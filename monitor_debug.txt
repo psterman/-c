@@ -1,0 +1,5 @@
+MonitorGetCount: 2
+Monitor 1: L-1920 T0 R0 B1080
+Monitor 2: L0 T0 R1920 B1080
+SysGet(80): 2
+A_ScreenDPI: 96
