@@ -1,4 +1,4 @@
-# Cursor Helper - Cursor 编辑器快捷工具
+# Cursor助手 - Cursor 编辑器快捷工具
 
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![AutoHotkey v2](https://img.shields.io/badge/AutoHotkey-v2-blue.svg)](https://www.autohotkey.com/)
@@ -46,13 +46,13 @@
 ## 📥 下载
 
 ### 方式一：直接下载
-1. 访问 [Releases](https://github.com/your-username/cursor-helper/releases) 页面
+1. 访问 [Releases](https://github.com/your-username/cursor_helper/releases) 页面
 2. 下载最新版本的 `CursorHelper.ahk` 文件
 
 ### 方式二：克隆仓库
 ```bash
-git clone https://github.com/your-username/cursor-helper.git
-cd cursor-helper
+git clone https://github.com/your-username/cursor_helper.git
+cd cursor_helper
 ```
 
 ## 🔧 环境准备
@@ -272,9 +272,10 @@ cd cursor-helper
 
 ## 📮 联系方式
 
-- **Issues**：[GitHub Issues](https://github.com/your-username/cursor-helper/issues)
-- **Discussions**：[GitHub Discussions](https://github.com/your-username/cursor-helper/discussions)
+- **Issues**：[GitHub Issues](https://github.com/your-username/cursor_helper/issues)
+- **Discussions**：[GitHub Discussions](https://github.com/your-username/cursor_helper/discussions)
 
 ---
 
 **⭐ 如果这个项目对您有帮助，请给个 Star！**
+
