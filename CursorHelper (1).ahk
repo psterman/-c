@@ -50,6 +50,15 @@ global PanelY := -1  ; 自定义 Y 坐标（-1 表示使用默认位置）
 ; 连续复制功能
 global ClipboardHistory := []  ; 存储所有复制的内容
 global GuiID_ClipboardManager := 0  ; 剪贴板管理面板 GUI ID
+; 语音输入功能
+global VoiceInputActive := false  ; 语音输入是否激活
+global GuiID_VoiceInput := 0  ; 语音输入动画GUI ID
+global VoiceInputContent := ""  ; 存储语音输入的内容
+global VoiceInputMethod := ""  ; 当前使用的输入法类型：baidu, xunfei, auto
+global VoiceInputBlocked := false  ; 语音输入是否被屏蔽
+global VoiceInputPaused := false  ; 语音输入是否被暂停（按住CapsLock时）
+global VoiceTitleText := 0  ; 语音输入动画标题文本控件
+global VoiceHintText := 0  ; 语音输入动画提示文本控件
 ; 多语言支持
 global Language := "zh"  ; 语言设置：zh=中文, en=英文
 
@@ -169,7 +178,17 @@ GetText(Key) {
             "import_success", "导入成功",
             "import_failed", "导入失败",
             "confirm_reset", "确定要重置为默认设置吗？这将清除所有自定义配置。",
-            "config_saved", "配置已保存！"
+            "config_saved", "配置已保存！",
+            "voice_input_starting", "正在启动语音输入...",
+            "voice_input_active", "🎤 语音输入中",
+            "voice_input_hint", "正在录入，请说话...",
+            "voice_input_stopping", "正在结束语音输入...",
+            "voice_input_sent", "语音输入已发送到 Cursor",
+            "voice_input_failed", "语音输入失败",
+            "voice_input_no_content", "未检测到语音输入内容",
+            "voice_input_detected_baidu", "检测到百度输入法",
+            "voice_input_detected_xunfei", "检测到讯飞输入法",
+            "voice_input_auto_detect", "自动检测输入法"
         ),
         "en", Map(
             "app_name", "Cursor Assistant",
@@ -284,7 +303,17 @@ GetText(Key) {
             "import_success", "Import Successful",
             "import_failed", "Import Failed",
             "confirm_reset", "Are you sure you want to reset to default settings? This will clear all custom configurations.",
-            "config_saved", "Configuration Saved!"
+            "config_saved", "Configuration Saved!",
+            "voice_input_starting", "Starting voice input...",
+            "voice_input_active", "🎤 Voice Input Active",
+            "voice_input_hint", "Recording, please speak...",
+            "voice_input_stopping", "Stopping voice input...",
+            "voice_input_sent", "Voice input sent to Cursor",
+            "voice_input_failed", "Voice input failed",
+            "voice_input_no_content", "No voice input content detected",
+            "voice_input_detected_baidu", "Baidu IME detected",
+            "voice_input_detected_xunfei", "Xunfei IME detected",
+            "voice_input_auto_detect", "Auto detect IME"
         )
     )
     
@@ -445,34 +474,137 @@ ClearCapsLock2Timer(*) {
 }
 
 ShowPanelTimer(*) {
-    global CapsLock, PanelVisible
+    global CapsLock, PanelVisible, VoiceInputActive
+    ; 如果正在语音输入，不显示快捷操作面板
+    if (VoiceInputActive) {
+        return
+    }
     if (CapsLock && !PanelVisible) {
         ShowCursorPanel()
     }
 }
 
+; 长按CapsLock屏蔽语音输入（定时器函数）
+global CapsLockPressTime := 0
+BlockVoiceInputTimer(*) {
+    global VoiceInputBlocked, CapsLockPressTime
+    ; 记录按下时间
+    CapsLockPressTime := A_TickCount
+    VoiceInputBlocked := true
+    TrayTip("语音输入已屏蔽", "提示", "Iconi 1")
+}
+
 ; 采用 CapsLock+ 方案：使用 ~ 前缀保留原始功能，通过标记变量控制行为
 ~CapsLock:: {
-    global CapsLock, CapsLock2, IsCommandMode, PanelVisible
+    global CapsLock, CapsLock2, IsCommandMode, PanelVisible, VoiceInputActive, VoiceInputMethod, VoiceInputBlocked, VoiceInputPaused
     
     ; 标记 CapsLock 已按下
     CapsLock := true
     CapsLock2 := true  ; 初始化为 true，如果使用了功能会被清除
     IsCommandMode := false
     
+    ; 记录按下时间
+    CapsLockPressTime := A_TickCount
+    
+    ; 如果正在语音输入，处理暂停/恢复逻辑
+    if (VoiceInputActive) {
+        ; 设置定时器：300ms 后清除 CapsLock2（用于检测是否按了其他键）
+        SetTimer(ClearCapsLock2Timer, -300)
+        
+        ; 如果未暂停，则暂停语音输入
+        if (!VoiceInputPaused) {
+            VoiceInputPaused := true
+            UpdateVoiceInputPausedState(true)
+            
+            ; 暂停百度输入法语音转换（F1）
+            if (VoiceInputMethod = "baidu") {
+                Send("{F1}")
+                Sleep(200)
+            }
+        }
+        
+        ; 等待 CapsLock 释放
+        KeyWait("CapsLock")
+        
+        ; 停止定时器
+        SetTimer(ClearCapsLock2Timer, 0)
+        
+        ; 计算按下时长
+        PressDuration := A_TickCount - CapsLockPressTime
+        
+        ; 如果长按超过1.5秒，切换屏蔽状态（不恢复语音）
+        if (PressDuration >= 1500) {
+            VoiceInputBlocked := !VoiceInputBlocked
+            if (VoiceInputBlocked) {
+                TrayTip("语音输入已屏蔽", "提示", "Iconi 1")
+            } else {
+                TrayTip("语音输入已启用", "提示", "Iconi 1")
+            }
+            ; 如果之前暂停了，保持暂停状态
+            if (VoiceInputPaused) {
+                ; 不恢复，保持暂停
+            }
+            CapsLock := false
+            CapsLock2 := false
+            return
+        }
+        
+        ; 如果按了其他键（如Z），CapsLock2会被清除，不恢复语音
+        ; 如果只按了CapsLock（CapsLock2仍然为true），且是短按，则恢复语音输入
+        if (CapsLock2 && PressDuration < 1500) {
+            ; 只按了CapsLock，没有按其他键，恢复语音输入
+            if (VoiceInputPaused) {
+                VoiceInputPaused := false
+                UpdateVoiceInputPausedState(false)  ; 更新动画状态，显示恢复
+                
+                ; 恢复百度输入法语音转换（F2）
+                if (VoiceInputMethod = "baidu") {
+                    Send("{F2}")
+                    Sleep(200)
+                }
+            }
+        }
+        
+        CapsLock := false
+        CapsLock2 := false
+        return
+    }
+    
+    ; 如果未在语音输入，执行正常的 CapsLock+ 逻辑
     ; 设置定时器：300ms 后清除 CapsLock2（犹豫操作时间）
     ; 如果在这 300ms 内使用了 CapsLock+ 功能，CapsLock2 会被提前清除
     SetTimer(ClearCapsLock2Timer, -300)
     
-    ; 设置定时器：长按 0.5 秒后自动显示面板
+    ; 设置定时器：长按 1.5 秒后屏蔽语音输入
+    SetTimer(BlockVoiceInputTimer, -1500)
+    
+    ; 设置定时器：长按 0.5 秒后自动显示面板（不在语音输入时）
     SetTimer(ShowPanelTimer, -500)
     
     ; 等待 CapsLock 释放
     KeyWait("CapsLock")
     
+    ; 计算按下时长
+    PressDuration := A_TickCount - CapsLockPressTime
+    
     ; 停止所有定时器
     SetTimer(ClearCapsLock2Timer, 0)
     SetTimer(ShowPanelTimer, 0)
+    SetTimer(BlockVoiceInputTimer, 0)
+    
+    ; 检查是否长按（超过1.5秒）来切换屏蔽状态
+    if (PressDuration >= 1500) {
+        ; 长按超过1.5秒，切换屏蔽状态
+        VoiceInputBlocked := !VoiceInputBlocked
+        if (VoiceInputBlocked) {
+            TrayTip("语音输入已屏蔽", "提示", "Iconi 1")
+        } else {
+            TrayTip("语音输入已启用", "提示", "Iconi 1")
+        }
+        CapsLock := false
+        CapsLock2 := false
+        return
+    }
     
     ; CapsLock 最优先置空，来关闭 CapsLock+ 功能的触发
     CapsLock := false
@@ -2359,6 +2491,30 @@ q:: {
     ShowConfigGUI()
 }
 
+; Z 键语音输入（切换模式）
+z:: {
+    global CapsLock2, VoiceInputActive, CapsLock, VoiceInputBlocked
+    CapsLock2 := false  ; 清除标记，表示使用了功能
+    
+    ; 如果语音输入被屏蔽，则不响应
+    if (VoiceInputBlocked && !VoiceInputActive) {
+        TrayTip("语音输入已被屏蔽，长按CapsLock可启用", "提示", "Icon! 2")
+        return
+    }
+    
+    if (VoiceInputActive) {
+        ; 如果正在语音输入，则结束输入
+        ; 确保CapsLock状态被重置
+        if (CapsLock) {
+            CapsLock := false
+        }
+        StopVoiceInput()
+    } else {
+        ; 如果未在语音输入，则开始输入
+        StartVoiceInput()
+    }
+}
+
 #HotIf
 
 ; ===================== 动态快捷键处理 =====================
@@ -2511,5 +2667,418 @@ ImportClipboard(*) {
         SetTimer(ShowImportSuccessTip, -100)
     } catch as e {
         MsgBox(GetText("import_failed") . ": " . e.Message, GetText("error"), "Iconx")
+    }
+}
+
+; ===================== 语音输入功能 =====================
+
+; 检测输入法类型（改进版：多方法检测）
+DetectInputMethod() {
+    ; 检测百度输入法进程（常见进程名）
+    BaiduProcesses := ["BaiduIME.exe", "BaiduPinyin.exe", "bdpinyin.exe", "BaiduInput.exe", "BaiduPinyinService.exe"]
+    
+    ; 检测讯飞输入法进程（常见进程名）
+    ; 讯飞输入法的主要进程：XunfeiIME.exe, XunfeiInput.exe, XunfeiPinyin.exe
+    XunfeiProcesses := ["XunfeiIME.exe", "XunfeiInput.exe", "XunfeiPinyin.exe", "XunfeiCloud.exe", "Xunfei.exe"]
+    
+    ; 方法1：通过进程检测（优先检测讯飞，因为进程名更独特）
+    for Index, ProcessName in XunfeiProcesses {
+        try {
+            if (ProcessExist(ProcessName)) {
+                return "xunfei"
+            }
+        }
+    }
+    
+    ; 检测百度输入法
+    for Index, ProcessName in BaiduProcesses {
+        try {
+            if (ProcessExist(ProcessName)) {
+                return "baidu"
+            }
+        }
+    }
+    
+    ; 方法2：通过窗口类名检测（更准确）
+    ; 尝试检测当前活动的输入法窗口
+    try {
+        ; 检测讯飞输入法窗口（常见的窗口类名）
+        if WinExist("ahk_class XunfeiIME") || WinExist("ahk_class XunfeiInput") || WinExist("ahk_class XunfeiPinyin") {
+            return "xunfei"
+        }
+        ; 检测百度输入法窗口
+        if WinExist("ahk_class BaiduIME") || WinExist("ahk_class BaiduPinyin") || WinExist("ahk_class BaiduInput") {
+            return "baidu"
+        }
+    }
+    
+    ; 方法3：通过注册表检测（备用方案）
+    try {
+        ; 检测讯飞输入法注册表项
+        try {
+            RegRead("HKEY_CURRENT_USER\Software\Xunfei", "", "")
+            return "xunfei"
+        }
+        ; 检测百度输入法注册表项
+        try {
+            RegRead("HKEY_CURRENT_USER\Software\Baidu", "", "")
+            return "baidu"
+        }
+    }
+    
+    ; 如果都检测不到，默认尝试百度方案（因为百度更常见）
+    ; 但提示用户可能需要手动选择
+    return "baidu"
+}
+
+; 开始语音输入
+StartVoiceInput() {
+    global VoiceInputActive, VoiceInputContent, CursorPath, AISleepTime, VoiceInputMethod, VoiceInputBlocked, PanelVisible
+    
+    ; 如果语音输入被屏蔽，则不启动
+    if (VoiceInputBlocked) {
+        TrayTip("语音输入已被屏蔽，长按CapsLock可启用", "提示", "Icon! 2")
+        return
+    }
+    
+    if (VoiceInputActive) {
+        return
+    }
+    
+    ; 如果快捷操作面板正在显示，先关闭它
+    if (PanelVisible) {
+        HideCursorPanel()
+    }
+    
+    try {
+        if !WinExist("ahk_exe Cursor.exe") {
+            if (CursorPath != "" && FileExist(CursorPath)) {
+                Run(CursorPath)
+                Sleep(AISleepTime)
+            } else {
+                TrayTip(GetText("cursor_not_running_error"), GetText("error"), "Iconx 2")
+                return
+            }
+        }
+        
+        WinActivate("ahk_exe Cursor.exe")
+        WinWaitActive("ahk_exe Cursor.exe", , 2)
+        Sleep(300)
+        
+        Send("{Esc}")
+        Sleep(100)
+        Send("^l")
+        Sleep(500)
+        
+        if !WinActive("ahk_exe Cursor.exe") {
+            WinActivate("ahk_exe Cursor.exe")
+            Sleep(200)
+        }
+        
+        ; 自动检测输入法类型
+        VoiceInputMethod := DetectInputMethod()
+        
+        ; 根据输入法类型使用不同的快捷键（不显示弹窗，动画界面会提供反馈）
+        if (VoiceInputMethod = "baidu") {
+            ; 百度输入法：Alt+Y 激活，F2 开始
+            Send("!y")
+            Sleep(500)
+            Send("{F2}")
+            Sleep(200)
+        } else if (VoiceInputMethod = "xunfei") {
+            ; 讯飞输入法：直接按 F6 开始语音输入（F6 也是结束键）
+            ; 注意：讯飞输入法不需要先激活，直接按 F6 即可
+            Send("{F6}")
+            Sleep(800)  ; 给讯飞输入法更多时间启动语音识别
+        } else {
+            ; 默认尝试百度方案
+            Send("!y")
+            Sleep(500)
+            Send("{F2}")
+            Sleep(200)
+        }
+        
+        VoiceInputActive := true
+        VoiceInputContent := ""
+        ShowVoiceInputAnimation()
+        ; 不显示弹窗，动画界面已提供视觉反馈
+    } catch as e {
+        TrayTip(GetText("voice_input_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
+    }
+}
+
+; 结束语音输入
+StopVoiceInput() {
+    global VoiceInputActive, VoiceInputContent, VoiceInputMethod, CapsLock
+    
+    if (!VoiceInputActive) {
+        return
+    }
+    
+    try {
+        ; 先确保CapsLock状态被重置，避免影响后续操作
+        ; 如果CapsLock被按下，先释放它
+        if (CapsLock) {
+            CapsLock := false
+        }
+        
+        ; 根据输入法类型使用不同的结束快捷键
+        if (VoiceInputMethod = "baidu") {
+            ; 百度输入法：F1 结束语音录入
+            Send("{F1}")
+            Sleep(500)
+            
+            ; 获取语音输入内容
+            OldClipboard := A_Clipboard
+            Send("^a")
+            Sleep(100)
+            A_Clipboard := ""
+            Send("^c")
+            if ClipWait(1) {
+                VoiceInputContent := A_Clipboard
+            }
+            A_Clipboard := OldClipboard
+            
+            if (VoiceInputContent = "" || StrLen(VoiceInputContent) < 2) {
+                Send("^a")
+                Sleep(100)
+                A_Clipboard := ""
+                Send("^c")
+                if ClipWait(1) {
+                    VoiceInputContent := A_Clipboard
+                }
+                A_Clipboard := OldClipboard
+            }
+            
+            ; 退出百度输入法语音模式（Alt+Y 关闭语音窗口）
+            Send("!y")
+            Sleep(300)
+        } else if (VoiceInputMethod = "xunfei") {
+            ; 讯飞输入法：F6 结束（与开始相同，按 F6 切换开始/结束）
+            Send("{F6}")
+            Sleep(800)  ; 给讯飞输入法更多时间处理结束操作和识别结果
+            
+            ; 获取语音输入内容
+            OldClipboard := A_Clipboard
+            Send("^a")
+            Sleep(100)
+            A_Clipboard := ""
+            Send("^c")
+            if ClipWait(1) {
+                VoiceInputContent := A_Clipboard
+            }
+            A_Clipboard := OldClipboard
+            
+            if (VoiceInputContent = "" || StrLen(VoiceInputContent) < 2) {
+                Send("^a")
+                Sleep(100)
+                A_Clipboard := ""
+                Send("^c")
+                if ClipWait(1) {
+                    VoiceInputContent := A_Clipboard
+                }
+                A_Clipboard := OldClipboard
+            }
+        } else {
+            ; 默认尝试百度方案
+            Send("{F1}")
+            Sleep(500)
+            
+            ; 获取语音输入内容
+            OldClipboard := A_Clipboard
+            Send("^a")
+            Sleep(100)
+            A_Clipboard := ""
+            Send("^c")
+            if ClipWait(1) {
+                VoiceInputContent := A_Clipboard
+            }
+            A_Clipboard := OldClipboard
+            
+            if (VoiceInputContent = "" || StrLen(VoiceInputContent) < 2) {
+                Send("^a")
+                Sleep(100)
+                A_Clipboard := ""
+                Send("^c")
+                if ClipWait(1) {
+                    VoiceInputContent := A_Clipboard
+                }
+                A_Clipboard := OldClipboard
+            }
+            
+            ; 退出百度输入法语音模式（Alt+Y 关闭语音窗口）
+            Send("!y")
+            Sleep(300)
+        }
+        
+        VoiceInputActive := false
+        HideVoiceInputAnimation()
+        
+        if (VoiceInputContent != "" && StrLen(VoiceInputContent) > 0) {
+            SendVoiceInputToCursor(VoiceInputContent)
+        } else {
+            ; 只在没有内容时显示提示
+            TrayTip(GetText("voice_input_no_content"), GetText("tip"), "Iconi 2")
+        }
+        ; 不显示"正在结束"的提示，动画界面已关闭
+    } catch as e {
+        VoiceInputActive := false
+        HideVoiceInputAnimation()
+        TrayTip(GetText("voice_input_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
+    }
+}
+
+; 显示语音输入动画
+ShowVoiceInputAnimation() {
+    global GuiID_VoiceInput, VoiceInputActive, PanelScreenIndex, UI_Colors
+    
+    if (GuiID_VoiceInput != 0) {
+        try {
+            GuiID_VoiceInput.Destroy()
+        }
+    }
+    
+    GuiID_VoiceInput := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
+    GuiID_VoiceInput.BackColor := UI_Colors.Background
+    GuiID_VoiceInput.SetFont("s12 cFFFFFF Bold", "Segoe UI")
+    
+    PanelWidth := 400
+    PanelHeight := 150
+    
+    TitleText := GuiID_VoiceInput.Add("Text", "x0 y20 w400 h30 Center cFFFFFF", GetText("voice_input_active"))
+    TitleText.SetFont("s16 Bold", "Segoe UI")
+    global VoiceTitleText := TitleText
+    
+    HintText := GuiID_VoiceInput.Add("Text", "x0 y60 w400 h25 Center cCCCCCC", GetText("voice_input_hint"))
+    HintText.SetFont("s11", "Segoe UI")
+    global VoiceHintText := HintText
+    
+    AnimationText := GuiID_VoiceInput.Add("Text", "x0 y95 w400 h30 Center c00FF00", "● ● ●")
+    AnimationText.SetFont("s14", "Segoe UI")
+    global VoiceAnimationText := AnimationText
+    
+    SetTimer(UpdateVoiceAnimation, 500)
+    
+    ScreenInfo := GetScreenInfo(PanelScreenIndex)
+    Pos := GetPanelPosition(ScreenInfo, PanelWidth, PanelHeight, "center")
+    
+    GuiID_VoiceInput.Show("w" . PanelWidth . " h" . PanelHeight . " x" . Pos.X . " y" . Pos.Y . " NoActivate")
+    WinSetAlwaysOnTop(1, GuiID_VoiceInput.Hwnd)
+}
+
+; 更新语音输入暂停状态
+UpdateVoiceInputPausedState(IsPaused) {
+    global VoiceTitleText, VoiceHintText, VoiceAnimationText, GuiID_VoiceInput
+    
+    try {
+        if (!GuiID_VoiceInput || GuiID_VoiceInput = 0) {
+            return
+        }
+        
+        if (IsPaused) {
+            ; 暂停状态：显示黄色和暂停提示
+            if (VoiceTitleText) {
+                VoiceTitleText.Text := "⏸️ 语音输入已暂停"
+                VoiceTitleText.SetFont("s16 Bold cFFFF00", "Segoe UI")
+            }
+            if (VoiceHintText) {
+                VoiceHintText.Text := "已暂停语音录入，释放 CapsLock 恢复"
+                VoiceHintText.SetFont("s11 cFFFF00", "Segoe UI")
+            }
+            if (VoiceAnimationText) {
+                VoiceAnimationText.Text := "⏸ ⏸ ⏸"
+                VoiceAnimationText.SetFont("s14 cFFFF00", "Segoe UI")
+            }
+        } else {
+            ; 正常状态：恢复绿色和正常提示
+            if (VoiceTitleText) {
+                VoiceTitleText.Text := GetText("voice_input_active")
+                VoiceTitleText.SetFont("s16 Bold cFFFFFF", "Segoe UI")
+            }
+            if (VoiceHintText) {
+                VoiceHintText.Text := GetText("voice_input_hint")
+                VoiceHintText.SetFont("s11 cCCCCCC", "Segoe UI")
+            }
+            if (VoiceAnimationText) {
+                VoiceAnimationText.Text := "● ● ●"
+                VoiceAnimationText.SetFont("s14 c00FF00", "Segoe UI")
+            }
+        }
+    } catch {
+        ; 忽略错误
+    }
+}
+
+; 更新语音输入动画
+UpdateVoiceAnimation(*) {
+    global VoiceInputActive, VoiceAnimationText, VoiceInputPaused
+    
+    if (!VoiceInputActive || !VoiceAnimationText || VoiceInputPaused) {
+        ; 如果暂停，不更新动画
+        return
+    }
+    
+    try {
+        static AnimationState := 0
+        AnimationState := Mod(AnimationState + 1, 4)
+        
+        switch AnimationState {
+            case 0:
+                VoiceAnimationText.Text := "● ○ ○"
+            case 1:
+                VoiceAnimationText.Text := "○ ● ○"
+            case 2:
+                VoiceAnimationText.Text := "○ ○ ●"
+            case 3:
+                VoiceAnimationText.Text := "● ● ●"
+        }
+    } catch {
+        SetTimer(, 0)
+    }
+}
+
+; 隐藏语音输入动画
+HideVoiceInputAnimation() {
+    global GuiID_VoiceInput, VoiceAnimationText, VoiceTitleText, VoiceHintText, VoiceInputPaused
+    
+    ; 重置暂停状态
+    VoiceInputPaused := false
+    
+    SetTimer(UpdateVoiceAnimation, 0)
+    
+    if (GuiID_VoiceInput != 0) {
+        try {
+            GuiID_VoiceInput.Destroy()
+        }
+        GuiID_VoiceInput := 0
+    }
+    VoiceAnimationText := 0
+    VoiceTitleText := 0
+    VoiceHintText := 0
+}
+
+; 发送语音输入内容到 Cursor
+SendVoiceInputToCursor(Content) {
+    global CursorPath, AISleepTime
+    
+    try {
+        if !WinActive("ahk_exe Cursor.exe") {
+            WinActivate("ahk_exe Cursor.exe")
+            WinWaitActive("ahk_exe Cursor.exe", , 1)
+            Sleep(200)
+        }
+        
+        if !WinActive("ahk_exe Cursor.exe") {
+            WinActivate("ahk_exe Cursor.exe")
+            Sleep(200)
+        }
+        
+        if (Content != "" && StrLen(Content) > 0) {
+            Send("{Enter}")
+            Sleep(300)
+            ; 不显示发送成功的提示，避免弹窗干扰
+        }
+    } catch as e {
+        TrayTip(GetText("voice_input_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
     }
 }
