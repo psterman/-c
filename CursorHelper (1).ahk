@@ -24,6 +24,7 @@ global CapsLockDownTime := 0
 global IsCommandMode := false
 global PanelVisible := false
 global GuiID_CursorPanel := 0
+global CursorPanelDescText := 0  ; 快捷操作面板说明文字控件
 global ConfigFile := A_ScriptDir "\CursorShortcut.ini"
 global TrayIconPath := A_ScriptDir "\cursor_helper.ico"
 ; CapsLock+ 方案的核心变量
@@ -75,6 +76,15 @@ global VoiceTitleText := 0  ; 语音输入动画标题文本控件
 global VoiceHintText := 0  ; 语音输入动画提示文本控件
 ; 多语言支持
 global Language := "zh"  ; 语言设置：zh=中文, en=英文
+; 快捷操作按钮配置（最多5个）
+; 每个按钮配置格式：{Type: "Explain|Refactor|Optimize|Config", Hotkey: "e|r|o|q"}
+global QuickActionButtons := [
+    {Type: "Explain", Hotkey: "e"},
+    {Type: "Refactor", Hotkey: "r"},
+    {Type: "Optimize", Hotkey: "o"},
+    {Type: "Config", Hotkey: "q"},
+    {Type: "Explain", Hotkey: "e"}
+]
 
 ; ===================== 多语言支持 =====================
 ; 获取本地化文本
@@ -187,9 +197,9 @@ GetText(Key) {
             "hotkey_z", "语音输入 (Z):",
             "hotkey_z_desc", "按此键可启动或停止语音输入功能，支持百度输入法和讯飞输入法。",
             "hotkey_s", "分割代码 (S):",
-            "hotkey_s_desc", "在面板显示时，按此键可在代码中插入分割标记，用于批量处理。",
+            "hotkey_s_desc", "在 Cursor 中选中代码后，长按 CapsLock 调出面板，按此键可在代码中插入分割标记，用于标记多个代码片段以便批量处理。",
             "hotkey_b", "批量操作 (B):",
-            "hotkey_b_desc", "在面板显示时，按此键可执行批量操作功能。",
+            "hotkey_b_desc", "在 Cursor 中选中代码后，长按 CapsLock 调出面板，按此键可对已标记的所有代码片段执行批量操作（解释/重构/优化）。",
             "hotkey_single_char_hint", "（单个字符，默认: {0}）",
             "hotkey_esc_hint", "（特殊键，默认: Esc）",
             "display_screen", "显示屏幕:",
@@ -213,13 +223,18 @@ GetText(Key) {
             "default_prompt_refactor", "重构这段代码，遵循PEP8/行业规范，简化冗余逻辑，添加中文注释，保持功能不变",
             "default_prompt_optimize", "分析这段代码的性能瓶颈（时间/空间复杂度），给出优化方案+对比说明，保留原逻辑可读性",
             "export_config", "导出配置",
+            "export_config_desc", "将当前配置保存为INI文件",
             "import_config", "导入配置",
+            "import_config_desc", "从INI文件加载配置",
             "export_clipboard", "导出剪贴板",
             "import_clipboard", "导入剪贴板",
             "export_success", "导出成功",
             "import_success", "导入成功",
             "import_failed", "导入失败",
             "confirm_reset", "确定要重置为默认设置吗？这将清除所有自定义配置。",
+            "reset_default_desc", "将所有设置重置为默认值",
+            "save_config_desc", "保存当前配置并关闭面板",
+            "cancel_desc", "关闭配置面板，不保存更改",
             "config_saved", "配置已保存！",
             "voice_input_starting", "正在启动语音输入...",
             "voice_input_active", "🎤 语音输入中",
@@ -230,7 +245,28 @@ GetText(Key) {
             "voice_input_no_content", "未检测到语音输入内容",
             "voice_input_detected_baidu", "检测到百度输入法",
             "voice_input_detected_xunfei", "检测到讯飞输入法",
-            "voice_input_auto_detect", "自动检测输入法"
+            "voice_input_auto_detect", "自动检测输入法",
+            "quick_action_config", "快捷操作按钮配置",
+            "quick_action_config_desc", "配置快捷操作面板中的按钮顺序和功能按键（最多5个）",
+            "quick_action_button", "按钮 {0}",
+            "quick_action_type", "功能类型:",
+            "quick_action_hotkey", "快捷键:",
+            "quick_action_move_up", "上移",
+            "quick_action_move_down", "下移",
+            "quick_action_add", "添加按钮",
+            "quick_action_remove", "删除",
+            "quick_action_type_explain", "解释代码",
+            "quick_action_type_refactor", "重构代码",
+            "quick_action_type_optimize", "优化代码",
+            "quick_action_type_config", "打开配置",
+            "quick_action_type_copy", "连续复制",
+            "quick_action_type_paste", "合并粘贴",
+            "quick_action_type_clipboard", "剪贴板管理",
+            "quick_action_type_voice", "语音输入",
+            "quick_action_type_split", "分割代码",
+            "quick_action_type_batch", "批量操作",
+            "quick_action_max_reached", "最多只能添加5个按钮",
+            "quick_action_min_reached", "至少需要保留1个按钮"
         ),
         "en", Map(
             "app_name", "Cursor Assistant",
@@ -366,13 +402,18 @@ GetText(Key) {
             "close_button", "Close",
             "close_button_tip", "Close Panel",
             "export_config", "Export Config",
+            "export_config_desc", "Save current configuration as INI file",
             "import_config", "Import Config",
+            "import_config_desc", "Load configuration from INI file",
             "export_clipboard", "Export Clipboard",
             "import_clipboard", "Import Clipboard",
             "export_success", "Export Successful",
             "import_success", "Import Successful",
             "import_failed", "Import Failed",
             "confirm_reset", "Are you sure you want to reset to default settings? This will clear all custom configurations.",
+            "reset_default_desc", "Reset all settings to default values",
+            "save_config_desc", "Save current configuration and close panel",
+            "cancel_desc", "Close configuration panel without saving changes",
             "config_saved", "Configuration Saved! Hotkeys are now active.",
             "voice_input_starting", "Starting voice input...",
             "voice_input_active", "🎤 Voice Input Active",
@@ -383,7 +424,28 @@ GetText(Key) {
             "voice_input_no_content", "No voice input content detected",
             "voice_input_detected_baidu", "Baidu IME detected",
             "voice_input_detected_xunfei", "Xunfei IME detected",
-            "voice_input_auto_detect", "Auto detect IME"
+            "voice_input_auto_detect", "Auto detect IME",
+            "quick_action_config", "Quick Action Button Configuration",
+            "quick_action_config_desc", "Configure button order and hotkeys in the quick action panel (max 5)",
+            "quick_action_button", "Button {0}",
+            "quick_action_type", "Action Type:",
+            "quick_action_hotkey", "Hotkey:",
+            "quick_action_move_up", "Move Up",
+            "quick_action_move_down", "Move Down",
+            "quick_action_add", "Add Button",
+            "quick_action_remove", "Remove",
+            "quick_action_type_explain", "Explain Code",
+            "quick_action_type_refactor", "Refactor Code",
+            "quick_action_type_optimize", "Optimize Code",
+            "quick_action_type_config", "Open Config",
+            "quick_action_type_copy", "Continuous Copy",
+            "quick_action_type_paste", "Merge Paste",
+            "quick_action_type_clipboard", "Clipboard Manager",
+            "quick_action_type_voice", "Voice Input",
+            "quick_action_type_split", "Split Code",
+            "quick_action_type_batch", "Batch Operation",
+            "quick_action_max_reached", "Maximum 5 buttons allowed",
+            "quick_action_min_reached", "At least 1 button required"
         )
     )
     
@@ -476,6 +538,19 @@ InitConfig() {
         IniWrite(DefaultMsgBoxScreenIndex, ConfigFile, "Advanced", "MsgBoxScreenIndex")
         IniWrite(DefaultVoiceInputScreenIndex, ConfigFile, "Advanced", "VoiceInputScreenIndex")
         IniWrite(DefaultCursorPanelScreenIndex, ConfigFile, "Advanced", "CursorPanelScreenIndex")
+        
+        ; 保存默认快捷操作按钮配置（固定5个按钮）
+        IniWrite(5, ConfigFile, "QuickActions", "ButtonCount")
+        IniWrite("Explain", ConfigFile, "QuickActions", "Button1Type")
+        IniWrite("e", ConfigFile, "QuickActions", "Button1Hotkey")
+        IniWrite("Refactor", ConfigFile, "QuickActions", "Button2Type")
+        IniWrite("r", ConfigFile, "QuickActions", "Button2Hotkey")
+        IniWrite("Optimize", ConfigFile, "QuickActions", "Button3Type")
+        IniWrite("o", ConfigFile, "QuickActions", "Button3Hotkey")
+        IniWrite("Config", ConfigFile, "QuickActions", "Button4Type")
+        IniWrite("q", ConfigFile, "QuickActions", "Button4Hotkey")
+        IniWrite("Explain", ConfigFile, "QuickActions", "Button5Type")
+        IniWrite("e", ConfigFile, "QuickActions", "Button5Hotkey")
     }
 
     ; 3. 加载配置（v2的IniRead返回值更直观）
@@ -483,6 +558,7 @@ InitConfig() {
     global FunctionPanelPos, ConfigPanelPos, ClipboardPanelPos
     global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ
     global ConfigPanelScreenIndex, MsgBoxScreenIndex, VoiceInputScreenIndex, CursorPanelScreenIndex
+    global QuickActionButtons
     try {
         if FileExist(ConfigFile) {
             ; 兼容旧配置格式，优先读取新格式
@@ -514,6 +590,44 @@ InitConfig() {
             MsgBoxScreenIndex := Integer(IniRead(ConfigFile, "Advanced", "MsgBoxScreenIndex", DefaultMsgBoxScreenIndex))
             VoiceInputScreenIndex := Integer(IniRead(ConfigFile, "Advanced", "VoiceInputScreenIndex", DefaultVoiceInputScreenIndex))
             CursorPanelScreenIndex := Integer(IniRead(ConfigFile, "Advanced", "CursorPanelScreenIndex", DefaultCursorPanelScreenIndex))
+            
+            ; 加载快捷操作按钮配置
+            QuickActionButtons := []
+            ButtonCount := Integer(IniRead(ConfigFile, "QuickActions", "ButtonCount", "5"))
+            if (ButtonCount < 1) {
+                ButtonCount := 5
+            }
+            if (ButtonCount > 5) {
+                ButtonCount := 5
+            }
+            Loop ButtonCount {
+                Index := A_Index
+                ButtonType := IniRead(ConfigFile, "QuickActions", "Button" . Index . "Type", "")
+                ButtonHotkey := IniRead(ConfigFile, "QuickActions", "Button" . Index . "Hotkey", "")
+                if (ButtonType != "" && ButtonHotkey != "") {
+                    QuickActionButtons.Push({Type: ButtonType, Hotkey: ButtonHotkey})
+                } else {
+                    ; 如果某个按钮配置缺失，使用默认值
+                    QuickActionButtons.Push({Type: "Explain", Hotkey: "e"})
+                }
+            }
+            ; 确保有5个按钮
+            while (QuickActionButtons.Length < 5) {
+                QuickActionButtons.Push({Type: "Explain", Hotkey: "e"})
+            }
+            while (QuickActionButtons.Length > 5) {
+                QuickActionButtons.Pop()
+            }
+            ; 如果没有加载到任何按钮，使用默认配置
+            if (QuickActionButtons.Length = 0) {
+                QuickActionButtons := [
+                    {Type: "Explain", Hotkey: "e"},
+                    {Type: "Refactor", Hotkey: "r"},
+                    {Type: "Optimize", Hotkey: "o"},
+                    {Type: "Config", Hotkey: "q"},
+                    {Type: "Explain", Hotkey: "e"}
+                ]
+            }
         } else {
             ; If config file doesn't exist, use default values directly
             CursorPath := DefaultCursorPath
@@ -813,7 +927,7 @@ GetPanelPosition(ScreenInfo, Width, Height, PosType := "Center") {
 ; ===================== 显示面板函数 =====================
 ShowCursorPanel() {
     global PanelVisible, GuiID_CursorPanel, SplitHotkey, BatchHotkey, CapsLock2
-    global CursorPanelScreenIndex, FunctionPanelPos
+    global CursorPanelScreenIndex, FunctionPanelPos, QuickActionButtons
     
     if (PanelVisible) {
         return
@@ -822,58 +936,188 @@ ShowCursorPanel() {
     CapsLock2 := false  ; 清除标记，表示使用了功能（显示面板）
     PanelVisible := true
     
+    ; 根据按钮数量计算面板高度
+    ButtonCount := QuickActionButtons.Length
+    ButtonHeight := 42
+    ButtonSpacing := 50
+    BaseHeight := 200  ; 标题、提示、说明文字、底部提示等基础高度（增加50px给说明文字区域）
+    PanelHeight := BaseHeight + (ButtonCount * ButtonSpacing)
+    
     ; 面板尺寸（Cursor 风格，更紧凑现代）
     PanelWidth := 420
-    PanelHeight := 370  ; 增加高度以容纳配置按钮
     
-    ; 创建 GUI（如果不存在）
-    if (GuiID_CursorPanel = 0) {
-        ; Cursor 风格的深色主题
-        GuiID_CursorPanel := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
-        GuiID_CursorPanel.BackColor := "1e1e1e"  ; Cursor 的主背景色
-        GuiID_CursorPanel.SetFont("s11 cCCCCCC", "Segoe UI")  ; Cursor 使用的字体
-        
-        ; 添加圆角和阴影效果（通过边框实现）
-        ; 标题区域
-        TitleBg := GuiID_CursorPanel.Add("Text", "x0 y0 w420 h50 Background1e1e1e", "")
-        TitleText := GuiID_CursorPanel.Add("Text", "x20 y12 w380 h26 Center cFFFFFF", GetText("panel_title"))
-        TitleText.SetFont("s13 Bold", "Segoe UI")
-        
-        ; 分隔线
-        GuiID_CursorPanel.Add("Text", "x0 y50 w420 h1 Background3c3c3c", "")
-        
-        ; 提示文本（更小的字体，更柔和的颜色）
-        HintText := GuiID_CursorPanel.Add("Text", "x20 y60 w380 h18 Center c888888", FormatText("split_hint", SplitHotkey, BatchHotkey))
-        HintText.SetFont("s9", "Segoe UI")
-        
-        ; 按钮区域（Cursor 风格的按钮）
-        ; 解释代码按钮
-        BtnExplain := GuiID_CursorPanel.Add("Button", "x30 y90 w360 h42", GetText("explain_code"))
-        BtnExplain.SetFont("s11 cFFFFFF", "Segoe UI")
-        BtnExplain.OnEvent("Click", (*) => ExecutePrompt("Explain"))
-        
-        ; 重构代码按钮
-        BtnRefactor := GuiID_CursorPanel.Add("Button", "x30 y140 w360 h42", GetText("refactor_code"))
-        BtnRefactor.SetFont("s11 cFFFFFF", "Segoe UI")
-        BtnRefactor.OnEvent("Click", (*) => ExecutePrompt("Refactor"))
-        
-        ; 优化代码按钮
-        BtnOptimize := GuiID_CursorPanel.Add("Button", "x30 y190 w360 h42", GetText("optimize_code"))
-        BtnOptimize.SetFont("s11 cFFFFFF", "Segoe UI")
-        BtnOptimize.OnEvent("Click", (*) => ExecutePrompt("Optimize"))
-        
-        ; 配置面板按钮
-        BtnConfig := GuiID_CursorPanel.Add("Button", "x30 y240 w360 h36", GetText("open_config"))
-        BtnConfig.SetFont("s10 cFFFFFF", "Segoe UI")
-        BtnConfig.OnEvent("Click", OpenConfigFromPanel)
-        
-        ; 底部提示文本
-        FooterText := GuiID_CursorPanel.Add("Text", "x20 y290 w380 h50 Center c666666", GetText("footer_hint"))
-        FooterText.SetFont("s9", "Segoe UI")
-        
-        ; 底部边框
-        GuiID_CursorPanel.Add("Text", "x0 y360 w420 h10 Background1e1e1e", "")
+    ; 如果面板已存在，先销毁
+    if (GuiID_CursorPanel != 0) {
+        try {
+            GuiID_CursorPanel.Destroy()
+        } catch {
+            ; 忽略错误
+        }
+        global GuiID_CursorPanel := 0
     }
+    
+    ; 创建 GUI
+    ; Cursor 风格的深色主题
+    GuiID_CursorPanel := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
+    GuiID_CursorPanel.BackColor := "1e1e1e"  ; Cursor 的主背景色
+    GuiID_CursorPanel.SetFont("s11 cCCCCCC", "Segoe UI")  ; Cursor 使用的字体
+    
+    ; 添加圆角和阴影效果（通过边框实现）
+    ; 标题区域
+    TitleBg := GuiID_CursorPanel.Add("Text", "x0 y0 w420 h50 Background1e1e1e", "")
+    TitleText := GuiID_CursorPanel.Add("Text", "x20 y12 w380 h26 Center cFFFFFF", GetText("panel_title"))
+    TitleText.SetFont("s13 Bold", "Segoe UI")
+    
+    ; 分隔线
+    GuiID_CursorPanel.Add("Text", "x0 y50 w420 h1 Background3c3c3c", "")
+    
+    ; 提示文本（更小的字体，更柔和的颜色）
+    HintText := GuiID_CursorPanel.Add("Text", "x20 y60 w380 h18 Center c888888", FormatText("split_hint", SplitHotkey, BatchHotkey))
+    HintText.SetFont("s9", "Segoe UI")
+    
+    ; 按钮区域（根据配置动态创建）
+    ButtonY := 90
+    for Index, Button in QuickActionButtons {
+        ; 获取按钮文本和功能
+        ButtonText := ""
+        ButtonAction := (*) => {}
+        
+        ; 获取基础文本（不包含快捷键）
+        BaseText := ""
+        switch Button.Type {
+            case "Explain":
+                BaseText := GetText("explain_code")
+                ButtonAction := (*) => ExecutePrompt("Explain")
+            case "Refactor":
+                BaseText := GetText("refactor_code")
+                ButtonAction := (*) => ExecutePrompt("Refactor")
+            case "Optimize":
+                BaseText := GetText("optimize_code")
+                ButtonAction := (*) => ExecutePrompt("Optimize")
+            case "Config":
+                BaseText := GetText("open_config")
+                ButtonAction := OpenConfigFromPanel
+            case "Copy":
+                BaseText := GetText("hotkey_c")
+                ButtonAction := (*) => CapsLockCopy()
+            case "Paste":
+                BaseText := GetText("hotkey_v")
+                ButtonAction := (*) => CapsLockPaste()
+            case "Clipboard":
+                BaseText := GetText("hotkey_x")
+                ButtonAction := CreateClipboardAction()
+            case "Voice":
+                BaseText := GetText("hotkey_z")
+                ButtonAction := CreateVoiceAction()
+            case "Split":
+                BaseText := GetText("hotkey_s")
+                ButtonAction := (*) => SplitCode()
+            case "Batch":
+                BaseText := GetText("hotkey_b")
+                ButtonAction := (*) => BatchOperation()
+        }
+        
+        ; 替换快捷键（将默认快捷键替换为配置的快捷键）
+        ; 例如："解释代码 (E)" -> "解释代码 (e)"（如果配置的是e）
+        HotkeyUpper := StrUpper(Button.Hotkey)
+        ; 尝试替换常见的默认快捷键
+        ButtonText := StrReplace(BaseText, " (E)", " (" . HotkeyUpper . ")")
+        ButtonText := StrReplace(ButtonText, " (R)", " (" . HotkeyUpper . ")")
+        ButtonText := StrReplace(ButtonText, " (O)", " (" . HotkeyUpper . ")")
+        ButtonText := StrReplace(ButtonText, " (Q)", " (" . HotkeyUpper . ")")
+        ButtonText := StrReplace(ButtonText, " (C)", " (" . HotkeyUpper . ")")
+        ButtonText := StrReplace(ButtonText, " (V)", " (" . HotkeyUpper . ")")
+        ButtonText := StrReplace(ButtonText, " (X)", " (" . HotkeyUpper . ")")
+        ButtonText := StrReplace(ButtonText, " (Z)", " (" . HotkeyUpper . ")")
+        ButtonText := StrReplace(ButtonText, " (S)", " (" . HotkeyUpper . ")")
+        ButtonText := StrReplace(ButtonText, " (B)", " (" . HotkeyUpper . ")")
+        ; 如果替换失败，直接添加快捷键
+        if (ButtonText = BaseText) {
+            ; 提取基础文本（去掉括号部分）
+            if (RegExMatch(BaseText, "^(.*?)\s*\([^)]+\)", &Match)) {
+                ButtonText := Match[1] . " (" . HotkeyUpper . ")"
+            } else {
+                ButtonText := BaseText . " (" . HotkeyUpper . ")"
+            }
+        }
+        
+        ; 获取按钮对应的说明文字
+        ButtonDesc := ""
+        switch Button.Type {
+            case "Explain":
+                ButtonDesc := GetText("hotkey_e_desc")
+            case "Refactor":
+                ButtonDesc := GetText("hotkey_r_desc")
+            case "Optimize":
+                ButtonDesc := GetText("hotkey_o_desc")
+            case "Config":
+                ButtonDesc := GetText("hotkey_q_desc")
+            case "Copy":
+                ButtonDesc := GetText("hotkey_c_desc")
+            case "Paste":
+                ButtonDesc := GetText("hotkey_v_desc")
+            case "Clipboard":
+                ButtonDesc := GetText("hotkey_x_desc")
+            case "Voice":
+                ButtonDesc := GetText("hotkey_z_desc")
+            case "Split":
+                ButtonDesc := GetText("hotkey_s_desc")
+            case "Batch":
+                ButtonDesc := GetText("hotkey_b_desc")
+        }
+        
+        ; 创建按钮，添加点击事件以更新说明文字
+        Btn := GuiID_CursorPanel.Add("Button", "x30 y" . ButtonY . " w360 h" . ButtonHeight, ButtonText)
+        Btn.SetFont("s11 cFFFFFF", "Segoe UI")
+        ; 创建包装函数，同时更新说明文字和执行操作
+        WrappedAction := CreateButtonActionWithDesc(ButtonAction, ButtonDesc)
+        Btn.OnEvent("Click", WrappedAction)
+        
+        ButtonY += ButtonSpacing
+    }
+    
+    ; 说明文字显示区域（在按钮和底部提示之间）
+    DescY := ButtonY + 5
+    global CursorPanelDescText := GuiID_CursorPanel.Add("Text", "x20 y" . DescY . " w380 h40 Center c888888 vCursorPanelDescText", "")
+    CursorPanelDescText.SetFont("s9", "Segoe UI")
+    
+    ; 初始显示第一个按钮的说明（如果有按钮）
+    if (QuickActionButtons.Length > 0) {
+        FirstButtonDesc := ""
+        switch QuickActionButtons[1].Type {
+            case "Explain":
+                FirstButtonDesc := GetText("hotkey_e_desc")
+            case "Refactor":
+                FirstButtonDesc := GetText("hotkey_r_desc")
+            case "Optimize":
+                FirstButtonDesc := GetText("hotkey_o_desc")
+            case "Config":
+                FirstButtonDesc := GetText("hotkey_q_desc")
+            case "Copy":
+                FirstButtonDesc := GetText("hotkey_c_desc")
+            case "Paste":
+                FirstButtonDesc := GetText("hotkey_v_desc")
+            case "Clipboard":
+                FirstButtonDesc := GetText("hotkey_x_desc")
+            case "Voice":
+                FirstButtonDesc := GetText("hotkey_z_desc")
+            case "Split":
+                FirstButtonDesc := GetText("hotkey_s_desc")
+            case "Batch":
+                FirstButtonDesc := GetText("hotkey_b_desc")
+        }
+        if (FirstButtonDesc != "") {
+            CursorPanelDescText.Text := FirstButtonDesc
+        }
+    }
+    
+    ; 底部提示文本
+    FooterY := DescY + 45
+    FooterText := GuiID_CursorPanel.Add("Text", "x20 y" . FooterY . " w380 h50 Center c666666", GetText("footer_hint"))
+    FooterText.SetFont("s9", "Segoe UI")
+    
+    ; 底部边框
+    GuiID_CursorPanel.Add("Text", "x0 y" . (PanelHeight - 10) . " w420 h10 Background1e1e1e", "")
     
     ; 获取屏幕信息并计算位置
     ScreenInfo := GetScreenInfo(CursorPanelScreenIndex)
@@ -884,6 +1128,41 @@ ShowCursorPanel() {
     
     ; 确保窗口在最上层
     WinSetAlwaysOnTop(1, GuiID_CursorPanel.Hwnd)
+}
+
+; ===================== 创建带说明文字的按钮操作 =====================
+CreateButtonActionWithDesc(OriginalAction, Desc) {
+    ; 返回一个函数，该函数会更新说明文字并执行原始操作
+    ActionFunc(*) {
+        ; 更新说明文字
+        global CursorPanelDescText
+        if (CursorPanelDescText) {
+            CursorPanelDescText.Text := Desc
+        }
+        ; 执行原始操作
+        OriginalAction()
+    }
+    return ActionFunc
+}
+
+; ===================== 创建剪贴板动作 =====================
+CreateClipboardAction() {
+    return ClipboardButtonAction
+}
+
+ClipboardButtonAction(*) {
+    HideCursorPanel()
+    ShowClipboardManager()
+}
+
+; ===================== 创建语音输入动作 =====================
+CreateVoiceAction() {
+    return VoiceButtonAction
+}
+
+VoiceButtonAction(*) {
+    HideCursorPanel()
+    StartVoiceInput()
 }
 
 ; ===================== 隐藏面板函数 =====================
@@ -1209,7 +1488,13 @@ SwitchTab(TabName) {
     HideControls(ControlList) {
         if (ControlList && ControlList.Length > 0) {
             for Ctrl in ControlList {
-                try Ctrl.Visible := false
+                try {
+                    if (Ctrl) {
+                        Ctrl.Visible := false
+                    }
+                } catch {
+                    ; 忽略已销毁的控件
+                }
             }
         }
     }
@@ -1218,7 +1503,13 @@ SwitchTab(TabName) {
     ShowControls(ControlList) {
         if (ControlList && ControlList.Length > 0) {
             for Ctrl in ControlList {
-                try Ctrl.Visible := true
+                try {
+                    if (Ctrl) {
+                        Ctrl.Visible := true
+                    }
+                } catch {
+                    ; 忽略已销毁的控件
+                }
             }
         }
     }
@@ -1283,8 +1574,9 @@ CreateGeneralTab(ConfigGUI, X, Y, W, H) {
     global CursorPath, Language, GeneralTabPanel, CursorPathEdit, LangChinese, LangEnglish, BtnBrowse, GeneralTabControls
     global UI_Colors
     
-    ; 创建标签页面板
+    ; 创建标签页面板（默认显示，因为是第一个标签）
     GeneralTabPanel := ConfigGUI.Add("Text", "x" . X . " y" . Y . " w" . W . " h" . H . " Background" . UI_Colors.Background . " vGeneralTabPanel", "")
+    GeneralTabPanel.Visible := true  ; 通用标签页默认显示
     GeneralTabControls.Push(GeneralTabPanel)
     
     ; 标题
@@ -1337,6 +1629,321 @@ CreateGeneralTab(ConfigGUI, X, Y, W, H) {
         LangChinese.Value := 1
     } else {
         LangEnglish.Value := 1
+    }
+    
+    ; 快捷操作按钮配置
+    YPos += 60
+    QuickActionLabel := ConfigGUI.Add("Text", "x" . (X + 30) . " y" . YPos . " w" . (W - 60) . " h25 c" . UI_Colors.Text, GetText("quick_action_config"))
+    QuickActionLabel.SetFont("s12 Bold", "Segoe UI")
+    GeneralTabControls.Push(QuickActionLabel)
+    
+    YPos += 30
+    QuickActionDesc := ConfigGUI.Add("Text", "x" . (X + 30) . " y" . YPos . " w" . (W - 60) . " h20 c" . UI_Colors.TextDim, GetText("quick_action_config_desc"))
+    QuickActionDesc.SetFont("s9", "Segoe UI")
+    GeneralTabControls.Push(QuickActionDesc)
+    
+    ; 创建按钮配置列表容器
+    YPos += 30
+    global QuickActionConfigControls := []
+    CreateQuickActionConfigUI(ConfigGUI, X + 30, YPos, W - 60, GeneralTabControls)
+}
+
+; ===================== 创建快捷操作按钮配置UI =====================
+CreateQuickActionConfigUI(ConfigGUI, X, Y, W, ParentControls) {
+    global QuickActionButtons, QuickActionConfigControls, UI_Colors
+    
+    ; 清空之前的控件
+    for Index, Ctrl in QuickActionConfigControls {
+        try {
+            Ctrl.Destroy()
+        } catch {
+            ; 忽略已销毁的控件
+        }
+    }
+    QuickActionConfigControls := []
+    
+    ; 确保有5个按钮
+    while (QuickActionButtons.Length < 5) {
+        QuickActionButtons.Push({Type: "Explain", Hotkey: "e"})
+    }
+    while (QuickActionButtons.Length > 5) {
+        QuickActionButtons.Pop()
+    }
+    
+    ; 功能类型选项（用于单选按钮）- 包括所有快捷键设置
+    ActionTypes := [
+        {Type: "Explain", Name: GetText("quick_action_type_explain"), Hotkey: "e", Desc: GetText("hotkey_e_desc")},
+        {Type: "Refactor", Name: GetText("quick_action_type_refactor"), Hotkey: "r", Desc: GetText("hotkey_r_desc")},
+        {Type: "Optimize", Name: GetText("quick_action_type_optimize"), Hotkey: "o", Desc: GetText("hotkey_o_desc")},
+        {Type: "Config", Name: GetText("quick_action_type_config"), Hotkey: "q", Desc: GetText("hotkey_q_desc")},
+        {Type: "Copy", Name: GetText("quick_action_type_copy"), Hotkey: "c", Desc: GetText("hotkey_c_desc")},
+        {Type: "Paste", Name: GetText("quick_action_type_paste"), Hotkey: "v", Desc: GetText("hotkey_v_desc")},
+        {Type: "Clipboard", Name: GetText("quick_action_type_clipboard"), Hotkey: "x", Desc: GetText("hotkey_x_desc")},
+        {Type: "Voice", Name: GetText("quick_action_type_voice"), Hotkey: "z", Desc: GetText("hotkey_z_desc")},
+        {Type: "Split", Name: GetText("quick_action_type_split"), Hotkey: "s", Desc: GetText("hotkey_s_desc")},
+        {Type: "Batch", Name: GetText("quick_action_type_batch"), Hotkey: "b", Desc: GetText("hotkey_b_desc")}
+    ]
+    
+    ; 按钮配置列表（Cursor风格：简洁现代）
+    ButtonY := Y
+    Loop 5 {
+        Index := A_Index
+        Button := QuickActionButtons[Index]
+        
+        ; 左侧序号区域
+        BtnNum := ConfigGUI.Add("Text", "x" . X . " y" . (ButtonY + 12) . " w50 h28 c" . UI_Colors.TextDim . " Background" . UI_Colors.Background, FormatText("quick_action_button", Index))
+        BtnNum.SetFont("s10", "Segoe UI")
+        QuickActionConfigControls.Push(BtnNum)
+        
+        ; 功能类型单选按钮组
+        RadioX := X + 60
+        RadioY := ButtonY + 12
+        RadioSpacing := 100  ; 单选按钮之间的间距（缩小以适应更多选项）
+        
+        ; 说明文字（去掉快捷键输入框，直接显示说明）
+        DescX := RadioX
+        DescY := RadioY + 60  ; 调整位置，确保在单选按钮下方
+        DescW := W - (DescX - X) - 10
+        DescH := 40  ; 增加高度，确保多行文字能完整显示
+        
+        ; 获取当前选中类型的说明
+        CurrentDesc := ""
+        for TypeIndex, ActionType in ActionTypes {
+            if (Button.Type = ActionType.Type) {
+                CurrentDesc := ActionType.Desc
+                break
+            }
+        }
+        
+        DescText := ConfigGUI.Add("Text", "x" . DescX . " y" . DescY . " w" . DescW . " h" . DescH . " vQuickActionDesc" . Index . " c" . UI_Colors.TextDim . " Background" . UI_Colors.Background . " +0x200", CurrentDesc)  ; +0x200 = SS_LEFTNOWORDWRAP，确保文字正确显示，避免乱码
+        DescText.SetFont("s9", "Segoe UI")
+        QuickActionConfigControls.Push(DescText)
+        
+        ; 创建单选按钮组（在说明文字创建之后，以便绑定事件）
+        ; 使用相同的变量名确保互斥（AutoHotkey v2的Radio控件默认互斥）
+        RadioGroupName := "QuickActionType" . Index
+        SelectedTypeIndex := 1
+        
+        ; 先确定当前选中的类型索引
+        for TypeIndex, ActionType in ActionTypes {
+            if (Button.Type = ActionType.Type) {
+                SelectedTypeIndex := TypeIndex
+                break
+            }
+        }
+        
+        ; 单选按钮分两行显示（每行5个）
+        RadioControls := []  ; 存储所有单选按钮，用于设置选中状态
+        for TypeIndex, ActionType in ActionTypes {
+            ; 计算行和列
+            Row := Floor((TypeIndex - 1) / 5)
+            Col := Mod((TypeIndex - 1), 5)
+            RadioXPos := RadioX + Col * RadioSpacing
+            RadioYPos := RadioY + Row * 30  ; 行间距30px
+            
+            ; 保存当前ActionType的值到局部变量，确保闭包中能正确访问
+            CurrentActionTypeDesc := ActionType.Desc
+            CurrentTypeIndex := TypeIndex
+            
+            ; 由于单选按钮在循环中创建且位置不连续，无法使用自动互斥功能
+            ; 改为手动管理互斥：每个按钮使用唯一的变量名，在点击事件中手动取消其他按钮的选中状态
+            RadioCtrlName := RadioGroupName . "_" . TypeIndex
+            RadioCtrl := ConfigGUI.Add("Radio", "x" . RadioXPos . " y" . RadioYPos . " w95 h28 v" . RadioCtrlName . " c" . UI_Colors.Text . " Background" . UI_Colors.Background, ActionType.Name)
+            RadioCtrl.SetFont("s9", "Segoe UI")
+            
+            ; 添加事件处理：当单选按钮改变时，更新说明文字并手动管理互斥
+            ; 为每个单选按钮创建独立的事件处理器，确保点击时能正确更新说明和互斥状态
+            ; 使用局部变量确保闭包中能正确访问值
+            RadioCtrl.OnEvent("Click", CreateRadioClickHandler(Index, CurrentActionTypeDesc, CurrentTypeIndex, RadioControls))
+            
+            RadioControls.Push(RadioCtrl)
+            QuickActionConfigControls.Push(RadioCtrl)
+        }
+        
+        ; 设置选中状态（通过设置对应索引的单选按钮的Value为1）
+        if (SelectedTypeIndex >= 1 && SelectedTypeIndex <= RadioControls.Length) {
+            RadioControls[SelectedTypeIndex].Value := 1
+        }
+        
+        ; 说明文字已在创建DescText时设置，无需重复初始化
+        
+        ; 底部边框线（Cursor风格：分隔每个按钮项，使用更柔和的颜色）
+        if (Index < 5) {
+            BottomBorder := ConfigGUI.Add("Text", "x" . X . " y" . (ButtonY + 105) . " w" . W . " h1 Background" . UI_Colors.Border, "")
+            QuickActionConfigControls.Push(BottomBorder)
+        }
+        
+        ButtonY += 110  ; 增加高度以适应两行单选按钮和说明文字
+    }
+    
+    ; 将控件添加到父控件列表
+    for Index, Ctrl in QuickActionConfigControls {
+        ParentControls.Push(Ctrl)
+    }
+}
+
+; ===================== 快捷操作类型改变处理 =====================
+CreateQuickActionTypeChangeHandler(Index, Desc, TypeIndex) {
+    return (*) => UpdateQuickActionDesc(Index, Desc, TypeIndex)
+}
+
+; ===================== 创建单选按钮点击处理器 =====================
+CreateRadioClickHandler(Index, Desc, TypeIndex, RadioControls) {
+    ; 返回一个函数，该函数会手动管理互斥并更新说明文字
+    ActionFunc(*) {
+        ; 手动管理互斥：取消其他按钮的选中状态
+        for RadioIndex, RadioCtrl in RadioControls {
+            if (RadioIndex != TypeIndex) {
+                RadioCtrl.Value := 0
+            } else {
+                RadioCtrl.Value := 1
+            }
+        }
+        ; 更新说明文字
+        UpdateQuickActionDesc(Index, Desc, TypeIndex)
+    }
+    return ActionFunc
+}
+
+UpdateQuickActionDesc(Index, Desc, TypeIndex) {
+    global GuiID_ConfigGUI, QuickActionButtons
+    try {
+        ; GuiID_ConfigGUI 直接是 GUI 对象，不需要 GuiFromHwnd
+        if (GuiID_ConfigGUI) {
+            ; 更新说明文字
+            DescCtrl := GuiID_ConfigGUI["QuickActionDesc" . Index]
+            if (DescCtrl) {
+                DescCtrl.Text := Desc
+            }
+            
+            ; 更新对应的按钮类型（保存到QuickActionButtons中）
+            if (QuickActionButtons && QuickActionButtons.Length >= Index) {
+                ; 根据TypeIndex找到对应的ActionType（与CreateQuickActionConfigUI中的定义保持一致）
+                ActionTypes := [
+                    {Type: "Explain", Name: GetText("quick_action_type_explain"), Hotkey: "e", Desc: GetText("hotkey_e_desc")},
+                    {Type: "Refactor", Name: GetText("quick_action_type_refactor"), Hotkey: "r", Desc: GetText("hotkey_r_desc")},
+                    {Type: "Optimize", Name: GetText("quick_action_type_optimize"), Hotkey: "o", Desc: GetText("hotkey_o_desc")},
+                    {Type: "Config", Name: GetText("quick_action_type_config"), Hotkey: "q", Desc: GetText("hotkey_q_desc")},
+                    {Type: "Copy", Name: GetText("quick_action_type_copy"), Hotkey: "c", Desc: GetText("hotkey_c_desc")},
+                    {Type: "Paste", Name: GetText("quick_action_type_paste"), Hotkey: "v", Desc: GetText("hotkey_v_desc")},
+                    {Type: "Clipboard", Name: GetText("quick_action_type_clipboard"), Hotkey: "x", Desc: GetText("hotkey_x_desc")},
+                    {Type: "Voice", Name: GetText("quick_action_type_voice"), Hotkey: "z", Desc: GetText("hotkey_z_desc")},
+                    {Type: "Split", Name: GetText("quick_action_type_split"), Hotkey: "s", Desc: GetText("hotkey_s_desc")},
+                    {Type: "Batch", Name: GetText("quick_action_type_batch"), Hotkey: "b", Desc: GetText("hotkey_b_desc")}
+                ]
+                if (TypeIndex >= 1 && TypeIndex <= ActionTypes.Length) {
+                    SelectedType := ActionTypes[TypeIndex]
+                    QuickActionButtons[Index].Type := SelectedType.Type
+                    QuickActionButtons[Index].Hotkey := SelectedType.Hotkey
+                }
+            }
+        }
+    } catch as e {
+        ; 调试时输出错误信息
+        ; MsgBox("UpdateQuickActionDesc Error: " . e.Message)
+    }
+}
+
+; ===================== 快捷操作按钮移动处理 =====================
+CreateQuickActionMoveHandler(Index, Direction) {
+    return (*) => MoveQuickActionButton(Index, Direction)
+}
+
+MoveQuickActionButton(Index, Direction) {
+    global QuickActionButtons, GuiID_ConfigGUI
+    
+    if (Direction = "up" && Index > 1) {
+        ; 上移
+        Temp := QuickActionButtons[Index]
+        QuickActionButtons[Index] := QuickActionButtons[Index - 1]
+        QuickActionButtons[Index - 1] := Temp
+        RefreshQuickActionConfigUI()
+    } else if (Direction = "down" && Index < QuickActionButtons.Length) {
+        ; 下移
+        Temp := QuickActionButtons[Index]
+        QuickActionButtons[Index] := QuickActionButtons[Index + 1]
+        QuickActionButtons[Index + 1] := Temp
+        RefreshQuickActionConfigUI()
+    }
+}
+
+; ===================== 快捷操作按钮删除处理 =====================
+CreateQuickActionRemoveHandler(Index) {
+    return (*) => RemoveQuickActionButton(Index)
+}
+
+RemoveQuickActionButton(Index) {
+    global QuickActionButtons
+    
+    if (QuickActionButtons.Length <= 1) {
+        MsgBox(GetText("quick_action_min_reached"), GetText("tip"), "Icon!")
+        return
+    }
+    
+    QuickActionButtons.RemoveAt(Index)
+    RefreshQuickActionConfigUI()
+}
+
+
+; ===================== 刷新快捷操作配置UI =====================
+RefreshQuickActionConfigUI() {
+    global GuiID_ConfigGUI, GeneralTabControls, QuickActionButtons
+    
+    if (GuiID_ConfigGUI = 0) {
+        return
+    }
+    
+    try {
+        ConfigGUI := GuiFromHwnd(GuiID_ConfigGUI)
+        if (!ConfigGUI) {
+            return
+        }
+        
+        ; 获取通用标签页的位置和尺寸
+        ; 由于需要重新创建UI，我们需要找到通用标签页的位置
+        ; 这里我们通过查找GeneralTabPanel来获取位置
+        GeneralTabPanel := ConfigGUI["GeneralTabPanel"]
+        if (!GeneralTabPanel) {
+            return
+        }
+        
+        ; 获取面板位置和尺寸
+        GeneralTabPanel.GetPos(&TabX, &TabY, &TabW, &TabH)
+        
+        ; 重新创建快捷操作配置UI
+        ; 先销毁旧的控件
+        global QuickActionConfigControls
+        for Index, Ctrl in QuickActionConfigControls {
+            try {
+                Ctrl.Destroy()
+            } catch {
+                ; 忽略已销毁的控件
+            }
+        }
+        
+        ; 从GeneralTabControls中移除快捷操作相关的控件
+        NewGeneralTabControls := []
+        for Index, Ctrl in GeneralTabControls {
+            IsQuickActionCtrl := false
+            for J, QACtrl in QuickActionConfigControls {
+                if (Ctrl = QACtrl) {
+                    IsQuickActionCtrl := true
+                    break
+                }
+            }
+            if (!IsQuickActionCtrl) {
+                NewGeneralTabControls.Push(Ctrl)
+            }
+        }
+        GeneralTabControls := NewGeneralTabControls
+        
+        ; 重新创建快捷操作配置UI
+        ; 计算Y位置（在语言设置之后，大约在TabY + 200的位置）
+        ; 需要找到语言设置之后的位置，这里使用固定偏移
+        ; 由于UI结构已简化，高度计算：每个按钮75px，5个按钮共375px
+        CreateQuickActionConfigUI(ConfigGUI, TabX + 30, TabY + 200, TabW - 60, GeneralTabControls)
+    } catch {
+        ; 如果更新失败，忽略错误
     }
 }
 
@@ -1423,8 +2030,20 @@ CreateAppearanceTab(ConfigGUI, X, Y, W, H) {
     LabelFunc.SetFont("s11", "Segoe UI")
     AppearanceTabControls.Push(LabelFunc)
     
-    FuncPosDDL := ConfigGUI.Add("DropDownList", "x" . (X + 240) . " y" . YPos . " w150 Choose1 vFuncPosDDL AltSubmit", PosTexts)
-    FuncPosDDL.SetFont("s10")
+    ; 1. 功能面板位置下拉框（Cursor风格）
+    DDLX1 := X + 240
+    DDLY1 := YPos
+    DDLW1 := 150
+    DDLH1 := 30
+    ; 外边框
+    FuncPosDDLBorder := ConfigGUI.Add("Text", "x" . DDLX1 . " y" . DDLY1 . " w" . DDLW1 . " h" . DDLH1 . " Background" . UI_Colors.DDLBorder, "")
+    AppearanceTabControls.Push(FuncPosDDLBorder)
+    ; 内背景
+    FuncPosDDLBg := ConfigGUI.Add("Text", "x" . (DDLX1 + 1) . " y" . (DDLY1 + 1) . " w" . (DDLW1 - 2) . " h" . (DDLH1 - 2) . " Background" . UI_Colors.DDLBg, "")
+    AppearanceTabControls.Push(FuncPosDDLBg)
+    ; 下拉框
+    FuncPosDDL := ConfigGUI.Add("DropDownList", "x" . (DDLX1 + 1) . " y" . (DDLY1 + 1) . " w" . (DDLW1 - 2) . " h" . (DDLH1 - 2) . " Choose1 vFuncPosDDL AltSubmit Background" . UI_Colors.DDLBg . " c" . UI_Colors.DDLText, PosTexts)
+    FuncPosDDL.SetFont("s10", "Segoe UI")
     ; 设置当前选中项
     for i, key in PosKeys {
         if (key = FunctionPanelPos) {
@@ -1434,14 +2053,23 @@ CreateAppearanceTab(ConfigGUI, X, Y, W, H) {
     }
     AppearanceTabControls.Push(FuncPosDDL)
     
-    ; 2. 设置面板
+    ; 2. 设置面板位置下拉框（Cursor风格）
     YPos += 40
     LabelConfig := ConfigGUI.Add("Text", "x" . (X + 30) . " y" . YPos . " w200 h25 c" . UI_Colors.Text, GetText("panel_pos_config"))
     LabelConfig.SetFont("s11", "Segoe UI")
     AppearanceTabControls.Push(LabelConfig)
     
-    ConfigPosDDL := ConfigGUI.Add("DropDownList", "x" . (X + 240) . " y" . YPos . " w150 Choose1 vConfigPosDDL AltSubmit", PosTexts)
-    ConfigPosDDL.SetFont("s10")
+    DDLX2 := X + 240
+    DDLY2 := YPos
+    ; 外边框
+    ConfigPosDDLBorder := ConfigGUI.Add("Text", "x" . DDLX2 . " y" . DDLY2 . " w" . DDLW1 . " h" . DDLH1 . " Background" . UI_Colors.DDLBorder, "")
+    AppearanceTabControls.Push(ConfigPosDDLBorder)
+    ; 内背景
+    ConfigPosDDLBg := ConfigGUI.Add("Text", "x" . (DDLX2 + 1) . " y" . (DDLY2 + 1) . " w" . (DDLW1 - 2) . " h" . (DDLH1 - 2) . " Background" . UI_Colors.DDLBg, "")
+    AppearanceTabControls.Push(ConfigPosDDLBg)
+    ; 下拉框
+    ConfigPosDDL := ConfigGUI.Add("DropDownList", "x" . (DDLX2 + 1) . " y" . (DDLY2 + 1) . " w" . (DDLW1 - 2) . " h" . (DDLH1 - 2) . " Choose1 vConfigPosDDL AltSubmit Background" . UI_Colors.DDLBg . " c" . UI_Colors.DDLText, PosTexts)
+    ConfigPosDDL.SetFont("s10", "Segoe UI")
     for i, key in PosKeys {
         if (key = ConfigPanelPos) {
             ConfigPosDDL.Choose(i)
@@ -1450,14 +2078,23 @@ CreateAppearanceTab(ConfigGUI, X, Y, W, H) {
     }
     AppearanceTabControls.Push(ConfigPosDDL)
     
-    ; 3. 剪贴板面板
+    ; 3. 剪贴板面板位置下拉框（Cursor风格）
     YPos += 40
     LabelClip := ConfigGUI.Add("Text", "x" . (X + 30) . " y" . YPos . " w200 h25 c" . UI_Colors.Text, GetText("panel_pos_clip"))
     LabelClip.SetFont("s11", "Segoe UI")
     AppearanceTabControls.Push(LabelClip)
     
-    ClipPosDDL := ConfigGUI.Add("DropDownList", "x" . (X + 240) . " y" . YPos . " w150 Choose1 vClipPosDDL AltSubmit", PosTexts)
-    ClipPosDDL.SetFont("s10")
+    DDLX3 := X + 240
+    DDLY3 := YPos
+    ; 外边框
+    ClipPosDDLBorder := ConfigGUI.Add("Text", "x" . DDLX3 . " y" . DDLY3 . " w" . DDLW1 . " h" . DDLH1 . " Background" . UI_Colors.DDLBorder, "")
+    AppearanceTabControls.Push(ClipPosDDLBorder)
+    ; 内背景
+    ClipPosDDLBg := ConfigGUI.Add("Text", "x" . (DDLX3 + 1) . " y" . (DDLY3 + 1) . " w" . (DDLW1 - 2) . " h" . (DDLH1 - 2) . " Background" . UI_Colors.DDLBg, "")
+    AppearanceTabControls.Push(ClipPosDDLBg)
+    ; 下拉框
+    ClipPosDDL := ConfigGUI.Add("DropDownList", "x" . (DDLX3 + 1) . " y" . (DDLY3 + 1) . " w" . (DDLW1 - 2) . " h" . (DDLH1 - 2) . " Choose1 vClipPosDDL AltSubmit Background" . UI_Colors.DDLBg . " c" . UI_Colors.DDLText, PosTexts)
+    ClipPosDDL.SetFont("s10", "Segoe UI")
     for i, key in PosKeys {
         if (key = ClipboardPanelPos) {
             ClipPosDDL.Choose(i)
@@ -2224,6 +2861,10 @@ global UI_Colors := {
     Text: "cccccc",
     TextDim: "888888",
     InputBg: "3c3c3c",
+    DDLBg: "2d2d30",  ; Cursor风格下拉框背景（稍浅的深灰色）
+    DDLBorder: "3e3e42",  ; Cursor风格下拉框边框（更柔和的浅灰色，更接近Cursor）
+    DDLText: "cccccc",  ; Cursor风格下拉框文本（中等灰色）
+    DDLHover: "37373d",  ; Cursor风格下拉框悬停背景
     BtnBg: "3c3c3c",
     BtnHover: "4c4c4c",
     BtnPrimary: "0e639c",
@@ -2241,6 +2882,37 @@ WM_LBUTTONDOWN(*) {
 HoverBtn(Ctrl, NormalColor, HoverColor) {
     Ctrl.NormalColor := NormalColor
     Ctrl.HoverColor := HoverColor
+}
+
+; ===================== 创建Cursor风格的下拉框 =====================
+; 创建一个带边框和Cursor风格样式的下拉框
+CreateCursorDDL(Parent, X, Y, W, H, Options, VarName := "", ControlList := "") {
+    global UI_Colors
+    
+    ; 外边框（浅灰色，模拟Cursor风格）
+    DDLBorderOuter := Parent.Add("Text", "x" . X . " y" . Y . " w" . W . " h" . H . " Background" . UI_Colors.DDLBorder, "")
+    if (ControlList != "") {
+        ControlList.Push(DDLBorderOuter)
+    }
+    
+    ; 内背景（深灰色，Cursor风格）
+    DDLBgRect := Parent.Add("Text", "x" . (X + 1) . " y" . (Y + 1) . " w" . (W - 2) . " h" . (H - 2) . " Background" . UI_Colors.DDLBg, "")
+    if (ControlList != "") {
+        ControlList.Push(DDLBgRect)
+    }
+    
+    ; 创建下拉框（内嵌2px以显示边框）
+    DDL := Parent.Add("DDL", "x" . (X + 2) . " y" . (Y + 2) . " w" . (W - 4) . " h" . (H - 4) . " v" . VarName . " Background" . UI_Colors.DDLBg . " c" . UI_Colors.DDLText . " " . Options, [])
+    DDL.SetFont("s10", "Segoe UI")
+    
+    ; 添加选项
+    if (Type(Options) = "Array") {
+        for Index, Option in Options {
+            DDL.Add(Option)
+        }
+    }
+    
+    return DDL
 }
 
 ; 全局变量记录当前悬停控件
@@ -2444,21 +3116,38 @@ ShowConfigGUI() {
     global SidebarWidth := 150
     
     ; ========== 自定义标题栏 (35px) ==========
-    ; 调整标题栏宽度，避免覆盖关闭按钮
-    TitleBar := ConfigGUI.Add("Text", "x0 y0 w" . (ConfigWidth - 40) . " h35 Background" . UI_Colors.TitleBar . " vTitleBar", "")
+    TitleBar := ConfigGUI.Add("Text", "x0 y0 w" . ConfigWidth . " h35 Background" . UI_Colors.TitleBar . " vTitleBar", "")
     TitleBar.OnEvent("Click", (*) => PostMessage(0xA1, 2)) ; 拖动窗口
     
-    ; 窗口标题
-    WinTitle := ConfigGUI.Add("Text", "x15 y8 w200 h20 Background" . UI_Colors.TitleBar . " c" . UI_Colors.Text, GetText("config_title"))
+    ; 关闭按钮 - 四个角都设置（先创建关闭按钮，确保在最上层）
+    ; 左上角关闭按钮（调整位置，不遮挡标题）
+    CloseBtnTopLeft := ConfigGUI.Add("Text", "x0 y0 w35 h35 Center 0x200 Background" . UI_Colors.TitleBar . " c" . UI_Colors.Text . " vCloseBtnTopLeft", "✕")
+    CloseBtnTopLeft.SetFont("s10", "Segoe UI")
+    CloseBtnTopLeft.OnEvent("Click", (*) => CloseConfigGUI())
+    HoverBtn(CloseBtnTopLeft, UI_Colors.TitleBar, "e81123") ; 红色关闭 hover
+    
+    ; 窗口标题（调整位置，避免被左上角关闭按钮遮挡）
+    WinTitle := ConfigGUI.Add("Text", "x40 y8 w" . (ConfigWidth - 80) . " h20 Background" . UI_Colors.TitleBar . " c" . UI_Colors.Text . " vWinTitle", GetText("config_title"))
     WinTitle.SetFont("s10 Bold", "Segoe UI")
     WinTitle.OnEvent("Click", (*) => PostMessage(0xA1, 2))
     
-    ; 关闭按钮 (右上角)
-    ; 确保关闭按钮在最上层
-    CloseBtn := ConfigGUI.Add("Text", "x" . (ConfigWidth - 40) . " y0 w40 h35 Center 0x200 Background" . UI_Colors.TitleBar . " c" . UI_Colors.Text . " vCloseBtn", "✕")
-    CloseBtn.SetFont("s10", "Segoe UI")
-    CloseBtn.OnEvent("Click", (*) => CloseConfigGUI())
-    HoverBtn(CloseBtn, UI_Colors.TitleBar, "e81123") ; 红色关闭 hover
+    ; 右上角关闭按钮
+    CloseBtnTopRight := ConfigGUI.Add("Text", "x" . (ConfigWidth - 40) . " y0 w40 h35 Center 0x200 Background" . UI_Colors.TitleBar . " c" . UI_Colors.Text . " vCloseBtnTopRight", "✕")
+    CloseBtnTopRight.SetFont("s10", "Segoe UI")
+    CloseBtnTopRight.OnEvent("Click", (*) => CloseConfigGUI())
+    HoverBtn(CloseBtnTopRight, UI_Colors.TitleBar, "e81123") ; 红色关闭 hover
+    
+    ; 左下角关闭按钮
+    CloseBtnBottomLeft := ConfigGUI.Add("Text", "x0 y" . (ConfigHeight - 40) . " w40 h40 Center 0x200 Background" . UI_Colors.Background . " c" . UI_Colors.Text . " vCloseBtnBottomLeft", "✕")
+    CloseBtnBottomLeft.SetFont("s10", "Segoe UI")
+    CloseBtnBottomLeft.OnEvent("Click", (*) => CloseConfigGUI())
+    HoverBtn(CloseBtnBottomLeft, UI_Colors.Background, "e81123") ; 红色关闭 hover
+    
+    ; 右下角关闭按钮
+    CloseBtnBottomRight := ConfigGUI.Add("Text", "x" . (ConfigWidth - 40) . " y" . (ConfigHeight - 40) . " w40 h40 Center 0x200 Background" . UI_Colors.Background . " c" . UI_Colors.Text . " vCloseBtnBottomRight", "✕")
+    CloseBtnBottomRight.SetFont("s10", "Segoe UI")
+    CloseBtnBottomRight.OnEvent("Click", (*) => CloseConfigGUI())
+    HoverBtn(CloseBtnBottomRight, UI_Colors.Background, "e81123") ; 红色关闭 hover
     
     ; ========== 左侧侧边栏 (150px，更窄以给右侧更多空间) ==========
     ; SidebarWidth 已在上面声明为全局变量
@@ -2466,10 +3155,14 @@ ShowConfigGUI() {
     
     ; 侧边栏搜索框
     SearchBg := ConfigGUI.Add("Text", "x10 y45 w" . (SidebarWidth - 20) . " h30 Background" . UI_Colors.InputBg, "")
-    global SearchEdit := ConfigGUI.Add("Edit", "x15 y50 w" . (SidebarWidth - 30) . " h20 vSearchEdit Background" . UI_Colors.InputBg . " c" . UI_Colors.Text . " -E0x200", "") 
+    ; 放大镜图标
+    SearchIcon := ConfigGUI.Add("Text", "x18 y50 w16 h16 Center 0x200 c" . UI_Colors.TextDim . " Background" . UI_Colors.InputBg, "🔍")
+    SearchIcon.SetFont("s10", "Segoe UI")
+    ; 搜索输入框（调整位置，为放大镜图标留出空间）
+    global SearchEdit := ConfigGUI.Add("Edit", "x36 y50 w" . (SidebarWidth - 46) . " h20 vSearchEdit Background" . UI_Colors.InputBg . " c" . UI_Colors.Text . " -E0x200", "") 
     SearchEdit.SetFont("s9", "Segoe UI")
     
-    global SearchHint := ConfigGUI.Add("Text", "x15 y50 w" . (SidebarWidth - 30) . " h20 c" . UI_Colors.TextDim . " Background" . UI_Colors.InputBg, "Search settings...")
+    global SearchHint := ConfigGUI.Add("Text", "x36 y50 w" . (SidebarWidth - 46) . " h20 c" . UI_Colors.TextDim . " Background" . UI_Colors.InputBg, "Search settings...")
     SearchHint.SetFont("s9 Italic", "Segoe UI")
     
     ; 标签按钮起始位置
@@ -2522,11 +3215,12 @@ ShowConfigGUI() {
     CreateAdvancedTab(ConfigGUI, ContentX, ContentY, ContentWidth, ContentHeight)
     
     ; ========== 底部按钮区域 (右侧) ==========
-    ButtonAreaY := ConfigHeight - 50
-    ButtonAreaBg := ConfigGUI.Add("Text", "x" . ContentX . " y" . ButtonAreaY . " w" . ContentWidth . " h50 Background" . UI_Colors.Background . " vButtonAreaBg", "") ; 遮挡背景
+    ButtonAreaY := ConfigHeight - 70  ; 增加高度以容纳按钮说明文字
+    ; 移除底部按钮区域的背景色块，只保留按钮本身
+    ; ButtonAreaBg := ConfigGUI.Add("Text", "x" . ContentX . " y" . ButtonAreaY . " w" . ContentWidth . " h50 Background" . UI_Colors.Background . " vButtonAreaBg", "") ; 遮挡背景
     
-    ; 底部按钮辅助函数 
-    CreateBottomBtn(Label, XPos, Action, IsPrimary := false, BtnName := "") {
+    ; 底部按钮辅助函数（带说明文字）
+    CreateBottomBtn(Label, XPos, Action, IsPrimary := false, BtnName := "", Desc := "") {
         BgColor := IsPrimary ? UI_Colors.BtnPrimary : UI_Colors.BtnBg
         HoverColor := IsPrimary ? UI_Colors.BtnPrimaryHover : UI_Colors.BtnHover
         
@@ -2534,17 +3228,26 @@ ShowConfigGUI() {
         Btn.SetFont("s9", "Segoe UI")
         Btn.OnEvent("Click", Action)
         HoverBtn(Btn, BgColor, HoverColor)
+        
+        ; 添加按钮功能说明
+        if (Desc != "") {
+            DescText := ConfigGUI.Add("Text", "x" . XPos . " y" . (ButtonAreaY + 42) . " w80 h15 Center c" . UI_Colors.TextDim, Desc)
+            DescText.SetFont("s7", "Segoe UI")
+        }
+        
         return Btn
     }
 
-    ; 计算按钮位置 (右对齐)
-    BtnStartX := ConfigWidth - 460
+    ; 计算按钮位置 (右对齐，确保不重叠)
+    BtnWidth := 80
+    BtnSpacing := 10
+    BtnStartX := ConfigWidth - (BtnWidth * 5 + BtnSpacing * 4) - 20  ; 5个按钮，4个间距，右边距20
     
-    CreateBottomBtn(GetText("export_config"), BtnStartX, ExportConfig, false, "ExportBtn")
-    CreateBottomBtn(GetText("import_config"), BtnStartX + 90, ImportConfig, false, "ImportBtn")
-    CreateBottomBtn(GetText("reset_default"), BtnStartX + 180, ResetToDefaults, false, "ResetBtn")
-    CreateBottomBtn(GetText("save_config"), BtnStartX + 270, SaveConfigAndClose, true, "SaveBtn") ; Primary
-    CreateBottomBtn(GetText("cancel"), BtnStartX + 360, (*) => CloseConfigGUI(), false, "CancelBtn")
+    CreateBottomBtn(GetText("export_config"), BtnStartX, ExportConfig, false, "ExportBtn", GetText("export_config_desc"))
+    CreateBottomBtn(GetText("import_config"), BtnStartX + BtnWidth + BtnSpacing, ImportConfig, false, "ImportBtn", GetText("import_config_desc"))
+    CreateBottomBtn(GetText("reset_default"), BtnStartX + (BtnWidth + BtnSpacing) * 2, ResetToDefaults, false, "ResetBtn", GetText("reset_default_desc"))
+    CreateBottomBtn(GetText("save_config"), BtnStartX + (BtnWidth + BtnSpacing) * 3, SaveConfigAndClose, true, "SaveBtn", GetText("save_config_desc")) ; Primary
+    CreateBottomBtn(GetText("cancel"), BtnStartX + (BtnWidth + BtnSpacing) * 4, (*) => CloseConfigGUI(), false, "CancelBtn", GetText("cancel_desc"))
     
     ; 默认显示通用标签
     SwitchTab("general")
@@ -2734,11 +3437,26 @@ ConfigGUI_Size(GuiObj, MinMax, Width, Height) {
         }
     }
     
-    ; 更新关闭按钮位置
+    ; 更新关闭按钮位置（四个角）
     try {
-        CloseBtn := GuiObj["CloseBtn"]
-        if (CloseBtn) {
-            CloseBtn.Move(Width - 40)
+        CloseBtnTopLeft := GuiObj["CloseBtnTopLeft"]
+        if (CloseBtnTopLeft) {
+            ; 左上角位置不变
+        }
+        
+        CloseBtnTopRight := GuiObj["CloseBtnTopRight"]
+        if (CloseBtnTopRight) {
+            CloseBtnTopRight.Move(Width - 40)
+        }
+        
+        CloseBtnBottomLeft := GuiObj["CloseBtnBottomLeft"]
+        if (CloseBtnBottomLeft) {
+            CloseBtnBottomLeft.Move(, Height - 40)
+        }
+        
+        CloseBtnBottomRight := GuiObj["CloseBtnBottomRight"]
+        if (CloseBtnBottomRight) {
+            CloseBtnBottomRight.Move(Width - 40, Height - 40)
         }
     }
     
@@ -2757,13 +3475,14 @@ ConfigGUI_Size(GuiObj, MinMax, Width, Height) {
     ContentHeight := Height - 35 - 50
     
     ; 更新底部按钮区域位置
-    ButtonAreaY := Height - 50
-    try {
-        ButtonAreaBg := GuiObj["ButtonAreaBg"]
-        if (ButtonAreaBg) {
-            ButtonAreaBg.Move(ContentX, ButtonAreaY, ContentWidth)
-        }
-    }
+    ButtonAreaY := Height - 70  ; 增加高度以容纳按钮说明文字
+    ; 已移除ButtonAreaBg，不再需要更新
+    ; try {
+    ;     ButtonAreaBg := GuiObj["ButtonAreaBg"]
+    ;     if (ButtonAreaBg) {
+    ;         ButtonAreaBg.Move(ContentX, ButtonAreaY, ContentWidth)
+    ;     }
+    ; }
     
     ; 更新各个标签页的内容区域大小
     ; 通用标签页
@@ -2814,10 +3533,13 @@ ConfigGUI_Size(GuiObj, MinMax, Width, Height) {
         }
     }
     
-    ; 更新底部按钮位置（右对齐）
+    ; 更新底部按钮位置（右对齐，确保不重叠）
     try {
         ; 计算按钮起始位置（右对齐）
-        BtnStartX := Width - 460
+        BtnWidth := 80
+        BtnSpacing := 10
+        BtnStartX := Width - (BtnWidth * 5 + BtnSpacing * 4) - 20  ; 5个按钮，4个间距，右边距20
+        
         ; 更新所有底部按钮的位置
         ExportBtn := GuiObj["ExportBtn"]
         if (ExportBtn) {
@@ -2825,19 +3547,19 @@ ConfigGUI_Size(GuiObj, MinMax, Width, Height) {
         }
         ImportBtn := GuiObj["ImportBtn"]
         if (ImportBtn) {
-            ImportBtn.Move(BtnStartX + 90, ButtonAreaY + 10)
+            ImportBtn.Move(BtnStartX + BtnWidth + BtnSpacing, ButtonAreaY + 10)
         }
         ResetBtn := GuiObj["ResetBtn"]
         if (ResetBtn) {
-            ResetBtn.Move(BtnStartX + 180, ButtonAreaY + 10)
+            ResetBtn.Move(BtnStartX + (BtnWidth + BtnSpacing) * 2, ButtonAreaY + 10)
         }
         SaveBtn := GuiObj["SaveBtn"]
         if (SaveBtn) {
-            SaveBtn.Move(BtnStartX + 270, ButtonAreaY + 10)
+            SaveBtn.Move(BtnStartX + (BtnWidth + BtnSpacing) * 3, ButtonAreaY + 10)
         }
         CancelBtn := GuiObj["CancelBtn"]
         if (CancelBtn) {
-            CancelBtn.Move(BtnStartX + 360, ButtonAreaY + 10)
+            CancelBtn.Move(BtnStartX + (BtnWidth + BtnSpacing) * 4, ButtonAreaY + 10)
         }
     }
 }
@@ -3005,8 +3727,9 @@ FilterSettings(SearchText) {
 SaveConfig(*) {
     global AISleepTimeEdit, PanelScreenRadio
     global CursorPathEdit, PromptExplainEdit, PromptRefactorEdit, PromptOptimizeEdit
-    global LangChinese, ConfigFile, GuiID_CursorPanel
+    global LangChinese, ConfigFile, GuiID_CursorPanel, GuiID_ConfigGUI
     global ConfigPanelScreenRadio, MsgBoxScreenRadio, VoiceInputScreenRadio, CursorPanelScreenRadio
+    global PanelVisible
     
     ; 验证输入
     if (!AISleepTimeEdit || AISleepTimeEdit.Value = "" || !IsNumber(AISleepTimeEdit.Value)) {
@@ -3093,6 +3816,78 @@ SaveConfig(*) {
         NewCursorPanelScreenIndex := 1
     }
     
+    ; 读取快捷操作按钮配置（从单选按钮读取类型，快捷键根据类型自动确定）
+    global QuickActionButtons
+    try {
+        ConfigGUI := GuiFromHwnd(GuiID_ConfigGUI)
+        if (ConfigGUI) {
+            QuickActionButtons := []
+            ; 定义所有功能类型（与CreateQuickActionConfigUI中的ActionTypes保持一致）
+            ActionTypes := [
+                {Type: "Explain", Hotkey: "e"},
+                {Type: "Refactor", Hotkey: "r"},
+                {Type: "Optimize", Hotkey: "o"},
+                {Type: "Config", Hotkey: "q"},
+                {Type: "Copy", Hotkey: "c"},
+                {Type: "Paste", Hotkey: "v"},
+                {Type: "Clipboard", Hotkey: "x"},
+                {Type: "Voice", Hotkey: "z"},
+                {Type: "Split", Hotkey: "s"},
+                {Type: "Batch", Hotkey: "b"}
+            ]
+            
+            Loop 5 {
+                Index := A_Index
+                ButtonType := ""
+                ButtonHotkey := ""
+                
+                ; 读取单选按钮的值（现在每个按钮都有唯一的变量名）
+                ; 遍历所有可能的单选按钮，找到值为1的那个
+                RadioGroupName := "QuickActionType" . Index
+                for TypeIndex, ActionType in ActionTypes {
+                    RadioCtrlName := RadioGroupName . "_" . TypeIndex
+                    RadioCtrl := ConfigGUI[RadioCtrlName]
+                    if (RadioCtrl && RadioCtrl.Value = 1) {
+                        ButtonType := ActionType.Type
+                        ButtonHotkey := ActionType.Hotkey
+                        break
+                    }
+                }
+                
+                ; 如果没有选择类型，使用默认值
+                if (ButtonType = "") {
+                    ButtonType := "Explain"
+                    ButtonHotkey := "e"
+                }
+                
+                QuickActionButtons.Push({Type: ButtonType, Hotkey: ButtonHotkey})
+            }
+            
+            ; 确保有5个按钮
+            while (QuickActionButtons.Length < 5) {
+                QuickActionButtons.Push({Type: "Explain", Hotkey: "e"})
+            }
+        }
+    } catch {
+        ; 如果读取失败，使用默认配置
+        if (!QuickActionButtons || QuickActionButtons.Length = 0) {
+            QuickActionButtons := [
+                {Type: "Explain", Hotkey: "e"},
+                {Type: "Refactor", Hotkey: "r"},
+                {Type: "Optimize", Hotkey: "o"},
+                {Type: "Config", Hotkey: "q"},
+                {Type: "Copy", Hotkey: "c"}
+            ]
+        }
+        ; 确保有5个按钮
+        while (QuickActionButtons.Length < 5) {
+            QuickActionButtons.Push({Type: "Explain", Hotkey: "e"})
+        }
+        while (QuickActionButtons.Length > 5) {
+            QuickActionButtons.Pop()
+        }
+    }
+    
     ; 更新全局变量
     global CursorPath := CursorPathEdit ? CursorPathEdit.Value : ""
     global AISleepTime := AISleepTimeEdit.Value
@@ -3122,15 +3917,29 @@ SaveConfig(*) {
     IniWrite(VoiceInputScreenIndex, ConfigFile, "Advanced", "VoiceInputScreenIndex")
     IniWrite(CursorPanelScreenIndex, ConfigFile, "Advanced", "CursorPanelScreenIndex")
     
+    ; 保存快捷操作按钮配置
+    ButtonCount := QuickActionButtons.Length
+    IniWrite(ButtonCount, ConfigFile, "QuickActions", "ButtonCount")
+    for Index, Button in QuickActionButtons {
+        IniWrite(Button.Type, ConfigFile, "QuickActions", "Button" . Index . "Type")
+        IniWrite(Button.Hotkey, ConfigFile, "QuickActions", "Button" . Index . "Hotkey")
+    }
+    
     ; 更新托盘菜单（语言可能已改变）
     UpdateTrayMenu()
     
-    ; 更新面板显示的快捷键
+    ; 更新面板显示的快捷键和按钮配置
     if (GuiID_CursorPanel != 0) {
         try {
             GuiID_CursorPanel.Destroy()
         }
         global GuiID_CursorPanel := 0
+    }
+    
+    ; 如果面板正在显示，重新创建面板以应用新配置
+    if (PanelVisible) {
+        HideCursorPanel()
+        ShowCursorPanel()
     }
     
     return true
@@ -3633,10 +4442,33 @@ PasteSelectedToCursor(*) {
 HandleDynamicHotkey(PressedKey, ActionType) {
     global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ
     global CapsLock2, PanelVisible, VoiceInputActive, CapsLock, VoiceInputBlocked
+    global QuickActionButtons
     
     ; 将按键转换为小写进行比较（ESC特殊处理）
     KeyLower := StrLower(PressedKey)
     ConfigKey := ""
+    
+    ; 首先检查是否匹配快捷操作按钮配置的快捷键
+    if (PanelVisible && QuickActionButtons.Length > 0) {
+        for Index, Button in QuickActionButtons {
+            if (StrLower(Button.Hotkey) = KeyLower) {
+                ; 匹配到快捷操作按钮
+                CapsLock2 := false
+                switch Button.Type {
+                    case "Explain":
+                        ExecutePrompt("Explain")
+                    case "Refactor":
+                        ExecutePrompt("Refactor")
+                    case "Optimize":
+                        ExecutePrompt("Optimize")
+                    case "Config":
+                        HideCursorPanel()
+                        ShowConfigGUI()
+                }
+                return true  ; 已处理
+            }
+        }
+    }
     
     ; 根据操作类型获取配置的快捷键
     switch ActionType {
