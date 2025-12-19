@@ -43,6 +43,7 @@ global HotkeyR := "r"  ; 执行重构
 global HotkeyO := "o"  ; 执行优化
 global HotkeyQ := "q"  ; 打开配置面板
 global HotkeyZ := "z"  ; 语音输入
+global HotkeyF := "f"  ; 语音搜索
 ; 配置变量
 global CursorPath := ""
 global AISleepTime := 15000
@@ -70,10 +71,25 @@ global VoiceInputActive := false  ; 语音输入是否激活
 global GuiID_VoiceInput := 0  ; 语音输入动画GUI ID
 global VoiceInputContent := ""  ; 存储语音输入的内容
 global VoiceInputMethod := ""  ; 当前使用的输入法类型：baidu, xunfei, auto
-global VoiceInputBlocked := false  ; 语音输入是否被屏蔽
 global VoiceInputPaused := false  ; 语音输入是否被暂停（按住CapsLock时）
 global VoiceTitleText := 0  ; 语音输入动画标题文本控件
 global VoiceHintText := 0  ; 语音输入动画提示文本控件
+global VoiceAnimationText := 0  ; 语音输入/搜索动画文本控件
+global VoiceSearchInputEdit := 0  ; 语音搜索输入框控件
+global VoiceSearchEngineButtons := []  ; 搜索引擎按钮数组
+; 语音搜索功能
+global VoiceSearchActive := false  ; 语音搜索是否激活
+global VoiceSearchContent := ""  ; 存储语音搜索的内容
+global SearchEngine := "deepseek"  ; 默认搜索引擎：deepseek, yuanbao, doubao, zhipu, mita, wenxin, qianwen, kimi
+global VoiceSearchSelecting := false  ; 是否正在选择搜索引擎
+global VoiceSearchPanelVisible := false  ; 语音搜索面板是否显示
+global VoiceSearchSelectedEngines := ["deepseek"]  ; 当前在语音搜索界面中选择的搜索引擎（支持多选）
+global AutoLoadSelectedText := false  ; 是否自动加载选中文本到输入框
+global VoiceSearchAutoLoadSwitch := 0  ; 自动加载开关控件（语音搜索）
+global VoiceInputAutoLoadSwitch := 0  ; 自动加载开关控件（语音输入）
+global AutoUpdateVoiceInput := true  ; 是否自动更新语音输入内容到输入框
+global VoiceSearchAutoUpdateSwitch := 0  ; 自动更新开关控件（语音搜索）
+global VoiceInputActionSelectionVisible := false  ; 语音输入操作选择界面是否显示
 ; 多语言支持
 global Language := "zh"  ; 语言设置：zh=中文, en=英文
 ; 快捷操作按钮配置（最多5个）
@@ -196,6 +212,8 @@ GetText(Key) {
             "hotkey_q_desc", "按此键可打开配置面板，进行各种设置。",
             "hotkey_z", "语音输入 (Z):",
             "hotkey_z_desc", "按此键可启动或停止语音输入功能，支持百度输入法和讯飞输入法。",
+            "hotkey_f", "语音搜索 (F):",
+            "hotkey_f_desc", "按此键可启动语音搜索功能，输入语音后自动打开浏览器搜索。",
             "hotkey_s", "分割代码 (S):",
             "hotkey_s_desc", "在 Cursor 中选中代码后，长按 CapsLock 调出面板，按此键可在代码中插入分割标记，用于标记多个代码片段以便批量处理。",
             "hotkey_b", "批量操作 (B):",
@@ -246,6 +264,21 @@ GetText(Key) {
             "voice_input_detected_baidu", "检测到百度输入法",
             "voice_input_detected_xunfei", "检测到讯飞输入法",
             "voice_input_auto_detect", "自动检测输入法",
+            "voice_search_active", "🎤 语音搜索中",
+            "voice_search_hint", "正在录入，请说话...",
+            "voice_search_sent", "正在打开搜索...",
+            "voice_search_failed", "语音搜索失败",
+            "voice_search_no_content", "未检测到语音搜索内容",
+            "search_engine_setting", "搜索引擎设置",
+            "search_engine_label", "默认搜索引擎:",
+            "search_engine_deepseek", "DeepSeek",
+            "search_engine_yuanbao", "元宝",
+            "search_engine_doubao", "豆包",
+            "search_engine_zhipu", "智谱",
+            "search_engine_mita", "秘塔",
+            "search_engine_wenxin", "文心一言",
+            "search_engine_qianwen", "千问",
+            "search_engine_kimi", "Kimi",
             "quick_action_config", "快捷操作按钮配置",
             "quick_action_config_desc", "配置快捷操作面板中的按钮顺序和功能按键（最多5个）",
             "quick_action_button", "按钮 {0}",
@@ -373,6 +406,8 @@ GetText(Key) {
             "hotkey_q_desc", "Press this key to open the configuration panel for various settings.",
             "hotkey_z", "Voice Input (Z):",
             "hotkey_z_desc", "Press this key to start or stop voice input, supporting Baidu Input and Xunfei Input.",
+            "hotkey_f", "Voice Search (F):",
+            "hotkey_f_desc", "Press this key to start voice search, automatically open browser search after voice input.",
             "hotkey_s", "Split Code (S):",
             "hotkey_s_desc", "When the panel is displayed, press this key to insert split markers in the code for batch processing.",
             "hotkey_b", "Batch Operation (B):",
@@ -425,6 +460,21 @@ GetText(Key) {
             "voice_input_detected_baidu", "Baidu IME detected",
             "voice_input_detected_xunfei", "Xunfei IME detected",
             "voice_input_auto_detect", "Auto detect IME",
+            "voice_search_active", "🎤 Voice Search Active",
+            "voice_search_hint", "Recording, please speak...",
+            "voice_search_sent", "Opening search...",
+            "voice_search_failed", "Voice search failed",
+            "voice_search_no_content", "No voice search content detected",
+            "search_engine_setting", "Search Engine Settings",
+            "search_engine_label", "Default Search Engine:",
+            "search_engine_deepseek", "DeepSeek",
+            "search_engine_yuanbao", "Yuanbao",
+            "search_engine_doubao", "Doubao",
+            "search_engine_zhipu", "Zhipu",
+            "search_engine_mita", "Mita",
+            "search_engine_wenxin", "Wenxin Yiyan",
+            "search_engine_qianwen", "Qianwen",
+            "search_engine_kimi", "Kimi",
             "quick_action_config", "Quick Action Button Configuration",
             "quick_action_config_desc", "Configure button order and hotkeys in the quick action panel (max 5)",
             "quick_action_button", "Button {0}",
@@ -529,6 +579,10 @@ InitConfig() {
         IniWrite(DefaultHotkeyO, ConfigFile, "Hotkeys", "O")
         IniWrite(DefaultHotkeyQ, ConfigFile, "Hotkeys", "Q")
         IniWrite(DefaultHotkeyZ, ConfigFile, "Hotkeys", "Z")
+        IniWrite("f", ConfigFile, "Hotkeys", "F")
+        IniWrite("deepseek", ConfigFile, "Settings", "SearchEngine")
+        IniWrite("0", ConfigFile, "Settings", "AutoLoadSelectedText")
+        IniWrite("1", ConfigFile, "Settings", "AutoUpdateVoiceInput")
         
         IniWrite(DefaultPanelScreenIndex, ConfigFile, "Appearance", "ScreenIndex")
         IniWrite(DefaultFunctionPanelPos, ConfigFile, "Appearance", "FunctionPanelPos")
@@ -581,6 +635,10 @@ InitConfig() {
             HotkeyO := IniRead(ConfigFile, "Hotkeys", "O", DefaultHotkeyO)
             HotkeyQ := IniRead(ConfigFile, "Hotkeys", "Q", DefaultHotkeyQ)
             HotkeyZ := IniRead(ConfigFile, "Hotkeys", "Z", DefaultHotkeyZ)
+            HotkeyF := IniRead(ConfigFile, "Hotkeys", "F", "f")
+            SearchEngine := IniRead(ConfigFile, "Settings", "SearchEngine", "deepseek")
+            AutoLoadSelectedText := (IniRead(ConfigFile, "Settings", "AutoLoadSelectedText", "0") = "1")
+            AutoUpdateVoiceInput := (IniRead(ConfigFile, "Settings", "AutoUpdateVoiceInput", "1") = "1")
             
             PanelScreenIndex := Integer(IniRead(ConfigFile, "Appearance", "ScreenIndex", DefaultPanelScreenIndex))
             FunctionPanelPos := IniRead(ConfigFile, "Appearance", "FunctionPanelPos", DefaultFunctionPanelPos)
@@ -726,9 +784,9 @@ ClearCapsLock2Timer(*) {
 }
 
 ShowPanelTimer(*) {
-    global CapsLock, PanelVisible, VoiceInputActive
-    ; 如果正在语音输入，不显示快捷操作面板
-    if (VoiceInputActive) {
+    global CapsLock, PanelVisible, VoiceInputActive, VoiceSearchActive, VoiceSearchSelecting
+    ; 如果正在语音输入、语音搜索或选择搜索引擎，不显示快捷操作面板
+    if (VoiceInputActive || VoiceSearchActive || VoiceSearchSelecting) {
         return
     }
     if (CapsLock && !PanelVisible) {
@@ -736,19 +794,12 @@ ShowPanelTimer(*) {
     }
 }
 
-; 长按CapsLock屏蔽语音输入（定时器函数）
+; 记录 CapsLock 按下时间
 global CapsLockPressTime := 0
-BlockVoiceInputTimer(*) {
-    global VoiceInputBlocked, CapsLockPressTime
-    ; 记录按下时间
-    CapsLockPressTime := A_TickCount
-    VoiceInputBlocked := true
-    TrayTip("语音输入已屏蔽", "提示", "Iconi 1")
-}
 
 ; 采用 CapsLock+ 方案：使用 ~ 前缀保留原始功能，通过标记变量控制行为
 ~CapsLock:: {
-    global CapsLock, CapsLock2, IsCommandMode, PanelVisible, VoiceInputActive, VoiceInputMethod, VoiceInputBlocked, VoiceInputPaused
+    global CapsLock, CapsLock2, IsCommandMode, PanelVisible, VoiceInputActive, VoiceSearchActive, VoiceInputMethod, VoiceInputPaused
     
     ; 标记 CapsLock 已按下
     CapsLock := true
@@ -758,8 +809,8 @@ BlockVoiceInputTimer(*) {
     ; 记录按下时间
     CapsLockPressTime := A_TickCount
     
-    ; 如果正在语音输入，处理暂停/恢复逻辑
-    if (VoiceInputActive) {
+    ; 如果正在语音输入或语音搜索，处理暂停/恢复逻辑
+    if (VoiceInputActive || VoiceSearchActive) {
         ; 设置定时器：300ms 后清除 CapsLock2（用于检测是否按了其他键）
         SetTimer(ClearCapsLock2Timer, -300)
         
@@ -784,34 +835,17 @@ BlockVoiceInputTimer(*) {
         ; 计算按下时长
         PressDuration := A_TickCount - CapsLockPressTime
         
-        ; 如果长按超过1.5秒，切换屏蔽状态（不恢复语音）
-        ; 仅在语音输入已激活时才显示屏蔽/启用提示
-        if (PressDuration >= 1500) {
-            VoiceInputBlocked := !VoiceInputBlocked
-            ; 仅在语音输入已激活时才显示提示
-            if (VoiceInputActive) {
-                if (VoiceInputBlocked) {
-                    TrayTip("语音输入已屏蔽", "提示", "Iconi 1")
-                } else {
-                    TrayTip("语音输入已启用", "提示", "Iconi 1")
-                }
-            }
-            ; 如果之前暂停了，保持暂停状态
-            if (VoiceInputPaused) {
-                ; 不恢复，保持暂停
-            }
-            CapsLock := false
-            CapsLock2 := false
-            return
-        }
-        
-        ; 如果按了其他键（如Z），CapsLock2会被清除，不恢复语音
-        ; 如果只按了CapsLock（CapsLock2仍然为true），且是短按，则恢复语音输入
+        ; 如果按了其他键（如Z或F），CapsLock2会被清除，不恢复语音
+        ; 如果只按了CapsLock（CapsLock2仍然为true），且是短按，则恢复语音输入或搜索
         if (CapsLock2 && PressDuration < 1500) {
-            ; 只按了CapsLock，没有按其他键，恢复语音输入
+            ; 只按了CapsLock，没有按其他键，恢复语音输入或搜索
             if (VoiceInputPaused) {
                 VoiceInputPaused := false
-                UpdateVoiceInputPausedState(false)  ; 更新动画状态，显示恢复
+                if (VoiceInputActive) {
+                    UpdateVoiceInputPausedState(false)  ; 更新动画状态，显示恢复
+                } else if (VoiceSearchActive) {
+                    ; 语音搜索的恢复逻辑（如果需要的话）
+                }
                 
                 ; 恢复百度输入法语音转换（F2）
                 if (VoiceInputMethod = "baidu") {
@@ -831,36 +865,15 @@ BlockVoiceInputTimer(*) {
     ; 如果在这 300ms 内使用了 CapsLock+ 功能，CapsLock2 会被提前清除
     SetTimer(ClearCapsLock2Timer, -300)
     
-    ; 设置定时器：长按 1.5 秒后屏蔽语音输入
-    SetTimer(BlockVoiceInputTimer, -1500)
-    
     ; 设置定时器：长按 0.5 秒后自动显示面板（不在语音输入时）
     SetTimer(ShowPanelTimer, -500)
     
     ; 等待 CapsLock 释放
     KeyWait("CapsLock")
     
-    ; 计算按下时长
-    PressDuration := A_TickCount - CapsLockPressTime
-    
     ; 停止所有定时器
     SetTimer(ClearCapsLock2Timer, 0)
     SetTimer(ShowPanelTimer, 0)
-    SetTimer(BlockVoiceInputTimer, 0)
-    
-    ; 检查是否长按（超过1.5秒）来切换屏蔽状态
-    if (PressDuration >= 1500) {
-        ; 长按超过1.5秒，切换屏蔽状态
-        VoiceInputBlocked := !VoiceInputBlocked
-        if (VoiceInputBlocked) {
-            TrayTip("语音输入已屏蔽", "提示", "Iconi 1")
-        } else {
-            TrayTip("语音输入已启用", "提示", "Iconi 1")
-        }
-        CapsLock := false
-        CapsLock2 := false
-        return
-    }
     
     ; CapsLock 最优先置空，来关闭 CapsLock+ 功能的触发
     CapsLock := false
@@ -1630,6 +1643,50 @@ CreateGeneralTab(ConfigGUI, X, Y, W, H) {
     } else {
         LangEnglish.Value := 1
     }
+    
+    ; 搜索引擎设置
+    YPos += 60
+    global SearchEngineDDL
+    Label3 := ConfigGUI.Add("Text", "x" . (X + 30) . " y" . YPos . " w200 h25 c" . UI_Colors.Text, GetText("search_engine_label"))
+    Label3.SetFont("s11", "Segoe UI")
+    GeneralTabControls.Push(Label3)
+    
+    YPos += 30
+    ; 搜索引擎选项
+    SearchEngineOptions := [
+        GetText("search_engine_deepseek"),
+        GetText("search_engine_yuanbao"),
+        GetText("search_engine_doubao"),
+        GetText("search_engine_zhipu"),
+        GetText("search_engine_mita"),
+        GetText("search_engine_wenxin"),
+        GetText("search_engine_qianwen"),
+        GetText("search_engine_kimi")
+    ]
+    SearchEngineValues := ["deepseek", "yuanbao", "doubao", "zhipu", "mita", "wenxin", "qianwen", "kimi"]
+    
+    ; 外边框
+    DDLX := X + 30
+    DDLY := YPos
+    DDLW := 200
+    DDLH := 30
+    SearchEngineDDLBorder := ConfigGUI.Add("Text", "x" . DDLX . " y" . DDLY . " w" . DDLW . " h" . DDLH . " Background" . UI_Colors.DDLBorder, "")
+    GeneralTabControls.Push(SearchEngineDDLBorder)
+    ; 内背景
+    SearchEngineDDLBg := ConfigGUI.Add("Text", "x" . (DDLX + 1) . " y" . (DDLY + 1) . " w" . (DDLW - 2) . " h" . (DDLH - 2) . " Background" . UI_Colors.DDLBg, "")
+    GeneralTabControls.Push(SearchEngineDDLBg)
+    ; 下拉框
+    global SearchEngine
+    SearchEngineDDL := ConfigGUI.Add("DropDownList", "x" . (DDLX + 1) . " y" . (DDLY + 1) . " w" . (DDLW - 2) . " h" . (DDLH - 2) . " Choose1 vSearchEngineDDL AltSubmit Background" . UI_Colors.DDLBg . " c" . UI_Colors.DDLText, SearchEngineOptions)
+    SearchEngineDDL.SetFont("s10", "Segoe UI")
+    ; 设置当前选中项
+    for i, value in SearchEngineValues {
+        if (value = SearchEngine) {
+            SearchEngineDDL.Choose(i)
+            break
+        }
+    }
+    GeneralTabControls.Push(SearchEngineDDL)
     
     ; 快捷操作按钮配置
     YPos += 60
@@ -3729,7 +3786,7 @@ SaveConfig(*) {
     global CursorPathEdit, PromptExplainEdit, PromptRefactorEdit, PromptOptimizeEdit
     global LangChinese, ConfigFile, GuiID_CursorPanel, GuiID_ConfigGUI
     global ConfigPanelScreenRadio, MsgBoxScreenRadio, VoiceInputScreenRadio, CursorPanelScreenRadio
-    global PanelVisible
+    global PanelVisible, SearchEngineDDL
     
     ; 验证输入
     if (!AISleepTimeEdit || AISleepTimeEdit.Value = "" || !IsNumber(AISleepTimeEdit.Value)) {
@@ -3888,6 +3945,13 @@ SaveConfig(*) {
         }
     }
     
+    ; 获取搜索引擎设置
+    NewSearchEngine := "deepseek"
+    if (SearchEngineDDL && SearchEngineDDL.Value >= 1 && SearchEngineDDL.Value <= 8) {
+        SearchEngineValues := ["deepseek", "yuanbao", "doubao", "zhipu", "mita", "wenxin", "qianwen", "kimi"]
+        NewSearchEngine := SearchEngineValues[SearchEngineDDL.Value]
+    }
+    
     ; 更新全局变量
     global CursorPath := CursorPathEdit ? CursorPathEdit.Value : ""
     global AISleepTime := AISleepTimeEdit.Value
@@ -3896,6 +3960,7 @@ SaveConfig(*) {
     global Prompt_Optimize := PromptOptimizeEdit ? PromptOptimizeEdit.Value : ""
     global PanelScreenIndex := NewScreenIndex
     global Language := NewLanguage
+    global SearchEngine := NewSearchEngine
     global ConfigPanelScreenIndex := NewConfigPanelScreenIndex
     global MsgBoxScreenIndex := NewMsgBoxScreenIndex
     global VoiceInputScreenIndex := NewVoiceInputScreenIndex
@@ -3909,6 +3974,9 @@ SaveConfig(*) {
     IniWrite(Prompt_Optimize, ConfigFile, "Settings", "Prompt_Optimize")
     IniWrite(PanelScreenIndex, ConfigFile, "Panel", "ScreenIndex")
     IniWrite(Language, ConfigFile, "Settings", "Language")
+    IniWrite(SearchEngine, ConfigFile, "Settings", "SearchEngine")
+    global AutoLoadSelectedText
+    IniWrite(AutoLoadSelectedText ? "1" : "0", ConfigFile, "Settings", "AutoLoadSelectedText")
     IniWrite(FunctionPanelPos, ConfigFile, "Panel", "FunctionPanelPos")
     IniWrite(ConfigPanelPos, ConfigFile, "Panel", "ConfigPanelPos")
     IniWrite(ClipboardPanelPos, ConfigFile, "Panel", "ClipboardPanelPos")
@@ -4440,8 +4508,8 @@ PasteSelectedToCursor(*) {
 ; ===================== 动态快捷键处理函数 =====================
 ; 检查按键是否匹配配置的快捷键，如果匹配则执行相应操作
 HandleDynamicHotkey(PressedKey, ActionType) {
-    global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ
-    global CapsLock2, PanelVisible, VoiceInputActive, CapsLock, VoiceInputBlocked
+    global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ, HotkeyF
+    global CapsLock2, PanelVisible, VoiceInputActive, CapsLock, VoiceSearchActive
     global QuickActionButtons
     
     ; 将按键转换为小写进行比较（ESC特殊处理）
@@ -4454,6 +4522,10 @@ HandleDynamicHotkey(PressedKey, ActionType) {
             if (StrLower(Button.Hotkey) = KeyLower) {
                 ; 匹配到快捷操作按钮
                 CapsLock2 := false
+                ; 立即隐藏面板
+                if (PanelVisible) {
+                    HideCursorPanel()
+                }
                 switch Button.Type {
                     case "Explain":
                         ExecutePrompt("Explain")
@@ -4462,7 +4534,6 @@ HandleDynamicHotkey(PressedKey, ActionType) {
                     case "Optimize":
                         ExecutePrompt("Optimize")
                     case "Config":
-                        HideCursorPanel()
                         ShowConfigGUI()
                 }
                 return true  ; 已处理
@@ -4481,16 +4552,19 @@ HandleDynamicHotkey(PressedKey, ActionType) {
         case "O": ConfigKey := StrLower(HotkeyO)
         case "Q": ConfigKey := StrLower(HotkeyQ)
         case "Z": ConfigKey := StrLower(HotkeyZ)
+        case "F": ConfigKey := StrLower(HotkeyF)
     }
     
     ; 如果按键匹配配置的快捷键，执行操作
     if (KeyLower = ConfigKey || (ActionType = "ESC" && (PressedKey = "Esc" || KeyLower = "esc"))) {
+        ; 立即隐藏面板（所有快捷键操作都应该隐藏面板）
+        if (PanelVisible) {
+            HideCursorPanel()
+        }
+        
         switch ActionType {
             case "ESC":
                 CapsLock2 := false
-                if (PanelVisible) {
-                    HideCursorPanel()
-                }
             case "C":
                 CapsLockCopy()
             case "V":
@@ -4509,16 +4583,9 @@ HandleDynamicHotkey(PressedKey, ActionType) {
                 ExecutePrompt("Optimize")
             case "Q":
                 CapsLock2 := false
-                if (PanelVisible) {
-                    HideCursorPanel()
-                }
                 ShowConfigGUI()
             case "Z":
                 CapsLock2 := false
-                if (VoiceInputBlocked && !VoiceInputActive) {
-                    TrayTip("语音输入已被屏蔽，长按CapsLock可启用", "提示", "Icon! 2")
-                    return
-                }
                 if (VoiceInputActive) {
                     if (CapsLock) {
                         CapsLock := false
@@ -4526,6 +4593,30 @@ HandleDynamicHotkey(PressedKey, ActionType) {
                     StopVoiceInput()
                 } else {
                     StartVoiceInput()
+                }
+            case "F":
+                CapsLock2 := false
+                global VoiceSearchPanelVisible, VoiceSearchActive
+                if (VoiceSearchPanelVisible) {
+                    ; 面板已显示
+                    if (VoiceSearchActive) {
+                        ; 正在语音输入，停止并执行搜索
+                        if (CapsLock) {
+                            CapsLock := false
+                        }
+                        StopVoiceInputInSearch()
+                        ; 等待一下让内容填入输入框
+                        Sleep(300)
+                        ExecuteVoiceSearch()
+                    } else {
+                        ; 未在语音输入，切换焦点并开始语音输入
+                        FocusVoiceSearchInput()
+                        Sleep(200)
+                        StartVoiceInputInSearch()
+                    }
+                } else {
+                    ; 面板未显示，显示面板
+                    StartVoiceSearch()
                 }
         }
         return true  ; 已处理
@@ -4599,6 +4690,13 @@ q:: {
 z:: {
     if (!HandleDynamicHotkey("z", "Z")) {
         Send("z")
+    }
+}
+
+; F 键语音搜索（切换模式）
+f:: {
+    if (!HandleDynamicHotkey("f", "F")) {
+        Send("f")
     }
 }
 
@@ -4818,13 +4916,7 @@ DetectInputMethod() {
 
 ; 开始语音输入
 StartVoiceInput() {
-    global VoiceInputActive, VoiceInputContent, CursorPath, AISleepTime, VoiceInputMethod, VoiceInputBlocked, PanelVisible
-    
-    ; 如果语音输入被屏蔽，则不启动
-    if (VoiceInputBlocked) {
-        TrayTip("语音输入已被屏蔽，长按CapsLock可启用", "提示", "Icon! 2")
-        return
-    }
+    global VoiceInputActive, VoiceInputContent, CursorPath, AISleepTime, VoiceInputMethod, PanelVisible
     
     if (VoiceInputActive) {
         return
@@ -4859,6 +4951,12 @@ StartVoiceInput() {
             WinActivate("ahk_exe Cursor.exe")
             Sleep(200)
         }
+        
+        ; 清空输入框，避免复制到旧内容
+        Send("^a")
+        Sleep(100)
+        Send("{Delete}")
+        Sleep(100)
         
         ; 自动检测输入法类型
         VoiceInputMethod := DetectInputMethod()
@@ -4911,25 +5009,28 @@ StopVoiceInput() {
         if (VoiceInputMethod = "baidu") {
             ; 百度输入法：F1 结束语音录入
             Send("{F1}")
-            Sleep(500)
+            Sleep(800)  ; 增加等待时间，确保语音识别完成
             
             ; 获取语音输入内容
             OldClipboard := A_Clipboard
+            ; 先选中输入框中的所有内容
             Send("^a")
-            Sleep(100)
+            Sleep(200)  ; 增加等待时间，确保选中完成
             A_Clipboard := ""
             Send("^c")
-            if ClipWait(1) {
+            if ClipWait(1.5) {
                 VoiceInputContent := A_Clipboard
             }
             A_Clipboard := OldClipboard
             
+            ; 如果内容为空或太短，再尝试一次
             if (VoiceInputContent = "" || StrLen(VoiceInputContent) < 2) {
+                Sleep(300)  ; 再等待一下
                 Send("^a")
-                Sleep(100)
+                Sleep(200)
                 A_Clipboard := ""
                 Send("^c")
-                if ClipWait(1) {
+                if ClipWait(1.5) {
                     VoiceInputContent := A_Clipboard
                 }
                 A_Clipboard := OldClipboard
@@ -4941,25 +5042,28 @@ StopVoiceInput() {
         } else if (VoiceInputMethod = "xunfei") {
             ; 讯飞输入法：F6 结束（与开始相同，按 F6 切换开始/结束）
             Send("{F6}")
-            Sleep(800)  ; 给讯飞输入法更多时间处理结束操作和识别结果
+            Sleep(1000)  ; 给讯飞输入法更多时间处理结束操作和识别结果
             
             ; 获取语音输入内容
             OldClipboard := A_Clipboard
+            ; 先选中输入框中的所有内容
             Send("^a")
-            Sleep(100)
+            Sleep(200)  ; 增加等待时间，确保选中完成
             A_Clipboard := ""
             Send("^c")
-            if ClipWait(1) {
+            if ClipWait(1.5) {
                 VoiceInputContent := A_Clipboard
             }
             A_Clipboard := OldClipboard
             
+            ; 如果内容为空或太短，再尝试一次
             if (VoiceInputContent = "" || StrLen(VoiceInputContent) < 2) {
+                Sleep(300)  ; 再等待一下
                 Send("^a")
-                Sleep(100)
+                Sleep(200)
                 A_Clipboard := ""
                 Send("^c")
-                if ClipWait(1) {
+                if ClipWait(1.5) {
                     VoiceInputContent := A_Clipboard
                 }
                 A_Clipboard := OldClipboard
@@ -4967,25 +5071,28 @@ StopVoiceInput() {
         } else {
             ; 默认尝试百度方案
             Send("{F1}")
-            Sleep(500)
+            Sleep(800)  ; 增加等待时间，确保语音识别完成
             
             ; 获取语音输入内容
             OldClipboard := A_Clipboard
+            ; 先选中输入框中的所有内容
             Send("^a")
-            Sleep(100)
+            Sleep(200)  ; 增加等待时间，确保选中完成
             A_Clipboard := ""
             Send("^c")
-            if ClipWait(1) {
+            if ClipWait(1.5) {
                 VoiceInputContent := A_Clipboard
             }
             A_Clipboard := OldClipboard
             
+            ; 如果内容为空或太短，再尝试一次
             if (VoiceInputContent = "" || StrLen(VoiceInputContent) < 2) {
+                Sleep(300)  ; 再等待一下
                 Send("^a")
-                Sleep(100)
+                Sleep(200)
                 A_Clipboard := ""
                 Send("^c")
-                if ClipWait(1) {
+                if ClipWait(1.5) {
                     VoiceInputContent := A_Clipboard
                 }
                 A_Clipboard := OldClipboard
@@ -5000,7 +5107,8 @@ StopVoiceInput() {
         HideVoiceInputAnimation()
         
         if (VoiceInputContent != "" && StrLen(VoiceInputContent) > 0) {
-            SendVoiceInputToCursor(VoiceInputContent)
+            ; 显示选择界面：发送到Cursor或搜索
+            ShowVoiceInputActionSelection(VoiceInputContent)
         } else {
             ; 只在没有内容时显示提示
             TrayTip(GetText("voice_input_no_content"), GetText("tip"), "Iconi 2")
@@ -5142,6 +5250,218 @@ HideVoiceInputAnimation() {
     VoiceHintText := 0
 }
 
+; 显示语音输入操作选择界面（发送到Cursor或搜索）
+ShowVoiceInputActionSelection(Content) {
+    global GuiID_VoiceInput, VoiceInputScreenIndex, UI_Colors, VoiceSearchSelecting, VoiceSearchEngineButtons
+    
+    VoiceSearchSelecting := true
+    
+    if (GuiID_VoiceInput != 0) {
+        try {
+            GuiID_VoiceInput.Destroy()
+        }
+        GuiID_VoiceInput := 0
+    }
+    
+    GuiID_VoiceInput := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
+    GuiID_VoiceInput.BackColor := UI_Colors.Background
+    GuiID_VoiceInput.SetFont("s12 cFFFFFF Bold", "Segoe UI")
+    
+    PanelWidth := 500
+    ; 计算所需高度：标题(50) + 内容标签(25) + 内容框(60) + 自动加载开关(35) + 操作标签(30) + 操作按钮(45) + 引擎标签(30) + 按钮区域 + 取消按钮(45) + 边距(20)
+    ButtonsRows := Ceil(8 / 4)  ; 每行4个按钮，共8个搜索引擎
+    ButtonsAreaHeight := ButtonsRows * 45  ; 每行45px（按钮35px + 间距10px）
+    PanelHeight := 50 + 25 + 60 + 35 + 30 + 45 + 30 + ButtonsAreaHeight + 45 + 20
+    
+    ; 标题
+    TitleText := GuiID_VoiceInput.Add("Text", "x0 y15 w500 h30 Center cFFFFFF", "选择操作")
+    TitleText.SetFont("s14 Bold", "Segoe UI")
+    
+    ; 显示输入内容
+    YPos := 55
+    LabelText := GuiID_VoiceInput.Add("Text", "x20 y" . YPos . " w460 h20 cCCCCCC", "语音输入内容:")
+    LabelText.SetFont("s10", "Segoe UI")
+    
+    YPos += 25
+    ContentEdit := GuiID_VoiceInput.Add("Edit", "x20 y" . YPos . " w460 h60 vVoiceInputContentEdit Background" . UI_Colors.InputBg . " c" . UI_Colors.Text . " ReadOnly Multi", Content)
+    ContentEdit.SetFont("s11", "Segoe UI")
+    
+    ; 自动加载选中文本开关
+    YPos += 70
+    global AutoLoadSelectedText, VoiceInputAutoLoadSwitch
+    AutoLoadLabel := GuiID_VoiceInput.Add("Text", "x20 y" . YPos . " w200 h25 cCCCCCC", "自动加载选中文本:")
+    AutoLoadLabel.SetFont("s10", "Segoe UI")
+    ; 创建开关按钮（使用文本按钮模拟开关）
+    SwitchText := AutoLoadSelectedText ? "✓ 已开启" : "○ 已关闭"
+    SwitchBg := AutoLoadSelectedText ? UI_Colors.BtnHover : UI_Colors.BtnBg
+    VoiceInputAutoLoadSwitch := GuiID_VoiceInput.Add("Text", "x220 y" . YPos . " w120 h25 Center 0x200 cWhite Background" . SwitchBg . " vVoiceInputAutoLoadSwitch", SwitchText)
+    VoiceInputAutoLoadSwitch.SetFont("s10", "Segoe UI")
+    VoiceInputAutoLoadSwitch.OnEvent("Click", ToggleAutoLoadSelectedTextForVoiceInput)
+    HoverBtn(VoiceInputAutoLoadSwitch, SwitchBg, UI_Colors.BtnHover)
+    
+    ; 操作选择
+    YPos += 35
+    LabelAction := GuiID_VoiceInput.Add("Text", "x20 y" . YPos . " w460 h20 cCCCCCC", "选择操作:")
+    LabelAction.SetFont("s10", "Segoe UI")
+    
+    ; 搜索引擎按钮标签（先创建，以便后续引用）
+    YPos += 50
+    LabelEngine := GuiID_VoiceInput.Add("Text", "x20 y" . YPos . " w460 h20 cCCCCCC vEngineLabel", "选择搜索引擎:")
+    LabelEngine.SetFont("s10", "Segoe UI")
+    LabelEngine.Visible := false
+    
+    ; 操作按钮（在操作标签下方）
+    YPos := 55 + 25 + 60 + 70 + 35 + 20 + 10  ; 重新计算YPos位置（标题+标签+输入框+开关间距+开关+操作标签间距+操作标签高度+按钮间距）
+    ; 发送到Cursor按钮
+    SendToCursorBtn := GuiID_VoiceInput.Add("Text", "x20 y" . YPos . " w220 h35 Center 0x200 cWhite Background" . UI_Colors.BtnBg . " vSendToCursorBtn", "发送到 Cursor")
+    SendToCursorBtn.SetFont("s11", "Segoe UI")
+    SendToCursorBtn.OnEvent("Click", CreateSendToCursorHandler(Content))
+    HoverBtn(SendToCursorBtn, UI_Colors.BtnBg, UI_Colors.BtnHover)
+    
+    ; 搜索按钮（保存引用以便后续访问）
+    global VoiceInputSendToCursorBtn := SendToCursorBtn
+    global VoiceInputSearchBtn
+    SearchBtn := GuiID_VoiceInput.Add("Text", "x260 y" . YPos . " w220 h35 Center 0x200 cWhite Background" . UI_Colors.BtnBg . " vSearchBtn", "搜索")
+    SearchBtn.SetFont("s11", "Segoe UI")
+    SearchBtn.OnEvent("Click", CreateShowSearchEnginesHandler(Content, SendToCursorBtn, SearchBtn, LabelEngine))
+    VoiceInputSearchBtn := SearchBtn
+    HoverBtn(SearchBtn, UI_Colors.BtnBg, UI_Colors.BtnHover)
+    
+    ; 搜索引擎按钮位置（从LabelEngine下方开始）
+    YPos := 55 + 25 + 60 + 70 + 35 + 20 + 10 + 35 + 50  ; 操作按钮下方（标题+标签+输入框+开关间距+开关+操作标签间距+操作标签+按钮间距+操作按钮+引擎标签间距）
+    ; 搜索引擎列表
+    SearchEngines := [
+        {Name: GetText("search_engine_deepseek"), Value: "deepseek"},
+        {Name: GetText("search_engine_yuanbao"), Value: "yuanbao"},
+        {Name: GetText("search_engine_doubao"), Value: "doubao"},
+        {Name: GetText("search_engine_zhipu"), Value: "zhipu"},
+        {Name: GetText("search_engine_mita"), Value: "mita"},
+        {Name: GetText("search_engine_wenxin"), Value: "wenxin"},
+        {Name: GetText("search_engine_qianwen"), Value: "qianwen"},
+        {Name: GetText("search_engine_kimi"), Value: "kimi"}
+    ]
+    
+    VoiceSearchEngineButtons := []
+    ButtonWidth := 110
+    ButtonHeight := 35
+    ButtonSpacing := 10
+    StartX := 20
+    ButtonsPerRow := 4
+    
+    for Index, Engine in SearchEngines {
+        Row := Floor((Index - 1) / ButtonsPerRow)
+        Col := Mod((Index - 1), ButtonsPerRow)
+        BtnX := StartX + Col * (ButtonWidth + ButtonSpacing)
+        BtnY := YPos + Row * (ButtonHeight + ButtonSpacing)
+        
+        ; 创建按钮（初始隐藏）
+        Btn := GuiID_VoiceInput.Add("Text", "x" . BtnX . " y" . BtnY . " w" . ButtonWidth . " h" . ButtonHeight . " Center 0x200 cWhite Background" . UI_Colors.BtnBg . " vSearchEngineBtn" . Index, Engine.Name)
+        Btn.SetFont("s10", "Segoe UI")
+        Btn.OnEvent("Click", CreateSearchEngineClickHandler(Content, Engine.Value))
+        Btn.Visible := false
+        HoverBtn(Btn, UI_Colors.BtnBg, UI_Colors.BtnHover)
+        VoiceSearchEngineButtons.Push(Btn)
+    }
+    
+    ; 取消按钮
+    CancelBtnY := YPos + (Floor((SearchEngines.Length - 1) / ButtonsPerRow) + 1) * (ButtonHeight + ButtonSpacing) + 10
+    CancelBtn := GuiID_VoiceInput.Add("Text", "x" . (PanelWidth // 2 - 60) . " y" . CancelBtnY . " w120 h35 Center 0x200 cWhite Background666666 vCancelBtn", "取消")
+    CancelBtn.SetFont("s11", "Segoe UI")
+    CancelBtn.OnEvent("Click", CancelVoiceInputActionSelection)
+    HoverBtn(CancelBtn, "666666", "777777")
+    
+    ScreenInfo := GetScreenInfo(VoiceInputScreenIndex)
+    Pos := GetPanelPosition(ScreenInfo, PanelWidth, PanelHeight, "center")
+    GuiID_VoiceInput.Show("w" . PanelWidth . " h" . PanelHeight . " x" . Pos.X . " y" . Pos.Y . " NoActivate")
+    WinSetAlwaysOnTop(1, GuiID_VoiceInput.Hwnd)
+    
+    ; 标记界面已显示
+    global VoiceInputActionSelectionVisible
+    VoiceInputActionSelectionVisible := true
+    
+    ; 首先明确停止监听（无论之前状态如何）
+    SetTimer(MonitorSelectedTextForVoiceInput, 0)
+    
+    ; 如果自动加载开关已开启，启动监听；否则确保监听已停止
+    if (AutoLoadSelectedText) {
+        SetTimer(MonitorSelectedTextForVoiceInput, 200)  ; 每200ms检查一次
+    } else {
+        ; 明确停止监听，确保不会自动加载
+        SetTimer(MonitorSelectedTextForVoiceInput, 0)
+    }
+}
+
+; 创建发送到Cursor处理函数
+CreateSendToCursorHandler(Content) {
+    SendToCursorHandler(*) {
+        global VoiceSearchSelecting
+        VoiceSearchSelecting := false
+        HideVoiceInputActionSelection()
+        SendVoiceInputToCursor(Content)
+    }
+    return SendToCursorHandler
+}
+
+; 创建显示搜索引擎处理函数
+CreateShowSearchEnginesHandler(Content, SendToCursorBtn, SearchBtn, EngineLabel) {
+    ShowSearchEnginesHandler(*) {
+        global VoiceSearchEngineButtons
+        try {
+            ; 隐藏操作按钮
+            if (SendToCursorBtn) {
+                SendToCursorBtn.Visible := false
+            }
+            if (SearchBtn) {
+                SearchBtn.Visible := false
+            }
+            if (EngineLabel) {
+                EngineLabel.Visible := true
+            }
+            
+            ; 显示搜索引擎按钮
+            if (IsSet(VoiceSearchEngineButtons) && VoiceSearchEngineButtons.Length > 0) {
+                Loop VoiceSearchEngineButtons.Length {
+                    Index := A_Index
+                    Btn := VoiceSearchEngineButtons[Index]
+                    if (Btn) {
+                        Btn.Visible := true
+                    }
+                }
+            }
+        } catch {
+            ; 如果出错，直接显示搜索引擎选择界面
+            HideVoiceInputActionSelection()
+            ShowSearchEngineSelection(Content)
+        }
+    }
+    return ShowSearchEnginesHandler
+}
+
+; 取消语音输入操作选择
+CancelVoiceInputActionSelection(*) {
+    global VoiceSearchSelecting
+    VoiceSearchSelecting := false
+    HideVoiceInputActionSelection()
+}
+
+; 隐藏语音输入操作选择界面
+HideVoiceInputActionSelection() {
+    global GuiID_VoiceInput, VoiceInputActionSelectionVisible
+    
+    ; 停止监听选中文本
+    SetTimer(MonitorSelectedTextForVoiceInput, 0)
+    
+    ; 标记界面已隐藏
+    VoiceInputActionSelectionVisible := false
+    
+    if (GuiID_VoiceInput != 0) {
+        try {
+            GuiID_VoiceInput.Destroy()
+        }
+        GuiID_VoiceInput := 0
+    }
+}
+
 ; 发送语音输入内容到 Cursor
 SendVoiceInputToCursor(Content) {
     global CursorPath, AISleepTime
@@ -5159,11 +5479,976 @@ SendVoiceInputToCursor(Content) {
         }
         
         if (Content != "" && StrLen(Content) > 0) {
+            ; 确保输入框已打开
+            Send("^l")
+            Sleep(300)
+            
+            ; 清空输入框
+            Send("^a")
+            Sleep(100)
+            Send("{Delete}")
+            Sleep(100)
+            
+            ; 输入内容
+            A_Clipboard := Content
+            Sleep(100)
+            Send("^v")
+            Sleep(200)
+            
+            ; 发送
             Send("{Enter}")
             Sleep(300)
             ; 不显示发送成功的提示，避免弹窗干扰
         }
     } catch as e {
         TrayTip(GetText("voice_input_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
+    }
+}
+
+; ===================== 语音搜索功能 =====================
+; 辅助函数：检查数组是否包含某个值
+ArrayContainsValue(Arr, Value) {
+    for Index, Item in Arr {
+        if (Item = Value) {
+            return Index
+        }
+    }
+    return 0
+}
+
+; 开始语音搜索（显示输入框界面）
+StartVoiceSearch() {
+    global VoiceSearchActive, VoiceSearchPanelVisible, PanelVisible
+    
+    ; 自动关闭 CapsLock 大写状态
+    SetCapsLockState("Off")
+    
+    ; 如果面板已显示，切换焦点到输入框并清空，然后激活语音输入
+    if (VoiceSearchPanelVisible) {
+        FocusVoiceSearchInput()
+        Sleep(200)
+        ; 如果未在语音输入，开始语音输入
+        if (!VoiceSearchActive) {
+            StartVoiceInputInSearch()
+        }
+        return
+    }
+    
+    ; 如果正在语音输入中，先停止
+    if (VoiceSearchActive) {
+        StopVoiceInputInSearch()
+    }
+    
+    ; 如果快捷操作面板正在显示，先关闭它
+    if (PanelVisible) {
+        HideCursorPanel()
+    }
+    
+    try {
+        ; 显示语音搜索输入界面（会自动激活语音输入）
+        ShowVoiceSearchInputPanel()
+    } catch as e {
+        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
+    }
+}
+
+; 显示语音搜索输入界面
+ShowVoiceSearchInputPanel() {
+    global GuiID_VoiceInput, VoiceInputScreenIndex, UI_Colors, VoiceSearchPanelVisible
+    global VoiceSearchInputEdit, VoiceSearchSelectedEngines, VoiceSearchEngineButtons
+    
+    VoiceSearchPanelVisible := true
+    
+    if (GuiID_VoiceInput != 0) {
+        try {
+            GuiID_VoiceInput.Destroy()
+        }
+        GuiID_VoiceInput := 0
+    }
+    
+    GuiID_VoiceInput := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
+    GuiID_VoiceInput.BackColor := UI_Colors.Background
+    GuiID_VoiceInput.SetFont("s12 cFFFFFF Bold", "Segoe UI")
+    
+    PanelWidth := 600
+    ; 计算所需高度：标题(50) + 输入框标签(25) + 输入框(40) + 搜索按钮(45) + 自动加载开关(35) + 自动更新开关(35) + 引擎标签(30) + 按钮区域 + 边距(20)
+    ButtonsRows := Ceil(8 / 4)  ; 每行4个按钮，共8个搜索引擎
+    ButtonsAreaHeight := ButtonsRows * 45  ; 每行45px（按钮35px + 间距10px）
+    PanelHeight := 50 + 25 + 40 + 45 + 35 + 35 + 30 + ButtonsAreaHeight + 20
+    
+    ; 标题
+    TitleText := GuiID_VoiceInput.Add("Text", "x0 y15 w600 h30 Center cFFFFFF", "语音搜索")
+    TitleText.SetFont("s14 Bold", "Segoe UI")
+    
+    ; 输入框标签
+    YPos := 55
+    LabelText := GuiID_VoiceInput.Add("Text", "x20 y" . YPos . " w560 h20 cCCCCCC", "输入内容:")
+    LabelText.SetFont("s10", "Segoe UI")
+    
+    ; 输入框（可编辑，用于显示和编辑语音输入内容）
+    YPos += 25
+    VoiceSearchInputEdit := GuiID_VoiceInput.Add("Edit", "x20 y" . YPos . " w460 h40 vVoiceSearchInputEdit Background" . UI_Colors.InputBg . " c" . UI_Colors.Text, "")
+    VoiceSearchInputEdit.SetFont("s12", "Segoe UI")
+    ; 添加焦点事件，自动切换到中文输入法
+    VoiceSearchInputEdit.OnEvent("Focus", SwitchToChineseIME)
+    
+    ; 搜索按钮
+    SearchBtn := GuiID_VoiceInput.Add("Text", "x490 y" . YPos . " w90 h40 Center 0x200 cWhite Background" . UI_Colors.BtnBg . " vSearchBtn", "搜索")
+    SearchBtn.SetFont("s11 Bold", "Segoe UI")
+    SearchBtn.OnEvent("Click", ExecuteVoiceSearch)
+    HoverBtn(SearchBtn, UI_Colors.BtnBg, UI_Colors.BtnHover)
+    
+    ; 自动加载选中文本开关
+    YPos += 50
+    global AutoLoadSelectedText, VoiceSearchAutoLoadSwitch
+    AutoLoadLabel := GuiID_VoiceInput.Add("Text", "x20 y" . YPos . " w200 h25 cCCCCCC", "自动加载选中文本:")
+    AutoLoadLabel.SetFont("s10", "Segoe UI")
+    ; 创建开关按钮（使用文本按钮模拟开关）
+    SwitchText := AutoLoadSelectedText ? "✓ 已开启" : "○ 已关闭"
+    SwitchBg := AutoLoadSelectedText ? UI_Colors.BtnHover : UI_Colors.BtnBg
+    VoiceSearchAutoLoadSwitch := GuiID_VoiceInput.Add("Text", "x220 y" . YPos . " w120 h25 Center 0x200 cWhite Background" . SwitchBg . " vAutoLoadSwitch", SwitchText)
+    VoiceSearchAutoLoadSwitch.SetFont("s10", "Segoe UI")
+    VoiceSearchAutoLoadSwitch.OnEvent("Click", ToggleAutoLoadSelectedText)
+    HoverBtn(VoiceSearchAutoLoadSwitch, SwitchBg, UI_Colors.BtnHover)
+    
+    ; 自动更新语音输入开关
+    YPos += 35
+    global AutoUpdateVoiceInput, VoiceSearchAutoUpdateSwitch
+    AutoUpdateLabel := GuiID_VoiceInput.Add("Text", "x20 y" . YPos . " w200 h25 cCCCCCC", "自动更新语音输入:")
+    AutoUpdateLabel.SetFont("s10", "Segoe UI")
+    ; 创建开关按钮（使用文本按钮模拟开关）
+    UpdateSwitchText := AutoUpdateVoiceInput ? "✓ 已开启" : "○ 已关闭"
+    UpdateSwitchBg := AutoUpdateVoiceInput ? UI_Colors.BtnHover : UI_Colors.BtnBg
+    VoiceSearchAutoUpdateSwitch := GuiID_VoiceInput.Add("Text", "x220 y" . YPos . " w120 h25 Center 0x200 cWhite Background" . UpdateSwitchBg . " vAutoUpdateSwitch", UpdateSwitchText)
+    VoiceSearchAutoUpdateSwitch.SetFont("s10", "Segoe UI")
+    VoiceSearchAutoUpdateSwitch.OnEvent("Click", ToggleAutoUpdateVoiceInput)
+    HoverBtn(VoiceSearchAutoUpdateSwitch, UpdateSwitchBg, UI_Colors.BtnHover)
+    
+    ; 搜索引擎标签
+    YPos += 35
+    LabelEngine := GuiID_VoiceInput.Add("Text", "x20 y" . YPos . " w560 h20 cCCCCCC", "选择搜索引擎:")
+    LabelEngine.SetFont("s10", "Segoe UI")
+    
+    ; 搜索引擎按钮
+    YPos += 30
+    SearchEngines := [
+        {Name: GetText("search_engine_deepseek"), Value: "deepseek"},
+        {Name: GetText("search_engine_yuanbao"), Value: "yuanbao"},
+        {Name: GetText("search_engine_doubao"), Value: "doubao"},
+        {Name: GetText("search_engine_zhipu"), Value: "zhipu"},
+        {Name: GetText("search_engine_mita"), Value: "mita"},
+        {Name: GetText("search_engine_wenxin"), Value: "wenxin"},
+        {Name: GetText("search_engine_qianwen"), Value: "qianwen"},
+        {Name: GetText("search_engine_kimi"), Value: "kimi"}
+    ]
+    
+    VoiceSearchEngineButtons := []
+    ButtonWidth := 130
+    ButtonHeight := 35
+    ButtonSpacing := 10
+    StartX := 20
+    ButtonsPerRow := 4
+    
+    for Index, Engine in SearchEngines {
+        Row := Floor((Index - 1) / ButtonsPerRow)
+        Col := Mod((Index - 1), ButtonsPerRow)
+        BtnX := StartX + Col * (ButtonWidth + ButtonSpacing)
+        BtnY := YPos + Row * (ButtonHeight + ButtonSpacing)
+        
+        ; 创建按钮（支持多选）
+        IsSelected := (ArrayContainsValue(VoiceSearchSelectedEngines, Engine.Value) > 0)
+        BtnBg := IsSelected ? UI_Colors.BtnHover : UI_Colors.BtnBg
+        BtnText := IsSelected ? "✓ " . Engine.Name : Engine.Name
+        Btn := GuiID_VoiceInput.Add("Text", "x" . BtnX . " y" . BtnY . " w" . ButtonWidth . " h" . ButtonHeight . " Center 0x200 cWhite Background" . BtnBg . " vSearchEngineBtn" . Index, BtnText)
+        Btn.SetFont("s10", "Segoe UI")
+        Btn.OnEvent("Click", CreateToggleSearchEngineHandler(Engine.Value, Index))
+        HoverBtn(Btn, BtnBg, UI_Colors.BtnHover)
+        VoiceSearchEngineButtons.Push(Btn)
+    }
+    
+    ScreenInfo := GetScreenInfo(VoiceInputScreenIndex)
+    Pos := GetPanelPosition(ScreenInfo, PanelWidth, PanelHeight, "center")
+    GuiID_VoiceInput.Show("w" . PanelWidth . " h" . PanelHeight . " x" . Pos.X . " y" . Pos.Y . " NoActivate")
+    WinSetAlwaysOnTop(1, GuiID_VoiceInput.Hwnd)
+    
+    ; 确保输入框为空
+    VoiceSearchInputEdit.Value := ""
+    
+    ; 首先明确停止监听（无论之前状态如何）
+    SetTimer(MonitorSelectedText, 0)
+    
+    ; 设置输入框焦点并自动激活语音输入
+    Sleep(100)
+    VoiceSearchInputEdit.Focus()
+    
+    ; 如果自动加载开关已开启，启动监听；否则确保监听已停止
+    if (AutoLoadSelectedText) {
+        SetTimer(MonitorSelectedText, 200)  ; 每200ms检查一次
+    } else {
+        ; 明确停止监听，确保不会自动加载
+        SetTimer(MonitorSelectedText, 0)
+    }
+    
+    ; 自动激活语音输入
+    StartVoiceInputInSearch()
+}
+
+; 切换焦点到输入框并清空
+FocusVoiceSearchInput() {
+    global VoiceSearchInputEdit, VoiceSearchPanelVisible, AutoLoadSelectedText
+    
+    if (!VoiceSearchPanelVisible || !VoiceSearchInputEdit) {
+        return
+    }
+    
+    try {
+        ; 清空输入框
+        VoiceSearchInputEdit.Value := ""
+        ; 设置焦点
+        VoiceSearchInputEdit.Focus()
+        
+        ; 根据开关状态确保定时器状态正确
+        ; 先停止定时器，然后根据开关状态决定是否启动
+        SetTimer(MonitorSelectedText, 0)
+        
+        ; 只有在开关开启时才启动定时器
+        if (AutoLoadSelectedText) {
+            SetTimer(MonitorSelectedText, 200)  ; 每200ms检查一次
+        } else {
+            ; 确保定时器已停止
+            SetTimer(MonitorSelectedText, 0)
+        }
+    } catch {
+        ; 忽略错误
+    }
+}
+
+; 切换自动加载选中文本开关
+ToggleAutoLoadSelectedText(*) {
+    global AutoLoadSelectedText, VoiceSearchAutoLoadSwitch, VoiceSearchPanelVisible, UI_Colors, ConfigFile
+    
+    if (!VoiceSearchPanelVisible || !VoiceSearchAutoLoadSwitch) {
+        return
+    }
+    
+    ; 切换状态
+    AutoLoadSelectedText := !AutoLoadSelectedText
+    
+    ; 更新开关显示
+    SwitchText := AutoLoadSelectedText ? "✓ 已开启" : "○ 已关闭"
+    SwitchBg := AutoLoadSelectedText ? UI_Colors.BtnHover : UI_Colors.BtnBg
+    VoiceSearchAutoLoadSwitch.Text := SwitchText
+    VoiceSearchAutoLoadSwitch.BackColor := SwitchBg
+    
+    ; 保存到配置文件
+    try {
+        IniWrite(AutoLoadSelectedText ? "1" : "0", ConfigFile, "Settings", "AutoLoadSelectedText")
+    } catch {
+        ; 忽略保存错误
+    }
+    
+    ; 如果开启，启动监听；如果关闭，立即停止监听
+    if (AutoLoadSelectedText) {
+        SetTimer(MonitorSelectedText, 200)  ; 每200ms检查一次
+        ; 如果正在语音输入，也启动更新输入框的定时器
+        global VoiceSearchActive
+        if (VoiceSearchActive) {
+            SetTimer(UpdateVoiceSearchInputInPanel, 300)  ; 每300ms更新一次
+        }
+    } else {
+        ; 立即停止监听，确保不会继续自动加载
+        SetTimer(MonitorSelectedText, 0)
+        ; 同时停止更新输入框的定时器
+        SetTimer(UpdateVoiceSearchInputInPanel, 0)
+    }
+}
+
+; 切换自动更新语音输入开关
+ToggleAutoUpdateVoiceInput(*) {
+    global AutoUpdateVoiceInput, VoiceSearchAutoUpdateSwitch, VoiceSearchPanelVisible, UI_Colors, ConfigFile, VoiceSearchActive
+    
+    if (!VoiceSearchPanelVisible || !VoiceSearchAutoUpdateSwitch) {
+        return
+    }
+    
+    ; 切换状态
+    AutoUpdateVoiceInput := !AutoUpdateVoiceInput
+    
+    ; 更新开关显示
+    SwitchText := AutoUpdateVoiceInput ? "✓ 已开启" : "○ 已关闭"
+    SwitchBg := AutoUpdateVoiceInput ? UI_Colors.BtnHover : UI_Colors.BtnBg
+    VoiceSearchAutoUpdateSwitch.Text := SwitchText
+    VoiceSearchAutoUpdateSwitch.BackColor := SwitchBg
+    
+    ; 保存到配置文件
+    try {
+        IniWrite(AutoUpdateVoiceInput ? "1" : "0", ConfigFile, "Settings", "AutoUpdateVoiceInput")
+    } catch {
+        ; 忽略保存错误
+    }
+    
+    ; 根据"自动记载选中文本"开关状态立即启动或停止定时器（无论是否正在语音输入）
+    ; 先停止定时器，确保状态正确
+    SetTimer(UpdateVoiceSearchInputInPanel, 0)
+    global AutoLoadSelectedText
+    if (AutoLoadSelectedText && VoiceSearchActive) {
+        ; 只有在"自动记载选中文本"开关开启且正在语音输入时才启动定时器
+        SetTimer(UpdateVoiceSearchInputInPanel, 300)  ; 每300ms更新一次
+    } else {
+        ; 明确停止定时器，确保不会自动更新
+        SetTimer(UpdateVoiceSearchInputInPanel, 0)
+    }
+}
+
+; 切换自动加载选中文本开关（语音输入界面）
+ToggleAutoLoadSelectedTextForVoiceInput(*) {
+    global AutoLoadSelectedText, VoiceInputAutoLoadSwitch, VoiceInputActionSelectionVisible, UI_Colors, ConfigFile
+    
+    if (!VoiceInputActionSelectionVisible || !VoiceInputAutoLoadSwitch) {
+        return
+    }
+    
+    ; 切换状态
+    AutoLoadSelectedText := !AutoLoadSelectedText
+    
+    ; 更新开关显示
+    SwitchText := AutoLoadSelectedText ? "✓ 已开启" : "○ 已关闭"
+    SwitchBg := AutoLoadSelectedText ? UI_Colors.BtnHover : UI_Colors.BtnBg
+    VoiceInputAutoLoadSwitch.Text := SwitchText
+    VoiceInputAutoLoadSwitch.BackColor := SwitchBg
+    
+    ; 保存到配置文件
+    try {
+        IniWrite(AutoLoadSelectedText ? "1" : "0", ConfigFile, "Settings", "AutoLoadSelectedText")
+    } catch {
+        ; 忽略保存错误
+    }
+    
+    ; 如果开启，启动监听；如果关闭，立即停止监听
+    if (AutoLoadSelectedText) {
+        SetTimer(MonitorSelectedTextForVoiceInput, 200)  ; 每200ms检查一次
+    } else {
+        ; 立即停止监听，确保不会继续自动加载
+        SetTimer(MonitorSelectedTextForVoiceInput, 0)
+    }
+}
+
+; 监听选中文本并自动加载到输入框（语音输入界面）
+MonitorSelectedTextForVoiceInput(*) {
+    global AutoLoadSelectedText, VoiceInputActionSelectionVisible, GuiID_VoiceInput
+    
+    ; 如果开关未开启或界面未显示，立即停止监听
+    if (!AutoLoadSelectedText || !VoiceInputActionSelectionVisible || !GuiID_VoiceInput) {
+        SetTimer(MonitorSelectedTextForVoiceInput, 0)
+        return
+    }
+    
+    ; 检查是否有选中的文本
+    try {
+        ; 保存当前剪贴板
+        OldClipboard := A_Clipboard
+        
+        ; 尝试复制选中文本
+        A_Clipboard := ""
+        Send("^c")
+        Sleep(50)  ; 等待复制完成
+        
+        ; 检查是否复制成功
+        if (ClipWait(0.1) && A_Clipboard != "" && A_Clipboard != OldClipboard) {
+            ; 有选中文本，加载到输入框
+            SelectedText := A_Clipboard
+            if (SelectedText != "" && StrLen(SelectedText) > 0) {
+                ; 尝试获取输入框控件并更新
+                try {
+                    ContentEdit := GuiID_VoiceInput["VoiceInputContentEdit"]
+                    if (ContentEdit && (ContentEdit.Value = "" || ContentEdit.Value != SelectedText)) {
+                        ContentEdit.Value := SelectedText
+                    }
+                } catch {
+                    ; 忽略错误
+                }
+            }
+        }
+        
+        ; 恢复剪贴板
+        A_Clipboard := OldClipboard
+    } catch {
+        ; 忽略错误
+    }
+}
+
+; 监听选中文本并自动加载到输入框
+MonitorSelectedText(*) {
+    global AutoLoadSelectedText, VoiceSearchPanelVisible, GuiID_VoiceInput, VoiceSearchInputEdit
+    
+    ; 如果开关未开启或面板未显示，立即停止监听
+    if (!AutoLoadSelectedText || !VoiceSearchPanelVisible || !GuiID_VoiceInput) {
+        SetTimer(MonitorSelectedText, 0)
+        return
+    }
+    
+    ; 检查是否有选中的文本
+    try {
+        ; 保存当前剪贴板
+        OldClipboard := A_Clipboard
+        
+        ; 尝试复制选中文本
+        A_Clipboard := ""
+        Send("^c")
+        Sleep(50)  ; 等待复制完成
+        
+        ; 检查是否复制成功
+        if (ClipWait(0.1) && A_Clipboard != "" && A_Clipboard != OldClipboard) {
+            ; 有选中文本，加载到输入框
+            SelectedText := A_Clipboard
+            if (SelectedText != "" && StrLen(SelectedText) > 0) {
+                ; 尝试获取输入框控件并更新
+                try {
+                    InputEdit := GuiID_VoiceInput["VoiceSearchInputEdit"]
+                    if (InputEdit && (InputEdit.Value = "" || InputEdit.Value != SelectedText)) {
+                        InputEdit.Value := SelectedText
+                    }
+                } catch {
+                    ; 如果通过GUI对象获取失败，尝试使用全局变量（备用方案）
+                    try {
+                        if (VoiceSearchInputEdit && (VoiceSearchInputEdit.Value = "" || VoiceSearchInputEdit.Value != SelectedText)) {
+                            VoiceSearchInputEdit.Value := SelectedText
+                        }
+                    } catch {
+                        ; 忽略错误
+                    }
+                }
+            }
+        }
+        
+        ; 恢复剪贴板
+        A_Clipboard := OldClipboard
+    } catch {
+        ; 忽略错误
+    }
+}
+
+; 创建切换搜索引擎选择处理函数（支持多选）
+CreateToggleSearchEngineHandler(Engine, BtnIndex) {
+    ToggleSearchEngineHandler(*) {
+        global VoiceSearchSelectedEngines, VoiceSearchEngineButtons, UI_Colors
+        global SearchEngines
+        
+        ; 切换选择状态
+        FoundIndex := ArrayContainsValue(VoiceSearchSelectedEngines, Engine)
+        if (FoundIndex > 0) {
+            ; 取消选择
+            VoiceSearchSelectedEngines.RemoveAt(FoundIndex)
+        } else {
+            ; 添加选择
+            VoiceSearchSelectedEngines.Push(Engine)
+        }
+        
+        ; 更新按钮样式
+        if (IsSet(VoiceSearchEngineButtons) && VoiceSearchEngineButtons.Length > 0 && BtnIndex <= VoiceSearchEngineButtons.Length) {
+            Btn := VoiceSearchEngineButtons[BtnIndex]
+            if (Btn) {
+                IsSelected := (ArrayContainsValue(VoiceSearchSelectedEngines, Engine) > 0)
+                Btn.BackColor := IsSelected ? UI_Colors.BtnHover : UI_Colors.BtnBg
+                
+                ; 更新按钮文本（添加/移除 ✓ 标记）
+                SearchEngines := [
+                    {Name: GetText("search_engine_deepseek"), Value: "deepseek"},
+                    {Name: GetText("search_engine_yuanbao"), Value: "yuanbao"},
+                    {Name: GetText("search_engine_doubao"), Value: "doubao"},
+                    {Name: GetText("search_engine_zhipu"), Value: "zhipu"},
+                    {Name: GetText("search_engine_mita"), Value: "mita"},
+                    {Name: GetText("search_engine_wenxin"), Value: "wenxin"},
+                    {Name: GetText("search_engine_qianwen"), Value: "qianwen"},
+                    {Name: GetText("search_engine_kimi"), Value: "kimi"}
+                ]
+                
+                if (BtnIndex <= SearchEngines.Length) {
+                    EngineName := SearchEngines[BtnIndex].Name
+                    Btn.Text := IsSelected ? "✓ " . EngineName : EngineName
+                }
+            }
+        }
+    }
+    return ToggleSearchEngineHandler
+}
+
+; 执行语音搜索
+ExecuteVoiceSearch(*) {
+    global VoiceSearchInputEdit, VoiceSearchSelectedEngines, VoiceSearchPanelVisible
+    
+    if (!VoiceSearchPanelVisible || !VoiceSearchInputEdit) {
+        return
+    }
+    
+    try {
+        Content := VoiceSearchInputEdit.Value
+        if (Content != "" && StrLen(Content) > 0) {
+            ; 检查是否有选中的搜索引擎
+            if (VoiceSearchSelectedEngines.Length = 0) {
+                TrayTip("请至少选择一个搜索引擎", "提示", "Icon! 2")
+                return
+            }
+            
+            ; 隐藏面板
+            HideVoiceSearchInputPanel()
+            
+            ; 打开所有选中的搜索引擎
+            for Index, Engine in VoiceSearchSelectedEngines {
+                SendVoiceSearchToBrowser(Content, Engine)
+                ; 每个搜索引擎之间稍作延迟，避免同时打开太多窗口
+                if (Index < VoiceSearchSelectedEngines.Length) {
+                    Sleep(300)
+                }
+            }
+            
+            TrayTip("已打开 " . VoiceSearchSelectedEngines.Length . " 个搜索引擎", "提示", "Iconi 1")
+        }
+    } catch as e {
+        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
+    }
+}
+
+; 隐藏语音搜索输入界面
+HideVoiceSearchInputPanel() {
+    global GuiID_VoiceInput, VoiceSearchPanelVisible, VoiceSearchInputEdit
+    
+    ; 自动关闭 CapsLock 大写状态
+    SetCapsLockState("Off")
+    
+    ; 停止监听选中文本
+    SetTimer(MonitorSelectedText, 0)
+    
+    VoiceSearchPanelVisible := false
+    
+    if (GuiID_VoiceInput != 0) {
+        try {
+            GuiID_VoiceInput.Destroy()
+        }
+        GuiID_VoiceInput := 0
+    }
+    VoiceSearchInputEdit := 0
+}
+
+; 开始语音输入（在语音搜索界面中）
+StartVoiceInputInSearch() {
+    global VoiceSearchActive, VoiceInputMethod, VoiceSearchPanelVisible, VoiceSearchInputEdit
+    
+    if (VoiceSearchActive || !VoiceSearchPanelVisible) {
+        return
+    }
+    
+    try {
+        ; 确保输入框为空
+        if (VoiceSearchInputEdit) {
+            VoiceSearchInputEdit.Value := ""
+        }
+        
+        ; 自动检测输入法类型
+        VoiceInputMethod := DetectInputMethod()
+        
+        ; 根据输入法类型使用不同的快捷键
+        if (VoiceInputMethod = "baidu") {
+            ; 百度输入法：Alt+Y 激活，F2 开始
+            Send("!y")
+            Sleep(500)
+            Send("{F2}")
+            Sleep(200)
+        } else if (VoiceInputMethod = "xunfei") {
+            ; 讯飞输入法：直接按 F6 开始语音输入
+            Send("{F6}")
+            Sleep(800)
+        } else {
+            ; 默认尝试百度方案
+            Send("!y")
+            Sleep(500)
+            Send("{F2}")
+            Sleep(200)
+        }
+        
+        VoiceSearchActive := true
+        VoiceSearchContent := ""
+        
+        ; 等待一下，确保语音输入已启动，再开始更新输入框内容
+        Sleep(500)
+        ; 根据"自动记载选中文本"开关状态决定是否开始更新输入框内容
+        global AutoLoadSelectedText
+        ; 先停止定时器，确保状态正确
+        SetTimer(UpdateVoiceSearchInputInPanel, 0)
+        if (AutoLoadSelectedText) {
+            SetTimer(UpdateVoiceSearchInputInPanel, 300)  ; 每300ms更新一次
+        } else {
+            ; 明确停止定时器，确保不会自动更新
+            SetTimer(UpdateVoiceSearchInputInPanel, 0)
+        }
+    } catch as e {
+        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
+    }
+}
+
+; 更新语音搜索输入框内容（在面板中）
+UpdateVoiceSearchInputInPanel(*) {
+    global VoiceSearchActive, VoiceSearchInputEdit, VoiceSearchPanelVisible, AutoLoadSelectedText
+    
+    ; 如果"自动记载选中文本"开关未开启，停止定时器
+    if (!AutoLoadSelectedText) {
+        SetTimer(UpdateVoiceSearchInputInPanel, 0)
+        return
+    }
+    
+    if (!VoiceSearchActive || !VoiceSearchPanelVisible || !VoiceSearchInputEdit) {
+        SetTimer(UpdateVoiceSearchInputInPanel, 0)
+        return
+    }
+    
+    try {
+        ; 从剪贴板读取当前内容
+        OldClipboard := A_Clipboard
+        A_Clipboard := ""
+        Send("^c")
+        if ClipWait(0.1) {
+            CurrentContent := A_Clipboard
+            ; 只更新非空内容，避免填入剪贴板中的旧内容
+            if (CurrentContent != "" && StrLen(CurrentContent) > 0) {
+                ; 检查内容是否看起来像语音输入的内容（不是文件路径或快捷方式）
+                ; 如果输入框为空，且剪贴板内容包含路径分隔符或看起来像文件路径，则忽略
+                CurrentInputValue := VoiceSearchInputEdit.Value
+                if (CurrentInputValue = "" && (InStr(CurrentContent, "\") || InStr(CurrentContent, ".lnk") || InStr(CurrentContent, "快捷方式"))) {
+                    ; 忽略看起来像文件路径或快捷方式的内容
+                    A_Clipboard := OldClipboard
+                    return
+                }
+                
+                ; 只在内容变化时更新
+                if (CurrentContent != CurrentInputValue) {
+                    VoiceSearchInputEdit.Value := CurrentContent
+                }
+            }
+        }
+        A_Clipboard := OldClipboard
+    } catch {
+        ; 忽略错误
+    }
+}
+
+; 结束语音输入（在语音搜索界面中）
+StopVoiceInputInSearch() {
+    global VoiceSearchActive, VoiceInputMethod, CapsLock, VoiceSearchInputEdit, VoiceSearchPanelVisible
+    
+    if (!VoiceSearchActive || !VoiceSearchPanelVisible) {
+        return
+    }
+    
+    try {
+        ; 先确保CapsLock状态被重置
+        if (CapsLock) {
+            CapsLock := false
+        }
+        
+        ; 根据输入法类型使用不同的结束快捷键
+        if (VoiceInputMethod = "baidu") {
+            ; 百度输入法：F1 结束语音录入
+            Send("{F1}")
+            Sleep(800)
+            
+            ; 获取语音输入内容
+            OldClipboard := A_Clipboard
+            Send("^a")
+            Sleep(200)
+            A_Clipboard := ""
+            Send("^c")
+            if ClipWait(1.5) {
+                VoiceSearchContent := A_Clipboard
+            }
+            A_Clipboard := OldClipboard
+            
+            ; 退出百度输入法语音模式
+            Send("!y")
+            Sleep(300)
+        } else if (VoiceInputMethod = "xunfei") {
+            ; 讯飞输入法：F6 结束
+            Send("{F6}")
+            Sleep(1000)
+            
+            ; 获取语音输入内容
+            OldClipboard := A_Clipboard
+            Send("^a")
+            Sleep(200)
+            A_Clipboard := ""
+            Send("^c")
+            if ClipWait(1.5) {
+                VoiceSearchContent := A_Clipboard
+            }
+            A_Clipboard := OldClipboard
+        } else {
+            ; 默认尝试百度方案
+            Send("{F1}")
+            Sleep(800)
+            
+            ; 获取语音输入内容
+            OldClipboard := A_Clipboard
+            Send("^a")
+            Sleep(200)
+            A_Clipboard := ""
+            Send("^c")
+            if ClipWait(1.5) {
+                VoiceSearchContent := A_Clipboard
+            }
+            A_Clipboard := OldClipboard
+            
+            ; 退出百度输入法语音模式
+            Send("!y")
+            Sleep(300)
+        }
+        
+        VoiceSearchActive := false
+        SetTimer(UpdateVoiceSearchInputInPanel, 0)  ; 停止更新输入框
+        
+        ; 将内容填入输入框
+        if (VoiceSearchContent != "" && StrLen(VoiceSearchContent) > 0 && VoiceSearchInputEdit) {
+            VoiceSearchInputEdit.Value := VoiceSearchContent
+            VoiceSearchInputEdit.Focus()
+        }
+    } catch as e {
+        VoiceSearchActive := false
+        SetTimer(UpdateVoiceSearchInputInPanel, 0)
+        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
+    }
+}
+
+
+; 显示搜索引擎选择界面
+ShowSearchEngineSelection(Content) {
+    global GuiID_VoiceInput, VoiceInputScreenIndex, UI_Colors, VoiceSearchSelecting, VoiceSearchEngineButtons
+    
+    VoiceSearchSelecting := true
+    
+    if (GuiID_VoiceInput != 0) {
+        try {
+            GuiID_VoiceInput.Destroy()
+        }
+        GuiID_VoiceInput := 0
+    }
+    
+    GuiID_VoiceInput := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
+    GuiID_VoiceInput.BackColor := UI_Colors.Background
+    GuiID_VoiceInput.SetFont("s12 cFFFFFF Bold", "Segoe UI")
+    
+    PanelWidth := 500
+    ; 计算所需高度：标题(50) + 内容标签(25) + 内容框(60) + 引擎标签(30) + 按钮区域 + 取消按钮(45) + 边距(20)
+    ButtonsRows := Ceil(SearchEngines.Length / 4)  ; 每行4个按钮
+    ButtonsAreaHeight := ButtonsRows * 45  ; 每行45px（按钮35px + 间距10px）
+    PanelHeight := 50 + 25 + 60 + 30 + ButtonsAreaHeight + 45 + 20
+    
+    ; 标题
+    TitleText := GuiID_VoiceInput.Add("Text", "x0 y15 w500 h30 Center cFFFFFF", "选择搜索引擎")
+    TitleText.SetFont("s14 Bold", "Segoe UI")
+    
+    ; 显示搜索内容
+    YPos := 55
+    LabelText := GuiID_VoiceInput.Add("Text", "x20 y" . YPos . " w460 h20 cCCCCCC", "搜索内容:")
+    LabelText.SetFont("s10", "Segoe UI")
+    
+    YPos += 25
+    ContentEdit := GuiID_VoiceInput.Add("Edit", "x20 y" . YPos . " w460 h60 vSearchContentEdit Background" . UI_Colors.InputBg . " c" . UI_Colors.Text . " ReadOnly Multi", Content)
+    ContentEdit.SetFont("s11", "Segoe UI")
+    
+    ; 搜索引擎按钮
+    YPos += 80
+    LabelEngine := GuiID_VoiceInput.Add("Text", "x20 y" . YPos . " w460 h20 cCCCCCC", "选择搜索引擎:")
+    LabelEngine.SetFont("s10", "Segoe UI")
+    
+    YPos += 30
+    ; 搜索引擎列表
+    SearchEngines := [
+        {Name: GetText("search_engine_deepseek"), Value: "deepseek"},
+        {Name: GetText("search_engine_yuanbao"), Value: "yuanbao"},
+        {Name: GetText("search_engine_doubao"), Value: "doubao"},
+        {Name: GetText("search_engine_zhipu"), Value: "zhipu"},
+        {Name: GetText("search_engine_mita"), Value: "mita"},
+        {Name: GetText("search_engine_wenxin"), Value: "wenxin"},
+        {Name: GetText("search_engine_qianwen"), Value: "qianwen"},
+        {Name: GetText("search_engine_kimi"), Value: "kimi"}
+    ]
+    
+    VoiceSearchEngineButtons := []
+    ButtonWidth := 110
+    ButtonHeight := 35
+    ButtonSpacing := 10
+    StartX := 20
+    ButtonsPerRow := 4
+    
+    for Index, Engine in SearchEngines {
+        Row := Floor((Index - 1) / ButtonsPerRow)
+        Col := Mod((Index - 1), ButtonsPerRow)
+        BtnX := StartX + Col * (ButtonWidth + ButtonSpacing)
+        BtnY := YPos + Row * (ButtonHeight + ButtonSpacing)
+        
+        ; 创建按钮
+        Btn := GuiID_VoiceInput.Add("Text", "x" . BtnX . " y" . BtnY . " w" . ButtonWidth . " h" . ButtonHeight . " Center 0x200 cWhite Background" . UI_Colors.BtnBg . " vSearchEngineBtn" . Index, Engine.Name)
+        Btn.SetFont("s10", "Segoe UI")
+        Btn.OnEvent("Click", CreateSearchEngineClickHandler(Content, Engine.Value))
+        HoverBtn(Btn, UI_Colors.BtnBg, UI_Colors.BtnHover)
+        VoiceSearchEngineButtons.Push(Btn)
+    }
+    
+    ; 取消按钮
+    CancelBtnY := YPos + (Floor((SearchEngines.Length - 1) / ButtonsPerRow) + 1) * (ButtonHeight + ButtonSpacing) + 10
+    CancelBtn := GuiID_VoiceInput.Add("Text", "x" . (PanelWidth // 2 - 60) . " y" . CancelBtnY . " w120 h35 Center 0x200 cWhite Background666666 vCancelBtn", "取消")
+    CancelBtn.SetFont("s11", "Segoe UI")
+    CancelBtn.OnEvent("Click", CancelSearchEngineSelection)
+    HoverBtn(CancelBtn, "666666", "777777")
+    
+    ScreenInfo := GetScreenInfo(VoiceInputScreenIndex)
+    Pos := GetPanelPosition(ScreenInfo, PanelWidth, PanelHeight, "center")
+    GuiID_VoiceInput.Show("w" . PanelWidth . " h" . PanelHeight . " x" . Pos.X . " y" . Pos.Y . " NoActivate")
+    WinSetAlwaysOnTop(1, GuiID_VoiceInput.Hwnd)
+}
+
+; 创建搜索引擎点击处理函数
+CreateSearchEngineClickHandler(Content, Engine) {
+    ; 使用闭包保存参数
+    SearchEngineClickHandler(*) {
+        global VoiceSearchSelecting
+        VoiceSearchSelecting := false
+        HideVoiceSearchInputPanel()
+        SendVoiceSearchToBrowser(Content, Engine)
+    }
+    return SearchEngineClickHandler
+}
+
+; 取消搜索引擎选择
+CancelSearchEngineSelection(*) {
+    global VoiceSearchSelecting
+    VoiceSearchSelecting := false
+    HideVoiceSearchInputPanel()
+}
+
+; 发送语音搜索内容到浏览器
+SendVoiceSearchToBrowser(Content, Engine) {
+    try {
+        ; URL编码搜索内容
+        EncodedContent := UriEncode(Content)
+        
+        ; 根据搜索引擎构建URL
+        SearchURL := ""
+        switch Engine {
+            case "deepseek":
+                SearchURL := "https://chat.deepseek.com/?q=" . EncodedContent
+            case "yuanbao":
+                SearchURL := "https://www.yuanbao.com/search?query=" . EncodedContent
+            case "doubao":
+                SearchURL := "https://www.doubao.com/search?query=" . EncodedContent
+            case "zhipu":
+                SearchURL := "https://chatglm.cn/main/search?query=" . EncodedContent
+            case "mita":
+                SearchURL := "https://www.metaso.cn/search?query=" . EncodedContent
+            case "wenxin":
+                SearchURL := "https://yiyan.baidu.com/search?query=" . EncodedContent
+            case "qianwen":
+                SearchURL := "https://tongyi.aliyun.com/search?query=" . EncodedContent
+            case "kimi":
+                SearchURL := "https://kimi.moonshot.cn/search?query=" . EncodedContent
+            default:
+                SearchURL := "https://chat.deepseek.com/?q=" . EncodedContent
+        }
+        
+        ; 打开浏览器
+        Run(SearchURL)
+        TrayTip(GetText("voice_search_sent"), GetText("tip"), "Iconi 1")
+    } catch as e {
+        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
+    }
+}
+
+; 切换到中文输入法
+SwitchToChineseIME(*) {
+    try {
+        ; 获取当前活动窗口的句柄
+        ActiveHwnd := WinGetID("A")
+        if (!ActiveHwnd) {
+            return
+        }
+        
+        ; 方法1：使用 Windows IME API 切换到中文输入法
+        ; 加载 imm32.dll
+        hIMC := DllCall("imm32\ImmGetContext", "Ptr", ActiveHwnd, "Ptr")
+        if (hIMC) {
+            ; 获取当前输入法状态
+            DllCall("imm32\ImmGetConversionStatus", "Ptr", hIMC, "UInt*", &ConversionMode := 0, "UInt*", &SentenceMode := 0)
+            
+            ; 设置输入法为中文模式（IME_CMODE_NATIVE = 1）
+            ; IME_CMODE_NATIVE 表示使用本地语言（中文）输入模式
+            ConversionMode := ConversionMode | 0x0001  ; IME_CMODE_NATIVE
+            
+            ; 应用新的输入法状态
+            DllCall("imm32\ImmSetConversionStatus", "Ptr", hIMC, "UInt", ConversionMode, "UInt", SentenceMode)
+            
+            ; 释放输入法上下文
+            DllCall("imm32\ImmReleaseContext", "Ptr", ActiveHwnd, "Ptr", hIMC)
+        }
+        
+        ; 方法2：尝试切换到中文键盘布局（备用方案）
+        ; 中文简体键盘布局代码：0x0804 (2052)
+        ; 使用 PostMessage 发送输入法切换请求
+        try {
+            ; WM_INPUTLANGCHANGEREQUEST = 0x0050
+            ; 参数：wParam = INPUTLANGCHANGE_SYSCHARSET (0x0001), lParam = 键盘布局句柄
+            ; 获取中文键盘布局句柄
+            hKL := DllCall("user32\LoadKeyboardLayout", "Str", "00000804", "UInt", 0x00000001, "Ptr")  ; KLF_ACTIVATE = 1
+            if (hKL) {
+                ; 发送输入法切换消息
+                PostMessage(0x0050, 0x0001, hKL, , , "ahk_id " . ActiveHwnd)
+            }
+        } catch {
+            ; 如果失败，静默处理
+        }
+        
+    } catch {
+        ; 如果切换失败，静默处理（不显示错误提示）
+    }
+}
+
+; URL编码函数（使用 UTF-8 编码，正确处理中文）
+UriEncode(Uri) {
+    try {
+        ; 方法1：使用 JavaScript encodeURIComponent（如果可用）
+        try {
+            js := ComObject("MSScriptControl.ScriptControl")
+            js.Language := "JScript"
+            ; 转义单引号，防止 JavaScript 错误
+            EscapedUri := StrReplace(Uri, "\", "\\")
+            EscapedUri := StrReplace(EscapedUri, "'", "\'")
+            EscapedUri := StrReplace(EscapedUri, "`n", "\n")
+            EscapedUri := StrReplace(EscapedUri, "`r", "\r")
+            Encoded := js.Eval("encodeURIComponent('" . EscapedUri . "')")
+            return Encoded
+        } catch {
+            ; 方法2：手动 UTF-8 编码（更可靠的备用方案）
+            Encoded := ""
+            ; 将字符串转换为 UTF-8 字节数组
+            UTF8Size := StrPut(Uri, "UTF-8")
+            UTF8Bytes := Buffer(UTF8Size)
+            StrPut(Uri, UTF8Bytes, "UTF-8")
+            
+            ; 遍历每个字节进行编码
+            Loop UTF8Size - 1 {  ; -1 因为 StrPut 返回的大小包括 null 终止符
+                Byte := NumGet(UTF8Bytes, A_Index - 1, "UChar")
+                ; 保留字符：字母、数字、-、_、.、~（根据 RFC 3986）
+                if ((Byte >= 48 && Byte <= 57) || (Byte >= 65 && Byte <= 90) || (Byte >= 97 && Byte <= 122) || Byte = 45 || Byte = 95 || Byte = 46 || Byte = 126) {
+                    Encoded .= Chr(Byte)
+                } else if (Byte = 32) {
+                    ; 空格编码为 +
+                    Encoded .= "+"
+                } else {
+                    ; URL编码：%XX（大写）
+                    Encoded .= "%" . Format("{:02X}", Byte)
+                }
+            }
+            return Encoded
+        }
+    } catch {
+        ; 如果编码失败，返回原始字符串
+        return Uri
     }
 }
