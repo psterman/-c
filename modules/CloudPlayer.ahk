@@ -311,6 +311,21 @@ CloudPlayer_OnWebMessage(sender, args) {
         return
     }
 
+    if (typ = "cloudplayer_archive_list") {
+        path := payload.Has("path") ? String(payload["path"]) : ""
+        token := payload.Has("token") ? Trim(String(payload["token"])) : ""
+        reqId := payload.Has("reqId") ? String(payload["reqId"]) : ""
+        out := CloudPlayer_GetArchiveEntries(path, token, reqId)
+        try WebView_QueuePayload(g_CloudPlayerWv2, Map(
+            "type", "cloudplayer_archive_list_result",
+            "reqId", reqId,
+            "ok", out["ok"],
+            "message", out["message"],
+            "entries", out["entries"]
+        ))
+        return
+    }
+
     ; 任意 /api/fs/* JSON POST（复制/粘贴/删除等）；与列表请求一致地使用 g_CloudPlayerApiBase + WinHttp，避免 WebView host bridge HttpRequest 传入非法 URL。
     if (typ = "cloudplayer_api_json") {
         apiPath := payload.Has("apiPath") ? Trim(String(payload["apiPath"])) : ""
@@ -2016,6 +2031,20 @@ CloudPlayer_PostDownloadProgress(message) {
     ))
 }
 
+CloudPlayer_PostArchiveProgress(reqId, message, percent := 0) {
+    global g_CloudPlayerWv2
+    rid := Trim(String(reqId))
+    if (rid = "")
+        return
+    msg := Trim(String(message))
+    try WebView_QueuePayload(g_CloudPlayerWv2, Map(
+        "type", "cloudplayer_archive_progress",
+        "reqId", rid,
+        "message", msg,
+        "percent", Integer(percent)
+    ))
+}
+
 CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "") {
     global g_CloudPlayerApiBase
     p := CloudPlayer_NormalizeRemotePath(folderPath)
@@ -2301,6 +2330,89 @@ CloudPlayer_DownloadsDir() {
     if (dir != "\Downloads" && DirExist(dir))
         return dir
     return A_Desktop
+}
+
+CloudPlayer_GetArchiveEntries(remotePath, token := "", reqId := "") {
+    global g_CloudPlayerApiBase
+    out := Map("ok", false, "message", "", "entries", [])
+    CloudPlayer_PostArchiveProgress(reqId, "压缩包预览：开始准备...", 3)
+    rp := CloudPlayer_NormalizeRemotePath(remotePath)
+    if (rp = "/" || rp = "") {
+        out["message"] := "invalid archive path"
+        return out
+    }
+    headers := Map("Content-Type", "application/json", "Accept", "application/json")
+    tk := Trim(String(token))
+    if (tk = "") {
+        errTok := ""
+        tk := CloudPlayer_GetOpenListAdminToken(&errTok, 12000)
+    }
+    if (tk != "")
+        headers["Authorization"] := tk
+
+    CloudPlayer_PostArchiveProgress(reqId, "压缩包预览：正在解析下载地址...", 12)
+    info := CloudPlayer_ResolveDownloadUrl(rp, headers)
+    if !(info is Map) || !info.Has("url") || Trim(String(info["url"])) = "" {
+        out["message"] := "resolve archive url failed"
+        return out
+    }
+
+    sevenZip := A_ScriptDir . "\lib\7z.exe"
+    if !FileExist(sevenZip) {
+        out["message"] := "missing lib\\7z.exe"
+        return out
+    }
+
+    stamp := FormatTime(, "yyyyMMdd_HHmmss")
+    workDir := A_Temp . "\NiumaZipPreview_" . stamp . "_" . A_TickCount
+    DirCreate(workDir)
+    arcPath := workDir . "\preview.archive"
+    CloudPlayer_PostArchiveProgress(reqId, "压缩包预览：正在下载压缩包...", 42)
+    okDl := CloudPlayer_DownloadBinary(String(info["url"]), arcPath, tk, info.Has("headers") ? info["headers"] : 0)
+    if !okDl || !FileExist(arcPath) {
+        try DirDelete(workDir, true)
+        out["message"] := "download archive failed"
+        return out
+    }
+
+    CloudPlayer_PostArchiveProgress(reqId, "压缩包预览：正在读取目录结构...", 74)
+    cmd := '"' . sevenZip . '" l -slt -ba -y -p"" -- "' . arcPath . '"'
+    cap := CloudPlayer_ExecCapture(cmd, 15000)
+    stdout := ""
+    try stdout := String(cap["stdout"])
+    catch {
+        stdout := ""
+    }
+    stderr := ""
+    try stderr := String(cap["stderr"])
+    catch {
+        stderr := ""
+    }
+    txt := stdout . "`n" . stderr
+    lines := StrSplit(txt, "`n", "`r")
+    arr := []
+    maxItems := 1200
+    for _, line in lines {
+        s := Trim(String(line))
+        if (SubStr(s, 1, 7) != "Path = ")
+            continue
+        name := Trim(SubStr(s, 8))
+        if (name = "" || name = arcPath)
+            continue
+        arr.Push(name)
+        if (arr.Length >= maxItems)
+            break
+    }
+    try DirDelete(workDir, true)
+    if (arr.Length = 0) {
+        out["message"] := "zip list is empty or parse failed"
+        return out
+    }
+    CloudPlayer_PostArchiveProgress(reqId, "压缩包预览：目录读取完成", 100)
+    out["ok"] := true
+    out["entries"] := arr
+    out["message"] := "ok"
+    return out
 }
 
 CloudPlayer_HttpJson(method, url, headers := 0, body := "") {

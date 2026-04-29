@@ -1991,6 +1991,7 @@ mark {
             <span class="ql-text">按 <kbd>Space</kbd> 重新加载预览 · 选项：</span>
             <div class="ql-btns">
               <button type="button" id="preview-pdf-mode-btn" class="preview-ctrl-btn" title="PDF 预览策略">PDF:auto</button>
+              <button type="button" id="preview-archive-mode-btn" class="preview-ctrl-btn" title="压缩包目录预览策略（本地文件）">归档:7z</button>
               <button type="button" id="preview-native-btn" class="preview-ctrl-btn" title="调用系统原生 IPreviewHandler">IPreview</button>
               <button type="button" id="preview-ql-btn" title="可选：调用便携版 QuickLook.exe">QuickLook</button>
             </div>
@@ -2146,6 +2147,7 @@ const state = {
     loop: (localStorage.getItem("sc_media_loop") || "0") === "1",
     autoplay: (localStorage.getItem("sc_media_autoplay") || "0") === "1"
   },
+  archivePreviewMode: (typeof localStorage !== "undefined" && localStorage.getItem("sc_archive_preview_mode")) || "seven_zip",
   pdfMode: (localStorage.getItem("sc_pdf_preview_mode") || "auto"),
   pdfPlan: null,
   pdfWebBroken: false,
@@ -4063,6 +4065,28 @@ function cyclePdfMode() {
   if (pathExtensionLower(state.previewPath) === "pdf") scheduleRunPreview();
 }
 
+function applyArchivePreviewModeLabel() {
+  const btn = document.getElementById("preview-archive-mode-btn");
+  if (!btn) return;
+  const m = state.archivePreviewMode || "seven_zip";
+  const labels = {
+    seven_zip: "归档:7z",
+    zip_shell_first: "归档:ZIP先"
+  };
+  btn.textContent = labels[m] || ("归档:" + m);
+}
+
+function cycleArchivePreviewMode() {
+  const order = ["seven_zip", "zip_shell_first"];
+  const cur = state.archivePreviewMode || "seven_zip";
+  const i = Math.max(0, order.indexOf(cur));
+  const next = order[(i + 1) % order.length];
+  state.archivePreviewMode = next;
+  try { localStorage.setItem("sc_archive_preview_mode", next); } catch (_) {}
+  applyArchivePreviewModeLabel();
+  if (PREVIEW_ARCHIVE_EXT.has(pathExtensionLower(state.previewPath))) scheduleRunPreview();
+}
+
 function ensurePdfJsScript() {
   if (globalThis.pdfjsLib) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_JS_ASSET_BASE + "pdf.worker.min.js";
@@ -4690,7 +4714,7 @@ function runPreviewForSelection() {
     setPreviewLayoutMode("web");
     stopNativePreview();
     pane.innerHTML = "<div class=\"preview-loading\">正在读取压缩包目录…</div>";
-    postToAhk({ type: "INVOKE_ARCHIVE_LIST", path, seq });
+    postToAhk({ type: "INVOKE_ARCHIVE_LIST", path, seq, mode: state.archivePreviewMode || "seven_zip" });
     return;
   }
 
@@ -5375,7 +5399,12 @@ const previewPdfModeBtn = document.getElementById("preview-pdf-mode-btn");
 if (previewPdfModeBtn) {
   previewPdfModeBtn.addEventListener("click", () => cyclePdfMode());
 }
+const previewArchiveModeBtn = document.getElementById("preview-archive-mode-btn");
+if (previewArchiveModeBtn) {
+  previewArchiveModeBtn.addEventListener("click", () => cycleArchivePreviewMode());
+}
 setPdfMode(state.pdfMode || "auto");
+applyArchivePreviewModeLabel();
 updateQuickLookInstallUi();
 const previewQlBtn = document.getElementById("preview-ql-btn");
 if (previewQlBtn) {

@@ -258,6 +258,15 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       <div class="adv-item"><label for="advClientId">Client ID</label><input id="advClientId" value=""></div>
       <div class="adv-item"><label for="advClientSecret">Client Secret</label><input id="advClientSecret" value=""></div>
       <div class="adv-item full"><label for="advApiUrlAddress">API URL Address</label><input id="advApiUrlAddress" value="https://api.oplist.org/alicloud/renewapi"></div>
+      <div class="adv-item full">
+        <label for="advArchivePreviewMode" title="切换压缩包目录预览的实现方式">压缩包预览策略</label>
+        <select id="advArchivePreviewMode">
+          <option value="host_7z">宿主 7-Zip（默认：下载临时文件后用 lib\7z.exe）</option>
+          <option value="browser_hybrid">混合（先宿主；失败则浏览器 libarchive.js）</option>
+          <option value="browser_wasm">浏览器 libarchive.js（需完整下载；ZIP 可走 JSZip 快速列目录）</option>
+          <option value="openlist_api">OpenList 归档接口（服务端列目录，需 Alist/OpenList 支持 /api/fs/archive/*）</option>
+        </select>
+      </div>
     </div>
 
     <input id="mountAli" class="hidden" value="/aliyun">
@@ -366,6 +375,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
 
 <script src="https://unpkg.com/artplayer@5.2.3/dist/artplayer.js"></script>
 <script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="./assets/nm-bottom-dock.js"></script>
 <script>
 (function(){
@@ -423,6 +433,10 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   var artPlayer = null;
   var playerMode = "native";
   var activeWebEmbed = null;
+  var previewSeq = 0;
+  var previewActivePath = "";
+  var previewBlobUrls = [];
+  var archivePreviewCache = {};
   var autoBootDone = false;
   var uiLang = "zh";
   var providerTokens = {};
@@ -1431,6 +1445,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       advDriveType: $("advDriveType").value || "default", advAlipanType: $("advAlipanType").value || "default",
       advUseOnlineApi: $("advUseOnlineApi").value || "true", advClientId: $("advClientId").value || "",
       advClientSecret: $("advClientSecret").value || "", advApiUrlAddress: $("advApiUrlAddress").value || "https://api.oplist.org/alicloud/renewapi",
+      advArchivePreviewMode: $("advArchivePreviewMode") ? ($("advArchivePreviewMode").value || "host_7z") : "host_7z",
       advLanguage: uiLang
     };
     try{ localStorage.setItem(storeKey, JSON.stringify(data)); }catch(_){}
@@ -1463,6 +1478,9 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       if(typeof s.advClientId==="string") $("advClientId").value=s.advClientId;
       if(typeof s.advClientSecret==="string") $("advClientSecret").value=s.advClientSecret;
       if(s.advApiUrlAddress) $("advApiUrlAddress").value=s.advApiUrlAddress;
+      if($("advArchivePreviewMode") && s.advArchivePreviewMode && /^(host_7z|browser_hybrid|browser_wasm|openlist_api)$/.test(String(s.advArchivePreviewMode))){
+        $("advArchivePreviewMode").value = String(s.advArchivePreviewMode);
+      }
       if(typeof s.advLanguage==="string" && (s.advLanguage==="zh" || s.advLanguage==="en")) uiLang = s.advLanguage;
     }catch(_){}
     if(uiLang !== "en") uiLang = "zh";
@@ -2457,6 +2475,204 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       postHost("cloudplayer_fs_get", { apiBase: abGet, path:String(fullPath||"/"), token:String(token||""), reqId:reqId });
     });
   }
+  async function requestArchiveListViaHost(fullPath, token, timeoutMs, onProgress){
+    timeoutMs = timeoutMs || 12000;
+    var reqId = "arclist_" + Date.now() + "_" + (++fsGetReqSeq);
+    return new Promise(function(resolve){
+      var done = false;
+      var handler = function(evt){
+        var data = evt && evt.data ? evt.data : null;
+        if(!data) return;
+        if(data.type === "cloudplayer_archive_progress"){
+          if(String(data.reqId||"") !== reqId) return;
+          if(typeof onProgress === "function"){
+            try{ onProgress({ message:String(data.message||""), percent:Number(data.percent||0) }); }catch(_){}
+          }
+          return;
+        }
+        if(data.type !== "cloudplayer_archive_list_result") return;
+        if(String(data.reqId||"") !== reqId) return;
+        if(done) return;
+        done = true;
+        clearTimeout(timer);
+        try{ if(window.chrome && window.chrome.webview) window.chrome.webview.removeEventListener("message", handler); }catch(_){ }
+        resolve({ ok:!!data.ok, message:String(data.message||""), entries:Array.isArray(data.entries)?data.entries:[] });
+      };
+      var timer = setTimeout(function(){
+        if(done) return;
+        done = true;
+        try{ if(window.chrome && window.chrome.webview) window.chrome.webview.removeEventListener("message", handler); }catch(_){ }
+        resolve({ ok:false, message:"timeout", entries:[] });
+      }, timeoutMs);
+      try{ if(window.chrome && window.chrome.webview) window.chrome.webview.addEventListener("message", handler); }catch(_){ }
+      var ab = normalizeApiBase(($("apiBase") && $("apiBase").value) || state.apiBase);
+      postHost("cloudplayer_archive_list", { apiBase:ab, path:String(fullPath||""), token:String(token||""), reqId:reqId });
+    });
+  }
+  var ARCHIVE_WASM_MAX_BYTES = 96 * 1024 * 1024;
+  var __archiveLibModulePromise = null;
+  function getArchivePreviewMode(){
+    var el = $("advArchivePreviewMode");
+    var v = el ? String(el.value||"").trim() : "";
+    if(v === "browser_hybrid" || v === "browser_wasm" || v === "openlist_api") return v;
+    return "host_7z";
+  }
+  function ensureArchiveLibModule(){
+    if(__archiveLibModulePromise) return __archiveLibModulePromise;
+    __archiveLibModulePromise = import("https://unpkg.com/libarchive.js@2.0.2/dist/libarchive.js").then(function(mod){
+      var Archive = mod.Archive;
+      return Archive.init({
+        workerUrl: "https://unpkg.com/libarchive.js@2.0.2/dist/worker-bundle.js"
+      }).then(function(){ return Archive; });
+    }).catch(function(e){
+      __archiveLibModulePromise = null;
+      throw e;
+    });
+    return __archiveLibModulePromise;
+  }
+  async function listZipEntriesFromBlob(blob){
+    if(!(window.JSZip)) throw new Error("JSZip missing");
+    var z = await JSZip.loadAsync(blob);
+    var keys = Object.keys(z.files).filter(function(k){ return !z.files[k].dir; });
+    keys.sort();
+    return keys.slice(0, 1200);
+  }
+  async function listArchiveEntriesFromBlob(blob, ext){
+    var e = String(ext||"").toLowerCase();
+    if(e === "zip"){
+      try{ return await listZipEntriesFromBlob(blob); }catch(_){ }
+    }
+    var Archive = await ensureArchiveLibModule();
+    var arc = await Archive.open(blob);
+    try{
+      var arr = await arc.getFilesArray();
+      var names = [];
+      for(var i=0;i<arr.length;i++){
+        var it = arr[i];
+        var p = it && it.path != null ? String(it.path) : "";
+        if(p) names.push(p);
+      }
+      names.sort();
+      return names.slice(0, 1200);
+    }finally{
+      try{ await arc.close(); }catch(_){ }
+    }
+  }
+  function flattenOpenListArchiveTree(nodes, prefix){
+    var out = [];
+    var arr = Array.isArray(nodes) ? nodes : [];
+    for(var i=0;i<arr.length;i++){
+      var n = arr[i] || {};
+      var obj = n.Object || n.object || {};
+      var name = String(obj.name || n.name || "").replace(/^\/+|\/+$/g,"");
+      var isFolder = !!(n.IsFolder || n.is_folder || obj.type === "folder" || (String(obj.path||"").endsWith("/")));
+      var base = prefix ? (prefix + "/" + name) : name;
+      var ch = n.children || n.Children || [];
+      if(isFolder){
+        if(ch && ch.length){
+          out = out.concat(flattenOpenListArchiveTree(ch, base));
+        }else{
+          out.push(base ? (base + "/") : "/");
+        }
+      }else{
+        if(base) out.push(base);
+      }
+    }
+    return out;
+  }
+  function pathsFromOpenListArchiveData(data){
+    if(!data || typeof data !== "object") return [];
+    if(Array.isArray(data.content)){
+      var p1 = [];
+      for(var i=0;i<data.content.length;i++){
+        var it = data.content[i];
+        var pn = it && (it.path || it.name) ? String(it.path || it.name) : "";
+        if(pn) p1.push(pn.replace(/^\/+/,""));
+      }
+      if(p1.length) return p1.slice(0, 1200);
+    }
+    if(data.tree){
+      var tr = data.tree;
+      var roots = Array.isArray(tr) ? tr : (tr.children || tr.Children || []);
+      return flattenOpenListArchiveTree(roots, "").slice(0, 1200);
+    }
+    return [];
+  }
+  async function requestArchiveListViaOpenListArchiveApi(fullPath, token, timeoutMs){
+    timeoutMs = timeoutMs || 26000;
+    var ab = normalizeApiBase(($("apiBase") && $("apiBase").value) || state.apiBase);
+    var tk = String(token||"").trim();
+    var headers = { "Content-Type":"application/json", "Accept":"application/json" };
+    if(tk) headers["Authorization"] = tk;
+    var root = ab.replace(/\/+$/,"");
+    var metaUrl = root + "/api/fs/archive/meta";
+    var ctrl = new AbortController();
+    var timer = setTimeout(function(){ try{ ctrl.abort(); }catch(_){ } }, timeoutMs);
+    try{
+      var res = await fetch(metaUrl, {
+        method:"POST",
+        headers: headers,
+        body: JSON.stringify({ path: fullPath, password: "" }),
+        signal: ctrl.signal
+      });
+      var txt = await res.text();
+      var j = null;
+      try{ j = JSON.parse(txt); }catch(_){ j = null; }
+      var code = Number(j && j.code);
+      if(res.ok && code === 200 && j && j.data){
+        var paths = pathsFromOpenListArchiveData(j.data);
+        if(paths.length) return { ok:true, message:"", entries: paths };
+      }
+      var listUrl = root + "/api/fs/archive/list";
+      var res2 = await fetch(listUrl, {
+        method:"POST",
+        headers: headers,
+        body: JSON.stringify({ path: fullPath, password: "", inner_path: "/" }),
+        signal: ctrl.signal
+      });
+      var txt2 = await res2.text();
+      var j2 = null;
+      try{ j2 = JSON.parse(txt2); }catch(_){ j2 = null; }
+      var code2 = Number(j2 && j2.code);
+      if(res2.ok && code2 === 200 && j2 && j2.data){
+        var paths2 = pathsFromOpenListArchiveData(j2.data);
+        if(paths2.length) return { ok:true, message:"", entries: paths2 };
+      }
+      var msg = (j && j.message) || (j2 && j2.message) || ("HTTP " + res.status);
+      return { ok:false, message: msg || "archive api unsupported or empty", entries:[] };
+    }catch(e){
+      return { ok:false, message: String(e && e.message ? e.message : "archive api error"), entries:[] };
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+  async function previewArchiveEntryWasm(entry, seq){
+    var ext = getFileExt(entry.path);
+    renderArchiveLoading(entry.name || "Archive Preview", "正在下载压缩包到浏览器…", 12);
+    var tk = await ensureLiveToken(4500);
+    if(!isPreviewSessionCurrent(seq, entry)) return { ok:false, message:"cancelled", entries:[] };
+    var link = await resolveFileUrl(entry.path);
+    if(!isPreviewSessionCurrent(seq, entry)) return { ok:false, message:"cancelled", entries:[] };
+    var cands = [];
+    if(link && link.url) cands.push({ url:link.url, headers:(link.headers||{}) });
+    if(Array.isArray(link && link.candidates)){
+      for(var ci=0; ci<link.candidates.length; ci++) cands.push(link.candidates[ci]);
+    }
+    var blob = await fetchBlobByCandidates(cands, "application/octet-stream");
+    if(!isPreviewSessionCurrent(seq, entry)) return { ok:false, message:"cancelled", entries:[] };
+    if(!blob) return { ok:false, message:"download failed" };
+    if(blob.size > ARCHIVE_WASM_MAX_BYTES){
+      return { ok:false, message:"压缩包超过浏览器预览上限（约 " + Math.round(ARCHIVE_WASM_MAX_BYTES/1048576) + " MB），请改用宿主 7-Zip 或 OpenList 归档接口。" };
+    }
+    renderArchiveLoading(entry.name || "Archive Preview", "正在解析压缩包目录…", 72);
+    try{
+      var entries = await listArchiveEntriesFromBlob(blob, ext);
+      return { ok:true, message:"", entries: entries };
+    }catch(e){
+      return { ok:false, message: String(e && e.message ? e.message : "wasm parse failed") };
+    }
+  }
+
   async function ensureLiveToken(timeoutMs){
     var tk = String(($("token") && $("token").value) || state.token || "").trim();
     if(tk) return tk;
@@ -2586,6 +2802,47 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     var m = p.match(/\.([a-z0-9]+)$/i);
     return m ? m[1] : "";
   }
+  function getFileExt(path){
+    var p = String(path || "").toLowerCase();
+    var m = p.match(/\.([a-z0-9]+)$/i);
+    return m ? m[1] : "";
+  }
+  function isTextPreviewExt(ext){
+    return /^(md|markdown|txt|log|json|js|ts|tsx|jsx|css|html|xml|yaml|yml|ini|conf|bat|cmd|ps1|sh|py|java|c|cpp|h|hpp|ahk)$/i.test(String(ext || ""));
+  }
+  function isPdfPath(path){
+    return /\.pdf$/i.test(String(path || ""));
+  }
+  function isImagePath(path){
+    return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(String(path || ""));
+  }
+  function isAudioPath(path){
+    return /\.(mp3|m4a|aac|wav|flac|ogg|oga|opus)$/i.test(String(path || ""));
+  }
+  function isArchivePath(path){
+    return /\.(zip|rar|7z)$/i.test(String(path || ""));
+  }
+  function isPlayableMediaPath(path){
+    var p = String(path || "").toLowerCase();
+    return /\.(mp4|m4v|mov|webm|mkv|avi|mp3|m4a|aac|wav|flac|ogg|oga|opus)$/i.test(p);
+  }
+  function escapeHtmlText(s){
+    return String(s || "").replace(/[&<>"']/g, function(ch){
+      return ch === "&" ? "&amp;" : ch === "<" ? "&lt;" : ch === ">" ? "&gt;" : ch === "\"" ? "&quot;" : "&#39;";
+    });
+  }
+  function renderSimpleMarkdown(md){
+    var s = String(md || "");
+    s = escapeHtmlText(s);
+    s = s.replace(/^###\s+(.+)$/gm, "<h3>$1</h3>");
+    s = s.replace(/^##\s+(.+)$/gm, "<h2>$1</h2>");
+    s = s.replace(/^#\s+(.+)$/gm, "<h1>$1</h1>");
+    s = s.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+    s = s.replace(/\*(.+?)\*/g, "<i>$1</i>");
+    s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+    s = s.replace(/\n/g, "<br>");
+    return s;
+  }
   function showDocPreview(html, title){
     clearWebEmbed();
     if($("video")){
@@ -2600,6 +2857,96 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     if(!wrap) return;
     wrap.classList.remove("hidden");
     wrap.innerHTML = '<h3>' + escHtml(title || "Office Preview") + '</h3>' + String(html || "");
+  }
+  function hidePlayerSurfaces(){
+    clearWebEmbed();
+    if($("video")){
+      try{ $("video").pause(); }catch(_){}
+      $("video").classList.add("hidden");
+    }
+    if(artPlayer){
+      try{ artPlayer.pause(); }catch(_){}
+    }
+    if($("artPlayerWrap")) $("artPlayerWrap").classList.add("hidden");
+  }
+  function beginPreviewSession(entry){
+    previewSeq += 1;
+    previewActivePath = String((entry && entry.path) || "");
+    return previewSeq;
+  }
+  function isPreviewSessionCurrent(seq, entry){
+    return seq === previewSeq && String((entry && entry.path) || "") === previewActivePath;
+  }
+  function revokePreviewBlobs(){
+    for(var i=0;i<previewBlobUrls.length;i++){
+      try{ URL.revokeObjectURL(previewBlobUrls[i]); }catch(_){}
+    }
+    previewBlobUrls = [];
+  }
+  function trackPreviewBlob(blob){
+    try{
+      var u = URL.createObjectURL(blob);
+      previewBlobUrls.push(u);
+      if(previewBlobUrls.length > 24){
+        var old = previewBlobUrls.shift();
+        try{ URL.revokeObjectURL(old); }catch(_){}
+      }
+      return u;
+    }catch(_){
+      return "";
+    }
+  }
+  function ensurePdfJsScript(){
+    if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = "assets/pdfjs/pdf.min.js";
+      s.onload = function(){
+        if(!window.pdfjsLib){ reject(new Error("pdfjsLib missing")); return; }
+        try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc = "assets/pdfjs/pdf.worker.min.js"; }catch(_){}
+        resolve(window.pdfjsLib);
+      };
+      s.onerror = function(){ reject(new Error("pdf.min.js load error")); };
+      document.head.appendChild(s);
+    });
+  }
+  async function renderPdfByPdfJs(blob, title){
+    await ensurePdfJsScript();
+    var ab = await blob.arrayBuffer();
+    var pdf = await window.pdfjsLib.getDocument({ data:new Uint8Array(ab), verbosity:0 }).promise;
+    var wrap = $("docPreview");
+    if(!wrap) return false;
+    wrap.classList.remove("hidden");
+    wrap.innerHTML = '<h3>' + escHtml(title || "PDF Preview") + '</h3><div style="font-size:12px;color:#9fb0cb;margin-bottom:10px;">共 ' + pdf.numPages + ' 页（PDF.js）</div><div id="pdfJsViewport"></div>';
+    var viewportHost = $("pdfJsViewport");
+    var maxPages = Math.min(pdf.numPages, 120);
+    for(var pn=1; pn<=maxPages; pn++){
+      var page = await pdf.getPage(pn);
+      var vp = page.getViewport({ scale: 1.2 });
+      var c = document.createElement("canvas");
+      c.width = Math.ceil(vp.width);
+      c.height = Math.ceil(vp.height);
+      c.style.display = "block";
+      c.style.width = "100%";
+      c.style.maxWidth = "980px";
+      c.style.margin = "0 auto 12px auto";
+      c.style.background = "#fff";
+      c.style.borderRadius = "8px";
+      c.style.border = "1px solid #2b364d";
+      var ctx = c.getContext("2d");
+      await page.render({ canvasContext:ctx, viewport:vp }).promise;
+      viewportHost.appendChild(c);
+    }
+    return true;
+  }
+  async function fetchBlobByCandidates(candidates, mimeType){
+    var buf = await fetchArrayBufferByCandidates(candidates || []);
+    if(!buf) return null;
+    try{
+      return new Blob([buf], { type:String(mimeType || "application/octet-stream") });
+    }catch(_){
+      return null;
+    }
   }
   async function fetchArrayBufferByCandidates(candidates){
     for(var i=0;i<candidates.length;i++){
@@ -2652,6 +2999,246 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       return false;
     }
   }
+  async function previewPdfEntry(entry, seq){
+    if(!entry) return false;
+    var link = await resolveFileUrl(entry.path);
+    if(!isPreviewSessionCurrent(seq, entry)) return true;
+    if(!link || !link.url) return false;
+    var cands = Array.isArray(link.candidates) ? link.candidates.slice() : [];
+    cands.unshift({ url:link.url, headers:(link.headers || {}) });
+    var blob = await fetchBlobByCandidates(cands, "application/pdf");
+    if(!isPreviewSessionCurrent(seq, entry)) return true;
+    if(!blob) return false;
+    hidePlayerSurfaces();
+    try{
+      var okPdfJs = await renderPdfByPdfJs(blob, entry.name || "PDF Preview");
+      if(okPdfJs){
+        text($("currentInfo"), "PDF preview loaded: " + (entry.name || entry.path));
+        return true;
+      }
+    }catch(_){}
+    if(!isPreviewSessionCurrent(seq, entry)) return true;
+    var frame = $("webEmbed");
+    if(!frame) return false;
+    frame.classList.remove("hidden");
+    var u = trackPreviewBlob(blob);
+    if(!u) return false;
+    try{ frame.src = u; }catch(_){ return false; }
+    text($("currentInfo"), "PDF preview loaded: " + (entry.name || entry.path));
+    return true;
+  }
+  async function previewImageEntry(entry, seq){
+    if(!entry) return false;
+    var link = await resolveFileUrl(entry.path);
+    if(!isPreviewSessionCurrent(seq, entry)) return true;
+    if(!link || !link.url) return false;
+    var cands = Array.isArray(link.candidates) ? link.candidates.slice() : [];
+    cands.unshift({ url:link.url, headers:(link.headers || {}) });
+    var blob = await fetchBlobByCandidates(cands, "image/*");
+    if(!isPreviewSessionCurrent(seq, entry)) return true;
+    if(!blob) return false;
+    var u = trackPreviewBlob(blob);
+    if(!u) return false;
+    var html = '<div style="display:flex;align-items:center;justify-content:center;min-height:320px;"><img src="' + escHtml(u) + '" alt="' + escHtml(entry.name||"image") + '" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;border:1px solid #2c3b55;"></div>';
+    showDocPreview(html, entry.name || "Image Preview");
+    text($("currentInfo"), "Image preview loaded: " + (entry.name || entry.path));
+    return true;
+  }
+  async function previewAudioEntry(entry, seq){
+    if(!entry) return false;
+    var link = await resolveFileUrl(entry.path);
+    if(!isPreviewSessionCurrent(seq, entry)) return true;
+    if(!link || !link.url) return false;
+    var cands = Array.isArray(link.candidates) ? link.candidates.slice() : [];
+    cands.unshift({ url:link.url, headers:(link.headers || {}) });
+    var blob = await fetchBlobByCandidates(cands, "audio/*");
+    if(!isPreviewSessionCurrent(seq, entry)) return true;
+    if(!blob) return false;
+    var u = trackPreviewBlob(blob);
+    if(!u) return false;
+    clearWebEmbed();
+    if($("docPreview")) $("docPreview").classList.add("hidden");
+    if($("artPlayerWrap")) $("artPlayerWrap").classList.add("hidden");
+    var v = $("video");
+    if(!v) return false;
+    v.classList.remove("hidden");
+    v.src = u;
+    try{ await v.play(); }catch(_){}
+    text($("currentInfo"), "Audio preview loaded: " + (entry.name || entry.path));
+    return true;
+  }
+  async function previewTextEntry(entry, seq){
+    if(!entry) return false;
+    var link = await resolveFileUrl(entry.path);
+    if(!isPreviewSessionCurrent(seq, entry)) return true;
+    if(!link || !link.url) return false;
+    var cands = Array.isArray(link.candidates) ? link.candidates.slice() : [];
+    cands.unshift({ url:link.url, headers:(link.headers || {}) });
+    var txt = "";
+    for(var i=0;i<cands.length;i++){
+      var u = String((cands[i] && cands[i].url) || "");
+      if(!u) continue;
+      try{
+        var r = await fetchWithRange(u, { method:"GET", headers:(cands[i].headers || {}), tryRangeFirst:false });
+        if(!r.ok) continue;
+        txt = await r.text();
+        break;
+      }catch(_){}
+    }
+    if(!isPreviewSessionCurrent(seq, entry)) return true;
+    if(txt === "") return false;
+    var ext = getFileExt(entry.path);
+    var body = isTextPreviewExt(ext) && /^(md|markdown)$/i.test(ext)
+      ? renderSimpleMarkdown(txt)
+      : ('<pre style="white-space:pre-wrap;word-break:break-word;margin:0;">' + escapeHtmlText(txt) + "</pre>");
+    showDocPreview(body, entry.name || "Text Preview");
+    text($("currentInfo"), "Text preview loaded: " + (entry.name || entry.path));
+    return true;
+  }
+  function renderArchiveLoading(title, message, percent){
+    var p = Number(percent || 0);
+    if(!Number.isFinite(p) || p < 0) p = 0;
+    if(p > 100) p = 100;
+    var bar = '<div style="margin:10px 0 6px 0;height:8px;border-radius:999px;background:#1a2335;overflow:hidden;border:1px solid #2a3550;"><div style="height:100%;width:' + p + '%;background:linear-gradient(90deg,#ff8f35,#ffb067);transition:width .25s ease;"></div></div>';
+    showDocPreview('<p style="margin:0;color:#cfdaf0;">' + escHtml(message || "正在读取压缩包目录...") + '</p>' + bar + '<p style="margin:4px 0 0 0;color:#8ea2c8;font-size:12px;">' + p + '%</p>', title || "Archive Preview");
+  }
+  function renderArchiveEntries(title, entries){
+    var list = Array.isArray(entries) ? entries : [];
+    var lines = list.slice(0, 800).map(function(n){ return "<li>" + escHtml(String(n||"")) + "</li>"; }).join("");
+    var more = list.length > 800 ? ('<p>... 其余 ' + (list.length - 800) + ' 项已省略</p>') : "";
+    showDocPreview('<p>共 ' + list.length + ' 项</p><ol style="padding-left:18px;">' + lines + "</ol>" + more, title || "Archive Preview");
+  }
+  function showArchivePreviewDisabled(entry){
+    var title = (entry && entry.name) ? entry.name : "Archive";
+    showDocPreview("<p>压缩文档预览已暂时关闭。</p><p>请使用“下载”后在本地查看 zip/rar/7z 内容。</p>", title);
+    text($("currentInfo"), "Archive preview is disabled: " + ((entry && (entry.name || entry.path)) || ""));
+    return true;
+  }
+  async function previewArchiveEntry(entry, seq){
+    if(!entry) return false;
+    var ext = getFileExt(entry.path);
+    var entrySize = Number((entry && entry.size) || 0);
+    var mode = getArchivePreviewMode();
+    var cacheKey = normPath(entry.path || "") + "|" + mode;
+    var nowMs = Date.now();
+    var cached = archivePreviewCache[cacheKey];
+    if(cached && Array.isArray(cached.entries) && cached.entries.length && (nowMs - Number(cached.at||0) < 5*60*1000)){
+      renderArchiveEntries(entry.name || "Archive Preview", cached.entries);
+      text($("currentInfo"), "Archive preview loaded (cache): " + (entry.name || entry.path));
+      return true;
+    }
+    var progressMsg = "正在连接 OpenList 并准备读取压缩包目录...";
+    var progressPct = 8;
+    var progressTimer = 0;
+    var stopProgress = function(){
+      if(progressTimer){
+        clearInterval(progressTimer);
+        progressTimer = 0;
+      }
+    };
+    renderArchiveLoading(entry.name || "Archive Preview", progressMsg, progressPct);
+    progressTimer = setInterval(function(){
+      if(!isPreviewSessionCurrent(seq, entry)){
+        stopProgress();
+        return;
+      }
+      if(progressPct < 88){
+        progressPct += (progressPct < 40 ? 4 : (progressPct < 70 ? 2 : 1));
+        if(progressPct > 88) progressPct = 88;
+        renderArchiveLoading(entry.name || "Archive Preview", progressMsg, progressPct);
+      }
+    }, 380);
+    var tk = await ensureLiveToken(3500);
+    if(!isPreviewSessionCurrent(seq, entry)){ stopProgress(); return true; }
+
+    if(mode === "openlist_api"){
+      stopProgress();
+      renderArchiveLoading(entry.name || "Archive Preview", "正在请求服务端归档接口...", 22);
+      var apiRet = await requestArchiveListViaOpenListArchiveApi(entry.path, tk, 28000);
+      if(!isPreviewSessionCurrent(seq, entry)) return true;
+      if(apiRet && apiRet.ok && Array.isArray(apiRet.entries) && apiRet.entries.length){
+        archivePreviewCache[cacheKey] = { at:nowMs, entries:apiRet.entries.slice(0) };
+        renderArchiveEntries(entry.name || "Archive Preview", apiRet.entries);
+        text($("currentInfo"), "Archive preview (OpenList API): " + (entry.name || entry.path));
+        return true;
+      }
+      showDocPreview(
+        "<p>服务端归档接口不可用或返回为空。</p><p style=\"color:#8ea2c8;font-size:12px;\">" + escHtml(apiRet && apiRet.message ? apiRet.message : "unknown") + "</p><p>请在高级设置中改用「宿主 7-Zip」或其它策略。</p>",
+        entry.name || "Archive Preview"
+      );
+      text($("currentInfo"), "Archive preview failed (openlist_api)");
+      return true;
+    }
+
+    if(mode === "browser_wasm"){
+      stopProgress();
+      var wr = await previewArchiveEntryWasm(entry, seq);
+      if(!isPreviewSessionCurrent(seq, entry)) return true;
+      if(wr && wr.ok && Array.isArray(wr.entries) && wr.entries.length){
+        archivePreviewCache[cacheKey] = { at:nowMs, entries:wr.entries.slice(0) };
+        renderArchiveEntries(entry.name || "Archive Preview", wr.entries);
+        text($("currentInfo"), "Archive preview (browser): " + (entry.name || entry.path));
+        return true;
+      }
+      var wh = (wr && wr.message) ? ("<p style=\"color:#8ea2c8;\">" + escHtml(wr.message) + "</p>") : "";
+      showDocPreview("<p>浏览器解析压缩包失败。</p>" + wh + "<p>可切换到「宿主 7-Zip」或「混合」模式。</p>", entry.name || "Archive Preview");
+      text($("currentInfo"), "Archive preview failed (browser)");
+      return true;
+    }
+
+    var hostRet = await requestArchiveListViaHost(entry.path, tk, 45000, function(pg){
+      if(!isPreviewSessionCurrent(seq, entry)) return;
+      var msg = String((pg && pg.message) || "正在读取压缩包目录...");
+      var pct = Number((pg && pg.percent) || 0);
+      if(Number.isFinite(pct) && pct > progressPct) progressPct = pct;
+      progressMsg = msg || progressMsg;
+      renderArchiveLoading(entry.name || "Archive Preview", progressMsg, progressPct);
+      if(progressMsg) text($("currentInfo"), progressMsg);
+    });
+    stopProgress();
+    if(!isPreviewSessionCurrent(seq, entry)) return true;
+    if(hostRet && hostRet.ok && Array.isArray(hostRet.entries) && hostRet.entries.length){
+      archivePreviewCache[cacheKey] = { at:nowMs, entries:hostRet.entries.slice(0) };
+      renderArchiveEntries(entry.name || "Archive Preview", hostRet.entries);
+      text($("currentInfo"), "Archive preview loaded: " + (entry.name || entry.path));
+      return true;
+    }
+
+    if(mode === "browser_hybrid"){
+      renderArchiveLoading(entry.name || "Archive Preview", "宿主失败，尝试浏览器解析...", 30);
+      var wr2 = await previewArchiveEntryWasm(entry, seq);
+      if(!isPreviewSessionCurrent(seq, entry)) return true;
+      if(wr2 && wr2.ok && Array.isArray(wr2.entries) && wr2.entries.length){
+        archivePreviewCache[cacheKey] = { at:nowMs, entries:wr2.entries.slice(0) };
+        renderArchiveEntries(entry.name || "Archive Preview", wr2.entries);
+        text($("currentInfo"), "Archive preview (hybrid fallback): " + (entry.name || entry.path));
+        return true;
+      }
+    }
+
+    var sizeHint = (Number.isFinite(entrySize) && entrySize > 0)
+      ? ("<p style=\"color:#8ea2c8;\">文件体积：" + escHtml(fmtSize(entrySize)) + "</p>")
+      : "";
+    showDocPreview(
+      "<p>压缩包目录预览失败。</p>" +
+      sizeHint +
+      "<p>可尝试在高级设置中切换压缩包预览策略，或直接下载后查看。</p>",
+      entry.name || "Archive Preview"
+    );
+    text($("currentInfo"), "Archive preview failed: " + (entry.name || entry.path));
+    return true;
+  }
+  async function adaptivePreviewEntry(entry, seq){
+    if(!entry || entry.isDir) return false;
+    var ext = getFileExt(entry.path);
+    if(isArchivePath(entry.path)) return showArchivePreviewDisabled(entry);
+    if(isPdfPath(entry.path)) return await previewPdfEntry(entry, seq);
+    if(isImagePath(entry.path)) return await previewImageEntry(entry, seq);
+    if(isAudioPath(entry.path)) return await previewAudioEntry(entry, seq);
+    if(isOfficeDocPath(entry.path)) return await previewOfficeEntry(entry);
+    if(isTextPreviewExt(ext)) return await previewTextEntry(entry, seq);
+    return false;
+  }
   function playUrl(url, title){
     var u=String(url||"").trim();
     if(!u){ text($("currentInfo"), "Play failed: empty URL"); return; }
@@ -2663,6 +3250,8 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
         text($("currentInfo"), "ArtPlayer is unavailable, switched to native player.");
         setPlayerMode("native");
       }else{
+        if($("artPlayerWrap")) $("artPlayerWrap").classList.remove("hidden");
+        if($("video")) $("video").classList.add("hidden");
         try{
           ap.switchUrl(u);
           ap.play();
@@ -2676,6 +3265,8 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     if(playerMode === "native"){
       var v=$("video");
       if(v){
+        v.classList.remove("hidden");
+        if($("artPlayerWrap")) $("artPlayerWrap").classList.add("hidden");
         v.src=u;
         v.play().catch(function(){});
         tryRestoreSeekAfterLoad(lastPlayPath, u);
@@ -2763,6 +3354,19 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     }
     selectedEntries = {};
     addSelection(fullPath);
+    var entry = findEntryByPath(fullPath) || { path:fullPath, isDir:el.getAttribute("data-dir")==="1", name:splitPath(fullPath).name };
+    if(entry.isDir) return;
+    revokePreviewBlobs();
+    var seq = beginPreviewSession(entry);
+    try{
+      var handled = await adaptivePreviewEntry(entry, seq);
+      if(handled) return;
+      if(isPlayableMediaPath(entry.path)){
+        await playEntry(entry);
+        return;
+      }
+      text($("currentInfo"), "当前类型暂不支持内置预览，请双击或右键操作： " + (entry.name || entry.path));
+    }catch(_){}
   }
   async function onRowOpen(e){
     var el = e.currentTarget;
@@ -3123,7 +3727,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       if(document.hidden) persistPlaybackProgressNow();
     });
 
-    ["mountAli","mountBaidu","mountQuark","mount115","mount123","mountOneDrive","mountDropbox","mountYandex","mountGDrive","aliMountPath","advRootFolderId","advDriveType","advAlipanType","advUseOnlineApi","advClientId","advClientSecret","advApiUrlAddress"].forEach(function(id){
+    ["mountAli","mountBaidu","mountQuark","mount115","mount123","mountOneDrive","mountDropbox","mountYandex","mountGDrive","aliMountPath","advRootFolderId","advDriveType","advAlipanType","advUseOnlineApi","advClientId","advClientSecret","advApiUrlAddress","advArchivePreviewMode"].forEach(function(id){
       $(id).addEventListener("change", saveSettings);
       $(id).addEventListener("blur", saveSettings);
     });

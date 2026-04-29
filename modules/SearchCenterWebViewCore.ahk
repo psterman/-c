@@ -1836,8 +1836,9 @@ SCWV_OnWebMessage(sender, args) {
         case "INVOKE_ARCHIVE_LIST":
             p := msg.Has("path") ? String(msg["path"]) : ""
             sq := msg.Has("seq") ? Integer(msg["seq"]) : 0
+            mode := msg.Has("mode") ? Trim(String(msg["mode"])) : "seven_zip"
             _SCWV_BlockDeactivate(2500, "archive_preview")
-            SCWV_Preview_OnArchiveList(p, sq)
+            SCWV_Preview_OnArchiveList(p, sq, mode)
         case "INSTALL_QUICKLOOK":
             global g_SCWV_QuickLookInstallBusy
             if g_SCWV_QuickLookInstallBusy {
@@ -4511,8 +4512,8 @@ SCWV_Preview_OnPdfium(path, seq) {
     }
 }
 
-SCWV_Preview_OnArchiveList(path, seq) {
-    try SCWV_Preview_Get().OnArchiveList(path, seq)
+SCWV_Preview_OnArchiveList(path, seq, mode := "seven_zip") {
+    try SCWV_Preview_Get().OnArchiveList(path, seq, mode)
     catch as err {
         SCWV_PostJson(Map("type", "WEB_PREVIEW_ARCHIVE_RESULT", "seq", seq, "entries", [], "error", err.Message))
     }
@@ -5837,7 +5838,7 @@ class PreviewManager {
         }
     }
 
-    OnArchiveList(path, seq) {
+    OnArchiveList(path, seq, mode := "seven_zip") {
         try {
             path := Trim(String(path))
             this._PostDetailMeta(path, seq)
@@ -5848,6 +5849,27 @@ class PreviewManager {
 
             SplitPath path, , , &ext
             ext := StrLower(ext)
+            mode := Trim(String(mode))
+            if (mode = "")
+                mode := "seven_zip"
+
+            if (mode = "zip_shell_first" && ext = "zip") {
+                try {
+                    total := 0
+                    truncated := false
+                    entries := _SCWV_ListZipEntries(path, 500, &total, &truncated)
+                    SCWV_PostJson(Map(
+                        "type", "WEB_PREVIEW_ARCHIVE_RESULT",
+                        "seq", seq,
+                        "entries", entries,
+                        "total", total,
+                        "truncated", !!truncated,
+                        "error", ""
+                    ))
+                    return
+                } catch {
+                }
+            }
 
             sevenZip := A_ScriptDir "\lib\7z.exe"
             sevenZipDll := A_ScriptDir "\lib\7z.dll"
