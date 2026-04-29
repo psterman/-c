@@ -32,12 +32,12 @@
 }
 /* ── Reset & Variables ─────────────────────────────────────────────────── */
 :root {
-  --bg:           #0a0a0a;
-  --surface:      #141414;
-  --surface2:     #1a1a1a;
-  --surface3:     #202020;
-  --border:       #2e2e2e;
-  --border2:      #3a3a3a;
+  --bg:           #0d1016;
+  --surface:      #142236;
+  --surface2:     #1b2d45;
+  --surface3:     #223955;
+  --border:       #2f4665;
+  --border2:      #3a567a;
   --orange:       #e67e22;
   --orange-dk:    #d35400;
   --orange-lt:    #f39c12;
@@ -53,7 +53,7 @@
   /* ── Cyberpunk palette ─── */
   --matrix-green: #00ff41;
   --warning-gold: #ffcc00;
-  --deep-black:   #0a0a0a;
+  --deep-black:   #0d1016;
   --glow-green:   0 0 8px #00ff4188, 0 0 18px #00ff4144;
   --glow-gold:    0 0 8px #ffcc0088, 0 0 18px #ffcc0044;
   /* 整页 UI 缩放：略小可避免键盘区出现纵向滚动条，仍保持清晰可读 */
@@ -65,7 +65,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
   width: 100%; height: 100%;
-  background: radial-gradient(circle at top right, rgba(230,126,34,.08), transparent 28%), linear-gradient(180deg, #090b0d 0%, #101317 100%);
+  background: radial-gradient(circle at top right, rgba(58,107,168,.28), transparent 36%), linear-gradient(180deg, #0d1016 0%, #16253b 100%);
   color: var(--text);
   font-family: var(--font-ui);
   overflow: hidden;
@@ -576,7 +576,7 @@ body.vk-kb-collapsed #bottom-zone { border-top: 1px solid var(--border); }
   font-family: var(--font-ui);
   font-size: 10px;
   color: var(--orange);
-  background: #1a1a1a;
+  background: #1b2d45;
   padding: 1px 5px;
   border-radius: 2px;
 }
@@ -770,7 +770,7 @@ body.vk-kb-collapsed #bottom-zone { border-top: 1px solid var(--border); }
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 3px;
-  border-bottom: 2px solid #1a1a1a;
+  border-bottom: 2px solid #1b2d45;
   font-family: var(--font);
   font-size: 8px; font-weight: 500;
   color: var(--text-dim);
@@ -960,7 +960,7 @@ body.vk-kb-collapsed #bottom-zone { border-top: 1px solid var(--border); }
   height: 30px;
   border-radius: 8px;
   border: 1px solid var(--border2);
-  background: #1a1a1a;
+  background: #1b2d45;
   color: var(--orange);
   display: inline-flex;
   align-items: center;
@@ -1099,7 +1099,7 @@ body.vk-kb-collapsed #bottom-zone { border-top: 1px solid var(--border); }
   flex-wrap: wrap;
   padding: 6px 10px;
   border-bottom: 1px solid var(--border);
-  background: #101010;
+  background: #16253b;
 }
 .atom-tab {
   display: inline-flex;

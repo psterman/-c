@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -31,26 +31,29 @@
 }
 :root {
   --color-scheme: dark;
-  --app-bg: radial-gradient(circle at top right, rgba(255,141,42,.08), transparent 26%), linear-gradient(180deg, #0f1113 0%, #15181c 100%);
-  --bg: #111315;
-  --surface: #171a1e;
-  --surface2: #1f2429;
-  --surface3: #262c33;
-  --border: #313941;
-  --border2: #3a434d;
+  --app-bg:
+    radial-gradient(circle at 82% 6%, rgba(79,172,255,.16), transparent 34%),
+    radial-gradient(circle at 12% 96%, rgba(42,125,255,.12), transparent 40%),
+    linear-gradient(180deg, #071224 0%, #0b1a31 56%, #0d223d 100%);
+  --bg: #0a1527;
+  --surface: #10213a;
+  --surface2: #132846;
+  --surface3: #173254;
+  --border: #27456d;
+  --border2: #2f527f;
   --glass-edge: rgba(255,255,255,.28);
   --glass-edge-soft: rgba(255,255,255,.08);
-  --glass-warm: rgba(255,171,92,.2);
-  --orange: #ff8d2a;
-  --orange-dk: #ff7a14;
-  --orange-lt: #ffb347;
-  --cyan: #79d2ff;
-  --text: #e7ebef;
-  --text-dim: #93a0ad;
-  --text-xs: #6f7d8b;
+  --glass-warm: rgba(91,172,255,.2);
+  --orange: #4facff;
+  --orange-dk: #2f8fff;
+  --orange-lt: #8ec9ff;
+  --cyan: #7fd8ff;
+  --text: #eaf3ff;
+  --text-dim: #9eb4cf;
+  --text-xs: #7894b5;
   --glow: 0 18px 42px rgba(0, 0, 0, 0.35);
-  --glow-hot: 0 0 0 1px rgba(255,179,71,.24), 0 14px 34px rgba(0,0,0,.28);
-  --glow-cyan: 0 0 0 1px rgba(121,210,255,.18), 0 14px 34px rgba(0,0,0,.22);
+  --glow-hot: 0 0 0 1px rgba(79,172,255,.3), 0 14px 34px rgba(0,0,0,.28);
+  --glow-cyan: 0 0 0 1px rgba(127,216,255,.22), 0 14px 34px rgba(0,0,0,.22);
   --font: "AppUi", "Segoe UI", "DengXian", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
   --font-ui: "AppUi", "Segoe UI", "DengXian", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
   --matrix-green: #7af2a4;
@@ -58,26 +61,26 @@
 }
 html[data-theme="light"] {
   --color-scheme: light;
-  --app-bg: #f7f7f7;
-  --bg: #f7f7f7;
+  --app-bg: linear-gradient(180deg, #edf5ff 0%, #e8f1ff 100%);
+  --bg: #eef5ff;
   --surface: #ffffff;
-  --surface2: #ffffff;
-  --surface3: #ffffff;
-  --border: #e5e5e5;
-  --border2: #e5e5e5;
+  --surface2: #f6faff;
+  --surface3: #eaf3ff;
+  --border: #c9dcf4;
+  --border2: #bcd3ee;
   --glass-edge: rgba(0,0,0,.06);
   --glass-edge-soft: rgba(0,0,0,.02);
-  --glass-warm: rgba(230,126,34,.12);
-  --orange: #e67e22;
-  --orange-dk: #d35400;
-  --orange-lt: #e9a466;
-  --cyan: #4b8ec6;
-  --text: #555555;
-  --text-dim: #666666;
-  --text-xs: #777777;
+  --glass-warm: rgba(76,144,220,.16);
+  --orange: #267ed6;
+  --orange-dk: #1f66b1;
+  --orange-lt: #5ea5ec;
+  --cyan: #4e96dd;
+  --text: #1f3554;
+  --text-dim: #3f5878;
+  --text-xs: #587294;
   --glow: 0 6px 16px rgba(0,0,0,.06);
-  --glow-hot: 0 0 0 1px rgba(230,126,34,.16), 0 8px 20px rgba(211,84,0,.12);
-  --glow-cyan: 0 0 0 1px rgba(75,142,198,.12), 0 8px 18px rgba(75,142,198,.1);
+  --glow-hot: 0 0 0 1px rgba(38,126,214,.2), 0 8px 20px rgba(31,102,177,.14);
+  --glow-cyan: 0 0 0 1px rgba(78,150,221,.16), 0 8px 18px rgba(78,150,221,.12);
   --matrix-green: #4f8b63;
   --warning-gold: #a9852c;
 }
@@ -96,7 +99,7 @@ body::after {
   display: none;
 }
 
-/* ── Scanner line animation ─────────────────────────────────────────── */
+/* 鈹€鈹€ Scanner line animation 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 .scanner-line {
   display: none;
 }
@@ -105,7 +108,7 @@ body::after {
   100% { top: 100%; }
 }
 
-/* ── Layout ─────────────────────────────────────────────────────────── */
+/* 鈹€鈹€ Layout 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 #root {
   display: grid;
   grid-template-rows: auto auto 1fr auto;
@@ -114,7 +117,7 @@ body::after {
   padding: 14px 18px 18px;
 }
 
-/* 无边框宿主：顶栏拖动（与搜索中心 dragHost 一致） */
+/* 鏃犺竟妗嗗涓伙細椤舵爮鎷栧姩锛堜笌鎼滅储涓績 dragHost 涓€鑷达級 */
 .chrome-drag {
   position: relative;
   flex-shrink: 0;
@@ -184,7 +187,7 @@ body.native-titlebar .chrome-drag { display: none; }
   box-shadow: var(--glow-hot);
 }
 
-/* ── Result header chips + time ─────────────────────────────────────────── */
+/* 鈹€鈹€ Result header chips + time 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 #results-head {
   position: relative;
   overflow: visible;
@@ -372,7 +375,7 @@ body.native-titlebar .chrome-drag { display: none; }
 }
 #time-date-apply:hover { border-color: var(--orange); }
 
-/* ── Search bar ─────────────────────────────────────────────────────── */
+/* 鈹€鈹€ Search bar 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 #search-bar {
   position: relative;
   flex-shrink: 0;
@@ -461,12 +464,12 @@ body.native-titlebar .chrome-drag { display: none; }
   white-space: nowrap;
 }
 
-/* ── Main content: dual-pane ────────────────────────────────────────── */
+/* 鈹€鈹€ Main content: dual-pane 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 #main-content {
   flex: 1; display: grid; grid-template-columns: minmax(420px, 1.1fr) minmax(320px, .9fr); gap: 16px; min-height: 0; overflow: hidden;
 }
 
-/* ── List panel (left 60%) ──────────────────────────────────────────── */
+/* 鈹€鈹€ List panel (left 60%) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 #list-panel {
   position: relative;
   min-width: 0;
@@ -602,7 +605,7 @@ body.native-titlebar .chrome-drag { display: none; }
   color: var(--text-xs);
 }
 
-/* Raycast 风格：图片条目流体卡片（缩略图经 https://clip.local/Thumbs/ 加载） */
+/* Raycast 椋庢牸锛氬浘鐗囨潯鐩祦浣撳崱鐗囷紙缂╃暐鍥剧粡 https://clip.local/Thumbs/ 鍔犺浇锛?*/
 .clip-item.clip-item-image-card {
   align-items: flex-start;
   flex-wrap: wrap;
@@ -674,7 +677,7 @@ body.native-titlebar .chrome-drag { display: none; }
 }
 mark { background: var(--orange); color: var(--bg); border-radius: 2px; padding: 0 1px; }
 
-/* 触底加载哨兵：仅用于 IntersectionObserver，不占交互 */
+/* 瑙﹀簳鍔犺浇鍝ㄥ叺锛氫粎鐢ㄤ簬 IntersectionObserver锛屼笉鍗犱氦浜?*/
 .load-sentinel {
   height: 2px;
   width: 100%;
@@ -686,7 +689,7 @@ mark { background: var(--orange); color: var(--bg); border-radius: 2px; padding:
   text-align: center; padding: 12px 12px 16px;
   font-family: var(--font); font-size: 11px; color: var(--text-xs);
 }
-/* Raycast：底部可滚入的留白区（非内容，仅撑高 scrollHeight） */
+/* Raycast锛氬簳閮ㄥ彲婊氬叆鐨勭暀鐧藉尯锛堥潪鍐呭锛屼粎鎾戦珮 scrollHeight锛?*/
 .list-scroll-cushion {
   width: 100%;
   flex-shrink: 0;
@@ -715,7 +718,7 @@ mark { background: var(--orange); color: var(--bg); border-radius: 2px; padding:
   100% { background-position: -120% 0; }
 }
 
-/* ── Preview panel (right 40%) ──────────────────────────────────────── */
+/* 鈹€鈹€ Preview panel (right 40%) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 #preview-panel {
   position: relative;
   min-width: 0;
@@ -776,7 +779,7 @@ mark { background: var(--orange); color: var(--bg); border-radius: 2px; padding:
 .fade-in { animation: fadeIn 0.15s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ── Action Panel (Ctrl+K overlay) ──────────────────────────────────── */
+/* 鈹€鈹€ Action Panel (Ctrl+K overlay) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 #action-overlay {
   position: fixed; inset: 0; z-index: 100;
   background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
@@ -812,7 +815,7 @@ mark { background: var(--orange); color: var(--bg); border-radius: 2px; padding:
   border: 1px solid var(--border); border-radius: 3px;
 }
 
-/* ── Status bar ─────────────────────────────────────────────────────── */
+/* 鈹€鈹€ Status bar 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 #status-bar {
   position: relative;
   flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
@@ -837,7 +840,7 @@ mark { background: var(--orange); color: var(--bg); border-radius: 2px; padding:
   box-shadow: var(--glow-hot);
 }
 
-/* Context menu — 与搜索中心 / VK 暗色弹出一致：橙字 + 悬停橙条白字 */
+/* Context menu 鈥?涓庢悳绱腑蹇?/ VK 鏆楄壊寮瑰嚭涓€鑷达細姗欏瓧 + 鎮仠姗欐潯鐧藉瓧 */
 #context-menu {
   position: fixed; z-index: 300;
   overflow: visible;
@@ -889,7 +892,7 @@ mark { background: var(--orange); color: var(--bg); border-radius: 2px; padding:
   z-index: 50;
 }
 .ctx-item.ctx-sub-parent::after {
-  content: '▸';
+  content: '▶';
   font-size: 11px;
   opacity: 0.65;
   margin-left: 8px;
@@ -1185,7 +1188,7 @@ html[data-theme="light"] .ctx-item.toggle.on .ctx-check {
   </div>
 </div>
 
-<!-- Right-click context menu（由 ctxMenuSpec 动态生成） -->
+<!-- Right-click context menu锛堢敱 ctxMenuSpec 鍔ㄦ€佺敓鎴愶級 -->
 <div id="context-menu" aria-hidden="true"></div>
 
 <!-- Shortcuts Panel Overlay -->
@@ -1236,18 +1239,18 @@ if (typeof BasePanel === 'undefined') {
     }
   };
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 // State
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 const state = {
   items: [],
   selectedIndex: 0,
   selectedId: null,
   keyword: '',
   filterType: 'all',
-  /** 顶部标签：全部 / 文本 / 图片 */
+  /** 椤堕儴鏍囩锛氬叏閮?/ 鏂囨湰 / 鍥剧墖 */
   chipFilter: 'all',
-  /** 时间：all | day | week | month | date:YYYY-MM-DD */
+  /** 鏃堕棿锛歛ll | day | week | month | date:YYYY-MM-DD */
   timeRange: 'all',
   currentOffset: 0,
   hasMore: false,
@@ -1258,12 +1261,12 @@ const state = {
   previewCache: {},
   continuousPaste: false,
   ctxMenuVisible: false,
-  /** 上次分页完成后的时间戳，防止贴底连续触发 loadMore */
+  /** 涓婃鍒嗛〉瀹屾垚鍚庣殑鏃堕棿鎴筹紝闃叉璐村簳杩炵画瑙﹀彂 loadMore */
   loadMoreCooldownUntil: 0,
   peekSpaceDown: false,
   /** @type {Array<{id?:string,name?:string,act?:string,visible?:boolean}>} */
   ctxMenuSpec: [],
-  /** 搜索后端：go=SearchCenterCore；ahk=本地 SQLite */
+  /** 鎼滅储鍚庣锛歡o=SearchCenterCore锛沘hk=鏈湴 SQLite */
   engineMode: 'go'
 };
 let __nmDock = null;
@@ -1316,16 +1319,16 @@ const CP_CTX_FALLBACK = [
   const PAGE_SIZE = 30;
 const LOAD_MORE_COOLDOWN_MS = 420;
 /**
- * Raycast 风格提前加载：扩大 root 底部相交区域，哨兵尚未滚进视口时即可触发（约提前一屏内开始拉取）。
- * 单位：px，仅底部扩张（与 CSS margin 一致：上 右 下 左）。
+ * Raycast 椋庢牸鎻愬墠鍔犺浇锛氭墿澶?root 搴曢儴鐩镐氦鍖哄煙锛屽摠鍏靛皻鏈粴杩涜鍙ｆ椂鍗冲彲瑙﹀彂锛堢害鎻愬墠涓€灞忓唴寮€濮嬫媺鍙栵級銆?
+ * 鍗曚綅锛歱x锛屼粎搴曢儴鎵╁紶锛堜笌 CSS margin 涓€鑷达細涓?鍙?涓?宸︼級銆?
  */
 const LOAD_MORE_PREFETCH_ROOT_MARGIN = '0px 0px 360px 0px';
-/** 滚动兜底：距列表底部不足此像素时尝试加载（与 IO 互补，避免部分 WebView2 下 IO 不触发） */
+/** 婊氬姩鍏滃簳锛氳窛鍒楄〃搴曢儴涓嶈冻姝ゅ儚绱犳椂灏濊瘯鍔犺浇锛堜笌 IO 浜掕ˉ锛岄伩鍏嶉儴鍒?WebView2 涓?IO 涓嶈Е鍙戯級 */
 const SCROLL_PREFETCH_FROM_BOTTOM_PX = 380;
-/** Raycast：列表最底部留白，增加可滚动空间（视觉与滚动条行程） */
+/** Raycast锛氬垪琛ㄦ渶搴曢儴鐣欑櫧锛屽鍔犲彲婊氬姩绌洪棿锛堣瑙変笌婊氬姩鏉¤绋嬶級 */
 const LIST_BOTTOM_CUSHION_PX = 80;
 /**
- * 分页追加后若贴在绝对底部，略上移 scrollTop（滚动条会「跳」一下），用户可继续向下滚，不会顶死。
+ * 鍒嗛〉杩藉姞鍚庤嫢璐村湪缁濆搴曢儴锛岀暐涓婄Щ scrollTop锛堟粴鍔ㄦ潯浼氥€岃烦銆嶄竴涓嬶級锛岀敤鎴峰彲缁х画鍚戜笅婊氾紝涓嶄細椤舵銆?
  */
 const LIST_BOTTOM_SLACK_PX = 56;
 
@@ -1343,8 +1346,8 @@ function disconnectLoadMoreObserver() {
 }
 
 /**
- * Raycast：避免 scrollTop 钉在 maxScroll（滚动条拇指顶死、无法再继续向下滚）。
- * 在仍有可滚空间时，把位置设在 maxScroll - slack。
+ * Raycast锛氶伩鍏?scrollTop 閽夊湪 maxScroll锛堟粴鍔ㄦ潯鎷囨寚椤舵銆佹棤娉曞啀缁х画鍚戜笅婊氾級銆?
+ * 鍦ㄤ粛鏈夊彲婊氱┖闂存椂锛屾妸浣嶇疆璁惧湪 maxScroll - slack銆?
  */
 function applyRaycastBottomScrollSlack(panel) {
   if (!panel) return;
@@ -1356,7 +1359,7 @@ function applyRaycastBottomScrollSlack(panel) {
   }
 }
 
-/** 用户滚动接近底部时预取下一页（仅在有滚动事件时评估，不自动连发）；到底时施加 Raycast 式底部 slack */
+/** 鐢ㄦ埛婊氬姩鎺ヨ繎搴曢儴鏃堕鍙栦笅涓€椤碉紙浠呭湪鏈夋粴鍔ㄤ簨浠舵椂璇勪及锛屼笉鑷姩杩炲彂锛夛紱鍒板簳鏃舵柦鍔?Raycast 寮忓簳閮?slack */
 function onListPanelScrollPrefetch() {
   if (listScrollRaf) return;
   listScrollRaf = requestAnimationFrame(() => {
@@ -1401,9 +1404,9 @@ function setupLoadMoreObserver() {
   loadMoreObserver.observe(sent);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// AHK Bridge（实现见 app.local BasePanel.js）
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+// AHK Bridge锛堝疄鐜拌 app.local BasePanel.js锛?
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 const postToAhk = (obj) => BasePanel.postToAhk(obj);
 document.getElementById('chrome-close').addEventListener('click', (e) => {
   e.preventDefault();
@@ -1414,7 +1417,7 @@ document.getElementById('chrome-close').addEventListener('mousedown', (e) => {
   e.stopPropagation();
 });
 
-/** 粘贴/复制类操作是否保持面板打开（持续粘贴模式） */
+/** 绮樿创/澶嶅埗绫绘搷浣滄槸鍚︿繚鎸侀潰鏉挎墦寮€锛堟寔缁矘璐存ā寮忥級 */
 function keepOpenFlag() {
   return !!state.continuousPaste;
 }
@@ -1434,7 +1437,7 @@ function itemIsImage(it) {
   return t === 'image' || t === 'screenshot';
 }
 
-/** 用于禁用「打开位置 / 以管理员运行」等需本地路径的搜索中心同款命令 */
+/** 鐢ㄤ簬绂佺敤銆屾墦寮€浣嶇疆 / 浠ョ鐞嗗憳杩愯銆嶇瓑闇€鏈湴璺緞鐨勬悳绱腑蹇冨悓娆惧懡浠?*/
 function itemHasLocalWindowsPath(it) {
   if (!it) return false;
   const ip = String(it.imagePath || '').trim();
@@ -1446,7 +1449,7 @@ function itemHasLocalWindowsPath(it) {
   return false;
 }
 
-/** 语音朗读：需非空可读文本（content 或 title） */
+/** 璇煶鏈楄锛氶渶闈炵┖鍙鏂囨湰锛坈ontent 鎴?title锛?*/
 function itemHasSpeakableText(it) {
   if (!it) return false;
   const c = String(it.content != null ? it.content : '').replace(/\0/g, '').trim();
@@ -1459,7 +1462,7 @@ function isCpScStyleCmd(act) {
   return /^(sc_|ai_|sys_)/.test(String(act || ''));
 }
 
-/** 剪贴板条目 ID 与预览消息 id 统一为可比较形式（避免 Go/AHK JSON 数字与字符串不一致导致右侧不刷新） */
+/** 鍓创鏉挎潯鐩?ID 涓庨瑙堟秷鎭?id 缁熶竴涓哄彲姣旇緝褰㈠紡锛堥伩鍏?Go/AHK JSON 鏁板瓧涓庡瓧绗︿覆涓嶄竴鑷村鑷村彸渚т笉鍒锋柊锛?*/
 function clipRowId(id) {
   if (id == null) return null;
   const n = Number(id);
@@ -1497,7 +1500,7 @@ function toFileUrl(path) {
   return encodeURI('file://' + p);
 }
 
-// Raycast/搜索中心同款：盘符路径 -> https://c.local/...（需宿主 SetVirtualHostNameToFolderMapping）
+// Raycast/鎼滅储涓績鍚屾锛氱洏绗﹁矾寰?-> https://c.local/...锛堥渶瀹夸富 SetVirtualHostNameToFolderMapping锛?
 function toDriveLocalUrl(winPath) {
   const p = String(winPath || '').trim();
   const m = p.match(/^([a-zA-Z]):\\(.+)$/);
@@ -1515,7 +1518,7 @@ function resolveImageSrc(path) {
   return toFileUrl(p);
 }
 
-/** 本地磁盘图片路径（可拖放 / Space 预览 / FileDrop） */
+/** 鏈湴纾佺洏鍥剧墖璺緞锛堝彲鎷栨斁 / Space 棰勮 / FileDrop锛?*/
 function localImageDiskPath(it) {
   if (!it) return '';
   const ip = String(it.imagePath || '').trim();
@@ -1524,10 +1527,10 @@ function localImageDiskPath(it) {
   return '';
 }
 
-/** 列表缩略图：优先 Base64，其次 clip.local 虚拟路径，最后 file/https
- * 说明：
- * - WebView2 对 file:/// 本地图和虚拟主机映射偶发失败时，会显示破损图。
- * - 复制图片入库时已经持久化了 ThumbnailData，因此列表优先吃稳定的 data URL。
+/** 鍒楄〃缂╃暐鍥撅細浼樺厛 Base64锛屽叾娆?clip.local 铏氭嫙璺緞锛屾渶鍚?file/https
+ * 璇存槑锛?
+ * - WebView2 瀵?file:/// 鏈湴鍥惧拰铏氭嫙涓绘満鏄犲皠鍋跺彂澶辫触鏃讹紝浼氭樉绀虹牬鎹熷浘銆?
+ * - 澶嶅埗鍥剧墖鍏ュ簱鏃跺凡缁忔寔涔呭寲浜?ThumbnailData锛屽洜姝ゅ垪琛ㄤ紭鍏堝悆绋冲畾鐨?data URL銆?
  */
 function thumbUrlForItem(it) {
   if (!it) return '';
@@ -1554,7 +1557,7 @@ function imageDimLabel(it) {
   if (!it) return '';
   const w = Number(it.imageWidth) || 0;
   const h = Number(it.imageHeight) || 0;
-  if (w > 0 && h > 0) return w + '×' + h;
+  if (w > 0 && h > 0) return w + '脳' + h;
   return '';
 }
 
@@ -1567,7 +1570,7 @@ function formatBytes(bytes) {
   return (n / (1024 * 1024 * 1024)).toFixed(2).replace(/\.00$/, '') + ' GB';
 }
 
-/** 列表/预览共用的图片引用：优先 ImagePath，再解析 content 中的 img/src 或裸图 URL */
+/** 鍒楄〃/棰勮鍏辩敤鐨勫浘鐗囧紩鐢細浼樺厛 ImagePath锛屽啀瑙ｆ瀽 content 涓殑 img/src 鎴栬８鍥?URL */
 function primaryImageRefForItem(it) {
   if (!it) return '';
   const ip = String(it.imagePath || '').trim();
@@ -1588,7 +1591,7 @@ function getImageSummary(it) {
       const u = new URL(path);
       const seg = u.pathname.split('/').filter(Boolean);
       return seg.length ? seg[seg.length - 1] : (u.hostname || 'Image');
-    } catch (e) { /* 本地路径 */ }
+    } catch (e) { /* 鏈湴璺緞 */ }
     const parts = path.split(/[\\/]/);
     return parts[parts.length - 1] || 'Image';
   }
@@ -1793,7 +1796,7 @@ function handleAhkMessage(msg) {
         state.engineMode = msg.engineMode;
         syncEngineModeUI();
       }
-      state.items = msg.items || [];
+      state.items = normalizeIncomingItems(msg.items || []);
       if (Array.isArray(msg.ctxMenuSpec))
         state.ctxMenuSpec = msg.ctxMenuSpec;
       if (msg.total != null && msg.total >= 0) {
@@ -1821,7 +1824,7 @@ function handleAhkMessage(msg) {
         syncEngineModeUI();
       }
       if (msg.items && msg.items.length > 0) {
-        state.items = state.items.concat(msg.items);
+        state.items = state.items.concat(normalizeIncomingItems(msg.items));
         if (Array.isArray(msg.ctxMenuSpec))
           state.ctxMenuSpec = msg.ctxMenuSpec;
         if (msg.total != null && msg.total >= 0) {
@@ -1842,6 +1845,7 @@ function handleAhkMessage(msg) {
 
     case 'preview': {
       const pid = clipRowId(msg.id);
+      msg = normalizeIncomingPreview(msg);
       if (pid != null) {
         state.previewCache[pid] = msg;
       }
@@ -1880,9 +1884,9 @@ function handleAhkMessage(msg) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 // Render List
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 /** @param {{ preserveScroll?: boolean }} [opts] */
 function renderList(opts) {
   opts = opts || {};
@@ -1954,7 +1958,7 @@ function renderList(opts) {
       if (timeStr && !dimStr) sub.push(escapeHtml(timeStr));
       html += '<span class="summary image-summary">';
       html += '<span class="main-line">' + badge + highlighted + '</span>';
-      html += '<span class="sub-line">' + (sub.join(' · ') || 'Clipboard Image') + '</span>';
+      html += '<span class="sub-line">' + (sub.join(' 路 ') || 'Clipboard Image') + '</span>';
       html += '</span>';
       if (it.isFavorite) html += '<span class="pin-icon">&#9733;</span>';
       html += '</div></div>';
@@ -1978,7 +1982,7 @@ function renderList(opts) {
   if (state.hasMore) {
     html += '<div id="load-sentinel" class="load-sentinel" aria-hidden="true"></div>';
     if (state.loading) {
-      html += '<div class="list-loading-hint">加载中…</div>';
+      html += '<div class="list-loading-hint">加载中...</div>';
     }
   }
   html += '<div class="list-scroll-cushion" aria-hidden="true" style="height:' + LIST_BOTTOM_CUSHION_PX + 'px"></div>';
@@ -2017,7 +2021,7 @@ function renderList(opts) {
   });
   bindListHeaderEvents(panel);
 
-  // 结果较少时补骨架，保持列表视觉充满并减少抖动
+  // 缁撴灉杈冨皯鏃惰ˉ楠ㄦ灦锛屼繚鎸佸垪琛ㄨ瑙夊厖婊″苟鍑忓皯鎶栧姩
   const MIN_FILL_ROWS = 8;
   if (state.items.length < MIN_FILL_ROWS) {
     const need = MIN_FILL_ROWS - state.items.length;
@@ -2252,9 +2256,9 @@ function typeIcon(dt) {
   return '&#128196;';
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Render Preview（本地图用 data:，网页图用 https URL；缩略图作兜底）
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+// Render Preview锛堟湰鍦板浘鐢?data:锛岀綉椤靛浘鐢?https URL锛涚缉鐣ュ浘浣滃厹搴曪級
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 function renderPreview(data) {
   const metaEl = document.getElementById('preview-meta');
   const bodyEl = document.getElementById('preview-body');
@@ -2318,7 +2322,7 @@ function renderPreview(data) {
   const PREVIEW_AUDIO_EXT = new Set(['mp3','wav','flac','m4a','aac','ogg','opus','wma']);
   const PREVIEW_VIDEO_EXT = new Set(['mp4','m4v','mov','webm','mkv','avi']);
 
-  // 1) PDF：大体积 data:base64 在 WebView2 中常黑屏；有路径时优先盘符虚拟主机（与搜索中心 / 音视频一致），其次 file://，最后才用小体积 base64
+  // 1) PDF锛氬ぇ浣撶Н data:base64 鍦?WebView2 涓父榛戝睆锛涙湁璺緞鏃朵紭鍏堢洏绗﹁櫄鎷熶富鏈猴紙涓庢悳绱腑蹇?/ 闊宠棰戜竴鑷达級锛屽叾娆?file://锛屾渶鍚庢墠鐢ㄥ皬浣撶Н base64
   if (fileExt === 'pdf' || fileMime === 'application/pdf') {
     const pdfFromPath = filePath
       ? (toDriveLocalUrl(filePath) || toFileUrl(filePath))
@@ -2343,12 +2347,12 @@ function renderPreview(data) {
     }
     bodyEl.innerHTML =
       '<div class="preview-image-wrap"><pre style="white-space:pre-wrap">' +
-      escapeHtml('无法内嵌预览该 PDF（体积过大或路径不可用）。可在搜索中心打开同一文件预览，或使用系统默认程序打开。') +
+      escapeHtml('无法内嵌预览此 PDF（体积过大或路径不可用）。可在搜索中心打开同一文件预览，或使用系统默认程序打开。') +
       '</pre></div>';
     return;
   }
 
-  // 2) 音频/视频：使用 file:///（若 WebView2 环境拦截，会自然失败并显示错误）
+  // 2) 闊抽/瑙嗛锛氫娇鐢?file:///锛堣嫢 WebView2 鐜鎷︽埅锛屼細鑷劧澶辫触骞舵樉绀洪敊璇級
   if (filePath && (PREVIEW_AUDIO_EXT.has(fileExt) || PREVIEW_VIDEO_EXT.has(fileExt))) {
     const url = toDriveLocalUrl(filePath) || toFileUrl(filePath);
     if (PREVIEW_AUDIO_EXT.has(fileExt)) {
@@ -2365,7 +2369,7 @@ function renderPreview(data) {
     return;
   }
 
-  // 3) 文本/Markdown：优先 previewText（由 AHK 截断后返回）
+  // 3) 鏂囨湰/Markdown锛氫紭鍏?previewText锛堢敱 AHK 鎴柇鍚庤繑鍥烇級
   if ((filePath && PREVIEW_TEXT_EXT.has(fileExt)) || (previewText && previewText.length)) {
     const text = previewText || (data.content || '');
     bodyEl.innerHTML = '<pre>' + escapeHtml(text) + '</pre>';
@@ -2392,9 +2396,9 @@ function clearPreview() {
     '<div id="preview-empty"><div class="pe-icon">&#128203;</div><div>选择一项查看详情</div></div>';
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 // Selection
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 function selectItem(index) {
   if (index < 0 || index >= state.items.length) return;
   state.selectedIndex = index;
@@ -2415,9 +2419,9 @@ function selectItem(index) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 // Action Panel
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 function toggleActionPanel() {
   state.actionPanelOpen = !state.actionPanelOpen;
   state.actionIndex = 0;
@@ -2479,7 +2483,7 @@ function setEngineMode(mode) {
   if (state.engineMode === m) return;
   state.engineMode = m;
   syncEngineModeUI();
-  // 由 AHK 在 setEngineMode 内立即刷新列表，避免与 search 消息顺序竞态
+  // 鐢?AHK 鍦?setEngineMode 鍐呯珛鍗冲埛鏂板垪琛紝閬垮厤涓?search 娑堟伅椤哄簭绔炴€?
   postToAhk({ type: 'setEngineMode', engine: m });
 }
 
@@ -2490,11 +2494,11 @@ document.querySelectorAll('.action-item').forEach(el => {
   el.addEventListener('click', () => closeActionPanel());
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Search debounce（须在 keydown 之前，供 Enter 立即刷新）
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+// Search debounce锛堥』鍦?keydown 涔嬪墠锛屼緵 Enter 绔嬪嵆鍒锋柊锛?
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 let searchDebounceTimer = 0;
-/** 组合：更多筛选优先于类型标签（链接/代码/置顶）；否则用全部/文本/图片 */
+/** 缁勫悎锛氭洿澶氱瓫閫変紭鍏堜簬绫诲瀷鏍囩锛堥摼鎺?浠ｇ爜/缃《锛夛紱鍚﹀垯鐢ㄥ叏閮?鏂囨湰/鍥剧墖 */
 function resolvedFilterType() {
   return normalizeClipboardChipFilter(state.chipFilter);
 }
@@ -2523,9 +2527,9 @@ function flushSearchNow() {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 // Keyboard
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 document.addEventListener('keydown', (e) => {
   if (state.ctxMenuVisible && e.key === 'Escape') {
     e.preventDefault();
@@ -2587,7 +2591,7 @@ document.addEventListener('keydown', (e) => {
   const searchInput = document.getElementById('search-input');
   const typingInSearch = searchInput && document.activeElement === searchInput;
 
-  // 1-9: 快捷粘贴；在搜索框内输入数字时必须交给输入框，否则会 paste 并关面板
+  // 1-9: 蹇嵎绮樿创锛涘湪鎼滅储妗嗗唴杈撳叆鏁板瓧鏃跺繀椤讳氦缁欒緭鍏ユ锛屽惁鍒欎細 paste 骞跺叧闈㈡澘
   if (!typingInSearch && !e.ctrlKey && !e.altKey && e.key >= '1' && e.key <= '9') {
     const idx = parseInt(e.key, 10) - 1;
     if (idx < state.items.length) {
@@ -2604,7 +2608,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Enter：在搜索框内立即执行搜索；否则粘贴当前选中项
+  // Enter锛氬湪鎼滅储妗嗗唴绔嬪嵆鎵ц鎼滅储锛涘惁鍒欑矘璐村綋鍓嶉€変腑椤?
   if (e.key === 'Enter') {
     e.preventDefault();
     if (typingInSearch) {
@@ -2615,7 +2619,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  /* Space：长按快速翻页（按住持续向下选中） */
+  /* Space锛氶暱鎸夊揩閫熺炕椤碉紙鎸変綇鎸佺画鍚戜笅閫変腑锛?*/
   if (!state.actionPanelOpen && !state.ctxMenuVisible && !typingInSearch && e.code === 'Space') {
     e.preventDefault();
     if (!state.peekSpaceDown) {
@@ -2630,7 +2634,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // ArrowUp / ArrowDown: navigate list（搜索框聚焦时不劫持，避免干扰 IME/光标）
+  // ArrowUp / ArrowDown: navigate list锛堟悳绱㈡鑱氱劍鏃朵笉鍔寔锛岄伩鍏嶅共鎵?IME/鍏夋爣锛?
   if (!typingInSearch && e.key === 'ArrowUp') {
     e.preventDefault();
     if (state.selectedIndex > 0) selectItem(state.selectedIndex - 1);
@@ -2659,9 +2663,9 @@ document.addEventListener('keyup', (e) => {
   }
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 // Search (JS side fires event, AHK does debounce)
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 document.getElementById('search-input').addEventListener('input', (e) => {
   state.keyword = e.target.value.trim();
   triggerSearch();
@@ -2688,24 +2692,88 @@ if (engineModeGroup) {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 分页：Raycast 式提前加载 — 大 rootMargin + 哨兵 IO；滚动近底 rAF 兜底（scroll 仅随用户滚轮/触控）
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+// 鍒嗛〉锛歊aycast 寮忔彁鍓嶅姞杞?鈥?澶?rootMargin + 鍝ㄥ叺 IO锛涙粴鍔ㄨ繎搴?rAF 鍏滃簳锛坰croll 浠呴殢鐢ㄦ埛婊氳疆/瑙︽帶锛?
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 document.getElementById('list-panel').addEventListener('scroll', onListPanelScrollPrefetch, { passive: true });
 
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 // Status
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 function updateStatus() {
   document.getElementById('status-total').textContent = state.total + ' 条记录';
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 // Helpers
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 function escapeHtml(s) {
   if (!s) return '';
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function normalizeIncomingItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items.map((it) => normalizeIncomingItem(it));
+}
+
+function normalizeIncomingItem(it) {
+  if (!it || typeof it !== 'object') return it;
+  const out = Object.assign({}, it);
+  if (out.content != null) out.content = cleanDisplayText(out.content);
+  if (out.sourceApp != null) out.sourceApp = cleanDisplayText(out.sourceApp);
+  if (out.previewText != null) out.previewText = cleanDisplayText(out.previewText);
+  return out;
+}
+
+function normalizeIncomingPreview(msg) {
+  if (!msg || typeof msg !== 'object') return msg;
+  const out = Object.assign({}, msg);
+  if (out.content != null) out.content = cleanDisplayText(out.content);
+  if (out.previewText != null) out.previewText = cleanDisplayText(out.previewText);
+  if (out.meta && typeof out.meta === 'object') {
+    out.meta = Object.assign({}, out.meta);
+    if (out.meta.sourceApp != null) out.meta.sourceApp = cleanDisplayText(out.meta.sourceApp);
+    if (out.meta.fileName != null) out.meta.fileName = cleanDisplayText(out.meta.fileName);
+    if (out.meta.sourceUrl != null) out.meta.sourceUrl = String(out.meta.sourceUrl).trim();
+  }
+  return out;
+}
+
+function cleanDisplayText(v) {
+  if (v == null) return '';
+  let s = String(v);
+  s = tryFixMojibake(s);
+  s = stripHtmlTags(s);
+  s = decodeHtmlEntities(s);
+  s = s
+    .replace(/\u00A0/g, ' ')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t\f\v]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return s;
+}
+
+function stripHtmlTags(s) {
+  return s.replace(/<[^>]*>/g, ' ');
+}
+
+function decodeHtmlEntities(s) {
+  const ta = document.createElement('textarea');
+  ta.innerHTML = s;
+  return ta.value || s;
+}
+
+function tryFixMojibake(s) {
+  const badHint = /[ÃÂâ€˜’“”•–—…‰™š›œžŸ鈥锛锟]/;
+  if (!badHint.test(s)) return s;
+  try {
+    const bytes = new Uint8Array(Array.from(s, ch => ch.charCodeAt(0) & 0xFF));
+    const fixed = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    if (fixed && fixed !== s && fixed.indexOf('\uFFFD') < 0) return fixed;
+  } catch (e) { /* ignore */ }
+  return s;
 }
 
 function truncate(s, max) {
@@ -2736,9 +2804,9 @@ function relativeTime(timeStr) {
   } catch { return timeStr; }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Context menu & 持续粘贴
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+// Context menu & 鎸佺画绮樿创
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 const cpToggle = document.getElementById('continuous-paste-toggle');
 if (cpToggle) cpToggle.addEventListener('click', () => toggleContinuousPaste());
 
@@ -2795,9 +2863,9 @@ updateContinuousPasteUI();
   });
 })();
 
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 // WebView2 Bridge Init
-// ═══════════════════════════════════════════════════════════════════════════
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 if (window.chrome && window.chrome.webview) {
   window.chrome.webview.addEventListener('message', (e) => {
     try {
@@ -2818,3 +2886,5 @@ if (window.chrome && window.chrome.webview) {
 </script>
 </body>
 </html>
+
+
