@@ -325,6 +325,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <div class="fld"><label for="apiKey" id="apiKeyLabel">API Key</label><input id="apiKey" class="ctl" type="password" autocomplete="off" placeholder="API Key"><div class="hint mini" id="apiKeyKeyHint" style="display:none"></div></div>
 <div class="fld" id="fldTtydShellRow" style="display:none"><label for="ttydShellCommand">终端启动命令（Shell）</label><input id="ttydShellCommand" class="ctl" type="text" spellcheck="false" autocomplete="off" placeholder="cmd.exe" /><div class="hint mini">传给本机 ttyd 的 Shell（如 <code>cmd.exe</code>、<code>powershell</code> 完整路径等）。点「完成」后写入配置并建议重启 ttyd。若被拦截请允许主目录下 <code>ttyd.exe</code> 或检查本机安全软件。</div></div>
 <div class="fld" id="fldBaseUrlRow"><label for="baseUrl">Base URL</label><input id="baseUrl" class="ctl" type="text" autocomplete="off"></div>
+<div class="fld" id="fldOpenClawSessionRow" style="display:none"><label for="openclawSessionKey">Gateway Session Key</label><input id="openclawSessionKey" class="ctl" type="text" autocomplete="off" list="openclawSessionOptions" placeholder="agent:main:... / main"><datalist id="openclawSessionOptions"></datalist><div class="hint mini" id="openclawSessionHint">留空时该标签自动使用独立 `niuma-*` 会话；如需对齐 OpenClaw Control，请填写完整 session key。</div></div>
 <div class="fld" id="fldModelRow"><label for="model">Model</label><input id="model" class="ctl" type="text" autocomplete="off"></div>
 <div class="fld"><label for="systemPrompt">System Prompt</label><div class="prompt-tools"><select id="promptBuiltin" class="ctl"></select><button type="button" class="btn3" id="promptTplApply">应用到上方</button><button type="button" class="btn3" id="promptImportBtn">从文件导入</button><input type="file" id="promptImportFile" accept=".txt,.md,.json,text/plain" style="display:none" /></div><textarea id="systemPrompt" class="ctl"></textarea></div>
 <div class="hint" id="providerHint"></div>
@@ -674,6 +675,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     provider = $('provider'),
     apiKey = $('apiKey'),
     baseUrl = $('baseUrl'),
+    openclawSessionKey = $('openclawSessionKey'),
+    openclawSessionOptions = $('openclawSessionOptions'),
+    openclawSessionHint = $('openclawSessionHint'),
     model = $('model'),
     modelPreset = $('modelPreset'),
     systemPrompt = $('systemPrompt'),
@@ -695,6 +699,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     fldModelDdCol = $('fldModelDdCol'),
     fldTtydShellRow = $('fldTtydShellRow'),
     fldBaseUrlRow = $('fldBaseUrlRow'),
+    fldOpenClawSessionRow = $('fldOpenClawSessionRow'),
     fldModelRow = $('fldModelRow'),
     resetCfg = $('resetCfg'),
     collapsedRoot = $('collapsedRoot'),
@@ -737,7 +742,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     niumaHistoryStore: { version: 1, sessions: {}, updatedAt: null },
     niumaHistoryLoaded: false,
     dynamicModels: {},
-    dynamicModelsFetchedAt: {}
+    dynamicModelsFetchedAt: {},
+    openclawMetaCache: {},
+    openclawSessionRows: [],
+    openclawSessionRowsFetchedAt: 0,
+    openclawSessionRowsLoading: false
   };
   var toolbarVisibleSynced = false;
   var toolbarRevealTimer = 0;
@@ -1201,7 +1210,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       m.payload && m.payload.role,
       m.data && m.data.role,
       m.result && m.result.role,
-      m.response && m.response.role
+      m.response && m.response.role,
+      m.assistantMessage && m.assistantMessage.role,
+      m.assistant_message && m.assistant_message.role,
+      m.userMessage && m.userMessage.role,
+      m.user_message && m.user_message.role
     ];
     for (var i = 0; i < cands.length; i++) {
       var rr = normalizeRole(cands[i]);
@@ -1233,7 +1246,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       'answer',
       'response',
       'output_text',
+      'outputText',
       'assistantText',
+      'assistant_text',
+      'finalText',
+      'final_text',
       'final'
     ];
     for (var si = 0; si < strFields.length; si++) {
@@ -1248,6 +1265,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!acc.length && m.result != null && typeof m.result !== 'string') ocCollectTextDeep(m.result, acc);
     if (!acc.length && m.response != null && typeof m.response !== 'string') ocCollectTextDeep(m.response, acc);
     if (!acc.length && m.output != null && typeof m.output !== 'string') ocCollectTextDeep(m.output, acc);
+    if (!acc.length && m.answer != null && typeof m.answer !== 'string') ocCollectTextDeep(m.answer, acc);
+    if (!acc.length && m.assistantMessage != null && typeof m.assistantMessage !== 'string') ocCollectTextDeep(m.assistantMessage, acc);
+    if (!acc.length && m.assistant_message != null && typeof m.assistant_message !== 'string') ocCollectTextDeep(m.assistant_message, acc);
     if (!acc.length && Array.isArray(m.parts)) {
       for (var pi = 0; pi < m.parts.length; pi++) {
         var p = m.parts[pi];
@@ -1297,16 +1317,24 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return out;
   }
 
+  function buildOpenClawSessionKey(seed) {
+    var raw = String(seed || '').trim();
+    if (!raw) raw = genId();
+    raw = raw.replace(/[^a-zA-Z0-9_-]+/g, '-');
+    raw = raw.replace(/-+/g, '-').replace(/^-|-$/g, '');
+    if (!raw) raw = 'session';
+    return 'niuma-' + raw;
+  }
+
   function getOpenClawSessionKey(s) {
-    if (s) {
-      var own = String(s.gatewaySessionKey || '').trim();
-      if (own) return own;
+    if (!s) return buildOpenClawSessionKey('');
+    var own = String(s.gatewaySessionKey || '').trim();
+    if (own === 'main') own = 'agent:main:main';
+    if (!own) {
+      own = buildOpenClawSessionKey(s.id || '');
+      s.gatewaySessionKey = own;
     }
-    try {
-      var lk = String(localStorage.getItem('openclaw2_lastSessionKey') || '').trim();
-      if (lk) return lk;
-    } catch (e) {}
-    return 'main';
+    return own;
   }
 
   function historyStoreKeyForSession(s) {
@@ -1432,7 +1460,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         provider: pid,
         model: mModel,
         baseUrl: s.baseUrl || '',
-        gatewaySessionKey: pid === 'openclaw' ? gk || 'main' : '',
+        gatewaySessionKey: pid === 'openclaw' ? (gk ? (gk === 'main' ? 'agent:main:main' : gk) : buildOpenClawSessionKey(s.id || '')) : '',
+        openclawMeta: pid === 'openclaw' && s.openclawMeta && typeof s.openclawMeta === 'object' ? s.openclawMeta : null,
         history: Array.isArray(s.history)
           ? s.history.map(function (m) {
               var n = normalizeHistoryItem(m);
@@ -1453,12 +1482,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var pv = normalizeProviderId(provider.value);
     var pid = pv && P[pv] ? pv : 'openai';
     var p = P[pid] || P.openai;
+    var sid = genId();
+    var wantedOpenClawKey = openclawSessionKey ? String(openclawSessionKey.value || '').trim() : '';
+    var hintedOpenClawKey = openClawSessionKeyHintFromBaseUrl(baseUrl.value.trim());
     return {
-      id: genId(),
+      id: sid,
       provider: pid,
       model: p.transport === 'cli' ? '' : model.value.trim() || p.model,
       baseUrl: baseUrl.value.trim(),
-      gatewaySessionKey: pid === 'openclaw' ? 'main' : '',
+      gatewaySessionKey: pid === 'openclaw' ? wantedOpenClawKey || hintedOpenClawKey || buildOpenClawSessionKey(sid) : '',
       history: []
     };
   }
@@ -1488,6 +1520,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       model.value = s.model || p.model;
     }
     baseUrl.value = (s.baseUrl || '').trim() || p.baseUrl;
+    if (openclawSessionKey) openclawSessionKey.value = pid === 'openclaw' ? getOpenClawSessionKey(s) : '';
     hint(pid);
     apiKey.value = (state.apiKeys && state.apiKeys[pid]) || '';
     refreshApiKeyField(pid);
@@ -1505,7 +1538,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     s.model = p.transport === 'cli' ? '' : model.value.trim() || p.model;
     s.baseUrl = baseUrl.value.trim();
     if (pid !== 'openclaw') s.gatewaySessionKey = '';
-    else if (!String(s.gatewaySessionKey || '').trim()) s.gatewaySessionKey = 'main';
+    else {
+      var wanted = openclawSessionKey ? String(openclawSessionKey.value || '').trim() : '';
+      var hinted = openClawSessionKeyHintFromBaseUrl(s.baseUrl);
+      s.gatewaySessionKey = wanted || hinted || getOpenClawSessionKey(s);
+    }
   }
 
   function providerIconUrlList(pid) {
@@ -1559,6 +1596,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     try {
       var p = P[pid] || {};
       var isCli = p && p.transport === 'cli';
+      apiKey.type = pid === 'openclaw' ? 'text' : 'password';
+      apiKey.spellcheck = false;
       apiKey.disabled = !!isCli;
       apiKey.setAttribute('aria-disabled', isCli ? 'true' : 'false');
       apiKey.style.opacity = isCli ? '0.6' : '';
@@ -1579,9 +1618,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!(pid && P[pid])) pid = 'openai';
     var p = P[pid] || P.openai;
     var isCli = p.transport === 'cli';
+    var isOpenClaw = pid === 'openclaw';
     if (fldModelDdCol) fldModelDdCol.style.display = isCli ? 'none' : '';
     if (fldModelRow) fldModelRow.style.display = isCli ? 'none' : '';
     if (fldTtydShellRow) fldTtydShellRow.style.display = isCli ? '' : 'none';
+    if (fldOpenClawSessionRow) fldOpenClawSessionRow.style.display = !isCli && isOpenClaw ? '' : 'none';
+    if (!isCli && isOpenClaw) refreshOpenClawSessionRows(false);
     if (fldBaseUrlRow) {
       var bl = fldBaseUrlRow.querySelector('label[for="baseUrl"]');
       if (bl) bl.textContent = isCli ? 'ttyd 地址（Base URL）' : 'Base URL';
@@ -1989,12 +2031,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     syncSessionFromForm(cur);
     saveCfg(false);
     var p = P[pid];
+    var sid = genId();
+    var wantedOpenClawKey = openclawSessionKey ? String(openclawSessionKey.value || '').trim() : '';
     var s = {
-      id: genId(),
+      id: sid,
       provider: pid,
       model: p.transport === 'cli' ? '' : p.model,
       baseUrl: p.baseUrl,
-      gatewaySessionKey: pid === 'openclaw' ? getOpenClawSessionKey(null) : '',
+      gatewaySessionKey: pid === 'openclaw' ? wantedOpenClawKey || buildOpenClawSessionKey(sid) : '',
       history: []
     };
     state.sessions.push(s);
@@ -2421,6 +2465,303 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return { ok: true, host: host, port: port, token: token };
   }
 
+  function openClawSessionKeyHintFromBaseUrl(rawBaseUrl) {
+    var raw = String(rawBaseUrl || '').trim();
+    if (!raw) return '';
+    try {
+      var u = new URL(raw.indexOf('://') >= 0 ? raw : 'http://' + raw);
+      var qs = new URLSearchParams(u.search || '');
+      var qk = String(qs.get('sessionKey') || qs.get('session') || qs.get('key') || '').trim();
+      if (qk) return qk;
+      if (u.hash) {
+        var hs = new URLSearchParams(u.hash.replace(/^#/, '?'));
+        var hk = String(hs.get('sessionKey') || hs.get('session') || hs.get('key') || '').trim();
+        if (hk) return hk;
+      }
+    } catch (e) {}
+    return '';
+  }
+
+  function ocNormalizeModelForSend(m) {
+    var t = String(m || '').trim();
+    if (!t) return '';
+    var low = t.toLowerCase();
+    if (low === 'gateway' || low === 'default') return '';
+    return t;
+  }
+
+  function ocSessionRowsFromAny(v) {
+    if (!v) return [];
+    if (Array.isArray(v)) return v;
+    if (Array.isArray(v.sessions)) return v.sessions;
+    if (Array.isArray(v.items)) return v.items;
+    if (Array.isArray(v.rows)) return v.rows;
+    if (v.result && typeof v.result === 'object') return ocSessionRowsFromAny(v.result);
+    if (v.data && typeof v.data === 'object') return ocSessionRowsFromAny(v.data);
+    if (v.payload && typeof v.payload === 'object') return ocSessionRowsFromAny(v.payload);
+    return [];
+  }
+
+  function ocSessionKeyFromSessionRow(row) {
+    if (!row || typeof row !== 'object') return '';
+    var direct = [
+      row.sessionKey,
+      row.key,
+      row.session && row.session.sessionKey,
+      row.session && row.session.key,
+      row.entry && row.entry.sessionKey,
+      row.entry && row.entry.key,
+      row.data && row.data.sessionKey,
+      row.data && row.data.key
+    ];
+    for (var i = 0; i < direct.length; i++) {
+      var s = String(direct[i] == null ? '' : direct[i]).trim();
+      if (s) return s;
+    }
+    return '';
+  }
+
+  function ocCanonicalSessionKey(k) {
+    var s = String(k || '').trim();
+    if (!s) return '';
+    if (s.indexOf('agent:') === 0) return s;
+    if (s === 'main') return 'agent:main:main';
+    return 'agent:main:' + s;
+  }
+
+  function ocShortSessionKey(k) {
+    var s = String(k || '').trim();
+    if (!s) return '';
+    var p = s.match(/^agent:[^:]+:(.+)$/);
+    return p ? p[1] : s;
+  }
+
+  function ocSessionKeysEquivalent(a, b) {
+    a = String(a || '').trim();
+    b = String(b || '').trim();
+    if (!a || !b) return false;
+    if (a === b) return true;
+    return ocCanonicalSessionKey(a) === ocCanonicalSessionKey(b) || ocShortSessionKey(a) === ocShortSessionKey(b);
+  }
+
+  function ocSessionPreviewItemsFromAny(v) {
+    if (!v) return [];
+    if (Array.isArray(v)) return v;
+    if (Array.isArray(v.items)) return v.items;
+    if (Array.isArray(v.messages)) return v.messages;
+    if (Array.isArray(v.previews)) {
+      for (var i = 0; i < v.previews.length; i++) {
+        if (v.previews[i] && Array.isArray(v.previews[i].items)) return v.previews[i].items;
+      }
+    }
+    if (v.result && typeof v.result === 'object') return ocSessionPreviewItemsFromAny(v.result);
+    if (v.data && typeof v.data === 'object') return ocSessionPreviewItemsFromAny(v.data);
+    if (v.payload && typeof v.payload === 'object') return ocSessionPreviewItemsFromAny(v.payload);
+    return [];
+  }
+
+  function ocPreviewRowsFromAny(v) {
+    if (!v) return [];
+    if (Array.isArray(v.previews)) return v.previews;
+    if (v.result && typeof v.result === 'object') return ocPreviewRowsFromAny(v.result);
+    if (v.data && typeof v.data === 'object') return ocPreviewRowsFromAny(v.data);
+    if (v.payload && typeof v.payload === 'object') return ocPreviewRowsFromAny(v.payload);
+    return [];
+  }
+
+  function ocHistoryItemsFromPreviewItems(items) {
+    return (Array.isArray(items) ? items : [])
+      .map(function (it) {
+        if (!it || typeof it !== 'object') return null;
+        var role = normalizeRole(it.role);
+        var text = String(it.text || it.content || '').trim();
+        if (!role || !text) return null;
+        if (role === 'tool' || role === 'system') return null;
+        return { role: role === 'assistant' ? 'assistant' : 'user', content: text, ts: ensureIsoTime(it.ts || it.timestamp || it.createdAt) };
+      })
+      .filter(Boolean);
+  }
+
+  function ocModelFromSessionRow(row) {
+    if (!row || typeof row !== 'object') return '';
+    var direct = [
+      row.modelIdentifier,
+      row.model,
+      row.modelName,
+      row.model_name,
+      row.session && row.session.modelIdentifier,
+      row.session && row.session.model,
+      row.session && row.session.modelName,
+      row.session && row.session.model_name,
+      row.agentRuntime && row.agentRuntime.modelIdentifier,
+      row.agentRuntime && row.agentRuntime.model,
+      row.agentRuntime && row.agentRuntime.modelName,
+      row.effectiveModel,
+      row.effective_model
+    ];
+    for (var i = 0; i < direct.length; i++) {
+      var s = String(direct[i] == null ? '' : direct[i]).trim();
+      if (s) return s;
+    }
+    return '';
+  }
+
+  async function ocResolveSessionMeta(cfg, wantedSessionKey) {
+    var out = { sessionKey: String(wantedSessionKey || '').trim(), canonicalKey: '', model: '', row: null, previewItems: [] };
+    if (!out.sessionKey) return out;
+    var now = Date.now();
+    var cacheKey = [String(cfg.baseUrl || '').trim(), out.sessionKey].join('|');
+    if (!state.openclawMetaCache || typeof state.openclawMetaCache !== 'object') state.openclawMetaCache = {};
+    var cached = state.openclawMetaCache[cacheKey];
+    if (cached && now - Number(cached.ts || 0) < 15000) {
+      return {
+        sessionKey: String(cached.sessionKey || out.sessionKey),
+        canonicalKey: String(cached.canonicalKey || ''),
+        model: String(cached.model || ''),
+        row: cached.row || null,
+        previewItems: cached.previewItems || []
+      };
+    }
+    try {
+      var preview = await openClawRpc(cfg, 'sessions.preview', { keys: [out.sessionKey] }, 3500);
+      out.previewItems = ocSessionPreviewItemsFromAny(preview);
+      var previews = ocPreviewRowsFromAny(preview);
+      if (previews.length) {
+        var pk = ocSessionKeyFromSessionRow(previews[0]);
+        if (pk) {
+          out.sessionKey = pk;
+          out.canonicalKey = ocCanonicalSessionKey(pk);
+        }
+      }
+    } catch (ePreview) {}
+    try {
+      var sub = await openClawRpc(cfg, 'sessions.messages.subscribe', { key: out.sessionKey }, 3500);
+      var subKey = ocSessionKeyFromSessionRow(sub);
+      if (subKey) out.canonicalKey = subKey;
+    } catch (eSub) {}
+    if (!out.canonicalKey) out.canonicalKey = ocCanonicalSessionKey(out.sessionKey);
+    try {
+      var listed = await openClawRpc(cfg, 'sessions.list', {}, 3500);
+      var defaults = listed && listed.defaults ? listed.defaults : listed && listed.payload && listed.payload.defaults ? listed.payload.defaults : null;
+      var rows = ocSessionRowsFromAny(listed);
+      if (rows.length) {
+        state.openclawSessionRows = rows;
+        state.openclawSessionRowsFetchedAt = Date.now();
+        renderOpenClawSessionOptions();
+      }
+      for (var i = 0; i < rows.length; i++) {
+        var k = ocSessionKeyFromSessionRow(rows[i]);
+        if (!k) continue;
+        if (ocSessionKeysEquivalent(k, out.sessionKey) || ocSessionKeysEquivalent(k, out.canonicalKey)) {
+          out.row = rows[i];
+          out.sessionKey = k;
+          out.canonicalKey = ocCanonicalSessionKey(k);
+          var m = ocModelFromSessionRow(rows[i]);
+          if (m) out.model = m;
+          break;
+        }
+      }
+      if (!out.model && defaults) {
+        var dm = defaults.model || defaults.modelIdentifier || defaults.primary || '';
+        var dp = defaults.modelProvider || defaults.provider || '';
+        out.model = dp && dm && String(dm).indexOf('/') < 0 ? String(dp) + '/' + String(dm) : String(dm || '');
+      }
+    } catch (e1) {}
+    state.openclawMetaCache[cacheKey] = {
+      ts: now,
+      sessionKey: out.sessionKey,
+      canonicalKey: out.canonicalKey || '',
+      model: out.model || '',
+      row: out.row || null,
+      previewItems: out.previewItems || []
+    };
+    return out;
+  }
+
+  function ocGetSessionMessagePayload(msg) {
+    if (!msg || typeof msg !== 'object') return null;
+    var t = String(msg.type || '').toLowerCase();
+    var e = String(msg.event || msg.method || '').toLowerCase();
+    if (e === 'session.message') return msg.payload || msg.params || msg.result || msg;
+    if (t === 'event' || t === 'push' || t === 'notification' || t === 'broadcast') {
+      var w = msg.payload || msg.params;
+      if (w && typeof w === 'object' && String(w.event || w.type || '').toLowerCase() === 'session.message') {
+        return w.payload || w.message || w;
+      }
+    }
+    return null;
+  }
+
+  function ocRoleFromSessionMessage(pl) {
+    if (!pl || typeof pl !== 'object') return '';
+    return ocRoleFromHistoryItem(pl.message || pl.item || pl.entry || pl);
+  }
+
+  function ocSessionMessageDone(pl) {
+    if (!pl || typeof pl !== 'object') return false;
+    var s = String(pl.state || pl.status || pl.phase || '').toLowerCase();
+    return s === 'final' || s === 'done' || s === 'completed' || s === 'finished' || pl.done === true || pl.finished === true;
+  }
+
+  function ocSessionRowLabel(row) {
+    if (!row || typeof row !== 'object') return '';
+    var bits = [];
+    var k = ocSessionKeyFromSessionRow(row);
+    var label = row.displayName || row.label || row.name || '';
+    var kind = row.kind || row.chatType || '';
+    var updated = row.updatedAt || row.timestamp || row.ts || '';
+    if (label) bits.push(String(label));
+    if (kind) bits.push(String(kind));
+    if (updated) {
+      try {
+        bits.push(new Date(Number(updated) || updated).toLocaleString());
+      } catch (e) {}
+    }
+    return bits.length ? bits.join(' / ') : k;
+  }
+
+  function renderOpenClawSessionOptions() {
+    if (!openclawSessionOptions) return;
+    var rows = Array.isArray(state.openclawSessionRows) ? state.openclawSessionRows : [];
+    openclawSessionOptions.innerHTML = rows
+      .map(function (row) {
+        var k = ocSessionKeyFromSessionRow(row);
+        if (!k) return '';
+        return '<option value="' + esc(k) + '" label="' + esc(ocSessionRowLabel(row)) + '"></option>';
+      })
+      .join('');
+    if (openclawSessionHint && rows.length) {
+      openclawSessionHint.textContent = '已读取 OpenClaw 后台会话 ' + rows.length + ' 个；建议选择完整 agent:* key。留空会自动创建独立会话。';
+    }
+  }
+
+  async function refreshOpenClawSessionRows(force) {
+    if (state.openclawSessionRowsLoading) return;
+    var now = Date.now();
+    if (!force && state.openclawSessionRowsFetchedAt && now - state.openclawSessionRowsFetchedAt < 20000) return;
+    var s = activeSession();
+    var cfg = {
+      provider: 'openclaw',
+      baseUrl: (s && s.provider === 'openclaw' && s.baseUrl ? s.baseUrl : baseUrl.value || (P.openclaw && P.openclaw.baseUrl) || '').trim(),
+      apiKey: getApiKeyForProvider('openclaw')
+    };
+    if (!openClawEndpointFromCfg(cfg).ok) return;
+    state.openclawSessionRowsLoading = true;
+    try {
+      var listed = await openClawRpc(cfg, 'sessions.list', {}, 6000);
+      var rows = ocSessionRowsFromAny(listed);
+      rows.sort(function (a, b) {
+        return Number(b.updatedAt || b.timestamp || 0) - Number(a.updatedAt || a.timestamp || 0);
+      });
+      state.openclawSessionRows = rows;
+      state.openclawSessionRowsFetchedAt = Date.now();
+      renderOpenClawSessionOptions();
+    } catch (e) {
+    } finally {
+      state.openclawSessionRowsLoading = false;
+    }
+  }
+
   function updateNeedSetup() {
     var s = activeSession();
     if (!s) {
@@ -2564,6 +2905,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       provider: pid,
       model: p.transport === 'cli' ? '' : (s.model || '').trim() || p.model,
       baseUrl: bu,
+      openclawSessionKey:
+        pid === 'openclaw'
+          ? String(s.gatewaySessionKey || '').trim() || openClawSessionKeyHintFromBaseUrl(bu) || getOpenClawSessionKey(s)
+          : '',
       apiKey: getApiKeyForProvider(pid),
       systemPrompt: systemPrompt.value.trim()
     };
@@ -2735,6 +3080,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       if (v.content && typeof v.content !== 'string') ocCollectTextDeep(v.content, out);
       if (v.delta) ocCollectTextDeep(v.delta, out);
       if (v.output) ocCollectTextDeep(v.output, out);
+      if (v.outputText) ocCollectTextDeep(v.outputText, out);
       if (v.response) ocCollectTextDeep(v.response, out);
       if (v.result) ocCollectTextDeep(v.result, out);
       if (v.data) ocCollectTextDeep(v.data, out);
@@ -2742,7 +3088,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       if (v.message && typeof v.message !== 'string') ocCollectTextDeep(v.message, out);
       if (v.parts) ocCollectTextDeep(v.parts, out);
       if (v.output_text) ocCollectTextDeep(v.output_text, out);
+      if (v.answer) ocCollectTextDeep(v.answer, out);
       if (v.assistant) ocCollectTextDeep(v.assistant, out);
+      if (v.assistantText) ocCollectTextDeep(v.assistantText, out);
+      if (v.assistant_text) ocCollectTextDeep(v.assistant_text, out);
+      if (v.assistantMessage) ocCollectTextDeep(v.assistantMessage, out);
+      if (v.assistant_message) ocCollectTextDeep(v.assistant_message, out);
+      if (v.finalText) ocCollectTextDeep(v.finalText, out);
+      if (v.final_text) ocCollectTextDeep(v.final_text, out);
+      if (v.final) ocCollectTextDeep(v.final, out);
       if (Array.isArray(v.choices)) {
         for (var c = 0; c < v.choices.length; c++) {
           var ch = v.choices[c];
@@ -2834,6 +3188,67 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var s = pl.state;
     if (s === 'final' || s === 'done' || s === 'completed' || s === 'finished') return true;
     if (pl.done === true || pl.finished === true) return true;
+    return false;
+  }
+
+  function ocCollectNamedStringsDeep(v, names, out, depth) {
+    if (!v || typeof v !== 'object' || depth > 7) return;
+    if (Array.isArray(v)) {
+      for (var i = 0; i < v.length; i++) ocCollectNamedStringsDeep(v[i], names, out, depth + 1);
+      return;
+    }
+    for (var k in v) {
+      if (!Object.prototype.hasOwnProperty.call(v, k)) continue;
+      var val = v[k];
+      var lk = String(k || '').toLowerCase();
+      if (names[lk] && (typeof val === 'string' || typeof val === 'number')) {
+        var s = String(val).trim();
+        if (s) out.push(s);
+      }
+      if (val && typeof val === 'object') ocCollectNamedStringsDeep(val, names, out, depth + 1);
+    }
+  }
+
+  function ocPayloadMatchesSession(v, expectedSessionKey) {
+    var expected = String(expectedSessionKey || '').trim();
+    if (!expected || !v || typeof v !== 'object') return true;
+    var names = {
+      sessionkey: 1,
+      sessionid: 1,
+      session_id: 1,
+      key: 1,
+      conversationid: 1,
+      conversation_id: 1,
+      threadid: 1,
+      thread_id: 1
+    };
+    var found = [];
+    ocCollectNamedStringsDeep(v, names, found, 0);
+    if (!found.length) return true;
+    for (var i = 0; i < found.length; i++) {
+      var got = String(found[i] || '').trim();
+      if (got === expected || ocSessionKeysEquivalent(got, expected)) return true;
+    }
+    return false;
+  }
+
+  function ocPayloadMatchesRequest(v, expectedRequestId) {
+    var expected = String(expectedRequestId || '').trim();
+    if (!expected || !v || typeof v !== 'object') return true;
+    var names = {
+      idempotencykey: 1,
+      clientrequestid: 1,
+      client_request_id: 1,
+      runid: 1,
+      run_id: 1
+    };
+    var found = [];
+    ocCollectNamedStringsDeep(v, names, found, 0);
+    if (!found.length) return true;
+    for (var i = 0; i < found.length; i++) {
+      var got = String(found[i] || '').trim();
+      if (got === expected) return true;
+    }
     return false;
   }
 
@@ -3065,12 +3480,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var ep = openClawEndpointFromCfg(cfg);
       if (ep.ok) {
         var sk = getOpenClawSessionKey(s);
+        var meta = await ocResolveSessionMeta(cfg, sk);
+        if (meta && (meta.canonicalKey || meta.sessionKey)) sk = String(meta.canonicalKey || meta.sessionKey).trim() || sk;
         s.gatewaySessionKey = sk;
-        try {
-          localStorage.setItem('openclaw2_lastSessionKey', sk);
-        } catch (e0) {}
+        if (meta && meta.row) s.openclawMeta = meta.row;
+        if (meta && meta.model) s.model = String(meta.model).trim() || s.model;
         var rpcRes = await openClawRpc(cfg, 'chat.history', { sessionKey: sk, limit: 100 }, 10000);
         var gw = extractGatewayHistoryMessages(rpcRes).map(mapGatewayHistoryItem).filter(Boolean);
+        if ((!gw.length || gw.length < 2) && meta && meta.previewItems && meta.previewItems.length) {
+          gw = mergeHistoryList(gw, ocHistoryItemsFromPreviewItems(meta.previewItems));
+        }
         /* 本地优先：避免网关 chat.history 占位项（content 空、仅有 id）与刚发送条目同 key 时盖住本地正文 */
         if (gw.length) s.history = mergeHistoryList(s.history || [], gw).slice(-400);
       }
@@ -3093,16 +3512,35 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!last || last.role !== 'user') throw new Error('内部错误：缺少用户消息。');
     var msgText = String(last.content != null ? last.content : '');
     if (!msgText.trim()) msgText = ocExtractMessageContentForHistory(last);
+    cfg.systemPrompt = '';
     if (!String(msgText || '').trim()) throw new Error('上一条用户消息正文为空，请重新输入后发送。');
     if (cfg.systemPrompt && h.length === 1) {
       msgText = '【系统提示】\n' + cfg.systemPrompt + '\n\n' + msgText;
     }
     var s0 = activeSession();
-    var sessionKey = getOpenClawSessionKey(s0);
-    if (s0) s0.gatewaySessionKey = sessionKey;
-    try {
-      localStorage.setItem('openclaw2_lastSessionKey', sessionKey);
-    } catch (e) {}
+    var sessionKey =
+      String(cfg.openclawSessionKey || '').trim() ||
+      openClawSessionKeyHintFromBaseUrl(cfg.baseUrl) ||
+      getOpenClawSessionKey(s0);
+    var meta = await ocResolveSessionMeta(cfg, sessionKey);
+    var canonicalSessionKey = ocCanonicalSessionKey(sessionKey);
+    if (meta && typeof meta === 'object') {
+      if (meta.sessionKey) sessionKey = String(meta.sessionKey).trim();
+      if (meta.canonicalKey) canonicalSessionKey = String(meta.canonicalKey).trim();
+      if (meta.model) cfg.model = String(meta.model).trim();
+    }
+    if (!canonicalSessionKey) canonicalSessionKey = ocCanonicalSessionKey(sessionKey);
+    var canUseSessionSend = !!(meta && meta.row && canonicalSessionKey);
+    var sendModel = ocNormalizeModelForSend(cfg.model);
+    if (s0) {
+      s0.gatewaySessionKey = canonicalSessionKey || sessionKey || s0.gatewaySessionKey;
+      if (meta && meta.row) s0.openclawMeta = meta.row;
+      if (cfg.model && String(cfg.model).trim()) s0.model = String(cfg.model).trim();
+      if (openclawSessionKey && state.activeSessionId === s0.id) openclawSessionKey.value = s0.gatewaySessionKey || '';
+      if (model && state.activeSessionId === s0.id && s0.model) model.value = s0.model;
+      persistSessions();
+      renderSessionTabs();
+    }
     var instanceId = 'niuma-' + Date.now() + '-' + Math.random().toString(36).slice(2, 11);
 
     return new Promise(function (resolve, reject) {
@@ -3119,6 +3557,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var challengeReceived = false;
       var connectSent = false;
       var chatMsgId = '';
+      var subscribeMsgId = '';
+      var subscribeSent = false;
+      var sendMethod = 'sessions.send';
       var pendingText = '';
       var finalizeTimer = null;
       var recoveringFinal = false;
@@ -3223,6 +3664,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                 settleResolve(pendingText);
                 return;
               }
+              var prevRes = await openClawRpc(cfg, 'sessions.preview', { keys: [canonicalSessionKey || sessionKey] }, fromTimeout ? 8000 : 3500);
+              var prevPicked = ocPickAssistantFromHistory(ocHistoryItemsFromPreviewItems(ocSessionPreviewItemsFromAny(prevRes)), msgText);
+              if (prevPicked && String(prevPicked).trim()) {
+                pendingText = String(prevPicked).trim();
+                emitProgress(true);
+                settleResolve(pendingText);
+                return;
+              }
             } catch (e0) {
             }
           }
@@ -3278,21 +3727,48 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       function sendChatMsg() {
         seq += 1;
         chatMsgId = 'msg-' + seq;
+        sendMethod = canUseSessionSend ? 'sessions.send' : 'chat.send';
+        var params =
+          sendMethod === 'sessions.send'
+            ? { key: canonicalSessionKey || sessionKey, message: msgText, idempotencyKey: chatMsgId }
+            : { message: msgText, idempotencyKey: chatMsgId, sessionKey: sessionKey };
+        if (sendModel && sendMethod !== 'sessions.send') {
+          params.model = sendModel;
+          params.modelIdentifier = sendModel;
+        }
         try {
           ws.send(
             JSON.stringify({
               type: 'req',
               id: chatMsgId,
-              method: 'chat.send',
-              params: {
-                message: msgText,
-                idempotencyKey: chatMsgId,
-                sessionKey: sessionKey
-              }
+              method: sendMethod,
+              params: params
             })
           );
         } catch (e) {
           fail(new Error('发送对话失败：' + (e && e.message ? e.message : String(e))));
+        }
+      }
+
+      function sendSessionSubscribe() {
+        if (!canonicalSessionKey || subscribeSent) {
+          sendChatMsg();
+          return;
+        }
+        subscribeSent = true;
+        seq += 1;
+        subscribeMsgId = 'sub-' + seq;
+        try {
+          ws.send(
+            JSON.stringify({
+              type: 'req',
+              id: subscribeMsgId,
+              method: 'sessions.messages.subscribe',
+              params: { key: canonicalSessionKey }
+            })
+          );
+        } catch (e) {
+          sendChatMsg();
         }
       }
 
@@ -3314,23 +3790,42 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           }
           if (msg.result !== undefined || msg.ok === true) {
             authenticated = true;
-            sendChatMsg();
+            sendSessionSubscribe();
           }
           return;
         }
 
         if (!authenticated && ev === 'hello-ok') {
           authenticated = true;
-          sendChatMsg();
+          sendSessionSubscribe();
           return;
         }
 
         if (!authenticated) return;
 
+        if (subscribeMsgId && msg.type === 'res' && msg.id === subscribeMsgId) {
+          sendChatMsg();
+          return;
+        }
+
         /* chat.send 先返回 type:res（仅 started），助手正文由 broadcast("chat") 推送 */
         if (msg.type === 'res' && msg.id === chatMsgId) {
           if (msg.error || msg.ok === false) {
             var er0 = (msg.error && msg.error.message) || JSON.stringify(msg.error || {});
+            if (sendMethod === 'sessions.send' && /unknown method|invalid sessions\.send|session not found|webchat clients cannot/i.test(String(er0 || ''))) {
+              sendMethod = 'chat.send';
+              seq += 1;
+              chatMsgId = 'msg-' + seq;
+              ws.send(
+                JSON.stringify({
+                  type: 'req',
+                  id: chatMsgId,
+                  method: 'chat.send',
+                  params: { message: msgText, idempotencyKey: chatMsgId, sessionKey: sessionKey }
+                })
+              );
+              return;
+            }
             fail(new Error(String(er0)));
             return;
           }
@@ -3343,8 +3838,39 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           return;
         }
 
+        var plSession = ocGetSessionMessagePayload(msg);
+        if (plSession) {
+          var sessOk =
+            ocPayloadMatchesSession(msg, sessionKey) ||
+            ocPayloadMatchesSession(plSession, sessionKey) ||
+            ocPayloadMatchesSession(msg, canonicalSessionKey) ||
+            ocPayloadMatchesSession(plSession, canonicalSessionKey);
+          if (!sessOk) return;
+          var sr = ocRoleFromSessionMessage(plSession);
+          if (sr && sr !== 'assistant') {
+            if (ocSessionMessageDone(plSession) && pendingText.trim()) okDone();
+            return;
+          }
+          var sessionTxt = ocExtractMessageContentForHistory(plSession.message || plSession.item || plSession.entry || plSession);
+          if (!sessionTxt) sessionTxt = ocExtractChatEventPayload(plSession);
+          if (sessionTxt) {
+            pendingText = String(sessionTxt).trim();
+            emitProgress(false);
+          }
+          if (ocSessionMessageDone(plSession)) {
+            if (pendingText.trim()) okDone();
+            else recoverFinalFromHistory(false);
+            return;
+          }
+          if (sessionTxt) armFinalize();
+          return;
+        }
+
         var plChat = ocGetChatBroadcastPayload(msg);
         if (plChat) {
+          var chatSessionOk = ocPayloadMatchesSession(msg, sessionKey) || ocPayloadMatchesSession(plChat, sessionKey);
+          var chatReqOk = ocPayloadMatchesRequest(msg, chatMsgId) || ocPayloadMatchesRequest(plChat, chatMsgId);
+          if (!chatSessionOk || !chatReqOk) return;
           var pl = plChat;
           if (pl.state === 'error') {
             fail(new Error(String(pl.errorMessage || 'OpenClaw 对话出错')));
@@ -3391,6 +3917,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
         var sidePl = ocGetChatSideResultPayload(msg);
         if (sidePl) {
+          var sideSessionOk = ocPayloadMatchesSession(msg, sessionKey) || ocPayloadMatchesSession(sidePl, sessionKey);
+          var sideReqOk = ocPayloadMatchesRequest(msg, chatMsgId) || ocPayloadMatchesRequest(sidePl, chatMsgId);
+          if (!sideSessionOk || !sideReqOk) return;
           var side = sidePl;
           var st = ocExtractText(side.text || side.message || side.content || '');
           if (!st && side.btw && typeof side.btw.question === 'string') st = side.btw.question.trim();
@@ -3411,6 +3940,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           (msg.id === chatMsgId && respPayload);
 
         if (isResp && respPayload) {
+          var respSessionOk = ocPayloadMatchesSession(msg, sessionKey) || ocPayloadMatchesSession(respPayload, sessionKey);
+          var respReqOk = ocPayloadMatchesRequest(msg, chatMsgId) || ocPayloadMatchesRequest(respPayload, chatMsgId);
+          if (!respSessionOk || !respReqOk) return;
           var piece =
             ocExtractText(respPayload.text || respPayload.content || respPayload.message || '') ||
             ocExtractChatEventPayload(respPayload);
@@ -3436,6 +3968,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         var rt =
           ocExtractText(rest.text || rest.content || rest.message || '') || ocExtractChatEventPayload(rest);
         if (rt && (msg.id === chatMsgId || msg.id == null || msg.id === '')) {
+          var restSessionOk = ocPayloadMatchesSession(msg, sessionKey) || ocPayloadMatchesSession(rest, sessionKey);
+          var restReqOk = ocPayloadMatchesRequest(msg, chatMsgId) || ocPayloadMatchesRequest(rest, chatMsgId);
+          if (!restSessionOk || !restReqOk) return;
           pendingText += rt;
           emitProgress(false);
           armFinalize();
@@ -3455,6 +3990,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                 guess.state === 'completed' ||
                 guess.state === 'error')
             ) {
+              var guessSessionOk = ocPayloadMatchesSession(msg, sessionKey) || ocPayloadMatchesSession(guess, sessionKey);
+              var guessReqOk = ocPayloadMatchesRequest(msg, chatMsgId) || ocPayloadMatchesRequest(guess, chatMsgId);
+              if (!guessSessionOk || !guessReqOk) return;
               if (guess.state === 'error') {
                 fail(new Error(String(guess.errorMessage || 'OpenClaw 对话出错')));
                 return;
@@ -3949,7 +4487,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
   document.addEventListener('keydown', handleGlobalEscape, true);
 
-  [apiKey, baseUrl, model, systemPrompt, ttydShellCommand].forEach(function (el) {
+  [apiKey, baseUrl, openclawSessionKey, model, systemPrompt, ttydShellCommand].forEach(function (el) {
     if (!el) return;
     el.addEventListener('input', function () {
       saveCfg(false);

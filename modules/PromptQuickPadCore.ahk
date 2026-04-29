@@ -301,6 +301,11 @@ _PQP_ExecuteDockCmd(msg) {
         try ShowCloudPlayer()
         return
     }
+    try {
+        _ExecuteCommand(cmdId0)
+        return
+    } catch {
+    }
     m0 := Map(
         "Title", "dock",
         "Content", "",

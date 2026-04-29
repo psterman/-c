@@ -32,21 +32,21 @@
 :root {
   --color-scheme: dark;
   --app-bg:
-    radial-gradient(circle at 82% 6%, rgba(79,172,255,.16), transparent 34%),
-    radial-gradient(circle at 12% 96%, rgba(42,125,255,.12), transparent 40%),
-    linear-gradient(180deg, #071224 0%, #0b1a31 56%, #0d223d 100%);
+    radial-gradient(circle at 82% 6%, rgba(79,172,255,.1), transparent 34%),
+    radial-gradient(circle at 12% 96%, rgba(42,125,255,.08), transparent 40%),
+    linear-gradient(180deg, #06101f 0%, #0a182c 56%, #0c1f36 100%);
   --bg: #0a1527;
-  --surface: #10213a;
-  --surface2: #132846;
-  --surface3: #173254;
-  --border: #27456d;
-  --border2: #2f527f;
+  --surface: #132033;
+  --surface2: #16283d;
+  --surface3: #1c314a;
+  --border: #2b405c;
+  --border2: #35506f;
   --glass-edge: rgba(255,255,255,.28);
   --glass-edge-soft: rgba(255,255,255,.08);
   --glass-warm: rgba(91,172,255,.2);
-  --orange: #4facff;
-  --orange-dk: #2f8fff;
-  --orange-lt: #8ec9ff;
+  --orange: #4a9ee6;
+  --orange-dk: #2f82cb;
+  --orange-lt: #80b7e6;
   --cyan: #7fd8ff;
   --text: #eaf3ff;
   --text-dim: #9eb4cf;
@@ -199,7 +199,7 @@ body.native-titlebar .chrome-drag { display: none; }
   padding: 10px 14px;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.1);
-  background: #1a1f25;
+  background: var(--surface);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -318,7 +318,7 @@ body.native-titlebar .chrome-drag { display: none; }
   height: 24px;
   border-radius: 6px;
   border: 1px solid rgba(255,141,42,.5);
-  background: #14191f;
+  background: var(--surface2);
   color: #ffcf98;
   font-size: 12px;
   padding: 0 6px;
@@ -328,7 +328,7 @@ body.native-titlebar .chrome-drag { display: none; }
   height: 24px;
   border-radius: 6px;
   border: 1px solid rgba(255,141,42,.5);
-  background: #14191f;
+  background: var(--surface2);
   color: #ffb66a;
   cursor: pointer;
 }
@@ -347,7 +347,7 @@ body.native-titlebar .chrome-drag { display: none; }
   height: 28px;
   border-radius: 7px;
   border: 1px solid rgba(255,141,42,.28);
-  background: #11161d;
+  background: var(--surface);
   color: #e7ebef;
   cursor: pointer;
   font-size: 12px;
@@ -362,7 +362,7 @@ body.native-titlebar .chrome-drag { display: none; }
 }
 .cal-day.selected {
   border-color: rgba(255,141,42,.8);
-  background: linear-gradient(180deg, rgba(255,179,71,.22), rgba(255,141,42,.18));
+  background: linear-gradient(180deg, rgba(255,179,71,.16), rgba(255,141,42,.12));
   color: #fff;
 }
 #time-date-apply {
@@ -514,7 +514,7 @@ body.native-titlebar .chrome-drag { display: none; }
   border-color: rgba(255,255,255,.05);
 }
 .clip-item.active {
-  background: linear-gradient(180deg, rgba(255,141,42,.16), rgba(255,141,42,.06));
+  background: linear-gradient(180deg, rgba(255,141,42,.12), rgba(255,141,42,.04));
   border-color: rgba(255,179,71,.45);
   box-shadow: none;
 }
