@@ -49,7 +49,7 @@ global g_VK_QuickBindHook := 0
 global g_VK_QuickBindArmed := false
 global g_VK_QuickBindConsumed := false
 global g_VK_NextShowFromCapsLockHold := false
-global g_VK_TitleH := 44
+global g_VK_TitleH := 0
 global g_VK_IsAdmin := A_IsAdmin
 global g_VK_AdminWarning := ""
 ; 双击修饰键：^^ / ++ / !!（与 Hotkey() 不兼容，由专用 InputHook 处理）
@@ -110,43 +110,16 @@ VK_Init(embedded := false) {
     ScreenH := SysGet(1)
     WinW := Max(1100, Min(Round(ScreenW * 0.94), 2100))
     WinH := Max(720, Min(Round(ScreenH * 0.90), 1260))
-    TitleH := g_VK_TitleH
-    BtnW := 32
-    BtnPad := 8
-    TitleBtnY := Max(8, (TitleH - 22) // 2)
-
-    guiOpts := "+AlwaysOnTop -Caption +Resize -DPIScale +ToolWindow" . _VK_OwnerGuiOpt()
+    guiOpts := "+AlwaysOnTop +Resize -DPIScale" . _VK_OwnerGuiOpt()
     g_VK_Gui := Gui(guiOpts, "VK KeyBinder")
     hostTheme := _VK_GetHostThemePalette()
     g_VK_Gui.BackColor := hostTheme["windowBg"]
     g_VK_Gui.MarginX := 0
     g_VK_Gui.MarginY := 0
-
-    TitleBg := g_VK_Gui.Add("Text",
-        "x0 y0 w" . (WinW - BtnW * 2 - BtnPad * 3) . " h" . TitleH . " Background" . hostTheme["titleBg"], "")
-    TitleBg.OnEvent("Click", _TitleDrag)
-
-    TitleLbl := g_VK_Gui.Add("Text",
-        "x16 y" . TitleBtnY . " w400 h22 c" . hostTheme["titleText"] . " Background" . hostTheme["titleBg"], "[ VK KEYBINDER ]")
-    TitleLbl.SetFont("s11 Bold", "Consolas")
-    TitleLbl.OnEvent("Click", _TitleDrag)
-
-    MinX := WinW - BtnW * 2 - BtnPad * 2
-    MinBtn := g_VK_Gui.Add("Text",
-        "x" . MinX . " y" . TitleBtnY . " w" . BtnW . " h22 Center c" . hostTheme["btnText"] . " Background" . hostTheme["titleBg"], "─")
-    MinBtn.SetFont("s11", "Segoe UI")
-    MinBtn.OnEvent("Click", (*) => WinMinimize(g_VK_Gui.Hwnd))
-
-    CloseX := WinW - BtnW - BtnPad
-    CloseBtn := g_VK_Gui.Add("Text",
-        "x" . CloseX . " y" . TitleBtnY . " w" . BtnW . " h22 Center c" . hostTheme["btnText"] . " Background" . hostTheme["titleBg"], "✕")
-    CloseBtn.SetFont("s11", "Segoe UI")
-    CloseBtn.OnEvent("Click", (*) => VK_Hide())
-
-    g_VK_TitleBgCtrl := TitleBg
-    g_VK_TitleLblCtrl := TitleLbl
-    g_VK_MinBtnCtrl := MinBtn
-    g_VK_CloseBtnCtrl := CloseBtn
+    g_VK_TitleBgCtrl := 0
+    g_VK_TitleLblCtrl := 0
+    g_VK_MinBtnCtrl := 0
+    g_VK_CloseBtnCtrl := 0
 
     showOpt := "w" . WinW . " h" . WinH . (embedded ? " Hide" : " NoActivate")
     g_VK_Gui.Show(showOpt)
@@ -3402,18 +3375,18 @@ _ApplyWV2Bounds() {
     catch
         try WinGetClientPos(, , &cw, &ch, g_VK_Gui.Hwnd)
     ; 隐藏预加载阶段可能拿到 0 尺寸，回退到窗口尺寸兜底
-    if (cw <= 0 || ch <= g_VK_TitleH) {
+    if (cw <= 0 || ch <= 0) {
         try WinGetPos(, , &ww, &wh, "ahk_id " . g_VK_Gui.Hwnd)
         if (ww > 0 && wh > 0) {
             cw := ww
             ch := wh
         }
     }
-    if (cw <= 0 || ch <= g_VK_TitleH)
+    if (cw <= 0 || ch <= 0)
         return
     rc := WebView2.RECT()
     rc.left := 0
-    rc.top := g_VK_TitleH
+    rc.top := 0
     rc.right := cw
     rc.bottom := ch
     g_VK_Ctrl.Bounds := rc

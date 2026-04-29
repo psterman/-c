@@ -3433,14 +3433,18 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
         : "\u5f00\u59cb\u524d\uff0c\u8bf7\u786e\u8ba4\u4f60\u7684 123 \u8d26\u53f7\u5df2\u5f00\u901a<b>\u5f00\u53d1\u8005\u5957\u9910</b>\u3002")
       : isQuark
       ? (isEn ? "Smart Login has opened the authorization page automatically. Sign in to <b>Quark Web</b>." : "\u667a\u80fd\u767b\u5f55\u5df2\u81ea\u52a8\u6253\u5f00\u6388\u6743\u9875\uff0c\u8bf7\u5b8c\u6210<b>\u5938\u514b\u7f51\u9875\u7248</b>\u767b\u5f55\u3002")
-      : (isEn ? ("Smart Login has opened the <b>" + escHtml(m.label) + "</b> login page automatically.") : ("\u667a\u80fd\u767b\u5f55\u5df2\u81ea\u52a8\u6253\u5f00<b>" + escHtml(m.label) + "</b>\u767b\u5f55\u9875\u3002"));
+      : (isEn
+        ? ("Smart Login has opened the <b>" + escHtml(m.label) + "</b> login page automatically. On api.oplist.org, first check <b>Use OpenList provided parameters</b>.")
+        : ("\u667a\u80fd\u767b\u5f55\u5df2\u81ea\u52a8\u6253\u5f00<b>" + escHtml(m.label) + "</b>\u767b\u5f55\u9875\u3002\u8fdb\u5165 api.oplist.org \u540e\uff0c\u8bf7\u5148\u52fe\u9009<b>\u201c\u4f7f\u7528 OpenList \u63d0\u4f9b\u7684\u53c2\u6570\u201d</b>\u518d\u7ee7\u7eed\u3002"));
     if($("guideStep2")) $("guideStep2").innerHTML = is123
       ? (isEn
         ? "In <b>Advanced Settings</b>, fill <code>client_id</code> and <code>client_secret</code> from 123 Open API."
         : "\u5728<b>\u9ad8\u7ea7\u8bbe\u7f6e</b>\u4e2d\u586b\u5199 123 Open API \u7533\u8bf7\u7684 <code>client_id</code> \u4e0e <code>client_secret</code>\u3002")
       : isQuark
       ? (isEn ? "Open browser DevTools (<code>F12</code>) -> <code>Application</code> -> <code>Cookies</code> -> <code>https://pan.quark.cn</code>, then copy cookie items." : "\u6253\u5f00\u6d4f\u89c8\u5668\u5f00\u53d1\u8005\u5de5\u5177\uff08<code>F12</code>\uff09 -> <code>Application</code> -> <code>Cookies</code> -> <code>https://pan.quark.cn</code>\uff0c\u590d\u5236 Cookie \u9879\u3002")
-      : (isEn ? ("After login, copy the <code>" + escHtml(m.tokenLabel) + "</code> text.") : ("\u767b\u5f55\u6210\u529f\u540e\u590d\u5236 <code>" + escHtml(m.tokenLabel) + "</code> \u6587\u672c\u3002"));
+      : (isEn
+        ? ("After checking the option, complete login and copy the <code>" + escHtml(m.tokenLabel) + "</code> text.")
+        : ("\u52fe\u9009\u5b8c\u6210\u540e\u518d\u767b\u5f55\uff0c\u6210\u529f\u540e\u590d\u5236 <code>" + escHtml(m.tokenLabel) + "</code> \u6587\u672c\u3002"));
     if($("guideStep3")) $("guideStep3").innerHTML = is123
       ? (isEn
         ? "Paste valid <code>refresh_token</code> below, then click <b>Import 123</b>. Without developer plan, import will fail."
@@ -3456,13 +3460,21 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     if($("btnGuideImport")) $("btnGuideImport").textContent = isEn ? ("Paste " + m.label + " and Import") : ("\u7c98\u8d34\u5230" + m.label + "\u5e76\u5bfc\u5165");
     syncProviderTokenToInputs(state.provider);
     if($("importHint")){
-      text($("importHint"), is123
-        ? (isEn
+      var importHintText = "";
+      if(is123){
+        importHintText = isEn
           ? "123 OpenAPI notice: requires developer plan and valid client_id/client_secret. refresh_token-only without OpenAPI credentials may fail."
-          : "123 OpenAPI \u63d0\u793a\uff1a\u9700\u5f00\u53d1\u8005\u5957\u9910\u5e76\u586b\u5199\u6709\u6548 client_id/client_secret\uff0c\u4ec5 refresh_token \u901a\u5e38\u4f1a\u5bfc\u5165\u5931\u8d25\u3002")
-        : isQuark
-        ? (isEn ? "Quark recommended flow: login web page, copy Cookie (__puus/__pus/ctoken), then import." : "\u5938\u514b\u63a8\u8350\u6d41\u7a0b\uff1a\u767b\u5f55\u7f51\u9875\u7248\uff0c\u590d\u5236 Cookie\uff08__puus/__pus/ctoken\uff09\u540e\u5bfc\u5165\u3002")
-        : (isEn ? ("Smart Login for " + m.label + ": page opened automatically, copy " + m.tokenLabel + ", then import.") : ("\u201c" + m.label + "\u201d\u667a\u80fd\u767b\u5f55\uff1a\u767b\u5f55\u9875\u5df2\u81ea\u52a8\u6253\u5f00\uff0c\u590d\u5236 " + m.tokenLabel + " \u540e\u5bfc\u5165\u3002")));
+          : "123 OpenAPI \u63d0\u793a\uff1a\u9700\u5f00\u53d1\u8005\u5957\u9910\u5e76\u586b\u5199\u6709\u6548 client_id/client_secret\uff0c\u4ec5 refresh_token \u901a\u5e38\u4f1a\u5bfc\u5165\u5931\u8d25\u3002";
+      }else if(isQuark){
+        importHintText = isEn
+          ? "Quark recommended flow: login web page, copy Cookie (__puus/__pus/ctoken), then import."
+          : "\u5938\u514b\u63a8\u8350\u6d41\u7a0b\uff1a\u767b\u5f55\u7f51\u9875\u7248\uff0c\u590d\u5236 Cookie\uff08__puus/__pus/ctoken\uff09\u540e\u5bfc\u5165\u3002";
+      }else{
+        importHintText = isEn
+          ? ("Smart Login for " + m.label + ": page opened automatically. On api.oplist.org, check \"Use OpenList provided parameters\" first, then copy " + m.tokenLabel + " and import.")
+          : ("\u201c" + m.label + "\u201d\u667a\u80fd\u767b\u5f55\uff1a\u767b\u5f55\u9875\u5df2\u81ea\u52a8\u6253\u5f00\u3002\u8bf7\u5148\u52fe\u9009\u201c\u4f7f\u7528 OpenList \u63d0\u4f9b\u7684\u53c2\u6570\u201d\uff0c\u518d\u590d\u5236 " + m.tokenLabel + " \u5bfc\u5165\u3002");
+      }
+      text($("importHint"), importHintText);
     }
   }
   async function doProviderImport(providerKey){

@@ -68,6 +68,8 @@ CloudPlayer_CreateGui() {
     g_CloudPlayerGui.BackColor := "121212"
     g_CloudPlayerGui.OnEvent("Size", CloudPlayer_OnGuiSize)
     g_CloudPlayerGui.OnEvent("Close", CloudPlayer_OnGuiClose)
+    ; 点最小化时改为隐藏窗口，避免缩到任务栏角落
+    OnMessage(0x0112, CloudPlayer_WM_SYSCOMMAND)
 
     try WebView2.create(g_CloudPlayerGui.Hwnd, CloudPlayer_OnWebViewCreated, WebView2_EnsureSharedEnvBlocking())
     catch as e {
@@ -106,6 +108,22 @@ CloudPlayer_OnGuiClose(*) {
     g_CloudPlayerAutoPulseEnabled := false
 }
 
+CloudPlayer_WM_SYSCOMMAND(wParam, lParam, msg, hwnd) {
+    global g_CloudPlayerGui
+    try {
+        if !g_CloudPlayerGui || !g_CloudPlayerGui.Hwnd
+            return
+        if (hwnd != g_CloudPlayerGui.Hwnd)
+            return
+        ; SC_MINIMIZE
+        if ((wParam & 0xFFF0) = 0xF020) {
+            CloudPlayer_OnGuiClose()
+            return 0
+        }
+    } catch {
+    }
+}
+
 CloudPlayer_OnGuiSize(guiObj, minMax, width, height) {
     ; WebView2.Controller 无 Move；须写 Bounds，否则最大化/拖动后视口仍停留在初次 Fill 的尺寸（右侧空白）
     CloudPlayer_ApplyWebViewBounds()
@@ -126,6 +144,9 @@ CloudPlayer_OnWebViewCreated(ctrl) {
     g_CloudPlayerWv2 := ctrl.CoreWebView2
     g_CloudPlayerReady := true
 
+    ; Avoid white flash before real page paints.
+    try g_CloudPlayerCtrl.DefaultBackgroundColor := 0xFF121212
+
     try ApplyUnifiedWebViewAssets(g_CloudPlayerWv2)
     try WebView2_RegisterHostBridge(g_CloudPlayerWv2)
 
@@ -140,8 +161,9 @@ CloudPlayer_OnWebViewCreated(ctrl) {
     }
 
     CloudPlayer_ApplyWebViewBounds()
+    try g_CloudPlayerWv2.NavigateToString("<!doctype html><html><head><meta charset='utf-8'><style>html,body{margin:0;width:100%;height:100%;background:#121212;color:#d7e3f7;font:13px Segoe UI,Microsoft YaHei UI,sans-serif;display:flex;align-items:center;justify-content:center} .dot{width:7px;height:7px;border-radius:50%;background:#ff8f35;box-shadow:0 0 12px rgba(255,143,53,.65);margin-right:8px}</style></head><body><span class='dot'></span>牛马云加载中...</body></html>")
     url := BuildAppLocalUrl("CloudPlayer.html?t=" . A_TickCount)
-    try g_CloudPlayerWv2.Navigate(url)
+    SetTimer(() => g_CloudPlayerWv2.Navigate(url), -10)
 
     g_CloudPlayerAutoPulseEnabled := true
     SetTimer(CloudPlayer_AutoConnectPulse, 6000)
