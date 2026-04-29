@@ -576,8 +576,13 @@ CloudPlayer_EnsureOpenListRunning() {
 CloudPlayer_StartOpenList() {
     global g_CloudPlayerOpenListPid
     exe := CloudPlayer_FindOpenListExe()
-    if (exe = "")
-        return false
+    if (exe = "") {
+        if !CloudPlayer_DownloadOpenListExe()
+            return false
+        exe := CloudPlayer_FindOpenListExe()
+        if (exe = "")
+            return false
+    }
 
     if CloudPlayer_IsOpenListRunning()
         return true
@@ -617,6 +622,65 @@ CloudPlayer_FindOpenListExe() {
             return p
     }
     return ""
+}
+
+CloudPlayer_DownloadOpenListExe() {
+    destDir := A_ScriptDir "\tools\openlist"
+    destExe := destDir "\openlist.exe"
+    tmpExe := destDir "\openlist.download.tmp.exe"
+    if !DirExist(destDir) {
+        try DirCreate(destDir)
+        catch {
+            try TrayTip("CloudPlayer", "无法创建目录: " . destDir, "Icon! 2")
+            return false
+        }
+    }
+
+    urls := CloudPlayer_GetOpenListDownloadUrls()
+    for _, url in urls {
+        try FileDelete(tmpExe)
+        ok := false
+        try {
+            Download(url, tmpExe)
+            sz := 0
+            try sz := FileGetSize(tmpExe)
+            if (sz >= 5 * 1024 * 1024) {
+                FileMove(tmpExe, destExe, 1)
+                ok := FileExist(destExe) ? true : false
+            }
+        } catch {
+            ok := false
+        }
+        if ok {
+            try TrayTip("CloudPlayer", "OpenList 已自动下载完成", "Iconi")
+            return true
+        }
+    }
+
+    try FileDelete(tmpExe)
+    try TrayTip("CloudPlayer", "OpenList 自动下载失败，请检查网络后重试。", "Icon! 2")
+    return false
+}
+
+CloudPlayer_GetOpenListDownloadUrls() {
+    repo := "OpenListTeam/OpenList/releases/latest/download/"
+    fileNames := [
+        "openlist-windows-amd64-lite.exe",
+        "openlist-windows-amd64.exe",
+        "alist-windows-amd64.exe"
+    ]
+    prefixes := [
+        "https://github.com/",
+        "https://gh-proxy.com/github.com/",
+        "https://ghfast.top/github.com/",
+        "https://ghproxy.net/github.com/"
+    ]
+    out := []
+    for _, pre in prefixes {
+        for _, fn in fileNames
+            out.Push(pre . repo . fn)
+    }
+    return out
 }
 
 CloudPlayer_GetWorkDir(exePath) {

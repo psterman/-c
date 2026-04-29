@@ -107,20 +107,36 @@ global TrayMenuHoverTimer := 0
 global TrayMenuPressedItem := 0
 
 TRAY_ICON_MESSAGE(wParam, lParam, msg, hwnd) {
-    if (lParam = 0x203) {
-        CleanUp()
-        ExitApp()
-        return 0
-    }
-    if (lParam = 0x205 || lParam = 0x202) {
-        ShowCustomTrayMenu()
-        return 0
+    try {
+        if (lParam = 0x203) {
+            CleanUp()
+            ExitApp()
+            return 0
+        }
+        if (lParam = 0x205 || lParam = 0x202) {
+            try ShowCustomTrayMenu()
+            catch {
+                ; Fallback: custom popup failed, show standard tray menu.
+                try A_TrayMenu.Show()
+            }
+            return 0
+        }
+    } catch {
     }
 }
 
 UpdateTrayMenu() {
     A_IconTip := GetText("app_tip")
     A_TrayMenu.Delete()
+    ; Keep a functional fallback menu even if custom dark popup fails.
+    A_TrayMenu.Add("搜索中心", ((*) => TrayMenu_RunSceneCmd("tray_show_search")))
+    A_TrayMenu.Add("剪贴板", ((*) => TrayMenu_RunSceneCmd("tray_show_clipboard")))
+    A_TrayMenu.Add("截图", ((*) => TrayMenu_RunSceneCmd("tray_show_screenshot")))
+    A_TrayMenu.Add(GetText("open_config_menu"), ((*) => TrayMenu_RunSceneCmd("tray_show_config")))
+    A_TrayMenu.Add()
+    A_TrayMenu.Add("重启脚本", ((*) => TrayMenu_RunSceneCmd("tray_reload_script")))
+    A_TrayMenu.Add(GetText("exit_menu"), ((*) => TrayMenu_RunSceneCmd("tray_exit_app")))
+    A_TrayMenu.Default := "搜索中心"
 }
 
 TrayMenuCancelHoverAnim() {
@@ -728,8 +744,9 @@ TrayMenu_RunSceneCmd(cmdId) {
         return
     try {
         if IsSet(VK_Execute) {
-            VK_Execute(c)
-            return
+            ok := VK_Execute(c)
+            if ok
+                return
         }
     } catch {
     }
@@ -738,6 +755,11 @@ TrayMenu_RunSceneCmd(cmdId) {
             _ExecuteCommand(c)
     } catch {
     }
+}
+
+TrayMenu_MakeSceneAction(cmdId) {
+    _cid := String(cmdId)
+    return ((*) => TrayMenu_RunSceneCmd(_cid))
 }
 
 TrayMenu_BuildItemsFromSceneMenu(sceneKey := "tray_menu") {
@@ -766,7 +788,7 @@ TrayMenu_BuildItemsFromSceneMenu(sceneKey := "tray_menu") {
         nm := cid
         if (cmdList.Has(cid) && cmdList[cid] is Map && cmdList[cid].Has("name") && cmdList[cid]["name"] != "")
             nm := String(cmdList[cid]["name"])
-        items.Push({ Text: nm, Action: ((*) => TrayMenu_RunSceneCmd(cid)), Icon: "•" })
+        items.Push({ Text: nm, Action: TrayMenu_MakeSceneAction(cid), Icon: "•" })
     }
     return items
 }
