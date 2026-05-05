@@ -1494,29 +1494,76 @@ FloatingToolbarOpenSettings() {
 ; ===================== 濠婃俺鐤嗙紓鈺傛杹婢跺嫮鎮?=====================
 FloatingToolbarWM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
     global FloatingToolbarGUI, FloatingToolbarIsVisible, FloatingToolbarChatDrawerOpen
-
-    if (!FloatingToolbarIsVisible || !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui))
-        return
-    ; 鎶藉眽灞曞紑鏃剁敱椤甸潰鍐呮粴鍔紝涓嶅湪姝ょ敤婊氳疆缂╂斁鏁寸獥
-    if (FloatingToolbarChatDrawerOpen)
-        return
-
-    MouseGetPos(&mx, &my)
-    try FloatingToolbarGUI.GetPos(&wx, &wy, &ww, &wh)
-    catch {
-        return
-    }
-    if (mx < wx || mx > wx + ww || my < wy || my > wy + wh)
-        return
-
+    global FloatingBubbleGUI, FloatingBubbleIsVisible, AppearanceActivationMode
     wheelDelta := (wParam >> 16) & 0xFFFF
     if (wheelDelta > 0x7FFF)
         wheelDelta := wheelDelta - 0x10000
 
     delta := wheelDelta > 0 ? 1 : -1
+    mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+
+    mouseInToolbar := false
+    if (FloatingToolbarIsVisible && IsObject(FloatingToolbarGUI) && (FloatingToolbarGUI is Gui)) {
+        MouseGetPos(&mx1, &my1)
+        try FloatingToolbarGUI.GetPos(&tx, &ty, &tw, &th)
+        catch {
+            tx := ty := tw := th := 0
+        }
+        if (mx1 >= tx && mx1 <= tx + tw && my1 >= ty && my1 <= ty + th)
+            mouseInToolbar := true
+    }
+    mouseInBubble := false
+    if (FloatingBubbleIsVisible && IsObject(FloatingBubbleGUI) && (FloatingBubbleGUI is Gui)) {
+        MouseGetPos(&mx2, &my2)
+        try FloatingBubbleGUI.GetPos(&bx, &by, &bw, &bh)
+        catch {
+            bx := by := bw := bh := 0
+        }
+        if (mx2 >= bx && mx2 <= bx + bw && my2 >= by && my2 <= by + bh)
+            mouseInBubble := true
+    }
+
+    if (mouseInToolbar || mouseInBubble) {
+        FloatingToolbar_SwitchActivationByWheel(delta)
+        return 0
+    }
+
+    if (!mouseInToolbar)
+        return
+    if (mode != "toolbar")
+        return
+    ; 抽屉展开时由页面内滚动，不在此处用滚轮缩放整窗
+    if (FloatingToolbarChatDrawerOpen)
+        return
+
     FloatingToolbarApplyWheelDelta(delta)
 
     return 0
+}
+
+FloatingToolbar_SetActivationMode(mode) {
+    global AppearanceActivationMode
+    m := NormalizeAppearanceActivationMode(mode)
+    if (m != "toolbar" && m != "bubble" && m != "tray")
+        return
+    AppearanceActivationMode := m
+    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    try IniWrite(AppearanceActivationMode, cfg, "Appearance", "ActivationMode")
+    catch {
+    }
+    SetTimer((*) => ApplyAppearanceActivationMode(), -10)
+}
+
+FloatingToolbar_SwitchActivationByWheel(delta) {
+    global AppearanceActivationMode
+    mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    if (delta > 0) {
+        if (mode != "toolbar")
+            FloatingToolbar_SetActivationMode("toolbar")
+        return
+    }
+    if (mode != "bubble")
+        FloatingToolbar_SetActivationMode("bubble")
 }
 
 FloatingToolbarApplyWheelDelta(delta) {
@@ -1579,6 +1626,11 @@ FloatingToolbarApplyWheelDelta(delta) {
 
         FloatingToolbarSaveScale()
         SaveFloatingToolbarPosition()
+
+        if (delta < 0 && FloatingToolbarIsCompactMode(newScale)) {
+            ; Reaching minimum scale switches to bubble mode instead of staying a square compact block.
+            FloatingToolbar_SwitchActivationByWheel(-1)
+        }
     }
 }
 
@@ -2216,49 +2268,13 @@ FloatingToolbarCalculateHeight() {
 
 ; ===================== 閺堚偓鐏忓繐瀵查崚鏉跨潌楠炴洝绔熺紓?=====================
 MinimizeFloatingToolbarToEdge() {
-    global FloatingToolbarGUI, FloatingToolbarIsVisible, FloatingToolbarIsMinimized
-    global FloatingToolbarWindowX, FloatingToolbarWindowY
+    global FloatingToolbarGUI, FloatingToolbarIsVisible
 
     if (!FloatingToolbarIsVisible || FloatingToolbarGUI = 0)
         return
 
-    FloatingToolbarGUI.GetPos(&currentX, &currentY, &currentW, &currentH)
-
-    ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
-    vr := vl + vw
-    vb := vt + vh
-
-    distLeft := currentX - vl
-    distRight := vr - (currentX + currentW)
-    distTop := currentY - vt
-    distBottom := vb - (currentY + currentH)
-
-    minDist := distLeft
-    targetX := vl
-    targetY := currentY
-
-    if (distRight < minDist) {
-        minDist := distRight
-        targetX := vr - currentW
-        targetY := currentY
-    }
-    if (distTop < minDist) {
-        minDist := distTop
-        targetX := currentX
-        targetY := vt
-    }
-    if (distBottom < minDist) {
-        minDist := distBottom
-        targetX := currentX
-        targetY := vb - currentH
-    }
-
-    FloatingToolbarGUI.Move(targetX, targetY)
-    FloatingToolbarWindowX := targetX
-    FloatingToolbarWindowY := targetY
-    FloatingToolbarIsMinimized := true
-
-    SaveFloatingToolbarPosition()
+    ; Prefer bubble mode as the minimized representation.
+    FloatingToolbar_SwitchActivationByWheel(-1)
 }
 
 RestoreFloatingToolbar() {

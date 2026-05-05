@@ -475,6 +475,8 @@ FloatingBubble_BindHostMouseFallback(hwnd) {
     OnMessage(0x0202, FloatingBubble_HostLButtonUp)   ; WM_LBUTTONUP
     OnMessage(0x0200, FloatingBubble_HostMouseMove)   ; WM_MOUSEMOVE
     OnMessage(0x0205, FloatingBubble_HostRButtonUp)   ; WM_RBUTTONUP
+    ; Share the same middle-wheel mode switch handler with toolbar.
+    OnMessage(0x020A, FloatingToolbarWM_MOUSEWHEEL)
     Bound := true
 }
 
