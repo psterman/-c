@@ -75,6 +75,9 @@ func main() {
 	}
 	http.HandleFunc("/v1/status", recoverHTTP("v1/status", statusH))
 	http.HandleFunc("/status", recoverHTTP("status", statusH))
+	http.HandleFunc("/v1/niuma/debug", recoverHTTP("v1/niuma/debug", func(w http.ResponseWriter, r *http.Request) {
+		handleNiumaDebug(w, r, absBase)
+	}))
 	// 浏览器或代理若自动加了尾部斜杠，默认 ServeMux 不会匹配 /v1/status
 	http.HandleFunc("/v1/status/", recoverHTTP("v1/status/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/v1/status", http.StatusTemporaryRedirect)

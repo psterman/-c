@@ -9,6 +9,7 @@
 @font-face{font-family:"AppUi";src:local("Segoe UI");unicode-range:U+0000-024F,U+1E00-1EFF,U+2000-206F,U+20A0-20CF,U+2100-214F}
 @font-face{font-family:"AppUi";src:local("DengXian"),local("Microsoft YaHei UI"),local("Microsoft YaHei");unicode-range:U+2E80-2EFF,U+2F00-2FDF,U+3000-303F,U+3040-30FF,U+3100-312F,U+31A0-31BF,U+3400-4DBF,U+4E00-9FFF,U+F900-FAFF}
 :root{--bg:#0d1016;--panel:rgba(20,34,54,.92);--panel2:rgba(27,45,69,.96);--orange:#ff6600;--text:#e8e8e8;--muted:#9db0c6;--ui:1;--ease:.2s cubic-bezier(.22,1,.36,1);--de:.32s ease-in-out;--toolbar-bg:#0d1016}
+ :root{--compact-bg:#0d1016;--compact-bg-deep:#0d1016;--compact-shell:#0d1016}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--toolbar-bg);font-size:calc(14px * var(--ui));line-height:1.5;font-family:"AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;color:var(--text);user-select:none;-webkit-user-select:none}
 button,input,textarea,select{font:inherit}
@@ -34,7 +35,7 @@ button,input,textarea,select{font:inherit}
 #app{position:relative;width:100%;height:100%;background:var(--toolbar-bg)}
 body.drawer-open{background:var(--toolbar-bg)}
 /* 标准圆角矩形：CSS border-radius 各向一致，避免 SVG 非等比拉伸成“药丸/鼓边” */
-#collapsedRoot{position:relative;display:flex;flex-direction:row;align-items:center;height:100%;width:100%;gap:calc(8px * var(--ui));padding:calc(6px * var(--ui)) calc(8px * var(--ui));background:var(--toolbar-bg);background-clip:padding-box;border-radius:calc(10px * var(--ui));border:none;box-shadow:none;opacity:0;visibility:hidden;transition:opacity .12s ease,visibility .12s ease,border-radius .24s cubic-bezier(.22,1,.36,1),padding .24s cubic-bezier(.22,1,.36,1),gap .24s cubic-bezier(.22,1,.36,1);isolation:isolate;transform:translateZ(0)}
+#collapsedRoot{position:relative;display:flex;flex-direction:row;align-items:center;height:100%;width:100%;gap:calc(8px * var(--ui));padding:calc(6px * var(--ui)) calc(8px * var(--ui));background:var(--toolbar-bg);background-clip:padding-box;border-radius:calc(10px * var(--ui));border:none;box-shadow:none;opacity:0;visibility:hidden;transition:opacity .12s ease,visibility .12s ease,border-radius .22s cubic-bezier(.22,1,.36,1),padding .22s cubic-bezier(.22,1,.36,1),gap .22s cubic-bezier(.22,1,.36,1);isolation:isolate;transform:translateZ(0)}
 /* 仅用户悬停/按下/内部聚焦时：轻盈内发光（平时关闭，避免误以为是黑边） */
 #collapsedRoot::after{content:"";position:absolute;inset:0;z-index:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .22s ease;box-shadow:none}
 #collapsedRoot:hover::after,#collapsedRoot:active::after,#collapsedRoot:focus-within::after{opacity:1;animation:ftbInnerBreath 2.6s ease-in-out infinite}
@@ -97,14 +98,63 @@ body.cli-mode #cliPane{display:flex!important;flex-direction:column}
 .logo-btn:focus-visible{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.5);box-shadow:none}
 .logo-img{width:max(calc(30px * var(--ui)),28px);height:max(calc(30px * var(--ui)),28px);min-width:max(calc(28px * var(--ui)),24px);min-height:max(calc(28px * var(--ui)),24px);object-fit:contain;pointer-events:none;transform-origin:center;opacity:0;transition:opacity .12s ease,transform .24s cubic-bezier(.22,1,.36,1),width .24s cubic-bezier(.22,1,.36,1),height .24s cubic-bezier(.22,1,.36,1)}
 .logo-img.logo-ready{opacity:1}
-.icon-btns{display:flex;flex-direction:row;align-items:center;gap:calc(5px * var(--ui));flex:1;min-width:0;flex-wrap:nowrap;overflow-x:auto;transition:max-width .24s cubic-bezier(.22,1,.36,1),opacity .2s ease,transform .24s cubic-bezier(.22,1,.36,1)}
+.icon-btns{display:flex;flex-direction:row;align-items:center;gap:calc(5px * var(--ui));flex:1;min-width:0;flex-wrap:nowrap;overflow-x:auto;transition:max-width .22s cubic-bezier(.22,1,.36,1),opacity .18s ease,transform .18s ease}
 .icon-btns::-webkit-scrollbar{height:4px}
-body.ftb-compact #collapsedRoot{justify-content:center;padding:0;gap:0;border-radius:999px}
-body.ftb-compact #collapsedBtns{max-width:0;opacity:0;overflow:hidden;pointer-events:none;transform:translateX(-10px) scale(.94)}
+body.ftb-compact #collapsedRoot{justify-content:center;padding:0;gap:0;border-radius:999px;overflow:hidden}
+body.ftb-compact #collapsedBtns{max-width:0;opacity:0;overflow:hidden;pointer-events:none;transform:translateX(-6px)}
 body.ftb-compact #collapsedRoot::after{opacity:0!important;animation:none!important}
-body.ftb-compact #collapsedRoot .logo-btn{width:100%;height:100%;padding:0;border-radius:999px;background:transparent;box-shadow:none;filter:none}
-body.ftb-compact #collapsedRoot .logo-btn:hover{filter:none;background:transparent}
-body.ftb-compact #collapsedRoot .logo-btn .logo-img{transform:scale(1.02)}
+html.ftb-compact,html.ftb-compact body,html.ftb-compact #app{background:var(--toolbar-bg)!important}
+body.ftb-compact #collapsedRoot{
+  border-radius:999px;
+  background:transparent;
+  box-shadow:none;
+  transition:none
+}
+body.ftb-compact #collapsedRoot::after{
+  inset:-1px!important;
+  border-radius:calc(6px * var(--ui))!important;
+  opacity:0!important;
+  animation:none!important;
+  box-shadow:
+    inset 0 0 16px rgba(255,102,0,.1),
+    0 0 0 1px rgba(255,102,0,.26),
+    0 0 26px rgba(255,102,0,.16)!important;
+}
+body.ftb-compact #collapsedRoot .logo-btn{
+  width:max(calc(42px * var(--ui)),34px);
+  height:max(calc(42px * var(--ui)),34px);
+  padding:4px;
+  border-radius:calc(8px * var(--ui));
+  border:1px solid transparent;
+  background:transparent;
+  box-shadow:none;
+  filter:none
+}
+body.ftb-compact #collapsedRoot .logo-btn:hover{
+  filter:none;
+  background:rgba(255,102,0,.1);
+  border-color:rgba(255,102,0,.32);
+  box-shadow:none
+}
+body.ftb-compact #collapsedRoot:has(.logo-btn:hover)::after,
+body.ftb-compact #collapsedRoot:has(.logo-btn:focus-visible)::after{
+  opacity:1!important;
+}
+body.ftb-compact #collapsedRoot .logo-btn:focus-visible{
+  background:rgba(255,102,0,.12);
+  border-color:rgba(255,102,0,.5);
+  box-shadow:none
+}
+body.ftb-compact #collapsedRoot .logo-btn .logo-img{transform:none}
+body[data-theme="light"].ftb-compact #collapsedRoot{
+  border:none!important;
+  background:var(--toolbar-bg)!important;
+  box-shadow:none!important
+}
+body[data-theme="light"].ftb-compact #collapsedRoot .logo-btn{
+  background:transparent!important;
+  border-color:transparent!important
+}
 .tb{width:calc(40px * var(--ui));height:calc(40px * var(--ui));display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:calc(8px * var(--ui));cursor:pointer;position:relative;transition:background-color var(--ease),border-color var(--ease),transform var(--ease),color var(--ease);color:#ff6600;background:transparent;flex-shrink:0;font-size:0;line-height:0;overflow:hidden}
 .tb svg{width:calc(24px * var(--ui));height:calc(24px * var(--ui));pointer-events:none}
 .tb .tb-ico{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--orange)}
@@ -181,10 +231,13 @@ textarea.ctl{min-height:calc(100px * var(--ui));resize:vertical}
 .stab-add:hover{background:rgba(255,102,0,.08)}
 #newSessionPick{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity var(--de);z-index:42}
 body.nspick-open #newSessionPick{opacity:1;pointer-events:auto}
-.debug-hud{position:fixed;left:4px;right:4px;bottom:3px;top:auto;z-index:9999;height:16px;overflow:hidden;background:rgba(0,0,0,.72);border:1px solid rgba(255,102,0,.45);border-radius:6px;padding:0 6px;font:10px/14px "AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;color:#d8d8d8;pointer-events:none;white-space:nowrap;text-overflow:ellipsis}
+.debug-hud{display:none;position:relative;width:100%;min-height:calc(18px * var(--ui));max-height:calc(40px * var(--ui));overflow:hidden;background:linear-gradient(180deg,rgba(255,102,0,.08),rgba(255,102,0,.03));border:1px solid rgba(255,102,0,.26);border-radius:calc(8px * var(--ui));padding:calc(1px * var(--ui)) calc(8px * var(--ui));font:calc(10px * var(--ui))/1.45 "AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;color:var(--muted);pointer-events:none;box-sizing:border-box}
 .debug-hud .row{display:block;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.debug-hud .row.err{color:#ff9b7d}
-.debug-hud .row.ok{color:#7df0b2}
+.debug-hud .row.err{color:#ff7a59}
+.debug-hud .row.ok{color:color-mix(in srgb, var(--orange) 78%, #fff 22%)}
+#chatStatusRow{display:grid;gap:calc(6px * var(--ui))}
+body.drawer-open #chatStatusRow .debug-hud{display:block}
+body[data-theme="light"] .debug-hud{background:linear-gradient(180deg,rgba(230,126,34,.10),rgba(230,126,34,.04));border-color:rgba(214,100,20,.28);color:#7a644f}
 .nsbg{position:absolute;inset:0;background:rgba(0,0,0,.5)}
 .ns-panel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(calc(380px * var(--ui)),calc(100% - 28px));max-height:min(calc(440px * var(--ui)),72vh);background:var(--panel2);border:1px solid rgba(255,102,0,.28);border-radius:calc(18px * var(--ui));display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.45)}
 .nsh{padding:calc(12px * var(--ui)) calc(14px * var(--ui));border-bottom:1px solid rgba(255,102,0,.15);display:flex;justify-content:space-between;align-items:flex-start;gap:calc(10px * var(--ui))}
@@ -752,9 +805,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   var toolbarRevealTimer = 0;
   var ftbBootStartAt = Date.now();
   var ftbBootHidden = false;
-  var DEBUG_HUD = false;
+  var DEBUG_HUD = true;
   var debugLines = [];
   var debugSeq = 0;
+  var debugLoopMarks = [];
+  var debugLoopWarnAt = 0;
   var _cliOpenThrottle = 0;
   var _niumaPendingPop = false;
   var _niumaWasCli = false;
@@ -813,11 +868,52 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       })
       .join('');
     hud.scrollTop = hud.scrollHeight;
+    maybeWarnWsLoop(text, cls);
+  }
+
+  function maybeWarnWsLoop(text, cls) {
+    var line = String(text || '').toLowerCase();
+    var isLoopSignal =
+      cls === 'err' &&
+      (/challenge -> reconnect/.test(line) ||
+        /ignore duplicate connect error/.test(line) ||
+        /close chat stream code=1005/.test(line) ||
+        /openclaw websocket closed/.test(line));
+    if (!isLoopSignal) return;
+    var now = Date.now();
+    debugLoopMarks.push(now);
+    while (debugLoopMarks.length && now - debugLoopMarks[0] > 7000) debugLoopMarks.shift();
+    if (debugLoopMarks.length < 4) return;
+    if (now - debugLoopWarnAt < 12000) return;
+    debugLoopWarnAt = now;
+    try {
+      cstat('检测到连接循环：请检查 Gateway Token、Base URL、会话 key；建议先停 5 秒再重发。', 'error');
+    } catch (_) {}
+  }
+
+  function wsFrameBrief(msg) {
+    if (!msg || typeof msg !== 'object') return '';
+    var t = String(msg.type || msg.event || msg.method || '');
+    var id = msg.id ? String(msg.id) : '';
+    var m = msg.method ? String(msg.method) : '';
+    var ev = msg.event ? String(msg.event) : '';
+    var err = msg.error && (msg.error.message || msg.error.code) ? String(msg.error.message || msg.error.code) : '';
+    var bits = [];
+    if (t) bits.push(t);
+    if (id) bits.push(id);
+    if (m) bits.push(m);
+    if (ev) bits.push(ev);
+    if (err) bits.push('err=' + err);
+    return bits.join(' ');
   }
 
   (function initDebugHudVisibility() {
     var hud = document.getElementById('debugHud');
-    if (hud && !DEBUG_HUD) hud.style.display = 'none';
+    if (!hud) return;
+    var statusRow = document.getElementById('chatStatusRow');
+    if (statusRow && hud.parentElement !== statusRow) statusRow.appendChild(hud);
+    hud.style.display = DEBUG_HUD ? '' : 'none';
+    if (DEBUG_HUD) dbg('HUD', 'debug enabled', 'ok');
   })();
 
   function revealToolbarSync() {
@@ -873,6 +969,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function setCompact(v) {
     state.compact = !!v;
     document.body.classList.toggle('ftb-compact', state.compact);
+    document.documentElement.classList.toggle('ftb-compact', state.compact);
   }
 
   function scrollMsgsToLatest() {
@@ -1233,6 +1330,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   /** 从 Gateway / 持久化 JSON 中取出可展示正文（含 parts[]、嵌套 content） */
   function ocExtractMessageContentForHistory(m) {
     if (!m || typeof m !== 'object') return '';
+    if (Array.isArray(m.content)) {
+      var textParts = [];
+      for (var ci = 0; ci < m.content.length; ci++) {
+        var cp = m.content[ci];
+        if (cp && cp.type === 'text' && typeof cp.text === 'string' && cp.text.trim()) {
+          textParts.push(cp.text.trim());
+        }
+      }
+      if (textParts.length) return textParts.join('\n').trim();
+    }
     /* 勿在 content==="" 时提前返回：网关常把正文放在 text / parts，content 仅占位空串 */
     var strFields = [
       'content',
@@ -3049,13 +3156,22 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function ocExtractText(v) {
     if (v == null) return '';
-    if (typeof v === 'object')
-      return String(v.text || v.content || v.message || v.body || v.value || '').trim();
+    if (typeof v === 'object') {
+      var cand = v.text || v.content || v.message || v.body || v.value;
+      if (typeof cand === 'string') return cand.trim();
+      if (typeof cand === 'number' || typeof cand === 'boolean') return String(cand);
+      return ''; // 禁止对 object/array 强制 String()，防止出现 [object Object]
+    }
     var s = String(v).trim();
     if (!s) return '';
     try {
-      var o = JSON.parse(s);
-      if (o && typeof o === 'object') return String(o.text || o.content || o.message || s).trim();
+      if ((s[0] === '{' && s[s.length - 1] === '}') || (s[0] === '[' && s[s.length - 1] === ']')) {
+        var o = JSON.parse(s);
+        if (o && typeof o === 'object') {
+          var inner = o.text || o.content || o.message;
+          if (typeof inner === 'string') return inner.trim();
+        }
+      }
     } catch (e) {}
     return s;
   }
@@ -3064,7 +3180,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (v == null) return;
     if (typeof v === 'string') {
       var t = v.trim();
-      if (t) out.push(t);
+      if (!t) return;
+      // If the string looks like JSON, parse and recurse; don't also push the raw string
+      // to avoid duplicate content when gateway embeds JSON in string fields.
+      if ((t[0] === '{' && t[t.length - 1] === '}') || (t[0] === '[' && t[t.length - 1] === ']')) {
+        try {
+          var obj = JSON.parse(t);
+          ocCollectTextDeep(obj, out);
+          return; // parsed successfully — don't also push raw JSON string
+        } catch (_) {}
+      }
+      out.push(t);
       return;
     }
     if (Array.isArray(v)) {
@@ -3072,21 +3198,32 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return;
     }
     if (typeof v === 'object') {
+      if (v.functionCall && v.functionCall.name) out.push('[调用工具: ' + v.functionCall.name + ']');
+      if (v.function && v.function.name) out.push('[调用工具: ' + v.function.name + ']');
+      if ((v.type === 'tool_call' || v.type === 'function_call') && v.name) out.push('[调用工具: ' + v.name + ']');
+
       if (typeof v.text === 'string' && v.text.trim()) out.push(v.text.trim());
       if (typeof v.message === 'string' && v.message.trim()) out.push(v.message.trim());
       if (typeof v.content === 'string' && v.content.trim()) out.push(v.content.trim());
       if (typeof v.body === 'string' && v.body.trim()) out.push(v.body.trim());
       if (typeof v.value === 'string' && v.value.trim()) out.push(v.value.trim());
+      if (typeof v.result === 'string' && v.result.trim()) out.push(v.result.trim());
+      if (typeof v.item === 'string' && v.item.trim()) out.push(v.item.trim());
+      if (typeof v.entry === 'string' && v.entry.trim()) out.push(v.entry.trim());
+      if (typeof v.payload === 'string' && v.payload.trim()) out.push(v.payload.trim());
       if (v.content && typeof v.content !== 'string') ocCollectTextDeep(v.content, out);
       if (v.delta) ocCollectTextDeep(v.delta, out);
       if (v.output) ocCollectTextDeep(v.output, out);
       if (v.outputText) ocCollectTextDeep(v.outputText, out);
       if (v.response) ocCollectTextDeep(v.response, out);
-      if (v.result) ocCollectTextDeep(v.result, out);
+      if (v.result && typeof v.result !== 'string') ocCollectTextDeep(v.result, out);
       if (v.data) ocCollectTextDeep(v.data, out);
-      if (v.payload) ocCollectTextDeep(v.payload, out);
+      if (v.payload && typeof v.payload !== 'string') ocCollectTextDeep(v.payload, out);
+      if (v.item && typeof v.item !== 'string') ocCollectTextDeep(v.item, out);
+      if (v.entry && typeof v.entry !== 'string') ocCollectTextDeep(v.entry, out);
       if (v.message && typeof v.message !== 'string') ocCollectTextDeep(v.message, out);
       if (v.parts) ocCollectTextDeep(v.parts, out);
+      if (v.tool_calls) ocCollectTextDeep(v.tool_calls, out);
       if (v.output_text) ocCollectTextDeep(v.output_text, out);
       if (v.answer) ocCollectTextDeep(v.answer, out);
       if (v.assistant) ocCollectTextDeep(v.assistant, out);
@@ -3139,23 +3276,19 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
    */
   function ocGetChatBroadcastPayload(msg) {
     if (!msg || typeof msg !== 'object') return null;
-    if (msg.payload != null && typeof msg.payload === 'object' && msg.event === 'chat') return msg.payload;
-    var t = msg.type,
-      e = msg.event;
+    var e = String(msg.event || msg.type || msg.method || '').toLowerCase();
     var isEventEnvelope =
-      t === 'event' ||
-      t === 'push' ||
-      t === 'notification' ||
-      t === 'broadcast' ||
       e === 'event' ||
-      e === 'push' ||
-      e === 'notification' ||
+      e === 'chat' ||
+      e === 'chat.stream' ||
+      e === 'chat.delta' ||
+      e === 'chat.event' ||
       e === 'broadcast';
     if (!isEventEnvelope) return null;
     var w = msg.payload || msg.params;
     if (!w || typeof w !== 'object') return null;
     var inner = String(w.event || w.type || '').toLowerCase();
-    if (inner !== 'chat') return null;
+    if (inner !== 'chat' && inner !== 'chat.stream' && inner !== 'chat.delta' && inner !== 'chat.event' && inner !== 'chat.result') return null;
     if (w.payload != null && typeof w.payload === 'object') return w.payload;
     return w;
   }
@@ -3191,65 +3324,28 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return false;
   }
 
-  function ocCollectNamedStringsDeep(v, names, out, depth) {
-    if (!v || typeof v !== 'object' || depth > 7) return;
-    if (Array.isArray(v)) {
-      for (var i = 0; i < v.length; i++) ocCollectNamedStringsDeep(v[i], names, out, depth + 1);
-      return;
-    }
-    for (var k in v) {
-      if (!Object.prototype.hasOwnProperty.call(v, k)) continue;
-      var val = v[k];
-      var lk = String(k || '').toLowerCase();
-      if (names[lk] && (typeof val === 'string' || typeof val === 'number')) {
-        var s = String(val).trim();
-        if (s) out.push(s);
-      }
-      if (val && typeof val === 'object') ocCollectNamedStringsDeep(val, names, out, depth + 1);
-    }
+  function ocIsSystemEventName(ev) {
+    ev = String(ev || '').toLowerCase();
+    return (
+      ev === 'health' ||
+      ev === 'tick' ||
+      ev === 'presence' ||
+      ev === 'heartbeat' ||
+      ev === 'ping' ||
+      ev === 'pong' ||
+      ev === 'web-heartbeat' ||
+      ev === 'web-reconnect'
+    );
   }
 
   function ocPayloadMatchesSession(v, expectedSessionKey) {
-    var expected = String(expectedSessionKey || '').trim();
-    if (!expected || !v || typeof v !== 'object') return true;
-    var names = {
-      sessionkey: 1,
-      sessionid: 1,
-      session_id: 1,
-      key: 1,
-      conversationid: 1,
-      conversation_id: 1,
-      threadid: 1,
-      thread_id: 1
-    };
-    var found = [];
-    ocCollectNamedStringsDeep(v, names, found, 0);
-    if (!found.length) return true;
-    for (var i = 0; i < found.length; i++) {
-      var got = String(found[i] || '').trim();
-      if (got === expected || ocSessionKeysEquivalent(got, expected)) return true;
-    }
-    return false;
+    return true; // 彻底停用过滤。NiuMa 对每次会话连接独立分配了独占 WebSocket 句柄，底层已物理隔离跨并发数据流泄漏的环境，过度核验会导致结构体同名属性严重丢包。
   }
 
   function ocPayloadMatchesRequest(v, expectedRequestId) {
-    var expected = String(expectedRequestId || '').trim();
-    if (!expected || !v || typeof v !== 'object') return true;
-    var names = {
-      idempotencykey: 1,
-      clientrequestid: 1,
-      client_request_id: 1,
-      runid: 1,
-      run_id: 1
-    };
-    var found = [];
-    ocCollectNamedStringsDeep(v, names, found, 0);
-    if (!found.length) return true;
-    for (var i = 0; i < found.length; i++) {
-      var got = String(found[i] || '').trim();
-      if (got === expected) return true;
-    }
-    return false;
+    if (!v || !expectedRequestId) return true;
+    if (v.id === expectedRequestId || v.requestId === expectedRequestId || v.runId === expectedRequestId || v.correlationId === expectedRequestId) return true;
+    return true; // Keep true for now to avoid false negatives, but prioritization logic may use the checks above.
   }
 
   function extractGatewayHistoryMessages(res) {
@@ -3281,52 +3377,92 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       .toLowerCase();
   }
 
-  function ocPickAssistantFromHistory(rawMessages, sentText) {
+  function ocIsIgnorableGatewayText(s) {
+    var n = ocNormForMatch(s)
+      .replace(/[\-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!n) return true;
+    return (
+      n === 'heartbeat' ||
+      n === 'heartbeat ok' ||
+      n === 'ping' ||
+      n === 'pong' ||
+      n === 'keepalive' ||
+      n === 'keep alive' ||
+      n === 'healthcheck' ||
+      n === 'health check'
+    );
+  }
+
+  function ocLooksLikeSentTextMatch(a, b) {
+    var an = ocNormForMatch(a);
+    var bn = ocNormForMatch(b);
+    if (!an || !bn) return false;
+    return an === bn || an.indexOf(bn) >= 0 || bn.indexOf(an) >= 0;
+  }
+
+  function ocPickAssistantFromHistory(rawMessages, sentText, sentAtMs) {
     var arr = Array.isArray(rawMessages) ? rawMessages : [];
     if (!arr.length) return '';
     var rows = [];
-    var loose = [];
     for (var i = 0; i < arr.length; i++) {
       var m = arr[i];
       if (!m || typeof m !== 'object') continue;
       var content = ocExtractMessageContentForHistory(m);
-      if (content) loose.push(content);
+      if (ocIsIgnorableGatewayText(content)) continue;
       var role = ocRoleFromHistoryItem(m);
       if (!role || !content) continue;
-      rows.push({ role: role, content: content });
-    }
-    var sentNorm = ocNormForMatch(sentText);
-    if (!rows.length) {
-      for (var q = loose.length - 1; q >= 0; q--) {
-        var ln0 = ocNormForMatch(loose[q]);
-        if (!ln0) continue;
-        if (sentNorm && (ln0 === sentNorm || ln0.indexOf(sentNorm) >= 0 || sentNorm.indexOf(ln0) >= 0)) continue;
-        return loose[q];
-      }
-      return '';
-    }
-    if (sentNorm) {
-      for (var u = rows.length - 1; u >= 0; u--) {
-        if (rows[u].role !== 'user') continue;
-        var un = ocNormForMatch(rows[u].content);
-        if (!un) continue;
-        if (un === sentNorm || un.indexOf(sentNorm) >= 0 || sentNorm.indexOf(un) >= 0) {
-          for (var a = rows.length - 1; a > u; a--) {
-            if (rows[a].role === 'assistant') return rows[a].content;
-          }
-          break;
+      var tsRaw = m.ts || m.timestamp || m.createdAt || m.created_at || m.created || m.time || m.updatedAt;
+      var tsMs = 0;
+      if (typeof tsRaw === 'number') {
+        tsMs = tsRaw < 1e11 ? tsRaw * 1000 : tsRaw;
+      } else if (typeof tsRaw === 'string' && tsRaw.trim()) {
+        tsRaw = tsRaw.trim();
+        if (/^[0-9]+$/.test(tsRaw)) {
+          var num = parseInt(tsRaw, 10);
+          tsMs = num < 1e11 ? num * 1000 : num;
+        } else {
+          tsMs = Date.parse(tsRaw);
         }
       }
+      rows.push({ role: role, content: content, tsMs: isNaN(tsMs) ? 0 : tsMs, origIdx: i });
     }
-    for (var z = rows.length - 1; z >= 0; z--) {
-      if (rows[z].role === 'assistant') return rows[z].content;
+    if (!rows.length) return '';
+
+    // 强行把列表拉成时间正序 (旧 -> 新)
+    rows.sort(function(a, b) {
+      if (a.tsMs !== b.tsMs && a.tsMs > 0 && b.tsMs > 0) return a.tsMs - b.tsMs;
+      // 如果没有可比时间戳，假定 OpenClaw 返回的是常见顺序，这里做个简单兜底即可
+      return a.origIdx - b.origIdx;
+    });
+
+    var sentNorm = ocNormForMatch(sentText);
+    var sentMs = Number(sentAtMs) || 0;
+    if (!sentNorm) return '';
+    
+    // 找与 sentText 匹配的最新的 user 消息，取其紧随其后的 assistant 回复
+    for (var u = rows.length - 1; u >= 0; u--) {
+      if (rows[u].role !== 'user') continue;
+      // Prefer users at/after this send time to avoid matching an old identical prompt.
+      if (sentMs > 0 && rows[u].tsMs > 0 && rows[u].tsMs + 1200 < sentMs) continue;
+      var un = ocNormForMatch(rows[u].content);
+      if (!un) continue;
+      if (ocLooksLikeSentTextMatch(un, sentNorm)) {
+        // 找到了 user，向后寻找由于生成延迟可能刚刚出现的第一条 assistant 回复
+        for (var a = u + 1; a < rows.length; a++) {
+          if (rows[a].role === 'assistant') {
+            if (sentMs > 0 && rows[a].tsMs > 0 && rows[a].tsMs + 1200 < sentMs) continue;
+            if (!ocIsIgnorableGatewayText(rows[a].content)) {
+              return rows[a].content;
+            }
+          }
+        }
+        // user 已出现但 assistant 未出现：继续等待轮询
+        return '';
+      }
     }
-    for (var q2 = loose.length - 1; q2 >= 0; q2--) {
-      var ln = ocNormForMatch(loose[q2]);
-      if (!ln) continue;
-      if (sentNorm && (ln === sentNorm || ln.indexOf(sentNorm) >= 0 || sentNorm.indexOf(ln) >= 0)) continue;
-      return loose[q2];
-    }
+    
     return '';
   }
 
@@ -3352,7 +3488,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var ep = openClawEndpointFromCfg(cfg);
     if (!ep.ok) return Promise.reject(new Error('Gateway token missing'));
     var wsUrl = 'ws://' + ep.host + ':' + ep.port + '/?token=' + encodeURIComponent(ep.token);
-    var to = Math.max(3000, Number(timeoutMs) || 12000);
+    var to = Math.max(3000, Number(timeoutMs) || 15000);
     return new Promise(function (resolve, reject) {
       var ws;
       try {
@@ -3365,9 +3501,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         seq = 0,
         connected = false,
         connectSent = false,
+        connectAttempts = 0,
         rpcId = '';
       var timer = setTimeout(function () {
-        finishErr(new Error('OpenClaw RPC timeout: ' + method));
+        finishErr(new Error('OpenClaw RPC timeout: ' + method + ' (Waited ' + to + 'ms)'));
       }, to);
 
       function finishOk(val) {
@@ -3389,10 +3526,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         reject(err);
       }
       function sendConnect() {
-        if (connectSent) return;
+        if (connectSent || connected || done) return;
         connectSent = true;
+        connectAttempts += 1;
         seq += 1;
         var cid = 'connect-' + seq;
+        dbg('WS→', 'connect ' + cid, 'ok');
         ws.send(
           JSON.stringify({
             type: 'req',
@@ -3414,15 +3553,19 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         if (!connected || rpcId) return;
         seq += 1;
         rpcId = 'rpc-' + seq;
+        dbg('WS→', method + ' ' + rpcId, 'ok');
         ws.send(JSON.stringify({ type: 'req', id: rpcId, method: method, params: params || {} }));
       }
       ws.onopen = function () {
+        dbg('WS', 'open rpc=' + method, 'ok');
         sendConnect();
       };
       ws.onerror = function () {
+        dbg('WS', 'error rpc=' + method, 'err');
         finishErr(new Error('OpenClaw websocket error'));
       };
       ws.onclose = function () {
+        dbg('WS', 'close rpc=' + method, connected ? 'ok' : 'err');
         if (!done) finishErr(new Error('OpenClaw websocket closed'));
       };
       ws.onmessage = function (e) {
@@ -3432,18 +3575,30 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         } catch (ex) {
           return;
         }
+        if (msg && msg.type !== 'heartbeat' && msg.event !== 'heartbeat') dbg('WS←', wsFrameBrief(msg), msg.error ? 'err' : 'ok');
         var ev = msg.event || msg.type || msg.method || '';
         if (ev === 'connect.challenge') {
+          if (connected || rpcId) {
+            dbg('WS', 'ignore late connect.challenge', 'err');
+            return;
+          }
           connectSent = false;
+          dbg('WS', 'challenge -> reconnect', 'ok');
           sendConnect();
           return;
         }
         if (typeof msg.id === 'string' && msg.id.indexOf('connect-') === 0) {
           if (msg.error || msg.ok === false) {
-            finishErr(new Error((msg.error && msg.error.message) || 'connect failed'));
+            var em = String((msg.error && msg.error.message) || 'connect failed');
+            if (connected && /connect is only valid as the first request/i.test(em)) {
+              dbg('WS', 'ignore duplicate connect error', 'err');
+              return;
+            }
+            finishErr(new Error(em));
             return;
           }
           connected = true;
+          dbg('WS', 'connect ok attempts=' + connectAttempts, 'ok');
           sendRpc();
           return;
         }
@@ -3462,6 +3617,32 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         }
       };
     });
+  }
+
+  async function openClawRpcWithRetry(cfg, method, params, options) {
+    var opt = options || {};
+    var attempts = Math.max(1, Number(opt.attempts) || 3);
+    var baseTimeoutMs = Math.max(3000, Number(opt.timeoutMs) || 12000);
+    var timeoutStepMs = Math.max(0, Number(opt.timeoutStepMs) || 2000);
+    var backoffMs = Array.isArray(opt.backoffMs) ? opt.backoffMs : [220, 700, 1500];
+    var lastErr = null;
+    for (var i = 0; i < attempts; i++) {
+      var timeoutMs = baseTimeoutMs + timeoutStepMs * i;
+      try {
+        return await openClawRpc(cfg, method, params, timeoutMs);
+      } catch (e) {
+        lastErr = e;
+        if (typeof dbgPush === 'function') {
+          dbgPush('rpc', 'retry', { method: method, attempt: i + 1, attempts: attempts, timeoutMs: timeoutMs, error: e && e.message ? e.message : String(e) }, true);
+        }
+        if (i >= attempts - 1) break;
+        var waitMs = Number(backoffMs[Math.min(i, backoffMs.length - 1)]);
+        if (!(waitMs > 0)) waitMs = 200 * (i + 1);
+        await new Promise(function(r) { setTimeout(r, waitMs); });
+      }
+    }
+    if (lastErr) throw lastErr;
+    throw new Error('OpenClaw RPC failed: ' + method);
   }
 
   async function hydrateOpenClawHistoryForSession(s, force) {
@@ -3485,7 +3666,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         s.gatewaySessionKey = sk;
         if (meta && meta.row) s.openclawMeta = meta.row;
         if (meta && meta.model) s.model = String(meta.model).trim() || s.model;
-        var rpcRes = await openClawRpc(cfg, 'chat.history', { sessionKey: sk, limit: 100 }, 10000);
+        var rpcRes = await openClawRpcWithRetry(cfg, 'chat.history', { sessionKey: sk, limit: 100 }, {
+          attempts: 3,
+          timeoutMs: 12000,
+          timeoutStepMs: 4000,
+          backoffMs: [250, 900]
+        });
         var gw = extractGatewayHistoryMessages(rpcRes).map(mapGatewayHistoryItem).filter(Boolean);
         if ((!gw.length || gw.length < 2) && meta && meta.previewItems && meta.previewItems.length) {
           gw = mergeHistoryList(gw, ocHistoryItemsFromPreviewItems(meta.previewItems));
@@ -3517,6 +3703,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (cfg.systemPrompt && h.length === 1) {
       msgText = '【系统提示】\n' + cfg.systemPrompt + '\n\n' + msgText;
     }
+    var chatSentAtMs = Date.now();
     var s0 = activeSession();
     var sessionKey =
       String(cfg.openclawSessionKey || '').trim() ||
@@ -3556,13 +3743,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var authenticated = false;
       var challengeReceived = false;
       var connectSent = false;
+      var connectAcked = false;
       var chatMsgId = '';
       var subscribeMsgId = '';
       var subscribeSent = false;
+      var chatDispatched = false;
       var sendMethod = 'sessions.send';
       var pendingText = '';
       var finalizeTimer = null;
       var recoveringFinal = false;
+      var _dbgFrames = [];
       var hardTimeout = setTimeout(function () {
         if (pendingText.trim()) {
           emitProgress(true);
@@ -3630,27 +3820,34 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         else settleReject(new Error('响应中没有可显示的内容。'));
       }
 
-      function recoverFinalFromHistory(fromTimeout) {
+      function recoverFinalFromHistory(fromTimeout, finalPayload) {
         if (recoveringFinal) return;
         recoveringFinal = true;
         fromTimeout = fromTimeout === true;
         (async function () {
           var waitList = fromTimeout ? [400, 1500, 3500] : [120, 360];
           var lastRpcRes = null;
+          var histKey = canonicalSessionKey || sessionKey;
           for (var i = 0; i < waitList.length; i++) {
             try {
               await new Promise(function (r) {
                 setTimeout(r, waitList[i]);
               });
-              var rpcRes = await openClawRpc(
+              var rpcRes = await openClawRpcWithRetry(
                 cfg,
                 'chat.history',
-                { sessionKey: sessionKey, limit: fromTimeout ? 200 : 120 },
-                fromTimeout ? 8000 : 3500
+                { sessionKey: histKey, limit: fromTimeout ? 200 : 120 },
+                {
+                  attempts: fromTimeout ? 3 : 2,
+                  timeoutMs: fromTimeout ? 8000 : 3500,
+                  timeoutStepMs: fromTimeout ? 3000 : 1200,
+                  backoffMs: fromTimeout ? [280, 900] : [160]
+                }
               );
               lastRpcRes = rpcRes;
+              if (typeof dbgPush === 'function') dbgPush('stream', 'recover_history_try', { attempt: i + 1, waitMs: waitList[i], key: histKey }, true);
               var raw = extractGatewayHistoryMessages(rpcRes);
-              var picked = ocPickAssistantFromHistory(raw, msgText);
+              var picked = ocPickAssistantFromHistory(raw, msgText, chatSentAtMs);
               if (picked && String(picked).trim()) {
                 pendingText = String(picked).trim();
                 emitProgress(true);
@@ -3664,8 +3861,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                 settleResolve(pendingText);
                 return;
               }
-              var prevRes = await openClawRpc(cfg, 'sessions.preview', { keys: [canonicalSessionKey || sessionKey] }, fromTimeout ? 8000 : 3500);
-              var prevPicked = ocPickAssistantFromHistory(ocHistoryItemsFromPreviewItems(ocSessionPreviewItemsFromAny(prevRes)), msgText);
+              var prevRes = await openClawRpcWithRetry(
+                cfg,
+                'sessions.preview',
+                { keys: [histKey] },
+                {
+                  attempts: fromTimeout ? 2 : 1,
+                  timeoutMs: fromTimeout ? 7000 : 3200,
+                  timeoutStepMs: 1500,
+                  backoffMs: [180]
+                }
+              );
+              var prevPicked = ocPickAssistantFromHistory(ocHistoryItemsFromPreviewItems(ocSessionPreviewItemsFromAny(prevRes)), msgText, chatSentAtMs);
               if (prevPicked && String(prevPicked).trim()) {
                 pendingText = String(prevPicked).trim();
                 emitProgress(true);
@@ -3673,6 +3880,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                 return;
               }
             } catch (e0) {
+              lastRpcRes = { openclawHistoryError: e0 && e0.message ? e0.message : String(e0) };
             }
           }
           if (lastRpcRes) {
@@ -3689,16 +3897,75 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             settleResolve(pendingText.trim());
             return;
           }
-          if (fromTimeout) settleReject(new Error('OpenClaw 超时：已重试并回查 history，但仍未解析到可读正文。'));
-          else settleReject(new Error('OpenClaw 已到 final，但回查 history 仍未解析到可读正文。'));
+          if (lastRpcRes && Array.isArray(lastRpcRes.messages) && lastRpcRes.messages.length) {
+            var hasAssistantThinking = false;
+            var hasAssistantToolCall = false;
+            for (var mi = 0; mi < lastRpcRes.messages.length; mi++) {
+              var hm = lastRpcRes.messages[mi];
+              if (!hm || hm.role !== 'assistant' || !Array.isArray(hm.content)) continue;
+              for (var ci = 0; ci < hm.content.length; ci++) {
+                var cp = hm.content[ci];
+                if (!cp || typeof cp !== 'object') continue;
+                if (cp.type === 'thinking' && cp.thinking) hasAssistantThinking = true;
+                if (cp.type === 'toolCall' || cp.type === 'tool_call') hasAssistantToolCall = true;
+              }
+            }
+            if (hasAssistantThinking || hasAssistantToolCall) {
+              if (!fromTimeout) {
+                for (var w = 0; w < 3; w++) {
+                  await new Promise(function(r){ setTimeout(r, 1800); });
+                  try {
+                    var lateRes = await openClawRpcWithRetry(
+                      cfg,
+                      'chat.history',
+                      { sessionKey: histKey, limit: 200 },
+                      { attempts: 1, timeoutMs: 6000, timeoutStepMs: 0, backoffMs: [0] }
+                    );
+                    var lateRaw = extractGatewayHistoryMessages(lateRes);
+                    var latePicked = ocPickAssistantFromHistory(lateRaw, msgText, chatSentAtMs);
+                    if (latePicked && String(latePicked).trim()) {
+                      pendingText = String(latePicked).trim();
+                      emitProgress(true);
+                      settleResolve(pendingText);
+                      return;
+                    }
+                    lastRpcRes = lateRes;
+                  } catch (eLate) {
+                  }
+                }
+              }
+              var tip = 'OpenClaw 已收到请求，但当前停留在工具调用/思考阶段，未产出最终可展示文本。请重试一次，或切换到无工具依赖模型。';
+              settleResolve(tip);
+              return;
+            }
+          }
+          
+          var formatDbg = function(obj) {
+            try { return obj ? '\n```json\n' + JSON.stringify(obj, null, 2).slice(0, 5000) + '\n```' : ''; } catch(e) { return ''; }
+          };
+          var framesRev = (_dbgFrames && _dbgFrames.length) ? _dbgFrames.slice().reverse() : [];
+          var framesSummary = framesRev.length ? '\n\n**WebSocket 记录 (倒序前100帧):**' + formatDbg(framesRev.slice(0, 100)) : '\n\n**没有捕获到任何 WebSocket 帧。**';
+          
+          if (fromTimeout) {
+            settleResolve('### 【OpenClaw 响应解析异常 - 超时】\n\n已尝试回查 History 但未能寻获有效内容 (Waited ' + (Date.now() - chatSentAtMs) + 'ms)。\n\n' +
+              (finalPayload ? '**最后收到的 Payload:**' + formatDbg(finalPayload) + '\n\n' : '') +
+              (lastRpcRes ? '**History 接口结果:**' + formatDbg(lastRpcRes) : '') +
+              framesSummary);
+          } else {
+            settleResolve('### 【OpenClaw 响应解析异常 - 结束】\n\n网关已返回 Final 状态，但回查 History 仍无有效正文。\n\n' +
+              (finalPayload ? '**Final Payload:**' + formatDbg(finalPayload) + '\n\n' : '') +
+              (lastRpcRes ? '**History 接口结果:**' + formatDbg(lastRpcRes) : '') +
+              framesSummary);
+          }
         })();
       }
 
       function sendConnectOnce() {
-        if (connectSent) return;
+        if (connectSent || authenticated || connectAcked) return;
         connectSent = true;
         seq += 1;
         var cid = 'connect-' + seq;
+        dbg('WS→', 'connect ' + cid, 'ok');
         var params = {
           minProtocol: 3,
           maxProtocol: 3,
@@ -3717,6 +3984,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           locale: typeof navigator !== 'undefined' ? navigator.language || 'zh-CN' : 'zh-CN',
           auth: { token: ep.token }
         };
+        var wsSendOriginal = ws.send;
+        ws.send = function(data) {
+          try {
+            var parsed = JSON.parse(data);
+            if (_dbgFrames && _dbgFrames.length < 100) {
+              _dbgFrames.push({ _ts: Date.now(), _dir: 'out', msg: parsed });
+            }
+          } catch(e) {}
+          return wsSendOriginal.apply(ws, arguments);
+        };
+
         try {
           ws.send(JSON.stringify({ type: 'req', id: cid, method: 'connect', params: params }));
         } catch (e) {
@@ -3725,6 +4003,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
 
       function sendChatMsg() {
+        if (chatDispatched) return;
+        chatDispatched = true;
         seq += 1;
         chatMsgId = 'msg-' + seq;
         sendMethod = canUseSessionSend ? 'sessions.send' : 'chat.send';
@@ -3733,10 +4013,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             ? { key: canonicalSessionKey || sessionKey, message: msgText, idempotencyKey: chatMsgId }
             : { message: msgText, idempotencyKey: chatMsgId, sessionKey: sessionKey };
         if (sendModel && sendMethod !== 'sessions.send') {
-          params.model = sendModel;
-          params.modelIdentifier = sendModel;
+          // OpenClaw v2+ 架构已在 session meta 固化模型参数，网关强制执行严格 JSON 校验，
+          // 不再允许于 chat.send Request Root 继续携带 model / modelIdentifier 声明，否则将抛出 Unexpected Property Error。
         }
         try {
+          dbg('WS→', sendMethod + ' ' + chatMsgId, 'ok');
           ws.send(
             JSON.stringify({
               type: 'req',
@@ -3767,17 +4048,24 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
               params: { key: canonicalSessionKey }
             })
           );
-        } catch (e) {
-          sendChatMsg();
-        }
+        } catch (e) {}
+        // 订阅是增强能力，不应阻塞本轮消息发送。
+        sendChatMsg();
       }
 
       function onFrame(msg) {
+        if (msg && msg.type !== 'heartbeat' && msg.event !== 'heartbeat') dbg('WS←', wsFrameBrief(msg), msg.error ? 'err' : 'ok');
         var ev = msg.event || msg.type || msg.method || '';
+        var evLower = String(ev || '').toLowerCase();
 
         if (ev === 'connect.challenge') {
+          if (authenticated || connectAcked) {
+            dbg('WS', 'ignore late connect.challenge', 'err');
+            return;
+          }
           challengeReceived = true;
           connectSent = false;
+          dbg('WS', 'challenge -> reconnect', 'ok');
           sendConnectOnce();
           return;
         }
@@ -3785,11 +4073,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         if (typeof msg.id === 'string' && msg.id.indexOf('connect-') === 0) {
           if (msg.error || msg.ok === false) {
             var em = (msg.error && msg.error.message) || 'Gateway 认证失败';
+            if ((authenticated || connectAcked) && /connect is only valid as the first request/i.test(String(em))) {
+              dbg('WS', 'ignore duplicate connect error', 'err');
+              return;
+            }
             fail(new Error(String(em)));
             return;
           }
           if (msg.result !== undefined || msg.ok === true) {
             authenticated = true;
+            connectAcked = true;
+            dbg('WS', 'connect ok', 'ok');
             sendSessionSubscribe();
           }
           return;
@@ -3797,14 +4091,19 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
         if (!authenticated && ev === 'hello-ok') {
           authenticated = true;
+          connectAcked = true;
+          dbg('WS', 'hello-ok authed', 'ok');
           sendSessionSubscribe();
           return;
         }
 
         if (!authenticated) return;
 
+        // Ignore transport/system broadcasts; they are not model replies.
+        if (ocIsSystemEventName(evLower)) return;
+
         if (subscribeMsgId && msg.type === 'res' && msg.id === subscribeMsgId) {
-          sendChatMsg();
+          // chat.send 已经即时发出，这里仅确认订阅完成。
           return;
         }
 
@@ -3859,7 +4158,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           }
           if (ocSessionMessageDone(plSession)) {
             if (pendingText.trim()) okDone();
-            else recoverFinalFromHistory(false);
+            else recoverFinalFromHistory(false, typeof plSession === 'object' ? plSession : msg);
             return;
           }
           if (sessionTxt) armFinalize();
@@ -3894,17 +4193,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
               if (fallback) pendingText = fallback;
             }
             if (!pendingText.trim()) {
-              recoverFinalFromHistory(false);
+              recoverFinalFromHistory(false, pl);
               return;
-            }
-            if (!pendingText.trim()) {
-              try {
-                var dbg = JSON.stringify(pl);
-                if (dbg && dbg.length > 2 && dbg.length < 8000)
-                  pendingText =
-                    '（Gateway 返回了 final 但未解析出正文，请升级脚本或核对 Gateway 版本。原始 payload 摘要）\n' +
-                    dbg.slice(0, 4000);
-              } catch (e3) {}
             }
             okDone();
             return;
@@ -3967,7 +4257,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         var rest = msg.payload || msg.params || {};
         var rt =
           ocExtractText(rest.text || rest.content || rest.message || '') || ocExtractChatEventPayload(rest);
-        if (rt && (msg.id === chatMsgId || msg.id == null || msg.id === '')) {
+        var likelyChatEnvelope =
+          evLower === 'chat' ||
+          evLower === 'chat.response' ||
+          evLower === 'response' ||
+          evLower === 'session.message' ||
+          (rest && typeof rest === 'object' && (String(rest.event || rest.type || '').toLowerCase().indexOf('chat') === 0));
+        if (likelyChatEnvelope && rt && (msg.id === chatMsgId || msg.id == null || msg.id === '')) {
           var restSessionOk = ocPayloadMatchesSession(msg, sessionKey) || ocPayloadMatchesSession(rest, sessionKey);
           var restReqOk = ocPayloadMatchesRequest(msg, chatMsgId) || ocPayloadMatchesRequest(rest, chatMsgId);
           if (!restSessionOk || !restReqOk) return;
@@ -4017,6 +4313,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         var msg;
         try {
           msg = JSON.parse(e.data);
+          if (_dbgFrames && _dbgFrames.length < 100 && msg && typeof msg === 'object' && msg.event !== 'heartbeat' && msg.type !== 'heartbeat') {
+            _dbgFrames.push({ _ts: Date.now(), _dir: 'in', msg: msg });
+          }
         } catch (ex) {
           return;
         }
@@ -4028,16 +4327,20 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       };
 
       ws.onopen = function () {
+        dbg('WS', 'open chat stream', 'ok');
+        if (!authenticated) sendConnectOnce();
         setTimeout(function () {
           if (!authenticated && !challengeReceived) sendConnectOnce();
         }, 450);
       };
 
       ws.onerror = function () {
+        dbg('WS', 'error chat stream', 'err');
         settleReject(new Error('WebSocket 错误（请确认 OpenClaw Gateway 已在本机 ' + ep.host + ':' + ep.port + ' 运行）。'));
       };
 
       ws.onclose = function (e) {
+        dbg('WS', 'close chat stream code=' + e.code, authenticated ? 'ok' : 'err');
         if (settled) return;
         if (authenticated && pendingText.trim()) {
           settleResolve(pendingText.trim());

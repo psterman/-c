@@ -385,7 +385,7 @@ FloatingToolbar_OnNavigationCompleted(sender, args) {
 }
 
 ; ===================== 閸﹀棜顫楁潏瑙勵攱婢跺嫮鎮?=====================
-; 涓嶅啀浣跨敤 GDI CreateRoundRectRgn 瑁佸壀瀹夸富绐楀彛锛氭暣鏁板儚绱犲渾瑙掓槗浜х敓閿娇锛?; 鍦嗚涓庢弿杈圭敱 WebView 鍐?SVG/CSS 鎶楅敮榻跨粯鍒讹紱瀹夸富淇濇寔鐭╁舰绐楀彛锛孊ackColor 涓庡伐鍏锋爮搴曞悓鑹插嵆鍙€?
+; 宿主窗口保持矩形；圆角与发光统一由 WebView 内部绘制，避免 Win32 Region 边缘锯齿。
 FloatingToolbarApplyRoundedCorners() {
     global FloatingToolbarGUI
 
@@ -431,7 +431,17 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
     g_FTB_WV2.add_NavigationCompleted(FloatingToolbar_OnNavigationCompleted)
     g_FTB_WV2.add_WebMessageReceived(FloatingToolbar_OnWebMessage)
     try ApplyUnifiedWebViewAssets(g_FTB_WV2)
-    g_FTB_WV2.Navigate(BuildAppLocalUrl("FloatingToolbarStrip.html"))
+    ; 强制刷新 WebView 资源版本，避免命中旧缓存脚本导致前端变量未定义
+    stripUrl := BuildAppLocalUrl("FloatingToolbarStrip.html")
+    try {
+        ver := String(FileGetTime(A_ScriptDir . "\FloatingToolbarStrip.html", "M"))
+        if (InStr(stripUrl, "?"))
+            stripUrl := stripUrl . "&v=" . ver
+        else
+            stripUrl := stripUrl . "?v=" . ver
+    } catch {
+    }
+    g_FTB_WV2.Navigate(stripUrl)
 }
 
 ; 历史路径/边缘情况下紧凑态 w≠h 会导致 WebView 非正方形、正圆成竖椭圆且一侧露底（常见右侧黑条）。强制为固定直径。
@@ -449,11 +459,13 @@ FloatingToolbar_SyncCompactWindowSquare() {
         if (gw = s && gh = s) {
             FloatingToolbarWindowX := gx
             FloatingToolbarWindowY := gy
+            FloatingToolbarApplyRoundedCorners()
             return
         }
         FloatingToolbarWindowX := gx
         FloatingToolbarWindowY := gy
         FloatingToolbarGUI.Move(gx, gy, s, s)
+        FloatingToolbarApplyRoundedCorners()
     } catch {
     }
 }
@@ -820,10 +832,53 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(FloatingToolbar_DeferredProbeOpenClawToken.Bind(force), -1)
         return
     }
+    if (typ = "niuma_debug_event") {
+        evt := msg.Has("event") ? msg["event"] : ""
+        FloatingToolbar_DebugWriteEvent(evt)
+        return
+    }
+    if (typ = "niuma_debug_pull_go") {
+        SetTimer(FloatingToolbar_DeferredDebugPullGo, -1)
+        return
+    }
 }
 
 FloatingToolbar_DeferredProbeOpenClawToken(force := false) {
     try FloatingToolbar_ProbeOpenClawGatewayToken(!!force)
+}
+
+FloatingToolbar_DebugWriteEvent(evt) {
+    try {
+        line := ""
+        if (evt is Map)
+            line := Jxon_Dump(evt)
+        else if (evt is Object)
+            line := Jxon_Dump(evt)
+        else
+            line := String(evt)
+        line := Trim(line)
+        if (line = "")
+            return
+        dir := A_ScriptDir . "\Data\NiuMaDebug"
+        try DirCreate(dir)
+        fp := dir . "\openclaw_timeline.jsonl"
+        FileAppend(line . "`n", fp, "UTF-8")
+    } catch {
+    }
+}
+
+FloatingToolbar_DeferredDebugPullGo() {
+    global g_FTB_WV2, g_AhkInterface
+    if !g_FTB_WV2
+        return
+    try {
+        base := "http://127.0.0.1:8080"
+        statusRaw := g_AhkInterface.HttpRequest("GET", base . "/v1/status", "", "")
+        dbgRaw := g_AhkInterface.HttpRequest("GET", base . "/v1/niuma/debug", "", "")
+        data := Map("status", statusRaw, "debug", dbgRaw, "fetchedAt", A_Now)
+        WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_debug_go_snapshot", "data", data))
+    } catch {
+    }
 }
 
 FloatingToolbar_ProbeOpenClawGatewayToken(force := false) {
