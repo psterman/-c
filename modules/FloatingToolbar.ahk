@@ -1603,13 +1603,52 @@ FloatingToolbar_SwitchActivationByWheel(delta) {
                     newY := vb - th
                 FloatingToolbarWindowX := newX
                 FloatingToolbarWindowY := newY
+                cfg := A_ScriptDir . "\CursorShortcut.ini"
+                try IniWrite(String(newX), cfg, "WindowPositions", "FloatingToolbar_X")
+                try IniWrite(String(newY), cfg, "WindowPositions", "FloatingToolbar_Y")
             }
             FloatingToolbar_SetActivationMode("toolbar")
         }
         return
     }
-    if (mode != "bubble")
+    if (mode != "bubble") {
+        ; Persist bubble target position before mode switch; ShowFloatingBubble() reloads from ini.
+        tx := FloatingToolbarWindowX
+        ty := FloatingToolbarWindowY
+        tw := th := 0
+        if IsObject(FloatingToolbarGUI) {
+            try FloatingToolbarGUI.GetPos(&tx, &ty, &tw, &th)
+            catch {
+            }
+        }
+        if (tw <= 0 || th <= 0) {
+            tw := FloatingToolbarCalculateWidth()
+            th := FloatingToolbarCalculateHeight()
+        }
+        try bs := FloatingBubble_GetSize()
+        catch {
+            bs := 48
+        }
+        bx := Round(tx + (tw - bs) / 2.0)
+        by := Round(ty + (th - bs) / 2.0)
+        ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+        vr := vl + vw
+        vb := vt + vh
+        if (bx < vl)
+            bx := vl
+        if (by < vt)
+            by := vt
+        if (bx + bs > vr)
+            bx := vr - bs
+        if (by + bs > vb)
+            by := vb - bs
+        FloatingBubbleWindowX := bx
+        FloatingBubbleWindowY := by
+        cfg := A_ScriptDir . "\CursorShortcut.ini"
+        try IniWrite(String(bx), cfg, "WindowPositions", "FloatingBubble_X")
+        try IniWrite(String(by), cfg, "WindowPositions", "FloatingBubble_Y")
         FloatingToolbar_SetActivationMode("bubble")
+    }
 }
 
 FloatingToolbarApplyWheelDelta(delta) {
