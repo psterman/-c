@@ -1,4 +1,4 @@
-; 悬浮球：仅牛马图标 WebView2，右键菜单与悬浮条一致，长按左键拖动（由页面发 drag_host）
+﻿; Floating bubble implemented with WebView2.
 #Requires AutoHotkey v2.0
 
 global FloatingBubbleGUI := 0
@@ -14,29 +14,21 @@ global FloatingBubble_DragOriginScreenX := 0
 global FloatingBubble_DragOriginScreenY := 0
 global FloatingBubble_DragOriginWinX := 0
 global FloatingBubble_DragOriginWinY := 0
-global FloatingBubbleSize := 45
+global FloatingBubbleSize := 48
 global g_FB_WV2_CreateRetry := 0
+global g_FB_HostMouseDownTick := 0
+global g_FB_HostMouseDownX := 0
+global g_FB_HostMouseDownY := 0
+global g_FB_HostMouseDown := false
 
 FloatingBubble_GetSize() {
     return FloatingBubbleSize
 }
 
-; 正方形客户区裁成圆形（CreateEllipticRgn）；页面用 border-radius:50% 由 Chromium 做边缘抗锯齿
 FloatingBubble_ApplyWindowShape(hwnd) {
     global FloatingBubbleGUI
-    if !hwnd && FloatingBubbleGUI
-        hwnd := FloatingBubbleGUI.Hwnd
-    if !hwnd
-        return
-    WinGetClientPos(, , &cw, &ch, hwnd)
-    if (cw < 4 || ch < 4)
-        return
-    ; 外接矩形 (0,0)-(cw,ch)，宽=高 时为正圆
-    hrgn := DllCall("gdi32\CreateEllipticRgn", "int", 0, "int", 0, "int", cw, "int", ch, "ptr")
-    if !hrgn
-        return
-    if !DllCall("user32\SetWindowRgn", "ptr", hwnd, "ptr", hrgn, "int", 1)
-        DllCall("gdi32\DeleteObject", "ptr", hrgn)
+    ; Layered bitmap rendering gives us per-pixel alpha, so no hard region is needed.
+    return
 }
 
 FloatingBubble_DestroyCompletely() {
@@ -123,7 +115,7 @@ FloatingBubble_ShowModeMenuDeferred(x := 0, y := 0, *) {
     FloatingBubble_ShowModeMenuAt(x, y)
 }
 
-; 悬浮球：关闭 / 切换悬浮栏 / 仅托盘（与外观设置写入同一键）
+; 鎮诞鐞冿細鍏抽棴 / 鍒囨崲鎮诞鏍?/ 浠呮墭鐩橈紙涓庡瑙傝缃啓鍏ュ悓涓€閿級
 FloatingBubble_PersistModeAndApply(mode) {
     global AppearanceActivationMode
     AppearanceActivationMode := NormalizeAppearanceActivationMode(mode)
@@ -131,7 +123,7 @@ FloatingBubble_PersistModeAndApply(mode) {
     try IniWrite(AppearanceActivationMode, cfg, "Appearance", "ActivationMode")
     catch {
     }
-    ; 延后应用，让暗色菜单与 WebView 消息泵收尾，减少切换模式时异步回调与销毁竞态
+    ; Apply after the current UI event finishes to avoid mode-switch races.
     SetTimer((*) => ApplyAppearanceActivationMode(), -200)
 }
 
@@ -178,25 +170,15 @@ FloatingBubble_ShowContextMenuDeferred(anchorX := 0, anchorY := 0) {
 }
 
 FloatingBubble_PushLogoToWeb(*) {
-    global g_FB_WV2
-    if !g_FB_WV2
-        return
-    url := FloatingToolbar_GetLogoAppUrl()
-    if (url = "")
-        return
-    try WebView_QueuePayload(g_FB_WV2, Map("type", "set_logo", "url", url))
-    catch {
-    }
+    FloatingBubble_RenderLayered()
 }
 
 FloatingBubble_PushThemeToWeb(*) {
-    global g_FB_WV2
-    if !g_FB_WV2
-        return
-    tm := FloatingBubble_GetThemeMode()
-    try WebView_QueuePayload(g_FB_WV2, Map("type", "set_theme", "themeMode", tm))
-    catch {
-    }
+    FloatingBubble_ApplyHostTheme()
+}
+
+FloatingBubble_ApplyHostTheme(mode := "") {
+    FloatingBubble_RenderLayered(mode)
 }
 
 FloatingBubble_NormalizeThemeToken(raw, fallback := "dark") {
@@ -237,22 +219,7 @@ FloatingBubble_GetThemeMode() {
 
 FloatingBubble_ApplyWebViewBounds() {
     global FloatingBubbleGUI, g_FB_WV2_Ctrl
-    ; 无 WebView 时也要更新宿主外形（首次 Show 在异步创建完成前）
-    if FloatingBubbleGUI
-        try FloatingBubble_ApplyWindowShape(FloatingBubbleGUI.Hwnd)
-    if !(FloatingBubbleGUI && g_FB_WV2_Ctrl)
-        return
-    WinGetClientPos(, , &cw, &ch, FloatingBubbleGUI.Hwnd)
-    rc := WebView2.RECT()
-    rc.left := 0
-    rc.top := 0
-    rc.right := cw
-    rc.bottom := ch
-    try {
-        g_FB_WV2_Ctrl.Bounds := rc
-        g_FB_WV2_Ctrl.NotifyParentWindowPositionChanged()
-    } catch {
-    }
+    FloatingBubble_RenderLayered()
 }
 
 FloatingBubble_RetryCreateWebView() {
@@ -277,9 +244,8 @@ FloatingBubble_OnWebViewCreated(ctrl) {
     g_FB_WV2 := ctrl.CoreWebView2
     g_FB_WV2_Ready := false
     g_FB_WV2_FrameReady := false
-
-    ; 与 Gui / HTML #121212 一致，抗锯齿边缘与底色同色才不会有外圈假「黑环」
-    try ctrl.DefaultBackgroundColor := 0xFF121212
+    ; Keep host + WebView background synchronized with current theme to reduce edge fringing.
+    FloatingBubble_ApplyHostTheme()
     try ctrl.IsVisible := true
 
     FloatingBubble_ApplyWebViewBounds()
@@ -298,6 +264,81 @@ FloatingBubble_OnWebViewCreated(ctrl) {
     g_FB_WV2.Navigate(BuildAppLocalUrl("FloatingBubble.html"))
 }
 
+FloatingBubble_GetLogoFilePath() {
+    candidates := [
+        "牛马.png",
+        "assets\牛马.png",
+        "logo.png",
+        "images\logo.png",
+        "images\nimabu.png",
+        "favicon.ico"
+    ]
+    for rel in candidates {
+        full := A_ScriptDir . "\" . rel
+        if FileExist(full)
+            return full
+    }
+    return ""
+}
+
+FloatingBubble_RenderLayered(mode := "") {
+    global FloatingBubbleGUI
+    if !FloatingBubbleGUI
+        return
+
+    sz := FloatingBubble_GetSize()
+    tm := FloatingBubble_NormalizeThemeToken(mode = "" ? FloatingBubble_GetThemeMode() : mode, "dark")
+    circleColor := (tm = "light") ? 0xFFF7F7F7 : 0xFF121212
+    outerStroke := (tm = "light") ? 0x14000000 : 0x18FFFFFF
+    innerStroke := (tm = "light") ? 0x16000000 : 0x22FFFFFF
+
+    pBitmap := Gdip_CreateBitmap(sz, sz)
+    if !pBitmap
+        return
+    G := Gdip_GraphicsFromImage(pBitmap)
+    if !G {
+        Gdip_DisposeImage(pBitmap)
+        return
+    }
+    Gdip_SetSmoothingMode(G, 4)
+    Gdip_SetInterpolationMode(G, 7)
+    Gdip_GraphicsClear(G, 0x00000000)
+
+    brush := Gdip_BrushCreateSolid(circleColor)
+    Gdip_FillEllipse(G, brush, 0.6, 0.6, sz - 1.2, sz - 1.2)
+    Gdip_DeleteBrush(brush)
+
+    penOuter := Gdip_CreatePen(outerStroke, 1.0)
+    Gdip_DrawEllipse(G, penOuter, 0.5, 0.5, sz - 1.0, sz - 1.0)
+    Gdip_DeletePen(penOuter)
+
+    penInner := Gdip_CreatePen(innerStroke, 0.75)
+    Gdip_DrawEllipse(G, penInner, 1.7, 1.7, sz - 3.4, sz - 3.4)
+    Gdip_DeletePen(penInner)
+
+    logoPath := FloatingBubble_GetLogoFilePath()
+    if (logoPath != "") {
+        pLogo := Gdip_CreateBitmapFromFile(logoPath)
+        if (pLogo > 0) {
+            logoSize := Round(sz * 0.76)
+            logoX := Round((sz - logoSize) / 2)
+            logoY := Round((sz - logoSize) / 2)
+            Gdip_DrawImage(G, pLogo, logoX, logoY, logoSize, logoSize, 0, 0, Gdip_GetImageWidth(pLogo), Gdip_GetImageHeight(pLogo))
+            Gdip_DisposeImage(pLogo)
+        }
+    }
+
+    hBitmap := Gdip_CreateHBITMAPFromBitmap(pBitmap, 0x00000000)
+    hdc := CreateCompatibleDC()
+    obm := SelectObject(hdc, hBitmap)
+    try UpdateLayeredWindow(FloatingBubbleGUI.Hwnd, hdc, "", "", sz, sz, 255)
+    SelectObject(hdc, obm)
+    DeleteObject(hBitmap)
+    DeleteDC(hdc)
+    Gdip_DeleteGraphics(G)
+    Gdip_DisposeImage(pBitmap)
+}
+
 CreateFloatingBubbleGUI() {
     global FloatingBubbleGUI, g_FB_WV2_Ctrl, g_FB_WV2, g_FB_WV2_Ready, g_FB_WV2_FrameReady
     global WebView2, g_FB_WV2_CreateRetry
@@ -313,9 +354,12 @@ CreateFloatingBubbleGUI() {
         }
     }
 
-    FloatingBubbleGUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x02000000", "Floating Bubble")
-    FloatingBubbleGUI.BackColor := "121212"
-    WebView2.create(FloatingBubbleGUI.Hwnd, FloatingBubble_OnWebViewCreated, WebView2_EnsureSharedEnvBlocking())
+    FloatingBubbleGUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x00080000", "Floating Bubble")
+    try FloatingBubble_BindHostMouseFallback(FloatingBubbleGUI.Hwnd)
+    g_FB_WV2_Ctrl := 0
+    g_FB_WV2 := 0
+    g_FB_WV2_Ready := true
+    g_FB_WV2_FrameReady := true
 }
 
 SaveFloatingBubblePosition() {
@@ -357,7 +401,7 @@ LoadFloatingBubblePosition() {
     }
 }
 
-; 同步拖动循环（比 1ms 定时器更跟手，避免 WebView 消息泵与计时器合帧延迟）
+; 鍚屾鎷栧姩寰幆锛堟瘮 1ms 瀹氭椂鍣ㄦ洿璺熸墜锛岄伩鍏?WebView 娑堟伅娉典笌璁℃椂鍣ㄥ悎甯у欢杩燂級
 FloatingBubble_DragRun(*) {
     global FloatingBubbleGUI, FloatingBubbleDragging, FloatingBubbleWindowX, FloatingBubbleWindowY
     global FloatingBubble_DragOriginScreenX, FloatingBubble_DragOriginScreenY
@@ -420,6 +464,99 @@ ShowFloatingBubble() {
     FloatingBubbleIsVisible := true
     try WebView2_NotifyShown(g_FB_WV2)
     SetTimer(FloatingBubble_PushLogoToWeb, -50)
+}
+
+FloatingBubble_BindHostMouseFallback(hwnd) {
+    static Bound := false
+    if Bound
+        return
+    OnMessage(0x0201, FloatingBubble_HostLButtonDown) ; WM_LBUTTONDOWN
+    OnMessage(0x0202, FloatingBubble_HostLButtonUp)   ; WM_LBUTTONUP
+    OnMessage(0x0200, FloatingBubble_HostMouseMove)   ; WM_MOUSEMOVE
+    OnMessage(0x0205, FloatingBubble_HostRButtonUp)   ; WM_RBUTTONUP
+    Bound := true
+}
+
+FloatingBubble_IsOwnHwnd(hwnd) {
+    global FloatingBubbleGUI
+    if !FloatingBubbleGUI
+        return false
+    if (hwnd = FloatingBubbleGUI.Hwnd)
+        return true
+    try return DllCall("user32\GetAncestor", "ptr", hwnd, "uint", 2, "ptr") = FloatingBubbleGUI.Hwnd
+    catch {
+        return false
+    }
+}
+
+FloatingBubble_HostLButtonDown(wParam, lParam, msg, hwnd) {
+    global FloatingBubbleGUI, g_FB_HostMouseDown, g_FB_HostMouseDownTick
+    global g_FB_HostMouseDownX, g_FB_HostMouseDownY
+    if !FloatingBubble_IsOwnHwnd(hwnd)
+        return
+    g_FB_HostMouseDown := true
+    g_FB_HostMouseDownTick := A_TickCount
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&g_FB_HostMouseDownX, &g_FB_HostMouseDownY)
+    SetTimer(FloatingBubble_HostStartDragIfHeld, -60)
+}
+
+FloatingBubble_HostMouseMove(wParam, lParam, msg, hwnd) {
+    global FloatingBubbleGUI, g_FB_HostMouseDown, FloatingBubbleDragging
+    global g_FB_HostMouseDownX, g_FB_HostMouseDownY
+    if !FloatingBubble_IsOwnHwnd(hwnd)
+        return
+    if !g_FB_HostMouseDown || FloatingBubbleDragging
+        return
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&mx, &my)
+    dx := mx - g_FB_HostMouseDownX
+    dy := my - g_FB_HostMouseDownY
+    if (dx * dx + dy * dy >= 25)
+        FloatingBubble_HostStartDragNow()
+}
+
+FloatingBubble_HostLButtonUp(wParam, lParam, msg, hwnd) {
+    global FloatingBubbleGUI, g_FB_HostMouseDown, FloatingBubbleDragging
+    if !FloatingBubble_IsOwnHwnd(hwnd)
+        return
+    hadDrag := FloatingBubbleDragging
+    g_FB_HostMouseDown := false
+    if !hadDrag {
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&x, &y)
+        SetTimer(FloatingBubble_ShowModeMenuDeferred.Bind(x, y), -1)
+    }
+}
+
+FloatingBubble_HostRButtonUp(wParam, lParam, msg, hwnd) {
+    if !FloatingBubble_IsOwnHwnd(hwnd)
+        return
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&x, &y)
+    SetTimer(FloatingBubble_ShowContextMenuDeferred.Bind(x, y), -1)
+}
+
+FloatingBubble_HostStartDragIfHeld(*) {
+    global g_FB_HostMouseDown, FloatingBubbleDragging
+    if !g_FB_HostMouseDown || FloatingBubbleDragging
+        return
+    if !GetKeyState("LButton", "P")
+        return
+    FloatingBubble_HostStartDragNow()
+}
+
+FloatingBubble_HostStartDragNow() {
+    global FloatingBubbleGUI, FloatingBubbleDragging
+    global FloatingBubble_DragOriginWinX, FloatingBubble_DragOriginWinY
+    global FloatingBubble_DragOriginScreenX, FloatingBubble_DragOriginScreenY
+    if !FloatingBubbleGUI || FloatingBubbleDragging
+        return
+    try FloatingBubbleGUI.GetPos(&FloatingBubble_DragOriginWinX, &FloatingBubble_DragOriginWinY)
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&FloatingBubble_DragOriginScreenX, &FloatingBubble_DragOriginScreenY)
+    FloatingBubbleDragging := true
+    SetTimer(FloatingBubble_DragRun, -1)
 }
 
 HideFloatingBubble() {

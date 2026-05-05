@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
@@ -8,17 +8,17 @@
     html, body {
       width: 100%; height: 100%;
       overflow: hidden;
-      /* 与宿主 Gui / DefaultBackgroundColor 同一灰，避免出现「外圈近黑 + 内圈浅灰」的甜甜圈环 */
       background-color: #121212;
       color-scheme: dark;
       user-select: none;
       -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
-    /* 单层灰圆 + 居中图标，无嵌套双色圆 */
+    /* 鍗曞眰鐏板渾 + 灞呬腑鍥炬爣锛屾棤宓屽鍙岃壊鍦?*/
     .wrap {
       width: 100%;
       height: 100%;
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -28,19 +28,40 @@
       isolation: isolate;
       transform: translateZ(0);
       backface-visibility: hidden;
+      will-change: transform;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.07);
+    }
+    .wrap::before {
+      content: "";
+      position: absolute;
+      inset: 1.25px;
+      border-radius: 50%;
+      pointer-events: none;
+      /* 鍐呯缉 1px 鐨勫悓鑹插渾灞傦紝閬綇鏈€澶栧湀閿娇杈?*/
+      background: inherit;
+      box-shadow: inset 0 0 0 0.75px rgba(255,255,255,.11);
+      z-index: 0;
     }
     .wrap img#logo {
-      width: 78%;
-      height: 78%;
-      max-width: 37px;
-      max-height: 37px;
+      position: relative;
+      z-index: 1;
+      width: 76%;
+      height: 76%;
+      max-width: 36px;
+      max-height: 36px;
       object-fit: contain;
       pointer-events: none;
     }
-    html[data-theme="light"] body,
-    html[data-theme="light"] .wrap {
+    html[data-theme="light"] body {
       background-color: #F7F7F7;
       color-scheme: light;
+    }
+    html[data-theme="light"] .wrap {
+      background-color: #F7F7F7;
+      box-shadow: 0 0 0 1px rgba(0,0,0,.045);
+    }
+    html[data-theme="light"] .wrap::before {
+      box-shadow: inset 0 0 0 0.75px rgba(0,0,0,.06);
     }
   </style>
 </head>
@@ -57,10 +78,10 @@
       } catch (e) {}
     }
     var holdTimer = null;
-    var HOLD_MS = 140;
+    var HOLD_MS = 60;
     var dragStartScreenX = 0;
     var dragStartScreenY = 0;
-    var MOVE_PX = 8;
+    var MOVE_PX = 5;
     var dragSent = false;
     var root = document.getElementById('root');
     var logo = document.getElementById('logo');
@@ -144,3 +165,5 @@
   </script>
 </body>
 </html>
+
+
