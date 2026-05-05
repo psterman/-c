@@ -20,6 +20,7 @@ global g_FB_HostMouseDownTick := 0
 global g_FB_HostMouseDownX := 0
 global g_FB_HostMouseDownY := 0
 global g_FB_HostMouseDown := false
+global g_FB_HostDragTriggered := false
 
 FloatingBubble_GetSize() {
     return FloatingBubbleSize
@@ -289,8 +290,8 @@ FloatingBubble_RenderLayered(mode := "") {
     sz := FloatingBubble_GetSize()
     tm := FloatingBubble_NormalizeThemeToken(mode = "" ? FloatingBubble_GetThemeMode() : mode, "dark")
     circleColor := (tm = "light") ? 0xFFF7F7F7 : 0xFF121212
-    outerStroke := (tm = "light") ? 0x14000000 : 0x18FFFFFF
-    innerStroke := (tm = "light") ? 0x16000000 : 0x22FFFFFF
+    outerStroke := (tm = "light") ? 0x14000000 : 0x10FFFFFF
+    innerStroke := (tm = "light") ? 0x16000000 : 0x16FFFFFF
 
     pBitmap := Gdip_CreateBitmap(sz, sz)
     if !pBitmap
@@ -308,12 +309,12 @@ FloatingBubble_RenderLayered(mode := "") {
     Gdip_FillEllipse(G, brush, 0.6, 0.6, sz - 1.2, sz - 1.2)
     Gdip_DeleteBrush(brush)
 
-    penOuter := Gdip_CreatePen(outerStroke, 1.0)
-    Gdip_DrawEllipse(G, penOuter, 0.5, 0.5, sz - 1.0, sz - 1.0)
+    penOuter := Gdip_CreatePen(outerStroke, 0.85)
+    Gdip_DrawEllipse(G, penOuter, 0.75, 0.75, sz - 1.5, sz - 1.5)
     Gdip_DeletePen(penOuter)
 
-    penInner := Gdip_CreatePen(innerStroke, 0.75)
-    Gdip_DrawEllipse(G, penInner, 1.7, 1.7, sz - 3.4, sz - 3.4)
+    penInner := Gdip_CreatePen(innerStroke, 0.6)
+    Gdip_DrawEllipse(G, penInner, 2.05, 2.05, sz - 4.1, sz - 4.1)
     Gdip_DeletePen(penInner)
 
     logoPath := FloatingBubble_GetLogoFilePath()
@@ -491,10 +492,11 @@ FloatingBubble_IsOwnHwnd(hwnd) {
 
 FloatingBubble_HostLButtonDown(wParam, lParam, msg, hwnd) {
     global FloatingBubbleGUI, g_FB_HostMouseDown, g_FB_HostMouseDownTick
-    global g_FB_HostMouseDownX, g_FB_HostMouseDownY
+    global g_FB_HostMouseDownX, g_FB_HostMouseDownY, g_FB_HostDragTriggered
     if !FloatingBubble_IsOwnHwnd(hwnd)
         return
     g_FB_HostMouseDown := true
+    g_FB_HostDragTriggered := false
     g_FB_HostMouseDownTick := A_TickCount
     CoordMode("Mouse", "Screen")
     MouseGetPos(&g_FB_HostMouseDownX, &g_FB_HostMouseDownY)
@@ -517,11 +519,12 @@ FloatingBubble_HostMouseMove(wParam, lParam, msg, hwnd) {
 }
 
 FloatingBubble_HostLButtonUp(wParam, lParam, msg, hwnd) {
-    global FloatingBubbleGUI, g_FB_HostMouseDown, FloatingBubbleDragging
+    global FloatingBubbleGUI, g_FB_HostMouseDown, FloatingBubbleDragging, g_FB_HostDragTriggered
     if !FloatingBubble_IsOwnHwnd(hwnd)
         return
-    hadDrag := FloatingBubbleDragging
+    hadDrag := FloatingBubbleDragging || g_FB_HostDragTriggered
     g_FB_HostMouseDown := false
+    g_FB_HostDragTriggered := false
     if !hadDrag {
         CoordMode("Mouse", "Screen")
         MouseGetPos(&x, &y)
@@ -547,7 +550,7 @@ FloatingBubble_HostStartDragIfHeld(*) {
 }
 
 FloatingBubble_HostStartDragNow() {
-    global FloatingBubbleGUI, FloatingBubbleDragging
+    global FloatingBubbleGUI, FloatingBubbleDragging, g_FB_HostDragTriggered
     global FloatingBubble_DragOriginWinX, FloatingBubble_DragOriginWinY
     global FloatingBubble_DragOriginScreenX, FloatingBubble_DragOriginScreenY
     if !FloatingBubbleGUI || FloatingBubbleDragging
@@ -555,16 +558,20 @@ FloatingBubble_HostStartDragNow() {
     try FloatingBubbleGUI.GetPos(&FloatingBubble_DragOriginWinX, &FloatingBubble_DragOriginWinY)
     CoordMode("Mouse", "Screen")
     MouseGetPos(&FloatingBubble_DragOriginScreenX, &FloatingBubble_DragOriginScreenY)
+    g_FB_HostDragTriggered := true
     FloatingBubbleDragging := true
     SetTimer(FloatingBubble_DragRun, -1)
 }
 
 HideFloatingBubble() {
     global FloatingBubbleGUI, FloatingBubbleIsVisible, FloatingBubbleDragging
+    global g_FB_HostMouseDown, g_FB_HostDragTriggered
 
     if (FloatingBubbleGUI = 0)
         return
     FloatingBubbleDragging := false
+    g_FB_HostMouseDown := false
+    g_FB_HostDragTriggered := false
     SaveFloatingBubblePosition()
     try WebView2_NotifyHidden(g_FB_WV2)
     try FloatingBubbleGUI.Hide()
