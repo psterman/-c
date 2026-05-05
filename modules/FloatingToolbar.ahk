@@ -1555,11 +1555,57 @@ FloatingToolbar_SetActivationMode(mode) {
 }
 
 FloatingToolbar_SwitchActivationByWheel(delta) {
-    global AppearanceActivationMode
+    global AppearanceActivationMode, FloatingToolbarScale, FloatingToolbarMinScale, FloatingToolbarMaxScale
+    global FloatingToolbarWindowX, FloatingToolbarWindowY
+    global FloatingBubbleGUI, FloatingBubbleIsVisible, FloatingBubbleWindowX, FloatingBubbleWindowY
     mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
     if (delta > 0) {
-        if (mode != "toolbar")
+        if (mode != "toolbar") {
+            ; Ensure wheel-up from bubble opens full toolbar directly (skip compact square state).
+            if FloatingToolbarIsCompactMode() {
+                targetScale := FloatingToolbarMinScale + 0.15
+                if (targetScale > FloatingToolbarMaxScale)
+                    targetScale := FloatingToolbarMaxScale
+                FloatingToolbarScale := targetScale
+                FloatingToolbarSaveScale()
+            }
+
+            ; Anchor expansion to bubble center so position follows visual continuity.
+            if (mode = "bubble" && FloatingBubbleIsVisible) {
+                bx := FloatingBubbleWindowX
+                by := FloatingBubbleWindowY
+                bw := bh := 0
+                try FloatingBubbleGUI.GetPos(&bx, &by, &bw, &bh)
+                catch {
+                }
+                if (bw <= 0 || bh <= 0) {
+                    try bw := bh := FloatingBubble_GetSize()
+                    catch {
+                        bw := bh := 48
+                    }
+                }
+                cx := bx + (bw / 2.0)
+                cy := by + (bh / 2.0)
+                tw := FloatingToolbarCalculateWidth()
+                th := FloatingToolbarCalculateHeight()
+                newX := Round(cx - (tw / 2.0))
+                newY := Round(cy - (th / 2.0))
+                ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+                vr := vl + vw
+                vb := vt + vh
+                if (newX < vl)
+                    newX := vl
+                if (newY < vt)
+                    newY := vt
+                if (newX + tw > vr)
+                    newX := vr - tw
+                if (newY + th > vb)
+                    newY := vb - th
+                FloatingToolbarWindowX := newX
+                FloatingToolbarWindowY := newY
+            }
             FloatingToolbar_SetActivationMode("toolbar")
+        }
         return
     }
     if (mode != "bubble")
@@ -1576,6 +1622,12 @@ FloatingToolbarApplyWheelDelta(delta) {
 
     scaleStep := 0.15
     newScale := FloatingToolbarScale
+
+    ; Scroll-down from toolbar should switch directly to bubble before entering compact square.
+    if (delta < 0 && (FloatingToolbarScale - scaleStep) <= (FloatingToolbarMinScale + 0.0001)) {
+        FloatingToolbar_SwitchActivationByWheel(-1)
+        return
+    }
 
     if (delta > 0) {
         newScale := FloatingToolbarScale + scaleStep
