@@ -60,6 +60,16 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
   border:0;outline:none;background:transparent;color:inherit;font:14px "Segoe UI","Microsoft YaHei UI",sans-serif;
 }
 #textHint{margin-top:6px;color:var(--muted);font-size:12px}
+#mosaicPanel{
+  position:absolute;right:12px;top:12px;z-index:9000;display:none;
+  width:220px;padding:10px;border-radius:10px;border:1px solid var(--panel-border);
+  background:rgba(15,26,43,.93);box-shadow:0 10px 24px rgba(0,0,0,.28)
+}
+body[data-theme="light"] #mosaicPanel{background:rgba(255,255,255,.97)}
+.mp-row{display:flex;align-items:center;gap:8px;margin:6px 0}
+.mp-row label{width:72px;color:var(--muted);font-size:12px}
+.mp-row input[type="range"]{flex:1}
+.mp-val{width:36px;text-align:right;font:12px Consolas,monospace;color:var(--text)}
 </style>
 </head>
 <body>
@@ -68,6 +78,11 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
     <div id="preview">
       <div id="empty">等待截图内容...</div>
       <img id="img" style="display:none">
+      <div id="mosaicPanel">
+        <div class="mp-row"><label>Size</label><input id="mpSize" type="range" min="12" max="120" step="2"><span id="mpSizeV" class="mp-val"></span></div>
+        <div class="mp-row"><label>Intensity</label><input id="mpIntensity" type="range" min="4" max="48" step="2"><span id="mpIntensityV" class="mp-val"></span></div>
+        <div class="mp-row"><label>Opacity</label><input id="mpOpacity" type="range" min="10" max="100" step="5"><span id="mpOpacityV" class="mp-val"></span></div>
+      </div>
       <div id="textBox">
         <textarea id="textArea" placeholder="输入文字，Enter 确认，Esc 取消"></textarea>
         <div id="textHint">Enter 提交，Shift+Enter 换行</div>
@@ -87,10 +102,17 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
   const textBox = document.getElementById('textBox');
   const textArea = document.getElementById('textArea');
   const debugPanel = document.getElementById('debugPanel');
+  const mosaicPanel = document.getElementById('mosaicPanel');
+  const mpSize = document.getElementById('mpSize');
+  const mpIntensity = document.getElementById('mpIntensity');
+  const mpOpacity = document.getElementById('mpOpacity');
+  const mpSizeV = document.getElementById('mpSizeV');
+  const mpIntensityV = document.getElementById('mpIntensityV');
+  const mpOpacityV = document.getElementById('mpOpacityV');
 
   const st = { drag:false, sx:0, sy:0, ox:0, oy:0, pid:null, tx:0, ty:0, scale:1 };
   const annot = { active:false, pointerId:null };
-  const host = { themeMode:'dark', annotMode:'none', previewSrc:'', zoomScale:1, imgW:0, imgH:0 };
+  const host = { themeMode:'dark', annotMode:'none', previewSrc:'', zoomScale:1, imgW:0, imgH:0, mosaicOptions:{ size:56, intensity:18, opacity:100 } };
   const dbg = { enabled:true, sessionId:'', seq:0 };
   let pendingTextAt = null; // {x,y} in image coordinates
 
@@ -114,7 +136,7 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
   }
 
   function applyCursorByMode(){
-    const mode = String(host.annotMode || 'none');
+    const mode = normalizeAnnotMode(host.annotMode);
     if (mode === 'none') {
       img.style.cursor = st.drag ? 'grabbing' : 'grab';
     } else if (mode === 'text') {
@@ -127,6 +149,33 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
   function applyTheme(mode){
     const tm = String(mode||'').toLowerCase()==='light'?'light':'dark';
     document.body.setAttribute('data-theme', tm);
+  }
+
+  function applyMosaicPanel(){
+    const show = normalizeAnnotMode(host.annotMode) === 'mosaic';
+    mosaicPanel.style.display = show ? '' : 'none';
+    if (!show) return;
+    const mo = host.mosaicOptions || {};
+    mpSize.value = String(mo.size || 56);
+    mpIntensity.value = String(mo.intensity || 18);
+    mpOpacity.value = String(mo.opacity || 100);
+    mpSizeV.textContent = mpSize.value;
+    mpIntensityV.textContent = mpIntensity.value;
+    mpOpacityV.textContent = mpOpacity.value + '%';
+  }
+
+  function postMosaicOptions(){
+    const payload = {
+      size: Number(mpSize.value || 56),
+      intensity: Number(mpIntensity.value || 18),
+      opacity: Number(mpOpacity.value || 100)
+    };
+    host.mosaicOptions = payload;
+    mpSizeV.textContent = String(payload.size);
+    mpIntensityV.textContent = String(payload.intensity);
+    mpOpacityV.textContent = String(payload.opacity) + '%';
+    post({ type:'action', name:'updateToolOptions', payload:{ tool:'mosaic', options: payload } });
+    logDebug(`TX mosaic opts size=${payload.size} intensity=${payload.intensity} opacity=${payload.opacity}`);
   }
 
   function setImage(src){
@@ -232,19 +281,27 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
   }
 
   // Pan only when not in annotation mode.
+  function normalizeAnnotMode(mode){
+    const m = String(mode || 'none').toLowerCase();
+    if (m === 'annot_text') return 'text';
+    if (m === 'annot_mosaic') return 'mosaic';
+    return m;
+  }
+
   function onAnnotPointerDown(ev){
     try {
-      logDebug(`RAW down target=${(ev.target && ev.target.id) ? ev.target.id : ev.target.tagName} btn=${ev.button} mode=${host.annotMode}`);
+      const mode = normalizeAnnotMode(host.annotMode);
+      logDebug(`RAW down target=${(ev.target && ev.target.id) ? ev.target.id : ev.target.tagName} btn=${ev.button} mode=${mode}`);
       ev.stopPropagation();
       if(ev.button !== 0) return;
       if (isTextBoxVisible()) return;
-      if (String(host.annotMode || 'none') === 'text') {
+      if (mode === 'text') {
         ev.preventDefault();
         const pt = imgPointFromClient(ev);
         showTextBoxAtClient(ev.clientX, ev.clientY, pt.x, pt.y);
         return;
       }
-      if (String(host.annotMode || 'none') !== 'none') {
+      if (mode !== 'none') {
         ev.preventDefault();
         annot.active = true;
         annot.pointerId = ev.pointerId;
@@ -266,7 +323,7 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
   preview.addEventListener('pointerdown', onAnnotPointerDown);
 
   function onAnnotPointerMove(ev){
-    if (String(host.annotMode || 'none') !== 'none') {
+    if (normalizeAnnotMode(host.annotMode) !== 'none') {
       if (!annot.active) return;
       if (annot.pointerId !== null && ev.pointerId !== annot.pointerId) return;
       sendPointer(ev, 'move');
@@ -280,7 +337,7 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
   preview.addEventListener('pointermove', onAnnotPointerMove);
 
   function stopDrag(ev){
-    if (String(host.annotMode || 'none') !== 'none') {
+    if (normalizeAnnotMode(host.annotMode) !== 'none') {
       if (!annot.active) return;
       if (ev && annot.pointerId !== null && ev.pointerId !== annot.pointerId) return;
       if (ev) sendPointer(ev, 'up');
@@ -304,6 +361,10 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
   preview.addEventListener('pointercancel', stopDrag);
   preview.addEventListener('lostpointercapture', stopDrag);
   img.addEventListener('dblclick', ()=>{ st.tx = 0; st.ty = 0; applyTransform(); });
+  [mpSize, mpIntensity, mpOpacity].forEach(el=>{
+    el.addEventListener('input', postMosaicOptions);
+    el.addEventListener('change', postMosaicOptions);
+  });
 
   window.chrome?.webview?.addEventListener('message',(ev)=>{
     let msg = ev.data||{};
@@ -321,11 +382,12 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
     if(msg.type==='state'){
       const p = msg.payload || msg;
       host.themeMode = p.themeMode || host.themeMode;
-      host.annotMode = p.annotMode || host.annotMode;
+      host.annotMode = normalizeAnnotMode(p.annotMode || host.annotMode);
       host.previewSrc = p.previewSrc || host.previewSrc;
       host.zoomScale = (typeof p.zoomScale === 'number' && isFinite(p.zoomScale)) ? p.zoomScale : host.zoomScale;
       host.imgW = Number(p.imageWidth || p.imgW || host.imgW || 0);
       host.imgH = Number(p.imageHeight || p.imgH || host.imgH || 0);
+      host.mosaicOptions = p.mosaicOptions || host.mosaicOptions;
       logDebug(`STATE mode=${host.annotMode} img=${Math.round(host.imgW)}x${Math.round(host.imgH)} zoom=${host.zoomScale}`);
       applyTheme(host.themeMode);
       if(p.previewSrc) setImage(p.previewSrc);
@@ -334,6 +396,7 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
         applyTransform();
       }
       applyCursorByMode();
+      applyMosaicPanel();
       return;
     }
     if (msg.type === 'event') {
@@ -356,6 +419,7 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
   post({ type:'event', name:'requestInit', payload:{} });
   post({ type:'event', name:'ready', payload:{} });
   applyCursorByMode();
+  applyMosaicPanel();
 })();
 </script>
 </body>
