@@ -769,6 +769,7 @@
       <button class="tab-btn" data-tab="prompts">提示词设置</button>
       <button class="tab-btn" data-tab="hotkeys">快捷键设置</button>
       <button class="tab-btn" data-tab="advanced">高级设置</button>
+      <button class="tab-btn" data-tab="screenshot">截图设置</button>
       <button class="tab-btn" data-tab="search">搜索设置</button>
     </aside>
     <section id="content">
@@ -844,6 +845,7 @@
       customPromptCategories: [],
       promptsSearchComposing: false,
       creatingPromptTemplate: false,
+      screenshotSubTab: "capture",
       cursorRulesTab: "general",
       appearanceActivationMode: "toolbar",
       fullText: {
@@ -884,6 +886,19 @@
         searchEngine: "deepseek", autoLoadSelectedText: false, autoUpdateVoiceInput: true,
         voiceSearchEnabledCategories: ["ai","cli","academic","baidu","image","audio","video","book","price","medical","cloud"],
         voiceSearchSelectedEnginesCsv: "deepseek",
+        screenshotConfig: {
+          captureMode: "selection",
+          outputTarget: "editor",
+          includeCursor: false,
+          autoCopyClipboard: true,
+          scalePercent: 100,
+          imageFormat: "png",
+          jpegQuality: 90,
+          saveFilenamePattern: "Screenshot_{yyyyMMdd_HHmmss}",
+          ocrTextLayoutMode: "keep",
+          ocrPunctuationMode: "keep",
+          ocrDirectCopyEnabled: false
+        },
         floatingToolbarButtons: [...DEFAULT_TOOLBAR_BUTTONS],
         floatingToolbarMenuItems: [...DEFAULT_TOOLBAR_MENUS],
         floatingToolbarButtonOptions: [...TOOLBAR_BUTTON_OPTIONS],
@@ -1468,6 +1483,27 @@
       d.voiceSearchEnabledCategories = cats;
       return d;
     }
+    function readScreenshot(d) {
+      const base = { ...(d.screenshotConfig || {}) };
+      base.captureMode = document.getElementById("ssCaptureMode")?.value || base.captureMode || "selection";
+      base.outputTarget = document.getElementById("ssOutputTarget")?.value || base.outputTarget || "editor";
+      base.includeCursor = !!document.getElementById("ssIncludeCursor")?.checked;
+      base.autoCopyClipboard = !!document.getElementById("ssAutoCopyClipboard")?.checked;
+      base.scalePercent = Number(document.getElementById("ssScalePercent")?.value || base.scalePercent || 100);
+      base.imageFormat = document.getElementById("ssImageFormat")?.value || base.imageFormat || "png";
+      base.jpegQuality = Number(document.getElementById("ssJpegQuality")?.value || base.jpegQuality || 90);
+      base.saveFilenamePattern = (document.getElementById("ssFilenamePattern")?.value || base.saveFilenamePattern || "Screenshot_{yyyyMMdd_HHmmss}").trim();
+      base.ocrTextLayoutMode = document.getElementById("ssOcrLayout")?.value || base.ocrTextLayoutMode || "keep";
+      base.ocrPunctuationMode = document.getElementById("ssOcrPunc")?.value || base.ocrPunctuationMode || "keep";
+      base.ocrDirectCopyEnabled = !!document.getElementById("ssOcrDirectCopy")?.checked;
+      if (!Number.isFinite(base.scalePercent) || base.scalePercent < 25) base.scalePercent = 25;
+      if (base.scalePercent > 300) base.scalePercent = 300;
+      if (!Number.isFinite(base.jpegQuality) || base.jpegQuality < 10) base.jpegQuality = 10;
+      if (base.jpegQuality > 100) base.jpegQuality = 100;
+      if (!base.saveFilenamePattern) base.saveFilenamePattern = "Screenshot_{yyyyMMdd_HHmmss}";
+      d.screenshotConfig = base;
+      return d;
+    }
     function syncThemeAndPopupFromDom() {
       try {
         const tm = document.getElementById("themeMode");
@@ -1480,7 +1516,7 @@
       syncActivationModeFromDom();
       syncThemeAndPopupFromDom();
       let d = { ...state.data, hotkeys: { ...state.data.hotkeys }, quickActions: [...state.data.quickActions], voiceSearchEnabledCategories: [...state.data.voiceSearchEnabledCategories], floatingToolbarButtons: [...(state.data.floatingToolbarButtons||[])], floatingToolbarMenuItems: [...(state.data.floatingToolbarMenuItems||[])] };
-      d = readGeneral(d); d = readAppearance(d); d = readPrompts(d); d = readHotkeys(d); d = readAdvanced(d); d = readSearch(d);
+      d = readGeneral(d); d = readAppearance(d); d = readPrompts(d); d = readHotkeys(d); d = readAdvanced(d); d = readScreenshot(d); d = readSearch(d);
       d.appearanceActivationMode = normalizeActivationMode(state.appearanceActivationMode);
       state.data.appearanceActivationMode = d.appearanceActivationMode;
       return d;
@@ -1651,6 +1687,7 @@
         { value:"prompts", label:"提示词设置" },
         { value:"hotkeys", label:"快捷键设置" },
         { value:"advanced", label:"高级设置" },
+        { value:"screenshot", label:"截图设置" },
         { value:"search", label:"搜索设置" }
       ];
       const monitorCount = Math.max(1, Number(d.monitorCount || 1));
@@ -1842,6 +1879,58 @@
         document.getElementById("btnExportCfg").addEventListener("click", () => post({ type: "invokeAction", op: "exportConfig" }));
         document.getElementById("btnImportCfg").addEventListener("click", () => post({ type: "invokeAction", op: "importConfig" }));
         document.getElementById("btnResetCfg").addEventListener("click", () => post({ type: "invokeAction", op: "resetToDefaults" }));
+      } else if (state.activeTab === "screenshot") {
+        const ss = { ...(d.screenshotConfig || {}) };
+        const capTabs = `<div class="subtabs">
+          <button class="subtab-btn ${state.screenshotSubTab === "capture" ? "active" : ""}" data-ss-subtab="capture">截图模式</button>
+          <button class="subtab-btn ${state.screenshotSubTab === "output" ? "active" : ""}" data-ss-subtab="output">输出与画质</button>
+          <button class="subtab-btn ${state.screenshotSubTab === "ocr" ? "active" : ""}" data-ss-subtab="ocr">OCR</button>
+        </div>`;
+        let body = "";
+        if (state.screenshotSubTab === "capture") {
+          body = `<div class="row"><div class="label">捕获模式</div><select id="ssCaptureMode">${optionsKV([
+            { value:"selection", label:"区域截图（Win+Shift+S）" },
+            { value:"fullscreen", label:"全屏" },
+            { value:"active_window", label:"活动窗口" },
+            { value:"monitor", label:"当前显示器" }
+          ], ss.captureMode || "selection")}</select></div>
+          <div class="row"><div class="label">包含鼠标指针</div><div><input id="ssIncludeCursor" type="checkbox" ${checked(!!ss.includeCursor)}></div></div>
+          <div class="row"><div class="label">缩放比例 (%)</div><input id="ssScalePercent" type="number" min="25" max="300" step="5" value="${esc(ss.scalePercent || 100)}"></div>`;
+        } else if (state.screenshotSubTab === "output") {
+          body = `<div class="row"><div class="label">输出目标</div><select id="ssOutputTarget">${optionsKV([
+            { value:"editor", label:"截图助手预览" },
+            { value:"clipboard", label:"仅复制到剪贴板" },
+            { value:"both", label:"预览 + 剪贴板" }
+          ], ss.outputTarget || "editor")}</select></div>
+          <div class="row"><div class="label">自动复制到剪贴板</div><div><input id="ssAutoCopyClipboard" type="checkbox" ${checked(ss.autoCopyClipboard !== false)}></div></div>
+          <div class="row"><div class="label">保存格式</div><select id="ssImageFormat">${optionsKV([
+            { value:"png", label:"PNG（无损）" },
+            { value:"jpg", label:"JPG（有损）" },
+            { value:"bmp", label:"BMP（大文件）" }
+          ], ss.imageFormat || "png")}</select></div>
+          <div class="row"><div class="label">JPG 质量 (10-100)</div><input id="ssJpegQuality" type="number" min="10" max="100" step="1" value="${esc(ss.jpegQuality || 90)}"></div>
+          <div class="row"><div class="label">保存文件名模板</div><input id="ssFilenamePattern" type="text" value="${esc(ss.saveFilenamePattern || "Screenshot_{yyyyMMdd_HHmmss}")}"></div>
+          <div class="hint">可用占位符：<code>{yyyyMMdd_HHmmss}</code></div>`;
+        } else {
+          body = `<div class="row"><div class="label">OCR 文本排版</div><select id="ssOcrLayout">${optionsKV([
+            { value:"keep", label:"保持原样" },
+            { value:"single_line", label:"合并单行" },
+            { value:"multi_line", label:"智能分行" }
+          ], ss.ocrTextLayoutMode || "keep")}</select></div>
+          <div class="row"><div class="label">OCR 标点处理</div><select id="ssOcrPunc">${optionsKV([
+            { value:"keep", label:"保持原样" },
+            { value:"halfwidth", label:"转半角" },
+            { value:"strip", label:"去除标点" }
+          ], ss.ocrPunctuationMode || "keep")}</select></div>
+          <div class="row"><div class="label">识别后直接复制</div><div><input id="ssOcrDirectCopy" type="checkbox" ${checked(!!ss.ocrDirectCopyEnabled)}></div></div>`;
+        }
+        panel.innerHTML = `<div class="card"><div class="title">截图设置</div>${capTabs}${body}<div class="inline" style="margin-top:8px;"><button class="btn" id="btnOpenLegacyScreenshot">打开原版截图设置</button></div></div>`;
+        document.querySelectorAll("[data-ss-subtab]").forEach(el => el.addEventListener("click", () => {
+          state.data = readFromUI();
+          state.screenshotSubTab = el.getAttribute("data-ss-subtab");
+          render();
+        }));
+        document.getElementById("btnOpenLegacyScreenshot").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacyTab", tab: "screenshot" }));
       } else {
         const selectedDefault = csvToArr(d.searchEngine || "deepseek");
         const selectedAiCli = csvToArr(d.voiceSearchSelectedEnginesCsv || "codex");
@@ -1987,7 +2076,7 @@
         if (Array.isArray(p.keybinderCommands)) state.data.keybinderCommands = p.keybinderCommands;
         if (Array.isArray(p.keybinderContextMenuLayout)) state.data.keybinderContextMenuLayout = p.keybinderContextMenuLayout;
         const startTab = (msg.payload || {}).defaultStartTab;
-        const validStartTabs = new Set(["general","appearance","prompts","hotkeys","advanced","search"]);
+        const validStartTabs = new Set(["general","appearance","prompts","hotkeys","advanced","screenshot","search"]);
         if (startTab && validStartTabs.has(startTab)) {
           state.activeTab = startTab;
           document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === startTab));

@@ -3377,8 +3377,31 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     global ClipboardDB
     
     try {
-        ; 寮瑰嚭淇濆瓨瀵硅瘽妗?
-        FilePath := FileSelect("S16", A_Desktop, "淇濆瓨鎴浘", "鍥剧墖鏂囦欢 (*.png; *.jpg; *.bmp)")
+        ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+        defFmt := StrLower(IniRead(ConfigFile, "Screenshot", "ImageFormat", "png"))
+        if (defFmt != "png" && defFmt != "jpg" && defFmt != "bmp")
+            defFmt := "png"
+        jpgQ := Integer(IniRead(ConfigFile, "Screenshot", "JpegQuality", "90"))
+        if (jpgQ < 10)
+            jpgQ := 10
+        if (jpgQ > 100)
+            jpgQ := 100
+        nameTpl := IniRead(ConfigFile, "Screenshot", "SaveFilenamePattern", "Screenshot_{yyyyMMdd_HHmmss}")
+        if (Trim(nameTpl) = "")
+            nameTpl := "Screenshot_{yyyyMMdd_HHmmss}"
+        ts := SubStr(A_Now, 1, 8) . "_" . SubStr(A_Now, 9, 6)
+        fileBase := StrReplace(nameTpl, "{yyyyMMdd_HHmmss}", ts)
+        fileBase := StrReplace(fileBase, "\", "_")
+        fileBase := StrReplace(fileBase, "/", "_")
+        fileBase := StrReplace(fileBase, ":", "_")
+        fileBase := StrReplace(fileBase, "*", "_")
+        fileBase := StrReplace(fileBase, "?", "_")
+        fileBase := StrReplace(fileBase, Chr(34), "_")
+        fileBase := StrReplace(fileBase, "<", "_")
+        fileBase := StrReplace(fileBase, ">", "_")
+        fileBase := StrReplace(fileBase, "|", "_")
+        defPath := A_Desktop . "\" . fileBase . "." . defFmt
+        FilePath := FileSelect("S16", defPath, "淇濆瓨鎴浘", "鍥剧墖鏂囦欢 (*.png; *.jpg; *.bmp)")
         if (!FilePath) {
             return
         }
@@ -3406,7 +3429,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             if (Ext = "png") {
                 Gdip_SaveBitmapToFile(this.ScreenshotEditorBitmap, FilePath)
             } else if (Ext = "jpg" || Ext = "jpeg") {
-                Gdip_SaveBitmapToFile(this.ScreenshotEditorBitmap, FilePath, 90)  ; Quality = 90
+                Gdip_SaveBitmapToFile(this.ScreenshotEditorBitmap, FilePath, jpgQ)
             } else {
                 Gdip_SaveBitmapToFile(this.ScreenshotEditorBitmap, FilePath)
             }

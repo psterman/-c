@@ -16,6 +16,24 @@ ScreenshotFlowRestoreFloatingToolbarIfNeeded() {
     }
 }
 
+ScreenshotFlowReadOutputTarget() {
+    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    out := "editor"
+    try out := Trim(StrLower(IniRead(cfg, "Screenshot", "OutputTarget", "editor")))
+    if (out != "editor" && out != "clipboard" && out != "both")
+        out := "editor"
+    return out
+}
+
+ScreenshotFlowReadCaptureMode() {
+    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    mode := "selection"
+    try mode := Trim(StrLower(IniRead(cfg, "Screenshot", "CaptureMode", "selection")))
+    if (mode != "selection" && mode != "fullscreen" && mode != "active_window" && mode != "monitor")
+        mode := "selection"
+    return mode
+}
+
 ; 执行截图并等待完成后弹出智能菜单
 ; fromFloatingDeferred: 为 true 时表示 FloatingToolbar_DeferredScreenshot 已在 Hide/Sleep 前原子地占用了 g_ExecuteScreenshotWithMenuBusy，此处不得因 busy 而 return
 ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
@@ -86,13 +104,24 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
         Sleep(80)
         ClipboardSeqBeforeShot := DllCall("GetClipboardSequenceNumber", "UInt")
 
-        ; 使用 Windows 10/11 的截图工具（Win+Shift+S）
+        ; 依据截图模式触发不同的系统捕获方式
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 5, "发送 Win+Shift+S 启动截图工具...", false)
+            UpdateDebugStep(DebugGui, 5, "触发截图模式...", false)
         }
-        Send("#+{s}")
+        captureMode := ScreenshotFlowReadCaptureMode()
+        if (captureMode = "fullscreen") {
+            Send("{PrintScreen}")
+        } else if (captureMode = "active_window") {
+            Send("!{PrintScreen}")
+        } else if (captureMode = "monitor") {
+            ; 当前版本先回退到系统区域截图（后续可扩展为直接抓取当前显示器）。
+            Send("#+{s}")
+            TrayTip("提示", "当前显示器模式暂使用区域截图，请框选目标显示器区域。", "Iconi 1")
+        } else {
+            Send("#+{s}")
+        }
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 5, "截图工具启动命令已发送", true)
+            UpdateDebugStep(DebugGui, 5, "截图触发命令已发送（" . captureMode . "）", true)
         }
         
         ; 等待用户完成截图（最多等待30秒）
@@ -259,6 +288,15 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
             Sleep(150)
             Sleep(200)
             ScreenshotFlowRestoreFloatingToolbarIfNeeded()
+            outputTarget := ScreenshotFlowReadOutputTarget()
+            if (outputTarget = "clipboard") {
+                if (DebugGui) {
+                    UpdateDebugStep(DebugGui, 13, "输出目标=仅剪贴板，跳过截图助手预览", true)
+                    SetTimer(DestroyDebugGui.Bind(DebugGui), -1200)
+                }
+                TrayTip("提示", "截图已复制到剪贴板", "Iconi 1")
+                return
+            }
             ; 弹出截图助手预览窗（替代智能菜单）
             if (DebugGui) {
                 UpdateDebugStep(DebugGui, 13, "调用 ShowScreenshotEditor() 显示助手窗口...", false)

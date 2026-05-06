@@ -537,6 +537,19 @@ ConfigWebView_BuildInitData() {
         "ios", IniRead(ConfigFile, "CursorRules", "ios", ""),
         "python", IniRead(ConfigFile, "CursorRules", "python", "")
     )
+    screenshotConfig := Map(
+        "captureMode", IniRead(ConfigFile, "Screenshot", "CaptureMode", "selection"),
+        "outputTarget", IniRead(ConfigFile, "Screenshot", "OutputTarget", "editor"),
+        "includeCursor", IniRead(ConfigFile, "Screenshot", "IncludeCursor", "0") = "1",
+        "autoCopyClipboard", IniRead(ConfigFile, "Screenshot", "AutoCopyClipboard", "1") != "0",
+        "scalePercent", Integer(IniRead(ConfigFile, "Screenshot", "ScalePercent", "100")),
+        "imageFormat", IniRead(ConfigFile, "Screenshot", "ImageFormat", "png"),
+        "jpegQuality", Integer(IniRead(ConfigFile, "Screenshot", "JpegQuality", "90")),
+        "saveFilenamePattern", IniRead(ConfigFile, "Screenshot", "SaveFilenamePattern", "Screenshot_{yyyyMMdd_HHmmss}"),
+        "ocrTextLayoutMode", IniRead(ConfigFile, "Settings", "ScreenshotOCRTextLayoutMode", "keep"),
+        "ocrPunctuationMode", IniRead(ConfigFile, "Settings", "ScreenshotOCRPunctuationMode", "keep"),
+        "ocrDirectCopyEnabled", IniRead(ConfigFile, "Settings", "ScreenshotOCRDirectCopyEnabled", "0") = "1"
+    )
     cfgPayload := Map(
         "cursorPath", CursorPath,
         "capslockHoldTimeSeconds", CapsLockHoldTimeSeconds,
@@ -573,6 +586,7 @@ ConfigWebView_BuildInitData() {
         "autoUpdateVoiceInput", AutoUpdateVoiceInput,
         "voiceSearchEnabledCategories", cats,
         "voiceSearchSelectedEnginesCsv", selectedCsv,
+        "screenshotConfig", screenshotConfig,
         "floatingToolbarButtons", toolbarButtons,
         "floatingToolbarMenuItems", toolbarMenus,
         "floatingToolbarButtonOptions", FloatingToolbarButtonOptions,
@@ -628,6 +642,19 @@ ConfigWebView_BuildInitDataSafe() {
             "autoUpdateVoiceInput", true,
             "voiceSearchEnabledCategories", ["ai","cli","academic","baidu","image","audio","video","book","price","medical","cloud"],
             "voiceSearchSelectedEnginesCsv", "deepseek",
+            "screenshotConfig", Map(
+                "captureMode", "selection",
+                "outputTarget", "editor",
+                "includeCursor", false,
+                "autoCopyClipboard", true,
+                "scalePercent", 100,
+                "imageFormat", "png",
+                "jpegQuality", 90,
+                "saveFilenamePattern", "Screenshot_{yyyyMMdd_HHmmss}",
+                "ocrTextLayoutMode", "keep",
+                "ocrPunctuationMode", "keep",
+                "ocrDirectCopyEnabled", false
+            ),
             "floatingToolbarButtons", ["Search","Record","Prompt","NewPrompt","Screenshot","Settings","VirtualKeyboard"],
             "floatingToolbarMenuItems", ["ToggleToolbar","MinimizeToEdge","ResetScale","SearchCenter","Clipboard","OpenConfig","HideToolbar","ReloadScript","ExitApp"],
             "floatingToolbarButtonOptions", [
@@ -744,7 +771,7 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         if (payload.Has("capsLockHoldVkEnabled"))
             NewCapsLockHoldVk := payload["capsLockHoldVkEnabled"] ? true : false
         NewDefaultTab := payload.Get("defaultStartTab", "general")
-        validTabs := Map("general",1, "appearance",1, "prompts",1, "hotkeys",1, "advanced",1, "search",1)
+        validTabs := Map("general",1, "appearance",1, "prompts",1, "hotkeys",1, "advanced",1, "screenshot",1, "search",1)
         if !validTabs.Has(NewDefaultTab)
             NewDefaultTab := "general"
         NewTheme := ThemeMode
@@ -808,6 +835,63 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         NewAutoUpdate := payload.Get("autoUpdateVoiceInput", true) ? true : false
         NewCaptureHotkey := Trim(payload.Get("promptQuickCaptureHotkey", ""))
         NewVoiceEngineCsv := Trim(payload.Get("voiceSearchSelectedEnginesCsv", ""))
+        NewScreenshotCfg := Map(
+            "captureMode", "selection",
+            "outputTarget", "editor",
+            "includeCursor", false,
+            "autoCopyClipboard", true,
+            "scalePercent", 100,
+            "imageFormat", "png",
+            "jpegQuality", 90,
+            "saveFilenamePattern", "Screenshot_{yyyyMMdd_HHmmss}",
+            "ocrTextLayoutMode", "keep",
+            "ocrPunctuationMode", "keep",
+            "ocrDirectCopyEnabled", false
+        )
+        if (payload.Has("screenshotConfig") && payload["screenshotConfig"] is Map) {
+            sc := payload["screenshotConfig"]
+            cm := Trim(String(sc.Get("captureMode", "selection")))
+            if (cm != "selection" && cm != "fullscreen" && cm != "active_window" && cm != "monitor")
+                cm := "selection"
+            ot := Trim(String(sc.Get("outputTarget", "editor")))
+            if (ot != "editor" && ot != "clipboard" && ot != "both")
+                ot := "editor"
+            sf := Trim(String(sc.Get("imageFormat", "png")))
+            if (sf != "png" && sf != "jpg" && sf != "bmp")
+                sf := "png"
+            sp := Integer(sc.Get("scalePercent", 100))
+            if (sp < 25)
+                sp := 25
+            if (sp > 300)
+                sp := 300
+            jq := Integer(sc.Get("jpegQuality", 90))
+            if (jq < 10)
+                jq := 10
+            if (jq > 100)
+                jq := 100
+            pat := Trim(String(sc.Get("saveFilenamePattern", "Screenshot_{yyyyMMdd_HHmmss}")))
+            if (pat = "")
+                pat := "Screenshot_{yyyyMMdd_HHmmss}"
+            tl := Trim(String(sc.Get("ocrTextLayoutMode", "keep")))
+            if (tl != "keep" && tl != "single_line" && tl != "multi_line")
+                tl := "keep"
+            pm := Trim(String(sc.Get("ocrPunctuationMode", "keep")))
+            if (pm != "keep" && pm != "halfwidth" && pm != "strip")
+                pm := "keep"
+            NewScreenshotCfg := Map(
+                "captureMode", cm,
+                "outputTarget", ot,
+                "includeCursor", sc.Get("includeCursor", false) ? true : false,
+                "autoCopyClipboard", sc.Get("autoCopyClipboard", true) ? true : false,
+                "scalePercent", sp,
+                "imageFormat", sf,
+                "jpegQuality", jq,
+                "saveFilenamePattern", pat,
+                "ocrTextLayoutMode", tl,
+                "ocrPunctuationMode", pm,
+                "ocrDirectCopyEnabled", sc.Get("ocrDirectCopyEnabled", false) ? true : false
+            )
+        }
         NewVoiceCats := []
         if (payload.Has("voiceSearchEnabledCategories") && payload["voiceSearchEnabledCategories"] is Array) {
             for c in payload["voiceSearchEnabledCategories"] {
@@ -942,6 +1026,17 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         IniWrite(AutoUpdateVoiceInput ? "1" : "0", ConfigFile, "Settings", "AutoUpdateVoiceInput")
         IniWrite(JoinArray(VoiceSearchEnabledCategories, ","), ConfigFile, "Settings", "VoiceSearchEnabledCategories")
         IniWrite(JoinArray(VoiceSearchSelectedEngines, ","), ConfigFile, "Settings", "VoiceSearchSelectedEngines")
+        IniWrite(NewScreenshotCfg["captureMode"], ConfigFile, "Screenshot", "CaptureMode")
+        IniWrite(NewScreenshotCfg["outputTarget"], ConfigFile, "Screenshot", "OutputTarget")
+        IniWrite(NewScreenshotCfg["includeCursor"] ? "1" : "0", ConfigFile, "Screenshot", "IncludeCursor")
+        IniWrite(NewScreenshotCfg["autoCopyClipboard"] ? "1" : "0", ConfigFile, "Screenshot", "AutoCopyClipboard")
+        IniWrite(String(NewScreenshotCfg["scalePercent"]), ConfigFile, "Screenshot", "ScalePercent")
+        IniWrite(NewScreenshotCfg["imageFormat"], ConfigFile, "Screenshot", "ImageFormat")
+        IniWrite(String(NewScreenshotCfg["jpegQuality"]), ConfigFile, "Screenshot", "JpegQuality")
+        IniWrite(NewScreenshotCfg["saveFilenamePattern"], ConfigFile, "Screenshot", "SaveFilenamePattern")
+        IniWrite(NewScreenshotCfg["ocrTextLayoutMode"], ConfigFile, "Settings", "ScreenshotOCRTextLayoutMode")
+        IniWrite(NewScreenshotCfg["ocrPunctuationMode"], ConfigFile, "Settings", "ScreenshotOCRPunctuationMode")
+        IniWrite(NewScreenshotCfg["ocrDirectCopyEnabled"] ? "1" : "0", ConfigFile, "Settings", "ScreenshotOCRDirectCopyEnabled")
         IniWrite(FTB_ItemsToCsv(FloatingToolbarButtonItems), ConfigFile, "Settings", "FloatingToolbarButtonItems")
         IniWrite(NewCursorRules["general"], ConfigFile, "CursorRules", "general")
         IniWrite(NewCursorRules["web"], ConfigFile, "CursorRules", "web")
