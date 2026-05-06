@@ -24,11 +24,6 @@ body[data-theme="light"]{
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:var(--text);font:13px "Segoe UI","Microsoft YaHei UI",sans-serif;overflow:hidden}
 #root{height:100%;display:flex;flex-direction:column}
-#header{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 10px;border-bottom:1px solid var(--panel-border);background:linear-gradient(180deg,rgba(255,122,26,.08),transparent);user-select:none}
-#title{font-weight:600}
-#winbtns{display:flex;gap:6px}
-.wb{width:24px;height:24px;border:1px solid var(--panel-border);border-radius:6px;background:transparent;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
-.wb:hover{background:rgba(255,122,26,.16)}
 #previewWrap{position:relative;flex:1;padding:10px}
 #preview{
   width:100%;height:100%;display:flex;align-items:center;justify-content:center;
@@ -47,14 +42,6 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
 </head>
 <body>
 <div id="root">
-  <div id="header">
-    <div id="title">截图编辑</div>
-    <div id="winbtns">
-      <button class="wb" id="wb-min" title="最小化">─</button>
-      <button class="wb" id="wb-max" title="最大化/还原">□</button>
-      <button class="wb" id="wb-close" title="关闭">✕</button>
-    </div>
-  </div>
   <div id="previewWrap">
     <div id="preview"><div id="empty">等待截图内容...</div><img id="img" style="display:none"></div>
   </div>
@@ -66,21 +53,22 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
   const img = document.getElementById('img');
   const empty = document.getElementById('empty');
   const ctx = document.getElementById('ctx');
-  const header = document.getElementById('header');
   const preview = document.getElementById('preview');
-  const st = { scale:1, tx:0, ty:0, drag:false, sx:0, sy:0, ox:0, oy:0 };
+  const st = { drag:false, sx:0, sy:0, ox:0, oy:0, pid:null, tx:0, ty:0, scale:1 };
+
+  function applyTransform(){
+    img.style.transform = `translate(${st.tx}px, ${st.ty}px) scale(${st.scale})`;
+  }
 
   function applyTheme(mode){
     const tm = String(mode||'').toLowerCase()==='light'?'light':'dark';
     document.body.setAttribute('data-theme', tm);
   }
-  function applyTransform(){
-    img.style.transform = `translate(${st.tx}px, ${st.ty}px) scale(${st.scale})`;
-  }
   function setImage(src){
     if(!src){ img.style.display='none'; empty.style.display=''; return; }
     img.src = src; img.style.display=''; empty.style.display='none';
-    st.scale = 1; st.tx = 0; st.ty = 0; applyTransform();
+    st.tx = 0; st.ty = 0; st.scale = 1;
+    applyTransform();
   }
   function renderMenu(items, x, y){
     if(!Array.isArray(items) || !items.length){ ctx.style.display='none'; return; }
@@ -104,53 +92,48 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
   preview.addEventListener('wheel', (ev)=>{
     ev.preventDefault();
     const d = ev.deltaY < 0 ? 1 : -1;
-    st.scale = Math.max(0.2, Math.min(8, st.scale * (d > 0 ? 1.1 : 0.9)));
-    applyTransform();
     post({action:'zoom', delta:d});
   }, {passive:false});
 
   img.addEventListener('pointerdown', (ev)=>{
     if(ev.button !== 0) return;
+    ev.preventDefault();
     st.drag = true; st.sx = ev.clientX; st.sy = ev.clientY; st.ox = st.tx; st.oy = st.ty;
+    st.pid = ev.pointerId;
+    try { img.setPointerCapture(ev.pointerId); } catch(_) {}
     img.classList.add('dragging');
   });
-  window.addEventListener('pointermove', (ev)=>{
-    if(!st.drag) return;
+  img.addEventListener('pointermove', (ev)=>{
+    if(!st.drag || ev.pointerId !== st.pid) return;
     st.tx = st.ox + (ev.clientX - st.sx);
     st.ty = st.oy + (ev.clientY - st.sy);
     applyTransform();
   });
-  window.addEventListener('pointerup', ()=>{
+  function stopDrag(ev){
+    if (!st.drag) return;
+    if (ev && st.pid !== null && ev.pointerId !== st.pid) return;
     st.drag = false; img.classList.remove('dragging');
-  });
-  img.addEventListener('dblclick', ()=>{
-    st.scale = 1; st.tx = 0; st.ty = 0; applyTransform();
-  });
-
-  preview.addEventListener('pointerdown', (ev)=>{
-    post({action:'previewPointer', kind:'down', x:ev.offsetX, y:ev.offsetY, button:ev.button});
-  });
-  preview.addEventListener('pointermove', (ev)=>{
-    post({action:'previewPointer', kind:'move', x:ev.offsetX, y:ev.offsetY, button:ev.button});
-  });
-  preview.addEventListener('pointerup', (ev)=>{
-    post({action:'previewPointer', kind:'up', x:ev.offsetX, y:ev.offsetY, button:ev.button});
-  });
-
-  header.addEventListener('mousedown', (ev)=>{
-    if(ev.button !== 0) return;
-    if(ev.target.closest('.wb')) return;
-    post({action:'windowCmd', cmd:'drag'});
-  });
-  document.getElementById('wb-min').onclick = ()=> post({action:'windowCmd', cmd:'min'});
-  document.getElementById('wb-max').onclick = ()=> post({action:'windowCmd', cmd:'max'});
-  document.getElementById('wb-close').onclick = ()=> post({action:'windowCmd', cmd:'close'});
+    try { if (st.pid !== null) img.releasePointerCapture(st.pid); } catch(_) {}
+    st.pid = null;
+  }
+  img.addEventListener('pointerup', stopDrag);
+  img.addEventListener('pointercancel', stopDrag);
+  img.addEventListener('lostpointercapture', stopDrag);
+  img.addEventListener('dblclick', ()=>{ st.tx = 0; st.ty = 0; applyTransform(); });
 
   window.chrome?.webview?.addEventListener('message',(ev)=>{
     let msg = ev.data||{};
     if(typeof msg==='string'){ try{ msg=JSON.parse(msg);}catch{return;} }
     if(msg.type==='init'){ applyTheme(msg.themeMode); return; }
-    if(msg.type==='state'){ applyTheme(msg.themeMode); if(msg.previewSrc) setImage(msg.previewSrc); return; }
+    if(msg.type==='state'){
+      applyTheme(msg.themeMode);
+      if(msg.previewSrc) setImage(msg.previewSrc);
+      if(typeof msg.zoomScale === 'number' && isFinite(msg.zoomScale)){
+        st.scale = Math.max(0.05, msg.zoomScale);
+        applyTransform();
+      }
+      return;
+    }
     if(msg.type==='contextMenu'){ renderMenu(msg.items||[], Number(msg.x||0), Number(msg.y||0)); return; }
   });
 

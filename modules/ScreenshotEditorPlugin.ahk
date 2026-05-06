@@ -573,6 +573,7 @@ class ScreenshotEditorPlugin {
         
         ; 娣诲姞閿洏浜嬩欢
         EditorGui.OnEvent("Escape", (*) => this.CloseScreenshotEditor())
+        EditorGui.OnEvent("Size", ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotEditor_OnSize"))
         
         ; 涓庡叏灞€鍚屾锛氭鍚?CloseScreenshotEditor / 鍚屾宸ュ叿鏍忕瓑渚濊禆 this.GuiID_ScreenshotEditor
         this.GuiID_ScreenshotEditor := EditorGui
@@ -1230,7 +1231,8 @@ class ScreenshotEditorPlugin {
     try this.ScreenshotPreviewWV2.PostWebMessageAsJson(WebView_DumpJson(Map(
         "type","state",
         "themeMode", this.ScreenshotToolbarGetThemeMode(),
-        "previewSrc", this.ScreenshotPreviewPendingSrc
+        "previewSrc", this.ScreenshotPreviewPendingSrc,
+        "zoomScale", this.ScreenshotEditorZoomScale
     )))
 }
 
@@ -1241,10 +1243,10 @@ class ScreenshotEditorPlugin {
     if !(b is Map)
         return
     rc := WebView2.RECT()
-    rc.x := Integer(b["x"])
-    rc.y := Integer(b["y"])
-    rc.w := Integer(b["w"])
-    rc.h := Integer(b["h"])
+    rc.left := Integer(b["x"])
+    rc.top := Integer(b["y"])
+    rc.right := Integer(b["x"]) + Integer(b["w"])
+    rc.bottom := Integer(b["y"]) + Integer(b["h"])
     try this.ScreenshotPreviewWV2Ctrl.Bounds := rc
 }
 
@@ -1664,10 +1666,10 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             ; 鏄剧ず宸ュ叿鏍忓拰鏍囬鏍?
             this.ShowScreenshotEditorToolbar()
             this.ScreenshotToolbar_SendState()
-            TrayTip("鎻愮ず", "宸叉樉绀哄伐鍏锋爮鍜屾爣棰樻爮", "Iconi 1")
+            TrayTip("提示", "已显示工具栏和标题栏", "Iconi 1")
         }
     } catch as e {
-        TrayTip("閿欒", "鍒囨崲鏄剧ず鐘舵€佸け璐? " . e.Message, "Iconx 2")
+        TrayTip("错误", "切换显示状态失败: " . e.Message, "Iconx 2")
     }
 }
 
@@ -1689,7 +1691,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         this.ScreenshotEditorApplyZoom(this.ScreenshotEditorZoomScale, false)
         this.ScreenshotToolbar_SendState()
     } catch as e {
-        TrayTip("閿欒", "鏄剧ず宸ュ叿鏍忓け璐? " . e.Message, "Iconx 2")
+        TrayTip("错误", "显示工具栏失败: " . e.Message, "Iconx 2")
     }
 }
 
@@ -1715,8 +1717,6 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
 
     try {
         if !(IsObject(this.GuiID_ScreenshotEditor) && this.GuiID_ScreenshotEditor != 0)
-            return
-        if (!this.ScreenshotEditorPreviewPic)
             return
 
         if (!this.ScreenshotEditorBaseWidth || !this.ScreenshotEditorBaseHeight) {
@@ -1777,9 +1777,16 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         if (winY < vT)
             winY := vT
 
-        ; 鍏抽敭淇锛氫粠鍘熷浘閲嶉噰鏍峰綋鍓嶅昂瀵革紝閬垮厤浠呮媺浼告帶浠跺鑷寸殑鈥滄埅鏂?澶辩湡鎰熲€?
-        this.ScreenshotEditorRefreshScaledPreview(drawW, drawH)
-        this.ScreenshotEditorPreviewPic.Move(0, previewY, drawW, drawH)
+        if (this.ScreenshotUseUnifiedWebView) {
+            ; Unified WebView 模式：图片与窗口同步缩放。
+            this.ScreenshotPreviewBounds := Map("x", 0, "y", previewY, "w", drawW, "h", drawH)
+            this.ScreenshotPreviewShell_ApplyBounds()
+            this.ScreenshotPreviewShell_SendState()
+        } else {
+            ; 鍏抽敭淇锛氫粠鍘熷浘閲嶉噰鏍峰綋鍓嶅昂瀵革紝閬垮厤浠呮媺浼告帶浠跺鑷寸殑鈥滄埅鏂?澶辩湡鎰熲€?
+            this.ScreenshotEditorRefreshScaledPreview(drawW, drawH)
+            this.ScreenshotEditorPreviewPic.Move(0, previewY, drawW, drawH)
+        }
         this.GuiID_ScreenshotEditor.Show("w" . winW . " h" . winH . " x" . winX . " y" . winY)
 
         if (this.ScreenshotEditorToolbarVisible && this.GuiID_ScreenshotToolbar != 0) {
@@ -1794,7 +1801,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         if (showTip)
             this.ScreenshotEditorShowZoomTip(this.ScreenshotEditorZoomScale, drawW, drawH)
     } catch as e {
-        TrayTip("缂╂斁", "缂╂斁澶辫触: " . e.Message, "Iconx 1")
+        TrayTip("缩放", "缩放失败: " . e.Message, "Iconx 1")
     }
 }
 
@@ -1843,19 +1850,32 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     }
 }
 
+    static ScreenshotEditor_OnSize(guiObj, minMax, width, height) {
+    try {
+        if !(this.ScreenshotUseUnifiedWebView)
+            return
+        if !(this.ScreenshotPreviewWV2Ctrl)
+            return
+        this.ScreenshotPreviewBounds := Map("x", 0, "y", 0, "w", width, "h", height)
+        this.ScreenshotPreviewShell_ApplyBounds()
+        try this.ScreenshotPreviewWV2Ctrl.NotifyParentWindowPositionChanged()
+    } catch {
+    }
+}
+
     static ScreenshotEditorShowZoomTip(scale, width, height) {
 
     try {
         if !(IsObject(this.GuiID_ScreenshotZoomTip) && this.GuiID_ScreenshotZoomTip != 0) {
             this.GuiID_ScreenshotZoomTip := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale")
-            this.GuiID_ScreenshotZoomTip.BackColor := "0b0b0b"
-            this.GuiID_ScreenshotZoomTip.MarginX := 10
-            this.GuiID_ScreenshotZoomTip.MarginY := 6
-            this.ScreenshotZoomTipTextCtrl := this.GuiID_ScreenshotZoomTip.Add("Text", "cFF8A00", "")
-            this.ScreenshotZoomTipTextCtrl.SetFont("s10 Bold", "Segoe UI")
+            this.GuiID_ScreenshotZoomTip.BackColor := "1A2433"
+            this.GuiID_ScreenshotZoomTip.MarginX := 12
+            this.GuiID_ScreenshotZoomTip.MarginY := 8
+            this.ScreenshotZoomTipTextCtrl := this.GuiID_ScreenshotZoomTip.Add("Text", "cEAF2FF", "")
+            this.ScreenshotZoomTipTextCtrl.SetFont("s9", "Segoe UI")
         }
 
-        txt := "缂╂斁 " . Round(scale * 100) . "%  |  灏哄 " . width . " x " . height
+        txt := "缩放 " . Round(scale * 100) . "% | " . width . "×" . height
         this.ScreenshotZoomTipTextCtrl.Value := txt
         this.GuiID_ScreenshotZoomTip.Show("NA AutoSize")
 
@@ -1863,6 +1883,16 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         WinGetPos(, , &tw, &th, "ahk_id " . this.GuiID_ScreenshotZoomTip.Hwnd)
         tx := ex + ew - tw - 12
         ty := ey + (this.ScreenshotEditorToolbarVisible ? this.ScreenshotEditorTitleBarHeight + 8 : 8)
+        vL := SysGet(76), vT := SysGet(77), vW := SysGet(78), vH := SysGet(79)
+        vR := vL + vW, vB := vT + vH
+        if (tx < vL + 6)
+            tx := vL + 6
+        if (ty < vT + 6)
+            ty := vT + 6
+        if (tx + tw > vR - 6)
+            tx := vR - tw - 6
+        if (ty + th > vB - 6)
+            ty := vB - th - 6
         this.GuiID_ScreenshotZoomTip.Show("NA x" . tx . " y" . ty)
 
         SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotEditorHideZoomTip"), -1200)
@@ -2471,17 +2501,17 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
 
     panel.Add("Text", "x12 y8 w220 h20 cFF9D3A", "屏幕取色器")
     this.ScreenshotColorPickerMagnifierPic := panel.Add("Picture", "x12 y30 w180 h180 0xE Border")
-    this.ScreenshotColorPickerCurrentText := panel.Add("Text", "x200 y32 w220 h78 cE8EDF2", "褰撳墠棰滆壊")
+    this.ScreenshotColorPickerCurrentText := panel.Add("Text", "x200 y32 w220 h78 cE8EDF2", "当前颜色")
     this.ScreenshotColorPickerCurrentText.SetFont("s9", "Consolas")
     this.ScreenshotColorPickerCompareText := panel.Add("Text", "x200 y114 w220 h46 cAAB7C4", "对比: 未设置")
 
-    btnCopyHex := panel.Add("Button", "x12 y220 w84 h26", "澶嶅埗HEX")
-    btnCopyRgb := panel.Add("Button", "x104 y220 w84 h26", "澶嶅埗RGB")
-    btnAnchor := panel.Add("Button", "x200 y220 w84 h26", "璁句负瀵规瘮")
-    btnHistory := panel.Add("Button", "x292 y220 w84 h26", "鍔犲叆鍘嗗彶")
+    btnCopyHex := panel.Add("Button", "x12 y220 w84 h26", "复制HEX")
+    btnCopyRgb := panel.Add("Button", "x104 y220 w84 h26", "复制RGB")
+    btnAnchor := panel.Add("Button", "x200 y220 w84 h26", "设为对比")
+    btnHistory := panel.Add("Button", "x292 y220 w84 h26", "加入历史")
     btnClose := panel.Add("Button", "x384 y220 w36 h26", "×")
 
-    panel.Add("Text", "x12 y254 w170 h18 c9DB0C2", "鍘嗗彶棰滆壊锛堟渶鏂板湪鍓嶏級")
+    panel.Add("Text", "x12 y254 w240 h18 c9DB0C2", "历史颜色（最新在前）")
     this.ScreenshotColorPickerHistoryEdit := panel.Add("Edit", "x12 y274 w408 h166 ReadOnly -Wrap -VScroll cDCE9F7 Background101820", "")
     this.ScreenshotColorPickerHistoryEdit.SetFont("s10", "Consolas")
 
@@ -2556,7 +2586,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         this.ScreenshotColorPickerCurrent := colorInfo
         if (this.ScreenshotColorPickerCurrentText) {
             this.ScreenshotColorPickerCurrentText.Value :=
-                "灞忓箷: (" . mx . ", " . my . ")`n"
+                "屏幕坐标: (" . mx . ", " . my . ")`n"
                 . "HEX: " . colorInfo["hex"] . "`n"
                 . "hex: " . colorInfo["hex_lower"] . "`n"
                 . "RGB: " . colorInfo["rgb"]
@@ -2589,13 +2619,13 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
 
     static ScreenshotColorPickerBuildCompareText(current, anchor) {
     if !(anchor is Map) || anchor.Count = 0
-        return "瀵规瘮: 鏈缃紙鐐瑰嚮鈥滆涓哄姣斺€濓級"
+        return "对比: 未设置（点击“设为对比”）"
     dr := current["r"] - anchor["r"]
     dg := current["g"] - anchor["g"]
     db := current["b"] - anchor["b"]
     distance := Round(Sqrt(dr * dr + dg * dg + db * db), 2)
-    return "瀵规瘮鍩哄噯: " . anchor["hex"] . "`n"
-        . "螖RGB: (" . dr . ", " . dg . ", " . db . ")  |  璺濈: " . distance
+    return "对比基准: " . anchor["hex"] . "`n"
+        . "ΔRGB: (" . dr . ", " . dg . ", " . db . ")  |  距离: " . distance
 }
 
     static ScreenshotColorPickerCaptureScreenBitmapNative(x, y, w, h) {
