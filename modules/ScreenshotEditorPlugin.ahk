@@ -1383,6 +1383,10 @@ class ScreenshotEditorPlugin {
             this.ScreenshotEditor_AddText(Number(p.Get("x", 0)), Number(p.Get("y", 0)), String(p.Get("text","")))
             return
     }
+    if (t = "action" && name = "updateText") {
+            this.ScreenshotEditor_UpdateText(String(p.Get("id", "")), String(p.Get("text","")))
+            return
+    }
     if (t = "action" && name = "updateToolOptions") {
             tool := String(p.Get("tool", ""))
             opts := p.Get("options", 0)
@@ -1412,6 +1416,20 @@ class ScreenshotEditorPlugin {
     }
     if (t = "event" && name = "wheel") {
             d := Number(p.Get("delta", 0))
+            if (this.ScreenshotEditor_NormalizeAnnotMode(this.ScreenshotAnnotMode) = "text" && this.ScreenshotSelectedObjectId != "") {
+                idx := this.ScreenshotDoc_FindObjectIndexById(this.ScreenshotSelectedObjectId)
+                if (idx > 0 && idx <= this.ScreenshotDocObjects.Length) {
+                    obj := this.ScreenshotDocObjects[idx]
+                    if (obj is Map && String(obj.Get("type","")) = "text") {
+                        step := (d > 0) ? 1.1 : 0.9
+                        obj["w"] := Max(40, Round(Number(obj.Get("w", 80)) * step))
+                        obj["h"] := Max(24, Round(Number(obj.Get("h", 34)) * step))
+                        this.ScreenshotDocObjects[idx] := obj
+                        this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, true, "scale_text")
+                        return
+                    }
+                }
+            }
             if (d > 0)
                 this.ScreenshotEditorZoomWithWheel(1)
             else if (d < 0)
@@ -1446,9 +1464,16 @@ class ScreenshotEditorPlugin {
         "annotMode", this.ScreenshotAnnotMode,
         "imageWidth", this.ScreenshotEditorBaseWidth,
         "imageHeight", this.ScreenshotEditorBaseHeight,
-        "mosaicOptions", this.ScreenshotMosaicOptions
+        "mosaicOptions", this.ScreenshotMosaicOptions,
+        "selectedId", this.ScreenshotSelectedObjectId
     )
     this._WV_Send(this.ScreenshotPreviewWV2, "state", payload)
+}
+
+    static ScreenshotPreviewShell_SendEvent(name, payload := "") {
+    if !this.ScreenshotPreviewWV2
+        return
+    this._WV_Send(this.ScreenshotPreviewWV2, "event", payload, String(name))
 }
 
     static ScreenshotPreviewShell_ApplyBounds() {
@@ -1722,6 +1747,15 @@ class ScreenshotEditorPlugin {
     return Sqrt((px - qx) * (px - qx) + (py - qy) * (py - qy))
 }
 
+    static ScreenshotEditor_NormalizeAnnotMode(mode) {
+    m := StrLower(Trim(String(mode)))
+    if (m = "annot_text")
+        return "text"
+    if (m = "annot_mosaic")
+        return "mosaic"
+    return m
+}
+
     static ScreenshotDoc_HitTestArrow(x, y) {
     if !(this.ScreenshotDocObjects is Array) || this.ScreenshotDocObjects.Length = 0
         return Map("kind", "none")
@@ -1742,6 +1776,44 @@ class ScreenshotEditorPlugin {
         dl := this.ScreenshotDoc_DistancePointToSegment(x, y, x1, y1, x2, y2)
         if (dl <= threshold)
             return Map("kind", "line", "id", obj["id"], "index", idx)
+    }
+    return Map("kind", "none")
+}
+
+    static ScreenshotDoc_MeasureTextBox(text, fontSize) {
+    t := String(text)
+    fs := Max(10, Integer(fontSize))
+    lines := StrSplit(StrReplace(t, "`r", ""), "`n")
+    lineCount := Max(1, lines.Length)
+    maxChars := 1
+    for _, ln in lines {
+        l := StrLen(String(ln))
+        if (l > maxChars)
+            maxChars := l
+    }
+    ; Approximate metrics are enough for hit-test and resize handle behavior.
+    w := Max(80, Round(maxChars * fs * 0.62) + 16)
+    h := Max(34, Round(lineCount * fs * 1.35) + 14)
+    return Map("w", w, "h", h)
+}
+
+    static ScreenshotDoc_HitTestText(x, y) {
+    if !(this.ScreenshotDocObjects is Array) || this.ScreenshotDocObjects.Length = 0
+        return Map("kind", "none")
+    handleThreshold := 14
+    loop this.ScreenshotDocObjects.Length {
+        idx := this.ScreenshotDocObjects.Length - A_Index + 1
+        obj := this.ScreenshotDocObjects[idx]
+        if !(obj is Map) || String(obj.Get("type","")) != "text"
+            continue
+        tx := Number(obj.Get("x", 0)), ty := Number(obj.Get("y", 0))
+        tw := Max(40, Number(obj.Get("w", 80))), th := Max(24, Number(obj.Get("h", 34)))
+        if (x >= tx && x <= tx + tw && y >= ty && y <= ty + th) {
+            brx := tx + tw, bry := ty + th
+            if (Abs(x - brx) <= handleThreshold && Abs(y - bry) <= handleThreshold)
+                return Map("kind", "handle_resize", "id", obj["id"], "index", idx)
+            return Map("kind", "box", "id", obj["id"], "index", idx)
+        }
     }
     return Map("kind", "none")
 }
@@ -1779,6 +1851,39 @@ class ScreenshotEditorPlugin {
     }
 }
 
+    static ScreenshotDoc_DrawText(pG, obj, selected := false) {
+    tx := Number(obj.Get("x", 0)), ty := Number(obj.Get("y", 0))
+    tw := Max(40, Number(obj.Get("w", 80))), th := Max(24, Number(obj.Get("h", 34)))
+    text := String(obj.Get("text", ""))
+    if (text = "")
+        return
+    color := Integer(obj.Get("color", this.ScreenshotDrawColor))
+    fs := Max(10, Integer(obj.Get("size", Integer(this.ScreenshotTextOptions.Get("size", 22)))))
+    bold := !!obj.Get("bold", this.ScreenshotTextOptions.Get("bold", true))
+    wt := bold ? "Bold " : ""
+    pSel := 0, pBrush := 0
+    try {
+        ; NOTE: In Gdip_TextToGraphics, "Top/Up" forces ypos := 0. Do not include it.
+        opt := "x" . Round(tx) . " y" . Round(ty) . " w" . Round(tw) . " h" . Round(th) . " c" . this.ScreenshotColorToOpt(color) . " s" . fs . " " . wt . "Left NoWrap"
+        Gdip_TextToGraphics(pG, text, opt, "Segoe UI")
+        if selected {
+            pSel := Gdip_CreatePen(0xCCFFFFFF, 1)
+            pBrush := Gdip_BrushCreateSolid(0xCCFFFFFF)
+            if (pSel)
+                Gdip_DrawRectangle(pG, pSel, tx - 2, ty - 2, tw + 4, th + 4)
+            if (pBrush)
+                Gdip_FillEllipse(pG, pBrush, tx + tw - 5, ty + th - 5, 10, 10)
+            if (pSel)
+                Gdip_DrawEllipse(pG, pSel, tx + tw - 5, ty + th - 5, 10, 10)
+        }
+    } finally {
+        if (pBrush)
+            try Gdip_DeleteBrush(pBrush)
+        if (pSel)
+            try Gdip_DeletePen(pSel)
+    }
+}
+
     static ScreenshotDoc_RenderToPath(objects := "", selectedId := "", pushHistory := false, op := "") {
     basePath := this.ScreenshotBaseImagePath
     if (basePath = "" || !FileExist(basePath)) {
@@ -1805,6 +1910,8 @@ class ScreenshotEditorPlugin {
             tp := String(obj.Get("type", ""))
             if (tp = "arrow") {
                 this.ScreenshotDoc_DrawArrow(pG, obj, String(obj.Get("id","")) = String(selectedId))
+            } else if (tp = "text") {
+                this.ScreenshotDoc_DrawText(pG, obj, String(obj.Get("id","")) = String(selectedId))
             }
         }
         outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
@@ -1844,7 +1951,7 @@ class ScreenshotEditorPlugin {
         return
     if !this.ScreenshotUseUnifiedWebView
         return
-    tool := this.ScreenshotAnnotMode
+    tool := this.ScreenshotEditor_NormalizeAnnotMode(this.ScreenshotAnnotMode)
     phase := StrLower(String(p.Get("phase","")))
     x := Number(p.Get("x", 0))
     y := Number(p.Get("y", 0))
@@ -1874,6 +1981,30 @@ class ScreenshotEditorPlugin {
                 this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
                 return
             }
+        } else if (tool = "text") {
+            hitT := this.ScreenshotDoc_HitTestText(x, y)
+            if (hitT["kind"] != "none") {
+                idx := hitT["index"]
+                obj := this.ScreenshotDocObjects[idx]
+                this.ScreenshotSelectedObjectId := String(obj["id"])
+                this.ScreenshotEditSession := Map(
+                    "tool", "text",
+                    "mode", hitT["kind"],
+                    "id", obj["id"],
+                    "index", idx,
+                    "x0", x, "y0", y,
+                    "orig", obj,
+                    "work", obj
+                )
+                this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+                return
+            }
+            this.ScreenshotSelectedObjectId := ""
+            this.ScreenshotEditSession := 0
+            try this.ScreenshotPreviewShell_SendEvent("openTextInput", Map("x", x, "y", y, "text", ""))
+            this.ScreenshotDebug_Trace("text", "open_input x=" . Round(x) . " y=" . Round(y))
+            this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+            return
         }
         this.ScreenshotEditSession := Map("tool", tool, "x0", x, "y0", y, "x1", x, "y1", y, "points", [])
         if (tool = "mosaic" || tool = "eraser") {
@@ -1907,6 +2038,31 @@ class ScreenshotEditorPlugin {
                     work["y1"] := Number(orig["y1"]) + dy
                     work["x2"] := Number(orig["x2"]) + dx
                     work["y2"] := Number(orig["y2"]) + dy
+                }
+                this.ScreenshotEditSession["work"] := work
+                previewObjs := this.ScreenshotDoc_CloneObjects(this.ScreenshotDocObjects)
+                previewObjs[idx] := work
+                this.ScreenshotDoc_RenderToPath(previewObjs, this.ScreenshotSelectedObjectId, false, "")
+            }
+            return
+        }
+        if (this.ScreenshotEditSession["tool"] = "text" && this.ScreenshotEditSession.Has("mode")) {
+            mode := String(this.ScreenshotEditSession["mode"])
+            idx := Integer(this.ScreenshotEditSession["index"])
+            if (idx > 0 && idx <= this.ScreenshotDocObjects.Length) {
+                orig := this.ScreenshotEditSession["orig"]
+                work := Map()
+                for k, v in orig
+                    work[k] := v
+                if (mode = "handle_resize") {
+                    minW := 40, minH := 24
+                    work["w"] := Max(minW, x - Number(orig["x"]))
+                    work["h"] := Max(minH, y - Number(orig["y"]))
+                } else {
+                    dx := x - Number(this.ScreenshotEditSession["x0"])
+                    dy := y - Number(this.ScreenshotEditSession["y0"])
+                    work["x"] := Number(orig["x"]) + dx
+                    work["y"] := Number(orig["y"]) + dy
                 }
                 this.ScreenshotEditSession["work"] := work
                 previewObjs := this.ScreenshotDoc_CloneObjects(this.ScreenshotDocObjects)
@@ -1987,6 +2143,35 @@ class ScreenshotEditorPlugin {
                 this.ScreenshotDebug_SendCommit("add_arrow", rp != "", (rp != "") ? "" : "render_failed")
             } else {
                 this.ScreenshotDebug_SendCommit("add_arrow", false, "length_too_short")
+            }
+        } else if (t2 = "text" && sess.Has("mode")) {
+            idx := Integer(sess["index"])
+            if (idx > 0 && idx <= this.ScreenshotDocObjects.Length) {
+                work := sess["work"], orig := sess["orig"]
+                mode := String(sess.Get("mode", ""))
+                if (mode = "handle_resize") {
+                    work["w"] := Max(40, x1 - Number(orig["x"]))
+                    work["h"] := Max(24, y1 - Number(orig["y"]))
+                } else {
+                    dx := x1 - Number(sess["x0"])
+                    dy := y1 - Number(sess["y0"])
+                    work["x"] := Number(orig["x"]) + dx
+                    work["y"] := Number(orig["y"]) + dy
+                }
+                changed := (Number(work.Get("x",0)) != Number(orig.Get("x",0))
+                    || Number(work.Get("y",0)) != Number(orig.Get("y",0))
+                    || Number(work.Get("w",0)) != Number(orig.Get("w",0))
+                    || Number(work.Get("h",0)) != Number(orig.Get("h",0)))
+                this.ScreenshotSelectedObjectId := String(sess["id"])
+                if changed {
+                    this.ScreenshotDocObjects[idx] := work
+                    rp := this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, true, "update_text")
+                    this.ScreenshotDebug_SendCommit("update_text", rp != "", (rp != "") ? "" : "render_failed")
+                } else {
+                    this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+                    this.ScreenshotToolbar_SendState()
+                    this.ScreenshotDebug_SendCommit("update_text", true, "no_change")
+                }
             }
         } else if (t2 = "rect" || t2 = "ellipse") {
             this.ScreenshotEditor_ApplyShape(t2, x0, y0, x1, y1)
@@ -2167,43 +2352,46 @@ class ScreenshotEditorPlugin {
     static ScreenshotEditor_AddText(x, y, text) {
     if (text = "")
         return
-    srcPath := this.ScreenshotDocCurrentPath
-    if (srcPath = "" || !FileExist(srcPath))
+    to := this.ScreenshotTextOptions
+    fs := Integer(to.Get("size", 22))
+    mt := this.ScreenshotDoc_MeasureTextBox(text, fs)
+    this.ScreenshotSelectedObjectId := this.ScreenshotDoc_NewObjectId()
+    this.ScreenshotDocObjects.Push(Map(
+        "id", this.ScreenshotSelectedObjectId,
+        "type", "text",
+        "x", Round(x),
+        "y", Round(y),
+        "w", Number(mt.Get("w", 120)),
+        "h", Number(mt.Get("h", 40)),
+        "text", String(text),
+        "size", fs,
+        "bold", to.Get("bold", true) ? true : false,
+        "color", this.ScreenshotDrawColor
+    ))
+    this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, true, "add_text")
+}
+
+    static ScreenshotEditor_UpdateText(id, text) {
+    sid := String(id)
+    if (sid = "")
         return
-    pBmp := 0, pG := 0
-    try {
-        pBmp := Gdip_CreateBitmapFromFile(srcPath)
-        if !pBmp
-            return
-        pG := Gdip_GraphicsFromImage(pBmp)
-        if !pG
-            return
-        ; Use explicit render box so GDI+ text is consistently visible.
-        imgW := Gdip_GetImageWidth(pBmp)
-        imgH := Gdip_GetImageHeight(pBmp)
-        if !(imgW > 0 && imgH > 0)
-            return
-        tx := Max(0, Min(imgW - 20, Round(x)))
-        ty := Max(0, Min(imgH - 20, Round(y)))
-        tw := Max(80, imgW - tx - 8)
-        th := Max(30, Min(220, imgH - ty - 8))
-        col := this.ScreenshotColorToOpt(this.ScreenshotDrawColor)
-        to := this.ScreenshotTextOptions
-        fs := Integer(to.Get("size", 22))
-        wt := to.Get("bold", true) ? "Bold " : ""
-        opt := "x" . tx . " y" . ty . " w" . tw . " h" . th . " c" . col . " s" . fs . " " . wt . "Left vTop"
-        try Gdip_TextToGraphics(pG, text, opt, "Segoe UI")
-        outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
-        if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
-            return
-        this.ScreenshotHistory_Push(outPath, "text")
-    } catch {
-    } finally {
-        if (pG)
-            try Gdip_DeleteGraphics(pG)
-        if (pBmp)
-            try Gdip_DisposeImage(pBmp)
-    }
+    idx := this.ScreenshotDoc_FindObjectIndexById(sid)
+    if (idx <= 0 || idx > this.ScreenshotDocObjects.Length)
+        return
+    obj := this.ScreenshotDocObjects[idx]
+    if !(obj is Map) || String(obj.Get("type","")) != "text"
+        return
+    t := String(text)
+    if (t = "")
+        return
+    fs := Integer(obj.Get("size", Integer(this.ScreenshotTextOptions.Get("size", 22))))
+    mt := this.ScreenshotDoc_MeasureTextBox(t, fs)
+    obj["text"] := t
+    obj["w"] := Max(Number(obj.Get("w", 80)), Number(mt.Get("w", 80)))
+    obj["h"] := Max(Number(obj.Get("h", 34)), Number(mt.Get("h", 34)))
+    this.ScreenshotDocObjects[idx] := obj
+    this.ScreenshotSelectedObjectId := sid
+    this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, true, "update_text_content")
 }
 
     static ScreenshotEditor_ApplyNumber(x, y) {

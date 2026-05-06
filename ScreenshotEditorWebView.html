@@ -167,9 +167,10 @@ body[data-theme="light"] #mosaicPanel{
 
   const st = { drag:false, sx:0, sy:0, ox:0, oy:0, pid:null, tx:0, ty:0, scale:1 };
   const annot = { active:false, pointerId:null };
-  const host = { themeMode:'dark', annotMode:'none', previewSrc:'', zoomScale:1, imgW:0, imgH:0, mosaicOptions:{ size:56, intensity:18, opacity:100, style:'pixel' } };
+  const host = { themeMode:'dark', annotMode:'none', previewSrc:'', zoomScale:1, imgW:0, imgH:0, selectedId:'', mosaicOptions:{ size:56, intensity:18, opacity:100, style:'pixel' } };
   const dbg = { enabled:true, sessionId:'', seq:0 };
   let pendingTextAt = null; // {x,y} in image coordinates
+  let pendingTextTargetId = '';
   let mosaicStyle = 'pixel';
 
   function isTextBoxVisible(){
@@ -264,21 +265,38 @@ body[data-theme="light"] #mosaicPanel{
     textBox.style.display = 'none';
     textArea.value = '';
     pendingTextAt = null;
+    pendingTextTargetId = '';
   }
 
-  function showTextBoxAtClient(clientX, clientY, imgX, imgY){
+
+  function showTextBoxAtClient(clientX, clientY, imgX, imgY, textValue, targetId){
     pendingTextAt = { x: imgX, y: imgY };
+    pendingTextTargetId = String(targetId || '');
     textBox.style.left = Math.max(12, Math.min(preview.clientWidth - 160, clientX - preview.getBoundingClientRect().left)) + 'px';
     textBox.style.top = Math.max(12, Math.min(preview.clientHeight - 60, clientY - preview.getBoundingClientRect().top)) + 'px';
     textBox.style.display = 'block';
+    textArea.value = String(textValue || '');
     textArea.focus();
     textArea.select();
+  }
+
+  function clientFromImagePoint(imgX, imgY){
+    const r = img.getBoundingClientRect();
+    const iw = host.imgW || img.naturalWidth || Math.max(1, r.width);
+    const ih = host.imgH || img.naturalHeight || Math.max(1, r.height);
+    const cx = r.left + (Math.max(0, Math.min(iw, imgX)) / Math.max(1, iw)) * r.width;
+    const cy = r.top + (Math.max(0, Math.min(ih, imgY)) / Math.max(1, ih)) * r.height;
+    return { clientX: cx, clientY: cy };
   }
 
   function commitText(){
     const t = String(textArea.value || '').replace(/\r\n/g, '\n').trimEnd();
     if(!pendingTextAt || !t){ hideTextBox(); return; }
-    post({ type:'action', name:'addText', payload:{ x: pendingTextAt.x, y: pendingTextAt.y, text: t } });
+    if (pendingTextTargetId) {
+      post({ type:'action', name:'updateText', payload:{ id: pendingTextTargetId, text: t } });
+    } else {
+      post({ type:'action', name:'addText', payload:{ x: pendingTextAt.x, y: pendingTextAt.y, text: t } });
+    }
     hideTextBox();
   }
 
@@ -357,12 +375,6 @@ body[data-theme="light"] #mosaicPanel{
       ev.stopPropagation();
       if(ev.button !== 0) return;
       if (isTextBoxVisible()) return;
-      if (mode === 'text') {
-        ev.preventDefault();
-        const pt = imgPointFromClient(ev);
-        showTextBoxAtClient(ev.clientX, ev.clientY, pt.x, pt.y);
-        return;
-      }
       if (mode !== 'none') {
         ev.preventDefault();
         annot.active = true;
@@ -461,6 +473,7 @@ body[data-theme="light"] #mosaicPanel{
       host.zoomScale = (typeof p.zoomScale === 'number' && isFinite(p.zoomScale)) ? p.zoomScale : host.zoomScale;
       host.imgW = Number(p.imageWidth || p.imgW || host.imgW || 0);
       host.imgH = Number(p.imageHeight || p.imgH || host.imgH || 0);
+      host.selectedId = String(p.selectedId || host.selectedId || '');
       host.mosaicOptions = p.mosaicOptions || host.mosaicOptions;
       logDebug(`STATE mode=${host.annotMode} img=${Math.round(host.imgW)}x${Math.round(host.imgH)} zoom=${host.zoomScale}`);
       applyTheme(host.themeMode);
@@ -484,6 +497,10 @@ body[data-theme="light"] #mosaicPanel{
         logDebug(`HOST ${p.stage||''} ${p.detail||''}`);
       } else if (name === 'error') {
         logDebug(`ERROR ${p.code||''} ${p.message||''}`);
+      } else if (name === 'openTextInput') {
+        const ix = Number(p.x || 0), iy = Number(p.y || 0);
+        const pos = clientFromImagePoint(ix, iy);
+        showTextBoxAtClient(pos.clientX, pos.clientY, ix, iy, String(p.text || ''), String(p.id || ''));
       }
       return;
     }
