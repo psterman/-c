@@ -76,6 +76,10 @@ class ScreenshotEditorPlugin {
     static ScreenshotEditSession := 0
     static ScreenshotDocObjects := []
     static ScreenshotSelectedObjectId := ""
+    static ScreenshotTextLastClickId := ""
+    static ScreenshotTextLastClickTick := 0
+    static ScreenshotTextLastClickX := 0
+    static ScreenshotTextLastClickY := 0
     static ScreenshotObjectIdSeed := 0
     static ScreenshotArrowPalette := [0xFFFF7A1A, 0xFF3B82F6, 0xFF10B981, 0xFFEF4444, 0xFFF59E0B, 0xFF8B5CF6]
     static ScreenshotLivePreviewPath := ""
@@ -1914,7 +1918,7 @@ class ScreenshotEditorPlugin {
     }
 }
 
-    static ScreenshotDoc_DrawText(pG, obj, selected := false) {
+    static ScreenshotDoc_DrawText(pG, obj, selected := false, pBmp := 0) {
     tx := Number(obj.Get("x", 0)), ty := Number(obj.Get("y", 0))
     tw := Max(40, Number(obj.Get("w", 80))), th := Max(24, Number(obj.Get("h", 34)))
     text := String(obj.Get("text", ""))
@@ -1930,8 +1934,9 @@ class ScreenshotEditorPlugin {
         opt := "x" . Round(tx) . " y" . Round(ty) . " w" . Round(tw) . " h" . Round(th) . " c" . this.ScreenshotColorToOpt(color) . " s" . fs . " " . wt . "Left NoWrap"
         Gdip_TextToGraphics(pG, text, opt, "Segoe UI")
         if selected {
-            pSel := Gdip_CreatePen(0xCCFFFFFF, 1)
-            pBrush := Gdip_BrushCreateSolid(0xCCFFFFFF)
+            selColor := this.ScreenshotDoc_PickSelectionColor(pBmp, tx, ty, tw, th)
+            pSel := Gdip_CreatePen(selColor, 1)
+            pBrush := Gdip_BrushCreateSolid(selColor)
             pCloseBrush := Gdip_BrushCreateSolid(0xCCEF4444)
             pClosePen := Gdip_CreatePen(0xFFFFFFFF, 1)
             if (pSel)
@@ -1971,6 +1976,37 @@ class ScreenshotEditorPlugin {
     }
 }
 
+    static ScreenshotDoc_PickSelectionColor(pBmp, x, y, w, h) {
+    if !pBmp
+        return 0xCCFFFFFF
+    bw := Gdip_GetImageWidth(pBmp)
+    bh := Gdip_GetImageHeight(pBmp)
+    if !(bw > 0 && bh > 0)
+        return 0xCCFFFFFF
+    pts := [
+        Map("x", Round(x + w * 0.5), "y", Round(y + h * 0.5)),
+        Map("x", Round(x + w * 0.2), "y", Round(y + h * 0.2)),
+        Map("x", Round(x + w * 0.8), "y", Round(y + h * 0.2)),
+        Map("x", Round(x + w * 0.2), "y", Round(y + h * 0.8)),
+        Map("x", Round(x + w * 0.8), "y", Round(y + h * 0.8))
+    ]
+    sumLum := 0.0, n := 0
+    for _, pt in pts {
+        px := Min(bw - 1, Max(0, Integer(pt["x"])))
+        py := Min(bh - 1, Max(0, Integer(pt["y"])))
+        argb := Gdip_GetPixel(pBmp, px, py)
+        r := (argb >> 16) & 0xFF
+        g := (argb >> 8) & 0xFF
+        b := argb & 0xFF
+        lum := 0.299 * r + 0.587 * g + 0.114 * b
+        sumLum += lum
+        n += 1
+    }
+    avgLum := (n > 0) ? (sumLum / n) : 255
+    ; Light background -> dark frame, dark background -> light frame.
+    return (avgLum >= 145) ? 0xCC111827 : 0xCCFFFFFF
+}
+
     static ScreenshotDoc_RenderToPath(objects := "", selectedId := "", pushHistory := false, op := "") {
     basePath := this.ScreenshotBaseImagePath
     if (basePath = "" || !FileExist(basePath)) {
@@ -1998,7 +2034,7 @@ class ScreenshotEditorPlugin {
             if (tp = "arrow") {
                 this.ScreenshotDoc_DrawArrow(pG, obj, String(obj.Get("id","")) = String(selectedId))
             } else if (tp = "text") {
-                this.ScreenshotDoc_DrawText(pG, obj, String(obj.Get("id","")) = String(selectedId))
+                this.ScreenshotDoc_DrawText(pG, obj, String(obj.Get("id","")) = String(selectedId), pBmp)
             }
         }
         outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
@@ -2048,19 +2084,42 @@ class ScreenshotEditorPlugin {
     this.ScreenshotDebug_Trace("pointer", "seq=" . seq . " phase=" . phase . " x=" . Round(x) . " y=" . Round(y) . " mode=" . tool)
 
     if (phase = "down") {
+        nowTick := A_TickCount
         if (tool = "none" || tool = "") {
             hitSel := this.ScreenshotDoc_HitTestText(x, y)
             if (hitSel["kind"] != "none") {
                 idx := hitSel["index"]
                 obj := this.ScreenshotDocObjects[idx]
+                sidHit := String(obj.Get("id", ""))
+                lastId := String(this.ScreenshotTextLastClickId)
+                lastTick := Integer(this.ScreenshotTextLastClickTick)
+                lastX := Number(this.ScreenshotTextLastClickX)
+                lastY := Number(this.ScreenshotTextLastClickY)
+                alreadySelected := (sidHit != "" && sidHit = String(this.ScreenshotSelectedObjectId))
+                clickNear := ((x - lastX) * (x - lastX) + (y - lastY) * (y - lastY)) <= 36
+                isDouble := (alreadySelected && sidHit = lastId && clickNear && (nowTick - lastTick) <= 320)
+                this.ScreenshotTextLastClickId := sidHit
+                this.ScreenshotTextLastClickTick := nowTick
+                this.ScreenshotTextLastClickX := x
+                this.ScreenshotTextLastClickY := y
                 this.ScreenshotSelectedObjectId := String(obj["id"])
                 this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+                if (isDouble) {
+                    try this.ScreenshotPreviewShell_SendEvent("openTextInput", Map(
+                        "x", Number(obj.Get("x", 0)),
+                        "y", Number(obj.Get("y", 0)),
+                        "text", String(obj.Get("text", "")),
+                        "id", sidHit
+                    ))
+                }
                 return
             }
             if (this.ScreenshotSelectedObjectId != "") {
                 this.ScreenshotSelectedObjectId := ""
                 this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
             }
+            this.ScreenshotTextLastClickId := ""
+            this.ScreenshotTextLastClickTick := 0
             return
         }
         if (tool = "arrow") {
@@ -2086,11 +2145,35 @@ class ScreenshotEditorPlugin {
             if (hitT["kind"] != "none") {
                 idx := hitT["index"]
                 obj := this.ScreenshotDocObjects[idx]
+                sidHit := String(obj.Get("id", ""))
+                lastId := String(this.ScreenshotTextLastClickId)
+                lastTick := Integer(this.ScreenshotTextLastClickTick)
+                lastX := Number(this.ScreenshotTextLastClickX)
+                lastY := Number(this.ScreenshotTextLastClickY)
+                alreadySelected := (sidHit != "" && sidHit = String(this.ScreenshotSelectedObjectId))
+                clickNear := ((x - lastX) * (x - lastX) + (y - lastY) * (y - lastY)) <= 36
+                isDouble := (hitT["kind"] = "box" && alreadySelected && sidHit = lastId && clickNear && (nowTick - lastTick) <= 320)
+                this.ScreenshotTextLastClickId := sidHit
+                this.ScreenshotTextLastClickTick := nowTick
+                this.ScreenshotTextLastClickX := x
+                this.ScreenshotTextLastClickY := y
                 if (hitT["kind"] = "handle_close") {
                     try this.ScreenshotDocObjects.RemoveAt(idx)
                     this.ScreenshotSelectedObjectId := ""
                     rp := this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, true, "delete_text")
                     this.ScreenshotDebug_SendCommit("delete_text", rp != "", (rp != "") ? "" : "render_failed")
+                    return
+                }
+                if (isDouble) {
+                    this.ScreenshotSelectedObjectId := sidHit
+                    this.ScreenshotEditSession := 0
+                    this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+                    try this.ScreenshotPreviewShell_SendEvent("openTextInput", Map(
+                        "x", Number(obj.Get("x", 0)),
+                        "y", Number(obj.Get("y", 0)),
+                        "text", String(obj.Get("text", "")),
+                        "id", sidHit
+                    ))
                     return
                 }
                 this.ScreenshotSelectedObjectId := String(obj["id"])
@@ -2193,14 +2276,9 @@ class ScreenshotEditorPlugin {
                     work["y"] := Number(orig["y"]) + dy
                 }
                 this.ScreenshotEditSession["work"] := work
-                nowTick := A_TickCount
-                lastTick := Integer(this.ScreenshotEditSession.Get("lastPreviewTick", 0))
-                if (nowTick - lastTick >= 16) {
-                    this.ScreenshotEditSession["lastPreviewTick"] := nowTick
-                    previewObjs := this.ScreenshotDoc_CloneObjects(this.ScreenshotDocObjects)
-                    previewObjs[idx] := work
-                    this.ScreenshotDoc_RenderToPath(previewObjs, this.ScreenshotSelectedObjectId, false, "")
-                }
+                previewObjs := this.ScreenshotDoc_CloneObjects(this.ScreenshotDocObjects)
+                previewObjs[idx] := work
+                this.ScreenshotDoc_RenderToPath(previewObjs, this.ScreenshotSelectedObjectId, false, "")
             }
             return
         }
