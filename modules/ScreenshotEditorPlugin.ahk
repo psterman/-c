@@ -1422,8 +1422,7 @@ class ScreenshotEditorPlugin {
                     obj := this.ScreenshotDocObjects[idx]
                     if (obj is Map && String(obj.Get("type","")) = "text") {
                         step := (d > 0) ? 1.1 : 0.9
-                        obj["w"] := Max(40, Round(Number(obj.Get("w", 80)) * step))
-                        obj["h"] := Max(24, Round(Number(obj.Get("h", 34)) * step))
+                        obj := this.ScreenshotDoc_ApplyTextScaleToObject(obj, step)
                         this.ScreenshotDocObjects[idx] := obj
                         this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, true, "scale_text")
                         return
@@ -1797,6 +1796,22 @@ class ScreenshotEditorPlugin {
     return Map("w", w, "h", h)
 }
 
+    static ScreenshotDoc_ApplyTextScaleToObject(obj, scaleFactor) {
+    if !(obj is Map)
+        return obj
+    sf := Number(scaleFactor)
+    if !(sf > 0)
+        sf := 1
+    txt := String(obj.Get("text", ""))
+    oldSize := Max(10, Integer(obj.Get("size", Integer(this.ScreenshotTextOptions.Get("size", 22)))))
+    newSize := Max(10, Min(144, Round(oldSize * sf)))
+    mt := this.ScreenshotDoc_MeasureTextBox(txt, newSize)
+    obj["size"] := newSize
+    obj["w"] := Max(40, Number(mt.Get("w", 80)))
+    obj["h"] := Max(24, Number(mt.Get("h", 34)))
+    return obj
+}
+
     static ScreenshotDoc_HitTestText(x, y) {
     if !(this.ScreenshotDocObjects is Array) || this.ScreenshotDocObjects.Length = 0
         return Map("kind", "none")
@@ -1994,7 +2009,8 @@ class ScreenshotEditorPlugin {
                     "index", idx,
                     "x0", x, "y0", y,
                     "orig", obj,
-                    "work", obj
+                    "work", obj,
+                    "lastPreviewTick", 0
                 )
                 this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
                 return
@@ -2055,9 +2071,13 @@ class ScreenshotEditorPlugin {
                 for k, v in orig
                     work[k] := v
                 if (mode = "handle_resize") {
-                    minW := 40, minH := 24
-                    work["w"] := Max(minW, x - Number(orig["x"]))
-                    work["h"] := Max(minH, y - Number(orig["y"]))
+                    ow := Max(40, Number(orig.Get("w", 80)))
+                    oh := Max(24, Number(orig.Get("h", 34)))
+                    nw := Max(40, x - Number(orig["x"]))
+                    nh := Max(24, y - Number(orig["y"]))
+                    sx := nw / ow, sy := nh / oh
+                    sf := Max(0.5, Min(4.0, (sx + sy) / 2.0))
+                    work := this.ScreenshotDoc_ApplyTextScaleToObject(work, sf)
                 } else {
                     dx := x - Number(this.ScreenshotEditSession["x0"])
                     dy := y - Number(this.ScreenshotEditSession["y0"])
@@ -2065,9 +2085,14 @@ class ScreenshotEditorPlugin {
                     work["y"] := Number(orig["y"]) + dy
                 }
                 this.ScreenshotEditSession["work"] := work
-                previewObjs := this.ScreenshotDoc_CloneObjects(this.ScreenshotDocObjects)
-                previewObjs[idx] := work
-                this.ScreenshotDoc_RenderToPath(previewObjs, this.ScreenshotSelectedObjectId, false, "")
+                nowTick := A_TickCount
+                lastTick := Integer(this.ScreenshotEditSession.Get("lastPreviewTick", 0))
+                if (nowTick - lastTick >= 16) {
+                    this.ScreenshotEditSession["lastPreviewTick"] := nowTick
+                    previewObjs := this.ScreenshotDoc_CloneObjects(this.ScreenshotDocObjects)
+                    previewObjs[idx] := work
+                    this.ScreenshotDoc_RenderToPath(previewObjs, this.ScreenshotSelectedObjectId, false, "")
+                }
             }
             return
         }
@@ -2150,8 +2175,13 @@ class ScreenshotEditorPlugin {
                 work := sess["work"], orig := sess["orig"]
                 mode := String(sess.Get("mode", ""))
                 if (mode = "handle_resize") {
-                    work["w"] := Max(40, x1 - Number(orig["x"]))
-                    work["h"] := Max(24, y1 - Number(orig["y"]))
+                    ow := Max(40, Number(orig.Get("w", 80)))
+                    oh := Max(24, Number(orig.Get("h", 34)))
+                    nw := Max(40, x1 - Number(orig["x"]))
+                    nh := Max(24, y1 - Number(orig["y"]))
+                    sx := nw / ow, sy := nh / oh
+                    sf := Max(0.5, Min(4.0, (sx + sy) / 2.0))
+                    work := this.ScreenshotDoc_ApplyTextScaleToObject(work, sf)
                 } else {
                     dx := x1 - Number(sess["x0"])
                     dy := y1 - Number(sess["y0"])
@@ -2161,7 +2191,8 @@ class ScreenshotEditorPlugin {
                 changed := (Number(work.Get("x",0)) != Number(orig.Get("x",0))
                     || Number(work.Get("y",0)) != Number(orig.Get("y",0))
                     || Number(work.Get("w",0)) != Number(orig.Get("w",0))
-                    || Number(work.Get("h",0)) != Number(orig.Get("h",0)))
+                    || Number(work.Get("h",0)) != Number(orig.Get("h",0))
+                    || Number(work.Get("size",0)) != Number(orig.Get("size",0)))
                 this.ScreenshotSelectedObjectId := String(sess["id"])
                 if changed {
                     this.ScreenshotDocObjects[idx] := work
