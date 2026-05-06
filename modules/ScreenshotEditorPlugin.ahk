@@ -1779,28 +1779,60 @@ class ScreenshotEditorPlugin {
     return Map("kind", "none")
 }
 
-    static ScreenshotDoc_MeasureTextBox(text, fontSize) {
+    static ScreenshotDoc_MeasureTextBox(text, fontSize, bold := true) {
     t := String(text)
     fs := Max(10, Integer(fontSize))
     lines := StrSplit(StrReplace(t, "`r", ""), "`n")
     lineCount := Max(1, lines.Length)
-    maxChars := 1
-    maxWideChars := 1
+    isBold := !!bold
+    maxW := 0.0
+    lineH := 0.0
     for _, ln in lines {
         sLn := String(ln)
-        l := StrLen(sLn)
-        if (l > maxChars)
-            maxChars := l
-        wideLn := RegExReplace(sLn, "[\x00-\x7F]", "")
-        wlen := StrLen(wideLn)
-        if (wlen > maxWideChars)
-            maxWideChars := wlen
+        mm := this.ScreenshotDoc_MeasureTextLine(sLn, fs, isBold)
+        lw := Number(mm.Get("w", 0))
+        lh := Number(mm.Get("h", 0))
+        if (lw > maxW)
+            maxW := lw
+        if (lh > lineH)
+            lineH := lh
     }
-    asciiChars := Max(0, maxChars - maxWideChars)
-    ; Keep extra safety margin to avoid clipping while scaling CJK/bold text.
-    w := Max(96, Round(asciiChars * fs * 0.62 + maxWideChars * fs * 1.08) + 26)
-    h := Max(40, Round(lineCount * fs * 1.45) + 20)
+    if !(lineH > 0)
+        lineH := fs * 1.45
+    ; Keep extra safety margin to avoid clipping while scaling/anti-aliasing.
+    w := Max(96, Round(maxW + fs * 1.2 + 24))
+    h := Max(40, Round(lineCount * lineH + fs * 0.8 + 16))
     return Map("w", w, "h", h)
+}
+
+    static ScreenshotDoc_MeasureTextLine(line, fontSize, bold := true) {
+    fs := Max(10, Integer(fontSize))
+    wt := bold ? "Bold " : ""
+    txt := (line = "") ? " " : String(line)
+    pBmp := 0, pG := 0
+    try {
+        pBmp := Gdip_CreateBitmap(2, 2)
+        if !pBmp
+            throw Error("bmp_fail")
+        pG := Gdip_GraphicsFromImage(pBmp)
+        if !pG
+            throw Error("graphics_fail")
+        opt := "x0 y0 w10000 h200 cFFFFFFFF s" . fs . " " . wt . "Left NoWrap"
+        rc := Gdip_TextToGraphics(pG, txt, opt, "Segoe UI", 10000, 200, 1)
+        parts := StrSplit(String(rc), "|")
+        if (parts.Length >= 4) {
+            mw := Max(0.0, Number(parts[3]))
+            mh := Max(0.0, Number(parts[4]))
+            return Map("w", mw, "h", mh)
+        }
+    } catch {
+    } finally {
+        if (pG)
+            try Gdip_DeleteGraphics(pG)
+        if (pBmp)
+            try Gdip_DisposeImage(pBmp)
+    }
+    return Map("w", Max(1, Round(StrLen(String(line)) * fs * 0.7)), "h", Round(fs * 1.45))
 }
 
     static ScreenshotDoc_ApplyTextScaleToObject(obj, scaleFactor) {
@@ -1812,7 +1844,7 @@ class ScreenshotEditorPlugin {
     txt := String(obj.Get("text", ""))
     oldSize := Max(10, Integer(obj.Get("size", Integer(this.ScreenshotTextOptions.Get("size", 22)))))
     newSize := Max(10, Min(144, Round(oldSize * sf)))
-    mt := this.ScreenshotDoc_MeasureTextBox(txt, newSize)
+    mt := this.ScreenshotDoc_MeasureTextBox(txt, newSize, obj.Get("bold", true))
     obj["size"] := newSize
     obj["w"] := Max(40, Number(mt.Get("w", 80)))
     obj["h"] := Max(24, Number(mt.Get("h", 34)))
@@ -2016,8 +2048,21 @@ class ScreenshotEditorPlugin {
     this.ScreenshotDebug_Trace("pointer", "seq=" . seq . " phase=" . phase . " x=" . Round(x) . " y=" . Round(y) . " mode=" . tool)
 
     if (phase = "down") {
-        if (tool = "none" || tool = "")
+        if (tool = "none" || tool = "") {
+            hitSel := this.ScreenshotDoc_HitTestText(x, y)
+            if (hitSel["kind"] != "none") {
+                idx := hitSel["index"]
+                obj := this.ScreenshotDocObjects[idx]
+                this.ScreenshotSelectedObjectId := String(obj["id"])
+                this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+                return
+            }
+            if (this.ScreenshotSelectedObjectId != "") {
+                this.ScreenshotSelectedObjectId := ""
+                this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+            }
             return
+        }
         if (tool = "arrow") {
             hit := this.ScreenshotDoc_HitTestArrow(x, y)
             if (hit["kind"] != "none") {
@@ -2464,7 +2509,7 @@ class ScreenshotEditorPlugin {
         return
     to := this.ScreenshotTextOptions
     fs := Integer(to.Get("size", 22))
-    mt := this.ScreenshotDoc_MeasureTextBox(text, fs)
+    mt := this.ScreenshotDoc_MeasureTextBox(text, fs, to.Get("bold", true))
     this.ScreenshotSelectedObjectId := this.ScreenshotDoc_NewObjectId()
     this.ScreenshotDocObjects.Push(Map(
         "id", this.ScreenshotSelectedObjectId,
@@ -2495,7 +2540,7 @@ class ScreenshotEditorPlugin {
     if (t = "")
         return
     fs := Integer(obj.Get("size", Integer(this.ScreenshotTextOptions.Get("size", 22))))
-    mt := this.ScreenshotDoc_MeasureTextBox(t, fs)
+    mt := this.ScreenshotDoc_MeasureTextBox(t, fs, obj.Get("bold", true))
     obj["text"] := t
     obj["w"] := Max(Number(obj.Get("w", 80)), Number(mt.Get("w", 80)))
     obj["h"] := Max(Number(obj.Get("h", 34)), Number(mt.Get("h", 34)))
