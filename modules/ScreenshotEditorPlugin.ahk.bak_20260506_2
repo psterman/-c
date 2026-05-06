@@ -16,7 +16,6 @@ class ScreenshotEditorPlugin {
     static ScreenshotToolbarCreateCheckPass := 0
     static ScreenshotToolbarCurrentWidth := 520
     static ScreenshotToolbarCurrentHeight := 56
-    static ScreenshotToolbarLayoutMeta := Map()
     static ScreenshotOCRHubPendingText := ""
     static ScreenshotOCRHubPushAttempts := 0
     static ScreenshotOCRHubPushInFlight := false
@@ -83,7 +82,7 @@ class ScreenshotEditorPlugin {
     static ScreenshotNumberSequence := 1
     static ScreenshotNumberStyleMode := "arabic" ; arabic | circled | roman | alpha
     static ScreenshotSymbolStyle := "+" ; + | x | check | ! | ? | star
-    static ScreenshotMosaicOptions := Map("size", 56, "intensity", 18, "opacity", 100, "style", "pixel")
+    static ScreenshotMosaicOptions := Map("size", 56, "intensity", 18, "opacity", 100)
     static ScreenshotDebugEnabled := true
     static ScreenshotDebugSessionId := ""
 
@@ -1189,7 +1188,7 @@ class ScreenshotEditorPlugin {
             return
     }
     if (t = "event" && name = "layout") {
-            this.ScreenshotToolbar_ApplyLayout(p.Get("width", 0), p.Get("height", 0), p)
+            this.ScreenshotToolbar_ApplyLayout(p.Get("width", 0), p.Get("height", 0))
             return
     }
     if (t = "action" && name = "dragWindow") {
@@ -1199,28 +1198,6 @@ class ScreenshotEditorPlugin {
     if (t = "action" && name = "invoke") {
             cmd := p.Get("cmd", "")
             this.ScreenshotToolbar_InvokeCommand(cmd)
-            return
-    }
-    if (t = "action" && name = "updateToolOptions") {
-            tool := String(p.Get("tool", ""))
-            opts := p.Get("options", 0)
-            if (tool = "mosaic" && opts is Map) {
-                size := Integer(opts.Get("size", this.ScreenshotMosaicOptions["size"]))
-                intensity := Integer(opts.Get("intensity", this.ScreenshotMosaicOptions["intensity"]))
-                opacity := Integer(opts.Get("opacity", this.ScreenshotMosaicOptions["opacity"]))
-                style := StrLower(String(opts.Get("style", this.ScreenshotMosaicOptions.Get("style", "pixel"))))
-                if (style != "pixel" && style != "frost" && style != "gauss")
-                    style := "pixel"
-                this.ScreenshotMosaicOptions := Map(
-                    "size", Max(12, Min(120, size)),
-                    "intensity", Max(4, Min(48, intensity)),
-                    "opacity", Max(10, Min(100, opacity)),
-                    "style", style
-                )
-                this.ScreenshotDebug_Trace("mosaic_opts", "style=" . style . " size=" . this.ScreenshotMosaicOptions["size"] . " intensity=" . this.ScreenshotMosaicOptions["intensity"] . " opacity=" . this.ScreenshotMosaicOptions["opacity"])
-                this.ScreenshotPreviewShell_SendState()
-                this.ScreenshotToolbar_SendState()
-            }
             return
     }
 }
@@ -1598,7 +1575,6 @@ class ScreenshotEditorPlugin {
         "toolbarVisible", this.ScreenshotEditorToolbarVisible,
         "themeMode", this.ScreenshotToolbarGetThemeMode(),
         "annotMode", this.ScreenshotAnnotMode,
-        "mosaicOptions", this.ScreenshotMosaicOptions,
         "canUndo", this.ScreenshotHistoryIndex > 1,
         "canRedo", (this.ScreenshotHistory is Array) && (this.ScreenshotHistoryIndex < this.ScreenshotHistory.Length)
     )
@@ -2502,7 +2478,7 @@ class ScreenshotEditorPlugin {
     return out
 }
 
-    static ScreenshotToolbar_ApplyLayout(width, height, meta := "") {
+    static ScreenshotToolbar_ApplyLayout(width, height) {
 
     try {
         w := Integer(Round(Float(width)))
@@ -2515,11 +2491,9 @@ class ScreenshotEditorPlugin {
         return
 
     w := Max(240, Min(960, w))
-    h := Max(40, Min(220, h))
+    h := Max(40, Min(120, h))
     this.ScreenshotToolbarCurrentWidth := w
     this.ScreenshotToolbarCurrentHeight := h
-    if (meta is Map)
-        this.ScreenshotToolbarLayoutMeta := meta
 
     if !(IsObject(this.GuiID_ScreenshotToolbar) && this.GuiID_ScreenshotToolbar != 0)
         return
@@ -2556,54 +2530,12 @@ class ScreenshotEditorPlugin {
         return
     if (w < 20 || h < 20)
         return
-    meta := this.ScreenshotToolbarLayoutMeta
-    hasPanel := false
-    bx := 0, by := 0, bw := w, bh := Min(50, h)
-    px := 0, py := 0, pw := 0, ph := 0
-    try {
-        if (meta is Map) {
-            bx := Integer(Round(Number(meta.Get("barX", 0))))
-            by := Integer(Round(Number(meta.Get("barY", 0))))
-            bw := Integer(Round(Number(meta.Get("barW", w))))
-            bh := Integer(Round(Number(meta.Get("barH", Min(50, h)))))
-            px := Integer(Round(Number(meta.Get("panelX", 0))))
-            py := Integer(Round(Number(meta.Get("panelY", 0))))
-            pw := Integer(Round(Number(meta.Get("panelW", 0))))
-            ph := Integer(Round(Number(meta.Get("panelH", 0))))
-            hasPanel := !!meta.Get("panelVisible", false)
-        }
-    }
-    bx := Max(0, Min(w - 2, bx)), by := Max(0, Min(h - 2, by))
-    bw := Max(20, Min(w - bx, bw)), bh := Max(20, Min(h - by, bh))
-    rgnBar := DllCall("gdi32\CreateRoundRectRgn", "Int", bx, "Int", by, "Int", bx + bw + 1, "Int", by + bh + 1, "Int", 24, "Int", 24, "Ptr")
-    if !rgnBar
+    ; 涓?HTML 鍗＄墖鍦嗚涓€鑷达紙radius鈮?2px -> ellipse 24x24锛?
+    rgn := DllCall("gdi32\CreateRoundRectRgn", "Int", 0, "Int", 0, "Int", w + 1, "Int", h + 1, "Int", 24, "Int", 24, "Ptr")
+    if !rgn
         return
-    if (!hasPanel || pw < 20 || ph < 20) {
-        DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", rgnBar, "Int", 1)
-        return
-    }
-    px := Max(0, Min(w - 2, px)), py := Max(0, Min(h - 2, py))
-    pw := Max(20, Min(w - px, pw)), ph := Max(20, Min(h - py, ph))
-    rgnPanel := DllCall("gdi32\CreateRoundRectRgn", "Int", px, "Int", py, "Int", px + pw + 1, "Int", py + ph + 1, "Int", 20, "Int", 20, "Ptr")
-    if !rgnPanel {
-        DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", rgnBar, "Int", 1)
-        return
-    }
-    rgnUnion := DllCall("gdi32\CreateRectRgn", "Int", 0, "Int", 0, "Int", 0, "Int", 0, "Ptr")
-    if !rgnUnion {
-        DllCall("gdi32\DeleteObject", "Ptr", rgnPanel)
-        DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", rgnBar, "Int", 1)
-        return
-    }
-    ; RGN_OR=2
-    ok1 := DllCall("gdi32\CombineRgn", "Ptr", rgnUnion, "Ptr", rgnBar, "Ptr", rgnPanel, "Int", 2, "Int")
-    DllCall("gdi32\DeleteObject", "Ptr", rgnBar)
-    DllCall("gdi32\DeleteObject", "Ptr", rgnPanel)
-    if (ok1 = 0) {
-        DllCall("gdi32\DeleteObject", "Ptr", rgnUnion)
-        return
-    }
-    DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", rgnUnion, "Int", 1)
+    ; SetWindowRgn 鎴愬姛鍚庣郴缁熸帴绠?rgn 鍙ユ焺
+    DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", rgn, "Int", 1)
 }
 
     static ScreenshotToolbar_EnsureUsable(*) {

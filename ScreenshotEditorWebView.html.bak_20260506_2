@@ -74,7 +74,6 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
   overflow:hidden;
 }
 #mosaicPanel.show{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
-#mosaicPanel{display:none !important}
 body[data-theme="light"] #mosaicPanel{
   background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(247,250,255,.96));
   box-shadow:0 10px 24px rgba(10,30,60,.14);

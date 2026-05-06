@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -31,10 +31,10 @@ body[data-theme="light"]{
   --danger-border:#e6b0aa;
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent;font:13px "AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif}
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:var(--bg);font:13px "AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif}
 body{opacity:1}
 body.theme-ready{opacity:1}
-#shell{display:inline-flex;flex-direction:column;align-items:center;gap:10px;padding:0;margin:0;background:transparent;pointer-events:auto}
+#shell{display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;pointer-events:auto}
 #bar{
   display:inline-flex;align-items:center;gap:6px;
   width:max-content;
@@ -43,7 +43,7 @@ body.theme-ready{opacity:1}
   border-radius:12px;
   background:linear-gradient(180deg,#14181d,#0d1014);
   border:1px solid var(--panel-border);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04),0 8px 18px rgba(0,0,0,.26);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
   animation:barIn .2s ease-out;
 }
 @keyframes barIn{from{transform:translateY(4px);opacity:.85}to{transform:translateY(0);opacity:1}}
@@ -75,48 +75,15 @@ body.theme-ready{opacity:1}
 }
 .sep{width:1px;height:18px;background:rgba(255,122,26,.3);margin:0 2px;flex:0 0 auto}
 .lucide{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-body[data-theme="light"] #bar{background:#ffffff;box-shadow: inset 0 0 0 1px rgba(0,0,0,.02)}
-#mosaicPanel{
-  display:none;width:max-content;max-width:100%;padding:8px 10px;border-radius:10px;
-  background:linear-gradient(180deg,#14181d,#0d1014);
-  border:1px solid var(--panel-border);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04),0 10px 22px rgba(0,0,0,.24);
-  margin-top:2px;
+body[data-theme="light"] #bar{
+  background:#ffffff;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.02);
 }
-#mosaicPanel.show{display:block}
-.mp-strip{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
-.mp-style{display:flex;align-items:center;gap:6px;flex:0 0 auto}
-.mp-style-btn{
-  height:24px;padding:0 10px;border-radius:8px;border:1px solid transparent;
-  color:var(--accent);background:var(--panel);cursor:pointer;font-size:12px;
-}
-.mp-style-btn.active{background:var(--accent-soft);border-color:var(--accent-border)}
-.mp-col{display:flex;align-items:center;gap:6px;min-width:0;flex:1}
-.mp-col label{color:var(--accent);font-size:12px;flex:0 0 auto}
-.mp-col input[type="range"]{flex:1;min-width:84px;appearance:none;-webkit-appearance:none;background:transparent;height:18px}
-.mp-col input[type="range"]::-webkit-slider-runnable-track{height:6px;border-radius:999px;background:rgba(255,122,26,.24)}
-.mp-col input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;margin-top:-4px;border-radius:50%;border:1px solid rgba(255,145,77,.9);background:linear-gradient(180deg,#ff9a45,#ff7a1a)}
-.mp-col input[type="range"]::-moz-range-track{height:6px;border-radius:999px;background:rgba(255,122,26,.24)}
-.mp-col input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,145,77,.9);background:linear-gradient(180deg,#ff9a45,#ff7a1a)}
-.mp-val{width:36px;text-align:right;color:var(--accent);font:12px Consolas,monospace}
-body[data-theme="light"] #mosaicPanel{background:#ffffff;box-shadow: inset 0 0 0 1px rgba(0,0,0,.02)}
 </style>
 </head>
 <body>
 <div id="shell">
   <div id="bar" aria-label="截图工具栏"></div>
-  <div id="mosaicPanel">
-    <div class="mp-strip">
-      <div class="mp-style">
-        <button class="mp-style-btn" type="button" data-style="pixel">像素</button>
-        <button class="mp-style-btn" type="button" data-style="frost">磨砂</button>
-        <button class="mp-style-btn" type="button" data-style="gauss">高斯</button>
-      </div>
-      <div class="mp-col"><label>粗细</label><input id="mpSize" type="range" min="12" max="120" step="2"><span id="mpSizeV" class="mp-val"></span></div>
-      <div class="mp-col"><label>融合</label><input id="mpIntensity" type="range" min="4" max="48" step="2"><span id="mpIntensityV" class="mp-val"></span></div>
-      <div class="mp-col"><label>透明</label><input id="mpOpacity" type="range" min="10" max="100" step="5"><span id="mpOpacityV" class="mp-val"></span></div>
-    </div>
-  </div>
 </div>
 
 <script src="./assets/nm-bottom-dock.js"></script>
@@ -124,7 +91,7 @@ body[data-theme="light"] #mosaicPanel{background:#ffffff;box-shadow: inset 0 0 0
 (function () {
   var __nmDock = null;
   var __schema = { items: [] };
-  var __state = { annotMode: 'none', toolbarVisible: true, canUndo: false, canRedo: false, mosaicOptions: { size:56, intensity:18, opacity:100, style:'pixel' } };
+  var __state = { annotMode: 'none', toolbarVisible: true, canUndo: false, canRedo: false };
 
   function post(obj) {
     try {
@@ -133,15 +100,6 @@ body[data-theme="light"] #mosaicPanel{background:#ffffff;box-shadow: inset 0 0 0
   }
 
   var bar = document.getElementById('bar');
-  var shell = document.getElementById('shell');
-  var mosaicPanel = document.getElementById('mosaicPanel');
-  var mpSize = document.getElementById('mpSize');
-  var mpIntensity = document.getElementById('mpIntensity');
-  var mpOpacity = document.getElementById('mpOpacity');
-  var mpSizeV = document.getElementById('mpSizeV');
-  var mpIntensityV = document.getElementById('mpIntensityV');
-  var mpOpacityV = document.getElementById('mpOpacityV');
-  var __mosaicStyle = 'pixel';
 
   function iconSvg(cmd) {
     switch (String(cmd || '')) {
@@ -188,61 +146,13 @@ body[data-theme="light"] #mosaicPanel{background:#ffffff;box-shadow: inset 0 0 0
     if (undoBtn) undoBtn.toggleAttribute('disabled', !__state.canUndo);
     var redoBtn = bar.querySelector('.tb[data-cmd="redo"]');
     if (redoBtn) redoBtn.toggleAttribute('disabled', !__state.canRedo);
-
-    var showMp = mode === 'mosaic';
-    mosaicPanel.classList.toggle('show', showMp);
-    var mo = __state.mosaicOptions || {};
-    mpSize.value = String(mo.size || 56);
-    mpIntensity.value = String(mo.intensity || 18);
-    mpOpacity.value = String(mo.opacity || 100);
-    __mosaicStyle = String(mo.style || __mosaicStyle || 'pixel');
-    mpSizeV.textContent = mpSize.value;
-    mpIntensityV.textContent = mpIntensity.value;
-    mpOpacityV.textContent = mpOpacity.value + '%';
-    document.querySelectorAll('.mp-style-btn').forEach(function(btn){
-      btn.classList.toggle('active', btn.getAttribute('data-style') === __mosaicStyle);
-    });
-    reportLayout();
   }
 
   function reportLayout() {
     try {
-      var r = shell.getBoundingClientRect();
-      var rb = bar.getBoundingClientRect();
-      var rp = mosaicPanel.getBoundingClientRect();
-      var panelVisible = mosaicPanel.classList.contains('show');
-      post({
-        type: 'event',
-        name: 'layout',
-        payload: {
-          width: Math.ceil(r.width),
-          height: Math.ceil(r.height),
-          barX: Math.max(0, Math.round(rb.left - r.left)),
-          barY: Math.max(0, Math.round(rb.top - r.top)),
-          barW: Math.round(rb.width),
-          barH: Math.round(rb.height),
-          panelVisible: panelVisible,
-          panelX: Math.max(0, Math.round(rp.left - r.left)),
-          panelY: Math.max(0, Math.round(rp.top - r.top)),
-          panelW: Math.round(rp.width),
-          panelH: Math.round(rp.height)
-        }
-      });
+      var r = bar.getBoundingClientRect();
+      post({ type: 'event', name: 'layout', payload: { width: Math.ceil(r.width), height: Math.ceil(r.height) } });
     } catch (e) {}
-  }
-
-  function postMosaicOptions() {
-    var payload = {
-      size: Number(mpSize.value || 56),
-      intensity: Number(mpIntensity.value || 18),
-      opacity: Number(mpOpacity.value || 100),
-      style: __mosaicStyle
-    };
-    __state.mosaicOptions = payload;
-    mpSizeV.textContent = String(payload.size);
-    mpIntensityV.textContent = String(payload.intensity);
-    mpOpacityV.textContent = String(payload.opacity) + '%';
-    post({ type: 'action', name: 'updateToolOptions', payload: { tool: 'mosaic', options: payload } });
   }
 
   function renderToolbar() {
@@ -285,21 +195,6 @@ body[data-theme="light"] #mosaicPanel{background:#ffffff;box-shadow: inset 0 0 0
     if (!t || t === bar) post({ type: 'action', name: 'dragWindow', payload: {} });
   });
 
-  [mpSize, mpIntensity, mpOpacity].forEach(function(el){
-    el.addEventListener('input', postMosaicOptions);
-    el.addEventListener('change', postMosaicOptions);
-  });
-  document.querySelectorAll('.mp-style-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      __mosaicStyle = btn.getAttribute('data-style') || 'pixel';
-      document.querySelectorAll('.mp-style-btn').forEach(function(x){ x.classList.toggle('active', x === btn); });
-      postMosaicOptions();
-    });
-  });
-  ['pointerdown','pointermove','pointerup','wheel','contextmenu','click','mousedown'].forEach(function(evt){
-    mosaicPanel.addEventListener(evt, function(e){ e.stopPropagation(); }, { passive:false });
-  });
-
   if (window.chrome && window.chrome.webview) {
     window.chrome.webview.addEventListener('message', function (ev) {
       var msg = ev.data || {};
@@ -321,7 +216,6 @@ body[data-theme="light"] #mosaicPanel{background:#ffffff;box-shadow: inset 0 0 0
         __state.toolbarVisible = !!p2.toolbarVisible;
         __state.canUndo = !!p2.canUndo;
         __state.canRedo = !!p2.canRedo;
-        __state.mosaicOptions = p2.mosaicOptions || __state.mosaicOptions;
         applyState();
         return;
       }
