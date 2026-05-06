@@ -80,10 +80,17 @@ class ScreenshotEditorPlugin {
     static ScreenshotArrowPalette := [0xFFFF7A1A, 0xFF3B82F6, 0xFF10B981, 0xFFEF4444, 0xFFF59E0B, 0xFF8B5CF6]
     static ScreenshotLivePreviewPath := ""
     static ScreenshotDrawColor := 0xFFFF7A1A
+    static ScreenshotDrawOpacity := 100
     static ScreenshotNumberSequence := 1
     static ScreenshotNumberStyleMode := "arabic" ; arabic | circled | roman | alpha
     static ScreenshotSymbolStyle := "+" ; + | x | check | ! | ? | star
     static ScreenshotMosaicOptions := Map("size", 56, "intensity", 18, "opacity", 100, "style", "pixel")
+    static ScreenshotTextOptions := Map("size", 22, "bold", true)
+    static ScreenshotSymbolOptions := Map("size", 16, "width", 4, "style", "+")
+    static ScreenshotNumberOptions := Map("size", 16, "radius", 16, "style", "arabic")
+    static ScreenshotArrowOptions := Map("width", 4)
+    static ScreenshotRectOptions := Map("width", 4)
+    static ScreenshotEllipseOptions := Map("width", 4)
     static ScreenshotDebugEnabled := true
     static ScreenshotDebugSessionId := ""
 
@@ -1204,23 +1211,7 @@ class ScreenshotEditorPlugin {
     if (t = "action" && name = "updateToolOptions") {
             tool := String(p.Get("tool", ""))
             opts := p.Get("options", 0)
-            if (tool = "mosaic" && opts is Map) {
-                size := Integer(opts.Get("size", this.ScreenshotMosaicOptions["size"]))
-                intensity := Integer(opts.Get("intensity", this.ScreenshotMosaicOptions["intensity"]))
-                opacity := Integer(opts.Get("opacity", this.ScreenshotMosaicOptions["opacity"]))
-                style := StrLower(String(opts.Get("style", this.ScreenshotMosaicOptions.Get("style", "pixel"))))
-                if (style != "pixel" && style != "frost" && style != "gauss")
-                    style := "pixel"
-                this.ScreenshotMosaicOptions := Map(
-                    "size", Max(12, Min(120, size)),
-                    "intensity", Max(4, Min(48, intensity)),
-                    "opacity", Max(10, Min(100, opacity)),
-                    "style", style
-                )
-                this.ScreenshotDebug_Trace("mosaic_opts", "style=" . style . " size=" . this.ScreenshotMosaicOptions["size"] . " intensity=" . this.ScreenshotMosaicOptions["intensity"] . " opacity=" . this.ScreenshotMosaicOptions["opacity"])
-                this.ScreenshotPreviewShell_SendState()
-                this.ScreenshotToolbar_SendState()
-            }
+            this.ScreenshotEditor_ApplyToolOptions(tool, opts)
             return
     }
 }
@@ -1395,18 +1386,7 @@ class ScreenshotEditorPlugin {
     if (t = "action" && name = "updateToolOptions") {
             tool := String(p.Get("tool", ""))
             opts := p.Get("options", 0)
-            if (tool = "mosaic" && opts is Map) {
-                size := Integer(opts.Get("size", this.ScreenshotMosaicOptions["size"]))
-                intensity := Integer(opts.Get("intensity", this.ScreenshotMosaicOptions["intensity"]))
-                opacity := Integer(opts.Get("opacity", this.ScreenshotMosaicOptions["opacity"]))
-                this.ScreenshotMosaicOptions := Map(
-                    "size", Max(12, Min(120, size)),
-                    "intensity", Max(4, Min(48, intensity)),
-                    "opacity", Max(10, Min(100, opacity))
-                )
-                this.ScreenshotDebug_Trace("mosaic_opts", "size=" . this.ScreenshotMosaicOptions["size"] . " intensity=" . this.ScreenshotMosaicOptions["intensity"] . " opacity=" . this.ScreenshotMosaicOptions["opacity"])
-                this.ScreenshotPreviewShell_SendState()
-            }
+            this.ScreenshotEditor_ApplyToolOptions(tool, opts)
             return
     }
     if (t = "action" && name = "windowCmd") {
@@ -1599,6 +1579,13 @@ class ScreenshotEditorPlugin {
         "themeMode", this.ScreenshotToolbarGetThemeMode(),
         "annotMode", this.ScreenshotAnnotMode,
         "mosaicOptions", this.ScreenshotMosaicOptions,
+        "textOptions", this.ScreenshotTextOptions,
+        "symbolOptions", this.ScreenshotSymbolOptions,
+        "numberOptions", this.ScreenshotNumberOptions,
+        "arrowOptions", this.ScreenshotArrowOptions,
+        "rectOptions", this.ScreenshotRectOptions,
+        "ellipseOptions", this.ScreenshotEllipseOptions,
+        "drawOptions", Map("color", Format("{:06X}", this.ScreenshotDrawColor & 0x00FFFFFF), "opacity", this.ScreenshotDrawOpacity),
         "canUndo", this.ScreenshotHistoryIndex > 1,
         "canRedo", (this.ScreenshotHistory is Array) && (this.ScreenshotHistoryIndex < this.ScreenshotHistory.Length)
     )
@@ -1993,7 +1980,7 @@ class ScreenshotEditorPlugin {
                     "type", "arrow",
                     "x1", x0, "y1", y0, "x2", x1, "y2", y1,
                     "color", this.ScreenshotDrawColor,
-                    "width", 4
+                    "width", Max(2, Min(12, Integer(this.ScreenshotArrowOptions.Get("width", 4))))
                 )
                 this.ScreenshotDocObjects.Push(newObj)
                 rp := this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, true, "add_arrow")
@@ -2038,7 +2025,8 @@ class ScreenshotEditorPlugin {
             return
         try DllCall("gdiplus\\GdipSetSmoothingMode", "Ptr", pG, "Int", 4)
 
-        pPen := Gdip_CreatePen(this.ScreenshotDrawColor, 4)
+        sw := (kind = "rect") ? Integer(this.ScreenshotRectOptions.Get("width", 4)) : Integer(this.ScreenshotEllipseOptions.Get("width", 4))
+        pPen := Gdip_CreatePen(this.ScreenshotDrawColor, Max(2, Min(12, sw)))
         if !pPen
             return
 
@@ -2200,7 +2188,10 @@ class ScreenshotEditorPlugin {
         tw := Max(80, imgW - tx - 8)
         th := Max(30, Min(220, imgH - ty - 8))
         col := this.ScreenshotColorToOpt(this.ScreenshotDrawColor)
-        opt := "x" . tx . " y" . ty . " w" . tw . " h" . th . " c" . col . " s22 Bold Left vTop"
+        to := this.ScreenshotTextOptions
+        fs := Integer(to.Get("size", 22))
+        wt := to.Get("bold", true) ? "Bold " : ""
+        opt := "x" . tx . " y" . ty . " w" . tw . " h" . th . " c" . col . " s" . fs . " " . wt . "Left vTop"
         try Gdip_TextToGraphics(pG, text, opt, "Segoe UI")
         outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
         if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
@@ -2227,7 +2218,8 @@ class ScreenshotEditorPlugin {
         pG := Gdip_GraphicsFromImage(pBmp)
         if !pG
             return
-        cx := Round(x), cy := Round(y), r := 16
+        no := this.ScreenshotNumberOptions
+        cx := Round(x), cy := Round(y), r := Integer(no.Get("radius", 16))
         fill := (this.ScreenshotDrawColor & 0x00FFFFFF) | 0xD0000000
         pBrush := Gdip_BrushCreateSolid(fill)
         pPen := Gdip_CreatePen(this.ScreenshotDrawColor, 2)
@@ -2235,9 +2227,10 @@ class ScreenshotEditorPlugin {
             Gdip_FillEllipse(pG, pBrush, cx - r, cy - r, r * 2, r * 2)
         if (pPen)
             Gdip_DrawEllipse(pG, pPen, cx - r, cy - r, r * 2, r * 2)
-        token := this.ScreenshotNumberFormat(this.ScreenshotNumberSequence, this.ScreenshotNumberStyleMode)
+        token := this.ScreenshotNumberFormat(this.ScreenshotNumberSequence, String(no.Get("style", this.ScreenshotNumberStyleMode)))
         this.ScreenshotNumberSequence += 1
-        opt := "x" . (cx - 16) . " y" . (cy - 14) . " w32 h28 cFFFFFFFF s16 Bold Center vCenter"
+        fs := Integer(no.Get("size", 16))
+        opt := "x" . (cx - r) . " y" . (cy - r + 2) . " w" . (r*2) . " h" . (r*2-2) . " cFFFFFFFF s" . fs . " Bold Center vCenter"
         Gdip_TextToGraphics(pG, token, opt, "Segoe UI")
         outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
         if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
@@ -2268,11 +2261,12 @@ class ScreenshotEditorPlugin {
         pG := Gdip_GraphicsFromImage(pBmp)
         if !pG
             return
-        cx := Round(x), cy := Round(y), r := 16
-        pPen := Gdip_CreatePen(this.ScreenshotDrawColor, 4)
+        so := this.ScreenshotSymbolOptions
+        cx := Round(x), cy := Round(y), r := Integer(so.Get("size", 16))
+        pPen := Gdip_CreatePen(this.ScreenshotDrawColor, Max(2, Min(10, Integer(so.Get("width", 4)))))
         if !pPen
             return
-        sty := this.ScreenshotSymbolStyle
+        sty := String(so.Get("style", this.ScreenshotSymbolStyle))
         if (sty = "x") {
             Gdip_DrawLine(pG, pPen, cx - r, cy - r, cx + r, cy + r)
             Gdip_DrawLine(pG, pPen, cx + r, cy - r, cx - r, cy + r)
@@ -2410,10 +2404,10 @@ class ScreenshotEditorPlugin {
     pal := this.ScreenshotArrowPalette
     if !(pal is Array) || pal.Length = 0
         return
-    cur := Integer(this.ScreenshotDrawColor)
+    cur := Integer(this.ScreenshotDrawColor) & 0x00FFFFFF
     pidx := 0
     for i, c in pal {
-        if (Integer(c) = cur) {
+        if ((Integer(c) & 0x00FFFFFF) = cur) {
             pidx := i
             break
         }
@@ -2421,7 +2415,8 @@ class ScreenshotEditorPlugin {
     if (pidx <= 0)
         pidx := 1
     next := (pidx >= pal.Length) ? 1 : (pidx + 1)
-    this.ScreenshotDrawColor := Integer(pal[next])
+    alpha := Round(this.ScreenshotDrawOpacity * 255 / 100)
+    this.ScreenshotDrawColor := (Integer(pal[next]) & 0x00FFFFFF) | (alpha << 24)
     TrayTip("Draw Color", Format("0x{1:08X}", this.ScreenshotDrawColor), "Iconi 1")
 }
 
@@ -4959,6 +4954,54 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     } catch as e {
         TrayTip("閿欒", "淇濆瓨澶辫触: " . e.Message, "Iconx 2")
     }
+}
+
+    static ScreenshotEditor_ApplyToolOptions(tool, opts) {
+    if !(opts is Map)
+        return
+    t := StrLower(String(tool))
+    if (t = "mosaic") {
+        size := Integer(opts.Get("size", this.ScreenshotMosaicOptions["size"]))
+        intensity := Integer(opts.Get("intensity", this.ScreenshotMosaicOptions["intensity"]))
+        opacity := Integer(opts.Get("opacity", this.ScreenshotMosaicOptions["opacity"]))
+        style := StrLower(String(opts.Get("style", this.ScreenshotMosaicOptions.Get("style", "pixel"))))
+        if (style != "pixel" && style != "frost" && style != "gauss")
+            style := "pixel"
+        this.ScreenshotMosaicOptions := Map("size", Max(12, Min(120, size)), "intensity", Max(4, Min(48, intensity)), "opacity", Max(10, Min(100, opacity)), "style", style)
+    } else if (t = "text") {
+        this.ScreenshotTextOptions := Map("size", Max(12, Min(48, Integer(opts.Get("size", this.ScreenshotTextOptions.Get("size", 22))))), "bold", !!opts.Get("bold", this.ScreenshotTextOptions.Get("bold", true)))
+    } else if (t = "symbol") {
+        style := String(opts.Get("style", this.ScreenshotSymbolStyle))
+        this.ScreenshotSymbolStyle := style
+        this.ScreenshotSymbolOptions := Map("size", Max(10, Min(40, Integer(opts.Get("size", this.ScreenshotSymbolOptions.Get("size", 16))))), "width", Max(2, Min(10, Integer(opts.Get("width", this.ScreenshotSymbolOptions.Get("width", 4))))), "style", style)
+    } else if (t = "number") {
+        style := String(opts.Get("style", this.ScreenshotNumberStyleMode))
+        this.ScreenshotNumberStyleMode := style
+        if (opts.Get("reset", false))
+            this.ScreenshotNumberSequence := 1
+        this.ScreenshotNumberOptions := Map("size", Max(12, Min(36, Integer(opts.Get("size", this.ScreenshotNumberOptions.Get("size", 16))))), "radius", Max(10, Min(28, Integer(opts.Get("radius", this.ScreenshotNumberOptions.Get("radius", 16))))), "style", style)
+    } else if (t = "arrow") {
+        this.ScreenshotArrowOptions := Map("width", Max(2, Min(12, Integer(opts.Get("width", this.ScreenshotArrowOptions.Get("width", 4))))))
+    } else if (t = "rect") {
+        this.ScreenshotRectOptions := Map("width", Max(2, Min(12, Integer(opts.Get("width", this.ScreenshotRectOptions.Get("width", 4))))))
+    } else if (t = "ellipse") {
+        this.ScreenshotEllipseOptions := Map("width", Max(2, Min(12, Integer(opts.Get("width", this.ScreenshotEllipseOptions.Get("width", 4))))))
+    } else {
+        return
+    }
+    if (opts.Has("color")) {
+        rgb := StrLower(String(opts.Get("color", "")))
+        if RegExMatch(rgb, "^[0-9a-f]{6}$")
+            this.ScreenshotDrawColor := (this.ScreenshotDrawColor & 0xFF000000) | Integer("0x" . rgb)
+    }
+    if (opts.Has("opacity"))
+        this.ScreenshotDrawOpacity := Max(10, Min(100, Integer(opts.Get("opacity", this.ScreenshotDrawOpacity))))
+    alpha := Round(this.ScreenshotDrawOpacity * 255 / 100)
+    if (alpha < 26)
+        alpha := 26
+    this.ScreenshotDrawColor := (this.ScreenshotDrawColor & 0x00FFFFFF) | (alpha << 24)
+    this.ScreenshotPreviewShell_SendState()
+    this.ScreenshotToolbar_SendState()
 }
 
     static _SyncHub() {
