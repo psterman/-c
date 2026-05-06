@@ -29,7 +29,7 @@ ScreenshotFlowReadCaptureMode() {
     cfg := A_ScriptDir . "\CursorShortcut.ini"
     mode := "selection"
     try mode := Trim(StrLower(IniRead(cfg, "Screenshot", "CaptureMode", "selection")))
-    if (mode != "selection" && mode != "fullscreen" && mode != "active_window" && mode != "monitor")
+    if (mode != "selection" && mode != "fullscreen" && mode != "active_window")
         mode := "selection"
     return mode
 }
@@ -113,10 +113,6 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
             Send("{PrintScreen}")
         } else if (captureMode = "active_window") {
             Send("!{PrintScreen}")
-        } else if (captureMode = "monitor") {
-            ; 当前版本先回退到系统区域截图（后续可扩展为直接抓取当前显示器）。
-            Send("#+{s}")
-            TrayTip("提示", "当前显示器模式暂使用区域截图，请框选目标显示器区域。", "Iconi 1")
         } else {
             Send("#+{s}")
         }

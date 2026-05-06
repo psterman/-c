@@ -1891,8 +1891,7 @@
           body = `<div class="row"><div class="label">捕获模式</div><select id="ssCaptureMode">${optionsKV([
             { value:"selection", label:"区域截图（Win+Shift+S）" },
             { value:"fullscreen", label:"全屏" },
-            { value:"active_window", label:"活动窗口" },
-            { value:"monitor", label:"当前显示器" }
+            { value:"active_window", label:"活动窗口" }
           ], ss.captureMode || "selection")}</select></div>
           <div class="row"><div class="label">包含鼠标指针</div><div><input id="ssIncludeCursor" type="checkbox" ${checked(!!ss.includeCursor)}></div></div>
           <div class="row"><div class="label">缩放比例 (%)</div><input id="ssScalePercent" type="number" min="25" max="300" step="5" value="${esc(ss.scalePercent || 100)}"></div>`;

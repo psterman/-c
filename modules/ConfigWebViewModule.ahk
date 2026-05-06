@@ -851,7 +851,7 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         if (payload.Has("screenshotConfig") && payload["screenshotConfig"] is Map) {
             sc := payload["screenshotConfig"]
             cm := Trim(String(sc.Get("captureMode", "selection")))
-            if (cm != "selection" && cm != "fullscreen" && cm != "active_window" && cm != "monitor")
+            if (cm != "selection" && cm != "fullscreen" && cm != "active_window")
                 cm := "selection"
             ot := Trim(String(sc.Get("outputTarget", "editor")))
             if (ot != "editor" && ot != "clipboard" && ot != "both")
