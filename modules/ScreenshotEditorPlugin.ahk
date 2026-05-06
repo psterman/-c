@@ -67,6 +67,12 @@ class ScreenshotEditorPlugin {
     static ScreenshotPreviewBounds := Map("x",0,"y",0,"w",0,"h",0)
     static ScreenshotAnnotMode := "none"
 
+    ; Minimal document/history for Phase-1 (AHK renders; WebView dispatches events).
+    static ScreenshotDocCurrentPath := ""
+    static ScreenshotHistory := []
+    static ScreenshotHistoryIndex := 0
+    static ScreenshotEditSession := 0
+
     static IsScreenshotEditorActive() {
     try {
         if !(IsObject(this.GuiID_ScreenshotEditor) && this.GuiID_ScreenshotEditor != 0)
@@ -680,7 +686,10 @@ class ScreenshotEditorPlugin {
         
         ; 淇濆瓨涓存椂鍥剧墖璺緞
         this.ScreenshotEditorImagePath := TempImagePath
-        
+        this.ScreenshotDocCurrentPath := TempImagePath
+        this.ScreenshotHistory := [Map("path", TempImagePath, "op", "init")]
+        this.ScreenshotHistoryIndex := 1
+         
     } catch as e {
         ; 鏄剧ず璇︾粏鐨勯敊璇瘖鏂俊鎭?
         this.ShowScreenshotErrorDiagnostics(e)
@@ -1018,6 +1027,78 @@ class ScreenshotEditorPlugin {
     }
 }
 
+    static _WV_Send(wv2, type, payload := "", name := "") {
+    if !wv2
+        return
+    msg := Map("type", String(type))
+    if (name != "")
+        msg["name"] := String(name)
+    ; For init/state/event/action/error we always keep payload in a single field.
+    if (payload != "")
+        msg["payload"] := payload
+    else
+        msg["payload"] := Map()
+    try {
+        if IsSet(WebView_QueuePayload)
+            WebView_QueuePayload(wv2, msg)
+        else
+            wv2.PostWebMessageAsJson(WebView_DumpJson(msg))
+    } catch {
+    }
+}
+
+    static _ATan2(y, x) {
+    ; AHK builds vary; keep an explicit atan2 implementation for safety.
+    try return DllCall("msvcrt\\atan2", "Double", Number(y), "Double", Number(x), "Double")
+    catch
+        return 0.0
+}
+
+    static _WV_NormalizeIncoming(msg) {
+    ; Normal form: {type, name, payload}
+    if !(msg is Map)
+        return Map("type","", "name","", "payload", Map())
+
+    if (msg.Has("type") && (msg.Has("payload") || msg.Has("name"))) {
+        t := String(msg["type"])
+        n := msg.Has("name") ? String(msg["name"]) : ""
+        p := msg.Has("payload") ? msg["payload"] : Map()
+        if !(p is Map)
+            p := Map("value", p)
+        return Map("type", t, "name", n, "payload", p)
+    }
+
+    ; Legacy compatibility: {type:"nmDockCmd", ...} (no payload wrapper).
+    if msg.Has("type") {
+        t0 := String(msg["type"])
+        if (t0 != "init" && t0 != "state") {
+            p0 := Map()
+            for k, v in msg {
+                if (k = "type")
+                    continue
+                p0[k] := v
+            }
+            return Map("type","event","name",t0,"payload",p0)
+        }
+    }
+
+    ; Legacy compatibility: {action, ...}
+    if msg.Has("action") {
+        a := String(msg["action"])
+        p2 := Map()
+        for k, v in msg {
+            if (k = "action")
+                continue
+            p2[k] := v
+        }
+        if (a = "invoke" || a = "dragWindow" || a = "menuInvoke" || a = "windowCmd")
+            return Map("type","action","name",a,"payload",p2)
+        return Map("type","event","name",a,"payload",p2)
+    }
+
+    return Map("type","", "name","", "payload", msg)
+}
+
     static ScreenshotToolbar_OnMessage(sender, args) {
     jsonStr := args.WebMessageAsJson
     try msg := Jxon_Load(jsonStr)
@@ -1025,51 +1106,91 @@ class ScreenshotEditorPlugin {
         return
     if !(msg is Map)
         return
-    action := msg.Has("action") ? msg["action"] : (msg.Has("type") ? msg["type"] : "")
-    switch action {
-        case "ready":
+    n := this._WV_NormalizeIncoming(msg)
+    t := n["type"]
+    name := n["name"]
+    p := n["payload"]
+    if (t = "event" && name = "ready") {
             this.ScreenshotToolbarWV2Ready := true
             this.ScreenshotToolbar_SendInit()
             this.ScreenshotToolbar_SendState()
             this.ScreenshotToolbar_SendDockConfig()
-        case "requestInit":
+            return
+    }
+    if (t = "event" && name = "requestInit") {
             this.ScreenshotToolbar_SendInit()
             this.ScreenshotToolbar_SendState()
-        case "nmDockReady":
+            return
+    }
+    if (t = "event" && name = "nmDockReady") {
             this.ScreenshotToolbar_SendDockConfig()
-        case "nmDockLeave":
+            return
+    }
+    if (t = "event" && name = "nmDockLeave") {
             ; lifecycle handled by ShowScreenshotEditor/CloseScreenshotEditor
-        case "nmDockCmd":
+            return
+    }
+    if (t = "event" && name = "nmDockCmd") {
             this.ScreenshotToolbar_ExecuteDockCmd(msg)
-        case "paint_ok":
+            return
+    }
+    if (t = "event" && name = "paint_ok") {
             this.ScreenshotToolbarWV2PaintOk := true
-        case "layout":
-            this.ScreenshotToolbar_ApplyLayout(msg.Get("width", 0), msg.Get("height", 0))
-        case "dragWindow":
+            return
+    }
+    if (t = "event" && name = "layout") {
+            this.ScreenshotToolbar_ApplyLayout(p.Get("width", 0), p.Get("height", 0))
+            return
+    }
+    if (t = "action" && name = "dragWindow") {
             this.ScreenshotToolbarDragWindow()
-        case "invoke":
-            cmd := msg.Get("cmd", "")
+            return
+    }
+    if (t = "action" && name = "invoke") {
+            cmd := p.Get("cmd", "")
             this.ScreenshotToolbar_InvokeCommand(cmd)
+            return
     }
 }
 
     static ScreenshotToolbar_SendInit() {
     if !this.ScreenshotToolbarWV2
         return
-    init := Map(
-        "type", "init",
+    payload := Map(
         "bridgeVersion", this.ScreenshotBridgeVersion,
         "themeMode", this.ScreenshotToolbarGetThemeMode(),
-        "accent", Map(
-            "dark", "ff7a1a",
-            "light", "e67e22"
-        ),
-        "commands", [
-            "rect","ellipse","arrow","number","symbol","annot_text","mosaic","eraser","undo","redo",
-            "pin","ocr","ocr_edit","text","save","ai","search","color","close"
-        ]
+        "schema", this.ScreenshotToolbar_BuildSchema()
     )
-    try this.ScreenshotToolbarWV2.PostWebMessageAsJson(WebView_DumpJson(init))
+    this._WV_Send(this.ScreenshotToolbarWV2, "init", payload)
+}
+
+    static ScreenshotToolbar_BuildSchema() {
+    ; State-driven toolbar schema. Icons live in the WebView; host controls structure/order.
+    items := [
+        Map("id","rect","title","矩形标注"),
+        Map("id","ellipse","title","圆形标注"),
+        Map("id","arrow","title","箭头标注"),
+        Map("id","number","title","序号标注"),
+        Map("id","symbol","title","符号标注"),
+        Map("id","annot_text","title","文本标注"),
+        Map("id","mosaic","title","马赛克"),
+        Map("id","eraser","title","橡皮擦"),
+        Map("kind","sep","drag",true),
+        Map("id","undo","title","撤回"),
+        Map("id","redo","title","重做"),
+        Map("id","pin","title","置顶/缩放模式"),
+        Map("id","ocr","title","OCR识别  Caps+G"),
+        Map("id","ocr_edit","title","编辑OCR到草稿本"),
+        Map("id","text","title","复制文本  Caps+C"),
+        Map("id","save","title","保存图片  Caps+R"),
+        Map("kind","sep","drag",true),
+        Map("id","ai","title","发送到AI  Caps+Z"),
+        Map("id","search","title","搜索文本  Caps+F"),
+        Map("id","color","title","取色器  Caps+X"),
+        Map("kind","sep","drag",true),
+        Map("id","close","title","关闭  Esc","danger",true)
+    ]
+    return Map("version","1", "items", items)
 }
 
     static ScreenshotFilePathToUrl(path) {
@@ -1166,27 +1287,41 @@ class ScreenshotEditorPlugin {
         return
     if !(msg is Map)
         return
-    action := msg.Has("action") ? msg["action"] : ""
-    switch action {
-        case "ready":
+    n := this._WV_NormalizeIncoming(msg)
+    t := n["type"]
+    name := n["name"]
+    p := n["payload"]
+    if (t = "event" && name = "ready") {
             this.ScreenshotPreviewWV2Ready := true
             this.ScreenshotPreviewShell_SendInit()
             this.ScreenshotPreviewShell_SendState()
-        case "requestInit":
+            return
+    }
+    if (t = "event" && name = "requestInit") {
             this.ScreenshotPreviewShell_SendInit()
             this.ScreenshotPreviewShell_SendState()
-        case "contextMenuRequest":
+            return
+    }
+    if (t = "event" && name = "contextMenuRequest") {
             this.OnScreenshotEditorContextMenu(0, 0)
-        case "menuInvoke":
-            mid := msg.Get("id","")
+            return
+    }
+    if (t = "action" && name = "menuInvoke") {
+            mid := p.Get("id","")
             if (mid = "copy")
                 this.CopyScreenshotToClipboard(false)
             else if (mid = "save")
                 this.SaveScreenshotToFile(false)
             else if (mid = "close")
                 this.CloseScreenshotEditor()
-        case "windowCmd":
-            cmd := StrLower(String(msg.Get("cmd","")))
+            return
+    }
+    if (t = "action" && name = "addText") {
+            this.ScreenshotEditor_AddText(Number(p.Get("x", 0)), Number(p.Get("y", 0)), String(p.Get("text","")))
+            return
+    }
+    if (t = "action" && name = "windowCmd") {
+            cmd := StrLower(String(p.Get("cmd","")))
             if (cmd = "close") {
                 this.CloseScreenshotEditor()
             } else if (cmd = "min") {
@@ -1204,36 +1339,44 @@ class ScreenshotEditorPlugin {
             } else if (cmd = "drag") {
                 this.ScreenshotEditorDragWindow()
             }
-        case "zoom":
-            d := Number(msg.Get("delta", 0))
+            return
+    }
+    if (t = "event" && name = "wheel") {
+            d := Number(p.Get("delta", 0))
             if (d > 0)
                 this.ScreenshotEditorZoomWithWheel(1)
             else if (d < 0)
                 this.ScreenshotEditorZoomWithWheel(-1)
-        case "previewPointer":
-            ; Phase-1: protocol only, drawing core hooks in phase-2.
+            return
+    }
+    if (t = "event" && name = "pointer") {
+            this.ScreenshotEditor_OnPreviewPointer(p)
+            return
     }
 }
 
     static ScreenshotPreviewShell_SendInit() {
     if !this.ScreenshotPreviewWV2
         return
-    try this.ScreenshotPreviewWV2.PostWebMessageAsJson(WebView_DumpJson(Map(
-        "type","init",
+    payload := Map(
         "bridgeVersion", this.ScreenshotBridgeVersion,
         "themeMode", this.ScreenshotToolbarGetThemeMode()
-    )))
+    )
+    this._WV_Send(this.ScreenshotPreviewWV2, "init", payload)
 }
 
     static ScreenshotPreviewShell_SendState() {
     if !this.ScreenshotPreviewWV2
         return
-    try this.ScreenshotPreviewWV2.PostWebMessageAsJson(WebView_DumpJson(Map(
-        "type","state",
+    payload := Map(
         "themeMode", this.ScreenshotToolbarGetThemeMode(),
         "previewSrc", this.ScreenshotPreviewPendingSrc,
-        "zoomScale", this.ScreenshotEditorZoomScale
-    )))
+        "zoomScale", this.ScreenshotEditorZoomScale,
+        "annotMode", this.ScreenshotAnnotMode,
+        "imageWidth", this.ScreenshotEditorBaseWidth,
+        "imageHeight", this.ScreenshotEditorBaseHeight
+    )
+    this._WV_Send(this.ScreenshotPreviewWV2, "state", payload)
 }
 
     static ScreenshotPreviewShell_ApplyBounds() {
@@ -1350,15 +1493,15 @@ class ScreenshotEditorPlugin {
     static ScreenshotToolbar_SendState() {
     if !this.ScreenshotToolbarWV2 || !this.ScreenshotToolbarWV2Ready
         return
-    try this.ScreenshotToolbarWV2.PostWebMessageAsJson(
-        WebView_DumpJson(Map(
-            "type", "state",
-            "bridgeVersion", this.ScreenshotBridgeVersion,
-            "toolbarVisible", this.ScreenshotEditorToolbarVisible,
-            "themeMode", this.ScreenshotToolbarGetThemeMode(),
-            "annotMode", this.ScreenshotAnnotMode
-        ))
+    payload := Map(
+        "bridgeVersion", this.ScreenshotBridgeVersion,
+        "toolbarVisible", this.ScreenshotEditorToolbarVisible,
+        "themeMode", this.ScreenshotToolbarGetThemeMode(),
+        "annotMode", this.ScreenshotAnnotMode,
+        "canUndo", this.ScreenshotHistoryIndex > 1,
+        "canRedo", (this.ScreenshotHistory is Array) && (this.ScreenshotHistoryIndex < this.ScreenshotHistory.Length)
     )
+    this._WV_Send(this.ScreenshotToolbarWV2, "state", payload)
 }
 
     ; Phase-1 stable bridge stubs for annotation actions.
@@ -1368,15 +1511,268 @@ class ScreenshotEditorPlugin {
     else
         this.ScreenshotAnnotMode := mode
     this.ScreenshotToolbar_SendState()
+    try this.ScreenshotPreviewShell_SendState()
     TrayTip("Screenshot", "Mode: " . this.ScreenshotAnnotMode, "Iconi 1")
 }
 
     static ScreenshotEditorUndo() {
-    TrayTip("Screenshot", "Undo is reserved for phase-2 drawing core", "Iconi 1")
+    this.ScreenshotHistory_Undo()
 }
 
     static ScreenshotEditorRedo() {
-    TrayTip("Screenshot", "Redo is reserved for phase-2 drawing core", "Iconi 1")
+    this.ScreenshotHistory_Redo()
+}
+
+    static ScreenshotHistory_SetCurrent(path) {
+    if (path = "" || !FileExist(path))
+        return
+    this.ScreenshotDocCurrentPath := path
+    src := this.ScreenshotImagePathToDataUrl(path)
+    if (src = "")
+        src := this.ScreenshotFilePathToUrl(path)
+    this.ScreenshotPreviewPendingSrc := src
+    try this.ScreenshotPreviewShell_SendState()
+    try this.ScreenshotToolbar_SendState()
+}
+
+    static ScreenshotHistory_Push(path, op := "") {
+    if (path = "" || !FileExist(path))
+        return
+    if !(this.ScreenshotHistory is Array)
+        this.ScreenshotHistory := []
+    if !(this.ScreenshotHistoryIndex > 0)
+        this.ScreenshotHistoryIndex := this.ScreenshotHistory.Length
+    ; Drop redo tail.
+    while (this.ScreenshotHistory.Length > this.ScreenshotHistoryIndex) {
+        try this.ScreenshotHistory.Pop()
+    }
+    if (op != "")
+        this.ScreenshotHistory.Push(Map("path", path, "op", String(op)))
+    else
+        this.ScreenshotHistory.Push(Map("path", path, "op", ""))
+    this.ScreenshotHistoryIndex := this.ScreenshotHistory.Length
+    this.ScreenshotHistory_SetCurrent(path)
+}
+
+    static ScreenshotHistory_Undo() {
+    if !(this.ScreenshotHistory is Array)
+        return
+    if (this.ScreenshotHistoryIndex <= 1)
+        return
+    this.ScreenshotHistoryIndex -= 1
+    item := this.ScreenshotHistory[this.ScreenshotHistoryIndex]
+    this.ScreenshotHistory_SetCurrent((item is Map) ? item["path"] : String(item))
+}
+
+    static ScreenshotHistory_Redo() {
+    if !(this.ScreenshotHistory is Array)
+        return
+    if (this.ScreenshotHistoryIndex >= this.ScreenshotHistory.Length)
+        return
+    this.ScreenshotHistoryIndex += 1
+    item := this.ScreenshotHistory[this.ScreenshotHistoryIndex]
+    this.ScreenshotHistory_SetCurrent((item is Map) ? item["path"] : String(item))
+}
+
+    static ScreenshotEditor_OnPreviewPointer(p) {
+    if !(p is Map)
+        return
+    if !this.ScreenshotUseUnifiedWebView
+        return
+    tool := this.ScreenshotAnnotMode
+    phase := StrLower(String(p.Get("phase","")))
+    x := Number(p.Get("x", 0))
+    y := Number(p.Get("y", 0))
+
+    if (phase = "down") {
+        if (tool = "none" || tool = "")
+            return
+        this.ScreenshotEditSession := Map("tool", tool, "x0", x, "y0", y, "x1", x, "y1", y, "points", [])
+        if (tool = "mosaic") {
+            this.ScreenshotEditSession["points"].Push(Map("x", x, "y", y))
+        }
+        return
+    }
+
+    if !(this.ScreenshotEditSession is Map)
+        return
+
+    if (phase = "move") {
+        this.ScreenshotEditSession["x1"] := x
+        this.ScreenshotEditSession["y1"] := y
+        if (this.ScreenshotEditSession["tool"] = "mosaic") {
+            pts := this.ScreenshotEditSession["points"]
+            if (pts is Array) {
+                ; throttle: keep points ~ every 6px
+                if (pts.Length = 0) {
+                    pts.Push(Map("x", x, "y", y))
+                } else {
+                    last := pts[pts.Length]
+                    dx := x - Number(last["x"])
+                    dy := y - Number(last["y"])
+                    if (dx*dx + dy*dy >= 36)
+                        pts.Push(Map("x", x, "y", y))
+                }
+            }
+        }
+        return
+    }
+
+    if (phase = "up") {
+        sess := this.ScreenshotEditSession
+        this.ScreenshotEditSession := 0
+        t2 := sess["tool"]
+        x0 := Number(sess["x0"]), y0 := Number(sess["y0"])
+        x1 := Number(sess["x1"]), y1 := Number(sess["y1"])
+        if (t2 = "rect" || t2 = "ellipse" || t2 = "arrow") {
+            this.ScreenshotEditor_ApplyShape(t2, x0, y0, x1, y1)
+        } else if (t2 = "mosaic") {
+            this.ScreenshotEditor_ApplyMosaic(sess["points"])
+        }
+        return
+    }
+}
+
+    static ScreenshotEditor_ApplyShape(kind, x0, y0, x1, y1) {
+    srcPath := this.ScreenshotDocCurrentPath
+    if (srcPath = "" || !FileExist(srcPath))
+        return
+    pBmp := 0, pG := 0, pPen := 0
+    try {
+        pBmp := Gdip_CreateBitmapFromFile(srcPath)
+        if !pBmp
+            return
+        pG := Gdip_GraphicsFromImage(pBmp)
+        if !pG
+            return
+        try DllCall("gdiplus\\GdipSetSmoothingMode", "Ptr", pG, "Int", 4)
+
+        ; Accent orange; keep consistent with UI.
+        pPen := Gdip_CreatePen(0xFFFF7A1A, 4)
+        if !pPen
+            return
+
+        x := Min(x0, x1), y := Min(y0, y1)
+        w := Abs(x1 - x0), h := Abs(y1 - y0)
+        if (w < 2 && h < 2)
+            return
+
+        if (kind = "rect") {
+            Gdip_DrawRectangle(pG, pPen, x, y, w, h)
+        } else if (kind = "ellipse") {
+            Gdip_DrawEllipse(pG, pPen, x, y, w, h)
+        } else if (kind = "arrow") {
+            ; Simple arrow: main line + two wings.
+            Gdip_DrawLine(pG, pPen, x0, y0, x1, y1)
+            ang := this._ATan2(y1 - y0, x1 - x0)
+            len := 16
+            a1 := ang + 2.6
+            a2 := ang - 2.6
+            Gdip_DrawLine(pG, pPen, x1, y1, x1 + Cos(a1) * len, y1 + Sin(a1) * len)
+            Gdip_DrawLine(pG, pPen, x1, y1, x1 + Cos(a2) * len, y1 + Sin(a2) * len)
+        }
+
+        outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
+        if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
+            return
+        this.ScreenshotHistory_Push(outPath, kind)
+    } catch {
+    } finally {
+        if (pPen)
+            try Gdip_DeletePen(pPen)
+        if (pG)
+            try Gdip_DeleteGraphics(pG)
+        if (pBmp)
+            try Gdip_DisposeImage(pBmp)
+    }
+}
+
+    static ScreenshotEditor_ApplyMosaic(points) {
+    srcPath := this.ScreenshotDocCurrentPath
+    if (srcPath = "" || !FileExist(srcPath))
+        return
+    if !(points is Array) || points.Length = 0
+        return
+
+    pBmp := 0, pG := 0
+    try {
+        pBmp := Gdip_CreateBitmapFromFile(srcPath)
+        if !pBmp
+            return
+        pG := Gdip_GraphicsFromImage(pBmp)
+        if !pG
+            return
+
+        stamp := 34
+        block := 10
+        for _, pt in points {
+            if !(pt is Map)
+                continue
+            cx := Number(pt.Get("x", 0))
+            cy := Number(pt.Get("y", 0))
+            x := Max(0, Round(cx - stamp/2))
+            y := Max(0, Round(cy - stamp/2))
+            w := Round(stamp)
+            h := Round(stamp)
+            pClone := 0, pPix := 0
+            try {
+                pClone := Gdip_CloneBitmapArea(pBmp, x, y, w, h, 0x26200A)
+                if !pClone
+                    continue
+                pPix := 0
+                if (Gdip_PixelateBitmap(pClone, &pPix, block) != 0 || !pPix)
+                    continue
+                Gdip_DrawImage(pG, pPix, x, y, w, h, 0, 0, w, h)
+            } catch {
+            } finally {
+                if (pPix)
+                    try Gdip_DisposeImage(pPix)
+                if (pClone)
+                    try Gdip_DisposeImage(pClone)
+            }
+        }
+
+        outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
+        if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
+            return
+        this.ScreenshotHistory_Push(outPath, "mosaic")
+    } catch {
+    } finally {
+        if (pG)
+            try Gdip_DeleteGraphics(pG)
+        if (pBmp)
+            try Gdip_DisposeImage(pBmp)
+    }
+}
+
+    static ScreenshotEditor_AddText(x, y, text) {
+    if (text = "")
+        return
+    srcPath := this.ScreenshotDocCurrentPath
+    if (srcPath = "" || !FileExist(srcPath))
+        return
+    pBmp := 0, pG := 0
+    try {
+        pBmp := Gdip_CreateBitmapFromFile(srcPath)
+        if !pBmp
+            return
+        pG := Gdip_GraphicsFromImage(pBmp)
+        if !pG
+            return
+        ; Simple text; keep font and style consistent and safe for IME (input in WebView).
+        opt := "x" . Round(x) . " y" . Round(y) . " cFFFFF2E8 s22 Bold"
+        try Gdip_TextToGraphics(pG, text, opt, "Segoe UI")
+        outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
+        if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
+            return
+        this.ScreenshotHistory_Push(outPath, "text")
+    } catch {
+    } finally {
+        if (pG)
+            try Gdip_DeleteGraphics(pG)
+        if (pBmp)
+            try Gdip_DisposeImage(pBmp)
+    }
 }
 
     static ScreenshotToolbar_ApplyLayout(width, height) {
@@ -2039,7 +2435,27 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             }
             this.ScreenshotEditorImagePath := ""
         }
-        
+
+        ; 清理本次会话生成的编辑历史临时文件（仅删除本模块生成的 temp 前缀）。
+        if (this.ScreenshotHistory is Array) {
+            for _, hp in this.ScreenshotHistory {
+                try {
+                    p := (hp is Map && hp.Has("path")) ? String(hp["path"]) : String(hp)
+                    if (p = "")
+                        continue
+                    if (InStr(p, A_Temp "\\ScreenshotEdit_") || InStr(p, A_Temp "\\ScreenshotEditor_")) {
+                        if FileExist(p)
+                            FileDelete(p)
+                    }
+                } catch {
+                }
+            }
+        }
+        this.ScreenshotHistory := []
+        this.ScreenshotHistoryIndex := 0
+        this.ScreenshotDocCurrentPath := ""
+        this.ScreenshotEditSession := 0
+         
         ; 閿€姣丟UI锛堝畨鍏ㄥ鐞咷ui瀵硅薄锛?
         if (IsObject(this.GuiID_ScreenshotEditor)) {
             try {

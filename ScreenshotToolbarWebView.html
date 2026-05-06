@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -56,7 +56,7 @@ body.theme-ready{opacity:1}
   color:var(--accent);
   cursor:pointer;
   outline:none;
-  transition:transform var(--ease),background var(--ease),border-color var(--ease),box-shadow var(--ease),color var(--ease);
+  transition:transform var(--ease),background var(--ease),border-color var(--ease),box-shadow var(--ease),color var(--ease),opacity var(--ease);
 }
 .tb:hover,.tb:focus-visible{
   transform:translateY(-1px);
@@ -66,6 +66,7 @@ body.theme-ready{opacity:1}
 }
 .tb:active{transform:translateY(0) scale(.97)}
 .tb.active{background:var(--accent-soft);border-color:transparent}
+.tb:disabled{opacity:.35;cursor:default}
 .tb.danger{color:var(--danger);border-color:transparent}
 .tb.danger:hover,.tb.danger:focus-visible{
   background:var(--danger-soft);
@@ -82,86 +83,48 @@ body[data-theme="light"] #bar{
 </head>
 <body>
 <div id="shell">
-  <div id="bar" aria-label="截图工具栏">
-    <button class="tb" data-cmd="rect" title="矩形标注" aria-label="矩形标注">
-      <svg class="lucide" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
-    </button>
-    <button class="tb" data-cmd="ellipse" title="圆形标注" aria-label="圆形标注">
-      <svg class="lucide" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg>
-    </button>
-    <button class="tb" data-cmd="arrow" title="箭头标注" aria-label="箭头标注">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="M4 16 18 6"/><path d="m18 6-1 6"/><path d="m18 6-6 1"/></svg>
-    </button>
-    <button class="tb" data-cmd="number" title="序号标注" aria-label="序号标注">
-      <svg class="lucide" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M10 10h3v6"/><path d="M10 16h4"/></svg>
-    </button>
-    <button class="tb" data-cmd="symbol" title="符号标注" aria-label="符号标注">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="m12 3 2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6-6.3 4.6 2.3-7-6-4.6h7.6z"/></svg>
-    </button>
-    <button class="tb" data-cmd="annot_text" title="文本标注" aria-label="文本标注">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M12 6v12"/></svg>
-    </button>
-    <button class="tb" data-cmd="mosaic" title="马赛克" aria-label="马赛克">
-      <svg class="lucide" viewBox="0 0 24 24"><rect x="4" y="4" width="5" height="5" rx="1"/><rect x="10" y="4" width="5" height="5" rx="1"/><rect x="15" y="9" width="5" height="5" rx="1"/><rect x="9" y="10" width="5" height="5" rx="1"/><rect x="4" y="15" width="5" height="5" rx="1"/><rect x="10" y="15" width="5" height="5" rx="1"/></svg>
-    </button>
-    <button class="tb" data-cmd="eraser" title="橡皮擦" aria-label="橡皮擦">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="m7 14 7-7 5 5-7 7H7z"/><path d="M4 20h16"/></svg>
-    </button>
-    <button class="tb" data-cmd="undo" title="撤销" aria-label="撤销">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="m9 7-5 5 5 5"/><path d="M20 19a8 8 0 0 0-8-8H4"/></svg>
-    </button>
-    <button class="tb" data-cmd="redo" title="重做" aria-label="重做">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="m15 7 5 5-5 5"/><path d="M4 19a8 8 0 0 1 8-8h8"/></svg>
-    </button>
-    <div class="sep" data-drag="1"></div>
-    <button class="tb" data-cmd="pin" title="置顶  Caps+Q" aria-label="置顶">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 3h6l1 6 2 2-6 4-6-4 2-2z"/></svg>
-    </button>
-    <button class="tb" data-cmd="ocr" title="识别文本  Caps+E" aria-label="识别文本">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h6M8 16h4"/></svg>
-    </button>
-    <button class="tb" data-cmd="ocr_edit" title="编辑OCR到草稿本" aria-label="编辑OCR到草稿本">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="M3 21h6"/><path d="m14.5 4.5 5 5"/><path d="M7 17l2.5-.5L19 7a1.8 1.8 0 0 0-2.5-2.5L7 14z"/></svg>
-    </button>
-    <button class="tb" data-cmd="text" title="复制文本  Caps+C" aria-label="复制文本">
-      <svg class="lucide" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><rect x="4" y="4" width="11" height="11" rx="2"/></svg>
-    </button>
-    <button class="tb" data-cmd="save" title="保存图片  Caps+R" aria-label="保存图片">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5z"/><path d="M8 4v6h8V4"/><path d="M9 16h6"/></svg>
-    </button>
-
-    <div class="sep" data-drag="1"></div>
-
-    <button class="tb" data-cmd="ai" title="发送到AI  Caps+Z" aria-label="发送到AI">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.9 4.9 7.7 7.7"/><path d="m16.3 16.3 2.8 2.8"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.9 19.1 2.8-2.8"/><path d="m16.3 7.7 2.8-2.8"/><circle cx="12" cy="12" r="3.5"/></svg>
-    </button>
-    <button class="tb" data-cmd="search" title="搜索文本  Caps+F" aria-label="搜索文本">
-      <svg class="lucide" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-    </button>
-    <button class="tb" data-cmd="color" title="取色器  Caps+X" aria-label="取色器">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="m14 4 6 6"/><path d="m6 12 8-8 6 6-8 8H6z"/><path d="M4 20h6"/></svg>
-    </button>
-
-    <div class="sep" data-drag="1"></div>
-
-    <button class="tb danger" data-cmd="close" title="关闭  Esc" aria-label="关闭">
-      <svg class="lucide" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    </button>
-  </div>
+  <div id="bar" aria-label="截图工具栏"></div>
 </div>
 
 <script src="./assets/nm-bottom-dock.js"></script>
 <script>
 (function () {
   var __nmDock = null;
+  var __schema = { items: [] };
+  var __state = { annotMode: 'none', toolbarVisible: true, canUndo: false, canRedo: false };
+
   function post(obj) {
     try {
       if (window.chrome && window.chrome.webview) window.chrome.webview.postMessage(obj);
     } catch (e) {}
   }
 
-  var shell = document.getElementById('shell');
   var bar = document.getElementById('bar');
+
+  function iconSvg(cmd) {
+    switch (String(cmd || '')) {
+      case 'rect': return '<svg class="lucide" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>';
+      case 'ellipse': return '<svg class="lucide" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg>';
+      case 'arrow': return '<svg class="lucide" viewBox="0 0 24 24"><path d="M4 16 18 6"/><path d="m18 6-1 6"/><path d="m18 6-6 1"/></svg>';
+      case 'number': return '<svg class="lucide" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M10 10h3v6"/><path d="M10 16h4"/></svg>';
+      case 'symbol': return '<svg class="lucide" viewBox="0 0 24 24"><path d="m12 3 2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6-6.3 4.6 2.3-7-6-4.6h7.6z"/></svg>';
+      case 'annot_text': return '<svg class="lucide" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M12 6v12"/></svg>';
+      case 'mosaic': return '<svg class="lucide" viewBox="0 0 24 24"><path d="M4 4h7v7H4z"/><path d="M13 4h7v7h-7z"/><path d="M4 13h7v7H4z"/><path d="M13 13h7v7h-7z"/></svg>';
+      case 'eraser': return '<svg class="lucide" viewBox="0 0 24 24"><path d="m7 21-4-4 9-9 4 4-9 9z"/><path d="M14 14l4 4"/><path d="M16 3l5 5"/></svg>';
+      case 'undo': return '<svg class="lucide" viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9H3"/></svg>';
+      case 'redo': return '<svg class="lucide" viewBox="0 0 24 24"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9h9"/></svg>';
+      case 'pin': return '<svg class="lucide" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 3h6l1 6-2 2v5H10v-5L8 9l1-6z"/></svg>';
+      case 'ocr': return '<svg class="lucide" viewBox="0 0 24 24"><path d="M7 5H5a2 2 0 0 0-2 2v2"/><path d="M17 5h2a2 2 0 0 1 2 2v2"/><path d="M7 19H5a2 2 0 0 1-2-2v-2"/><path d="M17 19h2a2 2 0 0 0 2-2v-2"/><path d="M8 11h8"/><path d="M8 15h6"/></svg>';
+      case 'ocr_edit': return '<svg class="lucide" viewBox="0 0 24 24"><path d="M3 21h6"/><path d="m14.5 4.5 5 5"/><path d="M7 17l2.5-.5L19 7a1.8 1.8 0 0 0-2.5-2.5L7 14z"/></svg>';
+      case 'text': return '<svg class="lucide" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><rect x="4" y="4" width="11" height="11" rx="2"/></svg>';
+      case 'save': return '<svg class="lucide" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5z"/><path d="M8 4v6h8V4"/><path d="M9 16h6"/></svg>';
+      case 'ai': return '<svg class="lucide" viewBox="0 0 24 24"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.9 4.9 7.7 7.7"/><path d="m16.3 16.3 2.8 2.8"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.9 19.1 2.8-2.8"/><path d="m16.3 7.7 2.8-2.8"/><circle cx="12" cy="12" r="3.5"/></svg>';
+      case 'search': return '<svg class="lucide" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+      case 'color': return '<svg class="lucide" viewBox="0 0 24 24"><path d="m14 4 6 6"/><path d="m6 12 8-8 6 6-8 8H6z"/><path d="M4 20h6"/></svg>';
+      case 'close': return '<svg class="lucide" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+      default: return '<svg class="lucide" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>';
+    }
+  }
 
   function applyTheme(mode) {
     var tm = String(mode || '').toLowerCase() === 'light' ? 'light' : 'dark';
@@ -169,25 +132,67 @@ body[data-theme="light"] #bar{
     document.body.classList.add('theme-ready');
   }
 
+  function applyState() {
+    var mode = String(__state.annotMode || 'none');
+    ['rect','ellipse','arrow','number','symbol','annot_text','mosaic','eraser'].forEach(function(cmd){
+      var b = bar.querySelector('.tb[data-cmd="'+cmd+'"]');
+      if (!b) return;
+      var key = (cmd === 'annot_text') ? 'text' : cmd;
+      b.classList.toggle('active', mode === key);
+    });
+    var pinBtn = bar.querySelector('.tb[data-cmd="pin"]');
+    if (pinBtn) pinBtn.classList.toggle('active', !!__state.toolbarVisible);
+    var undoBtn = bar.querySelector('.tb[data-cmd="undo"]');
+    if (undoBtn) undoBtn.toggleAttribute('disabled', !__state.canUndo);
+    var redoBtn = bar.querySelector('.tb[data-cmd="redo"]');
+    if (redoBtn) redoBtn.toggleAttribute('disabled', !__state.canRedo);
+  }
+
   function reportLayout() {
     try {
       var r = bar.getBoundingClientRect();
-      post({ action: 'layout', width: Math.ceil(r.width), height: Math.ceil(r.height) });
+      post({ type: 'event', name: 'layout', payload: { width: Math.ceil(r.width), height: Math.ceil(r.height) } });
     } catch (e) {}
+  }
+
+  function renderToolbar() {
+    var items = (__schema && Array.isArray(__schema.items)) ? __schema.items : [];
+    if (!items.length) return;
+    bar.innerHTML = '';
+    items.forEach(function (it) {
+      if (!it || it.kind === 'sep') {
+        var sep = document.createElement('div');
+        sep.className = 'sep';
+        if (it && it.drag) sep.setAttribute('data-drag', '1');
+        bar.appendChild(sep);
+        return;
+      }
+      var cmd = String(it.id || '');
+      var btn = document.createElement('button');
+      btn.className = 'tb' + (it.danger ? ' danger' : '');
+      btn.setAttribute('data-cmd', cmd);
+      btn.setAttribute('title', it.title || cmd);
+      btn.setAttribute('aria-label', it.aria || it.title || cmd);
+      btn.innerHTML = iconSvg(cmd);
+      bar.appendChild(btn);
+    });
+    applyState();
+    reportLayout();
   }
 
   bar.addEventListener('click', function (ev) {
     var t = ev.target;
     while (t && t !== bar && !t.getAttribute('data-cmd')) t = t.parentNode;
     if (!t || t === bar) return;
-    post({ action: 'invoke', cmd: t.getAttribute('data-cmd') });
+    if (t.hasAttribute('disabled')) return;
+    post({ type: 'action', name: 'invoke', payload: { cmd: t.getAttribute('data-cmd') } });
   });
 
   bar.addEventListener('mousedown', function (ev) {
     if (ev.button !== 0) return;
     var t = ev.target;
     while (t && t !== bar && !t.getAttribute('data-cmd')) t = t.parentNode;
-    if (!t || t === bar) post({ action: 'dragWindow' });
+    if (!t || t === bar) post({ type: 'action', name: 'dragWindow', payload: {} });
   });
 
   if (window.chrome && window.chrome.webview) {
@@ -197,38 +202,33 @@ body[data-theme="light"] #bar{
         try { msg = JSON.parse(msg); } catch (e) { return; }
       }
       if (__nmDock && typeof __nmDock.onHostMessage === 'function') __nmDock.onHostMessage(msg);
-      if (msg && msg.type === 'RESET_STATE') {
-        try {
-          if (typeof window.onWebViewResetState === 'function') window.onWebViewResetState();
-        } catch (e) {}
-        return;
-      }
+      if (msg && msg.type === 'RESET_STATE') return;
       if (msg.type === 'init') {
-        applyTheme(msg.themeMode || 'dark');
+        var p = msg.payload || msg;
+        applyTheme(p.themeMode || 'dark');
+        if (p.schema) { __schema = p.schema; renderToolbar(); }
         return;
       }
-      if (msg.type !== 'state') return;
-      applyTheme(msg.themeMode || msg.theme || 'dark');
-      var pinBtn = bar.querySelector('.tb[data-cmd="pin"]');
-      if (pinBtn) pinBtn.classList.toggle('active', !!msg.toolbarVisible);
-      var mode = String(msg.annotMode || 'none');
-      ['rect','ellipse','arrow','number','symbol','annot_text','mosaic','eraser'].forEach(function(cmd){
-        var b = bar.querySelector('.tb[data-cmd="'+cmd+'"]');
-        if (!b) return;
-        var key = (cmd === 'annot_text') ? 'text' : cmd;
-        b.classList.toggle('active', mode === key);
-      });
+      if (msg.type === 'state') {
+        var p2 = msg.payload || msg;
+        applyTheme(p2.themeMode || p2.theme || 'dark');
+        __state.annotMode = p2.annotMode || 'none';
+        __state.toolbarVisible = !!p2.toolbarVisible;
+        __state.canUndo = !!p2.canUndo;
+        __state.canRedo = !!p2.canRedo;
+        applyState();
+        return;
+      }
     });
   }
 
   window.addEventListener('resize', reportLayout);
   if (window.NiumaBottomDock && typeof window.NiumaBottomDock.mount === 'function')
     __nmDock = window.NiumaBottomDock.mount({ sceneId: 'screenshot', post: post, space: 70 });
-  // Keep hidden until host state arrives to avoid dark->light flash.
   reportLayout();
-  post({ action: 'requestInit' });
-  post({ action: 'ready' });
-  requestAnimationFrame(function(){ post({ action: 'paint_ok' }); reportLayout(); });
+  post({ type: 'event', name: 'requestInit', payload: {} });
+  post({ type: 'event', name: 'ready', payload: {} });
+  requestAnimationFrame(function(){ post({ type: 'event', name: 'paint_ok', payload: {} }); reportLayout(); });
   setTimeout(reportLayout, 80);
   setTimeout(reportLayout, 260);
 })();
