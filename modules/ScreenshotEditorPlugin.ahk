@@ -1877,7 +1877,7 @@ class ScreenshotEditorPlugin {
             }
             return
         }
-        if (this.ScreenshotEditSession["tool"] = "mosaic") {
+        if (this.ScreenshotEditSession["tool"] = "mosaic" || this.ScreenshotEditSession["tool"] = "eraser") {
             pts := this.ScreenshotEditSession["points"]
             if (pts is Array) {
                 ; throttle: keep points ~ every 6px
@@ -1952,8 +1952,21 @@ class ScreenshotEditorPlugin {
             }
         } else if (t2 = "rect" || t2 = "ellipse") {
             this.ScreenshotEditor_ApplyShape(t2, x0, y0, x1, y1)
+        } else if (t2 = "number") {
+            this.ScreenshotEditor_ApplyNumber(x1, y1)
+        } else if (t2 = "symbol") {
+            this.ScreenshotEditor_ApplySymbol(x1, y1)
         } else if (t2 = "mosaic") {
+            if (sess["points"] is Array && sess["points"].Length = 0)
+                sess["points"].Push(Map("x", x1, "y", y1))
             this.ScreenshotEditor_ApplyMosaic(sess["points"])
+        } else if (t2 = "eraser") {
+            points := []
+            if (sess["points"] is Array)
+                points := sess["points"]
+            if (points.Length = 0)
+                points.Push(Map("x", x1, "y", y1))
+            this.ScreenshotEditor_ApplyEraser(points)
         }
         return
     }
@@ -2085,8 +2098,16 @@ class ScreenshotEditorPlugin {
         pG := Gdip_GraphicsFromImage(pBmp)
         if !pG
             return
-        ; Simple text; keep font and style consistent and safe for IME (input in WebView).
-        opt := "x" . Round(x) . " y" . Round(y) . " cFFFFF2E8 s22 Bold"
+        ; Use explicit render box so GDI+ text is consistently visible.
+        imgW := Gdip_GetImageWidth(pBmp)
+        imgH := Gdip_GetImageHeight(pBmp)
+        if !(imgW > 0 && imgH > 0)
+            return
+        tx := Max(0, Min(imgW - 20, Round(x)))
+        ty := Max(0, Min(imgH - 20, Round(y)))
+        tw := Max(80, imgW - tx - 8)
+        th := Max(30, Min(220, imgH - ty - 8))
+        opt := "x" . tx . " y" . ty . " w" . tw . " h" . th . " cFFFFF2E8 s22 Bold Left vtop"
         try Gdip_TextToGraphics(pG, text, opt, "Segoe UI")
         outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
         if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
@@ -2098,6 +2119,124 @@ class ScreenshotEditorPlugin {
             try Gdip_DeleteGraphics(pG)
         if (pBmp)
             try Gdip_DisposeImage(pBmp)
+    }
+}
+
+    static ScreenshotEditor_ApplyNumber(x, y) {
+    srcPath := this.ScreenshotDocCurrentPath
+    if (srcPath = "" || !FileExist(srcPath))
+        return
+    pBmp := 0, pG := 0, pPen := 0, pBrush := 0
+    try {
+        pBmp := Gdip_CreateBitmapFromFile(srcPath)
+        if !pBmp
+            return
+        pG := Gdip_GraphicsFromImage(pBmp)
+        if !pG
+            return
+        cx := Round(x), cy := Round(y), r := 16
+        pBrush := Gdip_BrushCreateSolid(0xE6FF7A1A)
+        pPen := Gdip_CreatePen(0xFFFFA34D, 2)
+        if (pBrush)
+            Gdip_FillEllipse(pG, pBrush, cx - r, cy - r, r * 2, r * 2)
+        if (pPen)
+            Gdip_DrawEllipse(pG, pPen, cx - r, cy - r, r * 2, r * 2)
+        idx := (this.ScreenshotHistory is Array) ? this.ScreenshotHistory.Length : 1
+        opt := "x" . (cx - 8) . " y" . (cy - 12) . " w24 h24 cFFFFFFFF s16 Bold Center vcenter"
+        Gdip_TextToGraphics(pG, String(idx), opt, "Segoe UI")
+        outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
+        if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
+            return
+        this.ScreenshotHistory_Push(outPath, "number")
+    } catch {
+    } finally {
+        if (pBrush)
+            try Gdip_DeleteBrush(pBrush)
+        if (pPen)
+            try Gdip_DeletePen(pPen)
+        if (pG)
+            try Gdip_DeleteGraphics(pG)
+        if (pBmp)
+            try Gdip_DisposeImage(pBmp)
+    }
+}
+
+    static ScreenshotEditor_ApplySymbol(x, y) {
+    srcPath := this.ScreenshotDocCurrentPath
+    if (srcPath = "" || !FileExist(srcPath))
+        return
+    pBmp := 0, pG := 0, pPen := 0
+    try {
+        pBmp := Gdip_CreateBitmapFromFile(srcPath)
+        if !pBmp
+            return
+        pG := Gdip_GraphicsFromImage(pBmp)
+        if !pG
+            return
+        cx := Round(x), cy := Round(y), r := 14
+        pPen := Gdip_CreatePen(0xFFFF7A1A, 4)
+        if !pPen
+            return
+        ; Draw a simple plus symbol.
+        Gdip_DrawLine(pG, pPen, cx - r, cy, cx + r, cy)
+        Gdip_DrawLine(pG, pPen, cx, cy - r, cx, cy + r)
+        outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
+        if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
+            return
+        this.ScreenshotHistory_Push(outPath, "symbol")
+    } catch {
+    } finally {
+        if (pPen)
+            try Gdip_DeletePen(pPen)
+        if (pG)
+            try Gdip_DeleteGraphics(pG)
+        if (pBmp)
+            try Gdip_DisposeImage(pBmp)
+    }
+}
+
+    static ScreenshotEditor_ApplyEraser(points) {
+    srcPath := this.ScreenshotDocCurrentPath
+    basePath := this.ScreenshotBaseImagePath
+    if (srcPath = "" || !FileExist(srcPath))
+        return
+    if (basePath = "" || !FileExist(basePath))
+        return
+    if !(points is Array) || points.Length = 0
+        return
+    pCur := 0, pBase := 0, pG := 0
+    try {
+        pCur := Gdip_CreateBitmapFromFile(srcPath)
+        pBase := Gdip_CreateBitmapFromFile(basePath)
+        if !pCur || !pBase
+            return
+        pG := Gdip_GraphicsFromImage(pCur)
+        if !pG
+            return
+        stamp := 30
+        for _, pt in points {
+            if !(pt is Map)
+                continue
+            cx := Number(pt.Get("x", 0))
+            cy := Number(pt.Get("y", 0))
+            x := Max(0, Round(cx - stamp / 2))
+            y := Max(0, Round(cy - stamp / 2))
+            w := Round(stamp), h := Round(stamp)
+            ; Restore pixels from original screenshot (acts as eraser for overlays).
+            Gdip_DrawImage(pG, pBase, x, y, w, h, x, y, w, h)
+        }
+        outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
+        if (Gdip_SaveBitmapToFile(pCur, outPath) != 0)
+            return
+        this.ScreenshotHistory_Push(outPath, "eraser")
+    } catch {
+    } finally {
+        if (pG)
+            try Gdip_DeleteGraphics(pG)
+        if (pBase)
+            try Gdip_DisposeImage(pBase)
+        if (pCur)
+            try Gdip_DisposeImage(pCur)
     }
 }
 
