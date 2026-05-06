@@ -29,6 +29,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
   width:100%;height:100%;display:flex;align-items:center;justify-content:center;
   border:1px solid var(--panel-border);border-radius:10px;background:var(--panel);overflow:hidden;
   position:relative;
+  touch-action:none;
 }
 #preview img{max-width:none;max-height:none;object-fit:contain;user-select:none;-webkit-user-drag:none;transform-origin:center center;cursor:grab}
 #preview img.dragging{cursor:grabbing}
@@ -39,6 +40,13 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
 }
 .mi{height:30px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:8px;color:var(--text);cursor:pointer}
 .mi:hover{background:rgba(255,122,26,.12)}
+#debugPanel{
+  position:fixed;left:8px;bottom:8px;z-index:10000;max-width:52vw;max-height:34vh;overflow:auto;
+  padding:8px 10px;border-radius:8px;border:1px solid var(--panel-border);
+  background:rgba(0,0,0,.65);color:#d1d5db;font:12px Consolas, "Segoe UI", monospace;
+}
+body[data-theme="light"] #debugPanel{background:rgba(255,255,255,.94);color:#111827}
+.dbg{white-space:pre-wrap;line-height:1.3}
 
 #textBox{
   position:absolute;display:none;min-width:120px;min-height:34px;max-width:70%;
@@ -68,6 +76,7 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
   </div>
 </div>
 <div id="ctx"></div>
+<div id="debugPanel" style="display:none"></div>
 <script>
 (function(){
   const post = (o)=>{ try{ window.chrome?.webview?.postMessage(o);}catch(_){} };
@@ -77,13 +86,42 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
   const preview = document.getElementById('preview');
   const textBox = document.getElementById('textBox');
   const textArea = document.getElementById('textArea');
+  const debugPanel = document.getElementById('debugPanel');
 
   const st = { drag:false, sx:0, sy:0, ox:0, oy:0, pid:null, tx:0, ty:0, scale:1 };
+  const annot = { active:false, pointerId:null };
   const host = { themeMode:'dark', annotMode:'none', previewSrc:'', zoomScale:1, imgW:0, imgH:0 };
+  const dbg = { enabled:true, sessionId:'', seq:0 };
   let pendingTextAt = null; // {x,y} in image coordinates
+
+  function isTextBoxVisible(){
+    return window.getComputedStyle(textBox).display !== 'none';
+  }
+
+  function logDebug(line){
+    if (!dbg.enabled) return;
+    debugPanel.style.display = '';
+    const div = document.createElement('div');
+    div.className = 'dbg';
+    div.textContent = line;
+    debugPanel.appendChild(div);
+    while (debugPanel.childNodes.length > 40) debugPanel.removeChild(debugPanel.firstChild);
+    debugPanel.scrollTop = debugPanel.scrollHeight;
+  }
 
   function applyTransform(){
     img.style.transform = `translate(${st.tx}px, ${st.ty}px) scale(${st.scale})`;
+  }
+
+  function applyCursorByMode(){
+    const mode = String(host.annotMode || 'none');
+    if (mode === 'none') {
+      img.style.cursor = st.drag ? 'grabbing' : 'grab';
+    } else if (mode === 'text') {
+      img.style.cursor = 'text';
+    } else {
+      img.style.cursor = 'crosshair';
+    }
   }
 
   function applyTheme(mode){
@@ -135,7 +173,7 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
 
   document.addEventListener('click', ()=> ctx.style.display='none');
   document.addEventListener('keydown', (ev)=>{
-    if (textBox.style.display !== 'none') {
+    if (isTextBoxVisible()) {
       if (ev.key === 'Escape') { ev.preventDefault(); hideTextBox(); return; }
       if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); commitText(); return; }
     }
@@ -156,66 +194,103 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
     const r = img.getBoundingClientRect();
     const nx = (ev.clientX - r.left) / Math.max(1, r.width);
     const ny = (ev.clientY - r.top) / Math.max(1, r.height);
-    const iw = host.imgW || img.naturalWidth || 0;
-    const ih = host.imgH || img.naturalHeight || 0;
+    let iw = host.imgW || img.naturalWidth || 0;
+    let ih = host.imgH || img.naturalHeight || 0;
+    // Fallback when intrinsic size is not ready yet.
+    if (!(iw > 0) || !(ih > 0)) {
+      iw = Math.max(1, r.width);
+      ih = Math.max(1, r.height);
+    }
     const x = Math.max(0, Math.min(iw, nx * iw));
     const y = Math.max(0, Math.min(ih, ny * ih));
     return { x, y, iw, ih };
   }
 
   function sendPointer(ev, phase){
-    if(img.style.display === 'none') return;
-    const pt = imgPointFromClient(ev);
-    post({
-      type:'event',
-      name:'pointer',
-      payload:{
-        phase,
-        x: pt.x, y: pt.y,
-        buttons: ev.buttons || 0,
-        pointerId: ev.pointerId || 0,
-        shiftKey: !!ev.shiftKey, altKey: !!ev.altKey, ctrlKey: !!ev.ctrlKey,
-        pressure: typeof ev.pressure === 'number' ? ev.pressure : 0
-      }
-    });
+    try {
+      if(img.style.display === 'none') { logDebug('TX skipped: img hidden'); return; }
+      const pt = imgPointFromClient(ev);
+      const seq = ++dbg.seq;
+      post({
+        type:'event',
+        name:'pointer',
+        payload:{
+          sessionId: dbg.sessionId || '',
+          seq,
+          phase,
+          x: pt.x, y: pt.y,
+          buttons: ev.buttons || 0,
+          pointerId: ev.pointerId || 0,
+          shiftKey: !!ev.shiftKey, altKey: !!ev.altKey, ctrlKey: !!ev.ctrlKey,
+          pressure: typeof ev.pressure === 'number' ? ev.pressure : 0
+        }
+      });
+      logDebug(`TX pointer #${seq} ${phase} (${Math.round(pt.x)},${Math.round(pt.y)})`);
+    } catch (e) {
+      logDebug(`TX error ${phase}: ${e && e.message ? e.message : e}`);
+    }
   }
 
   // Pan only when not in annotation mode.
-  img.addEventListener('pointerdown', (ev)=>{
-    if(ev.button !== 0) return;
-    if (textBox.style.display !== 'none') return;
-    if (String(host.annotMode || 'none') === 'text') {
+  function onAnnotPointerDown(ev){
+    try {
+      logDebug(`RAW down target=${(ev.target && ev.target.id) ? ev.target.id : ev.target.tagName} btn=${ev.button} mode=${host.annotMode}`);
+      ev.stopPropagation();
+      if(ev.button !== 0) return;
+      if (isTextBoxVisible()) return;
+      if (String(host.annotMode || 'none') === 'text') {
+        ev.preventDefault();
+        const pt = imgPointFromClient(ev);
+        showTextBoxAtClient(ev.clientX, ev.clientY, pt.x, pt.y);
+        return;
+      }
+      if (String(host.annotMode || 'none') !== 'none') {
+        ev.preventDefault();
+        annot.active = true;
+        annot.pointerId = ev.pointerId;
+        try { (ev.currentTarget || preview).setPointerCapture(ev.pointerId); } catch(_) {}
+        logDebug(`MODE draw start pid=${annot.pointerId}`);
+        sendPointer(ev, 'down');
+        return;
+      }
       ev.preventDefault();
-      const pt = imgPointFromClient(ev);
-      showTextBoxAtClient(ev.clientX, ev.clientY, pt.x, pt.y);
-      return;
+      st.drag = true; st.sx = ev.clientX; st.sy = ev.clientY; st.ox = st.tx; st.oy = st.ty;
+      st.pid = ev.pointerId;
+      try { (ev.currentTarget || preview).setPointerCapture(ev.pointerId); } catch(_) {}
+      img.classList.add('dragging');
+      applyCursorByMode();
+    } catch (e) {
+      logDebug(`DOWN error: ${e && e.message ? e.message : e}`);
     }
-    if (String(host.annotMode || 'none') !== 'none') {
-      ev.preventDefault();
-      sendPointer(ev, 'down');
-      return;
-    }
-    ev.preventDefault();
-    st.drag = true; st.sx = ev.clientX; st.sy = ev.clientY; st.ox = st.tx; st.oy = st.ty;
-    st.pid = ev.pointerId;
-    try { img.setPointerCapture(ev.pointerId); } catch(_) {}
-    img.classList.add('dragging');
-  });
+  }
+  preview.addEventListener('pointerdown', onAnnotPointerDown);
 
-  img.addEventListener('pointermove', (ev)=>{
+  function onAnnotPointerMove(ev){
     if (String(host.annotMode || 'none') !== 'none') {
-      if (ev.buttons & 1) sendPointer(ev, 'move');
+      if (!annot.active) return;
+      if (annot.pointerId !== null && ev.pointerId !== annot.pointerId) return;
+      sendPointer(ev, 'move');
       return;
     }
     if(!st.drag || ev.pointerId !== st.pid) return;
     st.tx = st.ox + (ev.clientX - st.sx);
     st.ty = st.oy + (ev.clientY - st.sy);
     applyTransform();
-  });
+  }
+  preview.addEventListener('pointermove', onAnnotPointerMove);
 
   function stopDrag(ev){
     if (String(host.annotMode || 'none') !== 'none') {
-      if (ev && (ev.buttons === 0 || ev.type === 'pointerup' || ev.type === 'pointercancel')) sendPointer(ev, 'up');
+      if (!annot.active) return;
+      if (ev && annot.pointerId !== null && ev.pointerId !== annot.pointerId) return;
+      if (ev) sendPointer(ev, 'up');
+      logDebug(`MODE draw end pid=${annot.pointerId}`);
+      try {
+        if (annot.pointerId !== null && ev && ev.currentTarget)
+          ev.currentTarget.releasePointerCapture(annot.pointerId);
+      } catch(_) {}
+      annot.active = false;
+      annot.pointerId = null;
       return;
     }
     if (!st.drag) return;
@@ -223,10 +298,11 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
     st.drag = false; img.classList.remove('dragging');
     try { if (st.pid !== null) img.releasePointerCapture(st.pid); } catch(_) {}
     st.pid = null;
+    applyCursorByMode();
   }
-  img.addEventListener('pointerup', stopDrag);
-  img.addEventListener('pointercancel', stopDrag);
-  img.addEventListener('lostpointercapture', stopDrag);
+  preview.addEventListener('pointerup', stopDrag);
+  preview.addEventListener('pointercancel', stopDrag);
+  preview.addEventListener('lostpointercapture', stopDrag);
   img.addEventListener('dblclick', ()=>{ st.tx = 0; st.ty = 0; applyTransform(); });
 
   window.chrome?.webview?.addEventListener('message',(ev)=>{
@@ -235,7 +311,11 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
     if(msg.type==='init'){
       const p = msg.payload || msg;
       host.themeMode = p.themeMode || host.themeMode;
+      dbg.enabled = (p.debugEnabled !== false);
+      dbg.sessionId = String(p.sessionId || '');
+      dbg.seq = 0;
       applyTheme(host.themeMode);
+      logDebug(`INIT session=${dbg.sessionId}`);
       return;
     }
     if(msg.type==='state'){
@@ -246,11 +326,27 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
       host.zoomScale = (typeof p.zoomScale === 'number' && isFinite(p.zoomScale)) ? p.zoomScale : host.zoomScale;
       host.imgW = Number(p.imageWidth || p.imgW || host.imgW || 0);
       host.imgH = Number(p.imageHeight || p.imgH || host.imgH || 0);
+      logDebug(`STATE mode=${host.annotMode} img=${Math.round(host.imgW)}x${Math.round(host.imgH)} zoom=${host.zoomScale}`);
       applyTheme(host.themeMode);
       if(p.previewSrc) setImage(p.previewSrc);
       if(typeof host.zoomScale === 'number' && isFinite(host.zoomScale)){
         st.scale = Math.max(0.05, host.zoomScale);
         applyTransform();
+      }
+      applyCursorByMode();
+      return;
+    }
+    if (msg.type === 'event') {
+      const name = String(msg.name || '');
+      const p = msg.payload || {};
+      if (name === 'eventAck') {
+        logDebug(`ACK pointer #${p.seq||'?'} ${p.phase||''}`);
+      } else if (name === 'commitAck') {
+        logDebug(`COMMIT ${p.ok ? 'ok' : 'fail'} op=${p.op||''} reason=${p.reason||''}`);
+      } else if (name === 'debugTrace') {
+        logDebug(`HOST ${p.stage||''} ${p.detail||''}`);
+      } else if (name === 'error') {
+        logDebug(`ERROR ${p.code||''} ${p.message||''}`);
       }
       return;
     }
@@ -259,6 +355,7 @@ body[data-theme="light"] #textBox{background:rgba(255,255,255,.97)}
 
   post({ type:'event', name:'requestInit', payload:{} });
   post({ type:'event', name:'ready', payload:{} });
+  applyCursorByMode();
 })();
 </script>
 </body>

@@ -68,10 +68,18 @@ class ScreenshotEditorPlugin {
     static ScreenshotAnnotMode := "none"
 
     ; Minimal document/history for Phase-1 (AHK renders; WebView dispatches events).
+    static ScreenshotBaseImagePath := ""
     static ScreenshotDocCurrentPath := ""
     static ScreenshotHistory := []
     static ScreenshotHistoryIndex := 0
     static ScreenshotEditSession := 0
+    static ScreenshotDocObjects := []
+    static ScreenshotSelectedObjectId := ""
+    static ScreenshotObjectIdSeed := 0
+    static ScreenshotArrowPalette := [0xFFFF7A1A, 0xFF3B82F6, 0xFF10B981, 0xFFEF4444, 0xFFF59E0B, 0xFF8B5CF6]
+    static ScreenshotLivePreviewPath := ""
+    static ScreenshotDebugEnabled := true
+    static ScreenshotDebugSessionId := ""
 
     static IsScreenshotEditorActive() {
     try {
@@ -236,6 +244,11 @@ class ScreenshotEditorPlugin {
     this.g_ShowScreenshotEditorInFlight := true
     Critical(prevCrit)
     try {
+        ; New screenshot session always starts from neutral annotation mode.
+        this.ScreenshotAnnotMode := "none"
+        this.ScreenshotSelectedObjectId := ""
+        this.ScreenshotEditSession := 0
+        this.ScreenshotDebugSessionId := "ss_" . A_TickCount
         if (DebugGui) {
             UpdateDebugStep(DebugGui, 14, "ShowScreenshotEditor: 寮€濮嬫墽琛?..", false)
         }
@@ -269,7 +282,7 @@ class ScreenshotEditorPlugin {
                 if (DebugGui) {
                     UpdateDebugStep(DebugGui, 16, "GDI+ 鍒濆鍖栧け璐? pToken 涓虹┖", false)
                 }
-                TrayTip("閿欒", "鏃犳硶鍒濆鍖朑DI+", "Iconx 2")
+                TrayTip("Error", "Failed to initialize GDI+.", "Iconx 2")
                 return
             }
             if (DebugGui) {
@@ -279,7 +292,7 @@ class ScreenshotEditorPlugin {
             if (DebugGui) {
                 UpdateDebugStep(DebugGui, 16, "GDI+ 鍒濆鍖栧紓甯? " . e.Message, false)
             }
-            TrayTip("閿欒", "鍒濆鍖朑DI+澶辫触: " . e.Message, "Iconx 2")
+            TrayTip("Error", "GDI+ initialization failed: " . e.Message, "Iconx 2")
             return
         }
         
@@ -301,7 +314,7 @@ class ScreenshotEditorPlugin {
                 if (DebugGui) {
                     UpdateDebugStep(DebugGui, 17, "鎭㈠澶辫触: " . e.Message, false)
                 }
-                TrayTip("閿欒", "鎭㈠鎴浘鍒板壀璐存澘澶辫触: " . e.Message, "Iconx 2")
+                TrayTip("Error", "Failed to restore screenshot from clipboard: " . e.Message, "Iconx 2")
                 try {
                     Gdip_Shutdown(pToken)
                 } catch as e2 {
@@ -344,7 +357,7 @@ class ScreenshotEditorPlugin {
                 }
             }
             if (!pBitmap || pBitmap = 0) {
-                TrayTip("閿欒", "浠庡壀璐存澘鍒涘缓浣嶅浘澶辫触: " . e.Message, "Iconx 2")
+                TrayTip("Error", "Failed to create bitmap from clipboard: " . e.Message, "Iconx 2")
                 try {
                     Gdip_Shutdown(pToken)
                 } catch as e3 {
@@ -404,8 +417,30 @@ class ScreenshotEditorPlugin {
             Sleep(80)
         }
 
+        ; Retry with rebuilt bitmap once when clipboard pipeline is delayed.
         if (!SizeGetOk) {
-            TrayTip("閿欒", "鏃犳硶鑾峰彇浣嶅浘灏哄锛堟埅鍥炬暟鎹彲鑳芥棤鏁堬級", "Iconx 2")
+            try this.SafeGdipDisposeImage(pBitmap)
+            pBitmap := 0
+            Sleep(100)
+            try {
+                pBitmap := Gdip_CreateBitmapFromClipboard()
+                if (!pBitmap || pBitmap = 0)
+                    pBitmap := ImagePutBitmap(A_Clipboard)
+            } catch {
+            }
+            if (pBitmap && pBitmap != 0) {
+                try {
+                    ImgWidth := Gdip_GetImageWidth(pBitmap)
+                    ImgHeight := Gdip_GetImageHeight(pBitmap)
+                    SizeGetOk := (ImgWidth > 0 && ImgHeight > 0)
+                } catch {
+                    SizeGetOk := false
+                }
+            }
+        }
+
+        if (!SizeGetOk) {
+            TrayTip("Error", "Failed to read bitmap size (invalid screenshot data).", "Iconx 2")
             this.SafeGdipDisposeImage(pBitmap)
             try {
                 Gdip_Shutdown(pToken)
@@ -426,7 +461,7 @@ class ScreenshotEditorPlugin {
         
         ; 楠岃瘉璁＄畻鍑虹殑灏哄鏈夋晥
         if (PreviewWidth <= 0 || PreviewHeight <= 0) {
-            TrayTip("閿欒", "棰勮灏哄璁＄畻澶辫触", "Iconx 2")
+            TrayTip("Error", "Failed to calculate preview size.", "Iconx 2")
             this.SafeGdipDisposeImage(pBitmap)
             try {
                 Gdip_Shutdown(pToken)
@@ -439,7 +474,7 @@ class ScreenshotEditorPlugin {
         ; 鍒涘缓棰勮浣嶅浘
         result := DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", PreviewWidth, "Int", PreviewHeight, "Int", 0, "UInt", 0x26200A, "Ptr", 0, "Ptr*", &pPreviewBitmap := 0)
         if (result != 0 || !pPreviewBitmap || pPreviewBitmap = 0) {
-            TrayTip("閿欒", "鏃犳硶鍒涘缓棰勮浣嶅浘", "Iconx 2")
+            TrayTip("Error", "Failed to create preview bitmap.", "Iconx 2")
             this.SafeGdipDisposeImage(pBitmap)
             try {
                 Gdip_Shutdown(pToken)
@@ -467,7 +502,7 @@ class ScreenshotEditorPlugin {
         DllCall("gdiplus\GdipSetInterpolationMode", "Ptr", pGraphics, "Int", 7)  ; HighQualityBicubic
         result := DllCall("gdiplus\GdipDrawImageRect", "Ptr", pGraphics, "Ptr", pBitmap, "Float", 0, "Float", 0, "Float", PreviewWidth, "Float", PreviewHeight)
         if (result != 0) {
-            TrayTip("閿欒", "鏃犳硶缁樺埗棰勮鍥惧儚", "Iconx 2")
+            TrayTip("Error", "Failed to draw preview image.", "Iconx 2")
             this.SafeGdipDeleteGraphics(pGraphics)
             this.SafeGdipDisposeImage(pPreviewBitmap)
             this.SafeGdipDisposeImage(pBitmap)
@@ -531,7 +566,7 @@ class ScreenshotEditorPlugin {
                 throw Error("淇濆瓨棰勮鍥剧墖澶辫触锛岄敊璇唬鐮? " . result)
             }
         } catch as e {
-            TrayTip("閿欒", "淇濆瓨棰勮鍥剧墖澶辫触: " . e.Message, "Iconx 2")
+            TrayTip("Error", "Failed to save preview image: " . e.Message, "Iconx 2")
             this.SafeGdipDeleteGraphics(pGraphics)
             this.SafeGdipDisposeImage(pPreviewBitmap)
             this.SafeGdipDisposeImage(pBitmap)
@@ -686,8 +721,16 @@ class ScreenshotEditorPlugin {
         
         ; 淇濆瓨涓存椂鍥剧墖璺緞
         this.ScreenshotEditorImagePath := TempImagePath
+        this.ScreenshotBaseImagePath := TempImagePath
         this.ScreenshotDocCurrentPath := TempImagePath
-        this.ScreenshotHistory := [Map("path", TempImagePath, "op", "init")]
+        this.ScreenshotDocObjects := []
+        this.ScreenshotSelectedObjectId := ""
+        this.ScreenshotObjectIdSeed := 0
+        if (this.ScreenshotLivePreviewPath != "" && FileExist(this.ScreenshotLivePreviewPath)) {
+            try FileDelete(this.ScreenshotLivePreviewPath)
+        }
+        this.ScreenshotLivePreviewPath := ""
+        this.ScreenshotHistory := [Map("path", TempImagePath, "op", "init", "objects", this.ScreenshotDoc_CloneObjects(this.ScreenshotDocObjects), "selectedId", this.ScreenshotSelectedObjectId)]
         this.ScreenshotHistoryIndex := 1
          
     } catch as e {
@@ -809,7 +852,7 @@ class ScreenshotEditorPlugin {
     ErrorGui.Show("w820 h570")
     
     ; 鍚屾椂鏄剧ず绯荤粺鎻愮ず
-    TrayTip("閿欒", "鏄剧ず鎴浘鍔╂墜澶辫触锛屽凡寮瑰嚭璇︾粏璇婃柇绐楀彛", "Iconx 2")
+    TrayTip("Error", "Failed to open screenshot editor. Diagnostics window opened.", "Iconx 2")
 }
 
 ; 澶嶅埗閿欒淇℃伅鍒板壀璐存澘鐨勮緟鍔╁嚱鏁?
@@ -1360,7 +1403,9 @@ class ScreenshotEditorPlugin {
         return
     payload := Map(
         "bridgeVersion", this.ScreenshotBridgeVersion,
-        "themeMode", this.ScreenshotToolbarGetThemeMode()
+        "themeMode", this.ScreenshotToolbarGetThemeMode(),
+        "debugEnabled", this.ScreenshotDebugEnabled,
+        "sessionId", this.ScreenshotDebugSessionId
     )
     this._WV_Send(this.ScreenshotPreviewWV2, "init", payload)
 }
@@ -1448,6 +1493,7 @@ class ScreenshotEditorPlugin {
 }
 
     static ScreenshotToolbar_InvokeCommand(cmd) {
+    this.ScreenshotDebug_Trace("toolbar_cmd", "cmd=" . String(cmd))
     switch cmd {
         case "rect":
             this.ScreenshotEditorSetAnnotMode("rect")
@@ -1484,7 +1530,8 @@ class ScreenshotEditorPlugin {
         case "search":
             this.ScreenshotEditorSearchText()
         case "color":
-            this.ScreenshotEditorToggleColorPicker()
+            if !this.ScreenshotEditorCycleSelectedArrowColor()
+                this.ScreenshotEditorToggleColorPicker()
         case "close":
             this.CloseScreenshotEditor()
     }
@@ -1510,6 +1557,10 @@ class ScreenshotEditorPlugin {
         this.ScreenshotAnnotMode := "none"
     else
         this.ScreenshotAnnotMode := mode
+    if (this.ScreenshotDocObjects is Array && this.ScreenshotDocObjects.Length > 0) {
+        sel := (this.ScreenshotAnnotMode = "arrow") ? this.ScreenshotSelectedObjectId : ""
+        try this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, sel, false, "")
+    }
     this.ScreenshotToolbar_SendState()
     try this.ScreenshotPreviewShell_SendState()
     TrayTip("Screenshot", "Mode: " . this.ScreenshotAnnotMode, "Iconi 1")
@@ -1535,7 +1586,7 @@ class ScreenshotEditorPlugin {
     try this.ScreenshotToolbar_SendState()
 }
 
-    static ScreenshotHistory_Push(path, op := "") {
+    static ScreenshotHistory_Push(path, op := "", objects := "", selectedId := "") {
     if (path = "" || !FileExist(path))
         return
     if !(this.ScreenshotHistory is Array)
@@ -1546,11 +1597,12 @@ class ScreenshotEditorPlugin {
     while (this.ScreenshotHistory.Length > this.ScreenshotHistoryIndex) {
         try this.ScreenshotHistory.Pop()
     }
-    if (op != "")
-        this.ScreenshotHistory.Push(Map("path", path, "op", String(op)))
-    else
-        this.ScreenshotHistory.Push(Map("path", path, "op", ""))
+    objSnap := (objects is Array) ? this.ScreenshotDoc_CloneObjects(objects) : this.ScreenshotDoc_CloneObjects(this.ScreenshotDocObjects)
+    sel := (selectedId != "") ? String(selectedId) : this.ScreenshotSelectedObjectId
+    this.ScreenshotHistory.Push(Map("path", path, "op", String(op), "objects", objSnap, "selectedId", sel))
     this.ScreenshotHistoryIndex := this.ScreenshotHistory.Length
+    this.ScreenshotDocObjects := objSnap
+    this.ScreenshotSelectedObjectId := sel
     this.ScreenshotHistory_SetCurrent(path)
 }
 
@@ -1561,7 +1613,14 @@ class ScreenshotEditorPlugin {
         return
     this.ScreenshotHistoryIndex -= 1
     item := this.ScreenshotHistory[this.ScreenshotHistoryIndex]
-    this.ScreenshotHistory_SetCurrent((item is Map) ? item["path"] : String(item))
+    if (item is Map) {
+        if item.Has("objects")
+            this.ScreenshotDocObjects := this.ScreenshotDoc_CloneObjects(item["objects"])
+        this.ScreenshotSelectedObjectId := item.Has("selectedId") ? String(item["selectedId"]) : ""
+        this.ScreenshotHistory_SetCurrent(item["path"])
+    } else {
+        this.ScreenshotHistory_SetCurrent(String(item))
+    }
 }
 
     static ScreenshotHistory_Redo() {
@@ -1571,7 +1630,175 @@ class ScreenshotEditorPlugin {
         return
     this.ScreenshotHistoryIndex += 1
     item := this.ScreenshotHistory[this.ScreenshotHistoryIndex]
-    this.ScreenshotHistory_SetCurrent((item is Map) ? item["path"] : String(item))
+    if (item is Map) {
+        if item.Has("objects")
+            this.ScreenshotDocObjects := this.ScreenshotDoc_CloneObjects(item["objects"])
+        this.ScreenshotSelectedObjectId := item.Has("selectedId") ? String(item["selectedId"]) : ""
+        this.ScreenshotHistory_SetCurrent(item["path"])
+    } else {
+        this.ScreenshotHistory_SetCurrent(String(item))
+    }
+}
+
+    static ScreenshotDoc_NewObjectId() {
+    this.ScreenshotObjectIdSeed += 1
+    return "obj_" . this.ScreenshotObjectIdSeed . "_" . A_TickCount
+}
+
+    static ScreenshotDoc_CloneObjects(objects) {
+    out := []
+    if !(objects is Array)
+        return out
+    for _, obj in objects {
+        if !(obj is Map)
+            continue
+        cp := Map()
+        for k, v in obj
+            cp[k] := v
+        out.Push(cp)
+    }
+    return out
+}
+
+    static ScreenshotDoc_FindObjectIndexById(id) {
+    if !(this.ScreenshotDocObjects is Array)
+        return 0
+    sid := String(id)
+    for idx, obj in this.ScreenshotDocObjects {
+        if (obj is Map && obj.Has("id") && String(obj["id"]) = sid)
+            return idx
+    }
+    return 0
+}
+
+    static ScreenshotDoc_DistancePointToSegment(px, py, x1, y1, x2, y2) {
+    dx := x2 - x1, dy := y2 - y1
+    if (dx = 0 && dy = 0)
+        return Sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1))
+    t := ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)
+    if (t < 0)
+        t := 0
+    else if (t > 1)
+        t := 1
+    qx := x1 + t * dx, qy := y1 + t * dy
+    return Sqrt((px - qx) * (px - qx) + (py - qy) * (py - qy))
+}
+
+    static ScreenshotDoc_HitTestArrow(x, y) {
+    if !(this.ScreenshotDocObjects is Array) || this.ScreenshotDocObjects.Length = 0
+        return Map("kind", "none")
+    threshold := 12
+    loop this.ScreenshotDocObjects.Length {
+        idx := this.ScreenshotDocObjects.Length - A_Index + 1
+        obj := this.ScreenshotDocObjects[idx]
+        if !(obj is Map) || String(obj.Get("type","")) != "arrow"
+            continue
+        x1 := Number(obj.Get("x1", 0)), y1 := Number(obj.Get("y1", 0))
+        x2 := Number(obj.Get("x2", 0)), y2 := Number(obj.Get("y2", 0))
+        d1 := Sqrt((x - x1) * (x - x1) + (y - y1) * (y - y1))
+        d2 := Sqrt((x - x2) * (x - x2) + (y - y2) * (y - y2))
+        if (d1 <= threshold)
+            return Map("kind", "handle_start", "id", obj["id"], "index", idx)
+        if (d2 <= threshold)
+            return Map("kind", "handle_end", "id", obj["id"], "index", idx)
+        dl := this.ScreenshotDoc_DistancePointToSegment(x, y, x1, y1, x2, y2)
+        if (dl <= threshold)
+            return Map("kind", "line", "id", obj["id"], "index", idx)
+    }
+    return Map("kind", "none")
+}
+
+    static ScreenshotDoc_DrawArrow(pG, obj, selected := false) {
+    x1 := Number(obj.Get("x1", 0)), y1 := Number(obj.Get("y1", 0))
+    x2 := Number(obj.Get("x2", 0)), y2 := Number(obj.Get("y2", 0))
+    color := Integer(obj.Get("color", 0xFFFF7A1A))
+    width := Max(1, Integer(obj.Get("width", 4)))
+    pPen := 0, pSel := 0, pBrush := 0
+    try {
+        pPen := Gdip_CreatePen(color, width)
+        if !pPen
+            return
+        Gdip_DrawLine(pG, pPen, x1, y1, x2, y2)
+        ang := this._ATan2(y2 - y1, x2 - x1)
+        len := 16 + width
+        a1 := ang + 2.6, a2 := ang - 2.6
+        Gdip_DrawLine(pG, pPen, x2, y2, x2 + Cos(a1) * len, y2 + Sin(a1) * len)
+        Gdip_DrawLine(pG, pPen, x2, y2, x2 + Cos(a2) * len, y2 + Sin(a2) * len)
+        if selected {
+            pSel := Gdip_CreatePen(0xCCFFFFFF, 1)
+            if pSel {
+                Gdip_DrawEllipse(pG, pSel, x1 - 5, y1 - 5, 10, 10)
+                Gdip_DrawEllipse(pG, pSel, x2 - 5, y2 - 5, 10, 10)
+            }
+        }
+    } finally {
+        if (pBrush)
+            try Gdip_DeleteBrush(pBrush)
+        if (pSel)
+            try Gdip_DeletePen(pSel)
+        if (pPen)
+            try Gdip_DeletePen(pPen)
+    }
+}
+
+    static ScreenshotDoc_RenderToPath(objects := "", selectedId := "", pushHistory := false, op := "") {
+    basePath := this.ScreenshotBaseImagePath
+    if (basePath = "" || !FileExist(basePath)) {
+        this.ScreenshotDebug_SendEvent("error", Map("code","base_image_missing","message","Base image path is missing"))
+        return ""
+    }
+    objs := (objects is Array) ? objects : this.ScreenshotDocObjects
+    pBmp := 0, pG := 0, outPath := ""
+    try {
+        pBmp := Gdip_CreateBitmapFromFile(basePath)
+        if !pBmp {
+            this.ScreenshotDebug_SendEvent("error", Map("code","bitmap_open_failed","message","Gdip_CreateBitmapFromFile failed"))
+            return ""
+        }
+        pG := Gdip_GraphicsFromImage(pBmp)
+        if !pG {
+            this.ScreenshotDebug_SendEvent("error", Map("code","graphics_create_failed","message","Gdip_GraphicsFromImage failed"))
+            return ""
+        }
+        try DllCall("gdiplus\\GdipSetSmoothingMode", "Ptr", pG, "Int", 4)
+        for _, obj in objs {
+            if !(obj is Map)
+                continue
+            tp := String(obj.Get("type", ""))
+            if (tp = "arrow") {
+                this.ScreenshotDoc_DrawArrow(pG, obj, String(obj.Get("id","")) = String(selectedId))
+            }
+        }
+        outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
+        if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0) {
+            this.ScreenshotDebug_SendEvent("error", Map("code","bitmap_save_failed","message","Gdip_SaveBitmapToFile failed"))
+            return ""
+        }
+    } catch {
+        this.ScreenshotDebug_SendEvent("error", Map("code","render_exception","message","Exception in ScreenshotDoc_RenderToPath"))
+        outPath := ""
+    } finally {
+        if (pG)
+            try Gdip_DeleteGraphics(pG)
+        if (pBmp)
+            try Gdip_DisposeImage(pBmp)
+    }
+    if (outPath = "")
+        return ""
+    if pushHistory {
+        if (this.ScreenshotLivePreviewPath != "" && this.ScreenshotLivePreviewPath != outPath && FileExist(this.ScreenshotLivePreviewPath)) {
+            try FileDelete(this.ScreenshotLivePreviewPath)
+        }
+        this.ScreenshotLivePreviewPath := ""
+        this.ScreenshotHistory_Push(outPath, op, objs, selectedId)
+    } else {
+        if (this.ScreenshotLivePreviewPath != "" && this.ScreenshotLivePreviewPath != outPath && FileExist(this.ScreenshotLivePreviewPath)) {
+            try FileDelete(this.ScreenshotLivePreviewPath)
+        }
+        this.ScreenshotLivePreviewPath := outPath
+        this.ScreenshotHistory_SetCurrent(outPath)
+    }
+    return outPath
 }
 
     static ScreenshotEditor_OnPreviewPointer(p) {
@@ -1583,10 +1810,33 @@ class ScreenshotEditorPlugin {
     phase := StrLower(String(p.Get("phase","")))
     x := Number(p.Get("x", 0))
     y := Number(p.Get("y", 0))
+    seq := Integer(p.Get("seq", 0))
+    sid := String(p.Get("sessionId", ""))
+    this.ScreenshotDebug_SendEvent("eventAck", Map("seq", seq, "phase", phase, "sessionId", sid))
+    this.ScreenshotDebug_Trace("pointer", "seq=" . seq . " phase=" . phase . " x=" . Round(x) . " y=" . Round(y) . " mode=" . tool)
 
     if (phase = "down") {
         if (tool = "none" || tool = "")
             return
+        if (tool = "arrow") {
+            hit := this.ScreenshotDoc_HitTestArrow(x, y)
+            if (hit["kind"] != "none") {
+                idx := hit["index"]
+                obj := this.ScreenshotDocObjects[idx]
+                this.ScreenshotSelectedObjectId := String(obj["id"])
+                this.ScreenshotEditSession := Map(
+                    "tool", "arrow",
+                    "mode", hit["kind"],
+                    "id", obj["id"],
+                    "index", idx,
+                    "x0", x, "y0", y,
+                    "orig", obj,
+                    "work", obj
+                )
+                this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+                return
+            }
+        }
         this.ScreenshotEditSession := Map("tool", tool, "x0", x, "y0", y, "x1", x, "y1", y, "points", [])
         if (tool = "mosaic") {
             this.ScreenshotEditSession["points"].Push(Map("x", x, "y", y))
@@ -1600,6 +1850,33 @@ class ScreenshotEditorPlugin {
     if (phase = "move") {
         this.ScreenshotEditSession["x1"] := x
         this.ScreenshotEditSession["y1"] := y
+        if (this.ScreenshotEditSession["tool"] = "arrow" && this.ScreenshotEditSession.Has("mode")) {
+            mode := String(this.ScreenshotEditSession["mode"])
+            idx := Integer(this.ScreenshotEditSession["index"])
+            if (idx > 0 && idx <= this.ScreenshotDocObjects.Length) {
+                orig := this.ScreenshotEditSession["orig"]
+                work := Map()
+                for k, v in orig
+                    work[k] := v
+                if (mode = "handle_start") {
+                    work["x1"] := x, work["y1"] := y
+                } else if (mode = "handle_end") {
+                    work["x2"] := x, work["y2"] := y
+                } else {
+                    dx := x - Number(this.ScreenshotEditSession["x0"])
+                    dy := y - Number(this.ScreenshotEditSession["y0"])
+                    work["x1"] := Number(orig["x1"]) + dx
+                    work["y1"] := Number(orig["y1"]) + dy
+                    work["x2"] := Number(orig["x2"]) + dx
+                    work["y2"] := Number(orig["y2"]) + dy
+                }
+                this.ScreenshotEditSession["work"] := work
+                previewObjs := this.ScreenshotDoc_CloneObjects(this.ScreenshotDocObjects)
+                previewObjs[idx] := work
+                this.ScreenshotDoc_RenderToPath(previewObjs, this.ScreenshotSelectedObjectId, false, "")
+            }
+            return
+        }
         if (this.ScreenshotEditSession["tool"] = "mosaic") {
             pts := this.ScreenshotEditSession["points"]
             if (pts is Array) {
@@ -1623,8 +1900,57 @@ class ScreenshotEditorPlugin {
         this.ScreenshotEditSession := 0
         t2 := sess["tool"]
         x0 := Number(sess["x0"]), y0 := Number(sess["y0"])
-        x1 := Number(sess["x1"]), y1 := Number(sess["y1"])
-        if (t2 = "rect" || t2 = "ellipse" || t2 = "arrow") {
+        ; Prefer pointer-up coordinate as final endpoint in case move events are sparse.
+        x1 := Number(p.Get("x", sess["x1"])), y1 := Number(p.Get("y", sess["y1"]))
+        if (t2 = "arrow" && sess.Has("mode")) {
+            idx := Integer(sess["index"])
+            if (idx > 0 && idx <= this.ScreenshotDocObjects.Length) {
+                work := sess["work"], orig := sess["orig"]
+                mode := String(sess.Get("mode", ""))
+                if (mode = "handle_start") {
+                    work["x1"] := x1, work["y1"] := y1
+                } else if (mode = "handle_end") {
+                    work["x2"] := x1, work["y2"] := y1
+                } else if (mode = "line") {
+                    dx := x1 - Number(sess["x0"])
+                    dy := y1 - Number(sess["y0"])
+                    work["x1"] := Number(orig["x1"]) + dx
+                    work["y1"] := Number(orig["y1"]) + dy
+                    work["x2"] := Number(orig["x2"]) + dx
+                    work["y2"] := Number(orig["y2"]) + dy
+                }
+                changed := (Number(work.Get("x1",0)) != Number(orig.Get("x1",0))
+                    || Number(work.Get("y1",0)) != Number(orig.Get("y1",0))
+                    || Number(work.Get("x2",0)) != Number(orig.Get("x2",0))
+                    || Number(work.Get("y2",0)) != Number(orig.Get("y2",0)))
+                this.ScreenshotSelectedObjectId := String(sess["id"])
+                if changed {
+                    this.ScreenshotDocObjects[idx] := work
+                    rp := this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, true, "update_arrow")
+                    this.ScreenshotDebug_SendCommit("update_arrow", rp != "", (rp != "") ? "" : "render_failed")
+                } else {
+                    this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+                    this.ScreenshotToolbar_SendState()
+                    this.ScreenshotDebug_SendCommit("update_arrow", true, "no_change")
+                }
+            }
+        } else if (t2 = "arrow") {
+            if (Abs(x1 - x0) >= 2 || Abs(y1 - y0) >= 2) {
+                this.ScreenshotSelectedObjectId := this.ScreenshotDoc_NewObjectId()
+                newObj := Map(
+                    "id", this.ScreenshotSelectedObjectId,
+                    "type", "arrow",
+                    "x1", x0, "y1", y0, "x2", x1, "y2", y1,
+                    "color", 0xFFFF7A1A,
+                    "width", 4
+                )
+                this.ScreenshotDocObjects.Push(newObj)
+                rp := this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, true, "add_arrow")
+                this.ScreenshotDebug_SendCommit("add_arrow", rp != "", (rp != "") ? "" : "render_failed")
+            } else {
+                this.ScreenshotDebug_SendCommit("add_arrow", false, "length_too_short")
+            }
+        } else if (t2 = "rect" || t2 = "ellipse") {
             this.ScreenshotEditor_ApplyShape(t2, x0, y0, x1, y1)
         } else if (t2 = "mosaic") {
             this.ScreenshotEditor_ApplyMosaic(sess["points"])
@@ -1773,6 +2099,56 @@ class ScreenshotEditorPlugin {
         if (pBmp)
             try Gdip_DisposeImage(pBmp)
     }
+}
+
+    static ScreenshotDebug_SendEvent(name, payload) {
+    if !this.ScreenshotDebugEnabled
+        return
+    if !this.ScreenshotPreviewWV2
+        return
+    this._WV_Send(this.ScreenshotPreviewWV2, "event", payload, name)
+}
+
+    static ScreenshotDebug_SendCommit(op, ok, reason := "") {
+    this.ScreenshotDebug_SendEvent("commitAck", Map("op", String(op), "ok", ok ? true : false, "reason", String(reason)))
+    this.ScreenshotDebug_Trace("commit", "op=" . String(op) . " ok=" . (ok ? "1" : "0") . " reason=" . String(reason))
+}
+
+    static ScreenshotDebug_Trace(stage, detail := "") {
+    if !this.ScreenshotDebugEnabled
+        return
+    try OutputDebug("[SS-Debug] " . String(stage) . " " . String(detail))
+    this.ScreenshotDebug_SendEvent("debugTrace", Map("stage", String(stage), "detail", String(detail)))
+}
+
+    static ScreenshotEditorCycleSelectedArrowColor() {
+    sid := String(this.ScreenshotSelectedObjectId)
+    if (sid = "")
+        return false
+    idx := this.ScreenshotDoc_FindObjectIndexById(sid)
+    if (idx <= 0)
+        return false
+    obj := this.ScreenshotDocObjects[idx]
+    if !(obj is Map) || String(obj.Get("type","")) != "arrow"
+        return false
+    pal := this.ScreenshotArrowPalette
+    if !(pal is Array) || pal.Length = 0
+        return false
+    cur := Integer(obj.Get("color", pal[1]))
+    pidx := 0
+    for i, c in pal {
+        if (Integer(c) = cur) {
+            pidx := i
+            break
+        }
+    }
+    if (pidx <= 0)
+        pidx := 1
+    next := (pidx >= pal.Length) ? 1 : (pidx + 1)
+    obj["color"] := Integer(pal[next])
+    this.ScreenshotDocObjects[idx] := obj
+    this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, sid, true, "recolor_arrow")
+    return true
 }
 
     static ScreenshotToolbar_ApplyLayout(width, height) {
@@ -2453,8 +2829,13 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         }
         this.ScreenshotHistory := []
         this.ScreenshotHistoryIndex := 0
+        this.ScreenshotAnnotMode := "none"
+        this.ScreenshotBaseImagePath := ""
         this.ScreenshotDocCurrentPath := ""
         this.ScreenshotEditSession := 0
+        this.ScreenshotDocObjects := []
+        this.ScreenshotSelectedObjectId := ""
+        this.ScreenshotObjectIdSeed := 0
          
         ; 閿€姣丟UI锛堝畨鍏ㄥ鐞咷ui瀵硅薄锛?
         if (IsObject(this.GuiID_ScreenshotEditor)) {
