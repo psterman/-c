@@ -1785,14 +1785,21 @@ class ScreenshotEditorPlugin {
     lines := StrSplit(StrReplace(t, "`r", ""), "`n")
     lineCount := Max(1, lines.Length)
     maxChars := 1
+    maxWideChars := 1
     for _, ln in lines {
-        l := StrLen(String(ln))
+        sLn := String(ln)
+        l := StrLen(sLn)
         if (l > maxChars)
             maxChars := l
+        wideLn := RegExReplace(sLn, "[\x00-\x7F]", "")
+        wlen := StrLen(wideLn)
+        if (wlen > maxWideChars)
+            maxWideChars := wlen
     }
-    ; Approximate metrics are enough for hit-test and resize handle behavior.
-    w := Max(80, Round(maxChars * fs * 0.62) + 16)
-    h := Max(34, Round(lineCount * fs * 1.35) + 14)
+    asciiChars := Max(0, maxChars - maxWideChars)
+    ; Keep extra safety margin to avoid clipping while scaling CJK/bold text.
+    w := Max(96, Round(asciiChars * fs * 0.62 + maxWideChars * fs * 1.08) + 26)
+    h := Max(40, Round(lineCount * fs * 1.45) + 20)
     return Map("w", w, "h", h)
 }
 
@@ -1824,9 +1831,18 @@ class ScreenshotEditorPlugin {
         tx := Number(obj.Get("x", 0)), ty := Number(obj.Get("y", 0))
         tw := Max(40, Number(obj.Get("w", 80))), th := Max(24, Number(obj.Get("h", 34)))
         if (x >= tx && x <= tx + tw && y >= ty && y <= ty + th) {
+            tlx := tx, tly := ty
+            trx := tx + tw, tryy := ty
+            blx := tx, bly := ty + th
             brx := tx + tw, bry := ty + th
+            if (Abs(x - trx) <= handleThreshold && Abs(y - tryy) <= handleThreshold)
+                return Map("kind", "handle_close", "id", obj["id"], "index", idx)
+            if (Abs(x - tlx) <= handleThreshold && Abs(y - tly) <= handleThreshold)
+                return Map("kind", "handle_resize_tl", "id", obj["id"], "index", idx)
+            if (Abs(x - blx) <= handleThreshold && Abs(y - bly) <= handleThreshold)
+                return Map("kind", "handle_resize_bl", "id", obj["id"], "index", idx)
             if (Abs(x - brx) <= handleThreshold && Abs(y - bry) <= handleThreshold)
-                return Map("kind", "handle_resize", "id", obj["id"], "index", idx)
+                return Map("kind", "handle_resize_br", "id", obj["id"], "index", idx)
             return Map("kind", "box", "id", obj["id"], "index", idx)
         }
     }
@@ -1876,7 +1892,7 @@ class ScreenshotEditorPlugin {
     fs := Max(10, Integer(obj.Get("size", Integer(this.ScreenshotTextOptions.Get("size", 22)))))
     bold := !!obj.Get("bold", this.ScreenshotTextOptions.Get("bold", true))
     wt := bold ? "Bold " : ""
-    pSel := 0, pBrush := 0
+    pSel := 0, pBrush := 0, pCloseBrush := 0, pClosePen := 0
     try {
         ; NOTE: In Gdip_TextToGraphics, "Top/Up" forces ypos := 0. Do not include it.
         opt := "x" . Round(tx) . " y" . Round(ty) . " w" . Round(tw) . " h" . Round(th) . " c" . this.ScreenshotColorToOpt(color) . " s" . fs . " " . wt . "Left NoWrap"
@@ -1884,14 +1900,38 @@ class ScreenshotEditorPlugin {
         if selected {
             pSel := Gdip_CreatePen(0xCCFFFFFF, 1)
             pBrush := Gdip_BrushCreateSolid(0xCCFFFFFF)
+            pCloseBrush := Gdip_BrushCreateSolid(0xCCEF4444)
+            pClosePen := Gdip_CreatePen(0xFFFFFFFF, 1)
             if (pSel)
                 Gdip_DrawRectangle(pG, pSel, tx - 2, ty - 2, tw + 4, th + 4)
+            ; Right-top = close button.
+            if (pCloseBrush)
+                Gdip_FillEllipse(pG, pCloseBrush, tx + tw - 5, ty - 5, 10, 10)
+            if (pSel)
+                Gdip_DrawEllipse(pG, pSel, tx + tw - 5, ty - 5, 10, 10)
+            if (pClosePen) {
+                Gdip_DrawLine(pG, pClosePen, tx + tw - 2, ty - 2, tx + tw + 2, ty + 2)
+                Gdip_DrawLine(pG, pClosePen, tx + tw + 2, ty - 2, tx + tw - 2, ty + 2)
+            }
+            ; Other 3 corners = resize handles.
+            if (pBrush)
+                Gdip_FillEllipse(pG, pBrush, tx - 5, ty - 5, 10, 10)
+            if (pBrush)
+                Gdip_FillEllipse(pG, pBrush, tx - 5, ty + th - 5, 10, 10)
             if (pBrush)
                 Gdip_FillEllipse(pG, pBrush, tx + tw - 5, ty + th - 5, 10, 10)
+            if (pSel)
+                Gdip_DrawEllipse(pG, pSel, tx - 5, ty - 5, 10, 10)
+            if (pSel)
+                Gdip_DrawEllipse(pG, pSel, tx - 5, ty + th - 5, 10, 10)
             if (pSel)
                 Gdip_DrawEllipse(pG, pSel, tx + tw - 5, ty + th - 5, 10, 10)
         }
     } finally {
+        if (pClosePen)
+            try Gdip_DeletePen(pClosePen)
+        if (pCloseBrush)
+            try Gdip_DeleteBrush(pCloseBrush)
         if (pBrush)
             try Gdip_DeleteBrush(pBrush)
         if (pSel)
@@ -2001,6 +2041,13 @@ class ScreenshotEditorPlugin {
             if (hitT["kind"] != "none") {
                 idx := hitT["index"]
                 obj := this.ScreenshotDocObjects[idx]
+                if (hitT["kind"] = "handle_close") {
+                    try this.ScreenshotDocObjects.RemoveAt(idx)
+                    this.ScreenshotSelectedObjectId := ""
+                    rp := this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, true, "delete_text")
+                    this.ScreenshotDebug_SendCommit("delete_text", rp != "", (rp != "") ? "" : "render_failed")
+                    return
+                }
                 this.ScreenshotSelectedObjectId := String(obj["id"])
                 this.ScreenshotEditSession := Map(
                     "tool", "text",
@@ -2070,14 +2117,30 @@ class ScreenshotEditorPlugin {
                 work := Map()
                 for k, v in orig
                     work[k] := v
-                if (mode = "handle_resize") {
+                if (mode = "handle_resize_br" || mode = "handle_resize_tl" || mode = "handle_resize_bl") {
                     ow := Max(40, Number(orig.Get("w", 80)))
                     oh := Max(24, Number(orig.Get("h", 34)))
-                    nw := Max(40, x - Number(orig["x"]))
-                    nh := Max(24, y - Number(orig["y"]))
+                    ox := Number(orig["x"]), oy := Number(orig["y"])
+                    nw := ow, nh := oh
+                    nx := ox, ny := oy
+                    if (mode = "handle_resize_br") {
+                        nw := Max(40, x - ox)
+                        nh := Max(24, y - oy)
+                    } else if (mode = "handle_resize_tl") {
+                        nw := Max(40, (ox + ow) - x)
+                        nh := Max(24, (oy + oh) - y)
+                        nx := (ox + ow) - nw
+                        ny := (oy + oh) - nh
+                    } else if (mode = "handle_resize_bl") {
+                        nw := Max(40, (ox + ow) - x)
+                        nh := Max(24, y - oy)
+                        nx := (ox + ow) - nw
+                    }
                     sx := nw / ow, sy := nh / oh
                     sf := Max(0.5, Min(4.0, (sx + sy) / 2.0))
                     work := this.ScreenshotDoc_ApplyTextScaleToObject(work, sf)
+                    work["x"] := nx
+                    work["y"] := ny
                 } else {
                     dx := x - Number(this.ScreenshotEditSession["x0"])
                     dy := y - Number(this.ScreenshotEditSession["y0"])
@@ -2174,14 +2237,30 @@ class ScreenshotEditorPlugin {
             if (idx > 0 && idx <= this.ScreenshotDocObjects.Length) {
                 work := sess["work"], orig := sess["orig"]
                 mode := String(sess.Get("mode", ""))
-                if (mode = "handle_resize") {
+                if (mode = "handle_resize_br" || mode = "handle_resize_tl" || mode = "handle_resize_bl") {
                     ow := Max(40, Number(orig.Get("w", 80)))
                     oh := Max(24, Number(orig.Get("h", 34)))
-                    nw := Max(40, x1 - Number(orig["x"]))
-                    nh := Max(24, y1 - Number(orig["y"]))
+                    ox := Number(orig["x"]), oy := Number(orig["y"])
+                    nw := ow, nh := oh
+                    nx := ox, ny := oy
+                    if (mode = "handle_resize_br") {
+                        nw := Max(40, x1 - ox)
+                        nh := Max(24, y1 - oy)
+                    } else if (mode = "handle_resize_tl") {
+                        nw := Max(40, (ox + ow) - x1)
+                        nh := Max(24, (oy + oh) - y1)
+                        nx := (ox + ow) - nw
+                        ny := (oy + oh) - nh
+                    } else if (mode = "handle_resize_bl") {
+                        nw := Max(40, (ox + ow) - x1)
+                        nh := Max(24, y1 - oy)
+                        nx := (ox + ow) - nw
+                    }
                     sx := nw / ow, sy := nh / oh
                     sf := Max(0.5, Min(4.0, (sx + sy) / 2.0))
                     work := this.ScreenshotDoc_ApplyTextScaleToObject(work, sf)
+                    work["x"] := nx
+                    work["y"] := ny
                 } else {
                     dx := x1 - Number(sess["x0"])
                     dy := y1 - Number(sess["y0"])
