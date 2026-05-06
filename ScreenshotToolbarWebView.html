@@ -83,6 +83,37 @@ body[data-theme="light"] #bar{
 <body>
 <div id="shell">
   <div id="bar" aria-label="截图工具栏">
+    <button class="tb" data-cmd="rect" title="矩形标注" aria-label="矩形标注">
+      <svg class="lucide" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
+    </button>
+    <button class="tb" data-cmd="ellipse" title="圆形标注" aria-label="圆形标注">
+      <svg class="lucide" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg>
+    </button>
+    <button class="tb" data-cmd="arrow" title="箭头标注" aria-label="箭头标注">
+      <svg class="lucide" viewBox="0 0 24 24"><path d="M4 16 18 6"/><path d="m18 6-1 6"/><path d="m18 6-6 1"/></svg>
+    </button>
+    <button class="tb" data-cmd="number" title="序号标注" aria-label="序号标注">
+      <svg class="lucide" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M10 10h3v6"/><path d="M10 16h4"/></svg>
+    </button>
+    <button class="tb" data-cmd="symbol" title="符号标注" aria-label="符号标注">
+      <svg class="lucide" viewBox="0 0 24 24"><path d="m12 3 2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6-6.3 4.6 2.3-7-6-4.6h7.6z"/></svg>
+    </button>
+    <button class="tb" data-cmd="annot_text" title="文本标注" aria-label="文本标注">
+      <svg class="lucide" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M12 6v12"/></svg>
+    </button>
+    <button class="tb" data-cmd="mosaic" title="马赛克" aria-label="马赛克">
+      <svg class="lucide" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+    </button>
+    <button class="tb" data-cmd="eraser" title="橡皮擦" aria-label="橡皮擦">
+      <svg class="lucide" viewBox="0 0 24 24"><path d="m7 14 7-7 5 5-7 7H7z"/><path d="M4 20h16"/></svg>
+    </button>
+    <button class="tb" data-cmd="undo" title="撤销" aria-label="撤销">
+      <svg class="lucide" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M20 20a8 8 0 0 0-8-8H4"/></svg>
+    </button>
+    <button class="tb" data-cmd="redo" title="重做" aria-label="重做">
+      <svg class="lucide" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M4 20a8 8 0 0 1 8-8h8"/></svg>
+    </button>
+    <div class="sep" data-drag="1"></div>
     <button class="tb" data-cmd="pin" title="置顶  Caps+Q" aria-label="置顶">
       <svg class="lucide" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 3h6l1 6 2 2-6 4-6-4 2-2z"/></svg>
     </button>
@@ -172,10 +203,21 @@ body[data-theme="light"] #bar{
         } catch (e) {}
         return;
       }
+      if (msg.type === 'init') {
+        applyTheme(msg.themeMode || 'dark');
+        return;
+      }
       if (msg.type !== 'state') return;
       applyTheme(msg.themeMode || msg.theme || 'dark');
       var pinBtn = bar.querySelector('.tb[data-cmd="pin"]');
       if (pinBtn) pinBtn.classList.toggle('active', !!msg.toolbarVisible);
+      var mode = String(msg.annotMode || 'none');
+      ['rect','ellipse','arrow','number','symbol','annot_text','mosaic','eraser'].forEach(function(cmd){
+        var b = bar.querySelector('.tb[data-cmd="'+cmd+'"]');
+        if (!b) return;
+        var key = (cmd === 'annot_text') ? 'text' : cmd;
+        b.classList.toggle('active', mode === key);
+      });
     });
   }
 
@@ -184,6 +226,7 @@ body[data-theme="light"] #bar{
     __nmDock = window.NiumaBottomDock.mount({ sceneId: 'screenshot', post: post, space: 70 });
   // Keep hidden until host state arrives to avoid dark->light flash.
   reportLayout();
+  post({ action: 'requestInit' });
   post({ action: 'ready' });
   requestAnimationFrame(function(){ post({ action: 'paint_ok' }); reportLayout(); });
   setTimeout(reportLayout, 80);

@@ -1,0 +1,162 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Screenshot Editor Shell</title>
+<style>
+:root{
+  --bg:#0c1220;
+  --panel:#0f1a2b;
+  --panel-border:rgba(255,122,26,.34);
+  --accent:#ff7a1a;
+  --text:#eaf0ff;
+  --muted:#9aa8bf;
+}
+body[data-theme="light"]{
+  --bg:#f4f7fb;
+  --panel:#ffffff;
+  --panel-border:#e3e7ef;
+  --accent:#e67e22;
+  --text:#1e293b;
+  --muted:#64748b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:var(--text);font:13px "Segoe UI","Microsoft YaHei UI",sans-serif;overflow:hidden}
+#root{height:100%;display:flex;flex-direction:column}
+#header{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 10px;border-bottom:1px solid var(--panel-border);background:linear-gradient(180deg,rgba(255,122,26,.08),transparent);user-select:none}
+#title{font-weight:600}
+#winbtns{display:flex;gap:6px}
+.wb{width:24px;height:24px;border:1px solid var(--panel-border);border-radius:6px;background:transparent;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.wb:hover{background:rgba(255,122,26,.16)}
+#previewWrap{position:relative;flex:1;padding:10px}
+#preview{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--panel-border);border-radius:10px;background:var(--panel);overflow:hidden;
+}
+#preview img{max-width:none;max-height:none;object-fit:contain;user-select:none;-webkit-user-drag:none;transform-origin:center center;cursor:grab}
+#preview img.dragging{cursor:grabbing}
+#empty{color:var(--muted)}
+#ctx{
+  position:fixed;display:none;min-width:170px;padding:6px;background:var(--panel);border:1px solid var(--panel-border);
+  border-radius:10px;box-shadow:0 10px 24px rgba(0,0,0,.28);z-index:9999
+}
+.mi{height:30px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:8px;color:var(--text);cursor:pointer}
+.mi:hover{background:rgba(255,122,26,.12)}
+</style>
+</head>
+<body>
+<div id="root">
+  <div id="header">
+    <div id="title">截图编辑</div>
+    <div id="winbtns">
+      <button class="wb" id="wb-min" title="最小化">─</button>
+      <button class="wb" id="wb-max" title="最大化/还原">□</button>
+      <button class="wb" id="wb-close" title="关闭">✕</button>
+    </div>
+  </div>
+  <div id="previewWrap">
+    <div id="preview"><div id="empty">等待截图内容...</div><img id="img" style="display:none"></div>
+  </div>
+</div>
+<div id="ctx"></div>
+<script>
+(function(){
+  const post = (o)=>{ try{ window.chrome?.webview?.postMessage(o);}catch(_){} };
+  const img = document.getElementById('img');
+  const empty = document.getElementById('empty');
+  const ctx = document.getElementById('ctx');
+  const header = document.getElementById('header');
+  const preview = document.getElementById('preview');
+  const st = { scale:1, tx:0, ty:0, drag:false, sx:0, sy:0, ox:0, oy:0 };
+
+  function applyTheme(mode){
+    const tm = String(mode||'').toLowerCase()==='light'?'light':'dark';
+    document.body.setAttribute('data-theme', tm);
+  }
+  function applyTransform(){
+    img.style.transform = `translate(${st.tx}px, ${st.ty}px) scale(${st.scale})`;
+  }
+  function setImage(src){
+    if(!src){ img.style.display='none'; empty.style.display=''; return; }
+    img.src = src; img.style.display=''; empty.style.display='none';
+    st.scale = 1; st.tx = 0; st.ty = 0; applyTransform();
+  }
+  function renderMenu(items, x, y){
+    if(!Array.isArray(items) || !items.length){ ctx.style.display='none'; return; }
+    ctx.innerHTML = '';
+    items.forEach(it=>{
+      const div = document.createElement('div');
+      div.className = 'mi';
+      div.textContent = it.label || it.id || '';
+      div.onclick = ()=>{ post({action:'menuInvoke', id:it.id||''}); ctx.style.display='none'; };
+      ctx.appendChild(div);
+    });
+    ctx.style.left = x+'px'; ctx.style.top = y+'px'; ctx.style.display='block';
+  }
+  document.addEventListener('click', ()=> ctx.style.display='none');
+
+  preview.addEventListener('contextmenu', (ev)=>{
+    ev.preventDefault();
+    post({action:'contextMenuRequest', x:ev.clientX, y:ev.clientY});
+  });
+
+  preview.addEventListener('wheel', (ev)=>{
+    ev.preventDefault();
+    const d = ev.deltaY < 0 ? 1 : -1;
+    st.scale = Math.max(0.2, Math.min(8, st.scale * (d > 0 ? 1.1 : 0.9)));
+    applyTransform();
+    post({action:'zoom', delta:d});
+  }, {passive:false});
+
+  img.addEventListener('pointerdown', (ev)=>{
+    if(ev.button !== 0) return;
+    st.drag = true; st.sx = ev.clientX; st.sy = ev.clientY; st.ox = st.tx; st.oy = st.ty;
+    img.classList.add('dragging');
+  });
+  window.addEventListener('pointermove', (ev)=>{
+    if(!st.drag) return;
+    st.tx = st.ox + (ev.clientX - st.sx);
+    st.ty = st.oy + (ev.clientY - st.sy);
+    applyTransform();
+  });
+  window.addEventListener('pointerup', ()=>{
+    st.drag = false; img.classList.remove('dragging');
+  });
+  img.addEventListener('dblclick', ()=>{
+    st.scale = 1; st.tx = 0; st.ty = 0; applyTransform();
+  });
+
+  preview.addEventListener('pointerdown', (ev)=>{
+    post({action:'previewPointer', kind:'down', x:ev.offsetX, y:ev.offsetY, button:ev.button});
+  });
+  preview.addEventListener('pointermove', (ev)=>{
+    post({action:'previewPointer', kind:'move', x:ev.offsetX, y:ev.offsetY, button:ev.button});
+  });
+  preview.addEventListener('pointerup', (ev)=>{
+    post({action:'previewPointer', kind:'up', x:ev.offsetX, y:ev.offsetY, button:ev.button});
+  });
+
+  header.addEventListener('mousedown', (ev)=>{
+    if(ev.button !== 0) return;
+    if(ev.target.closest('.wb')) return;
+    post({action:'windowCmd', cmd:'drag'});
+  });
+  document.getElementById('wb-min').onclick = ()=> post({action:'windowCmd', cmd:'min'});
+  document.getElementById('wb-max').onclick = ()=> post({action:'windowCmd', cmd:'max'});
+  document.getElementById('wb-close').onclick = ()=> post({action:'windowCmd', cmd:'close'});
+
+  window.chrome?.webview?.addEventListener('message',(ev)=>{
+    let msg = ev.data||{};
+    if(typeof msg==='string'){ try{ msg=JSON.parse(msg);}catch{return;} }
+    if(msg.type==='init'){ applyTheme(msg.themeMode); return; }
+    if(msg.type==='state'){ applyTheme(msg.themeMode); if(msg.previewSrc) setImage(msg.previewSrc); return; }
+    if(msg.type==='contextMenu'){ renderMenu(msg.items||[], Number(msg.x||0), Number(msg.y||0)); return; }
+  });
+
+  post({action:'requestInit'});
+  post({action:'ready'});
+})();
+</script>
+</body>
+</html>

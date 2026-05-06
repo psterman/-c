@@ -2,6 +2,8 @@
 ; 鐘舵€佷负 ScreenshotEditorPlugin 鐨?static 瀛楁锛汬ub 鍚屾灏戦噺鍏ㄥ眬渚?LegacyConfigGui銆?
 
 class ScreenshotEditorPlugin {
+    static ScreenshotUseUnifiedWebView := true
+    static ScreenshotBridgeVersion := "1.0.0"
 
     static g_ShowScreenshotEditorInFlight := false
     static GuiID_ScreenshotEditor := 0
@@ -57,6 +59,13 @@ class ScreenshotEditorPlugin {
     static ScreenshotEditorImgHeight := 0
     static ScreenshotEditorPreviewPic := 0
     static ScreenshotEditorMode := ""
+    static GuiID_ScreenshotPreviewShell := 0
+    static ScreenshotPreviewWV2Ctrl := 0
+    static ScreenshotPreviewWV2 := 0
+    static ScreenshotPreviewWV2Ready := false
+    static ScreenshotPreviewPendingSrc := ""
+    static ScreenshotPreviewBounds := Map("x",0,"y",0,"w",0,"h",0)
+    static ScreenshotAnnotMode := "none"
 
     static IsScreenshotEditorActive() {
     try {
@@ -479,22 +488,28 @@ class ScreenshotEditorPlugin {
         ; 鍒涘缓GUI锛堝彲鎷栧姩绐楀彛锛?
         ; 浣跨敤灞€閮?EditorGui 鏋勫缓锛屾渶鍚庡啀璧嬬粰鍏ㄥ眬 this.GuiID_ScreenshotEditor锛岄伩鍏嶆瀯寤鸿繃绋嬩腑
         ; 鍏ㄥ眬琚叾瀹冮€昏緫娓呯┖鎴栨湭缁戝畾瀵艰嚧 .Show 瀵规暣鏁?0 璋冪敤銆?
-        EditorGui := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
+        if (this.ScreenshotUseUnifiedWebView)
+            EditorGui := Gui("+AlwaysOnTop +Resize +MinimizeBox +MaximizeBox -DPIScale", "截图编辑")
+        else
+            EditorGui := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
         EditorGui.BackColor := UI_Colors.Background
         EditorGui.SetFont("s10 c" . UI_Colors.Text, "Segoe UI")
         
         ; 绐楀彛灏哄锛堜粎棰勮鍖哄煙锛屽伐鍏锋爮鐙珛鎮诞锛?
         ; 娑堥櫎榛戣竟锛氱獥鍙ｅ搴︾瓑浜庡浘鐗囧搴︼紝楂樺害绛変簬鏍囬鏍?鍥剧墖楂樺害
-        TitleBarHeight := 30
+        TitleBarHeight := this.ScreenshotUseUnifiedWebView ? 0 : 30
         this.ScreenshotEditorTitleBarHeight := TitleBarHeight
         WindowWidth := PreviewWidth
         WindowHeight := TitleBarHeight + PreviewHeight
         
         ; 鏍囬鏍忥紙鍙嫋鍔級
-        this.ScreenshotEditorTitleBar := EditorGui.Add("Text", "x0 y0 w" . (WindowWidth - 40) . " h" . TitleBarHeight . " Center Background" . UI_Colors.TitleBar . " c" . UI_Colors.Text, "📷 截图助手")
-        this.ScreenshotEditorTitleBar.SetFont("s11 Bold", "Segoe UI")
-        ; 娣诲姞鎷栧姩鍔熻兘锛圱ext鎺т欢鍙敮鎸丆lick浜嬩欢锛?
-        this.ScreenshotEditorTitleBar.OnEvent("Click", ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotEditorDragWindow"))
+        if (!this.ScreenshotUseUnifiedWebView) {
+            this.ScreenshotEditorTitleBar := EditorGui.Add("Text", "x0 y0 w" . (WindowWidth - 40) . " h" . TitleBarHeight . " Center Background" . UI_Colors.TitleBar . " c" . UI_Colors.Text, "📷 截图助手")
+            this.ScreenshotEditorTitleBar.SetFont("s11 Bold", "Segoe UI")
+            this.ScreenshotEditorTitleBar.OnEvent("Click", ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotEditorDragWindow"))
+        } else {
+            this.ScreenshotEditorTitleBar := 0
+        }
         
         ; [鍏抽棴] 鎸夐挳锛堝湪鏍囬鏍忓彸渚э紝鏈€鍚庡垱寤轰互纭繚鍦ㄦ渶涓婂眰锛?
         ; 娉ㄦ剰锛氬叧闂寜閽渶瑕佸湪鎵€鏈夊叾浠栨帶浠朵箣鍚庡垱寤猴紝浠ョ‘淇濆畠鍦ㄦ渶涓婂眰
@@ -521,30 +536,35 @@ class ScreenshotEditorPlugin {
             }
             return
         }
-        PreviewPic := EditorGui.Add("Picture", "x0 y" . PreviewY . " w" . PreviewWidth . " h" . PreviewHeight, TempImagePath)
-        
-        ; 涓哄浘鐗囨帶浠舵坊鍔犳嫋鍔ㄥ姛鑳斤紙Picture鎺т欢鏀寔Click浜嬩欢锛?
-        PreviewPic.OnEvent("Click", (*) => this.ScreenshotEditorDragWindow())
-        PreviewPic.OnEvent("ContextMenu", ObjBindMethod(ScreenshotEditorPlugin, "OnScreenshotEditorContextMenu"))
-        this.ScreenshotEditorPreviewPic := PreviewPic
+        if (!this.ScreenshotUseUnifiedWebView) {
+            PreviewPic := EditorGui.Add("Picture", "x0 y" . PreviewY . " w" . PreviewWidth . " h" . PreviewHeight, TempImagePath)
+            PreviewPic.OnEvent("Click", (*) => this.ScreenshotEditorDragWindow())
+            PreviewPic.OnEvent("ContextMenu", ObjBindMethod(ScreenshotEditorPlugin, "OnScreenshotEditorContextMenu"))
+            this.ScreenshotEditorPreviewPic := PreviewPic
+        } else {
+            this.ScreenshotEditorPreviewPic := 0
+        }
         
         ; 鍒涘缓鐙珛鐨勬偓娴伐鍏锋爮绐楀彛锛圵ebView2 鎵胯浇鐙珛 HTML锛?
-        this.GuiID_ScreenshotToolbar := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
-        ; 涓嶅啀浣跨敤 TransColor 鑹查敭閫忔槑锛氬湪閮ㄥ垎鏈哄櫒/WebView2 缁勫悎涓嬩細鍑虹幇鐐瑰嚮绌块€忥紝瀵艰嚧鎸夐挳鏃犳硶鐢熸晥
-        this.GuiID_ScreenshotToolbar.BackColor := this.ScreenshotToolbarThemeHex("toolbarBg")
-        ToolbarWidth := this.ScreenshotToolbarCurrentWidth
-        ToolbarHeight := this.ScreenshotToolbarCurrentHeight
-        this.ScreenshotToolbarWV2Ctrl := 0
-        this.ScreenshotToolbarWV2 := 0
-        this.ScreenshotToolbarWV2Ready := false
-        this.ScreenshotToolbarWV2PaintOk := false
-        this.ScreenshotToolbarNativeFallback := false
-        this.ScreenshotToolbarCreateCheckPass := 0
-        this.GuiID_ScreenshotToolbar.OnEvent("Size", ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnSize"))
-        try WebView2.create(this.GuiID_ScreenshotToolbar.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnCreated"), WebView2_EnsureSharedEnvBlocking())
+        if (this.ScreenshotUseUnifiedWebView) {
+            this.GuiID_ScreenshotToolbar := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
+            this.GuiID_ScreenshotToolbar.BackColor := this.ScreenshotToolbarThemeHex("toolbarBg")
+            ToolbarWidth := this.ScreenshotToolbarCurrentWidth
+            ToolbarHeight := this.ScreenshotToolbarCurrentHeight
+            this.ScreenshotToolbarWV2Ctrl := 0
+            this.ScreenshotToolbarWV2 := 0
+            this.ScreenshotToolbarWV2Ready := false
+            this.ScreenshotToolbarWV2PaintOk := false
+            this.ScreenshotToolbarNativeFallback := false
+            this.ScreenshotToolbarCreateCheckPass := 0
+            this.GuiID_ScreenshotToolbar.OnEvent("Size", ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnSize"))
+            try WebView2.create(this.GuiID_ScreenshotToolbar.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnCreated"), WebView2_EnsureSharedEnvBlocking())
+        } else {
+            this.GuiID_ScreenshotToolbar := 0
+        }
         
         ; [鍏抽棴] 鎸夐挳锛堝湪鏍囬鏍忓彸渚э紝鏈€鍚庡垱寤轰互纭繚鍦ㄦ渶涓婂眰锛?
-        if (!this.ScreenshotEditorCloseBtn || this.ScreenshotEditorCloseBtn = 0) {
+        if (!this.ScreenshotUseUnifiedWebView && (!this.ScreenshotEditorCloseBtn || this.ScreenshotEditorCloseBtn = 0)) {
             this.ScreenshotEditorCloseBtn := EditorGui.Add("Text", "x" . (WindowWidth - 40) . " y0 w40 h" . TitleBarHeight . " Center 0x200 cFFFFFF Background" . UI_Colors.BtnDanger, "×")
             this.ScreenshotEditorCloseBtn.SetFont("s12", "Segoe UI")
             this.ScreenshotEditorCloseBtn.OnEvent("Click", (*) => this.CloseScreenshotEditor())
@@ -588,6 +608,8 @@ class ScreenshotEditorPlugin {
         }
         ; 浣跨敤灞€閮?EditorGui 璋冪敤 Show锛岄伩鍏嶅叏灞€鍙橀噺鍦ㄦ瀬灏戞暟鎯呭喌涓嬮潪瀵硅薄鏃跺穿婧?
         EditorGui.Show("w" . WindowWidth . " h" . WindowHeight . " x" . WindowX . " y" . WindowY)
+        ; Phase-1 preview shell: mount inside editor window (single-window UX).
+        try this.ScreenshotPreviewShell_Show(0, TitleBarHeight, WindowWidth, PreviewHeight, TempImagePath)
         
         ; 婵€娲荤獥鍙ｅ苟纭繚鍦ㄦ渶鍓嶉潰
         try {
@@ -608,17 +630,20 @@ class ScreenshotEditorPlugin {
         ToolbarY := WindowY + WindowHeight + 10
         
         ; 鏄剧ず鎮诞宸ュ叿鏍?
-        this.GuiID_ScreenshotToolbar.Show("w" . ToolbarWidth . " h" . ToolbarHeight . " x" . ToolbarX . " y" . ToolbarY)
-        this.ScreenshotToolbar_NotifyHostMemory(true)
-        this.ScreenshotToolbar_ApplyWindowRegion()
-        this.ScreenshotToolbar_ApplyBounds()
-        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_RefreshComposition"), -40)
-        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureCreated"), -900)
-        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsable"), -1200)
+        if (IsObject(this.GuiID_ScreenshotToolbar) && this.GuiID_ScreenshotToolbar != 0) {
+            this.GuiID_ScreenshotToolbar.Show("w" . ToolbarWidth . " h" . ToolbarHeight . " x" . ToolbarX . " y" . ToolbarY)
+            this.ScreenshotToolbar_NotifyHostMemory(true)
+            this.ScreenshotToolbar_ApplyWindowRegion()
+            this.ScreenshotToolbar_ApplyBounds()
+            SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_RefreshComposition"), -40)
+            SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureCreated"), -900)
+            SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsable"), -1200)
+        }
         
         ; 婵€娲诲伐鍏锋爮绐楀彛
         try {
-            WinActivate("ahk_id " . this.GuiID_ScreenshotToolbar.Hwnd)
+            if (IsObject(this.GuiID_ScreenshotToolbar) && this.GuiID_ScreenshotToolbar != 0)
+                WinActivate("ahk_id " . this.GuiID_ScreenshotToolbar.Hwnd)
         } catch as e {
         }
         
@@ -643,9 +668,10 @@ class ScreenshotEditorPlugin {
         
         ; 鍚屾椂涔熸縺娲诲伐鍏锋爮绐楀彛
         try {
-            toolbarHwnd := this.GuiID_ScreenshotToolbar.Hwnd
-            ; 宸ュ叿鏍忓悓鏍峰彧缃《锛屼笉閲嶇疆鍒板乏涓婅
-            DllCall("SetWindowPos", "Ptr", toolbarHwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0001 | 0x0002 | 0x0004)
+            if (IsObject(this.GuiID_ScreenshotToolbar) && this.GuiID_ScreenshotToolbar != 0) {
+                toolbarHwnd := this.GuiID_ScreenshotToolbar.Hwnd
+                DllCall("SetWindowPos", "Ptr", toolbarHwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0001 | 0x0002 | 0x0004)
+            }
         } catch as e {
         }
         
@@ -1002,8 +1028,12 @@ class ScreenshotEditorPlugin {
     switch action {
         case "ready":
             this.ScreenshotToolbarWV2Ready := true
+            this.ScreenshotToolbar_SendInit()
             this.ScreenshotToolbar_SendState()
             this.ScreenshotToolbar_SendDockConfig()
+        case "requestInit":
+            this.ScreenshotToolbar_SendInit()
+            this.ScreenshotToolbar_SendState()
         case "nmDockReady":
             this.ScreenshotToolbar_SendDockConfig()
         case "nmDockLeave":
@@ -1020,6 +1050,202 @@ class ScreenshotEditorPlugin {
             cmd := msg.Get("cmd", "")
             this.ScreenshotToolbar_InvokeCommand(cmd)
     }
+}
+
+    static ScreenshotToolbar_SendInit() {
+    if !this.ScreenshotToolbarWV2
+        return
+    init := Map(
+        "type", "init",
+        "bridgeVersion", this.ScreenshotBridgeVersion,
+        "themeMode", this.ScreenshotToolbarGetThemeMode(),
+        "accent", Map(
+            "dark", "ff7a1a",
+            "light", "e67e22"
+        ),
+        "commands", [
+            "rect","ellipse","arrow","number","symbol","annot_text","mosaic","eraser","undo","redo",
+            "pin","ocr","ocr_edit","text","save","ai","search","color","close"
+        ]
+    )
+    try this.ScreenshotToolbarWV2.PostWebMessageAsJson(WebView_DumpJson(init))
+}
+
+    static ScreenshotFilePathToUrl(path) {
+    p := String(path)
+    p := StrReplace(p, "\", "/")
+    p := StrReplace(p, "#", "%23")
+    p := StrReplace(p, "%", "%25")
+    p := StrReplace(p, " ", "%20")
+    return "file:///" . p
+}
+
+    static ScreenshotBase64EncodeBuffer(buf) {
+    if !(buf is Buffer) || (buf.Size <= 0)
+        return ""
+    flags := 0x40000001 ; CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF
+    chars := 0
+    if !DllCall("crypt32\CryptBinaryToStringW", "Ptr", buf.Ptr, "UInt", buf.Size, "UInt", flags, "Ptr", 0, "UInt*", &chars)
+        return ""
+    out := Buffer(chars * 2, 0)
+    if !DllCall("crypt32\CryptBinaryToStringW", "Ptr", buf.Ptr, "UInt", buf.Size, "UInt", flags, "Ptr", out.Ptr, "UInt*", &chars)
+        return ""
+    return StrGet(out.Ptr)
+}
+
+    static ScreenshotImagePathToDataUrl(path) {
+    p := String(path)
+    if (p = "" || !FileExist(p))
+        return ""
+    try {
+        raw := FileRead(p, "RAW")
+        b64 := this.ScreenshotBase64EncodeBuffer(raw)
+        if (b64 = "")
+            return ""
+        ext := StrLower(SubStr(p, InStr(p, ".", , -1) + 1))
+        mime := "image/png"
+        if (ext = "jpg" || ext = "jpeg")
+            mime := "image/jpeg"
+        else if (ext = "bmp")
+            mime := "image/bmp"
+        else if (ext = "gif")
+            mime := "image/gif"
+        else if (ext = "webp")
+            mime := "image/webp"
+        return "data:" . mime . ";base64," . b64
+    } catch {
+        return ""
+    }
+}
+
+    static ScreenshotPreviewShell_Show(x, y, w, h, previewPath) {
+    if !(w > 0 && h > 0)
+        return
+    if !(IsObject(this.GuiID_ScreenshotEditor) && this.GuiID_ScreenshotEditor != 0)
+        return
+    src := this.ScreenshotImagePathToDataUrl(previewPath)
+    if (src = "")
+        src := this.ScreenshotFilePathToUrl(previewPath)
+    this.ScreenshotPreviewPendingSrc := src
+    this.ScreenshotPreviewBounds := Map("x", x, "y", y, "w", w, "h", h)
+    if !this.ScreenshotPreviewWV2Ctrl {
+        try WebView2.create(this.GuiID_ScreenshotEditor.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnCreated"), WebView2_EnsureSharedEnvBlocking())
+    } else {
+        this.ScreenshotPreviewShell_ApplyBounds()
+        this.ScreenshotPreviewShell_SendInit()
+        this.ScreenshotPreviewShell_SendState()
+    }
+}
+
+    static ScreenshotPreviewShell_OnCreated(ctrl) {
+    this.ScreenshotPreviewWV2Ctrl := ctrl
+    this.ScreenshotPreviewWV2 := ctrl.CoreWebView2
+    this.ScreenshotPreviewWV2Ready := false
+    try this.ScreenshotPreviewWV2Ctrl.DefaultBackgroundColor := this.ScreenshotToolbarThemeArgb()
+    try this.ScreenshotPreviewWV2.add_WebMessageReceived(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnMessage"))
+    htmlPath := A_ScriptDir "\ScreenshotEditorWebView.html"
+    try {
+        if FileExist(htmlPath) {
+            tm := this.ScreenshotToolbarGetThemeMode()
+            html := FileRead(htmlPath, "UTF-8")
+            bodyTag := Format('<body data-theme="{1}" class="theme-ready">', tm)
+            html := StrReplace(html, "<body>", bodyTag, , , 1)
+            this.ScreenshotPreviewWV2.NavigateToString(html)
+        } else {
+            this.ScreenshotPreviewWV2.Navigate("<!doctype html><html><body>Missing ScreenshotEditorWebView.html</body></html>")
+        }
+    } catch {
+    }
+}
+
+    static ScreenshotPreviewShell_OnMessage(sender, args) {
+    jsonStr := args.WebMessageAsJson
+    try msg := Jxon_Load(jsonStr)
+    catch
+        return
+    if !(msg is Map)
+        return
+    action := msg.Has("action") ? msg["action"] : ""
+    switch action {
+        case "ready":
+            this.ScreenshotPreviewWV2Ready := true
+            this.ScreenshotPreviewShell_SendInit()
+            this.ScreenshotPreviewShell_SendState()
+        case "requestInit":
+            this.ScreenshotPreviewShell_SendInit()
+            this.ScreenshotPreviewShell_SendState()
+        case "contextMenuRequest":
+            this.OnScreenshotEditorContextMenu(0, 0)
+        case "menuInvoke":
+            mid := msg.Get("id","")
+            if (mid = "copy")
+                this.CopyScreenshotToClipboard(false)
+            else if (mid = "save")
+                this.SaveScreenshotToFile(false)
+            else if (mid = "close")
+                this.CloseScreenshotEditor()
+        case "windowCmd":
+            cmd := StrLower(String(msg.Get("cmd","")))
+            if (cmd = "close") {
+                this.CloseScreenshotEditor()
+            } else if (cmd = "min") {
+                try {
+                    WinMinimize("ahk_id " . this.GuiID_ScreenshotEditor.Hwnd)
+                }
+            } else if (cmd = "max") {
+                try {
+                    mm := WinGetMinMax("ahk_id " . this.GuiID_ScreenshotEditor.Hwnd)
+                    if (mm = 1)
+                        WinRestore("ahk_id " . this.GuiID_ScreenshotEditor.Hwnd)
+                    else
+                        WinMaximize("ahk_id " . this.GuiID_ScreenshotEditor.Hwnd)
+                }
+            } else if (cmd = "drag") {
+                this.ScreenshotEditorDragWindow()
+            }
+        case "zoom":
+            d := Number(msg.Get("delta", 0))
+            if (d > 0)
+                this.ScreenshotEditorZoomWithWheel(1)
+            else if (d < 0)
+                this.ScreenshotEditorZoomWithWheel(-1)
+        case "previewPointer":
+            ; Phase-1: protocol only, drawing core hooks in phase-2.
+    }
+}
+
+    static ScreenshotPreviewShell_SendInit() {
+    if !this.ScreenshotPreviewWV2
+        return
+    try this.ScreenshotPreviewWV2.PostWebMessageAsJson(WebView_DumpJson(Map(
+        "type","init",
+        "bridgeVersion", this.ScreenshotBridgeVersion,
+        "themeMode", this.ScreenshotToolbarGetThemeMode()
+    )))
+}
+
+    static ScreenshotPreviewShell_SendState() {
+    if !this.ScreenshotPreviewWV2
+        return
+    try this.ScreenshotPreviewWV2.PostWebMessageAsJson(WebView_DumpJson(Map(
+        "type","state",
+        "themeMode", this.ScreenshotToolbarGetThemeMode(),
+        "previewSrc", this.ScreenshotPreviewPendingSrc
+    )))
+}
+
+    static ScreenshotPreviewShell_ApplyBounds() {
+    if !this.ScreenshotPreviewWV2Ctrl
+        return
+    b := this.ScreenshotPreviewBounds
+    if !(b is Map)
+        return
+    rc := WebView2.RECT()
+    rc.x := Integer(b["x"])
+    rc.y := Integer(b["y"])
+    rc.w := Integer(b["w"])
+    rc.h := Integer(b["h"])
+    try this.ScreenshotPreviewWV2Ctrl.Bounds := rc
 }
 
     static ScreenshotToolbar_SendDockConfig() {
@@ -1078,6 +1304,26 @@ class ScreenshotEditorPlugin {
 
     static ScreenshotToolbar_InvokeCommand(cmd) {
     switch cmd {
+        case "rect":
+            this.ScreenshotEditorSetAnnotMode("rect")
+        case "ellipse":
+            this.ScreenshotEditorSetAnnotMode("ellipse")
+        case "arrow":
+            this.ScreenshotEditorSetAnnotMode("arrow")
+        case "number":
+            this.ScreenshotEditorSetAnnotMode("number")
+        case "symbol":
+            this.ScreenshotEditorSetAnnotMode("symbol")
+        case "annot_text":
+            this.ScreenshotEditorSetAnnotMode("text")
+        case "mosaic":
+            this.ScreenshotEditorSetAnnotMode("mosaic")
+        case "eraser":
+            this.ScreenshotEditorSetAnnotMode("eraser")
+        case "undo":
+            this.ScreenshotEditorUndo()
+        case "redo":
+            this.ScreenshotEditorRedo()
         case "pin":
             this.ToggleScreenshotEditorAlwaysOnTop()
         case "ocr":
@@ -1105,10 +1351,30 @@ class ScreenshotEditorPlugin {
     try this.ScreenshotToolbarWV2.PostWebMessageAsJson(
         WebView_DumpJson(Map(
             "type", "state",
+            "bridgeVersion", this.ScreenshotBridgeVersion,
             "toolbarVisible", this.ScreenshotEditorToolbarVisible,
-            "themeMode", this.ScreenshotToolbarGetThemeMode()
+            "themeMode", this.ScreenshotToolbarGetThemeMode(),
+            "annotMode", this.ScreenshotAnnotMode
         ))
     )
+}
+
+    ; Phase-1 stable bridge stubs for annotation actions.
+    static ScreenshotEditorSetAnnotMode(mode) {
+    if (this.ScreenshotAnnotMode = mode)
+        this.ScreenshotAnnotMode := "none"
+    else
+        this.ScreenshotAnnotMode := mode
+    this.ScreenshotToolbar_SendState()
+    TrayTip("Screenshot", "Mode: " . this.ScreenshotAnnotMode, "Iconi 1")
+}
+
+    static ScreenshotEditorUndo() {
+    TrayTip("Screenshot", "Undo is reserved for phase-2 drawing core", "Iconi 1")
+}
+
+    static ScreenshotEditorRedo() {
+    TrayTip("Screenshot", "Redo is reserved for phase-2 drawing core", "Iconi 1")
 }
 
     static ScreenshotToolbar_ApplyLayout(width, height) {
@@ -1680,6 +1946,11 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         this.ScreenshotToolbarWV2Ready := false
         this.ScreenshotToolbarWV2PaintOk := false
         this.ScreenshotToolbarNativeFallback := false
+        this.GuiID_ScreenshotPreviewShell := 0
+        this.ScreenshotPreviewWV2Ctrl := 0
+        this.ScreenshotPreviewWV2 := 0
+        this.ScreenshotPreviewWV2Ready := false
+        this.ScreenshotPreviewPendingSrc := ""
 
         if (this.GuiID_ScreenshotToolbarTip && (this.GuiID_ScreenshotToolbarTip != 0)) {
             try {
