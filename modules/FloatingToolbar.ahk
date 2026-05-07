@@ -718,8 +718,13 @@ FloatingToolbar_OnWebMessage(sender, args) {
                 switch action {
                     case "Search":
                         SearchCenter_RunQueryWithKeyword(t)
-                    case "Prompt", "NewPrompt", "Record":
+                    case "Niuma":
+                        FloatingToolbar_SendTextToNiumaChat(t, true, true, true)
+                    case "Prompt", "NewPrompt":
                         PromptQuickPad_OpenCaptureDraft(t, true)
+                    case "Record":
+                        CP_Show()
+                        CP_SetSearchText(t, true, true)
                     default:
                         ; 鏈畾涔夎緭鍏ラ潰鏉跨殑鍥炬爣缁熶竴鍥為€€鍒版悳绱腑蹇?                        SearchCenter_RunQueryWithKeyword(t)
                 }

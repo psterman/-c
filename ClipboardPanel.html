@@ -1770,6 +1770,19 @@ function handleAhkMessage(msg) {
       if (input) input.focus();
       break;
     }
+    case 'set_search_text': {
+      const input = document.getElementById('search-input');
+      const keyword = (msg.keyword || '').toString();
+      if (input) {
+        input.value = keyword;
+        state.keyword = keyword.trim();
+        if (msg.runSearch !== false) {
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (msg.focusInput !== false) input.focus();
+      }
+      break;
+    }
     case 'vk_set_filter':
       setChipFilterAndSearch(msg.filterType || 'all', true);
       break;

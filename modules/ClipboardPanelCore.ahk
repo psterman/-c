@@ -408,6 +408,27 @@ CP_RequestFocusInput() {
     g_CP_FocusPending := true
 }
 
+CP_SetSearchText(keyword, runSearch := true, focusInput := true) {
+    global g_CP_WV2, g_CP_Ready
+    kw := String(keyword)
+    if !g_CP_WV2
+        return false
+    payload := Map(
+        "type", "set_search_text",
+        "keyword", kw,
+        "runSearch", !!runSearch,
+        "focusInput", !!focusInput
+    )
+    if g_CP_Ready {
+        try {
+            WebView_QueuePayload(g_CP_WV2, payload)
+            return true
+        } catch {
+        }
+    }
+    return false
+}
+
 CP_Toggle() {
     global g_CP_Visible
     if g_CP_Visible
