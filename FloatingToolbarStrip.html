@@ -83,12 +83,14 @@ body.cli-mode #cliPane{display:flex!important;flex-direction:column}
 .mb pre{margin-top:calc(10px * var(--ui));border:1px solid rgba(255,102,0,.14);border-radius:calc(12px * var(--ui));background:rgba(8,8,8,.95);overflow:auto}
 .mb pre code{display:block;padding:calc(12px * var(--ui));font-size:calc(12px * var(--ui));line-height:1.65;font-family:"AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif}
 .hl-comment{color:#6a9955}.hl-string{color:#ce9178}.hl-number{color:#b5cea8}.hl-keyword{color:#ff9b52}.hl-builtins{color:#4fc1ff}.hl-var{color:#dcdcaa}
-#cmp{flex-shrink:0;padding:calc(12px * var(--ui)) calc(16px * var(--ui)) calc(14px * var(--ui));border-top:1px solid rgba(255,102,0,.15);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
+#cmp{flex-shrink:0;padding:calc(14px * var(--ui)) calc(16px * var(--ui)) calc(18px * var(--ui));border-top:1px solid rgba(255,102,0,.15);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
 #input{width:100%;min-height:calc(96px * var(--ui));resize:vertical;border:1px solid rgba(255,102,0,.2);border-radius:calc(14px * var(--ui));background:rgba(8,8,8,.72);color:var(--text);padding:calc(10px * var(--ui)) calc(12px * var(--ui));outline:none;user-select:text;-webkit-user-select:text}
-#composerFooter{display:flex;flex-direction:row;align-items:flex-end;gap:calc(8px * var(--ui));margin-top:calc(10px * var(--ui))}
-.drawer-toolbar{flex:1;display:flex;flex-direction:row;align-items:center;gap:calc(6px * var(--ui));min-width:0;background:transparent;padding:0}
-#sendWrap{flex-shrink:0;display:flex;align-items:flex-end}
-.attach-wrap{display:flex;align-items:flex-end;gap:calc(6px * var(--ui));flex-wrap:wrap}
+#composerFooter{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:calc(10px * var(--ui));margin-top:calc(12px * var(--ui))}
+.drawer-toolbar{display:flex;flex-direction:row;align-items:center;gap:calc(6px * var(--ui));min-width:0;background:transparent;padding:0}
+#sendWrap{flex-shrink:0;display:flex;align-items:center}
+.attach-wrap{display:flex;align-items:center;gap:calc(6px * var(--ui));flex-wrap:wrap;flex:1;min-width:0}
+.utility-row{display:flex;align-items:center;gap:calc(8px * var(--ui));margin-top:calc(10px * var(--ui));min-height:calc(40px * var(--ui))}
+.utility-row .drawer-toolbar{flex:1;min-width:0}
 .st{font-size:calc(12px * var(--ui));color:var(--muted)}.st.error{color:#ff7a59}.st.success{color:#4ed08b}
 .btn1{min-height:calc(36px * var(--ui));padding:0 calc(14px * var(--ui));border-radius:calc(10px * var(--ui));border:1px solid rgba(255,102,0,.3);cursor:pointer;font-weight:700;font-size:calc(13px * var(--ui));background:linear-gradient(180deg,#ff7d26,#ff6600);color:#111;transition:all var(--ease)}
 .btn1:disabled{opacity:.45;cursor:not-allowed}
@@ -376,13 +378,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <section id="cmp">
 <textarea id="input" placeholder="输入消息，Ctrl+Enter 发送"></textarea>
 <div id="composerFooter">
-<div class="drawer-toolbar">
-<button type="button" class="logo-btn" data-logo-toggle title="收起"><img class="logo-img" alt="" /></button>
-<div id="drawerBtns" class="icon-btns"></div>
-<button id="hudToggleBtn" class="hud-toggle" type="button" title="显示/隐藏实时日志" aria-label="显示/隐藏实时日志">
-  <svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/></svg>
-</button>
-</div>
 <div class="attach-wrap">
 <input id="attachFileInput" type="file" multiple style="display:none" />
 <input id="attachFolderInput" type="file" multiple webkitdirectory directory style="display:none" />
@@ -390,6 +385,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <button class="btn3" id="attachFolderBtn" type="button">添加文件夹</button>
 </div>
 <div id="sendWrap"><button class="btn1" id="send" type="button">发送消息</button></div>
+</div>
+<div class="utility-row">
+<div class="drawer-toolbar">
+<button type="button" class="logo-btn" data-logo-toggle title="收起"><img class="logo-img" alt="" /></button>
+<div id="drawerBtns" class="icon-btns"></div>
+<button id="hudToggleBtn" class="hud-toggle" type="button" title="显示/隐藏实时日志" aria-label="显示/隐藏实时日志">
+  <svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/></svg>
+</button>
+</div>
 </div>
 <div id="attachList"></div>
 <div id="chatStatusRow"><div class="st" id="chat-status">就绪</div></div>
