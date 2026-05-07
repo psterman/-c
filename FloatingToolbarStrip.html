@@ -94,6 +94,10 @@ body.cli-mode #cliPane{display:flex!important;flex-direction:column}
 .btn1:disabled{opacity:.45;cursor:not-allowed}
 .btn2,.btn3{height:calc(38px * var(--ui));padding:0 calc(14px * var(--ui));border-radius:calc(10px * var(--ui));font-size:calc(13px * var(--ui));border:1px solid rgba(255,102,0,.22);cursor:pointer;background:rgba(255,255,255,.04);color:var(--text)}
 #chatStatusRow{margin-top:calc(8px * var(--ui))}
+.hud-toggle{width:calc(34px * var(--ui));height:calc(34px * var(--ui));display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,102,0,.22);border-radius:calc(8px * var(--ui));background:rgba(255,255,255,.04);color:var(--orange);cursor:pointer;flex-shrink:0}
+.hud-toggle:hover{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.4)}
+.hud-toggle.active{background:rgba(255,102,0,.16);border-color:rgba(255,102,0,.55)}
+.hud-toggle svg{width:calc(18px * var(--ui));height:calc(18px * var(--ui));stroke:currentColor;fill:none;stroke-width:2}
 #attachList{margin-top:calc(6px * var(--ui));max-height:calc(110px * var(--ui));overflow:auto;display:none;padding:calc(6px * var(--ui)) calc(8px * var(--ui));border:1px solid rgba(255,102,0,.22);border-radius:calc(8px * var(--ui));background:rgba(255,255,255,.03);color:var(--text)}
 .logo-btn{flex-shrink:0;width:max(calc(42px * var(--ui)),34px);height:max(calc(42px * var(--ui)),34px);border:1px solid transparent;border-radius:calc(8px * var(--ui));background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:4px;transition:background-color var(--ease),border-color var(--ease),transform var(--ease),color var(--ease);color:#ff6600;outline:none;position:relative}
 .logo-btn:hover{background:rgba(255,102,0,.1);border-color:rgba(255,102,0,.32)}
@@ -375,6 +379,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <div class="drawer-toolbar">
 <button type="button" class="logo-btn" data-logo-toggle title="收起"><img class="logo-img" alt="" /></button>
 <div id="drawerBtns" class="icon-btns"></div>
+<button id="hudToggleBtn" class="hud-toggle" type="button" title="显示/隐藏实时日志" aria-label="显示/隐藏实时日志">
+  <svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/></svg>
+</button>
 </div>
 <div class="attach-wrap">
 <input id="attachFileInput" type="file" multiple style="display:none" />
@@ -427,6 +434,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     LEGACY_LS = 'niuma_chat_drawer_config_v1',
     SESSIONS_LS = 'niuma_chat_sessions_v1',
     NIUMA_HISTORY_LS = 'niuma_chat_history_v1',
+    DEBUG_HUD_LS = 'niuma_chat_debug_hud_v1',
     NIUMA_HISTORY_API = '/api/niuma/history',
     SP = '你是一个擅长 AHK v2、自动化脚本和桌面工作流的助手。',
     P = {
@@ -520,7 +528,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   var _tpl = $('ftb-toolbar-tpl');
   var _th = _tpl ? _tpl.innerHTML : '';
-  var DEFAULT_TOOLBAR_ACTIONS = ['Search', 'Record', 'Prompt', 'NewPrompt', 'Screenshot', 'Settings', 'VirtualKeyboard'];
+  var DEFAULT_TOOLBAR_ACTIONS = ['Search', 'Record', 'Screenshot', 'Prompt', 'NewPrompt', 'VirtualKeyboard', 'Settings'];
   function normalizeToolbarActions(actions) {
     var src = Array.isArray(actions) ? actions : DEFAULT_TOOLBAR_ACTIONS;
     var allow = { Search:1, Record:1, Prompt:1, NewPrompt:1, Screenshot:1, Settings:1, VirtualKeyboard:1 };
@@ -746,6 +754,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     chatSet = $('chat-settings'),
     chatExportMd = $('chat-export-md'),
     chatExportJson = $('chat-export-json'),
+    hudToggleBtn = $('hudToggleBtn'),
     sessionTabsEl = $('sessionTabs'),
     msgs = $('msgs'),
     empty = $('empty'),
@@ -846,7 +855,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   var toolbarRevealTimer = 0;
   var ftbBootStartAt = Date.now();
   var ftbBootHidden = false;
-  var DEBUG_HUD = true;
+  var DEBUG_HUD = false;
   var debugLines = [];
   var debugSeq = 0;
   var debugLoopMarks = [];
@@ -854,6 +863,27 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   var _cliOpenThrottle = 0;
   var _niumaPendingPop = false;
   var _niumaWasCli = false;
+
+  function loadDebugHudPref() {
+    try {
+      var raw = localStorage.getItem(DEBUG_HUD_LS);
+      if (raw === '1' || raw === 'true') return true;
+      if (raw === '0' || raw === 'false') return false;
+    } catch (_) {}
+    return false;
+  }
+
+  function saveDebugHudPref(v) {
+    try {
+      localStorage.setItem(DEBUG_HUD_LS, v ? '1' : '0');
+    } catch (_) {}
+  }
+
+  function applyDebugHudState() {
+    var hud = document.getElementById('debugHud');
+    if (hud) hud.style.display = DEBUG_HUD ? '' : 'none';
+    if (hudToggleBtn) hudToggleBtn.classList.toggle('active', !!DEBUG_HUD);
+  }
 
   function dismissBootSplash(forceNow) {
     if (ftbBootHidden) return;
@@ -951,9 +981,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   (function initDebugHudVisibility() {
     var hud = document.getElementById('debugHud');
     if (!hud) return;
+    DEBUG_HUD = loadDebugHudPref();
     var statusRow = document.getElementById('chatStatusRow');
     if (statusRow && hud.parentElement !== statusRow) statusRow.appendChild(hud);
-    hud.style.display = DEBUG_HUD ? '' : 'none';
+    applyDebugHudState();
     if (DEBUG_HUD) dbg('HUD', 'debug enabled', 'ok');
   })();
 
@@ -4713,6 +4744,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   send.addEventListener('click', sendChat);
+  if (hudToggleBtn) {
+    hudToggleBtn.addEventListener('click', function () {
+      DEBUG_HUD = !DEBUG_HUD;
+      saveDebugHudPref(DEBUG_HUD);
+      applyDebugHudState();
+      if (DEBUG_HUD) dbg('HUD', 'debug enabled', 'ok');
+    });
+  }
 
   function clearPendingAttach() {
     state.pendingAttach = { items: [], texts: [], images: [], files: [] };
