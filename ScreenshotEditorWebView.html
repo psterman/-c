@@ -373,8 +373,18 @@ body[data-theme="light"] #mosaicPanel{
       hintBar.style.top = previewWrap.classList.contains('with-mosaic') ? '70px' : '10px';
       hintBar.style.display = '';
     }
-    textArea.focus();
-    textArea.select();
+    // WebView occasionally drops first focus; reinforce focus on next frames.
+    const focusTextArea = () => {
+      try { textArea.focus({ preventScroll: true }); } catch (_) { try { textArea.focus(); } catch(_) {} }
+      try {
+        const n = String(textArea.value || '').length;
+        textArea.setSelectionRange(n, n);
+      } catch (_) {}
+    };
+    focusTextArea();
+    requestAnimationFrame(focusTextArea);
+    setTimeout(focusTextArea, 0);
+    setTimeout(focusTextArea, 40);
   }
 
   function clientFromImagePoint(imgX, imgY){
@@ -398,6 +408,12 @@ body[data-theme="light"] #mosaicPanel{
   }
 
   document.addEventListener('click', ()=> ctx.style.display='none');
+  // Click outside text box should immediately exit text-input mode.
+  document.addEventListener('pointerdown', (ev)=>{
+    if (!isTextBoxVisible()) return;
+    if (textBox.contains(ev.target)) return;
+    hideTextBox(true, false);
+  }, true);
   document.addEventListener('keydown', (ev)=>{
     if (isTextBoxVisible()) {
       if (ev.key === 'Escape') { ev.preventDefault(); hideTextBox(true, false); return; }
@@ -471,7 +487,11 @@ body[data-theme="light"] #mosaicPanel{
       logDebug(`RAW down target=${(ev.target && ev.target.id) ? ev.target.id : ev.target.tagName} btn=${ev.button} mode=${mode}`);
       ev.stopPropagation();
       if(ev.button !== 0) return;
-      if (isTextBoxVisible()) return;
+      if (isTextBoxVisible()) {
+        // Keep inside-edit interactions, but allow outside click to leave edit mode.
+        if (textBox.contains(ev.target)) return;
+        hideTextBox(true, false);
+      }
       if (mode !== 'none') {
         ev.preventDefault();
         annot.active = true;

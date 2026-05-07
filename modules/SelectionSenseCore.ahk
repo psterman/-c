@@ -33,10 +33,13 @@ global g_SelSense_UserCopyInProgress := false
 global g_SelSense_UserCopyEndTick := 0
 global g_SelSense_DoubleCopyHub_LastTick := 0
 global g_SelSense_HubCopyTriggerMode := "capslock"
-; HubCapsule锛氬爢鍙犻€夋嫨/鎺ㄩ€侊紙渚?CapsLock+C/V锛?global g_HubCapsule_SelectedText := ""
+; HubCapsule：堆叠选择/推送（供 CapsLock+C/V 使用）
+global g_HubCapsule_SelectedText := ""
 global g_SelSense_PendingHubSegments := []  ; Hub 鏈?ready 鏃舵殏瀛樺緟 push 鐨勬枃鏈
-; 涓庝富鑴氭湰 CapsLockCopy 鍏辩敤锛歋end(^c) 鏈熼棿涓?true锛寏^c 椤昏烦杩囦互鍏嶈鍒版仮澶嶅悗鐨勬棫鍓创鏉?global CapsLockCopyInProgress := false
-; 鏈€杩戜竴娆″彂寰€ Hub 鐨勩€屽叆鑽夌銆嶆槸鍚︽潵鑷樉寮忛噰闆嗭紙棰勮鏇存柊浼氱疆 false锛?global g_SelSense_IsManualCollected := false
+; 与主脚本 CapsLockCopy 共用：Send(^c) 期间置 true，避免与 SelectionSense 的模拟复制冲突
+global CapsLockCopyInProgress := false
+; 最近一次发往 Hub 的“入草稿”是否来自显式采集（预览更新会置 false）
+global g_SelSense_IsManualCollected := false
 global g_SelSense_HubDictReady := false
 global g_SelSense_HubDictActiveSource := "builtin_default"
 global g_SelSense_HubDictInstallBusy := false

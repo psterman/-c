@@ -398,7 +398,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   <button class="btn2" id="chat-export-json" type="button" title="导出当前对话 JSON">导出 JSON</button>
 </div>
 </div>
-<footer class="sf"><div class="st" id="config-status"></div><div style="display:flex;gap:8px;"><button class="btn2" id="resetCfg" type="button">重置</button><button class="btn3" id="saveCfg" type="button">完成</button></div></footer>
+<footer class="sf"><div class="st" id="config-status"></div><div style="display:flex;gap:8px;"><button class="btn2" id="resetCfg" type="button">重置</button><button class="btn2" id="testCfg" type="button">测试 API</button><button class="btn3" id="saveCfg" type="button">完成</button></div></footer>
 </section>
 </div>
 <div id="newSessionPick" aria-hidden="true">
@@ -430,7 +430,21 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       gemini: { label: 'Gemini', transport: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-2.5-flash', models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'] },
       glm: { label: 'GLM', transport: 'openai', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-plus', models: ['glm-4-plus', 'glm-4-air', 'glm-4-flash'] },
       siliconflow: { label: '硅基流动', transport: 'openai', baseUrl: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen2.5-7B-Instruct', models: ['Qwen/Qwen2.5-7B-Instruct', 'deepseek-ai/DeepSeek-V3', 'THUDM/glm-4-9b-chat'] },
-      minimax: { label: 'MiniMax', transport: 'openai', baseUrl: 'https://api.minimax.chat/v1', model: 'abab6.5s-chat', models: ['abab6.5s-chat', 'MiniMax-M1', 'MiniMax-Text-01'] },
+      minimax: {
+        label: 'MiniMax',
+        transport: 'openai',
+        baseUrl: 'https://api.minimax.io/v1',
+        model: 'MiniMax-M2.7',
+        models: [
+          'MiniMax-M2.7',
+          'MiniMax-M2.7-highspeed',
+          'MiniMax-M2.5',
+          'MiniMax-M2.5-highspeed',
+          'MiniMax-M2.1',
+          'MiniMax-M2.1-highspeed',
+          'MiniMax-M2'
+        ]
+      },
       zhipu: { label: '智谱', transport: 'openai', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-plus', models: ['glm-4-plus', 'glm-4-air', 'glm-4-flash'] },
       ollama: { label: 'Ollama', transport: 'openai', baseUrl: 'http://127.0.0.1:11434/v1', model: 'llama3.1:8b', models: ['llama3.1:8b', 'qwen2.5:7b', 'deepseek-r1:7b', 'gemma3:4b'] },
       openclaw: { label: 'OpenClaw', transport: 'openclaw', baseUrl: 'http://127.0.0.1:18789', model: 'gateway', models: ['gateway'] }
@@ -467,7 +481,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       gemini: { keyLabel: 'Google AI API Key', keyPlaceholder: 'AIza...', keyHint: '密钥以 query 参数 key= 传递；单独保存在「Gemini」槽位。' },
       glm: { keyLabel: '智谱 BigModel API Key', keyPlaceholder: 'BigModel 密钥', keyHint: '与「智谱」槽位分离保存；均为 OpenAI 兼容但密钥不同。' },
       siliconflow: { keyLabel: '硅基流动 API Key', keyPlaceholder: '硅基流动密钥', keyHint: '单独保存在「硅基流动」槽位。' },
-      minimax: { keyLabel: 'MiniMax API Key', keyPlaceholder: 'MiniMax 密钥', keyHint: '单独保存在「MiniMax」槽位。' },
+      minimax: { keyLabel: 'MiniMax API Key', keyPlaceholder: 'MiniMax 密钥', keyHint: 'OpenAI 兼容地址：国际版 https://api.minimax.io/v1；中国区可改为 https://api.minimaxi.com/v1。' },
       zhipu: { keyLabel: '智谱 API Key', keyPlaceholder: '智谱开放平台密钥', keyHint: '单独保存在「智谱」槽位（与 GLM BigModel 可填不同密钥）。' },
       ollama: { keyLabel: 'Ollama API Key（可选）', keyPlaceholder: '本地默认可留空', keyHint: '本地 Ollama 默认无需 API Key；如启用鉴权可在此填写。' },
       openclaw: {
@@ -733,6 +747,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     sbg = document.querySelector('.sbg'),
     sclose = $('settings-close'),
     ssave = $('saveCfg'),
+    stest = $('testCfg'),
     cfgStatus = $('config-status'),
     ph = $('providerHint'),
     provider = $('provider'),
@@ -3031,6 +3046,65 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     };
   }
 
+  async function testApiConfig() {
+    saveCfg(false);
+    var cfg = buildSendCfg();
+    if (!cfg) {
+      sstat('无法读取当前配置。', 'error');
+      return;
+    }
+    var p = P[cfg.provider] || P.openai;
+    sstat('正在测试 API 连通性...', '');
+    try {
+      if (p.transport === 'cli') {
+        var rCli = await fetch(String(cfg.baseUrl || '').replace(/\/+$/, '') + '/', { method: 'GET' });
+        if (!rCli.ok) throw new Error('HTTP ' + rCli.status);
+        sstat('CLI 连接正常。', 'success');
+        return;
+      }
+      if (p.transport === 'openclaw') {
+        if (!openClawEndpointFromCfg(cfg).ok) throw new Error('缺少 Gateway Token 或 Base URL 无效');
+        await openClawRpc(cfg, 'sessions.list', {}, 5000);
+        sstat('OpenClaw 连接正常。', 'success');
+        return;
+      }
+      if (p.transport === 'anthropic') {
+        if (!cfg.apiKey) throw new Error('缺少 API Key');
+        var rA = await fetch(claudeUrl(cfg.baseUrl), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': cfg.apiKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model: cfg.model, max_tokens: 1, messages: [{ role: 'user', content: 'ping' }] })
+        });
+        if (!rA.ok) throw new Error('HTTP ' + rA.status + ': ' + (await rA.text()));
+        sstat('API 测试通过。', 'success');
+        return;
+      }
+      if (p.transport === 'gemini') {
+        if (!cfg.apiKey) throw new Error('缺少 API Key');
+        var rG = await fetch(geminiUrl(cfg.baseUrl, cfg.model, cfg.apiKey), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'ping' }] }], generationConfig: { maxOutputTokens: 1 } })
+        });
+        if (!rG.ok) throw new Error('HTTP ' + rG.status + ': ' + (await rG.text()));
+        sstat('API 测试通过。', 'success');
+        return;
+      }
+      if (!cfg.apiKey && cfg.provider !== 'ollama') throw new Error('缺少 API Key');
+      var h = { 'Content-Type': 'application/json' };
+      if (cfg.apiKey) h.Authorization = 'Bearer ' + cfg.apiKey;
+      var rO = await fetch(oaUrl(cfg.baseUrl), {
+        method: 'POST',
+        headers: h,
+        body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, temperature: 0.1 })
+      });
+      if (!rO.ok) throw new Error('HTTP ' + rO.status + ': ' + (await rO.text()));
+      sstat('API 测试通过。', 'success');
+    } catch (e) {
+      sstat('API 测试失败: ' + (e && e.message ? e.message : String(e)), 'error');
+    }
+  }
+
   function oaUrl(u) {
     u = String(u || '').replace(/\/+$/, '');
     if (/\/chat\/completions$/i.test(u)) return u;
@@ -4611,6 +4685,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     setSettings(false);
   });
+  if (stest) {
+    stest.addEventListener('click', function () {
+      testApiConfig();
+    });
+  }
 
   send.addEventListener('click', sendChat);
 
