@@ -106,7 +106,7 @@ body.cli-mode #cliPane{display:flex!important;flex-direction:column}
 .logo-btn:focus-visible{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.5);box-shadow:none}
 .logo-img{width:max(calc(30px * var(--ui)),28px);height:max(calc(30px * var(--ui)),28px);min-width:max(calc(28px * var(--ui)),24px);min-height:max(calc(28px * var(--ui)),24px);object-fit:contain;pointer-events:none;transform-origin:center;opacity:0;transition:opacity .12s ease,transform .24s cubic-bezier(.22,1,.36,1),width .24s cubic-bezier(.22,1,.36,1),height .24s cubic-bezier(.22,1,.36,1)}
 .logo-img.logo-ready{opacity:1}
-.icon-btns{display:flex;flex-direction:row;align-items:center;gap:calc(5px * var(--ui));flex:1;min-width:0;flex-wrap:nowrap;overflow-x:auto;transition:max-width .22s cubic-bezier(.22,1,.36,1),opacity .18s ease,transform .18s ease}
+.icon-btns{display:flex;flex-direction:row;align-items:center;gap:calc(5px * var(--ui));flex:1;min-width:0;flex-wrap:nowrap;overflow:visible;transition:max-width .22s cubic-bezier(.22,1,.36,1),opacity .18s ease,transform .18s ease}
 .icon-btns::-webkit-scrollbar{height:4px}
 body.ftb-compact #collapsedRoot{justify-content:center;padding:0;gap:0;border-radius:999px;overflow:hidden}
 body.ftb-compact #collapsedBtns{max-width:0;opacity:0;overflow:hidden;pointer-events:none;transform:translateX(-6px)}
@@ -173,19 +173,26 @@ body[data-theme="light"].ftb-compact #collapsedRoot .logo-btn:focus-visible{
   background:#FFF3E8!important;
   border-color:#D8D8D8!important;
 }
-.tb{width:calc(40px * var(--ui));height:calc(40px * var(--ui));display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:calc(8px * var(--ui));cursor:pointer;position:relative;transition:background-color var(--ease),border-color var(--ease),transform var(--ease),color var(--ease);color:#ff6600;background:transparent;flex-shrink:0;font-size:0;line-height:0;overflow:hidden}
-.tb svg{width:calc(24px * var(--ui));height:calc(24px * var(--ui));pointer-events:none}
-.tb .tb-ico{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--orange)}
+.tb{--dock-scale:1;width:calc(40px * var(--ui));height:calc(40px * var(--ui));display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:calc(8px * var(--ui));cursor:pointer;position:relative;transition:background-color var(--ease),border-color var(--ease),transform .24s cubic-bezier(.2,.9,.25,1),color var(--ease),box-shadow .24s ease;transform:translate3d(0,0,0) scale(var(--dock-scale));transform-origin:center center;color:#ff6600;background:transparent;flex-shrink:0;font-size:0;line-height:0;overflow:visible;will-change:transform;backface-visibility:hidden}
+.tb svg{width:calc(24px * var(--ui));height:calc(24px * var(--ui));pointer-events:none;transform:translate3d(0,0,0);shape-rendering:geometricPrecision}
+.tb svg *{vector-effect:non-scaling-stroke;shape-rendering:geometricPrecision}
+.tb .tb-ico{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--orange);transition:transform .24s cubic-bezier(.2,.9,.25,1);transform:translate3d(0,0,0)}
 .tb .tb-ico svg{stroke:currentColor}
-.tb .tb-ico-img{width:calc(22px * var(--ui));height:calc(22px * var(--ui));object-fit:contain;pointer-events:none}
+.tb .tb-ico-img{width:calc(22px * var(--ui));height:calc(22px * var(--ui));object-fit:contain;pointer-events:none;image-rendering:auto;-ms-interpolation-mode:bicubic}
 button.tb{font:inherit;font-family:inherit}
 .tb:hover{background:rgba(255,102,0,.1);border-color:rgba(255,102,0,.28)}
 .tb .dot{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--orange);opacity:0}
 .tb.selected .dot{opacity:1}
 .tb.selected{border-color:transparent!important;background:transparent!important;box-shadow:none!important}
 .tb[data-action=Search].pulse{animation:breathe 1.6s ease-in-out infinite}
-.tb[data-action=Search].drag-over{transform:scale(.9)}
-.tb.drag-over{transform:scale(.92);background:rgba(255,102,0,.14);border-color:rgba(255,102,0,.42)}
+.tb.drag-over{
+  background:rgba(255,102,0,.20);
+  border-color:rgba(255,102,0,.62);
+  box-shadow:0 0 0 1px rgba(255,170,110,.42),0 10px 24px rgba(255,102,0,.28);
+  z-index:3
+}
+.tb.drag-over{--dock-scale:1.38}
+.tb.drag-over .tb-ico-img{filter:drop-shadow(0 0 8px rgba(255,170,110,.52))}
 .tb[data-action=Search].loading svg{animation:spin .7s linear infinite}
 .bubble{position:absolute;left:50%;bottom:calc(100% + 5px);transform:translateX(-50%);padding:2px 7px;font-size:10px;font-weight:600;color:#00ff41;background:rgba(10,10,10,.92);border:1px solid rgba(0,255,65,.4);border-radius:5px;white-space:nowrap;opacity:0;pointer-events:none}
 .tb[data-action=Search].pulse .bubble{opacity:1}
@@ -5605,11 +5612,62 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return 'Search';
   }
 
+  function findDropButtonTarget(e) {
+    var n = e && e.target ? e.target.closest('.tb') : null;
+    return n || null;
+  }
+
+  var activeDropBtn = null;
+  var activeDropGroup = null;
+
+  function setActiveDropBtn(btn) {
+    if (activeDropBtn === btn) return;
+    if (activeDropBtn) activeDropBtn.classList.remove('drag-over');
+    activeDropBtn = btn || null;
+    if (activeDropBtn) activeDropBtn.classList.add('drag-over');
+  }
+
+  function resetDropScales(group) {
+    if (!group || !group.querySelectorAll) return;
+    group.querySelectorAll('.tb[data-action], .tb[data-cmd-id]').forEach(function (el) {
+      el.style.removeProperty('--dock-scale');
+    });
+  }
+
+  function applyFishEye(btn, clientX) {
+    if (!btn) return;
+    var group = btn.parentElement || null;
+    if (!group) return;
+    if (activeDropGroup && activeDropGroup !== group) resetDropScales(activeDropGroup);
+    activeDropGroup = group;
+    var nodes = Array.prototype.slice.call(group.querySelectorAll(':scope > .tb[data-action], :scope > .tb[data-cmd-id]'));
+    if (!nodes.length) return;
+    var sigma = 34;       // narrower peak like macOS dock
+    var maxBoost = 0.40;  // center ~= 1.40
+    var minScale = 0.88;  // far icons slightly shrink
+    nodes.forEach(function (el) {
+      var r = el.getBoundingClientRect();
+      var cx = r.left + r.width / 2;
+      var dist = Math.abs(clientX - cx);
+      var influence = Math.exp(-(dist * dist) / (2 * sigma * sigma));
+      var dockScale = minScale + (1 + maxBoost - minScale) * influence;
+      el.style.setProperty('--dock-scale', String(dockScale));
+    });
+  }
+
+  function clearActiveDropBtn() {
+    setActiveDropBtn(null);
+    if (activeDropGroup) {
+      resetDropScales(activeDropGroup);
+      activeDropGroup = null;
+    }
+  }
+
   async function onDrop(e) {
     e.preventDefault();
     e.stopPropagation();
     var action = findDropActionTarget(e);
-    tbEls().forEach(function (el) { el.classList.remove('drag-over'); });
+    clearActiveDropBtn();
     var t = await readDrop(e.dataTransfer);
     if (!t && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) t = (e.dataTransfer.files[0].name || '').trim();
     if (!t) return;
@@ -5623,12 +5681,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     try {
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
     } catch (e2) {}
+    var targetBtn = findDropButtonTarget(e);
+    setActiveDropBtn(targetBtn);
+    if (targetBtn) applyFishEye(targetBtn, e.clientX || 0);
+    else if (activeDropGroup) resetDropScales(activeDropGroup);
     var action = findDropActionTarget(e);
-    tbEls().forEach(function (el) {
-      var da = el.getAttribute('data-drop-bucket') || el.getAttribute('data-action') || '';
-      el.classList.toggle('drag-over', da === action);
-    });
-    if (String(action || '').toLowerCase() === 'search') dragOver(true);
+    if (String(action || '').toLowerCase() !== 'search') dragOver(false);
   }
 
   function onDragLeave(e) {
@@ -5640,7 +5698,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       });
     if (!ok) {
       dragOver(false);
-      tbEls().forEach(function (el) { el.classList.remove('drag-over'); });
+      clearActiveDropBtn();
     }
   }
 
