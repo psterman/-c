@@ -24,3 +24,12 @@ PromptTemplates.ini
 clipboard_debug.log
 
 cache/dict_install/
+
+# Prototype: generated artifacts and local deps
+prototype/**/frontend/node_modules/
+prototype/**/frontend/dist/
+prototype/**/build/bin/
+prototype/**/.wails/
+prototype/**/*.log
+prototype/**/tmp/
+prototype/**/temp/

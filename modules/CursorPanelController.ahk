@@ -469,6 +469,170 @@ ClearCapsLockTimer(*) {
     global CapsLock := false
 }
 
+; ===================== Wails 输入框激活 =====================
+; 可选全局配置（可在主脚本或 ini 加载后覆盖）：
+;   WailsInputWindowTitle := "NMER COMMAND BAR"
+;   WailsInputWindowExe   := "your-wails-app.exe"
+;   WailsInputLaunchPath  := "C:\path\to\your-wails-app.exe"
+global WailsInputWindowTitle := "NMER Wails Input"
+global WailsInputWindowExe := "nmer-wails-input-dev.exe"
+global WailsInputLaunchPath := ""
+global WailsInputTitleKeywords := "NMER Wails Input|nmer-wails-input"
+global WailsInputHtmlPath := A_ScriptDir . "\prototype\wails-toolbar-skeleton\index.html"
+
+TryActivateWindow(winQuery) {
+    if !WinExist(winQuery)
+        return false
+    try WinShow(winQuery)
+    try WinRestore(winQuery)
+    try WinActivate(winQuery)
+    Sleep(60)
+    if WinActive(winQuery)
+        return true
+    try WinActivate(winQuery)
+    Sleep(90)
+    return WinActive(winQuery)
+}
+
+LaunchHtmlInNewWindow(htmlPath) {
+    if (Trim(htmlPath) = "" || !FileExist(htmlPath))
+        return false
+    uri := "file:///" . StrReplace(htmlPath, "\", "/")
+    chrome := A_ProgramFiles . "\Google\Chrome\Application\chrome.exe"
+    chromeX86 := A_ProgramFiles . " (x86)\Google\Chrome\Application\chrome.exe"
+    edge := A_ProgramFiles . "\Microsoft\Edge\Application\msedge.exe"
+    edgeX86 := A_ProgramFiles . " (x86)\Microsoft\Edge\Application\msedge.exe"
+    try {
+        if (FileExist(chrome)) {
+            Run('"' . chrome . '" --new-window "' . uri . '"')
+            return true
+        }
+        if (FileExist(chromeX86)) {
+            Run('"' . chromeX86 . '" --new-window "' . uri . '"')
+            return true
+        }
+        if (FileExist(edge)) {
+            Run('"' . edge . '" --new-window "' . uri . '"')
+            return true
+        }
+        if (FileExist(edgeX86)) {
+            Run('"' . edgeX86 . '" --new-window "' . uri . '"')
+            return true
+        }
+        Run('explorer.exe "' . htmlPath . '"')
+        return true
+    } catch {
+    }
+    return false
+}
+
+ActivateWailsInputBox() {
+    global WailsInputWindowTitle, WailsInputWindowExe, WailsInputLaunchPath, WailsInputTitleKeywords, WailsInputHtmlPath
+    local prevMatch := A_TitleMatchMode
+    SetTitleMatchMode(2)
+
+    candidates := []
+    if (Trim(WailsInputWindowTitle) != "")
+        candidates.Push(Trim(WailsInputWindowTitle))
+    if (Trim(WailsInputWindowExe) != "")
+        candidates.Push("ahk_exe " . Trim(WailsInputWindowExe))
+
+    ; 常见兜底：如果你后续改了标题或 exe，可通过上面的全局变量覆盖
+    candidates.Push("ahk_exe nmer.exe")
+    candidates.Push("ahk_exe niuma.exe")
+    candidates.Push("ahk_exe wails.exe")
+
+    for _, winQuery in candidates {
+        if (WinExist(winQuery)) {
+            if (TryActivateWindow(winQuery)) {
+                SetTitleMatchMode(prevMatch)
+                return true
+            }
+            SetTitleMatchMode(prevMatch)
+            return false
+        }
+    }
+
+    ; 枚举所有顶层窗口做模糊匹配（对 Wails 开发期标题不稳定更友好）
+    kwList := []
+    for kw in StrSplit(String(WailsInputTitleKeywords), "|") {
+        k := Trim(kw)
+        if (k != "")
+            kwList.Push(StrLower(k))
+    }
+    winIds := WinGetList()
+    for _, hwnd in winIds {
+        t := ""
+        try t := WinGetTitle("ahk_id " . hwnd)
+        if (Trim(t) = "")
+            continue
+        titleLower := StrLower(t)
+        for _, k in kwList {
+            if (InStr(titleLower, k)) {
+                if (TryActivateWindow("ahk_id " . hwnd)) {
+                    SetTitleMatchMode(prevMatch)
+                    return true
+                }
+                SetTitleMatchMode(prevMatch)
+                return false
+            }
+        }
+    }
+
+    if (Trim(WailsInputLaunchPath) != "") {
+        try Run(WailsInputLaunchPath)
+        Sleep(350)
+        for _, winQuery in candidates {
+            if (WinExist(winQuery)) {
+                if (TryActivateWindow(winQuery)) {
+                    SetTitleMatchMode(prevMatch)
+                    return true
+                }
+                SetTitleMatchMode(prevMatch)
+                return false
+            }
+        }
+    }
+
+    ; 开发态兜底：强制新建独立窗口打开本地 html 原型
+    if (Trim(WailsInputHtmlPath) != "" && FileExist(WailsInputHtmlPath)) {
+        LaunchHtmlInNewWindow(WailsInputHtmlPath)
+        Sleep(900)
+        for _, winQuery in candidates {
+            if (WinExist(winQuery)) {
+                if (TryActivateWindow(winQuery)) {
+                    SetTitleMatchMode(prevMatch)
+                    return true
+                }
+                SetTitleMatchMode(prevMatch)
+                return false
+            }
+        }
+        winIds2 := WinGetList()
+        for _, hwnd2 in winIds2 {
+            t2 := ""
+            try t2 := WinGetTitle("ahk_id " . hwnd2)
+            if (Trim(t2) = "")
+                continue
+            titleLower2 := StrLower(t2)
+            for _, k2 in kwList {
+                if (InStr(titleLower2, k2)) {
+                    if (TryActivateWindow("ahk_id " . hwnd2)) {
+                        SetTitleMatchMode(prevMatch)
+                        return true
+                    }
+                    SetTitleMatchMode(prevMatch)
+                    return false
+                }
+            }
+        }
+    }
+
+    SetTitleMatchMode(prevMatch)
+    TrayTip("提示", "未找到/未拉起输入框。请确认窗口标题关键词或 html 路径。", "Iconi")
+    return false
+}
+
 ShowPanelTimer(*) {
     global CapsLock, CapsLock2, PanelVisible, VoiceInputActive, VoiceSearchActive, VoiceSearchSelecting
     global VKHoldVisible, CapsLockHoldVkEnabled
@@ -506,6 +670,8 @@ ShowPanelTimer(*) {
 
 ; 记录 CapsLock 按下时间
 global CapsLockPressTime := 0
+; 双击 CapsLock 专用时间戳（避免 A_PriorHotkey 在复杂热键场景下失真）
+global LastCapsLockTapTick := 0
 
 ; ===================== CapsLock+ 与原生单击共存（当前脚本采用的做法，请勿混用其它方案）=====================
 ; 1) 本热键为「无 ~ 的 CapsLock::」：拦截系统对 CapsLock 的默认处理，由下面 KeyWait 释放分支统一收尾。
@@ -518,6 +684,7 @@ CapsLock:: {
     global CapsLock, CapsLock2, IsCommandMode, PanelVisible, VoiceInputActive, VoiceSearchActive, VoiceInputMethod, VoiceInputPaused, CapsLockHoldTimeSeconds
     global CapsLockInitialStateForChord
     global VKHoldVisible, CapsLockHoldVkEnabled
+    global LastCapsLockTapTick
     
     ; 确保全局变量已初始化
     if (!IsSet(PanelVisible)) {
@@ -554,8 +721,6 @@ CapsLock:: {
     
     ; 记录按下时间
     CapsLockPressTime := A_TickCount
-    ; 双击判定：两次 CapsLock 触发间隔在 300ms 内
-    IsCapsDoubleClick := (InStr(A_PriorHotkey, "CapsLock") && A_TimeSincePriorHotkey > 0 && A_TimeSincePriorHotkey <= 300)
     
     ; 如果正在语音输入或语音搜索，处理暂停/恢复逻辑
     global VoiceInputActive, VoiceSearchActive
@@ -634,18 +799,29 @@ CapsLock:: {
     SetTimer(ShowPanelTimer, 0)  ; 取消未触发的长按检测
     SetTimer(SearchCenter_CapsHintOnTimer, 0)
     SearchCenter_SetCapsHintActive(false)
+    ; 稳定双击判定：以“释放时刻”计算两次短按间隔，避免 A_PriorHotkey 被其它热键污染
+    PressDuration := A_TickCount - CapsLockPressTime
+    IsShortTap := (PressDuration <= 260)
+    IsCapsDoubleClick := false
+    if (IsShortTap && LastCapsLockTapTick > 0 && (A_TickCount - LastCapsLockTapTick <= 320)) {
+        IsCapsDoubleClick := true
+        LastCapsLockTapTick := 0
+    } else if (IsShortTap) {
+        LastCapsLockTapTick := A_TickCount
+    } else {
+        LastCapsLockTapTick := 0
+    }
+
     if (VKHoldVisible) {
         try VK_Hide()
         VKHoldVisible := false
     }
     
-    ; 双击 CapsLock：快捷面板开关（已开则关，已关则开），并撤销第一次单击对大小写状态的切换
+    ; 双击 CapsLock：激活/拉起 Wails 输入框，并撤销第一次单击对大小写状态的切换
     if (CapsLock2 && IsCapsDoubleClick) {
-        if (PanelVisible) {
-            HideCursorPanel()
-        } else {
-            ShowCursorPanel()
-        }
+        ; 调试确认：看到该提示表示“双击判定已命中”
+        TrayTip("CapsLock", "双击已触发，正在激活 Wails 输入框…", "Iconi")
+        ActivateWailsInputBox()
         ; 双击时保持系统原生 CapsLock 状态流转，不额外改写大小写状态
         ; 延迟清除 CapsLock 变量，给快捷键处理函数足够的时间
         SetTimer(ClearCapsLockTimer, -100)
