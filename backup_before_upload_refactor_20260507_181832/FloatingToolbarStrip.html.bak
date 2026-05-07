@@ -4603,11 +4603,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var pa = state.pendingAttach || { items: [], fileIds: [], files: [] };
     var hasAttach = !!((pa.fileIds && pa.fileIds.length) || (pa.files && pa.files.length) || (pa.items && pa.items.length));
     if (!text && !hasAttach) return;
-    var composedForModel = String(text || '').trim();
+    var attachmentContext = '';
     if (hasAttach) {
-      var idsForModel = (pa.fileIds || []).filter(Boolean).slice(0, 50);
-      composedForModel = (composedForModel ? composedForModel + '\n\n' : '') + '[Attached file_ids]\n' + idsForModel.join('\n');
+      try {
+        attachmentContext = await fetchAttachmentContext(pa);
+      } catch (eAttach) {
+        cstatForSession(sid, 'Attachment context read failed: ' + (eAttach && eAttach.message ? eAttach.message : String(eAttach)), 'error');
+      }
     }
+    var composedForModel = mergeUserTextWithAttachmentContext(text, attachmentContext);
     var displayText = text || ('[attachments] ' + Number((pa.items && pa.items.length) || 0) + ' file(s)');
     saveCfg(false);
     var cfg = buildSendCfg();
@@ -4647,6 +4651,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     try {
       var p = P[cfg.provider] || P.openai,
         content = '';
+      cfg.attachmentContext = attachmentContext;
       cfg.userContentForModel = composedForModel;
       if (p.transport === 'anthropic') content = await reqClaude(cfg);
       else if (p.transport === 'gemini') content = await reqGemini(cfg);
@@ -4894,67 +4899,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     for (var i = 0; i < rows.length; i++) {
       var item = pa.items[i] || null;
       var line = document.createElement('div');
-      line.style.display = 'flex';
-      line.style.alignItems = 'center';
-      line.style.gap = '8px';
-      var txt = document.createElement('div');
-      txt.style.flex = '1 1 auto';
-      txt.style.minWidth = '0';
-      txt.style.whiteSpace = 'nowrap';
-      txt.style.overflow = 'hidden';
-      txt.style.textOverflow = 'ellipsis';
-      txt.textContent = rows[i];
+      line.style.whiteSpace = 'nowrap';
+      line.style.overflow = 'hidden';
+      line.style.textOverflow = 'ellipsis';
+      line.textContent = rows[i];
       if (item && item.failed && item.error) {
-        txt.title = String(item.error);
+        line.title = String(item.error);
       }
-      line.appendChild(txt);
-      var rm = document.createElement('button');
-      rm.type = 'button';
-      rm.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
-      rm.setAttribute('data-remove-attach-id', item && item.id ? String(item.id) : '');
-      rm.style.flex = '0 0 auto';
-      rm.style.border = 'none';
-      rm.style.borderRadius = '6px';
-      rm.style.padding = '3px 7px';
-      rm.style.background = '#d64040';
-      rm.style.color = '#fff';
-      rm.style.cursor = 'pointer';
-      rm.style.fontSize = '12px';
-      rm.style.lineHeight = '1.2';
-      rm.style.display = 'inline-flex';
-      rm.style.alignItems = 'center';
-      rm.style.justifyContent = 'center';
-      rm.title = '删除附件';
-      line.appendChild(rm);
       attachList.appendChild(line);
     }
     attachList.style.display = 'block';
     if (chatStatus) chatStatus.textContent = '已添加附件: ' + rows.length;
-  }
-
-  function removePendingAttachmentById(id) {
-    var rid = String(id || '').trim();
-    if (!rid) return;
-    var pa = state.pendingAttach || { items: [], fileIds: [], files: [] };
-    pa.items = Array.isArray(pa.items) ? pa.items : [];
-    pa.fileIds = Array.isArray(pa.fileIds) ? pa.fileIds : [];
-    pa.files = Array.isArray(pa.files) ? pa.files : [];
-    var removed = null;
-    pa.items = pa.items.filter(function (it) {
-      if (!it) return false;
-      if (String(it.id || '') === rid) {
-        removed = it;
-        return false;
-      }
-      return true;
-    });
-    var removeFileId = removed && removed.id && String(removed.id).indexOf('att_') === 0 ? String(removed.id) : '';
-    if (removeFileId) {
-      pa.fileIds = pa.fileIds.filter(function (x) { return String(x || '') !== removeFileId; });
-      pa.files = pa.files.filter(function (x) { return String((x && x.id) || '') !== removeFileId; });
-    }
-    state.pendingAttach = pa;
-    refreshAttachUi();
   }
 
   function extOf(name) {
@@ -4990,18 +4945,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   async function uploadOneAttachment(file, displayName) {
     if (!file || Number(file.size || 0) <= 0) throw new Error('empty file (0 bytes)');
+    var b64 = await readAsBase64(file);
     var body = {
       name: String((file && file.name) || displayName || 'file'),
       relativePath: String(displayName || (file && file.name) || 'file'),
       type: String((file && file.type) || ''),
-      size: Number((file && file.size) || 0)
+      size: Number((file && file.size) || 0),
+      contentBase64: b64
     };
-    var fd = new FormData();
-    fd.append('file', file, String((file && file.name) || 'file'));
-    fd.append('relativePath', body.relativePath);
     var req = {
       method: 'POST',
-      body: fd
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
     };
     var r;
     try {
@@ -5010,15 +4965,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       try {
         r = await fetch(niumaApiUrlLocalFallback(NIUMA_UPLOAD_API), req);
       } catch (e1) {
-        var b64 = await readAsBase64(file);
-        var bridgeBody = {
-          name: body.name,
-          relativePath: body.relativePath,
-          type: body.type,
-          size: body.size,
-          contentBase64: b64
-        };
-        return await hostBridgeRequest('niuma_upload_file', bridgeBody, 30000);
+        return await hostBridgeRequest('niuma_upload_file', body, 30000);
       }
     }
     if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()));
@@ -5147,16 +5094,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var fs = Array.prototype.slice.call(attachFolderInput.files || []);
       attachFolderInput.value = '';
       ingestAttachments(fs);
-    });
-  }
-
-  if (attachList) {
-    attachList.addEventListener('click', function (e) {
-      var btn = e.target && e.target.closest ? e.target.closest('[data-remove-attach-id]') : null;
-      if (!btn) return;
-      e.preventDefault();
-      e.stopPropagation();
-      removePendingAttachmentById(btn.getAttribute('data-remove-attach-id') || '');
     });
   }
 

@@ -95,65 +95,6 @@ function parseJsonBody(req, cb) {
   req.on("error", cb);
 }
 
-function parseRawBody(req, maxBytes, cb) {
-  const chunks = [];
-  let total = 0;
-  req.on("data", (chunk) => {
-    total += chunk.length;
-    if (total > maxBytes) {
-      cb(new Error("Body too large"));
-      req.destroy();
-      return;
-    }
-    chunks.push(chunk);
-  });
-  req.on("end", () => cb(null, Buffer.concat(chunks)));
-  req.on("error", cb);
-}
-
-function parseMultipartFormData(bodyBuf, contentType) {
-  const ct = String(contentType || "");
-  const m = ct.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
-  if (!m) throw new Error("Missing multipart boundary");
-  const boundary = "--" + (m[1] || m[2]);
-  const body = bodyBuf.toString("binary");
-  const parts = body.split(boundary).slice(1, -1);
-  const fields = {};
-  let file = null;
-  for (const rawPart of parts) {
-    let p = rawPart;
-    if (p.startsWith("\r\n")) p = p.slice(2);
-    if (p.endsWith("\r\n")) p = p.slice(0, -2);
-    const headerEnd = p.indexOf("\r\n\r\n");
-    if (headerEnd < 0) continue;
-    const headerText = p.slice(0, headerEnd);
-    const contentBin = p.slice(headerEnd + 4);
-    const headers = {};
-    headerText.split("\r\n").forEach((line) => {
-      const idx = line.indexOf(":");
-      if (idx > 0) headers[line.slice(0, idx).trim().toLowerCase()] = line.slice(idx + 1).trim();
-    });
-    const cd = headers["content-disposition"] || "";
-    const nameMatch = cd.match(/name="([^"]+)"/i);
-    if (!nameMatch) continue;
-    const fieldName = nameMatch[1];
-    const fileNameMatch = cd.match(/filename="([^"]*)"/i);
-    if (fileNameMatch) {
-      const contentTypePart = headers["content-type"] || "application/octet-stream";
-      const fileBuf = Buffer.from(contentBin, "binary");
-      file = {
-        fieldName,
-        filename: fileNameMatch[1] || "file",
-        mimeType: contentTypePart,
-        buffer: fileBuf
-      };
-    } else {
-      fields[fieldName] = Buffer.from(contentBin, "binary").toString("utf8");
-    }
-  }
-  return { fields, file };
-}
-
 function readAttachmentMeta(cb) {
   fs.readFile(niumaAttachMetaFile, "utf8", (err, text) => {
     if (err) {
@@ -165,16 +106,11 @@ function readAttachmentMeta(cb) {
       return;
     }
     try {
-      const cleaned = String(text || "").replace(/^\uFEFF/, "").trim();
-      if (!cleaned) {
-        cb(null, { version: 1, files: {}, updatedAt: null });
-        return;
-      }
-      const parsed = JSON.parse(cleaned);
+      const parsed = JSON.parse(text);
       if (!parsed || typeof parsed !== "object") throw new Error("Invalid attachment metadata");
       cb(null, parsed);
     } catch (parseErr) {
-      cb(null, { version: 1, files: {}, updatedAt: null });
+      cb(parseErr);
     }
   });
 }
@@ -212,88 +148,11 @@ function shouldExtractText(name, mimeType) {
   return /^(md|txt|json|csv|log|xml|yml|yaml|ini|cfg|js|ts|py|java|go|rs|html|css|sql|bat|cmd|ps1|psm1|sh|toml|env)$/i.test(extOf(name));
 }
 
-function persistUploadAndMeta(name, relativePath, mimeType, buf, cb) {
-  const fileId = createFileId();
-  const storedName = fileId + "_" + safeBaseName(name);
-  const absPath = path.join(niumaUploadDir, storedName);
-  fs.mkdir(niumaUploadDir, { recursive: true }, (mkErr) => {
-    if (mkErr) return cb(mkErr);
-    fs.writeFile(absPath, buf, (writeErr) => {
-      if (writeErr) return cb(writeErr);
-      readAttachmentMeta((metaErr, metaDoc) => {
-        if (metaErr) return cb(metaErr);
-        const doc = metaDoc && typeof metaDoc === "object" ? metaDoc : { version: 1, files: {} };
-        if (!doc.files || typeof doc.files !== "object") doc.files = {};
-        let textExcerpt = "";
-        if (shouldExtractText(name, mimeType)) textExcerpt = buf.toString("utf8").slice(0, 12000).trim();
-        doc.files[fileId] = {
-          id: fileId,
-          name,
-          relativePath,
-          type: mimeType,
-          size: buf.length,
-          storedName,
-          storedPath: absPath,
-          uploadedAt: new Date().toISOString(),
-          textExcerpt
-        };
-        writeAttachmentMeta(doc, (saveErr) => {
-          if (saveErr) return cb(saveErr);
-          cb(null, {
-            id: fileId,
-            name,
-            relativePath,
-            type: mimeType,
-            size: buf.length,
-            hasTextExcerpt: !!textExcerpt
-          });
-        });
-      });
-    });
-  });
-}
-
 const server = http.createServer((req, res) => {
   const reqPath = decodeURIComponent((req.url || "/").split("?")[0].split("#")[0]);
   if (reqPath === "/api/niuma/upload") {
     if (req.method !== "POST") {
       sendJson(res, 405, { ok: false, error: "Method not allowed" });
-      return;
-    }
-    const contentType = String(req.headers["content-type"] || "");
-    if (/multipart\/form-data/i.test(contentType)) {
-      parseRawBody(req, 40 * 1024 * 1024, (rawErr, rawBuf) => {
-        if (rawErr) {
-          sendJson(res, 413, { ok: false, error: rawErr.message || String(rawErr) });
-          return;
-        }
-        let parsed;
-        try {
-          parsed = parseMultipartFormData(rawBuf, contentType);
-        } catch (e) {
-          sendJson(res, 400, { ok: false, error: e.message || String(e) });
-          return;
-        }
-        const f = parsed.file;
-        if (!f || !f.buffer || !f.buffer.length) {
-          sendJson(res, 400, { ok: false, error: "Missing file" });
-          return;
-        }
-        if (f.buffer.length > 20 * 1024 * 1024) {
-          sendJson(res, 413, { ok: false, error: "File too large (>20MB)" });
-          return;
-        }
-        const name = String(f.filename || "file");
-        const relativePath = String((parsed.fields && parsed.fields.relativePath) || name);
-        const mimeType = String(f.mimeType || "application/octet-stream");
-        persistUploadAndMeta(name, relativePath, mimeType, f.buffer, (saveErr, fileInfo) => {
-          if (saveErr) {
-            sendJson(res, 500, { ok: false, error: saveErr.message || String(saveErr) });
-            return;
-          }
-          sendJson(res, 200, { ok: true, file: fileInfo });
-        });
-      });
       return;
     }
     parseJsonBody(req, (bodyErr, body) => {
@@ -324,12 +183,60 @@ const server = http.createServer((req, res) => {
         sendJson(res, 413, { ok: false, error: "File too large (>20MB)" });
         return;
       }
-      persistUploadAndMeta(name, relativePath, mimeType, buf, (saveErr, fileInfo) => {
-        if (saveErr) {
-          sendJson(res, 500, { ok: false, error: saveErr.message || String(saveErr) });
+      const fileId = createFileId();
+      const storedName = fileId + "_" + safeBaseName(name);
+      const absPath = path.join(niumaUploadDir, storedName);
+      fs.mkdir(niumaUploadDir, { recursive: true }, (mkErr) => {
+        if (mkErr) {
+          sendJson(res, 500, { ok: false, error: mkErr.message || String(mkErr) });
           return;
         }
-        sendJson(res, 200, { ok: true, file: fileInfo });
+        fs.writeFile(absPath, buf, (writeErr) => {
+          if (writeErr) {
+            sendJson(res, 500, { ok: false, error: writeErr.message || String(writeErr) });
+            return;
+          }
+          readAttachmentMeta((metaErr, metaDoc) => {
+            if (metaErr) {
+              sendJson(res, 500, { ok: false, error: metaErr.message || String(metaErr) });
+              return;
+            }
+            const doc = metaDoc && typeof metaDoc === "object" ? metaDoc : { version: 1, files: {} };
+            if (!doc.files || typeof doc.files !== "object") doc.files = {};
+            let textExcerpt = "";
+            if (shouldExtractText(name, mimeType)) {
+              textExcerpt = buf.toString("utf8").slice(0, 12000).trim();
+            }
+            doc.files[fileId] = {
+              id: fileId,
+              name,
+              relativePath,
+              type: mimeType,
+              size: buf.length,
+              storedName,
+              storedPath: absPath,
+              uploadedAt: new Date().toISOString(),
+              textExcerpt
+            };
+            writeAttachmentMeta(doc, (saveErr) => {
+              if (saveErr) {
+                sendJson(res, 500, { ok: false, error: saveErr.message || String(saveErr) });
+                return;
+              }
+              sendJson(res, 200, {
+                ok: true,
+                file: {
+                  id: fileId,
+                  name,
+                  relativePath,
+                  type: mimeType,
+                  size: buf.length,
+                  hasTextExcerpt: !!textExcerpt
+                }
+              });
+            });
+          });
+        });
       });
     });
     return;
