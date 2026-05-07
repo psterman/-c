@@ -440,6 +440,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     NIUMA_HISTORY_LS = 'niuma_chat_history_v1',
     DEBUG_HUD_LS = 'niuma_chat_debug_hud_v1',
     NIUMA_HISTORY_API = '/api/niuma/history',
+    NIUMA_UPLOAD_API = '/api/niuma/upload',
+    NIUMA_ATTACH_CTX_API = '/api/niuma/attachments/context',
     SP = '你是一个擅长 AHK v2、自动化脚本和桌面工作流的助手。',
     P = {
       openai: { label: 'OpenAI', transport: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini', models: ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini', 'gpt-4o'] },
@@ -853,7 +855,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     openclawSessionRowsFetchedAt: 0,
     openclawSessionRowsLoading: false
     ,
-    pendingAttach: { items: [], texts: [], images: [], files: [] }
+    pendingAttach: { items: [], fileIds: [], files: [] }
   };
   var toolbarVisibleSynced = false;
   var toolbarRevealTimer = 0;
@@ -3177,6 +3179,82 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return u + '/v1beta' + p;
   }
 
+  function hostBridgeAvailable() {
+    return !!(window.chrome && window.chrome.webview && window.chrome.webview.postMessage);
+  }
+
+  function hostBridgeRequest(type, payload, timeoutMs) {
+    return new Promise(function (resolve, reject) {
+      if (!hostBridgeAvailable()) {
+        reject(new Error('host bridge unavailable'));
+        return;
+      }
+      var reqId = 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+      var done = false;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        try { window.chrome.webview.removeEventListener('message', onMsg); } catch (_) {}
+        reject(new Error('host bridge timeout'));
+      }, Math.max(1000, Number(timeoutMs || 15000)));
+      function finishOk(data) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        try { window.chrome.webview.removeEventListener('message', onMsg); } catch (_) {}
+        resolve(data);
+      }
+      function finishErr(err) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        try { window.chrome.webview.removeEventListener('message', onMsg); } catch (_) {}
+        reject(err instanceof Error ? err : new Error(String(err || 'host bridge error')));
+      }
+      function onMsg(ev) {
+        var d = ev && ev.data;
+        if (typeof d === 'string') {
+          try { d = JSON.parse(d); } catch (_) {}
+        }
+        if (!d || typeof d !== 'object') return;
+        if (String(d.reqId || '') !== reqId) return;
+        if (String(d.type || '') === 'niuma_upload_result') {
+          if (d.ok && d.file) finishOk(d.file);
+          else finishErr(new Error(String(d.error || 'upload failed')));
+          return;
+        }
+        if (String(d.type || '') === 'niuma_attach_context_result') {
+          if (d.ok) finishOk(Array.isArray(d.files) ? d.files : []);
+          else finishErr(new Error(String(d.error || 'context failed')));
+        }
+      }
+      try { window.chrome.webview.addEventListener('message', onMsg); } catch (e) { finishErr(e); return; }
+      try {
+        window.chrome.webview.postMessage(JSON.stringify({
+          type: type,
+          reqId: reqId,
+          payload: payload || {}
+        }));
+      } catch (e) {
+        finishErr(e);
+      }
+    });
+  }
+
+  function niumaApiUrl(p) {
+    var pathOnly = String(p || '');
+    if (!pathOnly) return '';
+    if (/^https?:\/\//i.test(pathOnly)) return pathOnly;
+    return pathOnly;
+  }
+
+  function niumaApiUrlLocalFallback(p) {
+    var pathOnly = String(p || '');
+    if (!pathOnly) return '';
+    if (/^https?:\/\//i.test(pathOnly)) return pathOnly;
+    return 'http://127.0.0.1:3000' + pathOnly;
+  }
+
   function norm(c) {
     if (typeof c === 'string') return c;
     if (Array.isArray(c))
@@ -3195,23 +3273,50 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var m = [];
     if (cfg.systemPrompt) m.push({ role: 'system', content: cfg.systemPrompt });
     var h = activeSession() ? activeSession().history : [];
-    h.forEach(function (i) {
-      m.push({ role: i.role, content: i.content });
+    var lastUserIdx = -1;
+    for (var i = h.length - 1; i >= 0; i--) {
+      if (h[i] && h[i].role === 'user') {
+        lastUserIdx = i;
+        break;
+      }
+    }
+    h.forEach(function (it, idx) {
+      var c = it.content;
+      if (idx === lastUserIdx && cfg && cfg.userContentForModel) c = cfg.userContentForModel;
+      m.push({ role: it.role, content: c });
     });
     return m;
   }
 
-  function claudeMsgs() {
+  function claudeMsgs(cfg) {
     var h = activeSession() ? activeSession().history : [];
-    return h.map(function (i) {
-      return { role: i.role === 'assistant' ? 'assistant' : 'user', content: i.content };
+    var lastUserIdx = -1;
+    for (var i = h.length - 1; i >= 0; i--) {
+      if (h[i] && h[i].role !== 'assistant') {
+        lastUserIdx = i;
+        break;
+      }
+    }
+    return h.map(function (it, idx) {
+      var c = it.content;
+      if (idx === lastUserIdx && cfg && cfg.userContentForModel) c = cfg.userContentForModel;
+      return { role: it.role === 'assistant' ? 'assistant' : 'user', content: c };
     });
   }
 
-  function geminiMsgs() {
+  function geminiMsgs(cfg) {
     var h = activeSession() ? activeSession().history : [];
-    return h.map(function (i) {
-      return { role: i.role === 'assistant' ? 'model' : 'user', parts: [{ text: i.content }] };
+    var lastUserIdx = -1;
+    for (var i = h.length - 1; i >= 0; i--) {
+      if (h[i] && h[i].role !== 'assistant') {
+        lastUserIdx = i;
+        break;
+      }
+    }
+    return h.map(function (it, idx) {
+      var c = it.content;
+      if (idx === lastUserIdx && cfg && cfg.userContentForModel) c = cfg.userContentForModel;
+      return { role: it.role === 'assistant' ? 'model' : 'user', parts: [{ text: c }] };
     });
   }
 
@@ -3243,7 +3348,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         model: cfg.model,
         system: cfg.systemPrompt || '',
         max_tokens: 2048,
-        messages: claudeMsgs()
+        messages: claudeMsgs(cfg)
       })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()));
@@ -3264,7 +3369,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   async function reqGemini(cfg) {
-    var body = { contents: geminiMsgs(), generationConfig: { temperature: 0.7 } };
+    var body = { contents: geminiMsgs(cfg), generationConfig: { temperature: 0.7 } };
     if (cfg.systemPrompt) body.systemInstruction = { parts: [{ text: cfg.systemPrompt }] };
     var r = await fetch(geminiUrl(cfg.baseUrl, cfg.model, cfg.apiKey), {
       method: 'POST',
@@ -4495,17 +4600,26 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return;
     }
     var text = input.value.trim();
-    var pa = state.pendingAttach || { items: [], texts: [], images: [], files: [] };
-    var hasAttach = !!((pa.texts && pa.texts.length) || (pa.images && pa.images.length) || (pa.files && pa.files.length));
+    var pa = state.pendingAttach || { items: [], fileIds: [], files: [] };
+    var hasAttach = !!((pa.fileIds && pa.fileIds.length) || (pa.files && pa.files.length) || (pa.items && pa.items.length));
     if (!text && !hasAttach) return;
-    var composed = buildAttachmentPrompt(text, pa);
+    var attachmentContext = '';
+    if (hasAttach) {
+      try {
+        attachmentContext = await fetchAttachmentContext(pa);
+      } catch (eAttach) {
+        cstatForSession(sid, 'Attachment context read failed: ' + (eAttach && eAttach.message ? eAttach.message : String(eAttach)), 'error');
+      }
+    }
+    var composedForModel = mergeUserTextWithAttachmentContext(text, attachmentContext);
+    var displayText = text || ('[attachments] ' + Number((pa.items && pa.items.length) || 0) + ' file(s)');
     saveCfg(false);
     var cfg = buildSendCfg();
     if (!cfg) return;
     var p0 = P[cfg.provider] || P.openai;
     if (p0.transport === 'cli') {
       // CLI 原生界面：不依赖 Base URL / Model 校验，点击即打开专属终端
-      add('user', composed);
+      add('user', displayText);
       input.value = '';
       clearPendingAttach();
       cstatForSession(sid, '正在连接本机 ttyd 终端…');
@@ -4527,7 +4641,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       setSettings(true);
       return;
     }
-    add('user', composed);
+    add('user', displayText);
     input.value = '';
     clearPendingAttach();
     setSessionSending(sid, true);
@@ -4537,6 +4651,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     try {
       var p = P[cfg.provider] || P.openai,
         content = '';
+      cfg.attachmentContext = attachmentContext;
+      cfg.userContentForModel = composedForModel;
       if (p.transport === 'anthropic') content = await reqClaude(cfg);
       else if (p.transport === 'gemini') content = await reqGemini(cfg);
       else if (p.transport === 'openclaw')
@@ -4758,19 +4874,20 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function clearPendingAttach() {
-    state.pendingAttach = { items: [], texts: [], images: [], files: [] };
+    state.pendingAttach = { items: [], fileIds: [], files: [] };
     refreshAttachUi();
   }
 
   function refreshAttachUi() {
     if (!attachList) return;
-    var pa = state.pendingAttach || { items: [], texts: [], images: [], files: [] };
+    var pa = state.pendingAttach || { items: [], fileIds: [], files: [] };
     pa.items = Array.isArray(pa.items) ? pa.items : [];
     var rows = [];
     (pa.items || []).forEach(function (x) {
-      var n = x && x.name ? x.name : 'file';
+      var n = x && x.relativePath ? x.relativePath : x && x.name ? x.name : 'file';
       var sz = Number((x && x.size) || 0);
-      rows.push(n + ' (' + sz + ' bytes)');
+      var status = x && x.pending ? ' [uploading]' : x && x.failed ? ' [failed]' : '';
+      rows.push(n + ' (' + sz + ' bytes)' + status);
     });
     if (!rows.length) {
       attachList.style.display = 'none';
@@ -4780,11 +4897,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     while (attachList.firstChild) attachList.removeChild(attachList.firstChild);
     for (var i = 0; i < rows.length; i++) {
+      var item = pa.items[i] || null;
       var line = document.createElement('div');
       line.style.whiteSpace = 'nowrap';
       line.style.overflow = 'hidden';
       line.style.textOverflow = 'ellipsis';
       line.textContent = rows[i];
+      if (item && item.failed && item.error) {
+        line.title = String(item.error);
+      }
       attachList.appendChild(line);
     }
     attachList.style.display = 'block';
@@ -4809,72 +4930,153 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return /^(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(extOf(f && f.name));
   }
 
-  function readAsText(file) {
+  function readAsBase64(file) {
     return new Promise(function (resolve, reject) {
       var rd = new FileReader();
-      rd.onload = function () { resolve(String(rd.result || '')); };
-      rd.onerror = function () { reject(new Error('read text failed')); };
-      rd.readAsText(file);
+      rd.onload = function () {
+        var str = String(rd.result || '');
+        var comma = str.indexOf(',');
+        resolve(comma >= 0 ? str.slice(comma + 1) : str);
+      };
+      rd.onerror = function () { reject(new Error('read base64 failed')); };
+      rd.readAsDataURL(file);
     });
+  }
+
+  async function uploadOneAttachment(file, displayName) {
+    if (!file || Number(file.size || 0) <= 0) throw new Error('empty file (0 bytes)');
+    var b64 = await readAsBase64(file);
+    var body = {
+      name: String((file && file.name) || displayName || 'file'),
+      relativePath: String(displayName || (file && file.name) || 'file'),
+      type: String((file && file.type) || ''),
+      size: Number((file && file.size) || 0),
+      contentBase64: b64
+    };
+    var req = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    };
+    var r;
+    try {
+      r = await fetch(niumaApiUrl(NIUMA_UPLOAD_API), req);
+    } catch (e0) {
+      try {
+        r = await fetch(niumaApiUrlLocalFallback(NIUMA_UPLOAD_API), req);
+      } catch (e1) {
+        return await hostBridgeRequest('niuma_upload_file', body, 30000);
+      }
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()));
+    var d = await r.json();
+    if (!d || !d.ok || !d.file || !d.file.id) throw new Error('upload response invalid');
+    return d.file;
   }
 
   async function ingestAttachments(files) {
     if (!files || !files.length) return;
-    var pa = state.pendingAttach || { items: [], texts: [], images: [], files: [] };
+    var pa = state.pendingAttach || { items: [], fileIds: [], files: [] };
     pa.items = Array.isArray(pa.items) ? pa.items : [];
-    var textBudget = 18000;
+    pa.fileIds = Array.isArray(pa.fileIds) ? pa.fileIds : [];
+    pa.files = Array.isArray(pa.files) ? pa.files : [];
+    var okCount = 0;
     for (var i = 0; i < files.length; i++) {
       var f = files[i];
       if (!f) continue;
       var displayName = (f.webkitRelativePath && String(f.webkitRelativePath).trim()) || f.name || 'file';
-      pa.items.push({ name: displayName, size: Number(f.size || 0) });
-      if (isImageFile(f)) {
-        pa.images.push({ name: displayName });
-        continue;
+      var pendingId = 'pending_' + Date.now().toString(36) + '_' + i;
+      pa.items.push({
+        id: pendingId,
+        name: f.name || displayName,
+        relativePath: displayName,
+        size: Number(f.size || 0),
+        pending: true
+      });
+      refreshAttachUi();
+      try {
+        var uploaded = await uploadOneAttachment(f, displayName);
+        for (var j = pa.items.length - 1; j >= 0; j--) {
+          if (pa.items[j] && pa.items[j].id === pendingId) {
+            pa.items[j] = {
+              id: uploaded.id,
+              name: uploaded.name || f.name || displayName,
+              relativePath: uploaded.relativePath || displayName,
+              size: Number(uploaded.size || f.size || 0),
+              type: uploaded.type || String(f.type || '')
+            };
+            break;
+          }
+        }
+        pa.fileIds.push(uploaded.id);
+        pa.files.push(uploaded);
+        okCount++;
+      } catch (e) {
+        var em = e && e.message ? String(e.message) : String(e);
+        if (/Failed to fetch|NetworkError|connect|Unable to connect|无法连接/i.test(em)) {
+          em = 'upload service offline (start serve3000.js)';
+        }
+        for (var k = pa.items.length - 1; k >= 0; k--) {
+          if (pa.items[k] && pa.items[k].id === pendingId) {
+            pa.items[k].pending = false;
+            pa.items[k].failed = true;
+            pa.items[k].error = em;
+            break;
+          }
+        }
+        dbg('UPLOAD', displayName + ' -> ' + em, 'err');
+        cstat('Upload failed: ' + displayName + ' - ' + em, 'error');
       }
-      if (isTextFile(f) && textBudget > 0) {
-        try {
-          var t = await readAsText(f);
-          t = String(t || '').trim();
-          if (!t) continue;
-          var one = t.slice(0, Math.min(4000, textBudget));
-          textBudget -= one.length;
-          pa.texts.push({ name: displayName, text: one });
-          continue;
-        } catch (_) {}
-      }
-      pa.files.push({ name: displayName, size: Number(f.size || 0) });
     }
     state.pendingAttach = pa;
     refreshAttachUi();
-    cstat('附件已添加: ' + files.length + ' 个', 'success');
+    if (okCount > 0) cstat('Attachments added: ' + okCount, 'success');
   }
 
-  function buildAttachmentPrompt(userText, pa) {
+  async function fetchAttachmentContext(pa) {
+    pa = pa || { fileIds: [], items: [] };
+    var ids = Array.isArray(pa.fileIds) ? pa.fileIds.filter(Boolean) : [];
+    if (!ids.length) return '';
+    var req = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileIds: ids })
+    };
+    var r;
+    try {
+      r = await fetch(niumaApiUrl(NIUMA_ATTACH_CTX_API), req);
+    } catch (e0) {
+      try {
+        r = await fetch(niumaApiUrlLocalFallback(NIUMA_ATTACH_CTX_API), req);
+      } catch (e1) {
+        var hostFiles = await hostBridgeRequest('niuma_attach_context', { fileIds: ids }, 12000);
+        var lines2 = ['Attachment Context'];
+        (hostFiles || []).forEach(function (f, idx) {
+          lines2.push('[' + (idx + 1) + '] ' + (f.relativePath || f.name || 'file') + ' (' + Number(f.size || 0) + ' bytes)');
+          var ex2 = String((f && f.textExcerpt) || '').trim();
+          if (ex2) lines2.push(ex2.slice(0, 3000));
+        });
+        return lines2.length > 1 ? lines2.join('\n') : '';
+      }
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()));
+    var d = await r.json();
+    var files = d && d.ok && Array.isArray(d.files) ? d.files : [];
+    if (!files.length) return '';
+    var lines = ['Attachment Context'];
+    files.forEach(function (f, idx) {
+      lines.push('[' + (idx + 1) + '] ' + (f.relativePath || f.name || 'file') + ' (' + Number(f.size || 0) + ' bytes)');
+      var ex = String((f && f.textExcerpt) || '').trim();
+      if (ex) lines.push(ex.slice(0, 3000));
+    });
+    return lines.join('\n');
+  }
+
+  function mergeUserTextWithAttachmentContext(userText, attachmentContext) {
     var q = String(userText || '').trim();
-    pa = pa || { texts: [], images: [], files: [] };
-    var lines = [];
-    if ((pa.texts || []).length) {
-      lines.push('Attached text excerpts:');
-      pa.texts.slice(0, 6).forEach(function (it, idx) {
-        lines.push('[' + (idx + 1) + '] ' + (it.name || 'text'));
-        lines.push(String(it.text || ''));
-      });
-    }
-    if ((pa.images || []).length) {
-      lines.push('Attached images: ' + pa.images.length);
-      pa.images.slice(0, 12).forEach(function (it, idx) {
-        lines.push('- image ' + (idx + 1) + ': ' + (it.name || 'image'));
-      });
-    }
-    if ((pa.files || []).length) {
-      lines.push('Other attached files:');
-      pa.files.slice(0, 12).forEach(function (it) {
-        lines.push('- ' + (it.name || 'file') + ' (' + Number(it.size || 0) + ' bytes)');
-      });
-    }
-    if (!lines.length) return q;
-    return (q ? q + '\n\n' : '') + '---\nAttachment Context\n' + lines.join('\n');
+    var ctx = String(attachmentContext || '').trim();
+    if (!ctx) return q;
+    return (q ? q + '\n\n' : '') + '---\n' + ctx;
   }
 
   if (attachFileBtn && attachFileInput) {

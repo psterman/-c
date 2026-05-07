@@ -841,6 +841,172 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(FloatingToolbar_DeferredDebugPullGo, -1)
         return
     }
+    if (typ = "niuma_upload_file") {
+        SetTimer(FloatingToolbar_DeferredNiumaUpload.Bind(msg), -1)
+        return
+    }
+    if (typ = "niuma_attach_context") {
+        SetTimer(FloatingToolbar_DeferredNiumaAttachContext.Bind(msg), -1)
+        return
+    }
+}
+
+FloatingToolbar_DeferredNiumaUpload(msg) {
+    global g_FTB_WV2
+    if !g_FTB_WV2
+        return
+    reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    payload := msg.Has("payload") && (msg["payload"] is Map) ? msg["payload"] : msg
+    try {
+        ret := FloatingToolbar_SaveNiumaUpload(payload)
+        WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_upload_result", "reqId", reqId, "ok", true, "file", ret))
+    } catch as e {
+        WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_upload_result", "reqId", reqId, "ok", false, "error", e.Message))
+    }
+}
+
+FloatingToolbar_DeferredNiumaAttachContext(msg) {
+    global g_FTB_WV2
+    if !g_FTB_WV2
+        return
+    reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    payload := msg.Has("payload") && (msg["payload"] is Map) ? msg["payload"] : msg
+    try {
+        ids := payload.Has("fileIds") ? payload["fileIds"] : []
+        files := FloatingToolbar_LoadNiumaAttachContext(ids)
+        WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_attach_context_result", "reqId", reqId, "ok", true, "files", files))
+    } catch as e {
+        WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_attach_context_result", "reqId", reqId, "ok", false, "error", e.Message))
+    }
+}
+
+FloatingToolbar_NiumaDataDir() {
+    return A_ScriptDir . "\Data\niuma-chat"
+}
+
+FloatingToolbar_NiumaUploadDir() {
+    return FloatingToolbar_NiumaDataDir() . "\uploads"
+}
+
+FloatingToolbar_NiumaAttachMetaFile() {
+    return FloatingToolbar_NiumaDataDir() . "\attachments.json"
+}
+
+FloatingToolbar_Base64DecodeToBuffer(b64) {
+    s := Trim(String(b64))
+    if (s = "")
+        throw Error("empty base64")
+    need := 0
+    if !DllCall("crypt32\CryptStringToBinaryW", "WStr", s, "UInt", 0, "UInt", 0x1, "Ptr", 0, "UInt*", &need, "Ptr", 0, "Ptr", 0)
+        throw Error("base64 decode size failed")
+    if (need <= 0)
+        throw Error("decoded size zero")
+    buf := Buffer(need, 0)
+    if !DllCall("crypt32\CryptStringToBinaryW", "WStr", s, "UInt", 0, "UInt", 0x1, "Ptr", buf.Ptr, "UInt*", &need, "Ptr", 0, "Ptr", 0)
+        throw Error("base64 decode failed")
+    return buf
+}
+
+FloatingToolbar_IsTextExt(name) {
+    n := StrLower(String(name))
+    p := InStr(n, ".",, -1)
+    ext := (p > 0) ? SubStr(n, p + 1) : ""
+    return RegExMatch(ext, "i)^(md|txt|json|csv|log|xml|yml|yaml|ini|cfg|js|ts|py|java|go|rs|html|css|sql|bat|cmd|ps1|psm1|sh|toml|env)$")
+}
+
+FloatingToolbar_LoadNiumaAttachMeta() {
+    fp := FloatingToolbar_NiumaAttachMetaFile()
+    if !FileExist(fp)
+        return Map("version", 1, "files", Map())
+    raw := FileRead(fp, "UTF-8")
+    o := Jxon_Load(raw)
+    if !(o is Map)
+        return Map("version", 1, "files", Map())
+    if !o.Has("files") || !(o["files"] is Map)
+        o["files"] := Map()
+    return o
+}
+
+FloatingToolbar_SaveNiumaAttachMeta(meta) {
+    dir := FloatingToolbar_NiumaDataDir()
+    try DirCreate(dir)
+    fp := FloatingToolbar_NiumaAttachMetaFile()
+    meta["updatedAt"] := FormatTime(, "yyyy-MM-ddTHH:mm:ss")
+    try FileDelete(fp)
+    FileAppend(Jxon_Dump(meta), fp, "UTF-8")
+}
+
+FloatingToolbar_SaveNiumaUpload(payload) {
+    name := payload.Has("name") ? String(payload["name"]) : "file"
+    rel := payload.Has("relativePath") ? String(payload["relativePath"]) : name
+    mime := payload.Has("type") ? String(payload["type"]) : ""
+    b64 := payload.Has("contentBase64") ? String(payload["contentBase64"]) : ""
+    if (Trim(b64) = "")
+        throw Error("Missing contentBase64")
+    buf := FloatingToolbar_Base64DecodeToBuffer(b64)
+    if (buf.Size <= 0)
+        throw Error("Empty file")
+    if (buf.Size > 20 * 1024 * 1024)
+        throw Error("File too large (>20MB)")
+    uid := "att_" . FormatTime(, "yyyyMMddHHmmss") . "_" . A_TickCount
+    safe := RegExReplace(name, "[^\w\.\-\(\) ]", "_")
+    upDir := FloatingToolbar_NiumaUploadDir()
+    try DirCreate(upDir)
+    stored := uid . "_" . safe
+    fp := upDir . "\" . stored
+    f := FileOpen(fp, "w")
+    if !IsObject(f)
+        throw Error("open file failed")
+    f.RawWrite(buf, buf.Size)
+    f.Close()
+    excerpt := ""
+    if (InStr(StrLower(mime), "text/") = 1 || FloatingToolbar_IsTextExt(name)) {
+        try excerpt := Trim(StrGet(buf, "UTF-8"))
+        if (StrLen(excerpt) > 12000)
+            excerpt := SubStr(excerpt, 1, 12000)
+    }
+    meta := FloatingToolbar_LoadNiumaAttachMeta()
+    files := meta["files"]
+    files[uid] := Map(
+        "id", uid,
+        "name", name,
+        "relativePath", rel,
+        "type", mime,
+        "size", buf.Size,
+        "storedName", stored,
+        "storedPath", fp,
+        "uploadedAt", FormatTime(, "yyyy-MM-ddTHH:mm:ss"),
+        "textExcerpt", excerpt
+    )
+    FloatingToolbar_SaveNiumaAttachMeta(meta)
+    return Map("id", uid, "name", name, "relativePath", rel, "type", mime, "size", buf.Size)
+}
+
+FloatingToolbar_LoadNiumaAttachContext(ids) {
+    meta := FloatingToolbar_LoadNiumaAttachMeta()
+    files := meta["files"]
+    out := []
+    if !(ids is Array)
+        return out
+    for _, id in ids {
+        sid := String(id)
+        if !files.Has(sid)
+            continue
+        x := files[sid]
+        ex := x.Has("textExcerpt") ? String(x["textExcerpt"]) : ""
+        if (StrLen(ex) > 6000)
+            ex := SubStr(ex, 1, 6000)
+        out.Push(Map(
+            "id", sid,
+            "name", x.Has("name") ? String(x["name"]) : "file",
+            "relativePath", x.Has("relativePath") ? String(x["relativePath"]) : (x.Has("name") ? String(x["name"]) : "file"),
+            "type", x.Has("type") ? String(x["type"]) : "",
+            "size", x.Has("size") ? Integer(x["size"]) : 0,
+            "uploadedAt", x.Has("uploadedAt") ? String(x["uploadedAt"]) : "",
+            "textExcerpt", ex
+        ))
+    }
+    return out
 }
 
 FloatingToolbar_DeferredProbeOpenClawToken(force := false) {
