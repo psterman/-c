@@ -5494,6 +5494,26 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     if (alpha < 26)
         alpha := 26
     this.ScreenshotDrawColor := (this.ScreenshotDrawColor & 0x00FFFFFF) | (alpha << 24)
+    ; Live-preview selected text object while adjusting text options.
+    if (t = "text" && this.ScreenshotSelectedObjectId != "") {
+        idx := this.ScreenshotDoc_FindObjectIndexById(this.ScreenshotSelectedObjectId)
+        if (idx > 0 && idx <= this.ScreenshotDocObjects.Length) {
+            obj := this.ScreenshotDocObjects[idx]
+            if (obj is Map && String(obj.Get("type","")) = "text") {
+                if (opts.Has("size"))
+                    obj["size"] := Max(12, Min(48, Integer(opts.Get("size", obj.Get("size", this.ScreenshotTextOptions.Get("size", 22))))))
+                if (opts.Has("bold"))
+                    obj["bold"] := !!opts.Get("bold", obj.Get("bold", this.ScreenshotTextOptions.Get("bold", true)))
+                if (opts.Has("color") || opts.Has("opacity"))
+                    obj["color"] := this.ScreenshotDrawColor
+                mt := this.ScreenshotDoc_MeasureTextBox(String(obj.Get("text","")), Integer(obj.Get("size", 22)), obj.Get("bold", true))
+                obj["w"] := Max(40, Number(mt.Get("w", obj.Get("w", 80))))
+                obj["h"] := Max(24, Number(mt.Get("h", obj.Get("h", 34))))
+                this.ScreenshotDocObjects[idx] := obj
+                this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+            }
+        }
+    }
     this.ScreenshotPreviewShell_SendState()
     this.ScreenshotToolbar_SendState()
 }

@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -54,6 +54,7 @@ body[data-theme="light"] #debugPanel{background:rgba(255,255,255,.94);color:#111
   padding:8px 10px;border-radius:10px;border:1px solid var(--panel-border);
   background:rgba(15,26,43,.95);color:var(--text);
   box-shadow:0 10px 24px rgba(0,0,0,.28);outline:none;
+  overflow:visible;z-index:9500;
 }
 body[data-theme="light"] #textBox{
   background:rgba(255,255,255,.97);
@@ -64,7 +65,13 @@ body[data-theme="light"] #textBox{
   font:14px "Segoe UI","Microsoft YaHei UI",sans-serif;line-height:1.35;
   padding:0;margin:0;
 }
-#textHint{display:none}
+#textHint{
+  display:none;position:fixed;left:0;top:0;
+  font-size:12px;color:var(--muted);white-space:nowrap;
+  background:rgba(0,0,0,.28);padding:2px 6px;border-radius:6px;
+  pointer-events:none;z-index:9600;
+}
+body[data-theme="light"] #textHint{background:rgba(255,255,255,.92)}
 #mosaicPanel{
   position:absolute;left:12px;right:12px;top:12px;z-index:9000;display:flex;
   width:auto;padding:10px 12px;border-radius:12px;border:1px solid var(--panel-border);
@@ -127,23 +134,23 @@ body[data-theme="light"] #mosaicPanel{
 <div id="root">
   <div id="previewWrap">
     <div id="preview">
-      <div id="empty">等待截图内容...</div>
+      <div id="empty">绛夊緟鎴浘鍐呭...</div>
       <img id="img" style="display:none">
       <div id="mosaicPanel">
         <div class="mp-strip">
           <div class="mp-style">
-            <button class="mp-style-btn" type="button" data-style="pixel">像素</button>
-            <button class="mp-style-btn" type="button" data-style="frost">磨砂</button>
-            <button class="mp-style-btn" type="button" data-style="gauss">高斯</button>
+            <button class="mp-style-btn" type="button" data-style="pixel">鍍忕礌</button>
+            <button class="mp-style-btn" type="button" data-style="frost">纾ㄧ爞</button>
+            <button class="mp-style-btn" type="button" data-style="gauss">楂樻柉</button>
           </div>
-          <div class="mp-col"><label>粗细</label><input id="mpSize" type="range" min="12" max="120" step="2"><span id="mpSizeV" class="mp-val"></span></div>
-          <div class="mp-col"><label>融合</label><input id="mpIntensity" type="range" min="4" max="48" step="2"><span id="mpIntensityV" class="mp-val"></span></div>
-          <div class="mp-col"><label>透明</label><input id="mpOpacity" type="range" min="10" max="100" step="5"><span id="mpOpacityV" class="mp-val"></span></div>
+          <div class="mp-col"><label>绮楃粏</label><input id="mpSize" type="range" min="12" max="120" step="2"><span id="mpSizeV" class="mp-val"></span></div>
+          <div class="mp-col"><label>铻嶅悎</label><input id="mpIntensity" type="range" min="4" max="48" step="2"><span id="mpIntensityV" class="mp-val"></span></div>
+          <div class="mp-col"><label>閫忔槑</label><input id="mpOpacity" type="range" min="10" max="100" step="5"><span id="mpOpacityV" class="mp-val"></span></div>
         </div>
       </div>
       <div id="textBox">
-        <textarea id="textArea" placeholder="输入文字，Enter 确认，Esc 取消"></textarea>
-        <div id="textHint">Enter 提交，Shift+Enter 换行</div>
+        <textarea id="textArea" placeholder="杈撳叆鏂囧瓧锛孍nter 纭锛孍sc 鍙栨秷"></textarea>
+        <div id="textHint">Enter 鎻愪氦锛孲hift+Enter 鎹㈣</div>
       </div>
     </div>
   </div>
@@ -201,7 +208,8 @@ body[data-theme="light"] #mosaicPanel{
     if (mode === 'none') {
       img.style.cursor = st.drag ? 'grabbing' : 'grab';
     } else if (mode === 'text') {
-      img.style.cursor = 'text';
+      if (annot.active) img.style.cursor = 'grabbing';
+      else img.style.cursor = host.selectedId ? 'grab' : 'text';
     } else {
       img.style.cursor = 'crosshair';
     }
@@ -272,6 +280,8 @@ body[data-theme="light"] #mosaicPanel{
     }
     textBox.style.display = 'none';
     textBox.removeAttribute('data-mode');
+    const hint = document.getElementById('textHint');
+    if (hint) hint.style.display = 'none';
     textArea.value = '';
     pendingTextAt = null;
     pendingTextTargetId = '';
@@ -310,7 +320,14 @@ body[data-theme="light"] #mosaicPanel{
     textArea.style.fontSize = '14px';
     textArea.style.fontWeight = '700';
     textArea.style.color = 'var(--text)';
-    textArea.placeholder = isEdit ? '' : '输入文字，Enter 确认，Esc 取消';
+    textArea.placeholder = isEdit ? '' : '请输入文字';
+    const hint = document.getElementById('textHint');
+    if (hint) {
+      hint.textContent = 'Enter 确认，Esc 取消，Shift+Enter 换行';
+      hint.style.left = Math.round(pr.left + left) + 'px';
+      hint.style.top = Math.round(pr.top + top - 28) + 'px';
+      hint.style.display = '';
+    }
     textArea.focus();
     textArea.select();
   }
@@ -555,3 +572,4 @@ body[data-theme="light"] #mosaicPanel{
 </script>
 </body>
 </html>
+
