@@ -23,7 +23,12 @@ body[data-theme="light"]{
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:var(--text);font:13px "Segoe UI","Microsoft YaHei UI",sans-serif;overflow:hidden}
+body{position:relative}
 #root{height:100%;display:flex;flex-direction:column}
+#hudLayer{
+  position:absolute;left:0;top:0;right:0;bottom:0;
+  pointer-events:none;z-index:12000;overflow:visible;
+}
 #previewWrap{position:relative;flex:1;padding:10px}
 #previewWrap.with-mosaic{padding-top:66px}
 #preview{
@@ -65,13 +70,31 @@ body[data-theme="light"] #textBox{
   font:14px "Segoe UI","Microsoft YaHei UI",sans-serif;line-height:1.35;
   padding:0;margin:0;
 }
-#textHint{
-  display:none;position:fixed;left:0;top:0;
-  font-size:12px;color:var(--muted);white-space:nowrap;
-  background:rgba(0,0,0,.28);padding:2px 6px;border-radius:6px;
-  pointer-events:none;z-index:9600;
+#textBox textarea::placeholder{
+  color:var(--muted);
+  opacity:1;
 }
-body[data-theme="light"] #textHint{background:rgba(255,255,255,.92)}
+#textHint{
+  display:none;position:absolute;left:0;top:0;
+  font-size:12px;color:var(--muted);white-space:nowrap;
+  background:rgba(0,0,0,.62);padding:3px 8px;border-radius:6px;
+  border:1px solid rgba(255,255,255,.16);
+  pointer-events:none;z-index:9800;
+}
+body[data-theme="light"] #textHint{
+  background:rgba(255,255,255,.95);
+  border-color:rgba(30,41,59,.2);
+}
+#textHintBar{
+  display:none;position:absolute;left:12px;top:10px;
+  height:26px;line-height:26px;padding:0 10px;
+  border-radius:8px;border:1px solid var(--panel-border);
+  background:rgba(0,0,0,.58);color:var(--text);font-size:12px;
+  white-space:nowrap;pointer-events:none;z-index:9850;
+}
+body[data-theme="light"] #textHintBar{
+  background:rgba(255,255,255,.94);
+}
 #mosaicPanel{
   position:absolute;left:12px;right:12px;top:12px;z-index:9000;display:flex;
   width:auto;padding:10px 12px;border-radius:12px;border:1px solid var(--panel-border);
@@ -149,11 +172,14 @@ body[data-theme="light"] #mosaicPanel{
         </div>
       </div>
       <div id="textBox">
-        <textarea id="textArea" placeholder="杈撳叆鏂囧瓧锛孍nter 纭锛孍sc 鍙栨秷"></textarea>
-        <div id="textHint">Enter 鎻愪氦锛孲hift+Enter 鎹㈣</div>
+        <textarea id="textArea" placeholder="请输入文字"></textarea>
       </div>
+      <div id="textHintBar">Enter 确认，Esc 取消，Shift+Enter 换行</div>
     </div>
   </div>
+</div>
+<div id="hudLayer">
+  <div id="textHint">Enter 确认，Esc 取消，Shift+Enter 换行</div>
 </div>
 <div id="ctx"></div>
 <div id="debugPanel" style="display:none"></div>
@@ -278,10 +304,15 @@ body[data-theme="light"] #mosaicPanel{
     if (notifyHost && closingId) {
       post({ type:'event', name:'textInputClosed', payload:{ id: closingId, committed: !!committed } });
     }
+    if (notifyHost) {
+      post({ type:'event', name:'textInputHintHide', payload:{} });
+    }
     textBox.style.display = 'none';
     textBox.removeAttribute('data-mode');
     const hint = document.getElementById('textHint');
     if (hint) hint.style.display = 'none';
+    const hintBar = document.getElementById('textHintBar');
+    if (hintBar) hintBar.style.display = 'none';
     textArea.value = '';
     pendingTextAt = null;
     pendingTextTargetId = '';
@@ -324,9 +355,23 @@ body[data-theme="light"] #mosaicPanel{
     const hint = document.getElementById('textHint');
     if (hint) {
       hint.textContent = 'Enter 确认，Esc 取消，Shift+Enter 换行';
-      hint.style.left = Math.round(pr.left + left) + 'px';
-      hint.style.top = Math.round(pr.top + top - 28) + 'px';
+      const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+      const pr2 = preview.getBoundingClientRect();
+      let hintLeft = Math.round(pr2.left + 16);
+      let hintTop = Math.round(pr2.top + 12);
+      const estW = 300;
+      const estH = 26;
+      if (hintLeft + estW > vw - 8) hintLeft = Math.max(8, vw - estW - 8);
+      hint.style.left = hintLeft + 'px';
+      hint.style.top = hintTop + 'px';
       hint.style.display = '';
+      post({ type:'event', name:'textInputHintShow', payload:{ x: hintLeft, y: hintTop, w: estW, h: estH } });
+    }
+    const hintBar = document.getElementById('textHintBar');
+    if (hintBar) {
+      hintBar.textContent = 'Enter 确认，Esc 取消，Shift+Enter 换行';
+      hintBar.style.top = previewWrap.classList.contains('with-mosaic') ? '70px' : '10px';
+      hintBar.style.display = '';
     }
     textArea.focus();
     textArea.select();

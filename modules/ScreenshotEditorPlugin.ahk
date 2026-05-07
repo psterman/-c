@@ -81,6 +81,9 @@ class ScreenshotEditorPlugin {
     static ScreenshotTextLastClickTick := 0
     static ScreenshotTextLastClickX := 0
     static ScreenshotTextLastClickY := 0
+    static ScreenshotTextHintTooltipId := 19
+    static GuiID_ScreenshotTextHint := 0
+    static ScreenshotTextHintTextCtrl := 0
     static ScreenshotObjectIdSeed := 0
     static ScreenshotArrowPalette := [0xFFFF7A1A, 0xFF3B82F6, 0xFF10B981, 0xFFEF4444, 0xFFF59E0B, 0xFF8B5CF6]
     static ScreenshotLivePreviewPath := ""
@@ -1378,6 +1381,14 @@ class ScreenshotEditorPlugin {
             this.ScreenshotEditor_EndInlineTextEdit(String(p.Get("id", "")))
             return
     }
+    if (t = "event" && name = "textInputHintShow") {
+            this.ScreenshotEditor_ShowNativeTextHint(p)
+            return
+    }
+    if (t = "event" && name = "textInputHintHide") {
+            this.ScreenshotEditor_HideNativeTextHint()
+            return
+    }
     if (t = "action" && name = "menuInvoke") {
             mid := p.Get("id","")
             if (mid = "copy")
@@ -2100,6 +2111,57 @@ class ScreenshotEditorPlugin {
         return
     this.ScreenshotTextEditingObjectId := ""
     this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+}
+
+    static ScreenshotEditor_ShowNativeTextHint(payload) {
+    try {
+        ; 美化提示条：优先使用原生小窗体（可控字体/颜色/间距），失败再回退 ToolTip。
+        if !(IsObject(this.GuiID_ScreenshotTextHint) && this.GuiID_ScreenshotTextHint != 0) {
+            this.GuiID_ScreenshotTextHint := Gui("+AlwaysOnTop -Caption +ToolWindow +Border +E0x20")
+            this.GuiID_ScreenshotTextHint.BackColor := "1C2433"
+            this.GuiID_ScreenshotTextHint.MarginX := 10
+            this.GuiID_ScreenshotTextHint.MarginY := 4
+            this.ScreenshotTextHintTextCtrl := this.GuiID_ScreenshotTextHint.Add("Text", "w320 h18 cFFE8CC +0x200", "")
+            this.ScreenshotTextHintTextCtrl.SetFont("s9 Bold", "Segoe UI")
+        }
+
+        this.ScreenshotTextHintTextCtrl.Text := "回车确认  Esc取消  Shift+回车换行"
+        this.GuiID_ScreenshotTextHint.Show("NA w340 h28")
+
+        if (IsObject(this.GuiID_ScreenshotEditor) && this.GuiID_ScreenshotEditor != 0) {
+            WinGetPos(&ex, &ey, &ew, , "ahk_id " . this.GuiID_ScreenshotEditor.Hwnd)
+            WinGetPos(, , &tw, &th, "ahk_id " . this.GuiID_ScreenshotTextHint.Hwnd)
+            ; 标题栏正中心，不遮挡右上角按钮（按钮区约 90px）。
+            x := ex + Floor((ew - tw) / 2)
+            rightSafe := ex + ew - 96
+            if (x + tw > rightSafe)
+                x := rightSafe - tw
+            if (x < ex + 8)
+                x := ex + 8
+            y := ey + 2
+            this.GuiID_ScreenshotTextHint.Show("NA x" . x . " y" . y)
+        } else {
+            CoordMode("ToolTip", "Screen")
+            x2 := Integer(payload.Get("x", 16))
+            y2 := Integer(payload.Get("y", 16))
+            ToolTip("回车确认  Esc取消  Shift+回车换行", x2, y2, this.ScreenshotTextHintTooltipId)
+        }
+    } catch {
+        try {
+            CoordMode("ToolTip", "Screen")
+            x3 := Integer(payload.Get("x", 16))
+            y3 := Integer(payload.Get("y", 16))
+            ToolTip("回车确认  Esc取消  Shift+回车换行", x3, y3, this.ScreenshotTextHintTooltipId)
+        }
+    }
+}
+
+    static ScreenshotEditor_HideNativeTextHint(*) {
+    try ToolTip("", , , this.ScreenshotTextHintTooltipId)
+    try {
+        if (IsObject(this.GuiID_ScreenshotTextHint) && this.GuiID_ScreenshotTextHint != 0)
+            this.GuiID_ScreenshotTextHint.Hide()
+    }
 }
 
     static ScreenshotEditor_OnPreviewPointer(p) {
@@ -3612,6 +3674,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
 ; 鍏抽棴鎴浘鍔╂墜棰勮绐?
     static CloseScreenshotEditor() {
     try FloatingToolbar_PageDockLeave("screenshot")
+    try this.ScreenshotEditor_HideNativeTextHint()
     
     try {
         this.ScreenshotEditorStopColorPicker()
@@ -3657,6 +3720,16 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             }
             this.GuiID_ScreenshotZoomTip := 0
             this.ScreenshotZoomTipTextCtrl := 0
+        }
+        if (this.GuiID_ScreenshotTextHint && (this.GuiID_ScreenshotTextHint != 0)) {
+            try {
+                if (IsObject(this.GuiID_ScreenshotTextHint)) {
+                    this.GuiID_ScreenshotTextHint.Destroy()
+                }
+            } catch {
+            }
+            this.GuiID_ScreenshotTextHint := 0
+            this.ScreenshotTextHintTextCtrl := 0
         }
         
         ; 閲嶇疆鐘舵€?
