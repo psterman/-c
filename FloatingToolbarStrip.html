@@ -85,14 +85,16 @@ body.cli-mode #cliPane{display:flex!important;flex-direction:column}
 .hl-comment{color:#6a9955}.hl-string{color:#ce9178}.hl-number{color:#b5cea8}.hl-keyword{color:#ff9b52}.hl-builtins{color:#4fc1ff}.hl-var{color:#dcdcaa}
 #cmp{flex-shrink:0;padding:calc(12px * var(--ui)) calc(16px * var(--ui)) calc(14px * var(--ui));border-top:1px solid rgba(255,102,0,.15);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
 #input{width:100%;min-height:calc(96px * var(--ui));resize:vertical;border:1px solid rgba(255,102,0,.2);border-radius:calc(14px * var(--ui));background:rgba(8,8,8,.72);color:var(--text);padding:calc(10px * var(--ui)) calc(12px * var(--ui));outline:none;user-select:text;-webkit-user-select:text}
-#composerFooter{display:flex;flex-direction:row;align-items:flex-end;gap:calc(12px * var(--ui));margin-top:calc(10px * var(--ui))}
+#composerFooter{display:flex;flex-direction:row;align-items:flex-end;gap:calc(8px * var(--ui));margin-top:calc(10px * var(--ui))}
 .drawer-toolbar{flex:1;display:flex;flex-direction:row;align-items:center;gap:calc(6px * var(--ui));min-width:0;background:transparent;padding:0}
 #sendWrap{flex-shrink:0;display:flex;align-items:flex-end}
+.attach-wrap{display:flex;align-items:flex-end;gap:calc(6px * var(--ui));flex-wrap:wrap}
 .st{font-size:calc(12px * var(--ui));color:var(--muted)}.st.error{color:#ff7a59}.st.success{color:#4ed08b}
-.btn1{min-height:calc(42px * var(--ui));padding:0 calc(18px * var(--ui));border-radius:calc(12px * var(--ui));border:1px solid rgba(255,102,0,.3);cursor:pointer;font-weight:700;font-size:calc(14px * var(--ui));background:linear-gradient(180deg,#ff7d26,#ff6600);color:#111;transition:all var(--ease)}
+.btn1{min-height:calc(36px * var(--ui));padding:0 calc(14px * var(--ui));border-radius:calc(10px * var(--ui));border:1px solid rgba(255,102,0,.3);cursor:pointer;font-weight:700;font-size:calc(13px * var(--ui));background:linear-gradient(180deg,#ff7d26,#ff6600);color:#111;transition:all var(--ease)}
 .btn1:disabled{opacity:.45;cursor:not-allowed}
 .btn2,.btn3{height:calc(38px * var(--ui));padding:0 calc(14px * var(--ui));border-radius:calc(10px * var(--ui));font-size:calc(13px * var(--ui));border:1px solid rgba(255,102,0,.22);cursor:pointer;background:rgba(255,255,255,.04);color:var(--text)}
 #chatStatusRow{margin-top:calc(8px * var(--ui))}
+#attachList{margin-top:calc(6px * var(--ui));max-height:calc(110px * var(--ui));overflow:auto;display:none;padding:calc(6px * var(--ui)) calc(8px * var(--ui));border:1px solid rgba(255,102,0,.22);border-radius:calc(8px * var(--ui));background:rgba(255,255,255,.03);color:var(--text)}
 .logo-btn{flex-shrink:0;width:max(calc(42px * var(--ui)),34px);height:max(calc(42px * var(--ui)),34px);border:1px solid transparent;border-radius:calc(8px * var(--ui));background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:4px;transition:background-color var(--ease),border-color var(--ease),transform var(--ease),color var(--ease);color:#ff6600;outline:none;position:relative}
 .logo-btn:hover{background:rgba(255,102,0,.1);border-color:rgba(255,102,0,.32)}
 .logo-btn:focus-visible{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.5);box-shadow:none}
@@ -374,8 +376,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <button type="button" class="logo-btn" data-logo-toggle title="收起"><img class="logo-img" alt="" /></button>
 <div id="drawerBtns" class="icon-btns"></div>
 </div>
+<div class="attach-wrap">
+<input id="attachFileInput" type="file" multiple style="display:none" />
+<input id="attachFolderInput" type="file" multiple webkitdirectory directory style="display:none" />
+<button class="btn3" id="attachFileBtn" type="button">添加文件</button>
+<button class="btn3" id="attachFolderBtn" type="button">添加文件夹</button>
+</div>
 <div id="sendWrap"><button class="btn1" id="send" type="button">发送消息</button></div>
 </div>
+<div id="attachList"></div>
 <div id="chatStatusRow"><div class="st" id="chat-status">就绪</div></div>
 </section>
 </div>
@@ -742,6 +751,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     empty = $('empty'),
     input = $('input'),
     send = $('send'),
+    attachFileInput = $('attachFileInput'),
+    attachFolderInput = $('attachFolderInput'),
+    attachFileBtn = $('attachFileBtn'),
+    attachFolderBtn = $('attachFolderBtn'),
+    attachList = $('attachList'),
     chatStatus = $('chat-status'),
     settings = $('settings'),
     sbg = document.querySelector('.sbg'),
@@ -825,6 +839,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     openclawSessionRows: [],
     openclawSessionRowsFetchedAt: 0,
     openclawSessionRowsLoading: false
+    ,
+    pendingAttach: { items: [], texts: [], images: [], files: [] }
   };
   var toolbarVisibleSynced = false;
   var toolbarRevealTimer = 0;
@@ -4444,15 +4460,19 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return;
     }
     var text = input.value.trim();
-    if (!text) return;
+    var pa = state.pendingAttach || { items: [], texts: [], images: [], files: [] };
+    var hasAttach = !!((pa.texts && pa.texts.length) || (pa.images && pa.images.length) || (pa.files && pa.files.length));
+    if (!text && !hasAttach) return;
+    var composed = buildAttachmentPrompt(text, pa);
     saveCfg(false);
     var cfg = buildSendCfg();
     if (!cfg) return;
     var p0 = P[cfg.provider] || P.openai;
     if (p0.transport === 'cli') {
       // CLI 原生界面：不依赖 Base URL / Model 校验，点击即打开专属终端
-      add('user', text);
+      add('user', composed);
       input.value = '';
+      clearPendingAttach();
       cstatForSession(sid, '正在连接本机 ttyd 终端…');
       throttledNiumaCliOpen(true);
       return;
@@ -4472,8 +4492,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       setSettings(true);
       return;
     }
-    add('user', text);
+    add('user', composed);
     input.value = '';
+    clearPendingAttach();
     setSessionSending(sid, true);
     cstatForSession(sid, '正在请求模型响应...');
     var streamDraftId = '';
@@ -4692,6 +4713,146 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   send.addEventListener('click', sendChat);
+
+  function clearPendingAttach() {
+    state.pendingAttach = { items: [], texts: [], images: [], files: [] };
+    refreshAttachUi();
+  }
+
+  function refreshAttachUi() {
+    if (!attachList) return;
+    var pa = state.pendingAttach || { items: [], texts: [], images: [], files: [] };
+    pa.items = Array.isArray(pa.items) ? pa.items : [];
+    var rows = [];
+    (pa.items || []).forEach(function (x) {
+      var n = x && x.name ? x.name : 'file';
+      var sz = Number((x && x.size) || 0);
+      rows.push(n + ' (' + sz + ' bytes)');
+    });
+    if (!rows.length) {
+      attachList.style.display = 'none';
+      attachList.textContent = '';
+      if (chatStatus) chatStatus.textContent = '就绪';
+      return;
+    }
+    while (attachList.firstChild) attachList.removeChild(attachList.firstChild);
+    for (var i = 0; i < rows.length; i++) {
+      var line = document.createElement('div');
+      line.style.whiteSpace = 'nowrap';
+      line.style.overflow = 'hidden';
+      line.style.textOverflow = 'ellipsis';
+      line.textContent = rows[i];
+      attachList.appendChild(line);
+    }
+    attachList.style.display = 'block';
+    if (chatStatus) chatStatus.textContent = '已添加附件: ' + rows.length;
+  }
+
+  function extOf(name) {
+    var n = String(name || '');
+    var i = n.lastIndexOf('.');
+    return i >= 0 ? n.slice(i + 1).toLowerCase() : '';
+  }
+
+  function isTextFile(f) {
+    var typ = String((f && f.type) || '').toLowerCase();
+    if (typ.indexOf('text/') === 0) return true;
+    return /^(md|txt|json|csv|log|xml|yml|yaml|ini|cfg|js|ts|py|java|go|rs|html|css|sql|bat|cmd|ps1|psm1|sh|toml|env)$/i.test(extOf(f && f.name));
+  }
+
+  function isImageFile(f) {
+    var typ = String((f && f.type) || '').toLowerCase();
+    if (typ.indexOf('image/') === 0) return true;
+    return /^(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(extOf(f && f.name));
+  }
+
+  function readAsText(file) {
+    return new Promise(function (resolve, reject) {
+      var rd = new FileReader();
+      rd.onload = function () { resolve(String(rd.result || '')); };
+      rd.onerror = function () { reject(new Error('read text failed')); };
+      rd.readAsText(file);
+    });
+  }
+
+  async function ingestAttachments(files) {
+    if (!files || !files.length) return;
+    var pa = state.pendingAttach || { items: [], texts: [], images: [], files: [] };
+    pa.items = Array.isArray(pa.items) ? pa.items : [];
+    var textBudget = 18000;
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (!f) continue;
+      var displayName = (f.webkitRelativePath && String(f.webkitRelativePath).trim()) || f.name || 'file';
+      pa.items.push({ name: displayName, size: Number(f.size || 0) });
+      if (isImageFile(f)) {
+        pa.images.push({ name: displayName });
+        continue;
+      }
+      if (isTextFile(f) && textBudget > 0) {
+        try {
+          var t = await readAsText(f);
+          t = String(t || '').trim();
+          if (!t) continue;
+          var one = t.slice(0, Math.min(4000, textBudget));
+          textBudget -= one.length;
+          pa.texts.push({ name: displayName, text: one });
+          continue;
+        } catch (_) {}
+      }
+      pa.files.push({ name: displayName, size: Number(f.size || 0) });
+    }
+    state.pendingAttach = pa;
+    refreshAttachUi();
+    cstat('附件已添加: ' + files.length + ' 个', 'success');
+  }
+
+  function buildAttachmentPrompt(userText, pa) {
+    var q = String(userText || '').trim();
+    pa = pa || { texts: [], images: [], files: [] };
+    var lines = [];
+    if ((pa.texts || []).length) {
+      lines.push('Attached text excerpts:');
+      pa.texts.slice(0, 6).forEach(function (it, idx) {
+        lines.push('[' + (idx + 1) + '] ' + (it.name || 'text'));
+        lines.push(String(it.text || ''));
+      });
+    }
+    if ((pa.images || []).length) {
+      lines.push('Attached images: ' + pa.images.length);
+      pa.images.slice(0, 12).forEach(function (it, idx) {
+        lines.push('- image ' + (idx + 1) + ': ' + (it.name || 'image'));
+      });
+    }
+    if ((pa.files || []).length) {
+      lines.push('Other attached files:');
+      pa.files.slice(0, 12).forEach(function (it) {
+        lines.push('- ' + (it.name || 'file') + ' (' + Number(it.size || 0) + ' bytes)');
+      });
+    }
+    if (!lines.length) return q;
+    return (q ? q + '\n\n' : '') + '---\nAttachment Context\n' + lines.join('\n');
+  }
+
+  if (attachFileBtn && attachFileInput) {
+    attachFileBtn.addEventListener('click', function () { attachFileInput.value = ''; attachFileInput.click(); });
+    attachFileInput.addEventListener('change', function () {
+      var fs = Array.prototype.slice.call(attachFileInput.files || []);
+      attachFileInput.value = '';
+      ingestAttachments(fs);
+    });
+  }
+
+  if (attachFolderBtn && attachFolderInput) {
+    attachFolderBtn.addEventListener('click', function () { attachFolderInput.value = ''; attachFolderInput.click(); });
+    attachFolderInput.addEventListener('change', function () {
+      var fs = Array.prototype.slice.call(attachFolderInput.files || []);
+      attachFolderInput.value = '';
+      ingestAttachments(fs);
+    });
+  }
+
+  refreshAttachUi();
 
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && e.ctrlKey) {
