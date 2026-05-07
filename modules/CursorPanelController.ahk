@@ -1,5 +1,10 @@
 #Requires AutoHotkey v2.0
 
+; Cursor Quick Actions WebView runtime state
+global CursorPanelWV2Ctrl := 0
+global CursorPanelWV2 := 0
+global CursorPanelWV2Ready := false
+
 ; ===================== 切换工具栏和面板显示 =====================
 ToggleToolbarAndPanel(*) {
     global FloatingToolbarIsVisible, FloatingToolbarIsMinimized
@@ -876,6 +881,11 @@ ShowCursorPanel() {
     global PanelVisible, GuiID_CursorPanel, SplitHotkey, BatchHotkey, CapsLock2
     global CursorPanelScreenIndex, FunctionPanelPos, QuickActionButtons
     global UI_Colors, ThemeMode, CursorPanelAlwaysOnTop, CursorPanelAutoHide, CursorPanelHidden
+
+    if (CursorPanel_ShouldUseWebView()) {
+        ShowCursorPanel_WebView()
+        return
+    }
     
     if (PanelVisible) {
         return
@@ -1193,14 +1203,17 @@ ShowCursorPanel() {
         ; 创建按钮，添加点击事件以更新说明文字
         ; 按钮宽度 = 面板宽度 - 左右边距（30*2 = 60）
         ButtonWidth := CursorPanelWidth - 60
-        Btn := GuiID_CursorPanel.Add("Button", "x30 y" . ButtonY . " w" . ButtonWidth . " h" . ButtonHeight, ButtonText)
-        ; 按钮文字颜色：使用 html.to.design 风格配色
+        ; 使用 Text 模拟按钮，避免系统 Button 强制灰色外观
         global ThemeMode
-        BtnTextColor := (ThemeMode = "light") ? UI_Colors.Text : UI_Colors.Text
-        Btn.SetFont("s11 c" . BtnTextColor, "Segoe UI")
+        BtnTextColor := UI_Colors.Text
+        BtnBgColor := (ThemeMode = "light") ? UI_Colors.InputBg : UI_Colors.BtnBg
+        BtnHoverBgColor := (ThemeMode = "light") ? UI_Colors.BtnHover : UI_Colors.BtnPrimaryHover
+        Btn := GuiID_CursorPanel.Add("Text", "x30 y" . ButtonY . " w" . ButtonWidth . " h" . ButtonHeight . " Center 0x200 c" . BtnTextColor . " Background" . BtnBgColor, ButtonText)
+        Btn.SetFont("s11", "Segoe UI")
         ; 创建包装函数，同时更新说明文字和执行操作
         WrappedAction := CreateButtonActionWithDesc(ButtonAction, ButtonDesc)
         Btn.OnEvent("Click", WrappedAction)
+        HoverBtnWithAnimation(Btn, BtnBgColor, BtnHoverBgColor)
         
         ; 保存按钮说明文字到按钮对象，用于鼠标悬停时更新说明文字
         ; 使用 WM_MOUSEMOVE 消息来检测鼠标悬停（Button 控件不支持 MouseMove 事件）
@@ -1668,10 +1681,16 @@ ToggleCursorPanelAlwaysOnTop(*) {
     
     if (CursorPanelAlwaysOnTop) {
         WinSetAlwaysOnTop(1, GuiID_CursorPanel.Hwnd)
-        CursorPanelAlwaysOnTopBtn.Opt("+Background" . UI_Colors.BtnPrimary)
+        try {
+            if IsObject(CursorPanelAlwaysOnTopBtn)
+                CursorPanelAlwaysOnTopBtn.Opt("+Background" . UI_Colors.BtnPrimary)
+        }
     } else {
         WinSetAlwaysOnTop(0, GuiID_CursorPanel.Hwnd)
-        CursorPanelAlwaysOnTopBtn.Opt("+Background" . UI_Colors.BtnBg)
+        try {
+            if IsObject(CursorPanelAlwaysOnTopBtn)
+                CursorPanelAlwaysOnTopBtn.Opt("+Background" . UI_Colors.BtnBg)
+        }
     }
     
     ; 确保面板保持显示（不关闭）
@@ -1767,12 +1786,18 @@ ToggleCursorPanelAutoHide(*) {
     CursorPanelAutoHide := !CursorPanelAutoHide
     
     if (CursorPanelAutoHide) {
-        CursorPanelAutoHideBtn.Opt("+Background" . UI_Colors.BtnPrimary)
+        try {
+            if IsObject(CursorPanelAutoHideBtn)
+                CursorPanelAutoHideBtn.Opt("+Background" . UI_Colors.BtnPrimary)
+        }
         SetTimer(CheckCursorPanelEdge, 500)  ; 启动检测定时器
         ; 立即检测一次，如果已经靠边则隐藏
         CheckCursorPanelEdge()
     } else {
-        CursorPanelAutoHideBtn.Opt("+Background" . UI_Colors.BtnBg)
+        try {
+            if IsObject(CursorPanelAutoHideBtn)
+                CursorPanelAutoHideBtn.Opt("+Background" . UI_Colors.BtnBg)
+        }
         SetTimer(CheckCursorPanelEdge, 0)  ; 停止检测定时器
         ; 如果面板已隐藏，恢复显示
         if (CursorPanelHidden) {
@@ -2059,5 +2084,364 @@ GetCursorActionShortcut(ActionType) {
             return _ResolveVkShortcut("qa_cursor_settings", CursorShortcut_CursorSettings)
         default:
             return ""
+    }
+}
+
+CursorPanel_ShouldUseWebView() {
+    return true
+}
+
+ShowCursorPanel_WebView() {
+    global PanelVisible, GuiID_CursorPanel, CapsLock2
+    global CursorPanelScreenIndex, FunctionPanelPos, QuickActionButtons
+    global CursorPanelWidth, CursorPanelHeight
+    global UI_Colors, CursorPanelAlwaysOnTop, CursorPanelAutoHide
+
+    if (PanelVisible)
+        return
+
+    CapsLock2 := false
+    PanelVisible := true
+
+    ButtonCount := QuickActionButtons.Length
+    ButtonSpacing := 50
+    BaseHeight := 200
+    ListViewReservedHeight := 665
+    CursorPanelHeight := BaseHeight + ListViewReservedHeight + (ButtonCount * ButtonSpacing)
+    CursorPanelWidth := 680
+
+    if (GuiID_CursorPanel != 0) {
+        try GuiID_CursorPanel.Destroy()
+        GuiID_CursorPanel := 0
+    }
+
+    GuiID_CursorPanel := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
+    GuiID_CursorPanel.BackColor := UI_Colors.Background
+    GuiID_CursorPanel.OnEvent("Escape", (*) => CloseCursorPanel())
+    GuiID_CursorPanel.OnEvent("Size", CursorPanelWebView_OnSize)
+
+    ScreenInfo := GetScreenInfo(CursorPanelScreenIndex)
+    Pos := GetPanelPosition(ScreenInfo, CursorPanelWidth, CursorPanelHeight, FunctionPanelPos)
+    GuiID_CursorPanel.Show("w" . CursorPanelWidth . " h" . CursorPanelHeight . " x" . Pos.X . " y" . Pos.Y . " NoActivate")
+
+    global CursorPanelWV2Ctrl, CursorPanelWV2, CursorPanelWV2Ready
+    CursorPanelWV2Ctrl := 0
+    CursorPanelWV2 := 0
+    CursorPanelWV2Ready := false
+    try WebView2.create(GuiID_CursorPanel.Hwnd, CursorPanelWebView_OnCreated, WebView2_EnsureSharedEnvBlocking())
+    SetTimer(CursorPanelWebView_RefreshComposition, -30)
+    SetTimer(CursorPanelWebView_RefreshComposition, -120)
+    SetTimer(CursorPanelWebView_RefreshComposition, -380)
+
+    WinSetAlwaysOnTop(1, GuiID_CursorPanel.Hwnd)
+    if (!CursorPanelAlwaysOnTop)
+        SetTimer(RemoveCursorPanelAlwaysOnTop, -500)
+    if (CursorPanelAutoHide)
+        SetTimer(CheckCursorPanelEdge, 500)
+}
+
+CursorPanelWebView_OnCreated(ctrl) {
+    global CursorPanelWV2Ctrl, CursorPanelWV2
+    CursorPanelWV2Ctrl := ctrl
+    CursorPanelWV2 := ctrl.CoreWebView2
+    try CursorPanelWV2Ctrl.DefaultBackgroundColor := 0xFF111315
+    try {
+        s := CursorPanelWV2.Settings
+        s.AreDefaultContextMenusEnabled := false
+        s.AreDevToolsEnabled := true
+        s.IsWebMessageEnabled := true
+    }
+    try ApplyWebView2PerformanceSettings(CursorPanelWV2)
+    try WebView2_RegisterHostBridge(CursorPanelWV2)
+    CursorPanelWV2.add_WebMessageReceived(CursorPanelWebView_OnMessage)
+    try CursorPanelWV2.add_NavigationCompleted(CursorPanelWebView_OnNavigationCompleted)
+    CursorPanelWebView_OnSize()
+    try CursorPanelWV2Ctrl.IsVisible := true
+    try ApplyUnifiedWebViewAssets(CursorPanelWV2)
+    try CursorPanelWV2.Navigate(BuildAppLocalUrl("CursorQuickActionsPanel.html"))
+    catch {
+        htmlPath := A_ScriptDir "\CursorQuickActionsPanel.html"
+        try CursorPanelWV2.NavigateToString(FileRead(htmlPath, "UTF-8"))
+    }
+}
+
+CursorPanelWebView_OnNavigationCompleted(sender, args) {
+    try ok := args.IsSuccess
+    catch
+        ok := true
+    if !ok {
+        try sender.NavigateToString("<!doctype html><html><body style='background:#111315;color:#e7ebef;font-family:Segoe UI;padding:16px'>Cursor 快捷操作页面加载失败</body></html>")
+        return
+    }
+    CursorPanelWebView_RefreshComposition()
+    SetTimer(CursorPanelWebView_RefreshComposition, -30)
+    SetTimer(CursorPanelWebView_RefreshComposition, -120)
+    SetTimer(CursorPanelWebView_RefreshComposition, -380)
+}
+
+CursorPanelWebView_OnSize(*) {
+    global GuiID_CursorPanel, CursorPanelWV2Ctrl
+    if (!IsSet(GuiID_CursorPanel) || !IsSet(CursorPanelWV2Ctrl) || !GuiID_CursorPanel || !CursorPanelWV2Ctrl)
+        return
+    try {
+        if !WinExist("ahk_id " . GuiID_CursorPanel.Hwnd)
+            return
+        WinGetClientPos(, , &cw, &ch, GuiID_CursorPanel.Hwnd)
+        rc := WebView2.RECT()
+        rc.left := 0, rc.top := 0, rc.right := cw, rc.bottom := ch
+        CursorPanelWV2Ctrl.Bounds := rc
+    } catch {
+        return
+    }
+}
+
+CursorPanelWebView_RefreshComposition(*) {
+    global GuiID_CursorPanel, CursorPanelWV2Ctrl
+    if (!IsSet(GuiID_CursorPanel) || !IsSet(CursorPanelWV2Ctrl) || !GuiID_CursorPanel || !CursorPanelWV2Ctrl)
+        return
+    try {
+        if !WinExist("ahk_id " . GuiID_CursorPanel.Hwnd)
+            return
+        WinGetClientPos(, , &cw, &ch, GuiID_CursorPanel.Hwnd)
+        rc := WebView2.RECT()
+        rc.left := 0, rc.top := 0, rc.right := cw, rc.bottom := ch
+        CursorPanelWV2Ctrl.Bounds := rc
+        CursorPanelWV2Ctrl.NotifyParentWindowPositionChanged()
+    } catch {
+        return
+    }
+}
+
+CursorPanelWebView_Send(msg) {
+    global CursorPanelWV2
+    if !CursorPanelWV2
+        return
+    try CursorPanelWV2.PostWebMessageAsJson(Jxon_Dump(msg))
+}
+
+CursorPanelWebView_SendInit() {
+    global CursorPanelAlwaysOnTop, CursorPanelAutoHide, ThemeMode
+    CursorPanelWebView_Send(Map(
+        "type", "initData",
+        "title", GetText("panel_title"),
+        "themeMode", ThemeMode,
+        "alwaysOnTop", CursorPanelAlwaysOnTop ? true : false,
+        "autoHide", CursorPanelAutoHide ? true : false,
+        "buttons", CursorPanel_BuildQuickActionItems()
+    ))
+}
+
+CursorPanel_BuildQuickActionItems() {
+    global QuickActionButtons
+    arr := []
+    for _, Button in QuickActionButtons {
+        btnType := "", btnHotkey := ""
+        if (Button is Map) {
+            btnType := Button.Get("Type", "")
+            btnHotkey := Button.Get("Hotkey", "")
+        } else if (IsObject(Button)) {
+            if Button.HasProp("Type")
+                btnType := Button.Type
+            if Button.HasProp("Hotkey")
+                btnHotkey := Button.Hotkey
+        }
+        baseText := CursorPanel_GetBaseTextByType(btnType)
+        showText := baseText
+        if (btnHotkey != "") {
+            hk := StrUpper(btnHotkey)
+            showText := RegExReplace(baseText, "\s*\([^)]+\)\s*$", "")
+            showText := showText . " (" . hk . ")"
+        }
+        arr.Push(Map(
+            "type", btnType,
+            "text", showText,
+            "desc", CursorPanel_GetDescByType(btnType)
+        ))
+    }
+    return arr
+}
+
+CursorPanel_GetBaseTextByType(btnType) {
+    switch btnType {
+        case "Explain": return GetText("explain_code")
+        case "Refactor": return GetText("refactor_code")
+        case "Optimize": return GetText("optimize_code")
+        case "Config": return GetText("open_config")
+        case "Copy": return GetText("hotkey_c")
+        case "Paste": return GetText("hotkey_v")
+        case "Clipboard": return GetText("hotkey_x")
+        case "Voice": return GetText("hotkey_z")
+        case "Split": return GetText("hotkey_s")
+        case "Batch": return GetText("hotkey_b")
+        case "CommandPalette": return GetText("quick_action_type_command_palette")
+        case "Terminal": return GetText("quick_action_type_terminal")
+        case "GlobalSearch": return GetText("quick_action_type_global_search")
+        case "Explorer": return GetText("quick_action_type_explorer")
+        case "SourceControl": return GetText("quick_action_type_source_control")
+        case "Extensions": return GetText("quick_action_type_extensions")
+        case "Browser": return GetText("quick_action_type_browser")
+        case "Settings": return GetText("quick_action_type_settings")
+        case "CursorSettings": return GetText("quick_action_type_cursor_settings")
+        default: return btnType
+    }
+}
+
+CursorPanel_GetDescByType(btnType) {
+    switch btnType {
+        case "Explain": return GetText("hotkey_e_desc")
+        case "Refactor": return GetText("hotkey_r_desc")
+        case "Optimize": return GetText("hotkey_o_desc")
+        case "Config": return GetText("hotkey_q_desc")
+        case "Copy": return GetText("hotkey_c_desc")
+        case "Paste": return GetText("hotkey_v_desc")
+        case "Clipboard": return GetText("hotkey_x_desc")
+        case "Voice": return GetText("hotkey_z_desc")
+        case "Split": return GetText("hotkey_s_desc")
+        case "Batch": return GetText("hotkey_b_desc")
+        case "CommandPalette": return GetText("quick_action_desc_command_palette")
+        case "Terminal": return GetText("quick_action_desc_terminal")
+        case "GlobalSearch": return GetText("quick_action_desc_global_search")
+        case "Explorer": return GetText("quick_action_desc_explorer")
+        case "SourceControl": return GetText("quick_action_desc_source_control")
+        case "Extensions": return GetText("quick_action_desc_extensions")
+        case "Browser": return GetText("quick_action_desc_browser")
+        case "Settings": return GetText("quick_action_desc_settings")
+        case "CursorSettings": return GetText("quick_action_desc_cursor_settings")
+        default: return ""
+    }
+}
+
+CursorPanel_SearchByKeyword(keyword) {
+    global CursorPanelSearchResults
+    kw := Trim(String(keyword))
+    if (kw = "") {
+        CursorPanelSearchResults := []
+        return []
+    }
+    all := SearchAllDataSources(kw, [], 50, 0)
+    results := []
+    for dataType, typeData in all {
+        if !(IsObject(typeData) && typeData.HasProp("Items"))
+            continue
+        for _, item in typeData.Items {
+            t := ""
+            if (item.HasProp("TimeFormatted"))
+                t := item.TimeFormatted
+            else if (item.HasProp("Timestamp")) {
+                try t := FormatTime(item.Timestamp, "yyyy-MM-dd HH:mm:ss")
+                catch
+                    t := item.Timestamp
+            }
+            title := ""
+            if (item.HasProp("Title") && item.Title != "")
+                title := item.Title
+            else if (item.HasProp("Content") && item.Content != "") {
+                title := SubStr(item.Content, 1, 50)
+                if (StrLen(item.Content) > 50)
+                    title .= "..."
+            }
+            source := typeData.HasProp("DataTypeName") ? typeData.DataTypeName : dataType
+            results.Push({
+                Title: title,
+                Source: source,
+                Time: t,
+                Content: item.HasProp("Content") ? item.Content : (item.HasProp("Title") ? item.Title : ""),
+                ID: item.HasProp("ID") ? item.ID : "",
+                DataType: dataType,
+                Action: item.HasProp("Action") ? item.Action : "",
+                ActionParams: item.HasProp("ActionParams") ? item.ActionParams : Map()
+            })
+        }
+    }
+    CursorPanelSearchResults := results
+    return results
+}
+
+CursorPanel_OpenResultByIndex(idx) {
+    global CursorPanelSearchResults
+    row := Integer(idx)
+    if (row < 1 || row > CursorPanelSearchResults.Length)
+        return
+    fakeLV := 0
+    OnCursorPanelResultDoubleClick(fakeLV, row)
+}
+
+CursorPanel_RunQuickAction(btnType) {
+    switch btnType {
+        case "Explain":
+            ExecutePrompt("Explain")
+        case "Refactor":
+            ExecutePrompt("Refactor")
+        case "Optimize":
+            ExecutePrompt("Optimize")
+        case "Config":
+            OpenConfigFromPanel()
+        case "Copy":
+            CapsLockCopy()
+        case "Paste":
+            CapsLockPaste()
+        case "Clipboard":
+            CreateClipboardAction().Call()
+        case "Voice":
+            CreateVoiceAction().Call()
+        case "Split":
+            SplitCode()
+        case "Batch":
+            BatchOperation()
+        case "CommandPalette":
+            ExecuteCursorShortcut(GetCursorActionShortcut("CommandPalette"))
+        case "Terminal":
+            ExecuteCursorShortcut(GetCursorActionShortcut("Terminal"))
+        case "GlobalSearch":
+            ExecuteCursorShortcut(GetCursorActionShortcut("GlobalSearch"))
+        case "Explorer":
+            ExecuteCursorShortcut(GetCursorActionShortcut("Explorer"))
+        case "SourceControl":
+            ExecuteCursorShortcut(GetCursorActionShortcut("SourceControl"))
+        case "Extensions":
+            ExecuteCursorShortcut(GetCursorActionShortcut("Extensions"))
+        case "Browser":
+            ExecuteCursorShortcut(GetCursorActionShortcut("Browser"))
+        case "Settings":
+            ExecuteCursorShortcut(GetCursorActionShortcut("Settings"))
+        case "CursorSettings":
+            ExecuteCursorShortcut(GetCursorActionShortcut("CursorSettings"))
+    }
+}
+
+CursorPanelWebView_OnMessage(sender, args) {
+    global CursorPanelWV2Ready, CursorPanelAlwaysOnTop, CursorPanelAutoHide
+    jsonStr := args.WebMessageAsJson
+    try msg := Jxon_Load(jsonStr)
+    catch
+        return
+    if !(msg is Map)
+        return
+    action := msg.Has("type") ? String(msg["type"]) : ""
+    switch action {
+        case "ready":
+            CursorPanelWV2Ready := true
+            CursorPanelWebView_SendInit()
+        case "dragWindow":
+            PostMessage(0xA1, 2)
+        case "close":
+            CloseCursorPanel()
+        case "toggleAlwaysOnTop":
+            ToggleCursorPanelAlwaysOnTop()
+            CursorPanelWebView_Send(Map("type", "state", "alwaysOnTop", CursorPanelAlwaysOnTop ? true : false, "autoHide", CursorPanelAutoHide ? true : false))
+        case "toggleAutoHide":
+            ToggleCursorPanelAutoHide()
+            CursorPanelWebView_Send(Map("type", "state", "alwaysOnTop", CursorPanelAlwaysOnTop ? true : false, "autoHide", CursorPanelAutoHide ? true : false))
+        case "search":
+            kw := msg.Has("keyword") ? String(msg["keyword"]) : ""
+            rows := CursorPanel_SearchByKeyword(kw)
+            CursorPanelWebView_Send(Map("type", "searchResult", "rows", rows))
+        case "openResult":
+            idx := msg.Has("index") ? Integer(msg["index"]) : 0
+            CursorPanel_OpenResultByIndex(idx)
+        case "runQuickAction":
+            t := msg.Has("btnType") ? String(msg["btnType"]) : ""
+            if (t != "")
+                CursorPanel_RunQuickAction(t)
     }
 }

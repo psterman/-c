@@ -288,6 +288,41 @@
       color: var(--on-accent);
       box-shadow: var(--glow-hot);
     }
+    .btn.legacy-compact {
+      height: 30px;
+      padding: 0 10px;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+    .legacy-tools {
+      position: relative;
+    }
+    .legacy-tools > summary {
+      list-style: none;
+    }
+    .legacy-tools > summary::-webkit-details-marker {
+      display: none;
+    }
+    .legacy-tools-menu {
+      position: absolute;
+      right: 0;
+      top: 42px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 180px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      box-shadow: var(--glow);
+      z-index: 30;
+    }
+    .legacy-tools-menu .btn {
+      width: 100%;
+      justify-content: flex-start;
+      text-align: left;
+    }
     #header > div:first-child,
     .apple-group-title,
     .activation-mode-title,
@@ -773,7 +808,7 @@
       <button class="tab-btn" data-tab="search">搜索设置</button>
     </aside>
     <section id="content">
-      <div id="header"><div>[ 设置中心 ]</div><div class="inline"><button id="btn-open-legacy" class="btn">打开原版完整设置</button><button id="btn-open-compare" class="btn">对比模式</button><div id="status">等待连接...</div></div></div>
+      <div id="header"><div>[ 设置中心 ]</div><div class="inline"><details class="legacy-tools"><summary class="btn legacy-compact">兼容入口</summary><div class="legacy-tools-menu"><button id="btn-open-legacy" class="btn legacy-compact">打开原版完整设置</button><button id="btn-open-compare" class="btn legacy-compact">对比模式</button></div></details><div id="status">等待连接...</div></div></div>
       <div id="panel"></div>
       <div id="footer"><button id="btn-cancel" class="btn">取消</button><button id="btn-save" class="btn primary">保存</button></div>
     </section>
@@ -1745,7 +1780,7 @@
           : (filtered.find(t => t.id === state.selectedPromptTemplateId) || filtered[0] || null);
         const catTabs = allCats.map(c => `<button class="subtab-btn ${state.promptsCategoryTab === c ? "active" : ""}" data-prompt-cat="${esc(c)}">${esc(c)}</button>`).join("");
         const listRows = filtered.map(t => `<div class="list-row ${selected?.id === t.id ? "active" : ""}" data-prompt-id="${esc(t.id)}"><div>${esc(t.title || t.id)}</div><div>${esc((t.content || "").replace(/\s+/g, " ").slice(0, 96))}</div></div>`).join("");
-        panel.innerHTML = `<div class="card"><div class="subtabs"><button class="subtab-btn ${state.promptsMainTab === "templateManager" ? "active" : ""}" data-prompt-main="templateManager">模板管理</button><button class="subtab-btn ${state.promptsMainTab === "cursorRules" ? "active" : ""}" data-prompt-main="cursorRules">cursor规则</button></div>${state.promptsMainTab === "templateManager" ? `<div class="search-row"><div class="inline"><input id="promptSearchKeyword" data-nosave="1" type="text" placeholder="搜索模板关键词（自动匹配全部模板）" value="${esc(state.promptsSearchKeyword)}"><button class="btn" id="btnPromptSearchClear">清空</button></div></div><div class="subtabs">${catTabs}</div><div class="prompt-grid"><div class="list-panel"><div class="list-head"><div>名称</div><div>内容</div></div><div class="list-body">${listRows || `<div class="list-row"><div>-</div><div>未匹配到模板</div></div>`}</div></div><div><div class="compact-row"><div class="label">模板标题</div><input id="promptTplTitle" type="text" value="${esc(selected?.title || "")}"></div><div class="compact-row"><div class="label">模板分类</div><div class="inline"><select id="promptTplCategory">${options(allCats, (selected?.category || state.promptsCategoryTab))}</select><button class="btn" id="btnAddCategory">新建分类</button><button class="btn" id="btnDeleteCategory">删除分类</button></div></div><div class="label">模板内容</div><div class="editor-toolbar"><button class="btn" data-editor-action="bold">加粗</button><button class="btn" data-editor-action="code">代码</button><button class="btn" data-editor-action="quote">引用</button><button class="btn" data-editor-action="ul">列表</button><button class="btn" data-editor-action="undo">撤销</button><button class="btn" data-editor-action="redo">重做</button><button class="btn" data-editor-action="clear">清空</button></div><textarea id="promptTplContent" style="min-height:260px;">${esc(selected?.content || "")}</textarea><div class="inline" style="margin-top:8px;"><button class="btn" id="btnTplNew">新建模板</button><button class="btn" id="btnTplSave">保存模板</button><button class="btn" id="btnTplDelete">删除模板</button></div><div class="inline" style="margin-top:8px;"><button class="btn" id="btnImportTpl">导入模板</button><button class="btn" id="btnExportTpl">导出模板</button><button class="btn" id="btnReloadTpl">重载模板</button><button class="btn" id="btnOpenLegacyPrompts">原版模板管理</button></div></div></div>` : (() => { const ruleTabs = [{k:"general",n:"通用规则"},{k:"web",n:"网页开发"},{k:"miniprogram",n:"小程序"},{k:"android",n:"安卓App"},{k:"ios",n:"iOS App"},{k:"python",n:"Python"}]; const tabHtml = ruleTabs.map(t => `<button class="subtab-btn ${state.cursorRulesTab===t.k?"active":""}" data-rule-tab="${t.k}">${t.n}</button>`).join(""); const content = d.cursorRules?.[state.cursorRulesTab] || ""; return `<div class="title">Cursor规则配置</div><div class="hint">根据开发类型配置规则，让 AI 更精准理解项目上下文，减少无效对话与返工。</div><div class="title" style="margin-top:10px;">📋 复制位置</div><div class="hint">在 Cursor 中按 Ctrl+Shift+P 打开命令面板，输入 <code>rules</code> 或 <code>cursor rules</code>，选择 Open Cursor Rules，粘贴到 <code>.cursorrules</code> 文件。</div><div class="title" style="margin-top:10px;">💡 使用方法</div><div class="hint">1. 选择下方开发类型标签 2. 编辑或粘贴规则 3. 点击复制规则 4. 粘贴保存到 Cursor 规则文件 5. 重启 Cursor 生效。</div><div class="subtabs" style="margin-top:10px;">${tabHtml}</div><div class="label">规则内容</div><textarea id="cursorRuleContent" style="min-height:320px;">${esc(content)}</textarea><div class="inline" style="margin-top:8px;"><button class="btn" id="btnCursorRulesCopy">复制规则</button><button class="btn" id="btnOpenLegacyPrompts">打开原版规则设置</button></div>`; })()}</div>`;
+        panel.innerHTML = `<div class="card"><div class="subtabs"><button class="subtab-btn ${state.promptsMainTab === "templateManager" ? "active" : ""}" data-prompt-main="templateManager">模板管理</button><button class="subtab-btn ${state.promptsMainTab === "cursorRules" ? "active" : ""}" data-prompt-main="cursorRules">cursor规则</button></div>${state.promptsMainTab === "templateManager" ? `<div class="search-row"><div class="inline"><input id="promptSearchKeyword" data-nosave="1" type="text" placeholder="搜索模板关键词（自动匹配全部模板）" value="${esc(state.promptsSearchKeyword)}"><button class="btn" id="btnPromptSearchClear">清空</button></div></div><div class="subtabs">${catTabs}</div><div class="prompt-grid"><div class="list-panel"><div class="list-head"><div>名称</div><div>内容</div></div><div class="list-body">${listRows || `<div class="list-row"><div>-</div><div>未匹配到模板</div></div>`}</div></div><div><div class="compact-row"><div class="label">模板标题</div><input id="promptTplTitle" type="text" value="${esc(selected?.title || "")}"></div><div class="compact-row"><div class="label">模板分类</div><div class="inline"><select id="promptTplCategory">${options(allCats, (selected?.category || state.promptsCategoryTab))}</select><button class="btn" id="btnAddCategory">新建分类</button><button class="btn" id="btnDeleteCategory">删除分类</button></div></div><div class="label">模板内容</div><div class="editor-toolbar"><button class="btn" data-editor-action="bold">加粗</button><button class="btn" data-editor-action="code">代码</button><button class="btn" data-editor-action="quote">引用</button><button class="btn" data-editor-action="ul">列表</button><button class="btn" data-editor-action="undo">撤销</button><button class="btn" data-editor-action="redo">重做</button><button class="btn" data-editor-action="clear">清空</button></div><textarea id="promptTplContent" style="min-height:260px;">${esc(selected?.content || "")}</textarea><div class="inline" style="margin-top:8px;"><button class="btn" id="btnTplNew">新建模板</button><button class="btn" id="btnTplSave">保存模板</button><button class="btn" id="btnTplDelete">删除模板</button></div><div class="inline" style="margin-top:8px;"><button class="btn" id="btnImportTpl">导入模板</button><button class="btn" id="btnExportTpl">导出模板</button><button class="btn" id="btnReloadTpl">重载模板</button><button class="btn legacy-compact" id="btnOpenLegacyPrompts">原版模板管理</button></div></div></div>` : (() => { const ruleTabs = [{k:"general",n:"通用规则"},{k:"web",n:"网页开发"},{k:"miniprogram",n:"小程序"},{k:"android",n:"安卓App"},{k:"ios",n:"iOS App"},{k:"python",n:"Python"}]; const tabHtml = ruleTabs.map(t => `<button class="subtab-btn ${state.cursorRulesTab===t.k?"active":""}" data-rule-tab="${t.k}">${t.n}</button>`).join(""); const content = d.cursorRules?.[state.cursorRulesTab] || ""; return `<div class="title">Cursor规则配置</div><div class="hint">根据开发类型配置规则，让 AI 更精准理解项目上下文，减少无效对话与返工。</div><div class="title" style="margin-top:10px;">📋 复制位置</div><div class="hint">在 Cursor 中按 Ctrl+Shift+P 打开命令面板，输入 <code>rules</code> 或 <code>cursor rules</code>，选择 Open Cursor Rules，粘贴到 <code>.cursorrules</code> 文件。</div><div class="title" style="margin-top:10px;">💡 使用方法</div><div class="hint">1. 选择下方开发类型标签 2. 编辑或粘贴规则 3. 点击复制规则 4. 粘贴保存到 Cursor 规则文件 5. 重启 Cursor 生效。</div><div class="subtabs" style="margin-top:10px;">${tabHtml}</div><div class="label">规则内容</div><textarea id="cursorRuleContent" style="min-height:320px;">${esc(content)}</textarea><div class="inline" style="margin-top:8px;"><button class="btn" id="btnCursorRulesCopy">复制规则</button><button class="btn legacy-compact" id="btnOpenLegacyPrompts">打开原版规则设置</button></div>`; })()}</div>`;
         document.querySelectorAll("[data-prompt-main]").forEach(el => el.addEventListener("click", () => { state.promptsMainTab = el.getAttribute("data-prompt-main"); render(); }));
         if (state.promptsMainTab === "templateManager") {
           const searchEl = document.getElementById("promptSearchKeyword");
@@ -1864,7 +1899,7 @@
           document.getElementById("btnOpenLegacyPrompts").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacyTab", tab: "prompts" }));
         }
       } else if (state.activeTab === "hotkeys") {
-        panel.innerHTML = `<div class="card"><div class="title">快捷键设置</div><div class="row"><div class="label">长按 CapsLock 打开 VK 快捷键面板</div><div><input id="capsLockHoldVkEnabled" type="checkbox" ${checked(d.capsLockHoldVkEnabled !== false && d.capsLockHoldVkEnabled !== 0)}></div></div><div class="hint" style="margin:-4px 0 10px 0;">开启后，按住 CapsLock 达到「通用设置」中的长按时间即弹出 KeyBinder，松开 CapsLock 后关闭；关闭本项后仍可从托盘菜单打开虚拟键盘。</div>${hotkeyRows}<div class="row"><div class="label">Prompt 快速采集热键</div><input id="promptQuickCaptureHotkey" type="text" value="${esc(d.promptQuickCaptureHotkey)}"></div></div><div class="card"><div class="title">快速操作按钮 (5)</div>${qaRows}<div class="inline"><button class="btn" id="btnOpenLegacyHotkeys">打开原版快捷键设置</button></div></div>`;
+        panel.innerHTML = `<div class="card"><div class="title">快捷键设置</div><div class="row"><div class="label">长按 CapsLock 打开 VK 快捷键面板</div><div><input id="capsLockHoldVkEnabled" type="checkbox" ${checked(d.capsLockHoldVkEnabled !== false && d.capsLockHoldVkEnabled !== 0)}></div></div><div class="hint" style="margin:-4px 0 10px 0;">开启后，按住 CapsLock 达到「通用设置」中的长按时间即弹出 KeyBinder，松开 CapsLock 后关闭；关闭本项后仍可从托盘菜单打开虚拟键盘。</div>${hotkeyRows}<div class="row"><div class="label">Prompt 快速采集热键</div><input id="promptQuickCaptureHotkey" type="text" value="${esc(d.promptQuickCaptureHotkey)}"></div></div><div class="card"><div class="title">快速操作按钮 (5)</div>${qaRows}<div class="inline"><button class="btn legacy-compact" id="btnOpenLegacyHotkeys">打开原版快捷键设置</button></div></div>`;
         document.getElementById("btnOpenLegacyHotkeys").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacyTab", tab: "hotkeys" }));
       } else if (state.activeTab === "advanced") {
         const aiSec = (Number(d.aiSleepTime || 200) / 1000).toFixed(2).replace(/\.?0+$/, "");
@@ -1923,7 +1958,7 @@
           ], ss.ocrPunctuationMode || "keep")}</select></div>
           <div class="row"><div class="label">识别后直接复制</div><div><input id="ssOcrDirectCopy" type="checkbox" ${checked(!!ss.ocrDirectCopyEnabled)}></div></div>`;
         }
-        panel.innerHTML = `<div class="card"><div class="title">截图设置</div>${capTabs}${body}<div class="inline" style="margin-top:8px;"><button class="btn" id="btnOpenLegacyScreenshot">打开原版截图设置</button></div></div>`;
+        panel.innerHTML = `<div class="card"><div class="title">截图设置</div>${capTabs}${body}<div class="inline" style="margin-top:8px;"><button class="btn legacy-compact" id="btnOpenLegacyScreenshot">打开原版截图设置</button></div></div>`;
         document.querySelectorAll("[data-ss-subtab]").forEach(el => el.addEventListener("click", () => {
           state.data = readFromUI();
           state.screenshotSubTab = el.getAttribute("data-ss-subtab");
@@ -1942,7 +1977,7 @@
         const ftCfg = ft.config || {};
         const lightHtml = (ft.engine_lights || ["off","off","off","off"]).map((st, idx) => `<span class="ft-light ${esc(st)}" data-ft-light="${idx}"></span>`).join("");
         const progressNum = Math.max(0, Math.min(100, Number(ft.progress || 0)));
-        panel.innerHTML = `<div class="card"><div class="title">搜索设置</div><div class="row"><div class="label">默认搜索引擎（多选）</div><div class="multi-dd" id="ddDefaultEngine"><button type="button" class="multi-dd-btn" id="btnDefaultEngine">${esc(defaultSummary)}</button><div class="multi-dd-panel">${defaultOptions}</div></div></div><div class="row"><div class="label">AI/CLI 搜索引擎（多选）</div><div class="multi-dd" id="ddAiCliEngine"><button type="button" class="multi-dd-btn" id="btnAiCliEngine">${esc(aiCliSummary)}</button><div class="multi-dd-panel">${aiCliOptions}</div></div></div><div class="row"><div class="label">自动加载选中文本</div><div><input id="autoLoadSelectedText" type="checkbox" ${checked(d.autoLoadSelectedText)}></div></div><div class="row"><div class="label">自动更新语音输入</div><div><input id="autoUpdateVoiceInput" type="checkbox" ${checked(d.autoUpdateVoiceInput)}></div></div><div class="label">启用分类</div><div class="tag-wrap">${catRows}</div><div class="inline" style="margin-top:8px;"><button class="btn" id="btnOpenLegacySearch">打开原版搜索设置</button></div></div>
+        panel.innerHTML = `<div class="card"><div class="title">搜索设置</div><div class="row"><div class="label">默认搜索引擎（多选）</div><div class="multi-dd" id="ddDefaultEngine"><button type="button" class="multi-dd-btn" id="btnDefaultEngine">${esc(defaultSummary)}</button><div class="multi-dd-panel">${defaultOptions}</div></div></div><div class="row"><div class="label">AI/CLI 搜索引擎（多选）</div><div class="multi-dd" id="ddAiCliEngine"><button type="button" class="multi-dd-btn" id="btnAiCliEngine">${esc(aiCliSummary)}</button><div class="multi-dd-panel">${aiCliOptions}</div></div></div><div class="row"><div class="label">自动加载选中文本</div><div><input id="autoLoadSelectedText" type="checkbox" ${checked(d.autoLoadSelectedText)}></div></div><div class="row"><div class="label">自动更新语音输入</div><div><input id="autoUpdateVoiceInput" type="checkbox" ${checked(d.autoUpdateVoiceInput)}></div></div><div class="label">启用分类</div><div class="tag-wrap">${catRows}</div><div class="inline" style="margin-top:8px;"><button class="btn legacy-compact" id="btnOpenLegacySearch">打开原版搜索设置</button></div></div>
 <div class="card">
   <div class="title">全文索引控制台</div>
   <div class="ft-console">

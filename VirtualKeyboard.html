@@ -32,28 +32,28 @@
 }
 /* ── Reset & Variables ─────────────────────────────────────────────────── */
 :root {
-  --bg:           #0d1016;
-  --surface:      #121a27;
-  --surface2:     #16253b;
-  --surface3:     #1a2f4a;
-  --border:       #263246;
-  --border2:      #32445f;
-  --orange:       #ff8f35;
-  --orange-dk:    #ff7420;
-  --orange-lt:    #ffb36b;
-  --cyan:         #91bfff;
-  --text:         #eef3ff;
-  --text-dim:     #9eb0cb;
-  --text-xs:      #7f93b5;
-  --glow:         0 0 8px rgba(255,143,53,.42), 0 0 18px rgba(255,143,53,.24);
-  --glow-hot:     0 0 12px rgba(255,143,53,.56), 0 0 30px rgba(255,143,53,.3);
-  --glow-cyan:    0 0 8px rgba(145,191,255,.35), 0 0 18px rgba(145,191,255,.2);
+  --bg:           #111315;
+  --surface:      #142236;
+  --surface2:     #1a2c43;
+  --surface3:     #22354f;
+  --border:       #2d4361;
+  --border2:      #365172;
+  --orange:       #ff8d2a;
+  --orange-dk:    #ff7a14;
+  --orange-lt:    #ffb347;
+  --cyan:         #8ec7ff;
+  --text:         #e7ebef;
+  --text-dim:     #93a0ad;
+  --text-xs:      #6f7d8b;
+  --glow:         0 18px 42px rgba(0,0,0,.35);
+  --glow-hot:     0 0 0 1px rgba(255,179,71,.24), 0 14px 34px rgba(0,0,0,.28);
+  --glow-cyan:    0 0 0 1px rgba(142,199,255,.24), 0 12px 28px rgba(0,0,0,.22);
   --font:         "AppUi", "Segoe UI", "DengXian", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
   --font-ui:      "AppUi", "Segoe UI", "DengXian", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
   /* ── Cyberpunk palette ─── */
-  --matrix-green: #ffb36b;
-  --warning-gold: #ffcb8d;
-  --deep-black:   #0d1016;
+  --matrix-green: #ffb347;
+  --warning-gold: #ffb347;
+  --deep-black:   #111315;
   --glow-green:   0 0 8px #00ff4188, 0 0 18px #00ff4144;
   --glow-gold:    0 0 8px #ffcc0088, 0 0 18px #ffcc0044;
   /* 整页 UI 缩放：略小可避免键盘区出现纵向滚动条，仍保持清晰可读 */
@@ -66,9 +66,9 @@
 html, body {
   width: 100%; height: 100%;
   background:
-    radial-gradient(circle at 82% 6%, rgba(41,83,145,.24), transparent 36%),
-    radial-gradient(circle at 12% 96%, rgba(29,63,115,.18), transparent 42%),
-    linear-gradient(180deg, #0d1016 0%, #131e2f 56%, #172842 100%);
+    radial-gradient(circle at 82% 6%, rgba(58,107,168,.18), transparent 34%),
+    radial-gradient(circle at 12% 96%, rgba(24,58,102,.12), transparent 42%),
+    linear-gradient(180deg, #0c1119 0%, #132238 100%);
   color: var(--text);
   font-family: var(--font-ui);
   overflow: hidden;
@@ -2248,31 +2248,31 @@ body.vk-kb-collapsed #bottom-zone { border-top: 1px solid var(--border); }
 }
 /* ── Light Theme ─────────────────────────────────────────────────────── */
 html[data-theme="light"] {
-  background: #edf5ff;
+  background: #fffdf9;
   color-scheme: light;
 }
 body[data-theme="light"] {
-  --bg: #eef5ff;
-  --surface: #FFFFFF;
-  --surface2: #f6faff;
-  --surface3: #eaf3ff;
-  --border: #c9dcf4;
-  --border2: #bcd3ee;
-  --orange: #267ed6;
-  --orange-dk: #1f66b1;
-  --orange-lt: #5ea5ec;
-  --text: #1f3554;
-  --text-dim: #3f5878;
-  --text-xs: #587294;
+  --bg: #fffdf9;
+  --surface: #fff7ef;
+  --surface2: #fff3e7;
+  --surface3: #ffeddc;
+  --border: #e9b889;
+  --border2: #e4b285;
+  --orange: #e67e22;
+  --orange-dk: #d35400;
+  --orange-lt: #f39c12;
+  --text: #202225;
+  --text-dim: #5b5f67;
+  --text-xs: #7a7f88;
   --glow: 0 4px 14px rgba(0,0,0,.08);
   --glow-hot: 0 0 0 1px rgba(38,126,214,.2), 0 8px 20px rgba(31,102,177,.14);
   --glow-cyan: 0 0 0 1px rgba(78,150,221,.16), 0 8px 20px rgba(78,150,221,.1);
-  --matrix-green: #4f8b63;
-  --warning-gold: #a9852c;
-  --deep-black: #eef5ff;
+  --matrix-green: #f39c12;
+  --warning-gold: #f39c12;
+  --deep-black: #fffdf9;
   --glow-green: 0 0 0 1px rgba(31,157,75,.18), 0 6px 16px rgba(31,157,75,.12);
   --glow-gold: 0 0 0 1px rgba(183,121,31,.18), 0 6px 16px rgba(183,121,31,.12);
-  background: linear-gradient(180deg, #edf5ff 0%, #e8f1ff 100%);
+  background: linear-gradient(180deg, #fffdf9 0%, #fff6ec 100%);
   color: var(--text);
   color-scheme: light;
 }
@@ -2316,8 +2316,8 @@ body[data-theme="light"] .cmd-row:hover,
 body[data-theme="light"] .dashboard-slot:hover,
 body[data-theme="light"] .scene-menu-slot:hover,
 body[data-theme="light"] .scene-menu-item:hover {
-  border-color: #267ed6;
-  background: #eef6ff;
+  border-color: #e67e22;
+  background: #fff1e3;
 }
 body[data-theme="light"] .k.active,
 body[data-theme="light"] .sidebar-item.active,
@@ -2779,21 +2779,21 @@ body[data-theme="light"] .dashboard-edit-input:focus {
 
 /* === CloudPlayer-aligned Dark Theme Cleanup (quiet blue hierarchy) === */
 body:not([data-theme="light"]) {
-  --bg: #0d1016;
-  --surface: #121a27;
-  --surface2: #16253b;
-  --surface3: #1a2f4a;
-  --border: #263246;
-  --border2: #32445f;
-  --text: #eef3ff;
-  --text-dim: #9eb0cb;
-  --text-xs: #7f93b5;
-  --orange: #ff8f35;
-  --orange-dk: #ff7420;
-  --orange-lt: #ffb36b;
-  --cyan: #91bfff;
-  --matrix-green: #9eb0cb;
-  --warning-gold: #ffcb8d;
+  --bg: #111315;
+  --surface: #142236;
+  --surface2: #1a2c43;
+  --surface3: #22354f;
+  --border: #2d4361;
+  --border2: #365172;
+  --text: #e7ebef;
+  --text-dim: #93a0ad;
+  --text-xs: #6f7d8b;
+  --orange: #ff8d2a;
+  --orange-dk: #ff7a14;
+  --orange-lt: #ffb347;
+  --cyan: #8ec7ff;
+  --matrix-green: #ffb347;
+  --warning-gold: #ffb347;
   --glow: none;
   --glow-hot: none;
   --glow-cyan: none;
@@ -2804,9 +2804,9 @@ body:not([data-theme="light"]) html,
 body:not([data-theme="light"]),
 body:not([data-theme="light"]) #root {
   background:
-    radial-gradient(circle at 82% 6%, rgba(41,83,145,.18), transparent 36%),
-    radial-gradient(circle at 12% 96%, rgba(29,63,115,.12), transparent 42%),
-    linear-gradient(180deg, #0d1016 0%, #131e2f 56%, #172842 100%);
+    radial-gradient(circle at 82% 6%, rgba(58,107,168,.18), transparent 34%),
+    radial-gradient(circle at 12% 96%, rgba(24,58,102,.12), transparent 42%),
+    linear-gradient(180deg, #0c1119 0%, #132238 100%);
 }
 body:not([data-theme="light"]) * {
   text-shadow: none !important;

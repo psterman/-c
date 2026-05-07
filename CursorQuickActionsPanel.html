@@ -1,0 +1,106 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cursor Quick Actions</title>
+  <style>
+    :root{--bg:#111315;--surface:#142236;--surface2:#1a2c43;--border:#2d4361;--border2:#365172;--text:#e7ebef;--text-dim:#93a0ad;--accent:#ff8d2a;--accent2:#ffb347;}
+    body[data-theme="light"]{--bg:#fffdf9;--surface:#fff7ef;--surface2:#fff3e7;--border:#e9b889;--border2:#e4b285;--text:#202225;--text-dim:#5b5f67;--accent:#e67e22;--accent2:#f39c12;}
+    *{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI","Microsoft YaHei UI",sans-serif;overflow:hidden}
+    #app{display:flex;flex-direction:column;height:100%}
+    #header{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--border);background:var(--surface);user-select:none}
+    #title{font-size:28px;font-weight:700;cursor:move}
+    #headerBtns{display:flex;gap:8px}
+    .icon-btn{min-width:30px;height:30px;border:1px solid var(--border2);border-radius:6px;background:var(--surface2);color:var(--text);cursor:pointer;padding:0 8px;font-size:12px}
+    .icon-btn.active{border-color:var(--accent);color:var(--accent)}
+    #searchWrap{padding:10px;border-bottom:1px solid var(--border)}
+    #search{width:100%;height:34px;border:1px solid var(--border2);border-radius:6px;background:var(--surface2);color:var(--text);padding:0 10px;outline:none}
+    #search:focus{border-color:var(--accent)}
+    #list{flex:1;overflow:auto;border-bottom:1px solid var(--border)} table{width:100%;border-collapse:collapse;table-layout:fixed}
+    thead th{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);text-align:left;padding:8px}
+    tbody td{padding:8px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    tbody tr{cursor:pointer} tbody tr:hover{background:rgba(255,141,42,.12)}
+    #actions{padding:14px 16px 10px;display:grid;gap:10px;background:var(--bg)}
+    .qa{height:42px;border:1px solid var(--border2);background:linear-gradient(90deg, rgba(255,255,255,.02), rgba(255,255,255,0));color:var(--text);border-radius:4px;cursor:pointer;font-size:28px}
+    .qa:hover{border-color:var(--accent);color:var(--accent2)}
+    #desc{padding:4px 18px 12px;text-align:center;color:var(--text-dim);font-size:24px}
+  </style>
+</head>
+<body data-theme="light">
+<div id="app">
+  <div id="header">
+    <div id="title">Cursor Quick Actions</div>
+    <div id="headerBtns">
+      <button id="btn-top" class="icon-btn" title="TopMost">PIN</button>
+      <button id="btn-auto" class="icon-btn" title="AutoHide">AUTO</button>
+      <button id="btn-close" class="icon-btn" title="Close">X</button>
+    </div>
+  </div>
+  <div id="searchWrap"><input id="search" placeholder="Search title / content / source..." /></div>
+  <div id="list">
+    <table>
+      <thead><tr><th style="width:50%">Title</th><th style="width:25%">Source</th><th style="width:25%">Time</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div id="actions"></div>
+  <div id="desc"></div>
+</div>
+<script>
+const post=(o)=>window.chrome?.webview?.postMessage(o);
+const elRows=document.getElementById("rows");
+const elActions=document.getElementById("actions");
+const elDesc=document.getElementById("desc");
+const state={buttons:[],rows:[]};
+let searchTimer=0;
+function normalizeThemeMode(raw){
+  const t=String(raw??"").trim().toLowerCase();
+  if(t==="light"||t==="l"||t==="0"||t==="false"||t==="off") return "light";
+  if(t==="dark"||t==="d"||t==="1"||t==="true"||t==="on") return "dark";
+  return "light";
+}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
+function renderRows(){
+  elRows.innerHTML=state.rows.map((r,i)=>{
+    const title=r.title??r.Title??""; const source=r.source??r.Source??""; const time=r.time??r.Time??"";
+    return `<tr data-i="${i+1}"><td>${esc(title)}</td><td>${esc(source)}</td><td>${esc(time)}</td></tr>`;
+  }).join("");
+  elRows.querySelectorAll("tr").forEach(tr=>tr.addEventListener("dblclick",()=>post({type:"openResult",index:Number(tr.dataset.i)})));
+}
+function renderButtons(){
+  elActions.innerHTML=state.buttons.map(b=>`<button class="qa" data-type="${esc(b.type||"")}">${esc(b.text||"")}</button>`).join("");
+  const btns=[...elActions.querySelectorAll(".qa")];
+  btns.forEach((b,idx)=>{
+    const item=state.buttons[idx]||{};
+    b.addEventListener("mouseenter",()=>{elDesc.textContent=item.desc||"";});
+    b.addEventListener("click",()=>post({type:"runQuickAction",btnType:b.dataset.type}));
+  });
+  if(state.buttons[0]?.desc)elDesc.textContent=state.buttons[0].desc;
+}
+document.getElementById("title").addEventListener("mousedown",()=>post({type:"dragWindow"}));
+document.getElementById("btn-close").addEventListener("click",()=>post({type:"close"}));
+document.getElementById("btn-top").addEventListener("click",()=>post({type:"toggleAlwaysOnTop"}));
+document.getElementById("btn-auto").addEventListener("click",()=>post({type:"toggleAutoHide"}));
+document.getElementById("search").addEventListener("input",(e)=>{clearTimeout(searchTimer); const kw=e.target.value||""; searchTimer=setTimeout(()=>post({type:"search",keyword:kw}),150);});
+window.chrome?.webview?.addEventListener("message",(e)=>{
+  const m=e.data||{};
+  if(m.type==="initData"){
+    document.getElementById("title").textContent=m.title||"Cursor Quick Actions";
+    document.body.setAttribute("data-theme",normalizeThemeMode(m.themeMode));
+    state.buttons=Array.isArray(m.buttons)?m.buttons:[];
+    renderButtons();
+    document.getElementById("btn-top").classList.toggle("active",!!m.alwaysOnTop);
+    document.getElementById("btn-auto").classList.toggle("active",!!m.autoHide);
+  } else if(m.type==="searchResult"){
+    state.rows=Array.isArray(m.rows)?m.rows:[];
+    renderRows();
+  } else if(m.type==="state"){
+    document.getElementById("btn-top").classList.toggle("active",!!m.alwaysOnTop);
+    document.getElementById("btn-auto").classList.toggle("active",!!m.autoHide);
+  }
+});
+post({type:"ready"});
+</script>
+</body>
+</html>
