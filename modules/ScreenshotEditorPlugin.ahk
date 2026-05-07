@@ -76,6 +76,7 @@ class ScreenshotEditorPlugin {
     static ScreenshotEditSession := 0
     static ScreenshotDocObjects := []
     static ScreenshotSelectedObjectId := ""
+    static ScreenshotTextEditingObjectId := ""
     static ScreenshotTextLastClickId := ""
     static ScreenshotTextLastClickTick := 0
     static ScreenshotTextLastClickX := 0
@@ -1373,6 +1374,10 @@ class ScreenshotEditorPlugin {
             this.OnScreenshotEditorContextMenu(0, 0)
             return
     }
+    if (t = "event" && name = "textInputClosed") {
+            this.ScreenshotEditor_EndInlineTextEdit(String(p.Get("id", "")))
+            return
+    }
     if (t = "action" && name = "menuInvoke") {
             mid := p.Get("id","")
             if (mid = "copy")
@@ -1859,6 +1864,7 @@ class ScreenshotEditorPlugin {
     if !(this.ScreenshotDocObjects is Array) || this.ScreenshotDocObjects.Length = 0
         return Map("kind", "none")
     handleThreshold := 14
+    boxPad := 6
     loop this.ScreenshotDocObjects.Length {
         idx := this.ScreenshotDocObjects.Length - A_Index + 1
         obj := this.ScreenshotDocObjects[idx]
@@ -1866,7 +1872,7 @@ class ScreenshotEditorPlugin {
             continue
         tx := Number(obj.Get("x", 0)), ty := Number(obj.Get("y", 0))
         tw := Max(40, Number(obj.Get("w", 80))), th := Max(24, Number(obj.Get("h", 34)))
-        if (x >= tx && x <= tx + tw && y >= ty && y <= ty + th) {
+        if (x >= tx - boxPad && x <= tx + tw + boxPad && y >= ty - boxPad && y <= ty + th + boxPad) {
             tlx := tx, tly := ty
             trx := tx + tw, tryy := ty
             blx := tx, bly := ty + th
@@ -2069,6 +2075,33 @@ class ScreenshotEditorPlugin {
     return outPath
 }
 
+    static ScreenshotEditor_StartInlineTextEdit(editId) {
+    sid := String(editId)
+    if (sid = "")
+        return
+    idx := this.ScreenshotDoc_FindObjectIndexById(sid)
+    if (idx <= 0 || idx > this.ScreenshotDocObjects.Length)
+        return
+    objs := this.ScreenshotDoc_CloneObjects(this.ScreenshotDocObjects)
+    obj := objs[idx]
+    if (obj is Map) {
+        obj["text"] := ""
+        objs[idx] := obj
+    }
+    this.ScreenshotTextEditingObjectId := sid
+    this.ScreenshotDoc_RenderToPath(objs, "", false, "")
+}
+
+    static ScreenshotEditor_EndInlineTextEdit(editId := "") {
+    sid := String(editId)
+    if (sid != "" && sid != String(this.ScreenshotTextEditingObjectId))
+        return
+    if (this.ScreenshotTextEditingObjectId = "")
+        return
+    this.ScreenshotTextEditingObjectId := ""
+    this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+}
+
     static ScreenshotEditor_OnPreviewPointer(p) {
     if !(p is Map)
         return
@@ -2105,9 +2138,15 @@ class ScreenshotEditorPlugin {
                 this.ScreenshotSelectedObjectId := String(obj["id"])
                 this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
                 if (isDouble) {
+                    this.ScreenshotEditor_StartInlineTextEdit(sidHit)
                     try this.ScreenshotPreviewShell_SendEvent("openTextInput", Map(
                         "x", Number(obj.Get("x", 0)),
                         "y", Number(obj.Get("y", 0)),
+                        "w", Number(obj.Get("w", 120)),
+                        "h", Number(obj.Get("h", 40)),
+                        "size", Integer(obj.Get("size", Integer(this.ScreenshotTextOptions.Get("size", 22)))),
+                        "bold", !!obj.Get("bold", this.ScreenshotTextOptions.Get("bold", true)),
+                        "color", Format("#{:06X}", Integer(obj.Get("color", this.ScreenshotDrawColor)) & 0x00FFFFFF),
                         "text", String(obj.Get("text", "")),
                         "id", sidHit
                     ))
@@ -2168,14 +2207,21 @@ class ScreenshotEditorPlugin {
                     this.ScreenshotSelectedObjectId := sidHit
                     this.ScreenshotEditSession := 0
                     this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+                    this.ScreenshotEditor_StartInlineTextEdit(sidHit)
                     try this.ScreenshotPreviewShell_SendEvent("openTextInput", Map(
                         "x", Number(obj.Get("x", 0)),
                         "y", Number(obj.Get("y", 0)),
+                        "w", Number(obj.Get("w", 120)),
+                        "h", Number(obj.Get("h", 40)),
+                        "size", Integer(obj.Get("size", Integer(this.ScreenshotTextOptions.Get("size", 22)))),
+                        "bold", !!obj.Get("bold", this.ScreenshotTextOptions.Get("bold", true)),
+                        "color", Format("#{:06X}", Integer(obj.Get("color", this.ScreenshotDrawColor)) & 0x00FFFFFF),
                         "text", String(obj.Get("text", "")),
                         "id", sidHit
                     ))
                     return
                 }
+                alreadySelected := (String(obj.Get("id","")) = String(this.ScreenshotSelectedObjectId))
                 this.ScreenshotSelectedObjectId := String(obj["id"])
                 this.ScreenshotEditSession := Map(
                     "tool", "text",
@@ -2185,7 +2231,8 @@ class ScreenshotEditorPlugin {
                     "x0", x, "y0", y,
                     "orig", obj,
                     "work", obj,
-                    "lastPreviewTick", 0
+                    "lastPreviewTick", 0,
+                    "editOnClick", (hitT["kind"] = "box" && alreadySelected)
                 )
                 this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
                 return
@@ -2274,6 +2321,10 @@ class ScreenshotEditorPlugin {
                     dy := y - Number(this.ScreenshotEditSession["y0"])
                     work["x"] := Number(orig["x"]) + dx
                     work["y"] := Number(orig["y"]) + dy
+                    if (this.ScreenshotEditSession.Get("editOnClick", false)) {
+                        if (Abs(dx) > 2 || Abs(dy) > 2)
+                            this.ScreenshotEditSession["editOnClick"] := false
+                    }
                 }
                 this.ScreenshotEditSession["work"] := work
                 previewObjs := this.ScreenshotDoc_CloneObjects(this.ScreenshotDocObjects)
@@ -2389,6 +2440,28 @@ class ScreenshotEditorPlugin {
                     dy := y1 - Number(sess["y0"])
                     work["x"] := Number(orig["x"]) + dx
                     work["y"] := Number(orig["y"]) + dy
+                    if (sess.Get("editOnClick", false)) {
+                        if (Abs(dx) > 2 || Abs(dy) > 2)
+                            sess["editOnClick"] := false
+                    }
+                }
+                if (mode = "box" && sess.Get("editOnClick", false)) {
+                    sidEdit := String(sess.Get("id", ""))
+                    this.ScreenshotSelectedObjectId := sidEdit
+                    this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
+                    this.ScreenshotEditor_StartInlineTextEdit(sidEdit)
+                    try this.ScreenshotPreviewShell_SendEvent("openTextInput", Map(
+                        "x", Number(orig.Get("x", 0)),
+                        "y", Number(orig.Get("y", 0)),
+                        "w", Number(orig.Get("w", 120)),
+                        "h", Number(orig.Get("h", 40)),
+                        "size", Integer(orig.Get("size", Integer(this.ScreenshotTextOptions.Get("size", 22)))),
+                        "bold", !!orig.Get("bold", this.ScreenshotTextOptions.Get("bold", true)),
+                        "color", Format("#{:06X}", Integer(orig.Get("color", this.ScreenshotDrawColor)) & 0x00FFFFFF),
+                        "text", String(orig.Get("text", "")),
+                        "id", sidEdit
+                    ))
+                    return
                 }
                 changed := (Number(work.Get("x",0)) != Number(orig.Get("x",0))
                     || Number(work.Get("y",0)) != Number(orig.Get("y",0))
