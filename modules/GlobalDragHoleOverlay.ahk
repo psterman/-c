@@ -23,7 +23,7 @@ global GDHO_NAV_FAIL_COUNT := 0
 
 ; drag pre-judge parameters
 global GDHO_MIN_MOVE_PX := 10
-global GDHO_POLL_MS := 16
+global GDHO_POLL_MS := 24
 global GDHO_MAX_IDLE_HIDE_MS := 160
 global GDHO_LAST_UPDATE_TICK := 0
 global GDHO_DESKTOP_PINNED := false
@@ -31,7 +31,16 @@ global GDHO_PIN_PAYLOAD := "text"
 global GDHO_ANCHOR_W := 160
 global GDHO_ANCHOR_H := 206
 global GDHO_ANCHOR_GAP := 10
+global GDHO_ANCHOR_MODE := "toolbar_auto_vertical" ; toolbar_auto_vertical|toolbar_below|toolbar_above|toolbar_center|toolbar_left|toolbar_right|screen
+global GDHO_ANCHOR_OFFSET_X := 0
+global GDHO_ANCHOR_OFFSET_Y := 0
+global GDHO_SCREEN_X := 120
+global GDHO_SCREEN_Y := 120
 global GDHO_CLICKTHROUGH := true
+global GDHO_UPDATE_MIN_INTERVAL_MS := 48
+global GDHO_POLL_BUSY := false
+global GDHO_CURSOR_X := 0
+global GDHO_CURSOR_Y := 0
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -52,6 +61,28 @@ GDHO_SetFallbackUrl(url) {
     u := Trim(String(url))
     if (u != "")
         GDHO_FALLBACK_URL := u
+}
+
+GDHO_SetAnchorMode(mode := "toolbar_center") {
+    global GDHO_ANCHOR_MODE
+    m := Trim(String(mode))
+    if (m = "")
+        return
+    if (m != "toolbar_auto_vertical" && m != "toolbar_center" && m != "toolbar_left" && m != "toolbar_right" && m != "toolbar_above" && m != "toolbar_below" && m != "screen")
+        return
+    GDHO_ANCHOR_MODE := m
+}
+
+GDHO_SetAnchorOffset(offsetX := 0, offsetY := 0) {
+    global GDHO_ANCHOR_OFFSET_X, GDHO_ANCHOR_OFFSET_Y
+    GDHO_ANCHOR_OFFSET_X := Integer(offsetX)
+    GDHO_ANCHOR_OFFSET_Y := Integer(offsetY)
+}
+
+GDHO_SetScreenAnchor(screenX := 120, screenY := 120) {
+    global GDHO_SCREEN_X, GDHO_SCREEN_Y
+    GDHO_SCREEN_X := Integer(screenX)
+    GDHO_SCREEN_Y := Integer(screenY)
 }
 
 GDHO_Init() {
@@ -117,10 +148,28 @@ GDHO_OnWebViewCreated(ctrl) {
         s.AreBrowserAcceleratorKeysEnabled := false
     }
     try ApplyWebView2PerformanceSettings(GDHO_WV2)
+    try GDHO_ApplyHostMapping()
     try WebView2_RegisterHostBridge(GDHO_WV2)
     try GDHO_WV2.add_WebMessageReceived(GDHO_OnWebMessage)
     try GDHO_WV2.add_NavigationCompleted(GDHO_OnNavigationCompleted)
     try GDHO_WV2.Navigate(GDHO_PAGE_URL)
+}
+
+GDHO_ApplyHostMapping() {
+    global GDHO_WV2
+    if !GDHO_WV2
+        return
+    ; Ensure https://app.local/* resolves for static fallback pages.
+    try {
+        ; 0 = COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY_CORS? (depends wrapper)
+        ; Keep compatibility with existing helper when available.
+        if IsSet(ApplyUnifiedWebViewAssets) {
+            ApplyUnifiedWebViewAssets(GDHO_WV2)
+            return
+        }
+    } catch {
+    }
+    try GDHO_WV2.SetVirtualHostNameToFolderMapping("app.local", A_ScriptDir, 0)
 }
 
 GDHO_OnWebMessage(sender, args) {
@@ -128,20 +177,30 @@ GDHO_OnWebMessage(sender, args) {
     try msgJson := args.WebMessageAsJson
     if (msgJson = "")
         return
-    if !InStr(msgJson, '"type":"hole_text_drop"')
+    msg := 0
+    try msg := Jxon_Load(msgJson)
+    if !(msg is Map)
         return
-    m := ""
-    if !RegExMatch(msgJson, '"text"\s*:\s*"((?:[^"\\]|\\.)*)"', &m)
+    typ := msg.Has("type") ? String(msg["type"]) : ""
+    if (typ != "hole_drop")
         return
-    txt := m[1]
-    txt := StrReplace(txt, '\\"', '"')
-    txt := StrReplace(txt, "\\\\", "\")
-    txt := StrReplace(txt, "\\n", "`n")
-    txt := StrReplace(txt, "\\r", "`r")
-    txt := Trim(txt)
-    if (txt = "")
+    if !msg.Has("payload") || !(msg["payload"] is Map)
         return
-    try FloatingToolbar_RequestSearchByKeyword(txt)
+    GDHO_HandleDropPayload(msg["payload"])
+}
+
+GDHO_HandleDropPayload(payload) {
+    kind := payload.Has("kind") ? String(payload["kind"]) : "none"
+    if (kind = "text") {
+        txt := payload.Has("text") ? Trim(String(payload["text"])) : ""
+        if (txt != "")
+            try FloatingToolbar_RequestSearchByKeyword(txt)
+        return
+    }
+
+    ; Foundation for next phase (image/file/folder upload route).
+    ; Keep structured payload now, wire business uploader later.
+    try OutputDebug("[GDHO] hole_drop kind=" . kind)
 }
 
 GDHO_OnNavigationCompleted(sender, args) {
@@ -229,20 +288,65 @@ GDHO_KeepBelowToolbar() {
 GDHO_AnchorHoleUnderToolbar() {
     global FloatingToolbarGUI, FloatingToolbarIsVisible
     global GDHO_ANCHOR_W, GDHO_ANCHOR_H, GDHO_ANCHOR_GAP
+    global GDHO_ANCHOR_MODE, GDHO_ANCHOR_OFFSET_X, GDHO_ANCHOR_OFFSET_Y, GDHO_SCREEN_X, GDHO_SCREEN_Y
+    global GDHO_CURSOR_X, GDHO_CURSOR_Y
     if !IsSet(FloatingToolbarGUI)
-        return false
+        return GDHO_AnchorHoleByScreen()
     if !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui)
-        return false
+        return GDHO_AnchorHoleByScreen()
     if (IsSet(FloatingToolbarIsVisible) && !FloatingToolbarIsVisible)
-        return false
+        return GDHO_AnchorHoleByScreen()
     try FloatingToolbarGUI.GetPos(&tx, &ty, &tw, &th)
     catch
-        return false
+        return GDHO_AnchorHoleByScreen()
 
     GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
     holeW := Integer(GDHO_ANCHOR_W), holeH := Integer(GDHO_ANCHOR_H), gap := Integer(GDHO_ANCHOR_GAP)
-    x := Integer(tx + (tw / 2) - (holeW / 2) - vl)
-    y := Integer(ty + th + gap - vt)
+    mode := GDHO_ANCHOR_MODE
+    if (mode = "screen")
+        return GDHO_AnchorHoleByScreen()
+
+    if (mode = "toolbar_left")
+        x := Integer(tx + 8 - vl)
+    else if (mode = "toolbar_right")
+        x := Integer(tx + tw - holeW - 8 - vl)
+    else
+        x := Integer(tx + (tw / 2) - (holeW / 2) - vl)
+
+    if (mode = "toolbar_auto_vertical") {
+        cursorY := Integer(GDHO_CURSOR_Y)
+        midY := Integer(ty + (th / 2))
+        if (cursorY > 0 && cursorY < midY)
+            y := Integer(ty - holeH - gap - vt)
+        else
+            y := Integer(ty + th + gap - vt)
+    } else if (mode = "toolbar_above") {
+        y := Integer(ty - holeH - gap - vt)
+    } else {
+        y := Integer(ty + th + gap - vt)
+    }
+    x += Integer(GDHO_ANCHOR_OFFSET_X)
+    y += Integer(GDHO_ANCHOR_OFFSET_Y)
+    if (x < 12)
+        x := 12
+    if (y < 12)
+        y := 12
+    maxX := vw - holeW - 12
+    maxY := vh - holeH - 12
+    if (x > maxX)
+        x := maxX
+    if (y > maxY)
+        y := maxY
+    return GDHO_RunJS("window.HoleOverlay?.moveTo({ x: " x ", y: " y " })")
+}
+
+GDHO_AnchorHoleByScreen() {
+    global GDHO_ANCHOR_W, GDHO_ANCHOR_H, GDHO_SCREEN_X, GDHO_SCREEN_Y
+    global GDHO_ANCHOR_OFFSET_X, GDHO_ANCHOR_OFFSET_Y
+    GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+    holeW := Integer(GDHO_ANCHOR_W), holeH := Integer(GDHO_ANCHOR_H)
+    x := Integer(GDHO_SCREEN_X + GDHO_ANCHOR_OFFSET_X)
+    y := Integer(GDHO_SCREEN_Y + GDHO_ANCHOR_OFFSET_Y)
     if (x < 12)
         x := 12
     if (y < 12)
@@ -267,21 +371,35 @@ GDHO_HideOverlay() {
 }
 
 GDHO_Show(payload := "file") {
+    global GDHO_CURSOR_X, GDHO_CURSOR_Y
     p := (payload = "text") ? "text" : "file"
+    try {
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&mx, &my)
+        GDHO_CURSOR_X := mx
+        GDHO_CURSOR_Y := my
+    }
     GDHO_ShowOverlay()
     GDHO_AnchorHoleUnderToolbar()
     GDHO_RunJS("window.HoleOverlay?.show('" p "')")
 }
 
 GDHO_Update(payload := "file", x := "", y := "") {
-    global GDHO_LAST_UPDATE_TICK
+    global GDHO_LAST_UPDATE_TICK, GDHO_UPDATE_MIN_INTERVAL_MS, GDHO_CURSOR_X, GDHO_CURSOR_Y
+    nowTick := A_TickCount
+    if (GDHO_LAST_UPDATE_TICK && (nowTick - GDHO_LAST_UPDATE_TICK < GDHO_UPDATE_MIN_INTERVAL_MS))
+        return
     p := (payload = "text") ? "text" : "file"
+    if (x != "" && y != "") {
+        GDHO_CURSOR_X := Integer(x)
+        GDHO_CURSOR_Y := Integer(y)
+    }
     GDHO_AnchorHoleUnderToolbar()
     if (x = "" || y = "")
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "' })")
     else
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "', x: " Integer(x) ", y: " Integer(y) " })")
-    GDHO_LAST_UPDATE_TICK := A_TickCount
+    GDHO_LAST_UPDATE_TICK := nowTick
 }
 
 GDHO_Drop(payload := "file") {
@@ -347,52 +465,101 @@ GDHO_PollDrag(*) {
     global GDHO_ACTIVE, GDHO_START_X, GDHO_START_Y, GDHO_LAST_X, GDHO_LAST_Y
     global GDHO_START_CURSOR, GDHO_DRAG_SOURCE_CLASS, GDHO_PAYLOAD
     global GDHO_MIN_MOVE_PX, GDHO_LAST_UPDATE_TICK, GDHO_MAX_IDLE_HIDE_MS
-
-    lDown := GetKeyState("LButton", "P")
-    CoordMode("Mouse", "Screen")
-    MouseGetPos(&mx, &my, &hwnd)
-
-    if !lDown {
-        if GDHO_ACTIVE {
-            GDHO_Drop(GDHO_PAYLOAD)
-            GDHO_ACTIVE := false
-            SetTimer((*) => GDHO_HideOverlay(), -700)
-        } else if (A_TickCount - GDHO_LAST_UPDATE_TICK > GDHO_MAX_IDLE_HIDE_MS) {
-            GDHO_HideFrontend()
-            GDHO_HideOverlay()
-        }
-        GDHO_ResetPointerSeed()
+    global GDHO_POLL_BUSY
+    if GDHO_POLL_BUSY
         return
-    }
+    GDHO_POLL_BUSY := true
 
-    if (GDHO_START_X = 0 && GDHO_START_Y = 0) {
-        GDHO_START_X := mx
-        GDHO_START_Y := my
+    try {
+        lDown := GetKeyState("LButton", "P")
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&mx, &my, &hwnd)
+        isOwn := GDHO_IsOwnWindowHwnd(hwnd)
+
+        if !lDown {
+            ; Defensive: if toolbar drag state got stuck, force-close it on mouse-up.
+            try FloatingToolbar_EndDrag()
+            if GDHO_ACTIVE {
+                GDHO_Drop(GDHO_PAYLOAD)
+                GDHO_ACTIVE := false
+                SetTimer((*) => GDHO_HideOverlay(), -700)
+            } else if (A_TickCount - GDHO_LAST_UPDATE_TICK > GDHO_MAX_IDLE_HIDE_MS) {
+                GDHO_HideFrontend()
+                GDHO_HideOverlay()
+            }
+            GDHO_ResetPointerSeed()
+            return
+        }
+
+        if (GDHO_START_X = 0 && GDHO_START_Y = 0) {
+            ; Do not seed drag from our own UI (toolbar/bubble/hole), avoid feedback loops.
+            if isOwn
+                return
+            GDHO_START_X := mx
+            GDHO_START_Y := my
+            GDHO_LAST_X := mx
+            GDHO_LAST_Y := my
+            GDHO_START_CURSOR := GDHO_GetCursorHandle()
+            GDHO_DRAG_SOURCE_CLASS := GDHO_GetClassByHwnd(hwnd)
+            GDHO_PAYLOAD := GDHO_GuessPayloadType(GDHO_DRAG_SOURCE_CLASS)
+            return
+        }
+
+        dx := mx - GDHO_START_X
+        dy := my - GDHO_START_Y
+        moved := (dx * dx + dy * dy) >= (GDHO_MIN_MOVE_PX * GDHO_MIN_MOVE_PX)
+        if !moved
+            return
+
+        likelyDrag := GDHO_IsLikelyDrag(GDHO_DRAG_SOURCE_CLASS, GDHO_START_CURSOR)
+        if !likelyDrag
+            return
+
+        ; If drag already seeded from external window, keep updating even when cursor passes over toolbar.
+        if !GDHO_ACTIVE {
+            GDHO_Show(GDHO_PAYLOAD)
+            GDHO_ACTIVE := true
+        }
+        GDHO_Update(GDHO_PAYLOAD, mx, my)
         GDHO_LAST_X := mx
         GDHO_LAST_Y := my
-        GDHO_START_CURSOR := GDHO_GetCursorHandle()
-        GDHO_DRAG_SOURCE_CLASS := GDHO_GetClassByHwnd(hwnd)
-        GDHO_PAYLOAD := GDHO_GuessPayloadType(GDHO_DRAG_SOURCE_CLASS)
-        return
+    } finally {
+        GDHO_POLL_BUSY := false
     }
+}
 
-    dx := mx - GDHO_START_X
-    dy := my - GDHO_START_Y
-    moved := (dx * dx + dy * dy) >= (GDHO_MIN_MOVE_PX * GDHO_MIN_MOVE_PX)
-    if !moved
-        return
-
-    likelyDrag := GDHO_IsLikelyDrag(GDHO_DRAG_SOURCE_CLASS, GDHO_START_CURSOR)
-    if !likelyDrag
-        return
-
-    if !GDHO_ACTIVE {
-        GDHO_Show(GDHO_PAYLOAD)
-        GDHO_ACTIVE := true
+GDHO_IsOwnWindowHwnd(hwnd) {
+    global GDHO_GUI, FloatingToolbarGUI, FloatingBubbleGUI
+    if !hwnd
+        return false
+    rootHwnd := GDHO_GetRootHwnd(hwnd)
+    try {
+        if (GDHO_GUI && (hwnd = GDHO_GUI.Hwnd || rootHwnd = GDHO_GUI.Hwnd))
+            return true
+    } catch {
     }
-    GDHO_Update(GDHO_PAYLOAD, mx, my)
-    GDHO_LAST_X := mx
-    GDHO_LAST_Y := my
+    try {
+        if (FloatingToolbarGUI && IsObject(FloatingToolbarGUI)
+            && (hwnd = FloatingToolbarGUI.Hwnd || rootHwnd = FloatingToolbarGUI.Hwnd))
+            return true
+    } catch {
+    }
+    try {
+        if (FloatingBubbleGUI && IsObject(FloatingBubbleGUI)
+            && (hwnd = FloatingBubbleGUI.Hwnd || rootHwnd = FloatingBubbleGUI.Hwnd))
+            return true
+    } catch {
+    }
+    return false
+}
+
+GDHO_GetRootHwnd(hwnd) {
+    if !hwnd
+        return 0
+    ; GA_ROOT = 2
+    try return DllCall("GetAncestor", "Ptr", hwnd, "UInt", 2, "Ptr")
+    catch
+        return hwnd
 }
 
 GDHO_ResetPointerSeed(*) {

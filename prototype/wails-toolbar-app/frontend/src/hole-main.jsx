@@ -20,6 +20,42 @@ function clamp01(v) {
   return Math.max(0, Math.min(1, v));
 }
 
+async function inspectDataTransfer(dataTransfer) {
+  const types = Array.from(dataTransfer?.types || []);
+  const text = (
+    dataTransfer?.getData("text/plain")
+    || dataTransfer?.getData("Text")
+    || dataTransfer?.getData("text/uri-list")
+    || ""
+  ).trim();
+
+  const files = Array.from(dataTransfer?.files || []).map((f) => ({
+    name: f.name || "",
+    type: f.type || "",
+    size: Number(f.size || 0),
+    path: f.path || "",
+  }));
+
+  let hasDirectory = false;
+  try {
+    const items = Array.from(dataTransfer?.items || []);
+    hasDirectory = items.some((it) => {
+      try {
+        const entry = it.webkitGetAsEntry?.();
+        return !!entry?.isDirectory;
+      } catch (_) {
+        return false;
+      }
+    });
+  } catch (_) {}
+
+  let kind = "none";
+  if (text) kind = "text";
+  if (files.length > 0) kind = hasDirectory ? "folder" : "file";
+
+  return { kind, text, files, hasDirectory, sourceTypes: types };
+}
+
 function HolePage() {
   const [holeVisible, setHoleVisible] = useState(true);
   const [dragging, setDragging] = useState(false);
@@ -169,33 +205,21 @@ function HolePage() {
 
   const onHoleDrop = (event) => {
     event.preventDefault();
-    const text = (
-      event.dataTransfer?.getData("text/plain")
-      || event.dataTransfer?.getData("Text")
-      || event.dataTransfer?.getData("text/uri-list")
-      || ""
-    ).trim();
-    const file = event.dataTransfer?.files?.[0];
 
     setDropPulse(true);
     setTimeout(() => setDropPulse(false), 620);
 
-    if (text) {
-      setPayloadType("text");
-      setHint(applyPhaseHint("text", "drop"));
-      postHostMessage({ type: "hole_text_drop", text });
+    inspectDataTransfer(event.dataTransfer).then((payload) => {
+      if (payload.kind === "text" && payload.text) {
+        setPayloadType("text");
+        setHint(applyPhaseHint("text", "drop"));
+      } else if (payload.kind === "file" || payload.kind === "folder") {
+        setPayloadType("file");
+        setHint(applyPhaseHint("file", "drop"));
+      }
+      postHostMessage({ type: "hole_drop", payload });
       resetState(false);
-      return;
-    }
-
-    if (file?.name) {
-      setPayloadType("file");
-      setHint(applyPhaseHint("file", "drop"));
-      resetState(false);
-      return;
-    }
-
-    resetState(false);
+    });
   };
 
   useEffect(() => {

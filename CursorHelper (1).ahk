@@ -85,14 +85,10 @@ global MainScriptDir := A_ScriptDir
 
 #Include modules\EverythingClient.ahk
 
-; 洞与工具栏同时启用：洞页面使用本地开发地址
-holeFallbackUrl := BuildAppLocalUrl("HoleOverlayStandalone.html")
-holePageUrl := GDHO_ResolveHolePageUrl(holeFallbackUrl)
-try GDHO_SetPageUrl(holePageUrl)
+; 洞与工具栏同时启用：默认使用本地静态页，避免 dev server/端口探测阻塞导致启动假死
+holeFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\HoleOverlayStandalone.html")
+try GDHO_SetPageUrl(holeFallbackUrl)
 try GDHO_SetFallbackUrl(holeFallbackUrl)
-; 洞改为“由工具栏拖拽事件触发”，避免常驻/全局轮询与工具栏拖拽状态机冲突
-; 改为仅全局拖拽文本/文件触发洞，避免与工具栏拖动链路形成死循环
-try GDHO_Start()
 
 ; 已移除强制管理员自提权，避免与 Everything 产生权限不一致导致 IPC 失败。
 
@@ -2473,6 +2469,13 @@ GDHO_TryStartHoleDevServer() {
     }
 }
 
+GDHO_BuildFileUrl(absPath) {
+    p := String(absPath)
+    p := StrReplace(p, "\", "/")
+    ; file:///C:/...
+    return "file:///" . p
+}
+
 ApplyUnifiedWebViewAssets(wv2) {
     global UnifiedAssetsHost, UnifiedAssetsRoot, UnifiedAssetsAccessKind
     try wv2.SetVirtualHostNameToFolderMapping(UnifiedAssetsHost, UnifiedAssetsRoot, UnifiedAssetsAccessKind)
@@ -2563,6 +2566,8 @@ _WV2_BeginWarmupAfterEnv(*) {
     try ApplyAppearanceActivationMode()
     catch as _eApp {
     }
+    ; 洞延后到共享环境就绪后启动，避免与工具栏初始化竞争导致无响应
+    try SetTimer((*) => GDHO_Start(), -260)
     global WebViewWarmupQueue, WebViewWarmupIndex
     WebViewWarmupIndex := 0
     WebViewWarmupQueue := [CP_Init, PQP_Init, SCWV_Init, VK_EnsureInit.Bind(true)]
@@ -4397,9 +4402,17 @@ $f:: {
 
 #HotIf  ; 结束 SearchCenter 作用域
 
+CountdownHotkeyActive() {
+    global IsCountdownActive
+    try return !!IsCountdownActive
+    catch {
+        return false
+    }
+}
+
 ; ===================== 倒计时期间全局热键 =====================
 ; 【作用域】倒计时激活时全局生效（优先级最高）
-#HotIf IsCountdownActive
+#HotIf CountdownHotkeyActive()
 
 ; F 键：加速执行
 f:: {
