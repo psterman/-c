@@ -1,15 +1,15 @@
-; ======================================================================================================================
-; Prompt Quick-Pad（原 AI 助手入口）：提示词快捷记录与粘贴
-; 数据：A_ScriptDir "\prompts.json" 仅用户条目 [{title, tags, content, category?}]
-; 列表展示 = 设置中快捷三项 + PromptTemplates + json 合并
-; 对外保留：ShowAIListPanel / HideAIListPanel / InitAIListPanel 及 CursorHelper 使用的全局变量名
+﻿; ======================================================================================================================
+; Prompt Quick-Pad锛堝師 AI 鍔╂墜鍏ュ彛锛夛細鎻愮ず璇嶅揩鎹疯褰曚笌绮樿创
+; 鏁版嵁锛欰_ScriptDir "\prompts.json" 浠呯敤鎴锋潯鐩?[{title, tags, content, category?}]
+; 鍒楄〃灞曠ず = 璁剧疆涓揩鎹蜂笁椤?+ PromptTemplates + json 鍚堝苟
+; 瀵瑰淇濈暀锛歋howAIListPanel / HideAIListPanel / InitAIListPanel 鍙?CursorHelper 浣跨敤鐨勫叏灞€鍙橀噺鍚?
 ; ======================================================================================================================
 
 #Requires AutoHotkey v2.0
 
 global AIListPanelGUI := 0
 global AIListPanelIsVisible := false
-global AIListPanelItems := []  ; 兼容保留（不再使用 AI 引擎项）
+global AIListPanelItems := []  ; 鍏煎淇濈暀锛堜笉鍐嶄娇鐢?AI 寮曟搸椤癸級
 global AIListPanelHoveredIndex := 0
 global AIListPanelDragging := false
 global AIListPanelDragStartX := 0
@@ -25,7 +25,7 @@ global AIListPanelEscHotkey := 0
 global AIListPanelUserMoving := false
 global AIListPanelIsResizing := false
 
-; 以下全局仅为兼容旧 ini 键与脚本中可能的引用，固定为「竖排」逻辑
+; 浠ヤ笅鍏ㄥ眬浠呬负鍏煎鏃?ini 閿笌鑴氭湰涓彲鑳界殑寮曠敤锛屽浐瀹氫负銆岀珫鎺掋€嶉€昏緫
 global AIListPanelIconOnlyMode := false
 global AIListPanelIconModeX := 0
 global AIListPanelIconModeY := 0
@@ -46,14 +46,14 @@ global PromptQuickPadListLV := 0
 global PromptQuickPadStatusText := 0
 global PromptQuickPadSearchDebounce := 0
 global PromptQuickPadCaptureHotkeyObj := 0
-global PromptQuickPadMergedSnapshot := []  ; 当前完整合并列表（与 FilteredIdx 下标对应）
+global PromptQuickPadMergedSnapshot := []  ; 褰撳墠瀹屾暣鍚堝苟鍒楄〃锛堜笌 FilteredIdx 涓嬫爣瀵瑰簲锛?
 global PromptQuickPadSelectedCategory := "全部"
-global PromptQuickPadCategoryStrip := []  ; 分类标签控件，便于销毁
+global PromptQuickPadCategoryStrip := []  ; 鍒嗙被鏍囩鎺т欢锛屼究浜庨攢姣?
 global PromptQuickPadCategoryCtrlByName := Map()
 global PromptQuickPadLastCategorySig := ""
 global PromptQuickPadCategoryStripHeight := 32
-global PromptQuickPadDragBar := 0  ; 保留变量；已改用标准标题栏，不再创建拖动条
-global PromptQuickPad_PasteTargetHwnd := 0  ; 打开面板前的前台窗口，用于粘贴回目标
+global PromptQuickPadDragBar := 0  ; 淇濈暀鍙橀噺锛涘凡鏀圭敤鏍囧噯鏍囬鏍忥紝涓嶅啀鍒涘缓鎷栧姩鏉?
+global PromptQuickPad_PasteTargetHwnd := 0  ; 鎵撳紑闈㈡澘鍓嶇殑鍓嶅彴绐楀彛锛岀敤浜庣矘璐村洖鐩爣
 global PromptQuickPadBtnImport := 0
 global PromptQuickPadBtnExport := 0
 global PromptQuickPadBtnJsonHelp := 0
@@ -153,7 +153,7 @@ PromptQuickPad_PushDataToWeb(msgType := "init") {
     global PromptQuickPad_CapsLockBDefaultTitle, PromptQuickPad_CapsLockBDefaultCategory, PromptQuickPad_CapsLockBDefaultTags
     if !PromptQuickPad_ShouldUseWebView() || !PQP_IsReady()
         return
-    ; 注：PromptQuickPadData 需由调用方提前 LoadFromDisk()（RefreshListView 或 ApplyWebCaptureDraft 里已调用）
+    ; 娉細PromptQuickPadData 闇€鐢辫皟鐢ㄦ柟鎻愬墠 LoadFromDisk()锛圧efreshListView 鎴?ApplyWebCaptureDraft 閲屽凡璋冪敤锛?
     merged := PromptQuickPad_BuildMergedList()
     PromptQuickPad_ValidateSelectedCategory(merged)
     needle := PromptQuickPad_WebSearchKeyword
@@ -178,13 +178,13 @@ PromptQuickPad_PushDataToWeb(msgType := "init") {
     }
     catDisp := PromptQuickPadSelectedCategory
     if StrLen(catDisp) > 18
-        catDisp := SubStr(catDisp, 1, 18) . "…"
+        catDisp := SubStr(catDisp, 1, 18) . "..."
     statusLine := "共 " . merged.Length . " 条 · prompts.json " . PromptQuickPadData.Length . " 条`n「" . catDisp . "」显示 " . items.Length . " 条 · 双击粘贴 · 右键菜单"
     categories := PromptQuickPad_UniqueCategoryTabs(merged)
     PromptQuickPad_ReloadCapsLockBSettings()
     draftMap := Map(
         "title", PromptQuickPad_CapsLockBDefaultTitle,
-        "category", PromptQuickPad_CapsLockBDefaultCategory = "" ? "未分类" : PromptQuickPad_CapsLockBDefaultCategory,
+        "category", (Trim(PromptQuickPad_CapsLockBDefaultCategory) = "" ? "未分类" : PromptQuickPad_CapsLockBDefaultCategory),
         "tags", PromptQuickPad_CapsLockBDefaultTags,
         "silent", PromptQuickPad_CapsLockBSilent ? true : false,
         "silentTpl", PromptQuickPad_CapsLockBSilentToTemplate ? true : false,
@@ -320,12 +320,12 @@ PromptQuickPad_TogglePinTopWeb() {
 
 PromptQuickPad_SaveDraftFromWeb(msg) {
     global PromptQuickPadData
-    title := msg.Has("title") ? Trim(String(msg["title"])) : ""
+    title := msg.Has("title") ? PromptQuickPad_CleanText(msg["title"]) : ""
     if title = ""
         title := "未命名"
-    tags := msg.Has("tags") ? Trim(String(msg["tags"])) : ""
-    body := msg.Has("body") ? Trim(String(msg["body"]), " `t`r`n") : ""
-    cat := msg.Has("category") ? Trim(String(msg["category"])) : ""
+    tags := msg.Has("tags") ? PromptQuickPad_CleanText(msg["tags"]) : ""
+    body := msg.Has("body") ? Trim(PromptQuickPad_CleanText(msg["body"]), " `t`r`n") : ""
+    cat := msg.Has("category") ? PromptQuickPad_CleanText(msg["category"]) : ""
     if body = "" {
         TrayTip("正文不能为空", "Prompt Quick-Pad", "Icon! 1")
         return
@@ -342,7 +342,6 @@ PromptQuickPad_SaveDraftFromWeb(msg) {
     }
     TrayTip("已保存到 prompts.json", "Prompt Quick-Pad", "Iconi 1")
 }
-
 PromptQuickPad_ClearCaptureDraftWeb() {
     PromptQuickPad_SyncCaptureDraftFromIni()
     PQP_SendCaptureOpen("", true)
@@ -412,10 +411,10 @@ PromptQuickPad_DeleteByMergedIndex(mi) {
     entry := merged[mi]
     src := entry.Has("source") ? entry["source"] : ""
     if src != "json" {
-        MsgBox("此项来自设置中的「快捷操作」或「提示词模板」，请在主界面 设置 → 提示词 中修改或删除。", "Prompt Quick-Pad", "Iconi")
+        MsgBox("此项来自“快捷操作”或“模板库”，请在设置里修改。", "Prompt Quick-Pad", "Iconi")
         return
     }
-    if MsgBox("确定删除该条用户提示词？（仅移除 prompts.json 中的条目）", "Prompt Quick-Pad", "YesNo Icon?") != "Yes"
+    if MsgBox("确定删除该条用户提示词？（仅移除 prompts.json 条目）", "Prompt Quick-Pad", "YesNo Icon?") != "Yes"
         return
     uix := entry.Has("userIndex") ? Integer(entry["userIndex"]) : 0
     if uix >= 1 && uix <= PromptQuickPadData.Length {
@@ -458,14 +457,35 @@ PromptQuickPad_TryGetText(Key, Fallback) {
         return Fallback
 }
 
+PromptQuickPad_LooksCorruptedText(s) {
+    t := String(s)
+    if (t = "")
+        return false
+    ; U+FFFD replacement char is a strong signal of broken decoding.
+    if InStr(t, Chr(0xFFFD))
+        return true
+    ; Private Use Area chars often indicate broken decoding artifacts.
+    if RegExMatch(t, "[\x{E000}-\x{F8FF}]")
+        return true
+    return false
+}
+
+PromptQuickPad_CleanText(v, fallback := "") {
+    s := Trim(String(v))
+    s := RegExReplace(s, "\R+", "`n")
+    if (PromptQuickPad_LooksCorruptedText(s) && fallback != "")
+        return fallback
+    return s
+}
+
 PromptQuickPad_NormalizeEntry(m) {
     if !(m is Map)
         return Map("title", "", "tags", "", "content", "", "category", "", "hotkey", "")
-    t := m.Has("title") ? String(m["title"]) : m.Has("Title") ? String(m["Title"]) : ""
-    g := m.Has("tags") ? String(m["tags"]) : m.Has("Tags") ? String(m["Tags"]) : ""
-    c := m.Has("content") ? String(m["content"]) : m.Has("Content") ? String(m["Content"]) : ""
-    cat := m.Has("category") ? String(m["category"]) : m.Has("Category") ? String(m["Category"]) : ""
-    hk := m.Has("hotkey") ? String(m["hotkey"]) : m.Has("Hotkey") ? String(m["Hotkey"]) : ""
+    t := m.Has("title") ? PromptQuickPad_CleanText(m["title"]) : m.Has("Title") ? PromptQuickPad_CleanText(m["Title"]) : ""
+    g := m.Has("tags") ? PromptQuickPad_CleanText(m["tags"]) : m.Has("Tags") ? PromptQuickPad_CleanText(m["Tags"]) : ""
+    c := m.Has("content") ? PromptQuickPad_CleanText(m["content"]) : m.Has("Content") ? PromptQuickPad_CleanText(m["Content"]) : ""
+    cat := m.Has("category") ? PromptQuickPad_CleanText(m["category"]) : m.Has("Category") ? PromptQuickPad_CleanText(m["Category"]) : ""
+    hk := m.Has("hotkey") ? PromptQuickPad_CleanText(m["hotkey"]) : m.Has("Hotkey") ? PromptQuickPad_CleanText(m["Hotkey"]) : ""
     return Map("title", t, "tags", g, "content", c, "category", cat, "hotkey", hk)
 }
 
@@ -620,16 +640,16 @@ PromptQuickPad_TemplateExtraTags(T) {
     return parts
 }
 
-; 合并：设置页三项快捷词 + PromptTemplates.ini 加载的全局模板 + prompts.json 用户项
+; 鍚堝苟锛氳缃〉涓夐」蹇嵎璇?+ PromptTemplates.ini 鍔犺浇鐨勫叏灞€妯℃澘 + prompts.json 鐢ㄦ埛椤?
 PromptQuickPad_BuildMergedList() {
     global PromptQuickPadData, PromptTemplates
     merged := []
     global Prompt_Explain, Prompt_Refactor, Prompt_Optimize
 
-    capCat := "快捷操作"
+    capCat := "蹇嵎鎿嶄綔"
     if Trim(Prompt_Explain) != "" {
         merged.Push(Map(
-            "title", PromptQuickPad_TryGetText("quick_action_type_explain", "解释代码"),
+            "title", PromptQuickPad_TryGetText("quick_action_type_explain", "瑙ｉ噴浠ｇ爜"),
             "category", capCat,
             "tags", "",
             "hotkey", "CapsLock+E",
@@ -640,7 +660,7 @@ PromptQuickPad_BuildMergedList() {
     }
     if Trim(Prompt_Refactor) != "" {
         merged.Push(Map(
-            "title", PromptQuickPad_TryGetText("quick_action_type_refactor", "重构代码"),
+            "title", PromptQuickPad_TryGetText("quick_action_type_refactor", "閲嶆瀯浠ｇ爜"),
             "category", capCat,
             "tags", "",
             "hotkey", "CapsLock+R",
@@ -651,7 +671,7 @@ PromptQuickPad_BuildMergedList() {
     }
     if Trim(Prompt_Optimize) != "" {
         merged.Push(Map(
-            "title", PromptQuickPad_TryGetText("quick_action_type_optimize", "优化代码"),
+            "title", PromptQuickPad_TryGetText("quick_action_type_optimize", "浼樺寲浠ｇ爜"),
             "category", capCat,
             "tags", "",
             "hotkey", "CapsLock+O",
@@ -700,6 +720,31 @@ PromptQuickPad_BuildMergedList() {
             e["hotkey"] := ""
         merged.Push(e)
     }
+    ; Normalize and guard against mojibake coming from ini/config sources.
+    for i, it in merged {
+        if !(it is Map)
+            continue
+        if it.Has("title")
+            it["title"] := PromptQuickPad_CleanText(it["title"], "未命名")
+        if it.Has("content")
+            it["content"] := PromptQuickPad_CleanText(it["content"])
+        if it.Has("category")
+            it["category"] := PromptQuickPad_CleanText(it["category"], "未分类")
+        if it.Has("tags")
+            it["tags"] := PromptQuickPad_CleanText(it["tags"])
+        if it.Has("hotkey")
+            it["hotkey"] := PromptQuickPad_CleanText(it["hotkey"])
+        if (it.Has("source") && it["source"] = "builtin" && PromptQuickPad_LooksCorruptedText(it.Has("content") ? it["content"] : "")) {
+            hk := it.Has("hotkey") ? it["hotkey"] : ""
+            if (hk = "CapsLock+E")
+                it["content"] := "解释这段代码的核心逻辑、输入输出、关键函数作用，用新手能懂的语言，标注易错点。"
+            else if (hk = "CapsLock+R")
+                it["content"] := "重构这段代码，保持功能不变，提升可读性与可维护性，并说明关键改动。"
+            else if (hk = "CapsLock+O")
+                it["content"] := "分析这段代码的性能瓶颈，给出优化方案，并说明时间/空间复杂度变化。"
+        }
+        merged[i] := it
+    }
     return PromptQuickPad_DeduplicateList(merged)
 }
 
@@ -707,7 +752,7 @@ PromptQuickPad_MakePreview(Text, MaxLen := 96) {
     s := RegExReplace(Text, "[\r\n\t]+", " ")
     s := Trim(s)
     if StrLen(s) > MaxLen
-        s := SubStr(s, 1, MaxLen) . "…"
+        s := SubStr(s, 1, MaxLen) . "..."
     return s
 }
 
@@ -948,7 +993,7 @@ PromptQuickPad_WriteDefaultsFromCaptureDraft() {
         return
     title := Trim(PromptQuickPad_edDraftTitle.Value)
     if title = ""
-        title := "摘录"
+        title := "鎽樺綍"
     tags := PromptQuickPad_edDraftTags != 0 ? Trim(PromptQuickPad_edDraftTags.Value) : ""
     cat := PromptQuickPad_DraftCategoryTextToSave()
     PromptQuickPad_CapsLockBDefaultTitle := title
@@ -1045,8 +1090,8 @@ PromptQuickPad_ClearCaptureDraft(*) {
     PromptQuickPad_FillCaptureDraftContent("")
 }
 
-; WebView：同步摘录区状态后推送完整列表/分类（RefreshListView 在 Web 模式下不 PostMessage）
-; 若 WebView 尚未就绪（首次打开时异步初始化），通过延迟重试保证数据一定送达。
+; WebView锛氬悓姝ユ憳褰曞尯鐘舵€佸悗鎺ㄩ€佸畬鏁村垪琛?鍒嗙被锛圧efreshListView 鍦?Web 妯″紡涓嬩笉 PostMessage锛?
+; 鑻?WebView 灏氭湭灏辩华锛堥娆℃墦寮€鏃跺紓姝ュ垵濮嬪寲锛夛紝閫氳繃寤惰繜閲嶈瘯淇濊瘉鏁版嵁涓€瀹氶€佽揪銆?
 global _PQP_PendingCapText := ""
 global _PQP_PendingCapExpand := true
 global _PQP_PendingCapRetry := 0
@@ -1060,7 +1105,7 @@ PromptQuickPad_ApplyWebCaptureDraft(initialText := "", forceExpand := true) {
         PromptQuickPad_SetCaptureExpanded(false, false)
     PromptQuickPad_SyncCaptureDraftFromIni()
     
-    ; 确保数据已加载（prompts.json + PromptTemplates），BuildMergedList 才能完整
+    ; 纭繚鏁版嵁宸插姞杞斤紙prompts.json + PromptTemplates锛夛紝BuildMergedList 鎵嶈兘瀹屾暣
     PromptQuickPad_LoadFromDisk()
 
     _PQP_PendingCapText := initialText
@@ -1122,7 +1167,7 @@ PromptQuickPad_OpenCaptureDraft(initialText := "", forceExpand := true) {
     }
 }
 
-; clientW/clientH 可传入 OnEvent("Size") 的客户端宽高；为 0 时用 GetClientRect
+; clientW/clientH 鍙紶鍏?OnEvent("Size") 鐨勫鎴风瀹介珮锛涗负 0 鏃剁敤 GetClientRect
 PromptQuickPad_RelayoutMainControls(clientW := 0, clientH := 0) {
     if PromptQuickPad_ShouldUseWebView()
         return
@@ -1384,15 +1429,15 @@ PromptQuickPad_FillListViewFromMerged(merged) {
     if PromptQuickPadStatusText != 0 {
         catDisp := PromptQuickPadSelectedCategory
         if StrLen(catDisp) > 18
-            catDisp := SubStr(catDisp, 1, 18) . "…"
-        PromptQuickPadStatusText.Value := "共 " . merged.Length . " 条 · prompts.json " . PromptQuickPadData.Length . " 条"
-            . "`n「" . catDisp . "」显示 " . row . " 条 · 双击粘贴 · 右键菜单 · 上方可导入/导出/查看 JSON 说明"
+            catDisp := SubStr(catDisp, 1, 18) . "..."
+        PromptQuickPadStatusText.Value := "共 " . merged.Length . " 条 · prompts.json " . PromptQuickPadData.Length
+            . " 条`n「" . catDisp . "」显示 " . row . " 条 · 双击粘贴 · 右键菜单 · 上方可导入/导出/查看 JSON 说明"
     }
 }
 
 PromptQuickPad_RefreshListView(*) {
     global PromptQuickPadListLV, PromptQuickPadData
-    ; WebView 模式下也需要先加载数据，BuildMergedList 才能包含 prompts.json 条目
+    ; WebView 妯″紡涓嬩篃闇€瑕佸厛鍔犺浇鏁版嵁锛孊uildMergedList 鎵嶈兘鍖呭惈 prompts.json 鏉＄洰
     if PromptQuickPad_ShouldUseWebView()
         PromptQuickPad_LoadFromDisk()
     merged := PromptQuickPad_BuildMergedList()
@@ -1400,7 +1445,7 @@ PromptQuickPad_RefreshListView(*) {
     PromptQuickPad_RefreshCategoryStrip(merged)
     PromptQuickPad_FillListViewFromMerged(merged)
     if PromptQuickPad_ShouldUseWebView() {
-        ; WebView 模式：构建完 merged 后推送到前端
+        ; WebView 妯″紡锛氭瀯寤哄畬 merged 鍚庢帹閫佸埌鍓嶇
         PromptQuickPad_PushDataToWeb("searchResult")
         return
     }
@@ -1449,7 +1494,7 @@ PromptQuickPad_PasteRow(row) {
     }
     try A_Clipboard := content
     catch {
-        TrayTip("复制失败", "Prompt Quick-Pad", "Iconx 1")
+        TrayTip("澶嶅埗澶辫触", "Prompt Quick-Pad", "Iconx 1")
         return
     }
     if !ClipWait(2.0) {
@@ -1459,7 +1504,7 @@ PromptQuickPad_PasteRow(row) {
     try HideAIListPanel()
     catch {
     }
-    TrayTip("已复制提示词，请粘贴", "Prompt Quick-Pad", "Iconi 1")
+    TrayTip("宸插鍒舵彁绀鸿瘝锛岃绮樿创", "Prompt Quick-Pad", "Iconi 1")
 }
 
 PromptQuickPad_OnEnter(*) {
@@ -1472,9 +1517,9 @@ PromptQuickPad_OnEsc(*) {
     HideAIListPanel()
 }
 
-; 双击仅由 WM_NOTIFY NM_DBLCLK 处理，避免与 OnEvent("DoubleClick") 重复触发导致粘贴两次
+; 鍙屽嚮浠呯敱 WM_NOTIFY NM_DBLCLK 澶勭悊锛岄伩鍏嶄笌 OnEvent("DoubleClick") 閲嶅瑙﹀彂瀵艰嚧绮樿创涓ゆ
 
-; ListView 双击在部分环境下 OnEvent 不可靠，用 WM_NOTIFY 兜底（不注册 DoubleClick）
+; ListView 鍙屽嚮鍦ㄩ儴鍒嗙幆澧冧笅 OnEvent 涓嶅彲闈狅紝鐢?WM_NOTIFY 鍏滃簳锛堜笉娉ㄥ唽 DoubleClick锛?
 PromptQuickPad_ListViewHitItemOneBased(LV) {
     if LV = 0
         return 0
@@ -1510,7 +1555,7 @@ PromptQuickPad_OnWmNotify(wParam, lParam, msg, hwnd) {
     code := NumGet(lParam, 2 * A_PtrSize, "int")
     nmSize := A_PtrSize = 8 ? 24 : 12
     iItem := NumGet(lParam, nmSize, "int")
-    if code = -3 {  ; NM_DBLCLK（仅此路径处理双击粘贴，避免重复）
+    if code = -3 {  ; NM_DBLCLK锛堜粎姝よ矾寰勫鐞嗗弻鍑荤矘璐达紝閬垮厤閲嶅锛?
         r := 0
         if iItem >= 0
             r := iItem + 1
@@ -1519,7 +1564,7 @@ PromptQuickPad_OnWmNotify(wParam, lParam, msg, hwnd) {
         if r > 0
             PromptQuickPad_PasteRow(r)
     }
-    ; 右键菜单仅由 ListView ContextMenu 事件弹出（含 Client→Screen），避免与 NM_RCLICK 双开菜单
+    ; 鍙抽敭鑿滃崟浠呯敱 ListView ContextMenu 浜嬩欢寮瑰嚭锛堝惈 Client鈫扴creen锛夛紝閬垮厤涓?NM_RCLICK 鍙屽紑鑿滃崟
 }
 
 PromptQuickPad_LoadPinFromIni() {
@@ -1735,7 +1780,7 @@ PromptQuickPad_CloseCtxMenuIfOutside(*) {
     }
 }
 
-; 与悬浮工具栏 ShowDarkStylePopupMenuAt 同款：黑底 + 橙色字/图标 + 悬停橙条（独立 GUI，不占 TrayMenuGUI）
+; 涓庢偓娴伐鍏锋爮 ShowDarkStylePopupMenuAt 鍚屾锛氶粦搴?+ 姗欒壊瀛?鍥炬爣 + 鎮仠姗欐潯锛堢嫭绔?GUI锛屼笉鍗?TrayMenuGUI锛?
 PromptQuickPad_ShowDarkCtxMenuAt(MenuItems, posX, posY) {
     global PromptQuickPadCtxMenuGUI, PromptQuickPadCtxMenuSel
     PromptQuickPad_DestroyCtxMenu()
@@ -1865,10 +1910,10 @@ PromptQuickPad_DeleteItem(row) {
     entry := PromptQuickPadMergedSnapshot[mi]
     src := entry.Has("source") ? entry["source"] : ""
     if src != "json" {
-        MsgBox("此项来自设置中的「快捷操作」或「提示词模板」，请在主界面 设置 → 提示词 中修改或删除。", "Prompt Quick-Pad", "Iconi")
+        MsgBox("此项来自“快捷操作”或“模板库”，请在设置里修改或删除。", "Prompt Quick-Pad", "Iconi")
         return
     }
-    if MsgBox("确定删除该条用户提示词？（仅移除 prompts.json 中的条目）", "Prompt Quick-Pad", "YesNo Icon?") != "Yes"
+    if MsgBox("确定删除该条用户提示词？（仅移除 prompts.json 条目）", "Prompt Quick-Pad", "YesNo Icon?") != "Yes"
         return
     uix := entry.Has("userIndex") ? Integer(entry["userIndex"]) : 0
     if uix >= 1 && uix <= PromptQuickPadData.Length {
@@ -1884,10 +1929,10 @@ PromptQuickPad_OpenReadOnlyViewer(Title, Content) {
     ownerHwnd := PromptQuickPad_GetHostHwnd()
     if ownerHwnd != 0
         opt .= " +Owner" . ownerHwnd
-    g := Gui(opt, "查看 — " . (Title != "" ? Title : "内置/模板"))
+    g := Gui(opt, "查看 - " . (Title != "" ? Title : "内置/模板"))
     g.BackColor := AIListPanelColors.PopupBg
     top := g.Add("Text", "x12 y10 w540 h40 c" . AIListPanelColors.PopupTextBright . " Wrap",
-        "此为设置中的快捷词或模板，正文请在「设置 → 提示词」中修改。")
+        "此项来自设置中的快捷操作或模板库。若需改正文，请在「设置 -> 提示词」中编辑。")
     top.SetFont("s10", "Segoe UI")
     ed := g.Add("Edit", "x12 y54 w540 h300 Multi ReadOnly VScroll -Theme Background" . AIListPanelColors.PopupEditBg . " c" . AIListPanelColors.PopupEditText, Content)
     ed.SetFont("s10", "Consolas")
@@ -2102,13 +2147,13 @@ PromptQuickPad_EditEntry(shell) {
         if uix < 1 || uix > PromptQuickPadData.Length
             return
         entry := PromptQuickPadData[uix]
-        eg := Gui(opt, "编辑内容")
+        eg := Gui(opt, "缂栬緫鍐呭")
         eg.BackColor := AIListPanelColors.Background
         eg.SetFont("s10 c" . AIListPanelColors.Text, "Segoe UI")
         ed := eg.Add("Edit", "x10 y10 w420 h260 Multi WantReturn VScroll", entry["content"])
         ed.SetFont("s9", "Consolas")
-        eg.Add("Button", "x10 y280 w100 h28 Default", "保存").OnEvent("Click", (*) => PromptQuickPad_SaveEditContent(eg, ed, entry))
-        eg.Add("Button", "x120 y280 w100 h28", "取消").OnEvent("Click", (*) => eg.Destroy())
+        eg.Add("Button", "x10 y280 w100 h28 Default", "淇濆瓨").OnEvent("Click", (*) => PromptQuickPad_SaveEditContent(eg, ed, entry))
+        eg.Add("Button", "x120 y280 w100 h28", "鍙栨秷").OnEvent("Click", (*) => eg.Destroy())
         eg.OnEvent("Escape", (*) => eg.Destroy())
         eg.Show()
         return
@@ -2131,11 +2176,11 @@ PromptQuickPad_EditEntry(shell) {
         eg := Gui(opt, "编辑全局提示词")
         eg.BackColor := AIListPanelColors.Background
         eg.SetFont("s10 c" . AIListPanelColors.Text, "Segoe UI")
-        eg.Add("Text", "x10 y10 w420 h22", title . "（修改后同步到 设置）")
+        eg.Add("Text", "x10 y10 w420 h22", title . "（修改后同步到设置）")
         ed := eg.Add("Edit", "x10 y38 w420 h232 Multi WantReturn VScroll", content)
         ed.SetFont("s9", "Consolas")
-        eg.Add("Button", "x10 y282 w100 h28 Default", "保存").OnEvent("Click", (*) => PromptQuickPad_SaveBuiltinEdit(eg, ed, builtinKey))
-        eg.Add("Button", "x120 y282 w100 h28", "取消").OnEvent("Click", (*) => eg.Destroy())
+        eg.Add("Button", "x10 y282 w100 h28 Default", "淇濆瓨").OnEvent("Click", (*) => PromptQuickPad_SaveBuiltinEdit(eg, ed, builtinKey))
+        eg.Add("Button", "x120 y282 w100 h28", "鍙栨秷").OnEvent("Click", (*) => eg.Destroy())
         eg.OnEvent("Escape", (*) => eg.Destroy())
         eg.Show()
         return
@@ -2145,28 +2190,28 @@ PromptQuickPad_EditEntry(shell) {
         title := shell.Has("title") ? shell["title"] : ""
         category := shell.Has("category") ? shell["category"] : ""
         content := shell.Has("content") ? shell["content"] : ""
-        eg := Gui(opt, "编辑模板")
+        eg := Gui(opt, "缂栬緫妯℃澘")
         eg.BackColor := AIListPanelColors.Background
         eg.SetFont("s10 c" . AIListPanelColors.Text, "Segoe UI")
-        eg.Add("Text", "x10 y10 w60 h22", "标题")
+        eg.Add("Text", "x10 y10 w60 h22", "鏍囬")
         titleEd := eg.Add("Edit", "x80 y10 w350 h22", title)
-        eg.Add("Text", "x10 y40 w60 h22", "分类")
+        eg.Add("Text", "x10 y40 w60 h22", "鍒嗙被")
         catEd := eg.Add("Edit", "x80 y40 w350 h22", category)
-        eg.Add("Text", "x10 y70 w60 h22", "正文")
+        eg.Add("Text", "x10 y70 w60 h22", "姝ｆ枃")
         bodyEd := eg.Add("Edit", "x10 y94 w420 h180 Multi WantReturn VScroll", content)
         bodyEd.SetFont("s9", "Consolas")
-        eg.Add("Button", "x10 y286 w100 h28 Default", "保存").OnEvent("Click", (*) => PromptQuickPad_SaveTemplateEdit(eg, titleEd, catEd, bodyEd, templateId))
-        eg.Add("Button", "x120 y286 w100 h28", "取消").OnEvent("Click", (*) => eg.Destroy())
+        eg.Add("Button", "x10 y286 w100 h28 Default", "淇濆瓨").OnEvent("Click", (*) => PromptQuickPad_SaveTemplateEdit(eg, titleEd, catEd, bodyEd, templateId))
+        eg.Add("Button", "x120 y286 w100 h28", "鍙栨秷").OnEvent("Click", (*) => eg.Destroy())
         eg.OnEvent("Escape", (*) => eg.Destroy())
         eg.Show()
         return
     }
-    eg := Gui(opt, "查看内容")
+    eg := Gui(opt, "鏌ョ湅鍐呭")
     eg.BackColor := AIListPanelColors.Background
     eg.SetFont("s10 c" . AIListPanelColors.Text, "Segoe UI")
     ed := eg.Add("Edit", "x10 y10 w420 h260 Multi ReadOnly VScroll", shell.Has("content") ? shell["content"] : "")
     ed.SetFont("s9", "Consolas")
-    eg.Add("Button", "x10 y280 w100 h28 Default", "关闭").OnEvent("Click", (*) => eg.Destroy())
+    eg.Add("Button", "x10 y280 w100 h28 Default", "鍏抽棴").OnEvent("Click", (*) => eg.Destroy())
     eg.OnEvent("Escape", (*) => eg.Destroy())
     eg.Show()
 }
@@ -2388,7 +2433,7 @@ ShowPromptQuickPadListOnly() {
     }
     if AIListPanelGUI = 0
         return
-    ; 悬浮工具栏 Prompt：显示同款折叠栏，但默认保持收起
+    ; 鎮诞宸ュ叿鏍?Prompt锛氭樉绀哄悓娆炬姌鍙犳爮锛屼絾榛樿淇濇寔鏀惰捣
     PromptQuickPad_SetCaptureExpanded(false, false)
     PromptQuickPad_UpdateCaptureToggleText()
     PromptQuickPad_ApplyCaptureControlsVisibility()
@@ -2542,20 +2587,20 @@ RestoreAIListPanel() {
     AIListPanelIsMinimized := false
 }
 
-; 复制当前选区并打开收录区
+; 澶嶅埗褰撳墠閫夊尯骞舵墦寮€鏀跺綍鍖?
 PromptQuickPad_QuickCapture(*) {
     oldClip := ClipboardAll()
     try {
         A_Clipboard := ""
         SendInput("^c")
         if !ClipWait(1.5) {
-            ; HandleCapsLockB 在无选区时不会打开面板；直接打开收录区供手动粘贴。
+            ; HandleCapsLockB 鍦ㄦ棤閫夊尯鏃朵笉浼氭墦寮€闈㈡澘锛涚洿鎺ユ墦寮€鏀跺綍鍖轰緵鎵嬪姩绮樿创銆?
             try PromptQuickPad_OpenCaptureDraft("", true)
             catch as err
-                try TrayTip("打开 Prompt Quick-Pad 失败：`n" . err.Message, "Prompt Quick-Pad", "Iconx 2")
+                try TrayTip("打开 Prompt Quick-Pad 失败:`n" . err.Message, "Prompt Quick-Pad", "Iconx 2")
                 catch as _e {
                 }
-            TrayTip("未获取到选中文本，已打开收录区，可手动粘贴。", "Prompt Quick-Pad", "Iconi 1")
+            TrayTip("未获取到选中文本，已打开采集区，可手动粘贴。", "Prompt Quick-Pad", "Iconi 1")
             return
         }
         PromptQuickPad_OpenCaptureDraft(A_Clipboard, true)
@@ -2564,7 +2609,7 @@ PromptQuickPad_QuickCapture(*) {
     }
 }
 
-; 由主脚本在加载配置后调用：根据 PromptQuickCaptureHotkey 注册/注销
+; 鐢变富鑴氭湰鍦ㄥ姞杞介厤缃悗璋冪敤锛氭牴鎹?PromptQuickCaptureHotkey 娉ㄥ唽/娉ㄩ攢
 PromptQuickPad_RegisterCaptureHotkey() {
     global PromptQuickPadCaptureHotkeyObj
     global PromptQuickCaptureHotkey
@@ -2580,7 +2625,7 @@ PromptQuickPad_RegisterCaptureHotkey() {
     try {
         PromptQuickPadCaptureHotkeyObj := Hotkey(hk, PromptQuickPad_QuickCapture, "On")
     } catch as e {
-        TrayTip("Prompt 采集热键无效: " . hk . " — " . e.Message, "Prompt Quick-Pad", "Iconx 2")
+        TrayTip("Prompt 采集热键无效: " . hk . " - " . e.Message, "Prompt Quick-Pad", "Iconx 2")
     }
 }
 
@@ -2589,14 +2634,14 @@ PromptQuickPad_GetJsonHelpBody() {
 (
 文件位置：脚本目录下的 prompts.json，UTF-8 编码。
 
-内容必须是一个 JSON 数组（顶层用英文方括号 [ ] 包裹），数组中每个元素是一条用户提示词对象。
+内容必须是一个 JSON 数组（顶层使用 [ ] 包裹），数组中的每个元素是一条用户提示词对象。
 
 字段说明：
-  • title（字符串，建议）列表中显示的标题。
-  • content（字符串，必填）双击粘贴到目标窗口的正文，可含换行。
-  • tags（字符串，可选）标签或备注，逗号分隔，参与搜索。
-  • category（字符串，可选）顶部分类名；省略或空字符串会出现在「未分类」。
-  • hotkey（字符串，可选）仅作列表展示用说明，不自动绑定热键。
+  - title（字符串，建议）：列表中的标题
+  - content（字符串，必填）：双击后粘贴到目标窗口的正文，可包含换行
+  - tags（字符串，可选）：标签或备注，逗号分隔
+  - category（字符串，可选）：分类名；为空时显示为“未分类”
+  - hotkey（字符串，可选）：仅用于展示说明，不自动绑定热键
 
 最小示例（单条）：
 [
@@ -2609,7 +2654,7 @@ PromptQuickPad_GetJsonHelpBody() {
   }
 ]
 
-注意：面板里的「快捷操作」「模板」来自设置与模板文件，不会写入 prompts.json；导入导出仅针对上述用户条目数组。
+注意：面板里的“快捷操作”“模板”来自设置与模板文件，不会写入 prompts.json；导入导出仅针对用户条目数组。
 )"
 }
 
@@ -2645,7 +2690,7 @@ PromptQuickPad_ShowJsonFormatHelp(*) {
 
 PromptQuickPad_DoImport(*) {
     global PromptQuickPadData
-    p := FileSelect(1, A_ScriptDir, "选择要导入的 JSON", "JSON (*.json)")
+    p := FileSelect(1, A_ScriptDir, "閫夋嫨瑕佸鍏ョ殑 JSON", "JSON (*.json)")
     if p = ""
         return
     try
@@ -2680,7 +2725,7 @@ PromptQuickPad_DoImport(*) {
 
 PromptQuickPad_DoExport(*) {
     def := A_ScriptDir . "\prompts_export_" . A_Now . ".json"
-    p := FileSelect("S16", def, "导出 prompts.json", "JSON (*.json)")
+    p := FileSelect("S16", def, "瀵煎嚭 prompts.json", "JSON (*.json)")
     if p = ""
         return
     try {
@@ -2701,4 +2746,5 @@ PromptQuickPad_DoExport(*) {
 InitAIListPanel() {
 }
 
-; WM_NOTIFY 由主脚本 OnClipboardListViewWMNotify 转发到 PromptQuickPad_OnWmNotify（避免覆盖全局监听）
+; WM_NOTIFY 鐢变富鑴氭湰 OnClipboardListViewWMNotify 杞彂鍒?PromptQuickPad_OnWmNotify锛堥伩鍏嶈鐩栧叏灞€鐩戝惉锛?
+

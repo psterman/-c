@@ -741,7 +741,20 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         ic = 'fa-solid ' + ic;
       var bucket = 'Search';
       if (cid === 'sc_activate_search') bucket = 'Search';
-      else if (cid === 'qa_clipboard' || cid === 'ch_b' || cid === 'pqp_capture' || cid === 'hub_capsule') bucket = 'Prompt';
+      else if (
+        cid === 'qa_clipboard' ||
+        cid === 'ch_x' ||
+        cid === 'cp_search' ||
+        cid === 'cp_clear_search' ||
+        cid === 'cp_show_shortcuts'
+      ) bucket = 'Record';
+      else if (
+        cid === 'ch_b' ||
+        cid === 'ch_p' ||
+        cid === 'pqp_capture' ||
+        cid === 'qa_batch'
+      ) bucket = 'Prompt';
+      else if (cid === 'hub_capsule') bucket = 'NewPrompt';
       var sd = bucket === 'Search' ? ' data-search-drop="1"' : '';
       html +=
         '<button type="button" class="tb" title="' +

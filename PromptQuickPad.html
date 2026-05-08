@@ -1331,7 +1331,7 @@ function renderList() {
     const src = (it.source || '');
     row.innerHTML = '<div class="meta">'
       + '<div class="title">' + highlight(it.title || '', kw) + '</div>'
-      + '<div class="sub">' + escapeHtml(it.category || '') + ' 路 ' + escapeHtml(it.hotkey || '') + '</div>'
+      + '<div class="sub">' + escapeHtml(it.category || '') + ' · ' + escapeHtml(it.hotkey || '') + '</div>'
       + '<div class="preview">' + highlight(it.preview || '', kw) + '</div></div>'
       + '<span class="src">' + escapeHtml(src) + '</span>';
     row.onclick = () => selectItem(i);
@@ -1364,7 +1364,7 @@ function updatePreview() {
     content.textContent = '选择一项查看正文';
     return;
   }
-  meta.textContent = (it.title || '') + ' 路 ' + (it.category || '') + ' 路 merged #' + it.mergedIndex;
+  meta.textContent = (it.title || '') + ' · ' + (it.category || '') + ' · merged #' + it.mergedIndex;
   content.textContent = (it.content !== undefined && it.content !== '') ? it.content : '(空正文)';
 }
 
@@ -1424,6 +1424,7 @@ function handleAhkMessage(msg) {
     case 'captureOpen':
       document.getElementById('capture-panel').style.display = 'block';
       state.captureExpanded = !!msg.expanded;
+      setSourceFilter('json');
       syncCaptureUi();
       if (msg.text !== undefined)
         document.getElementById('cap-body').value = msg.text;
@@ -1744,7 +1745,7 @@ function openItemModal(msg) {
   state.itemModalOpen = true;
   msg = normalizeIncomingModalMsg(msg || {});
   document.getElementById('item-modal-title').textContent = msg.mode === 'edit' ? '编辑内容' : '查看内容';
-  document.getElementById('item-modal-sub').textContent = [msg.source || '', msg.hotkey || '', msg.category || ''].filter(Boolean).join(' 路 ');
+  document.getElementById('item-modal-sub').textContent = [msg.source || '', msg.hotkey || '', msg.category || ''].filter(Boolean).join(' · ');
   document.getElementById('item-edit-title').value = msg.title || '';
     fillItemCategorySelect(state._lastCats || ['全部'], msg.category || '未分类');
   document.getElementById('item-edit-tags').value = msg.tags || '';

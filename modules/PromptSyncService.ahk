@@ -1,6 +1,5 @@
-; PromptSyncService.ahk — Prompt Quick-Pad / CapsLock+B 与 CursorShortcut.ini [PromptQuickPad] 的读写与 UI 摘录区同步
-; 由 CursorHelper 中枢在 AIListPanel 之后、PromptQuickPadCapsLockB 之前 #Include。
-; 依赖：主脚本已声明 CapsLock+B 相关 global；Legacy 摘录控件由 AIListPanel 创建（可能为 0）。
+; PromptSyncService.ahk
+; Prompt Quick-Pad / CapsLock+B settings read-write and capture-draft sync.
 
 PSS_CursorShortcutIniPath() {
     return A_ScriptDir . "\CursorShortcut.ini"
@@ -18,6 +17,26 @@ PSS_WriteCapsLockBDefaultFieldsToIni(Title, Category, Tags) {
     PSS_IniWritePQP("CapsLockBDefaultTags", Tags)
 }
 
+PSS_IsCorruptedText(s) {
+    t := String(s)
+    if (t = "")
+        return false
+    if InStr(t, Chr(0xFFFD))
+        return true
+    ; Private Use Area chars often appear in mojibake artifacts.
+    if RegExMatch(t, "[\x{E000}-\x{F8FF}]")
+        return true
+    return false
+}
+
+PSS_CleanText(v, fallback := "") {
+    s := Trim(String(v))
+    s := RegExReplace(s, "\R+", "`n")
+    if (PSS_IsCorruptedText(s) && fallback != "")
+        return fallback
+    return s
+}
+
 PromptQuickPad_ReloadCapsLockBSettings() {
     global PromptQuickPad_CapsLockBSilent, PromptQuickPad_CapsLockBSilentToTemplate, PromptQuickPad_CapsLockBDefaultTitle
     global PromptQuickPad_CapsLockBDefaultCategory, PromptQuickPad_CapsLockBDefaultTags
@@ -25,11 +44,16 @@ PromptQuickPad_ReloadCapsLockBSettings() {
     try {
         PromptQuickPad_CapsLockBSilent := (IniRead(cfg, "PromptQuickPad", "CapsLockBSilent", "0") = "1")
         PromptQuickPad_CapsLockBSilentToTemplate := (IniRead(cfg, "PromptQuickPad", "CapsLockBSilentToTemplate", "0") = "1")
-        PromptQuickPad_CapsLockBDefaultTitle := IniRead(cfg, "PromptQuickPad", "CapsLockBDefaultTitle", "摘录")
-        PromptQuickPad_CapsLockBDefaultCategory := IniRead(cfg, "PromptQuickPad", "CapsLockBDefaultCategory", "")
-        PromptQuickPad_CapsLockBDefaultTags := IniRead(cfg, "PromptQuickPad", "CapsLockBDefaultTags", "")
+        rawTitle := IniRead(cfg, "PromptQuickPad", "CapsLockBDefaultTitle", "摘录")
+        rawCategory := IniRead(cfg, "PromptQuickPad", "CapsLockBDefaultCategory", "")
+        rawTags := IniRead(cfg, "PromptQuickPad", "CapsLockBDefaultTags", "")
+        PromptQuickPad_CapsLockBDefaultTitle := PSS_CleanText(rawTitle, "摘录")
+        PromptQuickPad_CapsLockBDefaultCategory := PSS_CleanText(rawCategory, "")
+        PromptQuickPad_CapsLockBDefaultTags := PSS_CleanText(rawTags, "")
     } catch {
     }
+    if (Trim(PromptQuickPad_CapsLockBDefaultTitle) = "")
+        PromptQuickPad_CapsLockBDefaultTitle := "摘录"
 }
 
 PromptQuickPad_SyncSilentFromWeb(msg) {
@@ -45,6 +69,7 @@ PromptQuickPad_SyncCaptureDraftFromIni() {
     global PromptQuickPad_chkCaptureSilent, PromptQuickPad_chkCaptureSilentTpl
     global PromptQuickPad_CapsLockBDefaultTitle, PromptQuickPad_CapsLockBDefaultCategory, PromptQuickPad_CapsLockBDefaultTags
     global PromptQuickPad_CapsLockBSilent, PromptQuickPad_CapsLockBSilentToTemplate
+
     PromptQuickPad_ReloadCapsLockBSettings()
     if PromptQuickPad_edDraftTitle != 0
         PromptQuickPad_edDraftTitle.Value := PromptQuickPad_CapsLockBDefaultTitle
