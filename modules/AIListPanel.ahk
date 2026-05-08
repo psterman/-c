@@ -276,6 +276,23 @@ PromptQuickPad_ProcessWebMessage(msg) {
             PromptQuickPad_SyncSilentFromWeb(msg)
         case "itemEditSave":
             PromptQuickPad_SaveItemEditFromWeb(msg)
+        case "syncExport":
+            try PQP_SendToWeb(Map("type", "syncExportResult", "snapshot", PromptQuickPad_SyncExportSnapshot()))
+            catch {
+            }
+        case "syncImport":
+            snap := msg.Has("snapshot") ? msg["snapshot"] : 0
+            merge := !(msg.Has("merge") && !msg["merge"])
+            ok := PromptQuickPad_SyncImportSnapshot(snap, merge)
+            try PQP_SendToWeb(Map("type", "syncImportResult", "ok", ok ? true : false))
+            catch {
+            }
+        case "syncGetSince":
+            since := msg.Has("since") ? String(msg["since"]) : ""
+            arr := PromptQuickPad_SyncGetEntriesSince(since)
+            try PQP_SendToWeb(Map("type", "syncSinceResult", "since", since, "entries", arr))
+            catch {
+            }
         case "pqpScCtxCmd":
             cmdId0 := msg.Has("cmdId") ? String(msg["cmdId"]) : ""
             mi0 := msg.Has("mergedIndex") ? Integer(msg["mergedIndex"]) : 0
@@ -493,13 +510,38 @@ PromptQuickPad_NormalizeCategoryName(v) {
 
 PromptQuickPad_NormalizeEntry(m) {
     if !(m is Map)
-        return Map("title", "", "tags", "", "content", "", "category", "", "hotkey", "")
+        return Map("id", "", "title", "", "tags", "", "content", "", "category", "", "hotkey", "", "source", "json", "enabled", true, "updatedAt", A_NowUTC)
     t := m.Has("title") ? PromptQuickPad_CleanText(m["title"]) : m.Has("Title") ? PromptQuickPad_CleanText(m["Title"]) : ""
     g := m.Has("tags") ? PromptQuickPad_CleanText(m["tags"]) : m.Has("Tags") ? PromptQuickPad_CleanText(m["Tags"]) : ""
     c := m.Has("content") ? PromptQuickPad_CleanText(m["content"]) : m.Has("Content") ? PromptQuickPad_CleanText(m["Content"]) : ""
     cat := m.Has("category") ? PromptQuickPad_NormalizeCategoryName(m["category"]) : m.Has("Category") ? PromptQuickPad_NormalizeCategoryName(m["Category"]) : ""
     hk := m.Has("hotkey") ? PromptQuickPad_CleanText(m["hotkey"]) : m.Has("Hotkey") ? PromptQuickPad_CleanText(m["Hotkey"]) : ""
-    return Map("title", t, "tags", g, "content", c, "category", cat, "hotkey", hk)
+    idv := m.Has("id") ? PromptQuickPad_CleanText(m["id"]) : (m.Has("ID") ? PromptQuickPad_CleanText(m["ID"]) : "")
+    if idv = ""
+        idv := "pqp_" . A_NowUTC . "_" . A_TickCount
+    src := m.Has("source") ? StrLower(PromptQuickPad_CleanText(m["source"])) : "json"
+    if (src != "json" && src != "builtin" && src != "template")
+        src := "json"
+    enabled := true
+    if m.Has("enabled")
+        enabled := !!m["enabled"]
+    uat := m.Has("updatedAt") ? PromptQuickPad_CleanText(m["updatedAt"]) : A_NowUTC
+    if (src = "builtin" && PromptQuickPad_LooksCorruptedText(c))
+        c := PromptQuickPad_DefaultBuiltinContent(hk, t)
+    out := Map("id", idv, "title", t, "tags", g, "content", c, "category", cat, "hotkey", hk, "source", src, "enabled", enabled, "updatedAt", uat)
+    if m.Has("templateId")
+        out["templateId"] := PromptQuickPad_CleanText(m["templateId"])
+    return out
+}
+
+PromptQuickPad_DefaultBuiltinContent(hk, title := "") {
+    if (hk = "CapsLock+E" || InStr(title, "解释"))
+        return "解释这段代码的核心逻辑、输入输出、关键函数作用，用新手能懂的语言，标注易错点。"
+    if (hk = "CapsLock+R" || InStr(title, "重构"))
+        return "重构这段代码，保持功能不变，提升可读性与可维护性，并说明关键改动。"
+    if (hk = "CapsLock+O" || InStr(title, "优化"))
+        return "分析这段代码的性能瓶颈，给出优化方案，并说明时间/空间复杂度变化。"
+    return "请根据上下文完善该快捷提示词内容。"
 }
 
 PromptQuickPad_DedupText(v) {
@@ -584,44 +626,71 @@ PromptQuickPad_LoadFromDisk() {
     global PromptQuickPadData
     path := PromptQuickPad_JsonPath()
     PromptQuickPadData := []
+    changed := false
     if !FileExist(path) {
-        try FileAppend("[]", path, "UTF-8")
+        try {
+            store := Map(
+                "version", 2,
+                "updatedAt", A_NowUTC,
+                "entries", [],
+                "settings", Map("selectedCategory", "全部"),
+                "sync", Map("cloudEnabled", false, "lastSyncAt", "", "syncEndpoint", "")
+            )
+            f0 := FileOpen(path, "w", "UTF-8")
+            if f0 {
+                f0.Write(Jxon_Dump(store))
+                f0.Close()
+            }
+        }
         return
     }
     try {
         raw := FileRead(path, "UTF-8")
         parsed := Jxon_Load(raw)
-        if !(parsed is Array) {
-            PromptQuickPadData := []
-            return
+        entries := []
+        if (parsed is Array) {
+            entries := parsed
+        } else if (parsed is Map && parsed.Has("entries") && parsed["entries"] is Array) {
+            entries := parsed["entries"]
+        } else {
+            entries := []
         }
-        for item in parsed {
-            if item is Map
-                PromptQuickPadData.Push(PromptQuickPad_NormalizeEntry(item))
+        for item in entries {
+            if item is Map {
+                e := PromptQuickPad_NormalizeEntry(item)
+                if !e.Has("source")
+                    e["source"] := "json"
+                oldContent := item.Has("content") ? String(item["content"]) : (item.Has("Content") ? String(item["Content"]) : "")
+                if (e.Has("content") && String(e["content"]) != oldContent)
+                    changed := true
+                PromptQuickPadData.Push(e)
+            }
         }
     } catch {
         PromptQuickPadData := []
     }
+    added := PromptQuickPad_MigrateLegacySourcesIntoData()
     removed := PromptQuickPad_DeduplicateJsonData()
-    if removed > 0
+    if (removed > 0 || added > 0 || changed)
         PromptQuickPad_SaveToDisk()
 }
 
 PromptQuickPad_BuildCleanArrayForFile() {
-    global PromptQuickPadData
-    clean := []
+    global PromptQuickPadData, PromptQuickPadSelectedCategory
+    entries := []
     for item in PromptQuickPadData {
         if !(item is Map)
             continue
-        o := Map("title", item.Has("title") ? item["title"] : "", "tags", item.Has("tags") ? item["tags"] : "",
-            "content", item.Has("content") ? item["content"] : "")
-        if item.Has("category") && item["category"] != ""
-            o["category"] := item["category"]
-        if item.Has("hotkey") && item["hotkey"] != ""
-            o["hotkey"] := item["hotkey"]
-        clean.Push(o)
+        o := PromptQuickPad_NormalizeEntry(item)
+        entries.Push(o)
     }
-    return clean
+    return Map(
+        "version", 2,
+        "updatedAt", A_NowUTC,
+        "entries", entries,
+        "settings", Map("selectedCategory", PromptQuickPadSelectedCategory),
+        "sync", PromptQuickPad_GetSyncPortConfig()
+    )
 }
 
 PromptQuickPad_SaveToDisk() {
@@ -655,77 +724,19 @@ PromptQuickPad_TemplateExtraTags(T) {
 
 ; 鍚堝苟锛氳缃〉涓夐」蹇嵎璇?+ PromptTemplates.ini 鍔犺浇鐨勫叏灞€妯℃澘 + prompts.json 鐢ㄦ埛椤?
 PromptQuickPad_BuildMergedList() {
-    global PromptQuickPadData, PromptTemplates
+    global PromptQuickPadData
+    addedNow := PromptQuickPad_MigrateLegacySourcesIntoData()
+    if (addedNow > 0)
+        PromptQuickPad_SaveToDisk()
     merged := []
-    global Prompt_Explain, Prompt_Refactor, Prompt_Optimize
-
-    capCat := "快捷操作"
-    if Trim(Prompt_Explain) != "" {
-        merged.Push(Map(
-            "title", PromptQuickPad_TryGetText("quick_action_type_explain", "解释代码"),
-            "category", capCat,
-            "tags", "",
-            "hotkey", "CapsLock+E",
-            "content", Prompt_Explain,
-            "source", "builtin",
-            "userIndex", 0
-        ))
-    }
-    if Trim(Prompt_Refactor) != "" {
-        merged.Push(Map(
-            "title", PromptQuickPad_TryGetText("quick_action_type_refactor", "重构代码"),
-            "category", capCat,
-            "tags", "",
-            "hotkey", "CapsLock+R",
-            "content", Prompt_Refactor,
-            "source", "builtin",
-            "userIndex", 0
-        ))
-    }
-    if Trim(Prompt_Optimize) != "" {
-        merged.Push(Map(
-            "title", PromptQuickPad_TryGetText("quick_action_type_optimize", "优化代码"),
-            "category", capCat,
-            "tags", "",
-            "hotkey", "CapsLock+O",
-            "content", Prompt_Optimize,
-            "source", "builtin",
-            "userIndex", 0
-        ))
-    }
-
-    if IsSet(PromptTemplates) && PromptTemplates is Array {
-        for T in PromptTemplates {
-            if !IsObject(T)
-                continue
-            title := ""
-            content := ""
-            cat := ""
-            tid := ""
-            try title := T.Title
-            try content := T.Content
-            try cat := T.Category
-            try tid := T.ID
-            if title = "" && content = ""
-                continue
-            merged.Push(Map(
-                "title", title,
-                "category", cat,
-                "tags", PromptQuickPad_TemplateExtraTags(T),
-                "hotkey", "",
-                "content", content,
-                "source", "template",
-                "templateId", tid,
-                "userIndex", 0
-            ))
-        }
-    }
-
     idx := 0
     for item in PromptQuickPadData {
         idx++
         e := PromptQuickPad_NormalizeEntry(item)
-        e["source"] := "json"
+        if (e.Has("enabled") && !e["enabled"])
+            continue
+        if !e.Has("source") || e["source"] = ""
+            e["source"] := "json"
         e["userIndex"] := idx
         if !e.Has("category")
             e["category"] := ""
@@ -747,15 +758,6 @@ PromptQuickPad_BuildMergedList() {
             it["tags"] := PromptQuickPad_CleanText(it["tags"])
         if it.Has("hotkey")
             it["hotkey"] := PromptQuickPad_CleanText(it["hotkey"])
-        if (it.Has("source") && it["source"] = "builtin" && PromptQuickPad_LooksCorruptedText(it.Has("content") ? it["content"] : "")) {
-            hk := it.Has("hotkey") ? it["hotkey"] : ""
-            if (hk = "CapsLock+E")
-                it["content"] := "解释这段代码的核心逻辑、输入输出、关键函数作用，用新手能懂的语言，标注易错点。"
-            else if (hk = "CapsLock+R")
-                it["content"] := "重构这段代码，保持功能不变，提升可读性与可维护性，并说明关键改动。"
-            else if (hk = "CapsLock+O")
-                it["content"] := "分析这段代码的性能瓶颈，给出优化方案，并说明时间/空间复杂度变化。"
-        }
         merged[i] := it
     }
     return PromptQuickPad_DeduplicateList(merged)
@@ -811,6 +813,63 @@ PromptQuickPad_CategoryMatches(entry, Tab) {
     if Tab = "未分类"
         return raw = ""
     return raw = Tab
+}
+
+PromptQuickPad_GetSyncPortConfig() {
+    return Map(
+        "cloudEnabled", false,
+        "lastSyncAt", "",
+        "syncEndpoint", "pqp://local-sync"
+    )
+}
+
+PromptQuickPad_MigrateLegacySourcesIntoData() {
+    global PromptQuickPadData, PromptTemplates
+    global Prompt_Explain, Prompt_Refactor, Prompt_Optimize
+    added := 0
+    haveKey := Map()
+    for it in PromptQuickPadData {
+        if !(it is Map)
+            continue
+        k := PromptQuickPad_MakeEntryDedupKey(it)
+        if k != ""
+            haveKey[k] := true
+    }
+    capCat := "快捷操作"
+    if Trim(Prompt_Explain) != ""
+        added += PromptQuickPad_MigrateAddIfMissing(haveKey, Map("title", "解释代码", "category", capCat, "tags", "", "hotkey", "CapsLock+E", "content", Prompt_Explain, "source", "builtin")) ? 1 : 0
+    if Trim(Prompt_Refactor) != ""
+        added += PromptQuickPad_MigrateAddIfMissing(haveKey, Map("title", "重构代码", "category", capCat, "tags", "", "hotkey", "CapsLock+R", "content", Prompt_Refactor, "source", "builtin")) ? 1 : 0
+    if Trim(Prompt_Optimize) != ""
+        added += PromptQuickPad_MigrateAddIfMissing(haveKey, Map("title", "优化代码", "category", capCat, "tags", "", "hotkey", "CapsLock+O", "content", Prompt_Optimize, "source", "builtin")) ? 1 : 0
+    if IsSet(PromptTemplates) && PromptTemplates is Array {
+        for T in PromptTemplates {
+            if !IsObject(T)
+                continue
+            title := "", content := "", cat := "", tid := ""
+            try title := T.Title
+            try content := T.Content
+            try cat := T.Category
+            try tid := T.ID
+            if title = "" && content = ""
+                continue
+            ent := Map("title", title, "category", cat, "tags", PromptQuickPad_TemplateExtraTags(T), "hotkey", "", "content", content, "source", "template")
+            if tid != ""
+                ent["templateId"] := tid
+            added += PromptQuickPad_MigrateAddIfMissing(haveKey, ent) ? 1 : 0
+        }
+    }
+    return added
+}
+
+PromptQuickPad_MigrateAddIfMissing(haveKey, entry) {
+    global PromptQuickPadData
+    k := PromptQuickPad_MakeEntryDedupKey(entry)
+    if (k = "" || haveKey.Has(k))
+        return false
+    haveKey[k] := true
+    PromptQuickPadData.Push(PromptQuickPad_NormalizeEntry(entry))
+    return true
 }
 
 PromptQuickPad_ClearCategoryStrip() {
@@ -1921,12 +1980,7 @@ PromptQuickPad_DeleteItem(row) {
     if mi < 1 || mi > PromptQuickPadMergedSnapshot.Length
         return
     entry := PromptQuickPadMergedSnapshot[mi]
-    src := entry.Has("source") ? entry["source"] : ""
-    if src != "json" {
-        MsgBox("此项来自“快捷操作”或“模板库”，请在设置里修改或删除。", "Prompt Quick-Pad", "Iconi")
-        return
-    }
-    if MsgBox("确定删除该条用户提示词？（仅移除 prompts.json 条目）", "Prompt Quick-Pad", "YesNo Icon?") != "Yes"
+    if MsgBox("确定删除该条提示词？（将从 prompts.json 移除）", "Prompt Quick-Pad", "YesNo Icon?") != "Yes"
         return
     uix := entry.Has("userIndex") ? Integer(entry["userIndex"]) : 0
     if uix >= 1 && uix <= PromptQuickPadData.Length {
@@ -1976,9 +2030,9 @@ PromptQuickPad_OpenViewWeb(shell, mergedIndex) {
 
 PromptQuickPad_OpenEditWeb(shell, mergedIndex) {
     src := shell.Has("source") ? shell["source"] : ""
-    allowTitle := (src = "json" || src = "template")
-    allowCategory := (src = "json" || src = "template")
-    allowTags := (src = "json")
+    allowTitle := true
+    allowCategory := true
+    allowTags := true
     payload := Map(
         "type", "itemModalOpen",
         "mode", "edit",
@@ -2096,56 +2150,32 @@ PromptQuickPad_SaveItemEditFromWeb(msg) {
     if mergedIndex < 1 || mergedIndex > merged.Length
         return
     shell := merged[mergedIndex]
-    src := shell.Has("source") ? shell["source"] : ""
     title := msg.Has("title") ? Trim(String(msg["title"])) : ""
     category := msg.Has("category") ? Trim(String(msg["category"])) : ""
     tags := msg.Has("tags") ? Trim(String(msg["tags"])) : ""
     content := msg.Has("content") ? String(msg["content"]) : ""
-
-    if src = "json" {
-        global PromptQuickPadData
-        uix := shell.Has("userIndex") ? Integer(shell["userIndex"]) : 0
-        if uix < 1 || uix > PromptQuickPadData.Length
-            return
-        if title = ""
-            title := "未命名"
-        PromptQuickPadData[uix] := PromptQuickPad_NormalizeEntry(Map(
-            "title", title,
-            "tags", tags,
-            "content", content,
-            "category", category,
-            "hotkey", shell.Has("hotkey") ? shell["hotkey"] : ""
-        ))
-        PromptQuickPad_SaveToDisk()
-        PromptQuickPad_RefreshListView()
+    global PromptQuickPadData
+    uix := shell.Has("userIndex") ? Integer(shell["userIndex"]) : 0
+    if uix < 1 || uix > PromptQuickPadData.Length
         return
-    }
-
-    if src = "builtin" {
-        hk := shell.Has("hotkey") ? shell["hotkey"] : ""
-        builtinKey := ""
-        if hk = "CapsLock+E"
-            builtinKey := "Explain"
-        else if hk = "CapsLock+R"
-            builtinKey := "Refactor"
-        else if hk = "CapsLock+O"
-            builtinKey := "Optimize"
-        if builtinKey = ""
-            return
-        PromptQuickPad_SaveBuiltinPrompt(builtinKey, content)
-        PromptQuickPad_RefreshListView()
-        return
-    }
-
-    if src = "template" {
-        templateId := shell.Has("templateId") ? shell["templateId"] : ""
-        if title = ""
-            title := "未命名模板"
-        if category = ""
-            category := "未分类"
-        if PromptQuickPad_SaveTemplateContent(templateId, title, category, content)
-            PromptQuickPad_RefreshListView()
-    }
+    if title = ""
+        title := "未命名"
+    old := PromptQuickPadData[uix]
+    src := old.Has("source") ? old["source"] : "json"
+    idv := old.Has("id") ? old["id"] : ""
+    PromptQuickPadData[uix] := PromptQuickPad_NormalizeEntry(Map(
+        "id", idv,
+        "source", src,
+        "title", title,
+        "tags", tags,
+        "content", content,
+        "category", category,
+        "hotkey", shell.Has("hotkey") ? shell["hotkey"] : "",
+        "enabled", true,
+        "updatedAt", A_NowUTC
+    ))
+    PromptQuickPad_SaveToDisk()
+    PromptQuickPad_RefreshListView()
 }
 
 PromptQuickPad_EditEntry(shell) {
@@ -2647,27 +2677,34 @@ PromptQuickPad_GetJsonHelpBody() {
 (
 文件位置：脚本目录下的 prompts.json，UTF-8 编码。
 
-内容必须是一个 JSON 数组（顶层使用 [ ] 包裹），数组中的每个元素是一条用户提示词对象。
-
-字段说明：
-  - title（字符串，建议）：列表中的标题
-  - content（字符串，必填）：双击后粘贴到目标窗口的正文，可包含换行
-  - tags（字符串，可选）：标签或备注，逗号分隔
-  - category（字符串，可选）：分类名；为空时显示为“未分类”
-  - hotkey（字符串，可选）：仅用于展示说明，不自动绑定热键
-
-最小示例（单条）：
-[
-  {
-    ""title"": ""代码说明"",
-    ""tags"": ""doc,zh"",
-    ""category"": ""文档"",
-    ""hotkey"": """",
-    ""content"": ""请用简洁中文解释下面代码在做什么：\n\n""
+推荐使用 v2 对象结构（统一管理、便于云同步）：
+{
+  ""version"": 2,
+  ""updatedAt"": ""2026-05-08T00:00:00Z"",
+  ""entries"": [
+    {
+      ""id"": ""pqp_xxx"",
+      ""source"": ""json"",
+      ""title"": ""代码说明"",
+      ""content"": ""请解释以下代码..."",
+      ""category"": ""文档"",
+      ""tags"": ""doc,zh"",
+      ""hotkey"": """",
+      ""enabled"": true,
+      ""updatedAt"": ""2026-05-08T00:00:00Z""
+    }
+  ],
+  ""settings"": { ""selectedCategory"": ""全部"" },
+  ""sync"": {
+    ""cloudEnabled"": false,
+    ""lastSyncAt"": """",
+    ""syncEndpoint"": ""pqp://local-sync""
   }
-]
+}
 
-注意：面板里的“快捷操作”“模板”来自设置与模板文件，不会写入 prompts.json；导入导出仅针对用户条目数组。
+兼容说明：
+  - 旧格式（顶层数组）仍可导入，读取时会自动归一化为 entries。
+  - 提示词条目统一由 prompts.json 托管。
 )"
 }
 
@@ -2690,7 +2727,7 @@ PromptQuickPad_ShowJsonFormatHelp(*) {
     g := Gui(opt, "prompts.json 格式说明")
     g.BackColor := AIListPanelColors.PopupBg
     top := g.Add("Text", "x12 y10 w560 h44 c" . AIListPanelColors.PopupTextBright . " Wrap",
-        "以下为 prompts.json 的结构说明。导入/导出使用相同格式（仅用户自定义条目）。")
+        "以下为 prompts.json v2 结构说明。导入/导出使用相同格式。")
     top.SetFont("s10", "Segoe UI")
     ed := g.Add("Edit", "x12 y60 w560 h352 Multi ReadOnly VScroll WantReturn -Theme Background" . AIListPanelColors.PopupEditBg . " c" . AIListPanelColors.PopupEditText, PromptQuickPad_GetJsonHelpBody())
     ed.SetFont("s10", "Consolas")
@@ -2718,16 +2755,21 @@ PromptQuickPad_DoImport(*) {
         MsgBox("JSON 解析失败，请检查语法。", "导入提示词", "Iconx")
         return
     }
-    if !(parsed is Array) {
-        MsgBox("文件顶层必须是 JSON 数组，例如 [ {...}, {...} ]。", "导入提示词", "Iconx")
+    importEntries := []
+    if (parsed is Array)
+        importEntries := parsed
+    else if (parsed is Map && parsed.Has("entries") && parsed["entries"] is Array)
+        importEntries := parsed["entries"]
+    else {
+        MsgBox("文件必须是 JSON 数组或 v2 对象（含 entries 数组）。", "导入提示词", "Iconx")
         return
     }
-    ans := MsgBox("将读取 " . parsed.Length . " 条记录。`n`n是 = 合并到现有末尾`n否 = 清空后仅保留导入内容`n取消 = 放弃", "导入提示词", "YesNoCancel Icon?")
+    ans := MsgBox("将读取 " . importEntries.Length . " 条记录。`n`n是 = 合并到现有末尾`n否 = 清空后仅保留导入内容`n取消 = 放弃", "导入提示词", "YesNoCancel Icon?")
     if ans = "Cancel"
         return
     if ans = "No"
         PromptQuickPadData := []
-    for item in parsed {
+    for item in importEntries {
         if item is Map
             PromptQuickPadData.Push(PromptQuickPad_NormalizeEntry(item))
     }
@@ -2756,8 +2798,48 @@ PromptQuickPad_DoExport(*) {
     }
 }
 
+PromptQuickPad_SyncExportSnapshot() {
+    return PromptQuickPad_BuildCleanArrayForFile()
+}
+
+PromptQuickPad_SyncImportSnapshot(snapshot, merge := true) {
+    global PromptQuickPadData
+    arr := []
+    if (snapshot is Array)
+        arr := snapshot
+    else if (snapshot is Map && snapshot.Has("entries") && snapshot["entries"] is Array)
+        arr := snapshot["entries"]
+    else
+        return false
+    if !merge
+        PromptQuickPadData := []
+    for item in arr {
+        if item is Map
+            PromptQuickPadData.Push(PromptQuickPad_NormalizeEntry(item))
+    }
+    PromptQuickPad_SaveToDisk()
+    PromptQuickPad_RefreshListView()
+    return true
+}
+
+PromptQuickPad_SyncGetEntriesSince(utcTs := "") {
+    global PromptQuickPadData
+    out := []
+    for item in PromptQuickPadData {
+        if !(item is Map)
+            continue
+        if (utcTs = "") {
+            out.Push(item)
+            continue
+        }
+        t := item.Has("updatedAt") ? String(item["updatedAt"]) : ""
+        if (t != "" && t >= utcTs)
+            out.Push(item)
+    }
+    return out
+}
+
 InitAIListPanel() {
 }
 
 ; WM_NOTIFY 鐢变富鑴氭湰 OnClipboardListViewWMNotify 杞彂鍒?PromptQuickPad_OnWmNotify锛堥伩鍏嶈鐩栧叏灞€鐩戝惉锛?
-

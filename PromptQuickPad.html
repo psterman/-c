@@ -1546,7 +1546,11 @@ function getCategoryChildrenPaths(basePath, allPaths) {
     const child = basePath === '全部' ? firstSeg : (basePath + ' / ' + firstSeg);
     set.add(child);
   });
-  return [...set];
+  return [...set].sort((a, b) => {
+    const an = splitCategoryPath(a).slice(-1)[0] || a;
+    const bn = splitCategoryPath(b).slice(-1)[0] || b;
+    return an.localeCompare(bn, 'zh-Hans-CN');
+  });
 }
 
 function renderCategoryTopTags() {
