@@ -478,13 +478,26 @@ PromptQuickPad_CleanText(v, fallback := "") {
     return s
 }
 
+PromptQuickPad_NormalizeCategoryName(v) {
+    c := PromptQuickPad_CleanText(v)
+    ; remove full-width spaces / zero-width chars
+    c := StrReplace(c, Chr(0x3000), " ")
+    c := RegExReplace(c, "[\x{200B}-\x{200D}\x{FEFF}]", "")
+    c := Trim(c)
+    if (c = "" || c = "未分类")
+        return ""
+    if (c = "全部")
+        return "全部"
+    return c
+}
+
 PromptQuickPad_NormalizeEntry(m) {
     if !(m is Map)
         return Map("title", "", "tags", "", "content", "", "category", "", "hotkey", "")
     t := m.Has("title") ? PromptQuickPad_CleanText(m["title"]) : m.Has("Title") ? PromptQuickPad_CleanText(m["Title"]) : ""
     g := m.Has("tags") ? PromptQuickPad_CleanText(m["tags"]) : m.Has("Tags") ? PromptQuickPad_CleanText(m["Tags"]) : ""
     c := m.Has("content") ? PromptQuickPad_CleanText(m["content"]) : m.Has("Content") ? PromptQuickPad_CleanText(m["Content"]) : ""
-    cat := m.Has("category") ? PromptQuickPad_CleanText(m["category"]) : m.Has("Category") ? PromptQuickPad_CleanText(m["Category"]) : ""
+    cat := m.Has("category") ? PromptQuickPad_NormalizeCategoryName(m["category"]) : m.Has("Category") ? PromptQuickPad_NormalizeCategoryName(m["Category"]) : ""
     hk := m.Has("hotkey") ? PromptQuickPad_CleanText(m["hotkey"]) : m.Has("Hotkey") ? PromptQuickPad_CleanText(m["Hotkey"]) : ""
     return Map("title", t, "tags", g, "content", c, "category", cat, "hotkey", hk)
 }
@@ -646,10 +659,10 @@ PromptQuickPad_BuildMergedList() {
     merged := []
     global Prompt_Explain, Prompt_Refactor, Prompt_Optimize
 
-    capCat := "蹇嵎鎿嶄綔"
+    capCat := "快捷操作"
     if Trim(Prompt_Explain) != "" {
         merged.Push(Map(
-            "title", PromptQuickPad_TryGetText("quick_action_type_explain", "瑙ｉ噴浠ｇ爜"),
+            "title", PromptQuickPad_TryGetText("quick_action_type_explain", "解释代码"),
             "category", capCat,
             "tags", "",
             "hotkey", "CapsLock+E",
@@ -660,7 +673,7 @@ PromptQuickPad_BuildMergedList() {
     }
     if Trim(Prompt_Refactor) != "" {
         merged.Push(Map(
-            "title", PromptQuickPad_TryGetText("quick_action_type_refactor", "閲嶆瀯浠ｇ爜"),
+            "title", PromptQuickPad_TryGetText("quick_action_type_refactor", "重构代码"),
             "category", capCat,
             "tags", "",
             "hotkey", "CapsLock+R",
@@ -671,7 +684,7 @@ PromptQuickPad_BuildMergedList() {
     }
     if Trim(Prompt_Optimize) != "" {
         merged.Push(Map(
-            "title", PromptQuickPad_TryGetText("quick_action_type_optimize", "浼樺寲浠ｇ爜"),
+            "title", PromptQuickPad_TryGetText("quick_action_type_optimize", "优化代码"),
             "category", capCat,
             "tags", "",
             "hotkey", "CapsLock+O",
@@ -729,7 +742,7 @@ PromptQuickPad_BuildMergedList() {
         if it.Has("content")
             it["content"] := PromptQuickPad_CleanText(it["content"])
         if it.Has("category")
-            it["category"] := PromptQuickPad_CleanText(it["category"], "未分类")
+            it["category"] := PromptQuickPad_NormalizeCategoryName(it["category"])
         if it.Has("tags")
             it["tags"] := PromptQuickPad_CleanText(it["tags"])
         if it.Has("hotkey")
@@ -760,7 +773,7 @@ PromptQuickPad_UniqueCategoryTabs(merged) {
     hasUncat := false
     m := Map()
     for e in merged {
-        c := e.Has("category") ? e["category"] : ""
+        c := e.Has("category") ? PromptQuickPad_NormalizeCategoryName(e["category"]) : ""
         if c = ""
             hasUncat := true
         else

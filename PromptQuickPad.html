@@ -747,6 +747,7 @@ html[data-theme="light"] mark {
   border-bottom: none;
   background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)), var(--surface);
 }
+#toolbar-close { display: none !important; }
 #search-input {
   height: 42px;
   min-width: 180px;
@@ -779,6 +780,7 @@ html[data-theme="light"] mark {
   border-bottom: none;
   background: transparent;
 }
+#cat-strip { display: none !important; }
 .cat-chip,
 .source-chip {
   border: 1px solid var(--border);
@@ -786,6 +788,10 @@ html[data-theme="light"] mark {
   background: var(--surface2);
   color: var(--text-dim);
   padding: 8px 13px;
+}
+.source-chip.disabled {
+  opacity: .45;
+  cursor: not-allowed;
 }
 .cat-chip.on,
 .source-chip.on {
@@ -824,8 +830,94 @@ html[data-theme="light"] mark {
 }
 #main {
   display: grid;
-  grid-template-columns: minmax(360px, 1.1fr) minmax(280px, .9fr);
+  grid-template-columns: minmax(220px, 280px) minmax(360px, 1.1fr) minmax(280px, .9fr);
   gap: 14px;
+}
+#drawer-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)), var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: width .24s ease, min-width .24s ease, opacity .24s ease;
+}
+#drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--orange-lt);
+}
+#drawer-toggle {
+  min-height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  padding: 0 10px;
+  cursor: pointer;
+}
+#drawer-body {
+  overflow: auto;
+  padding: 8px;
+}
+.drawer-section-title {
+  font-size: 11px;
+  color: var(--text-xs);
+  margin: 8px 6px 6px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.drawer-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  color: var(--text-dim);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.drawer-node:hover {
+  background: rgba(255,255,255,.03);
+  border-color: rgba(255,255,255,.08);
+}
+.drawer-node.active {
+  background: linear-gradient(180deg, rgba(255,141,42,.16), rgba(255,141,42,.06));
+  border-color: rgba(255,179,71,.45);
+  color: #fff;
+}
+.drawer-indent-1 { padding-left: 18px; }
+.drawer-indent-2 { padding-left: 30px; }
+.drawer-indent-3 { padding-left: 42px; }
+.drawer-fold {
+  width: 14px;
+  text-align: center;
+  color: var(--text-xs);
+}
+.drawer-panel-collapsed #drawer-body,
+.drawer-panel-collapsed .drawer-node .drawer-label {
+  opacity: 0;
+  pointer-events: none;
+}
+.drawer-panel-collapsed {
+  width: 64px;
+  min-width: 64px;
+}
+.drawer-panel-collapsed #drawer-head {
+  justify-content: center;
+}
+.drawer-panel-collapsed #drawer-title {
+  display: none;
+}
+#drawer-body,
+.drawer-node .drawer-label {
+  transition: opacity .2s ease;
 }
 #list-panel {
   border-right: none;
@@ -906,7 +998,6 @@ html[data-theme="light"] mark {
   <div id="toolbar">
     <input type="text" id="search-input" placeholder="列表搜索..." autocomplete="off" spellcheck="false">
     <span style="font-size:11px;color:var(--text-xs)">Enter 粘贴 · Esc 关闭 · 1-9 快速粘贴</span>
-    <button type="button" id="toolbar-close" title="关闭">✕</button>
   </div>
   <div id="cat-strip"></div>
   <div id="source-strip"></div>
@@ -929,6 +1020,13 @@ html[data-theme="light"] mark {
     </div>
   </div>
   <div id="main">
+    <aside id="drawer-panel">
+      <div id="drawer-head">
+        <span id="drawer-title">分类抽屉</span>
+        <button type="button" id="drawer-toggle">折叠</button>
+      </div>
+      <div id="drawer-body"></div>
+    </aside>
     <div id="list-panel"></div>
     <div id="preview-panel">
       <div id="preview-meta"></div>
@@ -939,7 +1037,6 @@ html[data-theme="light"] mark {
   <div id="link-bar">
     <a id="lnk-import">导入</a>
     <a id="lnk-export">导出</a>
-    <a id="lnk-pin">置顶·开</a>
     <a id="lnk-json">JSON 格式说明</a>
     <a id="lnk-win-recycle">系统回收站</a>
   </div>
@@ -1008,7 +1105,15 @@ const state = {
   selectedMergedIndex: 0,
   keyword: '',
   category: '全部',
+  categoryPath: '全部',
   sourceFilter: 'all',
+  drawerCollapsed: false,
+  drawerTreeOpen: {},
+  recentCategoryPaths: [],
+  hotCategoryPaths: [],
+  usageStats: {},
+  pinTop: true,
+  topTagMode: 'normal',
   capsHintActive: false,
   capsPressedKey: '',
   captureExpanded: false,
@@ -1019,6 +1124,110 @@ const state = {
   pqpCtxMenuSpec: []
 };
 let __nmDock = null;
+const PQP_USAGE_KEY = 'pqp_usage_stats_v2';
+const PQP_RECENT_KEY = 'pqp_recent_categories_v2';
+
+function loadDrawerPrefs() {
+  try {
+    const usageRaw = localStorage.getItem(PQP_USAGE_KEY);
+    const recentRaw = localStorage.getItem(PQP_RECENT_KEY);
+    state.usageStats = usageRaw ? JSON.parse(usageRaw) : {};
+    state.recentCategoryPaths = recentRaw ? JSON.parse(recentRaw) : [];
+  } catch (_) {
+    state.usageStats = {};
+    state.recentCategoryPaths = [];
+  }
+}
+
+function saveDrawerPrefs() {
+  try {
+    localStorage.setItem(PQP_USAGE_KEY, JSON.stringify(state.usageStats || {}));
+    localStorage.setItem(PQP_RECENT_KEY, JSON.stringify(state.recentCategoryPaths || []));
+  } catch (_) {}
+}
+
+function splitCategoryPath(input) {
+  const raw = cleanDisplayText(input || '');
+  if (!raw || raw === '全部' || raw === '未分类') return [raw || '未分类'];
+  return raw.split(/[\\/|>]+/).map((s) => cleanDisplayText(s)).filter(Boolean);
+}
+
+function joinCategoryPath(parts) {
+  const p = Array.isArray(parts) ? parts.filter(Boolean) : [];
+  return p.length ? p.join(' / ') : '未分类';
+}
+
+function looksMojibakeCategoryText(s) {
+  const t = cleanDisplayText(s || '');
+  if (!t) return true;
+  // Common mojibake fragments seen in mixed UTF-8/GBK roundtrips.
+  if (/(锟|锛|鏂|闂|鐨|鍙|璇|鎺|瑙|浣|铪|癙|鈥|�)/.test(t)) return true;
+  // Frequent noisy pairs in corrupted Chinese labels.
+  if (/(嗨.*铪|铪.*癙|差.*嗨.*铪)/.test(t)) return true;
+  return false;
+}
+
+function sanitizeCategorySegment(seg) {
+  const s = cleanDisplayText(seg || '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\uFFFD/g, '')
+    .trim();
+  if (!s) return '';
+  if (looksMojibakeCategoryText(s)) return '';
+  // Keep common CJK/ASCII label chars only; drop mojibake noise chars.
+  const safe = s.replace(/[^A-Za-z0-9\u4E00-\u9FFF\s_\-()（）【】[\]·&+]/g, '').trim();
+  if (!safe || looksMojibakeCategoryText(safe)) return '';
+  return safe;
+}
+
+function normalizeCategoryPath(path) {
+  const parts = splitCategoryPath(path).map(sanitizeCategorySegment).filter(Boolean);
+  return joinCategoryPath(parts);
+}
+
+function categoryPathKey(path) {
+  return normalizeCategoryPath(path).toLowerCase().replace(/\s+/g, '');
+}
+
+function getItemCategoryPath(it) {
+  const p = normalizeCategoryPath(it?.category || '未分类');
+  return p || '未分类';
+}
+
+function isLikelyGarbledText(s) {
+  const t = cleanDisplayText(s || '');
+  if (!t) return true;
+  return /[�]|锟|Ã|Â|¤|�/.test(t) || looksMojibakeCategoryText(t);
+}
+
+function isValidCategoryPath(path) {
+  const p = normalizeCategoryPath(path || '');
+  if (!p || p === '未分类') return false;
+  const segs = splitCategoryPath(p);
+  if (!segs.length) return false;
+  return segs.every((seg) => seg && !isLikelyGarbledText(seg));
+}
+
+function getAllValidCategoryPaths(cats) {
+  const fromMsg = (cats || []).map((c) => normalizeCategoryPath(c));
+  const fromItems = (state.items || []).map((it) => getItemCategoryPath(it));
+  const bucket = new Map();
+  [...fromMsg, ...fromItems].forEach((p) => {
+    if (!p || p === '全部' || !isValidCategoryPath(p)) return;
+    const k = categoryPathKey(p);
+    if (!k) return;
+    if (!bucket.has(k)) bucket.set(k, p);
+  });
+  return [...bucket.values()];
+}
+
+function trackCategoryUse(path) {
+  const p = cleanDisplayText(path || '');
+  if (!p || p === '全部') return;
+  state.usageStats[p] = (state.usageStats[p] || 0) + 1;
+  state.recentCategoryPaths = [p, ...(state.recentCategoryPaths || []).filter((x) => x !== p)].slice(0, 8);
+  saveDrawerPrefs();
+}
 
 function normalizeThemeMode(mode) {
   return String(mode || '').toLowerCase() === 'light' ? 'light' : 'dark';
@@ -1053,29 +1262,17 @@ const PQP_CTX_FALLBACK = [
 ];
 
 const postToAhk = (obj) => BasePanel.postToAhk(obj);
-document.getElementById('toolbar-close').addEventListener('click', () => {
-  postToAhk({ type: 'requestHide' });
-});
 
 function sendAction(type, extra = {}) {
   postToAhk({ type, ...extra });
 }
 
-const SOURCE_FILTER_HOTKEY = Object.freeze({
-  all: 'q',
-  builtin: 'w',
-  template: 'e',
-  json: 'r'
-});
-
 const STATIC_HOTKEY_BINDINGS = Object.freeze([
-  ['#toolbar-close', 'g'],
   ['#btn-load-sel', 'z'],
   ['#btn-save-cap', 'x'],
   ['#btn-clear-cap', 'c'],
   ['#lnk-import', 't'],
   ['#lnk-export', 'p'],
-  ['#lnk-pin', 'b'],
   ['#lnk-json', '1'],
   ['#help-close', '4'],
   ['#item-modal-close', '3'],
@@ -1114,15 +1311,10 @@ function applyStaticHotkeyHints() {
     const el = document.querySelector(selector);
     if (!el) return;
     let label;
-    if (selector === '#toolbar-close')
-      label = '关闭';
-    else if (selector === '#lnk-pin')
+    if (selector === '#lnk-pin')
       label = (el.dataset.hotkeyBase || el.textContent || '').trim();
     setElementHotkeyHint(el, hotkey, label);
   });
-  const closeBtn = document.getElementById('toolbar-close');
-  if (closeBtn)
-    closeBtn.title = '关闭（Caps+G）';
   updateHotkeyHighlights();
 }
 
@@ -1177,46 +1369,19 @@ function endCapsHoldHint() {
   setCapsHintActive(false);
 }
 
-const SOURCE_FILTER_PRESETS = [
-  { key: 'all', label: '全部' },
-  { key: 'builtin', label: '快捷操作' },
-    { key: 'template', label: '模板库' },
-    { key: 'json', label: '我的提示词' }
-];
-
-function normalizeSourceFilter(filterType) {
-  const f = String(filterType || '').trim().toLowerCase();
-  if (f === 'builtin' || f === 'template' || f === 'json') return f;
+function normalizeSourceFilter() {
   return 'all';
 }
 
-function setSourceFilter(filterType) {
-  state.sourceFilter = normalizeSourceFilter(filterType);
-  state.selectedIndex = 0;
-  renderSourceFilters(state.sourceFilter);
-  renderList();
-}
-
-function renderSourceFilters(sel) {
-  const el = document.getElementById('source-strip');
-  if (!el) return;
-  el.innerHTML = '';
-  SOURCE_FILTER_PRESETS.forEach((it) => {
-    const chip = document.createElement('span');
-    const hotkey = SOURCE_FILTER_HOTKEY[it.key] || '';
-    chip.className = 'source-chip pqp-hotkey-item' + (it.key === sel ? ' on' : '');
-    chip.dataset.hotkey = hotkey;
-    chip.innerHTML = '<span class="hotkey-label">' + escapeHtml(it.label) + '</span>' + hotkeyHintHtml(hotkey);
-    chip.onclick = () => setSourceFilter(it.key);
-    el.appendChild(chip);
-  });
-  updateHotkeyHighlights();
-}
-
 function getDisplayItems() {
-  const src = normalizeSourceFilter(state.sourceFilter);
-  if (src === 'all') return state.items || [];
-  return (state.items || []).filter(it => String(it?.source || '').toLowerCase() === src);
+  let out = state.items || [];
+  if (state.categoryPath && state.categoryPath !== '全部') {
+    out = out.filter((it) => {
+      const cp = getItemCategoryPath(it);
+      return cp === state.categoryPath || cp.startsWith(state.categoryPath + ' / ');
+    });
+  }
+  return out;
 }
 
 function getSelectedDisplayItem() {
@@ -1241,7 +1406,10 @@ function normalizeIncomingItem(it) {
   if (!it || typeof it !== 'object') return it;
   const out = Object.assign({}, it);
   if (out.title != null) out.title = cleanDisplayText(out.title);
-  if (out.category != null) out.category = cleanDisplayText(out.category);
+  if (out.category != null) {
+    const cat = normalizeCategoryPath(out.category);
+    out.category = cat || '未分类';
+  }
   if (out.hotkey != null) out.hotkey = cleanDisplayText(out.hotkey);
   if (out.preview != null) out.preview = cleanDisplayText(out.preview);
   if (out.content != null) out.content = cleanDisplayText(out.content);
@@ -1302,20 +1470,212 @@ function highlight(s, kw) {
   } catch { return escapeHtml(s); }
 }
 
-function renderCategories(cats, sel) {
-  const el = document.getElementById('cat-strip');
+function buildCategoryTree(cats) {
+  const root = {};
+  (cats || []).forEach((c0) => {
+    const parts = splitCategoryPath(c0);
+    if (!parts.length || parts[0] === '全部') return;
+    let ptr = root;
+    parts.forEach((part) => {
+      if (!ptr[part]) ptr[part] = {};
+      ptr = ptr[part];
+    });
+  });
+  return root;
+}
+
+function renderTreeNodes(container, tree, depth, chain) {
+  Object.keys(tree).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN')).forEach((name) => {
+    const nextChain = [...chain, name];
+    const path = joinCategoryPath(nextChain);
+    const children = tree[name] || {};
+    const hasChild = Object.keys(children).length > 0;
+    const open = state.drawerTreeOpen[path] !== false;
+    const row = document.createElement('div');
+    row.className = 'drawer-node drawer-indent-' + Math.min(depth, 3) + (state.categoryPath === path ? ' active' : '');
+    row.innerHTML = '<span class="drawer-fold">' + (hasChild ? (open ? '-' : '+') : '*') + '</span><span class="drawer-label">' + escapeHtml(name) + '</span>';
+    row.onclick = (ev) => {
+      if (hasChild && ev.target && ev.target.classList && ev.target.classList.contains('drawer-fold')) {
+        state.drawerTreeOpen[path] = !open;
+        renderCategories(state._lastCats || [], state.categoryPath);
+        return;
+      }
+      state.category = name;
+      state.categoryPath = path;
+      postToAhk({ type: 'setCategory', category: name });
+      state.selectedIndex = 0;
+      renderCategories(state._lastCats || [], state.categoryPath);
+      renderList();
+    };
+    container.appendChild(row);
+    if (hasChild && open)
+      renderTreeNodes(container, children, depth + 1, nextChain);
+  });
+}
+
+function renderDynamicSection(container, title, paths) {
+  if (!paths || !paths.length) return;
+  const t = document.createElement('div');
+  t.className = 'drawer-section-title';
+  t.textContent = title;
+  container.appendChild(t);
+  paths.forEach((path) => {
+    const row = document.createElement('div');
+    row.className = 'drawer-node' + (state.categoryPath === path ? ' active' : '');
+    row.innerHTML = '<span class="drawer-fold">*</span><span class="drawer-label">' + escapeHtml(path) + '</span>';
+    row.onclick = () => {
+      state.categoryPath = path;
+      state.category = splitCategoryPath(path).slice(-1)[0] || path;
+      state.selectedIndex = 0;
+      renderCategories(state._lastCats || [], state.categoryPath);
+      renderList();
+    };
+    container.appendChild(row);
+  });
+}
+
+function getCategoryChildrenPaths(basePath, allPaths) {
+  const set = new Set();
+  const prefix = basePath === '全部' ? '' : (basePath + ' / ');
+  (allPaths || []).forEach((p) => {
+    if (!p) return;
+    if (basePath !== '全部' && !(p === basePath || p.startsWith(prefix))) return;
+    const rest = basePath === '全部' ? p : (p === basePath ? '' : p.slice(prefix.length));
+    if (!rest) return;
+    const firstSeg = rest.split(' / ')[0];
+    const child = basePath === '全部' ? firstSeg : (basePath + ' / ' + firstSeg);
+    set.add(child);
+  });
+  return [...set];
+}
+
+function renderCategoryTopTags() {
+  const el = document.getElementById('source-strip');
+  if (!el) return;
+  const allCatPaths = getAllValidCategoryPaths(state._lastCats || []);
+  const selectedPath = state.categoryPath || '全部';
+  const selectedParts = splitCategoryPath(selectedPath);
+  const parentBase = selectedPath === '全部' ? '全部' : (selectedParts.length > 1 ? joinCategoryPath(selectedParts.slice(0, -1)) : '全部');
+  const activeBase = state.topTagMode === 'normal' ? parentBase : '全部';
+  const tags = getCategoryChildrenPaths(activeBase, allCatPaths);
+  const hotPaths = (state.hotCategoryPaths || []).filter((p) => allCatPaths.includes(p));
+  const recentPaths = (state.recentCategoryPaths || []).filter((p) => allCatPaths.includes(p));
   el.innerHTML = '';
-  (cats || []).forEach(c0 => {
-    const c = cleanDisplayText(c0);
+  const createChip = (text, active, onClick, title) => {
     const chip = document.createElement('span');
-    chip.className = 'cat-chip' + (c === sel ? ' on' : '');
-    chip.textContent = c;
+    chip.className = 'source-chip' + (active ? ' on' : '');
+    chip.textContent = text;
+    if (title) chip.title = title;
+    chip.onclick = onClick;
+    el.appendChild(chip);
+    return chip;
+  };
+  const hotChip = createChip('常用', state.topTagMode === 'hot', () => {
+    state.topTagMode = 'hot';
+    const first = hotPaths[0] || tags[0] || allCatPaths[0];
+    if (!first) {
+      renderCategoryTopTags();
+      return;
+    }
+    state.categoryPath = first;
+    state.category = splitCategoryPath(first).slice(-1)[0] || first;
+    state.selectedIndex = 0;
+    renderCategories(state._lastCats || [], state.categoryPath);
+    renderList();
+  }, '跳转到高频分类');
+  if (!hotPaths.length) hotChip.classList.add('disabled');
+  const recentChip = createChip('最近', state.topTagMode === 'recent', () => {
+    state.topTagMode = 'recent';
+    const first = recentPaths[0] || state.categoryPath || allCatPaths[0];
+    if (!first || first === '全部') {
+      renderCategoryTopTags();
+      return;
+    }
+    state.categoryPath = first;
+    state.category = splitCategoryPath(first).slice(-1)[0] || first;
+    state.selectedIndex = 0;
+    renderCategories(state._lastCats || [], state.categoryPath);
+    renderList();
+  }, '跳转到最近分类');
+  if (!recentPaths.length && (!state.categoryPath || state.categoryPath === '全部')) recentChip.classList.add('disabled');
+  createChip(state.pinTop ? '置顶:开' : '置顶:关', !!state.pinTop, () => {
+    sendAction('togglePinTop');
+  }, '切换窗口置顶');
+  const allChip = document.createElement('span');
+  allChip.className = 'source-chip' + (state.topTagMode === 'normal' ? ' on' : '');
+  allChip.textContent = '全部分类';
+  allChip.onclick = () => {
+    state.topTagMode = 'normal';
+    state.category = '全部';
+    state.categoryPath = '全部';
+    state.selectedIndex = 0;
+    renderCategories(state._lastCats || [], '全部');
+    renderList();
+  };
+  el.appendChild(allChip);
+  tags.slice(0, 24).forEach((path) => {
+    const chip = document.createElement('span');
+    chip.className = 'source-chip' + (state.categoryPath === path && state.topTagMode === 'normal' ? ' on' : '');
+    chip.textContent = splitCategoryPath(path).slice(-1)[0] || path;
+    chip.title = path;
     chip.onclick = () => {
-      state.category = c;
-      postToAhk({ type: 'setCategory', category: c });
+      state.topTagMode = 'normal';
+      state.categoryPath = path;
+      state.category = splitCategoryPath(path).slice(-1)[0] || path;
+      state.selectedIndex = 0;
+      renderCategories(state._lastCats || [], state.categoryPath);
+      renderList();
     };
     el.appendChild(chip);
   });
+}
+
+function renderCategories(cats, selPath) {
+  const drawer = document.getElementById('drawer-body');
+  if (!drawer) return;
+  state._lastCats = Array.isArray(cats) ? cats : [];
+  state.categoryPath = cleanDisplayText(selPath || state.categoryPath || '全部') || '全部';
+  const allCatPaths = getAllValidCategoryPaths(cats || []);
+  const uniqueCatPaths = [...new Set(allCatPaths)];
+  state.hotCategoryPaths = Object.entries(state.usageStats || {})
+    .filter(([k]) => uniqueCatPaths.includes(k))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([k]) => k);
+  if (!state.hotCategoryPaths.length) {
+    const freq = {};
+    (state.items || []).forEach((it) => {
+      const p = getItemCategoryPath(it);
+      if (!p || p === '未分类') return;
+      freq[p] = (freq[p] || 0) + 1;
+    });
+    state.hotCategoryPaths = Object.entries(freq)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([k]) => k);
+  }
+  if (!state.recentCategoryPaths.length && state.categoryPath && state.categoryPath !== '全部') {
+    state.recentCategoryPaths = [state.categoryPath];
+  }
+  drawer.innerHTML = '';
+  const fixedTitle = document.createElement('div');
+  fixedTitle.className = 'drawer-section-title';
+  fixedTitle.textContent = '分类目录';
+  drawer.appendChild(fixedTitle);
+  const allRow = document.createElement('div');
+  allRow.className = 'drawer-node' + (state.categoryPath === '全部' ? ' active' : '');
+  allRow.innerHTML = '<span class="drawer-fold">*</span><span class="drawer-label">全部</span>';
+  allRow.onclick = () => {
+    state.category = '全部';
+    state.categoryPath = '全部';
+    state.selectedIndex = 0;
+    postToAhk({ type: 'setCategory', category: '全部' });
+    renderCategories(state._lastCats || [], state.categoryPath);
+    renderList();
+  };
+  drawer.appendChild(allRow);
+  renderTreeNodes(drawer, buildCategoryTree(uniqueCatPaths), 0, []);
+  renderCategoryTopTags();
 }
 
 function renderList() {
@@ -1393,14 +1753,12 @@ function handleAhkMessage(msg) {
       state.keyword = msg.keyword || '';
       document.getElementById('search-input').value = state.keyword;
       state.category = cleanDisplayText(msg.selectedCategory || '全部');
-      if (msg.sourceFilter !== undefined)
-        state.sourceFilter = normalizeSourceFilter(msg.sourceFilter);
+      state.categoryPath = state.category === '全部' ? '全部' : joinCategoryPath(splitCategoryPath(state.category));
       if (msg.categories)
-        renderCategories(msg.categories, state.category);
-      renderSourceFilters(state.sourceFilter);
+        renderCategories(msg.categories, state.categoryPath);
       document.getElementById('status-bar').textContent = cleanDisplayText(msg.statusLine || '');
       if (msg.pinTop !== undefined) {
-                document.getElementById('lnk-pin').textContent = msg.pinTop ? '置顶·开' : '置顶·关';
+        state.pinTop = !!msg.pinTop;
       }
       if (msg.captureDraft) {
         const d = msg.captureDraft;
@@ -1420,11 +1778,11 @@ function handleAhkMessage(msg) {
       applyStaticHotkeyHints();
       state.selectedIndex = 0;
       renderList();
+      renderCategoryTopTags();
       break;
     case 'captureOpen':
       document.getElementById('capture-panel').style.display = 'block';
       state.captureExpanded = !!msg.expanded;
-      setSourceFilter('json');
       syncCaptureUi();
       if (msg.text !== undefined)
         document.getElementById('cap-body').value = msg.text;
@@ -1442,7 +1800,7 @@ function handleAhkMessage(msg) {
       openItemModal(msg);
       break;
     case 'vk_set_source_filter':
-      setSourceFilter(msg.filterType || 'all');
+      // source filter deprecated in favor of category tags
       break;
     case 'vk_action':
       handleVkAction(msg.action || '');
@@ -1455,9 +1813,13 @@ function handleAhkMessage(msg) {
 function fillCatSelect(cats, current) {
   const sel = document.getElementById('cap-cat');
   sel.innerHTML = '';
+  const norm = (v) => cleanDisplayText(v || '')
+    .replace(/\u3000/g, ' ')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim();
   const set = new Set(['未分类']);
   (cats || []).forEach(c0 => {
-    const c = cleanDisplayText(c0);
+    const c = norm(c0);
     if (c && c !== '全部') set.add(c);
   });
   set.forEach(c => {
@@ -1466,15 +1828,20 @@ function fillCatSelect(cats, current) {
     o.textContent = c;
     sel.appendChild(o);
   });
-    sel.value = current && [...set].includes(current) ? current : '未分类';
+  const cur = norm(current || '');
+  sel.value = cur && [...set].includes(cur) ? cur : '未分类';
 }
 
 function fillItemCategorySelect(cats, current) {
   const sel = document.getElementById('item-edit-category');
   sel.innerHTML = '';
+  const norm = (v) => cleanDisplayText(v || '')
+    .replace(/\u3000/g, ' ')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim();
   const set = new Set(['未分类']);
   (cats || []).forEach(c0 => {
-    const c = cleanDisplayText(c0);
+    const c = norm(c0);
     if (c && c !== '全部') set.add(c);
   });
   set.forEach(c => {
@@ -1483,7 +1850,8 @@ function fillItemCategorySelect(cats, current) {
     o.textContent = c;
     sel.appendChild(o);
   });
-    sel.value = current && [...set].includes(current) ? current : '未分类';
+  const cur = norm(current || '');
+  sel.value = cur && [...set].includes(cur) ? cur : '未分类';
 }
 
 function syncCaptureUi() {
@@ -1599,6 +1967,7 @@ document.getElementById('capture-toggle').addEventListener('click', () => {
 function doPaste() {
   const it = getSelectedDisplayItem();
   if (!it) return;
+  trackCategoryUse(getItemCategoryPath(it));
   sendAction('paste', { mergedIndex: it.mergedIndex });
 }
 
@@ -1818,7 +2187,6 @@ document.getElementById('search-input').addEventListener('input', (e) => {
 document.getElementById('lnk-import').onclick = () => sendAction('import');
 document.getElementById('lnk-export').onclick = () => sendAction('export');
 document.getElementById('lnk-json').onclick = () => sendAction('jsonHelp');
-document.getElementById('lnk-pin').onclick = () => sendAction('togglePinTop');
 const lnkWinRecycle = document.getElementById('lnk-win-recycle');
 if (lnkWinRecycle) {
   lnkWinRecycle.onclick = () => postToAhk({ type: 'openWindowsRecycleBin' });
@@ -1872,8 +2240,10 @@ document.addEventListener('keydown', (e) => {
   if (n >= 1 && n <= 9 && !e.ctrlKey && !e.altKey && e.target.id !== 'search-input') {
     const i = n - 1;
     const items = getDisplayItems();
-    if (items[i])
+    if (items[i]) {
+      trackCategoryUse(getItemCategoryPath(items[i]));
       sendAction('paste', { mergedIndex: items[i].mergedIndex });
+    }
   }
 });
 
@@ -1899,7 +2269,18 @@ document.addEventListener('visibilitychange', () => {
     endCapsHoldHint();
 });
 
-renderSourceFilters(state.sourceFilter);
+const drawerPanel = document.getElementById('drawer-panel');
+const drawerToggle = document.getElementById('drawer-toggle');
+if (drawerToggle && drawerPanel) {
+  drawerToggle.addEventListener('click', () => {
+    state.drawerCollapsed = !state.drawerCollapsed;
+    drawerPanel.classList.toggle('drawer-panel-collapsed', state.drawerCollapsed);
+    drawerToggle.textContent = state.drawerCollapsed ? '展开' : '折叠';
+  });
+}
+
+loadDrawerPrefs();
+renderCategoryTopTags();
 applyStaticHotkeyHints();
 syncCaptureUi();
 bootstrapPqpTheme();
