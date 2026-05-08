@@ -591,7 +591,14 @@ ConfigWebView_BuildInitData() {
         "floatingToolbarMenuItems", toolbarMenus,
         "floatingToolbarButtonOptions", FloatingToolbarButtonOptions,
         "floatingToolbarMenuOptions", FloatingToolbarMenuOptions,
-        "appearanceActivationMode", NormalizeAppearanceActivationMode(AppearanceActivationMode)
+        "appearanceActivationMode", NormalizeAppearanceActivationMode(AppearanceActivationMode),
+        "holePositionMode", IniRead(ConfigFile, "Appearance", "HolePositionMode", "anchor"),
+        "holeTriggerDistance", Integer(IniRead(ConfigFile, "Appearance", "HoleTriggerDistance", "260")),
+        "holeDismissDistance", Integer(IniRead(ConfigFile, "Appearance", "HoleDismissDistance", "320")),
+        "holeFixedX", Integer(IniRead(ConfigFile, "Appearance", "HoleFixedX", "360")),
+        "holeFixedY", Integer(IniRead(ConfigFile, "Appearance", "HoleFixedY", "260")),
+        "holeSizeScale", Float(IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0")),
+        "holeAnimLevel", Float(IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0"))
     )
     kbSnap := ConfigWebView_GetKeybinderToolbarSnapshot()
     cfgPayload["keybinderToolbarLayout"] := kbSnap["toolbarLayout"]
@@ -916,6 +923,31 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         NewFloatingToolbarButtons := FTB_SanitizeToolbarButtonItems(FloatingToolbarButtonItems)
         if (payload.Has("floatingToolbarButtons") && payload["floatingToolbarButtons"] is Array)
             NewFloatingToolbarButtons := FTB_SanitizeToolbarButtonItems(payload["floatingToolbarButtons"])
+        NewHolePositionMode := Trim(String(payload.Get("holePositionMode", IniRead(ConfigFile, "Appearance", "HolePositionMode", "anchor"))))
+        if (NewHolePositionMode != "anchor" && NewHolePositionMode != "fixed" && NewHolePositionMode != "relative")
+            NewHolePositionMode := "anchor"
+        NewHoleTriggerDistance := Integer(payload.Get("holeTriggerDistance", IniRead(ConfigFile, "Appearance", "HoleTriggerDistance", "260")))
+        if (NewHoleTriggerDistance < 80)
+            NewHoleTriggerDistance := 80
+        if (NewHoleTriggerDistance > 1200)
+            NewHoleTriggerDistance := 1200
+        NewHoleDismissDistance := Integer(payload.Get("holeDismissDistance", IniRead(ConfigFile, "Appearance", "HoleDismissDistance", "320")))
+        if (NewHoleDismissDistance < NewHoleTriggerDistance + 20)
+            NewHoleDismissDistance := NewHoleTriggerDistance + 20
+        if (NewHoleDismissDistance > 1600)
+            NewHoleDismissDistance := 1600
+        NewHoleFixedX := Integer(payload.Get("holeFixedX", IniRead(ConfigFile, "Appearance", "HoleFixedX", "360")))
+        NewHoleFixedY := Integer(payload.Get("holeFixedY", IniRead(ConfigFile, "Appearance", "HoleFixedY", "260")))
+        NewHoleSizeScale := Float(payload.Get("holeSizeScale", IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0")))
+        if (NewHoleSizeScale < 0.6)
+            NewHoleSizeScale := 0.6
+        if (NewHoleSizeScale > 1.8)
+            NewHoleSizeScale := 1.8
+        NewHoleAnimLevel := Float(payload.Get("holeAnimLevel", IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0")))
+        if (NewHoleAnimLevel < 0.4)
+            NewHoleAnimLevel := 0.4
+        if (NewHoleAnimLevel > 2.2)
+            NewHoleAnimLevel := 2.2
         NewQuickActions := []
         if (payload.Has("quickActions") && payload["quickActions"] is Array) {
             for item in payload["quickActions"] {
@@ -1079,6 +1111,13 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         IniWrite(PanelScreenIndex, ConfigFile, "Appearance", "ScreenIndex")
         IniWrite(PanelScreenIndex, ConfigFile, "Appearance", "PopupScreenIndex")
         IniWrite(AppearanceActivationMode, ConfigFile, "Appearance", "ActivationMode")
+        IniWrite(NewHolePositionMode, ConfigFile, "Appearance", "HolePositionMode")
+        IniWrite(String(NewHoleTriggerDistance), ConfigFile, "Appearance", "HoleTriggerDistance")
+        IniWrite(String(NewHoleDismissDistance), ConfigFile, "Appearance", "HoleDismissDistance")
+        IniWrite(String(NewHoleFixedX), ConfigFile, "Appearance", "HoleFixedX")
+        IniWrite(String(NewHoleFixedY), ConfigFile, "Appearance", "HoleFixedY")
+        IniWrite(String(NewHoleSizeScale), ConfigFile, "Appearance", "HoleSizeScale")
+        IniWrite(String(NewHoleAnimLevel), ConfigFile, "Appearance", "HoleAnimLevel")
         IniWrite(FunctionPanelPos, ConfigFile, "Appearance", "FunctionPanelPos")
         IniWrite(ConfigPanelPos, ConfigFile, "Appearance", "ConfigPanelPos")
         IniWrite(ClipboardPanelPos, ConfigFile, "Appearance", "ClipboardPanelPos")
@@ -1090,6 +1129,8 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         SetAutoStart(AutoStart)
         PromptQuickPad_RegisterCaptureHotkey()
         try FloatingToolbarPushButtonConfigToWeb()
+        try GDHO_SetScreenAnchor(NewHoleFixedX, NewHoleFixedY)
+        try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel)
         try ApplyAppearanceActivationMode()
         catch {
         }

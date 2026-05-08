@@ -37,10 +37,18 @@ global GDHO_ANCHOR_OFFSET_Y := 0
 global GDHO_SCREEN_X := 120
 global GDHO_SCREEN_Y := 120
 global GDHO_CLICKTHROUGH := true
-global GDHO_UPDATE_MIN_INTERVAL_MS := 48
+global GDHO_UPDATE_MIN_INTERVAL_MS := 72
 global GDHO_POLL_BUSY := false
 global GDHO_CURSOR_X := 0
 global GDHO_CURSOR_Y := 0
+global GDHO_SUPPRESS_UNTIL_RELEASE := false
+global GDHO_TOOLBAR_NEAR_RADIUS_PX := 260
+global GDHO_TOOLBAR_DISMISS_RADIUS_PX := 320
+global GDHO_POSITION_MODE := "anchor" ; anchor|fixed|relative
+global GDHO_FIXED_X := 360
+global GDHO_FIXED_Y := 260
+global GDHO_SIZE_SCALE := 1.0
+global GDHO_ANIM_LEVEL := 1.0
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -83,6 +91,40 @@ GDHO_SetScreenAnchor(screenX := 120, screenY := 120) {
     global GDHO_SCREEN_X, GDHO_SCREEN_Y
     GDHO_SCREEN_X := Integer(screenX)
     GDHO_SCREEN_Y := Integer(screenY)
+}
+
+GDHO_ApplySettings(positionMode := "anchor", triggerDistance := 260, dismissDistance := 320, fixedX := 360, fixedY := 260, sizeScale := 1.0, animLevel := 1.0) {
+    global GDHO_POSITION_MODE, GDHO_TOOLBAR_NEAR_RADIUS_PX, GDHO_TOOLBAR_DISMISS_RADIUS_PX, GDHO_FIXED_X, GDHO_FIXED_Y, GDHO_SIZE_SCALE, GDHO_ANIM_LEVEL
+    m := Trim(String(positionMode))
+    if (m != "anchor" && m != "fixed" && m != "relative")
+        m := "anchor"
+    GDHO_POSITION_MODE := m
+    td := Integer(triggerDistance)
+    dd := Integer(dismissDistance)
+    if (td < 80)
+        td := 80
+    if (td > 1200)
+        td := 1200
+    if (dd < td + 20)
+        dd := td + 20
+    if (dd > 1600)
+        dd := 1600
+    GDHO_TOOLBAR_NEAR_RADIUS_PX := td
+    GDHO_TOOLBAR_DISMISS_RADIUS_PX := dd
+    GDHO_FIXED_X := Integer(fixedX)
+    GDHO_FIXED_Y := Integer(fixedY)
+    ss := Float(sizeScale)
+    if (ss < 0.6)
+        ss := 0.6
+    if (ss > 1.8)
+        ss := 1.8
+    GDHO_SIZE_SCALE := ss
+    al := Float(animLevel)
+    if (al < 0.4)
+        al := 0.4
+    if (al > 2.2)
+        al := 2.2
+    GDHO_ANIM_LEVEL := al
 }
 
 GDHO_Init() {
@@ -314,9 +356,12 @@ GDHO_AnchorHoleUnderToolbar() {
         x := Integer(tx + (tw / 2) - (holeW / 2) - vl)
 
     if (mode = "toolbar_auto_vertical") {
+        ; Strict snap: cursor in upper half => above, lower half => below.
         cursorY := Integer(GDHO_CURSOR_Y)
+        if (cursorY = 0)
+            cursorY := Integer(ty + (th / 2))
         midY := Integer(ty + (th / 2))
-        if (cursorY > 0 && cursorY < midY)
+        if (cursorY < midY)
             y := Integer(ty - holeH - gap - vt)
         else
             y := Integer(ty + th + gap - vt)
@@ -371,7 +416,7 @@ GDHO_HideOverlay() {
 }
 
 GDHO_Show(payload := "file") {
-    global GDHO_CURSOR_X, GDHO_CURSOR_Y
+    global GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_POSITION_MODE
     p := (payload = "text") ? "text" : "file"
     try {
         CoordMode("Mouse", "Screen")
@@ -380,12 +425,18 @@ GDHO_Show(payload := "file") {
         GDHO_CURSOR_Y := my
     }
     GDHO_ShowOverlay()
-    GDHO_AnchorHoleUnderToolbar()
+    if (GDHO_POSITION_MODE = "fixed")
+        GDHO_AnchorHoleByScreen()
+    else if (GDHO_POSITION_MODE = "relative")
+        GDHO_RunJS("window.HoleOverlay?.moveTo({ x: " Integer(GDHO_CURSOR_X - 90) ", y: " Integer(GDHO_CURSOR_Y - 110) " })")
+    else
+        GDHO_AnchorHoleUnderToolbar()
     GDHO_RunJS("window.HoleOverlay?.show('" p "')")
+    GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL " })")
 }
 
 GDHO_Update(payload := "file", x := "", y := "") {
-    global GDHO_LAST_UPDATE_TICK, GDHO_UPDATE_MIN_INTERVAL_MS, GDHO_CURSOR_X, GDHO_CURSOR_Y
+    global GDHO_LAST_UPDATE_TICK, GDHO_UPDATE_MIN_INTERVAL_MS, GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_POSITION_MODE
     nowTick := A_TickCount
     if (GDHO_LAST_UPDATE_TICK && (nowTick - GDHO_LAST_UPDATE_TICK < GDHO_UPDATE_MIN_INTERVAL_MS))
         return
@@ -394,7 +445,12 @@ GDHO_Update(payload := "file", x := "", y := "") {
         GDHO_CURSOR_X := Integer(x)
         GDHO_CURSOR_Y := Integer(y)
     }
-    GDHO_AnchorHoleUnderToolbar()
+    if (GDHO_POSITION_MODE = "fixed")
+        GDHO_AnchorHoleByScreen()
+    else if (GDHO_POSITION_MODE = "relative" && x != "" && y != "")
+        GDHO_RunJS("window.HoleOverlay?.moveTo({ x: " Integer(x - 90) ", y: " Integer(y - 110) " })")
+    else
+        GDHO_AnchorHoleUnderToolbar()
     if (x = "" || y = "")
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "' })")
     else
@@ -435,6 +491,39 @@ GDHO_Stop() {
     GDHO_HideOverlay()
 }
 
+GDHO_IsDragSessionActive() {
+    global GDHO_ACTIVE, GDHO_START_X, GDHO_START_Y
+    if GDHO_ACTIVE
+        return true
+    if (GDHO_START_X != 0 || GDHO_START_Y != 0)
+        return GetKeyState("LButton", "P")
+    return false
+}
+
+GDHO_DistanceToToolbar(mx, my) {
+    global FloatingToolbarGUI, FloatingToolbarIsVisible
+    if !IsSet(FloatingToolbarGUI)
+        return 999999
+    if !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui)
+        return 999999
+    if (IsSet(FloatingToolbarIsVisible) && !FloatingToolbarIsVisible)
+        return 999999
+    try FloatingToolbarGUI.GetPos(&tx, &ty, &tw, &th)
+    catch
+        return 999999
+    left := tx, top := ty, right := tx + tw, bottom := ty + th
+    dx := 0, dy := 0
+    if (mx < left)
+        dx := left - mx
+    else if (mx > right)
+        dx := mx - right
+    if (my < top)
+        dy := top - my
+    else if (my > bottom)
+        dy := my - bottom
+    return Sqrt(dx * dx + dy * dy)
+}
+
 GDHO_PinToDesktop(payload := "text") {
     global GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD, GDHO_ACTIVE
     p := (payload = "file") ? "file" : "text"
@@ -465,7 +554,7 @@ GDHO_PollDrag(*) {
     global GDHO_ACTIVE, GDHO_START_X, GDHO_START_Y, GDHO_LAST_X, GDHO_LAST_Y
     global GDHO_START_CURSOR, GDHO_DRAG_SOURCE_CLASS, GDHO_PAYLOAD
     global GDHO_MIN_MOVE_PX, GDHO_LAST_UPDATE_TICK, GDHO_MAX_IDLE_HIDE_MS
-    global GDHO_POLL_BUSY
+    global GDHO_POLL_BUSY, GDHO_SUPPRESS_UNTIL_RELEASE, GDHO_TOOLBAR_NEAR_RADIUS_PX, GDHO_TOOLBAR_DISMISS_RADIUS_PX
     if GDHO_POLL_BUSY
         return
     GDHO_POLL_BUSY := true
@@ -479,6 +568,7 @@ GDHO_PollDrag(*) {
         if !lDown {
             ; Defensive: if toolbar drag state got stuck, force-close it on mouse-up.
             try FloatingToolbar_EndDrag()
+            GDHO_SUPPRESS_UNTIL_RELEASE := false
             if GDHO_ACTIVE {
                 GDHO_Drop(GDHO_PAYLOAD)
                 GDHO_ACTIVE := false
@@ -488,6 +578,13 @@ GDHO_PollDrag(*) {
                 GDHO_HideOverlay()
             }
             GDHO_ResetPointerSeed()
+            return
+        }
+
+        if GDHO_SUPPRESS_UNTIL_RELEASE {
+            GDHO_HideFrontend()
+            GDHO_HideOverlay()
+            GDHO_ACTIVE := false
             return
         }
 
@@ -514,6 +611,16 @@ GDHO_PollDrag(*) {
         likelyDrag := GDHO_IsLikelyDrag(GDHO_DRAG_SOURCE_CLASS, GDHO_START_CURSOR)
         if !likelyDrag
             return
+
+        distToTb := GDHO_DistanceToToolbar(mx, my)
+        limit := GDHO_ACTIVE ? GDHO_TOOLBAR_DISMISS_RADIUS_PX : GDHO_TOOLBAR_NEAR_RADIUS_PX
+        if (distToTb > limit) {
+            GDHO_HideFrontend()
+            GDHO_HideOverlay()
+            GDHO_ACTIVE := false
+            GDHO_SUPPRESS_UNTIL_RELEASE := true
+            return
+        }
 
         ; If drag already seeded from external window, keep updating even when cursor passes over toolbar.
         if !GDHO_ACTIVE {

@@ -770,6 +770,12 @@ FloatingToolbar_OnWebMessage(sender, args) {
         global FloatingToolbarGUI, FloatingToolbarDragging
         global FloatingToolbar_DragOriginScreenX, FloatingToolbar_DragOriginScreenY
         global FloatingToolbar_DragOriginWinX, FloatingToolbar_DragOriginWinY, FloatingToolbar_DragStartTick
+        ; Hard isolation: when external drag/hole session is active, never start toolbar self-drag.
+        try {
+            if GDHO_IsDragSessionActive()
+                return
+        } catch {
+        }
         if !FloatingToolbarGUI || FloatingToolbarDragging
             return
         try FloatingToolbarGUI.GetPos(&FloatingToolbar_DragOriginWinX, &FloatingToolbar_DragOriginWinY)

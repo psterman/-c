@@ -941,7 +941,14 @@
         keybinderToolbarLayout: [],
         keybinderCommands: [],
         keybinderContextMenuLayout: [],
-        appearanceActivationMode: "toolbar"
+        appearanceActivationMode: "toolbar",
+        holePositionMode: "anchor",
+        holeTriggerDistance: 260,
+        holeDismissDistance: 320,
+        holeFixedX: 360,
+        holeFixedY: 260,
+        holeSizeScale: 1.0,
+        holeAnimLevel: 1.0
       }
     };
     let __nmDock = null;
@@ -1461,7 +1468,18 @@
       } catch {}
     }
     function readGeneral(d){ d.cursorPath = document.getElementById("cursorPath")?.value.trim() ?? d.cursorPath; d.capslockHoldTimeSeconds = Number(document.getElementById("holdTime")?.value ?? d.capslockHoldTimeSeconds); d.autoStart = !!document.getElementById("autoStart")?.checked; d.defaultStartTab = document.getElementById("defaultStartTab")?.value ?? d.defaultStartTab; return d; }
-    function readAppearance(d){ d.themeMode = document.getElementById("themeMode")?.value ?? d.themeMode; d.popupScreenIndex = Number(document.getElementById("popupScreenIndex")?.value ?? d.popupScreenIndex); return d; }
+    function readAppearance(d){
+      d.themeMode = document.getElementById("themeMode")?.value ?? d.themeMode;
+      d.popupScreenIndex = Number(document.getElementById("popupScreenIndex")?.value ?? d.popupScreenIndex);
+      d.holePositionMode = document.getElementById("holePositionMode")?.value ?? (d.holePositionMode || "anchor");
+      d.holeTriggerDistance = Number(document.getElementById("holeTriggerDistance")?.value ?? d.holeTriggerDistance ?? 260);
+      d.holeDismissDistance = Number(document.getElementById("holeDismissDistance")?.value ?? d.holeDismissDistance ?? 320);
+      d.holeFixedX = Number(document.getElementById("holeFixedX")?.value ?? d.holeFixedX ?? 360);
+      d.holeFixedY = Number(document.getElementById("holeFixedY")?.value ?? d.holeFixedY ?? 260);
+      d.holeSizeScale = Number(document.getElementById("holeSizeScale")?.value ?? d.holeSizeScale ?? 1.0);
+      d.holeAnimLevel = Number(document.getElementById("holeAnimLevel")?.value ?? d.holeAnimLevel ?? 1.0);
+      return d;
+    }
     function readPrompts(d){
       d.promptExplain = document.getElementById("promptExplain")?.value ?? d.promptExplain;
       d.promptRefactor = document.getElementById("promptRefactor")?.value ?? d.promptRefactor;
@@ -1737,6 +1755,14 @@
       } else if (state.activeTab === "appearance") {
         const activationMode = normalizeActivationMode(state.appearanceActivationMode);
         panel.innerHTML = `<div class="card"><div class="title">外观设置</div><div class="row"><div class="label">主题模式</div><select id="themeMode">${optionsKV([{value:"dark",label:"深色"},{value:"light",label:"浅色"}],d.themeMode)}</select></div><div class="row"><div class="label">弹窗位置</div><select id="popupScreenIndex">${optionsKV(screenOpts, String(d.popupScreenIndex || 1))}</select></div><div class="hint">已自动识别显示器数量：${esc(monitorCount)}。此设置会应用到所有弹窗并固定保存。</div></div>
+<div class="card"><div class="title">悬浮洞交互</div>
+<div class="row"><div class="label">洞位置模式</div><select id="holePositionMode">${optionsKV([{value:"anchor",label:"靠近工具栏"},{value:"fixed",label:"固定位置"},{value:"relative",label:"相对拖动"}], String(d.holePositionMode || "anchor"))}</select></div>
+<div class="row"><div class="label">触发距离(px)</div><input id="holeTriggerDistance" type="number" min="80" max="1200" step="10" value="${esc(d.holeTriggerDistance ?? 260)}"></div>
+<div class="row"><div class="label">忽略后消失距离(px)</div><input id="holeDismissDistance" type="number" min="120" max="1600" step="10" value="${esc(d.holeDismissDistance ?? 320)}"></div>
+<div class="row"><div class="label">固定位置 X / Y</div><div class="inline"><input id="holeFixedX" type="number" step="1" value="${esc(d.holeFixedX ?? 360)}"><input id="holeFixedY" type="number" step="1" value="${esc(d.holeFixedY ?? 260)}"></div></div>
+<div class="row"><div class="label">洞大小缩放</div><input id="holeSizeScale" type="number" min="0.6" max="1.8" step="0.05" value="${esc(d.holeSizeScale ?? 1.0)}"></div>
+<div class="row"><div class="label">动画强度</div><input id="holeAnimLevel" type="number" min="0.4" max="2.2" step="0.05" value="${esc(d.holeAnimLevel ?? 1.0)}"></div>
+</div>
 <div class="card">
   <div class="title">激活方式</div>
   <div class="hint">选择悬浮栏、悬浮球或仅托盘；修改后将写入配置并立即生效。</div>
@@ -2041,6 +2067,11 @@
       if (!Number.isInteger(d.popupScreenIndex) || d.popupScreenIndex < 1) return "弹窗屏幕序号非法";
       const maxMonitors = Math.max(1, Number(d.monitorCount || 1));
       if (d.popupScreenIndex > maxMonitors) return "弹窗屏幕序号超出显示器范围";
+      if (!["anchor","fixed","relative"].includes(String(d.holePositionMode || "anchor"))) return "洞位置模式非法";
+      if (!Number.isFinite(Number(d.holeTriggerDistance)) || Number(d.holeTriggerDistance) < 80 || Number(d.holeTriggerDistance) > 1200) return "洞触发距离非法";
+      if (!Number.isFinite(Number(d.holeDismissDistance)) || Number(d.holeDismissDistance) < 120 || Number(d.holeDismissDistance) > 1600) return "洞消失距离非法";
+      if (!Number.isFinite(Number(d.holeSizeScale)) || Number(d.holeSizeScale) < 0.6 || Number(d.holeSizeScale) > 1.8) return "洞大小缩放非法";
+      if (!Number.isFinite(Number(d.holeAnimLevel)) || Number(d.holeAnimLevel) < 0.4 || Number(d.holeAnimLevel) > 2.2) return "洞动画强度非法";
       if (!Number.isInteger(d.aiSleepTime) || d.aiSleepTime < 50) return "AI 等待时间非法";
       if (!(d.launchDelaySeconds >= 0.5 && d.launchDelaySeconds <= 10)) return "启动延迟时间非法";
       if (!d.hotkeys || typeof d.hotkeys !== "object") return "快捷键数据无效";

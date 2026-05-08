@@ -2476,6 +2476,21 @@ GDHO_BuildFileUrl(absPath) {
     return "file:///" . p
 }
 
+GDHO_LoadSettingsFromIni() {
+    global ConfigFile
+    if !FileExist(ConfigFile)
+        return
+    mode := IniRead(ConfigFile, "Appearance", "HolePositionMode", "anchor")
+    td := Integer(IniRead(ConfigFile, "Appearance", "HoleTriggerDistance", "260"))
+    dd := Integer(IniRead(ConfigFile, "Appearance", "HoleDismissDistance", "320"))
+    fx := Integer(IniRead(ConfigFile, "Appearance", "HoleFixedX", "360"))
+    fy := Integer(IniRead(ConfigFile, "Appearance", "HoleFixedY", "260"))
+    ss := Float(IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0"))
+    al := Float(IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0"))
+    try GDHO_SetScreenAnchor(fx, fy)
+    try GDHO_ApplySettings(mode, td, dd, fx, fy, ss, al)
+}
+
 ApplyUnifiedWebViewAssets(wv2) {
     global UnifiedAssetsHost, UnifiedAssetsRoot, UnifiedAssetsAccessKind
     try wv2.SetVirtualHostNameToFolderMapping(UnifiedAssetsHost, UnifiedAssetsRoot, UnifiedAssetsAccessKind)
@@ -2566,8 +2581,8 @@ _WV2_BeginWarmupAfterEnv(*) {
     try ApplyAppearanceActivationMode()
     catch as _eApp {
     }
-    ; 洞延后到共享环境就绪后启动，避免与工具栏初始化竞争导致无响应
-    try SetTimer((*) => GDHO_Start(), -260)
+    ; 洞监控延迟启动，避免与悬浮栏首屏初始化竞争
+    try SetTimer((*) => GDHO_Start(), -1200)
     global WebViewWarmupQueue, WebViewWarmupIndex
     WebViewWarmupIndex := 0
     WebViewWarmupQueue := [CP_Init, PQP_Init, SCWV_Init, VK_EnsureInit.Bind(true)]
@@ -2591,6 +2606,7 @@ StartWebViewWarmup(*) {
 
 #Include modules\ConfigManager.ahk
 InitConfig() ; 启动初始化
+try GDHO_LoadSettingsFromIni()
 ; 启动时统一归一化 CapsLock 状态，避免继承系统残留 On 状态导致后续组合键流程反复恢复为大写
 SetCapsLockState("Off")
 PromptQuickPad_ReloadCapsLockBSettings()

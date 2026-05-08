@@ -10,19 +10,30 @@
     html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
     #root {
       position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      height: 280px;
+      inset: 0;
       pointer-events: none;
       background: transparent !important;
+      --hx: 50vw;
+      --hy: calc(100vh - 220px);
+      --hole-scale: 1;
+      --anim-level: 1;
+    }
+    .hole-wrap {
+      position: absolute;
+      left: var(--hx);
+      top: var(--hy);
+      width: 180px;
+      height: 206px;
+      transform: translateZ(0) scale(var(--hole-scale));
+      opacity: 0;
+      transition: opacity 180ms ease, transform calc(220ms / var(--anim-level)) ease;
     }
     .local-fx {
       position: absolute;
       left: 50%;
-      bottom: 40px;
-      width: min(72vw, 620px);
-      height: 180px;
+      bottom: 0;
+      width: 180px;
+      height: 120px;
       transform: translateX(-50%);
       border-radius: 50%;
       pointer-events: none;
@@ -36,17 +47,7 @@
           rgba(255, 255, 255, 0) 76%);
       animation: localAuraBreath 2.8s ease-in-out infinite;
     }
-    .hole-wrap {
-      position: absolute;
-      left: 50%;
-      bottom: 96px;
-      transform: translateX(-50%);
-      width: min(56vw, 410px);
-      height: min(36vw, 224px);
-      opacity: 0;
-      transition: opacity 180ms ease, transform 220ms ease;
-    }
-    .show .hole-wrap { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .show .hole-wrap { opacity: 1; transform: translateZ(0) scale(var(--hole-scale)); }
     .base-hole,.aura,.ring,.well {
       position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%;
     }
@@ -125,19 +126,49 @@
         p = Math.max(0, Math.min(1, Number(v) || 0));
         root.style.setProperty('--p', String(p));
       }
+      var pos = { x: Math.max(12, Math.round(window.innerWidth / 2 - 90)), y: Math.max(12, Math.round(window.innerHeight - 240)) };
+      function applyPos() {
+        root.style.setProperty('--hx', String(pos.x) + 'px');
+        root.style.setProperty('--hy', String(pos.y) + 'px');
+      }
+      function clampPos(x, y) {
+        var maxX = Math.max(12, window.innerWidth - 180 - 12);
+        var maxY = Math.max(12, window.innerHeight - 206 - 12);
+        pos.x = Math.max(12, Math.min(maxX, Math.round(Number(x) || 0)));
+        pos.y = Math.max(12, Math.min(maxY, Math.round(Number(y) || 0)));
+        applyPos();
+      }
       function show() { root.classList.add('show'); }
       function hide() { root.classList.remove('show'); root.classList.remove('drop'); setP(0); }
+      function setStyle(scale, animLevel) {
+        var s = Number(scale);
+        if (!Number.isFinite(s)) s = 1;
+        if (s < 0.6) s = 0.6;
+        if (s > 1.8) s = 1.8;
+        var a = Number(animLevel);
+        if (!Number.isFinite(a)) a = 1;
+        if (a < 0.4) a = 0.4;
+        if (a > 2.2) a = 2.2;
+        root.style.setProperty('--hole-scale', String(s));
+        root.style.setProperty('--anim-level', String(a));
+      }
       window.HoleOverlay = {
         show: function () { show(); setP(0.2); },
+        setStyle: function (o) { if (o) setStyle(o.scale, o.animLevel); },
+        moveTo: function (o) {
+          if (!o) return;
+          clampPos(o.x, o.y);
+          show();
+        },
         update: function (o) {
           show();
           if (o && typeof o.proximity === 'number') setP(o.proximity);
           else if (o && typeof o.x === 'number' && typeof o.y === 'number') {
-            var cx = window.innerWidth / 2;
-            var cy = window.innerHeight - 140;
+            var cx = pos.x + 90;
+            var cy = pos.y + 150;
             var dx = o.x - cx, dy = o.y - cy;
             var d = Math.sqrt(dx * dx + dy * dy);
-            var r = Math.max(window.innerWidth, window.innerHeight) * 0.28;
+            var r = 260;
             setP(1 - d / r);
           } else setP(0.45);
         },
@@ -149,6 +180,8 @@
         },
         hide: function () { hide(); }
       };
+      window.addEventListener('resize', function () { clampPos(pos.x, pos.y); });
+      applyPos();
       // 独立打开 HTML 时默认显示，便于预览；运行态仍由 AHK 控制 update/drop。
       show();
       setP(0.35);
