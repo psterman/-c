@@ -86,8 +86,10 @@ global MainScriptDir := A_ScriptDir
 #Include modules\EverythingClient.ahk
 
 ; 洞与工具栏同时启用：洞页面使用本地开发地址
-try GDHO_SetPageUrl("http://127.0.0.1:5173/hole.html")
-try GDHO_SetFallbackUrl(BuildAppLocalUrl("HoleOverlayStandalone.html"))
+holeFallbackUrl := BuildAppLocalUrl("HoleOverlayStandalone.html")
+holePageUrl := GDHO_ResolveHolePageUrl(holeFallbackUrl)
+try GDHO_SetPageUrl(holePageUrl)
+try GDHO_SetFallbackUrl(holeFallbackUrl)
 ; 洞改为“由工具栏拖拽事件触发”，避免常驻/全局轮询与工具栏拖拽状态机冲突
 ; 改为仅全局拖拽文本/文件触发洞，避免与工具栏拖动链路形成死循环
 try GDHO_Start()
@@ -2401,11 +2403,19 @@ EnsureFloatingSurfaceVisible() {
 
 ; 在InitConfig结束后加载模板
 BuildAppLocalUrl(relativePath) {
-    global UnifiedAssetsHost
+    host := "app.local"
+    try {
+        if IsSet(UnifiedAssetsHost) {
+            h := Trim(String(UnifiedAssetsHost))
+            if (h != "")
+                host := h
+        }
+    } catch {
+    }
     normalized := StrReplace(relativePath, "\", "/")
     if (SubStr(normalized, 1, 1) = "/")
         normalized := SubStr(normalized, 2)
-    return "https://" . UnifiedAssetsHost . "/" . normalized
+    return "https://" . host . "/" . normalized
 }
 
 BuildAppAssetUrl(relativePath) {
@@ -2415,6 +2425,52 @@ BuildAppAssetUrl(relativePath) {
     if (SubStr(normalized, 1, 7) = "assets/")
         return BuildAppLocalUrl(normalized)
     return BuildAppLocalUrl("assets/" . normalized)
+}
+
+GDHO_ResolveHolePageUrl(fallbackUrl) {
+    devUrl := "http://127.0.0.1:5173/hole.html"
+    if GDHO_IsHoleUrlReachable(devUrl, 900)
+        return devUrl
+
+    ; Try to auto-start Vite dev server for hole page.
+    GDHO_TryStartHoleDevServer()
+    Loop 18 {
+        Sleep(280)
+        if GDHO_IsHoleUrlReachable(devUrl, 700)
+            return devUrl
+    }
+    return fallbackUrl
+}
+
+GDHO_IsHoleUrlReachable(url, timeoutMs := 800) {
+    try {
+        req := ComObject("WinHttp.WinHttpRequest.5.1")
+        req.SetTimeouts(timeoutMs, timeoutMs, timeoutMs, timeoutMs)
+        req.Open("GET", url, false)
+        req.Send()
+        st := 0
+        try st := Integer(req.Status)
+        return (st >= 200 && st < 400)
+    } catch {
+        return false
+    }
+}
+
+GDHO_TryStartHoleDevServer() {
+    try {
+        workDir := A_ScriptDir . "\prototype\wails-toolbar-app\frontend"
+        if !DirExist(workDir)
+            return false
+        logDir := A_ScriptDir . "\Cache"
+        try DirCreate(logDir)
+        logFile := logDir . "\hole-vite.log"
+        ps := "Set-Location '" . StrReplace(workDir, "'", "''") . "'; npm run dev *> '" . StrReplace(logFile, "'", "''") . "'"
+        cmd := '"' . A_ComSpec . '" /c powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "' . ps . '"'
+        Run(cmd, , "Hide")
+        return true
+    } catch {
+        return false
+    }
 }
 
 ApplyUnifiedWebViewAssets(wv2) {

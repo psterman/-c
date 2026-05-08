@@ -89,6 +89,36 @@ body {
   position: relative;
   width: 100%;
   height: 116px;
+  filter: saturate(1.04);
+}
+
+.hole-core::before,
+.hole-core::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.hole-core::before {
+  bottom: 17px;
+  width: 120px;
+  height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 50%, rgba(118, 228, 255, 0.16), rgba(118, 228, 255, 0) 70%);
+  opacity: 0.45;
+  animation: idleAura 2.8s ease-in-out infinite;
+}
+
+.hole-core::after {
+  bottom: 19px;
+  width: 112px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(151, 221, 245, 0.28);
+  opacity: 0.34;
+  animation: idleRing 2.6s ease-in-out infinite;
 }
 
 .base-hole,
@@ -107,6 +137,7 @@ body {
   height: 34px;
   background: radial-gradient(ellipse at 50% 52%, rgba(174, 198, 221, 0.9) 0%, rgba(99, 129, 160, 0.75) 58%, rgba(67, 92, 120, 0.74) 100%);
   box-shadow: inset 0 7px 14px rgba(219, 235, 247, 0.52), inset 0 -9px 18px rgba(49, 71, 95, 0.48);
+  animation: baseBreath 3.4s ease-in-out infinite;
 }
 
 .color-aura {
@@ -142,6 +173,7 @@ body {
 .floating-hole.dragging .color-aura {
   opacity: calc(0.38 + var(--proximity) * 0.55);
   transform: translateX(-50%) scale(calc(0.95 + var(--proximity) * 0.16));
+  animation: auraSpiral 1.15s linear infinite;
 }
 
 .floating-hole.dragging .color-ring {
@@ -164,11 +196,13 @@ body {
   opacity: calc(0.34 + var(--proximity) * 0.56);
   transform: translateX(-50%) scale(calc(0.98 - var(--proximity) * 0.12));
   box-shadow: inset 0 6px 14px rgba(220, 252, 255, calc(0.15 + var(--proximity) * 0.24));
+  animation: wellThrob 0.9s ease-in-out infinite;
 }
 
 .floating-hole.drop-pulse .color-ring { animation: ringCollapse 620ms cubic-bezier(0.13, 0.84, 0.24, 1); }
 .floating-hole.drop-pulse .inner-well { animation: wellCollapse 620ms cubic-bezier(0.13, 0.84, 0.24, 1); }
 .floating-hole.drop-pulse .color-aura { animation: auraFlash 620ms cubic-bezier(0.13, 0.84, 0.24, 1); }
+.floating-hole.drop-pulse .hole-core::after { animation: shockwave 620ms cubic-bezier(0.13, 0.84, 0.24, 1); }
 
 .hint {
   margin: 8px 0 0;
@@ -196,4 +230,35 @@ body {
   0% { transform: translateX(-50%) scale(1); opacity: 0.86; }
   44% { transform: translateX(-50%) scale(1.16); opacity: 1; }
   100% { transform: translateX(-50%) scale(1.36); opacity: 0.18; }
+}
+
+@keyframes idleAura {
+  0%, 100% { opacity: 0.28; transform: translateX(-50%) scale(0.94); }
+  50% { opacity: 0.52; transform: translateX(-50%) scale(1.04); }
+}
+
+@keyframes idleRing {
+  0%, 100% { opacity: 0.22; transform: translateX(-50%) scale(0.94); }
+  50% { opacity: 0.42; transform: translateX(-50%) scale(1.04); }
+}
+
+@keyframes baseBreath {
+  0%, 100% { transform: translateX(-50%) scale(0.985); filter: brightness(0.98); }
+  50% { transform: translateX(-50%) scale(1.015); filter: brightness(1.03); }
+}
+
+@keyframes auraSpiral {
+  from { filter: blur(11px) hue-rotate(0deg); }
+  to { filter: blur(11px) hue-rotate(18deg); }
+}
+
+@keyframes wellThrob {
+  0%, 100% { transform: translateX(-50%) scale(0.96); }
+  50% { transform: translateX(-50%) scale(1.02); }
+}
+
+@keyframes shockwave {
+  0% { opacity: 0.88; transform: translateX(-50%) scale(0.92); }
+  55% { opacity: 0.74; transform: translateX(-50%) scale(1.24); }
+  100% { opacity: 0; transform: translateX(-50%) scale(1.58); }
 }
