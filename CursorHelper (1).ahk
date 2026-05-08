@@ -85,10 +85,12 @@ global MainScriptDir := A_ScriptDir
 
 #Include modules\EverythingClient.ahk
 
-; 初始化洞 Overlay（由悬浮工具栏拖拽事件触发显示，不开启全局轮询）
-try GDHO_SetPageUrl(BuildAppLocalUrl("HoleOverlayStandalone.html"))
-; 不在主脚本启动时常驻洞，避免覆盖悬浮工具栏。
-; 需要测试洞时请单独运行 scripts/run_global_drag_hole_overlay.ahk
+; 洞与工具栏同时启用：洞页面使用本地开发地址
+try GDHO_SetPageUrl("http://127.0.0.1:5173/hole.html")
+try GDHO_SetFallbackUrl(BuildAppLocalUrl("HoleOverlayStandalone.html"))
+; 洞改为“由工具栏拖拽事件触发”，避免常驻/全局轮询与工具栏拖拽状态机冲突
+; 改为仅全局拖拽文本/文件触发洞，避免与工具栏拖动链路形成死循环
+try GDHO_Start()
 
 ; 已移除强制管理员自提权，避免与 Everything 产生权限不一致导致 IPC 失败。
 
@@ -4462,6 +4464,17 @@ p:: {
 ; ===================== SearchCenter 其他功能键 =====================
 
 #HotIf  ; 结束 IsSearchCenterActive() && GetCapsLockState() 作用域
+
+; Ctrl+Alt+T：强制恢复到悬浮工具栏模式（从悬浮球/托盘一键回到工具栏）
+^!t:: {
+    global AppearanceActivationMode, ConfigFile
+    try AppearanceActivationMode := "toolbar"
+    try IniWrite("toolbar", ConfigFile, "Appearance", "ActivationMode")
+    try HideFloatingBubble()
+    try ShowFloatingToolbar()
+    try ApplyAppearanceActivationMode()
+    try TrayTip("悬浮工具栏", "已恢复工具栏模式", "Iconi Mute")
+}
 
 ; ===================== 快捷操作（设置「快捷按钮」同款，可从任意上下文调用）=====================
 ExecuteQuickActionByType(Type) {

@@ -18,6 +18,8 @@ global GDHO_LAST_X := 0
 global GDHO_LAST_Y := 0
 global GDHO_MONITORING := false
 global GDHO_PAGE_URL := "http://127.0.0.1:5173/hole.html"
+global GDHO_FALLBACK_URL := ""
+global GDHO_NAV_FAIL_COUNT := 0
 
 ; drag pre-judge parameters
 global GDHO_MIN_MOVE_PX := 10
@@ -26,6 +28,10 @@ global GDHO_MAX_IDLE_HIDE_MS := 160
 global GDHO_LAST_UPDATE_TICK := 0
 global GDHO_DESKTOP_PINNED := false
 global GDHO_PIN_PAYLOAD := "text"
+global GDHO_ANCHOR_W := 160
+global GDHO_ANCHOR_H := 206
+global GDHO_ANCHOR_GAP := 10
+global GDHO_CLICKTHROUGH := true
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -39,6 +45,13 @@ GDHO_SetPageUrl(url) {
     u := Trim(String(url))
     if (u != "")
         GDHO_PAGE_URL := u
+}
+
+GDHO_SetFallbackUrl(url) {
+    global GDHO_FALLBACK_URL
+    u := Trim(String(url))
+    if (u != "")
+        GDHO_FALLBACK_URL := u
 }
 
 GDHO_Init() {
@@ -68,8 +81,23 @@ GDHO_CreateOverlayGui() {
     try WinSetTransparent(255, "ahk_id " GDHO_GUI.Hwnd)
 }
 
+GDHO_SetClickThrough(enable := true) {
+    global GDHO_GUI, GDHO_CLICKTHROUGH
+    if !GDHO_GUI
+        return
+    ex := DllCall("GetWindowLongPtr", "Ptr", GDHO_GUI.Hwnd, "Int", -20, "Ptr")
+    if (enable) {
+        ex := ex | 0x20 ; WS_EX_TRANSPARENT
+        GDHO_CLICKTHROUGH := true
+    } else {
+        ex := ex & ~0x20
+        GDHO_CLICKTHROUGH := false
+    }
+    DllCall("SetWindowLongPtr", "Ptr", GDHO_GUI.Hwnd, "Int", -20, "Ptr", ex, "Ptr")
+}
+
 GDHO_OnWebViewCreated(ctrl) {
-    global GDHO_WV2_CTRL, GDHO_WV2, GDHO_READY, GDHO_PAGE_URL
+    global GDHO_WV2_CTRL, GDHO_WV2, GDHO_READY, GDHO_PAGE_URL, GDHO_NAV_FAIL_COUNT
 
     if !IsObject(ctrl) || !ctrl.HasProp("CoreWebView2")
         return
@@ -77,6 +105,7 @@ GDHO_OnWebViewCreated(ctrl) {
     GDHO_WV2_CTRL := ctrl
     GDHO_WV2 := ctrl.CoreWebView2
     GDHO_READY := false
+    GDHO_NAV_FAIL_COUNT := 0
 
     try ctrl.IsVisible := true
     try ctrl.DefaultBackgroundColor := 0x00000000
@@ -89,19 +118,54 @@ GDHO_OnWebViewCreated(ctrl) {
     }
     try ApplyWebView2PerformanceSettings(GDHO_WV2)
     try WebView2_RegisterHostBridge(GDHO_WV2)
+    try GDHO_WV2.add_WebMessageReceived(GDHO_OnWebMessage)
     try GDHO_WV2.add_NavigationCompleted(GDHO_OnNavigationCompleted)
     try GDHO_WV2.Navigate(GDHO_PAGE_URL)
 }
 
+GDHO_OnWebMessage(sender, args) {
+    msgJson := ""
+    try msgJson := args.WebMessageAsJson
+    if (msgJson = "")
+        return
+    if !InStr(msgJson, '"type":"hole_text_drop"')
+        return
+    m := ""
+    if !RegExMatch(msgJson, '"text"\s*:\s*"((?:[^"\\]|\\.)*)"', &m)
+        return
+    txt := m[1]
+    txt := StrReplace(txt, '\\"', '"')
+    txt := StrReplace(txt, "\\\\", "\")
+    txt := StrReplace(txt, "\\n", "`n")
+    txt := StrReplace(txt, "\\r", "`r")
+    txt := Trim(txt)
+    if (txt = "")
+        return
+    try FloatingToolbar_RequestSearchByKeyword(txt)
+}
+
 GDHO_OnNavigationCompleted(sender, args) {
-    global GDHO_READY, GDHO_GUI, GDHO_WV2_CTRL
+    global GDHO_READY, GDHO_GUI, GDHO_WV2_CTRL, GDHO_WV2
+    global GDHO_FALLBACK_URL, GDHO_NAV_FAIL_COUNT, GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD
     ok := false
     try ok := args.IsSuccess
     GDHO_READY := !!ok
     if GDHO_READY {
+        GDHO_NAV_FAIL_COUNT := 0
         ; Re-apply transparency after document init to avoid occasional white/black flash.
         try GDHO_WV2_CTRL.DefaultBackgroundColor := 0x00000000
         try WinSetTransColor("000000", "ahk_id " GDHO_GUI.Hwnd)
+        if GDHO_DESKTOP_PINNED {
+            p := (GDHO_PIN_PAYLOAD = "file") ? "file" : "text"
+            SetTimer((*) => GDHO_RunJS("window.HoleOverlay?.show('" p "')"), -60)
+            SetTimer((*) => GDHO_RunJS("window.HoleOverlay?.show('" p "')"), -220)
+        }
+        return
+    }
+
+    GDHO_NAV_FAIL_COUNT += 1
+    if (GDHO_FALLBACK_URL != "" && GDHO_NAV_FAIL_COUNT <= 2) {
+        try GDHO_WV2.Navigate(GDHO_FALLBACK_URL)
     }
 }
 
@@ -135,9 +199,61 @@ GDHO_ShowOverlay() {
     if !GDHO_VISIBLE {
         GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
         try GDHO_GUI.Show("x" vl " y" vt " w" vw " h" vh " NoActivate")
+        GDHO_SetClickThrough(true)
+        GDHO_KeepBelowToolbar()
         GDHO_VISIBLE := true
         try WebView2_NotifyShown(GDHO_WV2)
     }
+}
+
+GDHO_KeepBelowToolbar() {
+    global GDHO_GUI, FloatingToolbarGUI, FloatingToolbarIsVisible
+    if !GDHO_GUI
+        return
+    if !IsSet(FloatingToolbarGUI)
+        return
+    if !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui)
+        return
+    if (IsSet(FloatingToolbarIsVisible) && !FloatingToolbarIsVisible)
+        return
+    try {
+        ; Keep hole overlay directly below toolbar in topmost z-order.
+        DllCall("SetWindowPos"
+            , "Ptr", GDHO_GUI.Hwnd
+            , "Ptr", FloatingToolbarGUI.Hwnd
+            , "Int", 0, "Int", 0, "Int", 0, "Int", 0
+            , "UInt", 0x0001 | 0x0002 | 0x0010) ; NOSIZE|NOMOVE|NOACTIVATE
+    }
+}
+
+GDHO_AnchorHoleUnderToolbar() {
+    global FloatingToolbarGUI, FloatingToolbarIsVisible
+    global GDHO_ANCHOR_W, GDHO_ANCHOR_H, GDHO_ANCHOR_GAP
+    if !IsSet(FloatingToolbarGUI)
+        return false
+    if !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui)
+        return false
+    if (IsSet(FloatingToolbarIsVisible) && !FloatingToolbarIsVisible)
+        return false
+    try FloatingToolbarGUI.GetPos(&tx, &ty, &tw, &th)
+    catch
+        return false
+
+    GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+    holeW := Integer(GDHO_ANCHOR_W), holeH := Integer(GDHO_ANCHOR_H), gap := Integer(GDHO_ANCHOR_GAP)
+    x := Integer(tx + (tw / 2) - (holeW / 2) - vl)
+    y := Integer(ty + th + gap - vt)
+    if (x < 12)
+        x := 12
+    if (y < 12)
+        y := 12
+    maxX := vw - holeW - 12
+    maxY := vh - holeH - 12
+    if (x > maxX)
+        x := maxX
+    if (y > maxY)
+        y := maxY
+    return GDHO_RunJS("window.HoleOverlay?.moveTo({ x: " x ", y: " y " })")
 }
 
 GDHO_HideOverlay() {
@@ -145,6 +261,7 @@ GDHO_HideOverlay() {
     if !GDHO_GUI
         return
     try WebView2_NotifyHidden(GDHO_WV2)
+    GDHO_SetClickThrough(true)
     try GDHO_GUI.Hide()
     GDHO_VISIBLE := false
 }
@@ -152,12 +269,14 @@ GDHO_HideOverlay() {
 GDHO_Show(payload := "file") {
     p := (payload = "text") ? "text" : "file"
     GDHO_ShowOverlay()
+    GDHO_AnchorHoleUnderToolbar()
     GDHO_RunJS("window.HoleOverlay?.show('" p "')")
 }
 
 GDHO_Update(payload := "file", x := "", y := "") {
     global GDHO_LAST_UPDATE_TICK
     p := (payload = "text") ? "text" : "file"
+    GDHO_AnchorHoleUnderToolbar()
     if (x = "" || y = "")
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "' })")
     else

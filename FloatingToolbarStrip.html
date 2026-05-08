@@ -5651,10 +5651,23 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     } catch (_) {}
   }
   function holeDragShow(payload) {
-    holeDragVisible = false;
+    holeDragVisible = true;
+    holeDragLastPostTs = Date.now();
+    post({ type: 'hole_drag_show', payload: payload || 'text' });
   }
   function holeDragUpdate(payload, e) {
-    holeDragVisible = false;
+    var now = Date.now();
+    if (!holeDragVisible) {
+      holeDragShow(payload);
+    }
+    if (now - holeDragLastPostTs < HOLE_DRAG_POST_INTERVAL_MS) return;
+    holeDragLastPostTs = now;
+    post({
+      type: 'hole_drag_update',
+      payload: payload || 'text',
+      x: e && typeof e.screenX === 'number' ? Math.round(e.screenX) : 0,
+      y: e && typeof e.screenY === 'number' ? Math.round(e.screenY) : 0
+    });
   }
   function holeDragHide() {
     if (!holeDragVisible) return;
@@ -5663,6 +5676,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     post({ type: 'hole_drag_hide' });
   }
   function holeDragDrop(payload) {
+    post({ type: 'hole_drag_drop', payload: payload || 'text' });
     holeDragVisible = false;
     forceReleaseInteractionLocks();
   }

@@ -56,6 +56,8 @@ global FloatingToolbar_DragOriginScreenX := 0
 global FloatingToolbar_DragOriginScreenY := 0
 global FloatingToolbar_DragOriginWinX := 0
 global FloatingToolbar_DragOriginWinY := 0
+global FloatingToolbar_DragStartTick := 0
+global FloatingToolbar_DragMaxMs := 8000
 global FloatingToolbarIsMinimized := false
 global FloatingToolbarChatDrawerOpen := false
 global FloatingToolbarChatDrawerWidth := 620
@@ -745,67 +747,29 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
 
     if (typ = "hole_drag_show") {
-        ; 激活洞功能已下线：仅兜底回收可能遗留的 Overlay
-        try {
-            if IsSet(GDHO_Stop)
-                GDHO_Stop()
-            else {
-                if IsSet(GDHO_HideFrontend)
-                    GDHO_HideFrontend()
-                if IsSet(GDHO_HideOverlay)
-                    GDHO_HideOverlay()
-            }
-        } catch {
-        }
+        ; Disabled to avoid drag-event storm causing toolbar freeze.
         return
     }
 
     if (typ = "hole_drag_update") {
-        ; 激活洞功能已下线：仅兜底回收可能遗留的 Overlay
-        try {
-            if IsSet(GDHO_Stop)
-                GDHO_Stop()
-            else {
-                if IsSet(GDHO_HideFrontend)
-                    GDHO_HideFrontend()
-                if IsSet(GDHO_HideOverlay)
-                    GDHO_HideOverlay()
-            }
-        } catch {
-        }
+        ; Disabled to avoid drag-event storm causing toolbar freeze.
         return
     }
 
     if (typ = "hole_drag_hide") {
-        try {
-            if IsSet(GDHO_HideFrontend)
-                GDHO_HideFrontend()
-            if IsSet(GDHO_HideOverlay)
-                GDHO_HideOverlay()
-        } catch {
-        }
+        ; Disabled to avoid drag-event storm causing toolbar freeze.
         return
     }
 
     if (typ = "hole_drag_drop") {
-        try {
-            if IsSet(GDHO_Stop)
-                GDHO_Stop()
-            else {
-                if IsSet(GDHO_HideFrontend)
-                    GDHO_HideFrontend()
-                if IsSet(GDHO_HideOverlay)
-                    GDHO_HideOverlay()
-            }
-        } catch {
-        }
+        ; Disabled to avoid drag-event storm causing toolbar freeze.
         return
     }
 
     if (typ = "drag_host") {
         global FloatingToolbarGUI, FloatingToolbarDragging
         global FloatingToolbar_DragOriginScreenX, FloatingToolbar_DragOriginScreenY
-        global FloatingToolbar_DragOriginWinX, FloatingToolbar_DragOriginWinY
+        global FloatingToolbar_DragOriginWinX, FloatingToolbar_DragOriginWinY, FloatingToolbar_DragStartTick
         if !FloatingToolbarGUI || FloatingToolbarDragging
             return
         try FloatingToolbarGUI.GetPos(&FloatingToolbar_DragOriginWinX, &FloatingToolbar_DragOriginWinY)
@@ -815,7 +779,8 @@ FloatingToolbar_OnWebMessage(sender, args) {
         CoordMode("Mouse", "Screen")
         MouseGetPos(&FloatingToolbar_DragOriginScreenX, &FloatingToolbar_DragOriginScreenY)
         FloatingToolbarDragging := true
-        SetTimer(FloatingToolbar_DragRun, -1)
+        FloatingToolbar_DragStartTick := A_TickCount
+        SetTimer(FloatingToolbar_DragRun, 16)
         return
     }
 
@@ -2042,41 +2007,54 @@ FloatingToolbar_DragRun(*) {
     global FloatingToolbarGUI, FloatingToolbarDragging, FloatingToolbarWindowX, FloatingToolbarWindowY
     global FloatingToolbar_DragOriginScreenX, FloatingToolbar_DragOriginScreenY
     global FloatingToolbar_DragOriginWinX, FloatingToolbar_DragOriginWinY
+    global FloatingToolbar_DragStartTick, FloatingToolbar_DragMaxMs
 
-    if !(FloatingToolbarGUI && FloatingToolbarDragging)
+    if !(FloatingToolbarGUI && FloatingToolbarDragging) {
+        SetTimer(FloatingToolbar_DragRun, 0)
         return
+    }
+    if (!GetKeyState("LButton", "P")) {
+        FloatingToolbar_EndDrag()
+        return
+    }
+    if (FloatingToolbar_DragStartTick && (A_TickCount - FloatingToolbar_DragStartTick > FloatingToolbar_DragMaxMs)) {
+        FloatingToolbar_EndDrag()
+        return
+    }
     try {
         ToolbarWidth := FloatingToolbarCalculateWidth()
         ToolbarHeight := FloatingToolbarCalculateHeight()
         ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
         vr := vl + vw
         vb := vt + vh
-        lastX := FloatingToolbarWindowX
-        lastY := FloatingToolbarWindowY
-        while GetKeyState("LButton", "P") {
-            CoordMode("Mouse", "Screen")
-            MouseGetPos(&mx, &my)
-            newX := FloatingToolbar_DragOriginWinX + (mx - FloatingToolbar_DragOriginScreenX)
-            newY := FloatingToolbar_DragOriginWinY + (my - FloatingToolbar_DragOriginScreenY)
-            if (newX < vl)
-                newX := vl
-            if (newY < vt)
-                newY := vt
-            if (newX + ToolbarWidth > vr)
-                newX := vr - ToolbarWidth
-            if (newY + ToolbarHeight > vb)
-                newY := vb - ToolbarHeight
-            if (newX != lastX || newY != lastY) {
-                try FloatingToolbarGUI.Move(newX, newY)
-                lastX := newX
-                lastY := newY
-                FloatingToolbarWindowX := newX
-                FloatingToolbarWindowY := newY
-            }
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&mx, &my)
+        newX := FloatingToolbar_DragOriginWinX + (mx - FloatingToolbar_DragOriginScreenX)
+        newY := FloatingToolbar_DragOriginWinY + (my - FloatingToolbar_DragOriginScreenY)
+        if (newX < vl)
+            newX := vl
+        if (newY < vt)
+            newY := vt
+        if (newX + ToolbarWidth > vr)
+            newX := vr - ToolbarWidth
+        if (newY + ToolbarHeight > vb)
+            newY := vb - ToolbarHeight
+        if (newX != FloatingToolbarWindowX || newY != FloatingToolbarWindowY) {
+            try FloatingToolbarGUI.Move(newX, newY)
+            FloatingToolbarWindowX := newX
+            FloatingToolbarWindowY := newY
         }
     } catch {
+        FloatingToolbar_EndDrag()
+        return
     }
+}
+
+FloatingToolbar_EndDrag() {
+    global FloatingToolbarDragging, FloatingToolbar_DragStartTick
     FloatingToolbarDragging := false
+    FloatingToolbar_DragStartTick := 0
+    SetTimer(FloatingToolbar_DragRun, 0)
     FloatingToolbarCheckWindowPosition()
     SaveFloatingToolbarPosition()
 }

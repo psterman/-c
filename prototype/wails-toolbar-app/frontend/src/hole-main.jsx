@@ -103,6 +103,14 @@ function HolePage() {
     setHoleVisible(false);
   };
 
+  const postHostMessage = (payload) => {
+    try {
+      if (window?.chrome?.webview?.postMessage) {
+        window.chrome.webview.postMessage(payload);
+      }
+    } catch (_) {}
+  };
+
   useEffect(() => {
     window.HoleOverlay = {
       show: (payload = "file") => {
@@ -159,6 +167,37 @@ function HolePage() {
     };
   }, []);
 
+  const onHoleDrop = (event) => {
+    event.preventDefault();
+    const text = (
+      event.dataTransfer?.getData("text/plain")
+      || event.dataTransfer?.getData("Text")
+      || event.dataTransfer?.getData("text/uri-list")
+      || ""
+    ).trim();
+    const file = event.dataTransfer?.files?.[0];
+
+    setDropPulse(true);
+    setTimeout(() => setDropPulse(false), 620);
+
+    if (text) {
+      setPayloadType("text");
+      setHint(applyPhaseHint("text", "drop"));
+      postHostMessage({ type: "hole_text_drop", text });
+      resetState(false);
+      return;
+    }
+
+    if (file?.name) {
+      setPayloadType("file");
+      setHint(applyPhaseHint("file", "drop"));
+      resetState(false);
+      return;
+    }
+
+    resetState(false);
+  };
+
   useEffect(() => {
     const onWindowDragEnter = (event) => {
       const type = detectPayloadType(event.dataTransfer);
@@ -209,6 +248,26 @@ function HolePage() {
         ref={holeRef}
         className={`floating-hole ${holeVisible ? "" : "hidden"} ${dragging ? "dragging" : ""} ${dropPulse ? "drop-pulse" : ""} payload-${payloadType}`}
         style={{ "--proximity": proximity.toFixed(3), left: `${position.x}px`, top: `${position.y}px` }}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          const type = detectPayloadType(e.dataTransfer);
+          if (type === "none") return;
+          setDragging(true);
+          setPayloadType(type);
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          const type = detectPayloadType(e.dataTransfer);
+          if (type === "none") return;
+          setDragging(true);
+          setPayloadType(type);
+          updateProximityFromPointer(e.clientX, e.clientY);
+        }}
+        onDragLeave={() => {
+          setDragging(false);
+          setProximity(0);
+        }}
+        onDrop={onHoleDrop}
       >
         <button type="button" className="hole-grip" onPointerDown={beginMove} title="按住拖动位置" aria-label="拖动洞位置" />
         <button
