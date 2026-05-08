@@ -87,6 +87,8 @@ global MainScriptDir := A_ScriptDir
 
 ; 初始化洞 Overlay（由悬浮工具栏拖拽事件触发显示，不开启全局轮询）
 try GDHO_SetPageUrl(BuildAppLocalUrl("HoleOverlayStandalone.html"))
+; 不在主脚本启动时常驻洞，避免覆盖悬浮工具栏。
+; 需要测试洞时请单独运行 scripts/run_global_drag_hole_overlay.ahk
 
 ; 已移除强制管理员自提权，避免与 Everything 产生权限不一致导致 IPC 失败。
 

@@ -698,7 +698,7 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ = "drop_search") {
         t := msg.Has("text") ? Trim(String(msg["text"])) : ""
         if (t != "") {
-            try SearchCenter_RunQueryWithKeyword(t)
+            try FloatingToolbar_RequestSearchByKeyword(t)
             catch {
             }
         }
@@ -719,7 +719,7 @@ FloatingToolbar_OnWebMessage(sender, args) {
             try {
                 switch action {
                     case "Search":
-                        SearchCenter_RunQueryWithKeyword(t)
+                        FloatingToolbar_RequestSearchByKeyword(t)
                     case "Niuma":
                         FloatingToolbar_SendTextToNiumaChat(t, true, true, true)
                     case "Prompt", "NewPrompt":
@@ -728,7 +728,8 @@ FloatingToolbar_OnWebMessage(sender, args) {
                         CP_Show()
                         CP_SetSearchText(t, true, true)
                     default:
-                        ; 鏈畾涔夎緭鍏ラ潰鏉跨殑鍥炬爣缁熶竴鍥為€€鍒版悳绱腑蹇?                        SearchCenter_RunQueryWithKeyword(t)
+                        ; 未定义入口图标统一回退到搜索中心
+                        FloatingToolbar_RequestSearchByKeyword(t)
                 }
             } catch {
             }
@@ -744,33 +745,32 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
 
     if (typ = "hole_drag_show") {
-        p := msg.Has("payload") ? Trim(String(msg["payload"])) : "text"
-        if (p = "")
-            p := "text"
+        ; 激活洞功能已下线：仅兜底回收可能遗留的 Overlay
         try {
-            if IsSet(GDHO_Init)
-                GDHO_Init()
-            if IsSet(GDHO_Show)
-                GDHO_Show(p)
+            if IsSet(GDHO_Stop)
+                GDHO_Stop()
+            else {
+                if IsSet(GDHO_HideFrontend)
+                    GDHO_HideFrontend()
+                if IsSet(GDHO_HideOverlay)
+                    GDHO_HideOverlay()
+            }
         } catch {
         }
         return
     }
 
     if (typ = "hole_drag_update") {
-        global g_FTB_HoleDragLastUpdateTick, g_FTB_HoleDragUpdateMinIntervalMs
-        nowTick := A_TickCount
-        if (g_FTB_HoleDragLastUpdateTick && (nowTick - g_FTB_HoleDragLastUpdateTick) < g_FTB_HoleDragUpdateMinIntervalMs)
-            return
-        g_FTB_HoleDragLastUpdateTick := nowTick
-        p := msg.Has("payload") ? Trim(String(msg["payload"])) : "text"
-        x := msg.Has("x") ? Integer(msg["x"]) : ""
-        y := msg.Has("y") ? Integer(msg["y"]) : ""
+        ; 激活洞功能已下线：仅兜底回收可能遗留的 Overlay
         try {
-            if IsSet(GDHO_Init)
-                GDHO_Init()
-            if IsSet(GDHO_Update)
-                GDHO_Update(p, x, y)
+            if IsSet(GDHO_Stop)
+                GDHO_Stop()
+            else {
+                if IsSet(GDHO_HideFrontend)
+                    GDHO_HideFrontend()
+                if IsSet(GDHO_HideOverlay)
+                    GDHO_HideOverlay()
+            }
         } catch {
         }
         return
@@ -788,13 +788,15 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
 
     if (typ = "hole_drag_drop") {
-        p := msg.Has("payload") ? Trim(String(msg["payload"])) : "text"
         try {
-            if IsSet(GDHO_Drop)
-                GDHO_Drop(p)
-            if IsSet(GDHO_HideFrontend)
-                SetTimer((*) => GDHO_HideFrontend(), -320)
-            SetTimer((*) => (IsSet(GDHO_HideOverlay) ? GDHO_HideOverlay() : 0), -700)
+            if IsSet(GDHO_Stop)
+                GDHO_Stop()
+            else {
+                if IsSet(GDHO_HideFrontend)
+                    GDHO_HideFrontend()
+                if IsSet(GDHO_HideOverlay)
+                    GDHO_HideOverlay()
+            }
         } catch {
         }
         return
@@ -1453,6 +1455,49 @@ FloatingToolbar_VerifySearchCenterOpen(*) {
         return
 
     ; 搜索中心未真正拉起：释放 search dock 抑制并恢复工具栏可见性
+    try FloatingToolbar_PageDockLeave("search")
+    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) = "toolbar" && !FloatingToolbarIsVisible) {
+        try ShowFloatingToolbar()
+    }
+}
+
+; 拖拽入口：异步打开搜索中心，避免在 WebMessage 回调内同步跑搜索导致工具栏卡死。
+FloatingToolbar_RequestSearchByKeyword(keyword) {
+    kw := Trim(String(keyword))
+    if (kw = "")
+        return
+    SetTimer(FloatingToolbar_DeferredOpenSearchByKeyword.Bind(kw), -1)
+}
+
+FloatingToolbar_DeferredOpenSearchByKeyword(keyword, *) {
+    global FloatingToolbarIsVisible, AppearanceActivationMode
+    kw := Trim(String(keyword))
+    if (kw = "")
+        return
+
+    opened := false
+    try FloatingToolbarCollapseTransientUi()
+    ; 兜底清理：若上一次 search dock 标记残留，先释放，后续由 SCWV_Show 重新进入
+    try FloatingToolbar_PageDockLeave("search")
+
+    try {
+        SearchCenter_RunQueryWithKeyword(kw)
+        opened := true
+    } catch {
+        opened := false
+    }
+
+    ; 与工具栏搜索图标保持一致：补焦点 + 补验证，避免“工具栏消失但搜索中心没起来”
+    SetTimer(FloatingToolbar_EnsureSearchCenterFocused, -20)
+    SetTimer(FloatingToolbar_EnsureSearchCenterFocused, -120)
+    SetTimer(FloatingToolbar_EnsureSearchCenterFocused, -320)
+    SetTimer(FloatingToolbar_VerifySearchCenterOpen, -260)
+    SetTimer(FloatingToolbar_VerifySearchCenterOpen, -900)
+
+    if opened
+        return
+
+    ; 打开失败时立刻回滚 dock 抑制，确保工具栏不会残留在隐藏态
     try FloatingToolbar_PageDockLeave("search")
     if (NormalizeAppearanceActivationMode(AppearanceActivationMode) = "toolbar" && !FloatingToolbarIsVisible) {
         try ShowFloatingToolbar()

@@ -5651,19 +5651,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     } catch (_) {}
   }
   function holeDragShow(payload) {
-    if (!payload) return;
-    if (!holeDragVisible) {
-      holeDragVisible = true;
-      post({ type: 'hole_drag_show', payload: payload });
-    }
+    holeDragVisible = false;
   }
   function holeDragUpdate(payload, e) {
-    if (!payload || !e) return;
-    var now = Date.now();
-    if (now - holeDragLastPostTs < HOLE_DRAG_POST_INTERVAL_MS) return;
-    holeDragLastPostTs = now;
-    if (!holeDragVisible) holeDragShow(payload);
-    post({ type: 'hole_drag_update', payload: payload, x: e.screenX || 0, y: e.screenY || 0 });
+    holeDragVisible = false;
   }
   function holeDragHide() {
     if (!holeDragVisible) return;
@@ -5672,10 +5663,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     post({ type: 'hole_drag_hide' });
   }
   function holeDragDrop(payload) {
-    if (!holeDragVisible) return;
     holeDragVisible = false;
     forceReleaseInteractionLocks();
-    post({ type: 'hole_drag_drop', payload: payload || 'text' });
   }
 
   function findDropActionTarget(e) {

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./hole.css";
 
@@ -11,7 +11,6 @@ function detectPayloadType(dataTransfer) {
 
   if (hasFilesType) return "file";
   if (hasTextType) return "text";
-
   const file = dataTransfer.files?.[0];
   if (file) return "file";
   return "none";
@@ -22,35 +21,33 @@ function clamp01(v) {
 }
 
 function HolePage() {
-  const [holeVisible, setHoleVisible] = useState(false);
+  const [holeVisible, setHoleVisible] = useState(true);
   const [dragging, setDragging] = useState(false);
   const [dropPulse, setDropPulse] = useState(false);
   const [payloadType, setPayloadType] = useState("none");
   const [proximity, setProximity] = useState(0);
-  const [hint, setHint] = useState("拖动文本或文件到洞口");
+  const [hint, setHint] = useState("拖文字或文件靠近洞口");
+  const [position, setPosition] = useState({ x: 0, y: 0 });
 
   const holeRef = useRef(null);
   const dragCounterRef = useRef(0);
-
-  const cards = useMemo(
-    () => Array.from({ length: 12 }).map((_, i) => ({ id: i, tilt: -14 + ((i % 6) * 6), lift: (i % 4) * 6 })),
-    []
-  );
+  const movingRef = useRef(false);
+  const moveOriginRef = useRef({ pointerX: 0, pointerY: 0, startX: 0, startY: 0 });
 
   const applyPhaseHint = (type, phase) => {
-    if (phase === "idle") return "拖动文本或文件到洞口";
+    if (phase === "idle") return "拖文字或文件靠近洞口";
     if (phase === "drop") return type === "text" ? "文本已流转" : "文件已流转";
-    return type === "text" ? "靠近洞口，松开流转文本" : "靠近洞口，松开流转文件";
+    return type === "text" ? "松开以流转文本" : "松开以流转文件";
   };
 
-  const resetState = (hide = true) => {
+  const resetState = (hide = false) => {
     setDragging(false);
     setProximity(0);
     setTimeout(() => {
       setPayloadType("none");
       setHint(applyPhaseHint("none", "idle"));
       if (hide) setHoleVisible(false);
-    }, 900);
+    }, 560);
   };
 
   const updateProximityFromPointer = (clientX, clientY) => {
@@ -63,12 +60,50 @@ function HolePage() {
     const dx = clientX - cx;
     const dy = clientY - cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const influenceRadius = Math.max(rect.width, rect.height) * 0.85;
+    const influenceRadius = Math.max(rect.width, rect.height) * 1.2;
     setProximity(clamp01(1 - dist / influenceRadius));
   };
 
+  const beginMove = (event) => {
+    if (event.button !== 0) return;
+    movingRef.current = true;
+    moveOriginRef.current = {
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      startX: position.x,
+      startY: position.y,
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", endMove);
+  };
+
+  const handleMove = (event) => {
+    if (!movingRef.current) return;
+    const dx = event.clientX - moveOriginRef.current.pointerX;
+    const dy = event.clientY - moveOriginRef.current.pointerY;
+
+    const nextX = Math.max(12, Math.min(window.innerWidth - 172, moveOriginRef.current.startX + dx));
+    const nextY = Math.max(12, Math.min(window.innerHeight - 220, moveOriginRef.current.startY + dy));
+    setPosition({ x: nextX, y: nextY });
+  };
+
+  const endMove = () => {
+    movingRef.current = false;
+    window.removeEventListener("pointermove", handleMove);
+    window.removeEventListener("pointerup", endMove);
+  };
+
+  const closeHole = () => {
+    endMove();
+    setDropPulse(false);
+    setDragging(false);
+    setProximity(0);
+    setPayloadType("none");
+    setHint(applyPhaseHint("none", "idle"));
+    setHoleVisible(false);
+  };
+
   useEffect(() => {
-    // AHK -> Wails -> WebView2 bridge API
     window.HoleOverlay = {
       show: (payload = "file") => {
         const type = payload === "text" ? "text" : "file";
@@ -98,7 +133,7 @@ function HolePage() {
         setDropPulse(true);
         setHint(applyPhaseHint(type, "drop"));
         setTimeout(() => setDropPulse(false), 620);
-        resetState(true);
+        resetState(false);
       },
       hide: () => {
         setDropPulse(false);
@@ -108,15 +143,23 @@ function HolePage() {
         setHint(applyPhaseHint("none", "idle"));
         setHoleVisible(false);
       },
+      moveTo: ({ x, y } = {}) => {
+        if (typeof x === "number" && typeof y === "number") {
+          setPosition({
+            x: Math.max(12, Math.min(window.innerWidth - 172, x)),
+            y: Math.max(12, Math.min(window.innerHeight - 220, y)),
+          });
+        }
+      },
     };
 
     return () => {
+      endMove();
       if (window.HoleOverlay) delete window.HoleOverlay;
     };
   }, []);
 
   useEffect(() => {
-    // Browser fallback drag behavior for local testing
     const onWindowDragEnter = (event) => {
       const type = detectPayloadType(event.dataTransfer);
       if (type === "none") return;
@@ -140,13 +183,7 @@ function HolePage() {
 
     const onWindowDragLeave = () => {
       dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
-      if (dragCounterRef.current === 0) {
-        setDragging(false);
-        setProximity(0);
-        setPayloadType("none");
-        setHint(applyPhaseHint("none", "idle"));
-        setHoleVisible(false);
-      }
+      if (dragCounterRef.current === 0) resetState(false);
     };
 
     const onWindowDrop = () => {
@@ -166,102 +203,31 @@ function HolePage() {
     };
   }, []);
 
-  const onDragOver = (event) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
-
-    const nextType = detectPayloadType(event.dataTransfer);
-    if (nextType === "none") {
-      setDragging(false);
-      setPayloadType("none");
-      setProximity(0);
-      setHint(applyPhaseHint("none", "idle"));
-      return;
-    }
-
-    setHoleVisible(true);
-    setDragging(true);
-    setPayloadType(nextType);
-    updateProximityFromPointer(event.clientX, event.clientY);
-    setHint(applyPhaseHint(nextType, "drag"));
-  };
-
-  const onDragLeave = (event) => {
-    event.preventDefault();
-    if (!event.currentTarget.contains(event.relatedTarget)) {
-      setDragging(false);
-      setPayloadType("none");
-      setProximity(0);
-      setHint(applyPhaseHint("none", "idle"));
-    }
-  };
-
-  const onDrop = async (event) => {
-    event.preventDefault();
-
-    const text = event.dataTransfer?.getData("text/plain")?.trim();
-    const file = event.dataTransfer?.files?.[0];
-
-    setDropPulse(true);
-
-    if (text) {
-      setPayloadType("text");
-      setHint(applyPhaseHint("text", "drop"));
-    } else if (file?.path || file?.name) {
-      setPayloadType("file");
-      setHint(`文件已流转: ${file.name}`);
-      try {
-        const sender = window?.go?.main?.App?.SendToAI;
-        if (typeof sender === "function" && file.path) await sender(file.path);
-      } catch (error) {
-        console.error("SendToAI failed:", error);
-      }
-    } else {
-      setHint("未检测到可流转内容");
-    }
-
-    setTimeout(() => setDropPulse(false), 620);
-    resetState();
-  };
-
   return (
-    <main
-      className={`flow-scene ${holeVisible ? "hole-visible" : "hole-hidden"} ${dragging ? "dragging" : ""} ${dropPulse ? "drop-pulse" : ""} payload-${payloadType}`}
-      style={{ "--proximity": proximity.toFixed(3) }}
-      onDragEnter={onDragOver}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-    >
-      <section className="card-cloud" aria-hidden="true">
-        {cards.map((card, idx) => (
-          <article
-            key={card.id}
-            className={`cloud-card ${idx === 7 ? "hero" : ""}`}
-            style={{
-              "--tilt": `${card.tilt}deg`,
-              "--lift": `${card.lift}px`,
-              "--x": `${(idx % 4) * 24 - 36}%`,
-              "--y": `${Math.floor(idx / 4) * 22}%`,
-            }}
-          >
-            <div className="line l1" />
-            <div className="line l2" />
-            <div className="line l3" />
-          </article>
-        ))}
+    <main className="hole-stage">
+      <section
+        ref={holeRef}
+        className={`floating-hole ${holeVisible ? "" : "hidden"} ${dragging ? "dragging" : ""} ${dropPulse ? "drop-pulse" : ""} payload-${payloadType}`}
+        style={{ "--proximity": proximity.toFixed(3), left: `${position.x}px`, top: `${position.y}px` }}
+      >
+        <button type="button" className="hole-grip" onPointerDown={beginMove} title="按住拖动位置" aria-label="拖动洞位置" />
+        <button
+          type="button"
+          className="hole-close"
+          onClick={closeHole}
+          title="关闭洞"
+          aria-label="关闭洞"
+        >
+          ×
+        </button>
+        <div className="hole-core" aria-label="流转洞" role="img">
+          <div className="base-hole" />
+          <div className="color-aura" />
+          <div className="color-ring" />
+          <div className="inner-well" />
+        </div>
+        {(dragging && proximity > 0.18) ? <p className="hint">{hint}</p> : null}
       </section>
-
-      <div className="fog" aria-hidden="true" />
-
-      <section ref={holeRef} className="flow-hole" role="img" aria-label="流转洞">
-        <div className="base-hole" />
-        <div className="color-aura" />
-        <div className="color-ring" />
-        <div className="inner-well" />
-      </section>
-
-      <p className="hint">{hint}</p>
     </main>
   );
 }

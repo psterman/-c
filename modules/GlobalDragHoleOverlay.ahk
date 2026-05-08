@@ -24,6 +24,8 @@ global GDHO_MIN_MOVE_PX := 10
 global GDHO_POLL_MS := 16
 global GDHO_MAX_IDLE_HIDE_MS := 160
 global GDHO_LAST_UPDATE_TICK := 0
+global GDHO_DESKTOP_PINNED := false
+global GDHO_PIN_PAYLOAD := "text"
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -57,12 +59,13 @@ GDHO_Init() {
 GDHO_CreateOverlayGui() {
     global GDHO_GUI
     GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
-    GDHO_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x00080020", "Global Drag Hole Overlay")
+    ; WS_EX_LAYERED + WS_EX_TRANSPARENT + WS_EX_NOACTIVATE
+    GDHO_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x08080020", "Global Drag Hole Overlay")
     GDHO_GUI.BackColor := "000000"
-    ; E0x20 click-through, NoActivate prevents focus stealing.
+    ; Click-through + no activate overlay host.
     GDHO_GUI.Show("Hide x" vl " y" vt " w" vw " h" vh " NoActivate")
-    ; transparent host background, content comes from WebView
-    try WinSetTransparent(1, "ahk_id " GDHO_GUI.Hwnd)
+    ; Keep window normal opacity; visual transparency comes from WebView + trans color.
+    try WinSetTransparent(255, "ahk_id " GDHO_GUI.Hwnd)
 }
 
 GDHO_OnWebViewCreated(ctrl) {
@@ -76,6 +79,7 @@ GDHO_OnWebViewCreated(ctrl) {
     GDHO_READY := false
 
     try ctrl.IsVisible := true
+    try ctrl.DefaultBackgroundColor := 0x00000000
     GDHO_ResizeToVirtualScreen()
     try {
         s := GDHO_WV2.Settings
@@ -90,10 +94,15 @@ GDHO_OnWebViewCreated(ctrl) {
 }
 
 GDHO_OnNavigationCompleted(sender, args) {
-    global GDHO_READY
+    global GDHO_READY, GDHO_GUI, GDHO_WV2_CTRL
     ok := false
     try ok := args.IsSuccess
     GDHO_READY := !!ok
+    if GDHO_READY {
+        ; Re-apply transparency after document init to avoid occasional white/black flash.
+        try GDHO_WV2_CTRL.DefaultBackgroundColor := 0x00000000
+        try WinSetTransColor("000000", "ahk_id " GDHO_GUI.Hwnd)
+    }
 }
 
 GDHO_ResizeToVirtualScreen() {
@@ -162,6 +171,12 @@ GDHO_Drop(payload := "file") {
 }
 
 GDHO_HideFrontend() {
+    global GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD
+    if GDHO_DESKTOP_PINNED {
+        p := (GDHO_PIN_PAYLOAD = "file") ? "file" : "text"
+        GDHO_RunJS("window.HoleOverlay?.show('" p "')")
+        return
+    }
     GDHO_RunJS("window.HoleOverlay?.hide()")
 }
 
@@ -179,6 +194,27 @@ GDHO_Stop() {
     GDHO_MONITORING := false
     GDHO_ACTIVE := false
     SetTimer(GDHO_PollDrag, 0)
+    GDHO_HideFrontend()
+    GDHO_HideOverlay()
+}
+
+GDHO_PinToDesktop(payload := "text") {
+    global GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD, GDHO_ACTIVE
+    p := (payload = "file") ? "file" : "text"
+    GDHO_PIN_PAYLOAD := p
+    GDHO_DESKTOP_PINNED := true
+    GDHO_ACTIVE := false
+    GDHO_Init()
+    GDHO_ShowOverlay()
+    if !GDHO_RunJS("window.HoleOverlay?.show('" p "')") {
+        SetTimer((*) => GDHO_RunJS("window.HoleOverlay?.show('" p "')"), -180)
+        SetTimer((*) => GDHO_RunJS("window.HoleOverlay?.show('" p "')"), -420)
+    }
+}
+
+GDHO_UnpinFromDesktop() {
+    global GDHO_DESKTOP_PINNED
+    GDHO_DESKTOP_PINNED := false
     GDHO_HideFrontend()
     GDHO_HideOverlay()
 }

@@ -1,69 +1,94 @@
 ﻿:root {
-  --bg-top: #f4f7fb;
-  --bg-mid: #e9eff6;
-  --bg-bottom: #e3ebf5;
-  --text-main: #2f4a63;
-  --text-line: rgba(146, 178, 205, 0.62);
+  --text-main: #dff5ff;
+  --text-soft: rgba(222, 244, 255, 0.84);
 }
 
 * { box-sizing: border-box; }
-html, body, #root { margin: 0; width: 100%; height: 100%; }
-body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+html, body, #root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
 
-.flow-scene {
-  --proximity: 0;
+body {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  overflow: hidden;
+}
+
+.hole-stage {
   position: relative;
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  background:
-    radial-gradient(125% 72% at 50% 100%, rgba(214, 228, 244, 0.88) 0%, rgba(214, 228, 244, 0) 58%),
-    linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 55%, var(--bg-bottom) 100%);
-}
-
-.card-cloud { position: absolute; inset: 0; perspective: 1000px; transform-style: preserve-3d; }
-.cloud-card {
-  position: absolute;
-  left: calc(50% + var(--x));
-  top: calc(12% + var(--y));
-  width: clamp(110px, 12vw, 170px);
-  height: clamp(150px, 18vh, 220px);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(235, 242, 250, 0.97));
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 10px 22px rgba(40, 67, 102, 0.15);
-  transform: translate(-50%, -50%) rotateX(15deg) rotateZ(var(--tilt)) translateY(var(--lift));
-  transition: transform 430ms cubic-bezier(0.2, 0.92, 0.22, 1), filter 260ms ease;
-  overflow: hidden;
-}
-.cloud-card::before { content: ""; position: absolute; inset: 0; background: linear-gradient(155deg, rgba(123, 171, 216, 0.12), rgba(180, 208, 236, 0.03)); }
-.cloud-card.hero { width: clamp(132px, 14vw, 194px); height: clamp(172px, 20vh, 248px); z-index: 2; background: linear-gradient(170deg, rgba(98, 125, 204, 0.9), rgba(73, 103, 182, 0.9)); }
-.line { position: absolute; left: 12px; right: 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.6); }
-.l1 { top: 16px; height: 22px; }
-.l2 { top: 48px; height: 10px; }
-.l3 { top: 64px; height: 10px; width: 68%; }
-
-.fog {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 36%;
-  z-index: 5;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(227, 235, 245, 0) 0%, rgba(227, 235, 245, 0.7) 54%, rgba(227, 235, 245, 0.95) 100%);
-  backdrop-filter: blur(9px) saturate(1.06);
 }
 
-.flow-hole {
+.floating-hole {
+  --proximity: 0;
+  position: absolute;
+  width: 160px;
+  height: 206px;
+  pointer-events: auto;
+  transition: opacity 180ms ease;
+}
+
+.floating-hole.hidden {
+  opacity: 0;
+}
+
+.hole-grip {
+  width: 100%;
+  height: 28px;
+  border: 1px solid rgba(160, 220, 239, 0.32);
+  border-radius: 12px;
+  background: rgba(12, 27, 44, 0.42);
+  color: var(--text-soft);
+  font-size: 12px;
+  cursor: grab;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.hole-grip:active {
+  cursor: grabbing;
+}
+
+.hole-grip::before {
+  content: "";
   position: absolute;
   left: 50%;
-  bottom: 96px;
-  transform: translateX(-50%);
-  width: min(56vw, 410px);
-  height: min(36vw, 224px);
-  z-index: 6;
-  pointer-events: none;
+  top: 50%;
+  width: 34px;
+  height: 4px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: rgba(223, 245, 255, 0.52);
+}
+
+.hole-close {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(160, 220, 239, 0.46);
+  border-radius: 10px;
+  background: rgba(8, 20, 34, 0.7);
+  color: rgba(224, 245, 255, 0.92);
+  font-size: 18px;
+  line-height: 24px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.hole-close:hover {
+  background: rgba(22, 44, 68, 0.9);
+}
+
+.hole-core {
+  position: relative;
+  width: 100%;
+  height: 116px;
 }
 
 .base-hole,
@@ -76,21 +101,19 @@ body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
   border-radius: 50%;
 }
 
-/* Always visible static base hole */
 .base-hole {
-  bottom: 26px;
-  width: 58%;
-  height: 25%;
-  background: radial-gradient(ellipse at 50% 52%, rgba(187, 210, 229, 0.9) 0%, rgba(133, 161, 187, 0.76) 58%, rgba(107, 135, 162, 0.68) 100%);
-  box-shadow: inset 0 8px 16px rgba(216, 232, 245, 0.55), inset 0 -10px 22px rgba(80, 111, 139, 0.45);
+  bottom: 22px;
+  width: 100px;
+  height: 34px;
+  background: radial-gradient(ellipse at 50% 52%, rgba(174, 198, 221, 0.9) 0%, rgba(99, 129, 160, 0.75) 58%, rgba(67, 92, 120, 0.74) 100%);
+  box-shadow: inset 0 7px 14px rgba(219, 235, 247, 0.52), inset 0 -9px 18px rgba(49, 71, 95, 0.48);
 }
 
-/* Hidden by default; appears only while dragging text/file */
 .color-aura {
-  bottom: 12px;
-  width: 92%;
-  height: 46%;
-  background: radial-gradient(ellipse at 50% 58%, rgba(123, 240, 255, 0.7), rgba(123, 240, 255, 0.2) 48%, rgba(123, 240, 255, 0) 74%);
+  bottom: 8px;
+  width: 146px;
+  height: 62px;
+  background: radial-gradient(ellipse at 50% 58%, rgba(123, 240, 255, 0.7), rgba(123, 240, 255, 0.18) 48%, rgba(123, 240, 255, 0) 74%);
   filter: blur(11px);
   opacity: 0;
   transform: translateX(-50%) scale(0.92);
@@ -98,9 +121,9 @@ body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
 }
 
 .color-ring {
-  bottom: 24px;
-  width: 60%;
-  height: 27%;
+  bottom: 20px;
+  width: 108px;
+  height: 39px;
   border: 1.5px solid rgba(160, 220, 239, 0.35);
   opacity: 0;
   transform: translateX(-50%) scale(0.9);
@@ -108,25 +131,23 @@ body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
 }
 
 .inner-well {
-  bottom: 29px;
-  width: 45%;
-  height: 17%;
+  bottom: 25px;
+  width: 76px;
+  height: 22px;
   background: radial-gradient(ellipse at 50% 52%, rgba(98, 174, 196, 0.38) 0%, rgba(24, 61, 104, 0.48) 44%, rgba(10, 32, 64, 0.76) 100%);
   opacity: .18;
   transition: opacity 180ms ease, transform 180ms ease, box-shadow 180ms ease;
 }
 
-/* Dragging any valid payload: show color effect */
-.flow-scene.dragging .color-aura {
+.floating-hole.dragging .color-aura {
   opacity: calc(0.38 + var(--proximity) * 0.55);
   transform: translateX(-50%) scale(calc(0.95 + var(--proximity) * 0.16));
 }
 
-.flow-scene.dragging .color-ring {
+.floating-hole.dragging .color-ring {
   opacity: calc(0.45 + var(--proximity) * 0.55);
   border-color: rgba(210, 248, 255, calc(0.45 + var(--proximity) * 0.5));
-  background:
-    conic-gradient(from 0deg,
+  background: conic-gradient(from 0deg,
       rgba(255, 255, 255, 0) 0 16%,
       rgba(130, 245, 255, 0.98) 30%,
       rgba(86, 223, 255, 0.94) 44%,
@@ -139,39 +160,23 @@ body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
     0 0 calc(16px + var(--proximity) * 38px) rgba(235, 171, 255, calc(0.14 + var(--proximity) * 0.28));
 }
 
-.flow-scene.dragging .inner-well {
+.floating-hole.dragging .inner-well {
   opacity: calc(0.34 + var(--proximity) * 0.56);
   transform: translateX(-50%) scale(calc(0.98 - var(--proximity) * 0.12));
   box-shadow: inset 0 6px 14px rgba(220, 252, 255, calc(0.15 + var(--proximity) * 0.24));
 }
 
-.flow-scene.dragging .cloud-card {
-  transform: translate(-50%, -50%) rotateX(17deg) rotateZ(calc(var(--tilt) * 0.85)) translateY(calc(var(--lift) - 8px - var(--proximity) * 12px));
-}
-
-.flow-scene.dragging .cloud-card.hero {
-  transform: translate(-50%, -50%) rotateX(20deg) rotateZ(-3deg) translateY(calc(-40px - var(--proximity) * 42px)) scale(calc(1.03 + var(--proximity) * 0.06));
-}
-
-/* Drop finish animation */
-.flow-scene.drop-pulse .color-ring { animation: ringCollapse 620ms cubic-bezier(0.13, 0.84, 0.24, 1); }
-.flow-scene.drop-pulse .inner-well { animation: wellCollapse 620ms cubic-bezier(0.13, 0.84, 0.24, 1); }
-.flow-scene.drop-pulse .color-aura { animation: auraFlash 620ms cubic-bezier(0.13, 0.84, 0.24, 1); }
+.floating-hole.drop-pulse .color-ring { animation: ringCollapse 620ms cubic-bezier(0.13, 0.84, 0.24, 1); }
+.floating-hole.drop-pulse .inner-well { animation: wellCollapse 620ms cubic-bezier(0.13, 0.84, 0.24, 1); }
+.floating-hole.drop-pulse .color-aura { animation: auraFlash 620ms cubic-bezier(0.13, 0.84, 0.24, 1); }
 
 .hint {
-  position: absolute;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
-  z-index: 7;
-  margin: 0;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.65);
-  color: var(--text-main);
+  margin: 8px 0 0;
+  width: 100%;
+  text-align: center;
   font-size: 12px;
-  border: 1px solid var(--text-line);
-  backdrop-filter: blur(4px);
+  color: var(--text-main);
+  text-shadow: 0 1px 8px rgba(10, 24, 42, 0.55);
 }
 
 @keyframes ringCollapse {
@@ -191,10 +196,4 @@ body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
   0% { transform: translateX(-50%) scale(1); opacity: 0.86; }
   44% { transform: translateX(-50%) scale(1.16); opacity: 1; }
   100% { transform: translateX(-50%) scale(1.36); opacity: 0.18; }
-}
-
-@media (max-width: 760px) {
-  .cloud-card { width: 112px; height: 152px; }
-  .flow-hole { width: min(76vw, 350px); height: min(48vw, 228px); bottom: 88px; }
-  .hint { bottom: 18px; }
 }
