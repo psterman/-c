@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hole Overlay</title>
+  <style>
+    :root { --p: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+    #root { position: fixed; inset: 0; pointer-events: none; }
+    .hole-wrap {
+      position: absolute;
+      left: 50%;
+      bottom: 96px;
+      transform: translateX(-50%);
+      width: min(56vw, 410px);
+      height: min(36vw, 224px);
+      opacity: 0;
+      transition: opacity 180ms ease, transform 220ms ease;
+    }
+    .show .hole-wrap { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .base-hole,.aura,.ring,.well {
+      position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%;
+    }
+    .base-hole {
+      bottom: 26px; width: 58%; height: 25%;
+      background: radial-gradient(ellipse at 50% 52%, rgba(187,210,229,.9) 0%, rgba(133,161,187,.76) 58%, rgba(107,135,162,.68) 100%);
+      box-shadow: inset 0 8px 16px rgba(216,232,245,.55), inset 0 -10px 22px rgba(80,111,139,.45);
+    }
+    .aura {
+      bottom: 12px; width: 92%; height: 46%; filter: blur(11px);
+      background: radial-gradient(ellipse at 50% 58%, rgba(123,240,255,.7), rgba(123,240,255,.2) 48%, rgba(123,240,255,0) 74%);
+      opacity: calc(.2 + var(--p) * .75);
+      transform: translateX(-50%) scale(calc(.92 + var(--p) * .24));
+    }
+    .ring {
+      bottom: 24px; width: 60%; height: 27%;
+      border: 1.5px solid rgba(210,248,255, calc(.35 + var(--p) * .6));
+      background: conic-gradient(from 0deg, rgba(255,255,255,0) 0 16%, rgba(130,245,255,.98) 30%, rgba(86,223,255,.94) 44%, rgba(240,166,255,.9) 58%, rgba(134,255,225,.9) 72%, rgba(255,255,255,0) 100%);
+      opacity: calc(.28 + var(--p) * .72);
+      transform: translateX(-50%) scale(calc(.9 + var(--p) * .24));
+      box-shadow: 0 0 calc(8px + var(--p) * 20px) rgba(122,235,255, calc(.3 + var(--p) * .45)), 0 0 calc(20px + var(--p) * 42px) rgba(235,171,255, calc(.12 + var(--p) * .35));
+    }
+    .well {
+      bottom: 29px; width: 45%; height: 17%;
+      background: radial-gradient(ellipse at 50% 52%, rgba(98,174,196,.38) 0%, rgba(24,61,104,.48) 44%, rgba(10,32,64,.76) 100%);
+      opacity: calc(.18 + var(--p) * .64);
+      transform: translateX(-50%) scale(calc(.98 - var(--p) * .12));
+    }
+    .drop .ring { animation: ringCollapse 620ms cubic-bezier(.13,.84,.24,1); }
+    .drop .well { animation: wellCollapse 620ms cubic-bezier(.13,.84,.24,1); }
+    .drop .aura { animation: auraFlash 620ms cubic-bezier(.13,.84,.24,1); }
+    @keyframes ringCollapse {
+      0% { transform: translateX(-50%) scale(1.06); opacity: 1; }
+      36% { transform: translateX(-50%) scale(.72); opacity: .98; }
+      72% { transform: translateX(-50%) scale(1.16); opacity: .88; }
+      100% { transform: translateX(-50%) scale(.9); opacity: .4; }
+    }
+    @keyframes wellCollapse {
+      0% { transform: translateX(-50%) scale(1); opacity: .9; }
+      44% { transform: translateX(-50%) scale(.66); opacity: 1; }
+      100% { transform: translateX(-50%) scale(1.08); opacity: .34; }
+    }
+    @keyframes auraFlash {
+      0% { transform: translateX(-50%) scale(1); opacity: .86; }
+      44% { transform: translateX(-50%) scale(1.16); opacity: 1; }
+      100% { transform: translateX(-50%) scale(1.36); opacity: .18; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="hole-wrap">
+      <div class="base-hole"></div>
+      <div class="aura"></div>
+      <div class="ring"></div>
+      <div class="well"></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var root = document.getElementById('root');
+      var p = 0;
+      function setP(v) {
+        p = Math.max(0, Math.min(1, Number(v) || 0));
+        root.style.setProperty('--p', String(p));
+      }
+      function show() { root.classList.add('show'); }
+      function hide() { root.classList.remove('show'); root.classList.remove('drop'); setP(0); }
+      window.HoleOverlay = {
+        show: function () { show(); setP(0.2); },
+        update: function (o) {
+          show();
+          if (o && typeof o.proximity === 'number') setP(o.proximity);
+          else if (o && typeof o.x === 'number' && typeof o.y === 'number') {
+            var cx = window.innerWidth / 2;
+            var cy = window.innerHeight - 140;
+            var dx = o.x - cx, dy = o.y - cy;
+            var d = Math.sqrt(dx * dx + dy * dy);
+            var r = Math.max(window.innerWidth, window.innerHeight) * 0.28;
+            setP(1 - d / r);
+          } else setP(0.45);
+        },
+        drop: function () {
+          root.classList.remove('drop');
+          void root.offsetWidth;
+          root.classList.add('drop');
+          setTimeout(function () { hide(); }, 700);
+        },
+        hide: function () { hide(); }
+      };
+    })();
+  </script>
+</body>
+</html>

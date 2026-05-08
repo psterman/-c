@@ -5626,6 +5626,43 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
   }
 
+  function detectPayloadFromDataTransfer(dt) {
+    if (!dt) return '';
+    try {
+      var types = Array.prototype.slice.call(dt.types || []);
+      var hasFiles = types.indexOf('Files') >= 0 || types.indexOf('application/x-moz-file') >= 0;
+      var hasText = types.indexOf('text/plain') >= 0 || types.indexOf('Text') >= 0 || types.indexOf('text/uri-list') >= 0;
+      if (hasFiles) return 'file';
+      if (hasText) return 'text';
+      if (dt.files && dt.files.length) return 'file';
+    } catch (_) {}
+    return '';
+  }
+
+  var holeDragVisible = false;
+  function holeDragShow(payload) {
+    if (!payload) return;
+    if (!holeDragVisible) {
+      holeDragVisible = true;
+      post({ type: 'hole_drag_show', payload: payload });
+    }
+  }
+  function holeDragUpdate(payload, e) {
+    if (!payload || !e) return;
+    if (!holeDragVisible) holeDragShow(payload);
+    post({ type: 'hole_drag_update', payload: payload, x: e.screenX || 0, y: e.screenY || 0 });
+  }
+  function holeDragHide() {
+    if (!holeDragVisible) return;
+    holeDragVisible = false;
+    post({ type: 'hole_drag_hide' });
+  }
+  function holeDragDrop(payload) {
+    if (!holeDragVisible) return;
+    holeDragVisible = false;
+    post({ type: 'hole_drag_drop', payload: payload || 'text' });
+  }
+
   function findDropActionTarget(e) {
     var n = e && e.target ? e.target.closest('.tb, .logo-btn[data-logo-toggle]') : null;
     if (n && n.getAttribute) {
@@ -5696,6 +5733,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var t = await readDrop(e.dataTransfer);
     if (!t && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) t = (e.dataTransfer.files[0].name || '').trim();
     if (!t) return;
+    holeDragDrop(detectPayloadFromDataTransfer(e.dataTransfer) || 'text');
     loading(true);
     post({ type: 'drop_action', action: action, text: t });
   }
@@ -5706,6 +5744,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     try {
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
     } catch (e2) {}
+    var payload = detectPayloadFromDataTransfer(e.dataTransfer);
+    if (payload) {
+      holeDragUpdate(payload, e);
+    } else {
+      holeDragHide();
+    }
     var targetBtn = findDropButtonTarget(e);
     setActiveDropBtn(targetBtn);
     if (targetBtn) applyFishEye(targetBtn, e.clientX || 0);
@@ -5724,6 +5768,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!ok) {
       dragOver(false);
       clearActiveDropBtn();
+      holeDragHide();
     }
   }
 
@@ -5744,6 +5789,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   document.body.addEventListener('dragover', function (e) {
     e.preventDefault();
+    var payload = detectPayloadFromDataTransfer(e.dataTransfer);
+    if (payload) holeDragUpdate(payload, e);
   });
 
   document.body.addEventListener('drop', function (e) {
@@ -5754,6 +5801,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     });
     if (onS) return;
     onDrop(e);
+  });
+  document.body.addEventListener('dragleave', function () {
+    holeDragHide();
   });
 
   if (window.chrome && window.chrome.webview) {

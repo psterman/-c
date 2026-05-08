@@ -741,6 +741,56 @@ FloatingToolbar_OnWebMessage(sender, args) {
         return
     }
 
+    if (typ = "hole_drag_show") {
+        p := msg.Has("payload") ? Trim(String(msg["payload"])) : "text"
+        if (p = "")
+            p := "text"
+        try {
+            if IsSet(GDHO_Init)
+                GDHO_Init()
+            if IsSet(GDHO_Show)
+                GDHO_Show(p)
+        } catch {
+        }
+        return
+    }
+
+    if (typ = "hole_drag_update") {
+        p := msg.Has("payload") ? Trim(String(msg["payload"])) : "text"
+        x := msg.Has("x") ? Integer(msg["x"]) : ""
+        y := msg.Has("y") ? Integer(msg["y"]) : ""
+        try {
+            if IsSet(GDHO_Init)
+                GDHO_Init()
+            if IsSet(GDHO_Update)
+                GDHO_Update(p, x, y)
+        } catch {
+        }
+        return
+    }
+
+    if (typ = "hole_drag_hide") {
+        try {
+            if IsSet(GDHO_HideFrontend)
+                GDHO_HideFrontend()
+            if IsSet(GDHO_HideOverlay)
+                GDHO_HideOverlay()
+        } catch {
+        }
+        return
+    }
+
+    if (typ = "hole_drag_drop") {
+        p := msg.Has("payload") ? Trim(String(msg["payload"])) : "text"
+        try {
+            if IsSet(GDHO_Drop)
+                GDHO_Drop(p)
+            SetTimer((*) => (IsSet(GDHO_HideOverlay) ? GDHO_HideOverlay() : 0), -700)
+        } catch {
+        }
+        return
+    }
+
     if (typ = "drag_host") {
         global FloatingToolbarGUI, FloatingToolbarDragging
         global FloatingToolbar_DragOriginScreenX, FloatingToolbar_DragOriginScreenY

@@ -72,6 +72,7 @@ global MainScriptDir := A_ScriptDir
 #Include modules\CloudPlayer.ahk
 
 ; ===================== 包含悬浮工具栏模块 =====================
+#Include modules\GlobalDragHoleOverlay.ahk
 #Include modules\FloatingToolbar.ahk
 #Include modules\FloatingBubble.ahk
 #Include modules\GravityPump.ahk
@@ -83,6 +84,9 @@ global MainScriptDir := A_ScriptDir
 #Include modules\PromptQuickPadCapsLockB.ahk
 
 #Include modules\EverythingClient.ahk
+
+; 初始化洞 Overlay（由悬浮工具栏拖拽事件触发显示，不开启全局轮询）
+try GDHO_SetPageUrl(BuildAppLocalUrl("HoleOverlayStandalone.html"))
 
 ; 已移除强制管理员自提权，避免与 Everything 产生权限不一致导致 IPC 失败。
 
