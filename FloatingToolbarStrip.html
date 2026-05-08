@@ -5640,6 +5640,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   var holeDragVisible = false;
+  var holeDragLastPostTs = 0;
+  var HOLE_DRAG_POST_INTERVAL_MS = 36;
+  function forceReleaseInteractionLocks() {
+    try {
+      suppressClickUntil = 0;
+      longPressTriggered = false;
+      longPressPointerId = null;
+      clearLongPressTimer();
+    } catch (_) {}
+  }
   function holeDragShow(payload) {
     if (!payload) return;
     if (!holeDragVisible) {
@@ -5649,17 +5659,22 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
   function holeDragUpdate(payload, e) {
     if (!payload || !e) return;
+    var now = Date.now();
+    if (now - holeDragLastPostTs < HOLE_DRAG_POST_INTERVAL_MS) return;
+    holeDragLastPostTs = now;
     if (!holeDragVisible) holeDragShow(payload);
     post({ type: 'hole_drag_update', payload: payload, x: e.screenX || 0, y: e.screenY || 0 });
   }
   function holeDragHide() {
     if (!holeDragVisible) return;
     holeDragVisible = false;
+    forceReleaseInteractionLocks();
     post({ type: 'hole_drag_hide' });
   }
   function holeDragDrop(payload) {
     if (!holeDragVisible) return;
     holeDragVisible = false;
+    forceReleaseInteractionLocks();
     post({ type: 'hole_drag_drop', payload: payload || 'text' });
   }
 
@@ -5732,8 +5747,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     clearActiveDropBtn();
     var t = await readDrop(e.dataTransfer);
     if (!t && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) t = (e.dataTransfer.files[0].name || '').trim();
-    if (!t) return;
+    if (!t) {
+      holeDragHide();
+      forceReleaseInteractionLocks();
+      return;
+    }
     holeDragDrop(detectPayloadFromDataTransfer(e.dataTransfer) || 'text');
+    forceReleaseInteractionLocks();
+    setTimeout(function () {
+      clearActiveDropBtn();
+      holeDragHide();
+      forceReleaseInteractionLocks();
+    }, 0);
     loading(true);
     post({ type: 'drop_action', action: action, text: t });
   }
@@ -5769,6 +5794,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       dragOver(false);
       clearActiveDropBtn();
       holeDragHide();
+      forceReleaseInteractionLocks();
     }
   }
 
@@ -5789,8 +5815,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   document.body.addEventListener('dragover', function (e) {
     e.preventDefault();
-    var payload = detectPayloadFromDataTransfer(e.dataTransfer);
-    if (payload) holeDragUpdate(payload, e);
+  });
+  document.body.addEventListener('dragenter', function () {
+    forceReleaseInteractionLocks();
   });
 
   document.body.addEventListener('drop', function (e) {
@@ -5799,11 +5826,34 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     dockEls().forEach(function (s) {
       if (e.target === s || s.contains(e.target)) onS = true;
     });
-    if (onS) return;
+    if (onS) {
+      clearActiveDropBtn();
+      holeDragHide();
+      forceReleaseInteractionLocks();
+      return;
+    }
+    forceReleaseInteractionLocks();
     onDrop(e);
   });
   document.body.addEventListener('dragleave', function () {
     holeDragHide();
+    forceReleaseInteractionLocks();
+  });
+  document.body.addEventListener('dragend', function () {
+    holeDragHide();
+    forceReleaseInteractionLocks();
+  });
+  window.addEventListener('blur', function () {
+    holeDragHide();
+    clearActiveDropBtn();
+    forceReleaseInteractionLocks();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      holeDragHide();
+      clearActiveDropBtn();
+      forceReleaseInteractionLocks();
+    }
   });
 
   if (window.chrome && window.chrome.webview) {
@@ -5837,6 +5887,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       if (d.type === 'drop_done') {
         loading(false);
         pulse(false);
+        holeDragHide();
+        clearActiveDropBtn();
+        forceReleaseInteractionLocks();
         return;
       }
       if (d.type === 'set_scale') {

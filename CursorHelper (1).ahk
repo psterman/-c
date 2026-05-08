@@ -4001,6 +4001,22 @@ OnScreenshotEditorContextMenu(Ctrl, Info := 0, *) {
 
 ; ESC 关闭面板
 Esc:: {
+    ; 搜索中心优先：避免 WebView 激活态瞬时判定失败时，Esc 误落到全局动态热键（如关闭工具栏）
+    try {
+        if (SearchCenter_ShouldUseWebView()) {
+            if (SCWV_IsVisible()) {
+                SCWV_Hide(true)
+                return
+            }
+        } else {
+            global GuiID_SearchCenter
+            if (GuiID_SearchCenter != 0) {
+                SearchCenterCloseHandler()
+                return
+            }
+        }
+    } catch {
+    }
     if (VirtualKeyboard_HandleKey("Esc"))
         return
     if (!HandleDynamicHotkey("Esc", "ESC")) {

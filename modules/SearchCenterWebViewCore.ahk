@@ -1186,7 +1186,6 @@ _SCWV_ResultItemGet(Item, Prop, Default := "") {
 SCWV_Show() {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
     global SearchCenterEngineMode
-    try FloatingToolbar_PageDockEnter("search")
 
     if !SCWV_HostAlive() {
         SCWV_ResetHostState()
@@ -1250,6 +1249,8 @@ SCWV_Show() {
         SetTimer(SCWV_ForceRevealIfStuck, 0)
         SetTimer(SCWV_ForceRevealIfStuck, -3200)
     }
+    ; 仅在宿主窗口成功显示后再压下工具栏，避免“先隐藏工具栏但搜索中心没显示”的竞态
+    try FloatingToolbar_PageDockEnter("search")
     g_SCWV_LastShown := A_TickCount
     try WebView2_NotifyShown(g_SCWV_WV2)
     WMActivateChain_Register(SCWV_WM_ACTIVATE)
@@ -1307,11 +1308,14 @@ SCWV_DeferredPush(*) {
 }
 
 SCWV_FocusDeferred(*) {
-    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ctrl
+    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ctrl, g_SCWV_Ready
 
     if g_SCWV_Visible && g_SCWV_Gui {
         try WinActivate("ahk_id " . g_SCWV_Gui.Hwnd)
-        WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl)
+        try {
+            if g_SCWV_Ready
+                WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl)
+        }
     }
 }
 

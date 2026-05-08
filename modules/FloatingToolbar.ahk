@@ -88,6 +88,8 @@ global g_FTB_WaitingUiFinishedReveal := false
 global g_FTB_ScreenshotDeferLastTick := 0  ; 闃叉姈锛歐ebView 鐭椂鍙屽彂 postMessage 浼氭帓闃熶袱娆?Deferred锛岄伩鍏嶇浜屾鍐嶈窇瀹屾暣鎴浘鍔╂墜娴佺▼
 global g_FTB_WV2_CreateRetry := 0
 global g_FTB_DebugOverlayEnabled := true
+global g_FTB_HoleDragLastUpdateTick := 0
+global g_FTB_HoleDragUpdateMinIntervalMs := 45
 ; 页面底部已集成工具栏时，不再让外层悬浮条覆盖页面。
 global g_FTB_OverlaySuppressedByPageDock := false
 global g_FTB_PageDockActive := Map()
@@ -756,6 +758,11 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
 
     if (typ = "hole_drag_update") {
+        global g_FTB_HoleDragLastUpdateTick, g_FTB_HoleDragUpdateMinIntervalMs
+        nowTick := A_TickCount
+        if (g_FTB_HoleDragLastUpdateTick && (nowTick - g_FTB_HoleDragLastUpdateTick) < g_FTB_HoleDragUpdateMinIntervalMs)
+            return
+        g_FTB_HoleDragLastUpdateTick := nowTick
         p := msg.Has("payload") ? Trim(String(msg["payload"])) : "text"
         x := msg.Has("x") ? Integer(msg["x"]) : ""
         y := msg.Has("y") ? Integer(msg["y"]) : ""
@@ -785,6 +792,8 @@ FloatingToolbar_OnWebMessage(sender, args) {
         try {
             if IsSet(GDHO_Drop)
                 GDHO_Drop(p)
+            if IsSet(GDHO_HideFrontend)
+                SetTimer((*) => GDHO_HideFrontend(), -320)
             SetTimer((*) => (IsSet(GDHO_HideOverlay) ? GDHO_HideOverlay() : 0), -700)
         } catch {
         }
@@ -1418,6 +1427,38 @@ FloatingToolbar_EnsureSearchCenterFocused(*) {
     }
 }
 
+FloatingToolbar_VerifySearchCenterOpen(*) {
+    global FloatingToolbarIsVisible, AppearanceActivationMode
+    scVisible := false
+    try {
+        if (SearchCenter_ShouldUseWebView()) {
+            hwnd := 0
+            try hwnd := SCWV_GetGuiHwnd()
+            if (hwnd && WinExist("ahk_id " . hwnd) && (WinGetStyle("ahk_id " . hwnd) & 0x10000000))
+                scVisible := true
+            else if (SCWV_IsVisible())
+                scVisible := true
+        } else {
+            global GuiID_SearchCenter
+            if (GuiID_SearchCenter && IsObject(GuiID_SearchCenter) && GuiID_SearchCenter.HasProp("Hwnd")) {
+                h := GuiID_SearchCenter.Hwnd
+                if (h && WinExist("ahk_id " . h) && (WinGetStyle("ahk_id " . h) & 0x10000000))
+                    scVisible := true
+            }
+        }
+    } catch {
+    }
+
+    if scVisible
+        return
+
+    ; 搜索中心未真正拉起：释放 search dock 抑制并恢复工具栏可见性
+    try FloatingToolbar_PageDockLeave("search")
+    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) = "toolbar" && !FloatingToolbarIsVisible) {
+        try ShowFloatingToolbar()
+    }
+}
+
 FloatingToolbar_ActivateSearchCenter() {
     selectedText := ""
     opened := false
@@ -1425,6 +1466,8 @@ FloatingToolbar_ActivateSearchCenter() {
 
     try usedWebView := SearchCenter_ShouldUseWebView()
     try FloatingToolbarCollapseTransientUi()
+    ; 兜底清理：若上一次 search dock 标记残留，先释放，后续由 SCWV_Show 重新进入
+    try FloatingToolbar_PageDockLeave("search")
 
     ; 与 CapsLock+F/拖放入口统一：有选中文本时直接带词打开，否则走搜索中心显示链路
     try selectedText := Trim(String(SelectionSense_GetLastSelectedText()))
@@ -1484,6 +1527,9 @@ FloatingToolbar_ActivateSearchCenter() {
     SetTimer(FloatingToolbar_EnsureSearchCenterFocused, -20)
     SetTimer(FloatingToolbar_EnsureSearchCenterFocused, -120)
     SetTimer(FloatingToolbar_EnsureSearchCenterFocused, -320)
+    ; 防竞态：若焦点/宿主状态异常导致搜索中心未出现，自动回滚工具栏隐藏态
+    SetTimer(FloatingToolbar_VerifySearchCenterOpen, -260)
+    SetTimer(FloatingToolbar_VerifySearchCenterOpen, -900)
 }
 
 FloatingToolbarExecuteButtonAction(action, buttonHwnd) {
