@@ -49,6 +49,10 @@ global GDHO_FIXED_X := 360
 global GDHO_FIXED_Y := 260
 global GDHO_SIZE_SCALE := 1.0
 global GDHO_ANIM_LEVEL := 1.0
+global GDHO_HOST_W := 360
+global GDHO_HOST_H := 320
+global GDHO_LAST_HOST_X := 120
+global GDHO_LAST_HOST_Y := 120
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -145,11 +149,17 @@ GDHO_Init() {
 GDHO_CreateOverlayGui() {
     global GDHO_GUI
     GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+    hostW := Integer(GDHO_HOST_W), hostH := Integer(GDHO_HOST_H)
+    if (hostW < 260)
+        hostW := 260
+    if (hostH < 220)
+        hostH := 220
+    x := Integer(vl + 24), y := Integer(vt + 24)
     ; WS_EX_LAYERED + WS_EX_TRANSPARENT + WS_EX_NOACTIVATE
     GDHO_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x08080020", "Global Drag Hole Overlay")
     GDHO_GUI.BackColor := "000000"
     ; Click-through + no activate overlay host.
-    GDHO_GUI.Show("Hide x" vl " y" vt " w" vw " h" vh " NoActivate")
+    GDHO_GUI.Show("Hide x" x " y" y " w" hostW " h" hostH " NoActivate")
     ; Keep window normal opacity; visual transparency comes from WebView + trans color.
     try WinSetTransparent(255, "ahk_id " GDHO_GUI.Hwnd)
 }
@@ -271,13 +281,14 @@ GDHO_OnNavigationCompleted(sender, args) {
 }
 
 GDHO_ResizeToVirtualScreen() {
-    global GDHO_GUI, GDHO_WV2_CTRL
+    global GDHO_GUI, GDHO_WV2_CTRL, GDHO_HOST_W, GDHO_HOST_H
     if !(GDHO_GUI && GDHO_WV2_CTRL)
         return
-    GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
-    try GDHO_GUI.Move(vl, vt, vw, vh)
+    try GDHO_GUI.GetPos(&gx, &gy)
+    hostW := Integer(GDHO_HOST_W), hostH := Integer(GDHO_HOST_H)
+    try GDHO_GUI.Move(gx, gy, hostW, hostH)
     rc := WebView2.RECT()
-    rc.left := 0, rc.top := 0, rc.right := vw, rc.bottom := vh
+    rc.left := 0, rc.top := 0, rc.right := hostW, rc.bottom := hostH
     try GDHO_WV2_CTRL.Bounds := rc
 }
 
@@ -294,15 +305,14 @@ GDHO_RunJS(js) {
 }
 
 GDHO_ShowOverlay() {
-    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_READY
+    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_READY, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_HOST_W, GDHO_HOST_H
     if !GDHO_GUI
         return
     ; Avoid first-frame black flash: don't reveal host before WebView content is ready.
     if !GDHO_READY
         return
     if !GDHO_VISIBLE {
-        GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
-        try GDHO_GUI.Show("x" vl " y" vt " w" vw " h" vh " NoActivate")
+        try GDHO_GUI.Show("x" Integer(GDHO_LAST_HOST_X) " y" Integer(GDHO_LAST_HOST_Y) " w" Integer(GDHO_HOST_W) " h" Integer(GDHO_HOST_H) " NoActivate")
         GDHO_SetClickThrough(true)
         GDHO_KeepBelowToolbar()
         GDHO_VISIBLE := true
@@ -312,19 +322,31 @@ GDHO_ShowOverlay() {
 
 GDHO_KeepBelowToolbar() {
     global GDHO_GUI, FloatingToolbarGUI, FloatingToolbarIsVisible
+    global FloatingBubbleGUI, FloatingBubbleIsVisible
     if !GDHO_GUI
         return
-    if !IsSet(FloatingToolbarGUI)
-        return
-    if !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui)
-        return
-    if (IsSet(FloatingToolbarIsVisible) && !FloatingToolbarIsVisible)
+    anchorGui := 0
+    try {
+        if (IsSet(FloatingToolbarGUI) && IsObject(FloatingToolbarGUI) && (FloatingToolbarGUI is Gui)
+            && (!IsSet(FloatingToolbarIsVisible) || FloatingToolbarIsVisible))
+            anchorGui := FloatingToolbarGUI
+    } catch {
+    }
+    if !anchorGui {
+        try {
+            if (IsSet(FloatingBubbleGUI) && IsObject(FloatingBubbleGUI) && (FloatingBubbleGUI is Gui)
+                && IsSet(FloatingBubbleIsVisible) && FloatingBubbleIsVisible)
+                anchorGui := FloatingBubbleGUI
+        } catch {
+        }
+    }
+    if !anchorGui
         return
     try {
-        ; Keep hole overlay directly below toolbar in topmost z-order.
+        ; Keep hole overlay directly below current anchor (toolbar or bubble) in topmost z-order.
         DllCall("SetWindowPos"
             , "Ptr", GDHO_GUI.Hwnd
-            , "Ptr", FloatingToolbarGUI.Hwnd
+            , "Ptr", anchorGui.Hwnd
             , "Int", 0, "Int", 0, "Int", 0, "Int", 0
             , "UInt", 0x0001 | 0x0002 | 0x0010) ; NOSIZE|NOMOVE|NOACTIVATE
     }
@@ -332,16 +354,28 @@ GDHO_KeepBelowToolbar() {
 
 GDHO_AnchorHoleUnderToolbar() {
     global FloatingToolbarGUI, FloatingToolbarIsVisible
+    global FloatingBubbleGUI, FloatingBubbleIsVisible
     global GDHO_ANCHOR_W, GDHO_ANCHOR_H, GDHO_ANCHOR_GAP
     global GDHO_ANCHOR_MODE, GDHO_ANCHOR_OFFSET_X, GDHO_ANCHOR_OFFSET_Y, GDHO_SCREEN_X, GDHO_SCREEN_Y
     global GDHO_CURSOR_X, GDHO_CURSOR_Y
-    if !IsSet(FloatingToolbarGUI)
+    anchorGui := 0
+    try {
+        if (IsSet(FloatingToolbarGUI) && IsObject(FloatingToolbarGUI) && (FloatingToolbarGUI is Gui)
+            && (!IsSet(FloatingToolbarIsVisible) || FloatingToolbarIsVisible))
+            anchorGui := FloatingToolbarGUI
+    } catch {
+    }
+    if !anchorGui {
+        try {
+            if (IsSet(FloatingBubbleGUI) && IsObject(FloatingBubbleGUI) && (FloatingBubbleGUI is Gui)
+                && IsSet(FloatingBubbleIsVisible) && FloatingBubbleIsVisible)
+                anchorGui := FloatingBubbleGUI
+        } catch {
+        }
+    }
+    if !anchorGui
         return GDHO_AnchorHoleByScreen()
-    if !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui)
-        return GDHO_AnchorHoleByScreen()
-    if (IsSet(FloatingToolbarIsVisible) && !FloatingToolbarIsVisible)
-        return GDHO_AnchorHoleByScreen()
-    try FloatingToolbarGUI.GetPos(&tx, &ty, &tw, &th)
+    try anchorGui.GetPos(&tx, &ty, &tw, &th)
     catch
         return GDHO_AnchorHoleByScreen()
 
@@ -383,7 +417,8 @@ GDHO_AnchorHoleUnderToolbar() {
         x := maxX
     if (y > maxY)
         y := maxY
-    return GDHO_RunJS("window.HoleOverlay?.moveTo({ x: " x ", y: " y " })")
+    GDHO_MoveHostToHole(x, y)
+    return GDHO_RunJS("window.HoleOverlay?.moveTo({ x: 90, y: 56 })")
 }
 
 GDHO_AnchorHoleByScreen() {
@@ -403,7 +438,44 @@ GDHO_AnchorHoleByScreen() {
         x := maxX
     if (y > maxY)
         y := maxY
-    return GDHO_RunJS("window.HoleOverlay?.moveTo({ x: " x ", y: " y " })")
+    GDHO_MoveHostToHole(x, y)
+    return GDHO_RunJS("window.HoleOverlay?.moveTo({ x: 90, y: 56 })")
+}
+
+GDHO_MoveHostToHole(holeX, holeY) {
+    global GDHO_GUI, GDHO_HOST_W, GDHO_HOST_H, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y
+    if !GDHO_GUI
+        return
+    GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+    hostW := Integer(GDHO_HOST_W), hostH := Integer(GDHO_HOST_H)
+    hx := Integer(vl + holeX - 90)
+    hy := Integer(vt + holeY - 56)
+    if (hx < vl + 2)
+        hx := vl + 2
+    if (hy < vt + 2)
+        hy := vt + 2
+    maxX := vl + vw - hostW - 2
+    maxY := vt + vh - hostH - 2
+    if (hx > maxX)
+        hx := maxX
+    if (hy > maxY)
+        hy := maxY
+    GDHO_LAST_HOST_X := hx
+    GDHO_LAST_HOST_Y := hy
+    try GDHO_GUI.Move(hx, hy, hostW, hostH)
+}
+
+GDHO_GlobalPointToHostLocal(globalX, globalY, &localX, &localY) {
+    global GDHO_GUI
+    localX := Integer(globalX)
+    localY := Integer(globalY)
+    if !GDHO_GUI
+        return
+    try GDHO_GUI.GetPos(&gx, &gy)
+    catch
+        return
+    localX := Integer(globalX - gx)
+    localY := Integer(globalY - gy)
 }
 
 GDHO_HideOverlay() {
@@ -428,8 +500,10 @@ GDHO_Show(payload := "file") {
     GDHO_ShowOverlay()
     if (GDHO_POSITION_MODE = "fixed")
         GDHO_AnchorHoleByScreen()
-    else if (GDHO_POSITION_MODE = "relative")
-        GDHO_RunJS("window.HoleOverlay?.moveTo({ x: " Integer(GDHO_CURSOR_X - 90) ", y: " Integer(GDHO_CURSOR_Y - 110) " })")
+    else if (GDHO_POSITION_MODE = "relative") {
+        GDHO_MoveHostToHole(Integer(GDHO_CURSOR_X - 90), Integer(GDHO_CURSOR_Y - 110))
+        GDHO_RunJS("window.HoleOverlay?.moveTo({ x: 90, y: 56 })")
+    }
     else
         GDHO_AnchorHoleUnderToolbar()
     GDHO_RunJS("window.HoleOverlay?.show('" p "')")
@@ -448,14 +522,18 @@ GDHO_Update(payload := "file", x := "", y := "") {
     }
     if (GDHO_POSITION_MODE = "fixed")
         GDHO_AnchorHoleByScreen()
-    else if (GDHO_POSITION_MODE = "relative" && x != "" && y != "")
-        GDHO_RunJS("window.HoleOverlay?.moveTo({ x: " Integer(x - 90) ", y: " Integer(y - 110) " })")
+    else if (GDHO_POSITION_MODE = "relative" && x != "" && y != "") {
+        GDHO_MoveHostToHole(Integer(x - 90), Integer(y - 110))
+        GDHO_RunJS("window.HoleOverlay?.moveTo({ x: 90, y: 56 })")
+    }
     else
         GDHO_AnchorHoleUnderToolbar()
-    if (x = "" || y = "")
+    if (x = "" || y = "") {
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "' })")
-    else
-        GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "', x: " Integer(x) ", y: " Integer(y) " })")
+    } else {
+        GDHO_GlobalPointToHostLocal(Integer(x), Integer(y), &lx, &ly)
+        GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "', x: " Integer(lx) ", y: " Integer(ly) " })")
+    }
     GDHO_LAST_UPDATE_TICK := nowTick
 }
 
