@@ -217,6 +217,20 @@
     .safe-mode.drop .local-fx {
       animation-duration: 320ms;
     }
+    .perf-box {
+      position: fixed;
+      right: 10px;
+      top: 10px;
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.35);
+      background: #1f9d45;
+      box-shadow: 0 0 10px rgba(0,0,0,.25);
+      pointer-events: none;
+      opacity: .9;
+      z-index: 9999;
+    }
     @keyframes localAuraBreath {
       0% { transform: translateX(-50%) scale(.96); opacity: .16; }
       50% { transform: translateX(-50%) scale(1.04); opacity: .28; }
@@ -246,6 +260,7 @@
   </style>
 </head>
 <body>
+  <div id="perfBox" class="perf-box" aria-hidden="true"></div>
   <div id="root">
     <div class="hole-wrap">
       <div id="hint" class="hint">拖到这里开始搜索</div>
@@ -266,11 +281,42 @@
       }
       var pos = { x: Math.max(12, Math.round(window.innerWidth / 2 - 90)), y: Math.max(12, Math.round(window.innerHeight - 240)) };
       var hint = document.getElementById('hint');
+      var perfBox = document.getElementById('perfBox');
       var payloadType = 'text';
       var isNear = false;
       var lastHintText = '';
       var dragUpdateActive = false;
       var lastUpdateTick = 0;
+      var perfStats = { fps: 60, frameMs: 16.7, state: 'green', dropped: false, ts: Date.now() };
+      var perfLastTs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      function updatePerfBox() {
+        if (!perfBox) return;
+        var fps = perfStats.fps;
+        if (fps > 55) {
+          perfStats.state = 'green';
+          perfStats.dropped = false;
+          perfBox.style.background = '#1f9d45';
+        } else if (fps >= 30) {
+          perfStats.state = 'yellow';
+          perfStats.dropped = false;
+          perfBox.style.background = '#e3b341';
+        } else {
+          perfStats.state = 'red';
+          perfStats.dropped = true;
+          perfBox.style.background = '#d73a49';
+        }
+      }
+      function perfTick(ts) {
+        var now = (typeof ts === 'number') ? ts : ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
+        var dt = Math.max(1, now - perfLastTs);
+        perfLastTs = now;
+        var instFps = 1000 / dt;
+        perfStats.fps = perfStats.fps * 0.85 + instFps * 0.15;
+        perfStats.frameMs = dt;
+        perfStats.ts = Date.now();
+        updatePerfBox();
+        window.requestAnimationFrame(perfTick);
+      }
       function applyPos() {
         root.style.setProperty('--hx', String(pos.x) + 'px');
         root.style.setProperty('--hy', String(pos.y) + 'px');
@@ -408,8 +454,18 @@
         },
         hide: function () { root.classList.remove('near'); isNear = false; dragUpdateActive = false; hide(); }
       };
+      window.getPerfStats = function () {
+        return {
+          fps: Number(perfStats.fps.toFixed(1)),
+          frameMs: Number(perfStats.frameMs.toFixed(2)),
+          state: perfStats.state,
+          dropped: !!perfStats.dropped,
+          ts: perfStats.ts
+        };
+      };
       window.addEventListener('resize', function () { clampPos(pos.x, pos.y); });
       applyPos();
+      window.requestAnimationFrame(perfTick);
       try {
         var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         setTheme(prefersDark ? 'dark' : 'light');

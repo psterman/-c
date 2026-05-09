@@ -57,6 +57,9 @@ global GDHO_LAST_HOST_X := 120
 global GDHO_LAST_HOST_Y := 120
 global GDHO_DRAG_CONFIDENCE := 0.0
 global GDHO_JUMP_LERP_THRESHOLD_PX := 50
+global GDHO_DIAG_CTRL := 0
+global GDHO_DIAG_VISIBLE := false
+global GDHO_LAST_APPLIED_ANIM_LEVEL := -1.0
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -153,7 +156,7 @@ GDHO_Init() {
 }
 
 GDHO_CreateOverlayGui() {
-    global GDHO_GUI
+    global GDHO_GUI, GDHO_DIAG_CTRL
     GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
     hostW := Integer(GDHO_HOST_W), hostH := Integer(GDHO_HOST_H)
     if (hostW < 260)
@@ -163,6 +166,7 @@ GDHO_CreateOverlayGui() {
     x := Integer(vl + 24), y := Integer(vt + 24)
     ; WS_EX_LAYERED + WS_EX_TRANSPARENT + WS_EX_NOACTIVATE
     GDHO_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x08080020", "Global Drag Hole Overlay")
+    GDHO_DIAG_CTRL := GDHO_GUI.AddText("Hidden x6 y6 w340 h44 BackgroundTrans c66FF66", "")
     ; Use dedicated chroma key to keep host transparent before first WebView paint.
     GDHO_GUI.BackColor := "010101"
     ; Click-through + no activate overlay host.
@@ -170,6 +174,38 @@ GDHO_CreateOverlayGui() {
     ; Keep window normal opacity; transparency comes from chroma-key immediately.
     try WinSetTransparent(255, "ahk_id " GDHO_GUI.Hwnd)
     try WinSetTransColor("010101", "ahk_id " GDHO_GUI.Hwnd)
+}
+
+GDHO_DIAG_LOG(msg, elapsedMs := "") {
+    global GDHO_DIAG_CTRL, GDHO_DIAG_VISIBLE
+    if !IsObject(GDHO_DIAG_CTRL)
+        return
+    ts := FormatTime(, "HH:mm:ss")
+    line := "[" ts "] " String(msg)
+    if (elapsedMs != "")
+        line .= " (" Format("{:.1f}", Float(elapsedMs)) "ms)"
+    GDHO_DIAG_CTRL.Value := line
+    slow := (elapsedMs != "" && Float(elapsedMs) > 15.0)
+    if slow {
+        GDHO_DIAG_CTRL.Opt("cFF4D4D")
+        GDHO_DIAG_CTRL.Visible := true
+        GDHO_DIAG_VISIBLE := true
+    } else {
+        GDHO_DIAG_CTRL.Opt("c66FF66")
+        if !GDHO_DIAG_VISIBLE
+            GDHO_DIAG_CTRL.Visible := false
+    }
+}
+
+GDHO_ApplyAdaptiveAnimLevel() {
+    global GDHO_ANIM_LEVEL, GDHO_SIZE_SCALE, GDHO_DRAG_CONFIDENCE, GDHO_LAST_APPLIED_ANIM_LEVEL
+    targetAnim := Float(GDHO_ANIM_LEVEL)
+    if (GDHO_DRAG_CONFIDENCE < 0.5)
+        targetAnim := Max(0.4, targetAnim * 0.62)
+    if (GDHO_LAST_APPLIED_ANIM_LEVEL >= 0 && Abs(targetAnim - GDHO_LAST_APPLIED_ANIM_LEVEL) < 0.01)
+        return
+    GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " targetAnim " })")
+    GDHO_LAST_APPLIED_ANIM_LEVEL := targetAnim
 }
 
 GDHO_SetClickThrough(enable := true) {
@@ -525,14 +561,19 @@ GDHO_PushThemeToWeb() {
     GDHO_RunJS("window.HoleOverlay?.setTheme({ themeMode: '" tm "' })")
 }
 
-GDHO_Show(payload := "file") {
+GDHO_Show(payload := "file", x := "", y := "") {
     global GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_POSITION_MODE
     p := (payload = "text") ? "text" : "file"
-    try {
-        CoordMode("Mouse", "Screen")
-        MouseGetPos(&mx, &my)
-        GDHO_CURSOR_X := mx
-        GDHO_CURSOR_Y := my
+    if (x != "" && y != "") {
+        GDHO_CURSOR_X := Integer(x)
+        GDHO_CURSOR_Y := Integer(y)
+    } else {
+        try {
+            CoordMode("Mouse", "Screen")
+            MouseGetPos(&mx, &my)
+            GDHO_CURSOR_X := mx
+            GDHO_CURSOR_Y := my
+        }
     }
     GDHO_ShowOverlay()
     GDHO_PushThemeToWeb()
@@ -562,11 +603,12 @@ GDHO_Update(payload := "file", x := "", y := "") {
     if (GDHO_POSITION_MODE = "fixed")
         GDHO_AnchorHoleByScreen()
     else if (GDHO_POSITION_MODE = "relative" && x != "" && y != "") {
-        GDHO_MoveHostToHole(Integer(x - 90), Integer(y - 110))
-        GDHO_RunJS("window.HoleOverlay?.moveTo({ x: 90, y: 56 })")
+        ; Relative mode: lock hole at activation position for current drag session.
+        ; Do not follow cursor during update; only feed pointer for proximity.
     }
     else
         GDHO_AnchorHoleUnderToolbar()
+    GDHO_ApplyAdaptiveAnimLevel()
     if (x = "" || y = "") {
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "' })")
     } else {
@@ -684,12 +726,13 @@ GDHO_PollDrag(*) {
     global GDHO_ACTIVE, GDHO_START_X, GDHO_START_Y, GDHO_LAST_X, GDHO_LAST_Y
     global GDHO_START_CURSOR, GDHO_DRAG_SOURCE_CLASS, GDHO_PAYLOAD
     global GDHO_MIN_MOVE_PX, GDHO_LAST_UPDATE_TICK, GDHO_MAX_IDLE_HIDE_MS, GDHO_DRAG_CONFIDENCE
-    global GDHO_POLL_BUSY, GDHO_SUPPRESS_UNTIL_RELEASE, GDHO_TOOLBAR_NEAR_RADIUS_PX, GDHO_TOOLBAR_DISMISS_RADIUS_PX
+    global GDHO_POLL_BUSY, GDHO_SUPPRESS_UNTIL_RELEASE, GDHO_TOOLBAR_NEAR_RADIUS_PX, GDHO_TOOLBAR_DISMISS_RADIUS_PX, GDHO_POSITION_MODE
     if GDHO_POLL_BUSY
         return
     GDHO_POLL_BUSY := true
 
     try {
+        pollStartTick := A_TickCount
         try ProcessSetPriority("High")
         try DllCall("SetThreadPriority", "Ptr", DllCall("GetCurrentThread", "Ptr"), "Int", 2)
 
@@ -762,16 +805,22 @@ GDHO_PollDrag(*) {
 
         ; If drag already seeded from external window, keep updating even when cursor passes over toolbar.
         if !GDHO_ACTIVE {
-            ; Reveal hole immediately on activation for faster visual response.
-            GDHO_ShowOverlay()
-            GDHO_RunJS("window.HoleOverlay?.show('" GDHO_PAYLOAD "')")
-            GDHO_Show(GDHO_PAYLOAD)
+            ; In relative mode, position with current frame coordinates first to avoid follow-offset.
+            if (GDHO_POSITION_MODE != "relative") {
+                ; Reveal hole immediately on activation for faster visual response.
+                GDHO_ShowOverlay()
+                GDHO_RunJS("window.HoleOverlay?.show('" GDHO_PAYLOAD "')")
+            }
+            ; Relative mode will place hole once here, then GDHO_Update keeps it fixed.
+            GDHO_Show(GDHO_PAYLOAD, mx, my)
             GDHO_ACTIVE := true
         }
         GDHO_Update(GDHO_PAYLOAD, mx, my)
         GDHO_LAST_X := mx
         GDHO_LAST_Y := my
     } finally {
+        pollElapsed := A_TickCount - pollStartTick
+        GDHO_DIAG_LOG("PollDrag", pollElapsed)
         GDHO_POLL_BUSY := false
     }
 }
