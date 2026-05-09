@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
@@ -231,6 +231,25 @@
       opacity: .9;
       z-index: 9999;
     }
+    .perf-label {
+      position: fixed;
+      right: 46px;
+      top: 10px;
+      min-width: 320px;
+      max-width: 460px;
+      padding: 4px 7px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(12, 16, 24, .78);
+      color: rgba(242, 247, 255, .96);
+      font: 600 11px/1.35 "Segoe UI","Microsoft YaHei",sans-serif;
+      letter-spacing: .01em;
+      pointer-events: none;
+      z-index: 9998;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+    }
     @keyframes localAuraBreath {
       0% { transform: translateX(-50%) scale(.96); opacity: .16; }
       50% { transform: translateX(-50%) scale(1.04); opacity: .28; }
@@ -261,6 +280,7 @@
 </head>
 <body>
   <div id="perfBox" class="perf-box" aria-hidden="true"></div>
+  <div id="perfLabel" class="perf-label" aria-hidden="true">FPS: -- | 帧: --ms | Host: --ms | 诊断: --</div>
   <div id="root">
     <div class="hole-wrap">
       <div id="hint" class="hint">拖到这里开始搜索</div>
@@ -282,29 +302,51 @@
       var pos = { x: Math.max(12, Math.round(window.innerWidth / 2 - 90)), y: Math.max(12, Math.round(window.innerHeight - 240)) };
       var hint = document.getElementById('hint');
       var perfBox = document.getElementById('perfBox');
+      var perfLabel = document.getElementById('perfLabel');
       var payloadType = 'text';
       var isNear = false;
       var lastHintText = '';
       var dragUpdateActive = false;
       var lastUpdateTick = 0;
-      var perfStats = { fps: 60, frameMs: 16.7, state: 'green', dropped: false, ts: Date.now() };
+      var DRAG_HEARTBEAT_TIMEOUT_MS = 220;
+      var perfStats = { fps: 60, frameMs: 16.7, state: 'green', dropped: false, ts: Date.now(), hostGapMs: -1, hostAgeMs: 0, hostStall: false };
       var perfLastTs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      var lastHostUpdateTs = perfLastTs;
+      var perfDiagnosis = '状态正常';
+      function updatePerfLabel() {
+        if (!perfLabel) return;
+        var hostDeltaText = perfStats.hostGapMs >= 0 ? Number(perfStats.hostGapMs).toFixed(1) + 'ms' : '--';
+        perfLabel.textContent = 'FPS: ' + Number(perfStats.fps).toFixed(1)
+          + ' | 帧: ' + Number(perfStats.frameMs).toFixed(1) + 'ms'
+          + ' | HostΔ: ' + hostDeltaText
+          + ' | HostAge: ' + Number(perfStats.hostAgeMs).toFixed(1) + 'ms'
+          + ' | 诊断: ' + perfDiagnosis;
+      }
       function updatePerfBox() {
         if (!perfBox) return;
         var fps = perfStats.fps;
-        if (fps > 55) {
-          perfStats.state = 'green';
-          perfStats.dropped = false;
-          perfBox.style.background = '#1f9d45';
-        } else if (fps >= 30) {
-          perfStats.state = 'yellow';
-          perfStats.dropped = false;
-          perfBox.style.background = '#e3b341';
-        } else {
+        if (perfStats.hostStall || perfStats.hostAgeMs > 420 || fps < 30) {
+          perfDiagnosis = perfStats.hostStall || perfStats.hostAgeMs > 420 ? '宿主更新阻塞' : '渲染严重掉帧';
           perfStats.state = 'red';
           perfStats.dropped = true;
           perfBox.style.background = '#d73a49';
+        } else if (perfStats.hostAgeMs > 220 || fps < 55) {
+          perfDiagnosis = perfStats.hostAgeMs > 220 ? '宿主更新变慢' : '渲染轻度掉帧';
+          perfStats.state = 'yellow';
+          perfStats.dropped = false;
+          perfBox.style.background = '#e3b341';
+        } else if (fps > 55) {
+          perfDiagnosis = '状态正常';
+          perfStats.state = 'green';
+          perfStats.dropped = false;
+          perfBox.style.background = '#1f9d45';
+        } else {
+          perfDiagnosis = '轻微波动';
+          perfStats.state = 'yellow';
+          perfStats.dropped = false;
+          perfBox.style.background = '#e3b341';
         }
+        updatePerfLabel();
       }
       function perfTick(ts) {
         var now = (typeof ts === 'number') ? ts : ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
@@ -313,6 +355,25 @@
         var instFps = 1000 / dt;
         perfStats.fps = perfStats.fps * 0.85 + instFps * 0.15;
         perfStats.frameMs = dt;
+        if (dragUpdateActive) {
+          var staleFor = Date.now() - lastUpdateTick;
+          if (staleFor > DRAG_HEARTBEAT_TIMEOUT_MS) {
+            dragUpdateActive = false;
+            isNear = false;
+            root.classList.remove('near');
+            hintTextByState('idle');
+          }
+        }
+        var showing = root.classList.contains('show');
+        if (showing && dragUpdateActive) {
+          var age = Math.max(0, now - lastHostUpdateTs);
+          perfStats.hostAgeMs = age;
+          perfStats.hostStall = age > 420;
+        } else {
+          perfStats.hostGapMs = -1;
+          perfStats.hostAgeMs = 0;
+          perfStats.hostStall = false;
+        }
         perfStats.ts = Date.now();
         updatePerfBox();
         window.requestAnimationFrame(perfTick);
@@ -380,6 +441,9 @@
         setSafeMode(false);
         dragUpdateActive = false;
         lastUpdateTick = 0;
+        perfStats.hostGapMs = -1;
+        perfStats.hostAgeMs = 0;
+        perfStats.hostStall = false;
         setP(0);
       }
       function setStyle(scale, animLevel) {
@@ -409,6 +473,9 @@
         },
         update: function (o) {
           show();
+          var nowHost = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+          perfStats.hostGapMs = Math.max(0, nowHost - lastHostUpdateTs);
+          lastHostUpdateTs = nowHost;
           dragUpdateActive = true;
           lastUpdateTick = Date.now();
           if (o && typeof o.proximity === 'number') setP(o.proximity);
@@ -420,15 +487,6 @@
             var r = 260;
             setP(1 - d / r);
           } else setP(0.45);
-          if ((Date.now() - lastUpdateTick) > 180) {
-            dragUpdateActive = false;
-          }
-          if (!dragUpdateActive) {
-            isNear = false;
-            root.classList.remove('near');
-            hintTextByState('idle');
-            return;
-          }
           var enterNear = 0.62;
           var leaveNear = 0.48;
           if (!isNear && p >= enterNear) isNear = true;
@@ -458,6 +516,10 @@
         return {
           fps: Number(perfStats.fps.toFixed(1)),
           frameMs: Number(perfStats.frameMs.toFixed(2)),
+          hostGapMs: perfStats.hostGapMs >= 0 ? Number(perfStats.hostGapMs.toFixed(1)) : null,
+          hostAgeMs: Number(perfStats.hostAgeMs.toFixed(1)),
+          hostStall: !!perfStats.hostStall,
+          diagnosis: perfDiagnosis,
           state: perfStats.state,
           dropped: !!perfStats.dropped,
           ts: perfStats.ts
@@ -470,10 +532,12 @@
         var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         setTheme(prefersDark ? 'dark' : 'light');
       } catch (_) {}
-      // 独立打开 HTML 时默认显示，便于预览；运行态仍由 AHK 控制 update/drop。
+      // Standalone preview mode: runtime still controlled by AHK update/drop.
       show();
       setP(0.35);
     })();
   </script>
 </body>
 </html>
+
+

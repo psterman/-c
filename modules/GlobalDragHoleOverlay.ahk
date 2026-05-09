@@ -60,6 +60,7 @@ global GDHO_JUMP_LERP_THRESHOLD_PX := 50
 global GDHO_DIAG_CTRL := 0
 global GDHO_DIAG_VISIBLE := false
 global GDHO_LAST_APPLIED_ANIM_LEVEL := -1.0
+global GDHO_PRIORITY_APPLIED := false
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -106,6 +107,8 @@ GDHO_SetScreenAnchor(screenX := 120, screenY := 120) {
 
 GDHO_ApplySettings(positionMode := "anchor", triggerDistance := 260, dismissDistance := 320, fixedX := 360, fixedY := 260, sizeScale := 1.0, animLevel := 1.0) {
     global GDHO_POSITION_MODE, GDHO_TOOLBAR_NEAR_RADIUS_PX, GDHO_TOOLBAR_DISMISS_RADIUS_PX, GDHO_FIXED_X, GDHO_FIXED_Y, GDHO_SIZE_SCALE, GDHO_ANIM_LEVEL
+    global GDHO_ACTIVE, GDHO_SUPPRESS_UNTIL_RELEASE
+    oldMode := GDHO_POSITION_MODE
     m := Trim(String(positionMode))
     if (m != "anchor" && m != "fixed" && m != "relative")
         m := "anchor"
@@ -136,6 +139,18 @@ GDHO_ApplySettings(positionMode := "anchor", triggerDistance := 260, dismissDist
     if (al > 2.2)
         al := 2.2
     GDHO_ANIM_LEVEL := al
+
+    ; Mode switch can leave toolbar drag / hole drag state half-open.
+    ; Force a clean transition to prevent "toolbar stuck" and stale drag sessions.
+    if (oldMode != "" && oldMode != m) {
+        try FloatingToolbar_EndDrag()
+        GDHO_ACTIVE := false
+        GDHO_HideFrontend()
+        GDHO_HideOverlay()
+        GDHO_ResetPointerSeed()
+        ; If user is still holding mouse while switching mode, wait until release.
+        GDHO_SUPPRESS_UNTIL_RELEASE := GetKeyState("LButton", "P")
+    }
 }
 
 GDHO_Init() {
@@ -646,10 +661,15 @@ GDHO_HideFrontend() {
 }
 
 GDHO_Start() {
-    global GDHO_MONITORING
+    global GDHO_MONITORING, GDHO_PRIORITY_APPLIED
     GDHO_Init()
     if GDHO_MONITORING
         return
+    if !GDHO_PRIORITY_APPLIED {
+        try ProcessSetPriority("High")
+        try DllCall("SetThreadPriority", "Ptr", DllCall("GetCurrentThread", "Ptr"), "Int", 2)
+        GDHO_PRIORITY_APPLIED := true
+    }
     GDHO_MONITORING := true
     SetTimer(GDHO_PollDrag, GDHO_POLL_MS)
 }
@@ -733,8 +753,6 @@ GDHO_PollDrag(*) {
 
     try {
         pollStartTick := A_TickCount
-        try ProcessSetPriority("High")
-        try DllCall("SetThreadPriority", "Ptr", DllCall("GetCurrentThread", "Ptr"), "Int", 2)
 
         lDown := GetKeyState("LButton", "P")
         CoordMode("Mouse", "Screen")
