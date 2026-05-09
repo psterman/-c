@@ -72,6 +72,7 @@ global GDHO_SAW_DRAG_CURSOR := false
 global GDHO_DROP_ACK_TICK := 0
 global GDHO_STRICT_MODE := true
 global GDHO_DRAG_CURSOR_STREAK := 0
+global GDHO_LAST_DROPPED_TEXT := ""
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -330,6 +331,7 @@ GDHO_OnWebMessage(sender, args) {
     typ := msg.Has("type") ? String(msg["type"]) : ""
     if (typ = "hole_drop_ack") {
         GDHO_DROP_ACK_TICK := A_TickCount
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'ack:first_frame' })")
         return
     }
     if (typ != "hole_drop")
@@ -340,10 +342,12 @@ GDHO_OnWebMessage(sender, args) {
 }
 
 GDHO_HandleDropPayload(payload) {
+    global GDHO_LAST_DROPPED_TEXT
     kind := payload.Has("kind") ? String(payload["kind"]) : "none"
     if (kind = "text") {
         txt := payload.Has("text") ? Trim(String(payload["text"])) : ""
         if (txt != "") {
+            GDHO_LAST_DROPPED_TEXT := txt
             ; Always open SearchCenter first, then inject keyword query.
             try FloatingToolbar_ActivateSearchCenter()
             try SetTimer(FloatingToolbar_ActivateSearchCenter, -80)
@@ -735,18 +739,33 @@ GDHO_Drop(payload := "file") {
         return
     GDHO_LAST_DROP_TICK := nowTick
     ; Execute backend drop command immediately; do not wait for frontend animation.
+    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drop', dispatch: 'pending' })")
     GDHO_ExecuteDropCommand(p)
     GDHO_RunJS("window.HoleOverlay?.drop({ payload: '" p "' })")
 }
 
 GDHO_ExecuteDropCommand(payload := "file") {
+    global GDHO_LAST_DROPPED_TEXT
     p := (payload = "text") ? "text" : "file"
     if (p = "text") {
+        txt := Trim(String(GDHO_LAST_DROPPED_TEXT))
+        if (txt = "") {
+            try txt := Trim(String(A_Clipboard))
+        }
         try FloatingToolbar_ActivateSearchCenter()
+        try SetTimer(FloatingToolbar_ActivateSearchCenter, -80)
+        try SetTimer(FloatingToolbar_ActivateSearchCenter, -220)
+        if (txt != "") {
+            try FloatingToolbar_RequestSearchByKeyword(txt)
+            try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(txt), -120)
+            try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(txt), -320)
+        }
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'search:" (txt != "" ? "ok" : "empty") "' })")
         return
     }
     ; File-like drop path: attempt native explorer fallback immediately.
     try GDHO_TryHandleExplorerDrop()
+    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'files:fallback' })")
 }
 
 GDHO_HideFrontend() {

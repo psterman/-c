@@ -322,6 +322,7 @@
       var perfLastTs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       var lastHostUpdateTs = perfLastTs;
       var perfDiagnosis = '状态正常';
+      var nativeState = { session: '-', kind: '-', dispatch: '-', at: 0 };
       function updatePerfLabel() {
         if (!perfLabel) return;
         var hostDeltaText = perfStats.hostGapMs >= 0 ? Number(perfStats.hostGapMs).toFixed(1) + 'ms' : '--';
@@ -329,7 +330,9 @@
           + ' | 帧: ' + Number(perfStats.frameMs).toFixed(1) + 'ms'
           + ' | HostΔ: ' + hostDeltaText
           + ' | HostAge: ' + Number(perfStats.hostAgeMs).toFixed(1) + 'ms'
-          + ' | 诊断: ' + perfDiagnosis;
+          + ' | 诊断: ' + perfDiagnosis
+          + ' | Native: ' + String(nativeState.kind || '-')
+          + ' | Dispatch: ' + String(nativeState.dispatch || '-');
       }
       function updatePerfBox() {
         if (!perfBox) return;
@@ -530,6 +533,14 @@
         },
         hide: function () { root.classList.remove('near'); isNear = false; dragUpdateActive = false; hide(); }
       };
+      window.HoleOverlay.setNativeState = function (o) {
+        if (!o || typeof o !== 'object') return;
+        if (typeof o.session !== 'undefined') nativeState.session = o.session;
+        if (typeof o.kind !== 'undefined') nativeState.kind = o.kind;
+        if (typeof o.dispatch !== 'undefined') nativeState.dispatch = o.dispatch;
+        nativeState.at = Date.now();
+        updatePerfLabel();
+      };
       window.getPerfStats = function () {
         return {
           fps: Number(perfStats.fps.toFixed(1)),
@@ -620,9 +631,14 @@
         var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         setTheme(prefersDark ? 'dark' : 'light');
       } catch (_) {}
-      // Standalone preview mode: runtime still controlled by AHK update/drop.
-      show();
-      setP(0.35);
+      // Optional standalone preview mode: enable only with ?preview=1
+      try {
+        var qp = new URLSearchParams(window.location.search || '');
+        if (qp.get('preview') === '1') {
+          show();
+          setP(0.35);
+        }
+      } catch (_) {}
     })();
   </script>
 </body>
