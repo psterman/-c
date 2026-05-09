@@ -28,6 +28,32 @@
       opacity: 0;
       transition: opacity 180ms ease, transform calc(220ms / var(--anim-level)) ease;
     }
+    .hint {
+      position: absolute;
+      left: 50%;
+      bottom: 166px;
+      transform: translateX(-50%);
+      min-width: 136px;
+      max-width: 220px;
+      text-align: center;
+      font: 600 12px/1.2 "Segoe UI","Microsoft YaHei",sans-serif;
+      color: rgba(218, 247, 255, .96);
+      letter-spacing: .02em;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(150, 238, 255, .44);
+      background: linear-gradient(180deg, rgba(20,58,88,.72), rgba(15,36,60,.74));
+      box-shadow: 0 0 18px rgba(115, 229, 255, .25);
+      opacity: 0;
+      transition: opacity 140ms ease, transform 180ms ease, box-shadow 180ms ease;
+      pointer-events: none;
+    }
+    .show .hint { opacity: .74; transform: translateX(-50%) translateY(0); }
+    .near .hint {
+      opacity: 1;
+      box-shadow: 0 0 24px rgba(115, 229, 255, .45), 0 0 50px rgba(232, 159, 255, .22);
+      transform: translateX(-50%) translateY(-2px);
+    }
     .local-fx {
       position: absolute;
       left: 50%;
@@ -80,6 +106,7 @@
     .drop .well { animation: wellCollapse 620ms cubic-bezier(.13,.84,.24,1); }
     .drop .aura { animation: auraFlash 620ms cubic-bezier(.13,.84,.24,1); }
     .drop .local-fx { animation: localAuraDrop 620ms cubic-bezier(.13,.84,.24,1); }
+    .drop .hint { opacity: 1; }
     @keyframes localAuraBreath {
       0% { transform: translateX(-50%) scale(.96); opacity: .16; }
       50% { transform: translateX(-50%) scale(1.04); opacity: .28; }
@@ -111,6 +138,7 @@
 <body>
   <div id="root">
     <div class="hole-wrap">
+      <div id="hint" class="hint">拖到这里开始搜索</div>
       <div class="local-fx"></div>
       <div class="base-hole"></div>
       <div class="aura"></div>
@@ -127,6 +155,8 @@
         root.style.setProperty('--p', String(p));
       }
       var pos = { x: Math.max(12, Math.round(window.innerWidth / 2 - 90)), y: Math.max(12, Math.round(window.innerHeight - 240)) };
+      var hint = document.getElementById('hint');
+      var payloadType = 'text';
       function applyPos() {
         root.style.setProperty('--hx', String(pos.x) + 'px');
         root.style.setProperty('--hy', String(pos.y) + 'px');
@@ -138,7 +168,23 @@
         pos.y = Math.max(12, Math.min(maxY, Math.round(Number(y) || 0)));
         applyPos();
       }
-      function show() { root.classList.add('show'); }
+      function hintTextByState(state) {
+        if (!hint) return;
+        if (state === 'drop') {
+          hint.textContent = payloadType === 'text' ? '已接收文本' : '已接收文件';
+          return;
+        }
+        if (state === 'near') {
+          hint.textContent = payloadType === 'text' ? '松手即可搜索文本' : '松手即可处理文件';
+          return;
+        }
+        hint.textContent = payloadType === 'text' ? '拖到这里开始搜索' : '拖到这里处理文件';
+      }
+      function show(payload) {
+        if (payload === 'text' || payload === 'file') payloadType = payload;
+        root.classList.add('show');
+        hintTextByState('idle');
+      }
       function hide() { root.classList.remove('show'); root.classList.remove('drop'); setP(0); }
       function setStyle(scale, animLevel) {
         var s = Number(scale);
@@ -153,7 +199,7 @@
         root.style.setProperty('--anim-level', String(a));
       }
       window.HoleOverlay = {
-        show: function () { show(); setP(0.2); },
+        show: function (payload) { show(payload); setP(0.2); },
         setStyle: function (o) { if (o) setStyle(o.scale, o.animLevel); },
         moveTo: function (o) {
           if (!o) return;
@@ -171,14 +217,24 @@
             var r = 260;
             setP(1 - d / r);
           } else setP(0.45);
+          if (p >= 0.58) {
+            root.classList.add('near');
+            hintTextByState('near');
+          } else {
+            root.classList.remove('near');
+            hintTextByState('idle');
+          }
         },
-        drop: function () {
+        drop: function (o) {
+          if (o && (o.payload === 'text' || o.payload === 'file')) payloadType = o.payload;
           root.classList.remove('drop');
           void root.offsetWidth;
           root.classList.add('drop');
+          root.classList.remove('near');
+          hintTextByState('drop');
           setTimeout(function () { hide(); }, 700);
         },
-        hide: function () { hide(); }
+        hide: function () { root.classList.remove('near'); hide(); }
       };
       window.addEventListener('resize', function () { clampPos(pos.x, pos.y); });
       applyPos();

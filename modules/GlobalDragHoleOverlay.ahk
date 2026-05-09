@@ -294,8 +294,11 @@ GDHO_RunJS(js) {
 }
 
 GDHO_ShowOverlay() {
-    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2
+    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_READY
     if !GDHO_GUI
+        return
+    ; Avoid first-frame black flash: don't reveal host before WebView content is ready.
+    if !GDHO_READY
         return
     if !GDHO_VISIBLE {
         GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
@@ -356,15 +359,13 @@ GDHO_AnchorHoleUnderToolbar() {
         x := Integer(tx + (tw / 2) - (holeW / 2) - vl)
 
     if (mode = "toolbar_auto_vertical") {
-        ; Strict snap: cursor in upper half => above, lower half => below.
-        cursorY := Integer(GDHO_CURSOR_Y)
-        if (cursorY = 0)
-            cursorY := Integer(ty + (th / 2))
-        midY := Integer(ty + (th / 2))
-        if (cursorY < midY)
-            y := Integer(ty - holeH - gap - vt)
+        ; Stable placement: prefer above toolbar; if not enough space, place below.
+        yAbove := Integer(ty - holeH - gap - vt)
+        yBelow := Integer(ty + th + gap - vt)
+        if (yAbove >= 12)
+            y := yAbove
         else
-            y := Integer(ty + th + gap - vt)
+            y := yBelow
     } else if (mode = "toolbar_above") {
         y := Integer(ty - holeH - gap - vt)
     } else {

@@ -24,6 +24,7 @@ global NativeDropBridgeLastEvent := 0
 global NativeDropSessionActive := false
 global NativeDropDiagLogPath := A_ScriptDir "\Cache\drop_diagnostics_runtime.log"
 global NativeDropHideDelayMs := 1800
+global NativeDropSessionPayload := "text"
 ; Diagnostic mode: make drop receiver full-screen to verify hit path.
 ; Keep disabled in production. Full-screen receiver can degrade desktop interaction.
 global NativeDropBridgeFullScreenHitTest := false
@@ -2716,7 +2717,7 @@ NativeDropBridge_Poll(*) {
 }
 
 NativeDropBridge_TriggerHolePulse(evt) {
-    global EnableHoleOverlayOnNativeDrop, NativeDropSessionActive, NativeDropHideDelayMs
+    global EnableHoleOverlayOnNativeDrop, NativeDropSessionActive, NativeDropHideDelayMs, NativeDropSessionPayload
     if !EnableHoleOverlayOnNativeDrop
         return
     if !IsObject(evt)
@@ -2734,7 +2735,9 @@ NativeDropBridge_TriggerHolePulse(evt) {
     if (kindRaw = "drag_start" || kindRaw = "drag_enter") {
         ; Event-driven preview: show on drag_start as primary trigger, drag_enter as reinforce.
         NativeDropSessionActive := true
+        NativeDropSessionPayload := "text"
         try SetTimer(NativeDropBridge_DelayedHide, 0) ; cancel pending hide
+        try SetTimer(NativeDropBridge_DragSessionTick, 60)
         try NativeDropDiag_Log("route kind=" . kindRaw . " action=show")
         try {
             GDHO_Init()
@@ -2749,6 +2752,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
     }
     if (kindRaw = "drag_end") {
         NativeDropSessionActive := false
+        try SetTimer(NativeDropBridge_DragSessionTick, 0)
         try NativeDropDiag_Log("route kind=drag_end action=hide_delay ms=" . NativeDropHideDelayMs)
         try SetTimer(NativeDropBridge_DelayedHide, -Abs(Integer(NativeDropHideDelayMs)))
         return
@@ -2756,9 +2760,11 @@ NativeDropBridge_TriggerHolePulse(evt) {
 
     if (kindRaw = "drop") {
         kind := NativeDropBridge_NormalizeHolePayloadKind(payloadRaw)
+        NativeDropSessionPayload := kind
         try NativeDropDiag_Log("route kind=drop payload=" . payloadRaw . " mapped=" . kind)
         try {
             SetTimer(NativeDropBridge_DelayedHide, 0)
+            SetTimer(NativeDropBridge_DragSessionTick, 0)
             GDHO_Init()
             GDHO_Show(kind)
             GDHO_Drop(kind)
@@ -2792,6 +2798,18 @@ NativeDropBridge_DelayedHide(*) {
         GDHO_HideFrontend()
         GDHO_HideOverlay()
         NativeDropDiag_Log("route delayed_hide action=hide_now")
+    } catch {
+    }
+}
+
+NativeDropBridge_DragSessionTick(*) {
+    global NativeDropSessionActive, NativeDropSessionPayload
+    if !NativeDropSessionActive
+        return
+    try {
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&mx, &my)
+        GDHO_Update(NativeDropSessionPayload, mx, my)
     } catch {
     }
 }

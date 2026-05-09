@@ -165,3 +165,29 @@
 [2026-05-09 08:40:31] evt {"at":"2026-05-09T08:40:31+08:00","kind":"drag_end","payloadKind":"none","x":744,"y":771}
 [2026-05-09 08:40:31] route kind=drag_end action=hide_delay ms=1800
 [2026-05-09 08:40:33] route delayed_hide action=hide_now
+[2026-05-09 08:41:38] evt {"at":"2026-05-09T08:41:38+08:00","kind":"drag_start","payloadKind":"none","x":960,"y":669}
+[2026-05-09 08:41:38] route kind=drag_start action=show
+[2026-05-09 08:41:38] evt {"at":"2026-05-09T08:41:38+08:00","kind":"drag_end","payloadKind":"none","x":1053,"y":671}
+[2026-05-09 08:41:38] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 08:41:39] evt {"at":"2026-05-09T08:41:39+08:00","kind":"drag_start","payloadKind":"none","x":988,"y":679}
+[2026-05-09 08:41:39] route kind=drag_start action=show
+[2026-05-09 08:41:40] evt {"at":"2026-05-09T08:41:40+08:00","kind":"drag_end","payloadKind":"none","x":997,"y":671}
+[2026-05-09 08:41:40] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 08:41:40] evt {"at":"2026-05-09T08:41:40+08:00","kind":"drag_start","payloadKind":"none","x":1093,"y":719}
+[2026-05-09 08:41:40] route kind=drag_start action=show
+[2026-05-09 08:41:41] evt {"at":"2026-05-09T08:41:41+08:00","kind":"drag_end","payloadKind":"none","x":1119,"y":733}
+[2026-05-09 08:41:41] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 08:41:43] route delayed_hide action=hide_now
+[2026-05-09 08:45:15] evt {"at":"2026-05-09T08:45:15+08:00","kind":"bridge_ready","x":914,"y":549,"w":170,"h":210}
+[2026-05-09 08:45:21] evt {"at":"2026-05-09T08:45:21+08:00","kind":"drag_start","payloadKind":"none","x":1101,"y":544}
+[2026-05-09 08:45:21] route kind=drag_start action=show
+[2026-05-09 08:45:22] evt {"at":"2026-05-09T08:45:22+08:00","kind":"drag_end","payloadKind":"none","x":1190,"y":549}
+[2026-05-09 08:45:22] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 08:45:24] evt {"at":"2026-05-09T08:45:24+08:00","kind":"drag_start","payloadKind":"none","x":1106,"y":572}
+[2026-05-09 08:45:24] route kind=drag_start action=show
+[2026-05-09 08:51:08] evt {"at":"2026-05-09T08:51:08+08:00","kind":"bridge_ready","x":774,"y":549,"w":170,"h":210}
+[2026-05-09 08:51:13] evt {"at":"2026-05-09T08:51:13+08:00","kind":"drag_start","payloadKind":"none","x":1001,"y":717}
+[2026-05-09 08:51:13] route kind=drag_start action=show
+[2026-05-09 08:51:15] evt {"at":"2026-05-09T08:51:15+08:00","kind":"drag_end","payloadKind":"none","x":1140,"y":719}
+[2026-05-09 08:51:15] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 08:51:17] route delayed_hide action=hide_now
