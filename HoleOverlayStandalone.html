@@ -177,6 +177,10 @@
       var pos = { x: Math.max(12, Math.round(window.innerWidth / 2 - 90)), y: Math.max(12, Math.round(window.innerHeight - 240)) };
       var hint = document.getElementById('hint');
       var payloadType = 'text';
+      var isNear = false;
+      var lastHintText = '';
+      var dragUpdateActive = false;
+      var lastUpdateTick = 0;
       function applyPos() {
         root.style.setProperty('--hx', String(pos.x) + 'px');
         root.style.setProperty('--hy', String(pos.y) + 'px');
@@ -190,15 +194,28 @@
       }
       function hintTextByState(state) {
         if (!hint) return;
+        var next = '';
         if (state === 'drop') {
-          hint.textContent = payloadType === 'text' ? '已接收文本' : '已接收文件';
+          next = payloadType === 'text' ? '已接收文本' : '已接收文件';
+          if (next !== lastHintText) {
+            hint.textContent = next;
+            lastHintText = next;
+          }
           return;
         }
         if (state === 'near') {
-          hint.textContent = payloadType === 'text' ? '松手即可搜索文本' : '松手即可处理文件';
+          next = payloadType === 'text' ? '松手即可搜索文本' : '松手即可处理文件';
+          if (next !== lastHintText) {
+            hint.textContent = next;
+            lastHintText = next;
+          }
           return;
         }
-        hint.textContent = payloadType === 'text' ? '拖到这里开始搜索' : '拖到这里处理文件';
+        next = payloadType === 'text' ? '拖到这里开始搜索' : '拖到这里处理文件';
+        if (next !== lastHintText) {
+          hint.textContent = next;
+          lastHintText = next;
+        }
       }
       function setSafeMode(on) {
         root.classList.toggle('safe-mode', !!on);
@@ -206,14 +223,19 @@
       function show(payload) {
         if (payload === 'text' || payload === 'file') payloadType = payload;
         setSafeMode(true);
+        var alreadyShown = root.classList.contains('show');
         root.classList.add('show');
-        hintTextByState('idle');
+        if (!alreadyShown && !isNear) {
+          hintTextByState('idle');
+        }
       }
       function hide() {
         root.classList.remove('show');
         root.classList.remove('drop');
         root.classList.remove('near');
         setSafeMode(false);
+        dragUpdateActive = false;
+        lastUpdateTick = 0;
         setP(0);
       }
       function setStyle(scale, animLevel) {
@@ -238,6 +260,8 @@
         },
         update: function (o) {
           show();
+          dragUpdateActive = true;
+          lastUpdateTick = Date.now();
           if (o && typeof o.proximity === 'number') setP(o.proximity);
           else if (o && typeof o.x === 'number' && typeof o.y === 'number') {
             var cx = pos.x + 90;
@@ -247,7 +271,20 @@
             var r = 260;
             setP(1 - d / r);
           } else setP(0.45);
-          if (p >= 0.58) {
+          if ((Date.now() - lastUpdateTick) > 180) {
+            dragUpdateActive = false;
+          }
+          if (!dragUpdateActive) {
+            isNear = false;
+            root.classList.remove('near');
+            hintTextByState('idle');
+            return;
+          }
+          var enterNear = 0.62;
+          var leaveNear = 0.48;
+          if (!isNear && p >= enterNear) isNear = true;
+          else if (isNear && p <= leaveNear) isNear = false;
+          if (isNear) {
             root.classList.add('near');
             hintTextByState('near');
           } else {
@@ -261,10 +298,12 @@
           void root.offsetWidth;
           root.classList.add('drop');
           root.classList.remove('near');
+          isNear = false;
+          dragUpdateActive = false;
           hintTextByState('drop');
           setTimeout(function () { hide(); }, 700);
         },
-        hide: function () { root.classList.remove('near'); hide(); }
+        hide: function () { root.classList.remove('near'); isNear = false; dragUpdateActive = false; hide(); }
       };
       window.addEventListener('resize', function () { clampPos(pos.x, pos.y); });
       applyPos();
