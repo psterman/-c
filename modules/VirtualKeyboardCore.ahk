@@ -3192,8 +3192,10 @@ _VK_UnregisterCapsLockDispatchHotkeys() {
     global g_VK_CapsLockDynHotkeys
     for hk in g_VK_CapsLockDynHotkeys {
         try Hotkey(hk, "Off")
-        catch as e
-            OutputDebug("[VK] CapsLock dyn off " . hk . ": " . e.Message)
+        catch as e {
+            if !_VK_IsMissingHotIfVariantError(e.Message)
+                OutputDebug("[VK] CapsLock dyn off " . hk . ": " . e.Message)
+        }
     }
     g_VK_CapsLockDynHotkeys := []
 }
@@ -3202,10 +3204,17 @@ _VK_UnregisterEmbeddedScopedHotkeys() {
     global g_VK_EmbeddedScopedHotkeys
     for hk in g_VK_EmbeddedScopedHotkeys {
         try Hotkey(hk, "Off")
-        catch as e
-            OutputDebug("[VK] Embedded scoped off " . hk . ": " . e.Message)
+        catch as e {
+            if !_VK_IsMissingHotIfVariantError(e.Message)
+                OutputDebug("[VK] Embedded scoped off " . hk . ": " . e.Message)
+        }
     }
     g_VK_EmbeddedScopedHotkeys := []
+}
+
+_VK_IsMissingHotIfVariantError(msg) {
+    s := StrLower(String(msg))
+    return InStr(s, "nonexistent hotkey variant")
 }
 
 _VK_IsEmbeddedScopedCommand(cmdId) {
@@ -3795,9 +3804,13 @@ _VK_ToEmbeddedHotkeyValue(ahkKey, isEsc := false) {
 }
 
 _VK_SyncEmbeddedCapslockHotkeys() {
+    global g_VK_RebindInProgress
     global g_InverseBindings
     global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ, HotkeyT, HotkeyF, HotkeyP
-
+    if (IsSet(g_VK_RebindInProgress) && g_VK_RebindInProgress)
+        return
+    g_VK_RebindInProgress := true
+    try {
     escVal := g_InverseBindings.Has("sys_exit") ? _VK_ToEmbeddedHotkeyValue(g_InverseBindings["sys_exit"], true) : ""
     cVal := g_InverseBindings.Has("ch_c") ? _VK_ToEmbeddedHotkeyValue(g_InverseBindings["ch_c"]) : ""
     vVal := g_InverseBindings.Has("ch_v") ? _VK_ToEmbeddedHotkeyValue(g_InverseBindings["ch_v"]) : ""
@@ -3828,6 +3841,9 @@ _VK_SyncEmbeddedCapslockHotkeys() {
     HotkeyP := pVal
     _VK_RegisterCapsLockDispatchHotkeys()
     _VK_RegisterEmbeddedScopedHotkeys()
+    } finally {
+        g_VK_RebindInProgress := false
+    }
 }
 
 _VkJsonStr(s) {
@@ -4979,7 +4995,11 @@ _VK_ReleaseOldHotkeys() {
 
 ; 独立 VirtualKeyboard 保存绑定后通知 CursorHelper：重载 Commands.json 并同步 CapsLock 变量 / 双击修饰键与序列钩子。
 VK_HandleBindingsReloaded(*) {
-    global g_VK_Embedded, g_VK_Gui, g_VK_Ready, g_Commands, g_Bindings, g_ModState
+    global g_VK_Embedded, g_VK_Gui, g_VK_Ready, g_Commands, g_Bindings, g_ModState, g_VK_RebindInProgress
+    if (IsSet(g_VK_RebindInProgress) && g_VK_RebindInProgress)
+        return
+    g_VK_RebindInProgress := true
+    try {
 
     _LoadCommands()
 
@@ -5014,6 +5034,9 @@ VK_HandleBindingsReloaded(*) {
 
     ; 绑定重载场景不再强制重建悬浮条/整页 init，避免 VK 编辑过程焦点跳转与宫格刷新抖动
     ; 悬浮条布局变更在 saveToolbarLayout/saveSceneToolbarLayout/saveSceneMenu(floating_bar) 内单独刷新
+    } finally {
+        g_VK_RebindInProgress := false
+    }
 }
 
 VK_MakeToolbarContextMenuAction(cid) {

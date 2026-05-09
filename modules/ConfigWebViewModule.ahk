@@ -1141,6 +1141,105 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
     }
 }
 
+ConfigWebView_SaveHoleOnly(payload, &errorMsg := "") {
+    global ConfigFile
+    try {
+        if !(payload is Map) {
+            errorMsg := "payload 无效"
+            return false
+        }
+        NewHolePositionMode := Trim(String(payload.Get("holePositionMode", IniRead(ConfigFile, "Appearance", "HolePositionMode", "anchor"))))
+        if (NewHolePositionMode != "anchor" && NewHolePositionMode != "fixed" && NewHolePositionMode != "relative")
+            NewHolePositionMode := "anchor"
+        NewHoleTriggerDistance := Integer(payload.Get("holeTriggerDistance", IniRead(ConfigFile, "Appearance", "HoleTriggerDistance", "260")))
+        if (NewHoleTriggerDistance < 80)
+            NewHoleTriggerDistance := 80
+        if (NewHoleTriggerDistance > 1200)
+            NewHoleTriggerDistance := 1200
+        NewHoleDismissDistance := Integer(payload.Get("holeDismissDistance", IniRead(ConfigFile, "Appearance", "HoleDismissDistance", "320")))
+        if (NewHoleDismissDistance < NewHoleTriggerDistance + 20)
+            NewHoleDismissDistance := NewHoleTriggerDistance + 20
+        if (NewHoleDismissDistance > 1600)
+            NewHoleDismissDistance := 1600
+        NewHoleFixedX := Integer(payload.Get("holeFixedX", IniRead(ConfigFile, "Appearance", "HoleFixedX", "360")))
+        NewHoleFixedY := Integer(payload.Get("holeFixedY", IniRead(ConfigFile, "Appearance", "HoleFixedY", "260")))
+        NewHoleSizeScale := Float(payload.Get("holeSizeScale", IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0")))
+        if (NewHoleSizeScale < 0.6)
+            NewHoleSizeScale := 0.6
+        if (NewHoleSizeScale > 1.8)
+            NewHoleSizeScale := 1.8
+        NewHoleAnimLevel := Float(payload.Get("holeAnimLevel", IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0")))
+        if (NewHoleAnimLevel < 0.4)
+            NewHoleAnimLevel := 0.4
+        if (NewHoleAnimLevel > 2.2)
+            NewHoleAnimLevel := 2.2
+
+        IniWrite(NewHolePositionMode, ConfigFile, "Appearance", "HolePositionMode")
+        IniWrite(String(NewHoleTriggerDistance), ConfigFile, "Appearance", "HoleTriggerDistance")
+        IniWrite(String(NewHoleDismissDistance), ConfigFile, "Appearance", "HoleDismissDistance")
+        IniWrite(String(NewHoleFixedX), ConfigFile, "Appearance", "HoleFixedX")
+        IniWrite(String(NewHoleFixedY), ConfigFile, "Appearance", "HoleFixedY")
+        IniWrite(String(NewHoleSizeScale), ConfigFile, "Appearance", "HoleSizeScale")
+        IniWrite(String(NewHoleAnimLevel), ConfigFile, "Appearance", "HoleAnimLevel")
+        try GDHO_SetScreenAnchor(NewHoleFixedX, NewHoleFixedY)
+        try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel)
+        return true
+    } catch as err {
+        errorMsg := "保存失败: " . err.Message
+        return false
+    }
+}
+
+ConfigWebView_SaveSettingsSingleFlight(payload) {
+    global g_ConfigSaveInFlight, g_ConfigSaveQueuedPayload, g_ConfigSaveFlushTimerArmed, g_ConfigSaveLastTick
+    nowTick := A_TickCount
+    if (IsSet(g_ConfigSaveInFlight) && g_ConfigSaveInFlight) {
+        g_ConfigSaveQueuedPayload := payload
+        return
+    }
+    if IsSet(g_ConfigSaveLastTick) {
+        delta := nowTick - g_ConfigSaveLastTick
+        if (delta < 350) {
+            g_ConfigSaveQueuedPayload := payload
+            if !(IsSet(g_ConfigSaveFlushTimerArmed) && g_ConfigSaveFlushTimerArmed) {
+                g_ConfigSaveFlushTimerArmed := true
+                SetTimer(ConfigWebView_FlushQueuedSaveSettings, -(350 - delta + 10))
+            }
+            return
+        }
+    }
+    ConfigWebView_RunSaveSettings(payload)
+}
+
+ConfigWebView_FlushQueuedSaveSettings(*) {
+    global g_ConfigSaveFlushTimerArmed, g_ConfigSaveQueuedPayload
+    g_ConfigSaveFlushTimerArmed := false
+    if !(IsSet(g_ConfigSaveQueuedPayload) && (g_ConfigSaveQueuedPayload is Map))
+        return
+    payload := g_ConfigSaveQueuedPayload
+    g_ConfigSaveQueuedPayload := 0
+    ConfigWebView_RunSaveSettings(payload)
+}
+
+ConfigWebView_RunSaveSettings(payload) {
+    global g_ConfigSaveInFlight, g_ConfigSaveQueuedPayload, g_ConfigSaveLastTick
+    if !(payload is Map)
+        payload := Map()
+    g_ConfigSaveInFlight := true
+    err := ""
+    ok := false
+    try ok := ConfigWebView_ValidateAndApply(payload, &err)
+    catch as e {
+        ok := false
+        err := e.Message
+    }
+    ConfigWebView_Send(Map("type", "saveResult", "ok", ok, "error", err))
+    g_ConfigSaveLastTick := A_TickCount
+    g_ConfigSaveInFlight := false
+    if (IsSet(g_ConfigSaveQueuedPayload) && (g_ConfigSaveQueuedPayload is Map))
+        SetTimer(ConfigWebView_FlushQueuedSaveSettings, -380)
+}
+
 ConfigWebView_OnMessage(sender, args) {
     global ConfigWV2Ready, UseWebViewSettings
     jsonStr := args.WebMessageAsJson
@@ -1198,9 +1297,20 @@ ConfigWebView_OnMessage(sender, args) {
             }
             if !(payload is Map)
                 payload := Map()
+            ConfigWebView_SaveSettingsSingleFlight(payload)
+        case "saveHoleSettings":
+            payload := msg.Get("payload", Map())
+            if (payload is String && payload != "") {
+                try payload := Jxon_Load(payload)
+                catch {
+                    payload := Map()
+                }
+            }
+            if !(payload is Map)
+                payload := Map()
             err := ""
-            ok := ConfigWebView_ValidateAndApply(payload, &err)
-            ConfigWebView_Send(Map("type", "saveResult", "ok", ok, "error", err))
+            ok := ConfigWebView_SaveHoleOnly(payload, &err)
+            ConfigWebView_Send(Map("type", "saveHoleResult", "ok", ok, "error", err))
         case "saveKeybinderToolbarLayout":
             tl := msg.Has("toolbarLayout") && msg["toolbarLayout"] is Array ? msg["toolbarLayout"] : []
             cml := msg.Has("contextMenuLayout") && msg["contextMenuLayout"] is Array ? msg["contextMenuLayout"] : []

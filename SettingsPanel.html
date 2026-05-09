@@ -1790,12 +1790,13 @@
         const activationMode = normalizeActivationMode(state.appearanceActivationMode);
         panel.innerHTML = `<div class="card"><div class="title">外观设置</div><div class="row"><div class="label">主题模式</div><select id="themeMode">${optionsKV([{value:"dark",label:"深色"},{value:"light",label:"浅色"}],d.themeMode)}</select></div><div class="row"><div class="label">弹窗位置</div><select id="popupScreenIndex">${optionsKV(screenOpts, String(d.popupScreenIndex || 1))}</select></div><div class="hint">已自动识别显示器数量：${esc(monitorCount)}。此设置会应用到所有弹窗并固定保存。</div></div>
 <div class="card"><div class="title">黑洞交互</div>
-<div class="row"><div class="label">黑洞位置模式</div><select id="holePositionMode">${optionsKV([{value:"anchor",label:"靠近工具栏"},{value:"fixed",label:"固定位置"},{value:"relative",label:"相对拖动"}], String(d.holePositionMode || "anchor"))}</select></div>
-<div class="row"><div class="label">触发距离</div><select id="holeTriggerDistance">${optionsKV(withCurrentOption([{value:"200",label:"紧凑（200px）"},{value:"260",label:"标准（260px）"},{value:"340",label:"宽松（340px）"},{value:"420",label:"远距（420px）"}], d.holeTriggerDistance ?? 260), String(d.holeTriggerDistance ?? 260))}</select></div>
-<div class="row"><div class="label">消失距离</div><select id="holeDismissDistance">${optionsKV(withCurrentOption([{value:"260",label:"紧凑（260px）"},{value:"320",label:"标准（320px）"},{value:"420",label:"宽松（420px）"},{value:"560",label:"远距（560px）"}], d.holeDismissDistance ?? 320), String(d.holeDismissDistance ?? 320))}</select></div>
-<div class="row"><div class="label">固定位置 X / Y</div><div class="inline"><input id="holeFixedX" type="number" step="1" value="${esc(d.holeFixedX ?? 360)}"><input id="holeFixedY" type="number" step="1" value="${esc(d.holeFixedY ?? 260)}"></div></div>
-<div class="row"><div class="label">黑洞大小</div><select id="holeSizeScale">${optionsKV(withCurrentOption([{value:"0.85",label:"小（0.85x）"},{value:"1.0",label:"标准（1.0x）"},{value:"1.25",label:"大（1.25x）"},{value:"1.5",label:"超大（1.5x）"}], d.holeSizeScale ?? 1.0), String(d.holeSizeScale ?? 1.0))}</select></div>
-<div class="row"><div class="label">动画强度</div><select id="holeAnimLevel">${optionsKV(withCurrentOption([{value:"0.8",label:"柔和（0.8）"},{value:"1.0",label:"标准（1.0）"},{value:"1.4",label:"增强（1.4）"},{value:"2.0",label:"强烈（2.0）"}], d.holeAnimLevel ?? 1.0), String(d.holeAnimLevel ?? 1.0))}</select></div>
+<div class="row"><div class="label">黑洞位置模式</div><select id="holePositionMode" data-nosave="1">${optionsKV([{value:"anchor",label:"靠近工具栏"},{value:"fixed",label:"固定位置"},{value:"relative",label:"相对拖动"}], String(d.holePositionMode || "anchor"))}</select></div>
+<div class="row"><div class="label">触发距离</div><select id="holeTriggerDistance" data-nosave="1">${optionsKV(withCurrentOption([{value:"200",label:"紧凑（200px）"},{value:"260",label:"标准（260px）"},{value:"340",label:"宽松（340px）"},{value:"420",label:"远距（420px）"}], d.holeTriggerDistance ?? 260), String(d.holeTriggerDistance ?? 260))}</select></div>
+<div class="row"><div class="label">消失距离</div><select id="holeDismissDistance" data-nosave="1">${optionsKV(withCurrentOption([{value:"260",label:"紧凑（260px）"},{value:"320",label:"标准（320px）"},{value:"420",label:"宽松（420px）"},{value:"560",label:"远距（560px）"}], d.holeDismissDistance ?? 320), String(d.holeDismissDistance ?? 320))}</select></div>
+<div class="row"><div class="label">固定位置 X / Y</div><div class="inline"><input id="holeFixedX" data-nosave="1" type="number" step="1" value="${esc(d.holeFixedX ?? 360)}"><input id="holeFixedY" data-nosave="1" type="number" step="1" value="${esc(d.holeFixedY ?? 260)}"></div></div>
+<div class="row"><div class="label">黑洞大小</div><select id="holeSizeScale" data-nosave="1">${optionsKV(withCurrentOption([{value:"0.85",label:"小（0.85x）"},{value:"1.0",label:"标准（1.0x）"},{value:"1.25",label:"大（1.25x）"},{value:"1.5",label:"超大（1.5x）"}], d.holeSizeScale ?? 1.0), String(d.holeSizeScale ?? 1.0))}</select></div>
+<div class="row"><div class="label">动画强度</div><select id="holeAnimLevel" data-nosave="1">${optionsKV(withCurrentOption([{value:"0.8",label:"柔和（0.8）"},{value:"1.0",label:"标准（1.0）"},{value:"1.4",label:"增强（1.4）"},{value:"2.0",label:"强烈（2.0）"}], d.holeAnimLevel ?? 1.0), String(d.holeAnimLevel ?? 1.0))}</select></div>
+<div class="inline" style="margin-top:8px;"><button class="btn" id="btnApplyHoleSettings">应用黑洞设置</button></div>
 </div>
 <div class="card">
   <div class="title">激活方式</div>
@@ -1807,6 +1808,25 @@
   </div>
 </div>`;
         bindAppearanceActivationMode();
+        const holeBtn = document.getElementById("btnApplyHoleSettings");
+        if (holeBtn) {
+          holeBtn.addEventListener("click", () => {
+            const d = readFromUI();
+            const err = validate(d);
+            if (err) return setStatus(err, "err");
+            const holePayload = {
+              holePositionMode: d.holePositionMode,
+              holeTriggerDistance: d.holeTriggerDistance,
+              holeDismissDistance: d.holeDismissDistance,
+              holeFixedX: d.holeFixedX,
+              holeFixedY: d.holeFixedY,
+              holeSizeScale: d.holeSizeScale,
+              holeAnimLevel: d.holeAnimLevel
+            };
+            post({ type: "saveHoleSettings", payload: holePayload });
+            setStatus("黑洞设置应用中...");
+          });
+        }
       } else if (state.activeTab === "prompts") {
         const fixedCategories = ["基础","专业","改错","优化","解释","重构"];
         const tplAll = d.promptTemplateSummary || [];
@@ -2251,6 +2271,10 @@
       }
       if (msg.type === "saveKeybinderToolbarLayoutResult") {
         setStatus(msg.ok ? "工具栏与右键菜单已写入配置" : (msg.error || "保存失败"), msg.ok ? "ok" : "err");
+        return;
+      }
+      if (msg.type === "saveHoleResult") {
+        setStatus(msg.ok ? "黑洞设置已应用" : (msg.error || "黑洞设置应用失败"), msg.ok ? "ok" : "err");
         return;
       }
       if (msg.type === "actionResult") { setStatus(msg.ok ? "操作成功" : (msg.error || "操作失败"), msg.ok ? "ok" : "err"); }

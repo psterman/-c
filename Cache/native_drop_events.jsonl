@@ -961,3 +961,14 @@
 {"at":"2026-05-09T19:40:03+08:00","kind":"drag_end","payloadKind":"none","x":1453,"y":201}
 {"at":"2026-05-09T19:42:43+08:00","kind":"drag_start","payloadKind":"none","x":1029,"y":829}
 {"at":"2026-05-09T19:42:44+08:00","kind":"drag_end","payloadKind":"none","x":1306,"y":948}
+{"at":"2026-05-09T19:48:40+08:00","kind":"bridge_ready","x":1400,"y":686,"w":170,"h":210}
+{"at":"2026-05-09T19:48:57+08:00","kind":"bridge_ready","x":1301,"y":686,"w":170,"h":210}
+{"at":"2026-05-09T19:54:09+08:00","kind":"bridge_ready","x":1202,"y":686,"w":170,"h":210}
+{"at":"2026-05-09T20:01:24+08:00","kind":"drag_start","payloadKind":"none","x":433,"y":545}
+{"at":"2026-05-09T20:01:25+08:00","kind":"drag_end","payloadKind":"none","x":515,"y":546}
+{"at":"2026-05-09T20:14:45+08:00","kind":"drag_start","payloadKind":"none","x":1707,"y":162}
+{"at":"2026-05-09T20:14:45+08:00","kind":"drag_end","payloadKind":"none","x":1474,"y":311}
+{"at":"2026-05-09T20:24:28+08:00","kind":"drag_start","payloadKind":"none","x":151,"y":830}
+{"at":"2026-05-09T20:24:29+08:00","kind":"drag_end","payloadKind":"none","x":125,"y":932}
+{"at":"2026-05-09T20:24:33+08:00","kind":"drag_start","payloadKind":"none","x":212,"y":806}
+{"at":"2026-05-09T20:24:34+08:00","kind":"drag_end","payloadKind":"none","x":309,"y":801}
