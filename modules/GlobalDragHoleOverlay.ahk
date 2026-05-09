@@ -62,6 +62,16 @@ global GDHO_DIAG_VISIBLE := false
 global GDHO_LAST_APPLIED_ANIM_LEVEL := -1.0
 global GDHO_PRIORITY_APPLIED := false
 global GDHO_START_ROOT_HWND := 0
+global NativeDropSessionActive := false
+global GDHO_LAST_DROP_TICK := 0
+global GDHO_RELEASE_SETTLE_MS := 100
+global GDHO_RELEASE_PENDING := false
+global GDHO_RELEASE_DEADLINE_TICK := 0
+global GDHO_LAST_CURSOR_NAME := ""
+global GDHO_SAW_DRAG_CURSOR := false
+global GDHO_DROP_ACK_TICK := 0
+global GDHO_STRICT_MODE := true
+global GDHO_DRAG_CURSOR_STREAK := 0
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -286,6 +296,7 @@ GDHO_ApplyHostMapping() {
 }
 
 GDHO_OnWebMessage(sender, args) {
+    global GDHO_DROP_ACK_TICK
     msg := 0
     ; 1) Preferred path: postMessage(string) payload.
     try {
@@ -317,6 +328,10 @@ GDHO_OnWebMessage(sender, args) {
     if !(msg is Map)
         return
     typ := msg.Has("type") ? String(msg["type"]) : ""
+    if (typ = "hole_drop_ack") {
+        GDHO_DROP_ACK_TICK := A_TickCount
+        return
+    }
     if (typ != "hole_drop")
         return
     if !msg.Has("payload") || !(msg["payload"] is Map)
@@ -615,7 +630,7 @@ GDHO_HideOverlay() {
     if !GDHO_GUI
         return
     try WebView2_NotifyHidden(GDHO_WV2)
-    GDHO_SetClickThrough(true)
+    GDHO_ApplyDropHitTestByProximity(0.0)
     try GDHO_GUI.Hide()
     GDHO_VISIBLE := false
 }
@@ -668,8 +683,6 @@ GDHO_Update(payload := "file", x := "", y := "") {
     nowTick := A_TickCount
     if (GDHO_LAST_UPDATE_TICK && (nowTick - GDHO_LAST_UPDATE_TICK < GDHO_UPDATE_MIN_INTERVAL_MS))
         return
-    ; Keep overlay hit-testable during active drag/drop.
-    GDHO_SetClickThrough(false)
     p := (payload = "text") ? "text" : "file"
     if (x != "" && y != "") {
         GDHO_CURSOR_X := Integer(x)
@@ -684,6 +697,7 @@ GDHO_Update(payload := "file", x := "", y := "") {
     else
         GDHO_AnchorHoleUnderToolbar()
     GDHO_ApplyAdaptiveAnimLevel()
+    prox := 0.45
     if (x = "" || y = "") {
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "' })")
     } else {
@@ -700,14 +714,39 @@ GDHO_Update(payload := "file", x := "", y := "") {
             }
         }
         GDHO_GlobalPointToHostLocal(Integer(x), Integer(y), &lx, &ly)
+        cx := 90
+        cy := 56 + (206 / 2)
+        dxp := lx - cx
+        dyp := ly - cy
+        dist := Sqrt(dxp * dxp + dyp * dyp)
+        radius := 140.0
+        prox := Max(0.0, Min(1.0, 1.0 - (dist / radius)))
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "', x: " Integer(lx) ", y: " Integer(ly) " })")
     }
+    GDHO_ApplyDropHitTestByProximity(prox)
     GDHO_LAST_UPDATE_TICK := nowTick
 }
 
 GDHO_Drop(payload := "file") {
+    global GDHO_LAST_DROP_TICK
     p := (payload = "text") ? "text" : "file"
+    nowTick := A_TickCount
+    if (GDHO_LAST_DROP_TICK && (nowTick - GDHO_LAST_DROP_TICK < 120))
+        return
+    GDHO_LAST_DROP_TICK := nowTick
+    ; Execute backend drop command immediately; do not wait for frontend animation.
+    GDHO_ExecuteDropCommand(p)
     GDHO_RunJS("window.HoleOverlay?.drop({ payload: '" p "' })")
+}
+
+GDHO_ExecuteDropCommand(payload := "file") {
+    p := (payload = "text") ? "text" : "file"
+    if (p = "text") {
+        try FloatingToolbar_ActivateSearchCenter()
+        return
+    }
+    ; File-like drop path: attempt native explorer fallback immediately.
+    try GDHO_TryHandleExplorerDrop()
 }
 
 GDHO_HideFrontend() {
@@ -832,7 +871,9 @@ GDHO_PollDrag(*) {
     global GDHO_START_CURSOR, GDHO_DRAG_SOURCE_CLASS, GDHO_PAYLOAD
     global GDHO_MIN_MOVE_PX, GDHO_LAST_UPDATE_TICK, GDHO_MAX_IDLE_HIDE_MS, GDHO_DRAG_CONFIDENCE
     global GDHO_POLL_BUSY, GDHO_SUPPRESS_UNTIL_RELEASE, GDHO_TOOLBAR_NEAR_RADIUS_PX, GDHO_TOOLBAR_DISMISS_RADIUS_PX, GDHO_POSITION_MODE
-    global FloatingToolbarDragging
+    global FloatingToolbarDragging, NativeDropSessionActive
+    global GDHO_RELEASE_PENDING, GDHO_RELEASE_DEADLINE_TICK, GDHO_RELEASE_SETTLE_MS
+    global GDHO_LAST_CURSOR_NAME, GDHO_SAW_DRAG_CURSOR, GDHO_STRICT_MODE, GDHO_DRAG_CURSOR_STREAK
     if GDHO_POLL_BUSY
         return
     GDHO_POLL_BUSY := true
@@ -845,6 +886,44 @@ GDHO_PollDrag(*) {
         MouseGetPos(&mx, &my, &hwnd)
         isOwn := GDHO_IsOwnWindowHwnd(hwnd)
         isOwnProc := GDHO_IsOwnProcessHwnd(hwnd)
+        cName := ""
+        try cName := String(A_Cursor)
+        if (cName != "") {
+            GDHO_LAST_CURSOR_NAME := cName
+            if !GDHO_IsStandardCursorName(cName) {
+                GDHO_SAW_DRAG_CURSOR := true
+                GDHO_DRAG_CURSOR_STREAK += 1
+            } else if lDown {
+                GDHO_DRAG_CURSOR_STREAK := 0
+            }
+        }
+
+        ; Physical fallback + settle buffer:
+        ; keep state for a short window after release to avoid race with delayed native Drop.
+        if (NativeDropSessionActive && !lDown) {
+            if !GDHO_RELEASE_PENDING {
+                GDHO_RELEASE_PENDING := true
+                GDHO_RELEASE_DEADLINE_TICK := A_TickCount + Integer(GDHO_RELEASE_SETTLE_MS)
+                if GDHO_ACTIVE
+                    GDHO_Drop(GDHO_PAYLOAD)
+            }
+            if (GDHO_RELEASE_PENDING && GDHO_SAW_DRAG_CURSOR && GDHO_IsStandardCursorName(cName) && GDHO_IsPointInHole(mx, my, 20)) {
+                GDHO_ExecuteDropCommand(GDHO_PAYLOAD)
+                GDHO_SAW_DRAG_CURSOR := false
+            }
+            if (A_TickCount < GDHO_RELEASE_DEADLINE_TICK)
+                return
+            GDHO_RELEASE_PENDING := false
+            GDHO_RELEASE_DEADLINE_TICK := 0
+            GDHO_ACTIVE := false
+            NativeDropSessionActive := false
+            GDHO_SAW_DRAG_CURSOR := false
+            GDHO_DRAG_CURSOR_STREAK := 0
+            GDHO_HideFrontend()
+            GDHO_HideOverlay()
+            GDHO_ResetPointerSeed()
+            return
+        }
 
         ; Hard guard: dragging/operating toolbar must never trigger hole logic.
         if (IsSet(FloatingToolbarDragging) && FloatingToolbarDragging) {
@@ -885,15 +964,43 @@ GDHO_PollDrag(*) {
             try FloatingToolbar_EndDrag()
             GDHO_SUPPRESS_UNTIL_RELEASE := false
             GDHO_DRAG_CONFIDENCE := 0.0
-            if GDHO_ACTIVE {
-                GDHO_Drop(GDHO_PAYLOAD)
-                GDHO_ACTIVE := false
-                GDHO_TryHandleExplorerDrop()
-                SetTimer((*) => GDHO_HideOverlay(), -700)
+            GDHO_DRAG_CURSOR_STREAK := 0
+            if (GDHO_ACTIVE || NativeDropSessionActive) {
+                if !GDHO_RELEASE_PENDING {
+                    GDHO_RELEASE_PENDING := true
+                    GDHO_RELEASE_DEADLINE_TICK := A_TickCount + Integer(GDHO_RELEASE_SETTLE_MS)
+                    if GDHO_ACTIVE
+                        GDHO_Drop(GDHO_PAYLOAD)
+                }
+                if (GDHO_RELEASE_PENDING && GDHO_SAW_DRAG_CURSOR && GDHO_IsStandardCursorName(cName) && GDHO_IsPointInHole(mx, my, 20)) {
+                    GDHO_ExecuteDropCommand(GDHO_PAYLOAD)
+                    GDHO_SAW_DRAG_CURSOR := false
+                }
+                if (A_TickCount < GDHO_RELEASE_DEADLINE_TICK)
+                    return
+                GDHO_RELEASE_PENDING := false
+                GDHO_RELEASE_DEADLINE_TICK := 0
+                NativeDropSessionActive := false
+                if GDHO_ACTIVE {
+                    GDHO_ACTIVE := false
+                    GDHO_TryHandleExplorerDrop()
+                    SetTimer((*) => GDHO_HideOverlay(), -700)
+                } else if (A_TickCount - GDHO_LAST_UPDATE_TICK > GDHO_MAX_IDLE_HIDE_MS) {
+                    GDHO_HideFrontend()
+                    GDHO_HideOverlay()
+                }
+                GDHO_SAW_DRAG_CURSOR := false
+                GDHO_DRAG_CURSOR_STREAK := 0
+                GDHO_ResetPointerSeed()
+                return
             } else if (A_TickCount - GDHO_LAST_UPDATE_TICK > GDHO_MAX_IDLE_HIDE_MS) {
                 GDHO_HideFrontend()
                 GDHO_HideOverlay()
             }
+            GDHO_RELEASE_PENDING := false
+            GDHO_RELEASE_DEADLINE_TICK := 0
+            GDHO_SAW_DRAG_CURSOR := false
+            GDHO_DRAG_CURSOR_STREAK := 0
             GDHO_ResetPointerSeed()
             return
         }
@@ -933,6 +1040,8 @@ GDHO_PollDrag(*) {
         likelyDrag := GDHO_IsLikelyDrag(GDHO_DRAG_SOURCE_CLASS, GDHO_START_CURSOR)
         if !likelyDrag
             return
+        if (GDHO_STRICT_MODE && !GDHO_IsStrictDragQualified(GDHO_DRAG_SOURCE_CLASS, GDHO_DRAG_CURSOR_STREAK, cName, GDHO_START_CURSOR))
+            return
 
         distToTb := GDHO_DistanceToToolbar(mx, my)
         limit := GDHO_ACTIVE ? GDHO_TOOLBAR_DISMISS_RADIUS_PX : GDHO_TOOLBAR_NEAR_RADIUS_PX
@@ -955,6 +1064,9 @@ GDHO_PollDrag(*) {
             ; Relative mode will place hole once here, then GDHO_Update keeps it fixed.
             GDHO_Show(GDHO_PAYLOAD, mx, my)
             GDHO_ACTIVE := true
+            NativeDropSessionActive := true
+            GDHO_RELEASE_PENDING := false
+            GDHO_RELEASE_DEADLINE_TICK := 0
         }
         GDHO_Update(GDHO_PAYLOAD, mx, my)
         GDHO_LAST_X := mx
@@ -964,6 +1076,47 @@ GDHO_PollDrag(*) {
         GDHO_DIAG_LOG("PollDrag", pollElapsed)
         GDHO_POLL_BUSY := false
     }
+}
+
+GDHO_ApplyDropHitTestByProximity(p) {
+    global GDHO_GUI, GDHO_ACTIVE, GDHO_CLICKTHROUGH
+    if !GDHO_GUI
+        return
+    prox := Max(0.0, Min(1.0, Float(p)))
+    if (prox >= 0.6) {
+        try WinSetExStyle("-0x20", "ahk_id " GDHO_GUI.Hwnd)
+        GDHO_CLICKTHROUGH := false
+        return
+    }
+    if (!GDHO_ACTIVE || prox < 0.5) {
+        try WinSetExStyle("+0x20", "ahk_id " GDHO_GUI.Hwnd)
+        GDHO_CLICKTHROUGH := true
+    }
+}
+
+GDHO_IsStandardCursorName(name) {
+    n := StrLower(Trim(String(name)))
+    if (n = "")
+        return false
+    return (n = "arrow" || n = "ibeam" || n = "wait" || n = "appstarting" || n = "cross" || n = "help"
+        || n = "uparrow" || n = "sizeall" || n = "sizens" || n = "sizewe" || n = "sizenesw" || n = "sizenwse"
+        || n = "hand" || n = "no")
+}
+
+GDHO_IsStrictDragQualified(srcClass, cursorStreak, currentCursorName, startCursor) {
+    ; Strict mode goal:
+    ; 1) Ordinary mouse pass should not light up the hole.
+    ; 2) Require explicit drag-cursor evidence (continuous frames).
+    if (cursorStreak < 2)
+        return false
+    ; Explorer/Desktop source can be accepted once drag cursor is stable.
+    if (srcClass = "CabinetWClass" || srcClass = "ExploreWClass" || srcClass = "WorkerW" || srcClass = "Progman")
+        return true
+    ; Non-explorer source: need stronger evidence than class alone.
+    if !GDHO_IsStandardCursorName(currentCursorName)
+        return true
+    ; Fallback: if handle changed from press seed and streak is stable.
+    return (startCursor != 0 && startCursor != GDHO_GetCursorHandle())
 }
 
 GDHO_IsOwnWindowHwnd(hwnd) {

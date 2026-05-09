@@ -2543,3 +2543,171 @@
 [2026-05-09 22:38:02] route kind=drag_end action=hide_delay ms=1800
 [2026-05-09 22:38:02] evt {"at":"2026-05-09T22:38:02+08:00","kind":"drag_start","payloadKind":"none","x":426,"y":665}
 [2026-05-09 22:38:02] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:38:45] evt {"at":"2026-05-09T22:38:45+08:00","kind":"bridge_ready","x":419,"y":565,"w":170,"h":210}
+[2026-05-09 22:38:59] evt {"at":"2026-05-09T22:38:59+08:00","kind":"drag_start","payloadKind":"none","x":237,"y":556}
+[2026-05-09 22:38:59] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:39:00] evt {"at":"2026-05-09T22:39:00+08:00","kind":"drag_end","payloadKind":"none","x":302,"y":564}
+[2026-05-09 22:39:00] route drag_end over_hole=0 payload=text
+[2026-05-09 22:39:00] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:39:02] route delayed_hide action=hide_now
+[2026-05-09 22:39:04] evt {"at":"2026-05-09T22:39:04+08:00","kind":"drag_start","payloadKind":"none","x":327,"y":618}
+[2026-05-09 22:39:04] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:39:13] evt {"at":"2026-05-09T22:39:12+08:00","kind":"drag_end","payloadKind":"none","x":226,"y":565}
+[2026-05-09 22:39:13] route drag_end over_hole=0 payload=text
+[2026-05-09 22:39:13] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:39:14] evt {"at":"2026-05-09T22:39:14+08:00","kind":"drag_start","payloadKind":"none","x":264,"y":556}
+[2026-05-09 22:39:14] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:39:14] evt {"at":"2026-05-09T22:39:14+08:00","kind":"drag_end","payloadKind":"none","x":297,"y":555}
+[2026-05-09 22:39:14] route drag_end over_hole=0 payload=text
+[2026-05-09 22:39:14] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:39:15] evt {"at":"2026-05-09T22:39:15+08:00","kind":"drag_start","payloadKind":"none","x":279,"y":580}
+[2026-05-09 22:39:15] route kind=drag_start action=allow_unknown payload=none
+[2026-05-09 22:39:15] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-09 22:44:06] evt {"at":"2026-05-09T22:44:06+08:00","kind":"bridge_ready","x":320,"y":565,"w":170,"h":210}
+[2026-05-09 22:46:31] evt {"at":"2026-05-09T22:46:31+08:00","kind":"drag_start","payloadKind":"none","x":182,"y":798}
+[2026-05-09 22:46:31] route kind=drag_start action=ignore reason=toolbar_dragging
+[2026-05-09 22:46:32] evt {"at":"2026-05-09T22:46:32+08:00","kind":"drag_end","payloadKind":"none","x":890,"y":784}
+[2026-05-09 22:46:32] route drag_end over_hole=0 payload=text
+[2026-05-09 22:46:32] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:46:34] route delayed_hide action=hide_now
+[2026-05-09 22:46:44] evt {"at":"2026-05-09T22:46:43+08:00","kind":"drag_start","payloadKind":"none","x":1088,"y":564}
+[2026-05-09 22:46:44] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:46:44] evt {"at":"2026-05-09T22:46:44+08:00","kind":"drag_end","payloadKind":"none","x":1285,"y":562}
+[2026-05-09 22:46:44] route drag_end over_hole=0 payload=text
+[2026-05-09 22:46:44] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:46:45] evt {"at":"2026-05-09T22:46:45+08:00","kind":"drag_start","payloadKind":"none","x":1198,"y":591}
+[2026-05-09 22:46:45] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:46:46] evt {"at":"2026-05-09T22:46:45+08:00","kind":"drag_end","payloadKind":"none","x":1123,"y":704}
+[2026-05-09 22:46:46] route drag_end over_hole=1 payload=text
+[2026-05-09 22:46:46] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:46:47] route delayed_hide action=hide_now
+[2026-05-09 22:46:48] evt {"at":"2026-05-09T22:46:47+08:00","kind":"drag_start","payloadKind":"none","x":1185,"y":598}
+[2026-05-09 22:46:48] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:46:49] evt {"at":"2026-05-09T22:46:49+08:00","kind":"drag_end","payloadKind":"none","x":1117,"y":711}
+[2026-05-09 22:46:49] route drag_end over_hole=1 payload=text
+[2026-05-09 22:46:49] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:46:51] route delayed_hide action=hide_now
+[2026-05-09 22:46:52] evt {"at":"2026-05-09T22:46:52+08:00","kind":"drag_start","payloadKind":"none","x":1206,"y":586}
+[2026-05-09 22:46:52] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:46:54] evt {"at":"2026-05-09T22:46:54+08:00","kind":"drag_end","payloadKind":"none","x":937,"y":811}
+[2026-05-09 22:46:54] route drag_end over_hole=0 payload=text
+[2026-05-09 22:46:54] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:46:56] route delayed_hide action=hide_now
+[2026-05-09 22:46:59] evt {"at":"2026-05-09T22:46:59+08:00","kind":"drag_start","payloadKind":"none","x":1230,"y":640}
+[2026-05-09 22:46:59] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:46:59] evt {"at":"2026-05-09T22:46:59+08:00","kind":"drag_end","payloadKind":"none","x":1297,"y":638}
+[2026-05-09 22:46:59] route drag_end over_hole=0 payload=text
+[2026-05-09 22:46:59] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:47:00] evt {"at":"2026-05-09T22:47:00+08:00","kind":"drag_start","payloadKind":"none","x":1226,"y":652}
+[2026-05-09 22:47:00] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:47:05] evt {"at":"2026-05-09T22:47:05+08:00","kind":"drag_end","payloadKind":"none","x":1128,"y":703}
+[2026-05-09 22:47:05] route drag_end over_hole=1 payload=text
+[2026-05-09 22:47:05] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:47:07] route delayed_hide action=hide_now
+[2026-05-09 22:47:09] evt {"at":"2026-05-09T22:47:09+08:00","kind":"drag_start","payloadKind":"none","x":1218,"y":641}
+[2026-05-09 22:47:09] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:47:10] evt {"at":"2026-05-09T22:47:10+08:00","kind":"drag_end","payloadKind":"none","x":1356,"y":643}
+[2026-05-09 22:47:10] route drag_end over_hole=0 payload=text
+[2026-05-09 22:47:10] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:47:10] evt {"at":"2026-05-09T22:47:10+08:00","kind":"drag_start","payloadKind":"none","x":1302,"y":655}
+[2026-05-09 22:47:10] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:47:12] evt {"at":"2026-05-09T22:47:12+08:00","kind":"drag_end","payloadKind":"none","x":1131,"y":709}
+[2026-05-09 22:47:12] route drag_end over_hole=1 payload=text
+[2026-05-09 22:47:12] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:47:14] route delayed_hide action=hide_now
+[2026-05-09 22:47:20] evt {"at":"2026-05-09T22:47:20+08:00","kind":"bridge_ready","x":969,"y":550,"w":170,"h":210}
+[2026-05-09 22:47:51] evt {"at":"2026-05-09T22:47:51+08:00","kind":"drag_start","payloadKind":"none","x":1158,"y":671}
+[2026-05-09 22:47:51] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:47:52] evt {"at":"2026-05-09T22:47:52+08:00","kind":"drag_end","payloadKind":"none","x":1358,"y":699}
+[2026-05-09 22:47:52] route drag_end over_hole=0 payload=text
+[2026-05-09 22:47:52] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:47:53] evt {"at":"2026-05-09T22:47:53+08:00","kind":"drag_start","payloadKind":"none","x":1224,"y":692}
+[2026-05-09 22:47:53] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:48:59] evt {"at":"2026-05-09T22:48:59+08:00","kind":"bridge_ready","x":870,"y":550,"w":170,"h":210}
+[2026-05-09 22:49:56] evt {"at":"2026-05-09T22:49:56+08:00","kind":"drag_start","payloadKind":"none","x":660,"y":810}
+[2026-05-09 22:49:56] route kind=drag_start action=ignore reason=toolbar_dragging
+[2026-05-09 22:49:58] evt {"at":"2026-05-09T22:49:58+08:00","kind":"drag_end","payloadKind":"none","x":107,"y":844}
+[2026-05-09 22:49:58] route drag_end over_hole=0 payload=text
+[2026-05-09 22:49:58] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:49:59] route delayed_hide action=hide_now
+[2026-05-09 22:50:23] evt {"at":"2026-05-09T22:50:22+08:00","kind":"drag_start","payloadKind":"none","x":1279,"y":866}
+[2026-05-09 22:50:23] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:50:24] evt {"at":"2026-05-09T22:50:24+08:00","kind":"drag_end","payloadKind":"none","x":932,"y":844}
+[2026-05-09 22:50:24] route drag_end over_hole=0 payload=text
+[2026-05-09 22:50:24] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:50:26] route delayed_hide action=hide_now
+[2026-05-09 22:50:34] evt {"at":"2026-05-09T22:50:34+08:00","kind":"drag_start","payloadKind":"none","x":997,"y":501}
+[2026-05-09 22:50:34] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:50:43] evt {"at":"2026-05-09T22:50:43+08:00","kind":"drag_end","payloadKind":"none","x":1527,"y":763}
+[2026-05-09 22:50:43] route drag_end over_hole=0 payload=text
+[2026-05-09 22:50:43] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:50:45] route delayed_hide action=hide_now
+[2026-05-09 22:51:43] evt {"at":"2026-05-09T22:51:43+08:00","kind":"bridge_ready","x":200,"y":572,"w":170,"h":210}
+[2026-05-09 22:52:18] evt {"at":"2026-05-09T22:52:18+08:00","kind":"drag_start","payloadKind":"none","x":357,"y":542}
+[2026-05-09 22:52:18] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 22:52:19] evt {"at":"2026-05-09T22:52:19+08:00","kind":"drag_end","payloadKind":"none","x":451,"y":546}
+[2026-05-09 22:52:19] route drag_end over_hole=0 payload=text
+[2026-05-09 22:52:19] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 22:52:21] evt {"at":"2026-05-09T22:52:20+08:00","kind":"drag_start","payloadKind":"none","x":404,"y":559}
+[2026-05-09 22:52:21] route kind=drag_start action=allow_unknown payload=none
+[2026-05-09 22:52:21] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-09 23:01:09] evt {"at":"2026-05-09T23:01:09+08:00","kind":"bridge_ready","x":1386,"y":92,"w":170,"h":210}
+[2026-05-09 23:01:26] evt {"at":"2026-05-09T23:01:26+08:00","kind":"bridge_ready","x":1287,"y":92,"w":170,"h":210}
+[2026-05-09 23:01:33] evt {"at":"2026-05-09T23:01:33+08:00","kind":"drag_start","payloadKind":"none","x":1067,"y":558}
+[2026-05-09 23:01:33] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 23:01:33] evt {"at":"2026-05-09T23:01:33+08:00","kind":"drag_end","payloadKind":"none","x":1134,"y":566}
+[2026-05-09 23:01:33] route drag_end over_hole=0 payload=text
+[2026-05-09 23:01:33] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 23:01:35] route delayed_hide action=hide_now
+[2026-05-09 23:01:35] evt {"at":"2026-05-09T23:01:35+08:00","kind":"drag_start","payloadKind":"none","x":1162,"y":551}
+[2026-05-09 23:01:35] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 23:01:35] evt {"at":"2026-05-09T23:01:35+08:00","kind":"drag_end","payloadKind":"none","x":1271,"y":566}
+[2026-05-09 23:01:35] route drag_end over_hole=0 payload=text
+[2026-05-09 23:01:35] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 23:01:36] evt {"at":"2026-05-09T23:01:36+08:00","kind":"drag_start","payloadKind":"none","x":1258,"y":546}
+[2026-05-09 23:01:36] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 23:06:00] evt {"at":"2026-05-09T23:06:00+08:00","kind":"bridge_ready","x":799,"y":560,"w":170,"h":210}
+[2026-05-09 23:06:14] evt {"at":"2026-05-09T23:06:14+08:00","kind":"drag_start","payloadKind":"none","x":666,"y":809}
+[2026-05-09 23:06:14] route kind=drag_start action=ignore reason=toolbar_dragging
+[2026-05-09 23:06:14] evt {"at":"2026-05-09T23:06:14+08:00","kind":"drag_end","payloadKind":"none","x":1069,"y":810}
+[2026-05-09 23:06:14] route drag_end over_hole=0 payload=text
+[2026-05-09 23:06:14] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 23:06:15] evt {"at":"2026-05-09T23:06:15+08:00","kind":"drag_start","payloadKind":"none","x":1141,"y":672}
+[2026-05-09 23:06:15] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 23:06:16] evt {"at":"2026-05-09T23:06:16+08:00","kind":"drag_end","payloadKind":"none","x":1272,"y":672}
+[2026-05-09 23:06:16] route drag_end over_hole=1 payload=text
+[2026-05-09 23:06:16] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 23:06:17] evt {"at":"2026-05-09T23:06:17+08:00","kind":"drag_start","payloadKind":"none","x":1160,"y":691}
+[2026-05-09 23:06:17] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 23:06:18] evt {"at":"2026-05-09T23:06:18+08:00","kind":"drag_end","payloadKind":"none","x":1227,"y":720}
+[2026-05-09 23:06:18] route drag_end over_hole=1 payload=text
+[2026-05-09 23:06:18] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 23:06:20] route delayed_hide action=hide_now
+[2026-05-09 23:06:21] evt {"at":"2026-05-09T23:06:21+08:00","kind":"drag_start","payloadKind":"none","x":1206,"y":675}
+[2026-05-09 23:06:21] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 23:06:21] evt {"at":"2026-05-09T23:06:21+08:00","kind":"drag_end","payloadKind":"none","x":1291,"y":679}
+[2026-05-09 23:06:21] route drag_end over_hole=1 payload=text
+[2026-05-09 23:06:21] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 23:06:23] route delayed_hide action=hide_now
+[2026-05-09 23:06:25] evt {"at":"2026-05-09T23:06:25+08:00","kind":"drag_start","payloadKind":"none","x":1233,"y":680}
+[2026-05-09 23:06:25] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 23:06:25] evt {"at":"2026-05-09T23:06:25+08:00","kind":"drag_end","payloadKind":"none","x":1334,"y":682}
+[2026-05-09 23:06:25] route drag_end over_hole=0 payload=text
+[2026-05-09 23:06:25] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 23:06:26] evt {"at":"2026-05-09T23:06:26+08:00","kind":"drag_start","payloadKind":"none","x":1267,"y":700}
+[2026-05-09 23:06:26] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 23:06:28] evt {"at":"2026-05-09T23:06:28+08:00","kind":"drag_end","payloadKind":"none","x":1224,"y":721}
+[2026-05-09 23:06:28] route drag_end over_hole=1 payload=text
+[2026-05-09 23:06:28] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 23:06:29] evt {"at":"2026-05-09T23:06:29+08:00","kind":"drag_start","payloadKind":"none","x":1257,"y":668}
+[2026-05-09 23:06:29] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 23:06:30] evt {"at":"2026-05-09T23:06:30+08:00","kind":"drag_end","payloadKind":"none","x":1437,"y":675}
+[2026-05-09 23:06:30] route drag_end over_hole=0 payload=text
+[2026-05-09 23:06:30] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 23:06:32] route delayed_hide action=hide_now
+[2026-05-09 23:06:32] evt {"at":"2026-05-09T23:06:32+08:00","kind":"drag_start","payloadKind":"none","x":1332,"y":689}
+[2026-05-09 23:06:32] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-09 23:06:34] evt {"at":"2026-05-09T23:06:34+08:00","kind":"drag_end","payloadKind":"none","x":1237,"y":723}
+[2026-05-09 23:06:34] route drag_end over_hole=1 payload=text
+[2026-05-09 23:06:34] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 23:06:36] route delayed_hide action=hide_now

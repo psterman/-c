@@ -98,6 +98,7 @@
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+    html.drop-active, body.drop-active { pointer-events: auto !important; }
     #root {
       position: fixed;
       inset: 0;
@@ -444,6 +445,8 @@
         }
       }
       function hide() {
+        document.documentElement.classList.remove('drop-active');
+        document.body.classList.remove('drop-active');
         document.body.classList.remove('hole-visible');
         root.classList.remove('show');
         root.classList.remove('drop');
@@ -511,6 +514,11 @@
         },
         drop: function (o) {
           if (o && (o.payload === 'text' || o.payload === 'file')) payloadType = o.payload;
+          document.documentElement.classList.add('drop-active');
+          document.body.classList.add('drop-active');
+          window.requestAnimationFrame(function () {
+            postHostMessage({ type: 'hole_drop_ack', phase: 'first_frame', payload: payloadType, ts: Date.now() });
+          });
           root.classList.remove('drop');
           void root.offsetWidth;
           root.classList.add('drop');

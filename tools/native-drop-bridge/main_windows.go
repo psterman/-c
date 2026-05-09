@@ -252,9 +252,6 @@ func writeDropEvent(ev dropEvent) {
 	b, _ := json.Marshal(ev)
 	_, _ = activeWriter.Write(append(b, '\n'))
 	_ = activeWriter.Flush()
-	if activeWriterF != nil {
-		_ = activeWriterF.Sync()
-	}
 }
 
 func installDragDropWinEventHook() uintptr {
@@ -401,7 +398,19 @@ func (d *dropTarget) drop(dataObj *iDataObject, pt pointl, effect *uint32) uintp
 			ev.PayloadKind = "text"
 		}
 	}
-	if ev.PayloadKind != "none" && d.onDrop != nil { d.onDrop(ev) }
+	if ev.PayloadKind != "none" && d.onDrop != nil {
+		d.onDrop(ev)
+	}
+	// Physical release signal must be emitted regardless of IDataObject parse success.
+	if d.onDrop != nil {
+		d.onDrop(dropEvent{
+			At:          time.Now().Format(time.RFC3339),
+			Kind:        "DRAG_END_PHYSICAL",
+			PayloadKind: "none",
+			X:           pt.X,
+			Y:           pt.Y,
+		})
+	}
 	return sOk
 }
 
