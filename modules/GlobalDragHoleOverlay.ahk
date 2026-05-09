@@ -61,6 +61,7 @@ global GDHO_DIAG_CTRL := 0
 global GDHO_DIAG_VISIBLE := false
 global GDHO_LAST_APPLIED_ANIM_LEVEL := -1.0
 global GDHO_PRIORITY_APPLIED := false
+global GDHO_START_ROOT_HWND := 0
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -179,8 +180,9 @@ GDHO_CreateOverlayGui() {
     if (hostH < 220)
         hostH := 220
     x := Integer(vl + 24), y := Integer(vt + 24)
-    ; WS_EX_LAYERED + WS_EX_TRANSPARENT + WS_EX_NOACTIVATE
-    GDHO_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x08080020", "Global Drag Hole Overlay")
+    ; WS_EX_LAYERED + WS_EX_NOACTIVATE (do NOT include WS_EX_TRANSPARENT at creation)
+    ; Click-through will be toggled explicitly by GDHO_SetClickThrough().
+    GDHO_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x08080000", "Global Drag Hole Overlay")
     GDHO_DIAG_CTRL := GDHO_GUI.AddText("Hidden x6 y6 w340 h44 BackgroundTrans c66FF66", "")
     ; Use dedicated chroma key to keep host transparent before first WebView paint.
     GDHO_GUI.BackColor := "010101"
@@ -284,12 +286,34 @@ GDHO_ApplyHostMapping() {
 }
 
 GDHO_OnWebMessage(sender, args) {
-    msgJson := ""
-    try msgJson := args.WebMessageAsJson
-    if (msgJson = "")
-        return
     msg := 0
-    try msg := Jxon_Load(msgJson)
+    ; 1) Preferred path: postMessage(string) payload.
+    try {
+        raw := args.TryGetWebMessageAsString()
+        if (raw != "") {
+            try {
+                m := Jxon_Load(raw)
+                if (m is Map)
+                    msg := m
+            } catch {
+            }
+        }
+    } catch {
+    }
+    ; 2) Fallback path: WebMessageAsJson (object or quoted string).
+    if !(msg is Map) {
+        try {
+            jsonStr := args.WebMessageAsJson
+            if (jsonStr != "") {
+                m := Jxon_Load(jsonStr)
+                if (m is String)
+                    m := Jxon_Load(m)
+                if (m is Map)
+                    msg := m
+            }
+        } catch {
+        }
+    }
     if !(msg is Map)
         return
     typ := msg.Has("type") ? String(msg["type"]) : ""
@@ -304,14 +328,46 @@ GDHO_HandleDropPayload(payload) {
     kind := payload.Has("kind") ? String(payload["kind"]) : "none"
     if (kind = "text") {
         txt := payload.Has("text") ? Trim(String(payload["text"])) : ""
-        if (txt != "")
-            try FloatingToolbar_RequestSearchByKeyword(txt)
+        if (txt != "") {
+            ; Always open SearchCenter first, then inject keyword query.
+            try FloatingToolbar_ActivateSearchCenter()
+            try SetTimer(FloatingToolbar_ActivateSearchCenter, -80)
+            try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(txt), -120)
+            try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(txt), -320)
+        }
         return
     }
 
-    ; Foundation for next phase (image/file/folder upload route).
-    ; Keep structured payload now, wire business uploader later.
-    try OutputDebug("[GDHO] hole_drop kind=" . kind)
+    if (kind = "file" || kind = "folder" || kind = "mixed") {
+        items := []
+        files := []
+        if (payload.Has("files") && (payload["files"] is Array)) {
+            for _, item in payload["files"] {
+                fp := ""
+                if (item is Map) {
+                    items.Push(item)
+                    fp := item.Has("path") ? Trim(String(item["path"])) : ""
+                    if (fp = "")
+                        fp := item.Has("name") ? Trim(String(item["name"])) : ""
+                } else
+                    fp := Trim(String(item))
+                if (fp != "")
+                    files.Push(fp)
+            }
+        }
+        if (items.Length > 0) {
+            try {
+                if FloatingToolbar_HandleDroppedPayloadItems(items)
+                    return
+            } catch {
+            }
+        }
+        if (files.Length > 0) {
+            try FloatingToolbar_HandleDroppedFiles(files)
+            return
+        }
+    }
+    try OutputDebug("[GDHO] hole_drop ignored kind=" . kind)
 }
 
 GDHO_OnNavigationCompleted(sender, args) {
@@ -388,7 +444,8 @@ GDHO_ShowOverlay() {
     if !GDHO_VISIBLE {
         try GDHO_GUI.Show("x" Integer(GDHO_LAST_HOST_X) " y" Integer(GDHO_LAST_HOST_Y) " w" Integer(GDHO_HOST_W) " h" Integer(GDHO_HOST_H) " NoActivate")
         try WinSetTransColor("010101", "ahk_id " GDHO_GUI.Hwnd)
-        GDHO_SetClickThrough(true)
+        ; Receive actual drop events while hole is visible.
+        GDHO_SetClickThrough(false)
         GDHO_KeepBelowToolbar()
         GDHO_VISIBLE := true
         try WebView2_NotifyShown(GDHO_WV2)
@@ -591,6 +648,7 @@ GDHO_Show(payload := "file", x := "", y := "") {
         }
     }
     GDHO_ShowOverlay()
+    GDHO_SetClickThrough(false)
     GDHO_PushThemeToWeb()
     if (GDHO_POSITION_MODE = "fixed")
         GDHO_AnchorHoleByScreen()
@@ -610,6 +668,8 @@ GDHO_Update(payload := "file", x := "", y := "") {
     nowTick := A_TickCount
     if (GDHO_LAST_UPDATE_TICK && (nowTick - GDHO_LAST_UPDATE_TICK < GDHO_UPDATE_MIN_INTERVAL_MS))
         return
+    ; Keep overlay hit-testable during active drag/drop.
+    GDHO_SetClickThrough(false)
     p := (payload = "text") ? "text" : "file"
     if (x != "" && y != "") {
         GDHO_CURSOR_X := Integer(x)
@@ -716,6 +776,17 @@ GDHO_DistanceToToolbar(mx, my) {
     return Sqrt(dx * dx + dy * dy)
 }
 
+GDHO_IsPointInHole(mx, my, margin := 0) {
+    global GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y
+    ; HoleOverlayStandalone: .hole-wrap default size 180x206 and moveTo({x:90,y:56})
+    hx := Integer(GDHO_LAST_HOST_X) + 90 - Integer(margin)
+    hy := Integer(GDHO_LAST_HOST_Y) + 56 - Integer(margin)
+    hw := 180 + Integer(margin) * 2
+    hh := 206 + Integer(margin) * 2
+    x := Integer(mx), y := Integer(my)
+    return (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh)
+}
+
 GDHO_IsPointInToolbar(mx, my) {
     global FloatingToolbarGUI, FloatingToolbarIsVisible
     if !IsSet(FloatingToolbarGUI)
@@ -817,6 +888,7 @@ GDHO_PollDrag(*) {
             if GDHO_ACTIVE {
                 GDHO_Drop(GDHO_PAYLOAD)
                 GDHO_ACTIVE := false
+                GDHO_TryHandleExplorerDrop()
                 SetTimer((*) => GDHO_HideOverlay(), -700)
             } else if (A_TickCount - GDHO_LAST_UPDATE_TICK > GDHO_MAX_IDLE_HIDE_MS) {
                 GDHO_HideFrontend()
@@ -839,6 +911,7 @@ GDHO_PollDrag(*) {
                 return
             GDHO_START_X := mx
             GDHO_START_Y := my
+            GDHO_START_ROOT_HWND := GDHO_GetRootHwnd(hwnd)
             GDHO_LAST_X := mx
             GDHO_LAST_Y := my
             GDHO_START_CURSOR := GDHO_GetCursorHandle()
@@ -934,6 +1007,7 @@ GDHO_ResetPointerSeed(*) {
         return
     GDHO_START_X := 0
     GDHO_START_Y := 0
+    GDHO_START_ROOT_HWND := 0
     GDHO_START_CURSOR := 0
     GDHO_DRAG_SOURCE_CLASS := ""
 }
@@ -1004,4 +1078,37 @@ GDHO_GuessPayloadType(srcClass) {
     return "text"
 }
 
-
+; ==== Explorer drop fallback: get selected files via Shell.Application COM ====
+GDHO_TryHandleExplorerDrop() {
+    global GDHO_DRAG_SOURCE_CLASS, GDHO_START_ROOT_HWND
+    static s_lastDropTick := 0
+    if (GDHO_DRAG_SOURCE_CLASS != "CabinetWClass" && GDHO_DRAG_SOURCE_CLASS != "ExploreWClass"
+        && GDHO_DRAG_SOURCE_CLASS != "WorkerW" && GDHO_DRAG_SOURCE_CLASS != "Progman")
+        return
+    if !GDHO_START_ROOT_HWND
+        return
+    ; Deduplicate: prevent double-fire from both OS COM and JS native drop
+    if (A_TickCount - s_lastDropTick < 1200)
+        return
+    s_lastDropTick := A_TickCount
+    files := []
+    try {
+        shell := ComObject("Shell.Application")
+        for window in shell.Windows {
+            try {
+                if (window.HWND = GDHO_START_ROOT_HWND) {
+                    doc := window.Document
+                    for item in doc.SelectedItems {
+                        fp := Trim(String(item.Path))
+                        if (fp != "")
+                            files.Push(fp)
+                    }
+                    break
+                }
+            }
+        }
+    }
+    if (files.Length > 0) {
+        try FloatingToolbar_HandleDroppedFiles(files)
+    }
+}

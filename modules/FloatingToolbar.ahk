@@ -735,6 +735,14 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ = "drop_action") {
         action := msg.Has("action") ? Trim(String(msg["action"])) : "Search"
         t := msg.Has("text") ? Trim(String(msg["text"])) : ""
+        filePaths := []
+        if (msg.Has("files") && (msg["files"] is Array)) {
+            for _, f in msg["files"] {
+                fp := Trim(String(f))
+                if (fp != "")
+                    filePaths.Push(fp)
+            }
+        }
         if (t != "") {
             try {
                 switch action {
@@ -753,6 +761,18 @@ FloatingToolbar_OnWebMessage(sender, args) {
                 }
             } catch {
             }
+        } else if (filePaths.Length > 0) {
+            try {
+                switch action {
+                    case "Niuma":
+                        FloatingToolbar_HandleDroppedFiles(filePaths)
+                    case "Prompt", "NewPrompt", "Record", "Search":
+                        FloatingToolbar_HandleDroppedFiles(filePaths)
+                    default:
+                        FloatingToolbar_HandleDroppedFiles(filePaths)
+                }
+            } catch {
+            }
         }
         if g_FTB_WV2 {
             try {
@@ -765,22 +785,23 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
 
     if (typ = "hole_drag_show") {
-        ; Disabled to avoid drag-event storm causing toolbar freeze.
+        ; Disabled: WebView dragover can flood host and freeze toolbar.
+        ; NativeDropBridge drives hole animation/commands instead.
         return
     }
 
     if (typ = "hole_drag_update") {
-        ; Disabled to avoid drag-event storm causing toolbar freeze.
+        ; Disabled: avoid drag-event storm in toolbar WebView.
         return
     }
 
     if (typ = "hole_drag_hide") {
-        ; Disabled to avoid drag-event storm causing toolbar freeze.
+        ; Disabled: avoid conflicting hide/show with native bridge.
         return
     }
 
     if (typ = "hole_drag_drop") {
-        ; Disabled to avoid drag-event storm causing toolbar freeze.
+        ; Disabled: drop command is handled by native bridge / hole drop.
         return
     }
 
@@ -1035,6 +1056,56 @@ FloatingToolbar_SaveNiumaUpload(payload) {
     )
     FloatingToolbar_SaveNiumaAttachMeta(meta)
     return Map("id", uid, "name", name, "relativePath", rel, "type", mime, "size", buf.Size)
+}
+
+FloatingToolbar_SaveNiumaUploadFromLocalPath(path) {
+    p := Trim(String(path))
+    if (p = "")
+        throw Error("empty path")
+    if !FileExist(p)
+        throw Error("path not found: " . p)
+    attr := FileExist(p)
+    if (InStr(attr, "D"))
+        throw Error("folder not supported: " . p)
+    sz := FileGetSize(p)
+    if (sz <= 0)
+        throw Error("empty file: " . p)
+    if (sz > 20 * 1024 * 1024)
+        throw Error("file too large (>20MB): " . p)
+
+    SplitPath p, &name
+    if (name = "")
+        name := "file"
+    uid := "att_" . FormatTime(, "yyyyMMddHHmmss") . "_" . A_TickCount
+    safe := RegExReplace(name, "[^\w\.\-\(\) ]", "_")
+    upDir := FloatingToolbar_NiumaUploadDir()
+    try DirCreate(upDir)
+    stored := uid . "_" . safe
+    fp := upDir . "\" . stored
+    FileCopy(p, fp, true)
+
+    excerpt := ""
+    if FloatingToolbar_IsTextExt(name) {
+        try excerpt := Trim(FileRead(p, "UTF-8"))
+        if (StrLen(excerpt) > 12000)
+            excerpt := SubStr(excerpt, 1, 12000)
+    }
+
+    meta := FloatingToolbar_LoadNiumaAttachMeta()
+    files := meta["files"]
+    files[uid] := Map(
+        "id", uid,
+        "name", name,
+        "relativePath", name,
+        "type", "",
+        "size", sz,
+        "storedName", stored,
+        "storedPath", fp,
+        "uploadedAt", FormatTime(, "yyyy-MM-ddTHH:mm:ss"),
+        "textExcerpt", excerpt
+    )
+    FloatingToolbar_SaveNiumaAttachMeta(meta)
+    return Map("id", uid, "name", name, "relativePath", name, "type", "", "size", sz)
 }
 
 FloatingToolbar_LoadNiumaAttachContext(ids) {
@@ -2762,6 +2833,89 @@ InitFloatingToolbar() {
     ; 启动后兜底重试，避免共享环境/首帧竞态导致工具栏未显示
     SetTimer((*) => ShowFloatingToolbar(), -1200)
     SetTimer((*) => ShowFloatingToolbar(), -3200)
+}
+
+FloatingToolbar_HandleDroppedFiles(filePaths) {
+    global g_FTB_WV2
+    paths := []
+    for _, p in filePaths {
+        s := Trim(String(p))
+        if (s = "")
+            continue
+        paths.Push(s)
+    }
+    if (paths.Length = 0)
+        return false
+    uploaded := []
+    failed := []
+    for _, p in paths {
+        try {
+            ret := FloatingToolbar_SaveNiumaUploadFromLocalPath(p)
+            if (ret is Map)
+                uploaded.Push(ret)
+        } catch as e {
+            failed.Push(p . " => " . e.Message)
+        }
+    }
+    if (uploaded.Length > 0 && g_FTB_WV2) {
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_stage_attachments", "files", uploaded))
+    }
+    if (failed.Length > 0) {
+        msg := "以下文件未能加入附件：" . "`n" . JoinArray(failed, "`n")
+        try FloatingToolbar_SendTextToNiumaChat(msg, false, false, true)
+    } else {
+        ; Open Niuma drawer and hint user to send with attachments.
+        try FloatingToolbarSetChatDrawerState(true)
+        try FloatingToolbar_SendTextToNiumaChat("已添加附件，可直接发送。", false, false, true)
+    }
+    return (uploaded.Length > 0)
+}
+
+FloatingToolbar_HandleDroppedPayloadItems(items) {
+    global g_FTB_WV2
+    if !(items is Array) || (items.Length = 0)
+        return false
+    uploaded := []
+    failed := []
+    for _, it in items {
+        if !(it is Map)
+            continue
+        p := it.Has("path") ? Trim(String(it["path"])) : ""
+        nm := it.Has("name") ? Trim(String(it["name"])) : "file"
+        typ := it.Has("type") ? String(it["type"]) : ""
+        sz := it.Has("size") ? Integer(it["size"]) : 0
+        b64 := it.Has("contentBase64") ? Trim(String(it["contentBase64"])) : ""
+        try {
+            if (b64 != "") {
+                ret := FloatingToolbar_SaveNiumaUpload(Map(
+                    "name", nm,
+                    "relativePath", nm,
+                    "type", typ,
+                    "size", sz,
+                    "contentBase64", b64
+                ))
+                uploaded.Push(ret)
+            } else if (p != "") {
+                ret := FloatingToolbar_SaveNiumaUploadFromLocalPath(p)
+                uploaded.Push(ret)
+            } else {
+                throw Error("missing file content/path")
+            }
+        } catch as e {
+            failed.Push(nm . " => " . e.Message)
+        }
+    }
+    if (uploaded.Length > 0 && g_FTB_WV2) {
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_stage_attachments", "files", uploaded))
+    }
+    if (failed.Length > 0) {
+        msg := "以下文件未能加入附件：" . "`n" . JoinArray(failed, "`n")
+        try FloatingToolbar_SendTextToNiumaChat(msg, false, false, true)
+    } else {
+        try FloatingToolbarSetChatDrawerState(true)
+        try FloatingToolbar_SendTextToNiumaChat("已添加附件，可直接发送。", false, false, true)
+    }
+    return (uploaded.Length > 0)
 }
 
 ; ===================== 閺嶈宓侀幐澶愭尦action閼惧嘲褰囬幓鎰仛閺傚洤鐡?=====================

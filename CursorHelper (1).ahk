@@ -25,6 +25,7 @@ global NativeDropSessionActive := false
 global NativeDropDiagLogPath := A_ScriptDir "\Cache\drop_diagnostics_runtime.log"
 global NativeDropHideDelayMs := 1800
 global NativeDropSessionPayload := "text"
+global NativeDropOverHole := false
 ; Diagnostic mode: make drop receiver full-screen to verify hit path.
 ; Keep disabled in production. Full-screen receiver can degrade desktop interaction.
 global NativeDropBridgeFullScreenHitTest := false
@@ -2717,7 +2718,7 @@ NativeDropBridge_Poll(*) {
 }
 
 NativeDropBridge_TriggerHolePulse(evt) {
-    global EnableHoleOverlayOnNativeDrop, NativeDropSessionActive, NativeDropHideDelayMs, NativeDropSessionPayload
+    global EnableHoleOverlayOnNativeDrop, NativeDropSessionActive, NativeDropHideDelayMs, NativeDropSessionPayload, NativeDropOverHole
     if !EnableHoleOverlayOnNativeDrop
         return
     if !IsObject(evt)
@@ -2742,11 +2743,14 @@ NativeDropBridge_TriggerHolePulse(evt) {
             try SetTimer(NativeDropBridge_DragSessionTick, 0)
             return
         }
-        if (kindMapped = "")
-            return
+        if (kindMapped = "") {
+            kindMapped := "file"
+            fallbackPayload := (fallbackPayload != "" ? fallbackPayload . ";" : "") . "default=file"
+        }
         ; Event-driven preview: show on drag_start as primary trigger, drag_enter as reinforce.
         NativeDropSessionActive := true
         NativeDropSessionPayload := kindMapped
+        NativeDropOverHole := false
         try SetTimer(NativeDropBridge_DelayedHide, 0) ; cancel pending hide
         try SetTimer(NativeDropBridge_DragSessionTick, 60)
         try NativeDropDiag_Log("route kind=" . kindRaw . " action=show payload=" . payloadRaw . " mapped=" . kindMapped . (fallbackPayload != "" ? " fallback=" . fallbackPayload : ""))
@@ -2762,7 +2766,14 @@ NativeDropBridge_TriggerHolePulse(evt) {
         return
     }
     if (kindRaw = "drag_end") {
+        try {
+            try NativeDropDiag_Log("route drag_end over_hole=" . (NativeDropOverHole ? "1" : "0") . " payload=" . NativeDropSessionPayload)
+            if (NativeDropSessionPayload = "text" && NativeDropOverHole)
+                NativeDropBridge_TryOpenSearchCenterFromSelection()
+        } catch {
+        }
         NativeDropSessionActive := false
+        NativeDropOverHole := false
         try SetTimer(NativeDropBridge_DragSessionTick, 0)
         try NativeDropDiag_Log("route kind=drag_end action=hide_delay ms=" . NativeDropHideDelayMs)
         try SetTimer(NativeDropBridge_DelayedHide, -Abs(Integer(NativeDropHideDelayMs)))
@@ -2789,6 +2800,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
             SetTimer((*) => GDHO_HideOverlay(), -1200)
         } catch {
         }
+        try NativeDropBridge_ApplyDropAction(evt, kind)
         return
     }
 
@@ -2805,6 +2817,46 @@ NativeDropBridge_TriggerHolePulse(evt) {
         SetTimer((*) => GDHO_HideOverlay(), -1200)
     } catch {
     }
+    try NativeDropBridge_ApplyDropAction(evt, kind)
+}
+
+NativeDropBridge_ApplyDropAction(evt, kind := "") {
+    kind0 := StrLower(Trim(String(kind)))
+    if (kind0 = "")
+        kind0 := "text"
+
+    if (kind0 = "text") {
+        t := ""
+        if (IsObject(evt) && evt.Has("text"))
+            t := Trim(String(evt["text"]))
+        if (t = "" && IsObject(evt) && evt.Has("link"))
+            t := Trim(String(evt["link"]))
+        if (t != "") {
+            try FloatingToolbar_RequestSearchByKeyword(t)
+            return true
+        }
+        return false
+    }
+
+    files := []
+    if (IsObject(evt) && evt.Has("files") && (evt["files"] is Array)) {
+        for _, p in evt["files"] {
+            s := Trim(String(p))
+            if (s != "")
+                files.Push(s)
+        }
+    }
+    if (IsObject(evt) && evt.Has("folders") && (evt["folders"] is Array)) {
+        for _, p in evt["folders"] {
+            s := Trim(String(p))
+            if (s != "")
+                files.Push(s)
+        }
+    }
+    if (files.Length > 0) {
+        try return FloatingToolbar_HandleDroppedFiles(files)
+    }
+    return false
 }
 
 NativeDropBridge_ShouldIgnoreDragEvent(kindRaw, payloadRaw, kindMapped := "") {
@@ -2823,9 +2875,11 @@ NativeDropBridge_ShouldIgnoreDragEvent(kindRaw, payloadRaw, kindMapped := "") {
         try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=cursor_in_toolbar")
         return true
     }
+    ; payloadKind from bridge drag_start is often "none". Do not hard-ignore:
+    ; let caller fall back to guessed/default route to keep hole responsive.
     if (kindMapped = "") {
-        try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=unknown_payload payload=" . payloadRaw)
-        return true
+        try NativeDropDiag_Log("route kind=" . kindRaw . " action=allow_unknown payload=" . payloadRaw)
+        return false
     }
     return false
 }
@@ -2861,12 +2915,14 @@ NativeDropBridge_DelayedHide(*) {
 }
 
 NativeDropBridge_DragSessionTick(*) {
-    global NativeDropSessionActive, NativeDropSessionPayload
+    global NativeDropSessionActive, NativeDropSessionPayload, NativeDropOverHole
     if !NativeDropSessionActive
         return
     try {
+        GDHO_SetClickThrough(false)
         CoordMode("Mouse", "Screen")
         MouseGetPos(&mx, &my)
+        NativeDropOverHole := GDHO_IsPointInHole(mx, my, 10)
         GDHO_Update(NativeDropSessionPayload, mx, my)
     } catch {
     }
@@ -2880,6 +2936,22 @@ NativeDropBridge_NormalizeHolePayloadKind(kindRaw) {
     if (k = "file" || k = "folder" || k = "mixed")
         return "file"
     return ""
+}
+
+NativeDropBridge_TryOpenSearchCenterFromSelection() {
+    t := ""
+    try t := Trim(String(SelectionSense_GetLastSelectedText()))
+    catch {
+        t := ""
+    }
+    if (t = "")
+        return false
+    try FloatingToolbar_ActivateSearchCenter()
+    try SetTimer(FloatingToolbar_ActivateSearchCenter, -60)
+    try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(t), -100)
+    try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(t), -260)
+    try NativeDropDiag_Log("route drag_end_text action=open_search len=" . StrLen(t))
+    return true
 }
 
 NativeDropDiag_Log(msg) {

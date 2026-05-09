@@ -5748,8 +5748,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     e.stopPropagation();
     var action = findDropActionTarget(e);
     clearActiveDropBtn();
+    var droppedFiles = [];
+    try {
+      droppedFiles = Array.from((e.dataTransfer && e.dataTransfer.files) || [])
+        .map(function (f) {
+          return String((f && (f.path || f.name)) || '').trim();
+        })
+        .filter(function (x) { return !!x; });
+    } catch (_) {
+      droppedFiles = [];
+    }
     var t = await readDrop(e.dataTransfer);
-    if (!t && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) t = (e.dataTransfer.files[0].name || '').trim();
+    if (!t && droppedFiles.length) t = droppedFiles[0];
     if (!t) {
       holeDragHide();
       forceReleaseInteractionLocks();
@@ -5763,7 +5773,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       forceReleaseInteractionLocks();
     }, 0);
     loading(true);
-    post({ type: 'drop_action', action: action, text: t });
+    post({ type: 'drop_action', action: action, text: t, files: droppedFiles });
   }
 
   function onDragOver(e) {
@@ -5998,6 +6008,43 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           } catch (_) {}
           if (shouldSendNow) sendChat();
         });
+        return;
+      }
+      if (d.type === 'niuma_stage_attachments') {
+        var arr = Array.isArray(d.files) ? d.files : [];
+        if (!arr.length) return;
+        var pa = state.pendingAttach || { items: [], fileIds: [], files: [] };
+        pa.items = Array.isArray(pa.items) ? pa.items : [];
+        pa.fileIds = Array.isArray(pa.fileIds) ? pa.fileIds : [];
+        pa.files = Array.isArray(pa.files) ? pa.files : [];
+        arr.forEach(function (f) {
+          if (!f || !f.id) return;
+          var fid = String(f.id || '');
+          if (!fid) return;
+          if (pa.fileIds.indexOf(fid) < 0) pa.fileIds.push(fid);
+          var item = {
+            id: fid,
+            name: String(f.name || f.relativePath || 'file'),
+            relativePath: String(f.relativePath || f.name || 'file'),
+            size: Number(f.size || 0),
+            type: String(f.type || '')
+          };
+          var idx = -1;
+          for (var i = 0; i < pa.items.length; i++) {
+            if (String((pa.items[i] && pa.items[i].id) || '') === fid) { idx = i; break; }
+          }
+          if (idx >= 0) pa.items[idx] = item;
+          else pa.items.push(item);
+          var jdx = -1;
+          for (var j = 0; j < pa.files.length; j++) {
+            if (String((pa.files[j] && pa.files[j].id) || '') === fid) { jdx = j; break; }
+          }
+          if (jdx >= 0) pa.files[jdx] = f;
+          else pa.files.push(f);
+        });
+        state.pendingAttach = pa;
+        refreshAttachUi();
+        cstat('Attachments added: ' + arr.length, 'success');
         return;
       }
       if (d.type === 'host_force_toolbar_home') {

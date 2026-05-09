@@ -108,6 +108,7 @@
       --hole-scale: 1;
       --anim-level: 1;
     }
+    #root.show { pointer-events: auto; }
     .hole-wrap {
       position: absolute;
       left: var(--hx);
@@ -534,6 +535,76 @@
           ts: perfStats.ts
         };
       };
+      function postHostMessage(msg) {
+        try {
+          if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage)
+            window.chrome.webview.postMessage(msg);
+        } catch (_) {}
+      }
+      function readAsBase64(file) {
+        return new Promise(function (resolve, reject) {
+          try {
+            var rd = new FileReader();
+            rd.onload = function () {
+              var str = String(rd.result || '');
+              var comma = str.indexOf(',');
+              resolve(comma >= 0 ? str.slice(comma + 1) : str);
+            };
+            rd.onerror = function () { reject(new Error('read base64 failed')); };
+            rd.readAsDataURL(file);
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+      async function readDropPayload(dt) {
+        var files = [];
+        var text = '';
+        var rawFiles = [];
+        try { rawFiles = Array.from((dt && dt.files) || []); } catch (_) { rawFiles = []; }
+        for (var i = 0; i < rawFiles.length; i++) {
+          var f = rawFiles[i];
+          if (!f) continue;
+          var sz = Number((f && f.size) || 0);
+          if (sz > 20 * 1024 * 1024) continue;
+          var item = {
+            name: String((f && f.name) || ''),
+            type: String((f && f.type) || ''),
+            size: sz,
+            path: String((f && (f.path || '')) || ''),
+            contentBase64: ''
+          };
+          try {
+            item.contentBase64 = await readAsBase64(f);
+          } catch (_) {
+            item.contentBase64 = '';
+          }
+          if (item.contentBase64 || item.path || item.name) files.push(item);
+        }
+        try {
+          text = String((dt && (dt.getData('text/plain') || dt.getData('Text') || dt.getData('text/uri-list'))) || '').trim();
+        } catch (_) {
+          text = '';
+        }
+        if (files.length > 0)
+          return { kind: 'file', files: files, text: text };
+        if (text)
+          return { kind: 'text', text: text, files: [] };
+        return { kind: 'none', text: '', files: [] };
+      }
+      window.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        try { if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; } catch (_) {}
+      }, true);
+      window.addEventListener('drop', async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var payload = await readDropPayload(e.dataTransfer);
+        if (payload.kind === 'none')
+          return;
+        try { window.HoleOverlay.drop({ payload: payload.kind === 'text' ? 'text' : 'file' }); } catch (_) {}
+        postHostMessage({ type: 'hole_drop', payload: payload });
+      }, true);
       window.addEventListener('resize', function () { clampPos(pos.x, pos.y); });
       applyPos();
       window.requestAnimationFrame(perfTick);
