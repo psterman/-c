@@ -716,6 +716,20 @@ GDHO_DistanceToToolbar(mx, my) {
     return Sqrt(dx * dx + dy * dy)
 }
 
+GDHO_IsPointInToolbar(mx, my) {
+    global FloatingToolbarGUI, FloatingToolbarIsVisible
+    if !IsSet(FloatingToolbarGUI)
+        return false
+    if !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui)
+        return false
+    if (IsSet(FloatingToolbarIsVisible) && !FloatingToolbarIsVisible)
+        return false
+    try FloatingToolbarGUI.GetPos(&tx, &ty, &tw, &th)
+    catch
+        return false
+    return (mx >= tx && mx <= tx + tw && my >= ty && my <= ty + th)
+}
+
 GDHO_PinToDesktop(payload := "text") {
     global GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD, GDHO_ACTIVE
     p := (payload = "file") ? "file" : "text"
@@ -747,6 +761,7 @@ GDHO_PollDrag(*) {
     global GDHO_START_CURSOR, GDHO_DRAG_SOURCE_CLASS, GDHO_PAYLOAD
     global GDHO_MIN_MOVE_PX, GDHO_LAST_UPDATE_TICK, GDHO_MAX_IDLE_HIDE_MS, GDHO_DRAG_CONFIDENCE
     global GDHO_POLL_BUSY, GDHO_SUPPRESS_UNTIL_RELEASE, GDHO_TOOLBAR_NEAR_RADIUS_PX, GDHO_TOOLBAR_DISMISS_RADIUS_PX, GDHO_POSITION_MODE
+    global FloatingToolbarDragging
     if GDHO_POLL_BUSY
         return
     GDHO_POLL_BUSY := true
@@ -758,6 +773,41 @@ GDHO_PollDrag(*) {
         CoordMode("Mouse", "Screen")
         MouseGetPos(&mx, &my, &hwnd)
         isOwn := GDHO_IsOwnWindowHwnd(hwnd)
+        isOwnProc := GDHO_IsOwnProcessHwnd(hwnd)
+
+        ; Hard guard: dragging/operating toolbar must never trigger hole logic.
+        if (IsSet(FloatingToolbarDragging) && FloatingToolbarDragging) {
+            GDHO_SUPPRESS_UNTIL_RELEASE := true
+            GDHO_ACTIVE := false
+            GDHO_HideFrontend()
+            GDHO_HideOverlay()
+            GDHO_ResetPointerSeed()
+            return
+        }
+        if isOwn {
+            GDHO_SUPPRESS_UNTIL_RELEASE := true
+            GDHO_ACTIVE := false
+            GDHO_HideFrontend()
+            GDHO_HideOverlay()
+            GDHO_ResetPointerSeed()
+            return
+        }
+        if isOwnProc {
+            GDHO_SUPPRESS_UNTIL_RELEASE := true
+            GDHO_ACTIVE := false
+            GDHO_HideFrontend()
+            GDHO_HideOverlay()
+            GDHO_ResetPointerSeed()
+            return
+        }
+        if GDHO_IsPointInToolbar(mx, my) {
+            GDHO_SUPPRESS_UNTIL_RELEASE := true
+            GDHO_ACTIVE := false
+            GDHO_HideFrontend()
+            GDHO_HideOverlay()
+            GDHO_ResetPointerSeed()
+            return
+        }
 
         if !lDown {
             ; Defensive: if toolbar drag state got stuck, force-close it on mouse-up.
@@ -903,6 +953,18 @@ GDHO_GetClassByHwnd(hwnd) {
     catch {
         return ""
     }
+}
+
+GDHO_IsOwnProcessHwnd(hwnd) {
+    if !hwnd
+        return false
+    try {
+        pname := StrLower(WinGetProcessName("ahk_id " hwnd))
+        if InStr(pname, "autohotkey")
+            return true
+    } catch {
+    }
+    return false
 }
 
 GDHO_IsLikelyDrag(srcClass, startCursor) {

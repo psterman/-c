@@ -228,8 +228,9 @@
       background: #1f9d45;
       box-shadow: 0 0 10px rgba(0,0,0,.25);
       pointer-events: none;
-      opacity: .9;
+      opacity: 0;
       z-index: 9999;
+      transition: opacity 120ms ease;
     }
     .perf-label {
       position: fixed;
@@ -249,6 +250,12 @@
       white-space: normal;
       overflow: visible;
       text-overflow: clip;
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+    body.hole-visible .perf-box,
+    body.hole-visible .perf-label {
+      opacity: .95;
     }
     @keyframes localAuraBreath {
       0% { transform: translateX(-50%) scale(.96); opacity: .16; }
@@ -428,6 +435,7 @@
       function show(payload) {
         if (payload === 'text' || payload === 'file') payloadType = payload;
         setSafeMode(true);
+        document.body.classList.add('hole-visible');
         var alreadyShown = root.classList.contains('show');
         root.classList.add('show');
         if (!alreadyShown && !isNear) {
@@ -435,6 +443,7 @@
         }
       }
       function hide() {
+        document.body.classList.remove('hole-visible');
         root.classList.remove('show');
         root.classList.remove('drop');
         root.classList.remove('near');

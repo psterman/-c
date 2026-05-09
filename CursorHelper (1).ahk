@@ -2732,20 +2732,31 @@ NativeDropBridge_TriggerHolePulse(evt) {
     catch {
         payloadRaw := ""
     }
+    kindMapped := NativeDropBridge_NormalizeHolePayloadKind(payloadRaw)
+    fallbackPayload := ""
     if (kindRaw = "drag_start" || kindRaw = "drag_enter") {
+        if (kindMapped = "")
+            kindMapped := NativeDropBridge_GuessPayloadForUnknownDrag(&fallbackPayload)
+        if NativeDropBridge_ShouldIgnoreDragEvent(kindRaw, payloadRaw, kindMapped) {
+            NativeDropSessionActive := false
+            try SetTimer(NativeDropBridge_DragSessionTick, 0)
+            return
+        }
+        if (kindMapped = "")
+            return
         ; Event-driven preview: show on drag_start as primary trigger, drag_enter as reinforce.
         NativeDropSessionActive := true
-        NativeDropSessionPayload := "text"
+        NativeDropSessionPayload := kindMapped
         try SetTimer(NativeDropBridge_DelayedHide, 0) ; cancel pending hide
         try SetTimer(NativeDropBridge_DragSessionTick, 60)
-        try NativeDropDiag_Log("route kind=" . kindRaw . " action=show")
+        try NativeDropDiag_Log("route kind=" . kindRaw . " action=show payload=" . payloadRaw . " mapped=" . kindMapped . (fallbackPayload != "" ? " fallback=" . fallbackPayload : ""))
         try {
             GDHO_Init()
-            GDHO_Show("text")
+            GDHO_Show(kindMapped)
             ; WebView may not be ready at the first tick, retry a few times.
-            SetTimer((*) => (NativeDropSessionActive ? GDHO_Show("text") : 0), -120)
-            SetTimer((*) => (NativeDropSessionActive ? GDHO_Show("text") : 0), -320)
-            SetTimer((*) => (NativeDropSessionActive ? GDHO_Show("text") : 0), -620)
+            SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -120)
+            SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -320)
+            SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -620)
         } catch {
         }
         return
@@ -2759,9 +2770,15 @@ NativeDropBridge_TriggerHolePulse(evt) {
     }
 
     if (kindRaw = "drop") {
-        kind := NativeDropBridge_NormalizeHolePayloadKind(payloadRaw)
+        kind := kindMapped
+        if (kind = "")
+            kind := NativeDropBridge_GuessPayloadForUnknownDrag(&fallbackPayload)
+        if (kind = "") {
+            try NativeDropDiag_Log("route kind=drop action=ignore payload=" . payloadRaw)
+            return
+        }
         NativeDropSessionPayload := kind
-        try NativeDropDiag_Log("route kind=drop payload=" . payloadRaw . " mapped=" . kind)
+        try NativeDropDiag_Log("route kind=drop payload=" . payloadRaw . " mapped=" . kind . (fallbackPayload != "" ? " fallback=" . fallbackPayload : ""))
         try {
             SetTimer(NativeDropBridge_DelayedHide, 0)
             SetTimer(NativeDropBridge_DragSessionTick, 0)
@@ -2788,6 +2805,47 @@ NativeDropBridge_TriggerHolePulse(evt) {
         SetTimer((*) => GDHO_HideOverlay(), -1200)
     } catch {
     }
+}
+
+NativeDropBridge_ShouldIgnoreDragEvent(kindRaw, payloadRaw, kindMapped := "") {
+    global FloatingToolbarDragging
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&mx, &my, &hwnd)
+    if (IsSet(FloatingToolbarDragging) && FloatingToolbarDragging) {
+        try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=toolbar_dragging")
+        return true
+    }
+    if (GDHO_IsOwnWindowHwnd(hwnd) || GDHO_IsOwnProcessHwnd(hwnd)) {
+        try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=own_ui_or_process")
+        return true
+    }
+    if GDHO_IsPointInToolbar(mx, my) {
+        try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=cursor_in_toolbar")
+        return true
+    }
+    if (kindMapped = "") {
+        try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=unknown_payload payload=" . payloadRaw)
+        return true
+    }
+    return false
+}
+
+NativeDropBridge_GuessPayloadForUnknownDrag(&detail := "") {
+    detail := ""
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(, , &hwnd)
+    srcClass := GDHO_GetClassByHwnd(hwnd)
+    ; Explorer/Desktop drags are highly likely file/folder payload.
+    if (srcClass = "CabinetWClass" || srcClass = "ExploreWClass" || srcClass = "WorkerW" || srcClass = "Progman") {
+        detail := "class=" . srcClass
+        return "file"
+    }
+    ; Browser/edit controls are likely text drags.
+    if (srcClass = "Chrome_WidgetWin_1" || srcClass = "Edit" || srcClass = "MozillaWindowClass") {
+        detail := "class=" . srcClass
+        return "text"
+    }
+    return ""
 }
 
 NativeDropBridge_DelayedHide(*) {
@@ -2819,7 +2877,9 @@ NativeDropBridge_NormalizeHolePayloadKind(kindRaw) {
     ; Current hole frontend supports file/text. Map richer kinds for now.
     if (k = "text" || k = "link")
         return "text"
-    return "file" ; file|folder|mixed and fallback
+    if (k = "file" || k = "folder" || k = "mixed")
+        return "file"
+    return ""
 }
 
 NativeDropDiag_Log(msg) {
