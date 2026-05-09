@@ -5,7 +5,97 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hole Overlay</title>
   <style>
-    :root { --p: 0; }
+    :root {
+      --p: 0;
+      --hint-text: rgba(218, 247, 255, .96);
+      --hint-border: rgba(150, 238, 255, .44);
+      --hint-bg1: rgba(20,58,88,.72);
+      --hint-bg2: rgba(15,36,60,.74);
+      --hint-shadow1: rgba(115, 229, 255, .45);
+      --hint-shadow2: rgba(232, 159, 255, .22);
+      --local-a1: rgba(118, 235, 255, .34);
+      --local-a2: rgba(118, 235, 255, .15);
+      --local-a3: rgba(236, 170, 255, .10);
+      --base-1: rgba(187,210,229,.9);
+      --base-2: rgba(133,161,187,.76);
+      --base-3: rgba(107,135,162,.68);
+      --base-inset-1: rgba(216,232,245,.55);
+      --base-inset-2: rgba(80,111,139,.45);
+      --aura-1: rgba(123,240,255,.7);
+      --aura-2: rgba(123,240,255,.2);
+      --ring-border: rgba(210,248,255,.35);
+      --ring-1: rgba(255,255,255,0);
+      --ring-2: rgba(130,245,255,.98);
+      --ring-3: rgba(86,223,255,.94);
+      --ring-4: rgba(240,166,255,.9);
+      --ring-5: rgba(134,255,225,.9);
+      --ring-glow-1: rgba(122,235,255,.45);
+      --ring-glow-2: rgba(235,171,255,.35);
+      --well-1: rgba(98,174,196,.38);
+      --well-2: rgba(24,61,104,.48);
+      --well-3: rgba(10,32,64,.76);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --hint-text: rgba(255, 214, 176, .96);
+        --hint-border: rgba(255, 124, 42, .58);
+        --hint-bg1: rgba(28,16,12,.9);
+        --hint-bg2: rgba(12,8,6,.94);
+        --hint-shadow1: rgba(255, 110, 20, .48);
+        --hint-shadow2: rgba(255, 72, 10, .28);
+        --local-a1: rgba(255, 122, 28, .4);
+        --local-a2: rgba(255, 88, 12, .2);
+        --local-a3: rgba(255, 168, 84, .1);
+        --base-1: rgba(54,36,27,.95);
+        --base-2: rgba(24,16,12,.92);
+        --base-3: rgba(7,5,4,.95);
+        --base-inset-1: rgba(255,148,70,.24);
+        --base-inset-2: rgba(0,0,0,.78);
+        --aura-1: rgba(255, 116, 26, .86);
+        --aura-2: rgba(255, 80, 10, .3);
+        --ring-border: rgba(255, 142, 68, .58);
+        --ring-1: rgba(255,240,220,.16);
+        --ring-2: rgba(255,150,58,.98);
+        --ring-3: rgba(255,108,26,.95);
+        --ring-4: rgba(255,66,12,.9);
+        --ring-5: rgba(255,186,106,.88);
+        --ring-glow-1: rgba(255, 112, 20, .7);
+        --ring-glow-2: rgba(255, 62, 8, .52);
+        --well-1: rgba(255,132,58,.36);
+        --well-2: rgba(70,28,10,.62);
+        --well-3: rgba(4,3,3,.96);
+      }
+    }
+    :root[data-theme="light"] {}
+    :root[data-theme="dark"] {
+      --hint-text: rgba(255, 214, 176, .96);
+      --hint-border: rgba(255, 124, 42, .58);
+      --hint-bg1: rgba(28,16,12,.9);
+      --hint-bg2: rgba(12,8,6,.94);
+      --hint-shadow1: rgba(255, 110, 20, .48);
+      --hint-shadow2: rgba(255, 72, 10, .28);
+      --local-a1: rgba(255, 122, 28, .4);
+      --local-a2: rgba(255, 88, 12, .2);
+      --local-a3: rgba(255, 168, 84, .1);
+      --base-1: rgba(54,36,27,.95);
+      --base-2: rgba(24,16,12,.92);
+      --base-3: rgba(7,5,4,.95);
+      --base-inset-1: rgba(255,148,70,.24);
+      --base-inset-2: rgba(0,0,0,.78);
+      --aura-1: rgba(255, 116, 26, .86);
+      --aura-2: rgba(255, 80, 10, .3);
+      --ring-border: rgba(255, 142, 68, .58);
+      --ring-1: rgba(255,240,220,.16);
+      --ring-2: rgba(255,150,58,.98);
+      --ring-3: rgba(255,108,26,.95);
+      --ring-4: rgba(255,66,12,.9);
+      --ring-5: rgba(255,186,106,.88);
+      --ring-glow-1: rgba(255, 112, 20, .7);
+      --ring-glow-2: rgba(255, 62, 8, .52);
+      --well-1: rgba(255,132,58,.36);
+      --well-2: rgba(70,28,10,.62);
+      --well-3: rgba(4,3,3,.96);
+    }
     * { box-sizing: border-box; }
     html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
     #root {
@@ -37,13 +127,13 @@
       max-width: 220px;
       text-align: center;
       font: 600 12px/1.2 "Segoe UI","Microsoft YaHei",sans-serif;
-      color: rgba(218, 247, 255, .96);
+      color: var(--hint-text);
       letter-spacing: .02em;
       padding: 7px 10px;
       border-radius: 999px;
-      border: 1px solid rgba(150, 238, 255, .44);
-      background: linear-gradient(180deg, rgba(20,58,88,.72), rgba(15,36,60,.74));
-      box-shadow: 0 0 18px rgba(115, 229, 255, .25);
+      border: 1px solid var(--hint-border);
+      background: linear-gradient(180deg, var(--hint-bg1), var(--hint-bg2));
+      box-shadow: 0 0 18px var(--hint-shadow1);
       opacity: 0;
       transition: opacity 140ms ease, transform 180ms ease, box-shadow 180ms ease;
       pointer-events: none;
@@ -51,7 +141,7 @@
     .show .hint { opacity: .74; transform: translateX(-50%) translateY(0); }
     .near .hint {
       opacity: 1;
-      box-shadow: 0 0 24px rgba(115, 229, 255, .45), 0 0 50px rgba(232, 159, 255, .22);
+      box-shadow: 0 0 24px var(--hint-shadow1), 0 0 50px var(--hint-shadow2);
       transform: translateX(-50%) translateY(-2px);
     }
     .local-fx {
@@ -67,9 +157,9 @@
       filter: blur(16px);
       background:
         radial-gradient(ellipse at 50% 62%,
-          rgba(118, 235, 255, .34) 0%,
-          rgba(118, 235, 255, .15) 34%,
-          rgba(236, 170, 255, .10) 54%,
+          var(--local-a1) 0%,
+          var(--local-a2) 34%,
+          var(--local-a3) 54%,
           rgba(255, 255, 255, 0) 76%);
       animation: localAuraBreath 2.8s ease-in-out infinite;
     }
@@ -84,12 +174,12 @@
     }
     .base-hole {
       bottom: 26px; width: 58%; height: 25%;
-      background: radial-gradient(ellipse at 50% 52%, rgba(187,210,229,.9) 0%, rgba(133,161,187,.76) 58%, rgba(107,135,162,.68) 100%);
-      box-shadow: inset 0 8px 16px rgba(216,232,245,.55), inset 0 -10px 22px rgba(80,111,139,.45);
+      background: radial-gradient(ellipse at 50% 52%, var(--base-1) 0%, var(--base-2) 58%, var(--base-3) 100%);
+      box-shadow: inset 0 8px 16px var(--base-inset-1), inset 0 -10px 22px var(--base-inset-2);
     }
     .aura {
       bottom: 12px; width: 92%; height: 46%; filter: blur(11px);
-      background: radial-gradient(ellipse at 50% 58%, rgba(123,240,255,.7), rgba(123,240,255,.2) 48%, rgba(123,240,255,0) 74%);
+      background: radial-gradient(ellipse at 50% 58%, var(--aura-1), var(--aura-2) 48%, rgba(123,240,255,0) 74%);
       opacity: calc(.2 + var(--p) * .75);
       transform: translateX(-50%) scale(calc(.92 + var(--p) * .24));
     }
@@ -99,20 +189,20 @@
     }
     .ring {
       bottom: 24px; width: 60%; height: 27%;
-      border: 1.5px solid rgba(210,248,255, calc(.35 + var(--p) * .6));
-      background: conic-gradient(from 0deg, rgba(255,255,255,0) 0 16%, rgba(130,245,255,.98) 30%, rgba(86,223,255,.94) 44%, rgba(240,166,255,.9) 58%, rgba(134,255,225,.9) 72%, rgba(255,255,255,0) 100%);
+      border: 1.5px solid var(--ring-border);
+      background: conic-gradient(from 0deg, rgba(255,255,255,0) 0 16%, var(--ring-2) 30%, var(--ring-3) 44%, var(--ring-4) 58%, var(--ring-5) 72%, rgba(255,255,255,0) 100%);
       opacity: calc(.28 + var(--p) * .72);
       transform: translateX(-50%) scale(calc(.9 + var(--p) * .24));
-      box-shadow: 0 0 calc(8px + var(--p) * 20px) rgba(122,235,255, calc(.3 + var(--p) * .45)), 0 0 calc(20px + var(--p) * 42px) rgba(235,171,255, calc(.12 + var(--p) * .35));
+      box-shadow: 0 0 calc(8px + var(--p) * 20px) var(--ring-glow-1), 0 0 calc(20px + var(--p) * 42px) var(--ring-glow-2);
     }
     .safe-mode .ring {
       box-shadow: none;
-      background: rgba(130,245,255, calc(.2 + var(--p) * .55));
-      border-color: rgba(190,245,255, calc(.28 + var(--p) * .45));
+      background: color-mix(in srgb, var(--ring-2) 70%, transparent);
+      border-color: var(--ring-border);
     }
     .well {
       bottom: 29px; width: 45%; height: 17%;
-      background: radial-gradient(ellipse at 50% 52%, rgba(98,174,196,.38) 0%, rgba(24,61,104,.48) 44%, rgba(10,32,64,.76) 100%);
+      background: radial-gradient(ellipse at 50% 52%, var(--well-1) 0%, var(--well-2) 44%, var(--well-3) 100%);
       opacity: calc(.18 + var(--p) * .64);
       transform: translateX(-50%) scale(calc(.98 - var(--p) * .12));
     }
@@ -220,6 +310,14 @@
       function setSafeMode(on) {
         root.classList.toggle('safe-mode', !!on);
       }
+      function setTheme(mode) {
+        var m = String(mode || '').toLowerCase();
+        if (m !== 'light' && m !== 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          return;
+        }
+        document.documentElement.setAttribute('data-theme', m);
+      }
       function show(payload) {
         if (payload === 'text' || payload === 'file') payloadType = payload;
         setSafeMode(true);
@@ -253,6 +351,11 @@
       window.HoleOverlay = {
         show: function (payload) { show(payload); setP(0.2); },
         setStyle: function (o) { if (o) setStyle(o.scale, o.animLevel); },
+        setTheme: function (o) {
+          if (typeof o === 'string') setTheme(o);
+          else if (o && typeof o.theme === 'string') setTheme(o.theme);
+          else if (o && typeof o.themeMode === 'string') setTheme(o.themeMode);
+        },
         moveTo: function (o) {
           if (!o) return;
           clampPos(o.x, o.y);
@@ -307,6 +410,10 @@
       };
       window.addEventListener('resize', function () { clampPos(pos.x, pos.y); });
       applyPos();
+      try {
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setTheme(prefersDark ? 'dark' : 'light');
+      } catch (_) {}
       // 独立打开 HTML 时默认显示，便于预览；运行态仍由 AHK 控制 update/drop。
       show();
       setP(0.35);

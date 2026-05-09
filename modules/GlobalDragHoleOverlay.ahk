@@ -510,6 +510,19 @@ GDHO_HideOverlay() {
     GDHO_VISIBLE := false
 }
 
+GDHO_PushThemeToWeb() {
+    tm := "dark"
+    try {
+        if IsSet(ThemeMode) {
+            m := StrLower(Trim(String(ThemeMode)))
+            if (m = "light")
+                tm := "light"
+        }
+    } catch {
+    }
+    GDHO_RunJS("window.HoleOverlay?.setTheme({ themeMode: '" tm "' })")
+}
+
 GDHO_Show(payload := "file") {
     global GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_POSITION_MODE
     p := (payload = "text") ? "text" : "file"
@@ -520,6 +533,7 @@ GDHO_Show(payload := "file") {
         GDHO_CURSOR_Y := my
     }
     GDHO_ShowOverlay()
+    GDHO_PushThemeToWeb()
     if (GDHO_POSITION_MODE = "fixed")
         GDHO_AnchorHoleByScreen()
     else if (GDHO_POSITION_MODE = "relative") {

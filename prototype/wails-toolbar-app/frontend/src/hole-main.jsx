@@ -68,6 +68,7 @@ function HolePage() {
   const [snapshotBg, setSnapshotBg] = useState("");
   const [snapshotVisible, setSnapshotVisible] = useState(false);
   const [renderLocked, setRenderLocked] = useState(false);
+  const [themeMode, setThemeMode] = useState("auto");
 
   const holeRef = useRef(null);
   const dragCounterRef = useRef(0);
@@ -155,6 +156,14 @@ function HolePage() {
   };
 
   useEffect(() => {
+    const root = document.documentElement;
+    if (!root) return;
+    const mode = String(themeMode || "auto").toLowerCase();
+    if (mode === "dark" || mode === "light") root.setAttribute("data-theme", mode);
+    else root.removeAttribute("data-theme");
+  }, [themeMode]);
+
+  useEffect(() => {
     const offNativeDrop = EventsOn("native_drop_detected", (eventPayload) => {
       const payload = Array.isArray(eventPayload) ? eventPayload[0] : eventPayload;
       const kind = payload?.kind === "text" ? "text" : (payload?.kind === "file" ? "file" : "none");
@@ -170,6 +179,15 @@ function HolePage() {
     });
 
     window.HoleOverlay = {
+      setTheme: (o) => {
+        let mode = "auto";
+        if (typeof o === "string") mode = o;
+        else if (o && typeof o.themeMode === "string") mode = o.themeMode;
+        else if (o && typeof o.theme === "string") mode = o.theme;
+        mode = String(mode || "auto").toLowerCase();
+        if (mode !== "dark" && mode !== "light" && mode !== "auto") mode = "auto";
+        setThemeMode(mode);
+      },
       show: (payload = "file") => {
         const type = payload === "text" ? "text" : "file";
         setHoleVisible(true);

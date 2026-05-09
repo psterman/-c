@@ -1,6 +1,96 @@
 ﻿:root {
   --text-main: #dff5ff;
   --text-soft: rgba(222, 244, 255, 0.84);
+  --grip-border: rgba(160, 220, 239, 0.32);
+  --grip-bg: rgba(12, 27, 44, 0.42);
+  --grip-dot: rgba(223, 245, 255, 0.52);
+  --close-border: rgba(160, 220, 239, 0.46);
+  --close-bg: rgba(8, 20, 34, 0.7);
+  --close-color: rgba(224, 245, 255, 0.92);
+  --close-hover: rgba(22, 44, 68, 0.9);
+  --idle-aura: rgba(118, 228, 255, 0.16);
+  --idle-ring: rgba(151, 221, 245, 0.28);
+  --base-1: rgba(174, 198, 221, 0.9);
+  --base-2: rgba(99, 129, 160, 0.75);
+  --base-3: rgba(67, 92, 120, 0.74);
+  --base-inset-1: rgba(219, 235, 247, 0.52);
+  --base-inset-2: rgba(49, 71, 95, 0.48);
+  --aura-1: rgba(123, 240, 255, 0.7);
+  --aura-2: rgba(123, 240, 255, 0.18);
+  --drag-ring-border: rgba(210, 248, 255, 0.65);
+  --drag-ring-2: rgba(130, 245, 255, 0.98);
+  --drag-ring-3: rgba(86, 223, 255, 0.94);
+  --drag-ring-4: rgba(240, 166, 255, 0.9);
+  --drag-ring-5: rgba(134, 255, 225, 0.9);
+  --drag-ring-glow-1: rgba(122, 235, 255, 0.7);
+  --drag-ring-glow-2: rgba(235, 171, 255, 0.42);
+  --well-1: rgba(98, 174, 196, 0.38);
+  --well-2: rgba(24, 61, 104, 0.48);
+  --well-3: rgba(10, 32, 64, 0.76);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-main: rgba(255, 214, 176, 0.96);
+    --text-soft: rgba(255, 206, 160, 0.86);
+    --grip-border: rgba(255, 138, 54, 0.36);
+    --grip-bg: rgba(28, 15, 10, 0.5);
+    --grip-dot: rgba(255, 180, 120, 0.6);
+    --close-border: rgba(255, 130, 50, 0.54);
+    --close-bg: rgba(16, 9, 7, 0.82);
+    --close-color: rgba(255, 218, 182, 0.94);
+    --close-hover: rgba(44, 19, 10, 0.92);
+    --idle-aura: rgba(255, 116, 26, 0.18);
+    --idle-ring: rgba(255, 142, 68, 0.36);
+    --base-1: rgba(54, 36, 27, 0.95);
+    --base-2: rgba(24, 16, 12, 0.92);
+    --base-3: rgba(7, 5, 4, 0.95);
+    --base-inset-1: rgba(255, 148, 70, 0.24);
+    --base-inset-2: rgba(0, 0, 0, 0.78);
+    --aura-1: rgba(255, 116, 26, 0.86);
+    --aura-2: rgba(255, 80, 10, 0.3);
+    --drag-ring-border: rgba(255, 142, 68, 0.62);
+    --drag-ring-2: rgba(255, 150, 58, 0.98);
+    --drag-ring-3: rgba(255, 108, 26, 0.95);
+    --drag-ring-4: rgba(255, 66, 12, 0.9);
+    --drag-ring-5: rgba(255, 186, 106, 0.88);
+    --drag-ring-glow-1: rgba(255, 112, 20, 0.7);
+    --drag-ring-glow-2: rgba(255, 62, 8, 0.52);
+    --well-1: rgba(255, 132, 58, 0.36);
+    --well-2: rgba(70, 28, 10, 0.62);
+    --well-3: rgba(4, 3, 3, 0.96);
+  }
+}
+
+:root[data-theme="dark"] {
+  --text-main: rgba(255, 214, 176, 0.96);
+  --text-soft: rgba(255, 206, 160, 0.86);
+  --grip-border: rgba(255, 138, 54, 0.36);
+  --grip-bg: rgba(28, 15, 10, 0.5);
+  --grip-dot: rgba(255, 180, 120, 0.6);
+  --close-border: rgba(255, 130, 50, 0.54);
+  --close-bg: rgba(16, 9, 7, 0.82);
+  --close-color: rgba(255, 218, 182, 0.94);
+  --close-hover: rgba(44, 19, 10, 0.92);
+  --idle-aura: rgba(255, 116, 26, 0.18);
+  --idle-ring: rgba(255, 142, 68, 0.36);
+  --base-1: rgba(54, 36, 27, 0.95);
+  --base-2: rgba(24, 16, 12, 0.92);
+  --base-3: rgba(7, 5, 4, 0.95);
+  --base-inset-1: rgba(255, 148, 70, 0.24);
+  --base-inset-2: rgba(0, 0, 0, 0.78);
+  --aura-1: rgba(255, 116, 26, 0.86);
+  --aura-2: rgba(255, 80, 10, 0.3);
+  --drag-ring-border: rgba(255, 142, 68, 0.62);
+  --drag-ring-2: rgba(255, 150, 58, 0.98);
+  --drag-ring-3: rgba(255, 108, 26, 0.95);
+  --drag-ring-4: rgba(255, 66, 12, 0.9);
+  --drag-ring-5: rgba(255, 186, 106, 0.88);
+  --drag-ring-glow-1: rgba(255, 112, 20, 0.7);
+  --drag-ring-glow-2: rgba(255, 62, 8, 0.52);
+  --well-1: rgba(255, 132, 58, 0.36);
+  --well-2: rgba(70, 28, 10, 0.62);
+  --well-3: rgba(4, 3, 3, 0.96);
 }
 
 * { box-sizing: border-box; }
@@ -40,9 +130,9 @@ body {
 .hole-grip {
   width: 100%;
   height: 28px;
-  border: 1px solid rgba(160, 220, 239, 0.32);
+  border: 1px solid var(--grip-border);
   border-radius: 12px;
-  background: rgba(12, 27, 44, 0.42);
+  background: var(--grip-bg);
   color: var(--text-soft);
   font-size: 12px;
   cursor: grab;
@@ -63,7 +153,7 @@ body {
   height: 4px;
   transform: translate(-50%, -50%);
   border-radius: 999px;
-  background: rgba(223, 245, 255, 0.52);
+  background: var(--grip-dot);
 }
 
 .hole-close {
@@ -72,10 +162,10 @@ body {
   top: 0;
   width: 28px;
   height: 28px;
-  border: 1px solid rgba(160, 220, 239, 0.46);
+  border: 1px solid var(--close-border);
   border-radius: 10px;
-  background: rgba(8, 20, 34, 0.7);
-  color: rgba(224, 245, 255, 0.92);
+  background: var(--close-bg);
+  color: var(--close-color);
   font-size: 18px;
   line-height: 24px;
   cursor: pointer;
@@ -83,7 +173,7 @@ body {
 }
 
 .hole-close:hover {
-  background: rgba(22, 44, 68, 0.9);
+  background: var(--close-hover);
 }
 
 .hole-core {
@@ -122,7 +212,7 @@ body {
   width: 120px;
   height: 46px;
   border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 50%, rgba(118, 228, 255, 0.16), rgba(118, 228, 255, 0) 70%);
+  background: radial-gradient(ellipse at 50% 50%, var(--idle-aura), rgba(118, 228, 255, 0) 70%);
   opacity: 0.45;
   animation: idleAura 2.8s ease-in-out infinite;
 }
@@ -132,7 +222,7 @@ body {
   width: 112px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid rgba(151, 221, 245, 0.28);
+  border: 1px solid var(--idle-ring);
   opacity: 0.34;
   animation: idleRing 2.6s ease-in-out infinite;
 }
@@ -151,8 +241,8 @@ body {
   bottom: 22px;
   width: 100px;
   height: 34px;
-  background: radial-gradient(ellipse at 50% 52%, rgba(174, 198, 221, 0.9) 0%, rgba(99, 129, 160, 0.75) 58%, rgba(67, 92, 120, 0.74) 100%);
-  box-shadow: inset 0 7px 14px rgba(219, 235, 247, 0.52), inset 0 -9px 18px rgba(49, 71, 95, 0.48);
+  background: radial-gradient(ellipse at 50% 52%, var(--base-1) 0%, var(--base-2) 58%, var(--base-3) 100%);
+  box-shadow: inset 0 7px 14px var(--base-inset-1), inset 0 -9px 18px var(--base-inset-2);
   animation: baseBreath 3.4s ease-in-out infinite;
 }
 
@@ -160,7 +250,7 @@ body {
   bottom: 8px;
   width: 146px;
   height: 62px;
-  background: radial-gradient(ellipse at 50% 58%, rgba(123, 240, 255, 0.7), rgba(123, 240, 255, 0.18) 48%, rgba(123, 240, 255, 0) 74%);
+  background: radial-gradient(ellipse at 50% 58%, var(--aura-1), var(--aura-2) 48%, rgba(123, 240, 255, 0) 74%);
   filter: blur(11px);
   opacity: 0;
   transform: translateX(-50%) scale(0.92);
@@ -181,7 +271,7 @@ body {
   bottom: 25px;
   width: 76px;
   height: 22px;
-  background: radial-gradient(ellipse at 50% 52%, rgba(98, 174, 196, 0.38) 0%, rgba(24, 61, 104, 0.48) 44%, rgba(10, 32, 64, 0.76) 100%);
+  background: radial-gradient(ellipse at 50% 52%, var(--well-1) 0%, var(--well-2) 44%, var(--well-3) 100%);
   opacity: .18;
   transition: opacity 180ms ease, transform 180ms ease, box-shadow 180ms ease;
 }
@@ -194,18 +284,18 @@ body {
 
 .floating-hole.dragging .color-ring {
   opacity: calc(0.45 + var(--proximity) * 0.55);
-  border-color: rgba(210, 248, 255, calc(0.45 + var(--proximity) * 0.5));
+  border-color: var(--drag-ring-border);
   background: conic-gradient(from 0deg,
       rgba(255, 255, 255, 0) 0 16%,
-      rgba(130, 245, 255, 0.98) 30%,
-      rgba(86, 223, 255, 0.94) 44%,
-      rgba(240, 166, 255, 0.9) 58%,
-      rgba(134, 255, 225, 0.9) 72%,
+      var(--drag-ring-2) 30%,
+      var(--drag-ring-3) 44%,
+      var(--drag-ring-4) 58%,
+      var(--drag-ring-5) 72%,
       rgba(255, 255, 255, 0) 100%);
   transform: translateX(-50%) scale(calc(0.93 + var(--proximity) * 0.22));
   box-shadow:
-    0 0 calc(8px + var(--proximity) * 18px) rgba(122, 235, 255, calc(0.35 + var(--proximity) * 0.4)),
-    0 0 calc(16px + var(--proximity) * 38px) rgba(235, 171, 255, calc(0.14 + var(--proximity) * 0.28));
+    0 0 calc(8px + var(--proximity) * 18px) var(--drag-ring-glow-1),
+    0 0 calc(16px + var(--proximity) * 38px) var(--drag-ring-glow-2);
 }
 
 .floating-hole.dragging .inner-well {
@@ -292,3 +382,4 @@ body {
   55% { opacity: 0.74; transform: translateX(-50%) scale(1.24); }
   100% { opacity: 0; transform: translateX(-50%) scale(1.58); }
 }
+
