@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { EventsOn } from "../wailsjs/runtime/runtime";
 import "./hole.css";
 
 function detectPayloadType(dataTransfer) {
@@ -148,6 +149,20 @@ function HolePage() {
   };
 
   useEffect(() => {
+    const offNativeDrop = EventsOn("native_drop_detected", (eventPayload) => {
+      const payload = Array.isArray(eventPayload) ? eventPayload[0] : eventPayload;
+      const kind = payload?.kind === "text" ? "text" : (payload?.kind === "file" ? "file" : "none");
+      if (kind === "none") return;
+
+      setHoleVisible(true);
+      setDragging(false);
+      setPayloadType(kind);
+      setDropPulse(true);
+      setHint(applyPhaseHint(kind, "drop"));
+      setTimeout(() => setDropPulse(false), 620);
+      resetState(false);
+    });
+
     window.HoleOverlay = {
       show: (payload = "file") => {
         const type = payload === "text" ? "text" : "file";
@@ -198,6 +213,7 @@ function HolePage() {
     };
 
     return () => {
+      if (typeof offNativeDrop === "function") offNativeDrop();
       endMove();
       if (window.HoleOverlay) delete window.HoleOverlay;
     };
@@ -316,3 +332,4 @@ function HolePage() {
 }
 
 createRoot(document.getElementById("root")).render(<HolePage />);
+

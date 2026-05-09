@@ -1,0 +1,69 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drop Event Diagnostics</title>
+  <style>
+    body { margin:0; font-family:"Segoe UI","Microsoft YaHei",sans-serif; background:#0f172a; color:#e2e8f0; }
+    .wrap { max-width:1100px; margin:0 auto; padding:16px; }
+    .row { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:12px; }
+    .k { background:#111827; border:1px solid #334155; border-radius:10px; padding:10px; }
+    .k .l { color:#94a3b8; font-size:12px; }
+    .k .v { font-size:22px; font-weight:700; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .p { background:#111827; border:1px solid #334155; border-radius:10px; padding:10px; }
+    .log { height:420px; overflow:auto; white-space:pre-wrap; font-family:Consolas,monospace; font-size:12px; line-height:1.4; }
+    .ok { color:#22c55e; }
+    .bad { color:#f87171; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>拖拽事件诊断面板</h2>
+    <div id="meta"></div>
+    <div class="row" id="kpis"></div>
+    <div class="grid">
+      <div class="p"><h3>Bridge 事件</h3><div id="bridge" class="log"></div></div>
+      <div class="p"><h3>AHK 路由</h3><div id="ahk" class="log"></div></div>
+    </div>
+  </div>
+<script>
+const bridgePath='/Cache/native_drop_events.jsonl?ts=';
+const ahkPath='/Cache/drop_diagnostics_runtime.log?ts=';
+const kpis=document.getElementById('kpis');
+const meta=document.getElementById('meta');
+const bridgeEl=document.getElementById('bridge');
+const ahkEl=document.getElementById('ahk');
+
+function countKinds(lines){
+  const c={bridge_ready:0,drag_start:0,drag_enter:0,drop:0,drag_end:0};
+  for(const ln of lines){
+    try{ const o=JSON.parse(ln); if(c[o.kind]!==undefined) c[o.kind]++; }catch{}
+  }
+  return c;
+}
+
+async function tick(){
+  const t=Date.now();
+  const [b,a]=await Promise.all([
+    fetch(bridgePath+t).then(r=>r.text()).catch(()=>''),
+    fetch(ahkPath+t).then(r=>r.text()).catch(()=>''),
+  ]);
+  const blines=b.split(/\r?\n/).filter(Boolean);
+  const alines=a.split(/\r?\n/).filter(Boolean);
+  const c=countKinds(blines);
+  kpis.innerHTML=[
+    ['bridge_ready',c.bridge_ready],['drag_start',c.drag_start],['drag_enter',c.drag_enter],['drop',c.drop],['drag_end',c.drag_end]
+  ].map(([l,v])=>`<div class="k"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+  const status = (c.drag_start>0 || c.drag_enter>0) ? '<span class="ok">检测到拖拽触发事件</span>' : '<span class="bad">未检测到拖拽触发事件</span>';
+  meta.innerHTML=`<p>${status} | bridge行数: ${blines.length} | ahk行数: ${alines.length}</p>`;
+  bridgeEl.textContent=blines.slice(-120).join('\n');
+  ahkEl.textContent=alines.slice(-120).join('\n');
+  bridgeEl.scrollTop=bridgeEl.scrollHeight;
+  ahkEl.scrollTop=ahkEl.scrollHeight;
+}
+setInterval(tick,1000); tick();
+</script>
+</body>
+</html>

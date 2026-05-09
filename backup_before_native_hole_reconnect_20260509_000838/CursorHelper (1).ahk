@@ -13,7 +13,6 @@ global FloatingToolbarIsVisible := false
 global FloatingBubbleIsVisible := false
 ; Emergency switch: disable hole overlay to avoid toolbar/page freeze.
 global EnableHoleOverlay := false
-global EnableHoleOverlayOnNativeDrop := true
 ; Decoupled Go native drop bridge (out-of-process).
 global EnableNativeDropBridge := true
 global NativeDropBridgePID := 0
@@ -21,12 +20,6 @@ global NativeDropBridgeExe := A_ScriptDir "\tools\native-drop-bridge\native-drop
 global NativeDropBridgeOut := A_ScriptDir "\Cache\native_drop_events.jsonl"
 global NativeDropBridgeReadOffset := 0
 global NativeDropBridgeLastEvent := 0
-global NativeDropSessionActive := false
-global NativeDropDiagLogPath := A_ScriptDir "\Cache\drop_diagnostics_runtime.log"
-global NativeDropHideDelayMs := 1800
-; Diagnostic mode: make drop receiver full-screen to verify hit path.
-; Keep disabled in production. Full-screen receiver can degrade desktop interaction.
-global NativeDropBridgeFullScreenHitTest := false
 ; TrayMenu_Init / UpdateTrayMenu 会立刻 GetText，须早于后部「多语言」全局块
 global Language := "zh"
 ; ===================== 基础配置 =====================
@@ -103,11 +96,6 @@ global MainScriptDir := A_ScriptDir
 
 ; 洞与工具栏同时启用：默认使用本地静态页，避免 dev server/端口探测阻塞导致启动假死
 if (EnableHoleOverlay) {
-    holeFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\HoleOverlayStandalone.html")
-    try GDHO_SetPageUrl(holeFallbackUrl)
-    try GDHO_SetFallbackUrl(holeFallbackUrl)
-}
-if (EnableHoleOverlayOnNativeDrop) {
     holeFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\HoleOverlayStandalone.html")
     try GDHO_SetPageUrl(holeFallbackUrl)
     try GDHO_SetFallbackUrl(holeFallbackUrl)
@@ -2642,39 +2630,12 @@ NativeDropBridge_Start() {
         } else {
             NativeDropBridgeReadOffset := 0
         }
-        rect := NativeDropBridge_GetDropRect()
-        rx := Integer(rect["x"]), ry := Integer(rect["y"]), rw := Integer(rect["w"]), rh := Integer(rect["h"])
-        cmd := '"' . NativeDropBridgeExe . '" --out "' . NativeDropBridgeOut . '" --x ' . rx . ' --y ' . ry . ' --w ' . rw . ' --h ' . rh
-        ; ensure stale bridge processes are cleaned before relaunch
-        try ProcessClose("native-drop-bridge.exe")
-        Sleep(80)
+        cmd := '"' . NativeDropBridgeExe . '" --out "' . NativeDropBridgeOut . '"'
         Run(cmd, A_ScriptDir, "Hide", &pid)
         NativeDropBridgePID := pid
         SetTimer(NativeDropBridge_Poll, 250)
     } catch {
     }
-}
-
-NativeDropBridge_GetDropRect() {
-    global NativeDropBridgeFullScreenHitTest
-    if (NativeDropBridgeFullScreenHitTest) {
-        left := SysGet(76), top := SysGet(77), vw := SysGet(78), vh := SysGet(79)
-        return Map("x", Integer(left), "y", Integer(top), "w", Integer(vw), "h", Integer(vh))
-    }
-    ; Keep receiver roughly aligned to hole visual area near toolbar.
-    x := 300, y := 300, w := 170, h := 210
-    try {
-        global FloatingToolbarGUI
-        if (FloatingToolbarGUI && FloatingToolbarGUI.Hwnd) {
-            FloatingToolbarGUI.GetPos(&tx, &ty, &tw, &th)
-            x := Integer(tx + Max(0, Round((tw - w) / 2)))
-            y := Integer(ty - h - 12)
-            if (y < 12)
-                y := Integer(ty + th + 12)
-        }
-    } catch {
-    }
-    return Map("x", x, "y", y, "w", w, "h", h)
 }
 
 NativeDropBridge_Stop() {
@@ -2704,115 +2665,12 @@ NativeDropBridge_Poll(*) {
             try {
                 evt := Jxon_Load(line)
                 NativeDropBridgeLastEvent := evt
-                try NativeDropDiag_Log("evt " . line)
-                NativeDropBridge_TriggerHolePulse(evt)
+                ; Keep this side-channel non-intrusive: no heavy UI operations here.
             } catch {
             }
         }
         NativeDropBridgeReadOffset := f.Pos
         f.Close()
-    } catch {
-    }
-}
-
-NativeDropBridge_TriggerHolePulse(evt) {
-    global EnableHoleOverlayOnNativeDrop, NativeDropSessionActive, NativeDropHideDelayMs
-    if !EnableHoleOverlayOnNativeDrop
-        return
-    if !IsObject(evt)
-        return
-    kindRaw := ""
-    try kindRaw := StrLower(Trim(String(evt["kind"])))
-    catch {
-        return
-    }
-    payloadRaw := ""
-    try payloadRaw := StrLower(Trim(String(evt["payloadKind"])))
-    catch {
-        payloadRaw := ""
-    }
-    if (kindRaw = "drag_start" || kindRaw = "drag_enter") {
-        ; Event-driven preview: show on drag_start as primary trigger, drag_enter as reinforce.
-        NativeDropSessionActive := true
-        try SetTimer(NativeDropBridge_DelayedHide, 0) ; cancel pending hide
-        try NativeDropDiag_Log("route kind=" . kindRaw . " action=show")
-        try {
-            GDHO_Init()
-            GDHO_Show("text")
-            ; WebView may not be ready at the first tick, retry a few times.
-            SetTimer((*) => (NativeDropSessionActive ? GDHO_Show("text") : 0), -120)
-            SetTimer((*) => (NativeDropSessionActive ? GDHO_Show("text") : 0), -320)
-            SetTimer((*) => (NativeDropSessionActive ? GDHO_Show("text") : 0), -620)
-        } catch {
-        }
-        return
-    }
-    if (kindRaw = "drag_end") {
-        NativeDropSessionActive := false
-        try NativeDropDiag_Log("route kind=drag_end action=hide_delay ms=" . NativeDropHideDelayMs)
-        try SetTimer(NativeDropBridge_DelayedHide, -Abs(Integer(NativeDropHideDelayMs)))
-        return
-    }
-
-    if (kindRaw = "drop") {
-        kind := NativeDropBridge_NormalizeHolePayloadKind(payloadRaw)
-        try NativeDropDiag_Log("route kind=drop payload=" . payloadRaw . " mapped=" . kind)
-        try {
-            SetTimer(NativeDropBridge_DelayedHide, 0)
-            GDHO_Init()
-            GDHO_Show(kind)
-            GDHO_Drop(kind)
-            SetTimer((*) => GDHO_HideFrontend(), -900)
-            SetTimer((*) => GDHO_HideOverlay(), -1200)
-        } catch {
-        }
-        return
-    }
-
-    ; Backward compatibility for older bridge payload.
-    if (kindRaw != "text" && kindRaw != "file" && kindRaw != "folder" && kindRaw != "link" && kindRaw != "mixed")
-        return
-    kind := NativeDropBridge_NormalizeHolePayloadKind(kindRaw)
-    try NativeDropDiag_Log("route legacy kind=" . kindRaw . " mapped=" . kind)
-    try {
-        GDHO_Init()
-        GDHO_Show(kind)
-        SetTimer((*) => GDHO_Drop(kind), -120)
-        SetTimer((*) => GDHO_HideFrontend(), -920)
-        SetTimer((*) => GDHO_HideOverlay(), -1200)
-    } catch {
-    }
-}
-
-NativeDropBridge_DelayedHide(*) {
-    global NativeDropSessionActive
-    if NativeDropSessionActive
-        return
-    try {
-        GDHO_HideFrontend()
-        GDHO_HideOverlay()
-        NativeDropDiag_Log("route delayed_hide action=hide_now")
-    } catch {
-    }
-}
-
-NativeDropBridge_NormalizeHolePayloadKind(kindRaw) {
-    k := StrLower(Trim(String(kindRaw)))
-    ; Current hole frontend supports file/text. Map richer kinds for now.
-    if (k = "text" || k = "link")
-        return "text"
-    return "file" ; file|folder|mixed and fallback
-}
-
-NativeDropDiag_Log(msg) {
-    global NativeDropDiagLogPath
-    try {
-        dir := ""
-        SplitPath(NativeDropDiagLogPath, , &dir)
-        if (dir != "" && !DirExist(dir))
-            DirCreate(dir)
-        ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
-        FileAppend("[" . ts . "] " . String(msg) . "`r`n", NativeDropDiagLogPath, "UTF-8")
     } catch {
     }
 }

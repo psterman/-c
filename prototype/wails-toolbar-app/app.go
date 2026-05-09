@@ -1,7 +1,8 @@
-﻿package main
+package main
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -27,6 +28,7 @@ type ProcessResult struct {
 type App struct {
 	ctx      context.Context
 	commands []QuickAction
+	dropMgr  *dropManager
 }
 
 func NewApp() *App {
@@ -46,6 +48,24 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+
+	// Safety gate: native OLE drop listener is opt-in for now.
+	// Set NMER_NATIVE_DROP=1 to enable after UI stability is confirmed.
+	if os.Getenv("NMER_NATIVE_DROP") != "1" {
+		runtime.LogInfo(ctx, "native drop manager disabled by default (set NMER_NATIVE_DROP=1 to enable)")
+		return
+	}
+
+	a.dropMgr = newDropManager(ctx)
+	if err := a.dropMgr.start(); err != nil {
+		runtime.LogErrorf(ctx, "native drop manager start failed: %v", err)
+	}
+}
+
+func (a *App) shutdown(ctx context.Context) {
+	if a.dropMgr != nil {
+		a.dropMgr.stop()
+	}
 }
 
 func scoreAction(action QuickAction, q string) int {
