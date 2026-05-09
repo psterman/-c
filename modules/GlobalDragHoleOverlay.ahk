@@ -55,6 +55,8 @@ global GDHO_HOST_W := 360
 global GDHO_HOST_H := 320
 global GDHO_LAST_HOST_X := 120
 global GDHO_LAST_HOST_Y := 120
+global GDHO_DRAG_CONFIDENCE := 0.0
+global GDHO_JUMP_LERP_THRESHOLD_PX := 50
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -548,6 +550,7 @@ GDHO_Show(payload := "file") {
 
 GDHO_Update(payload := "file", x := "", y := "") {
     global GDHO_LAST_UPDATE_TICK, GDHO_UPDATE_MIN_INTERVAL_MS, GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_POSITION_MODE
+    global GDHO_LAST_X, GDHO_LAST_Y, GDHO_JUMP_LERP_THRESHOLD_PX
     nowTick := A_TickCount
     if (GDHO_LAST_UPDATE_TICK && (nowTick - GDHO_LAST_UPDATE_TICK < GDHO_UPDATE_MIN_INTERVAL_MS))
         return
@@ -567,6 +570,18 @@ GDHO_Update(payload := "file", x := "", y := "") {
     if (x = "" || y = "") {
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "' })")
     } else {
+        ; If pointer jump is too large, inject one lerp frame to smooth frontend animation.
+        if (GDHO_LAST_X != 0 || GDHO_LAST_Y != 0) {
+            dxj := Integer(x) - Integer(GDHO_LAST_X)
+            dyj := Integer(y) - Integer(GDHO_LAST_Y)
+            jumpDist := Sqrt(dxj * dxj + dyj * dyj)
+            if (jumpDist > GDHO_JUMP_LERP_THRESHOLD_PX) {
+                midX := Integer((Integer(GDHO_LAST_X) + Integer(x)) / 2)
+                midY := Integer((Integer(GDHO_LAST_Y) + Integer(y)) / 2)
+                GDHO_GlobalPointToHostLocal(midX, midY, &mlx, &mly)
+                GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "', x: " Integer(mlx) ", y: " Integer(mly) " })")
+            }
+        }
         GDHO_GlobalPointToHostLocal(Integer(x), Integer(y), &lx, &ly)
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "', x: " Integer(lx) ", y: " Integer(ly) " })")
     }
@@ -668,13 +683,16 @@ GDHO_UnpinFromDesktop() {
 GDHO_PollDrag(*) {
     global GDHO_ACTIVE, GDHO_START_X, GDHO_START_Y, GDHO_LAST_X, GDHO_LAST_Y
     global GDHO_START_CURSOR, GDHO_DRAG_SOURCE_CLASS, GDHO_PAYLOAD
-    global GDHO_MIN_MOVE_PX, GDHO_LAST_UPDATE_TICK, GDHO_MAX_IDLE_HIDE_MS
+    global GDHO_MIN_MOVE_PX, GDHO_LAST_UPDATE_TICK, GDHO_MAX_IDLE_HIDE_MS, GDHO_DRAG_CONFIDENCE
     global GDHO_POLL_BUSY, GDHO_SUPPRESS_UNTIL_RELEASE, GDHO_TOOLBAR_NEAR_RADIUS_PX, GDHO_TOOLBAR_DISMISS_RADIUS_PX
     if GDHO_POLL_BUSY
         return
     GDHO_POLL_BUSY := true
 
     try {
+        try ProcessSetPriority("High")
+        try DllCall("SetThreadPriority", "Ptr", DllCall("GetCurrentThread", "Ptr"), "Int", 2)
+
         lDown := GetKeyState("LButton", "P")
         CoordMode("Mouse", "Screen")
         MouseGetPos(&mx, &my, &hwnd)
@@ -684,6 +702,7 @@ GDHO_PollDrag(*) {
             ; Defensive: if toolbar drag state got stuck, force-close it on mouse-up.
             try FloatingToolbar_EndDrag()
             GDHO_SUPPRESS_UNTIL_RELEASE := false
+            GDHO_DRAG_CONFIDENCE := 0.0
             if GDHO_ACTIVE {
                 GDHO_Drop(GDHO_PAYLOAD)
                 GDHO_ACTIVE := false
@@ -719,7 +738,11 @@ GDHO_PollDrag(*) {
 
         dx := mx - GDHO_START_X
         dy := my - GDHO_START_Y
-        moved := (dx * dx + dy * dy) >= (GDHO_MIN_MOVE_PX * GDHO_MIN_MOVE_PX)
+        startClass := GDHO_DRAG_SOURCE_CLASS
+        startCursorChanged := (GDHO_START_CURSOR != 0 && GDHO_START_CURSOR != GDHO_GetCursorHandle())
+        quickThreshold := (startClass = "Chrome_WidgetWin_1" || startClass = "Edit") && startCursorChanged
+        activeMovePx := quickThreshold ? 5 : GDHO_MIN_MOVE_PX
+        moved := (dx * dx + dy * dy) >= (activeMovePx * activeMovePx)
         if !moved
             return
 
@@ -739,6 +762,9 @@ GDHO_PollDrag(*) {
 
         ; If drag already seeded from external window, keep updating even when cursor passes over toolbar.
         if !GDHO_ACTIVE {
+            ; Reveal hole immediately on activation for faster visual response.
+            GDHO_ShowOverlay()
+            GDHO_RunJS("window.HoleOverlay?.show('" GDHO_PAYLOAD "')")
             GDHO_Show(GDHO_PAYLOAD)
             GDHO_ACTIVE := true
         }
@@ -813,17 +839,30 @@ GDHO_GetClassByHwnd(hwnd) {
 }
 
 GDHO_IsLikelyDrag(srcClass, startCursor) {
+    global GDHO_DRAG_CONFIDENCE
     cNow := GDHO_GetCursorHandle()
     if (cNow = 0)
         return false
 
     ; Explorer/Desktop class: high confidence file/folder drag
-    if (srcClass = "CabinetWClass" || srcClass = "ExploreWClass" || srcClass = "WorkerW" || srcClass = "Progman")
+    if (srcClass = "CabinetWClass" || srcClass = "ExploreWClass" || srcClass = "WorkerW" || srcClass = "Progman") {
+        GDHO_DRAG_CONFIDENCE := 1.0
         return true
+    }
+
+    ; Browser/Edit text drag: cursor switched means strong signal.
+    if ((srcClass = "Chrome_WidgetWin_1" || srcClass = "Edit") && startCursor != 0 && cNow != startCursor) {
+        GDHO_DRAG_CONFIDENCE := 0.95
+        return true
+    }
 
     ; generic fallback: cursor changed after movement, usually indicates drag-mode cursor
-    if (startCursor != 0 && cNow != startCursor)
+    if (startCursor != 0 && cNow != startCursor) {
+        GDHO_DRAG_CONFIDENCE := 0.7
         return true
+    }
+
+    GDHO_DRAG_CONFIDENCE := 0.2
 
     return false
 }
