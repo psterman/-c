@@ -1247,16 +1247,44 @@
     let autoSaveTimer = 0;
     let suppressAutoSave = true;
     let initDataReceived = false;
+    let saveInFlight = false;
+    let pendingSaveHash = "";
+    let lastSentHash = "";
+    let lastSavedHash = "";
+    function stableStringify(v){
+      const seen = new WeakSet();
+      const sortObj = (x) => {
+        if (!x || typeof x !== "object") return x;
+        if (seen.has(x)) return null;
+        seen.add(x);
+        if (Array.isArray(x)) return x.map(sortObj);
+        const out = {};
+        Object.keys(x).sort().forEach((k) => { out[k] = sortObj(x[k]); });
+        return out;
+      };
+      try { return JSON.stringify(sortObj(v)); } catch { return ""; }
+    }
+    function tryAutoSaveNow(){
+      const d = readFromUI();
+      const err = validate(d);
+      if (err) return setStatus(err, "err");
+      const hash = stableStringify(d);
+      if (!hash) return;
+      if (hash === lastSavedHash || hash === lastSentHash) return;
+      if (saveInFlight) {
+        pendingSaveHash = hash;
+        return;
+      }
+      saveInFlight = true;
+      lastSentHash = hash;
+      pendingSaveHash = "";
+      setStatus("自动保存中...");
+      post({ type: "saveSettings", payload: d });
+    }
     function scheduleAutoSave(delay = 250){
       if (suppressAutoSave || !initDataReceived) return;
       if (autoSaveTimer) clearTimeout(autoSaveTimer);
-      autoSaveTimer = setTimeout(() => {
-        const d = readFromUI();
-        const err = validate(d);
-        if (err) return setStatus(err, "err");
-        setStatus("自动保存中...");
-        post({ type: "saveSettings", payload: d });
-      }, delay);
+      autoSaveTimer = setTimeout(() => { tryAutoSaveNow(); }, delay);
     }
     function bindAutoSaveControls(){}
     function normalizeFullTextPayload(payload){
@@ -1745,6 +1773,12 @@
       ];
       const monitorCount = Math.max(1, Number(d.monitorCount || 1));
       const screenOpts = Array.from({ length: monitorCount }, (_, i) => ({ value: String(i + 1), label: `显示器${i + 1}` }));
+      const withCurrentOption = (opts, cur) => {
+        const curStr = String(cur ?? "");
+        if (opts.some(o => String(o.value) === curStr))
+          return opts;
+        return [{ value: curStr, label: `当前值（${curStr}）` }, ...opts];
+      };
       const qaRows = d.quickActions.map((q, i) => `<div class="qa-row"><div class="label">#${i+1}</div><select id="qaType${i+1}">${options(ACTION_TYPES,q.type)}</select><input id="qaHotkey${i+1}" type="text" value="${esc(q.hotkey)}"></div>`).join("");
       const hotkeyRows = HOTKEY_KEYS.map(k => `<div class="row"><div class="label">快捷键 ${k}</div><input id="hk_${k}" type="text" value="${esc(d.hotkeys[k] || "")}"></div>`).join("");
       const catRows = ALL_CATEGORIES.map(c => `<label class="tag"><input id="cat_${c}" type="checkbox" ${checked((d.voiceSearchEnabledCategories||[]).includes(c))}> ${esc(c)}</label>`).join("");
@@ -1755,13 +1789,13 @@
       } else if (state.activeTab === "appearance") {
         const activationMode = normalizeActivationMode(state.appearanceActivationMode);
         panel.innerHTML = `<div class="card"><div class="title">外观设置</div><div class="row"><div class="label">主题模式</div><select id="themeMode">${optionsKV([{value:"dark",label:"深色"},{value:"light",label:"浅色"}],d.themeMode)}</select></div><div class="row"><div class="label">弹窗位置</div><select id="popupScreenIndex">${optionsKV(screenOpts, String(d.popupScreenIndex || 1))}</select></div><div class="hint">已自动识别显示器数量：${esc(monitorCount)}。此设置会应用到所有弹窗并固定保存。</div></div>
-<div class="card"><div class="title">悬浮洞交互</div>
-<div class="row"><div class="label">洞位置模式</div><select id="holePositionMode">${optionsKV([{value:"anchor",label:"靠近工具栏"},{value:"fixed",label:"固定位置"},{value:"relative",label:"相对拖动"}], String(d.holePositionMode || "anchor"))}</select></div>
-<div class="row"><div class="label">触发距离(px)</div><input id="holeTriggerDistance" type="number" min="80" max="1200" step="10" value="${esc(d.holeTriggerDistance ?? 260)}"></div>
-<div class="row"><div class="label">忽略后消失距离(px)</div><input id="holeDismissDistance" type="number" min="120" max="1600" step="10" value="${esc(d.holeDismissDistance ?? 320)}"></div>
+<div class="card"><div class="title">黑洞交互</div>
+<div class="row"><div class="label">黑洞位置模式</div><select id="holePositionMode">${optionsKV([{value:"anchor",label:"靠近工具栏"},{value:"fixed",label:"固定位置"},{value:"relative",label:"相对拖动"}], String(d.holePositionMode || "anchor"))}</select></div>
+<div class="row"><div class="label">触发距离</div><select id="holeTriggerDistance">${optionsKV(withCurrentOption([{value:"200",label:"紧凑（200px）"},{value:"260",label:"标准（260px）"},{value:"340",label:"宽松（340px）"},{value:"420",label:"远距（420px）"}], d.holeTriggerDistance ?? 260), String(d.holeTriggerDistance ?? 260))}</select></div>
+<div class="row"><div class="label">消失距离</div><select id="holeDismissDistance">${optionsKV(withCurrentOption([{value:"260",label:"紧凑（260px）"},{value:"320",label:"标准（320px）"},{value:"420",label:"宽松（420px）"},{value:"560",label:"远距（560px）"}], d.holeDismissDistance ?? 320), String(d.holeDismissDistance ?? 320))}</select></div>
 <div class="row"><div class="label">固定位置 X / Y</div><div class="inline"><input id="holeFixedX" type="number" step="1" value="${esc(d.holeFixedX ?? 360)}"><input id="holeFixedY" type="number" step="1" value="${esc(d.holeFixedY ?? 260)}"></div></div>
-<div class="row"><div class="label">洞大小缩放</div><input id="holeSizeScale" type="number" min="0.6" max="1.8" step="0.05" value="${esc(d.holeSizeScale ?? 1.0)}"></div>
-<div class="row"><div class="label">动画强度</div><input id="holeAnimLevel" type="number" min="0.4" max="2.2" step="0.05" value="${esc(d.holeAnimLevel ?? 1.0)}"></div>
+<div class="row"><div class="label">黑洞大小</div><select id="holeSizeScale">${optionsKV(withCurrentOption([{value:"0.85",label:"小（0.85x）"},{value:"1.0",label:"标准（1.0x）"},{value:"1.25",label:"大（1.25x）"},{value:"1.5",label:"超大（1.5x）"}], d.holeSizeScale ?? 1.0), String(d.holeSizeScale ?? 1.0))}</select></div>
+<div class="row"><div class="label">动画强度</div><select id="holeAnimLevel">${optionsKV(withCurrentOption([{value:"0.8",label:"柔和（0.8）"},{value:"1.0",label:"标准（1.0）"},{value:"1.4",label:"增强（1.4）"},{value:"2.0",label:"强烈（2.0）"}], d.holeAnimLevel ?? 1.0), String(d.holeAnimLevel ?? 1.0))}</select></div>
 </div>
 <div class="card">
   <div class="title">激活方式</div>
@@ -2067,11 +2101,11 @@
       if (!Number.isInteger(d.popupScreenIndex) || d.popupScreenIndex < 1) return "弹窗屏幕序号非法";
       const maxMonitors = Math.max(1, Number(d.monitorCount || 1));
       if (d.popupScreenIndex > maxMonitors) return "弹窗屏幕序号超出显示器范围";
-      if (!["anchor","fixed","relative"].includes(String(d.holePositionMode || "anchor"))) return "洞位置模式非法";
-      if (!Number.isFinite(Number(d.holeTriggerDistance)) || Number(d.holeTriggerDistance) < 80 || Number(d.holeTriggerDistance) > 1200) return "洞触发距离非法";
-      if (!Number.isFinite(Number(d.holeDismissDistance)) || Number(d.holeDismissDistance) < 120 || Number(d.holeDismissDistance) > 1600) return "洞消失距离非法";
-      if (!Number.isFinite(Number(d.holeSizeScale)) || Number(d.holeSizeScale) < 0.6 || Number(d.holeSizeScale) > 1.8) return "洞大小缩放非法";
-      if (!Number.isFinite(Number(d.holeAnimLevel)) || Number(d.holeAnimLevel) < 0.4 || Number(d.holeAnimLevel) > 2.2) return "洞动画强度非法";
+      if (!["anchor","fixed","relative"].includes(String(d.holePositionMode || "anchor"))) return "黑洞位置模式非法";
+      if (!Number.isFinite(Number(d.holeTriggerDistance)) || Number(d.holeTriggerDistance) < 80 || Number(d.holeTriggerDistance) > 1200) return "黑洞触发距离非法";
+      if (!Number.isFinite(Number(d.holeDismissDistance)) || Number(d.holeDismissDistance) < 120 || Number(d.holeDismissDistance) > 1600) return "黑洞消失距离非法";
+      if (!Number.isFinite(Number(d.holeSizeScale)) || Number(d.holeSizeScale) < 0.6 || Number(d.holeSizeScale) > 1.8) return "黑洞大小缩放非法";
+      if (!Number.isFinite(Number(d.holeAnimLevel)) || Number(d.holeAnimLevel) < 0.4 || Number(d.holeAnimLevel) > 2.2) return "黑洞动画强度非法";
       if (!Number.isInteger(d.aiSleepTime) || d.aiSleepTime < 50) return "AI 等待时间非法";
       if (!(d.launchDelaySeconds >= 0.5 && d.launchDelaySeconds <= 10)) return "启动延迟时间非法";
       if (!d.hotkeys || typeof d.hotkeys !== "object") return "快捷键数据无效";
@@ -2151,6 +2185,10 @@
           state.selectedPromptTemplateId = "";
         render();
         setStatus("已连接", "ok");
+        lastSavedHash = stableStringify(state.data);
+        lastSentHash = lastSavedHash;
+        pendingSaveHash = "";
+        saveInFlight = false;
         if (state.activeTab === "search")
           requestFullTextStatus(true);
         initDataReceived = true;
@@ -2198,7 +2236,19 @@
         }
         return;
       }
-      if (msg.type === "saveResult") { setStatus(msg.ok ? "保存成功" : (msg.error || "保存失败"), msg.ok ? "ok" : "err"); return; }
+      if (msg.type === "saveResult") {
+        saveInFlight = false;
+        if (msg.ok) {
+          lastSavedHash = lastSentHash || stableStringify(readFromUI());
+          setStatus("保存成功", "ok");
+          if (pendingSaveHash && pendingSaveHash !== lastSavedHash) {
+            scheduleAutoSave(10);
+          }
+        } else {
+          setStatus(msg.error || "保存失败", "err");
+        }
+        return;
+      }
       if (msg.type === "saveKeybinderToolbarLayoutResult") {
         setStatus(msg.ok ? "工具栏与右键菜单已写入配置" : (msg.error || "保存失败"), msg.ok ? "ok" : "err");
         return;

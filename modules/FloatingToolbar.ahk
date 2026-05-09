@@ -226,7 +226,7 @@ ShowFloatingToolbar() {
 
     FloatingToolbarLoadScale()
 
-    if (FloatingToolbarGUI = 0) {
+    if (!IsSet(FloatingToolbarGUI) || FloatingToolbarGUI = 0) {
         CreateFloatingToolbarGUI()
     }
 
@@ -407,7 +407,7 @@ FloatingToolbar_OnNavigationCompleted(sender, args) {
 FloatingToolbarApplyRoundedCorners() {
     global FloatingToolbarGUI
 
-    if (FloatingToolbarGUI = 0) {
+    if (!IsSet(FloatingToolbarGUI) || FloatingToolbarGUI = 0) {
         return
     }
 
@@ -2087,7 +2087,7 @@ FloatingToolbar_EndDrag() {
 FloatingToolbarCheckWindowPosition() {
     global FloatingToolbarGUI, FloatingToolbarWindowX, FloatingToolbarWindowY, FloatingToolbarDragging, FloatingToolbarIsVisible
 
-    if (!FloatingToolbarIsVisible || FloatingToolbarGUI = 0)
+    if (!FloatingToolbarIsVisible || !IsSet(FloatingToolbarGUI) || FloatingToolbarGUI = 0)
         return
 
     if (FloatingToolbarDragging)
@@ -2217,7 +2217,7 @@ SaveFloatingToolbarPosition() {
     global FloatingToolbarGUI, FloatingToolbarWindowX, FloatingToolbarWindowY
     global FloatingToolbarChatDrawerOpen, FloatingToolbarLastClosedX, FloatingToolbarLastClosedY
 
-    if (FloatingToolbarGUI = 0)
+    if (!IsSet(FloatingToolbarGUI) || FloatingToolbarGUI = 0)
         return
 
     try {
@@ -2675,7 +2675,7 @@ FloatingToolbarCalculateHeight() {
 MinimizeFloatingToolbarToEdge() {
     global FloatingToolbarGUI, FloatingToolbarIsVisible
 
-    if (!FloatingToolbarIsVisible || FloatingToolbarGUI = 0)
+    if (!FloatingToolbarIsVisible || !IsSet(FloatingToolbarGUI) || FloatingToolbarGUI = 0)
         return
 
     ; Prefer bubble mode as the minimized representation.
