@@ -27,6 +27,10 @@ global NativeDropHideDelayMs := 1800
 global NativeDropSessionPayload := "text"
 global NativeDropOverHole := false
 global NativeDropWasOverHole := false
+global NativeDropSeedText := ""
+global NativeDropLastEventTick := 0
+global NativeDropLastTickMouseX := 0
+global NativeDropLastTickMouseY := 0
 ; Diagnostic mode: make drop receiver full-screen to verify hit path.
 ; Keep disabled in production. Full-screen receiver can degrade desktop interaction.
 global NativeDropBridgeFullScreenHitTest := false
@@ -2654,6 +2658,7 @@ NativeDropBridge_Start() {
         Run(cmd, A_ScriptDir, "Hide", &pid)
         NativeDropBridgePID := pid
         SetTimer(NativeDropBridge_Poll, 250)
+        SetTimer(NativeDropBridge_Watchdog, 180)
     } catch {
     }
 }
@@ -2683,6 +2688,7 @@ NativeDropBridge_GetDropRect() {
 NativeDropBridge_Stop() {
     global NativeDropBridgePID
     try SetTimer(NativeDropBridge_Poll, 0)
+    try SetTimer(NativeDropBridge_Watchdog, 0)
     if (NativeDropBridgePID && ProcessExist(NativeDropBridgePID)) {
         try ProcessClose(NativeDropBridgePID)
     }
@@ -2690,7 +2696,7 @@ NativeDropBridge_Stop() {
 }
 
 NativeDropBridge_Poll(*) {
-    global NativeDropBridgeOut, NativeDropBridgeReadOffset, NativeDropBridgeLastEvent
+    global NativeDropBridgeOut, NativeDropBridgeReadOffset, NativeDropBridgeLastEvent, NativeDropLastEventTick
     try {
         if !FileExist(NativeDropBridgeOut)
             return
@@ -2707,6 +2713,7 @@ NativeDropBridge_Poll(*) {
             try {
                 evt := Jxon_Load(line)
                 NativeDropBridgeLastEvent := evt
+                NativeDropLastEventTick := A_TickCount
                 try NativeDropDiag_Log("evt " . line)
                 try {
                     k := ""
@@ -2724,7 +2731,7 @@ NativeDropBridge_Poll(*) {
 }
 
 NativeDropBridge_TriggerHolePulse(evt) {
-    global EnableHoleOverlayOnNativeDrop, NativeDropSessionActive, NativeDropHideDelayMs, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole
+    global EnableHoleOverlayOnNativeDrop, NativeDropSessionActive, NativeDropHideDelayMs, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
     if !EnableHoleOverlayOnNativeDrop
         return
     if !IsObject(evt)
@@ -2740,7 +2747,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
         payloadRaw := ""
     }
     kindMapped := NativeDropBridge_NormalizeHolePayloadKind(payloadRaw)
-    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . kindRaw . "', dispatch: 'route' })")
+    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . kindRaw . "', dispatch: 'route', active: " . (NativeDropSessionActive ? "1" : "0") . ", overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
     fallbackPayload := ""
     if (kindRaw = "drag_start" || kindRaw = "drag_enter") {
         if (kindMapped = "")
@@ -2759,10 +2766,14 @@ NativeDropBridge_TriggerHolePulse(evt) {
         NativeDropSessionPayload := kindMapped
         NativeDropOverHole := false
         NativeDropWasOverHole := false
+        if (kindMapped = "text")
+            NativeDropSeedText := NativeDropBridge_CaptureTextSeed()
+        else
+            NativeDropSeedText := ""
         try SetTimer(NativeDropBridge_DelayedHide, 0) ; cancel pending hide
         try SetTimer(NativeDropBridge_DragSessionTick, 60)
         try NativeDropDiag_Log("route kind=" . kindRaw . " action=show payload=" . payloadRaw . " mapped=" . kindMapped . (fallbackPayload != "" ? " fallback=" . fallbackPayload : ""))
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . kindRaw . "', dispatch: 'show:" . kindMapped . "' })")
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . kindRaw . "', dispatch: 'show:" . kindMapped . "', active: 1, overHole: 0, wasOverHole: 0, payload: '" . kindMapped . "' })")
         try {
             GDHO_Init()
             GDHO_Show(kindMapped)
@@ -2777,17 +2788,12 @@ NativeDropBridge_TriggerHolePulse(evt) {
     if (kindRaw = "drag_end") {
         try {
             try NativeDropDiag_Log("route drag_end over_hole=" . (NativeDropOverHole ? "1" : "0") . " payload=" . NativeDropSessionPayload)
-            try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_end', dispatch: 'over_hole=" . (NativeDropOverHole ? "1" : "0") . "' })")
+            try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_end', dispatch: 'over_hole=" . (NativeDropOverHole ? "1" : "0") . "', active: 1, overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
             if (NativeDropSessionPayload = "text" && (NativeDropOverHole || NativeDropWasOverHole))
-                NativeDropBridge_TryOpenSearchCenterFromSelection()
+                NativeDropBridge_TryOpenSearchCenterFromSelection(NativeDropSeedText)
         } catch {
         }
-        NativeDropSessionActive := false
-        NativeDropOverHole := false
-        NativeDropWasOverHole := false
-        try SetTimer(NativeDropBridge_DragSessionTick, 0)
-        try NativeDropDiag_Log("route kind=drag_end action=hide_delay ms=" . NativeDropHideDelayMs)
-        try SetTimer(NativeDropBridge_DelayedHide, -Abs(Integer(NativeDropHideDelayMs)))
+        NativeDropBridge_ResetSession("drag_end", NativeDropHideDelayMs)
         return
     }
 
@@ -2801,7 +2807,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
         }
         NativeDropSessionPayload := kind
         try NativeDropDiag_Log("route kind=drop payload=" . payloadRaw . " mapped=" . kind . (fallbackPayload != "" ? " fallback=" . fallbackPayload : ""))
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drop', dispatch: 'mapped:" . kind . "' })")
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drop', dispatch: 'mapped:" . kind . "', active: 1, overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . kind . "' })")
         try {
             SetTimer(NativeDropBridge_DelayedHide, 0)
             SetTimer(NativeDropBridge_DragSessionTick, 0)
@@ -2813,6 +2819,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
         } catch {
         }
         try NativeDropBridge_ApplyDropAction(evt, kind)
+        NativeDropBridge_ResetSession("drop", 300)
         return
     }
 
@@ -2833,6 +2840,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
 }
 
 NativeDropBridge_ApplyDropAction(evt, kind := "") {
+    global NativeDropSeedText
     kind0 := StrLower(Trim(String(kind)))
     if (kind0 = "")
         kind0 := "text"
@@ -2843,6 +2851,10 @@ NativeDropBridge_ApplyDropAction(evt, kind := "") {
             t := Trim(String(evt["text"]))
         if (t = "" && IsObject(evt) && evt.Has("link"))
             t := Trim(String(evt["link"]))
+        if (t = "")
+            t := Trim(String(NativeDropSeedText))
+        if (t = "")
+            t := NativeDropBridge_CaptureTextSeed()
         try FloatingToolbar_ActivateSearchCenter()
         try SetTimer(FloatingToolbar_ActivateSearchCenter, -60)
         if (t != "") {
@@ -2935,34 +2947,50 @@ NativeDropBridge_DelayedHide(*) {
 }
 
 NativeDropBridge_DragSessionTick(*) {
-    global NativeDropSessionActive, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole
+    global NativeDropSessionActive, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
+    global NativeDropLastTickMouseX, NativeDropLastTickMouseY
     if !NativeDropSessionActive
         return
     try {
         GDHO_SetClickThrough(false)
         CoordMode("Mouse", "Screen")
         MouseGetPos(&mx, &my)
+        NativeDropLastTickMouseX := mx
+        NativeDropLastTickMouseY := my
         NativeDropOverHole := GDHO_IsPointInHole(mx, my, 30)
         if NativeDropOverHole
             NativeDropWasOverHole := true
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: '" . (NativeDropOverHole ? "over_hole" : "tracking") . "' })")
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: '" . (NativeDropOverHole ? "over_hole" : "tracking") . "', active: 1, overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
         GDHO_Update(NativeDropSessionPayload, mx, my)
         ; If OS missed/late drag_end, use physical release fallback to avoid losing command dispatch.
         if !GetKeyState("LButton", "P") {
             if (NativeDropSessionPayload = "text" && NativeDropWasOverHole) {
                 try NativeDropDiag_Log("route release_fallback action=open_search was_over_hole=1")
                 try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'release_fallback', dispatch: 'release_detected' })")
-                ok := NativeDropBridge_TryOpenSearchCenterFromSelection()
+                ok := NativeDropBridge_TryOpenSearchCenterFromSelection(NativeDropSeedText)
                 try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'release_fallback', dispatch: '" . (ok ? "search_opened" : "search_failed") . "' })")
             }
-            NativeDropSessionActive := false
-            NativeDropOverHole := false
-            NativeDropWasOverHole := false
-            try SetTimer(NativeDropBridge_DragSessionTick, 0)
-            try SetTimer(NativeDropBridge_DelayedHide, -300)
+            NativeDropBridge_ResetSession("release_fallback", 300)
             return
         }
     } catch {
+    }
+}
+
+NativeDropBridge_Watchdog(*) {
+    global NativeDropSessionActive, NativeDropLastEventTick, NativeDropLastTickMouseX, NativeDropLastTickMouseY
+    if !NativeDropSessionActive
+        return
+    now := A_TickCount
+    idleMs := (NativeDropLastEventTick > 0) ? (now - NativeDropLastEventTick) : 0
+    physDown := GetKeyState("LButton", "P")
+    logDown := GetKeyState("LButton")
+    ; Force cleanup if session is stale or button already released but state still active.
+    if ((!physDown && !logDown) || (idleMs > 2200)) {
+        try NativeDropDiag_Log("route watchdog action=force_reset phys=" . (physDown ? "1" : "0") . " log=" . (logDown ? "1" : "0") . " idle_ms=" . idleMs)
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'watchdog', dispatch: 'force_reset', active: 0, overHole: 0, wasOverHole: 0, payload: '-' })")
+        NativeDropBridge_ResetSession("watchdog", 120)
+        return
     }
 }
 
@@ -2976,15 +3004,10 @@ NativeDropBridge_NormalizeHolePayloadKind(kindRaw) {
     return ""
 }
 
-NativeDropBridge_TryOpenSearchCenterFromSelection() {
-    t := ""
-    try t := Trim(String(SelectionSense_GetLastSelectedText()))
-    catch {
-        t := ""
-    }
-    if (t = "") {
-        try t := Trim(String(A_Clipboard))
-    }
+NativeDropBridge_TryOpenSearchCenterFromSelection(preferredText := "") {
+    t := Trim(String(preferredText))
+    if (t = "")
+        t := NativeDropBridge_CaptureTextSeed()
     try FloatingToolbar_ActivateSearchCenter()
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'search_center', dispatch: 'opened' })")
     try SetTimer(FloatingToolbar_ActivateSearchCenter, -60)
@@ -2998,6 +3021,41 @@ NativeDropBridge_TryOpenSearchCenterFromSelection() {
         try NativeDropDiag_Log("route drag_end_text action=open_search_no_text")
     }
     return true
+}
+
+NativeDropBridge_CaptureTextSeed() {
+    t := ""
+    try t := Trim(String(SelectionSense_GetLastSelectedText()))
+    catch {
+        t := ""
+    }
+    if (t = "") {
+        try t := Trim(String(A_Clipboard))
+    }
+    return t
+}
+
+NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300) {
+    global NativeDropSessionActive, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
+    global NativeDropLastTickMouseX, NativeDropLastTickMouseY
+    NativeDropSessionActive := false
+    NativeDropOverHole := false
+    NativeDropWasOverHole := false
+    NativeDropSeedText := ""
+    NativeDropLastTickMouseX := 0
+    NativeDropLastTickMouseY := 0
+    try SetTimer(NativeDropBridge_DragSessionTick, 0)
+    if (hideDelayMs < 0)
+        hideDelayMs := 0
+    if (hideDelayMs = 0) {
+        try GDHO_HideFrontend()
+        try GDHO_HideOverlay()
+    } else {
+        try SetTimer(NativeDropBridge_DelayedHide, -Abs(Integer(hideDelayMs)))
+    }
+    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'reset', dispatch: '" . reason . "', active: 0, overHole: 0, wasOverHole: 0, payload: '-' })")
+    if (reason != "")
+        try NativeDropDiag_Log("route reset_session reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
 }
 
 NativeDropDiag_Log(msg) {
