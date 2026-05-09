@@ -31,6 +31,14 @@ type App struct {
 	dropMgr  *dropManager
 }
 
+type SnapshotResult struct {
+	OK     bool   `json:"ok"`
+	Base64 string `json:"base64,omitempty"`
+	Width  int    `json:"width,omitempty"`
+	Height int    `json:"height,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
 func NewApp() *App {
 	return &App{
 		commands: []QuickAction{
@@ -48,6 +56,7 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	go a.enableWindowResidentMode()
 
 	// Safety gate: native OLE drop listener is opt-in for now.
 	// Set NMER_NATIVE_DROP=1 to enable after UI stability is confirmed.
@@ -60,6 +69,20 @@ func (a *App) startup(ctx context.Context) {
 	if err := a.dropMgr.start(); err != nil {
 		runtime.LogErrorf(ctx, "native drop manager start failed: %v", err)
 	}
+}
+
+func (a *App) CaptureArea(x int, y int, w int, h int) SnapshotResult {
+	return captureAreaBase64(x, y, w, h)
+}
+
+func (a *App) FadeInWindow(durationMs int) ProcessResult {
+	if durationMs <= 0 {
+		durationMs = 140
+	}
+	if err := fadeInWailsWindow(durationMs); err != nil {
+		return ProcessResult{OK: false, Message: err.Error()}
+	}
+	return ProcessResult{OK: true, Message: "fade-in done"}
 }
 
 func (a *App) shutdown(ctx context.Context) {

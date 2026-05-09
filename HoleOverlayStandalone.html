@@ -73,6 +73,11 @@
           rgba(255, 255, 255, 0) 76%);
       animation: localAuraBreath 2.8s ease-in-out infinite;
     }
+    .safe-mode .local-fx {
+      filter: none;
+      opacity: .1;
+      animation: none;
+    }
     .show .hole-wrap { opacity: 1; transform: translateZ(0) scale(var(--hole-scale)); }
     .base-hole,.aura,.ring,.well {
       position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%;
@@ -88,6 +93,10 @@
       opacity: calc(.2 + var(--p) * .75);
       transform: translateX(-50%) scale(calc(.92 + var(--p) * .24));
     }
+    .safe-mode .aura {
+      filter: none;
+      opacity: calc(.14 + var(--p) * .45);
+    }
     .ring {
       bottom: 24px; width: 60%; height: 27%;
       border: 1.5px solid rgba(210,248,255, calc(.35 + var(--p) * .6));
@@ -95,6 +104,11 @@
       opacity: calc(.28 + var(--p) * .72);
       transform: translateX(-50%) scale(calc(.9 + var(--p) * .24));
       box-shadow: 0 0 calc(8px + var(--p) * 20px) rgba(122,235,255, calc(.3 + var(--p) * .45)), 0 0 calc(20px + var(--p) * 42px) rgba(235,171,255, calc(.12 + var(--p) * .35));
+    }
+    .safe-mode .ring {
+      box-shadow: none;
+      background: rgba(130,245,255, calc(.2 + var(--p) * .55));
+      border-color: rgba(190,245,255, calc(.28 + var(--p) * .45));
     }
     .well {
       bottom: 29px; width: 45%; height: 17%;
@@ -107,6 +121,12 @@
     .drop .aura { animation: auraFlash 620ms cubic-bezier(.13,.84,.24,1); }
     .drop .local-fx { animation: localAuraDrop 620ms cubic-bezier(.13,.84,.24,1); }
     .drop .hint { opacity: 1; }
+    .safe-mode.drop .ring,
+    .safe-mode.drop .well,
+    .safe-mode.drop .aura,
+    .safe-mode.drop .local-fx {
+      animation-duration: 320ms;
+    }
     @keyframes localAuraBreath {
       0% { transform: translateX(-50%) scale(.96); opacity: .16; }
       50% { transform: translateX(-50%) scale(1.04); opacity: .28; }
@@ -180,12 +200,22 @@
         }
         hint.textContent = payloadType === 'text' ? '拖到这里开始搜索' : '拖到这里处理文件';
       }
+      function setSafeMode(on) {
+        root.classList.toggle('safe-mode', !!on);
+      }
       function show(payload) {
         if (payload === 'text' || payload === 'file') payloadType = payload;
+        setSafeMode(true);
         root.classList.add('show');
         hintTextByState('idle');
       }
-      function hide() { root.classList.remove('show'); root.classList.remove('drop'); setP(0); }
+      function hide() {
+        root.classList.remove('show');
+        root.classList.remove('drop');
+        root.classList.remove('near');
+        setSafeMode(false);
+        setP(0);
+      }
       function setStyle(scale, animLevel) {
         var s = Number(scale);
         if (!Number.isFinite(s)) s = 1;

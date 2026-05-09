@@ -242,3 +242,91 @@
 [2026-05-09 09:02:15] route kind=drag_end action=hide_delay ms=1800
 [2026-05-09 09:02:16] evt {"at":"2026-05-09T09:02:16+08:00","kind":"drag_start","payloadKind":"none","x":1107,"y":551}
 [2026-05-09 09:02:16] route kind=drag_start action=show
+[2026-05-09 09:14:34] evt {"at":"2026-05-09T09:14:34+08:00","kind":"bridge_ready","x":511,"y":524,"w":170,"h":210}
+[2026-05-09 09:14:42] evt {"at":"2026-05-09T09:14:42+08:00","kind":"drag_start","payloadKind":"none","x":524,"y":799}
+[2026-05-09 09:14:42] route kind=drag_start action=show
+[2026-05-09 09:14:43] evt {"at":"2026-05-09T09:14:43+08:00","kind":"drag_end","payloadKind":"none","x":862,"y":842}
+[2026-05-09 09:14:43] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:14:45] route delayed_hide action=hide_now
+[2026-05-09 09:14:49] evt {"at":"2026-05-09T09:14:49+08:00","kind":"bridge_ready","x":892,"y":572,"w":170,"h":210}
+[2026-05-09 09:14:57] evt {"at":"2026-05-09T09:14:57+08:00","kind":"drag_start","payloadKind":"none","x":1013,"y":459}
+[2026-05-09 09:14:57] route kind=drag_start action=show
+[2026-05-09 09:14:58] evt {"at":"2026-05-09T09:14:58+08:00","kind":"drag_end","payloadKind":"none","x":1120,"y":452}
+[2026-05-09 09:14:58] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:15:00] route delayed_hide action=hide_now
+[2026-05-09 09:15:02] evt {"at":"2026-05-09T09:15:02+08:00","kind":"drag_start","payloadKind":"none","x":1114,"y":457}
+[2026-05-09 09:15:02] route kind=drag_start action=show
+[2026-05-09 09:15:03] evt {"at":"2026-05-09T09:15:02+08:00","kind":"drag_end","payloadKind":"none","x":1039,"y":458}
+[2026-05-09 09:15:03] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:15:04] route delayed_hide action=hide_now
+[2026-05-09 09:16:03] evt {"at":"2026-05-09T09:16:03+08:00","kind":"bridge_ready","x":892,"y":572,"w":170,"h":210}
+[2026-05-09 09:16:13] evt {"at":"2026-05-09T09:16:13+08:00","kind":"drag_start","payloadKind":"none","x":1096,"y":456}
+[2026-05-09 09:16:13] route kind=drag_start action=show
+[2026-05-09 09:16:14] evt {"at":"2026-05-09T09:16:14+08:00","kind":"drag_end","payloadKind":"none","x":1205,"y":457}
+[2026-05-09 09:16:14] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:16:16] route delayed_hide action=hide_now
+[2026-05-09 09:17:34] evt {"at":"2026-05-09T09:17:34+08:00","kind":"bridge_ready","x":892,"y":571,"w":170,"h":210}
+[2026-05-09 09:17:47] evt {"at":"2026-05-09T09:17:47+08:00","kind":"drag_start","payloadKind":"none","x":1186,"y":671}
+[2026-05-09 09:17:47] route kind=drag_start action=show
+[2026-05-09 09:17:54] evt {"at":"2026-05-09T09:17:54+08:00","kind":"drag_end","payloadKind":"none","x":1287,"y":674}
+[2026-05-09 09:17:54] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:17:56] route delayed_hide action=hide_now
+[2026-05-09 09:17:58] evt {"at":"2026-05-09T09:17:57+08:00","kind":"drag_start","payloadKind":"none","x":1207,"y":674}
+[2026-05-09 09:17:58] route kind=drag_start action=show
+[2026-05-09 09:17:58] evt {"at":"2026-05-09T09:17:58+08:00","kind":"drag_end","payloadKind":"none","x":1262,"y":679}
+[2026-05-09 09:17:58] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:18:00] route delayed_hide action=hide_now
+[2026-05-09 09:18:19] evt {"at":"2026-05-09T09:18:18+08:00","kind":"drag_start","payloadKind":"none","x":230,"y":514}
+[2026-05-09 09:18:19] route kind=drag_start action=show
+[2026-05-09 09:18:22] evt {"at":"2026-05-09T09:18:22+08:00","kind":"drag_end","payloadKind":"none","x":389,"y":690}
+[2026-05-09 09:18:22] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:18:24] route delayed_hide action=hide_now
+[2026-05-09 09:18:25] evt {"at":"2026-05-09T09:18:25+08:00","kind":"drag_start","payloadKind":"none","x":1108,"y":783}
+[2026-05-09 09:18:25] route kind=drag_start action=show
+[2026-05-09 09:18:27] evt {"at":"2026-05-09T09:18:26+08:00","kind":"drag_end","payloadKind":"none","x":1137,"y":844}
+[2026-05-09 09:18:27] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:18:28] route delayed_hide action=hide_now
+[2026-05-09 09:18:32] evt {"at":"2026-05-09T09:18:32+08:00","kind":"drag_start","payloadKind":"none","x":1253,"y":812}
+[2026-05-09 09:18:32] route kind=drag_start action=show
+[2026-05-09 09:18:33] evt {"at":"2026-05-09T09:18:33+08:00","kind":"drag_end","payloadKind":"none","x":1280,"y":847}
+[2026-05-09 09:18:33] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:18:35] route delayed_hide action=hide_now
+[2026-05-09 09:24:09] evt {"at":"2026-05-09T09:24:09+08:00","kind":"drag_start","payloadKind":"none","x":1506,"y":582}
+[2026-05-09 09:24:09] route kind=drag_start action=show
+[2026-05-09 09:24:10] evt {"at":"2026-05-09T09:24:10+08:00","kind":"drag_end","payloadKind":"none","x":1521,"y":617}
+[2026-05-09 09:24:10] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:24:12] route delayed_hide action=hide_now
+[2026-05-09 09:33:59] evt {"at":"2026-05-09T09:33:58+08:00","kind":"bridge_ready","x":908,"y":555,"w":170,"h":210}
+[2026-05-09 09:34:15] evt {"at":"2026-05-09T09:34:15+08:00","kind":"drag_start","payloadKind":"none","x":1105,"y":613}
+[2026-05-09 09:34:15] route kind=drag_start action=show
+[2026-05-09 09:34:16] evt {"at":"2026-05-09T09:34:16+08:00","kind":"drag_end","payloadKind":"none","x":1190,"y":614}
+[2026-05-09 09:34:16] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:34:16] evt {"at":"2026-05-09T09:34:16+08:00","kind":"drag_start","payloadKind":"none","x":1128,"y":614}
+[2026-05-09 09:34:16] route kind=drag_start action=show
+[2026-05-09 09:34:17] evt {"at":"2026-05-09T09:34:17+08:00","kind":"drag_end","payloadKind":"none","x":1075,"y":614}
+[2026-05-09 09:34:17] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:34:19] route delayed_hide action=hide_now
+[2026-05-09 09:34:56] evt {"at":"2026-05-09T09:34:56+08:00","kind":"drag_start","payloadKind":"none","x":262,"y":468}
+[2026-05-09 09:34:56] route kind=drag_start action=show
+[2026-05-09 09:35:00] evt {"at":"2026-05-09T09:35:00+08:00","kind":"drag_end","payloadKind":"none","x":492,"y":490}
+[2026-05-09 09:35:00] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:35:02] route delayed_hide action=hide_now
+[2026-05-09 09:35:11] evt {"at":"2026-05-09T09:35:11+08:00","kind":"bridge_ready","x":825,"y":564,"w":170,"h":210}
+[2026-05-09 09:35:16] evt {"at":"2026-05-09T09:35:16+08:00","kind":"drag_start","payloadKind":"none","x":1152,"y":606}
+[2026-05-09 09:35:16] route kind=drag_start action=show
+[2026-05-09 09:35:16] evt {"at":"2026-05-09T09:35:16+08:00","kind":"drag_end","payloadKind":"none","x":1198,"y":603}
+[2026-05-09 09:35:16] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:35:19] evt {"at":"2026-05-09T09:35:18+08:00","kind":"drag_start","payloadKind":"none","x":1226,"y":607}
+[2026-05-09 09:35:19] route kind=drag_start action=show
+[2026-05-09 09:35:41] evt {"at":"2026-05-09T09:35:41+08:00","kind":"bridge_ready","x":825,"y":564,"w":170,"h":210}
+[2026-05-09 09:35:52] evt {"at":"2026-05-09T09:35:52+08:00","kind":"drag_start","payloadKind":"none","x":1244,"y":613}
+[2026-05-09 09:35:52] route kind=drag_start action=show
+[2026-05-09 09:35:53] evt {"at":"2026-05-09T09:35:53+08:00","kind":"drag_end","payloadKind":"none","x":1357,"y":613}
+[2026-05-09 09:35:53] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:35:55] route delayed_hide action=hide_now
+[2026-05-09 09:35:57] evt {"at":"2026-05-09T09:35:56+08:00","kind":"drag_start","payloadKind":"none","x":1225,"y":615}
+[2026-05-09 09:35:57] route kind=drag_start action=show
+[2026-05-09 09:35:57] evt {"at":"2026-05-09T09:35:57+08:00","kind":"drag_end","payloadKind":"none","x":1337,"y":607}
+[2026-05-09 09:35:57] route kind=drag_end action=hide_delay ms=1800
+[2026-05-09 09:35:58] evt {"at":"2026-05-09T09:35:58+08:00","kind":"drag_start","payloadKind":"none","x":1308,"y":617}
+[2026-05-09 09:35:58] route kind=drag_start action=show

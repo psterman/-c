@@ -65,6 +65,9 @@ function HolePage() {
   const [proximity, setProximity] = useState(0);
   const [hint, setHint] = useState("拖文字或文件靠近洞口");
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [snapshotBg, setSnapshotBg] = useState("");
+  const [snapshotVisible, setSnapshotVisible] = useState(false);
+  const [renderLocked, setRenderLocked] = useState(false);
 
   const holeRef = useRef(null);
   const dragCounterRef = useRef(0);
@@ -83,6 +86,9 @@ function HolePage() {
     setTimeout(() => {
       setPayloadType("none");
       setHint(applyPhaseHint("none", "idle"));
+      setSnapshotVisible(false);
+      setRenderLocked(false);
+      setSnapshotBg("");
       if (hide) setHoleVisible(false);
     }, 560);
   };
@@ -214,6 +220,7 @@ function HolePage() {
 
     return () => {
       if (typeof offNativeDrop === "function") offNativeDrop();
+      if (typeof offNativeIntent === "function") offNativeIntent();
       endMove();
       if (window.HoleOverlay) delete window.HoleOverlay;
     };
@@ -286,7 +293,7 @@ function HolePage() {
     <main className="hole-stage">
       <section
         ref={holeRef}
-        className={`floating-hole ${holeVisible ? "" : "hidden"} ${dragging ? "dragging" : ""} ${dropPulse ? "drop-pulse" : ""} payload-${payloadType}`}
+        className={`floating-hole ${holeVisible ? "" : "hidden"} ${dragging ? "dragging" : ""} ${dropPulse ? "drop-pulse" : ""} ${renderLocked ? "render-locked" : ""} payload-${payloadType}`}
         style={{ "--proximity": proximity.toFixed(3), left: `${position.x}px`, top: `${position.y}px` }}
         onDragEnter={(e) => {
           e.preventDefault();
@@ -309,6 +316,7 @@ function HolePage() {
         }}
         onDrop={onHoleDrop}
       >
+        <div className={`snapshot-bg ${snapshotVisible ? "show" : ""}`} style={snapshotBg ? { backgroundImage: `url(${snapshotBg})` } : undefined} />
         <button type="button" className="hole-grip" onPointerDown={beginMove} title="按住拖动位置" aria-label="拖动洞位置" />
         <button
           type="button"
@@ -333,3 +341,21 @@ function HolePage() {
 
 createRoot(document.getElementById("root")).render(<HolePage />);
 
+    const offNativeIntent = EventsOn("native_drag_intent", async (eventPayload) => {
+      const p = Array.isArray(eventPayload) ? eventPayload[0] : eventPayload;
+      const x = Number(p?.dropX || 0);
+      const y = Number(p?.dropY || 0);
+      setRenderLocked(true);
+      setSnapshotVisible(true);
+      try {
+        const cap = await window?.go?.main?.App?.CaptureArea?.(Math.max(0, x - 110), Math.max(0, y - 90), 220, 220);
+        if (cap?.ok && cap?.base64) {
+          setSnapshotBg(String(cap.base64));
+        }
+      } catch (_) {}
+      try {
+        await window?.go?.main?.App?.FadeInWindow?.(140);
+      } catch (_) {}
+      setTimeout(() => setSnapshotVisible(false), 200);
+      setTimeout(() => setRenderLocked(false), 220);
+    });

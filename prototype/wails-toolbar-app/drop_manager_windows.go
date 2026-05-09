@@ -66,6 +66,13 @@ type nativeDropPayload struct {
 	Succeeded bool     `json:"succeeded"`
 }
 
+type nativeDragIntentPayload struct {
+	Kind   string `json:"kind"`
+	DropX  int32  `json:"dropX"`
+	DropY  int32  `json:"dropY"`
+	Source string `json:"source"`
+}
+
 func newDropManager(ctx context.Context) *dropManager {
 	return &dropManager{
 		ctx:    ctx,
@@ -176,6 +183,13 @@ func (m *dropManager) emitDrop(payload nativeDropPayload) {
 		return
 	}
 	wailsruntime.EventsEmit(m.ctx, "native_drop_detected", payload)
+}
+
+func (m *dropManager) emitDragIntent(payload nativeDragIntentPayload) {
+	if m.ctx == nil {
+		return
+	}
+	wailsruntime.EventsEmit(m.ctx, "native_drag_intent", payload)
 }
 
 type msg struct {
@@ -363,9 +377,16 @@ func newDropTarget(mgr *dropManager) *dropTarget {
 func (d *dropTarget) dragEnter(dataObj *iDataObject, keyState uint32, pt pointl, effect *uint32) uintptr {
 	_ = dataObj
 	_ = keyState
-	_ = pt
 	if effect != nil {
 		*effect = dropEffectCopy
+	}
+	if d.mgr != nil {
+		d.mgr.emitDragIntent(nativeDragIntentPayload{
+			Kind:   "drag_enter",
+			DropX:  pt.X,
+			DropY:  pt.Y,
+			Source: "native_ole",
+		})
 	}
 	return sOk
 }

@@ -20,6 +20,8 @@ global GDHO_MONITORING := false
 global GDHO_PAGE_URL := "http://127.0.0.1:5173/hole.html"
 global GDHO_FALLBACK_URL := ""
 global GDHO_NAV_FAIL_COUNT := 0
+global GDHO_PREWARM_DONE := false
+global GDHO_FIRST_REVEAL_DONE := false
 
 ; drag pre-judge parameters
 global GDHO_MIN_MOVE_PX := 10
@@ -142,6 +144,8 @@ GDHO_Init() {
     GDHO_WV2_CTRL := 0
     GDHO_WV2 := 0
     GDHO_READY := false
+    GDHO_PREWARM_DONE := false
+    GDHO_FIRST_REVEAL_DONE := false
     GDHO_VISIBLE := false
     try WebView2.create(GDHO_GUI.Hwnd, GDHO_OnWebViewCreated, WebView2_EnsureSharedEnvBlocking())
 }
@@ -157,11 +161,13 @@ GDHO_CreateOverlayGui() {
     x := Integer(vl + 24), y := Integer(vt + 24)
     ; WS_EX_LAYERED + WS_EX_TRANSPARENT + WS_EX_NOACTIVATE
     GDHO_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x08080020", "Global Drag Hole Overlay")
-    GDHO_GUI.BackColor := "000000"
+    ; Use dedicated chroma key to keep host transparent before first WebView paint.
+    GDHO_GUI.BackColor := "010101"
     ; Click-through + no activate overlay host.
     GDHO_GUI.Show("Hide x" x " y" y " w" hostW " h" hostH " NoActivate")
-    ; Keep window normal opacity; visual transparency comes from WebView + trans color.
+    ; Keep window normal opacity; transparency comes from chroma-key immediately.
     try WinSetTransparent(255, "ahk_id " GDHO_GUI.Hwnd)
+    try WinSetTransColor("010101", "ahk_id " GDHO_GUI.Hwnd)
 }
 
 GDHO_SetClickThrough(enable := true) {
@@ -257,7 +263,7 @@ GDHO_HandleDropPayload(payload) {
 
 GDHO_OnNavigationCompleted(sender, args) {
     global GDHO_READY, GDHO_GUI, GDHO_WV2_CTRL, GDHO_WV2
-    global GDHO_FALLBACK_URL, GDHO_NAV_FAIL_COUNT, GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD
+    global GDHO_FALLBACK_URL, GDHO_NAV_FAIL_COUNT, GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD, GDHO_PREWARM_DONE
     ok := false
     try ok := args.IsSuccess
     GDHO_READY := !!ok
@@ -265,7 +271,12 @@ GDHO_OnNavigationCompleted(sender, args) {
         GDHO_NAV_FAIL_COUNT := 0
         ; Re-apply transparency after document init to avoid occasional white/black flash.
         try GDHO_WV2_CTRL.DefaultBackgroundColor := 0x00000000
-        try WinSetTransColor("000000", "ahk_id " GDHO_GUI.Hwnd)
+        try WinSetTransColor("010101", "ahk_id " GDHO_GUI.Hwnd)
+        if !GDHO_PREWARM_DONE {
+            GDHO_PREWARM_DONE := true
+            ; Warm-up strategy: render one full state offscreen, then hide.
+            SetTimer(GDHO_PrewarmOffscreen, -40)
+        }
         if GDHO_DESKTOP_PINNED {
             p := (GDHO_PIN_PAYLOAD = "file") ? "file" : "text"
             SetTimer((*) => GDHO_RunJS("window.HoleOverlay?.show('" p "')"), -60)
@@ -292,6 +303,11 @@ GDHO_ResizeToVirtualScreen() {
     try GDHO_WV2_CTRL.Bounds := rc
 }
 
+GDHO_PrewarmOffscreen(*) {
+    ; Keep host window hidden; just force one render pass to prebuild GPU textures.
+    GDHO_RunJS("(function(){var h=window.HoleOverlay;if(!h)return;h.show('text');h.update({payload:'text',x:120,y:120,proximity:0.36});setTimeout(function(){try{h.hide();}catch(_e){}},90);})();")
+}
+
 GDHO_RunJS(js) {
     global GDHO_WV2, GDHO_READY
     if !(GDHO_WV2 && GDHO_READY)
@@ -305,14 +321,20 @@ GDHO_RunJS(js) {
 }
 
 GDHO_ShowOverlay() {
-    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_READY, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_HOST_W, GDHO_HOST_H
+    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_READY, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_HOST_W, GDHO_HOST_H, GDHO_FIRST_REVEAL_DONE
     if !GDHO_GUI
         return
     ; Avoid first-frame black flash: don't reveal host before WebView content is ready.
     if !GDHO_READY
         return
+    if !GDHO_FIRST_REVEAL_DONE {
+        GDHO_FIRST_REVEAL_DONE := true
+        SetTimer(GDHO_ShowOverlay, -16)
+        return
+    }
     if !GDHO_VISIBLE {
         try GDHO_GUI.Show("x" Integer(GDHO_LAST_HOST_X) " y" Integer(GDHO_LAST_HOST_Y) " w" Integer(GDHO_HOST_W) " h" Integer(GDHO_HOST_H) " NoActivate")
+        try WinSetTransColor("010101", "ahk_id " GDHO_GUI.Hwnd)
         GDHO_SetClickThrough(true)
         GDHO_KeepBelowToolbar()
         GDHO_VISIBLE := true
