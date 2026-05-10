@@ -5,17 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hole Overlay</title>
   <style>
-    @property --ring-angle {
-      syntax: '<angle>';
-      initial-value: 0deg;
-      inherits: false;
-    }
     :root {
       --p: 0;
-      --ai-red: #ea4335;
-      --ai-yellow: #fbbc05;
-      --ai-green: #34a853;
-      --ai-blue: #4285f4;
       --hint-text: rgba(218, 247, 255, .96);
       --hint-border: rgba(150, 238, 255, .44);
       --hint-bg1: rgba(20,58,88,.72);
@@ -77,10 +68,6 @@
     }
     :root[data-theme="light"] {}
     :root[data-theme="dark"] {
-      --ai-red: #ff6f3d;
-      --ai-yellow: #ffb347;
-      --ai-green: #4fd18b;
-      --ai-blue: #64a8ff;
       --hint-text: rgba(255, 214, 176, .96);
       --hint-border: rgba(255, 124, 42, .58);
       --hint-bg1: rgba(28,16,12,.9);
@@ -156,7 +143,7 @@
     .show .hint { opacity: .74; transform: translateX(-50%) translateY(0); }
     .near .hint {
       opacity: 1;
-      box-shadow: 0 0 18px var(--hint-shadow1), 0 0 30px var(--hint-shadow2);
+      box-shadow: 0 0 24px var(--hint-shadow1), 0 0 50px var(--hint-shadow2);
       transform: translateX(-50%) translateY(-2px);
     }
     .local-fx {
@@ -168,15 +155,15 @@
       transform: translateX(-50%);
       border-radius: 50%;
       pointer-events: none;
-      opacity: .13;
-      filter: blur(12px) saturate(.85);
+      opacity: .22;
+      filter: blur(16px);
       background:
         radial-gradient(ellipse at 50% 62%,
-          color-mix(in srgb, var(--ai-blue) 24%, transparent) 0%,
-          color-mix(in srgb, var(--ai-green) 18%, transparent) 30%,
-          color-mix(in srgb, var(--ai-red) 14%, transparent) 52%,
-          rgba(255, 255, 255, 0) 74%);
-      animation: localAuraBreath 3.6s ease-in-out infinite;
+          var(--local-a1) 0%,
+          var(--local-a2) 34%,
+          var(--local-a3) 54%,
+          rgba(255, 255, 255, 0) 76%);
+      animation: localAuraBreath 2.8s ease-in-out infinite;
     }
     .safe-mode .local-fx {
       filter: none;
@@ -194,37 +181,26 @@
     }
     .aura {
       bottom: 12px; width: 92%; height: 46%; filter: blur(11px);
-      background: conic-gradient(from var(--ring-angle),
-        color-mix(in srgb, var(--ai-blue) 68%, transparent) 0%,
-        color-mix(in srgb, var(--ai-green) 64%, transparent) 25%,
-        color-mix(in srgb, var(--ai-yellow) 60%, transparent) 50%,
-        color-mix(in srgb, var(--ai-red) 64%, transparent) 75%,
-        color-mix(in srgb, var(--ai-blue) 68%, transparent) 100%);
-      opacity: calc(.09 + var(--p) * .28);
+      background: radial-gradient(ellipse at 50% 58%, var(--aura-1), var(--aura-2) 48%, rgba(123,240,255,0) 74%);
+      opacity: calc(.2 + var(--p) * .75);
       transform: translateX(-50%) scale(calc(.92 + var(--p) * .24));
-      animation: ringOrbit 6.4s linear infinite, auraBreathSoft 4.4s ease-in-out infinite;
     }
     .safe-mode .aura {
       filter: none;
-      opacity: calc(.08 + var(--p) * .24);
+      opacity: calc(.14 + var(--p) * .45);
     }
     .ring {
       bottom: 24px; width: 60%; height: 27%;
-      border: 1px solid color-mix(in srgb, var(--ai-blue) 35%, rgba(255,255,255,.22));
-      background:
-        radial-gradient(ellipse at center, rgba(255,255,255,0) 58%, rgba(255,255,255,.05) 70%, rgba(255,255,255,0) 100%),
-        conic-gradient(from var(--ring-angle), var(--ai-blue), var(--ai-green), var(--ai-yellow), var(--ai-red), var(--ai-blue));
+      border: 1.5px solid var(--ring-border);
+      background: conic-gradient(from 0deg, rgba(255,255,255,0) 0 16%, var(--ring-2) 30%, var(--ring-3) 44%, var(--ring-4) 58%, var(--ring-5) 72%, rgba(255,255,255,0) 100%);
       opacity: calc(.28 + var(--p) * .72);
       transform: translateX(-50%) scale(calc(.9 + var(--p) * .24));
-      box-shadow:
-        0 0 calc(5px + var(--p) * 8px) color-mix(in srgb, var(--ai-blue) 22%, transparent),
-        0 0 calc(12px + var(--p) * 14px) color-mix(in srgb, var(--ai-green) 18%, transparent);
-      animation: ringOrbit 3.2s linear infinite;
+      box-shadow: 0 0 calc(8px + var(--p) * 20px) var(--ring-glow-1), 0 0 calc(20px + var(--p) * 42px) var(--ring-glow-2);
     }
     .safe-mode .ring {
       box-shadow: none;
-      background: conic-gradient(from var(--ring-angle), color-mix(in srgb, var(--ai-blue) 74%, transparent), color-mix(in srgb, var(--ai-green) 72%, transparent), color-mix(in srgb, var(--ai-yellow) 70%, transparent), color-mix(in srgb, var(--ai-red) 72%, transparent), color-mix(in srgb, var(--ai-blue) 74%, transparent));
-      border-color: color-mix(in srgb, var(--ai-blue) 30%, rgba(255,255,255,.2));
+      background: color-mix(in srgb, var(--ring-2) 70%, transparent);
+      border-color: var(--ring-border);
     }
     .well {
       bottom: 29px; width: 45%; height: 17%;
@@ -284,18 +260,9 @@
       opacity: .95;
     }
     @keyframes localAuraBreath {
-      0% { transform: translateX(-50%) scale(.96); opacity: .1; }
-      50% { transform: translateX(-50%) scale(1.02); opacity: .17; }
-      100% { transform: translateX(-50%) scale(.96); opacity: .1; }
-    }
-    @keyframes auraBreathSoft {
-      0% { filter: blur(10px) saturate(.86); }
-      50% { filter: blur(13px) saturate(.8); }
-      100% { filter: blur(10px) saturate(.86); }
-    }
-    @keyframes ringOrbit {
-      0% { --ring-angle: 0deg; }
-      100% { --ring-angle: 360deg; }
+      0% { transform: translateX(-50%) scale(.96); opacity: .16; }
+      50% { transform: translateX(-50%) scale(1.04); opacity: .28; }
+      100% { transform: translateX(-50%) scale(.96); opacity: .16; }
     }
     @keyframes localAuraDrop {
       0% { transform: translateX(-50%) scale(1); opacity: .3; }
