@@ -5674,3 +5674,1099 @@
 [2026-05-10 19:37:03] route drag_end over_hole=0 payload=text
 [2026-05-10 19:37:03] route reset_session reason=drag_end hide_ms=1800
 [2026-05-10 19:37:05] route delayed_hide action=hide_now
+[2026-05-10 19:38:27] evt {"at":"2026-05-10T19:38:27+08:00","kind":"drag_start","payloadKind":"none","x":1114,"y":873}
+[2026-05-10 19:38:27] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:38:28] route watchdog action=force_reset phys=0 log=0 idle_ms=1031
+[2026-05-10 19:38:28] evt {"at":"2026-05-10T19:38:28+08:00","kind":"drag_end","payloadKind":"none","x":906,"y":891}
+[2026-05-10 19:39:30] evt {"at":"2026-05-10T19:39:30+08:00","kind":"bridge_ready","x":3403,"y":790,"w":170,"h":210}
+[2026-05-10 19:40:14] evt {"at":"2026-05-10T19:40:14+08:00","kind":"drag_start","payloadKind":"none","x":1070,"y":887}
+[2026-05-10 19:40:14] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:40:14] route watchdog action=force_reset phys=0 log=0 idle_ms=266
+[2026-05-10 19:40:14] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:40:14] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:40:14] route delayed_hide action=hide_now
+[2026-05-10 19:40:14] evt {"at":"2026-05-10T19:40:14+08:00","kind":"drag_end","payloadKind":"none","x":959,"y":874}
+[2026-05-10 19:40:14] route drag_end over_hole=0 payload=text
+[2026-05-10 19:40:14] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:40:15] evt {"at":"2026-05-10T19:40:15+08:00","kind":"drag_start","payloadKind":"none","x":938,"y":865}
+[2026-05-10 19:40:15] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:40:17] route watchdog action=force_reset phys=1 log=1 idle_ms=2203
+[2026-05-10 19:40:17] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:40:17] route delayed_hide action=hide_now
+[2026-05-10 19:40:20] evt {"at":"2026-05-10T19:40:20+08:00","kind":"drag_end","payloadKind":"none","x":892,"y":620}
+[2026-05-10 19:40:20] route drag_end over_hole=0 payload=text
+[2026-05-10 19:40:20] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:40:20] evt {"at":"2026-05-10T19:40:20+08:00","kind":"drag_start","payloadKind":"none","x":905,"y":590}
+[2026-05-10 19:40:20] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:40:20] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:40:20] evt {"at":"2026-05-10T19:40:20+08:00","kind":"drag_end","payloadKind":"none","x":1060,"y":588}
+[2026-05-10 19:40:20] route drag_end over_hole=0 payload=text
+[2026-05-10 19:40:20] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:40:21] evt {"at":"2026-05-10T19:40:21+08:00","kind":"drag_start","payloadKind":"none","x":962,"y":586}
+[2026-05-10 19:40:21] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:40:22] route watchdog action=force_reset phys=0 log=0 idle_ms=1453
+[2026-05-10 19:40:22] route release_fallback action=open_search was_over_hole=1
+[2026-05-10 19:40:22] evt {"at":"2026-05-10T19:40:22+08:00","kind":"drag_end","payloadKind":"none","x":459,"y":408}
+[2026-05-10 19:40:22] route drag_end over_hole=1 payload=text
+[2026-05-10 19:40:23] route drag_end_text action=open_search len=12
+[2026-05-10 19:40:23] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:40:24] evt {"at":"2026-05-10T19:40:23+08:00","kind":"drag_start","payloadKind":"none","x":389,"y":377}
+[2026-05-10 19:40:24] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 19:40:24] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 19:40:25] route drag_end_text action=open_search len=12
+[2026-05-10 19:40:25] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:40:25] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:40:25] route delayed_hide action=hide_now
+[2026-05-10 19:40:25] evt {"at":"2026-05-10T19:40:25+08:00","kind":"drag_end","payloadKind":"none","x":493,"y":456}
+[2026-05-10 19:40:25] route drag_end over_hole=0 payload=text
+[2026-05-10 19:40:25] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:40:27] route delayed_hide action=hide_now
+[2026-05-10 19:40:28] evt {"at":"2026-05-10T19:40:28+08:00","kind":"drag_start","payloadKind":"none","x":392,"y":353}
+[2026-05-10 19:40:28] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 19:40:28] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 19:40:29] route watchdog action=force_reset phys=0 log=0 idle_ms=875
+[2026-05-10 19:40:29] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:40:29] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:40:29] evt {"at":"2026-05-10T19:40:29+08:00","kind":"drag_end","payloadKind":"none","x":498,"y":446}
+[2026-05-10 19:40:29] route delayed_hide action=hide_now
+[2026-05-10 19:40:29] route drag_end over_hole=0 payload=text
+[2026-05-10 19:40:29] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:40:31] route delayed_hide action=hide_now
+[2026-05-10 19:40:31] evt {"at":"2026-05-10T19:40:31+08:00","kind":"drag_start","payloadKind":"none","x":2010,"y":556}
+[2026-05-10 19:40:31] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 19:40:31] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 19:40:32] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:40:32] evt {"at":"2026-05-10T19:40:32+08:00","kind":"drag_end","payloadKind":"none","x":618,"y":475}
+[2026-05-10 19:40:32] route drag_end over_hole=0 payload=text
+[2026-05-10 19:40:32] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:40:34] route delayed_hide action=hide_now
+[2026-05-10 19:40:35] evt {"at":"2026-05-10T19:40:35+08:00","kind":"drag_start","payloadKind":"none","x":371,"y":62}
+[2026-05-10 19:40:35] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 19:40:35] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 19:40:36] route watchdog action=force_reset phys=0 log=0 idle_ms=891
+[2026-05-10 19:40:36] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:40:36] evt {"at":"2026-05-10T19:40:36+08:00","kind":"drag_end","payloadKind":"none","x":491,"y":362}
+[2026-05-10 19:40:36] route drag_end over_hole=0 payload=text
+[2026-05-10 19:40:36] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:40:36] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:40:37] route delayed_hide action=hide_now
+[2026-05-10 19:40:37] evt {"at":"2026-05-10T19:40:37+08:00","kind":"drag_start","payloadKind":"none","x":399,"y":1002}
+[2026-05-10 19:40:37] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 19:40:37] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 19:40:39] route watchdog action=force_reset phys=0 log=0 idle_ms=1219
+[2026-05-10 19:40:39] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:40:39] evt {"at":"2026-05-10T19:40:39+08:00","kind":"drag_end","payloadKind":"none","x":445,"y":448}
+[2026-05-10 19:40:39] route drag_end over_hole=0 payload=text
+[2026-05-10 19:40:39] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:40:39] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:40:39] route delayed_hide action=hide_now
+[2026-05-10 19:40:40] evt {"at":"2026-05-10T19:40:40+08:00","kind":"drag_start","payloadKind":"none","x":207,"y":398}
+[2026-05-10 19:40:40] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 19:40:40] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 19:40:41] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:40:41] evt {"at":"2026-05-10T19:40:41+08:00","kind":"drag_end","payloadKind":"none","x":389,"y":402}
+[2026-05-10 19:40:41] route drag_end over_hole=0 payload=text
+[2026-05-10 19:40:41] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:40:42] evt {"at":"2026-05-10T19:40:42+08:00","kind":"drag_start","payloadKind":"none","x":583,"y":391}
+[2026-05-10 19:40:42] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 19:40:42] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 19:40:43] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:40:43] evt {"at":"2026-05-10T19:40:43+08:00","kind":"drag_end","payloadKind":"none","x":508,"y":394}
+[2026-05-10 19:40:43] route drag_end over_hole=0 payload=text
+[2026-05-10 19:40:43] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:40:45] route delayed_hide action=hide_now
+[2026-05-10 19:40:48] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-10 19:40:56] evt {"at":"2026-05-10T19:40:56+08:00","kind":"drag_start","payloadKind":"none","x":2188,"y":732}
+[2026-05-10 19:40:56] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 19:40:56] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 19:40:57] route watchdog action=force_reset phys=0 log=0 idle_ms=1235
+[2026-05-10 19:40:57] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:40:57] evt {"at":"2026-05-10T19:40:57+08:00","kind":"drag_end","payloadKind":"none","x":1932,"y":838}
+[2026-05-10 19:40:57] route drag_end over_hole=0 payload=text
+[2026-05-10 19:40:57] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:40:58] evt {"at":"2026-05-10T19:40:58+08:00","kind":"drag_start","payloadKind":"none","x":2149,"y":789}
+[2026-05-10 19:40:58] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 19:40:58] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 19:40:59] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:40:59] evt {"at":"2026-05-10T19:40:59+08:00","kind":"drag_end","payloadKind":"none","x":2153,"y":790}
+[2026-05-10 19:40:59] route drag_end over_hole=0 payload=text
+[2026-05-10 19:40:59] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:41:01] route delayed_hide action=hide_now
+[2026-05-10 19:41:12] evt {"at":"2026-05-10T19:41:12+08:00","kind":"drag_start","payloadKind":"none","x":2192,"y":740}
+[2026-05-10 19:41:12] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 19:41:12] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 19:41:14] evt {"at":"2026-05-10T19:41:14+08:00","kind":"drag_end","payloadKind":"none","x":1929,"y":842}
+[2026-05-10 19:41:14] route drag_end over_hole=0 payload=file
+[2026-05-10 19:41:14] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:41:14] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:41:15] route delayed_hide action=hide_now
+[2026-05-10 19:41:31] evt {"at":"2026-05-10T19:41:31+08:00","kind":"drag_start","payloadKind":"none","x":1952,"y":761}
+[2026-05-10 19:41:31] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 19:41:31] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 19:41:33] route watchdog action=force_reset phys=1 log=1 idle_ms=2328
+[2026-05-10 19:41:33] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:41:33] route delayed_hide action=hide_now
+[2026-05-10 19:41:33] evt {"at":"2026-05-10T19:41:33+08:00","kind":"drag_end","payloadKind":"none","x":2199,"y":837}
+[2026-05-10 19:41:33] route drag_end over_hole=0 payload=text
+[2026-05-10 19:41:33] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:41:35] route delayed_hide action=hide_now
+[2026-05-10 19:43:40] evt {"at":"2026-05-10T19:43:40+08:00","kind":"bridge_ready","x":3318,"y":790,"w":170,"h":210}
+[2026-05-10 19:44:15] evt {"at":"2026-05-10T19:44:15+08:00","kind":"bridge_ready","x":3233,"y":790,"w":170,"h":210}
+[2026-05-10 19:44:37] evt {"at":"2026-05-10T19:44:36+08:00","kind":"drag_start","payloadKind":"none","x":943,"y":639}
+[2026-05-10 19:44:37] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:44:37] route watchdog action=force_reset phys=0 log=0 idle_ms=312
+[2026-05-10 19:44:37] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:44:37] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:44:37] route delayed_hide action=hide_now
+[2026-05-10 19:44:37] evt {"at":"2026-05-10T19:44:37+08:00","kind":"drag_end","payloadKind":"none","x":1059,"y":641}
+[2026-05-10 19:44:37] route drag_end over_hole=0 payload=text
+[2026-05-10 19:44:37] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:44:38] evt {"at":"2026-05-10T19:44:37+08:00","kind":"drag_start","payloadKind":"none","x":990,"y":639}
+[2026-05-10 19:44:38] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:44:40] route watchdog action=force_reset phys=1 log=1 idle_ms=2312
+[2026-05-10 19:44:40] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:44:40] route delayed_hide action=hide_now
+[2026-05-10 19:44:41] evt {"at":"2026-05-10T19:44:41+08:00","kind":"drag_end","payloadKind":"none","x":934,"y":630}
+[2026-05-10 19:44:41] route drag_end over_hole=0 payload=text
+[2026-05-10 19:44:41] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:44:42] evt {"at":"2026-05-10T19:44:42+08:00","kind":"drag_start","payloadKind":"none","x":894,"y":635}
+[2026-05-10 19:44:42] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:44:44] route watchdog action=force_reset phys=1 log=1 idle_ms=2344
+[2026-05-10 19:44:44] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:44:44] route delayed_hide action=hide_now
+[2026-05-10 19:44:47] evt {"at":"2026-05-10T19:44:47+08:00","kind":"drag_end","payloadKind":"none","x":930,"y":654}
+[2026-05-10 19:44:47] route drag_end over_hole=0 payload=text
+[2026-05-10 19:44:47] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:44:47] evt {"at":"2026-05-10T19:44:47+08:00","kind":"drag_start","payloadKind":"none","x":885,"y":637}
+[2026-05-10 19:44:47] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:44:49] route watchdog action=force_reset phys=1 log=1 idle_ms=2204
+[2026-05-10 19:44:49] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:44:49] route delayed_hide action=hide_now
+[2026-05-10 19:44:51] evt {"at":"2026-05-10T19:44:50+08:00","kind":"drag_end","payloadKind":"none","x":750,"y":602}
+[2026-05-10 19:44:51] route drag_end over_hole=0 payload=text
+[2026-05-10 19:44:51] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:44:52] route delayed_hide action=hide_now
+[2026-05-10 19:46:03] evt {"at":"2026-05-10T19:46:02+08:00","kind":"drag_start","payloadKind":"none","x":769,"y":987}
+[2026-05-10 19:46:03] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:46:03] route watchdog action=force_reset phys=0 log=0 idle_ms=610
+[2026-05-10 19:46:03] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:46:03] route delayed_hide action=hide_now
+[2026-05-10 19:46:03] evt {"at":"2026-05-10T19:46:03+08:00","kind":"drag_end","payloadKind":"none","x":742,"y":984}
+[2026-05-10 19:46:03] route drag_end over_hole=0 payload=text
+[2026-05-10 19:46:03] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:46:05] route delayed_hide action=hide_now
+[2026-05-10 19:46:08] evt {"at":"2026-05-10T19:46:08+08:00","kind":"drag_start","payloadKind":"none","x":709,"y":989}
+[2026-05-10 19:46:08] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:46:09] route watchdog action=force_reset phys=0 log=0 idle_ms=860
+[2026-05-10 19:46:09] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:46:09] evt {"at":"2026-05-10T19:46:09+08:00","kind":"drag_end","payloadKind":"none","x":786,"y":897}
+[2026-05-10 19:46:09] route drag_end over_hole=0 payload=text
+[2026-05-10 19:46:09] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:46:09] route delayed_hide action=hide_now
+[2026-05-10 19:46:11] route delayed_hide action=hide_now
+[2026-05-10 19:46:15] evt {"at":"2026-05-10T19:46:15+08:00","kind":"drag_start","payloadKind":"none","x":866,"y":382}
+[2026-05-10 19:46:15] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:46:15] evt {"at":"2026-05-10T19:46:15+08:00","kind":"drag_end","payloadKind":"none","x":1203,"y":489}
+[2026-05-10 19:46:15] route drag_end over_hole=0 payload=text
+[2026-05-10 19:46:15] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:46:17] route delayed_hide action=hide_now
+[2026-05-10 19:46:19] evt {"at":"2026-05-10T19:46:18+08:00","kind":"drag_start","payloadKind":"none","x":968,"y":441}
+[2026-05-10 19:46:19] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:46:19] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:46:19] evt {"at":"2026-05-10T19:46:19+08:00","kind":"drag_end","payloadKind":"none","x":1119,"y":456}
+[2026-05-10 19:46:19] route drag_end over_hole=0 payload=text
+[2026-05-10 19:46:19] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:46:21] route delayed_hide action=hide_now
+[2026-05-10 19:47:06] evt {"at":"2026-05-10T19:47:06+08:00","kind":"drag_start","payloadKind":"none","x":1183,"y":273}
+[2026-05-10 19:47:06] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 19:47:06] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 19:47:06] evt {"at":"2026-05-10T19:47:06+08:00","kind":"drag_end","payloadKind":"none","x":1175,"y":272}
+[2026-05-10 19:47:06] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:47:06] route drag_end over_hole=0 payload=text
+[2026-05-10 19:47:06] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:47:08] route delayed_hide action=hide_now
+[2026-05-10 19:48:04] evt {"at":"2026-05-10T19:48:04+08:00","kind":"drag_start","payloadKind":"none","x":840,"y":902}
+[2026-05-10 19:48:04] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:04] evt {"at":"2026-05-10T19:48:04+08:00","kind":"drag_end","payloadKind":"none","x":716,"y":903}
+[2026-05-10 19:48:04] route drag_end over_hole=0 payload=text
+[2026-05-10 19:48:04] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:48:05] evt {"at":"2026-05-10T19:48:05+08:00","kind":"drag_start","payloadKind":"none","x":740,"y":853}
+[2026-05-10 19:48:05] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:05] evt {"at":"2026-05-10T19:48:05+08:00","kind":"drag_end","payloadKind":"none","x":719,"y":856}
+[2026-05-10 19:48:05] route drag_end over_hole=0 payload=text
+[2026-05-10 19:48:05] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:48:07] route delayed_hide action=hide_now
+[2026-05-10 19:48:11] evt {"at":"2026-05-10T19:48:11+08:00","kind":"drag_start","payloadKind":"none","x":158,"y":820}
+[2026-05-10 19:48:11] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:13] route watchdog action=force_reset phys=1 log=1 idle_ms=2297
+[2026-05-10 19:48:13] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:48:13] route delayed_hide action=hide_now
+[2026-05-10 19:48:14] evt {"at":"2026-05-10T19:48:14+08:00","kind":"drag_end","payloadKind":"none","x":377,"y":807}
+[2026-05-10 19:48:14] route drag_end over_hole=0 payload=text
+[2026-05-10 19:48:14] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:48:16] route delayed_hide action=hide_now
+[2026-05-10 19:48:17] evt {"at":"2026-05-10T19:48:17+08:00","kind":"drag_start","payloadKind":"none","x":287,"y":826}
+[2026-05-10 19:48:17] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:17] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:48:17] evt {"at":"2026-05-10T19:48:17+08:00","kind":"drag_end","payloadKind":"none","x":239,"y":829}
+[2026-05-10 19:48:17] route drag_end over_hole=0 payload=text
+[2026-05-10 19:48:17] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:48:19] route delayed_hide action=hide_now
+[2026-05-10 19:48:22] evt {"at":"2026-05-10T19:48:22+08:00","kind":"drag_start","payloadKind":"none","x":141,"y":815}
+[2026-05-10 19:48:22] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:23] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:48:23] evt {"at":"2026-05-10T19:48:23+08:00","kind":"drag_end","payloadKind":"none","x":146,"y":815}
+[2026-05-10 19:48:23] route drag_end over_hole=0 payload=text
+[2026-05-10 19:48:23] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:48:25] route delayed_hide action=hide_now
+[2026-05-10 19:48:28] evt {"at":"2026-05-10T19:48:28+08:00","kind":"drag_start","payloadKind":"none","x":303,"y":908}
+[2026-05-10 19:48:28] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:30] route watchdog action=force_reset phys=1 log=1 idle_ms=2360
+[2026-05-10 19:48:30] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:48:30] route delayed_hide action=hide_now
+[2026-05-10 19:48:32] evt {"at":"2026-05-10T19:48:31+08:00","kind":"drag_end","payloadKind":"none","x":978,"y":917}
+[2026-05-10 19:48:32] route drag_end over_hole=0 payload=text
+[2026-05-10 19:48:32] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:48:34] route delayed_hide action=hide_now
+[2026-05-10 19:48:36] evt {"at":"2026-05-10T19:48:36+08:00","kind":"drag_start","payloadKind":"none","x":167,"y":805}
+[2026-05-10 19:48:36] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:38] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:48:38] evt {"at":"2026-05-10T19:48:38+08:00","kind":"drag_end","payloadKind":"none","x":928,"y":833}
+[2026-05-10 19:48:38] route drag_end over_hole=0 payload=text
+[2026-05-10 19:48:38] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:48:39] evt {"at":"2026-05-10T19:48:39+08:00","kind":"drag_start","payloadKind":"none","x":936,"y":831}
+[2026-05-10 19:48:39] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:39] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:48:39] evt {"at":"2026-05-10T19:48:39+08:00","kind":"drag_end","payloadKind":"none","x":951,"y":829}
+[2026-05-10 19:48:39] route drag_end over_hole=0 payload=text
+[2026-05-10 19:48:39] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:48:40] evt {"at":"2026-05-10T19:48:40+08:00","kind":"drag_start","payloadKind":"none","x":934,"y":811}
+[2026-05-10 19:48:40] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:40] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:48:40] evt {"at":"2026-05-10T19:48:40+08:00","kind":"drag_end","payloadKind":"none","x":975,"y":813}
+[2026-05-10 19:48:40] route drag_end over_hole=0 payload=text
+[2026-05-10 19:48:40] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:48:42] evt {"at":"2026-05-10T19:48:42+08:00","kind":"drag_start","payloadKind":"none","x":1020,"y":901}
+[2026-05-10 19:48:42] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:43] route watchdog action=force_reset phys=0 log=0 idle_ms=1235
+[2026-05-10 19:48:43] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:48:43] evt {"at":"2026-05-10T19:48:43+08:00","kind":"drag_end","payloadKind":"none","x":1428,"y":896}
+[2026-05-10 19:48:43] route drag_end over_hole=0 payload=text
+[2026-05-10 19:48:43] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:48:44] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:48:44] route delayed_hide action=hide_now
+[2026-05-10 19:48:55] evt {"at":"2026-05-10T19:48:55+08:00","kind":"drag_start","payloadKind":"none","x":477,"y":531}
+[2026-05-10 19:48:55] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:56] evt {"at":"2026-05-10T19:48:56+08:00","kind":"drag_end","payloadKind":"none","x":426,"y":555}
+[2026-05-10 19:48:56] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:48:56] route drag_end over_hole=0 payload=text
+[2026-05-10 19:48:56] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:48:57] evt {"at":"2026-05-10T19:48:57+08:00","kind":"drag_start","payloadKind":"none","x":725,"y":493}
+[2026-05-10 19:48:57] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:57] evt {"at":"2026-05-10T19:48:57+08:00","kind":"drag_end","payloadKind":"none","x":848,"y":363}
+[2026-05-10 19:48:57] route drag_end over_hole=0 payload=text
+[2026-05-10 19:48:57] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:48:58] evt {"at":"2026-05-10T19:48:58+08:00","kind":"drag_start","payloadKind":"none","x":943,"y":435}
+[2026-05-10 19:48:58] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:48:59] route watchdog action=force_reset phys=0 log=0 idle_ms=1765
+[2026-05-10 19:49:00] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:49:00] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:49:00] route delayed_hide action=hide_now
+[2026-05-10 19:49:00] evt {"at":"2026-05-10T19:48:59+08:00","kind":"drag_end","payloadKind":"none","x":310,"y":448}
+[2026-05-10 19:49:00] route drag_end over_hole=0 payload=text
+[2026-05-10 19:49:00] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:49:01] evt {"at":"2026-05-10T19:49:01+08:00","kind":"drag_start","payloadKind":"none","x":780,"y":327}
+[2026-05-10 19:49:01] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:49:03] route release_fallback action=open_search was_over_hole=1
+[2026-05-10 19:49:03] evt {"at":"2026-05-10T19:49:03+08:00","kind":"drag_end","payloadKind":"none","x":230,"y":452}
+[2026-05-10 19:49:03] route drag_end over_hole=0 payload=text
+[2026-05-10 19:49:03] route watchdog action=force_reset phys=0 log=0 idle_ms=94
+[2026-05-10 19:49:03] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:49:03] route drag_end_text action=open_search len=238
+[2026-05-10 19:49:03] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:49:04] route drag_end_text action=open_search len=238
+[2026-05-10 19:49:04] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:49:04] route delayed_hide action=hide_now
+[2026-05-10 19:49:05] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-10 19:49:07] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-10 19:49:13] evt {"at":"2026-05-10T19:49:13+08:00","kind":"drag_start","payloadKind":"none","x":1714,"y":881}
+[2026-05-10 19:49:13] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:49:14] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:49:14] evt {"at":"2026-05-10T19:49:14+08:00","kind":"drag_end","payloadKind":"none","x":1758,"y":878}
+[2026-05-10 19:49:14] route drag_end over_hole=0 payload=text
+[2026-05-10 19:49:14] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:49:16] route delayed_hide action=hide_now
+[2026-05-10 19:49:16] evt {"at":"2026-05-10T19:49:16+08:00","kind":"drag_start","payloadKind":"none","x":1780,"y":889}
+[2026-05-10 19:49:16] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:49:17] evt {"at":"2026-05-10T19:49:17+08:00","kind":"drag_end","payloadKind":"none","x":1661,"y":898}
+[2026-05-10 19:49:17] route drag_end over_hole=0 payload=text
+[2026-05-10 19:49:17] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:49:17] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:49:17] route delayed_hide action=hide_now
+[2026-05-10 19:49:18] evt {"at":"2026-05-10T19:49:18+08:00","kind":"drag_start","payloadKind":"none","x":560,"y":470}
+[2026-05-10 19:49:18] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:49:19] route release_fallback action=open_search was_over_hole=1
+[2026-05-10 19:49:19] route watchdog action=force_reset phys=0 log=0 idle_ms=1438
+[2026-05-10 19:49:19] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:49:19] route drag_end_text action=open_search len=238
+[2026-05-10 19:49:19] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:49:19] evt {"at":"2026-05-10T19:49:19+08:00","kind":"drag_end","payloadKind":"none","x":525,"y":452}
+[2026-05-10 19:49:19] route drag_end over_hole=0 payload=text
+[2026-05-10 19:49:19] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:49:26] evt {"at":"2026-05-10T19:49:26+08:00","kind":"drag_start","payloadKind":"none","x":1571,"y":55}
+[2026-05-10 19:50:47] evt {"at":"2026-05-10T19:50:47+08:00","kind":"bridge_ready","x":3148,"y":790,"w":170,"h":210}
+[2026-05-10 19:51:27] evt {"at":"2026-05-10T19:51:27+08:00","kind":"drag_start","payloadKind":"none","x":973,"y":553}
+[2026-05-10 19:51:27] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:51:29] route watchdog action=force_reset phys=1 log=1 idle_ms=2375
+[2026-05-10 19:51:29] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:51:29] route delayed_hide action=hide_now
+[2026-05-10 19:51:32] evt {"at":"2026-05-10T19:51:32+08:00","kind":"drag_end","payloadKind":"none","x":1035,"y":555}
+[2026-05-10 19:51:32] route drag_end over_hole=0 payload=text
+[2026-05-10 19:51:32] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:51:32] evt {"at":"2026-05-10T19:51:32+08:00","kind":"drag_start","payloadKind":"none","x":974,"y":559}
+[2026-05-10 19:51:32] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:51:34] route release_fallback action=open_search was_over_hole=1
+[2026-05-10 19:51:34] route watchdog action=force_reset phys=0 log=0 idle_ms=2125
+[2026-05-10 19:51:34] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:51:34] evt {"at":"2026-05-10T19:51:34+08:00","kind":"drag_end","payloadKind":"none","x":1035,"y":574}
+[2026-05-10 19:51:34] route drag_end over_hole=0 payload=text
+[2026-05-10 19:51:34] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:51:35] route drag_end_text action=open_search len=4
+[2026-05-10 19:51:35] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:53:19] evt {"at":"2026-05-10T19:53:18+08:00","kind":"bridge_ready","x":3063,"y":790,"w":170,"h":210}
+[2026-05-10 19:53:29] evt {"at":"2026-05-10T19:53:29+08:00","kind":"drag_start","payloadKind":"none","x":957,"y":606}
+[2026-05-10 19:53:29] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:53:30] evt {"at":"2026-05-10T19:53:30+08:00","kind":"drag_end","payloadKind":"none","x":1071,"y":596}
+[2026-05-10 19:53:30] route drag_end over_hole=0 payload=text
+[2026-05-10 19:53:30] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:53:31] evt {"at":"2026-05-10T19:53:31+08:00","kind":"drag_start","payloadKind":"none","x":977,"y":594}
+[2026-05-10 19:53:31] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:53:32] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:53:32] evt {"at":"2026-05-10T19:53:32+08:00","kind":"drag_end","payloadKind":"none","x":1064,"y":590}
+[2026-05-10 19:53:32] route drag_end over_hole=0 payload=text
+[2026-05-10 19:53:32] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:53:33] evt {"at":"2026-05-10T19:53:33+08:00","kind":"drag_start","payloadKind":"none","x":994,"y":599}
+[2026-05-10 19:53:33] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:53:34] route watchdog action=force_reset phys=0 log=0 idle_ms=703
+[2026-05-10 19:53:34] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:53:34] evt {"at":"2026-05-10T19:53:34+08:00","kind":"drag_end","payloadKind":"none","x":953,"y":605}
+[2026-05-10 19:53:34] route drag_end over_hole=0 payload=text
+[2026-05-10 19:53:34] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:53:35] evt {"at":"2026-05-10T19:53:35+08:00","kind":"drag_start","payloadKind":"none","x":975,"y":599}
+[2026-05-10 19:53:35] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:53:35] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:53:35] evt {"at":"2026-05-10T19:53:35+08:00","kind":"drag_end","payloadKind":"none","x":1124,"y":594}
+[2026-05-10 19:53:35] route drag_end over_hole=0 payload=text
+[2026-05-10 19:53:35] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:53:37] route delayed_hide action=hide_now
+[2026-05-10 19:53:37] evt {"at":"2026-05-10T19:53:37+08:00","kind":"drag_start","payloadKind":"none","x":982,"y":597}
+[2026-05-10 19:53:37] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:53:38] route watchdog action=force_reset phys=0 log=0 idle_ms=719
+[2026-05-10 19:53:38] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:53:38] evt {"at":"2026-05-10T19:53:38+08:00","kind":"drag_end","payloadKind":"none","x":1093,"y":594}
+[2026-05-10 19:53:38] route drag_end over_hole=0 payload=text
+[2026-05-10 19:53:38] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:53:39] evt {"at":"2026-05-10T19:53:39+08:00","kind":"drag_start","payloadKind":"none","x":1017,"y":601}
+[2026-05-10 19:53:39] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:53:41] route watchdog action=force_reset phys=1 log=1 idle_ms=2219
+[2026-05-10 19:53:41] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:53:41] route delayed_hide action=hide_now
+[2026-05-10 19:53:42] evt {"at":"2026-05-10T19:53:41+08:00","kind":"drag_end","payloadKind":"none","x":1176,"y":543}
+[2026-05-10 19:53:42] route drag_end over_hole=0 payload=text
+[2026-05-10 19:53:42] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:53:42] evt {"at":"2026-05-10T19:53:42+08:00","kind":"drag_start","payloadKind":"none","x":1056,"y":482}
+[2026-05-10 19:53:42] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:53:42] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:53:43] evt {"at":"2026-05-10T19:53:42+08:00","kind":"drag_end","payloadKind":"none","x":1213,"y":488}
+[2026-05-10 19:53:43] route drag_end over_hole=0 payload=text
+[2026-05-10 19:53:43] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:53:43] evt {"at":"2026-05-10T19:53:43+08:00","kind":"drag_start","payloadKind":"none","x":1114,"y":495}
+[2026-05-10 19:53:43] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:53:45] route watchdog action=force_reset phys=1 log=1 idle_ms=2281
+[2026-05-10 19:53:45] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:53:46] route delayed_hide action=hide_now
+[2026-05-10 19:53:48] evt {"at":"2026-05-10T19:53:47+08:00","kind":"drag_end","payloadKind":"none","x":1140,"y":520}
+[2026-05-10 19:53:48] route drag_end over_hole=0 payload=text
+[2026-05-10 19:53:48] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:53:49] evt {"at":"2026-05-10T19:53:49+08:00","kind":"drag_start","payloadKind":"none","x":1207,"y":482}
+[2026-05-10 19:53:49] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:53:49] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 19:53:50] evt {"at":"2026-05-10T19:53:49+08:00","kind":"drag_end","payloadKind":"none","x":1008,"y":490}
+[2026-05-10 19:53:50] route drag_end over_hole=0 payload=text
+[2026-05-10 19:53:50] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:53:50] evt {"at":"2026-05-10T19:53:50+08:00","kind":"drag_start","payloadKind":"none","x":1084,"y":487}
+[2026-05-10 19:53:50] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:53:52] route watchdog action=force_reset phys=1 log=1 idle_ms=2219
+[2026-05-10 19:53:52] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:53:52] route delayed_hide action=hide_now
+[2026-05-10 19:53:55] evt {"at":"2026-05-10T19:53:55+08:00","kind":"drag_end","payloadKind":"none","x":1156,"y":455}
+[2026-05-10 19:53:55] route drag_end over_hole=0 payload=text
+[2026-05-10 19:53:55] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:53:56] route delayed_hide action=hide_now
+[2026-05-10 19:54:54] evt {"at":"2026-05-10T19:54:54+08:00","kind":"drag_start","payloadKind":"none","x":1015,"y":495}
+[2026-05-10 19:54:54] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:54:57] route watchdog action=force_reset phys=1 log=1 idle_ms=2266
+[2026-05-10 19:54:57] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 19:54:57] route delayed_hide action=hide_now
+[2026-05-10 19:54:59] evt {"at":"2026-05-10T19:54:59+08:00","kind":"drag_end","payloadKind":"none","x":1108,"y":475}
+[2026-05-10 19:54:59] route drag_end over_hole=0 payload=text
+[2026-05-10 19:54:59] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 19:55:01] route delayed_hide action=hide_now
+[2026-05-10 19:56:43] evt {"at":"2026-05-10T19:56:43+08:00","kind":"drag_start","payloadKind":"none","x":1096,"y":495}
+[2026-05-10 19:56:43] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 19:56:46] route watchdog action=force_reset phys=1 log=1 idle_ms=2266
+[2026-05-10 19:56:56] evt {"at":"2026-05-10T19:56:56+08:00","kind":"drag_end","payloadKind":"none","x":1108,"y":508}
+[2026-05-10 20:02:08] evt {"at":"2026-05-10T20:02:07+08:00","kind":"bridge_ready","x":3573,"y":790,"w":170,"h":210}
+[2026-05-10 20:03:21] evt {"at":"2026-05-10T20:03:21+08:00","kind":"drag_start","payloadKind":"none","x":981,"y":440}
+[2026-05-10 20:03:21] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:03:22] route watchdog action=force_reset phys=0 log=0 idle_ms=437
+[2026-05-10 20:03:22] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:03:22] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:03:22] evt {"at":"2026-05-10T20:03:21+08:00","kind":"drag_end","payloadKind":"none","x":1149,"y":452}
+[2026-05-10 20:03:22] route drag_end over_hole=0 payload=text
+[2026-05-10 20:03:22] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:03:22] evt {"at":"2026-05-10T20:03:22+08:00","kind":"drag_start","payloadKind":"none","x":1067,"y":447}
+[2026-05-10 20:03:22] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:03:24] route watchdog action=force_reset phys=1 log=1 idle_ms=2250
+[2026-05-10 20:03:24] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:03:24] route delayed_hide action=hide_now
+[2026-05-10 20:03:26] evt {"at":"2026-05-10T20:03:26+08:00","kind":"drag_end","payloadKind":"none","x":940,"y":444}
+[2026-05-10 20:03:26] route drag_end over_hole=0 payload=text
+[2026-05-10 20:03:26] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:03:27] evt {"at":"2026-05-10T20:03:27+08:00","kind":"drag_start","payloadKind":"none","x":1005,"y":440}
+[2026-05-10 20:03:27] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:03:28] route watchdog action=force_reset phys=0 log=0 idle_ms=187
+[2026-05-10 20:03:28] evt {"at":"2026-05-10T20:03:28+08:00","kind":"drag_end","payloadKind":"none","x":1169,"y":444}
+[2026-05-10 20:03:28] route drag_end over_hole=0 payload=text
+[2026-05-10 20:03:28] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:03:28] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:03:28] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:03:28] route delayed_hide action=hide_now
+[2026-05-10 20:03:28] evt {"at":"2026-05-10T20:03:28+08:00","kind":"drag_start","payloadKind":"none","x":1090,"y":444}
+[2026-05-10 20:03:28] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:03:30] route watchdog action=force_reset phys=1 log=1 idle_ms=2250
+[2026-05-10 20:03:30] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:03:30] route delayed_hide action=hide_now
+[2026-05-10 20:03:32] evt {"at":"2026-05-10T20:03:32+08:00","kind":"drag_end","payloadKind":"none","x":1072,"y":434}
+[2026-05-10 20:03:32] route drag_end over_hole=0 payload=text
+[2026-05-10 20:03:32] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:03:34] route delayed_hide action=hide_now
+[2026-05-10 20:04:52] evt {"at":"2026-05-10T20:04:51+08:00","kind":"drag_start","payloadKind":"none","x":988,"y":452}
+[2026-05-10 20:04:52] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:04:54] route watchdog action=force_reset phys=1 log=1 idle_ms=2375
+[2026-05-10 20:04:54] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:04:54] route delayed_hide action=hide_now
+[2026-05-10 20:04:56] evt {"at":"2026-05-10T20:04:56+08:00","kind":"drag_end","payloadKind":"none","x":1025,"y":443}
+[2026-05-10 20:04:56] route drag_end over_hole=0 payload=text
+[2026-05-10 20:04:56] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:04:58] route delayed_hide action=hide_now
+[2026-05-10 20:05:24] evt {"at":"2026-05-10T20:05:24+08:00","kind":"drag_start","payloadKind":"none","x":973,"y":445}
+[2026-05-10 20:05:24] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:05:27] route watchdog action=force_reset phys=1 log=1 idle_ms=2281
+[2026-05-10 20:05:31] evt {"at":"2026-05-10T20:05:31+08:00","kind":"drag_end","payloadKind":"none","x":1036,"y":467}
+[2026-05-10 20:05:41] evt {"at":"2026-05-10T20:05:41+08:00","kind":"bridge_ready","x":3488,"y":790,"w":170,"h":210}
+[2026-05-10 20:06:27] evt {"at":"2026-05-10T20:06:27+08:00","kind":"drag_start","payloadKind":"none","x":1036,"y":480}
+[2026-05-10 20:06:27] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:06:27] route watchdog action=force_reset phys=0 log=0 idle_ms=235
+[2026-05-10 20:06:27] evt {"at":"2026-05-10T20:06:27+08:00","kind":"drag_end","payloadKind":"none","x":1176,"y":495}
+[2026-05-10 20:06:27] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:06:27] route drag_end over_hole=0 payload=text
+[2026-05-10 20:06:27] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:06:27] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:06:27] route delayed_hide action=hide_now
+[2026-05-10 20:06:27] evt {"at":"2026-05-10T20:06:27+08:00","kind":"drag_start","payloadKind":"none","x":1081,"y":492}
+[2026-05-10 20:06:27] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:06:30] route watchdog action=force_reset phys=1 log=1 idle_ms=2281
+[2026-05-10 20:06:31] evt {"at":"2026-05-10T20:06:31+08:00","kind":"drag_end","payloadKind":"none","x":461,"y":601}
+[2026-05-10 20:07:31] evt {"at":"2026-05-10T20:07:31+08:00","kind":"bridge_ready","x":3403,"y":790,"w":170,"h":210}
+[2026-05-10 20:08:42] evt {"at":"2026-05-10T20:08:42+08:00","kind":"drag_start","payloadKind":"none","x":1120,"y":444}
+[2026-05-10 20:08:42] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:08:43] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:08:43] evt {"at":"2026-05-10T20:08:43+08:00","kind":"drag_end","payloadKind":"none","x":1329,"y":445}
+[2026-05-10 20:08:43] route drag_end over_hole=0 payload=text
+[2026-05-10 20:08:43] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:08:43] evt {"at":"2026-05-10T20:08:43+08:00","kind":"drag_start","payloadKind":"none","x":1207,"y":444}
+[2026-05-10 20:08:43] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:08:45] route watchdog action=force_reset phys=1 log=1 idle_ms=2265
+[2026-05-10 20:08:45] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:08:46] route delayed_hide action=hide_now
+[2026-05-10 20:08:47] evt {"at":"2026-05-10T20:08:47+08:00","kind":"drag_end","payloadKind":"none","x":1174,"y":411}
+[2026-05-10 20:08:47] route drag_end over_hole=0 payload=text
+[2026-05-10 20:08:47] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:08:49] evt {"at":"2026-05-10T20:08:49+08:00","kind":"drag_start","payloadKind":"none","x":1131,"y":445}
+[2026-05-10 20:08:49] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:08:50] route watchdog action=force_reset phys=0 log=0 idle_ms=390
+[2026-05-10 20:08:50] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:08:50] evt {"at":"2026-05-10T20:08:50+08:00","kind":"drag_end","payloadKind":"none","x":1224,"y":445}
+[2026-05-10 20:08:50] route drag_end over_hole=0 payload=text
+[2026-05-10 20:08:50] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:08:50] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:08:50] route delayed_hide action=hide_now
+[2026-05-10 20:08:50] evt {"at":"2026-05-10T20:08:50+08:00","kind":"drag_start","payloadKind":"none","x":1184,"y":447}
+[2026-05-10 20:08:50] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:08:52] route watchdog action=force_reset phys=1 log=1 idle_ms=2203
+[2026-05-10 20:08:52] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:08:52] route delayed_hide action=hide_now
+[2026-05-10 20:08:54] evt {"at":"2026-05-10T20:08:53+08:00","kind":"drag_end","payloadKind":"none","x":1139,"y":446}
+[2026-05-10 20:08:54] route drag_end over_hole=0 payload=text
+[2026-05-10 20:08:54] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:08:55] evt {"at":"2026-05-10T20:08:54+08:00","kind":"drag_start","payloadKind":"none","x":844,"y":436}
+[2026-05-10 20:08:55] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:08:55] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:08:55] evt {"at":"2026-05-10T20:08:55+08:00","kind":"drag_end","payloadKind":"none","x":1308,"y":454}
+[2026-05-10 20:08:55] route drag_end over_hole=0 payload=text
+[2026-05-10 20:08:55] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:08:55] evt {"at":"2026-05-10T20:08:55+08:00","kind":"drag_start","payloadKind":"none","x":1117,"y":440}
+[2026-05-10 20:08:55] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:08:58] route watchdog action=force_reset phys=1 log=1 idle_ms=2234
+[2026-05-10 20:08:58] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:08:58] route delayed_hide action=hide_now
+[2026-05-10 20:08:59] evt {"at":"2026-05-10T20:08:59+08:00","kind":"drag_end","payloadKind":"none","x":872,"y":415}
+[2026-05-10 20:08:59] route drag_end over_hole=0 payload=text
+[2026-05-10 20:08:59] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:00] evt {"at":"2026-05-10T20:09:00+08:00","kind":"drag_start","payloadKind":"none","x":887,"y":411}
+[2026-05-10 20:09:00] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:09:00] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:09:00] evt {"at":"2026-05-10T20:09:00+08:00","kind":"drag_end","payloadKind":"none","x":1123,"y":414}
+[2026-05-10 20:09:00] route drag_end over_hole=0 payload=text
+[2026-05-10 20:09:00] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:00] evt {"at":"2026-05-10T20:09:00+08:00","kind":"drag_start","payloadKind":"none","x":978,"y":411}
+[2026-05-10 20:09:00] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:09:03] route watchdog action=force_reset phys=1 log=1 idle_ms=2297
+[2026-05-10 20:09:03] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:09:03] route delayed_hide action=hide_now
+[2026-05-10 20:09:04] evt {"at":"2026-05-10T20:09:04+08:00","kind":"drag_end","payloadKind":"none","x":962,"y":398}
+[2026-05-10 20:09:04] route drag_end over_hole=0 payload=text
+[2026-05-10 20:09:04] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:05] evt {"at":"2026-05-10T20:09:05+08:00","kind":"drag_start","payloadKind":"none","x":885,"y":404}
+[2026-05-10 20:09:05] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:09:05] evt {"at":"2026-05-10T20:09:05+08:00","kind":"drag_end","payloadKind":"none","x":1115,"y":417}
+[2026-05-10 20:09:05] route drag_end over_hole=0 payload=text
+[2026-05-10 20:09:05] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:05] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:09:06] route delayed_hide action=hide_now
+[2026-05-10 20:09:06] evt {"at":"2026-05-10T20:09:06+08:00","kind":"drag_start","payloadKind":"none","x":980,"y":403}
+[2026-05-10 20:09:06] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:09:08] route watchdog action=force_reset phys=1 log=1 idle_ms=2235
+[2026-05-10 20:09:08] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:09:08] route delayed_hide action=hide_now
+[2026-05-10 20:09:10] evt {"at":"2026-05-10T20:09:09+08:00","kind":"drag_end","payloadKind":"none","x":944,"y":393}
+[2026-05-10 20:09:10] route drag_end over_hole=0 payload=text
+[2026-05-10 20:09:10] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:10] evt {"at":"2026-05-10T20:09:10+08:00","kind":"drag_start","payloadKind":"none","x":873,"y":398}
+[2026-05-10 20:09:10] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:09:10] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:09:11] evt {"at":"2026-05-10T20:09:10+08:00","kind":"drag_end","payloadKind":"none","x":872,"y":398}
+[2026-05-10 20:09:11] route drag_end over_hole=0 payload=text
+[2026-05-10 20:09:11] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:12] route delayed_hide action=hide_now
+[2026-05-10 20:09:13] evt {"at":"2026-05-10T20:09:12+08:00","kind":"drag_start","payloadKind":"none","x":846,"y":438}
+[2026-05-10 20:09:13] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:09:13] route watchdog action=force_reset phys=0 log=0 idle_ms=188
+[2026-05-10 20:09:13] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:09:13] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:09:13] evt {"at":"2026-05-10T20:09:13+08:00","kind":"drag_end","payloadKind":"none","x":1091,"y":448}
+[2026-05-10 20:09:13] route drag_end over_hole=0 payload=text
+[2026-05-10 20:09:13] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:15] route delayed_hide action=hide_now
+[2026-05-10 20:09:15] evt {"at":"2026-05-10T20:09:15+08:00","kind":"drag_start","payloadKind":"none","x":944,"y":457}
+[2026-05-10 20:09:15] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:09:17] route watchdog action=force_reset phys=1 log=1 idle_ms=2266
+[2026-05-10 20:09:17] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:09:17] route delayed_hide action=hide_now
+[2026-05-10 20:09:18] evt {"at":"2026-05-10T20:09:18+08:00","kind":"drag_end","payloadKind":"none","x":1039,"y":469}
+[2026-05-10 20:09:18] route drag_end over_hole=0 payload=text
+[2026-05-10 20:09:18] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:19] evt {"at":"2026-05-10T20:09:19+08:00","kind":"drag_start","payloadKind":"none","x":1008,"y":495}
+[2026-05-10 20:09:19] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:09:20] route watchdog action=force_reset phys=0 log=0 idle_ms=203
+[2026-05-10 20:09:20] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:09:20] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:09:20] evt {"at":"2026-05-10T20:09:20+08:00","kind":"drag_end","payloadKind":"none","x":1316,"y":506}
+[2026-05-10 20:09:20] route drag_end over_hole=0 payload=text
+[2026-05-10 20:09:20] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:20] evt {"at":"2026-05-10T20:09:20+08:00","kind":"drag_start","payloadKind":"none","x":1006,"y":485}
+[2026-05-10 20:09:20] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:09:22] route watchdog action=force_reset phys=1 log=1 idle_ms=2266
+[2026-05-10 20:09:22] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:09:23] route delayed_hide action=hide_now
+[2026-05-10 20:09:24] evt {"at":"2026-05-10T20:09:24+08:00","kind":"drag_end","payloadKind":"none","x":1063,"y":481}
+[2026-05-10 20:09:24] route drag_end over_hole=0 payload=text
+[2026-05-10 20:09:24] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:26] evt {"at":"2026-05-10T20:09:26+08:00","kind":"drag_start","payloadKind":"none","x":991,"y":484}
+[2026-05-10 20:09:26] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:09:26] evt {"at":"2026-05-10T20:09:26+08:00","kind":"drag_end","payloadKind":"none","x":1274,"y":484}
+[2026-05-10 20:09:26] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:09:26] route drag_end over_hole=0 payload=text
+[2026-05-10 20:09:26] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:26] evt {"at":"2026-05-10T20:09:26+08:00","kind":"drag_start","payloadKind":"none","x":1054,"y":488}
+[2026-05-10 20:09:26] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:09:29] route watchdog action=force_reset phys=1 log=1 idle_ms=2203
+[2026-05-10 20:09:29] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:09:29] route delayed_hide action=hide_now
+[2026-05-10 20:09:30] evt {"at":"2026-05-10T20:09:30+08:00","kind":"drag_end","payloadKind":"none","x":739,"y":419}
+[2026-05-10 20:09:30] route drag_end over_hole=0 payload=text
+[2026-05-10 20:09:30] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:31] evt {"at":"2026-05-10T20:09:31+08:00","kind":"drag_start","payloadKind":"none","x":847,"y":415}
+[2026-05-10 20:09:31] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:09:32] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:09:32] evt {"at":"2026-05-10T20:09:32+08:00","kind":"drag_end","payloadKind":"none","x":1031,"y":408}
+[2026-05-10 20:09:32] route drag_end over_hole=0 payload=text
+[2026-05-10 20:09:32] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:09:34] route delayed_hide action=hide_now
+[2026-05-10 20:11:24] evt {"at":"2026-05-10T20:11:24+08:00","kind":"drag_start","payloadKind":"none","x":868,"y":409}
+[2026-05-10 20:11:24] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:11:26] route watchdog action=force_reset phys=1 log=1 idle_ms=2266
+[2026-05-10 20:11:26] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:11:26] route delayed_hide action=hide_now
+[2026-05-10 20:11:28] evt {"at":"2026-05-10T20:11:28+08:00","kind":"drag_end","payloadKind":"none","x":963,"y":401}
+[2026-05-10 20:11:28] route drag_end over_hole=0 payload=text
+[2026-05-10 20:11:28] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:11:29] evt {"at":"2026-05-10T20:11:29+08:00","kind":"drag_start","payloadKind":"none","x":1015,"y":408}
+[2026-05-10 20:11:29] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:11:29] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:11:29] evt {"at":"2026-05-10T20:11:29+08:00","kind":"drag_end","payloadKind":"none","x":835,"y":404}
+[2026-05-10 20:11:29] route drag_end over_hole=0 payload=text
+[2026-05-10 20:11:29] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:11:30] evt {"at":"2026-05-10T20:11:30+08:00","kind":"drag_start","payloadKind":"none","x":870,"y":411}
+[2026-05-10 20:11:30] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:11:32] route watchdog action=force_reset phys=1 log=1 idle_ms=2312
+[2026-05-10 20:11:32] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:11:32] route delayed_hide action=hide_now
+[2026-05-10 20:11:33] evt {"at":"2026-05-10T20:11:33+08:00","kind":"drag_end","payloadKind":"none","x":887,"y":415}
+[2026-05-10 20:11:33] route drag_end over_hole=0 payload=text
+[2026-05-10 20:11:33] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:11:35] route delayed_hide action=hide_now
+[2026-05-10 20:12:14] evt {"at":"2026-05-10T20:12:14+08:00","kind":"drag_start","payloadKind":"none","x":992,"y":494}
+[2026-05-10 20:12:14] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:12:14] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:12:14] evt {"at":"2026-05-10T20:12:14+08:00","kind":"drag_end","payloadKind":"none","x":1166,"y":495}
+[2026-05-10 20:12:14] route drag_end over_hole=0 payload=text
+[2026-05-10 20:12:14] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:12:15] evt {"at":"2026-05-10T20:12:15+08:00","kind":"drag_start","payloadKind":"none","x":1069,"y":485}
+[2026-05-10 20:12:15] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:12:17] route watchdog action=force_reset phys=1 log=1 idle_ms=2312
+[2026-05-10 20:12:17] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:12:17] route delayed_hide action=hide_now
+[2026-05-10 20:12:17] evt {"at":"2026-05-10T20:12:17+08:00","kind":"drag_end","payloadKind":"none","x":1136,"y":520}
+[2026-05-10 20:12:17] route drag_end over_hole=0 payload=text
+[2026-05-10 20:12:17] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:12:19] route delayed_hide action=hide_now
+[2026-05-10 20:14:05] evt {"at":"2026-05-10T20:14:05+08:00","kind":"bridge_ready","x":3318,"y":790,"w":170,"h":210}
+[2026-05-10 20:15:13] evt {"at":"2026-05-10T20:15:13+08:00","kind":"bridge_ready","x":3233,"y":790,"w":170,"h":210}
+[2026-05-10 20:15:17] evt {"at":"2026-05-10T20:15:17+08:00","kind":"drag_start","payloadKind":"none","x":969,"y":596}
+[2026-05-10 20:15:17] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:15:17] evt {"at":"2026-05-10T20:15:17+08:00","kind":"drag_end","payloadKind":"none","x":1091,"y":600}
+[2026-05-10 20:15:17] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:17] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:19] route delayed_hide action=hide_now
+[2026-05-10 20:15:19] evt {"at":"2026-05-10T20:15:19+08:00","kind":"drag_start","payloadKind":"none","x":1059,"y":636}
+[2026-05-10 20:15:19] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:15:20] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:15:20] evt {"at":"2026-05-10T20:15:20+08:00","kind":"drag_end","payloadKind":"none","x":1185,"y":633}
+[2026-05-10 20:15:20] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:20] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:21] evt {"at":"2026-05-10T20:15:21+08:00","kind":"drag_start","payloadKind":"none","x":1201,"y":647}
+[2026-05-10 20:15:21] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:15:22] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:15:22] evt {"at":"2026-05-10T20:15:22+08:00","kind":"drag_end","payloadKind":"none","x":998,"y":644}
+[2026-05-10 20:15:22] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:22] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:23] evt {"at":"2026-05-10T20:15:23+08:00","kind":"drag_start","payloadKind":"none","x":1008,"y":643}
+[2026-05-10 20:15:23] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:15:24] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:15:24] evt {"at":"2026-05-10T20:15:24+08:00","kind":"drag_end","payloadKind":"none","x":1175,"y":640}
+[2026-05-10 20:15:24] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:24] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:25] evt {"at":"2026-05-10T20:15:24+08:00","kind":"drag_start","payloadKind":"none","x":1045,"y":646}
+[2026-05-10 20:15:25] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:15:25] evt {"at":"2026-05-10T20:15:25+08:00","kind":"drag_end","payloadKind":"none","x":897,"y":637}
+[2026-05-10 20:15:25] route watchdog action=force_reset phys=0 log=0 idle_ms=0
+[2026-05-10 20:15:25] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:15:25] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:15:25] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:25] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:26] evt {"at":"2026-05-10T20:15:26+08:00","kind":"drag_start","payloadKind":"none","x":939,"y":640}
+[2026-05-10 20:15:26] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:15:29] route watchdog action=force_reset phys=1 log=1 idle_ms=2375
+[2026-05-10 20:15:29] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:15:29] route delayed_hide action=hide_now
+[2026-05-10 20:15:30] evt {"at":"2026-05-10T20:15:30+08:00","kind":"drag_end","payloadKind":"none","x":944,"y":653}
+[2026-05-10 20:15:30] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:30] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:31] evt {"at":"2026-05-10T20:15:31+08:00","kind":"drag_start","payloadKind":"none","x":956,"y":648}
+[2026-05-10 20:15:31] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:15:31] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:15:31] evt {"at":"2026-05-10T20:15:31+08:00","kind":"drag_end","payloadKind":"none","x":1119,"y":657}
+[2026-05-10 20:15:31] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:31] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:32] evt {"at":"2026-05-10T20:15:32+08:00","kind":"drag_start","payloadKind":"none","x":1004,"y":642}
+[2026-05-10 20:15:32] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:15:34] route watchdog action=force_reset phys=1 log=1 idle_ms=2312
+[2026-05-10 20:15:34] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:15:34] route delayed_hide action=hide_now
+[2026-05-10 20:15:35] evt {"at":"2026-05-10T20:15:35+08:00","kind":"drag_end","payloadKind":"none","x":671,"y":460}
+[2026-05-10 20:15:35] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:35] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:37] route delayed_hide action=hide_now
+[2026-05-10 20:15:38] evt {"at":"2026-05-10T20:15:38+08:00","kind":"drag_start","payloadKind":"none","x":901,"y":634}
+[2026-05-10 20:15:38] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:15:38] route watchdog action=force_reset phys=0 log=0 idle_ms=703
+[2026-05-10 20:15:38] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:15:38] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:15:38] evt {"at":"2026-05-10T20:15:38+08:00","kind":"drag_end","payloadKind":"none","x":1255,"y":643}
+[2026-05-10 20:15:38] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:38] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:39] evt {"at":"2026-05-10T20:15:39+08:00","kind":"drag_start","payloadKind":"none","x":1035,"y":648}
+[2026-05-10 20:15:39] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:15:41] route watchdog action=force_reset phys=1 log=1 idle_ms=2203
+[2026-05-10 20:15:41] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:15:41] route delayed_hide action=hide_now
+[2026-05-10 20:15:42] evt {"at":"2026-05-10T20:15:42+08:00","kind":"drag_end","payloadKind":"none","x":448,"y":402}
+[2026-05-10 20:15:42] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:42] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:43] evt {"at":"2026-05-10T20:15:42+08:00","kind":"drag_start","payloadKind":"none","x":372,"y":361}
+[2026-05-10 20:15:43] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 20:15:43] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 20:15:44] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:15:44] evt {"at":"2026-05-10T20:15:44+08:00","kind":"drag_end","payloadKind":"none","x":575,"y":455}
+[2026-05-10 20:15:44] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:44] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:45] route delayed_hide action=hide_now
+[2026-05-10 20:15:52] evt {"at":"2026-05-10T20:15:52+08:00","kind":"drag_start","payloadKind":"none","x":1191,"y":643}
+[2026-05-10 20:15:52] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:15:53] evt {"at":"2026-05-10T20:15:53+08:00","kind":"drag_end","payloadKind":"none","x":889,"y":653}
+[2026-05-10 20:15:53] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:15:53] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:53] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:54] evt {"at":"2026-05-10T20:15:54+08:00","kind":"drag_start","payloadKind":"none","x":815,"y":610}
+[2026-05-10 20:15:54] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:15:56] route watchdog action=force_reset phys=0 log=0 idle_ms=2281
+[2026-05-10 20:15:56] route release_fallback action=open_search was_over_hole=1
+[2026-05-10 20:15:56] evt {"at":"2026-05-10T20:15:56+08:00","kind":"drag_end","payloadKind":"none","x":470,"y":461}
+[2026-05-10 20:15:57] route drag_end over_hole=1 payload=text
+[2026-05-10 20:15:57] route drag_end_text action=open_search len=22
+[2026-05-10 20:15:57] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:57] evt {"at":"2026-05-10T20:15:57+08:00","kind":"drag_start","payloadKind":"none","x":352,"y":351}
+[2026-05-10 20:15:57] route kind=drag_start action=ignore reason=rearm_gate remain_ms=104
+[2026-05-10 20:15:58] route drag_end_text action=open_search len=22
+[2026-05-10 20:15:58] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:15:58] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:15:58] route delayed_hide action=hide_now
+[2026-05-10 20:15:58] evt {"at":"2026-05-10T20:15:58+08:00","kind":"drag_end","payloadKind":"none","x":502,"y":413}
+[2026-05-10 20:15:58] route drag_end over_hole=0 payload=text
+[2026-05-10 20:15:58] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:15:59] evt {"at":"2026-05-10T20:15:59+08:00","kind":"drag_start","payloadKind":"none","x":455,"y":388}
+[2026-05-10 20:15:59] route kind=drag_start action=ignore reason=own_ui_or_process
+[2026-05-10 20:16:00] evt {"at":"2026-05-10T20:16:00+08:00","kind":"drag_end","payloadKind":"none","x":561,"y":422}
+[2026-05-10 20:16:00] route drag_end over_hole=0 payload=text
+[2026-05-10 20:16:00] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:16:00] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-10 20:16:02] evt {"at":"2026-05-10T20:16:01+08:00","kind":"drag_start","payloadKind":"none","x":909,"y":621}
+[2026-05-10 20:16:02] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:16:04] route watchdog action=force_reset phys=1 log=1 idle_ms=2203
+[2026-05-10 20:16:04] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:16:04] route delayed_hide action=hide_now
+[2026-05-10 20:16:04] evt {"at":"2026-05-10T20:16:04+08:00","kind":"drag_end","payloadKind":"none","x":345,"y":352}
+[2026-05-10 20:16:04] route drag_end over_hole=0 payload=text
+[2026-05-10 20:16:04] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:16:05] evt {"at":"2026-05-10T20:16:05+08:00","kind":"drag_start","payloadKind":"none","x":357,"y":358}
+[2026-05-10 20:16:05] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 20:16:05] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 20:16:06] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:16:06] evt {"at":"2026-05-10T20:16:06+08:00","kind":"drag_end","payloadKind":"none","x":579,"y":452}
+[2026-05-10 20:16:06] route drag_end over_hole=0 payload=text
+[2026-05-10 20:16:06] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:16:08] route delayed_hide action=hide_now
+[2026-05-10 20:16:53] evt {"at":"2026-05-10T20:16:53+08:00","kind":"drag_start","payloadKind":"none","x":1960,"y":762}
+[2026-05-10 20:16:53] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 20:16:53] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 20:16:55] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:16:55] evt {"at":"2026-05-10T20:16:55+08:00","kind":"drag_end","payloadKind":"none","x":2207,"y":845}
+[2026-05-10 20:16:55] route drag_end over_hole=0 payload=text
+[2026-05-10 20:16:55] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:16:57] route delayed_hide action=hide_now
+[2026-05-10 20:17:38] evt {"at":"2026-05-10T20:17:38+08:00","kind":"drag_start","payloadKind":"none","x":2197,"y":709}
+[2026-05-10 20:17:38] route kind=drag_start action=allow_unknown payload=none
+[2026-05-10 20:17:38] route kind=drag_start action=show payload=none mapped=file fallback=default=file
+[2026-05-10 20:17:40] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:17:40] evt {"at":"2026-05-10T20:17:40+08:00","kind":"drag_end","payloadKind":"none","x":1929,"y":843}
+[2026-05-10 20:17:40] route drag_end over_hole=0 payload=text
+[2026-05-10 20:17:40] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:17:42] route delayed_hide action=hide_now
+[2026-05-10 20:19:13] evt {"at":"2026-05-10T20:19:13+08:00","kind":"bridge_ready","x":3148,"y":790,"w":170,"h":210}
+[2026-05-10 20:19:35] evt {"at":"2026-05-10T20:19:35+08:00","kind":"drag_start","payloadKind":"none","x":975,"y":630}
+[2026-05-10 20:19:35] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:19:35] evt {"at":"2026-05-10T20:19:35+08:00","kind":"drag_end","payloadKind":"none","x":1164,"y":639}
+[2026-05-10 20:19:35] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:19:35] route drag_end over_hole=0 payload=text
+[2026-05-10 20:19:35] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:19:37] evt {"at":"2026-05-10T20:19:37+08:00","kind":"drag_start","payloadKind":"none","x":1026,"y":611}
+[2026-05-10 20:19:37] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:19:39] route watchdog action=force_reset phys=1 log=1 idle_ms=2360
+[2026-05-10 20:19:39] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:19:39] route delayed_hide action=hide_now
+[2026-05-10 20:19:41] evt {"at":"2026-05-10T20:19:41+08:00","kind":"drag_end","payloadKind":"none","x":1008,"y":621}
+[2026-05-10 20:19:41] route drag_end over_hole=0 payload=text
+[2026-05-10 20:19:41] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:19:42] evt {"at":"2026-05-10T20:19:42+08:00","kind":"drag_start","payloadKind":"none","x":1181,"y":652}
+[2026-05-10 20:19:42] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:19:42] route watchdog action=force_reset phys=0 log=0 idle_ms=297
+[2026-05-10 20:19:42] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:19:43] route delayed_hide action=hide_now
+[2026-05-10 20:19:43] evt {"at":"2026-05-10T20:19:42+08:00","kind":"drag_end","payloadKind":"none","x":835,"y":630}
+[2026-05-10 20:19:43] route drag_end over_hole=0 payload=text
+[2026-05-10 20:19:43] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:19:43] evt {"at":"2026-05-10T20:19:43+08:00","kind":"drag_start","payloadKind":"none","x":907,"y":633}
+[2026-05-10 20:19:43] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:19:45] route watchdog action=force_reset phys=1 log=1 idle_ms=2297
+[2026-05-10 20:19:46] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:19:46] route delayed_hide action=hide_now
+[2026-05-10 20:19:47] evt {"at":"2026-05-10T20:19:47+08:00","kind":"drag_end","payloadKind":"none","x":1102,"y":613}
+[2026-05-10 20:19:47] route drag_end over_hole=0 payload=text
+[2026-05-10 20:19:47] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:19:48] evt {"at":"2026-05-10T20:19:48+08:00","kind":"drag_start","payloadKind":"none","x":1198,"y":653}
+[2026-05-10 20:19:48] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:19:49] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:19:49] evt {"at":"2026-05-10T20:19:49+08:00","kind":"drag_end","payloadKind":"none","x":868,"y":638}
+[2026-05-10 20:19:49] route drag_end over_hole=0 payload=text
+[2026-05-10 20:19:49] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:19:50] evt {"at":"2026-05-10T20:19:50+08:00","kind":"drag_start","payloadKind":"none","x":882,"y":633}
+[2026-05-10 20:19:50] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:19:52] route watchdog action=force_reset phys=1 log=1 idle_ms=2375
+[2026-05-10 20:19:53] evt {"at":"2026-05-10T20:19:53+08:00","kind":"drag_end","payloadKind":"none","x":1083,"y":651}
+[2026-05-10 20:19:53] route drag_end over_hole=0 payload=text
+[2026-05-10 20:19:53] route release_fallback action=open_search was_over_hole=1
+[2026-05-10 20:19:54] route drag_end_text action=open_search len=23
+[2026-05-10 20:19:54] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:19:55] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-10 20:20:10] evt {"at":"2026-05-10T20:20:10+08:00","kind":"bridge_ready","x":3063,"y":790,"w":170,"h":210}
+[2026-05-10 20:20:34] evt {"at":"2026-05-10T20:20:33+08:00","kind":"drag_start","payloadKind":"none","x":903,"y":555}
+[2026-05-10 20:20:34] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:20:34] route watchdog action=force_reset phys=0 log=0 idle_ms=328
+[2026-05-10 20:20:34] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:20:34] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:20:34] evt {"at":"2026-05-10T20:20:34+08:00","kind":"drag_end","payloadKind":"none","x":1069,"y":565}
+[2026-05-10 20:20:34] route drag_end over_hole=0 payload=text
+[2026-05-10 20:20:34] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:20:35] evt {"at":"2026-05-10T20:20:34+08:00","kind":"drag_start","payloadKind":"none","x":957,"y":553}
+[2026-05-10 20:20:35] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:20:37] route watchdog action=force_reset phys=1 log=1 idle_ms=2328
+[2026-05-10 20:20:37] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:20:37] route delayed_hide action=hide_now
+[2026-05-10 20:20:38] evt {"at":"2026-05-10T20:20:38+08:00","kind":"drag_end","payloadKind":"none","x":801,"y":519}
+[2026-05-10 20:20:38] route drag_end over_hole=0 payload=text
+[2026-05-10 20:20:38] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:20:38] evt {"at":"2026-05-10T20:20:38+08:00","kind":"drag_start","payloadKind":"none","x":817,"y":524}
+[2026-05-10 20:20:38] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:20:38] evt {"at":"2026-05-10T20:20:38+08:00","kind":"drag_end","payloadKind":"none","x":835,"y":525}
+[2026-05-10 20:20:38] route drag_end over_hole=0 payload=text
+[2026-05-10 20:20:38] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:20:39] evt {"at":"2026-05-10T20:20:39+08:00","kind":"drag_start","payloadKind":"none","x":908,"y":561}
+[2026-05-10 20:20:39] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:20:40] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:20:40] evt {"at":"2026-05-10T20:20:40+08:00","kind":"drag_end","payloadKind":"none","x":1055,"y":564}
+[2026-05-10 20:20:40] route drag_end over_hole=0 payload=text
+[2026-05-10 20:20:40] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:20:40] evt {"at":"2026-05-10T20:20:40+08:00","kind":"drag_start","payloadKind":"none","x":988,"y":560}
+[2026-05-10 20:20:40] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:20:42] route watchdog action=force_reset phys=1 log=1 idle_ms=2266
+[2026-05-10 20:20:42] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:20:42] route delayed_hide action=hide_now
+[2026-05-10 20:20:44] evt {"at":"2026-05-10T20:20:44+08:00","kind":"drag_end","payloadKind":"none","x":944,"y":605}
+[2026-05-10 20:20:44] route drag_end over_hole=0 payload=text
+[2026-05-10 20:20:44] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:20:46] evt {"at":"2026-05-10T20:20:45+08:00","kind":"drag_start","payloadKind":"none","x":934,"y":562}
+[2026-05-10 20:20:46] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:20:46] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:20:46] evt {"at":"2026-05-10T20:20:46+08:00","kind":"drag_end","payloadKind":"none","x":1167,"y":567}
+[2026-05-10 20:20:46] route drag_end over_hole=0 payload=text
+[2026-05-10 20:20:46] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:20:46] evt {"at":"2026-05-10T20:20:46+08:00","kind":"drag_start","payloadKind":"none","x":1054,"y":560}
+[2026-05-10 20:20:46] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:20:48] route watchdog action=force_reset phys=0 log=0 idle_ms=2094
+[2026-05-10 20:20:48] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:20:48] route delayed_hide action=hide_now
+[2026-05-10 20:20:48] evt {"at":"2026-05-10T20:20:48+08:00","kind":"drag_end","payloadKind":"none","x":1072,"y":580}
+[2026-05-10 20:20:48] route drag_end over_hole=0 payload=text
+[2026-05-10 20:20:48] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:20:49] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:20:50] route delayed_hide action=hide_now
+[2026-05-10 20:21:50] evt {"at":"2026-05-10T20:21:50+08:00","kind":"bridge_ready","x":2978,"y":790,"w":170,"h":210}
+[2026-05-10 20:21:53] evt {"at":"2026-05-10T20:21:52+08:00","kind":"drag_start","payloadKind":"none","x":941,"y":646}
+[2026-05-10 20:21:53] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:21:53] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:21:53] evt {"at":"2026-05-10T20:21:53+08:00","kind":"drag_end","payloadKind":"none","x":1198,"y":655}
+[2026-05-10 20:21:53] route drag_end over_hole=0 payload=text
+[2026-05-10 20:21:53] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:21:54] evt {"at":"2026-05-10T20:21:54+08:00","kind":"drag_start","payloadKind":"none","x":1016,"y":644}
+[2026-05-10 20:21:54] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:21:56] route watchdog action=force_reset phys=0 log=0 idle_ms=2188
+[2026-05-10 20:21:56] evt {"at":"2026-05-10T20:21:56+08:00","kind":"drag_end","payloadKind":"none","x":1229,"y":744}
+[2026-05-10 20:22:00] evt {"at":"2026-05-10T20:22:00+08:00","kind":"bridge_ready","x":2978,"y":790,"w":170,"h":210}
+[2026-05-10 20:22:03] evt {"at":"2026-05-10T20:22:03+08:00","kind":"drag_start","payloadKind":"none","x":887,"y":639}
+[2026-05-10 20:22:03] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:22:04] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:22:04] evt {"at":"2026-05-10T20:22:04+08:00","kind":"drag_end","payloadKind":"none","x":1191,"y":664}
+[2026-05-10 20:22:04] route drag_end over_hole=0 payload=text
+[2026-05-10 20:22:04] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:22:06] route delayed_hide action=hide_now
+[2026-05-10 20:22:06] evt {"at":"2026-05-10T20:22:06+08:00","kind":"drag_start","payloadKind":"none","x":929,"y":646}
+[2026-05-10 20:22:06] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:22:08] route release_fallback action=open_search was_over_hole=1
+[2026-05-10 20:22:08] route watchdog action=force_reset phys=0 log=0 idle_ms=1188
+[2026-05-10 20:22:08] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:22:08] evt {"at":"2026-05-10T20:22:08+08:00","kind":"drag_end","payloadKind":"none","x":990,"y":674}
+[2026-05-10 20:22:08] route drag_end over_hole=0 payload=text
+[2026-05-10 20:22:08] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:22:08] evt {"at":"2026-05-10T20:22:08+08:00","kind":"drag_start","payloadKind":"none","x":987,"y":644}
+[2026-05-10 20:22:08] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:22:09] route drag_end_text action=open_search len=23
+[2026-05-10 20:22:09] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:22:09] evt {"at":"2026-05-10T20:22:09+08:00","kind":"drag_end","payloadKind":"none","x":1040,"y":644}
+[2026-05-10 20:22:09] route drag_end over_hole=0 payload=text
+[2026-05-10 20:22:09] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:22:09] evt {"at":"2026-05-10T20:22:09+08:00","kind":"drag_start","payloadKind":"none","x":956,"y":638}
+[2026-05-10 20:22:09] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:22:10] route watchdog action=force_reset phys=0 log=0 idle_ms=484
+[2026-05-10 20:22:10] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:22:10] evt {"at":"2026-05-10T20:22:10+08:00","kind":"drag_end","payloadKind":"none","x":953,"y":652}
+[2026-05-10 20:22:10] route drag_end over_hole=0 payload=text
+[2026-05-10 20:22:10] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:22:14] evt {"at":"2026-05-10T20:22:14+08:00","kind":"bridge_ready","x":2978,"y":790,"w":170,"h":210}
+[2026-05-10 20:23:08] evt {"at":"2026-05-10T20:23:08+08:00","kind":"drag_start","payloadKind":"none","x":1029,"y":599}
+[2026-05-10 20:23:08] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:23:08] route watchdog action=force_reset phys=0 log=0 idle_ms=203
+[2026-05-10 20:23:08] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:23:08] evt {"at":"2026-05-10T20:23:08+08:00","kind":"drag_end","payloadKind":"none","x":1145,"y":604}
+[2026-05-10 20:23:08] route drag_end over_hole=0 payload=text
+[2026-05-10 20:23:08] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:23:09] evt {"at":"2026-05-10T20:23:09+08:00","kind":"drag_start","payloadKind":"none","x":1016,"y":593}
+[2026-05-10 20:23:09] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:23:11] route watchdog action=force_reset phys=1 log=1 idle_ms=2203
+[2026-05-10 20:23:11] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:23:12] route delayed_hide action=hide_now
+[2026-05-10 20:23:13] evt {"at":"2026-05-10T20:23:13+08:00","kind":"drag_end","payloadKind":"none","x":1041,"y":627}
+[2026-05-10 20:23:13] route drag_end over_hole=0 payload=text
+[2026-05-10 20:23:13] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:23:14] evt {"at":"2026-05-10T20:23:14+08:00","kind":"drag_start","payloadKind":"none","x":1105,"y":597}
+[2026-05-10 20:23:14] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:23:14] route watchdog action=force_reset phys=0 log=0 idle_ms=515
+[2026-05-10 20:23:14] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:23:14] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:23:14] route delayed_hide action=hide_now
+[2026-05-10 20:23:14] evt {"at":"2026-05-10T20:23:14+08:00","kind":"drag_end","payloadKind":"none","x":960,"y":590}
+[2026-05-10 20:23:15] route drag_end over_hole=0 payload=text
+[2026-05-10 20:23:15] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:23:15] evt {"at":"2026-05-10T20:23:15+08:00","kind":"drag_start","payloadKind":"none","x":954,"y":596}
+[2026-05-10 20:23:15] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:23:17] route watchdog action=force_reset phys=1 log=1 idle_ms=2203
+[2026-05-10 20:23:17] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:23:18] route delayed_hide action=hide_now
+[2026-05-10 20:23:19] evt {"at":"2026-05-10T20:23:19+08:00","kind":"drag_end","payloadKind":"none","x":991,"y":597}
+[2026-05-10 20:23:19] route drag_end over_hole=0 payload=text
+[2026-05-10 20:23:19] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:23:20] evt {"at":"2026-05-10T20:23:20+08:00","kind":"drag_start","payloadKind":"none","x":1043,"y":602}
+[2026-05-10 20:23:20] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:23:20] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:23:20] evt {"at":"2026-05-10T20:23:20+08:00","kind":"drag_end","payloadKind":"none","x":936,"y":602}
+[2026-05-10 20:23:20] route drag_end over_hole=0 payload=text
+[2026-05-10 20:23:20] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:23:21] evt {"at":"2026-05-10T20:23:21+08:00","kind":"drag_start","payloadKind":"none","x":952,"y":603}
+[2026-05-10 20:23:21] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:23:23] route watchdog action=force_reset phys=1 log=1 idle_ms=2203
+[2026-05-10 20:23:23] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:23:24] route delayed_hide action=hide_now
+[2026-05-10 20:23:25] evt {"at":"2026-05-10T20:23:25+08:00","kind":"drag_end","payloadKind":"none","x":918,"y":603}
+[2026-05-10 20:23:25] route drag_end over_hole=0 payload=text
+[2026-05-10 20:23:25] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:23:27] route delayed_hide action=hide_now
+[2026-05-10 20:24:17] evt {"at":"2026-05-10T20:24:16+08:00","kind":"bridge_ready","x":2893,"y":790,"w":170,"h":210}
+[2026-05-10 20:24:22] evt {"at":"2026-05-10T20:24:22+08:00","kind":"drag_start","payloadKind":"none","x":1016,"y":689}
+[2026-05-10 20:24:22] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:24:22] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:24:22] evt {"at":"2026-05-10T20:24:22+08:00","kind":"drag_end","payloadKind":"none","x":1110,"y":689}
+[2026-05-10 20:24:22] route drag_end over_hole=0 payload=text
+[2026-05-10 20:24:22] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:24:24] route delayed_hide action=hide_now
+[2026-05-10 20:24:30] evt {"at":"2026-05-10T20:24:30+08:00","kind":"drag_start","payloadKind":"none","x":1175,"y":731}
+[2026-05-10 20:25:16] evt {"at":"2026-05-10T20:25:16+08:00","kind":"bridge_ready","x":2893,"y":790,"w":170,"h":210}
+[2026-05-10 20:25:16] evt {"at":"2026-05-10T20:25:16+08:00","kind":"drag_start","payloadKind":"none","x":1027,"y":603}
+[2026-05-10 20:25:16] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:25:16] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:25:17] evt {"at":"2026-05-10T20:25:16+08:00","kind":"drag_end","payloadKind":"none","x":1019,"y":593}
+[2026-05-10 20:25:17] route drag_end over_hole=0 payload=text
+[2026-05-10 20:25:17] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:25:18] evt {"at":"2026-05-10T20:25:18+08:00","kind":"drag_start","payloadKind":"none","x":866,"y":572}
+[2026-05-10 20:25:18] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:25:19] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:25:19] evt {"at":"2026-05-10T20:25:19+08:00","kind":"drag_end","payloadKind":"none","x":1075,"y":598}
+[2026-05-10 20:25:19] route drag_end over_hole=0 payload=text
+[2026-05-10 20:25:19] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:25:20] evt {"at":"2026-05-10T20:25:19+08:00","kind":"drag_start","payloadKind":"none","x":873,"y":589}
+[2026-05-10 20:25:20] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:25:20] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:25:20] evt {"at":"2026-05-10T20:25:20+08:00","kind":"drag_end","payloadKind":"none","x":1036,"y":597}
+[2026-05-10 20:25:20] route drag_end over_hole=0 payload=text
+[2026-05-10 20:25:20] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:25:22] evt {"at":"2026-05-10T20:25:22+08:00","kind":"drag_start","payloadKind":"none","x":1003,"y":526}
+[2026-05-10 20:25:22] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:25:22] evt {"at":"2026-05-10T20:25:22+08:00","kind":"drag_end","payloadKind":"none","x":1002,"y":602}
+[2026-05-10 20:25:22] route drag_end over_hole=0 payload=text
+[2026-05-10 20:25:22] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:25:24] evt {"at":"2026-05-10T20:25:24+08:00","kind":"drag_start","payloadKind":"none","x":932,"y":559}
+[2026-05-10 20:25:24] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:25:24] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:25:24] evt {"at":"2026-05-10T20:25:24+08:00","kind":"drag_end","payloadKind":"none","x":1072,"y":565}
+[2026-05-10 20:25:35] evt {"at":"2026-05-10T20:25:35+08:00","kind":"bridge_ready","x":2893,"y":790,"w":170,"h":210}
+[2026-05-10 20:25:35] evt {"at":"2026-05-10T20:25:35+08:00","kind":"drag_start","payloadKind":"none","x":1096,"y":685}
+[2026-05-10 20:25:35] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:25:36] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:25:37] evt {"at":"2026-05-10T20:25:36+08:00","kind":"drag_end","payloadKind":"none","x":960,"y":678}
+[2026-05-10 20:25:37] route drag_end over_hole=0 payload=text
+[2026-05-10 20:25:37] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:25:38] route delayed_hide action=hide_now
+[2026-05-10 20:25:39] evt {"at":"2026-05-10T20:25:39+08:00","kind":"drag_start","payloadKind":"none","x":1114,"y":690}
+[2026-05-10 20:25:39] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:25:39] route watchdog action=force_reset phys=0 log=0 idle_ms=531
+[2026-05-10 20:25:39] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:25:40] route delayed_hide action=hide_now
+[2026-05-10 20:25:40] evt {"at":"2026-05-10T20:25:39+08:00","kind":"drag_end","payloadKind":"none","x":960,"y":691}
+[2026-05-10 20:25:40] route drag_end over_hole=0 payload=text
+[2026-05-10 20:25:40] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:25:40] evt {"at":"2026-05-10T20:25:40+08:00","kind":"drag_start","payloadKind":"none","x":968,"y":666}
+[2026-05-10 20:25:40] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:25:42] route watchdog action=force_reset phys=1 log=1 idle_ms=2297
+[2026-05-10 20:25:43] evt {"at":"2026-05-10T20:25:43+08:00","kind":"drag_end","payloadKind":"none","x":887,"y":585}
+[2026-05-10 20:25:58] evt {"at":"2026-05-10T20:25:57+08:00","kind":"bridge_ready","x":2893,"y":790,"w":170,"h":210}
+[2026-05-10 20:26:31] evt {"at":"2026-05-10T20:26:30+08:00","kind":"drag_start","payloadKind":"none","x":1141,"y":637}
+[2026-05-10 20:26:31] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:26:31] route reset_session reason=release_fallback hide_ms=300
+[2026-05-10 20:26:31] evt {"at":"2026-05-10T20:26:31+08:00","kind":"drag_end","payloadKind":"none","x":936,"y":616}
+[2026-05-10 20:26:31] route drag_end over_hole=0 payload=text
+[2026-05-10 20:26:31] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:26:32] evt {"at":"2026-05-10T20:26:32+08:00","kind":"drag_start","payloadKind":"none","x":946,"y":601}
+[2026-05-10 20:26:32] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:26:34] route watchdog action=force_reset phys=1 log=1 idle_ms=2297
+[2026-05-10 20:26:34] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:26:35] route delayed_hide action=hide_now
+[2026-05-10 20:26:36] evt {"at":"2026-05-10T20:26:36+08:00","kind":"drag_end","payloadKind":"none","x":1118,"y":632}
+[2026-05-10 20:26:36] route drag_end over_hole=0 payload=text
+[2026-05-10 20:26:36] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:26:37] evt {"at":"2026-05-10T20:26:37+08:00","kind":"drag_start","payloadKind":"none","x":976,"y":627}
+[2026-05-10 20:26:37] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:26:39] route watchdog action=force_reset phys=1 log=1 idle_ms=2328
+[2026-05-10 20:26:39] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:26:39] route delayed_hide action=hide_now
+[2026-05-10 20:26:41] evt {"at":"2026-05-10T20:26:41+08:00","kind":"drag_end","payloadKind":"none","x":1018,"y":629}
+[2026-05-10 20:26:41] route drag_end over_hole=0 payload=text
+[2026-05-10 20:26:41] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:26:41] evt {"at":"2026-05-10T20:26:41+08:00","kind":"drag_start","payloadKind":"none","x":995,"y":624}
+[2026-05-10 20:26:41] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-10 20:26:44] route watchdog action=force_reset phys=1 log=1 idle_ms=2266
+[2026-05-10 20:26:44] route reset_session reason=watchdog hide_ms=120
+[2026-05-10 20:26:44] route delayed_hide action=hide_now
+[2026-05-10 20:26:45] evt {"at":"2026-05-10T20:26:45+08:00","kind":"drag_end","payloadKind":"none","x":985,"y":640}
+[2026-05-10 20:26:45] route drag_end over_hole=0 payload=text
+[2026-05-10 20:26:45] route reset_session reason=drag_end hide_ms=1800
+[2026-05-10 20:26:47] route delayed_hide action=hide_now
