@@ -74,25 +74,6 @@ global GDHO_STRICT_MODE := true
 global GDHO_DRAG_CURSOR_STREAK := 0
 global GDHO_LAST_DROPPED_TEXT := ""
 global GDHO_SESSION_TEXT := ""
-; Hidden-state parking: keep host away from center to reduce accidental obstruction.
-global GDHO_HIDE_DOCK_ENABLED := true
-global GDHO_HIDE_DOCK_EDGE := "right" ; right|left|top|bottom
-global GDHO_HIDE_DOCK_MARGIN := 10
-
-GDHO_ApplyHideDockSettings(enabled := true, edge := "right", margin := 10) {
-    global GDHO_HIDE_DOCK_ENABLED, GDHO_HIDE_DOCK_EDGE, GDHO_HIDE_DOCK_MARGIN
-    GDHO_HIDE_DOCK_ENABLED := !!enabled
-    e := StrLower(Trim(String(edge)))
-    if (e != "right" && e != "left" && e != "top" && e != "bottom")
-        e := "right"
-    GDHO_HIDE_DOCK_EDGE := e
-    m := Integer(margin)
-    if (m < 0)
-        m := 0
-    if (m > 80)
-        m := 80
-    GDHO_HIDE_DOCK_MARGIN := m
-}
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -656,52 +637,8 @@ GDHO_HideOverlay() {
         return
     try WebView2_NotifyHidden(GDHO_WV2)
     GDHO_ApplyDropHitTestByProximity(0.0)
-    try GDHO_DockHostWhenHidden()
     try GDHO_GUI.Hide()
     GDHO_VISIBLE := false
-}
-
-GDHO_DockHostWhenHidden() {
-    global GDHO_GUI, GDHO_HIDE_DOCK_ENABLED, GDHO_HIDE_DOCK_EDGE, GDHO_HIDE_DOCK_MARGIN
-    global GDHO_HOST_W, GDHO_HOST_H, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y
-    if !GDHO_HIDE_DOCK_ENABLED || !GDHO_GUI
-        return
-
-    GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
-    hostW := Integer(GDHO_HOST_W), hostH := Integer(GDHO_HOST_H)
-    m := Integer(GDHO_HIDE_DOCK_MARGIN)
-    if (m < 0)
-        m := 0
-
-    x := Integer(vl + vw - hostW - m)
-    y := Integer(vt + (vh - hostH) / 2)
-    edge := StrLower(Trim(String(GDHO_HIDE_DOCK_EDGE)))
-    if (edge = "left")
-        x := Integer(vl + m)
-    else if (edge = "top") {
-        x := Integer(vl + (vw - hostW) / 2)
-        y := Integer(vt + m)
-    } else if (edge = "bottom") {
-        x := Integer(vl + (vw - hostW) / 2)
-        y := Integer(vt + vh - hostH - m)
-    }
-
-    minX := vl + 2
-    minY := vt + 2
-    maxX := vl + vw - hostW - 2
-    maxY := vt + vh - hostH - 2
-    if (x < minX)
-        x := minX
-    if (y < minY)
-        y := minY
-    if (x > maxX)
-        x := maxX
-    if (y > maxY)
-        y := maxY
-
-    GDHO_LAST_HOST_X := x
-    GDHO_LAST_HOST_Y := y
-    try GDHO_GUI.Move(x, y, hostW, hostH)
 }
 
 GDHO_PushThemeToWeb() {

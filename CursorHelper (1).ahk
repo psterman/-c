@@ -2521,8 +2521,12 @@ GDHO_LoadSettingsFromIni() {
     fy := Integer(IniRead(ConfigFile, "Appearance", "HoleFixedY", "260"))
     ss := Float(IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0"))
     al := Float(IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0"))
+    hideDockEnabled := (IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1")
+    hideDockEdge := IniRead(ConfigFile, "Appearance", "HoleHideDockEdge", "right")
+    hideDockMargin := Integer(IniRead(ConfigFile, "Appearance", "HoleHideDockMargin", "10"))
     try GDHO_SetScreenAnchor(fx, fy)
     try GDHO_ApplySettings(mode, td, dd, fx, fy, ss, al)
+    try GDHO_ApplyHideDockSettings(hideDockEnabled, hideDockEdge, hideDockMargin)
 }
 
 ApplyUnifiedWebViewAssets(wv2) {

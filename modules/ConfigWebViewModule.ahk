@@ -598,7 +598,10 @@ ConfigWebView_BuildInitData() {
         "holeFixedX", Integer(IniRead(ConfigFile, "Appearance", "HoleFixedX", "360")),
         "holeFixedY", Integer(IniRead(ConfigFile, "Appearance", "HoleFixedY", "260")),
         "holeSizeScale", Float(IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0")),
-        "holeAnimLevel", Float(IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0"))
+        "holeAnimLevel", Float(IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0")),
+        "holeHideDockEnabled", (IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1"),
+        "holeHideDockEdge", IniRead(ConfigFile, "Appearance", "HoleHideDockEdge", "right"),
+        "holeHideDockMargin", Integer(IniRead(ConfigFile, "Appearance", "HoleHideDockMargin", "10"))
     )
     kbSnap := ConfigWebView_GetKeybinderToolbarSnapshot()
     cfgPayload["keybinderToolbarLayout"] := kbSnap["toolbarLayout"]
@@ -948,6 +951,15 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
             NewHoleAnimLevel := 0.4
         if (NewHoleAnimLevel > 2.2)
             NewHoleAnimLevel := 2.2
+        NewHoleHideDockEnabled := !!payload.Get("holeHideDockEnabled", IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1")
+        NewHoleHideDockEdge := StrLower(Trim(String(payload.Get("holeHideDockEdge", IniRead(ConfigFile, "Appearance", "HoleHideDockEdge", "right")))))
+        if (NewHoleHideDockEdge != "right" && NewHoleHideDockEdge != "left" && NewHoleHideDockEdge != "top" && NewHoleHideDockEdge != "bottom")
+            NewHoleHideDockEdge := "right"
+        NewHoleHideDockMargin := Integer(payload.Get("holeHideDockMargin", IniRead(ConfigFile, "Appearance", "HoleHideDockMargin", "10")))
+        if (NewHoleHideDockMargin < 0)
+            NewHoleHideDockMargin := 0
+        if (NewHoleHideDockMargin > 80)
+            NewHoleHideDockMargin := 80
         NewQuickActions := []
         if (payload.Has("quickActions") && payload["quickActions"] is Array) {
             for item in payload["quickActions"] {
@@ -1118,6 +1130,9 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         IniWrite(String(NewHoleFixedY), ConfigFile, "Appearance", "HoleFixedY")
         IniWrite(String(NewHoleSizeScale), ConfigFile, "Appearance", "HoleSizeScale")
         IniWrite(String(NewHoleAnimLevel), ConfigFile, "Appearance", "HoleAnimLevel")
+        IniWrite(NewHoleHideDockEnabled ? "1" : "0", ConfigFile, "Appearance", "HoleHideDockEnabled")
+        IniWrite(NewHoleHideDockEdge, ConfigFile, "Appearance", "HoleHideDockEdge")
+        IniWrite(String(NewHoleHideDockMargin), ConfigFile, "Appearance", "HoleHideDockMargin")
         IniWrite(FunctionPanelPos, ConfigFile, "Appearance", "FunctionPanelPos")
         IniWrite(ConfigPanelPos, ConfigFile, "Appearance", "ConfigPanelPos")
         IniWrite(ClipboardPanelPos, ConfigFile, "Appearance", "ClipboardPanelPos")
@@ -1131,6 +1146,7 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         try FloatingToolbarPushButtonConfigToWeb()
         try GDHO_SetScreenAnchor(NewHoleFixedX, NewHoleFixedY)
         try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel)
+        try GDHO_ApplyHideDockSettings(NewHoleHideDockEnabled, NewHoleHideDockEdge, NewHoleHideDockMargin)
         try ApplyAppearanceActivationMode()
         catch {
         }
@@ -1173,6 +1189,15 @@ ConfigWebView_SaveHoleOnly(payload, &errorMsg := "") {
             NewHoleAnimLevel := 0.4
         if (NewHoleAnimLevel > 2.2)
             NewHoleAnimLevel := 2.2
+        NewHoleHideDockEnabled := !!payload.Get("holeHideDockEnabled", IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1")
+        NewHoleHideDockEdge := StrLower(Trim(String(payload.Get("holeHideDockEdge", IniRead(ConfigFile, "Appearance", "HoleHideDockEdge", "right")))))
+        if (NewHoleHideDockEdge != "right" && NewHoleHideDockEdge != "left" && NewHoleHideDockEdge != "top" && NewHoleHideDockEdge != "bottom")
+            NewHoleHideDockEdge := "right"
+        NewHoleHideDockMargin := Integer(payload.Get("holeHideDockMargin", IniRead(ConfigFile, "Appearance", "HoleHideDockMargin", "10")))
+        if (NewHoleHideDockMargin < 0)
+            NewHoleHideDockMargin := 0
+        if (NewHoleHideDockMargin > 80)
+            NewHoleHideDockMargin := 80
 
         IniWrite(NewHolePositionMode, ConfigFile, "Appearance", "HolePositionMode")
         IniWrite(String(NewHoleTriggerDistance), ConfigFile, "Appearance", "HoleTriggerDistance")
@@ -1181,8 +1206,12 @@ ConfigWebView_SaveHoleOnly(payload, &errorMsg := "") {
         IniWrite(String(NewHoleFixedY), ConfigFile, "Appearance", "HoleFixedY")
         IniWrite(String(NewHoleSizeScale), ConfigFile, "Appearance", "HoleSizeScale")
         IniWrite(String(NewHoleAnimLevel), ConfigFile, "Appearance", "HoleAnimLevel")
+        IniWrite(NewHoleHideDockEnabled ? "1" : "0", ConfigFile, "Appearance", "HoleHideDockEnabled")
+        IniWrite(NewHoleHideDockEdge, ConfigFile, "Appearance", "HoleHideDockEdge")
+        IniWrite(String(NewHoleHideDockMargin), ConfigFile, "Appearance", "HoleHideDockMargin")
         try GDHO_SetScreenAnchor(NewHoleFixedX, NewHoleFixedY)
         try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel)
+        try GDHO_ApplyHideDockSettings(NewHoleHideDockEnabled, NewHoleHideDockEdge, NewHoleHideDockMargin)
         return true
     } catch as err {
         errorMsg := "保存失败: " . err.Message
