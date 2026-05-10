@@ -1332,6 +1332,11 @@ SCWV_RequestFocusInput() {
 SCWV_Hide(PersistSelection := true) {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_SearchTimer, GuiID_SearchCenter, g_SCWV_PendingJsonQueue
     global g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason
+    ; Drag-hole reentry safety: when exiting SearchCenter, force-reset native drag session
+    ; so next text drag can re-trigger the hole from a clean initial state.
+    try NativeDropBridge_ResetSession("search_center_exit", 0)
+    catch {
+    }
     try FloatingToolbar_PageDockLeave("search")
 
     if !SCWV_HostAlive() {

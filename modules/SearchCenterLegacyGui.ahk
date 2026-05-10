@@ -2822,6 +2822,10 @@ OnSearchCenterSize(GuiObj, MinMax, Width, Height) {
 ; 搜索中心窗口关闭处理函数
 SearchCenterCloseHandler(*) {
     global GuiID_SearchCenter, SearchCenterSelectedEngines, SearchCenterSelectedEnginesByCategory, SearchCenterCurrentCategory
+    ; Keep drag-hole state machine re-entrant across close/reopen cycles.
+    try NativeDropBridge_ResetSession("search_center_exit", 0)
+    catch {
+    }
     ; 【关键修复】在关闭窗口前保存当前分类的选择状态
     try {
         Categories := GetSearchCenterCategories()

@@ -31,6 +31,8 @@ global NativeDropSeedText := ""
 global NativeDropLastEventTick := 0
 global NativeDropLastTickMouseX := 0
 global NativeDropLastTickMouseY := 0
+global NativeDropLastStartTick := 0
+global NativeDropRearmUntil := 0
 ; Diagnostic mode: make drop receiver full-screen to verify hit path.
 ; Keep disabled in production. Full-screen receiver can degrade desktop interaction.
 global NativeDropBridgeFullScreenHitTest := false
@@ -2732,6 +2734,7 @@ NativeDropBridge_Poll(*) {
 
 NativeDropBridge_TriggerHolePulse(evt) {
     global EnableHoleOverlayOnNativeDrop, NativeDropSessionActive, NativeDropHideDelayMs, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
+    global NativeDropLastStartTick, NativeDropRearmUntil
     if !EnableHoleOverlayOnNativeDrop
         return
     if !IsObject(evt)
@@ -2750,6 +2753,18 @@ NativeDropBridge_TriggerHolePulse(evt) {
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . kindRaw . "', dispatch: 'route', active: " . (NativeDropSessionActive ? "1" : "0") . ", overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
     fallbackPayload := ""
     if (kindRaw = "drag_start" || kindRaw = "drag_enter") {
+        nowTick := A_TickCount
+        ; Rearm gate: after closing SearchCenter/reset, ignore a few stale bridge ticks.
+        if (NativeDropRearmUntil > 0 && nowTick < NativeDropRearmUntil) {
+            try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=rearm_gate remain_ms=" . (NativeDropRearmUntil - nowTick))
+            return
+        }
+        ; Start debounce: suppress duplicate drag_start/drag_enter bursts.
+        if (NativeDropLastStartTick > 0 && (nowTick - NativeDropLastStartTick) < 90) {
+            try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=start_debounce delta_ms=" . (nowTick - NativeDropLastStartTick))
+            return
+        }
+        NativeDropLastStartTick := nowTick
         if (kindMapped = "")
             kindMapped := NativeDropBridge_GuessPayloadForUnknownDrag(&fallbackPayload)
         if NativeDropBridge_ShouldIgnoreDragEvent(kindRaw, payloadRaw, kindMapped) {
@@ -3038,12 +3053,17 @@ NativeDropBridge_CaptureTextSeed() {
 NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300) {
     global NativeDropSessionActive, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
     global NativeDropLastTickMouseX, NativeDropLastTickMouseY
+    global NativeDropSessionPayload, NativeDropLastEventTick, NativeDropLastStartTick, NativeDropRearmUntil
     NativeDropSessionActive := false
+    NativeDropSessionPayload := "text"
     NativeDropOverHole := false
     NativeDropWasOverHole := false
     NativeDropSeedText := ""
     NativeDropLastTickMouseX := 0
     NativeDropLastTickMouseY := 0
+    NativeDropLastStartTick := 0
+    NativeDropLastEventTick := A_TickCount
+    NativeDropRearmUntil := A_TickCount + 120
     try SetTimer(NativeDropBridge_DragSessionTick, 0)
     if (hideDelayMs < 0)
         hideDelayMs := 0
@@ -3053,6 +3073,10 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300) {
     } else {
         try SetTimer(NativeDropBridge_DelayedHide, -Abs(Integer(hideDelayMs)))
     }
+    ; Ensure overlay window returns to transparent hit-test state after forced cleanup.
+    try GDHO_SetClickThrough(true)
+    ; Keep bridge alive/re-armed for the next drag cycle.
+    try NativeDropBridge_Start()
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'reset', dispatch: '" . reason . "', active: 0, overHole: 0, wasOverHole: 0, payload: '-' })")
     if (reason != "")
         try NativeDropDiag_Log("route reset_session reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
