@@ -73,6 +73,7 @@ global GDHO_DROP_ACK_TICK := 0
 global GDHO_STRICT_MODE := true
 global GDHO_DRAG_CURSOR_STREAK := 0
 global GDHO_LAST_DROPPED_TEXT := ""
+global GDHO_SESSION_TEXT := ""
 
 GDHO_ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
@@ -342,12 +343,13 @@ GDHO_OnWebMessage(sender, args) {
 }
 
 GDHO_HandleDropPayload(payload) {
-    global GDHO_LAST_DROPPED_TEXT
+    global GDHO_LAST_DROPPED_TEXT, GDHO_SESSION_TEXT
     kind := payload.Has("kind") ? String(payload["kind"]) : "none"
     if (kind = "text") {
         txt := payload.Has("text") ? Trim(String(payload["text"])) : ""
         if (txt != "") {
             GDHO_LAST_DROPPED_TEXT := txt
+            GDHO_SESSION_TEXT := txt
             ; Always open SearchCenter first, then inject keyword query.
             try FloatingToolbar_ActivateSearchCenter()
             try SetTimer(FloatingToolbar_ActivateSearchCenter, -80)
@@ -745,10 +747,18 @@ GDHO_Drop(payload := "file") {
 }
 
 GDHO_ExecuteDropCommand(payload := "file") {
-    global GDHO_LAST_DROPPED_TEXT
+    global GDHO_LAST_DROPPED_TEXT, GDHO_SESSION_TEXT
     p := (payload = "text") ? "text" : "file"
     if (p = "text") {
-        txt := Trim(String(GDHO_LAST_DROPPED_TEXT))
+        txt := Trim(String(GDHO_SESSION_TEXT))
+        if (txt = "")
+            txt := Trim(String(GDHO_LAST_DROPPED_TEXT))
+        if (txt = "") {
+            try txt := Trim(String(GDHO_GetBestSelectedText()))
+        }
+        if (txt = "") {
+            try txt := Trim(String(GDHO_CaptureSelectedTextViaCopy()))
+        }
         if (txt = "") {
             try txt := Trim(String(A_Clipboard))
         }
@@ -761,6 +771,7 @@ GDHO_ExecuteDropCommand(payload := "file") {
             try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(txt), -320)
         }
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'search:" (txt != "" ? "ok" : "empty") "' })")
+        GDHO_SESSION_TEXT := ""
         return
     }
     ; File-like drop path: attempt native explorer fallback immediately.
@@ -880,6 +891,47 @@ GDHO_UnpinFromDesktop() {
     GDHO_HideOverlay()
 }
 
+GDHO_GetBestSelectedText() {
+    txt := ""
+    try txt := Trim(String(SelectionSense_GetLastSelectedText()))
+    catch {
+        txt := ""
+    }
+    return txt
+}
+
+GDHO_CaptureSelectedTextViaCopy() {
+    oldClip := ""
+    hadOld := false
+    out := ""
+    try {
+        oldClip := ClipboardAll()
+        hadOld := true
+    } catch {
+        hadOld := false
+        oldClip := ""
+    }
+    try A_Clipboard := ""
+    catch {
+    }
+    try Send("^c")
+    catch {
+    }
+    try ClipWait(0.18)
+    catch {
+    }
+    try out := Trim(String(A_Clipboard))
+    catch {
+        out := ""
+    }
+    try {
+        if hadOld
+            A_Clipboard := oldClip
+    } catch {
+    }
+    return out
+}
+
 ; ===== Global drag pre-judge =====
 ; Strategy:
 ; 1) Detect left-button hold + movement threshold.
@@ -887,7 +939,7 @@ GDHO_UnpinFromDesktop() {
 ; 3) If likely dragging payload, show/update overlay globally.
 GDHO_PollDrag(*) {
     global GDHO_ACTIVE, GDHO_START_X, GDHO_START_Y, GDHO_LAST_X, GDHO_LAST_Y
-    global GDHO_START_CURSOR, GDHO_DRAG_SOURCE_CLASS, GDHO_PAYLOAD
+    global GDHO_START_CURSOR, GDHO_DRAG_SOURCE_CLASS, GDHO_PAYLOAD, GDHO_SESSION_TEXT
     global GDHO_MIN_MOVE_PX, GDHO_LAST_UPDATE_TICK, GDHO_MAX_IDLE_HIDE_MS, GDHO_DRAG_CONFIDENCE
     global GDHO_POLL_BUSY, GDHO_SUPPRESS_UNTIL_RELEASE, GDHO_TOOLBAR_NEAR_RADIUS_PX, GDHO_TOOLBAR_DISMISS_RADIUS_PX, GDHO_POSITION_MODE
     global FloatingToolbarDragging, NativeDropSessionActive
@@ -1020,6 +1072,7 @@ GDHO_PollDrag(*) {
             GDHO_RELEASE_DEADLINE_TICK := 0
             GDHO_SAW_DRAG_CURSOR := false
             GDHO_DRAG_CURSOR_STREAK := 0
+            GDHO_SESSION_TEXT := ""
             GDHO_ResetPointerSeed()
             return
         }
@@ -1028,6 +1081,7 @@ GDHO_PollDrag(*) {
             GDHO_HideFrontend()
             GDHO_HideOverlay()
             GDHO_ACTIVE := false
+            GDHO_SESSION_TEXT := ""
             return
         }
 
@@ -1043,6 +1097,8 @@ GDHO_PollDrag(*) {
             GDHO_START_CURSOR := GDHO_GetCursorHandle()
             GDHO_DRAG_SOURCE_CLASS := GDHO_GetClassByHwnd(hwnd)
             GDHO_PAYLOAD := GDHO_GuessPayloadType(GDHO_DRAG_SOURCE_CLASS)
+            if (GDHO_PAYLOAD = "text")
+                GDHO_SESSION_TEXT := GDHO_GetBestSelectedText()
             return
         }
 

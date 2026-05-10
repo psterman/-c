@@ -1359,14 +1359,9 @@ SelectionSense_ProcessDeferred(*) {
     if (CapsLockCopyInProgress)
         return
 
-    ; Only when Hub is open and Cursor editor has focus do we simulate ^c for preview refresh.
-    if !(SelectionSense_HubCapsuleHostIsOpen() && SelectionSense_IsCursorEditorActive()) {
-        SelectionSense_ClearLastSelected()
-        try FloatingToolbar_NotifySelectionClear()
-        catch as _e {
-        }
-        return
-    }
+    ; Always capture selection text for global consumers (e.g. drag-hole -> SearchCenter).
+    ; Keep Hub/preview notifications gated by original condition.
+    hubPreviewActive := (SelectionSense_HubCapsuleHostIsOpen() && SelectionSense_IsCursorEditorActive())
 
     clipSaved := ""
     try clipSaved := ClipboardAll()
@@ -1408,8 +1403,10 @@ SelectionSense_ProcessDeferred(*) {
         } catch as _e {
         }
         SelectionSense_ClearLastSelected()
-        try FloatingToolbar_NotifySelectionClear()
-        catch as _e {
+        if hubPreviewActive {
+            try FloatingToolbar_NotifySelectionClear()
+            catch as _e {
+            }
         }
         return
     }
@@ -1423,10 +1420,12 @@ SelectionSense_ProcessDeferred(*) {
     g_SelSense_LastFullText := text
     g_SelSense_LastTick := A_TickCount
 
-    try FloatingToolbar_NotifySelectionChange(text)
-    catch as _e {
+    if hubPreviewActive {
+        try FloatingToolbar_NotifySelectionChange(text)
+        catch as _e {
+        }
+        SelectionSense_QueueHubPreviewUpdate(text)
     }
-    SelectionSense_QueueHubPreviewUpdate(text)
 }
 
 SelectionSense_EnsureMenuHost() {

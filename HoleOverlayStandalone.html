@@ -584,6 +584,41 @@
           }
         });
       }
+      function stripHtmlToText(html) {
+        try {
+          var div = document.createElement('div');
+          div.innerHTML = String(html || '');
+          return String(div.textContent || div.innerText || '').trim();
+        } catch (_) {
+          return '';
+        }
+      }
+      function getDataTransferText(dt) {
+        try {
+          var direct = String((dt && (dt.getData('text/plain') || dt.getData('Text') || dt.getData('text/uri-list'))) || '').trim();
+          if (direct) return direct;
+        } catch (_) {}
+        try {
+          var html = String((dt && dt.getData && dt.getData('text/html')) || '').trim();
+          if (html) {
+            var textFromHtml = stripHtmlToText(html);
+            if (textFromHtml) return textFromHtml;
+          }
+        } catch (_) {}
+        return '';
+      }
+      function readItemString(item) {
+        return new Promise(function (resolve) {
+          try {
+            if (!item || typeof item.getAsString !== 'function') return resolve('');
+            item.getAsString(function (value) {
+              resolve(String(value || '').trim());
+            });
+          } catch (_) {
+            resolve('');
+          }
+        });
+      }
       async function readDropPayload(dt) {
         var files = [];
         var text = '';
@@ -608,10 +643,27 @@
           }
           if (item.contentBase64 || item.path || item.name) files.push(item);
         }
-        try {
-          text = String((dt && (dt.getData('text/plain') || dt.getData('Text') || dt.getData('text/uri-list'))) || '').trim();
-        } catch (_) {
-          text = '';
+        text = getDataTransferText(dt);
+        if (!text) {
+          try {
+            var items = Array.from((dt && dt.items) || []);
+            for (var j = 0; j < items.length; j++) {
+              var it = items[j];
+              if (!it) continue;
+              var kind = String(it.kind || '').toLowerCase();
+              var type = String(it.type || '').toLowerCase();
+              if (kind !== 'string') continue;
+              if (!(type.indexOf('text/plain') >= 0 || type.indexOf('text/html') >= 0 || type.indexOf('text/uri-list') >= 0)) continue;
+              var itemText = await readItemString(it);
+              if (!itemText) continue;
+              if (type.indexOf('text/html') >= 0) itemText = stripHtmlToText(itemText);
+              itemText = String(itemText || '').trim();
+              if (itemText) {
+                text = itemText;
+                break;
+              }
+            }
+          } catch (_) {}
         }
         if (files.length > 0)
           return { kind: 'file', files: files, text: text };

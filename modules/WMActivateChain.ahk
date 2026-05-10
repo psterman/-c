@@ -6,8 +6,24 @@
 global g_WMActivateChain := []
 global g_WMActivateChain_DispatchActive := false
 
+WMActivateChain_EnsureInit() {
+    global g_WMActivateChain, g_WMActivateChain_DispatchActive
+    try {
+        if !(g_WMActivateChain is Array)
+            g_WMActivateChain := []
+    } catch {
+        g_WMActivateChain := []
+    }
+    try {
+        g_WMActivateChain_DispatchActive := !!g_WMActivateChain_DispatchActive
+    } catch {
+        g_WMActivateChain_DispatchActive := false
+    }
+}
+
 _WMActivateChain_Dispatch(wParam, lParam, msg, hwnd) {
     global g_WMActivateChain
+    WMActivateChain_EnsureInit()
     if g_WMActivateChain.Length = 0
         return
     snap := []
@@ -19,6 +35,7 @@ _WMActivateChain_Dispatch(wParam, lParam, msg, hwnd) {
 
 WMActivateChain_Register(fn) {
     global g_WMActivateChain, g_WMActivateChain_DispatchActive
+    WMActivateChain_EnsureInit()
     if !(fn is Func)
         return
     for x in g_WMActivateChain
@@ -33,6 +50,7 @@ WMActivateChain_Register(fn) {
 
 WMActivateChain_Unregister(fn) {
     global g_WMActivateChain, g_WMActivateChain_DispatchActive
+    WMActivateChain_EnsureInit()
     i := 0
     Loop g_WMActivateChain.Length {
         if (g_WMActivateChain[A_Index] = fn) {
