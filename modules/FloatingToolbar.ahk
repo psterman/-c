@@ -1875,7 +1875,7 @@ FloatingToolbarWM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
     mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
 
     mouseInToolbar := false
-    if (FloatingToolbarIsVisible && IsObject(FloatingToolbarGUI) && (FloatingToolbarGUI is Gui)) {
+    if (FloatingToolbarIsVisible && IsSet(FloatingToolbarGUI) && IsObject(FloatingToolbarGUI) && (FloatingToolbarGUI is Gui)) {
         MouseGetPos(&mx1, &my1)
         try FloatingToolbarGUI.GetPos(&tx, &ty, &tw, &th)
         catch {
@@ -1885,7 +1885,7 @@ FloatingToolbarWM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
             mouseInToolbar := true
     }
     mouseInBubble := false
-    if (FloatingBubbleIsVisible && IsObject(FloatingBubbleGUI) && (FloatingBubbleGUI is Gui)) {
+    if (FloatingBubbleIsVisible && IsSet(FloatingBubbleGUI) && IsObject(FloatingBubbleGUI) && (FloatingBubbleGUI is Gui)) {
         MouseGetPos(&mx2, &my2)
         try FloatingBubbleGUI.GetPos(&bx, &by, &bw, &bh)
         catch {

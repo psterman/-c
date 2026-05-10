@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+﻿import { defineConfig } from "vite";
 import { resolve } from "path";
 
 export default defineConfig({
@@ -14,7 +14,10 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, "index.html"),
         hole: resolve(__dirname, "hole.html"),
+        hole_starry: resolve(__dirname, "hole_starry.html"),
       },
     },
   },
 });
+
+

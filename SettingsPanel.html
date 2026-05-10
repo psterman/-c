@@ -949,6 +949,7 @@
         holeFixedY: 260,
         holeSizeScale: 1.0,
         holeAnimLevel: 1.0,
+        holeVisualStyle: "ring",
         holeHideDockEnabled: true,
         holeHideDockEdge: "right",
         holeHideDockMargin: 10
@@ -1509,6 +1510,7 @@
       d.holeFixedY = Number(document.getElementById("holeFixedY")?.value ?? d.holeFixedY ?? 260);
       d.holeSizeScale = Number(document.getElementById("holeSizeScale")?.value ?? d.holeSizeScale ?? 1.0);
       d.holeAnimLevel = Number(document.getElementById("holeAnimLevel")?.value ?? d.holeAnimLevel ?? 1.0);
+      d.holeVisualStyle = document.getElementById("holeVisualStyle")?.value ?? (d.holeVisualStyle || "ring");
       d.holeHideDockEnabled = !!document.getElementById("holeHideDockEnabled")?.checked;
       d.holeHideDockEdge = document.getElementById("holeHideDockEdge")?.value ?? (d.holeHideDockEdge || "right");
       d.holeHideDockMargin = Number(document.getElementById("holeHideDockMargin")?.value ?? d.holeHideDockMargin ?? 10);
@@ -1802,6 +1804,7 @@
 <div class="row"><div class="label">固定位置 X / Y</div><div class="inline"><input id="holeFixedX" data-nosave="1" type="number" step="1" value="${esc(d.holeFixedX ?? 360)}"><input id="holeFixedY" data-nosave="1" type="number" step="1" value="${esc(d.holeFixedY ?? 260)}"></div></div>
 <div class="row"><div class="label">黑洞大小</div><select id="holeSizeScale" data-nosave="1">${optionsKV(withCurrentOption([{value:"0.85",label:"小（0.85x）"},{value:"1.0",label:"标准（1.0x）"},{value:"1.25",label:"大（1.25x）"},{value:"1.5",label:"超大（1.5x）"}], d.holeSizeScale ?? 1.0), String(d.holeSizeScale ?? 1.0))}</select></div>
 <div class="row"><div class="label">动画强度</div><select id="holeAnimLevel" data-nosave="1">${optionsKV(withCurrentOption([{value:"0.8",label:"柔和（0.8）"},{value:"1.0",label:"标准（1.0）"},{value:"1.4",label:"增强（1.4）"},{value:"2.0",label:"强烈（2.0）"}], d.holeAnimLevel ?? 1.0), String(d.holeAnimLevel ?? 1.0))}</select></div>
+<div class="row"><div class="label">黑洞样式</div><select id="holeVisualStyle" data-nosave="1">${optionsKV([{value:"ring",label:"彩环黑洞"},{value:"starry",label:"星空黑洞"}], String(d.holeVisualStyle || "ring"))}</select></div>
 <div class="row"><div class="label">隐藏时吸附到屏幕内侧</div><div><input id="holeHideDockEnabled" data-nosave="1" type="checkbox" ${checked(d.holeHideDockEnabled !== false)}></div></div>
 <div class="row"><div class="label">吸附边缘</div><select id="holeHideDockEdge" data-nosave="1">${optionsKV([{value:"right",label:"右侧"},{value:"left",label:"左侧"},{value:"top",label:"顶部"},{value:"bottom",label:"底部"}], String(d.holeHideDockEdge || "right"))}</select></div>
 <div class="row"><div class="label">吸附内边距（px）</div><input id="holeHideDockMargin" data-nosave="1" type="number" min="0" max="80" step="1" value="${esc(d.holeHideDockMargin ?? 10)}"></div>
@@ -1831,6 +1834,7 @@
               holeFixedY: d.holeFixedY,
               holeSizeScale: d.holeSizeScale,
               holeAnimLevel: d.holeAnimLevel,
+              holeVisualStyle: d.holeVisualStyle,
               holeHideDockEnabled: d.holeHideDockEnabled,
               holeHideDockEdge: d.holeHideDockEdge,
               holeHideDockMargin: d.holeHideDockMargin
@@ -2138,6 +2142,7 @@
       if (!Number.isFinite(Number(d.holeDismissDistance)) || Number(d.holeDismissDistance) < 120 || Number(d.holeDismissDistance) > 1600) return "黑洞消失距离非法";
       if (!Number.isFinite(Number(d.holeSizeScale)) || Number(d.holeSizeScale) < 0.6 || Number(d.holeSizeScale) > 1.8) return "黑洞大小缩放非法";
       if (!Number.isFinite(Number(d.holeAnimLevel)) || Number(d.holeAnimLevel) < 0.4 || Number(d.holeAnimLevel) > 2.2) return "黑洞动画强度非法";
+      if (!["ring","starry"].includes(String(d.holeVisualStyle || "ring"))) return "黑洞样式非法";
       if (!["right","left","top","bottom"].includes(String(d.holeHideDockEdge || "right"))) return "黑洞隐藏吸附边缘非法";
       if (!Number.isFinite(Number(d.holeHideDockMargin)) || Number(d.holeHideDockMargin) < 0 || Number(d.holeHideDockMargin) > 80) return "黑洞隐藏吸附边距非法";
       if (!Number.isInteger(d.aiSleepTime) || d.aiSleepTime < 50) return "AI 等待时间非法";

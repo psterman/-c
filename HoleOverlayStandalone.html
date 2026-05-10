@@ -125,6 +125,58 @@
       --aura-speed: 6.4s;
       --focus-amount: 0;
     }
+    #root.style-ring {}
+    #root.style-starry .hint {
+      color: rgba(221, 240, 255, .96);
+      border-color: rgba(132, 198, 255, .64);
+      background: linear-gradient(180deg, rgba(8,18,40,.92), rgba(6,11,26,.94));
+      box-shadow: 0 0 20px rgba(90, 172, 255, .48), 0 0 36px rgba(110, 120, 255, .22);
+    }
+    #root.style-starry .local-fx {
+      opacity: .2;
+      filter: blur(16px) saturate(1.05);
+      background:
+        radial-gradient(ellipse at 50% 60%,
+          rgba(113, 178, 255, .34) 0%,
+          rgba(90, 135, 255, .18) 36%,
+          rgba(161, 219, 255, .12) 58%,
+          rgba(255,255,255,0) 80%);
+    }
+    #root.style-starry .base-hole {}
+    #root.style-starry .aura {}
+    #root.style-starry .ring {}
+    #root.style-starry .well {}
+    #root.style-starry .well::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        radial-gradient(circle at 10% 20%, rgba(255,255,255,.95) 0 .7px, transparent 1px),
+        radial-gradient(circle at 26% 70%, rgba(200,225,255,.82) 0 .8px, transparent 1.1px),
+        radial-gradient(circle at 44% 36%, rgba(255,255,255,.9) 0 .75px, transparent 1.05px),
+        radial-gradient(circle at 62% 18%, rgba(180,210,255,.85) 0 .8px, transparent 1.1px),
+        radial-gradient(circle at 78% 58%, rgba(255,255,255,.92) 0 .8px, transparent 1.1px),
+        radial-gradient(circle at 90% 34%, rgba(214,234,255,.8) 0 .75px, transparent 1.05px);
+      opacity: 0;
+      animation: none;
+      pointer-events: none;
+    }
+    #root.style-starry .well::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        radial-gradient(circle at 16% 60%, rgba(255,255,255,.8) 0 .65px, transparent .95px),
+        radial-gradient(circle at 34% 26%, rgba(190,220,255,.72) 0 .7px, transparent 1px),
+        radial-gradient(circle at 58% 76%, rgba(255,255,255,.8) 0 .65px, transparent .95px),
+        radial-gradient(circle at 74% 40%, rgba(178,208,255,.7) 0 .7px, transparent 1px),
+        radial-gradient(circle at 86% 72%, rgba(255,255,255,.82) 0 .65px, transparent .95px);
+      opacity: 0;
+      animation: none;
+      pointer-events: none;
+    }
     #root.show { pointer-events: auto; }
     .hole-wrap {
       position: absolute;
@@ -360,6 +412,9 @@
       box-shadow: inset 0 0 16px rgba(0,0,0,.44);
       z-index: 4;
     }
+    :root[data-theme="dark"] #root.style-starry.text-focus .ring {}
+    :root[data-theme="dark"] #root.style-starry.text-focus .base-hole {}
+    :root[data-theme="dark"] #root.style-starry.text-focus .well {}
     .drop .ring { animation: ringCollapse 620ms cubic-bezier(.13,.84,.24,1); }
     .drop .well { animation: wellCollapse 620ms cubic-bezier(.13,.84,.24,1); }
     .drop .aura { animation: auraFlash 620ms cubic-bezier(.13,.84,.24,1); }
@@ -370,6 +425,101 @@
     .safe-mode.drop .aura,
     .safe-mode.drop .local-fx {
       animation-duration: 320ms;
+    }
+    #root.style-starry.drop .aura {
+      width: 450px !important;
+      height: 450px !important;
+      bottom: -136px !important;
+      left: 225px !important;
+      border-radius: 50%;
+      opacity: 0;
+      animation: none;
+      transform: translateX(-50%) scale(1) !important;
+      transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s;
+    }
+    #root.style-starry.drop .ring {
+      width: 450px !important;
+      height: 450px !important;
+      bottom: -136px !important;
+      left: 225px !important;
+      border-radius: 50%;
+      opacity: 1;
+      animation: none;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+      transform: translateX(-50%) scale(1) !important;
+      transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #root.style-starry.drop .ring::before {
+      inset: -3px;
+      padding: 3px;
+      border-radius: 50%;
+      background: conic-gradient(from var(--ring-angle), #4285f4, #34a853, #fbbc05, #ea4335, #4285f4);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      animation: ringOrbit 4s linear infinite;
+    }
+    #root.style-starry.drop .base-hole {
+      width: 450px !important;
+      height: 450px !important;
+      bottom: -136px !important;
+      left: 225px !important;
+      border-radius: 50%;
+      opacity: .16;
+      animation: none;
+      transform: translateX(-50%) scale(1) !important;
+      transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s;
+    }
+    #root.style-starry.drop .well {
+      width: 450px !important;
+      height: 450px !important;
+      bottom: -136px !important;
+      left: 225px !important;
+      border-radius: 50%;
+      background: #000;
+      opacity: 1;
+      animation: none;
+      transform: translateX(-50%) scale(1) !important;
+      transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s;
+    }
+    #root.style-starry.drop .well::before {
+      opacity: .9;
+      animation: starryTwinkle 1.5s ease-in-out infinite, starfieldDrift 8s linear infinite;
+      background:
+        radial-gradient(circle at 5% 12%, rgba(255,255,255,.95) 0 1px, transparent 1.4px),
+        radial-gradient(circle at 12% 78%, rgba(190,220,255,.86) 0 1px, transparent 1.4px),
+        radial-gradient(circle at 20% 42%, rgba(255,255,255,.9) 0 1px, transparent 1.4px),
+        radial-gradient(circle at 28% 24%, rgba(178,208,255,.84) 0 1px, transparent 1.4px),
+        radial-gradient(circle at 36% 66%, rgba(255,255,255,.88) 0 1px, transparent 1.4px),
+        radial-gradient(circle at 44% 36%, rgba(205,228,255,.86) 0 1px, transparent 1.4px),
+        radial-gradient(circle at 52% 14%, rgba(255,255,255,.9) 0 1px, transparent 1.4px),
+        radial-gradient(circle at 60% 74%, rgba(180,210,255,.84) 0 1px, transparent 1.4px),
+        radial-gradient(circle at 68% 32%, rgba(255,255,255,.9) 0 1px, transparent 1.4px),
+        radial-gradient(circle at 76% 58%, rgba(200,224,255,.84) 0 1px, transparent 1.4px),
+        radial-gradient(circle at 84% 20%, rgba(255,255,255,.92) 0 1px, transparent 1.4px),
+        radial-gradient(circle at 92% 68%, rgba(185,215,255,.84) 0 1px, transparent 1.4px);
+    }
+    #root.style-starry.drop .well::after {
+      opacity: .78;
+      animation: starfieldDrift 6.5s linear infinite reverse;
+    }
+    #root.style-starry.drop .local-fx {
+      animation: none;
+      opacity: 0;
+    }
+    #root.style-starry .starry-ui-slot {
+      position: absolute;
+      inset: 20px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 6;
+      display: none;
+    }
+    #root.style-starry.drop .starry-ui-slot {
+      display: block;
+      pointer-events: auto;
     }
     .perf-box {
       position: fixed;
@@ -464,6 +614,16 @@
       44% { transform: translateX(-50%) scale(1.16); opacity: 1; }
       100% { transform: translateX(-50%) scale(1.36); opacity: .18; }
     }
+    @keyframes starryTwinkle {
+      0% { opacity: .36; }
+      50% { opacity: .9; }
+      100% { opacity: .36; }
+    }
+    @keyframes starfieldDrift {
+      0% { transform: translate(0, 0); }
+      50% { transform: translate(-3px, 2px); }
+      100% { transform: translate(0, 0); }
+    }
   </style>
 </head>
 <body>
@@ -476,7 +636,9 @@
       <div class="base-hole"></div>
       <div class="aura"></div>
       <div class="ring"></div>
-      <div class="well"></div>
+      <div class="well">
+        <div id="starryUiSlot" class="starry-ui-slot"></div>
+      </div>
       <div id="previewCore" class="preview-core">拖动文本到黑洞</div>
     </div>
   </div>
@@ -679,13 +841,26 @@
         root.style.setProperty('--hole-scale', String(s));
         root.style.setProperty('--anim-level', String(a));
       }
+      function setVisualStyle(mode) {
+        var m = String(mode || '').toLowerCase();
+        if (m !== 'starry') m = 'ring';
+        root.classList.remove('style-ring', 'style-starry');
+        root.classList.add(m === 'starry' ? 'style-starry' : 'style-ring');
+      }
       window.HoleOverlay = {
         show: function (payload) { show(payload); setP(0.2); },
-        setStyle: function (o) { if (o) setStyle(o.scale, o.animLevel); },
+        setStyle: function (o) {
+          if (!o) return;
+          setStyle(o.scale, o.animLevel);
+          if (typeof o.visualStyle === 'string') setVisualStyle(o.visualStyle);
+          else if (typeof o.holeVisualStyle === 'string') setVisualStyle(o.holeVisualStyle);
+        },
         setTheme: function (o) {
           if (typeof o === 'string') setTheme(o);
           else if (o && typeof o.theme === 'string') setTheme(o.theme);
           else if (o && typeof o.themeMode === 'string') setTheme(o.themeMode);
+          if (o && typeof o.visualStyle === 'string') setVisualStyle(o.visualStyle);
+          else if (o && typeof o.holeVisualStyle === 'string') setVisualStyle(o.holeVisualStyle);
         },
         moveTo: function (o) {
           if (!o) return;
@@ -735,7 +910,9 @@
           isNear = false;
           dragUpdateActive = false;
           hintTextByState('drop');
-          setTimeout(function () { hide(); }, 700);
+          var isStarry = root.classList.contains('style-starry');
+          if (!isStarry)
+            setTimeout(function () { hide(); }, 700);
         },
         hide: function () { root.classList.remove('near'); isNear = false; dragUpdateActive = false; hide(); }
       };
@@ -893,6 +1070,7 @@
       }, true);
       window.addEventListener('resize', function () { clampPos(pos.x, pos.y); });
       applyPos();
+      setVisualStyle('ring');
       window.requestAnimationFrame(perfTick);
       try {
         var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;

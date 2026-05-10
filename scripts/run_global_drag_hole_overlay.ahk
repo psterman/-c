@@ -11,7 +11,7 @@ SetWorkingDir(A_ScriptDir "\..")
 #Include ..\modules\GlobalDragHoleOverlay.ahk
 
 ; If your hole page is hosted by local dev server:
-GDHO_SetPageUrl("http://127.0.0.1:5173/hole.html")
+GDHO_SetPageUrl("http://127.0.0.1:5173/hole_starry.html")
 
 GDHO_Start()
 TrayTip("Global Drag Hole", "Started. Drag text/file/folder on desktop to trigger hole. Ctrl+Alt+H to exit.", "Iconi Mute")
@@ -29,3 +29,6 @@ TrayTip("Global Drag Hole", "Started. Drag text/file/folder on desktop to trigge
     GDHO_Stop()
     ExitApp
 }
+
+
+

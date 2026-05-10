@@ -599,6 +599,7 @@ ConfigWebView_BuildInitData() {
         "holeFixedY", Integer(IniRead(ConfigFile, "Appearance", "HoleFixedY", "260")),
         "holeSizeScale", Float(IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0")),
         "holeAnimLevel", Float(IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0")),
+        "holeVisualStyle", IniRead(ConfigFile, "Appearance", "HoleVisualStyle", "ring"),
         "holeHideDockEnabled", (IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1"),
         "holeHideDockEdge", IniRead(ConfigFile, "Appearance", "HoleHideDockEdge", "right"),
         "holeHideDockMargin", Integer(IniRead(ConfigFile, "Appearance", "HoleHideDockMargin", "10"))
@@ -951,6 +952,9 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
             NewHoleAnimLevel := 0.4
         if (NewHoleAnimLevel > 2.2)
             NewHoleAnimLevel := 2.2
+        NewHoleVisualStyle := StrLower(Trim(String(payload.Get("holeVisualStyle", IniRead(ConfigFile, "Appearance", "HoleVisualStyle", "ring")))))
+        if (NewHoleVisualStyle != "ring" && NewHoleVisualStyle != "starry")
+            NewHoleVisualStyle := "ring"
         NewHoleHideDockEnabled := !!payload.Get("holeHideDockEnabled", IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1")
         NewHoleHideDockEdge := StrLower(Trim(String(payload.Get("holeHideDockEdge", IniRead(ConfigFile, "Appearance", "HoleHideDockEdge", "right")))))
         if (NewHoleHideDockEdge != "right" && NewHoleHideDockEdge != "left" && NewHoleHideDockEdge != "top" && NewHoleHideDockEdge != "bottom")
@@ -1130,6 +1134,7 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         IniWrite(String(NewHoleFixedY), ConfigFile, "Appearance", "HoleFixedY")
         IniWrite(String(NewHoleSizeScale), ConfigFile, "Appearance", "HoleSizeScale")
         IniWrite(String(NewHoleAnimLevel), ConfigFile, "Appearance", "HoleAnimLevel")
+        IniWrite(NewHoleVisualStyle, ConfigFile, "Appearance", "HoleVisualStyle")
         IniWrite(NewHoleHideDockEnabled ? "1" : "0", ConfigFile, "Appearance", "HoleHideDockEnabled")
         IniWrite(NewHoleHideDockEdge, ConfigFile, "Appearance", "HoleHideDockEdge")
         IniWrite(String(NewHoleHideDockMargin), ConfigFile, "Appearance", "HoleHideDockMargin")
@@ -1145,7 +1150,7 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         PromptQuickPad_RegisterCaptureHotkey()
         try FloatingToolbarPushButtonConfigToWeb()
         try GDHO_SetScreenAnchor(NewHoleFixedX, NewHoleFixedY)
-        try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel)
+        try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel, NewHoleVisualStyle)
         try GDHO_ApplyHideDockSettings(NewHoleHideDockEnabled, NewHoleHideDockEdge, NewHoleHideDockMargin)
         try ApplyAppearanceActivationMode()
         catch {
@@ -1189,6 +1194,9 @@ ConfigWebView_SaveHoleOnly(payload, &errorMsg := "") {
             NewHoleAnimLevel := 0.4
         if (NewHoleAnimLevel > 2.2)
             NewHoleAnimLevel := 2.2
+        NewHoleVisualStyle := StrLower(Trim(String(payload.Get("holeVisualStyle", IniRead(ConfigFile, "Appearance", "HoleVisualStyle", "ring")))))
+        if (NewHoleVisualStyle != "ring" && NewHoleVisualStyle != "starry")
+            NewHoleVisualStyle := "ring"
         NewHoleHideDockEnabled := !!payload.Get("holeHideDockEnabled", IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1")
         NewHoleHideDockEdge := StrLower(Trim(String(payload.Get("holeHideDockEdge", IniRead(ConfigFile, "Appearance", "HoleHideDockEdge", "right")))))
         if (NewHoleHideDockEdge != "right" && NewHoleHideDockEdge != "left" && NewHoleHideDockEdge != "top" && NewHoleHideDockEdge != "bottom")
@@ -1206,11 +1214,12 @@ ConfigWebView_SaveHoleOnly(payload, &errorMsg := "") {
         IniWrite(String(NewHoleFixedY), ConfigFile, "Appearance", "HoleFixedY")
         IniWrite(String(NewHoleSizeScale), ConfigFile, "Appearance", "HoleSizeScale")
         IniWrite(String(NewHoleAnimLevel), ConfigFile, "Appearance", "HoleAnimLevel")
+        IniWrite(NewHoleVisualStyle, ConfigFile, "Appearance", "HoleVisualStyle")
         IniWrite(NewHoleHideDockEnabled ? "1" : "0", ConfigFile, "Appearance", "HoleHideDockEnabled")
         IniWrite(NewHoleHideDockEdge, ConfigFile, "Appearance", "HoleHideDockEdge")
         IniWrite(String(NewHoleHideDockMargin), ConfigFile, "Appearance", "HoleHideDockMargin")
         try GDHO_SetScreenAnchor(NewHoleFixedX, NewHoleFixedY)
-        try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel)
+        try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel, NewHoleVisualStyle)
         try GDHO_ApplyHideDockSettings(NewHoleHideDockEnabled, NewHoleHideDockEdge, NewHoleHideDockMargin)
         return true
     } catch as err {

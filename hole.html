@@ -1,11 +1,11 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hole Overlay</title>
   <style>
-    /* 引入 CSS 变量动画支持，用于完美的圆锥渐变旋转 */
+    /* 寮曞叆 CSS 鍙橀噺鍔ㄧ敾鏀寔锛岀敤浜庡畬缇庣殑鍦嗛敟娓愬彉鏃嬭浆 */
     @property --bg-angle {
       syntax: '<angle>';
       initial-value: 0deg;
@@ -14,7 +14,7 @@
 
     :root {
       --p: 0;
-      /* AI 流光色彩板 (参考截图风格) */
+      /* AI 娴佸厜鑹插僵鏉?(鍙傝€冩埅鍥鹃鏍? */
       --ai-red: #ea4335;
       --ai-yellow: #fbbc05;
       --ai-green: #34a853;
@@ -35,6 +35,7 @@
       --anim-level: 1;
     }
     #root.show { pointer-events: auto; }
+    #root.style-ring {}
     .hole-wrap {
       position: absolute;
       left: var(--hx);
@@ -46,7 +47,7 @@
       transition: opacity 180ms ease, transform calc(220ms / var(--anim-level)) ease;
     }
 
-    /* 气泡提示框：增加流光边框 */
+    /* 姘旀场鎻愮ず妗嗭細澧炲姞娴佸厜杈规 */
     .hint {
       position: absolute;
       left: 50%;
@@ -67,16 +68,16 @@
       transition: opacity 140ms ease, transform 180ms ease, box-shadow 180ms ease;
       pointer-events: none;
     }
-    /* 气泡的彩色动态边框 */
+    /* 姘旀场鐨勫僵鑹插姩鎬佽竟妗?*/
     .hint::before {
       content: '';
       position: absolute;
       inset: -1.5px;
       border-radius: 999px;
-      padding: 1.5px; /* 边框粗细 */
+      padding: 1.5px; /* 杈规绮楃粏 */
       background: linear-gradient(90deg, var(--ai-red), var(--ai-yellow), var(--ai-green), var(--ai-blue), var(--ai-red));
       background-size: 200% 100%;
-      /* 使用 mask 技术完美镂空内部，只保留渐变边框 */
+      /* 浣跨敤 mask 鎶€鏈畬缇庨晜绌哄唴閮紝鍙繚鐣欐笎鍙樿竟妗?*/
       -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
@@ -90,7 +91,7 @@
       transform: translateX(-50%) translateY(-2px);
     }
 
-    /* 底部环境光 */
+    /* 搴曢儴鐜鍏?*/
     .local-fx {
       position: absolute;
       left: 50%;
@@ -115,14 +116,14 @@
       position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%;
     }
     
-    /* 黑洞深邃底座 */
+    /* 榛戞礊娣遍們搴曞骇 */
     .base-hole {
       bottom: 26px; width: 58%; height: 25%;
       background: radial-gradient(ellipse at 50% 52%, #181820 0%, #0a0a0e 58%, #000000 100%);
       box-shadow: inset 0 8px 16px rgba(255,255,255,0.05), inset 0 -10px 22px rgba(0,0,0,0.9);
     }
 
-    /* 散发的彩色光晕 */
+    /* 鏁ｅ彂鐨勫僵鑹插厜鏅?*/
     .aura {
       bottom: 12px; width: 92%; height: 46%; filter: blur(14px);
       background: conic-gradient(from var(--bg-angle),
@@ -138,13 +139,13 @@
     }
     .safe-mode .aura { opacity: calc(.14 + var(--p) * .45); }
 
-    /* 黑洞边缘的流光环 */
+    /* 榛戞礊杈圭紭鐨勬祦鍏夌幆 */
     .ring {
       bottom: 24px; width: 60%; height: 27%;
       opacity: calc(.5 + var(--p) * .5);
       transform: translateX(-50%) scale(calc(.9 + var(--p) * .24));
     }
-    /* 实线流光边框 */
+    /* 瀹炵嚎娴佸厜杈规 */
     .ring::before {
       content: '';
       position: absolute;
@@ -157,7 +158,7 @@
       mask-composite: exclude;
       animation: spinHalo 3s linear infinite;
     }
-    /* 边框泛光效果 */
+    /* 杈规娉涘厜鏁堟灉 */
     .ring::after {
       content: '';
       position: absolute;
@@ -173,15 +174,97 @@
       opacity: 0.85;
     }
 
-    /* 黑洞内部纵深 */
+    /* 榛戞礊鍐呴儴绾垫繁 */
     .well {
       bottom: 29px; width: 45%; height: 17%;
       background: radial-gradient(ellipse at 50% 52%, rgba(66,133,244,0.15) 0%, rgba(10,10,15,0.7) 44%, #000 100%);
       opacity: calc(.4 + var(--p) * .6);
       transform: translateX(-50%) scale(calc(.98 - var(--p) * .12));
+      overflow: hidden;
+    }
+    .well::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
     }
 
-    /* 拖入时的动画覆盖 (保持原有逻辑不变) */
+    /* 鏄熺┖榛戞礊鏍峰紡锛堝弬鑰冮粦娲瀠i.html鐨勫渾鐜姩鎬佽鎰燂級 */
+    #root.style-starry .base-hole {
+      opacity: 0;
+    }
+    #root.style-starry .aura {
+      bottom: 14px;
+      width: 148px;
+      height: 148px;
+      transform: translateX(-50%) scale(calc(.92 + var(--p) * .24));
+      background: radial-gradient(circle at 50% 52%,
+        rgba(98, 150, 255, 0.22) 0%,
+        rgba(58, 98, 180, 0.14) 38%,
+        rgba(10, 16, 32, 0.06) 68%,
+        rgba(8, 10, 16, 0) 100%);
+      filter: blur(16px);
+    }
+    #root.style-starry .ring {
+      bottom: 22px;
+      width: 132px;
+      height: 132px;
+      transform: translateX(-50%) scale(calc(.9 + var(--p) * .24));
+    }
+    #root.style-starry .aura {
+      opacity: calc(.22 + var(--p) * .44);
+    }
+    #root.style-starry .ring::before {
+      background: conic-gradient(from var(--bg-angle),
+        rgba(173, 214, 255, 0.92),
+        rgba(94, 152, 255, 0.94),
+        rgba(151, 229, 255, 0.9),
+        rgba(173, 214, 255, 0.92));
+    }
+    #root.style-starry .ring::after {
+      background: conic-gradient(from var(--bg-angle),
+        rgba(206, 234, 255, 0.9),
+        rgba(126, 193, 255, 0.88),
+        rgba(180, 245, 255, 0.86),
+        rgba(206, 234, 255, 0.9));
+      filter: blur(8px);
+      opacity: 0.95;
+    }
+    #root.style-starry .well {
+      bottom: 26px;
+      width: 116px;
+      height: 116px;
+      transform: translateX(-50%) scale(calc(.98 - var(--p) * .12));
+      background: radial-gradient(circle at 50% 52%, rgba(114,169,255,0.22) 0%, rgba(8,10,22,0.86) 42%, #000 100%);
+    }
+    #root.style-starry .well::before {
+      background:
+        radial-gradient(circle at 18% 30%, rgba(255,255,255,.95) 0 1px, transparent 1.2px),
+        radial-gradient(circle at 32% 62%, rgba(186,220,255,.8) 0 1px, transparent 1.3px),
+        radial-gradient(circle at 66% 35%, rgba(255,255,255,.88) 0 .9px, transparent 1.2px),
+        radial-gradient(circle at 74% 58%, rgba(154,205,255,.76) 0 1.1px, transparent 1.4px),
+        radial-gradient(circle at 48% 44%, rgba(255,255,255,.7) 0 .8px, transparent 1.1px);
+      opacity: calc(.35 + var(--p) * .55);
+      animation: twinkleStars 2.2s ease-in-out infinite;
+    }
+    #root.style-starry .well::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 24% 22%, rgba(255,255,255,.92) 0 1px, transparent 1.3px),
+        radial-gradient(circle at 58% 28%, rgba(210,232,255,.82) 0 1.1px, transparent 1.4px),
+        radial-gradient(circle at 78% 44%, rgba(255,255,255,.86) 0 .9px, transparent 1.2px),
+        radial-gradient(circle at 30% 70%, rgba(170,214,255,.75) 0 1.1px, transparent 1.5px),
+        radial-gradient(circle at 64% 76%, rgba(255,255,255,.78) 0 .9px, transparent 1.2px);
+      opacity: calc(.22 + var(--p) * .5);
+      animation: twinkleStarsAlt 1.6s ease-in-out infinite;
+    }
+
+    /* 鎷栧叆鏃剁殑鍔ㄧ敾瑕嗙洊 (淇濇寔鍘熸湁閫昏緫涓嶅彉) */
     .drop .ring { animation: ringCollapse 620ms cubic-bezier(.13,.84,.24,1); }
     .drop .well { animation: wellCollapse 620ms cubic-bezier(.13,.84,.24,1); }
     .drop .aura { animation: auraFlash 620ms cubic-bezier(.13,.84,.24,1); }
@@ -193,13 +276,47 @@
     .safe-mode.drop .local-fx {
       animation-duration: 320ms;
     }
+    #root.style-starry.drop .ring {
+      animation: starryRingExpand 620ms cubic-bezier(.13,.84,.24,1) !important;
+      width: 450px !important;
+      height: 450px !important;
+      bottom: -120px !important;
+      opacity: 1 !important;
+      border-radius: 50% !important;
+      transform: translateX(-50%) scale(1) !important;
+    }
+    #root.style-starry.drop .ring,
+    #root.style-starry.drop .well,
+    #root.style-starry.drop .aura {
+      animation-timing-function: cubic-bezier(.13,.84,.24,1) !important;
+    }
+    #root.style-starry.drop .well {
+      animation: starryWellExpand 620ms cubic-bezier(.13,.84,.24,1) !important;
+      width: 410px !important;
+      height: 410px !important;
+      bottom: -100px !important;
+      opacity: 1 !important;
+      border-radius: 50% !important;
+      transform: translateX(-50%) scale(1) !important;
+      background: radial-gradient(circle at 50% 52%, rgba(114,169,255,0.24) 0%, rgba(8,10,22,0.84) 42%, #000 100%) !important;
+    }
+    #root.style-starry.drop .aura {
+      animation: starryAuraExpand 620ms cubic-bezier(.13,.84,.24,1) !important;
+      width: 450px !important;
+      height: 450px !important;
+      bottom: -120px !important;
+      opacity: 0.22 !important;
+      border-radius: 50% !important;
+      transform: translateX(-50%) scale(1) !important;
+      filter: blur(22px) !important;
+    }
 
-    /* 性能监控浮层样式保留 */
+    /* 鎬ц兘鐩戞帶娴眰鏍峰紡淇濈暀 */
     .perf-box { position: fixed; right: 10px; top: 10px; width: 30px; height: 30px; border-radius: 6px; border: 1px solid rgba(255,255,255,.35); background: #1f9d45; box-shadow: 0 0 10px rgba(0,0,0,.25); pointer-events: none; opacity: 0; z-index: 9999; transition: opacity 120ms ease; }
     .perf-label { position: fixed; right: 46px; top: 10px; min-width: 320px; max-width: 460px; padding: 4px 7px; border-radius: 6px; border: 1px solid rgba(255,255,255,.2); background: rgba(12, 16, 24, .78); color: rgba(242, 247, 255, .96); font: 600 11px/1.35 "Segoe UI","Microsoft YaHei",sans-serif; letter-spacing: .01em; pointer-events: none; z-index: 9998; white-space: normal; overflow: visible; text-overflow: clip; opacity: 0; transition: opacity 120ms ease; }
     body.hole-visible .perf-box, body.hole-visible .perf-label { opacity: .95; }
 
-    /* --- 新增关键动画 --- */
+    /* --- 鏂板鍏抽敭鍔ㄧ敾 --- */
     @keyframes spinHalo {
       0% { --bg-angle: 0deg; }
       100% { --bg-angle: 360deg; }
@@ -234,14 +351,39 @@
       44% { transform: translateX(-50%) scale(1.16); opacity: 1; }
       100% { transform: translateX(-50%) scale(1.36); opacity: .18; }
     }
+    @keyframes twinkleStars {
+      0% { opacity: .32; }
+      50% { opacity: .78; }
+      100% { opacity: .32; }
+    }
+    @keyframes twinkleStarsAlt {
+      0% { opacity: .22; }
+      50% { opacity: .7; }
+      100% { opacity: .22; }
+    }
+    @keyframes starryRingExpand {
+      0% { transform: translateX(-50%) scale(.96); opacity: .95; }
+      45% { transform: translateX(-50%) scale(1.08); opacity: 1; }
+      100% { transform: translateX(-50%) scale(1); opacity: .92; }
+    }
+    @keyframes starryWellExpand {
+      0% { transform: translateX(-50%) scale(.94); opacity: .9; }
+      44% { transform: translateX(-50%) scale(1.05); opacity: 1; }
+      100% { transform: translateX(-50%) scale(1); opacity: .96; }
+    }
+    @keyframes starryAuraExpand {
+      0% { transform: translateX(-50%) scale(.9); opacity: .28; }
+      45% { transform: translateX(-50%) scale(1.06); opacity: .34; }
+      100% { transform: translateX(-50%) scale(1); opacity: .22; }
+    }
   </style>
 </head>
 <body>
   <div id="perfBox" class="perf-box" aria-hidden="true"></div>
-  <div id="perfLabel" class="perf-label" aria-hidden="true">FPS: -- | 帧: --ms | Host: --ms | 诊断: --</div>
+  <div id="perfLabel" class="perf-label" aria-hidden="true">FPS: -- | 甯? --ms | Host: --ms | 璇婃柇: --</div>
   <div id="root">
     <div class="hole-wrap">
-      <div id="hint" class="hint">拖到这里开始搜索</div>
+      <div id="hint" class="hint">鎷栧埌杩欓噷寮€濮嬫悳绱?/div>
       <div class="local-fx"></div>
       <div class="base-hole"></div>
       <div class="aura"></div>
@@ -270,16 +412,16 @@
       var perfStats = { fps: 60, frameMs: 16.7, state: 'green', dropped: false, ts: Date.now(), hostGapMs: -1, hostAgeMs: 0, hostStall: false };
       var perfLastTs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       var lastHostUpdateTs = perfLastTs;
-      var perfDiagnosis = '状态正常';
+      var perfDiagnosis = '鐘舵€佹甯?;
       var nativeState = { session: '-', kind: '-', dispatch: '-', at: 0, active: '-', overHole: '-', wasOverHole: '-', payload: '-' };
       function updatePerfLabel() {
         if (!perfLabel) return;
         var hostDeltaText = perfStats.hostGapMs >= 0 ? Number(perfStats.hostGapMs).toFixed(1) + 'ms' : '--';
         perfLabel.textContent = 'FPS: ' + Number(perfStats.fps).toFixed(1)
-          + ' | 帧: ' + Number(perfStats.frameMs).toFixed(1) + 'ms'
-          + ' | HostΔ: ' + hostDeltaText
+          + ' | 甯? ' + Number(perfStats.frameMs).toFixed(1) + 'ms'
+          + ' | Host螖: ' + hostDeltaText
           + ' | HostAge: ' + Number(perfStats.hostAgeMs).toFixed(1) + 'ms'
-          + ' | 诊断: ' + perfDiagnosis
+          + ' | 璇婃柇: ' + perfDiagnosis
           + ' | Native: ' + String(nativeState.kind || '-')
           + ' | Dispatch: ' + String(nativeState.dispatch || '-')
           + ' | A:' + String(nativeState.active || '-')
@@ -291,22 +433,22 @@
         if (!perfBox) return;
         var fps = perfStats.fps;
         if (perfStats.hostStall || perfStats.hostAgeMs > 420 || fps < 30) {
-          perfDiagnosis = perfStats.hostStall || perfStats.hostAgeMs > 420 ? '宿主更新阻塞' : '渲染严重掉帧';
+          perfDiagnosis = perfStats.hostStall || perfStats.hostAgeMs > 420 ? '瀹夸富鏇存柊闃诲' : '娓叉煋涓ラ噸鎺夊抚';
           perfStats.state = 'red';
           perfStats.dropped = true;
           perfBox.style.background = '#d73a49';
         } else if (perfStats.hostAgeMs > 220 || fps < 55) {
-          perfDiagnosis = perfStats.hostAgeMs > 220 ? '宿主更新变慢' : '渲染轻度掉帧';
+          perfDiagnosis = perfStats.hostAgeMs > 220 ? '瀹夸富鏇存柊鍙樻參' : '娓叉煋杞诲害鎺夊抚';
           perfStats.state = 'yellow';
           perfStats.dropped = false;
           perfBox.style.background = '#e3b341';
         } else if (fps > 55) {
-          perfDiagnosis = '状态正常';
+          perfDiagnosis = '鐘舵€佹甯?;
           perfStats.state = 'green';
           perfStats.dropped = false;
           perfBox.style.background = '#1f9d45';
         } else {
-          perfDiagnosis = '轻微波动';
+          perfDiagnosis = '杞诲井娉㈠姩';
           perfStats.state = 'yellow';
           perfStats.dropped = false;
           perfBox.style.background = '#e3b341';
@@ -358,7 +500,7 @@
         if (!hint) return;
         var next = '';
         if (state === 'drop') {
-          next = payloadType === 'text' ? '已接收文本' : '已接收文件';
+          next = payloadType === 'text' ? '宸叉帴鏀舵枃鏈? : '宸叉帴鏀舵枃浠?;
           if (next !== lastHintText) {
             hint.textContent = next;
             lastHintText = next;
@@ -366,14 +508,14 @@
           return;
         }
         if (state === 'near') {
-          next = payloadType === 'text' ? '松手即可搜索文本' : '松手即可处理文件';
+          next = payloadType === 'text' ? '鏉炬墜鍗冲彲鎼滅储鏂囨湰' : '鏉炬墜鍗冲彲澶勭悊鏂囦欢';
           if (next !== lastHintText) {
             hint.textContent = next;
             lastHintText = next;
           }
           return;
         }
-        next = payloadType === 'text' ? '拖到这里开始搜索' : '拖到这里处理文件';
+        next = payloadType === 'text' ? '鎷栧埌杩欓噷寮€濮嬫悳绱? : '鎷栧埌杩欓噷澶勭悊鏂囦欢';
         if (next !== lastHintText) {
           hint.textContent = next;
           lastHintText = next;
@@ -383,7 +525,7 @@
         root.classList.toggle('safe-mode', !!on);
       }
       function setTheme(mode) {
-        // 当前统一调整为深色星空主题，此函数保留用于不破坏原生调用
+        // 褰撳墠缁熶竴璋冩暣涓烘繁鑹叉槦绌轰富棰橈紝姝ゅ嚱鏁颁繚鐣欑敤浜庝笉鐮村潖鍘熺敓璋冪敤
         var m = String(mode || '').toLowerCase();
         if (m !== 'light' && m !== 'dark') {
           document.documentElement.removeAttribute('data-theme');
@@ -428,13 +570,26 @@
         root.style.setProperty('--hole-scale', String(s));
         root.style.setProperty('--anim-level', String(a));
       }
+      function setVisualStyle(mode) {
+        var m = String(mode || '').toLowerCase();
+        if (m !== 'starry') m = 'ring';
+        root.classList.remove('style-ring', 'style-starry');
+        root.classList.add(m === 'starry' ? 'style-starry' : 'style-ring');
+      }
       window.HoleOverlay = {
         show: function (payload) { show(payload); setP(0.2); },
-        setStyle: function (o) { if (o) setStyle(o.scale, o.animLevel); },
+        setStyle: function (o) {
+          if (!o) return;
+          setStyle(o.scale, o.animLevel);
+          if (typeof o.visualStyle === 'string') setVisualStyle(o.visualStyle);
+          else if (typeof o.holeVisualStyle === 'string') setVisualStyle(o.holeVisualStyle);
+        },
         setTheme: function (o) {
           if (typeof o === 'string') setTheme(o);
           else if (o && typeof o.theme === 'string') setTheme(o.theme);
           else if (o && typeof o.themeMode === 'string') setTheme(o.themeMode);
+          if (o && typeof o.visualStyle === 'string') setVisualStyle(o.visualStyle);
+          else if (o && typeof o.holeVisualStyle === 'string') setVisualStyle(o.holeVisualStyle);
         },
         moveTo: function (o) {
           if (!o) return;
@@ -636,20 +791,22 @@
       }, true);
       window.addEventListener('resize', function () { clampPos(pos.x, pos.y); });
       applyPos();
+      setVisualStyle('ring');
       window.requestAnimationFrame(perfTick);
       
-      // 自动预览逻辑优化：如果检测到没有在 WebView2 中运行（比如在普通浏览器中双击打开），
-      // 就会自动赋予一个深色背景并主动展示出黑洞，方便你随时预览。
+      // 鑷姩棰勮閫昏緫浼樺寲锛氬鏋滄娴嬪埌娌℃湁鍦?WebView2 涓繍琛岋紙姣斿鍦ㄦ櫘閫氭祻瑙堝櫒涓弻鍑绘墦寮€锛夛紝
+      // 灏变細鑷姩璧嬩簣涓€涓繁鑹茶儗鏅苟涓诲姩灞曠ず鍑洪粦娲烇紝鏂逛究浣犻殢鏃堕瑙堛€?
       try {
         var isWebView = window.chrome && window.chrome.webview;
         var qp = new URLSearchParams(window.location.search || '');
         if (!isWebView || qp.get('preview') === '1') {
-          document.body.style.background = '#0a0a0e'; // 给普通浏览器加上深色星空底色
+          document.body.style.background = '#0a0a0e'; // 缁欐櫘閫氭祻瑙堝櫒鍔犱笂娣辫壊鏄熺┖搴曡壊
           show();
-          setP(0.65); // 稍微模拟一下拖拽文件靠近时的放大发光效果
+          setP(0.65); // 绋嶅井妯℃嫙涓€涓嬫嫋鎷芥枃浠堕潬杩戞椂鐨勬斁澶у彂鍏夋晥鏋?
         }
       } catch (_) {}
     })();
   </script>
 </body>
 </html>
+

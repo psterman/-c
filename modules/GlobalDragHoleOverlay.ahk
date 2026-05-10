@@ -17,7 +17,7 @@ global GDHO_START_CURSOR := 0
 global GDHO_LAST_X := 0
 global GDHO_LAST_Y := 0
 global GDHO_MONITORING := false
-global GDHO_PAGE_URL := "http://127.0.0.1:5173/hole.html"
+global GDHO_PAGE_URL := "http://127.0.0.1:5173/hole_starry.html"
 global GDHO_FALLBACK_URL := ""
 global GDHO_NAV_FAIL_COUNT := 0
 global GDHO_PREWARM_DONE := false
@@ -51,8 +51,9 @@ global GDHO_FIXED_X := 360
 global GDHO_FIXED_Y := 260
 global GDHO_SIZE_SCALE := 1.0
 global GDHO_ANIM_LEVEL := 1.0
-global GDHO_HOST_W := 360
-global GDHO_HOST_H := 320
+global GDHO_VISUAL_STYLE := "ring" ; ring|starry
+global GDHO_HOST_W := 620
+global GDHO_HOST_H := 620
 global GDHO_LAST_HOST_X := 120
 global GDHO_LAST_HOST_Y := 120
 global GDHO_DRAG_CONFIDENCE := 0.0
@@ -137,8 +138,8 @@ GDHO_SetScreenAnchor(screenX := 120, screenY := 120) {
     GDHO_SCREEN_Y := Integer(screenY)
 }
 
-GDHO_ApplySettings(positionMode := "anchor", triggerDistance := 260, dismissDistance := 320, fixedX := 360, fixedY := 260, sizeScale := 1.0, animLevel := 1.0) {
-    global GDHO_POSITION_MODE, GDHO_TOOLBAR_NEAR_RADIUS_PX, GDHO_TOOLBAR_DISMISS_RADIUS_PX, GDHO_FIXED_X, GDHO_FIXED_Y, GDHO_SIZE_SCALE, GDHO_ANIM_LEVEL
+GDHO_ApplySettings(positionMode := "anchor", triggerDistance := 260, dismissDistance := 320, fixedX := 360, fixedY := 260, sizeScale := 1.0, animLevel := 1.0, visualStyle := "ring") {
+    global GDHO_POSITION_MODE, GDHO_TOOLBAR_NEAR_RADIUS_PX, GDHO_TOOLBAR_DISMISS_RADIUS_PX, GDHO_FIXED_X, GDHO_FIXED_Y, GDHO_SIZE_SCALE, GDHO_ANIM_LEVEL, GDHO_VISUAL_STYLE
     global GDHO_ACTIVE, GDHO_SUPPRESS_UNTIL_RELEASE
     oldMode := GDHO_POSITION_MODE
     m := Trim(String(positionMode))
@@ -171,6 +172,11 @@ GDHO_ApplySettings(positionMode := "anchor", triggerDistance := 260, dismissDist
     if (al > 2.2)
         al := 2.2
     GDHO_ANIM_LEVEL := al
+    vs := StrLower(Trim(String(visualStyle)))
+    if (vs != "ring" && vs != "starry")
+        vs := "ring"
+    GDHO_VISUAL_STYLE := vs
+    try GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
 
     ; Mode switch can leave toolbar drag / hole drag state half-open.
     ; Force a clean transition to prevent "toolbar stuck" and stale drag sessions.
@@ -246,13 +252,13 @@ GDHO_DIAG_LOG(msg, elapsedMs := "") {
 }
 
 GDHO_ApplyAdaptiveAnimLevel() {
-    global GDHO_ANIM_LEVEL, GDHO_SIZE_SCALE, GDHO_DRAG_CONFIDENCE, GDHO_LAST_APPLIED_ANIM_LEVEL
+    global GDHO_ANIM_LEVEL, GDHO_SIZE_SCALE, GDHO_DRAG_CONFIDENCE, GDHO_LAST_APPLIED_ANIM_LEVEL, GDHO_VISUAL_STYLE
     targetAnim := Float(GDHO_ANIM_LEVEL)
     if (GDHO_DRAG_CONFIDENCE < 0.5)
         targetAnim := Max(0.4, targetAnim * 0.62)
     if (GDHO_LAST_APPLIED_ANIM_LEVEL >= 0 && Abs(targetAnim - GDHO_LAST_APPLIED_ANIM_LEVEL) < 0.01)
         return
-    GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " targetAnim " })")
+    GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " targetAnim ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
     GDHO_LAST_APPLIED_ANIM_LEVEL := targetAnim
 }
 
@@ -705,6 +711,7 @@ GDHO_DockHostWhenHidden() {
 }
 
 GDHO_PushThemeToWeb() {
+    global GDHO_VISUAL_STYLE
     tm := "dark"
     try {
         if IsSet(ThemeMode) {
@@ -714,7 +721,7 @@ GDHO_PushThemeToWeb() {
         }
     } catch {
     }
-    GDHO_RunJS("window.HoleOverlay?.setTheme({ themeMode: '" tm "' })")
+    GDHO_RunJS("window.HoleOverlay?.setTheme({ themeMode: '" tm "', visualStyle: '" GDHO_VISUAL_STYLE "' })")
 }
 
 GDHO_Show(payload := "file", x := "", y := "") {
@@ -743,7 +750,7 @@ GDHO_Show(payload := "file", x := "", y := "") {
     else
         GDHO_AnchorHoleUnderToolbar()
     GDHO_RunJS("window.HoleOverlay?.show('" p "')")
-    GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL " })")
+    GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
 }
 
 GDHO_Update(payload := "file", x := "", y := "") {
@@ -803,10 +810,10 @@ GDHO_Drop(payload := "file") {
     if (GDHO_LAST_DROP_TICK && (nowTick - GDHO_LAST_DROP_TICK < 120))
         return
     GDHO_LAST_DROP_TICK := nowTick
-    ; Execute backend drop command immediately; do not wait for frontend animation.
+    ; Let frontend play drop expansion first, then execute command shortly after.
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drop', dispatch: 'pending' })")
-    GDHO_ExecuteDropCommand(p)
     GDHO_RunJS("window.HoleOverlay?.drop({ payload: '" p "' })")
+    SetTimer(GDHO_ExecuteDropCommand.Bind(p), -700)
 }
 
 GDHO_ExecuteDropCommand(payload := "file") {
@@ -1403,3 +1410,7 @@ GDHO_TryHandleExplorerDrop() {
         try FloatingToolbar_HandleDroppedFiles(files)
     }
 }
+
+
+
+

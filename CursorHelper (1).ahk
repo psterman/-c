@@ -111,14 +111,12 @@ global MainScriptDir := A_ScriptDir
 #Include modules\EverythingClient.ahk
 
 ; 洞与工具栏同时启用：默认使用本地静态页，避免 dev server/端口探测阻塞导致启动假死
-if (EnableHoleOverlay) {
-    holeFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\HoleOverlayStandalone.html")
-    try GDHO_SetPageUrl(holeFallbackUrl)
+if (EnableHoleOverlay || EnableHoleOverlayOnNativeDrop) {
+    holeFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\hole_starry.html")
     try GDHO_SetFallbackUrl(holeFallbackUrl)
 }
 if (EnableHoleOverlayOnNativeDrop) {
-    holeFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\HoleOverlayStandalone.html")
-    try GDHO_SetPageUrl(holeFallbackUrl)
+    holeFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\hole_starry.html")
     try GDHO_SetFallbackUrl(holeFallbackUrl)
 }
 
@@ -2458,7 +2456,7 @@ BuildAppAssetUrl(relativePath) {
 }
 
 GDHO_ResolveHolePageUrl(fallbackUrl) {
-    devUrl := "http://127.0.0.1:5173/hole.html"
+    devUrl := "http://127.0.0.1:5173/hole_starry.html"
     if GDHO_IsHoleUrlReachable(devUrl, 900)
         return devUrl
 
@@ -2521,11 +2519,14 @@ GDHO_LoadSettingsFromIni() {
     fy := Integer(IniRead(ConfigFile, "Appearance", "HoleFixedY", "260"))
     ss := Float(IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0"))
     al := Float(IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0"))
+    vs := StrLower(Trim(String(IniRead(ConfigFile, "Appearance", "HoleVisualStyle", "ring"))))
+    if (vs != "ring" && vs != "starry")
+        vs := "ring"
     hideDockEnabled := (IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1")
     hideDockEdge := IniRead(ConfigFile, "Appearance", "HoleHideDockEdge", "right")
     hideDockMargin := Integer(IniRead(ConfigFile, "Appearance", "HoleHideDockMargin", "10"))
     try GDHO_SetScreenAnchor(fx, fy)
-    try GDHO_ApplySettings(mode, td, dd, fx, fy, ss, al)
+    try GDHO_ApplySettings(mode, td, dd, fx, fy, ss, al, vs)
     try GDHO_ApplyHideDockSettings(hideDockEnabled, hideDockEdge, hideDockMargin)
 }
 
@@ -2620,7 +2621,8 @@ _WV2_BeginWarmupAfterEnv(*) {
     catch as _eApp {
     }
     ; 洞监控延迟启动，避免与悬浮栏首屏初始化竞争
-    if (EnableHoleOverlay) {
+    if (EnableHoleOverlay || EnableHoleOverlayOnNativeDrop) {
+        ; Delay GDHO startup to avoid competing with toolbar first-paint phase.
         try SetTimer((*) => GDHO_Start(), -1200)
     } else {
         try GDHO_Stop()
@@ -5308,4 +5310,7 @@ $^+q:: {
 }
 
 OnExit(ExitFunc)
+
+
+
 
