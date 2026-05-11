@@ -21,6 +21,13 @@ global NativeDropBridgeExe := A_ScriptDir "\tools\native-drop-bridge\native-drop
 global NativeDropBridgeOut := A_ScriptDir "\Cache\native_drop_events.jsonl"
 global NativeDropBridgeReadOffset := 0
 global NativeDropBridgeLastEvent := 0
+global NativeDropBridgeUseCopyData := true
+global NativeDropBridgeCopyDataReady := false
+global NativeDropBridgeCopyDataTitle := "NMER_AHK_BRIDGE"
+global NativeDropBridgeCopyDataGui := 0
+global NativeDropBridgeCopyDataLastTick := 0
+global NativeDropBridgeStartTick := 0
+global NativeDropBridgeCopyDataFallbackMs := 2200
 global NativeDropSessionActive := false
 global NativeDropDiagLogPath := A_ScriptDir "\Cache\drop_diagnostics_runtime.log"
 global NativeDropHideDelayMs := 1800
@@ -121,6 +128,7 @@ if (EnableHoleOverlayOnNativeDrop) {
 }
 
 OnExit((*) => NativeDropBridge_Stop())
+NativeDropBridge_InitCopyDataReceiver()
 
 ; 已移除强制管理员自提权，避免与 Everything 产生权限不一致导致 IPC 失败。
 
@@ -2706,6 +2714,8 @@ _WV2_BeginWarmupAfterEnv(*) {
 
 NativeDropBridge_Start() {
     global EnableNativeDropBridge, NativeDropBridgePID, NativeDropBridgeExe, NativeDropBridgeOut, NativeDropBridgeReadOffset
+    global NativeDropBridgeUseCopyData, NativeDropBridgeCopyDataReady, NativeDropBridgeCopyDataTitle
+    global NativeDropBridgeStartTick, NativeDropBridgeCopyDataLastTick
     global g_HoleRuntimeEnabled
     if !g_HoleRuntimeEnabled
         return
@@ -2731,11 +2741,15 @@ NativeDropBridge_Start() {
         rect := NativeDropBridge_GetDropRect()
         rx := Integer(rect["x"]), ry := Integer(rect["y"]), rw := Integer(rect["w"]), rh := Integer(rect["h"])
         cmd := '"' . NativeDropBridgeExe . '" --out "' . NativeDropBridgeOut . '" --x ' . rx . ' --y ' . ry . ' --w ' . rw . ' --h ' . rh
+        if (NativeDropBridgeUseCopyData && NativeDropBridgeCopyDataReady)
+            cmd .= ' --copydata --ahk-class "AutoHotkey" --ahk-title "' . NativeDropBridgeCopyDataTitle . '"'
         ; ensure stale bridge processes are cleaned before relaunch
         try ProcessClose("native-drop-bridge.exe")
         Sleep(80)
         Run(cmd, A_ScriptDir, "Hide", &pid)
         NativeDropBridgePID := pid
+        NativeDropBridgeStartTick := A_TickCount
+        NativeDropBridgeCopyDataLastTick := 0
         SetTimer(NativeDropBridge_Poll, 250)
         SetTimer(NativeDropBridge_Watchdog, 180)
     } catch {
@@ -2765,20 +2779,80 @@ NativeDropBridge_GetDropRect() {
 }
 
 NativeDropBridge_Stop() {
-    global NativeDropBridgePID
+    global NativeDropBridgePID, NativeDropBridgeCopyDataLastTick, NativeDropBridgeStartTick
     try SetTimer(NativeDropBridge_Poll, 0)
     try SetTimer(NativeDropBridge_Watchdog, 0)
     if (NativeDropBridgePID && ProcessExist(NativeDropBridgePID)) {
         try ProcessClose(NativeDropBridgePID)
     }
     NativeDropBridgePID := 0
+    NativeDropBridgeCopyDataLastTick := 0
+    NativeDropBridgeStartTick := 0
+}
+
+NativeDropBridge_InitCopyDataReceiver() {
+    global NativeDropBridgeUseCopyData, NativeDropBridgeCopyDataTitle, NativeDropBridgeCopyDataGui, NativeDropBridgeCopyDataReady
+    if !NativeDropBridgeUseCopyData {
+        NativeDropBridgeCopyDataReady := false
+        return
+    }
+    try {
+        if !IsObject(NativeDropBridgeCopyDataGui) {
+            NativeDropBridgeCopyDataGui := Gui("+ToolWindow -Caption", NativeDropBridgeCopyDataTitle)
+            NativeDropBridgeCopyDataGui.Show("Hide")
+        }
+        OnMessage(0x4A, NativeDropBridge_OnCopyData)
+        NativeDropBridgeCopyDataReady := true
+    } catch {
+        NativeDropBridgeCopyDataReady := false
+    }
+}
+
+NativeDropBridge_OnCopyData(wParam, lParam, msg, hwnd) {
+    global NativeDropBridgeCopyDataGui, NativeDropBridgeLastEvent, NativeDropLastEventTick, NativeDropBridgeCopyDataLastTick
+    try {
+        if !IsObject(NativeDropBridgeCopyDataGui)
+            return 0
+        if (hwnd != NativeDropBridgeCopyDataGui.Hwnd)
+            return 0
+        cbData := NumGet(lParam + A_PtrSize, "UInt")
+        lpData := NumGet(lParam + A_PtrSize + 4, "Ptr")
+        if (cbData <= 0 || lpData = 0)
+            return 1
+        line := StrGet(lpData, cbData, "UTF-8")
+        line := Trim(StrReplace(line, Chr(0), ""), "`r`n`t ")
+        if (line = "")
+            return 1
+        evt := Jxon_Load(line)
+        NativeDropBridgeCopyDataLastTick := A_TickCount
+        NativeDropBridgeLastEvent := evt
+        NativeDropLastEventTick := A_TickCount
+        try NativeDropDiag_Log("evt(copydata) " . line)
+        try {
+            k := ""
+            try k := String(evt["kind"])
+            GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . k . "', dispatch: 'evt' })")
+        }
+        NativeDropBridge_TriggerHolePulse(evt)
+        return 1
+    } catch {
+        return 0
+    }
 }
 
 NativeDropBridge_Poll(*) {
     global NativeDropBridgeOut, NativeDropBridgeReadOffset, NativeDropBridgeLastEvent, NativeDropLastEventTick
+    global NativeDropBridgeUseCopyData, NativeDropBridgeCopyDataReady, NativeDropBridgeCopyDataLastTick, NativeDropBridgeStartTick, NativeDropBridgeCopyDataFallbackMs
     global g_HoleRuntimeEnabled
     if !g_HoleRuntimeEnabled
         return
+    if (NativeDropBridgeUseCopyData && NativeDropBridgeCopyDataReady) {
+        nowTick := A_TickCount
+        if (NativeDropBridgeCopyDataLastTick > 0 && (nowTick - NativeDropBridgeCopyDataLastTick) <= NativeDropBridgeCopyDataFallbackMs)
+            return
+        if (NativeDropBridgeCopyDataLastTick = 0 && NativeDropBridgeStartTick > 0 && (nowTick - NativeDropBridgeStartTick) <= NativeDropBridgeCopyDataFallbackMs)
+            return
+    }
     try {
         if !FileExist(NativeDropBridgeOut)
             return
@@ -2967,6 +3041,10 @@ NativeDropBridge_ApplyDropAction(evt, kind := "") {
     }
 
     files := []
+    sourceFmt := ""
+    itemCount := 0
+    try sourceFmt := StrLower(Trim(String(evt["sourceFormat"])))
+    try itemCount := Integer(evt["count"])
     if (IsObject(evt) && evt.Has("files") && (evt["files"] is Array)) {
         for _, p in evt["files"] {
             s := Trim(String(p))
@@ -2982,7 +3060,24 @@ NativeDropBridge_ApplyDropAction(evt, kind := "") {
         }
     }
     if (files.Length > 0) {
+        ; Outlook style virtual attachments provide display names (FileGroupDescriptorW), not real filesystem paths.
+        ; Route these names to search flow instead of file-path pipeline.
+        if (sourceFmt = "filegroupdescriptorw") {
+            names := ""
+            sep := ""
+            for _, p in files {
+                names .= sep . p
+                sep := Chr(32) . Chr(59) . Chr(32)
+            }
+            try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'outlook_attachments:" . files.Length . "' })")
+            try FloatingToolbar_ActivateSearchCenter()
+            if (names != "")
+                try FloatingToolbar_RequestSearchByKeyword(names)
+            return true
+        }
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'files:" . files.Length . "' })")
+        if (itemCount > 0)
+            try NativeDropDiag_Log("drop action files count=" . itemCount . " source=" . sourceFmt)
         try return FloatingToolbar_HandleDroppedFiles(files)
     }
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'files:empty' })")
@@ -3046,7 +3141,7 @@ NativeDropBridge_DelayedHide(*) {
 
 NativeDropBridge_DragSessionTick(*) {
     global NativeDropSessionActive, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
-    global NativeDropLastTickMouseX, NativeDropLastTickMouseY
+    global NativeDropLastTickMouseX, NativeDropLastTickMouseY, NativeDropLastStartTick
     global g_HoleRuntimeEnabled
     if !g_HoleRuntimeEnabled
         return
@@ -3063,8 +3158,11 @@ NativeDropBridge_DragSessionTick(*) {
             NativeDropWasOverHole := true
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: '" . (NativeDropOverHole ? "over_hole" : "tracking") . "', active: 1, overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
         GDHO_Update(NativeDropSessionPayload, mx, my)
-        ; If OS missed/late drag_end, use physical release fallback to avoid losing command dispatch.
-        if !GetKeyState("LButton", "P") {
+        ; If OS missed/late drag_end, use release fallback.
+        ; Guard the first ~280ms to avoid false release on some text-drag sources.
+        lbtnDown := GetKeyState("LButton", "P") || GetKeyState("LButton")
+        sinceStartMs := (NativeDropLastStartTick > 0) ? (A_TickCount - NativeDropLastStartTick) : 9999
+        if (!lbtnDown && sinceStartMs >= 280) {
             if (NativeDropSessionPayload = "text" && NativeDropWasOverHole) {
                 try NativeDropDiag_Log("route release_fallback action=open_search was_over_hole=1")
                 try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'release_fallback', dispatch: 'release_detected' })")
@@ -3079,7 +3177,7 @@ NativeDropBridge_DragSessionTick(*) {
 }
 
 NativeDropBridge_Watchdog(*) {
-    global NativeDropSessionActive, NativeDropLastEventTick, NativeDropLastTickMouseX, NativeDropLastTickMouseY
+    global NativeDropSessionActive, NativeDropLastEventTick, NativeDropLastTickMouseX, NativeDropLastTickMouseY, NativeDropLastStartTick
     global g_HoleRuntimeEnabled
     if !g_HoleRuntimeEnabled
         return
@@ -3087,10 +3185,12 @@ NativeDropBridge_Watchdog(*) {
         return
     now := A_TickCount
     idleMs := (NativeDropLastEventTick > 0) ? (now - NativeDropLastEventTick) : 0
+    sinceStartMs := (NativeDropLastStartTick > 0) ? (now - NativeDropLastStartTick) : 9999
     physDown := GetKeyState("LButton", "P")
     logDown := GetKeyState("LButton")
     ; Force cleanup if session is stale or button already released but state still active.
-    if ((!physDown && !logDown) || (idleMs > 2200)) {
+    ; Keep a short grace period after drag_start to avoid false "released" on some apps.
+    if ((idleMs > 2200) || (sinceStartMs > 450 && !physDown && !logDown)) {
         try NativeDropDiag_Log("route watchdog action=force_reset phys=" . (physDown ? "1" : "0") . " log=" . (logDown ? "1" : "0") . " idle_ms=" . idleMs)
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'watchdog', dispatch: 'force_reset', active: 0, overHole: 0, wasOverHole: 0, payload: '-' })")
         NativeDropBridge_ResetSession("watchdog", 120)

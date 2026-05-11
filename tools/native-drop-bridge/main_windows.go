@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -36,20 +37,31 @@ const (
 	wineventOutOfContext     = 0x0000
 	eventSystemDragDropStart = 0x000E
 	eventSystemDragDropEnd   = 0x000F
+	wmCopyData               = 0x004A
+	dpiAwarenessContextPMv2  = ^uintptr(3) + 1 // (DPI_AWARENESS_CONTEXT)-4
+	maxPathUTF16             = 260
+	smCxScreen               = 0
+	smCyScreen               = 1
+	smXVirtualScreen         = 76
+	smYVirtualScreen         = 77
+	smCxVirtualScreen        = 78
+	smCyVirtualScreen        = 79
 )
 
 type dropEvent struct {
-	At          string   `json:"at"`
-	Kind        string   `json:"kind"`
-	PayloadKind string   `json:"payloadKind,omitempty"` // text|link|file|folder|mixed|none
-	Text        string   `json:"text,omitempty"`
-	Link        string   `json:"link,omitempty"`
-	Files       []string `json:"files,omitempty"`
-	Folders     []string `json:"folders,omitempty"`
-	X           int32    `json:"x"`
-	Y           int32    `json:"y"`
-	W           int32    `json:"w,omitempty"`
-	H           int32    `json:"h,omitempty"`
+	At           string   `json:"at"`
+	Kind         string   `json:"kind"`
+	PayloadKind  string   `json:"payloadKind,omitempty"`
+	SourceFormat string   `json:"sourceFormat,omitempty"`
+	Text         string   `json:"text,omitempty"`
+	Link         string   `json:"link,omitempty"`
+	Files        []string `json:"files,omitempty"`
+	Folders      []string `json:"folders,omitempty"`
+	Count        int      `json:"count,omitempty"`
+	X            int32    `json:"x"`
+	Y            int32    `json:"y"`
+	W            int32    `json:"w,omitempty"`
+	H            int32    `json:"h,omitempty"`
 }
 
 type pointl struct{ X, Y int32 }
@@ -80,6 +92,12 @@ type stgMedium struct {
 	PUnkForRelease uintptr
 }
 
+type copyDataStruct struct {
+	DwData uintptr
+	CbData uint32
+	LpData uintptr
+}
+
 type iDataObject struct{ LpVtbl *iDataObjectVtbl }
 type iDataObjectVtbl struct {
 	QueryInterface uintptr
@@ -99,10 +117,41 @@ type iDropTargetVtbl struct {
 }
 
 type dropTarget struct {
-	lpVtbl *iDropTargetVtbl
-	refs   int32
-	onDrop func(dropEvent)
+	lpVtbl  *iDropTargetVtbl
+	refs    int32
+	onDrop  func(dropEvent)
 	onEnter func(dropEvent)
+}
+
+type wndClassEx struct {
+	CbSize        uint32
+	Style         uint32
+	LpfnWndProc   uintptr
+	CbClsExtra    int32
+	CbWndExtra    int32
+	HInstance     uintptr
+	HIcon         uintptr
+	HCursor       uintptr
+	HbrBackground uintptr
+	LpszMenuName  uintptr
+	LpszClassName uintptr
+	HIconSm       uintptr
+}
+
+type fileDescriptorW struct {
+	DwFlags          uint32
+	ClsID            [16]byte
+	SizelCx          int32
+	SizelCy          int32
+	PointlX          int32
+	PointlY          int32
+	DwFileAttributes uint32
+	FtCreationTime   uint64
+	FtLastAccessTime uint64
+	FtLastWriteTime  uint64
+	NFileSizeHigh    uint32
+	NFileSizeLow     uint32
+	CFileName        [maxPathUTF16]uint16
 }
 
 var (
@@ -111,19 +160,25 @@ var (
 	modShell32 = syscall.NewLazyDLL("shell32.dll")
 	modKernel  = syscall.NewLazyDLL("kernel32.dll")
 
-	procRegisterClassExW = modUser32.NewProc("RegisterClassExW")
-	procCreateWindowExW  = modUser32.NewProc("CreateWindowExW")
-	procDefWindowProcW   = modUser32.NewProc("DefWindowProcW")
-	procDestroyWindow    = modUser32.NewProc("DestroyWindow")
-	procGetMessageW      = modUser32.NewProc("GetMessageW")
-	procGetCursorPos     = modUser32.NewProc("GetCursorPos")
-	procTranslateMessage = modUser32.NewProc("TranslateMessage")
-	procDispatchMessageW = modUser32.NewProc("DispatchMessageW")
-	procShowWindow       = modUser32.NewProc("ShowWindow")
+	procRegisterClassExW           = modUser32.NewProc("RegisterClassExW")
+	procCreateWindowExW            = modUser32.NewProc("CreateWindowExW")
+	procDefWindowProcW             = modUser32.NewProc("DefWindowProcW")
+	procDestroyWindow              = modUser32.NewProc("DestroyWindow")
+	procGetMessageW                = modUser32.NewProc("GetMessageW")
+	procGetCursorPos               = modUser32.NewProc("GetCursorPos")
+	procTranslateMessage           = modUser32.NewProc("TranslateMessage")
+	procDispatchMessageW           = modUser32.NewProc("DispatchMessageW")
+	procShowWindow                 = modUser32.NewProc("ShowWindow")
 	procSetLayeredWindowAttributes = modUser32.NewProc("SetLayeredWindowAttributes")
-	procGetAsyncKeyState = modUser32.NewProc("GetAsyncKeyState")
-	procSetWinEventHook = modUser32.NewProc("SetWinEventHook")
-	procUnhookWinEvent  = modUser32.NewProc("UnhookWinEvent")
+	procGetAsyncKeyState           = modUser32.NewProc("GetAsyncKeyState")
+	procSetWinEventHook            = modUser32.NewProc("SetWinEventHook")
+	procUnhookWinEvent             = modUser32.NewProc("UnhookWinEvent")
+	procRegisterClipboardFormatW   = modUser32.NewProc("RegisterClipboardFormatW")
+	procFindWindowW                = modUser32.NewProc("FindWindowW")
+	procSendMessageW               = modUser32.NewProc("SendMessageW")
+	procSetProcessDpiAwarenessCtx  = modUser32.NewProc("SetProcessDpiAwarenessContext")
+	procSetProcessDPIAware         = modUser32.NewProc("SetProcessDPIAware")
+	procGetSystemMetrics           = modUser32.NewProc("GetSystemMetrics")
 
 	procRegisterDragDrop = modOle32.NewProc("RegisterDragDrop")
 	procRevokeDragDrop   = modOle32.NewProc("RevokeDragDrop")
@@ -153,26 +208,14 @@ var (
 		DragLeave:      callbackDropDragLeave,
 		Drop:           callbackDropDrop,
 	}
-	iidIUnknown    = ole.IID_IUnknown
-	iidIDropTarget = ole.NewGUID("00000122-0000-0000-C000-000000000046")
-	activeWriter   *bufio.Writer
-	activeWriterF  *os.File
+	iidIUnknown            = ole.IID_IUnknown
+	iidIDropTarget         = ole.NewGUID("00000122-0000-0000-C000-000000000046")
+	activeWriter           *bufio.Writer
+	activeWriterF          *os.File
+	ahkReceiver            uintptr
+	enableCopyData         bool
+	cfFileGroupDescriptorW uint16
 )
-
-type wndClassEx struct {
-	CbSize        uint32
-	Style         uint32
-	LpfnWndProc   uintptr
-	CbClsExtra    int32
-	CbWndExtra    int32
-	HInstance     uintptr
-	HIcon         uintptr
-	HCursor       uintptr
-	HbrBackground uintptr
-	LpszMenuName  uintptr
-	LpszClassName uintptr
-	HIconSm       uintptr
-}
 
 func main() {
 	out := flag.String("out", "..\\..\\Cache\\native_drop_events.jsonl", "output jsonl path")
@@ -180,16 +223,64 @@ func main() {
 	y := flag.Int("y", 300, "drop window y")
 	w := flag.Int("w", 170, "drop window width")
 	h := flag.Int("h", 210, "drop window height")
+	ahkClass := flag.String("ahk-class", "AutoHotkey", "AHK target window class for WM_COPYDATA")
+	ahkTitle := flag.String("ahk-title", "", "AHK target window title for WM_COPYDATA")
+	sendCopyData := flag.Bool("copydata", false, "send JSON events via WM_COPYDATA to AHK hidden window")
+	monitor := flag.String("monitor", "custom", "receiver area: custom|primary|all|rect")
+	rect := flag.String("rect", "", "rect as x,y,w,h (used when --monitor rect)")
 	flag.Parse()
-	if err := run(*out, *x, *y, *w, *h); err != nil {
+	rx, ry, rw, rh := resolveReceiverRect(*monitor, *rect, *x, *y, *w, *h)
+	if err := run(*out, rx, ry, rw, rh, *ahkClass, *ahkTitle, *sendCopyData); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(outPath string, x int, y int, w int, h int) error {
+func resolveReceiverRect(mode string, rectArg string, x, y, w, h int) (int, int, int, int) {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "all":
+		return getMetric(smXVirtualScreen), getMetric(smYVirtualScreen), getMetric(smCxVirtualScreen), getMetric(smCyVirtualScreen)
+	case "primary":
+		return 0, 0, getMetric(smCxScreen), getMetric(smCyScreen)
+	case "rect":
+		if rx, ry, rw, rh, ok := parseRect(rectArg); ok {
+			return rx, ry, rw, rh
+		}
+	}
+	return x, y, w, h
+}
+
+func parseRect(s string) (int, int, int, int, bool) {
+	parts := strings.Split(strings.TrimSpace(s), ",")
+	if len(parts) != 4 {
+		return 0, 0, 0, 0, false
+	}
+	vals := make([]int, 4)
+	for i := 0; i < 4; i++ {
+		n, err := strconv.Atoi(strings.TrimSpace(parts[i]))
+		if err != nil {
+			return 0, 0, 0, 0, false
+		}
+		vals[i] = n
+	}
+	if vals[2] <= 0 || vals[3] <= 0 {
+		return 0, 0, 0, 0, false
+	}
+	return vals[0], vals[1], vals[2], vals[3], true
+}
+
+func getMetric(i int) int {
+	r, _, _ := procGetSystemMetrics.Call(uintptr(i))
+	return int(int32(r))
+}
+
+func run(outPath string, x int, y int, w int, h int, ahkClass string, ahkTitle string, sendCopyData bool) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
+	setDPIAwareness()
+	registerFormats()
+	resolveAHKReceiver(ahkClass, ahkTitle, sendCopyData)
+
 	hr, _, _ := procOleInitialize.Call(0)
 	if int32(hr) < 0 {
 		return fmt.Errorf("OleInitialize failed: 0x%08X", uint32(hr))
@@ -197,7 +288,9 @@ func run(outPath string, x int, y int, w int, h int) error {
 	defer procOleUninitialize.Call()
 
 	f, err := os.OpenFile(outPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	defer f.Close()
 	bw := bufio.NewWriter(f)
 	defer bw.Flush()
@@ -209,7 +302,9 @@ func run(outPath string, x int, y int, w int, h int) error {
 	}()
 
 	hwnd, err := createHostWindow(x, y, w, h)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	defer procDestroyWindow.Call(hwnd)
 	dragHook := installDragDropWinEventHook()
 	if dragHook != 0 {
@@ -220,38 +315,94 @@ func run(outPath string, x int, y int, w int, h int) error {
 
 	target := &dropTarget{lpVtbl: &dropTargetVTable, refs: 1, onDrop: writeDropEvent, onEnter: writeDropEvent}
 
-	ready, _ := json.Marshal(dropEvent{
+	ready := dropEvent{
 		At:   time.Now().Format(time.RFC3339),
 		Kind: "bridge_ready",
 		X:    int32(x),
 		Y:    int32(y),
 		W:    int32(w),
 		H:    int32(h),
-	})
-	_, _ = bw.Write(append(ready, '\n'))
-	_ = bw.Flush()
+	}
+	writeDropEvent(ready)
 
 	hr, _, _ = procRegisterDragDrop.Call(hwnd, uintptr(unsafe.Pointer(target)))
-	if int32(hr) < 0 { return fmt.Errorf("RegisterDragDrop failed: 0x%08X", uint32(hr)) }
+	if int32(hr) < 0 {
+		return fmt.Errorf("RegisterDragDrop failed: 0x%08X", uint32(hr))
+	}
 	defer procRevokeDragDrop.Call(hwnd)
 
 	var m msg
 	for {
 		r1, _, _ := procGetMessageW.Call(uintptr(unsafe.Pointer(&m)), 0, 0, 0)
-		if int32(r1) <= 0 { break }
+		if int32(r1) <= 0 {
+			break
+		}
 		procTranslateMessage.Call(uintptr(unsafe.Pointer(&m)))
 		procDispatchMessageW.Call(uintptr(unsafe.Pointer(&m)))
 	}
 	return nil
 }
 
-func writeDropEvent(ev dropEvent) {
-	if activeWriter == nil {
+func setDPIAwareness() {
+	r, _, _ := procSetProcessDpiAwarenessCtx.Call(dpiAwarenessContextPMv2)
+	if r == 0 {
+		procSetProcessDPIAware.Call()
+	}
+}
+
+func registerFormats() {
+	name, _ := syscall.UTF16PtrFromString("FileGroupDescriptorW")
+	r, _, _ := procRegisterClipboardFormatW.Call(uintptr(unsafe.Pointer(name)))
+	cfFileGroupDescriptorW = uint16(r)
+}
+
+func resolveAHKReceiver(className, title string, enabled bool) {
+	enableCopyData = false
+	ahkReceiver = 0
+	if !enabled {
 		return
 	}
-	b, _ := json.Marshal(ev)
-	_, _ = activeWriter.Write(append(b, '\n'))
-	_ = activeWriter.Flush()
+	var classPtr, titlePtr *uint16
+	if strings.TrimSpace(className) != "" {
+		classPtr, _ = syscall.UTF16PtrFromString(className)
+	}
+	if strings.TrimSpace(title) != "" {
+		titlePtr, _ = syscall.UTF16PtrFromString(title)
+	}
+	h, _, _ := procFindWindowW.Call(uintptr(unsafe.Pointer(classPtr)), uintptr(unsafe.Pointer(titlePtr)))
+	if h != 0 {
+		ahkReceiver = h
+		enableCopyData = true
+	}
+}
+
+func writeDropEvent(ev dropEvent) {
+	if ev.Count == 0 {
+		ev.Count = len(ev.Files) + len(ev.Folders)
+	}
+	if activeWriter != nil {
+		if b, err := json.Marshal(ev); err == nil {
+			_, _ = activeWriter.Write(append(b, '\n'))
+			_ = activeWriter.Flush()
+		}
+	}
+	if enableCopyData && ahkReceiver != 0 {
+		sendCopyDataJSON(ev)
+	}
+}
+
+func sendCopyDataJSON(ev dropEvent) {
+	b, err := json.Marshal(ev)
+	if err != nil {
+		return
+	}
+	payload := append(b, 0)
+	cds := copyDataStruct{
+		DwData: 1,
+		CbData: uint32(len(payload)),
+		LpData: uintptr(unsafe.Pointer(&payload[0])),
+	}
+	procSendMessageW.Call(ahkReceiver, wmCopyData, 0, uintptr(unsafe.Pointer(&cds)))
 }
 
 func installDragDropWinEventHook() uintptr {
@@ -268,6 +419,7 @@ func installDragDropWinEventHook() uintptr {
 }
 
 func winEventProc(hWinEventHook, event, hwnd, idObject, idChild, idEventThread, dwmsEventTime uintptr) uintptr {
+	defer recoverCallback("winEventProc")
 	kind := ""
 	switch uint32(event) {
 	case eventSystemDragDropStart:
@@ -283,6 +435,12 @@ func winEventProc(hWinEventHook, event, hwnd, idObject, idChild, idEventThread, 
 		PayloadKind: "none",
 	})
 	return 0
+}
+
+func recoverCallback(tag string) {
+	if r := recover(); r != nil {
+		fmt.Fprintf(os.Stderr, "callback panic (%s): %v\n", tag, r)
+	}
 }
 
 func startMouseDragFallback() func() {
@@ -375,22 +533,50 @@ func createHostWindow(x int, y int, w int, h int) (uintptr, error) {
 }
 
 func (d *dropTarget) drop(dataObj *iDataObject, pt pointl, effect *uint32) uintptr {
-	if effect != nil { *effect = dropEffectCopy }
-	ev := dropEvent{At: time.Now().Format(time.RFC3339), Kind: "drop", PayloadKind: "none", X: pt.X, Y: pt.Y}
-	if files, folders, ok := readHDropPaths(dataObj); ok && (len(files) > 0 || len(folders) > 0) {
+	if effect != nil {
+		*effect = dropEffectCopy
+	}
+	ev := buildDropEvent("drop", dataObj, pt)
+	if ev.PayloadKind != "none" && d.onDrop != nil {
+		d.onDrop(ev)
+	}
+	if d.onDrop != nil {
+		d.onDrop(dropEvent{At: time.Now().Format(time.RFC3339), Kind: "DRAG_END_PHYSICAL", PayloadKind: "none", X: pt.X, Y: pt.Y})
+	}
+	return sOk
+}
+
+func (d *dropTarget) dragEnterLog(dataObj *iDataObject, pt pointl, effect *uint32) uintptr {
+	if effect != nil {
+		*effect = dropEffectCopy
+	}
+	if d.onEnter != nil {
+		d.onEnter(buildDropEvent("drag_enter", dataObj, pt))
+	}
+	return sOk
+}
+
+func buildDropEvent(kind string, dataObj *iDataObject, pt pointl) dropEvent {
+	ev := dropEvent{At: time.Now().Format(time.RFC3339), Kind: kind, PayloadKind: "none", X: pt.X, Y: pt.Y}
+	if files, folders, ok := readHDropPaths(dataObj); ok {
 		ev.Files = files
 		ev.Folders = folders
-		switch {
-		case len(files) > 0 && len(folders) > 0:
-			ev.PayloadKind = "mixed"
-		case len(folders) > 0:
-			ev.PayloadKind = "folder"
-		default:
-			ev.PayloadKind = "file"
-		}
-	} else if t, ok := readUnicodeText(dataObj); ok && strings.TrimSpace(t) != "" {
+		ev.SourceFormat = "CF_HDROP"
+		ev.PayloadKind = classifyPayload(files, folders)
+		ev.Count = len(files) + len(folders)
+		return ev
+	}
+	if files, ok := readFileGroupDescriptorW(dataObj); ok {
+		ev.Files = files
+		ev.SourceFormat = "FileGroupDescriptorW"
+		ev.PayloadKind = "file"
+		ev.Count = len(files)
+		return ev
+	}
+	if t, ok := readUnicodeText(dataObj); ok && strings.TrimSpace(t) != "" {
 		t = strings.TrimSpace(t)
 		ev.Text = t
+		ev.SourceFormat = "CF_UNICODETEXT"
 		if looksLikeURL(t) {
 			ev.PayloadKind = "link"
 			ev.Link = t
@@ -398,45 +584,33 @@ func (d *dropTarget) drop(dataObj *iDataObject, pt pointl, effect *uint32) uintp
 			ev.PayloadKind = "text"
 		}
 	}
-	if ev.PayloadKind != "none" && d.onDrop != nil {
-		d.onDrop(ev)
-	}
-	// Physical release signal must be emitted regardless of IDataObject parse success.
-	if d.onDrop != nil {
-		d.onDrop(dropEvent{
-			At:          time.Now().Format(time.RFC3339),
-			Kind:        "DRAG_END_PHYSICAL",
-			PayloadKind: "none",
-			X:           pt.X,
-			Y:           pt.Y,
-		})
-	}
-	return sOk
+	return ev
 }
 
-func (d *dropTarget) dragEnterLog(pt pointl, effect *uint32) uintptr {
-	if effect != nil {
-		*effect = dropEffectCopy
+func classifyPayload(files []string, folders []string) string {
+	switch {
+	case len(files) > 0 && len(folders) > 0:
+		return "mixed"
+	case len(folders) > 0:
+		return "folder"
+	case len(files) > 0:
+		return "file"
+	default:
+		return "none"
 	}
-	if d.onEnter != nil {
-		d.onEnter(dropEvent{
-			At:   time.Now().Format(time.RFC3339),
-			Kind: "drag_enter",
-			PayloadKind: "none",
-			X:    pt.X,
-			Y:    pt.Y,
-		})
-	}
-	return sOk
 }
 
 func readHDropPaths(dataObj *iDataObject) ([]string, []string, bool) {
 	fe := formatEtc{CfFormat: cfHDrop, DwAspect: dvaspectContent, Lindex: -1, Tymed: tymedHGlobal}
 	var med stgMedium
-	if int32(getData(dataObj, &fe, &med)) < 0 || med.Handle == 0 { return nil, nil, false }
+	if int32(getData(dataObj, &fe, &med)) < 0 || med.Handle == 0 {
+		return nil, nil, false
+	}
 	defer procReleaseStgMedium.Call(uintptr(unsafe.Pointer(&med)))
 	cnt, _, _ := procDragQueryFileW.Call(med.Handle, 0xFFFFFFFF, 0, 0)
-	if cnt == 0 { return nil, nil, false }
+	if cnt == 0 {
+		return nil, nil, false
+	}
 	files := make([]string, 0, cnt)
 	folders := make([]string, 0, cnt)
 	for i := uint32(0); i < uint32(cnt); i++ {
@@ -457,13 +631,50 @@ func readHDropPaths(dataObj *iDataObject) ([]string, []string, bool) {
 	return files, folders, (len(files)+len(folders) > 0)
 }
 
+func readFileGroupDescriptorW(dataObj *iDataObject) ([]string, bool) {
+	if cfFileGroupDescriptorW == 0 {
+		return nil, false
+	}
+	fe := formatEtc{CfFormat: cfFileGroupDescriptorW, DwAspect: dvaspectContent, Lindex: -1, Tymed: tymedHGlobal}
+	var med stgMedium
+	if int32(getData(dataObj, &fe, &med)) < 0 || med.Handle == 0 {
+		return nil, false
+	}
+	defer procReleaseStgMedium.Call(uintptr(unsafe.Pointer(&med)))
+	ptr, _, _ := procGlobalLock.Call(med.Handle)
+	if ptr == 0 {
+		return nil, false
+	}
+	defer procGlobalUnlock.Call(med.Handle)
+
+	count := *(*uint32)(unsafe.Pointer(ptr))
+	if count == 0 || count > 4096 {
+		return nil, false
+	}
+	off := uintptr(4)
+	sz := unsafe.Sizeof(fileDescriptorW{})
+	files := make([]string, 0, count)
+	for i := uint32(0); i < count; i++ {
+		fd := (*fileDescriptorW)(unsafe.Pointer(ptr + off + uintptr(i)*sz))
+		name := strings.TrimSpace(syscall.UTF16ToString(fd.CFileName[:]))
+		if name != "" {
+			files = append(files, name)
+		}
+	}
+	return files, len(files) > 0
+}
+
 func readUnicodeText(dataObj *iDataObject) (string, bool) {
 	fe := formatEtc{CfFormat: cfUnicodeText, DwAspect: dvaspectContent, Lindex: -1, Tymed: tymedHGlobal}
 	var med stgMedium
-	if int32(getData(dataObj, &fe, &med)) < 0 || med.Handle == 0 { return "", false }
+	if int32(getData(dataObj, &fe, &med)) < 0 || med.Handle == 0 {
+		return "", false
+	}
 	defer procReleaseStgMedium.Call(uintptr(unsafe.Pointer(&med)))
 	ptr, _, _ := procGlobalLock.Call(med.Handle)
-	if ptr == 0 { return "", false }
+	if ptr == 0 {
+		return "", false
+	}
 	defer procGlobalUnlock.Call(med.Handle)
 	return utf16PtrToString((*uint16)(unsafe.Pointer(ptr))), true
 }
@@ -474,10 +685,16 @@ func getData(dataObj *iDataObject, fe *formatEtc, med *stgMedium) uintptr {
 }
 
 func utf16PtrToString(ptr *uint16) string {
-	if ptr == nil { return "" }
+	if ptr == nil {
+		return ""
+	}
 	buf := make([]uint16, 0, 256)
 	for p := uintptr(unsafe.Pointer(ptr)); ; p += 2 {
-		v := *(*uint16)(unsafe.Pointer(p)); if v == 0 { break }; buf = append(buf, v)
+		v := *(*uint16)(unsafe.Pointer(p))
+		if v == 0 {
+			break
+		}
+		buf = append(buf, v)
 	}
 	return syscall.UTF16ToString(buf)
 }
@@ -490,13 +707,16 @@ func looksLikeURL(s string) bool {
 func isDirectoryPath(p string) bool {
 	fi, err := os.Stat(filepath.Clean(p))
 	if err != nil {
-		return strings.HasSuffix(p, `\`) || strings.HasSuffix(p, `/`)
+		return strings.HasSuffix(p, `\\`) || strings.HasSuffix(p, `/`)
 	}
 	return fi.IsDir()
 }
 
 func dropQueryInterface(self, riid, ppv uintptr) uintptr {
-	if ppv == 0 { return eNoInterface }
+	defer recoverCallback("dropQueryInterface")
+	if ppv == 0 {
+		return eNoInterface
+	}
 	*(*uintptr)(unsafe.Pointer(ppv)) = 0
 	g := (*ole.GUID)(unsafe.Pointer(riid))
 	if equalGUID(g, iidIUnknown) || equalGUID(g, iidIDropTarget) {
@@ -506,28 +726,61 @@ func dropQueryInterface(self, riid, ppv uintptr) uintptr {
 	}
 	return eNoInterface
 }
-func dropAddRef(self uintptr) uintptr { return uintptr(atomic.AddInt32(&(*dropTarget)(unsafe.Pointer(self)).refs, 1)) }
-func dropRelease(self uintptr) uintptr { return uintptr(atomic.AddInt32(&(*dropTarget)(unsafe.Pointer(self)).refs, -1)) }
+
+func dropAddRef(self uintptr) uintptr {
+	defer recoverCallback("dropAddRef")
+	return uintptr(atomic.AddInt32(&(*dropTarget)(unsafe.Pointer(self)).refs, 1))
+}
+
+func dropRelease(self uintptr) uintptr {
+	defer recoverCallback("dropRelease")
+	return uintptr(atomic.AddInt32(&(*dropTarget)(unsafe.Pointer(self)).refs, -1))
+}
+
 func dropDragEnter(self, dataObj, keyState, pt, effect uintptr) uintptr {
+	defer recoverCallback("dropDragEnter")
 	obj := (*dropTarget)(unsafe.Pointer(self))
 	var eff *uint32
 	if effect != 0 {
 		eff = (*uint32)(unsafe.Pointer(effect))
 	}
-	return obj.dragEnterLog(*(*pointl)(unsafe.Pointer(pt)), eff)
+	return obj.dragEnterLog((*iDataObject)(unsafe.Pointer(dataObj)), *(*pointl)(unsafe.Pointer(pt)), eff)
 }
-func dropDragOver(self, keyState, pt, effect uintptr) uintptr { if effect != 0 { *(*uint32)(unsafe.Pointer(effect)) = dropEffectCopy }; return sOk }
-func dropDragLeave(self uintptr) uintptr { return sOk }
+
+func dropDragOver(self, keyState, pt, effect uintptr) uintptr {
+	defer recoverCallback("dropDragOver")
+	if effect != 0 {
+		*(*uint32)(unsafe.Pointer(effect)) = dropEffectCopy
+	}
+	return sOk
+}
+
+func dropDragLeave(self uintptr) uintptr {
+	defer recoverCallback("dropDragLeave")
+	return sOk
+}
+
 func dropDrop(self, dataObj, keyState, pt, effect uintptr) uintptr {
+	defer recoverCallback("dropDrop")
 	obj := (*dropTarget)(unsafe.Pointer(self))
 	var eff *uint32
-	if effect != 0 { eff = (*uint32)(unsafe.Pointer(effect)) }
+	if effect != 0 {
+		eff = (*uint32)(unsafe.Pointer(effect))
+	}
 	return obj.drop((*iDataObject)(unsafe.Pointer(dataObj)), *(*pointl)(unsafe.Pointer(pt)), eff)
 }
 
 func equalGUID(a, b *ole.GUID) bool {
-	if a == nil || b == nil { return false }
-	if a.Data1 != b.Data1 || a.Data2 != b.Data2 || a.Data3 != b.Data3 { return false }
-	for i := 0; i < 8; i++ { if a.Data4[i] != b.Data4[i] { return false } }
+	if a == nil || b == nil {
+		return false
+	}
+	if a.Data1 != b.Data1 || a.Data2 != b.Data2 || a.Data3 != b.Data3 {
+		return false
+	}
+	for i := 0; i < 8; i++ {
+		if a.Data4[i] != b.Data4[i] {
+			return false
+		}
+	}
 	return true
 }

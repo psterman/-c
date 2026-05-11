@@ -1419,6 +1419,7 @@ SelectionSense_ProcessDeferred(*) {
 
     g_SelSense_LastFullText := text
     g_SelSense_LastTick := A_TickCount
+    SelectionSense_TryActivateHoleFromSelection(text)
 
     if hubPreviewActive {
         try FloatingToolbar_NotifySelectionChange(text)
@@ -1426,6 +1427,27 @@ SelectionSense_ProcessDeferred(*) {
         }
         SelectionSense_QueueHubPreviewUpdate(text)
     }
+}
+
+SelectionSense_TryActivateHoleFromSelection(selectedText) {
+    global g_HoleRuntimeEnabled, EnableHoleOverlayOnNativeDrop
+    if !g_HoleRuntimeEnabled
+        return
+    if !EnableHoleOverlayOnNativeDrop
+        return
+    t := ""
+    try t := Trim(String(selectedText))
+    if (t = "")
+        return
+
+    ; Mouse selection auto-copy has no native drag events, so trigger hole/search directly.
+    try GDHO_Init()
+    try GDHO_Show("text")
+    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'selection_copy', dispatch: 'show:text', active: 1, overHole: 0, wasOverHole: 0, payload: 'text' })")
+    try FloatingToolbar_ActivateSearchCenter()
+    try FloatingToolbar_RequestSearchByKeyword(t)
+    try SetTimer((*) => GDHO_HideFrontend(), -900)
+    try SetTimer((*) => GDHO_HideOverlay(), -1200)
 }
 
 SelectionSense_EnsureMenuHost() {

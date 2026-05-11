@@ -9651,3 +9651,26 @@
 [2026-05-11 10:28:36] evt {"at":"2026-05-11T10:28:36+08:00","kind":"drag_start","payloadKind":"none","x":300,"y":567}
 [2026-05-11 10:28:49] evt {"at":"2026-05-11T10:28:49+08:00","kind":"bridge_ready","x":3233,"y":790,"w":170,"h":210}
 [2026-05-11 10:31:45] evt {"at":"2026-05-11T10:31:45+08:00","kind":"bridge_ready","x":1563,"y":706,"w":170,"h":210}
+[2026-05-11 10:55:34] evt {"at":"2026-05-11T10:55:34+08:00","kind":"bridge_ready","x":1563,"y":706,"w":170,"h":210}
+[2026-05-11 18:16:01] evt {"at":"2026-05-11T18:15:59+08:00","kind":"bridge_ready","x":1386,"y":685,"w":170,"h":210}
+[2026-05-11 18:16:07] evt {"at":"2026-05-11T18:16:05+08:00","kind":"bridge_ready","x":1341,"y":685,"w":170,"h":210}
+[2026-05-11 18:16:07] evt {"at":"2026-05-11T18:16:07+08:00","kind":"drag_start","payloadKind":"none","x":1109,"y":541}
+[2026-05-11 18:16:07] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-11 18:16:07] route watchdog action=force_reset phys=0 log=0 idle_ms=109
+[2026-05-11 18:16:07] route reset_session reason=watchdog hide_ms=120
+[2026-05-11 18:16:07] route delayed_hide action=hide_now
+[2026-05-11 18:16:07] evt {"at":"2026-05-11T18:16:07+08:00","kind":"drag_end","payloadKind":"none","x":1346,"y":647}
+[2026-05-11 18:16:07] route drag_end over_hole=0 payload=text
+[2026-05-11 18:16:07] route reset_session reason=drag_end hide_ms=1800
+[2026-05-11 18:16:08] evt {"at":"2026-05-11T18:16:08+08:00","kind":"drag_start","payloadKind":"none","x":1277,"y":584}
+[2026-05-11 18:16:08] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-11 18:16:08] route reset_session reason=release_fallback hide_ms=300
+[2026-05-11 18:16:08] evt {"at":"2026-05-11T18:16:08+08:00","kind":"drag_end","payloadKind":"none","x":1419,"y":579}
+[2026-05-11 18:16:08] route drag_end over_hole=0 payload=text
+[2026-05-11 18:16:08] route reset_session reason=drag_end hide_ms=1800
+[2026-05-11 18:16:08] evt {"at":"2026-05-11T18:16:08+08:00","kind":"drag_start","payloadKind":"none","x":1324,"y":582}
+[2026-05-11 18:16:08] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-11 18:16:10] evt {"at":"2026-05-11T18:16:10+08:00","kind":"drag_end","payloadKind":"none","x":1318,"y":614}
+[2026-05-11 18:16:10] route drag_end over_hole=0 payload=text
+[2026-05-11 18:16:10] route reset_session reason=drag_end hide_ms=1800
+[2026-05-11 18:16:11] route delayed_hide action=hide_now
