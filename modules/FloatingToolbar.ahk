@@ -101,6 +101,11 @@ FloatingToolbar_CanShowOverlay() {
     global g_FTB_OverlaySuppressedByPageDock
     return !g_FTB_OverlaySuppressedByPageDock
 }
+FloatingToolbar_ClearOverlaySuppression() {
+    global g_FTB_PageDockActive, g_FTB_OverlaySuppressedByPageDock
+    g_FTB_PageDockActive := Map()
+    g_FTB_OverlaySuppressedByPageDock := false
+}
 FloatingToolbar_PageDockEnter(tag := "") {
     global g_FTB_PageDockActive, g_FTB_OverlaySuppressedByPageDock
     t := Trim(StrLower(String(tag)))
@@ -208,8 +213,15 @@ FloatingToolbar_ForceRevealIfStuck() {
 
 ShowFloatingToolbar() {
     global FloatingToolbarGUI, FloatingToolbarIsVisible, FloatingToolbarWindowX, FloatingToolbarWindowY
-    global g_FTB_UI_Ready, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2_Ready
+    global g_FTB_UI_Ready, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2_Ready, FloatingToolbarChatDrawerOpen
 
+    ; Safety: entering toolbar mode should always start from collapsed bar state.
+    FloatingToolbarChatDrawerOpen := false
+
+    if !FloatingToolbar_CanShowOverlay() {
+        if (NormalizeAppearanceActivationMode(AppearanceActivationMode) = "toolbar")
+            FloatingToolbar_ClearOverlaySuppression()
+    }
     if !FloatingToolbar_CanShowOverlay() {
         try HideFloatingToolbar()
         return
@@ -274,6 +286,7 @@ HideFloatingToolbar() {
     global FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2
 
     if (FloatingToolbarGUI != 0) {
+        try FloatingToolbar_ExitHoleCompactRuntime()
         SaveFloatingToolbarPosition()
         g_FTB_WaitingUiFinishedReveal := false
         SetTimer(FloatingToolbar_ForceRevealIfStuck, 0)
@@ -288,7 +301,7 @@ HideFloatingToolbar() {
 }
 
 ToggleFloatingToolbar() {
-    global FloatingToolbarIsVisible, AppearanceActivationMode, FloatingBubbleIsVisible
+    global FloatingToolbarIsVisible, AppearanceActivationMode
 
     if !FloatingToolbar_CanShowOverlay() {
         try HideFloatingToolbar()
@@ -296,12 +309,7 @@ ToggleFloatingToolbar() {
     }
 
     mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
-    if (mode = "bubble") {
-        if (FloatingBubbleIsVisible) {
-            HideFloatingBubble()
-        } else {
-            ShowFloatingBubble()
-        }
+    if (mode = "hole") {
         return
     }
     if (mode = "tray") {
@@ -1339,11 +1347,13 @@ FloatingToolbarLoadDrawerWidth() {
 }
 
 FloatingToolbarSetChatDrawerState(open) {
-    global FloatingToolbarGUI, FloatingToolbarChatDrawerOpen
+    global FloatingToolbarGUI, FloatingToolbarChatDrawerOpen, AppearanceActivationMode
     global FloatingToolbarWindowX, FloatingToolbarWindowY, FloatingToolbarIsVisible
     global FloatingToolbarLastClosedX, FloatingToolbarLastClosedY
 
     open := !!open
+    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+        open := false
     ; Do not gate by FloatingToolbarIsVisible: this state flag can lag behind
     ; WebView UI transitions and would block drawer open/close resize.
     if (!FloatingToolbarGUI)
@@ -1866,7 +1876,7 @@ FloatingToolbarOpenSettings() {
 ; ===================== 濠婃俺鐤嗙紓鈺傛杹婢跺嫮鎮?=====================
 FloatingToolbarWM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
     global FloatingToolbarGUI, FloatingToolbarIsVisible, FloatingToolbarChatDrawerOpen
-    global FloatingBubbleGUI, FloatingBubbleIsVisible, AppearanceActivationMode
+    global AppearanceActivationMode
     wheelDelta := (wParam >> 16) & 0xFFFF
     if (wheelDelta > 0x7FFF)
         wheelDelta := wheelDelta - 0x10000
@@ -1884,22 +1894,6 @@ FloatingToolbarWM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
         if (mx1 >= tx && mx1 <= tx + tw && my1 >= ty && my1 <= ty + th)
             mouseInToolbar := true
     }
-    mouseInBubble := false
-    if (FloatingBubbleIsVisible && IsSet(FloatingBubbleGUI) && IsObject(FloatingBubbleGUI) && (FloatingBubbleGUI is Gui)) {
-        MouseGetPos(&mx2, &my2)
-        try FloatingBubbleGUI.GetPos(&bx, &by, &bw, &bh)
-        catch {
-            bx := by := bw := bh := 0
-        }
-        if (mx2 >= bx && mx2 <= bx + bw && my2 >= by && my2 <= by + bh)
-            mouseInBubble := true
-    }
-
-    if (mouseInToolbar || mouseInBubble) {
-        FloatingToolbar_SwitchActivationByWheel(delta)
-        return 0
-    }
-
     if (!mouseInToolbar)
         return
     if (mode != "toolbar")
@@ -1916,7 +1910,7 @@ FloatingToolbarWM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
 FloatingToolbar_SetActivationMode(mode) {
     global AppearanceActivationMode
     m := NormalizeAppearanceActivationMode(mode)
-    if (m != "toolbar" && m != "bubble" && m != "tray")
+    if (m != "toolbar" && m != "hole" && m != "tray")
         return
     AppearanceActivationMode := m
     cfg := A_ScriptDir . "\CursorShortcut.ini"
@@ -1927,99 +1921,19 @@ FloatingToolbar_SetActivationMode(mode) {
 }
 
 FloatingToolbar_SwitchActivationByWheel(delta) {
-    global AppearanceActivationMode, FloatingToolbarScale, FloatingToolbarMinScale, FloatingToolbarMaxScale
-    global FloatingToolbarWindowX, FloatingToolbarWindowY
-    global FloatingBubbleGUI, FloatingBubbleIsVisible, FloatingBubbleWindowX, FloatingBubbleWindowY
+    global AppearanceActivationMode
     mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
     if (delta > 0) {
         if (mode != "toolbar") {
-            ; Ensure wheel-up from bubble opens full toolbar directly (skip compact square state).
-            if FloatingToolbarIsCompactMode() {
-                targetScale := FloatingToolbarMinScale + 0.15
-                if (targetScale > FloatingToolbarMaxScale)
-                    targetScale := FloatingToolbarMaxScale
-                FloatingToolbarScale := targetScale
-                FloatingToolbarSaveScale()
-            }
-
-            ; Anchor expansion to bubble center so position follows visual continuity.
-            if (mode = "bubble" && FloatingBubbleIsVisible) {
-                bx := FloatingBubbleWindowX
-                by := FloatingBubbleWindowY
-                bw := bh := 0
-                try FloatingBubbleGUI.GetPos(&bx, &by, &bw, &bh)
-                catch {
-                }
-                if (bw <= 0 || bh <= 0) {
-                    try bw := bh := FloatingBubble_GetSize()
-                    catch {
-                        bw := bh := 48
-                    }
-                }
-                cx := bx + (bw / 2.0)
-                cy := by + (bh / 2.0)
-                tw := FloatingToolbarCalculateWidth()
-                th := FloatingToolbarCalculateHeight()
-                newX := Round(cx - (tw / 2.0))
-                newY := Round(cy - (th / 2.0))
-                ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
-                vr := vl + vw
-                vb := vt + vh
-                if (newX < vl)
-                    newX := vl
-                if (newY < vt)
-                    newY := vt
-                if (newX + tw > vr)
-                    newX := vr - tw
-                if (newY + th > vb)
-                    newY := vb - th
-                FloatingToolbarWindowX := newX
-                FloatingToolbarWindowY := newY
-                cfg := A_ScriptDir . "\CursorShortcut.ini"
-                try IniWrite(String(newX), cfg, "WindowPositions", "FloatingToolbar_X")
-                try IniWrite(String(newY), cfg, "WindowPositions", "FloatingToolbar_Y")
-            }
             FloatingToolbar_SetActivationMode("toolbar")
         }
         return
     }
-    if (mode != "bubble") {
-        ; Persist bubble target position before mode switch; ShowFloatingBubble() reloads from ini.
-        tx := FloatingToolbarWindowX
-        ty := FloatingToolbarWindowY
-        tw := th := 0
-        if IsObject(FloatingToolbarGUI) {
-            try FloatingToolbarGUI.GetPos(&tx, &ty, &tw, &th)
-            catch {
-            }
-        }
-        if (tw <= 0 || th <= 0) {
-            tw := FloatingToolbarCalculateWidth()
-            th := FloatingToolbarCalculateHeight()
-        }
-        try bs := FloatingBubble_GetSize()
-        catch {
-            bs := 48
-        }
-        bx := Round(tx + (tw - bs) / 2.0)
-        by := Round(ty + (th - bs) / 2.0)
-        ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
-        vr := vl + vw
-        vb := vt + vh
-        if (bx < vl)
-            bx := vl
-        if (by < vt)
-            by := vt
-        if (bx + bs > vr)
-            bx := vr - bs
-        if (by + bs > vb)
-            by := vb - bs
-        FloatingBubbleWindowX := bx
-        FloatingBubbleWindowY := by
-        cfg := A_ScriptDir . "\CursorShortcut.ini"
-        try IniWrite(String(bx), cfg, "WindowPositions", "FloatingBubble_X")
-        try IniWrite(String(by), cfg, "WindowPositions", "FloatingBubble_Y")
-        FloatingToolbar_SetActivationMode("bubble")
+    if (mode = "toolbar") {
+        ; Directly switch to real GDHO hole runtime (not toolbar compact skin).
+        FloatingToolbar_SetActivationMode("hole")
+    } else if (mode != "tray") {
+        FloatingToolbar_SetActivationMode("hole")
     }
 }
 
@@ -2034,12 +1948,6 @@ FloatingToolbarApplyWheelDelta(delta) {
     scaleStep := 0.15
     newScale := FloatingToolbarScale
 
-    ; Scroll-down from toolbar should switch directly to bubble before entering compact square.
-    if (delta < 0 && (FloatingToolbarScale - scaleStep) <= (FloatingToolbarMinScale + 0.0001)) {
-        FloatingToolbar_SwitchActivationByWheel(-1)
-        return
-    }
-
     if (delta > 0) {
         newScale := FloatingToolbarScale + scaleStep
         if (newScale > FloatingToolbarMaxScale)
@@ -2050,7 +1958,14 @@ FloatingToolbarApplyWheelDelta(delta) {
             newScale := FloatingToolbarMinScale
     }
 
+    ; Reaching minimum while shrinking: switch directly to hole mode.
+    if (delta < 0 && FloatingToolbarIsCompactMode(newScale)) {
+        FloatingToolbar_SetActivationMode("hole")
+        return
+    }
+
     if (newScale != FloatingToolbarScale) {
+        wasCompact := FloatingToolbarIsCompactMode(FloatingToolbarScale)
         FloatingToolbarGUI.GetPos(&oldX, &oldY, &oldWidth, &oldHeight)
         MouseGetPos(&mouseScreenX, &mouseScreenY)
         mouseRelX := mouseScreenX - oldX
@@ -2089,11 +2004,37 @@ FloatingToolbarApplyWheelDelta(delta) {
 
         FloatingToolbarSaveScale()
         SaveFloatingToolbarPosition()
-
-        if (delta < 0 && FloatingToolbarIsCompactMode(newScale)) {
-            ; Reaching minimum scale switches to bubble mode instead of staying a square compact block.
-            FloatingToolbar_SwitchActivationByWheel(-1)
+        nowCompact := FloatingToolbarIsCompactMode(newScale)
+        if (nowCompact && !wasCompact) {
+            try FloatingToolbar_EnterHoleCompactRuntime()
+        } else if (!nowCompact && wasCompact) {
+            try FloatingToolbar_ExitHoleCompactRuntime()
         }
+
+    }
+}
+
+FloatingToolbar_EnterHoleCompact() {
+    global FloatingToolbarScale, FloatingToolbarMinScale
+    FloatingToolbarScale := FloatingToolbarMinScale
+    FloatingToolbarSaveScale()
+    FloatingToolbarPushScaleStateToWeb(FloatingToolbarScale)
+    try FloatingToolbar_ApplyWebViewBounds()
+    try FloatingToolbarApplyRoundedCorners()
+    try FloatingToolbar_EnterHoleCompactRuntime()
+}
+
+FloatingToolbar_EnterHoleCompactRuntime() {
+    ; Disabled for stability: hole runtime visibility is owned by ActivationMode=hole.
+    return
+}
+
+FloatingToolbar_ExitHoleCompactRuntime() {
+    global AppearanceActivationMode
+    try GDHO_UnpinFromDesktop()
+    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "hole") {
+        try GDHO_Stop()
+        try NativeDropBridge_Stop()
     }
 }
 
@@ -2360,6 +2301,74 @@ FloatingToolbarLoadScale() {
     } catch {
     }
     FloatingToolbarLoadDrawerWidth()
+}
+
+FloatingToolbar_ForceRecoverVisible() {
+    global FloatingToolbarWindowX, FloatingToolbarWindowY, FloatingToolbarGUI
+    global FloatingToolbarChatDrawerOpen, FloatingToolbarScale
+    global g_FTB_WaitingUiFinishedReveal, g_FTB_UI_Ready, g_FTB_WV2_Ready
+    global g_FTB_WV2
+    try FloatingToolbar_ClearOverlaySuppression()
+    catch {
+    }
+    try GDHO_UnpinFromDesktop()
+    catch {
+    }
+    try GDHO_Stop()
+    catch {
+    }
+    try NativeDropBridge_Stop()
+    catch {
+    }
+    try {
+        tw := FloatingToolbarCalculateWidth()
+        th := FloatingToolbarCalculateHeight()
+        ; Always recover to primary-screen visible area.
+        FloatingToolbarWindowX := Max(16, A_ScreenWidth - tw - 36)
+        FloatingToolbarWindowY := Max(16, A_ScreenHeight - th - 80)
+        ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+        IniWrite(String(FloatingToolbarWindowX), ConfigFile, "WindowPositions", "FloatingToolbar_X")
+        IniWrite(String(FloatingToolbarWindowY), ConfigFile, "WindowPositions", "FloatingToolbar_Y")
+    } catch {
+    }
+    ; Reset sticky drawer/compact state before recreate/show.
+    try FloatingToolbarChatDrawerOpen := false
+    try FloatingToolbarScale := Max(1.0, FloatingToolbarScale)
+    try FloatingToolbarSaveScale()
+    try {
+        if (g_FTB_WV2) {
+            WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
+            WebView_QueuePayload(g_FTB_WV2, Map("type", "set_scale", "scale", FloatingToolbar_EffectiveScale(), "compact", false))
+        }
+    } catch {
+    }
+    ; Hard recovery: rebuild toolbar host once to break stuck reveal states.
+    try {
+        g_FTB_WaitingUiFinishedReveal := false
+        g_FTB_UI_Ready := false
+        g_FTB_WV2_Ready := false
+        CreateFloatingToolbarGUI()
+    } catch {
+    }
+    try ShowFloatingToolbar()
+    catch {
+    }
+    try SetTimer((*) => ShowFloatingToolbar(), -260)
+    catch {
+    }
+    try SetTimer((*) => ShowFloatingToolbar(), -680)
+    catch {
+    }
+    ; Last resort: force host window visible immediately.
+    try {
+        if (FloatingToolbarGUI && IsObject(FloatingToolbarGUI) && (FloatingToolbarGUI is Gui)) {
+            tw := FloatingToolbarCalculateWidth()
+            th := FloatingToolbarCalculateHeight()
+            FloatingToolbarGUI.Show("x" . FloatingToolbarWindowX . " y" . FloatingToolbarWindowY . " w" . tw . " h" . th . " NoActivate")
+            WinSetTransparent(255, "ahk_id " . FloatingToolbarGUI.Hwnd)
+        }
+    } catch {
+    }
 }
 
 FloatingToolbarIsCompactMode(scaleValue := "") {
@@ -2749,8 +2758,8 @@ MinimizeFloatingToolbarToEdge() {
     if (!FloatingToolbarIsVisible || !IsSet(FloatingToolbarGUI) || FloatingToolbarGUI = 0)
         return
 
-    ; Prefer bubble mode as the minimized representation.
-    FloatingToolbar_SwitchActivationByWheel(-1)
+    ; Directly switch to real GDHO hole runtime.
+    FloatingToolbar_SetActivationMode("hole")
 }
 
 RestoreFloatingToolbar() {

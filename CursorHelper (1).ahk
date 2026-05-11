@@ -430,7 +430,7 @@ global FloatingToolbarMenuOptions := [
     Map("id", "ExitApp", "name", "退出程序")
 ]
 
-; 激活方式：toolbar=悬浮栏 bubble=悬浮球 tray=后台（仅托盘，无悬浮 UI）
+; 激活方式：toolbar=悬浮栏 hole=黑洞模式 tray=后台（仅托盘，无悬浮 UI）
 global AppearanceActivationMode := "toolbar"
 
 ; ===================== UI 颜色初始化（必须在脚本早期初始化）=====================
@@ -2378,32 +2378,110 @@ SyncPromptTemplatesToDB() {
 ; ===================== 激活方式规范化 =====================
 NormalizeAppearanceActivationMode(v) {
     s := Trim(String(v))
-    if (s = "bubble" || s = "tray" || s = "toolbar")
+    if (s = "bubble")
+        return "hole"
+    if (s = "hole" || s = "tray" || s = "toolbar")
         return s
     return "toolbar"
 }
 
-
-; 根据「外观 · 激活方式」显示悬浮栏 / 悬浮球 / 或仅托盘
-ApplyAppearanceActivationMode() {
+IsHoleRuntimeEnabledByActivationMode() {
     global AppearanceActivationMode
-    m := NormalizeAppearanceActivationMode(AppearanceActivationMode)
-    if (m = "toolbar") {
-        try FloatingBubble_DestroyCompletely()
+    return NormalizeAppearanceActivationMode(AppearanceActivationMode) = "hole"
+}
+
+global g_ActivationRuntimeToken := 0
+global g_HoleRuntimeEnabled := false
+
+SetHoleRuntimeEnabled(enabled) {
+    global g_HoleRuntimeEnabled
+    g_HoleRuntimeEnabled := !!enabled
+}
+
+ApplyActivationRuntimeAsync(mode) {
+    global g_ActivationRuntimeToken
+    g_ActivationRuntimeToken += 1
+    tok := g_ActivationRuntimeToken
+    try SetTimer(ApplyActivationRuntimeDeferred.Bind(mode, tok), -40)
+}
+
+ApplyActivationRuntimeDeferred(mode, token) {
+    global g_ActivationRuntimeToken
+    if (token != g_ActivationRuntimeToken)
+        return
+    m := NormalizeAppearanceActivationMode(mode)
+    if (m = "hole") {
+        try SetHoleRuntimeEnabled(true)
+        try GDHO_Start()
         catch {
         }
-        try ShowFloatingToolbar()
+        ; Safety: do not pin persistent overlay in hole mode, avoid interfering with other app UIs.
+        try GDHO_UnpinFromDesktop()
+        catch {
+        }
+        try GDHO_SetClickThrough(true)
+        catch {
+        }
+        try NativeDropBridge_Start()
         catch {
         }
         return
     }
-    if (m = "bubble") {
+    try SetHoleRuntimeEnabled(false)
+    try NativeDropBridge_Stop()
+    catch {
+    }
+    try GDHO_UnpinFromDesktop()
+    catch {
+    }
+    try GDHO_SetClickThrough(true)
+    catch {
+    }
+    try GDHO_Stop()
+    catch {
+    }
+}
+
+; 根据「外观 · 激活方式」显示悬浮栏 / 黑洞模式 / 或仅托盘
+ApplyAppearanceActivationMode() {
+    global AppearanceActivationMode
+    m := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    if (m = "toolbar") {
+        try ApplyActivationRuntimeAsync("toolbar")
+        try FloatingBubble_DestroyCompletely()
+        catch {
+        }
+        try FloatingToolbar_ClearOverlaySuppression()
+        catch {
+        }
+        try FloatingToolbarChatDrawerOpen := false
+        catch {
+        }
+        try {
+            if (IsSet(g_FTB_WV2) && g_FTB_WV2) {
+                WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
+            }
+        } catch {
+        }
+        ; Use hard recover path to avoid stale hole/overlay state hiding toolbar.
+        try FloatingToolbar_ForceRecoverVisible()
+        catch {
+            try ShowFloatingToolbar()
+            catch {
+            }
+        }
+        ; One delayed retry further improves reliability after mode save from settings WebView.
+        try SetTimer((*) => FloatingToolbar_ForceRecoverVisible(), -120)
+        return
+    }
+    if (m = "hole") {
         try HideFloatingToolbar()
         catch {
         }
-        try ShowFloatingBubble()
+        try FloatingBubble_DestroyCompletely()
         catch {
         }
+        try ApplyActivationRuntimeAsync("hole")
         return
     }
     try HideFloatingToolbar()
@@ -2412,18 +2490,15 @@ ApplyAppearanceActivationMode() {
     try FloatingBubble_DestroyCompletely()
     catch {
     }
+    try ApplyActivationRuntimeAsync("tray")
 }
 
-; 选区/牛马等需要宿主表面已显示时调用：按激活方式打开悬浮栏或悬浮球（后台模式不弹出）
+; 选区/牛马等需要宿主表面已显示时调用：按激活方式打开悬浮栏（黑洞/后台模式不弹出）
 EnsureFloatingSurfaceVisible() {
     global AppearanceActivationMode
     m := NormalizeAppearanceActivationMode(AppearanceActivationMode)
     if (m = "toolbar") {
         try ShowFloatingToolbar()
-        catch {
-        }
-    } else if (m = "bubble") {
-        try ShowFloatingBubble()
         catch {
         }
     }
@@ -2620,15 +2695,8 @@ _WV2_BeginWarmupAfterEnv(*) {
     try ApplyAppearanceActivationMode()
     catch as _eApp {
     }
-    ; 洞监控延迟启动，避免与悬浮栏首屏初始化竞争
-    if (EnableHoleOverlay || EnableHoleOverlayOnNativeDrop) {
-        ; Delay GDHO startup to avoid competing with toolbar first-paint phase.
-        try SetTimer((*) => GDHO_Start(), -1200)
-    } else {
-        try GDHO_Stop()
-    }
-    if (EnableNativeDropBridge)
-        try SetTimer((*) => NativeDropBridge_Start(), -1000)
+    ; Runtime mode switch async/coalesced to keep startup and settings transitions smooth.
+    try ApplyActivationRuntimeAsync(NormalizeAppearanceActivationMode(AppearanceActivationMode))
     global WebViewWarmupQueue, WebViewWarmupIndex
     WebViewWarmupIndex := 0
     WebViewWarmupQueue := [CP_Init, PQP_Init, SCWV_Init, VK_EnsureInit.Bind(true)]
@@ -2638,6 +2706,9 @@ _WV2_BeginWarmupAfterEnv(*) {
 
 NativeDropBridge_Start() {
     global EnableNativeDropBridge, NativeDropBridgePID, NativeDropBridgeExe, NativeDropBridgeOut, NativeDropBridgeReadOffset
+    global g_HoleRuntimeEnabled
+    if !g_HoleRuntimeEnabled
+        return
     if !EnableNativeDropBridge
         return
     if (NativeDropBridgePID && ProcessExist(NativeDropBridgePID))
@@ -2705,6 +2776,9 @@ NativeDropBridge_Stop() {
 
 NativeDropBridge_Poll(*) {
     global NativeDropBridgeOut, NativeDropBridgeReadOffset, NativeDropBridgeLastEvent, NativeDropLastEventTick
+    global g_HoleRuntimeEnabled
+    if !g_HoleRuntimeEnabled
+        return
     try {
         if !FileExist(NativeDropBridgeOut)
             return
@@ -2741,6 +2815,9 @@ NativeDropBridge_Poll(*) {
 NativeDropBridge_TriggerHolePulse(evt) {
     global EnableHoleOverlayOnNativeDrop, NativeDropSessionActive, NativeDropHideDelayMs, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
     global NativeDropLastStartTick, NativeDropRearmUntil
+    global g_HoleRuntimeEnabled
+    if !g_HoleRuntimeEnabled
+        return
     if !EnableHoleOverlayOnNativeDrop
         return
     if !IsObject(evt)
@@ -2970,6 +3047,9 @@ NativeDropBridge_DelayedHide(*) {
 NativeDropBridge_DragSessionTick(*) {
     global NativeDropSessionActive, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
     global NativeDropLastTickMouseX, NativeDropLastTickMouseY
+    global g_HoleRuntimeEnabled
+    if !g_HoleRuntimeEnabled
+        return
     if !NativeDropSessionActive
         return
     try {
@@ -3000,6 +3080,9 @@ NativeDropBridge_DragSessionTick(*) {
 
 NativeDropBridge_Watchdog(*) {
     global NativeDropSessionActive, NativeDropLastEventTick, NativeDropLastTickMouseX, NativeDropLastTickMouseY
+    global g_HoleRuntimeEnabled
+    if !g_HoleRuntimeEnabled
+        return
     if !NativeDropSessionActive
         return
     now := A_TickCount
@@ -3081,8 +3164,9 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300) {
     }
     ; Ensure overlay window returns to transparent hit-test state after forced cleanup.
     try GDHO_SetClickThrough(true)
-    ; Keep bridge alive/re-armed for the next drag cycle.
-    try NativeDropBridge_Start()
+    ; Keep bridge alive only in hole mode.
+    if IsHoleRuntimeEnabledByActivationMode()
+        try NativeDropBridge_Start()
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'reset', dispatch: '" . reason . "', active: 0, overHole: 0, wasOverHole: 0, payload: '-' })")
     if (reason != "")
         try NativeDropDiag_Log("route reset_session reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
@@ -3573,13 +3657,65 @@ ProcessClipboardChange() {
 #Include "modules\LegacyClipboardListView.ahk"
 #Include "modules\ConfigWebViewModule.ahk"
 
-ShowConfigGUI() {
+ShowConfigGUI_Core() {
     global UseWebViewSettings
     if (UseWebViewSettings) {
         ShowConfigWebViewGUI()
         return
     }
     LegacyConfigGui_Show()
+}
+
+ShowConfigGUI() {
+    ; Route all legacy callers through safe open path.
+    ShowConfigGUI_Safe()
+}
+
+ShowConfigGUI_FallbackCheck(*) {
+    global GuiID_ConfigGUI, UseWebViewSettings
+    ; If WebView config host is still unavailable after safe open,
+    ; fall back to legacy config window to guarantee accessibility.
+    try {
+        if (GuiID_ConfigGUI && WinExist("ahk_id " . GuiID_ConfigGUI.Hwnd))
+            return
+    }
+    catch {
+    }
+    try {
+        UseWebViewSettings := false
+        LegacyConfigGui_Show()
+    }
+    catch {
+    }
+}
+
+ShowConfigGUI_Safe() {
+    ; Defensive open path: clear overlay/runtime interference before showing settings.
+    try NativeDropBridge_Stop()
+    catch {
+    }
+    try GDHO_UnpinFromDesktop()
+    catch {
+    }
+    try GDHO_SetClickThrough(true)
+    catch {
+    }
+    try GDHO_Stop()
+    catch {
+    }
+    try HideFloatingToolbar()
+    catch {
+    }
+    try HideFloatingBubble()
+    catch {
+    }
+    ; Open settings async to avoid re-entrancy from menu/hotkey callbacks.
+    try SetTimer((*) => ShowConfigGUI_Core(), -20)
+    catch {
+        try ShowConfigGUI_Core()
+    }
+    ; Fallback safety net: if WebView path fails, open legacy settings.
+    try SetTimer(ShowConfigGUI_FallbackCheck, -900)
 }
 
 
@@ -5072,6 +5208,44 @@ p:: {
     try TrayTip("悬浮工具栏", "已恢复工具栏模式", "Iconi Mute")
 }
 
+; 中键 + 滚轮：在悬浮栏 / 黑洞系统之间切换
+MButton & WheelUp:: {
+    try FloatingToolbar_SetActivationMode("toolbar")
+    try FloatingToolbar_ForceRecoverVisible()
+}
+
+MButton & WheelDown:: {
+    try FloatingToolbar_SetActivationMode("hole")
+}
+
+; 兼容某些鼠标驱动对「MButton & Wheel」组合拦截：提供 Alt+滚轮 全局切换兜底
+!WheelUp:: {
+    try FloatingToolbar_SetActivationMode("toolbar")
+    try FloatingToolbar_ForceRecoverVisible()
+}
+
+!WheelDown:: {
+    try FloatingToolbar_SetActivationMode("hole")
+}
+
+; 强制恢复悬浮工具栏到可见区域（紧急兜底）
+^!y:: {
+    global ConfigFile
+    try AppearanceActivationMode := "toolbar"
+    try IniWrite("toolbar", ConfigFile, "Appearance", "ActivationMode")
+    try FloatingToolbar_ForceRecoverVisible()
+}
+
+; 仅强制显示工具栏（不改其它设置）
+^!u:: {
+    try FloatingToolbar_ForceRecoverVisible()
+}
+
+; 全局设置入口（不依赖当前激活模式）
+^!q:: {
+    try ShowConfigGUI_Safe()
+}
+
 ; ===================== 快捷操作（设置「快捷按钮」同款，可从任意上下文调用）=====================
 ExecuteQuickActionByType(Type) {
     global CapsLock2, PanelVisible
@@ -5089,7 +5263,7 @@ ExecuteQuickActionByType(Type) {
         case "Optimize":
             ExecutePrompt("Optimize")
         case "Config":
-            ShowConfigGUI()
+            ShowConfigGUI_Safe()
         case "Copy":
             CapsLockCopy()
         case "Paste":

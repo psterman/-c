@@ -69,10 +69,41 @@ global g_VK_FloatPinned := []
 global g_VK_ExpectAppLocalNavigationResult := false
 global g_VK_TriedDiskAfterAppLocalFail := false
 
+VK_HostGuiValid() {
+    global g_VK_Gui
+    if !IsObject(g_VK_Gui)
+        return false
+    try {
+        hwnd := g_VK_Gui.Hwnd
+        if !hwnd
+            return false
+        return !!WinExist("ahk_id " . hwnd)
+    } catch {
+        return false
+    }
+}
+
+VK_ResetHostState() {
+    global g_VK_Gui, g_VK_WV2, g_VK_Ctrl, g_VK_Ready, g_VK_FocusPending
+    try {
+        if IsObject(g_VK_Gui)
+            g_VK_Gui.Destroy()
+    } catch {
+    }
+    g_VK_Gui := 0
+    g_VK_WV2 := 0
+    g_VK_Ctrl := 0
+    g_VK_Ready := false
+    g_VK_FocusPending := false
+}
+
 VK_EnsureInit(embedded := true) {
     global g_VK_Gui
-    if g_VK_Gui
+    if VK_HostGuiValid()
         return
+    ; Gui object exists but host window is gone/stale: rebuild cleanly.
+    if IsObject(g_VK_Gui)
+        VK_ResetHostState()
     VK_Init(embedded)
 }
 
@@ -4856,10 +4887,20 @@ VK_MarkNextShowFromCapsLockHold(enabled := true) {
 VK_Show() {
     global g_VK_Gui, g_VK_Ready, g_VK_LastShown, g_VK_NextShowFromCapsLockHold
     try FloatingToolbar_PageDockEnter("hotkeys")
+    if !VK_HostGuiValid()
+        VK_EnsureInit(true)
     if g_VK_Gui {
         openFromCapsHold := g_VK_NextShowFromCapsLockHold
         g_VK_NextShowFromCapsLockHold := false
-        g_VK_Gui.Show("NoActivate")
+        try g_VK_Gui.Show("NoActivate")
+        catch {
+            ; One-shot recover for stale/detached host.
+            VK_ResetHostState()
+            VK_EnsureInit(true)
+            if !g_VK_Gui
+                return
+            g_VK_Gui.Show("NoActivate")
+        }
         try WinMaximize("ahk_id " . g_VK_Gui.Hwnd)
         g_VK_LastShown := A_TickCount
         ; 预加载隐藏态创建时，首次显示需刷新布局与合成层（缓解 WebView2 黑屏）
@@ -4909,7 +4950,7 @@ VK_Hide() {
 VK_ToggleEmbedded() {
     VK_EnsureInit(true)
     global g_VK_Gui
-    if !g_VK_Gui
+    if !VK_HostGuiValid()
         return
     if WinExist("ahk_id " . g_VK_Gui.Hwnd) && (WinGetStyle("ahk_id " . g_VK_Gui.Hwnd) & 0x10000000)
         VK_Hide()

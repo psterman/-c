@@ -866,7 +866,7 @@
     const DEFAULT_TOOLBAR_MENUS = ["ToggleToolbar","MinimizeToEdge","ResetScale","SearchCenter","Clipboard","OpenConfig","HideToolbar","ReloadScript","ExitApp"];
     const ACTIVATION_MODE_OPTIONS = [
       { value: "toolbar", label: "悬浮栏", desc: "显示完整悬浮条，适合重度高频操作。" },
-      { value: "bubble", label: "悬浮球", desc: "仅显示牛马图标；右键打开与悬浮条相同的命令菜单，长按左键拖动位置。" },
+      { value: "hole", label: "黑洞模式", desc: "独立黑洞交互入口；与悬浮栏互斥，不同时显示。" },
       { value: "tray", label: "后台", desc: "不显示任何悬浮窗，仅通过托盘图标使用功能。" }
     ];
     const ACTIVATION_MODE_LOCAL_KEY = "settings.appearance.activationMode";
@@ -1615,6 +1615,7 @@
     function optionsKV(items, selected){ return items.map(it => `<option value="${esc(it.value)}"${it.value===selected?" selected":""}>${esc(it.label)}</option>`).join(""); }
     function normalizeActivationMode(v){
       const s = String(v || "").trim();
+      if (s === "bubble") return "hole";
       return ACTIVATION_MODE_OPTIONS.some(o => o.value === s) ? s : "toolbar";
     }
     /** 从当前外观页单选项同步，避免仅点了选项未触发 state 更新时保存丢失 */
@@ -1651,10 +1652,12 @@
     }
     function activationModePreviewHtml(mode){
       const m = normalizeActivationMode(mode);
-      if (m === "bubble") {
+      if (m === "hole") {
         return `<div class="mode-preview-scene">
-  <div class="mode-icon-bubble"><img src="${esc(NIUMA_ICON_URL)}" alt="牛马图标"></div>
-  <div class="hint">仅牛马图标；右键命令菜单；长按左键拖动。</div>
+  <div class="mode-icon-bubble" style="background: radial-gradient(circle at 35% 30%, #2c3f68 0%, #0b0f16 55%, #000 100%); border-color: rgba(110,165,255,.45);">
+    <img src="${esc(NIUMA_ICON_URL)}" alt="黑洞模式">
+  </div>
+  <div class="hint">黑洞模式与悬浮栏互斥，桌面仅保留黑洞交互入口。</div>
 </div>`;
       }
       if (m === "tray") {
@@ -1812,7 +1815,7 @@
 </div>
 <div class="card">
   <div class="title">激活方式</div>
-  <div class="hint">选择悬浮栏、悬浮球或仅托盘；修改后将写入配置并立即生效。</div>
+  <div class="hint">选择悬浮栏、黑洞模式或仅托盘；修改后将写入配置并立即生效。</div>
   <div class="activation-mode-group">${activationModeOptionsHtml(activationMode)}</div>
   <div class="activation-mode-preview">
     <div class="mode-preview-title">模式预览</div>

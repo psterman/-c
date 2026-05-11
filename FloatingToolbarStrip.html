@@ -152,6 +152,37 @@ body.ftb-compact #collapsedRoot .logo-btn:focus-visible{
   box-shadow:none
 }
 body.ftb-compact #collapsedRoot .logo-btn .logo-img{transform:none}
+body.ftb-compact #collapsedRoot{
+  position:relative;
+  background:radial-gradient(circle at 38% 34%,rgba(79,122,186,.72) 0%,rgba(18,30,48,.96) 42%,#03070d 74%,#000 100%)!important;
+  border:1px solid rgba(122,177,255,.5)!important;
+  box-shadow:0 0 0 1px rgba(122,177,255,.22),0 12px 28px rgba(0,0,0,.5),inset 0 0 34px rgba(40,74,120,.52)!important;
+}
+body.ftb-compact #collapsedRoot::before{
+  content:"";
+  position:absolute;
+  inset:-8px;
+  border-radius:999px;
+  pointer-events:none;
+  background:conic-gradient(from 0deg,rgba(122,177,255,.26),rgba(255,162,93,.22),rgba(122,177,255,.26));
+  filter:blur(7px);
+  opacity:.78;
+  animation:ftbHoleAura 3.2s linear infinite;
+}
+body.ftb-compact #collapsedRoot .logo-btn{
+  border:1px solid rgba(122,177,255,.34);
+  background:radial-gradient(circle at 45% 40%,rgba(36,62,102,.42),rgba(2,4,8,.94));
+}
+body.ftb-compact #collapsedRoot .logo-btn .logo-img{
+  opacity:.92;
+  transform:scale(.92);
+  filter:drop-shadow(0 0 8px rgba(122,177,255,.5));
+}
+body.ftb-compact-transition-in #collapsedRoot{animation:ftbMorphToHole .34s cubic-bezier(.22,1,.36,1)}
+body.ftb-compact-transition-out #collapsedRoot{animation:ftbMorphFromHole .3s cubic-bezier(.22,1,.36,1)}
+@keyframes ftbHoleAura{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes ftbMorphToHole{0%{transform:scale(.85);filter:saturate(.8)}100%{transform:scale(1);filter:saturate(1)}}
+@keyframes ftbMorphFromHole{0%{transform:scale(1)}100%{transform:scale(1.03)}}
 body[data-theme="light"].ftb-compact #collapsedRoot{
   border:1px solid transparent!important;
   background:var(--toolbar-bg)!important;
@@ -172,6 +203,52 @@ body[data-theme="light"].ftb-compact #collapsedRoot .logo-btn:hover{
 body[data-theme="light"].ftb-compact #collapsedRoot .logo-btn:focus-visible{
   background:#FFF3E8!important;
   border-color:#D8D8D8!important;
+}
+/* Final override: compact mode must look like a pure black-hole, independent from light/dark theme blocks above. */
+html.ftb-compact body #collapsedRoot{
+  background:radial-gradient(circle at 40% 34%,rgba(54,88,138,.82) 0%,rgba(11,21,36,.98) 44%,#02050b 72%,#000 100%)!important;
+  border:1px solid rgba(88,150,246,.68)!important;
+  border-radius:999px!important;
+  box-shadow:0 0 0 1px rgba(88,150,246,.28),0 10px 24px rgba(0,0,0,.54),inset 0 0 30px rgba(31,61,98,.56)!important;
+  overflow:visible!important;
+}
+html.ftb-compact body #collapsedRoot::before{
+  content:"";
+  position:absolute;
+  inset:-7px;
+  border-radius:999px;
+  pointer-events:none;
+  background:conic-gradient(from 0deg,rgba(74,142,255,.26),rgba(255,128,72,.18),rgba(74,142,255,.26));
+  filter:blur(7px);
+  opacity:.86;
+  animation:ftbHoleAura 3.4s linear infinite;
+}
+html.ftb-compact body #collapsedRoot::after{
+  opacity:1!important;
+  inset:2px!important;
+  border-radius:999px!important;
+  box-shadow:inset 0 0 0 1px rgba(140,188,255,.22)!important;
+  animation:none!important;
+}
+html.ftb-compact body #collapsedRoot .logo-btn{
+  width:100%!important;
+  height:100%!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:999px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  cursor:grab!important;
+}
+html.ftb-compact body #collapsedRoot .logo-btn:active{cursor:grabbing!important}
+html.ftb-compact body #collapsedRoot .logo-btn .logo-img{
+  width:calc(20px * var(--ui))!important;
+  height:calc(20px * var(--ui))!important;
+  min-width:0!important;
+  min-height:0!important;
+  opacity:.95!important;
+  transform:translateZ(0) scale(.95)!important;
+  filter:drop-shadow(0 0 9px rgba(110,170,255,.58))!important;
 }
 .tb{--dock-scale:1;width:calc(40px * var(--ui));height:calc(40px * var(--ui));display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:calc(8px * var(--ui));cursor:pointer;position:relative;transition:background-color var(--ease),border-color var(--ease),transform .24s cubic-bezier(.2,.9,.25,1),color var(--ease),box-shadow .24s ease;transform:translate3d(0,0,0) scale(var(--dock-scale));transform-origin:center center;color:#ff6600;background:transparent;flex-shrink:0;font-size:0;line-height:0;overflow:visible;will-change:transform;backface-visibility:hidden}
 .tb svg{width:calc(24px * var(--ui));height:calc(24px * var(--ui));pointer-events:none;transform:translate3d(0,0,0);shape-rendering:geometricPrecision}
@@ -1076,9 +1153,19 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function setCompact(v) {
+    var wasCompact = !!state.compact;
     state.compact = !!v;
     document.body.classList.toggle('ftb-compact', state.compact);
     document.documentElement.classList.toggle('ftb-compact', state.compact);
+    if (state.compact && !wasCompact) {
+      document.body.classList.remove('ftb-compact-transition-out');
+      document.body.classList.add('ftb-compact-transition-in');
+      setTimeout(function () { document.body.classList.remove('ftb-compact-transition-in'); }, 380);
+    } else if (!state.compact && wasCompact) {
+      document.body.classList.remove('ftb-compact-transition-in');
+      document.body.classList.add('ftb-compact-transition-out');
+      setTimeout(function () { document.body.classList.remove('ftb-compact-transition-out'); }, 340);
+    }
   }
 
   function scrollMsgsToLatest() {
@@ -5464,6 +5551,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         longPressPointerId = e.pointerId;
         longPressStartScreenX = e.screenX;
         longPressStartScreenY = e.screenY;
+        if (state.compact) {
+          triggerLongPressDrag();
+          return;
+        }
         clearLongPressTimer();
         longPressTimer = setTimeout(function () {
           if (longPressPointerId === null) return;
@@ -5483,6 +5574,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         longPressPointerId = -1;
         longPressStartScreenX = e.screenX;
         longPressStartScreenY = e.screenY;
+        if (state.compact) {
+          triggerLongPressDrag();
+          return;
+        }
         clearLongPressTimer();
         longPressTimer = setTimeout(function () {
           if (longPressPointerId === null) return;

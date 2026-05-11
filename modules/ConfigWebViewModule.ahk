@@ -1152,7 +1152,8 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         try GDHO_SetScreenAnchor(NewHoleFixedX, NewHoleFixedY)
         try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel, NewHoleVisualStyle)
         try GDHO_ApplyHideDockSettings(NewHoleHideDockEnabled, NewHoleHideDockEdge, NewHoleHideDockMargin)
-        try ApplyAppearanceActivationMode()
+        ; Apply mode asynchronously to avoid blocking settings WebView thread.
+        try SetTimer((*) => ApplyAppearanceActivationMode(), -20)
         catch {
         }
         return true

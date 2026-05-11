@@ -482,7 +482,7 @@ FloatingBubble_BindHostMouseFallback(hwnd) {
 
 FloatingBubble_IsOwnHwnd(hwnd) {
     global FloatingBubbleGUI
-    if !FloatingBubbleGUI
+    if (!IsSet(FloatingBubbleGUI) || !FloatingBubbleGUI)
         return false
     if (hwnd = FloatingBubbleGUI.Hwnd)
         return true

@@ -415,7 +415,7 @@ ShowConfigFromMenu(*) {
         }
     }
 
-    ShowConfigGUI()
+    ShowConfigGUI_Safe()
 }
 
 ExitFromMenu(*) {
@@ -433,7 +433,7 @@ HideFloatingToolbarFromPopupMenu(*) {
         }
     }
     amRaw := IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar"
-    if (NormalizeAppearanceActivationMode(amRaw) = "bubble") {
+    if (NormalizeAppearanceActivationMode(amRaw) = "hole") {
         try HideFloatingBubble()
         catch {
         }
@@ -727,13 +727,13 @@ CloseDarkStylePopupMenu(*) {
 }
 
 FloatingBubbleShowFromMenu(*) {
-    try ShowFloatingBubble()
+    try FloatingToolbar_SetActivationMode("hole")
     catch {
     }
 }
 
 FloatingBubbleHideFromMenu(*) {
-    try HideFloatingBubble()
+    try FloatingToolbar_SetActivationMode("tray")
     catch {
     }
 }
@@ -806,12 +806,14 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
     ftVis := IsSet(FloatingToolbarIsVisible) ? FloatingToolbarIsVisible : false
     bubVis := IsSet(FloatingBubbleIsVisible) ? FloatingBubbleIsVisible : false
     if (mode = "tray") {
-    } else if (mode = "bubble") {
+    } else if (mode = "hole") {
         if (bubVis) {
-            MenuItems.Push({ Text: "隐藏悬浮球", Action: FloatingBubbleHideFromMenu, Icon: "☰" })
+            MenuItems.Push({ Text: "隐藏黑洞", Action: FloatingBubbleHideFromMenu, Icon: "☰" })
         } else {
-            MenuItems.Push({ Text: "显示悬浮球", Action: FloatingBubbleShowFromMenu, Icon: "☰" })
+            MenuItems.Push({ Text: "显示黑洞", Action: FloatingBubbleShowFromMenu, Icon: "☰" })
         }
+        ; Direct settings entry in hole mode (bypass scene-command chain).
+        MenuItems.Push({ Text: GetText("open_config_menu"), Action: ((*) => ShowConfigGUI_Safe()), Icon: "⚙" })
     } else {
         if (ftVis) {
             MenuItems.Push({ Text: "隐藏工具栏", Action: ToggleFloatingToolbarFromMenu, Icon: "☰" })
@@ -829,7 +831,7 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
         MenuItems.Push({ Text: "搜索中心", Action: ((*) => TrayMenu_RunSceneCmd("tray_show_search")), Icon: "●" })
         MenuItems.Push({ Text: "剪贴板", Action: ((*) => TrayMenu_RunSceneCmd("tray_show_clipboard")), Icon: "▤" })
         MenuItems.Push({ Text: "截图", Action: ((*) => TrayMenu_RunSceneCmd("tray_show_screenshot")), Icon: "📷" })
-        MenuItems.Push({ Text: GetText("open_config_menu"), Action: ((*) => TrayMenu_RunSceneCmd("tray_show_config")), Icon: "⚙" })
+        MenuItems.Push({ Text: GetText("open_config_menu"), Action: ((*) => ShowConfigGUI_Safe()), Icon: "⚙" })
         if (mode != "tray") {
             MenuItems.Push({ Text: "关闭工具栏", Action: ((*) => TrayMenu_RunSceneCmd("tray_hide_toolbar")), Icon: "◼" })
         }
@@ -856,5 +858,13 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
         posY := ScreenHeight - MenuHeight - 10
     }
 
+    ; Stability fallback: disable icon glyphs to avoid font/icon rendering glitches.
+    try {
+        for _, it in MenuItems {
+            if (it is Map && it.Has("Icon"))
+                it["Icon"] := ""
+        }
+    } catch {
+    }
     ShowDarkStylePopupMenuAt(MenuItems, posX, posY)
 }

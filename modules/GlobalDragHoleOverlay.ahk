@@ -25,7 +25,7 @@ global GDHO_FIRST_REVEAL_DONE := false
 
 ; drag pre-judge parameters
 global GDHO_MIN_MOVE_PX := 10
-global GDHO_POLL_MS := 24
+global GDHO_POLL_MS := 48
 global GDHO_MAX_IDLE_HIDE_MS := 160
 global GDHO_LAST_UPDATE_TICK := 0
 global GDHO_DESKTOP_PINNED := false
@@ -865,8 +865,8 @@ GDHO_Start() {
     if GDHO_MONITORING
         return
     if !GDHO_PRIORITY_APPLIED {
-        try ProcessSetPriority("High")
-        try DllCall("SetThreadPriority", "Ptr", DllCall("GetCurrentThread", "Ptr"), "Int", 2)
+        try ProcessSetPriority("Normal")
+        try DllCall("SetThreadPriority", "Ptr", DllCall("GetCurrentThread", "Ptr"), "Int", 0)
         GDHO_PRIORITY_APPLIED := true
     }
     GDHO_MONITORING := true
