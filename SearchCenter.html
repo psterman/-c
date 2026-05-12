@@ -2109,6 +2109,7 @@ const state = {
   keyword: "",
   limit: 30,
   engineMode: (typeof localStorage !== "undefined" && localStorage.getItem(SC_ENGINE_MODE_KEY)) || "go",
+  hostLifecycle: "closed",
   categories: [],
   currentCategoryKey: "ai",
   engines: [],
@@ -2250,6 +2251,11 @@ try {
 const PDF_JS_ASSET_BASE = "https://app.local/assets/pdfjs/";
 
 const postToAhk = (obj) => BasePanel.postToAhk(obj);
+
+function requestHostClose(source = "ui") {
+  if (state.hostLifecycle === "closing" || state.hostLifecycle === "closed") return;
+  postToAhk({ type: "lifecycle", phase: "close_request", source });
+}
 
 function syncEngineModeButton() {
   const isGo = state.engineMode === "go";
@@ -5480,7 +5486,7 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "Escape") {
     event.preventDefault();
-    postToAhk({ type: "close" });
+    requestHostClose("escape");
     return;
   }
 
@@ -5547,6 +5553,12 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) endCapsHoldHint();
 });
 
+window.addEventListener("beforeunload", () => {
+  try {
+    postToAhk({ type: "lifecycle", phase: "close_request", source: "beforeunload" });
+  } catch (_) {}
+});
+
 if (window.chrome && window.chrome.webview) {
   window.chrome.webview.addEventListener("message", (event) => {
     const payload = event.data;
@@ -5599,6 +5611,17 @@ if (window.chrome && window.chrome.webview) {
     }
     if (payload.type === "set_theme") {
       applyTheme(payload.themeMode || payload.theme || "dark", false);
+      return;
+    }
+    if (payload.type === "lifecycle") {
+      const phase = String(payload.phase || "").toLowerCase();
+      if (phase) {
+        state.hostLifecycle = phase;
+        if (phase === "closing" || phase === "closed") {
+          endCapsHoldHint();
+          dragCounter = 0;
+        }
+      }
       return;
     }
     if (payload.type === "WEB_PREVIEW_TEXT_RESULT") {

@@ -8,6 +8,7 @@ global g_SCWV_UI_Ready := false
 global g_SCWV_WaitingUiFinishedReveal := false
 global g_SCWV_WV2_CreateRetry := 0
 global g_SCWV_CreateInFlight := false
+global g_SCWV_CreateStartTick := 0
 global g_SCWV_Visible := false
 global g_SCWV_LastShown := 0  ; SCWV_Show 鍚庡闄愭湡锛岄伩鍏嶇偣鍑绘偓娴潯澶辩劍绔嬪埢 Hide 涓庝簩娆＄偣鍑绘姠璺?
 global g_SCWV_ShowWaitStartTick := 0
@@ -55,6 +56,7 @@ global g_SCWV_SearchHttpInFlight := false
 global g_SCWV_SearchPendingReq := 0
 global g_SCWV_HostTopMost := false
 global g_SCWV_NavFallbackTried := false
+global g_SCWV_LifecyclePhase := "closed"
 
 SCWV_Log(event, detail := "") {
     try {
@@ -100,6 +102,7 @@ SCWV_ResetHostState() {
     global g_SCWV_Gui, g_SCWV_Ctrl, g_SCWV_WV2, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Visible
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
     global g_SCWV_FocusPending, g_SCWV_PendingJsonQueue, GuiID_SearchCenter
+    global g_SCWV_LifecyclePhase
 
     g_SCWV_Gui := 0
     g_SCWV_Ctrl := 0
@@ -109,10 +112,14 @@ SCWV_ResetHostState() {
     g_SCWV_WaitingUiFinishedReveal := false
     g_SCWV_WV2_CreateRetry := 0
     g_SCWV_CreateInFlight := false
+    g_SCWV_CreateStartTick := 0
     g_SCWV_Visible := false
     g_SCWV_FocusPending := false
     g_SCWV_PendingJsonQueue := []
     g_SCWV_ShowWaitStartTick := 0
+    g_SCWV_LifecyclePhase := "closed"
+    SetTimer(SCWV_Show, 0)
+    SetTimer(SCWV_RecoverAfterShowWaitTimeout, 0)
     SetTimer(SCWV_ForceRevealIfStuck, 0)
     SetTimer(SCWV_ShowWaitTimeoutCheck, 0)
     GuiID_SearchCenter := 0
@@ -124,6 +131,60 @@ SCWV_ResetHostState() {
     }
 }
 
+SCWV_ClearStaleHostState(reason := "") {
+    global g_SCWV_Gui, g_SCWV_WaitingUiFinishedReveal, g_SCWV_CreateInFlight, g_SCWV_Visible
+    if (SCWV_HostAlive())
+        return false
+    if (!(g_SCWV_Gui || g_SCWV_WaitingUiFinishedReveal || g_SCWV_CreateInFlight || g_SCWV_Visible))
+        return false
+    try SCWV_Log("stale_host_reset", "reason=" . reason . " gui=" . (g_SCWV_Gui ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " inflight=" . (g_SCWV_CreateInFlight ? "1" : "0") . " visible=" . (g_SCWV_Visible ? "1" : "0"))
+    SCWV_ResetHostState()
+    return true
+}
+
+SCWV_MaintainLifecycleState(reason := "") {
+    global g_SCWV_WaitingUiFinishedReveal, g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
+    global g_SCWV_CreateInFlight, g_SCWV_CreateStartTick
+    global g_SCWV_LifecyclePhase
+
+    if (g_SCWV_WaitingUiFinishedReveal && g_SCWV_ShowWaitStartTick > 0) {
+        g_SCWV_LifecyclePhase := "opening"
+        if ((A_TickCount - g_SCWV_ShowWaitStartTick) > 5000) {
+            try SCWV_Log("wait_stale_reset", "reason=" . reason . " elapsed=" . (A_TickCount - g_SCWV_ShowWaitStartTick))
+            catch {
+            }
+            SCWV_ForceCloseHost("stale_wait_timeout")
+            return false
+        }
+    }
+
+    if (g_SCWV_CreateInFlight && g_SCWV_CreateStartTick > 0) {
+        g_SCWV_LifecyclePhase := "opening"
+        if ((A_TickCount - g_SCWV_CreateStartTick) > 8000) {
+            try SCWV_Log("create_stale_reset", "reason=" . reason . " elapsed=" . (A_TickCount - g_SCWV_CreateStartTick))
+            catch {
+            }
+            SCWV_ForceCloseHost("stale_create_timeout")
+            return false
+        }
+    }
+
+    return true
+}
+
+SCWV_PushLifecycleState(phase, reason := "") {
+    global g_SCWV_LifecyclePhase, g_SCWV_Visible
+    p := StrLower(Trim(String(phase)))
+    if (p = "")
+        return
+    if !(p = "opening" || p = "open" || p = "closing" || p = "closed" || p = "error")
+        p := "open"
+    g_SCWV_LifecyclePhase := p
+    try SCWV_PostJson(Map("type", "lifecycle", "phase", p, "reason", String(reason), "visible", g_SCWV_Visible ? true : false))
+    catch {
+    }
+}
+
 SearchCenter_ShouldUseWebView() {
     return true
 }
@@ -131,6 +192,28 @@ SearchCenter_ShouldUseWebView() {
 SCWV_IsVisible() {
     global g_SCWV_Visible
     return g_SCWV_Visible
+}
+
+SearchCenter_IsOpeningOrBusy() {
+    global g_SCWV_WaitingUiFinishedReveal, g_SCWV_CreateInFlight, g_SCWV_LifecyclePhase
+    try {
+        if (!SCWV_MaintainLifecycleState("is_opening_or_busy"))
+            return false
+        if (!SCWV_HostAlive()) {
+            try SCWV_ClearStaleHostState("is_opening_or_busy_host_dead")
+            catch {
+            }
+        }
+        if (g_SCWV_LifecyclePhase = "opening" || g_SCWV_LifecyclePhase = "closing")
+            return true
+        if (SCWV_IsVisible())
+            return true
+    } catch {
+    }
+    try SCWV_ClearStaleHostState("is_opening_or_busy")
+    catch {
+    }
+    return (g_SCWV_WaitingUiFinishedReveal || g_SCWV_CreateInFlight)
 }
 
 SCWV_GetGui() {
@@ -169,18 +252,19 @@ _SCWV_IsDarkCtxMenuOpen() {
 }
 
 SCWV_Init(reason := "") {
-    global g_SCWV_Gui, g_SCWV_CreateInFlight
+    global g_SCWV_Gui, g_SCWV_CreateInFlight, g_SCWV_LifecyclePhase
 
     try SCWV_Log("init_begin", "reason=" . reason . " gui=" . (g_SCWV_Gui ? "1" : "0") . " alive=" . (SCWV_HostAlive() ? "1" : "0") . " inflight=" . (g_SCWV_CreateInFlight ? "1" : "0"))
 
     if g_SCWV_Gui && SCWV_HostAlive()
         return
-    if g_SCWV_Gui && !SCWV_HostAlive()
+    if (g_SCWV_Gui || g_SCWV_CreateInFlight) && !SCWV_HostAlive()
         SCWV_ResetHostState()
     if g_SCWV_CreateInFlight {
         try SCWV_Log("init_skip_create_inflight", "reason=" . reason)
         return
     }
+    g_SCWV_LifecyclePhase := "opening"
 
     ; 浣跨敤 Windows 鍘熺敓鏍囬鏍忎笌绯荤粺绐楀彛鎸夐挳锛堟渶灏忓寲/鏈€澶у寲/鍏抽棴锛?
     g_SCWV_Gui := Gui("+Resize +MinSize760x540 +MinimizeBox +MaximizeBox -DPIScale +Owner", "搜索中心")
@@ -191,6 +275,7 @@ SCWV_Init(reason := "") {
     g_SCWV_Gui.OnEvent("Size", SCWV_OnGuiResize)
     g_SCWV_Gui.Show("w1180 h760 Hide")
     g_SCWV_CreateInFlight := true
+    g_SCWV_CreateStartTick := A_TickCount
     try SCWV_Log("init_create_begin", "reason=" . reason . " hwnd=" . g_SCWV_Gui.Hwnd)
 
     WebView2.create(g_SCWV_Gui.Hwnd, SCWV_OnCreated, WebView2_EnsureSharedEnvBlocking())
@@ -218,6 +303,8 @@ _SCWV_MapAllDriveVirtualHosts(wv2) {
 SCWV_OnCreated(ctrl) {
     global g_SCWV_Ctrl, g_SCWV_WV2, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_NavFallbackTried
     global g_SCWV_WV2_CreateRetry, g_SCWV_CreateInFlight
+    global g_SCWV_CreateStartTick
+    global g_SCWV_LifecyclePhase
 
     if !IsObject(ctrl) || !ctrl.HasProp("CoreWebView2") {
         errText := ""
@@ -229,6 +316,7 @@ SCWV_OnCreated(ctrl) {
         catch {
         }
         g_SCWV_CreateInFlight := false
+        g_SCWV_CreateStartTick := 0
         SCWV_ForceCloseHost("webview_create_failed")
         if (g_SCWV_WV2_CreateRetry < 2) {
             g_SCWV_WV2_CreateRetry += 1
@@ -246,6 +334,8 @@ SCWV_OnCreated(ctrl) {
 
     g_SCWV_WV2_CreateRetry := 0
     g_SCWV_CreateInFlight := false
+    g_SCWV_CreateStartTick := 0
+    g_SCWV_LifecyclePhase := "opening"
     g_SCWV_Ctrl := ctrl
     g_SCWV_WV2 := ctrl.CoreWebView2
     g_SCWV_Ready := false
@@ -280,11 +370,10 @@ SCWV_OnCreated(ctrl) {
 }
 
 SCWV_OnGuiClose(*) {
-    global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
-    if (GDHO_VISIBLE || NativeDropSessionActive || g_SCWV_WaitingUiFinishedReveal)
-        SCWV_RequestHardClose("gui_close")
-    else
-        SCWV_Hide(true)
+    global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Visible
+    try SCWV_Log("gui_close_request", "visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " gdho=" . (GDHO_VISIBLE ? "1" : "0") . " native=" . (NativeDropSessionActive ? "1" : "0"))
+    SCWV_PushLifecycleState("closing", "gui_close")
+    SCWV_Hide(true)
 }
 
 SCWV_OnGuiResize(GuiObj, MinMax, Width, Height) {
@@ -351,6 +440,7 @@ SCWV_FinishReveal() {
     catch {
     }
     g_SCWV_Visible := true
+    SCWV_PushLifecycleState("open", "finish_reveal")
 }
 
 SCWV_ForceRevealIfStuck(*) {
@@ -403,12 +493,14 @@ SCWV_ForceCloseHost(reason := "") {
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts, GuiID_SearchCenter
     global g_SCWV_Ready, g_SCWV_UI_Ready
     global g_SCWV_SearchTimer, g_SCWV_PendingJsonQueue, g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason
-    global g_SCWV_CreateInFlight
+    global g_SCWV_CreateInFlight, g_SCWV_CreateStartTick, g_SCWV_LifecyclePhase
 
     try SCWV_Log("force_close_begin", "reason=" . reason . " visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
+    SCWV_PushLifecycleState("closing", reason)
 
     SetTimer(SCWV_ShowWaitTimeoutCheck, 0)
     SetTimer(SCWV_ForceRevealIfStuck, 0)
+    SetTimer(SCWV_RecoverAfterShowWaitTimeout, 0)
     SetTimer(SCWV_WMDeactivateHideTick, 0)
     SetTimer(SCWV_DeferredPush, 0)
     SetTimer(SCWV_RefreshComposition, 0)
@@ -421,12 +513,31 @@ SCWV_ForceCloseHost(reason := "") {
     }
     g_SCWV_WaitingUiFinishedReveal := false
     g_SCWV_CreateInFlight := false
+    g_SCWV_CreateStartTick := 0
     g_SCWV_ShowWaitStartTick := 0
     g_SCWV_Visible := false
     g_SCWV_PendingJsonQueue := []
     g_SCWV_DeactivateBlockUntil := 0
     g_SCWV_DeactivateBlockReason := ""
     GuiID_SearchCenter := 0
+
+    ; Hard close path must perform the same teardown that SCWV_Hide() normally does.
+    ; Otherwise black-hole close buttons can leave dock/session state behind and block later tray opens.
+    try NativeDropBridge_ResetSessionAsync("search_center_exit", 0)
+    catch as err {
+        try SCWV_Log("force_close_error", "reason=" . reason . " step=reset_bridge msg=" . err.Message)
+    }
+    try FloatingToolbar_PageDockLeave("search")
+    catch as err {
+        try SCWV_Log("force_close_error", "reason=" . reason . " step=pagedock_leave msg=" . err.Message)
+    }
+    if g_SCWV_SearchTimer {
+        try SetTimer(g_SCWV_SearchTimer, 0)
+        g_SCWV_SearchTimer := 0
+    }
+    try SearchCenterInvalidateGuiControlRefs()
+    catch {
+    }
 
     try WMActivateChain_Unregister(SCWV_WM_ACTIVATE)
     catch {
@@ -449,6 +560,7 @@ SCWV_ForceCloseHost(reason := "") {
     SCWV_ResetHostState()
     if (reason != "show_wait_timeout")
         g_SCWV_ShowRecoveryAttempts := 0
+    SCWV_PushLifecycleState("closed", reason)
     try SCWV_Log("hide_done", "visible=0 reason=" . reason)
     try SCWV_Log("force_close_done", "reason=" . reason)
 }
@@ -1364,8 +1476,9 @@ _SCWV_ResultItemGet(Item, Prop, Default := "") {
 SCWV_Show(reason := "") {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
-    global SearchCenterEngineMode
+    global SearchCenterEngineMode, g_SCWV_LifecyclePhase
     try SCWV_Log("show_begin", "reason=" . reason . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
+    SCWV_PushLifecycleState("opening", reason)
 
     if !SCWV_HostAlive() {
         SCWV_ResetHostState()
@@ -1435,6 +1548,7 @@ SCWV_Show(reason := "") {
         SetTimer(SCWV_ShowWaitTimeoutCheck, 0)
         SetTimer(SCWV_ShowWaitTimeoutCheck, -3000)
     }
+    SCWV_PushLifecycleState("open", reason)
     ; 仅在宿主窗口成功显示后再压下工具栏，避免“先隐藏工具栏但搜索中心没显示”的竞态
     try FloatingToolbar_PageDockEnter("search")
     g_SCWV_LastShown := A_TickCount
@@ -1518,7 +1632,9 @@ SCWV_RequestFocusInput() {
 SCWV_Hide(PersistSelection := true) {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_SearchTimer, GuiID_SearchCenter, g_SCWV_PendingJsonQueue
     global g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason, g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
+    global g_SCWV_LifecyclePhase
     try SCWV_Log("hide_begin", "persist=" . (PersistSelection ? "1" : "0") . " visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " deact_block=" . Integer(g_SCWV_DeactivateBlockUntil))
+    SCWV_PushLifecycleState("closing", "hide")
     ; Drag-hole reentry safety: when exiting SearchCenter, force-reset native drag session
     ; so next text drag can re-trigger the hole from a clean initial state.
     try SCWV_Log("hide_step", "reset_bridge_begin")
@@ -1549,6 +1665,7 @@ SCWV_Hide(PersistSelection := true) {
     SetTimer(SCWV_ForceRevealIfStuck, 0)
     SetTimer(SCWV_ShowWaitTimeoutCheck, 0)
     SetTimer(SCWV_FlushPendingJsonQueue, 0)
+    SetTimer(SCWV_Show, 0)
     g_SCWV_WaitingUiFinishedReveal := false
     g_SCWV_ShowWaitStartTick := 0
     g_SCWV_ShowRecoveryAttempts := 0
@@ -1574,7 +1691,6 @@ SCWV_Hide(PersistSelection := true) {
             g_SCWV_Gui.Hide()
         } catch as err {
             try SCWV_Log("hide_error", "step=gui_hide msg=" . err.Message)
-            return
         }
     }
 
@@ -1598,6 +1714,7 @@ SCWV_Hide(PersistSelection := true) {
     try SCWV_Preview_UnloadNative()
     catch {
     }
+    SCWV_PushLifecycleState("closed", "hide")
 }
 
 SCWV_WMDeactivateHideTick(*) {
@@ -1825,6 +1942,7 @@ SCWV_ToggleHostTopMost() {
 
 SCWV_OnWebMessage(sender, args) {
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
+    global g_SCWV_LifecyclePhase
     jsonStr := args.WebMessageAsJson
     try {
         msg := Jxon_Load(jsonStr)
@@ -1851,6 +1969,7 @@ SCWV_OnWebMessage(sender, args) {
             global g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal
             g_SCWV_Ready := true
             g_SCWV_UI_Ready := true
+            g_SCWV_LifecyclePhase := "open"
             if g_SCWV_WaitingUiFinishedReveal
                 SCWV_FinishReveal()
             SCWV_PushThemeToWeb()
@@ -2018,10 +2137,20 @@ SCWV_OnWebMessage(sender, args) {
             _SCWV_ShowSearchCenterRowMenu(row, sx, sy)
         case "close":
             try SCWV_Log("webmsg_close", "visible=" . (g_SCWV_Visible ? "1" : "0"))
-            if (GDHO_VISIBLE || NativeDropSessionActive || g_SCWV_WaitingUiFinishedReveal)
-                SCWV_RequestHardClose("webmsg_close")
-            else
+            SCWV_PushLifecycleState("closing", "webmsg_close")
+            SCWV_Hide(true)
+        case "lifecycle":
+            phase := msg.Has("phase") ? StrLower(Trim(String(msg["phase"]))) : ""
+            reason := msg.Has("reason") ? String(msg["reason"]) : ""
+            try SCWV_Log("webmsg_lifecycle", "phase=" . phase . " reason=" . reason)
+            if (phase = "close_request") {
+                SCWV_PushLifecycleState("closing", reason != "" ? reason : "close_request")
                 SCWV_Hide(true)
+            } else if (phase = "closed") {
+                SCWV_PushLifecycleState("closed", reason)
+            } else if (phase = "opening" || phase = "open" || phase = "closing") {
+                SCWV_PushLifecycleState(phase, reason)
+            }
         case "dragHost":
             SCWV_BeginHostDrag()
         case "windowMinimize":
@@ -2590,7 +2719,7 @@ _SCWV_GetFilteredResults() {
 SCWV_PushState(msgType := "state") {
     global SearchCenterWebKeyword, SearchCenterCurrentLimit, SearchCenterSelectedEngines, SearchCenterFilterType
     global SearchCenterHasMoreData, SearchCenterEngineMode
-    global g_SCWV_RecycleBin, g_SCWV_PinnedKeys
+    global g_SCWV_RecycleBin, g_SCWV_PinnedKeys, g_SCWV_LifecyclePhase
 
     if !SearchCenter_ShouldUseWebView()
         return
@@ -2657,6 +2786,7 @@ SCWV_PushState(msgType := "state") {
         "type", msgType,
         "themeMode", _SCWV_GetThemeMode(),
         "hostTopMost", SCWV_IsHostTopMost(),
+        "hostLifecycle", g_SCWV_LifecyclePhase,
         "keyword", SearchCenterWebKeyword,
         "engineMode", SearchCenterEngineMode,
         "limit", SearchCenterCurrentLimit,

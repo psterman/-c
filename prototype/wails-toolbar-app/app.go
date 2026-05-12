@@ -31,6 +31,16 @@ type App struct {
 	dropMgr  *dropManager
 }
 
+func (a *App) emitLifecycle(stage string, reason string) {
+	if a.ctx == nil {
+		return
+	}
+	runtime.EventsEmit(a.ctx, "window_lifecycle", map[string]interface{}{
+		"stage":  stage,
+		"reason": reason,
+	})
+}
+
 type SnapshotResult struct {
 	OK     bool   `json:"ok"`
 	Base64 string `json:"base64,omitempty"`
@@ -56,12 +66,14 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	a.emitLifecycle("starting", "startup")
 	go a.enableWindowResidentMode()
 
 	// Safety gate: native OLE drop listener is opt-in for now.
 	// Set NMER_NATIVE_DROP=1 to enable after UI stability is confirmed.
 	if os.Getenv("NMER_NATIVE_DROP") != "1" {
 		runtime.LogInfo(ctx, "native drop manager disabled by default (set NMER_NATIVE_DROP=1 to enable)")
+		a.emitLifecycle("ready", "startup")
 		return
 	}
 
@@ -69,6 +81,7 @@ func (a *App) startup(ctx context.Context) {
 	if err := a.dropMgr.start(); err != nil {
 		runtime.LogErrorf(ctx, "native drop manager start failed: %v", err)
 	}
+	a.emitLifecycle("ready", "startup")
 }
 
 func (a *App) CaptureArea(x int, y int, w int, h int) SnapshotResult {
@@ -86,9 +99,11 @@ func (a *App) FadeInWindow(durationMs int) ProcessResult {
 }
 
 func (a *App) shutdown(ctx context.Context) {
+	a.emitLifecycle("stopping", "shutdown")
 	if a.dropMgr != nil {
 		a.dropMgr.stop()
 	}
+	a.emitLifecycle("stopped", "shutdown")
 }
 
 func scoreAction(action QuickAction, q string) int {
@@ -198,12 +213,14 @@ func (a *App) ProcessFile(path string, actionType string) ProcessResult {
 
 func (a *App) MinimizeWindow() {
 	if a.ctx != nil {
+		a.emitLifecycle("minimized", "api")
 		runtime.WindowMinimise(a.ctx)
 	}
 }
 
 func (a *App) FocusWindow() {
 	if a.ctx != nil {
+		a.emitLifecycle("focused", "api")
 		runtime.WindowUnminimise(a.ctx)
 		runtime.WindowShow(a.ctx)
 		runtime.WindowCenter(a.ctx)
@@ -218,6 +235,7 @@ func (a *App) SetPaletteExpanded(expanded bool, itemCount int) {
 	width := 900
 	height := 64
 	if expanded {
+		a.emitLifecycle("expanded", "palette")
 		if itemCount < 1 {
 			itemCount = 1
 		}
@@ -232,4 +250,7 @@ func (a *App) SetPaletteExpanded(expanded bool, itemCount int) {
 	}
 
 	runtime.WindowSetSize(a.ctx, width, height)
+	if !expanded {
+		a.emitLifecycle("collapsed", "palette")
+	}
 }

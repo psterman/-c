@@ -3,12 +3,39 @@
 
 global ConfigWebViewNavFallbackTried := false
 
+ConfigWebView_HostAlive() {
+    global GuiID_ConfigGUI
+    try {
+        if !(IsObject(GuiID_ConfigGUI) && GuiID_ConfigGUI)
+            return false
+        hwnd := GuiID_ConfigGUI.Hwnd
+        if !hwnd
+            return false
+        return !!WinExist("ahk_id " . hwnd)
+    } catch {
+        return false
+    }
+}
+
 ConfigWebView_CreateHost() {
     global GuiID_ConfigGUI, ConfigWebViewMode, ConfigWV2Ready, ConfigWebViewPreloaded, ConfigWebViewNavFallbackTried
     global ConfigWV2Ctrl, ConfigWV2
 
-    if (GuiID_ConfigGUI != 0)
-        return
+    if (GuiID_ConfigGUI != 0) {
+        if (ConfigWebView_HostAlive())
+            return
+        try {
+            WMActivateChain_Unregister(ConfigWebView_WM_ACTIVATE)
+        } catch {
+        }
+        GuiID_ConfigGUI := 0
+        ConfigWebViewMode := false
+        ConfigWV2Ready := false
+        ConfigWV2Ctrl := 0
+        ConfigWV2 := 0
+        ConfigWebViewPreloaded := false
+        ConfigWebViewNavFallbackTried := false
+    }
 
     ConfigGUI := Gui("+Resize +MinimizeBox +MaximizeBox +Owner", GetText("config_title"))
     ConfigGUI.BackColor := "0a0a0a"

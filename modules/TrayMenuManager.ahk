@@ -105,6 +105,10 @@ global TrayMenuGUI := 0
 global TrayMenuSelectedItem := 0
 global TrayMenuHoverTimer := 0
 global TrayMenuPressedItem := 0
+global TrayMenuPopupBusy := false
+global TrayMenuPopupPending := false
+global TrayMenuPopupPendingLParam := 0
+global TrayMenuPopupPendingStart := 0
 
 TrayMenu_Log(msg) {
     try {
@@ -120,6 +124,7 @@ TrayMenu_Log(msg) {
 }
 
 TRAY_ICON_MESSAGE(wParam, lParam, msg, hwnd) {
+    global TrayMenuPopupBusy, TrayMenuPopupPending, TrayMenuPopupPendingLParam, TrayMenuPopupPendingStart
     try {
         try TrayMenu_Log("tray_msg lParam=" . lParam . " msg=" . msg)
         if (lParam = 0x203) {
@@ -137,11 +142,41 @@ TRAY_ICON_MESSAGE(wParam, lParam, msg, hwnd) {
             try TrayMenu_Log("tray_popup_state mode=" . NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") . " search_active=" . (IsSearchCenterActive() ? "1" : "0") . " search_visible=" . (searchVisible ? "1" : "0") . " waiting=" . (IsSet(g_SCWV_WaitingUiFinishedReveal) && g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " caps=" . (GetCapsLockState() ? "1" : "0"))
             catch {
             }
-            try TrayMenu_Log("custom_popup_begin lParam=" . lParam)
-            try ShowCustomTrayMenu()
-            catch as err {
-                try TrayMenu_Log("custom_popup_failed lParam=" . lParam . " elapsed_ms=" . (A_TickCount - trayStart) . " msg=" . err.Message)
-                ; Fallback: custom popup failed, show standard tray menu.
+            if (TrayMenuPopupBusy) {
+                try TrayMenu_Log("custom_popup_skip_busy lParam=" . lParam . " elapsed_ms=" . (A_TickCount - trayStart))
+                return 0
+            }
+            TrayMenuPopupBusy := true
+            TrayMenuPopupPending := true
+            TrayMenuPopupPendingLParam := lParam
+            TrayMenuPopupPendingStart := trayStart
+            try TrayMenu_Log("custom_popup_queue lParam=" . lParam)
+            SetTimer(TrayMenu_ShowQueuedPopup, -1)
+            try TrayMenu_Log("custom_popup_return lParam=" . lParam . " elapsed_ms=" . (A_TickCount - trayStart))
+            return 0
+        }
+    } catch {
+    }
+}
+
+TrayMenu_ShowQueuedPopup(*) {
+    global TrayMenuPopupBusy, TrayMenuPopupPending, TrayMenuPopupPendingLParam, TrayMenuPopupPendingStart
+    if !TrayMenuPopupPending
+    {
+        TrayMenuPopupBusy := false
+        return
+    }
+    lParam := TrayMenuPopupPendingLParam
+    trayStart := TrayMenuPopupPendingStart
+    TrayMenuPopupPending := false
+    try {
+        try TrayMenu_Log("custom_popup_begin lParam=" . lParam)
+        try {
+            ShowCustomTrayMenu()
+        } catch as err {
+            mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+            try TrayMenu_Log("custom_popup_failed lParam=" . lParam . " elapsed_ms=" . (A_TickCount - trayStart) . " mode=" . mode . " msg=" . err.Message)
+            if (mode != "hole") {
                 try {
                     TrayMenu_Log("custom_popup_fallback_begin")
                     A_TrayMenu.Show()
@@ -149,11 +184,13 @@ TRAY_ICON_MESSAGE(wParam, lParam, msg, hwnd) {
                 } catch as fallbackErr {
                     try TrayMenu_Log("custom_popup_fallback_failed msg=" . fallbackErr.Message)
                 }
+            } else {
+                try TrayMenu_Log("custom_popup_fallback_suppressed_hole")
             }
-            try TrayMenu_Log("custom_popup_end lParam=" . lParam . " elapsed_ms=" . (A_TickCount - trayStart))
-            return 0
         }
-    } catch {
+        try TrayMenu_Log("custom_popup_end lParam=" . lParam . " elapsed_ms=" . (A_TickCount - trayStart))
+    } finally {
+        TrayMenuPopupBusy := false
     }
 }
 
@@ -301,11 +338,18 @@ TrayMenu_InvokeActionDeferred(actionObj, actionText := "") {
 TrayMenu_PrepareUiOpenFromHoleMode() {
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
     try TrayMenu_Log("prepare_ui_from_hole search_active=" . (IsSearchCenterActive() ? "1" : "0") . " vk_visible=" . (VK_IsHostVisible() ? "1" : "0") . " caps=" . (GetCapsLockState() ? "1" : "0"))
+    ; 先跑一次生命周期维护，避免“已关闭但忙碌态残留”的假活状态挡住后续托盘动作。
+    try SearchCenter_IsOpeningOrBusy()
+    catch {
+    }
     ; In hole mode, proactively neutralize overlay hit-test / drag session interference.
     try {
-        if (IsSearchCenterActive() || SCWV_IsVisible() || g_SCWV_WaitingUiFinishedReveal || GDHO_VISIBLE || NativeDropSessionActive) {
+        if (SearchCenter_IsOpeningOrBusy() || IsSearchCenterActive() || SCWV_IsVisible() || GDHO_VISIBLE || NativeDropSessionActive) {
             TrayMenu_Log("prepare_ui_from_hole_force_close_search_center")
-            SetTimer((*) => SCWV_RequestHardClose("tray_open_ui"), -1)
+            try SCWV_RequestHardClose("tray_open_ui")
+            catch {
+            }
+            TrayMenu_WaitForSearchCenterIdle(1500)
         }
     } catch {
     }
@@ -323,6 +367,27 @@ TrayMenu_PrepareUiOpenFromHoleMode() {
     }
     try TrayMenu_Log("prepare_ui_from_hole_step reset_session_queued")
     try TrayMenu_Log("prepare_ui_from_hole_done")
+}
+
+TrayMenu_WaitForSearchCenterIdle(timeoutMs := 1500) {
+    start := A_TickCount
+    loop {
+        busy := false
+        try busy := SearchCenter_IsOpeningOrBusy()
+        catch {
+            busy := false
+        }
+        visible := false
+        try visible := SCWV_IsVisible()
+        catch {
+            visible := false
+        }
+        if (!busy && !visible)
+            return true
+        if ((A_TickCount - start) >= timeoutMs)
+            return false
+        Sleep(30)
+    }
 }
 
 TrayMenu_QueueUiOpenFromHoleMode(actionFn, reason := "") {
@@ -344,6 +409,22 @@ TrayMenu_RunQueuedUiOpenFromHoleMode(actionFn, reason := "") {
 
 TrayMenu_OpenSearchAction(*) {
     try TrayMenu_Log("open_search_from_menu")
+    if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole") {
+        try {
+            if (SearchCenter_IsOpeningOrBusy() || IsSearchCenterActive() || SCWV_IsVisible()) {
+                SCWV_RequestHardClose("tray_open_search")
+                TrayMenu_WaitForSearchCenterIdle(1500)
+            }
+        } catch {
+        }
+        try {
+            SCWV_Init("tray_menu_search")
+            SCWV_Show("tray_menu_search")
+            return
+        } catch as err {
+            try TrayMenu_Log("open_search_direct_failed msg=" . err.Message)
+        }
+    }
     if FuncExists("FloatingToolbar_ActivateSearchCenter")
         FloatingToolbar_ActivateSearchCenter()
     else
@@ -508,6 +589,29 @@ ShowSearchCenterFromMenu(*) {
     global TrayMenuGUI
 
     try TrayMenu_Log("show_search_from_menu_begin")
+    try {
+        if (SearchCenter_IsOpeningOrBusy()) {
+            TrayMenu_Log("show_search_from_menu_busy")
+            if (TrayMenuGUI != 0) {
+                try {
+                    TrayMenuGUI.Destroy()
+                    TrayMenuGUI := 0
+                    SetTimer(CheckTrayMenuMousePosition, 0)
+                }
+            }
+            if (SCWV_IsVisible()) {
+                SCWV_Show("tray_reuse_search")
+            } else {
+                try SCWV_RequestHardClose("tray_search_busy_reopen")
+                catch {
+                }
+                TrayMenu_WaitForSearchCenterIdle(1500)
+                TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenSearchAction, "search_recover")
+            }
+            return
+        }
+    } catch {
+    }
     if (TrayMenuGUI != 0) {
         try {
             TrayMenuGUI.Destroy()

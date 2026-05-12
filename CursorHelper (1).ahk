@@ -3964,12 +3964,14 @@ CloseConfigGUI() {
     
     ; 如果窗口已经不存在，直接返回
     if (GuiID_ConfigGUI = 0) {
+        CloseConfigGUI_IsClosing := false
         return
     }
 
     ; WebView 设置页关闭路径（首期改造）
     if (ConfigWebViewMode) {
         ConfigWebView_Close()
+        SetTimer(LegacyConfigGui_ClearClosingFlag, -100)
         return
     }
     

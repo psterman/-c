@@ -1586,9 +1586,19 @@ FloatingToolbar_ActivateSearchCenter() {
     try usedWebView := SearchCenter_ShouldUseWebView()
     try SCWV_Log("ftb_activate_search_center_begin", "used_webview=" . (usedWebView ? "1" : "0"))
     try {
-        if (IsSearchCenterActive() || SCWV_IsVisible() || g_SCWV_WaitingUiFinishedReveal) {
-            try SCWV_Log("ftb_activate_search_center_force_close", "active=" . (IsSearchCenterActive() ? "1" : "0") . " vis=" . (SCWV_IsVisible() ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
-            SCWV_RequestHardClose("ftb_activate_search_center")
+        if (SearchCenter_IsOpeningOrBusy()) {
+            try SCWV_Log("ftb_activate_search_center_busy", "active=" . (IsSearchCenterActive() ? "1" : "0") . " vis=" . (SCWV_IsVisible() ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
+            if (SCWV_IsVisible()) {
+                SCWV_Show("ftb_activate_reuse")
+                opened := true
+                return
+            }
+            try SCWV_RequestHardClose("ftb_activate_busy_recover")
+            catch {
+            }
+            try TrayMenu_WaitForSearchCenterIdle(1500)
+            catch {
+            }
         }
     } catch {
     }
