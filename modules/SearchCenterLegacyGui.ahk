@@ -1116,11 +1116,7 @@ FocusSearchCenterCLIInput() {
 }
 
 GetSearchCenterCurrentCLICommand() {
-    global SearchCenterSearchEdit
-    if (!SearchCenterSearchEdit || SearchCenterSearchEdit = 0) {
-        return ""
-    }
-    return Trim(SearchCenterSearchEdit.Value, " `t`r`n")
+    return Trim(SearchCenter_GetEditTextSafe(), " `t`r`n")
 }
 
 UpdateSearchCenterCLILayout(WindowWidth := 0, WindowHeight := 0, KeepFilterTop := true) {
@@ -2335,12 +2331,13 @@ DebouncedSearchCenter(offset := 0) {
     global SearchCenterCurrentLimit, SearchCenterHasMoreData, SearchCenterFilterType
     
     ; 下拉仅控制结果数量，不覆盖过滤标签状态
-    Keyword := Trim(SearchCenterSearchEdit.Value)
+    Keyword := SearchCenter_GetEditTextSafe()
     
     ; 如果是新搜索（offset = 0），重置数据
     if (offset = 0) {
         SearchCenterSearchResults := []
-        SearchCenterResultLV.Delete()
+        if (IsObject(SearchCenterResultLV))
+            SearchCenterResultLV.Delete()
     }
     
     if (Keyword == "") {
@@ -2546,6 +2543,21 @@ DebouncedSearchCenter(offset := 0) {
     RefreshSearchCenterResults()
     
     OutputDebug("AHK_DEBUG: 搜索中心刷新完成，总结果: " . SearchCenterSearchResults.Length . ", 还有更多: " . (SearchCenterHasMoreData ? "是" : "否"))
+}
+
+SearchCenter_GetEditTextSafe() {
+    global SearchCenterSearchEdit
+    try {
+        if IsObject(SearchCenterSearchEdit) {
+            return Trim(String(SearchCenterSearchEdit.Value))
+        }
+        if (SearchCenterSearchEdit && Integer(SearchCenterSearchEdit) > 0) {
+            txt := ControlGetText("ahk_id " . Integer(SearchCenterSearchEdit))
+            return Trim(String(txt))
+        }
+    } catch {
+    }
+    return ""
 }
 
 ; Destroy 之后必须清空控件引用，否则异步 RefreshSearchCenterResults 仍持有旧 Gui.Control 会报 “control is destroyed”

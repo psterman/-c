@@ -1,8 +1,10 @@
 ; ConfigWebViewModule.ahk — 设置中心 WebView 宿主与消息桥（由主脚本 #Include）
 ; 依赖：WebView2、WMActivateChain、Jxon、主脚本全局与 BuildAppLocalUrl / WebView_DumpJson 等。
 
+global ConfigWebViewNavFallbackTried := false
+
 ConfigWebView_CreateHost() {
-    global GuiID_ConfigGUI, ConfigWebViewMode, ConfigWV2Ready, ConfigWebViewPreloaded
+    global GuiID_ConfigGUI, ConfigWebViewMode, ConfigWV2Ready, ConfigWebViewPreloaded, ConfigWebViewNavFallbackTried
     global ConfigWV2Ctrl, ConfigWV2
 
     if (GuiID_ConfigGUI != 0)
@@ -17,6 +19,7 @@ ConfigWebView_CreateHost() {
     ConfigWV2Ctrl := 0
     ConfigWV2 := 0
     ConfigWebViewPreloaded := false
+    ConfigWebViewNavFallbackTried := false
 
     ConfigGUI.OnEvent("Close", (*) => CloseConfigGUI())
     ConfigGUI.OnEvent("Escape", (*) => CloseConfigGUI())
@@ -98,6 +101,7 @@ ConfigWebView_OnCreated(ctrl) {
 }
 
 ConfigWebView_OnNavigationCompleted(sender, args) {
+    global ConfigWebViewNavFallbackTried
     try ok := args.IsSuccess
     catch as e
         ok := true
@@ -105,6 +109,15 @@ ConfigWebView_OnNavigationCompleted(sender, args) {
         if ConfigWebView_HostWindowVisible()
             ConfigWebView_RefreshWebViewComposition()
         return
+    }
+    if !ConfigWebViewNavFallbackTried {
+        ConfigWebViewNavFallbackTried := true
+        fileUrl := "file:///" . StrReplace(A_ScriptDir . "\SettingsPanel.html", "\", "/")
+        try {
+            sender.Navigate(fileUrl)
+            return
+        } catch {
+        }
     }
     try {
         sender.NavigateToString("<!doctype html><html><body style='background:#111;color:#eee;font-family:Segoe UI;padding:16px'>设置面板页面加载失败。请重启脚本后重试。</body></html>")

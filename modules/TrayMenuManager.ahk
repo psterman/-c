@@ -106,8 +106,22 @@ global TrayMenuSelectedItem := 0
 global TrayMenuHoverTimer := 0
 global TrayMenuPressedItem := 0
 
+TrayMenu_Log(msg) {
+    try {
+        logPath := A_ScriptDir . "\Cache\tray_menu_runtime.log"
+        dir := ""
+        SplitPath(logPath, , &dir)
+        if (dir != "" && !DirExist(dir))
+            DirCreate(dir)
+        ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
+        FileAppend("[" . ts . "] " . String(msg) . "`r`n", logPath, "UTF-8")
+    } catch {
+    }
+}
+
 TRAY_ICON_MESSAGE(wParam, lParam, msg, hwnd) {
     try {
+        try TrayMenu_Log("tray_msg lParam=" . lParam . " msg=" . msg)
         if (lParam = 0x203) {
             CleanUp()
             ExitApp()
@@ -115,7 +129,8 @@ TRAY_ICON_MESSAGE(wParam, lParam, msg, hwnd) {
         }
         if (lParam = 0x205 || lParam = 0x202) {
             try ShowCustomTrayMenu()
-            catch {
+            catch as err {
+                try TrayMenu_Log("custom_popup_failed lParam=" . lParam . " msg=" . err.Message)
                 ; Fallback: custom popup failed, show standard tray menu.
                 try A_TrayMenu.Show()
             }
@@ -246,10 +261,37 @@ TrayMenuInvokeItem(item, itemIndex, keepOpen := false) {
         return
     }
     CloseDarkStylePopupMenu()
+    try TrayMenu_Log("invoke_click idx=" . itemIndex . " text=" . (item.HasProp("Text") ? String(item.Text) : ""))
     try {
         if (item.HasProp("Action") && IsObject(item.Action))
-            item.Action()
+            SetTimer((*) => TrayMenu_InvokeActionDeferred(item.Action, (item.HasProp("Text") ? String(item.Text) : "")), -1)
+        try TrayMenu_Log("invoke_ok idx=" . itemIndex . " text=" . (item.HasProp("Text") ? String(item.Text) : ""))
+    } catch as err {
+        try TrayMenu_Log("invoke_failed idx=" . itemIndex . " msg=" . err.Message)
     } catch {
+    }
+}
+
+TrayMenu_InvokeActionDeferred(actionObj, actionText := "") {
+    try {
+        if IsObject(actionObj)
+            actionObj.Call()
+    } catch as err {
+        try TrayMenu_Log("invoke_deferred_failed text=" . actionText . " msg=" . err.Message)
+    }
+}
+
+TrayMenu_PrepareUiOpenFromHoleMode() {
+    try TrayMenu_Log("prepare_ui_from_hole")
+    ; In hole mode, proactively neutralize overlay hit-test / drag session interference.
+    try GDHO_SetClickThrough(true)
+    catch {
+    }
+    try GDHO_HideFrontend()
+    catch {
+    }
+    try NativeDropBridge_ResetSession("tray_open_ui", 0)
+    catch {
     }
 }
 
@@ -369,10 +411,12 @@ ShowSearchCenterFromMenu(*) {
         }
     }
 
+    TrayMenu_PrepareUiOpenFromHoleMode()
+    try TrayMenu_Log("open_search_from_menu")
     if FuncExists("FloatingToolbar_ActivateSearchCenter")
-        FloatingToolbar_ActivateSearchCenter()
+        SetTimer((*) => FloatingToolbar_ActivateSearchCenter(), -10)
     else
-        ShowSearchCenter()
+        SetTimer((*) => ShowSearchCenter(), -10)
 }
 
 ShowClipboardFromMenu(*) {
@@ -386,7 +430,9 @@ ShowClipboardFromMenu(*) {
         }
     }
 
-    CP_Show()
+    TrayMenu_PrepareUiOpenFromHoleMode()
+    try TrayMenu_Log("open_clipboard_from_menu")
+    SetTimer((*) => CP_Show(), -10)
 }
 
 ; 截图：modules\ScreenshotWorkflow.ahk — ExecuteScreenshotWithMenu
@@ -415,7 +461,9 @@ ShowConfigFromMenu(*) {
         }
     }
 
-    ShowConfigGUI_Safe()
+    TrayMenu_PrepareUiOpenFromHoleMode()
+    try TrayMenu_Log("open_config_from_menu")
+    SetTimer((*) => ShowConfigGUI_Safe(), -10)
 }
 
 ExitFromMenu(*) {
@@ -742,10 +790,32 @@ TrayMenu_RunSceneCmd(cmdId) {
     c := Trim(String(cmdId))
     if (c = "")
         return
-    ; Hard route for settings from tray: avoid command-chain edge cases and ensure direct open.
-    if (c = "tray_show_config") {
-        try ShowConfigGUI_Safe()
-        return
+    ; Hard route for tray commands: avoid dependency on command-dispatch readiness during startup.
+    switch c {
+        case "tray_show_search":
+            try ShowSearchCenterFromMenu()
+            return
+        case "tray_show_clipboard":
+            try ShowClipboardFromMenu()
+            return
+        case "tray_show_screenshot":
+            try ShowScreenshotFromMenu()
+            return
+        case "tray_show_config":
+            try ShowConfigGUI_Safe()
+            return
+        case "tray_toggle_toolbar":
+            try ToggleFloatingToolbarFromMenu()
+            return
+        case "tray_hide_toolbar":
+            try HideFloatingToolbarFromPopupMenu()
+            return
+        case "tray_reload_script":
+            try ReloadScriptFromPopupMenu()
+            return
+        case "tray_exit_app":
+            try ExitFromMenu()
+            return
     }
     try {
         if IsSet(VK_Execute) {
@@ -754,11 +824,13 @@ TrayMenu_RunSceneCmd(cmdId) {
                 return
         }
     } catch {
+        try TrayMenu_Log("run_scene_vk_failed cmd=" . c)
     }
     try {
         if IsSet(_ExecuteCommand)
             _ExecuteCommand(c)
     } catch {
+        try TrayMenu_Log("run_scene_exec_failed cmd=" . c)
     }
 }
 

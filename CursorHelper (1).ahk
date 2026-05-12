@@ -5,6 +5,8 @@ global pToken := Gdip_Startup()
 if (!pToken) {
     MsgBox "GDI+ 启动失败，请检查 lib\Gdip_All.ahk"
 }
+global NMER_TraceSession := FormatTime(A_Now, "yyyyMMdd-HHmmss") . "-" . A_TickCount
+NMER_Log("startup", "boot", "gdip=" . (pToken ? "ok" : "fail"))
 ; ScreenshotEditorPlugin #HotIf 可能在主脚本后部全局块执行前被求值，须尽早初始化
 global ScreenshotColorPickerActive := false
 ; 托盘菜单可能在 Appearance / 悬浮模块全局块执行前被点击（TrayMenu_Init 很早），须尽早初始化
@@ -2420,6 +2422,7 @@ ApplyActivationRuntimeDeferred(mode, token) {
     if (token != g_ActivationRuntimeToken)
         return
     m := NormalizeAppearanceActivationMode(mode)
+    NMER_Log("activation", "runtime_deferred", "mode=" . m . " token=" . token)
     if (m = "hole") {
         try SetHoleRuntimeEnabled(true)
         try GDHO_Start()
@@ -2457,6 +2460,7 @@ ApplyAppearanceActivationMode() {
     global AppearanceActivationMode
     global g_ActivationApplyLastMode, g_ActivationApplyLastTick
     m := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    NMER_Log("activation", "apply_mode_begin", "mode=" . m)
     nowTick := A_TickCount
     ; Coalesce duplicate mode applies to avoid toolbar/hole visibility thrash.
     if (m = g_ActivationApplyLastMode && g_ActivationApplyLastTick > 0 && (nowTick - g_ActivationApplyLastTick) < 250)
@@ -2489,6 +2493,7 @@ ApplyAppearanceActivationMode() {
         }
         ; One delayed retry further improves reliability after mode save from settings WebView.
         try SetTimer((*) => FloatingToolbar_ForceRecoverVisible(), -120)
+        NMER_Log("activation", "apply_mode_toolbar", "ok=1")
         return
     }
     if (m = "hole") {
@@ -2499,6 +2504,7 @@ ApplyAppearanceActivationMode() {
         catch {
         }
         try ApplyActivationRuntimeAsync("hole")
+        NMER_Log("activation", "apply_mode_hole", "ok=1")
         return
     }
     try HideFloatingToolbar()
@@ -2507,6 +2513,7 @@ ApplyAppearanceActivationMode() {
     try FloatingBubble_DestroyCompletely()
     catch {
     }
+    NMER_Log("activation", "apply_mode_tray", "ok=1")
     try ApplyActivationRuntimeAsync("tray")
 }
 
@@ -3816,6 +3823,7 @@ NormalizeCapsLockRuntimeForUiOpen() {
 }
 
 ShowConfigGUI_Safe() {
+    NMER_Log("ui", "open_config_safe_begin", "")
     try NormalizeCapsLockRuntimeForUiOpen()
     catch {
     }
@@ -3845,6 +3853,21 @@ ShowConfigGUI_Safe() {
     }
     ; Fallback safety net: if WebView path fails, open legacy settings.
     try SetTimer(ShowConfigGUI_FallbackCheck, -900)
+    NMER_Log("ui", "open_config_safe_scheduled", "")
+}
+
+NMER_Log(scope, event, detail := "") {
+    global NMER_TraceSession
+    try {
+        logPath := A_ScriptDir . "\Cache\nmer_trace.log"
+        dir := ""
+        SplitPath(logPath, , &dir)
+        if (dir != "" && !DirExist(dir))
+            DirCreate(dir)
+        ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
+        FileAppend("[" . ts . "][" . NMER_TraceSession . "][" . scope . "][" . event . "] " . String(detail) . "`r`n", logPath, "UTF-8")
+    } catch {
+    }
 }
 
 

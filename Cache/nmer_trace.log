@@ -1,0 +1,13 @@
+﻿[2026-05-12 08:48:04][20260512-084804-6805859][startup][boot] gdip=ok
+[2026-05-12 08:48:05][20260512-084804-6805859][activation][apply_mode_begin] mode=hole
+[2026-05-12 08:48:05][20260512-084804-6805859][activation][apply_mode_hole] ok=1
+[2026-05-12 08:48:05][20260512-084804-6805859][activation][runtime_deferred] mode=hole token=2
+[2026-05-12 08:48:09][20260512-084804-6805859][ui][open_config_safe_begin] 
+[2026-05-12 08:48:09][20260512-084804-6805859][ui][open_config_safe_scheduled] 
+[2026-05-12 08:48:10][20260512-084804-6805859][activation][apply_mode_begin] mode=hole
+[2026-05-12 08:48:10][20260512-084804-6805859][activation][apply_mode_hole] ok=1
+[2026-05-12 08:48:10][20260512-084804-6805859][activation][runtime_deferred] mode=hole token=3
+[2026-05-12 08:48:25][20260512-084804-6805859][ui][open_config_safe_begin] 
+[2026-05-12 08:48:25][20260512-084804-6805859][ui][open_config_safe_scheduled] 
+[2026-05-12 08:50:28][20260512-084804-6805859][ui][open_config_safe_begin] 
+[2026-05-12 08:50:28][20260512-084804-6805859][ui][open_config_safe_scheduled] 

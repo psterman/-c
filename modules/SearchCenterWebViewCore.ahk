@@ -50,6 +50,20 @@ global g_SCWV_QLInvokeSendCount := 0
 global g_SCWV_SearchHttpInFlight := false
 global g_SCWV_SearchPendingReq := 0
 global g_SCWV_HostTopMost := false
+global g_SCWV_NavFallbackTried := false
+
+SCWV_Log(event, detail := "") {
+    try {
+        logPath := A_ScriptDir . "\Cache\scwv_trace.log"
+        dir := ""
+        SplitPath(logPath, , &dir)
+        if (dir != "" && !DirExist(dir))
+            DirCreate(dir)
+        ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
+        FileAppend("[" . ts . "][" . event . "] " . String(detail) . "`r`n", logPath, "UTF-8")
+    } catch {
+    }
+}
 
 _SCWV_BlockDeactivate(ms := 1500, reason := "") {
     global g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason
@@ -185,13 +199,14 @@ _SCWV_MapAllDriveVirtualHosts(wv2) {
 }
 
 SCWV_OnCreated(ctrl) {
-    global g_SCWV_Ctrl, g_SCWV_WV2, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal
+    global g_SCWV_Ctrl, g_SCWV_WV2, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_NavFallbackTried
 
     g_SCWV_Ctrl := ctrl
     g_SCWV_WV2 := ctrl.CoreWebView2
     g_SCWV_Ready := false
     g_SCWV_UI_Ready := false
     g_SCWV_WaitingUiFinishedReveal := false
+    g_SCWV_NavFallbackTried := false
     SetTimer(SCWV_ForceRevealIfStuck, 0)
 
     try g_SCWV_Ctrl.DefaultBackgroundColor := 0xFF1B1B1D
@@ -233,7 +248,7 @@ SCWV_OnGuiResize(GuiObj, MinMax, Width, Height) {
 }
 
 SCWV_OnNavigationCompleted(sender, args) {
-    global g_SCWV_Visible
+    global g_SCWV_Visible, g_SCWV_NavFallbackTried
 
     if !g_SCWV_Visible
         return
@@ -242,8 +257,18 @@ SCWV_OnNavigationCompleted(sender, args) {
     catch {
         ok := true
     }
-    if !ok
+    try SCWV_Log("nav_completed", "ok=" . (ok ? "1" : "0") . " visible=" . (g_SCWV_Visible ? "1" : "0"))
+    if !ok {
+        if !g_SCWV_NavFallbackTried {
+            g_SCWV_NavFallbackTried := true
+            fileUrl := "file:///" . StrReplace(A_ScriptDir . "\SearchCenter.html", "\", "/")
+            try SCWV_Log("nav_fallback_file", fileUrl)
+            try sender.Navigate(fileUrl)
+            catch {
+            }
+        }
         return
+    }
 
     SCWV_RefreshComposition()
 }
@@ -1186,6 +1211,7 @@ _SCWV_ResultItemGet(Item, Prop, Default := "") {
 SCWV_Show() {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
     global SearchCenterEngineMode
+    try SCWV_Log("show_begin", "ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
 
     if !SCWV_HostAlive() {
         SCWV_ResetHostState()
@@ -1199,6 +1225,7 @@ SCWV_Show() {
     GuiID_SearchCenter := g_SCWV_Gui
 
     if g_SCWV_Visible {
+        try SCWV_Log("show_already_visible", "")
         try WinActivate("ahk_id " . g_SCWV_Gui.Hwnd)
         try WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl)
         SetTimer(_SCWV_DeferredMoveFocus100, -100)
@@ -1242,8 +1269,10 @@ SCWV_Show() {
         SCWV_SetHostTopMost(g_SCWV_HostTopMost)
     }
     if readyToReveal {
+        try SCWV_Log("show_finish_reveal_immediate", "")
         SCWV_FinishReveal()
     } else {
+        try SCWV_Log("show_wait_ui_ready", "")
         g_SCWV_WaitingUiFinishedReveal := true
         g_SCWV_Visible := false
         SetTimer(SCWV_ForceRevealIfStuck, 0)
@@ -1332,6 +1361,7 @@ SCWV_RequestFocusInput() {
 SCWV_Hide(PersistSelection := true) {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_SearchTimer, GuiID_SearchCenter, g_SCWV_PendingJsonQueue
     global g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason
+    try SCWV_Log("hide_begin", "persist=" . (PersistSelection ? "1" : "0"))
     ; Drag-hole reentry safety: when exiting SearchCenter, force-reset native drag session
     ; so next text drag can re-trigger the hole from a clean initial state.
     try NativeDropBridge_ResetSession("search_center_exit", 0)
@@ -1340,6 +1370,7 @@ SCWV_Hide(PersistSelection := true) {
     try FloatingToolbar_PageDockLeave("search")
 
     if !SCWV_HostAlive() {
+        try SCWV_Log("hide_host_not_alive", "")
         SCWV_ResetHostState()
         return
     }
@@ -1373,6 +1404,7 @@ SCWV_Hide(PersistSelection := true) {
     if g_SCWV_Gui {
         try g_SCWV_Gui.Hide()
     }
+    try SCWV_Log("hide_done", "")
     try SCWV_Preview_UnloadNative()
     catch {
     }
