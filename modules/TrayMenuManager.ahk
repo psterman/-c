@@ -742,6 +742,11 @@ TrayMenu_RunSceneCmd(cmdId) {
     c := Trim(String(cmdId))
     if (c = "")
         return
+    ; Hard route for settings from tray: avoid command-chain edge cases and ensure direct open.
+    if (c = "tray_show_config") {
+        try ShowConfigGUI_Safe()
+        return
+    }
     try {
         if IsSet(VK_Execute) {
             ok := VK_Execute(c)

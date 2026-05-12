@@ -9674,3 +9674,23 @@
 [2026-05-11 18:16:10] route drag_end over_hole=0 payload=text
 [2026-05-11 18:16:10] route reset_session reason=drag_end hide_ms=1800
 [2026-05-11 18:16:11] route delayed_hide action=hide_now
+[2026-05-12 07:50:37] evt {"at":"2026-05-12T07:50:35+08:00","kind":"bridge_ready","x":1158,"y":706,"w":170,"h":210}
+[2026-05-12 07:51:25] evt {"at":"2026-05-12T07:51:23+08:00","kind":"bridge_ready","x":1068,"y":706,"w":170,"h":210}
+[2026-05-12 07:51:38] evt {"at":"2026-05-12T07:51:38+08:00","kind":"drag_start","payloadKind":"none","x":1302,"y":702}
+[2026-05-12 07:51:48] evt {"at":"2026-05-12T07:51:46+08:00","kind":"bridge_ready","x":978,"y":706,"w":170,"h":210}
+[2026-05-12 07:51:53] evt {"at":"2026-05-12T07:51:51+08:00","kind":"bridge_ready","x":1023,"y":706,"w":170,"h":210}
+[2026-05-12 07:53:11] evt {"at":"2026-05-12T07:53:09+08:00","kind":"bridge_ready","x":978,"y":706,"w":170,"h":210}
+[2026-05-12 07:53:16] evt {"at":"2026-05-12T07:53:16+08:00","kind":"drag_start","payloadKind":"none","x":1141,"y":788}
+[2026-05-12 07:57:44] evt {"at":"2026-05-12T07:57:42+08:00","kind":"bridge_ready","x":888,"y":706,"w":170,"h":210}
+[2026-05-12 07:58:31] evt {"at":"2026-05-12T07:58:29+08:00","kind":"bridge_ready","x":3564,"y":786,"w":170,"h":210}
+[2026-05-12 08:00:28] evt {"at":"2026-05-12T08:00:26+08:00","kind":"bridge_ready","x":3474,"y":786,"w":170,"h":210}
+[2026-05-12 08:00:32] evt {"at":"2026-05-12T08:00:32+08:00","kind":"drag_start","payloadKind":"none","x":944,"y":874}
+[2026-05-12 08:00:32] route kind=drag_start action=show payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-12 08:00:33] route reset_session reason=release_fallback hide_ms=300
+[2026-05-12 08:00:33] evt {"at":"2026-05-12T08:00:33+08:00","kind":"drag_end","payloadKind":"none","x":727,"y":845}
+[2026-05-12 08:00:33] route drag_end over_hole=0 payload=text
+[2026-05-12 08:00:33] route reset_session reason=drag_end hide_ms=1800
+[2026-05-12 08:00:35] route delayed_hide action=hide_now
+[2026-05-12 08:01:50] evt {"at":"2026-05-12T08:01:48+08:00","kind":"bridge_ready","x":3474,"y":786,"w":170,"h":210}
+[2026-05-12 08:02:25] evt {"at":"2026-05-12T08:02:23+08:00","kind":"bridge_ready","x":3564,"y":786,"w":170,"h":210}
+[2026-05-12 08:05:08] evt {"at":"2026-05-12T08:05:06+08:00","kind":"bridge_ready","x":3564,"y":786,"w":170,"h":210}

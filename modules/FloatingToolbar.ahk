@@ -1912,6 +1912,9 @@ FloatingToolbar_SetActivationMode(mode) {
     m := NormalizeAppearanceActivationMode(mode)
     if (m != "toolbar" && m != "hole" && m != "tray")
         return
+    ; Idempotent guard: wheel/UI can emit repeated same-mode toggles in a short burst.
+    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) = m)
+        return
     AppearanceActivationMode := m
     cfg := A_ScriptDir . "\CursorShortcut.ini"
     try IniWrite(AppearanceActivationMode, cfg, "Appearance", "ActivationMode")

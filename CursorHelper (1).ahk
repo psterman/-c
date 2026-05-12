@@ -2400,6 +2400,8 @@ IsHoleRuntimeEnabledByActivationMode() {
 
 global g_ActivationRuntimeToken := 0
 global g_HoleRuntimeEnabled := false
+global g_ActivationApplyLastMode := ""
+global g_ActivationApplyLastTick := 0
 
 SetHoleRuntimeEnabled(enabled) {
     global g_HoleRuntimeEnabled
@@ -2453,7 +2455,14 @@ ApplyActivationRuntimeDeferred(mode, token) {
 ; 根据「外观 · 激活方式」显示悬浮栏 / 黑洞模式 / 或仅托盘
 ApplyAppearanceActivationMode() {
     global AppearanceActivationMode
+    global g_ActivationApplyLastMode, g_ActivationApplyLastTick
     m := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    nowTick := A_TickCount
+    ; Coalesce duplicate mode applies to avoid toolbar/hole visibility thrash.
+    if (m = g_ActivationApplyLastMode && g_ActivationApplyLastTick > 0 && (nowTick - g_ActivationApplyLastTick) < 250)
+        return
+    g_ActivationApplyLastMode := m
+    g_ActivationApplyLastTick := nowTick
     if (m = "toolbar") {
         try ApplyActivationRuntimeAsync("toolbar")
         try FloatingBubble_DestroyCompletely()
@@ -2891,6 +2900,8 @@ NativeDropBridge_TriggerHolePulse(evt) {
     global NativeDropLastStartTick, NativeDropRearmUntil
     global g_HoleRuntimeEnabled
     if !g_HoleRuntimeEnabled
+        return
+    if !IsHoleRuntimeEnabledByActivationMode()
         return
     if !EnableHoleOverlayOnNativeDrop
         return
@@ -3776,8 +3787,12 @@ ShowConfigGUI_FallbackCheck(*) {
     ; If WebView config host is still unavailable after safe open,
     ; fall back to legacy config window to guarantee accessibility.
     try {
-        if (GuiID_ConfigGUI && WinExist("ahk_id " . GuiID_ConfigGUI.Hwnd))
-            return
+        if (GuiID_ConfigGUI && WinExist("ahk_id " . GuiID_ConfigGUI.Hwnd)) {
+            vis := false
+            try vis := (WinGetStyle("ahk_id " . GuiID_ConfigGUI.Hwnd) & 0x10000000)
+            if vis
+                return
+        }
     }
     catch {
     }
@@ -3789,7 +3804,21 @@ ShowConfigGUI_FallbackCheck(*) {
     }
 }
 
+NormalizeCapsLockRuntimeForUiOpen() {
+    global CapsLock, CapsLock2, VKHoldVisible, CapsLockDownTime
+    ; Ensure UI entry (tray/settings) does not leave CapsLock chord mode active.
+    try CapsLock := false
+    try CapsLock2 := false
+    try VKHoldVisible := false
+    try CapsLockDownTime := 0
+    try Send("{CapsLock up}")
+    try SetCapsLockState("Off")
+}
+
 ShowConfigGUI_Safe() {
+    try NormalizeCapsLockRuntimeForUiOpen()
+    catch {
+    }
     ; Defensive open path: clear overlay/runtime interference before showing settings.
     try NativeDropBridge_Stop()
     catch {
