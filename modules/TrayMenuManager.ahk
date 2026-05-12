@@ -128,12 +128,29 @@ TRAY_ICON_MESSAGE(wParam, lParam, msg, hwnd) {
             return 0
         }
         if (lParam = 0x205 || lParam = 0x202) {
+            trayStart := A_TickCount
+            searchVisible := false
+            try searchVisible := SCWV_IsVisible()
+            catch {
+                searchVisible := false
+            }
+            try TrayMenu_Log("tray_popup_state mode=" . NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") . " search_active=" . (IsSearchCenterActive() ? "1" : "0") . " search_visible=" . (searchVisible ? "1" : "0") . " waiting=" . (IsSet(g_SCWV_WaitingUiFinishedReveal) && g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " caps=" . (GetCapsLockState() ? "1" : "0"))
+            catch {
+            }
+            try TrayMenu_Log("custom_popup_begin lParam=" . lParam)
             try ShowCustomTrayMenu()
             catch as err {
-                try TrayMenu_Log("custom_popup_failed lParam=" . lParam . " msg=" . err.Message)
+                try TrayMenu_Log("custom_popup_failed lParam=" . lParam . " elapsed_ms=" . (A_TickCount - trayStart) . " msg=" . err.Message)
                 ; Fallback: custom popup failed, show standard tray menu.
-                try A_TrayMenu.Show()
+                try {
+                    TrayMenu_Log("custom_popup_fallback_begin")
+                    A_TrayMenu.Show()
+                    TrayMenu_Log("custom_popup_fallback_done")
+                } catch as fallbackErr {
+                    try TrayMenu_Log("custom_popup_fallback_failed msg=" . fallbackErr.Message)
+                }
             }
+            try TrayMenu_Log("custom_popup_end lParam=" . lParam . " elapsed_ms=" . (A_TickCount - trayStart))
             return 0
         }
     } catch {
@@ -288,22 +305,93 @@ TrayMenu_PrepareUiOpenFromHoleMode() {
     try {
         if (IsSearchCenterActive() || SCWV_IsVisible() || g_SCWV_WaitingUiFinishedReveal || GDHO_VISIBLE || NativeDropSessionActive) {
             TrayMenu_Log("prepare_ui_from_hole_force_close_search_center")
-            SCWV_RequestHardClose("tray_open_ui")
+            SetTimer((*) => SCWV_RequestHardClose("tray_open_ui"), -1)
         }
     } catch {
     }
     try NormalizeCapsLockRuntimeForUiOpen()
     catch {
     }
+    try TrayMenu_Log("prepare_ui_from_hole_step clickthrough_begin")
     try GDHO_SetClickThrough(true)
     catch {
     }
-    try GDHO_HideFrontend()
+    try TrayMenu_Log("prepare_ui_from_hole_step clickthrough_done")
+    try TrayMenu_Log("prepare_ui_from_hole_step reset_session_begin")
+    try NativeDropBridge_ResetSessionAsync("tray_open_ui", 0)
     catch {
     }
-    try NativeDropBridge_ResetSession("tray_open_ui", 0)
-    catch {
+    try TrayMenu_Log("prepare_ui_from_hole_step reset_session_queued")
+    try TrayMenu_Log("prepare_ui_from_hole_done")
+}
+
+TrayMenu_QueueUiOpenFromHoleMode(actionFn, reason := "") {
+    SetTimer((*) => TrayMenu_RunQueuedUiOpenFromHoleMode(actionFn, reason), -1)
+}
+
+TrayMenu_RunQueuedUiOpenFromHoleMode(actionFn, reason := "") {
+    try TrayMenu_Log("queued_ui_open_begin reason=" . reason)
+    TrayMenu_PrepareUiOpenFromHoleMode()
+    try TrayMenu_Log("queued_ui_open_after_prep reason=" . reason)
+    try {
+        if IsObject(actionFn)
+            actionFn.Call()
+    } catch as err {
+        try TrayMenu_Log("queued_ui_open_action_failed reason=" . reason . " msg=" . err.Message)
     }
+    try TrayMenu_Log("queued_ui_open_done reason=" . reason)
+}
+
+TrayMenu_OpenSearchAction(*) {
+    try TrayMenu_Log("open_search_from_menu")
+    if FuncExists("FloatingToolbar_ActivateSearchCenter")
+        FloatingToolbar_ActivateSearchCenter()
+    else
+        ShowSearchCenter()
+}
+
+TrayMenu_OpenClipboardAction(*) {
+    try TrayMenu_Log("open_clipboard_from_menu")
+    CP_Show()
+}
+
+TrayMenu_OpenScreenshotAction(*) {
+    try TrayMenu_Log("open_screenshot_from_menu")
+    ExecuteScreenshotWithMenu()
+}
+
+TrayMenu_OpenConfigAction(*) {
+    try TrayMenu_Log("open_config_from_menu")
+    ShowConfigGUI_Safe()
+}
+
+TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis) {
+    if (mode = "hole") {
+        if (bubVis) {
+            MenuItems.Push({ Text: "隐藏黑洞", Action: FloatingBubbleHideFromMenu, Icon: "☰" })
+        } else {
+            MenuItems.Push({ Text: "显示黑洞", Action: FloatingBubbleShowFromMenu, Icon: "☰" })
+        }
+    } else if (mode != "tray") {
+        if (ftVis) {
+            MenuItems.Push({ Text: "隐藏工具栏", Action: ToggleFloatingToolbarFromMenu, Icon: "☰" })
+            MenuItems.Push({ Text: "最小化到边缘", Action: MinimizeFloatingToolbarToEdge, Icon: "⊏" })
+            MenuItems.Push({ Text: "重置大小", Action: FloatingToolbarResetScale, Icon: "⤢" })
+        } else {
+            MenuItems.Push({ Text: "显示工具栏", Action: ToggleFloatingToolbarFromMenu, Icon: "☰" })
+        }
+    }
+
+    MenuItems.Push({ Text: "搜索中心", Action: ShowSearchCenterFromMenu, Icon: "●" })
+    MenuItems.Push({ Text: "剪贴板", Action: ShowClipboardFromMenu, Icon: "▤" })
+    MenuItems.Push({ Text: "截图", Action: ShowScreenshotFromMenu, Icon: "📷" })
+    MenuItems.Push({ Text: GetText("open_config_menu"), Action: ShowConfigFromMenu, Icon: "⚙" })
+
+    if (mode != "tray") {
+        MenuItems.Push({ Text: "关闭工具栏", Action: ((*) => TrayMenu_RunSceneCmd("tray_hide_toolbar")), Icon: "◼" })
+    }
+    MenuItems.Push({ Text: "重启脚本", Action: ((*) => TrayMenu_RunSceneCmd("tray_reload_script")), Icon: "↻" })
+    MenuItems.Push({ Text: GetText("exit_menu"), Action: ((*) => TrayMenu_RunSceneCmd("tray_exit_app")), Icon: "✕" })
 }
 
 CheckTrayMenuMousePosition(*) {
@@ -419,6 +507,7 @@ ToggleFloatingToolbarFromMenu(*) {
 ShowSearchCenterFromMenu(*) {
     global TrayMenuGUI
 
+    try TrayMenu_Log("show_search_from_menu_begin")
     if (TrayMenuGUI != 0) {
         try {
             TrayMenuGUI.Destroy()
@@ -427,17 +516,14 @@ ShowSearchCenterFromMenu(*) {
         }
     }
 
-    TrayMenu_PrepareUiOpenFromHoleMode()
-    try TrayMenu_Log("open_search_from_menu")
-    if FuncExists("FloatingToolbar_ActivateSearchCenter")
-        SetTimer((*) => FloatingToolbar_ActivateSearchCenter(), -10)
-    else
-        SetTimer((*) => ShowSearchCenter(), -10)
+    TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenSearchAction, "search")
+    try TrayMenu_Log("show_search_from_menu_end")
 }
 
 ShowClipboardFromMenu(*) {
     global TrayMenuGUI
 
+    try TrayMenu_Log("show_clipboard_from_menu_begin")
     if (TrayMenuGUI != 0) {
         try {
             TrayMenuGUI.Destroy()
@@ -446,15 +532,15 @@ ShowClipboardFromMenu(*) {
         }
     }
 
-    TrayMenu_PrepareUiOpenFromHoleMode()
-    try TrayMenu_Log("open_clipboard_from_menu")
-    SetTimer((*) => CP_Show(), -10)
+    TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenClipboardAction, "clipboard")
+    try TrayMenu_Log("show_clipboard_from_menu_end")
 }
 
 ; 截图：modules\ScreenshotWorkflow.ahk — ExecuteScreenshotWithMenu
 ShowScreenshotFromMenu(*) {
     global TrayMenuGUI
 
+    try TrayMenu_Log("show_screenshot_from_menu_begin")
     if (TrayMenuGUI != 0) {
         try {
             TrayMenuGUI.Destroy()
@@ -463,14 +549,14 @@ ShowScreenshotFromMenu(*) {
         }
     }
 
-    TrayMenu_PrepareUiOpenFromHoleMode()
-    try TrayMenu_Log("open_screenshot_from_menu")
-    ExecuteScreenshotWithMenu()
+    TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenScreenshotAction, "screenshot")
+    try TrayMenu_Log("show_screenshot_from_menu_end")
 }
 
 ShowConfigFromMenu(*) {
     global TrayMenuGUI
 
+    try TrayMenu_Log("show_config_from_menu_begin")
     if (TrayMenuGUI != 0) {
         try {
             TrayMenuGUI.Destroy()
@@ -479,9 +565,8 @@ ShowConfigFromMenu(*) {
         }
     }
 
-    TrayMenu_PrepareUiOpenFromHoleMode()
-    try TrayMenu_Log("open_config_from_menu")
-    SetTimer((*) => ShowConfigGUI_Safe(), -10)
+    TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenConfigAction, "config")
+    try TrayMenu_Log("show_config_from_menu_end")
 }
 
 ExitFromMenu(*) {
@@ -603,6 +688,8 @@ TrayPopup_ThemeColor(key) {
 
 ShowDarkStylePopupMenuAt(MenuItems, posX, posY) {
     global TrayMenuGUI, TrayMenuSelectedItem, TrayMenuPressedItem
+    trayShowStart := A_TickCount
+    try TrayMenu_Log("dark_popup_show_begin items=" . MenuItems.Length . " pos=" . posX . "," . posY)
 
     if (TrayMenuGUI != 0) {
         try {
@@ -699,6 +786,7 @@ ShowDarkStylePopupMenuAt(MenuItems, posX, posY) {
     }
     SetTimer(CheckTrayMenuMousePosition, 50)
     SetTimer(CloseTrayMenuIfClickedOutside, 100)
+    try TrayMenu_Log("dark_popup_show_done elapsed_ms=" . (A_TickCount - trayShowStart) . " hwnd=" . (TrayMenuGUI.HasProp("Hwnd") ? TrayMenuGUI.Hwnd : 0))
 }
 
 ResolveDarkPopupItemIconFile(Item, size := 18) {
@@ -808,6 +896,9 @@ TrayMenu_RunSceneCmd(cmdId) {
     c := Trim(String(cmdId))
     if (c = "")
         return
+    try TrayMenu_Log("run_scene_cmd cmd=" . c . " mode=" . NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") . " search_active=" . (IsSearchCenterActive() ? "1" : "0"))
+    catch {
+    }
     ; Hard route for tray commands: avoid dependency on command-dispatch readiness during startup.
     switch c {
         case "tray_show_search":
@@ -820,7 +911,7 @@ TrayMenu_RunSceneCmd(cmdId) {
             try ShowScreenshotFromMenu()
             return
         case "tray_show_config":
-            try ShowConfigGUI_Safe()
+            try ShowConfigFromMenu()
             return
         case "tray_toggle_toolbar":
             try ToggleFloatingToolbarFromMenu()
@@ -889,7 +980,8 @@ TrayMenu_BuildItemsFromSceneMenu(sceneKey := "tray_menu") {
 }
 
 ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
-    global FloatingToolbarIsVisible, AppearanceActivationMode, FloatingBubbleIsVisible
+    global FloatingToolbarIsVisible, AppearanceActivationMode, FloatingBubbleIsVisible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_CreateInFlight
+    trayBuildStart := A_TickCount
 
     MenuWidth := 200
     MenuItemHeight := 35
@@ -900,38 +992,28 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
     mode := NormalizeAppearanceActivationMode(amRaw)
     ftVis := IsSet(FloatingToolbarIsVisible) ? FloatingToolbarIsVisible : false
     bubVis := IsSet(FloatingBubbleIsVisible) ? FloatingBubbleIsVisible : false
-    if (mode = "tray") {
-    } else if (mode = "hole") {
-        if (bubVis) {
-            MenuItems.Push({ Text: "隐藏黑洞", Action: FloatingBubbleHideFromMenu, Icon: "☰" })
-        } else {
-            MenuItems.Push({ Text: "显示黑洞", Action: FloatingBubbleShowFromMenu, Icon: "☰" })
-        }
-        ; Direct settings entry in hole mode (bypass scene-command chain).
-        MenuItems.Push({ Text: GetText("open_config_menu"), Action: ((*) => ShowConfigGUI_Safe()), Icon: "⚙" })
-    } else {
-        if (ftVis) {
-            MenuItems.Push({ Text: "隐藏工具栏", Action: ToggleFloatingToolbarFromMenu, Icon: "☰" })
-            MenuItems.Push({ Text: "最小化到边缘", Action: MinimizeFloatingToolbarToEdge, Icon: "⊏" })
-            MenuItems.Push({ Text: "重置大小", Action: FloatingToolbarResetScale, Icon: "⤢" })
-        } else {
-            MenuItems.Push({ Text: "显示工具栏", Action: ToggleFloatingToolbarFromMenu, Icon: "☰" })
-        }
+    searchVisible := false
+    try searchVisible := SCWV_IsVisible()
+    catch {
+        searchVisible := false
     }
+    try TrayMenu_Log("custom_popup_state mode=" . mode . " ft_vis=" . (ftVis ? "1" : "0") . " bub_vis=" . (bubVis ? "1" : "0") . " search_active=" . (IsSearchCenterActive() ? "1" : "0") . " search_visible=" . (searchVisible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " create_inflight=" . (g_SCWV_CreateInFlight ? "1" : "0"))
+    catch {
+    }
+    TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis)
+
     sceneItems := TrayMenu_BuildItemsFromSceneMenu("tray_menu")
+    try TrayMenu_Log("custom_popup_scene_items count=" . sceneItems.Length . " mode=" . mode)
+    catch {
+    }
     if (sceneItems.Length > 0) {
-        for it in sceneItems
-            MenuItems.Push(it)
-    } else {
-        MenuItems.Push({ Text: "搜索中心", Action: ((*) => TrayMenu_RunSceneCmd("tray_show_search")), Icon: "●" })
-        MenuItems.Push({ Text: "剪贴板", Action: ((*) => TrayMenu_RunSceneCmd("tray_show_clipboard")), Icon: "▤" })
-        MenuItems.Push({ Text: "截图", Action: ((*) => TrayMenu_RunSceneCmd("tray_show_screenshot")), Icon: "📷" })
-        MenuItems.Push({ Text: GetText("open_config_menu"), Action: ((*) => ShowConfigGUI_Safe()), Icon: "⚙" })
-        if (mode != "tray") {
-            MenuItems.Push({ Text: "关闭工具栏", Action: ((*) => TrayMenu_RunSceneCmd("tray_hide_toolbar")), Icon: "◼" })
+        if (mode = "hole") {
+            try TrayMenu_Log("scene_items_skipped_hole count=" . sceneItems.Length)
+        } else {
+            try TrayMenu_Log("scene_items_appended count=" . sceneItems.Length)
+            for it in sceneItems
+                MenuItems.Push(it)
         }
-        MenuItems.Push({ Text: "重启脚本", Action: ((*) => TrayMenu_RunSceneCmd("tray_reload_script")), Icon: "↻" })
-        MenuItems.Push({ Text: GetText("exit_menu"), Action: ((*) => TrayMenu_RunSceneCmd("tray_exit_app")), Icon: "✕" })
     }
 
     MenuHeight := MenuItems.Length * MenuItemHeight + Padding * 2
@@ -961,5 +1043,6 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
         }
     } catch {
     }
+    try TrayMenu_Log("custom_popup_build_done items=" . MenuItems.Length . " elapsed_ms=" . (A_TickCount - trayBuildStart))
     ShowDarkStylePopupMenuAt(MenuItems, posX, posY)
 }

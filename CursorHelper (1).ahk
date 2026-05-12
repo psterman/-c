@@ -2995,7 +2995,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
                 NativeDropBridge_TryOpenSearchCenterFromSelection(NativeDropSeedText)
         } catch {
         }
-        NativeDropBridge_ResetSession("drag_end", NativeDropHideDelayMs)
+        NativeDropBridge_ResetSessionAsync("drag_end", NativeDropHideDelayMs)
         return
     }
 
@@ -3021,7 +3021,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
         } catch {
         }
         try NativeDropBridge_ApplyDropAction(evt, kind)
-        NativeDropBridge_ResetSession("drop", 300)
+        NativeDropBridge_ResetSessionAsync("drop", 300)
         return
     }
 
@@ -3199,7 +3199,7 @@ NativeDropBridge_DragSessionTick(*) {
                 ok := NativeDropBridge_TryOpenSearchCenterFromSelection(NativeDropSeedText)
                 try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'release_fallback', dispatch: '" . (ok ? "search_opened" : "search_failed") . "' })")
             }
-            NativeDropBridge_ResetSession("release_fallback", 300)
+            NativeDropBridge_ResetSessionAsync("release_fallback", 300)
             return
         }
     } catch {
@@ -3223,7 +3223,7 @@ NativeDropBridge_Watchdog(*) {
     if ((idleMs > 2200) || (sinceStartMs > 450 && !physDown && !logDown)) {
         try NativeDropDiag_Log("route watchdog action=force_reset phys=" . (physDown ? "1" : "0") . " log=" . (logDown ? "1" : "0") . " idle_ms=" . idleMs)
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'watchdog', dispatch: 'force_reset', active: 0, overHole: 0, wasOverHole: 0, payload: '-' })")
-        NativeDropBridge_ResetSession("watchdog", 120)
+        NativeDropBridge_ResetSessionAsync("watchdog", 120)
         return
     }
 }
@@ -3273,6 +3273,7 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300) {
     global NativeDropSessionActive, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
     global NativeDropLastTickMouseX, NativeDropLastTickMouseY
     global NativeDropSessionPayload, NativeDropLastEventTick, NativeDropLastStartTick, NativeDropRearmUntil
+    try NativeDropDiag_Log("reset_session_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
     NativeDropSessionActive := false
     NativeDropSessionPayload := "text"
     NativeDropOverHole := false
@@ -3283,23 +3284,62 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300) {
     NativeDropLastStartTick := 0
     NativeDropLastEventTick := A_TickCount
     NativeDropRearmUntil := A_TickCount + 120
+    try NativeDropDiag_Log("reset_session_step state_cleared reason=" . reason)
     try SetTimer(NativeDropBridge_DragSessionTick, 0)
+    try NativeDropDiag_Log("reset_session_step drag_tick_stopped reason=" . reason)
     if (hideDelayMs < 0)
         hideDelayMs := 0
     if (hideDelayMs = 0) {
-        try GDHO_HideFrontend()
-        try GDHO_HideOverlay()
+        try NativeDropDiag_Log("reset_session_step hide_frontend_queued reason=" . reason)
+        SetTimer((*) => NativeDropBridge_DeferredHideFrontendAndOverlay(reason), -1)
     } else {
+        try NativeDropDiag_Log("reset_session_step delayed_hide_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
         try SetTimer(NativeDropBridge_DelayedHide, -Abs(Integer(hideDelayMs)))
+        try NativeDropDiag_Log("reset_session_step delayed_hide_done reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
     }
     ; Ensure overlay window returns to transparent hit-test state after forced cleanup.
+    try NativeDropDiag_Log("reset_session_step clickthrough_begin reason=" . reason)
     try GDHO_SetClickThrough(true)
+    try NativeDropDiag_Log("reset_session_step clickthrough_done reason=" . reason)
     ; Keep bridge alive only in hole mode.
-    if IsHoleRuntimeEnabledByActivationMode()
+    if IsHoleRuntimeEnabledByActivationMode() {
+        try NativeDropDiag_Log("reset_session_step start_bridge_begin reason=" . reason)
         try NativeDropBridge_Start()
+        try NativeDropDiag_Log("reset_session_step start_bridge_done reason=" . reason)
+    }
+    try NativeDropDiag_Log("reset_session_step js_begin reason=" . reason)
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'reset', dispatch: '" . reason . "', active: 0, overHole: 0, wasOverHole: 0, payload: '-' })")
+    try NativeDropDiag_Log("reset_session_step js_done reason=" . reason)
     if (reason != "")
         try NativeDropDiag_Log("route reset_session reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
+}
+
+NativeDropBridge_DeferredHideFrontendAndOverlay(reason := "") {
+    try NativeDropDiag_Log("reset_session_step hide_frontend_async_begin reason=" . reason)
+    try GDHO_HideFrontend()
+    catch as err {
+        try NativeDropDiag_Log("reset_session_step hide_frontend_async_error reason=" . reason . " msg=" . err.Message)
+    }
+    try NativeDropDiag_Log("reset_session_step hide_frontend_async_done reason=" . reason)
+    try NativeDropDiag_Log("reset_session_step hide_overlay_async_begin reason=" . reason)
+    try GDHO_HideOverlay()
+    catch as err {
+        try NativeDropDiag_Log("reset_session_step hide_overlay_async_error reason=" . reason . " msg=" . err.Message)
+    }
+    try NativeDropDiag_Log("reset_session_step hide_overlay_async_done reason=" . reason)
+}
+
+NativeDropBridge_ResetSessionAsync(reason := "", hideDelayMs := 300) {
+    SetTimer((*) => NativeDropBridge_ResetSessionAsyncRun(reason, hideDelayMs), -1)
+}
+
+NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300) {
+    try NativeDropDiag_Log("reset_session_async_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
+    try NativeDropBridge_ResetSession(reason, hideDelayMs)
+    catch as err {
+        try NativeDropDiag_Log("reset_session_async_error reason=" . reason . " msg=" . err.Message)
+    }
+    try NativeDropDiag_Log("reset_session_async_done reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
 }
 
 NativeDropDiag_Log(msg) {
@@ -5084,9 +5124,19 @@ t:: {
 
 ; F 键：激活搜索中心或执行区域内操作
 f:: {
-    global IsCountdownActive, CapsLock2
+    global IsCountdownActive, CapsLock2, g_SCWV_WaitingUiFinishedReveal, g_SCWV_CreateInFlight
     if (VirtualKeyboard_HandleKey("f"))
         return
+    try {
+        searchVisible := false
+        try searchVisible := SCWV_IsVisible()
+        catch {
+            searchVisible := false
+        }
+        try SCWV_Log("caps_f_state", "search_active=" . (IsSearchCenterActive() ? "1" : "0") . " search_visible=" . (searchVisible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " create_inflight=" . (g_SCWV_CreateInFlight ? "1" : "0") . " countdown=" . (IsCountdownActive ? "1" : "0") . " caps=" . (GetCapsLockState() ? "1" : "0"))
+        catch {
+        }
+    }
     if (IsSearchCenterActive() && SearchCenter_HandleCapsChordKey("f")) {
         VK_NoteLastChFromCapsLockKey("f")
         return

@@ -132,20 +132,31 @@ FTB_UnifiedContextMenuDedupeSlotKey(cmdId) {
 }
 
 ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
-    global g_Commands
+    global g_Commands, AppearanceActivationMode, g_SCWV_WaitingUiFinishedReveal
 
     MenuItemHeight := 35
     Padding := 10
     MenuItems := []
     useFloatingSceneMenu := false
     seenMenuSlots := Map()
+    mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+    searchBusy := false
+    try searchBusy := (IsSearchCenterActive() || SCWV_IsVisible() || g_SCWV_WaitingUiFinishedReveal)
+    catch {
+        searchBusy := false
+    }
+    try OutputDebug("[FTBCTX] show menu mode=" . mode . " search_busy=" . (searchBusy ? "1" : "0") . " anchor=" . Integer(anchorX) . "," . Integer(anchorY))
+    catch {
+    }
 
     try {
         if (IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map) {
             cmdList := g_Commands["CommandList"]
-            if (g_Commands.Has("SceneMenus") && g_Commands["SceneMenus"] is Map) {
-                sm := g_Commands["SceneMenus"]
-                if (sm.Has("floating_bar") && sm["floating_bar"] is Array) {
+            sceneMenus := Map()
+            if (g_Commands.Has("SceneMenus") && g_Commands["SceneMenus"] is Map)
+                sceneMenus := g_Commands["SceneMenus"]
+            if (sceneMenus.Has("floating_bar") && sceneMenus["floating_bar"] is Array) {
+                if (!searchBusy && mode != "hole") {
                     useFloatingSceneMenu := true
                     vm := Map()
                     if g_Commands.Has("SceneMenuVisibility") && g_Commands["SceneMenuVisibility"] is Map {
@@ -153,7 +164,7 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
                         if visAll.Has("floating_bar") && visAll["floating_bar"] is Map
                             vm := visAll["floating_bar"]
                     }
-                    for cid in sm["floating_bar"] {
+                    for cid in sceneMenus["floating_bar"] {
                         c := Trim(String(cid))
                         if (c = "" || !cmdList.Has(c))
                             continue
@@ -168,6 +179,10 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
                         if (nm = "")
                             nm := c
                         MenuItems.Push({ Text: nm, Icon: "▸", Action: VK_MakeToolbarContextMenuAction(c) })
+                    }
+                } else {
+                    try OutputDebug("[FTBCTX] skip floating_bar scene menu mode=" . mode . " search_busy=" . (searchBusy ? "1" : "0") . " count=" . sceneMenus["floating_bar"].Length)
+                    catch {
                     }
                 }
             }
@@ -199,6 +214,10 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
 
     if (MenuItems.Length = 0)
         MenuItems.Push({ Text: "（右键菜单暂无命令）", Icon: "·", Action: (*) => 0 })
+
+    try OutputDebug("[FTBCTX] menu items=" . MenuItems.Length . " floating_scene=" . (useFloatingSceneMenu ? "1" : "0"))
+    catch {
+    }
 
     n := MenuItems.Length
     MenuHeight := n * MenuItemHeight + Padding * 2
@@ -307,6 +326,9 @@ SearchCenter_HandleCapsChordKey(ch) {
             . " SCWV_Ready=" . wr)
     try SCWV_Log("caps_chord", "key=" . k . " active=" . (IsSearchCenterActive() ? "1" : "0") . " gcls=" . (GetCapsLockState() ? "1" : "0") . " ready=" . wr)
     if !IsSearchCenterActive() {
+        try SCWV_Log("caps_chord_skip", "key=" . k . " reason=not_active")
+        catch {
+        }
         if dbg
             OutputDebug("SC_CapsChord abort: !IsSearchCenterActive key=" . k)
         return false
@@ -314,12 +336,18 @@ SearchCenter_HandleCapsChordKey(ch) {
 
     cmdId := VK_SearchCenterResolveCapsChordCmd(k)
     if (cmdId = "") {
+        try SCWV_Log("caps_chord_skip", "key=" . k . " reason=resolve_empty")
+        catch {
+        }
         if dbg
             OutputDebug("SC_CapsChord abort: resolve empty key=" . k)
         return false
     }
     if dbg
         OutputDebug("SC_CapsChord run cmdId=" . cmdId)
+    try SCWV_Log("caps_chord_cmd", "key=" . k . " cmd=" . cmdId)
+    catch {
+    }
 
     ; 与 CapsLock+F/G 等一致：必须标记组合键已消费并恢复按下前的逻辑大写状态，
     ; 否则 CapsLock 松手时仍走「单击切换大小写」，表现为只亮/灭大写灯而忽略 sc_* 语义。

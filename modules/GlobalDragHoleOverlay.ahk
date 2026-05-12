@@ -363,7 +363,7 @@ GDHO_OnWebMessage(sender, args) {
     }
     if (typ = "hole_close") {
         try NativeDropDiag_Log("route kind=hole_close action=reset")
-        NativeDropBridge_ResetSession("hole_close", 0)
+        NativeDropBridge_ResetSessionAsync("hole_close", 0)
         return
     }
     if (typ != "hole_drop")

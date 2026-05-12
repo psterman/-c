@@ -6,6 +6,8 @@ global g_SCWV_WV2 := 0
 global g_SCWV_Ready := false
 global g_SCWV_UI_Ready := false
 global g_SCWV_WaitingUiFinishedReveal := false
+global g_SCWV_WV2_CreateRetry := 0
+global g_SCWV_CreateInFlight := false
 global g_SCWV_Visible := false
 global g_SCWV_LastShown := 0  ; SCWV_Show 鍚庡闄愭湡锛岄伩鍏嶇偣鍑绘偓娴潯澶辩劍绔嬪埢 Hide 涓庝簩娆＄偣鍑绘姠璺?
 global g_SCWV_ShowWaitStartTick := 0
@@ -105,6 +107,8 @@ SCWV_ResetHostState() {
     g_SCWV_Ready := false
     g_SCWV_UI_Ready := false
     g_SCWV_WaitingUiFinishedReveal := false
+    g_SCWV_WV2_CreateRetry := 0
+    g_SCWV_CreateInFlight := false
     g_SCWV_Visible := false
     g_SCWV_FocusPending := false
     g_SCWV_PendingJsonQueue := []
@@ -164,13 +168,19 @@ _SCWV_IsDarkCtxMenuOpen() {
     }
 }
 
-SCWV_Init() {
-    global g_SCWV_Gui
+SCWV_Init(reason := "") {
+    global g_SCWV_Gui, g_SCWV_CreateInFlight
+
+    try SCWV_Log("init_begin", "reason=" . reason . " gui=" . (g_SCWV_Gui ? "1" : "0") . " alive=" . (SCWV_HostAlive() ? "1" : "0") . " inflight=" . (g_SCWV_CreateInFlight ? "1" : "0"))
 
     if g_SCWV_Gui && SCWV_HostAlive()
         return
     if g_SCWV_Gui && !SCWV_HostAlive()
         SCWV_ResetHostState()
+    if g_SCWV_CreateInFlight {
+        try SCWV_Log("init_skip_create_inflight", "reason=" . reason)
+        return
+    }
 
     ; 浣跨敤 Windows 鍘熺敓鏍囬鏍忎笌绯荤粺绐楀彛鎸夐挳锛堟渶灏忓寲/鏈€澶у寲/鍏抽棴锛?
     g_SCWV_Gui := Gui("+Resize +MinSize760x540 +MinimizeBox +MaximizeBox -DPIScale +Owner", "搜索中心")
@@ -180,6 +190,8 @@ SCWV_Init() {
     g_SCWV_Gui.OnEvent("Close", SCWV_OnGuiClose)
     g_SCWV_Gui.OnEvent("Size", SCWV_OnGuiResize)
     g_SCWV_Gui.Show("w1180 h760 Hide")
+    g_SCWV_CreateInFlight := true
+    try SCWV_Log("init_create_begin", "reason=" . reason . " hwnd=" . g_SCWV_Gui.Hwnd)
 
     WebView2.create(g_SCWV_Gui.Hwnd, SCWV_OnCreated, WebView2_EnsureSharedEnvBlocking())
 
@@ -205,7 +217,35 @@ _SCWV_MapAllDriveVirtualHosts(wv2) {
 
 SCWV_OnCreated(ctrl) {
     global g_SCWV_Ctrl, g_SCWV_WV2, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_NavFallbackTried
+    global g_SCWV_WV2_CreateRetry, g_SCWV_CreateInFlight
 
+    if !IsObject(ctrl) || !ctrl.HasProp("CoreWebView2") {
+        errText := ""
+        try errText := String(ctrl)
+        catch {
+            errText := ""
+        }
+        try SCWV_Log("webview_create_failed", "ctrl_type=" . Type(ctrl) . " retry=" . g_SCWV_WV2_CreateRetry . " value=" . errText)
+        catch {
+        }
+        g_SCWV_CreateInFlight := false
+        SCWV_ForceCloseHost("webview_create_failed")
+        if (g_SCWV_WV2_CreateRetry < 2) {
+            g_SCWV_WV2_CreateRetry += 1
+            try SCWV_Log("webview_create_retry", "attempts=" . g_SCWV_WV2_CreateRetry)
+            catch {
+            }
+            SetTimer(SCWV_Show, -180)
+        } else {
+            try SCWV_Log("webview_create_retry_exhausted", "attempts=" . g_SCWV_WV2_CreateRetry)
+            catch {
+            }
+        }
+        return
+    }
+
+    g_SCWV_WV2_CreateRetry := 0
+    g_SCWV_CreateInFlight := false
     g_SCWV_Ctrl := ctrl
     g_SCWV_WV2 := ctrl.CoreWebView2
     g_SCWV_Ready := false
@@ -351,11 +391,11 @@ SCWV_RecoverAfterShowWaitTimeout(*) {
     global g_SCWV_Gui, g_SCWV_ShowRecoveryAttempts
     try SCWV_Log("show_wait_recover", "attempts=" . g_SCWV_ShowRecoveryAttempts)
     if !SCWV_HostAlive()
-        SCWV_Init()
+        SCWV_Init("show_wait_recover")
     if !g_SCWV_Gui
         return
     ; 让新的宿主重新走一遍可见化流程，若仍未就绪，后续再由超时兜底。
-    SCWV_Show()
+    SCWV_Show("show_wait_recover")
 }
 
 SCWV_ForceCloseHost(reason := "") {
@@ -363,6 +403,7 @@ SCWV_ForceCloseHost(reason := "") {
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts, GuiID_SearchCenter
     global g_SCWV_Ready, g_SCWV_UI_Ready
     global g_SCWV_SearchTimer, g_SCWV_PendingJsonQueue, g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason
+    global g_SCWV_CreateInFlight
 
     try SCWV_Log("force_close_begin", "reason=" . reason . " visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
 
@@ -379,6 +420,7 @@ SCWV_ForceCloseHost(reason := "") {
         g_SCWV_SearchTimer := 0
     }
     g_SCWV_WaitingUiFinishedReveal := false
+    g_SCWV_CreateInFlight := false
     g_SCWV_ShowWaitStartTick := 0
     g_SCWV_Visible := false
     g_SCWV_PendingJsonQueue := []
@@ -1319,25 +1361,25 @@ _SCWV_ResultItemGet(Item, Prop, Default := "") {
     }
 }
 
-SCWV_Show() {
+SCWV_Show(reason := "") {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
     global SearchCenterEngineMode
-    try SCWV_Log("show_begin", "ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
+    try SCWV_Log("show_begin", "reason=" . reason . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
 
     if !SCWV_HostAlive() {
         SCWV_ResetHostState()
-        SCWV_Init()
+        SCWV_Init(reason)
     }
     if !g_SCWV_Gui
-        SCWV_Init()
+        SCWV_Init(reason)
 
     try FloatingToolbarCollapseTransientUi()
 
     GuiID_SearchCenter := g_SCWV_Gui
 
     if g_SCWV_Visible {
-        try SCWV_Log("show_already_visible", "")
+        try SCWV_Log("show_already_visible", "reason=" . reason)
         try WinActivate("ahk_id " . g_SCWV_Gui.Hwnd)
         try WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl)
         SetTimer(_SCWV_DeferredMoveFocus100, -100)
@@ -1363,7 +1405,7 @@ SCWV_Show() {
         SCWV_SetHostTopMost(g_SCWV_HostTopMost)
     } catch {
         ; 鍏滃簳锛氱獥鍙ｅ璞″瓨鍦ㄤ絾鍙ユ焺澶辨晥鏃堕噸寤轰竴娆★紝閬垮厤 鈥淕ui has no window鈥?        SCWV_ResetHostState()
-        SCWV_Init()
+        SCWV_Init(reason)
         if !g_SCWV_Gui
             return
         readyToReveal := (g_SCWV_Ready && g_SCWV_UI_Ready)
@@ -1381,10 +1423,10 @@ SCWV_Show() {
         SCWV_SetHostTopMost(g_SCWV_HostTopMost)
     }
     if readyToReveal {
-        try SCWV_Log("show_finish_reveal_immediate", "")
+        try SCWV_Log("show_finish_reveal_immediate", "reason=" . reason)
         SCWV_FinishReveal()
     } else {
-        try SCWV_Log("show_wait_ui_ready", "")
+        try SCWV_Log("show_wait_ui_ready", "reason=" . reason)
         g_SCWV_WaitingUiFinishedReveal := true
         g_SCWV_ShowWaitStartTick := A_TickCount
         g_SCWV_Visible := false
@@ -1480,11 +1522,11 @@ SCWV_Hide(PersistSelection := true) {
     ; Drag-hole reentry safety: when exiting SearchCenter, force-reset native drag session
     ; so next text drag can re-trigger the hole from a clean initial state.
     try SCWV_Log("hide_step", "reset_bridge_begin")
-    try NativeDropBridge_ResetSession("search_center_exit", 0)
+    try NativeDropBridge_ResetSessionAsync("search_center_exit", 0)
     catch as err {
         try SCWV_Log("hide_error", "step=reset_bridge msg=" . err.Message)
     }
-    try SCWV_Log("hide_step", "reset_bridge_done")
+    try SCWV_Log("hide_step", "reset_bridge_queued")
 
     try SCWV_Log("hide_step", "pagedock_leave_begin")
     try FloatingToolbar_PageDockLeave("search")
@@ -3809,16 +3851,19 @@ SearchCenter_RunQueryWithKeyword(keyword) {
     }
 
     try {
-        SCWV_Init()
-        SCWV_Show()
+        try SCWV_Log("run_query_begin", "kw_len=" . StrLen(keyword) . " kw_prefix=" . SubStr(keyword, 1, 24))
+        catch {
+        }
+        SCWV_Init("search_keyword")
+        SCWV_Show("search_keyword")
         _SCWV_ExecuteGoSearchHttp(0, SearchCenterWebKeyword, "", 0)
         SCWV_PushState("state")
         SCWV_RequestFocusInput()
     } catch {
         ; 鍏滃簳閲嶈瘯锛氳閬挎棫鍙ユ焺澶辨晥瀵艰嚧鐨勫伓鍙戞墦寮€澶辫触
         SCWV_ResetHostState()
-        SCWV_Init()
-        SCWV_Show()
+        SCWV_Init("search_keyword_retry")
+        SCWV_Show("search_keyword_retry")
         _SCWV_ExecuteGoSearchHttp(0, SearchCenterWebKeyword, "", 0)
         SCWV_PushState("state")
         SCWV_RequestFocusInput()

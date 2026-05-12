@@ -1606,8 +1606,8 @@ FloatingToolbar_ActivateSearchCenter() {
         if (selectedText != "")
             SearchCenter_RunQueryWithKeyword(selectedText)
         else if (usedWebView) {
-            SCWV_Init()
-            SCWV_Show()
+            SCWV_Init("ftb_activate")
+            SCWV_Show("ftb_activate")
         } else
             ShowSearchCenter()
         opened := true
@@ -1636,13 +1636,13 @@ FloatingToolbar_ActivateSearchCenter() {
     ; 涓嶈鍏ュ彛鏉ヨ嚜鍥炬爣杩樻槸鍙抽敭鑿滃崟锛屾渶鍚庨兘鍐嶅己鍒朵竴娆″彲瑙佷笌杈撳叆鐒︾偣銆?
     if (usedWebView) {
         try {
-            if (!SCWV_IsVisible())
-                SCWV_Show()
+        if (!SCWV_IsVisible())
+                SCWV_Show("ftb_show_visible_check")
         } catch {
             try {
                 SCWV_ResetHostState()
-                SCWV_Init()
-                SCWV_Show()
+                SCWV_Init("ftb_show_recover")
+                SCWV_Show("ftb_show_recover")
             } catch {
             }
         }
@@ -2226,11 +2226,17 @@ FloatingToolbar_ParseWebMessage(args) {
 }
 
 FloatingToolbar_ShowContextMenuDeferred(anchorX := 0, anchorY := 0) {
+    global AppearanceActivationMode, g_SCWV_WaitingUiFinishedReveal
     if (anchorX <= 0 || anchorY <= 0) {
         CoordMode("Mouse", "Screen")
         MouseGetPos(&anchorX, &anchorY)
     }
-    FTB_Debug("show menu @" . anchorX . "," . anchorY)
+    try {
+        mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+        FTB_Debug("show menu @" . anchorX . "," . anchorY . " mode=" . mode . " search_active=" . (IsSearchCenterActive() ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
+    } catch {
+        FTB_Debug("show menu @" . anchorX . "," . anchorY)
+    }
     try ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY)
     catch as err {
         FTB_Debug("show menu failed: " . err.Message, "err")

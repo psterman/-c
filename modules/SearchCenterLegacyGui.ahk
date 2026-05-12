@@ -2836,7 +2836,7 @@ SearchCenterCloseHandler(*) {
     global GuiID_SearchCenter, SearchCenterSelectedEngines, SearchCenterSelectedEnginesByCategory, SearchCenterCurrentCategory
     try SCWV_Log("legacy_close_handler_begin", "gui=" . (GuiID_SearchCenter ? "1" : "0"))
     ; Keep drag-hole state machine re-entrant across close/reopen cycles.
-    try NativeDropBridge_ResetSession("search_center_exit", 0)
+    try NativeDropBridge_ResetSessionAsync("search_center_exit", 0)
     catch {
     }
     ; 【关键修复】在关闭窗口前保存当前分类的选择状态
