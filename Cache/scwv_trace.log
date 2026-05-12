@@ -632,3 +632,109 @@
 [2026-05-12 23:20:38][run_query_begin] kw_len=250 kw_prefix=C:\Users\Administrator\D
 [2026-05-12 23:20:38][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
 [2026-05-12 23:20:38][show_begin] reason=search_keyword ready=0 ui_ready=0
+[2026-05-12 23:21:06][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-12 23:21:06][init_create_begin] reason= hwnd=17372902
+[2026-05-12 23:21:10][show_begin] reason= ready=0 ui_ready=0
+[2026-05-12 23:21:10][show_wait_ui_ready] reason=
+[2026-05-12 23:21:27][show_begin] reason= ready=1 ui_ready=1
+[2026-05-12 23:21:27][show_finish_reveal_immediate] reason=
+[2026-05-12 23:21:29][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-12 23:21:29][hide_step] reset_bridge_begin
+[2026-05-12 23:21:29][hide_step] reset_bridge_queued
+[2026-05-12 23:21:29][hide_step] pagedock_leave_begin
+[2026-05-12 23:21:29][hide_step] pagedock_leave_done
+[2026-05-12 23:21:29][hide_step] save_selection_begin
+[2026-05-12 23:21:29][hide_step] save_selection_done
+[2026-05-12 23:21:29][hide_step] gui_hide_begin
+[2026-05-12 23:21:29][wm_activate_queue] reason=wm_deactivate
+[2026-05-12 23:21:29][hide_step] unregister_activate_chain
+[2026-05-12 23:21:29][hide_step] webview_hidden_notified
+[2026-05-12 23:21:29][hide_done] visible=0
+[2026-05-12 23:21:29][hide_skip] reason=not_visible_or_host
+[2026-05-12 23:22:41][ftb_activate_search_center_begin] used_webview=1
+[2026-05-12 23:22:41][run_query_begin] kw_len=354 kw_prefix=我主要修了这几类黑洞系统原始 bug：
+
+托
+[2026-05-12 23:22:41][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-12 23:22:41][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-12 23:22:41][show_finish_reveal_immediate] reason=search_keyword
+[2026-05-12 23:22:42][ftb_activate_search_center_mid] selected_len=354 opened=1 vis=1
+[2026-05-12 23:22:42][ftb_activate_search_center_end] opened=1 vis=1
+[2026-05-12 23:22:42][run_query_begin] kw_len=354 kw_prefix=我主要修了这几类黑洞系统原始 bug：
+
+托
+[2026-05-12 23:22:42][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-12 23:22:42][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-12 23:22:42][show_already_visible] reason=search_keyword
+[2026-05-12 23:22:42][ftb_ensure_focus] hwnd=17372902 vis=1
+[2026-05-12 23:22:43][ftb_ensure_focus] hwnd=17372902 vis=1
+[2026-05-12 23:22:44][hide_begin] persist=1 visible=1 waiting=0 deact_block=33289171
+[2026-05-12 23:22:44][hide_step] reset_bridge_begin
+[2026-05-12 23:22:44][hide_step] reset_bridge_queued
+[2026-05-12 23:22:44][hide_step] pagedock_leave_begin
+[2026-05-12 23:22:44][hide_step] pagedock_leave_done
+[2026-05-12 23:22:44][hide_step] save_selection_begin
+[2026-05-12 23:22:44][hide_step] save_selection_done
+[2026-05-12 23:22:44][hide_step] gui_hide_begin
+[2026-05-12 23:22:44][wm_activate_queue] reason=wm_deactivate
+[2026-05-12 23:22:44][hide_step] unregister_activate_chain
+[2026-05-12 23:22:44][hide_step] webview_hidden_notified
+[2026-05-12 23:22:44][hide_done] visible=0
+[2026-05-12 23:22:44][hide_skip] reason=not_visible_or_host
+[2026-05-12 23:22:47][ftb_activate_search_center_begin] used_webview=1
+[2026-05-12 23:22:47][run_query_begin] kw_len=331 kw_prefix=托盘菜单入口不稳定：把黑洞态下的“打开搜索中心 
+[2026-05-12 23:22:47][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-12 23:22:47][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-12 23:22:47][show_finish_reveal_immediate] reason=search_keyword
+[2026-05-12 23:22:48][ftb_activate_search_center_mid] selected_len=331 opened=1 vis=1
+[2026-05-12 23:22:48][ftb_activate_search_center_end] opened=1 vis=1
+[2026-05-12 23:22:48][run_query_begin] kw_len=331 kw_prefix=托盘菜单入口不稳定：把黑洞态下的“打开搜索中心 
+[2026-05-12 23:22:48][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-12 23:22:48][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-12 23:22:48][show_already_visible] reason=search_keyword
+[2026-05-12 23:22:48][ftb_ensure_focus] hwnd=17372902 vis=1
+[2026-05-12 23:22:49][ftb_ensure_focus] hwnd=17372902 vis=1
+[2026-05-12 23:22:49][hide_begin] persist=1 visible=1 waiting=0 deact_block=33294984
+[2026-05-12 23:22:49][hide_step] reset_bridge_begin
+[2026-05-12 23:22:49][hide_step] reset_bridge_queued
+[2026-05-12 23:22:49][hide_step] pagedock_leave_begin
+[2026-05-12 23:22:49][hide_step] pagedock_leave_done
+[2026-05-12 23:22:49][hide_step] save_selection_begin
+[2026-05-12 23:22:49][hide_step] save_selection_done
+[2026-05-12 23:22:49][hide_step] gui_hide_begin
+[2026-05-12 23:22:49][wm_activate_queue] reason=wm_deactivate
+[2026-05-12 23:22:49][hide_step] unregister_activate_chain
+[2026-05-12 23:22:49][hide_step] webview_hidden_notified
+[2026-05-12 23:22:49][hide_done] visible=0
+[2026-05-12 23:22:49][ftb_verify_search_center_miss] tb_visible=0 mode=hole
+[2026-05-12 23:22:49][hide_skip] reason=not_visible_or_host
+[2026-05-12 23:24:23][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-12 23:24:23][init_create_begin] reason= hwnd=45552612
+[2026-05-12 23:24:24][show_begin] reason= ready=0 ui_ready=0
+[2026-05-12 23:24:24][show_wait_ui_ready] reason=
+[2026-05-12 23:24:28][nav_completed] ok=1 visible=1
+[2026-05-12 23:24:33][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-12 23:24:33][hide_step] reset_bridge_begin
+[2026-05-12 23:24:33][hide_step] reset_bridge_queued
+[2026-05-12 23:24:33][hide_step] pagedock_leave_begin
+[2026-05-12 23:24:33][hide_step] pagedock_leave_done
+[2026-05-12 23:24:33][hide_step] save_selection_begin
+[2026-05-12 23:24:33][hide_step] save_selection_done
+[2026-05-12 23:24:33][hide_step] gui_hide_begin
+[2026-05-12 23:24:33][wm_activate_queue] reason=wm_deactivate
+[2026-05-12 23:24:33][hide_step] unregister_activate_chain
+[2026-05-12 23:24:33][hide_step] webview_hidden_notified
+[2026-05-12 23:24:33][hide_done] visible=0
+[2026-05-12 23:24:33][hide_skip] reason=not_visible_or_host
+[2026-05-12 23:26:23][show_begin] reason= ready=1 ui_ready=1
+[2026-05-12 23:26:25][hide_begin] persist=1 visible=0 waiting=0 deact_block=0
+[2026-05-12 23:26:25][hide_step] reset_bridge_begin
+[2026-05-12 23:26:25][hide_step] reset_bridge_queued
+[2026-05-12 23:26:25][hide_step] pagedock_leave_begin
+[2026-05-12 23:26:25][hide_step] pagedock_leave_done
+[2026-05-12 23:26:25][hide_step] save_selection_begin
+[2026-05-12 23:26:25][hide_step] save_selection_done
+[2026-05-12 23:26:25][hide_step] gui_hide_begin
+[2026-05-12 23:26:25][hide_step] unregister_activate_chain
+[2026-05-12 23:26:25][hide_step] webview_hidden_notified
+[2026-05-12 23:26:25][hide_done] visible=0

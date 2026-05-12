@@ -8101,3 +8101,375 @@
 [2026-05-12 23:20:32] invoke_click idx=7 text=重启脚本
 [2026-05-12 23:20:32] invoke_ok idx=7 text=重启脚本
 [2026-05-12 23:20:32] run_scene_cmd cmd=tray_reload_script mode=hole search_active=0
+[2026-05-12 23:21:02] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:02] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:02] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:02] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:02] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:03] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:03] tray_msg lParam=516 msg=1028
+[2026-05-12 23:21:03] tray_msg lParam=517 msg=1028
+[2026-05-12 23:21:03] tray_popup_state mode=hole search_active=0 search_visible=0 waiting=0 caps=0
+[2026-05-12 23:21:03] custom_popup_begin lParam=517
+[2026-05-12 23:21:03] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 waiting=0 create_inflight=0
+[2026-05-12 23:21:03] custom_popup_scene_items count=8 mode=hole
+[2026-05-12 23:21:03] scene_items_skipped_hole count=8
+[2026-05-12 23:21:03] custom_popup_build_done items=8 elapsed_ms=0
+[2026-05-12 23:21:03] dark_popup_show_begin items=8 pos=1642,757
+[2026-05-12 23:21:03] dark_popup_show_done elapsed_ms=188 hwnd=41555166
+[2026-05-12 23:21:03] custom_popup_end lParam=517 elapsed_ms=188
+[2026-05-12 23:21:04] invoke_click idx=7 text=重启脚本
+[2026-05-12 23:21:04] invoke_ok idx=7 text=重启脚本
+[2026-05-12 23:21:04] run_scene_cmd cmd=tray_reload_script mode=hole search_active=0
+[2026-05-12 23:21:05] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:05] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:05] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:05] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:05] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:05] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:05] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:05] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:05] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:06] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:06] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:06] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:06] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:06] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:06] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:06] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:06] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:06] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:07] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:07] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:07] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:07] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:07] tray_msg lParam=516 msg=1028
+[2026-05-12 23:21:07] tray_msg lParam=517 msg=1028
+[2026-05-12 23:21:07] tray_popup_state mode=hole search_active=0 search_visible=0 waiting=0 caps=0
+[2026-05-12 23:21:07] custom_popup_begin lParam=517
+[2026-05-12 23:21:07] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 waiting=0 create_inflight=1
+[2026-05-12 23:21:07] custom_popup_scene_items count=8 mode=hole
+[2026-05-12 23:21:07] scene_items_skipped_hole count=8
+[2026-05-12 23:21:07] custom_popup_build_done items=8 elapsed_ms=0
+[2026-05-12 23:21:07] dark_popup_show_begin items=8 pos=1644,749
+[2026-05-12 23:21:07] dark_popup_show_done elapsed_ms=172 hwnd=21239570
+[2026-05-12 23:21:07] custom_popup_end lParam=517 elapsed_ms=188
+[2026-05-12 23:21:10] invoke_click idx=2 text=搜索中心
+[2026-05-12 23:21:10] invoke_ok idx=2 text=搜索中心
+[2026-05-12 23:21:10] show_search_from_menu_begin
+[2026-05-12 23:21:10] show_search_from_menu_end
+[2026-05-12 23:21:10] queued_ui_open_begin reason=search
+[2026-05-12 23:21:10] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-12 23:21:10] prepare_ui_from_hole_step clickthrough_begin
+[2026-05-12 23:21:10] prepare_ui_from_hole_step clickthrough_done
+[2026-05-12 23:21:10] prepare_ui_from_hole_step reset_session_begin
+[2026-05-12 23:21:10] prepare_ui_from_hole_step reset_session_queued
+[2026-05-12 23:21:10] prepare_ui_from_hole_done
+[2026-05-12 23:21:10] queued_ui_open_after_prep reason=search
+[2026-05-12 23:21:10] open_search_from_menu
+[2026-05-12 23:21:10] queued_ui_open_done reason=search
+[2026-05-12 23:21:26] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:26] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:26] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:26] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:26] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:26] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:26] tray_msg lParam=516 msg=1028
+[2026-05-12 23:21:26] tray_msg lParam=517 msg=1028
+[2026-05-12 23:21:26] tray_popup_state mode=hole search_active=0 search_visible=0 waiting=0 caps=0
+[2026-05-12 23:21:26] custom_popup_begin lParam=517
+[2026-05-12 23:21:26] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 waiting=0 create_inflight=0
+[2026-05-12 23:21:26] custom_popup_scene_items count=8 mode=hole
+[2026-05-12 23:21:26] scene_items_skipped_hole count=8
+[2026-05-12 23:21:26] custom_popup_build_done items=8 elapsed_ms=0
+[2026-05-12 23:21:26] dark_popup_show_begin items=8 pos=1641,739
+[2026-05-12 23:21:26] dark_popup_show_done elapsed_ms=141 hwnd=45946160
+[2026-05-12 23:21:26] custom_popup_end lParam=517 elapsed_ms=141
+[2026-05-12 23:21:26] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:27] invoke_click idx=2 text=搜索中心
+[2026-05-12 23:21:27] invoke_ok idx=2 text=搜索中心
+[2026-05-12 23:21:27] show_search_from_menu_begin
+[2026-05-12 23:21:27] show_search_from_menu_end
+[2026-05-12 23:21:27] queued_ui_open_begin reason=search
+[2026-05-12 23:21:27] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-12 23:21:27] prepare_ui_from_hole_step clickthrough_begin
+[2026-05-12 23:21:27] prepare_ui_from_hole_step clickthrough_done
+[2026-05-12 23:21:27] prepare_ui_from_hole_step reset_session_begin
+[2026-05-12 23:21:27] prepare_ui_from_hole_step reset_session_queued
+[2026-05-12 23:21:27] prepare_ui_from_hole_done
+[2026-05-12 23:21:27] queued_ui_open_after_prep reason=search
+[2026-05-12 23:21:27] open_search_from_menu
+[2026-05-12 23:21:27] queued_ui_open_done reason=search
+[2026-05-12 23:21:30] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:30] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:30] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:30] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:30] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:30] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:30] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:30] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:30] tray_msg lParam=516 msg=1028
+[2026-05-12 23:21:30] tray_msg lParam=517 msg=1028
+[2026-05-12 23:21:30] tray_popup_state mode=hole search_active=0 search_visible=0 waiting=0 caps=0
+[2026-05-12 23:21:30] custom_popup_begin lParam=517
+[2026-05-12 23:21:30] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 waiting=0 create_inflight=0
+[2026-05-12 23:21:30] custom_popup_scene_items count=8 mode=hole
+[2026-05-12 23:21:30] scene_items_skipped_hole count=8
+[2026-05-12 23:21:30] custom_popup_build_done items=8 elapsed_ms=0
+[2026-05-12 23:21:30] dark_popup_show_begin items=8 pos=1636,743
+[2026-05-12 23:21:30] dark_popup_show_done elapsed_ms=141 hwnd=49353290
+[2026-05-12 23:21:30] custom_popup_end lParam=517 elapsed_ms=141
+[2026-05-12 23:21:32] invoke_click idx=3 text=剪贴板
+[2026-05-12 23:21:32] invoke_ok idx=3 text=剪贴板
+[2026-05-12 23:21:32] show_clipboard_from_menu_begin
+[2026-05-12 23:21:32] show_clipboard_from_menu_end
+[2026-05-12 23:21:32] queued_ui_open_begin reason=clipboard
+[2026-05-12 23:21:32] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-12 23:21:32] prepare_ui_from_hole_step clickthrough_begin
+[2026-05-12 23:21:32] prepare_ui_from_hole_step clickthrough_done
+[2026-05-12 23:21:32] prepare_ui_from_hole_step reset_session_begin
+[2026-05-12 23:21:32] prepare_ui_from_hole_step reset_session_queued
+[2026-05-12 23:21:32] prepare_ui_from_hole_done
+[2026-05-12 23:21:32] queued_ui_open_after_prep reason=clipboard
+[2026-05-12 23:21:32] open_clipboard_from_menu
+[2026-05-12 23:21:32] queued_ui_open_done reason=clipboard
+[2026-05-12 23:21:35] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:35] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:35] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:35] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:35] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:35] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:35] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:35] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:35] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:35] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:35] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:35] tray_msg lParam=516 msg=1028
+[2026-05-12 23:21:35] tray_msg lParam=517 msg=1028
+[2026-05-12 23:21:35] tray_popup_state mode=hole search_active=0 search_visible=0 waiting=0 caps=0
+[2026-05-12 23:21:35] custom_popup_begin lParam=517
+[2026-05-12 23:21:35] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 waiting=0 create_inflight=0
+[2026-05-12 23:21:35] custom_popup_scene_items count=8 mode=hole
+[2026-05-12 23:21:35] scene_items_skipped_hole count=8
+[2026-05-12 23:21:35] custom_popup_build_done items=8 elapsed_ms=0
+[2026-05-12 23:21:35] dark_popup_show_begin items=8 pos=1643,743
+[2026-05-12 23:21:35] dark_popup_show_done elapsed_ms=141 hwnd=3545044
+[2026-05-12 23:21:35] custom_popup_end lParam=517 elapsed_ms=141
+[2026-05-12 23:21:37] invoke_click idx=5 text=打开配置面板
+[2026-05-12 23:21:37] invoke_ok idx=5 text=打开配置面板
+[2026-05-12 23:21:37] show_config_from_menu_begin
+[2026-05-12 23:21:37] show_config_from_menu_end
+[2026-05-12 23:21:37] queued_ui_open_begin reason=config
+[2026-05-12 23:21:37] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-12 23:21:37] prepare_ui_from_hole_step clickthrough_begin
+[2026-05-12 23:21:37] prepare_ui_from_hole_step clickthrough_done
+[2026-05-12 23:21:37] prepare_ui_from_hole_step reset_session_begin
+[2026-05-12 23:21:37] prepare_ui_from_hole_step reset_session_queued
+[2026-05-12 23:21:37] prepare_ui_from_hole_done
+[2026-05-12 23:21:37] queued_ui_open_after_prep reason=config
+[2026-05-12 23:21:37] open_config_from_menu
+[2026-05-12 23:21:37] queued_ui_open_done reason=config
+[2026-05-12 23:21:44] tray_msg lParam=1026 msg=1028
+[2026-05-12 23:21:45] tray_msg lParam=1028 msg=1028
+[2026-05-12 23:21:45] tray_msg lParam=1026 msg=1028
+[2026-05-12 23:21:52] tray_msg lParam=1028 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=512 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=516 msg=1028
+[2026-05-12 23:21:53] tray_msg lParam=517 msg=1028
+[2026-05-12 23:21:53] tray_popup_state mode=hole search_active=0 search_visible=0 waiting=0 caps=0
+[2026-05-12 23:21:53] custom_popup_begin lParam=517
+[2026-05-12 23:21:53] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 waiting=0 create_inflight=0
+[2026-05-12 23:21:53] custom_popup_scene_items count=8 mode=hole
+[2026-05-12 23:21:53] scene_items_skipped_hole count=8
+[2026-05-12 23:21:53] custom_popup_build_done items=8 elapsed_ms=16
+[2026-05-12 23:21:53] dark_popup_show_begin items=8 pos=1636,755
+[2026-05-12 23:21:54] dark_popup_show_done elapsed_ms=156 hwnd=14227350
+[2026-05-12 23:21:54] custom_popup_end lParam=517 elapsed_ms=172
+[2026-05-12 23:21:56] invoke_click idx=3 text=剪贴板
+[2026-05-12 23:21:56] invoke_ok idx=3 text=剪贴板
+[2026-05-12 23:21:56] show_clipboard_from_menu_begin
+[2026-05-12 23:21:56] show_clipboard_from_menu_end
+[2026-05-12 23:21:56] queued_ui_open_begin reason=clipboard
+[2026-05-12 23:21:56] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-12 23:21:56] prepare_ui_from_hole_step clickthrough_begin
+[2026-05-12 23:21:56] prepare_ui_from_hole_step clickthrough_done
+[2026-05-12 23:21:56] prepare_ui_from_hole_step reset_session_begin
+[2026-05-12 23:21:56] prepare_ui_from_hole_step reset_session_queued
+[2026-05-12 23:21:56] prepare_ui_from_hole_done
+[2026-05-12 23:21:56] queued_ui_open_after_prep reason=clipboard
+[2026-05-12 23:21:56] open_clipboard_from_menu
+[2026-05-12 23:21:56] queued_ui_open_done reason=clipboard
+[2026-05-12 23:24:18] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:18] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:19] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:19] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:19] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:19] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:19] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:19] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:19] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:19] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:19] tray_msg lParam=516 msg=1028
+[2026-05-12 23:24:19] tray_msg lParam=517 msg=1028
+[2026-05-12 23:24:19] tray_popup_state mode=hole search_active=0 search_visible=0 waiting=0 caps=0
+[2026-05-12 23:24:19] custom_popup_begin lParam=517
+[2026-05-12 23:24:19] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 waiting=0 create_inflight=0
+[2026-05-12 23:24:19] custom_popup_scene_items count=8 mode=hole
+[2026-05-12 23:24:19] scene_items_skipped_hole count=8
+[2026-05-12 23:24:19] custom_popup_build_done items=8 elapsed_ms=0
+[2026-05-12 23:24:19] dark_popup_show_begin items=8 pos=1631,760
+[2026-05-12 23:24:19] dark_popup_show_done elapsed_ms=141 hwnd=43717604
+[2026-05-12 23:24:19] custom_popup_end lParam=517 elapsed_ms=141
+[2026-05-12 23:24:20] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] invoke_click idx=7 text=重启脚本
+[2026-05-12 23:24:21] invoke_ok idx=7 text=重启脚本
+[2026-05-12 23:24:21] run_scene_cmd cmd=tray_reload_script mode=hole search_active=0
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=516 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=517 msg=1028
+[2026-05-12 23:24:23] tray_popup_state mode=hole search_active=0 search_visible=0 waiting=0 caps=0
+[2026-05-12 23:24:23] custom_popup_begin lParam=517
+[2026-05-12 23:24:23] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 waiting=0 create_inflight=0
+[2026-05-12 23:24:23] custom_popup_scene_items count=0 mode=hole
+[2026-05-12 23:24:23] custom_popup_build_done items=8 elapsed_ms=0
+[2026-05-12 23:24:23] dark_popup_show_begin items=8 pos=1640,749
+[2026-05-12 23:24:23] dark_popup_show_done elapsed_ms=188 hwnd=28317026
+[2026-05-12 23:24:23] custom_popup_end lParam=517 elapsed_ms=203
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:23] tray_msg lParam=512 msg=1028
+[2026-05-12 23:24:24] invoke_click idx=2 text=搜索中心
+[2026-05-12 23:24:24] invoke_ok idx=2 text=搜索中心
+[2026-05-12 23:24:24] show_search_from_menu_begin
+[2026-05-12 23:24:24] show_search_from_menu_end
+[2026-05-12 23:24:24] queued_ui_open_begin reason=search
+[2026-05-12 23:24:24] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-12 23:24:24] prepare_ui_from_hole_step clickthrough_begin
+[2026-05-12 23:24:24] prepare_ui_from_hole_step clickthrough_done
+[2026-05-12 23:24:24] prepare_ui_from_hole_step reset_session_begin
+[2026-05-12 23:24:24] prepare_ui_from_hole_step reset_session_queued
+[2026-05-12 23:24:24] prepare_ui_from_hole_done
+[2026-05-12 23:24:24] queued_ui_open_after_prep reason=search
+[2026-05-12 23:24:24] open_search_from_menu
+[2026-05-12 23:24:24] queued_ui_open_done reason=search
+[2026-05-12 23:26:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:21] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:22] tray_msg lParam=516 msg=1028
+[2026-05-12 23:26:22] tray_msg lParam=517 msg=1028
+[2026-05-12 23:26:22] tray_popup_state mode=hole search_active=0 search_visible=0 waiting=0 caps=0
+[2026-05-12 23:26:22] custom_popup_begin lParam=517
+[2026-05-12 23:26:22] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 waiting=0 create_inflight=0
+[2026-05-12 23:26:22] custom_popup_scene_items count=8 mode=hole
+[2026-05-12 23:26:22] scene_items_skipped_hole count=8
+[2026-05-12 23:26:22] custom_popup_build_done items=8 elapsed_ms=0
+[2026-05-12 23:26:22] dark_popup_show_begin items=8 pos=1636,742
+[2026-05-12 23:26:22] dark_popup_show_done elapsed_ms=140 hwnd=44372754
+[2026-05-12 23:26:22] custom_popup_end lParam=517 elapsed_ms=140
+[2026-05-12 23:26:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:22] tray_msg lParam=512 msg=1028
+[2026-05-12 23:26:23] invoke_click idx=2 text=搜索中心
+[2026-05-12 23:26:23] invoke_ok idx=2 text=搜索中心
+[2026-05-12 23:26:23] show_search_from_menu_begin
+[2026-05-12 23:26:23] show_search_from_menu_end
+[2026-05-12 23:26:23] queued_ui_open_begin reason=search
+[2026-05-12 23:26:23] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-12 23:26:23] prepare_ui_from_hole_step clickthrough_begin
+[2026-05-12 23:26:23] prepare_ui_from_hole_step clickthrough_done
+[2026-05-12 23:26:23] prepare_ui_from_hole_step reset_session_begin
+[2026-05-12 23:26:23] prepare_ui_from_hole_step reset_session_queued
+[2026-05-12 23:26:23] prepare_ui_from_hole_done
+[2026-05-12 23:26:23] queued_ui_open_after_prep reason=search
+[2026-05-12 23:26:23] open_search_from_menu
