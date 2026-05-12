@@ -2423,6 +2423,12 @@ ApplyActivationRuntimeDeferred(mode, token) {
         return
     m := NormalizeAppearanceActivationMode(mode)
     NMER_Log("activation", "runtime_deferred", "mode=" . m . " token=" . token)
+    t0 := A_TickCount
+    ; 切换激活模式时统一清理残留的 CapsLock 物理/逻辑状态，避免重启或黑洞切换后
+    ; 继续沿用上一次会话里的“按下中”状态，导致单键被误判成 CapsLock+组合键。
+    try NormalizeCapsLockRuntimeForUiOpen()
+    catch {
+    }
     if (m = "hole") {
         try SetHoleRuntimeEnabled(true)
         try GDHO_Start()
@@ -2438,6 +2444,7 @@ ApplyActivationRuntimeDeferred(mode, token) {
         try NativeDropBridge_Start()
         catch {
         }
+        NMER_Log("activation", "runtime_hole_ready", "elapsed_ms=" . (A_TickCount - t0))
         return
     }
     try SetHoleRuntimeEnabled(false)
@@ -2453,6 +2460,7 @@ ApplyActivationRuntimeDeferred(mode, token) {
     try GDHO_Stop()
     catch {
     }
+    NMER_Log("activation", "runtime_non_hole_ready", "mode=" . m . " elapsed_ms=" . (A_TickCount - t0))
 }
 
 ; 根据「外观 · 激活方式」显示悬浮栏 / 黑洞模式 / 或仅托盘
@@ -2733,6 +2741,7 @@ NativeDropBridge_Start() {
     global NativeDropBridgeUseCopyData, NativeDropBridgeCopyDataReady, NativeDropBridgeCopyDataTitle
     global NativeDropBridgeStartTick, NativeDropBridgeCopyDataLastTick
     global g_HoleRuntimeEnabled
+    t0 := A_TickCount
     if !g_HoleRuntimeEnabled
         return
     if !EnableNativeDropBridge
@@ -2768,6 +2777,7 @@ NativeDropBridge_Start() {
         NativeDropBridgeCopyDataLastTick := 0
         SetTimer(NativeDropBridge_Poll, 250)
         SetTimer(NativeDropBridge_Watchdog, 180)
+        NMER_Log("activation", "native_drop_bridge_started", "pid=" . pid . " elapsed_ms=" . (A_TickCount - t0))
     } catch {
     }
 }
@@ -2796,6 +2806,7 @@ NativeDropBridge_GetDropRect() {
 
 NativeDropBridge_Stop() {
     global NativeDropBridgePID, NativeDropBridgeCopyDataLastTick, NativeDropBridgeStartTick
+    t0 := A_TickCount
     try SetTimer(NativeDropBridge_Poll, 0)
     try SetTimer(NativeDropBridge_Watchdog, 0)
     if (NativeDropBridgePID && ProcessExist(NativeDropBridgePID)) {
@@ -2804,6 +2815,7 @@ NativeDropBridge_Stop() {
     NativeDropBridgePID := 0
     NativeDropBridgeCopyDataLastTick := 0
     NativeDropBridgeStartTick := 0
+    NMER_Log("activation", "native_drop_bridge_stopped", "elapsed_ms=" . (A_TickCount - t0))
 }
 
 NativeDropBridge_InitCopyDataReceiver() {
@@ -3322,6 +3334,9 @@ InitConfig() ; 启动初始化
 try GDHO_LoadSettingsFromIni()
 ; 启动时统一归一化 CapsLock 状态，避免继承系统残留 On 状态导致后续组合键流程反复恢复为大写
 SetCapsLockState("Off")
+try NormalizeCapsLockRuntimeForUiOpen()
+catch {
+}
 PromptQuickPad_ReloadCapsLockBSettings()
 ; 初始化剪贴板数据库（在配置初始化后）
 InitClipboardDB()

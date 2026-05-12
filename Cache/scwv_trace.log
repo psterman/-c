@@ -6,3 +6,92 @@
 [2026-05-12 08:50:39][show_finish_reveal_immediate] 
 [2026-05-12 08:50:44][hide_begin] persist=1
 [2026-05-12 08:50:44][hide_done] 
+[2026-05-12 16:18:53][show_begin] ready=1 ui_ready=1
+[2026-05-12 16:18:53][show_finish_reveal_immediate] 
+[2026-05-12 16:18:54][hide_begin] persist=1
+[2026-05-12 16:19:29][hide_begin] persist=1
+[2026-05-12 19:41:39][show_begin] ready=1 ui_ready=1
+[2026-05-12 19:41:39][show_finish_reveal_immediate] 
+[2026-05-12 19:41:42][hide_begin] persist=1
+[2026-05-12 19:42:56][show_begin] ready=1 ui_ready=1
+[2026-05-12 19:42:56][show_finish_reveal_immediate] 
+[2026-05-12 19:42:56][nav_completed] ok=1 visible=1
+[2026-05-12 19:42:59][hide_begin] persist=1
+[2026-05-12 19:43:00][hide_begin] persist=1
+[2026-05-12 19:44:43][show_begin] ready=1 ui_ready=1
+[2026-05-12 19:44:43][show_finish_reveal_immediate] 
+[2026-05-12 19:44:44][nav_completed] ok=1 visible=1
+[2026-05-12 19:44:49][hide_begin] persist=1
+[2026-05-12 19:44:49][hide_done] 
+[2026-05-12 19:44:50][show_begin] ready=1 ui_ready=1
+[2026-05-12 19:44:50][show_finish_reveal_immediate] 
+[2026-05-12 19:44:52][hide_begin] persist=1
+[2026-05-12 19:44:52][hide_done] 
+[2026-05-12 19:46:29][show_begin] ready=1 ui_ready=1
+[2026-05-12 19:46:29][show_finish_reveal_immediate] 
+[2026-05-12 19:46:29][hide_begin] persist=1
+[2026-05-12 19:46:29][hide_done] 
+[2026-05-12 19:56:13][show_begin] ready=1 ui_ready=1
+[2026-05-12 19:56:14][show_finish_reveal_immediate] 
+[2026-05-12 19:56:14][show_begin] ready=1 ui_ready=1
+[2026-05-12 19:56:14][show_already_visible] 
+[2026-05-12 19:56:16][hide_begin] persist=1
+[2026-05-12 19:56:16][hide_done] 
+[2026-05-12 19:56:32][show_begin] ready=1 ui_ready=1
+[2026-05-12 19:56:32][show_finish_reveal_immediate] 
+[2026-05-12 19:56:34][show_begin] ready=1 ui_ready=1
+[2026-05-12 19:56:34][show_already_visible] 
+[2026-05-12 19:56:36][hide_begin] persist=1
+[2026-05-12 19:56:36][hide_done] 
+[2026-05-12 19:57:54][show_begin] ready=0 ui_ready=0
+[2026-05-12 19:57:54][show_wait_ui_ready] 
+[2026-05-12 19:58:26][hide_begin] persist=1
+[2026-05-12 20:00:22][show_begin] ready=0 ui_ready=0
+[2026-05-12 20:00:22][show_wait_ui_ready] 
+[2026-05-12 20:00:23][show_begin] ready=0 ui_ready=0
+[2026-05-12 20:00:23][show_wait_ui_ready] 
+[2026-05-12 20:00:24][show_begin] ready=0 ui_ready=0
+[2026-05-12 20:00:24][show_wait_ui_ready] 
+[2026-05-12 20:11:39][show_begin] ready=0 ui_ready=0
+[2026-05-12 20:11:39][show_wait_ui_ready] 
+[2026-05-12 20:11:43][show_begin] ready=0 ui_ready=0
+[2026-05-12 20:11:43][show_already_visible] 
+[2026-05-12 20:11:45][hide_begin] persist=1
+[2026-05-12 20:11:45][hide_done] 
+[2026-05-12 20:13:59][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:13:59][show_finish_reveal_immediate] 
+[2026-05-12 20:14:02][hide_begin] persist=1
+[2026-05-12 20:14:02][hide_done] 
+[2026-05-12 20:14:10][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:14:10][show_finish_reveal_immediate] 
+[2026-05-12 20:14:11][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:14:11][show_already_visible] 
+[2026-05-12 20:14:12][hide_begin] persist=1
+[2026-05-12 20:14:12][hide_done] 
+[2026-05-12 20:14:23][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:14:24][show_finish_reveal_immediate] 
+[2026-05-12 20:14:24][hide_begin] persist=1
+[2026-05-12 20:14:26][hide_begin] persist=1
+[2026-05-12 20:26:29][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:26:30][show_finish_reveal_immediate] 
+[2026-05-12 20:26:32][nav_completed] ok=1 visible=1
+[2026-05-12 20:26:34][hide_begin] persist=1
+[2026-05-12 20:26:34][hide_done] 
+[2026-05-12 20:26:37][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:26:37][show_finish_reveal_immediate] 
+[2026-05-12 20:26:39][hide_begin] persist=1
+[2026-05-12 20:26:39][hide_done] 
+[2026-05-12 20:27:04][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:27:05][show_finish_reveal_immediate] 
+[2026-05-12 20:27:07][hide_begin] persist=1
+[2026-05-12 20:27:08][hide_done] 
+[2026-05-12 20:29:01][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:29:01][show_finish_reveal_immediate] 
+[2026-05-12 20:29:03][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:29:03][show_already_visible] 
+[2026-05-12 20:29:20][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:29:20][show_already_visible] 
+[2026-05-12 20:29:20][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:29:20][show_already_visible] 
+[2026-05-12 20:29:27][hide_begin] persist=1
+[2026-05-12 20:29:27][hide_done] 

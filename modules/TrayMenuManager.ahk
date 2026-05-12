@@ -284,6 +284,9 @@ TrayMenu_InvokeActionDeferred(actionObj, actionText := "") {
 TrayMenu_PrepareUiOpenFromHoleMode() {
     try TrayMenu_Log("prepare_ui_from_hole")
     ; In hole mode, proactively neutralize overlay hit-test / drag session interference.
+    try NormalizeCapsLockRuntimeForUiOpen()
+    catch {
+    }
     try GDHO_SetClickThrough(true)
     catch {
     }
@@ -390,7 +393,12 @@ CloseTrayMenuIfClickedOutside(*) {
 
 ToggleFloatingToolbarFromMenu(*) {
     global TrayMenuGUI
-    ToggleFloatingToolbar()
+    amRaw := IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar"
+    if (NormalizeAppearanceActivationMode(amRaw) = "hole") {
+        try FloatingToolbar_SetActivationMode("toolbar")
+    } else {
+        ToggleFloatingToolbar()
+    }
     if (TrayMenuGUI != 0) {
         try {
             TrayMenuGUI.Destroy()
@@ -447,6 +455,8 @@ ShowScreenshotFromMenu(*) {
         }
     }
 
+    TrayMenu_PrepareUiOpenFromHoleMode()
+    try TrayMenu_Log("open_screenshot_from_menu")
     ExecuteScreenshotWithMenu()
 }
 

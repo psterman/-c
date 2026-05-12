@@ -1258,12 +1258,17 @@ SelectionSense_IsKnownGuiRoot(hwnd) {
     if !hwnd
         return false
     global FloatingToolbarGUI, g_SCWV_Gui, g_CP_Gui, g_VK_Gui, g_PQP_Gui, g_SelSense_MenuGui
-    global AIListPanelGUI, GuiID_ConfigGUI, GuiID_SearchCenter
+    global AIListPanelGUI, TrayMenuGUI, GuiID_ConfigGUI, GuiID_SearchCenter
+    global GuiID_ClipboardManager, GuiID_ClipboardHistory, GuiID_ClipboardFTS5, GuiID_ClipboardMonitor, GuiID_ClipboardDebug
+    global GuiID_ClipboardSmartMenu, GuiID_ScreenshotEditor, GuiID_ScreenshotToolbar
+    global GuiID_VoiceInputPanel, GuiID_VoiceInput, PromptQuickPadCtxMenuGUI, g_CP_PeekGui, g_CloudPlayerGui
     if (IsSet(FloatingToolbarGUI) && FloatingToolbarGUI && SelectionSense_GuiHwndMatches(FloatingToolbarGUI, hwnd))
         return true
     if (IsSet(g_SCWV_Gui) && g_SCWV_Gui && SelectionSense_GuiHwndMatches(g_SCWV_Gui, hwnd))
         return true
     if (IsSet(g_CP_Gui) && g_CP_Gui && SelectionSense_GuiHwndMatches(g_CP_Gui, hwnd))
+        return true
+    if (IsSet(g_CP_PeekGui) && g_CP_PeekGui && SelectionSense_GuiHwndMatches(g_CP_PeekGui, hwnd))
         return true
     if (IsSet(g_VK_Gui) && g_VK_Gui && SelectionSense_GuiHwndMatches(g_VK_Gui, hwnd))
         return true
@@ -1273,9 +1278,35 @@ SelectionSense_IsKnownGuiRoot(hwnd) {
         return true
     if (IsSet(AIListPanelGUI) && AIListPanelGUI && SelectionSense_GuiHwndMatches(AIListPanelGUI, hwnd))
         return true
+    if (IsSet(TrayMenuGUI) && TrayMenuGUI && SelectionSense_GuiHwndMatches(TrayMenuGUI, hwnd))
+        return true
     if (IsSet(GuiID_ConfigGUI) && GuiID_ConfigGUI && SelectionSense_GuiHwndMatches(GuiID_ConfigGUI, hwnd))
         return true
     if (IsSet(GuiID_SearchCenter) && GuiID_SearchCenter && SelectionSense_GuiHwndMatches(GuiID_SearchCenter, hwnd))
+        return true
+    if (IsSet(GuiID_ClipboardManager) && GuiID_ClipboardManager && SelectionSense_GuiHwndMatches(GuiID_ClipboardManager, hwnd))
+        return true
+    if (IsSet(GuiID_ClipboardHistory) && GuiID_ClipboardHistory && SelectionSense_GuiHwndMatches(GuiID_ClipboardHistory, hwnd))
+        return true
+    if (IsSet(GuiID_ClipboardFTS5) && GuiID_ClipboardFTS5 && SelectionSense_GuiHwndMatches(GuiID_ClipboardFTS5, hwnd))
+        return true
+    if (IsSet(GuiID_ClipboardMonitor) && GuiID_ClipboardMonitor && SelectionSense_GuiHwndMatches(GuiID_ClipboardMonitor, hwnd))
+        return true
+    if (IsSet(GuiID_ClipboardDebug) && GuiID_ClipboardDebug && SelectionSense_GuiHwndMatches(GuiID_ClipboardDebug, hwnd))
+        return true
+    if (IsSet(GuiID_ClipboardSmartMenu) && GuiID_ClipboardSmartMenu && SelectionSense_GuiHwndMatches(GuiID_ClipboardSmartMenu, hwnd))
+        return true
+    if (IsSet(GuiID_ScreenshotEditor) && GuiID_ScreenshotEditor && SelectionSense_GuiHwndMatches(GuiID_ScreenshotEditor, hwnd))
+        return true
+    if (IsSet(GuiID_ScreenshotToolbar) && GuiID_ScreenshotToolbar && SelectionSense_GuiHwndMatches(GuiID_ScreenshotToolbar, hwnd))
+        return true
+    if (IsSet(GuiID_VoiceInputPanel) && GuiID_VoiceInputPanel && SelectionSense_GuiHwndMatches(GuiID_VoiceInputPanel, hwnd))
+        return true
+    if (IsSet(GuiID_VoiceInput) && GuiID_VoiceInput && SelectionSense_GuiHwndMatches(GuiID_VoiceInput, hwnd))
+        return true
+    if (IsSet(PromptQuickPadCtxMenuGUI) && PromptQuickPadCtxMenuGUI && SelectionSense_GuiHwndMatches(PromptQuickPadCtxMenuGUI, hwnd))
+        return true
+    if (IsSet(g_CloudPlayerGui) && g_CloudPlayerGui && SelectionSense_GuiHwndMatches(g_CloudPlayerGui, hwnd))
         return true
     return false
 }

@@ -283,6 +283,7 @@ GDHO_OnWebViewCreated(ctrl) {
     if !IsObject(ctrl) || !ctrl.HasProp("CoreWebView2")
         return
 
+    try NativeDropDiag_Log("gdho webview_created begin")
     GDHO_WV2_CTRL := ctrl
     GDHO_WV2 := ctrl.CoreWebView2
     GDHO_READY := false
@@ -422,6 +423,7 @@ GDHO_OnNavigationCompleted(sender, args) {
     ok := false
     try ok := args.IsSuccess
     GDHO_READY := !!ok
+    try NativeDropDiag_Log("gdho navigation_completed ok=" . (GDHO_READY ? "1" : "0"))
     if GDHO_READY {
         GDHO_NAV_FAIL_COUNT := 0
         ; Re-apply transparency after document init to avoid occasional white/black flash.
@@ -861,6 +863,7 @@ GDHO_HideFrontend() {
 
 GDHO_Start() {
     global GDHO_MONITORING, GDHO_PRIORITY_APPLIED
+    try NativeDropDiag_Log("gdho start begin")
     GDHO_Init()
     if GDHO_MONITORING
         return
@@ -871,15 +874,18 @@ GDHO_Start() {
     }
     GDHO_MONITORING := true
     SetTimer(GDHO_PollDrag, GDHO_POLL_MS)
+    try NativeDropDiag_Log("gdho start armed poll_ms=" . Integer(GDHO_POLL_MS))
 }
 
 GDHO_Stop() {
     global GDHO_MONITORING, GDHO_ACTIVE
+    try NativeDropDiag_Log("gdho stop begin")
     GDHO_MONITORING := false
     GDHO_ACTIVE := false
     SetTimer(GDHO_PollDrag, 0)
     GDHO_HideFrontend()
     GDHO_HideOverlay()
+    try NativeDropDiag_Log("gdho stop done")
 }
 
 GDHO_IsDragSessionActive() {
@@ -1218,6 +1224,8 @@ GDHO_PollDrag(*) {
         GDHO_LAST_Y := my
     } finally {
         pollElapsed := A_TickCount - pollStartTick
+        if (pollElapsed >= 18)
+            try NativeDropDiag_Log("gdho poll slow ms=" . pollElapsed . " active=" . (GDHO_ACTIVE ? "1" : "0") . " ldown=" . (lDown ? "1" : "0"))
         GDHO_DIAG_LOG("PollDrag", pollElapsed)
         GDHO_POLL_BUSY := false
     }
@@ -1264,28 +1272,87 @@ GDHO_IsStrictDragQualified(srcClass, cursorStreak, currentCursorName, startCurso
     return (startCursor != 0 && startCursor != GDHO_GetCursorHandle())
 }
 
+GDHO_IsOwnGuiRefHwnd(guiRef, hwnd, rootHwnd) {
+    if !hwnd
+        return false
+    if !IsSet(guiRef) || !guiRef
+        return false
+    try {
+        if IsObject(guiRef) {
+            if !guiRef.HasProp("Hwnd")
+                return false
+            oh := guiRef.Hwnd
+            return (oh && (hwnd = oh || rootHwnd = oh))
+        }
+        gh := Integer(guiRef)
+        return (gh && (hwnd = gh || rootHwnd = gh))
+    } catch {
+        return false
+    }
+}
+
 GDHO_IsOwnWindowHwnd(hwnd) {
     global GDHO_GUI, FloatingToolbarGUI, FloatingBubbleGUI
+    global TrayMenuGUI, g_SCWV_Gui, g_CP_Gui, g_VK_Gui, g_PQP_Gui, g_SelSense_MenuGui
+    global AIListPanelGUI, GuiID_ConfigGUI, GuiID_SearchCenter
+    global GuiID_ClipboardManager, GuiID_ClipboardHistory, GuiID_ClipboardFTS5, GuiID_ClipboardMonitor, GuiID_ClipboardDebug
+    global GuiID_ClipboardSmartMenu, GuiID_ScreenshotEditor, GuiID_ScreenshotToolbar
+    global GuiID_VoiceInputPanel, GuiID_VoiceInput, PromptQuickPadCtxMenuGUI, g_CP_PeekGui, g_CloudPlayerGui
+
     if !hwnd
         return false
     rootHwnd := GDHO_GetRootHwnd(hwnd)
-    try {
-        if (GDHO_GUI && (hwnd = GDHO_GUI.Hwnd || rootHwnd = GDHO_GUI.Hwnd))
-            return true
-    } catch {
-    }
-    try {
-        if (FloatingToolbarGUI && IsObject(FloatingToolbarGUI)
-            && (hwnd = FloatingToolbarGUI.Hwnd || rootHwnd = FloatingToolbarGUI.Hwnd))
-            return true
-    } catch {
-    }
-    try {
-        if (FloatingBubbleGUI && IsObject(FloatingBubbleGUI)
-            && (hwnd = FloatingBubbleGUI.Hwnd || rootHwnd = FloatingBubbleGUI.Hwnd))
-            return true
-    } catch {
-    }
+
+    if (IsSet(GDHO_GUI) && GDHO_IsOwnGuiRefHwnd(GDHO_GUI, hwnd, rootHwnd))
+        return true
+    if (IsSet(FloatingToolbarGUI) && GDHO_IsOwnGuiRefHwnd(FloatingToolbarGUI, hwnd, rootHwnd))
+        return true
+    if (IsSet(FloatingBubbleGUI) && GDHO_IsOwnGuiRefHwnd(FloatingBubbleGUI, hwnd, rootHwnd))
+        return true
+    if (IsSet(TrayMenuGUI) && GDHO_IsOwnGuiRefHwnd(TrayMenuGUI, hwnd, rootHwnd))
+        return true
+    if (IsSet(g_SCWV_Gui) && GDHO_IsOwnGuiRefHwnd(g_SCWV_Gui, hwnd, rootHwnd))
+        return true
+    if (IsSet(g_CP_Gui) && GDHO_IsOwnGuiRefHwnd(g_CP_Gui, hwnd, rootHwnd))
+        return true
+    if (IsSet(g_CP_PeekGui) && GDHO_IsOwnGuiRefHwnd(g_CP_PeekGui, hwnd, rootHwnd))
+        return true
+    if (IsSet(g_VK_Gui) && GDHO_IsOwnGuiRefHwnd(g_VK_Gui, hwnd, rootHwnd))
+        return true
+    if (IsSet(g_PQP_Gui) && GDHO_IsOwnGuiRefHwnd(g_PQP_Gui, hwnd, rootHwnd))
+        return true
+    if (IsSet(g_SelSense_MenuGui) && GDHO_IsOwnGuiRefHwnd(g_SelSense_MenuGui, hwnd, rootHwnd))
+        return true
+    if (IsSet(AIListPanelGUI) && GDHO_IsOwnGuiRefHwnd(AIListPanelGUI, hwnd, rootHwnd))
+        return true
+    if (IsSet(GuiID_ConfigGUI) && GDHO_IsOwnGuiRefHwnd(GuiID_ConfigGUI, hwnd, rootHwnd))
+        return true
+    if (IsSet(GuiID_SearchCenter) && GDHO_IsOwnGuiRefHwnd(GuiID_SearchCenter, hwnd, rootHwnd))
+        return true
+    if (IsSet(GuiID_ClipboardManager) && GDHO_IsOwnGuiRefHwnd(GuiID_ClipboardManager, hwnd, rootHwnd))
+        return true
+    if (IsSet(GuiID_ClipboardHistory) && GDHO_IsOwnGuiRefHwnd(GuiID_ClipboardHistory, hwnd, rootHwnd))
+        return true
+    if (IsSet(GuiID_ClipboardFTS5) && GDHO_IsOwnGuiRefHwnd(GuiID_ClipboardFTS5, hwnd, rootHwnd))
+        return true
+    if (IsSet(GuiID_ClipboardMonitor) && GDHO_IsOwnGuiRefHwnd(GuiID_ClipboardMonitor, hwnd, rootHwnd))
+        return true
+    if (IsSet(GuiID_ClipboardDebug) && GDHO_IsOwnGuiRefHwnd(GuiID_ClipboardDebug, hwnd, rootHwnd))
+        return true
+    if (IsSet(GuiID_ClipboardSmartMenu) && GDHO_IsOwnGuiRefHwnd(GuiID_ClipboardSmartMenu, hwnd, rootHwnd))
+        return true
+    if (IsSet(GuiID_ScreenshotEditor) && GDHO_IsOwnGuiRefHwnd(GuiID_ScreenshotEditor, hwnd, rootHwnd))
+        return true
+    if (IsSet(GuiID_ScreenshotToolbar) && GDHO_IsOwnGuiRefHwnd(GuiID_ScreenshotToolbar, hwnd, rootHwnd))
+        return true
+    if (IsSet(GuiID_VoiceInputPanel) && GDHO_IsOwnGuiRefHwnd(GuiID_VoiceInputPanel, hwnd, rootHwnd))
+        return true
+    if (IsSet(GuiID_VoiceInput) && GDHO_IsOwnGuiRefHwnd(GuiID_VoiceInput, hwnd, rootHwnd))
+        return true
+    if (IsSet(PromptQuickPadCtxMenuGUI) && GDHO_IsOwnGuiRefHwnd(PromptQuickPadCtxMenuGUI, hwnd, rootHwnd))
+        return true
+    if (IsSet(g_CloudPlayerGui) && GDHO_IsOwnGuiRefHwnd(g_CloudPlayerGui, hwnd, rootHwnd))
+        return true
     return false
 }
 
