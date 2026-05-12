@@ -305,6 +305,7 @@ SearchCenter_HandleCapsChordKey(ch) {
             . " ISA=" . (IsSearchCenterActive() ? "1" : "0")
             . " GCLS=" . (GetCapsLockState() ? "1" : "0")
             . " SCWV_Ready=" . wr)
+    try SCWV_Log("caps_chord", "key=" . k . " active=" . (IsSearchCenterActive() ? "1" : "0") . " gcls=" . (GetCapsLockState() ? "1" : "0") . " ready=" . wr)
     if !IsSearchCenterActive() {
         if dbg
             OutputDebug("SC_CapsChord abort: !IsSearchCenterActive key=" . k)

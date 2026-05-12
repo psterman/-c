@@ -4892,19 +4892,58 @@ OnScreenshotEditorContextMenu(Ctrl, Info := 0, *) {
 ; ===================== 面板快捷键 =====================
 ; 当 CapsLock 按下时，响应快捷键（采用 CapsLock+ 方案）
 ; 注意：在 AutoHotkey v2 中，需要使用函数来检查变量
+#HotIf IsSearchCenterActive()
+
+Esc:: {
+    global IsCountdownActive, GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
+    try NativeDropDiag_Log("route esc key=Esc path=search_center_visible")
+    if (IsCountdownActive) {
+        try NativeDropDiag_Log("route esc key=Esc path=countdown_cancel")
+        CancelCountdown()
+        return
+    }
+    try {
+        if (GDHO_VISIBLE || NativeDropSessionActive || g_SCWV_WaitingUiFinishedReveal) {
+            try NativeDropDiag_Log("route esc key=Esc path=hard_force_close")
+            SCWV_RequestHardClose("esc_black_hole")
+            return
+        }
+        if (SearchCenter_ShouldUseWebView()) {
+            try NativeDropDiag_Log("route esc key=Esc path=search_webview_close_attempt visible=" . (SCWV_IsVisible() ? "1" : "0"))
+            SCWV_Hide(true)
+            return
+        } else {
+            global GuiID_SearchCenter
+            if (GuiID_SearchCenter != 0) {
+                try NativeDropDiag_Log("route esc key=Esc path=legacy_close_attempt active=" . (GuiID_SearchCenter != 0 ? "1" : "0"))
+                SearchCenterCloseHandler()
+                return
+            }
+        }
+    } catch {
+    }
+    Send("{Esc}")
+}
+
 #HotIf GetCapsLockState()
 
 ; ESC 关闭面板
 Esc:: {
     ; 搜索中心优先：避免 WebView 激活态瞬时判定失败时，Esc 误落到全局动态热键（如关闭工具栏）
+    global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
     try {
+        if (GDHO_VISIBLE || NativeDropSessionActive || g_SCWV_WaitingUiFinishedReveal) {
+            try NativeDropDiag_Log("route esc key=Esc path=hard_force_close_caps")
+            SCWV_RequestHardClose("esc_black_hole_caps")
+            return
+        }
         if (SearchCenter_ShouldUseWebView()) {
-            if (SCWV_IsVisible()) {
-                SCWV_Hide(true)
-                return
-            }
+            try NativeDropDiag_Log("route esc key=Esc path=search_webview_close_attempt visible=" . (SCWV_IsVisible() ? "1" : "0"))
+            SCWV_Hide(true)
+            return
         } else {
             global GuiID_SearchCenter
+            try NativeDropDiag_Log("route esc key=Esc path=legacy active=" . (GuiID_SearchCenter != 0 ? "1" : "0"))
             if (GuiID_SearchCenter != 0) {
                 SearchCenterCloseHandler()
                 return
@@ -5114,16 +5153,6 @@ b:: {
 ; 【作用域】仅在 SearchCenter 窗口激活时生效
 
 #HotIf IsSearchCenterActive()
-
-; ESC 键：关闭搜索中心窗口或取消倒计时
-Esc:: {
-    global IsCountdownActive
-    if (IsCountdownActive) {
-        CancelCountdown()
-    } else {
-        SearchCenterCloseHandler()
-    }
-}
 
     ; Enter 键：根据焦点区域执行不同操作，或加速倒计时
 Enter:: {

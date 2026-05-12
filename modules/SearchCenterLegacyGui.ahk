@@ -2834,6 +2834,7 @@ OnSearchCenterSize(GuiObj, MinMax, Width, Height) {
 ; 搜索中心窗口关闭处理函数
 SearchCenterCloseHandler(*) {
     global GuiID_SearchCenter, SearchCenterSelectedEngines, SearchCenterSelectedEnginesByCategory, SearchCenterCurrentCategory
+    try SCWV_Log("legacy_close_handler_begin", "gui=" . (GuiID_SearchCenter ? "1" : "0"))
     ; Keep drag-hole state machine re-entrant across close/reopen cycles.
     try NativeDropBridge_ResetSession("search_center_exit", 0)
     catch {
@@ -2885,6 +2886,7 @@ SearchCenterCloseHandler(*) {
         GuiID_SearchCenter := 0
         SearchCenterInvalidateGuiControlRefs()
     }
+    try SCWV_Log("legacy_close_handler_done", "")
 }
 
 ; 执行搜索中心批量搜索（按Enter键时）

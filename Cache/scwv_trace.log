@@ -95,3 +95,100 @@
 [2026-05-12 20:29:20][show_already_visible] 
 [2026-05-12 20:29:27][hide_begin] persist=1
 [2026-05-12 20:29:27][hide_done] 
+[2026-05-12 20:34:46][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:34:46][show_finish_reveal_immediate] 
+[2026-05-12 20:34:48][hide_begin] persist=1
+[2026-05-12 20:35:17][show_begin] ready=0 ui_ready=0
+[2026-05-12 20:35:18][show_wait_ui_ready] 
+[2026-05-12 20:35:19][show_begin] ready=0 ui_ready=0
+[2026-05-12 20:35:19][show_wait_ui_ready] 
+[2026-05-12 20:35:20][show_begin] ready=0 ui_ready=0
+[2026-05-12 20:35:20][show_wait_ui_ready] 
+[2026-05-12 20:35:21][show_begin] ready=0 ui_ready=0
+[2026-05-12 20:35:21][show_wait_ui_ready] 
+[2026-05-12 20:35:23][nav_completed] ok=1 visible=1
+[2026-05-12 20:35:26][hide_begin] persist=1
+[2026-05-12 20:35:27][hide_begin] persist=1
+[2026-05-12 20:41:04][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:41:05][show_finish_reveal_immediate] 
+[2026-05-12 20:52:36][show_begin] ready=1 ui_ready=1
+[2026-05-12 20:52:37][show_finish_reveal_immediate] 
+[2026-05-12 20:52:54][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-12 20:52:59][caps_chord] key=a active=1 gcls=1 ready=1
+[2026-05-12 20:52:59][caps_chord] key=s active=1 gcls=1 ready=1
+[2026-05-12 20:52:59][caps_chord] key=w active=1 gcls=1 ready=1
+[2026-05-12 20:53:01][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-12 21:02:59][show_begin] ready=1 ui_ready=1
+[2026-05-12 21:03:00][show_finish_reveal_immediate] 
+[2026-05-12 21:03:03][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-12 21:03:41][show_begin] ready=1 ui_ready=1
+[2026-05-12 21:03:41][show_finish_reveal_immediate] 
+[2026-05-12 21:03:43][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-12 21:37:45][show_begin] ready=1 ui_ready=1
+[2026-05-12 21:37:45][show_finish_reveal_immediate] 
+[2026-05-12 21:37:48][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-12 21:37:48][hide_step] reset_bridge_begin
+[2026-05-12 21:37:48][hide_step] reset_bridge_done
+[2026-05-12 21:37:48][hide_step] pagedock_leave_begin
+[2026-05-12 21:37:48][hide_step] pagedock_leave_done
+[2026-05-12 21:37:48][hide_step] save_selection_begin
+[2026-05-12 21:37:48][hide_step] save_selection_done
+[2026-05-12 21:37:48][hide_step] gui_hide_begin
+[2026-05-12 21:37:48][wm_activate_queue] reason=wm_deactivate
+[2026-05-12 21:37:48][hide_step] unregister_activate_chain
+[2026-05-12 21:37:48][hide_step] webview_hidden_notified
+[2026-05-12 21:37:48][hide_done] visible=0
+[2026-05-12 21:37:48][hide_skip] reason=not_visible_or_host
+[2026-05-12 21:38:29][show_begin] ready=1 ui_ready=1
+[2026-05-12 21:38:29][show_finish_reveal_immediate] 
+[2026-05-12 21:38:30][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-12 21:38:30][hide_step] reset_bridge_begin
+[2026-05-12 21:38:30][hide_step] reset_bridge_done
+[2026-05-12 21:38:30][hide_step] pagedock_leave_begin
+[2026-05-12 21:38:30][hide_step] pagedock_leave_done
+[2026-05-12 21:38:30][hide_step] save_selection_begin
+[2026-05-12 21:38:30][hide_step] save_selection_done
+[2026-05-12 21:38:30][hide_step] gui_hide_begin
+[2026-05-12 21:38:30][wm_activate_queue] reason=wm_deactivate
+[2026-05-12 21:38:30][hide_step] unregister_activate_chain
+[2026-05-12 21:38:30][hide_step] webview_hidden_notified
+[2026-05-12 21:38:30][hide_done] visible=0
+[2026-05-12 21:38:31][hide_skip] reason=not_visible_or_host
+[2026-05-12 21:38:51][show_begin] ready=1 ui_ready=1
+[2026-05-12 21:38:51][show_finish_reveal_immediate] 
+[2026-05-12 21:38:52][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-12 21:38:52][hide_step] reset_bridge_begin
+[2026-05-12 21:38:52][hide_step] reset_bridge_done
+[2026-05-12 21:38:52][hide_step] pagedock_leave_begin
+[2026-05-12 21:38:52][hide_step] pagedock_leave_done
+[2026-05-12 21:38:52][hide_step] save_selection_begin
+[2026-05-12 21:38:52][hide_step] save_selection_done
+[2026-05-12 21:38:52][hide_step] gui_hide_begin
+[2026-05-12 21:38:52][wm_activate_queue] reason=wm_deactivate
+[2026-05-12 21:38:52][hide_step] unregister_activate_chain
+[2026-05-12 21:38:52][hide_step] webview_hidden_notified
+[2026-05-12 21:38:52][hide_done] visible=0
+[2026-05-12 21:38:52][hide_skip] reason=not_visible_or_host
+[2026-05-12 21:39:06][ftb_activate_search_center_begin] used_webview=1
+[2026-05-12 21:39:06][show_begin] ready=1 ui_ready=1
+[2026-05-12 21:39:06][show_finish_reveal_immediate] 
+[2026-05-12 21:39:07][ftb_activate_search_center_mid] selected_len=166 opened=1 vis=1
+[2026-05-12 21:39:07][ftb_activate_search_center_end] opened=1 vis=1
+[2026-05-12 21:39:07][show_begin] ready=1 ui_ready=1
+[2026-05-12 21:39:07][show_already_visible] 
+[2026-05-12 21:39:07][ftb_ensure_focus] hwnd=8392744 vis=1
+[2026-05-12 21:39:08][hide_begin] persist=1 visible=1 waiting=0 deact_block=27074046
+[2026-05-12 21:39:08][hide_step] reset_bridge_begin
+[2026-05-12 21:39:08][ftb_ensure_focus] hwnd=8392744 vis=1
+[2026-05-12 21:39:08][hide_step] reset_bridge_done
+[2026-05-12 21:39:08][hide_step] pagedock_leave_begin
+[2026-05-12 21:39:08][hide_step] pagedock_leave_done
+[2026-05-12 21:39:08][hide_step] save_selection_begin
+[2026-05-12 21:39:08][hide_step] save_selection_done
+[2026-05-12 21:39:08][hide_step] gui_hide_begin
+[2026-05-12 21:39:08][wm_activate_queue] reason=wm_deactivate
+[2026-05-12 21:39:08][hide_step] unregister_activate_chain
+[2026-05-12 21:39:08][hide_step] webview_hidden_notified
+[2026-05-12 21:39:08][hide_done] visible=0
+[2026-05-12 21:39:08][hide_skip] reason=not_visible_or_host
+[2026-05-12 21:39:08][ftb_verify_search_center_miss] tb_visible=0 mode=hole

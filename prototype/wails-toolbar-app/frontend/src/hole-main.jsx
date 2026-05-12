@@ -145,6 +145,7 @@ function HolePage() {
     setPayloadType("none");
     setHint(applyPhaseHint("none", "idle"));
     setHoleVisible(false);
+    postHostMessage({ type: "hole_close" });
   };
 
   const postHostMessage = (payload) => {
@@ -195,6 +196,9 @@ function HolePage() {
         setPayloadType(type);
         setProximity(0);
         setHint(applyPhaseHint(type, "drag"));
+        try {
+          window.requestAnimationFrame(() => postHostMessage({ type: "hole_drop_ack" }));
+        } catch (_) {}
       },
       update: ({ payload = "file", proximity: p, x, y } = {}) => {
         const type = payload === "text" ? "text" : "file";

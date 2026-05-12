@@ -9869,3 +9869,136 @@
 [2026-05-12 20:29:27] route reset_session reason=search_center_exit hide_ms=0
 [2026-05-12 20:29:29] evt {"at":"2026-05-12T20:29:27+08:00","kind":"bridge_ready","x":933,"y":706,"w":170,"h":210}
 [2026-05-12 20:29:30] evt {"at":"2026-05-12T20:29:30+08:00","kind":"drag_start","payloadKind":"none","x":914,"y":338}
+[2026-05-12 20:31:34] gdho start begin
+[2026-05-12 20:31:34] gdho start armed poll_ms=48
+[2026-05-12 20:31:36] gdho webview_created begin
+[2026-05-12 20:31:36] evt {"at":"2026-05-12T20:31:34+08:00","kind":"bridge_ready","x":888,"y":706,"w":170,"h":210}
+[2026-05-12 20:31:39] gdho start begin
+[2026-05-12 20:31:40] gdho navigation_completed ok=0
+[2026-05-12 20:31:41] gdho navigation_completed ok=0
+[2026-05-12 20:31:41] gdho navigation_completed ok=0
+[2026-05-12 20:31:41] gdho navigation_completed ok=1
+[2026-05-12 20:32:48] evt {"at":"2026-05-12T20:32:48+08:00","kind":"drag_start","payloadKind":"none","x":418,"y":460}
+[2026-05-12 20:34:28] gdho start begin
+[2026-05-12 20:34:28] gdho start armed poll_ms=48
+[2026-05-12 20:34:29] gdho webview_created begin
+[2026-05-12 20:34:31] evt {"at":"2026-05-12T20:34:29+08:00","kind":"bridge_ready","x":798,"y":706,"w":170,"h":210}
+[2026-05-12 20:34:33] gdho start begin
+[2026-05-12 20:34:34] gdho navigation_completed ok=0
+[2026-05-12 20:34:34] gdho navigation_completed ok=0
+[2026-05-12 20:34:34] gdho navigation_completed ok=0
+[2026-05-12 20:34:34] gdho navigation_completed ok=1
+[2026-05-12 20:35:17] gdho start begin
+[2026-05-12 20:35:17] gdho start armed poll_ms=48
+[2026-05-12 20:35:17] gdho webview_created begin
+[2026-05-12 20:35:19] evt {"at":"2026-05-12T20:35:17+08:00","kind":"bridge_ready","x":708,"y":706,"w":170,"h":210}
+[2026-05-12 20:35:21] gdho navigation_completed ok=0
+[2026-05-12 20:35:22] gdho start begin
+[2026-05-12 20:35:23] gdho navigation_completed ok=0
+[2026-05-12 20:35:23] gdho navigation_completed ok=0
+[2026-05-12 20:35:24] gdho navigation_completed ok=1
+[2026-05-12 20:39:54] gdho start begin
+[2026-05-12 20:39:54] gdho start armed poll_ms=48
+[2026-05-12 20:39:55] gdho webview_created begin
+[2026-05-12 20:39:57] evt {"at":"2026-05-12T20:39:55+08:00","kind":"bridge_ready","x":708,"y":706,"w":170,"h":210}
+[2026-05-12 20:39:59] gdho navigation_completed ok=0
+[2026-05-12 20:39:59] gdho navigation_completed ok=0
+[2026-05-12 20:39:59] gdho navigation_completed ok=0
+[2026-05-12 20:39:59] gdho navigation_completed ok=1
+[2026-05-12 20:40:04] gdho start begin
+[2026-05-12 20:40:04] gdho start armed poll_ms=48
+[2026-05-12 20:40:06] evt {"at":"2026-05-12T20:40:04+08:00","kind":"bridge_ready","x":708,"y":706,"w":170,"h":210}
+[2026-05-12 20:40:06] gdho webview_created begin
+[2026-05-12 20:40:09] gdho start begin
+[2026-05-12 20:40:11] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-12 20:40:14] gdho navigation_completed ok=0
+[2026-05-12 20:40:15] gdho stop begin
+[2026-05-12 20:40:15] gdho stop done
+[2026-05-12 20:40:21] gdho navigation_completed ok=0
+[2026-05-12 20:40:21] gdho navigation_completed ok=0
+[2026-05-12 20:40:21] gdho navigation_completed ok=1
+[2026-05-12 20:51:03] gdho start begin
+[2026-05-12 20:51:03] gdho start armed poll_ms=48
+[2026-05-12 20:51:03] gdho webview_created begin
+[2026-05-12 20:51:06] evt {"at":"2026-05-12T20:51:03+08:00","kind":"bridge_ready","x":618,"y":706,"w":170,"h":210}
+[2026-05-12 20:51:07] gdho navigation_completed ok=0
+[2026-05-12 20:51:07] gdho navigation_completed ok=0
+[2026-05-12 20:51:07] gdho navigation_completed ok=0
+[2026-05-12 20:51:07] gdho navigation_completed ok=1
+[2026-05-12 20:51:28] gdho start begin
+[2026-05-12 20:51:28] gdho start armed poll_ms=48
+[2026-05-12 20:51:29] gdho webview_created begin
+[2026-05-12 20:51:31] evt {"at":"2026-05-12T20:51:29+08:00","kind":"bridge_ready","x":528,"y":706,"w":170,"h":210}
+[2026-05-12 20:51:32] gdho navigation_completed ok=0
+[2026-05-12 20:51:32] gdho navigation_completed ok=0
+[2026-05-12 20:51:32] gdho navigation_completed ok=0
+[2026-05-12 20:51:33] gdho navigation_completed ok=1
+[2026-05-12 20:51:48] gdho start begin
+[2026-05-12 20:51:48] gdho start armed poll_ms=48
+[2026-05-12 20:51:49] gdho webview_created begin
+[2026-05-12 20:51:51] evt {"at":"2026-05-12T20:51:49+08:00","kind":"bridge_ready","x":438,"y":706,"w":170,"h":210}
+[2026-05-12 20:51:53] gdho start begin
+[2026-05-12 20:51:57] gdho navigation_completed ok=0
+[2026-05-12 20:51:58] gdho navigation_completed ok=0
+[2026-05-12 20:51:58] gdho navigation_completed ok=0
+[2026-05-12 20:51:58] gdho navigation_completed ok=1
+[2026-05-12 20:53:01] route esc key=Esc path=search_center_visible
+[2026-05-12 21:02:37] gdho start begin
+[2026-05-12 21:02:37] gdho start armed poll_ms=48
+[2026-05-12 21:02:37] gdho webview_created begin
+[2026-05-12 21:02:39] evt {"at":"2026-05-12T21:02:37+08:00","kind":"bridge_ready","x":348,"y":706,"w":170,"h":210}
+[2026-05-12 21:02:42] gdho start begin
+[2026-05-12 21:02:42] gdho navigation_completed ok=0
+[2026-05-12 21:02:42] gdho navigation_completed ok=0
+[2026-05-12 21:02:42] gdho navigation_completed ok=0
+[2026-05-12 21:02:42] gdho navigation_completed ok=1
+[2026-05-12 21:03:14] gdho start begin
+[2026-05-12 21:03:14] gdho start armed poll_ms=48
+[2026-05-12 21:03:15] gdho webview_created begin
+[2026-05-12 21:03:18] gdho start begin
+[2026-05-12 21:03:18] gdho start armed poll_ms=48
+[2026-05-12 21:03:19] gdho webview_created begin
+[2026-05-12 21:03:21] evt {"at":"2026-05-12T21:03:18+08:00","kind":"bridge_ready","x":258,"y":706,"w":170,"h":210}
+[2026-05-12 21:03:21] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-12 21:03:23] gdho start begin
+[2026-05-12 21:03:25] gdho navigation_completed ok=0
+[2026-05-12 21:03:25] gdho poll slow ms=32 active=0 ldown=0
+[2026-05-12 21:03:27] gdho navigation_completed ok=0
+[2026-05-12 21:03:32] gdho navigation_completed ok=0
+[2026-05-12 21:03:32] gdho navigation_completed ok=1
+[2026-05-12 21:37:09] gdho start begin
+[2026-05-12 21:37:09] gdho start armed poll_ms=48
+[2026-05-12 21:37:11] evt {"at":"2026-05-12T21:37:09+08:00","kind":"bridge_ready","x":168,"y":706,"w":170,"h":210}
+[2026-05-12 21:37:11] gdho webview_created begin
+[2026-05-12 21:37:14] gdho start begin
+[2026-05-12 21:37:20] gdho navigation_completed ok=0
+[2026-05-12 21:37:20] gdho navigation_completed ok=0
+[2026-05-12 21:37:22] gdho navigation_completed ok=0
+[2026-05-12 21:37:22] gdho navigation_completed ok=1
+[2026-05-12 21:37:24] gdho poll slow ms=1844 active=0 ldown=0
+[2026-05-12 21:37:30] gdho stop begin
+[2026-05-12 21:37:30] gdho stop done
+[2026-05-12 21:37:31] gdho poll slow ms=1828 active=0 ldown=0
+[2026-05-12 21:37:35] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-12 21:37:37] evt {"at":"2026-05-12T21:37:35+08:00","kind":"bridge_ready","x":151,"y":706,"w":170,"h":210}
+[2026-05-12 21:37:48] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-12 21:38:29] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-12 21:38:30] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-12 21:38:33] gdho stop begin
+[2026-05-12 21:38:33] gdho stop done
+[2026-05-12 21:38:51] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-12 21:38:52] route esc key=Esc path=search_center_visible
+[2026-05-12 21:38:52] route esc key=Esc path=search_webview_close_attempt visible=1
+[2026-05-12 21:38:52] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-12 21:38:53] evt {"at":"2026-05-12T21:38:51+08:00","kind":"bridge_ready","x":151,"y":706,"w":170,"h":210}
+[2026-05-12 21:38:57] gdho stop begin
+[2026-05-12 21:38:57] gdho stop done
+[2026-05-12 21:39:08] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-12 21:39:10] evt {"at":"2026-05-12T21:39:08+08:00","kind":"bridge_ready","x":151,"y":706,"w":170,"h":210}
+[2026-05-12 21:39:10] evt {"at":"2026-05-12T21:39:09+08:00","kind":"drag_start","payloadKind":"none","x":1349,"y":431}
+[2026-05-12 21:39:10] route kind=drag_start action=show payload=none mapped=file fallback=class=CabinetWClass
+[2026-05-12 21:39:12] route reset_session reason=release_fallback hide_ms=300
+[2026-05-12 21:39:12] evt {"at":"2026-05-12T21:39:12+08:00","kind":"drag_end","payloadKind":"none","x":1356,"y":439}
+[2026-05-12 21:39:12] route drag_end over_hole=0 payload=text
+[2026-05-12 21:39:12] route reset_session reason=drag_end hide_ms=1800
+[2026-05-12 21:39:14] route delayed_hide action=hide_now

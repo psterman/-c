@@ -1488,6 +1488,7 @@ FloatingToolbar_EnsureSearchCenterFocused(*) {
             hwnd := GuiID_SearchCenter.Hwnd
         if !hwnd
             return
+        try SCWV_Log("ftb_ensure_focus", "hwnd=" . hwnd . " vis=" . (SCWV_IsVisible() ? "1" : "0"))
         WinActivate("ahk_id " . hwnd)
     } catch {
     }
@@ -1523,6 +1524,8 @@ FloatingToolbar_VerifySearchCenterOpen(*) {
 
     if scVisible
         return
+
+    try SCWV_Log("ftb_verify_search_center_miss", "tb_visible=" . (FloatingToolbarIsVisible ? "1" : "0") . " mode=" . NormalizeAppearanceActivationMode(AppearanceActivationMode))
 
     ; 搜索中心未真正拉起：释放 search dock 抑制并恢复工具栏可见性
     try FloatingToolbar_PageDockLeave("search")
@@ -1575,11 +1578,20 @@ FloatingToolbar_DeferredOpenSearchByKeyword(keyword, *) {
 }
 
 FloatingToolbar_ActivateSearchCenter() {
+    global g_SCWV_WaitingUiFinishedReveal
     selectedText := ""
     opened := false
     usedWebView := false
 
     try usedWebView := SearchCenter_ShouldUseWebView()
+    try SCWV_Log("ftb_activate_search_center_begin", "used_webview=" . (usedWebView ? "1" : "0"))
+    try {
+        if (IsSearchCenterActive() || SCWV_IsVisible() || g_SCWV_WaitingUiFinishedReveal) {
+            try SCWV_Log("ftb_activate_search_center_force_close", "active=" . (IsSearchCenterActive() ? "1" : "0") . " vis=" . (SCWV_IsVisible() ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
+            SCWV_RequestHardClose("ftb_activate_search_center")
+        }
+    } catch {
+    }
     try FloatingToolbarCollapseTransientUi()
     ; 兜底清理：若上一次 search dock 标记残留，先释放，后续由 SCWV_Show 重新进入
     try FloatingToolbar_PageDockLeave("search")
@@ -1601,6 +1613,8 @@ FloatingToolbar_ActivateSearchCenter() {
         opened := true
     } catch {
     }
+
+    try SCWV_Log("ftb_activate_search_center_mid", "selected_len=" . StrLen(selectedText) . " opened=" . (opened ? "1" : "0") . " vis=" . (usedWebView ? (SCWV_IsVisible() ? "1" : "0") : "n/a"))
 
     ; 鍏滃簳閲嶅缓锛氶伩鍏?g_SCWV_Visible / 瀹夸富鍙ユ焺娈嬬暀瀵艰嚧鈥滃垽瀹氬凡寮€浣嗛潰鏉挎病鍑烘潵鈥濄€?
     if (!opened && usedWebView) {
@@ -1645,6 +1659,7 @@ FloatingToolbar_ActivateSearchCenter() {
     ; 防竞态：若焦点/宿主状态异常导致搜索中心未出现，自动回滚工具栏隐藏态
     SetTimer(FloatingToolbar_VerifySearchCenterOpen, -260)
     SetTimer(FloatingToolbar_VerifySearchCenterOpen, -900)
+    try SCWV_Log("ftb_activate_search_center_end", "opened=" . (opened ? "1" : "0") . " vis=" . (usedWebView ? (SCWV_IsVisible() ? "1" : "0") : "n/a"))
 }
 
 FloatingToolbarExecuteButtonAction(action, buttonHwnd) {

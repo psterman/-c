@@ -361,6 +361,11 @@ GDHO_OnWebMessage(sender, args) {
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'ack:first_frame' })")
         return
     }
+    if (typ = "hole_close") {
+        try NativeDropDiag_Log("route kind=hole_close action=reset")
+        NativeDropBridge_ResetSession("hole_close", 0)
+        return
+    }
     if (typ != "hole_drop")
         return
     if !msg.Has("payload") || !(msg["payload"] is Map)

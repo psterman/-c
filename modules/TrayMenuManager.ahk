@@ -282,8 +282,16 @@ TrayMenu_InvokeActionDeferred(actionObj, actionText := "") {
 }
 
 TrayMenu_PrepareUiOpenFromHoleMode() {
-    try TrayMenu_Log("prepare_ui_from_hole")
+    global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
+    try TrayMenu_Log("prepare_ui_from_hole search_active=" . (IsSearchCenterActive() ? "1" : "0") . " vk_visible=" . (VK_IsHostVisible() ? "1" : "0") . " caps=" . (GetCapsLockState() ? "1" : "0"))
     ; In hole mode, proactively neutralize overlay hit-test / drag session interference.
+    try {
+        if (IsSearchCenterActive() || SCWV_IsVisible() || g_SCWV_WaitingUiFinishedReveal || GDHO_VISIBLE || NativeDropSessionActive) {
+            TrayMenu_Log("prepare_ui_from_hole_force_close_search_center")
+            SCWV_RequestHardClose("tray_open_ui")
+        }
+    } catch {
+    }
     try NormalizeCapsLockRuntimeForUiOpen()
     catch {
     }
