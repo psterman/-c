@@ -36,6 +36,24 @@ global NativeDropHideDelayMs := 1800
 global NativeDropSessionPayload := "text"
 global NativeDropOverHole := false
 global NativeDropWasOverHole := false
+global NativeDropWeakPreviewShown := false
+global NativeDropSawOutsideHole := false
+global NativeDropValidEnterHole := false
+global NativeDropStartMouseX := 0
+global NativeDropStartMouseY := 0
+global NativeDropMovedEnough := false
+global NativeDropMoveThresholdPx := 14
+global NativeDropMinCommitDistancePx := 36
+global NativeDropCurrentMoveDistance := 0.0
+global NativeDropMinCommitMs := 260
+global NativeDropEnterHoleTick := 0
+global NativeDropMinDwellInHoleMs := 140
+global NativeDropAwaitingDragEnd := false
+global NativeDropAwaitingDragEndSince := 0
+global GDHO_STATE := "IDLE" ; IDLE | ARMED | TRACKING
+global GDHO_HOVER_VALID := false
+global GDHO_DWELL_START_TICK := 0
+global GDHO_LAST_PROXIMITY := 0.0
 global NativeDropSeedText := ""
 global NativeDropLastEventTick := 0
 global NativeDropLastTickMouseX := 0
@@ -162,6 +180,9 @@ global TrayIconPath := A_ScriptDir "\cursor_helper.ico"
 global CapsLock := false
 global GuiID_ConfigGUI := 0  ; 配置面板单例
 global UseWebViewSettings := true  ; 恢复 WebView 设置页
+global g_ConfigOpenInFlight := false
+global g_ConfigOpenInFlightSince := 0
+global g_ConfigPreferWebViewOnly := true
 global ConfigWebViewMode := false
 global ConfigWV2Ctrl := 0
 global ConfigWV2 := 0
@@ -169,6 +190,7 @@ global ConfigWV2Ready := false
 global ConfigWebViewPreloaded := false
 global g_ConfigWebView_LastShown := 0  ; ShowConfigWebViewGUI 后时间戳，WM_ACTIVATE 宽限期避免刚显示即被关
 global g_ConfigWebViewOpenStartTick := 0
+global g_ConfigUserClosedTick := 0
 global UnifiedAssetsHost := "app.local"
 global UnifiedAssetsRoot := A_ScriptDir
 global UnifiedAssetsAccessKind := 0  ; COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_ALLOW
@@ -3105,8 +3127,11 @@ NativeDropBridge_Poll(*) {
 }
 
 NativeDropBridge_TriggerHolePulse(evt) {
-    global EnableHoleOverlayOnNativeDrop, NativeDropSessionActive, NativeDropHideDelayMs, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
+    global EnableHoleOverlayOnNativeDrop, NativeDropSessionActive, NativeDropHideDelayMs, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole, NativeDropWeakPreviewShown, NativeDropSawOutsideHole, NativeDropValidEnterHole, NativeDropMovedEnough, NativeDropCurrentMoveDistance, NativeDropMinCommitDistancePx, NativeDropMinCommitMs, NativeDropEnterHoleTick, NativeDropMinDwellInHoleMs, NativeDropSeedText
     global NativeDropLastStartTick, NativeDropRearmUntil
+    global NativeDropAwaitingDragEnd, NativeDropAwaitingDragEndSince
+    global GDHO_STATE, GDHO_HOVER_VALID, GDHO_DWELL_START_TICK, GDHO_LAST_PROXIMITY
+    global GDHO_SIZE_SCALE, GDHO_ANIM_LEVEL, GDHO_VISUAL_STYLE
     global g_HoleRuntimeEnabled, NativeDropBridgeSilentMode
     if (!g_HoleRuntimeEnabled || NativeDropBridgeSilentMode)
         return
@@ -3153,36 +3178,84 @@ NativeDropBridge_TriggerHolePulse(evt) {
             kindMapped := "file"
             fallbackPayload := (fallbackPayload != "" ? fallbackPayload . ";" : "") . "default=file"
         }
-        ; Event-driven preview: show on drag_start as primary trigger, drag_enter as reinforce.
-        NativeDropSessionActive := true
-        NativeDropSessionPayload := kindMapped
-        NativeDropOverHole := false
-        NativeDropWasOverHole := false
+        ; Init session only once (usually on drag_start). Repeated drag_enter should not
+        ; reset movement gate, otherwise weak preview may never show.
+        isFreshSession := !NativeDropSessionActive
+        if isFreshSession {
+            NativeDropSessionActive := true
+            NativeDropAwaitingDragEnd := false
+            NativeDropAwaitingDragEndSince := 0
+            GDHO_STATE := "ARMED"
+            GDHO_HOVER_VALID := false
+            GDHO_DWELL_START_TICK := 0
+            GDHO_LAST_PROXIMITY := 0.0
+            NativeDropSessionPayload := kindMapped
+            NativeDropOverHole := false
+            NativeDropWasOverHole := false
+            NativeDropWeakPreviewShown := false
+            NativeDropSawOutsideHole := false
+            NativeDropValidEnterHole := false
+            NativeDropMovedEnough := false
+            NativeDropCurrentMoveDistance := 0.0
+            NativeDropEnterHoleTick := 0
+            sx := ""
+            sy := ""
+            try sx := Integer(evt["x"])
+            try sy := Integer(evt["y"])
+            if (sx != "" && sy != "") {
+                NativeDropStartMouseX := sx
+                NativeDropStartMouseY := sy
+            } else {
+                CoordMode("Mouse", "Screen")
+                MouseGetPos(&smx, &smy)
+                NativeDropStartMouseX := smx
+                NativeDropStartMouseY := smy
+            }
+        } else {
+            NativeDropSessionPayload := kindMapped
+        }
         if (kindMapped = "text")
             NativeDropSeedText := NativeDropBridge_CaptureTextSeed()
         else
             NativeDropSeedText := ""
         try SetTimer(NativeDropBridge_DelayedHide, 0) ; cancel pending hide
         try SetTimer(NativeDropBridge_DragSessionTick, 60)
-        try NativeDropDiag_Log("route kind=" . kindRaw . " action=show payload=" . payloadRaw . " mapped=" . kindMapped . (fallbackPayload != "" ? " fallback=" . fallbackPayload : ""))
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . kindRaw . "', dispatch: 'show:" . kindMapped . "', active: 1, overHole: 0, wasOverHole: 0, payload: '" . kindMapped . "' })")
-        try {
-            GDHO_Init()
-            GDHO_Show(kindMapped)
-            ; WebView may not be ready at the first tick, retry a few times.
-            SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -120)
-            SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -320)
-            SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -620)
-        } catch {
+        if isFreshSession {
+            try NativeDropBridge_ShowWeakPreviewGate()
+            try SetTimer(NativeDropBridge_ShowWeakPreviewGate, -60)
+            try SetTimer(NativeDropBridge_ShowWeakPreviewGate, -180)
         }
+        actionTag := isFreshSession ? "arm_wait_move" : "arm_keep_session"
+        try NativeDropDiag_Log("route kind=" . kindRaw . " action=" . actionTag . " payload=" . payloadRaw . " mapped=" . kindMapped . (fallbackPayload != "" ? " fallback=" . fallbackPayload : ""))
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . kindRaw . "', dispatch: '" . actionTag . ":" . kindMapped . "', active: 1, overHole: 0, wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . kindMapped . "' })")
         return
     }
     if (kindRaw = "drag_end") {
         try {
+            endX := ""
+            endY := ""
+            try endX := Integer(evt["x"])
+            try endY := Integer(evt["y"])
+            if (endX != "" && endY != "") {
+                dxEnd := Integer(endX) - Integer(NativeDropStartMouseX)
+                dyEnd := Integer(endY) - Integer(NativeDropStartMouseY)
+                NativeDropCurrentMoveDistance := Max(NativeDropCurrentMoveDistance, Sqrt(dxEnd * dxEnd + dyEnd * dyEnd))
+                NativeDropOverHole := GDHO_IsPointInHole(endX, endY, 30)
+            }
             try NativeDropDiag_Log("route drag_end over_hole=" . (NativeDropOverHole ? "1" : "0") . " payload=" . NativeDropSessionPayload)
             try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_end', dispatch: 'over_hole=" . (NativeDropOverHole ? "1" : "0") . "', active: 1, overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
-            if (NativeDropSessionPayload = "text" && (NativeDropOverHole || NativeDropWasOverHole))
+            sinceStartMs := (NativeDropLastStartTick > 0) ? (A_TickCount - NativeDropLastStartTick) : 9999
+            dwellMs := (NativeDropEnterHoleTick > 0) ? (A_TickCount - NativeDropEnterHoleTick) : 0
+            canCommit := NativeDropMovedEnough
+                && GDHO_HOVER_VALID
+                && NativeDropOverHole
+                && (NativeDropCurrentMoveDistance >= NativeDropMinCommitDistancePx)
+                && (sinceStartMs >= NativeDropMinCommitMs)
+                && (dwellMs >= NativeDropMinDwellInHoleMs)
+            if (NativeDropSessionPayload = "text" && canCommit)
                 NativeDropBridge_TryOpenSearchCenterFromSelection(NativeDropSeedText)
+            else if (NativeDropSessionPayload = "text")
+                try NativeDropDiag_Log("route drag_end_text action=blocked dist=" . Round(NativeDropCurrentMoveDistance, 1) . " min_dist=" . NativeDropMinCommitDistancePx . " ms=" . sinceStartMs . " min_ms=" . NativeDropMinCommitMs . " hover_valid=" . (GDHO_HOVER_VALID ? "1" : "0") . " over_hole=" . (NativeDropOverHole ? "1" : "0") . " dwell_ms=" . dwellMs . " min_dwell=" . NativeDropMinDwellInHoleMs)
         } catch {
         }
         NativeDropBridge_ResetSessionAsync("drag_end", NativeDropHideDelayMs)
@@ -3195,6 +3268,10 @@ NativeDropBridge_TriggerHolePulse(evt) {
             kind := NativeDropBridge_GuessPayloadForUnknownDrag(&fallbackPayload)
         if (kind = "") {
             try NativeDropDiag_Log("route kind=drop action=ignore payload=" . payloadRaw)
+            return
+        }
+        if (kind = "text") {
+            try NativeDropDiag_Log("route kind=drop action=ignore_text reason=strict_drag_end_commit")
             return
         }
         NativeDropSessionPayload := kind
@@ -3219,6 +3296,10 @@ NativeDropBridge_TriggerHolePulse(evt) {
     if (kindRaw != "text" && kindRaw != "file" && kindRaw != "folder" && kindRaw != "link" && kindRaw != "mixed")
         return
     kind := NativeDropBridge_NormalizeHolePayloadKind(kindRaw)
+    if (kind = "text") {
+        try NativeDropDiag_Log("route legacy kind=" . kindRaw . " action=ignore_text reason=strict_drag_end_commit")
+        return
+    }
     try NativeDropDiag_Log("route legacy kind=" . kindRaw . " mapped=" . kind)
     try {
         GDHO_Init()
@@ -3361,8 +3442,14 @@ NativeDropBridge_DelayedHide(*) {
 
 NativeDropBridge_DragSessionTick(*) {
     global NativeDropSessionActive, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
-    global NativeDropLastTickMouseX, NativeDropLastTickMouseY, NativeDropLastStartTick
-    global g_HoleRuntimeEnabled, NativeDropBridgeSilentMode
+    global NativeDropLastTickMouseX, NativeDropLastTickMouseY, NativeDropLastStartTick, NativeDropLastEventTick
+    global g_HoleRuntimeEnabled, NativeDropBridgeSilentMode, GDHO_VISIBLE, NativeDropWeakPreviewShown, NativeDropSawOutsideHole, NativeDropValidEnterHole
+    global NativeDropStartMouseX, NativeDropStartMouseY, NativeDropMovedEnough, NativeDropMoveThresholdPx, NativeDropCurrentMoveDistance
+    global NativeDropEnterHoleTick
+    global NativeDropAwaitingDragEnd, NativeDropAwaitingDragEndSince
+    global GDHO_STATE, GDHO_HOVER_VALID, GDHO_DWELL_START_TICK, GDHO_LAST_PROXIMITY
+    global GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y
+    global GDHO_SIZE_SCALE, GDHO_ANIM_LEVEL, GDHO_VISUAL_STYLE
     if (!g_HoleRuntimeEnabled || NativeDropBridgeSilentMode)
         return
     if !NativeDropSessionActive
@@ -3371,27 +3458,126 @@ NativeDropBridge_DragSessionTick(*) {
         GDHO_SetClickThrough(false)
         CoordMode("Mouse", "Screen")
         MouseGetPos(&mx, &my)
+        NativeDropLastEventTick := A_TickCount
         NativeDropLastTickMouseX := mx
         NativeDropLastTickMouseY := my
+        dxm := Integer(mx) - Integer(NativeDropStartMouseX)
+        dym := Integer(my) - Integer(NativeDropStartMouseY)
+        moveDist := Sqrt(dxm * dxm + dym * dym)
+        NativeDropCurrentMoveDistance := moveDist
+        if (!NativeDropMovedEnough && moveDist >= NativeDropMoveThresholdPx) {
+            GDHO_STATE := "TRACKING"
+            NativeDropMovedEnough := true
+            try NativeDropDiag_Log("route drag_tick action=move_gate_passed dist=" . Round(moveDist, 1))
+            if !NativeDropWeakPreviewShown {
+                try {
+                    GDHO_Init()
+                    GDHO_Show(NativeDropSessionPayload)
+                    weakScale := 0.82
+                    weakAnim := 0.45
+                    try weakScale := Max(0.65, Min(0.92, Float(GDHO_SIZE_SCALE) * 0.82))
+                    try weakAnim := Max(0.20, Min(0.55, Float(GDHO_ANIM_LEVEL) * 0.45))
+                    GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " weakScale ", animLevel: " weakAnim ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
+                    NativeDropWeakPreviewShown := true
+                    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: 'preview_weak_after_move', active: 1, overHole: 0, wasOverHole: 0, payload: '" . NativeDropSessionPayload . "' })")
+                } catch {
+                }
+            }
+        }
+        if !NativeDropMovedEnough {
+            GDHO_Update(NativeDropSessionPayload, mx, my)
+            return
+        }
         NativeDropOverHole := GDHO_IsPointInHole(mx, my, 30)
+        hx := Integer(GDHO_LAST_HOST_X) + 90
+        hy := Integer(GDHO_LAST_HOST_Y) + 56 + 103
+        dxh := Integer(mx) - hx
+        dyh := Integer(my) - hy
+        holeDist := Sqrt(dxh * dxh + dyh * dyh)
+        GDHO_LAST_PROXIMITY := Max(0.0, Min(1.0, 1.0 - (holeDist / 260.0)))
+        if !NativeDropOverHole
+            NativeDropSawOutsideHole := true
+        if (NativeDropOverHole && NativeDropSawOutsideHole) {
+            NativeDropValidEnterHole := true
+            if (NativeDropEnterHoleTick = 0)
+                NativeDropEnterHoleTick := A_TickCount
+        } else if !NativeDropOverHole {
+            NativeDropEnterHoleTick := 0
+        }
+        if (NativeDropOverHole && GDHO_LAST_PROXIMITY > 0.90) {
+            if (GDHO_DWELL_START_TICK = 0)
+                GDHO_DWELL_START_TICK := A_TickCount
+            GDHO_HOVER_VALID := ((A_TickCount - GDHO_DWELL_START_TICK) >= NativeDropMinDwellInHoleMs)
+        } else {
+            GDHO_DWELL_START_TICK := 0
+            GDHO_HOVER_VALID := false
+        }
+        if (NativeDropOverHole && !NativeDropWasOverHole) {
+            try NativeDropDiag_Log("route drag_tick action=promote_on_enter payload=" . NativeDropSessionPayload)
+            try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: 'promote_on_enter', active: 1, overHole: 1, wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
+            try {
+                if !GDHO_VISIBLE {
+                    GDHO_Init()
+                    GDHO_Show(NativeDropSessionPayload)
+                }
+                ; Restore normal style when pointer first enters hole area.
+                if NativeDropWeakPreviewShown {
+                    GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
+                    NativeDropWeakPreviewShown := false
+                }
+            } catch {
+            }
+        }
         if NativeDropOverHole
             NativeDropWasOverHole := true
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: '" . (NativeDropOverHole ? "over_hole" : "tracking") . "', active: 1, overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: '" . (NativeDropOverHole ? "over_hole" : "tracking") . "', state: '" . GDHO_STATE . "', ready: " . (GDHO_HOVER_VALID ? "1" : "0") . ", proximity: " . Round(GDHO_LAST_PROXIMITY, 3) . ", active: 1, overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
         GDHO_Update(NativeDropSessionPayload, mx, my)
         ; If OS missed/late drag_end, use release fallback.
         ; Guard the first ~280ms to avoid false release on some text-drag sources.
         lbtnDown := GetKeyState("LButton", "P") || GetKeyState("LButton")
         sinceStartMs := (NativeDropLastStartTick > 0) ? (A_TickCount - NativeDropLastStartTick) : 9999
         if (!lbtnDown && sinceStartMs >= 280) {
-            if (NativeDropSessionPayload = "text" && NativeDropWasOverHole) {
-                try NativeDropDiag_Log("route release_fallback action=open_search was_over_hole=1")
-                try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'release_fallback', dispatch: 'release_detected' })")
-                ok := NativeDropBridge_TryOpenSearchCenterFromSelection(NativeDropSeedText)
-                try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'release_fallback', dispatch: '" . (ok ? "search_opened" : "search_failed") . "' })")
+            ; Wait for bridge drag_end first to avoid double reset races against WebView2 controller state.
+            if !NativeDropAwaitingDragEnd {
+                NativeDropAwaitingDragEnd := true
+                NativeDropAwaitingDragEndSince := A_TickCount
+                try NativeDropDiag_Log("route release_fallback action=wait_drag_end")
+                return
             }
-            NativeDropBridge_ResetSessionAsync("release_fallback", 300)
+            waitedMs := A_TickCount - NativeDropAwaitingDragEndSince
+            if (waitedMs < 2200)
+                return
+            try NativeDropDiag_Log("route release_fallback action=timeout_reset waited_ms=" . waitedMs)
+            NativeDropBridge_ResetSessionAsync("release_fallback_timeout", 300)
             return
         }
+    } catch {
+    }
+}
+
+NativeDropBridge_ShowWeakPreviewGate(*) {
+    global NativeDropSessionActive, NativeDropSessionPayload, NativeDropWeakPreviewShown
+    global GDHO_STATE
+    global GDHO_SIZE_SCALE, GDHO_ANIM_LEVEL, GDHO_VISUAL_STYLE
+    if !NativeDropSessionActive
+        return
+    if NativeDropWeakPreviewShown
+        return
+    try {
+        GDHO_Init()
+        GDHO_Show(NativeDropSessionPayload)
+        weakScale := 0.90
+        weakAnim := 0.60
+        try weakScale := Max(0.78, Min(0.98, Float(GDHO_SIZE_SCALE) * 0.90))
+        try weakAnim := Max(0.35, Min(0.75, Float(GDHO_ANIM_LEVEL) * 0.60))
+        GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " weakScale ", animLevel: " weakAnim ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
+        ; Make weak state clearly visible while still weaker than hover/commit state.
+        GDHO_RunJS("window.HoleOverlay?.update({ payload: '" NativeDropSessionPayload "', proximity: 0.55 })")
+        NativeDropWeakPreviewShown := true
+        GDHO_STATE := "ARMED"
+        SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -80)
+        try NativeDropDiag_Log("route weak_preview action=show_gate payload=" . NativeDropSessionPayload)
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'weak_preview', dispatch: 'show_gate', active: 1, overHole: 0, wasOverHole: 0, payload: '" . NativeDropSessionPayload . "' })")
     } catch {
     }
 }
@@ -3408,9 +3594,9 @@ NativeDropBridge_Watchdog(*) {
     sinceStartMs := (NativeDropLastStartTick > 0) ? (now - NativeDropLastStartTick) : 9999
     physDown := GetKeyState("LButton", "P")
     logDown := GetKeyState("LButton")
-    ; Force cleanup if session is stale or button already released but state still active.
-    ; Keep a short grace period after drag_start to avoid false "released" on some apps.
-    if ((idleMs > 2200) || (sinceStartMs > 450 && !physDown && !logDown)) {
+    ; Force cleanup only when session is truly stale.
+    ; Some text-drag sources don't expose stable LButton state, so keep a wide grace window.
+    if ((idleMs > 5000) || (sinceStartMs > 4200 && !physDown && !logDown)) {
         try NativeDropDiag_Log("route watchdog action=force_reset phys=" . (physDown ? "1" : "0") . " log=" . (logDown ? "1" : "0") . " idle_ms=" . idleMs)
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'watchdog', dispatch: 'force_reset', active: 0, overHole: 0, wasOverHole: 0, payload: '-' })")
         NativeDropBridge_ResetSessionAsync("watchdog", 120)
@@ -3460,14 +3646,35 @@ NativeDropBridge_CaptureTextSeed() {
 }
 
 NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := false) {
-    global NativeDropSessionActive, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
+    global NativeDropSessionActive, NativeDropOverHole, NativeDropWasOverHole, NativeDropWeakPreviewShown, NativeDropSawOutsideHole, NativeDropValidEnterHole, NativeDropStartMouseX, NativeDropStartMouseY, NativeDropMovedEnough, NativeDropCurrentMoveDistance, NativeDropEnterHoleTick, NativeDropSeedText
     global NativeDropLastTickMouseX, NativeDropLastTickMouseY
     global NativeDropSessionPayload, NativeDropLastEventTick, NativeDropLastStartTick, NativeDropRearmUntil, NativeDropBridgeSilentMode
+    global NativeDropAwaitingDragEnd, NativeDropAwaitingDragEndSince
+    global GDHO_STATE, GDHO_HOVER_VALID, GDHO_DWELL_START_TICK, GDHO_LAST_PROXIMITY
+    r0 := StrLower(Trim(String(reason)))
+    if (NativeDropSessionActive && (r0 = "caps_f_search" || r0 = "search_center_exit")) {
+        try NativeDropDiag_Log("reset_session_skip reason=" . reason . " active_drag=1")
+        return
+    }
     try NativeDropDiag_Log("reset_session_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
     NativeDropSessionActive := false
     NativeDropSessionPayload := "text"
     NativeDropOverHole := false
     NativeDropWasOverHole := false
+    NativeDropWeakPreviewShown := false
+    NativeDropSawOutsideHole := false
+    NativeDropValidEnterHole := false
+    NativeDropStartMouseX := 0
+    NativeDropStartMouseY := 0
+    NativeDropMovedEnough := false
+    NativeDropCurrentMoveDistance := 0.0
+    NativeDropEnterHoleTick := 0
+    NativeDropAwaitingDragEnd := false
+    NativeDropAwaitingDragEndSince := 0
+    GDHO_STATE := "IDLE"
+    GDHO_HOVER_VALID := false
+    GDHO_DWELL_START_TICK := 0
+    GDHO_LAST_PROXIMITY := 0.0
     NativeDropSeedText := ""
     NativeDropLastTickMouseX := 0
     NativeDropLastTickMouseY := 0
@@ -3535,6 +3742,12 @@ NativeDropBridge_ResetSessionAsync(reason := "", hideDelayMs := 300, silentMode 
 }
 
 NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMode := false) {
+    global NativeDropSessionActive
+    r := StrLower(Trim(String(reason)))
+    if (NativeDropSessionActive && (r = "caps_f_search" || r = "search_center_exit")) {
+        try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " active_drag=1")
+        return
+    }
     try NativeDropDiag_Log("reset_session_async_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
     try NativeDropBridge_ResetSession(reason, hideDelayMs, silentMode)
     catch as err {
@@ -4071,7 +4284,17 @@ ShowConfigGUI() {
 
 ShowConfigGUI_FallbackCheck(*) {
     static retryCount := 0
-    global GuiID_ConfigGUI, UseWebViewSettings, g_ConfigWebViewOpenStartTick
+    global GuiID_ConfigGUI, UseWebViewSettings, g_ConfigWebViewOpenStartTick, g_ConfigPreferWebViewOnly, g_ConfigOpenInFlight, g_ConfigUserClosedTick
+    ; User explicitly closed settings recently: never auto-reopen.
+    if (g_ConfigUserClosedTick > 0 && (A_TickCount - g_ConfigUserClosedTick) < 3000) {
+        retryCount := 0
+        return
+    }
+    ; No active opening session => stop fallback loop.
+    if (g_ConfigWebViewOpenStartTick <= 0 && !g_ConfigOpenInFlight) {
+        retryCount := 0
+        return
+    }
     ; If WebView config host is still unavailable after safe open,
     ; fall back to legacy config window to guarantee accessibility.
     try {
@@ -4111,11 +4334,31 @@ ShowConfigGUI_FallbackCheck(*) {
     }
     catch {
     }
+    if (g_ConfigPreferWebViewOnly) {
+        try {
+            ; Prefer recovering WebView settings host instead of bouncing to legacy page.
+            if (g_ConfigOpenInFlight) {
+                retryCount += 1
+                if (retryCount <= 12) {
+                    SetTimer(ShowConfigGUI_FallbackCheck, -260)
+                    return
+                }
+            }
+        } catch {
+        }
+    }
     try {
         if FuncExists("ConfigWebView_ReleaseSettingsDock")
-            ConfigWebView_ReleaseSettingsDock("fallback")
+            ConfigWebView_ReleaseSettingsDock("recover")
+    } catch {
     }
-    catch {
+    if (g_ConfigPreferWebViewOnly) {
+        try SetTimer((*) => ShowConfigWebViewGUI(), -120)
+        g_ConfigWebViewOpenStartTick := A_TickCount
+        retryCount += 1
+        if (retryCount <= 12)
+            SetTimer(ShowConfigGUI_FallbackCheck, -260)
+        return
     }
     g_ConfigWebViewOpenStartTick := 0
     LegacyConfigGui_Show()
@@ -4133,8 +4376,16 @@ NormalizeCapsLockRuntimeForUiOpen() {
 }
 
 ShowConfigGUI_Safe() {
-    global g_ConfigWebViewOpenStartTick
+    global g_ConfigWebViewOpenStartTick, g_ConfigOpenInFlight, g_ConfigOpenInFlightSince, g_ConfigUserClosedTick
     NMER_Log("ui", "open_config_safe_begin", "")
+    nowTick := A_TickCount
+    if (g_ConfigOpenInFlight && (nowTick - g_ConfigOpenInFlightSince) < 2500) {
+        NMER_Log("ui", "open_config_safe_skip_inflight", "elapsed_ms=" . (nowTick - g_ConfigOpenInFlightSince))
+        return
+    }
+    g_ConfigOpenInFlight := true
+    g_ConfigOpenInFlightSince := nowTick
+    g_ConfigUserClosedTick := 0
     try NormalizeCapsLockRuntimeForUiOpen()
     catch {
     }
@@ -4182,7 +4433,13 @@ ShowConfigGUI_Safe() {
     }
     ; Fallback safety net: if WebView path fails, open legacy settings.
     try SetTimer(ShowConfigGUI_FallbackCheck, -900)
+    try SetTimer(ConfigOpenFlightRelease, -2600)
     NMER_Log("ui", "open_config_safe_scheduled", "")
+}
+
+ConfigOpenFlightRelease(*) {
+    global g_ConfigOpenInFlight
+    g_ConfigOpenInFlight := false
 }
 
 NMER_Log(scope, event, detail := "") {
@@ -4230,6 +4487,7 @@ CloseConfigGUI() {
     global GuiID_ConfigGUI, CapsLockHoldTimeEdit, CapsLockHoldTimeSeconds, ConfigFile
     global DDLBrush, DefaultStartTabDDL_Hwnd
     global ConfigWebViewMode, ConfigWV2Ctrl, ConfigWV2, ConfigWV2Ready
+    global g_ConfigOpenInFlight, g_ConfigWebViewOpenStartTick, g_ConfigUserClosedTick
 
     ; 如果正在关闭，直接返回
     if (CloseConfigGUI_IsClosing) {
@@ -4244,7 +4502,13 @@ CloseConfigGUI() {
 
     ; WebView 设置页关闭路径（首期改造）
     if (ConfigWebViewMode) {
+        g_ConfigUserClosedTick := A_TickCount
+        g_ConfigOpenInFlight := false
+        g_ConfigWebViewOpenStartTick := 0
+        try SetTimer(ShowConfigGUI_FallbackCheck, 0)
         ConfigWebView_Close()
+        ; Restore activation runtime (especially hole mode bridge/overlay) after settings close.
+        try SetTimer(RestoreActivationRuntimeAfterConfigClose, -120)
         SetTimer(LegacyConfigGui_ClearClosingFlag, -100)
         return
     }
@@ -5239,6 +5503,14 @@ Esc:: {
     } catch {
     }
     Send("{Esc}")
+}
+
+RestoreActivationRuntimeAfterConfigClose(*) {
+    try {
+        mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+        ApplyActivationRuntimeAsync(mode)
+    } catch {
+    }
 }
 
 #HotIf GetCapsLockState()

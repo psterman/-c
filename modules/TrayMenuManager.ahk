@@ -6,6 +6,8 @@ global CustomIconPath := ""
 global g_LastValidTrayMenu := []
 global g_IsUIVisibleTransitioning := false
 global g_TrayMenuTransitionToken := 0
+global TrayMenuCustomFailStreak := 0
+global TrayMenuSuppressNativeFallbackUntil := 0
 
 ; 初始化托盘：清空系统托盘菜单、注册 0x0404、设置图标与提示
 TrayMenu_Init() {
@@ -174,6 +176,7 @@ TRAY_ICON_MESSAGE(wParam, lParam, msg, hwnd) {
 
 TrayMenu_ShowQueuedPopup(*) {
     global TrayMenuPopupBusy, TrayMenuPopupPending, TrayMenuPopupPendingLParam, TrayMenuPopupPendingStart
+    global TrayMenuCustomFailStreak, TrayMenuSuppressNativeFallbackUntil
     if !TrayMenuPopupPending
     {
         TrayMenuPopupBusy := false
@@ -186,10 +189,23 @@ TrayMenu_ShowQueuedPopup(*) {
         try TrayMenu_Log("custom_popup_begin lParam=" . lParam)
         try {
             ShowCustomTrayMenu()
+            TrayMenuCustomFailStreak := 0
         } catch as err {
             mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
             try TrayMenu_Log("custom_popup_failed lParam=" . lParam . " elapsed_ms=" . (A_TickCount - trayStart) . " mode=" . mode . " msg=" . err.Message)
+            TrayMenuCustomFailStreak += 1
             if (mode != "hole") {
+                nowTick := A_TickCount
+                ; Prefer retrying custom dark popup first; avoid immediate white native menu degradation.
+                if (TrayMenuCustomFailStreak <= 2 || nowTick < TrayMenuSuppressNativeFallbackUntil) {
+                    TrayMenuSuppressNativeFallbackUntil := nowTick + 1800
+                    try TrayMenu_Log("custom_popup_retry_dark streak=" . TrayMenuCustomFailStreak)
+                    SetTimer(TrayMenu_ShowQueuedPopup, -120)
+                    TrayMenuPopupPending := true
+                    TrayMenuPopupPendingLParam := lParam
+                    TrayMenuPopupPendingStart := trayStart
+                    return
+                }
                 try {
                     TrayMenu_Log("custom_popup_fallback_begin")
                     A_TrayMenu.Show()

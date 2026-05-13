@@ -12,6 +12,7 @@
     }
     :root {
       --p: 0;
+      --hole-alpha: 0.22;
       --ai-red: #ea4335;
       --ai-yellow: #fbbc05;
       --ai-green: #34a853;
@@ -45,7 +46,7 @@
       align-items: center;
       justify-content: center;
     }
-    .show .hole-wrap { opacity: 1; }
+    .show .hole-wrap { opacity: var(--hole-alpha); }
 
     /* 鐜粫鍏夊奖灞?*/
     .aura {
@@ -234,10 +235,12 @@
       function setP(v) {
         p = Math.max(0, Math.min(1, Number(v) || 0));
         root.style.setProperty('--p', String(p));
+        const alpha = 0.20 + p * 0.70;
+        root.style.setProperty('--hole-alpha', String(Math.max(0.08, Math.min(1, alpha))));
       }
 
       window.HoleOverlay = {
-        show: () => { if(!isGalaxyOpen) { root.classList.add('show'); setP(0.1); } },
+        show: () => { if(!isGalaxyOpen) { root.classList.add('show'); setP(0.08); } },
         hide: () => { 
           root.classList.remove('show', 'drop'); 
           isGalaxyOpen = false; setP(0); 

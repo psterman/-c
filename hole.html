@@ -14,6 +14,7 @@
 
     :root {
       --p: 0;
+      --hole-alpha: 0.22;
       /* AI 娴佸厜鑹插僵鏉?(鍙傝€冩埅鍥鹃鏍? */
       --ai-red: #ea4335;
       --ai-yellow: #fbbc05;
@@ -110,7 +111,7 @@
       animation: localAuraBreath 2.8s ease-in-out infinite;
     }
     .safe-mode .local-fx { opacity: .1; animation: none; }
-    .show .hole-wrap { opacity: 1; transform: translateZ(0) scale(var(--hole-scale)); }
+    .show .hole-wrap { opacity: var(--hole-alpha); transform: translateZ(0) scale(var(--hole-scale)); }
     
     .base-hole, .aura, .ring, .well {
       position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50%;
@@ -398,6 +399,8 @@
       function setP(v) {
         p = Math.max(0, Math.min(1, Number(v) || 0));
         root.style.setProperty('--p', String(p));
+        var alpha = 0.20 + p * 0.70;
+        root.style.setProperty('--hole-alpha', String(Math.max(0.08, Math.min(1, alpha))));
       }
       var pos = { x: Math.max(12, Math.round(window.innerWidth / 2 - 90)), y: Math.max(12, Math.round(window.innerHeight - 240)) };
       var hint = document.getElementById('hint');
@@ -577,7 +580,7 @@
         root.classList.add(m === 'starry' ? 'style-starry' : 'style-ring');
       }
       window.HoleOverlay = {
-        show: function (payload) { show(payload); setP(0.2); },
+        show: function (payload) { show(payload); setP(0.08); },
         setStyle: function (o) {
           if (!o) return;
           setStyle(o.scale, o.animLevel);
