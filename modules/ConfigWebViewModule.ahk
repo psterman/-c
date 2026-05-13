@@ -105,6 +105,10 @@ ShowConfigWebViewGUI() {
 }
 
 ConfigWebView_EnsureVisibleOrRecover(*) {
+    if (ThemeApply_IsInProgress() || ActivationApply_IsInProgress()) {
+        SetTimer(ConfigWebView_EnsureVisibleOrRecover, -180)
+        return
+    }
     if ConfigWebView_HostAlive() {
         try ConfigWebView_RefocusAfterThemeChange()
         catch {

@@ -46,6 +46,7 @@ global NativeDropBridgeSilentMode := false
 global g_LastValidTrayMenu := []
 global g_IsUIVisibleTransitioning := false
 global g_ActivationApplyToken := 0
+global g_ActivationApplyInFlight := false
 ; Diagnostic mode: make drop receiver full-screen to verify hit path.
 ; Keep disabled in production. Full-screen receiver can degrade desktop interaction.
 global NativeDropBridgeFullScreenHitTest := false
@@ -167,6 +168,7 @@ global ConfigWV2 := 0
 global ConfigWV2Ready := false
 global ConfigWebViewPreloaded := false
 global g_ConfigWebView_LastShown := 0  ; ShowConfigWebViewGUI 后时间戳，WM_ACTIVATE 宽限期避免刚显示即被关
+global g_ConfigWebViewOpenStartTick := 0
 global UnifiedAssetsHost := "app.local"
 global UnifiedAssetsRoot := A_ScriptDir
 global UnifiedAssetsAccessKind := 0  ; COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_ALLOW
@@ -2543,75 +2545,85 @@ ApplyAppearanceActivationMode() {
 }
 
 ApplyAppearanceActivationMode_Run(m, token) {
-    global g_ActivationApplyToken
+    global g_ActivationApplyToken, g_ActivationApplyInFlight
     if (token != g_ActivationApplyToken)
         return
-    NMER_Log("activation", "apply_mode_begin", "mode=" . m)
-    if (m = "toolbar") {
-        try ApplyActivationRuntimeAsync("toolbar")
-        try FloatingBubble_DestroyCompletely()
-        catch {
-        }
-        try FloatingToolbar_ClearOverlaySuppression()
-        catch {
-        }
-        try FloatingToolbarChatDrawerOpen := false
-        catch {
-        }
-        try {
-            if (IsSet(g_FTB_WV2) && g_FTB_WV2) {
-                WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
-            }
-        } catch {
-        }
-        ; Prefer reusing the existing toolbar host to avoid WebView2 recreate races.
-        try {
-            if (IsSet(FloatingToolbarGUI) && IsObject(FloatingToolbarGUI) && FloatingToolbarGUI) {
-                ShowFloatingToolbar()
-            } else {
-                FloatingToolbar_ForceRecoverVisible()
-            }
-        } catch {
-            try ShowFloatingToolbar()
+    g_ActivationApplyInFlight := true
+    try {
+        NMER_Log("activation", "apply_mode_begin", "mode=" . m)
+        if (m = "toolbar") {
+            try ApplyActivationRuntimeAsync("toolbar")
+            try FloatingBubble_DestroyCompletely()
             catch {
             }
+            try FloatingToolbar_ClearOverlaySuppression()
+            catch {
+            }
+            try FloatingToolbarChatDrawerOpen := false
+            catch {
+            }
+            try {
+                if (IsSet(g_FTB_WV2) && g_FTB_WV2) {
+                    WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
+                }
+            } catch {
+            }
+            ; Prefer reusing the existing toolbar host to avoid WebView2 recreate races.
+            try {
+                if (IsSet(FloatingToolbarGUI) && IsObject(FloatingToolbarGUI) && FloatingToolbarGUI) {
+                    ShowFloatingToolbar()
+                } else {
+                    FloatingToolbar_ForceRecoverVisible()
+                }
+            } catch {
+                try ShowFloatingToolbar()
+                catch {
+                }
+            }
+            ; Force a fresh toolbar layout push after recovering visibility.
+            ; Recreating the toolbar host can leave the webview on its default icons
+            ; until the command layout is re-sent.
+            try FloatingToolbarReloadFromToolbarLayout()
+            catch {
+            }
+            try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -120)
+            catch {
+            }
+            try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -520)
+            catch {
+            }
+            ; One delayed retry keeps the existing host visible without forcing a recreate.
+            try SetTimer((*) => ShowFloatingToolbar(), -120)
+            NMER_Log("activation", "apply_mode_toolbar", "ok=1")
+            return
         }
-        ; Force a fresh toolbar layout push after recovering visibility.
-        ; Recreating the toolbar host can leave the webview on its default icons
-        ; until the command layout is re-sent.
-        try FloatingToolbarReloadFromToolbarLayout()
-        catch {
+        if (m = "hole") {
+            try HideFloatingToolbar()
+            catch {
+            }
+            try FloatingBubble_DestroyCompletely()
+            catch {
+            }
+            try ApplyActivationRuntimeAsync("hole")
+            NMER_Log("activation", "apply_mode_hole", "ok=1")
+            return
         }
-        try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -120)
-        catch {
-        }
-        try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -520)
-        catch {
-        }
-        ; One delayed retry keeps the existing host visible without forcing a recreate.
-        try SetTimer((*) => ShowFloatingToolbar(), -120)
-        NMER_Log("activation", "apply_mode_toolbar", "ok=1")
-        return
-    }
-    if (m = "hole") {
         try HideFloatingToolbar()
         catch {
         }
         try FloatingBubble_DestroyCompletely()
         catch {
         }
-        try ApplyActivationRuntimeAsync("hole")
-        NMER_Log("activation", "apply_mode_hole", "ok=1")
-        return
+        NMER_Log("activation", "apply_mode_tray", "ok=1")
+        try ApplyActivationRuntimeAsync("tray")
+    } finally {
+        g_ActivationApplyInFlight := false
     }
-    try HideFloatingToolbar()
-    catch {
-    }
-    try FloatingBubble_DestroyCompletely()
-    catch {
-    }
-    NMER_Log("activation", "apply_mode_tray", "ok=1")
-    try ApplyActivationRuntimeAsync("tray")
+}
+
+ActivationApply_IsInProgress() {
+    global g_ActivationApplyInFlight
+    return !!g_ActivationApplyInFlight
 }
 
 ; 选区/牛马等需要宿主表面已显示时调用：按激活方式打开悬浮栏（黑洞/后台模式不弹出）
@@ -3969,15 +3981,43 @@ ShowConfigGUI() {
 }
 
 ShowConfigGUI_FallbackCheck(*) {
-    global GuiID_ConfigGUI, UseWebViewSettings
+    static retryCount := 0
+    global GuiID_ConfigGUI, UseWebViewSettings, g_ConfigWebViewOpenStartTick
     ; If WebView config host is still unavailable after safe open,
     ; fall back to legacy config window to guarantee accessibility.
+    try {
+        if (ThemeApply_IsInProgress() || ActivationApply_IsInProgress()) {
+            if (retryCount < 8) {
+                retryCount += 1
+                SetTimer(ShowConfigGUI_FallbackCheck, -180)
+                return
+            }
+        } else {
+            retryCount := 0
+        }
+    } catch {
+    }
+    try {
+        if (g_ConfigWebViewOpenStartTick > 0) {
+            elapsed := A_TickCount - g_ConfigWebViewOpenStartTick
+            if (elapsed < 2400) {
+                retryCount += 1
+                SetTimer(ShowConfigGUI_FallbackCheck, -220)
+                return
+            }
+        }
+    } catch {
+    }
     try {
         if (GuiID_ConfigGUI && WinExist("ahk_id " . GuiID_ConfigGUI.Hwnd)) {
             vis := false
             try vis := (WinGetStyle("ahk_id " . GuiID_ConfigGUI.Hwnd) & 0x10000000)
             if vis
+            {
+                retryCount := 0
+                g_ConfigWebViewOpenStartTick := 0
                 return
+            }
         }
     }
     catch {
@@ -3988,6 +4028,7 @@ ShowConfigGUI_FallbackCheck(*) {
     }
     catch {
     }
+    g_ConfigWebViewOpenStartTick := 0
     LegacyConfigGui_Show()
 }
 
@@ -4003,10 +4044,21 @@ NormalizeCapsLockRuntimeForUiOpen() {
 }
 
 ShowConfigGUI_Safe() {
+    global g_ConfigWebViewOpenStartTick
     NMER_Log("ui", "open_config_safe_begin", "")
     try NormalizeCapsLockRuntimeForUiOpen()
     catch {
     }
+    try {
+        if (ThemeApply_IsInProgress() || ActivationApply_IsInProgress()) {
+            NMER_Log("ui", "open_config_deferred_busy", "theme=" . (ThemeApply_IsInProgress() ? "1" : "0") . " activation=" . (ActivationApply_IsInProgress() ? "1" : "0"))
+            SetTimer(ShowConfigGUI_Safe, -220)
+            return
+        }
+    }
+    catch {
+    }
+    g_ConfigWebViewOpenStartTick := A_TickCount
     ; Defensive open path: clear overlay/runtime interference before showing settings.
     try GDHO_UnpinFromDesktop()
     catch {
