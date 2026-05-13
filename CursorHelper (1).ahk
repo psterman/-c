@@ -450,6 +450,8 @@ global AppearanceActivationMode := "toolbar"
 ; ===================== UI 颜色初始化（必须在脚本早期初始化）=====================
 ; 主题模式：dark（暗色，默认）或 light（亮色）
 global ThemeMode := "dark"
+global g_ThemeApplyInFlight := false
+global g_ThemeApplyToken := 0
 
 ; 暗色主题颜色
 UI_Colors_Dark := {
@@ -501,6 +503,10 @@ global UI_Colors := UI_Colors_Dark
 ; 应用主题
 ApplyTheme(Mode) {
     global UI_Colors, ThemeMode, UI_Colors_Dark, UI_Colors_Light
+    global g_ThemeApplyInFlight, g_ThemeApplyToken
+    g_ThemeApplyInFlight := true
+    g_ThemeApplyToken += 1
+    token := g_ThemeApplyToken
     ThemeMode := Mode
     if (Mode = "light") {
         UI_Colors := UI_Colors_Light
@@ -523,6 +529,44 @@ ApplyTheme(Mode) {
     }
     try SCWV_PushThemeToWeb()
     catch {
+    }
+    try SetTimer(ThemeApply_RefreshVisibleUi, -120)
+    catch {
+    }
+    try SetTimer((*) => ThemeApply_ClearIfCurrent(token), -500)
+    catch {
+        g_ThemeApplyInFlight := false
+    }
+}
+
+ThemeApply_ClearIfCurrent(token := 0) {
+    global g_ThemeApplyInFlight, g_ThemeApplyToken
+    if (token != 0 && token != g_ThemeApplyToken)
+        return
+    g_ThemeApplyInFlight := false
+}
+
+ThemeApply_IsInProgress() {
+    global g_ThemeApplyInFlight
+    return !!g_ThemeApplyInFlight
+}
+
+ThemeApply_RefreshVisibleUi(*) {
+    global g_CP_Visible, g_CP_Ready, g_SCWV_Visible, g_SCWV_Ready
+    try {
+        if ConfigWebView_HostAlive()
+            ConfigWebView_RefocusAfterThemeChange()
+    } catch {
+    }
+    try {
+        if (g_CP_Visible && g_CP_Ready)
+            CP_NotifyClipboardUpdated()
+    } catch {
+    }
+    try {
+        if (g_SCWV_Visible && g_SCWV_Ready)
+            SetTimer(SCWV_FocusDeferred, -60)
+    } catch {
     }
 }
 
@@ -3939,11 +3983,12 @@ ShowConfigGUI_FallbackCheck(*) {
     catch {
     }
     try {
-        UseWebViewSettings := false
-        LegacyConfigGui_Show()
+        if FuncExists("ConfigWebView_ReleaseSettingsDock")
+            ConfigWebView_ReleaseSettingsDock("fallback")
     }
     catch {
     }
+    LegacyConfigGui_Show()
 }
 
 NormalizeCapsLockRuntimeForUiOpen() {

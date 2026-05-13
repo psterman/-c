@@ -97,10 +97,28 @@ ShowConfigWebViewGUI() {
     SetTimer(ConfigWebView_RefreshRasterizationScale, -50)
     SetTimer(ConfigWebView_RefreshRasterizationScale, -150)
     SetTimer(ConfigWebView_FocusDeferred, -80)
+    SetTimer(ConfigWebView_EnsureVisibleOrRecover, -420)
     global ConfigWV2, ConfigWV2Ready
     try WebView2_NotifyShown(ConfigWV2)
     ; 每次打开都重新推送 initData（延后一帧），确保主题等与 INI 一致且避开 WebView 回调重入
     SetTimer(ConfigWebView_SendInitDataIfReady, -1)
+}
+
+ConfigWebView_EnsureVisibleOrRecover(*) {
+    if ConfigWebView_HostAlive() {
+        try ConfigWebView_RefocusAfterThemeChange()
+        catch {
+        }
+        return
+    }
+    if !ConfigWebView_HostAlive() {
+        try ConfigWebView_ReleaseSettingsDock("host_dead")
+        catch {
+        }
+        try SetTimer(ShowConfigGUI_FallbackCheck, -1)
+        catch {
+        }
+    }
 }
 
 ConfigWebView_OnCreated(ctrl) {
@@ -217,11 +235,37 @@ ConfigWebView_FocusDeferred(*) {
     }
 }
 
+ConfigWebView_RefocusAfterThemeChange(*) {
+    global GuiID_ConfigGUI, ConfigWV2Ctrl
+    if !ConfigWebView_HostAlive()
+        return
+    try WinSetAlwaysOnTop(true, "ahk_id " . GuiID_ConfigGUI.Hwnd)
+    catch {
+    }
+    try WinActivate("ahk_id " . GuiID_ConfigGUI.Hwnd)
+    catch {
+    }
+    try WebView2_MoveFocusProgrammatic(ConfigWV2Ctrl)
+    catch {
+    }
+}
+
+ConfigWebView_ReleaseSettingsDock(reason := "") {
+    try FloatingToolbar_PageDockLeave("settings")
+    catch {
+    }
+}
+
 ConfigWebView_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
     global GuiID_ConfigGUI, ConfigWebViewMode, g_ConfigWebView_LastShown
     if !ConfigWebViewMode || !GuiID_ConfigGUI
         return
     if (hwnd = GuiID_ConfigGUI.Hwnd && (wParam & 0xFFFF) = 0) {
+        try {
+            if ThemeApply_IsInProgress()
+                return
+        } catch {
+        }
         try {
             if (FloatingToolbar_IsForegroundToolbarOrChild())
                 return
@@ -1113,6 +1157,9 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         IniWrite(NewTheme, ConfigFile, "Settings", "ThemeMode")
         IniWrite(NewTheme, ConfigFile, "Appearance", "ThemeMode")
         ApplyTheme(NewTheme)
+        try SetTimer(ConfigWebView_RefocusAfterThemeChange, -60)
+        catch {
+        }
 
         IniWrite(CursorPath, ConfigFile, "Settings", "CursorPath")
         IniWrite(String(AISleepTime), ConfigFile, "Settings", "AISleepTime")
@@ -1304,6 +1351,18 @@ ConfigWebView_SaveAppearanceActivationMode(mode, &errorMsg := "") {
         try SetTimer(ApplyAppearanceActivationMode, -1)
         catch {
             try ApplyAppearanceActivationMode()
+            catch {
+            }
+        }
+        if (newMode = "toolbar") {
+            try SetTimer((*) => (
+                FloatingToolbar_ClearOverlaySuppression(),
+                ShowFloatingToolbar()
+            ), -50)
+            catch {
+            }
+        } else if (newMode = "hole") {
+            try SetTimer((*) => HideFloatingToolbar(), -50)
             catch {
             }
         }

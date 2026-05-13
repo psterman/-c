@@ -10307,15 +10307,11 @@ LegacyConfigGui_Show() {
     ; 【移除滚动功能】不再启用配置面板的滚轮热键（已移除滚动条）
 }
 OpenLegacyConfigGUI(targetTab := "") {
-    global UseWebViewSettings
-    UseWebViewSettings := false
     try {
-        ShowConfigGUI()
+        LegacyConfigGui_Show()
         if (targetTab != "") {
             SetTimer((*) => SwitchTab(targetTab), -200)
         }
-    } finally {
-        SetTimer((*) => (UseWebViewSettings := true), -300)
     }
 }
 ; ===================== 配置面板滚动消息处理 =====================

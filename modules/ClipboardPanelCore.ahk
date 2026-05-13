@@ -455,6 +455,11 @@ _CP_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
     wp := wParam & 0xFFFF
     if (wp = 0) {
         ; 刚 Show 后短时间内可能收到失焦（与托盘菜单/悬浮条抢焦点），勿立即关闭
+        try {
+            if ThemeApply_IsInProgress()
+                return
+        } catch {
+        }
         if (g_CP_LastShown && (A_TickCount - g_CP_LastShown < 500))
             return
         ; 悬浮工具栏或其 WebView 子窗口获得焦点时，不应关闭剪贴板面板

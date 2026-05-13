@@ -1779,6 +1779,11 @@ SCWV_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
         return
 
     if (hwnd = g_SCWV_Gui.Hwnd && (wParam & 0xFFFF) = 0) {
+        try {
+            if ThemeApply_IsInProgress()
+                return
+        } catch {
+        }
         if g_SCWV_SearchHttpInFlight {
             try SCWV_Log("wm_activate_skip", "reason=search_http_in_flight")
             return
