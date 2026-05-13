@@ -328,7 +328,7 @@ TrayMenuInvokeItem(item, itemIndex, keepOpen := false) {
     try TrayMenu_Log("invoke_click idx=" . itemIndex . " text=" . (item.HasProp("Text") ? String(item.Text) : ""))
     try {
         if (item.HasProp("Action") && IsObject(item.Action))
-            TrayMenu_InvokeActionDeferred(item.Action, (item.HasProp("Text") ? String(item.Text) : ""))
+            SetTimer((*) => TrayMenu_InvokeActionDeferred(item.Action, (item.HasProp("Text") ? String(item.Text) : "")), -1)
         try TrayMenu_Log("invoke_ok idx=" . itemIndex . " text=" . (item.HasProp("Text") ? String(item.Text) : ""))
     } catch as err {
         try TrayMenu_Log("invoke_failed idx=" . itemIndex . " msg=" . err.Message)
@@ -337,11 +337,6 @@ TrayMenuInvokeItem(item, itemIndex, keepOpen := false) {
 }
 
 TrayMenu_InvokeActionDeferred(actionObj, actionText := "") {
-    SetTimer((*) => TrayMenu_InvokeActionDeferredRun(actionObj, actionText), -1)
-}
-
-TrayMenu_InvokeActionDeferredRun(actionObj, actionText := "") {
-    Critical "Off"
     try {
         if IsObject(actionObj)
             actionObj.Call()
@@ -420,7 +415,6 @@ TrayMenu_WaitForHoleUiIdle(timeoutMs := 1800) {
 }
 
 TrayMenu_HardenHoleUiTransition(reason := "tray_open_ui", timeoutMs := 1800) {
-    Critical "Off"
     global GDHO_VISIBLE, NativeDropSessionActive
     searchVisible := false
     try searchVisible := SCWV_IsVisible()
@@ -470,7 +464,6 @@ TrayMenu_QueueUiOpenFromHoleMode(actionFn, reason := "") {
 }
 
 TrayMenu_RunQueuedUiOpenFromHoleMode(actionFn, reason := "") {
-    Critical "Off"
     try TrayMenu_Log("queued_ui_open_begin reason=" . reason)
     TrayMenu_PrepareUiOpenFromHoleMode()
     try TrayMenu_Log("queued_ui_open_after_prep reason=" . reason)
@@ -484,11 +477,6 @@ TrayMenu_RunQueuedUiOpenFromHoleMode(actionFn, reason := "") {
 }
 
 TrayMenu_OpenSearchAction(*) {
-    SetTimer((*) => TrayMenu_OpenSearchActionRun(), -1)
-}
-
-TrayMenu_OpenSearchActionRun(*) {
-    Critical "Off"
     try TrayMenu_Log("open_search_from_menu")
     if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole") {
         try {
@@ -511,67 +499,6 @@ TrayMenu_OpenSearchActionRun(*) {
         FloatingToolbar_ActivateSearchCenter()
     else
         ShowSearchCenter()
-}
-
-ShowSearchCenterFromMenu(*) {
-    SetTimer((*) => ShowSearchCenterFromMenuRun(), -1)
-}
-
-ShowSearchCenterFromMenuRun(*) {
-    Critical "Off"
-    global TrayMenuGUI
-
-    try TrayMenu_Log("show_search_from_menu_begin")
-    try {
-        if (SCWV_IsVisible() && !SearchCenter_IsOpeningOrBusy()) {
-            TrayMenu_Log("show_search_from_menu_toggle_close")
-            if (TrayMenuGUI != 0) {
-                try {
-                    TrayMenuGUI.Destroy()
-                    TrayMenuGUI := 0
-                    SetTimer(CheckTrayMenuMousePosition, 0)
-                }
-            }
-            try SCWV_RequestHardClose("tray_toggle_search")
-            catch {
-                try SCWV_Hide(true)
-                catch {
-                }
-            }
-            return
-        }
-        if (SearchCenter_IsOpeningOrBusy()) {
-            TrayMenu_Log("show_search_from_menu_busy")
-            if (TrayMenuGUI != 0) {
-                try {
-                    TrayMenuGUI.Destroy()
-                    TrayMenuGUI := 0
-                    SetTimer(CheckTrayMenuMousePosition, 0)
-                }
-            }
-            if (SCWV_IsVisible()) {
-                SCWV_Show("tray_reuse_search")
-            } else {
-                try SCWV_RequestHardClose("tray_search_busy_reopen")
-                catch {
-                }
-                TrayMenu_WaitForSearchCenterIdle(1500)
-                TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenSearchAction, "search_recover")
-            }
-            return
-        }
-    } catch {
-    }
-    if (TrayMenuGUI != 0) {
-        try {
-            TrayMenuGUI.Destroy()
-            TrayMenuGUI := 0
-            SetTimer(CheckTrayMenuMousePosition, 0)
-        }
-    }
-
-    TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenSearchAction, "search")
-    try TrayMenu_Log("show_search_from_menu_end")
 }
 
 TrayMenu_OpenClipboardAction(*) {
@@ -726,6 +653,45 @@ ToggleFloatingToolbarFromMenu(*) {
             SetTimer(CheckTrayMenuMousePosition, 0)
         }
     }
+}
+
+ShowSearchCenterFromMenu(*) {
+    global TrayMenuGUI
+
+    try TrayMenu_Log("show_search_from_menu_begin")
+    try {
+        if (SearchCenter_IsOpeningOrBusy()) {
+            TrayMenu_Log("show_search_from_menu_busy")
+            if (TrayMenuGUI != 0) {
+                try {
+                    TrayMenuGUI.Destroy()
+                    TrayMenuGUI := 0
+                    SetTimer(CheckTrayMenuMousePosition, 0)
+                }
+            }
+            if (SCWV_IsVisible()) {
+                SCWV_Show("tray_reuse_search")
+            } else {
+                try SCWV_RequestHardClose("tray_search_busy_reopen")
+                catch {
+                }
+                TrayMenu_WaitForSearchCenterIdle(1500)
+                TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenSearchAction, "search_recover")
+            }
+            return
+        }
+    } catch {
+    }
+    if (TrayMenuGUI != 0) {
+        try {
+            TrayMenuGUI.Destroy()
+            TrayMenuGUI := 0
+            SetTimer(CheckTrayMenuMousePosition, 0)
+        }
+    }
+
+    TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenSearchAction, "search")
+    try TrayMenu_Log("show_search_from_menu_end")
 }
 
 ShowClipboardFromMenu(*) {
@@ -1101,11 +1067,6 @@ FloatingBubbleHideFromMenu(*) {
 }
 
 TrayMenu_RunSceneCmd(cmdId) {
-    SetTimer((*) => TrayMenu_RunSceneCmdRun(cmdId), -1)
-}
-
-TrayMenu_RunSceneCmdRun(cmdId) {
-    Critical "Off"
     c := Trim(String(cmdId))
     if (c = "")
         return
@@ -1162,115 +1123,34 @@ TrayMenu_MakeSceneAction(cmdId) {
 }
 
 TrayMenu_BuildItemsFromSceneMenu(sceneKey := "tray_menu") {
-    global g_Commands, AppearanceActivationMode
+    global g_Commands
     items := []
     if !(IsSet(g_Commands) && g_Commands is Map)
-        return TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items)
+        return items
     if !(g_Commands.Has("SceneMenus") && g_Commands["SceneMenus"] is Map)
-        return TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items)
+        return items
     sm := g_Commands["SceneMenus"]
     if !sm.Has(sceneKey) || !(sm[sceneKey] is Array)
-        return TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items)
+        return items
     vm := Map()
     if (g_Commands.Has("SceneMenuVisibility") && g_Commands["SceneMenuVisibility"] is Map
         && g_Commands["SceneMenuVisibility"].Has(sceneKey) && g_Commands["SceneMenuVisibility"][sceneKey] is Map)
         vm := g_Commands["SceneMenuVisibility"][sceneKey]
     cmdList := (g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map) ? g_Commands["CommandList"] : Map()
-    try {
-        rawCount := (sm.Has(sceneKey) && sm[sceneKey] is Array) ? sm[sceneKey].Length : -1
-        visCount := IsObject(vm) ? vm.Count : -1
-        TrayMenu_Log("scene_items_source scene=" . sceneKey . " mode=" . NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") . " raw_count=" . rawCount . " vis_count=" . visCount . " cmd_count=" . (IsObject(cmdList) ? cmdList.Count : 0))
-    } catch {
-    }
-    items := TrayMenu_BuildItemsFromSceneIds(sm[sceneKey], cmdList, vm)
-    try TrayMenu_Log("scene_items_filtered scene=" . sceneKey . " count=" . items.Length)
-    catch {
-    }
-    if (items.Length > 0)
-        return items
-    return TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items, cmdList, vm)
-}
-
-TrayMenu_BuildItemsFromSceneIds(sceneIds, cmdList, vm := 0) {
-    items := []
     seen := Map()
-    if !(sceneIds is Array)
-        return items
-    for cid0 in sceneIds {
+    for cid0 in sm[sceneKey] {
         cid := Trim(String(cid0))
         if (cid = "" || seen.Has(cid))
             continue
         seen[cid] := true
-        if (IsObject(vm) && vm.Has(cid) && !vm[cid])
+        if vm.Has(cid) && !vm[cid]
             continue
         nm := cid
-        if (IsObject(cmdList) && cmdList.Has(cid) && cmdList[cid] is Map && cmdList[cid].Has("name") && cmdList[cid]["name"] != "")
+        if (cmdList.Has(cid) && cmdList[cid] is Map && cmdList[cid].Has("name") && cmdList[cid]["name"] != "")
             nm := String(cmdList[cid]["name"])
-        if (nm = "" || nm = cid)
-            nm := TrayMenu_GetSceneFallbackLabel(cid, nm)
         items.Push({ Text: nm, Action: TrayMenu_MakeSceneAction(cid), Icon: "•" })
     }
     return items
-}
-
-TrayMenu_GetSceneFallbackLabel(cmdId, defaultLabel := "") {
-    c := Trim(String(cmdId))
-    if (c = "")
-        return defaultLabel
-    switch c {
-        case "tray_show_search":
-            return "搜索中心"
-        case "tray_show_clipboard":
-            return "剪贴板"
-        case "tray_show_screenshot":
-            return "截图"
-        case "tray_show_config":
-            return "打开配置面板"
-        case "tray_toggle_toolbar":
-            return "切换工具栏"
-        case "tray_hide_toolbar":
-            return "关闭工具栏"
-        case "tray_reload_script":
-            return "重启脚本"
-        case "tray_exit_app":
-            return "退出工具"
-        default:
-            return defaultLabel
-    }
-}
-
-TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items := [], cmdList := 0, vm := 0) {
-    global AppearanceActivationMode, g_Commands
-    mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
-    if (sceneKey != "tray_menu" || mode != "hole")
-        return items
-    if (!IsObject(cmdList) || !(cmdList is Map) || !cmdList.Count) {
-        try {
-            if (IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map)
-                cmdList := g_Commands["CommandList"]
-        } catch {
-        }
-    }
-    fallbackIds := []
-    try fallbackIds := _VK_DefaultSceneMenuTrayMenuCmds()
-    catch {
-        fallbackIds := []
-    }
-    if (!(fallbackIds is Array) || fallbackIds.Length = 0)
-        return items
-    try TrayMenu_Log("scene_items_fallback_default count=" . fallbackIds.Length . " mode=" . mode)
-    try {
-        hiddenCount := 0
-        if (IsObject(vm) && vm is Map) {
-            for cid, on in vm {
-                if !on
-                    hiddenCount += 1
-            }
-        }
-        TrayMenu_Log("scene_items_fallback_context scene=" . sceneKey . " hidden_count=" . hiddenCount . " cmd_count=" . (IsObject(cmdList) ? cmdList.Count : 0))
-    } catch {
-    }
-    return TrayMenu_BuildItemsFromSceneIds(fallbackIds, cmdList, vm)
 }
 
 ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
@@ -1312,11 +1192,13 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
     catch {
     }
     if (sceneItems.Length > 0) {
-        ; 黑洞模式也沿用悬浮栏的 scene menu 内容，避免菜单在 hole 运行态被主动降级。
-        ; 真正的安全收敛交给各个 action 自己的异步打开/硬关闭逻辑。
-        try TrayMenu_Log("scene_items_appended count=" . sceneItems.Length . " mode=" . mode)
-        for it in sceneItems
-            MenuItems.Push(it)
+        if (mode = "hole") {
+            try TrayMenu_Log("scene_items_skipped_hole count=" . sceneItems.Length)
+        } else {
+            try TrayMenu_Log("scene_items_appended count=" . sceneItems.Length)
+            for it in sceneItems
+                MenuItems.Push(it)
+        }
     }
 
     MenuHeight := MenuItems.Length * MenuItemHeight + Padding * 2

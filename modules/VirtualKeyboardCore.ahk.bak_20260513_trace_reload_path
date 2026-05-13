@@ -539,14 +539,6 @@ _LoadCommands() {
         return
 
     _VK_SyncBuiltinCommands()
-    try {
-        trayCount := (g_Commands.Has("SceneMenus") && g_Commands["SceneMenus"] is Map
-            && g_Commands["SceneMenus"].Has("tray_menu") && g_Commands["SceneMenus"]["tray_menu"] is Array)
-            ? g_Commands["SceneMenus"]["tray_menu"].Length
-            : -1
-        OutputDebug("[VK] LoadCommands after sync tray_menu count=" . trayCount)
-    } catch {
-    }
     ; Sync cursor-native mapping layer (catalog + user_keymap) into runtime bindings.
     try CursorShortcutMapper_SyncUserKeymapToCommands(g_Commands)
 
@@ -558,14 +550,6 @@ _LoadCommands() {
     _VK_EnsureSceneToolbarLayout()
     _VK_EnsureSceneMenus()
     _VK_EnsureContextMenuLayout()
-    try {
-        trayCount := (g_Commands.Has("SceneMenus") && g_Commands["SceneMenus"] is Map
-            && g_Commands["SceneMenus"].Has("tray_menu") && g_Commands["SceneMenus"]["tray_menu"] is Array)
-            ? g_Commands["SceneMenus"]["tray_menu"].Length
-            : -1
-        OutputDebug("[VK] LoadCommands ready tray_menu count=" . trayCount . " cmd_count=" . (g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map ? g_Commands["CommandList"].Count : 0))
-    } catch {
-    }
     _VK_SyncFloatPinnedFromStorage()
     _VK_RenderGlobalFloatPanel()
     if g_VK_Embedded

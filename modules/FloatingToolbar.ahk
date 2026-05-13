@@ -1578,13 +1578,21 @@ FloatingToolbar_DeferredOpenSearchByKeyword(keyword, *) {
 }
 
 FloatingToolbar_ActivateSearchCenter() {
-    global g_SCWV_WaitingUiFinishedReveal
+    global g_SCWV_WaitingUiFinishedReveal, AppearanceActivationMode
     selectedText := ""
     opened := false
     usedWebView := false
 
     try usedWebView := SearchCenter_ShouldUseWebView()
     try SCWV_Log("ftb_activate_search_center_begin", "used_webview=" . (usedWebView ? "1" : "0"))
+    ; If the app is already in hole mode and SearchCenter is not visible, reuse the same hard
+    ; handoff that tray opening uses. This clears stale overlay / native drag state before we
+    ; try to wake SearchCenter again.
+    try {
+        if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole" && !SCWV_IsVisible())
+            TrayMenu_HardenHoleUiTransition("caps_f_search", 1800)
+    } catch {
+    }
     try {
         if (SearchCenter_IsOpeningOrBusy()) {
             try SCWV_Log("ftb_activate_search_center_busy", "active=" . (IsSearchCenterActive() ? "1" : "0") . " vis=" . (SCWV_IsVisible() ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))

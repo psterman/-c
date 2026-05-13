@@ -132,12 +132,12 @@ SCWV_ResetHostState() {
 }
 
 SCWV_ClearStaleHostState(reason := "") {
-    global g_SCWV_Gui, g_SCWV_WaitingUiFinishedReveal, g_SCWV_CreateInFlight, g_SCWV_Visible
+    global g_SCWV_Gui, g_SCWV_WaitingUiFinishedReveal, g_SCWV_CreateInFlight, g_SCWV_Visible, g_SCWV_LifecyclePhase
     if (SCWV_HostAlive())
         return false
-    if (!(g_SCWV_Gui || g_SCWV_WaitingUiFinishedReveal || g_SCWV_CreateInFlight || g_SCWV_Visible))
+    if (!(g_SCWV_Gui || g_SCWV_WaitingUiFinishedReveal || g_SCWV_CreateInFlight || g_SCWV_Visible || (g_SCWV_LifecyclePhase = "opening") || (g_SCWV_LifecyclePhase = "closing")))
         return false
-    try SCWV_Log("stale_host_reset", "reason=" . reason . " gui=" . (g_SCWV_Gui ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " inflight=" . (g_SCWV_CreateInFlight ? "1" : "0") . " visible=" . (g_SCWV_Visible ? "1" : "0"))
+    try SCWV_Log("stale_host_reset", "reason=" . reason . " gui=" . (g_SCWV_Gui ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " inflight=" . (g_SCWV_CreateInFlight ? "1" : "0") . " visible=" . (g_SCWV_Visible ? "1" : "0") . " phase=" . g_SCWV_LifecyclePhase)
     SCWV_ResetHostState()
     return true
 }
@@ -539,8 +539,14 @@ SCWV_ForceCloseHost(reason := "") {
     catch {
     }
 
-    try WMActivateChain_Unregister(SCWV_WM_ACTIVATE)
-    catch {
+    try {
+        SCWV_Log("wm_chain_unregister_begin", "reason=" . reason . " count=" . WMActivateChain_Count())
+        WMActivateChain_Unregister(SCWV_WM_ACTIVATE)
+        SCWV_Log("wm_chain_unregister_done", "reason=" . reason . " count=" . WMActivateChain_Count())
+    } catch as err {
+        try SCWV_Log("wm_chain_unregister_failed", "reason=" . reason . " msg=" . err.Message)
+        catch {
+        }
     }
     try WebView2_NotifyHidden(g_SCWV_WV2)
     catch {
@@ -1553,7 +1559,15 @@ SCWV_Show(reason := "") {
     try FloatingToolbar_PageDockEnter("search")
     g_SCWV_LastShown := A_TickCount
     try WebView2_NotifyShown(g_SCWV_WV2)
-    WMActivateChain_Register(SCWV_WM_ACTIVATE)
+    try {
+        SCWV_Log("wm_chain_register_begin", "reason=" . reason . " count=" . WMActivateChain_Count())
+        WMActivateChain_Register(SCWV_WM_ACTIVATE)
+        SCWV_Log("wm_chain_register_done", "reason=" . reason . " count=" . WMActivateChain_Count())
+    } catch as err {
+        try SCWV_Log("wm_chain_register_failed", "reason=" . reason . " msg=" . err.Message)
+        catch {
+        }
+    }
 
     SCWV_RefreshComposition()
     SetTimer(SCWV_RefreshComposition, -120)
@@ -1698,9 +1712,10 @@ SCWV_Hide(PersistSelection := true) {
     GuiID_SearchCenter := 0
     SearchCenterInvalidateGuiControlRefs()
 
-    try SCWV_Log("hide_step", "unregister_activate_chain")
+    try SCWV_Log("hide_step", "unregister_activate_chain count_before=" . WMActivateChain_Count())
     try {
         WMActivateChain_Unregister(SCWV_WM_ACTIVATE)
+        try SCWV_Log("hide_step", "unregister_activate_chain_done count_after=" . WMActivateChain_Count())
     } catch as err {
         try SCWV_Log("hide_error", "step=unregister_activate_chain msg=" . err.Message)
     }
@@ -1756,6 +1771,9 @@ SCWV_WMDeactivateHideTick(*) {
 
 SCWV_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_LastShown, g_SCWV_SearchHttpInFlight
+    global g_SCWV_WaitingUiFinishedReveal, g_SCWV_FocusPending, g_SCWV_LifecyclePhase
+
+    try SCWV_Log("wm_activate_seen", "wparam=" . Integer(wParam & 0xFFFF) . " hwnd=" . hwnd . " visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " focus_pending=" . (g_SCWV_FocusPending ? "1" : "0") . " phase=" . g_SCWV_LifecyclePhase . " search_http=" . (g_SCWV_SearchHttpInFlight ? "1" : "0"))
 
     if !g_SCWV_Visible || !g_SCWV_Gui
         return
@@ -1789,11 +1807,11 @@ SCWV_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
             try SCWV_Log("wm_activate_skip", "reason=dark_ctx_menu")
             return
         }
-        if (g_SCWV_LastShown && (A_TickCount - g_SCWV_LastShown < 500)) {
+        if (g_SCWV_LifecyclePhase != "closing" && g_SCWV_LastShown && (A_TickCount - g_SCWV_LastShown < 500)) {
             try SCWV_Log("wm_activate_skip", "reason=recent_show delta=" . Integer(A_TickCount - g_SCWV_LastShown))
             return
         }
-        try SCWV_Log("wm_activate_queue", "reason=wm_deactivate")
+        try SCWV_Log("wm_activate_queue", "reason=wm_deactivate count=" . WMActivateChain_Count())
         SetTimer(SCWV_WMDeactivateHideTick, -50)
     }
 }

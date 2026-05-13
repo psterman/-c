@@ -21,6 +21,16 @@ WMActivateChain_EnsureInit() {
     }
 }
 
+WMActivateChain_Count() {
+    global g_WMActivateChain
+    WMActivateChain_EnsureInit()
+    try {
+        return g_WMActivateChain.Length
+    } catch {
+        return 0
+    }
+}
+
 _WMActivateChain_Dispatch(wParam, lParam, msg, hwnd) {
     global g_WMActivateChain
     WMActivateChain_EnsureInit()

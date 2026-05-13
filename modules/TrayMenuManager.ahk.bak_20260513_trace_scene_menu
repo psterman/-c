@@ -1176,16 +1176,7 @@ TrayMenu_BuildItemsFromSceneMenu(sceneKey := "tray_menu") {
         && g_Commands["SceneMenuVisibility"].Has(sceneKey) && g_Commands["SceneMenuVisibility"][sceneKey] is Map)
         vm := g_Commands["SceneMenuVisibility"][sceneKey]
     cmdList := (g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map) ? g_Commands["CommandList"] : Map()
-    try {
-        rawCount := (sm.Has(sceneKey) && sm[sceneKey] is Array) ? sm[sceneKey].Length : -1
-        visCount := IsObject(vm) ? vm.Count : -1
-        TrayMenu_Log("scene_items_source scene=" . sceneKey . " mode=" . NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") . " raw_count=" . rawCount . " vis_count=" . visCount . " cmd_count=" . (IsObject(cmdList) ? cmdList.Count : 0))
-    } catch {
-    }
     items := TrayMenu_BuildItemsFromSceneIds(sm[sceneKey], cmdList, vm)
-    try TrayMenu_Log("scene_items_filtered scene=" . sceneKey . " count=" . items.Length)
-    catch {
-    }
     if (items.Length > 0)
         return items
     return TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items, cmdList, vm)
@@ -1259,17 +1250,6 @@ TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items := [], cmdList := 0, vm
     if (!(fallbackIds is Array) || fallbackIds.Length = 0)
         return items
     try TrayMenu_Log("scene_items_fallback_default count=" . fallbackIds.Length . " mode=" . mode)
-    try {
-        hiddenCount := 0
-        if (IsObject(vm) && vm is Map) {
-            for cid, on in vm {
-                if !on
-                    hiddenCount += 1
-            }
-        }
-        TrayMenu_Log("scene_items_fallback_context scene=" . sceneKey . " hidden_count=" . hiddenCount . " cmd_count=" . (IsObject(cmdList) ? cmdList.Count : 0))
-    } catch {
-    }
     return TrayMenu_BuildItemsFromSceneIds(fallbackIds, cmdList, vm)
 }
 

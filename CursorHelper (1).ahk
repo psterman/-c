@@ -5135,7 +5135,7 @@ f:: {
         catch {
             searchVisible := false
         }
-        try SCWV_Log("caps_f_state", "search_active=" . (IsSearchCenterActive() ? "1" : "0") . " search_visible=" . (searchVisible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " create_inflight=" . (g_SCWV_CreateInFlight ? "1" : "0") . " countdown=" . (IsCountdownActive ? "1" : "0") . " caps=" . (GetCapsLockState() ? "1" : "0"))
+        try SCWV_Log("caps_f_state", "search_active=" . (IsSearchCenterActive() ? "1" : "0") . " search_visible=" . (searchVisible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " create_inflight=" . (g_SCWV_CreateInFlight ? "1" : "0") . " phase=" . (IsSet(g_SCWV_LifecyclePhase) ? g_SCWV_LifecyclePhase : "") . " countdown=" . (IsCountdownActive ? "1" : "0") . " caps=" . (GetCapsLockState() ? "1" : "0"))
         catch {
         }
     }

@@ -75,8 +75,6 @@ global GDHO_STRICT_MODE := true
 global GDHO_DRAG_CURSOR_STREAK := 0
 global GDHO_LAST_DROPPED_TEXT := ""
 global GDHO_SESSION_TEXT := ""
-global GDHO_FRONTEND_POST_MSG := 0x8127
-global GDHO_FRONTEND_PENDING_JS := ""
 ; Hidden-state parking: keep host away from center to reduce accidental obstruction.
 global GDHO_HIDE_DOCK_ENABLED := true
 global GDHO_HIDE_DOCK_EDGE := "right" ; right|left|top|bottom
@@ -212,7 +210,6 @@ GDHO_Init() {
 
 GDHO_CreateOverlayGui() {
     global GDHO_GUI, GDHO_DIAG_CTRL
-    OnMessage(GDHO_FRONTEND_POST_MSG, GDHO_OnFrontendPostMessage)
     GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
     hostW := Integer(GDHO_HOST_W), hostH := Integer(GDHO_HOST_H)
     if (hostW < 260)
@@ -483,35 +480,6 @@ GDHO_RunJS(js) {
     } catch {
         return false
     }
-}
-
-GDHO_QueueFrontendJs(js) {
-    global GDHO_GUI, GDHO_FRONTEND_PENDING_JS, GDHO_FRONTEND_POST_MSG
-    if !GDHO_GUI
-        return false
-    GDHO_FRONTEND_PENDING_JS := String(js)
-    try {
-        PostMessage(GDHO_FRONTEND_POST_MSG, 1, 0, , "ahk_id " GDHO_GUI.Hwnd)
-        return true
-    } catch {
-        return false
-    }
-}
-
-GDHO_OnFrontendPostMessage(wParam, lParam, msg, hwnd) {
-    global GDHO_FRONTEND_PENDING_JS, GDHO_GUI, GDHO_WV2, GDHO_READY
-    Critical "Off"
-    if (wParam != 1)
-        return 0
-    js := GDHO_FRONTEND_PENDING_JS
-    GDHO_FRONTEND_PENDING_JS := ""
-    if (js = "" || !GDHO_GUI)
-        return 0
-    ; Bridge-safe fallback: if WebView is not ready or the post arrives late,
-    ; avoid a synchronous bridge call and let the window state settle without blocking the AHK thread.
-    if (GDHO_WV2 && GDHO_READY)
-        return GDHO_RunJS(js) ? 0 : 0
-    return 0
 }
 
 GDHO_ShowOverlay() {
@@ -892,12 +860,10 @@ GDHO_HideFrontend() {
     global GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD
     if GDHO_DESKTOP_PINNED {
         p := (GDHO_PIN_PAYLOAD = "file") ? "file" : "text"
-        GDHO_QueueFrontendJs("window.HoleOverlay?.show('" p "')")
+        GDHO_RunJS("window.HoleOverlay?.show('" p "')")
         return
     }
-    ; Do not call the bridge synchronously during teardown. Post the work to the GUI thread
-    ; so tray/menu cleanup cannot hang on a slow or wedged WebView2 bridge.
-    GDHO_QueueFrontendJs("window.HoleOverlay?.hide()")
+    GDHO_RunJS("window.HoleOverlay?.hide()")
 }
 
 GDHO_Start() {

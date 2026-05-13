@@ -539,14 +539,6 @@ _LoadCommands() {
         return
 
     _VK_SyncBuiltinCommands()
-    try {
-        trayCount := (g_Commands.Has("SceneMenus") && g_Commands["SceneMenus"] is Map
-            && g_Commands["SceneMenus"].Has("tray_menu") && g_Commands["SceneMenus"]["tray_menu"] is Array)
-            ? g_Commands["SceneMenus"]["tray_menu"].Length
-            : -1
-        OutputDebug("[VK] LoadCommands after sync tray_menu count=" . trayCount)
-    } catch {
-    }
     ; Sync cursor-native mapping layer (catalog + user_keymap) into runtime bindings.
     try CursorShortcutMapper_SyncUserKeymapToCommands(g_Commands)
 
@@ -558,14 +550,6 @@ _LoadCommands() {
     _VK_EnsureSceneToolbarLayout()
     _VK_EnsureSceneMenus()
     _VK_EnsureContextMenuLayout()
-    try {
-        trayCount := (g_Commands.Has("SceneMenus") && g_Commands["SceneMenus"] is Map
-            && g_Commands["SceneMenus"].Has("tray_menu") && g_Commands["SceneMenus"]["tray_menu"] is Array)
-            ? g_Commands["SceneMenus"]["tray_menu"].Length
-            : -1
-        OutputDebug("[VK] LoadCommands ready tray_menu count=" . trayCount . " cmd_count=" . (g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map ? g_Commands["CommandList"].Count : 0))
-    } catch {
-    }
     _VK_SyncFloatPinnedFromStorage()
     _VK_RenderGlobalFloatPanel()
     if g_VK_Embedded
@@ -1548,15 +1532,6 @@ _VK_EnsureSceneMenus() {
     }
     g_Commands["SceneMenus"] := sm
     _VK_EnsureSceneMenuVisibility()
-    try {
-        trayCount := (sm.Has("tray_menu") && sm["tray_menu"] is Array) ? sm["tray_menu"].Length : -1
-        visCount := (g_Commands.Has("SceneMenuVisibility") && g_Commands["SceneMenuVisibility"] is Map
-            && g_Commands["SceneMenuVisibility"].Has("tray_menu") && g_Commands["SceneMenuVisibility"]["tray_menu"] is Map)
-            ? g_Commands["SceneMenuVisibility"]["tray_menu"].Count
-            : -1
-        OutputDebug("[VK] EnsureSceneMenus tray_menu count=" . trayCount . " vis_count=" . visCount . " cmd_count=" . cmdList.Count)
-    } catch {
-    }
 }
 
 _VK_SceneMenusToJson() {
@@ -1565,11 +1540,6 @@ _VK_SceneMenusToJson() {
         _VK_EnsureSceneMenus()
     keys := _VK_SceneMenuCanonicalKeys()
     sm := g_Commands.Has("SceneMenus") && g_Commands["SceneMenus"] is Map ? g_Commands["SceneMenus"] : Map()
-    try {
-        trayCount := (sm.Has("tray_menu") && sm["tray_menu"] is Array) ? sm["tray_menu"].Length : -1
-        OutputDebug("[VK] SceneMenusToJson tray_menu count=" . trayCount)
-    } catch {
-    }
     json := "{"
     sep := ""
     for key in keys {
@@ -2009,12 +1979,6 @@ _VK_ApplySceneMenuFromWeb(msg) {
     }
     if (key != "search")
         user := _VK_SceneMenuPadToGridSlotCount(cmdList, user)
-    try {
-        if (key = "tray_menu") {
-            OutputDebug("[VK] ApplySceneMenuFromWeb tray_menu incoming=" . (msg.Has("cmds") && msg["cmds"] is Array ? msg["cmds"].Length : 0) . " stored=" . user.Length)
-        }
-    } catch {
-    }
     if !g_Commands.Has("SceneMenus") || !(g_Commands["SceneMenus"] is Map)
         g_Commands["SceneMenus"] := Map()
     g_Commands["SceneMenus"][key] := user
@@ -2027,16 +1991,6 @@ _VK_ApplySceneMenuFromWeb(msg) {
             tgt[Trim(String(k2))] := !!v2
     }
     _VK_SyncSceneMenuVisibilityWithMenus()
-    try {
-        if (key = "tray_menu") {
-            visCount := (g_Commands.Has("SceneMenuVisibility") && g_Commands["SceneMenuVisibility"] is Map
-                && g_Commands["SceneMenuVisibility"].Has(key) && g_Commands["SceneMenuVisibility"][key] is Map)
-                ? g_Commands["SceneMenuVisibility"][key].Count
-                : -1
-            OutputDebug("[VK] ApplySceneMenuFromWeb tray_menu visible_count=" . visCount)
-        }
-    } catch {
-    }
     if (key = "floating_bar")
         _VK_SyncContextMenuLayoutFromFloatingSceneMenu()
     return true
@@ -3666,12 +3620,6 @@ _OnWebMessage(sender, args) {
             if _VK_ApplySceneMenuFromWeb(msg) {
                 _SaveBindings()
                 sk := msg.Has("scene") ? Trim(String(msg["scene"])) : ""
-                try {
-                    if (sk = "tray_menu") {
-                        OutputDebug("[VK] saveSceneMenu tray_menu persisted")
-                    }
-                } catch {
-                }
                 if (sk = "floating_bar") {
                     try FloatingToolbarReloadFromToolbarLayout()
                     catch as e

@@ -523,23 +523,6 @@ ShowSearchCenterFromMenuRun(*) {
 
     try TrayMenu_Log("show_search_from_menu_begin")
     try {
-        if (SCWV_IsVisible() && !SearchCenter_IsOpeningOrBusy()) {
-            TrayMenu_Log("show_search_from_menu_toggle_close")
-            if (TrayMenuGUI != 0) {
-                try {
-                    TrayMenuGUI.Destroy()
-                    TrayMenuGUI := 0
-                    SetTimer(CheckTrayMenuMousePosition, 0)
-                }
-            }
-            try SCWV_RequestHardClose("tray_toggle_search")
-            catch {
-                try SCWV_Hide(true)
-                catch {
-                }
-            }
-            return
-        }
         if (SearchCenter_IsOpeningOrBusy()) {
             TrayMenu_Log("show_search_from_menu_busy")
             if (TrayMenuGUI != 0) {
@@ -1162,115 +1145,34 @@ TrayMenu_MakeSceneAction(cmdId) {
 }
 
 TrayMenu_BuildItemsFromSceneMenu(sceneKey := "tray_menu") {
-    global g_Commands, AppearanceActivationMode
+    global g_Commands
     items := []
     if !(IsSet(g_Commands) && g_Commands is Map)
-        return TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items)
+        return items
     if !(g_Commands.Has("SceneMenus") && g_Commands["SceneMenus"] is Map)
-        return TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items)
+        return items
     sm := g_Commands["SceneMenus"]
     if !sm.Has(sceneKey) || !(sm[sceneKey] is Array)
-        return TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items)
+        return items
     vm := Map()
     if (g_Commands.Has("SceneMenuVisibility") && g_Commands["SceneMenuVisibility"] is Map
         && g_Commands["SceneMenuVisibility"].Has(sceneKey) && g_Commands["SceneMenuVisibility"][sceneKey] is Map)
         vm := g_Commands["SceneMenuVisibility"][sceneKey]
     cmdList := (g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map) ? g_Commands["CommandList"] : Map()
-    try {
-        rawCount := (sm.Has(sceneKey) && sm[sceneKey] is Array) ? sm[sceneKey].Length : -1
-        visCount := IsObject(vm) ? vm.Count : -1
-        TrayMenu_Log("scene_items_source scene=" . sceneKey . " mode=" . NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") . " raw_count=" . rawCount . " vis_count=" . visCount . " cmd_count=" . (IsObject(cmdList) ? cmdList.Count : 0))
-    } catch {
-    }
-    items := TrayMenu_BuildItemsFromSceneIds(sm[sceneKey], cmdList, vm)
-    try TrayMenu_Log("scene_items_filtered scene=" . sceneKey . " count=" . items.Length)
-    catch {
-    }
-    if (items.Length > 0)
-        return items
-    return TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items, cmdList, vm)
-}
-
-TrayMenu_BuildItemsFromSceneIds(sceneIds, cmdList, vm := 0) {
-    items := []
     seen := Map()
-    if !(sceneIds is Array)
-        return items
-    for cid0 in sceneIds {
+    for cid0 in sm[sceneKey] {
         cid := Trim(String(cid0))
         if (cid = "" || seen.Has(cid))
             continue
         seen[cid] := true
-        if (IsObject(vm) && vm.Has(cid) && !vm[cid])
+        if vm.Has(cid) && !vm[cid]
             continue
         nm := cid
-        if (IsObject(cmdList) && cmdList.Has(cid) && cmdList[cid] is Map && cmdList[cid].Has("name") && cmdList[cid]["name"] != "")
+        if (cmdList.Has(cid) && cmdList[cid] is Map && cmdList[cid].Has("name") && cmdList[cid]["name"] != "")
             nm := String(cmdList[cid]["name"])
-        if (nm = "" || nm = cid)
-            nm := TrayMenu_GetSceneFallbackLabel(cid, nm)
         items.Push({ Text: nm, Action: TrayMenu_MakeSceneAction(cid), Icon: "•" })
     }
     return items
-}
-
-TrayMenu_GetSceneFallbackLabel(cmdId, defaultLabel := "") {
-    c := Trim(String(cmdId))
-    if (c = "")
-        return defaultLabel
-    switch c {
-        case "tray_show_search":
-            return "搜索中心"
-        case "tray_show_clipboard":
-            return "剪贴板"
-        case "tray_show_screenshot":
-            return "截图"
-        case "tray_show_config":
-            return "打开配置面板"
-        case "tray_toggle_toolbar":
-            return "切换工具栏"
-        case "tray_hide_toolbar":
-            return "关闭工具栏"
-        case "tray_reload_script":
-            return "重启脚本"
-        case "tray_exit_app":
-            return "退出工具"
-        default:
-            return defaultLabel
-    }
-}
-
-TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items := [], cmdList := 0, vm := 0) {
-    global AppearanceActivationMode, g_Commands
-    mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
-    if (sceneKey != "tray_menu" || mode != "hole")
-        return items
-    if (!IsObject(cmdList) || !(cmdList is Map) || !cmdList.Count) {
-        try {
-            if (IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map)
-                cmdList := g_Commands["CommandList"]
-        } catch {
-        }
-    }
-    fallbackIds := []
-    try fallbackIds := _VK_DefaultSceneMenuTrayMenuCmds()
-    catch {
-        fallbackIds := []
-    }
-    if (!(fallbackIds is Array) || fallbackIds.Length = 0)
-        return items
-    try TrayMenu_Log("scene_items_fallback_default count=" . fallbackIds.Length . " mode=" . mode)
-    try {
-        hiddenCount := 0
-        if (IsObject(vm) && vm is Map) {
-            for cid, on in vm {
-                if !on
-                    hiddenCount += 1
-            }
-        }
-        TrayMenu_Log("scene_items_fallback_context scene=" . sceneKey . " hidden_count=" . hiddenCount . " cmd_count=" . (IsObject(cmdList) ? cmdList.Count : 0))
-    } catch {
-    }
-    return TrayMenu_BuildItemsFromSceneIds(fallbackIds, cmdList, vm)
 }
 
 ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
