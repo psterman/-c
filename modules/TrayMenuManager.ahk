@@ -781,7 +781,9 @@ ShowScreenshotFromMenu(*) {
         }
     }
 
-    TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenScreenshotAction, "screenshot")
+    try TrayMenu_Log("screenshot_direct_execute_begin")
+    ExecuteScreenshotWithMenu()
+    try TrayMenu_Log("screenshot_direct_execute_done")
     try TrayMenu_Log("show_screenshot_from_menu_end")
 }
 

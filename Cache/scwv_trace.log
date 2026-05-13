@@ -2256,3 +2256,39 @@
 [2026-05-13 17:53:52][hide_done] visible=0 reason=webview_create_failed
 [2026-05-13 17:53:52][force_close_done] reason=webview_create_failed
 [2026-05-13 17:53:52][webview_create_retry_exhausted] attempts=2
+[2026-05-13 18:08:48][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 18:08:48][init_create_begin] reason= hwnd=530972
+[2026-05-13 18:14:10][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 18:14:10][init_create_begin] reason= hwnd=1317966
+[2026-05-13 18:17:36][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 18:17:36][init_create_begin] reason= hwnd=1383502
+[2026-05-13 18:42:48][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 18:42:48][init_create_begin] reason= hwnd=990210
+[2026-05-13 18:57:18][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 18:57:18][init_create_begin] reason= hwnd=1121298
+[2026-05-13 19:04:43][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 19:04:43][init_create_begin] reason= hwnd=924604
+[2026-05-13 19:06:41][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 19:06:41][init_create_begin] reason= hwnd=924510
+[2026-05-13 19:07:09][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 19:07:09][init_create_begin] reason= hwnd=17831668
+[2026-05-13 19:18:44][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 19:18:44][init_create_begin] reason= hwnd=4528536
+[2026-05-13 19:32:28][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 19:32:28][init_create_begin] reason= hwnd=1382940
+[2026-05-13 19:32:34][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 19:32:34][init_create_begin] reason= hwnd=1317812
+[2026-05-13 19:35:22][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 19:35:22][init_create_begin] reason= hwnd=1383348
+[2026-05-13 21:04:00][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 21:04:00][init_create_begin] reason= hwnd=1448884
+[2026-05-13 21:23:15][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 21:23:15][init_create_begin] reason= hwnd=6953872
+[2026-05-13 21:25:02][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 21:25:02][init_create_begin] reason= hwnd=5512260
+[2026-05-13 21:27:21][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 21:27:21][init_create_begin] reason= hwnd=4529108
+[2026-05-13 21:30:43][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 21:30:43][init_create_begin] reason= hwnd=1580074
+[2026-05-13 21:33:56][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 21:33:56][init_create_begin] reason= hwnd=2563018

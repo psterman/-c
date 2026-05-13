@@ -223,6 +223,7 @@ global PromptQuickPad_CapsLockBDefaultTags := ""
 global ScreenshotWaiting := false  ; 是否正在等待粘贴截图
 global ScreenshotImageDetected := false  ; OnClipboardChange 检测到截图图片
 global ScreenshotClipboard := ""  ; 保存的截图剪贴板内容
+global ScreenshotLastFilePath := ""  ; 当系统截图未写入位图剪贴板时，回退使用最新保存图片路径
 global ScreenshotOldClipboard := ""  ; 截图流程保存的剪贴板快照
 global ScreenshotCheckTimer := 0  ; 截图检测定时器
 global g_ExecuteScreenshotWithMenuBusy := false  ; 防重复进入截图流程（避免双重助手/工具栏）
@@ -2454,10 +2455,74 @@ global g_ActivationRuntimeToken := 0
 global g_HoleRuntimeEnabled := false
 global g_ActivationApplyLastMode := ""
 global g_ActivationApplyLastTick := 0
+global g_ScreenshotSuspendActivationMode := ""
+global g_ScreenshotSuspendActivationToken := 0
 
 SetHoleRuntimeEnabled(enabled) {
     global g_HoleRuntimeEnabled
     g_HoleRuntimeEnabled := !!enabled
+}
+
+BeginScreenshotUiSession() {
+    global g_ScreenshotSuspendActivationMode, g_ScreenshotSuspendActivationToken, AppearanceActivationMode
+    if (g_ScreenshotSuspendActivationMode != "")
+        return false
+    m := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+    if (m != "hole")
+        return false
+    g_ScreenshotSuspendActivationToken += 1
+    g_ScreenshotSuspendActivationMode := m
+    try SetHoleRuntimeEnabled(false)
+    catch {
+    }
+    try NativeDropBridge_Stop()
+    catch {
+    }
+    try GDHO_UnpinFromDesktop()
+    catch {
+    }
+    try GDHO_SetClickThrough(true)
+    catch {
+    }
+    try GDHO_Stop()
+    catch {
+    }
+    return true
+}
+
+EndScreenshotUiSession(token := 0) {
+    global g_ScreenshotSuspendActivationMode, g_ScreenshotSuspendActivationToken, AppearanceActivationMode
+    if (g_ScreenshotSuspendActivationMode = "")
+        return false
+    if (token = 0)
+        token := g_ScreenshotSuspendActivationToken
+    if (token != g_ScreenshotSuspendActivationToken)
+        return false
+    suspendedMode := g_ScreenshotSuspendActivationMode
+    g_ScreenshotSuspendActivationMode := ""
+    if (suspendedMode = "hole" && NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole") {
+        try SetTimer((*) => RestoreActivationRuntimeAfterScreenshot(token), -120)
+        catch {
+            try RestoreActivationRuntimeAfterScreenshot(token)
+            catch {
+            }
+        }
+    }
+    return true
+}
+
+RestoreActivationRuntimeAfterScreenshot(token) {
+    global g_ScreenshotSuspendActivationToken, g_ScreenshotSuspendActivationMode, AppearanceActivationMode
+    if (token = 0 || token != g_ScreenshotSuspendActivationToken)
+        return false
+    if (g_ScreenshotSuspendActivationMode != "")
+        return false
+    if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") != "hole")
+        return false
+    try ApplyActivationRuntimeAsync("hole")
+    catch {
+    }
+    return true
 }
 
 ApplyActivationRuntimeAsync(mode) {
@@ -3719,7 +3784,10 @@ SaveToDB(content, type, app, title, path, cCount, wCount) {
 OnClipboardChangeHandler(Type) {
     global ClipboardDB, ClipboardFTS5DB, CapsLockCopyInProgress
     global ClipboardChangeDebounceTimer, PendingClipboardType, PendingClipboardContent
-    global ScreenshotWaiting, ScreenshotImageDetected
+    global ScreenshotWaiting, ScreenshotImageDetected, ScreenshotClipboard, ScreenshotLastFilePath
+    try OutputDebug("[CLIP] change type=" . Type . " waiting=" . (ScreenshotWaiting ? "1" : "0") . " detected=" . (ScreenshotImageDetected ? "1" : "0"))
+    catch {
+    }
 
     if (CapsLockCopyInProgress) {
         return
@@ -3727,7 +3795,28 @@ OnClipboardChangeHandler(Type) {
 
     ; 截图等待期间：图片写入剪贴板时立即通知检测循环，跳过常规处理以避免剪贴板竞争
     if (ScreenshotWaiting && Type = 2) {
+        try {
+            ScreenshotClipboard := ClipboardAll()
+        } catch {
+            ScreenshotClipboard := ""
+        }
+        try {
+            files := GetClipboardFileDropList()
+            if (files != "") {
+                firstPath := StrSplit(files, "`n")[1]
+                if (firstPath != "")
+                    ScreenshotLastFilePath := firstPath
+            } else {
+                txt := Trim(String(A_Clipboard))
+                if (txt != "" && FileExist(txt))
+                    ScreenshotLastFilePath := txt
+            }
+        } catch {
+        }
         ScreenshotImageDetected := true
+        try OutputDebug("[CLIP] screenshot image detected type=2")
+        catch {
+        }
         return
     }
 

@@ -1,9 +1,9 @@
-; ScreenshotWorkflow.ahk — 截图业务流程（智能菜单、区域截图、悬浮按钮等，由主脚本 #Include）
-; 依赖：ShowScreenshotEditor、CloseScreenshotEditor、DeferredScreenshotHistorySave、GetScreenInfo、
-; UI_Colors、ThemeMode、FloatingToolbar、HideCursorPanel、ImagePut/OCR、GetText 等。
+﻿; ScreenshotWorkflow.ahk 鈥?鎴浘涓氬姟娴佺▼锛堟櫤鑳借彍鍗曘€佸尯鍩熸埅鍥俱€佹偓娴寜閽瓑锛岀敱涓昏剼鏈?#Include锛?
+; 渚濊禆锛歋howScreenshotEditor銆丆loseScreenshotEditor銆丏eferredScreenshotHistorySave銆丟etScreenInfo銆?
+; UI_Colors銆乀hemeMode銆丗loatingToolbar銆丠ideCursorPanel銆両magePut/OCR銆丟etText 绛夈€?
 
-; ===================== 截图后智能处理菜单 =====================
-; 从悬浮条隐藏工具栏后发起截图时，在剪贴板就绪、显示助手前恢复悬浮条（避免与 finally 延迟 Show 重复导致双开/偏移）
+; ===================== 鎴浘鍚庢櫤鑳藉鐞嗚彍鍗?=====================
+; 浠庢偓娴潯闅愯棌宸ュ叿鏍忓悗鍙戣捣鎴浘鏃讹紝鍦ㄥ壀璐存澘灏辩华銆佹樉绀哄姪鎵嬪墠鎭㈠鎮诞鏉★紙閬垮厤涓?finally 寤惰繜 Show 閲嶅瀵艰嚧鍙屽紑/鍋忕Щ锛?
 ScreenshotFlowRestoreFloatingToolbarIfNeeded() {
     global FloatingToolbar_ScheduleRestoreAfterScreenshot, AppearanceActivationMode
     if (FloatingToolbar_ScheduleRestoreAfterScreenshot) {
@@ -34,13 +34,18 @@ ScreenshotFlowReadCaptureMode() {
     return mode
 }
 
-; 执行截图并等待完成后弹出智能菜单
-; fromFloatingDeferred: 为 true 时表示 FloatingToolbar_DeferredScreenshot 已在 Hide/Sleep 前原子地占用了 g_ExecuteScreenshotWithMenuBusy，此处不得因 busy 而 return
+; 鎵ц鎴浘骞剁瓑寰呭畬鎴愬悗寮瑰嚭鏅鸿兘鑿滃崟
+; fromFloatingDeferred: 涓?true 鏃惰〃绀?FloatingToolbar_DeferredScreenshot 宸插湪 Hide/Sleep 鍓嶅師瀛愬湴鍗犵敤浜?g_ExecuteScreenshotWithMenuBusy锛屾澶勪笉寰楀洜 busy 鑰?return
 ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
-    global CursorPath, AISleepTime, ScreenshotWaiting, ScreenshotClipboard, ScreenshotOldClipboard
+    global CursorPath, AISleepTime, ScreenshotWaiting, ScreenshotClipboard, ScreenshotOldClipboard, ScreenshotLastFilePath
+    global ScreenshotImageDetected
     global PanelVisible
     global g_ExecuteScreenshotWithMenuBusy, FloatingToolbar_ScheduleRestoreAfterScreenshot
-    ; 与热键/定时器线程竞态：Sleep 让出执行权前 busy 检查与赋值须原子化；Deferred 路径在 Sleep 前预占 busy，避免第二次 Deferred 叠加入口
+    global g_ScreenshotSuspendActivationToken
+    try OutputDebug("[SSWF] begin fromFloatingDeferred=" . (fromFloatingDeferred ? "1" : "0") . " busy=" . (g_ExecuteScreenshotWithMenuBusy ? "1" : "0"))
+    catch {
+    }
+    ; 涓庣儹閿?瀹氭椂鍣ㄧ嚎绋嬬珵鎬侊細Sleep 璁╁嚭鎵ц鏉冨墠 busy 妫€鏌ヤ笌璧嬪€奸』鍘熷瓙鍖栵紱Deferred 璺緞鍦?Sleep 鍓嶉鍗?busy锛岄伩鍏嶇浜屾 Deferred 鍙犲姞鍏ュ彛
     prevCrit := Critical("On")
     if (g_ExecuteScreenshotWithMenuBusy && !fromFloatingDeferred) {
         Critical(prevCrit)
@@ -50,63 +55,79 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
         g_ExecuteScreenshotWithMenuBusy := true
     Critical(prevCrit)
     try {
-    ; 初始化 DebugGui 变量
+    screenshotSessionToken := 0
+    ; 鍒濆鍖?DebugGui 鍙橀噺
     DebugGui := 0
     
-    ; 创建调试窗口
+    ; 鍒涘缓璋冭瘯绐楀彛
     try {
         DebugGui := CreateScreenshotDebugWindow()
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 1, "开始执行截图流程...", true)
+            UpdateDebugStep(DebugGui, 1, "寮€濮嬫墽琛屾埅鍥炬祦绋?..", true)
         }
     } catch as e {
-        ; 如果创建调试窗口失败，继续执行但不显示调试信息
-        TrayTip("警告", "无法创建调试窗口: " . e.Message, "Icon! 1")
+        ; 濡傛灉鍒涘缓璋冭瘯绐楀彛澶辫触锛岀户缁墽琛屼絾涓嶆樉绀鸿皟璇曚俊鎭?
+        TrayTip("璀﹀憡", "鏃犳硶鍒涘缓璋冭瘯绐楀彛: " . e.Message, "Icon! 1")
     }
     
     try {
-        ; 隐藏面板（如果显示）
+        ; 闅愯棌闈㈡澘锛堝鏋滄樉绀猴級
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 2, "检查并隐藏面板...", false)
+            UpdateDebugStep(DebugGui, 2, "妫€鏌ュ苟闅愯棌闈㈡澘...", false)
         }
         if (PanelVisible) {
             HideCursorPanel()
             if (DebugGui) {
-                UpdateDebugStep(DebugGui, 2, "面板已隐藏", true)
+                UpdateDebugStep(DebugGui, 2, "闈㈡澘宸查殣钘?", true)
             }
         } else {
             if (DebugGui) {
-                UpdateDebugStep(DebugGui, 2, "面板未显示，跳过", true)
+                UpdateDebugStep(DebugGui, 2, "闈㈡澘鏈樉绀猴紝璺宠繃", true)
             }
         }
         
-        ; 保存当前剪贴板内容
+        ; 淇濆瓨褰撳墠鍓创鏉垮唴瀹?
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 3, "保存当前剪贴板内容...", false)
+            UpdateDebugStep(DebugGui, 3, "淇濆瓨褰撳墠鍓创鏉垮唴瀹?..", false)
         }
         ScreenshotOldClipboard := ClipboardAll()
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 3, "剪贴板内容已保存", true)
+            UpdateDebugStep(DebugGui, 3, "鍓创鏉垮唴瀹瑰凡淇濆瓨", true)
         }
         
-        ; 启动等待截图模式
+        ; 鍚姩绛夊緟鎴浘妯″紡
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 4, "设置等待状态...", false)
+            UpdateDebugStep(DebugGui, 4, "璁剧疆绛夊緟鐘舵€?..", false)
         }
         ScreenshotWaiting := true
         ScreenshotImageDetected := false
+        try OutputDebug("[SSWF] waiting armed")
+        catch {
+        }
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 4, "等待状态已设置", true)
+            UpdateDebugStep(DebugGui, 4, "绛夊緟鐘舵€佸凡璁剧疆", true)
         }
         
-        ; 记录剪贴板序列号并清空剪贴板，确保后续能检测到“新截图”
+        ; 璁板綍鍓创鏉垮簭鍒楀彿骞舵竻绌哄壀璐存澘锛岀‘淇濆悗缁兘妫€娴嬪埌鈥滄柊鎴浘鈥?
         A_Clipboard := ""
         Sleep(80)
         ClipboardSeqBeforeShot := DllCall("GetClipboardSequenceNumber", "UInt")
+        try {
+            if (BeginScreenshotUiSession()) {
+                screenshotSessionToken := g_ScreenshotSuspendActivationToken
+                if (DebugGui) {
+                    UpdateDebugStep(DebugGui, 4, "榛戞礊閽╁瓙宸蹭复鏃跺仠鐢?", true)
+                }
+            }
+        } catch as e {
+            if (DebugGui) {
+                UpdateDebugStep(DebugGui, 4, "涓存椂鍋滅敤榛戞礊閽╁瓙澶辫触: " . e.Message, false)
+            }
+        }
 
-        ; 依据截图模式触发不同的系统捕获方式
+        ; 渚濇嵁鎴浘妯″紡瑙﹀彂涓嶅悓鐨勭郴缁熸崟鑾锋柟寮?
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 5, "触发截图模式...", false)
+            UpdateDebugStep(DebugGui, 5, "瑙﹀彂鎴浘妯″紡...", false)
         }
         captureMode := ScreenshotFlowReadCaptureMode()
         if (captureMode = "fullscreen") {
@@ -116,131 +137,157 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
         } else {
             Send("#+{s}")
         }
+        try OutputDebug("[SSWF] capture sent mode=" . captureMode . " seq_before=" . ClipboardSeqBeforeShot)
+        catch {
+        }
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 5, "截图触发命令已发送（" . captureMode . "）", true)
+            UpdateDebugStep(DebugGui, 5, "鎴浘瑙﹀彂鍛戒护宸插彂閫侊紙" . captureMode . "锛?", true)
         }
         
-        ; 等待用户完成截图（最多等待30秒）
+        ; 绛夊緟鐢ㄦ埛瀹屾垚鎴浘锛堟渶澶氱瓑寰?0绉掞級
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 6, "初始化等待参数...", false)
+            UpdateDebugStep(DebugGui, 6, "鍒濆鍖栫瓑寰呭弬鏁?..", false)
         }
-        MaxWaitTime := 30000  ; 30秒
-        WaitInterval := 200   ; 每200ms检查一次
+        MaxWaitTime := 30000  ; 30绉?
+        WaitInterval := 200   ; 姣?00ms妫€鏌ヤ竴娆?
         ElapsedTime := 0
         ScreenshotTaken := false
+        CapturedClipNow := ""
+        CapturedFileNow := ""
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 6, "等待参数已初始化 (最大30秒)", true)
+            UpdateDebugStep(DebugGui, 6, "绛夊緟鍙傛暟宸插垵濮嬪寲 (鏈€澶?0绉?", true)
         }
         
-        ; 等待一下，让截图工具启动
+        ; 绛夊緟涓€涓嬶紝璁╂埅鍥惧伐鍏峰惎鍔?
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 7, "等待截图工具启动 (500ms)...", false)
+            UpdateDebugStep(DebugGui, 7, "绛夊緟鎴浘宸ュ叿鍚姩 (500ms)...", false)
         }
         Sleep(500)
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 7, "等待完成，开始监控剪贴板...", true)
+            UpdateDebugStep(DebugGui, 7, "绛夊緟瀹屾垚锛屽紑濮嬬洃鎺у壀璐存澘...", true)
         }
         
-        ; 监控剪贴板，等待截图完成
+        ; 鐩戞帶鍓创鏉匡紝绛夊緟鎴浘瀹屾垚
         if (DebugGui) {
-            UpdateDebugStep(DebugGui, 8, "监控剪贴板，等待截图完成...", false)
+            UpdateDebugStep(DebugGui, 8, "鐩戞帶鍓创鏉匡紝绛夊緟鎴浘瀹屾垚...", false)
         }
         CheckCount := 0
         while (ElapsedTime < MaxWaitTime) {
             CheckCount++
             if (Mod(CheckCount, 10) = 0 && DebugGui) {
-                UpdateDebugStep(DebugGui, 8, "监控中... (已等待 " . Round(ElapsedTime/1000) . " 秒)", false)
+                UpdateDebugStep(DebugGui, 8, "鐩戞帶涓?.. (宸茬瓑寰?" . Round(ElapsedTime/1000) . " 绉?", false)
             }
             Sleep(WaitInterval)
             ElapsedTime += WaitInterval
             
-            ; 主要检测：OnClipboardChange 回调已检测到图片写入
+            ; 涓昏妫€娴嬶細OnClipboardChange 鍥炶皟宸叉娴嬪埌鍥剧墖鍐欏叆
             if (ScreenshotImageDetected) {
                 ScreenshotTaken := true
+                CapturedClipNow := ScreenshotClipboard
+                CapturedFileNow := ScreenshotLastFilePath
+                if (!CapturedClipNow && CapturedFileNow = "")
+                    try ScreenshotCapturePayload(&CapturedClipNow, &CapturedFileNow, 1200)
+                try OutputDebug("[SSWF] screenshot detected via ScreenshotImageDetected elapsed_ms=" . ElapsedTime)
+                catch {
+                }
                 if (DebugGui) {
-                    UpdateDebugStep(DebugGui, 8, "OnClipboardChange 检测到图片，截图完成！", true)
+                    UpdateDebugStep(DebugGui, 8, "OnClipboardChange 妫€娴嬪埌鍥剧墖锛屾埅鍥惧畬鎴愶紒", true)
                 }
                 break
             }
             
-            ; 备用检测：直接轮询剪贴板序列号 + 格式，避免把非图片当成截图成功“图片格式可用”，避免把非图片当成截图成功
+            ; 澶囩敤妫€娴嬶細鐩存帴杞鍓创鏉垮簭鍒楀彿 + 鏍煎紡锛岄伩鍏嶆妸闈炲浘鐗囧綋鎴愭埅鍥炬垚鍔熲€滃浘鐗囨牸寮忓彲鐢ㄢ€濓紝閬垮厤鎶婇潪鍥剧墖褰撴垚鎴浘鎴愬姛
             try {
                 ClipboardSeqNow := DllCall("GetClipboardSequenceNumber", "UInt")
                 if (ClipboardSeqNow = ClipboardSeqBeforeShot) {
                     continue
                 }
                 if (DllCall("OpenClipboard", "Ptr", 0)) {
-                    ; 检查是否包含位图格式
+                    ; 妫€鏌ユ槸鍚﹀寘鍚綅鍥炬牸寮?
                     if (DllCall("IsClipboardFormatAvailable", "UInt", 2)) {  ; CF_BITMAP = 2
                         DllCall("CloseClipboard")
                         ScreenshotTaken := true
+                        CapturedClipNow := ScreenshotClipboard
+                        CapturedFileNow := ScreenshotLastFilePath
+                        if (!CapturedClipNow && CapturedFileNow = "")
+                            try ScreenshotCapturePayload(&CapturedClipNow, &CapturedFileNow, 1200)
                         if (DebugGui) {
-                            UpdateDebugStep(DebugGui, 8, "检测到 CF_BITMAP 格式，截图完成！", true)
+                            UpdateDebugStep(DebugGui, 8, "妫€娴嬪埌 CF_BITMAP 鏍煎紡锛屾埅鍥惧畬鎴愶紒", true)
                         }
                         break
                     }
-                    ; 检查是否包含 DIB / DIBV5 格式
+                    ; 妫€鏌ユ槸鍚﹀寘鍚?DIB / DIBV5 鏍煎紡
                     if (DllCall("IsClipboardFormatAvailable", "UInt", 8)) {  ; CF_DIB = 8
                         DllCall("CloseClipboard")
                         ScreenshotTaken := true
+                        CapturedClipNow := ScreenshotClipboard
+                        CapturedFileNow := ScreenshotLastFilePath
+                        if (!CapturedClipNow && CapturedFileNow = "")
+                            try ScreenshotCapturePayload(&CapturedClipNow, &CapturedFileNow, 1200)
                         if (DebugGui) {
-                            UpdateDebugStep(DebugGui, 8, "检测到 CF_DIB 格式，截图完成！", true)
+                            UpdateDebugStep(DebugGui, 8, "妫€娴嬪埌 CF_DIB 鏍煎紡锛屾埅鍥惧畬鎴愶紒", true)
                         }
                         break
                     }
                     if (DllCall("IsClipboardFormatAvailable", "UInt", 17)) {  ; CF_DIBV5 = 17
                         DllCall("CloseClipboard")
                         ScreenshotTaken := true
+                        CapturedClipNow := ScreenshotClipboard
+                        CapturedFileNow := ScreenshotLastFilePath
+                        if (!CapturedClipNow && CapturedFileNow = "")
+                            try ScreenshotCapturePayload(&CapturedClipNow, &CapturedFileNow, 1200)
                         if (DebugGui) {
-                            UpdateDebugStep(DebugGui, 8, "检测到 CF_DIBV5 格式，截图完成！", true)
+                            UpdateDebugStep(DebugGui, 8, "妫€娴嬪埌 CF_DIBV5 鏍煎紡锛屾埅鍥惧畬鎴愶紒", true)
                         }
                         break
                     }
-                    ; 检查是否包含 PNG 格式
+                    ; 妫€鏌ユ槸鍚﹀寘鍚?PNG 鏍煎紡
                     PNGFormat := DllCall("RegisterClipboardFormat", "Str", "PNG")
                     if (PNGFormat && DllCall("IsClipboardFormatAvailable", "UInt", PNGFormat)) {
                         DllCall("CloseClipboard")
                         ScreenshotTaken := true
+                        CapturedClipNow := ScreenshotClipboard
+                        CapturedFileNow := ScreenshotLastFilePath
+                        if (!CapturedClipNow && CapturedFileNow = "")
+                            try ScreenshotCapturePayload(&CapturedClipNow, &CapturedFileNow, 1200)
                         if (DebugGui) {
-                            UpdateDebugStep(DebugGui, 8, "检测到 PNG 格式，截图完成！", true)
+                            UpdateDebugStep(DebugGui, 8, "妫€娴嬪埌 PNG 鏍煎紡锛屾埅鍥惧畬鎴愶紒", true)
                         }
                         break
                     }
                     DllCall("CloseClipboard")
                 }
             } catch as e {
-                ; 如果检测失败，继续等待
+                ; 濡傛灉妫€娴嬪け璐ワ紝缁х画绛夊緟
             }
         }
         
-        ; 如果截图成功，保存截图并弹出智能菜单
+        ; 濡傛灉鎴浘鎴愬姛锛屼繚瀛樻埅鍥惧苟寮瑰嚭鏅鸿兘鑿滃崟
         if (ScreenshotTaken) {
             if (DebugGui) {
-                UpdateDebugStep(DebugGui, 9, "截图检测成功，开始保存截图数据...", false)
+                UpdateDebugStep(DebugGui, 9, "鎴浘妫€娴嬫垚鍔燂紝寮€濮嬩繚瀛樻埅鍥炬暟鎹?..", false)
             }
-            ; 等待一下确保截图已保存到剪贴板
+            ; 绛夊緟涓€涓嬬‘淇濇埅鍥惧凡淇濆瓨鍒板壀璐存澘
             Sleep(300)
             
-            ; 保存截图到全局变量
+            ; 淇濆瓨鎴浘鍒板叏灞€鍙橀噺
             try {
                 if (DebugGui) {
-                    UpdateDebugStep(DebugGui, 10, "调用 ClipboardAll() 保存截图...", false)
+                    UpdateDebugStep(DebugGui, 10, "璋冪敤 ClipboardAll() 淇濆瓨鎴浘...", false)
                 }
-                ; 再次确认当前剪贴板确实是图片，防止竞争条件导致保存到非图片数据
-                if (GetClipboardType() != "image") {
-                    throw Error("当前剪贴板不是图片数据")
-                }
-                ScreenshotClipboard := ClipboardAll()
-                
-                if (!ScreenshotClipboard) {
-                    throw Error("截图数据为空")
+                ; 鍐嶆纭褰撳墠鍓创鏉跨‘瀹炴槸鍥剧墖锛岄槻姝㈢珵浜夋潯浠跺鑷翠繚瀛樺埌闈炲浘鐗囨暟鎹?
+                if (CapturedClipNow || CapturedFileNow != "") {
+                    ScreenshotClipboard := CapturedClipNow
+                    ScreenshotLastFilePath := CapturedFileNow
+                } else if (!ScreenshotCapturePayload(&ScreenshotClipboard, &ScreenshotLastFilePath, 3200)) {
+                    throw Error("未捕获到截图数据（剪贴板/自动保存文件）")
                 }
                 if (DebugGui) {
-                    UpdateDebugStep(DebugGui, 10, "截图数据已保存到 ScreenshotClipboard", true)
+                    UpdateDebugStep(DebugGui, 10, "鎴浘鏁版嵁宸蹭繚瀛樺埌 ScreenshotClipboard", true)
                 }
             } catch as e {
                 if (DebugGui) {
-                    UpdateDebugStep(DebugGui, 10, "保存截图失败: " . e.Message, false)
+                    UpdateDebugStep(DebugGui, 10, "淇濆瓨鎴浘澶辫触: " . e.Message, false)
                 }
                 TrayTip("保存截图失败", e.Message, "Iconx 2")
                 A_Clipboard := ScreenshotOldClipboard
@@ -249,61 +296,75 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
                     try {
                         DebugGui.Destroy()
                     } catch {
-                        ; 忽略销毁错误
+                        ; 蹇界暐閿€姣侀敊璇?
                     }
                 }
                 ScreenshotFlowRestoreFloatingToolbarIfNeeded()
                 return
             }
             
-            ; 恢复旧剪贴板（预览窗会重新设置）
+            ; 鎭㈠鏃у壀璐存澘锛堥瑙堢獥浼氶噸鏂拌缃級
             if (DebugGui) {
-                UpdateDebugStep(DebugGui, 11, "恢复旧剪贴板内容...", false)
+                UpdateDebugStep(DebugGui, 11, "鎭㈠鏃у壀璐存澘鍐呭...", false)
             }
             A_Clipboard := ScreenshotOldClipboard
             if (DebugGui) {
-                UpdateDebugStep(DebugGui, 11, "旧剪贴板已恢复", true)
+                UpdateDebugStep(DebugGui, 11, "鏃у壀璐存澘宸叉仮澶?", true)
             }
             
-            ; 清除等待状态
+            ; 娓呴櫎绛夊緟鐘舵€?
             if (DebugGui) {
-                UpdateDebugStep(DebugGui, 12, "清除等待状态...", false)
+                UpdateDebugStep(DebugGui, 12, "娓呴櫎绛夊緟鐘舵€?..", false)
             }
             ScreenshotWaiting := false
             SetTimer(DeferredScreenshotHistorySave, -800)
             if (DebugGui) {
-                UpdateDebugStep(DebugGui, 12, "等待状态已清除", true)
+                UpdateDebugStep(DebugGui, 12, "绛夊緟鐘舵€佸凡娓呴櫎", true)
             }
             
-            ; 等待截图工具关闭后再恢复悬浮条并打开助手（避免与延迟 Show 重复导致双开/位置偏移）
+            ; 绛夊緟鎴浘宸ュ叿鍏抽棴鍚庡啀鎭㈠鎮诞鏉″苟鎵撳紑鍔╂墜锛堥伩鍏嶄笌寤惰繜 Show 閲嶅瀵艰嚧鍙屽紑/浣嶇疆鍋忕Щ锛?
             if (DebugGui) {
-                UpdateDebugStep(DebugGui, 13, "等待截图工具关闭...", false)
+                UpdateDebugStep(DebugGui, 13, "绛夊緟鎴浘宸ュ叿鍏抽棴...", false)
             }
             Sleep(400)
             CloseAllScreenshotWindows()
             Sleep(150)
             Sleep(200)
-            ScreenshotFlowRestoreFloatingToolbarIfNeeded()
             outputTarget := ScreenshotFlowReadOutputTarget()
+            if (fromFloatingDeferred)
+                FloatingToolbar_ScheduleRestoreAfterScreenshot := false
             if (outputTarget = "clipboard") {
+                ScreenshotFlowRestoreFloatingToolbarIfNeeded()
+                try OutputDebug("[SSWF] clipboard-only output, no preview")
+                catch {
+                }
                 if (DebugGui) {
-                    UpdateDebugStep(DebugGui, 13, "输出目标=仅剪贴板，跳过截图助手预览", true)
+                    UpdateDebugStep(DebugGui, 13, "杈撳嚭鐩爣=浠呭壀璐存澘锛岃烦杩囨埅鍥惧姪鎵嬮瑙?", true)
                     SetTimer(DestroyDebugGui.Bind(DebugGui), -1200)
                 }
                 TrayTip("提示", "截图已复制到剪贴板", "Iconi 1")
+                try EndScreenshotUiSession(screenshotSessionToken)
+                catch {
+                }
                 return
             }
-            ; 弹出截图助手预览窗（替代智能菜单）
+            ; 寮瑰嚭鎴浘鍔╂墜棰勮绐楋紙鏇夸唬鏅鸿兘鑿滃崟锛?
             if (DebugGui) {
-                UpdateDebugStep(DebugGui, 13, "调用 ShowScreenshotEditor() 显示助手窗口...", false)
+                UpdateDebugStep(DebugGui, 13, "调用 ShowScreenshotEditor() 显示预览与工具栏...", false)
             }
             try {
+                try OutputDebug("[SSWF] calling ShowScreenshotEditor")
+                catch {
+                }
                 ShowScreenshotEditor(DebugGui)
+                try OutputDebug("[SSWF] ShowScreenshotEditor returned")
+                catch {
+                }
                 if (DebugGui) {
-                    UpdateDebugStep(DebugGui, 13, "ShowScreenshotEditor() 调用成功", true)
+                    UpdateDebugStep(DebugGui, 13, "ShowScreenshotEditor() 璋冪敤鎴愬姛", true)
                 }
                 TrayTip("调试", "ShowScreenshotEditor() 调用成功", "Iconi 1")
-                ; 延迟关闭调试窗口，让用户看到最后的状态
+                ; 寤惰繜鍏抽棴璋冭瘯绐楀彛锛岃鐢ㄦ埛鐪嬪埌鏈€鍚庣殑鐘舵€?
                 if (DebugGui) {
                     SetTimer(DestroyDebugGui.Bind(DebugGui), -2000)
                 }
@@ -313,32 +374,41 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
                 }
                 ErrorMsg := "显示截图助手失败:`n"
                 ErrorMsg .= "错误: " . e.Message . "`n"
-                ErrorMsg .= "文件: " . (e.HasProp("File") ? e.File : "未知") . "`n"
-                ErrorMsg .= "行号: " . (e.HasProp("Line") ? e.Line : "未知") . "`n"
-                ErrorMsg .= "堆栈: " . (e.HasProp("Stack") ? e.Stack : "未知")
-                MsgBox(ErrorMsg, "截图助手错误", "Icon!")
+                ErrorMsg .= "鏂囦欢: " . (e.HasProp("File") ? e.File : "鏈煡") . "`n"
+                ErrorMsg .= "琛屽彿: " . (e.HasProp("Line") ? e.Line : "鏈煡") . "`n"
+                ErrorMsg .= "鍫嗘爤: " . (e.HasProp("Stack") ? e.Stack : "鏈煡")
+                MsgBox(ErrorMsg, "鎴浘鍔╂墜閿欒", "Icon!")
                 if (DebugGui) {
                     SetTimer(DestroyDebugGui.Bind(DebugGui), -3000)
                 }
             }
         } else {
-            ; 截图超时或取消，恢复旧剪贴板
+            ; 鎴浘瓒呮椂鎴栧彇娑堬紝鎭㈠鏃у壀璐存澘
+            try OutputDebug("[SSWF] screenshot timeout/cancel elapsed_ms=" . ElapsedTime)
+            catch {
+            }
             if (DebugGui) {
-                UpdateDebugStep(DebugGui, 9, "截图超时或取消 (等待了 " . Round(ElapsedTime/1000) . " 秒)", false)
+                UpdateDebugStep(DebugGui, 9, "鎴浘瓒呮椂鎴栧彇娑?(绛夊緟浜?" . Round(ElapsedTime/1000) . " 绉?", false)
             }
             A_Clipboard := ScreenshotOldClipboard
             ScreenshotWaiting := false
-            TrayTip("提示", "截图已取消或超时", "Iconi 1")
+            TrayTip("鎻愮ず", "鎴浘宸插彇娑堟垨瓒呮椂", "Iconi 1")
             if (DebugGui) {
                 SetTimer(DestroyDebugGui.Bind(DebugGui), -2000)
             }
             ScreenshotFlowRestoreFloatingToolbarIfNeeded()
+            try EndScreenshotUiSession(screenshotSessionToken)
+            catch {
+            }
         }
     } catch as e {
-        if (DebugGui) {
-            UpdateDebugStep(DebugGui, 0, "发生异常: " . e.Message . "`n文件: " . (e.File ? e.File : "未知") . "`n行号: " . (e.Line ? e.Line : "未知"), false)
+        try OutputDebug("[SSWF] exception: " . e.Message)
+        catch {
         }
-        TrayTip("截图失败: " . e.Message, GetText("error"), "Iconx 2")
+        if (DebugGui) {
+            UpdateDebugStep(DebugGui, 0, "鍙戠敓寮傚父: " . e.Message . "`n鏂囦欢: " . (e.File ? e.File : "鏈煡") . "`n琛屽彿: " . (e.Line ? e.Line : "鏈煡"), false)
+        }
+        TrayTip("鎴浘澶辫触: " . e.Message, GetText("error"), "Iconx 2")
         try {
             A_Clipboard := ScreenshotOldClipboard
         }
@@ -347,68 +417,71 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
             SetTimer(DestroyDebugGui.Bind(DebugGui), -3000)
         }
         ScreenshotFlowRestoreFloatingToolbarIfNeeded()
+        try EndScreenshotUiSession(screenshotSessionToken)
+        catch {
+        }
     }
     } finally {
         g_ExecuteScreenshotWithMenuBusy := false
     }
 }
 
-; 销毁调试窗口的辅助函数
+; 閿€姣佽皟璇曠獥鍙ｇ殑杈呭姪鍑芥暟
 DestroyDebugGui(DebugGui) {
     try {
         if (DebugGui && IsObject(DebugGui)) {
             DebugGui.Destroy()
         }
     } catch {
-        ; 忽略销毁错误
+        ; 蹇界暐閿€姣侀敊璇?
     }
 }
 
-; 创建截图调试窗口
+; 鍒涘缓鎴浘璋冭瘯绐楀彛
 CreateScreenshotDebugWindow() {
     try {
-        DebugGui := Gui("+AlwaysOnTop +ToolWindow -MaximizeBox -MinimizeBox", "截图流程调试")
+        DebugGui := Gui("+AlwaysOnTop +ToolWindow -MaximizeBox -MinimizeBox", "鎴浘娴佺▼璋冭瘯")
         if (!DebugGui) {
-            throw Error("无法创建 GUI 对象")
+            throw Error("鏃犳硶鍒涘缓 GUI 瀵硅薄")
         }
         DebugGui.BackColor := "0x1E1E1E"
         DebugGui.SetFont("s9", "Consolas")
         
-        ; 标题
-        TitleText := DebugGui.Add("Text", "x10 y10 w780 h30 Center c0xFFFFFF Background0x2D2D2D", "📊 截图流程调试信息")
+        ; 鏍囬
+        TitleText := DebugGui.Add("Text", "x10 y10 w780 h30 Center c0xFFFFFF Background0x2D2D2D", "馃搳 鎴浘娴佺▼璋冭瘯淇℃伅")
         if (TitleText) {
             TitleText.SetFont("s11 Bold", "Segoe UI")
         }
         
-        ; 步骤显示区域
+        ; 姝ラ鏄剧ず鍖哄煙
         StepsText := DebugGui.Add("Edit", "x10 y50 w780 h450 ReadOnly Multi Background0x2D2D2D c0xCCCCCC", "")
         if (StepsText) {
             StepsText.SetFont("s9", "Consolas")
         }
         
-        ; 保存引用以便更新
+        ; 淇濆瓨寮曠敤浠ヤ究鏇存柊
         if (StepsText) {
             DebugGui["StepsText"] := StepsText
             DebugGui["Steps"] := []
         }
         
-        ; 关闭按钮
-        CloseBtn := DebugGui.Add("Button", "x350 y510 w120 h35 Default", "关闭")
+        ; 鍏抽棴鎸夐挳
+        CloseBtn := DebugGui.Add("Button", "x350 y510 w120 h35 Default", "鍏抽棴")
         if (CloseBtn) {
             CloseBtn.OnEvent("Click", (*) => DebugGui.Destroy())
         }
         
-        ; 显示窗口
+        ; 鏄剧ず绐楀彛
         DebugGui.Show("w800 h560")
         
         return DebugGui
     } catch as e {
-        ; 如果创建失败，返回 0
+        ; 濡傛灉鍒涘缓澶辫触锛岃繑鍥?0
         return 0
     }
 }
 
-; 更新调试步骤
+; 鏇存柊璋冭瘯姝ラ
 UpdateDebugStep(DebugGui, StepNum, Message, IsSuccess) {
     if (!DebugGui || !IsObject(DebugGui["Steps"])) {
         return
@@ -417,22 +490,22 @@ UpdateDebugStep(DebugGui, StepNum, Message, IsSuccess) {
     Steps := DebugGui["Steps"]
     StepsText := DebugGui["StepsText"]
     
-    ; 格式化步骤信息
-    ; 在 AutoHotkey v2 中，FormatTime 的第一个参数可以为空字符串表示当前时间
+    ; 鏍煎紡鍖栨楠や俊鎭?
+    ; 鍦?AutoHotkey v2 涓紝FormatTime 鐨勭涓€涓弬鏁板彲浠ヤ负绌哄瓧绗︿覆琛ㄧず褰撳墠鏃堕棿
     TimeStr := FormatTime("", "HH:mm:ss.fff")
-    StatusIcon := IsSuccess ? "✓" : "⏳"
+    StatusIcon := IsSuccess ? "OK" : "WARN"
     StatusColor := IsSuccess ? "0x00FF00" : "0xFFFF00"
     
     StepInfo := "[" . TimeStr . "] "
     if (StepNum > 0) {
-        StepInfo .= "步骤 " . StepNum . ": "
+        StepInfo .= "姝ラ " . StepNum . ": "
     }
     StepInfo .= Message
     
-    ; 添加到步骤列表
+    ; 娣诲姞鍒版楠ゅ垪琛?
     Steps.Push(StepInfo)
     
-    ; 更新显示（只显示最后30个步骤）
+    ; 鏇存柊鏄剧ず锛堝彧鏄剧ず鏈€鍚?0涓楠わ級
     DisplayText := ""
     StartIdx := Steps.Length > 30 ? Steps.Length - 30 : 1
     Loop Steps.Length - StartIdx + 1 {
@@ -444,77 +517,77 @@ UpdateDebugStep(DebugGui, StepNum, Message, IsSuccess) {
     StepsText.Focus()
 }
 
-; 显示剪贴板智能处理菜单
+; 鏄剧ず鍓创鏉挎櫤鑳藉鐞嗚彍鍗?
 ShowClipboardSmartMenu(ForceType := "") {
     global GuiID_ClipboardSmartMenu, UI_Colors, ThemeMode, PanelVisible
     global ClipboardMenuSelectedIndex, ClipboardMenuButtons, ClipboardMenuOptions
     
-    ; 如果面板已显示，先隐藏
+    ; 濡傛灉闈㈡澘宸叉樉绀猴紝鍏堥殣钘?
     if (PanelVisible) {
         HideCursorPanel()
     }
     
-    ; 如果菜单已存在，先销毁
+    ; 濡傛灉鑿滃崟宸插瓨鍦紝鍏堥攢姣?
     if (GuiID_ClipboardSmartMenu != 0) {
         try {
             GuiID_ClipboardSmartMenu.Destroy()
         } catch as err {
-            ; 忽略错误
+            ; 蹇界暐閿欒
         }
         global GuiID_ClipboardSmartMenu := 0
     }
     
-    ; 检查剪贴板内容类型
+    ; 妫€鏌ュ壀璐存澘鍐呭绫诲瀷
     if (ForceType != "") {
-        ; 强制指定类型（截图后使用）
+        ; 寮哄埗鎸囧畾绫诲瀷锛堟埅鍥惧悗浣跨敤锛?
         ClipboardType := ForceType
     } else {
-        ; 自动检测类型
+        ; 鑷姩妫€娴嬬被鍨?
         ClipboardType := GetClipboardType()
     }
     
-    ; 创建菜单 GUI
+    ; 鍒涘缓鑿滃崟 GUI
     GuiID_ClipboardSmartMenu := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
     GuiID_ClipboardSmartMenu.BackColor := UI_Colors.Background
     GuiID_ClipboardSmartMenu.SetFont("s11 c" . UI_Colors.Text, "Segoe UI")
     
-    ; 菜单尺寸
+    ; 鑿滃崟灏哄
     MenuWidth := 420
-    MenuHeight := 0  ; 动态计算
+    MenuHeight := 0  ; 鍔ㄦ€佽绠?
     ButtonHeight := 50
     ButtonSpacing := 8
     Padding := 20
     
-    ; 当前 Y 位置
+    ; 褰撳墠 Y 浣嶇疆
     CurrentY := Padding
     
-    ; 标题
-    TitleText := GuiID_ClipboardSmartMenu.Add("Text", "x" . Padding . " y" . CurrentY . " w" . (MenuWidth - Padding * 2) . " h30 Center c" . UI_Colors.Text, "📋 智能剪贴板处理")
+    ; 鏍囬
+    TitleText := GuiID_ClipboardSmartMenu.Add("Text", "x" . Padding . " y" . CurrentY . " w" . (MenuWidth - Padding * 2) . " h30 Center c" . UI_Colors.Text, "Smart Clipboard")
     TitleText.SetFont("s13 Bold", "Segoe UI")
     CurrentY += 35
     
-    ; 提示文字（根据类型显示不同提示）
+    ; 鎻愮ず鏂囧瓧锛堟牴鎹被鍨嬫樉绀轰笉鍚屾彁绀猴級
     if (ClipboardType = "image") {
-        HintText := GuiID_ClipboardSmartMenu.Add("Text", "x" . Padding . " y" . CurrentY . " w" . (MenuWidth - Padding * 2) . " h20 Center c" . UI_Colors.TextDim, "检测到图片，请选择处理方式：")
+        HintText := GuiID_ClipboardSmartMenu.Add("Text", "x" . Padding . " y" . CurrentY . " w" . (MenuWidth - Padding * 2) . " h20 Center c" . UI_Colors.TextDim, "Image detected, choose an action")
     } else if (ClipboardType = "text") {
-        HintText := GuiID_ClipboardSmartMenu.Add("Text", "x" . Padding . " y" . CurrentY . " w" . (MenuWidth - Padding * 2) . " h20 Center c" . UI_Colors.TextDim, "检测到文本，请选择处理方式：")
+        HintText := GuiID_ClipboardSmartMenu.Add("Text", "x" . Padding . " y" . CurrentY . " w" . (MenuWidth - Padding * 2) . " h20 Center c" . UI_Colors.TextDim, "Text detected, choose an action")
     } else {
-        HintText := GuiID_ClipboardSmartMenu.Add("Text", "x" . Padding . " y" . CurrentY . " w" . (MenuWidth - Padding * 2) . " h20 Center c" . UI_Colors.TextDim, "剪贴板为空")
+        HintText := GuiID_ClipboardSmartMenu.Add("Text", "x" . Padding . " y" . CurrentY . " w" . (MenuWidth - Padding * 2) . " h20 Center c" . UI_Colors.TextDim, "Clipboard is empty")
     }
     HintText.SetFont("s9", "Segoe UI")
     CurrentY += 25
     
-    ; 根据剪贴板类型显示不同的选项
+    ; 鏍规嵁鍓创鏉跨被鍨嬫樉绀轰笉鍚岀殑閫夐」
     ClipboardMenuOptions := []
     
     if (ClipboardType = "image") {
-        ; 图片类型：显示图片相关选项
-        ClipboardMenuOptions.Push(Map("icon", "🔍", "text", "识图取词 (保留布局)", "desc", "提取文字，保留原始分行和缩进", "action", "ocr_preserve_layout"))
-        ClipboardMenuOptions.Push(Map("icon", "🔄", "text", "识图取词 (自动流转)", "desc", "提取文字，合并断行并去除中文间空格", "action", "ocr_auto_flow"))
-        ClipboardMenuOptions.Push(Map("icon", "📷", "text", "粘贴图片", "desc", "保留原始图片状态", "action", "paste_image"))
-        ; 如果是截图后的菜单，确保使用保存的截图数据
+        ; 鍥剧墖绫诲瀷锛氭樉绀哄浘鐗囩浉鍏抽€夐」
+        ClipboardMenuOptions.Push(Map("icon", "馃攳", "text", "璇嗗浘鍙栬瘝 (淇濈暀甯冨眬)", "desc", "鎻愬彇鏂囧瓧锛屼繚鐣欏師濮嬪垎琛屽拰缂╄繘", "action", "ocr_preserve_layout"))
+        ClipboardMenuOptions.Push(Map("icon", "📇", "text", "提取文本 (自动流转)", "desc", "提取文本并做断行合并", "action", "ocr_auto_flow"))
+        ClipboardMenuOptions.Push(Map("icon", "🖼", "text", "粘贴图片", "desc", "保留原始图片内容", "action", "paste_image"))
+        ; 濡傛灉鏄埅鍥惧悗鐨勮彍鍗曪紝纭繚浣跨敤淇濆瓨鐨勬埅鍥炬暟鎹?
         if (ForceType = "image") {
-            ; 恢复截图到剪贴板，供后续操作使用
+            ; 鎭㈠鎴浘鍒板壀璐存澘锛屼緵鍚庣画鎿嶄綔浣跨敤
             global ScreenshotClipboard
             if (ScreenshotClipboard) {
                 A_Clipboard := ScreenshotClipboard
@@ -522,65 +595,65 @@ ShowClipboardSmartMenu(ForceType := "") {
             }
         }
     } else if (ClipboardType = "text") {
-        ; 文本类型：显示文本相关选项
-        ClipboardMenuOptions.Push(Map("icon", "📝", "text", "提取文本 (保留布局)", "desc", "保留原始的分行和缩进（适合代码、诗歌）", "action", "extract_preserve_layout"))
-        ClipboardMenuOptions.Push(Map("icon", "🔄", "text", "提取文本 (自动流转)", "desc", "合并断行，去除中文间空格（适合阅读、论文）", "action", "extract_auto_flow"))
-        ClipboardMenuOptions.Push(Map("icon", "✨", "text", "文本净化", "desc", "去除重复空格、统一标点、移除 HTML 标签", "action", "text_cleanup"))
+        ; 鏂囨湰绫诲瀷锛氭樉绀烘枃鏈浉鍏抽€夐」
+        ClipboardMenuOptions.Push(Map("icon", "馃摑", "text", "鎻愬彇鏂囨湰 (淇濈暀甯冨眬)", "desc", "淇濈暀鍘熷鐨勫垎琛屽拰缂╄繘锛堥€傚悎浠ｇ爜銆佽瘲姝岋級", "action", "extract_preserve_layout"))
+        ClipboardMenuOptions.Push(Map("icon", "馃攧", "text", "鎻愬彇鏂囨湰 (鑷姩娴佽浆)", "desc", "鍚堝苟鏂锛屽幓闄や腑鏂囬棿绌烘牸锛堥€傚悎闃呰銆佽鏂囷級", "action", "extract_auto_flow"))
+        ClipboardMenuOptions.Push(Map("icon", "✓", "text", "文本净化", "desc", "去除重复空格、统一标点、移除 HTML 标签", "action", "text_cleanup"))
     } else {
-        ; 空剪贴板或其他类型
-        ClipboardMenuOptions.Push(Map("icon", "⚠️", "text", "剪贴板为空", "desc", "请先复制内容", "action", "empty"))
+        ; 绌哄壀璐存澘鎴栧叾浠栫被鍨?
+        ClipboardMenuOptions.Push(Map("icon", "ℹ", "text", "剪贴板为空", "desc", "请先复制内容", "action", "empty"))
     }
     
-    ; 初始化按钮数组和选中索引
+    ; 鍒濆鍖栨寜閽暟缁勫拰閫変腑绱㈠紩
     ClipboardMenuButtons := []
-    ClipboardMenuSelectedIndex := 1  ; 默认选中第一个按钮
+    ClipboardMenuSelectedIndex := 1  ; 榛樿閫変腑绗竴涓寜閽?
     
-    ; 计算按钮背景色（增强对比度，让光效更明显）
-    ; 如果背景是深色，按钮使用稍亮的灰色；如果背景是浅色，按钮使用稍暗的灰色
-    BtnNormalBg := (ThemeMode = "light") ? "e0e0e0" : "2d2d2d"  ; 正常状态（稍暗，与背景有区别）
-    BtnHoverBg := (ThemeMode = "light") ? "c0c0c0" : "5a5a5a"   ; 悬停时的背景色（明显的光效）
-    BtnSelectedBg := (ThemeMode = "light") ? "b0b0b0" : "6a6a6a"  ; 选中时的背景色（更亮的光效）
-    BtnSelectedHoverBg := (ThemeMode = "light") ? "a0a0a0" : "7a7a7a"  ; 选中+悬停时的背景色（最亮的光效）
+    ; 璁＄畻鎸夐挳鑳屾櫙鑹诧紙澧炲己瀵规瘮搴︼紝璁╁厜鏁堟洿鏄庢樉锛?
+    ; 濡傛灉鑳屾櫙鏄繁鑹诧紝鎸夐挳浣跨敤绋嶄寒鐨勭伆鑹诧紱濡傛灉鑳屾櫙鏄祬鑹诧紝鎸夐挳浣跨敤绋嶆殫鐨勭伆鑹?
+    BtnNormalBg := (ThemeMode = "light") ? "e0e0e0" : "2d2d2d"  ; 姝ｅ父鐘舵€侊紙绋嶆殫锛屼笌鑳屾櫙鏈夊尯鍒級
+    BtnHoverBg := (ThemeMode = "light") ? "c0c0c0" : "5a5a5a"   ; 鎮仠鏃剁殑鑳屾櫙鑹诧紙鏄庢樉鐨勫厜鏁堬級
+    BtnSelectedBg := (ThemeMode = "light") ? "b0b0b0" : "6a6a6a"  ; 閫変腑鏃剁殑鑳屾櫙鑹诧紙鏇翠寒鐨勫厜鏁堬級
+    BtnSelectedHoverBg := (ThemeMode = "light") ? "a0a0a0" : "7a7a7a"  ; 閫変腑+鎮仠鏃剁殑鑳屾櫙鑹诧紙鏈€浜殑鍏夋晥锛?
     
-    ; 添加选项按钮
+    ; 娣诲姞閫夐」鎸夐挳
     for Index, Option in ClipboardMenuOptions {
         if (Option["action"] = "empty") {
-            ; 空剪贴板提示
+            ; 绌哄壀璐存澘鎻愮ず
             EmptyText := GuiID_ClipboardSmartMenu.Add("Text", "x" . Padding . " y" . CurrentY . " w" . (MenuWidth - Padding * 2) . " h" . ButtonHeight . " Center c" . UI_Colors.TextDim, Option["text"])
             EmptyText.SetFont("s11", "Segoe UI")
             CurrentY += ButtonHeight + ButtonSpacing
         } else {
-            ; 创建按钮
+            ; 鍒涘缓鎸夐挳
             BtnY := CurrentY
             BtnX := Padding
             
-            ; 确定按钮背景色（选中时使用更亮的颜色）
+            ; 纭畾鎸夐挳鑳屾櫙鑹诧紙閫変腑鏃朵娇鐢ㄦ洿浜殑棰滆壊锛?
             CurrentBtnBg := (Index = ClipboardMenuSelectedIndex) ? BtnSelectedBg : BtnNormalBg
             
-            ; 按钮背景（使用更亮的背景色，确保与背景有对比度，避免黑色块效果）
+            ; 鎸夐挳鑳屾櫙锛堜娇鐢ㄦ洿浜殑鑳屾櫙鑹诧紝纭繚涓庤儗鏅湁瀵规瘮搴︼紝閬垮厤榛戣壊鍧楁晥鏋滐級
             BtnBg := GuiID_ClipboardSmartMenu.Add("Text", "x" . BtnX . " y" . BtnY . " w" . (MenuWidth - Padding * 2) . " h" . ButtonHeight . " Background" . CurrentBtnBg . " vBtnBg" . Index, "")
             
-            ; 图标和文字
+            ; 鍥炬爣鍜屾枃瀛?
             IconText := GuiID_ClipboardSmartMenu.Add("Text", "x" . (BtnX + 15) . " y" . (BtnY + 10) . " w30 h30 Center 0x200 c" . UI_Colors.Text . " BackgroundTrans vBtnIcon" . Index, Option["icon"])
             IconText.SetFont("s16", "Segoe UI")
             
-            ; 主文字
+            ; 涓绘枃瀛?
             MainText := GuiID_ClipboardSmartMenu.Add("Text", "x" . (BtnX + 55) . " y" . (BtnY + 8) . " w" . (MenuWidth - Padding * 2 - 70) . " h22 0x200 c" . UI_Colors.Text . " BackgroundTrans vBtnText" . Index, Option["text"])
             MainText.SetFont("s11 Bold", "Segoe UI")
             
-            ; 描述文字
+            ; 鎻忚堪鏂囧瓧
             DescText := GuiID_ClipboardSmartMenu.Add("Text", "x" . (BtnX + 55) . " y" . (BtnY + 28) . " w" . (MenuWidth - Padding * 2 - 70) . " h18 0x200 c" . UI_Colors.TextDim . " BackgroundTrans vBtnDesc" . Index, Option["desc"])
             DescText.SetFont("s9", "Segoe UI")
             
-            ; 为按钮背景设置悬停属性（让WM_MOUSEMOVE能处理）
+            ; 涓烘寜閽儗鏅缃偓鍋滃睘鎬э紙璁￤M_MOUSEMOVE鑳藉鐞嗭級
             BtnBg.NormalColor := BtnNormalBg
             BtnBg.HoverColor := BtnHoverBg
             BtnBg.SelectedBg := BtnSelectedBg
             BtnBg.SelectedHoverBg := BtnSelectedHoverBg
             BtnBg.ButtonIndex := Index
-            BtnBg.IsMenuButton := true  ; 标记这是菜单按钮
+            BtnBg.IsMenuButton := true  ; 鏍囪杩欐槸鑿滃崟鎸夐挳
             
-            ; 保存按钮引用
+            ; 淇濆瓨鎸夐挳寮曠敤
             ClipboardMenuButtons.Push({
                 Bg: BtnBg,
                 Icon: IconText,
@@ -594,7 +667,7 @@ ShowClipboardSmartMenu(ForceType := "") {
                 SelectedHoverBg: BtnSelectedHoverBg
             })
             
-            ; 添加点击事件
+            ; 娣诲姞鐐瑰嚮浜嬩欢
             ActionFunc := CreateMenuActionHandler(Option["action"])
             BtnBg.OnEvent("Click", ActionFunc)
             IconText.OnEvent("Click", ActionFunc)
@@ -605,99 +678,99 @@ ShowClipboardSmartMenu(ForceType := "") {
         }
     }
     
-    ; 关闭按钮
+    ; 鍏抽棴鎸夐挳
     CloseBtnY := CurrentY + 10
-    CloseBtn := GuiID_ClipboardSmartMenu.Add("Text", "x" . (MenuWidth - 40) . " y" . (CloseBtnY - 5) . " w30 h30 Center 0x200 cFFFFFF Background" . BtnNormalBg . " vCloseBtn", "✕")
+    CloseBtn := GuiID_ClipboardSmartMenu.Add("Text", "x" . (MenuWidth - 40) . " y" . (CloseBtnY - 5) . " w30 h30 Center 0x200 cFFFFFF Background" . BtnNormalBg . " vCloseBtn", "×")
     CloseBtn.SetFont("s12", "Segoe UI")
     CloseBtn.OnEvent("Click", (*) => CloseClipboardSmartMenu())
     HoverBtnWithAnimation(CloseBtn, BtnNormalBg, "e81123")
     
-    ; 更新菜单高度
+    ; 鏇存柊鑿滃崟楂樺害
     MenuHeight := CloseBtnY + 35
     
-    ; 计算菜单位置（屏幕居中）
+    ; 璁＄畻鑿滃崟浣嶇疆锛堝睆骞曞眳涓級
     ScreenInfo := GetScreenInfo(1)
     MenuX := (ScreenInfo.Width - MenuWidth) // 2
     MenuY := (ScreenInfo.Height - MenuHeight) // 2
     
-    ; 创建一个隐藏的输入框用于接收键盘焦点（在显示前创建）
+    ; 鍒涘缓涓€涓殣钘忕殑杈撳叆妗嗙敤浜庢帴鏀堕敭鐩樼劍鐐癸紙鍦ㄦ樉绀哄墠鍒涘缓锛?
     DummyEdit := GuiID_ClipboardSmartMenu.Add("Edit", "x0 y0 w0 h0 vDummyFocus")
     
-    ; 显示菜单
+    ; 鏄剧ず鑿滃崟
     GuiID_ClipboardSmartMenu.Show("w" . MenuWidth . " h" . MenuHeight . " x" . MenuX . " y" . MenuY)
     
-    ; 添加键盘事件
+    ; 娣诲姞閿洏浜嬩欢
     GuiID_ClipboardSmartMenu.OnEvent("Escape", (*) => CloseClipboardSmartMenu())
     
-    ; 使用窗口消息处理键盘事件（更可靠）
+    ; 浣跨敤绐楀彛娑堟伅澶勭悊閿洏浜嬩欢锛堟洿鍙潬锛?
     OnMessage(0x0100, HandleClipboardMenuKeyMessage)  ; WM_KEYDOWN
     
-    ; 注册热键（仅在菜单显示时生效）
+    ; 娉ㄥ唽鐑敭锛堜粎鍦ㄨ彍鍗曟樉绀烘椂鐢熸晥锛?
     RegisterClipboardMenuHotkeys()
     
-    ; 更新按钮高亮（初始状态）
+    ; 鏇存柊鎸夐挳楂樹寒锛堝垵濮嬬姸鎬侊級
     UpdateClipboardMenuHighlight()
     
-    ; 确保窗口获得焦点，以便接收键盘事件
+    ; 纭繚绐楀彛鑾峰緱鐒︾偣锛屼互渚挎帴鏀堕敭鐩樹簨浠?
     try {
-        ; 等待窗口完全显示
+        ; 绛夊緟绐楀彛瀹屽叏鏄剧ず
         Sleep(50)
         WinActivate("ahk_id " . GuiID_ClipboardSmartMenu.Hwnd)
-        ; 再次等待确保激活完成
+        ; 鍐嶆绛夊緟纭繚婵€娲诲畬鎴?
         Sleep(50)
-        ; 设置输入框焦点
+        ; 璁剧疆杈撳叆妗嗙劍鐐?
         DummyEdit.Focus()
-        ; 确保窗口在前台
+        ; 纭繚绐楀彛鍦ㄥ墠鍙?
         WinSetAlwaysOnTop(true, "ahk_id " . GuiID_ClipboardSmartMenu.Hwnd)
     } catch as err {
-        ; 忽略错误
+        ; 蹇界暐閿欒
     }
 }
 
-; 处理剪贴板菜单键盘消息
+; 澶勭悊鍓创鏉胯彍鍗曢敭鐩樻秷鎭?
 HandleClipboardMenuKeyMessage(wParam, lParam, msg, hwnd) {
     global GuiID_ClipboardSmartMenu
     if (GuiID_ClipboardSmartMenu = 0 || hwnd != GuiID_ClipboardSmartMenu.Hwnd) {
         return
     }
     
-    ; wParam 是虚拟键码
+    ; wParam 鏄櫄鎷熼敭鐮?
     KeyCode := wParam
     
-    ; 上方向键 (VK_UP = 0x26)
+    ; 涓婃柟鍚戦敭 (VK_UP = 0x26)
     if (KeyCode = 0x26) {
         HandleClipboardMenuUp()
-        return 1  ; 阻止默认行为
+        return 1  ; 闃绘榛樿琛屼负
     }
     
-    ; 下方向键 (VK_DOWN = 0x28)
+    ; 涓嬫柟鍚戦敭 (VK_DOWN = 0x28)
     if (KeyCode = 0x28) {
         HandleClipboardMenuDown()
-        return 1  ; 阻止默认行为
+        return 1  ; 闃绘榛樿琛屼负
     }
     
-    ; 回车键 (VK_RETURN = 0x0D)
+    ; 鍥炶溅閿?(VK_RETURN = 0x0D)
     if (KeyCode = 0x0D) {
         HandleClipboardMenuEnter()
-        return 1  ; 阻止默认行为
+        return 1  ; 闃绘榛樿琛屼负
     }
     
-    return 0  ; 允许默认行为
+    return 0  ; 鍏佽榛樿琛屼负
 }
 
-; 创建菜单操作处理函数
+; 鍒涘缓鑿滃崟鎿嶄綔澶勭悊鍑芥暟
 CreateMenuActionHandler(Action) {
     return (*) => HandleClipboardMenuAction(Action)
 }
 
-; 处理菜单操作
+; 澶勭悊鑿滃崟鎿嶄綔
 HandleClipboardMenuAction(Action) {
     global GuiID_ClipboardSmartMenu
     
-    ; 关闭菜单
+    ; 鍏抽棴鑿滃崟
     CloseClipboardSmartMenu()
     
-    ; 根据操作类型执行相应功能
+    ; 鏍规嵁鎿嶄綔绫诲瀷鎵ц鐩稿簲鍔熻兘
     switch Action {
         case "ocr_preserve_layout":
             ProcessOCR("preserve_layout")
@@ -714,16 +787,16 @@ HandleClipboardMenuAction(Action) {
     }
 }
 
-; 关闭智能菜单
+; 鍏抽棴鏅鸿兘鑿滃崟
 CloseClipboardSmartMenu() {
     global GuiID_ClipboardSmartMenu, ClipboardMenuHotkeysRegistered
     if (GuiID_ClipboardSmartMenu != 0) {
         try {
-            ; 注销热键
+            ; 娉ㄩ攢鐑敭
             UnregisterClipboardMenuHotkeys()
-            ; 移除消息处理
-            OnMessage(0x0100, HandleClipboardMenuKeyMessage, 0)  ; 移除 WM_KEYDOWN 处理
-            ; 清理所有按钮的悬停状态（不需要清理定时器，因为使用WM_MOUSEMOVE）
+            ; 绉婚櫎娑堟伅澶勭悊
+            OnMessage(0x0100, HandleClipboardMenuKeyMessage, 0)  ; 绉婚櫎 WM_KEYDOWN 澶勭悊
+            ; 娓呯悊鎵€鏈夋寜閽殑鎮仠鐘舵€侊紙涓嶉渶瑕佹竻鐞嗗畾鏃跺櫒锛屽洜涓轰娇鐢╓M_MOUSEMOVE锛?
             global LastHoverCtrl
             if (LastHoverCtrl && LastHoverCtrl.HasProp("IsMenuButton")) {
                 try {
@@ -733,13 +806,13 @@ CloseClipboardSmartMenu() {
                         LastHoverCtrl.BackColor := LastHoverCtrl.NormalColor
                     }
                 } catch as err {
-                    ; 忽略错误
+                    ; 蹇界暐閿欒
                 }
                 LastHoverCtrl := 0
             }
             GuiID_ClipboardSmartMenu.Destroy()
         } catch as err {
-            ; 忽略错误
+            ; 蹇界暐閿欒
         }
         global GuiID_ClipboardSmartMenu := 0
         global ClipboardMenuButtons := []
@@ -747,19 +820,19 @@ CloseClipboardSmartMenu() {
     }
 }
 
-; 注册剪贴板菜单热键（占位函数，实际使用窗口消息处理）
+; 娉ㄥ唽鍓创鏉胯彍鍗曠儹閿紙鍗犱綅鍑芥暟锛屽疄闄呬娇鐢ㄧ獥鍙ｆ秷鎭鐞嗭級
 RegisterClipboardMenuHotkeys() {
     global ClipboardMenuHotkeysRegistered
     ClipboardMenuHotkeysRegistered := true
 }
 
-; 注销剪贴板菜单热键（占位函数）
+; 娉ㄩ攢鍓创鏉胯彍鍗曠儹閿紙鍗犱綅鍑芥暟锛?
 UnregisterClipboardMenuHotkeys() {
     global ClipboardMenuHotkeysRegistered
     ClipboardMenuHotkeysRegistered := false
 }
 
-; 处理剪贴板菜单上方向键
+; 澶勭悊鍓创鏉胯彍鍗曚笂鏂瑰悜閿?
 HandleClipboardMenuUp(*) {
     global ClipboardMenuSelectedIndex, ClipboardMenuButtons, GuiID_ClipboardSmartMenu
     if (GuiID_ClipboardSmartMenu = 0 || ClipboardMenuButtons.Length = 0) {
@@ -771,27 +844,27 @@ HandleClipboardMenuUp(*) {
         ClipboardMenuSelectedIndex := ClipboardMenuButtons.Length
     }
     
-    ; 更新高亮（会同时检查悬停状态）
+    ; 鏇存柊楂樹寒锛堜細鍚屾椂妫€鏌ユ偓鍋滅姸鎬侊級
     UpdateClipboardMenuHighlight()
     
-    ; 确保窗口获得焦点，以便继续接收键盘事件
+    ; 纭繚绐楀彛鑾峰緱鐒︾偣锛屼互渚跨户缁帴鏀堕敭鐩樹簨浠?
     try {
         WinActivate("ahk_id " . GuiID_ClipboardSmartMenu.Hwnd)
-        ; 重新设置焦点到隐藏输入框
+        ; 閲嶆柊璁剧疆鐒︾偣鍒伴殣钘忚緭鍏ユ
         try {
             DummyEdit := GuiID_ClipboardSmartMenu["DummyFocus"]
             if (DummyEdit) {
                 DummyEdit.Focus()
             }
         } catch as err {
-            ; 忽略错误
+            ; 蹇界暐閿欒
         }
     } catch as err {
-        ; 忽略错误
+        ; 蹇界暐閿欒
     }
 }
 
-; 处理剪贴板菜单下方向键
+; 澶勭悊鍓创鏉胯彍鍗曚笅鏂瑰悜閿?
 HandleClipboardMenuDown(*) {
     global ClipboardMenuSelectedIndex, ClipboardMenuButtons, GuiID_ClipboardSmartMenu
     if (GuiID_ClipboardSmartMenu = 0 || ClipboardMenuButtons.Length = 0) {
@@ -803,27 +876,27 @@ HandleClipboardMenuDown(*) {
         ClipboardMenuSelectedIndex := 1
     }
     
-    ; 更新高亮（会同时检查悬停状态）
+    ; 鏇存柊楂樹寒锛堜細鍚屾椂妫€鏌ユ偓鍋滅姸鎬侊級
     UpdateClipboardMenuHighlight()
     
-    ; 确保窗口获得焦点，以便继续接收键盘事件
+    ; 纭繚绐楀彛鑾峰緱鐒︾偣锛屼互渚跨户缁帴鏀堕敭鐩樹簨浠?
     try {
         WinActivate("ahk_id " . GuiID_ClipboardSmartMenu.Hwnd)
-        ; 重新设置焦点到隐藏输入框
+        ; 閲嶆柊璁剧疆鐒︾偣鍒伴殣钘忚緭鍏ユ
         try {
             DummyEdit := GuiID_ClipboardSmartMenu["DummyFocus"]
             if (DummyEdit) {
                 DummyEdit.Focus()
             }
         } catch as err {
-            ; 忽略错误
+            ; 蹇界暐閿欒
         }
     } catch as err {
-        ; 忽略错误
+        ; 蹇界暐閿欒
     }
 }
 
-; 处理剪贴板菜单回车键
+; 澶勭悊鍓创鏉胯彍鍗曞洖杞﹂敭
 HandleClipboardMenuEnter(*) {
     global ClipboardMenuSelectedIndex, ClipboardMenuButtons, GuiID_ClipboardSmartMenu
     if (GuiID_ClipboardSmartMenu = 0 || ClipboardMenuButtons.Length = 0 || ClipboardMenuSelectedIndex < 1 || ClipboardMenuSelectedIndex > ClipboardMenuButtons.Length) {
@@ -834,7 +907,7 @@ HandleClipboardMenuEnter(*) {
     HandleClipboardMenuAction(Button.Action)
 }
 
-; 更新剪贴板菜单高亮（所有按钮都有悬停光效）
+; 鏇存柊鍓创鏉胯彍鍗曢珮浜紙鎵€鏈夋寜閽兘鏈夋偓鍋滃厜鏁堬級
 UpdateClipboardMenuHighlight() {
     global ClipboardMenuButtons, ClipboardMenuSelectedIndex, GuiID_ClipboardSmartMenu, LastHoverCtrl
     
@@ -842,60 +915,60 @@ UpdateClipboardMenuHighlight() {
         return
     }
     
-    ; 更新所有按钮的背景色（考虑选中状态和悬停状态）
-    ; 悬停状态由WM_MOUSEMOVE处理，这里只处理选中状态
+    ; 鏇存柊鎵€鏈夋寜閽殑鑳屾櫙鑹诧紙鑰冭檻閫変腑鐘舵€佸拰鎮仠鐘舵€侊級
+    ; 鎮仠鐘舵€佺敱WM_MOUSEMOVE澶勭悊锛岃繖閲屽彧澶勭悊閫変腑鐘舵€?
     for Index, Button in ClipboardMenuButtons {
         try {
-            ; 检查按钮是否被鼠标悬停（通过LastHoverCtrl判断）
+            ; 妫€鏌ユ寜閽槸鍚﹁榧犳爣鎮仠锛堥€氳繃LastHoverCtrl鍒ゆ柇锛?
             IsHovering := (LastHoverCtrl = Button.Bg)
             
-            ; 根据选中和悬停状态设置背景色
+            ; 鏍规嵁閫変腑鍜屾偓鍋滅姸鎬佽缃儗鏅壊
             if (Index = ClipboardMenuSelectedIndex) {
-                ; 已选中状态
+                ; 宸查€変腑鐘舵€?
                 if (IsHovering) {
-                    ; 选中+悬停 = 最亮光效
+                    ; 閫変腑+鎮仠 = 鏈€浜厜鏁?
                     Button.Bg.BackColor := Button.SelectedHoverBg
                 } else {
-                    ; 选中但未悬停：使用选中背景色
+                    ; 閫変腑浣嗘湭鎮仠锛氫娇鐢ㄩ€変腑鑳屾櫙鑹?
                     Button.Bg.BackColor := Button.SelectedBg
                 }
             } else {
-                ; 未选中状态
+                ; 鏈€変腑鐘舵€?
                 if (IsHovering) {
-                    ; 悬停时有光效
+                    ; 鎮仠鏃舵湁鍏夋晥
                     Button.Bg.BackColor := Button.HoverBg
                 } else {
-                    ; 未悬停：使用正常背景色
+                    ; 鏈偓鍋滐細浣跨敤姝ｅ父鑳屾櫙鑹?
                     Button.Bg.BackColor := Button.NormalBg
                 }
             }
         } catch as err {
-            ; 忽略错误
+            ; 蹇界暐閿欒
         }
     }
 }
 
-; 设置按钮悬停效果
+; 璁剧疆鎸夐挳鎮仠鏁堟灉
 SetupButtonHover(BtnBg, IconText, MainText, DescText, NormalBg, HoverBg, SelectedBg, SelectedHoverBg, Index) {
     global ClipboardMenuButtons, ClipboardMenuSelectedIndex, GuiID_ClipboardSmartMenu
     
-    ; 创建悬停检测函数
+    ; 鍒涘缓鎮仠妫€娴嬪嚱鏁?
     HoverCheckFunc(*) {
         CheckButtonHover(Index, BtnBg, NormalBg, HoverBg, SelectedBg, SelectedHoverBg)
     }
     
-    ; 使用定时器检测鼠标位置（每30ms检查一次，更流畅）
+    ; 浣跨敤瀹氭椂鍣ㄦ娴嬮紶鏍囦綅缃紙姣?0ms妫€鏌ヤ竴娆★紝鏇存祦鐣咃級
     SetTimer(HoverCheckFunc, 30)
     
-    ; 保存定时器引用以便清理
+    ; 淇濆瓨瀹氭椂鍣ㄥ紩鐢ㄤ互渚挎竻鐞?
     try {
         BtnBg.HoverTimer := HoverCheckFunc
     } catch as err {
-        ; 忽略错误
+        ; 蹇界暐閿欒
     }
 }
 
-; 检查按钮悬停状态（所有按钮都有悬停光效）
+; 妫€鏌ユ寜閽偓鍋滅姸鎬侊紙鎵€鏈夋寜閽兘鏈夋偓鍋滃厜鏁堬級
 CheckButtonHover(Index, BtnBg, NormalBg, HoverBg, SelectedBg, SelectedHoverBg) {
     global ClipboardMenuSelectedIndex, GuiID_ClipboardSmartMenu
     
@@ -904,58 +977,58 @@ CheckButtonHover(Index, BtnBg, NormalBg, HoverBg, SelectedBg, SelectedHoverBg) {
     }
     
     try {
-        ; 获取按钮位置和大小
+        ; 鑾峰彇鎸夐挳浣嶇疆鍜屽ぇ灏?
         WinGetPos(&WinX, &WinY, , , "ahk_id " . GuiID_ClipboardSmartMenu.Hwnd)
         ControlGetPos(&CtrlX, &CtrlY, &CtrlW, &CtrlH, , "ahk_id " . BtnBg.Hwnd)
         
-        ; 获取鼠标位置
+        ; 鑾峰彇榧犳爣浣嶇疆
         MouseGetPos(&MouseX, &MouseY)
         
-        ; 计算按钮在屏幕上的绝对位置
+        ; 璁＄畻鎸夐挳鍦ㄥ睆骞曚笂鐨勭粷瀵逛綅缃?
         BtnLeft := WinX + CtrlX
         BtnRight := BtnLeft + CtrlW
         BtnTop := WinY + CtrlY
         BtnBottom := BtnTop + CtrlH
         
-        ; 检查鼠标是否在按钮上
+        ; 妫€鏌ラ紶鏍囨槸鍚﹀湪鎸夐挳涓?
         IsHovering := (MouseX >= BtnLeft && MouseX <= BtnRight && MouseY >= BtnTop && MouseY <= BtnBottom)
         
-        ; 所有按钮都有悬停光效
+        ; 鎵€鏈夋寜閽兘鏈夋偓鍋滃厜鏁?
         if (Index = ClipboardMenuSelectedIndex) {
-            ; 已选中状态：根据是否悬停来决定背景色
+            ; 宸查€変腑鐘舵€侊細鏍规嵁鏄惁鎮仠鏉ュ喅瀹氳儗鏅壊
             if (IsHovering) {
-                ; 选中+悬停 = 最亮光效
+                ; 閫変腑+鎮仠 = 鏈€浜厜鏁?
                 BtnBg.BackColor := SelectedHoverBg
             } else {
-                ; 选中但未悬停：使用选中背景色
+                ; 閫変腑浣嗘湭鎮仠锛氫娇鐢ㄩ€変腑鑳屾櫙鑹?
                 BtnBg.BackColor := SelectedBg
             }
         } else {
-            ; 未选中状态
+            ; 鏈€変腑鐘舵€?
             if (IsHovering) {
-                ; 悬停时有光效
+                ; 鎮仠鏃舵湁鍏夋晥
                 BtnBg.BackColor := HoverBg
             } else {
-                ; 未悬停：使用正常背景色
+                ; 鏈偓鍋滐細浣跨敤姝ｅ父鑳屾櫙鑹?
                 BtnBg.BackColor := NormalBg
             }
         }
     } catch as err {
-        ; 忽略错误
+        ; 蹇界暐閿欒
     }
 }
 
-; 获取剪贴板类型
+; 鑾峰彇鍓创鏉跨被鍨?
 GetClipboardType() {
     try {
-        ; 检查是否包含图片
+        ; 妫€鏌ユ槸鍚﹀寘鍚浘鐗?
         if (DllCall("OpenClipboard", "Ptr", 0)) {
-            ; 检查位图格式
+            ; 妫€鏌ヤ綅鍥炬牸寮?
             if (DllCall("IsClipboardFormatAvailable", "UInt", 2)) {  ; CF_BITMAP
                 DllCall("CloseClipboard")
                 return "image"
             }
-            ; 检查 DIB / DIBV5 格式
+            ; 妫€鏌?DIB / DIBV5 鏍煎紡
             if (DllCall("IsClipboardFormatAvailable", "UInt", 8)) {  ; CF_DIB
                 DllCall("CloseClipboard")
                 return "image"
@@ -964,7 +1037,7 @@ GetClipboardType() {
                 DllCall("CloseClipboard")
                 return "image"
             }
-            ; 检查 PNG 格式
+            ; 妫€鏌?PNG 鏍煎紡
             PNGFormat := DllCall("RegisterClipboardFormat", "Str", "PNG")
             if (PNGFormat && DllCall("IsClipboardFormatAvailable", "UInt", PNGFormat)) {
                 DllCall("CloseClipboard")
@@ -973,14 +1046,14 @@ GetClipboardType() {
             DllCall("CloseClipboard")
         }
         
-        ; 检查文本
+        ; 妫€鏌ユ枃鏈?
         try {
             ClipboardText := A_Clipboard
             if (ClipboardText != "" && StrLen(ClipboardText) > 0) {
                 return "text"
             }
         } catch as err {
-            ; 忽略错误
+            ; 蹇界暐閿欒
         }
         
         return "empty"
@@ -989,75 +1062,174 @@ GetClipboardType() {
     }
 }
 
-; ===================== OCR 识图取词功能（使用 ImagePut 优化） =====================
+; ===================== OCR 璇嗗浘鍙栬瘝鍔熻兘锛堜娇鐢?ImagePut 浼樺寲锛?=====================
+IsClipboardImagePayload() {
+    try {
+        if (GetClipboardType() = "image")
+            return true
+    } catch {
+    }
+    try {
+        files := GetClipboardFileDropList()
+        if (files != "") {
+            for _, fp in StrSplit(files, "`n") {
+                if (fp = "")
+                    continue
+                ext := StrLower(RegExReplace(String(fp), "^.*\."))
+                if (ext = "png" || ext = "jpg" || ext = "jpeg" || ext = "bmp" || ext = "gif" || ext = "webp")
+                    return true
+            }
+        }
+    } catch {
+    }
+    try {
+        t := Trim(String(A_Clipboard))
+        if (t != "" && FileExist(t)) {
+            ext2 := StrLower(RegExReplace(t, "^.*\."))
+            if (ext2 = "png" || ext2 = "jpg" || ext2 = "jpeg" || ext2 = "bmp" || ext2 = "gif" || ext2 = "webp")
+                return true
+        }
+    } catch {
+    }
+    return false
+}
+
+ScreenshotFindLatestSavedImage(maxAgeSeconds := 240) {
+    bestPath := ""
+    bestTs := ""
+    picsRoot := EnvGet("USERPROFILE") "\Pictures"
+    dirs := [
+        picsRoot "\Screenshots",
+        picsRoot "\Saved Pictures",
+        picsRoot "\Saved Pictures\Screenshots",
+        picsRoot "\Gallery"
+    ]
+    for _, dir in dirs {
+        if !DirExist(dir)
+            continue
+        Loop Files, dir "\*.*", "F" {
+            ext := StrLower(RegExReplace(A_LoopFileName, "^.*\."))
+            if (ext != "png" && ext != "jpg" && ext != "jpeg" && ext != "bmp" && ext != "gif" && ext != "webp")
+                continue
+            ts := ""
+            try ts := FileGetTime(A_LoopFilePath, "M")
+            catch
+                continue
+            if (ts = "")
+                continue
+            age := 999999
+            try age := DateDiff(A_Now, ts, "Seconds")
+            catch
+                age := 999999
+            if (age < 0 || age > maxAgeSeconds)
+                continue
+            if (bestTs = "" || ts > bestTs) {
+                bestTs := ts
+                bestPath := A_LoopFilePath
+            }
+        }
+    }
+    return bestPath
+}
+
+ScreenshotCapturePayload(&outClip, &outFilePath, waitMs := 3200) {
+    outClip := ""
+    outFilePath := ""
+    elapsed := 0
+    step := 120
+    while (elapsed <= waitMs) {
+        try {
+            if (IsClipboardImagePayload()) {
+                c := ClipboardAll()
+                if (c) {
+                    outClip := c
+                    return true
+                }
+            }
+        } catch {
+        }
+        try {
+            fp := ScreenshotFindLatestSavedImage(240)
+            if (fp != "") {
+                outFilePath := fp
+                return true
+            }
+        } catch {
+        }
+        Sleep(step)
+        elapsed += step
+    }
+    return false
+}
+
 ProcessOCR(Mode := "preserve_layout") {
     global UI_Colors, ScreenshotClipboard
     
-    ; 显示处理中提示
-    TrayTip("⚙️ OCR 处理中...", "", "Iconi 1")
+    ; 鏄剧ず澶勭悊涓彁绀?
+    TrayTip("鈿欙笍 OCR 澶勭悊涓?..", "", "Iconi 1")
     
     try {
-        ; 保存当前剪贴板
+        ; 淇濆瓨褰撳墠鍓创鏉?
         OldClipboard := ClipboardAll()
         
-        ; 如果有保存的截图数据，优先使用
+        ; 濡傛灉鏈変繚瀛樼殑鎴浘鏁版嵁锛屼紭鍏堜娇鐢?
         if (ScreenshotClipboard) {
             A_Clipboard := ScreenshotClipboard
             Sleep(200)
         }
         
-        ; 使用 ImagePutBitmap 直接从剪贴板获取位图（自动处理所有格式：CF_BITMAP, CF_DIB, PNG等）
-        ; ImagePut 会自动检测并转换剪贴板中的任何图片格式，无需手动判断
+        ; 浣跨敤 ImagePutBitmap 鐩存帴浠庡壀璐存澘鑾峰彇浣嶅浘锛堣嚜鍔ㄥ鐞嗘墍鏈夋牸寮忥細CF_BITMAP, CF_DIB, PNG绛夛級
+        ; ImagePut 浼氳嚜鍔ㄦ娴嬪苟杞崲鍓创鏉夸腑鐨勪换浣曞浘鐗囨牸寮忥紝鏃犻渶鎵嬪姩鍒ゆ柇
         pBitmap := ImagePutBitmap(A_Clipboard)
         
         if (!pBitmap || pBitmap = "") {
-            TrayTip("剪贴板中没有可识别的图片格式", "错误", "Iconx 2")
+            TrayTip("鍓创鏉夸腑娌℃湁鍙瘑鍒殑鍥剧墖鏍煎紡", "閿欒", "Iconx 2")
             A_Clipboard := OldClipboard
             return
         }
         
-        ; 将 GDI+ Bitmap 转换为 RandomAccessStream（OCR 需要）
-        ; 先保存为临时文件，然后使用 OCR.FromFile 识别（性能更好，支持更多格式）
+        ; 灏?GDI+ Bitmap 杞崲涓?RandomAccessStream锛圤CR 闇€瑕侊級
+        ; 鍏堜繚瀛樹负涓存椂鏂囦欢锛岀劧鍚庝娇鐢?OCR.FromFile 璇嗗埆锛堟€ц兘鏇村ソ锛屾敮鎸佹洿澶氭牸寮忥級
         TempFile := A_Temp "\ocr_temp_" . A_TickCount . ".png"
         OCRResult := ""
         
         try {
-            ; 使用 ImagePut 保存为 PNG（高质量，支持透明通道）
+            ; 浣跨敤 ImagePut 淇濆瓨涓?PNG锛堥珮璐ㄩ噺锛屾敮鎸侀€忔槑閫氶亾锛?
             ImagePut("File", pBitmap, TempFile)
             
-            ; 清理 Bitmap 资源
+            ; 娓呯悊 Bitmap 璧勬簮
             ImageDestroy(pBitmap)
             pBitmap := ""
             
-            ; 使用 OCR.FromFile 识别（支持更多格式，性能更好）
+            ; 浣跨敤 OCR.FromFile 璇嗗埆锛堟敮鎸佹洿澶氭牸寮忥紝鎬ц兘鏇村ソ锛?
             OCRResult := OCR.FromFile(TempFile)
             
-            ; 删除临时文件
+            ; 鍒犻櫎涓存椂鏂囦欢
             try {
                 FileDelete(TempFile)
             } catch {
-                ; 忽略删除错误
+                ; 蹇界暐鍒犻櫎閿欒
             }
             
         } catch as e {
-            ; 清理资源
+            ; 娓呯悊璧勬簮
             try {
                 if (FileExist(TempFile)) {
                     FileDelete(TempFile)
                 }
             } catch {
-                ; 忽略清理错误
+                ; 蹇界暐娓呯悊閿欒
             }
             
-            ; 如果文件方式失败，尝试直接使用 RandomAccessStream（备用方案）
+            ; 濡傛灉鏂囦欢鏂瑰紡澶辫触锛屽皾璇曠洿鎺ヤ娇鐢?RandomAccessStream锛堝鐢ㄦ柟妗堬級
             try {
-                ; 重新从剪贴板读取（如果之前已清理）
+                ; 閲嶆柊浠庡壀璐存澘璇诲彇锛堝鏋滀箣鍓嶅凡娓呯悊锛?
                 if (!pBitmap) {
                     pBitmap := ImagePutBitmap(A_Clipboard)
                 }
                 
                 if (pBitmap) {
-                    ; 将 Bitmap 转换为 RandomAccessStream
+                    ; 灏?Bitmap 杞崲涓?RandomAccessStream
                     ras := ImagePut("RandomAccessStream", pBitmap, "png")
                     OCRResult := OCR(ras)
                     ImageDestroy(pBitmap)
@@ -1066,65 +1238,65 @@ ProcessOCR(Mode := "preserve_layout") {
                     throw Error("无法读取剪贴板图片")
                 }
             } catch as err {
-                TrayTip("OCR 识别失败：" . err.Message, "错误", "Iconx 2")
+                TrayTip("OCR 识别失败: " . err.Message, "错误", "Iconx 2")
                 A_Clipboard := OldClipboard
                 return
             }
         }
         
         if (!OCRResult || !OCRResult.Text || StrLen(OCRResult.Text) = 0) {
-            TrayTip("OCR 识别失败：未检测到文字", "错误", "Iconx 2")
+            TrayTip("OCR 璇嗗埆澶辫触锛氭湭妫€娴嬪埌鏂囧瓧", "閿欒", "Iconx 2")
             A_Clipboard := OldClipboard
             return
         }
         
-        ; 提取原始文本
+        ; 鎻愬彇鍘熷鏂囨湰
         ExtractedText := OCRResult.Text
         
-        ; 根据模式处理文本
+        ; 鏍规嵁妯″紡澶勭悊鏂囨湰
         if (Mode = "auto_flow") {
-            ; 自动流转模式：合并断行，去除中文间空格，去除 HTML 标签
+            ; 鑷姩娴佽浆妯″紡锛氬悎骞舵柇琛岋紝鍘婚櫎涓枃闂寸┖鏍硷紝鍘婚櫎 HTML 鏍囩
             ExtractedText := ProcessOCRTextAutoFlow(ExtractedText)
         } else {
-            ; 保留布局模式：仅进行基础清理（乱码修复、去 HTML 标签）
+            ; 淇濈暀甯冨眬妯″紡锛氫粎杩涜鍩虹娓呯悊锛堜贡鐮佷慨澶嶃€佸幓 HTML 鏍囩锛?
             ExtractedText := ProcessOCRTextPreserveLayout(ExtractedText)
         }
         
-        ; 将处理后的文本放入剪贴板
+        ; 灏嗗鐞嗗悗鐨勬枃鏈斁鍏ュ壀璐存澘
         A_Clipboard := ExtractedText
         Sleep(200)
         
-        ; 清除截图数据（已处理完成）
+        ; 娓呴櫎鎴浘鏁版嵁锛堝凡澶勭悊瀹屾垚锛?
         global ScreenshotClipboard
         ScreenshotClipboard := ""
         
-        ; 显示成功提示
-        TrayTip("✅ OCR 完成", "已识别 " . StrLen(ExtractedText) . " 个字符", "Iconi 1")
+        ; 鏄剧ず鎴愬姛鎻愮ず
+        TrayTip("OCR 完成", "已识别 " . StrLen(ExtractedText) . " 个字符", "Iconi 1")
         
-        ; 自动粘贴
+        ; 鑷姩绮樿创
         Sleep(300)
         Send("^v")
         
     } catch as e {
-        TrayTip("OCR 识别失败：" . e.Message, "错误", "Iconx 2")
+        TrayTip("OCR 识别失败: " . e.Message, "错误", "Iconx 2")
         try {
             A_Clipboard := OldClipboard
         } catch as err {
-            ; 忽略错误
+            ; 蹇界暐閿欒
         }
     }
 }
 
-; ===================== OCR 文本处理（保留布局） =====================
+; ===================== OCR 鏂囨湰澶勭悊锛堜繚鐣欏竷灞€锛?=====================
 ProcessOCRTextPreserveLayout(Text) {
-    ; 1. 乱码修复（常见 OCR 错误字符替换）
+    ; 1. 涔辩爜淇锛堝父瑙?OCR 閿欒瀛楃鏇挎崲锛?
     Text := FixOCREncodingErrors(Text)
     
-    ; 2. 去除 HTML 标签
+    ; 2. 鍘婚櫎 HTML 鏍囩
     Text := RemoveHTMLTags(Text)
     
-    ; 3. 去除多余的空格（但保留换行和基本布局）
-    ; 去除行首行尾空格
+    ; 3. 鍘婚櫎澶氫綑鐨勭┖鏍硷紙浣嗕繚鐣欐崲琛屽拰鍩烘湰甯冨眬锛?
+    ; 鍘婚櫎琛岄琛屽熬绌烘牸
     Lines := StrSplit(Text, "`n")
     ProcessedLines := []
     for Index, Line in Lines {
@@ -1139,7 +1311,7 @@ ProcessOCRTextPreserveLayout(Text) {
         Text .= Line
     }
     
-    ; 4. 清理重复的换行（超过 2 个连续换行合并为 2 个）
+    ; 4. 娓呯悊閲嶅鐨勬崲琛岋紙瓒呰繃 2 涓繛缁崲琛屽悎骞朵负 2 涓級
     while (InStr(Text, "`n`n`n")) {
         Text := StrReplace(Text, "`n`n`n", "`n`n")
     }
@@ -1147,85 +1319,82 @@ ProcessOCRTextPreserveLayout(Text) {
     return Text
 }
 
-; ===================== OCR 文本处理（自动流转） =====================
+; ===================== OCR 鏂囨湰澶勭悊锛堣嚜鍔ㄦ祦杞級 =====================
 ProcessOCRTextAutoFlow(Text) {
-    ; 1. 乱码修复
+    ; 1. 涔辩爜淇
     Text := FixOCREncodingErrors(Text)
     
-    ; 2. 去除 HTML 标签
+    ; 2. 鍘婚櫎 HTML 鏍囩
     Text := RemoveHTMLTags(Text)
     
-    ; 3. 合并所有换行符为空格（但保留段落分隔）
+    ; 3. 鍚堝苟鎵€鏈夋崲琛岀涓虹┖鏍硷紙浣嗕繚鐣欐钀藉垎闅旓級
     Text := StrReplace(Text, "`r`n", " ")
     Text := StrReplace(Text, "`n", " ")
     Text := StrReplace(Text, "`r", " ")
     
-    ; 4. 去除中文间的无意义空格
+    ; 4. 鍘婚櫎涓枃闂寸殑鏃犳剰涔夌┖鏍?
     Text := RemoveSpacesBetweenChinese(Text)
     
-    ; 5. 清理多余空格（多个连续空格合并为一个）
+    ; 5. 娓呯悊澶氫綑绌烘牸锛堝涓繛缁┖鏍煎悎骞朵负涓€涓級
     while (InStr(Text, "  ")) {
         Text := StrReplace(Text, "  ", " ")
     }
     
-    ; 6. 去除首尾空格
+    ; 6. 鍘婚櫎棣栧熬绌烘牸
     Text := Trim(Text)
     
     return Text
 }
 
-; ===================== OCR 乱码修复 =====================
+; ===================== OCR 涔辩爜淇 =====================
 FixOCREncodingErrors(Text) {
-    ; 常见 OCR 识别错误字符映射表
-    ; 格式：错误字符 => 正确字符
+    ; 甯歌 OCR 璇嗗埆閿欒瀛楃鏄犲皠琛?
+    ; 鏍煎紡锛氶敊璇瓧绗?=> 姝ｇ‘瀛楃
     ErrorMap := Map(
-        "０", "0", "１", "1", "２", "2", "３", "3", "４", "4",
-        "５", "5", "６", "6", "７", "7", "８", "8", "９", "9",
-        "（", "(", "）", ")", "，", ",", "。", ".", "：", ":",
-        "；", ";", "？", "?", "！", "!", "、", ",", "—", "-",
-        "…", "...", "“", '"', "”", '"', "'", "'", "'", "'",
-        "【", "[", "】", "]", "《", "<", "》", ">", "·", "·"
+        "，", ",", "。", ".", "：", ":", "；", ";",
+        "？", "?", "！", "!", "（", "(", "）", ")",
+        "【", "[", "】", "]", "“", Chr(34), "”", Chr(34)
     )
     
-    ; 替换错误字符
+    ; 鏇挎崲閿欒瀛楃
     Result := Text
     for WrongChar, CorrectChar in ErrorMap {
         Result := StrReplace(Result, WrongChar, CorrectChar)
     }
     
-    ; 修复常见的 OCR 识别错误
-    ; 修复 "l" 和 "1" 的混淆（在特定上下文中）
-    ; 修复 "O" 和 "0" 的混淆（在特定上下文中）
-    ; 这里可以根据需要添加更多规则
+    ; 淇甯歌鐨?OCR 璇嗗埆閿欒
+    ; 淇 "l" 鍜?"1" 鐨勬贩娣嗭紙鍦ㄧ壒瀹氫笂涓嬫枃涓級
+    ; 淇 "O" 鍜?"0" 鐨勬贩娣嗭紙鍦ㄧ壒瀹氫笂涓嬫枃涓級
+    ; 杩欓噷鍙互鏍规嵁闇€瑕佹坊鍔犳洿澶氳鍒?
     
-    ; 修复常见的英文识别错误
+    ; 淇甯歌鐨勮嫳鏂囪瘑鍒敊璇?
     CommonErrors := Map(
-        "rn", "m",  ; rn 常被识别为 m
-        "vv", "w",  ; vv 常被识别为 w
-        "cl", "d",  ; cl 常被识别为 d
-        "ii", "n"   ; ii 常被识别为 n
+        "rn", "m",  ; rn 甯歌璇嗗埆涓?m
+        "vv", "w",  ; vv 甯歌璇嗗埆涓?w
+        "cl", "d",  ; cl 甯歌璇嗗埆涓?d
+        "ii", "n"   ; ii 甯歌璇嗗埆涓?n
     )
     
-    ; 注意：这些替换需要谨慎，只在特定上下文中才适用
-    ; 这里简化处理，不进行自动替换，避免误替换
+    ; 娉ㄦ剰锛氳繖浜涙浛鎹㈤渶瑕佽皑鎱庯紝鍙湪鐗瑰畾涓婁笅鏂囦腑鎵嶉€傜敤
+    ; 杩欓噷绠€鍖栧鐞嗭紝涓嶈繘琛岃嚜鍔ㄦ浛鎹紝閬垮厤璇浛鎹?
     
     return Result
 }
 
-; ===================== 粘贴图片功能 =====================
+; ===================== 绮樿创鍥剧墖鍔熻兘 =====================
 PasteImage() {
     global ScreenshotClipboard
     
     try {
-        ; 如果有保存的截图数据，优先使用
+        ; 濡傛灉鏈変繚瀛樼殑鎴浘鏁版嵁锛屼紭鍏堜娇鐢?
         if (ScreenshotClipboard) {
             A_Clipboard := ScreenshotClipboard
             Sleep(200)
         }
         
-        ; 检查剪贴板是否有图片
+        ; 妫€鏌ュ壀璐存澘鏄惁鏈夊浘鐗?
         if (!DllCall("OpenClipboard", "Ptr", 0)) {
-            TrayTip("剪贴板中没有图片", "错误", "Iconx 2")
+            TrayTip("鍓创鏉夸腑娌℃湁鍥剧墖", "閿欒", "Iconx 2")
             return
         }
         
@@ -1243,47 +1412,47 @@ PasteImage() {
         DllCall("CloseClipboard")
         
         if (!HasImage) {
-            TrayTip("剪贴板中没有图片", "错误", "Iconx 2")
+            TrayTip("鍓创鏉夸腑娌℃湁鍥剧墖", "閿欒", "Iconx 2")
             return
         }
         
-        ; 清除截图数据（已处理完成）
+        ; 娓呴櫎鎴浘鏁版嵁锛堝凡澶勭悊瀹屾垚锛?
         global ScreenshotClipboard
         ScreenshotClipboard := ""
         
-        ; 直接粘贴图片
+        ; 鐩存帴绮樿创鍥剧墖
         Send("^v")
         Sleep(200)
         
-        ; 显示成功提示（简化）
-        TrayTip("✅ 图片已粘贴", "", "Iconi 1")
+        ; 鏄剧ず鎴愬姛鎻愮ず锛堢畝鍖栵級
+        TrayTip("图片已粘贴", "", "Iconi 1")
         
     } catch as e {
-        TrayTip("粘贴图片失败：" . e.Message, "错误", "Iconx 2")
+        TrayTip("粘贴图片失败: " . e.Message, "错误", "Iconx 2")
     }
 }
 
-; ===================== 提取文本（保留布局） =====================
+; ===================== 鎻愬彇鏂囨湰锛堜繚鐣欏竷灞€锛?=====================
 ExtractTextPreserveLayout() {
     try {
-        ; 显示处理中提示（简化）
-        TrayTip("⚙️ 处理中...", "", "Iconi 1")
+        ; 鏄剧ず澶勭悊涓彁绀猴紙绠€鍖栵級
+        TrayTip("鈿欙笍 澶勭悊涓?..", "", "Iconi 1")
         
-        ; 获取剪贴板文本
+        ; 鑾峰彇鍓创鏉挎枃鏈?
         ClipboardText := A_Clipboard
         
         if (ClipboardText = "" || StrLen(ClipboardText) = 0) {
-            TrayTip("剪贴板中没有文本", "错误", "Iconx 2")
+            TrayTip("鍓创鏉夸腑娌℃湁鏂囨湰", "閿欒", "Iconx 2")
             return
         }
         
-        ; 保留原始布局，仅进行基础清理
+        ; 淇濈暀鍘熷甯冨眬锛屼粎杩涜鍩虹娓呯悊
         ProcessedText := ClipboardText
         
-        ; 1. 去除 HTML 标签
+        ; 1. 鍘婚櫎 HTML 鏍囩
         ProcessedText := RemoveHTMLTags(ProcessedText)
         
-        ; 2. 去除行首行尾空格（保留换行）
+        ; 2. 鍘婚櫎琛岄琛屽熬绌烘牸锛堜繚鐣欐崲琛岋級
         Lines := StrSplit(ProcessedText, "`n")
         ProcessedLines := []
         for Index, Line in Lines {
@@ -1298,82 +1467,82 @@ ExtractTextPreserveLayout() {
             ProcessedText .= Line
         }
         
-        ; 3. 清理重复的换行（超过 2 个连续换行合并为 2 个）
+        ; 3. 娓呯悊閲嶅鐨勬崲琛岋紙瓒呰繃 2 涓繛缁崲琛屽悎骞朵负 2 涓級
         while (InStr(ProcessedText, "`n`n`n")) {
             ProcessedText := StrReplace(ProcessedText, "`n`n`n", "`n`n")
         }
         
-        ; 回填剪贴板
+        ; 鍥炲～鍓创鏉?
         A_Clipboard := ProcessedText
         Sleep(200)
         
-        ; 显示成功提示（简化）
-        TrayTip("✅ 文本已处理", "", "Iconi 1")
+        ; 鏄剧ず鎴愬姛鎻愮ず锛堢畝鍖栵級
+        TrayTip("文本已处理", "", "Iconi 1")
         
-        ; 自动粘贴
+        ; 鑷姩绮樿创
         Sleep(300)
         Send("^v")
         
     } catch as e {
-        TrayTip("文本提取失败：" . e.Message, "错误", "Iconx 2")
+        TrayTip("文本提取失败: " . e.Message, "错误", "Iconx 2")
     }
 }
 
-; ===================== 提取文本（自动流转） =====================
+; ===================== 鎻愬彇鏂囨湰锛堣嚜鍔ㄦ祦杞級 =====================
 ExtractTextAutoFlow() {
     try {
-        ; 显示处理中提示（简化）
-        TrayTip("⚙️ 处理中...", "", "Iconi 1")
+        ; 鏄剧ず澶勭悊涓彁绀猴紙绠€鍖栵級
+        TrayTip("鈿欙笍 澶勭悊涓?..", "", "Iconi 1")
         
-        ; 获取剪贴板文本
+        ; 鑾峰彇鍓创鏉挎枃鏈?
         ClipboardText := A_Clipboard
         
         if (ClipboardText = "" || StrLen(ClipboardText) = 0) {
-            TrayTip("剪贴板中没有文本", "错误", "Iconx 2")
+            TrayTip("鍓创鏉夸腑娌℃湁鏂囨湰", "閿欒", "Iconx 2")
             return
         }
         
-        ; 处理文本：合并断行，去除中文间空格
+        ; 澶勭悊鏂囨湰锛氬悎骞舵柇琛岋紝鍘婚櫎涓枃闂寸┖鏍?
         ProcessedText := ClipboardText
         
-        ; 1. 去除 HTML 标签
+        ; 1. 鍘婚櫎 HTML 鏍囩
         ProcessedText := RemoveHTMLTags(ProcessedText)
         
-        ; 2. 合并所有换行符为空格（但保留段落分隔）
+        ; 2. 鍚堝苟鎵€鏈夋崲琛岀涓虹┖鏍硷紙浣嗕繚鐣欐钀藉垎闅旓級
         ProcessedText := StrReplace(ProcessedText, "`r`n", " ")
         ProcessedText := StrReplace(ProcessedText, "`n", " ")
         ProcessedText := StrReplace(ProcessedText, "`r", " ")
         
-        ; 3. 去除中文间的无意义空格（中文字符之间的空格）
+        ; 3. 鍘婚櫎涓枃闂寸殑鏃犳剰涔夌┖鏍硷紙涓枃瀛楃涔嬮棿鐨勭┖鏍硷級
         ProcessedText := RemoveSpacesBetweenChinese(ProcessedText)
         
-        ; 4. 清理多余空格（多个连续空格合并为一个）
+        ; 4. 娓呯悊澶氫綑绌烘牸锛堝涓繛缁┖鏍煎悎骞朵负涓€涓級
         while (InStr(ProcessedText, "  ")) {
             ProcessedText := StrReplace(ProcessedText, "  ", " ")
         }
         
-        ; 5. 去除首尾空格
+        ; 5. 鍘婚櫎棣栧熬绌烘牸
         ProcessedText := Trim(ProcessedText)
         
-        ; 回填剪贴板
+        ; 鍥炲～鍓创鏉?
         A_Clipboard := ProcessedText
         Sleep(200)
         
-        ; 显示成功提示（简化）
-        TrayTip("✅ 文本已处理", "", "Iconi 1")
+        ; 鏄剧ず鎴愬姛鎻愮ず锛堢畝鍖栵級
+        TrayTip("文本已处理", "", "Iconi 1")
         
-        ; 自动粘贴
+        ; 鑷姩绮樿创
         Sleep(300)
         Send("^v")
         
     } catch as e {
-        TrayTip("文本流转失败：" . e.Message, "错误", "Iconx 2")
+        TrayTip("文本流转失败: " . e.Message, "错误", "Iconx 2")
     }
 }
 
-; 去除中文字符之间的空格
+; 鍘婚櫎涓枃瀛楃涔嬮棿鐨勭┖鏍?
 RemoveSpacesBetweenChinese(Text) {
-    ; 简单的实现：遍历文本，如果遇到中文字符-空格-中文字符的模式，删除空格
+    ; 绠€鍗曠殑瀹炵幇锛氶亶鍘嗘枃鏈紝濡傛灉閬囧埌涓枃瀛楃-绌烘牸-涓枃瀛楃鐨勬ā寮忥紝鍒犻櫎绌烘牸
     Result := ""
     TextLen := StrLen(Text)
     
@@ -1382,12 +1551,12 @@ RemoveSpacesBetweenChinese(Text) {
         NextChar := (A_Index < TextLen) ? SubStr(Text, A_Index + 1, 1) : ""
         PrevChar := (A_Index > 1) ? SubStr(Text, A_Index - 1, 1) : ""
         
-        ; 检查是否是中文字符（Unicode 范围：\u4e00-\u9fff）
+        ; 妫€鏌ユ槸鍚︽槸涓枃瀛楃锛圲nicode 鑼冨洿锛歕u4e00-\u9fff锛?
         IsChinese := (Ord(CurrentChar) >= 0x4E00 && Ord(CurrentChar) <= 0x9FFF)
         IsPrevChinese := (PrevChar != "" && Ord(PrevChar) >= 0x4E00 && Ord(PrevChar) <= 0x9FFF)
         IsNextChinese := (NextChar != "" && Ord(NextChar) >= 0x4E00 && Ord(NextChar) <= 0x9FFF)
         
-        ; 如果是空格，且前后都是中文，则跳过（不添加到结果）
+        ; 濡傛灉鏄┖鏍硷紝涓斿墠鍚庨兘鏄腑鏂囷紝鍒欒烦杩囷紙涓嶆坊鍔犲埌缁撴灉锛?
         if (CurrentChar = " " && IsPrevChinese && IsNextChinese) {
             continue
         }
@@ -1398,72 +1567,72 @@ RemoveSpacesBetweenChinese(Text) {
     return Result
 }
 
-; ===================== 文本净化功能 =====================
+; ===================== 鏂囨湰鍑€鍖栧姛鑳?=====================
 CleanupText() {
     try {
-        ; 显示处理中提示（简化）
-        TrayTip("⚙️ 处理中...", "", "Iconi 1")
+        ; 鏄剧ず澶勭悊涓彁绀猴紙绠€鍖栵級
+        TrayTip("鈿欙笍 澶勭悊涓?..", "", "Iconi 1")
         
-        ; 获取剪贴板文本
+        ; 鑾峰彇鍓创鏉挎枃鏈?
         ClipboardText := A_Clipboard
         
         if (ClipboardText = "" || StrLen(ClipboardText) = 0) {
-            TrayTip("剪贴板中没有文本", "错误", "Iconx 2")
+            TrayTip("鍓创鏉夸腑娌℃湁鏂囨湰", "閿欒", "Iconx 2")
             return
         }
         
-        ; 文本净化处理
+        ; 鏂囨湰鍑€鍖栧鐞?
         ProcessedText := ClipboardText
         
-        ; 1. 去除 HTML 标签
+        ; 1. 鍘婚櫎 HTML 鏍囩
         ProcessedText := RemoveHTMLTags(ProcessedText)
         
-        ; 2. 去除链接（http:// 或 https:// 开头的 URL）
+        ; 2. 鍘婚櫎閾炬帴锛坔ttp:// 鎴?https:// 寮€澶寸殑 URL锛?
         ProcessedText := RemoveURLs(ProcessedText)
         
-        ; 3. 去除重复空格
+        ; 3. 鍘婚櫎閲嶅绌烘牸
         while (InStr(ProcessedText, "  ")) {
             ProcessedText := StrReplace(ProcessedText, "  ", " ")
         }
         
-        ; 4. 统一标点格式（将中文标点后的空格去除，英文标点后添加空格）
+        ; 4. 缁熶竴鏍囩偣鏍煎紡锛堝皢涓枃鏍囩偣鍚庣殑绌烘牸鍘婚櫎锛岃嫳鏂囨爣鐐瑰悗娣诲姞绌烘牸锛?
         ProcessedText := NormalizePunctuation(ProcessedText)
         
-        ; 5. 去除中文间的无意义空格
+        ; 5. 鍘婚櫎涓枃闂寸殑鏃犳剰涔夌┖鏍?
         ProcessedText := RemoveSpacesBetweenChinese(ProcessedText)
         
-        ; 6. 去除首尾空格和换行
+        ; 6. 鍘婚櫎棣栧熬绌烘牸鍜屾崲琛?
         ProcessedText := Trim(ProcessedText, " `t`r`n")
         
-        ; 7. 清理重复的换行（超过 2 个连续换行合并为 2 个）
+        ; 7. 娓呯悊閲嶅鐨勬崲琛岋紙瓒呰繃 2 涓繛缁崲琛屽悎骞朵负 2 涓級
         while (InStr(ProcessedText, "`n`n`n")) {
             ProcessedText := StrReplace(ProcessedText, "`n`n`n", "`n`n")
         }
         
-        ; 回填剪贴板
+        ; 鍥炲～鍓创鏉?
         A_Clipboard := ProcessedText
         Sleep(200)
         
-        ; 显示成功提示（简化）
-        TrayTip("✅ 文本已净化", "", "Iconi 1")
+        ; 鏄剧ず鎴愬姛鎻愮ず锛堢畝鍖栵級
+        TrayTip("文本已净化", "", "Iconi 1")
         
-        ; 自动粘贴
+        ; 鑷姩绮樿创
         Sleep(300)
         Send("^v")
         
     } catch as e {
-        TrayTip("文本净化失败：" . e.Message, "错误", "Iconx 2")
+        TrayTip("鏂囨湰鍑€鍖栧け璐ワ細" . e.Message, "閿欒", "Iconx 2")
     }
 }
 
-; 去除 HTML 标签
+; 鍘婚櫎 HTML 鏍囩
 RemoveHTMLTags(Text) {
-    ; 简单的 HTML 标签移除（使用正则表达式或循环）
+    ; 绠€鍗曠殑 HTML 鏍囩绉婚櫎锛堜娇鐢ㄦ鍒欒〃杈惧紡鎴栧惊鐜級
     Result := Text
     
-    ; 移除常见的 HTML 标签
+    ; 绉婚櫎甯歌鐨?HTML 鏍囩
     Loop {
-        ; 查找 <...> 标签
+        ; 鏌ユ壘 <...> 鏍囩
         StartPos := InStr(Result, "<")
         if (!StartPos) {
             break
@@ -1474,11 +1643,11 @@ RemoveHTMLTags(Text) {
             break
         }
         
-        ; 移除标签
+        ; 绉婚櫎鏍囩
         Result := SubStr(Result, 1, StartPos - 1) . SubStr(Result, EndPos + 1)
     }
     
-    ; 解码 HTML 实体
+    ; 瑙ｇ爜 HTML 瀹炰綋
     Result := StrReplace(Result, "&nbsp;", " ")
     Result := StrReplace(Result, "&amp;", "&")
     Result := StrReplace(Result, "&lt;", "<")
@@ -1489,14 +1658,14 @@ RemoveHTMLTags(Text) {
     return Result
 }
 
-; 去除 URL
+; 鍘婚櫎 URL
 RemoveURLs(Text) {
-    ; 简单的 URL 移除（查找 http:// 或 https:// 开头的字符串）
+    ; 绠€鍗曠殑 URL 绉婚櫎锛堟煡鎵?http:// 鎴?https:// 寮€澶寸殑瀛楃涓诧級
     Result := Text
     Pos := 1
     
     Loop {
-        ; 查找 http:// 或 https://
+        ; 鏌ユ壘 http:// 鎴?https://
         HttpPos := InStr(Result, "http://", false, Pos)
         HttpsPos := InStr(Result, "https://", false, Pos)
         
@@ -1511,7 +1680,7 @@ RemoveURLs(Text) {
             break
         }
         
-        ; 查找 URL 结束位置（空格、换行、标点等）
+        ; 鏌ユ壘 URL 缁撴潫浣嶇疆锛堢┖鏍笺€佹崲琛屻€佹爣鐐圭瓑锛?
         EndPos := StartPos
         TextLen := StrLen(Result)
         
@@ -1525,7 +1694,7 @@ RemoveURLs(Text) {
             EndPos++
         }
         
-        ; 移除 URL
+        ; 绉婚櫎 URL
         Result := SubStr(Result, 1, StartPos - 1) . SubStr(Result, EndPos)
         Pos := StartPos
     }
@@ -1533,80 +1702,84 @@ RemoveURLs(Text) {
     return Result
 }
 
-; 统一标点格式
+; 缁熶竴鏍囩偣鏍煎紡
 NormalizePunctuation(Text) {
     Result := Text
     
-    ; 中文标点后去除空格
-    ChinesePunctuation := "，。！？；：、"
+    ; 涓枃鏍囩偣鍚庡幓闄ょ┖鏍?
+    ChinesePunctuation := "，。！？；："
     Loop StrLen(ChinesePunctuation) {
         Punctuation := SubStr(ChinesePunctuation, A_Index, 1)
         Result := StrReplace(Result, Punctuation . " ", Punctuation)
     }
     
-    ; 英文标点后添加空格（如果后面不是空格或标点）
+    ; 鑻辨枃鏍囩偣鍚庢坊鍔犵┖鏍硷紙濡傛灉鍚庨潰涓嶆槸绌烘牸鎴栨爣鐐癸級
     EnglishPunctuation := ".,!?;:"
     Loop StrLen(EnglishPunctuation) {
         Punctuation := SubStr(EnglishPunctuation, A_Index, 1)
-        ; 简单的处理：标点后如果是字母或数字，添加空格
-        ; 这里使用简单的替换，实际可能需要更复杂的逻辑
+        ; 绠€鍗曠殑澶勭悊锛氭爣鐐瑰悗濡傛灉鏄瓧姣嶆垨鏁板瓧锛屾坊鍔犵┖鏍?
+        ; 杩欓噷浣跨敤绠€鍗曠殑鏇挎崲锛屽疄闄呭彲鑳介渶瑕佹洿澶嶆潅鐨勯€昏緫
     }
     
     return Result
 }
 
-; ===================== 区域截图功能 =====================
-; 执行区域截图并自动粘贴到Cursor
+; ===================== 鍖哄煙鎴浘鍔熻兘 =====================
+; 鎵ц鍖哄煙鎴浘骞惰嚜鍔ㄧ矘璐村埌Cursor
 ExecuteScreenshot() {
-    global CursorPath, AISleepTime, ScreenshotWaiting, ScreenshotClipboard, ScreenshotCheckTimer
+    global CursorPath, AISleepTime, ScreenshotWaiting, ScreenshotClipboard, ScreenshotCheckTimer, ScreenshotLastFilePath
+    global ScreenshotImageDetected
     
     try {
-        ; 隐藏面板（如果显示）
+        ; 闅愯棌闈㈡澘锛堝鏋滄樉绀猴級
         global PanelVisible
         if (PanelVisible) {
             HideCursorPanel()
         }
         
-        ; 保存当前剪贴板内容
+        ; 淇濆瓨褰撳墠鍓创鏉垮唴瀹?
         OldClipboard := ClipboardAll()
         
-        ; 启动等待粘贴模式
+        ; 鍚姩绛夊緟绮樿创妯″紡
         ScreenshotWaiting := true
         ScreenshotImageDetected := false
         
-        ; 清空剪贴板，然后记录序列号（顺序很关键：先清空再记录，否则序列号比较失效）
+        ; 娓呯┖鍓创鏉匡紝鐒跺悗璁板綍搴忓垪鍙凤紙椤哄簭寰堝叧閿細鍏堟竻绌哄啀璁板綍锛屽惁鍒欏簭鍒楀彿姣旇緝澶辨晥锛?
         A_Clipboard := ""
         Sleep(80)
         ClipboardSeqBeforeShot := DllCall("GetClipboardSequenceNumber", "UInt")
 
-        ; 使用 Windows 10/11 的截图工具（Win+Shift+S）
+        ; 浣跨敤 Windows 10/11 鐨勬埅鍥惧伐鍏凤紙Win+Shift+S锛?
         Send("#+{s}")
         
-        ; 等待用户完成截图（最多等待30秒）
-        ; 通过检测剪贴板是否包含图片来判断截图是否完成
-        MaxWaitTime := 30000  ; 30秒
-        WaitInterval := 200   ; 每200ms检查一次
+        ; 绛夊緟鐢ㄦ埛瀹屾垚鎴浘锛堟渶澶氱瓑寰?0绉掞級
+        ; 閫氳繃妫€娴嬪壀璐存澘鏄惁鍖呭惈鍥剧墖鏉ュ垽鏂埅鍥炬槸鍚﹀畬鎴?
+        MaxWaitTime := 30000  ; 30绉?
+        WaitInterval := 200   ; 姣?00ms妫€鏌ヤ竴娆?
         ElapsedTime := 0
         ScreenshotTaken := false
+        CapturedClipNow := ""
+        CapturedFileNow := ""
         
-        ; 等待一下，让截图工具启动
+        ; 绛夊緟涓€涓嬶紝璁╂埅鍥惧伐鍏峰惎鍔?
         Sleep(500)
         
-        ; 清空剪贴板，用于检测新截图
-        ; 注意：不要立即清空，因为可能影响用户其他操作
-        ; 我们通过检测剪贴板内容变化来判断截图完成
+        ; 娓呯┖鍓创鏉匡紝鐢ㄤ簬妫€娴嬫柊鎴浘
+        ; 娉ㄦ剰锛氫笉瑕佺珛鍗虫竻绌猴紝鍥犱负鍙兘褰卞搷鐢ㄦ埛鍏朵粬鎿嶄綔
+        ; 鎴戜滑閫氳繃妫€娴嬪壀璐存澘鍐呭鍙樺寲鏉ュ垽鏂埅鍥惧畬鎴?
         
         while (ElapsedTime < MaxWaitTime) {
             Sleep(WaitInterval)
             ElapsedTime += WaitInterval
             
-            ; 主要检测：OnClipboardChange 回调已检测到图片写入
+            ; 涓昏妫€娴嬶細OnClipboardChange 鍥炶皟宸叉娴嬪埌鍥剧墖鍐欏叆
             if (ScreenshotImageDetected) {
                 ScreenshotTaken := true
+                try ScreenshotCapturePayload(&CapturedClipNow, &CapturedFileNow, 1200)
                 break
             }
             
-            ; 备用检测：直接轮询剪贴板序列号 + 格式
+            ; 澶囩敤妫€娴嬶細鐩存帴杞鍓创鏉垮簭鍒楀彿 + 鏍煎紡
             try {
                 ClipboardSeqNow := DllCall("GetClipboardSequenceNumber", "UInt")
                 if (ClipboardSeqNow = ClipboardSeqBeforeShot) {
@@ -1616,22 +1789,26 @@ ExecuteScreenshot() {
                     if (DllCall("IsClipboardFormatAvailable", "UInt", 2)) {  ; CF_BITMAP
                         DllCall("CloseClipboard")
                         ScreenshotTaken := true
+                        try ScreenshotCapturePayload(&CapturedClipNow, &CapturedFileNow, 1200)
                         break
                     }
                     if (DllCall("IsClipboardFormatAvailable", "UInt", 8)) {  ; CF_DIB
                         DllCall("CloseClipboard")
                         ScreenshotTaken := true
+                        try ScreenshotCapturePayload(&CapturedClipNow, &CapturedFileNow, 1200)
                         break
                     }
                     if (DllCall("IsClipboardFormatAvailable", "UInt", 17)) {  ; CF_DIBV5
                         DllCall("CloseClipboard")
                         ScreenshotTaken := true
+                        try ScreenshotCapturePayload(&CapturedClipNow, &CapturedFileNow, 1200)
                         break
                     }
                     PNGFormat := DllCall("RegisterClipboardFormat", "Str", "PNG")
                     if (PNGFormat && DllCall("IsClipboardFormatAvailable", "UInt", PNGFormat)) {
                         DllCall("CloseClipboard")
                         ScreenshotTaken := true
+                        try ScreenshotCapturePayload(&CapturedClipNow, &CapturedFileNow, 1200)
                         break
                     }
                     DllCall("CloseClipboard")
@@ -1640,24 +1817,20 @@ ExecuteScreenshot() {
             }
         }
         
-        ; 如果截图成功，立即自动粘贴到 Cursor
+        ; 濡傛灉鎴浘鎴愬姛锛岀珛鍗宠嚜鍔ㄧ矘璐村埌 Cursor
         if (ScreenshotTaken) {
-            ; 等待一下确保截图已保存到剪贴板
+            ; 绛夊緟涓€涓嬬‘淇濇埅鍥惧凡淇濆瓨鍒板壀璐存澘
             Sleep(300)
             
-            ; 保存截图到全局变量（使用 ClipboardAll 保存完整图片数据）
-            ; 注意：必须在恢复旧剪贴板之前保存
+            ; 淇濆瓨鎴浘鍒板叏灞€鍙橀噺锛堜娇鐢?ClipboardAll 淇濆瓨瀹屾暣鍥剧墖鏁版嵁锛?
+            ; 娉ㄦ剰锛氬繀椤诲湪鎭㈠鏃у壀璐存澘涔嬪墠淇濆瓨
             try {
-                ; 再次确认当前剪贴板确实是图片
-                if (GetClipboardType() != "image") {
-                    throw Error("当前剪贴板不是图片数据")
-                }
-                ; 在 AutoHotkey v2 中，使用 ClipboardAll() 获取数据对象
-                ScreenshotClipboard := ClipboardAll()
-                
-                ; 验证截图是否成功保存（检查是否为有效的 ClipboardAll 对象）
-                if (!ScreenshotClipboard) {
-                    throw Error("截图数据为空")
+                ; 鍐嶆纭褰撳墠鍓创鏉跨‘瀹炴槸鍥剧墖
+                if (CapturedClipNow || CapturedFileNow != "") {
+                    ScreenshotClipboard := CapturedClipNow
+                    ScreenshotLastFilePath := CapturedFileNow
+                } else if (!ScreenshotCapturePayload(&ScreenshotClipboard, &ScreenshotLastFilePath, 3200)) {
+                    throw Error("未捕获到截图数据（剪贴板/自动保存文件）")
                 }
             } catch as e {
                 TrayTip("保存截图失败: " . e.Message, GetText("error"), "Iconx 2")
@@ -1665,56 +1838,47 @@ ExecuteScreenshot() {
                 ScreenshotWaiting := false
                 return
             }
-            
-            ; 恢复旧剪贴板（不影响用户其他操作）
-            A_Clipboard := OldClipboard
-            
-            ; 补发剪贴板历史入库（OnClipboardChange 在截图等待期间被跳过了）
-            savedClip := ScreenshotClipboard
-            SetTimer(() => DeferredScreenshotHistorySave(savedClip), -800)
-            
-            ; 立即自动粘贴截图到 Cursor 输入框
             try {
                 PasteScreenshotToCursor()
             } catch as e {
-                TrayTip("自动粘贴失败: " . e.Message, GetText("error"), "Iconx 2")
+                TrayTip("鑷姩绮樿创澶辫触: " . e.Message, GetText("error"), "Iconx 2")
                 ScreenshotWaiting := false
                 ScreenshotClipboard := ""
             }
         } else {
-            ; 截图超时或取消，恢复旧剪贴板
+            ; 鎴浘瓒呮椂鎴栧彇娑堬紝鎭㈠鏃у壀璐存澘
             A_Clipboard := OldClipboard
             ScreenshotWaiting := false
-            TrayTip("截图已取消或超时", GetText("tip"), "Iconi 1")
+            TrayTip("鎴浘宸插彇娑堟垨瓒呮椂", GetText("tip"), "Iconi 1")
         }
     } catch as e {
-        TrayTip("截图失败: " . e.Message, GetText("error"), "Iconx 2")
-        ; 尝试恢复旧剪贴板
+        TrayTip("鎴浘澶辫触: " . e.Message, GetText("error"), "Iconx 2")
+        ; 灏濊瘯鎭㈠鏃у壀璐存澘
         try {
             A_Clipboard := OldClipboard
         }
     }
 }
 
-; ===================== 自动粘贴截图到 Cursor =====================
+; ===================== 鑷姩绮樿创鎴浘鍒?Cursor =====================
 PasteScreenshotToCursor() {
     global ScreenshotWaiting, ScreenshotClipboard, CursorPath, AISleepTime
     
-    ; 如果不在等待状态或没有截图数据，不执行
+    ; 濡傛灉涓嶅湪绛夊緟鐘舵€佹垨娌℃湁鎴浘鏁版嵁锛屼笉鎵ц
     if (!ScreenshotWaiting || !ScreenshotClipboard) {
         return
     }
     
     try {
-        ; 检查当前焦点是否在 Cursor 的输入框
-        ; 如果 Cursor 窗口已激活，假设焦点可能在输入框，直接尝试粘贴（不改变焦点）
+        ; 妫€鏌ュ綋鍓嶇劍鐐规槸鍚﹀湪 Cursor 鐨勮緭鍏ユ
+        ; 濡傛灉 Cursor 绐楀彛宸叉縺娲伙紝鍋囪鐒︾偣鍙兘鍦ㄨ緭鍏ユ锛岀洿鎺ュ皾璇曠矘璐达紙涓嶆敼鍙樼劍鐐癸級
         IsInCursorInput := WinActive("ahk_exe Cursor.exe")
         
         if (IsInCursorInput) {
-            ; 焦点在 Cursor，直接粘贴（不等待，立即粘贴，不改变焦点）
-            ; 先恢复截图到剪贴板
+            ; 鐒︾偣鍦?Cursor锛岀洿鎺ョ矘璐达紙涓嶇瓑寰咃紝绔嬪嵆绮樿创锛屼笉鏀瑰彉鐒︾偣锛?
+            ; 鍏堟仮澶嶆埅鍥惧埌鍓创鏉?
             try {
-                ; 检查系统剪贴板是否有图片数据（可能是用户最新的截图）
+                ; 妫€鏌ョ郴缁熷壀璐存澘鏄惁鏈夊浘鐗囨暟鎹紙鍙兘鏄敤鎴锋渶鏂扮殑鎴浘锛?
                 CurrentClipboardHasImage := false
                 try {
                     if (DllCall("OpenClipboard", "Ptr", 0)) {
@@ -1733,116 +1897,116 @@ PasteScreenshotToCursor() {
                 } catch as err {
                 }
                 
-                ; 如果系统剪贴板没有图片，使用保存的数据
+                ; 濡傛灉绯荤粺鍓创鏉挎病鏈夊浘鐗囷紝浣跨敤淇濆瓨鐨勬暟鎹?
                 if (!CurrentClipboardHasImage && ScreenshotClipboard) {
                     A_Clipboard := ""
                     Sleep(50)
                     A_Clipboard := ScreenshotClipboard
-                    Sleep(200)  ; 短暂等待确保系统识别图片数据
+                    Sleep(200)  ; 鐭殏绛夊緟纭繚绯荤粺璇嗗埆鍥剧墖鏁版嵁
                 }
                 
-                ; 立即粘贴（不等待，不改变焦点）
+                ; 绔嬪嵆绮樿创锛堜笉绛夊緟锛屼笉鏀瑰彉鐒︾偣锛?
                 Send("^v")
-                Sleep(100)  ; 短暂等待确保粘贴完成
+                Sleep(100)  ; 鐭殏绛夊緟纭繚绮樿创瀹屾垚
                 
-                ; 停止等待状态
+                ; 鍋滄绛夊緟鐘舵€?
                 ScreenshotWaiting := false
                 ScreenshotClipboard := ""
                 
-                ; 显示成功提示
+                ; 鏄剧ず鎴愬姛鎻愮ず
                 TrayTip(GetText("screenshot_paste_success"), GetText("tip"), "Iconi 1")
                 return
             } catch as e {
-                ; 如果直接粘贴失败，继续执行完整流程
+                ; 濡傛灉鐩存帴绮樿创澶辫触锛岀户缁墽琛屽畬鏁存祦绋?
             }
         }
         
-        ; 如果焦点不在 Cursor 或直接粘贴失败，执行完整的激活和粘贴流程
-        ; 确保 Cursor 窗口存在
+        ; 濡傛灉鐒︾偣涓嶅湪 Cursor 鎴栫洿鎺ョ矘璐村け璐ワ紝鎵ц瀹屾暣鐨勬縺娲诲拰绮樿创娴佺▼
+        ; 纭繚 Cursor 绐楀彛瀛樺湪
         if (!WinExist("ahk_exe Cursor.exe")) {
             if (CursorPath != "" && FileExist(CursorPath)) {
                 Run(CursorPath)
                 Sleep(AISleepTime)
             } else {
-                TrayTip("Cursor 未运行且无法启动", GetText("error"), "Iconx 2")
+                TrayTip("Cursor 鏈繍琛屼笖鏃犳硶鍚姩", GetText("error"), "Iconx 2")
                 return
             }
         }
         
-        ; 激活 Cursor 窗口（多次尝试确保激活成功）
+        ; 婵€娲?Cursor 绐楀彛锛堝娆″皾璇曠‘淇濇縺娲绘垚鍔燂級
         WinActivate("ahk_exe Cursor.exe")
         WinWaitActive("ahk_exe Cursor.exe", , 3)
-        Sleep(400)  ; 增加等待时间确保窗口完全激活
+        Sleep(400)  ; 澧炲姞绛夊緟鏃堕棿纭繚绐楀彛瀹屽叏婵€娲?
         
-        ; 再次确保 Cursor 窗口激活
+        ; 鍐嶆纭繚 Cursor 绐楀彛婵€娲?
         if !WinActive("ahk_exe Cursor.exe") {
             WinActivate("ahk_exe Cursor.exe")
             WinWaitActive("ahk_exe Cursor.exe", , 3)
             Sleep(400)
         }
         
-        ; 第三次确保窗口激活（关键步骤）
+        ; 绗笁娆＄‘淇濈獥鍙ｆ縺娲伙紙鍏抽敭姝ラ锛?
         if !WinActive("ahk_exe Cursor.exe") {
             WinActivate("ahk_exe Cursor.exe")
             WinWaitActive("ahk_exe Cursor.exe", , 3)
             Sleep(300)
         }
         
-        ; 先按 ESC 关闭可能已打开的输入框，避免冲突
+        ; 鍏堟寜 ESC 鍏抽棴鍙兘宸叉墦寮€鐨勮緭鍏ユ锛岄伩鍏嶅啿绐?
         Send("{Esc}")
         Sleep(300)
         
-        ; 确保窗口激活（ESC 后可能失去焦点）
+        ; 纭繚绐楀彛婵€娲伙紙ESC 鍚庡彲鑳藉け鍘荤劍鐐癸級
         if !WinActive("ahk_exe Cursor.exe") {
             WinActivate("ahk_exe Cursor.exe")
             WinWaitActive("ahk_exe Cursor.exe", , 3)
             Sleep(400)
         }
         
-        ; 打开 Cursor 的 AI 聊天面板（Ctrl+L）
+        ; 鎵撳紑 Cursor 鐨?AI 鑱婂ぉ闈㈡澘锛圕trl+L锛?
         Send("^l")
-        Sleep(1000)  ; 增加等待时间确保聊天面板完全打开
+        Sleep(1000)  ; 澧炲姞绛夊緟鏃堕棿纭繚鑱婂ぉ闈㈡澘瀹屽叏鎵撳紑
         
-        ; 再次确保窗口激活（打开聊天面板后可能失去焦点）
+        ; 鍐嶆纭繚绐楀彛婵€娲伙紙鎵撳紑鑱婂ぉ闈㈡澘鍚庡彲鑳藉け鍘荤劍鐐癸級
         if !WinActive("ahk_exe Cursor.exe") {
             WinActivate("ahk_exe Cursor.exe")
             WinWaitActive("ahk_exe Cursor.exe", , 3)
             Sleep(500)
         }
         
-        ; 确保输入框获得焦点
-        ; 方法1：按 Tab 键移动到输入框（如果焦点不在输入框上）
+        ; 纭繚杈撳叆妗嗚幏寰楃劍鐐?
+        ; 鏂规硶1锛氭寜 Tab 閿Щ鍔ㄥ埌杈撳叆妗嗭紙濡傛灉鐒︾偣涓嶅湪杈撳叆妗嗕笂锛?
         Send("{Tab}")
         Sleep(200)
         
-        ; 方法2：再次确保窗口激活
+        ; 鏂规硶2锛氬啀娆＄‘淇濈獥鍙ｆ縺娲?
         if !WinActive("ahk_exe Cursor.exe") {
             WinActivate("ahk_exe Cursor.exe")
             WinWaitActive("ahk_exe Cursor.exe", , 2)
             Sleep(300)
         }
         
-        ; 方法3：如果 Tab 不起作用，尝试再次按 Ctrl+L 确保聊天面板打开且焦点在输入框
-        ; 但先检查一下，如果已经打开了，再次按可能会关闭，所以先按 ESC 再按 Ctrl+L
+        ; 鏂规硶3锛氬鏋?Tab 涓嶈捣浣滅敤锛屽皾璇曞啀娆℃寜 Ctrl+L 纭繚鑱婂ぉ闈㈡澘鎵撳紑涓旂劍鐐瑰湪杈撳叆妗?
+        ; 浣嗗厛妫€鏌ヤ竴涓嬶紝濡傛灉宸茬粡鎵撳紑浜嗭紝鍐嶆鎸夊彲鑳戒細鍏抽棴锛屾墍浠ュ厛鎸?ESC 鍐嶆寜 Ctrl+L
         Send("{Esc}")
         Sleep(150)
         Send("^l")
         Sleep(600)
         
-        ; 最后一次确保窗口激活（粘贴前关键检查）
+        ; 鏈€鍚庝竴娆＄‘淇濈獥鍙ｆ縺娲伙紙绮樿创鍓嶅叧閿鏌ワ級
         if !WinActive("ahk_exe Cursor.exe") {
             WinActivate("ahk_exe Cursor.exe")
             WinWaitActive("ahk_exe Cursor.exe", , 2)
             Sleep(300)
         }
         
-        ; 将截图恢复到剪贴板（优先使用系统剪贴板中的最新数据）
+        ; 灏嗘埅鍥炬仮澶嶅埌鍓创鏉匡紙浼樺厛浣跨敤绯荤粺鍓创鏉夸腑鐨勬渶鏂版暟鎹級
         try {
-            ; 先检查系统剪贴板是否有图片数据（可能是用户最新的截图）
+            ; 鍏堟鏌ョ郴缁熷壀璐存澘鏄惁鏈夊浘鐗囨暟鎹紙鍙兘鏄敤鎴锋渶鏂扮殑鎴浘锛?
             CurrentClipboardHasImage := false
             try {
                 if (DllCall("OpenClipboard", "Ptr", 0)) {
-                    ; 检查是否包含位图格式
+                    ; 妫€鏌ユ槸鍚﹀寘鍚綅鍥炬牸寮?
                     if (DllCall("IsClipboardFormatAvailable", "UInt", 2)) {  ; CF_BITMAP = 2
                         CurrentClipboardHasImage := true
                     } else if (DllCall("IsClipboardFormatAvailable", "UInt", 8)) {  ; CF_DIB = 8
@@ -1850,7 +2014,7 @@ PasteScreenshotToCursor() {
                     } else if (DllCall("IsClipboardFormatAvailable", "UInt", 17)) {  ; CF_DIBV5 = 17
                         CurrentClipboardHasImage := true
                     } else {
-                        ; 检查 PNG 格式
+                        ; 妫€鏌?PNG 鏍煎紡
                         PNGFormat := DllCall("RegisterClipboardFormat", "Str", "PNG")
                         if (PNGFormat && DllCall("IsClipboardFormatAvailable", "UInt", PNGFormat)) {
                             CurrentClipboardHasImage := true
@@ -1859,27 +2023,27 @@ PasteScreenshotToCursor() {
                     DllCall("CloseClipboard")
                 }
             } catch as err {
-                ; 检查失败，忽略，继续使用保存的数据
+                ; 妫€鏌ュけ璐ワ紝蹇界暐锛岀户缁娇鐢ㄤ繚瀛樼殑鏁版嵁
             }
             
-            ; 如果系统剪贴板中有图片，优先使用最新的（用户可能进行了新的截图）
+            ; 濡傛灉绯荤粺鍓创鏉夸腑鏈夊浘鐗囷紝浼樺厛浣跨敤鏈€鏂扮殑锛堢敤鎴峰彲鑳借繘琛屼簡鏂扮殑鎴浘锛?
             if (CurrentClipboardHasImage) {
-                ; 使用系统剪贴板中的最新截图数据
-                ; 不需要恢复，直接使用当前剪贴板
-                Sleep(200) ; 短暂等待确保剪贴板数据稳定
+                ; 浣跨敤绯荤粺鍓创鏉夸腑鐨勬渶鏂版埅鍥炬暟鎹?
+                ; 涓嶉渶瑕佹仮澶嶏紝鐩存帴浣跨敤褰撳墠鍓创鏉?
+                Sleep(200) ; 鐭殏绛夊緟纭繚鍓创鏉挎暟鎹ǔ瀹?
             } else if (ScreenshotClipboard) {
-                ; 系统剪贴板没有图片，使用之前保存的数据
-                ; 先清空剪贴板
+                ; 绯荤粺鍓创鏉挎病鏈夊浘鐗囷紝浣跨敤涔嬪墠淇濆瓨鐨勬暟鎹?
+                ; 鍏堟竻绌哄壀璐存澘
                 A_Clipboard := ""
                 Sleep(150)
                 
-                ; 恢复 ClipboardAll 数据（图片数据）
+                ; 鎭㈠ ClipboardAll 鏁版嵁锛堝浘鐗囨暟鎹級
                 A_Clipboard := ScreenshotClipboard
-                Sleep(1000) ; 增加延迟确保系统识别图片数据并准备好
+                Sleep(1000) ; 澧炲姞寤惰繜纭繚绯荤粺璇嗗埆鍥剧墖鏁版嵁骞跺噯澶囧ソ
                 
-                ; 验证数据是否成功恢复
+                ; 楠岃瘉鏁版嵁鏄惁鎴愬姛鎭㈠
                 if (!DllCall("OpenClipboard", "Ptr", 0)) {
-                    ; 如果无法打开剪贴板，再等待一次
+                    ; 濡傛灉鏃犳硶鎵撳紑鍓创鏉匡紝鍐嶇瓑寰呬竴娆?
                     Sleep(500)
                 } else {
                     DllCall("CloseClipboard")
@@ -1888,11 +2052,11 @@ PasteScreenshotToCursor() {
                 throw Error("没有可用的截图数据")
             }
             
-            ; 验证剪贴板是否包含图片数据（需要先打开剪贴板）
+            ; 楠岃瘉鍓创鏉挎槸鍚﹀寘鍚浘鐗囨暟鎹紙闇€瑕佸厛鎵撳紑鍓创鏉匡級
             IsImage := false
             if (DllCall("OpenClipboard", "Ptr", 0)) {
                 try {
-                    ; 检查是否包含位图格式
+                    ; 妫€鏌ユ槸鍚﹀寘鍚綅鍥炬牸寮?
                     if (DllCall("IsClipboardFormatAvailable", "UInt", 2)) {  ; CF_BITMAP = 2
                         IsImage := true
                     } else if (DllCall("IsClipboardFormatAvailable", "UInt", 8)) {  ; CF_DIB = 8
@@ -1900,7 +2064,7 @@ PasteScreenshotToCursor() {
                     } else if (DllCall("IsClipboardFormatAvailable", "UInt", 17)) {  ; CF_DIBV5 = 17
                         IsImage := true
                     } else {
-                        ; 检查 PNG 格式
+                        ; 妫€鏌?PNG 鏍煎紡
                         PNGFormat := DllCall("RegisterClipboardFormat", "Str", "PNG")
                         if (PNGFormat && DllCall("IsClipboardFormatAvailable", "UInt", PNGFormat)) {
                             IsImage := true
@@ -1912,7 +2076,7 @@ PasteScreenshotToCursor() {
             }
             
             if (!IsImage) {
-                ; 如果图片数据未准备好，再等待一次并重新检查
+                ; 濡傛灉鍥剧墖鏁版嵁鏈噯澶囧ソ锛屽啀绛夊緟涓€娆″苟閲嶆柊妫€鏌?
                 Sleep(500)
                 if (DllCall("OpenClipboard", "Ptr", 0)) {
                     try {
@@ -1932,73 +2096,73 @@ PasteScreenshotToCursor() {
                 }
                 
                 if (!IsImage) {
-                    throw Error("剪贴板中未检测到图片数据，截图可能已失效")
+                    throw Error("鍓创鏉夸腑鏈娴嬪埌鍥剧墖鏁版嵁锛屾埅鍥惧彲鑳藉凡澶辨晥")
                 }
             }
         } catch as e {
-            throw Error("无法恢复截图到剪贴板: " . e.Message)
+            throw Error("鏃犳硶鎭㈠鎴浘鍒板壀璐存澘: " . e.Message)
         }
         
-        ; 恢复剪贴板后，再次确保窗口激活（恢复操作可能影响焦点）
+        ; 鎭㈠鍓创鏉垮悗锛屽啀娆＄‘淇濈獥鍙ｆ縺娲伙紙鎭㈠鎿嶄綔鍙兘褰卞搷鐒︾偣锛?
         if !WinActive("ahk_exe Cursor.exe") {
             WinActivate("ahk_exe Cursor.exe")
             WinWaitActive("ahk_exe Cursor.exe", , 1)
             Sleep(300)
         }
         
-        ; 最后一次确保窗口激活（粘贴前关键检查）
+        ; 鏈€鍚庝竴娆＄‘淇濈獥鍙ｆ縺娲伙紙绮樿创鍓嶅叧閿鏌ワ級
         if !WinActive("ahk_exe Cursor.exe") {
             WinActivate("ahk_exe Cursor.exe")
             WinWaitActive("ahk_exe Cursor.exe", , 1)
             Sleep(200)
         }
         
-        ; 确保输入框获得焦点（粘贴前最后检查）
-        ; 再次确保窗口激活
+        ; 纭繚杈撳叆妗嗚幏寰楃劍鐐癸紙绮樿创鍓嶆渶鍚庢鏌ワ級
+        ; 鍐嶆纭繚绐楀彛婵€娲?
         if !WinActive("ahk_exe Cursor.exe") {
             WinActivate("ahk_exe Cursor.exe")
             WinWaitActive("ahk_exe Cursor.exe", , 2)
             Sleep(300)
         }
         
-        ; 使用 Ctrl+V 粘贴（只使用一种方式，避免重复粘贴）
-        ; 在粘贴前，再次确保焦点在输入框（通过发送一个字符然后删除）
-        ; 这样可以确保输入框确实获得了焦点
-        Send("{Home}")  ; 移动到输入框开头（如果焦点在输入框，这会生效）
+        ; 浣跨敤 Ctrl+V 绮樿创锛堝彧浣跨敤涓€绉嶆柟寮忥紝閬垮厤閲嶅绮樿创锛?
+        ; 鍦ㄧ矘璐村墠锛屽啀娆＄‘淇濈劍鐐瑰湪杈撳叆妗嗭紙閫氳繃鍙戦€佷竴涓瓧绗︾劧鍚庡垹闄わ級
+        ; 杩欐牱鍙互纭繚杈撳叆妗嗙‘瀹炶幏寰椾簡鐒︾偣
+        Send("{Home}")  ; 绉诲姩鍒拌緭鍏ユ寮€澶达紙濡傛灉鐒︾偣鍦ㄨ緭鍏ユ锛岃繖浼氱敓鏁堬級
         Sleep(100)
         
-        ; 执行粘贴
+        ; 鎵ц绮樿创
         Send("^v")
-        Sleep(600)  ; 等待粘贴完成（图片粘贴可能需要更长时间）
+        Sleep(600)  ; 绛夊緟绮樿创瀹屾垚锛堝浘鐗囩矘璐村彲鑳介渶瑕佹洿闀挎椂闂达級
         
-        ; 停止等待状态
+        ; 鍋滄绛夊緟鐘舵€?
         ScreenshotWaiting := false
         
-        ; 清空截图数据
+        ; 娓呯┖鎴浘鏁版嵁
         ScreenshotClipboard := ""
         
-        ; 显示成功提示
+        ; 鏄剧ず鎴愬姛鎻愮ず
         TrayTip(GetText("screenshot_paste_success"), GetText("tip"), "Iconi 1")
     } catch as e {
-        TrayTip("粘贴截图失败: " . e.Message, GetText("error"), "Iconx 2")
-        ; 即使失败，也停止等待状态
+        TrayTip("绮樿创鎴浘澶辫触: " . e.Message, GetText("error"), "Iconx 2")
+        ; 鍗充娇澶辫触锛屼篃鍋滄绛夊緟鐘舵€?
         ScreenshotWaiting := false
         ScreenshotClipboard := ""
     }
 }
 
-; ===================== 从悬浮面板粘贴截图（已废弃，保留用于兼容）=====================
+; ===================== 浠庢偓娴潰鏉跨矘璐存埅鍥撅紙宸插簾寮冿紝淇濈暀鐢ㄤ簬鍏煎锛?====================
 PasteScreenshotFromButton(*) {
-    ; 直接调用自动粘贴函数
+    ; 鐩存帴璋冪敤鑷姩绮樿创鍑芥暟
     PasteScreenshotToCursor()
 }
 
-; ===================== 显示截图悬浮面板 =====================
+; ===================== 鏄剧ず鎴浘鎮诞闈㈡澘 =====================
 ShowScreenshotButton() {
     global GuiID_ScreenshotButton, ScreenshotButtonVisible, UI_Colors, ThemeMode
     
     try {
-        ; 如果面板已显示，先隐藏
+        ; 濡傛灉闈㈡澘宸叉樉绀猴紝鍏堥殣钘?
         if (ScreenshotButtonVisible && GuiID_ScreenshotButton != 0) {
             try {
                 GuiID_ScreenshotButton.Destroy()
@@ -2007,9 +2171,9 @@ ShowScreenshotButton() {
             GuiID_ScreenshotButton := 0
         }
         
-        ; 确保 UI_Colors 已初始化
+        ; 纭繚 UI_Colors 宸插垵濮嬪寲
         if (!IsSet(UI_Colors) || !UI_Colors) {
-            ; 如果未初始化，使用默认颜色
+            ; 濡傛灉鏈垵濮嬪寲锛屼娇鐢ㄩ粯璁ら鑹?
             global ThemeMode
             if (!IsSet(ThemeMode)) {
                 ThemeMode := "dark"
@@ -2017,39 +2181,39 @@ ShowScreenshotButton() {
             ApplyTheme(ThemeMode)
         }
         
-        ; 创建悬浮面板 GUI（参考其他面板的创建方式）
+        ; 鍒涘缓鎮诞闈㈡澘 GUI锛堝弬鑰冨叾浠栭潰鏉跨殑鍒涘缓鏂瑰紡锛?
         GuiID_ScreenshotButton := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale")
         GuiID_ScreenshotButton.BackColor := UI_Colors.Background
         
-        ; 面板尺寸
+        ; 闈㈡澘灏哄
         PanelWidth := 160
         PanelHeight := 60
         
-        ; 计算面板位置（优先显示在 Cursor 窗口正中间，并确保在同一屏幕）
+        ; 璁＄畻闈㈡澘浣嶇疆锛堜紭鍏堟樉绀哄湪 Cursor 绐楀彛姝ｄ腑闂达紝骞剁‘淇濆湪鍚屼竴灞忓箷锛?
         global ScreenshotPanelX, ScreenshotPanelY, ConfigFile
         PanelX := -1
         PanelY := -1
         
-        ; 尝试获取 Cursor 窗口位置和大小，并确定其所在的屏幕
+        ; 灏濊瘯鑾峰彇 Cursor 绐楀彛浣嶇疆鍜屽ぇ灏忥紝骞剁‘瀹氬叾鎵€鍦ㄧ殑灞忓箷
         if (WinExist("ahk_exe Cursor.exe")) {
             try {
                 WinGetPos(&CursorX, &CursorY, &CursorW, &CursorH, "ahk_exe Cursor.exe")
-                ; 获取 Cursor 窗口所在的屏幕索引
+                ; 鑾峰彇 Cursor 绐楀彛鎵€鍦ㄧ殑灞忓箷绱㈠紩
                 CursorScreenIndex := GetWindowScreenIndex("ahk_exe Cursor.exe")
                 ScreenInfo := GetScreenInfo(CursorScreenIndex)
                 
-                ; 计算 Cursor 窗口中心位置（相对于其所在屏幕）
+                ; 璁＄畻 Cursor 绐楀彛涓績浣嶇疆锛堢浉瀵逛簬鍏舵墍鍦ㄥ睆骞曪級
                 CursorCenterX := CursorX + CursorW // 2
                 CursorCenterY := CursorY + CursorH // 2
                 
-                ; 确保中心点在屏幕范围内
+                ; 纭繚涓績鐐瑰湪灞忓箷鑼冨洿鍐?
                 if (CursorCenterX >= ScreenInfo.Left && CursorCenterX < ScreenInfo.Right && 
                     CursorCenterY >= ScreenInfo.Top && CursorCenterY < ScreenInfo.Bottom) {
-                    ; 计算面板位置（Cursor 窗口中心）
+                    ; 璁＄畻闈㈡澘浣嶇疆锛圕ursor 绐楀彛涓績锛?
                     PanelX := CursorCenterX - PanelWidth // 2
                     PanelY := CursorCenterY - PanelHeight // 2
                     
-                    ; 确保面板完全在屏幕范围内
+                    ; 纭繚闈㈡澘瀹屽叏鍦ㄥ睆骞曡寖鍥村唴
                     if (PanelX < ScreenInfo.Left) {
                         PanelX := ScreenInfo.Left + 10
                     }
@@ -2064,13 +2228,13 @@ ShowScreenshotButton() {
                     }
                 }
             } catch as err {
-                ; 如果获取失败，使用保存的位置或屏幕中心
+                ; 濡傛灉鑾峰彇澶辫触锛屼娇鐢ㄤ繚瀛樼殑浣嶇疆鎴栧睆骞曚腑蹇?
             }
         }
         
-        ; 如果 Cursor 窗口不存在或获取失败，使用保存的位置
+        ; 濡傛灉 Cursor 绐楀彛涓嶅瓨鍦ㄦ垨鑾峰彇澶辫触锛屼娇鐢ㄤ繚瀛樼殑浣嶇疆
         if (PanelX = -1 || PanelY = -1) {
-            ; 从配置文件读取上次保存的位置
+            ; 浠庨厤缃枃浠惰鍙栦笂娆′繚瀛樼殑浣嶇疆
             ScreenshotPanelX := IniRead(ConfigFile, "Screenshot", "PanelX", "-1")
             ScreenshotPanelY := IniRead(ConfigFile, "Screenshot", "PanelY", "-1")
             
@@ -2078,8 +2242,8 @@ ShowScreenshotButton() {
                 PanelX := Integer(ScreenshotPanelX)
                 PanelY := Integer(ScreenshotPanelY)
                 
-                ; 验证保存的位置是否在有效屏幕范围内
-                ; 如果不在，使用主屏幕中心
+                ; 楠岃瘉淇濆瓨鐨勪綅缃槸鍚﹀湪鏈夋晥灞忓箷鑼冨洿鍐?
+                ; 濡傛灉涓嶅湪锛屼娇鐢ㄤ富灞忓箷涓績
                 ValidPosition := false
                 MonitorCount := MonitorGetCount()
                 Loop MonitorCount {
@@ -2092,102 +2256,102 @@ ShowScreenshotButton() {
                 }
                 
                 if (!ValidPosition) {
-                    ; 位置无效，使用主屏幕中心
+                    ; 浣嶇疆鏃犳晥锛屼娇鐢ㄤ富灞忓箷涓績
                     ScreenInfo := GetScreenInfo(1)
                     PanelX := ScreenInfo.Left + (ScreenInfo.Width - PanelWidth) // 2
                     PanelY := ScreenInfo.Top + (ScreenInfo.Height - PanelHeight) // 2
                 }
             } else {
-                ; 如果也没有保存的位置，使用主屏幕中心
+                ; 濡傛灉涔熸病鏈変繚瀛樼殑浣嶇疆锛屼娇鐢ㄤ富灞忓箷涓績
                 ScreenInfo := GetScreenInfo(1)
                 PanelX := ScreenInfo.Left + (ScreenInfo.Width - PanelWidth) // 2
                 PanelY := ScreenInfo.Top + (ScreenInfo.Height - PanelHeight) // 2
             }
         }
         
-        ; 创建按钮（先创建按钮，确保可以点击）
+        ; 鍒涘缓鎸夐挳锛堝厛鍒涘缓鎸夐挳锛岀‘淇濆彲浠ョ偣鍑伙級
         ButtonText := GetText("screenshot_button_text")
         ButtonWidth := PanelWidth - 20
         ButtonHeight := 40
         ButtonX := 10
         ButtonY := 10
         
-        ; 创建按钮（确保按钮可以点击）
-        ; 添加 SS_NOTIFY (0x100) 确保 Text 控件响应点击
+        ; 鍒涘缓鎸夐挳锛堢‘淇濇寜閽彲浠ョ偣鍑伙級
+        ; 娣诲姞 SS_NOTIFY (0x100) 纭繚 Text 鎺т欢鍝嶅簲鐐瑰嚮
         ScreenshotBtn := GuiID_ScreenshotButton.Add("Text", "x" . ButtonX . " y" . ButtonY . " w" . ButtonWidth . " h" . ButtonHeight . " Center 0x200 +0x100 cFFFFFF Background" . UI_Colors.BtnPrimary . " vScreenshotBtn", ButtonText)
         ScreenshotBtn.SetFont("s11 Bold", "Segoe UI")
-        ; 绑定点击事件（直接绑定函数，不使用闭包）
+        ; 缁戝畾鐐瑰嚮浜嬩欢锛堢洿鎺ョ粦瀹氬嚱鏁帮紝涓嶄娇鐢ㄩ棴鍖咃級
         ScreenshotBtn.OnEvent("Click", PasteScreenshotFromButton)
         
-        ; 在按钮右上角添加拖动柄（显示一个拖动图标）
+        ; 鍦ㄦ寜閽彸涓婅娣诲姞鎷栧姩鏌勶紙鏄剧ず涓€涓嫋鍔ㄥ浘鏍囷級
         DragHandleSize := 20
         DragHandleX := ButtonX + ButtonWidth - DragHandleSize - 2
         DragHandleY := ButtonY + 2
-        ; 使用半透明背景，让拖动柄更明显
+        ; 浣跨敤鍗婇€忔槑鑳屾櫙锛岃鎷栧姩鏌勬洿鏄庢樉
         DragHandleBg := (ThemeMode = "light") ? "E0E0E0" : "404040"
         DragHandle := GuiID_ScreenshotButton.Add("Text", "x" . DragHandleX . " y" . DragHandleY . " w" . DragHandleSize . " h" . DragHandleSize . " Center 0x200 cFFFFFF Background" . DragHandleBg . " vDragHandle", "☰")
         DragHandle.SetFont("s12 Bold", "Segoe UI")
         DragHandle.OnEvent("Click", (*) => PostMessage(0xA1, 2, , , GuiID_ScreenshotButton.Hwnd))
-        ; 注意：Text 控件不支持 MouseMove/MouseLeave 事件，所以使用固定背景色
+        ; 娉ㄦ剰锛歍ext 鎺т欢涓嶆敮鎸?MouseMove/MouseLeave 浜嬩欢锛屾墍浠ヤ娇鐢ㄥ浐瀹氳儗鏅壊
         
-        ; 创建可拖动的背景区域（后创建，在按钮下方，但不覆盖按钮）
-        ; 创建多个拖动区域，覆盖按钮周围的区域
-        ; 顶部拖动区域
+        ; 鍒涘缓鍙嫋鍔ㄧ殑鑳屾櫙鍖哄煙锛堝悗鍒涘缓锛屽湪鎸夐挳涓嬫柟锛屼絾涓嶈鐩栨寜閽級
+        ; 鍒涘缓澶氫釜鎷栧姩鍖哄煙锛岃鐩栨寜閽懆鍥寸殑鍖哄煙
+        ; 椤堕儴鎷栧姩鍖哄煙
         DragAreaTop := GuiID_ScreenshotButton.Add("Text", "x0 y0 w" . PanelWidth . " h" . ButtonY . " BackgroundTrans")
         DragAreaTop.OnEvent("Click", (*) => PostMessage(0xA1, 2, , , GuiID_ScreenshotButton.Hwnd))
-        ; 左侧拖动区域
+        ; 宸︿晶鎷栧姩鍖哄煙
         DragAreaLeft := GuiID_ScreenshotButton.Add("Text", "x0 y" . ButtonY . " w" . ButtonX . " h" . ButtonHeight . " BackgroundTrans")
         DragAreaLeft.OnEvent("Click", (*) => PostMessage(0xA1, 2, , , GuiID_ScreenshotButton.Hwnd))
-        ; 右侧拖动区域（不包括拖动柄区域）
+        ; 鍙充晶鎷栧姩鍖哄煙锛堜笉鍖呮嫭鎷栧姩鏌勫尯鍩燂級
         DragAreaRight := GuiID_ScreenshotButton.Add("Text", "x" . (ButtonX + ButtonWidth) . " y" . ButtonY . " w" . (PanelWidth - ButtonX - ButtonWidth) . " h" . ButtonHeight . " BackgroundTrans")
         DragAreaRight.OnEvent("Click", (*) => PostMessage(0xA1, 2, , , GuiID_ScreenshotButton.Hwnd))
-        ; 底部拖动区域
+        ; 搴曢儴鎷栧姩鍖哄煙
         DragAreaBottom := GuiID_ScreenshotButton.Add("Text", "x0 y" . (ButtonY + ButtonHeight) . " w" . PanelWidth . " h" . (PanelHeight - ButtonY - ButtonHeight) . " BackgroundTrans")
         DragAreaBottom.OnEvent("Click", (*) => PostMessage(0xA1, 2, , , GuiID_ScreenshotButton.Hwnd))
         
-        ; 添加悬停效果
+        ; 娣诲姞鎮仠鏁堟灉
         HoverBtn(ScreenshotBtn, UI_Colors.BtnPrimary, UI_Colors.BtnHover)
         
-        ; 使用定时器定期保存位置（因为 AutoHotkey v2 不支持 Move 事件）
-        SetTimer(SaveScreenshotPanelPosition, 500)  ; 每500ms检查一次位置
+        ; 浣跨敤瀹氭椂鍣ㄥ畾鏈熶繚瀛樹綅缃紙鍥犱负 AutoHotkey v2 涓嶆敮鎸?Move 浜嬩欢锛?
+        SetTimer(SaveScreenshotPanelPosition, 500)  ; 姣?00ms妫€鏌ヤ竴娆′綅缃?
         
-        ; 显示面板（在 Show 中设置大小和位置）
+        ; 鏄剧ず闈㈡澘锛堝湪 Show 涓缃ぇ灏忓拰浣嶇疆锛?
         GuiID_ScreenshotButton.Show("w" . PanelWidth . " h" . PanelHeight . " x" . PanelX . " y" . PanelY . " NoActivate")
         ScreenshotButtonVisible := true
         
-        ; 确保窗口始终置顶（使用 WinSetAlwaysOnTop）
+        ; 纭繚绐楀彛濮嬬粓缃《锛堜娇鐢?WinSetAlwaysOnTop锛?
         WinSetAlwaysOnTop(1, GuiID_ScreenshotButton.Hwnd)
         
-        ; 设置工具提示
+        ; 璁剧疆宸ュ叿鎻愮ず
         try {
-            ; 使用 ToolTip 显示提示
+            ; 浣跨敤 ToolTip 鏄剧ず鎻愮ず
             ToolTip(GetText("screenshot_button_tip"), PanelX + PanelWidth // 2, PanelY - 30)
-            SetTimer(() => ToolTip(), -3000)  ; 3秒后自动隐藏提示
+            SetTimer(() => ToolTip(), -3000)  ; 3绉掑悗鑷姩闅愯棌鎻愮ず
         } catch as err {
         }
     } catch as e {
-        ; 如果创建失败，显示错误信息
-        TrayTip("创建悬浮面板失败: " . e.Message, GetText("error"), "Iconx 2")
+        ; 濡傛灉鍒涘缓澶辫触锛屾樉绀洪敊璇俊鎭?
+        TrayTip("鍒涘缓鎮诞闈㈡澘澶辫触: " . e.Message, GetText("error"), "Iconx 2")
         throw e
     }
 }
 
-; ===================== 隐藏截图悬浮面板 =====================
+; ===================== 闅愯棌鎴浘鎮诞闈㈡澘 =====================
 HideScreenshotButton() {
     global GuiID_ScreenshotButton, ScreenshotButtonVisible
     
-    ; 停止定时器
+    ; 鍋滄瀹氭椂鍣?
     SetTimer(SaveScreenshotPanelPosition, 0)
     
-    ; 在隐藏前保存位置
+    ; 鍦ㄩ殣钘忓墠淇濆瓨浣嶇疆
     SaveScreenshotPanelPosition()
     
     if (GuiID_ScreenshotButton != 0) {
         try {
-            ; 确保窗口被销毁
+            ; 纭繚绐楀彛琚攢姣?
             GuiID_ScreenshotButton.Destroy()
         } catch as err {
-            ; 如果销毁失败，尝试强制关闭
+            ; 濡傛灉閿€姣佸け璐ワ紝灏濊瘯寮哄埗鍏抽棴
             try {
                 WinClose("ahk_id " . GuiID_ScreenshotButton.Hwnd)
             } catch as err {
@@ -2198,7 +2362,7 @@ HideScreenshotButton() {
     ScreenshotButtonVisible := false
 }
 
-; ===================== 截图面板拖动处理 =====================
+; ===================== 鎴浘闈㈡澘鎷栧姩澶勭悊 =====================
 ScreenshotPanelDragHandler(*) {
     global GuiID_ScreenshotButton
     if (GuiID_ScreenshotButton != 0) {
@@ -2206,36 +2370,36 @@ ScreenshotPanelDragHandler(*) {
     }
 }
 
-; ===================== 保存截图面板位置 =====================
+; ===================== 淇濆瓨鎴浘闈㈡澘浣嶇疆 =====================
 SaveScreenshotPanelPosition(*) {
     global GuiID_ScreenshotButton, ScreenshotPanelX, ScreenshotPanelY, ConfigFile, ScreenshotButtonVisible
     
-    ; 只在面板可见时保存位置
+    ; 鍙湪闈㈡澘鍙鏃朵繚瀛樹綅缃?
     if (GuiID_ScreenshotButton != 0 && ScreenshotButtonVisible) {
         try {
-            ; 获取窗口当前位置
+            ; 鑾峰彇绐楀彛褰撳墠浣嶇疆
             WinGetPos(&X, &Y, , , "ahk_id " . GuiID_ScreenshotButton.Hwnd)
-            if (X >= 0 && Y >= 0) {  ; 确保位置有效
+            if (X >= 0 && Y >= 0) {  ; 纭繚浣嶇疆鏈夋晥
                 ScreenshotPanelX := X
                 ScreenshotPanelY := Y
                 
-                ; 保存到配置文件
+                ; 淇濆瓨鍒伴厤缃枃浠?
                 IniWrite(ScreenshotPanelX, ConfigFile, "Screenshot", "PanelX")
                 IniWrite(ScreenshotPanelY, ConfigFile, "Screenshot", "PanelY")
             }
         } catch as err {
-            ; 忽略保存失败
+            ; 蹇界暐淇濆瓨澶辫触
         }
     }
 }
 
-; ===================== 停止截图等待 =====================
+; ===================== 鍋滄鎴浘绛夊緟 =====================
 StopScreenshotWaiting() {
     global ScreenshotWaiting, ScreenshotCheckTimer
     
     if (ScreenshotWaiting) {
         ScreenshotWaiting := false
         HideScreenshotButton()
-        ; 移除超时提示（按用户要求，不显示任何提示）
+        ; 绉婚櫎瓒呮椂鎻愮ず锛堟寜鐢ㄦ埛瑕佹眰锛屼笉鏄剧ず浠讳綍鎻愮ず锛?
     }
 }

@@ -1442,6 +1442,9 @@ FloatingToolbarCollapseTransientUi(forceResize := true) {
 FloatingToolbar_DeferredScreenshot(*) {
     global FloatingToolbarIsVisible, FloatingToolbar_ScheduleRestoreAfterScreenshot, g_ExecuteScreenshotWithMenuBusy
     global g_FTB_ScreenshotDeferLastTick
+    try OutputDebug("[FTB] screenshot deferred begin visible=" . (FloatingToolbarIsVisible ? "1" : "0") . " busy=" . (g_ExecuteScreenshotWithMenuBusy ? "1" : "0"))
+    catch {
+    }
 
     ; 防抖：同一操作 1500ms 内只接受一次（截图流程耗时长，完成后也需防重复触发）
     if (g_FTB_ScreenshotDeferLastTick && (A_TickCount - g_FTB_ScreenshotDeferLastTick < 1500))
@@ -1461,10 +1464,19 @@ FloatingToolbar_DeferredScreenshot(*) {
 
     try {
         if (wasVisible) {
+            try OutputDebug("[FTB] screenshot hide toolbar before capture")
+            catch {
+            }
             HideFloatingToolbar()
             Sleep(120)
         }
+        try OutputDebug("[FTB] screenshot call ExecuteScreenshotWithMenu(true)")
+        catch {
+        }
         ExecuteScreenshotWithMenu(true)
+        try OutputDebug("[FTB] screenshot ExecuteScreenshotWithMenu(true) returned")
+        catch {
+        }
         ; 截图流程完成后刷新防抖时间戳，阻止后续 1.5 秒内的重复触发
         g_FTB_ScreenshotDeferLastTick := A_TickCount
     } catch as err {
@@ -1473,6 +1485,9 @@ FloatingToolbar_DeferredScreenshot(*) {
         try OutputDebug("[FloatingToolbar] DeferredScreenshot: " . err.Message)
         catch {
         }
+    }
+    try OutputDebug("[FTB] screenshot deferred end")
+    catch {
     }
     ; 悬浮条在 ExecuteScreenshotWithMenu 内剪贴板就绪后、ShowScreenshotEditor 前统一恢复，避免 finally 再延迟 Show 造成双重显示与位移
 }

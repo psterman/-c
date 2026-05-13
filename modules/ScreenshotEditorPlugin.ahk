@@ -6,6 +6,7 @@ class ScreenshotEditorPlugin {
     static ScreenshotBridgeVersion := "1.0.0"
 
     static g_ShowScreenshotEditorInFlight := false
+    static ScreenshotEditorActivationRetryPass := 0
     static GuiID_ScreenshotEditor := 0
     static GuiID_ScreenshotToolbar := 0
     static ScreenshotToolbarWV2Ctrl := 0
@@ -59,6 +60,8 @@ class ScreenshotEditorPlugin {
     static ScreenshotEditorImgWidth := 0
     static ScreenshotEditorImgHeight := 0
     static ScreenshotEditorPreviewPic := 0
+    static ScreenshotPreviewVisibilityRetryPass := 0
+    static ScreenshotPreviewCreateCheckPass := 0
     static ScreenshotEditorMode := ""
     static GuiID_ScreenshotPreviewShell := 0
     static ScreenshotPreviewWV2Ctrl := 0
@@ -245,7 +248,10 @@ class ScreenshotEditorPlugin {
 
 ; 鏄剧ず鎴浘鍔╂墜棰勮绐?
     static ShowScreenshotEditor(DebugGui := 0) {
-    global ScreenshotClipboard, UI_Colors, ThemeMode
+    global ScreenshotClipboard, ScreenshotLastFilePath, UI_Colors, ThemeMode
+    try OutputDebug("[SSE] ShowScreenshotEditor begin clipboard=" . (!!ScreenshotClipboard ? "1" : "0") . " unified=" . (this.ScreenshotUseUnifiedWebView ? "1" : "0"))
+    catch {
+    }
     try FloatingToolbar_PageDockEnter("screenshot")
     
     ; 鍒濆鍖栧眬閮ㄥ彉閲?
@@ -256,6 +262,13 @@ class ScreenshotEditorPlugin {
     ImgHeight := 0
     pPreviewBitmap := 0
     pGraphics := 0
+    fallbackPath := ""
+    try {
+        if (!ScreenshotClipboard && ScreenshotLastFilePath != "" && FileExist(ScreenshotLastFilePath))
+            fallbackPath := ScreenshotLastFilePath
+    } catch {
+        fallbackPath := ""
+    }
     
     prevCrit := Critical("On")
     if (this.g_ShowScreenshotEditorInFlight) {
@@ -379,15 +392,46 @@ class ScreenshotEditorPlugin {
                 }
             }
             if (!pBitmap || pBitmap = 0) {
-                TrayTip("Error", "Failed to create bitmap from clipboard: " . e.Message, "Iconx 2")
-                try {
-                    Gdip_Shutdown(pToken)
-                } catch as e3 {
-                }
-                return
+                try TrayTip("截图", "剪贴板位图不可用，尝试文件回退...", "Iconi 1")
             }
         }
         
+        if ((!pBitmap || pBitmap = 0) && fallbackPath != "") {
+            try pBitmap := Gdip_CreateBitmapFromFile(fallbackPath)
+        }
+
+        ; 回退：部分系统/工具链场景下，截图不会以位图格式落剪贴板，
+        ; 而是文件拖放（CF_HDROP）或文本文件路径。这里兼容加载本地图片。
+        if (!pBitmap || pBitmap = 0) {
+            try {
+                clipFiles := []
+                try clipFiles := GetClipboardFileDropList()
+                if (clipFiles != "") {
+                    for _, fp in StrSplit(clipFiles, "`n") {
+                        if (fp = "")
+                            continue
+                        ext := StrLower(RegExReplace(String(fp), "^.*\."))
+                        if (ext = "png" || ext = "jpg" || ext = "jpeg" || ext = "bmp" || ext = "gif" || ext = "webp") {
+                            pBitmap := Gdip_CreateBitmapFromFile(String(fp))
+                            if (pBitmap && pBitmap != 0)
+                                break
+                        }
+                    }
+                }
+                if ((!pBitmap || pBitmap = 0)) {
+                    try clipTxt := Trim(String(A_Clipboard))
+                    catch
+                        clipTxt := ""
+                    if (clipTxt != "" && FileExist(clipTxt)) {
+                        ext2 := StrLower(RegExReplace(clipTxt, "^.*\."))
+                        if (ext2 = "png" || ext2 = "jpg" || ext2 = "jpeg" || ext2 = "bmp" || ext2 = "gif" || ext2 = "webp")
+                            pBitmap := Gdip_CreateBitmapFromFile(clipTxt)
+                    }
+                }
+            } catch {
+            }
+        }
+
         ; 楠岃瘉pBitmap鏄惁鏈夋晥
         if (DebugGui) {
             UpdateDebugStep(DebugGui, 19, "楠岃瘉 pBitmap 鏈夋晥鎬?..", false)
@@ -641,6 +685,9 @@ class ScreenshotEditorPlugin {
         ; 涓庡叏灞€鍚屾锛氭鍚?CloseScreenshotEditor / 鍚屾宸ュ叿鏍忕瓑渚濊禆 this.GuiID_ScreenshotEditor
         this.GuiID_ScreenshotEditor := EditorGui
         ScreenshotEditorPlugin._SyncHub()
+        try OutputDebug("[SSE] editor gui created hwnd=" . (EditorGui.HasProp("Hwnd") ? EditorGui.Hwnd : 0))
+        catch {
+        }
         
         ; 璁＄畻绐楀彛浣嶇疆锛堝睆骞曞眳涓級
         ScreenInfo := GetScreenInfo(1)
@@ -672,9 +719,18 @@ class ScreenshotEditorPlugin {
         }
         ; 浣跨敤灞€閮?EditorGui 璋冪敤 Show锛岄伩鍏嶅叏灞€鍙橀噺鍦ㄦ瀬灏戞暟鎯呭喌涓嬮潪瀵硅薄鏃跺穿婧?
         EditorGui.Show("w" . WindowWidth . " h" . WindowHeight . " x" . WindowX . " y" . WindowY)
+        try OutputDebug("[SSE] editor gui shown hwnd=" . (EditorGui.HasProp("Hwnd") ? EditorGui.Hwnd : 0))
+        catch {
+        }
         ; Phase-1 preview shell: mount inside editor window (single-window UX).
         try this.ScreenshotPreviewShell_Show(0, TitleBarHeight, WindowWidth, PreviewHeight, TempImagePath)
-        
+        try OutputDebug("[SSE] preview shell show requested path=" . TempImagePath)
+        catch {
+        }
+        this.ScreenshotPreviewVisibilityRetryPass := 0
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureVisible"), -80)
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureVisible"), -260)
+
         ; 婵€娲荤獥鍙ｅ苟纭繚鍦ㄦ渶鍓嶉潰
         try {
             WinActivate("ahk_id " . EditorGui.Hwnd)
@@ -718,6 +774,10 @@ class ScreenshotEditorPlugin {
         } catch as e {
         }
         
+        this.ScreenshotEditorActivationRetryPass := 0
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotEditorEnsureActivated"), -120)
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotEditorEnsureActivated"), -360)
+
         ; 浣跨敤鍘熺敓 Windows API 纭繚绐楀彛缃《骞舵縺娲?
         try {
             hwnd := EditorGui.Hwnd
@@ -1322,7 +1382,20 @@ class ScreenshotEditorPlugin {
     this.ScreenshotPreviewPendingSrc := src
     this.ScreenshotPreviewBounds := Map("x", x, "y", y, "w", w, "h", h)
     if !this.ScreenshotPreviewWV2Ctrl {
-        try WebView2.create(this.GuiID_ScreenshotEditor.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnCreated"), WebView2_EnsureSharedEnvBlocking())
+        try {
+            WebView2.create(this.GuiID_ScreenshotEditor.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnCreated"), WebView2_EnsureSharedEnvBlocking())
+        } catch as e {
+            try OutputDebug("[SSE] preview shell create failed: " . e.Message)
+            catch {
+            }
+            try TrayTip("截图预览", "预览窗口创建失败: " . e.Message, "Iconx 2")
+            catch {
+            }
+            return
+        }
+        this.ScreenshotPreviewCreateCheckPass := 0
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureCreated"), -260)
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureCreated"), -760)
     } else {
         this.ScreenshotPreviewShell_ApplyBounds()
         this.ScreenshotPreviewShell_SendInit()
@@ -1330,7 +1403,61 @@ class ScreenshotEditorPlugin {
     }
 }
 
+    static ScreenshotPreviewShell_EnsureCreated(*) {
+    if (this.ScreenshotPreviewWV2Ctrl) {
+        this.ScreenshotPreviewCreateCheckPass := 0
+        return
+    }
+    this.ScreenshotPreviewCreateCheckPass += 1
+    if (this.ScreenshotPreviewCreateCheckPass < 6) {
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureCreated"), -400)
+        return
+    }
+    try {
+        if (IsObject(this.GuiID_ScreenshotEditor) && this.GuiID_ScreenshotEditor != 0)
+            WebView2.create(this.GuiID_ScreenshotEditor.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnCreated"), WebView2_EnsureSharedEnvBlocking())
+    } catch {
+    }
+}
+
+    static ScreenshotPreviewShell_EnsureVisible(*) {
+    if !(IsObject(this.GuiID_ScreenshotEditor) && this.GuiID_ScreenshotEditor != 0)
+        return
+
+    prevCrit := Critical("On")
+    this.ScreenshotPreviewVisibilityRetryPass += 1
+    retryPass := this.ScreenshotPreviewVisibilityRetryPass
+    Critical(prevCrit)
+
+    try {
+        if (WinGetMinMax("ahk_id " . this.GuiID_ScreenshotEditor.Hwnd) = -1) {
+            try WinRestore("ahk_id " . this.GuiID_ScreenshotEditor.Hwnd)
+        }
+        this.ScreenshotPreviewShell_ApplyBounds()
+        this.ScreenshotPreviewShell_SendInit()
+        this.ScreenshotPreviewShell_SendState()
+        try WinActivate("ahk_id " . this.GuiID_ScreenshotEditor.Hwnd)
+        if (IsObject(this.GuiID_ScreenshotToolbar) && this.GuiID_ScreenshotToolbar != 0) {
+            try WinActivate("ahk_id " . this.GuiID_ScreenshotToolbar.Hwnd)
+        }
+        if (!this.ScreenshotPreviewWV2Ctrl && retryPass < 4)
+            SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureVisible"), -120)
+    } catch {
+        if (retryPass < 4)
+            SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureVisible"), -120)
+    }
+}
+
     static ScreenshotPreviewShell_OnCreated(ctrl) {
+    try OutputDebug("[SSE] preview shell on created ctrl=" . (IsObject(ctrl) ? 1 : 0))
+    catch {
+    }
+    if !IsObject(ctrl) {
+        try TrayTip("截图预览", "预览控件创建失败", "Iconx 2")
+        catch {
+        }
+        return
+    }
     this.ScreenshotPreviewWV2Ctrl := ctrl
     this.ScreenshotPreviewWV2 := ctrl.CoreWebView2
     this.ScreenshotPreviewWV2Ready := false
@@ -1347,7 +1474,15 @@ class ScreenshotEditorPlugin {
         } else {
             this.ScreenshotPreviewWV2.Navigate("<!doctype html><html><body>Missing ScreenshotEditorWebView.html</body></html>")
         }
-    } catch {
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureVisible"), -60)
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureVisible"), -220)
+    } catch as e {
+        try OutputDebug("[SSE] preview shell navigation failed: " . e.Message)
+        catch {
+        }
+        try TrayTip("截图预览", "预览页面加载失败: " . e.Message, "Iconx 2")
+        catch {
+        }
     }
 }
 
@@ -1364,13 +1499,21 @@ class ScreenshotEditorPlugin {
     p := n["payload"]
     if (t = "event" && name = "ready") {
             this.ScreenshotPreviewWV2Ready := true
+            try OutputDebug("[SSE] preview shell ready")
+            catch {
+            }
             this.ScreenshotPreviewShell_SendInit()
             this.ScreenshotPreviewShell_SendState()
+            SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureVisible"), -40)
             return
     }
     if (t = "event" && name = "requestInit") {
+            try OutputDebug("[SSE] preview shell requestInit")
+            catch {
+            }
             this.ScreenshotPreviewShell_SendInit()
             this.ScreenshotPreviewShell_SendState()
+            SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureVisible"), -40)
             return
     }
     if (t = "event" && name = "contextMenuRequest") {
@@ -3413,6 +3556,65 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     }
 }
 
+    static ScreenshotEditorEnsureActivated(*) {
+    if !(IsObject(this.GuiID_ScreenshotEditor) && this.GuiID_ScreenshotEditor != 0)
+        return
+
+    hwnd := this.GuiID_ScreenshotEditor.Hwnd
+    toolbarHwnd := 0
+    if (IsObject(this.GuiID_ScreenshotToolbar) && this.GuiID_ScreenshotToolbar != 0)
+        toolbarHwnd := this.GuiID_ScreenshotToolbar.Hwnd
+
+    prevCrit := Critical("On")
+    this.ScreenshotEditorActivationRetryPass += 1
+    retryPass := this.ScreenshotEditorActivationRetryPass
+    Critical(prevCrit)
+    try OutputDebug("[SSE] ensure activated pass=" . retryPass . " hwnd=" . hwnd . " toolbar=" . (toolbarHwnd ? toolbarHwnd : 0))
+    catch {
+    }
+
+    try {
+        if (this.g_ShowScreenshotEditorInFlight) {
+            if (retryPass < 4)
+                SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotEditorEnsureActivated"), -120)
+            return
+        }
+
+        if (WinGetMinMax("ahk_id " . hwnd) = -1) {
+            try WinRestore("ahk_id " . hwnd)
+        }
+
+        if (toolbarHwnd) {
+            try WinSetAlwaysOnTop("On", "ahk_id " . toolbarHwnd)
+        }
+        try WinSetAlwaysOnTop("On", "ahk_id " . hwnd)
+        try WinActivate("ahk_id " . hwnd)
+        Sleep(40)
+        if (toolbarHwnd) {
+            try WinActivate("ahk_id " . toolbarHwnd)
+            Sleep(20)
+        }
+        try WinActivate("ahk_id " . hwnd)
+        try DllCall("SetForegroundWindow", "Ptr", hwnd)
+        if (toolbarHwnd) {
+            try WinSetAlwaysOnTop("On", "ahk_id " . toolbarHwnd)
+            try DllCall("SetWindowPos", "Ptr", toolbarHwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0001 | 0x0002 | 0x0004)
+        }
+        try DllCall("SetWindowPos", "Ptr", hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0001 | 0x0002 | 0x0004)
+
+        activeHwnd := 0
+        try activeHwnd := WinGetID("A")
+        try OutputDebug("[SSE] ensure activated active=" . activeHwnd . " target=" . hwnd)
+        catch {
+        }
+        if (activeHwnd != hwnd && retryPass < 4)
+            SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotEditorEnsureActivated"), -160)
+    } catch {
+        if (retryPass < 4)
+            SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotEditorEnsureActivated"), -160)
+    }
+}
+
     static ScreenshotEditorZoomBy(step) {
     newScale := this.ScreenshotEditorZoomScale + step
     this.ScreenshotEditorApplyZoom(newScale, true)
@@ -3794,6 +3996,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         this.ScreenshotDocObjects := []
         this.ScreenshotSelectedObjectId := ""
         this.ScreenshotObjectIdSeed := 0
+        this.ScreenshotEditorActivationRetryPass := 0
          
         ; 閿€姣丟UI锛堝畨鍏ㄥ鐞咷ui瀵硅薄锛?
         if (IsObject(this.GuiID_ScreenshotEditor)) {
@@ -3810,6 +4013,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         this.ScreenshotEditorBaseWidth := 0
         this.ScreenshotEditorBaseHeight := 0
         ScreenshotEditorPlugin._SyncHub()
+        try EndScreenshotUiSession()
+        catch {
+        }
     } catch as err {
     }
 }
