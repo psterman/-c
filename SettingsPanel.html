@@ -1063,12 +1063,38 @@
       }
       const rows = [];
       const seen = new Set();
+      const prevRows = normalizeToolbarLayoutRows(state.data.keybinderToolbarLayout || []);
+      const prevById = new Map(prevRows.map((r) => [r.cmdId, r]));
       document.querySelectorAll("#cfg-ftb-bar .cfg-ftb-tile").forEach((el) => {
-        rows.push({ cmdId: el.dataset.cmdId, visible_in_bar: true, visible_in_menu: false, order_bar: rows.length, order_menu: -1 });
+        const cid = String(el.dataset.cmdId || "").trim();
+        if (!cid) return;
+        const prev = prevById.get(cid) || {};
+        rows.push({
+          cmdId: cid,
+          visible_in_bar: true,
+          visible_in_menu: !!prev.visible_in_menu,
+          order_bar: rows.length,
+          order_menu: Number.isFinite(Number(prev.order_menu)) ? Number(prev.order_menu) : -1,
+          visible_in_search_row: !!prev.visible_in_search_row,
+          order_search_row: Number.isFinite(Number(prev.order_search_row)) ? Number(prev.order_search_row) : -1,
+          menu_scenes: Array.isArray(prev.menu_scenes) ? [...prev.menu_scenes] : [],
+        });
         seen.add(el.dataset.cmdId);
       });
       document.querySelectorAll("#cfg-shared-pool-ftb .cfg-ftb-tile").forEach((el) => {
-        rows.push({ cmdId: el.dataset.cmdId, visible_in_bar: false, visible_in_menu: false, order_bar: -1, order_menu: -1 });
+        const cid = String(el.dataset.cmdId || "").trim();
+        if (!cid) return;
+        const prev = prevById.get(cid) || {};
+        rows.push({
+          cmdId: cid,
+          visible_in_bar: !!prev.visible_in_bar,
+          visible_in_menu: !!prev.visible_in_menu,
+          order_bar: Number.isFinite(Number(prev.order_bar)) ? Number(prev.order_bar) : -1,
+          order_menu: Number.isFinite(Number(prev.order_menu)) ? Number(prev.order_menu) : -1,
+          visible_in_search_row: !!prev.visible_in_search_row,
+          order_search_row: Number.isFinite(Number(prev.order_search_row)) ? Number(prev.order_search_row) : -1,
+          menu_scenes: Array.isArray(prev.menu_scenes) ? [...prev.menu_scenes] : [],
+        });
         seen.add(el.dataset.cmdId);
       });
       normalizeToolbarLayoutRows(state.data.keybinderToolbarLayout || []).forEach((r) => {
@@ -1077,9 +1103,12 @@
           rows.push({
             cmdId: r.cmdId,
             visible_in_bar: !!r.visible_in_bar,
-            visible_in_menu: false,
+            visible_in_menu: !!r.visible_in_menu,
             order_bar: Number.isFinite(Number(r.order_bar)) ? Number(r.order_bar) : -1,
-            order_menu: -1,
+            order_menu: Number.isFinite(Number(r.order_menu)) ? Number(r.order_menu) : -1,
+            visible_in_search_row: !!r.visible_in_search_row,
+            order_search_row: Number.isFinite(Number(r.order_search_row)) ? Number(r.order_search_row) : -1,
+            menu_scenes: Array.isArray(r.menu_scenes) ? [...r.menu_scenes] : [],
           });
         }
       });
@@ -1255,6 +1284,7 @@
     let pendingSaveHash = "";
     let lastSentHash = "";
     let lastSavedHash = "";
+    let activationModeSaveTimer = 0;
     function stableStringify(v){
       const seen = new WeakSet();
       const sortObj = (x) => {
@@ -1289,6 +1319,13 @@
       if (suppressAutoSave || !initDataReceived) return;
       if (autoSaveTimer) clearTimeout(autoSaveTimer);
       autoSaveTimer = setTimeout(() => { tryAutoSaveNow(); }, delay);
+    }
+    function scheduleSaveAppearanceActivationMode(delay = 120) {
+      if (activationModeSaveTimer) clearTimeout(activationModeSaveTimer);
+      activationModeSaveTimer = setTimeout(() => {
+        activationModeSaveTimer = 0;
+        post({ type: "saveAppearanceActivationMode", mode: state.appearanceActivationMode });
+      }, delay);
     }
     function bindAutoSaveControls(){}
     function normalizeFullTextPayload(payload){
@@ -1676,10 +1713,14 @@
     }
     function bindAppearanceActivationMode(){
       document.querySelectorAll('input[name="activationMode"]').forEach((el) => {
-        el.addEventListener("change", () => {
+        el.addEventListener("change", (e) => {
+          e.stopPropagation();
           state.appearanceActivationMode = normalizeActivationMode(el.value);
           state.data.appearanceActivationMode = state.appearanceActivationMode;
           saveAppearanceActivationMode();
+          if (activationModeSaveTimer) clearTimeout(activationModeSaveTimer);
+          activationModeSaveTimer = 0;
+          post({ type: "saveAppearanceActivationMode", mode: state.appearanceActivationMode });
           const prev = document.getElementById("activationModePreview");
           if (prev)
             prev.innerHTML = activationModePreviewHtml(state.appearanceActivationMode);
@@ -2167,6 +2208,7 @@
     panelRoot.addEventListener("input", (e) => {
       const t = e.target;
       if (!t || !(t.matches?.("input,textarea,select"))) return;
+      if (t.name === "activationMode") return;
       if (t.dataset?.nosave === "1") return;
       scheduleAutoSave();
     });
@@ -2176,6 +2218,10 @@
         state.appearanceActivationMode = normalizeActivationMode(t.value);
         state.data.appearanceActivationMode = state.appearanceActivationMode;
         saveAppearanceActivationMode();
+        if (activationModeSaveTimer) clearTimeout(activationModeSaveTimer);
+        activationModeSaveTimer = 0;
+        post({ type: "saveAppearanceActivationMode", mode: state.appearanceActivationMode });
+        return;
       }
       if (!t || !(t.matches?.("input,textarea,select"))) return;
       if (t.id === "themeMode") {
@@ -2289,6 +2335,10 @@
         } else {
           setStatus(msg.error || "保存失败", "err");
         }
+        return;
+      }
+      if (msg.type === "saveAppearanceActivationModeResult") {
+        setStatus(msg.ok ? ("激活方式已生效：" + (ACTIVATION_MODE_OPTIONS.find(o => o.value === msg.mode)?.label || msg.mode || "悬浮栏")) : (msg.error || "激活方式切换失败"), msg.ok ? "ok" : "err");
         return;
       }
       if (msg.type === "saveKeybinderToolbarLayoutResult") {

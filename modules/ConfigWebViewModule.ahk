@@ -81,6 +81,12 @@ ShowConfigWebViewGUI() {
     PosY := ScreenInfo.Top + Round((ScreenInfo.Height - WinH) / 2)
 
     GuiID_ConfigGUI.Show("w" . WinW . " h" . WinH . " x" . PosX . " y" . PosY)
+    try WinSetAlwaysOnTop(true, "ahk_id " . GuiID_ConfigGUI.Hwnd)
+    catch {
+    }
+    try WinActivate("ahk_id " . GuiID_ConfigGUI.Hwnd)
+    catch {
+    }
     g_ConfigWebView_LastShown := A_TickCount
     WMActivateChain_Register(ConfigWebView_WM_ACTIVATE)
     ConfigWebView_ApplyBounds()
@@ -1280,6 +1286,34 @@ ConfigWebView_SaveHoleOnly(payload, &errorMsg := "") {
     }
 }
 
+ConfigWebView_SaveAppearanceActivationMode(mode, &errorMsg := "") {
+    global AppearanceActivationMode, ConfigFile
+    try {
+        newMode := NormalizeAppearanceActivationMode(mode)
+        if (newMode = "") {
+            errorMsg := "激活方式无效"
+            return false
+        }
+        try OutputDebug("[ConfigWebView] saveAppearanceActivationMode mode=" . newMode)
+        catch {
+        }
+        AppearanceActivationMode := newMode
+        IniWrite(AppearanceActivationMode, ConfigFile, "Appearance", "ActivationMode")
+        ; Defer the actual visibility change so we do not re-enter WebView2 show/create paths
+        ; while still inside the config WebView message callback.
+        try SetTimer(ApplyAppearanceActivationMode, -1)
+        catch {
+            try ApplyAppearanceActivationMode()
+            catch {
+            }
+        }
+        return true
+    } catch as err {
+        errorMsg := err.Message
+        return false
+    }
+}
+
 ConfigWebView_SaveSettingsSingleFlight(payload) {
     global g_ConfigSaveInFlight, g_ConfigSaveQueuedPayload, g_ConfigSaveFlushTimerArmed, g_ConfigSaveLastTick
     nowTick := A_TickCount
@@ -1343,6 +1377,9 @@ ConfigWebView_OnMessage(sender, args) {
     action := msg.Has("type") ? msg["type"] : (msg.Has("action") ? msg["action"] : "")
     if (action = "")
         return
+    try OutputDebug("[ConfigWebView] onmessage action=" . action)
+    catch {
+    }
     switch action {
         case "ready":
             ConfigWV2Ready := true
@@ -1388,6 +1425,11 @@ ConfigWebView_OnMessage(sender, args) {
             if !(payload is Map)
                 payload := Map()
             ConfigWebView_SaveSettingsSingleFlight(payload)
+        case "saveAppearanceActivationMode":
+            mode := msg.Get("mode", "")
+            err := ""
+            ok := ConfigWebView_SaveAppearanceActivationMode(mode, &err)
+            ConfigWebView_Send(Map("type", "saveAppearanceActivationModeResult", "ok", ok, "error", err, "mode", NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")))
         case "saveHoleSettings":
             payload := msg.Get("payload", Map())
             if (payload is String && payload != "") {

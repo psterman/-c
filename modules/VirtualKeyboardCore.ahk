@@ -3473,6 +3473,8 @@ _ApplyWV2Bounds() {
         return
     cw := 0
     ch := 0
+    ww := 0
+    wh := 0
     try g_VK_Gui.GetClientPos(, , &cw, &ch)
     catch
         try WinGetClientPos(, , &cw, &ch, g_VK_Gui.Hwnd)
@@ -5235,6 +5237,22 @@ VK_ShowToolbarLayoutContextMenu() {
             if (nm = "")
                 nm := cid
             MenuItems.Push({ Text: nm, Icon: "h", Action: VK_MakeToolbarContextMenuAction(cid) })
+        }
+    }
+    if (MenuItems.Length = 0) {
+        fallbackIds := []
+        try fallbackIds := _VK_DefaultSceneMenuFloatingToolbarMenuCmds()
+        catch {
+            fallbackIds := ["ftm_reset_scale", "ftm_search_center", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script"]
+        }
+        for cid in fallbackIds {
+            c := Trim(String(cid))
+            if (c = "" || !cmdList.Has(c))
+                continue
+            nm := cmdList[c]["name"]
+            if (nm = "")
+                nm := c
+            MenuItems.Push({ Text: nm, Icon: "h", Action: VK_MakeToolbarContextMenuAction(c) })
         }
     }
     if MenuItems.Length = 0

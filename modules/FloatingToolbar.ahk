@@ -2563,15 +2563,6 @@ FloatingToolbarPushCmdLayoutToWeb() {
             "iconPath", FloatingToolbar_GetCursorIconPath()
         ))
     }
-    maxIcons := (FloatingToolbarMaxVisibleIcons > 0) ? Integer(FloatingToolbarMaxVisibleIcons) : 9
-    if (maxIcons < 1)
-        maxIcons := 1
-    if (items.Length > maxIcons) {
-        trimmed := []
-        Loop maxIcons
-            trimmed.Push(items[A_Index])
-        items := trimmed
-    }
     cloudVisible := false
     for _, it in items {
         if ((it is Map) && it.Has("cmdId") && String(it["cmdId"]) = "ftb_cloud_player") {
@@ -2580,11 +2571,9 @@ FloatingToolbarPushCmdLayoutToWeb() {
         }
     }
     if !cloudVisible {
-        if (items.Length >= maxIcons && items.Length > 0)
-            items[items.Length] := Map("cmdId", "ftb_cloud_player", "name", "云盘", "iconClass", "fa-solid fa-cloud")
-        else
-            items.Push(Map("cmdId", "ftb_cloud_player", "name", "云盘", "iconClass", "fa-solid fa-cloud"))
+        items.Push(Map("cmdId", "ftb_cloud_player", "name", "云盘", "iconClass", "fa-solid fa-cloud"))
     }
+    ; 让悬浮栏按实际可见项展开，避免 keybinder 下发的后续图标被 9 个上限截断。
     FloatingToolbarCmdVisibleCount := items.Length
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_toolbar_cmds", "items", items))
     catch as _e {
@@ -2689,11 +2678,9 @@ FloatingToolbarExitCompactMode() {
 
 ; ===================== 鐠侊紕鐣诲銉ュ徔閺嶅繐顔旀惔锕€鎷版妯哄 =====================
 FloatingToolbarCalculateWidth() {
-    global FloatingToolbarChatDrawerOpen, FloatingToolbarChatDrawerWidth, FloatingToolbarCompactDiameter, FloatingToolbarCmdVisibleCount, FloatingToolbarMaxVisibleIcons
+    global FloatingToolbarChatDrawerOpen, FloatingToolbarChatDrawerWidth, FloatingToolbarCompactDiameter, FloatingToolbarCmdVisibleCount
     eff := FloatingToolbar_EffectiveScale()
     iconCount := (FloatingToolbarCmdVisibleCount > 0) ? FloatingToolbarCmdVisibleCount : 7
-    if (FloatingToolbarMaxVisibleIcons > 0 && iconCount > FloatingToolbarMaxVisibleIcons)
-        iconCount := FloatingToolbarMaxVisibleIcons
     ; 按「Logo + 图标数量」自适应宽度，并在最终像素向上取整避免右侧 1~2px 截断。
     ; CSS 对应：左右 padding(16) + logo(42) + 间距(8) + 图标区(40*n + 5*(n-1))
     BaseWidth := Max(190, 61 + iconCount * 45)

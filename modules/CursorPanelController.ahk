@@ -212,6 +212,26 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
     } catch {
     }
 
+    if (MenuItems.Length = 0) {
+        fallbackIds := []
+        try fallbackIds := _VK_DefaultSceneMenuFloatingToolbarMenuCmds()
+        catch {
+            fallbackIds := ["ftm_reset_scale", "ftm_search_center", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script"]
+        }
+        if (IsSet(cmdList) && cmdList is Map) {
+            seen := Map()
+            for cid in fallbackIds {
+                c := Trim(String(cid))
+                if (c = "" || !cmdList.Has(c) || seen.Has(c))
+                    continue
+                seen[c] := true
+                nm := cmdList[c]["name"]
+                if (nm = "")
+                    nm := c
+                MenuItems.Push({ Text: nm, Icon: "·", Action: VK_MakeToolbarContextMenuAction(c) })
+            }
+        }
+    }
     if (MenuItems.Length = 0)
         MenuItems.Push({ Text: "（右键菜单暂无命令）", Icon: "·", Action: (*) => 0 })
 

@@ -2520,15 +2520,32 @@ ApplyAppearanceActivationMode_Run(m, token) {
             }
         } catch {
         }
-        ; Use hard recover path to avoid stale hole/overlay state hiding toolbar.
-        try FloatingToolbar_ForceRecoverVisible()
-        catch {
+        ; Prefer reusing the existing toolbar host to avoid WebView2 recreate races.
+        try {
+            if (IsSet(FloatingToolbarGUI) && IsObject(FloatingToolbarGUI) && FloatingToolbarGUI) {
+                ShowFloatingToolbar()
+            } else {
+                FloatingToolbar_ForceRecoverVisible()
+            }
+        } catch {
             try ShowFloatingToolbar()
             catch {
             }
         }
-        ; One delayed retry further improves reliability after mode save from settings WebView.
-        try SetTimer((*) => FloatingToolbar_ForceRecoverVisible(), -120)
+        ; Force a fresh toolbar layout push after recovering visibility.
+        ; Recreating the toolbar host can leave the webview on its default icons
+        ; until the command layout is re-sent.
+        try FloatingToolbarReloadFromToolbarLayout()
+        catch {
+        }
+        try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -120)
+        catch {
+        }
+        try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -520)
+        catch {
+        }
+        ; One delayed retry keeps the existing host visible without forcing a recreate.
+        try SetTimer((*) => ShowFloatingToolbar(), -120)
         NMER_Log("activation", "apply_mode_toolbar", "ok=1")
         return
     }
@@ -3967,7 +3984,13 @@ ShowConfigGUI_Safe() {
     catch {
     }
     ; Open settings async to avoid re-entrancy from menu/hotkey callbacks.
-    try SetTimer((*) => ShowConfigGUI_Core(), -20)
+    delayMs := 20
+    try {
+        if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole")
+            delayMs := 140
+    } catch {
+    }
+    try SetTimer((*) => ShowConfigGUI_Core(), -delayMs)
     catch {
         try ShowConfigGUI_Core()
     }

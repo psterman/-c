@@ -618,7 +618,9 @@ TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis) {
         } else {
             MenuItems.Push({ Text: "显示黑洞", Action: FloatingBubbleShowFromMenu, Icon: "☰" })
         }
-    } else if (mode != "tray") {
+        return
+    }
+    if (mode != "tray") {
         if (ftVis) {
             MenuItems.Push({ Text: "隐藏工具栏", Action: ToggleFloatingToolbarFromMenu, Icon: "☰" })
             MenuItems.Push({ Text: "最小化到边缘", Action: MinimizeFloatingToolbarToEdge, Icon: "⊏" })
