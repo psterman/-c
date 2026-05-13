@@ -473,12 +473,10 @@ TrayMenu_FinalizeHoleUiTransition(reason := "", token := 0) {
     global g_IsUIVisibleTransitioning, g_TrayMenuTransitionToken, GDHO_VISIBLE, NativeDropSessionActive
     if (token != g_TrayMenuTransitionToken)
         return
-    ; Re-arm the bridge in normal mode so the next UI can keep receiving its normal
-    ; initialization and clipboard events.
-    try NativeDropBridge_ResetSessionAsync(reason, 0, false)
+    try NativeDropBridge_ResetSessionAsync(reason, 0)
     catch {
     }
-    try GDHO_Hide()
+    try GDHO_Stop()
     catch {
     }
     g_IsUIVisibleTransitioning := false
@@ -1186,13 +1184,6 @@ TrayMenu_MakeSceneAction(cmdId) {
 TrayMenu_BuildItemsFromSceneMenu(sceneKey := "tray_menu") {
     global g_Commands, AppearanceActivationMode, g_LastValidTrayMenu
     items := []
-    ; Commands are loaded lazily in a few startup paths, so refresh them here before
-    ; deciding that the scene menu is unavailable and falling back to the generic menu.
-    try {
-        if IsSet(_LoadCommands)
-            _LoadCommands()
-    } catch {
-    }
     if !(IsSet(g_Commands) && g_Commands is Map)
         return TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items)
     if !(g_Commands.Has("SceneMenus") && g_Commands["SceneMenus"] is Map)

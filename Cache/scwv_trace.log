@@ -1728,3 +1728,187 @@
 [2026-05-13 09:00:45][hide_done] visible=0
 [2026-05-13 09:40:50][init_begin] reason= gui=0 alive=0 inflight=0
 [2026-05-13 09:40:50][init_create_begin] reason= hwnd=7868138
+[2026-05-13 12:43:11][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 12:43:11][init_create_begin] reason= hwnd=54595506
+[2026-05-13 12:53:50][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 12:53:50][init_create_begin] reason= hwnd=12980344
+[2026-05-13 12:57:16][init_begin] reason=tray_menu_search gui=1 alive=1 inflight=0
+[2026-05-13 12:57:16][show_begin] reason=tray_menu_search ready=1 ui_ready=1
+[2026-05-13 12:57:16][show_finish_reveal_immediate] reason=tray_menu_search
+[2026-05-13 12:57:16][wm_chain_register_begin] reason=tray_menu_search count=0
+[2026-05-13 12:57:16][wm_chain_register_done] reason=tray_menu_search count=1
+[2026-05-13 12:57:18][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-13 12:57:18][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-13 12:57:18][hide_step] reset_bridge_begin
+[2026-05-13 12:57:18][hide_step] reset_bridge_queued
+[2026-05-13 12:57:18][hide_step] pagedock_leave_begin
+[2026-05-13 12:57:18][hide_step] pagedock_leave_done
+[2026-05-13 12:57:18][hide_step] save_selection_begin
+[2026-05-13 12:57:18][hide_step] save_selection_done
+[2026-05-13 12:57:18][hide_step] gui_hide_begin
+[2026-05-13 12:57:18][wm_activate_seen] wparam=0 hwnd=12980344 visible=1 waiting=0 focus_pending=0 phase=closing search_http=0
+[2026-05-13 12:57:18][wm_activate_queue] reason=wm_deactivate count=1
+[2026-05-13 12:57:18][hide_step] unregister_activate_chain count_before=1
+[2026-05-13 12:57:18][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-13 12:57:18][hide_step] webview_hidden_notified
+[2026-05-13 12:57:18][hide_done] visible=0
+[2026-05-13 12:57:18][hide_skip] reason=not_visible_or_host
+[2026-05-13 13:00:29][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 13:00:29][init_create_begin] reason= hwnd=14289884
+[2026-05-13 13:00:44][init_begin] reason=tray_menu_search gui=1 alive=1 inflight=0
+[2026-05-13 13:00:44][show_begin] reason=tray_menu_search ready=1 ui_ready=1
+[2026-05-13 13:00:44][show_finish_reveal_immediate] reason=tray_menu_search
+[2026-05-13 13:00:44][wm_chain_register_begin] reason=tray_menu_search count=0
+[2026-05-13 13:00:44][wm_chain_register_done] reason=tray_menu_search count=1
+[2026-05-13 13:00:47][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-13 13:00:47][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-13 13:00:47][hide_step] reset_bridge_begin
+[2026-05-13 13:00:47][hide_step] reset_bridge_queued
+[2026-05-13 13:00:47][hide_step] pagedock_leave_begin
+[2026-05-13 13:00:47][hide_step] pagedock_leave_done
+[2026-05-13 13:00:47][hide_step] save_selection_begin
+[2026-05-13 13:00:47][hide_step] save_selection_done
+[2026-05-13 13:00:47][hide_step] gui_hide_begin
+[2026-05-13 13:00:47][wm_activate_seen] wparam=0 hwnd=14289884 visible=1 waiting=0 focus_pending=0 phase=closing search_http=0
+[2026-05-13 13:00:47][wm_activate_queue] reason=wm_deactivate count=1
+[2026-05-13 13:00:47][hide_step] unregister_activate_chain count_before=1
+[2026-05-13 13:00:47][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-13 13:00:47][hide_step] webview_hidden_notified
+[2026-05-13 13:00:47][hide_done] visible=0
+[2026-05-13 13:00:47][hide_skip] reason=not_visible_or_host
+[2026-05-13 13:03:38][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 13:03:38][init_create_begin] reason= hwnd=8260754
+[2026-05-13 13:03:47][caps_f_state] search_active=0 search_visible=0 waiting=0 create_inflight=0 phase=open countdown=0 caps=1
+[2026-05-13 13:03:47][show_begin] reason= ready=1 ui_ready=1
+[2026-05-13 13:03:49][hide_begin] persist=1 visible=0 waiting=0 deact_block=0
+[2026-05-13 13:03:49][hide_step] reset_bridge_begin
+[2026-05-13 13:03:49][hide_step] reset_bridge_queued
+[2026-05-13 13:03:49][hide_step] pagedock_leave_begin
+[2026-05-13 13:03:49][hide_step] pagedock_leave_done
+[2026-05-13 13:03:49][hide_step] save_selection_begin
+[2026-05-13 13:03:49][hide_step] save_selection_done
+[2026-05-13 13:03:49][hide_step] gui_hide_begin
+[2026-05-13 13:03:49][hide_step] unregister_activate_chain count_before=0
+[2026-05-13 13:03:49][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-13 13:03:49][hide_step] webview_hidden_notified
+[2026-05-13 13:03:49][hide_done] visible=0
+[2026-05-13 13:03:49][show_finish_reveal_immediate] reason=
+[2026-05-13 13:03:49][wm_chain_register_begin] reason= count=0
+[2026-05-13 13:03:49][wm_chain_register_done] reason= count=1
+[2026-05-13 13:03:49][wm_activate_seen] wparam=1 hwnd=8260754 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-13 13:03:50][caps_chord] key=x active=1 gcls=1 ready=1
+[2026-05-13 13:03:50][caps_chord_cmd] key=x cmd=sc_filter_clipboard
+[2026-05-13 13:03:53][wm_activate_seen] wparam=0 hwnd=8260754 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-13 13:03:53][wm_activate_queue] reason=wm_deactivate count=1
+[2026-05-13 13:03:53][hide_trigger] reason=wm_deactivate
+[2026-05-13 13:03:53][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-13 13:03:53][hide_step] reset_bridge_begin
+[2026-05-13 13:03:53][hide_step] reset_bridge_queued
+[2026-05-13 13:03:53][hide_step] pagedock_leave_begin
+[2026-05-13 13:03:53][hide_step] pagedock_leave_done
+[2026-05-13 13:03:53][hide_step] save_selection_begin
+[2026-05-13 13:03:53][hide_step] save_selection_done
+[2026-05-13 13:03:53][hide_step] gui_hide_begin
+[2026-05-13 13:03:53][hide_step] unregister_activate_chain count_before=1
+[2026-05-13 13:03:53][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-13 13:03:53][hide_step] webview_hidden_notified
+[2026-05-13 13:03:53][hide_done] visible=0
+[2026-05-13 13:03:57][ftb_activate_search_center_begin] used_webview=1
+[2026-05-13 13:03:57][run_query_begin] kw_len=44 kw_prefix=修改后打开剪贴板又出现了托盘菜单降级的问题，而且
+[2026-05-13 13:03:57][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-13 13:03:57][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-13 13:03:57][show_finish_reveal_immediate] reason=search_keyword
+[2026-05-13 13:03:57][wm_chain_register_begin] reason=search_keyword count=0
+[2026-05-13 13:03:57][wm_chain_register_done] reason=search_keyword count=1
+[2026-05-13 13:03:57][ftb_activate_search_center_mid] selected_len=44 opened=1 vis=1
+[2026-05-13 13:03:57][ftb_activate_search_center_end] opened=1 vis=1
+[2026-05-13 13:03:57][run_query_begin] kw_len=44 kw_prefix=修改后打开剪贴板又出现了托盘菜单降级的问题，而且
+[2026-05-13 13:03:57][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-13 13:03:57][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-13 13:03:57][show_already_visible] reason=search_keyword
+[2026-05-13 13:03:58][ftb_ensure_focus] hwnd=8260754 vis=1
+[2026-05-13 13:04:00][wm_activate_seen] wparam=0 hwnd=8260754 visible=1 waiting=0 focus_pending=0 phase=opening search_http=0
+[2026-05-13 13:04:00][wm_activate_skip] reason=deactivate_blocked until=24064343 now=24061968 block_reason=search_http
+[2026-05-13 13:04:00][wm_activate_seen] wparam=1 hwnd=5378642 visible=1 waiting=0 focus_pending=0 phase=opening search_http=0
+[2026-05-13 13:04:00][ftb_ensure_focus] hwnd=8260754 vis=1
+[2026-05-13 13:04:00][wm_activate_seen] wparam=0 hwnd=5378642 visible=1 waiting=0 focus_pending=0 phase=opening search_http=0
+[2026-05-13 13:04:00][wm_activate_seen] wparam=1 hwnd=8260754 visible=1 waiting=0 focus_pending=0 phase=opening search_http=0
+[2026-05-13 13:04:02][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-13 13:04:02][hide_begin] persist=1 visible=1 waiting=0 deact_block=24064343
+[2026-05-13 13:04:02][hide_step] reset_bridge_begin
+[2026-05-13 13:04:02][hide_step] reset_bridge_queued
+[2026-05-13 13:04:02][hide_step] pagedock_leave_begin
+[2026-05-13 13:04:02][hide_step] pagedock_leave_done
+[2026-05-13 13:04:02][hide_step] save_selection_begin
+[2026-05-13 13:04:02][hide_step] save_selection_done
+[2026-05-13 13:04:02][hide_step] gui_hide_begin
+[2026-05-13 13:04:02][wm_activate_seen] wparam=0 hwnd=8260754 visible=1 waiting=0 focus_pending=0 phase=closing search_http=0
+[2026-05-13 13:04:02][wm_activate_queue] reason=wm_deactivate count=2
+[2026-05-13 13:04:02][wm_activate_seen] wparam=1 hwnd=5378642 visible=1 waiting=0 focus_pending=0 phase=closing search_http=0
+[2026-05-13 13:04:02][hide_step] unregister_activate_chain count_before=2
+[2026-05-13 13:04:02][hide_step] unregister_activate_chain_done count_after=1
+[2026-05-13 13:04:02][hide_step] webview_hidden_notified
+[2026-05-13 13:04:02][hide_done] visible=0
+[2026-05-13 13:04:02][hide_skip] reason=not_visible_or_host
+[2026-05-13 15:05:54][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 15:05:54][init_create_begin] reason= hwnd=79104018
+[2026-05-13 15:06:37][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 15:06:37][init_create_begin] reason= hwnd=1249910
+[2026-05-13 15:08:26][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 15:08:26][init_create_begin] reason= hwnd=72880084
+[2026-05-13 15:09:05][init_begin] reason=tray_menu_search gui=1 alive=1 inflight=0
+[2026-05-13 15:09:05][show_begin] reason=tray_menu_search ready=1 ui_ready=1
+[2026-05-13 15:09:05][show_finish_reveal_immediate] reason=tray_menu_search
+[2026-05-13 15:09:05][wm_chain_register_begin] reason=tray_menu_search count=0
+[2026-05-13 15:09:05][wm_chain_register_done] reason=tray_menu_search count=1
+[2026-05-13 15:09:10][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-13 15:09:10][hide_step] reset_bridge_begin
+[2026-05-13 15:09:10][hide_step] reset_bridge_queued
+[2026-05-13 15:09:10][hide_step] pagedock_leave_begin
+[2026-05-13 15:09:10][hide_step] pagedock_leave_done
+[2026-05-13 15:09:10][hide_step] save_selection_begin
+[2026-05-13 15:09:10][hide_step] save_selection_done
+[2026-05-13 15:09:10][hide_step] gui_hide_begin
+[2026-05-13 15:09:10][wm_activate_seen] wparam=0 hwnd=72880084 visible=1 waiting=0 focus_pending=0 phase=closing search_http=0
+[2026-05-13 15:09:10][wm_activate_queue] reason=wm_deactivate count=1
+[2026-05-13 15:09:10][hide_step] unregister_activate_chain count_before=1
+[2026-05-13 15:09:10][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-13 15:09:10][hide_step] webview_hidden_notified
+[2026-05-13 15:09:10][hide_done] visible=0
+[2026-05-13 15:09:10][hide_skip] reason=not_visible_or_host
+[2026-05-13 15:11:28][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 15:11:28][init_create_begin] reason= hwnd=856966
+[2026-05-13 15:14:46][caps_f_state] search_active=0 search_visible=0 waiting=0 create_inflight=0 phase=open countdown=0 caps=1
+[2026-05-13 15:14:46][show_begin] reason= ready=1 ui_ready=1
+[2026-05-13 15:14:46][show_finish_reveal_immediate] reason=
+[2026-05-13 15:14:46][wm_chain_register_begin] reason= count=0
+[2026-05-13 15:14:46][wm_chain_register_done] reason= count=1
+[2026-05-13 15:14:49][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-13 15:14:49][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-13 15:14:49][hide_step] reset_bridge_begin
+[2026-05-13 15:14:49][hide_step] reset_bridge_queued
+[2026-05-13 15:14:49][hide_step] pagedock_leave_begin
+[2026-05-13 15:14:49][hide_step] pagedock_leave_done
+[2026-05-13 15:14:49][hide_step] save_selection_begin
+[2026-05-13 15:14:49][hide_step] save_selection_done
+[2026-05-13 15:14:49][hide_step] gui_hide_begin
+[2026-05-13 15:14:49][wm_activate_seen] wparam=0 hwnd=856966 visible=1 waiting=0 focus_pending=0 phase=closing search_http=0
+[2026-05-13 15:14:49][wm_activate_queue] reason=wm_deactivate count=1
+[2026-05-13 15:14:49][hide_step] unregister_activate_chain count_before=1
+[2026-05-13 15:14:49][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-13 15:14:49][hide_step] webview_hidden_notified
+[2026-05-13 15:14:49][hide_done] visible=0
+[2026-05-13 15:14:49][hide_skip] reason=not_visible_or_host
+[2026-05-13 15:22:33][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 15:22:33][init_create_begin] reason= hwnd=7410328
+[2026-05-13 15:25:53][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 15:25:53][init_create_begin] reason= hwnd=15274602
+[2026-05-13 15:27:50][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 15:27:50][init_create_begin] reason= hwnd=7016992
+[2026-05-13 15:28:43][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 15:28:43][init_create_begin] reason= hwnd=10032254
+[2026-05-13 15:28:47][force_close_begin] reason=tray_open_ui visible=0 waiting=0 ready=0 ui_ready=0
+[2026-05-13 15:28:47][wm_chain_unregister_begin] reason=tray_open_ui count=0
+[2026-05-13 15:28:47][wm_chain_unregister_done] reason=tray_open_ui count=0
+[2026-05-13 15:28:47][hide_done] visible=0 reason=tray_open_ui
+[2026-05-13 15:28:47][force_close_done] reason=tray_open_ui

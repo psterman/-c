@@ -3381,8 +3381,24 @@ VkDynCapsLockHandler(*) {
 _OnWV2Created(ctrl) {
     global g_VK_WV2, g_VK_Ctrl, g_VK_ExpectAppLocalNavigationResult, g_VK_TriedDiskAfterAppLocalFail
 
+    if !IsObject(ctrl) {
+        OutputDebug("[VK] WV2 created callback returned non-object: " . ctrl)
+        try VK_ResetHostState()
+        catch {
+        }
+        return
+    }
+    try wv2 := ctrl.CoreWebView2
+    catch as e {
+        OutputDebug("[VK] WV2 created callback invalid controller: " . e.Message)
+        try VK_ResetHostState()
+        catch {
+        }
+        return
+    }
+
     g_VK_Ctrl := ctrl
-    g_VK_WV2 := ctrl.CoreWebView2
+    g_VK_WV2 := wv2
     g_VK_ExpectAppLocalNavigationResult := false
     g_VK_TriedDiskAfterAppLocalFail := false
 

@@ -42,7 +42,6 @@ global NativeDropLastTickMouseX := 0
 global NativeDropLastTickMouseY := 0
 global NativeDropLastStartTick := 0
 global NativeDropRearmUntil := 0
-global NativeDropBridgeSilentMode := false
 global g_LastValidTrayMenu := []
 global g_IsUIVisibleTransitioning := false
 global g_ActivationApplyToken := 0
@@ -2433,6 +2432,9 @@ ApplyActivationRuntimeDeferred(mode, token) {
     try NormalizeCapsLockRuntimeForUiOpen()
     catch {
     }
+    try NativeDropBridge_Start()
+    catch {
+    }
     if (m = "hole") {
         try SetHoleRuntimeEnabled(true)
         try GDHO_Start()
@@ -2448,27 +2450,10 @@ ApplyActivationRuntimeDeferred(mode, token) {
         try NativeDropBridge_Start()
         catch {
         }
-        try NativeDropBridge_SetSilentMode(false, "runtime_hole")
-        catch {
-        }
         NMER_Log("activation", "runtime_hole_ready", "elapsed_ms=" . (A_TickCount - t0))
         return
     }
-    if (m = "disabled") {
-        try SetHoleRuntimeEnabled(false)
-        try NativeDropBridge_Stop()
-        catch {
-        }
-        try GDHO_Stop()
-        catch {
-        }
-        NMER_Log("activation", "runtime_disabled_ready", "elapsed_ms=" . (A_TickCount - t0))
-        return
-    }
     try SetHoleRuntimeEnabled(false)
-    try NativeDropBridge_SetSilentMode(true, "runtime_" . m)
-    catch {
-    }
     try GDHO_UnpinFromDesktop()
     catch {
     }
@@ -2767,19 +2752,17 @@ _WV2_BeginWarmupAfterEnv(*) {
 NativeDropBridge_Start() {
     global EnableNativeDropBridge, NativeDropBridgePID, NativeDropBridgeExe, NativeDropBridgeOut, NativeDropBridgeReadOffset
     global NativeDropBridgeUseCopyData, NativeDropBridgeCopyDataReady, NativeDropBridgeCopyDataTitle
-    global NativeDropBridgeStartTick, NativeDropBridgeCopyDataLastTick, NativeDropBridgeSilentMode
+    global NativeDropBridgeStartTick, NativeDropBridgeCopyDataLastTick
     t0 := A_TickCount
     if !EnableNativeDropBridge
         return
     if (NativeDropBridgePID && ProcessExist(NativeDropBridgePID)) {
-        NativeDropBridgeSilentMode := false
         SetTimer(NativeDropBridge_Poll, 250)
         SetTimer(NativeDropBridge_Watchdog, 180)
         return
     }
     if (existingPid := ProcessExist("native-drop-bridge.exe")) {
         NativeDropBridgePID := existingPid
-        NativeDropBridgeSilentMode := false
         SplitPath(NativeDropBridgeOut, , &outDir)
         if (outDir != "" && !DirExist(outDir))
             DirCreate(outDir)
@@ -2821,7 +2804,6 @@ NativeDropBridge_Start() {
             cmd .= ' --copydata --ahk-class "AutoHotkey" --ahk-title "' . NativeDropBridgeCopyDataTitle . '"'
         Run(cmd, A_ScriptDir, "Hide", &pid)
         NativeDropBridgePID := pid
-        NativeDropBridgeSilentMode := false
         NativeDropBridgeStartTick := A_TickCount
         NativeDropBridgeCopyDataLastTick := 0
         SetTimer(NativeDropBridge_Poll, 250)
@@ -2854,7 +2836,7 @@ NativeDropBridge_GetDropRect() {
 }
 
 NativeDropBridge_Stop() {
-    global NativeDropBridgePID, NativeDropBridgeCopyDataLastTick, NativeDropBridgeStartTick, NativeDropBridgeSilentMode
+    global NativeDropBridgePID, NativeDropBridgeCopyDataLastTick, NativeDropBridgeStartTick
     t0 := A_TickCount
     try SetTimer(NativeDropBridge_Poll, 0)
     try SetTimer(NativeDropBridge_Watchdog, 0)
@@ -2864,7 +2846,6 @@ NativeDropBridge_Stop() {
     NativeDropBridgePID := 0
     NativeDropBridgeCopyDataLastTick := 0
     NativeDropBridgeStartTick := 0
-    NativeDropBridgeSilentMode := false
     NMER_Log("activation", "native_drop_bridge_stopped", "elapsed_ms=" . (A_TickCount - t0))
 }
 
@@ -2887,9 +2868,7 @@ NativeDropBridge_InitCopyDataReceiver() {
 }
 
 NativeDropBridge_OnCopyData(wParam, lParam, msg, hwnd) {
-    global NativeDropBridgeCopyDataGui, NativeDropBridgeLastEvent, NativeDropLastEventTick, NativeDropBridgeCopyDataLastTick, NativeDropBridgeSilentMode
-    if NativeDropBridgeSilentMode
-        return 1
+    global NativeDropBridgeCopyDataGui, NativeDropBridgeLastEvent, NativeDropLastEventTick, NativeDropBridgeCopyDataLastTick
     try {
         if !IsObject(NativeDropBridgeCopyDataGui)
             return 0
@@ -2923,8 +2902,8 @@ NativeDropBridge_OnCopyData(wParam, lParam, msg, hwnd) {
 NativeDropBridge_Poll(*) {
     global NativeDropBridgeOut, NativeDropBridgeReadOffset, NativeDropBridgeLastEvent, NativeDropLastEventTick
     global NativeDropBridgeUseCopyData, NativeDropBridgeCopyDataReady, NativeDropBridgeCopyDataLastTick, NativeDropBridgeStartTick, NativeDropBridgeCopyDataFallbackMs
-    global g_HoleRuntimeEnabled, NativeDropBridgeSilentMode
-    if (!g_HoleRuntimeEnabled || NativeDropBridgeSilentMode)
+    global g_HoleRuntimeEnabled
+    if !g_HoleRuntimeEnabled
         return
     if (NativeDropBridgeUseCopyData && NativeDropBridgeCopyDataReady) {
         nowTick := A_TickCount
@@ -2969,8 +2948,8 @@ NativeDropBridge_Poll(*) {
 NativeDropBridge_TriggerHolePulse(evt) {
     global EnableHoleOverlayOnNativeDrop, NativeDropSessionActive, NativeDropHideDelayMs, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
     global NativeDropLastStartTick, NativeDropRearmUntil
-    global g_HoleRuntimeEnabled, NativeDropBridgeSilentMode
-    if (!g_HoleRuntimeEnabled || NativeDropBridgeSilentMode)
+    global g_HoleRuntimeEnabled
+    if !g_HoleRuntimeEnabled
         return
     if !IsHoleRuntimeEnabledByActivationMode()
         return
@@ -3224,8 +3203,8 @@ NativeDropBridge_DelayedHide(*) {
 NativeDropBridge_DragSessionTick(*) {
     global NativeDropSessionActive, NativeDropSessionPayload, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
     global NativeDropLastTickMouseX, NativeDropLastTickMouseY, NativeDropLastStartTick
-    global g_HoleRuntimeEnabled, NativeDropBridgeSilentMode
-    if (!g_HoleRuntimeEnabled || NativeDropBridgeSilentMode)
+    global g_HoleRuntimeEnabled
+    if !g_HoleRuntimeEnabled
         return
     if !NativeDropSessionActive
         return
@@ -3260,8 +3239,8 @@ NativeDropBridge_DragSessionTick(*) {
 
 NativeDropBridge_Watchdog(*) {
     global NativeDropSessionActive, NativeDropLastEventTick, NativeDropLastTickMouseX, NativeDropLastTickMouseY, NativeDropLastStartTick
-    global g_HoleRuntimeEnabled, NativeDropBridgeSilentMode
-    if (!g_HoleRuntimeEnabled || NativeDropBridgeSilentMode)
+    global g_HoleRuntimeEnabled
+    if !g_HoleRuntimeEnabled
         return
     if !NativeDropSessionActive
         return
@@ -3321,10 +3300,10 @@ NativeDropBridge_CaptureTextSeed() {
     return t
 }
 
-NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := false) {
+NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300) {
     global NativeDropSessionActive, NativeDropOverHole, NativeDropWasOverHole, NativeDropSeedText
     global NativeDropLastTickMouseX, NativeDropLastTickMouseY
-    global NativeDropSessionPayload, NativeDropLastEventTick, NativeDropLastStartTick, NativeDropRearmUntil, NativeDropBridgeSilentMode
+    global NativeDropSessionPayload, NativeDropLastEventTick, NativeDropLastStartTick, NativeDropRearmUntil
     try NativeDropDiag_Log("reset_session_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
     NativeDropSessionActive := false
     NativeDropSessionPayload := "text"
@@ -3353,19 +3332,12 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
     try NativeDropDiag_Log("reset_session_step clickthrough_begin reason=" . reason)
     try GDHO_SetClickThrough(true)
     try NativeDropDiag_Log("reset_session_step clickthrough_done reason=" . reason)
-    NativeDropBridgeSilentMode := !!silentMode
-    try NativeDropDiag_Log("reset_session_step silent_mode=" . (NativeDropBridgeSilentMode ? "1" : "0") . " reason=" . reason)
-    if (!NativeDropBridgeSilentMode) {
-        try NativeDropDiag_Log("reset_session_step start_bridge_begin reason=" . reason)
-        try NativeDropBridge_Start()
-        try NativeDropDiag_Log("reset_session_step start_bridge_done reason=" . reason)
-    }
+    ; Keep the bridge resident; only toggle active/silent state through the runtime API.
+    try NativeDropDiag_Log("reset_session_step start_bridge_begin reason=" . reason)
+    try NativeDropBridge_Start()
+    try NativeDropDiag_Log("reset_session_step start_bridge_done reason=" . reason)
     try NativeDropDiag_Log("reset_session_step js_begin reason=" . reason)
-    if (NativeDropBridgeSilentMode) {
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'reset', dispatch: 'silent_on:" . reason . "', active: 0, overHole: 0, wasOverHole: 0, payload: '-' })")
-    } else {
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'reset', dispatch: '" . reason . "', active: 0, overHole: 0, wasOverHole: 0, payload: '-' })")
-    }
+    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'reset', dispatch: '" . reason . "', active: 0, overHole: 0, wasOverHole: 0, payload: '-' })")
     try NativeDropDiag_Log("reset_session_step js_done reason=" . reason)
     if (reason != "")
         try NativeDropDiag_Log("route reset_session reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
@@ -3386,19 +3358,13 @@ NativeDropBridge_DeferredHideFrontendAndOverlay(reason := "") {
     try NativeDropDiag_Log("reset_session_step hide_overlay_async_done reason=" . reason)
 }
 
-NativeDropBridge_SetSilentMode(enabled, reason := "") {
-    global NativeDropBridgeSilentMode
-    NativeDropBridgeSilentMode := !!enabled
-    try NativeDropDiag_Log("bridge_silent_mode " . (NativeDropBridgeSilentMode ? "on" : "off") . " reason=" . reason)
+NativeDropBridge_ResetSessionAsync(reason := "", hideDelayMs := 300) {
+    SetTimer((*) => NativeDropBridge_ResetSessionAsyncRun(reason, hideDelayMs), -1)
 }
 
-NativeDropBridge_ResetSessionAsync(reason := "", hideDelayMs := 300, silentMode := false) {
-    SetTimer((*) => NativeDropBridge_ResetSessionAsyncRun(reason, hideDelayMs, silentMode), -1)
-}
-
-NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMode := false) {
+NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300) {
     try NativeDropDiag_Log("reset_session_async_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
-    try NativeDropBridge_ResetSession(reason, hideDelayMs, silentMode)
+    try NativeDropBridge_ResetSession(reason, hideDelayMs)
     catch as err {
         try NativeDropDiag_Log("reset_session_async_error reason=" . reason . " msg=" . err.Message)
     }
@@ -3952,12 +3918,10 @@ ShowConfigGUI_Safe() {
     try GDHO_SetClickThrough(true)
     catch {
     }
-    ; Keep the old stable order here: stop the native bridge first, then clear the overlay.
-    ; The newer silent reset path caused the settings WebView to lose its normal close/load flow.
-    try NativeDropBridge_Stop()
+    try GDHO_Hide()
     catch {
     }
-    try GDHO_Stop()
+    try NativeDropBridge_ResetSessionAsync("open_config_safe", 0)
     catch {
     }
     try HideFloatingToolbar()

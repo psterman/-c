@@ -706,6 +706,11 @@ GDHO_HideOverlay() {
     GDHO_VISIBLE := false
 }
 
+GDHO_Hide() {
+    GDHO_HideFrontend()
+    GDHO_HideOverlay()
+}
+
 GDHO_DockHostWhenHidden() {
     global GDHO_GUI, GDHO_HIDE_DOCK_ENABLED, GDHO_HIDE_DOCK_EDGE, GDHO_HIDE_DOCK_MARGIN
     global GDHO_HOST_W, GDHO_HOST_H, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y
