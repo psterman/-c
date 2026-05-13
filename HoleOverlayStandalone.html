@@ -255,13 +255,13 @@
         color-mix(in srgb, var(--ai-yellow) 60%, transparent) 50%,
         color-mix(in srgb, var(--ai-red) 64%, transparent) 75%,
         color-mix(in srgb, var(--ai-blue) 68%, transparent) 100%);
-      opacity: calc(.08 + var(--p) * .22);
+      opacity: calc(.05 + var(--p) * .42);
       transform: translateX(-50%) scale(calc(.94 + var(--p) * .12));
       animation: ringOrbit var(--aura-speed) linear infinite, auraBreathSoft 4.4s ease-in-out infinite;
     }
     .safe-mode .aura {
       filter: none;
-      opacity: calc(.08 + var(--p) * .24);
+      opacity: calc(.06 + var(--p) * .46);
     }
     .ring {
       bottom: 24px; width: 60%; height: 27%;
@@ -269,7 +269,7 @@
       background:
         radial-gradient(ellipse at center, rgba(255,255,255,0) 66%, rgba(255,255,255,.02) 74%, rgba(255,255,255,0) 100%),
         conic-gradient(from var(--ring-angle), var(--ai-blue), var(--ai-green), var(--ai-yellow), var(--ai-red), var(--ai-blue));
-      opacity: calc(.28 + var(--p) * .72);
+      opacity: calc(.18 + var(--p) * .82);
       transform: translateX(-50%) scale(calc(.92 + var(--p) * .08));
       box-shadow:
         0 0 calc(4px + var(--p) * 6px) color-mix(in srgb, var(--ai-blue) 20%, transparent),
@@ -291,13 +291,13 @@
         0 0 calc(12px + var(--p) * 12px) color-mix(in srgb, var(--ai-green) 16%, transparent);
     }
     .near .aura {
-      opacity: calc(.08 + var(--p) * .2);
+      opacity: calc(.05 + var(--p) * .38);
       filter: blur(11px) saturate(.84);
     }
     .well {
       bottom: 29px; width: 45%; height: 17%;
       background: radial-gradient(ellipse at 50% 52%, var(--well-1) 0%, var(--well-2) 44%, var(--well-3) 100%);
-      opacity: calc(.11 + var(--p) * .34);
+      opacity: calc(.08 + var(--p) * .5);
       transform: translateX(-50%) scale(calc(.99 - var(--p) * .06));
     }
     .preview-core {
@@ -848,7 +848,7 @@
         root.classList.add(m === 'starry' ? 'style-starry' : 'style-ring');
       }
       window.HoleOverlay = {
-        show: function (payload) { show(payload); setP(0.2); },
+        show: function (payload) { show(payload); setP(0.04); },
         setStyle: function (o) {
           if (!o) return;
           setStyle(o.scale, o.animLevel);
@@ -874,14 +874,19 @@
           lastHostUpdateTs = nowHost;
           dragUpdateActive = true;
           lastUpdateTick = Date.now();
-          if (o && typeof o.proximity === 'number') setP(o.proximity);
+          if (o && typeof o.proximity === 'number') {
+            var prox = Number(o.proximity);
+            if (!Number.isFinite(prox)) prox = 0;
+            prox = Math.max(0, Math.min(1, prox));
+            setP(Math.pow(prox, 0.72));
+          }
           else if (o && typeof o.x === 'number' && typeof o.y === 'number') {
             var cx = pos.x + 90;
             var cy = pos.y + 150;
             var dx = o.x - cx, dy = o.y - cy;
             var d = Math.sqrt(dx * dx + dy * dy);
             var r = 260;
-            setP(1 - d / r);
+            setP(Math.max(0, Math.min(1, Math.pow(1 - d / r, 0.72))));
           } else setP(0.45);
           var enterNear = 0.62;
           var leaveNear = 0.48;

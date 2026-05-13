@@ -183,6 +183,7 @@ global UseWebViewSettings := true  ; 恢复 WebView 设置页
 global g_ConfigOpenInFlight := false
 global g_ConfigOpenInFlightSince := 0
 global g_ConfigPreferWebViewOnly := true
+global g_ConfigOpenEntryMode := ""
 global ConfigWebViewMode := false
 global ConfigWV2Ctrl := 0
 global ConfigWV2 := 0
@@ -3234,6 +3235,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
         try {
             endX := ""
             endY := ""
+            strictOverHole := false
             try endX := Integer(evt["x"])
             try endY := Integer(evt["y"])
             if (endX != "" && endY != "") {
@@ -3241,6 +3243,10 @@ NativeDropBridge_TriggerHolePulse(evt) {
                 dyEnd := Integer(endY) - Integer(NativeDropStartMouseY)
                 NativeDropCurrentMoveDistance := Max(NativeDropCurrentMoveDistance, Sqrt(dxEnd * dxEnd + dyEnd * dyEnd))
                 NativeDropOverHole := GDHO_IsPointInHole(endX, endY, 30)
+                ; Commit must land in a tighter core zone, not the wide hover assist zone.
+                strictOverHole := GDHO_IsPointInHole(endX, endY, -26)
+            } else {
+                strictOverHole := false
             }
             try NativeDropDiag_Log("route drag_end over_hole=" . (NativeDropOverHole ? "1" : "0") . " payload=" . NativeDropSessionPayload)
             try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_end', dispatch: 'over_hole=" . (NativeDropOverHole ? "1" : "0") . "', active: 1, overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
@@ -3249,13 +3255,16 @@ NativeDropBridge_TriggerHolePulse(evt) {
             canCommit := NativeDropMovedEnough
                 && GDHO_HOVER_VALID
                 && NativeDropOverHole
+                && strictOverHole
+                && NativeDropWasOverHole
+                && NativeDropValidEnterHole
                 && (NativeDropCurrentMoveDistance >= NativeDropMinCommitDistancePx)
                 && (sinceStartMs >= NativeDropMinCommitMs)
                 && (dwellMs >= NativeDropMinDwellInHoleMs)
             if (NativeDropSessionPayload = "text" && canCommit)
                 NativeDropBridge_TryOpenSearchCenterFromSelection(NativeDropSeedText)
             else if (NativeDropSessionPayload = "text")
-                try NativeDropDiag_Log("route drag_end_text action=blocked dist=" . Round(NativeDropCurrentMoveDistance, 1) . " min_dist=" . NativeDropMinCommitDistancePx . " ms=" . sinceStartMs . " min_ms=" . NativeDropMinCommitMs . " hover_valid=" . (GDHO_HOVER_VALID ? "1" : "0") . " over_hole=" . (NativeDropOverHole ? "1" : "0") . " dwell_ms=" . dwellMs . " min_dwell=" . NativeDropMinDwellInHoleMs)
+                try NativeDropDiag_Log("route drag_end_text action=blocked dist=" . Round(NativeDropCurrentMoveDistance, 1) . " min_dist=" . NativeDropMinCommitDistancePx . " ms=" . sinceStartMs . " min_ms=" . NativeDropMinCommitMs . " hover_valid=" . (GDHO_HOVER_VALID ? "1" : "0") . " over_hole=" . (NativeDropOverHole ? "1" : "0") . " strict_over_hole=" . (strictOverHole ? "1" : "0") . " dwell_ms=" . dwellMs . " min_dwell=" . NativeDropMinDwellInHoleMs)
         } catch {
         }
         NativeDropBridge_ResetSessionAsync("drag_end", NativeDropHideDelayMs)
@@ -4376,7 +4385,7 @@ NormalizeCapsLockRuntimeForUiOpen() {
 }
 
 ShowConfigGUI_Safe() {
-    global g_ConfigWebViewOpenStartTick, g_ConfigOpenInFlight, g_ConfigOpenInFlightSince, g_ConfigUserClosedTick
+    global g_ConfigWebViewOpenStartTick, g_ConfigOpenInFlight, g_ConfigOpenInFlightSince, g_ConfigUserClosedTick, g_ConfigOpenEntryMode
     NMER_Log("ui", "open_config_safe_begin", "")
     nowTick := A_TickCount
     if (g_ConfigOpenInFlight && (nowTick - g_ConfigOpenInFlightSince) < 2500) {
@@ -4386,6 +4395,9 @@ ShowConfigGUI_Safe() {
     g_ConfigOpenInFlight := true
     g_ConfigOpenInFlightSince := nowTick
     g_ConfigUserClosedTick := 0
+    try g_ConfigOpenEntryMode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+    catch
+        g_ConfigOpenEntryMode := "toolbar"
     try NormalizeCapsLockRuntimeForUiOpen()
     catch {
     }
@@ -5506,11 +5518,21 @@ Esc:: {
 }
 
 RestoreActivationRuntimeAfterConfigClose(*) {
+    global g_ConfigOpenEntryMode, TrayMenuCustomFailStreak, TrayMenuSuppressNativeFallbackUntil
     try {
-        mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+        mode := ""
+        try mode := NormalizeAppearanceActivationMode(g_ConfigOpenEntryMode)
+        catch
+            mode := ""
+        if (mode != "hole" && mode != "toolbar" && mode != "tray")
+            mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
         ApplyActivationRuntimeAsync(mode)
+        TrayMenuCustomFailStreak := 0
+        TrayMenuSuppressNativeFallbackUntil := A_TickCount + 1800
+        try UpdateTrayMenu()
     } catch {
     }
+    g_ConfigOpenEntryMode := ""
 }
 
 #HotIf GetCapsLockState()

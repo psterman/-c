@@ -11828,3 +11828,330 @@
 [2026-05-13 23:25:07] reset_session_step hide_frontend_async_done reason=search_center_exit
 [2026-05-13 23:25:07] reset_session_step hide_overlay_async_begin reason=search_center_exit
 [2026-05-13 23:25:07] reset_session_step hide_overlay_async_done reason=search_center_exit
+[2026-05-13 23:26:34] gdho poll slow ms=47 active=0 ldown=0
+[2026-05-13 23:27:33] gdho poll slow ms=31 active=0 ldown=0
+[2026-05-13 23:27:56] gdho poll slow ms=812 active=0 ldown=0
+[2026-05-13 23:31:17] evt {"at":"2026-05-13T23:31:17+08:00","kind":"drag_start","payloadKind":"none","x":303,"y":694}
+[2026-05-13 23:38:24] gdho start begin
+[2026-05-13 23:38:24] gdho start armed poll_ms=48
+[2026-05-13 23:38:25] bridge_silent_mode off reason=runtime_hole
+[2026-05-13 23:38:27] gdho webview_created begin
+[2026-05-13 23:38:29] evt {"at":"2026-05-13T23:38:29+08:00","kind":"drag_start","payloadKind":"none","x":272,"y":614}
+[2026-05-13 23:38:29] route weak_preview action=show_gate payload=text
+[2026-05-13 23:38:29] route kind=drag_start action=arm_wait_move payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-13 23:38:29] route drag_tick action=move_gate_passed dist=695.8
+[2026-05-13 23:38:29] gdho start begin
+[2026-05-13 23:38:29] bridge_silent_mode off reason=runtime_hole
+[2026-05-13 23:38:31] route release_fallback action=wait_drag_end
+[2026-05-13 23:38:31] evt {"at":"2026-05-13T23:38:31+08:00","kind":"drag_end","payloadKind":"none","x":328,"y":610}
+[2026-05-13 23:38:31] reset_session_async_begin reason=drag_end hide_ms=1800
+[2026-05-13 23:38:31] reset_session_begin reason=drag_end hide_ms=1800
+[2026-05-13 23:38:31] reset_session_step state_cleared reason=drag_end
+[2026-05-13 23:38:31] reset_session_step drag_tick_stopped reason=drag_end
+[2026-05-13 23:38:31] reset_session_step delayed_hide_begin reason=drag_end hide_ms=1800
+[2026-05-13 23:38:31] reset_session_step delayed_hide_done reason=drag_end hide_ms=1800
+[2026-05-13 23:38:31] reset_session_step clickthrough_begin reason=drag_end
+[2026-05-13 23:38:31] reset_session_step clickthrough_done reason=drag_end
+[2026-05-13 23:38:31] reset_session_step silent_mode=0 reason=drag_end
+[2026-05-13 23:38:31] reset_session_step start_bridge_begin reason=drag_end
+[2026-05-13 23:38:31] reset_session_step start_bridge_done reason=drag_end
+[2026-05-13 23:38:31] reset_session_step js_begin reason=drag_end
+[2026-05-13 23:38:31] reset_session_step js_done reason=drag_end
+[2026-05-13 23:38:31] route reset_session reason=drag_end hide_ms=1800
+[2026-05-13 23:38:31] reset_session_async_done reason=drag_end hide_ms=1800
+[2026-05-13 23:38:31] reset_session_async_begin reason=caps_f_search hide_ms=0
+[2026-05-13 23:38:31] reset_session_begin reason=caps_f_search hide_ms=0
+[2026-05-13 23:38:31] reset_session_step state_cleared reason=caps_f_search
+[2026-05-13 23:38:31] reset_session_step drag_tick_stopped reason=caps_f_search
+[2026-05-13 23:38:31] reset_session_step hide_frontend_queued reason=caps_f_search
+[2026-05-13 23:38:31] reset_session_step clickthrough_begin reason=caps_f_search
+[2026-05-13 23:38:31] reset_session_step clickthrough_done reason=caps_f_search
+[2026-05-13 23:38:31] reset_session_step silent_mode=0 reason=caps_f_search
+[2026-05-13 23:38:31] reset_session_step start_bridge_begin reason=caps_f_search
+[2026-05-13 23:38:31] reset_session_step start_bridge_done reason=caps_f_search
+[2026-05-13 23:38:31] reset_session_step js_begin reason=caps_f_search
+[2026-05-13 23:38:31] reset_session_step js_done reason=caps_f_search
+[2026-05-13 23:38:31] route reset_session reason=caps_f_search hide_ms=0
+[2026-05-13 23:38:31] reset_session_async_done reason=caps_f_search hide_ms=0
+[2026-05-13 23:38:31] reset_session_step hide_frontend_async_begin reason=caps_f_search
+[2026-05-13 23:38:31] reset_session_step hide_frontend_async_done reason=caps_f_search
+[2026-05-13 23:38:31] reset_session_step hide_overlay_async_begin reason=caps_f_search
+[2026-05-13 23:38:31] reset_session_step hide_overlay_async_done reason=caps_f_search
+[2026-05-13 23:38:32] gdho navigation_completed ok=0
+[2026-05-13 23:38:33] route delayed_hide action=hide_now
+[2026-05-13 23:38:34] gdho navigation_completed ok=0
+[2026-05-13 23:38:34] gdho navigation_completed ok=0
+[2026-05-13 23:38:35] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-13 23:38:35] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-13 23:38:35] reset_session_step state_cleared reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step hide_frontend_queued reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step start_bridge_begin reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step start_bridge_done reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step hide_frontend_async_begin reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step hide_frontend_async_done reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step hide_overlay_async_begin reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step hide_overlay_async_done reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step js_begin reason=search_center_exit
+[2026-05-13 23:38:35] reset_session_step js_done reason=search_center_exit
+[2026-05-13 23:38:35] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-13 23:38:35] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-13 23:38:36] gdho navigation_completed ok=1
+[2026-05-13 23:38:36] evt {"at":"2026-05-13T23:38:36+08:00","kind":"drag_start","payloadKind":"none","x":200,"y":475}
+[2026-05-13 23:38:36] route weak_preview action=show_gate payload=text
+[2026-05-13 23:38:36] route kind=drag_start action=arm_wait_move payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-13 23:38:37] route drag_tick action=move_gate_passed dist=544.5
+[2026-05-13 23:38:37] route drag_tick action=promote_on_enter payload=text
+[2026-05-13 23:38:42] evt {"at":"2026-05-13T23:38:42+08:00","kind":"drag_end","payloadKind":"none","x":518,"y":473}
+[2026-05-13 23:38:42] reset_session_async_begin reason=drag_end hide_ms=1800
+[2026-05-13 23:38:42] reset_session_begin reason=drag_end hide_ms=1800
+[2026-05-13 23:38:42] reset_session_step state_cleared reason=drag_end
+[2026-05-13 23:38:42] reset_session_step drag_tick_stopped reason=drag_end
+[2026-05-13 23:38:42] reset_session_step delayed_hide_begin reason=drag_end hide_ms=1800
+[2026-05-13 23:38:42] reset_session_step delayed_hide_done reason=drag_end hide_ms=1800
+[2026-05-13 23:38:42] reset_session_step clickthrough_begin reason=drag_end
+[2026-05-13 23:38:42] reset_session_step clickthrough_done reason=drag_end
+[2026-05-13 23:38:42] reset_session_step silent_mode=0 reason=drag_end
+[2026-05-13 23:38:42] reset_session_step start_bridge_begin reason=drag_end
+[2026-05-13 23:38:42] reset_session_step start_bridge_done reason=drag_end
+[2026-05-13 23:38:42] reset_session_step js_begin reason=drag_end
+[2026-05-13 23:38:42] reset_session_step js_done reason=drag_end
+[2026-05-13 23:38:42] route reset_session reason=drag_end hide_ms=1800
+[2026-05-13 23:38:42] reset_session_async_done reason=drag_end hide_ms=1800
+[2026-05-13 23:38:42] reset_session_async_begin reason=caps_f_search hide_ms=0
+[2026-05-13 23:38:42] reset_session_begin reason=caps_f_search hide_ms=0
+[2026-05-13 23:38:42] reset_session_step state_cleared reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step drag_tick_stopped reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step hide_frontend_queued reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step clickthrough_begin reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step clickthrough_done reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step silent_mode=0 reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step start_bridge_begin reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step start_bridge_done reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step js_begin reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step hide_frontend_async_begin reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step hide_frontend_async_done reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step hide_overlay_async_begin reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step hide_overlay_async_done reason=caps_f_search
+[2026-05-13 23:38:42] reset_session_step js_done reason=caps_f_search
+[2026-05-13 23:38:42] route reset_session reason=caps_f_search hide_ms=0
+[2026-05-13 23:38:42] reset_session_async_done reason=caps_f_search hide_ms=0
+[2026-05-13 23:38:43] route release_fallback action=wait_drag_end
+[2026-05-13 23:38:44] route delayed_hide action=hide_now
+[2026-05-13 23:38:44] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-13 23:38:44] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-13 23:38:44] reset_session_step state_cleared reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step hide_frontend_queued reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step start_bridge_begin reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step start_bridge_done reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step js_begin reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step hide_frontend_async_begin reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step hide_frontend_async_done reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step hide_overlay_async_begin reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step hide_overlay_async_done reason=search_center_exit
+[2026-05-13 23:38:44] reset_session_step js_done reason=search_center_exit
+[2026-05-13 23:38:44] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-13 23:38:44] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-13 23:38:47] evt {"at":"2026-05-13T23:38:46+08:00","kind":"drag_start","payloadKind":"none","x":158,"y":683}
+[2026-05-13 23:38:47] route weak_preview action=show_gate payload=text
+[2026-05-13 23:38:47] route kind=drag_start action=arm_wait_move payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-13 23:38:47] route drag_tick action=move_gate_passed dist=741.5
+[2026-05-13 23:38:48] route release_fallback action=wait_drag_end
+[2026-05-13 23:38:48] evt {"at":"2026-05-13T23:38:48+08:00","kind":"drag_end","payloadKind":"none","x":431,"y":689}
+[2026-05-13 23:38:48] reset_session_async_begin reason=drag_end hide_ms=1800
+[2026-05-13 23:38:48] reset_session_begin reason=drag_end hide_ms=1800
+[2026-05-13 23:38:48] reset_session_step state_cleared reason=drag_end
+[2026-05-13 23:38:48] reset_session_step drag_tick_stopped reason=drag_end
+[2026-05-13 23:38:48] reset_session_step delayed_hide_begin reason=drag_end hide_ms=1800
+[2026-05-13 23:38:48] reset_session_step delayed_hide_done reason=drag_end hide_ms=1800
+[2026-05-13 23:38:48] reset_session_step clickthrough_begin reason=drag_end
+[2026-05-13 23:38:48] reset_session_step clickthrough_done reason=drag_end
+[2026-05-13 23:38:48] reset_session_step silent_mode=0 reason=drag_end
+[2026-05-13 23:38:48] reset_session_step start_bridge_begin reason=drag_end
+[2026-05-13 23:38:48] reset_session_step start_bridge_done reason=drag_end
+[2026-05-13 23:38:48] reset_session_step js_begin reason=drag_end
+[2026-05-13 23:38:48] reset_session_step js_done reason=drag_end
+[2026-05-13 23:38:48] route reset_session reason=drag_end hide_ms=1800
+[2026-05-13 23:38:48] reset_session_async_done reason=drag_end hide_ms=1800
+[2026-05-13 23:38:48] reset_session_async_begin reason=caps_f_search hide_ms=0
+[2026-05-13 23:38:48] reset_session_begin reason=caps_f_search hide_ms=0
+[2026-05-13 23:38:48] reset_session_step state_cleared reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step drag_tick_stopped reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step hide_frontend_queued reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step clickthrough_begin reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step clickthrough_done reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step silent_mode=0 reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step start_bridge_begin reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step start_bridge_done reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step js_begin reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step hide_frontend_async_begin reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step hide_frontend_async_done reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step hide_overlay_async_begin reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step hide_overlay_async_done reason=caps_f_search
+[2026-05-13 23:38:48] reset_session_step js_done reason=caps_f_search
+[2026-05-13 23:38:48] route reset_session reason=caps_f_search hide_ms=0
+[2026-05-13 23:38:48] reset_session_async_done reason=caps_f_search hide_ms=0
+[2026-05-13 23:38:50] route delayed_hide action=hide_now
+[2026-05-13 23:38:51] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-13 23:38:51] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-13 23:38:51] reset_session_step state_cleared reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step hide_frontend_queued reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step start_bridge_begin reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step start_bridge_done reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step js_begin reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step hide_frontend_async_begin reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step hide_frontend_async_done reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step hide_overlay_async_begin reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step hide_overlay_async_done reason=search_center_exit
+[2026-05-13 23:38:51] reset_session_step js_done reason=search_center_exit
+[2026-05-13 23:38:51] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-13 23:38:51] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-14 07:05:06] gdho start begin
+[2026-05-14 07:05:06] gdho start armed poll_ms=48
+[2026-05-14 07:05:06] bridge_silent_mode off reason=runtime_hole
+[2026-05-14 07:05:07] gdho webview_created begin
+[2026-05-14 07:05:09] evt {"at":"2026-05-14T07:05:07+08:00","kind":"bridge_ready","x":3294,"y":786,"w":170,"h":210}
+[2026-05-14 07:05:09] gdho poll slow ms=47 active=0 ldown=0
+[2026-05-14 07:05:13] gdho start begin
+[2026-05-14 07:05:13] bridge_silent_mode off reason=runtime_hole
+[2026-05-14 07:05:14] gdho navigation_completed ok=0
+[2026-05-14 07:05:15] gdho navigation_completed ok=0
+[2026-05-14 07:05:15] gdho navigation_completed ok=0
+[2026-05-14 07:05:15] gdho navigation_completed ok=1
+[2026-05-14 07:06:09] evt {"at":"2026-05-14T07:06:09+08:00","kind":"drag_start","payloadKind":"none","x":2160,"y":556}
+[2026-05-14 07:12:26] gdho start begin
+[2026-05-14 07:12:26] gdho start armed poll_ms=48
+[2026-05-14 07:12:26] bridge_silent_mode off reason=runtime_hole
+[2026-05-14 07:12:28] evt {"at":"2026-05-14T07:12:26+08:00","kind":"bridge_ready","x":3294,"y":786,"w":170,"h":210}
+[2026-05-14 07:12:31] gdho start begin
+[2026-05-14 07:12:31] bridge_silent_mode off reason=runtime_hole
+[2026-05-14 07:12:33] gdho webview_created begin
+[2026-05-14 07:12:36] gdho navigation_completed ok=0
+[2026-05-14 07:12:39] gdho navigation_completed ok=1
+[2026-05-14 07:12:45] evt {"at":"2026-05-14T07:12:45+08:00","kind":"drag_start","payloadKind":"none","x":416,"y":405}
+[2026-05-14 07:16:06] gdho start begin
+[2026-05-14 07:16:06] gdho start armed poll_ms=48
+[2026-05-14 07:16:06] bridge_silent_mode off reason=runtime_hole
+[2026-05-14 07:16:08] gdho webview_created begin
+[2026-05-14 07:16:09] evt {"at":"2026-05-14T07:16:06+08:00","kind":"bridge_ready","x":3294,"y":786,"w":170,"h":210}
+[2026-05-14 07:16:11] gdho start begin
+[2026-05-14 07:16:11] bridge_silent_mode off reason=runtime_hole
+[2026-05-14 07:16:11] gdho navigation_completed ok=0
+[2026-05-14 07:16:12] gdho navigation_completed ok=0
+[2026-05-14 07:16:14] gdho navigation_completed ok=0
+[2026-05-14 07:16:16] evt {"at":"2026-05-14T07:16:16+08:00","kind":"drag_start","payloadKind":"none","x":323,"y":644}
+[2026-05-14 07:16:16] route weak_preview action=show_gate payload=text
+[2026-05-14 07:16:16] route kind=drag_start action=arm_wait_move payload=none mapped=text fallback=class=Chrome_WidgetWin_1
+[2026-05-14 07:16:16] route drag_tick action=move_gate_passed dist=680.2
+[2026-05-14 07:16:19] gdho navigation_completed ok=1
+[2026-05-14 07:16:20] evt {"at":"2026-05-14T07:16:20+08:00","kind":"drag_end","payloadKind":"none","x":245,"y":626}
+[2026-05-14 07:16:34] gdho stop begin
+[2026-05-14 07:16:34] gdho stop done
+[2026-05-14 07:16:34] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-14 07:16:34] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-14 07:16:34] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-14 07:16:34] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-14 07:16:34] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-14 07:16:34] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-14 07:16:34] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-14 07:16:34] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-14 07:16:34] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-14 07:16:34] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-14 07:16:34] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-14 07:16:34] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-14 07:16:34] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-14 07:16:34] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-14 07:16:34] reset_session_step js_begin reason=tray_open_ui
+[2026-05-14 07:16:36] gdho start begin
+[2026-05-14 07:16:36] gdho start armed poll_ms=48
+[2026-05-14 07:16:36] bridge_silent_mode off reason=runtime_hole
+[2026-05-14 07:16:42] gdho stop begin
+[2026-05-14 07:16:42] gdho stop done
+[2026-05-14 07:16:43] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-14 07:16:43] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-14 07:16:43] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-14 07:16:43] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-14 07:16:43] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-14 07:16:43] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-14 07:16:43] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-14 07:16:43] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-14 07:16:43] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-14 07:16:43] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-14 07:16:43] reset_session_step js_begin reason=tray_open_ui
+[2026-05-14 07:29:19] gdho start begin
+[2026-05-14 07:29:19] gdho start armed poll_ms=48
+[2026-05-14 07:29:19] bridge_silent_mode off reason=runtime_hole
+[2026-05-14 07:29:19] gdho webview_created begin
+[2026-05-14 07:29:23] gdho navigation_completed ok=0
+[2026-05-14 07:29:23] gdho navigation_completed ok=0
+[2026-05-14 07:29:23] gdho navigation_completed ok=0
+[2026-05-14 07:29:24] gdho start begin
+[2026-05-14 07:29:24] bridge_silent_mode off reason=runtime_hole
+[2026-05-14 07:29:26] gdho navigation_completed ok=1
+[2026-05-14 07:29:32] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-14 07:29:32] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-14 07:29:32] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-14 07:29:32] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-14 07:29:32] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-14 07:29:32] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-14 07:29:32] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-14 07:29:32] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-14 07:29:32] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-14 07:29:32] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-14 07:29:32] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-14 07:29:32] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-14 07:29:32] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-14 07:29:32] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-14 07:29:32] reset_session_step js_begin reason=tray_open_ui
+[2026-05-14 07:29:34] evt {"at":"2026-05-14T07:29:32+08:00","kind":"bridge_ready","x":3159,"y":786,"w":170,"h":210}
+[2026-05-14 07:29:35] gdho stop begin
+[2026-05-14 07:29:35] gdho stop done
+[2026-05-14 07:29:36] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-14 07:29:36] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-14 07:29:36] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-14 07:29:36] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-14 07:29:36] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-14 07:29:36] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-14 07:29:36] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-14 07:29:36] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-14 07:29:36] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-14 07:29:36] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-14 07:29:36] reset_session_step js_begin reason=tray_open_ui
+[2026-05-14 07:29:36] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-14 07:29:36] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-14 07:29:36] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-14 07:29:36] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-14 07:29:52] gdho start begin
+[2026-05-14 07:29:52] gdho start armed poll_ms=48
+[2026-05-14 07:29:52] bridge_silent_mode off reason=runtime_hole
+[2026-05-14 07:29:56] gdho stop begin
+[2026-05-14 07:29:56] gdho stop done
+[2026-05-14 07:29:56] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-14 07:29:56] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-14 07:29:56] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-14 07:29:56] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-14 07:29:56] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-14 07:29:56] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-14 07:29:56] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-14 07:29:56] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-14 07:29:56] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-14 07:29:56] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-14 07:29:56] reset_session_step js_begin reason=tray_open_ui
+[2026-05-14 07:29:56] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-14 07:29:56] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-14 07:29:56] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-14 07:29:56] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-14 07:30:05] gdho start begin
+[2026-05-14 07:30:05] gdho start armed poll_ms=48
+[2026-05-14 07:30:05] bridge_silent_mode off reason=runtime_hole

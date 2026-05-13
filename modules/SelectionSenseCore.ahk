@@ -1477,8 +1477,24 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'selection_copy', dispatch: 'show:text', active: 1, overHole: 0, wasOverHole: 0, payload: 'text' })")
     try FloatingToolbar_ActivateSearchCenter()
     try FloatingToolbar_RequestSearchByKeyword(t)
-    try SetTimer((*) => GDHO_HideFrontend(), -900)
-    try SetTimer((*) => GDHO_HideOverlay(), -1200)
+    try SetTimer(SelectionSense_HideHoleAfterSelection, -2200)
+}
+
+SelectionSense_HideHoleAfterSelection(*) {
+    global NativeDropSessionActive
+    if GetKeyState("LButton", "P") {
+        try SetTimer(SelectionSense_HideHoleAfterSelection, -350)
+        return
+    }
+    try {
+        if NativeDropSessionActive {
+            try SetTimer(SelectionSense_HideHoleAfterSelection, -450)
+            return
+        }
+    } catch {
+    }
+    try GDHO_HideFrontend()
+    try GDHO_HideOverlay()
 }
 
 SelectionSense_EnsureMenuHost() {

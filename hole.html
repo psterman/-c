@@ -14,7 +14,7 @@
 
     :root {
       --p: 0;
-      --hole-alpha: 0.22;
+      --hole-alpha: 0.10;
       /* AI 娴佸厜鑹插僵鏉?(鍙傝€冩埅鍥鹃鏍? */
       --ai-red: #ea4335;
       --ai-yellow: #fbbc05;
@@ -134,7 +134,7 @@
         rgba(234, 67, 53, 0.5) 75%,
         rgba(66, 133, 244, 0.5) 100%
       );
-      opacity: calc(.3 + var(--p) * .5);
+      opacity: calc(.16 + var(--p) * .76);
       transform: translateX(-50%) scale(calc(.92 + var(--p) * .24));
       animation: spinHalo 4s linear infinite;
     }
@@ -143,7 +143,7 @@
     /* 榛戞礊杈圭紭鐨勬祦鍏夌幆 */
     .ring {
       bottom: 24px; width: 60%; height: 27%;
-      opacity: calc(.5 + var(--p) * .5);
+      opacity: calc(.28 + var(--p) * .72);
       transform: translateX(-50%) scale(calc(.9 + var(--p) * .24));
     }
     /* 瀹炵嚎娴佸厜杈规 */
@@ -179,7 +179,7 @@
     .well {
       bottom: 29px; width: 45%; height: 17%;
       background: radial-gradient(ellipse at 50% 52%, rgba(66,133,244,0.15) 0%, rgba(10,10,15,0.7) 44%, #000 100%);
-      opacity: calc(.4 + var(--p) * .6);
+      opacity: calc(.22 + var(--p) * .78);
       transform: translateX(-50%) scale(calc(.98 - var(--p) * .12));
       overflow: hidden;
     }
@@ -214,7 +214,7 @@
       transform: translateX(-50%) scale(calc(.9 + var(--p) * .24));
     }
     #root.style-starry .aura {
-      opacity: calc(.22 + var(--p) * .44);
+      opacity: calc(.12 + var(--p) * .58);
     }
     #root.style-starry .ring::before {
       background: conic-gradient(from var(--bg-angle),
@@ -246,7 +246,7 @@
         radial-gradient(circle at 66% 35%, rgba(255,255,255,.88) 0 .9px, transparent 1.2px),
         radial-gradient(circle at 74% 58%, rgba(154,205,255,.76) 0 1.1px, transparent 1.4px),
         radial-gradient(circle at 48% 44%, rgba(255,255,255,.7) 0 .8px, transparent 1.1px);
-      opacity: calc(.35 + var(--p) * .55);
+      opacity: calc(.18 + var(--p) * .74);
       animation: twinkleStars 2.2s ease-in-out infinite;
     }
     #root.style-starry .well::after {
@@ -261,7 +261,7 @@
         radial-gradient(circle at 78% 44%, rgba(255,255,255,.86) 0 .9px, transparent 1.2px),
         radial-gradient(circle at 30% 70%, rgba(170,214,255,.75) 0 1.1px, transparent 1.5px),
         radial-gradient(circle at 64% 76%, rgba(255,255,255,.78) 0 .9px, transparent 1.2px);
-      opacity: calc(.22 + var(--p) * .5);
+      opacity: calc(.12 + var(--p) * .64);
       animation: twinkleStarsAlt 1.6s ease-in-out infinite;
     }
 
@@ -399,7 +399,7 @@
       function setP(v) {
         p = Math.max(0, Math.min(1, Number(v) || 0));
         root.style.setProperty('--p', String(p));
-        var alpha = 0.20 + p * 0.70;
+        var alpha = 0.10 + p * 0.86;
         root.style.setProperty('--hole-alpha', String(Math.max(0.08, Math.min(1, alpha))));
       }
       var pos = { x: Math.max(12, Math.round(window.innerWidth / 2 - 90)), y: Math.max(12, Math.round(window.innerHeight - 240)) };
@@ -580,7 +580,7 @@
         root.classList.add(m === 'starry' ? 'style-starry' : 'style-ring');
       }
       window.HoleOverlay = {
-        show: function (payload) { show(payload); setP(0.08); },
+        show: function (payload) { show(payload); setP(0.04); },
         setStyle: function (o) {
           if (!o) return;
           setStyle(o.scale, o.animLevel);
@@ -606,14 +606,19 @@
           lastHostUpdateTs = nowHost;
           dragUpdateActive = true;
           lastUpdateTick = Date.now();
-          if (o && typeof o.proximity === 'number') setP(o.proximity);
+          if (o && typeof o.proximity === 'number') {
+            var prox = Number(o.proximity);
+            if (!Number.isFinite(prox)) prox = 0;
+            prox = Math.max(0, Math.min(1, prox));
+            setP(Math.pow(prox, 0.72));
+          }
           else if (o && typeof o.x === 'number' && typeof o.y === 'number') {
             var cx = pos.x + 90;
             var cy = pos.y + 150;
             var dx = o.x - cx, dy = o.y - cy;
             var d = Math.sqrt(dx * dx + dy * dy);
             var r = 260;
-            setP(1 - d / r);
+            setP(Math.max(0, Math.min(1, Math.pow(1 - d / r, 0.72))));
           } else setP(0.45);
           var enterNear = 0.62;
           var leaveNear = 0.48;

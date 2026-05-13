@@ -4090,3 +4090,106 @@ drop 分支对 te
 [2026-05-13 23:25:07][ftb_ensure_focus] hwnd=4328976 vis=0
 [2026-05-13 23:25:07][hide_skip] reason=not_visible_or_host
 [2026-05-13 23:25:07][ftb_verify_search_center_miss] tb_visible=0 mode=hole
+[2026-05-13 23:38:25][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-13 23:38:25][init_create_begin] reason= hwnd=23860874
+[2026-05-13 23:38:31][ftb_activate_search_center_begin] used_webview=1
+[2026-05-13 23:38:31][run_query_begin] kw_len=4 kw_prefix=禁止提交
+[2026-05-13 23:38:31][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-13 23:38:31][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-13 23:38:31][show_finish_reveal_immediate] reason=search_keyword
+[2026-05-13 23:38:31][wm_chain_register_begin] reason=search_keyword count=0
+[2026-05-13 23:38:31][wm_chain_register_done] reason=search_keyword count=1
+[2026-05-13 23:38:32][ftb_activate_search_center_mid] selected_len=4 opened=1 vis=1
+[2026-05-13 23:38:32][ftb_activate_search_center_end] opened=1 vis=1
+[2026-05-13 23:38:32][run_query_begin] kw_len=4 kw_prefix=禁止提交
+[2026-05-13 23:38:32][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-13 23:38:32][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-13 23:38:32][show_already_visible] reason=search_keyword
+[2026-05-13 23:38:32][nav_completed] ok=1 visible=1
+[2026-05-13 23:38:32][ftb_ensure_focus] hwnd=23860874 vis=1
+[2026-05-13 23:38:35][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-13 23:38:35][hide_begin] persist=1 visible=1 waiting=0 deact_block=62135531
+[2026-05-13 23:38:35][hide_step] reset_bridge_begin
+[2026-05-13 23:38:35][hide_step] reset_bridge_queued
+[2026-05-13 23:38:35][hide_step] pagedock_leave_begin
+[2026-05-13 23:38:35][hide_step] pagedock_leave_done
+[2026-05-13 23:38:35][hide_step] save_selection_begin
+[2026-05-13 23:38:35][hide_step] save_selection_done
+[2026-05-13 23:38:35][hide_step] gui_hide_begin
+[2026-05-13 23:38:35][wm_activate_seen] wparam=0 hwnd=23860874 visible=1 waiting=0 focus_pending=0 phase=closing search_http=0
+[2026-05-13 23:38:35][wm_activate_queue] reason=wm_deactivate count=1
+[2026-05-13 23:38:35][hide_step] unregister_activate_chain count_before=1
+[2026-05-13 23:38:35][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-13 23:38:35][hide_step] webview_hidden_notified
+[2026-05-13 23:38:35][hide_done] visible=0
+[2026-05-13 23:38:35][hide_skip] reason=not_visible_or_host
+[2026-05-13 23:38:42][ftb_activate_search_center_begin] used_webview=1
+[2026-05-13 23:38:42][run_query_begin] kw_len=38 kw_prefix=须满足 GDHO_IsPointInHole(.
+[2026-05-13 23:38:42][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-13 23:38:42][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-13 23:38:42][show_finish_reveal_immediate] reason=search_keyword
+[2026-05-13 23:38:42][wm_chain_register_begin] reason=search_keyword count=0
+[2026-05-13 23:38:42][wm_chain_register_done] reason=search_keyword count=1
+[2026-05-13 23:38:43][ftb_activate_search_center_mid] selected_len=38 opened=1 vis=1
+[2026-05-13 23:38:43][ftb_activate_search_center_end] opened=1 vis=1
+[2026-05-13 23:38:43][run_query_begin] kw_len=38 kw_prefix=须满足 GDHO_IsPointInHole(.
+[2026-05-13 23:38:43][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-13 23:38:43][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-13 23:38:43][show_already_visible] reason=search_keyword
+[2026-05-13 23:38:44][ftb_ensure_focus] hwnd=23860874 vis=1
+[2026-05-13 23:38:44][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-13 23:38:44][hide_begin] persist=1 visible=1 waiting=0 deact_block=62146968
+[2026-05-13 23:38:44][hide_step] reset_bridge_begin
+[2026-05-13 23:38:44][hide_step] reset_bridge_queued
+[2026-05-13 23:38:44][hide_step] pagedock_leave_begin
+[2026-05-13 23:38:44][hide_step] pagedock_leave_done
+[2026-05-13 23:38:44][hide_step] save_selection_begin
+[2026-05-13 23:38:44][hide_step] save_selection_done
+[2026-05-13 23:38:44][hide_step] gui_hide_begin
+[2026-05-13 23:38:44][wm_activate_seen] wparam=0 hwnd=23860874 visible=1 waiting=0 focus_pending=0 phase=closing search_http=0
+[2026-05-13 23:38:44][wm_activate_queue] reason=wm_deactivate count=1
+[2026-05-13 23:38:44][hide_step] unregister_activate_chain count_before=1
+[2026-05-13 23:38:44][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-13 23:38:44][hide_skip] reason=not_visible_or_host
+[2026-05-13 23:38:44][ftb_verify_search_center_miss] tb_visible=0 mode=hole
+[2026-05-13 23:38:44][hide_step] webview_hidden_notified
+[2026-05-13 23:38:44][hide_done] visible=0
+[2026-05-13 23:38:48][ftb_activate_search_center_begin] used_webview=1
+[2026-05-13 23:38:48][run_query_begin] kw_len=22 kw_prefix=没真正拖到黑洞核心并松手，不会再激活搜索中心
+[2026-05-13 23:38:48][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-13 23:38:48][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-13 23:38:48][show_finish_reveal_immediate] reason=search_keyword
+[2026-05-13 23:38:48][wm_chain_register_begin] reason=search_keyword count=0
+[2026-05-13 23:38:48][wm_chain_register_done] reason=search_keyword count=1
+[2026-05-13 23:38:48][ftb_activate_search_center_mid] selected_len=22 opened=1 vis=1
+[2026-05-13 23:38:48][ftb_activate_search_center_end] opened=1 vis=1
+[2026-05-13 23:38:48][run_query_begin] kw_len=22 kw_prefix=没真正拖到黑洞核心并松手，不会再激活搜索中心
+[2026-05-13 23:38:48][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-13 23:38:48][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-13 23:38:48][show_already_visible] reason=search_keyword
+[2026-05-13 23:38:49][ftb_ensure_focus] hwnd=23860874 vis=1
+[2026-05-13 23:38:50][ftb_ensure_focus] hwnd=23860874 vis=1
+[2026-05-13 23:38:51][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-13 23:38:51][hide_begin] persist=1 visible=1 waiting=0 deact_block=62152921
+[2026-05-13 23:38:51][hide_step] reset_bridge_begin
+[2026-05-13 23:38:51][hide_step] reset_bridge_queued
+[2026-05-13 23:38:51][hide_step] pagedock_leave_begin
+[2026-05-13 23:38:51][hide_step] pagedock_leave_done
+[2026-05-13 23:38:51][hide_step] save_selection_begin
+[2026-05-13 23:38:51][hide_step] save_selection_done
+[2026-05-13 23:38:51][hide_step] gui_hide_begin
+[2026-05-13 23:38:51][wm_activate_seen] wparam=0 hwnd=23860874 visible=1 waiting=0 focus_pending=0 phase=closing search_http=0
+[2026-05-13 23:38:51][wm_activate_queue] reason=wm_deactivate count=1
+[2026-05-13 23:38:51][hide_step] unregister_activate_chain count_before=1
+[2026-05-13 23:38:51][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-13 23:38:51][hide_step] webview_hidden_notified
+[2026-05-13 23:38:51][hide_done] visible=0
+[2026-05-13 23:38:51][hide_skip] reason=not_visible_or_host
+[2026-05-14 07:05:07][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 07:05:07][init_create_begin] reason= hwnd=67734
+[2026-05-14 07:12:26][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 07:12:26][init_create_begin] reason= hwnd=1246320
+[2026-05-14 07:16:07][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 07:16:07][init_create_begin] reason= hwnd=329880
+[2026-05-14 07:29:20][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 07:29:20][init_create_begin] reason= hwnd=854346
