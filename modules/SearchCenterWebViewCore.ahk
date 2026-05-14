@@ -57,6 +57,9 @@ global g_SCWV_SearchPendingReq := 0
 global g_SCWV_HostTopMost := false
 global g_SCWV_NavFallbackTried := false
 global g_SCWV_LifecyclePhase := "closed"
+global g_SCWV_CloseInFlight := false
+global g_SCWV_TrayOpenLock := false
+global g_SCWV_TrayOpenLockTick := 0
 
 SCWV_Log(event, detail := "") {
     try {
@@ -372,8 +375,7 @@ SCWV_OnCreated(ctrl) {
 SCWV_OnGuiClose(*) {
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Visible
     try SCWV_Log("gui_close_request", "visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " gdho=" . (GDHO_VISIBLE ? "1" : "0") . " native=" . (NativeDropSessionActive ? "1" : "0"))
-    SCWV_PushLifecycleState("closing", "gui_close")
-    SCWV_Hide(true)
+    SearchCenterUnifiedClose("gui_close", false, true)
 }
 
 SCWV_OnGuiResize(GuiObj, MinMax, Width, Height) {
@@ -439,6 +441,8 @@ SCWV_FinishReveal() {
     try WinSetTransparent(255, "ahk_id " . g_SCWV_Gui.Hwnd)
     catch {
     }
+    SCWV_ApplyBounds()
+    SetTimer(SCWV_ApplyBounds, -80)
     g_SCWV_Visible := true
     SCWV_PushLifecycleState("open", "finish_reveal")
 }
@@ -578,6 +582,35 @@ SCWV_RequestHardClose(reason := "") {
     catch as err {
         try SCWV_Log("force_close_error", "reason=" . reason . " msg=" . err.Message)
     }
+}
+
+SearchCenterUnifiedClose(reason := "unknown", preferHardClose := false, PersistSelection := true) {
+    global g_SCWV_CloseInFlight
+    if (g_SCWV_CloseInFlight) {
+        try SCWV_Log("unified_close_skip_inflight", "reason=" . reason)
+        return true
+    }
+    g_SCWV_CloseInFlight := true
+    try {
+        if (preferHardClose) {
+            SCWV_RequestHardClose(reason)
+            return true
+        }
+        if (SearchCenter_ShouldUseWebView()) {
+            SCWV_Hide(PersistSelection)
+            return true
+        }
+        global GuiID_SearchCenter
+        if (GuiID_SearchCenter != 0) {
+            SearchCenterCloseHandler()
+            return true
+        }
+    } catch as err {
+        try SCWV_Log("unified_close_error", "reason=" . reason . " msg=" . err.Message)
+    } finally {
+        g_SCWV_CloseInFlight := false
+    }
+    return false
 }
 
 ; WebView 鍐呰仈杈撳叆渚濊禆瀹夸富婵€娲?+ WebView 鍙栫劍锛孖MM/TSF 鎵嶈兘绋冲畾闄勭潃锛堝惁鍒欒〃鐜颁负鏈夋椂涓枃銆佹湁鏃惰嫳鏂囧皬鍐欙級
@@ -1487,6 +1520,8 @@ SCWV_Show(reason := "") {
     global SearchCenterEngineMode, g_SCWV_LifecyclePhase
     try SCWV_Log("show_begin", "reason=" . reason . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
     SCWV_PushLifecycleState("opening", reason)
+    ; 打开阶段先屏蔽失焦自动关闭，避免 WebView/焦点切换瞬时抖动把窗口提前关掉（白屏/一闪）。
+    _SCWV_BlockDeactivate(2800, "show_opening")
 
     if !SCWV_HostAlive() {
         SCWV_ResetHostState()
@@ -1524,6 +1559,8 @@ SCWV_Show(reason := "") {
         g_SCWV_Gui.Show("w1180 h760 Center")
         try WinMaximize("ahk_id " . g_SCWV_Gui.Hwnd)
         SCWV_SetHostTopMost(g_SCWV_HostTopMost)
+        SCWV_ApplyBounds()
+        SetTimer(SCWV_ApplyBounds, -80)
     } catch {
         ; 鍏滃簳锛氱獥鍙ｅ璞″瓨鍦ㄤ絾鍙ユ焺澶辨晥鏃堕噸寤轰竴娆★紝閬垮厤 鈥淕ui has no window鈥?        SCWV_ResetHostState()
         SCWV_Init(reason)
@@ -1542,6 +1579,8 @@ SCWV_Show(reason := "") {
         g_SCWV_Gui.Show("w1180 h760 Center")
         try WinMaximize("ahk_id " . g_SCWV_Gui.Hwnd)
         SCWV_SetHostTopMost(g_SCWV_HostTopMost)
+        SCWV_ApplyBounds()
+        SetTimer(SCWV_ApplyBounds, -80)
     }
     if readyToReveal {
         try SCWV_Log("show_finish_reveal_immediate", "reason=" . reason)
@@ -1788,6 +1827,10 @@ SCWV_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
         }
         if g_SCWV_SearchHttpInFlight {
             try SCWV_Log("wm_activate_skip", "reason=search_http_in_flight")
+            return
+        }
+        if (g_SCWV_WaitingUiFinishedReveal || g_SCWV_FocusPending || g_SCWV_LifecyclePhase = "opening") {
+            try SCWV_Log("wm_activate_skip", "reason=opening_or_focus_pending")
             return
         }
         if _SCWV_IsDeactivateBlocked() {
@@ -2162,15 +2205,13 @@ SCWV_OnWebMessage(sender, args) {
             _SCWV_ShowSearchCenterRowMenu(row, sx, sy)
         case "close":
             try SCWV_Log("webmsg_close", "visible=" . (g_SCWV_Visible ? "1" : "0"))
-            SCWV_PushLifecycleState("closing", "webmsg_close")
-            SCWV_Hide(true)
+            SearchCenterUnifiedClose("webmsg_close", false, true)
         case "lifecycle":
             phase := msg.Has("phase") ? StrLower(Trim(String(msg["phase"]))) : ""
             reason := msg.Has("reason") ? String(msg["reason"]) : ""
             try SCWV_Log("webmsg_lifecycle", "phase=" . phase . " reason=" . reason)
             if (phase = "close_request") {
-                SCWV_PushLifecycleState("closing", reason != "" ? reason : "close_request")
-                SCWV_Hide(true)
+                SearchCenterUnifiedClose(reason != "" ? reason : "close_request", false, true)
             } else if (phase = "closed") {
                 SCWV_PushLifecycleState("closed", reason)
             } else if (phase = "opening" || phase = "open" || phase = "closing") {

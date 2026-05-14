@@ -4384,6 +4384,19 @@ ShowConfigGUI_Safe() {
     global g_ConfigWebViewOpenStartTick, g_ConfigOpenInFlight, g_ConfigOpenInFlightSince, g_ConfigUserClosedTick, g_ConfigOpenEntryMode
     NMER_Log("ui", "open_config_safe_begin", "")
     nowTick := A_TickCount
+    ; Recover from stale/invisible config host left by failed dark-mode close.
+    try {
+        if (GuiID_ConfigGUI && WinExist("ahk_id " . GuiID_ConfigGUI.Hwnd)) {
+            vis0 := (WinGetStyle("ahk_id " . GuiID_ConfigGUI.Hwnd) & 0x10000000)
+            if (!vis0) {
+                g_ConfigWebViewOpenStartTick := 0
+                g_ConfigOpenInFlight := false
+                g_ConfigOpenInFlightSince := 0
+                NMER_Log("ui", "open_config_recover_stale_host", "")
+            }
+        }
+    } catch {
+    }
     if (g_ConfigOpenInFlight && (nowTick - g_ConfigOpenInFlightSince) < 2500) {
         NMER_Log("ui", "open_config_safe_skip_inflight", "elapsed_ms=" . (nowTick - g_ConfigOpenInFlightSince))
         return
@@ -4452,8 +4465,33 @@ ShowConfigGUI_Safe() {
 }
 
 ConfigOpenFlightRelease(*) {
-    global g_ConfigOpenInFlight
+    global g_ConfigOpenInFlight, g_ConfigOpenInFlightSince
+    global g_ConfigWebViewOpenStartTick, g_ConfigUserClosedTick
+    global ConfigWebViewMode, GuiID_ConfigGUI
+    global TrayMenuCustomFailStreak, TrayMenuSuppressNativeFallbackUntil
     g_ConfigOpenInFlight := false
+    g_ConfigOpenInFlightSince := 0
+    ; If settings window failed to close/render callback, force-release stuck state
+    ; so user can reopen settings and tray menu won't keep degrading to native white menu.
+    vis := false
+    try {
+        if (GuiID_ConfigGUI && WinExist("ahk_id " . GuiID_ConfigGUI.Hwnd))
+            vis := (WinGetStyle("ahk_id " . GuiID_ConfigGUI.Hwnd) & 0x10000000)
+    } catch {
+        vis := false
+    }
+    if (!vis) {
+        g_ConfigWebViewOpenStartTick := 0
+        if (ConfigWebViewMode)
+            g_ConfigUserClosedTick := A_TickCount
+        try SetTimer(ShowConfigGUI_FallbackCheck, 0)
+        try SetTimer(RestoreActivationRuntimeAfterConfigClose, -80)
+        TrayMenuCustomFailStreak := 0
+        TrayMenuSuppressNativeFallbackUntil := A_TickCount + 1800
+        NMER_Log("ui", "open_config_force_release", "vis=0")
+    } else {
+        NMER_Log("ui", "open_config_force_release", "vis=1")
+    }
 }
 
 NMER_Log(scope, event, detail := "") {
@@ -5499,21 +5537,12 @@ Esc:: {
     try {
         if (GDHO_VISIBLE || NativeDropSessionActive || g_SCWV_WaitingUiFinishedReveal) {
             try NativeDropDiag_Log("route esc key=Esc path=hard_force_close")
-            SCWV_RequestHardClose("esc_black_hole")
+            SearchCenterUnifiedClose("esc_black_hole", true, true)
             return
         }
-        if (SearchCenter_ShouldUseWebView()) {
-            try NativeDropDiag_Log("route esc key=Esc path=search_webview_close_attempt visible=" . (SCWV_IsVisible() ? "1" : "0"))
-            SCWV_Hide(true)
+        try NativeDropDiag_Log("route esc key=Esc path=unified_close visible=" . (SCWV_IsVisible() ? "1" : "0"))
+        if (SearchCenterUnifiedClose("esc", false, true))
             return
-        } else {
-            global GuiID_SearchCenter
-            if (GuiID_SearchCenter != 0) {
-                try NativeDropDiag_Log("route esc key=Esc path=legacy_close_attempt active=" . (GuiID_SearchCenter != 0 ? "1" : "0"))
-                SearchCenterCloseHandler()
-                return
-            }
-        }
     } catch {
     }
     Send("{Esc}")
@@ -5546,21 +5575,12 @@ Esc:: {
     try {
         if (GDHO_VISIBLE || NativeDropSessionActive || g_SCWV_WaitingUiFinishedReveal) {
             try NativeDropDiag_Log("route esc key=Esc path=hard_force_close_caps")
-            SCWV_RequestHardClose("esc_black_hole_caps")
+            SearchCenterUnifiedClose("esc_black_hole_caps", true, true)
             return
         }
-        if (SearchCenter_ShouldUseWebView()) {
-            try NativeDropDiag_Log("route esc key=Esc path=search_webview_close_attempt visible=" . (SCWV_IsVisible() ? "1" : "0"))
-            SCWV_Hide(true)
+        try NativeDropDiag_Log("route esc key=Esc path=unified_close_caps visible=" . (SCWV_IsVisible() ? "1" : "0"))
+        if (SearchCenterUnifiedClose("esc_caps", false, true))
             return
-        } else {
-            global GuiID_SearchCenter
-            try NativeDropDiag_Log("route esc key=Esc path=legacy active=" . (GuiID_SearchCenter != 0 ? "1" : "0"))
-            if (GuiID_SearchCenter != 0) {
-                SearchCenterCloseHandler()
-                return
-            }
-        }
     } catch {
     }
     if (VirtualKeyboard_HandleKey("Esc"))
@@ -5674,6 +5694,12 @@ $q:: {
 
 ; Z 键语音输入（切换模式）
 $z:: {
+    global IsCountdownActive
+    ; 倒计时/等待阶段禁止触发语音输入类动态命令，避免误激活。
+    if (IsCountdownActive) {
+        ExecuteCountdownAction()
+        return
+    }
     if (SearchCenter_HandleCapsChordKey("z"))
         return
     if (VirtualKeyboard_HandleKey("z"))
