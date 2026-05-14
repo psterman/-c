@@ -12,6 +12,10 @@
     }
     :root {
       --p: 0;
+      --preview-scale: 0;
+      --preview-canvas-alpha: 0;
+      --ring-w: 150px;
+      --ring-h: 50px;
       --ai-red: #ea4335;
       --ai-yellow: #fbbc05;
       --ai-green: #34a853;
@@ -64,13 +68,14 @@
     /* 鏍稿績褰╃幆 */
     .ring {
       position: absolute;
-      /* 鍒濆鐘舵€侊細闈炲父鎵佺殑妞渾 */
-      width: 150px; 
-      height: 50px; 
+      /* proximity drives ellipse -> circle morph */
+      width: var(--ring-w);
+      height: var(--ring-h);
       border-radius: 50%;
       opacity: calc(0.4 + var(--p) * 0.6);
       z-index: 4;
       transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: scale(calc(1 + var(--preview-scale)));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -104,7 +109,7 @@
       background: #000;
       width: 800px;
       height: 800px;
-      opacity: 0;
+      opacity: var(--preview-canvas-alpha);
       transition: opacity 800ms ease;
     }
 
@@ -121,6 +126,10 @@
       opacity: 1;
     }
     .drop #galaxyCanvas { opacity: 1; }
+    .drop.expanding .ring { transform: scale(0.88); }
+    .drop.expanding .aura { transform: scale(0.92); }
+    .drop.expanded .ring { transform: scale(1); }
+    .drop.expanded .aura { transform: scale(1); }
 
     @keyframes spin { to { --ring-angle: 360deg; } }
   </style>
@@ -150,6 +159,9 @@
       let payloadType = 'text';
       let lastX = 310;
       let lastY = 310;
+      let sleepMode = false;
+      let rafId = 0;
+      let expandTimer = 0;
 
       function initGalaxy() {
         const dpr = window.devicePixelRatio || 1;
@@ -191,8 +203,12 @@
       }
 
       function render(time) {
-        if (!isGalaxyOpen && p < 0.01) {
-          requestAnimationFrame(render);
+        if (sleepMode) {
+          rafId = 0;
+          return;
+        }
+        if (!isGalaxyOpen && p < 0.01 && !root.classList.contains('show')) {
+          rafId = 0;
           return;
         }
 
@@ -228,18 +244,35 @@
           }
         });
 
-        requestAnimationFrame(render);
+        rafId = requestAnimationFrame(render);
+      }
+      function wakeRender() {
+        if (!rafId) rafId = requestAnimationFrame(render);
       }
 
       function setP(v) {
         p = Math.max(0, Math.min(1, Number(v) || 0));
         root.style.setProperty('--p', String(p));
+        const previewScale = Math.max(0, (p - 0.25) / 0.75) * 0.75;
+        const previewCanvasAlpha = Math.max(0, (p - 0.42) / 0.58) * 0.55;
+        // Lower threshold so text drag proximity can reliably morph to a circle.
+        const t = Math.max(0, Math.min(1, (p - 0.28) / 0.52));
+        const ringW = 150 + t * 280; // up to 430
+        const ringH = 50 + t * 380;  // up to 430 (true circle at high proximity)
+        root.style.setProperty('--preview-scale', previewScale.toFixed(3));
+        root.style.setProperty('--preview-canvas-alpha', previewCanvasAlpha.toFixed(3));
+        root.style.setProperty('--ring-w', ringW.toFixed(1) + 'px');
+        root.style.setProperty('--ring-h', ringH.toFixed(1) + 'px');
       }
 
       window.HoleOverlay = {
         show: () => { if(!isGalaxyOpen) { root.classList.add('show'); setP(0.1); } },
         hide: () => { 
-          root.classList.remove('show', 'drop'); 
+          if (expandTimer) {
+            clearTimeout(expandTimer);
+            expandTimer = 0;
+          }
+          root.classList.remove('show', 'drop', 'expanding', 'expanded'); 
           isGalaxyOpen = false; setP(0); 
         },
         moveTo: (o) => {
@@ -253,6 +286,7 @@
           root.style.setProperty('--hy', y + 'px');
         },
         update: (o) => {
+          window.HoleOverlay.setSleepMode(false);
           if(isGalaxyOpen) return;
           root.classList.add('show');
           if (o && typeof o.proximity === 'number') {
@@ -270,8 +304,28 @@
         drop: (o) => {
           if(isGalaxyOpen) return;
           if (o && (o.payload === 'text' || o.payload === 'file')) payloadType = o.payload;
+          window.HoleOverlay.setSleepMode(false);
+          root.classList.add('show');
+          setP(1);
           isGalaxyOpen = true;
           root.classList.add('drop');
+          root.classList.add('expanding');
+          root.classList.remove('expanded');
+          if (expandTimer) clearTimeout(expandTimer);
+          expandTimer = setTimeout(() => {
+            root.classList.remove('expanding');
+            root.classList.add('expanded');
+            expandTimer = 0;
+          }, 1250);
+        },
+        setProximity: (v) => {
+          setP(v);
+          if (!sleepMode && (p >= 0.01 || root.classList.contains('show'))) wakeRender();
+        },
+        setSleepMode: (v) => {
+          sleepMode = !!v;
+          root.classList.toggle('sleep', sleepMode);
+          if (!sleepMode) wakeRender();
         },
         setStyle: () => {},
         setTheme: () => {},
@@ -285,7 +339,7 @@
       window.addEventListener('click', () => { if(isGalaxyOpen) window.HoleOverlay.hide(); });
 
       initGalaxy();
-      render();
+      wakeRender();
 
       if (!(window.chrome && window.chrome.webview)) {
         document.body.style.background = "#050508";

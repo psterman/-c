@@ -1131,9 +1131,25 @@ CloseDarkStylePopupMenu(*) {
 }
 
 FloatingBubbleShowFromMenu(*) {
-    try FloatingToolbar_SetActivationMode("hole")
-    catch {
-    }
+    global GDHO_HOST_W, GDHO_HOST_H, GDHO_POSITION_MODE
+    ; Unconditional diagnostic mode:
+    ; force hole_starry host visible at screen center with no gating conditions.
+    try GDHO_Init()
+    GDHO_POSITION_MODE := "fixed"
+    monL := SysGet(76), monT := SysGet(77), monW := SysGet(78), monH := SysGet(79)
+    hostW := (IsSet(GDHO_HOST_W) && GDHO_HOST_W > 0) ? GDHO_HOST_W : 360
+    hostH := (IsSet(GDHO_HOST_H) && GDHO_HOST_H > 0) ? GDHO_HOST_H : 420
+    cx := Integer(monL + (monW - hostW) / 2)
+    cy := Integer(monT + (monH - hostH) / 2)
+    try GDHO_MoveHostToHole(cx, cy)
+    try GDHO_ShowOverlay()
+    try GDHO_RunJS("window.HoleOverlay?.show('text')")
+    try GDHO_RunJS("window.HoleOverlay?.setSleepMode?.(false)")
+    try GDHO_RunJS("window.HoleOverlay?.setProximity?.(0.85)")
+    try WinSetAlwaysOnTop(1, "ahk_id " GDHO_GUI.Hwnd)
+    try WinSetTransparent(255, "ahk_id " GDHO_GUI.Hwnd)
+    try GDHO_SetClickThrough(true)
+    try TrayMenu_Log("tray_show_hole unconditional_center x=" . cx . " y=" . cy . " w=" . hostW . " h=" . hostH)
 }
 
 FloatingBubbleHideFromMenu(*) {

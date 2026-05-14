@@ -1418,8 +1418,8 @@ SelectionSense_OnLButtonUp(*) {
         return
     }
 
-    SelectionSense_Diag_Log("lbutton_up trigger=deferred timer=armed")
-    SetTimer((*) => SelectionSense_ProcessDeferredTimerWrapper(), -1)
+    ; New baseline: selection should not auto-copy or auto-open search center.
+    SelectionSense_Diag_Log("lbutton_up trigger=selection_only_no_copy")
 }
 
 SelectionSense_ProcessDeferredTimerWrapper() {
@@ -1542,7 +1542,7 @@ SelectionSense_ProcessDeferred(*) {
 }
 
 SelectionSense_TryActivateHoleFromSelection(selectedText) {
-    global g_HoleRuntimeEnabled, EnableHoleOverlayOnNativeDrop
+    global g_HoleRuntimeEnabled, EnableHoleOverlayOnNativeDrop, GDHO_TriggerSource
     if !g_HoleRuntimeEnabled {
         SelectionSense_Diag_Log("hole skip=runtime_disabled")
         return
@@ -1560,6 +1560,7 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
 
     ; Mouse selection auto-copy has no native drag events, so trigger hole/search directly.
     SelectionSense_Diag_Log("hole show begin len=" . StrLen(t))
+    GDHO_TriggerSource := "selection_copy"
     try GDHO_Init()
     try GDHO_Show("text")
     ; WebView2 may finish warming a little late; keep issuing cheap NoActivate moves.

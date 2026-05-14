@@ -4868,3 +4868,224 @@ drop 分支对 te
 [2026-05-14 09:55:45][hide_done] visible=0
 [2026-05-14 09:55:46][hide_skip] reason=not_visible_or_host
 [2026-05-14 09:55:46][ftb_verify_search_center_miss] tb_visible=0 mode=hole
+[2026-05-14 16:02:29][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 16:02:29][init_create_begin] reason= hwnd=6622308
+[2026-05-14 16:03:21][ftb_activate_search_center_begin] used_webview=1
+[2026-05-14 16:03:21][run_query_begin] kw_len=15 kw_prefix=了“中间人”，这引发了以下问题
+[2026-05-14 16:03:21][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-14 16:03:21][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-14 16:03:21][show_finish_reveal_immediate] reason=search_keyword
+[2026-05-14 16:03:21][wm_chain_register_begin] reason=search_keyword count=0
+[2026-05-14 16:03:21][wm_chain_register_done] reason=search_keyword count=1
+[2026-05-14 16:03:21][ftb_activate_search_center_mid] selected_len=15 opened=1 vis=1
+[2026-05-14 16:03:21][ftb_activate_search_center_end] opened=1 vis=1
+[2026-05-14 16:03:21][run_query_begin] kw_len=15 kw_prefix=了“中间人”，这引发了以下问题
+[2026-05-14 16:03:21][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-14 16:03:21][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-14 16:03:21][show_already_visible] reason=search_keyword
+[2026-05-14 16:03:21][ftb_ensure_focus] hwnd=6622308 vis=1
+[2026-05-14 16:03:23][gui_close_request] visible=1 waiting=0 gdho=1 native=0
+[2026-05-14 16:03:23][hide_begin] persist=1 visible=1 waiting=0 deact_block=17207968
+[2026-05-14 16:03:23][hide_step] reset_bridge_begin
+[2026-05-14 16:03:23][hide_step] reset_bridge_queued
+[2026-05-14 16:03:23][hide_step] pagedock_leave_begin
+[2026-05-14 16:03:23][hide_step] pagedock_leave_done
+[2026-05-14 16:03:23][hide_step] save_selection_begin
+[2026-05-14 16:03:23][hide_step] save_selection_done
+[2026-05-14 16:03:23][hide_step] gui_hide_begin
+[2026-05-14 16:03:23][hide_step] unregister_activate_chain count_before=1
+[2026-05-14 16:03:23][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-14 16:03:23][hide_step] webview_hidden_notified
+[2026-05-14 16:03:23][hide_done] visible=0
+[2026-05-14 16:08:12][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 16:08:12][init_create_begin] reason= hwnd=6818352
+[2026-05-14 16:20:20][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 16:20:20][init_create_begin] reason= hwnd=20185308
+[2026-05-14 16:20:57][init_begin] reason=tray_menu_search gui=1 alive=1 inflight=0
+[2026-05-14 16:20:57][show_begin] reason=tray_menu_search ready=1 ui_ready=1
+[2026-05-14 16:20:57][show_finish_reveal_immediate] reason=tray_menu_search
+[2026-05-14 16:20:58][wm_chain_register_begin] reason=tray_menu_search count=0
+[2026-05-14 16:20:58][wm_chain_register_done] reason=tray_menu_search count=1
+[2026-05-14 16:21:00][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-14 16:21:00][hide_begin] persist=1 visible=1 waiting=0 deact_block=0
+[2026-05-14 16:21:00][hide_step] reset_bridge_begin
+[2026-05-14 16:21:00][hide_step] reset_bridge_queued
+[2026-05-14 16:21:00][hide_step] pagedock_leave_begin
+[2026-05-14 16:21:00][hide_step] pagedock_leave_done
+[2026-05-14 16:21:00][hide_step] save_selection_begin
+[2026-05-14 16:21:00][hide_step] save_selection_done
+[2026-05-14 16:21:00][hide_step] gui_hide_begin
+[2026-05-14 16:21:00][wm_activate_seen] wparam=0 hwnd=20185308 visible=1 waiting=0 focus_pending=0 phase=closing search_http=0
+[2026-05-14 16:21:00][wm_activate_queue] reason=wm_deactivate count=1
+[2026-05-14 16:21:00][hide_step] unregister_activate_chain count_before=1
+[2026-05-14 16:21:00][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-14 16:21:00][hide_step] webview_hidden_notified
+[2026-05-14 16:21:00][hide_done] visible=0
+[2026-05-14 16:21:00][hide_skip] reason=not_visible_or_host
+[2026-05-14 16:23:48][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 16:23:48][init_create_begin] reason= hwnd=32377008
+[2026-05-14 16:43:17][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 16:43:17][init_create_begin] reason= hwnd=15797396
+[2026-05-14 16:47:18][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 16:47:18][init_create_begin] reason= hwnd=5311204
+[2026-05-14 16:47:31][ftb_activate_search_center_begin] used_webview=1
+[2026-05-14 16:47:31][ftb_activate_search_center_busy] active=0 vis=0 waiting=0
+[2026-05-14 16:47:31][force_close_begin] reason=ftb_activate_busy_recover visible=0 waiting=0 ready=0 ui_ready=0
+[2026-05-14 16:47:31][wm_chain_unregister_begin] reason=ftb_activate_busy_recover count=0
+[2026-05-14 16:47:31][wm_chain_unregister_done] reason=ftb_activate_busy_recover count=0
+[2026-05-14 16:47:31][force_close_begin] reason=caps_f_search visible=0 waiting=0 ready=0 ui_ready=0
+[2026-05-14 16:47:31][wm_chain_unregister_begin] reason=caps_f_search count=0
+[2026-05-14 16:47:31][wm_chain_unregister_done] reason=caps_f_search count=0
+[2026-05-14 16:47:31][hide_done] visible=0 reason=caps_f_search
+[2026-05-14 16:47:31][force_close_done] reason=caps_f_search
+[2026-05-14 16:47:31][hide_done] visible=0 reason=ftb_activate_busy_recover
+[2026-05-14 16:47:31][force_close_done] reason=ftb_activate_busy_recover
+[2026-05-14 16:47:31][run_query_begin] kw_len=12 kw_prefix=洞中心可以设计一个类似“
+[2026-05-14 16:47:31][init_begin] reason=search_keyword gui=0 alive=0 inflight=0
+[2026-05-14 16:47:31][init_create_begin] reason=search_keyword hwnd=22416642
+[2026-05-14 16:47:31][show_begin] reason=search_keyword ready=0 ui_ready=0
+[2026-05-14 16:47:31][show_wait_ui_ready] reason=search_keyword
+[2026-05-14 16:47:31][wm_chain_register_begin] reason=search_keyword count=0
+[2026-05-14 16:47:31][wm_chain_register_done] reason=search_keyword count=1
+[2026-05-14 16:47:31][ftb_activate_search_center_mid] selected_len=12 opened=1 vis=0
+[2026-05-14 16:47:31][show_begin] reason=ftb_show_visible_check ready=0 ui_ready=0
+[2026-05-14 16:47:31][wm_activate_seen] wparam=0 hwnd=22416642 visible=0 waiting=1 focus_pending=1 phase=opening search_http=0
+[2026-05-14 16:47:32][show_wait_ui_ready] reason=ftb_show_visible_check
+[2026-05-14 16:47:32][wm_chain_register_begin] reason=ftb_show_visible_check count=1
+[2026-05-14 16:47:32][wm_chain_register_done] reason=ftb_show_visible_check count=1
+[2026-05-14 16:47:32][ftb_activate_search_center_end] opened=1 vis=0
+[2026-05-14 16:47:32][run_query_begin] kw_len=12 kw_prefix=洞中心可以设计一个类似“
+[2026-05-14 16:47:32][init_begin] reason=search_keyword gui=1 alive=1 inflight=1
+[2026-05-14 16:47:32][show_begin] reason=search_keyword ready=0 ui_ready=0
+[2026-05-14 16:47:32][wm_activate_seen] wparam=1 hwnd=22416642 visible=0 waiting=1 focus_pending=1 phase=opening search_http=0
+[2026-05-14 16:47:32][wm_activate_seen] wparam=0 hwnd=22416642 visible=0 waiting=1 focus_pending=1 phase=opening search_http=0
+[2026-05-14 16:47:32][ftb_ensure_focus] hwnd=22416642 vis=0
+[2026-05-14 16:47:32][wm_activate_seen] wparam=1 hwnd=22416642 visible=0 waiting=1 focus_pending=1 phase=opening search_http=0
+[2026-05-14 16:47:32][wm_activate_seen] wparam=0 hwnd=22416642 visible=0 waiting=1 focus_pending=1 phase=opening search_http=0
+[2026-05-14 16:47:33][show_wait_ui_ready] reason=search_keyword
+[2026-05-14 16:47:33][wm_chain_register_begin] reason=search_keyword count=1
+[2026-05-14 16:47:33][wm_chain_register_done] reason=search_keyword count=1
+[2026-05-14 16:47:33][ftb_ensure_focus] hwnd=22416642 vis=0
+[2026-05-14 16:47:33][wm_activate_seen] wparam=1 hwnd=22416642 visible=0 waiting=1 focus_pending=1 phase=open search_http=0
+[2026-05-14 16:47:34][wm_activate_seen] wparam=0 hwnd=22416642 visible=0 waiting=1 focus_pending=1 phase=open search_http=0
+[2026-05-14 16:47:34][ftb_activate_search_center_begin] used_webview=1
+[2026-05-14 16:47:34][force_close_begin] reason=caps_f_search visible=0 waiting=1 ready=0 ui_ready=0
+[2026-05-14 16:47:34][wm_chain_unregister_begin] reason=caps_f_search count=1
+[2026-05-14 16:47:34][wm_chain_unregister_done] reason=caps_f_search count=0
+[2026-05-14 16:47:34][hide_done] visible=0 reason=caps_f_search
+[2026-05-14 16:47:34][force_close_done] reason=caps_f_search
+[2026-05-14 16:47:34][webview_create_failed] ctrl_type=String retry=0 value=
+[2026-05-14 16:47:34][force_close_begin] reason=webview_create_failed visible=0 waiting=0 ready=0 ui_ready=0
+[2026-05-14 16:47:34][wm_chain_unregister_begin] reason=webview_create_failed count=0
+[2026-05-14 16:47:34][wm_chain_unregister_done] reason=webview_create_failed count=0
+[2026-05-14 16:47:34][hide_done] visible=0 reason=webview_create_failed
+[2026-05-14 16:47:34][force_close_done] reason=webview_create_failed
+[2026-05-14 16:47:34][webview_create_retry] attempts=1
+[2026-05-14 16:47:34][run_query_begin] kw_len=1 kw_prefix=a
+[2026-05-14 16:47:34][init_begin] reason=search_keyword gui=0 alive=0 inflight=0
+[2026-05-14 16:47:34][init_create_begin] reason=search_keyword hwnd=5573348
+[2026-05-14 16:47:34][show_begin] reason=search_keyword ready=0 ui_ready=0
+[2026-05-14 16:47:34][show_wait_ui_ready] reason=search_keyword
+[2026-05-14 16:47:34][wm_chain_register_begin] reason=search_keyword count=0
+[2026-05-14 16:47:34][wm_chain_register_done] reason=search_keyword count=1
+[2026-05-14 16:47:35][wm_activate_seen] wparam=0 hwnd=5573348 visible=0 waiting=1 focus_pending=1 phase=open search_http=1
+[2026-05-14 16:47:35][show_begin] reason= ready=0 ui_ready=0
+[2026-05-14 16:47:35][wm_activate_seen] wparam=1 hwnd=5573348 visible=0 waiting=1 focus_pending=1 phase=opening search_http=1
+[2026-05-14 16:47:35][show_wait_ui_ready] reason=
+[2026-05-14 16:47:35][wm_chain_register_begin] reason= count=1
+[2026-05-14 16:47:35][wm_chain_register_done] reason= count=1
+[2026-05-14 16:47:36][wm_activate_seen] wparam=0 hwnd=5573348 visible=0 waiting=1 focus_pending=1 phase=open search_http=1
+[2026-05-14 16:47:37][ftb_activate_search_center_mid] selected_len=1 opened=1 vis=1
+[2026-05-14 16:47:37][ftb_activate_search_center_end] opened=1 vis=1
+[2026-05-14 16:47:37][run_query_begin] kw_len=1 kw_prefix=a
+[2026-05-14 16:47:37][init_begin] reason=search_keyword gui=1 alive=1 inflight=1
+[2026-05-14 16:47:37][show_begin] reason=search_keyword ready=0 ui_ready=0
+[2026-05-14 16:47:37][show_already_visible] reason=search_keyword
+[2026-05-14 16:47:37][wm_activate_seen] wparam=1 hwnd=5573348 visible=1 waiting=0 focus_pending=1 phase=opening search_http=0
+[2026-05-14 16:47:37][ftb_ensure_focus] hwnd=5573348 vis=1
+[2026-05-14 16:47:39][ftb_ensure_focus] hwnd=5573348 vis=1
+[2026-05-14 16:47:40][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-14 16:47:40][hide_begin] persist=1 visible=1 waiting=0 deact_block=19863734
+[2026-05-14 16:47:40][hide_step] reset_bridge_begin
+[2026-05-14 16:47:40][hide_step] reset_bridge_queued
+[2026-05-14 16:47:40][hide_step] pagedock_leave_begin
+[2026-05-14 16:47:40][hide_step] pagedock_leave_done
+[2026-05-14 16:47:40][hide_step] save_selection_begin
+[2026-05-14 16:47:40][hide_step] save_selection_done
+[2026-05-14 16:47:40][hide_step] gui_hide_begin
+[2026-05-14 16:47:40][wm_activate_seen] wparam=0 hwnd=5573348 visible=1 waiting=0 focus_pending=1 phase=closing search_http=0
+[2026-05-14 16:47:40][wm_activate_queue] reason=wm_deactivate count=1
+[2026-05-14 16:47:40][hide_step] unregister_activate_chain count_before=1
+[2026-05-14 16:47:40][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-14 16:47:40][hide_step] webview_hidden_notified
+[2026-05-14 16:47:40][hide_done] visible=0
+[2026-05-14 16:47:40][hide_skip] reason=not_visible_or_host
+[2026-05-14 16:47:40][ftb_verify_search_center_miss] tb_visible=0 mode=hole
+[2026-05-14 16:47:42][ftb_activate_search_center_begin] used_webview=1
+[2026-05-14 16:47:42][force_close_begin] reason=caps_f_search visible=0 waiting=0 ready=0 ui_ready=0
+[2026-05-14 16:47:42][wm_chain_unregister_begin] reason=caps_f_search count=0
+[2026-05-14 16:47:42][wm_chain_unregister_done] reason=caps_f_search count=0
+[2026-05-14 16:47:42][hide_done] visible=0 reason=caps_f_search
+[2026-05-14 16:47:42][force_close_done] reason=caps_f_search
+[2026-05-14 16:47:42][run_query_begin] kw_len=49 kw_prefix=/ SVG)
+黑洞中心可以设计一个类似“旋涡”的
+[2026-05-14 16:47:42][init_begin] reason=search_keyword gui=0 alive=0 inflight=0
+[2026-05-14 16:47:42][init_create_begin] reason=search_keyword hwnd=4917462
+[2026-05-14 16:47:42][show_begin] reason=search_keyword ready=0 ui_ready=0
+[2026-05-14 16:47:42][show_wait_ui_ready] reason=search_keyword
+[2026-05-14 16:47:42][wm_chain_register_begin] reason=search_keyword count=0
+[2026-05-14 16:47:42][wm_chain_register_done] reason=search_keyword count=1
+[2026-05-14 16:47:43][ftb_activate_search_center_mid] selected_len=49 opened=1 vis=0
+[2026-05-14 16:47:43][show_begin] reason=ftb_show_visible_check ready=0 ui_ready=0
+[2026-05-14 16:47:43][show_wait_ui_ready] reason=ftb_show_visible_check
+[2026-05-14 16:47:43][wm_chain_register_begin] reason=ftb_show_visible_check count=1
+[2026-05-14 16:47:43][wm_chain_register_done] reason=ftb_show_visible_check count=1
+[2026-05-14 16:47:43][ftb_activate_search_center_end] opened=1 vis=0
+[2026-05-14 16:47:43][run_query_begin] kw_len=49 kw_prefix=/ SVG)
+黑洞中心可以设计一个类似“旋涡”的
+[2026-05-14 16:47:43][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-14 16:47:43][show_begin] reason=search_keyword ready=0 ui_ready=0
+[2026-05-14 16:47:44][ftb_ensure_focus] hwnd=4917462 vis=0
+[2026-05-14 16:47:44][show_wait_ui_ready] reason=search_keyword
+[2026-05-14 16:47:44][wm_chain_register_begin] reason=search_keyword count=1
+[2026-05-14 16:47:44][wm_chain_register_done] reason=search_keyword count=1
+[2026-05-14 16:47:44][ftb_ensure_focus] hwnd=4917462 vis=1
+[2026-05-14 16:47:47][gui_close_request] visible=1 waiting=0 gdho=0 native=1
+[2026-05-14 16:47:47][hide_begin] persist=1 visible=1 waiting=0 deact_block=19870765
+[2026-05-14 16:47:47][hide_step] reset_bridge_begin
+[2026-05-14 16:47:47][hide_step] reset_bridge_queued
+[2026-05-14 16:47:47][hide_step] pagedock_leave_begin
+[2026-05-14 16:47:47][hide_step] pagedock_leave_done
+[2026-05-14 16:47:47][hide_step] save_selection_begin
+[2026-05-14 16:47:47][hide_step] save_selection_done
+[2026-05-14 16:47:47][hide_step] gui_hide_begin
+[2026-05-14 16:47:47][wm_activate_seen] wparam=0 hwnd=4917462 visible=1 waiting=0 focus_pending=0 phase=closing search_http=0
+[2026-05-14 16:47:47][wm_activate_queue] reason=wm_deactivate count=1
+[2026-05-14 16:47:47][hide_step] unregister_activate_chain count_before=1
+[2026-05-14 16:47:47][hide_step] unregister_activate_chain_done count_after=0
+[2026-05-14 16:47:47][hide_step] webview_hidden_notified
+[2026-05-14 16:47:47][hide_done] visible=0
+[2026-05-14 16:47:47][hide_skip] reason=not_visible_or_host
+[2026-05-14 16:55:27][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 16:55:27][init_create_begin] reason= hwnd=659028
+[2026-05-14 16:55:30][force_close_begin] reason=tray_open_ui visible=0 waiting=0 ready=0 ui_ready=0
+[2026-05-14 16:55:30][wm_chain_unregister_begin] reason=tray_open_ui count=0
+[2026-05-14 16:55:30][wm_chain_unregister_done] reason=tray_open_ui count=0
+[2026-05-14 16:55:30][hide_done] visible=0 reason=tray_open_ui
+[2026-05-14 16:55:30][force_close_done] reason=tray_open_ui
+[2026-05-14 17:02:04][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 17:02:04][init_create_begin] reason= hwnd=5308824
+[2026-05-14 17:02:11][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 17:02:11][init_create_begin] reason= hwnd=200466
+[2026-05-14 17:05:17][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 17:05:17][init_create_begin] reason= hwnd=4456804
+[2026-05-14 17:08:25][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 17:08:25][init_create_begin] reason= hwnd=5702040
+[2026-05-14 18:44:56][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 18:44:56][init_create_begin] reason= hwnd=721440
+[2026-05-14 18:48:29][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 18:48:29][init_create_begin] reason= hwnd=1051486
+[2026-05-14 19:09:48][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 19:09:48][init_create_begin] reason= hwnd=9768424
+[2026-05-14 19:12:18][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 19:12:18][init_create_begin] reason= hwnd=44893128

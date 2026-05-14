@@ -61,6 +61,7 @@ global NativeDropLastTickMouseY := 0
 global NativeDropLastStartTick := 0
 global NativeDropRearmUntil := 0
 global NativeDropBridgeSilentMode := false
+global GDHO_TriggerSource := ""
 global g_LastValidTrayMenu := []
 global g_IsUIVisibleTransitioning := false
 global g_ActivationApplyToken := 0
@@ -3228,11 +3229,8 @@ NativeDropBridge_TriggerHolePulse(evt) {
             NativeDropSeedText := ""
         try SetTimer(NativeDropBridge_DelayedHide, 0) ; cancel pending hide
         try SetTimer(NativeDropBridge_DragSessionTick, 60)
-        if isFreshSession {
-            try NativeDropBridge_ShowWeakPreviewGate()
-            try SetTimer(NativeDropBridge_ShowWeakPreviewGate, -60)
-            try SetTimer(NativeDropBridge_ShowWeakPreviewGate, -180)
-        }
+        ; Basic mode: do not show hole on drag_start.
+        ; Show only after real move gate is passed in DragSessionTick.
         actionTag := isFreshSession ? "arm_wait_move" : "arm_keep_session"
         try NativeDropDiag_Log("route kind=" . kindRaw . " action=" . actionTag . " payload=" . payloadRaw . " mapped=" . kindMapped . (fallbackPayload != "" ? " fallback=" . fallbackPayload : ""))
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . kindRaw . "', dispatch: '" . actionTag . ":" . kindMapped . "', active: 1, overHole: 0, wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . kindMapped . "' })")
@@ -3268,9 +3266,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
                 && (NativeDropCurrentMoveDistance >= NativeDropMinCommitDistancePx)
                 && (sinceStartMs >= NativeDropMinCommitMs)
                 && (dwellMs >= NativeDropMinDwellInHoleMs)
-            if (NativeDropSessionPayload = "text" && canCommit)
-                NativeDropBridge_TryOpenSearchCenterFromSelection(NativeDropSeedText)
-            else if (NativeDropSessionPayload = "text")
+            if (NativeDropSessionPayload = "text" && !canCommit)
                 try NativeDropDiag_Log("route drag_end_text action=blocked dist=" . Round(NativeDropCurrentMoveDistance, 1) . " min_dist=" . NativeDropMinCommitDistancePx . " ms=" . sinceStartMs . " min_ms=" . NativeDropMinCommitMs . " hover_valid=" . (GDHO_HOVER_VALID ? "1" : "0") . " over_hole=" . (NativeDropOverHole ? "1" : "0") . " strict_over_hole=" . (strictOverHole ? "1" : "0") . " dwell_ms=" . dwellMs . " min_dwell=" . NativeDropMinDwellInHoleMs)
         } catch {
         }
@@ -3335,26 +3331,9 @@ NativeDropBridge_ApplyDropAction(evt, kind := "") {
         kind0 := "text"
 
     if (kind0 = "text") {
-        t := ""
-        if (IsObject(evt) && evt.Has("text"))
-            t := Trim(String(evt["text"]))
-        if (t = "" && IsObject(evt) && evt.Has("link"))
-            t := Trim(String(evt["link"]))
-        if (t = "")
-            t := Trim(String(NativeDropSeedText))
-        if (t = "")
-            t := NativeDropBridge_CaptureTextSeed()
-        try FloatingToolbar_ActivateSearchCenter()
-        try SetTimer(FloatingToolbar_ActivateSearchCenter, -60)
-        if (t != "") {
-            try FloatingToolbar_RequestSearchByKeyword(t)
-            try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(t), -120)
-            try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(t), -260)
-            try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'search:ok' })")
-            return true
-        }
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'search:empty' })")
-        return false
+        ; Baseline mode: text drag only shows hole overlay, no auto-search action.
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text_drag_overlay_only' })")
+        return true
     }
 
     files := []
@@ -3486,7 +3465,7 @@ NativeDropBridge_DragSessionTick(*) {
             GDHO_DRAG_CONFIDENCE := 0.9
             NativeDropMovedEnough := true
             try NativeDropDiag_Log("route drag_tick action=move_gate_passed dist=" . Round(moveDist, 1))
-            if !NativeDropWeakPreviewShown {
+            if (!NativeDropWeakPreviewShown && NativeDropSessionPayload = "text") {
                 try {
                     GDHO_Init()
                     GDHO_Show(NativeDropSessionPayload)
@@ -3669,8 +3648,12 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
     global NativeDropLastTickMouseX, NativeDropLastTickMouseY
     global NativeDropSessionPayload, NativeDropLastEventTick, NativeDropLastStartTick, NativeDropRearmUntil, NativeDropBridgeSilentMode
     global NativeDropAwaitingDragEnd, NativeDropAwaitingDragEndSince
-    global GDHO_STATE, GDHO_HOVER_VALID, GDHO_DWELL_START_TICK, GDHO_LAST_PROXIMITY
+    global GDHO_STATE, GDHO_HOVER_VALID, GDHO_DWELL_START_TICK, GDHO_LAST_PROXIMITY, GDHO_TriggerSource
     r0 := StrLower(Trim(String(reason)))
+    if (r0 = "drag_end" && GDHO_TriggerSource = "selection_copy") {
+        try NativeDropDiag_Log("reset_session_skip reason=drag_end trigger_source=selection_copy")
+        return
+    }
     specialUiReason := (r0 = "caps_f_search" || r0 = "search_center_exit")
     if (NativeDropSessionActive && specialUiReason) {
         try NativeDropDiag_Log("reset_session_skip reason=" . reason . " active_drag=1")
@@ -3696,6 +3679,7 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
     GDHO_DWELL_START_TICK := 0
     GDHO_LAST_PROXIMITY := 0.0
     NativeDropSeedText := ""
+    GDHO_TriggerSource := ""
     NativeDropLastTickMouseX := 0
     NativeDropLastTickMouseY := 0
     NativeDropLastStartTick := 0
@@ -3768,8 +3752,12 @@ NativeDropBridge_ResetSessionAsync(reason := "", hideDelayMs := 300, silentMode 
 }
 
 NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMode := false) {
-    global NativeDropSessionActive
+    global NativeDropSessionActive, GDHO_TriggerSource
     r := StrLower(Trim(String(reason)))
+    if (r = "drag_end" && GDHO_TriggerSource = "selection_copy") {
+        try NativeDropDiag_Log("reset_session_async_skip reason=drag_end trigger_source=selection_copy")
+        return
+    }
     if (NativeDropSessionActive && (r = "caps_f_search" || r = "search_center_exit")) {
         try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " active_drag=1")
         return

@@ -158,7 +158,6 @@
       let sleepMode = true;
       let rafId = 0;
       let expandTimer = 0;
-      let autoDemoStarted = false;
 
       function initGalaxy() {
         const dpr = window.devicePixelRatio || 1;
@@ -335,12 +334,7 @@
 
       if (!(window.chrome && window.chrome.webview)) {
         document.body.style.background = "#050508";
-        setTimeout(() => {
-          if (autoDemoStarted) return;
-          autoDemoStarted = true;
-          window.HoleOverlay.show();
-          setTimeout(() => window.HoleOverlay.drop({ payload: 'text' }), 900);
-        }, 500);
+        setTimeout(() => window.HoleOverlay.show(), 500);
       }
     })();
   </script>
