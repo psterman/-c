@@ -190,6 +190,7 @@ function HolePage() {
         setThemeMode(mode);
       },
       show: (payload = "file") => {
+        window.__gdhoUserInteracting = true;
         const type = payload === "text" ? "text" : "file";
         setHoleVisible(true);
         setDragging(false);
@@ -201,6 +202,7 @@ function HolePage() {
         } catch (_) {}
       },
       update: ({ payload = "file", proximity: p, x, y } = {}) => {
+        window.__gdhoUserInteracting = true;
         const type = payload === "text" ? "text" : "file";
         setHoleVisible(true);
         setDragging(true);
@@ -223,6 +225,7 @@ function HolePage() {
         resetState(false);
       },
       hide: () => {
+        window.__gdhoUserInteracting = false;
         setDropPulse(false);
         setDragging(false);
         setProximity(0);
@@ -237,6 +240,19 @@ function HolePage() {
             y: Math.max(12, Math.min(window.innerHeight - 220, y)),
           });
         }
+      },
+      setProximity: (p) => {
+        setProximity(clamp01(Number(p) || 0));
+      },
+      setSleepMode: (enabled) => {
+        const sleeping = !!enabled;
+        window.__gdhoUserInteracting = !sleeping;
+        if (sleeping) {
+          setDropPulse(false);
+          setDragging(false);
+          setProximity(0);
+        }
+        document.documentElement.classList.toggle("gdho-sleep", sleeping);
       },
     };
 

@@ -2609,7 +2609,13 @@ ApplyActivationRuntimeDeferred(mode, token) {
     try GDHO_SetClickThrough(true)
     catch {
     }
-    try GDHO_Stop()
+    try GDHO_DisarmPolling("runtime_" . m)
+    catch {
+    }
+    try GDHO_HideFrontend()
+    catch {
+    }
+    try GDHO_HideOverlay()
     catch {
     }
     NMER_Log("activation", "runtime_non_hole_ready", "mode=" . m . " elapsed_ms=" . (A_TickCount - t0))
@@ -3132,11 +3138,9 @@ NativeDropBridge_TriggerHolePulse(evt) {
     global NativeDropLastStartTick, NativeDropRearmUntil
     global NativeDropAwaitingDragEnd, NativeDropAwaitingDragEndSince
     global GDHO_STATE, GDHO_HOVER_VALID, GDHO_DWELL_START_TICK, GDHO_LAST_PROXIMITY
-    global GDHO_SIZE_SCALE, GDHO_ANIM_LEVEL, GDHO_VISUAL_STYLE
+    global GDHO_SIZE_SCALE, GDHO_ANIM_LEVEL, GDHO_VISUAL_STYLE, GDHO_DRAG_CONFIDENCE
     global g_HoleRuntimeEnabled, NativeDropBridgeSilentMode
     if (!g_HoleRuntimeEnabled || NativeDropBridgeSilentMode)
-        return
-    if !IsHoleRuntimeEnabledByActivationMode()
         return
     if !EnableHoleOverlayOnNativeDrop
         return
@@ -3170,6 +3174,9 @@ NativeDropBridge_TriggerHolePulse(evt) {
         NativeDropLastStartTick := nowTick
         if (kindMapped = "")
             kindMapped := NativeDropBridge_GuessPayloadForUnknownDrag(&fallbackPayload)
+        ; Text-first experience: unknown drags should still reveal the weak black-hole preview.
+        if (kindMapped = "" && kindRaw = "drag_start")
+            kindMapped := "text"
         if NativeDropBridge_ShouldIgnoreDragEvent(kindRaw, payloadRaw, kindMapped) {
             NativeDropSessionActive := false
             try SetTimer(NativeDropBridge_DragSessionTick, 0)
@@ -3406,7 +3413,7 @@ NativeDropBridge_ShouldIgnoreDragEvent(kindRaw, payloadRaw, kindMapped := "") {
         try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=own_ui_or_process")
         return true
     }
-    if GDHO_IsPointInToolbar(mx, my) {
+    if (kindMapped != "text" && GDHO_IsPointInToolbar(mx, my)) {
         try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=cursor_in_toolbar")
         return true
     }
@@ -3464,7 +3471,7 @@ NativeDropBridge_DragSessionTick(*) {
     if !NativeDropSessionActive
         return
     try {
-        GDHO_SetClickThrough(false)
+        GDHO_SetClickThrough(true)
         CoordMode("Mouse", "Screen")
         MouseGetPos(&mx, &my)
         NativeDropLastEventTick := A_TickCount
@@ -3476,6 +3483,7 @@ NativeDropBridge_DragSessionTick(*) {
         NativeDropCurrentMoveDistance := moveDist
         if (!NativeDropMovedEnough && moveDist >= NativeDropMoveThresholdPx) {
             GDHO_STATE := "TRACKING"
+            GDHO_DRAG_CONFIDENCE := 0.9
             NativeDropMovedEnough := true
             try NativeDropDiag_Log("route drag_tick action=move_gate_passed dist=" . Round(moveDist, 1))
             if !NativeDropWeakPreviewShown {
@@ -3504,6 +3512,8 @@ NativeDropBridge_DragSessionTick(*) {
         dyh := Integer(my) - hy
         holeDist := Sqrt(dxh * dxh + dyh * dyh)
         GDHO_LAST_PROXIMITY := Max(0.0, Min(1.0, 1.0 - (holeDist / 260.0)))
+        try GDHO_SetProximity(GDHO_LAST_PROXIMITY)
+        try GDHO_ApplyDropHitTestByProximity(GDHO_LAST_PROXIMITY)
         if !NativeDropOverHole
             NativeDropSawOutsideHole := true
         if (NativeDropOverHole && NativeDropSawOutsideHole) {
@@ -3654,14 +3664,15 @@ NativeDropBridge_CaptureTextSeed() {
     return t
 }
 
-NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := false) {
+NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := false, hideOverlay := true) {
     global NativeDropSessionActive, NativeDropOverHole, NativeDropWasOverHole, NativeDropWeakPreviewShown, NativeDropSawOutsideHole, NativeDropValidEnterHole, NativeDropStartMouseX, NativeDropStartMouseY, NativeDropMovedEnough, NativeDropCurrentMoveDistance, NativeDropEnterHoleTick, NativeDropSeedText
     global NativeDropLastTickMouseX, NativeDropLastTickMouseY
     global NativeDropSessionPayload, NativeDropLastEventTick, NativeDropLastStartTick, NativeDropRearmUntil, NativeDropBridgeSilentMode
     global NativeDropAwaitingDragEnd, NativeDropAwaitingDragEndSince
     global GDHO_STATE, GDHO_HOVER_VALID, GDHO_DWELL_START_TICK, GDHO_LAST_PROXIMITY
     r0 := StrLower(Trim(String(reason)))
-    if (NativeDropSessionActive && (r0 = "caps_f_search" || r0 = "search_center_exit")) {
+    specialUiReason := (r0 = "caps_f_search" || r0 = "search_center_exit")
+    if (NativeDropSessionActive && specialUiReason) {
         try NativeDropDiag_Log("reset_session_skip reason=" . reason . " active_drag=1")
         return
     }
@@ -3695,13 +3706,17 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
     try NativeDropDiag_Log("reset_session_step drag_tick_stopped reason=" . reason)
     if (hideDelayMs < 0)
         hideDelayMs := 0
-    if (hideDelayMs = 0) {
-        try NativeDropDiag_Log("reset_session_step hide_frontend_queued reason=" . reason)
-        SetTimer((*) => NativeDropBridge_DeferredHideFrontendAndOverlay(reason), -1)
+    if (hideOverlay && !specialUiReason) {
+        if (hideDelayMs = 0) {
+            try NativeDropDiag_Log("reset_session_step hide_frontend_queued reason=" . reason)
+            SetTimer((*) => NativeDropBridge_DeferredHideFrontendAndOverlay(reason), -1)
+        } else {
+            try NativeDropDiag_Log("reset_session_step delayed_hide_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
+            try SetTimer(NativeDropBridge_DelayedHide, -Abs(Integer(hideDelayMs)))
+            try NativeDropDiag_Log("reset_session_step delayed_hide_done reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
+        }
     } else {
-        try NativeDropDiag_Log("reset_session_step delayed_hide_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
-        try SetTimer(NativeDropBridge_DelayedHide, -Abs(Integer(hideDelayMs)))
-        try NativeDropDiag_Log("reset_session_step delayed_hide_done reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
+        try NativeDropDiag_Log("reset_session_step hide_skipped reason=" . reason)
     }
     ; Ensure overlay window returns to transparent hit-test state after forced cleanup.
     try NativeDropDiag_Log("reset_session_step clickthrough_begin reason=" . reason)
@@ -3709,10 +3724,12 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
     try NativeDropDiag_Log("reset_session_step clickthrough_done reason=" . reason)
     NativeDropBridgeSilentMode := !!silentMode
     try NativeDropDiag_Log("reset_session_step silent_mode=" . (NativeDropBridgeSilentMode ? "1" : "0") . " reason=" . reason)
-    if (!NativeDropBridgeSilentMode) {
+    if (!NativeDropBridgeSilentMode && !specialUiReason) {
         try NativeDropDiag_Log("reset_session_step start_bridge_begin reason=" . reason)
         try NativeDropBridge_Start()
         try NativeDropDiag_Log("reset_session_step start_bridge_done reason=" . reason)
+    } else if (specialUiReason) {
+        try NativeDropDiag_Log("reset_session_step bridge_restart_skipped reason=" . reason)
     }
     try NativeDropDiag_Log("reset_session_step js_begin reason=" . reason)
     if (NativeDropBridgeSilentMode) {
@@ -3758,7 +3775,8 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
         return
     }
     try NativeDropDiag_Log("reset_session_async_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
-    try NativeDropBridge_ResetSession(reason, hideDelayMs, silentMode)
+    hideOverlay := !(r = "caps_f_search" || r = "search_center_exit")
+    try NativeDropBridge_ResetSession(reason, hideDelayMs, silentMode, hideOverlay)
     catch as err {
         try NativeDropDiag_Log("reset_session_async_error reason=" . reason . " msg=" . err.Message)
     }
@@ -4418,12 +4436,18 @@ ShowConfigGUI_Safe() {
     try GDHO_SetClickThrough(true)
     catch {
     }
-    ; Keep the old stable order here: stop the native bridge first, then clear the overlay.
-    ; The newer silent reset path caused the settings WebView to lose its normal close/load flow.
-    try NativeDropBridge_Stop()
+    ; Avoid tearing down the whole hole runtime when opening menus/settings.
+    ; Stopping the bridge here can trigger a visible white fallback and add startup lag.
+    try NativeDropBridge_SetSilentMode(true, "config_open")
     catch {
     }
-    try GDHO_Stop()
+    try GDHO_DisarmPolling("config_open")
+    catch {
+    }
+    try GDHO_HideFrontend()
+    catch {
+    }
+    try GDHO_HideOverlay()
     catch {
     }
     try HideFloatingToolbar()
@@ -6271,6 +6295,10 @@ SwitchToChineseIMEForSearchCenter(*) {
 ; 在脚本退出前关闭数据库连接，确保数据完全写入
 ExitFunc(ExitReason, ExitCode) {
     global ClipboardDB
+    try Send("{CapsLock up}")
+    try SetCapsLockState("Off")
+    try NormalizeCapsLockRuntimeForUiOpen()
+    try GDHO_HideOverlay()
     try NiumaTtyd_StopProcess()
     if (ClipboardDB && ClipboardDB != 0) {
         try {

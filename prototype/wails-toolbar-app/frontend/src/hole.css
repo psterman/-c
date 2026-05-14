@@ -123,6 +123,10 @@ body {
   overflow: hidden;
 }
 
+:root.gdho-sleep .floating-hole * {
+  animation-play-state: paused !important;
+}
+
 .floating-hole.hidden {
   opacity: 0;
 }

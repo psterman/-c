@@ -45,6 +45,19 @@ global g_SelSense_HubDictActiveSource := "builtin_default"
 global g_SelSense_HubDictInstallBusy := false
 global g_SelSense_HubDictInstallQueued := false
 
+SelectionSense_Diag_Log(msg) {
+    try NativeDropDiag_Log("selection " . String(msg))
+    catch {
+        try OutputDebug("[SelectionSense] " . String(msg))
+        catch {
+        }
+    }
+}
+
+SelectionSense_Diag_Bool(v) {
+    return v ? "1" : "0"
+}
+
 SelectionSense_HubDict_EscapeSql(s) {
     return StrReplace(String(s), "'", "''")
 }
@@ -1254,73 +1267,98 @@ SelectionSense_GuiHwndMatches(guiObj, hwnd) {
     }
 }
 
-SelectionSense_IsKnownGuiRoot(hwnd) {
+SelectionSense_WindowDescribe(hwnd) {
     if !hwnd
-        return false
+        return "hwnd=0"
+    desc := "hwnd=" . hwnd
+    try desc .= " class=" . WinGetClass("ahk_id " hwnd)
+    catch {
+    }
+    try desc .= " title=" . WinGetTitle("ahk_id " hwnd)
+    catch {
+    }
+    try desc .= " exe=" . WinGetProcessName("ahk_id " hwnd)
+    catch {
+    }
+    return desc
+}
+
+SelectionSense_DetectKnownGuiName(hwnd) {
+    if !hwnd
+        return ""
     global FloatingToolbarGUI, g_SCWV_Gui, g_CP_Gui, g_VK_Gui, g_PQP_Gui, g_SelSense_MenuGui
     global AIListPanelGUI, TrayMenuGUI, GuiID_ConfigGUI, GuiID_SearchCenter
     global GuiID_ClipboardManager, GuiID_ClipboardHistory, GuiID_ClipboardFTS5, GuiID_ClipboardMonitor, GuiID_ClipboardDebug
     global GuiID_ClipboardSmartMenu, GuiID_ScreenshotEditor, GuiID_ScreenshotToolbar
     global GuiID_VoiceInputPanel, GuiID_VoiceInput, PromptQuickPadCtxMenuGUI, g_CP_PeekGui, g_CloudPlayerGui
     if (IsSet(FloatingToolbarGUI) && FloatingToolbarGUI && SelectionSense_GuiHwndMatches(FloatingToolbarGUI, hwnd))
-        return true
+        return "FloatingToolbarGUI"
     if (IsSet(g_SCWV_Gui) && g_SCWV_Gui && SelectionSense_GuiHwndMatches(g_SCWV_Gui, hwnd))
-        return true
+        return "g_SCWV_Gui"
     if (IsSet(g_CP_Gui) && g_CP_Gui && SelectionSense_GuiHwndMatches(g_CP_Gui, hwnd))
-        return true
+        return "g_CP_Gui"
     if (IsSet(g_CP_PeekGui) && g_CP_PeekGui && SelectionSense_GuiHwndMatches(g_CP_PeekGui, hwnd))
-        return true
+        return "g_CP_PeekGui"
     if (IsSet(g_VK_Gui) && g_VK_Gui && SelectionSense_GuiHwndMatches(g_VK_Gui, hwnd))
-        return true
+        return "g_VK_Gui"
     if (IsSet(g_PQP_Gui) && g_PQP_Gui && SelectionSense_GuiHwndMatches(g_PQP_Gui, hwnd))
-        return true
+        return "g_PQP_Gui"
     if (IsSet(g_SelSense_MenuGui) && g_SelSense_MenuGui && SelectionSense_GuiHwndMatches(g_SelSense_MenuGui, hwnd))
-        return true
+        return "g_SelSense_MenuGui"
     if (IsSet(AIListPanelGUI) && AIListPanelGUI && SelectionSense_GuiHwndMatches(AIListPanelGUI, hwnd))
-        return true
+        return "AIListPanelGUI"
     if (IsSet(TrayMenuGUI) && TrayMenuGUI && SelectionSense_GuiHwndMatches(TrayMenuGUI, hwnd))
-        return true
+        return "TrayMenuGUI"
     if (IsSet(GuiID_ConfigGUI) && GuiID_ConfigGUI && SelectionSense_GuiHwndMatches(GuiID_ConfigGUI, hwnd))
-        return true
+        return "GuiID_ConfigGUI"
     if (IsSet(GuiID_SearchCenter) && GuiID_SearchCenter && SelectionSense_GuiHwndMatches(GuiID_SearchCenter, hwnd))
-        return true
+        return "GuiID_SearchCenter"
     if (IsSet(GuiID_ClipboardManager) && GuiID_ClipboardManager && SelectionSense_GuiHwndMatches(GuiID_ClipboardManager, hwnd))
-        return true
+        return "GuiID_ClipboardManager"
     if (IsSet(GuiID_ClipboardHistory) && GuiID_ClipboardHistory && SelectionSense_GuiHwndMatches(GuiID_ClipboardHistory, hwnd))
-        return true
+        return "GuiID_ClipboardHistory"
     if (IsSet(GuiID_ClipboardFTS5) && GuiID_ClipboardFTS5 && SelectionSense_GuiHwndMatches(GuiID_ClipboardFTS5, hwnd))
-        return true
+        return "GuiID_ClipboardFTS5"
     if (IsSet(GuiID_ClipboardMonitor) && GuiID_ClipboardMonitor && SelectionSense_GuiHwndMatches(GuiID_ClipboardMonitor, hwnd))
-        return true
+        return "GuiID_ClipboardMonitor"
     if (IsSet(GuiID_ClipboardDebug) && GuiID_ClipboardDebug && SelectionSense_GuiHwndMatches(GuiID_ClipboardDebug, hwnd))
-        return true
+        return "GuiID_ClipboardDebug"
     if (IsSet(GuiID_ClipboardSmartMenu) && GuiID_ClipboardSmartMenu && SelectionSense_GuiHwndMatches(GuiID_ClipboardSmartMenu, hwnd))
-        return true
+        return "GuiID_ClipboardSmartMenu"
     if (IsSet(GuiID_ScreenshotEditor) && GuiID_ScreenshotEditor && SelectionSense_GuiHwndMatches(GuiID_ScreenshotEditor, hwnd))
-        return true
+        return "GuiID_ScreenshotEditor"
     if (IsSet(GuiID_ScreenshotToolbar) && GuiID_ScreenshotToolbar && SelectionSense_GuiHwndMatches(GuiID_ScreenshotToolbar, hwnd))
-        return true
+        return "GuiID_ScreenshotToolbar"
     if (IsSet(GuiID_VoiceInputPanel) && GuiID_VoiceInputPanel && SelectionSense_GuiHwndMatches(GuiID_VoiceInputPanel, hwnd))
-        return true
+        return "GuiID_VoiceInputPanel"
     if (IsSet(GuiID_VoiceInput) && GuiID_VoiceInput && SelectionSense_GuiHwndMatches(GuiID_VoiceInput, hwnd))
-        return true
+        return "GuiID_VoiceInput"
     if (IsSet(PromptQuickPadCtxMenuGUI) && PromptQuickPadCtxMenuGUI && SelectionSense_GuiHwndMatches(PromptQuickPadCtxMenuGUI, hwnd))
-        return true
+        return "PromptQuickPadCtxMenuGUI"
     if (IsSet(g_CloudPlayerGui) && g_CloudPlayerGui && SelectionSense_GuiHwndMatches(g_CloudPlayerGui, hwnd))
-        return true
-    return false
+        return "g_CloudPlayerGui"
+    return ""
+}
+
+SelectionSense_IsKnownGuiRoot(hwnd) {
+    if !hwnd
+        return false
+    return (SelectionSense_DetectKnownGuiName(hwnd) != "")
 }
 
 SelectionSense_CursorOverOurUi() {
-    MouseGetPos(, , &hWin)
+    MouseGetPos(&mx, &my, &hWin)
     cur := hWin
     loop 14 {
-        if SelectionSense_IsKnownGuiRoot(cur)
+        if (name := SelectionSense_DetectKnownGuiName(cur)) {
+            SelectionSense_Diag_Log("cursor_over_ui hit=" . name . " " . SelectionSense_WindowDescribe(cur) . " mouse_x=" . mx . " mouse_y=" . my)
             return true
+        }
         cur := DllCall("GetParent", "ptr", cur, "ptr")
         if !cur
             break
     }
+    SelectionSense_Diag_Log("cursor_over_ui miss mouse_x=" . mx . " mouse_y=" . my . " top=" . SelectionSense_WindowDescribe(hWin))
     return false
 }
 
@@ -1352,12 +1390,18 @@ SelectionSense_OnLButtonDown(*) {
 SelectionSense_OnLButtonUp(*) {
     global g_SelSense_Enabled, g_SelSense_RequireIBeam
     global g_SelSense_LButtonDownX, g_SelSense_LButtonDownY, g_SelSense_LButtonClicks, g_SelSense_LButtonDownTick
-    if !g_SelSense_Enabled
+    if !g_SelSense_Enabled {
+        SelectionSense_Diag_Log("lbutton_up skip=disabled")
         return
-    if SelectionSense_CursorOverOurUi()
+    }
+    if SelectionSense_CursorOverOurUi() {
+        SelectionSense_Diag_Log("lbutton_up skip=our_ui")
         return
-    if g_SelSense_RequireIBeam && !SelectionSense_IsIBeamCursor()
+    }
+    if g_SelSense_RequireIBeam && !SelectionSense_IsIBeamCursor() {
+        SelectionSense_Diag_Log("lbutton_up skip=not_ibeam")
         return
+    }
         
     CoordMode("Mouse", "Screen")
     MouseGetPos(&upX, &upY)
@@ -1366,13 +1410,24 @@ SelectionSense_OnLButtonUp(*) {
     
     isDrag := (distX > 3 || distY > 3)
     isMultiClick := (g_SelSense_LButtonClicks >= 2 && (A_TickCount - g_SelSense_LButtonDownTick < 400))
+    SelectionSense_Diag_Log("lbutton_up dist_x=" . distX . " dist_y=" . distY . " drag=" . SelectionSense_Diag_Bool(isDrag) . " multi=" . SelectionSense_Diag_Bool(isMultiClick))
     
     if !(isDrag || isMultiClick) {
         try FloatingToolbar_NotifySelectionClear()
+        SelectionSense_Diag_Log("lbutton_up no_trigger=click")
         return
     }
 
-    SetTimer(SelectionSense_ProcessDeferred, -1)
+    SelectionSense_Diag_Log("lbutton_up trigger=deferred timer=armed")
+    SetTimer((*) => SelectionSense_ProcessDeferredTimerWrapper(), -1)
+}
+
+SelectionSense_ProcessDeferredTimerWrapper() {
+    SelectionSense_Diag_Log("process timer enter")
+    try SelectionSense_ProcessDeferred()
+    catch as err {
+        SelectionSense_Diag_Log("process timer error msg=" . err.Message)
+    }
 }
 
 SelectionSense_ProcessDeferred(*) {
@@ -1380,19 +1435,41 @@ SelectionSense_ProcessDeferred(*) {
     global g_SelSense_LastFullText, g_SelSense_LastTick, g_SelSense_UserCopyInProgress, g_SelSense_UserCopyEndTick
     global g_SelSense_ClipWaitSec, CapsLockCopyInProgress
 
-    if !g_SelSense_Enabled
+    if !g_SelSense_Enabled {
+        SelectionSense_Diag_Log("process skip=disabled")
         return
-    if SelectionSense_CursorOverOurUi()
+    }
+    if SelectionSense_CursorOverOurUi() {
+        SelectionSense_Diag_Log("process skip=our_ui")
         return
+    }
     ; 鐢ㄦ埛涓诲姩 Ctrl+C 鍚庝竴娈垫椂闂村唴璺宠繃妯℃嫙 ^c锛岄伩鍏嶄笌缂栬緫鍣ㄥ唴澶嶅埗/绮樿创鎶㈠壀璐存澘
-    if (g_SelSense_UserCopyInProgress || (A_TickCount - g_SelSense_UserCopyEndTick < 950))
+    if (g_SelSense_UserCopyInProgress || (A_TickCount - g_SelSense_UserCopyEndTick < 950)) {
+        SelectionSense_Diag_Log("process skip=user_copy_guard in_progress=" . SelectionSense_Diag_Bool(g_SelSense_UserCopyInProgress) . " since_ms=" . (A_TickCount - g_SelSense_UserCopyEndTick))
         return
-    if (CapsLockCopyInProgress)
+    }
+    if (CapsLockCopyInProgress) {
+        SelectionSense_Diag_Log("process skip=capslock_copy")
         return
+    }
+    SelectionSense_Diag_Log("process entered")
 
     ; Always capture selection text for global consumers (e.g. drag-hole -> SearchCenter).
     ; Keep Hub/preview notifications gated by original condition.
     hubPreviewActive := (SelectionSense_HubCapsuleHostIsOpen() && SelectionSense_IsCursorEditorActive())
+    procName := ""
+    winClass := ""
+    winTitle := ""
+    try procName := WinGetProcessName("A")
+    catch {
+    }
+    try winClass := WinGetClass("A")
+    catch {
+    }
+    try winTitle := WinGetTitle("A")
+    catch {
+    }
+    SelectionSense_Diag_Log("process begin hub_preview=" . SelectionSense_Diag_Bool(hubPreviewActive) . " clip_wait=" . g_SelSense_ClipWaitSec . " proc=" . procName . " class=" . winClass . " title=" . winTitle)
 
     clipSaved := ""
     try clipSaved := ClipboardAll()
@@ -1403,6 +1480,7 @@ SelectionSense_ProcessDeferred(*) {
     A_Clipboard := ""
     try Send("^c")
     catch as _sendErr {
+        SelectionSense_Diag_Log("process send_copy_failed msg=" . _sendErr.Message)
         try {
             if (clipSaved != "")
                 A_Clipboard := clipSaved
@@ -1420,6 +1498,7 @@ SelectionSense_ProcessDeferred(*) {
     catch as _e {
         got := ""
     }
+    SelectionSense_Diag_Log("process clipboard_read len=" . StrLen(String(got)))
 
     text := ""
     try text := String(got)
@@ -1428,6 +1507,7 @@ SelectionSense_ProcessDeferred(*) {
     }
     text := Trim(text, " `t`r`n")
     if (text = "") {
+        SelectionSense_Diag_Log("process empty_clipboard")
         try {
             if (clipSaved != "")
                 A_Clipboard := clipSaved
@@ -1450,6 +1530,7 @@ SelectionSense_ProcessDeferred(*) {
 
     g_SelSense_LastFullText := text
     g_SelSense_LastTick := A_TickCount
+    SelectionSense_Diag_Log("process text len=" . StrLen(text) . " sig=" . sig . " preview=" . SubStr(text, 1, 48))
     SelectionSense_TryActivateHoleFromSelection(text)
 
     if hubPreviewActive {
@@ -1462,37 +1543,54 @@ SelectionSense_ProcessDeferred(*) {
 
 SelectionSense_TryActivateHoleFromSelection(selectedText) {
     global g_HoleRuntimeEnabled, EnableHoleOverlayOnNativeDrop
-    if !g_HoleRuntimeEnabled
+    if !g_HoleRuntimeEnabled {
+        SelectionSense_Diag_Log("hole skip=runtime_disabled")
         return
-    if !EnableHoleOverlayOnNativeDrop
+    }
+    if !EnableHoleOverlayOnNativeDrop {
+        SelectionSense_Diag_Log("hole skip=feature_disabled")
         return
+    }
     t := ""
     try t := Trim(String(selectedText))
-    if (t = "")
+    if (t = "") {
+        SelectionSense_Diag_Log("hole skip=empty_text")
         return
+    }
 
     ; Mouse selection auto-copy has no native drag events, so trigger hole/search directly.
+    SelectionSense_Diag_Log("hole show begin len=" . StrLen(t))
     try GDHO_Init()
     try GDHO_Show("text")
+    ; WebView2 may finish warming a little late; keep issuing cheap NoActivate moves.
+    try SetTimer((*) => GDHO_Show("text"), -150)
+    try SetTimer((*) => GDHO_Show("text"), -300)
+    try SetTimer((*) => GDHO_Show("text"), -450)
+    try SetTimer((*) => GDHO_Show("text"), -600)
+    try SetTimer((*) => GDHO_Show("text"), -750)
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'selection_copy', dispatch: 'show:text', active: 1, overHole: 0, wasOverHole: 0, payload: 'text' })")
     try FloatingToolbar_ActivateSearchCenter()
     try FloatingToolbar_RequestSearchByKeyword(t)
     try SetTimer(SelectionSense_HideHoleAfterSelection, -2200)
+    SelectionSense_Diag_Log("hole show scheduled hide_ms=2200")
 }
 
 SelectionSense_HideHoleAfterSelection(*) {
     global NativeDropSessionActive
     if GetKeyState("LButton", "P") {
+        SelectionSense_Diag_Log("hole hide defer=button_down")
         try SetTimer(SelectionSense_HideHoleAfterSelection, -350)
         return
     }
     try {
         if NativeDropSessionActive {
+            SelectionSense_Diag_Log("hole hide defer=native_drop_active")
             try SetTimer(SelectionSense_HideHoleAfterSelection, -450)
             return
         }
     } catch {
     }
+    SelectionSense_Diag_Log("hole hide now")
     try GDHO_HideFrontend()
     try GDHO_HideOverlay()
 }
@@ -2593,6 +2691,7 @@ SelectionSense_ClearUserCopyFlag(*) {
 SelectionSense_Init() {
     SelectionSense_LoadIni()
     global g_SelSense_Enabled
+    SelectionSense_Diag_Log("init enabled=" . SelectionSense_Diag_Bool(g_SelSense_Enabled) . " copy_delay=" . g_SelSense_CopyDelayMs . " require_ibeam=" . SelectionSense_Diag_Bool(g_SelSense_RequireIBeam) . " copy_trigger=" . g_SelSense_HubCopyTriggerMode)
     if g_SelSense_Enabled {
         Hotkey("~*LButton", SelectionSense_OnLButtonDown, "On")
         Hotkey("~*LButton Up", SelectionSense_OnLButtonUp, "On")
@@ -2603,5 +2702,13 @@ SelectionSense_Init() {
         Hotkey("~^c", SelectionSense_OnUserCopy, "Off")
     }
     try SelectionSense_PrewarmHubCapsule()
+    try {
+        if EnableHoleOverlayOnNativeDrop && IsHoleRuntimeEnabledByActivationMode() {
+            GDHO_Init()
+            SetTimer((*) => GDHO_HideOverlay(), -900)
+            SelectionSense_Diag_Log("init hole_prewarm enabled")
+        }
+    } catch {
+    }
 }
 

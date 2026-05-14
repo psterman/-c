@@ -458,14 +458,16 @@ SCWV_ShowWaitTimeoutCheck(*) {
         return
 
     elapsed := (g_SCWV_ShowWaitStartTick > 0) ? (A_TickCount - g_SCWV_ShowWaitStartTick) : -1
-    if (elapsed >= 0 && elapsed < 3000) {
-        SetTimer(SCWV_ShowWaitTimeoutCheck, -((3000 - elapsed) + 50))
+    if (elapsed >= 0 && elapsed < 1500) {
+        SetTimer(SCWV_ShowWaitTimeoutCheck, -((1500 - elapsed) + 50))
         return
     }
 
     try SCWV_Log("show_wait_timeout", "elapsed=" . elapsed . " attempts=" . g_SCWV_ShowRecoveryAttempts . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0") . " visible=" . (g_SCWV_Visible ? "1" : "0"))
 
     ; 第一层：硬关机，跳过可能卡住的 Hide/回调链路
+    try GDHO_HideOverlay()
+    try GDHO_READY := false
     SCWV_ForceCloseHost("show_wait_timeout")
 
     ; 只允许一次自动复位，避免在底层环境持续异常时无限重启。
@@ -1550,9 +1552,9 @@ SCWV_Show(reason := "") {
         g_SCWV_ShowWaitStartTick := A_TickCount
         g_SCWV_Visible := false
         SetTimer(SCWV_ForceRevealIfStuck, 0)
-        SetTimer(SCWV_ForceRevealIfStuck, -3200)
+        SetTimer(SCWV_ForceRevealIfStuck, -1500)
         SetTimer(SCWV_ShowWaitTimeoutCheck, 0)
-        SetTimer(SCWV_ShowWaitTimeoutCheck, -3000)
+        SetTimer(SCWV_ShowWaitTimeoutCheck, -1500)
     }
     SCWV_PushLifecycleState("open", reason)
     ; 仅在宿主窗口成功显示后再压下工具栏，避免“先隐藏工具栏但搜索中心没显示”的竞态

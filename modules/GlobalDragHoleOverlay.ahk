@@ -77,7 +77,15 @@ global GDHO_LAST_DROPPED_TEXT := ""
 global GDHO_SESSION_TEXT := ""
 global GDHO_FRONTEND_POST_MSG := 0x8127
 global GDHO_FRONTEND_PENDING_JS := ""
-; Hidden-state parking: keep host away from center to reduce accidental obstruction.
+; Warm-standby parking: keep the WebView host alive and physically offscreen.
+global GDHO_PARK_X := -9999
+global GDHO_PARK_Y := -9999
+global GDHO_SLEEPING := true
+global GDHO_INTERACTIVE := false
+global GDHO_LAST_PROXIMITY_SENT := -1.0
+global GDHO_LAST_HIDE_FRONTEND_TICK := 0
+global GDHO_LAST_HIDE_OVERLAY_TICK := 0
+; Hidden-state parking: legacy dock settings are kept for ini compatibility.
 global GDHO_HIDE_DOCK_ENABLED := true
 global GDHO_HIDE_DOCK_EDGE := "right" ; right|left|top|bottom
 global GDHO_HIDE_DOCK_MARGIN := 10
@@ -195,10 +203,12 @@ GDHO_ApplySettings(positionMode := "anchor", triggerDistance := 260, dismissDist
 
 GDHO_Init() {
     global GDHO_GUI, GDHO_WV2_CTRL, GDHO_WV2, GDHO_READY
-    global GDHO_VISIBLE
+    global GDHO_VISIBLE, GDHO_SLEEPING, GDHO_INTERACTIVE, GDHO_LAST_PROXIMITY_SENT
 
     if (GDHO_GUI)
         return
+
+    GDHO_Trace("init begin")
 
     GDHO_CreateOverlayGui()
     GDHO_WV2_CTRL := 0
@@ -207,6 +217,9 @@ GDHO_Init() {
     GDHO_PREWARM_DONE := false
     GDHO_FIRST_REVEAL_DONE := false
     GDHO_VISIBLE := false
+    GDHO_SLEEPING := true
+    GDHO_INTERACTIVE := false
+    GDHO_LAST_PROXIMITY_SENT := -1.0
     try WebView2.create(GDHO_GUI.Hwnd, GDHO_OnWebViewCreated, WebView2_EnsureSharedEnvBlocking())
 }
 
@@ -219,18 +232,19 @@ GDHO_CreateOverlayGui() {
         hostW := 260
     if (hostH < 220)
         hostH := 220
-    x := Integer(vl + 24), y := Integer(vt + 24)
-    ; WS_EX_LAYERED + WS_EX_NOACTIVATE (do NOT include WS_EX_TRANSPARENT at creation)
-    ; Click-through will be toggled explicitly by GDHO_SetClickThrough().
-    GDHO_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x08080000", "Global Drag Hole Overlay")
+    x := -9999, y := -9999
+    ; WS_EX_LAYERED + WS_EX_NOACTIVATE + WS_EX_TRANSPARENT.
+    ; The host is always shown NoActivate and parked offscreen until needed.
+    GDHO_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x08080020", "Global Drag Hole Overlay")
     GDHO_DIAG_CTRL := GDHO_GUI.AddText("Hidden x6 y6 w340 h44 BackgroundTrans c66FF66", "")
     ; Use dedicated chroma key to keep host transparent before first WebView paint.
     GDHO_GUI.BackColor := "010101"
     ; Click-through + no activate overlay host.
-    GDHO_GUI.Show("Hide x" x " y" y " w" hostW " h" hostH " NoActivate")
+    GDHO_GUI.Show("x" x " y" y " w" hostW " h" hostH " NoActivate")
     ; Keep window normal opacity; transparency comes from chroma-key immediately.
     try WinSetTransparent(255, "ahk_id " GDHO_GUI.Hwnd)
     try WinSetTransColor("010101", "ahk_id " GDHO_GUI.Hwnd)
+    GDHO_SetClickThrough(true)
 }
 
 GDHO_DIAG_LOG(msg, elapsedMs := "") {
@@ -280,13 +294,41 @@ GDHO_SetClickThrough(enable := true) {
     DllCall("SetWindowLongPtr", "Ptr", GDHO_GUI.Hwnd, "Int", -20, "Ptr", ex, "Ptr")
 }
 
+GDHO_SetSleepMode(enable := true) {
+    global GDHO_SLEEPING
+    GDHO_SLEEPING := !!enable
+    GDHO_RunJS("window.HoleOverlay?.setSleepMode?.(" . (GDHO_SLEEPING ? "true" : "false") . ")")
+}
+
+GDHO_ParkOverlay() {
+    global GDHO_GUI, GDHO_HOST_W, GDHO_HOST_H, GDHO_PARK_X, GDHO_PARK_Y
+    global GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_INTERACTIVE
+    if !GDHO_GUI
+        return
+    GDHO_INTERACTIVE := false
+    GDHO_LAST_HOST_X := Integer(GDHO_PARK_X)
+    GDHO_LAST_HOST_Y := Integer(GDHO_PARK_Y)
+    GDHO_SetClickThrough(true)
+    try WinSetAlwaysOnTop(0, "ahk_id " GDHO_GUI.Hwnd)
+    try GDHO_GUI.Move(Integer(GDHO_PARK_X), Integer(GDHO_PARK_Y), Integer(GDHO_HOST_W), Integer(GDHO_HOST_H))
+}
+
+GDHO_SetProximity(prox) {
+    global GDHO_LAST_PROXIMITY_SENT
+    p := Max(0.0, Min(1.0, Float(prox)))
+    if (GDHO_LAST_PROXIMITY_SENT >= 0 && Abs(p - GDHO_LAST_PROXIMITY_SENT) < 0.025)
+        return
+    GDHO_LAST_PROXIMITY_SENT := p
+    GDHO_RunJS("window.HoleOverlay?.setProximity?.(" . Format("{:.3f}", p) . ")")
+}
+
 GDHO_OnWebViewCreated(ctrl) {
     global GDHO_WV2_CTRL, GDHO_WV2, GDHO_READY, GDHO_PAGE_URL, GDHO_NAV_FAIL_COUNT
 
     if !IsObject(ctrl) || !ctrl.HasProp("CoreWebView2")
         return
 
-    try NativeDropDiag_Log("gdho webview_created begin")
+    GDHO_Trace("webview_created begin")
     GDHO_WV2_CTRL := ctrl
     GDHO_WV2 := ctrl.CoreWebView2
     GDHO_READY := false
@@ -361,11 +403,12 @@ GDHO_OnWebMessage(sender, args) {
     typ := msg.Has("type") ? String(msg["type"]) : ""
     if (typ = "hole_drop_ack") {
         GDHO_DROP_ACK_TICK := A_TickCount
+        GDHO_Trace("webmsg hole_drop_ack")
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'ack:first_frame' })")
         return
     }
     if (typ = "hole_close") {
-        try NativeDropDiag_Log("route kind=hole_close action=reset")
+        GDHO_Trace("webmsg hole_close")
         NativeDropBridge_ResetSessionAsync("hole_close", 0)
         return
     }
@@ -373,12 +416,16 @@ GDHO_OnWebMessage(sender, args) {
         return
     if !msg.Has("payload") || !(msg["payload"] is Map)
         return
+    try GDHO_HideFrontend()
+    try GDHO_HideOverlay()
     GDHO_HandleDropPayload(msg["payload"])
+    try NativeDropBridge_ResetSessionAsync("hole_drop", 1)
 }
 
 GDHO_HandleDropPayload(payload) {
     global GDHO_LAST_DROPPED_TEXT, GDHO_SESSION_TEXT
     kind := payload.Has("kind") ? String(payload["kind"]) : "none"
+    GDHO_Trace("handle_drop kind=" . kind)
     if (kind = "text") {
         txt := payload.Has("text") ? Trim(String(payload["text"])) : ""
         if (txt != "") {
@@ -428,10 +475,35 @@ GDHO_HandleDropPayload(payload) {
 GDHO_OnNavigationCompleted(sender, args) {
     global GDHO_READY, GDHO_GUI, GDHO_WV2_CTRL, GDHO_WV2
     global GDHO_FALLBACK_URL, GDHO_NAV_FAIL_COUNT, GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD, GDHO_PREWARM_DONE
+    global GDHO_PAGE_URL
     ok := false
     try ok := args.IsSuccess
     GDHO_READY := !!ok
-    try NativeDropDiag_Log("gdho navigation_completed ok=" . (GDHO_READY ? "1" : "0"))
+    failInfo := ""
+    if !GDHO_READY {
+        try failInfo .= " navErr=" . args.WebErrorStatus
+        catch {
+        }
+        try failInfo .= " isSuccess=" . (args.IsSuccess ? "1" : "0")
+        catch {
+        }
+        try failInfo .= " isHttp=" . (args.IsHttpStatusCodeSuccess ? "1" : "0")
+        catch {
+        }
+        try failInfo .= " status=" . args.HttpStatusCode
+        catch {
+        }
+        try failInfo .= " uri=" . args.Uri
+        catch {
+        }
+        try failInfo .= " page=" . GDHO_PAGE_URL
+        catch {
+        }
+        try failInfo .= " fallback=" . GDHO_FALLBACK_URL
+        catch {
+        }
+    }
+    GDHO_Trace("navigation_completed ok=" . (GDHO_READY ? "1" : "0") . failInfo)
     if GDHO_READY {
         GDHO_NAV_FAIL_COUNT := 0
         ; Re-apply transparency after document init to avoid occasional white/black flash.
@@ -451,7 +523,9 @@ GDHO_OnNavigationCompleted(sender, args) {
     }
 
     GDHO_NAV_FAIL_COUNT += 1
+    GDHO_Trace("navigation_retry count=" . GDHO_NAV_FAIL_COUNT . " fallback=" . (GDHO_FALLBACK_URL != "" ? "1" : "0"))
     if (GDHO_FALLBACK_URL != "" && GDHO_NAV_FAIL_COUNT <= 2) {
+        GDHO_Trace("navigation_retry use_fallback")
         try GDHO_WV2.Navigate(GDHO_FALLBACK_URL)
     }
 }
@@ -469,8 +543,13 @@ GDHO_ResizeToVirtualScreen() {
 }
 
 GDHO_PrewarmOffscreen(*) {
-    ; Keep host window hidden; just force one render pass to prebuild GPU textures.
-    GDHO_RunJS("(function(){var h=window.HoleOverlay;if(!h)return;h.show('text');h.update({payload:'text',x:120,y:120,proximity:0.36});setTimeout(function(){try{h.hide();}catch(_e){}},90);})();")
+    global GDHO_ACTIVE, NativeDropSessionActive
+    ; Keep host parked; force one render pass unless the user is already interacting.
+    if (GDHO_ACTIVE || NativeDropSessionActive)
+        return
+    GDHO_Trace("prewarm offscreen begin")
+    GDHO_RunJS("(function(){var h=window.HoleOverlay;if(!h)return;window.__gdhoUserInteracting=false;h.setSleepMode&&h.setSleepMode(false);h.show&&h.show('text',{prewarm:true});h.update&&h.update({payload:'text',x:120,y:120,proximity:0.36,prewarm:true});setTimeout(function(){try{if(!(window.__gdhoUserInteracting)){h.hide&&h.hide();h.setSleepMode&&h.setSleepMode(true);}}catch(_e){}},90);})();")
+    try GDHO_ParkOverlay()
 }
 
 GDHO_RunJS(js) {
@@ -482,6 +561,15 @@ GDHO_RunJS(js) {
         return true
     } catch {
         return false
+    }
+}
+
+GDHO_Trace(msg) {
+    try NativeDropDiag_Log("gdho " . String(msg))
+    catch {
+        try OutputDebug("[GDHO] " . String(msg))
+        catch {
+        }
     }
 }
 
@@ -515,7 +603,7 @@ GDHO_OnFrontendPostMessage(wParam, lParam, msg, hwnd) {
 }
 
 GDHO_ShowOverlay() {
-    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_READY, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_HOST_W, GDHO_HOST_H, GDHO_FIRST_REVEAL_DONE
+    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_READY, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_HOST_W, GDHO_HOST_H, GDHO_FIRST_REVEAL_DONE, GDHO_INTERACTIVE
     if !GDHO_GUI
         return
     ; Avoid first-frame black flash: don't reveal host before WebView content is ready.
@@ -527,10 +615,13 @@ GDHO_ShowOverlay() {
         return
     }
     if !GDHO_VISIBLE {
+        GDHO_SetSleepMode(false)
+        try WinSetAlwaysOnTop(1, "ahk_id " GDHO_GUI.Hwnd)
         try GDHO_GUI.Show("x" Integer(GDHO_LAST_HOST_X) " y" Integer(GDHO_LAST_HOST_Y) " w" Integer(GDHO_HOST_W) " h" Integer(GDHO_HOST_H) " NoActivate")
         try WinSetTransColor("010101", "ahk_id " GDHO_GUI.Hwnd)
-        ; Receive actual drop events while hole is visible.
-        GDHO_SetClickThrough(false)
+        ; Stay transparent until drag confidence/proximity promotes interaction.
+        GDHO_INTERACTIVE := false
+        GDHO_SetClickThrough(true)
         GDHO_KeepBelowToolbar()
         GDHO_VISIBLE := true
         try WebView2_NotifyShown(GDHO_WV2)
@@ -696,13 +787,19 @@ GDHO_GlobalPointToHostLocal(globalX, globalY, &localX, &localY) {
 }
 
 GDHO_HideOverlay() {
-    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2
+    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_LAST_HIDE_OVERLAY_TICK
     if !GDHO_GUI
         return
+    nowTick := A_TickCount
+    if (GDHO_LAST_HIDE_OVERLAY_TICK && (nowTick - GDHO_LAST_HIDE_OVERLAY_TICK < 120))
+        return
+    GDHO_LAST_HIDE_OVERLAY_TICK := nowTick
+    GDHO_Trace("hide_overlay")
     try WebView2_NotifyHidden(GDHO_WV2)
     GDHO_ApplyDropHitTestByProximity(0.0)
-    try GDHO_DockHostWhenHidden()
-    try GDHO_GUI.Hide()
+    GDHO_SetProximity(0.0)
+    GDHO_SetSleepMode(true)
+    try GDHO_ParkOverlay()
     GDHO_VISIBLE := false
 }
 
@@ -771,6 +868,7 @@ GDHO_PushThemeToWeb() {
 GDHO_Show(payload := "file", x := "", y := "") {
     global GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_POSITION_MODE
     p := (payload = "text") ? "text" : "file"
+    GDHO_Trace("show payload=" . p)
     if (x != "" && y != "") {
         GDHO_CURSOR_X := Integer(x)
         GDHO_CURSOR_Y := Integer(y)
@@ -783,7 +881,7 @@ GDHO_Show(payload := "file", x := "", y := "") {
         }
     }
     GDHO_ShowOverlay()
-    GDHO_SetClickThrough(false)
+    GDHO_SetSleepMode(false)
     GDHO_PushThemeToWeb()
     if (GDHO_POSITION_MODE = "fixed")
         GDHO_AnchorHoleByScreen()
@@ -841,8 +939,9 @@ GDHO_Update(payload := "file", x := "", y := "") {
         dist := Sqrt(dxp * dxp + dyp * dyp)
         radius := 140.0
         prox := Max(0.0, Min(1.0, 1.0 - (dist / radius)))
-        GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "', x: " Integer(lx) ", y: " Integer(ly) " })")
+        GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "', x: " Integer(lx) ", y: " Integer(ly) ", proximity: " Format("{:.3f}", prox) " })")
     }
+    GDHO_SetProximity(prox)
     GDHO_ApplyDropHitTestByProximity(prox)
     GDHO_LAST_UPDATE_TICK := nowTick
 }
@@ -894,14 +993,20 @@ GDHO_ExecuteDropCommand(payload := "file") {
 }
 
 GDHO_HideFrontend() {
-    global GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD
+    global GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD, GDHO_LAST_HIDE_FRONTEND_TICK
+    nowTick := A_TickCount
+    if (GDHO_LAST_HIDE_FRONTEND_TICK && (nowTick - GDHO_LAST_HIDE_FRONTEND_TICK < 120))
+        return
+    GDHO_LAST_HIDE_FRONTEND_TICK := nowTick
     if GDHO_DESKTOP_PINNED {
         p := (GDHO_PIN_PAYLOAD = "file") ? "file" : "text"
+        GDHO_Trace("hide_frontend pinned show payload=" . p)
         GDHO_QueueFrontendJs("window.HoleOverlay?.show('" p "')")
         return
     }
     ; Do not call the bridge synchronously during teardown. Post the work to the GUI thread
     ; so tray/menu cleanup cannot hang on a slow or wedged WebView2 bridge.
+    GDHO_Trace("hide_frontend queue hide")
     GDHO_QueueFrontendJs("window.HoleOverlay?.hide()")
 }
 
@@ -909,24 +1014,47 @@ GDHO_Start() {
     global GDHO_MONITORING, GDHO_PRIORITY_APPLIED
     try NativeDropDiag_Log("gdho start begin")
     GDHO_Init()
-    if GDHO_MONITORING
-        return
     if !GDHO_PRIORITY_APPLIED {
         try ProcessSetPriority("Normal")
         try DllCall("SetThreadPriority", "Ptr", DllCall("GetCurrentThread", "Ptr"), "Int", 0)
         GDHO_PRIORITY_APPLIED := true
     }
+    ; Keep the overlay host warm, but do not run the drag poll loop while idle.
+    ; The poll loop is armed only for an active drag session to avoid background CPU churn.
+    GDHO_MONITORING := false
+    try GDHO_PrewarmOffscreen()
+    catch {
+    }
+    try NativeDropDiag_Log("gdho start warm_only")
+}
+
+GDHO_ArmPolling() {
+    global GDHO_MONITORING, GDHO_POLL_MS
+    if GDHO_MONITORING
+        return
     GDHO_MONITORING := true
     SetTimer(GDHO_PollDrag, GDHO_POLL_MS)
-    try NativeDropDiag_Log("gdho start armed poll_ms=" . Integer(GDHO_POLL_MS))
+    try NativeDropDiag_Log("gdho poll armed poll_ms=" . Integer(GDHO_POLL_MS))
+}
+
+GDHO_DisarmPolling(reason := "") {
+    global GDHO_MONITORING, GDHO_ACTIVE
+    if !GDHO_MONITORING {
+        if (reason != "")
+            try NativeDropDiag_Log("gdho poll disarm skip reason=" . reason)
+        return
+    }
+    GDHO_MONITORING := false
+    GDHO_ACTIVE := false
+    SetTimer(GDHO_PollDrag, 0)
+    if (reason != "")
+        try NativeDropDiag_Log("gdho poll disarmed reason=" . reason)
 }
 
 GDHO_Stop() {
     global GDHO_MONITORING, GDHO_ACTIVE
     try NativeDropDiag_Log("gdho stop begin")
-    GDHO_MONITORING := false
-    GDHO_ACTIVE := false
-    SetTimer(GDHO_PollDrag, 0)
+    GDHO_DisarmPolling("stop")
     GDHO_HideFrontend()
     GDHO_HideOverlay()
     try NativeDropDiag_Log("gdho stop done")
@@ -1260,6 +1388,7 @@ GDHO_PollDrag(*) {
             GDHO_Show(GDHO_PAYLOAD, mx, my)
             GDHO_ACTIVE := true
             NativeDropSessionActive := true
+            GDHO_ArmPolling()
             GDHO_RELEASE_PENDING := false
             GDHO_RELEASE_DEADLINE_TICK := 0
         }
@@ -1276,18 +1405,21 @@ GDHO_PollDrag(*) {
 }
 
 GDHO_ApplyDropHitTestByProximity(p) {
-    global GDHO_GUI, GDHO_ACTIVE, GDHO_CLICKTHROUGH
+    global GDHO_GUI, GDHO_ACTIVE, GDHO_CLICKTHROUGH, GDHO_DRAG_CONFIDENCE, GDHO_INTERACTIVE, NativeDropSessionActive
     if !GDHO_GUI
         return
     prox := Max(0.0, Min(1.0, Float(p)))
-    if (prox >= 0.6) {
+    sessionActive := (GDHO_ACTIVE || NativeDropSessionActive)
+    if (sessionActive && GDHO_DRAG_CONFIDENCE >= 0.85 && prox >= 0.88) {
         try WinSetExStyle("-0x20", "ahk_id " GDHO_GUI.Hwnd)
         GDHO_CLICKTHROUGH := false
+        GDHO_INTERACTIVE := true
         return
     }
-    if (!GDHO_ACTIVE || prox < 0.5) {
+    if (!sessionActive || prox < 0.82 || GDHO_DRAG_CONFIDENCE < 0.85) {
         try WinSetExStyle("+0x20", "ahk_id " GDHO_GUI.Hwnd)
         GDHO_CLICKTHROUGH := true
+        GDHO_INTERACTIVE := false
     }
 }
 

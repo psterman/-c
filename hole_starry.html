@@ -151,6 +151,8 @@
       let payloadType = 'text';
       let lastX = 310;
       let lastY = 310;
+      let sleepMode = true;
+      let rafId = 0;
 
       function initGalaxy() {
         const dpr = window.devicePixelRatio || 1;
@@ -192,8 +194,12 @@
       }
 
       function render(time) {
-        if (!isGalaxyOpen && p < 0.01) {
-          requestAnimationFrame(render);
+        if (sleepMode) {
+          rafId = 0;
+          return;
+        }
+        if (!isGalaxyOpen && p < 0.01 && !root.classList.contains('show')) {
+          rafId = 0;
           return;
         }
 
@@ -229,7 +235,11 @@
           }
         });
 
-        requestAnimationFrame(render);
+        rafId = requestAnimationFrame(render);
+      }
+
+      function wakeRender() {
+        if (!rafId) rafId = requestAnimationFrame(render);
       }
 
       function setP(v) {
@@ -240,8 +250,9 @@
       }
 
       window.HoleOverlay = {
-        show: () => { if(!isGalaxyOpen) { root.classList.add('show'); setP(0.08); } },
+        show: (_payload, opts) => { if(!(opts && opts.prewarm)) window.__gdhoUserInteracting = true; window.HoleOverlay.setSleepMode(false); if(!isGalaxyOpen) { root.classList.add('show'); setP(0.08); } },
         hide: () => { 
+          window.__gdhoUserInteracting = false;
           root.classList.remove('show', 'drop'); 
           isGalaxyOpen = false; setP(0); 
         },
@@ -256,6 +267,8 @@
           root.style.setProperty('--hy', y + 'px');
         },
         update: (o) => {
+          if (!(o && o.prewarm)) window.__gdhoUserInteracting = true;
+          window.HoleOverlay.setSleepMode(false);
           if(isGalaxyOpen) return;
           root.classList.add('show');
           if (o && typeof o.proximity === 'number') {
@@ -269,6 +282,15 @@
           } else {
             setP(0.45);
           }
+        },
+        setProximity: (v) => {
+          setP(v);
+          if (!sleepMode && (p >= 0.01 || root.classList.contains('show'))) wakeRender();
+        },
+        setSleepMode: (v) => {
+          sleepMode = !!v;
+          root.classList.toggle('sleep', sleepMode);
+          if (!sleepMode) wakeRender();
         },
         drop: (o) => {
           if(isGalaxyOpen) return;
@@ -288,7 +310,7 @@
       window.addEventListener('click', () => { if(isGalaxyOpen) window.HoleOverlay.hide(); });
 
       initGalaxy();
-      render();
+      window.HoleOverlay.setSleepMode(true);
 
       if (!(window.chrome && window.chrome.webview)) {
         document.body.style.background = "#050508";
