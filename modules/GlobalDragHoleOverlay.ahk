@@ -85,10 +85,19 @@ global GDHO_INTERACTIVE := false
 global GDHO_LAST_PROXIMITY_SENT := -1.0
 global GDHO_LAST_HIDE_FRONTEND_TICK := 0
 global GDHO_LAST_HIDE_OVERLAY_TICK := 0
+global GDHO_DROP_LOCK := false
+global GDHO_HITTEST_CAPTURED := false
+global GDHO_IS_SUCKING := false
+global GDHO_EXPANDED_HOLD := false
+global GDHO_LAST_DIST_TO_HOLE := 99999.0
 ; Hidden-state parking: legacy dock settings are kept for ini compatibility.
 global GDHO_HIDE_DOCK_ENABLED := true
 global GDHO_HIDE_DOCK_EDGE := "right" ; right|left|top|bottom
 global GDHO_HIDE_DOCK_MARGIN := 10
+global GDHO_CX := 0
+global GDHO_CY := 0
+global GDHO_INNER_RADIUS := 76
+global GDHO_SUCK_RADIUS := 140
 
 GDHO_ApplyHideDockSettings(enabled := true, edge := "right", margin := 10) {
     global GDHO_HIDE_DOCK_ENABLED, GDHO_HIDE_DOCK_EDGE, GDHO_HIDE_DOCK_MARGIN
@@ -251,21 +260,9 @@ GDHO_DIAG_LOG(msg, elapsedMs := "") {
     global GDHO_DIAG_CTRL, GDHO_DIAG_VISIBLE
     if !IsObject(GDHO_DIAG_CTRL)
         return
-    ts := FormatTime(, "HH:mm:ss")
-    line := "[" ts "] " String(msg)
-    if (elapsedMs != "")
-        line .= " (" Format("{:.1f}", Float(elapsedMs)) "ms)"
-    GDHO_DIAG_CTRL.Value := line
-    slow := (elapsedMs != "" && Float(elapsedMs) > 15.0)
-    if slow {
-        GDHO_DIAG_CTRL.Opt("cFF4D4D")
-        GDHO_DIAG_CTRL.Visible := true
-        GDHO_DIAG_VISIBLE := true
-    } else {
-        GDHO_DIAG_CTRL.Opt("c66FF66")
-        if !GDHO_DIAG_VISIBLE
-            GDHO_DIAG_CTRL.Visible := false
-    }
+    ; Runtime diagnostics should not leak into the drag overlay UI.
+    GDHO_DIAG_CTRL.Visible := false
+    GDHO_DIAG_VISIBLE := false
 }
 
 GDHO_ApplyAdaptiveAnimLevel() {
@@ -369,7 +366,7 @@ GDHO_ApplyHostMapping() {
 }
 
 GDHO_OnWebMessage(sender, args) {
-    global GDHO_DROP_ACK_TICK
+    global GDHO_DROP_ACK_TICK, GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD
     msg := 0
     ; 1) Preferred path: postMessage(string) payload.
     try {
@@ -409,6 +406,11 @@ GDHO_OnWebMessage(sender, args) {
     }
     if (typ = "hole_close") {
         GDHO_Trace("webmsg hole_close")
+        GDHO_IS_SUCKING := false
+        GDHO_EXPANDED_HOLD := false
+        try GDHO_HideOverlay()
+        try GDHO_ResetSession()
+        try GDHO_ArmPolling()
         NativeDropBridge_ResetSessionAsync("hole_close", 0)
         return
     }
@@ -431,11 +433,7 @@ GDHO_HandleDropPayload(payload) {
         if (txt != "") {
             GDHO_LAST_DROPPED_TEXT := txt
             GDHO_SESSION_TEXT := txt
-            ; Always open SearchCenter first, then inject keyword query.
-            try FloatingToolbar_ActivateSearchCenter()
-            try SetTimer(FloatingToolbar_ActivateSearchCenter, -80)
-            try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(txt), -120)
-            try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(txt), -320)
+            try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:captured' })")
         }
         return
     }
@@ -604,6 +602,7 @@ GDHO_OnFrontendPostMessage(wParam, lParam, msg, hwnd) {
 
 GDHO_ShowOverlay() {
     global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_READY, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_HOST_W, GDHO_HOST_H, GDHO_FIRST_REVEAL_DONE, GDHO_INTERACTIVE
+    global GDHO_CX, GDHO_CY
     if !GDHO_GUI
         return
     ; Avoid first-frame black flash: don't reveal host before WebView content is ready.
@@ -618,6 +617,8 @@ GDHO_ShowOverlay() {
         GDHO_SetSleepMode(false)
         try WinSetAlwaysOnTop(1, "ahk_id " GDHO_GUI.Hwnd)
         try GDHO_GUI.Show("x" Integer(GDHO_LAST_HOST_X) " y" Integer(GDHO_LAST_HOST_Y) " w" Integer(GDHO_HOST_W) " h" Integer(GDHO_HOST_H) " NoActivate")
+        GDHO_CX := Integer(GDHO_LAST_HOST_X) + 180
+        GDHO_CY := Integer(GDHO_LAST_HOST_Y) + 159
         try WinSetTransColor("010101", "ahk_id " GDHO_GUI.Hwnd)
         ; Stay transparent until drag confidence/proximity promotes interaction.
         GDHO_INTERACTIVE := false
@@ -751,7 +752,7 @@ GDHO_AnchorHoleByScreen() {
 }
 
 GDHO_MoveHostToHole(holeX, holeY) {
-    global GDHO_GUI, GDHO_HOST_W, GDHO_HOST_H, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y
+    global GDHO_GUI, GDHO_HOST_W, GDHO_HOST_H, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_CX, GDHO_CY
     if !GDHO_GUI
         return
     GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
@@ -770,6 +771,8 @@ GDHO_MoveHostToHole(holeX, holeY) {
         hy := maxY
     GDHO_LAST_HOST_X := hx
     GDHO_LAST_HOST_Y := hy
+    GDHO_CX := hx + 180
+    GDHO_CY := hy + 159
     try GDHO_GUI.Move(hx, hy, hostW, hostH)
 }
 
@@ -880,9 +883,6 @@ GDHO_Show(payload := "file", x := "", y := "") {
             GDHO_CURSOR_Y := my
         }
     }
-    GDHO_ShowOverlay()
-    GDHO_SetSleepMode(false)
-    GDHO_PushThemeToWeb()
     if (GDHO_POSITION_MODE = "fixed")
         GDHO_AnchorHoleByScreen()
     else if (GDHO_POSITION_MODE = "relative") {
@@ -891,13 +891,17 @@ GDHO_Show(payload := "file", x := "", y := "") {
     }
     else
         GDHO_AnchorHoleUnderToolbar()
-    GDHO_RunJS("window.HoleOverlay?.show('" p "')")
+    GDHO_ShowOverlay()
+    GDHO_SetSleepMode(false)
+    GDHO_PushThemeToWeb()
+    GDHO_RunJS("window.HoleOverlay?.show('" p "', { forceAccept: true })")
     GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
 }
 
 GDHO_Update(payload := "file", x := "", y := "") {
     global GDHO_LAST_UPDATE_TICK, GDHO_UPDATE_MIN_INTERVAL_MS, GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_POSITION_MODE
-    global GDHO_LAST_X, GDHO_LAST_Y, GDHO_JUMP_LERP_THRESHOLD_PX
+    global GDHO_LAST_X, GDHO_LAST_Y, GDHO_JUMP_LERP_THRESHOLD_PX, GDHO_GUI, GDHO_CLICKTHROUGH, GDHO_HITTEST_CAPTURED
+    global GDHO_LAST_DIST_TO_HOLE, GDHO_SUCK_RADIUS, GDHO_IS_SUCKING
     nowTick := A_TickCount
     if (GDHO_LAST_UPDATE_TICK && (nowTick - GDHO_LAST_UPDATE_TICK < GDHO_UPDATE_MIN_INTERVAL_MS))
         return
@@ -915,7 +919,8 @@ GDHO_Update(payload := "file", x := "", y := "") {
     else
         GDHO_AnchorHoleUnderToolbar()
     GDHO_ApplyAdaptiveAnimLevel()
-    prox := 0.45
+    prox := 0.10
+    distToCenter := 99999.0
     if (x = "" || y = "") {
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "' })")
     } else {
@@ -932,17 +937,33 @@ GDHO_Update(payload := "file", x := "", y := "") {
             }
         }
         GDHO_GlobalPointToHostLocal(Integer(x), Integer(y), &lx, &ly)
-        cx := 90
-        cy := 56 + (206 / 2)
-        dxp := lx - cx
-        dyp := ly - cy
-        dist := Sqrt(dxp * dxp + dyp * dyp)
-        radius := 140.0
-        prox := Max(0.0, Min(1.0, 1.0 - (dist / radius)))
+        distToCenter := GDHO_GetDistanceToHoleCenter(Integer(x), Integer(y))
+        GDHO_LAST_DIST_TO_HOLE := distToCenter
+        radius := Float(GDHO_SUCK_RADIUS)
+        prox := Max(0.10, Min(1.0, 1.0 - (distToCenter / radius)))
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" p "', x: " Integer(lx) ", y: " Integer(ly) ", proximity: " Format("{:.3f}", prox) " })")
+        if (!GetKeyState("LButton", "P") && !GDHO_IS_SUCKING && distToCenter <= Float(GDHO_SUCK_RADIUS)) {
+            try NativeDropDiag_Log("[Physical_Suck_UpdateFallback] dist=" . Format("{:.1f}", distToCenter))
+            GDHO_ForceSuckAction()
+            SetTimer(GDHO_FinishSuckSession, -2000)
+            return
+        }
     }
     GDHO_SetProximity(prox)
-    GDHO_ApplyDropHitTestByProximity(prox)
+    if (x != "" && y != "" && GDHO_GUI) {
+        inInner := (distToCenter <= Float(GDHO_INNER_RADIUS))
+        if (inInner && GDHO_CLICKTHROUGH) {
+            try WinSetExStyle("-0x20", "ahk_id " GDHO_GUI.Hwnd)
+            GDHO_CLICKTHROUGH := false
+            GDHO_HITTEST_CAPTURED := true
+        } else if (!inInner && !GDHO_CLICKTHROUGH) {
+            try WinSetExStyle("+0x20", "ahk_id " GDHO_GUI.Hwnd)
+            GDHO_CLICKTHROUGH := true
+            GDHO_HITTEST_CAPTURED := false
+        }
+    }
+    if !GDHO_HITTEST_CAPTURED
+        GDHO_ApplyDropHitTestByProximity(prox)
     GDHO_LAST_UPDATE_TICK := nowTick
 }
 
@@ -975,15 +996,7 @@ GDHO_ExecuteDropCommand(payload := "file") {
         if (txt = "") {
             try txt := Trim(String(A_Clipboard))
         }
-        try FloatingToolbar_ActivateSearchCenter()
-        try SetTimer(FloatingToolbar_ActivateSearchCenter, -80)
-        try SetTimer(FloatingToolbar_ActivateSearchCenter, -220)
-        if (txt != "") {
-            try FloatingToolbar_RequestSearchByKeyword(txt)
-            try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(txt), -120)
-            try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(txt), -320)
-        }
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'search:" (txt != "" ? "ok" : "empty") "' })")
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:" (txt != "" ? "captured" : "empty") "' })")
         GDHO_SESSION_TEXT := ""
         return
     }
@@ -1019,13 +1032,13 @@ GDHO_Start() {
         try DllCall("SetThreadPriority", "Ptr", DllCall("GetCurrentThread", "Ptr"), "Int", 0)
         GDHO_PRIORITY_APPLIED := true
     }
-    ; Keep the overlay host warm, but do not run the drag poll loop while idle.
-    ; The poll loop is armed only for an active drag session to avoid background CPU churn.
-    GDHO_MONITORING := false
+    ; Text drags can be blocked before WebView/native Drop sees them, so keep the
+    ; lightweight physical poller armed while hole mode is enabled.
     try GDHO_PrewarmOffscreen()
     catch {
     }
-    try NativeDropDiag_Log("gdho start warm_only")
+    GDHO_ArmPolling()
+    try NativeDropDiag_Log("gdho start poll_armed")
 }
 
 GDHO_ArmPolling() {
@@ -1102,6 +1115,108 @@ GDHO_IsPointInHole(mx, my, margin := 0) {
     hh := 206 + Integer(margin) * 2
     x := Integer(mx), y := Integer(my)
     return (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh)
+}
+
+GDHO_IsPointInInnerHoleRadius(mx, my) {
+    global GDHO_CX, GDHO_CY, GDHO_INNER_RADIUS
+    cx := Integer(GDHO_CX)
+    cy := Integer(GDHO_CY)
+    if (cx = 0 && cy = 0) {
+        ; Fallback to current host geometry center approximation.
+        global GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y
+        cx := Integer(GDHO_LAST_HOST_X) + 90 + 90
+        cy := Integer(GDHO_LAST_HOST_Y) + 56 + 103
+    }
+    r := Float(GDHO_INNER_RADIUS)
+    dx := Float(mx) - Float(cx)
+    dy := Float(my) - Float(cy)
+    return ((dx * dx + dy * dy) < (r * r))
+}
+
+GDHO_GetDistanceToHoleCenter(mx, my) {
+    global GDHO_CX, GDHO_CY, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y
+    cx := Integer(GDHO_CX)
+    cy := Integer(GDHO_CY)
+    if (cx = 0 && cy = 0) {
+        cx := Integer(GDHO_LAST_HOST_X) + 90 + 90
+        cy := Integer(GDHO_LAST_HOST_Y) + 56 + 103
+    }
+    dx := Float(mx) - Float(cx)
+    dy := Float(my) - Float(cy)
+    return Sqrt(dx * dx + dy * dy)
+}
+
+GDHO_HandleDropAction() {
+    global GDHO_PAYLOAD, GDHO_DROP_LOCK
+    GDHO_DROP_LOCK := true
+    try GDHO_RunJS("window.HoleOverlay?.drop({payload: '" GDHO_PAYLOAD "'})")
+    ; Keep drop animation responsive before any native fallback collection.
+    SetTimer((*) => GDHO_TryHandleExplorerDrop(), -80)
+    try NativeDropDiag_Log("[Drop_Sent] target=hole_starry payload=" . GDHO_PAYLOAD)
+}
+
+GDHO_ForceSuckAction() {
+    global GDHO_PAYLOAD, GDHO_DROP_LOCK, GDHO_SESSION_TEXT
+    global GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD, GDHO_GUI, GDHO_CLICKTHROUGH, GDHO_HITTEST_CAPTURED
+    if (GDHO_IS_SUCKING)
+        return
+    GDHO_IS_SUCKING := true
+    GDHO_EXPANDED_HOLD := true
+    GDHO_DROP_LOCK := true
+    try NativeDropDiag_Log("[Physical_Suck_Triggered] payload=" . GDHO_PAYLOAD)
+    if (GDHO_GUI) {
+        try WinSetExStyle("-0x20", "ahk_id " GDHO_GUI.Hwnd)
+        GDHO_CLICKTHROUGH := false
+        GDHO_HITTEST_CAPTURED := true
+    }
+    try GDHO_RunJS("window.HoleOverlay?.drop({payload: '" GDHO_PAYLOAD "'})")
+    if (GDHO_PAYLOAD = "text") {
+        try Send("^c")
+        try ClipWait(0.2)
+        try GDHO_SESSION_TEXT := Trim(String(A_Clipboard))
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:" (GDHO_SESSION_TEXT != "" ? "captured" : "empty") "' })")
+    } else {
+        try GDHO_TryHandleExplorerDrop()
+    }
+}
+
+GDHO_FinishSuckSession(*) {
+    global GDHO_IS_SUCKING
+    GDHO_IS_SUCKING := false
+    GDHO_ResetSession()
+}
+
+GDHO_ResetSession(*) {
+    global GDHO_ACTIVE, NativeDropSessionActive, GDHO_DROP_LOCK, GDHO_HITTEST_CAPTURED
+    global GDHO_RELEASE_PENDING, GDHO_RELEASE_DEADLINE_TICK, GDHO_SAW_DRAG_CURSOR, GDHO_DRAG_CURSOR_STREAK
+    global GDHO_SESSION_TEXT, GDHO_SUPPRESS_UNTIL_RELEASE, GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD
+    if (GDHO_IS_SUCKING)
+        return
+    if (GDHO_EXPANDED_HOLD) {
+        GDHO_ACTIVE := false
+        NativeDropSessionActive := false
+        GDHO_DROP_LOCK := false
+        GDHO_HITTEST_CAPTURED := true
+        GDHO_RELEASE_PENDING := false
+        GDHO_RELEASE_DEADLINE_TICK := 0
+        GDHO_SAW_DRAG_CURSOR := false
+        GDHO_DRAG_CURSOR_STREAK := 0
+        GDHO_SESSION_TEXT := ""
+        GDHO_SUPPRESS_UNTIL_RELEASE := false
+        GDHO_ResetPointerSeed()
+        return
+    }
+    GDHO_DROP_LOCK := false
+    GDHO_HITTEST_CAPTURED := false
+    GDHO_ACTIVE := false
+    NativeDropSessionActive := false
+    GDHO_RELEASE_PENDING := false
+    GDHO_RELEASE_DEADLINE_TICK := 0
+    GDHO_SAW_DRAG_CURSOR := false
+    GDHO_DRAG_CURSOR_STREAK := 0
+    GDHO_SESSION_TEXT := ""
+    GDHO_SUPPRESS_UNTIL_RELEASE := false
+    GDHO_ResetPointerSeed()
 }
 
 GDHO_IsPointInToolbar(mx, my) {
@@ -1193,6 +1308,7 @@ GDHO_PollDrag(*) {
     global FloatingToolbarDragging, NativeDropSessionActive
     global GDHO_RELEASE_PENDING, GDHO_RELEASE_DEADLINE_TICK, GDHO_RELEASE_SETTLE_MS
     global GDHO_LAST_CURSOR_NAME, GDHO_SAW_DRAG_CURSOR, GDHO_STRICT_MODE, GDHO_DRAG_CURSOR_STREAK
+    global GDHO_DROP_LOCK, GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD, GDHO_LAST_DIST_TO_HOLE, GDHO_INNER_RADIUS, GDHO_SUCK_RADIUS
     if GDHO_POLL_BUSY
         return
     GDHO_POLL_BUSY := true
@@ -1217,30 +1333,45 @@ GDHO_PollDrag(*) {
             }
         }
 
-        ; Physical fallback + settle buffer:
-        ; keep state for a short window after release to avoid race with delayed native Drop.
-        if (NativeDropSessionActive && !lDown) {
-            if !GDHO_RELEASE_PENDING {
-                GDHO_RELEASE_PENDING := true
-                GDHO_RELEASE_DEADLINE_TICK := A_TickCount + Integer(GDHO_RELEASE_SETTLE_MS)
-                if GDHO_ACTIVE
-                    GDHO_Drop(GDHO_PAYLOAD)
-            }
-            if (GDHO_RELEASE_PENDING && GDHO_SAW_DRAG_CURSOR && GDHO_IsStandardCursorName(cName) && GDHO_IsPointInHole(mx, my, 20)) {
-                GDHO_ExecuteDropCommand(GDHO_PAYLOAD)
-                GDHO_SAW_DRAG_CURSOR := false
-            }
-            if (A_TickCount < GDHO_RELEASE_DEADLINE_TICK)
+        if (GDHO_EXPANDED_HOLD) {
+            if !lDown
                 return
-            GDHO_RELEASE_PENDING := false
-            GDHO_RELEASE_DEADLINE_TICK := 0
-            GDHO_ACTIVE := false
-            NativeDropSessionActive := false
-            GDHO_SAW_DRAG_CURSOR := false
+            if !GDHO_IsPointInHole(mx, my, 40) {
+                GDHO_EXPANDED_HOLD := false
+                GDHO_IS_SUCKING := false
+                GDHO_HideFrontend()
+                GDHO_HideOverlay()
+                GDHO_ResetSession()
+                return
+            }
+            return
+        }
+
+        ; Mouse-up over the WebView can report our overlay as the hwnd. Treat physical release
+        ; as the highest-priority signal before own-window feedback guards can hide the hole.
+        if !lDown {
+            try FloatingToolbar_EndDrag()
+            GDHO_SUPPRESS_UNTIL_RELEASE := false
+            GDHO_DRAG_CONFIDENCE := 0.0
             GDHO_DRAG_CURSOR_STREAK := 0
-            GDHO_HideFrontend()
-            GDHO_HideOverlay()
-            GDHO_ResetPointerSeed()
+            distNow := GDHO_GetDistanceToHoleCenter(mx, my)
+            inSuckZone := (distNow <= Float(GDHO_SUCK_RADIUS) || GDHO_LAST_DIST_TO_HOLE <= Float(GDHO_SUCK_RADIUS))
+            if ((GDHO_ACTIVE || NativeDropSessionActive) && inSuckZone) {
+                try NativeDropDiag_Log("[Physical_Suck_Release] dist=" . Format("{:.1f}", distNow) . " lastDist=" . Format("{:.1f}", GDHO_LAST_DIST_TO_HOLE))
+                GDHO_ForceSuckAction()
+                SetTimer(GDHO_FinishSuckSession, -2000)
+                return
+            }
+            if (GDHO_ACTIVE || NativeDropSessionActive) {
+                GDHO_HideFrontend()
+                GDHO_HideOverlay()
+                GDHO_ResetSession()
+                return
+            } else if (A_TickCount - GDHO_LAST_UPDATE_TICK > GDHO_MAX_IDLE_HIDE_MS) {
+                GDHO_HideFrontend()
+                GDHO_HideOverlay()
+            }
+            GDHO_ResetSession()
             return
         }
 
@@ -1278,52 +1409,8 @@ GDHO_PollDrag(*) {
             return
         }
 
-        if !lDown {
-            ; Defensive: if toolbar drag state got stuck, force-close it on mouse-up.
-            try FloatingToolbar_EndDrag()
-            GDHO_SUPPRESS_UNTIL_RELEASE := false
-            GDHO_DRAG_CONFIDENCE := 0.0
-            GDHO_DRAG_CURSOR_STREAK := 0
-            if (GDHO_ACTIVE || NativeDropSessionActive) {
-                if !GDHO_RELEASE_PENDING {
-                    GDHO_RELEASE_PENDING := true
-                    GDHO_RELEASE_DEADLINE_TICK := A_TickCount + Integer(GDHO_RELEASE_SETTLE_MS)
-                    if GDHO_ACTIVE
-                        GDHO_Drop(GDHO_PAYLOAD)
-                }
-                if (GDHO_RELEASE_PENDING && GDHO_SAW_DRAG_CURSOR && GDHO_IsStandardCursorName(cName) && GDHO_IsPointInHole(mx, my, 20)) {
-                    GDHO_ExecuteDropCommand(GDHO_PAYLOAD)
-                    GDHO_SAW_DRAG_CURSOR := false
-                }
-                if (A_TickCount < GDHO_RELEASE_DEADLINE_TICK)
-                    return
-                GDHO_RELEASE_PENDING := false
-                GDHO_RELEASE_DEADLINE_TICK := 0
-                NativeDropSessionActive := false
-                if GDHO_ACTIVE {
-                    GDHO_ACTIVE := false
-                    GDHO_TryHandleExplorerDrop()
-                    SetTimer((*) => GDHO_HideOverlay(), -700)
-                } else if (A_TickCount - GDHO_LAST_UPDATE_TICK > GDHO_MAX_IDLE_HIDE_MS) {
-                    GDHO_HideFrontend()
-                    GDHO_HideOverlay()
-                }
-                GDHO_SAW_DRAG_CURSOR := false
-                GDHO_DRAG_CURSOR_STREAK := 0
-                GDHO_ResetPointerSeed()
-                return
-            } else if (A_TickCount - GDHO_LAST_UPDATE_TICK > GDHO_MAX_IDLE_HIDE_MS) {
-                GDHO_HideFrontend()
-                GDHO_HideOverlay()
-            }
-            GDHO_RELEASE_PENDING := false
-            GDHO_RELEASE_DEADLINE_TICK := 0
-            GDHO_SAW_DRAG_CURSOR := false
-            GDHO_DRAG_CURSOR_STREAK := 0
-            GDHO_SESSION_TEXT := ""
-            GDHO_ResetPointerSeed()
+        if GDHO_DROP_LOCK
             return
-        }
 
         if GDHO_SUPPRESS_UNTIL_RELEASE {
             GDHO_HideFrontend()
@@ -1363,12 +1450,12 @@ GDHO_PollDrag(*) {
         likelyDrag := GDHO_IsLikelyDrag(GDHO_DRAG_SOURCE_CLASS, GDHO_START_CURSOR)
         if !likelyDrag
             return
-        if (GDHO_STRICT_MODE && !GDHO_IsStrictDragQualified(GDHO_DRAG_SOURCE_CLASS, GDHO_DRAG_CURSOR_STREAK, cName, GDHO_START_CURSOR))
+        if (GDHO_STRICT_MODE && !GDHO_IsStrictDragQualified(GDHO_DRAG_SOURCE_CLASS, GDHO_DRAG_CURSOR_STREAK, cName, GDHO_START_CURSOR, GDHO_PAYLOAD))
             return
 
         distToTb := GDHO_DistanceToToolbar(mx, my)
         limit := GDHO_ACTIVE ? GDHO_TOOLBAR_DISMISS_RADIUS_PX : GDHO_TOOLBAR_NEAR_RADIUS_PX
-        if (distToTb > limit) {
+        if (GDHO_PAYLOAD != "text" && distToTb > limit) {
             GDHO_HideFrontend()
             GDHO_HideOverlay()
             GDHO_ACTIVE := false
@@ -1382,7 +1469,7 @@ GDHO_PollDrag(*) {
             if (GDHO_POSITION_MODE != "relative") {
                 ; Reveal hole immediately on activation for faster visual response.
                 GDHO_ShowOverlay()
-                GDHO_RunJS("window.HoleOverlay?.show('" GDHO_PAYLOAD "')")
+                GDHO_RunJS("window.HoleOverlay?.show('" GDHO_PAYLOAD "', { forceAccept: true })")
             }
             ; Relative mode will place hole once here, then GDHO_Update keeps it fixed.
             GDHO_Show(GDHO_PAYLOAD, mx, my)
@@ -1432,10 +1519,20 @@ GDHO_IsStandardCursorName(name) {
         || n = "hand" || n = "no")
 }
 
-GDHO_IsStrictDragQualified(srcClass, cursorStreak, currentCursorName, startCursor) {
+GDHO_IsStrictDragQualified(srcClass, cursorStreak, currentCursorName, startCursor, payload := "file") {
     ; Strict mode goal:
     ; 1) Ordinary mouse pass should not light up the hole.
     ; 2) Require explicit drag-cursor evidence (continuous frames).
+    ; Text drag (browser/edit) often keeps standard cursor names while handle changes.
+    ; Accept it when cursor handle differs from press seed.
+    if ((srcClass = "Chrome_WidgetWin_1" || srcClass = "Edit" || srcClass = "Chrome_RenderWidgetHostHWND"
+        || srcClass = "MozillaWindowClass" || srcClass = "Notepad" || srcClass = "RichEditD2DPT")
+        && startCursor != 0
+        && (startCursor != GDHO_GetCursorHandle() || cursorStreak >= 1))
+        return true
+    ; Physical text drag fallback: if source is inferred text payload, do not require drag-cursor streak.
+    if (payload = "text" && startCursor != 0)
+        return true
     if (cursorStreak < 2)
         return false
     ; Explorer/Desktop source can be accepted once drag cursor is stable.
@@ -1594,9 +1691,10 @@ GDHO_IsLikelyDrag(srcClass, startCursor) {
         return true
     }
 
-    ; Browser/Edit text drag: cursor switched means strong signal.
-    if ((srcClass = "Chrome_WidgetWin_1" || srcClass = "Edit") && startCursor != 0 && cNow != startCursor) {
-        GDHO_DRAG_CONFIDENCE := 0.95
+    ; Browser/Edit text drag: selection drags often keep a standard cursor, so allow it earlier.
+    if ((srcClass = "Chrome_WidgetWin_1" || srcClass = "Edit" || srcClass = "Chrome_RenderWidgetHostHWND"
+        || srcClass = "MozillaWindowClass" || srcClass = "Notepad" || srcClass = "RichEditD2DPT") && startCursor != 0) {
+        GDHO_DRAG_CONFIDENCE := (cNow != startCursor) ? 0.95 : 0.88
         return true
     }
 
@@ -1615,6 +1713,9 @@ GDHO_GuessPayloadType(srcClass) {
     ; Explorer/Desktop drags are generally file/folder.
     if (srcClass = "CabinetWClass" || srcClass = "ExploreWClass" || srcClass = "WorkerW" || srcClass = "Progman")
         return "file"
+    if (srcClass = "Chrome_WidgetWin_1" || srcClass = "Edit" || srcClass = "Chrome_RenderWidgetHostHWND"
+        || srcClass = "MozillaWindowClass" || srcClass = "Notepad" || srcClass = "RichEditD2DPT")
+        return "text"
     ; Other apps default to text-like drag behavior.
     return "text"
 }

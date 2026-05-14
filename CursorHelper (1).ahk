@@ -14,7 +14,7 @@ global AppearanceActivationMode := "toolbar"
 global FloatingToolbarIsVisible := false
 global FloatingBubbleIsVisible := false
 ; Emergency switch: disable hole overlay to avoid toolbar/page freeze.
-global EnableHoleOverlay := false
+global EnableHoleOverlay := true
 global EnableHoleOverlayOnNativeDrop := true
 ; Decoupled Go native drop bridge (out-of-process).
 global EnableNativeDropBridge := true
@@ -43,11 +43,11 @@ global NativeDropStartMouseX := 0
 global NativeDropStartMouseY := 0
 global NativeDropMovedEnough := false
 global NativeDropMoveThresholdPx := 14
-global NativeDropMinCommitDistancePx := 36
+global NativeDropMinCommitDistancePx := 20
 global NativeDropCurrentMoveDistance := 0.0
-global NativeDropMinCommitMs := 260
+global NativeDropMinCommitMs := 140
 global NativeDropEnterHoleTick := 0
-global NativeDropMinDwellInHoleMs := 140
+global NativeDropMinDwellInHoleMs := 60
 global NativeDropAwaitingDragEnd := false
 global NativeDropAwaitingDragEndSince := 0
 global GDHO_STATE := "IDLE" ; IDLE | ARMED | TRACKING
@@ -3469,13 +3469,9 @@ NativeDropBridge_DragSessionTick(*) {
                 try {
                     GDHO_Init()
                     GDHO_Show(NativeDropSessionPayload)
-                    weakScale := 0.82
-                    weakAnim := 0.45
-                    try weakScale := Max(0.65, Min(0.92, Float(GDHO_SIZE_SCALE) * 0.82))
-                    try weakAnim := Max(0.20, Min(0.55, Float(GDHO_ANIM_LEVEL) * 0.45))
-                    GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " weakScale ", animLevel: " weakAnim ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
+                    GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
                     NativeDropWeakPreviewShown := true
-                    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: 'preview_weak_after_move', active: 1, overHole: 0, wasOverHole: 0, payload: '" . NativeDropSessionPayload . "' })")
+                    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: 'preview_strong_after_move', active: 1, overHole: 0, wasOverHole: 0, payload: '" . NativeDropSessionPayload . "' })")
                 } catch {
                 }
             }
@@ -3564,12 +3560,7 @@ NativeDropBridge_ShowWeakPreviewGate(*) {
     try {
         GDHO_Init()
         GDHO_Show(NativeDropSessionPayload)
-        weakScale := 0.90
-        weakAnim := 0.60
-        try weakScale := Max(0.78, Min(0.98, Float(GDHO_SIZE_SCALE) * 0.90))
-        try weakAnim := Max(0.35, Min(0.75, Float(GDHO_ANIM_LEVEL) * 0.60))
-        GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " weakScale ", animLevel: " weakAnim ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
-        ; Make weak state clearly visible while still weaker than hover/commit state.
+        GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
         GDHO_RunJS("window.HoleOverlay?.update({ payload: '" NativeDropSessionPayload "', proximity: 0.55 })")
         NativeDropWeakPreviewShown := true
         GDHO_STATE := "ARMED"
@@ -3616,17 +3607,12 @@ NativeDropBridge_TryOpenSearchCenterFromSelection(preferredText := "") {
     t := Trim(String(preferredText))
     if (t = "")
         t := NativeDropBridge_CaptureTextSeed()
-    try FloatingToolbar_ActivateSearchCenter()
-    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'search_center', dispatch: 'opened' })")
-    try SetTimer(FloatingToolbar_ActivateSearchCenter, -60)
     if (t != "") {
-        try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(t), -100)
-        try SetTimer(FloatingToolbar_RequestSearchByKeyword.Bind(t), -260)
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'query_sent' })")
-        try NativeDropDiag_Log("route drag_end_text action=open_search len=" . StrLen(t))
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:captured' })")
+        try NativeDropDiag_Log("route drag_end_text action=text_captured len=" . StrLen(t))
     } else {
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'query_empty' })")
-        try NativeDropDiag_Log("route drag_end_text action=open_search_no_text")
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:empty' })")
+        try NativeDropDiag_Log("route drag_end_text action=text_empty")
     }
     return true
 }
@@ -3654,7 +3640,7 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
         try NativeDropDiag_Log("reset_session_skip reason=drag_end trigger_source=selection_copy")
         return
     }
-    specialUiReason := (r0 = "caps_f_search" || r0 = "search_center_exit")
+    specialUiReason := (r0 = "caps_f_search" || r0 = "search_center_exit" || r0 = "hole_close")
     if (NativeDropSessionActive && specialUiReason) {
         try NativeDropDiag_Log("reset_session_skip reason=" . reason . " active_drag=1")
         return
@@ -3758,12 +3744,16 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
         try NativeDropDiag_Log("reset_session_async_skip reason=drag_end trigger_source=selection_copy")
         return
     }
-    if (NativeDropSessionActive && (r = "caps_f_search" || r = "search_center_exit")) {
+    if (NativeDropSessionActive && (r = "caps_f_search" || r = "search_center_exit" || r = "hole_close")) {
         try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " active_drag=1")
         return
     }
+    if (!NativeDropSessionActive && r = "hole_close") {
+        try NativeDropDiag_Log("reset_session_async_skip reason=hole_close active_drag=0")
+        return
+    }
     try NativeDropDiag_Log("reset_session_async_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
-    hideOverlay := !(r = "caps_f_search" || r = "search_center_exit")
+    hideOverlay := !(r = "caps_f_search" || r = "search_center_exit" || r = "hole_close")
     try NativeDropBridge_ResetSession(reason, hideDelayMs, silentMode, hideOverlay)
     catch as err {
         try NativeDropDiag_Log("reset_session_async_error reason=" . reason . " msg=" . err.Message)

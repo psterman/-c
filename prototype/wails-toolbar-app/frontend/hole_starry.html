@@ -74,7 +74,7 @@
       border-radius: 50%;
       opacity: calc(0.4 + var(--p) * 0.6);
       z-index: 4;
-      transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: width 140ms linear, height 140ms linear, opacity 140ms linear, transform 180ms ease;
       transform: scale(calc(1 + var(--preview-scale)));
       display: flex;
       align-items: center;
@@ -255,10 +255,10 @@
         root.style.setProperty('--p', String(p));
         const previewScale = Math.max(0, (p - 0.25) / 0.75) * 0.75;
         const previewCanvasAlpha = Math.max(0, (p - 0.42) / 0.58) * 0.55;
-        // Lower threshold so text drag proximity can reliably morph to a circle.
-        const t = Math.max(0, Math.min(1, (p - 0.28) / 0.52));
-        const ringW = 150 + t * 280; // up to 430
-        const ringH = 50 + t * 380;  // up to 430 (true circle at high proximity)
+        // Make morph start much earlier for global drag scenarios.
+        const t = Math.max(0, Math.min(1, (p - 0.08) / 0.55));
+        const ringW = 150 + t * 300; // up to 450
+        const ringH = 50 + t * 400;  // up to 450 (full circle)
         root.style.setProperty('--preview-scale', previewScale.toFixed(3));
         root.style.setProperty('--preview-canvas-alpha', previewCanvasAlpha.toFixed(3));
         root.style.setProperty('--ring-w', ringW.toFixed(1) + 'px');

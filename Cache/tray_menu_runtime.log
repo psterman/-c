@@ -28649,3 +28649,1367 @@
 [2026-05-14 19:12:18] tray_msg lParam=512 msg=1028
 [2026-05-14 19:12:18] tray_msg lParam=512 msg=1028
 [2026-05-14 19:12:18] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=516 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=517 msg=1028
+[2026-05-14 19:14:55] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:14:55] custom_popup_queue lParam=517
+[2026-05-14 19:14:55] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] custom_popup_begin lParam=517
+[2026-05-14 19:14:55] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 19:14:55] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 19:14:55] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 19:14:55] scene_items_appended count=8 mode=hole
+[2026-05-14 19:14:55] custom_popup_build_done items=9 elapsed_ms=203
+[2026-05-14 19:14:55] dark_popup_show_begin items=9 pos=1640,720
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:55] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:56] dark_popup_show_done elapsed_ms=188 hwnd=9964070
+[2026-05-14 19:14:56] custom_popup_end lParam=517 elapsed_ms=406
+[2026-05-14 19:14:56] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:56] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:56] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:56] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:56] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:56] invoke_click idx=9 text=托盘/退出程序
+[2026-05-14 19:14:56] invoke_ok idx=9 text=托盘/退出程序
+[2026-05-14 19:14:56] run_scene_cmd cmd=tray_exit_app mode=hole search_active=0
+[2026-05-14 19:14:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:58] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:58] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:58] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:59] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:59] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:59] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:59] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:59] tray_msg lParam=516 msg=1028
+[2026-05-14 19:14:59] tray_msg lParam=517 msg=1028
+[2026-05-14 19:14:59] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:14:59] custom_popup_queue lParam=517
+[2026-05-14 19:14:59] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 19:14:59] tray_msg lParam=512 msg=1028
+[2026-05-14 19:14:59] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:00] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:00] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:00] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:00] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:00] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:00] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:00] tray_msg lParam=516 msg=1028
+[2026-05-14 19:15:00] tray_msg lParam=517 msg=1028
+[2026-05-14 19:15:00] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:15:00] custom_popup_skip_busy lParam=517 elapsed_ms=0
+[2026-05-14 19:15:01] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:01] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:01] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:01] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=516 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=517 msg=1028
+[2026-05-14 19:15:02] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:15:02] custom_popup_skip_busy lParam=517 elapsed_ms=0
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:15:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:38] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:38] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:38] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:38] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:38] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:38] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:38] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:38] tray_msg lParam=516 msg=1028
+[2026-05-14 19:31:38] tray_msg lParam=517 msg=1028
+[2026-05-14 19:31:38] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=1 native=1 waiting=0 phase=open caps=0
+[2026-05-14 19:31:38] custom_popup_queue lParam=517
+[2026-05-14 19:31:38] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 19:31:38] custom_popup_begin lParam=517
+[2026-05-14 19:31:38] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=1 native=1 waiting=0 create_inflight=0
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 19:31:39] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 19:31:39] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 19:31:39] scene_items_appended count=8 mode=hole
+[2026-05-14 19:31:39] custom_popup_build_done items=9 elapsed_ms=235
+[2026-05-14 19:31:39] dark_popup_show_begin items=9 pos=1646,685
+[2026-05-14 19:31:39] dark_popup_show_done elapsed_ms=187 hwnd=1445394
+[2026-05-14 19:31:39] custom_popup_end lParam=517 elapsed_ms=422
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:39] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:40] invoke_click idx=9 text=托盘/退出程序
+[2026-05-14 19:31:40] invoke_ok idx=9 text=托盘/退出程序
+[2026-05-14 19:31:40] run_scene_cmd cmd=tray_exit_app mode=hole search_active=0
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:41] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:42] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:42] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:31:43] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:49] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:49] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:49] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:49] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:49] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:49] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:49] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:49] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:49] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:49] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:49] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:50] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:50] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:50] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:50] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:50] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:50] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:50] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:50] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:50] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:51] tray_msg lParam=516 msg=1028
+[2026-05-14 19:33:51] tray_msg lParam=517 msg=1028
+[2026-05-14 19:33:51] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:33:51] custom_popup_queue lParam=517
+[2026-05-14 19:33:51] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 19:33:51] custom_popup_begin lParam=517
+[2026-05-14 19:33:51] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 19:33:51] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 19:33:51] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 19:33:51] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 19:33:51] scene_items_appended count=8 mode=hole
+[2026-05-14 19:33:51] custom_popup_build_done items=9 elapsed_ms=187
+[2026-05-14 19:33:51] dark_popup_show_begin items=9 pos=1637,716
+[2026-05-14 19:33:51] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:51] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:51] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:51] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:51] dark_popup_show_done elapsed_ms=188 hwnd=14814634
+[2026-05-14 19:33:51] custom_popup_end lParam=517 elapsed_ms=391
+[2026-05-14 19:33:52] invoke_click idx=5 text=托盘/打开设置
+[2026-05-14 19:33:52] invoke_ok idx=5 text=托盘/打开设置
+[2026-05-14 19:33:52] run_scene_cmd cmd=tray_show_config mode=hole search_active=0
+[2026-05-14 19:33:52] show_config_from_menu_begin
+[2026-05-14 19:33:52] show_config_from_menu_end
+[2026-05-14 19:33:52] queued_ui_open_begin reason=config
+[2026-05-14 19:33:52] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-14 19:33:52] handoff_begin reason=tray_open_ui search_active=0 search_visible=0 gdho=0 native=0 phase=open
+[2026-05-14 19:33:52] handoff_step clickthrough_begin reason=tray_open_ui
+[2026-05-14 19:33:52] handoff_step clickthrough_done reason=tray_open_ui
+[2026-05-14 19:33:52] handoff_step hide_gui_begin reason=tray_open_ui
+[2026-05-14 19:33:53] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:53] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:53] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:53] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:53] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:53] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:53] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:53] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:53] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=516 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=517 msg=1028
+[2026-05-14 19:33:54] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:33:54] custom_popup_queue lParam=517
+[2026-05-14 19:33:54] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 19:33:54] custom_popup_begin lParam=517
+[2026-05-14 19:33:54] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 19:33:54] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 19:33:54] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 19:33:54] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 19:33:54] scene_items_appended count=8 mode=hole
+[2026-05-14 19:33:54] custom_popup_build_done items=9 elapsed_ms=188
+[2026-05-14 19:33:54] dark_popup_show_begin items=9 pos=1634,710
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] dark_popup_show_done elapsed_ms=156 hwnd=16911786
+[2026-05-14 19:33:54] custom_popup_end lParam=517 elapsed_ms=359
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:54] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:56] invoke_click idx=5 text=托盘/打开设置
+[2026-05-14 19:33:56] invoke_ok idx=5 text=托盘/打开设置
+[2026-05-14 19:33:56] run_scene_cmd cmd=tray_show_config mode=hole search_active=0
+[2026-05-14 19:33:56] show_config_from_menu_begin
+[2026-05-14 19:33:56] show_config_from_menu_end
+[2026-05-14 19:33:56] queued_ui_open_begin reason=config
+[2026-05-14 19:33:56] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-14 19:33:56] handoff_begin reason=tray_open_ui search_active=0 search_visible=0 gdho=0 native=0 phase=open
+[2026-05-14 19:33:56] handoff_step clickthrough_begin reason=tray_open_ui
+[2026-05-14 19:33:56] handoff_step clickthrough_done reason=tray_open_ui
+[2026-05-14 19:33:56] handoff_step hide_gui_begin reason=tray_open_ui
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=516 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=517 msg=1028
+[2026-05-14 19:33:57] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:33:57] custom_popup_queue lParam=517
+[2026-05-14 19:33:57] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 19:33:57] custom_popup_begin lParam=517
+[2026-05-14 19:33:57] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] tray_msg lParam=512 msg=1028
+[2026-05-14 19:33:57] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 19:33:57] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 19:33:57] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 19:33:57] scene_items_appended count=8 mode=hole
+[2026-05-14 19:33:57] custom_popup_build_done items=9 elapsed_ms=187
+[2026-05-14 19:33:57] dark_popup_show_begin items=9 pos=1635,556
+[2026-05-14 19:33:58] dark_popup_show_done elapsed_ms=172 hwnd=84935848
+[2026-05-14 19:33:58] custom_popup_end lParam=517 elapsed_ms=375
+[2026-05-14 19:33:59] invoke_click idx=8 text=托盘/重启脚本
+[2026-05-14 19:33:59] invoke_ok idx=8 text=托盘/重启脚本
+[2026-05-14 19:33:59] run_scene_cmd cmd=tray_reload_script mode=hole search_active=0
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=516 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=517 msg=1028
+[2026-05-14 19:34:06] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:34:06] custom_popup_queue lParam=517
+[2026-05-14 19:34:06] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:07] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:07] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:07] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:07] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:07] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:07] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:07] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:07] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:07] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:07] tray_msg lParam=516 msg=1028
+[2026-05-14 19:34:07] tray_msg lParam=517 msg=1028
+[2026-05-14 19:34:07] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:34:07] custom_popup_skip_busy lParam=517 elapsed_ms=0
+[2026-05-14 19:34:08] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:08] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:08] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:08] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:08] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:08] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:08] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:08] tray_msg lParam=516 msg=1028
+[2026-05-14 19:34:08] tray_msg lParam=517 msg=1028
+[2026-05-14 19:34:08] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:34:08] custom_popup_skip_busy lParam=517 elapsed_ms=0
+[2026-05-14 19:34:08] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:08] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:08] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:08] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:13] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:13] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:13] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:13] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:13] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:13] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:13] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:13] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:13] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:13] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:34:33] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:31] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:31] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=516 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=517 msg=1028
+[2026-05-14 19:36:32] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:36:32] custom_popup_queue lParam=517
+[2026-05-14 19:36:32] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] custom_popup_begin lParam=517
+[2026-05-14 19:36:32] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] tray_msg lParam=512 msg=1028
+[2026-05-14 19:36:32] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 19:36:32] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 19:36:32] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 19:36:32] scene_items_appended count=8 mode=hole
+[2026-05-14 19:36:32] custom_popup_build_done items=9 elapsed_ms=187
+[2026-05-14 19:36:32] dark_popup_show_begin items=9 pos=1664,690
+[2026-05-14 19:36:33] dark_popup_show_done elapsed_ms=235 hwnd=22874306
+[2026-05-14 19:36:33] custom_popup_end lParam=517 elapsed_ms=438
+[2026-05-14 19:36:33] invoke_click idx=8 text=托盘/重启脚本
+[2026-05-14 19:36:33] invoke_ok idx=8 text=托盘/重启脚本
+[2026-05-14 19:36:33] run_scene_cmd cmd=tray_reload_script mode=hole search_active=0
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=516 msg=1028
+[2026-05-14 19:39:02] tray_msg lParam=517 msg=1028
+[2026-05-14 19:39:02] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:39:02] custom_popup_queue lParam=517
+[2026-05-14 19:39:02] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 19:39:02] custom_popup_begin lParam=517
+[2026-05-14 19:39:02] custom_popup_state mode=hole ft_vis=1 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 19:39:02] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:03] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 19:39:03] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 19:39:03] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 19:39:03] scene_items_appended count=8 mode=hole
+[2026-05-14 19:39:03] custom_popup_build_done items=9 elapsed_ms=203
+[2026-05-14 19:39:03] dark_popup_show_begin items=9 pos=1635,716
+[2026-05-14 19:39:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:03] tray_msg lParam=512 msg=1028
+[2026-05-14 19:39:03] dark_popup_show_done elapsed_ms=172 hwnd=4852570
+[2026-05-14 19:39:03] custom_popup_end lParam=517 elapsed_ms=375
+[2026-05-14 19:43:23] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:23] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:23] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:23] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:23] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:23] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:23] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:24] tray_msg lParam=516 msg=1028
+[2026-05-14 19:43:24] tray_msg lParam=517 msg=1028
+[2026-05-14 19:43:24] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:43:24] custom_popup_queue lParam=517
+[2026-05-14 19:43:24] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 19:43:24] custom_popup_begin lParam=517
+[2026-05-14 19:43:24] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 19:43:24] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 19:43:24] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 19:43:24] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 19:43:24] scene_items_appended count=8 mode=hole
+[2026-05-14 19:43:24] custom_popup_build_done items=9 elapsed_ms=187
+[2026-05-14 19:43:24] dark_popup_show_begin items=9 pos=1644,714
+[2026-05-14 19:43:24] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:24] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:24] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:24] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:24] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:24] dark_popup_show_done elapsed_ms=203 hwnd=78840986
+[2026-05-14 19:43:24] custom_popup_end lParam=517 elapsed_ms=390
+[2026-05-14 19:43:25] invoke_click idx=9 text=托盘/退出程序
+[2026-05-14 19:43:25] invoke_ok idx=9 text=托盘/退出程序
+[2026-05-14 19:43:25] run_scene_cmd cmd=tray_exit_app mode=hole search_active=0
+[2026-05-14 19:43:26] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:26] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:26] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:26] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:26] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:26] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:26] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:26] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:26] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:26] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:26] tray_msg lParam=512 msg=1028
+[2026-05-14 19:43:26] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:19] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:19] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=516 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=517 msg=1028
+[2026-05-14 19:53:20] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:53:20] custom_popup_queue lParam=517
+[2026-05-14 19:53:20] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 19:53:20] custom_popup_begin lParam=517
+[2026-05-14 19:53:20] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:20] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 19:53:20] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 19:53:20] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 19:53:20] scene_items_appended count=8 mode=hole
+[2026-05-14 19:53:20] custom_popup_build_done items=9 elapsed_ms=188
+[2026-05-14 19:53:20] dark_popup_show_begin items=9 pos=1641,715
+[2026-05-14 19:53:20] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:21] dark_popup_show_done elapsed_ms=187 hwnd=15011610
+[2026-05-14 19:53:21] custom_popup_end lParam=517 elapsed_ms=390
+[2026-05-14 19:53:21] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:21] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:21] tray_msg lParam=512 msg=1028
+[2026-05-14 19:53:21] invoke_click idx=9 text=托盘/退出程序
+[2026-05-14 19:53:21] invoke_ok idx=9 text=托盘/退出程序
+[2026-05-14 19:53:21] run_scene_cmd cmd=tray_exit_app mode=hole search_active=0
+[2026-05-14 19:54:22] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:22] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:22] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:22] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:22] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:23] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:23] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:23] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:23] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:24] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:24] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=516 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=517 msg=1028
+[2026-05-14 19:54:29] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 19:54:29] custom_popup_queue lParam=517
+[2026-05-14 19:54:29] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:29] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:30] tray_msg lParam=512 msg=1028
+[2026-05-14 19:54:30] tray_msg lParam=512 msg=1028
+[2026-05-14 19:55:56] tray_msg lParam=512 msg=1028
+[2026-05-14 19:55:56] tray_msg lParam=512 msg=1028
+[2026-05-14 19:56:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:56:06] tray_msg lParam=512 msg=1028
+[2026-05-14 19:56:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:09:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:09:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:09:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:09:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:09:37] tray_msg lParam=512 msg=1028
+[2026-05-14 20:17:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:17:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:17:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:17:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:17:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:17:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:17:42] tray_msg lParam=516 msg=1028
+[2026-05-14 20:17:42] tray_msg lParam=517 msg=1028
+[2026-05-14 20:17:42] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=1 native=0 waiting=0 phase=open caps=0
+[2026-05-14 20:17:42] custom_popup_queue lParam=517
+[2026-05-14 20:17:42] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 20:17:42] tray_msg lParam=512 msg=1028
+[2026-05-14 20:17:42] custom_popup_begin lParam=517
+[2026-05-14 20:17:42] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=1 native=0 waiting=0 create_inflight=0
+[2026-05-14 20:17:42] tray_msg lParam=512 msg=1028
+[2026-05-14 20:17:42] tray_msg lParam=512 msg=1028
+[2026-05-14 20:17:42] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 20:17:42] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 20:17:42] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 20:17:42] scene_items_appended count=8 mode=hole
+[2026-05-14 20:17:42] custom_popup_build_done items=9 elapsed_ms=234
+[2026-05-14 20:17:42] dark_popup_show_begin items=9 pos=1654,712
+[2026-05-14 20:17:42] dark_popup_show_done elapsed_ms=344 hwnd=34082592
+[2026-05-14 20:17:42] custom_popup_end lParam=517 elapsed_ms=578
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:19:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:20:39] tray_msg lParam=512 msg=1028
+[2026-05-14 20:20:39] tray_msg lParam=512 msg=1028
+[2026-05-14 20:20:39] tray_msg lParam=512 msg=1028
+[2026-05-14 20:20:39] tray_msg lParam=512 msg=1028
+[2026-05-14 20:20:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:20:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:20:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:20:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:20:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:20:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:20:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:54] tray_msg lParam=516 msg=1028
+[2026-05-14 20:25:54] tray_msg lParam=517 msg=1028
+[2026-05-14 20:25:54] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 20:25:54] custom_popup_queue lParam=517
+[2026-05-14 20:25:54] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 20:25:54] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:54] custom_popup_begin lParam=517
+[2026-05-14 20:25:54] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 20:25:54] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:54] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:54] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:54] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:54] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:54] tray_msg lParam=512 msg=1028
+[2026-05-14 20:25:54] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 20:25:54] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 20:25:54] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 20:25:54] scene_items_appended count=8 mode=hole
+[2026-05-14 20:25:54] custom_popup_build_done items=9 elapsed_ms=187
+[2026-05-14 20:25:54] dark_popup_show_begin items=9 pos=1673,658
+[2026-05-14 20:25:54] dark_popup_show_done elapsed_ms=172 hwnd=9832144
+[2026-05-14 20:25:54] custom_popup_end lParam=517 elapsed_ms=375
+[2026-05-14 20:25:55] invoke_click idx=9 text=托盘/退出程序
+[2026-05-14 20:25:55] invoke_ok idx=9 text=托盘/退出程序
+[2026-05-14 20:25:55] run_scene_cmd cmd=tray_exit_app mode=hole search_active=0
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:32] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:33] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:50] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:50] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:50] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:50] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:50] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:50] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:50] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:50] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:50] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:50] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:50] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:51] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:51] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:51] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:51] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:51] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:51] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:51] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:51] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:51] tray_msg lParam=512 msg=1028
+[2026-05-14 20:30:51] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:24] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:25] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:25] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:25] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:26] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:26] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:26] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:26] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:26] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:26] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:26] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:26] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:26] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:26] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:26] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:26] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:27] tray_msg lParam=516 msg=1028
+[2026-05-14 20:34:27] tray_msg lParam=517 msg=1028
+[2026-05-14 20:34:27] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=opening caps=0
+[2026-05-14 20:34:27] custom_popup_queue lParam=517
+[2026-05-14 20:34:27] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 20:34:27] custom_popup_begin lParam=517
+[2026-05-14 20:34:27] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 20:34:27] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:27] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:27] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:27] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:27] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:27] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:27] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 20:34:27] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 20:34:27] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 20:34:27] scene_items_appended count=8 mode=hole
+[2026-05-14 20:34:27] custom_popup_build_done items=9 elapsed_ms=187
+[2026-05-14 20:34:27] dark_popup_show_begin items=9 pos=1646,709
+[2026-05-14 20:34:27] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:27] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:27] dark_popup_show_done elapsed_ms=172 hwnd=6293916
+[2026-05-14 20:34:27] custom_popup_end lParam=517 elapsed_ms=359
+[2026-05-14 20:34:28] invoke_click idx=9 text=托盘/退出程序
+[2026-05-14 20:34:28] invoke_ok idx=9 text=托盘/退出程序
+[2026-05-14 20:34:28] run_scene_cmd cmd=tray_exit_app mode=hole search_active=0
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:34:53] tray_msg lParam=512 msg=1028
+[2026-05-14 20:36:21] handoff_begin reason=caps_f_search search_active=0 search_visible=0 gdho=0 native=0 phase=opening
+[2026-05-14 20:36:21] handoff_step hard_close_search_center_queued reason=caps_f_search
+[2026-05-14 20:36:21] handoff_step clickthrough_begin reason=caps_f_search
+[2026-05-14 20:36:21] handoff_step clickthrough_done reason=caps_f_search
+[2026-05-14 20:36:21] handoff_step hide_gui_begin reason=caps_f_search
+[2026-05-14 20:36:21] handoff_step hide_gui_done reason=caps_f_search
+[2026-05-14 20:36:21] handoff_queued reason=caps_f_search token=1 timeout_ms=1800
+[2026-05-14 20:36:21] handoff_cleanup_done reason=caps_f_search gdho=0 native=0
+[2026-05-14 20:36:21] handoff_begin reason=caps_f_search search_active=0 search_visible=0 gdho=0 native=0 phase=opening
+[2026-05-14 20:36:21] handoff_step hard_close_search_center_queued reason=caps_f_search
+[2026-05-14 20:36:21] handoff_step clickthrough_begin reason=caps_f_search
+[2026-05-14 20:36:21] handoff_step clickthrough_done reason=caps_f_search
+[2026-05-14 20:36:21] handoff_step hide_gui_begin reason=caps_f_search
+[2026-05-14 20:36:21] handoff_step hide_gui_done reason=caps_f_search
+[2026-05-14 20:36:21] handoff_queued reason=caps_f_search token=2 timeout_ms=1800
+[2026-05-14 20:36:21] handoff_cleanup_done reason=caps_f_search gdho=0 native=0
+[2026-05-14 20:38:11] tray_msg lParam=512 msg=1028
+[2026-05-14 20:38:12] tray_msg lParam=512 msg=1028
+[2026-05-14 20:38:12] tray_msg lParam=512 msg=1028
+[2026-05-14 20:38:12] tray_msg lParam=512 msg=1028
+[2026-05-14 20:38:12] tray_msg lParam=512 msg=1028
+[2026-05-14 20:38:12] tray_msg lParam=512 msg=1028
+[2026-05-14 20:38:12] tray_msg lParam=512 msg=1028
+[2026-05-14 20:38:12] tray_msg lParam=512 msg=1028
+[2026-05-14 20:38:13] tray_msg lParam=512 msg=1028
+[2026-05-14 20:38:13] tray_msg lParam=512 msg=1028
+[2026-05-14 20:38:13] tray_msg lParam=512 msg=1028
+[2026-05-14 20:38:13] tray_msg lParam=512 msg=1028
+[2026-05-14 20:38:13] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=516 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=517 msg=1028
+[2026-05-14 20:39:23] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=opening caps=0
+[2026-05-14 20:39:23] custom_popup_queue lParam=517
+[2026-05-14 20:39:23] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 20:39:23] custom_popup_begin lParam=517
+[2026-05-14 20:39:23] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:23] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 20:39:23] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 20:39:23] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 20:39:23] scene_items_appended count=8 mode=hole
+[2026-05-14 20:39:23] custom_popup_build_done items=9 elapsed_ms=203
+[2026-05-14 20:39:23] dark_popup_show_begin items=9 pos=1684,603
+[2026-05-14 20:39:23] dark_popup_show_done elapsed_ms=172 hwnd=4000808
+[2026-05-14 20:39:23] custom_popup_end lParam=517 elapsed_ms=375
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:36] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:37] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:37] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:37] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:37] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:37] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:37] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:37] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:37] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:37] tray_msg lParam=512 msg=1028
+[2026-05-14 20:39:37] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:05] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:05] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:05] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:05] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:05] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:05] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:05] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:05] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:05] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:05] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:05] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:06] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:07] tray_msg lParam=516 msg=1028
+[2026-05-14 20:41:07] tray_msg lParam=517 msg=1028
+[2026-05-14 20:41:07] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 20:41:07] custom_popup_queue lParam=517
+[2026-05-14 20:41:07] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 20:41:07] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:07] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:07] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:07] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:07] tray_msg lParam=512 msg=1028
+[2026-05-14 20:41:07] tray_msg lParam=512 msg=1028
+[2026-05-14 20:45:23] handoff_begin reason=caps_f_search search_active=0 search_visible=0 gdho=1 native=0 phase=open
+[2026-05-14 20:45:23] handoff_step clickthrough_begin reason=caps_f_search
+[2026-05-14 20:45:23] handoff_step clickthrough_done reason=caps_f_search
+[2026-05-14 20:45:23] handoff_step hide_gui_begin reason=caps_f_search
+[2026-05-14 20:45:23] handoff_step hide_gui_done reason=caps_f_search
+[2026-05-14 20:45:23] handoff_queued reason=caps_f_search token=1 timeout_ms=1800
+[2026-05-14 20:45:24] handoff_cleanup_done reason=caps_f_search gdho=0 native=0
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:09] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=516 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=517 msg=1028
+[2026-05-14 20:49:10] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 20:49:10] custom_popup_queue lParam=517
+[2026-05-14 20:49:10] custom_popup_return lParam=517 elapsed_ms=16
+[2026-05-14 20:49:10] custom_popup_begin lParam=517
+[2026-05-14 20:49:10] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:10] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 20:49:10] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 20:49:10] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 20:49:10] scene_items_appended count=8 mode=hole
+[2026-05-14 20:49:10] custom_popup_build_done items=9 elapsed_ms=187
+[2026-05-14 20:49:10] dark_popup_show_begin items=9 pos=1652,686
+[2026-05-14 20:49:11] dark_popup_show_done elapsed_ms=360 hwnd=199166
+[2026-05-14 20:49:11] custom_popup_end lParam=517 elapsed_ms=563
+[2026-05-14 20:49:13] invoke_click idx=9 text=托盘/退出程序
+[2026-05-14 20:49:13] invoke_ok idx=9 text=托盘/退出程序
+[2026-05-14 20:49:13] run_scene_cmd cmd=tray_exit_app mode=hole search_active=0
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:14] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:15] tray_msg lParam=512 msg=1028
+[2026-05-14 20:49:15] tray_msg lParam=512 msg=1028
+[2026-05-14 20:53:59] tray_msg lParam=512 msg=1028
+[2026-05-14 20:53:59] tray_msg lParam=512 msg=1028
+[2026-05-14 20:53:59] tray_msg lParam=512 msg=1028
+[2026-05-14 20:53:59] tray_msg lParam=512 msg=1028
+[2026-05-14 20:53:59] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:40] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:41] tray_msg lParam=516 msg=1028
+[2026-05-14 20:59:41] tray_msg lParam=517 msg=1028
+[2026-05-14 20:59:41] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=opening caps=0
+[2026-05-14 20:59:41] custom_popup_queue lParam=517
+[2026-05-14 20:59:41] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 20:59:41] custom_popup_begin lParam=517
+[2026-05-14 20:59:41] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 20:59:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:41] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 20:59:41] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 20:59:41] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 20:59:41] scene_items_appended count=8 mode=hole
+[2026-05-14 20:59:41] custom_popup_build_done items=9 elapsed_ms=188
+[2026-05-14 20:59:41] dark_popup_show_begin items=9 pos=1641,712
+[2026-05-14 20:59:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:41] dark_popup_show_done elapsed_ms=344 hwnd=1902610
+[2026-05-14 20:59:41] custom_popup_end lParam=517 elapsed_ms=532
+[2026-05-14 20:59:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:41] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:43] invoke_click idx=1 text=显示黑洞
+[2026-05-14 20:59:43] invoke_ok idx=1 text=显示黑洞
+[2026-05-14 20:59:45] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:45] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:45] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:45] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:45] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:45] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:45] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:45] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:45] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=516 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=517 msg=1028
+[2026-05-14 20:59:46] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=opening caps=0
+[2026-05-14 20:59:46] custom_popup_queue lParam=517
+[2026-05-14 20:59:46] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 20:59:46] custom_popup_begin lParam=517
+[2026-05-14 20:59:46] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 20:59:46] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 20:59:46] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 20:59:46] scene_items_appended count=8 mode=hole
+[2026-05-14 20:59:46] custom_popup_build_done items=9 elapsed_ms=203
+[2026-05-14 20:59:46] dark_popup_show_begin items=9 pos=1645,709
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:46] dark_popup_show_done elapsed_ms=141 hwnd=7473980
+[2026-05-14 20:59:46] custom_popup_end lParam=517 elapsed_ms=359
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=516 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=517 msg=1028
+[2026-05-14 20:59:55] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=opening caps=0
+[2026-05-14 20:59:55] custom_popup_queue lParam=517
+[2026-05-14 20:59:55] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 20:59:55] custom_popup_begin lParam=517
+[2026-05-14 20:59:55] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:55] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:56] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:56] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:57] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:57] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:57] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:57] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:57] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:57] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:57] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:57] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:57] tray_msg lParam=516 msg=1028
+[2026-05-14 20:59:57] tray_msg lParam=517 msg=1028
+[2026-05-14 20:59:57] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=opening caps=0
+[2026-05-14 20:59:57] custom_popup_skip_busy lParam=517 elapsed_ms=0
+[2026-05-14 20:59:57] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:57] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:57] tray_msg lParam=512 msg=1028
+[2026-05-14 20:59:57] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 20:59:57] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 20:59:57] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 20:59:57] scene_items_appended count=8 mode=hole
+[2026-05-14 20:59:57] custom_popup_build_done items=9 elapsed_ms=1985
+[2026-05-14 20:59:57] dark_popup_show_begin items=9 pos=1660,579
+[2026-05-14 20:59:57] dark_popup_show_done elapsed_ms=156 hwnd=5507848
+[2026-05-14 20:59:57] custom_popup_end lParam=517 elapsed_ms=2156
+[2026-05-14 20:59:58] invoke_click idx=1 text=显示黑洞
+[2026-05-14 20:59:58] invoke_ok idx=1 text=显示黑洞
+[2026-05-14 21:00:59] tray_msg lParam=512 msg=1028
+[2026-05-14 21:00:59] tray_msg lParam=512 msg=1028
+[2026-05-14 21:00:59] tray_msg lParam=512 msg=1028
+[2026-05-14 21:00:59] tray_msg lParam=512 msg=1028
+[2026-05-14 21:00:59] tray_msg lParam=512 msg=1028
+[2026-05-14 21:00:59] tray_msg lParam=512 msg=1028
+[2026-05-14 21:00:59] tray_msg lParam=512 msg=1028
+[2026-05-14 21:00:59] tray_msg lParam=512 msg=1028
+[2026-05-14 21:00:59] tray_msg lParam=512 msg=1028
+[2026-05-14 21:00:59] tray_msg lParam=513 msg=1028
+[2026-05-14 21:00:59] tray_msg lParam=514 msg=1028
+[2026-05-14 21:00:59] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=opening caps=0
+[2026-05-14 21:00:59] custom_popup_queue lParam=514
+[2026-05-14 21:00:59] custom_popup_return lParam=514 elapsed_ms=0
+[2026-05-14 21:00:59] tray_msg lParam=512 msg=1028
+[2026-05-14 21:00:59] custom_popup_begin lParam=514
+[2026-05-14 21:00:59] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 21:01:00] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 21:01:00] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 21:01:00] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 21:01:00] scene_items_appended count=8 mode=hole
+[2026-05-14 21:01:00] custom_popup_build_done items=9 elapsed_ms=203
+[2026-05-14 21:01:00] dark_popup_show_begin items=9 pos=1636,713
+[2026-05-14 21:01:00] dark_popup_show_done elapsed_ms=141 hwnd=7604258
+[2026-05-14 21:01:00] custom_popup_end lParam=514 elapsed_ms=360
+[2026-05-14 21:01:01] tray_msg lParam=512 msg=1028
+[2026-05-14 21:01:01] tray_msg lParam=512 msg=1028
+[2026-05-14 21:01:01] tray_msg lParam=512 msg=1028
+[2026-05-14 21:01:01] tray_msg lParam=512 msg=1028
+[2026-05-14 21:01:01] tray_msg lParam=512 msg=1028
+[2026-05-14 21:01:01] tray_msg lParam=512 msg=1028
+[2026-05-14 21:01:01] tray_msg lParam=512 msg=1028
+[2026-05-14 21:01:01] tray_msg lParam=512 msg=1028
+[2026-05-14 21:01:01] tray_msg lParam=512 msg=1028
+[2026-05-14 21:01:01] tray_msg lParam=512 msg=1028
+[2026-05-14 21:01:01] invoke_click idx=9 text=托盘/退出程序
+[2026-05-14 21:01:01] invoke_ok idx=9 text=托盘/退出程序
+[2026-05-14 21:01:01] run_scene_cmd cmd=tray_exit_app mode=hole search_active=0
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:19] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:20] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:21] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:21] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:21] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:21] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:21] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:21] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:21] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:23] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:24] tray_msg lParam=516 msg=1028
+[2026-05-14 21:04:24] tray_msg lParam=517 msg=1028
+[2026-05-14 21:04:24] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-14 21:04:24] custom_popup_queue lParam=517
+[2026-05-14 21:04:24] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-14 21:04:24] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:24] custom_popup_begin lParam=517
+[2026-05-14 21:04:24] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-14 21:04:24] scene_items_source scene=tray_menu mode=hole raw_count=60 vis_count=8 cmd_count=184
+[2026-05-14 21:04:24] scene_items_filtered scene=tray_menu count=8
+[2026-05-14 21:04:24] custom_popup_scene_items count=8 mode=hole
+[2026-05-14 21:04:24] scene_items_appended count=8 mode=hole
+[2026-05-14 21:04:24] custom_popup_build_done items=9 elapsed_ms=204
+[2026-05-14 21:04:24] dark_popup_show_begin items=9 pos=1630,714
+[2026-05-14 21:04:24] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:24] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:24] dark_popup_show_done elapsed_ms=171 hwnd=4130772
+[2026-05-14 21:04:24] custom_popup_end lParam=517 elapsed_ms=390
+[2026-05-14 21:04:24] tray_msg lParam=512 msg=1028
+[2026-05-14 21:04:24] tray_msg lParam=512 msg=1028

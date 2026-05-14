@@ -5089,3 +5089,141 @@ drop 分支对 te
 [2026-05-14 19:09:48][init_create_begin] reason= hwnd=9768424
 [2026-05-14 19:12:18][init_begin] reason= gui=0 alive=0 inflight=0
 [2026-05-14 19:12:18][init_create_begin] reason= hwnd=44893128
+[2026-05-14 19:15:18][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 19:15:18][init_create_begin] reason= hwnd=5965818
+[2026-05-14 19:32:00][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 19:32:00][init_create_begin] reason= hwnd=20056612
+[2026-05-14 19:34:26][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 19:34:26][init_create_begin] reason= hwnd=16977352
+[2026-05-14 19:36:41][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 19:36:41][init_create_begin] reason= hwnd=4589980
+[2026-05-14 19:39:12][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 19:39:12][init_create_begin] reason= hwnd=4000628
+[2026-05-14 19:43:43][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 19:43:43][init_create_begin] reason= hwnd=6818756
+[2026-05-14 19:46:05][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 19:46:05][init_create_begin] reason= hwnd=11011756
+[2026-05-14 19:54:47][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 19:54:47][init_create_begin] reason= hwnd=33295242
+[2026-05-14 20:08:31][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:08:31][init_create_begin] reason= hwnd=7146436
+[2026-05-14 20:17:59][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:17:59][init_create_begin] reason= hwnd=3802222
+[2026-05-14 20:19:56][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:19:56][init_create_begin] reason= hwnd=13698930
+[2026-05-14 20:23:52][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:23:52][init_create_begin] reason= hwnd=2754066
+[2026-05-14 20:26:23][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:26:23][init_create_begin] reason= hwnd=1246862
+[2026-05-14 20:30:41][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:30:41][init_create_begin] reason= hwnd=19007136
+[2026-05-14 20:33:09][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:33:09][init_create_begin] reason= hwnd=15010342
+[2026-05-14 20:34:43][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:34:43][init_create_begin] reason= hwnd=27135138
+[2026-05-14 20:36:11][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:36:11][init_create_begin] reason= hwnd=6490524
+[2026-05-14 20:36:21][ftb_activate_search_center_begin] used_webview=1
+[2026-05-14 20:36:21][ftb_activate_search_center_busy] active=0 vis=0 waiting=0
+[2026-05-14 20:36:21][force_close_begin] reason=ftb_activate_busy_recover visible=0 waiting=0 ready=0 ui_ready=0
+[2026-05-14 20:36:21][wm_chain_unregister_begin] reason=ftb_activate_busy_recover count=0
+[2026-05-14 20:36:21][force_close_begin] reason=caps_f_search visible=0 waiting=0 ready=0 ui_ready=0
+[2026-05-14 20:36:21][wm_chain_unregister_begin] reason=caps_f_search count=0
+[2026-05-14 20:36:21][wm_chain_unregister_done] reason=caps_f_search count=0
+[2026-05-14 20:36:21][hide_done] visible=0 reason=caps_f_search
+[2026-05-14 20:36:21][force_close_done] reason=caps_f_search
+[2026-05-14 20:36:21][wm_chain_unregister_done] reason=ftb_activate_busy_recover count=0
+[2026-05-14 20:36:21][hide_done] visible=0 reason=ftb_activate_busy_recover
+[2026-05-14 20:36:21][force_close_done] reason=ftb_activate_busy_recover
+[2026-05-14 20:36:21][init_begin] reason=ftb_activate gui=0 alive=0 inflight=0
+[2026-05-14 20:36:21][init_create_begin] reason=ftb_activate hwnd=53153648
+[2026-05-14 20:36:21][show_begin] reason=ftb_activate ready=0 ui_ready=0
+[2026-05-14 20:36:21][show_wait_ui_ready] reason=ftb_activate
+[2026-05-14 20:36:21][wm_chain_register_begin] reason=ftb_activate count=0
+[2026-05-14 20:36:21][wm_chain_register_done] reason=ftb_activate count=1
+[2026-05-14 20:36:21][ftb_activate_search_center_mid] selected_len=0 opened=1 vis=0
+[2026-05-14 20:36:21][show_begin] reason=ftb_show_visible_check ready=0 ui_ready=0
+[2026-05-14 20:36:21][show_wait_ui_ready] reason=ftb_show_visible_check
+[2026-05-14 20:36:21][wm_chain_register_begin] reason=ftb_show_visible_check count=1
+[2026-05-14 20:36:21][wm_chain_register_done] reason=ftb_show_visible_check count=1
+[2026-05-14 20:36:21][ftb_activate_search_center_end] opened=1 vis=0
+[2026-05-14 20:36:21][run_query_begin] kw_len=26 kw_prefix=https://aihot.virxact.co
+[2026-05-14 20:36:21][init_begin] reason=search_keyword gui=1 alive=1 inflight=1
+[2026-05-14 20:36:21][show_begin] reason=search_keyword ready=0 ui_ready=0
+[2026-05-14 20:36:21][show_wait_ui_ready] reason=search_keyword
+[2026-05-14 20:36:21][wm_chain_register_begin] reason=search_keyword count=1
+[2026-05-14 20:36:21][wm_chain_register_done] reason=search_keyword count=1
+[2026-05-14 20:36:21][run_query_begin] kw_len=26 kw_prefix=https://aihot.virxact.co
+[2026-05-14 20:36:21][init_begin] reason=search_keyword gui=1 alive=1 inflight=1
+[2026-05-14 20:36:21][show_begin] reason=search_keyword ready=0 ui_ready=0
+[2026-05-14 20:36:21][ftb_activate_search_center_begin] used_webview=1
+[2026-05-14 20:36:21][ftb_activate_search_center_busy] active=0 vis=0 waiting=1
+[2026-05-14 20:36:21][force_close_begin] reason=ftb_activate_busy_recover visible=0 waiting=1 ready=0 ui_ready=0
+[2026-05-14 20:36:21][wm_chain_unregister_begin] reason=ftb_activate_busy_recover count=1
+[2026-05-14 20:36:21][wm_chain_unregister_done] reason=ftb_activate_busy_recover count=0
+[2026-05-14 20:36:21][hide_done] visible=0 reason=ftb_activate_busy_recover
+[2026-05-14 20:36:21][force_close_done] reason=ftb_activate_busy_recover
+[2026-05-14 20:36:21][init_begin] reason=ftb_activate gui=0 alive=0 inflight=0
+[2026-05-14 20:36:21][ftb_ensure_focus] hwnd=6621596 vis=0
+[2026-05-14 20:36:21][force_close_begin] reason=caps_f_search visible=0 waiting=0 ready=0 ui_ready=0
+[2026-05-14 20:36:21][wm_chain_unregister_begin] reason=caps_f_search count=0
+[2026-05-14 20:36:21][wm_chain_unregister_done] reason=caps_f_search count=0
+[2026-05-14 20:36:22][run_query_begin] kw_len=26 kw_prefix=https://aihot.virxact.co
+[2026-05-14 20:36:22][init_begin] reason=search_keyword gui=1 alive=0 inflight=0
+[2026-05-14 20:36:22][init_create_begin] reason=search_keyword hwnd=6687132
+[2026-05-14 20:36:22][show_begin] reason=search_keyword ready=0 ui_ready=0
+[2026-05-14 20:36:22][show_wait_ui_ready] reason=search_keyword
+[2026-05-14 20:36:22][wm_chain_register_begin] reason=search_keyword count=0
+[2026-05-14 20:36:22][wm_chain_register_done] reason=search_keyword count=1
+[2026-05-14 20:36:22][webview_create_failed] ctrl_type=String retry=0 value=
+[2026-05-14 20:36:22][force_close_begin] reason=webview_create_failed visible=0 waiting=1 ready=0 ui_ready=0
+[2026-05-14 20:36:22][wm_chain_unregister_begin] reason=webview_create_failed count=1
+[2026-05-14 20:36:22][wm_chain_unregister_done] reason=webview_create_failed count=0
+[2026-05-14 20:37:50][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:37:50][init_create_begin] reason= hwnd=1705614
+[2026-05-14 20:39:34][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:39:34][init_create_begin] reason= hwnd=5640038
+[2026-05-14 20:43:52][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:43:52][init_create_begin] reason= hwnd=1443316
+[2026-05-14 20:45:23][ftb_activate_search_center_begin] used_webview=1
+[2026-05-14 20:45:23][init_begin] reason=ftb_activate gui=1 alive=1 inflight=0
+[2026-05-14 20:45:23][show_begin] reason=ftb_activate ready=1 ui_ready=1
+[2026-05-14 20:45:24][show_finish_reveal_immediate] reason=ftb_activate
+[2026-05-14 20:45:24][wm_chain_register_begin] reason=ftb_activate count=0
+[2026-05-14 20:45:24][wm_chain_register_done] reason=ftb_activate count=1
+[2026-05-14 20:45:24][ftb_activate_search_center_mid] selected_len=0 opened=1 vis=1
+[2026-05-14 20:45:24][ftb_activate_search_center_end] opened=1 vis=1
+[2026-05-14 20:45:24][run_query_begin] kw_len=135 kw_prefix=HK 物理监测文本拖拽。
+吸入展开后仍然 GD
+[2026-05-14 20:45:24][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-14 20:45:24][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-14 20:45:24][show_already_visible] reason=search_keyword
+[2026-05-14 20:45:24][run_query_begin] kw_len=135 kw_prefix=HK 物理监测文本拖拽。
+吸入展开后仍然 GD
+[2026-05-14 20:45:24][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-14 20:45:24][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-14 20:45:24][show_already_visible] reason=search_keyword
+[2026-05-14 20:45:24][ftb_activate_search_center_begin] used_webview=1
+[2026-05-14 20:45:24][ftb_activate_search_center_busy] active=1 vis=1 waiting=0
+[2026-05-14 20:45:24][show_begin] reason=ftb_activate_reuse ready=1 ui_ready=1
+[2026-05-14 20:45:24][show_already_visible] reason=ftb_activate_reuse
+[2026-05-14 20:45:24][ftb_ensure_focus] hwnd=1443316 vis=1
+[2026-05-14 20:45:24][run_query_begin] kw_len=135 kw_prefix=HK 物理监测文本拖拽。
+吸入展开后仍然 GD
+[2026-05-14 20:45:24][init_begin] reason=search_keyword gui=1 alive=1 inflight=0
+[2026-05-14 20:45:24][show_begin] reason=search_keyword ready=1 ui_ready=1
+[2026-05-14 20:45:24][show_already_visible] reason=search_keyword
+[2026-05-14 20:47:01][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:47:01][init_create_begin] reason= hwnd=199034
+[2026-05-14 20:49:22][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:49:22][init_create_begin] reason= hwnd=4261376
+[2026-05-14 20:53:37][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:53:37][init_create_begin] reason= hwnd=1247166
+[2026-05-14 20:54:05][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:54:05][init_create_begin] reason= hwnd=2688838
+[2026-05-14 20:55:57][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:55:57][init_create_begin] reason= hwnd=1706800
+[2026-05-14 20:59:28][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 20:59:28][init_create_begin] reason= hwnd=3868984
+[2026-05-14 21:04:14][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-14 21:04:14][init_create_begin] reason= hwnd=1051474
