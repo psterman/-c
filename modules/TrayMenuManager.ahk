@@ -264,6 +264,7 @@ UpdateTrayMenu() {
     A_TrayMenu.Add(GetText("open_config_menu"), ((*) => TrayMenu_RunSceneCmd("tray_show_config")))
     A_TrayMenu.Add()
     A_TrayMenu.Add("重启脚本", ((*) => TrayMenu_RunSceneCmd("tray_reload_script")))
+    A_TrayMenu.Add("[!] 强制重置搜索中心", ((*) => TrayMenu_RunSceneCmd("tray_force_reinit_search")))
     A_TrayMenu.Add(GetText("exit_menu"), ((*) => TrayMenu_RunSceneCmd("tray_exit_app")))
     A_TrayMenu.Default := "搜索中心"
 }
@@ -794,6 +795,7 @@ TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis) {
         MenuItems.Push({ Text: "关闭工具栏", Action: ((*) => TrayMenu_RunSceneCmd("tray_hide_toolbar")), Icon: "◼" })
     }
     MenuItems.Push({ Text: "重启脚本", Action: ((*) => TrayMenu_RunSceneCmd("tray_reload_script")), Icon: "↻" })
+    MenuItems.Push({ Text: "[!] 强制重置搜索中心", Action: ((*) => TrayMenu_RunSceneCmd("tray_force_reinit_search")), Icon: "!" })
     MenuItems.Push({ Text: GetText("exit_menu"), Action: ((*) => TrayMenu_RunSceneCmd("tray_exit_app")), Icon: "✕" })
 }
 
@@ -1374,6 +1376,9 @@ TrayMenu_RunSceneCmdRun(cmdId) {
         case "tray_reload_script":
             try ReloadScriptFromPopupMenu()
             return
+        case "tray_force_reinit_search":
+            try SCWV_ForceReinitFromTray()
+            return
         case "tray_exit_app":
             try ExitFromMenu()
             return
@@ -1409,6 +1414,7 @@ TrayMenu_NormalizeCmdId(cmdId) {
     c := StrReplace(c, "tray:toggle_toolbar", "tray_toggle_toolbar")
     c := StrReplace(c, "tray:hide_toolbar", "tray_hide_toolbar")
     c := StrReplace(c, "tray:reload_script", "tray_reload_script")
+    c := StrReplace(c, "tray:force_reinit_search", "tray_force_reinit_search")
     c := StrReplace(c, "tray:exit_app", "tray_exit_app")
     return c
 }
@@ -1501,6 +1507,8 @@ TrayMenu_GetSceneFallbackLabel(cmdId, defaultLabel := "") {
             return "关闭工具栏"
         case "tray_reload_script":
             return "重启脚本"
+        case "tray_force_reinit_search":
+            return "[!] 强制重置搜索中心"
         case "tray_exit_app":
             return "退出工具"
         default:

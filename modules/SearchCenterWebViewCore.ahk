@@ -58,6 +58,7 @@ global g_SCWV_RequestID := 0
 global g_SCWV_LastRenderedID := 0
 global g_SCWV_AsyncWhr := 0
 global g_SCWV_AsyncReqMeta := 0
+global g_SCWV_AsyncPollToken := 0
 global g_SCWV_HostTopMost := false
 global g_SCWV_NavFallbackTried := false
 global g_SCWV_LifecyclePhase := "closed"
@@ -76,6 +77,20 @@ global g_SCWV_TrayOpenLockTick := 0
 global g_SCWV_IntentQueue := []
 global g_SCWV_IntentPumpBusy := false
 global g_SCWV_TransitionCtx := Map("allow", false)
+global g_SCWV_ForceResetStreak := 0
+global g_SCWV_DegradedMode := false
+global g_SCWV_FirstFrameSeen := false
+global g_SCWV_GoStartPhase := "IDLE"
+global g_SCWV_GoStartGen := 0
+global g_SCWV_GoStartPending := false
+global g_SCWV_GoKillLastTick := 0
+global g_SCWV_GoResetInFlight := false
+global g_SCWV_GoPhaseSinceTick := 0
+global g_SCWV_LastSearchIntent := 0
+global g_SCWV_ReloadRecoveryPending := false
+global g_SCWV_ForceReinitRequested := false
+global g_SCWV_LimitedRecoverReloadAttempts := 0
+global g_SCWV_BackendHealthy := false
 
 SCWV_Log(event, detail := "") {
     try {
@@ -271,6 +286,9 @@ SCWV_HandleIntent(intent, payload := 0, priority := 50) {
         case "CLOSE":
             SCWV_TransitionTo(SCWV_PHASE_CLOSED, reason, payload, Integer(priority))
         case "FORCE_RESET":
+            global g_SCWV_CurrentToken, g_SCWV_AsyncPollToken
+            g_SCWV_CurrentToken += 1
+            g_SCWV_AsyncPollToken += 1
             SCWV_ForceCloseHost(reason)
             SCWV_SetPhase(SCWV_PHASE_CLOSED, "force_reset_" . reason)
     }
@@ -302,12 +320,23 @@ SCWV_AntiHangTick(token) {
     global g_SCWV_CurrentToken, g_SCWV_CurrentPhase, g_SCWV_PhaseLastChanged, g_SCWV_AntiHangTimerArmed
     if (token != g_SCWV_CurrentToken)
         return
+    if (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING) {
+        try {
+            if (g_SCWV_UI_Ready || (SCWV_IsVisible() && g_SCWV_FirstFrameSeen)) {
+                SCWV_SetPhase(SCWV_PHASE_OPEN, "anti_hang_promote_open")
+                g_SCWV_AntiHangTimerArmed := false
+                return
+            }
+        } catch {
+        }
+    }
     if !(g_SCWV_CurrentPhase = SCWV_PHASE_OPENING || g_SCWV_CurrentPhase = SCWV_PHASE_CLOSING) {
         g_SCWV_AntiHangTimerArmed := false
         return
     }
     elapsed := A_TickCount - g_SCWV_PhaseLastChanged
-    if (elapsed > 1500) {
+    timeoutMs := (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING) ? 7000 : 2500
+    if (elapsed > timeoutMs) {
         g_SCWV_AntiHangTimerArmed := false
         SCWV_SubmitIntent("FORCE_RESET", 5, Map("reason", "anti_hang_" . g_SCWV_CurrentPhase))
         return
@@ -356,9 +385,8 @@ SCWV_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
         token := g_SCWV_CurrentToken
         SCWV_SetPhase(SCWV_PHASE_CLOSING, reason)
         SCWV_ArmAntiHang(token)
-        g_SCWV_TransitionCtx["allow"] := true
-        try SCWV_Hide(true)
-        finally g_SCWV_TransitionCtx["allow"] := false
+        ; "彻底退出"：关闭统一走硬关闭，销毁 WebView 宿主并中止在途请求。
+        SCWV_ForceCloseHost(reason)
         SCWV_SetPhase(SCWV_PHASE_CLOSED, "closed_after_hide_" . reason)
         return true
     }
@@ -491,7 +519,7 @@ SCWV_OnCreated(ctrl) {
     global g_SCWV_Ctrl, g_SCWV_WV2, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_NavFallbackTried
     global g_SCWV_WV2_CreateRetry, g_SCWV_CreateInFlight
     global g_SCWV_CreateStartTick
-    global g_SCWV_LifecyclePhase
+    global g_SCWV_LifecyclePhase, g_SCWV_FirstFrameSeen
 
     if !IsObject(ctrl) || !ctrl.HasProp("CoreWebView2") {
         errText := ""
@@ -527,6 +555,7 @@ SCWV_OnCreated(ctrl) {
     g_SCWV_WV2 := ctrl.CoreWebView2
     g_SCWV_Ready := false
     g_SCWV_UI_Ready := false
+    g_SCWV_FirstFrameSeen := false
     g_SCWV_WaitingUiFinishedReveal := false
     g_SCWV_NavFallbackTried := false
     SetTimer(SCWV_ForceRevealIfStuck, 0)
@@ -559,7 +588,7 @@ SCWV_OnCreated(ctrl) {
 SCWV_OnGuiClose(*) {
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Visible
     try SCWV_Log("gui_close_request", "visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " gdho=" . (GDHO_VISIBLE ? "1" : "0") . " native=" . (NativeDropSessionActive ? "1" : "0"))
-    SearchCenterUnifiedClose("gui_close", false, true)
+    SearchCenterUnifiedClose("gui_close", true, true)
 }
 
 SCWV_OnGuiResize(GuiObj, MinMax, Width, Height) {
@@ -572,7 +601,7 @@ SCWV_OnGuiResize(GuiObj, MinMax, Width, Height) {
 }
 
 SCWV_OnNavigationCompleted(sender, args) {
-    global g_SCWV_Visible, g_SCWV_NavFallbackTried
+    global g_SCWV_Visible, g_SCWV_NavFallbackTried, g_SCWV_FirstFrameSeen
 
     if !g_SCWV_Visible
         return
@@ -593,6 +622,7 @@ SCWV_OnNavigationCompleted(sender, args) {
         }
         return
     }
+    g_SCWV_FirstFrameSeen := true
 
     SCWV_RefreshComposition()
 }
@@ -632,9 +662,14 @@ SCWV_FinishReveal() {
 }
 
 SCWV_ForceRevealIfStuck(*) {
-    global g_SCWV_WaitingUiFinishedReveal
+    global g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_FirstFrameSeen
     if !g_SCWV_WaitingUiFinishedReveal
         return
+    ; Guard: never force-reveal before first frame/web ready, otherwise hole mode can show a full black host.
+    if !(g_SCWV_UI_Ready || (g_SCWV_Ready && g_SCWV_FirstFrameSeen)) {
+        try SCWV_Log("force_reveal_skip_not_ready", "ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0") . " first_frame=" . (g_SCWV_FirstFrameSeen ? "1" : "0"))
+        return
+    }
     SCWV_FinishReveal()
 }
 
@@ -648,9 +683,33 @@ SCWV_ShowWaitTimeoutCheck(token := 0, *) {
         return
 
     elapsed := (g_SCWV_ShowWaitStartTick > 0) ? (A_TickCount - g_SCWV_ShowWaitStartTick) : -1
-    if (elapsed >= 0 && elapsed < 1500) {
+    safeWaitMs := 7000
+    if (elapsed >= 0 && elapsed < safeWaitMs) {
         curToken := g_SCWV_CurrentToken
-        SetTimer((*) => SCWV_ShowWaitTimeoutCheck(curToken), -((1500 - elapsed) + 50))
+        SetTimer((*) => SCWV_ShowWaitTimeoutCheck(curToken), -((safeWaitMs - elapsed) + 50))
+        return
+    }
+
+    if (g_SCWV_UI_Ready || (g_SCWV_Visible && g_SCWV_FirstFrameSeen)) {
+        SCWV_FinishReveal()
+        try SCWV_SetPhase(SCWV_PHASE_OPEN, "show_wait_timeout_promote_open")
+        return
+    }
+    if (g_SCWV_Ready && !g_SCWV_UI_Ready) {
+        global g_SCWV_ReloadRecoveryPending, g_SCWV_LimitedRecoverReloadAttempts
+        if (g_SCWV_LimitedRecoverReloadAttempts < 1) {
+            g_SCWV_LimitedRecoverReloadAttempts += 1
+            g_SCWV_ReloadRecoveryPending := true
+            try SCWV_Log("show_wait_limited_recover_reload", "ready=1 ui_ready=0")
+            try g_SCWV_WV2.Reload()
+            curToken := g_SCWV_CurrentToken
+            SetTimer((*) => SCWV_ShowWaitTimeoutCheck(curToken), -700)
+            return
+        }
+        try SCWV_Log("show_wait_limited_recover_escalate", "ready=1 ui_ready=0")
+        SCWV_ForceCloseHost("show_wait_limited_recover")
+        curToken := g_SCWV_CurrentToken
+        SetTimer((*) => SCWV_RecoverAfterShowWaitTimeout(curToken), -120)
         return
     }
 
@@ -672,9 +731,13 @@ SCWV_ShowWaitTimeoutCheck(token := 0, *) {
 }
 
 SCWV_RecoverAfterShowWaitTimeout(token := 0, *) {
-    global g_SCWV_Gui, g_SCWV_ShowRecoveryAttempts
+    global g_SCWV_Gui, g_SCWV_ShowRecoveryAttempts, g_SCWV_DegradedMode
     if (token && !SCWV_IsCurrentToken(token))
         return
+    if g_SCWV_DegradedMode {
+        try SCWV_Log("show_wait_recover_skip_degraded", "attempts=" . g_SCWV_ShowRecoveryAttempts)
+        return
+    }
     try SCWV_Log("show_wait_recover", "attempts=" . g_SCWV_ShowRecoveryAttempts)
     if !SCWV_HostAlive()
         SCWV_Init("show_wait_recover")
@@ -690,6 +753,10 @@ SCWV_ForceCloseHost(reason := "") {
     global g_SCWV_Ready, g_SCWV_UI_Ready
     global g_SCWV_SearchTimer, g_SCWV_PendingJsonQueue, g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason
     global g_SCWV_CreateInFlight, g_SCWV_CreateStartTick, g_SCWV_LifecyclePhase
+    global g_SCWV_AsyncWhr, g_SCWV_AsyncReqMeta, g_SCWV_SearchHttpInFlight, g_SCWV_AsyncPollToken
+    global g_SCWV_CurrentToken, g_SCWV_ForceResetStreak, g_SCWV_DegradedMode, g_SCWV_FirstFrameSeen, TrayMenuCustomFailStreak, g_SCWV_BackendHealthy
+    global SearchCenterWebKeyword, SearchCenterSearchResults, g_SCWV_AllResultsCache, g_SCWV_AllResultsKeyword
+    global SearchCenterHasMoreData, g_SCWV_LastRenderedID, g_SCWV_RequestID, g_SCWV_SearchPendingReq, AppearanceActivationMode
 
     try SCWV_Log("force_close_begin", "reason=" . reason . " visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
     SCWV_PushLifecycleState("closing", reason)
@@ -712,10 +779,50 @@ SCWV_ForceCloseHost(reason := "") {
     g_SCWV_CreateStartTick := 0
     g_SCWV_ShowWaitStartTick := 0
     g_SCWV_Visible := false
+    g_SCWV_FirstFrameSeen := false
     g_SCWV_PendingJsonQueue := []
+    g_SCWV_CurrentToken += 1
+    g_SCWV_AsyncPollToken += 1
+    g_SCWV_AsyncWhr := 0
+    g_SCWV_AsyncReqMeta := 0
+    g_SCWV_SearchPendingReq := 0
+    g_SCWV_SearchHttpInFlight := false
+    g_SCWV_SearchTimer := 0
     g_SCWV_DeactivateBlockUntil := 0
     g_SCWV_DeactivateBlockReason := ""
     GuiID_SearchCenter := 0
+    isRecoveryClose := _SCWV_IsRecoveryCloseReason(reason)
+    mode := "toolbar"
+    try mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+    catch {
+        mode := "toolbar"
+    }
+    if isRecoveryClose {
+        g_SCWV_ForceResetStreak += 1
+        TrayMenuCustomFailStreak += 1
+    } else {
+        g_SCWV_ForceResetStreak := 0
+        TrayMenuCustomFailStreak := 0
+    }
+    g_SCWV_BackendHealthy := false
+    g_SCWV_LastRenderedID := 0
+    g_SCWV_RequestID := 0
+    ; 按激活模式区分会话恢复：黑洞模式彻底清空；悬浮栏/托盘模式保留搜索上下文。
+    if (mode = "hole") {
+        SearchCenterWebKeyword := ""
+        SearchCenterSearchResults := []
+        g_SCWV_AllResultsCache := []
+        g_SCWV_AllResultsKeyword := ""
+        SearchCenterHasMoreData := false
+    }
+    if (isRecoveryClose && g_SCWV_ForceResetStreak >= 3) {
+        g_SCWV_DegradedMode := true
+        try TrayTip("搜索中心", "连续恢复失败，已暂停自动重试，请检查环境或重启。", "Iconx 2")
+        catch {
+        }
+    } else if (!isRecoveryClose) {
+        g_SCWV_DegradedMode := false
+    }
 
     ; Hard close path must perform the same teardown that SCWV_Hide() normally does.
     ; Otherwise black-hole close buttons can leave dock/session state behind and block later tray opens.
@@ -772,6 +879,19 @@ SCWV_RequestHardClose(reason := "") {
     catch as err {
         try SCWV_Log("force_close_error", "reason=" . reason . " msg=" . err.Message)
     }
+}
+
+_SCWV_IsRecoveryCloseReason(reason := "") {
+    r := StrLower(Trim(String(reason)))
+    if (r = "")
+        return false
+    return (InStr(r, "show_wait_timeout")
+        || InStr(r, "show_wait_limited_recover")
+        || InStr(r, "stale_wait_timeout")
+        || InStr(r, "stale_create_timeout")
+        || InStr(r, "webview_create_failed")
+        || InStr(r, "anti_hang_")
+        || InStr(r, "force_reset"))
 }
 
 SearchCenterUnifiedClose(reason := "unknown", preferHardClose := false, PersistSelection := true) {
@@ -849,12 +969,16 @@ _SCWV_SaveSearchEngineMode(mode) {
 }
 
 _SCWV_IsSearchCoreAlive() {
+    global g_SCWV_BackendHealthy
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         whr.Open("GET", "http://127.0.0.1:8080/health", false)
         whr.SetTimeouts(2000, 2000, 2000, 2000)
         whr.Send()
-        return whr.Status = 200
+        ok := (whr.Status = 200)
+        if ok
+            g_SCWV_BackendHealthy := true
+        return ok
     } catch {
         return false
     }
@@ -886,30 +1010,134 @@ _SCWV_ApplySearchCoreDefaults() {
 }
 
 _SCWV_RestartSearchCore() {
-    exe := _SCWV_SearchCoreExePath()
-    if (exe = "")
+    global g_SCWV_GoStartPhase, g_SCWV_GoStartGen, g_SCWV_GoStartPending, g_SCWV_GoKillLastTick, g_SCWV_GoPhaseSinceTick
+    if (g_SCWV_GoStartPhase = "KILLING" || g_SCWV_GoStartPhase = "STARTING") {
+        g_SCWV_GoStartPending := true
         return false
-    try ProcessClose("SearchCenterCore.exe")
-    catch {
     }
-    Sleep(150)
+    g_SCWV_GoStartGen += 1
+    myGen := g_SCWV_GoStartGen
+    g_SCWV_GoStartPhase := "KILLING"
+    g_SCWV_GoPhaseSinceTick := A_TickCount
+    SetTimer((*) => SCWV_GoPhaseWatchdogTick(myGen), -100)
+    exe := _SCWV_SearchCoreExePath()
+    if (exe = "") {
+        g_SCWV_GoStartPhase := "IDLE"
+        return false
+    }
+    nowTick := A_TickCount
+    if ((nowTick - g_SCWV_GoKillLastTick) > 2000) {
+        try ProcessClose("SearchCenterCore.exe")
+        catch {
+        }
+        g_SCWV_GoKillLastTick := nowTick
+    }
+    g_SCWV_GoStartPhase := "STARTING"
+    g_SCWV_GoPhaseSinceTick := A_TickCount
+    if (myGen != g_SCWV_GoStartGen)
+        return false
+    Sleep(120)
     try {
         _SCWV_ApplySearchCoreDefaults()
         Run('"' exe '" -base "' A_ScriptDir '"', A_ScriptDir, "Hide")
         Loop 70 {
             Sleep(80)
-            if _SCWV_IsSearchCoreAlive()
+            if _SCWV_IsSearchCoreAlive() {
+                g_SCWV_GoStartPhase := "RUNNING"
+                g_SCWV_GoPhaseSinceTick := A_TickCount
+                g_SCWV_GoStartPending := false
                 return true
+            }
         }
     } catch {
+    }
+    if (myGen = g_SCWV_GoStartGen)
+        g_SCWV_GoStartPhase := "IDLE"
+    if g_SCWV_GoStartPending {
+        g_SCWV_GoStartPending := false
+        SetTimer(_SCWV_RunDeferredSearchCoreEnsure, -1)
     }
     return false
 }
 
 _SCWV_EnsureSearchCoreRunning() {
-    if _SCWV_IsSearchCoreAlive()
+    global g_SCWV_GoStartPhase
+    if _SCWV_IsSearchCoreAlive() {
+        g_SCWV_GoStartPhase := "RUNNING"
         return true
+    }
     return _SCWV_RestartSearchCore()
+}
+
+_SCWV_RunDeferredSearchCoreEnsure(*) {
+    _SCWV_EnsureSearchCoreRunning()
+}
+
+SCWV_GoTimeoutReset(reason := "go_phase_timeout") {
+    global g_SCWV_GoResetInFlight, g_SCWV_GoStartGen, g_SCWV_GoStartPhase, g_SCWV_GoStartPending, g_SCWV_GoPhaseSinceTick
+    if g_SCWV_GoResetInFlight
+        return false
+    g_SCWV_GoResetInFlight := true
+    try {
+        g_SCWV_GoStartGen += 1
+        g_SCWV_GoStartPhase := "IDLE"
+        g_SCWV_GoStartPending := false
+        g_SCWV_GoPhaseSinceTick := A_TickCount
+        SCWV_Log("go_phase_timeout_reset", "reason=" . reason . " gen=" . g_SCWV_GoStartGen)
+        return true
+    } finally {
+        g_SCWV_GoResetInFlight := false
+    }
+}
+
+SCWV_GoPhaseWatchdogTick(gen, *) {
+    global g_SCWV_GoStartGen, g_SCWV_GoStartPhase, g_SCWV_GoPhaseSinceTick
+    if (Integer(gen) != Integer(g_SCWV_GoStartGen))
+        return
+    phase := String(g_SCWV_GoStartPhase)
+    if !(phase = "KILLING" || phase = "STARTING")
+        return
+    if ((A_TickCount - Integer(g_SCWV_GoPhaseSinceTick)) > 5000) {
+        SCWV_GoTimeoutReset("watchdog_" . phase)
+        return
+    }
+    SetTimer((*) => SCWV_GoPhaseWatchdogTick(gen), -100)
+}
+
+SCWV_ForceReinitFromTray(*) {
+    global g_SCWV_DegradedMode, g_SCWV_ForceResetStreak, g_SCWV_ShowRecoveryAttempts, g_SCWV_ForceReinitRequested
+    global g_SCWV_GoStartGen, g_SCWV_GoStartPhase, g_SCWV_GoStartPending
+    global g_SCWV_AsyncWhr, g_SCWV_AsyncReqMeta, g_SCWV_SearchHttpInFlight, g_SCWV_SearchPendingReq
+    global g_SCWV_CurrentToken, g_SCWV_AsyncPollToken, g_SCWV_IntentQueue, g_SCWV_IntentPumpBusy
+    g_SCWV_ForceReinitRequested := true
+    ; Full-channel quiesce: silence async chains before scheduling new lifecycle.
+    SetTimer(SCWV_ShowWaitTimeoutCheck, 0)
+    SetTimer(SCWV_RecoverAfterShowWaitTimeout, 0)
+    SetTimer(SCWV_ForceRevealIfStuck, 0)
+    SetTimer(SCWV_WMDeactivateHideTick, 0)
+    SetTimer(SCWV_DeferredPush, 0)
+    SetTimer(SCWV_RefreshComposition, 0)
+    SetTimer(SCWV_FocusDeferred, 0)
+    SetTimer(SCWV_FlushPendingJsonQueue, 0)
+    SetTimer(SCWV_PumpIntents, 0)
+    g_SCWV_CurrentToken += 1
+    g_SCWV_AsyncPollToken += 1
+    g_SCWV_AsyncWhr := 0
+    g_SCWV_AsyncReqMeta := 0
+    g_SCWV_SearchHttpInFlight := false
+    g_SCWV_SearchPendingReq := 0
+    g_SCWV_IntentQueue := []
+    g_SCWV_IntentPumpBusy := false
+    g_SCWV_DegradedMode := false
+    g_SCWV_ForceResetStreak := 0
+    g_SCWV_ShowRecoveryAttempts := 0
+    g_SCWV_GoStartGen += 1
+    g_SCWV_GoStartPhase := "IDLE"
+    g_SCWV_GoStartPending := false
+    SCWV_SubmitIntent("FORCE_RESET", 1, Map("reason", "manual_force_reinit"))
+    SetTimer((*) => _SCWV_RestartSearchCore(), -1)
+    SetTimer((*) => SCWV_SubmitIntent("OPEN", 10, Map("reason", "manual_force_reinit")), -180)
+    SetTimer((*) => SCWV_ReplayLastSearchIntent("manual_force_reinit"), -260)
 }
 
 _SCWV_MapFilterToGoSearchType(FilterType) {
@@ -1543,6 +1771,44 @@ _SCWV_RunPendingGoSearch(*) {
     _SCWV_ExecuteGoSearchHttp(req["offset"], req["keyword"], req["goType"], req["limit"])
 }
 
+SCWV_RecordLastSearchIntent(offset, keyword, goType, limit) {
+    global g_SCWV_LastSearchIntent, g_SCWV_CurrentToken, g_SCWV_GoStartGen
+    kw := Trim(String(keyword))
+    if (kw = "")
+        return
+    g_SCWV_LastSearchIntent := Map("offset", Integer(offset), "keyword", kw, "goType", String(goType), "limit", Integer(limit), "token", Integer(g_SCWV_CurrentToken), "gen", Integer(g_SCWV_GoStartGen), "tick", A_TickCount)
+}
+
+SCWV_ReplayLastSearchIntent(reason := "") {
+    global g_SCWV_LastSearchIntent, g_SCWV_DegradedMode, g_SCWV_CurrentToken, g_SCWV_GoStartGen
+    if g_SCWV_DegradedMode
+        return false
+    if !(g_SCWV_LastSearchIntent is Map)
+        return false
+    it := g_SCWV_LastSearchIntent
+    if (Trim(String(it["keyword"])) = "")
+        return false
+    ; Re-sample latest token/gen at replay time and add a tiny stabilization delay.
+    curToken := g_SCWV_CurrentToken
+    curGen := g_SCWV_GoStartGen
+    SetTimer((*) => SCWV_ReplayLastSearchIntentDelayed(curToken, curGen, it, reason), -50)
+    return true
+}
+
+SCWV_ReplayLastSearchIntentDelayed(token, gen, intentObj, reason := "", *) {
+    global g_SCWV_CurrentToken, g_SCWV_GoStartGen, g_SCWV_DegradedMode
+    if g_SCWV_DegradedMode
+        return
+    if (Integer(token) != Integer(g_SCWV_CurrentToken))
+        return
+    if (Integer(gen) != Integer(g_SCWV_GoStartGen))
+        return
+    if !(intentObj is Map)
+        return
+    try SCWV_Log("replay_last_search_intent", "reason=" . reason . " kw=" . intentObj["keyword"] . " token=" . token . " gen=" . gen)
+    _SCWV_ExecuteGoSearchHttp(intentObj["offset"], intentObj["keyword"], intentObj["goType"], intentObj["limit"])
+}
+
 _SCWV_ProcessGoSearchResponse(resp, kw, off, gt, lim) {
     st := resp.Has("status") ? Integer(resp["status"]) : 0
     if (st != 200) {
@@ -1616,12 +1882,20 @@ _SCWV_ProcessGoSearchResponse(resp, kw, off, gt, lim) {
 }
 
 _SCWV_HandleSearchResponse(token, reqID, resp, kw, off, gt, lim) {
-    global g_SCWV_LastRenderedID
+    global g_SCWV_LastRenderedID, g_SCWV_ForceResetStreak, g_SCWV_DegradedMode, TrayMenuCustomFailStreak, g_SCWV_BackendHealthy
     if (token && !SCWV_IsCurrentToken(token))
         return false
     if (reqID < g_SCWV_LastRenderedID)
         return false
     _SCWV_ProcessGoSearchResponse(resp, kw, off, gt, lim)
+    if (resp.Has("status") && Integer(resp["status"]) = 200) {
+        g_SCWV_BackendHealthy := true
+    }
+    if g_SCWV_BackendHealthy {
+        g_SCWV_ForceResetStreak := 0
+        g_SCWV_DegradedMode := false
+        TrayMenuCustomFailStreak := 0
+    }
     g_SCWV_LastRenderedID := reqID
     return true
 }
@@ -1630,7 +1904,9 @@ _SCWV_HandleSearchResponse(token, reqID, resp, kw, off, gt, lim) {
 _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) {
     global SearchCenterWebKeyword, SearchCenterCurrentLimit, SearchCenterFilterType
     global g_SCWV_SearchHttpInFlight, g_SCWV_SearchPendingReq
-    global g_SCWV_RequestID, g_SCWV_LastRenderedID, g_SCWV_AsyncWhr, g_SCWV_AsyncReqMeta, g_SCWV_CurrentToken
+    global g_SCWV_RequestID, g_SCWV_LastRenderedID, g_SCWV_AsyncWhr, g_SCWV_AsyncReqMeta, g_SCWV_CurrentToken, g_SCWV_AsyncPollToken, g_SCWV_DegradedMode
+    if g_SCWV_DegradedMode
+        return
 
     kw := Trim(String(keyword))
     if (kw = "")
@@ -1657,6 +1933,7 @@ _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) 
 
     reqID := g_SCWV_RequestID + 1
     g_SCWV_RequestID := reqID
+    SCWV_RecordLastSearchIntent(off, kw, gt, lim)
     _SCWV_BlockDeactivate(2500, "search_http")
     try {
         if !_SCWV_EnsureSearchCoreRunning() {
@@ -1680,19 +1957,23 @@ _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) 
         whr.SetTimeouts(900, 900, 2200, 2200)
         whr.Send()
         g_SCWV_AsyncWhr := whr
-        g_SCWV_AsyncReqMeta := Map("reqID", reqID, "kw", kw, "off", off, "gt", gt, "lim", lim, "startTick", A_TickCount, "token", g_SCWV_CurrentToken)
+        g_SCWV_AsyncReqMeta := Map("reqID", reqID, "kw", kw, "off", off, "gt", gt, "lim", lim, "startTick", A_TickCount, "token", g_SCWV_CurrentToken, "gen", g_SCWV_GoStartGen)
         g_SCWV_SearchHttpInFlight := true
-        SetTimer(_SCWV_AsyncPollSearchHttp, 20)
+        g_SCWV_AsyncPollToken += 1
+        pollToken := g_SCWV_AsyncPollToken
+        SetTimer((*) => _SCWV_AsyncPollSearchHttp(pollToken), 20)
     } catch as err {
         _SCWV_LogRuntime("ExecuteGoSearchHttp exception: " . err.Message)
     }
 }
 
-_SCWV_AsyncPollSearchHttp(*) {
+_SCWV_AsyncPollSearchHttp(pollToken := 0, *) {
     global g_SCWV_AsyncWhr, g_SCWV_AsyncReqMeta, g_SCWV_SearchHttpInFlight
-    global g_SCWV_LastRenderedID, g_SCWV_SearchPendingReq
+    global g_SCWV_LastRenderedID, g_SCWV_SearchPendingReq, g_SCWV_AsyncPollToken, g_SCWV_GoStartGen
+    if (pollToken && pollToken != g_SCWV_AsyncPollToken)
+        return
     if !IsObject(g_SCWV_AsyncWhr) || !(g_SCWV_AsyncReqMeta is Map) {
-        SetTimer(_SCWV_AsyncPollSearchHttp, 0)
+        try SetTimer((*) => _SCWV_AsyncPollSearchHttp(pollToken), 0)
         g_SCWV_SearchHttpInFlight := false
         return
     }
@@ -1703,17 +1984,21 @@ _SCWV_AsyncPollSearchHttp(*) {
         try rs := Integer(whr.ReadyState)
         if (rs < 4)
             return
-        SetTimer(_SCWV_AsyncPollSearchHttp, 0)
+        try SetTimer((*) => _SCWV_AsyncPollSearchHttp(pollToken), 0)
         st := 0
         try st := Integer(whr.Status)
         raw := _SCWV_WinHttpReadUtf8Text(whr)
         reqID := Integer(meta["reqID"])
         token := meta.Has("token") ? Integer(meta["token"]) : 0
+        gen := meta.Has("gen") ? Integer(meta["gen"]) : 0
+        if (gen != Integer(g_SCWV_GoStartGen))
+            return
         resp := Map("status", st, "body", (st = 200) ? raw : "", "responseText", raw)
         _SCWV_HandleSearchResponse(token, reqID, resp, meta["kw"], meta["off"], meta["gt"], meta["lim"])
     } catch as err {
         _SCWV_LogRuntime("AsyncPollSearchHttp error: " . err.Message)
     } finally {
+        g_SCWV_AsyncPollToken += 1
         g_SCWV_AsyncWhr := 0
         g_SCWV_AsyncReqMeta := 0
         g_SCWV_SearchHttpInFlight := false
@@ -1756,13 +2041,14 @@ _SCWV_ResultItemGet(Item, Prop, Default := "") {
 SCWV_Show(reason := "") {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
-    global SearchCenterEngineMode, g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx
+    global SearchCenterEngineMode, g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx, g_SCWV_LimitedRecoverReloadAttempts
     if !(g_SCWV_TransitionCtx is Map) || !g_SCWV_TransitionCtx["allow"] {
         try SCWV_Log("show_redirect_intent", "reason=" . reason)
         SCWV_SubmitIntent("open", 25, Map("reason", reason != "" ? reason : "show_redirect"))
         return
     }
     try SCWV_Log("show_begin", "reason=" . reason . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
+    g_SCWV_LimitedRecoverReloadAttempts := 0
     SCWV_PushLifecycleState("opening", reason)
     ; 打开阶段先屏蔽失焦自动关闭，避免 WebView/焦点切换瞬时抖动把窗口提前关掉（白屏/一闪）。
     _SCWV_BlockDeactivate(2800, "show_opening")
@@ -2284,8 +2570,11 @@ SCWV_OnWebMessage(sender, args) {
     switch action {
         case "ready":
             global g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_CloseAfterReady
+            global g_SCWV_ForceResetStreak, g_SCWV_DegradedMode, TrayMenuCustomFailStreak, g_SCWV_GoStartPhase
+            global g_SCWV_ReloadRecoveryPending
             g_SCWV_Ready := true
             g_SCWV_UI_Ready := true
+            g_SCWV_GoStartPhase := "RUNNING"
             SCWV_SetPhase(SCWV_PHASE_OPEN, "web_ready")
             if g_SCWV_WaitingUiFinishedReveal
                 SCWV_FinishReveal()
@@ -2299,6 +2588,10 @@ SCWV_OnWebMessage(sender, args) {
             if (g_SCWV_CloseAfterReady) {
                 g_SCWV_CloseAfterReady := false
                 SCWV_SubmitIntent("CLOSE", 15, Map("reason", "close_after_ready"))
+            }
+            if g_SCWV_ReloadRecoveryPending {
+                g_SCWV_ReloadRecoveryPending := false
+                SetTimer((*) => SCWV_ReplayLastSearchIntent("reload_ready"), -1)
             }
         case "setEngineMode":
             global SearchCenterEngineMode
