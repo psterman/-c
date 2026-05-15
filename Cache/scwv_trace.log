@@ -383,3 +383,358 @@
 [2026-05-15 19:19:59][wm_chain_unregister_done] reason=gui_close count=0
 [2026-05-15 19:19:59][hide_done] visible=0 reason=gui_close
 [2026-05-15 19:19:59][force_close_done] reason=gui_close
+[2026-05-15 19:22:58][init_begin] reason=tray_menu_search gui=0 alive=0 inflight=0
+[2026-05-15 19:22:58][init_create_begin] reason=tray_menu_search hwnd=24577996
+[2026-05-15 19:22:58][show_begin] reason=tray_menu_search ready=0 ui_ready=0
+[2026-05-15 19:22:59][show_wait_ui_ready] reason=tray_menu_search
+[2026-05-15 19:23:00][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-15 19:23:06][show_wait_timeout] elapsed=7062 attempts=0 ready=0 ui_ready=0 visible=0
+[2026-05-15 21:24:01][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-15 21:24:01][init_create_begin] reason= hwnd=8653882
+[2026-05-16 06:39:16][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 06:39:24][init_create_begin] reason= hwnd=264266
+[2026-05-16 06:41:37][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 06:41:37][init_create_begin] reason= hwnd=133210
+[2026-05-16 06:44:01][init_begin] reason=tray_menu_search gui=1 alive=1 inflight=0
+[2026-05-16 06:44:01][handoff_begin] reason=tray_menu_search until=545734
+[2026-05-16 06:44:01][handoff_queue_open] priority=20
+[2026-05-16 06:44:01][handoff_end] reason=ready
+[2026-05-16 06:44:01][handoff_begin] reason=tray_menu_search until=545828
+[2026-05-16 06:44:01][handoff_queue_open] priority=20
+[2026-05-16 06:44:01][handoff_end] reason=ready
+[2026-05-16 06:44:01][handoff_begin] reason=tray_menu_search until=545921
+[2026-05-16 06:44:01][handoff_queue_open] priority=20
+[2026-05-16 06:44:01][handoff_end] reason=ready
+[2026-05-16 06:44:01][handoff_begin] reason=tray_menu_search until=546015
+[2026-05-16 06:44:01][handoff_queue_open] priority=20
+[2026-05-16 06:44:01][handoff_end] reason=ready
+[2026-05-16 06:44:01][handoff_begin] reason=tray_menu_search until=546109
+[2026-05-16 06:44:01][handoff_queue_open] priority=20
+[2026-05-16 06:44:01][handoff_end] reason=ready
+[2026-05-16 06:44:01][handoff_begin] reason=tray_menu_search until=546203
+[2026-05-16 06:44:01][handoff_queue_open] priority=20
+[2026-05-16 06:44:01][handoff_end] reason=ready
+[2026-05-16 06:44:01][handoff_begin] reason=tray_menu_search until=546296
+[2026-05-16 06:44:01][handoff_queue_open] priority=20
+[2026-05-16 06:44:02][handoff_end] reason=ready
+[2026-05-16 06:44:02][handoff_begin] reason=tray_menu_search until=546390
+[2026-05-16 06:44:02][handoff_queue_open] priority=20
+[2026-05-16 06:44:02][handoff_end] reason=ready
+[2026-05-16 06:44:02][handoff_begin] reason=tray_menu_search until=546484
+[2026-05-16 06:44:02][handoff_queue_open] priority=20
+[2026-05-16 06:44:02][handoff_end] reason=ready
+[2026-05-16 06:44:02][handoff_begin] reason=tray_menu_search until=546578
+[2026-05-16 06:44:02][handoff_queue_open] priority=20
+[2026-05-16 06:44:02][handoff_end] reason=ready
+[2026-05-16 06:44:02][handoff_begin] reason=tray_menu_search until=546671
+[2026-05-16 06:44:02][handoff_queue_open] priority=20
+[2026-05-16 06:44:02][handoff_end] reason=ready
+[2026-05-16 06:44:02][handoff_begin] reason=tray_menu_search until=546765
+[2026-05-16 06:44:02][handoff_queue_open] priority=20
+[2026-05-16 06:44:02][handoff_end] reason=ready
+[2026-05-16 06:44:02][handoff_begin] reason=tray_menu_search until=546859
+[2026-05-16 06:44:02][handoff_queue_open] priority=20
+[2026-05-16 06:44:02][handoff_end] reason=ready
+[2026-05-16 06:44:02][handoff_begin] reason=tray_menu_search until=546953
+[2026-05-16 06:44:02][handoff_queue_open] priority=20
+[2026-05-16 06:44:02][handoff_end] reason=ready
+[2026-05-16 06:44:02][handoff_begin] reason=tray_menu_search until=547046
+[2026-05-16 06:44:02][handoff_queue_open] priority=20
+[2026-05-16 06:44:02][handoff_end] reason=ready
+[2026-05-16 06:44:02][handoff_begin] reason=tray_menu_search until=547140
+[2026-05-16 06:44:02][handoff_queue_open] priority=20
+[2026-05-16 06:44:02][handoff_end] reason=ready
+[2026-05-16 06:44:02][handoff_begin] reason=tray_menu_search until=547234
+[2026-05-16 06:44:02][handoff_queue_open] priority=20
+[2026-05-16 06:44:02][handoff_end] reason=ready
+[2026-05-16 06:44:02][handoff_begin] reason=tray_menu_search until=547328
+[2026-05-16 06:44:02][handoff_queue_open] priority=20
+[2026-05-16 06:44:03][handoff_end] reason=ready
+[2026-05-16 06:44:03][handoff_begin] reason=tray_menu_search until=547421
+[2026-05-16 06:44:03][handoff_queue_open] priority=20
+[2026-05-16 06:44:03][handoff_end] reason=ready
+[2026-05-16 06:44:03][handoff_begin] reason=tray_menu_search until=547515
+[2026-05-16 06:44:03][handoff_queue_open] priority=20
+[2026-05-16 06:44:03][handoff_end] reason=ready
+[2026-05-16 06:44:03][handoff_begin] reason=tray_menu_search until=547609
+[2026-05-16 06:44:03][handoff_queue_open] priority=20
+[2026-05-16 06:44:03][handoff_end] reason=ready
+[2026-05-16 06:44:03][handoff_begin] reason=tray_menu_search until=547703
+[2026-05-16 06:44:03][handoff_queue_open] priority=20
+[2026-05-16 06:44:03][handoff_end] reason=ready
+[2026-05-16 06:44:03][handoff_begin] reason=tray_menu_search until=547796
+[2026-05-16 06:44:03][handoff_queue_open] priority=20
+[2026-05-16 06:44:03][handoff_end] reason=ready
+[2026-05-16 06:44:03][handoff_begin] reason=tray_menu_search until=547890
+[2026-05-16 06:44:03][handoff_queue_open] priority=20
+[2026-05-16 06:44:03][handoff_end] reason=ready
+[2026-05-16 06:44:03][handoff_begin] reason=tray_menu_search until=547984
+[2026-05-16 06:44:03][handoff_queue_open] priority=20
+[2026-05-16 06:44:03][handoff_end] reason=ready
+[2026-05-16 06:44:03][handoff_begin] reason=tray_menu_search until=548078
+[2026-05-16 06:44:03][handoff_queue_open] priority=20
+[2026-05-16 06:44:03][handoff_end] reason=ready
+[2026-05-16 06:44:03][handoff_begin] reason=tray_menu_search until=548171
+[2026-05-16 06:44:03][handoff_queue_open] priority=20
+[2026-05-16 06:44:03][handoff_end] reason=ready
+[2026-05-16 06:44:03][handoff_begin] reason=tray_menu_search until=548265
+[2026-05-16 06:44:03][handoff_queue_open] priority=20
+[2026-05-16 06:44:03][handoff_end] reason=ready
+[2026-05-16 06:44:03][handoff_begin] reason=tray_menu_search until=548359
+[2026-05-16 06:44:03][handoff_queue_open] priority=20
+[2026-05-16 06:44:04][handoff_end] reason=ready
+[2026-05-16 06:44:04][handoff_begin] reason=tray_menu_search until=548453
+[2026-05-16 06:44:04][handoff_queue_open] priority=20
+[2026-05-16 06:44:04][handoff_end] reason=ready
+[2026-05-16 06:44:04][handoff_begin] reason=tray_menu_search until=548546
+[2026-05-16 06:44:04][handoff_queue_open] priority=20
+[2026-05-16 06:44:04][handoff_end] reason=ready
+[2026-05-16 06:44:04][handoff_begin] reason=tray_menu_search until=548640
+[2026-05-16 06:44:04][handoff_queue_open] priority=20
+[2026-05-16 06:44:04][handoff_end] reason=ready
+[2026-05-16 06:44:04][handoff_begin] reason=tray_menu_search until=548734
+[2026-05-16 06:44:04][handoff_queue_open] priority=20
+[2026-05-16 06:44:04][handoff_end] reason=ready
+[2026-05-16 06:44:04][handoff_begin] reason=tray_menu_search until=548828
+[2026-05-16 06:44:04][handoff_queue_open] priority=20
+[2026-05-16 06:44:04][handoff_end] reason=ready
+[2026-05-16 06:44:04][handoff_begin] reason=tray_menu_search until=548921
+[2026-05-16 06:44:04][handoff_queue_open] priority=20
+[2026-05-16 06:44:04][handoff_end] reason=ready
+[2026-05-16 06:44:04][handoff_begin] reason=tray_menu_search until=549015
+[2026-05-16 06:44:04][handoff_queue_open] priority=20
+[2026-05-16 06:44:04][handoff_end] reason=ready
+[2026-05-16 06:44:04][handoff_begin] reason=tray_menu_search until=549109
+[2026-05-16 06:44:04][handoff_queue_open] priority=20
+[2026-05-16 06:44:04][handoff_end] reason=ready
+[2026-05-16 06:44:04][handoff_begin] reason=tray_menu_search until=549203
+[2026-05-16 06:44:04][handoff_queue_open] priority=20
+[2026-05-16 06:44:04][handoff_end] reason=ready
+[2026-05-16 06:44:04][handoff_begin] reason=tray_menu_search until=549296
+[2026-05-16 06:44:04][handoff_queue_open] priority=20
+[2026-05-16 06:44:04][handoff_end] reason=ready
+[2026-05-16 06:44:04][handoff_begin] reason=tray_menu_search until=549390
+[2026-05-16 06:44:04][handoff_queue_open] priority=20
+[2026-05-16 06:44:05][handoff_end] reason=ready
+[2026-05-16 06:44:05][handoff_begin] reason=tray_menu_search until=549484
+[2026-05-16 06:44:05][handoff_queue_open] priority=20
+[2026-05-16 06:44:05][handoff_end] reason=ready
+[2026-05-16 06:44:05][handoff_begin] reason=tray_menu_search until=549578
+[2026-05-16 06:44:05][handoff_queue_open] priority=20
+[2026-05-16 06:44:05][handoff_end] reason=ready
+[2026-05-16 06:44:05][handoff_begin] reason=tray_menu_search until=549671
+[2026-05-16 06:44:05][handoff_queue_open] priority=20
+[2026-05-16 06:44:05][handoff_end] reason=ready
+[2026-05-16 06:44:05][handoff_begin] reason=tray_menu_search until=549765
+[2026-05-16 06:44:05][handoff_queue_open] priority=20
+[2026-05-16 06:44:05][handoff_end] reason=ready
+[2026-05-16 06:44:05][handoff_begin] reason=tray_menu_search until=549859
+[2026-05-16 06:44:05][handoff_queue_open] priority=20
+[2026-05-16 06:44:05][handoff_end] reason=ready
+[2026-05-16 06:44:05][handoff_begin] reason=tray_menu_search until=549953
+[2026-05-16 06:44:05][handoff_queue_open] priority=20
+[2026-05-16 06:44:05][handoff_end] reason=ready
+[2026-05-16 06:44:05][handoff_begin] reason=tray_menu_search until=550046
+[2026-05-16 06:44:05][handoff_queue_open] priority=20
+[2026-05-16 06:44:05][handoff_end] reason=ready
+[2026-05-16 06:44:05][handoff_begin] reason=tray_menu_search until=550140
+[2026-05-16 06:44:05][handoff_queue_open] priority=20
+[2026-05-16 06:44:05][handoff_end] reason=ready
+[2026-05-16 06:44:05][handoff_begin] reason=tray_menu_search until=550234
+[2026-05-16 06:44:05][handoff_queue_open] priority=20
+[2026-05-16 06:44:05][handoff_end] reason=ready
+[2026-05-16 06:44:05][handoff_begin] reason=tray_menu_search until=550328
+[2026-05-16 06:44:05][handoff_queue_open] priority=20
+[2026-05-16 06:44:06][handoff_end] reason=ready
+[2026-05-16 06:44:06][handoff_begin] reason=tray_menu_search until=550421
+[2026-05-16 06:44:06][handoff_queue_open] priority=20
+[2026-05-16 06:44:06][handoff_end] reason=ready
+[2026-05-16 06:44:06][handoff_begin] reason=tray_menu_search until=550515
+[2026-05-16 06:44:06][handoff_queue_open] priority=20
+[2026-05-16 06:44:06][handoff_end] reason=ready
+[2026-05-16 06:44:06][handoff_begin] reason=tray_menu_search until=550609
+[2026-05-16 06:44:06][handoff_queue_open] priority=20
+[2026-05-16 06:44:06][handoff_end] reason=ready
+[2026-05-16 06:44:06][handoff_begin] reason=tray_menu_search until=550703
+[2026-05-16 06:44:06][handoff_queue_open] priority=20
+[2026-05-16 06:44:06][handoff_end] reason=ready
+[2026-05-16 06:44:06][handoff_begin] reason=tray_menu_search until=550796
+[2026-05-16 06:44:06][handoff_queue_open] priority=20
+[2026-05-16 06:44:06][handoff_end] reason=ready
+[2026-05-16 06:44:06][handoff_begin] reason=tray_menu_search until=550890
+[2026-05-16 06:44:06][handoff_queue_open] priority=20
+[2026-05-16 06:44:06][handoff_end] reason=ready
+[2026-05-16 06:44:06][handoff_begin] reason=tray_menu_search until=550984
+[2026-05-16 06:44:06][handoff_queue_open] priority=20
+[2026-05-16 06:44:06][handoff_end] reason=ready
+[2026-05-16 06:44:06][handoff_begin] reason=tray_menu_search until=551078
+[2026-05-16 06:44:06][handoff_queue_open] priority=20
+[2026-05-16 06:44:06][handoff_end] reason=ready
+[2026-05-16 06:44:06][handoff_begin] reason=tray_menu_search until=551171
+[2026-05-16 06:44:06][handoff_queue_open] priority=20
+[2026-05-16 06:44:06][handoff_end] reason=ready
+[2026-05-16 06:44:06][handoff_begin] reason=tray_menu_search until=551265
+[2026-05-16 06:44:06][handoff_queue_open] priority=20
+[2026-05-16 06:44:06][handoff_end] reason=ready
+[2026-05-16 06:44:06][handoff_begin] reason=tray_menu_search until=551359
+[2026-05-16 06:44:06][handoff_queue_open] priority=20
+[2026-05-16 06:44:07][handoff_end] reason=ready
+[2026-05-16 06:44:07][handoff_begin] reason=tray_menu_search until=551453
+[2026-05-16 06:44:07][handoff_queue_open] priority=20
+[2026-05-16 06:44:07][handoff_end] reason=ready
+[2026-05-16 06:44:07][handoff_begin] reason=tray_menu_search until=551546
+[2026-05-16 06:44:07][handoff_queue_open] priority=20
+[2026-05-16 06:44:07][handoff_end] reason=ready
+[2026-05-16 06:44:07][handoff_begin] reason=tray_menu_search until=551656
+[2026-05-16 06:44:07][handoff_queue_open] priority=20
+[2026-05-16 06:44:07][handoff_end] reason=ready
+[2026-05-16 06:44:07][handoff_begin] reason=tray_menu_search until=551750
+[2026-05-16 06:44:07][handoff_queue_open] priority=20
+[2026-05-16 06:44:07][handoff_end] reason=ready
+[2026-05-16 06:44:07][handoff_begin] reason=tray_menu_search until=551843
+[2026-05-16 06:44:07][handoff_queue_open] priority=20
+[2026-05-16 06:44:07][handoff_end] reason=ready
+[2026-05-16 06:44:07][handoff_begin] reason=tray_menu_search until=551937
+[2026-05-16 06:44:07][handoff_queue_open] priority=20
+[2026-05-16 06:44:07][handoff_end] reason=ready
+[2026-05-16 06:44:07][handoff_begin] reason=tray_menu_search until=552031
+[2026-05-16 06:44:07][handoff_queue_open] priority=20
+[2026-05-16 06:44:07][handoff_end] reason=ready
+[2026-05-16 06:44:07][handoff_begin] reason=tray_menu_search until=552125
+[2026-05-16 06:44:07][handoff_queue_open] priority=20
+[2026-05-16 06:44:07][handoff_end] reason=ready
+[2026-05-16 06:44:07][handoff_begin] reason=tray_menu_search until=552218
+[2026-05-16 06:44:07][handoff_queue_open] priority=20
+[2026-05-16 06:44:07][handoff_end] reason=ready
+[2026-05-16 06:44:07][handoff_begin] reason=tray_menu_search until=552312
+[2026-05-16 06:44:07][handoff_queue_open] priority=20
+[2026-05-16 06:44:08][handoff_end] reason=ready
+[2026-05-16 06:44:08][handoff_begin] reason=tray_menu_search until=552406
+[2026-05-16 06:44:08][handoff_queue_open] priority=20
+[2026-05-16 06:44:08][handoff_end] reason=ready
+[2026-05-16 06:44:08][handoff_begin] reason=tray_menu_search until=552500
+[2026-05-16 06:44:08][handoff_queue_open] priority=20
+[2026-05-16 06:44:08][handoff_end] reason=ready
+[2026-05-16 06:44:08][handoff_begin] reason=tray_menu_search until=552593
+[2026-05-16 06:44:08][handoff_queue_open] priority=20
+[2026-05-16 06:44:08][handoff_end] reason=ready
+[2026-05-16 06:44:08][handoff_begin] reason=tray_menu_search until=552687
+[2026-05-16 06:44:08][handoff_queue_open] priority=20
+[2026-05-16 06:44:08][handoff_end] reason=ready
+[2026-05-16 06:44:08][handoff_begin] reason=tray_menu_search until=552781
+[2026-05-16 06:44:08][handoff_queue_open] priority=20
+[2026-05-16 06:44:08][handoff_end] reason=ready
+[2026-05-16 06:44:08][handoff_begin] reason=tray_menu_search until=552875
+[2026-05-16 06:44:08][handoff_queue_open] priority=20
+[2026-05-16 06:44:08][handoff_end] reason=ready
+[2026-05-16 06:44:08][handoff_begin] reason=tray_menu_search until=552968
+[2026-05-16 06:44:08][handoff_queue_open] priority=20
+[2026-05-16 06:44:08][handoff_end] reason=ready
+[2026-05-16 06:44:08][handoff_begin] reason=tray_menu_search until=553062
+[2026-05-16 06:44:08][handoff_queue_open] priority=20
+[2026-05-16 06:44:08][handoff_end] reason=ready
+[2026-05-16 06:44:08][handoff_begin] reason=tray_menu_search until=553156
+[2026-05-16 06:44:08][handoff_queue_open] priority=20
+[2026-05-16 06:44:08][handoff_end] reason=ready
+[2026-05-16 06:44:08][handoff_begin] reason=tray_menu_search until=553250
+[2026-05-16 06:44:08][handoff_queue_open] priority=20
+[2026-05-16 06:44:08][handoff_end] reason=ready
+[2026-05-16 06:44:08][handoff_begin] reason=tray_menu_search until=553343
+[2026-05-16 06:44:08][handoff_queue_open] priority=20
+[2026-05-16 06:44:09][handoff_end] reason=ready
+[2026-05-16 06:44:09][handoff_begin] reason=tray_menu_search until=553437
+[2026-05-16 06:44:09][handoff_queue_open] priority=20
+[2026-05-16 06:44:09][handoff_end] reason=ready
+[2026-05-16 06:44:09][handoff_begin] reason=tray_menu_search until=553531
+[2026-05-16 06:44:09][handoff_queue_open] priority=20
+[2026-05-16 06:44:09][handoff_end] reason=ready
+[2026-05-16 06:44:09][handoff_begin] reason=tray_menu_search until=553625
+[2026-05-16 06:44:09][handoff_queue_open] priority=20
+[2026-05-16 06:44:09][handoff_end] reason=ready
+[2026-05-16 06:44:09][handoff_begin] reason=tray_menu_search until=553718
+[2026-05-16 06:44:09][handoff_queue_open] priority=20
+[2026-05-16 06:44:09][handoff_end] reason=ready
+[2026-05-16 06:44:09][handoff_begin] reason=tray_menu_search until=553812
+[2026-05-16 06:44:09][handoff_queue_open] priority=20
+[2026-05-16 06:44:09][handoff_end] reason=ready
+[2026-05-16 06:44:09][handoff_begin] reason=tray_menu_search until=553906
+[2026-05-16 06:44:09][handoff_queue_open] priority=20
+[2026-05-16 06:44:09][handoff_end] reason=ready
+[2026-05-16 06:44:09][handoff_begin] reason=tray_menu_search until=554000
+[2026-05-16 06:44:09][handoff_queue_open] priority=20
+[2026-05-16 06:44:09][handoff_end] reason=ready
+[2026-05-16 06:44:09][handoff_begin] reason=tray_menu_search until=554093
+[2026-05-16 06:44:09][handoff_queue_open] priority=20
+[2026-05-16 06:44:09][handoff_end] reason=ready
+[2026-05-16 06:44:09][handoff_begin] reason=tray_menu_search until=554187
+[2026-05-16 06:44:09][handoff_queue_open] priority=20
+[2026-05-16 06:44:09][handoff_end] reason=ready
+[2026-05-16 06:44:09][handoff_begin] reason=tray_menu_search until=554281
+[2026-05-16 06:44:09][handoff_queue_open] priority=20
+[2026-05-16 06:44:09][handoff_end] reason=ready
+[2026-05-16 06:44:09][handoff_begin] reason=tray_menu_search until=554375
+[2026-05-16 06:44:09][handoff_queue_open] priority=20
+[2026-05-16 06:44:10][handoff_end] reason=ready
+[2026-05-16 06:44:10][handoff_begin] reason=tray_menu_search until=554468
+[2026-05-16 06:44:10][handoff_queue_open] priority=20
+[2026-05-16 06:44:10][handoff_end] reason=ready
+[2026-05-16 06:44:10][handoff_begin] reason=tray_menu_search until=554562
+[2026-05-16 06:44:10][handoff_queue_open] priority=20
+[2026-05-16 06:44:10][handoff_end] reason=ready
+[2026-05-16 06:44:10][handoff_begin] reason=tray_menu_search until=554656
+[2026-05-16 06:44:10][handoff_queue_open] priority=20
+[2026-05-16 06:44:10][handoff_end] reason=ready
+[2026-05-16 06:44:10][handoff_begin] reason=tray_menu_search until=554750
+[2026-05-16 06:44:10][handoff_queue_open] priority=20
+[2026-05-16 06:44:10][handoff_end] reason=ready
+[2026-05-16 06:44:10][handoff_begin] reason=tray_menu_search until=554843
+[2026-05-16 06:44:10][handoff_queue_open] priority=20
+[2026-05-16 06:44:10][handoff_end] reason=ready
+[2026-05-16 06:44:10][handoff_begin] reason=tray_menu_search until=554937
+[2026-05-16 06:44:10][handoff_queue_open] priority=20
+[2026-05-16 06:44:10][handoff_end] reason=ready
+[2026-05-16 06:44:10][handoff_begin] reason=tray_menu_search until=555031
+[2026-05-16 06:44:10][handoff_queue_open] priority=20
+[2026-05-16 06:44:10][handoff_end] reason=ready
+[2026-05-16 06:44:10][handoff_begin] reason=tray_menu_search until=555125
+[2026-05-16 06:44:10][handoff_queue_open] priority=20
+[2026-05-16 06:44:10][handoff_end] reason=ready
+[2026-05-16 06:44:10][handoff_begin] reason=tray_menu_search until=555218
+[2026-05-16 06:44:10][handoff_queue_open] priority=20
+[2026-05-16 06:44:10][handoff_end] reason=ready
+[2026-05-16 06:44:10][handoff_begin] reason=tray_menu_search until=555312
+[2026-05-16 06:44:10][handoff_queue_open] priority=20
+[2026-05-16 06:44:11][handoff_end] reason=ready
+[2026-05-16 06:44:11][handoff_begin] reason=tray_menu_search until=555406
+[2026-05-16 06:44:11][handoff_queue_open] priority=20
+[2026-05-16 06:44:11][handoff_end] reason=ready
+[2026-05-16 06:44:11][handoff_begin] reason=tray_menu_search until=555500
+[2026-05-16 06:44:11][handoff_queue_open] priority=20
+[2026-05-16 06:44:12][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 06:44:12][init_create_begin] reason= hwnd=591834
+[2026-05-16 06:44:24][stale_phase_reset] reason=is_opening_or_busy phase=opening
+[2026-05-16 06:47:15][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 06:47:15][init_create_begin] reason= hwnd=264342
+[2026-05-16 06:55:07][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 06:55:07][init_create_begin] reason= hwnd=788504
+[2026-05-16 06:57:13][force_close_begin] reason=manual_force_reinit visible=0 waiting=0 ready=1 ui_ready=1
+[2026-05-16 06:57:13][wm_chain_unregister_begin] reason=manual_force_reinit count=0
+[2026-05-16 06:57:13][wm_chain_unregister_done] reason=manual_force_reinit count=0
+[2026-05-16 06:57:13][hide_done] visible=0 reason=manual_force_reinit
+[2026-05-16 06:57:13][force_close_done] reason=manual_force_reinit
+[2026-05-16 06:57:13][show_begin] reason=manual_force_reinit ready=0 ui_ready=0
+[2026-05-16 06:57:13][init_begin] reason=manual_force_reinit gui=0 alive=0 inflight=0
+[2026-05-16 06:57:13][init_create_begin] reason=manual_force_reinit hwnd=395394
+[2026-05-16 06:57:13][show_wait_ui_ready] reason=manual_force_reinit
+[2026-05-16 06:57:13][wm_chain_register_begin] reason=manual_force_reinit count=0
+[2026-05-16 06:57:13][wm_chain_register_done] reason=manual_force_reinit count=1
+[2026-05-16 06:57:15][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-16 06:57:16][nav_completed] ok=1 visible=1
+[2026-05-16 06:57:27][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-16 06:57:27][wm_activate_seen] wparam=0 hwnd=395394 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-16 06:57:27][wm_activate_queue] reason=wm_deactivate_intent count=1
+[2026-05-16 06:57:27][force_close_begin] reason=gui_close visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-16 06:57:27][wm_chain_unregister_begin] reason=gui_close count=1
+[2026-05-16 06:57:27][wm_chain_unregister_done] reason=gui_close count=0
+[2026-05-16 06:57:27][hide_done] visible=0 reason=gui_close
+[2026-05-16 06:57:27][force_close_done] reason=gui_close

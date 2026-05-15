@@ -6052,15 +6052,8 @@ p:: {
     try TrayTip("悬浮工具栏", "已恢复工具栏模式", "Iconi Mute")
 }
 
-; 中键 + 滚轮：在悬浮栏 / 黑洞系统之间切换
-MButton & WheelUp:: {
-    try FloatingToolbar_SetActivationMode("toolbar")
-    try FloatingToolbar_ForceRecoverVisible()
-}
-
-MButton & WheelDown:: {
-    try FloatingToolbar_SetActivationMode("hole")
-}
+; 中键保留给系统/浏览器原生行为（如后台开标签），不再绑定 MButton & Wheel*
+; 若需模式切换请使用下方 Alt+滚轮 兜底热键。
 
 ; 兼容某些鼠标驱动对「MButton & Wheel」组合拦截：提供 Alt+滚轮 全局切换兜底
 !WheelUp:: {

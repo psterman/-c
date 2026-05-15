@@ -78,6 +78,7 @@ VK_ExecCursorHelperCmd(cmdId) {
     global CapsLock, CapsLock2, BatchHotkey, IsCountdownActive
     global g_LastExecutedCmdId
     global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ, HotkeyT
+    global AppearanceActivationMode, ConfigFile
     prevCaps := CapsLock
     CapsLock := true
     executed := false
@@ -723,6 +724,34 @@ VK_ExecCursorHelperCmd(cmdId) {
                 executed := true
             case "tray_exit_app":
                 ExitFromMenu()
+                executed := true
+            case "gk_alt_wheel_up":
+                try FloatingToolbar_SetActivationMode("toolbar")
+                try FloatingToolbar_ForceRecoverVisible()
+                executed := true
+            case "gk_alt_wheel_down":
+                try FloatingToolbar_SetActivationMode("hole")
+                executed := true
+            case "gk_toolbar_mode":
+                try AppearanceActivationMode := "toolbar"
+                try IniWrite("toolbar", ConfigFile, "Appearance", "ActivationMode")
+                try HideFloatingBubble()
+                try ShowFloatingToolbar()
+                try ApplyAppearanceActivationMode()
+                executed := true
+            case "gk_toolbar_recover":
+                try AppearanceActivationMode := "toolbar"
+                try IniWrite("toolbar", ConfigFile, "Appearance", "ActivationMode")
+                try FloatingToolbar_ForceRecoverVisible()
+                executed := true
+            case "gk_toolbar_show":
+                try FloatingToolbar_ForceRecoverVisible()
+                executed := true
+            case "gk_open_config":
+                try ShowConfigGUI_Safe()
+                executed := true
+            case "gk_reload_script":
+                try ReloadScriptFromPopupMenu()
                 executed := true
             case "hub_capsule":
                 try {

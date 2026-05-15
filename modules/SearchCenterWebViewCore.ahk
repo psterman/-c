@@ -91,6 +91,11 @@ global g_SCWV_ReloadRecoveryPending := false
 global g_SCWV_ForceReinitRequested := false
 global g_SCWV_LimitedRecoverReloadAttempts := 0
 global g_SCWV_BackendHealthy := false
+global g_SCWV_HandoffActive := false
+global g_SCWV_HandoffUntilTick := 0
+global g_SCWV_HandoffEpoch := 0
+global g_SCWV_HandoffPendingOpen := 0
+global g_SCWV_NavProgressTick := 0
 
 SCWV_Log(event, detail := "") {
     try {
@@ -137,6 +142,7 @@ SCWV_ResetHostState() {
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
     global g_SCWV_FocusPending, g_SCWV_PendingJsonQueue, GuiID_SearchCenter
     global g_SCWV_LifecyclePhase
+    global g_SCWV_HandoffActive, g_SCWV_HandoffPendingOpen, g_SCWV_HandoffUntilTick
 
     g_SCWV_Gui := 0
     g_SCWV_Ctrl := 0
@@ -152,6 +158,9 @@ SCWV_ResetHostState() {
     g_SCWV_PendingJsonQueue := []
     g_SCWV_ShowWaitStartTick := 0
     g_SCWV_LifecyclePhase := "closed"
+    g_SCWV_HandoffActive := false
+    g_SCWV_HandoffPendingOpen := 0
+    g_SCWV_HandoffUntilTick := 0
     SetTimer(SCWV_Show, 0)
     SetTimer(SCWV_RecoverAfterShowWaitTimeout, 0)
     SetTimer(SCWV_ForceRevealIfStuck, 0)
@@ -219,8 +228,60 @@ SCWV_PushLifecycleState(phase, reason := "") {
     }
 }
 
+_SCWV_ShouldStartHandoff(reason := "") {
+    r := StrLower(Trim(String(reason)))
+    if (r = "")
+        return false
+    return (InStr(r, "tray_")
+        || InStr(r, "ftb_")
+        || InStr(r, "show_redirect")
+        || InStr(r, "storm_open"))
+}
+
+_SCWV_HandoffEnd(reason := "done") {
+    global g_SCWV_HandoffActive, g_SCWV_HandoffPendingOpen
+    if !g_SCWV_HandoffActive
+        return
+    g_SCWV_HandoffActive := false
+    try SCWV_Log("handoff_end", "reason=" . reason)
+    pending := g_SCWV_HandoffPendingOpen
+    g_SCWV_HandoffPendingOpen := 0
+    if (pending is Map) {
+        try SCWV_SubmitIntent("OPEN", Integer(pending["priority"]), pending["payload"])
+    }
+}
+
+_SCWV_HandoffTick(epoch := 0, *) {
+    global g_SCWV_HandoffEpoch, g_SCWV_HandoffActive, g_SCWV_HandoffUntilTick
+    global g_SCWV_UI_Ready, g_SCWV_FirstFrameSeen
+    if (epoch && epoch != g_SCWV_HandoffEpoch)
+        return
+    if !g_SCWV_HandoffActive
+        return
+    if (g_SCWV_UI_Ready || g_SCWV_FirstFrameSeen) {
+        _SCWV_HandoffEnd("ready")
+        return
+    }
+    if (A_TickCount >= g_SCWV_HandoffUntilTick) {
+        _SCWV_HandoffEnd("timeout")
+        return
+    }
+    SetTimer((*) => _SCWV_HandoffTick(epoch), -80)
+}
+
+_SCWV_HandoffBegin(reason := "") {
+    global g_SCWV_HandoffActive, g_SCWV_HandoffUntilTick, g_SCWV_HandoffEpoch, g_SCWV_HandoffPendingOpen
+    g_SCWV_HandoffActive := true
+    g_SCWV_HandoffUntilTick := A_TickCount + 1500
+    g_SCWV_HandoffEpoch += 1
+    g_SCWV_HandoffPendingOpen := 0
+    ep := g_SCWV_HandoffEpoch
+    try SCWV_Log("handoff_begin", "reason=" . reason . " until=" . Integer(g_SCWV_HandoffUntilTick))
+    SetTimer((*) => _SCWV_HandoffTick(ep), -80)
+}
+
 SCWV_SubmitIntent(intent, priority := 50, payload := 0) {
-    global g_SCWV_IntentQueue
+    global g_SCWV_IntentQueue, g_SCWV_HandoffActive, g_SCWV_HandoffPendingOpen
     if !(g_SCWV_IntentQueue is Array)
         g_SCWV_IntentQueue := []
     normalized := StrUpper(Trim(String(intent)))
@@ -228,6 +289,21 @@ SCWV_SubmitIntent(intent, priority := 50, payload := 0) {
         normalized := "FORCE_RESET"
     if (normalized = "")
         return
+    if (_SCWV_ShouldStartHandoff(payload is Map && payload.Has("reason") ? payload["reason"] : "")) {
+        if !g_SCWV_HandoffActive
+            _SCWV_HandoffBegin(payload is Map && payload.Has("reason") ? payload["reason"] : "")
+    }
+    if g_SCWV_HandoffActive {
+        if (normalized = "OPEN") {
+            g_SCWV_HandoffPendingOpen := Map("priority", Integer(priority), "payload", payload)
+            try SCWV_Log("handoff_queue_open", "priority=" . Integer(priority))
+            return
+        }
+        if (normalized = "CLOSE") {
+            try SCWV_Log("handoff_drop_close", "priority=" . Integer(priority))
+            return
+        }
+    }
     ; Queue cleaning: keep only the latest meaningful intent (last intent wins).
     ; 1) Remove identical intent entries.
     idx := g_SCWV_IntentQueue.Length
@@ -317,7 +393,7 @@ SCWV_ArmAntiHang(token) {
 }
 
 SCWV_AntiHangTick(token) {
-    global g_SCWV_CurrentToken, g_SCWV_CurrentPhase, g_SCWV_PhaseLastChanged, g_SCWV_AntiHangTimerArmed
+    global g_SCWV_CurrentToken, g_SCWV_CurrentPhase, g_SCWV_PhaseLastChanged, g_SCWV_AntiHangTimerArmed, g_SCWV_NavProgressTick
     if (token != g_SCWV_CurrentToken)
         return
     if (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING) {
@@ -336,8 +412,13 @@ SCWV_AntiHangTick(token) {
     }
     elapsed := A_TickCount - g_SCWV_PhaseLastChanged
     timeoutMs := (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING) ? 7000 : 2500
+    if (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING && g_SCWV_NavProgressTick > 0 && (A_TickCount - g_SCWV_NavProgressTick) < 2200) {
+        SetTimer((*) => SCWV_AntiHangTick(token), -120)
+        return
+    }
     if (elapsed > timeoutMs) {
         g_SCWV_AntiHangTimerArmed := false
+        try SCWV_Log("watchdog_stage", "stage=anti_hang phase=" . g_SCWV_CurrentPhase . " elapsed=" . elapsed)
         SCWV_SubmitIntent("FORCE_RESET", 5, Map("reason", "anti_hang_" . g_SCWV_CurrentPhase))
         return
     }
@@ -573,6 +654,7 @@ SCWV_OnCreated(ctrl) {
 
     g_SCWV_WV2.add_WebMessageReceived(SCWV_OnWebMessage)
     try g_SCWV_WV2.add_NavigationCompleted(SCWV_OnNavigationCompleted)
+    try g_SCWV_WV2.add_NavigationStarting(SCWV_OnNavigationStarting)
 
      try ApplyUnifiedWebViewAssets(g_SCWV_WV2)
 
@@ -582,6 +664,8 @@ SCWV_OnCreated(ctrl) {
     ; 1 = COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_ALLOW
     _SCWV_MapAllDriveVirtualHosts(g_SCWV_WV2)
     
+    global g_SCWV_NavProgressTick
+    g_SCWV_NavProgressTick := A_TickCount
     g_SCWV_WV2.Navigate(BuildAppLocalUrl("SearchCenter.html"))
 }
 
@@ -601,7 +685,7 @@ SCWV_OnGuiResize(GuiObj, MinMax, Width, Height) {
 }
 
 SCWV_OnNavigationCompleted(sender, args) {
-    global g_SCWV_Visible, g_SCWV_NavFallbackTried, g_SCWV_FirstFrameSeen
+    global g_SCWV_Visible, g_SCWV_NavFallbackTried, g_SCWV_FirstFrameSeen, g_SCWV_NavProgressTick
 
     if !g_SCWV_Visible
         return
@@ -623,8 +707,15 @@ SCWV_OnNavigationCompleted(sender, args) {
         return
     }
     g_SCWV_FirstFrameSeen := true
+    g_SCWV_NavProgressTick := A_TickCount
+    _SCWV_HandoffEnd("first_frame")
 
     SCWV_RefreshComposition()
+}
+
+SCWV_OnNavigationStarting(sender, args) {
+    global g_SCWV_NavProgressTick
+    g_SCWV_NavProgressTick := A_TickCount
 }
 
 SCWV_ApplyBounds() {
@@ -675,7 +766,7 @@ SCWV_ForceRevealIfStuck(*) {
 
 SCWV_ShowWaitTimeoutCheck(token := 0, *) {
     global g_SCWV_WaitingUiFinishedReveal, g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
-    global g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_Visible
+    global g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_Visible, g_SCWV_NavProgressTick
     if (token && !SCWV_IsCurrentToken(token))
         return
 
@@ -684,6 +775,11 @@ SCWV_ShowWaitTimeoutCheck(token := 0, *) {
 
     elapsed := (g_SCWV_ShowWaitStartTick > 0) ? (A_TickCount - g_SCWV_ShowWaitStartTick) : -1
     safeWaitMs := 7000
+    if (g_SCWV_NavProgressTick > 0 && (A_TickCount - g_SCWV_NavProgressTick) < 1800) {
+        curToken := g_SCWV_CurrentToken
+        SetTimer((*) => SCWV_ShowWaitTimeoutCheck(curToken), -400)
+        return
+    }
     if (elapsed >= 0 && elapsed < safeWaitMs) {
         curToken := g_SCWV_CurrentToken
         SetTimer((*) => SCWV_ShowWaitTimeoutCheck(curToken), -((safeWaitMs - elapsed) + 50))
@@ -700,6 +796,8 @@ SCWV_ShowWaitTimeoutCheck(token := 0, *) {
         if (g_SCWV_LimitedRecoverReloadAttempts < 1) {
             g_SCWV_LimitedRecoverReloadAttempts += 1
             g_SCWV_ReloadRecoveryPending := true
+            try SCWV_Log("watchdog_stage", "stage=reload opening_elapsed=" . elapsed)
+            try SCWV_Log("recover_reload", "attempt=" . g_SCWV_LimitedRecoverReloadAttempts)
             try SCWV_Log("show_wait_limited_recover_reload", "ready=1 ui_ready=0")
             try g_SCWV_WV2.Reload()
             curToken := g_SCWV_CurrentToken
@@ -707,6 +805,8 @@ SCWV_ShowWaitTimeoutCheck(token := 0, *) {
             return
         }
         try SCWV_Log("show_wait_limited_recover_escalate", "ready=1 ui_ready=0")
+        try SCWV_Log("watchdog_stage", "stage=reinit opening_elapsed=" . elapsed)
+        try SCWV_Log("recover_reinit", "reason=show_wait_limited_recover")
         SCWV_ForceCloseHost("show_wait_limited_recover")
         curToken := g_SCWV_CurrentToken
         SetTimer((*) => SCWV_RecoverAfterShowWaitTimeout(curToken), -120)
@@ -714,6 +814,8 @@ SCWV_ShowWaitTimeoutCheck(token := 0, *) {
     }
 
     try SCWV_Log("show_wait_timeout", "elapsed=" . elapsed . " attempts=" . g_SCWV_ShowRecoveryAttempts . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0") . " visible=" . (g_SCWV_Visible ? "1" : "0"))
+    try SCWV_Log("watchdog_stage", "stage=reinit opening_elapsed=" . elapsed)
+    try SCWV_Log("recover_reinit", "reason=show_wait_timeout")
 
     ; 第一层：硬关机，跳过可能卡住的 Hide/回调链路
     try GDHO_HideOverlay()
@@ -817,6 +919,7 @@ SCWV_ForceCloseHost(reason := "") {
     }
     if (isRecoveryClose && g_SCWV_ForceResetStreak >= 3) {
         g_SCWV_DegradedMode := true
+        try SCWV_Log("degraded_enter", "reason=" . reason . " streak=" . g_SCWV_ForceResetStreak)
         try TrayTip("搜索中心", "连续恢复失败，已暂停自动重试，请检查环境或重启。", "Iconx 2")
         catch {
         }
@@ -2575,6 +2678,7 @@ SCWV_OnWebMessage(sender, args) {
             g_SCWV_Ready := true
             g_SCWV_UI_Ready := true
             g_SCWV_GoStartPhase := "RUNNING"
+            _SCWV_HandoffEnd("web_ready")
             SCWV_SetPhase(SCWV_PHASE_OPEN, "web_ready")
             if g_SCWV_WaitingUiFinishedReveal
                 SCWV_FinishReveal()
