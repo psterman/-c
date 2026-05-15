@@ -3766,7 +3766,12 @@ function renderFilters() {
     el.dataset.hotkeyLabel = String(filter.text || filter.key || "");
     el.dataset.filterKey = filter.key || "";
     el.innerHTML = "<span class=\"filter-label\">" + escapeHtml(filter.text) + "</span>" + hotkeyHintHtml(hotkey, "filter", filter.key, filter.text);
-    const applyFilter = () => postToAhk({ type: "setFilter", filterType: filter.key });
+    const applyFilter = () => {
+      const input = document.getElementById("search");
+      const keyword = input ? String(input.value || "") : String(state.keyword || "");
+      state.keyword = keyword;
+      postToAhk({ type: "setFilter", filterType: filter.key, keyword });
+    };
     let pressedHandled = false;
     let pressedAt = 0;
     // 输入防抖回包会重绘过滤栏，pointerdown 比 click 更早触发，避免点击被重绘吞掉

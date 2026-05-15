@@ -235,13 +235,17 @@ TrayMenu_ShowQueuedPopup(*) {
                 try TrayMenu_Log("custom_popup_no_native_fallback mode=hole")
                 return
             }
-            try {
-                TrayMenu_Log("custom_popup_fallback_begin mode=" . mode)
-                A_TrayMenu.Show()
-                TrayMenu_Log("custom_popup_fallback_done mode=" . mode)
-            } catch as fallbackErr {
-                try TrayMenu_Log("custom_popup_fallback_failed mode=" . mode . " msg=" . fallbackErr.Message)
-            }
+            ; Keep dark custom menu path only. Native fallback turns into white menu
+            ; and breaks visual/behavior consistency after repeated failures.
+            try TrayMenu_Log("custom_popup_native_fallback_disabled mode=" . mode . " streak=" . TrayMenuCustomFailStreak)
+            try TrayMenu_ForceBreakSearchCenterStuck("custom_popup_retry_only")
+            TrayMenuCustomFailStreak := 0
+            TrayMenuSuppressNativeFallbackUntil := nowTick + 3000
+            SetTimer(TrayMenu_ShowQueuedPopup, -180)
+            TrayMenuPopupPending := true
+            TrayMenuPopupPendingLParam := lParam
+            TrayMenuPopupPendingStart := trayStart
+            return
         }
         try TrayMenu_Log("custom_popup_end lParam=" . lParam . " elapsed_ms=" . (A_TickCount - trayStart))
     } finally {
@@ -364,7 +368,6 @@ TrayMenuItemPress(ItemIndex) {
 TrayMenuInvokeItem(item, itemIndex, keepOpen := false) {
     global TrayMenuPressedItem
     TrayMenuItemPress(itemIndex)
-    Sleep(72)
     if (keepOpen) {
         TrayMenuApplyItemVisual(itemIndex, "hover")
         TrayMenuPressedItem := 0
@@ -421,7 +424,7 @@ TrayMenu_ForceBreakSearchCenterStuck(reason := "tray_force_break") {
     ; In some stale lifecycle states this can block and prevent resume/silent-off.
     try SetTimer((*) => SCWV_RequestHardClose(reason), -1)
     catch {
-        try SetTimer((*) => SCWV_Hide(true), -1)
+        try SetTimer((*) => SCWV_SubmitIntent("close", 15, Map("reason", reason . "_fallback_close")), -1)
         catch {
         }
     }
@@ -503,6 +506,7 @@ TrayMenu_WaitForHoleUiIdle(timeoutMs := 1800) {
 TrayMenu_HardenHoleUiTransition(target := "tray_open_ui", timeoutMs := 1800) {
     Critical "Off"
     global GDHO_VISIBLE, NativeDropSessionActive, g_IsUIVisibleTransitioning, g_TrayMenuTransitionToken
+    isSearchOpen := (target = "tray_open_search" || target = "caps_f_search" || target = "search")
     g_IsUIVisibleTransitioning := true
     g_TrayMenuTransitionToken += 1
     token := g_TrayMenuTransitionToken
@@ -515,7 +519,7 @@ TrayMenu_HardenHoleUiTransition(target := "tray_open_ui", timeoutMs := 1800) {
     catch {
     }
 
-    if (SearchCenter_IsOpeningOrBusy() || IsSearchCenterActive() || searchVisible) {
+    if (!isSearchOpen && (SearchCenter_IsOpeningOrBusy() || IsSearchCenterActive() || searchVisible)) {
         try TrayMenu_Log("handoff_step hard_close_search_center_queued reason=" . target)
         SetTimer((*) => TrayMenu_RequestHardCloseSearchCenter(target), -1)
     }
@@ -547,10 +551,20 @@ TrayMenu_RequestHardCloseSearchCenter(reason := "") {
 
 TrayMenu_HideHoleOverlayAsync(reason := "") {
     Critical "Off"
+    global GDHO_GUI, GDHO_VISIBLE, GDHO_ACTIVE, NativeDropSessionActive
     try TrayMenu_Log("handoff_step hide_gui_async_begin reason=" . reason)
-    ; Tray transitions only need the visual frontend out of the way. Full GDHO_Hide()
-    ; can touch WebView/overlay state and has been observed blocking repeated tray opens.
-    try GDHO_HideFrontend()
+    ; Tray transitions only need the host out of the way. Avoid the WebView bridge here:
+    ; if SearchCenter/Go mode has wedged the UI thread, ExecuteScript/PostMessage can
+    ; stall the deferred tray action and make every menu item look dead.
+    try {
+        if (IsObject(GDHO_GUI) && GDHO_GUI.HasProp("Hwnd") && GDHO_GUI.Hwnd)
+            WinHide("ahk_id " . GDHO_GUI.Hwnd)
+    } catch {
+    }
+    try GDHO_VISIBLE := false
+    try GDHO_ACTIVE := false
+    try NativeDropSessionActive := false
+    try GDHO_SetClickThrough(true)
     catch {
     }
     try TrayMenu_Log("handoff_step hide_gui_async_done reason=" . reason)
@@ -582,11 +596,12 @@ TrayMenu_QueueUiOpenFromHoleMode(actionFn, reason := "") {
 TrayMenu_RunQueuedUiOpenFromHoleMode(actionFn, reason := "") {
     Critical "Off"
     try TrayMenu_Log("queued_ui_open_begin reason=" . reason)
-    TrayMenu_PrepareUiOpenFromHoleMode()
-    ; If hole/search lifecycle stays busy too long, don't block critical tray actions.
-    if (!TrayMenu_WaitForHoleUiIdle(1200)) {
-        try TrayMenu_Log("queued_ui_open_timeout reason=" . reason . " action=continue")
-    }
+    if (reason = "search")
+        TrayMenu_PrepareSearchOpenFromHoleMode()
+    else
+        TrayMenu_PrepareUiOpenFromHoleMode()
+    ; Zero-blocking tray policy: never wait synchronously for SCWV/hole state.
+    ; Any lifecycle resolution happens asynchronously via SCWV intents.
     try TrayMenu_Log("queued_ui_open_after_prep reason=" . reason)
     try {
         if IsObject(actionFn)
@@ -621,16 +636,8 @@ TrayMenu_OpenSearchActionRun(*) {
     try {
         if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole") {
             try {
-                if (SearchCenter_IsOpeningOrBusy() || IsSearchCenterActive() || SCWV_IsVisible()) {
-                    SearchCenterUnifiedClose("tray_open_search_reopen", true, true)
-                    if (!TrayMenu_WaitForSearchCenterIdle(900))
-                        TrayMenu_Log("open_search_timeout_degrade stage=wait_idle action=continue")
-                }
-            } catch {
-            }
-            try {
                 SCWV_Init("tray_menu_search")
-                SCWV_Show("tray_menu_search")
+                SCWV_SubmitIntent("open", 20, Map("reason", "tray_menu_search"))
                 return
             } catch as err {
                 try TrayMenu_Log("open_search_direct_failed msg=" . err.Message)
@@ -639,7 +646,7 @@ TrayMenu_OpenSearchActionRun(*) {
         ; Non-hole path also use robust init+show instead of mixed entry points.
         try {
             SCWV_Init("tray_menu_search_fallback")
-            SCWV_Show("tray_menu_search_fallback")
+            SCWV_SubmitIntent("open", 20, Map("reason", "tray_menu_search_fallback"))
             return
         } catch as err2 {
             try TrayMenu_Log("open_search_fallback_failed msg=" . err2.Message)
@@ -652,6 +659,17 @@ TrayMenu_OpenSearchActionRun(*) {
         g_SCWV_TrayOpenLock := false
         g_SCWV_TrayOpenLockTick := 0
     }
+}
+
+TrayMenu_PrepareSearchOpenFromHoleMode() {
+    try TrayMenu_Log("prepare_search_from_hole search_active=" . (IsSearchCenterActive() ? "1" : "0") . " caps=" . (GetCapsLockState() ? "1" : "0"))
+    try TrayMenu_HardenHoleUiTransition("tray_open_search", 1200)
+    catch {
+    }
+    try NormalizeCapsLockRuntimeForUiOpen()
+    catch {
+    }
+    try TrayMenu_Log("prepare_search_from_hole_done")
 }
 
 TrayMenu_OpenSearchLockWatchdog(*) {
@@ -700,7 +718,7 @@ ShowSearchCenterFromMenuRun(*) {
                 }
             }
             ; opening/busy 时优先复用当前实例，避免强制关闭打断 WebView 初始化造成白屏。
-            try SCWV_Show("tray_busy_reuse")
+            try SCWV_SubmitIntent("open", 20, Map("reason", "tray_busy_reuse"))
             return
         }
     } catch {
@@ -719,7 +737,12 @@ ShowSearchCenterFromMenuRun(*) {
 
 TrayMenu_OpenClipboardAction(*) {
     try TrayMenu_Log("open_clipboard_from_menu")
-    CP_Show()
+    try {
+        CP_Show()
+        TrayMenu_Log("open_clipboard_from_menu_done")
+    } catch as err {
+        try TrayMenu_Log("open_clipboard_from_menu_failed msg=" . err.Message)
+    }
 }
 
 TrayMenu_OpenScreenshotAction(*) {
@@ -729,7 +752,18 @@ TrayMenu_OpenScreenshotAction(*) {
 
 TrayMenu_OpenConfigAction(*) {
     try TrayMenu_Log("open_config_from_menu")
-    ShowConfigGUI_Safe()
+    ; Config open lock can remain stale after interrupted hole-mode transitions.
+    ; For tray action, force-release lock first and retry with core open path fallback.
+    try g_ConfigOpenInFlight := false
+    try g_ConfigOpenInFlightSince := 0
+    try g_ConfigWebViewOpenStartTick := 0
+    try {
+        ShowConfigGUI_Safe()
+        TrayMenu_Log("open_config_from_menu_done")
+    } catch as err {
+        try TrayMenu_Log("open_config_from_menu_safe_failed msg=" . err.Message)
+        try SetTimer((*) => ShowConfigGUI_Core(), -30)
+    }
 }
 
 TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis) {
@@ -1180,9 +1214,6 @@ ShowDarkStylePopupMenuAt(MenuItems, posX, posY) {
             DllCall("SetWindowPos", "Ptr", TrayMenuGUI.Hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x1 | 0x2)  ; HWND_TOPMOST, SWP_NOMOVE|SWP_NOSIZE
         } catch {
         }
-        try WinActivate("ahk_id " . TrayMenuGUI.Hwnd)
-        catch {
-        }
     }
     SetTimer(CheckTrayMenuMousePosition, 50)
     SetTimer(CloseTrayMenuIfClickedOutside, 100)
@@ -1555,17 +1586,7 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
     TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis)
 
     sceneItems := []
-    if (g_IsUIVisibleTransitioning) {
-        Loop 3 {
-            if (A_Index > 1)
-                Sleep(30)
-            sceneItems := TrayMenu_BuildItemsFromSceneMenu("tray_menu")
-            if (sceneItems.Length > 0)
-                break
-        }
-    } else {
-        sceneItems := TrayMenu_BuildItemsFromSceneMenu("tray_menu")
-    }
+    sceneItems := TrayMenu_BuildItemsFromSceneMenu("tray_menu")
     try TrayMenu_Log("custom_popup_scene_items count=" . sceneItems.Length . " mode=" . mode)
     catch {
     }
@@ -1606,4 +1627,15 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
     }
     try TrayMenu_Log("custom_popup_build_done items=" . MenuItems.Length . " elapsed_ms=" . (A_TickCount - trayBuildStart))
     ShowDarkStylePopupMenuAt(MenuItems, posX, posY)
+}
+
+TrayMenu_StressIntentStorm() {
+    ; 1s intent storm:
+    ; open search -> simulate blur(close) -> open search -> blackhole handoff
+    try TrayMenu_Log("storm_begin")
+    try SCWV_SubmitIntent("OPEN", 20, Map("reason", "storm_open_1"))
+    SetTimer((*) => SCWV_SubmitIntent("CLOSE", 25, Map("reason", "storm_blur_close")), -180)
+    SetTimer((*) => SCWV_SubmitIntent("OPEN", 20, Map("reason", "storm_open_2")), -360)
+    SetTimer((*) => TrayMenu_HardenHoleUiTransition("storm_handoff", 1200), -540)
+    SetTimer((*) => TrayMenu_Log("storm_end"), -900)
 }

@@ -54,12 +54,28 @@ global g_SCWV_QLInvokeAttempts := 0
 global g_SCWV_QLInvokeSendCount := 0
 global g_SCWV_SearchHttpInFlight := false
 global g_SCWV_SearchPendingReq := 0
+global g_SCWV_RequestID := 0
+global g_SCWV_LastRenderedID := 0
+global g_SCWV_AsyncWhr := 0
+global g_SCWV_AsyncReqMeta := 0
 global g_SCWV_HostTopMost := false
 global g_SCWV_NavFallbackTried := false
 global g_SCWV_LifecyclePhase := "closed"
+global SCWV_PHASE_CLOSED := "CLOSED"
+global SCWV_PHASE_OPENING := "OPENING"
+global SCWV_PHASE_OPEN := "OPEN"
+global SCWV_PHASE_CLOSING := "CLOSING"
+global g_SCWV_CurrentPhase := SCWV_PHASE_CLOSED
+global g_SCWV_CurrentToken := 0
+global g_SCWV_PhaseLastChanged := 0
+global g_SCWV_CloseAfterReady := false
+global g_SCWV_AntiHangTimerArmed := false
 global g_SCWV_CloseInFlight := false
 global g_SCWV_TrayOpenLock := false
 global g_SCWV_TrayOpenLockTick := 0
+global g_SCWV_IntentQueue := []
+global g_SCWV_IntentPumpBusy := false
+global g_SCWV_TransitionCtx := Map("allow", false)
 
 SCWV_Log(event, detail := "") {
     try {
@@ -188,6 +204,166 @@ SCWV_PushLifecycleState(phase, reason := "") {
     }
 }
 
+SCWV_SubmitIntent(intent, priority := 50, payload := 0) {
+    global g_SCWV_IntentQueue
+    if !(g_SCWV_IntentQueue is Array)
+        g_SCWV_IntentQueue := []
+    normalized := StrUpper(Trim(String(intent)))
+    if (normalized = "FORCE_CLOSE")
+        normalized := "FORCE_RESET"
+    if (normalized = "")
+        return
+    ; Queue cleaning: keep only the latest meaningful intent (last intent wins).
+    ; 1) Remove identical intent entries.
+    idx := g_SCWV_IntentQueue.Length
+    while (idx >= 1) {
+        item := g_SCWV_IntentQueue[idx]
+        if (StrUpper(Trim(String(item["intent"]))) = normalized)
+            g_SCWV_IntentQueue.RemoveAt(idx)
+        idx -= 1
+    }
+    ; 2) Remove opposite low-priority entries for open/close races.
+    if (normalized = "OPEN" || normalized = "CLOSE") {
+        other := (normalized = "OPEN") ? "CLOSE" : "OPEN"
+        idx := g_SCWV_IntentQueue.Length
+        while (idx >= 1) {
+            item := g_SCWV_IntentQueue[idx]
+            if (StrUpper(Trim(String(item["intent"]))) = other && Integer(item["priority"]) >= Integer(priority))
+                g_SCWV_IntentQueue.RemoveAt(idx)
+            idx -= 1
+        }
+    }
+    g_SCWV_IntentQueue.Push(Map("intent", normalized, "priority", Integer(priority), "payload", payload, "ts", A_TickCount))
+    SetTimer(SCWV_PumpIntents, -1)
+}
+
+SCWV_PumpIntents(*) {
+    global g_SCWV_IntentQueue, g_SCWV_IntentPumpBusy
+    if g_SCWV_IntentPumpBusy
+        return
+    g_SCWV_IntentPumpBusy := true
+    try {
+        while (g_SCWV_IntentQueue is Array) && g_SCWV_IntentQueue.Length {
+            bestIdx := 1
+            bestPri := g_SCWV_IntentQueue[1]["priority"]
+            loop g_SCWV_IntentQueue.Length {
+                i := A_Index
+                pri := g_SCWV_IntentQueue[i]["priority"]
+                if (pri < bestPri) {
+                    bestPri := pri
+                    bestIdx := i
+                }
+            }
+            it := g_SCWV_IntentQueue.RemoveAt(bestIdx)
+            SCWV_HandleIntent(it["intent"], it["payload"], it["priority"])
+        }
+    } finally {
+        g_SCWV_IntentPumpBusy := false
+    }
+}
+
+SCWV_HandleIntent(intent, payload := 0, priority := 50) {
+    iname := StrUpper(Trim(String(intent)))
+    reason := payload is Map && payload.Has("reason") ? payload["reason"] : "intent_" . StrLower(iname)
+    switch iname {
+        case "OPEN":
+            SCWV_TransitionTo(SCWV_PHASE_OPEN, reason, payload, Integer(priority))
+        case "CLOSE":
+            SCWV_TransitionTo(SCWV_PHASE_CLOSED, reason, payload, Integer(priority))
+        case "FORCE_RESET":
+            SCWV_ForceCloseHost(reason)
+            SCWV_SetPhase(SCWV_PHASE_CLOSED, "force_reset_" . reason)
+    }
+}
+
+SCWV_SetPhase(phase, reason := "") {
+    global g_SCWV_CurrentPhase, g_SCWV_PhaseLastChanged
+    p := StrUpper(Trim(String(phase)))
+    if !(p = SCWV_PHASE_CLOSED || p = SCWV_PHASE_OPENING || p = SCWV_PHASE_OPEN || p = SCWV_PHASE_CLOSING)
+        return false
+    g_SCWV_CurrentPhase := p
+    g_SCWV_PhaseLastChanged := A_TickCount
+    SCWV_PushLifecycleState(StrLower(p), reason)
+    return true
+}
+
+SCWV_IsCurrentToken(token) {
+    global g_SCWV_CurrentToken
+    return (Integer(token) = Integer(g_SCWV_CurrentToken))
+}
+
+SCWV_ArmAntiHang(token) {
+    global g_SCWV_AntiHangTimerArmed
+    g_SCWV_AntiHangTimerArmed := true
+    SetTimer((*) => SCWV_AntiHangTick(token), -60)
+}
+
+SCWV_AntiHangTick(token) {
+    global g_SCWV_CurrentToken, g_SCWV_CurrentPhase, g_SCWV_PhaseLastChanged, g_SCWV_AntiHangTimerArmed
+    if (token != g_SCWV_CurrentToken)
+        return
+    if !(g_SCWV_CurrentPhase = SCWV_PHASE_OPENING || g_SCWV_CurrentPhase = SCWV_PHASE_CLOSING) {
+        g_SCWV_AntiHangTimerArmed := false
+        return
+    }
+    elapsed := A_TickCount - g_SCWV_PhaseLastChanged
+    if (elapsed > 1500) {
+        g_SCWV_AntiHangTimerArmed := false
+        SCWV_SubmitIntent("FORCE_RESET", 5, Map("reason", "anti_hang_" . g_SCWV_CurrentPhase))
+        return
+    }
+    SetTimer((*) => SCWV_AntiHangTick(token), -60)
+}
+
+SCWV_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
+    global g_SCWV_CurrentPhase, g_SCWV_CurrentToken, g_SCWV_TransitionCtx, g_SCWV_CloseAfterReady, g_SCWV_PhaseLastChanged
+    ts := StrUpper(Trim(String(targetPhase)))
+    if !(ts = SCWV_PHASE_OPEN || ts = SCWV_PHASE_CLOSED)
+        return false
+    cur := StrUpper(Trim(String(g_SCWV_CurrentPhase)))
+    if !(g_SCWV_TransitionCtx is Map)
+        g_SCWV_TransitionCtx := Map("allow", false)
+    ; phase debounce: avoid oscillation within 50ms
+    if ((A_TickCount - g_SCWV_PhaseLastChanged) < 50) {
+        if ((cur = SCWV_PHASE_OPENING && ts = SCWV_PHASE_CLOSED) || (cur = SCWV_PHASE_CLOSING && ts = SCWV_PHASE_OPEN)) {
+            SetTimer((*) => SCWV_SubmitIntent(ts = SCWV_PHASE_OPEN ? "OPEN" : "CLOSE", priority, Map("reason", "phase_debounce_" . reason)), -60)
+            return true
+        }
+    }
+    if (ts = SCWV_PHASE_OPEN) {
+        if (cur = SCWV_PHASE_OPEN && SCWV_IsVisible()) {
+            try SCWV_RequestFocusInput()
+            return true
+        }
+        if (cur = SCWV_PHASE_CLOSING)
+            SCWV_SetPhase(SCWV_PHASE_OPENING, "interrupt_open_" . reason)
+        g_SCWV_CurrentToken += 1
+        token := g_SCWV_CurrentToken
+        SCWV_SetPhase(SCWV_PHASE_OPENING, reason)
+        SCWV_ArmAntiHang(token)
+        g_SCWV_TransitionCtx["allow"] := true
+        try SCWV_Show(reason)
+        finally g_SCWV_TransitionCtx["allow"] := false
+        return true
+    } else {
+        if (cur = SCWV_PHASE_OPENING) {
+            g_SCWV_CloseAfterReady := true
+            return true
+        }
+        if (cur = SCWV_PHASE_CLOSED || cur = SCWV_PHASE_CLOSING)
+            return true
+        g_SCWV_CurrentToken += 1
+        token := g_SCWV_CurrentToken
+        SCWV_SetPhase(SCWV_PHASE_CLOSING, reason)
+        SCWV_ArmAntiHang(token)
+        g_SCWV_TransitionCtx["allow"] := true
+        try SCWV_Hide(true)
+        finally g_SCWV_TransitionCtx["allow"] := false
+        SCWV_SetPhase(SCWV_PHASE_CLOSED, "closed_after_hide_" . reason)
+        return true
+    }
+}
+
 SearchCenter_ShouldUseWebView() {
     return true
 }
@@ -206,6 +382,14 @@ SearchCenter_IsOpeningOrBusy() {
             try SCWV_ClearStaleHostState("is_opening_or_busy_host_dead")
             catch {
             }
+        }
+        if ((g_SCWV_LifecyclePhase = "opening" || g_SCWV_LifecyclePhase = "closing")
+            && !g_SCWV_WaitingUiFinishedReveal && !g_SCWV_CreateInFlight && !SCWV_IsVisible()) {
+            try SCWV_Log("stale_phase_reset", "reason=is_opening_or_busy phase=" . g_SCWV_LifecyclePhase)
+            catch {
+            }
+            g_SCWV_LifecyclePhase := "closed"
+            return false
         }
         if (g_SCWV_LifecyclePhase = "opening" || g_SCWV_LifecyclePhase = "closing")
             return true
@@ -454,16 +638,19 @@ SCWV_ForceRevealIfStuck(*) {
     SCWV_FinishReveal()
 }
 
-SCWV_ShowWaitTimeoutCheck(*) {
+SCWV_ShowWaitTimeoutCheck(token := 0, *) {
     global g_SCWV_WaitingUiFinishedReveal, g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
     global g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_Visible
+    if (token && !SCWV_IsCurrentToken(token))
+        return
 
     if !g_SCWV_WaitingUiFinishedReveal
         return
 
     elapsed := (g_SCWV_ShowWaitStartTick > 0) ? (A_TickCount - g_SCWV_ShowWaitStartTick) : -1
     if (elapsed >= 0 && elapsed < 1500) {
-        SetTimer(SCWV_ShowWaitTimeoutCheck, -((1500 - elapsed) + 50))
+        curToken := g_SCWV_CurrentToken
+        SetTimer((*) => SCWV_ShowWaitTimeoutCheck(curToken), -((1500 - elapsed) + 50))
         return
     }
 
@@ -477,21 +664,24 @@ SCWV_ShowWaitTimeoutCheck(*) {
     ; 只允许一次自动复位，避免在底层环境持续异常时无限重启。
     if (g_SCWV_ShowRecoveryAttempts = 0) {
         g_SCWV_ShowRecoveryAttempts := 1
-        SetTimer(SCWV_RecoverAfterShowWaitTimeout, -120)
+        curToken := g_SCWV_CurrentToken
+        SetTimer((*) => SCWV_RecoverAfterShowWaitTimeout(curToken), -120)
     } else {
         try SCWV_Log("show_wait_timeout_no_recover", "attempts=" . g_SCWV_ShowRecoveryAttempts)
     }
 }
 
-SCWV_RecoverAfterShowWaitTimeout(*) {
+SCWV_RecoverAfterShowWaitTimeout(token := 0, *) {
     global g_SCWV_Gui, g_SCWV_ShowRecoveryAttempts
+    if (token && !SCWV_IsCurrentToken(token))
+        return
     try SCWV_Log("show_wait_recover", "attempts=" . g_SCWV_ShowRecoveryAttempts)
     if !SCWV_HostAlive()
         SCWV_Init("show_wait_recover")
     if !g_SCWV_Gui
         return
-    ; 让新的宿主重新走一遍可见化流程，若仍未就绪，后续再由超时兜底。
-    SCWV_Show("show_wait_recover")
+    ; Recovery must submit open intent instead of direct show.
+    SCWV_SubmitIntent("open", 15, Map("reason", "show_wait_recover"))
 }
 
 SCWV_ForceCloseHost(reason := "") {
@@ -593,11 +783,11 @@ SearchCenterUnifiedClose(reason := "unknown", preferHardClose := false, PersistS
     g_SCWV_CloseInFlight := true
     try {
         if (preferHardClose) {
-            SCWV_RequestHardClose(reason)
+            SCWV_SubmitIntent("force_close", 10, Map("reason", reason))
             return true
         }
         if (SearchCenter_ShouldUseWebView()) {
-            SCWV_Hide(PersistSelection)
+            SCWV_SubmitIntent("close", 30, Map("reason", reason, "persist", PersistSelection ? 1 : 0))
             return true
         }
         global GuiID_SearchCenter
@@ -1353,10 +1543,94 @@ _SCWV_RunPendingGoSearch(*) {
     _SCWV_ExecuteGoSearchHttp(req["offset"], req["keyword"], req["goType"], req["limit"])
 }
 
+_SCWV_ProcessGoSearchResponse(resp, kw, off, gt, lim) {
+    st := resp.Has("status") ? Integer(resp["status"]) : 0
+    if (st != 200) {
+        if (st = 0) {
+            _SCWV_LogRuntime("SearchCore HTTP 0 fast-fail")
+            _SCWV_EnsureSearchCoreRunning()
+            _SCWV_ShowHttp0Notice()
+            return
+        } else {
+            global SearchCenterSearchResults, SearchCenterHasMoreData
+            SearchCenterSearchResults := []
+            SearchCenterHasMoreData := false
+            _SCWV_ShowSearchCoreError("SearchCenterCore 请求失败 HTTP " . st)
+            SCWV_PushState("state")
+            return
+        }
+    }
+    body := resp.Has("body") ? resp["body"] : ""
+    if (body = "") {
+        global SearchCenterSearchResults, SearchCenterHasMoreData
+        SearchCenterSearchResults := []
+        SearchCenterHasMoreData := false
+        _SCWV_ShowSearchCoreError("SearchCenterCore 返回空响应")
+        SCWV_PushState("state")
+        return
+    }
+    maxBodyChars := 20971520
+    if (StrLen(body) > maxBodyChars) {
+        if (off = 0 && lim > 50) {
+            _SCWV_LogRuntime("SearchCore body too large, retry with limit=50, len=" . StrLen(body))
+            _SCWV_ExecuteGoSearchHttp(off, kw, gt, 50)
+            return
+        }
+        _SCWV_ShowSearchCoreError("SearchCenterCore 返回体过大（>" . Round(maxBodyChars / 1048576) . "MB），请缩小范围")
+        return
+    }
+    try data := Jxon_Load(body)
+    catch as e {
+        global SearchCenterSearchResults, SearchCenterHasMoreData
+        SearchCenterSearchResults := []
+        SearchCenterHasMoreData := false
+        _SCWV_ShowSearchCoreError("SearchCenterCore JSON 解析失败: " . e.Message)
+        SCWV_PushState("state")
+        return
+    }
+    if !(data is Map) {
+        global SearchCenterSearchResults, SearchCenterHasMoreData
+        SearchCenterSearchResults := []
+        SearchCenterHasMoreData := false
+        _SCWV_ShowSearchCoreError("SearchCenterCore 响应格式无效")
+        SCWV_PushState("state")
+        return
+    }
+    itemsRaw := []
+    if (data.Has("items"))
+        itemsRaw := data["items"]
+    else if (data.Has("Items"))
+        itemsRaw := data["Items"]
+    GoItems := []
+    if (itemsRaw is Array) {
+        for _, it in itemsRaw
+            GoItems.Push(it)
+    }
+    hasMore := false
+    if (data.Has("hasMore"))
+        hasMore := data["hasMore"] ? true : false
+    else if (data.Has("HasMore"))
+        hasMore := data["HasMore"] ? true : false
+    _SCWV_ApplySearchResultSync(kw, off, hasMore, GoItems)
+    SCWV_PushState("state")
+}
+
+_SCWV_HandleSearchResponse(token, reqID, resp, kw, off, gt, lim) {
+    global g_SCWV_LastRenderedID
+    if (token && !SCWV_IsCurrentToken(token))
+        return false
+    if (reqID < g_SCWV_LastRenderedID)
+        return false
+    _SCWV_ProcessGoSearchResponse(resp, kw, off, gt, lim)
+    g_SCWV_LastRenderedID := reqID
+    return true
+}
+
 ; 由宿主发起 WinHttp 访问本机 Go，避免 https://app.local 页面 fetch http 被混合内容拦截
 _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) {
     global SearchCenterWebKeyword, SearchCenterCurrentLimit, SearchCenterFilterType
     global g_SCWV_SearchHttpInFlight, g_SCWV_SearchPendingReq
+    global g_SCWV_RequestID, g_SCWV_LastRenderedID, g_SCWV_AsyncWhr, g_SCWV_AsyncReqMeta, g_SCWV_CurrentToken
 
     kw := Trim(String(keyword))
     if (kw = "")
@@ -1381,7 +1655,8 @@ _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) 
         return
     }
 
-    g_SCWV_SearchHttpInFlight := true
+    reqID := g_SCWV_RequestID + 1
+    g_SCWV_RequestID := reqID
     _SCWV_BlockDeactivate(2500, "search_http")
     try {
         if !_SCWV_EnsureSearchCoreRunning() {
@@ -1399,84 +1674,48 @@ _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) 
         }
 
         q := "q=" . encQ . "&type=" . gt . "&limit=" . lim . "&offset=" . off
-        resp := _SCWV_HttpGetSearchCoreResp(q)
-        st := resp.Has("status") ? Integer(resp["status"]) : 0
-        if (st != 200) {
-            if (st = 0) {
-                ; HTTP 0 快速失败并保留当前结果，避免二次重试导致 UI 持续卡住
-                _SCWV_LogRuntime("SearchCore HTTP 0 fast-fail")
-                _SCWV_EnsureSearchCoreRunning()
-                _SCWV_ShowHttp0Notice()
-                return
-            } else {
-                global SearchCenterSearchResults, SearchCenterHasMoreData
-                SearchCenterSearchResults := []
-                SearchCenterHasMoreData := false
-                _SCWV_ShowSearchCoreError("SearchCenterCore 请求失败 HTTP " . st)
-                SCWV_PushState("state")
-                return
-            }
-        }
-        body := resp.Has("body") ? resp["body"] : ""
-        if (body = "") {
-            global SearchCenterSearchResults, SearchCenterHasMoreData
-            SearchCenterSearchResults := []
-            SearchCenterHasMoreData := false
-            _SCWV_ShowSearchCoreError("SearchCenterCore 返回空响应")
-            SCWV_PushState("state")
-            return
-        }
-        ; 返回体保护：先放宽阈值；若超限且当前 limit 较大，自动降载重试一次，避免直接失败
-        maxBodyChars := 20971520  ; ~20MB（UTF-8/ANSI 近似）
-        if (StrLen(body) > maxBodyChars) {
-            if (off = 0 && lim > 50) {
-                _SCWV_LogRuntime("SearchCore body too large, retry with limit=50, len=" . StrLen(body))
-                _SCWV_ExecuteGoSearchHttp(off, kw, gt, 50)
-                return
-            }
-            _SCWV_ShowSearchCoreError("SearchCenterCore 返回体过大（>" . Round(maxBodyChars / 1048576) . "MB），请缩小范围")
-            return
-        }
-
-        try data := Jxon_Load(body)
-        catch as e {
-            global SearchCenterSearchResults, SearchCenterHasMoreData
-            SearchCenterSearchResults := []
-            SearchCenterHasMoreData := false
-            _SCWV_ShowSearchCoreError("SearchCenterCore JSON 解析失败: " . e.Message)
-            SCWV_PushState("state")
-            return
-        }
-        if !(data is Map) {
-            global SearchCenterSearchResults, SearchCenterHasMoreData
-            SearchCenterSearchResults := []
-            SearchCenterHasMoreData := false
-            _SCWV_ShowSearchCoreError("SearchCenterCore 响应格式无效")
-            SCWV_PushState("state")
-            return
-        }
-
-        ; Go encoding/json 与部分解析器键名：兼容 items / Items、hasMore / HasMore
-        itemsRaw := []
-        if (data.Has("items"))
-            itemsRaw := data["items"]
-        else if (data.Has("Items"))
-            itemsRaw := data["Items"]
-        GoItems := []
-        if (itemsRaw is Array) {
-            for _, it in itemsRaw
-                GoItems.Push(it)
-        }
-        hasMore := false
-        if (data.Has("hasMore"))
-            hasMore := data["hasMore"] ? true : false
-        else if (data.Has("HasMore"))
-            hasMore := data["HasMore"] ? true : false
-        _SCWV_ApplySearchResultSync(kw, off, hasMore, GoItems)
-        SCWV_PushState("state")
+        url := "http://127.0.0.1:8080/search?" . q
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        whr.Open("GET", url, true)
+        whr.SetTimeouts(900, 900, 2200, 2200)
+        whr.Send()
+        g_SCWV_AsyncWhr := whr
+        g_SCWV_AsyncReqMeta := Map("reqID", reqID, "kw", kw, "off", off, "gt", gt, "lim", lim, "startTick", A_TickCount, "token", g_SCWV_CurrentToken)
+        g_SCWV_SearchHttpInFlight := true
+        SetTimer(_SCWV_AsyncPollSearchHttp, 20)
     } catch as err {
         _SCWV_LogRuntime("ExecuteGoSearchHttp exception: " . err.Message)
+    }
+}
+
+_SCWV_AsyncPollSearchHttp(*) {
+    global g_SCWV_AsyncWhr, g_SCWV_AsyncReqMeta, g_SCWV_SearchHttpInFlight
+    global g_SCWV_LastRenderedID, g_SCWV_SearchPendingReq
+    if !IsObject(g_SCWV_AsyncWhr) || !(g_SCWV_AsyncReqMeta is Map) {
+        SetTimer(_SCWV_AsyncPollSearchHttp, 0)
+        g_SCWV_SearchHttpInFlight := false
+        return
+    }
+    whr := g_SCWV_AsyncWhr
+    meta := g_SCWV_AsyncReqMeta
+    try {
+        rs := 0
+        try rs := Integer(whr.ReadyState)
+        if (rs < 4)
+            return
+        SetTimer(_SCWV_AsyncPollSearchHttp, 0)
+        st := 0
+        try st := Integer(whr.Status)
+        raw := _SCWV_WinHttpReadUtf8Text(whr)
+        reqID := Integer(meta["reqID"])
+        token := meta.Has("token") ? Integer(meta["token"]) : 0
+        resp := Map("status", st, "body", (st = 200) ? raw : "", "responseText", raw)
+        _SCWV_HandleSearchResponse(token, reqID, resp, meta["kw"], meta["off"], meta["gt"], meta["lim"])
+    } catch as err {
+        _SCWV_LogRuntime("AsyncPollSearchHttp error: " . err.Message)
     } finally {
+        g_SCWV_AsyncWhr := 0
+        g_SCWV_AsyncReqMeta := 0
         g_SCWV_SearchHttpInFlight := false
         if (g_SCWV_SearchPendingReq is Map)
             SetTimer(_SCWV_RunPendingGoSearch, -1)
@@ -1517,7 +1756,12 @@ _SCWV_ResultItemGet(Item, Prop, Default := "") {
 SCWV_Show(reason := "") {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
-    global SearchCenterEngineMode, g_SCWV_LifecyclePhase
+    global SearchCenterEngineMode, g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx
+    if !(g_SCWV_TransitionCtx is Map) || !g_SCWV_TransitionCtx["allow"] {
+        try SCWV_Log("show_redirect_intent", "reason=" . reason)
+        SCWV_SubmitIntent("open", 25, Map("reason", reason != "" ? reason : "show_redirect"))
+        return
+    }
     try SCWV_Log("show_begin", "reason=" . reason . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
     SCWV_PushLifecycleState("opening", reason)
     ; 打开阶段先屏蔽失焦自动关闭，避免 WebView/焦点切换瞬时抖动把窗口提前关掉（白屏/一闪）。
@@ -1687,7 +1931,12 @@ SCWV_RequestFocusInput() {
 SCWV_Hide(PersistSelection := true) {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_SearchTimer, GuiID_SearchCenter, g_SCWV_PendingJsonQueue
     global g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason, g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
-    global g_SCWV_LifecyclePhase
+    global g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx
+    if !(g_SCWV_TransitionCtx is Map) || !g_SCWV_TransitionCtx["allow"] {
+        try SCWV_Log("hide_redirect_intent", "persist=" . (PersistSelection ? "1" : "0"))
+        SCWV_SubmitIntent("close", 25, Map("reason", "hide_redirect", "persist", PersistSelection ? 1 : 0))
+        return
+    }
     try SCWV_Log("hide_begin", "persist=" . (PersistSelection ? "1" : "0") . " visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " deact_block=" . Integer(g_SCWV_DeactivateBlockUntil))
     SCWV_PushLifecycleState("closing", "hide")
     ; Drag-hole reentry safety: when exiting SearchCenter, force-reset native drag session
@@ -1806,8 +2055,8 @@ SCWV_WMDeactivateHideTick(*) {
         }
     } catch {
     }
-    try SCWV_Log("hide_trigger", "reason=wm_deactivate")
-    SCWV_Hide(true)
+    try SCWV_Log("hide_trigger", "reason=wm_deactivate_intent")
+    SCWV_SubmitIntent("close", 40, Map("reason", "wm_deactivate"))
 }
 
 SCWV_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
@@ -1861,8 +2110,8 @@ SCWV_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
             try SCWV_Log("wm_activate_skip", "reason=recent_show delta=" . Integer(A_TickCount - g_SCWV_LastShown))
             return
         }
-        try SCWV_Log("wm_activate_queue", "reason=wm_deactivate count=" . WMActivateChain_Count())
-        SetTimer(SCWV_WMDeactivateHideTick, -50)
+        try SCWV_Log("wm_activate_queue", "reason=wm_deactivate_intent count=" . WMActivateChain_Count())
+        SCWV_SubmitIntent("close", 40, Map("reason", "wm_deactivate"))
     }
 }
 
@@ -2034,10 +2283,10 @@ SCWV_OnWebMessage(sender, args) {
     try {
     switch action {
         case "ready":
-            global g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal
+            global g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_CloseAfterReady
             g_SCWV_Ready := true
             g_SCWV_UI_Ready := true
-            g_SCWV_LifecyclePhase := "open"
+            SCWV_SetPhase(SCWV_PHASE_OPEN, "web_ready")
             if g_SCWV_WaitingUiFinishedReveal
                 SCWV_FinishReveal()
             SCWV_PushThemeToWeb()
@@ -2047,6 +2296,10 @@ SCWV_OnWebMessage(sender, args) {
             try SCWV_FlushPendingJsonQueue()
             if g_SCWV_FocusPending
                 SCWV_RequestFocusInput()
+            if (g_SCWV_CloseAfterReady) {
+                g_SCWV_CloseAfterReady := false
+                SCWV_SubmitIntent("CLOSE", 15, Map("reason", "close_after_ready"))
+            }
         case "setEngineMode":
             global SearchCenterEngineMode
             mo := msg.Has("mode") ? String(msg["mode"]) : "go"
@@ -2083,12 +2336,21 @@ SCWV_OnWebMessage(sender, args) {
             _SCWV_ApplySearchResultSync(kw, off, hm, GoItems)
             SCWV_PushState("state")
         case "searchGoRequest":
+            global SearchCenterWebKeyword, SearchCenterHasMoreData
             kw0 := msg.Has("keyword") ? String(msg["keyword"]) : ""
             off0 := msg.Has("offset") ? Integer(msg["offset"]) : 0
             if (off0 < 0)
                 off0 := 0
             lim0 := msg.Has("limit") ? Integer(msg["limit"]) : 0
             gt0 := msg.Has("goType") ? String(msg["goType"]) : ""
+            SearchCenterWebKeyword := Trim(kw0)
+            if (SearchCenterWebKeyword = "") {
+                SearchCenterHasMoreData := false
+                _SCWV_LoadSearchHistory()
+                SCWV_PushState("state")
+                return
+            }
+            _SCWV_RecordSearchHistory(SearchCenterWebKeyword)
             _SCWV_ExecuteGoSearchHttp(off0, kw0, gt0, lim0)
         case "fulltextStatusRequest":
             withCfg := msg.Has("withConfig") ? (msg["withConfig"] ? true : false) : false
@@ -2154,6 +2416,8 @@ SCWV_OnWebMessage(sender, args) {
                 SearchCenterFilterType := "fulltext"
             else
                 SearchCenterFilterType := (SearchCenterFilterType = nextFilter) ? "" : nextFilter
+            if msg.Has("keyword")
+                SearchCenterWebKeyword := Trim(String(msg["keyword"]))
             ; 普通过滤标签优先使用上一次「全部结果」本地切换，避免切标签还要等待后端。
             if (Trim(SearchCenterWebKeyword) != "" && SearchCenterFilterType != "fulltext" && _SCWV_RestoreAllResultsCache(SearchCenterWebKeyword)) {
                 SCWV_PushState("state")
@@ -2205,15 +2469,15 @@ SCWV_OnWebMessage(sender, args) {
             _SCWV_ShowSearchCenterRowMenu(row, sx, sy)
         case "close":
             try SCWV_Log("webmsg_close", "visible=" . (g_SCWV_Visible ? "1" : "0"))
-            SearchCenterUnifiedClose("webmsg_close", false, true)
+            SCWV_SubmitIntent("close", 20, Map("reason", "webmsg_close"))
         case "lifecycle":
             phase := msg.Has("phase") ? StrLower(Trim(String(msg["phase"]))) : ""
             reason := msg.Has("reason") ? String(msg["reason"]) : ""
             try SCWV_Log("webmsg_lifecycle", "phase=" . phase . " reason=" . reason)
             if (phase = "close_request") {
-                SearchCenterUnifiedClose(reason != "" ? reason : "close_request", false, true)
+                SCWV_SubmitIntent("close", 20, Map("reason", (reason != "" ? reason : "close_request")))
             } else if (phase = "closed") {
-                SCWV_PushLifecycleState("closed", reason)
+                SCWV_SetPhase(SCWV_PHASE_CLOSED, reason != "" ? reason : "web_closed")
             } else if (phase = "opening" || phase = "open" || phase = "closing") {
                 SCWV_PushLifecycleState(phase, reason)
             }
@@ -3826,7 +4090,7 @@ SC_ActivateSearchResultItem(Item, doHide := true, smartTextSearch := false) {
     isFileLike := (DataType = "file" || DataType = "File" || DataType = "Folder" || origDt = "file")
 
     if doHide {
-        SCWV_Hide(true)
+        SCWV_SubmitIntent("close", 25, Map("reason", "activate_result", "persist", 1))
         Sleep(60)
     }
 
@@ -4051,7 +4315,7 @@ SearchCenter_RunQueryWithKeyword(keyword) {
         catch {
         }
         SCWV_Init("search_keyword")
-        SCWV_Show("search_keyword")
+        SCWV_SubmitIntent("open", 20, Map("reason", "search_keyword"))
         _SCWV_ExecuteGoSearchHttp(0, SearchCenterWebKeyword, "", 0)
         SCWV_PushState("state")
         SCWV_RequestFocusInput()
@@ -4059,7 +4323,7 @@ SearchCenter_RunQueryWithKeyword(keyword) {
         ; 鍏滃簳閲嶈瘯锛氳閬挎棫鍙ユ焺澶辨晥瀵艰嚧鐨勫伓鍙戞墦寮€澶辫触
         SCWV_ResetHostState()
         SCWV_Init("search_keyword_retry")
-        SCWV_Show("search_keyword_retry")
+        SCWV_SubmitIntent("open", 20, Map("reason", "search_keyword_retry"))
         _SCWV_ExecuteGoSearchHttp(0, SearchCenterWebKeyword, "", 0)
         SCWV_PushState("state")
         SCWV_RequestFocusInput()
