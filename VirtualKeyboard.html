@@ -3554,6 +3554,27 @@ const CURSOR_TAB_PRESET = [
 /** 快捷键场景固定布局：每个 cmdId 只出现一次，避免侧边栏重复项与 Bar 开关只命中 toolbarLayout 第一条同 cmd 记录 */
 const HOTKEY_TAB_PRESET = [
   { id: 'hotkeys:direction', name: '方向', commands: ['ch_w', 'ch_s', 'ch_a', 'ch_d'] },
+  {
+    id: 'hotkeys:global_nav',
+    name: '全局导航',
+    commands: ['ch_f', 'ch_x', 'ch_q', 'ch_t', 'ch_p', 'ch_r', 'ch_b', 'ch_g', 'sys_show_vk'],
+  },
+  {
+    id: 'hotkeys:toolbar_mode',
+    name: '工具栏模式',
+    commands: ['gk_alt_wheel_up', 'gk_alt_wheel_down', 'gk_toolbar_mode', 'gk_toolbar_recover', 'gk_toolbar_show'],
+  },
+  {
+    id: 'hotkeys:tray_toolbar',
+    name: '托盘和工具栏',
+    commands: [
+      'ftm_reset_scale', 'ftm_search_center', 'ftm_clipboard', 'ftm_minimize_to_edge',
+      'ftm_exit_app', 'ftm_hide_toolbar', 'ftm_open_config', 'ftm_toggle_toolbar', 'ftm_reload_script',
+      'tray_show_search', 'tray_show_clipboard', 'tray_show_screenshot', 'tray_show_config',
+      'tray_toggle_toolbar', 'tray_hide_toolbar', 'tray_reload_script', 'tray_exit_app',
+    ],
+  },
+  { id: 'hotkeys:system', name: '系统控制', commands: ['gk_open_config', 'gk_reload_script'] },
 ];
 
 const FLOATING_BAR_TAB_PRESET = [

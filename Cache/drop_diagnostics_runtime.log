@@ -21689,3 +21689,141 @@
 [2026-05-16 06:58:36] selection cursor_over_ui miss mouse_x=421 mouse_y=190 top=hwnd=67874 class=Chrome_WidgetWin_1 title=Cursor 日志文件大小与性能 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
 [2026-05-16 06:58:36] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
 [2026-05-16 06:58:36] selection lbutton_up no_trigger=click
+[2026-05-16 06:58:38] selection cursor_over_ui miss mouse_x=36 mouse_y=349 top=hwnd=67874 class=Chrome_WidgetWin_1 title=Cursor 日志文件大小与性能 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-16 06:58:38] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-16 06:58:38] selection lbutton_up no_trigger=click
+[2026-05-16 06:58:45] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-16 06:58:45] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-16 06:58:45] gdho hide_frontend queue hide
+[2026-05-16 06:58:45] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-16 06:58:50] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-16 06:58:50] gdho hide_frontend queue hide
+[2026-05-16 06:58:50] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-16 06:59:01] selection cursor_over_ui miss mouse_x=2516 mouse_y=891 top=hwnd=395222 class=Chrome_WidgetWin_1 title=Discovery - 4D4Y - Google Chrome exe=chrome.exe
+[2026-05-16 06:59:01] selection lbutton_up dist_x=80 dist_y=42 drag=1 multi=0
+[2026-05-16 06:59:01] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-16 06:59:03] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=395558 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=2918 mouse_y=903
+[2026-05-16 06:59:03] selection lbutton_up skip=our_ui
+[2026-05-16 06:59:03] gdho hide_frontend queue hide
+[2026-05-16 06:59:03] gdho stop begin
+[2026-05-16 06:59:03] gdho poll disarm skip reason=stop
+[2026-05-16 06:59:03] gdho stop done
+[2026-05-16 06:59:07] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=177 mouse_y=775
+[2026-05-16 06:59:07] selection lbutton_up skip=our_ui
+[2026-05-16 06:59:14] selection cursor_over_ui miss mouse_x=1910 mouse_y=991 top=hwnd=67458 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-16 06:59:14] selection lbutton_up dist_x=1259 dist_y=424 drag=1 multi=0
+[2026-05-16 06:59:14] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-16 06:59:15] selection cursor_over_ui miss mouse_x=1887 mouse_y=1013 top=hwnd=5900266 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-16 06:59:15] selection lbutton_up dist_x=5 dist_y=0 drag=1 multi=0
+[2026-05-16 06:59:15] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-16 06:59:17] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=1882 mouse_y=1
+[2026-05-16 06:59:17] selection lbutton_up skip=our_ui
+[2026-05-16 06:59:19] selection cursor_over_ui miss mouse_x=212 mouse_y=899 top=hwnd=67874 class=Chrome_WidgetWin_1 title=Cursor 日志文件大小与性能 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-16 06:59:19] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-16 06:59:19] selection lbutton_up no_trigger=click
+[2026-05-16 07:00:03] gdho hide_frontend queue hide
+[2026-05-16 07:00:03] gdho stop begin
+[2026-05-16 07:00:03] gdho poll disarm skip reason=stop
+[2026-05-16 07:00:03] gdho stop done
+[2026-05-16 07:00:06] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=217 mouse_y=832
+[2026-05-16 07:00:06] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:07] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=225 mouse_y=867
+[2026-05-16 07:00:07] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:08] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=217 mouse_y=909
+[2026-05-16 07:00:08] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:09] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=218 mouse_y=948
+[2026-05-16 07:00:09] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:09] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=245 mouse_y=804
+[2026-05-16 07:00:09] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:10] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=252 mouse_y=768
+[2026-05-16 07:00:10] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:11] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=741 mouse_y=656
+[2026-05-16 07:00:11] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:11] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=711 mouse_y=677
+[2026-05-16 07:00:11] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:12] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=797 mouse_y=667
+[2026-05-16 07:00:12] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:16] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=177 mouse_y=749
+[2026-05-16 07:00:16] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:17] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=178 mouse_y=782
+[2026-05-16 07:00:17] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:19] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=193 mouse_y=711
+[2026-05-16 07:00:19] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:19] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=193 mouse_y=740
+[2026-05-16 07:00:19] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:20] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=187 mouse_y=803
+[2026-05-16 07:00:20] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:20] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=186 mouse_y=847
+[2026-05-16 07:00:20] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:24] selection cursor_over_ui hit=g_VK_Gui hwnd=526426 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=290 mouse_y=874
+[2026-05-16 07:00:24] selection lbutton_up skip=our_ui
+[2026-05-16 07:00:26] selection cursor_over_ui miss mouse_x=190 mouse_y=905 top=hwnd=67874 class=Chrome_WidgetWin_1 title=Cursor 日志文件大小与性能 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-16 07:00:26] selection lbutton_up dist_x=1 dist_y=1 drag=0 multi=0
+[2026-05-16 07:00:26] selection lbutton_up no_trigger=click
+[2026-05-16 07:00:43] gdho hide_frontend queue hide
+[2026-05-16 07:00:43] gdho stop begin
+[2026-05-16 07:00:43] gdho poll disarm skip reason=stop
+[2026-05-16 07:00:43] gdho stop done
+[2026-05-16 07:01:52] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-16 07:01:52] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-16 07:01:52] gdho hide_frontend queue hide
+[2026-05-16 07:01:52] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-16 07:01:53] selection cursor_over_ui miss mouse_x=23 mouse_y=139 top=hwnd=67874 class=Chrome_WidgetWin_1 title=Cursor 日志文件大小与性能 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-16 07:01:53] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-16 07:01:53] selection lbutton_up no_trigger=click
+[2026-05-16 07:01:57] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-16 07:01:57] gdho hide_frontend queue hide
+[2026-05-16 07:01:57] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-16 07:01:58] gdho hide_frontend queue hide
+[2026-05-16 07:01:58] gdho stop begin
+[2026-05-16 07:01:58] gdho poll disarm skip reason=stop
+[2026-05-16 07:01:58] gdho stop done
+[2026-05-16 07:02:06] gdho hide_frontend queue hide
+[2026-05-16 07:02:06] gdho stop begin
+[2026-05-16 07:02:06] gdho poll disarm skip reason=stop
+[2026-05-16 07:02:06] gdho stop done
+[2026-05-16 07:02:09] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-16 07:02:09] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-16 07:02:09] gdho hide_frontend queue hide
+[2026-05-16 07:02:09] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-16 07:02:14] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-16 07:02:14] gdho hide_frontend queue hide
+[2026-05-16 07:02:14] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-16 07:02:27] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=526630 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=2893 mouse_y=896
+[2026-05-16 07:02:27] selection lbutton_up skip=our_ui
+[2026-05-16 07:02:27] gdho hide_frontend queue hide
+[2026-05-16 07:02:27] gdho stop begin
+[2026-05-16 07:02:27] gdho poll disarm skip reason=stop
+[2026-05-16 07:02:27] gdho stop done
+[2026-05-16 07:02:35] selection cursor_over_ui hit=g_VK_Gui hwnd=854062 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=491 mouse_y=978
+[2026-05-16 07:02:35] selection lbutton_up skip=our_ui
+[2026-05-16 07:02:37] selection cursor_over_ui hit=g_VK_Gui hwnd=854062 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=815 mouse_y=607
+[2026-05-16 07:02:37] selection lbutton_up skip=our_ui
+[2026-05-16 07:02:37] selection cursor_over_ui hit=g_VK_Gui hwnd=854062 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=938 mouse_y=601
+[2026-05-16 07:02:37] selection lbutton_up skip=our_ui
+[2026-05-16 07:02:42] selection cursor_over_ui hit=g_VK_Gui hwnd=854062 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=147 mouse_y=909
+[2026-05-16 07:02:42] selection lbutton_up skip=our_ui
+[2026-05-16 07:02:51] selection cursor_over_ui hit=g_VK_Gui hwnd=854062 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=384 mouse_y=781
+[2026-05-16 07:02:51] selection lbutton_up skip=our_ui
+[2026-05-16 07:02:52] selection cursor_over_ui hit=g_VK_Gui hwnd=854062 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=807 mouse_y=609
+[2026-05-16 07:02:52] selection lbutton_up skip=our_ui
+[2026-05-16 07:02:56] selection cursor_over_ui hit=g_VK_Gui hwnd=854062 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=962 mouse_y=589
+[2026-05-16 07:02:56] selection lbutton_up skip=our_ui
+[2026-05-16 07:02:59] selection cursor_over_ui hit=g_VK_Gui hwnd=854062 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=329 mouse_y=904
+[2026-05-16 07:02:59] selection lbutton_up skip=our_ui
+[2026-05-16 07:02:59] selection cursor_over_ui hit=g_VK_Gui hwnd=854062 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=331 mouse_y=879
+[2026-05-16 07:02:59] selection lbutton_up skip=our_ui
+[2026-05-16 07:03:03] selection cursor_over_ui hit=g_VK_Gui hwnd=854062 class=AutoHotkeyGUI title=VK KeyBinder exe=AutoHotkey64.exe mouse_x=1908 mouse_y=6
+[2026-05-16 07:03:03] selection lbutton_up skip=our_ui
+[2026-05-16 07:03:08] selection cursor_over_ui miss mouse_x=463 mouse_y=154 top=hwnd=67874 class=Chrome_WidgetWin_1 title=Cursor 日志文件大小与性能 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-16 07:03:08] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-16 07:03:08] selection lbutton_up no_trigger=click
+[2026-05-16 07:03:10] selection cursor_over_ui miss mouse_x=453 mouse_y=163 top=hwnd=67874 class=Chrome_WidgetWin_1 title=Cursor 日志文件大小与性能 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-16 07:03:10] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-16 07:03:10] selection lbutton_up no_trigger=click
+[2026-05-16 07:03:15] selection cursor_over_ui miss mouse_x=388 mouse_y=159 top=hwnd=67874 class=Chrome_WidgetWin_1 title=Cursor 日志文件大小与性能 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-16 07:03:15] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-16 07:03:15] selection lbutton_up no_trigger=click
+[2026-05-16 07:03:22] selection cursor_over_ui miss mouse_x=347 mouse_y=194 top=hwnd=67874 class=Chrome_WidgetWin_1 title=Cursor 日志文件大小与性能 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-16 07:03:22] selection lbutton_up dist_x=1 dist_y=1 drag=0 multi=0
+[2026-05-16 07:03:22] selection lbutton_up no_trigger=click

@@ -1593,3 +1593,21 @@
 [2026-05-16 06:57:13] invoke_click idx=10 text=[!] 强制重置搜索中心
 [2026-05-16 06:57:13] invoke_ok idx=10 text=[!] 强制重置搜索中心
 [2026-05-16 06:57:13] run_scene_cmd cmd=tray_force_reinit_search mode=toolbar search_active=0
+[2026-05-16 06:58:44] reload_hard_spawn_ok
+[2026-05-16 06:58:55] tray_msg lParam=516 msg=1028
+[2026-05-16 06:58:55] tray_msg lParam=517 msg=1028
+[2026-05-16 06:58:55] tray_popup_state mode=toolbar search_active=0 search_visible=0 gdho=0 native=0 waiting=0 phase=open caps=0
+[2026-05-16 06:58:55] custom_popup_queue lParam=517
+[2026-05-16 06:58:55] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-16 06:58:55] custom_popup_begin lParam=517
+[2026-05-16 06:58:55] custom_popup_state mode=toolbar ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 native=0 waiting=0 create_inflight=0
+[2026-05-16 06:58:55] scene_items_source scene=tray_menu mode=toolbar raw_count=60 vis_count=8 cmd_count=184
+[2026-05-16 06:58:55] scene_items_filtered scene=tray_menu count=8
+[2026-05-16 06:58:55] custom_popup_scene_items count=8 mode=toolbar
+[2026-05-16 06:58:55] scene_items_appended count=8 mode=toolbar
+[2026-05-16 06:58:55] custom_popup_build_done items=17 elapsed_ms=188
+[2026-05-16 06:58:55] dark_popup_show_begin items=17 pos=1635,430
+[2026-05-16 06:58:55] dark_popup_show_done elapsed_ms=78 hwnd=788500
+[2026-05-16 06:58:55] custom_popup_end lParam=517 elapsed_ms=282
+[2026-05-16 07:01:51] reload_hard_spawn_ok
+[2026-05-16 07:02:08] reload_hard_spawn_ok

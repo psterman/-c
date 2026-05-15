@@ -738,3 +738,9 @@
 [2026-05-16 06:57:27][wm_chain_unregister_done] reason=gui_close count=0
 [2026-05-16 06:57:27][hide_done] visible=0 reason=gui_close
 [2026-05-16 06:57:27][force_close_done] reason=gui_close
+[2026-05-16 06:58:46][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 06:58:46][init_create_begin] reason= hwnd=2164858
+[2026-05-16 07:01:53][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 07:01:53][init_create_begin] reason= hwnd=1116254
+[2026-05-16 07:02:10][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 07:02:10][init_create_begin] reason= hwnd=919504
