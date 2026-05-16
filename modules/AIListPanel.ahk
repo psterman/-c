@@ -1191,7 +1191,7 @@ PromptQuickPad_ApplyWebCaptureDraft(initialText := "", forceExpand := true) {
         _PQP_PendingCapRetry := 5
         SetTimer(_PQP_DeferredCapturePush, -300)
     }
-    try WinActivate("ahk_id " . PromptQuickPad_GetHostHwnd())
+    try LegacyGuard_RequestFocus("AIListPanel.Host", "ahk_id " . PromptQuickPad_GetHostHwnd(), 45, "restore_host_focus")
     catch {
     }
 }
@@ -1234,7 +1234,7 @@ PromptQuickPad_OpenCaptureDraft(initialText := "", forceExpand := true) {
     try ControlFocus(PromptQuickPad_edDraftContent)
     catch {
     }
-    try WinActivate("ahk_id " . AIListPanelGUI.Hwnd)
+    try LegacyGuard_RequestFocus("AIListPanel.Main", "ahk_id " . AIListPanelGUI.Hwnd, 50, "show_panel_focus")
     catch {
     }
 }
@@ -1899,7 +1899,7 @@ PromptQuickPad_ShowDarkCtxMenuAt(MenuItems, posX, posY) {
     }
 
     PromptQuickPadCtxMenuGUI.Show("x" . posX . " y" . posY . " w" . MenuWidth . " h" . MenuHeight)
-    try WinActivate("ahk_id " . PromptQuickPadCtxMenuGUI.Hwnd)
+    try LegacyGuard_RequestFocus("AIListPanel.CtxMenu", "ahk_id " . PromptQuickPadCtxMenuGUI.Hwnd, 50, "show_ctx_menu_focus")
     catch {
     }
     SetTimer(PromptQuickPad_CheckCtxMenuMouse, 50)
@@ -2337,7 +2337,7 @@ ShowAIListPanel_WebView(openForCapture := false, forceCenterMaximize := false) {
             catch {
             }
             PromptQuickPad_CenterAndMaximizeOnActiveMonitor()
-            try WinActivate("ahk_id " . PQP_GetGuiHwnd())
+            try LegacyGuard_RequestFocus("AIListPanel.PQP", "ahk_id " . PQP_GetGuiHwnd(), 50, "restore_pqp_focus")
             catch {
             }
             return

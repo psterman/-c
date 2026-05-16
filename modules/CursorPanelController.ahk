@@ -534,11 +534,11 @@ TryActivateWindow(winQuery) {
         return false
     try WinShow(winQuery)
     try WinRestore(winQuery)
-    try WinActivate(winQuery)
+    try LegacyGuard_RequestFocus("CursorPanelController", winQuery, 50, "ensure_target_visible")
     Sleep(60)
     if WinActive(winQuery)
         return true
-    try WinActivate(winQuery)
+    try LegacyGuard_RequestFocus("CursorPanelController", winQuery, 50, "ensure_target_visible_retry")
     Sleep(90)
     return WinActive(winQuery)
 }
@@ -1803,7 +1803,7 @@ OnCursorPanelResultDoubleClick(LV, Row) {
                         }
                         
                         ; 激活 Cursor 窗口
-                        WinActivate("ahk_exe Cursor.exe")
+                        LegacyGuard_RequestCursorFocus("CursorPanelController", "return_cursor_focus")
                         Sleep(200)
                         
                         ; 打开聊天面板
@@ -1861,7 +1861,7 @@ OnCursorPanelResultDoubleClick(LV, Row) {
                     }
                 }
                 
-                WinActivate("ahk_exe Cursor.exe")
+                LegacyGuard_RequestCursorFocus("CursorPanelController", "return_cursor_focus")
                 Sleep(200)
                 Send("^l")
                 Sleep(400)
@@ -2257,13 +2257,13 @@ ExecuteCursorShortcut(Shortcut) {
         }
         
         ; 激活 Cursor 窗口
-        WinActivate("ahk_exe Cursor.exe")
+        LegacyGuard_RequestCursorFocus("CursorPanelController", "return_cursor_focus")
         WinWaitActive("ahk_exe Cursor.exe", , 2)
         Sleep(200)
         
         ; 确保窗口已激活
         if (!WinActive("ahk_exe Cursor.exe")) {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("CursorPanelController", "return_cursor_focus")
             Sleep(200)
         }
         

@@ -123,7 +123,7 @@ ShowSearchCenterDebugPanel() {
             ; 延迟一点时间，确保调试面板完全显示
             Sleep(100)
             ; 激活 SearchCenter 窗口
-            WinActivate("ahk_id " . GuiID_SearchCenter.Hwnd)
+            LegacyGuard_RequestFocus("SearchCenterDebugPanel", "ahk_id " . GuiID_SearchCenter.Hwnd, 60, "debug_panel_focus")
             WinWaitActive("ahk_id " . GuiID_SearchCenter.Hwnd, , 1)
             Sleep(100)
             ; 聚焦到输入框

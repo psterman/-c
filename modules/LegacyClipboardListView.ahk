@@ -102,7 +102,7 @@ ShowClipboardManager() {
         if (ClipboardCurrentTab = "CapsLockC")
             SetTimer(() => CreateClipboardHighlightOverlay(), -50)
         WinSetAlwaysOnTop(1, GuiID_ClipboardManager.Hwnd)
-        WinActivate(GuiID_ClipboardManager.Hwnd)
+        LegacyGuard_RequestFocus("LegacyClipboardListView", GuiID_ClipboardManager.Hwnd, 50, "show_clipboard_manager")
         Sleep(100)
         SetTimer(RefreshClipboardListAfterShow, -150)
         return
@@ -500,7 +500,7 @@ ShowClipboardManager() {
     
     ; 确保窗口在最上层并激活
     WinSetAlwaysOnTop(1, GuiID_ClipboardManager.Hwnd)
-    WinActivate(GuiID_ClipboardManager.Hwnd)
+    LegacyGuard_RequestFocus("LegacyClipboardListView", GuiID_ClipboardManager.Hwnd, 50, "show_clipboard_manager")
     
     ; 确保全局变量已正确初始化
     if (!IsSet(ClipboardHistory_CtrlC) || !IsObject(ClipboardHistory_CtrlC)) {
@@ -5672,12 +5672,12 @@ PasteSelectedToCursor(*) {
             ; 激活 Cursor 窗口
             try {
                 if WinExist("ahk_exe Cursor.exe") {
-                    WinActivate("ahk_exe Cursor.exe")
+                    LegacyGuard_RequestCursorFocus("LegacyClipboardListView", "return_cursor_focus")
                     WinWaitActive("ahk_exe Cursor.exe", , 1)
                     Sleep(200)
                     
                     if !WinActive("ahk_exe Cursor.exe") {
-                        WinActivate("ahk_exe Cursor.exe")
+                        LegacyGuard_RequestCursorFocus("LegacyClipboardListView", "return_cursor_focus")
                         Sleep(200)
                     }
                     
@@ -5687,7 +5687,7 @@ PasteSelectedToCursor(*) {
                     Sleep(400)
                     
                     if !WinActive("ahk_exe Cursor.exe") {
-                        WinActivate("ahk_exe Cursor.exe")
+                        LegacyGuard_RequestCursorFocus("LegacyClipboardListView", "return_cursor_focus")
                         Sleep(200)
                     }
                     

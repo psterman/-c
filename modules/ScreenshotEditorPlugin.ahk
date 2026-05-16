@@ -709,7 +709,7 @@ class ScreenshotEditorPlugin {
         
         ; 寮哄埗婵€娲绘闈紝纭繚鎴戜滑鐨勭獥鍙ｈ兘鏄剧ず鍦ㄦ渶鍓嶉潰
         try {
-            WinActivate("Program Manager")
+            LegacyGuard_RequestFocus("ScreenshotEditorPlugin", "Program Manager", 40, "restore_desktop_focus")
             Sleep(50)
         }
         
@@ -733,7 +733,7 @@ class ScreenshotEditorPlugin {
 
         ; 婵€娲荤獥鍙ｅ苟纭繚鍦ㄦ渶鍓嶉潰
         try {
-            WinActivate("ahk_id " . EditorGui.Hwnd)
+            LegacyGuard_RequestFocus("ScreenshotEditorPlugin", "ahk_id " . EditorGui.Hwnd, 55, "editor_enter")
             Sleep(50)
             ; 纭繚绐楀彛鑾峰緱鐒︾偣
             WinSetAlwaysOnTop("On", "ahk_id " . EditorGui.Hwnd)
@@ -763,14 +763,14 @@ class ScreenshotEditorPlugin {
         ; 婵€娲诲伐鍏锋爮绐楀彛
         try {
             if (IsObject(this.GuiID_ScreenshotToolbar) && this.GuiID_ScreenshotToolbar != 0)
-                WinActivate("ahk_id " . this.GuiID_ScreenshotToolbar.Hwnd)
+                LegacyGuard_RequestFocus("ScreenshotEditorPlugin", "ahk_id " . this.GuiID_ScreenshotToolbar.Hwnd, 55, "toolbar_enter")
         } catch as e {
         }
         
         ; 鍐嶆婵€娲讳富绐楀彛纭繚瀹冨湪鏈€鍓嶉潰
         Sleep(50)
         try {
-            WinActivate("ahk_id " . EditorGui.Hwnd)
+            LegacyGuard_RequestFocus("ScreenshotEditorPlugin", "ahk_id " . EditorGui.Hwnd, 55, "editor_resume")
         } catch as e {
         }
         
@@ -1436,9 +1436,9 @@ class ScreenshotEditorPlugin {
         this.ScreenshotPreviewShell_ApplyBounds()
         this.ScreenshotPreviewShell_SendInit()
         this.ScreenshotPreviewShell_SendState()
-        try WinActivate("ahk_id " . this.GuiID_ScreenshotEditor.Hwnd)
+        try LegacyGuard_RequestFocus("ScreenshotEditorPlugin", "ahk_id " . this.GuiID_ScreenshotEditor.Hwnd, 55, "activate_editor")
         if (IsObject(this.GuiID_ScreenshotToolbar) && this.GuiID_ScreenshotToolbar != 0) {
-            try WinActivate("ahk_id " . this.GuiID_ScreenshotToolbar.Hwnd)
+            try LegacyGuard_RequestFocus("ScreenshotEditorPlugin", "ahk_id " . this.GuiID_ScreenshotToolbar.Hwnd, 55, "activate_toolbar")
         }
         if (!this.ScreenshotPreviewWV2Ctrl && retryPass < 4)
             SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureVisible"), -120)
@@ -3588,13 +3588,13 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             try WinSetAlwaysOnTop("On", "ahk_id " . toolbarHwnd)
         }
         try WinSetAlwaysOnTop("On", "ahk_id " . hwnd)
-        try WinActivate("ahk_id " . hwnd)
+        try LegacyGuard_RequestFocus("ScreenshotEditorPlugin", "ahk_id " . hwnd, 55, "show_preview_hwnd")
         Sleep(40)
         if (toolbarHwnd) {
-            try WinActivate("ahk_id " . toolbarHwnd)
+            try LegacyGuard_RequestFocus("ScreenshotEditorPlugin", "ahk_id " . toolbarHwnd, 55, "show_preview_toolbar")
             Sleep(20)
         }
-        try WinActivate("ahk_id " . hwnd)
+        try LegacyGuard_RequestFocus("ScreenshotEditorPlugin", "ahk_id " . hwnd, 55, "reassert_preview_hwnd")
         try DllCall("SetForegroundWindow", "Ptr", hwnd)
         if (toolbarHwnd) {
             try WinSetAlwaysOnTop("On", "ahk_id " . toolbarHwnd)
@@ -4748,7 +4748,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         
         ; 婵€娲籆ursor绐楀彛
         try {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("ScreenshotEditorPlugin", "return_cursor_focus")
             Sleep(300)
         } catch as e {
             ; 濡傛灉Cursor鏈繍琛岋紝鏄剧ず鎻愮ず
@@ -5540,7 +5540,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     try {
         if (IsSet(g_SelSense_MenuGui) && g_SelSense_MenuGui && IsSet(g_SelSense_MenuVisible) && g_SelSense_MenuVisible
             && IsSet(g_SelSense_MenuShowingHub) && g_SelSense_MenuShowingHub) {
-            WinActivate("ahk_id " . g_SelSense_MenuGui.Hwnd)
+            LegacyGuard_RequestFocus("ScreenshotEditorPlugin", "ahk_id " . g_SelSense_MenuGui.Hwnd, 50, "selsense_menu_focus")
         }
     } catch {
     }

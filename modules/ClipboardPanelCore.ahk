@@ -42,11 +42,23 @@ _CP_UrlEncode(str) {
 _CP_IsSearchCoreAlive() {
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        guardTok := 0
+        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
+            if !LegacyGuard_WinHttpBeforeSync("ClipboardPanelCore", "GET", "http://127.0.0.1:8080/health", "cp_health_probe", &guardTok)
+                return false
+        }
         whr.Open("GET", "http://127.0.0.1:8080/health", false)
         whr.SetTimeouts(2000, 2000, 2000, 2000)
         whr.Send()
-        return whr.Status = 200
+        st := Integer(whr.Status)
+        if FuncExists("LegacyGuard_WinHttpAfterSync")
+            LegacyGuard_WinHttpAfterSync(guardTok, st)
+        return st = 200
     } catch {
+        try {
+            if FuncExists("LegacyGuard_WinHttpError")
+                LegacyGuard_WinHttpError(guardTok, "cp_health_probe_exception")
+        }
         return false
     }
 }
@@ -116,10 +128,18 @@ _CP_TryClipSearchViaGo(keyword, filterType, timeRange, offset, limit, msgType) {
         . "&offset=" . offset . "&limit=" . limit . "&msgType=" . msgType
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        guardTok := 0
+        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
+            if !LegacyGuard_WinHttpBeforeSync("ClipboardPanelCore", "GET", url, "cp_clip_search", &guardTok)
+                return false
+        }
         whr.Open("GET", url, false)
         whr.SetTimeouts(12000, 12000, 12000, 12000)
         whr.Send()
-        if (whr.Status != 200)
+        st := Integer(whr.Status)
+        if FuncExists("LegacyGuard_WinHttpAfterSync")
+            LegacyGuard_WinHttpAfterSync(guardTok, st)
+        if (st != 200)
             return false
         merged := _CP_MergeCtxMenuIntoClipJson(whr.ResponseText)
         if (merged = "")
@@ -127,6 +147,8 @@ _CP_TryClipSearchViaGo(keyword, filterType, timeRange, offset, limit, msgType) {
         CP_SendToWeb(merged)
         return true
     } catch as err {
+        if FuncExists("LegacyGuard_WinHttpError")
+            LegacyGuard_WinHttpError(guardTok, err.Message)
         OutputDebug("[CP] Go clip/search: " . err.Message)
         return false
     }
@@ -330,7 +352,7 @@ CP_Show() {
         CP_Init()
 
     if g_CP_Visible {
-        try WinActivate(g_CP_Gui.Hwnd)
+        try LegacyGuard_RequestFocus("ClipboardPanel", g_CP_Gui.Hwnd, 25, "cp_show_already_visible", 220)
         WebView2_MoveFocusProgrammatic(g_CP_Ctrl)
         SetTimer(_CP_DeferredMoveFocus100, -100)
         return
@@ -341,7 +363,7 @@ CP_Show() {
     try WinMaximize("ahk_id " . g_CP_Gui.Hwnd)
     g_CP_Visible := true
     g_CP_LastShown := A_TickCount
-    try WinActivate("ahk_id " . g_CP_Gui.Hwnd)
+    try LegacyGuard_RequestFocus("ClipboardPanel", g_CP_Gui.Hwnd, 25, "cp_show", 220)
     try WebView2_NotifyShown(g_CP_WV2)
 
     WMActivateChain_Register(_CP_WM_ACTIVATE)
@@ -369,7 +391,7 @@ _CP_DeferredMoveFocus100(*) {
 _CP_FocusDeferred() {
     global g_CP_Gui, g_CP_Visible, g_CP_Ctrl
     if g_CP_Visible && g_CP_Gui {
-        try WinActivate(g_CP_Gui.Hwnd)
+        try LegacyGuard_RequestFocus("ClipboardPanel", g_CP_Gui.Hwnd, 25, "cp_focus_deferred", 180)
         WebView2_MoveFocusProgrammatic(g_CP_Ctrl)
     }
 }

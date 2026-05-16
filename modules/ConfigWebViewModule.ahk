@@ -84,7 +84,7 @@ ShowConfigWebViewGUI() {
     try WinSetAlwaysOnTop(true, "ahk_id " . GuiID_ConfigGUI.Hwnd)
     catch {
     }
-    try WinActivate("ahk_id " . GuiID_ConfigGUI.Hwnd)
+    try LegacyGuard_RequestFocus("ConfigWebView", GuiID_ConfigGUI.Hwnd, 20, "show_config_webview", 220)
     catch {
     }
     g_ConfigWebView_LastShown := A_TickCount
@@ -234,7 +234,7 @@ ConfigWebView_HostWindowVisible() {
 ConfigWebView_FocusDeferred(*) {
     global GuiID_ConfigGUI, ConfigWV2Ctrl
     if GuiID_ConfigGUI {
-        try WinActivate(GuiID_ConfigGUI.Hwnd)
+        try LegacyGuard_RequestFocus("ConfigWebView", GuiID_ConfigGUI.Hwnd, 20, "focus_deferred", 180)
         WebView2_MoveFocusProgrammatic(ConfigWV2Ctrl)
     }
 }
@@ -246,7 +246,7 @@ ConfigWebView_RefocusAfterThemeChange(*) {
     try WinSetAlwaysOnTop(true, "ahk_id " . GuiID_ConfigGUI.Hwnd)
     catch {
     }
-    try WinActivate("ahk_id " . GuiID_ConfigGUI.Hwnd)
+    try LegacyGuard_RequestFocus("ConfigWebView", GuiID_ConfigGUI.Hwnd, 20, "refocus_after_theme", 220)
     catch {
     }
     try WebView2_MoveFocusProgrammatic(ConfigWV2Ctrl)
@@ -292,12 +292,24 @@ ConfigWebView_Send(msgMap) {
 ConfigWebView_EnsureSearchCoreRunning() {
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        guardTok := 0
+        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
+            if !LegacyGuard_WinHttpBeforeSync("ConfigWebViewModule", "GET", "http://127.0.0.1:8080/health", "cfg_health_probe", &guardTok)
+                return false
+        }
         whr.Open("GET", "http://127.0.0.1:8080/health", false)
         whr.SetTimeouts(1500, 1500, 1500, 1500)
         whr.Send()
-        if (whr.Status = 200)
+        st := Integer(whr.Status)
+        if FuncExists("LegacyGuard_WinHttpAfterSync")
+            LegacyGuard_WinHttpAfterSync(guardTok, st)
+        if (st = 200)
             return true
     } catch {
+        try {
+            if FuncExists("LegacyGuard_WinHttpError")
+                LegacyGuard_WinHttpError(guardTok, "cfg_health_probe_exception")
+        }
     }
     exe := ConfigWebView_SearchCoreExePath()
     if !FileExist(exe)
@@ -312,12 +324,24 @@ ConfigWebView_EnsureSearchCoreRunning() {
             Sleep(80)
             try {
                 whr2 := ComObject("WinHttp.WinHttpRequest.5.1")
+                guardTok2 := 0
+                if FuncExists("LegacyGuard_WinHttpBeforeSync") {
+                    if !LegacyGuard_WinHttpBeforeSync("ConfigWebViewModule", "GET", "http://127.0.0.1:8080/health", "cfg_health_probe_retry", &guardTok2)
+                        continue
+                }
                 whr2.Open("GET", "http://127.0.0.1:8080/health", false)
                 whr2.SetTimeouts(1000, 1000, 1000, 1000)
                 whr2.Send()
-                if (whr2.Status = 200)
+                st2 := Integer(whr2.Status)
+                if FuncExists("LegacyGuard_WinHttpAfterSync")
+                    LegacyGuard_WinHttpAfterSync(guardTok2, st2)
+                if (st2 = 200)
                     return true
             } catch {
+                try {
+                    if FuncExists("LegacyGuard_WinHttpError")
+                        LegacyGuard_WinHttpError(guardTok2, "cfg_health_probe_retry_exception")
+                }
             }
         }
     } catch {
@@ -339,6 +363,11 @@ ConfigWebView_HttpSearchCoreJsonRaw(method, path, body := "") {
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         url := "http://127.0.0.1:8080" . path
+        guardTok := 0
+        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
+            if !LegacyGuard_WinHttpBeforeSync("ConfigWebViewModule", method, url, "cfg_http_json_raw", &guardTok)
+                return Map("status", 0, "text", "", "json", 0, "error", "sync path blocked")
+        }
         whr.Open(method, url, false)
         whr.SetTimeouts(3000, 3000, 10000, 10000)
         if (method = "POST" || method = "PUT" || method = "PATCH") {
@@ -350,12 +379,16 @@ ConfigWebView_HttpSearchCoreJsonRaw(method, path, body := "") {
         }
         st := Integer(whr.Status)
         txt := whr.ResponseText
+        if FuncExists("LegacyGuard_WinHttpAfterSync")
+            LegacyGuard_WinHttpAfterSync(guardTok, st)
         obj := 0
         if (Trim(String(txt)) != "") {
             try obj := Jxon_Load(txt)
         }
         return Map("status", st, "text", txt, "json", obj)
     } catch as err {
+        if FuncExists("LegacyGuard_WinHttpError")
+            LegacyGuard_WinHttpError(guardTok, err.Message)
         return Map("status", 0, "text", "", "json", 0, "error", err.Message)
     }
 }

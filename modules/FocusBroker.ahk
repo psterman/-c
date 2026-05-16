@@ -6,7 +6,8 @@ global g_FocusBroker_Pending := 0
 global g_FocusBroker_Seq := 0
 global g_FocusBroker_LastReqTick := Map()
 global g_FocusBroker_MaxRetry := 3
-global g_FocusBroker_MaxWaitMs := 500
+global g_FocusBroker_MaxWaitMs := 150
+global g_FocusBroker_RetryIntervalMs := 40
 
 FocusBroker_Log(event, detail := "") {
     try {
@@ -105,7 +106,7 @@ FocusBroker_Grant(owner, hwnd, priority, reason, protectMs, focusCallback := 0) 
 }
 
 FocusBroker_AttemptActivate(ctx) {
-    global g_FocusBroker_MaxRetry, g_FocusBroker_MaxWaitMs, g_FocusBroker_Owner, g_FocusBroker_ProtectUntil
+    global g_FocusBroker_MaxRetry, g_FocusBroker_MaxWaitMs, g_FocusBroker_RetryIntervalMs, g_FocusBroker_Owner, g_FocusBroker_ProtectUntil
     if !(ctx is Map)
         return
     owner := String(ctx["owner"])
@@ -139,10 +140,9 @@ FocusBroker_AttemptActivate(ctx) {
         }
         return
     }
-    try WinActivate("ahk_id " . hwnd)
-    catch as err {
-        FocusBroker_Log("grant_failed", "owner=" . owner . " retry=" . retry . " msg=" . err.Message)
-    }
+    okActivate := FocusBroker_SetForegroundNow(hwnd)
+    if !okActivate
+        FocusBroker_Log("focus_soft_request", "owner=" . owner . " retry=" . retry . " reason=" . reason . " hwnd=" . hwnd)
     active := 0
     try active := WinGetID("A")
     if (active = hwnd) {
@@ -157,7 +157,22 @@ FocusBroker_AttemptActivate(ctx) {
         return
     }
     ctx["retry"] := retry + 1
-    SetTimer(timerFn, -80)
+    SetTimer(timerFn, -Abs(Integer(g_FocusBroker_RetryIntervalMs)))
+}
+
+FocusBroker_SetForegroundNow(hwnd) {
+    h := Integer(hwnd)
+    if !h
+        return false
+    try DllCall("ShowWindow", "Ptr", h, "Int", 9) ; SW_RESTORE
+    ok := 0
+    try ok := !!DllCall("SetForegroundWindow", "Ptr", h, "Int")
+    if !ok
+        return false
+    try return !!WinActive("ahk_id " . h)
+    catch {
+        return ok
+    }
 }
 
 FocusBroker_DefaultPriority(owner) {

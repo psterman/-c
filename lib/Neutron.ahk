@@ -24,7 +24,10 @@ class NeutronWindow {
             this._CreateWindow()
         }
         WinShow(this.hWnd)
-        WinActivate(this.hWnd)
+        if FuncExists("LegacyGuard_RequestFocus")
+            LegacyGuard_RequestFocus("Neutron", this.hWnd, 45, "neutron_show")
+        else
+            DllCall("SetForegroundWindow", "Ptr", this.hWnd)
         this._LoadPage()
     }
 

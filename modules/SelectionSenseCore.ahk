@@ -733,16 +733,29 @@ SelectionSense_HubDictInstall_DownloadByWinHttp(url, savePath, progressCb := 0, 
     path := (m[3] != "") ? m[3] : "/"
     secure := InStr(StrLower(u), "https://") = 1
     total := 0
+    guardTok := 0
     try {
         req := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
+            if !LegacyGuard_WinHttpBeforeSync("SelectionSenseCore", "HEAD", u, "hubdict_head_probe", &guardTok)
+                throw Error("sync path blocked")
+        }
         req.SetTimeouts(4000, 5000, 12000, 12000)
         req.Open("HEAD", u, false)
         req.SetRequestHeader("User-Agent", "AHK-HubDict/1.0")
         req.Send()
+        try {
+            if FuncExists("LegacyGuard_WinHttpAfterSync")
+                LegacyGuard_WinHttpAfterSync(guardTok, Integer(req.Status))
+        }
         cl := Trim(String(req.GetResponseHeader("Content-Length")))
         if (cl != "")
             total := Integer(cl)
     } catch {
+        try {
+            if FuncExists("LegacyGuard_WinHttpError")
+                LegacyGuard_WinHttpError(guardTok, "hubdict_head_probe_exception")
+        }
         total := 0
     }
     f := 0, hSession := 0, hConnect := 0, hRequest := 0

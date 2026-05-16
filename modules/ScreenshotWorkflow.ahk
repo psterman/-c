@@ -715,7 +715,7 @@ ShowClipboardSmartMenu(ForceType := "") {
     try {
         ; 绛夊緟绐楀彛瀹屽叏鏄剧ず
         Sleep(50)
-        WinActivate("ahk_id " . GuiID_ClipboardSmartMenu.Hwnd)
+        LegacyGuard_RequestFocus("ScreenshotWorkflow", GuiID_ClipboardSmartMenu.Hwnd, 28, "screenshot_menu_focus", 120)
         ; 鍐嶆绛夊緟纭繚婵€娲诲畬鎴?
         Sleep(50)
         ; 璁剧疆杈撳叆妗嗙劍鐐?
@@ -849,7 +849,7 @@ HandleClipboardMenuUp(*) {
     
     ; 纭繚绐楀彛鑾峰緱鐒︾偣锛屼互渚跨户缁帴鏀堕敭鐩樹簨浠?
     try {
-        WinActivate("ahk_id " . GuiID_ClipboardSmartMenu.Hwnd)
+        LegacyGuard_RequestFocus("ScreenshotWorkflow", GuiID_ClipboardSmartMenu.Hwnd, 28, "screenshot_menu_focus", 120)
         ; 閲嶆柊璁剧疆鐒︾偣鍒伴殣钘忚緭鍏ユ
         try {
             DummyEdit := GuiID_ClipboardSmartMenu["DummyFocus"]
@@ -881,7 +881,7 @@ HandleClipboardMenuDown(*) {
     
     ; 纭繚绐楀彛鑾峰緱鐒︾偣锛屼互渚跨户缁帴鏀堕敭鐩樹簨浠?
     try {
-        WinActivate("ahk_id " . GuiID_ClipboardSmartMenu.Hwnd)
+        LegacyGuard_RequestFocus("ScreenshotWorkflow", GuiID_ClipboardSmartMenu.Hwnd, 28, "screenshot_menu_focus", 120)
         ; 閲嶆柊璁剧疆鐒︾偣鍒伴殣钘忚緭鍏ユ
         try {
             DummyEdit := GuiID_ClipboardSmartMenu["DummyFocus"]
@@ -1934,20 +1934,20 @@ PasteScreenshotToCursor() {
         }
         
         ; 婵€娲?Cursor 绐楀彛锛堝娆″皾璇曠‘淇濇縺娲绘垚鍔燂級
-        WinActivate("ahk_exe Cursor.exe")
+        LegacyGuard_RequestCursorFocus("ScreenshotWorkflow", "screenshot_cursor", 120)
         WinWaitActive("ahk_exe Cursor.exe", , 3)
         Sleep(400)  ; 澧炲姞绛夊緟鏃堕棿纭繚绐楀彛瀹屽叏婵€娲?
         
         ; 鍐嶆纭繚 Cursor 绐楀彛婵€娲?
         if !WinActive("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("ScreenshotWorkflow", "screenshot_cursor", 120)
             WinWaitActive("ahk_exe Cursor.exe", , 3)
             Sleep(400)
         }
         
         ; 绗笁娆＄‘淇濈獥鍙ｆ縺娲伙紙鍏抽敭姝ラ锛?
         if !WinActive("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("ScreenshotWorkflow", "screenshot_cursor", 120)
             WinWaitActive("ahk_exe Cursor.exe", , 3)
             Sleep(300)
         }
@@ -1958,7 +1958,7 @@ PasteScreenshotToCursor() {
         
         ; 纭繚绐楀彛婵€娲伙紙ESC 鍚庡彲鑳藉け鍘荤劍鐐癸級
         if !WinActive("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("ScreenshotWorkflow", "screenshot_cursor", 120)
             WinWaitActive("ahk_exe Cursor.exe", , 3)
             Sleep(400)
         }
@@ -1969,7 +1969,7 @@ PasteScreenshotToCursor() {
         
         ; 鍐嶆纭繚绐楀彛婵€娲伙紙鎵撳紑鑱婂ぉ闈㈡澘鍚庡彲鑳藉け鍘荤劍鐐癸級
         if !WinActive("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("ScreenshotWorkflow", "screenshot_cursor", 120)
             WinWaitActive("ahk_exe Cursor.exe", , 3)
             Sleep(500)
         }
@@ -1981,7 +1981,7 @@ PasteScreenshotToCursor() {
         
         ; 鏂规硶2锛氬啀娆＄‘淇濈獥鍙ｆ縺娲?
         if !WinActive("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("ScreenshotWorkflow", "screenshot_cursor", 120)
             WinWaitActive("ahk_exe Cursor.exe", , 2)
             Sleep(300)
         }
@@ -1995,7 +1995,7 @@ PasteScreenshotToCursor() {
         
         ; 鏈€鍚庝竴娆＄‘淇濈獥鍙ｆ縺娲伙紙绮樿创鍓嶅叧閿鏌ワ級
         if !WinActive("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("ScreenshotWorkflow", "screenshot_cursor", 120)
             WinWaitActive("ahk_exe Cursor.exe", , 2)
             Sleep(300)
         }
@@ -2105,14 +2105,14 @@ PasteScreenshotToCursor() {
         
         ; 鎭㈠鍓创鏉垮悗锛屽啀娆＄‘淇濈獥鍙ｆ縺娲伙紙鎭㈠鎿嶄綔鍙兘褰卞搷鐒︾偣锛?
         if !WinActive("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("ScreenshotWorkflow", "screenshot_cursor", 120)
             WinWaitActive("ahk_exe Cursor.exe", , 1)
             Sleep(300)
         }
         
         ; 鏈€鍚庝竴娆＄‘淇濈獥鍙ｆ縺娲伙紙绮樿创鍓嶅叧閿鏌ワ級
         if !WinActive("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("ScreenshotWorkflow", "screenshot_cursor", 120)
             WinWaitActive("ahk_exe Cursor.exe", , 1)
             Sleep(200)
         }
@@ -2120,7 +2120,7 @@ PasteScreenshotToCursor() {
         ; 纭繚杈撳叆妗嗚幏寰楃劍鐐癸紙绮樿创鍓嶆渶鍚庢鏌ワ級
         ; 鍐嶆纭繚绐楀彛婵€娲?
         if !WinActive("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("ScreenshotWorkflow", "screenshot_cursor", 120)
             WinWaitActive("ahk_exe Cursor.exe", , 2)
             Sleep(300)
         }

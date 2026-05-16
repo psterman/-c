@@ -356,7 +356,7 @@ PQP_Show() {
         PQP_Init()
 
     if g_PQP_Visible {
-        try WinActivate(g_PQP_Gui.Hwnd)
+        try LegacyGuard_RequestFocus("PromptQuickPadCore", g_PQP_Gui.Hwnd, 50, "focus_pqp_visible")
         WebView2_MoveFocusProgrammatic(g_PQP_Ctrl)
         SetTimer(_PQP_DeferredMoveFocus100, -100)
         return
@@ -420,7 +420,7 @@ _PQP_DeferredShowPush(*) {
 _PQP_FocusDeferred(*) {
     global g_PQP_Gui, g_PQP_Visible, g_PQP_Ctrl
     if g_PQP_Visible && g_PQP_Gui {
-        try WinActivate(g_PQP_Gui.Hwnd)
+        try LegacyGuard_RequestFocus("PromptQuickPadCore", g_PQP_Gui.Hwnd, 50, "focus_pqp_visible")
         WebView2_MoveFocusProgrammatic(g_PQP_Ctrl)
     }
 }

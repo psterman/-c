@@ -73,7 +73,7 @@ HandleSearchCenterDown() {
         if (SearchCenterResultLV != 0) {
             try {
                 if (GuiID_SearchCenter != 0 && !WinActive("ahk_id " . GuiID_SearchCenter.Hwnd)) {
-                    WinActivate("ahk_id " . GuiID_SearchCenter.Hwnd)
+                    LegacyGuard_RequestFocus("SearchCenterLegacyGui", "ahk_id " . GuiID_SearchCenter.Hwnd, 60, "reassert_search_center")
                 }
                 ; 【优化】自动选中第一行，以便用户直接按 F 键"开火"
                 if (SearchCenterResultLV.GetCount() > 0) {
@@ -455,7 +455,7 @@ ExecuteCountdownAction() {
         
         ; 查找并激活 Cursor 窗口
         if (WinExist("ahk_exe Cursor.exe")) {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("SearchCenterLegacyGui", "return_cursor_focus")
             WinWaitActive("ahk_exe Cursor.exe", , 1)
             Sleep(150)  ; 【健壮性要求】防止粘贴指令发送过快
         } else {
@@ -964,7 +964,7 @@ ShowSearchCenter() {
     BringSearchCenterFilterButtonsToFront()
     
     ; 【关键修复】激活窗口并聚焦到输入框（参考CAPSLOCK+F的实现）
-    WinActivate("ahk_id " . GuiID_SearchCenter.Hwnd)
+    LegacyGuard_RequestFocus("SearchCenterLegacyGui", "ahk_id " . GuiID_SearchCenter.Hwnd, 60, "show_search_center")
     Sleep(100)
     try {
         if (SearchCenterIsCLICategory()) {
@@ -1658,8 +1658,15 @@ TryGeminiHeadlessRequest(PromptText, &ResponseText := "", &ErrorText := "") {
     )
     BodyText := Jxon_Dump(RequestBody)
 
+    guardTok := 0
     try {
         Http := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
+            if !LegacyGuard_WinHttpBeforeSync("SearchCenterLegacyGui", "POST", Url, "gemini_headless", &guardTok) {
+                ErrorText := "sync path blocked"
+                return false
+            }
+        }
         Http.Open("POST", Url, false)
         Http.SetTimeouts(5000, 5000, 15000, 30000)
         Http.SetRequestHeader("x-goog-api-key", ApiKey)
@@ -1668,6 +1675,8 @@ TryGeminiHeadlessRequest(PromptText, &ResponseText := "", &ErrorText := "") {
 
         Status := Http.Status
         RawResponse := Http.ResponseText
+        if FuncExists("LegacyGuard_WinHttpAfterSync")
+            LegacyGuard_WinHttpAfterSync(guardTok, Integer(Status))
         if (Status < 200 || Status >= 300) {
             ErrorText := "Gemini API HTTP " . Status . ": " . RawResponse
             return false
@@ -1683,6 +1692,8 @@ TryGeminiHeadlessRequest(PromptText, &ResponseText := "", &ErrorText := "") {
         SaveHeadlessAIResponseToDB(ResponseText, "gemini_cli", PromptText, ModelName)
         return true
     } catch as err {
+        if FuncExists("LegacyGuard_WinHttpError")
+            LegacyGuard_WinHttpError(guardTok, err.Message)
         ErrorText := err.Message
         return false
     }

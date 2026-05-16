@@ -44,3 +44,15 @@
 [2026-05-16 17:32:55][focus][release] owner=SearchCenter reason=gui_close
 [2026-05-16 17:39:57][focus][grant] owner=SearchCenter hwnd=25170534 priority=20 reason=show_focus
 [2026-05-16 17:40:02][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-16 19:45:16][focus][grant] owner=SearchCenter hwnd=105255140 priority=20 reason=show_focus
+[2026-05-16 19:45:20][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-16 19:45:23][focus][grant] owner=SearchCenter hwnd=2429742 priority=20 reason=show_focus
+[2026-05-16 19:45:28][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-16 19:45:33][focus][grant] owner=SearchCenter hwnd=105058160 priority=20 reason=show_focus
+[2026-05-16 19:45:36][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-16 19:45:38][focus][grant] owner=SearchCenter hwnd=4723410 priority=20 reason=show_focus
+[2026-05-16 19:45:43][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-16 19:45:49][focus][grant] owner=SearchCenter hwnd=24645722 priority=20 reason=show_focus
+[2026-05-16 20:13:48][focus][release] owner=SearchCenter reason=esc
+[2026-05-16 20:13:52][focus][grant] owner=SearchCenter hwnd=30937354 priority=20 reason=show_focus
+[2026-05-16 20:13:58][focus][release] owner=SearchCenter reason=gui_close

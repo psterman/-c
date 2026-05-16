@@ -62,6 +62,13 @@ class AhkInterface {
         rangeVal := ""
         try {
             whr := ComObject("WinHttp.WinHttpRequest.5.1")
+            guardTok := 0
+            if FuncExists("LegacyGuard_WinHttpBeforeSync") {
+                if !LegacyGuard_WinHttpBeforeSync("AhkWebViewBridge", m != "" ? m : "GET", u, "host_object_http_request", &guardTok) {
+                    out["error"] := "sync path blocked"
+                    return Jxon_Dump(out)
+                }
+            }
             whr.Open(m != "" ? m : "GET", u, false)
             whr.SetTimeouts(30000, 30000, 30000, 30000)
             for k, v in hdrs {
@@ -93,9 +100,13 @@ class AhkInterface {
             out["status"] := st
             out["body"] := whr.ResponseText
             out["ok"] := (st >= 200 && st < 300)
+            if FuncExists("LegacyGuard_WinHttpAfterSync")
+                LegacyGuard_WinHttpAfterSync(guardTok, st)
             return Jxon_Dump(out)
         } catch as e {
             out["error"] := e.Message
+            if FuncExists("LegacyGuard_WinHttpError")
+                LegacyGuard_WinHttpError(guardTok, e.Message)
             return Jxon_Dump(out)
         }
     }

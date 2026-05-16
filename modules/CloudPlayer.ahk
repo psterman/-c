@@ -32,7 +32,7 @@ CloudPlayer_Show() {
     if (h < 620)
         h := 620
     try g_CloudPlayerGui.Show("w" . w . " h" . h)
-    try WinActivate("ahk_id " . g_CloudPlayerGui.Hwnd)
+    try LegacyGuard_RequestFocus("CloudPlayer", "ahk_id " . g_CloudPlayerGui.Hwnd, 50, "show_cloud_player")
     g_CloudPlayerAutoPulseEnabled := true
     SetTimer(CloudPlayer_AutoConnectPulse, 6000)
     SetTimer(CloudPlayer_AutoConnectPulse, -150)
@@ -726,15 +726,26 @@ CloudPlayer_IsOpenListRunning() {
     url := RTrim(apiBase, "/") . "/"
 
     ; Primary probe: WinHTTP.
+    guardTok := 0
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
+            if !LegacyGuard_WinHttpBeforeSync("CloudPlayer", "GET", url, "cp_openlist_probe", &guardTok)
+                return false
+        }
         whr.Open("GET", url, false)
         whr.SetTimeouts(3000, 3000, 3000, 3000)
         whr.Send()
         st := Integer(whr.Status)
+        if FuncExists("LegacyGuard_WinHttpAfterSync")
+            LegacyGuard_WinHttpAfterSync(guardTok, st)
         if (st >= 200 && st < 600)
             return true
     } catch {
+        try {
+            if FuncExists("LegacyGuard_WinHttpError")
+                LegacyGuard_WinHttpError(guardTok, "cp_openlist_probe_exception")
+        }
     }
 
     ; Secondary probe: ServerXMLHTTP (different stack, avoids some WinHTTP env issues).
@@ -2311,11 +2322,16 @@ CloudPlayer_DownloadBinary(url, outPath, token := "", extraHeaders := 0) {
     u := Trim(String(url))
     if (u = "" || RegExMatch(u, "i)/@manage(?:[/?#]|$)"))
         return false
+    guardTok := 0
     try {
         dir := RegExReplace(outPath, "\\[^\\]*$")
         if (dir != "")
             DirCreate(dir)
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
+            if !LegacyGuard_WinHttpBeforeSync("CloudPlayer", "GET", u, "cp_download_binary", &guardTok)
+                return false
+        }
         whr.Open("GET", u, false)
         whr.SetTimeouts(10000, 10000, 30000, 120000)
         whr.SetRequestHeader("User-Agent", "Mozilla/5.0")
@@ -2328,6 +2344,8 @@ CloudPlayer_DownloadBinary(url, outPath, token := "", extraHeaders := 0) {
         }
         whr.Send()
         st := Integer(whr.Status)
+        if FuncExists("LegacyGuard_WinHttpAfterSync")
+            LegacyGuard_WinHttpAfterSync(guardTok, st)
         finalUrl := ""
         try finalUrl := String(whr.Option(1))
         catch {
@@ -2347,6 +2365,10 @@ CloudPlayer_DownloadBinary(url, outPath, token := "", extraHeaders := 0) {
             return FileExist(outPath)
         }
     } catch {
+        try {
+            if FuncExists("LegacyGuard_WinHttpError")
+                LegacyGuard_WinHttpError(guardTok, "cp_download_binary_exception")
+        }
         return false
     }
 }
@@ -2508,8 +2530,15 @@ CloudPlayer_GetArchiveEntries(remotePath, token := "", reqId := "") {
 
 CloudPlayer_HttpJson(method, url, headers := 0, body := "") {
     ret := Map("ok", false, "status", 0, "json", 0, "text", "", "error", "")
+    guardTok := 0
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
+            if !LegacyGuard_WinHttpBeforeSync("CloudPlayer", String(method), String(url), "cp_http_json", &guardTok) {
+                ret["error"] := "sync path blocked"
+                return ret
+            }
+        }
         whr.Open(String(method), String(url), false)
         whr.SetTimeouts(5000, 5000, 10000, 15000)
         if (headers is Map) {
@@ -2518,6 +2547,8 @@ CloudPlayer_HttpJson(method, url, headers := 0, body := "") {
         }
         whr.Send(body != "" ? String(body) : "")
         st := Integer(whr.Status)
+        if FuncExists("LegacyGuard_WinHttpAfterSync")
+            LegacyGuard_WinHttpAfterSync(guardTok, st)
         txt := String(whr.ResponseText)
         ret["status"] := st
         ret["text"] := txt
@@ -2552,6 +2583,8 @@ CloudPlayer_HttpJson(method, url, headers := 0, body := "") {
             ret["error"] := (errMsg != "") ? errMsg : ("http " . st)
         }
     } catch as e {
+        if FuncExists("LegacyGuard_WinHttpError")
+            LegacyGuard_WinHttpError(guardTok, e.Message)
         ret["error"] := e.Message
     }
     return ret

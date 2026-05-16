@@ -4884,7 +4884,7 @@ SendTemplateToCursorWithKey(TemplateKey, Template) {
         }
         
         ; 激活 Cursor 窗口
-        WinActivate("ahk_exe Cursor.exe")
+        LegacyGuard_RequestCursorFocus("LegacyConfigGui", "return_cursor_focus")
         Sleep(200)
         
         ; 打开聊天面板
@@ -5085,7 +5085,7 @@ SendTemplateToCursor(Template) {
         }
         
         ; 激活 Cursor 窗口
-        WinActivate("ahk_exe Cursor.exe")
+        LegacyGuard_RequestCursorFocus("LegacyConfigGui", "return_cursor_focus")
         Sleep(200)
         
         ; 打开聊天面板
@@ -9013,13 +9013,13 @@ InstallCursorChinese(*) {
     
     ; 激活 Cursor 窗口
     try {
-        WinActivate("ahk_exe Cursor.exe")
+        LegacyGuard_RequestCursorFocus("LegacyConfigGui", "return_cursor_focus")
         WinWaitActive("ahk_exe Cursor.exe", , 3)
         Sleep(500)  ; 等待窗口完全激活
         
         ; 确保窗口已激活
         if (!WinActive("ahk_exe Cursor.exe")) {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("LegacyConfigGui", "return_cursor_focus")
             Sleep(300)
         }
         
@@ -10057,7 +10057,7 @@ LegacyConfigGui_Show() {
     ; 单例模式:如果配置面板已存在,直接激活
     if (GuiID_ConfigGUI != 0 && !ConfigWebViewMode) {
         try {
-            WinActivate(GuiID_ConfigGUI.Hwnd)
+            LegacyGuard_RequestFocus("LegacyConfigGui", GuiID_ConfigGUI.Hwnd, 50, "show_config_gui")
             return
         } catch as err {
             ; 如果窗口已被销毁,继续创建新的
@@ -10302,7 +10302,7 @@ LegacyConfigGui_Show() {
     
     ; 确保窗口在最上层并激活
     WinSetAlwaysOnTop(1, ConfigGUI.Hwnd)
-    WinActivate(ConfigGUI.Hwnd)
+    LegacyGuard_RequestFocus("LegacyConfigGui", ConfigGUI.Hwnd, 50, "show_config_gui")
     
     ; 【移除滚动功能】不再启用配置面板的滚轮热键（已移除滚动条）
 }

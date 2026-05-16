@@ -15,7 +15,7 @@ LegacyPromptQuickPad_ShowNative(openForCapture := false, forceCenterMaximize := 
             catch {
             }
             PromptQuickPad_CenterAndMaximizeOnActiveMonitor()
-            try WinActivate("ahk_id " . AIListPanelGUI.Hwnd)
+            try LegacyGuard_RequestFocus("LegacyPromptQuickPadGui", "ahk_id " . AIListPanelGUI.Hwnd, 50, "show_ailistpanel")
             catch {
             }
             return

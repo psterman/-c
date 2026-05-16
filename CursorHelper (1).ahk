@@ -93,6 +93,7 @@ CoordMode("ToolTip", "Screen")
 #Include modules\AhkWebViewBridge.ahk
 #Include modules\WebView2SharedEnv.ahk
 #Include modules\FocusBroker.ahk
+#Include modules\LegacyGuardrails.ahk
 
 ; ===================== 包含 OCR 模块 =====================
 ; 包含 lib 文件夹中的 OCR.ahk（用于识图取词功能）
@@ -6272,7 +6273,7 @@ SwitchToChineseIMEForSearchCenter(*) {
             if (!ActiveHwnd)
                 ActiveHwnd := WinGetID("A")
         } else if (GuiID_SearchCenter && SearchCenterSearchEdit) {
-            WinActivate("ahk_id " . GuiID_SearchCenter.Hwnd)
+            LegacyGuard_RequestFocus("Main.SearchCenter", "ahk_id " . GuiID_SearchCenter.Hwnd, 55, "search_center_hotkey")
             Sleep(50)
             SearchCenterSearchEdit.Focus()
             Sleep(50)

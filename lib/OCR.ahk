@@ -723,7 +723,10 @@ class OCR {
                     else if this.Relative.CoordMode = "Client"
                         mode := "Client", hwnd := this.Relative.Hwnd
                     if IsSet(hwnd) && !WinActive(hwnd) {
-                        WinActivate(hwnd)
+                        if FuncExists("LegacyGuard_RequestFocus")
+                            LegacyGuard_RequestFocus("OCR", hwnd, 45, "ocr_click_focus")
+                        else
+                            DllCall("SetForegroundWindow", "Ptr", hwnd)
                         WinWaitActive(hwnd,,1)
                     }
                 }

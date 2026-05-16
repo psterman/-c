@@ -63,16 +63,27 @@ NiumaTtyd_IsPortOwnedByTtyd(port := 0) {
 ; 仅端口 LISTEN 并不代表 Web 页面已可用；补一层 HTTP 探测可避免 WebView2 首次拒绝访问
 NiumaTtyd_IsHttpReady(waitMs := 1200) {
     u := NiumaTtyd_BaseUrl()
+    guardTok := 0
     try {
         req := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
+            if !LegacyGuard_WinHttpBeforeSync("NiumaTtyd", "GET", u, "ttyd_http_ready_probe", &guardTok)
+                return false
+        }
         ; Resolve/connect/send/receive timeout (ms)
         req.SetTimeouts(400, 400, Integer(waitMs), Integer(waitMs))
         req.Open("GET", u, false)
         req.Send()
         st := 0
         try st := Integer(req.Status)
+        if FuncExists("LegacyGuard_WinHttpAfterSync")
+            LegacyGuard_WinHttpAfterSync(guardTok, st)
         return (st >= 200 && st < 500)
     } catch {
+        try {
+            if FuncExists("LegacyGuard_WinHttpError")
+                LegacyGuard_WinHttpError(guardTok, "ttyd_http_ready_probe_exception")
+        }
         return false
     }
 }

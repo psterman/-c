@@ -3848,7 +3848,7 @@ HistoryPasteToCursor(*) {
             }
             
             ; 激活 Cursor 窗口
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("ClipboardHistoryPanel", "return_cursor_focus")
             Sleep(100)
             
             ; 粘贴内容

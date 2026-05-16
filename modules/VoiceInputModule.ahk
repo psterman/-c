@@ -143,7 +143,7 @@ StartVoiceInput() {
             }
         }
         
-        WinActivate("ahk_exe Cursor.exe")
+        LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
         WinWaitActive("ahk_exe Cursor.exe", , 2)
         Sleep(300)
         
@@ -153,7 +153,7 @@ StartVoiceInput() {
         Sleep(500)
         
         if !WinActive("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
             Sleep(200)
         }
         
@@ -171,7 +171,7 @@ StartVoiceInput() {
         ; 确保在 Cursor 窗口处于活动状态时发送
         if !WinActive("ahk_exe Cursor.exe") {
             ; 如果窗口未激活，再次尝试激活
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
             WinWaitActive("ahk_exe Cursor.exe", , 2)
             Sleep(300)
         }
@@ -218,7 +218,7 @@ StopVoiceInput() {
             return
         }
         
-        WinActivate("ahk_exe Cursor.exe")
+        LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
         WinWaitActive("ahk_exe Cursor.exe", , 2)
         Sleep(200)
         
@@ -256,7 +256,7 @@ PauseVoiceInput() {
             return
         }
         
-        WinActivate("ahk_exe Cursor.exe")
+        LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
         WinWaitActive("ahk_exe Cursor.exe", , 2)
         Sleep(200)
         
@@ -285,7 +285,7 @@ ResumeVoiceInput() {
             return
         }
         
-        WinActivate("ahk_exe Cursor.exe")
+        LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
         WinWaitActive("ahk_exe Cursor.exe", , 2)
         Sleep(200)
         
@@ -761,13 +761,13 @@ SendVoiceInputToCursor(Content) {
     
     try {
         if !WinActive("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
             WinWaitActive("ahk_exe Cursor.exe", , 1)
             Sleep(200)
         }
         
         if !WinActive("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
             Sleep(200)
         }
         
@@ -1503,13 +1503,13 @@ StartVoiceInputInSearch() {
         global GuiID_VoiceInput
         if (GuiID_VoiceInput) {
             ; 激活窗口
-            WinActivate("ahk_id " . GuiID_VoiceInput.Hwnd)
+            LegacyGuard_RequestFocus("VoiceInput", GuiID_VoiceInput.Hwnd, 30, "voice_input_gui", 120)
             Sleep(200)
             
             ; 确保窗口真正激活
             if (!WinActive("ahk_id " . GuiID_VoiceInput.Hwnd)) {
                 ; 如果仍未激活，再次尝试
-                WinActivate("ahk_id " . GuiID_VoiceInput.Hwnd)
+                LegacyGuard_RequestFocus("VoiceInput", GuiID_VoiceInput.Hwnd, 30, "voice_input_gui", 120)
                 Sleep(200)
             }
         }
@@ -2295,11 +2295,11 @@ ShowVoiceSearchInputPanel() {
     
     SetTimer(MonitorSelectedText, 0)
     
-    WinActivate("ahk_id " . GuiID_VoiceInput.Hwnd)
+    LegacyGuard_RequestFocus("VoiceInput", GuiID_VoiceInput.Hwnd, 30, "voice_input_gui", 120)
     Sleep(200)
     
     if (!WinActive("ahk_id " . GuiID_VoiceInput.Hwnd)) {
-        WinActivate("ahk_id " . GuiID_VoiceInput.Hwnd)
+        LegacyGuard_RequestFocus("VoiceInput", GuiID_VoiceInput.Hwnd, 30, "voice_input_gui", 120)
         Sleep(200)
     }
     
@@ -2490,7 +2490,7 @@ UpdateVoiceSearchInputInPanel(*) {
             ; 输入法窗口不存在时，正常激活主窗口并设置焦点
             if (GuiID_VoiceInput) {
                 if (!WinActive("ahk_id " . GuiID_VoiceInput.Hwnd)) {
-                    WinActivate("ahk_id " . GuiID_VoiceInput.Hwnd)
+                    LegacyGuard_RequestFocus("VoiceInput", GuiID_VoiceInput.Hwnd, 30, "voice_input_gui", 120)
                     Sleep(100)
                 }
                 
@@ -2516,7 +2516,7 @@ UpdateVoiceSearchInputInPanel(*) {
             ; 如果直接读取失败，使用剪贴板方式
             if (!BaiduVoiceWindowActive && GuiID_VoiceInput) {
                 if (!WinActive("ahk_id " . GuiID_VoiceInput.Hwnd)) {
-                    WinActivate("ahk_id " . GuiID_VoiceInput.Hwnd)
+                    LegacyGuard_RequestFocus("VoiceInput", GuiID_VoiceInput.Hwnd, 30, "voice_input_gui", 120)
                     Sleep(50)
                 }
                 try {
@@ -2928,7 +2928,7 @@ SendPromptToCLIAgentWindow(WindowHwnd, PromptText, Engine := "") {
     }
 
     try {
-        WinActivate("ahk_id " . WindowHwnd)
+        LegacyGuard_RequestFocus("VoiceInput", WindowHwnd, 30, "voice_window_hwnd", 120)
         WinWaitActive("ahk_id " . WindowHwnd, , 3)
         Sleep((Engine = "qwen_cli" || Engine = "gemini_cli") ? 400 : 180)
 
@@ -3242,7 +3242,7 @@ MonitorPendingCLIAgentPrompts() {
         
         if (!Pending.ProbeSent) {
             try {
-                WinActivate("ahk_id " . Pending.Hwnd)
+                LegacyGuard_RequestFocus("VoiceInput", Pending.Hwnd, 30, "voice_pending_hwnd", 120)
                 WinWaitActive("ahk_id " . Pending.Hwnd, , 3)
                 Sleep(200)
                 Send("{Enter}")
@@ -3306,7 +3306,7 @@ OpenCLIAgentTerminal(Engine) {
     ExistingWindow := FindCLIAgentWindow(Engine)
     if (ExistingWindow) {
         try {
-            WinActivate("ahk_id " . ExistingWindow)
+            LegacyGuard_RequestFocus("VoiceInput", ExistingWindow, 30, "voice_existing_hwnd", 120)
             WinWaitActive("ahk_id " . ExistingWindow, , 3)
         } catch {
         }
@@ -3406,7 +3406,7 @@ InvokePythonCLIBridge(Engines, PromptText := "", Action := "send") {
             try FileAppend(PromptText, PromptFile, "UTF-8")
         }
         try {
-            WinActivate("ahk_id " . Hwnd)
+            LegacyGuard_RequestFocus("VoiceInput", Hwnd, 30, "voice_hwnd", 120)
             WinWaitActive("ahk_id " . Hwnd, , 2)
         } catch {
         }
@@ -3551,7 +3551,7 @@ SwitchToChineseIME(*) {
     try {
         global GuiID_VoiceInput, VoiceSearchInputEdit
         if (GuiID_VoiceInput && VoiceSearchInputEdit) {
-            WinActivate("ahk_id " . GuiID_VoiceInput.Hwnd)
+            LegacyGuard_RequestFocus("VoiceInput", GuiID_VoiceInput.Hwnd, 30, "voice_input_gui", 120)
             Sleep(50)
             VoiceSearchInputEdit.Focus()
             Sleep(50)
