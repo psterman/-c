@@ -71,6 +71,7 @@ global g_FTB_AllowedCmdIds := Map(
     "sc_activate_search", true,
     "qa_clipboard", true,
     "ch_b", true,
+    "hub_capsule", true,
     "ftb_scratchpad", true,
     "ftb_screenshot", true,
     "ftb_cloud_player", true,
@@ -128,13 +129,341 @@ FloatingToolbar_PageDockLeave(tag := "") {
 }
 
 FloatingToolbar_RestoreAfterPageDock() {
-    global AppearanceActivationMode, FloatingToolbarIsVisible
+    global AppearanceActivationMode
     mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
     if (mode != "toolbar")
         return
-    if FloatingToolbarIsVisible
-        return
+    try FloatingToolbar_ClearOverlaySuppression()
+    catch {
+    }
+    FloatingToolbar_ShowAfterPageDock()
+}
+
+; 子窗口关闭后恢复：复用已有 WebView，重置抽屉/设置叠层并重新推送图标布局。
+FloatingToolbar_ShowAfterPageDock() {
+    global g_FTB_WV2, g_FTB_WV2_Ready, FloatingToolbarChatDrawerOpen
+    try FloatingToolbarChatDrawerOpen := false
+    catch {
+    }
     try ShowFloatingToolbar()
+    catch {
+    }
+    if !(g_FTB_WV2_Ready && g_FTB_WV2)
+        return
+    try WebView2_NotifyShown(g_FTB_WV2)
+    catch {
+    }
+    try FloatingToolbar_ResetWebToToolbarHome()
+    catch {
+    }
+    try FloatingToolbarPushCmdLayoutToWeb()
+    catch {
+    }
+    SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
+    SetTimer(FloatingToolbar_PushLayoutDeferred, -200)
+    SetTimer(FloatingToolbar_PushLayoutDeferred, -600)
+}
+
+; 设置页/托盘切换为「悬浮栏」时统一走此入口：清 dock 抑制、显示并兜底恢复可见性。
+FloatingToolbar_ShowForActivationMode() {
+    global AppearanceActivationMode
+    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+        return
+    try FloatingToolbar_ClearOverlaySuppression()
+    catch {
+    }
+    try ShowFloatingToolbar()
+    catch {
+    }
+    if !FloatingToolbarIsVisible {
+        SetTimer(FloatingToolbar_SoftRecoverVisible, -120)
+    }
+    SetTimer(FloatingToolbar_EnsureVisibleAfterActivation, -280)
+    SetTimer(FloatingToolbar_EnsureVisibleAfterActivation, -900)
+}
+
+; 轻量恢复：优先 FinishReveal / 再显示；仅宿主缺失时才 ForceRecover。
+FloatingToolbar_SoftRecoverVisible(*) {
+    global FloatingToolbarIsVisible, FloatingToolbarGUI, g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WaitingUiFinishedReveal
+    if FloatingToolbarIsVisible && !g_FTB_WaitingUiFinishedReveal
+        return
+    if (FloatingToolbarGUI != 0 && g_FTB_WV2_Ready && g_FTB_WV2) {
+        if g_FTB_WaitingUiFinishedReveal {
+            try FloatingToolbar_FinishReveal()
+            catch {
+            }
+        } else if !FloatingToolbarIsVisible {
+            try ShowFloatingToolbar()
+            catch {
+            }
+        }
+        try WebView2_NotifyShown(g_FTB_WV2)
+        catch {
+        }
+        try FloatingToolbar_ResetWebToToolbarHome()
+        catch {
+        }
+        SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
+        SetTimer(FloatingToolbar_PushLayoutDeferred, -180)
+        return
+    }
+    if (FloatingToolbarGUI != 0 && g_FTB_WV2) {
+        try ShowFloatingToolbar()
+        catch {
+        }
+        return
+    }
+    try FloatingToolbar_ForceRecoverVisible()
+    catch {
+    }
+}
+
+FloatingToolbar_EnsureVisibleAfterActivation(*) {
+    global AppearanceActivationMode, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal
+    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+        return
+    if FloatingToolbarIsVisible && !g_FTB_WaitingUiFinishedReveal
+        return
+    try FloatingToolbar_ClearOverlaySuppression()
+    catch {
+    }
+    try FloatingToolbar_ResetWebToToolbarHome()
+    catch {
+    }
+    if g_FTB_WaitingUiFinishedReveal {
+        SetTimer(FloatingToolbar_FinishReveal, -120)
+    }
+    if !FloatingToolbarIsVisible {
+        SetTimer(FloatingToolbar_SoftRecoverVisible, -50)
+    }
+}
+
+FloatingToolbar_RequestWebReveal() {
+    global g_FTB_WV2
+    if !g_FTB_WV2
+        return
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_request_reveal"))
+    catch {
+    }
+}
+
+; 收起 Niuma 抽屉/设置叠层并恢复折叠工具条（子窗口关闭、隐藏后显示时均需调用）。
+FloatingToolbar_ResetWebToToolbarHome() {
+    global g_FTB_WV2, FloatingToolbarChatDrawerOpen
+    try FloatingToolbarChatDrawerOpen := false
+    catch {
+    }
+    if !g_FTB_WV2
+        return
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
+    catch {
+    }
+}
+
+FloatingToolbar_EnsureCommandsLoaded() {
+    global g_JsonPath, g_Commands
+    if !IsSet(g_JsonPath) || g_JsonPath = ""
+        g_JsonPath := A_ScriptDir "\Commands.json"
+    if (!IsSet(g_Commands) || !(g_Commands is Map) || !g_Commands.Has("CommandList")
+        || !(g_Commands["CommandList"] is Map) || g_Commands["CommandList"].Count = 0) {
+        if IsSet(_LoadCommands)
+            _LoadCommands()
+    }
+}
+
+FloatingToolbar_PushLayoutDeferred(*) {
+    global g_FTB_WV2
+    if !g_FTB_WV2
+        return
+    try FloatingToolbar_EnsureCommandsLoaded()
+    catch {
+    }
+    try FloatingToolbarPushCmdLayoutToWeb()
+    catch {
+    }
+    try FloatingToolbar_PushLogoToWeb()
+    catch {
+    }
+    try FloatingToolbar_RequestWebReveal()
+    catch {
+    }
+}
+
+FloatingToolbar_GetFallbackCmdIds() {
+    return [
+        "sc_activate_search",
+        "qa_clipboard",
+        "ch_b",
+        "ftb_scratchpad",
+        "ftb_screenshot",
+        "qa_config",
+        "sys_show_vk",
+        "ftb_cursor_menu",
+        "ftb_cloud_player"
+    ]
+}
+
+FloatingToolbar_ResolveSceneCmdId(sceneId) {
+    if !(IsSet(_VK_SceneIdToToolbarCmdId))
+        return ""
+    global g_Commands
+    cid := _VK_SceneIdToToolbarCmdId(sceneId)
+    if (cid != "" && IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList")
+        && g_Commands["CommandList"] is Map && g_Commands["CommandList"].Has(cid))
+        return cid
+    if (sceneId = "scratchpad") {
+        if (IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList")
+            && g_Commands["CommandList"] is Map && g_Commands["CommandList"].Has("hub_capsule"))
+            return "hub_capsule"
+    }
+    return cid
+}
+
+FloatingToolbar_CmdIdToSceneId(cmdId) {
+    cid := Trim(String(cmdId))
+    if (cid = "")
+        return ""
+    static sceneIds := ["search", "clipboard", "prompts", "scratchpad", "screenshot", "settings", "hotkeys", "cursor", "cloudplayer"]
+    for sid in sceneIds {
+        if (FloatingToolbar_ResolveSceneCmdId(sid) = cid)
+            return sid
+    }
+    return ""
+}
+
+FloatingToolbar_BuildToolbarItemPayload(cid, cmdList, sceneId := "") {
+    cid := Trim(String(cid))
+    if (cid = "" || !(cmdList is Map) || !cmdList.Has(cid))
+        return 0
+    ent := cmdList[cid]
+    sid := sceneId != "" ? Trim(String(sceneId)) : FloatingToolbar_CmdIdToSceneId(cid)
+    nm := (ent is Map && ent.Has("name")) ? String(ent["name"]) : cid
+    ic := ""
+    if (sid != "" && IsSet(_VK_SceneIdToToolbarIconClass))
+        ic := _VK_SceneIdToToolbarIconClass(sid)
+    if (ic = "" && ent is Map && ent.Has("iconClass") && ent["iconClass"] != "") {
+        ic := Trim(String(ent["iconClass"]))
+        if (SubStr(ic, 1, 3) != "fa-")
+            ic := "fa-solid " . ic
+        else if !InStr(ic, "fa-solid") && !InStr(ic, "fa-brands") && !InStr(ic, "fa-regular")
+            ic := "fa-solid " . ic
+    }
+    if (ic = "")
+        ic := "fa-solid fa-circle"
+    rowPayload := Map("cmdId", cid, "name", nm, "iconClass", ic)
+    if (cid = "ftb_cursor_menu")
+        rowPayload["iconPath"] := FloatingToolbar_GetCursorIconPath()
+    else if (cid = "hub_capsule") {
+        try {
+            nu := BuildAppAssetUrl("牛马.png")
+            if (nu != "")
+                rowPayload["iconPath"] := nu
+        } catch {
+        }
+    } else if ((ent is Map) && ent.Has("iconPath") && ent["iconPath"] != "")
+        rowPayload["iconPath"] := String(ent["iconPath"])
+    return rowPayload
+}
+
+; 按 SceneToolbarLayout：每场景至多一个 cmd，避免 ch_x/ch_f 与 qa_clipboard/sc_activate_search 等同功能重复堆叠。
+FloatingToolbar_BuildItemsFromSceneToolbarLayout() {
+    global g_Commands, g_FTB_BlockedCmdIds
+    items := []
+    if !(IsSet(g_Commands) && g_Commands is Map)
+        return items
+    try FloatingToolbar_EnsureCommandsLoaded()
+    catch {
+    }
+    try {
+        if IsSet(_VK_EnsureToolbarLayout)
+            _VK_EnsureToolbarLayout()
+    } catch {
+    }
+    try {
+        if IsSet(_VK_SyncToolbarLayoutFromSceneToolbar)
+            _VK_SyncToolbarLayoutFromSceneToolbar()
+    } catch {
+    }
+    if !g_Commands.Has("CommandList") || !(g_Commands["CommandList"] is Map)
+        return items
+    cmdList := g_Commands["CommandList"]
+    sceneRows := []
+    if (g_Commands.Has("SceneToolbarLayout") && g_Commands["SceneToolbarLayout"] is Array) {
+        for row in g_Commands["SceneToolbarLayout"]
+            sceneRows.Push(row)
+    }
+    if (sceneRows.Length > 1 && IsSet(_VK_SortRowsByNumericKey))
+        sceneRows := _VK_SortRowsByNumericKey(sceneRows, "order_bar")
+    seenCids := Map()
+    for row in sceneRows {
+        if !(row is Map) || !row.Has("sceneId")
+            continue
+        if !row.Has("visible_in_bar") || !row["visible_in_bar"]
+            continue
+        sid := Trim(String(row["sceneId"]))
+        if (sid = "" || sid = "ai")
+            continue
+        cid := Trim(String(FloatingToolbar_ResolveSceneCmdId(sid)))
+        if (cid = "" && IsSet(_VK_SceneIdToToolbarCmdId))
+            cid := Trim(String(_VK_SceneIdToToolbarCmdId(sid)))
+        if (cid = "" || !cmdList.Has(cid) || g_FTB_BlockedCmdIds.Has(cid) || seenCids.Has(cid))
+            continue
+        seenCids[cid] := true
+        rowPayload := FloatingToolbar_BuildToolbarItemPayload(cid, cmdList, sid)
+        if (rowPayload is Map)
+            items.Push(rowPayload)
+    }
+    return items
+}
+
+FloatingToolbar_BuildItemsFromCmdIds(cmdIds) {
+    global g_Commands
+    items := []
+    try FloatingToolbar_EnsureCommandsLoaded()
+    catch {
+    }
+    if !(IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map)
+        return items
+    cmdList := g_Commands["CommandList"]
+    for cid0 in cmdIds {
+        cid := Trim(String(cid0))
+        if (cid = "" || !cmdList.Has(cid))
+            continue
+        ent := cmdList[cid]
+        nm := (ent is Map && ent.Has("name")) ? String(ent["name"]) : cid
+        ic := "fa-circle"
+        if (ent is Map) && ent.Has("iconClass") && ent["iconClass"] != "" {
+            ic := Trim(String(ent["iconClass"]))
+            if (SubStr(ic, 1, 3) != "fa-")
+                ic := "fa-solid " . ic
+            else if !InStr(ic, "fa-solid") && !InStr(ic, "fa-brands") && !InStr(ic, "fa-regular")
+                ic := "fa-solid " . ic
+        }
+        rowPayload := Map("cmdId", cid, "name", nm, "iconClass", ic)
+        if (cid = "ftb_cursor_menu") {
+            rowPayload["iconPath"] := FloatingToolbar_GetCursorIconPath()
+        } else if ((ent is Map) && ent.Has("iconPath") && ent["iconPath"] != "") {
+            rowPayload["iconPath"] := String(ent["iconPath"])
+        }
+        items.Push(rowPayload)
+    }
+    return items
+}
+
+FloatingToolbar_PushLegacyToolbarActionsToWeb() {
+    global g_FTB_WV2, FloatingToolbarButtonItems
+    if !g_FTB_WV2
+        return
+    actions := []
+    if (IsSet(FloatingToolbarButtonItems) && FloatingToolbarButtonItems is Array) {
+        for a in FloatingToolbarButtonItems
+            actions.Push(String(a))
+    }
+    if (actions.Length = 0)
+        actions := ["Search", "Record", "Prompt", "NewPrompt", "Screenshot", "Settings", "VirtualKeyboard"]
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_toolbar_config", "actions", actions))
+    catch {
+    }
 }
 global g_FTB_CursorIconDataUrl := ""
 
@@ -186,6 +515,11 @@ FloatingToolbar_FinishReveal() {
     FloatingToolbarApplyRoundedCorners()
     FloatingToolbar_ApplyWebViewBounds()
     SetTimer(FloatingToolbarCheckWindowPosition, 100)
+    SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
+    SetTimer(FloatingToolbar_PushLayoutDeferred, -150)
+    try FloatingToolbar_RequestWebReveal()
+    catch {
+    }
 }
 
 FloatingToolbar_ForceRevealIfStuck() {
@@ -227,7 +561,7 @@ ShowFloatingToolbar() {
         return
     }
 
-    if (FloatingToolbarIsVisible && FloatingToolbarGUI != 0) {
+    if (FloatingToolbarIsVisible && FloatingToolbarGUI != 0 && !g_FTB_WaitingUiFinishedReveal) {
         return
     }
     ; 鑻ヤ笂娆′粛鍦ㄣ€岀瓑 UI_FINISHED銆嶏紝鍏堝彇娑堣秴鏃跺畾鏃跺櫒锛岄伩鍏嶉噸澶?reveal
@@ -255,15 +589,21 @@ ShowFloatingToolbar() {
     ToolbarWidth := FloatingToolbarCalculateWidth()
     ToolbarHeight := FloatingToolbarCalculateHeight()
 
-    readyToReveal := (g_FTB_WV2_Ready && g_FTB_UI_Ready)
-
-    ; WebView 已就绪（隐藏后再次打开）：直接不透明显示，不再等待
-    if readyToReveal {
+    ; WebView 已加载过（隐藏后再显示）：不再等待 UI_FINISHED，直接显示并刷新布局
+    if g_FTB_WV2_Ready {
+        g_FTB_WaitingUiFinishedReveal := false
+        g_FTB_RevealWaitStartTick := 0
+        SetTimer(FloatingToolbar_ForceRevealIfStuck, 0)
         try WinSetTransparent(255, "ahk_id " . FloatingToolbarGUI.Hwnd)
         catch {
         }
         FloatingToolbarGUI.Show("x" . FloatingToolbarWindowX . " y" . FloatingToolbarWindowY . " w" . ToolbarWidth . " h" . ToolbarHeight . " NoActivate")
         FloatingToolbar_FinishReveal()
+        SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
+        SetTimer(FloatingToolbar_PushLayoutDeferred, -150)
+        try FloatingToolbar_RequestWebReveal()
+        catch {
+        }
         return
     }
 
@@ -406,6 +746,13 @@ FloatingToolbar_OnNavigationCompleted(sender, args) {
         ok := false
     }
     g_FTB_WV2_FrameReady := !!ok
+    if ok {
+        SetTimer(FloatingToolbar_PushLayoutDeferred, -40)
+        SetTimer(FloatingToolbar_PushLayoutDeferred, -220)
+        try FloatingToolbar_RequestWebReveal()
+        catch {
+        }
+    }
     FloatingToolbar_FlushPendingSelectionIfReady()
     FloatingToolbar_FlushPendingNiumaComposeIfReady()
 }
@@ -536,17 +883,23 @@ FloatingToolbar_GetLogoAppUrl() {
         return ""
     candidates := [
         "牛马.png",
+        "assets\牛马.png",
         "logo.png",
+        "assets\logo.png",
         "images\logo.png",
         "images\nimabu.png",
+        "lib\images\logo.png",
         "favicon.ico"
     ]
     for rel in candidates {
         full := A_ScriptDir . "\" . rel
         if FileExist(full) {
             u := StrReplace(rel, "\", "/")
-            try return BuildAppLocalUrl(u)
-            catch {
+            try {
+                if (InStr(u, "assets/") = 1 || InStr(u, "assets\") = 1)
+                    return BuildAppAssetUrl(u)
+                return BuildAppLocalUrl(u)
+            } catch {
                 return ""
             }
         }
@@ -560,9 +913,14 @@ FloatingToolbar_PushLogoToWeb(*) {
         return
     url := FloatingToolbar_GetLogoAppUrl()
     if (url = "")
-        return
+        try url := BuildAppAssetUrl("牛马.png")
+        catch {
+        }
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_logo", "url", url))
     catch as _e {
+    }
+    try FloatingToolbar_RequestWebReveal()
+    catch {
     }
 }
 
@@ -669,12 +1027,35 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ = "toolbar_ready") {
         g_FTB_WV2_Ready := true
         FloatingToolbar_ApplyWebViewBounds()
+        try FloatingToolbar_EnsureCommandsLoaded()
+        catch {
+        }
         SetTimer(FloatingToolbar_PushLogoToWeb, -10)
         SetTimer(FloatingToolbar_PushThemeToWeb, -10)
         FloatingToolbarPushScaleStateToWeb(FloatingToolbarScale)
-        FloatingToolbarPushButtonConfigToWeb()
+        try FloatingToolbarPushButtonConfigToWeb()
+        catch {
+        }
+        SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
+        SetTimer(FloatingToolbar_PushLayoutDeferred, -180)
+        SetTimer(FloatingToolbar_PushLayoutDeferred, -520)
         FloatingToolbar_FlushPendingSelectionIfReady()
         FloatingToolbar_FlushPendingNiumaComposeIfReady()
+        try FloatingToolbar_RequestWebReveal()
+        catch {
+        }
+        return
+    }
+
+    if (typ = "ftb_soft_reset") {
+        try FloatingToolbar_EnsureCommandsLoaded()
+        catch {
+        }
+        SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
+        SetTimer(FloatingToolbar_PushLayoutDeferred, -150)
+        try FloatingToolbar_RequestWebReveal()
+        catch {
+        }
         return
     }
 
@@ -690,6 +1071,9 @@ FloatingToolbar_OnWebMessage(sender, args) {
         if !g_FTB_WaitingUiFinishedReveal
             return
 
+        try FloatingToolbar_RequestWebReveal()
+        catch {
+        }
         ; 涓嶅啀浣跨敤 AnimateWindow(AW_BLEND)锛岄伩鍏嶉粦鐧芥笎鍙橀棯灞忥紱鐢?FloatingToolbar_FinishReveal 涓€娆℃€т笉閫忔槑鏄剧ず
         FloatingToolbar_FinishReveal()
         FloatingToolbar_FlushPendingNiumaComposeIfReady()
@@ -706,7 +1090,7 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ = "toolbar_cmd") {
         cid := msg.Has("cmdId") ? Trim(String(msg["cmdId"])) : ""
         if (cid != "")
-            SetTimer(FloatingToolbar_DeferredToolbarCmd.Bind(cid), -1)
+            SetTimer(FloatingToolbar_DeferredToolbarCmd.Bind(cid), -10)
         return
     }
 
@@ -853,7 +1237,7 @@ FloatingToolbar_OnWebMessage(sender, args) {
         x := msg.Has("x") ? Integer(msg["x"]) : 0
         y := msg.Has("y") ? Integer(msg["y"]) : 0
         FTB_Debug("context_menu x=" . x . " y=" . y)
-        SetTimer(FloatingToolbar_ShowContextMenuDeferred.Bind(x, y), -1)
+        SetTimer(FloatingToolbar_ShowContextMenuDeferred.Bind(x, y), -10)
         return
     }
 
@@ -868,7 +1252,7 @@ FloatingToolbar_OnWebMessage(sender, args) {
         x := msg.Has("x") ? Integer(msg["x"]) : 0
         y := msg.Has("y") ? Integer(msg["y"]) : 0
         FTB_Debug("toolbar_cmd_context x=" . x . " y=" . y)
-        SetTimer(FloatingToolbar_ShowContextMenuDeferred.Bind(x, y), -1)
+        SetTimer(FloatingToolbar_ShowContextMenuDeferred.Bind(x, y), -10)
         return
     }
 
@@ -895,18 +1279,18 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ = "niuma_cli_open") {
         ; WebView 回调内不可长时间阻塞；端口就绪后由 NiumaTtyd 回传 ttyd_ready / ttyd_error
         reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
-        SetTimer(NiumaTtyd_DeferredOpenJob.Bind(reqId), -1)
+        SetTimer(NiumaTtyd_DeferredOpenJob.Bind(reqId), -10)
         return
     }
     if (typ = "niuma_cli_restart") {
         reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
-        SetTimer(NiumaTtyd_DeferredRestartJob.Bind(reqId), -1)
+        SetTimer(NiumaTtyd_DeferredRestartJob.Bind(reqId), -10)
         return
     }
     if (typ = "niuma_cli_open_external") {
         reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
         expectedBaseUrl := msg.Has("baseUrl") ? String(msg["baseUrl"]) : ""
-        SetTimer(NiumaTtyd_DeferredExternalOpenJob.Bind(reqId, expectedBaseUrl), -1)
+        SetTimer(NiumaTtyd_DeferredExternalOpenJob.Bind(reqId, expectedBaseUrl), -10)
         return
     }
     if (typ = "niuma_save_ttyd_shell") {
@@ -917,7 +1301,7 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
     if (typ = "niuma_openclaw_probe_token") {
         force := msg.Has("force") && !!msg["force"]
-        SetTimer(FloatingToolbar_DeferredProbeOpenClawToken.Bind(force), -1)
+        SetTimer(FloatingToolbar_DeferredProbeOpenClawToken.Bind(force), -10)
         return
     }
     if (typ = "niuma_debug_event") {
@@ -926,15 +1310,15 @@ FloatingToolbar_OnWebMessage(sender, args) {
         return
     }
     if (typ = "niuma_debug_pull_go") {
-        SetTimer(FloatingToolbar_DeferredDebugPullGo, -1)
+        SetTimer(FloatingToolbar_DeferredDebugPullGo, -10)
         return
     }
     if (typ = "niuma_upload_file") {
-        SetTimer(FloatingToolbar_DeferredNiumaUpload.Bind(msg), -1)
+        SetTimer(FloatingToolbar_DeferredNiumaUpload.Bind(msg), -10)
         return
     }
     if (typ = "niuma_attach_context") {
-        SetTimer(FloatingToolbar_DeferredNiumaAttachContext.Bind(msg), -1)
+        SetTimer(FloatingToolbar_DeferredNiumaAttachContext.Bind(msg), -10)
         return
     }
 }
@@ -997,7 +1381,7 @@ FloatingToolbar_Base64DecodeToBuffer(b64) {
 
 FloatingToolbar_IsTextExt(name) {
     n := StrLower(String(name))
-    p := InStr(n, ".",, -1)
+    p := InStr(n, ".",, -10)
     ext := (p > 0) ? SubStr(n, p + 1) : ""
     return RegExMatch(ext, "i)^(md|txt|json|csv|log|xml|yml|yaml|ini|cfg|js|ts|py|java|go|rs|html|css|sql|bat|cmd|ps1|psm1|sh|toml|env)$")
 }
@@ -1434,7 +1818,7 @@ FloatingToolbarCollapseTransientUi(forceResize := true) {
     }
 
     if g_FTB_WV2 {
-        try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
+        try FloatingToolbar_ResetWebToToolbarHome()
         catch {
         }
     }
@@ -1565,7 +1949,7 @@ FloatingToolbar_RequestSearchByKeyword(keyword) {
     kw := Trim(String(keyword))
     if (kw = "")
         return
-    SetTimer(FloatingToolbar_DeferredOpenSearchByKeyword.Bind(kw), -1)
+    SetTimer(FloatingToolbar_DeferredOpenSearchByKeyword.Bind(kw), -10)
 }
 
 FloatingToolbar_DeferredOpenSearchByKeyword(keyword, *) {
@@ -1728,7 +2112,7 @@ FloatingToolbarExecuteButtonAction(action, buttonHwnd) {
         case "Screenshot":
             ; 不可在 WebView2 WebMessageReceived 回调里同步执行 ExecuteScreenshotWithMenu
             ; 含长时间 Sleep/剪贴板轮询会阻塞消息泵，导致工具栏卡死且截图窗口无法显示
-            SetTimer(FloatingToolbar_DeferredScreenshot, -1)
+            SetTimer(FloatingToolbar_DeferredScreenshot, -10)
         case "Settings":
             FloatingToolbarOpenSettings()
         case "VirtualKeyboard":
@@ -1787,7 +2171,7 @@ FloatingToolbarToggleButtonAction(action) {
     global GuiID_SearchCenter, GuiID_ConfigGUI, ConfigWebViewMode, GuiID_ScreenshotEditor, g_PQP_Gui
     switch action {
         case "Search":
-            SetTimer(FloatingToolbar_ActivateSearchCenter, -1)
+            SetTimer(FloatingToolbar_ActivateSearchCenter, -10)
             return
         case "Record":
             try {
@@ -1800,7 +2184,7 @@ FloatingToolbarToggleButtonAction(action) {
             FloatingToolbarExecuteButtonAction(action, 0)
         case "AIAssistant", "Prompt":
             ; 延后一帧：与 WM_ACTIVATE、Hide/postMessage 顺序对齐，减少关不掉或关掉又弹回
-            SetTimer(FloatingToolbar_PromptToggleDeferred, -1)
+            SetTimer(FloatingToolbar_PromptToggleDeferred, -10)
             return
         case "Settings":
             ; WebView 璁剧疆锛氬叧闂椂浠?Hide锛孏uiID_ConfigGUI 浠嶉潪 0锛屽繀椤绘寜銆屾槸鍚﹀彲瑙併€嶅垏鎹紝鍚﹀垯浼氭棤娉曞啀娆℃墦寮€
@@ -1974,6 +2358,8 @@ FloatingToolbar_SetActivationMode(mode) {
     catch {
     }
     SetTimer((*) => ApplyAppearanceActivationMode(), -10)
+    if (m = "toolbar")
+        SetTimer(FloatingToolbar_ShowForActivationMode, -30)
 }
 
 FloatingToolbar_SwitchActivationByWheel(delta) {
@@ -2230,7 +2616,7 @@ FloatingToolbarResetScale() {
 OnFloatingToolbarContextMenu(*) {
     CoordMode("Mouse", "Screen")
     MouseGetPos(&mx, &my)
-    SetTimer(FloatingToolbar_ShowContextMenuDeferred.Bind(mx, my), -1)
+    SetTimer(FloatingToolbar_ShowContextMenuDeferred.Bind(mx, my), -10)
 }
 
 FloatingToolbar_ParseWebMessage(args) {
@@ -2399,7 +2785,9 @@ FloatingToolbar_ForceRecoverVisible() {
     try FloatingToolbarSaveScale()
     try {
         if (g_FTB_WV2) {
-            WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
+            try FloatingToolbar_ResetWebToToolbarHome()
+            catch {
+            }
             WebView_QueuePayload(g_FTB_WV2, Map("type", "set_scale", "scale", FloatingToolbar_EffectiveScale(), "compact", false))
         }
     } catch {
@@ -2415,6 +2803,7 @@ FloatingToolbar_ForceRecoverVisible() {
     try ShowFloatingToolbar()
     catch {
     }
+    try SetTimer(FloatingToolbar_RequestWebReveal, -200)
     try SetTimer((*) => ShowFloatingToolbar(), -260)
     catch {
     }
@@ -2511,11 +2900,8 @@ FloatingToolbarPushCmdLayoutToWeb() {
     global g_FTB_WV2, g_Commands, FloatingToolbarCmdVisibleCount, FloatingToolbarChatDrawerOpen, g_FTB_BlockedCmdIds, g_FTB_AllowedCmdIds, FloatingToolbarMaxVisibleIcons
     if !g_FTB_WV2
         return
-    try {
-        if (!IsSet(g_Commands) || !(g_Commands is Map) || !g_Commands.Has("CommandList") || !(g_Commands["CommandList"] is Map)
-            || g_Commands["CommandList"].Count = 0)
-            _LoadCommands()
-    } catch {
+    try FloatingToolbar_EnsureCommandsLoaded()
+    catch {
     }
     try {
         if (IsSet(_VK_EnsureToolbarLayout) && IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList"))
@@ -2523,80 +2909,73 @@ FloatingToolbarPushCmdLayoutToWeb() {
     } catch {
     }
     if !(IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("ToolbarLayout") && g_Commands["ToolbarLayout"] is Array
-        && g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map)
+        && g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map) {
+        items := FloatingToolbar_BuildItemsFromCmdIds(FloatingToolbar_GetFallbackCmdIds())
+        if (items.Length > 0) {
+            try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_toolbar_cmds", "items", items))
+            catch {
+            }
+        } else {
+            try FloatingToolbar_PushLegacyToolbarActionsToWeb()
+            catch {
+            }
+        }
+        try FloatingToolbar_RequestWebReveal()
+        catch {
+        }
         return
+    }
     cmdList := g_Commands["CommandList"]
-    items := []
-    hasCursorMenu := false
-    hasCloudPlayer := false
-    rows := []
-    for row in g_Commands["ToolbarLayout"]
-        rows.Push(row)
-    if rows.Length > 1
-        rows := _VK_SortRowsByNumericKey(rows, "order_bar")
-    for row in rows {
-        if !(row is Map) || !row.Has("cmdId")
-            continue
-        if !row.Has("visible_in_bar") || !row["visible_in_bar"]
-            continue
-        cid := Trim(String(row["cmdId"]))
-        if (cid = "" || !cmdList.Has(cid))
-            continue
-        if g_FTB_BlockedCmdIds.Has(cid)
-            continue
-        if !g_FTB_AllowedCmdIds.Has(cid)
-            continue
-        ent := cmdList[cid]
-        nm := ent.Has("name") ? String(ent["name"]) : cid
-        ic := "fa-circle"
-        if (ent is Map) && ent.Has("iconClass") && ent["iconClass"] != "" {
-            ic := Trim(String(ent["iconClass"]))
-            if (SubStr(ic, 1, 3) != "fa-")
-                ic := "fa-solid " . ic
-            else if !InStr(ic, "fa-solid") && !InStr(ic, "fa-brands") && !InStr(ic, "fa-regular")
-                ic := "fa-solid " . ic
+    items := FloatingToolbar_BuildItemsFromSceneToolbarLayout()
+    if (items.Length = 0) {
+        seenCids := Map()
+        seenScenes := Map()
+        rows := []
+        for row in g_Commands["ToolbarLayout"]
+            rows.Push(row)
+        if rows.Length > 1
+            rows := _VK_SortRowsByNumericKey(rows, "order_bar")
+        for row in rows {
+            if !(row is Map) || !row.Has("cmdId")
+                continue
+            if !row.Has("visible_in_bar") || !row["visible_in_bar"]
+                continue
+            cid := Trim(String(row["cmdId"]))
+            if (cid = "" || !cmdList.Has(cid) || g_FTB_BlockedCmdIds.Has(cid) || seenCids.Has(cid))
+                continue
+            sid := FloatingToolbar_CmdIdToSceneId(cid)
+            if (sid != "" && seenScenes.Has(sid))
+                continue
+            seenCids[cid] := true
+            if (sid != "")
+                seenScenes[sid] := true
+            rowPayload := FloatingToolbar_BuildToolbarItemPayload(cid, cmdList, sid)
+            if (rowPayload is Map)
+                items.Push(rowPayload)
         }
-        rowPayload := Map("cmdId", cid, "name", nm, "iconClass", ic)
-        if (cid = "ftb_cursor_menu") {
-            hasCursorMenu := true
-            rowPayload["iconPath"] := FloatingToolbar_GetCursorIconPath()
-        }
-        if (cid = "ftb_cloud_player")
-            hasCloudPlayer := true
-        if (cid != "ftb_cursor_menu" && (ent is Map) && ent.Has("iconPath") && ent["iconPath"] != "")
-            rowPayload["iconPath"] := String(ent["iconPath"])
-        items.Push(rowPayload)
-    }
-    if !hasCloudPlayer {
-        items.Push(Map(
-            "cmdId", "ftb_cloud_player",
-            "name", "云盘",
-            "iconClass", "fa-solid fa-cloud"
-        ))
-    }
-    ; ToolbarLayout 里没配置时也保底补上 cursor 菜单按钮，避免图标缺失。
-    if !hasCursorMenu {
-        items.Push(Map(
-            "cmdId", "ftb_cursor_menu",
-            "name", "Cursor",
-            "iconClass", "fa-solid fa-location-crosshairs",
-            "iconPath", FloatingToolbar_GetCursorIconPath()
-        ))
-    }
-    cloudVisible := false
-    for _, it in items {
-        if ((it is Map) && it.Has("cmdId") && String(it["cmdId"]) = "ftb_cloud_player") {
-            cloudVisible := true
-            break
-        }
-    }
-    if !cloudVisible {
-        items.Push(Map("cmdId", "ftb_cloud_player", "name", "云盘", "iconClass", "fa-solid fa-cloud"))
     }
     ; 让悬浮栏按实际可见项展开，避免 keybinder 下发的后续图标被 9 个上限截断。
     FloatingToolbarCmdVisibleCount := items.Length
+    if (items.Length = 0) {
+        items := FloatingToolbar_BuildItemsFromCmdIds(FloatingToolbar_GetFallbackCmdIds())
+        if (items.Length = 0) {
+            try FloatingToolbar_PushLegacyToolbarActionsToWeb()
+            catch {
+            }
+            try FloatingToolbar_RequestWebReveal()
+            catch {
+            }
+            return
+        }
+    }
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_toolbar_cmds", "items", items))
     catch as _e {
+        try FloatingToolbar_PushLegacyToolbarActionsToWeb()
+        catch {
+        }
+    }
+    try FloatingToolbar_RequestWebReveal()
+    catch {
     }
     if !FloatingToolbarChatDrawerOpen && !FloatingToolbarIsCompactMode()
         FloatingToolbar_ResizeForToolbarCount()

@@ -101,7 +101,7 @@ ShowConfigWebViewGUI() {
     global ConfigWV2, ConfigWV2Ready
     try WebView2_NotifyShown(ConfigWV2)
     ; 姣忔鎵撳紑閮介噸鏂版帹閫?initData锛堝欢鍚庝竴甯э級锛岀‘淇濅富棰樼瓑涓?INI 涓€鑷翠笖閬垮紑 WebView 鍥炶皟閲嶅叆
-    SetTimer(ConfigWebView_SendInitDataIfReady, -1)
+    SetTimer(ConfigWebView_SendInitDataIfReady, -10)
 }
 
 ConfigWebView_EnsureVisibleOrRecover(*) {
@@ -119,7 +119,7 @@ ConfigWebView_EnsureVisibleOrRecover(*) {
         try ConfigWebView_ReleaseSettingsDock("host_dead")
         catch {
         }
-        try SetTimer(ShowConfigGUI_FallbackCheck, -1)
+        try SetTimer(ShowConfigGUI_FallbackCheck, -10)
         catch {
         }
     }
@@ -1390,19 +1390,21 @@ ConfigWebView_SaveAppearanceActivationMode(mode, &errorMsg := "") {
         }
         AppearanceActivationMode := newMode
         IniWrite(AppearanceActivationMode, ConfigFile, "Appearance", "ActivationMode")
+        if (newMode = "toolbar") {
+            try FloatingToolbar_ClearOverlaySuppression()
+            catch {
+            }
+        }
         ; Defer the actual visibility change so we do not re-enter WebView2 show/create paths
         ; while still inside the config WebView message callback.
-        try SetTimer(ApplyAppearanceActivationMode, -1)
+        try SetTimer(ApplyAppearanceActivationMode, -10)
         catch {
             try ApplyAppearanceActivationMode()
             catch {
             }
         }
         if (newMode = "toolbar") {
-            try SetTimer((*) => (
-                FloatingToolbar_ClearOverlaySuppression(),
-                ShowFloatingToolbar()
-            ), -50)
+            try SetTimer(FloatingToolbar_ShowForActivationMode, -40)
             catch {
             }
         } else if (newMode = "hole") {

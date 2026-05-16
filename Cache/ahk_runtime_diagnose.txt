@@ -1,0 +1,18 @@
+﻿ahk_runtime_diagnose
+ts=2026-05-17 02:23:23.115
+root=C:\Users\Administrator\Desktop\牛马nmer
+pwd=C:\Users\Administrator\Desktop\牛马nmer
+user=Administrator
+session_name=Console
+is_user_interactive=True
+ps_edition=Desktop
+ps_version=5.1.19041.6456
+os=Microsoft Windows NT 10.0.19045.0
+ahk_found=1
+ahk_path=C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe
+ahk_length=1279488
+ahk_lastwrite=03/29/2026 21:12:04
+probe_exit=
+probe_out_exists=0
+ahk_process_count=3
+result=FAIL

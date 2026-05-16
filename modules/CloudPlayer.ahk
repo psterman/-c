@@ -7,11 +7,14 @@ global g_CloudPlayerReady := false
 global g_CloudPlayerOpenListPid := 0
 global g_CloudPlayerApiBase := "http://127.0.0.1:5244"
 global g_CloudPlayerImportBusy := false
+global g_CloudPlayerImportTask := Map("active", false, "taskId", "", "cancelled", false, "provider", "")
 global g_CloudPlayerAutoPulseEnabled := false
 global g_CloudPlayerBackendHealth := false
 global g_CloudPlayerLastHealthTick := 0
 global g_CloudPlayerHealthTtlMs := 900
 global g_CloudPlayerHealthProbeInflight := false
+global g_CloudPlayerLatestReq := Map()
+global g_CloudPlayerDownloadCancel := Map()
 
 ShowCloudPlayer(*) {
     CloudPlayer_Show()
@@ -205,7 +208,7 @@ CloudPlayer_OnWebMessage(sender, args) {
         return
 
     typ := String(payload["type"])
-
+    requestId := AsyncGuardrails_RequestIdFromPayload(payload)
     if (payload.Has("apiBase")) {
         try {
             ab := Trim(String(payload["apiBase"]))
@@ -272,19 +275,29 @@ CloudPlayer_OnWebMessage(sender, args) {
         folderPath := payload.Has("path") ? String(payload["path"]) : "/"
         folderName := payload.Has("name") ? String(payload["name"]) : ""
         token := payload.Has("token") ? Trim(String(payload["token"])) : ""
-        SetTimer(() => CloudPlayer_DownloadFolderZip(folderPath, folderName, token), -10)
+        reqId := payload.Has("reqId") ? String(payload["reqId"]) : requestId
+        CloudPlayer_MarkLatestReq("download_folder", reqId)
+        CloudPlayer_ClearDownloadCancelled(reqId)
+        SetTimer(CloudPlayer_DeferredDownloadFolder.Bind(reqId, folderPath, folderName, token), -10)
+        return
+    }
+    if (typ = "cloudplayer_download_cancel") {
+        reqId := payload.Has("reqId") ? String(payload["reqId"]) : requestId
+        okCancel := CloudPlayer_MarkDownloadCancelled(reqId)
+        CloudPlayer_QueuePayload(Map(
+            "type", "cloudplayer_download_result",
+            "ok", false,
+            "message", okCancel ? "cancel requested" : "missing reqId",
+            "path", "",
+            "name", ""
+        ), reqId, "cancelled", okCancel ? "cancelled" : "invalid_request_id")
         return
     }
 
     if (typ = "cloudplayer_request_admin_token") {
-        errMsg := ""
-        tok := CloudPlayer_GetOpenListAdminToken(&errMsg, 12000)
-        try WebView_QueuePayload(g_CloudPlayerWv2, Map(
-            "type", "cloudplayer_admin_token",
-            "ok", tok != "",
-            "token", tok,
-            "message", tok != "" ? "ok" : (errMsg != "" ? errMsg : "failed")
-        ))
+        reqId := payload.Has("reqId") ? String(payload["reqId"]) : requestId
+        CloudPlayer_MarkLatestReq("admin_token", reqId)
+        SetTimer(CloudPlayer_DeferredAdminToken.Bind(reqId), -10)
         return
     }
 
@@ -292,7 +305,8 @@ CloudPlayer_OnWebMessage(sender, args) {
         path := payload.Has("path") ? String(payload["path"]) : "/"
         refresh := payload.Has("refresh") ? CloudPlayer_ToBool(payload["refresh"], false) : false
         token := payload.Has("token") ? Trim(String(payload["token"])) : ""
-        reqId := payload.Has("reqId") ? String(payload["reqId"]) : ""
+        reqId := payload.Has("reqId") ? String(payload["reqId"]) : requestId
+        CloudPlayer_MarkLatestReq("fs_list", reqId)
         headers := Map("Content-Type", "application/json")
         if (token != "")
             headers["Authorization"] := token
@@ -303,52 +317,29 @@ CloudPlayer_OnWebMessage(sender, args) {
             "per_page", 300,
             "refresh", refresh
         )), ["refresh"])
-        retFs := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/fs/list", headers, body)
-        try WebView_QueuePayload(g_CloudPlayerWv2, Map(
-            "type", "cloudplayer_fs_list_result",
-            "reqId", reqId,
-            "path", path,
-            "ok", retFs["ok"],
-            "status", retFs["status"],
-            "error", retFs["error"],
-            "text", retFs["text"]
-        ))
+        HttpJsonAsync("POST", g_CloudPlayerApiBase . "/api/fs/list", body, (ret) => CloudPlayer_OnFsListResult(reqId, path, ret), Map("headers", headers, "timeoutMs", 12000, "receiveTimeoutMs", 12000, "reqId", reqId, "tag", "cp_fs_list"))
         return
     }
 
     if (typ = "cloudplayer_fs_get") {
         path := payload.Has("path") ? String(payload["path"]) : "/"
         token := payload.Has("token") ? Trim(String(payload["token"])) : ""
-        reqId := payload.Has("reqId") ? String(payload["reqId"]) : ""
+        reqId := payload.Has("reqId") ? String(payload["reqId"]) : requestId
+        CloudPlayer_MarkLatestReq("fs_get", reqId)
         headers := Map("Content-Type", "application/json")
         if (token != "")
             headers["Authorization"] := token
         body := Jxon_Dump(Map("path", path, "password", ""))
-        retGet := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/fs/get", headers, body)
-        try WebView_QueuePayload(g_CloudPlayerWv2, Map(
-            "type", "cloudplayer_fs_get_result",
-            "reqId", reqId,
-            "path", path,
-            "ok", retGet["ok"],
-            "status", retGet["status"],
-            "error", retGet["error"],
-            "text", retGet["text"]
-        ))
+        HttpJsonAsync("POST", g_CloudPlayerApiBase . "/api/fs/get", body, (ret) => CloudPlayer_OnFsGetResult(reqId, path, ret), Map("headers", headers, "timeoutMs", 12000, "receiveTimeoutMs", 12000, "reqId", reqId, "tag", "cp_fs_get"))
         return
     }
 
     if (typ = "cloudplayer_archive_list") {
         path := payload.Has("path") ? String(payload["path"]) : ""
         token := payload.Has("token") ? Trim(String(payload["token"])) : ""
-        reqId := payload.Has("reqId") ? String(payload["reqId"]) : ""
-        out := CloudPlayer_GetArchiveEntries(path, token, reqId)
-        try WebView_QueuePayload(g_CloudPlayerWv2, Map(
-            "type", "cloudplayer_archive_list_result",
-            "reqId", reqId,
-            "ok", out["ok"],
-            "message", out["message"],
-            "entries", out["entries"]
-        ))
+        reqId := payload.Has("reqId") ? String(payload["reqId"]) : requestId
+        CloudPlayer_MarkLatestReq("archive_list", reqId)
+        SetTimer(CloudPlayer_DeferredArchiveList.Bind(reqId, path, token), -10)
         return
     }
 
@@ -357,14 +348,19 @@ CloudPlayer_OnWebMessage(sender, args) {
         apiPath := payload.Has("apiPath") ? Trim(String(payload["apiPath"])) : ""
         bodyStr := payload.Has("body") ? String(payload["body"]) : ""
         token := payload.Has("token") ? Trim(String(payload["token"])) : ""
-        reqId := payload.Has("reqId") ? String(payload["reqId"]) : ""
+        reqId := payload.Has("reqId") ? String(payload["reqId"]) : requestId
+        CloudPlayer_MarkLatestReq("api_json", reqId)
         if apiPath = "" || !RegExMatch(apiPath, "i)^/api/fs/") {
             try WebView_QueuePayload(g_CloudPlayerWv2, Map(
                 "type", "cloudplayer_api_json_result",
                 "reqId", reqId,
+                "requestId", reqId,
+                "phase", "error",
                 "ok", false,
                 "status", 0,
                 "error", "invalid apiPath",
+                "errorCode", "invalid_api_path",
+                "ts", A_Now,
                 "text", ""
             ))
             return
@@ -372,24 +368,23 @@ CloudPlayer_OnWebMessage(sender, args) {
         headers := Map("Content-Type", "application/json", "Accept", "application/json")
         if (token != "")
             headers["Authorization"] := token
-        retApi := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . apiPath, headers, bodyStr)
-        try WebView_QueuePayload(g_CloudPlayerWv2, Map(
-            "type", "cloudplayer_api_json_result",
-            "reqId", reqId,
-            "ok", retApi["ok"],
-            "status", retApi["status"],
-            "error", retApi["error"],
-            "text", retApi["text"]
-        ))
+        HttpJsonAsync("POST", g_CloudPlayerApiBase . apiPath, bodyStr, (ret) => CloudPlayer_OnApiJsonResult(reqId, ret), Map("headers", headers, "timeoutMs", 12000, "receiveTimeoutMs", 12000, "reqId", reqId, "tag", "cp_api_json"))
         return
     }
 
     if (typ = "cloudplayer_import_aliyun") {
         if (g_CloudPlayerImportBusy) {
+            taskIdBusy := (g_CloudPlayerImportTask is Map && g_CloudPlayerImportTask.Has("taskId")) ? String(g_CloudPlayerImportTask["taskId"]) : ""
             try WebView_QueuePayload(g_CloudPlayerWv2, Map(
                 "type", "cloudplayer_import_result",
                 "ok", false,
                 "message", "import is already running",
+                "taskId", taskIdBusy,
+                "reqId", taskIdBusy,
+                "requestId", taskIdBusy,
+                "phase", "error",
+                "errorCode", "import_busy",
+                "ts", A_Now,
                 "mountPath", payload.Has("mountPath") ? String(payload["mountPath"]) : "/aliyun",
                 "driver", "AliyundriveOpen"
             ))
@@ -398,21 +393,30 @@ CloudPlayer_OnWebMessage(sender, args) {
 
         mountPath := payload.Has("mountPath") ? String(payload["mountPath"]) : "/aliyun"
         refreshToken := payload.Has("refreshToken") ? String(payload["refreshToken"]) : ""
+        taskId := payload.Has("taskId") ? String(payload["taskId"]) : CloudPlayer_NewTaskId("ali")
         opts := 0
         if (payload.Has("options") && payload["options"] is Map)
             opts := payload["options"]
         g_CloudPlayerImportBusy := true
-        CloudPlayer_SendImportProgress("Queued import task...")
-        SetTimer(CloudPlayer_RunAliImport.Bind(refreshToken, mountPath, opts), -10)
+        CloudPlayer_StartImportTask(taskId, "ali")
+        CloudPlayer_SendImportProgress("Queued import task...", taskId, "queued", 1)
+        SetTimer(CloudPlayer_RunAliImport.Bind(taskId, refreshToken, mountPath, opts), -10)
         return
     }
 
     if (typ = "cloudplayer_import_storage") {
         if (g_CloudPlayerImportBusy) {
+            taskIdBusy := (g_CloudPlayerImportTask is Map && g_CloudPlayerImportTask.Has("taskId")) ? String(g_CloudPlayerImportTask["taskId"]) : ""
             try WebView_QueuePayload(g_CloudPlayerWv2, Map(
                 "type", "cloudplayer_import_result",
                 "ok", false,
                 "message", "import is already running",
+                "taskId", taskIdBusy,
+                "reqId", taskIdBusy,
+                "requestId", taskIdBusy,
+                "phase", "error",
+                "errorCode", "import_busy",
+                "ts", A_Now,
                 "provider", payload.Has("provider") ? String(payload["provider"]) : "",
                 "mountPath", payload.Has("mountPath") ? String(payload["mountPath"]) : "/",
                 "driver", payload.Has("driver") ? String(payload["driver"]) : "Unknown"
@@ -423,12 +427,33 @@ CloudPlayer_OnWebMessage(sender, args) {
         mountPath := payload.Has("mountPath") ? String(payload["mountPath"]) : "/"
         token := payload.Has("token") ? String(payload["token"]) : ""
         driver := payload.Has("driver") ? String(payload["driver"]) : "Unknown"
+        taskId := payload.Has("taskId") ? String(payload["taskId"]) : CloudPlayer_NewTaskId(provider)
         opts := 0
         if (payload.Has("options") && payload["options"] is Map)
             opts := payload["options"]
         g_CloudPlayerImportBusy := true
-        CloudPlayer_SendImportProgress("Queued import task...")
-        SetTimer(CloudPlayer_RunStorageImport.Bind(provider, token, mountPath, driver, opts), -10)
+        CloudPlayer_StartImportTask(taskId, provider)
+        CloudPlayer_SendImportProgress("Queued import task...", taskId, "queued", 1)
+        SetTimer(CloudPlayer_RunStorageImport.Bind(taskId, provider, token, mountPath, driver, opts), -10)
+        return
+    }
+
+    if (typ = "cloudplayer_import_cancel") {
+        reqTaskId := payload.Has("taskId") ? String(payload["taskId"]) : ""
+        if (reqTaskId = "" && g_CloudPlayerImportTask is Map && g_CloudPlayerImportTask.Has("taskId"))
+            reqTaskId := String(g_CloudPlayerImportTask["taskId"])
+        okCancel := CloudPlayer_CancelImportTask(reqTaskId)
+        try WebView_QueuePayload(g_CloudPlayerWv2, Map(
+            "type", "cloudplayer_import_task_state",
+            "ok", okCancel,
+            "taskId", reqTaskId,
+            "reqId", reqTaskId,
+            "requestId", reqTaskId,
+            "phase", "cancelled",
+            "errorCode", okCancel ? "" : "no_active_task",
+            "message", okCancel ? "cancel requested" : "no active task",
+            "ts", A_Now
+        ))
         return
     }
 }
@@ -518,11 +543,15 @@ CloudPlayer_ParseWebMessage(args) {
     return 0
 }
 
-CloudPlayer_RunAliImport(refreshToken, mountPath, opts) {
+CloudPlayer_RunAliImport(taskId, refreshToken, mountPath, opts) {
     global g_CloudPlayerWv2, g_CloudPlayerImportBusy
+    if CloudPlayer_IsTaskCancelled(taskId) {
+        CloudPlayer_FinishImportTask(taskId, false, "cancelled", "ali", mountPath, "AliyundriveOpen", "")
+        return
+    }
     result := 0
     try {
-        result := CloudPlayer_ImportAliyunStorage(refreshToken, mountPath, opts)
+        result := CloudPlayer_ImportAliyunStorage(refreshToken, mountPath, opts, taskId)
     } catch as e {
         result := Map(
             "ok", false,
@@ -548,24 +577,22 @@ CloudPlayer_RunAliImport(refreshToken, mountPath, opts) {
         result["ok"] := false
     if !result.Has("message")
         result["message"] := result["ok"] ? "import success" : "import failed"
-
-    try WebView_QueuePayload(g_CloudPlayerWv2, Map(
-        "type", "cloudplayer_import_result",
-        "ok", result["ok"],
-        "message", result["message"],
-        "provider", "ali",
-        "mountPath", result["mountPath"],
-        "driver", result["driver"],
-        "authToken", result.Has("authToken") ? result["authToken"] : ""
-    ))
-    g_CloudPlayerImportBusy := false
+    if CloudPlayer_IsTaskCancelled(taskId) {
+        CloudPlayer_FinishImportTask(taskId, false, "cancelled", "ali", result["mountPath"], result["driver"], "")
+        return
+    }
+    CloudPlayer_FinishImportTask(taskId, result["ok"], result["message"], "ali", result["mountPath"], result["driver"], result.Has("authToken") ? result["authToken"] : "")
 }
 
-CloudPlayer_RunStorageImport(provider, token, mountPath, driver, opts) {
+CloudPlayer_RunStorageImport(taskId, provider, token, mountPath, driver, opts) {
     global g_CloudPlayerWv2, g_CloudPlayerImportBusy
+    if CloudPlayer_IsTaskCancelled(taskId) {
+        CloudPlayer_FinishImportTask(taskId, false, "cancelled", provider, mountPath, driver, "")
+        return
+    }
     result := 0
     try {
-        result := CloudPlayer_ImportStorageGeneric(provider, token, mountPath, driver, opts)
+        result := CloudPlayer_ImportStorageGeneric(provider, token, mountPath, driver, opts, taskId)
     } catch as e {
         result := Map(
             "ok", false,
@@ -585,17 +612,11 @@ CloudPlayer_RunStorageImport(provider, token, mountPath, driver, opts) {
         result["ok"] := false
     if !result.Has("message")
         result["message"] := result["ok"] ? "import success" : "import failed"
-
-    try WebView_QueuePayload(g_CloudPlayerWv2, Map(
-        "type", "cloudplayer_import_result",
-        "ok", result["ok"],
-        "message", result["message"],
-        "provider", provider,
-        "mountPath", result["mountPath"],
-        "driver", result["driver"],
-        "authToken", result.Has("authToken") ? result["authToken"] : ""
-    ))
-    g_CloudPlayerImportBusy := false
+    if CloudPlayer_IsTaskCancelled(taskId) {
+        CloudPlayer_FinishImportTask(taskId, false, "cancelled", provider, result["mountPath"], result["driver"], "")
+        return
+    }
+    CloudPlayer_FinishImportTask(taskId, result["ok"], result["message"], provider, result["mountPath"], result["driver"], result.Has("authToken") ? result["authToken"] : "")
 }
 
 CloudPlayer_EnsureOpenListRunning() {
@@ -653,6 +674,284 @@ CloudPlayer_FindOpenListExe() {
             return p
     }
     return ""
+}
+
+CloudPlayer_StaleDomain(kind) {
+    return "cloudplayer:" . Trim(String(kind))
+}
+
+CloudPlayer_MarkLatestReq(kind, reqId) {
+    global g_CloudPlayerLatestReq
+    k := Trim(String(kind))
+    rid := Trim(String(reqId))
+    if (k = "" || rid = "")
+        return
+    g_CloudPlayerLatestReq[k] := rid
+    AsyncGuardrails_UpdateLatest(CloudPlayer_StaleDomain(k), rid)
+}
+
+CloudPlayer_IsStaleReq(kind, reqId) {
+    k := Trim(String(kind))
+    rid := Trim(String(reqId))
+    if (k = "" || rid = "")
+        return false
+    return AsyncGuardrails_ShouldDropStale(CloudPlayer_StaleDomain(k), rid)
+}
+
+CloudPlayer_QueuePayload(payload, reqId := "", phase := "", errorCode := "") {
+    global g_CloudPlayerWv2
+    if !g_CloudPlayerWv2
+        return
+    out := AsyncGuardrails_AttachMeta(payload, reqId, phase, errorCode)
+    try WebView_QueuePayload(g_CloudPlayerWv2, out)
+}
+
+CloudPlayer_MarkDownloadCancelled(reqId) {
+    global g_CloudPlayerDownloadCancel
+    rid := Trim(String(reqId))
+    if (rid = "")
+        return false
+    g_CloudPlayerDownloadCancel[rid] := true
+    return true
+}
+
+CloudPlayer_ClearDownloadCancelled(reqId) {
+    global g_CloudPlayerDownloadCancel
+    rid := Trim(String(reqId))
+    if (rid = "")
+        return
+    try g_CloudPlayerDownloadCancel.Delete(rid)
+}
+
+CloudPlayer_IsDownloadCancelled(reqId) {
+    global g_CloudPlayerDownloadCancel
+    rid := Trim(String(reqId))
+    if (rid = "")
+        return false
+    return g_CloudPlayerDownloadCancel.Has(rid) && !!g_CloudPlayerDownloadCancel[rid]
+}
+
+CloudPlayer_NewTaskId(prefix := "task") {
+    return String(prefix) . "_" . A_Now . "_" . Random(1000, 999999)
+}
+
+CloudPlayer_StartImportTask(taskId, provider := "") {
+    global g_CloudPlayerImportTask
+    g_CloudPlayerImportTask := Map(
+        "active", true,
+        "taskId", String(taskId),
+        "cancelled", false,
+        "provider", String(provider)
+    )
+}
+
+CloudPlayer_CancelImportTask(taskId := "") {
+    global g_CloudPlayerImportTask
+    if !(g_CloudPlayerImportTask is Map) || !g_CloudPlayerImportTask.Has("active") || !g_CloudPlayerImportTask["active"]
+        return false
+    rid := Trim(String(taskId))
+    cur := String(g_CloudPlayerImportTask["taskId"])
+    if (rid != "" && rid != cur)
+        return false
+    g_CloudPlayerImportTask["cancelled"] := true
+    return true
+}
+
+CloudPlayer_IsTaskCancelled(taskId) {
+    global g_CloudPlayerImportTask
+    if !(g_CloudPlayerImportTask is Map) || !g_CloudPlayerImportTask.Has("active") || !g_CloudPlayerImportTask["active"]
+        return true
+    if (String(g_CloudPlayerImportTask["taskId"]) != String(taskId))
+        return true
+    return !!g_CloudPlayerImportTask["cancelled"]
+}
+
+CloudPlayer_FinishImportTask(taskId, ok, message, provider, mountPath, driver, authToken := "") {
+    global g_CloudPlayerWv2, g_CloudPlayerImportBusy, g_CloudPlayerImportTask
+    tid := String(taskId)
+    ; stale task result must not override a newer active task
+    if (g_CloudPlayerImportTask is Map
+        && g_CloudPlayerImportTask.Has("active")
+        && g_CloudPlayerImportTask["active"]
+        && g_CloudPlayerImportTask.Has("taskId")
+        && String(g_CloudPlayerImportTask["taskId"]) != tid) {
+        try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=import_result task_id=" . tid . " current=" . String(g_CloudPlayerImportTask["taskId"]))
+        return
+    }
+    ph := ok ? "done" : ((String(message) = "cancelled") ? "cancelled" : "error")
+    errCode := ""
+    if !ok {
+        low := StrLower(String(message))
+        if (low = "cancelled")
+            errCode := "cancelled"
+        else if InStr(low, "timeout")
+            errCode := "timeout"
+        else if InStr(low, "token")
+            errCode := "auth_token_failed"
+        else if InStr(low, "mount check failed")
+            errCode := "mount_verify_failed"
+        else
+            errCode := "import_failed"
+    }
+    CloudPlayer_QueuePayload(Map(
+        "type", "cloudplayer_import_result",
+        "ok", !!ok,
+        "taskId", tid,
+        "message", String(message),
+        "provider", String(provider),
+        "mountPath", String(mountPath),
+        "driver", String(driver),
+        "authToken", String(authToken)
+    ), tid, ph, errCode)
+    g_CloudPlayerImportBusy := false
+    if (g_CloudPlayerImportTask is Map)
+        g_CloudPlayerImportTask["active"] := false
+}
+
+CloudPlayer_CheckImportCancelled(taskId, &out, message := "cancelled") {
+    if (Trim(String(taskId)) = "")
+        return false
+    if !CloudPlayer_IsTaskCancelled(taskId)
+        return false
+    if (out is Map) {
+        out["ok"] := false
+        out["message"] := String(message)
+    }
+    return true
+}
+
+CloudPlayer_ImportCheckpoint(taskId, &out, phase, message, percent := 0) {
+    CloudPlayer_SendImportProgress(message, taskId, phase, percent)
+    if CloudPlayer_CheckImportCancelled(taskId, &out)
+        return false
+    ; Yield once so message queue and cancel events can run.
+    Sleep(0)
+    if CloudPlayer_CheckImportCancelled(taskId, &out)
+        return false
+    return true
+}
+
+CloudPlayer_OnFsListResult(reqId, path, ret) {
+    global g_CloudPlayerWv2
+    if CloudPlayer_IsStaleReq("fs_list", reqId) {
+        try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=fs_list req_id=" . reqId)
+        return
+    }
+    ok := (ret is Map) && ret.Has("ok") && !!ret["ok"]
+    st := (ret is Map && ret.Has("status")) ? Integer(ret["status"]) : 0
+    err := (ret is Map && ret.Has("error")) ? String(ret["error"]) : "unknown"
+    txt := (ret is Map && ret.Has("text")) ? String(ret["text"]) : ""
+    try WebView_QueuePayload(g_CloudPlayerWv2, Map(
+        "type", "cloudplayer_fs_list_result",
+        "reqId", reqId,
+        "requestId", reqId,
+        "phase", "done",
+        "path", path,
+        "ok", ok,
+        "status", st,
+        "error", err,
+        "errorCode", ok ? "" : err,
+        "ts", A_Now,
+        "text", txt
+    ))
+}
+
+CloudPlayer_OnFsGetResult(reqId, path, ret) {
+    global g_CloudPlayerWv2
+    if CloudPlayer_IsStaleReq("fs_get", reqId) {
+        try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=fs_get req_id=" . reqId)
+        return
+    }
+    ok := (ret is Map) && ret.Has("ok") && !!ret["ok"]
+    st := (ret is Map && ret.Has("status")) ? Integer(ret["status"]) : 0
+    err := (ret is Map && ret.Has("error")) ? String(ret["error"]) : "unknown"
+    txt := (ret is Map && ret.Has("text")) ? String(ret["text"]) : ""
+    try WebView_QueuePayload(g_CloudPlayerWv2, Map(
+        "type", "cloudplayer_fs_get_result",
+        "reqId", reqId,
+        "requestId", reqId,
+        "phase", "done",
+        "path", path,
+        "ok", ok,
+        "status", st,
+        "error", err,
+        "errorCode", ok ? "" : err,
+        "ts", A_Now,
+        "text", txt
+    ))
+}
+
+CloudPlayer_OnApiJsonResult(reqId, ret) {
+    global g_CloudPlayerWv2
+    if CloudPlayer_IsStaleReq("api_json", reqId) {
+        try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=api_json req_id=" . reqId)
+        return
+    }
+    ok := (ret is Map) && ret.Has("ok") && !!ret["ok"]
+    st := (ret is Map && ret.Has("status")) ? Integer(ret["status"]) : 0
+    err := (ret is Map && ret.Has("error")) ? String(ret["error"]) : "unknown"
+    txt := (ret is Map && ret.Has("text")) ? String(ret["text"]) : ""
+    try WebView_QueuePayload(g_CloudPlayerWv2, Map(
+        "type", "cloudplayer_api_json_result",
+        "reqId", reqId,
+        "requestId", reqId,
+        "phase", "done",
+        "ok", ok,
+        "status", st,
+        "error", err,
+        "errorCode", ok ? "" : err,
+        "ts", A_Now,
+        "text", txt
+    ))
+}
+
+CloudPlayer_DeferredAdminToken(reqId) {
+    global g_CloudPlayerWv2
+    if CloudPlayer_IsStaleReq("admin_token", reqId) {
+        try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=admin_token req_id=" . reqId)
+        return
+    }
+    errMsg := ""
+    tok := CloudPlayer_GetOpenListAdminToken(&errMsg, 12000)
+    if CloudPlayer_IsStaleReq("admin_token", reqId) {
+        try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=admin_token req_id=" . reqId . " phase=done")
+        return
+    }
+    try WebView_QueuePayload(g_CloudPlayerWv2, Map(
+        "type", "cloudplayer_admin_token",
+        "reqId", reqId,
+        "requestId", reqId,
+        "phase", "done",
+        "ok", tok != "",
+        "token", tok,
+        "errorCode", tok != "" ? "" : "admin_token_failed",
+        "message", tok != "" ? "ok" : (errMsg != "" ? errMsg : "failed"),
+        "ts", A_Now
+    ))
+}
+
+CloudPlayer_DeferredArchiveList(reqId, path, token) {
+    global g_CloudPlayerWv2
+    if CloudPlayer_IsStaleReq("archive_list", reqId) {
+        try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=archive_list req_id=" . reqId)
+        return
+    }
+    out := CloudPlayer_GetArchiveEntries(path, token, reqId)
+    if CloudPlayer_IsStaleReq("archive_list", reqId) {
+        try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=archive_list req_id=" . reqId . " phase=done")
+        return
+    }
+    try WebView_QueuePayload(g_CloudPlayerWv2, Map(
+        "type", "cloudplayer_archive_list_result",
+        "reqId", reqId,
+        "requestId", reqId,
+        "phase", "done",
+        "ok", out["ok"],
+        "message", out["message"],
+        "errorCode", out["ok"] ? "" : "archive_list_failed",
+        "ts", A_Now,
+        "entries", out["entries"]
+    ))
 }
 
 CloudPlayer_DownloadOpenListExe() {
@@ -773,18 +1072,45 @@ CloudPlayer_GetOpenListAdminUrl() {
     return base . "/@manage"
 }
 
-CloudPlayer_SendImportProgress(message) {
-    global g_CloudPlayerWv2
+CloudPlayer_SendImportProgress(message, taskId := "", phase := "running", percent := 0) {
+    global g_CloudPlayerWv2, g_CloudPlayerImportTask
     msg := Trim(String(message))
     if (msg = "")
-        return
+        return false
+    tid := Trim(String(taskId))
+    if (tid = "" && g_CloudPlayerImportTask is Map && g_CloudPlayerImportTask.Has("taskId"))
+        tid := String(g_CloudPlayerImportTask["taskId"])
+    if (tid != "" && g_CloudPlayerImportTask is Map && g_CloudPlayerImportTask.Has("taskId")
+        && String(g_CloudPlayerImportTask["taskId"]) != tid) {
+        try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=import_progress task_id=" . tid . " current=" . String(g_CloudPlayerImportTask["taskId"]))
+        return false
+    }
+    if (tid != "" && CloudPlayer_IsTaskCancelled(tid))
+        return false
     try WebView_QueuePayload(g_CloudPlayerWv2, Map(
         "type", "cloudplayer_import_progress",
-        "message", msg
+        "taskId", tid,
+        "reqId", tid,
+        "requestId", tid,
+        "phase", String(phase),
+        "percent", Integer(percent),
+        "message", msg,
+        "ts", A_Now
     ))
+    try WebView_QueuePayload(g_CloudPlayerWv2, Map(
+        "type", "cloudplayer_import_task_state",
+        "ok", true,
+        "taskId", tid,
+        "reqId", tid,
+        "requestId", tid,
+        "phase", String(phase),
+        "message", msg,
+        "ts", A_Now
+    ))
+    return true
 }
 
-CloudPlayer_ImportAliyunStorage(refreshToken, mountPath := "/aliyun", opts := 0) {
+CloudPlayer_ImportAliyunStorage(refreshToken, mountPath := "/aliyun", opts := 0, taskId := "") {
     global g_CloudPlayerApiBase
     out := Map("ok", false, "message", "", "mountPath", "", "driver", "AliyundriveOpen", "authToken", "")
     rt := CloudPlayer_NormalizeProviderToken(refreshToken)
@@ -799,13 +1125,15 @@ CloudPlayer_ImportAliyunStorage(refreshToken, mountPath := "/aliyun", opts := 0)
         out["message"] := "refresh token is empty"
         return out
     }
-    CloudPlayer_SendImportProgress("Checking OpenList status...")
+    if !CloudPlayer_ImportCheckpoint(taskId, &out, "checking_openlist", "Checking OpenList status...", 5)
+        return out
     if !CloudPlayer_EnsureOpenListRunning() {
         out["message"] := "OpenList is not running"
         return out
     }
 
-    CloudPlayer_SendImportProgress("Getting OpenList admin token...")
+    if !CloudPlayer_ImportCheckpoint(taskId, &out, "getting_token", "Getting OpenList admin token...", 12)
+        return out
     adminTokenErr := ""
     adminToken := CloudPlayer_GetOpenListAdminToken(&adminTokenErr, 12000)
     if (adminToken = "") {
@@ -814,9 +1142,12 @@ CloudPlayer_ImportAliyunStorage(refreshToken, mountPath := "/aliyun", opts := 0)
     }
     out["authToken"] := adminToken
 
-    CloudPlayer_SendImportProgress("Listing existing storages...")
+    if !CloudPlayer_ImportCheckpoint(taskId, &out, "listing_storage", "Listing existing storages...", 20)
+        return out
     headers := Map("Authorization", adminToken, "Content-Type", "application/json")
     listRet := CloudPlayer_HttpJson("GET", g_CloudPlayerApiBase . "/api/admin/storage/list", headers)
+    if CloudPlayer_CheckImportCancelled(taskId, &out)
+        return out
     if !listRet["ok"] {
         out["message"] := "failed to list storages: " . listRet["error"]
         return out
@@ -926,12 +1257,15 @@ CloudPlayer_ImportAliyunStorage(refreshToken, mountPath := "/aliyun", opts := 0)
         bodyObj["id"] := targetId
 
     saveUrl := g_CloudPlayerApiBase . ((targetId > 0) ? "/api/admin/storage/update" : "/api/admin/storage/create")
-    CloudPlayer_SendImportProgress((targetId > 0)
+    if !CloudPlayer_ImportCheckpoint(taskId, &out, "saving_storage", (targetId > 0)
         ? "Updating Aliyun storage config..."
-        : "Creating Aliyun storage config...")
+        : "Creating Aliyun storage config...", 45)
+        return out
     bodyJson := Jxon_Dump(bodyObj)
     bodyJson := CloudPlayer_JsonForceBoolLiterals(bodyJson, ["web_proxy", "enable_sign"])
     saveRet := CloudPlayer_HttpJson("POST", saveUrl, headers, bodyJson)
+    if CloudPlayer_CheckImportCancelled(taskId, &out)
+        return out
     if !saveRet["ok"] {
         out["message"] := "save storage failed: " . saveRet["error"]
         return out
@@ -942,8 +1276,11 @@ CloudPlayer_ImportAliyunStorage(refreshToken, mountPath := "/aliyun", opts := 0)
     catch {
         respMsg := ""
     }
-    CloudPlayer_SendImportProgress("Verifying storage status...")
+    if !CloudPlayer_ImportCheckpoint(taskId, &out, "verifying_storage", "Verifying storage status...", 72)
+        return out
     statusRet := CloudPlayer_HttpJson("GET", g_CloudPlayerApiBase . "/api/admin/storage/list", headers)
+    if CloudPlayer_CheckImportCancelled(taskId, &out)
+        return out
     statusHint := ""
     foundAfterSave := false
     if (statusRet["ok"] && statusRet["json"] is Map && statusRet["json"].Has("data")) {
@@ -981,12 +1318,15 @@ CloudPlayer_ImportAliyunStorage(refreshToken, mountPath := "/aliyun", opts := 0)
         return out
     }
     if (targetDriver = "AliyundriveOpen" && driveType = "resource" && verify["count"] = 0) {
-        CloudPlayer_SendImportProgress("Resource drive is empty, retrying with drive_type=default...")
+        if !CloudPlayer_ImportCheckpoint(taskId, &out, "fallback_retry", "Resource drive is empty, retrying with drive_type=default...", 82)
+            return out
         additionObj["drive_type"] := "default"
         additionJson2 := Jxon_Dump(additionObj)
         additionJson2 := CloudPlayer_JsonForceBoolLiterals(additionJson2, ["use_online_api", "rapid_upload", "internal_upload"])
         bodyObj["addition"] := additionJson2
         saveRet2 := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/admin/storage/update", headers, CloudPlayer_JsonForceBoolLiterals(Jxon_Dump(bodyObj), ["web_proxy", "enable_sign"]))
+        if CloudPlayer_CheckImportCancelled(taskId, &out)
+            return out
         if saveRet2["ok"] {
             driveType := "default"
             verify2 := CloudPlayer_VerifyMountList(mp, headers)
@@ -1005,18 +1345,18 @@ CloudPlayer_ImportAliyunStorage(refreshToken, mountPath := "/aliyun", opts := 0)
         : ((respMsg != "") ? respMsg : "import success")
     if (verify["count"] = 0)
         out["message"] := out["message"] . " (mount is reachable but empty)"
-    CloudPlayer_SendImportProgress("Import completed.")
+    CloudPlayer_SendImportProgress("Import completed.", taskId, "done", 100)
     return out
 }
 
-CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "AliyundriveOpen", opts := 0) {
+CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "AliyundriveOpen", opts := 0, taskId := "") {
     global g_CloudPlayerApiBase
     providerKey := StrLower(Trim(String(provider)))
     drvInput := Trim(String(driver))
     if (drvInput = "" || drvInput = "Unknown")
         drvInput := CloudPlayer_DefaultDriverByProvider(providerKey)
     if (drvInput = "AliyundriveOpen" || drvInput = "Aliyundrive")
-        return CloudPlayer_ImportAliyunStorage(token, mountPath, opts)
+        return CloudPlayer_ImportAliyunStorage(token, mountPath, opts, taskId)
 
     out := Map("ok", false, "message", "", "mountPath", "", "driver", drvInput, "authToken", "")
     tk := CloudPlayer_NormalizeProviderToken(token)
@@ -1031,12 +1371,14 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
         out["message"] := "token is empty"
         return out
     }
-    CloudPlayer_SendImportProgress("Checking OpenList status...")
+    if !CloudPlayer_ImportCheckpoint(taskId, &out, "checking_openlist", "Checking OpenList status...", 5)
+        return out
     if !CloudPlayer_EnsureOpenListRunning() {
         out["message"] := "OpenList is not running"
         return out
     }
-    CloudPlayer_SendImportProgress("Getting OpenList admin token...")
+    if !CloudPlayer_ImportCheckpoint(taskId, &out, "getting_token", "Getting OpenList admin token...", 12)
+        return out
     adminTokenErr := ""
     adminToken := CloudPlayer_GetOpenListAdminToken(&adminTokenErr, 12000)
     if (adminToken = "") {
@@ -1046,8 +1388,11 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
     out["authToken"] := adminToken
     headers := Map("Authorization", adminToken, "Content-Type", "application/json")
 
-    CloudPlayer_SendImportProgress("Listing existing storages...")
+    if !CloudPlayer_ImportCheckpoint(taskId, &out, "listing_storage", "Listing existing storages...", 20)
+        return out
     listRet := CloudPlayer_HttpJson("GET", g_CloudPlayerApiBase . "/api/admin/storage/list", headers)
+    if CloudPlayer_CheckImportCancelled(taskId, &out)
+        return out
     if !listRet["ok"] {
         out["message"] := "failed to list storages: " . listRet["error"]
         return out
@@ -1081,7 +1426,8 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
     migratedFromDriver := ""
     migratedToDriver := ""
     if (providerKey = "pan123" && targetId > 0) {
-        CloudPlayer_SendImportProgress("Found existing /pan123 storage, recreating to avoid driver-change conflicts...")
+        if !CloudPlayer_ImportCheckpoint(taskId, &out, "fallback_retry", "Found existing /pan123 storage, recreating to avoid driver-change conflicts...", 28)
+            return out
         delErrPan := ""
         delRetPan := CloudPlayer_DeleteStorageById(targetId, headers, &delErrPan)
         if !delRetPan["ok"] {
@@ -1098,7 +1444,7 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
         oldDrv := StrLower(existingDriver)
         newDrv := StrLower(drvInput)
         if (CloudPlayer_IsQuarkDriver(oldDrv) && CloudPlayer_IsQuarkDriver(newDrv)) {
-            CloudPlayer_SendImportProgress("Detected mismatched Quark driver (" . existingDriver . " -> " . drvInput . "), replacing mount...")
+            CloudPlayer_SendImportProgress("Detected mismatched Quark driver (" . existingDriver . " -> " . drvInput . "), replacing mount...", taskId, "fallback_retry", 30)
             delErr := ""
             delRet := CloudPlayer_DeleteStorageById(targetId, headers, &delErr)
             if !delRet["ok"] {
@@ -1119,7 +1465,7 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
         oldDrv2 := StrLower(existingDriver)
         newDrv2 := StrLower(drvInput)
         if (CloudPlayer_IsPan123Driver(oldDrv2) && CloudPlayer_IsPan123Driver(newDrv2)) {
-            CloudPlayer_SendImportProgress("Detected mismatched 123Pan driver (" . existingDriver . " -> " . drvInput . "), replacing mount...")
+            CloudPlayer_SendImportProgress("Detected mismatched 123Pan driver (" . existingDriver . " -> " . drvInput . "), replacing mount...", taskId, "fallback_retry", 30)
             delErr3 := ""
             delRet3 := CloudPlayer_DeleteStorageById(targetId, headers, &delErr3)
             if !delRet3["ok"] {
@@ -1191,11 +1537,14 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
         if (targetId > 0)
             bodyObj["id"] := targetId
 
-        CloudPlayer_SendImportProgress((targetId > 0)
+        if !CloudPlayer_ImportCheckpoint(taskId, &out, "saving_storage", (targetId > 0)
             ? "Updating storage config (" . drv . ")..."
-            : "Creating storage config (" . drv . ")...")
+            : "Creating storage config (" . drv . ")...", 45)
+            return out
         bodyJson := CloudPlayer_JsonForceBoolLiterals(Jxon_Dump(bodyObj), ["web_proxy", "enable_sign"])
         saveRet := CloudPlayer_HttpJson("POST", saveUrl, headers, bodyJson)
+        if CloudPlayer_CheckImportCancelled(taskId, &out)
+            return out
         if (saveRet["ok"]) {
             chosenDriver := drv
             break
@@ -1204,7 +1553,7 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
         if (providerKey = "pan123"
             && targetId > 0
             && (InStr(lowSaveErr, "no driver named") || InStr(lowSaveErr, "failed get driver new"))) {
-            CloudPlayer_SendImportProgress("Detected unavailable stored 123 driver alias, recreating mount...")
+            CloudPlayer_SendImportProgress("Detected unavailable stored 123 driver alias, recreating mount...", taskId, "fallback_retry", 56)
             delErr4 := ""
             delRet4 := CloudPlayer_DeleteStorageById(targetId, headers, &delErr4)
             if (delRet4["ok"]) {
@@ -1216,6 +1565,8 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
                 bodyJson := CloudPlayer_JsonForceBoolLiterals(Jxon_Dump(bodyObj), ["web_proxy", "enable_sign"])
                 ; Re-run current candidate as create, then continue to next fallback if still fails.
                 saveRet4 := CloudPlayer_HttpJson("POST", saveUrl, headers, bodyJson)
+                if CloudPlayer_CheckImportCancelled(taskId, &out)
+                    return out
                 if (saveRet4["ok"]) {
                     chosenDriver := drv
                     break
@@ -1229,7 +1580,7 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
             && targetId = 0
             && StrLower(drv) = StrLower(drvInput)
             && InStr(lowSaveErr, "unique constraint failed: x_storages.mount_path")) {
-            CloudPlayer_SendImportProgress("Mount path still exists, retrying legacy cleanup...")
+            CloudPlayer_SendImportProgress("Mount path still exists, retrying legacy cleanup...", taskId, "fallback_retry", 56)
             foundId := 0
             foundDriver := ""
             findErr := ""
@@ -1241,6 +1592,8 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
                     delRet2 := CloudPlayer_DeleteStorageById(foundId, headers, &delErr2)
                     if (delRet2["ok"]) {
                         saveRet2 := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/admin/storage/create", headers, bodyJson)
+                        if CloudPlayer_CheckImportCancelled(taskId, &out)
+                            return out
                         if (saveRet2["ok"]) {
                             chosenDriver := drv
                             break
@@ -1252,6 +1605,8 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
                     bodyObj["id"] := foundId
                     bodyJson2 := CloudPlayer_JsonForceBoolLiterals(Jxon_Dump(bodyObj), ["web_proxy", "enable_sign"])
                     saveRet3 := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/admin/storage/update", headers, bodyJson2)
+                    if CloudPlayer_CheckImportCancelled(taskId, &out)
+                        return out
                     if (saveRet3["ok"]) {
                         chosenDriver := drv
                         break
@@ -1284,11 +1639,12 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
         return out
     }
 
-    CloudPlayer_SendImportProgress("Verifying mount...")
+    if !CloudPlayer_ImportCheckpoint(taskId, &out, "verifying_storage", "Verifying mount...", 78)
+        return out
     verify := CloudPlayer_VerifyMountList(mp, headers)
     if !verify["ok"] {
         if (providerKey = "onedrive" && InStr(StrLower(verify["message"]), "segment 'root:'")) {
-            CloudPlayer_SendImportProgress("OneDrive root path fallback: retrying with empty root_folder_path...")
+            CloudPlayer_SendImportProgress("OneDrive root path fallback: retrying with empty root_folder_path...", taskId, "fallback_retry", 86)
             ; Some OpenList builds treat "/" as root: and fail on personal accounts.
             ; Retry once with empty root folder path.
             fixId := targetId
@@ -1335,6 +1691,8 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
             bodyObj2["addition"] := addJson2
             bodyJsonFallback := CloudPlayer_JsonForceBoolLiterals(Jxon_Dump(bodyObj2), ["web_proxy", "enable_sign"])
             saveRetFallback := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/admin/storage/update", headers, bodyJsonFallback)
+            if CloudPlayer_CheckImportCancelled(taskId, &out)
+                return out
             if saveRetFallback["ok"] {
                 verify2 := CloudPlayer_VerifyMountList(mp, headers)
                 if (verify2["ok"]) {
@@ -1343,7 +1701,7 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
                     out["driver"] := chosenDriver
                     if (verify2["count"] = 0)
                         out["message"] := out["message"] . " (mount is reachable but empty)"
-                    CloudPlayer_SendImportProgress("Import completed with root path fallback.")
+                    CloudPlayer_SendImportProgress("Import completed with root path fallback.", taskId, "done", 100)
                     return out
                 }
             }
@@ -1360,7 +1718,7 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
     out["driver"] := chosenDriver
     if (verify["count"] = 0)
         out["message"] := out["message"] . " (mount is reachable but empty)"
-    CloudPlayer_SendImportProgress("Import completed.")
+    CloudPlayer_SendImportProgress("Import completed.", taskId, "done", 100)
     return out
 }
 
@@ -2103,26 +2461,83 @@ CloudPlayer_NormalizeApiBase(apiBase) {
     return RTrim(s, "/")
 }
 
-CloudPlayer_PostDownloadResult(ok, message, path := "", name := "") {
-    global g_CloudPlayerWv2
-    try WebView_QueuePayload(g_CloudPlayerWv2, Map(
+CloudPlayer_DeferredDownloadFolder(reqId, folderPath, folderName, token) {
+    if CloudPlayer_IsStaleReq("download_folder", reqId) {
+        try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=download_folder req_id=" . reqId . " phase=deferred")
+        return
+    }
+    CloudPlayer_DownloadFolderZip(folderPath, folderName, token, reqId)
+}
+
+CloudPlayer_CheckDownloadStale(reqId, phase := "") {
+    rid := Trim(String(reqId))
+    if (rid = "")
+        return false
+    if !CloudPlayer_IsStaleReq("download_folder", rid)
+        return false
+    extra := (phase != "") ? (" phase=" . phase) : ""
+    try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=download_folder req_id=" . rid . extra)
+    return true
+}
+
+CloudPlayer_CheckDownloadCancelled(reqId, phase := "") {
+    rid := Trim(String(reqId))
+    if (rid = "")
+        return false
+    if !CloudPlayer_IsDownloadCancelled(rid)
+        return false
+    extra := (phase != "") ? (" phase=" . phase) : ""
+    try CoreAsyncHttp_Log("cloudplayer_download_cancelled", "req_id=" . rid . extra)
+    return true
+}
+
+CloudPlayer_PostDownloadResult(ok, message, path := "", name := "", reqId := "", errorCode := "") {
+    rid := Trim(String(reqId))
+    if CloudPlayer_CheckDownloadStale(rid, "result")
+        return
+    phase := ok ? "done" : (errorCode = "cancelled" ? "cancelled" : "error")
+    CloudPlayer_QueuePayload(Map(
         "type", "cloudplayer_download_result",
         "ok", !!ok,
         "message", String(message),
         "path", String(path),
         "name", String(name)
-    ))
+    ), rid, phase, String(errorCode))
 }
 
-CloudPlayer_PostDownloadProgress(message) {
-    global g_CloudPlayerWv2
+CloudPlayer_PostDownloadProgress(message, reqId := "", phase := "running", percent := 0) {
     msg := Trim(String(message))
     if (msg = "")
         return
-    try WebView_QueuePayload(g_CloudPlayerWv2, Map(
+    rid := Trim(String(reqId))
+    if CloudPlayer_CheckDownloadStale(rid, "progress")
+        return
+    CloudPlayer_QueuePayload(Map(
         "type", "cloudplayer_download_progress",
-        "message", msg
-    ))
+        "message", msg,
+        "percent", Integer(percent)
+    ), rid, String(phase), "")
+}
+
+CloudPlayer_DownloadPhasePercent(phase, processed := 0) {
+    ph := StrLower(Trim(String(phase)))
+    n := 0
+    try n := Integer(processed)
+    if (n < 0)
+        n := 0
+    if (ph = "preparing")
+        return 2
+    if (ph = "scanning")
+        return 10
+    if (ph = "downloading")
+        return Min(70, 10 + Floor(n * 0.9))
+    if (ph = "zipping")
+        return 82
+    if (ph = "finalizing")
+        return 98
+    if (ph = "done")
+        return 100
+    return 0
 }
 
 CloudPlayer_PostArchiveProgress(reqId, message, percent := 0) {
@@ -2139,15 +2554,28 @@ CloudPlayer_PostArchiveProgress(reqId, message, percent := 0) {
     ))
 }
 
-CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "") {
+CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "", reqId := "") {
     global g_CloudPlayerApiBase
+    rid := Trim(String(reqId))
+    if CloudPlayer_CheckDownloadStale(rid, "start")
+        return
+    if CloudPlayer_CheckDownloadCancelled(rid, "start") {
+        CloudPlayer_PostDownloadResult(false, "cancelled", "", "", rid, "cancelled")
+        return
+    }
     p := CloudPlayer_NormalizeRemotePath(folderPath)
     name := CloudPlayer_SafeFileName(folderName != "" ? folderName : CloudPlayer_RemoteBaseName(p))
     if (name = "")
         name := "cloud-folder"
 
     try {
-        CloudPlayer_PostDownloadProgress("打包下载：准备中...")
+        CloudPlayer_PostDownloadProgress("打包下载：准备中...", rid, "preparing", CloudPlayer_DownloadPhasePercent("preparing"))
+        if CloudPlayer_CheckDownloadStale(rid, "pre_token")
+            return
+        if CloudPlayer_CheckDownloadCancelled(rid, "pre_token") {
+            CloudPlayer_PostDownloadResult(false, "cancelled", "", name, rid, "cancelled")
+            return
+        }
         if (Trim(String(token)) = "") {
             errTok := ""
             token := CloudPlayer_GetOpenListAdminToken(&errTok, 12000)
@@ -2165,30 +2593,44 @@ CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "") {
         DirCreate(stageRoot)
 
         stats := Map("files", 0, "failed", 0)
-        CloudPlayer_PostDownloadProgress("打包下载：正在扫描目录结构...")
-        CloudPlayer_DownloadFolderTree(p, stageRoot, headers, token, stats, 0)
+        CloudPlayer_PostDownloadProgress("打包下载：正在扫描目录结构...", rid, "scanning", CloudPlayer_DownloadPhasePercent("scanning"))
+        CloudPlayer_DownloadFolderTree(p, stageRoot, headers, token, stats, 0, rid)
+        if CloudPlayer_CheckDownloadStale(rid, "post_scan") {
+            try DirDelete(workRoot, true)
+            return
+        }
+        if CloudPlayer_CheckDownloadCancelled(rid, "post_scan") {
+            try DirDelete(workRoot, true)
+            CloudPlayer_PostDownloadResult(false, "cancelled", "", name, rid, "cancelled")
+            return
+        }
         if (stats["files"] <= 0) {
             try DirDelete(workRoot, true)
-            CloudPlayer_PostDownloadResult(false, "folder is empty or no file could be downloaded", "", name)
+            CloudPlayer_PostDownloadResult(false, "folder is empty or no file could be downloaded", "", name, rid, "empty_folder")
             return
         }
 
         sevenZip := A_ScriptDir . "\lib\7z.exe"
         if !FileExist(sevenZip) {
             try DirDelete(workRoot, true)
-            CloudPlayer_PostDownloadResult(false, "missing lib\7z.exe", "", name)
+            CloudPlayer_PostDownloadResult(false, "missing lib\7z.exe", "", name, rid, "missing_7z")
             return
         }
         try FileDelete(zipPath)
-        CloudPlayer_PostDownloadProgress("打包下载：正在压缩，文件数 " . stats["files"] . "...")
+        CloudPlayer_PostDownloadProgress("打包下载：正在压缩，文件数 " . stats["files"] . "...", rid, "zipping", CloudPlayer_DownloadPhasePercent("zipping"))
         capZip := CloudPlayer_ExecCapture(A_ComSpec . ' /d /c ""' . sevenZip . '" a -tzip -mx=5 "' . zipPath . '" "' . name . '""', 180000)
+        if CloudPlayer_CheckDownloadCancelled(rid, "post_zip") {
+            try DirDelete(workRoot, true)
+            CloudPlayer_PostDownloadResult(false, "cancelled", "", name, rid, "cancelled")
+            return
+        }
         zipTimedOut := false
         zipExitCode := -1
         try zipTimedOut := !!capZip["timedOut"]
         try zipExitCode := Integer(capZip["exitCode"])
         if (zipTimedOut || zipExitCode != 0 || !FileExist(zipPath)) {
             try DirDelete(workRoot, true)
-            CloudPlayer_PostDownloadResult(false, zipTimedOut ? "zip timeout" : ("zip failed, exit code " . zipExitCode), "", name)
+            CloudPlayer_PostDownloadResult(false, zipTimedOut ? "zip timeout" : ("zip failed, exit code " . zipExitCode), "", name, rid, zipTimedOut ? "zip_timeout" : "zip_failed")
             return
         }
         try DirDelete(workRoot, true)
@@ -2196,19 +2638,30 @@ CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "") {
         msg := "ok, files: " . stats["files"]
         if (stats["failed"] > 0)
             msg .= ", failed: " . stats["failed"]
-        CloudPlayer_PostDownloadProgress("打包下载：已完成，准备打开目录...")
-        CloudPlayer_PostDownloadResult(true, msg, zipPath, name)
+        CloudPlayer_PostDownloadProgress("打包下载：已完成，准备打开目录...", rid, "finalizing", CloudPlayer_DownloadPhasePercent("finalizing"))
+        CloudPlayer_PostDownloadResult(true, msg, zipPath, name, rid, "")
+        CloudPlayer_ClearDownloadCancelled(rid)
     } catch as e {
-        CloudPlayer_PostDownloadResult(false, e.Message, "", name)
+        CloudPlayer_PostDownloadResult(false, e.Message, "", name, rid, "exception")
+    } finally {
+        CloudPlayer_ClearDownloadCancelled(rid)
     }
 }
 
-CloudPlayer_DownloadFolderTree(remotePath, localDir, headers, token, stats, depth := 0) {
+CloudPlayer_DownloadFolderTree(remotePath, localDir, headers, token, stats, depth := 0, reqId := "") {
+    if CloudPlayer_CheckDownloadStale(reqId, "walk")
+        return
+    if CloudPlayer_CheckDownloadCancelled(reqId, "walk")
+        return
     if (depth > 24)
         return
     DirCreate(localDir)
     items := CloudPlayer_ListFolderItems(remotePath, headers)
     for _, item in items {
+        if CloudPlayer_CheckDownloadStale(reqId, "walk_loop")
+            return
+        if CloudPlayer_CheckDownloadCancelled(reqId, "walk_loop")
+            return
         try name := String(item.Has("name") ? item["name"] : "")
         catch {
             name := ""
@@ -2226,7 +2679,7 @@ CloudPlayer_DownloadFolderTree(remotePath, localDir, headers, token, stats, dept
         }
         childLocal := localDir . "\" . safeName
         if isDir {
-            CloudPlayer_DownloadFolderTree(childRemote, childLocal, headers, token, stats, depth + 1)
+            CloudPlayer_DownloadFolderTree(childRemote, childLocal, headers, token, stats, depth + 1, reqId)
         } else {
             urlInfo := CloudPlayer_ResolveDownloadUrl(childRemote, headers)
             if !(urlInfo is Map) || !urlInfo.Has("url") || urlInfo["url"] = "" {
@@ -2240,7 +2693,7 @@ CloudPlayer_DownloadFolderTree(remotePath, localDir, headers, token, stats, dept
                 stats["failed"] += 1
             total := stats["files"] + stats["failed"]
             if (Mod(total, 5) = 0)
-                CloudPlayer_PostDownloadProgress("打包下载：已处理 " . total . " 个文件（成功 " . stats["files"] . "，失败 " . stats["failed"] . "）...")
+                CloudPlayer_PostDownloadProgress("打包下载：已处理 " . total . " 个文件（成功 " . stats["files"] . "，失败 " . stats["failed"] . "）...", reqId, "downloading", CloudPlayer_DownloadPhasePercent("downloading", total))
         }
     }
 }
@@ -2541,6 +2994,20 @@ CloudPlayer_HttpJson(method, url, headers := 0, body := "") {
         deadline := A_TickCount + 15000
         done := false
         while (A_TickCount < deadline) {
+            ; Import task cancellation should short-circuit network waits.
+            try {
+                global g_CloudPlayerImportTask
+                if (g_CloudPlayerImportTask is Map
+                    && g_CloudPlayerImportTask.Has("active")
+                    && g_CloudPlayerImportTask["active"]
+                    && g_CloudPlayerImportTask.Has("cancelled")
+                    && g_CloudPlayerImportTask["cancelled"]) {
+                    try whr.Abort()
+                    ret["error"] := "cancelled"
+                    return ret
+                }
+            } catch {
+            }
             try done := !!whr.WaitForResponse(0)
             catch {
                 done := false
@@ -2625,4 +3092,5 @@ CloudPlayer_OpenExternalUrl(url) {
     }
     return false
 }
+
 

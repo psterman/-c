@@ -95,6 +95,9 @@ CoordMode("ToolTip", "Screen")
 #Include modules\FocusBroker.ahk
 #Include modules\LegacyGuardrails.ahk
 #Include modules\CoreAsyncHttp.ahk
+#Include modules\AsyncGuardrails.ahk
+#Include modules\SqlBatchHelper.ahk
+#Include modules\StartupSqlRegistry.ahk
 
 ; ===================== 包含 OCR 模块 =====================
 ; 包含 lib 文件夹中的 OCR.ahk（用于识图取词功能）
@@ -2232,16 +2235,7 @@ InitClipboardDB() {
             return
         }
         
-        ; 4. 重写建表逻辑：彻底清除旧结构
-        SQL := "DROP TABLE IF EXISTS ClipboardHistory;"
-        if (!ClipboardDB.Exec(SQL)) {
-            MsgBox("删除旧表失败: " . ClipboardDB.ErrorMsg, "数据库初始化错误", "IconX")
-            ClipboardDB.CloseDB()
-            ClipboardDB := 0
-            return
-        }
-        
-        ; 5. 创建全新的 ClipboardHistory 表（11字段架构，废弃 SessionID 和 ItemIndex）
+        ; 4. 启动 SQL 批处理：统一事务 + 分批退避 + 失败回滚
         ; Content: 文本、代码或本地文件路径
         ; DataType: 分类: Text, Code, Link, Image, File, Email
         ; SourceApp: 程序名 (chrome.exe)
@@ -2252,25 +2246,22 @@ InitClipboardDB() {
         ; Timestamp: 时间戳
         ; MetaData: JSON 格式扩展数据
         ; IsPinned: 收藏/置顶
-        SQL := "CREATE TABLE ClipboardHistory (" .
-               "ID INTEGER PRIMARY KEY AUTOINCREMENT, " .
-               "Timestamp DATETIME DEFAULT (datetime('now', 'localtime')), " .
-               "Content TEXT, " .
-               "DataType TEXT, " .
-               "SourceApp TEXT, " .
-               "SourceTitle TEXT, " .
-               "SourcePath TEXT, " .
-               "CharCount INTEGER, " .
-               "WordCount INTEGER, " .
-               "MetaData TEXT, " .
-               "IsPinned INTEGER DEFAULT 0)"
-        
-        if (!ClipboardDB.Exec(SQL)) {
-            MsgBox("创建数据库表失败: " . ClipboardDB.ErrorMsg, "数据库初始化错误", "IconX")
-            ClipboardDB.CloseDB()
-            ClipboardDB := 0
-            return
-        }
+        startupSql := []
+        startupSql.Push("DROP TABLE IF EXISTS ClipboardHistory;")
+        startupSql.Push(
+            "CREATE TABLE ClipboardHistory ("
+            . "ID INTEGER PRIMARY KEY AUTOINCREMENT, "
+            . "Timestamp DATETIME DEFAULT (datetime('now', 'localtime')), "
+            . "Content TEXT, "
+            . "DataType TEXT, "
+            . "SourceApp TEXT, "
+            . "SourceTitle TEXT, "
+            . "SourcePath TEXT, "
+            . "CharCount INTEGER, "
+            . "WordCount INTEGER, "
+            . "MetaData TEXT, "
+            . "IsPinned INTEGER DEFAULT 0)"
+        )
         
         ; 5.1. 兼容性处理：如果表已存在但包含 SessionID 或 ItemIndex 字段，删除它们
         ; 注意：由于上面已经 DROP TABLE，这个检查主要是为了处理其他可能的场景
@@ -2319,69 +2310,40 @@ InitClipboardDB() {
             return
         }
         
-        ; 7. 创建索引以提升查询性能
-        SQL := "CREATE INDEX IF NOT EXISTS idx_clipboard_timestamp ON ClipboardHistory(Timestamp DESC)"
-        if (!ClipboardDB.Exec(SQL)) {
-            MsgBox("创建时间戳索引失败: " . ClipboardDB.ErrorMsg, "数据库初始化错误", "IconX")
-        }
-        
-        SQL := "CREATE INDEX IF NOT EXISTS idx_clipboard_content ON ClipboardHistory(Content COLLATE NOCASE)"
-        if (!ClipboardDB.Exec(SQL)) {
-            MsgBox("创建内容索引失败: " . ClipboardDB.ErrorMsg, "数据库初始化错误", "IconX")
-        }
-        
-        SQL := "CREATE INDEX IF NOT EXISTS idx_clipboard_datatype ON ClipboardHistory(DataType COLLATE NOCASE)"
-        if (!ClipboardDB.Exec(SQL)) {
-            MsgBox("创建数据类型索引失败: " . ClipboardDB.ErrorMsg, "数据库初始化错误", "IconX")
-        }
-        
-        SQL := "CREATE INDEX IF NOT EXISTS idx_clipboard_sourceapp ON ClipboardHistory(SourceApp COLLATE NOCASE)"
-        if (!ClipboardDB.Exec(SQL)) {
-            MsgBox("创建来源应用索引失败: " . ClipboardDB.ErrorMsg, "数据库初始化错误", "IconX")
-        }
-        
-        SQL := "CREATE INDEX IF NOT EXISTS idx_clipboard_ispinned ON ClipboardHistory(IsPinned)"
-        if (!ClipboardDB.Exec(SQL)) {
-            MsgBox("创建置顶索引失败: " . ClipboardDB.ErrorMsg, "数据库初始化错误", "IconX")
-        }
+        ; 7. 索引/视图/辅助表也并入同一批处理，减少启动期零散写入
+        startupSql.Push("CREATE INDEX IF NOT EXISTS idx_clipboard_timestamp ON ClipboardHistory(Timestamp DESC)")
+        startupSql.Push("CREATE INDEX IF NOT EXISTS idx_clipboard_content ON ClipboardHistory(Content COLLATE NOCASE)")
+        startupSql.Push("CREATE INDEX IF NOT EXISTS idx_clipboard_datatype ON ClipboardHistory(DataType COLLATE NOCASE)")
+        startupSql.Push("CREATE INDEX IF NOT EXISTS idx_clipboard_sourceapp ON ClipboardHistory(SourceApp COLLATE NOCASE)")
+        startupSql.Push("CREATE INDEX IF NOT EXISTS idx_clipboard_ispinned ON ClipboardHistory(IsPinned)")
+        startupSql.Push("CREATE TABLE IF NOT EXISTS Prompts (ID TEXT PRIMARY KEY, Title TEXT NOT NULL COLLATE NOCASE, Content TEXT NOT NULL, Category TEXT COLLATE NOCASE, Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)")
+        startupSql.Push("DROP VIEW IF EXISTS v_GlobalSearch")
+        startupSql.Push(
+            "CREATE VIEW v_GlobalSearch AS "
+            . "SELECT "
+            . "  Title, "
+            . "  Content, "
+            . "  'prompt' AS Source, "
+            . "  Timestamp, "
+            . "  ID AS OriginalID "
+            . "FROM Prompts "
+            . "UNION ALL "
+            . "SELECT "
+            . "  SUBSTR(Content, 1, 100) AS Title, "
+            . "  Content, "
+            . "  'clipboard' AS Source, "
+            . "  Timestamp, "
+            . "  CAST(ID AS TEXT) AS OriginalID "
+            . "FROM ClipboardHistory"
+        )
+        startupSql.Push("CREATE INDEX IF NOT EXISTS idx_prompts_title ON Prompts(Title COLLATE NOCASE)")
+        startupSql.Push("CREATE INDEX IF NOT EXISTS idx_prompts_content ON Prompts(Content COLLATE NOCASE)")
+        startupSql.Push("CREATE INDEX IF NOT EXISTS idx_prompts_category ON Prompts(Category COLLATE NOCASE)")
+        StartupSql_Register(startupSql, "clipboard_startup_schema", 8, 20)
+        batchRes := StartupSql_RunAll(ClipboardDB)
+        try NMER_Log("startup", "sql_batch_done", "label=clipboard_startup_schema batches=" . batchRes["batches"] . " total=" . batchRes["total"])
         
         ; 7.1. SessionID 模式已废弃，不再需要初始化
-        
-        ; 8. 创建 Prompts 表（如果不存在）- 用于存储提示词模板
-        SQL := "CREATE TABLE IF NOT EXISTS Prompts (ID TEXT PRIMARY KEY, Title TEXT NOT NULL COLLATE NOCASE, Content TEXT NOT NULL, Category TEXT COLLATE NOCASE, Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)"
-        if (!ClipboardDB.Exec(SQL)) {
-            MsgBox("创建 Prompts 表失败: " . ClipboardDB.ErrorMsg, "数据库初始化错误", "IconX")
-        }
-        
-        ; 9. 创建统一搜索视图 v_GlobalSearch
-        ClipboardDB.Exec("DROP VIEW IF EXISTS v_GlobalSearch")
-        SQL := "CREATE VIEW v_GlobalSearch AS " .
-               "SELECT " .
-               "  Title, " .
-               "  Content, " .
-               "  'prompt' AS Source, " .
-               "  Timestamp, " .
-               "  ID AS OriginalID " .
-               "FROM Prompts " .
-               "UNION ALL " .
-               "SELECT " .
-               "  SUBSTR(Content, 1, 100) AS Title, " .
-               "  Content, " .
-               "  'clipboard' AS Source, " .
-               "  Timestamp, " .
-               "  CAST(ID AS TEXT) AS OriginalID " .
-               "FROM ClipboardHistory"
-        if (!ClipboardDB.Exec(SQL)) {
-            MsgBox("创建搜索视图失败: " . ClipboardDB.ErrorMsg, "数据库初始化错误", "IconX")
-        }
-        
-        ; 为 Prompts 表创建索引
-        SQL := "CREATE INDEX IF NOT EXISTS idx_prompts_title ON Prompts(Title COLLATE NOCASE)"
-        ClipboardDB.Exec(SQL)
-        SQL := "CREATE INDEX IF NOT EXISTS idx_prompts_content ON Prompts(Content COLLATE NOCASE)"
-        ClipboardDB.Exec(SQL)
-        SQL := "CREATE INDEX IF NOT EXISTS idx_prompts_category ON Prompts(Category COLLATE NOCASE)"
-        ClipboardDB.Exec(SQL)
         
     } catch as e {
         ; 检查是否是类不存在的错误
@@ -2638,7 +2600,7 @@ ApplyAppearanceActivationMode() {
     g_ActivationApplyLastTick := nowTick
     g_ActivationApplyToken += 1
     token := g_ActivationApplyToken
-    SetTimer((*) => ApplyAppearanceActivationMode_Run(m, token), -1)
+    SetTimer((*) => ApplyAppearanceActivationMode_Run(m, token), -10)
     return true
 }
 
@@ -2654,9 +2616,6 @@ ApplyAppearanceActivationMode_Run(m, token) {
             try FloatingBubble_DestroyCompletely()
             catch {
             }
-            try FloatingToolbar_ClearOverlaySuppression()
-            catch {
-            }
             try FloatingToolbarChatDrawerOpen := false
             catch {
             }
@@ -2666,21 +2625,12 @@ ApplyAppearanceActivationMode_Run(m, token) {
                 }
             } catch {
             }
-            ; Prefer reusing the existing toolbar host to avoid WebView2 recreate races.
-            try {
-                if (IsSet(FloatingToolbarGUI) && IsObject(FloatingToolbarGUI) && FloatingToolbarGUI) {
-                    ShowFloatingToolbar()
-                } else {
-                    FloatingToolbar_ForceRecoverVisible()
-                }
-            } catch {
-                try ShowFloatingToolbar()
+            try FloatingToolbar_ShowForActivationMode()
+            catch {
+                try FloatingToolbar_ForceRecoverVisible()
                 catch {
                 }
             }
-            ; Force a fresh toolbar layout push after recovering visibility.
-            ; Recreating the toolbar host can leave the webview on its default icons
-            ; until the command layout is re-sent.
             try FloatingToolbarReloadFromToolbarLayout()
             catch {
             }
@@ -2690,8 +2640,6 @@ ApplyAppearanceActivationMode_Run(m, token) {
             try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -520)
             catch {
             }
-            ; One delayed retry keeps the existing host visible without forcing a recreate.
-            try SetTimer((*) => ShowFloatingToolbar(), -120)
             NMER_Log("activation", "apply_mode_toolbar", "ok=1")
             return
         }
@@ -2729,7 +2677,7 @@ EnsureFloatingSurfaceVisible() {
     global AppearanceActivationMode
     m := NormalizeAppearanceActivationMode(AppearanceActivationMode)
     if (m = "toolbar") {
-        try ShowFloatingToolbar()
+        try FloatingToolbar_ShowForActivationMode()
         catch {
         }
     }
@@ -3682,7 +3630,7 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
     if (hideOverlay && !specialUiReason) {
         if (hideDelayMs = 0) {
             try NativeDropDiag_Log("reset_session_step hide_frontend_queued reason=" . reason)
-            SetTimer((*) => NativeDropBridge_DeferredHideFrontendAndOverlay(reason), -1)
+            SetTimer((*) => NativeDropBridge_DeferredHideFrontendAndOverlay(reason), -10)
         } else {
             try NativeDropDiag_Log("reset_session_step delayed_hide_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
             try SetTimer(NativeDropBridge_DelayedHide, -Abs(Integer(hideDelayMs)))
@@ -5561,6 +5509,9 @@ RestoreActivationRuntimeAfterConfigClose(*) {
         if (mode != "hole" && mode != "toolbar" && mode != "tray")
             mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
         ApplyActivationRuntimeAsync(mode)
+        try ApplyAppearanceActivationMode()
+        catch {
+        }
         TrayMenuCustomFailStreak := 0
         TrayMenuSuppressNativeFallbackUntil := A_TickCount + 1800
         try UpdateTrayMenu()
@@ -6227,7 +6178,9 @@ SetAutoStart(Enable) {
 
 
 ; ===================== 语音模块（中枢 #Include VoiceInputModule）=====================
+#Include modules\VoiceInputStateMachine.ahk
 #Include modules\VoiceInputModule.ahk
+#Include modules\VoiceInputEffects.ahk
 
 ; 对指定窗口尝试 IMM 中文模式 + 简体键盘布局（WebView 焦点常在子 HWND 上，需多候选）
 ApplyChineseIMEConversionToHwnd(RootHwnd) {

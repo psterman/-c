@@ -1,0 +1,14 @@
+﻿core_async_http_recovery_probe
+ts=20260517024755
+offline_ms=10000
+interval_ms=800
+timeout_ms=90000
+sent=40
+done=40
+offline_fail=40
+online_ok=0
+online_fail=0
+active_after=0
+retry_jobs_after=0
+elapsed_ms=91594
+pass=0

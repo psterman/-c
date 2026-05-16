@@ -399,11 +399,53 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   var openListAutoCheckTimer = 0;
   var openListAutoCheckMs = 12000;
   var adminTokenReqSeq = 0;
+  var pendingAdminTokenReqId = "";
   var tokenAssistTimer = 0;
   var tokenAssistActive = false;
   var tokenAssistSeen = "";
   var lastSmartLoginError = "";
-  var fsGetReqSeq = 0;
+  var pendingDownloadReqId = "";
+  var pendingImportTaskId = "";
+  // Host protocol gate helpers: enforce request/task affinity and stale drop.
+  // Onboarding template for new async events:
+  // 1) create pending id var -> 2) extractor -> 3) gate by isCurrentPendingEvent
+  // 4) send reqId/requestId -> 5) handle stale(no id while pending) as drop.
+  function makeReqId(prefix){
+    return String(prefix || "req") + "_" + Date.now() + "_" + Math.floor(Math.random() * 1000000);
+  }
+  function getEventReqId(data){
+    return String((data && (data.reqId || data.requestId)) || "");
+  }
+  function isCurrentPendingEvent(pendingId, eventId){
+    if(!pendingId) return true;
+    if(!eventId) return false;
+    return String(eventId) === String(pendingId);
+  }
+  function matchReqEvent(data, type, reqId){
+    if(!data || data.type !== type) return false;
+    return getEventReqId(data) === String(reqId || "");
+  }
+  function adminTokenEventReqId(data){
+    return getEventReqId(data);
+  }
+  function isCurrentAdminTokenEvent(data){
+    var id = adminTokenEventReqId(data);
+    return isCurrentPendingEvent(pendingAdminTokenReqId, id);
+  }
+  function importEventTaskId(data){
+    return String((data && (data.taskId || data.reqId || data.requestId)) || "");
+  }
+  function isCurrentImportTaskEvent(data){
+    var id = importEventTaskId(data);
+    return isCurrentPendingEvent(pendingImportTaskId, id);
+  }
+  function downloadEventReqId(data){
+    return getEventReqId(data);
+  }
+  function isCurrentDownloadEvent(data){
+    var id = downloadEventReqId(data);
+    return isCurrentPendingEvent(pendingDownloadReqId, id);
+  }
   var navBackStack = [];
   var navForwardStack = [];
   var currentItems = [];
@@ -1219,15 +1261,18 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   function requestAdminToken(timeoutMs){
     timeoutMs = timeoutMs || 2500;
     var seq = ++adminTokenReqSeq;
+    var reqId = makeReqId("admintk");
+    pendingAdminTokenReqId = reqId;
     return new Promise(function(resolve){
       var done = false;
       var cleaned = false;
       var handler = function(evt){
         var data = evt && evt.data ? evt.data : null;
-        if(!data || data.type!=="cloudplayer_admin_token") return;
+        if(!matchReqEvent(data, "cloudplayer_admin_token", reqId)) return;
         if(seq !== adminTokenReqSeq) return;
         if(done) return;
         done = true;
+        if(pendingAdminTokenReqId === reqId) pendingAdminTokenReqId = "";
         if(!cleaned){
           cleaned = true;
           try{ if(window.chrome && window.chrome.webview) window.chrome.webview.removeEventListener("message", handler); }catch(_){}
@@ -1238,6 +1283,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       var timer = setTimeout(function(){
         if(done) return;
         done = true;
+        if(pendingAdminTokenReqId === reqId) pendingAdminTokenReqId = "";
         if(!cleaned){
           cleaned = true;
           try{ if(window.chrome && window.chrome.webview) window.chrome.webview.removeEventListener("message", handler); }catch(_){}
@@ -1245,19 +1291,18 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
         resolve({ ok:false, token:"", message:"timeout" });
       }, timeoutMs);
       try{ if(window.chrome && window.chrome.webview) window.chrome.webview.addEventListener("message", handler); }catch(_){}
-      postHost("cloudplayer_request_admin_token", { apiBase: state.apiBase });
+      postHost("cloudplayer_request_admin_token", { apiBase: state.apiBase, reqId:reqId, requestId:reqId });
     });
   }
   function requestFsListViaHost(path, token, refresh, timeoutMs){
     timeoutMs = timeoutMs || 3500;
-    var reqId = "fslist_" + Date.now() + "_" + Math.floor(Math.random()*1000000);
+    var reqId = makeReqId("fslist");
     return new Promise(function(resolve){
       var done = false;
       var cleaned = false;
       var handler = function(evt){
         var data = evt && evt.data ? evt.data : null;
-        if(!data || data.type!=="cloudplayer_fs_list_result") return;
-        if(String(data.reqId||"") !== reqId) return;
+        if(!matchReqEvent(data, "cloudplayer_fs_list_result", reqId)) return;
         if(String(data.path||"") !== String(path||"")) return;
         if(done) return;
         done = true;
@@ -1284,7 +1329,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       var abList = normalizeApiBase(($("apiBase") && $("apiBase").value) || state.apiBase);
       state.apiBase = abList;
       if($("apiBase")) $("apiBase").value = abList;
-      postHost("cloudplayer_fs_list", { apiBase: abList, path:String(path||"/"), token:String(token||""), refresh:!!refresh, reqId:reqId });
+      postHost("cloudplayer_fs_list", { apiBase: abList, path:String(path||"/"), token:String(token||""), refresh:!!refresh, reqId:reqId, requestId:reqId });
     });
   }
   function waitForHostStatus(timeoutMs, sinceTs){
@@ -1542,7 +1587,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   }
   function requestApiJsonViaHost(apiPath, payload, timeoutMs){
     timeoutMs = timeoutMs || 15000;
-    var reqId = "apjson_" + Date.now() + "_" + Math.floor(Math.random() * 1000000);
+    var reqId = makeReqId("apjson");
     if(!(window.chrome && window.chrome.webview && window.chrome.webview.postMessage))
       return Promise.resolve(null);
     var ab = normalizeApiBase(($("apiBase") && $("apiBase").value) || state.apiBase);
@@ -1556,8 +1601,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       var cleaned = false;
       var handler = function(evt){
         var data = evt && evt.data ? evt.data : null;
-        if(!data || data.type !== "cloudplayer_api_json_result") return;
-        if(String(data.reqId || "") !== reqId) return;
+        if(!matchReqEvent(data, "cloudplayer_api_json_result", reqId)) return;
         if(done) return;
         done = true;
         if(!cleaned){
@@ -1582,6 +1626,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
         body:JSON.stringify(payload || {}),
         token:tk,
         reqId:reqId,
+        requestId:reqId,
         apiBase:ab
       });
     });
@@ -2078,13 +2123,19 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     if(entry.isDir){
       var hostBridge = !!(window.chrome && window.chrome.webview && window.chrome.webview.postMessage);
       if(hostBridge){
+        var reqId = makeReqId("dlzip");
+        if(pendingDownloadReqId && pendingDownloadReqId !== reqId){
+          postHost("cloudplayer_download_cancel", { reqId: pendingDownloadReqId });
+        }
+        pendingDownloadReqId = reqId;
         text($("currentInfo"), "打包下载：已开始处理文件夹 " + entry.name);
         var tk = await ensureLiveToken(4500);
         postHost("cloudplayer_download_folder", {
           apiBase: normalizeApiBase(($("apiBase") && $("apiBase").value) || state.apiBase),
           path: entry.path,
           name: entry.name,
-          token: tk
+          token: tk,
+          reqId: reqId
         });
         return true;
       }
@@ -2446,13 +2497,12 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   }
   async function requestFsGetViaHost(fullPath, token, timeoutMs){
     timeoutMs = timeoutMs || 4000;
-    var reqId = "fsget_" + Date.now() + "_" + (++fsGetReqSeq);
+    var reqId = makeReqId("fsget");
     return new Promise(function(resolve){
       var done = false;
       var handler = function(evt){
         var data = evt && evt.data ? evt.data : null;
-        if(!data || data.type !== "cloudplayer_fs_get_result") return;
-        if(String(data.reqId||"") !== reqId) return;
+        if(!matchReqEvent(data, "cloudplayer_fs_get_result", reqId)) return;
         if(done) return;
         done = true;
         clearTimeout(timer);
@@ -2472,26 +2522,25 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       var abGet = normalizeApiBase(($("apiBase") && $("apiBase").value) || state.apiBase);
       state.apiBase = abGet;
       if($("apiBase")) $("apiBase").value = abGet;
-      postHost("cloudplayer_fs_get", { apiBase: abGet, path:String(fullPath||"/"), token:String(token||""), reqId:reqId });
+      postHost("cloudplayer_fs_get", { apiBase: abGet, path:String(fullPath||"/"), token:String(token||""), reqId:reqId, requestId:reqId });
     });
   }
   async function requestArchiveListViaHost(fullPath, token, timeoutMs, onProgress){
     timeoutMs = timeoutMs || 12000;
-    var reqId = "arclist_" + Date.now() + "_" + (++fsGetReqSeq);
+    var reqId = makeReqId("arclist");
     return new Promise(function(resolve){
       var done = false;
       var handler = function(evt){
         var data = evt && evt.data ? evt.data : null;
         if(!data) return;
         if(data.type === "cloudplayer_archive_progress"){
-          if(String(data.reqId||"") !== reqId) return;
+          if(getEventReqId(data) !== reqId) return;
           if(typeof onProgress === "function"){
             try{ onProgress({ message:String(data.message||""), percent:Number(data.percent||0) }); }catch(_){}
           }
           return;
         }
-        if(data.type !== "cloudplayer_archive_list_result") return;
-        if(String(data.reqId||"") !== reqId) return;
+        if(!matchReqEvent(data, "cloudplayer_archive_list_result", reqId)) return;
         if(done) return;
         done = true;
         clearTimeout(timer);
@@ -2506,7 +2555,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       }, timeoutMs);
       try{ if(window.chrome && window.chrome.webview) window.chrome.webview.addEventListener("message", handler); }catch(_){ }
       var ab = normalizeApiBase(($("apiBase") && $("apiBase").value) || state.apiBase);
-      postHost("cloudplayer_archive_list", { apiBase:ab, path:String(fullPath||""), token:String(token||""), reqId:reqId });
+      postHost("cloudplayer_archive_list", { apiBase:ab, path:String(fullPath||""), token:String(token||""), reqId:reqId, requestId:reqId });
     });
   }
   var ARCHIVE_WASM_MAX_BYTES = 96 * 1024 * 1024;
@@ -3532,7 +3581,9 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     markAliImportProgress(tr("importing_provider", { provider:m.label }));
     startAliImportWatchdog();
     startAliImportHardTimeout();
-    postHost("cloudplayer_import_storage", { provider:providerKey, driver:importDriver, token:token, mountPath:mountPath, options:options });
+    var taskId = makeReqId("cpimp");
+    pendingImportTaskId = taskId;
+    postHost("cloudplayer_import_storage", { provider:providerKey, driver:importDriver, token:token, mountPath:mountPath, options:options, taskId:taskId, reqId:taskId, requestId:taskId });
   }
   async function mountPathReachable(path){
     var p = normPath(path || "/");
@@ -3745,22 +3796,11 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     });
   }
   var __nmDock = null;
-  function onHostMessage(evt){
-    var data=evt && evt.data ? evt.data : null;
-    if(!data || typeof data!=="object") return;
-    if(__nmDock && typeof __nmDock.onHostMessage==="function") __nmDock.onHostMessage(data);
-    if(data.type==="cloudplayer_status"){
-      if(typeof data.apiBase==="string" && data.apiBase){
-        var nb = normalizeApiBase(data.apiBase);
-        $("apiBase").value = nb;
-        state.apiBase = nb;
-      }
-      lastHostStatusAt = Date.now();
-      lastHostStatusOnline = !!data.openListOnline;
-      setStatus(lastHostStatusOnline);
-      return;
-    }
+  function handleImportHostEvent(data){
     if(data.type==="cloudplayer_import_result"){
+      if(!isCurrentImportTaskEvent(data)) return true;
+      var ir = importEventTaskId(data);
+      if(ir && pendingImportTaskId === ir) pendingImportTaskId = "";
       stopTokenAssist(false);
       setAliImportBusy(false);
       stopAliImportWatchdog();
@@ -3792,32 +3832,79 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
         if(state.provider) setProviderOnline(state.provider, false);
         text($("importHint"), tr("import_failed", { msg:(data.message||"unknown error") }));
       }
-      return;
+      return true;
+    }
+    if(data.type==="cloudplayer_import_task_state"){
+      if(!isCurrentImportTaskEvent(data)) return true;
+      var its = importEventTaskId(data);
+      if(String(data.phase||"") === "cancelled"){
+        if(its && pendingImportTaskId === its) pendingImportTaskId = "";
+        setAliImportBusy(false);
+        stopAliImportWatchdog();
+        stopAliImportHardTimeout();
+        text($("importHint"), "Import cancelled.");
+      }
+      return true;
     }
     if(data.type==="cloudplayer_import_progress"){
+      if(!isCurrentImportTaskEvent(data)) return true;
       markAliImportProgress(data.message || tr("importing_cloud_storage"));
-      return;
+      return true;
     }
-    if(data.type==="cloudplayer_admin_token"){
-      if(data.ok && data.token){
-        $("token").value = String(data.token);
-        state.token = String(data.token);
-        saveSettings();
-      }
-      return;
-    }
+    return false;
+  }
+  function handleDownloadHostEvent(data){
     if(data.type==="cloudplayer_download_result"){
+      if(!isCurrentDownloadEvent(data)) return true;
+      var rr = downloadEventReqId(data);
+      if(rr && pendingDownloadReqId === rr) pendingDownloadReqId = "";
       var msg = data.ok
         ? ("打包下载完成：" + (data.path || data.name || "zip"))
-        : ("打包下载失败：" + (data.message || "unknown error"));
+        : ((String(data.phase||"") === "cancelled")
+          ? ("打包下载已取消：" + (data.message || "cancelled"))
+          : ("打包下载失败：" + (data.message || "unknown error")));
       text($("currentInfo"), msg);
-      return;
+      return true;
     }
     if(data.type==="cloudplayer_download_progress"){
+      if(!isCurrentDownloadEvent(data)) return true;
       var pmsg = String(data.message || "").trim();
-      if(pmsg) text($("currentInfo"), pmsg);
+      var pct = Number(data.percent || 0);
+      if(pmsg) text($("currentInfo"), pmsg + (pct > 0 ? (" (" + pct + "%)") : ""));
+      return true;
+    }
+    return false;
+  }
+  function handleAdminTokenHostEvent(data){
+    if(data.type!=="cloudplayer_admin_token") return false;
+    if(!isCurrentAdminTokenEvent(data)) return true;
+    var rid = adminTokenEventReqId(data);
+    if(rid && pendingAdminTokenReqId === rid) pendingAdminTokenReqId = "";
+    if(data.ok && data.token){
+      $("token").value = String(data.token);
+      state.token = String(data.token);
+      saveSettings();
+    }
+    return true;
+  }
+  function onHostMessage(evt){
+    var data=evt && evt.data ? evt.data : null;
+    if(!data || typeof data!=="object") return;
+    if(__nmDock && typeof __nmDock.onHostMessage==="function") __nmDock.onHostMessage(data);
+    if(data.type==="cloudplayer_status"){
+      if(typeof data.apiBase==="string" && data.apiBase){
+        var nb = normalizeApiBase(data.apiBase);
+        $("apiBase").value = nb;
+        state.apiBase = nb;
+      }
+      lastHostStatusAt = Date.now();
+      lastHostStatusOnline = !!data.openListOnline;
+      setStatus(lastHostStatusOnline);
       return;
     }
+    if(handleImportHostEvent(data)) return;
+    if(handleAdminTokenHostEvent(data)) return;
+    if(handleDownloadHostEvent(data)) return;
   }
   async function boot(){
     loadProviderTokens();

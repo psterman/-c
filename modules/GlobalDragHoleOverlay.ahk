@@ -265,7 +265,7 @@ GDHO_SubmitIntent(intent, priority := 50, payload := 0) {
         idx -= 1
     }
     g_GDHO_IntentQueue.Push(Map("intent", normalized, "priority", Integer(priority), "payload", payload, "ts", A_TickCount))
-    SetTimer(GDHO_PumpIntents, -1)
+    SetTimer(GDHO_PumpIntents, -10)
 }
 
 GDHO_PumpIntents(*) {

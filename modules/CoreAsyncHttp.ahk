@@ -53,6 +53,9 @@ CoreAsyncHttp_DefaultOpts(opts := 0) {
         "attempt", 1,
         "maxRetries", 0,
         "retryDelayMs", 250,
+        "retryBackoffFactor", 2.0,
+        "retryMaxDelayMs", 5000,
+        "retryJitterMs", 120,
         "retryOnStatuses", [408, 425, 429, 500, 502, 503, 504],
         "retryOnErrors", ["timeout", "transport_error"],
         "sampleLogRate", 1
@@ -122,6 +125,7 @@ CoreAsyncHttp_BuildResult(ok, status, text, err, reqMeta, startTick, errorCode :
     if (ec = "")
         ec := ok ? "" : "unknown"
     ph := (Trim(String(phase)) = "") ? (reqMeta.Has("phase") ? String(reqMeta["phase"]) : "done") : String(phase)
+    rid := reqMeta.Has("reqId") ? reqMeta["reqId"] : 0
     ret := Map(
         "ok", ok ? true : false,
         "status", Integer(status),
@@ -131,7 +135,9 @@ CoreAsyncHttp_BuildResult(ok, status, text, err, reqMeta, startTick, errorCode :
         "errorCode", ec,
         "phase", ph,
         "attempt", reqMeta.Has("attempt") ? Integer(reqMeta["attempt"]) : 1,
-        "reqId", reqMeta.Has("reqId") ? reqMeta["reqId"] : 0,
+        "reqId", rid,
+        "requestId", (Trim(String(rid)) != "") ? String(rid) : "",
+        "ts", A_Now,
         "elapsedMs", A_TickCount - Integer(startTick)
     )
     if (Trim(String(text)) != "") {
@@ -150,9 +156,21 @@ CoreAsyncHttp_Finalize(id, result) {
         return
     req := g_CoreAsyncHttpReqs[id]
     cb := req["cb"]
+    ; Break strong references early to avoid closure retention on async paths.
+    req["cb"] := 0
+    req["whr"] := 0
     try g_CoreAsyncHttpReqs.Delete(id)
     if cb {
-        try cb.Call(result)
+        try {
+            if (Type(cb) = "Func" || Type(cb) = "BoundFunc") {
+                if (cb.MinParams <= 1)
+                    cb.Call(result)
+                else
+                    cb.Call(result, "")
+            } else {
+                cb.Call(result)
+            }
+        }
     }
 }
 
@@ -194,7 +212,21 @@ CoreAsyncHttp_QueueRetry(id) {
     if CoreAsyncHttp_IsCancelled(req)
         return false
     opts := req["opts"]
-    delayMs := Max(10, Integer(opts["retryDelayMs"]))
+    baseDelay := Max(10, Integer(opts["retryDelayMs"]))
+    attempt := Max(1, Integer(req["attempt"]))
+    factor := 2.0
+    try factor := Number(opts["retryBackoffFactor"])
+    catch {
+        factor := 2.0
+    }
+    if (factor < 1)
+        factor := 1
+    maxDelay := Max(baseDelay, Integer(opts["retryMaxDelayMs"]))
+    jitter := Max(0, Integer(opts["retryJitterMs"]))
+    delayF := baseDelay * (factor ** Max(0, attempt - 2))
+    delayMs := Min(maxDelay, Floor(delayF))
+    if (jitter > 0)
+        delayMs += Random(0, jitter)
     req["phase"] := "retry_wait"
     g_CoreAsyncHttpReqs[id] := req
     g_CoreAsyncHttpRetrySeq += 1
@@ -397,4 +429,34 @@ HttpGetAsync(url, callback, opts := 0) {
 
 HttpJsonAsync(method, url, body, callback, opts := 0) {
     return CoreAsyncHttp_SendAsync(method, url, body, callback, opts)
+}
+
+CoreAsyncHttp_GetActiveCount() {
+    global g_CoreAsyncHttpReqs
+    return (g_CoreAsyncHttpReqs is Map) ? g_CoreAsyncHttpReqs.Count : 0
+}
+
+CoreAsyncHttp_GetRetryJobCount() {
+    global g_CoreAsyncHttpRetryJobs
+    return (g_CoreAsyncHttpRetryJobs is Map) ? g_CoreAsyncHttpRetryJobs.Count : 0
+}
+
+CoreAsyncHttp_DebugSnapshot() {
+    global g_CoreAsyncHttpReqs, g_CoreAsyncHttpRetryJobs
+    snap := Map(
+        "active", 0,
+        "retryJobs", 0,
+        "phases", Map()
+    )
+    if (g_CoreAsyncHttpReqs is Map) {
+        snap["active"] := g_CoreAsyncHttpReqs.Count
+        for _, req in g_CoreAsyncHttpReqs {
+            ph := req.Has("phase") ? String(req["phase"]) : "unknown"
+            pm := snap["phases"]
+            pm[ph] := pm.Has(ph) ? (Integer(pm[ph]) + 1) : 1
+        }
+    }
+    if (g_CoreAsyncHttpRetryJobs is Map)
+        snap["retryJobs"] := g_CoreAsyncHttpRetryJobs.Count
+    return snap
 }

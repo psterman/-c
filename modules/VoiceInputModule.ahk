@@ -113,191 +113,44 @@ DetectInputMethod() {
     return "baidu"
 }
 
-; 开始语音输入
+; 开始语音输入（仅经 FSM；副作用在 VoiceInputEffects）
 StartVoiceInput() {
-    global VoiceInputActive, VoiceInputContent, CursorPath, AISleepTime, PanelVisible, VoiceInputPaused
-    
-    if (VoiceInputActive) {
-        ; 如果已经在语音输入中，检查是否暂停
-        if (VoiceInputPaused) {
-            ; 如果暂停，继续录制
-            ResumeVoiceInput()
-            return
-        }
+    st := VoiceFSM_State()
+    if (st = "paused") {
+        VoiceFSM_Dispatch("resume_request")
         return
     }
-    
-    ; 如果快捷操作面板正在显示，先关闭它
-    if (PanelVisible) {
-        HideCursorPanel()
-    }
-    
-    try {
-        if !WinExist("ahk_exe Cursor.exe") {
-            if (CursorPath != "" && FileExist(CursorPath)) {
-                Run(CursorPath)
-                Sleep(AISleepTime)
-            } else {
-                TrayTip(GetText("cursor_not_running_error"), GetText("error"), "Iconx 2")
-                return
-            }
-        }
-        
-        LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
-        WinWaitActive("ahk_exe Cursor.exe", , 2)
-        Sleep(300)
-        
-        Send("{Esc}")
-        Sleep(100)
-        Send("^l")
-        Sleep(500)
-        
-        if !WinActive("ahk_exe Cursor.exe") {
-            LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
-            Sleep(200)
-        }
-        
-        ; 确保窗口已激活
-        WinWaitActive("ahk_exe Cursor.exe", , 1)
-        Sleep(200)
-        
-        ; 清空输入框，避免复制到旧内容
-        Send("^a")
-        Sleep(100)
-        Send("{Delete}")
-        Sleep(100)
-        
-        ; 使用 Cursor 的快捷键 Ctrl+Shift+Space 启动语音输入
-        ; 确保在 Cursor 窗口处于活动状态时发送
-        if !WinActive("ahk_exe Cursor.exe") {
-            ; 如果窗口未激活，再次尝试激活
-            LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
-            WinWaitActive("ahk_exe Cursor.exe", , 2)
-            Sleep(300)
-        }
-        
-        ; 确保窗口真正激活后再发送快捷键
-        if WinActive("ahk_exe Cursor.exe") {
-            ; 发送 Ctrl+Shift+Space 启动语音输入
-            Send("^+{Space}")
-            Sleep(220)  ; 降低长阻塞等待，减少主线程卡顿
-        } else {
-            ; 如果仍然无法激活，显示错误提示
-            TrayTip("无法激活 Cursor 窗口", GetText("error"), "Iconx 2")
-            return
-        }
-        
-        VoiceInputActive := true
-        VoiceInputPaused := false
-        VoiceInputContent := ""
-        ShowVoiceInputPanel()
-    } catch as e {
-        TrayTip(GetText("voice_input_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
-    }
+    if (st = "listening" || st = "processing")
+        return
+    if (st = "error")
+        VoiceFSM_Dispatch("reset")
+    VoiceFSM_Dispatch("start_request")
 }
 
-; 结束语音输入并发送
+; 结束语音输入并发送（processing 期 stop 优先）
 StopVoiceInput() {
-    global VoiceInputActive, VoiceInputContent, CapsLock
-    
-    if (!VoiceInputActive) {
+    if (VoiceFSM_State() = "idle")
         return
-    }
-    
-    try {
-        ; 先确保CapsLock状态被重置，避免影响后续操作
-        if (CapsLock) {
-            CapsLock := false
-        }
-        
-        ; 确保 Cursor 窗口处于活动状态
-        if !WinExist("ahk_exe Cursor.exe") {
-            VoiceInputActive := false
-            VoiceInputPaused := false
-            HideVoiceInputPanel()
-            return
-        }
-        
-        LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
-        WinWaitActive("ahk_exe Cursor.exe", , 2)
-        Sleep(200)
-        
-        ; 使用 Cursor 的快捷键 Ctrl+Shift+Space 停止语音输入
-        Send("^+{Space}")
-        Sleep(260)  ; 降低长阻塞等待，减少主线程卡顿
-        
-        ; Cursor 的语音输入会自动将识别内容填入输入框
-        ; 直接发送 Enter 键提交内容
-        Send("{Enter}")
-        Sleep(200)
-        
-        VoiceInputActive := false
-        VoiceInputPaused := false
-        HideVoiceInputPanel()
-    } catch as e {
-        VoiceInputActive := false
-        VoiceInputPaused := false
-        HideVoiceInputPanel()
-        TrayTip(GetText("voice_input_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
-    }
+    VoiceFSM_Dispatch("stop_request")
 }
 
-; 暂停语音输入
+; 暂停语音输入（processing/error 时 stop 优先）
 PauseVoiceInput() {
-    global VoiceInputActive, VoiceInputPaused
-    
-    if (!VoiceInputActive || VoiceInputPaused) {
+    st := VoiceFSM_State()
+    if (st = "processing" || st = "error") {
+        StopVoiceInput()
         return
     }
-    
-    try {
-        ; 确保 Cursor 窗口处于活动状态
-        if !WinExist("ahk_exe Cursor.exe") {
-            return
-        }
-        
-        LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
-        WinWaitActive("ahk_exe Cursor.exe", , 2)
-        Sleep(200)
-        
-        ; 使用 Cursor 的快捷键 Ctrl+Shift+Space 暂停语音输入
-        Send("^+{Space}")
-        Sleep(300)
-        
-        VoiceInputPaused := true
-        UpdateVoiceInputPanelState()
-    } catch as e {
-        TrayTip(GetText("voice_input_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
-    }
+    if (st != "listening")
+        return
+    VoiceFSM_Dispatch("pause_request")
 }
 
 ; 继续语音输入
 ResumeVoiceInput() {
-    global VoiceInputActive, VoiceInputPaused
-    
-    if (!VoiceInputActive || !VoiceInputPaused) {
+    if (VoiceFSM_State() != "paused")
         return
-    }
-    
-    try {
-        ; 确保 Cursor 窗口处于活动状态
-        if !WinExist("ahk_exe Cursor.exe") {
-            return
-        }
-        
-        LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
-        WinWaitActive("ahk_exe Cursor.exe", , 2)
-        Sleep(200)
-        
-        ; 使用 Cursor 的快捷键 Ctrl+Shift+Space 继续语音输入
-        Send("^+{Space}")
-        Sleep(300)
-        
-        VoiceInputPaused := false
-        UpdateVoiceInputPanelState()
-    } catch as e {
-        TrayTip(GetText("voice_input_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
-    }
+    VoiceFSM_Dispatch("resume_request")
 }
 
 ; 显示语音输入面板（屏幕中心）
@@ -1447,6 +1300,7 @@ DestroyOldSearchEngineButtons(OldButtons) {
 ; 执行语音搜索
 ExecuteVoiceSearch(*) {
     global VoiceSearchInputEdit, VoiceSearchSelectedEngines, VoiceSearchPanelVisible
+    try VoiceFSM_Dispatch("processing_begin")
     
     if (!VoiceSearchPanelVisible || !VoiceSearchInputEdit) {
         return
@@ -1458,6 +1312,7 @@ ExecuteVoiceSearch(*) {
             ; 检查是否有选中的搜索引擎
             if (VoiceSearchSelectedEngines.Length = 0) {
                 TrayTip(GetText("no_search_engine_selected"), GetText("tip"), "Icon! 2")
+                try VoiceFSM_Dispatch("processing_done")
                 return
             }
             
@@ -1468,6 +1323,7 @@ ExecuteVoiceSearch(*) {
             ; 【修复】检查VoiceSearchSelectedEngines是否已初始化且不为空
             if (!IsSet(VoiceSearchSelectedEngines) || !IsObject(VoiceSearchSelectedEngines) || VoiceSearchSelectedEngines.Length = 0) {
                 TrayTip(GetText("no_search_engine_selected"), GetText("tip"), "Icon! 2")
+                try VoiceFSM_Dispatch("processing_done")
                 return
             }
             
@@ -1484,8 +1340,12 @@ ExecuteVoiceSearch(*) {
             }
             
             TrayTip(FormatText("search_engines_opened", VoiceSearchSelectedEngines.Length), GetText("tip"), "Iconi 1")
+            try VoiceFSM_Dispatch("processing_done")
+        } else {
+            try VoiceFSM_Dispatch("processing_done")
         }
     } catch as e {
+        try VoiceFSM_Dispatch("error")
         TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
     }
 }

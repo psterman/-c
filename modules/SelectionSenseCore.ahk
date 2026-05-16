@@ -2015,7 +2015,7 @@ HubCapsule_SubmitIntent(intent, priority := 50, payload := 0) {
     }
     g_HubCapsule_IntentQueue.Push(Map("intent", normalized, "priority", pri, "payload", payload, "ts", A_TickCount))
     HubCapsule_Log("intent_queue", "intent=" . normalized . " priority=" . pri)
-    SetTimer(HubCapsule_PumpIntents, -1)
+    SetTimer(HubCapsule_PumpIntents, -10)
     return true
 }
 
@@ -3287,4 +3287,20 @@ SelectionSense_Init() {
     } catch {
     }
 }
+
+SelectionSense_RegisterStartupSql() {
+    static registered := false
+    if registered
+        return
+    registered := true
+    if !FuncExists("StartupSql_Register")
+        return
+    sql := []
+    sql.Push("CREATE TABLE IF NOT EXISTS HubLocalDict (SourceId TEXT NOT NULL, Dir TEXT NOT NULL, K TEXT NOT NULL COLLATE NOCASE, V TEXT NOT NULL, PRIMARY KEY (SourceId, Dir, K))")
+    sql.Push("CREATE INDEX IF NOT EXISTS idx_HubLocalDict_SourceDirK ON HubLocalDict (SourceId, Dir, K)")
+    sql.Push("CREATE TABLE IF NOT EXISTS HubLocalDictSource (SourceId TEXT PRIMARY KEY, Name TEXT NOT NULL, DbPath TEXT NOT NULL, Kind TEXT NOT NULL DEFAULT 'sqlite_import', CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)")
+    sql.Push("INSERT OR IGNORE INTO HubLocalDictSource (SourceId, Name, DbPath, Kind) VALUES ('builtin_default', '内置词典', '[builtin]', 'builtin')")
+    StartupSql_Register(sql, "hub_dict_schema", 8, 20)
+}
+SelectionSense_RegisterStartupSql()
 

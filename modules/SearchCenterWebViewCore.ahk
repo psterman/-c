@@ -404,7 +404,7 @@ SCWV_SubmitIntent(intent, priority := 50, payload := 0) {
         }
     }
     g_SCWV_IntentQueue.Push(Map("intent", normalized, "priority", Integer(priority), "payload", payload, "ts", A_TickCount))
-    SetTimer(SCWV_PumpIntents, -1)
+    SetTimer(SCWV_PumpIntents, -10)
 }
 
 SCWV_PumpIntents(*) {
@@ -1287,7 +1287,7 @@ _SCWV_CheckSearchCoreStartup(gen, *) {
         g_SCWV_GoStartPhase := "IDLE"
     if g_SCWV_GoStartPending {
         g_SCWV_GoStartPending := false
-        SetTimer(_SCWV_RunDeferredSearchCoreEnsure, -1)
+        SetTimer(_SCWV_RunDeferredSearchCoreEnsure, -10)
     }
     return false
 }
@@ -1367,7 +1367,7 @@ SCWV_ForceReinitFromTray(*) {
     g_SCWV_GoStartPhase := "IDLE"
     g_SCWV_GoStartPending := false
     SCWV_SubmitIntent("FORCE_RESET", 1, Map("reason", "manual_force_reinit"))
-    SetTimer((*) => _SCWV_RestartSearchCore(), -1)
+    SetTimer((*) => _SCWV_RestartSearchCore(), -10)
     SetTimer((*) => SCWV_SubmitIntent("OPEN", 10, Map("reason", "manual_force_reinit")), -180)
     SetTimer((*) => SCWV_ReplayLastSearchIntent("manual_force_reinit"), -260)
 }
@@ -2305,7 +2305,7 @@ _SCWV_AsyncPollSearchHttp(pollToken := 0, *) {
         g_SCWV_AsyncReqMeta := 0
         g_SCWV_SearchHttpInFlight := false
         if (g_SCWV_SearchPendingReq is Map)
-            SetTimer(_SCWV_RunPendingGoSearch, -1)
+            SetTimer(_SCWV_RunPendingGoSearch, -10)
     }
 }
 
@@ -2449,7 +2449,7 @@ SCWV_Show(reason := "") {
     ; 窗口显示后：无关键词仅历史；有关键词则按引擎模式搜索
     try {
         if (SearchCenterEngineMode = "go")
-            SetTimer(_SCWV_RunDeferredSearchCoreEnsure, -1)
+            SetTimer(_SCWV_RunDeferredSearchCoreEnsure, -10)
         if (Trim(SearchCenterWebKeyword) = "")
             _SCWV_LoadSearchHistory()
     } catch {
@@ -2910,7 +2910,7 @@ SCWV_OnWebMessage(sender, args) {
             }
             if g_SCWV_ReloadRecoveryPending {
                 g_SCWV_ReloadRecoveryPending := false
-                SetTimer((*) => SCWV_ReplayLastSearchIntent("reload_ready"), -1)
+                SetTimer((*) => SCWV_ReplayLastSearchIntent("reload_ready"), -10)
             }
         case "setEngineMode":
             global SearchCenterEngineMode
@@ -4821,7 +4821,7 @@ _SCWV_CleanLaunchPath(raw) {
     p := Trim(String(raw))
     if (p = "")
         return ""
-    if (SubStr(p, 1, 1) = '"' && SubStr(p, -1) = '"')
+    if (SubStr(p, 1, 1) = '"' && SubStr(p, -10) = '"')
         p := SubStr(p, 2, StrLen(p) - 2)
     return Trim(p)
 }

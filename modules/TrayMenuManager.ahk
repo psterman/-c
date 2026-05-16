@@ -195,7 +195,7 @@ TRAY_ICON_MESSAGE(wParam, lParam, msg, hwnd) {
             TrayMenuPopupPendingLParam := lParam
             TrayMenuPopupPendingStart := trayStart
             try TrayMenu_Log("custom_popup_queue lParam=" . lParam)
-            SetTimer(TrayMenu_ShowQueuedPopup, -1)
+            SetTimer(TrayMenu_ShowQueuedPopup, -10)
             try TrayMenu_Log("custom_popup_return lParam=" . lParam . " elapsed_ms=" . (A_TickCount - trayStart))
             return 0
         }
@@ -505,7 +505,7 @@ TrayMenuInvokeItem(item, itemIndex, keepOpen := false) {
 }
 
 TrayMenu_InvokeActionDeferred(actionObj, actionText := "") {
-    SetTimer((*) => TrayMenu_InvokeActionDeferredRun(actionObj, actionText), -1)
+    SetTimer((*) => TrayMenu_InvokeActionDeferredRun(actionObj, actionText), -10)
 }
 
 TrayMenu_InvokeActionDeferredRun(actionObj, actionText := "") {
@@ -541,9 +541,9 @@ TrayMenu_ForceBreakSearchCenterStuck(reason := "tray_force_break") {
     try TrayMenu_Log("force_break_begin reason=" . reason)
     ; Avoid synchronous hard-close on tray callback thread.
     ; In some stale lifecycle states this can block and prevent resume/silent-off.
-    try SetTimer((*) => SCWV_RequestHardClose(reason), -1)
+    try SetTimer((*) => SCWV_RequestHardClose(reason), -10)
     catch {
-        try SetTimer((*) => SCWV_SubmitIntent("close", 15, Map("reason", reason . "_fallback_close")), -1)
+        try SetTimer((*) => SCWV_SubmitIntent("close", 15, Map("reason", reason . "_fallback_close")), -10)
         catch {
         }
     }
@@ -556,7 +556,7 @@ TrayMenu_ForceBreakSearchCenterStuck(reason := "tray_force_break") {
     try NativeDropBridge_ResetSessionAsync(reason, 0, true)
     catch {
     }
-    try SetTimer((*) => TrayMenu_HideHoleOverlayAsync(reason . "_finalize"), -1)
+    try SetTimer((*) => TrayMenu_HideHoleOverlayAsync(reason . "_finalize"), -10)
     catch {
     }
     ; Re-enable native drop bridge after forced break, otherwise text selection drag
@@ -606,7 +606,7 @@ TrayMenu_HardenHoleUiTransition(target := "tray_open_ui", timeoutMs := 1800) {
 
     if (!isSearchOpen && (SearchCenter_IsOpeningOrBusy() || IsSearchCenterActive() || searchVisible)) {
         try TrayMenu_Log("handoff_step hard_close_search_center_queued reason=" . target)
-        SetTimer((*) => TrayMenu_RequestHardCloseSearchCenter(target), -1)
+        SetTimer((*) => TrayMenu_RequestHardCloseSearchCenter(target), -10)
     }
 
     try TrayMenu_Log("handoff_step clickthrough_begin reason=" . target)
@@ -616,7 +616,7 @@ TrayMenu_HardenHoleUiTransition(target := "tray_open_ui", timeoutMs := 1800) {
     try TrayMenu_Log("handoff_step clickthrough_done reason=" . target)
 
     try TrayMenu_Log("handoff_step hide_gui_queue reason=" . target)
-    try SetTimer((*) => TrayMenu_HideHoleOverlayAsync(target), -1)
+    try SetTimer((*) => TrayMenu_HideHoleOverlayAsync(target), -10)
     catch {
     }
     try GDHO_ResetPointerSeed()
@@ -673,7 +673,7 @@ TrayMenu_FinalizeHoleUiTransition(reason := "", token := 0) {
     try NativeDropBridge_ResetSessionAsync(reason, 0, false)
     catch {
     }
-    try SetTimer((*) => TrayMenu_HideHoleOverlayAsync(reason . "_finalize"), -1)
+    try SetTimer((*) => TrayMenu_HideHoleOverlayAsync(reason . "_finalize"), -10)
     catch {
     }
     g_IsUIVisibleTransitioning := false
@@ -684,7 +684,7 @@ TrayMenu_FinalizeHoleUiTransition(reason := "", token := 0) {
 }
 
 TrayMenu_QueueUiOpenFromHoleMode(actionFn, reason := "") {
-    SetTimer((*) => TrayMenu_RunQueuedUiOpenFromHoleMode(actionFn, reason), -1)
+    SetTimer((*) => TrayMenu_RunQueuedUiOpenFromHoleMode(actionFn, reason), -10)
 }
 
 TrayMenu_RunQueuedUiOpenFromHoleMode(actionFn, reason := "") {
@@ -707,7 +707,7 @@ TrayMenu_RunQueuedUiOpenFromHoleMode(actionFn, reason := "") {
 }
 
 TrayMenu_OpenSearchAction(*) {
-    SetTimer((*) => TrayMenu_OpenSearchActionRun(), -1)
+    SetTimer((*) => TrayMenu_OpenSearchActionRun(), -10)
 }
 
 TrayMenu_OpenSearchActionRun(*) {
@@ -774,7 +774,7 @@ TrayMenu_OpenSearchLockWatchdog(*) {
 }
 
 ShowSearchCenterFromMenu(*) {
-    SetTimer((*) => ShowSearchCenterFromMenuRun(), -1)
+    SetTimer((*) => ShowSearchCenterFromMenuRun(), -10)
 }
 
 ShowSearchCenterFromMenuRun(*) {
@@ -1374,7 +1374,7 @@ EnsureSvgIconRasterized(svgPath, size := 18) {
 }
 
 TrayMenu_QueueSvgRasterize(svgPath, size, pngPath, renderKey) {
-    SetTimer((*) => TrayMenu_RunSvgRasterize(svgPath, size, pngPath, renderKey), -1)
+    SetTimer((*) => TrayMenu_RunSvgRasterize(svgPath, size, pngPath, renderKey), -10)
 }
 
 TrayMenu_RunSvgRasterize(svgPath, size, pngPath, renderKey, *) {
@@ -1445,7 +1445,7 @@ TrayMenu_ResetPopupState(reason := "") {
 }
 
 FloatingBubbleShowFromMenu(*) {
-    SetTimer(FloatingBubbleShowFromMenuRun, -1)
+    SetTimer(FloatingBubbleShowFromMenuRun, -10)
 }
 
 FloatingBubbleShowFromMenuRun(*) {
@@ -1532,7 +1532,7 @@ FloatingBubbleHideFromMenu(*) {
 }
 
 TrayMenu_RunSceneCmd(cmdId) {
-    SetTimer((*) => TrayMenu_RunSceneCmdRun(cmdId), -1)
+    SetTimer((*) => TrayMenu_RunSceneCmdRun(cmdId), -10)
 }
 
 TrayMenu_RunSceneCmdRun(cmdId) {

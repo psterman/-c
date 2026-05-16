@@ -1131,6 +1131,135 @@ _VK_DefaultToolbarLayoutCmdIds() {
     ]
 }
 
+; 与 VirtualKeyboard.html SCENARIO_TOOLBAR_CMD_MAP 一致（场景勾选 → 悬浮栏 cmdId）
+_VK_SceneIdToToolbarCmdId(sceneId) {
+    sid := Trim(String(sceneId))
+    static m := 0
+    if !IsObject(m) {
+        m := Map(
+            "search", "sc_activate_search",
+            "clipboard", "qa_clipboard",
+            "prompts", "ch_b",
+            "scratchpad", "ftb_scratchpad",
+            "screenshot", "ftb_screenshot",
+            "settings", "qa_config",
+            "hotkeys", "sys_show_vk",
+            "cursor", "ftb_cursor_menu",
+            "cloudplayer", "ftb_cloud_player",
+        )
+    }
+    if m.Has(sid)
+        return m[sid]
+    return ""
+}
+
+_VK_SceneIdToToolbarIconClass(sceneId) {
+    sid := Trim(String(sceneId))
+    static m := 0
+    if !IsObject(m) {
+        m := Map(
+            "search", "fa-magnifying-glass",
+            "clipboard", "fa-clipboard",
+            "prompts", "fa-lightbulb",
+            "scratchpad", "fa-note-sticky",
+            "screenshot", "fa-camera",
+            "settings", "fa-gear",
+            "hotkeys", "fa-keyboard",
+            "cursor", "fa-compass-drafting",
+            "cloudplayer", "fa-cloud",
+        )
+    }
+    if m.Has(sid)
+        return "fa-solid " . m[sid]
+    return "fa-solid fa-circle"
+}
+
+_VK_SyncSceneToolbarFromToolbarLayout() {
+    global g_Commands
+    if !(g_Commands is Map)
+        return
+    try _VK_EnsureSceneToolbarLayout()
+    catch {
+    }
+    try _VK_EnsureToolbarLayout()
+    catch {
+    }
+    if !g_Commands.Has("ToolbarLayout") || !(g_Commands["ToolbarLayout"] is Array)
+        return
+    if !g_Commands.Has("SceneToolbarLayout") || !(g_Commands["SceneToolbarLayout"] is Array)
+        return
+    tlVis := Map()
+    for tlRow in g_Commands["ToolbarLayout"] {
+        if !(tlRow is Map) || !tlRow.Has("cmdId")
+            continue
+        cid := Trim(String(tlRow["cmdId"]))
+        if (cid = "")
+            continue
+        tlVis[cid] := tlRow.Has("visible_in_bar") ? !!tlRow["visible_in_bar"] : false
+    }
+    for row in g_Commands["SceneToolbarLayout"] {
+        if !(row is Map) || !row.Has("sceneId")
+            continue
+        cid := _VK_SceneIdToToolbarCmdId(Trim(String(row["sceneId"])))
+        if (cid = "" || !tlVis.Has(cid))
+            continue
+        row["visible_in_bar"] := tlVis[cid]
+    }
+}
+
+_VK_SyncToolbarLayoutFromSceneToolbar() {
+    global g_Commands
+    if !(g_Commands is Map)
+        return
+    try _VK_EnsureSceneToolbarLayout()
+    catch {
+    }
+    try _VK_EnsureToolbarLayout()
+    catch {
+    }
+    if !g_Commands.Has("ToolbarLayout") || !(g_Commands["ToolbarLayout"] is Array)
+        return
+    if !g_Commands.Has("CommandList") || !(g_Commands["CommandList"] is Map)
+        return
+    cmdList := g_Commands["CommandList"]
+    sceneBar := Map()
+    for row in g_Commands["SceneToolbarLayout"] {
+        if !(row is Map) || !row.Has("sceneId")
+            continue
+        sid := Trim(String(row["sceneId"]))
+        cid := _VK_SceneIdToToolbarCmdId(sid)
+        if (cid = "" || !cmdList.Has(cid))
+            continue
+        sceneBar[cid] := row.Has("visible_in_bar") ? !!row["visible_in_bar"] : true
+    }
+    for tlRow in g_Commands["ToolbarLayout"] {
+        if !(tlRow is Map) || !tlRow.Has("cmdId")
+            continue
+        cid := Trim(String(tlRow["cmdId"]))
+        if sceneBar.Has(cid)
+            tlRow["visible_in_bar"] := sceneBar[cid]
+    }
+    ; 按 SceneToolbarLayout 顺序重排 order_bar
+    order := 0
+    seen := Map()
+    for row in g_Commands["SceneToolbarLayout"] {
+        if !(row is Map) || !row.Has("sceneId")
+            continue
+        if !row.Has("visible_in_bar") || !row["visible_in_bar"]
+            continue
+        cid := _VK_SceneIdToToolbarCmdId(Trim(String(row["sceneId"])))
+        if (cid = "" || seen.Has(cid))
+            continue
+        seen[cid] := true
+        for tlRow in g_Commands["ToolbarLayout"] {
+            if (tlRow is Map) && tlRow.Has("cmdId") && Trim(String(tlRow["cmdId"])) = cid {
+                tlRow["order_bar"] := order++
+                break
+            }
+        }
+    }
+}
+
 _VK_DefaultSceneToolbarLayoutRows() {
     return [
         Map("sceneId", "ai", "visible_in_bar", true, "order_bar", 0),
@@ -2447,6 +2576,9 @@ _VK_ApplyToolbarLayoutFromWeb(msg) {
     out := _VK_NormalizeToolbarLayoutOrders(out)
     out := _VK_NormalizeToolbarSearchRowOrders(out)
     g_Commands["ToolbarLayout"] := out
+    try _VK_SyncSceneToolbarFromToolbarLayout()
+    catch {
+    }
     return true
 }
 
@@ -2477,6 +2609,9 @@ _VK_ApplySceneToolbarLayoutFromWeb(msg) {
     for row in out
         row["order_bar"] := idx++
     g_Commands["SceneToolbarLayout"] := out
+    try _VK_SyncToolbarLayoutFromSceneToolbar()
+    catch {
+    }
     return true
 }
 
@@ -5012,8 +5147,10 @@ VK_Hide() {
     _VK_StopQuickBindHook()
     WMActivateChain_Unregister(_VK_WM_ACTIVATE)
     try WebView2_NotifyHidden(g_VK_WV2)
-    if g_VK_Gui
-        g_VK_Gui.Hide()
+    if VK_HostGuiValid()
+        try g_VK_Gui.Hide()
+        catch {
+        }
 }
 
 ; CursorHelper 悬浮条：同进程内切换显示（首次调用会懒加载）
