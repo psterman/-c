@@ -60,6 +60,7 @@ global g_SelSense_HubDictReady := false
 global g_SelSense_HubDictActiveSource := "builtin_default"
 global g_SelSense_HubDictInstallBusy := false
 global g_SelSense_HubDictInstallQueued := false
+global g_SelSense_HubDictInstallTask := Map("active", false, "taskId", "", "cancelled", false, "phase", "", "zipPid", 0)
 global g_SelSense_HubDictLookupCache := Map()
 global g_SelSense_HubDictImportBusy := false
 global g_SelSense_AsyncCmdJobs := Map()
@@ -891,6 +892,92 @@ SelectionSense_HubDictInstall_DownloadByBuiltin(url, savePath, statusCb := 0) {
     return SelectionSense_HubDictInstall_DownloadByWinHttp(u, outPath, progressCb, statusCb)
 }
 
+SelectionSense_HubDictInstall_NewTaskId() {
+    return "dict_" . A_Now . "_" . Random(1000, 999999)
+}
+
+SelectionSense_HubDictInstall_TaskBegin(taskId := "") {
+    global g_SelSense_HubDictInstallTask
+    tid := Trim(String(taskId))
+    if (tid = "")
+        tid := SelectionSense_HubDictInstall_NewTaskId()
+    g_SelSense_HubDictInstallTask := Map("active", true, "taskId", tid, "cancelled", false, "phase", "start", "zipPid", 0)
+    return tid
+}
+
+SelectionSense_HubDictInstall_TaskIsCurrent(taskId) {
+    global g_SelSense_HubDictInstallTask
+    if !(g_SelSense_HubDictInstallTask is Map)
+        return false
+    return (g_SelSense_HubDictInstallTask.Has("active") && !!g_SelSense_HubDictInstallTask["active"]
+        && String(g_SelSense_HubDictInstallTask["taskId"]) = String(taskId))
+}
+
+SelectionSense_HubDictInstall_IsCancelled(taskId) {
+    global g_SelSense_HubDictInstallTask
+    if !SelectionSense_HubDictInstall_TaskIsCurrent(taskId)
+        return true
+    return !!g_SelSense_HubDictInstallTask["cancelled"]
+}
+
+SelectionSense_HubDictInstall_SetPhase(taskId, phase) {
+    global g_SelSense_HubDictInstallTask
+    if !SelectionSense_HubDictInstall_TaskIsCurrent(taskId)
+        return
+    g_SelSense_HubDictInstallTask["phase"] := String(phase)
+}
+
+SelectionSense_HubDictInstall_SetZipPid(taskId, pid) {
+    global g_SelSense_HubDictInstallTask
+    if !SelectionSense_HubDictInstall_TaskIsCurrent(taskId)
+        return
+    g_SelSense_HubDictInstallTask["zipPid"] := Integer(pid)
+}
+
+SelectionSense_HubDictInstall_EmitTaskState(taskId, ok, message, phase := "", percent := -1) {
+    global g_SelSense_MenuWV2
+    if !g_SelSense_MenuWV2
+        return
+    payload := Map(
+        "type", "hub_translate_sqlite_dict_task",
+        "taskId", String(taskId),
+        "ok", !!ok,
+        "message", String(message),
+        "phase", String(phase)
+    )
+    if (percent >= 0)
+        payload["percent"] := Integer(percent)
+    try WebView_QueuePayload(g_SelSense_MenuWV2, payload)
+}
+
+SelectionSense_HubDictInstall_CancelTask(taskId := "") {
+    global g_SelSense_HubDictInstallTask, g_SelSense_HubDictInstallBusy
+    if !(g_SelSense_HubDictInstallTask is Map) || !g_SelSense_HubDictInstallTask.Has("active") || !g_SelSense_HubDictInstallTask["active"]
+        return false
+    tid := String(g_SelSense_HubDictInstallTask["taskId"])
+    want := Trim(String(taskId))
+    if (want != "" && want != tid)
+        return false
+    g_SelSense_HubDictInstallTask["cancelled"] := true
+    pid := Integer(g_SelSense_HubDictInstallTask["zipPid"])
+    if (pid > 0) {
+        try ProcessClose(pid)
+        SetTimer((*) => SelectionSense_HubDictInstall_CancelSafetyValve(tid, pid), -3000)
+    }
+    SelectionSense_HubDictInstall_EmitTaskState(tid, false, "cancelled", "cancelled", 100)
+    g_SelSense_HubDictInstallBusy := false
+    g_SelSense_HubDictInstallTask["active"] := false
+    return true
+}
+
+SelectionSense_HubDictInstall_CancelSafetyValve(taskId, pid) {
+    alive := false
+    try alive := !!ProcessExist(Integer(pid))
+    if alive {
+        SelectionSense_HubDictInstall_ReportLine(A_ScriptDir . "\cache\dict_install\install_report.txt", "warning: task=" . taskId . " 7z pid still alive after cancel: " . pid)
+    }
+}
+
 SelectionSense_HubDictInstall_InspectArchive(zipPath) {
     z := Trim(String(zipPath))
     if (z = "" || !FileExist(z))
@@ -1008,18 +1095,18 @@ SelectionSense_RunHiddenCommandAsync(command, doneCb := 0, timeoutMs := 120000, 
     global g_SelSense_AsyncCmdJobs, g_SelSense_AsyncCmdSeq
     cmd := Trim(String(command))
     if (cmd = "")
-        return false
+        return 0
     pid := 0
     try Run(cmd, , "Hide", &pid)
     catch as e {
         if IsObject(doneCb)
             doneCb.Call(false, "run_failed:" . e.Message, 0)
-        return false
+        return 0
     }
     if (pid <= 0) {
         if IsObject(doneCb)
             doneCb.Call(false, "run_pid_empty", 0)
-        return false
+        return 0
     }
     g_SelSense_AsyncCmdSeq += 1
     g_SelSense_AsyncCmdJobs[g_SelSense_AsyncCmdSeq] := Map(
@@ -1030,7 +1117,7 @@ SelectionSense_RunHiddenCommandAsync(command, doneCb := 0, timeoutMs := 120000, 
         "tag", String(tag)
     )
     SetTimer(SelectionSense_AsyncCmdPump, -80)
-    return true
+    return Integer(pid)
 }
 
 SelectionSense_AsyncCmdPump(*) {
@@ -1068,12 +1155,13 @@ SelectionSense_AsyncCmdPump(*) {
         SetTimer(SelectionSense_AsyncCmdPump, -80)
 }
 
-SelectionSense_HubDict_InstallEcdictOneClick() {
+SelectionSense_HubDict_InstallEcdictOneClick(taskId := "") {
     global g_SelSense_HubDictInstallBusy
     if g_SelSense_HubDictInstallBusy
         return Map("ok", false, "message", "安装任务正在执行中")
     g_SelSense_HubDictInstallBusy := true
     pendingAsync := false
+    tid := SelectionSense_HubDictInstall_TaskBegin(taskId)
     try {
         ; 优先使用 SQLite 镜像包；stardict 原始包不含 sqlite db。
         urls := [
@@ -1083,7 +1171,7 @@ SelectionSense_HubDict_InstallEcdictOneClick() {
         ]
         workDir := A_ScriptDir "\cache\dict_install"
         zipPath := workDir "\ecdict-package.zip"
-        extractDir := workDir "\dict-package"
+        extractDir := workDir "\dict-package_" . tid
         finalDb := A_ScriptDir "\ultimate.db"
         reportPath := workDir "\install_report.txt"
 
@@ -1101,13 +1189,17 @@ SelectionSense_HubDict_InstallEcdictOneClick() {
             DirCreate(extractDir)
 
         SelectionSense_HubDictInstall_RunJs(5, "准备下载词典...")
+        SelectionSense_HubDictInstall_EmitTaskState(tid, true, "准备下载词典...", "download_prepare", 5)
         statusCb := (msg) => SelectionSense_HubDictInstall_RunJs(15, msg)
         dl := 0
         downloadErrors := []
         packageReady := false
         selectedUrl := ""
         for idx, url in urls {
+            if SelectionSense_HubDictInstall_IsCancelled(tid)
+                return Map("ok", false, "message", "cancelled", "cancelled", true)
             SelectionSense_HubDictInstall_RunJs(15, "正在下载词典包...")
+            SelectionSense_HubDictInstall_EmitTaskState(tid, true, "正在下载词典包...", "downloading", 15)
             SelectionSense_HubDictInstall_ReportLine(reportPath, "尝试源" . idx . ": " . url)
             dl := SelectionSense_HubDictInstall_DownloadByBuiltin(url, zipPath, statusCb)
             if (dl.Has("ok") && dl["ok"]) {
@@ -1138,6 +1230,7 @@ SelectionSense_HubDict_InstallEcdictOneClick() {
         }
 
         SelectionSense_HubDictInstall_RunJs(72, "正在解压词典...")
+        SelectionSense_HubDictInstall_EmitTaskState(tid, true, "正在解压词典...", "extracting", 72)
         sevenZip := A_ScriptDir "\lib\7z.exe"
         if !FileExist(sevenZip)
             return Map("ok", false, "message", "缺少解压组件，无法安装词典")
@@ -1152,12 +1245,15 @@ SelectionSense_HubDict_InstallEcdictOneClick() {
 
         ; 定向提取数据库文件（异步），避免在 UI 线程 RunWait 阻塞。
         cmdDb := '"' . sevenZip . '" e -y -aoa -o"' . extractDir . '" -- "' . zipPath . '" "ultimate.db" "*.sqlite" "*.sqlite3" "*.db3" "*.db"'
-        ctx := Map("extractDir", extractDir, "zipPath", zipPath, "finalDb", finalDb, "reportPath", reportPath, "sevenZip", sevenZip)
-        okAsync := SelectionSense_RunHiddenCommandAsync(cmdDb, (ok, why, pid) => SelectionSense_HubDictInstall_OnExtractDbDone(ok, why, pid, ctx), 120000, "hubdict_extract_db")
+        ctx := Map("extractDir", extractDir, "zipPath", zipPath, "finalDb", finalDb, "reportPath", reportPath, "sevenZip", sevenZip, "taskId", tid)
+        pidDb := SelectionSense_RunHiddenCommandAsync(cmdDb, (ok, why, pid) => SelectionSense_HubDictInstall_OnExtractDbDone(ok, why, pid, ctx), 120000, "hubdict_extract_db")
+        okAsync := (pidDb > 0)
+        if (okAsync)
+            SelectionSense_HubDictInstall_SetZipPid(tid, pidDb)
         if !okAsync
             return Map("ok", false, "message", "词典包解压任务启动失败")
         pendingAsync := true
-        return Map("pending", true)
+        return Map("pending", true, "taskId", tid)
     } finally {
         if !pendingAsync
             g_SelSense_HubDictInstallBusy := false
@@ -1165,6 +1261,9 @@ SelectionSense_HubDict_InstallEcdictOneClick() {
 }
 
 SelectionSense_HubDictInstall_OnExtractDbDone(ok, why, pid, ctx) {
+    tid := ctx.Has("taskId") ? String(ctx["taskId"]) : ""
+    if SelectionSense_HubDictInstall_IsCancelled(tid)
+        return
     SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "7z 定向提取(db)完成: ok=" . (ok ? "1" : "0") . " why=" . why . " pid=" . pid)
     if !ok {
         SelectionSense_HubDictInstall_AsyncFinish(false, "词典包解压超时或失败")
@@ -1176,12 +1275,18 @@ SelectionSense_HubDictInstall_OnExtractDbDone(ok, why, pid, ctx) {
         return
     }
     cmdAll := '"' . ctx["sevenZip"] . '" x -y -aoa -o"' . ctx["extractDir"] . '" -- "' . ctx["zipPath"] . '"'
-    okAsync := SelectionSense_RunHiddenCommandAsync(cmdAll, (ok2, why2, pid2) => SelectionSense_HubDictInstall_OnExtractAllDone(ok2, why2, pid2, ctx), 180000, "hubdict_extract_all")
+    pidAll := SelectionSense_RunHiddenCommandAsync(cmdAll, (ok2, why2, pid2) => SelectionSense_HubDictInstall_OnExtractAllDone(ok2, why2, pid2, ctx), 180000, "hubdict_extract_all")
+    okAsync := (pidAll > 0)
+    if okAsync
+        SelectionSense_HubDictInstall_SetZipPid(tid, pidAll)
     if !okAsync
         SelectionSense_HubDictInstall_AsyncFinish(false, "词典包完整解压任务启动失败")
 }
 
 SelectionSense_HubDictInstall_OnExtractAllDone(ok, why, pid, ctx) {
+    tid := ctx.Has("taskId") ? String(ctx["taskId"]) : ""
+    if SelectionSense_HubDictInstall_IsCancelled(tid)
+        return
     SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "7z 全量解压完成: ok=" . (ok ? "1" : "0") . " why=" . why . " pid=" . pid)
     if !ok {
         SelectionSense_HubDictInstall_AsyncFinish(false, "词典包解压超时或失败")
@@ -1197,8 +1302,12 @@ SelectionSense_HubDictInstall_OnExtractAllDone(ok, why, pid, ctx) {
 }
 
 SelectionSense_HubDictInstall_OnExtractFinalize(ctx, foundDb) {
+    tid := ctx.Has("taskId") ? String(ctx["taskId"]) : ""
+    if SelectionSense_HubDictInstall_IsCancelled(tid)
+        return
     SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "数据库探测结果: " . foundDb)
     SelectionSense_HubDictInstall_RunJs(84, "正在写入词典...")
+    SelectionSense_HubDictInstall_EmitTaskState(tid, true, "正在写入词典...", "writing", 84)
     try FileCopy(foundDb, ctx["finalDb"], 1)
     catch as e {
         SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "写入 ultimate.db 失败: " . e.Message)
@@ -1207,10 +1316,14 @@ SelectionSense_HubDictInstall_OnExtractFinalize(ctx, foundDb) {
     }
     SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "数据库复制成功: " . ctx["finalDb"])
     SelectionSense_HubDictInstall_RunJs(90, "正在导入词典...")
+    SelectionSense_HubDictInstall_EmitTaskState(tid, true, "正在导入词典...", "importing", 90)
     SelectionSense_HubDict_ImportSqliteAsync(ctx["finalDb"], (importRet) => SelectionSense_HubDictInstall_OnImportDone(ctx, importRet))
 }
 
 SelectionSense_HubDictInstall_OnImportDone(ctx, importRet) {
+    tid := ctx.Has("taskId") ? String(ctx["taskId"]) : ""
+    if SelectionSense_HubDictInstall_IsCancelled(tid)
+        return
     if !(importRet is Map) || !(importRet.Has("ok") && importRet["ok"]) {
         SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "导入失败: " . ((importRet is Map && importRet.Has("message")) ? String(importRet["message"]) : "导入失败"))
         SelectionSense_HubDictInstall_AsyncFinish(false, "词典导入失败")
@@ -1218,53 +1331,62 @@ SelectionSense_HubDictInstall_OnImportDone(ctx, importRet) {
     }
     SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "导入成功")
     SelectionSense_HubDictInstall_RunJs(96, "正在激活词典...")
+    SelectionSense_HubDictInstall_EmitTaskState(tid, true, "正在激活词典...", "activating", 96)
     SelectionSense_HubDictInstall_CallSQ3Open(ctx["finalDb"])
     SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "调用 SQ3_Open 完成")
     SelectionSense_HubDictInstall_AsyncFinish(true, "本地词库已激活")
 }
 
 SelectionSense_HubDictInstall_AsyncFinish(ok, msg) {
-    global g_SelSense_HubDictInstallBusy, g_SelSense_MenuWV2
+    global g_SelSense_HubDictInstallBusy, g_SelSense_MenuWV2, g_SelSense_HubDictInstallTask
     msg0 := String(msg)
+    tid := (g_SelSense_HubDictInstallTask is Map && g_SelSense_HubDictInstallTask.Has("taskId")) ? String(g_SelSense_HubDictInstallTask["taskId"]) : ""
     if ok
         SelectionSense_HubDictInstall_RunJs(100, "本地词库已激活")
     else
         SelectionSense_HubDictInstall_RunJs(100, "安装失败: " . msg0)
+    SelectionSense_HubDictInstall_EmitTaskState(tid, ok, msg0, ok ? "done" : "error", 100)
     try WebView_QueuePayload(g_SelSense_MenuWV2, Map(
         "type", "hub_translate_sqlite_dict_state",
         "ok", ok ? true : false,
         "message", msg0,
+        "taskId", tid,
         "activeSourceId", SelectionSense_HubDict_GetActiveSource(),
         "sources", SelectionSense_HubDict_ListSources()
     ))
     g_SelSense_HubDictInstallBusy := false
+    if (g_SelSense_HubDictInstallTask is Map)
+        g_SelSense_HubDictInstallTask["active"] := false
 }
 
-SelectionSense_HubDict_InstallEcdictOneClick_AsyncStart() {
+SelectionSense_HubDict_InstallEcdictOneClick_AsyncStart(taskId := "") {
     global g_SelSense_HubDictInstallBusy, g_SelSense_HubDictInstallQueued
     if g_SelSense_HubDictInstallBusy || g_SelSense_HubDictInstallQueued
         return false
     g_SelSense_HubDictInstallQueued := true
-    SetTimer(SelectionSense_HubDict_InstallEcdictOneClick_AsyncWorker, -10)
+    SetTimer(SelectionSense_HubDict_InstallEcdictOneClick_AsyncWorker.Bind(String(taskId)), -10)
     return true
 }
 
-SelectionSense_HubDict_InstallEcdictOneClick_AsyncWorker(*) {
+SelectionSense_HubDict_InstallEcdictOneClick_AsyncWorker(taskId := "", *) {
     global g_SelSense_HubDictInstallQueued, g_SelSense_MenuWV2
     g_SelSense_HubDictInstallQueued := false
-    ret0 := SelectionSense_HubDict_InstallEcdictOneClick()
+    ret0 := SelectionSense_HubDict_InstallEcdictOneClick(taskId)
     if (ret0 is Map && ret0.Has("pending") && ret0["pending"])
         return
     ok0 := ret0.Has("ok") ? !!ret0["ok"] : false
     msg0 := ret0.Has("message") ? String(ret0["message"]) : (ok0 ? "本地词库已激活" : "安装失败")
+    tid := ret0.Has("taskId") ? String(ret0["taskId"]) : String(taskId)
     if ok0
         SelectionSense_HubDictInstall_RunJs(100, "本地词库已激活")
     else
         SelectionSense_HubDictInstall_RunJs(100, "安装失败: " . msg0)
+    SelectionSense_HubDictInstall_EmitTaskState(tid, ok0, msg0, ok0 ? "done" : "error", 100)
     try WebView_QueuePayload(g_SelSense_MenuWV2, Map(
         "type", "hub_translate_sqlite_dict_state",
         "ok", ok0,
         "message", msg0,
+        "taskId", tid,
         "activeSourceId", SelectionSense_HubDict_GetActiveSource(),
         "sources", SelectionSense_HubDict_ListSources()
     ))
@@ -2356,8 +2478,23 @@ SelectionSense_OnMenuWebMessage(sender, args) {
         return
     }
     if (typ = "hub_translate_ecdict_install") {
-        if !SelectionSense_HubDict_InstallEcdictOneClick_AsyncStart()
+        taskId := msg.Has("taskId") ? String(msg["taskId"]) : ""
+        if !SelectionSense_HubDict_InstallEcdictOneClick_AsyncStart(taskId)
             SelectionSense_HubDictInstall_RunJs(2, "安装任务正在执行中，请稍候...")
+        return
+    }
+    if (typ = "hub_translate_sqlite_dict_cancel") {
+        global g_SelSense_MenuWV2
+        taskId := msg.Has("taskId") ? String(msg["taskId"]) : ""
+        okCancel := SelectionSense_HubDictInstall_CancelTask(taskId)
+        try WebView_QueuePayload(g_SelSense_MenuWV2, Map(
+            "type", "hub_translate_sqlite_dict_state",
+            "ok", okCancel,
+            "message", okCancel ? "已取消导入任务" : "没有可取消的导入任务",
+            "taskId", taskId,
+            "activeSourceId", SelectionSense_HubDict_GetActiveSource(),
+            "sources", SelectionSense_HubDict_ListSources()
+        ))
         return
     }
     if (typ = "hub_translate_sqlite_dict_list") {

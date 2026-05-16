@@ -1,8 +1,10 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 global g_CoreAsyncHttpReqSeq := 0
 global g_CoreAsyncHttpReqs := Map()
 global g_CoreAsyncHttpPollArmed := false
+global g_CoreAsyncHttpRetrySeq := 0
+global g_CoreAsyncHttpRetryJobs := Map()
 
 CoreAsyncHttp_Log(event, detail := "") {
     try {
@@ -15,6 +17,28 @@ CoreAsyncHttp_Log(event, detail := "") {
     }
 }
 
+CoreAsyncHttp_ShouldLog(req, event) {
+    opts := req["opts"]
+    ; abnormal states must be fully logged
+    if (event = "async_http_error" || event = "async_http_timeout" || event = "async_http_cancelled" || event = "async_http_retrying")
+        return true
+    rate := 1
+    try rate := Number(opts["sampleLogRate"])
+    catch {
+        rate := 1
+    }
+    if (rate >= 1)
+        return true
+    if (rate <= 0)
+        return false
+    return (Random(1, 1000000) <= Floor(rate * 1000000))
+}
+
+CoreAsyncHttp_LogReq(req, event, detail := "") {
+    if CoreAsyncHttp_ShouldLog(req, event)
+        CoreAsyncHttp_Log(event, detail)
+}
+
 CoreAsyncHttp_DefaultOpts(opts := 0) {
     out := Map(
         "timeoutMs", 2200,
@@ -24,7 +48,14 @@ CoreAsyncHttp_DefaultOpts(opts := 0) {
         "resolveTimeoutMs", 900,
         "reqId", 0,
         "tag", "",
-        "headers", 0
+        "headers", 0,
+        "phase", "send",
+        "attempt", 1,
+        "maxRetries", 0,
+        "retryDelayMs", 250,
+        "retryOnStatuses", [408, 425, 429, 500, 502, 503, 504],
+        "retryOnErrors", ["timeout", "transport_error"],
+        "sampleLogRate", 1
     )
     if (opts is Map) {
         for k, v in opts
@@ -86,20 +117,20 @@ CoreAsyncHttp_ArmPoll() {
     SetTimer(CoreAsyncHttp_PollTick, 25)
 }
 
-CoreAsyncHttp_Finalize(req, result) {
-    cb := req["cb"]
-    if cb {
-        try cb.Call(result)
-    }
-}
-
-CoreAsyncHttp_BuildResult(ok, status, text, err, reqMeta, startTick) {
+CoreAsyncHttp_BuildResult(ok, status, text, err, reqMeta, startTick, errorCode := "", phase := "") {
+    ec := (Trim(String(errorCode)) = "") ? Trim(String(err)) : Trim(String(errorCode))
+    if (ec = "")
+        ec := ok ? "" : "unknown"
+    ph := (Trim(String(phase)) = "") ? (reqMeta.Has("phase") ? String(reqMeta["phase"]) : "done") : String(phase)
     ret := Map(
         "ok", ok ? true : false,
         "status", Integer(status),
         "text", String(text),
         "json", 0,
         "error", String(err),
+        "errorCode", ec,
+        "phase", ph,
+        "attempt", reqMeta.Has("attempt") ? Integer(reqMeta["attempt"]) : 1,
         "reqId", reqMeta.Has("reqId") ? reqMeta["reqId"] : 0,
         "elapsedMs", A_TickCount - Integer(startTick)
     )
@@ -109,6 +140,134 @@ CoreAsyncHttp_BuildResult(ok, status, text, err, reqMeta, startTick) {
     return ret
 }
 
+CoreAsyncHttp_IsCancelled(req) {
+    return req.Has("cancelled") && !!req["cancelled"]
+}
+
+CoreAsyncHttp_Finalize(id, result) {
+    global g_CoreAsyncHttpReqs
+    if !(g_CoreAsyncHttpReqs is Map) || !g_CoreAsyncHttpReqs.Has(id)
+        return
+    req := g_CoreAsyncHttpReqs[id]
+    cb := req["cb"]
+    try g_CoreAsyncHttpReqs.Delete(id)
+    if cb {
+        try cb.Call(result)
+    }
+}
+
+CoreAsyncHttp_ShouldRetry(req, ret) {
+    opts := req["opts"]
+    attempt := Integer(req["attempt"])
+    maxRetries := Integer(opts["maxRetries"])
+    if (maxRetries <= 0 || attempt > maxRetries)
+        return false
+    if CoreAsyncHttp_IsCancelled(req)
+        return false
+    if ret["errorCode"] != "" {
+        if (ret["errorCode"] = "http_status_" . ret["status"]) {
+            ros := opts["retryOnStatuses"]
+            if (ros is Array) {
+                for _, st in ros {
+                    if Integer(st) = Integer(ret["status"])
+                        return true
+                }
+            }
+            return false
+        }
+        roe := opts["retryOnErrors"]
+        if (roe is Array) {
+            for _, ec in roe {
+                if (StrLower(String(ec)) = StrLower(String(ret["errorCode"])))
+                    return true
+            }
+        }
+    }
+    return false
+}
+
+CoreAsyncHttp_QueueRetry(id) {
+    global g_CoreAsyncHttpReqs, g_CoreAsyncHttpRetrySeq, g_CoreAsyncHttpRetryJobs
+    if !(g_CoreAsyncHttpReqs is Map) || !g_CoreAsyncHttpReqs.Has(id)
+        return false
+    req := g_CoreAsyncHttpReqs[id]
+    if CoreAsyncHttp_IsCancelled(req)
+        return false
+    opts := req["opts"]
+    delayMs := Max(10, Integer(opts["retryDelayMs"]))
+    req["phase"] := "retry_wait"
+    g_CoreAsyncHttpReqs[id] := req
+    g_CoreAsyncHttpRetrySeq += 1
+    rid := g_CoreAsyncHttpRetrySeq
+    g_CoreAsyncHttpRetryJobs[rid] := id
+    SetTimer((*) => CoreAsyncHttp_RetryTimerFire(rid), -delayMs)
+    return true
+}
+
+CoreAsyncHttp_RetryTimerFire(retryId) {
+    global g_CoreAsyncHttpRetryJobs, g_CoreAsyncHttpReqs
+    if !(g_CoreAsyncHttpRetryJobs is Map) || !g_CoreAsyncHttpRetryJobs.Has(retryId)
+        return
+    id := g_CoreAsyncHttpRetryJobs[retryId]
+    g_CoreAsyncHttpRetryJobs.Delete(retryId)
+    if !(g_CoreAsyncHttpReqs is Map) || !g_CoreAsyncHttpReqs.Has(id)
+        return
+    req := g_CoreAsyncHttpReqs[id]
+    ; must guard cancelled first to avoid resurrecting requests
+    if CoreAsyncHttp_IsCancelled(req) {
+        ret := CoreAsyncHttp_BuildResult(false, 0, "", "cancelled", req["opts"], req["start"], "cancelled", "cancelled")
+        CoreAsyncHttp_LogReq(req, "async_http_cancelled", "id=" . id . " req_id=" . req["opts"]["reqId"] . " tag=" . req["opts"]["tag"] . " phase=retry_wait")
+        CoreAsyncHttp_Finalize(id, ret)
+        return
+    }
+    CoreAsyncHttp_SendAttempt(id)
+}
+
+CoreAsyncHttp_SendAttempt(id) {
+    global g_CoreAsyncHttpReqs
+    if !(g_CoreAsyncHttpReqs is Map) || !g_CoreAsyncHttpReqs.Has(id)
+        return false
+    req := g_CoreAsyncHttpReqs[id]
+    if CoreAsyncHttp_IsCancelled(req)
+        return false
+    opts := req["opts"]
+    req["phase"] := "send"
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        whr.Open(String(req["method"]), String(req["url"]), true)
+        whr.SetTimeouts(Integer(opts["resolveTimeoutMs"]), Integer(opts["connectTimeoutMs"]), Integer(opts["sendTimeoutMs"]), Integer(opts["receiveTimeoutMs"]))
+        CoreAsyncHttp_ApplyHeaders(whr, opts["headers"])
+        m := String(req["method"])
+        if (m = "POST" || m = "PUT" || m = "PATCH") {
+            if !CoreAsyncHttp_HasHeader(opts["headers"], "Content-Type")
+                whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
+            payload := (Trim(String(req["body"])) = "") ? "{}" : String(req["body"])
+            whr.Send(payload)
+        } else {
+            whr.Send()
+        }
+        req["whr"] := whr
+        req["phase"] := "wait"
+        g_CoreAsyncHttpReqs[id] := req
+        CoreAsyncHttp_LogReq(req, "async_http_send", "id=" . id . " req_id=" . opts["reqId"] . " tag=" . opts["tag"] . " method=" . req["method"] . " url=" . req["url"] . " attempt=" . req["attempt"])
+        CoreAsyncHttp_ArmPoll()
+        return true
+    } catch as e {
+        retErr := CoreAsyncHttp_BuildResult(false, 0, "", e.Message, opts, req["start"], "transport_error", "send")
+        if CoreAsyncHttp_ShouldRetry(req, retErr) {
+            req["attempt"] := Integer(req["attempt"]) + 1
+            req["phase"] := "retrying"
+            g_CoreAsyncHttpReqs[id] := req
+            CoreAsyncHttp_LogReq(req, "async_http_retrying", "id=" . id . " req_id=" . opts["reqId"] . " tag=" . opts["tag"] . " reason=" . retErr["errorCode"] . " next_attempt=" . req["attempt"])
+            CoreAsyncHttp_QueueRetry(id)
+            return false
+        }
+        CoreAsyncHttp_LogReq(req, "async_http_error", "id=" . id . " req_id=" . opts["reqId"] . " tag=" . opts["tag"] . " msg=" . e.Message)
+        CoreAsyncHttp_Finalize(id, retErr)
+        return false
+    }
+}
+
 CoreAsyncHttp_PollTick(*) {
     global g_CoreAsyncHttpReqs, g_CoreAsyncHttpPollArmed
     if !(g_CoreAsyncHttpReqs is Map) || (g_CoreAsyncHttpReqs.Count = 0) {
@@ -116,27 +275,49 @@ CoreAsyncHttp_PollTick(*) {
         SetTimer(CoreAsyncHttp_PollTick, 0)
         return
     }
-    removeIds := []
     for id, req in g_CoreAsyncHttpReqs {
+        if CoreAsyncHttp_IsCancelled(req) {
+            try req["whr"].Abort()
+            retCancel := CoreAsyncHttp_BuildResult(false, 0, "", "cancelled", req["opts"], req["start"], "cancelled", "cancelled")
+            CoreAsyncHttp_LogReq(req, "async_http_cancelled", "id=" . id . " req_id=" . req["opts"]["reqId"] . " tag=" . req["opts"]["tag"] . " phase=poll")
+            CoreAsyncHttp_Finalize(id, retCancel)
+            continue
+        }
+        if (!req.Has("phase") || String(req["phase"]) != "wait")
+            continue
         whr := req["whr"]
         opts := req["opts"]
         startTick := req["start"]
         timeoutMs := Integer(opts["timeoutMs"])
         if (A_TickCount - startTick > timeoutMs) {
             try whr.Abort()
-            CoreAsyncHttp_Log("async_http_timeout", "id=" . id . " req_id=" . opts["reqId"] . " tag=" . opts["tag"] . " timeout_ms=" . timeoutMs)
-            retTimeout := CoreAsyncHttp_BuildResult(false, 0, "", "timeout", opts, startTick)
-            CoreAsyncHttp_Finalize(req, retTimeout)
-            removeIds.Push(id)
+            retTimeout := CoreAsyncHttp_BuildResult(false, 0, "", "timeout", opts, startTick, "timeout", "timeout")
+            if CoreAsyncHttp_ShouldRetry(req, retTimeout) {
+                req["attempt"] := Integer(req["attempt"]) + 1
+                req["phase"] := "retrying"
+                g_CoreAsyncHttpReqs[id] := req
+                CoreAsyncHttp_LogReq(req, "async_http_retrying", "id=" . id . " req_id=" . opts["reqId"] . " tag=" . opts["tag"] . " reason=timeout next_attempt=" . req["attempt"])
+                CoreAsyncHttp_QueueRetry(id)
+            } else {
+                CoreAsyncHttp_LogReq(req, "async_http_timeout", "id=" . id . " req_id=" . opts["reqId"] . " tag=" . opts["tag"] . " timeout_ms=" . timeoutMs)
+                CoreAsyncHttp_Finalize(id, retTimeout)
+            }
             continue
         }
         done := false
         try done := !!whr.WaitForResponse(0)
         catch as e {
-            CoreAsyncHttp_Log("async_http_error", "id=" . id . " req_id=" . opts["reqId"] . " tag=" . opts["tag"] . " msg=" . e.Message)
-            retErr := CoreAsyncHttp_BuildResult(false, 0, "", e.Message, opts, startTick)
-            CoreAsyncHttp_Finalize(req, retErr)
-            removeIds.Push(id)
+            retErr := CoreAsyncHttp_BuildResult(false, 0, "", e.Message, opts, startTick, "transport_error", "wait")
+            if CoreAsyncHttp_ShouldRetry(req, retErr) {
+                req["attempt"] := Integer(req["attempt"]) + 1
+                req["phase"] := "retrying"
+                g_CoreAsyncHttpReqs[id] := req
+                CoreAsyncHttp_LogReq(req, "async_http_retrying", "id=" . id . " req_id=" . opts["reqId"] . " tag=" . opts["tag"] . " reason=transport_error next_attempt=" . req["attempt"])
+                CoreAsyncHttp_QueueRetry(id)
+            } else {
+                CoreAsyncHttp_LogReq(req, "async_http_error", "id=" . id . " req_id=" . opts["reqId"] . " tag=" . opts["tag"] . " msg=" . e.Message)
+                CoreAsyncHttp_Finalize(id, retErr)
+            }
             continue
         }
         if !done
@@ -146,48 +327,68 @@ CoreAsyncHttp_PollTick(*) {
         try st := Integer(whr.Status)
         txt := CoreAsyncHttp_ReadUtf8Text(whr)
         ok := (st >= 200 && st < 300)
-        err := ok ? "" : ("http_status_" . st)
-        CoreAsyncHttp_Log("async_http_done", "id=" . id . " req_id=" . opts["reqId"] . " tag=" . opts["tag"] . " status=" . st . " elapsed_ms=" . (A_TickCount - startTick))
-        retDone := CoreAsyncHttp_BuildResult(ok, st, txt, err, opts, startTick)
-        CoreAsyncHttp_Finalize(req, retDone)
-        removeIds.Push(id)
+        errCode := ok ? "" : ("http_status_" . st)
+        retDone := CoreAsyncHttp_BuildResult(ok, st, txt, ok ? "" : errCode, opts, startTick, errCode, "done")
+        if (!ok && CoreAsyncHttp_ShouldRetry(req, retDone)) {
+            req["attempt"] := Integer(req["attempt"]) + 1
+            req["phase"] := "retrying"
+            g_CoreAsyncHttpReqs[id] := req
+            CoreAsyncHttp_LogReq(req, "async_http_retrying", "id=" . id . " req_id=" . opts["reqId"] . " tag=" . opts["tag"] . " reason=" . errCode . " next_attempt=" . req["attempt"])
+            CoreAsyncHttp_QueueRetry(id)
+            continue
+        }
+        CoreAsyncHttp_LogReq(req, "async_http_done", "id=" . id . " req_id=" . opts["reqId"] . " tag=" . opts["tag"] . " status=" . st . " elapsed_ms=" . (A_TickCount - startTick) . " attempt=" . req["attempt"])
+        CoreAsyncHttp_Finalize(id, retDone)
     }
-    for _, id in removeIds {
-        try g_CoreAsyncHttpReqs.Delete(id)
+}
+
+CoreAsyncHttp_Cancel(idOrReqId) {
+    global g_CoreAsyncHttpReqs
+    target := String(idOrReqId)
+    if !(g_CoreAsyncHttpReqs is Map) || (g_CoreAsyncHttpReqs.Count = 0)
+        return 0
+    cancelled := 0
+    for id, req in g_CoreAsyncHttpReqs {
+        matchId := (String(id) = target)
+        reqId := req["opts"].Has("reqId") ? String(req["opts"]["reqId"]) : ""
+        matchReqId := (target != "" && reqId != "" && reqId = target)
+        if !(matchId || matchReqId)
+            continue
+        req["cancelled"] := true
+        req["phase"] := "cancelled"
+        g_CoreAsyncHttpReqs[id] := req
+        try req["whr"].Abort()
+        cancelled += 1
     }
+    return cancelled
 }
 
 CoreAsyncHttp_SendAsync(method, url, body := "", callback := 0, opts := 0) {
     global g_CoreAsyncHttpReqSeq, g_CoreAsyncHttpReqs
     cb := IsObject(callback) ? callback : 0
     o := CoreAsyncHttp_DefaultOpts(opts)
-    try {
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        whr.Open(String(method), String(url), true)
-        whr.SetTimeouts(Integer(o["resolveTimeoutMs"]), Integer(o["connectTimeoutMs"]), Integer(o["sendTimeoutMs"]), Integer(o["receiveTimeoutMs"]))
-        CoreAsyncHttp_ApplyHeaders(whr, o["headers"])
-        if (String(method) = "POST" || String(method) = "PUT" || String(method) = "PATCH") {
-            if !CoreAsyncHttp_HasHeader(o["headers"], "Content-Type")
-                whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
-            payload := (Trim(String(body)) = "") ? "{}" : String(body)
-            whr.Send(payload)
-        } else {
-            whr.Send()
-        }
-        g_CoreAsyncHttpReqSeq += 1
-        id := g_CoreAsyncHttpReqSeq
-        g_CoreAsyncHttpReqs[id] := Map("whr", whr, "cb", cb, "start", A_TickCount, "opts", o)
-        CoreAsyncHttp_Log("async_http_send", "id=" . id . " req_id=" . o["reqId"] . " tag=" . o["tag"] . " method=" . String(method) . " url=" . String(url))
-        CoreAsyncHttp_ArmPoll()
+    g_CoreAsyncHttpReqSeq += 1
+    id := g_CoreAsyncHttpReqSeq
+    req := Map(
+        "id", id,
+        "method", String(method),
+        "url", String(url),
+        "body", String(body),
+        "cb", cb,
+        "opts", o,
+        "start", A_TickCount,
+        "attempt", 1,
+        "phase", "send",
+        "cancelled", false,
+        "whr", 0
+    )
+    g_CoreAsyncHttpReqs[id] := req
+    if !CoreAsyncHttp_SendAttempt(id) {
+        if g_CoreAsyncHttpReqs.Has(id)
+            CoreAsyncHttp_ArmPoll()
         return id
-    } catch as e {
-        CoreAsyncHttp_Log("async_http_error", "req_id=" . o["reqId"] . " tag=" . o["tag"] . " msg=" . e.Message)
-        if cb {
-            ret := CoreAsyncHttp_BuildResult(false, 0, "", e.Message, o, A_TickCount)
-            try cb.Call(ret)
-        }
-        return 0
     }
+    return id
 }
 
 HttpGetAsync(url, callback, opts := 0) {

@@ -894,15 +894,19 @@ FloatingToolbar_OnWebMessage(sender, args) {
 
     if (typ = "niuma_cli_open") {
         ; WebView 回调内不可长时间阻塞；端口就绪后由 NiumaTtyd 回传 ttyd_ready / ttyd_error
-        SetTimer(NiumaTtyd_DeferredOpenJob, -1)
+        reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        SetTimer(NiumaTtyd_DeferredOpenJob.Bind(reqId), -1)
         return
     }
     if (typ = "niuma_cli_restart") {
-        SetTimer(NiumaTtyd_DeferredRestartJob, -1)
+        reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        SetTimer(NiumaTtyd_DeferredRestartJob.Bind(reqId), -1)
         return
     }
     if (typ = "niuma_cli_open_external") {
-        SetTimer(NiumaTtyd_DeferredExternalOpenJob, -1)
+        reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        expectedBaseUrl := msg.Has("baseUrl") ? String(msg["baseUrl"]) : ""
+        SetTimer(NiumaTtyd_DeferredExternalOpenJob.Bind(reqId, expectedBaseUrl), -1)
         return
     }
     if (typ = "niuma_save_ttyd_shell") {

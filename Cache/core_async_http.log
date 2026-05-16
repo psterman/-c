@@ -2004,3 +2004,11 @@ Source:	WinHttp.WinHttpRequest
 操作超时
 
 Source:	WinHttp.WinHttpRequest
+[20260517010348][async_http_send] id=1 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260517010348][async_http_done] id=1 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=62 attempt=1
+[20260517010348][async_http_send] id=2 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260517010348][async_http_done] id=2 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260517010348][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260517010349][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
+[20260517010349][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260517010349][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1

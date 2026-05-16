@@ -10,6 +10,7 @@ global g_NiumaTtydHttpHealthy := false
 global g_NiumaTtydLastHttpTick := 0
 global g_NiumaTtydHttpTTL := 900
 global g_NiumaTtydHttpProbeInflight := false
+global g_NiumaTtydLastReqId := ""
 
 /**
  * 返回 ttyd.exe 的完整路径（与主程序同目录）。
@@ -76,6 +77,31 @@ NiumaTtyd_OnHttpProbeDone(ok) {
     g_NiumaTtydHttpProbeInflight := false
     g_NiumaTtydHttpHealthy := !!ok
     g_NiumaTtydLastHttpTick := A_TickCount
+}
+
+NiumaTtyd_NormalizeUrl(url, &hostOut := "", &portOut := 0) {
+    u := Trim(String(url))
+    if !RegExMatch(u, "i)^https?://([^/:]+)(?::(\d+))?/?", &m)
+        return ""
+    host := StrLower(Trim(String(m[1])))
+    if (host = "localhost")
+        host := "127.0.0.1"
+    port := (m[2] != "") ? Integer(m[2]) : 80
+    hostOut := host
+    portOut := port
+    return "http://" . host . ":" . port . "/"
+}
+
+NiumaTtyd_EmitStatus(wv2, state, reqId := "", msg := "") {
+    if !wv2
+        return
+    try WebView_QueuePayload(wv2, Map(
+        "type", "ttyd_status",
+        "state", String(state),
+        "reqId", String(reqId),
+        "port", Integer(NiumaTtyd_Port),
+        "message", String(msg)
+    ))
 }
 
 /**
@@ -289,15 +315,16 @@ NiumaTtyd_StopProcess() {
  * @param {String} errMsg 失败时短文案
  * @param {String} baseUrl 成功时页地址
  */
-NiumaTtyd_NotifyWeb(wv2, ok, errMsg, baseUrl) {
+NiumaTtyd_NotifyWeb(wv2, ok, errMsg, baseUrl, reqId := "") {
     if !wv2
         return
     try {
+        NiumaTtyd_EmitStatus(wv2, ok ? "ready" : "error", reqId, ok ? "" : errMsg)
         if (ok) {
-            WebView_QueuePayload(wv2, Map("type", "ttyd_ready", "baseUrl", String(baseUrl)))
+            WebView_QueuePayload(wv2, Map("type", "ttyd_ready", "baseUrl", String(baseUrl), "reqId", String(reqId), "port", Integer(NiumaTtyd_Port)))
         } else {
             WebView_QueuePayload(
-                wv2, Map("type", "ttyd_error", "message", errMsg = "" ? "终端未就绪" : errMsg)
+                wv2, Map("type", "ttyd_error", "message", errMsg = "" ? "终端未就绪" : errMsg, "reqId", String(reqId), "port", Integer(NiumaTtyd_Port))
             )
         }
     } catch {
@@ -305,7 +332,7 @@ NiumaTtyd_NotifyWeb(wv2, ok, errMsg, baseUrl) {
 }
 
 NiumaTtyd_BaseUrl() {
-    return "http://localhost:" . NiumaTtyd_Port . "/"
+    return "http://127.0.0.1:" . NiumaTtyd_Port . "/"
 }
 
 NiumaTtyd_OpenExternal(url := "") {
@@ -323,42 +350,56 @@ NiumaTtyd_OpenExternal(url := "") {
 }
 
 ; WebMessage 里同步长逻辑会卡 UI：延期到独立定时器
-NiumaTtyd_DeferredOpenJob(*) {
+NiumaTtyd_DeferredOpenJob(reqId := "") {
     global g_FTB_WV2
     wv2 := g_FTB_WV2
+    rid := String(reqId)
+    NiumaTtyd_EmitStatus(wv2, "starting", rid, "starting ttyd")
     if !FileExist(NiumaTtyd_ExePath()) {
-        NiumaTtyd_NotifyWeb(wv2, false, "missing ttyd.exe", "")
+        NiumaTtyd_NotifyWeb(wv2, false, "missing ttyd.exe", "", rid)
         return
     }
+    NiumaTtyd_EmitStatus(wv2, "probing", rid, "probing ttyd")
     NiumaTtyd_EnsureReadyAsync((ok, reason) => (
         ok
-            ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl())
-            : NiumaTtyd_NotifyWeb(wv2, false, "20s ready timeout: " . reason, "")
+            ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl(), rid)
+            : NiumaTtyd_NotifyWeb(wv2, false, "20s ready timeout: " . reason, "", rid)
     ), 20000)
 }
 
-NiumaTtyd_DeferredRestartJob(*) {
+NiumaTtyd_DeferredRestartJob(reqId := "") {
     global g_FTB_WV2
     wv2 := g_FTB_WV2
+    rid := String(reqId)
+    NiumaTtyd_EmitStatus(wv2, "starting", rid, "restarting ttyd")
     if !FileExist(NiumaTtyd_ExePath()) {
-        NiumaTtyd_NotifyWeb(wv2, false, "missing ttyd.exe", "")
+        NiumaTtyd_NotifyWeb(wv2, false, "missing ttyd.exe", "", rid)
         return
     }
     try Run(A_ComSpec . ' /c "taskkill /F /IM ttyd.exe 2>nul"', , "Hide")
     SetTimer((*) => NiumaTtyd_EnsureReadyAsync((ok, reason) => (
         ok
-            ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl())
-            : NiumaTtyd_NotifyWeb(wv2, false, "restart failed: " . reason, "")
+            ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl(), rid)
+            : NiumaTtyd_NotifyWeb(wv2, false, "restart failed: " . reason, "", rid)
     ), 25000), -500)
 }
 
-NiumaTtyd_DeferredExternalOpenJob(*) {
+NiumaTtyd_DeferredExternalOpenJob(reqId := "", expectedBaseUrl := "") {
     global g_FTB_WV2
     wv2 := g_FTB_WV2
+    rid := String(reqId)
+    if (Trim(String(expectedBaseUrl)) != "") {
+        host0 := "", port0 := 0
+        n0 := NiumaTtyd_NormalizeUrl(expectedBaseUrl, &host0, &port0)
+        if (n0 = "" || port0 != Integer(NiumaTtyd_Port)) {
+            NiumaTtyd_NotifyWeb(wv2, false, "base_url_port_mismatch", "", rid)
+            return
+        }
+    }
     NiumaTtyd_EnsureReadyAsync((ok, reason) => (
         ok
-            ? (Run(NiumaTtyd_BaseUrl()), NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl()))
-            : NiumaTtyd_NotifyWeb(wv2, false, "open external failed: " . reason, "")
+            ? (Run(NiumaTtyd_BaseUrl()), NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl(), rid))
+            : NiumaTtyd_NotifyWeb(wv2, false, "open external failed: " . reason, "", rid)
     ), 20000)
 }
 
