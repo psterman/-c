@@ -1477,9 +1477,10 @@ FloatingBubbleShowFromMenuRun(*) {
                 g_IsUIVisibleTransitioning := false
                 g_TrayMenuTransitionStartTick := 0
                 try TrayMenu_Log("tray_show_hole_force_clear_transition elapsed_ms=" . elapsedTrans)
+            } else {
+                try TrayMenu_Log("tray_show_hole_skip reason=ui_transitioning")
+                return
             }
-            try TrayMenu_Log("tray_show_hole_skip reason=ui_transitioning")
-            return
         }
         try TrayMenu_Log("tray_show_hole_begin")
         try SCWV_SubmitIntent("FORCE_CLOSE", 10, Map("reason", "tray_show_hole"))
