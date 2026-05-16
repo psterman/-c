@@ -1,0 +1,6 @@
+﻿[2026-05-16 09:55:05][focus][grant] owner=SearchCenter hwnd=3802212 priority=20 reason=show_focus
+[2026-05-16 09:55:10][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-16 09:59:27][focus][grant] owner=SearchCenter hwnd=659448 priority=20 reason=show_focus
+[2026-05-16 09:59:34][focus][release] owner=SearchCenter reason=anti_hang_OPENING
+[2026-05-16 10:18:55][focus][grant] owner=SearchCenter hwnd=4591692 priority=20 reason=show_focus
+[2026-05-16 10:19:00][focus][release] owner=SearchCenter reason=gui_close

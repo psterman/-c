@@ -230,7 +230,7 @@ FloatingBubble_RetryCreateWebView() {
     if (g_FB_WV2_CreateRetry >= 3)
         return
     g_FB_WV2_CreateRetry += 1
-    SetTimer((*) => WebView2.create(FloatingBubbleGUI.Hwnd, FloatingBubble_OnWebViewCreated, WebView2_EnsureSharedEnvBlocking()), -200)
+    SetTimer((*) => WebView2_CreateWithSharedEnvAsync(FloatingBubbleGUI.Hwnd, FloatingBubble_OnWebViewCreated, "floating_bubble"), -200)
 }
 
 FloatingBubble_OnWebViewCreated(ctrl) {

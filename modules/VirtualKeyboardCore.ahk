@@ -157,7 +157,7 @@ VK_Init(embedded := false) {
     g_VK_Gui.OnEvent("Close", (*) => VK_Hide())
     g_VK_Gui.OnEvent("Size", _OnGuiResize)
 
-    WebView2.create(g_VK_Gui.Hwnd, _OnWV2Created, WebView2_EnsureSharedEnvBlocking())
+    WebView2_CreateWithSharedEnvAsync(g_VK_Gui.Hwnd, _OnWV2Created, "virtual_keyboard")
 
     if !embedded {
         A_TrayMenu.Delete()

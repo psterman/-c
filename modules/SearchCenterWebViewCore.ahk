@@ -96,18 +96,44 @@ global g_SCWV_HandoffUntilTick := 0
 global g_SCWV_HandoffEpoch := 0
 global g_SCWV_HandoffPendingOpen := 0
 global g_SCWV_NavProgressTick := 0
+global g_SCWV_LastOpenIntentReason := ""
+global g_SCWV_LastOpenIntentTick := 0
+global g_SCWV_CloseCommitActive := false
+global g_SCWV_CloseCommitUntilTick := 0
 
 SCWV_Log(event, detail := "") {
     try {
         logPath := A_ScriptDir . "\Cache\scwv_trace.log"
-        dir := ""
-        SplitPath(logPath, , &dir)
-        if (dir != "" && !DirExist(dir))
-            DirCreate(dir)
         ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
-        FileAppend("[" . ts . "][" . event . "] " . String(detail) . "`r`n", logPath, "UTF-8")
+        line := "[" . ts . "][" . event . "] " . String(detail) . "`r`n"
+        if FuncExists("NMER_AsyncLog")
+            NMER_AsyncLog(logPath, line)
+        else
+            FileAppend(line, logPath, "UTF-8")
     } catch {
     }
+}
+
+_SCWV_PhaseHex(phase) {
+    p := StrUpper(Trim(String(phase)))
+    switch p {
+        case "OPENING":
+            return "0x02"
+        case "OPEN":
+            return "0x03"
+        case "CLOSING":
+            return "0x04"
+        case "ERROR":
+            return "0x05"
+        default:
+            return "0x01"
+    }
+}
+
+_SCWV_LogIFS(intentCode, focusCode := "0x00", phase := "") {
+    global g_SCWV_CurrentPhase
+    ph := (phase != "") ? phase : g_SCWV_CurrentPhase
+    try SCWV_Log("ifs", "[" . intentCode . "/" . focusCode . "/" . _SCWV_PhaseHex(ph) . "]")
 }
 
 _SCWV_BlockDeactivate(ms := 1500, reason := "") {
@@ -229,11 +255,19 @@ SCWV_PushLifecycleState(phase, reason := "") {
 }
 
 _SCWV_ShouldStartHandoff(reason := "") {
+    global g_SCWV_UI_Ready, g_SCWV_FirstFrameSeen
     r := StrLower(Trim(String(reason)))
     if (r = "")
         return false
-    return (InStr(r, "tray_")
-        || InStr(r, "ftb_")
+    ; Tray path already has hole handoff in TrayMenuManager.
+    ; Starting another handoff here can black-hole OPEN intents.
+    if (InStr(r, "tray_") || InStr(r, "traymenu_") || InStr(r, "tray_menu_"))
+        return false
+    if (SubStr(r, 1, 15) = "handoff_replay_")
+        return false
+    if (g_SCWV_UI_Ready || g_SCWV_FirstFrameSeen)
+        return false
+    return (InStr(r, "ftb_")
         || InStr(r, "show_redirect")
         || InStr(r, "storm_open"))
 }
@@ -247,7 +281,20 @@ _SCWV_HandoffEnd(reason := "done") {
     pending := g_SCWV_HandoffPendingOpen
     g_SCWV_HandoffPendingOpen := 0
     if (pending is Map) {
-        try SCWV_SubmitIntent("OPEN", Integer(pending["priority"]), pending["payload"])
+        try {
+            p := pending["payload"]
+            if (p is Map) {
+                p2 := Map()
+                for k, v in p
+                    p2[k] := v
+                p2["handoffReplay"] := 1
+                r0 := p2.Has("reason") ? String(p2["reason"]) : ""
+                p2["reason"] := "handoff_replay_" . (r0 != "" ? r0 : "open")
+                SCWV_SubmitIntent("OPEN", Integer(pending["priority"]), p2)
+            } else {
+                SCWV_SubmitIntent("OPEN", Integer(pending["priority"]), Map("reason", "handoff_replay_open", "handoffReplay", 1))
+            }
+        }
     }
 }
 
@@ -282,16 +329,41 @@ _SCWV_HandoffBegin(reason := "") {
 
 SCWV_SubmitIntent(intent, priority := 50, payload := 0) {
     global g_SCWV_IntentQueue, g_SCWV_HandoffActive, g_SCWV_HandoffPendingOpen
+    global g_SCWV_LastOpenIntentReason, g_SCWV_LastOpenIntentTick
+    global g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
+    global g_SCWV_HandoffUntilTick
     if !(g_SCWV_IntentQueue is Array)
         g_SCWV_IntentQueue := []
     normalized := StrUpper(Trim(String(intent)))
+    intentHex := (normalized = "OPEN") ? "0x11" : ((normalized = "CLOSE") ? "0x12" : ((normalized = "FORCE_RESET") ? "0x13" : "0x10"))
     if (normalized = "FORCE_CLOSE")
         normalized := "FORCE_RESET"
     if (normalized = "")
         return
-    if (_SCWV_ShouldStartHandoff(payload is Map && payload.Has("reason") ? payload["reason"] : "")) {
+    if (g_SCWV_CloseCommitActive && A_TickCount < g_SCWV_CloseCommitUntilTick && normalized = "OPEN") {
+        try SCWV_Log("intent_drop_close_commit", "intent=OPEN remain_ms=" . (g_SCWV_CloseCommitUntilTick - A_TickCount))
+        return
+    }
+    _SCWV_LogIFS(intentHex, "0x00")
+    if (normalized = "OPEN" && payload is Map && payload.Has("reason")) {
+        reasonNorm := StrLower(Trim(String(payload["reason"])))
+        delta := A_TickCount - g_SCWV_LastOpenIntentTick
+        if (reasonNorm != "" && reasonNorm = g_SCWV_LastOpenIntentReason && delta >= 0 && delta < 180) {
+            try SCWV_Log("intent_drop_dup_open", "reason=" . reasonNorm . " delta=" . delta)
+            return
+        }
+        g_SCWV_LastOpenIntentReason := reasonNorm
+        g_SCWV_LastOpenIntentTick := A_TickCount
+    }
+    isReplay := (payload is Map && payload.Has("handoffReplay") && payload["handoffReplay"])
+    if (!isReplay && _SCWV_ShouldStartHandoff(payload is Map && payload.Has("reason") ? payload["reason"] : "")) {
         if !g_SCWV_HandoffActive
             _SCWV_HandoffBegin(payload is Map && payload.Has("reason") ? payload["reason"] : "")
+    }
+    ; Handoff self-heal: if active flag is stale, end it here so OPEN won't be black-holed.
+    if (g_SCWV_HandoffActive && g_SCWV_HandoffUntilTick > 0 && A_TickCount >= g_SCWV_HandoffUntilTick) {
+        try SCWV_Log("handoff_submit_recover", "reason=submit_timeout now=" . A_TickCount . " until=" . g_SCWV_HandoffUntilTick)
+        _SCWV_HandoffEnd("submit_timeout")
     }
     if g_SCWV_HandoffActive {
         if (normalized = "OPEN") {
@@ -548,16 +620,33 @@ _SCWV_IsDarkCtxMenuOpen() {
 }
 
 SCWV_Init(reason := "") {
-    global g_SCWV_Gui, g_SCWV_CreateInFlight, g_SCWV_LifecyclePhase
+    global g_SCWV_Gui, g_SCWV_CreateInFlight, g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx
+    r := Trim(String(reason))
 
-    try SCWV_Log("init_begin", "reason=" . reason . " gui=" . (g_SCWV_Gui ? "1" : "0") . " alive=" . (SCWV_HostAlive() ? "1" : "0") . " inflight=" . (g_SCWV_CreateInFlight ? "1" : "0"))
+    try SCWV_Log("init_begin", "reason=" . r . " gui=" . (g_SCWV_Gui ? "1" : "0") . " alive=" . (SCWV_HostAlive() ? "1" : "0") . " inflight=" . (g_SCWV_CreateInFlight ? "1" : "0"))
+
+    ; Guardrail: SCWV_Init is internal. External callers must use intents.
+    isInternal := ((g_SCWV_TransitionCtx is Map) && g_SCWV_TransitionCtx["allow"])
+    if (r = "") {
+        if isInternal
+            r := "show_internal"
+        else {
+            try SCWV_Log("init_guard_drop", "reason=empty")
+            return
+        }
+    }
+    if !isInternal {
+        try SCWV_Log("init_guard_redirect", "reason=" . r)
+        SCWV_SubmitIntent("OPEN", 20, Map("reason", r))
+        return
+    }
 
     if g_SCWV_Gui && SCWV_HostAlive()
         return
     if (g_SCWV_Gui || g_SCWV_CreateInFlight) && !SCWV_HostAlive()
         SCWV_ResetHostState()
     if g_SCWV_CreateInFlight {
-        try SCWV_Log("init_skip_create_inflight", "reason=" . reason)
+        try SCWV_Log("init_skip_create_inflight", "reason=" . r)
         return
     }
     g_SCWV_LifecyclePhase := "opening"
@@ -572,9 +661,9 @@ SCWV_Init(reason := "") {
     g_SCWV_Gui.Show("w1180 h760 Hide")
     g_SCWV_CreateInFlight := true
     g_SCWV_CreateStartTick := A_TickCount
-    try SCWV_Log("init_create_begin", "reason=" . reason . " hwnd=" . g_SCWV_Gui.Hwnd)
+    try SCWV_Log("init_create_begin", "reason=" . r . " hwnd=" . g_SCWV_Gui.Hwnd)
 
-    WebView2.create(g_SCWV_Gui.Hwnd, SCWV_OnCreated, WebView2_EnsureSharedEnvBlocking())
+    WebView2_CreateWithSharedEnvAsync(g_SCWV_Gui.Hwnd, SCWV_OnCreated, "searchcenter_" . r)
 
     _SCWV_EnsureCurrentCategoryState()
     _SCWV_LoadSearchEngineMode()
@@ -671,6 +760,9 @@ SCWV_OnCreated(ctrl) {
 
 SCWV_OnGuiClose(*) {
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Visible
+    global g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
+    g_SCWV_CloseCommitActive := true
+    g_SCWV_CloseCommitUntilTick := A_TickCount + 1200
     try SCWV_Log("gui_close_request", "visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " gdho=" . (GDHO_VISIBLE ? "1" : "0") . " native=" . (NativeDropSessionActive ? "1" : "0"))
     SearchCenterUnifiedClose("gui_close", true, true)
 }
@@ -859,6 +951,7 @@ SCWV_ForceCloseHost(reason := "") {
     global g_SCWV_CurrentToken, g_SCWV_ForceResetStreak, g_SCWV_DegradedMode, g_SCWV_FirstFrameSeen, TrayMenuCustomFailStreak, g_SCWV_BackendHealthy
     global SearchCenterWebKeyword, SearchCenterSearchResults, g_SCWV_AllResultsCache, g_SCWV_AllResultsKeyword
     global SearchCenterHasMoreData, g_SCWV_LastRenderedID, g_SCWV_RequestID, g_SCWV_SearchPendingReq, AppearanceActivationMode
+    global g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
 
     try SCWV_Log("force_close_begin", "reason=" . reason . " visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
     SCWV_PushLifecycleState("closing", reason)
@@ -957,6 +1050,9 @@ SCWV_ForceCloseHost(reason := "") {
     try WebView2_NotifyHidden(g_SCWV_WV2)
     catch {
     }
+    try FocusBroker_Release("SearchCenter", reason)
+    catch {
+    }
     try {
         if g_SCWV_Gui {
             hwnd := 0
@@ -970,8 +1066,11 @@ SCWV_ForceCloseHost(reason := "") {
     }
 
     SCWV_ResetHostState()
+    g_SCWV_CloseCommitActive := false
+    g_SCWV_CloseCommitUntilTick := 0
     if (reason != "show_wait_timeout")
         g_SCWV_ShowRecoveryAttempts := 0
+    try SCWV_SetPhase(SCWV_PHASE_CLOSED, "close_commit_" . reason)
     SCWV_PushLifecycleState("closed", reason)
     try SCWV_Log("hide_done", "visible=0 reason=" . reason)
     try SCWV_Log("force_close_done", "reason=" . reason)
@@ -1032,8 +1131,7 @@ SCWV_FocusForIME(*) {
     if !g_SCWV_Visible || !g_SCWV_Gui || !g_SCWV_Ctrl
         return
     try {
-        WinActivate("ahk_id " . g_SCWV_Gui.Hwnd)
-        WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl)
+        FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "focus_for_ime", 300, (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
         if g_SCWV_Ready && g_SCWV_WV2
             WebView_QueueJson(g_SCWV_WV2, '{"type":"focus_input"}')
     } catch {
@@ -1606,7 +1704,7 @@ _SCWV_PickFullTextIndexDir() {
         try {
             if (wasTop && hostExpr != "") {
                 WinSetAlwaysOnTop(true, hostExpr)
-                WinActivate(hostExpr)
+                FocusBroker_Request("SearchCenter", hostHwnd, 20, "index_dir_pick_restore", 300)
             }
         } catch {
         }
@@ -1616,7 +1714,7 @@ _SCWV_PickFullTextIndexDir() {
     try {
         if (wasTop && hostExpr != "") {
             WinSetAlwaysOnTop(true, hostExpr)
-            WinActivate(hostExpr)
+            FocusBroker_Request("SearchCenter", hostHwnd, 20, "index_dir_pick_restore", 300)
         }
     } catch {
     }
@@ -2144,7 +2242,7 @@ _SCWV_ResultItemGet(Item, Prop, Default := "") {
 SCWV_Show(reason := "") {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
-    global SearchCenterEngineMode, g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx, g_SCWV_LimitedRecoverReloadAttempts
+    global SearchCenterEngineMode, g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx, g_SCWV_LimitedRecoverReloadAttempts, g_SCWV_CurrentToken
     if !(g_SCWV_TransitionCtx is Map) || !g_SCWV_TransitionCtx["allow"] {
         try SCWV_Log("show_redirect_intent", "reason=" . reason)
         SCWV_SubmitIntent("open", 25, Map("reason", reason != "" ? reason : "show_redirect"))
@@ -2169,9 +2267,9 @@ SCWV_Show(reason := "") {
 
     if g_SCWV_Visible {
         try SCWV_Log("show_already_visible", "reason=" . reason)
-        try WinActivate("ahk_id " . g_SCWV_Gui.Hwnd)
-        try WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl)
-        SetTimer(_SCWV_DeferredMoveFocus100, -100)
+        try FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "show_already_visible", 300, (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
+        curToken := g_SCWV_CurrentToken
+        SetTimer((*) => _SCWV_DeferredMoveFocus100(curToken), -100)
         try CapsLock_ScheduleNormalizeAfterChord()
         try SearchCenter_ScheduleIMEStabilize()
         return
@@ -2250,7 +2348,7 @@ SCWV_Show(reason := "") {
     ; 窗口显示后：无关键词仅历史；有关键词则按引擎模式搜索
     try {
         if (SearchCenterEngineMode = "go")
-            _SCWV_EnsureSearchCoreRunning()
+            SetTimer(_SCWV_RunDeferredSearchCoreEnsure, -1)
         if (Trim(SearchCenterWebKeyword) = "")
             _SCWV_LoadSearchHistory()
     } catch {
@@ -2267,18 +2365,21 @@ SCWV_Show(reason := "") {
     if (Trim(SearchCenterWebKeyword) != "")
         SetTimer(_SCWV_PostRequestSearchGo, -120)
 
-    try WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl)
-    SetTimer(_SCWV_DeferredMoveFocus100, -100)
-    SetTimer(SCWV_FocusDeferred, -80)
+    try FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "show_focus", 300, (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
+    curToken := g_SCWV_CurrentToken
+    SetTimer((*) => _SCWV_DeferredMoveFocus100(curToken), -100)
+    SetTimer((*) => SCWV_FocusDeferred(curToken), -80)
     SCWV_RequestFocusInput()
     try CapsLock_ScheduleNormalizeAfterChord()
     try SearchCenter_ScheduleIMEStabilize()
 }
 
-_SCWV_DeferredMoveFocus100(*) {
+_SCWV_DeferredMoveFocus100(token := 0, *) {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ctrl
+    if (token && !SCWV_IsCurrentToken(token))
+        return
     if g_SCWV_Visible && g_SCWV_Gui
-        WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl)
+        FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "deferred_move_focus", 300, (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
 }
 
 SCWV_DeferredPush(*) {
@@ -2295,11 +2396,13 @@ SCWV_DeferredPush(*) {
     }
 }
 
-SCWV_FocusDeferred(*) {
+SCWV_FocusDeferred(token := 0, *) {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ctrl, g_SCWV_Ready
+    if (token && !SCWV_IsCurrentToken(token))
+        return
 
     if g_SCWV_Visible && g_SCWV_Gui {
-        try WinActivate("ahk_id " . g_SCWV_Gui.Hwnd)
+        try FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "focus_deferred", 300)
         try {
             if g_SCWV_Ready
                 WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl)
@@ -2413,6 +2516,11 @@ SCWV_Hide(PersistSelection := true) {
 
 SCWV_WMDeactivateHideTick(*) {
     global g_SCWV_Visible, g_SCWV_Gui, g_SCWV_SearchHttpInFlight
+    global g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
+    if (g_SCWV_CloseCommitActive && A_TickCount < g_SCWV_CloseCommitUntilTick) {
+        try SCWV_Log("hide_skip", "reason=close_commit")
+        return
+    }
     if !g_SCWV_Visible || !g_SCWV_Gui {
         try SCWV_Log("hide_skip", "reason=not_visible_or_host")
         return
@@ -2451,8 +2559,14 @@ SCWV_WMDeactivateHideTick(*) {
 SCWV_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_LastShown, g_SCWV_SearchHttpInFlight
     global g_SCWV_WaitingUiFinishedReveal, g_SCWV_FocusPending, g_SCWV_LifecyclePhase
+    global g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
 
     try SCWV_Log("wm_activate_seen", "wparam=" . Integer(wParam & 0xFFFF) . " hwnd=" . hwnd . " visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " focus_pending=" . (g_SCWV_FocusPending ? "1" : "0") . " phase=" . g_SCWV_LifecyclePhase . " search_http=" . (g_SCWV_SearchHttpInFlight ? "1" : "0"))
+
+    if (g_SCWV_CloseCommitActive && A_TickCount < g_SCWV_CloseCommitUntilTick) {
+        try SCWV_Log("wm_activate_skip", "reason=close_commit")
+        return
+    }
 
     if !g_SCWV_Visible || !g_SCWV_Gui
         return
@@ -5115,7 +5229,7 @@ _SCWV_OnDarkSubMenuClick(idx, *) {
     if (c != "")
         SC_ExecuteContextCommand(c, row)
     if _SCWV_ShouldRefocusSearchAfterCmd(c) && g_SCWV_Gui {
-        try WinActivate("ahk_id " . g_SCWV_Gui.Hwnd)
+        try FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "ctx_refocus", 300)
         catch as _ea {
         }
     }
@@ -5269,7 +5383,7 @@ _SCWV_ShowDarkSubMenuAt(children, posX, posY) {
     catch {
     }
     _SCWV_DarkMenuRoundCorners(g_SCWV_DarkSubGui.Hwnd)
-    try WinActivate("ahk_id " . g_SCWV_DarkSubGui.Hwnd)
+    try FocusBroker_Request("SearchCenter", g_SCWV_DarkSubGui.Hwnd, 20, "dark_sub_menu", 300)
     catch {
     }
     SetTimer(_SCWV_CheckDarkSubCtxMouse, 45)
@@ -5312,7 +5426,7 @@ _SCWV_OnDarkSearchMenuClick(idx, *) {
     if (c != "")
         SC_ExecuteContextCommand(c, row)
     if _SCWV_ShouldRefocusSearchAfterCmd(c) && g_SCWV_Gui {
-        try WinActivate("ahk_id " . g_SCWV_Gui.Hwnd)
+        try FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "ctx_refocus", 300)
         catch as _ea {
         }
     }
@@ -5387,7 +5501,7 @@ _SCWV_ShowDarkSearchRowMenuAt(spec, posX, posY) {
     catch {
     }
     _SCWV_DarkMenuRoundCorners(g_SCWV_DarkCtxGui.Hwnd)
-    try WinActivate("ahk_id " . g_SCWV_DarkCtxGui.Hwnd)
+    try FocusBroker_Request("SearchCenter", g_SCWV_DarkCtxGui.Hwnd, 20, "dark_ctx_menu", 300)
     catch {
     }
     SetTimer(_SCWV_CheckDarkSearchCtxMouse, 45)
@@ -5852,7 +5966,7 @@ _SCWV_QuickLookRaiseOnce(*) {
         return
     expr := "ahk_id " best
     try {
-        WinActivate(expr)
+        FocusBroker_Request("SearchCenter", best, 20, "quicklook_raise", 300)
         WinSetAlwaysOnTop 1, expr
     } catch {
     }

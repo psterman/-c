@@ -355,7 +355,7 @@ CreateFloatingToolbarGUI() {
     OnMessage(0x020A, FloatingToolbarWM_MOUSEWHEEL)
 
     try {
-        WebView2.create(FloatingToolbarGUI.Hwnd, FloatingToolbar_OnWebViewCreated, WebView2_EnsureSharedEnvBlocking())
+        WebView2_CreateWithSharedEnvAsync(FloatingToolbarGUI.Hwnd, FloatingToolbar_OnWebViewCreated, "floating_toolbar")
     } catch as e {
         OutputDebug("[FTB] WebView2.create failed: " . e.Message)
         try TrayTip("悬浮工具栏", "WebView2 创建失败，请确认已安装 Edge WebView2 运行时。", "Iconx 2")
@@ -528,7 +528,7 @@ FloatingToolbar_RetryCreateWebView() {
         return
     }
     g_FTB_WV2_CreateRetry += 1
-    SetTimer((*) => WebView2.create(FloatingToolbarGUI.Hwnd, FloatingToolbar_OnWebViewCreated, WebView2_EnsureSharedEnvBlocking()), -200)
+    SetTimer((*) => WebView2_CreateWithSharedEnvAsync(FloatingToolbarGUI.Hwnd, FloatingToolbar_OnWebViewCreated, "floating_toolbar_retry"), -200)
 }
 
 FloatingToolbar_GetLogoAppUrl() {
@@ -1494,6 +1494,7 @@ FloatingToolbar_DeferredScreenshot(*) {
 
 FloatingToolbar_EnsureSearchCenterFocused(*) {
     global GuiID_SearchCenter
+    static lastFocusTick := 0
 
     try {
         hwnd := 0
@@ -1503,8 +1504,14 @@ FloatingToolbar_EnsureSearchCenterFocused(*) {
             hwnd := GuiID_SearchCenter.Hwnd
         if !hwnd
             return
+        nowTick := A_TickCount
+        if (nowTick - lastFocusTick < 120) {
+            try SCWV_Log("ftb_ensure_focus_drop", "reason=dedupe_window")
+            return
+        }
+        lastFocusTick := nowTick
         try SCWV_Log("ftb_ensure_focus", "hwnd=" . hwnd . " vis=" . (SCWV_IsVisible() ? "1" : "0"))
-        WinActivate("ahk_id " . hwnd)
+        try FocusBroker_Request("SearchCenter", hwnd, 20, "ftb_ensure_focus", 300)
     } catch {
     }
 
@@ -1612,14 +1619,11 @@ FloatingToolbar_ActivateSearchCenter() {
         if (SearchCenter_IsOpeningOrBusy()) {
             try SCWV_Log("ftb_activate_search_center_busy", "active=" . (IsSearchCenterActive() ? "1" : "0") . " vis=" . (SCWV_IsVisible() ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
             if (SCWV_IsVisible()) {
-                SCWV_Show("ftb_activate_reuse")
+                SCWV_SubmitIntent("open", 20, Map("reason", "ftb_activate_reuse"))
                 opened := true
                 return
             }
             try SCWV_RequestHardClose("ftb_activate_busy_recover")
-            catch {
-            }
-            try TrayMenu_WaitForSearchCenterIdle(1500)
             catch {
             }
         }
@@ -1639,8 +1643,7 @@ FloatingToolbar_ActivateSearchCenter() {
         if (selectedText != "")
             SearchCenter_RunQueryWithKeyword(selectedText)
         else if (usedWebView) {
-            SCWV_Init("ftb_activate")
-            SCWV_Show("ftb_activate")
+            SCWV_SubmitIntent("open", 20, Map("reason", "ftb_activate"))
         } else
             ShowSearchCenter()
         opened := true
@@ -1653,8 +1656,7 @@ FloatingToolbar_ActivateSearchCenter() {
     if (!opened && usedWebView) {
         try {
             SCWV_ResetHostState()
-            SCWV_Init()
-            SCWV_Show()
+            SCWV_SubmitIntent("open", 20, Map("reason", "ftb_recover_open"))
             opened := true
         } catch {
         }
@@ -1669,13 +1671,12 @@ FloatingToolbar_ActivateSearchCenter() {
     ; 涓嶈鍏ュ彛鏉ヨ嚜鍥炬爣杩樻槸鍙抽敭鑿滃崟锛屾渶鍚庨兘鍐嶅己鍒朵竴娆″彲瑙佷笌杈撳叆鐒︾偣銆?
     if (usedWebView) {
         try {
-        if (!SCWV_IsVisible())
-                SCWV_Show("ftb_show_visible_check")
+            if (!SCWV_IsVisible())
+                SCWV_SubmitIntent("open", 20, Map("reason", "ftb_show_visible_check"))
         } catch {
             try {
                 SCWV_ResetHostState()
-                SCWV_Init("ftb_show_recover")
-                SCWV_Show("ftb_show_recover")
+                SCWV_SubmitIntent("open", 20, Map("reason", "ftb_show_recover"))
             } catch {
             }
         }

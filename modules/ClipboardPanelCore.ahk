@@ -306,7 +306,7 @@ CP_Init() {
     g_CP_Gui.OnEvent("Close", (*) => CP_Hide())
     g_CP_Gui.OnEvent("Size", _CP_OnGuiResize)
 
-    WebView2.create(g_CP_Gui.Hwnd, _CP_OnWV2Created, WebView2_EnsureSharedEnvBlocking())
+    WebView2_CreateWithSharedEnvAsync(g_CP_Gui.Hwnd, _CP_OnWV2Created, "clipboard_panel")
 }
 
 ; ===================== 显示 / 隐藏 =====================

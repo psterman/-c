@@ -4,6 +4,11 @@
 
 global CustomIconPath := ""
 global g_LastValidTrayMenu := []
+global g_TrayMenuSceneSnapshot := Map()
+global g_TrayMenuSceneDirty := true
+global g_TrayMenuSceneRebuildQueued := false
+global g_TrayMenuSceneRebuildBusy := false
+global g_TrayMenuSceneSnapshotTick := 0
 global g_IsUIVisibleTransitioning := false
 global g_TrayMenuTransitionToken := 0
 global TrayMenuCustomFailStreak := 0
@@ -15,6 +20,7 @@ TrayMenu_Init() {
     OnMessage(0x0404, TRAY_ICON_MESSAGE)
     TrySetTrayIconHighQuality()
     UpdateTrayMenu()
+    TrayMenu_MarkSceneDirty("init")
 }
 
 Gdip_CreateTrayHIconFromPngFile(pngPath, size := 256) {
@@ -115,16 +121,18 @@ global TrayMenuPopupPending := false
 global TrayMenuPopupPendingLParam := 0
 global TrayMenuPopupPendingStart := 0
 global TrayMenuPopupBusySince := 0
+global g_TrayShowHolePending := false
+global g_TrayShowHoleRetryCount := 0
 
 TrayMenu_Log(msg) {
     try {
         logPath := A_ScriptDir . "\Cache\tray_menu_runtime.log"
-        dir := ""
-        SplitPath(logPath, , &dir)
-        if (dir != "" && !DirExist(dir))
-            DirCreate(dir)
         ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
-        FileAppend("[" . ts . "] " . String(msg) . "`r`n", logPath, "UTF-8")
+        line := "[" . ts . "] " . String(msg) . "`r`n"
+        if FuncExists("NMER_AsyncLog")
+            NMER_AsyncLog(logPath, line)
+        else
+            FileAppend(line, logPath, "UTF-8")
     } catch {
     }
 }
@@ -267,6 +275,101 @@ UpdateTrayMenu() {
     A_TrayMenu.Add("[!] 强制重置搜索中心", ((*) => TrayMenu_RunSceneCmd("tray_force_reinit_search")))
     A_TrayMenu.Add(GetText("exit_menu"), ((*) => TrayMenu_RunSceneCmd("tray_exit_app")))
     A_TrayMenu.Default := "搜索中心"
+    TrayMenu_MarkSceneDirty("update_tray_menu")
+}
+
+TrayMenu_MarkSceneDirty(reason := "") {
+    global g_TrayMenuSceneDirty
+    g_TrayMenuSceneDirty := true
+    try TrayMenu_Log("snapshot_dirty reason=" . reason)
+    TrayMenu_ScheduleSceneSnapshotRebuild(120)
+}
+
+TrayMenu_NotifyCommandsChanged(reason := "commands_changed") {
+    TrayMenu_MarkSceneDirty(reason)
+}
+
+TrayMenu_ScheduleSceneSnapshotRebuild(delayMs := 80) {
+    global g_TrayMenuSceneRebuildQueued
+    if g_TrayMenuSceneRebuildQueued
+        return
+    g_TrayMenuSceneRebuildQueued := true
+    SetTimer(TrayMenu_RebuildSceneSnapshot, -Abs(Integer(delayMs)))
+}
+
+TrayMenu_RebuildSceneSnapshot(*) {
+    global g_TrayMenuSceneRebuildQueued, g_TrayMenuSceneRebuildBusy, g_TrayMenuSceneSnapshot, g_TrayMenuSceneDirty, g_TrayMenuSceneSnapshotTick
+    global g_LastValidTrayMenu
+    g_TrayMenuSceneRebuildQueued := false
+    if g_TrayMenuSceneRebuildBusy
+        return
+    g_TrayMenuSceneRebuildBusy := true
+    try {
+        t0 := A_TickCount
+        liveItems := TrayMenu_BuildItemsFromSceneMenuLive("tray_menu", false)
+        if (!(liveItems is Array) || liveItems.Length = 0)
+            liveItems := TrayMenu_BuildItemsFromSceneMenuLive("tray_menu", true)
+        snap := []
+        if (liveItems is Array && liveItems.Length > 0) {
+            for it in liveItems {
+                cmdId := ""
+                text := ""
+                icon := "•"
+                try cmdId := it.HasProp("CmdId") ? String(it.CmdId) : ""
+                try text := it.HasProp("Text") ? String(it.Text) : ""
+                try icon := (it.HasProp("Icon") && it.Icon != "") ? String(it.Icon) : "•"
+                if (cmdId = "" || text = "")
+                    continue
+                snap.Push(Map("cmdId", cmdId, "text", text, "icon", icon))
+            }
+        }
+        if (snap.Length > 0) {
+            g_TrayMenuSceneSnapshot["tray_menu"] := snap
+            g_TrayMenuSceneDirty := false
+            g_TrayMenuSceneSnapshotTick := A_TickCount
+            try TrayMenu_Log("snapshot_rebuild_ok count=" . snap.Length . " elapsed_ms=" . (A_TickCount - t0))
+        } else {
+            ; Keep previous snapshot; fall back to last valid live items when needed.
+            try TrayMenu_Log("snapshot_rebuild_empty elapsed_ms=" . (A_TickCount - t0))
+            if (g_LastValidTrayMenu is Array && g_LastValidTrayMenu.Length > 0)
+                g_TrayMenuSceneDirty := false
+        }
+    } catch as err {
+        try TrayMenu_Log("snapshot_rebuild_failed msg=" . err.Message)
+    } finally {
+        g_TrayMenuSceneRebuildBusy := false
+    }
+}
+
+TrayMenu_GetSceneItemsFromSnapshot(sceneKey := "tray_menu") {
+    global g_TrayMenuSceneSnapshot, g_TrayMenuSceneDirty, g_LastValidTrayMenu
+    items := []
+    if g_TrayMenuSceneDirty
+        TrayMenu_ScheduleSceneSnapshotRebuild(10)
+    if (g_TrayMenuSceneSnapshot is Map && g_TrayMenuSceneSnapshot.Has(sceneKey) && g_TrayMenuSceneSnapshot[sceneKey] is Array) {
+        raw := g_TrayMenuSceneSnapshot[sceneKey]
+        if (raw.Length > 0) {
+            try TrayMenu_Log("snapshot_hit scene=" . sceneKey . " count=" . raw.Length)
+            for ent in raw {
+                cmdId := ent.Has("cmdId") ? String(ent["cmdId"]) : ""
+                text := ent.Has("text") ? String(ent["text"]) : ""
+                icon := ent.Has("icon") ? String(ent["icon"]) : "•"
+                if (cmdId = "" || text = "")
+                    continue
+                items.Push({ Text: text, Action: TrayMenu_MakeSceneAction(cmdId), Icon: icon, CmdId: cmdId })
+            }
+            if (items.Length > 0)
+                return items
+        }
+    }
+    try TrayMenu_Log("snapshot_miss scene=" . sceneKey . " dirty=" . (g_TrayMenuSceneDirty ? "1" : "0"))
+    if (g_LastValidTrayMenu is Array && g_LastValidTrayMenu.Length > 0) {
+        try return g_LastValidTrayMenu.Clone()
+        catch {
+            return g_LastValidTrayMenu
+        }
+    }
+    return items
 }
 
 TrayMenuCancelHoverAnim() {
@@ -450,58 +553,22 @@ TrayMenu_ForceBreakSearchCenterStuck(reason := "tray_force_break") {
 }
 
 TrayMenu_WaitForSearchCenterIdle(timeoutMs := 1500) {
-    start := A_TickCount
-    loop {
-        busy := false
-        try busy := SearchCenter_IsOpeningOrBusy()
-        catch {
-            busy := false
-        }
-        visible := false
-        try visible := SCWV_IsVisible()
-        catch {
-            visible := false
-        }
-        if (!busy && !visible)
-            return true
-        if ((A_TickCount - start) >= timeoutMs) {
-            try TrayMenu_Log("wait_search_idle_timeout action=force_break")
-            try TrayMenu_ForceBreakSearchCenterStuck("wait_search_idle_timeout")
-            return false
-        }
-        Sleep(30)
+    ; Non-blocking legacy compatibility wrapper.
+    ; Do not spin/sleep on UI thread: just schedule async force-break fallback.
+    try TrayMenu_Log("wait_search_idle_async timeout_ms=" . timeoutMs)
+    try SetTimer((*) => TrayMenu_ForceBreakSearchCenterStuck("wait_search_idle_async_timeout"), -Abs(Integer(timeoutMs)))
+    catch {
     }
+    return false
 }
 
 TrayMenu_WaitForHoleUiIdle(timeoutMs := 1800) {
-    start := A_TickCount
-    loop {
-        busy := false
-        try busy := SearchCenter_IsOpeningOrBusy()
-        catch {
-            busy := false
-        }
-        visible := false
-        try visible := SCWV_IsVisible()
-        catch {
-            visible := false
-        }
-        gdhoVisible := false
-        try gdhoVisible := GDHO_VISIBLE
-        catch {
-            gdhoVisible := false
-        }
-        nativeActive := false
-        try nativeActive := NativeDropSessionActive
-        catch {
-            nativeActive := false
-        }
-        if (!busy && !visible && !gdhoVisible && !nativeActive)
-            return true
-        if ((A_TickCount - start) >= timeoutMs)
-            return false
-        Sleep(30)
+    ; Non-blocking legacy compatibility wrapper.
+    try TrayMenu_Log("wait_hole_idle_async timeout_ms=" . timeoutMs)
+    try SetTimer((*) => TrayMenu_HideHoleOverlayAsync("wait_hole_idle_async_timeout"), -Abs(Integer(timeoutMs)))
+    catch {
     }
+    return false
 }
 
 TrayMenu_HardenHoleUiTransition(target := "tray_open_ui", timeoutMs := 1800) {
@@ -637,7 +704,6 @@ TrayMenu_OpenSearchActionRun(*) {
     try {
         if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole") {
             try {
-                SCWV_Init("tray_menu_search")
                 SCWV_SubmitIntent("open", 20, Map("reason", "tray_menu_search"))
                 return
             } catch as err {
@@ -646,7 +712,6 @@ TrayMenu_OpenSearchActionRun(*) {
         }
         ; Non-hole path also use robust init+show instead of mixed entry points.
         try {
-            SCWV_Init("tray_menu_search_fallback")
             SCWV_SubmitIntent("open", 20, Map("reason", "tray_menu_search_fallback"))
             return
         } catch as err2 {
@@ -1314,25 +1379,70 @@ CloseDarkStylePopupMenu(*) {
 }
 
 FloatingBubbleShowFromMenu(*) {
-    global GDHO_HOST_W, GDHO_HOST_H, GDHO_POSITION_MODE
-    ; Unconditional diagnostic mode:
-    ; force hole_starry host visible at screen center with no gating conditions.
-    try GDHO_Init()
-    GDHO_POSITION_MODE := "fixed"
-    monL := SysGet(76), monT := SysGet(77), monW := SysGet(78), monH := SysGet(79)
-    hostW := (IsSet(GDHO_HOST_W) && GDHO_HOST_W > 0) ? GDHO_HOST_W : 360
-    hostH := (IsSet(GDHO_HOST_H) && GDHO_HOST_H > 0) ? GDHO_HOST_H : 420
-    cx := Integer(monL + (monW - hostW) / 2)
-    cy := Integer(monT + (monH - hostH) / 2)
-    try GDHO_MoveHostToHole(cx, cy)
-    try GDHO_ShowOverlay()
-    try GDHO_RunJS("window.HoleOverlay?.show('text')")
-    try GDHO_RunJS("window.HoleOverlay?.setSleepMode?.(false)")
-    try GDHO_RunJS("window.HoleOverlay?.setProximity?.(0.85)")
-    try WinSetAlwaysOnTop(1, "ahk_id " GDHO_GUI.Hwnd)
-    try WinSetTransparent(255, "ahk_id " GDHO_GUI.Hwnd)
-    try GDHO_SetClickThrough(true)
-    try TrayMenu_Log("tray_show_hole unconditional_center x=" . cx . " y=" . cy . " w=" . hostW . " h=" . hostH)
+    SetTimer(FloatingBubbleShowFromMenuRun, -1)
+}
+
+FloatingBubbleShowFromMenuRun(*) {
+    global GDHO_HOST_W, GDHO_HOST_H, GDHO_POSITION_MODE, g_IsUIVisibleTransitioning
+    global GDHO_READY, GDHO_GUI, GDHO_SCREEN_X, GDHO_SCREEN_Y, GDHO_FIXED_X, GDHO_FIXED_Y
+    global g_TrayShowHolePending, g_TrayShowHoleRetryCount
+    if g_TrayShowHolePending {
+        try TrayMenu_Log("tray_show_hole_skip reason=pending")
+        return
+    }
+    g_TrayShowHolePending := true
+    try {
+        if (g_IsUIVisibleTransitioning) {
+            try TrayMenu_Log("tray_show_hole_skip reason=ui_transitioning")
+            return
+        }
+        try TrayMenu_Log("tray_show_hole_begin")
+        ; Unconditional diagnostic mode:
+        ; force hole_starry host visible at screen center with no gating conditions.
+        try GDHO_Init()
+        catch as err {
+            try TrayMenu_Log("tray_show_hole_init_failed msg=" . err.Message)
+            return
+        }
+        GDHO_POSITION_MODE := "fixed"
+        monL := SysGet(76), monT := SysGet(77), monW := SysGet(78), monH := SysGet(79)
+        hostW := (IsSet(GDHO_HOST_W) && GDHO_HOST_W > 0) ? GDHO_HOST_W : 360
+        hostH := (IsSet(GDHO_HOST_H) && GDHO_HOST_H > 0) ? GDHO_HOST_H : 420
+        cx := Integer(monL + (monW - hostW) / 2)
+        cy := Integer(monT + (monH - hostH) / 2)
+        try GDHO_MoveHostToHole(cx, cy)
+        if !GDHO_READY {
+            g_TrayShowHoleRetryCount += 1
+            try TrayMenu_Log("tray_show_hole_wait_ready retry=" . g_TrayShowHoleRetryCount)
+            if (g_TrayShowHoleRetryCount >= 20) {
+                try TrayMenu_Log("tray_show_hole_ready_timeout")
+                g_TrayShowHoleRetryCount := 0
+                return
+            }
+            ; Defer reveal until WebView is ready to avoid black-background host flash.
+            SetTimer(FloatingBubbleShowFromMenuRun, -80)
+            return
+        }
+        g_TrayShowHoleRetryCount := 0
+        ; Keep tray activation position consistent with later drag-triggered shows.
+        try GDHO_SCREEN_X := cx
+        try GDHO_SCREEN_Y := cy
+        try GDHO_FIXED_X := cx
+        try GDHO_FIXED_Y := cy
+        try GDHO_ShowOverlay()
+        try WinSetAlwaysOnTop(1, "ahk_id " GDHO_GUI.Hwnd)
+        ; Keep chroma-key transparency stable on every tray-open path.
+        try WinSetTransparent(255, "ahk_id " GDHO_GUI.Hwnd)
+        try WinSetTransColor("010101", "ahk_id " GDHO_GUI.Hwnd)
+        try GDHO_SetClickThrough(true)
+        ; JS bridge calls are deferred to avoid blocking tray callback flow when WebView is stale.
+        try SetTimer((*) => GDHO_RunJS("window.HoleOverlay?.show('text')"), -1)
+        try SetTimer((*) => GDHO_RunJS("window.HoleOverlay?.setSleepMode?.(false)"), -20)
+        try SetTimer((*) => GDHO_RunJS("window.HoleOverlay?.setProximity?.(0.85)"), -40)
+        try TrayMenu_Log("tray_show_hole unconditional_center x=" . cx . " y=" . cy . " w=" . hostW . " h=" . hostH)
+    } finally {
+        g_TrayShowHolePending := false
+    }
 }
 
 FloatingBubbleHideFromMenu(*) {
@@ -1425,14 +1535,18 @@ TrayMenu_MakeSceneAction(cmdId) {
 }
 
 TrayMenu_BuildItemsFromSceneMenu(sceneKey := "tray_menu") {
+    return TrayMenu_GetSceneItemsFromSnapshot(sceneKey)
+}
+
+TrayMenu_BuildItemsFromSceneMenuLive(sceneKey := "tray_menu", allowLoad := false) {
     global g_Commands, AppearanceActivationMode, g_LastValidTrayMenu
     items := []
-    ; Commands are loaded lazily in a few startup paths, so refresh them here before
-    ; deciding that the scene menu is unavailable and falling back to the generic menu.
-    try {
-        if IsSet(_LoadCommands)
-            _LoadCommands()
-    } catch {
+    if (allowLoad) {
+        try {
+            if IsSet(_LoadCommands)
+                _LoadCommands()
+        } catch {
+        }
     }
     if !(IsSet(g_Commands) && g_Commands is Map)
         return TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items)
@@ -1483,7 +1597,7 @@ TrayMenu_BuildItemsFromSceneIds(sceneIds, cmdList, vm := 0) {
             nm := String(cmdList[cid]["name"])
         if (nm = "" || nm = cid)
             nm := TrayMenu_GetSceneFallbackLabel(cid, nm)
-        items.Push({ Text: nm, Action: TrayMenu_MakeSceneAction(cid), Icon: "•" })
+        items.Push({ Text: nm, Action: TrayMenu_MakeSceneAction(cid), Icon: "•", CmdId: cid })
     }
     return items
 }
@@ -1563,6 +1677,7 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
     global FloatingToolbarIsVisible, AppearanceActivationMode, FloatingBubbleIsVisible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_CreateInFlight
     global GDHO_VISIBLE, NativeDropSessionActive, g_IsUIVisibleTransitioning
     trayBuildStart := A_TickCount
+    phaseStart := trayBuildStart
 
     MenuWidth := 200
     MenuItemHeight := 35
@@ -1591,6 +1706,8 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
     try TrayMenu_Log("custom_popup_state mode=" . mode . " ft_vis=" . (ftVis ? "1" : "0") . " bub_vis=" . (bubVis ? "1" : "0") . " search_active=" . (IsSearchCenterActive() ? "1" : "0") . " search_visible=" . (searchVisible ? "1" : "0") . " gdho=" . (gdhoVisible ? "1" : "0") . " native=" . (nativeActive ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " create_inflight=" . (g_SCWV_CreateInFlight ? "1" : "0"))
     catch {
     }
+    try TrayMenu_Log("tray_build_phase=state elapsed_ms=" . (A_TickCount - phaseStart))
+    phaseStart := A_TickCount
     TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis)
 
     sceneItems := []
@@ -1605,6 +1722,8 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
         for it in sceneItems
             MenuItems.Push(it)
     }
+    try TrayMenu_Log("tray_build_phase=snapshot elapsed_ms=" . (A_TickCount - phaseStart))
+    phaseStart := A_TickCount
 
     MenuHeight := MenuItems.Length * MenuItemHeight + Padding * 2
     CoordMode("Mouse", "Screen")
@@ -1633,6 +1752,7 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
         }
     } catch {
     }
+    try TrayMenu_Log("tray_build_phase=render elapsed_ms=" . (A_TickCount - phaseStart))
     try TrayMenu_Log("custom_popup_build_done items=" . MenuItems.Length . " elapsed_ms=" . (A_TickCount - trayBuildStart))
     ShowDarkStylePopupMenuAt(MenuItems, posX, posY)
 }

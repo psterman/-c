@@ -229,7 +229,7 @@ GDHO_Init() {
     GDHO_SLEEPING := true
     GDHO_INTERACTIVE := false
     GDHO_LAST_PROXIMITY_SENT := -1.0
-    try WebView2.create(GDHO_GUI.Hwnd, GDHO_OnWebViewCreated, WebView2_EnsureSharedEnvBlocking())
+    try WebView2_CreateWithSharedEnvAsync(GDHO_GUI.Hwnd, GDHO_OnWebViewCreated, "global_drag_hole")
 }
 
 GDHO_CreateOverlayGui() {

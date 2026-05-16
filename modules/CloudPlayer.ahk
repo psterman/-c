@@ -71,7 +71,7 @@ CloudPlayer_CreateGui() {
     ; 点最小化时改为隐藏窗口，避免缩到任务栏角落
     OnMessage(0x0112, CloudPlayer_WM_SYSCOMMAND)
 
-    try WebView2.create(g_CloudPlayerGui.Hwnd, CloudPlayer_OnWebViewCreated, WebView2_EnsureSharedEnvBlocking())
+    try WebView2_CreateWithSharedEnvAsync(g_CloudPlayerGui.Hwnd, CloudPlayer_OnWebViewCreated, "cloud_player")
     catch as e {
         try MsgBox("CloudPlayer WebView2 创建失败：`n" . e.Message)
         catch {

@@ -53,7 +53,7 @@ ConfigWebView_CreateHost() {
     ConfigGUI.OnEvent("Size", ConfigWebView_OnSize)
     ConfigGUI.Show("w980 h680 Hide")
 
-    WebView2.create(ConfigGUI.Hwnd, ConfigWebView_OnCreated, WebView2_EnsureSharedEnvBlocking())
+    WebView2_CreateWithSharedEnvAsync(ConfigGUI.Hwnd, ConfigWebView_OnCreated, "config")
 }
 
 ; 延后一帧推送 initData，避免从悬浮工具栏等 WebView 的 WebMessageReceived 内同步调用时重入/队列顺序异常导致主题错为深色

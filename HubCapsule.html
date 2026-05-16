@@ -5264,18 +5264,34 @@ html[data-theme="light"] #tx-test-result {
       state.drag.moved = true;
       state.justDragged = true;
     }
-    postToAhk({
+    state.drag.latestMove = {
       type: 'hub_drag_move',
       x: e.screenX,
       y: e.screenY,
       offsetX: state.drag.offsetX,
       offsetY: state.drag.offsetY
-    });
+    };
+    if (!state.drag.raf) {
+      state.drag.raf = requestAnimationFrame(() => {
+        if (!state.drag) return;
+        state.drag.raf = 0;
+        if (state.drag.latestMove) postToAhk(state.drag.latestMove);
+        state.drag.latestMove = null;
+      });
+    }
   }
 
   function endDrag(e) {
     if (!state.drag) return;
     if (state.drag.pointerId !== e.pointerId) return;
+    if (state.drag.raf) {
+      cancelAnimationFrame(state.drag.raf);
+      state.drag.raf = 0;
+    }
+    if (state.drag.latestMove) {
+      postToAhk(state.drag.latestMove);
+      state.drag.latestMove = null;
+    }
     state.drag = null;
     capsule.classList.remove('dragging');
     postToAhk({ type: 'hub_drag_end', x: e.screenX, y: e.screenY });

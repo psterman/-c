@@ -2353,7 +2353,7 @@ ShowCursorPanel_WebView() {
     CursorPanelWV2Ctrl := 0
     CursorPanelWV2 := 0
     CursorPanelWV2Ready := false
-    try WebView2.create(GuiID_CursorPanel.Hwnd, CursorPanelWebView_OnCreated, WebView2_EnsureSharedEnvBlocking())
+    try WebView2_CreateWithSharedEnvAsync(GuiID_CursorPanel.Hwnd, CursorPanelWebView_OnCreated, "cursor_panel")
     SetTimer(CursorPanelWebView_RefreshComposition, -30)
     SetTimer(CursorPanelWebView_RefreshComposition, -120)
     SetTimer(CursorPanelWebView_RefreshComposition, -380)

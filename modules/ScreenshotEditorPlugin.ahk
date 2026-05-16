@@ -665,7 +665,7 @@ class ScreenshotEditorPlugin {
             this.ScreenshotToolbarNativeFallback := false
             this.ScreenshotToolbarCreateCheckPass := 0
             this.GuiID_ScreenshotToolbar.OnEvent("Size", ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnSize"))
-            try WebView2.create(this.GuiID_ScreenshotToolbar.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnCreated"), WebView2_EnsureSharedEnvBlocking())
+            try WebView2_CreateWithSharedEnvAsync(this.GuiID_ScreenshotToolbar.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnCreated"), "screenshot_toolbar")
         } else {
             this.GuiID_ScreenshotToolbar := 0
         }
@@ -1104,7 +1104,7 @@ class ScreenshotEditorPlugin {
     ; Prefer WebView lucide toolbar; avoid dropping to legacy text/icon fallback.
     try {
         if (IsObject(this.GuiID_ScreenshotToolbar) && this.GuiID_ScreenshotToolbar != 0)
-            WebView2.create(this.GuiID_ScreenshotToolbar.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnCreated"), WebView2_EnsureSharedEnvBlocking())
+            WebView2_CreateWithSharedEnvAsync(this.GuiID_ScreenshotToolbar.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnCreated"), "screenshot_toolbar")
     } catch {
     }
 }
@@ -1383,7 +1383,7 @@ class ScreenshotEditorPlugin {
     this.ScreenshotPreviewBounds := Map("x", x, "y", y, "w", w, "h", h)
     if !this.ScreenshotPreviewWV2Ctrl {
         try {
-            WebView2.create(this.GuiID_ScreenshotEditor.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnCreated"), WebView2_EnsureSharedEnvBlocking())
+            WebView2_CreateWithSharedEnvAsync(this.GuiID_ScreenshotEditor.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnCreated"), "screenshot_preview")
         } catch as e {
             try OutputDebug("[SSE] preview shell create failed: " . e.Message)
             catch {
@@ -1415,7 +1415,7 @@ class ScreenshotEditorPlugin {
     }
     try {
         if (IsObject(this.GuiID_ScreenshotEditor) && this.GuiID_ScreenshotEditor != 0)
-            WebView2.create(this.GuiID_ScreenshotEditor.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnCreated"), WebView2_EnsureSharedEnvBlocking())
+            WebView2_CreateWithSharedEnvAsync(this.GuiID_ScreenshotEditor.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnCreated"), "screenshot_preview")
     } catch {
     }
 }

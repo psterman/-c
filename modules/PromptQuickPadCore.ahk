@@ -93,7 +93,7 @@ PQP_Init() {
     WV2 := _PQP_GetWebView2Class()
     if !WV2
         return
-    WV2.create(g_PQP_Gui.Hwnd, _PQP_OnWV2Created, WebView2_EnsureSharedEnvBlocking())
+    WebView2_CreateWithSharedEnvAsync(g_PQP_Gui.Hwnd, _PQP_OnWV2Created, "prompt_quick_pad")
 }
 
 _PQP_OnWV2Created(ctrl) {
