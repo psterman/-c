@@ -554,3 +554,104 @@
 [2026-05-16 15:54:18][wm_chain_unregister_done] reason=tray_show_hole count=0
 [2026-05-16 15:54:18][hide_done] visible=0 reason=tray_show_hole
 [2026-05-16 15:54:18][force_close_done] reason=tray_show_hole
+[2026-05-16 16:07:51][caps_f_state] search_active=0 search_visible=0 waiting=0 create_inflight=0 phase=closed countdown=0 caps=1
+[2026-05-16 16:07:51][show_redirect_intent] reason=
+[2026-05-16 16:07:51][ifs] [0x11/0x00/0x01]
+[2026-05-16 16:07:51][handoff_begin] reason=show_redirect until=34375515
+[2026-05-16 16:07:51][handoff_queue_open] priority=25
+[2026-05-16 16:07:52][handoff_end] reason=timeout
+[2026-05-16 16:07:52][ifs] [0x11/0x00/0x01]
+[2026-05-16 16:07:52][show_begin] reason=handoff_replay_show_redirect ready=0 ui_ready=0
+[2026-05-16 16:07:52][init_begin] reason=handoff_replay_show_redirect gui=0 alive=0 inflight=0
+[2026-05-16 16:07:52][init_create_begin] reason=handoff_replay_show_redirect hwnd=63115802
+[2026-05-16 16:07:52][show_wait_ui_ready] reason=handoff_replay_show_redirect
+[2026-05-16 16:07:52][wm_chain_register_begin] reason=handoff_replay_show_redirect count=0
+[2026-05-16 16:07:52][wm_chain_register_done] reason=handoff_replay_show_redirect count=1
+[2026-05-16 16:07:54][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-16 16:07:54][wm_activate_seen] wparam=0 hwnd=63115802 visible=1 waiting=0 focus_pending=1 phase=open search_http=0
+[2026-05-16 16:07:54][wm_activate_skip] reason=opening_or_focus_pending
+[2026-05-16 16:07:54][wm_activate_seen] wparam=1 hwnd=38210452 visible=1 waiting=0 focus_pending=1 phase=open search_http=0
+[2026-05-16 16:07:55][nav_completed] ok=1 visible=1
+[2026-05-16 16:07:56][wm_activate_seen] wparam=0 hwnd=38210452 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-16 16:07:56][wm_activate_seen] wparam=2 hwnd=63115802 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-16 16:08:02][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-16 16:08:02][ifs] [0x10/0x00/0x03]
+[2026-05-16 16:08:02][wm_activate_seen] wparam=0 hwnd=63115802 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-16 16:08:02][wm_activate_skip] reason=close_commit
+[2026-05-16 16:08:02][force_close_begin] reason=gui_close visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-16 16:08:02][wm_chain_unregister_begin] reason=gui_close count=1
+[2026-05-16 16:08:02][wm_chain_unregister_done] reason=gui_close count=0
+[2026-05-16 16:08:02][hide_done] visible=0 reason=gui_close
+[2026-05-16 16:08:02][force_close_done] reason=gui_close
+[2026-05-16 17:28:13][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 17:28:13][init_guard_drop] reason=empty
+[2026-05-16 17:29:35][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 17:29:35][init_guard_drop] reason=empty
+[2026-05-16 17:31:57][ifs] [0x10/0x00/0x01]
+[2026-05-16 17:31:57][force_close_begin] reason=tray_show_hole visible=0 waiting=0 ready=0 ui_ready=0
+[2026-05-16 17:31:57][wm_chain_unregister_begin] reason=tray_show_hole count=0
+[2026-05-16 17:31:57][wm_chain_unregister_done] reason=tray_show_hole count=0
+[2026-05-16 17:31:57][hide_done] visible=0 reason=tray_show_hole
+[2026-05-16 17:31:57][force_close_done] reason=tray_show_hole
+[2026-05-16 17:32:03][ifs] [0x11/0x00/0x01]
+[2026-05-16 17:32:03][show_begin] reason=tray_menu_search ready=0 ui_ready=0
+[2026-05-16 17:32:03][init_begin] reason=tray_menu_search gui=0 alive=0 inflight=0
+[2026-05-16 17:32:03][init_create_begin] reason=tray_menu_search hwnd=6228956
+[2026-05-16 17:32:03][show_wait_ui_ready] reason=tray_menu_search
+[2026-05-16 17:32:03][wm_chain_register_begin] reason=tray_menu_search count=0
+[2026-05-16 17:32:03][wm_chain_register_done] reason=tray_menu_search count=1
+[2026-05-16 17:32:04][wm_activate_seen] wparam=0 hwnd=6228956 visible=0 waiting=1 focus_pending=1 phase=open search_http=0
+[2026-05-16 17:32:04][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-16 17:32:05][nav_completed] ok=1 visible=1
+[2026-05-16 17:32:06][wm_activate_seen] wparam=1 hwnd=7541280 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-16 17:32:07][wm_activate_seen] wparam=0 hwnd=7541280 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-16 17:32:07][force_close_begin] reason=tray_open_ui visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-16 17:32:07][wm_chain_unregister_begin] reason=tray_open_ui count=1
+[2026-05-16 17:32:07][wm_chain_unregister_done] reason=tray_open_ui count=0
+[2026-05-16 17:32:07][hide_done] visible=0 reason=tray_open_ui
+[2026-05-16 17:32:07][force_close_done] reason=tray_open_ui
+[2026-05-16 17:32:10][intent_drop_stale_token] token=3 current=4
+[2026-05-16 17:32:22][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 17:32:22][init_guard_drop] reason=empty
+[2026-05-16 17:32:50][ifs] [0x11/0x00/0x01]
+[2026-05-16 17:32:50][show_begin] reason=tray_menu_search ready=0 ui_ready=0
+[2026-05-16 17:32:50][init_begin] reason=tray_menu_search gui=0 alive=0 inflight=0
+[2026-05-16 17:32:50][init_create_begin] reason=tray_menu_search hwnd=135900
+[2026-05-16 17:32:51][show_wait_ui_ready] reason=tray_menu_search
+[2026-05-16 17:32:51][wm_chain_register_begin] reason=tray_menu_search count=0
+[2026-05-16 17:32:51][wm_chain_register_done] reason=tray_menu_search count=1
+[2026-05-16 17:32:52][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-16 17:32:53][nav_completed] ok=1 visible=1
+[2026-05-16 17:32:55][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-16 17:32:55][ifs] [0x10/0x00/0x03]
+[2026-05-16 17:32:55][wm_activate_seen] wparam=0 hwnd=135900 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-16 17:32:55][wm_activate_skip] reason=close_commit
+[2026-05-16 17:32:55][force_close_begin] reason=gui_close visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-16 17:32:55][wm_chain_unregister_begin] reason=gui_close count=1
+[2026-05-16 17:32:55][wm_chain_unregister_done] reason=gui_close count=0
+[2026-05-16 17:32:55][hide_done] visible=0 reason=gui_close
+[2026-05-16 17:32:55][force_close_done] reason=gui_close
+[2026-05-16 17:32:58][intent_drop_stale_token] token=1 current=3
+[2026-05-16 17:39:35][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 17:39:35][init_guard_drop] reason=empty
+[2026-05-16 17:39:56][ifs] [0x11/0x00/0x01]
+[2026-05-16 17:39:56][show_begin] reason=tray_menu_search ready=0 ui_ready=0
+[2026-05-16 17:39:56][init_begin] reason=tray_menu_search gui=0 alive=0 inflight=0
+[2026-05-16 17:39:56][init_create_begin] reason=tray_menu_search hwnd=25170534
+[2026-05-16 17:39:56][show_wait_ui_ready] reason=tray_menu_search
+[2026-05-16 17:39:56][wm_chain_register_begin] reason=tray_menu_search count=0
+[2026-05-16 17:39:56][wm_chain_register_done] reason=tray_menu_search count=1
+[2026-05-16 17:39:58][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-16 17:39:59][nav_completed] ok=1 visible=1
+[2026-05-16 17:40:02][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-16 17:40:02][ifs] [0x10/0x00/0x03]
+[2026-05-16 17:40:02][wm_activate_seen] wparam=0 hwnd=25170534 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-16 17:40:02][wm_activate_skip] reason=close_commit
+[2026-05-16 17:40:02][force_close_begin] reason=gui_close visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-16 17:40:02][wm_chain_unregister_begin] reason=gui_close count=1
+[2026-05-16 17:40:02][wm_chain_unregister_done] reason=gui_close count=0
+[2026-05-16 17:40:02][hide_done] visible=0 reason=gui_close
+[2026-05-16 17:40:02][force_close_done] reason=gui_close
+[2026-05-16 17:40:04][intent_drop_stale_token] token=1 current=3
+[2026-05-16 17:41:25][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-16 17:41:25][init_guard_drop] reason=empty

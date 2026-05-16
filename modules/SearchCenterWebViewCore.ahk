@@ -4029,43 +4029,9 @@ _SCWV_QuickLookDownloadTryAll(url, zipPath, idx, nSrc, label, reportPath) {
     catch {
     }
 
-    ; 2) WinHttp COM（默认跟随重定向）
-    SCWV_QuickLookInstall_PostProgress(Min(46, 11 + idx * 3), "① 下载 · [" . idx . "/" . nSrc . " " . label . "] WinHttp COM（跟随重定向）…")
-    try {
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        whr.Open("GET", u, false)
-        whr.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-        whr.SetRequestHeader("Accept", "application/octet-stream,*/*")
-        whr.Send()
-        st := whr.Status
-        if (st = 200) {
-            ado := ComObject("ADODB.Stream")
-            ado.Type := 1
-            ado.Open()
-            ado.Write(whr.ResponseBody)
-            if FileExist(outPath)
-                try FileDelete(outPath)
-            ado.SaveToFile(outPath, 2)
-            ado.Close()
-            try sz2 := FileGetSize(outPath)
-            catch {
-                sz2 := 0
-            }
-            if (sz2 >= 200 * 1024 && _SCWV_FileLooksLikeZip(outPath))
-                return Map("ok", true, "bytes", sz2, "via", "com")
-            errors.Push("COM: HTTP 200 但校验失败（" . Round(sz2 / 1024, 1) . "KB）")
-            _SCWV_QuickLookInstallReportLine(reportPath, errors[errors.Length])
-        } else {
-            errors.Push("COM: HTTP " . st)
-            _SCWV_QuickLookInstallReportLine(reportPath, errors[errors.Length])
-        }
-    } catch as eCom {
-        errors.Push("COM 异常: " . eCom.Message)
-        _SCWV_QuickLookInstallReportLine(reportPath, errors[errors.Length])
-    }
-    try FileDelete(outPath)
-    catch {
-    }
+    ; 2) WinHttp COM 同步分支软禁用（避免 false 同步阻塞）
+    errors.Push("COM: skipped(sync_blocked_core_async_strict)")
+    _SCWV_QuickLookInstallReportLine(reportPath, errors[errors.Length])
 
     ; 3) 低层 WinHttp（末选）
     progressCb := SCWV_QuickLookInstall_OnHttpProgress.Bind(idx, nSrc, label)

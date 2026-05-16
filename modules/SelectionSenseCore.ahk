@@ -1593,6 +1593,10 @@ SelectionSense_ProcessDeferred(*) {
         SelectionSense_Diag_Log("process skip=our_ui")
         return
     }
+    if SelectionSense_IsTrayMenuOpen() {
+        SelectionSense_Diag_Log("process skip=tray_menu_open")
+        return
+    }
     ; 鐢ㄦ埛涓诲姩 Ctrl+C 鍚庝竴娈垫椂闂村唴璺宠繃妯℃嫙 ^c锛岄伩鍏嶄笌缂栬緫鍣ㄥ唴澶嶅埗/绮樿创鎶㈠壀璐存澘
     if (g_SelSense_UserCopyInProgress || (A_TickCount - g_SelSense_UserCopyEndTick < 950)) {
         SelectionSense_Diag_Log("process skip=user_copy_guard in_progress=" . SelectionSense_Diag_Bool(g_SelSense_UserCopyInProgress) . " since_ms=" . (A_TickCount - g_SelSense_UserCopyEndTick))
@@ -1647,11 +1651,36 @@ SelectionSense_ProcessDeferred(*) {
     SetTimer((*) => SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActive, deadlineTick), -delayMs)
 }
 
+SelectionSense_IsTrayMenuOpen() {
+    global TrayMenuGUI
+    if !(IsSet(TrayMenuGUI) && IsObject(TrayMenuGUI) && TrayMenuGUI)
+        return false
+    try {
+        hwnd := TrayMenuGUI.Hwnd
+        if !hwnd
+            return false
+        if !WinExist("ahk_id " . hwnd)
+            return false
+        return !!DllCall("IsWindowVisible", "ptr", hwnd, "int")
+    } catch {
+        return false
+    }
+}
+
 SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActive, deadlineTick, *) {
     global g_SelSense_CopyTicket, g_SelSense_LastClipSig, g_SelSense_LastFireTick
     global g_SelSense_LastFullText, g_SelSense_LastTick
     if (ticket != g_SelSense_CopyTicket)
         return
+    if SelectionSense_IsTrayMenuOpen() {
+        try {
+            if (clipSaved != "")
+                A_Clipboard := clipSaved
+        } catch {
+        }
+        SelectionSense_Diag_Log("process collect skip=tray_menu_open ticket=" . ticket)
+        return
+    }
 
     got := ""
     try got := A_Clipboard

@@ -5,6 +5,8 @@ global g_FocusBroker_ProtectUntil := 0
 global g_FocusBroker_Pending := 0
 global g_FocusBroker_Seq := 0
 global g_FocusBroker_LastReqTick := Map()
+global g_FocusBroker_MaxRetry := 3
+global g_FocusBroker_MaxWaitMs := 500
 
 FocusBroker_Log(event, detail := "") {
     try {
@@ -83,17 +85,79 @@ FocusBroker_Grant(owner, hwnd, priority, reason, protectMs, focusCallback := 0) 
     g_FocusBroker_Owner := String(owner)
     g_FocusBroker_ProtectUntil := A_TickCount + Max(0, Integer(protectMs))
     FocusBroker_Log("grant", "owner=" . owner . " hwnd=" . hwnd . " priority=" . priority . " reason=" . reason)
+    ctx := Map(
+        "owner", String(owner),
+        "hwnd", Integer(hwnd),
+        "priority", Integer(priority),
+        "reason", String(reason),
+        "protectMs", Integer(protectMs),
+        "callback", focusCallback,
+        "retry", 0,
+        "start", A_TickCount,
+        "active", true,
+        "timerFunc", 0
+    )
+    timerFn := 0
+    timerFn := (*) => FocusBroker_AttemptActivate(ctx)
+    ctx["timerFunc"] := timerFn
+    SetTimer(timerFn, -1)
+    return true
+}
+
+FocusBroker_AttemptActivate(ctx) {
+    global g_FocusBroker_MaxRetry, g_FocusBroker_MaxWaitMs, g_FocusBroker_Owner, g_FocusBroker_ProtectUntil
+    if !(ctx is Map)
+        return
+    owner := String(ctx["owner"])
+    hwnd := Integer(ctx["hwnd"])
+    reason := String(ctx["reason"])
+    retry := Integer(ctx["retry"])
+    start := Integer(ctx["start"])
+    timerFn := ctx["timerFunc"]
+    if !ctx["active"] {
+        try SetTimer(timerFn, 0)
+        return
+    }
+    if !WinExist("ahk_id " . hwnd) {
+        FocusBroker_Log("focus_failed_fallback", "owner=" . owner . " reason=" . reason . " msg=target_gone")
+        ctx["active"] := false
+        try SetTimer(timerFn, 0)
+        if (g_FocusBroker_Owner = owner) {
+            g_FocusBroker_Owner := ""
+            g_FocusBroker_ProtectUntil := 0
+        }
+        return
+    }
+    now := A_TickCount
+    if (retry >= g_FocusBroker_MaxRetry || (now - start) > g_FocusBroker_MaxWaitMs) {
+        FocusBroker_Log("focus_failed_fallback", "owner=" . owner . " reason=" . reason . " retry=" . retry . " elapsed=" . (now - start))
+        ctx["active"] := false
+        try SetTimer(timerFn, 0)
+        if (g_FocusBroker_Owner = owner) {
+            g_FocusBroker_Owner := ""
+            g_FocusBroker_ProtectUntil := 0
+        }
+        return
+    }
     try WinActivate("ahk_id " . hwnd)
     catch as err {
-        FocusBroker_Log("grant_failed", "owner=" . owner . " msg=" . err.Message)
-        return false
+        FocusBroker_Log("grant_failed", "owner=" . owner . " retry=" . retry . " msg=" . err.Message)
     }
-    if focusCallback {
-        try focusCallback.Call()
-        catch {
+    active := 0
+    try active := WinGetID("A")
+    if (active = hwnd) {
+        ctx["active"] := false
+        try SetTimer(timerFn, 0)
+        cb := ctx["callback"]
+        if cb {
+            try cb.Call()
+            catch {
+            }
         }
+        return
     }
-    return true
+    ctx["retry"] := retry + 1
+    SetTimer(timerFn, -80)
 }
 
 FocusBroker_DefaultPriority(owner) {

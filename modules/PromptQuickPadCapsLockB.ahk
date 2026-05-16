@@ -1,7 +1,6 @@
-; CapsLock+B：静默入库 或 打开 Prompt Quick-Pad 内「摘录/采集」区（逻辑在 AIListPanel.ahk）
-#Requires AutoHotkey v2.0
+﻿; CapsLock+B锛氶潤榛樺叆搴?鎴?鎵撳紑 Prompt Quick-Pad 鍐呫€屾憳褰?閲囬泦銆嶅尯锛堥€昏緫鍦?AIListPanel.ahk锛?#Requires AutoHotkey v2.0
 
-; 跨模块全局变量默认值（用于抑制单文件 LSP 误报；运行时会被主脚本真实值覆盖）
+; 璺ㄦā鍧楀叏灞€鍙橀噺榛樿鍊硷紙鐢ㄤ簬鎶戝埗鍗曟枃浠?LSP 璇姤锛涜繍琛屾椂浼氳涓昏剼鏈湡瀹炲€艰鐩栵級
 global AIListPanelGUI := 0
 global FloatingToolbarGUI := 0
 global GuiID_ConfigGUI := 0
@@ -13,7 +12,7 @@ global TemplateIndexByArrayIndex := Map()
 global AIListPanelIsVisible := false
 global PromptQuickPadData := []
 global g_PQPCB_CopyTicket := 0
-global g_PQPCB_CopyState := 0
+global g_PQPCB_CopyCtx := 0
 
 _PQPCB_CallExternal(funcName, args*) {
     try {
@@ -24,7 +23,7 @@ _PQPCB_CallExternal(funcName, args*) {
     return ""
 }
 
-; PromptQuickPad_ReloadCapsLockBSettings：见 modules\PromptSyncService.ahk
+; PromptQuickPad_ReloadCapsLockBSettings锛氳 modules\PromptSyncService.ahk
 
 PromptQuickPad_CapsB_IsOurGuiWindow(hwnd) {
     if !hwnd
@@ -47,7 +46,7 @@ PromptQuickPad_CapsB_IsOurGuiWindow(hwnd) {
     return false
 }
 
-; A_Clipboard 非纯文本时，尝试直接读取 CF_UNICODETEXT（部分应用复制后属性不是 String）
+; Read plain text directly from CF_UNICODETEXT when clipboard content is not a String.
 PromptQuickPad_CapsB_ClipboardUnicodeText() {
     if !DllCall("OpenClipboard", "ptr", 0, "int")
         return ""
@@ -83,7 +82,7 @@ PromptQuickPad_CapsB_CopySelection(&outText) {
     if PromptQuickPad_CapsB_IsOurGuiWindow(fg) {
         tgt := PromptQuickPad_PasteTargetHwnd
         if !tgt || !DllCall("IsWindow", "ptr", tgt) || PromptQuickPad_CapsB_IsOurGuiWindow(tgt) {
-            TrayTip("请先切到要摘录的应用里选中文字（焦点在本面板时无法从其它窗口复制）", "Prompt Quick-Pad", "Icon! 1")
+            TrayTip("璇峰厛鍒囧埌瑕佹憳褰曠殑搴旂敤閲岄€変腑鏂囧瓧锛堢劍鐐瑰湪鏈潰鏉挎椂鏃犳硶浠庡叾瀹冪獥鍙ｅ鍒讹級", "Prompt Quick-Pad", "Icon! 1")
             return false
         }
         try {
@@ -100,25 +99,35 @@ PromptQuickPad_CapsB_CopySelection(&outText) {
     }
     oldClip := ClipboardAll()
     try {
+        if CoreAsyncStrictMode {
+            ; Legacy sync path is soft-disabled in strict mode: avoid ClipWait-style blocking.
+            return false
+        }
         A_Clipboard := ""
         SendInput("^c")
-        ok := ClipWait(2.0)
-        if !ok {
-            Send("^c")
-            ok := ClipWait(1.2)
-        }
-        if !ok {
-            SendEvent("^c")
-            ok := ClipWait(1.0)
-        }
-        if !ok
-            return false
+        Sleep(80)
         DllCall("Sleep", "uint", 60)
         raw := ""
         try
             raw := A_Clipboard
         catch
             return false
+        if Trim(String(raw), " `t`r`n") = "" {
+            Send("^c")
+            Sleep(90)
+            try raw := A_Clipboard
+            catch {
+                raw := ""
+            }
+        }
+        if Trim(String(raw), " `t`r`n") = "" {
+            SendEvent("^c")
+            Sleep(110)
+            try raw := A_Clipboard
+            catch {
+                raw := ""
+            }
+        }
         if !(raw is String) {
             try
                 raw := String(raw)
@@ -143,7 +152,7 @@ PromptQuickPad_CapsB_CopySelection(&outText) {
 }
 
 PromptQuickPad_CapsB_BeginAsyncCopy(fgHwnd, doneCb) {
-    global g_PQPCB_CopyTicket, g_PQPCB_CopyState, PromptQuickPad_PasteTargetHwnd
+    global g_PQPCB_CopyTicket, g_PQPCB_CopyCtx, PromptQuickPad_PasteTargetHwnd
     g_PQPCB_CopyTicket += 1
     ticket := g_PQPCB_CopyTicket
     oldClip := ClipboardAll()
@@ -156,7 +165,11 @@ PromptQuickPad_CapsB_BeginAsyncCopy(fgHwnd, doneCb) {
         }
         target := tgt
     }
-    g_PQPCB_CopyState := Map("ticket", ticket, "start", A_TickCount, "tries", 0, "oldClip", oldClip, "target", target, "done", doneCb)
+    pollFn := 0
+    ctx := Map("ticket", ticket, "start", A_TickCount, "tries", 0, "oldClip", oldClip, "target", target, "done", doneCb, "inFlight", false, "timerFunc", 0)
+    pollFn := (*) => PromptQuickPad_CapsB_CopyPoll(ctx)
+    ctx["timerFunc"] := pollFn
+    g_PQPCB_CopyCtx := ctx
     try A_Clipboard := ""
     catch {
     }
@@ -169,44 +182,54 @@ PromptQuickPad_CapsB_BeginAsyncCopy(fgHwnd, doneCb) {
         } catch {
         }
     }
-    SetTimer((*) => PromptQuickPad_CapsB_CopyPoll(ticket), -40)
+    SetTimer(pollFn, 40)
 }
 
-PromptQuickPad_CapsB_CopyFinish(ticket, ok, text := "", reason := "") {
-    global g_PQPCB_CopyState
-    if !(g_PQPCB_CopyState is Map)
+PromptQuickPad_CapsB_CopyFinish(ctx, ok, text := "", reason := "") {
+    global g_PQPCB_CopyCtx
+    if !(ctx is Map) || !(g_PQPCB_CopyCtx is Map)
         return
-    if (Integer(g_PQPCB_CopyState["ticket"]) != Integer(ticket))
+    if (g_PQPCB_CopyCtx != ctx)
         return
-    doneCb := g_PQPCB_CopyState["done"]
-    oldClip := g_PQPCB_CopyState["oldClip"]
+    fn := ctx["timerFunc"]
+    try SetTimer(fn, 0)
+    doneCb := ctx["done"]
+    oldClip := ctx["oldClip"]
     try A_Clipboard := oldClip
     catch {
     }
-    g_PQPCB_CopyState := 0
+    g_PQPCB_CopyCtx := 0
     if IsObject(doneCb) {
         try doneCb.Call(ok ? true : false, String(text), String(reason))
     }
 }
 
-PromptQuickPad_CapsB_CopyPoll(ticket, *) {
-    global g_PQPCB_CopyState
-    if !(g_PQPCB_CopyState is Map)
+PromptQuickPad_CapsB_CopyPoll(ctx, *) {
+    global g_PQPCB_CopyCtx, g_PQPCB_CopyTicket
+    if !(ctx is Map)
         return
-    if (Integer(g_PQPCB_CopyState["ticket"]) != Integer(ticket))
-        return
-    if ((A_TickCount - Integer(g_PQPCB_CopyState["start"])) > 2300) {
-        PromptQuickPad_CapsB_CopyFinish(ticket, false, "", "timeout")
+    fn := ctx["timerFunc"]
+    if !(g_PQPCB_CopyCtx is Map) || (g_PQPCB_CopyCtx != ctx) || (Integer(ctx["ticket"]) != Integer(g_PQPCB_CopyTicket)) {
+        try SetTimer(fn, 0)
         return
     }
-    tries := Integer(g_PQPCB_CopyState["tries"])
+    if ctx["inFlight"] {
+        try SetTimer(fn, -35)
+        return
+    }
+    ctx["inFlight"] := true
+    if ((A_TickCount - Integer(ctx["start"])) > 2300) {
+        PromptQuickPad_CapsB_CopyFinish(ctx, false, "", "timeout")
+        return
+    }
+    tries := Integer(ctx["tries"])
     if (tries = 0)
         SendInput("^c")
     else if (tries = 4)
         Send("^c")
     else if (tries = 8)
         SendEvent("^c")
-    g_PQPCB_CopyState["tries"] := tries + 1
+    ctx["tries"] := tries + 1
     raw := ""
     try raw := A_Clipboard
     catch {
@@ -224,10 +247,11 @@ PromptQuickPad_CapsB_CopyPoll(ticket, *) {
             raw := plain
     }
     if (Trim(raw, " `t`r`n") != "") {
-        PromptQuickPad_CapsB_CopyFinish(ticket, true, Trim(raw, " `t`r`n"), "ok")
+        PromptQuickPad_CapsB_CopyFinish(ctx, true, Trim(raw, " `t`r`n"), "ok")
         return
     }
-    SetTimer((*) => PromptQuickPad_CapsB_CopyPoll(ticket), -90)
+    ctx["inFlight"] := false
+    try SetTimer(fn, -90)
 }
 
 PromptQuickPad_AppendCapsLockBToTemplateLibrary(content) {
@@ -236,7 +260,7 @@ PromptQuickPad_AppendCapsLockBToTemplateLibrary(content) {
     global AIListPanelIsVisible
     title := Trim(PromptQuickPad_CapsLockBDefaultTitle)
     if title = ""
-        title := "摘录"
+        title := "鎽樺綍"
     cat := Trim(PromptQuickPad_CapsLockBDefaultCategory)
     if cat = ""
         cat := "自定义"
@@ -251,7 +275,7 @@ PromptQuickPad_AppendCapsLockBToTemplateLibrary(content) {
     try {
         _PQPCB_CallExternal("SavePromptTemplates")
     } catch as err {
-        TrayTip("保存模板库失败：" . err.Message, "Prompt Quick-Pad", "Iconx 1")
+        TrayTip("淇濆瓨妯℃澘搴撳け璐ワ細" . err.Message, "Prompt Quick-Pad", "Iconx 1")
         return false
     }
     if AIListPanelIsVisible
@@ -282,7 +306,7 @@ PromptQuickPad_HandleCapsLockB() {
     /*
     if !PromptQuickPad_CapsB_CopySelection(&t) {
         if !PromptQuickPad_CapsB_IsOurGuiWindow(fg)
-            TrayTip("未获取到选中文本（请确认已选中文字，部分程序需先 Ctrl+C）", "Prompt Quick-Pad", "Iconi 1")
+            TrayTip("鏈幏鍙栧埌閫変腑鏂囨湰锛堣纭宸查€変腑鏂囧瓧锛岄儴鍒嗙▼搴忛渶鍏?Ctrl+C锛?, "Prompt Quick-Pad", "Iconi 1")
         return
     }
     if PromptQuickPad_CapsLockBSilent {
@@ -293,7 +317,7 @@ PromptQuickPad_HandleCapsLockB() {
         _PQPCB_CallExternal("PromptQuickPad_LoadFromDisk")
         title := Trim(PromptQuickPad_CapsLockBDefaultTitle)
         if title = ""
-            title := "摘录"
+            title := "鎽樺綍"
         cat := Trim(PromptQuickPad_CapsLockBDefaultCategory)
         tags := Trim(PromptQuickPad_CapsLockBDefaultTags)
         normalized := _PQPCB_CallExternal("PromptQuickPad_NormalizeEntry", Map("title", title, "tags", tags, "content", t, "category", cat, "hotkey", ""))
@@ -317,7 +341,7 @@ PromptQuickPad_HandleCapsLockB_CopyDone(ok, t, reason, fg) {
     global PromptQuickPadData, AIListPanelIsVisible
     if !ok {
         if !PromptQuickPad_CapsB_IsOurGuiWindow(fg)
-            TrayTip("未获取到选中文本，请确认已选中文字", "Prompt Quick-Pad", "Iconi 1")
+            TrayTip("鏈幏鍙栧埌閫変腑鏂囨湰锛岃纭宸查€変腑鏂囧瓧", "Prompt Quick-Pad", "Iconi 1")
         return
     }
     if PromptQuickPad_CapsLockBSilent {
@@ -328,7 +352,7 @@ PromptQuickPad_HandleCapsLockB_CopyDone(ok, t, reason, fg) {
         _PQPCB_CallExternal("PromptQuickPad_LoadFromDisk")
         title := Trim(PromptQuickPad_CapsLockBDefaultTitle)
         if title = ""
-            title := "摘录"
+            title := "鎽樺綍"
         cat := Trim(PromptQuickPad_CapsLockBDefaultCategory)
         tags := Trim(PromptQuickPad_CapsLockBDefaultTags)
         normalized := _PQPCB_CallExternal("PromptQuickPad_NormalizeEntry", Map("title", title, "tags", tags, "content", t, "category", cat, "hotkey", ""))

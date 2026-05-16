@@ -36,3 +36,11 @@
 [2026-05-16 15:51:03][focus][release] owner=SearchCenter reason=gui_close
 [2026-05-16 15:51:32][focus][grant] owner=SearchCenter hwnd=38143064 priority=20 reason=show_focus
 [2026-05-16 15:51:36][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-16 16:07:52][focus][grant] owner=SearchCenter hwnd=63115802 priority=20 reason=show_focus
+[2026-05-16 16:08:02][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-16 17:32:03][focus][grant] owner=SearchCenter hwnd=6228956 priority=20 reason=show_focus
+[2026-05-16 17:32:07][focus][release] owner=SearchCenter reason=tray_open_ui
+[2026-05-16 17:32:51][focus][grant] owner=SearchCenter hwnd=135900 priority=20 reason=show_focus
+[2026-05-16 17:32:55][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-16 17:39:57][focus][grant] owner=SearchCenter hwnd=25170534 priority=20 reason=show_focus
+[2026-05-16 17:40:02][focus][release] owner=SearchCenter reason=gui_close
