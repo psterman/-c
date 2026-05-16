@@ -1,5 +1,5 @@
-; ConfigWebViewModule.ahk — 设置中心 WebView 宿主与消息桥（由主脚本 #Include）
-; 依赖：WebView2、WMActivateChain、Jxon、主脚本全局与 BuildAppLocalUrl / WebView_DumpJson 等。
+﻿; ConfigWebViewModule.ahk 鈥?璁剧疆涓績 WebView 瀹夸富涓庢秷鎭ˉ锛堢敱涓昏剼鏈?#Include锛?
+; 渚濊禆锛歐ebView2銆乄MActivateChain銆丣xon銆佷富鑴氭湰鍏ㄥ眬涓?BuildAppLocalUrl / WebView_DumpJson 绛夈€?
 
 global ConfigWebViewNavFallbackTried := false
 
@@ -56,7 +56,7 @@ ConfigWebView_CreateHost() {
     WebView2_CreateWithSharedEnvAsync(ConfigGUI.Hwnd, ConfigWebView_OnCreated, "config")
 }
 
-; 延后一帧推送 initData，避免从悬浮工具栏等 WebView 的 WebMessageReceived 内同步调用时重入/队列顺序异常导致主题错为深色
+; 寤跺悗涓€甯ф帹閫?initData锛岄伩鍏嶄粠鎮诞宸ュ叿鏍忕瓑 WebView 鐨?WebMessageReceived 鍐呭悓姝ヨ皟鐢ㄦ椂閲嶅叆/闃熷垪椤哄簭寮傚父瀵艰嚧涓婚閿欎负娣辫壊
 ConfigWebView_SendInitDataIfReady(*) {
     global ConfigWV2Ready
     try {
@@ -68,7 +68,7 @@ ConfigWebView_SendInitDataIfReady(*) {
 ShowConfigWebViewGUI() {
     global GuiID_ConfigGUI, GuiID_ClipboardManager, ConfigPanelScreenIndex, g_ConfigWebView_LastShown
     try FloatingToolbar_PageDockEnter("settings")
-    ; 单例
+    ; 鍗曚緥
     ConfigWebView_CreateHost()
     if !GuiID_ConfigGUI
         return
@@ -100,7 +100,7 @@ ShowConfigWebViewGUI() {
     SetTimer(ConfigWebView_EnsureVisibleOrRecover, -420)
     global ConfigWV2, ConfigWV2Ready
     try WebView2_NotifyShown(ConfigWV2)
-    ; 每次打开都重新推送 initData（延后一帧），确保主题等与 INI 一致且避开 WebView 回调重入
+    ; 姣忔鎵撳紑閮介噸鏂版帹閫?initData锛堝欢鍚庝竴甯э級锛岀‘淇濅富棰樼瓑涓?INI 涓€鑷翠笖閬垮紑 WebView 鍥炶皟閲嶅叆
     SetTimer(ConfigWebView_SendInitDataIfReady, -1)
 }
 
@@ -175,7 +175,7 @@ ConfigWebView_OnNavigationCompleted(sender, args) {
         }
     }
     try {
-        sender.NavigateToString("<!doctype html><html><body style='background:#111;color:#eee;font-family:Segoe UI;padding:16px'>设置面板页面加载失败。请重启脚本后重试。</body></html>")
+        sender.NavigateToString("<!doctype html><html><body style='background:#111;color:#eee;font-family:Segoe UI;padding:16px'>璁剧疆闈㈡澘椤甸潰鍔犺浇澶辫触銆傝閲嶅惎鑴氭湰鍚庨噸璇曘€?/body></html>")
     } catch as e {
         OutputDebug("[ConfigWV2] error page failed: " . e.Message)
     }
@@ -198,7 +198,7 @@ ConfigWebView_ApplyBounds() {
     ConfigWV2Ctrl.Bounds := rc
 }
 
-; WebView2：先 Hide 再 Show 的宿主可能黑屏，需刷新合成（与 ClipboardPanel / VK 一致）
+; WebView2锛氬厛 Hide 鍐?Show 鐨勫涓诲彲鑳介粦灞忥紝闇€鍒锋柊鍚堟垚锛堜笌 ClipboardPanel / VK 涓€鑷达級
 ConfigWebView_RefreshWebViewComposition(*) {
     global GuiID_ConfigGUI, ConfigWV2Ctrl
     if !GuiID_ConfigGUI || !ConfigWV2Ctrl
@@ -211,7 +211,7 @@ ConfigWebView_RefreshWebViewComposition(*) {
     }
 }
 
-; 触发 RasterizationScale 写回，缓解高 DPI / -DPIScale 下偶发模糊
+; 瑙﹀彂 RasterizationScale 鍐欏洖锛岀紦瑙ｉ珮 DPI / -DPIScale 涓嬪伓鍙戞ā绯?
 ConfigWebView_RefreshRasterizationScale(*) {
     global ConfigWV2Ctrl
     if !ConfigWV2Ctrl
@@ -275,7 +275,7 @@ ConfigWebView_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
                 return
         } catch {
         }
-        ; 刚 Show 后短时间内可能收到失焦（与置顶悬浮条抢焦点），勿立即关闭
+        ; 鍒?Show 鍚庣煭鏃堕棿鍐呭彲鑳芥敹鍒板け鐒︼紙涓庣疆椤舵偓娴潯鎶㈢劍鐐癸級锛屽嬁绔嬪嵆鍏抽棴
         if (g_ConfigWebView_LastShown && (A_TickCount - g_ConfigWebView_LastShown < 500))
             return
         SetTimer(CloseConfigGUI, -50)
@@ -290,60 +290,14 @@ ConfigWebView_Send(msgMap) {
 }
 
 ConfigWebView_EnsureSearchCoreRunning() {
-    try {
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        guardTok := 0
-        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
-            if !LegacyGuard_WinHttpBeforeSync("ConfigWebViewModule", "GET", "http://127.0.0.1:8080/health", "cfg_health_probe", &guardTok)
-                return false
-        }
-        whr.Open("GET", "http://127.0.0.1:8080/health", false)
-        whr.SetTimeouts(1500, 1500, 1500, 1500)
-        whr.Send()
-        st := Integer(whr.Status)
-        if FuncExists("LegacyGuard_WinHttpAfterSync")
-            LegacyGuard_WinHttpAfterSync(guardTok, st)
-        if (st = 200)
-            return true
-    } catch {
-        try {
-            if FuncExists("LegacyGuard_WinHttpError")
-                LegacyGuard_WinHttpError(guardTok, "cfg_health_probe_exception")
-        }
-    }
+    if ProcessExist("SearchCenterCore.exe")
+        return true
     exe := ConfigWebView_SearchCoreExePath()
     if !FileExist(exe)
         return false
-    try ProcessClose("SearchCenterCore.exe")
-    catch {
-    }
-    Sleep(120)
     try {
         Run('"' exe '" -base "' A_ScriptDir '"', A_ScriptDir, "Hide")
-        Loop 40 {
-            Sleep(80)
-            try {
-                whr2 := ComObject("WinHttp.WinHttpRequest.5.1")
-                guardTok2 := 0
-                if FuncExists("LegacyGuard_WinHttpBeforeSync") {
-                    if !LegacyGuard_WinHttpBeforeSync("ConfigWebViewModule", "GET", "http://127.0.0.1:8080/health", "cfg_health_probe_retry", &guardTok2)
-                        continue
-                }
-                whr2.Open("GET", "http://127.0.0.1:8080/health", false)
-                whr2.SetTimeouts(1000, 1000, 1000, 1000)
-                whr2.Send()
-                st2 := Integer(whr2.Status)
-                if FuncExists("LegacyGuard_WinHttpAfterSync")
-                    LegacyGuard_WinHttpAfterSync(guardTok2, st2)
-                if (st2 = 200)
-                    return true
-            } catch {
-                try {
-                    if FuncExists("LegacyGuard_WinHttpError")
-                        LegacyGuard_WinHttpError(guardTok2, "cfg_health_probe_retry_exception")
-                }
-            }
-        }
+        return true
     } catch {
     }
     return false
@@ -360,46 +314,65 @@ ConfigWebView_SearchCoreExePath() {
 }
 
 ConfigWebView_HttpSearchCoreJsonRaw(method, path, body := "") {
-    try {
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        url := "http://127.0.0.1:8080" . path
-        guardTok := 0
-        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
-            if !LegacyGuard_WinHttpBeforeSync("ConfigWebViewModule", method, url, "cfg_http_json_raw", &guardTok)
-                return Map("status", 0, "text", "", "json", 0, "error", "sync path blocked")
-        }
-        whr.Open(method, url, false)
-        whr.SetTimeouts(3000, 3000, 10000, 10000)
-        if (method = "POST" || method = "PUT" || method = "PATCH") {
-            whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
-            payload := (Trim(String(body)) = "") ? "{}" : body
-            whr.Send(payload)
-        } else {
-            whr.Send()
-        }
-        st := Integer(whr.Status)
-        txt := whr.ResponseText
-        if FuncExists("LegacyGuard_WinHttpAfterSync")
-            LegacyGuard_WinHttpAfterSync(guardTok, st)
-        obj := 0
-        if (Trim(String(txt)) != "") {
-            try obj := Jxon_Load(txt)
-        }
-        return Map("status", st, "text", txt, "json", obj)
-    } catch as err {
-        if FuncExists("LegacyGuard_WinHttpError")
-            LegacyGuard_WinHttpError(guardTok, err.Message)
-        return Map("status", 0, "text", "", "json", 0, "error", err.Message)
-    }
+    return Map("status", 0, "text", "", "json", 0, "error", "sync_http_disabled")
 }
 
 ConfigWebView_HttpSearchCoreJson(method, path, body := "") {
-    resp := ConfigWebView_HttpSearchCoreJsonRaw(method, path, body)
-    if (resp.Has("status") && Integer(resp["status"]) = 404 && InStr(path, "/v1/fulltext/") = 1) {
-        if ConfigWebView_EnsureSearchCoreRunning()
-            resp := ConfigWebView_HttpSearchCoreJsonRaw(method, path, body)
+    return ConfigWebView_HttpSearchCoreJsonRaw(method, path, body)
+}
+
+ConfigWebView_HttpSearchCoreJsonAsync(method, path, body := "", callback := 0, reqId := 0) {
+    url := "http://127.0.0.1:8080" . path
+    ConfigWebView_HttpJsonAsync(method, url, body, callback, reqId)
+}
+
+ConfigWebView_HttpJsonAsync(method, url, body := "", callback := 0, reqId := 0) {
+    cb := IsObject(callback) ? callback : 0
+    HttpJsonAsync(method, url, body, (resp) => (
+        cb ? cb.Call(resp) : 0
+    ), Map("timeoutMs", 2600, "reqId", reqId, "tag", "cfg_http_json"))
+}
+
+ConfigWebView_HealthProbeAsync(callback := 0) {
+    cb := IsObject(callback) ? callback : 0
+    HttpGetAsync("http://127.0.0.1:8080/health", (resp) => (
+        cb ? cb.Call((resp.Has("status") && Integer(resp["status"]) = 200), resp) : 0
+    ), Map("timeoutMs", 2200, "reqId", 0, "tag", "cfg_health_probe"))
+}
+
+ConfigWebView_HttpProbeSearchCoreAsync(callback := 0) {
+    ConfigWebView_HealthProbeAsync(callback)
+}
+
+ConfigWebView_EnsureSearchCoreRunningAsync(callback := 0, retry := 0) {
+    cb := IsObject(callback) ? callback : 0
+    if ProcessExist("SearchCenterCore.exe") {
+        ConfigWebView_HealthProbeAsync((ok, resp) => ConfigWebView_EnsureSearchCoreRunningAsync_OnProbe(ok, cb, retry))
+        return
     }
-    return resp
+    if !ConfigWebView_EnsureSearchCoreRunning() {
+        cb ? cb.Call(false) : 0
+        return
+    }
+    if (retry >= 5) {
+        cb ? cb.Call(false) : 0
+        return
+    }
+    SetTimer((*) => ConfigWebView_EnsureSearchCoreRunningAsync(cb, retry + 1), -220)
+}
+
+ConfigWebView_EnsureSearchCoreRunningAsync_OnProbe(ok, cb, retry) {
+    if ok {
+        if cb
+            cb.Call(true)
+        return
+    }
+    if ConfigWebView_EnsureSearchCoreRunning() {
+        SetTimer((*) => ConfigWebView_EnsureSearchCoreRunningAsync(cb, retry + 1), -220)
+        return
+    }
+    if cb
+        cb.Call(false)
 }
 
 ConfigWebView_MergeMap(target, source) {
@@ -430,29 +403,42 @@ ConfigWebView_DefaultFullTextStatusPayload() {
 
 ConfigWebView_PostFullTextStatus(withConfig := true) {
     payload := ConfigWebView_DefaultFullTextStatusPayload()
-    if !ConfigWebView_EnsureSearchCoreRunning() {
+    ConfigWebView_EnsureSearchCoreRunningAsync((ok) => ConfigWebView_PostFullTextStatus_Continue(ok, withConfig, payload))
+}
+
+ConfigWebView_PostFullTextStatus_Continue(ok, withConfig, payload) {
+    if !ok {
         ConfigWebView_Send(Map("type", "fulltextStatus", "payload", payload))
         return
     }
-    stResp := ConfigWebView_HttpSearchCoreJson("GET", "/v1/fulltext/status")
-    if (stResp.Has("status") && Integer(stResp["status"]) = 200 && stResp.Has("json") && (stResp["json"] is Map))
+    ConfigWebView_HttpSearchCoreJsonAsync("GET", "/v1/fulltext/status", "", (stResp) => ConfigWebView_PostFullTextStatus_AfterStatus(stResp, withConfig, payload))
+}
+
+ConfigWebView_PostFullTextStatus_AfterStatus(stResp, withConfig, payload) {
+    if (stResp is Map && stResp.Has("status") && Integer(stResp["status"]) = 200 && stResp.Has("json") && (stResp["json"] is Map))
         payload := ConfigWebView_MergeMap(payload, stResp["json"])
+    ConfigWebView_HttpSearchCoreJsonAsync("GET", "/v1/fulltext/progress", "", (pgResp) => ConfigWebView_PostFullTextStatus_AfterProgress(pgResp, withConfig, payload))
+}
 
-    pgResp := ConfigWebView_HttpSearchCoreJson("GET", "/v1/fulltext/progress")
-    if (pgResp.Has("status") && Integer(pgResp["status"]) = 200 && pgResp.Has("json") && (pgResp["json"] is Map))
+ConfigWebView_PostFullTextStatus_AfterProgress(pgResp, withConfig, payload) {
+    if (pgResp is Map && pgResp.Has("status") && Integer(pgResp["status"]) = 200 && pgResp.Has("json") && (pgResp["json"] is Map))
         payload := ConfigWebView_MergeMap(payload, pgResp["json"])
+    if !withConfig {
+        ConfigWebView_Send(Map("type", "fulltextStatus", "payload", payload))
+        return
+    }
+    ConfigWebView_HttpSearchCoreJsonAsync("GET", "/v1/fulltext/config", "", (cfgResp) => ConfigWebView_PostFullTextStatus_AfterConfig(cfgResp, payload))
+}
 
-    if withConfig {
-        cfgResp := ConfigWebView_HttpSearchCoreJson("GET", "/v1/fulltext/config")
-        if (cfgResp.Has("status") && Integer(cfgResp["status"]) = 200 && cfgResp.Has("json") && (cfgResp["json"] is Map)) {
-            root := cfgResp["json"]
-            if (root.Has("config"))
-                payload["config"] := root["config"]
-            if (root.Has("status") && (root["status"] is Map))
-                payload := ConfigWebView_MergeMap(payload, root["status"])
-            if (root.Has("progress") && (root["progress"] is Map))
-                payload := ConfigWebView_MergeMap(payload, root["progress"])
-        }
+ConfigWebView_PostFullTextStatus_AfterConfig(cfgResp, payload) {
+    if (cfgResp is Map && cfgResp.Has("status") && Integer(cfgResp["status"]) = 200 && cfgResp.Has("json") && (cfgResp["json"] is Map)) {
+        root := cfgResp["json"]
+        if (root.Has("config"))
+            payload["config"] := root["config"]
+        if (root.Has("status") && (root["status"] is Map))
+            payload := ConfigWebView_MergeMap(payload, root["status"])
+        if (root.Has("progress") && (root["progress"] is Map))
+            payload := ConfigWebView_MergeMap(payload, root["progress"])
     }
     ConfigWebView_Send(Map("type", "fulltextStatus", "payload", payload))
 }
@@ -461,48 +447,69 @@ ConfigWebView_FullTextControl(action) {
     act := StrLower(Trim(String(action)))
     if (act = "")
         act := "start"
-    if !ConfigWebView_EnsureSearchCoreRunning() {
-        ConfigWebView_Send(Map("type", "fulltextActionResult", "ok", false, "action", act, "error", "SearchCenterCore 未启动"))
+    ConfigWebView_EnsureSearchCoreRunningAsync((ok) => ConfigWebView_FullTextControl_Continue(ok, act))
+}
+
+ConfigWebView_FullTextControl_Continue(ok, act) {
+    if !ok {
+        ConfigWebView_Send(Map("type", "fulltextActionResult", "ok", false, "action", act, "error", "SearchCenterCore not running"))
         ConfigWebView_PostFullTextStatus(true)
         return
     }
-    resp := ConfigWebView_HttpSearchCoreJson("POST", "/v1/fulltext/control", Jxon_Dump(Map("action", act)))
-    ok := (resp.Has("status") && Integer(resp["status"]) = 200)
+    ConfigWebView_HttpSearchCoreJsonAsync("POST", "/v1/fulltext/control", Jxon_Dump(Map("action", act)), (resp) => ConfigWebView_FullTextControl_After(resp, act))
+}
+
+ConfigWebView_FullTextControl_After(resp, act) {
+    ok := (resp is Map) && resp.Has("status") && Integer(resp["status"]) = 200
     err := ""
     if !ok
-        err := resp.Has("text") ? String(resp["text"]) : ("HTTP " . (resp.Has("status") ? String(resp["status"]) : "0"))
+        err := (resp is Map && resp.Has("text")) ? String(resp["text"]) : "HTTP 0"
     ConfigWebView_Send(Map("type", "fulltextActionResult", "ok", ok, "action", act, "error", err))
     ConfigWebView_PostFullTextStatus(true)
 }
 
 ConfigWebView_FullTextUpdateConfig(payload) {
     if !(payload is Map) {
-        ConfigWebView_Send(Map("type", "fulltextConfigResult", "ok", false, "error", "配置参数无效"))
+        ConfigWebView_Send(Map("type", "fulltextConfigResult", "ok", false, "error", "invalid payload"))
         return
     }
-    if !ConfigWebView_EnsureSearchCoreRunning() {
-        ConfigWebView_Send(Map("type", "fulltextConfigResult", "ok", false, "error", "SearchCenterCore 未启动"))
+    ConfigWebView_EnsureSearchCoreRunningAsync((ok) => ConfigWebView_FullTextUpdateConfig_Continue(ok, payload))
+}
+
+ConfigWebView_FullTextUpdateConfig_Continue(ok, payload) {
+    if !ok {
+        ConfigWebView_Send(Map("type", "fulltextConfigResult", "ok", false, "error", "SearchCenterCore not running"))
         ConfigWebView_PostFullTextStatus(true)
         return
     }
-    resp := ConfigWebView_HttpSearchCoreJson("POST", "/v1/fulltext/config", Jxon_Dump(payload))
-    ok := (resp.Has("status") && Integer(resp["status"]) = 200)
+    ConfigWebView_HttpSearchCoreJsonAsync("POST", "/v1/fulltext/config", Jxon_Dump(payload), (resp) => ConfigWebView_FullTextUpdateConfig_After(resp))
+}
+
+ConfigWebView_FullTextUpdateConfig_After(resp) {
+    ok := (resp is Map) && resp.Has("status") && Integer(resp["status"]) = 200
     err := ""
     if !ok
-        err := resp.Has("text") ? String(resp["text"]) : ("HTTP " . (resp.Has("status") ? String(resp["status"]) : "0"))
+        err := (resp is Map && resp.Has("text")) ? String(resp["text"]) : "HTTP 0"
     ConfigWebView_Send(Map("type", "fulltextConfigResult", "ok", ok, "error", err))
     ConfigWebView_PostFullTextStatus(true)
 }
 
 ConfigWebView_FullTextProbe() {
-    if !ConfigWebView_EnsureSearchCoreRunning() {
-        ConfigWebView_Send(Map("type", "fulltextProbeResult", "ok", false, "error", "SearchCenterCore 未启动", "probe", 0))
+    ConfigWebView_EnsureSearchCoreRunningAsync((ok) => ConfigWebView_FullTextProbe_Continue(ok))
+}
+
+ConfigWebView_FullTextProbe_Continue(okRunning) {
+    if !okRunning {
+        ConfigWebView_Send(Map("type", "fulltextProbeResult", "ok", false, "error", "SearchCenterCore not running", "probe", 0))
         return
     }
-    resp := ConfigWebView_HttpSearchCoreJson("GET", "/v1/fulltext/probe")
-    ok := (resp.Has("status") && Integer(resp["status"]) = 200 && resp.Has("json") && (resp["json"] is Map))
+    ConfigWebView_HttpSearchCoreJsonAsync("GET", "/v1/fulltext/probe", "", (resp) => ConfigWebView_FullTextProbe_After(resp))
+}
+
+ConfigWebView_FullTextProbe_After(resp) {
+    ok := (resp is Map) && resp.Has("status") && Integer(resp["status"]) = 200 && resp.Has("json") && (resp["json"] is Map)
     if !ok {
-        errMsg := resp.Has("text") ? String(resp["text"]) : ("HTTP " . (resp.Has("status") ? String(resp["status"]) : "0"))
+        errMsg := (resp is Map && resp.Has("text")) ? String(resp["text"]) : "HTTP 0"
         ConfigWebView_Send(Map("type", "fulltextProbeResult", "ok", false, "error", errMsg, "probe", 0))
         return
     }
@@ -523,7 +530,7 @@ JoinArray(arr, sep := ",") {
     return out
 }
 
-; 供 SettingsPanel「高级设置」悬浮条 1:1 操作台：与 Commands.json 中 ToolbarLayout / CommandList 同步
+; 渚?SettingsPanel銆岄珮绾ц缃€嶆偓娴潯 1:1 鎿嶄綔鍙帮細涓?Commands.json 涓?ToolbarLayout / CommandList 鍚屾
 ConfigWebView_GetKeybinderToolbarSnapshot() {
     global g_Commands
     tl := []
@@ -683,7 +690,7 @@ ConfigWebView_BuildInitData() {
         "capsLockHoldVkEnabled", CapsLockHoldVkEnabled,
         "autoStart", AutoStart,
         "defaultStartTab", DefaultStartTab,
-        ; 必须以 INI 为准：内存中 ThemeMode 可能与磁盘不一致（例如从 WebView 回调打开设置时）
+        ; 蹇呴』浠?INI 涓哄噯锛氬唴瀛樹腑 ThemeMode 鍙兘涓庣鐩樹笉涓€鑷达紙渚嬪浠?WebView 鍥炶皟鎵撳紑璁剧疆鏃讹級
         "themeMode", ReadPersistedThemeMode(),
         "popupScreenIndex", popupScreenIndex,
         "monitorCount", monitorCount,
@@ -796,24 +803,24 @@ ConfigWebView_BuildInitDataSafe() {
             "floatingToolbarButtons", ["Search","Record","Prompt","NewPrompt","Screenshot","Settings","VirtualKeyboard"],
             "floatingToolbarMenuItems", ["ToggleToolbar","MinimizeToEdge","ResetScale","SearchCenter","Clipboard","OpenConfig","HideToolbar","ReloadScript","ExitApp"],
             "floatingToolbarButtonOptions", [
-                Map("id","Search","name","搜索"),
-                Map("id","Record","name","记录"),
-                Map("id","Prompt","name","提示词"),
-                Map("id","NewPrompt","name","草稿本"),
-                Map("id","Screenshot","name","截图"),
-                Map("id","Settings","name","设置"),
-                Map("id","VirtualKeyboard","name","虚拟键盘")
+                Map("id","Search","name","Search"),
+                Map("id","Record","name","Record"),
+                Map("id","Prompt","name","Prompt"),
+                Map("id","NewPrompt","name","NewPrompt"),
+                Map("id","Screenshot","name","Screenshot"),
+                Map("id","Settings","name","Settings"),
+                Map("id","VirtualKeyboard","name","VirtualKeyboard")
             ],
             "floatingToolbarMenuOptions", [
-                Map("id","ToggleToolbar","name","显示/隐藏工具栏"),
-                Map("id","MinimizeToEdge","name","最小化到边缘"),
-                Map("id","ResetScale","name","重置大小"),
-                Map("id","SearchCenter","name","搜索中心"),
-                Map("id","Clipboard","name","剪贴板"),
-                Map("id","OpenConfig","name","打开设置"),
-                Map("id","HideToolbar","name","关闭工具栏"),
-                Map("id","ReloadScript","name","重启脚本"),
-                Map("id","ExitApp","name","退出程序")
+                Map("id","ToggleToolbar","name","ToggleToolbar"),
+                Map("id","MinimizeToEdge","name","MinimizeToEdge"),
+                Map("id","ResetScale","name","ResetScale"),
+                Map("id","SearchCenter","name","SearchCenter"),
+                Map("id","Clipboard","name","Clipboard"),
+                Map("id","OpenConfig","name","OpenConfig"),
+                Map("id","HideToolbar","name","HideToolbar"),
+                Map("id","ReloadScript","name","ReloadScript"),
+                Map("id","ExitApp","name","ExitApp")
             ],
             "appearanceActivationMode", "toolbar",
             "keybinderToolbarLayout", [],
@@ -902,17 +909,17 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
 
     try {
         if !(payload is Map) {
-            errorMsg := "payload 无效"
+            errorMsg := "payload 鏃犳晥"
             return false
         }
         NewCursorPath := NormalizeWindowsPath(payload.Get("cursorPath", ""))
         if (NewCursorPath = "") {
-            errorMsg := "Cursor Path 不能为空"
+            errorMsg := "Cursor Path 涓嶈兘涓虹┖"
             return false
         }
         NewHold := Float(payload.Get("capslockHoldTimeSeconds", 0.5))
         if (NewHold < 0.1 || NewHold > 5.0) {
-            errorMsg := "CapsLock Hold Time 超出范围"
+            errorMsg := "CapsLock Hold Time 瓒呭嚭鑼冨洿"
             return false
         }
         NewAutoStart := payload.Get("autoStart", false) ? true : false
@@ -1190,7 +1197,7 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         }
         if (VoiceSearchSelectedEngines.Length = 0)
             VoiceSearchSelectedEngines.Push("deepseek")
-        ; 先持久化主题再 ApplyTheme，避免 FloatingToolbar 等从 INI 读到旧值；ApplyTheme 内也会显式传入 Mode
+        ; 鍏堟寔涔呭寲涓婚鍐?ApplyTheme锛岄伩鍏?FloatingToolbar 绛変粠 INI 璇诲埌鏃у€硷紱ApplyTheme 鍐呬篃浼氭樉寮忎紶鍏?Mode
         IniWrite(NewTheme, ConfigFile, "Settings", "ThemeMode")
         IniWrite(NewTheme, ConfigFile, "Appearance", "ThemeMode")
         ApplyTheme(NewTheme)
@@ -1299,7 +1306,7 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         }
         return true
     } catch as err {
-        errorMsg := "保存失败: " . err.Message
+        errorMsg := "淇濆瓨澶辫触: " . err.Message
         return false
     }
 }
@@ -1308,7 +1315,7 @@ ConfigWebView_SaveHoleOnly(payload, &errorMsg := "") {
     global ConfigFile
     try {
         if !(payload is Map) {
-            errorMsg := "payload 无效"
+            errorMsg := "payload 鏃犳晥"
             return false
         }
         NewHolePositionMode := Trim(String(payload.Get("holePositionMode", IniRead(ConfigFile, "Appearance", "HolePositionMode", "anchor"))))
@@ -1365,7 +1372,7 @@ ConfigWebView_SaveHoleOnly(payload, &errorMsg := "") {
         try GDHO_ApplyHideDockSettings(NewHoleHideDockEnabled, NewHoleHideDockEdge, NewHoleHideDockMargin)
         return true
     } catch as err {
-        errorMsg := "保存失败: " . err.Message
+        errorMsg := "淇濆瓨澶辫触: " . err.Message
         return false
     }
 }
@@ -1375,7 +1382,7 @@ ConfigWebView_SaveAppearanceActivationMode(mode, &errorMsg := "") {
     try {
         newMode := NormalizeAppearanceActivationMode(mode)
         if (newMode = "") {
-            errorMsg := "激活方式无效"
+            errorMsg := "invalid activation mode"
             return false
         }
         try OutputDebug("[ConfigWebView] saveAppearanceActivationMode mode=" . newMode)
@@ -1499,14 +1506,14 @@ ConfigWebView_OnMessage(sender, args) {
             ConfigWebView_FullTextUpdateConfig(pl)
         case "fulltextPickIndexDir":
             selectedDir := ""
-            try selectedDir := FileSelect("D", A_ScriptDir, "选择索引目录")
+            try selectedDir := FileSelect("D", A_ScriptDir, "閫夋嫨绱㈠紩鐩綍")
             if (selectedDir = "")
                 selectedDir := ""
             ConfigWebView_Send(Map("type", "fulltextBrowseResult", "path", selectedDir))
         case "fulltextProbeRequest":
             ConfigWebView_FullTextProbe()
         case "browseCursorPath":
-            selected := FileSelect("1", A_ScriptDir, "选择 Cursor.exe", "Executable (*.exe)")
+            selected := FileSelect("1", A_ScriptDir, "閫夋嫨 Cursor.exe", "Executable (*.exe)")
             if (selected = "")
                 selected := ""
             ConfigWebView_Send(Map("type", "browseCursorPathResult", "path", selected))
@@ -1559,7 +1566,7 @@ ConfigWebView_OnMessage(sender, args) {
                         _PushInit()
                     ok := true
                 } else
-                    err := "工具栏布局无效或未加载命令表"
+                    err := "invalid toolbar layout or commands not loaded"
             } catch as e {
                 err := e.Message
             }
@@ -1605,11 +1612,11 @@ ConfigWebView_OnMessage(sender, args) {
                         }
                         OpenLegacyConfigGUI(targetTab)
                     case "openCompareSettings":
-                        ; 保留当前 WebView，同时再打开一份原版设置页用于对照
+                        ; 淇濈暀褰撳墠 WebView锛屽悓鏃跺啀鎵撳紑涓€浠藉師鐗堣缃〉鐢ㄤ簬瀵圭収
                         OpenLegacyConfigGUI()
                     default:
                         ok := false
-                        err := "未知操作: " . op
+                        err := "鏈煡鎿嶄綔: " . op
                 }
             } catch as e {
                 ok := false
@@ -1627,15 +1634,15 @@ ConfigWebView_OnMessage(sender, args) {
 WebViewPromptTemplateUpsert(payload) {
     global PromptTemplates, TemplateIndexByArrayIndex
     if !(payload is Map)
-        throw Error("模板数据无效")
+        throw Error("妯℃澘鏁版嵁鏃犳晥")
     tId := Trim(payload.Get("id", ""))
     tTitle := Trim(payload.Get("title", ""))
     tCategory := Trim(payload.Get("category", ""))
     tContent := payload.Get("content", "")
     if (tTitle = "" || tContent = "")
-        throw Error("模板标题和内容不能为空")
+        throw Error("template title/content cannot be empty")
     if (tCategory = "")
-        tCategory := "自定义"
+        tCategory := "custom"
     if (tId != "" && TemplateIndexByArrayIndex.Has(tId)) {
         idx := TemplateIndexByArrayIndex[tId]
         old := PromptTemplates[idx]
@@ -1656,16 +1663,16 @@ WebViewPromptTemplateUpsert(payload) {
 WebViewPromptTemplateDelete(payload) {
     global PromptTemplates, DefaultTemplateIDs, TemplateIndexByArrayIndex
     if !(payload is Map)
-        throw Error("模板数据无效")
+        throw Error("妯℃澘鏁版嵁鏃犳晥")
     tId := Trim(payload.Get("id", ""))
     if (tId = "")
-        throw Error("模板ID不能为空")
+        throw Error("妯℃澘ID涓嶈兘涓虹┖")
     for _, did in DefaultTemplateIDs {
         if (did = tId)
-            throw Error("默认模板不能删除")
+            throw Error("榛樿妯℃澘涓嶈兘鍒犻櫎")
     }
     if !TemplateIndexByArrayIndex.Has(tId)
-        throw Error("模板不存在")
+        throw Error("template does not exist")
     idx := TemplateIndexByArrayIndex[tId]
     PromptTemplates.RemoveAt(idx)
     InvalidateTemplateCache()
@@ -1675,43 +1682,43 @@ WebViewPromptTemplateDelete(payload) {
 WebViewPromptTemplateSetDefault(payload) {
     global DefaultTemplateIDs, TemplateIndexByID
     if !(payload is Map)
-        throw Error("默认模板参数无效")
+        throw Error("榛樿妯℃澘鍙傛暟鏃犳晥")
     tId := Trim(payload.Get("id", ""))
     tType := Trim(payload.Get("type", ""))
     if (tId = "" || tType = "")
-        throw Error("默认模板参数不完整")
+        throw Error("default template params are incomplete")
     if !TemplateIndexByID.Has(tId)
-        throw Error("模板不存在")
+        throw Error("template does not exist")
     if (tType != "Explain" && tType != "Refactor" && tType != "Optimize")
-        throw Error("默认模板类型无效")
+        throw Error("榛樿妯℃澘绫诲瀷鏃犳晥")
     DefaultTemplateIDs[tType] := tId
     SavePromptTemplates()
 }
 
 
-; ===================== 保存配置窗口位置 =====================
+; ===================== 淇濆瓨閰嶇疆绐楀彛浣嶇疆 =====================
 SaveConfigGUIPosition(ConfigGUI) {
     global GuiID_ConfigGUI
     try {
-        ; 检查窗口是否还存在
+        ; 妫€鏌ョ獥鍙ｆ槸鍚﹁繕瀛樺湪
         if (!ConfigGUI || !GuiID_ConfigGUI || GuiID_ConfigGUI = 0) {
-            ; 窗口已关闭，停止定时器并立即保存所有待保存的位置
+            ; 绐楀彛宸插叧闂紝鍋滄瀹氭椂鍣ㄥ苟绔嬪嵆淇濆瓨鎵€鏈夊緟淇濆瓨鐨勪綅缃?
             SetTimer(() => SaveConfigGUIPosition(ConfigGUI), 0)
             FlushPendingWindowPositions()
             return
         }
         
-        ; 获取窗口位置和大小
+        ; 鑾峰彇绐楀彛浣嶇疆鍜屽ぇ灏?
         WinGetPos(&WinX, &WinY, &WinW, &WinH, ConfigGUI.Hwnd)
         WindowName := GetText("config_title")
-        ; 使用延迟保存，统一管理
+        ; 浣跨敤寤惰繜淇濆瓨锛岀粺涓€绠＄悊
         QueueWindowPositionSave(WindowName, WinX, WinY, WinW, WinH)
     } catch as err {
-        ; 忽略错误（窗口可能已关闭）
+        ; 蹇界暐閿欒锛堢獥鍙ｅ彲鑳藉凡鍏抽棴锛?
     }
 }
 
-; WebView 设置页关闭（由 CloseConfigGUI 在 ConfigWebViewMode 下调用）
+; WebView 璁剧疆椤靛叧闂紙鐢?CloseConfigGUI 鍦?ConfigWebViewMode 涓嬭皟鐢級
 ConfigWebView_Close() {
     global GuiID_ConfigGUI, ConfigWV2Ctrl, ConfigWV2
     try FloatingToolbar_PageDockLeave("settings")
@@ -1722,3 +1729,4 @@ ConfigWebView_Close() {
     } catch {
     }
 }
+

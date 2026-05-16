@@ -94,6 +94,7 @@ CoordMode("ToolTip", "Screen")
 #Include modules\WebView2SharedEnv.ahk
 #Include modules\FocusBroker.ahk
 #Include modules\LegacyGuardrails.ahk
+#Include modules\CoreAsyncHttp.ahk
 
 ; ===================== 包含 OCR 模块 =====================
 ; 包含 lib 文件夹中的 OCR.ahk（用于识图取词功能）

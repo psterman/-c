@@ -224,6 +224,11 @@ LegacyGuard_WinHttpBeforeSync(moduleName, method, url, reason := "", &token := 0
     rs := String(reason)
     token := Map("start", A_TickCount, "module", mod, "method", m, "url", u, "reason", rs)
     LegacyGuard_Log("sync_path_blocked_winhttp_begin", "module=" . mod . " method=" . m . " reason=" . rs . " url=" . u)
+    static strictBlockMods := Map("ClipboardPanelCore", true, "ConfigWebViewModule", true)
+    if strictBlockMods.Has(mod) {
+        LegacyGuard_Log("sync_path_blocked_winhttp_error", "module=" . mod . " method=" . m . " reason=module_denylist")
+        return false
+    }
 
     strict := false
     fallback := true

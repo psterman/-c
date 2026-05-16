@@ -21,6 +21,11 @@ global g_CP_LastShown := 0  ; CP_Show 后时间戳，WM_ACTIVATE 宽限期避免
 global g_CP_PeekGui := 0
 ; go=HTTP /clip/search + Go JSON；ahk=本地 SQLite（_CP_LoadItems）
 global g_CP_EngineMode := "go"
+global g_CP_BackendHealth := false
+global g_CP_LastHealthTick := 0
+global g_CP_HealthTTL := 800
+global g_CP_RequestID := 0
+global g_CP_LastRenderedID := 0
 
 ; --- SearchCenterCore：剪贴板列表 /clip/search ---
 _CP_UrlEncode(str) {
@@ -39,33 +44,49 @@ _CP_UrlEncode(str) {
     return fEscaped
 }
 
-_CP_IsSearchCoreAlive() {
+_CP_LogAsync(event, detail := "") {
     try {
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        guardTok := 0
-        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
-            if !LegacyGuard_WinHttpBeforeSync("ClipboardPanelCore", "GET", "http://127.0.0.1:8080/health", "cp_health_probe", &guardTok)
-                return false
-        }
-        whr.Open("GET", "http://127.0.0.1:8080/health", false)
-        whr.SetTimeouts(2000, 2000, 2000, 2000)
-        whr.Send()
-        st := Integer(whr.Status)
-        if FuncExists("LegacyGuard_WinHttpAfterSync")
-            LegacyGuard_WinHttpAfterSync(guardTok, st)
-        return st = 200
+        line := "[" . A_Now . "][" . String(event) . "] " . String(detail) . "`r`n"
+        if FuncExists("NMER_AsyncLog")
+            NMER_AsyncLog(A_ScriptDir . "\Cache\clipboard_panel_runtime.log", line)
+        else
+            FileAppend(line, A_ScriptDir . "\Cache\clipboard_panel_runtime.log", "UTF-8")
     } catch {
-        try {
-            if FuncExists("LegacyGuard_WinHttpError")
-                LegacyGuard_WinHttpError(guardTok, "cp_health_probe_exception")
-        }
-        return false
     }
 }
 
+_CP_IsSearchCoreAlive() {
+    global g_CP_BackendHealth, g_CP_LastHealthTick, g_CP_HealthTTL
+    if (A_TickCount - g_CP_LastHealthTick <= Integer(g_CP_HealthTTL))
+        return !!g_CP_BackendHealth
+    return !!ProcessExist("SearchCenterCore.exe")
+}
+
+CP_HealthProbeAsync(callback := 0) {
+    global g_CP_BackendHealth, g_CP_LastHealthTick
+    cb := IsObject(callback) ? callback : 0
+    HttpGetAsync("http://127.0.0.1:8080/health", (resp) => (
+        g_CP_LastHealthTick := A_TickCount,
+        g_CP_BackendHealth := (resp.Has("status") && Integer(resp["status"]) = 200),
+        (cb ? cb.Call(g_CP_BackendHealth ? true : false, resp) : 0)
+    ), Map("timeoutMs", 2200, "reqId", 0, "tag", "cp_health_probe"))
+}
+
+CP_SearchAsync(url, callback := 0, timeoutMs := 2600, reqId := 0) {
+    cb := IsObject(callback) ? callback : 0
+    HttpGetAsync(String(url), (resp) => (
+        cb ? cb.Call(resp) : 0
+    ), Map("timeoutMs", Integer(timeoutMs), "reqId", reqId, "tag", "cp_clip_search"))
+}
+
 _CP_EnsureSearchCoreRunning() {
-    if _CP_IsSearchCoreAlive()
+    if ProcessExist("SearchCenterCore.exe") {
+        global g_CP_BackendHealth, g_CP_LastHealthTick
+        g_CP_BackendHealth := true
+        g_CP_LastHealthTick := A_TickCount
+        CP_HealthProbeAsync()
         return true
+    }
     base := IsSet(MainScriptDir) ? MainScriptDir : A_ScriptDir
     preferred := base "\searchcore\SearchCenterCore.exe"
     fallback := base "\SearchCenterCore.exe"
@@ -74,11 +95,8 @@ _CP_EnsureSearchCoreRunning() {
         return false
     try {
         Run('"' exe '" -base "' base '"', base, "Hide")
-        Loop 60 {
-            Sleep(80)
-            if _CP_IsSearchCoreAlive()
-                return true
-        }
+        SetTimer((*) => CP_HealthProbeAsync(), -80)
+        return true
     } catch {
     }
     return false
@@ -117,41 +135,50 @@ _CP_MergeCtxMenuIntoClipJson(body) {
 
 ; 成功返回 true（已向 WebView 投递）；失败返回 false，由调用方走 AHK SQLite
 _CP_TryClipSearchViaGo(keyword, filterType, timeRange, offset, limit, msgType) {
-    global g_CP_EngineMode
+    global g_CP_EngineMode, g_CP_RequestID
     if (g_CP_EngineMode != "go")
         return false
     if !_CP_EnsureSearchCoreRunning()
         return false
+    g_CP_RequestID += 1
+    reqId := g_CP_RequestID
     kwEnc := _CP_UrlEncode(keyword)
     trEnc := _CP_UrlEncode(timeRange)
     url := "http://127.0.0.1:8080/clip/search?keyword=" . kwEnc . "&type=" . filterType . "&timeRange=" . trEnc
         . "&offset=" . offset . "&limit=" . limit . "&msgType=" . msgType
-    try {
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        guardTok := 0
-        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
-            if !LegacyGuard_WinHttpBeforeSync("ClipboardPanelCore", "GET", url, "cp_clip_search", &guardTok)
-                return false
-        }
-        whr.Open("GET", url, false)
-        whr.SetTimeouts(12000, 12000, 12000, 12000)
-        whr.Send()
-        st := Integer(whr.Status)
-        if FuncExists("LegacyGuard_WinHttpAfterSync")
-            LegacyGuard_WinHttpAfterSync(guardTok, st)
-        if (st != 200)
-            return false
-        merged := _CP_MergeCtxMenuIntoClipJson(whr.ResponseText)
-        if (merged = "")
-            return false
-        CP_SendToWeb(merged)
-        return true
-    } catch as err {
-        if FuncExists("LegacyGuard_WinHttpError")
-            LegacyGuard_WinHttpError(guardTok, err.Message)
-        OutputDebug("[CP] Go clip/search: " . err.Message)
-        return false
+    CP_SendToWeb(Map("type", "loading", "source", "go", "msgType", msgType, "requestId", reqId))
+    CP_SearchAsync(url, (resp) => CP_OnSearchResult(reqId, keyword, filterType, offset, limit, msgType, resp), 2600, reqId)
+    return true
+}
+
+_CP_OnGoSearchDone(reqId, keyword, filterType, offset, limit, msgType, resp) {
+    CP_OnSearchResult(reqId, keyword, filterType, offset, limit, msgType, resp)
+}
+
+CP_OnSearchResult(reqId, keyword, filterType, offset, limit, msgType, resp) {
+    global g_CP_RequestID, g_CP_LastRenderedID
+    if (reqId != g_CP_RequestID) {
+        _CP_LogAsync("cp_drop_stale_req", "req_id=" . reqId . " current=" . g_CP_RequestID . " msgType=" . msgType)
+        return
     }
+    if ((resp is Map) && resp.Has("status") && Integer(resp["status"]) = 200 && resp.Has("text")) {
+        merged := _CP_MergeCtxMenuIntoClipJson(resp["text"])
+        if (merged != "") {
+            g_CP_LastRenderedID := reqId
+            CP_SendToWeb(merged)
+            return
+        }
+    }
+    if (reqId != g_CP_RequestID) {
+        _CP_LogAsync("cp_drop_stale_req", "req_id=" . reqId . " current=" . g_CP_RequestID . " phase=fallback")
+        return
+    }
+    items := _CP_LoadItems(keyword, filterType, offset, limit)
+    total := _CP_GetTotalCount(keyword, filterType)
+    hasMore := (msgType = "moreItems") ? ((offset + items.Length) < total) : (items.Length < total)
+    json := _CP_BuildItemsJson(msgType, items, total, hasMore)
+    g_CP_LastRenderedID := reqId
+    CP_SendToWeb(json)
 }
 
 _CP_ClipCacheRoot() {
@@ -887,13 +914,7 @@ _CP_PushInitialData() {
     g_CP_LastKeyword := ""
     g_CP_FilterType := "all"
     g_CP_TimeRange := "all"
-    if _CP_TryClipSearchViaGo("", g_CP_FilterType, g_CP_TimeRange, 0, 30, "init")
-        return
-    items := _CP_LoadItems("", g_CP_FilterType, 0, 30)
-    total := _CP_GetTotalCount("", g_CP_FilterType)
-    hasMore := (items.Length < total)
-    json := _CP_BuildItemsJson("init", items, total, hasMore)
-    CP_SendToWeb(json)
+    CP_RequestSearch("", g_CP_FilterType, g_CP_TimeRange, 0, 30, "init")
 }
 
 ; 外部 OnClipboardChange 写入 ClipMain 后调用：面板已显示时刷新列表（保留当前搜索词与筛选）
@@ -904,13 +925,7 @@ CP_NotifyClipboardUpdated() {
     try {
         kw := g_CP_LastKeyword
         ft := g_CP_FilterType
-        if _CP_TryClipSearchViaGo(kw, ft, g_CP_TimeRange, 0, 30, "init")
-            return
-        items := _CP_LoadItems(kw, ft, 0, 30)
-        total := _CP_GetTotalCount(kw, ft)
-        hasMore := (items.Length < total)
-        json := _CP_BuildItemsJson("init", items, total, hasMore)
-        CP_SendToWeb(json)
+        CP_RequestSearch(kw, ft, g_CP_TimeRange, 0, 30, "init")
     } catch as err {
         OutputDebug("[CP] NotifyClipboardUpdated: " . err.Message)
     }
@@ -921,13 +936,7 @@ _CP_DoLoadMore(offset) {
     offset := Integer(offset)
     if offset < 0
         offset := 0
-    if _CP_TryClipSearchViaGo(g_CP_LastKeyword, g_CP_FilterType, g_CP_TimeRange, offset, 30, "moreItems")
-        return
-    items := _CP_LoadItems(g_CP_LastKeyword, g_CP_FilterType, offset, 30)
-    total := _CP_GetTotalCount(g_CP_LastKeyword, g_CP_FilterType)
-    hasMore := (offset + items.Length) < total
-    json := _CP_BuildItemsJson("moreItems", items, total, hasMore)
-    CP_SendToWeb(json)
+    CP_RequestSearch(g_CP_LastKeyword, g_CP_FilterType, g_CP_TimeRange, offset, 30, "moreItems")
 }
 
 ; ===================== 防抖搜索 =====================
@@ -950,12 +959,16 @@ _CP_ExecuteSearch(keyword, filterType := "all") {
     global g_CP_SearchTimer, g_CP_TimeRange
     g_CP_SearchTimer := 0
     filterType := _CP_NormalizeFilterType(filterType)
-    if _CP_TryClipSearchViaGo(keyword, filterType, g_CP_TimeRange, 0, 30, "searchResult")
+    CP_RequestSearch(keyword, filterType, g_CP_TimeRange, 0, 30, "searchResult")
+}
+
+CP_RequestSearch(keyword, filterType, timeRange, offset, limit, msgType) {
+    if _CP_TryClipSearchViaGo(keyword, filterType, timeRange, offset, limit, msgType)
         return
-    items := _CP_LoadItems(keyword, filterType, 0, 30)
+    items := _CP_LoadItems(keyword, filterType, offset, limit)
     total := _CP_GetTotalCount(keyword, filterType)
-    hasMore := (items.Length < total)
-    json := _CP_BuildItemsJson("searchResult", items, total, hasMore)
+    hasMore := (msgType = "moreItems") ? ((offset + items.Length) < total) : (items.Length < total)
+    json := _CP_BuildItemsJson(msgType, items, total, hasMore)
     CP_SendToWeb(json)
 }
 
