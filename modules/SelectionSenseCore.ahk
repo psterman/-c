@@ -61,6 +61,7 @@ global g_SelSense_HubDictActiveSource := "builtin_default"
 global g_SelSense_HubDictInstallBusy := false
 global g_SelSense_HubDictInstallQueued := false
 global g_SelSense_HubDictLookupCache := Map()
+global g_SelSense_HubDictImportBusy := false
 global g_SelSense_AsyncCmdJobs := Map()
 global g_SelSense_AsyncCmdSeq := 0
 
@@ -390,6 +391,32 @@ SelectionSense_HubDict_DeleteSource(sourceId) {
     return true
 }
 
+SelectionSense_HubDict_InsertSelectChunked(sourceId, dirExpr, keyExpr, valExpr, fromTableExpr, whereExpr := "", chunkSize := 2000) {
+    global ClipboardDB
+    sidEsc := SelectionSense_HubDict_EscapeSql(sourceId)
+    fromExpr := String(fromTableExpr)
+    w := Trim(String(whereExpr))
+    whereSql := (w = "") ? "" : (" WHERE " . w)
+    cnt := 0
+    cntSql := "SELECT COUNT(*) FROM " . fromExpr . whereSql
+    if !(ClipboardDB.GetTable(cntSql, &ct) && ct && ct.HasProp("Rows") && ct.Rows.Length > 0 && ct.Rows[1].Length > 0)
+        return 0
+    cnt := Integer(ct.Rows[1][1])
+    if (cnt <= 0)
+        return 0
+    off := 0
+    while (off < cnt) {
+        sql := "INSERT OR REPLACE INTO HubLocalDict (SourceId, Dir, K, V) "
+            . "SELECT '" . sidEsc . "', " . dirExpr . ", " . keyExpr . ", " . valExpr
+            . " FROM " . fromExpr . whereSql
+            . " LIMIT " . Integer(chunkSize) . " OFFSET " . Integer(off)
+        ClipboardDB.Exec(sql)
+        off += Integer(chunkSize)
+        Sleep(0)
+    }
+    return cnt
+}
+
 SelectionSense_HubDict_ImportSqlite(sourcePath) {
     global ClipboardDB, g_SelSense_HubDictLookupCache
     g_SelSense_HubDictLookupCache := Map()
@@ -494,14 +521,15 @@ SelectionSense_HubDict_ImportSqlite(sourcePath) {
                 qDir := SelectionSense_HubDict_QuoteIdent(hubDir)
                 qK := SelectionSense_HubDict_QuoteIdent(hubK)
                 qV := SelectionSense_HubDict_QuoteIdent(hubV)
-                insertHub := "INSERT OR REPLACE INTO HubLocalDict (SourceId, Dir, K, V) "
-                    . "SELECT '" . SelectionSense_HubDict_EscapeSql(sid) . "', "
-                    . "CASE LOWER(TRIM(" . qDir . ")) WHEN 'zh2en' THEN 'zh2en' ELSE 'en2zh' END, "
-                    . "CASE WHEN LOWER(TRIM(" . qDir . "))='zh2en' THEN TRIM(" . qK . ") ELSE LOWER(TRIM(" . qK . ")) END, "
-                    . "TRIM(" . qV . ") "
-                    . "FROM " . qTable . " "
-                    . "WHERE TRIM(IFNULL(" . qK . ",''))<>'' AND TRIM(IFNULL(" . qV . ",''))<>''"
-                ClipboardDB.Exec(insertHub)
+                SelectionSense_HubDict_InsertSelectChunked(
+                    sid,
+                    "CASE LOWER(TRIM(" . qDir . ")) WHEN 'zh2en' THEN 'zh2en' ELSE 'en2zh' END",
+                    "CASE WHEN LOWER(TRIM(" . qDir . "))='zh2en' THEN TRIM(" . qK . ") ELSE LOWER(TRIM(" . qK . ")) END",
+                    "TRIM(" . qV . ")",
+                    qTable,
+                    "TRIM(IFNULL(" . qK . ",''))<>'' AND TRIM(IFNULL(" . qV . ",''))<>''",
+                    1800
+                )
             } else if (mode = "pair_tables") {
                 kvEn := SelectionSense_HubDict_DetectKvColumns(alias0, pairEnTable)
                 kvZh := SelectionSense_HubDict_DetectKvColumns(alias0, pairZhTable)
@@ -511,30 +539,14 @@ SelectionSense_HubDict_ImportSqlite(sourcePath) {
                 qEnV := SelectionSense_HubDict_QuoteIdent(String(kvEn["valCol"]))
                 qZhK := SelectionSense_HubDict_QuoteIdent(String(kvZh["keyCol"]))
                 qZhV := SelectionSense_HubDict_QuoteIdent(String(kvZh["valCol"]))
-                insertEn := "INSERT OR REPLACE INTO HubLocalDict (SourceId, Dir, K, V) "
-                    . "SELECT '" . SelectionSense_HubDict_EscapeSql(sid) . "', 'en2zh', LOWER(TRIM(" . qEnK . ")), TRIM(" . qEnV . ") "
-                    . "FROM " . qEnTable . " "
-                    . "WHERE TRIM(IFNULL(" . qEnK . ",''))<>'' AND TRIM(IFNULL(" . qEnV . ",''))<>''"
-                insertZh := "INSERT OR REPLACE INTO HubLocalDict (SourceId, Dir, K, V) "
-                    . "SELECT '" . SelectionSense_HubDict_EscapeSql(sid) . "', 'zh2en', TRIM(" . qZhK . "), TRIM(" . qZhV . ") "
-                    . "FROM " . qZhTable . " "
-                    . "WHERE TRIM(IFNULL(" . qZhK . ",''))<>'' AND TRIM(IFNULL(" . qZhV . ",''))<>''"
-                ClipboardDB.Exec(insertEn)
-                ClipboardDB.Exec(insertZh)
+                SelectionSense_HubDict_InsertSelectChunked(sid, "'en2zh'", "LOWER(TRIM(" . qEnK . "))", "TRIM(" . qEnV . ")", qEnTable, "TRIM(IFNULL(" . qEnK . ",''))<>'' AND TRIM(IFNULL(" . qEnV . ",''))<>''", 1800)
+                SelectionSense_HubDict_InsertSelectChunked(sid, "'zh2en'", "TRIM(" . qZhK . ")", "TRIM(" . qZhV . ")", qZhTable, "TRIM(IFNULL(" . qZhK . ",''))<>'' AND TRIM(IFNULL(" . qZhV . ",''))<>''", 1800)
             } else if (mode = "pair_cols") {
                 qPairTable := alias0 . "." . SelectionSense_HubDict_QuoteIdent(pairTable)
                 qEnCol := SelectionSense_HubDict_QuoteIdent(pairEnCol)
                 qZhCol := SelectionSense_HubDict_QuoteIdent(pairZhCol)
-                insertEnZh := "INSERT OR REPLACE INTO HubLocalDict (SourceId, Dir, K, V) "
-                    . "SELECT '" . SelectionSense_HubDict_EscapeSql(sid) . "', 'en2zh', LOWER(TRIM(" . qEnCol . ")), TRIM(" . qZhCol . ") "
-                    . "FROM " . qPairTable . " "
-                    . "WHERE TRIM(IFNULL(" . qEnCol . ",''))<>'' AND TRIM(IFNULL(" . qZhCol . ",''))<>''"
-                insertZhEn := "INSERT OR REPLACE INTO HubLocalDict (SourceId, Dir, K, V) "
-                    . "SELECT '" . SelectionSense_HubDict_EscapeSql(sid) . "', 'zh2en', TRIM(" . qZhCol . "), TRIM(" . qEnCol . ") "
-                    . "FROM " . qPairTable . " "
-                    . "WHERE TRIM(IFNULL(" . qEnCol . ",''))<>'' AND TRIM(IFNULL(" . qZhCol . ",''))<>''"
-                ClipboardDB.Exec(insertEnZh)
-                ClipboardDB.Exec(insertZhEn)
+                SelectionSense_HubDict_InsertSelectChunked(sid, "'en2zh'", "LOWER(TRIM(" . qEnCol . "))", "TRIM(" . qZhCol . ")", qPairTable, "TRIM(IFNULL(" . qEnCol . ",''))<>'' AND TRIM(IFNULL(" . qZhCol . ",''))<>''", 1800)
+                SelectionSense_HubDict_InsertSelectChunked(sid, "'zh2en'", "TRIM(" . qZhCol . ")", "TRIM(" . qEnCol . ")", qPairTable, "TRIM(IFNULL(" . qEnCol . ",''))<>'' AND TRIM(IFNULL(" . qZhCol . ",''))<>''", 1800)
             } else if (mode = "stardict") {
                 qPairTable := alias0 . "." . SelectionSense_HubDict_QuoteIdent(pairTable)
                 qEnCol := SelectionSense_HubDict_QuoteIdent(pairEnCol)
@@ -543,11 +555,7 @@ SelectionSense_HubDict_ImportSqlite(sourcePath) {
                     . "WHEN INSTR(REPLACE(IFNULL(" . qZhCol . ",''), CHAR(13), ''), CHAR(10))>0 "
                     . "THEN SUBSTR(REPLACE(IFNULL(" . qZhCol . ",''), CHAR(13), ''), 1, INSTR(REPLACE(IFNULL(" . qZhCol . ",''), CHAR(13), ''), CHAR(10)) - 1) "
                     . "ELSE REPLACE(IFNULL(" . qZhCol . ",''), CHAR(13), '') END)"
-                insertStardict := "INSERT OR REPLACE INTO HubLocalDict (SourceId, Dir, K, V) "
-                    . "SELECT '" . SelectionSense_HubDict_EscapeSql(sid) . "', 'en2zh', LOWER(TRIM(" . qEnCol . ")), " . cleanZhExpr . " "
-                    . "FROM " . qPairTable . " "
-                    . "WHERE TRIM(IFNULL(" . qEnCol . ",''))<>'' AND " . cleanZhExpr . "<>''"
-                ClipboardDB.Exec(insertStardict)
+                SelectionSense_HubDict_InsertSelectChunked(sid, "'en2zh'", "LOWER(TRIM(" . qEnCol . "))", cleanZhExpr, qPairTable, "TRIM(IFNULL(" . qEnCol . ",''))<>'' AND " . cleanZhExpr . "<>''", 1800)
             }
             countSql := "SELECT COUNT(*) FROM HubLocalDict WHERE SourceId='" . SelectionSense_HubDict_EscapeSql(sid) . "'"
             if (ClipboardDB.GetTable(countSql, &ct) && ct && ct.HasProp("Rows") && ct.Rows.Length > 0 && ct.Rows[1].Length > 0)
@@ -615,6 +623,44 @@ SelectionSense_HubDict_Lookup(dir, key, sourceId := "") {
     }
     g_SelSense_HubDictLookupCache[cacheKey] := ""
     return ""
+}
+
+SelectionSense_HubDict_ImportSqliteAsync(sourcePath, cb := 0) {
+    global g_SelSense_HubDictImportBusy
+    if g_SelSense_HubDictImportBusy {
+        if IsObject(cb)
+            cb.Call(Map("ok", false, "message", "导入任务正在执行中"))
+        return false
+    }
+    g_SelSense_HubDictImportBusy := true
+    SetTimer((*) => SelectionSense_HubDict_ImportSqliteAsync_Worker(String(sourcePath), cb), -1)
+    return true
+}
+
+SelectionSense_HubDict_ImportSqliteAsync_Worker(sourcePath, cb := 0) {
+    global g_SelSense_HubDictImportBusy
+    try {
+        ret := SelectionSense_HubDict_ImportSqlite(sourcePath)
+    } catch as e {
+        ret := Map("ok", false, "message", "导入失败: " . e.Message)
+    }
+    g_SelSense_HubDictImportBusy := false
+    if IsObject(cb) {
+        try cb.Call(ret)
+    }
+}
+
+SelectionSense_HubDict_OnManualImportDone(ret) {
+    global g_SelSense_MenuWV2
+    ok0 := (ret is Map && ret.Has("ok")) ? !!ret["ok"] : false
+    msg0 := (ret is Map && ret.Has("message")) ? String(ret["message"]) : (ok0 ? "导入完成" : "导入失败")
+    try WebView_QueuePayload(g_SelSense_MenuWV2, Map(
+        "type", "hub_translate_sqlite_dict_state",
+        "ok", ok0,
+        "message", msg0,
+        "activeSourceId", SelectionSense_HubDict_GetActiveSource(),
+        "sources", SelectionSense_HubDict_ListSources()
+    ))
 }
 
 SelectionSense_HubDictInstall_RunJs(percent, statusText := "") {
@@ -733,29 +779,29 @@ SelectionSense_HubDictInstall_DownloadByWinHttp(url, savePath, progressCb := 0, 
     path := (m[3] != "") ? m[3] : "/"
     secure := InStr(StrLower(u), "https://") = 1
     total := 0
-    guardTok := 0
     try {
         req := ComObject("WinHttp.WinHttpRequest.5.1")
-        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
-            if !LegacyGuard_WinHttpBeforeSync("SelectionSenseCore", "HEAD", u, "hubdict_head_probe", &guardTok)
-                throw Error("sync path blocked")
-        }
         req.SetTimeouts(4000, 5000, 12000, 12000)
-        req.Open("HEAD", u, false)
+        req.Open("HEAD", u, true)
         req.SetRequestHeader("User-Agent", "AHK-HubDict/1.0")
         req.Send()
-        try {
-            if FuncExists("LegacyGuard_WinHttpAfterSync")
-                LegacyGuard_WinHttpAfterSync(guardTok, Integer(req.Status))
+        deadline := A_TickCount + 12000
+        done := false
+        while (A_TickCount < deadline) {
+            try done := !!req.WaitForResponse(0)
+            catch {
+                done := false
+            }
+            if done
+                break
+            Sleep(10)
         }
+        if !done
+            throw Error("head timeout")
         cl := Trim(String(req.GetResponseHeader("Content-Length")))
         if (cl != "")
             total := Integer(cl)
     } catch {
-        try {
-            if FuncExists("LegacyGuard_WinHttpError")
-                LegacyGuard_WinHttpError(guardTok, "hubdict_head_probe_exception")
-        }
         total := 0
     }
     f := 0, hSession := 0, hConnect := 0, hRequest := 0
@@ -841,28 +887,8 @@ SelectionSense_HubDictInstall_DownloadByBuiltin(url, savePath, statusCb := 0) {
         return Map("ok", false, "message", "下载地址为空")
     if (outPath = "")
         return Map("ok", false, "message", "下载目标路径为空")
-    try {
-        SplitPath(outPath, , &outDir)
-        if (outDir != "" && !DirExist(outDir))
-            DirCreate(outDir)
-        if FileExist(outPath)
-            FileDelete(outPath)
-        if IsObject(statusCb)
-            statusCb.Call("正在下载词典包（内置通道）...")
-        Download(u, outPath)
-        sz := 0
-        try sz := FileGetSize(outPath)
-        catch {
-            sz := 0
-        }
-        if (sz <= 0)
-            return Map("ok", false, "message", "内置下载结果为空（0字节）")
-        if (sz < 256 * 1024)
-            return Map("ok", false, "message", "内置下载文件过小，疑似错误页（" . Round(sz / 1024, 1) . "KB）")
-        return Map("ok", true, "bytes", sz, "total", sz, "path", outPath)
-    } catch as e {
-        return Map("ok", false, "message", "内置下载失败: " . e.Message)
-    }
+    progressCb := 0
+    return SelectionSense_HubDictInstall_DownloadByWinHttp(u, outPath, progressCb, statusCb)
 }
 
 SelectionSense_HubDictInstall_InspectArchive(zipPath) {
@@ -1181,9 +1207,12 @@ SelectionSense_HubDictInstall_OnExtractFinalize(ctx, foundDb) {
     }
     SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "数据库复制成功: " . ctx["finalDb"])
     SelectionSense_HubDictInstall_RunJs(90, "正在导入词典...")
-    importRet := SelectionSense_HubDict_ImportSqlite(ctx["finalDb"])
-    if !(importRet.Has("ok") && importRet["ok"]) {
-        SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "导入失败: " . (importRet.Has("message") ? String(importRet["message"]) : "导入失败"))
+    SelectionSense_HubDict_ImportSqliteAsync(ctx["finalDb"], (importRet) => SelectionSense_HubDictInstall_OnImportDone(ctx, importRet))
+}
+
+SelectionSense_HubDictInstall_OnImportDone(ctx, importRet) {
+    if !(importRet is Map) || !(importRet.Has("ok") && importRet["ok"]) {
+        SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "导入失败: " . ((importRet is Map && importRet.Has("message")) ? String(importRet["message"]) : "导入失败"))
         SelectionSense_HubDictInstall_AsyncFinish(false, "词典导入失败")
         return
     }
@@ -2366,16 +2395,8 @@ SelectionSense_OnMenuWebMessage(sender, args) {
             ))
             return
         }
-        ret := SelectionSense_HubDict_ImportSqlite(picked)
-        ok0 := ret.Has("ok") ? !!ret["ok"] : false
-        msg0 := ret.Has("message") ? String(ret["message"]) : (ok0 ? "导入完成" : "导入失败")
-        try WebView_QueuePayload(g_SelSense_MenuWV2, Map(
-            "type", "hub_translate_sqlite_dict_state",
-            "ok", ok0,
-            "message", msg0,
-            "activeSourceId", SelectionSense_HubDict_GetActiveSource(),
-            "sources", SelectionSense_HubDict_ListSources()
-        ))
+        SelectionSense_HubDictInstall_RunJs(90, "正在导入词典...")
+        SelectionSense_HubDict_ImportSqliteAsync(picked, SelectionSense_HubDict_OnManualImportDone)
         return
     }
     if (typ = "hub_translate_sqlite_dict_delete") {

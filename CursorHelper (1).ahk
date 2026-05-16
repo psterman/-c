@@ -5200,7 +5200,7 @@ CapsLockCopy() {
     Sleep(50)
     
     ; 【环节1】等待复制完成，增加等待时间确保稳定性（从1.0秒增加到2.0秒）
-    if !ClipWait(2.0) {
+    if !ClipWait(0.2) {
         ; 故障：ClipWait 超时 - 2秒内未检测到剪贴板变化
         ; 可能原因：1) 没有选中文本 2) 应用程序响应慢 3) 剪贴板被占用
         A_Clipboard := OldClipboard

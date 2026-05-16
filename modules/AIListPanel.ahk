@@ -403,7 +403,7 @@ PromptQuickPad_PasteByMergedIndex(mi) {
         TrayTip("复制失败", "Prompt Quick-Pad", "Iconx 1")
         return
     }
-    if !ClipWait(2.0) {
+    if !ClipWait(0.12) {
         TrayTip("剪贴板写入失败", "Prompt Quick-Pad", "Iconx 1")
         return
     }
@@ -1569,7 +1569,7 @@ PromptQuickPad_PasteRow(row) {
         TrayTip("澶嶅埗澶辫触", "Prompt Quick-Pad", "Iconx 1")
         return
     }
-    if !ClipWait(2.0) {
+    if !ClipWait(0.12) {
         TrayTip("剪贴板写入失败", "Prompt Quick-Pad", "Iconx 1")
         return
     }
@@ -2636,7 +2636,7 @@ PromptQuickPad_QuickCapture(*) {
     try {
         A_Clipboard := ""
         SendInput("^c")
-        if !ClipWait(1.5) {
+        if !ClipWait(0.2) {
             ; HandleCapsLockB 鍦ㄦ棤閫夊尯鏃朵笉浼氭墦寮€闈㈡澘锛涚洿鎺ユ墦寮€鏀跺綍鍖轰緵鎵嬪姩绮樿创銆?
             try PromptQuickPad_OpenCaptureDraft("", true)
             catch as err

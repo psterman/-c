@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 global g_CloudPlayerGui := 0
 global g_CloudPlayerCtrl := 0
@@ -8,6 +8,10 @@ global g_CloudPlayerOpenListPid := 0
 global g_CloudPlayerApiBase := "http://127.0.0.1:5244"
 global g_CloudPlayerImportBusy := false
 global g_CloudPlayerAutoPulseEnabled := false
+global g_CloudPlayerBackendHealth := false
+global g_CloudPlayerLastHealthTick := 0
+global g_CloudPlayerHealthTtlMs := 900
+global g_CloudPlayerHealthProbeInflight := false
 
 ShowCloudPlayer(*) {
     CloudPlayer_Show()
@@ -668,7 +672,7 @@ CloudPlayer_DownloadOpenListExe() {
         try FileDelete(tmpExe)
         ok := false
         try {
-            Download(url, tmpExe)
+            CloudPlayer_DownloadBinary(url, tmpExe)
             sz := 0
             try sz := FileGetSize(tmpExe)
             if (sz >= 5 * 1024 * 1024) {
@@ -719,52 +723,40 @@ CloudPlayer_GetWorkDir(exePath) {
 }
 
 CloudPlayer_IsOpenListRunning() {
-    global g_CloudPlayerApiBase
+    global g_CloudPlayerBackendHealth, g_CloudPlayerLastHealthTick, g_CloudPlayerHealthTtlMs
+    ttl := Integer(g_CloudPlayerHealthTtlMs)
+    if ((A_TickCount - Integer(g_CloudPlayerLastHealthTick)) <= ttl)
+        return !!g_CloudPlayerBackendHealth
+    CloudPlayer_ProbeOpenListAsync()
+    if (CloudPlayer_IsLocalApiBase(g_CloudPlayerApiBase) && (ProcessExist("openlist.exe") || ProcessExist("alist.exe")))
+        return true
+    return !!g_CloudPlayerBackendHealth
+}
+
+CloudPlayer_ProbeOpenListAsync(cb := 0) {
+    global g_CloudPlayerApiBase, g_CloudPlayerBackendHealth, g_CloudPlayerLastHealthTick, g_CloudPlayerHealthProbeInflight
+    if g_CloudPlayerHealthProbeInflight
+        return 0
+    g_CloudPlayerHealthProbeInflight := true
     apiBase := Trim(String(g_CloudPlayerApiBase))
     if (apiBase = "")
         apiBase := "http://127.0.0.1:5244"
     url := RTrim(apiBase, "/") . "/"
+    return HttpGetAsync(url, (ret) => CloudPlayer_OnProbeDone(ret, cb), Map("timeoutMs", 1500, "receiveTimeoutMs", 1500, "tag", "cloudplayer_probe"))
+}
 
-    ; Primary probe: WinHTTP.
-    guardTok := 0
-    try {
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
-            if !LegacyGuard_WinHttpBeforeSync("CloudPlayer", "GET", url, "cp_openlist_probe", &guardTok)
-                return false
-        }
-        whr.Open("GET", url, false)
-        whr.SetTimeouts(3000, 3000, 3000, 3000)
-        whr.Send()
-        st := Integer(whr.Status)
-        if FuncExists("LegacyGuard_WinHttpAfterSync")
-            LegacyGuard_WinHttpAfterSync(guardTok, st)
-        if (st >= 200 && st < 600)
-            return true
-    } catch {
-        try {
-            if FuncExists("LegacyGuard_WinHttpError")
-                LegacyGuard_WinHttpError(guardTok, "cp_openlist_probe_exception")
-        }
+CloudPlayer_OnProbeDone(ret, cb := 0) {
+    global g_CloudPlayerBackendHealth, g_CloudPlayerLastHealthTick, g_CloudPlayerHealthProbeInflight
+    g_CloudPlayerHealthProbeInflight := false
+    ok := false
+    if (ret is Map) {
+        st := Integer(ret["status"])
+        ok := (st >= 200 && st < 600)
     }
-
-    ; Secondary probe: ServerXMLHTTP (different stack, avoids some WinHTTP env issues).
-    try {
-        xhr := ComObject("MSXML2.ServerXMLHTTP.6.0")
-        xhr.setTimeouts(3000, 3000, 3000, 3000)
-        xhr.open("GET", url, false)
-        xhr.send()
-        st2 := Integer(xhr.status)
-        if (st2 >= 200 && st2 < 600)
-            return true
-    } catch {
-    }
-
-    ; Local fallback: if process is running and API is localhost, treat as likely online.
-    if (CloudPlayer_IsLocalApiBase(apiBase) && (ProcessExist("openlist.exe") || ProcessExist("alist.exe")))
-        return true
-
-    return false
+    g_CloudPlayerBackendHealth := ok
+    g_CloudPlayerLastHealthTick := A_TickCount
+    if IsObject(cb)
+        try cb.Call(ok, ret)
 }
 
 CloudPlayer_IsLocalApiBase(apiBase) {
@@ -2189,10 +2181,14 @@ CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "") {
         }
         try FileDelete(zipPath)
         CloudPlayer_PostDownloadProgress("打包下载：正在压缩，文件数 " . stats["files"] . "...")
-        exitCode := RunWait('"' . sevenZip . '" a -tzip -mx=5 "' . zipPath . '" "' . name . '"', workRoot, "Hide")
-        if (exitCode != 0 || !FileExist(zipPath)) {
+        capZip := CloudPlayer_ExecCapture(A_ComSpec . ' /d /c ""' . sevenZip . '" a -tzip -mx=5 "' . zipPath . '" "' . name . '""', 180000)
+        zipTimedOut := false
+        zipExitCode := -1
+        try zipTimedOut := !!capZip["timedOut"]
+        try zipExitCode := Integer(capZip["exitCode"])
+        if (zipTimedOut || zipExitCode != 0 || !FileExist(zipPath)) {
             try DirDelete(workRoot, true)
-            CloudPlayer_PostDownloadResult(false, "zip failed, exit code " . exitCode, "", name)
+            CloudPlayer_PostDownloadResult(false, zipTimedOut ? "zip timeout" : ("zip failed, exit code " . zipExitCode), "", name)
             return
         }
         try DirDelete(workRoot, true)
@@ -2322,17 +2318,12 @@ CloudPlayer_DownloadBinary(url, outPath, token := "", extraHeaders := 0) {
     u := Trim(String(url))
     if (u = "" || RegExMatch(u, "i)/@manage(?:[/?#]|$)"))
         return false
-    guardTok := 0
     try {
         dir := RegExReplace(outPath, "\\[^\\]*$")
         if (dir != "")
             DirCreate(dir)
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
-            if !LegacyGuard_WinHttpBeforeSync("CloudPlayer", "GET", u, "cp_download_binary", &guardTok)
-                return false
-        }
-        whr.Open("GET", u, false)
+        whr.Open("GET", u, true)
         whr.SetTimeouts(10000, 10000, 30000, 120000)
         whr.SetRequestHeader("User-Agent", "Mozilla/5.0")
         whr.SetRequestHeader("Accept", "application/octet-stream,*/*")
@@ -2343,9 +2334,21 @@ CloudPlayer_DownloadBinary(url, outPath, token := "", extraHeaders := 0) {
                 whr.SetRequestHeader(String(k), String(v))
         }
         whr.Send()
-        st := Integer(whr.Status)
-        if FuncExists("LegacyGuard_WinHttpAfterSync")
-            LegacyGuard_WinHttpAfterSync(guardTok, st)
+        deadline := A_TickCount + 120000
+        done := false
+        while (A_TickCount < deadline) {
+            try done := !!whr.WaitForResponse(0)
+            catch {
+                done := false
+            }
+            if done
+                break
+            Sleep(15)
+        }
+        if !done
+            return false
+        st := 0
+        try st := Integer(whr.Status)
         finalUrl := ""
         try finalUrl := String(whr.Option(1))
         catch {
@@ -2365,10 +2368,6 @@ CloudPlayer_DownloadBinary(url, outPath, token := "", extraHeaders := 0) {
             return FileExist(outPath)
         }
     } catch {
-        try {
-            if FuncExists("LegacyGuard_WinHttpError")
-                LegacyGuard_WinHttpError(guardTok, "cp_download_binary_exception")
-        }
         return false
     }
 }
@@ -2530,25 +2529,31 @@ CloudPlayer_GetArchiveEntries(remotePath, token := "", reqId := "") {
 
 CloudPlayer_HttpJson(method, url, headers := 0, body := "") {
     ret := Map("ok", false, "status", 0, "json", 0, "text", "", "error", "")
-    guardTok := 0
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
-            if !LegacyGuard_WinHttpBeforeSync("CloudPlayer", String(method), String(url), "cp_http_json", &guardTok) {
-                ret["error"] := "sync path blocked"
-                return ret
-            }
-        }
-        whr.Open(String(method), String(url), false)
+        whr.Open(String(method), String(url), true)
         whr.SetTimeouts(5000, 5000, 10000, 15000)
         if (headers is Map) {
             for k, v in headers
                 whr.SetRequestHeader(String(k), String(v))
         }
         whr.Send(body != "" ? String(body) : "")
+        deadline := A_TickCount + 15000
+        done := false
+        while (A_TickCount < deadline) {
+            try done := !!whr.WaitForResponse(0)
+            catch {
+                done := false
+            }
+            if done
+                break
+            Sleep(10)
+        }
+        if !done {
+            ret["error"] := "timeout"
+            return ret
+        }
         st := Integer(whr.Status)
-        if FuncExists("LegacyGuard_WinHttpAfterSync")
-            LegacyGuard_WinHttpAfterSync(guardTok, st)
         txt := String(whr.ResponseText)
         ret["status"] := st
         ret["text"] := txt
@@ -2583,8 +2588,6 @@ CloudPlayer_HttpJson(method, url, headers := 0, body := "") {
             ret["error"] := (errMsg != "") ? errMsg : ("http " . st)
         }
     } catch as e {
-        if FuncExists("LegacyGuard_WinHttpError")
-            LegacyGuard_WinHttpError(guardTok, e.Message)
         ret["error"] := e.Message
     }
     return ret
@@ -2622,3 +2625,4 @@ CloudPlayer_OpenExternalUrl(url) {
     }
     return false
 }
+

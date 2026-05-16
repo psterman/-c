@@ -180,7 +180,7 @@ StartVoiceInput() {
         if WinActive("ahk_exe Cursor.exe") {
             ; 发送 Ctrl+Shift+Space 启动语音输入
             Send("^+{Space}")
-            Sleep(800)  ; 增加等待时间，确保语音输入启动
+            Sleep(220)  ; 降低长阻塞等待，减少主线程卡顿
         } else {
             ; 如果仍然无法激活，显示错误提示
             TrayTip("无法激活 Cursor 窗口", GetText("error"), "Iconx 2")
@@ -224,7 +224,7 @@ StopVoiceInput() {
         
         ; 使用 Cursor 的快捷键 Ctrl+Shift+Space 停止语音输入
         Send("^+{Space}")
-        Sleep(800)  ; 等待语音识别完成并填入内容
+        Sleep(260)  ; 降低长阻塞等待，减少主线程卡顿
         
         ; Cursor 的语音输入会自动将识别内容填入输入框
         ; 直接发送 Enter 键提交内容
@@ -1554,7 +1554,7 @@ StartVoiceInputInSearch() {
             
             ; 发送 Alt+Y 激活百度输入法
             Send("!y")
-            Sleep(800)
+            Sleep(220)
             
             ; 发送 F2 开始语音输入
             Send("{F2}")
@@ -1562,7 +1562,7 @@ StartVoiceInputInSearch() {
         } else if (VoiceInputMethod = "xunfei") {
             ; 讯飞输入法：直接按 F6 开始语音输入
             Send("{F6}")
-            Sleep(800)
+            Sleep(220)
             if (VoiceSearchInputEdit) {
                 InputEditHwnd := VoiceSearchInputEdit.Hwnd
                 try {
@@ -1589,7 +1589,7 @@ StartVoiceInputInSearch() {
             }
             
             Send("!y")
-            Sleep(800)
+            Sleep(220)
             Send("{F2}")
             Sleep(300)
         }
@@ -1624,7 +1624,7 @@ StopVoiceInputInSearch() {
         if (VoiceInputMethod = "baidu") {
             ; 百度输入法：F1 结束语音录入
             Send("{F1}")
-            Sleep(800)
+            Sleep(220)
             
             ; 获取语音输入内容
             OldClipboard := A_Clipboard
@@ -1632,7 +1632,7 @@ StopVoiceInputInSearch() {
             Sleep(200)
             A_Clipboard := ""
             Send("^c")
-            if ClipWait(1.5) {
+            if ClipWait(0.2) {
                 global VoiceSearchContent := A_Clipboard
             }
             A_Clipboard := OldClipboard
@@ -1643,7 +1643,7 @@ StopVoiceInputInSearch() {
         } else if (VoiceInputMethod = "xunfei") {
             ; 讯飞输入法：F6 结束
             Send("{F6}")
-            Sleep(1000)
+            Sleep(260)
             
             ; 获取语音输入内容
             OldClipboard := A_Clipboard
@@ -1651,14 +1651,14 @@ StopVoiceInputInSearch() {
             Sleep(200)
             A_Clipboard := ""
             Send("^c")
-            if ClipWait(1.5) {
+            if ClipWait(0.2) {
                 global VoiceSearchContent := A_Clipboard
             }
             A_Clipboard := OldClipboard
         } else {
             ; 默认尝试百度方案
             Send("{F1}")
-            Sleep(800)
+            Sleep(220)
             
             ; 获取语音输入内容
             OldClipboard := A_Clipboard
@@ -1666,7 +1666,7 @@ StopVoiceInputInSearch() {
             Sleep(200)
             A_Clipboard := ""
             Send("^c")
-            if ClipWait(1.5) {
+            if ClipWait(0.2) {
                 global VoiceSearchContent := A_Clipboard
             }
             A_Clipboard := OldClipboard

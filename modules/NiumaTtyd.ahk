@@ -1,9 +1,15 @@
-; Niuma Chat 本机 ttyd 终端：端口检测、重试、WebView 回传
+﻿; Niuma Chat 本机 ttyd 终端：端口检测、重试、WebView 回传
 ; 依赖主脚本中的 WebView_QueuePayload、A_ScriptDir
 
 global NiumaTtyd_Port := 7681
 global NiumaTtyd_Pid := 0
 global NiumaTtyd__BootI := 0
+global g_NiumaTtydReadyReqSeq := 0
+global g_NiumaTtydReadyReqs := Map()
+global g_NiumaTtydHttpHealthy := false
+global g_NiumaTtydLastHttpTick := 0
+global g_NiumaTtydHttpTTL := 900
+global g_NiumaTtydHttpProbeInflight := false
 
 /**
  * 返回 ttyd.exe 的完整路径（与主程序同目录）。
@@ -18,35 +24,18 @@ NiumaTtyd_ExePath() {
  * @returns {Boolean}
  */
 NiumaTtyd_IsPortListening() {
-    p := NiumaTtyd_Port
-    checkCode := RunWait(
-        A_ComSpec . ' /c "netstat -an | findstr :' . p . ' | findstr LISTENING >nul 2>&1"',
-        , "Hide")
-    return (checkCode = 0)
+    return (NiumaTtyd_GetListeningPid(NiumaTtyd_Port) > 0)
 }
 
 NiumaTtyd_GetListeningPid(port := 0) {
-    p := (port && Integer(port) > 0) ? Integer(port) : NiumaTtyd_Port
-    tmp := A_Temp . "\niuma_ttyd_pid_" . A_TickCount . ".txt"
-    try FileDelete(tmp)
-    try {
-        psCmd := "$pp=(Get-NetTCPConnection -State Listen -LocalPort " . p . " -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess); if($pp){Set-Content -LiteralPath '" . StrReplace(tmp, "'", "''") . "' -Value $pp -Encoding ASCII}"
-        RunWait("powershell -NoProfile -Command " . Chr(34) . psCmd . Chr(34), , "Hide")
-    } catch {
-        return 0
-    }
-    if !FileExist(tmp)
-        return 0
+    ; Phase B: avoid blocking RunWait/netstat probing in active path.
+    ; We use process-level ownership as a fast non-blocking heuristic.
     pid := 0
-    try {
-        s := Trim(FileRead(tmp, "UTF-8"))
-        if (s != "")
-            pid := Integer(s)
-    } catch {
+    try pid := ProcessExist("ttyd.exe")
+    catch {
         pid := 0
     }
-    try FileDelete(tmp)
-    return pid
+    return Integer(pid)
 }
 
 NiumaTtyd_IsPortOwnedByTtyd(port := 0) {
@@ -62,30 +51,31 @@ NiumaTtyd_IsPortOwnedByTtyd(port := 0) {
 
 ; 仅端口 LISTEN 并不代表 Web 页面已可用；补一层 HTTP 探测可避免 WebView2 首次拒绝访问
 NiumaTtyd_IsHttpReady(waitMs := 1200) {
+    global g_NiumaTtydHttpHealthy, g_NiumaTtydLastHttpTick, g_NiumaTtydHttpTTL
+    if ((A_TickCount - Integer(g_NiumaTtydLastHttpTick)) <= Integer(g_NiumaTtydHttpTTL))
+        return !!g_NiumaTtydHttpHealthy
+    NiumaTtyd_IsHttpReadyAsync((ok, _ret) => NiumaTtyd_OnHttpProbeDone(ok), waitMs)
+    return !!g_NiumaTtydHttpHealthy
+}
+
+NiumaTtyd_IsHttpReadyAsync(cb, waitMs := 1200, reqId := 0) {
+    global g_NiumaTtydHttpProbeInflight
+    if g_NiumaTtydHttpProbeInflight
+        return 0
+    g_NiumaTtydHttpProbeInflight := true
     u := NiumaTtyd_BaseUrl()
-    guardTok := 0
-    try {
-        req := ComObject("WinHttp.WinHttpRequest.5.1")
-        if FuncExists("LegacyGuard_WinHttpBeforeSync") {
-            if !LegacyGuard_WinHttpBeforeSync("NiumaTtyd", "GET", u, "ttyd_http_ready_probe", &guardTok)
-                return false
-        }
-        ; Resolve/connect/send/receive timeout (ms)
-        req.SetTimeouts(400, 400, Integer(waitMs), Integer(waitMs))
-        req.Open("GET", u, false)
-        req.Send()
-        st := 0
-        try st := Integer(req.Status)
-        if FuncExists("LegacyGuard_WinHttpAfterSync")
-            LegacyGuard_WinHttpAfterSync(guardTok, st)
-        return (st >= 200 && st < 500)
-    } catch {
-        try {
-            if FuncExists("LegacyGuard_WinHttpError")
-                LegacyGuard_WinHttpError(guardTok, "ttyd_http_ready_probe_exception")
-        }
-        return false
-    }
+    opts := Map("timeoutMs", Integer(waitMs), "receiveTimeoutMs", Integer(waitMs), "tag", "ttyd_http_ready", "reqId", reqId)
+    HttpGetAsync(u, (ret) => (
+        NiumaTtyd_OnHttpProbeDone((ret is Map) && ret["status"] >= 200 && ret["status"] < 500),
+        cb.Call((ret is Map) && ret["status"] >= 200 && ret["status"] < 500, ret)
+    ), opts)
+}
+
+NiumaTtyd_OnHttpProbeDone(ok) {
+    global g_NiumaTtydHttpHealthy, g_NiumaTtydLastHttpTick, g_NiumaTtydHttpProbeInflight
+    g_NiumaTtydHttpProbeInflight := false
+    g_NiumaTtydHttpHealthy := !!ok
+    g_NiumaTtydLastHttpTick := A_TickCount
 }
 
 /**
@@ -200,6 +190,67 @@ NiumaTtyd_EnsureReady(timeoutMs := 20000) {
     return (NiumaTtyd_IsPortOwnedByTtyd(NiumaTtyd_Port) && NiumaTtyd_IsHttpReady(1200))
 }
 
+NiumaTtyd_EnsureReadyAsync(cb, timeoutMs := 20000) {
+    global g_NiumaTtydReadyReqSeq, g_NiumaTtydReadyReqs, NiumaTtyd_Pid
+    if !FileExist(NiumaTtyd_ExePath()) {
+        cb.Call(false, "missing_ttyd_exe")
+        return 0
+    }
+    if (NiumaTtyd_IsPortOwnedByTtyd(NiumaTtyd_Port)) {
+        NiumaTtyd_Pid := NiumaTtyd_GetListeningPid(NiumaTtyd_Port)
+    } else if (NiumaTtyd_IsPortListening()) {
+        cb.Call(false, "port_occupied")
+        return 0
+    } else if !NiumaTtyd_StartProcess() {
+        cb.Call(false, "start_failed")
+        return 0
+    }
+    g_NiumaTtydReadyReqSeq += 1
+    rid := g_NiumaTtydReadyReqSeq
+    g_NiumaTtydReadyReqs[rid] := Map("cb", cb, "deadline", A_TickCount + Integer(timeoutMs), "inProbe", false)
+    SetTimer((*) => NiumaTtyd_EnsureReadyStep(rid), -10)
+    return rid
+}
+
+NiumaTtyd_EnsureReadyStep(rid) {
+    global g_NiumaTtydReadyReqs, NiumaTtyd_Pid
+    if !(g_NiumaTtydReadyReqs is Map) || !g_NiumaTtydReadyReqs.Has(rid)
+        return
+    req := g_NiumaTtydReadyReqs[rid]
+    if (A_TickCount >= Integer(req["deadline"])) {
+        cb := req["cb"]
+        g_NiumaTtydReadyReqs.Delete(rid)
+        cb.Call(false, "timeout")
+        return
+    }
+    if !NiumaTtyd_IsPortOwnedByTtyd(NiumaTtyd_Port) {
+        SetTimer((*) => NiumaTtyd_EnsureReadyStep(rid), -150)
+        return
+    }
+    NiumaTtyd_Pid := NiumaTtyd_GetListeningPid(NiumaTtyd_Port)
+    if req["inProbe"]
+        return
+    req["inProbe"] := true
+    g_NiumaTtydReadyReqs[rid] := req
+    NiumaTtyd_IsHttpReadyAsync((ok, _ret) => NiumaTtyd_EnsureReadyProbeDone(rid, ok), 1200, rid)
+}
+
+NiumaTtyd_EnsureReadyProbeDone(rid, ok) {
+    global g_NiumaTtydReadyReqs
+    if !(g_NiumaTtydReadyReqs is Map) || !g_NiumaTtydReadyReqs.Has(rid)
+        return
+    req := g_NiumaTtydReadyReqs[rid]
+    cb := req["cb"]
+    if ok {
+        g_NiumaTtydReadyReqs.Delete(rid)
+        cb.Call(true, "")
+        return
+    }
+    req["inProbe"] := false
+    g_NiumaTtydReadyReqs[rid] := req
+    SetTimer((*) => NiumaTtyd_EnsureReadyStep(rid), -180)
+}
+
 /**
  * 结束本机 ttyd 进程后重新拉起并等待端口就绪（「重启」按钮用）。
  * @param {Number} waitMs
@@ -207,10 +258,10 @@ NiumaTtyd_EnsureReady(timeoutMs := 20000) {
  */
 NiumaTtyd_Restart(waitMs := 20000) {
     try {
-        RunWait(A_ComSpec . ' /c "taskkill /F /IM ttyd.exe 2>nul"', , "Hide")
+        Run(A_ComSpec . ' /c "taskkill /F /IM ttyd.exe 2>nul"', , "Hide")
     } catch {
     }
-    Sleep(500)
+    Sleep(120)
     return NiumaTtyd_EnsureReady(waitMs)
 }
 
@@ -276,47 +327,39 @@ NiumaTtyd_DeferredOpenJob(*) {
     global g_FTB_WV2
     wv2 := g_FTB_WV2
     if !FileExist(NiumaTtyd_ExePath()) {
-        NiumaTtyd_NotifyWeb(wv2, false, "同目录下未找到 ttyd.exe，请与主程序一起复制。", "")
+        NiumaTtyd_NotifyWeb(wv2, false, "missing ttyd.exe", "")
         return
     }
-    ok := NiumaTtyd_EnsureReady(20000)
-    if (ok) {
-        NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl())
-    } else {
-        NiumaTtyd_NotifyWeb(
-            wv2, false,
-            "20 秒内未监听到 " . NiumaTtyd_Port . " 端口，可点「重试/重启」或检查防火墙/端口占用。",
-            ""
-        )
-    }
+    NiumaTtyd_EnsureReadyAsync((ok, reason) => (
+        ok
+            ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl())
+            : NiumaTtyd_NotifyWeb(wv2, false, "20s ready timeout: " . reason, "")
+    ), 20000)
 }
 
 NiumaTtyd_DeferredRestartJob(*) {
     global g_FTB_WV2
     wv2 := g_FTB_WV2
     if !FileExist(NiumaTtyd_ExePath()) {
-        NiumaTtyd_NotifyWeb(wv2, false, "同目录下未找到 ttyd.exe。", "")
+        NiumaTtyd_NotifyWeb(wv2, false, "missing ttyd.exe", "")
         return
     }
-    ok := NiumaTtyd_Restart(25000)
-    if (ok) {
-        NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl())
-    } else {
-        NiumaTtyd_NotifyWeb(
-            wv2, false, "重启后仍未就绪，请检查是否被安全软件拦截 ttyd.exe。", ""
-        )
-    }
+    try Run(A_ComSpec . ' /c "taskkill /F /IM ttyd.exe 2>nul"', , "Hide")
+    SetTimer((*) => NiumaTtyd_EnsureReadyAsync((ok, reason) => (
+        ok
+            ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl())
+            : NiumaTtyd_NotifyWeb(wv2, false, "restart failed: " . reason, "")
+    ), 25000), -500)
 }
 
 NiumaTtyd_DeferredExternalOpenJob(*) {
     global g_FTB_WV2
     wv2 := g_FTB_WV2
-    ok := NiumaTtyd_OpenExternal()
-    if (ok) {
-        NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl())
-    } else {
-        NiumaTtyd_NotifyWeb(wv2, false, "系统浏览器打开失败，可手动访问 " . NiumaTtyd_BaseUrl(), "")
-    }
+    NiumaTtyd_EnsureReadyAsync((ok, reason) => (
+        ok
+            ? (Run(NiumaTtyd_BaseUrl()), NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl()))
+            : NiumaTtyd_NotifyWeb(wv2, false, "open external failed: " . reason, "")
+    ), 20000)
 }
 
 /**
@@ -340,3 +383,4 @@ NiumaTtyd_BootstrapRetryStep(*) {
     NiumaTtyd_StartProcess()
     SetTimer(NiumaTtyd_BootstrapRetryStep, -500)
 }
+

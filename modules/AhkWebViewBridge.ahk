@@ -8,6 +8,9 @@
 global g_AhkInterface := AhkInterface()
 
 class AhkInterface {
+    __New() {
+        this._httpReqSeq := 0
+    }
     /**
      * 连通性探测（供前端验证 hostObjects）。
      */
@@ -39,75 +42,45 @@ class AhkInterface {
      * 同步 HTTP 请求；headersJson 为 JSON 对象字符串，如 {"Authorization":"Bearer x"}；返回 JSON 字符串 {ok,status,body,error}。
      */
     HttpRequest(method, url, headersJson := "", body := "") {
+        out := Map("ok", false, "status", 0, "body", "", "error", "sync_http_disabled")
+        return Jxon_Dump(out)
+    }
+
+    HttpRequestAsync(method, url, headersJson := "", body := "", requestId := "") {
         m := StrUpper(Trim(String(method)))
         u := Trim(String(url))
-        out := Map("ok", false, "status", 0, "body", "", "error", "")
+        out := Map("ok", false, "queued", false, "reqId", 0, "requestId", String(requestId), "error", "")
         if (u = "") {
             out["error"] := "empty url"
             return Jxon_Dump(out)
         }
-        hdrs := Map()
-        if (headersJson != "") {
-            try {
-                o := Jxon_Load(headersJson)
-                if (o is Map)
-                    hdrs := o
-            } catch as e {
-                out["error"] := "headersJson: " . e.Message
-                return Jxon_Dump(out)
-            }
-        }
-        uaVal := ""
-        refererVal := ""
-        rangeVal := ""
+        this._httpReqSeq += 1
+        rid := this._httpReqSeq
+        payloadId := String(requestId)
+        HttpJsonAsync(m = "" ? "GET" : m, u, body, (ret) => (
+            this._EmitHttpAsyncResult(rid, payloadId, ret)
+        ), Map("tag", "ahk_bridge_http", "reqId", rid, "timeoutMs", 5000, "receiveTimeoutMs", 5000))
+        out["ok"] := true
+        out["queued"] := true
+        out["reqId"] := rid
+        return Jxon_Dump(out)
+    }
+
+    _EmitHttpAsyncResult(reqId, requestId, ret) {
+        evt := Map(
+            "type", "ahk_http_result",
+            "reqId", reqId,
+            "requestId", requestId,
+            "ok", (ret is Map) ? ret["ok"] : false,
+            "status", (ret is Map) ? ret["status"] : 0,
+            "body", (ret is Map) ? ret["text"] : "",
+            "error", (ret is Map) ? ret["error"] : "invalid_ret"
+        )
         try {
-            whr := ComObject("WinHttp.WinHttpRequest.5.1")
-            guardTok := 0
-            if FuncExists("LegacyGuard_WinHttpBeforeSync") {
-                if !LegacyGuard_WinHttpBeforeSync("AhkWebViewBridge", m != "" ? m : "GET", u, "host_object_http_request", &guardTok) {
-                    out["error"] := "sync path blocked"
-                    return Jxon_Dump(out)
-                }
-            }
-            whr.Open(m != "" ? m : "GET", u, false)
-            whr.SetTimeouts(30000, 30000, 30000, 30000)
-            for k, v in hdrs {
-                key := String(k)
-                val := String(v)
-                lk := StrLower(Trim(key))
-                if (lk = "user-agent") {
-                    uaVal := val
-                    continue
-                }
-                if (lk = "referer" || lk = "referrer") {
-                    refererVal := val
-                    continue
-                }
-                if (lk = "range") {
-                    rangeVal := val
-                    continue
-                }
-                try whr.SetRequestHeader(key, val)
-            }
-            if (uaVal != "")
-                try whr.SetRequestHeader("User-Agent", uaVal)
-            if (refererVal != "")
-                try whr.SetRequestHeader("Referer", refererVal)
-            if (rangeVal != "")
-                try whr.SetRequestHeader("Range", rangeVal)
-            whr.Send(body != "" ? String(body) : "")
-            st := Integer(whr.Status)
-            out["status"] := st
-            out["body"] := whr.ResponseText
-            out["ok"] := (st >= 200 && st < 300)
-            if FuncExists("LegacyGuard_WinHttpAfterSync")
-                LegacyGuard_WinHttpAfterSync(guardTok, st)
-            return Jxon_Dump(out)
-        } catch as e {
-            out["error"] := e.Message
-            if FuncExists("LegacyGuard_WinHttpError")
-                LegacyGuard_WinHttpError(guardTok, e.Message)
-            return Jxon_Dump(out)
+            if FuncExists("WebView_BroadcastPayload")
+                Func("WebView_BroadcastPayload").Call(evt)
+            else if FuncExists("WebView_QueuePayload")
+                WebView_QueuePayload(0, evt)
         }
     }
 
