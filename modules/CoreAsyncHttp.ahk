@@ -23,13 +23,38 @@ CoreAsyncHttp_DefaultOpts(opts := 0) {
         "receiveTimeoutMs", 2200,
         "resolveTimeoutMs", 900,
         "reqId", 0,
-        "tag", ""
+        "tag", "",
+        "headers", 0
     )
     if (opts is Map) {
         for k, v in opts
             out[k] := v
     }
     return out
+}
+
+CoreAsyncHttp_ApplyHeaders(whr, headers) {
+    if !(headers is Map)
+        return
+    for k, v in headers {
+        hk := Trim(String(k))
+        if (hk = "")
+            continue
+        try whr.SetRequestHeader(hk, String(v))
+    }
+}
+
+CoreAsyncHttp_HasHeader(headers, keyName) {
+    if !(headers is Map)
+        return false
+    want := StrLower(Trim(String(keyName)))
+    if (want = "")
+        return false
+    for k, _ in headers {
+        if (StrLower(Trim(String(k))) = want)
+            return true
+    }
+    return false
 }
 
 CoreAsyncHttp_ReadUtf8Text(whr) {
@@ -140,8 +165,10 @@ CoreAsyncHttp_SendAsync(method, url, body := "", callback := 0, opts := 0) {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         whr.Open(String(method), String(url), true)
         whr.SetTimeouts(Integer(o["resolveTimeoutMs"]), Integer(o["connectTimeoutMs"]), Integer(o["sendTimeoutMs"]), Integer(o["receiveTimeoutMs"]))
+        CoreAsyncHttp_ApplyHeaders(whr, o["headers"])
         if (String(method) = "POST" || String(method) = "PUT" || String(method) = "PATCH") {
-            whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
+            if !CoreAsyncHttp_HasHeader(o["headers"], "Content-Type")
+                whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
             payload := (Trim(String(body)) = "") ? "{}" : String(body)
             whr.Send(payload)
         } else {

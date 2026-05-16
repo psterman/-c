@@ -42,7 +42,16 @@ class AhkInterface {
      * 同步 HTTP 请求；headersJson 为 JSON 对象字符串，如 {"Authorization":"Bearer x"}；返回 JSON 字符串 {ok,status,body,error}。
      */
     HttpRequest(method, url, headersJson := "", body := "") {
-        out := Map("ok", false, "status", 0, "body", "", "error", "sync_http_disabled")
+        payload := Map(
+            "reqId", 0,
+            "requestId", "",
+            "ok", false,
+            "status", 0,
+            "body", "",
+            "error", "sync_http_disabled"
+        )
+        out := Map("type", "event", "name", "ahk_http_result", "payload", payload)
+        out["legacy"] := AhkInterface._BuildLegacyHttpResult(payload)
         return Jxon_Dump(out)
     }
 
@@ -54,12 +63,18 @@ class AhkInterface {
             out["error"] := "empty url"
             return Jxon_Dump(out)
         }
+        headersRet := this._ParseHeadersJson(headersJson)
+        if !headersRet["ok"] {
+            out["error"] := headersRet["error"]
+            return Jxon_Dump(out)
+        }
+        headersMap := headersRet["headers"]
         this._httpReqSeq += 1
         rid := this._httpReqSeq
         payloadId := String(requestId)
         HttpJsonAsync(m = "" ? "GET" : m, u, body, (ret) => (
             this._EmitHttpAsyncResult(rid, payloadId, ret)
-        ), Map("tag", "ahk_bridge_http", "reqId", rid, "timeoutMs", 5000, "receiveTimeoutMs", 5000))
+        ), Map("tag", "ahk_bridge_http", "reqId", rid, "timeoutMs", 5000, "receiveTimeoutMs", 5000, "headers", headersMap))
         out["ok"] := true
         out["queued"] := true
         out["reqId"] := rid
@@ -67,8 +82,7 @@ class AhkInterface {
     }
 
     _EmitHttpAsyncResult(reqId, requestId, ret) {
-        evt := Map(
-            "type", "ahk_http_result",
+        payload := Map(
             "reqId", reqId,
             "requestId", requestId,
             "ok", (ret is Map) ? ret["ok"] : false,
@@ -76,12 +90,40 @@ class AhkInterface {
             "body", (ret is Map) ? ret["text"] : "",
             "error", (ret is Map) ? ret["error"] : "invalid_ret"
         )
+        evt := Map(
+            "type", "event",
+            "name", "ahk_http_result",
+            "payload", payload
+        )
+        evt["legacy"] := AhkInterface._BuildLegacyHttpResult(payload)
+        try CoreAsyncHttp_Log("ahk_bridge_http_event_legacy_compat", "name=ahk_http_result req_id=" . reqId . " request_id=" . requestId)
         try {
             if FuncExists("WebView_BroadcastPayload")
                 Func("WebView_BroadcastPayload").Call(evt)
             else if FuncExists("WebView_QueuePayload")
                 WebView_QueuePayload(0, evt)
         }
+    }
+
+    _ParseHeadersJson(headersJson) {
+        raw := Trim(String(headersJson))
+        if (raw = "")
+            return Map("ok", true, "headers", Map(), "error", "")
+        root := 0
+        try root := Jxon_Load(raw)
+        catch as e {
+            return Map("ok", false, "headers", Map(), "error", "invalid_headers_json: " . e.Message)
+        }
+        if !(root is Map)
+            return Map("ok", false, "headers", Map(), "error", "invalid_headers_json: expected object")
+        normalized := Map()
+        for k, v in root {
+            hk := Trim(String(k))
+            if (hk = "")
+                continue
+            normalized[hk] := String(v)
+        }
+        return Map("ok", true, "headers", normalized, "error", "")
     }
 
     /**
@@ -137,6 +179,20 @@ class AhkInterface {
         if (StrLower(SubStr(p, 1, StrLen(base))) != StrLower(base))
             return ""
         return p
+    }
+
+    static _BuildLegacyHttpResult(payload) {
+        if !(payload is Map)
+            payload := Map("ok", false, "status", 0, "body", "", "error", "invalid_payload", "reqId", 0, "requestId", "")
+        return Map(
+            "type", "ahk_http_result",
+            "reqId", payload.Has("reqId") ? payload["reqId"] : 0,
+            "requestId", payload.Has("requestId") ? payload["requestId"] : "",
+            "ok", payload.Has("ok") ? payload["ok"] : false,
+            "status", payload.Has("status") ? payload["status"] : 0,
+            "body", payload.Has("body") ? payload["body"] : "",
+            "error", payload.Has("error") ? payload["error"] : ""
+        )
     }
 }
 

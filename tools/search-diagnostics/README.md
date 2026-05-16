@@ -27,3 +27,27 @@ tools\search-diagnostics\start.ps1
 ```powershell
 Stop-Process -Id <collector_pid>,<server_pid>
 ```
+
+## 扫描脚本
+
+```powershell
+tools\search-diagnostics\scan-driver.ps1
+```
+
+- 批量请求典型查询词（短词/长词/中文/英文/路径/高命中）
+- 输出：
+  - `tools\search-diagnostics\results\search_scan_*.jsonl`
+  - `tools\search-diagnostics\results\search_scan_summary_*.json`
+
+## 压测脚本
+
+```powershell
+# smoke 30 秒
+tools\search-diagnostics\pressure.ps1 -DurationSec 30 -Concurrency 2 -Qps 8
+
+# baseline 5 分钟
+tools\search-diagnostics\pressure.ps1 -DurationSec 300 -Concurrency 4 -Qps 10
+```
+
+- 输出：`tools\search-diagnostics\results\search_pressure_*.json`
+- 统一字段：`ts` / `scenario` / `metrics` / `errors`

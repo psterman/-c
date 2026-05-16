@@ -1950,3 +1950,57 @@ Source:	WinHttp.WinHttpRequest
 操作超时
 
 Source:	WinHttp.WinHttpRequest
+[20260517003728][async_http_send] id=20 req_id=0 tag=cp_health_probe method=GET url=http://127.0.0.1:8080/health
+[20260517003728][async_http_send] id=21 req_id=1 tag=cp_clip_search method=GET url=http://127.0.0.1:8080/clip/search?keyword=&type=all&timeRange=all&offset=0&limit=30&msgType=init
+[20260517003728][async_http_done] id=20 req_id=0 tag=cp_health_probe status=200 elapsed_ms=47
+[20260517003728][async_http_done] id=21 req_id=1 tag=cp_clip_search status=200 elapsed_ms=31
+[20260517004948][async_http_send] id=1 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517004950][async_http_timeout] id=1 req_id=1 tag=ttyd_http_ready timeout_ms=1200
+[20260517004950][async_http_send] id=2 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517004951][async_http_timeout] id=2 req_id=1 tag=ttyd_http_ready timeout_ms=1200
+[20260517004951][async_http_send] id=3 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517004953][async_http_timeout] id=3 req_id=1 tag=ttyd_http_ready timeout_ms=1200
+[20260517004953][async_http_send] id=4 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517004953][async_http_send] id=5 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health
+[20260517004953][async_http_done] id=5 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=31
+[20260517004953][async_http_send] id=6 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status
+[20260517004953][async_http_done] id=6 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31
+[20260517004953][async_http_send] id=7 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress
+[20260517004953][async_http_done] id=7 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31
+[20260517004953][async_http_send] id=8 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config
+[20260517004953][async_http_done] id=8 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32
+[20260517004954][async_http_timeout] id=4 req_id=1 tag=ttyd_http_ready timeout_ms=1200
+[20260517004954][async_http_send] id=9 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517004955][async_http_timeout] id=9 req_id=1 tag=ttyd_http_ready timeout_ms=1200
+[20260517004956][async_http_send] id=10 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517004956][async_http_error] id=10 req_id=1 tag=ttyd_http_ready msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260517004957][async_http_send] id=11 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517004958][async_http_timeout] id=11 req_id=1 tag=ttyd_http_ready timeout_ms=1200
+[20260517004958][async_http_send] id=12 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517004959][async_http_timeout] id=12 req_id=1 tag=ttyd_http_ready timeout_ms=1200
+[20260517005000][async_http_send] id=13 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517005001][async_http_error] id=13 req_id=1 tag=ttyd_http_ready msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260517005001][async_http_send] id=14 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517005002][async_http_timeout] id=14 req_id=1 tag=ttyd_http_ready timeout_ms=1200
+[20260517005002][async_http_send] id=15 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517005003][async_http_timeout] id=15 req_id=1 tag=ttyd_http_ready timeout_ms=1200
+[20260517005004][async_http_send] id=16 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517005005][async_http_error] id=16 req_id=1 tag=ttyd_http_ready msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260517005005][async_http_send] id=17 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517005006][async_http_timeout] id=17 req_id=1 tag=ttyd_http_ready timeout_ms=1200
+[20260517005006][async_http_send] id=18 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517005007][async_http_timeout] id=18 req_id=1 tag=ttyd_http_ready timeout_ms=1200
+[20260517005008][async_http_send] id=19 req_id=1 tag=ttyd_http_ready method=GET url=http://localhost:7681/
+[20260517005009][async_http_error] id=19 req_id=1 tag=ttyd_http_ready msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest

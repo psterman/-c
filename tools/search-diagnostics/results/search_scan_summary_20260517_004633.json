@@ -1,0 +1,13 @@
+﻿{
+    "ts":  "2026-05-17T00:46:34",
+    "scenario":  "search_scan_default",
+    "metrics":  {
+                    "total":  10,
+                    "failed":  0,
+                    "passed":  10,
+                    "output":  "C:\\Users\\Administrator\\Desktop\\牛马nmer\\tools\\search-diagnostics\\results\\search_scan_20260517_004633.jsonl"
+                },
+    "errors":  [
+
+               ]
+}

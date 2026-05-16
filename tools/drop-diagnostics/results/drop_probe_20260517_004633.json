@@ -1,0 +1,24 @@
+﻿{
+    "ts":  "2026-05-17T00:46:58",
+    "scenario":  "drop_probe",
+    "metrics":  {
+                    "bridgeLines":  906,
+                    "ahkLines":  507010,
+                    "counts":  {
+                                   "drag_start":  423,
+                                   "drag_enter":  0,
+                                   "drop":  0,
+                                   "drag_end":  423,
+                                   "bridge_ready":  60,
+                                   "other":  0
+                               },
+                    "matchedDropSignals":  572,
+                    "dropLossRatePct":  0,
+                    "outOfOrder":  422,
+                    "avgLatencyMsApprox":  65466760.72,
+                    "peakLatencyMsApprox":  150920931.68
+                },
+    "errors":  [
+
+               ]
+}

@@ -1,0 +1,10 @@
+﻿{"ts":"2026-05-17T00:46:34","scenario":"search_scan_default","metrics":{"query":"a","latencyMs":138.63,"httpStatus":200,"ok":true,"resultCount":0},"errors":[]}
+{"ts":"2026-05-17T00:46:34","scenario":"search_scan_default","metrics":{"query":"search","latencyMs":21.98,"httpStatus":200,"ok":true,"resultCount":0},"errors":[]}
+{"ts":"2026-05-17T00:46:34","scenario":"search_scan_default","metrics":{"query":"README","latencyMs":21.79,"httpStatus":200,"ok":true,"resultCount":0},"errors":[]}
+{"ts":"2026-05-17T00:46:34","scenario":"search_scan_default","metrics":{"query":"SearchCenterCore","latencyMs":21.2,"httpStatus":200,"ok":true,"resultCount":0},"errors":[]}
+{"ts":"2026-05-17T00:46:34","scenario":"search_scan_default","metrics":{"query":"中文","latencyMs":30.12,"httpStatus":200,"ok":true,"resultCount":0},"errors":[]}
+{"ts":"2026-05-17T00:46:34","scenario":"search_scan_default","metrics":{"query":"测试","latencyMs":24.5,"httpStatus":200,"ok":true,"resultCount":0},"errors":[]}
+{"ts":"2026-05-17T00:46:34","scenario":"search_scan_default","metrics":{"query":"C:\\\\Users","latencyMs":25.73,"httpStatus":200,"ok":true,"resultCount":0},"errors":[]}
+{"ts":"2026-05-17T00:46:34","scenario":"search_scan_default","metrics":{"query":"node_modules","latencyMs":23.01,"httpStatus":200,"ok":true,"resultCount":0},"errors":[]}
+{"ts":"2026-05-17T00:46:34","scenario":"search_scan_default","metrics":{"query":"*.ahk","latencyMs":22.17,"httpStatus":200,"ok":true,"resultCount":0},"errors":[]}
+{"ts":"2026-05-17T00:46:34","scenario":"search_scan_default","metrics":{"query":"http","latencyMs":22.98,"httpStatus":200,"ok":true,"resultCount":0},"errors":[]}

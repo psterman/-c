@@ -7,6 +7,19 @@ global LegacyGuard_LastClipWaitLogTick := 0
 
 global LegacyGuard_WinHttpLogCooldownMs := 350
 global LegacyGuard_LastWinHttpWarnTick := 0
+global LegacyGuard_Probe := Map(
+    "denyHits", 0,
+    "allowHits", 0,
+    "moduleHits", Map(),
+    "recent", [],
+    "lastDecision", "",
+    "lastReason", "",
+    "lastModule", "",
+    "lastMethod", "",
+    "lastUrl", "",
+    "strictMode", false,
+    "legacyFallback", true
+)
 
 LegacyGuard_Log(tag, detail := "") {
     try {
@@ -18,6 +31,138 @@ LegacyGuard_Log(tag, detail := "") {
             FileAppend(line, A_ScriptDir . "\Cache\legacy_guardrails.log", "UTF-8")
     } catch {
     }
+}
+
+LegacyGuard_MergeKV(base := 0, ext := 0) {
+    out := Map()
+    if (base is Map) {
+        for k, v in base
+            out[k] := v
+    }
+    if (ext is Map) {
+        for k, v in ext
+            out[k] := v
+    }
+    return out
+}
+
+LegacyGuard_LogKV(tag, kv := 0) {
+    payload := Map("tag", String(tag), "ts", FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss"))
+    payload := LegacyGuard_MergeKV(payload, kv)
+    msg := ""
+    for k, v in payload {
+        if (msg != "")
+            msg .= " "
+        msg .= String(k) . "=" . String(v)
+    }
+    try LegacyGuard_Log(tag, msg)
+}
+
+LegacyGuard_RecordDecision(decision, moduleName, method, url, reason) {
+    global LegacyGuard_Probe, CoreAsyncStrictMode, LegacySyncFallback
+    if !(LegacyGuard_Probe is Map)
+        return
+    dec := StrLower(Trim(String(decision)))
+    mod := String(moduleName)
+    m := StrUpper(Trim(String(method)))
+    u := String(url)
+    rs := String(reason)
+    if (dec = "deny")
+        LegacyGuard_Probe["denyHits"] := Integer(LegacyGuard_Probe["denyHits"]) + 1
+    else
+        LegacyGuard_Probe["allowHits"] := Integer(LegacyGuard_Probe["allowHits"]) + 1
+    mh := LegacyGuard_Probe["moduleHits"]
+    if !(mh is Map)
+        mh := Map()
+    mh[mod] := mh.Has(mod) ? Integer(mh[mod]) + 1 : 1
+    LegacyGuard_Probe["moduleHits"] := mh
+    LegacyGuard_Probe["lastDecision"] := dec
+    LegacyGuard_Probe["lastReason"] := rs
+    LegacyGuard_Probe["lastModule"] := mod
+    LegacyGuard_Probe["lastMethod"] := m
+    LegacyGuard_Probe["lastUrl"] := u
+    strict := false
+    fallback := true
+    try strict := !!CoreAsyncStrictMode
+    try fallback := !!LegacySyncFallback
+    LegacyGuard_Probe["strictMode"] := strict
+    LegacyGuard_Probe["legacyFallback"] := fallback
+    rec := LegacyGuard_Probe["recent"]
+    if !(rec is Array)
+        rec := []
+    rec.Push(Map("ts", FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss"), "decision", dec, "module", mod, "method", m, "url", u, "reason", rs))
+    while (rec.Length > 20)
+        rec.RemoveAt(1)
+    LegacyGuard_Probe["recent"] := rec
+}
+
+LegacyGuard_EnvListToMap(raw) {
+    out := Map()
+    txt := Trim(String(raw))
+    if (txt = "")
+        return out
+    parts := StrSplit(StrReplace(txt, ";", ","), ",")
+    for _, p in parts {
+        one := Trim(String(p))
+        if (one = "")
+            continue
+        out[one] := true
+    }
+    return out
+}
+
+LegacyGuard_EnvGetSafe(name) {
+    try return EnvGet(String(name))
+    catch {
+        return ""
+    }
+}
+
+LegacyGuard_GetSyncDenylist() {
+    deny := Map(
+        "ClipboardPanelCore", true,
+        "ConfigWebViewModule", true,
+        "NiumaTtyd", true,
+        "AhkWebViewBridge", true
+    )
+    envAdd := LegacyGuard_EnvListToMap(LegacyGuard_EnvGetSafe("NMER_LEGACY_SYNC_DENYLIST_ADD"))
+    envRemove := LegacyGuard_EnvListToMap(LegacyGuard_EnvGetSafe("NMER_LEGACY_SYNC_DENYLIST_REMOVE"))
+    for k, _ in envAdd
+        deny[k] := true
+    for k, _ in envRemove {
+        if deny.Has(k)
+            deny.Delete(k)
+    }
+    return deny
+}
+
+LegacyGuard_GetProbeSnapshot() {
+    global LegacyGuard_Probe
+    out := Map()
+    if !(LegacyGuard_Probe is Map)
+        return out
+    out["denyHits"] := LegacyGuard_Probe["denyHits"]
+    out["allowHits"] := LegacyGuard_Probe["allowHits"]
+    out["lastDecision"] := LegacyGuard_Probe["lastDecision"]
+    out["lastReason"] := LegacyGuard_Probe["lastReason"]
+    out["lastModule"] := LegacyGuard_Probe["lastModule"]
+    out["lastMethod"] := LegacyGuard_Probe["lastMethod"]
+    out["lastUrl"] := LegacyGuard_Probe["lastUrl"]
+    out["strictMode"] := LegacyGuard_Probe["strictMode"]
+    out["legacyFallback"] := LegacyGuard_Probe["legacyFallback"]
+    out["moduleHits"] := Map()
+    mh := LegacyGuard_Probe["moduleHits"]
+    if (mh is Map) {
+        for k, v in mh
+            out["moduleHits"][k] := v
+    }
+    out["recent"] := []
+    rec := LegacyGuard_Probe["recent"]
+    if (rec is Array) {
+        for _, row in rec
+            out["recent"].Push(row)
+    }
+    return out
 }
 
 LegacyGuard_SafeSleep(ms) {
@@ -222,16 +367,13 @@ LegacyGuard_WinHttpBeforeSync(moduleName, method, url, reason := "", &token := 0
     m := StrUpper(Trim(String(method)))
     u := String(url)
     rs := String(reason)
-    token := Map("start", A_TickCount, "module", mod, "method", m, "url", u, "reason", rs)
-    LegacyGuard_Log("sync_path_blocked_winhttp_begin", "module=" . mod . " method=" . m . " reason=" . rs . " url=" . u)
-    static strictBlockMods := Map(
-        "ClipboardPanelCore", true,
-        "ConfigWebViewModule", true,
-        "NiumaTtyd", true,
-        "AhkWebViewBridge", true
-    )
+    token := Map("start", A_TickCount, "module", mod, "method", m, "url", u, "reason", rs, "decision", "")
+    LegacyGuard_LogKV("sync_path_blocked_winhttp_begin", Map("module", mod, "method", m, "url", u, "reason", rs, "decision", "pending"))
+    strictBlockMods := LegacyGuard_GetSyncDenylist()
     if strictBlockMods.Has(mod) {
-        LegacyGuard_Log("sync_path_blocked_winhttp_error", "module=" . mod . " method=" . m . " reason=module_denylist")
+        token["decision"] := "deny"
+        LegacyGuard_RecordDecision("deny", mod, m, u, "module_denylist")
+        LegacyGuard_LogKV("sync_path_blocked_winhttp_error", Map("module", mod, "method", m, "url", u, "reason", "module_denylist", "decision", "deny"))
         return false
     }
 
@@ -244,11 +386,15 @@ LegacyGuard_WinHttpBeforeSync(moduleName, method, url, reason := "", &token := 0
     catch {
     }
     if (strict && !fallback) {
-        LegacyGuard_Log("sync_path_blocked_winhttp_error", "module=" . mod . " method=" . m . " reason=strict_block_no_fallback")
+        token["decision"] := "deny"
+        LegacyGuard_RecordDecision("deny", mod, m, u, "strict_block_no_fallback")
+        LegacyGuard_LogKV("sync_path_blocked_winhttp_error", Map("module", mod, "method", m, "url", u, "reason", "strict_block_no_fallback", "decision", "deny"))
         return false
     }
     if (strict && fallback)
-        LegacyGuard_Log("sync_path_blocked_winhttp_warn", "module=" . mod . " mode=legacy_fallback_allow")
+        LegacyGuard_LogKV("sync_path_blocked_winhttp_warn", Map("module", mod, "method", m, "url", u, "reason", "legacy_fallback_allow", "decision", "allow"))
+    token["decision"] := "allow"
+    LegacyGuard_RecordDecision("allow", mod, m, u, (strict && fallback) ? "legacy_fallback_allow" : "default_allow")
     return true
 }
 
@@ -256,14 +402,28 @@ LegacyGuard_WinHttpAfterSync(token, status := 0) {
     if !(token is Map)
         return
     elapsed := A_TickCount - Integer(token["start"])
-    LegacyGuard_Log("sync_path_blocked_winhttp_end"
-        , "module=" . token["module"] . " method=" . token["method"] . " status=" . Integer(status) . " elapsed_ms=" . elapsed . " reason=" . token["reason"])
+    LegacyGuard_LogKV("sync_path_blocked_winhttp_end", Map(
+        "module", token["module"],
+        "method", token["method"],
+        "url", token["url"],
+        "status", Integer(status),
+        "elapsedMs", elapsed,
+        "reason", token["reason"],
+        "decision", token.Has("decision") ? token["decision"] : ""
+    ))
 }
 
 LegacyGuard_WinHttpError(token, errMsg := "") {
     if !(token is Map)
         return
     elapsed := A_TickCount - Integer(token["start"])
-    LegacyGuard_Log("sync_path_blocked_winhttp_error"
-        , "module=" . token["module"] . " method=" . token["method"] . " elapsed_ms=" . elapsed . " reason=" . token["reason"] . " msg=" . String(errMsg))
+    LegacyGuard_LogKV("sync_path_blocked_winhttp_error", Map(
+        "module", token["module"],
+        "method", token["method"],
+        "url", token["url"],
+        "elapsedMs", elapsed,
+        "reason", token["reason"],
+        "decision", token.Has("decision") ? token["decision"] : "",
+        "msg", String(errMsg)
+    ))
 }

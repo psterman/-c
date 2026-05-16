@@ -1,0 +1,19 @@
+﻿{
+    "ts":  "2026-05-17T00:48:11",
+    "scenario":  "drop_pressure",
+    "metrics":  {
+                    "durationSec":  2,
+                    "eventsPerSecTarget":  4,
+                    "totalEventsWritten":  8,
+                    "elapsedSec":  2.17,
+                    "throughputEps":  3.69,
+                    "avgLatencyMs":  250,
+                    "peakLatencyMs":  250,
+                    "dropRatePct":  0,
+                    "ahkWriteFailures":  0,
+                    "bridgeWriteFailures":  0
+                },
+    "errors":  [
+
+               ]
+}
