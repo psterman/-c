@@ -52,6 +52,8 @@ global g_SCWV_QLInvokeExe := ""
 global g_SCWV_QLInvokeDir := ""
 global g_SCWV_QLInvokeAttempts := 0
 global g_SCWV_QLInvokeSendCount := 0
+global g_SCWV_AsyncCmdJobs := Map()
+global g_SCWV_AsyncCmdSeq := 0
 global g_SCWV_SearchHttpInFlight := false
 global g_SCWV_SearchPendingReq := 0
 global g_SCWV_RequestID := 0
@@ -59,6 +61,9 @@ global g_SCWV_LastRenderedID := 0
 global g_SCWV_AsyncWhr := 0
 global g_SCWV_AsyncReqMeta := 0
 global g_SCWV_AsyncPollToken := 0
+global g_SCWV_CoreHttpReqSeq := 0
+global g_SCWV_CoreHttpReqs := Map()
+global g_SCWV_CoreHttpPollArmed := false
 global g_SCWV_HostTopMost := false
 global g_SCWV_NavFallbackTried := false
 global g_SCWV_LifecyclePhase := "closed"
@@ -86,6 +91,7 @@ global g_SCWV_GoStartPending := false
 global g_SCWV_GoKillLastTick := 0
 global g_SCWV_GoResetInFlight := false
 global g_SCWV_GoPhaseSinceTick := 0
+global g_SCWV_GoStartTryCount := 0
 global g_SCWV_LastSearchIntent := 0
 global g_SCWV_ReloadRecoveryPending := false
 global g_SCWV_ForceReinitRequested := false
@@ -100,6 +106,7 @@ global g_SCWV_LastOpenIntentReason := ""
 global g_SCWV_LastOpenIntentTick := 0
 global g_SCWV_CloseCommitActive := false
 global g_SCWV_CloseCommitUntilTick := 0
+global g_SCWV_LastStaleDropTick := 0
 
 SCWV_Log(event, detail := "") {
     try {
@@ -454,8 +461,16 @@ SCWV_SetPhase(phase, reason := "") {
 }
 
 SCWV_IsCurrentToken(token) {
-    global g_SCWV_CurrentToken
-    return (Integer(token) = Integer(g_SCWV_CurrentToken))
+    global g_SCWV_CurrentToken, g_SCWV_LastStaleDropTick
+    ok := (Integer(token) = Integer(g_SCWV_CurrentToken))
+    if !ok {
+        now := A_TickCount
+        if ((now - g_SCWV_LastStaleDropTick) > 100) {
+            g_SCWV_LastStaleDropTick := now
+            try SCWV_Log("intent_drop_stale_token", "token=" . Integer(token) . " current=" . Integer(g_SCWV_CurrentToken))
+        }
+    }
+    return ok
 }
 
 SCWV_ArmAntiHang(token) {
@@ -910,8 +925,7 @@ SCWV_ShowWaitTimeoutCheck(token := 0, *) {
     try SCWV_Log("recover_reinit", "reason=show_wait_timeout")
 
     ; 第一层：硬关机，跳过可能卡住的 Hide/回调链路
-    try GDHO_HideOverlay()
-    try GDHO_READY := false
+    try GDHO_RequestClose("scwv_show_wait_timeout")
     SCWV_ForceCloseHost("show_wait_timeout")
 
     ; 只允许一次自动复位，避免在底层环境持续异常时无限重启。
@@ -1097,13 +1111,20 @@ _SCWV_IsRecoveryCloseReason(reason := "") {
 }
 
 SearchCenterUnifiedClose(reason := "unknown", preferHardClose := false, PersistSelection := true) {
-    global g_SCWV_CloseInFlight
+    global g_SCWV_CloseInFlight, AppearanceActivationMode
     if (g_SCWV_CloseInFlight) {
         try SCWV_Log("unified_close_skip_inflight", "reason=" . reason)
         return true
     }
     g_SCWV_CloseInFlight := true
     try {
+        mode := "toolbar"
+        try mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+        catch {
+            mode := "toolbar"
+        }
+        if (mode = "hole")
+            preferHardClose := true
         if (preferHardClose) {
             SCWV_SubmitIntent("force_close", 10, Map("reason", reason))
             return true
@@ -1171,18 +1192,10 @@ _SCWV_SaveSearchEngineMode(mode) {
 
 _SCWV_IsSearchCoreAlive() {
     global g_SCWV_BackendHealthy
-    try {
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        whr.Open("GET", "http://127.0.0.1:8080/health", false)
-        whr.SetTimeouts(2000, 2000, 2000, 2000)
-        whr.Send()
-        ok := (whr.Status = 200)
-        if ok
-            g_SCWV_BackendHealthy := true
-        return ok
-    } catch {
-        return false
-    }
+    ok := ProcessExist("SearchCenterCore.exe") ? true : false
+    if ok
+        g_SCWV_BackendHealthy := true
+    return ok
 }
 
 _SCWV_SearchCoreExePath() {
@@ -1211,7 +1224,7 @@ _SCWV_ApplySearchCoreDefaults() {
 }
 
 _SCWV_RestartSearchCore() {
-    global g_SCWV_GoStartPhase, g_SCWV_GoStartGen, g_SCWV_GoStartPending, g_SCWV_GoKillLastTick, g_SCWV_GoPhaseSinceTick
+    global g_SCWV_GoStartPhase, g_SCWV_GoStartGen, g_SCWV_GoStartPending, g_SCWV_GoKillLastTick, g_SCWV_GoPhaseSinceTick, g_SCWV_GoStartTryCount
     if (g_SCWV_GoStartPhase = "KILLING" || g_SCWV_GoStartPhase = "STARTING") {
         g_SCWV_GoStartPending := true
         return false
@@ -1237,22 +1250,40 @@ _SCWV_RestartSearchCore() {
     g_SCWV_GoPhaseSinceTick := A_TickCount
     if (myGen != g_SCWV_GoStartGen)
         return false
-    Sleep(120)
+    g_SCWV_GoStartTryCount := 0
+    SetTimer((*) => _SCWV_StartSearchCoreLaunch(myGen, exe), -120)
+    return false
+}
+
+_SCWV_StartSearchCoreLaunch(gen, exe, *) {
+    global g_SCWV_GoStartGen
+    if (Integer(gen) != Integer(g_SCWV_GoStartGen))
+        return
     try {
         _SCWV_ApplySearchCoreDefaults()
         Run('"' exe '" -base "' A_ScriptDir '"', A_ScriptDir, "Hide")
-        Loop 70 {
-            Sleep(80)
-            if _SCWV_IsSearchCoreAlive() {
-                g_SCWV_GoStartPhase := "RUNNING"
-                g_SCWV_GoPhaseSinceTick := A_TickCount
-                g_SCWV_GoStartPending := false
-                return true
-            }
-        }
     } catch {
     }
-    if (myGen = g_SCWV_GoStartGen)
+    SetTimer((*) => _SCWV_CheckSearchCoreStartup(gen), -80)
+}
+
+_SCWV_CheckSearchCoreStartup(gen, *) {
+    global g_SCWV_GoStartGen, g_SCWV_GoStartPhase, g_SCWV_GoStartPending, g_SCWV_GoPhaseSinceTick, g_SCWV_GoStartTryCount, g_SCWV_BackendHealthy
+    if (Integer(gen) != Integer(g_SCWV_GoStartGen))
+        return
+    if ProcessExist("SearchCenterCore.exe") {
+        g_SCWV_GoStartPhase := "RUNNING"
+        g_SCWV_GoPhaseSinceTick := A_TickCount
+        g_SCWV_GoStartPending := false
+        g_SCWV_BackendHealthy := true
+        return
+    }
+    g_SCWV_GoStartTryCount += 1
+    if (g_SCWV_GoStartTryCount < 70) {
+        SetTimer((*) => _SCWV_CheckSearchCoreStartup(gen), -80)
+        return
+    }
+    if (Integer(gen) = Integer(g_SCWV_GoStartGen))
         g_SCWV_GoStartPhase := "IDLE"
     if g_SCWV_GoStartPending {
         g_SCWV_GoStartPending := false
@@ -1263,7 +1294,7 @@ _SCWV_RestartSearchCore() {
 
 _SCWV_EnsureSearchCoreRunning() {
     global g_SCWV_GoStartPhase
-    if _SCWV_IsSearchCoreAlive() {
+    if ProcessExist("SearchCenterCore.exe") {
         g_SCWV_GoStartPhase := "RUNNING"
         return true
     }
@@ -1365,8 +1396,9 @@ _SCWV_MapFilterToGoSearchType(FilterType) {
 }
 
 _SCWV_HttpGetSearchCore(queryString) {
-    r := _SCWV_HttpGetSearchCoreResp(queryString)
-    return r.Has("body") ? r["body"] : ""
+    ; Sync HTTP on AHK main thread is disabled on runtime hot paths.
+    try _SCWV_LogRuntime("sync_path_blocked _SCWV_HttpGetSearchCore")
+    return ""
 }
 
 _SCWV_WinHttpReadUtf8Text(whr) {
@@ -1393,32 +1425,38 @@ _SCWV_WinHttpReadUtf8Text(whr) {
 
 ; 返回 Map: status, body（仅 status=200 时 body 为 JSON 文本）
 _SCWV_HttpGetSearchCoreResp(queryString) {
-    try {
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        url := "http://127.0.0.1:8080/search?" . queryString
-        whr.Open("GET", url, false)
-        ; 收紧超时，避免主线程被同步 HTTP 长时间阻塞
-        whr.SetTimeouts(900, 900, 2200, 2200)
-        whr.Send()
-        st := Integer(whr.Status)
-        rawText := _SCWV_WinHttpReadUtf8Text(whr)
-        body := ""
-        if (st = 200)
-            body := rawText
-        return Map("status", st, "body", body, "responseText", rawText)
-    } catch as err {
-        try OutputDebug("[SCWV] SearchCore HTTP: " . err.Message)
-        _SCWV_LogRuntime("SearchCore HTTP exception: " . err.Message)
-        return Map("status", 0, "body", "", "responseText", "", "error", err.Message)
-    }
+    ; Sync HTTP on AHK main thread is disabled on runtime hot paths.
+    try _SCWV_LogRuntime("sync_path_blocked _SCWV_HttpGetSearchCoreResp")
+    return Map("status", 0, "body", "", "responseText", "", "error", "sync_http_disabled")
 }
 
 _SCWV_HttpSearchCoreJsonRaw(method, path, body := "") {
+    ; Sync HTTP on AHK main thread is disabled on runtime hot paths.
+    try _SCWV_LogRuntime("sync_path_blocked _SCWV_HttpSearchCoreJsonRaw path=" . path)
+    return Map("status", 0, "text", "", "json", 0, "error", "sync_http_disabled")
+}
+
+_SCWV_HttpSearchCoreJson(method, path, body := "") {
+    ; Keep compatibility signature but do not run sync HTTP anymore.
+    return _SCWV_HttpSearchCoreJsonRaw(method, path, body)
+}
+
+_SCWV_CoreHttpArmPoll() {
+    global g_SCWV_CoreHttpPollArmed
+    if g_SCWV_CoreHttpPollArmed
+        return
+    g_SCWV_CoreHttpPollArmed := true
+    SetTimer(_SCWV_CoreHttpPollTick, 25)
+}
+
+_SCWV_HttpSearchCoreJsonAsync(method, path, body := "", callback := 0, timeoutMs := 10000) {
+    global g_SCWV_CoreHttpReqSeq, g_SCWV_CoreHttpReqs
+    cb := IsObject(callback) ? callback : 0
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         url := "http://127.0.0.1:8080" . path
-        whr.Open(method, url, false)
-        whr.SetTimeouts(3000, 3000, 10000, 10000)
+        whr.Open(method, url, true)
+        whr.SetTimeouts(900, 900, 2200, 2200)
         if (method = "POST" || method = "PUT" || method = "PATCH") {
             whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
             payload := (Trim(String(body)) = "") ? "{}" : body
@@ -1426,25 +1464,69 @@ _SCWV_HttpSearchCoreJsonRaw(method, path, body := "") {
         } else {
             whr.Send()
         }
-        st := Integer(whr.Status)
-        txt := _SCWV_WinHttpReadUtf8Text(whr)
-        obj := 0
-        if (Trim(String(txt)) != "") {
-            try obj := Jxon_Load(txt)
-        }
-        return Map("status", st, "text", txt, "json", obj)
+        g_SCWV_CoreHttpReqSeq += 1
+        reqId := g_SCWV_CoreHttpReqSeq
+        g_SCWV_CoreHttpReqs[reqId] := Map("whr", whr, "cb", cb, "start", A_TickCount, "timeout", Integer(timeoutMs))
+        _SCWV_CoreHttpArmPoll()
     } catch as err {
-        return Map("status", 0, "text", "", "json", 0, "error", err.Message)
+        if cb
+            try cb.Call(Map("status", 0, "text", "", "json", 0, "error", err.Message))
     }
 }
 
-_SCWV_HttpSearchCoreJson(method, path, body := "") {
-    resp := _SCWV_HttpSearchCoreJsonRaw(method, path, body)
-    if (resp.Has("status") && Integer(resp["status"]) = 404 && InStr(path, "/v1/fulltext/") = 1) {
-        if _SCWV_RestartSearchCore()
-            resp := _SCWV_HttpSearchCoreJsonRaw(method, path, body)
+_SCWV_CoreHttpPollTick(*) {
+    global g_SCWV_CoreHttpReqs, g_SCWV_CoreHttpPollArmed
+    if !(g_SCWV_CoreHttpReqs is Map) || (g_SCWV_CoreHttpReqs.Count = 0) {
+        g_SCWV_CoreHttpPollArmed := false
+        SetTimer(_SCWV_CoreHttpPollTick, 0)
+        return
     }
-    return resp
+    removeIds := []
+    for reqId, req in g_SCWV_CoreHttpReqs {
+        if !(req is Map) {
+            removeIds.Push(reqId)
+            continue
+        }
+        whr := req["whr"]
+        cb := req["cb"]
+        startTick := req["start"]
+        timeoutMs := req["timeout"]
+        if (A_TickCount - startTick > timeoutMs) {
+            try whr.Abort()
+            if cb
+                try cb.Call(Map("status", 0, "text", "", "json", 0, "error", "timeout"))
+            removeIds.Push(reqId)
+            continue
+        }
+        rs := 0
+        try rs := Integer(whr.ReadyState)
+        catch as err {
+            if cb
+                try cb.Call(Map("status", 0, "text", "", "json", 0, "error", err.Message))
+            removeIds.Push(reqId)
+            continue
+        }
+        if (rs < 4)
+            continue
+        st := 0
+        txt := ""
+        obj := 0
+        try st := Integer(whr.Status)
+        try txt := _SCWV_WinHttpReadUtf8Text(whr)
+        if (Trim(String(txt)) != "") {
+            try obj := Jxon_Load(txt)
+        }
+        if cb
+            try cb.Call(Map("status", st, "text", txt, "json", obj))
+        removeIds.Push(reqId)
+    }
+    for _, reqId in removeIds {
+        try g_SCWV_CoreHttpReqs.Delete(reqId)
+    }
+    if (g_SCWV_CoreHttpReqs.Count = 0) {
+        g_SCWV_CoreHttpPollArmed := false
+        SetTimer(_SCWV_CoreHttpPollTick, 0)
+    }
 }
 
 _SCWV_DefaultFullTextStatusPayload() {
@@ -1547,28 +1629,35 @@ _SCWV_PostFullTextStatus(withConfig := false) {
         SCWV_PostJson(Map("type", "fulltextStatus", "payload", payload))
         return
     }
+    _SCWV_HttpSearchCoreJsonAsync("GET", "/v1/fulltext/status", "", (stResp) => _SCWV_PostFullTextStatus_AfterStatus(payload, withConfig, stResp))
+}
 
-    stResp := _SCWV_HttpSearchCoreJson("GET", "/v1/fulltext/status")
-    if (stResp.Has("status") && Integer(stResp["status"]) = 200 && stResp.Has("json") && (stResp["json"] is Map))
+_SCWV_PostFullTextStatus_AfterStatus(payload, withConfig, stResp) {
+    if (stResp is Map && stResp.Has("status") && Integer(stResp["status"]) = 200 && stResp.Has("json") && (stResp["json"] is Map))
         payload := _SCWV_MergeMap(payload, stResp["json"])
+    _SCWV_HttpSearchCoreJsonAsync("GET", "/v1/fulltext/progress", "", (pgResp) => _SCWV_PostFullTextStatus_AfterProgress(payload, withConfig, pgResp))
+}
 
-    pgResp := _SCWV_HttpSearchCoreJson("GET", "/v1/fulltext/progress")
-    if (pgResp.Has("status") && Integer(pgResp["status"]) = 200 && pgResp.Has("json") && (pgResp["json"] is Map))
+_SCWV_PostFullTextStatus_AfterProgress(payload, withConfig, pgResp) {
+    if (pgResp is Map && pgResp.Has("status") && Integer(pgResp["status"]) = 200 && pgResp.Has("json") && (pgResp["json"] is Map))
         payload := _SCWV_MergeMap(payload, pgResp["json"])
-
     if withConfig {
-        cfgResp := _SCWV_HttpSearchCoreJson("GET", "/v1/fulltext/config")
-        if (cfgResp.Has("status") && Integer(cfgResp["status"]) = 200 && cfgResp.Has("json") && (cfgResp["json"] is Map)) {
-            cfgRoot := cfgResp["json"]
-            if (cfgRoot.Has("config"))
-                payload["config"] := cfgRoot["config"]
-            if (cfgRoot.Has("status") && (cfgRoot["status"] is Map))
-                payload := _SCWV_MergeMap(payload, cfgRoot["status"])
-            if (cfgRoot.Has("progress") && (cfgRoot["progress"] is Map))
-                payload := _SCWV_MergeMap(payload, cfgRoot["progress"])
-        }
+        _SCWV_HttpSearchCoreJsonAsync("GET", "/v1/fulltext/config", "", (cfgResp) => _SCWV_PostFullTextStatus_AfterConfig(payload, cfgResp))
+        return
     }
+    SCWV_PostJson(Map("type", "fulltextStatus", "payload", payload))
+}
 
+_SCWV_PostFullTextStatus_AfterConfig(payload, cfgResp) {
+    if (cfgResp is Map && cfgResp.Has("status") && Integer(cfgResp["status"]) = 200 && cfgResp.Has("json") && (cfgResp["json"] is Map)) {
+        cfgRoot := cfgResp["json"]
+        if (cfgRoot.Has("config"))
+            payload["config"] := cfgRoot["config"]
+        if (cfgRoot.Has("status") && (cfgRoot["status"] is Map))
+            payload := _SCWV_MergeMap(payload, cfgRoot["status"])
+        if (cfgRoot.Has("progress") && (cfgRoot["progress"] is Map))
+            payload := _SCWV_MergeMap(payload, cfgRoot["progress"])
+    }
     SCWV_PostJson(Map("type", "fulltextStatus", "payload", payload))
 }
 
@@ -1582,12 +1671,14 @@ _SCWV_ControlFullText(action := "start") {
         return
     }
     req := Jxon_Dump(Map("action", act))
-    resp := _SCWV_HttpSearchCoreJson("POST", "/v1/fulltext/control", req)
-    ok := (resp.Has("status") && Integer(resp["status"]) = 200)
+    _SCWV_HttpSearchCoreJsonAsync("POST", "/v1/fulltext/control", req, (resp) => _SCWV_ControlFullText_OnResp(act, resp))
+}
+
+_SCWV_ControlFullText_OnResp(act, resp) {
+    ok := (resp is Map && resp.Has("status") && Integer(resp["status"]) = 200)
     errMsg := ""
-    if !ok {
-        errMsg := resp.Has("text") ? String(resp["text"]) : ("HTTP " . (resp.Has("status") ? String(resp["status"]) : "0"))
-    }
+    if !ok
+        errMsg := (resp is Map && resp.Has("text")) ? String(resp["text"]) : ("HTTP " . ((resp is Map && resp.Has("status")) ? String(resp["status"]) : "0"))
     SCWV_PostJson(Map("type", "fulltextActionResult", "ok", ok, "action", act, "error", errMsg))
     _SCWV_PostFullTextStatus(true)
 }
@@ -1603,38 +1694,43 @@ _SCWV_UpdateFullTextConfig(payloadMap) {
         return
     }
     req := Jxon_Dump(payloadMap)
-    resp := _SCWV_HttpSearchCoreJson("POST", "/v1/fulltext/config", req)
-    ok := (resp.Has("status") && Integer(resp["status"]) = 200)
+    _SCWV_HttpSearchCoreJsonAsync("POST", "/v1/fulltext/config", req, (resp) => _SCWV_UpdateFullTextConfig_OnResp(payloadMap, req, resp))
+}
+
+_SCWV_UpdateFullTextConfig_OnResp(payloadMap, req, resp) {
+    ok := (resp is Map && resp.Has("status") && Integer(resp["status"]) = 200)
     errMsg := ""
-    if !ok {
-        errMsg := resp.Has("text") ? String(resp["text"]) : ("HTTP " . (resp.Has("status") ? String(resp["status"]) : "0"))
-        lowErr := StrLower(errMsg)
-        if (InStr(lowErr, "invalid json body") > 0) {
-            ; 兼容兜底 1：旧/代理路径可能要求外层 payload 包裹
-            reqWrapped := Jxon_Dump(Map("payload", payloadMap))
-            resp2 := _SCWV_HttpSearchCoreJson("POST", "/v1/fulltext/config", reqWrapped)
-            ok := (resp2.Has("status") && Integer(resp2["status"]) = 200)
-            if ok {
-                resp := resp2
-                errMsg := ""
-            } else {
-                errMsg := resp2.Has("text") ? String(resp2["text"]) : ("HTTP " . (resp2.Has("status") ? String(resp2["status"]) : "0"))
-                lowErr2 := StrLower(errMsg)
-                ; 兼容兜底 2：可能仍连着旧 SearchCenterCore，重启后再试一次标准体
-                if (InStr(lowErr2, "invalid json body") > 0 && _SCWV_RestartSearchCore()) {
-                    Sleep(120)
-                    resp3 := _SCWV_HttpSearchCoreJson("POST", "/v1/fulltext/config", req)
-                    ok := (resp3.Has("status") && Integer(resp3["status"]) = 200)
-                    if ok {
-                        resp := resp3
-                        errMsg := ""
-                    } else {
-                        errMsg := resp3.Has("text") ? String(resp3["text"]) : ("HTTP " . (resp3.Has("status") ? String(resp3["status"]) : "0"))
-                    }
-                }
-            }
-        }
+    if !ok
+        errMsg := (resp is Map && resp.Has("text")) ? String(resp["text"]) : ("HTTP " . ((resp is Map && resp.Has("status")) ? String(resp["status"]) : "0"))
+    lowErr := StrLower(errMsg)
+    if (!ok && InStr(lowErr, "invalid json body") > 0) {
+        reqWrapped := Jxon_Dump(Map("payload", payloadMap))
+        _SCWV_HttpSearchCoreJsonAsync("POST", "/v1/fulltext/config", reqWrapped, (resp2) => _SCWV_UpdateFullTextConfig_OnRespWrapped(req, resp2))
+        return
     }
+    SCWV_PostJson(Map("type", "fulltextConfigResult", "ok", ok, "error", errMsg))
+    _SCWV_PostFullTextStatus(true)
+}
+
+_SCWV_UpdateFullTextConfig_OnRespWrapped(req, resp2) {
+    ok := (resp2 is Map && resp2.Has("status") && Integer(resp2["status"]) = 200)
+    errMsg := ""
+    if !ok
+        errMsg := (resp2 is Map && resp2.Has("text")) ? String(resp2["text"]) : ("HTTP " . ((resp2 is Map && resp2.Has("status")) ? String(resp2["status"]) : "0"))
+    lowErr2 := StrLower(errMsg)
+    if (!ok && InStr(lowErr2, "invalid json body") > 0 && _SCWV_RestartSearchCore()) {
+        SetTimer((*) => _SCWV_HttpSearchCoreJsonAsync("POST", "/v1/fulltext/config", req, _SCWV_UpdateFullTextConfig_OnRespFinal), -120)
+        return
+    }
+    SCWV_PostJson(Map("type", "fulltextConfigResult", "ok", ok, "error", errMsg))
+    _SCWV_PostFullTextStatus(true)
+}
+
+_SCWV_UpdateFullTextConfig_OnRespFinal(resp3) {
+    ok := (resp3 is Map && resp3.Has("status") && Integer(resp3["status"]) = 200)
+    errMsg := ""
+    if !ok
+        errMsg := (resp3 is Map && resp3.Has("text")) ? String(resp3["text"]) : ("HTTP " . ((resp3 is Map && resp3.Has("status")) ? String(resp3["status"]) : "0"))
     SCWV_PostJson(Map("type", "fulltextConfigResult", "ok", ok, "error", errMsg))
     _SCWV_PostFullTextStatus(true)
 }
@@ -1644,10 +1740,13 @@ _SCWV_ProbeFullTextFeasibility() {
         SCWV_PostJson(Map("type", "fulltextProbeResult", "ok", false, "error", "SearchCenterCore 未启动", "probe", 0))
         return
     }
-    resp := _SCWV_HttpSearchCoreJson("GET", "/v1/fulltext/probe")
-    ok := (resp.Has("status") && Integer(resp["status"]) = 200 && resp.Has("json") && (resp["json"] is Map))
+    _SCWV_HttpSearchCoreJsonAsync("GET", "/v1/fulltext/probe", "", _SCWV_ProbeFullTextFeasibility_OnResp)
+}
+
+_SCWV_ProbeFullTextFeasibility_OnResp(resp) {
+    ok := (resp is Map && resp.Has("status") && Integer(resp["status"]) = 200 && resp.Has("json") && (resp["json"] is Map))
     if !ok {
-        errMsg := resp.Has("text") ? String(resp["text"]) : ("HTTP " . (resp.Has("status") ? String(resp["status"]) : "0"))
+        errMsg := (resp is Map && resp.Has("text")) ? String(resp["text"]) : ("HTTP " . ((resp is Map && resp.Has("status")) ? String(resp["status"]) : "0"))
         SCWV_PostJson(Map("type", "fulltextProbeResult", "ok", false, "error", errMsg, "probe", 0))
         return
     }
@@ -1663,9 +1762,12 @@ _SCWV_PickFullTextIndexDir() {
     }
 
     defaultDir := A_ScriptDir
+    _SCWV_HttpSearchCoreJsonAsync("GET", "/v1/fulltext/config", "", (cfgResp) => _SCWV_PickFullTextIndexDir_AfterConfig(defaultDir, cfgResp))
+}
+
+_SCWV_PickFullTextIndexDir_AfterConfig(defaultDir, cfgResp) {
     try {
-        cfgResp := _SCWV_HttpSearchCoreJson("GET", "/v1/fulltext/config")
-        if (cfgResp.Has("status") && Integer(cfgResp["status"]) = 200 && cfgResp.Has("json") && (cfgResp["json"] is Map)) {
+        if (cfgResp is Map && cfgResp.Has("status") && Integer(cfgResp["status"]) = 200 && cfgResp.Has("json") && (cfgResp["json"] is Map)) {
             root := cfgResp["json"]
             if (root.Has("config") && (root["config"] is Map)) {
                 cfg := root["config"]
@@ -1678,7 +1780,6 @@ _SCWV_PickFullTextIndexDir() {
         }
     } catch {
     }
-
     hostHwnd := 0
     hostExpr := ""
     wasTop := false
@@ -3762,50 +3863,11 @@ _SCWV_QuickLookInspectArchive(zipPath) {
     z := Trim(String(zipPath))
     if (z = "" || !FileExist(z))
         return Map("ok", false, "message", "压缩包不存在")
-    sevenZip := A_ScriptDir "\lib\7z.exe"
-    if !FileExist(sevenZip)
-        return Map("ok", false, "message", "未找到 lib\\7z.exe")
-    workDir := A_ScriptDir "\cache\quicklook_install"
-    if !DirExist(workDir)
-        DirCreate(workDir)
-    listLog := workDir "\7z_list_ql.log"
-    hitLog := workDir "\7z_hit_ql.txt"
-    listSlt := workDir "\7z_list_slt.log"
-    try FileDelete(listLog)
-    catch {
-    }
-    try FileDelete(hitLog)
-    catch {
-    }
-    try FileDelete(listSlt)
-    catch {
-    }
-    ; ① 简短列表（推荐，-slt 与 -ba 组合在部分版本下输出异常）
-    cmd := '"' . sevenZip . '" l -ba -- "' . z . '" > "' . listLog . '" 2>&1'
-    rc := RunWait(A_ComSpec . " /c " . cmd, , "Hide")
-    txt := _SCWV_Read7zListLog(listLog)
-    if (rc > 1 && Trim(txt) = "")
-        return Map("ok", false, "message", "压缩包列表失败(7z退出码:" . rc . ")")
-    if _SCWV_ZipListTextHasQuickLookExe(txt)
-        return Map("ok", true, "hasExe", true, "list", txt)
-    ; ② findstr 过滤（控制台 OEM 下仍能找到 ASCII 路径）
-    cmdHit := '"' . sevenZip . '" l -ba -- "' . z . '" | findstr /i "QuickLook.exe" > "' . hitLog . '" 2>&1'
-    RunWait(A_ComSpec . " /c " . cmdHit, , "Hide")
-    hitTxt := _SCWV_Read7zListLog(hitLog)
-    if _SCWV_ZipListTextHasQuickLookExe(hitTxt)
-        return Map("ok", true, "hasExe", true, "list", txt "`n---`n" . hitTxt)
-    ; ③ 技术列表（无 -ba）
-    cmdSlt := '"' . sevenZip . '" l -slt -- "' . z . '" > "' . listSlt . '" 2>&1'
-    rcSlt := RunWait(A_ComSpec . " /c " . cmdSlt, , "Hide")
-    txtSlt := _SCWV_Read7zListLog(listSlt)
-    if (rcSlt > 1 && Trim(txtSlt) = "" && Trim(txt) = "")
-        return Map("ok", false, "message", "压缩包列表失败(7z)")
-    if _SCWV_ZipListTextHasQuickLookExe(txtSlt)
-        return Map("ok", true, "hasExe", true, "list", txtSlt)
-    ; ④ 直接扫 zip 内 ASCII 文件名（兜底）
+    ; Avoid synchronous external 7z listing on AHK UI thread.
+    ; Use raw ZIP filename scan to detect QuickLook.exe.
     if _SCWV_ZipRawContainsQuickLookExe(z)
-        return Map("ok", true, "hasExe", true, "list", "(zip 内嵌文件名扫描)")
-    return Map("ok", true, "hasExe", false, "list", SubStr(txt . txtSlt, 1, 1500))
+        return Map("ok", true, "hasExe", true, "list", "(zip raw filename scan)")
+    return Map("ok", true, "hasExe", false, "list", "(zip raw filename scan: not found)")
 }
 
 _SCWV_QuickLookFindPortableRoot(dir) {
@@ -4005,32 +4067,7 @@ _SCWV_QuickLookDownloadTryAll(url, zipPath, idx, nSrc, label, reportPath) {
     catch {
     }
 
-    ; 3) curl -L（在部分环境更稳定）
-    curlExe := A_WinDir . "\System32\curl.exe"
-    if FileExist(curlExe) {
-        SCWV_QuickLookInstall_PostProgress(Min(46, 12 + idx * 3), "① 下载 · [" . idx . "/" . nSrc . " " . label . "] curl -L（跟随重定向）…")
-        _SCWV_QuickLookInstallReportLine(reportPath, "curl: " . u)
-        cmd := '"' . curlExe . '" -fL -S --connect-timeout 30 --max-time 900 -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" -o "' . outPath . '" "' . u . '"'
-        rc := RunWait(A_ComSpec . " /c " . cmd, , "Hide")
-        try sz := FileGetSize(outPath)
-        catch {
-            sz := 0
-        }
-        if (rc = 0 && sz >= 200 * 1024 && _SCWV_FileLooksLikeZip(outPath))
-            return Map("ok", true, "bytes", sz, "via", "curl")
-        errC := "curl 失败(退出码 " . rc . ")"
-        if (sz > 0 && sz < 200 * 1024)
-            errC .= "，体积 " . Round(sz / 1024, 1) . "KB"
-        else if (sz > 0 && !_SCWV_FileLooksLikeZip(outPath))
-            errC .= "，文件头非 ZIP"
-        errors.Push(errC)
-        _SCWV_QuickLookInstallReportLine(reportPath, errors[errors.Length])
-        try FileDelete(outPath)
-        catch {
-        }
-    }
-
-    ; 4) 低层 WinHttp（末选）
+    ; 3) 低层 WinHttp（末选）
     progressCb := SCWV_QuickLookInstall_OnHttpProgress.Bind(idx, nSrc, label)
     statusCb := SCWV_QuickLookInstall_OnHttpStatus.Bind(idx, nSrc, label)
     SCWV_QuickLookInstall_PostProgress(Min(46, 13 + idx * 3), "① 下载 · [" . idx . "/" . nSrc . " " . label . "] WinHttp 底层（无自动重定向，末选）…")
@@ -4149,7 +4186,6 @@ SCWV_QuickLookInstall_RunInner() {
                 }
                 if (idx < nSrc)
                     SCWV_QuickLookInstall_PostProgress(18, "③ 自动切换 · 源 " . idx . " 列表失败 → 下一源 " . (idx + 1) . "/" . nSrc . " …")
-                Sleep(200)
                 continue
             }
             if !(info.Has("hasExe") && info["hasExe"]) {
@@ -4160,7 +4196,6 @@ SCWV_QuickLookInstall_RunInner() {
                 }
                 if (idx < nSrc)
                     SCWV_QuickLookInstall_PostProgress(18, "③ 自动切换 · 源 " . idx . " 校验未通过 → 下一源 " . (idx + 1) . "/" . nSrc . " …")
-                Sleep(200)
                 continue
             }
             packageReady := true
@@ -4173,7 +4208,6 @@ SCWV_QuickLookInstall_RunInner() {
         _SCWV_QuickLookInstallReportLine(reportPath, "源" . idx . "下载失败: " . errMsg)
         if (idx < nSrc)
             SCWV_QuickLookInstall_PostProgress(16, "③ 自动切换 · 源 " . idx . " 下载失败 → 下一源 " . (idx + 1) . "/" . nSrc . " …")
-        Sleep(200)
     }
 
     if !packageReady {
@@ -4197,60 +4231,82 @@ SCWV_QuickLookInstall_RunInner() {
         DirCreate(staging)
 
     cmdAll := '"' . sevenZip . '" x -y -aoa -o"' . staging . '" -- "' . zipPath . '"'
-    rcAll := RunWait(cmdAll, , "Hide")
-    _SCWV_QuickLookInstallReportLine(reportPath, "7z 全量解压退出码: " . rcAll)
-    if (rcAll > 1) {
-        SCWV_QuickLookInstall_PostProgress(0, "解压失败(7z 退出码 " . rcAll . ")")
-        SCWV_PostJson(Map("type", "quicklook_install_state", "ok", false, "message", "解压失败", "path", ""))
+    ctx := Map("staging", staging, "finalDir", finalDir, "reportPath", reportPath)
+    okAsync := _SCWV_RunHiddenCommandAsync(cmdAll, (ok, why, pid) => _SCWV_QuickLookInstall_OnExtractDone(ok, why, pid, ctx), 180000, "quicklook_extract")
+    if !okAsync {
+        SCWV_QuickLookInstall_PostProgress(0, "解压任务启动失败")
+        SCWV_PostJson(Map("type", "quicklook_install_state", "ok", false, "message", "解压任务启动失败", "path", ""))
         return
     }
+    return Map("pending", true)
+}
 
-    portableRoot := _SCWV_QuickLookFindPortableRoot(staging)
+_SCWV_QuickLookInstall_OnExtractDone(ok, why, pid, ctx) {
+    global g_SCWV_QuickLookInstallBusy
+    _SCWV_QuickLookInstallReportLine(ctx["reportPath"], "7z 全量解压完成: ok=" . (ok ? "1" : "0") . " why=" . why . " pid=" . pid)
+    if !ok {
+        SCWV_QuickLookInstall_PostProgress(0, "解压超时或失败")
+        SCWV_PostJson(Map("type", "quicklook_install_state", "ok", false, "message", "解压失败", "path", ""))
+        g_SCWV_QuickLookInstallBusy := false
+        try SCWV_PushState("state")
+        return
+    }
+    portableRoot := _SCWV_QuickLookFindPortableRoot(ctx["staging"])
     if (portableRoot = "" || !FileExist(portableRoot "\QuickLook.exe")) {
         SCWV_QuickLookInstall_PostProgress(0, "解压后未找到 QuickLook.exe")
         SCWV_PostJson(Map("type", "quicklook_install_state", "ok", false, "message", "解压后未找到 QuickLook.exe", "path", ""))
-        _SCWV_QuickLookInstallReportLine(reportPath, "未找到 QuickLook.exe 于 staging")
+        _SCWV_QuickLookInstallReportLine(ctx["reportPath"], "未找到 QuickLook.exe 于 staging")
+        g_SCWV_QuickLookInstallBusy := false
+        try SCWV_PushState("state")
         return
     }
-
     SCWV_QuickLookInstall_PostProgress(82, "写入安装目录…")
     try {
-        if DirExist(finalDir)
-            DirDelete(finalDir, 1)
+        if DirExist(ctx["finalDir"])
+            DirDelete(ctx["finalDir"], 1)
     } catch as e0 {
-        _SCWV_QuickLookInstallReportLine(reportPath, "删除旧目录失败: " . e0.Message)
+        _SCWV_QuickLookInstallReportLine(ctx["reportPath"], "删除旧目录失败: " . e0.Message)
     }
-    try DirCopy(portableRoot, finalDir, 1)
+    try DirCopy(portableRoot, ctx["finalDir"], 1)
     catch as e1 {
         SCWV_QuickLookInstall_PostProgress(0, "复制失败: " . e1.Message)
         SCWV_PostJson(Map("type", "quicklook_install_state", "ok", false, "message", "复制到安装目录失败", "path", ""))
-        _SCWV_QuickLookInstallReportLine(reportPath, "DirCopy 失败: " . e1.Message)
+        _SCWV_QuickLookInstallReportLine(ctx["reportPath"], "DirCopy 失败: " . e1.Message)
+        g_SCWV_QuickLookInstallBusy := false
+        try SCWV_PushState("state")
         return
     }
-
-    exeFinal := finalDir . "\QuickLook.exe"
+    exeFinal := ctx["finalDir"] . "\QuickLook.exe"
     if !FileExist(exeFinal) {
         SCWV_QuickLookInstall_PostProgress(0, "安装目录缺少 QuickLook.exe")
         SCWV_PostJson(Map("type", "quicklook_install_state", "ok", false, "message", "安装校验失败", "path", ""))
+        g_SCWV_QuickLookInstallBusy := false
+        try SCWV_PushState("state")
         return
     }
-
-    _SCWV_QuickLookInstallReportLine(reportPath, "安装成功: " . exeFinal)
+    _SCWV_QuickLookInstallReportLine(ctx["reportPath"], "安装成功: " . exeFinal)
     SCWV_QuickLookInstall_PostProgress(100, "QuickLook 已就绪")
     SCWV_PostJson(Map("type", "quicklook_install_state", "ok", true, "message", "QuickLook 安装完成", "path", exeFinal))
+    g_SCWV_QuickLookInstallBusy := false
+    try SCWV_PushState("state")
 }
 
 SCWV_QuickLookInstall_AsyncWorker(*) {
     global g_SCWV_QuickLookInstallQueued, g_SCWV_QuickLookInstallBusy
     g_SCWV_QuickLookInstallQueued := false
+    pendingAsync := false
     try {
-        SCWV_QuickLookInstall_RunInner()
+        ret := SCWV_QuickLookInstall_RunInner()
+        if (ret is Map && ret.Has("pending") && ret["pending"])
+            pendingAsync := true
     } catch as err {
         SCWV_PostJson(Map("type", "quicklook_install_state", "ok", false, "message", "安装异常: " . err.Message, "path", ""))
     } finally {
-        g_SCWV_QuickLookInstallBusy := false
-        try SCWV_PushState("state")
-        catch {
+        if !pendingAsync {
+            g_SCWV_QuickLookInstallBusy := false
+            try SCWV_PushState("state")
+            catch {
+            }
         }
     }
 }
@@ -4559,13 +4615,83 @@ _SCWV_BatchSearch() {
     
     _SCWV_RecordSearchHistory(Keyword)
 
-    for index, Engine in SearchCenterSelectedEngines {
-        if (Engine = "")
-            continue
-        SendVoiceSearchToBrowser(Keyword, Engine)
-        if (index < SearchCenterSelectedEngines.Length)
-            Sleep(300)
+    _SCWV_BatchSearchStep(Keyword, 1)
+}
+
+_SCWV_RunHiddenCommandAsync(command, doneCb := 0, timeoutMs := 120000, tag := "") {
+    global g_SCWV_AsyncCmdJobs, g_SCWV_AsyncCmdSeq
+    cmd := Trim(String(command))
+    if (cmd = "")
+        return false
+    pid := 0
+    try Run(cmd, , "Hide", &pid)
+    catch as e {
+        if IsObject(doneCb)
+            doneCb.Call(false, "run_failed:" . e.Message, 0)
+        return false
     }
+    if (pid <= 0) {
+        if IsObject(doneCb)
+            doneCb.Call(false, "run_pid_empty", 0)
+        return false
+    }
+    g_SCWV_AsyncCmdSeq += 1
+    g_SCWV_AsyncCmdJobs[g_SCWV_AsyncCmdSeq] := Map(
+        "pid", pid,
+        "start", A_TickCount,
+        "timeout", Max(1000, Integer(timeoutMs)),
+        "cb", doneCb,
+        "tag", String(tag)
+    )
+    SetTimer(_SCWV_AsyncCmdPump, -80)
+    return true
+}
+
+_SCWV_AsyncCmdPump(*) {
+    global g_SCWV_AsyncCmdJobs
+    if !(g_SCWV_AsyncCmdJobs is Map) || (g_SCWV_AsyncCmdJobs.Count = 0)
+        return
+    removeKeys := []
+    now := A_TickCount
+    for k, job in g_SCWV_AsyncCmdJobs {
+        pid := Integer(job["pid"])
+        alive := false
+        try alive := !!ProcessExist(pid)
+        if !alive {
+            removeKeys.Push(k)
+            cb := job["cb"]
+            if IsObject(cb) {
+                try cb.Call(true, "completed", pid)
+            }
+            continue
+        }
+        if ((now - Integer(job["start"])) >= Integer(job["timeout"])) {
+            try ProcessClose(pid)
+            removeKeys.Push(k)
+            cb := job["cb"]
+            if IsObject(cb) {
+                try cb.Call(false, "timeout", pid)
+            }
+        }
+    }
+    for _, k in removeKeys {
+        try g_SCWV_AsyncCmdJobs.Delete(k)
+    }
+    if (g_SCWV_AsyncCmdJobs.Count > 0)
+        SetTimer(_SCWV_AsyncCmdPump, -80)
+}
+
+_SCWV_BatchSearchStep(keyword, idx, *) {
+    global SearchCenterSelectedEngines
+    if !IsObject(SearchCenterSelectedEngines)
+        return
+    n := SearchCenterSelectedEngines.Length
+    if (idx > n)
+        return
+    engine := SearchCenterSelectedEngines[idx]
+    if (engine != "")
+        SendVoiceSearchToBrowser(keyword, engine)
+    SetTimer((*) => _SCWV_BatchSearchStep(keyword, idx + 1), -300)
 }
 
 _SCWV_SendToCLI(prompt) {
@@ -4602,8 +4728,25 @@ SC_ActivateSearchResultItem(Item, doHide := true, smartTextSearch := false) {
 
     if doHide {
         SCWV_SubmitIntent("close", 25, Map("reason", "activate_result", "persist", 1))
-        Sleep(60)
+        SetTimer((*) => _SCWV_ActivateSearchResultItemContinue(Item, smartTextSearch), -60)
+        return
     }
+    _SCWV_ActivateSearchResultItemContinue(Item, smartTextSearch)
+}
+
+_SCWV_ActivateSearchResultItemContinue(Item, smartTextSearch := false, *) {
+    global SearchCenterWebKeyword
+    if !IsObject(Item)
+        return
+    Content := Item.HasProp("Content") ? Item.Content : Item.Title
+    DataType := ""
+    if (Item.HasProp("DataType") && Item.DataType != "") {
+        DataType := Item.DataType
+    } else if (Item.HasProp("Metadata") && IsObject(Item.Metadata) && Item.Metadata.Has("DataType")) {
+        DataType := Item.Metadata["DataType"]
+    }
+    origDt := Item.HasProp("OriginalDataType") ? Item.OriginalDataType : ""
+    isFileLike := (DataType = "file" || DataType = "File" || DataType = "Folder" || origDt = "file")
 
     if (isFileLike) {
         launchTarget := _SCWV_ResolveLaunchTarget(Item)
@@ -4643,8 +4786,7 @@ SC_ActivateSearchResultItem(Item, doHide := true, smartTextSearch := false) {
 
     try {
         A_Clipboard := Content
-        Sleep(80)
-        Send("^v")
+        SetTimer((*) => Send("^v"), -80)
     } catch as err {
         TrayTip("粘贴失败", err.Message, "Iconx 2")
     }
@@ -5222,8 +5364,14 @@ _SCWV_OnDarkSubMenuClick(idx, *) {
             }
         } catch {
         }
-        Sleep(42)
+        SetTimer((*) => _SCWV_OnDarkSubMenuClick_Continue(idx, c, row), -42)
+        return
     }
+    _SCWV_OnDarkSubMenuClick_Continue(idx, c, row)
+}
+
+_SCWV_OnDarkSubMenuClick_Continue(idx, c, row, *) {
+    global g_SCWV_Gui
     _SCWV_DestroyDarkRowMenus()
     SetTimer(SCWV_WMDeactivateHideTick, 0)
     if (c != "")
@@ -5400,13 +5548,7 @@ _SCWV_OnDarkSearchMenuClick(idx, *) {
             }
         } catch {
         }
-        Sleep(32)
-        try {
-            _SCWV_DarkCtxComputeSubXY(idx, &subX, &subY)
-            _SCWV_ShowDarkSubMenuAt(ch, subX, subY)
-        } catch {
-            _SCWV_ShowDarkSubMenuAt(ch, A_ScreenWidth // 2, A_ScreenHeight // 2)
-        }
+        SetTimer((*) => _SCWV_OnDarkSearchMenuClick_ShowSub(idx, ch), -32)
         return
     }
     c := g_SCWV_DarkCtxCmdByIdx.Has(idx) ? g_SCWV_DarkCtxCmdByIdx[idx] : ""
@@ -5419,8 +5561,23 @@ _SCWV_OnDarkSearchMenuClick(idx, *) {
             }
         } catch {
         }
-        Sleep(38)
+        SetTimer((*) => _SCWV_OnDarkSearchMenuClick_Continue(c, row), -38)
+        return
     }
+    _SCWV_OnDarkSearchMenuClick_Continue(c, row)
+}
+
+_SCWV_OnDarkSearchMenuClick_ShowSub(idx, ch, *) {
+    try {
+        _SCWV_DarkCtxComputeSubXY(idx, &subX, &subY)
+        _SCWV_ShowDarkSubMenuAt(ch, subX, subY)
+    } catch {
+        _SCWV_ShowDarkSubMenuAt(ch, A_ScreenWidth // 2, A_ScreenHeight // 2)
+    }
+}
+
+_SCWV_OnDarkSearchMenuClick_Continue(c, row, *) {
+    global g_SCWV_Gui
     _SCWV_DestroyDarkRowMenus()
     SetTimer(SCWV_WMDeactivateHideTick, 0)
     if (c != "")

@@ -33,6 +33,7 @@ global g_SelSense_UserCopyInProgress := false
 global g_SelSense_UserCopyEndTick := 0
 global g_SelSense_DoubleCopyHub_LastTick := 0
 global g_SelSense_HubCopyTriggerMode := "capslock"
+global g_SelSense_CopyTicket := 0
 global HUB_PHASE_CLOSED := "CLOSED"
 global HUB_PHASE_OPENING := "OPENING"
 global HUB_PHASE_OPEN := "OPEN"
@@ -60,6 +61,8 @@ global g_SelSense_HubDictActiveSource := "builtin_default"
 global g_SelSense_HubDictInstallBusy := false
 global g_SelSense_HubDictInstallQueued := false
 global g_SelSense_HubDictLookupCache := Map()
+global g_SelSense_AsyncCmdJobs := Map()
+global g_SelSense_AsyncCmdSeq := 0
 
 SelectionSense_Diag_Log(msg) {
     try NativeDropDiag_Log("selection " . String(msg))
@@ -853,31 +856,48 @@ SelectionSense_HubDictInstall_InspectArchive(zipPath) {
     z := Trim(String(zipPath))
     if (z = "" || !FileExist(z))
         return Map("ok", false, "message", "压缩包不存在")
-    sevenZip := A_ScriptDir "\lib\7z.exe"
-    if !FileExist(sevenZip)
-        return Map("ok", false, "message", "未找到 7z.exe")
-    workDir := A_ScriptDir "\cache\dict_install"
-    if !DirExist(workDir)
-        DirCreate(workDir)
-    listLog := workDir "\7z_list.log"
-    try FileDelete(listLog)
-    catch {
-    }
-    cmd := '"' . sevenZip . '" l -slt -ba -- "' . z . '" > "' . listLog . '" 2>&1'
-    rc := RunWait(A_ComSpec . " /c " . cmd, , "Hide")
-    txt := ""
-    try txt := FileRead(listLog, "UTF-8")
-    catch {
-        txt := ""
-    }
-    if (rc > 1)
-        return Map("ok", false, "message", "压缩包列表失败(7z退出码:" . rc . ")", "list", txt, "hasDb", false, "isStardictRaw", false)
-    hasDb := RegExMatch(txt, "im)^Path\s*=\s*.+\.(db|sqlite|sqlite3|db3)\s*$") ? true : false
-    hasIfo := RegExMatch(txt, "im)^Path\s*=\s*.+\.ifo\s*$") ? true : false
-    hasIdx := RegExMatch(txt, "im)^Path\s*=\s*.+\.idx\s*$") ? true : false
-    hasDict := RegExMatch(txt, "im)^Path\s*=\s*.+\.dict(\.dz)?\s*$") ? true : false
+    ; Avoid synchronous external 7z list command on UI thread.
+    ; Detect embedded filenames directly from ZIP raw data.
+    hasDb := SelectionSense_ZipRawContainsAny(z, [".db", ".sqlite", ".sqlite3", ".db3"])
+    hasIfo := SelectionSense_ZipRawContainsAny(z, [".ifo"])
+    hasIdx := SelectionSense_ZipRawContainsAny(z, [".idx"])
+    hasDict := SelectionSense_ZipRawContainsAny(z, [".dict", ".dict.dz"])
     isStardictRaw := (!hasDb && hasIfo && hasIdx && hasDict)
-    return Map("ok", true, "message", "", "list", txt, "hasDb", hasDb, "isStardictRaw", isStardictRaw)
+    return Map("ok", true, "message", "", "list", "(zip raw filename scan)", "hasDb", hasDb, "isStardictRaw", isStardictRaw)
+}
+
+SelectionSense_ZipRawContainsAny(zipPath, needles) {
+    p := Trim(String(zipPath))
+    if (p = "" || !FileExist(p))
+        return false
+    if !(needles is Array) || needles.Length = 0
+        return false
+    lows := []
+    for _, n in needles
+        lows.Push(StrLower(String(n)))
+    overlap := 96
+    prev := ""
+    try {
+        f := FileOpen(p, "r")
+        if !IsObject(f)
+            return false
+        while !f.AtEOF {
+            chunk := f.Read(131072)
+            if (chunk = "")
+                break
+            scan := StrLower(prev . chunk)
+            for _, n in lows {
+                if InStr(scan, n) {
+                    f.Close()
+                    return true
+                }
+            }
+            prev := (StrLen(scan) > overlap) ? SubStr(scan, -overlap + 1) : scan
+        }
+        f.Close()
+    } catch {
+    }
+    return false
 }
 
 SelectionSense_HubDictInstall_ReportLine(reportPath, text) {
@@ -945,11 +965,76 @@ SelectionSense_HubDictInstall_FindFallbackExistingDb() {
     return bestPath
 }
 
+SelectionSense_RunHiddenCommandAsync(command, doneCb := 0, timeoutMs := 120000, tag := "") {
+    global g_SelSense_AsyncCmdJobs, g_SelSense_AsyncCmdSeq
+    cmd := Trim(String(command))
+    if (cmd = "")
+        return false
+    pid := 0
+    try Run(cmd, , "Hide", &pid)
+    catch as e {
+        if IsObject(doneCb)
+            doneCb.Call(false, "run_failed:" . e.Message, 0)
+        return false
+    }
+    if (pid <= 0) {
+        if IsObject(doneCb)
+            doneCb.Call(false, "run_pid_empty", 0)
+        return false
+    }
+    g_SelSense_AsyncCmdSeq += 1
+    g_SelSense_AsyncCmdJobs[g_SelSense_AsyncCmdSeq] := Map(
+        "pid", pid,
+        "start", A_TickCount,
+        "timeout", Max(1000, Integer(timeoutMs)),
+        "cb", doneCb,
+        "tag", String(tag)
+    )
+    SetTimer(SelectionSense_AsyncCmdPump, -80)
+    return true
+}
+
+SelectionSense_AsyncCmdPump(*) {
+    global g_SelSense_AsyncCmdJobs
+    if !(g_SelSense_AsyncCmdJobs is Map) || (g_SelSense_AsyncCmdJobs.Count = 0)
+        return
+    removeKeys := []
+    now := A_TickCount
+    for k, job in g_SelSense_AsyncCmdJobs {
+        pid := Integer(job["pid"])
+        alive := false
+        try alive := !!ProcessExist(pid)
+        if !alive {
+            removeKeys.Push(k)
+            cb := job["cb"]
+            if IsObject(cb) {
+                try cb.Call(true, "completed", pid)
+            }
+            continue
+        }
+        elapsed := now - Integer(job["start"])
+        if (elapsed >= Integer(job["timeout"])) {
+            try ProcessClose(pid)
+            removeKeys.Push(k)
+            cb := job["cb"]
+            if IsObject(cb) {
+                try cb.Call(false, "timeout", pid)
+            }
+        }
+    }
+    for _, k in removeKeys {
+        try g_SelSense_AsyncCmdJobs.Delete(k)
+    }
+    if (g_SelSense_AsyncCmdJobs.Count > 0)
+        SetTimer(SelectionSense_AsyncCmdPump, -80)
+}
+
 SelectionSense_HubDict_InstallEcdictOneClick() {
     global g_SelSense_HubDictInstallBusy
     if g_SelSense_HubDictInstallBusy
         return Map("ok", false, "message", "安装任务正在执行中")
     g_SelSense_HubDictInstallBusy := true
+    pendingAsync := false
     try {
         ; 优先使用 SQLite 镜像包；stardict 原始包不含 sqlite db。
         urls := [
@@ -1005,7 +1090,7 @@ SelectionSense_HubDict_InstallEcdictOneClick() {
             errMsg := dl.Has("message") ? String(dl["message"]) : "下载失败"
             downloadErrors.Push("源" . idx . ": " . errMsg)
             SelectionSense_HubDictInstall_ReportLine(reportPath, "源" . idx . "下载失败: " . errMsg)
-            Sleep(120)
+            ; no blocking delay on UI thread between source retries
         }
         if !packageReady {
             mergedErr := "下载词典失败，请稍后重试"
@@ -1026,58 +1111,91 @@ SelectionSense_HubDict_InstallEcdictOneClick() {
         if !DirExist(extractDir)
             DirCreate(extractDir)
 
-        ; 定向提取数据库文件，避免目录结构/警告导致“已解压但未命中”。
+        ; 定向提取数据库文件（异步），避免在 UI 线程 RunWait 阻塞。
         cmdDb := '"' . sevenZip . '" e -y -aoa -o"' . extractDir . '" -- "' . zipPath . '" "ultimate.db" "*.sqlite" "*.sqlite3" "*.db3" "*.db"'
-        rc := RunWait(cmdDb, , "Hide")
-        SelectionSense_HubDictInstall_ReportLine(reportPath, "7z 定向提取(db)退出码: " . rc)
-
-        foundDb := SelectionSense_HubDictInstall_FindDb(extractDir)
-        if (foundDb = "") {
-            ; 回退到完整解压，再次探测。
-            cmdAll := '"' . sevenZip . '" x -y -aoa -o"' . extractDir . '" -- "' . zipPath . '"'
-            rcAll := RunWait(cmdAll, , "Hide")
-            SelectionSense_HubDictInstall_ReportLine(reportPath, "7z 全量解压退出码: " . rcAll)
-            foundDb := SelectionSense_HubDictInstall_FindDb(extractDir)
-            rc := rcAll
-        }
-        SelectionSense_HubDictInstall_ReportLine(reportPath, "数据库探测结果: " . (foundDb != "" ? foundDb : "[未命中]"))
-        if (foundDb = "") {
-            try {
-                listing := ""
-                Loop Files, extractDir "\*.*", "R" {
-                    listing .= A_LoopFileFullPath . "`r`n"
-                    if (StrLen(listing) > 2000)
-                        break
-                }
-                if (listing != "")
-                    SelectionSense_HubDictInstall_ReportLine(reportPath, "解压目录文件样本:`r`n" . listing)
-            } catch {
-            }
-            return Map("ok", false, "message", "词典包解压失败，请稍后重试")
-        }
-        SelectionSense_HubDictInstall_RunJs(84, "正在写入词典...")
-        try FileCopy(foundDb, finalDb, 1)
-        catch as e {
-            SelectionSense_HubDictInstall_ReportLine(reportPath, "写入 ultimate.db 失败: " . e.Message)
-            return Map("ok", false, "message", "写入词典失败")
-        }
-        SelectionSense_HubDictInstall_ReportLine(reportPath, "数据库复制成功: " . finalDb)
-
-        SelectionSense_HubDictInstall_RunJs(90, "正在导入词典...")
-        importRet := SelectionSense_HubDict_ImportSqlite(finalDb)
-        if !(importRet.Has("ok") && importRet["ok"]) {
-            SelectionSense_HubDictInstall_ReportLine(reportPath, "导入失败: " . (importRet.Has("message") ? String(importRet["message"]) : "导入失败"))
-            return Map("ok", false, "message", "词典导入失败")
-        }
-        SelectionSense_HubDictInstall_ReportLine(reportPath, "导入成功")
-
-        SelectionSense_HubDictInstall_RunJs(96, "正在激活词典...")
-        SelectionSense_HubDictInstall_CallSQ3Open(finalDb)
-        SelectionSense_HubDictInstall_ReportLine(reportPath, "调用 SQ3_Open 完成")
-        return Map("ok", true, "message", "本地词库已激活")
+        ctx := Map("extractDir", extractDir, "zipPath", zipPath, "finalDb", finalDb, "reportPath", reportPath, "sevenZip", sevenZip)
+        okAsync := SelectionSense_RunHiddenCommandAsync(cmdDb, (ok, why, pid) => SelectionSense_HubDictInstall_OnExtractDbDone(ok, why, pid, ctx), 120000, "hubdict_extract_db")
+        if !okAsync
+            return Map("ok", false, "message", "词典包解压任务启动失败")
+        pendingAsync := true
+        return Map("pending", true)
     } finally {
-        g_SelSense_HubDictInstallBusy := false
+        if !pendingAsync
+            g_SelSense_HubDictInstallBusy := false
     }
+}
+
+SelectionSense_HubDictInstall_OnExtractDbDone(ok, why, pid, ctx) {
+    SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "7z 定向提取(db)完成: ok=" . (ok ? "1" : "0") . " why=" . why . " pid=" . pid)
+    if !ok {
+        SelectionSense_HubDictInstall_AsyncFinish(false, "词典包解压超时或失败")
+        return
+    }
+    foundDb := SelectionSense_HubDictInstall_FindDb(ctx["extractDir"])
+    if (foundDb != "") {
+        SelectionSense_HubDictInstall_OnExtractFinalize(ctx, foundDb)
+        return
+    }
+    cmdAll := '"' . ctx["sevenZip"] . '" x -y -aoa -o"' . ctx["extractDir"] . '" -- "' . ctx["zipPath"] . '"'
+    okAsync := SelectionSense_RunHiddenCommandAsync(cmdAll, (ok2, why2, pid2) => SelectionSense_HubDictInstall_OnExtractAllDone(ok2, why2, pid2, ctx), 180000, "hubdict_extract_all")
+    if !okAsync
+        SelectionSense_HubDictInstall_AsyncFinish(false, "词典包完整解压任务启动失败")
+}
+
+SelectionSense_HubDictInstall_OnExtractAllDone(ok, why, pid, ctx) {
+    SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "7z 全量解压完成: ok=" . (ok ? "1" : "0") . " why=" . why . " pid=" . pid)
+    if !ok {
+        SelectionSense_HubDictInstall_AsyncFinish(false, "词典包解压超时或失败")
+        return
+    }
+    foundDb := SelectionSense_HubDictInstall_FindDb(ctx["extractDir"])
+    if (foundDb = "") {
+        SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "数据库探测结果: [未命中]")
+        SelectionSense_HubDictInstall_AsyncFinish(false, "词典包解压失败，请稍后重试")
+        return
+    }
+    SelectionSense_HubDictInstall_OnExtractFinalize(ctx, foundDb)
+}
+
+SelectionSense_HubDictInstall_OnExtractFinalize(ctx, foundDb) {
+    SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "数据库探测结果: " . foundDb)
+    SelectionSense_HubDictInstall_RunJs(84, "正在写入词典...")
+    try FileCopy(foundDb, ctx["finalDb"], 1)
+    catch as e {
+        SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "写入 ultimate.db 失败: " . e.Message)
+        SelectionSense_HubDictInstall_AsyncFinish(false, "写入词典失败")
+        return
+    }
+    SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "数据库复制成功: " . ctx["finalDb"])
+    SelectionSense_HubDictInstall_RunJs(90, "正在导入词典...")
+    importRet := SelectionSense_HubDict_ImportSqlite(ctx["finalDb"])
+    if !(importRet.Has("ok") && importRet["ok"]) {
+        SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "导入失败: " . (importRet.Has("message") ? String(importRet["message"]) : "导入失败"))
+        SelectionSense_HubDictInstall_AsyncFinish(false, "词典导入失败")
+        return
+    }
+    SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "导入成功")
+    SelectionSense_HubDictInstall_RunJs(96, "正在激活词典...")
+    SelectionSense_HubDictInstall_CallSQ3Open(ctx["finalDb"])
+    SelectionSense_HubDictInstall_ReportLine(ctx["reportPath"], "调用 SQ3_Open 完成")
+    SelectionSense_HubDictInstall_AsyncFinish(true, "本地词库已激活")
+}
+
+SelectionSense_HubDictInstall_AsyncFinish(ok, msg) {
+    global g_SelSense_HubDictInstallBusy, g_SelSense_MenuWV2
+    msg0 := String(msg)
+    if ok
+        SelectionSense_HubDictInstall_RunJs(100, "本地词库已激活")
+    else
+        SelectionSense_HubDictInstall_RunJs(100, "安装失败: " . msg0)
+    try WebView_QueuePayload(g_SelSense_MenuWV2, Map(
+        "type", "hub_translate_sqlite_dict_state",
+        "ok", ok ? true : false,
+        "message", msg0,
+        "activeSourceId", SelectionSense_HubDict_GetActiveSource(),
+        "sources", SelectionSense_HubDict_ListSources()
+    ))
+    g_SelSense_HubDictInstallBusy := false
 }
 
 SelectionSense_HubDict_InstallEcdictOneClick_AsyncStart() {
@@ -1093,6 +1211,8 @@ SelectionSense_HubDict_InstallEcdictOneClick_AsyncWorker(*) {
     global g_SelSense_HubDictInstallQueued, g_SelSense_MenuWV2
     g_SelSense_HubDictInstallQueued := false
     ret0 := SelectionSense_HubDict_InstallEcdictOneClick()
+    if (ret0 is Map && ret0.Has("pending") && ret0["pending"])
+        return
     ok0 := ret0.Has("ok") ? !!ret0["ok"] : false
     msg0 := ret0.Has("message") ? String(ret0["message"]) : (ok0 ? "本地词库已激活" : "安装失败")
     if ok0
@@ -1519,34 +1639,50 @@ SelectionSense_ProcessDeferred(*) {
         return
     }
 
-    Sleep(SelectionSense_CopyDelayMsEffective())
-    try ClipWait(g_SelSense_ClipWaitSec)
-    catch as _e {
-    }
+    g_SelSense_CopyTicket += 1
+    ticket := g_SelSense_CopyTicket
+    deadlineTick := A_TickCount + Max(120, Integer(g_SelSense_ClipWaitSec * 1000))
+    delayMs := Max(1, SelectionSense_CopyDelayMsEffective())
+    SelectionSense_Diag_Log("process copy_scheduled ticket=" . ticket . " delay_ms=" . delayMs . " deadline_ms=" . (deadlineTick - A_TickCount))
+    SetTimer((*) => SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActive, deadlineTick), -delayMs)
+}
+
+SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActive, deadlineTick, *) {
+    global g_SelSense_CopyTicket, g_SelSense_LastClipSig, g_SelSense_LastFireTick
+    global g_SelSense_LastFullText, g_SelSense_LastTick
+    if (ticket != g_SelSense_CopyTicket)
+        return
+
     got := ""
     try got := A_Clipboard
-    catch as _e {
+    catch {
         got := ""
     }
-    SelectionSense_Diag_Log("process clipboard_read len=" . StrLen(String(got)))
-
     text := ""
     try text := String(got)
-    catch as _e {
+    catch {
         text := ""
     }
     text := Trim(text, " `t`r`n")
+
+    if (text = "" && A_TickCount < deadlineTick) {
+        SetTimer((*) => SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActive, deadlineTick), -35)
+        return
+    }
+
+    SelectionSense_Diag_Log("process clipboard_read len=" . StrLen(String(got)) . " ticket=" . ticket)
+    try {
+        if (clipSaved != "")
+            A_Clipboard := clipSaved
+    } catch {
+    }
+
     if (text = "") {
-        SelectionSense_Diag_Log("process empty_clipboard")
-        try {
-            if (clipSaved != "")
-                A_Clipboard := clipSaved
-        } catch as _e {
-        }
+        SelectionSense_Diag_Log("process empty_clipboard timeout=1 ticket=" . ticket)
         SelectionSense_ClearLastSelected()
         if hubPreviewActive {
             try FloatingToolbar_NotifySelectionClear()
-            catch as _e {
+            catch {
             }
         }
         return
@@ -1557,15 +1693,13 @@ SelectionSense_ProcessDeferred(*) {
         return
     g_SelSense_LastClipSig := sig
     g_SelSense_LastFireTick := A_TickCount
-
     g_SelSense_LastFullText := text
     g_SelSense_LastTick := A_TickCount
     SelectionSense_Diag_Log("process text len=" . StrLen(text) . " sig=" . sig . " preview=" . SubStr(text, 1, 48))
     SelectionSense_TryActivateHoleFromSelection(text)
-
     if hubPreviewActive {
         try FloatingToolbar_NotifySelectionChange(text)
-        catch as _e {
+        catch {
         }
         SelectionSense_QueueHubPreviewUpdate(text)
     }
@@ -1591,14 +1725,7 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
     ; Mouse selection auto-copy has no native drag events, so trigger hole/search directly.
     SelectionSense_Diag_Log("hole show begin len=" . StrLen(t))
     GDHO_TriggerSource := "selection_copy"
-    try GDHO_Init()
-    try GDHO_Show("text")
-    ; WebView2 may finish warming a little late; keep issuing cheap NoActivate moves.
-    try SetTimer((*) => GDHO_Show("text"), -150)
-    try SetTimer((*) => GDHO_Show("text"), -300)
-    try SetTimer((*) => GDHO_Show("text"), -450)
-    try SetTimer((*) => GDHO_Show("text"), -600)
-    try SetTimer((*) => GDHO_Show("text"), -750)
+    try GDHO_RequestOpen(Map("reason", "selection_copy", "payload", "text"))
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'selection_copy', dispatch: 'show:text', active: 1, overHole: 0, wasOverHole: 0, payload: 'text' })")
     try FloatingToolbar_ActivateSearchCenter()
     try FloatingToolbar_RequestSearchByKeyword(t)
@@ -1622,8 +1749,7 @@ SelectionSense_HideHoleAfterSelection(*) {
     } catch {
     }
     SelectionSense_Diag_Log("hole hide now")
-    try GDHO_HideFrontend()
-    try GDHO_HideOverlay()
+    try GDHO_RequestClose("selection_copy_timeout")
 }
 
 HubCapsule_Log(event, detail := "") {
@@ -2097,7 +2223,6 @@ SelectionSense_OnMenuWebMessage(sender, args) {
                 pBitmap := Gdip_CreateBitmapFromFile(p)
                 if (pBitmap) {
                     A_Clipboard := ""
-                    Sleep(30)
                     Gdip_SetBitmapToClipboard(pBitmap)
                     Gdip_DisposeImage(pBitmap)
                 }
@@ -2406,16 +2531,11 @@ SelectionSense_SendToNiumaChatAndSubmit(text) {
     }
 
     sent := false
-    Loop 8 {
-        try sent := FloatingToolbar_SendTextToNiumaChat(t, true, true, true)
-        catch as _e {
-            sent := false
-        }
-        if sent
-            return true
-        Sleep(120)
+    try sent := FloatingToolbar_SendTextToNiumaChat(t, true, true, true)
+    catch as _e {
+        sent := false
     }
-    return false
+    return sent ? true : false
 }
 
 ; HubCapsule: preview-only update (does not push into segments).
@@ -2960,8 +3080,8 @@ SelectionSense_Init() {
     try SelectionSense_PrewarmHubCapsule()
     try {
         if EnableHoleOverlayOnNativeDrop && IsHoleRuntimeEnabledByActivationMode() {
-            GDHO_Init()
-            SetTimer((*) => GDHO_HideOverlay(), -900)
+            GDHO_RequestOpen(Map("reason", "selection_prewarm", "payload", "text"))
+            SetTimer((*) => GDHO_RequestClose("selection_prewarm_close"), -900)
             SelectionSense_Diag_Log("init hole_prewarm enabled")
         }
     } catch {

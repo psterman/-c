@@ -4,6 +4,7 @@ global g_FocusBroker_Owner := ""
 global g_FocusBroker_ProtectUntil := 0
 global g_FocusBroker_Pending := 0
 global g_FocusBroker_Seq := 0
+global g_FocusBroker_LastReqTick := Map()
 
 FocusBroker_Log(event, detail := "") {
     try {
@@ -32,27 +33,36 @@ FocusBroker_Release(owner, reason := "") {
 }
 
 FocusBroker_Request(owner, hwnd, priority, reason, protectMs := 300, focusCallback := 0) {
-    global g_FocusBroker_Owner, g_FocusBroker_ProtectUntil, g_FocusBroker_Pending, g_FocusBroker_Seq
+    global g_FocusBroker_Owner, g_FocusBroker_ProtectUntil, g_FocusBroker_Pending, g_FocusBroker_Seq, g_FocusBroker_LastReqTick
     o := String(owner)
     h := Integer(hwnd)
     pri := Integer(priority)
+    rs := String(reason)
     now := A_TickCount
     if (o = "" || !h)
         return false
+    dedupeKey := StrLower(o) . "|" . StrLower(rs)
+    lastTick := 0
+    try lastTick := g_FocusBroker_LastReqTick.Get(dedupeKey, 0)
+    if (lastTick > 0 && (now - lastTick) < 120) {
+        FocusBroker_Log("drop_dedupe", "owner=" . o . " reason=" . rs . " delta=" . (now - lastTick))
+        return false
+    }
+    g_FocusBroker_LastReqTick[dedupeKey] := now
     g_FocusBroker_Seq += 1
     seq := g_FocusBroker_Seq
     if (g_FocusBroker_Owner != "" && g_FocusBroker_Owner != o && now < g_FocusBroker_ProtectUntil) {
         curPri := FocusBroker_DefaultPriority(g_FocusBroker_Owner)
         if (pri >= curPri) {
-            g_FocusBroker_Pending := Map("owner", o, "hwnd", h, "priority", pri, "reason", String(reason), "protectMs", Integer(protectMs), "callback", focusCallback, "seq", seq)
+            g_FocusBroker_Pending := Map("owner", o, "hwnd", h, "priority", pri, "reason", rs, "protectMs", Integer(protectMs), "callback", focusCallback, "seq", seq)
             delay := Max(15, g_FocusBroker_ProtectUntil - now + 5)
-            FocusBroker_Log("delay", "owner=" . o . " current=" . g_FocusBroker_Owner . " delay=" . delay . " reason=" . reason)
+            FocusBroker_Log("delay", "owner=" . o . " current=" . g_FocusBroker_Owner . " delay=" . delay . " reason=" . rs)
             SetTimer((*) => FocusBroker_RunPending(seq), -delay)
             return false
         }
-        FocusBroker_Log("preempt", "owner=" . o . " current=" . g_FocusBroker_Owner . " reason=" . reason)
+        FocusBroker_Log("preempt", "owner=" . o . " current=" . g_FocusBroker_Owner . " reason=" . rs)
     }
-    return FocusBroker_Grant(o, h, pri, String(reason), Integer(protectMs), focusCallback)
+    return FocusBroker_Grant(o, h, pri, rs, Integer(protectMs), focusCallback)
 }
 
 FocusBroker_RunPending(seq := 0, *) {

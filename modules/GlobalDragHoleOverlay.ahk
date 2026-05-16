@@ -8,6 +8,7 @@ global GDHO_WV2_CTRL := 0
 global GDHO_WV2 := 0
 global GDHO_READY := false
 global GDHO_VISIBLE := false
+global GDHO_ERROR := false
 global GDHO_ACTIVE := false
 global GDHO_PAYLOAD := "file"
 global GDHO_DRAG_SOURCE_CLASS := ""
@@ -75,8 +76,32 @@ global GDHO_STRICT_MODE := true
 global GDHO_DRAG_CURSOR_STREAK := 0
 global GDHO_LAST_DROPPED_TEXT := ""
 global GDHO_SESSION_TEXT := ""
+global GDHO_SESSION_CAPTURE_TICKET := 0
 global GDHO_FRONTEND_POST_MSG := 0x8127
 global GDHO_FRONTEND_PENDING_JS := ""
+global g_GDHO_FrontendQueue := []
+global GDHO_PHASE_CLOSED := "CLOSED"
+global GDHO_PHASE_OPENING := "OPENING"
+global GDHO_PHASE_OPEN := "OPEN"
+global GDHO_PHASE_CLOSING := "CLOSING"
+global GDHO_PHASE_ERROR := "ERROR"
+global g_GDHO_CurrentPhase := GDHO_PHASE_CLOSED
+global g_GDHO_CurrentToken := 0
+global g_GDHO_PhaseLastChanged := 0
+global g_GDHO_IntentQueue := []
+global g_GDHO_IntentPumpBusy := false
+global g_GDHO_CreateInFlight := false
+global g_GDHO_CreateStartTick := 0
+global g_GDHO_CreateToken := 0
+global g_GDHO_WaitingReadyReveal := false
+global g_GDHO_OpenReason := ""
+global g_GDHO_OpenPayload := 0
+global g_GDHO_CloseAfterReady := false
+global g_GDHO_AntiHangTimerArmed := false
+global g_GDHO_LastStaleDropTick := 0
+global g_GDHO_TransitionCtx := Map("allow", false)
+global g_GDHO_LastOpenIntentReason := ""
+global g_GDHO_LastOpenIntentTick := 0
 ; Warm-standby parking: keep the WebView host alive and physically offscreen.
 global GDHO_PARK_X := -9999
 global GDHO_PARK_Y := -9999
@@ -133,6 +158,316 @@ GDHO_SetFallbackUrl(url) {
     u := Trim(String(url))
     if (u != "")
         GDHO_FALLBACK_URL := u
+}
+
+GDHO_PhaseHex(phase) {
+    p := StrUpper(Trim(String(phase)))
+    switch p {
+        case "OPENING":
+            return "0x01"
+        case "OPEN":
+            return "0x02"
+        case "CLOSING":
+            return "0x03"
+        case "ERROR":
+            return "0x04"
+        default:
+            return "0x00"
+    }
+}
+
+GDHO_LogIFS(intentCode, focusCode := "0x00", phase := "") {
+    global g_GDHO_CurrentPhase
+    ph := (phase != "") ? phase : g_GDHO_CurrentPhase
+    try GDHO_Trace("[ifs] [" . intentCode . "/" . focusCode . "/" . GDHO_PhaseHex(ph) . "]")
+}
+
+GDHO_SetPhase(phase, reason := "") {
+    global g_GDHO_CurrentPhase, g_GDHO_PhaseLastChanged
+    p := StrUpper(Trim(String(phase)))
+    if !(p = GDHO_PHASE_CLOSED || p = GDHO_PHASE_OPENING || p = GDHO_PHASE_OPEN || p = GDHO_PHASE_CLOSING || p = GDHO_PHASE_ERROR)
+        return false
+    prev := g_GDHO_CurrentPhase
+    g_GDHO_CurrentPhase := p
+    g_GDHO_PhaseLastChanged := A_TickCount
+    try GDHO_Trace("gdho_phase " . prev . "->" . p . " reason=" . reason . " token=" . g_GDHO_CurrentToken)
+    return true
+}
+
+GDHO_IsCurrentToken(token) {
+    global g_GDHO_CurrentToken, g_GDHO_LastStaleDropTick
+    ok := (Integer(token) = Integer(g_GDHO_CurrentToken))
+    if !ok {
+        now := A_TickCount
+        if ((now - g_GDHO_LastStaleDropTick) > 100) {
+            g_GDHO_LastStaleDropTick := now
+            try GDHO_Trace("intent_drop_stale_token token=" . Integer(token) . " current=" . Integer(g_GDHO_CurrentToken))
+        }
+    }
+    return ok
+}
+
+GDHO_InternalCallAllowed() {
+    global g_GDHO_TransitionCtx
+    return (g_GDHO_TransitionCtx is Map) && !!g_GDHO_TransitionCtx["allow"]
+}
+
+GDHO_IsOpeningOrBusy() {
+    global g_GDHO_CurrentPhase, g_GDHO_WaitingReadyReveal, g_GDHO_CreateInFlight
+    return (g_GDHO_CurrentPhase = GDHO_PHASE_OPENING
+        || g_GDHO_CurrentPhase = GDHO_PHASE_CLOSING
+        || g_GDHO_WaitingReadyReveal
+        || g_GDHO_CreateInFlight)
+}
+
+GDHO_RequestOpen(payload := 0) {
+    if !(payload is Map)
+        payload := Map("payload", payload)
+    if !payload.Has("reason")
+        payload["reason"] := "request_open"
+    GDHO_SubmitIntent("OPEN", 30, payload)
+}
+
+GDHO_RequestClose(reason := "") {
+    GDHO_SubmitIntent("CLOSE", 30, Map("reason", reason != "" ? reason : "request_close"))
+}
+
+GDHO_RequestForceReset(reason := "") {
+    GDHO_SubmitIntent("FORCE_RESET", 5, Map("reason", reason != "" ? reason : "request_force_reset"))
+}
+
+GDHO_SubmitIntent(intent, priority := 50, payload := 0) {
+    global g_GDHO_IntentQueue, g_GDHO_LastOpenIntentReason, g_GDHO_LastOpenIntentTick
+    normalized := StrUpper(Trim(String(intent)))
+    if (normalized = "FORCE_CLOSE")
+        normalized := "FORCE_RESET"
+    if (normalized = "")
+        return
+    if !(g_GDHO_IntentQueue is Array)
+        g_GDHO_IntentQueue := []
+    intentHex := (normalized = "OPEN") ? "0x11" : ((normalized = "CLOSE") ? "0x12" : ((normalized = "FORCE_RESET") ? "0x13" : "0x10"))
+    GDHO_LogIFS(intentHex)
+    if (normalized = "OPEN" && payload is Map && payload.Has("reason")) {
+        reasonNorm := StrLower(Trim(String(payload["reason"])))
+        delta := A_TickCount - g_GDHO_LastOpenIntentTick
+        if (reasonNorm != "" && reasonNorm = g_GDHO_LastOpenIntentReason && delta >= 0 && delta < 120) {
+            try GDHO_Trace("gdho_intent_drop_dup_open reason=" . reasonNorm . " delta=" . delta)
+            return
+        }
+        g_GDHO_LastOpenIntentReason := reasonNorm
+        g_GDHO_LastOpenIntentTick := A_TickCount
+    }
+    idx := g_GDHO_IntentQueue.Length
+    while (idx >= 1) {
+        item := g_GDHO_IntentQueue[idx]
+        if (StrUpper(Trim(String(item["intent"]))) = normalized)
+            g_GDHO_IntentQueue.RemoveAt(idx)
+        idx -= 1
+    }
+    g_GDHO_IntentQueue.Push(Map("intent", normalized, "priority", Integer(priority), "payload", payload, "ts", A_TickCount))
+    SetTimer(GDHO_PumpIntents, -1)
+}
+
+GDHO_PumpIntents(*) {
+    global g_GDHO_IntentQueue, g_GDHO_IntentPumpBusy
+    if g_GDHO_IntentPumpBusy
+        return
+    g_GDHO_IntentPumpBusy := true
+    try {
+        while (g_GDHO_IntentQueue is Array) && g_GDHO_IntentQueue.Length {
+            bestIdx := 1
+            bestPri := g_GDHO_IntentQueue[1]["priority"]
+            loop g_GDHO_IntentQueue.Length {
+                i := A_Index
+                pri := g_GDHO_IntentQueue[i]["priority"]
+                if (pri < bestPri) {
+                    bestPri := pri
+                    bestIdx := i
+                }
+            }
+            it := g_GDHO_IntentQueue.RemoveAt(bestIdx)
+            GDHO_HandleIntent(it["intent"], it["payload"], it["priority"])
+        }
+    } finally {
+        g_GDHO_IntentPumpBusy := false
+    }
+}
+
+GDHO_HandleIntent(intent, payload := 0, priority := 50) {
+    global g_GDHO_CurrentToken
+    iname := StrUpper(Trim(String(intent)))
+    reason := payload is Map && payload.Has("reason") ? payload["reason"] : "gdho_" . StrLower(iname)
+    switch iname {
+        case "OPEN":
+            GDHO_TransitionTo(GDHO_PHASE_OPEN, reason, payload, Integer(priority))
+        case "CLOSE":
+            GDHO_TransitionTo(GDHO_PHASE_CLOSED, reason, payload, Integer(priority))
+        case "FORCE_RESET":
+            g_GDHO_CurrentToken += 1
+            GDHO_SetPhase(GDHO_PHASE_ERROR, "force_reset_" . reason)
+            GDHO_ForceReset(reason)
+            GDHO_SetPhase(GDHO_PHASE_CLOSED, "force_reset_done_" . reason)
+    }
+}
+
+GDHO_ArmAntiHang(token) {
+    global g_GDHO_AntiHangTimerArmed
+    g_GDHO_AntiHangTimerArmed := true
+    SetTimer((*) => GDHO_AntiHangTick(token), -80)
+}
+
+GDHO_AntiHangTick(token) {
+    global g_GDHO_CurrentToken, g_GDHO_CurrentPhase, g_GDHO_PhaseLastChanged, g_GDHO_AntiHangTimerArmed
+    global GDHO_READY, GDHO_VISIBLE, g_GDHO_WaitingReadyReveal
+    if (token != g_GDHO_CurrentToken)
+        return
+    if (g_GDHO_CurrentPhase = GDHO_PHASE_OPENING && GDHO_READY && (GDHO_VISIBLE || !g_GDHO_WaitingReadyReveal)) {
+        GDHO_SetPhase(GDHO_PHASE_OPEN, "anti_hang_promote_open")
+        g_GDHO_AntiHangTimerArmed := false
+        return
+    }
+    if !(g_GDHO_CurrentPhase = GDHO_PHASE_OPENING || g_GDHO_CurrentPhase = GDHO_PHASE_CLOSING) {
+        g_GDHO_AntiHangTimerArmed := false
+        return
+    }
+    elapsed := A_TickCount - g_GDHO_PhaseLastChanged
+    timeoutMs := (g_GDHO_CurrentPhase = GDHO_PHASE_OPENING) ? 7000 : 2500
+    if (elapsed > timeoutMs) {
+        g_GDHO_AntiHangTimerArmed := false
+        try GDHO_Trace("gdho_force_reset_watchdog phase=" . g_GDHO_CurrentPhase . " elapsed=" . elapsed)
+        GDHO_SubmitIntent("FORCE_RESET", 5, Map("reason", "anti_hang_" . g_GDHO_CurrentPhase))
+        return
+    }
+    SetTimer((*) => GDHO_AntiHangTick(token), -80)
+}
+
+GDHO_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
+    global g_GDHO_CurrentPhase, g_GDHO_CurrentToken, g_GDHO_TransitionCtx, g_GDHO_CloseAfterReady
+    global g_GDHO_OpenPayload, g_GDHO_OpenReason, g_GDHO_WaitingReadyReveal
+    global GDHO_VISIBLE, GDHO_READY, GDHO_DESKTOP_PINNED
+    ts := StrUpper(Trim(String(targetPhase)))
+    cur := StrUpper(Trim(String(g_GDHO_CurrentPhase)))
+    if !(ts = GDHO_PHASE_OPEN || ts = GDHO_PHASE_CLOSED)
+        return false
+    if (ts = GDHO_PHASE_OPEN) {
+        g_GDHO_CurrentToken += 1
+        token := g_GDHO_CurrentToken
+        g_GDHO_OpenPayload := payload
+        g_GDHO_OpenReason := reason
+        g_GDHO_CloseAfterReady := false
+        g_GDHO_WaitingReadyReveal := true
+        if (cur = GDHO_PHASE_CLOSING)
+            GDHO_SetPhase(GDHO_PHASE_OPENING, "interrupt_open_" . reason)
+        else if !(cur = GDHO_PHASE_OPEN && GDHO_VISIBLE)
+            GDHO_SetPhase(GDHO_PHASE_OPENING, reason)
+        GDHO_ArmAntiHang(token)
+        g_GDHO_TransitionCtx["allow"] := true
+        try GDHO_Init()
+        finally g_GDHO_TransitionCtx["allow"] := false
+        if (payload is Map)
+            _GDHO_ApplyOpenPayload(payload)
+        if (GDHO_READY)
+            GDHO_RevealIfReady(token, reason)
+        return true
+    }
+    if (cur = GDHO_PHASE_OPENING) {
+        g_GDHO_CloseAfterReady := true
+        try GDHO_Trace("gdho_close_defer_until_ready reason=" . reason)
+        return true
+    }
+    if (GDHO_DESKTOP_PINNED && reason != "desktop_unpin") {
+        try GDHO_Trace("gdho_intent_drop_pinned_close reason=" . reason)
+        return false
+    }
+    if (cur = GDHO_PHASE_CLOSED && !GDHO_VISIBLE)
+        return true
+    g_GDHO_CurrentToken += 1
+    token := g_GDHO_CurrentToken
+    GDHO_SetPhase(GDHO_PHASE_CLOSING, reason)
+    GDHO_ArmAntiHang(token)
+    GDHO_InternalClose(reason, token)
+    GDHO_SetPhase(GDHO_PHASE_CLOSED, "closed_after_hide_" . reason)
+    return true
+}
+
+_GDHO_ApplyOpenPayload(payload) {
+    global GDHO_PAYLOAD, GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_POSITION_MODE
+    if !(payload is Map)
+        return
+    if payload.Has("payload")
+        GDHO_PAYLOAD := (String(payload["payload"]) = "text") ? "text" : "file"
+    if payload.Has("positionMode")
+        GDHO_POSITION_MODE := String(payload["positionMode"])
+    if payload.Has("screenX")
+        GDHO_CURSOR_X := Integer(payload["screenX"])
+    if payload.Has("screenY")
+        GDHO_CURSOR_Y := Integer(payload["screenY"])
+}
+
+GDHO_RevealIfReady(token := 0, reason := "") {
+    global GDHO_READY, GDHO_VISIBLE, g_GDHO_OpenPayload, g_GDHO_WaitingReadyReveal, g_GDHO_CloseAfterReady, g_GDHO_TransitionCtx
+    if (token && !GDHO_IsCurrentToken(token))
+        return false
+    if !GDHO_READY {
+        g_GDHO_WaitingReadyReveal := true
+        try GDHO_Trace("gdho_reveal_wait_ready reason=" . reason . " token=" . token)
+        return false
+    }
+    g_GDHO_WaitingReadyReveal := false
+    g_GDHO_TransitionCtx["allow"] := true
+    try GDHO_Show(g_GDHO_OpenPayload)
+    finally g_GDHO_TransitionCtx["allow"] := false
+    if GDHO_VISIBLE
+        GDHO_SetPhase(GDHO_PHASE_OPEN, "ready_reveal_" . reason)
+    if g_GDHO_CloseAfterReady {
+        g_GDHO_CloseAfterReady := false
+        GDHO_SubmitIntent("CLOSE", 15, Map("reason", "close_after_ready"))
+    }
+    return GDHO_VISIBLE
+}
+
+GDHO_InternalClose(reason := "", token := 0) {
+    global g_GDHO_TransitionCtx
+    if (token && !GDHO_IsCurrentToken(token))
+        return
+    g_GDHO_TransitionCtx["allow"] := true
+    try {
+        GDHO_HideFrontend()
+        GDHO_HideOverlay()
+    } finally {
+        g_GDHO_TransitionCtx["allow"] := false
+    }
+}
+
+GDHO_ForceReset(reason := "") {
+    global GDHO_VISIBLE, GDHO_ACTIVE, GDHO_READY, GDHO_INTERACTIVE, GDHO_CLICKTHROUGH, GDHO_FIRST_REVEAL_DONE, GDHO_ERROR
+    global GDHO_FRONTEND_PENDING_JS, g_GDHO_FrontendQueue, g_GDHO_WaitingReadyReveal, g_GDHO_CloseAfterReady
+    global GDHO_RELEASE_PENDING, GDHO_RELEASE_DEADLINE_TICK, GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD, NativeDropSessionActive
+    global g_GDHO_CreateInFlight, g_GDHO_CreateStartTick
+    try GDHO_Trace("gdho_force_reset reason=" . reason)
+    GDHO_FRONTEND_PENDING_JS := ""
+    g_GDHO_FrontendQueue := []
+    g_GDHO_WaitingReadyReveal := false
+    g_GDHO_CloseAfterReady := false
+    g_GDHO_CreateInFlight := false
+    g_GDHO_CreateStartTick := 0
+    GDHO_RELEASE_PENDING := false
+    GDHO_RELEASE_DEADLINE_TICK := 0
+    GDHO_IS_SUCKING := false
+    GDHO_EXPANDED_HOLD := false
+    NativeDropSessionActive := false
+    GDHO_ACTIVE := false
+    GDHO_INTERACTIVE := false
+    GDHO_READY := false
+    GDHO_VISIBLE := false
+    GDHO_ERROR := false
+    GDHO_FIRST_REVEAL_DONE := false
+    try GDHO_SetClickThrough(true)
+    catch {
+    }
+    try GDHO_ParkOverlay()
+    catch {
+    }
 }
 
 GDHO_SetAnchorMode(mode := "toolbar_center") {
@@ -202,8 +537,7 @@ GDHO_ApplySettings(positionMode := "anchor", triggerDistance := 260, dismissDist
     if (oldMode != "" && oldMode != m) {
         try FloatingToolbar_EndDrag()
         GDHO_ACTIVE := false
-        GDHO_HideFrontend()
-        GDHO_HideOverlay()
+        GDHO_RequestClose("apply_settings_mode_switch")
         GDHO_ResetPointerSeed()
         ; If user is still holding mouse while switching mode, wait until release.
         GDHO_SUPPRESS_UNTIL_RELEASE := GetKeyState("LButton", "P")
@@ -213,8 +547,14 @@ GDHO_ApplySettings(positionMode := "anchor", triggerDistance := 260, dismissDist
 GDHO_Init() {
     global GDHO_GUI, GDHO_WV2_CTRL, GDHO_WV2, GDHO_READY
     global GDHO_VISIBLE, GDHO_SLEEPING, GDHO_INTERACTIVE, GDHO_LAST_PROXIMITY_SENT
+    global g_GDHO_TransitionCtx, g_GDHO_CreateInFlight, g_GDHO_CreateStartTick, g_GDHO_CreateToken
 
-    if (GDHO_GUI)
+    if !(g_GDHO_TransitionCtx is Map) || !g_GDHO_TransitionCtx["allow"] {
+        try GDHO_Trace("gdho_redirect_init")
+        GDHO_RequestOpen(Map("reason", "init_redirect", "payload", GDHO_PAYLOAD))
+        return
+    }
+    if (GDHO_GUI || g_GDHO_CreateInFlight)
         return
 
     GDHO_Trace("init begin")
@@ -229,6 +569,9 @@ GDHO_Init() {
     GDHO_SLEEPING := true
     GDHO_INTERACTIVE := false
     GDHO_LAST_PROXIMITY_SENT := -1.0
+    g_GDHO_CreateInFlight := true
+    g_GDHO_CreateStartTick := A_TickCount
+    g_GDHO_CreateToken := g_GDHO_CurrentToken
     try WebView2_CreateWithSharedEnvAsync(GDHO_GUI.Hwnd, GDHO_OnWebViewCreated, "global_drag_hole")
 }
 
@@ -321,9 +664,19 @@ GDHO_SetProximity(prox) {
 
 GDHO_OnWebViewCreated(ctrl) {
     global GDHO_WV2_CTRL, GDHO_WV2, GDHO_READY, GDHO_PAGE_URL, GDHO_NAV_FAIL_COUNT
+    global g_GDHO_CreateInFlight, g_GDHO_CreateStartTick, g_GDHO_CreateToken
 
-    if !IsObject(ctrl) || !ctrl.HasProp("CoreWebView2")
+    if !GDHO_IsCurrentToken(g_GDHO_CreateToken) {
+        try GDHO_Trace("gdho_webview_create_drop_stale token=" . g_GDHO_CreateToken)
         return
+    }
+    g_GDHO_CreateInFlight := false
+    g_GDHO_CreateStartTick := 0
+    if !IsObject(ctrl) || !ctrl.HasProp("CoreWebView2") {
+        try GDHO_Trace("gdho_webview_create_failed")
+        GDHO_SubmitIntent("FORCE_RESET", 5, Map("reason", "webview_create_failed"))
+        return
+    }
 
     GDHO_Trace("webview_created begin")
     GDHO_WV2_CTRL := ctrl
@@ -408,7 +761,7 @@ GDHO_OnWebMessage(sender, args) {
         GDHO_Trace("webmsg hole_close")
         GDHO_IS_SUCKING := false
         GDHO_EXPANDED_HOLD := false
-        try GDHO_HideOverlay()
+        GDHO_RequestClose("frontend_hole_close")
         try GDHO_ResetSession()
         try GDHO_ArmPolling()
         NativeDropBridge_ResetSessionAsync("hole_close", 0)
@@ -418,8 +771,7 @@ GDHO_OnWebMessage(sender, args) {
         return
     if !msg.Has("payload") || !(msg["payload"] is Map)
         return
-    try GDHO_HideFrontend()
-    try GDHO_HideOverlay()
+    GDHO_RequestClose("frontend_hole_drop")
     GDHO_HandleDropPayload(msg["payload"])
     try NativeDropBridge_ResetSessionAsync("hole_drop", 1)
 }
@@ -474,6 +826,7 @@ GDHO_OnNavigationCompleted(sender, args) {
     global GDHO_READY, GDHO_GUI, GDHO_WV2_CTRL, GDHO_WV2
     global GDHO_FALLBACK_URL, GDHO_NAV_FAIL_COUNT, GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD, GDHO_PREWARM_DONE
     global GDHO_PAGE_URL
+    global g_GDHO_CurrentToken
     ok := false
     try ok := args.IsSuccess
     GDHO_READY := !!ok
@@ -514,9 +867,10 @@ GDHO_OnNavigationCompleted(sender, args) {
         }
         if GDHO_DESKTOP_PINNED {
             p := (GDHO_PIN_PAYLOAD = "file") ? "file" : "text"
-            SetTimer((*) => GDHO_RunJS("window.HoleOverlay?.show('" p "')"), -60)
-            SetTimer((*) => GDHO_RunJS("window.HoleOverlay?.show('" p "')"), -220)
+            GDHO_QueueFrontendJs("window.HoleOverlay?.show('" p "')", g_GDHO_CurrentToken)
+            SetTimer((*) => GDHO_QueueFrontendJs("window.HoleOverlay?.show('" p "')", g_GDHO_CurrentToken), -180)
         }
+        GDHO_RevealIfReady(g_GDHO_CurrentToken, "nav_completed")
         return
     }
 
@@ -571,11 +925,14 @@ GDHO_Trace(msg) {
     }
 }
 
-GDHO_QueueFrontendJs(js) {
-    global GDHO_GUI, GDHO_FRONTEND_PENDING_JS, GDHO_FRONTEND_POST_MSG
+GDHO_QueueFrontendJs(js, token := 0) {
+    global GDHO_GUI, GDHO_FRONTEND_PENDING_JS, GDHO_FRONTEND_POST_MSG, g_GDHO_FrontendQueue, g_GDHO_CurrentToken
     if !GDHO_GUI
         return false
     GDHO_FRONTEND_PENDING_JS := String(js)
+    if !(g_GDHO_FrontendQueue is Array)
+        g_GDHO_FrontendQueue := []
+    g_GDHO_FrontendQueue.Push(Map("token", token ? Integer(token) : Integer(g_GDHO_CurrentToken), "js", String(js)))
     try {
         PostMessage(GDHO_FRONTEND_POST_MSG, 1, 0, , "ahk_id " GDHO_GUI.Hwnd)
         return true
@@ -585,24 +942,41 @@ GDHO_QueueFrontendJs(js) {
 }
 
 GDHO_OnFrontendPostMessage(wParam, lParam, msg, hwnd) {
-    global GDHO_FRONTEND_PENDING_JS, GDHO_GUI, GDHO_WV2, GDHO_READY
+    global GDHO_FRONTEND_PENDING_JS, GDHO_GUI, GDHO_WV2, GDHO_READY, g_GDHO_FrontendQueue, g_GDHO_CurrentToken
     Critical "Off"
     if (wParam != 1)
         return 0
     js := GDHO_FRONTEND_PENDING_JS
     GDHO_FRONTEND_PENDING_JS := ""
-    if (js = "" || !GDHO_GUI)
+    if (!GDHO_GUI)
         return 0
-    ; Bridge-safe fallback: if WebView is not ready or the post arrives late,
-    ; avoid a synchronous bridge call and let the window state settle without blocking the AHK thread.
-    if (GDHO_WV2 && GDHO_READY)
-        return GDHO_RunJS(js) ? 0 : 0
+    queue := g_GDHO_FrontendQueue
+    g_GDHO_FrontendQueue := []
+    if !(queue is Array)
+        return 0
+    for _, item in queue {
+        if !(item is Map)
+            continue
+        tok := item.Has("token") ? Integer(item["token"]) : 0
+        if (tok && tok != g_GDHO_CurrentToken) {
+            try GDHO_Trace("gdho_ready_drop_stale token=" . tok . " current=" . g_GDHO_CurrentToken)
+            continue
+        }
+        if (GDHO_WV2 && GDHO_READY)
+            GDHO_RunJS(String(item["js"]))
+    }
     return 0
 }
 
 GDHO_ShowOverlay() {
-    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_READY, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_HOST_W, GDHO_HOST_H, GDHO_FIRST_REVEAL_DONE, GDHO_INTERACTIVE
+    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_READY, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_HOST_W, GDHO_HOST_H, GDHO_FIRST_REVEAL_DONE, GDHO_INTERACTIVE, GDHO_PAYLOAD
+    global g_GDHO_CurrentToken
     global GDHO_CX, GDHO_CY
+    if !GDHO_InternalCallAllowed() {
+        try GDHO_Trace("gdho_redirect_show_overlay")
+        GDHO_RequestOpen(Map("reason", "show_overlay_redirect", "payload", GDHO_PAYLOAD))
+        return
+    }
     if !GDHO_GUI
         return
     ; Avoid first-frame black flash: don't reveal host before WebView content is ready.
@@ -610,7 +984,7 @@ GDHO_ShowOverlay() {
         return
     if !GDHO_FIRST_REVEAL_DONE {
         GDHO_FIRST_REVEAL_DONE := true
-        SetTimer(GDHO_ShowOverlay, -16)
+        SetTimer((*) => GDHO_RevealIfReady(g_GDHO_CurrentToken, "first_reveal"), -16)
         return
     }
     if !GDHO_VISIBLE {
@@ -790,7 +1164,12 @@ GDHO_GlobalPointToHostLocal(globalX, globalY, &localX, &localY) {
 }
 
 GDHO_HideOverlay() {
-    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_LAST_HIDE_OVERLAY_TICK
+    global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_LAST_HIDE_OVERLAY_TICK, g_GDHO_WaitingReadyReveal
+    if !GDHO_InternalCallAllowed() {
+        try GDHO_Trace("gdho_redirect_hide_overlay")
+        GDHO_RequestClose("hide_overlay_redirect")
+        return
+    }
     if !GDHO_GUI
         return
     nowTick := A_TickCount
@@ -804,9 +1183,15 @@ GDHO_HideOverlay() {
     GDHO_SetSleepMode(true)
     try GDHO_ParkOverlay()
     GDHO_VISIBLE := false
+    g_GDHO_WaitingReadyReveal := false
 }
 
 GDHO_Hide() {
+    if !GDHO_InternalCallAllowed() {
+        try GDHO_Trace("gdho_redirect_hide")
+        GDHO_RequestClose("hide_redirect")
+        return
+    }
     GDHO_HideFrontend()
     GDHO_HideOverlay()
 }
@@ -869,8 +1254,32 @@ GDHO_PushThemeToWeb() {
 }
 
 GDHO_Show(payload := "file", x := "", y := "") {
-    global GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_POSITION_MODE
-    p := (payload = "text") ? "text" : "file"
+    global GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_POSITION_MODE, g_GDHO_CurrentToken
+    if !GDHO_InternalCallAllowed() {
+        try GDHO_Trace("gdho_redirect_show")
+        openPayload := (payload is Map) ? payload : Map("reason", "show_redirect", "payload", payload)
+        if (openPayload is Map) {
+            if !openPayload.Has("reason")
+                openPayload["reason"] := "show_redirect"
+            if (x != "" && !openPayload.Has("screenX"))
+                openPayload["screenX"] := x
+            if (y != "" && !openPayload.Has("screenY"))
+                openPayload["screenY"] := y
+        }
+        GDHO_RequestOpen(openPayload)
+        return
+    }
+    payloadMap := 0
+    if (payload is Map) {
+        payloadMap := payload
+        if payloadMap.Has("screenX")
+            x := payloadMap["screenX"]
+        if payloadMap.Has("screenY")
+            y := payloadMap["screenY"]
+        if payloadMap.Has("payload")
+            payload := payloadMap["payload"]
+    }
+    p := (String(payload) = "text") ? "text" : "file"
     GDHO_Trace("show payload=" . p)
     if (x != "" && y != "") {
         GDHO_CURSOR_X := Integer(x)
@@ -894,8 +1303,8 @@ GDHO_Show(payload := "file", x := "", y := "") {
     GDHO_ShowOverlay()
     GDHO_SetSleepMode(false)
     GDHO_PushThemeToWeb()
-    GDHO_RunJS("window.HoleOverlay?.show('" p "', { forceAccept: true })")
-    GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
+    GDHO_QueueFrontendJs("window.HoleOverlay?.show('" p "', { forceAccept: true })", g_GDHO_CurrentToken)
+    GDHO_QueueFrontendJs("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })", g_GDHO_CurrentToken)
 }
 
 GDHO_Update(payload := "file", x := "", y := "") {
@@ -1006,7 +1415,12 @@ GDHO_ExecuteDropCommand(payload := "file") {
 }
 
 GDHO_HideFrontend() {
-    global GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD, GDHO_LAST_HIDE_FRONTEND_TICK
+    global GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD, GDHO_LAST_HIDE_FRONTEND_TICK, g_GDHO_CurrentToken
+    if !GDHO_InternalCallAllowed() {
+        try GDHO_Trace("gdho_redirect_hide_frontend")
+        GDHO_RequestClose("hide_frontend_redirect")
+        return
+    }
     nowTick := A_TickCount
     if (GDHO_LAST_HIDE_FRONTEND_TICK && (nowTick - GDHO_LAST_HIDE_FRONTEND_TICK < 120))
         return
@@ -1014,19 +1428,21 @@ GDHO_HideFrontend() {
     if GDHO_DESKTOP_PINNED {
         p := (GDHO_PIN_PAYLOAD = "file") ? "file" : "text"
         GDHO_Trace("hide_frontend pinned show payload=" . p)
-        GDHO_QueueFrontendJs("window.HoleOverlay?.show('" p "')")
+        GDHO_QueueFrontendJs("window.HoleOverlay?.show('" p "')", g_GDHO_CurrentToken)
         return
     }
     ; Do not call the bridge synchronously during teardown. Post the work to the GUI thread
     ; so tray/menu cleanup cannot hang on a slow or wedged WebView2 bridge.
     GDHO_Trace("hide_frontend queue hide")
-    GDHO_QueueFrontendJs("window.HoleOverlay?.hide()")
+    GDHO_QueueFrontendJs("window.HoleOverlay?.hide()", g_GDHO_CurrentToken)
 }
 
 GDHO_Start() {
-    global GDHO_MONITORING, GDHO_PRIORITY_APPLIED
+    global GDHO_MONITORING, GDHO_PRIORITY_APPLIED, g_GDHO_TransitionCtx
     try NativeDropDiag_Log("gdho start begin")
-    GDHO_Init()
+    g_GDHO_TransitionCtx["allow"] := true
+    try GDHO_Init()
+    finally g_GDHO_TransitionCtx["allow"] := false
     if !GDHO_PRIORITY_APPLIED {
         try ProcessSetPriority("Normal")
         try DllCall("SetThreadPriority", "Ptr", DllCall("GetCurrentThread", "Ptr"), "Int", 0)
@@ -1065,11 +1481,17 @@ GDHO_DisarmPolling(reason := "") {
 }
 
 GDHO_Stop() {
-    global GDHO_MONITORING, GDHO_ACTIVE
+    global GDHO_MONITORING, GDHO_ACTIVE, g_GDHO_TransitionCtx, g_GDHO_CurrentToken
     try NativeDropDiag_Log("gdho stop begin")
     GDHO_DisarmPolling("stop")
-    GDHO_HideFrontend()
-    GDHO_HideOverlay()
+    g_GDHO_CurrentToken += 1
+    GDHO_SetPhase(GDHO_PHASE_CLOSING, "stop")
+    g_GDHO_TransitionCtx["allow"] := true
+    try {
+        GDHO_HideFrontend()
+        GDHO_HideOverlay()
+    } finally g_GDHO_TransitionCtx["allow"] := false
+    GDHO_SetPhase(GDHO_PHASE_CLOSED, "stop_done")
     try NativeDropDiag_Log("gdho stop done")
 }
 
@@ -1157,7 +1579,7 @@ GDHO_HandleDropAction() {
 
 GDHO_ForceSuckAction() {
     global GDHO_PAYLOAD, GDHO_DROP_LOCK, GDHO_SESSION_TEXT
-    global GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD, GDHO_GUI, GDHO_CLICKTHROUGH, GDHO_HITTEST_CAPTURED
+    global GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD, GDHO_GUI, GDHO_CLICKTHROUGH, GDHO_HITTEST_CAPTURED, GDHO_SESSION_CAPTURE_TICKET
     if (GDHO_IS_SUCKING)
         return
     GDHO_IS_SUCKING := true
@@ -1171,13 +1593,26 @@ GDHO_ForceSuckAction() {
     }
     try GDHO_RunJS("window.HoleOverlay?.drop({payload: '" GDHO_PAYLOAD "'})")
     if (GDHO_PAYLOAD = "text") {
+        try A_Clipboard := ""
         try Send("^c")
-        try ClipWait(0.2)
-        try GDHO_SESSION_TEXT := Trim(String(A_Clipboard))
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:" (GDHO_SESSION_TEXT != "" ? "captured" : "empty") "' })")
+        GDHO_SESSION_CAPTURE_TICKET += 1
+        ticket := GDHO_SESSION_CAPTURE_TICKET
+        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:pending' })")
+        SetTimer((*) => GDHO_CompleteSessionTextCapture(ticket), -90)
     } else {
         try GDHO_TryHandleExplorerDrop()
     }
+}
+
+GDHO_CompleteSessionTextCapture(ticket, *) {
+    global GDHO_SESSION_CAPTURE_TICKET, GDHO_SESSION_TEXT
+    if (ticket != GDHO_SESSION_CAPTURE_TICKET)
+        return
+    try GDHO_SESSION_TEXT := Trim(String(A_Clipboard))
+    catch {
+        GDHO_SESSION_TEXT := ""
+    }
+    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:" (GDHO_SESSION_TEXT != "" ? "captured" : "empty") "' })")
 }
 
 GDHO_FinishSuckSession(*) {
@@ -1234,24 +1669,18 @@ GDHO_IsPointInToolbar(mx, my) {
 }
 
 GDHO_PinToDesktop(payload := "text") {
-    global GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD, GDHO_ACTIVE
+    global GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD, GDHO_ACTIVE, GDHO_SCREEN_X, GDHO_SCREEN_Y
     p := (payload = "file") ? "file" : "text"
     GDHO_PIN_PAYLOAD := p
     GDHO_DESKTOP_PINNED := true
     GDHO_ACTIVE := false
-    GDHO_Init()
-    GDHO_ShowOverlay()
-    if !GDHO_RunJS("window.HoleOverlay?.show('" p "')") {
-        SetTimer((*) => GDHO_RunJS("window.HoleOverlay?.show('" p "')"), -180)
-        SetTimer((*) => GDHO_RunJS("window.HoleOverlay?.show('" p "')"), -420)
-    }
+    GDHO_RequestOpen(Map("reason", "desktop_pin", "payload", p, "positionMode", "fixed", "screenX", GDHO_SCREEN_X, "screenY", GDHO_SCREEN_Y))
 }
 
 GDHO_UnpinFromDesktop() {
     global GDHO_DESKTOP_PINNED
     GDHO_DESKTOP_PINNED := false
-    GDHO_HideFrontend()
-    GDHO_HideOverlay()
+    GDHO_RequestClose("desktop_unpin")
 }
 
 GDHO_GetBestSelectedText() {
@@ -1278,9 +1707,6 @@ GDHO_CaptureSelectedTextViaCopy() {
     catch {
     }
     try Send("^c")
-    catch {
-    }
-    try ClipWait(0.18)
     catch {
     }
     try out := Trim(String(A_Clipboard))
@@ -1339,8 +1765,7 @@ GDHO_PollDrag(*) {
             if !GDHO_IsPointInHole(mx, my, 40) {
                 GDHO_EXPANDED_HOLD := false
                 GDHO_IS_SUCKING := false
-                GDHO_HideFrontend()
-                GDHO_HideOverlay()
+                GDHO_RequestClose("expanded_hold_exit")
                 GDHO_ResetSession()
                 return
             }
@@ -1363,13 +1788,11 @@ GDHO_PollDrag(*) {
                 return
             }
             if (GDHO_ACTIVE || NativeDropSessionActive) {
-                GDHO_HideFrontend()
-                GDHO_HideOverlay()
+                GDHO_RequestClose("drag_release")
                 GDHO_ResetSession()
                 return
             } else if (A_TickCount - GDHO_LAST_UPDATE_TICK > GDHO_MAX_IDLE_HIDE_MS) {
-                GDHO_HideFrontend()
-                GDHO_HideOverlay()
+                GDHO_RequestClose("drag_idle_timeout")
             }
             GDHO_ResetSession()
             return
@@ -1379,32 +1802,28 @@ GDHO_PollDrag(*) {
         if (IsSet(FloatingToolbarDragging) && FloatingToolbarDragging) {
             GDHO_SUPPRESS_UNTIL_RELEASE := true
             GDHO_ACTIVE := false
-            GDHO_HideFrontend()
-            GDHO_HideOverlay()
+            GDHO_RequestClose("toolbar_dragging")
             GDHO_ResetPointerSeed()
             return
         }
         if isOwn {
             GDHO_SUPPRESS_UNTIL_RELEASE := true
             GDHO_ACTIVE := false
-            GDHO_HideFrontend()
-            GDHO_HideOverlay()
+            GDHO_RequestClose("own_window_guard")
             GDHO_ResetPointerSeed()
             return
         }
         if isOwnProc {
             GDHO_SUPPRESS_UNTIL_RELEASE := true
             GDHO_ACTIVE := false
-            GDHO_HideFrontend()
-            GDHO_HideOverlay()
+            GDHO_RequestClose("own_process_guard")
             GDHO_ResetPointerSeed()
             return
         }
         if GDHO_IsPointInToolbar(mx, my) {
             GDHO_SUPPRESS_UNTIL_RELEASE := true
             GDHO_ACTIVE := false
-            GDHO_HideFrontend()
-            GDHO_HideOverlay()
+            GDHO_RequestClose("toolbar_guard")
             GDHO_ResetPointerSeed()
             return
         }
@@ -1413,8 +1832,7 @@ GDHO_PollDrag(*) {
             return
 
         if GDHO_SUPPRESS_UNTIL_RELEASE {
-            GDHO_HideFrontend()
-            GDHO_HideOverlay()
+            GDHO_RequestClose("suppress_until_release")
             GDHO_ACTIVE := false
             GDHO_SESSION_TEXT := ""
             return
@@ -1456,8 +1874,7 @@ GDHO_PollDrag(*) {
         distToTb := GDHO_DistanceToToolbar(mx, my)
         limit := GDHO_ACTIVE ? GDHO_TOOLBAR_DISMISS_RADIUS_PX : GDHO_TOOLBAR_NEAR_RADIUS_PX
         if (GDHO_PAYLOAD != "text" && distToTb > limit) {
-            GDHO_HideFrontend()
-            GDHO_HideOverlay()
+            GDHO_RequestClose("toolbar_distance_guard")
             GDHO_ACTIVE := false
             GDHO_SUPPRESS_UNTIL_RELEASE := true
             return
@@ -1465,14 +1882,7 @@ GDHO_PollDrag(*) {
 
         ; If drag already seeded from external window, keep updating even when cursor passes over toolbar.
         if !GDHO_ACTIVE {
-            ; In relative mode, position with current frame coordinates first to avoid follow-offset.
-            if (GDHO_POSITION_MODE != "relative") {
-                ; Reveal hole immediately on activation for faster visual response.
-                GDHO_ShowOverlay()
-                GDHO_RunJS("window.HoleOverlay?.show('" GDHO_PAYLOAD "', { forceAccept: true })")
-            }
-            ; Relative mode will place hole once here, then GDHO_Update keeps it fixed.
-            GDHO_Show(GDHO_PAYLOAD, mx, my)
+            GDHO_RequestOpen(Map("reason", "drag_activate", "payload", GDHO_PAYLOAD, "screenX", mx, "screenY", my, "positionMode", GDHO_POSITION_MODE))
             GDHO_ACTIVE := true
             NativeDropSessionActive := true
             GDHO_ArmPolling()

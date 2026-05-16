@@ -1,9 +1,107 @@
 #Requires AutoHotkey v2.0
 
+PromptExecution_RequestCursorFocus(reason := "prompt_exec", protectMs := 220) {
+    try {
+        if !WinExist("ahk_exe Cursor.exe")
+            return false
+        hwnd := WinGetID("ahk_exe Cursor.exe")
+        if !hwnd
+            return false
+        if FuncExists("FocusBroker_Request")
+            return FocusBroker_Request("PromptExecution", hwnd, 45, reason, protectMs)
+        return !!DllCall("SetForegroundWindow", "ptr", hwnd, "int")
+    } catch {
+        return false
+    }
+}
+
+PromptExecution_LogGuard(tag, detail := "") {
+    try {
+        line := "[" . A_Now . "][" . tag . "] " . String(detail) . "`r`n"
+        if FuncExists("NMER_AsyncLog")
+            NMER_AsyncLog(A_ScriptDir . "\Cache\prompt_execution_guard.log", line)
+        else
+            FileAppend(line, A_ScriptDir . "\Cache\prompt_execution_guard.log", "UTF-8")
+    } catch {
+    }
+}
+
+global g_PromptExecution_CopyTicket := 0
+global g_PromptExecution_CopyState := 0
+
+PromptExecution_BeginCopySelectionAsync(oldClipboard, doneCb) {
+    global g_PromptExecution_CopyTicket, g_PromptExecution_CopyState
+    g_PromptExecution_CopyTicket += 1
+    ticket := g_PromptExecution_CopyTicket
+    g_PromptExecution_CopyState := Map("ticket", ticket, "start", A_TickCount, "tries", 0, "old", oldClipboard, "done", doneCb)
+    try A_Clipboard := ""
+    catch {
+    }
+    if WinActive("ahk_exe Cursor.exe") {
+        Send("{Esc}")
+        Sleep(20)
+    }
+    SetTimer((*) => PromptExecution_CopyPoll(ticket), -30)
+}
+
+PromptExecution_CopyPoll(ticket, *) {
+    global g_PromptExecution_CopyState
+    if !(g_PromptExecution_CopyState is Map)
+        return
+    if (Integer(g_PromptExecution_CopyState["ticket"]) != Integer(ticket))
+        return
+    if ((A_TickCount - Integer(g_PromptExecution_CopyState["start"])) > 480) {
+        PromptExecution_CopyFinish(ticket, "")
+        return
+    }
+    tries := Integer(g_PromptExecution_CopyState["tries"])
+    if (tries = 0)
+        SendInput("^c")
+    else if (tries = 2)
+        Send("^c")
+    else if (tries = 4)
+        SendEvent("^c")
+    g_PromptExecution_CopyState["tries"] := tries + 1
+    txt := ""
+    try txt := A_Clipboard
+    catch {
+        txt := ""
+    }
+    if !(txt is String) {
+        try txt := String(txt)
+        catch {
+            txt := ""
+        }
+    }
+    if (Trim(txt, " `t`r`n") != "") {
+        PromptExecution_CopyFinish(ticket, txt)
+        return
+    }
+    SetTimer((*) => PromptExecution_CopyPoll(ticket), -70)
+}
+
+PromptExecution_CopyFinish(ticket, selectedCode) {
+    global g_PromptExecution_CopyState
+    if !(g_PromptExecution_CopyState is Map)
+        return
+    if (Integer(g_PromptExecution_CopyState["ticket"]) != Integer(ticket))
+        return
+    doneCb := g_PromptExecution_CopyState["done"]
+    old := g_PromptExecution_CopyState["old"]
+    try A_Clipboard := old
+    catch {
+    }
+    g_PromptExecution_CopyState := 0
+    if IsObject(doneCb) {
+        try doneCb.Call(String(selectedCode))
+    }
+}
+
 ; ===================== 执行提示词函数 =====================
 ExecutePrompt(Type, TemplateID := "") {
     global Prompt_Explain, Prompt_Refactor, Prompt_Optimize, CursorPath, AISleepTime, IsCommandMode, CapsLock2, ClipboardHistory
     global DefaultTemplateIDs, PromptTemplates
+    global CoreAsyncStrictMode, LegacySyncFallback
     
     ; 清除标记，表示使用了功能
     CapsLock2 := false
@@ -66,16 +164,23 @@ ExecutePrompt(Type, TemplateID := "") {
     if (OldClipboard != "") {
         ClipboardHistory.Push(OldClipboard)
     }
-    
+
+    ; Core async strict path: do not block UI thread on initial selection copy.
+    doneCb := Func("PromptExecution_OnInitialCopyDone").Bind(Prompt, OldClipboard, CursorPath, AISleepTime)
+    PromptExecution_BeginCopySelectionAsync(OldClipboard, doneCb)
+    return
+    /*
     SelectedCode := ""
     
     ; 尝试从当前活动窗口复制选中文本
+    if (CoreAsyncStrictMode && LegacySyncFallback)
+        PromptExecution_LogGuard("legacy_sync_path_hit", "ExecutePrompt.copy_selection")
     if WinActive("ahk_exe Cursor.exe") {
         Send("{Esc}")
         Sleep(50)
         A_Clipboard := "" ; 清空剪贴板以通过 ClipWait 检测
         Send("^c")
-        if ClipWait(0.5) { ; 智能等待复制完成
+        if ClipWait(0.18) { ; 缩短阻塞窗口，失败走后续兜底
             SelectedCode := A_Clipboard
         }
         ; 恢复剪贴板，避免影响后续判断
@@ -84,7 +189,7 @@ ExecutePrompt(Type, TemplateID := "") {
         CurrentActiveWindow := WinGetID("A")
         A_Clipboard := ""
         Send("^c")
-        if ClipWait(0.5) {
+        if ClipWait(0.18) {
             SelectedCode := A_Clipboard
         }
         A_Clipboard := OldClipboard
@@ -93,7 +198,7 @@ ExecutePrompt(Type, TemplateID := "") {
     ; 激活 Cursor 窗口
     try {
         if WinExist("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            PromptExecution_RequestCursorFocus("execute_prompt_open")
             WinWaitActive("ahk_exe Cursor.exe", , 1)
             Sleep(200)
             
@@ -103,7 +208,7 @@ ExecutePrompt(Type, TemplateID := "") {
                 Sleep(50)
                 A_Clipboard := ""
                 Send("^c")
-                if ClipWait(0.5) {
+                if ClipWait(0.18) {
                     SelectedCode := A_Clipboard
                 }
                 A_Clipboard := OldClipboard
@@ -120,12 +225,12 @@ ExecutePrompt(Type, TemplateID := "") {
             
             ; 复制完整提示词到剪贴板
             A_Clipboard := FullPrompt
-            if !ClipWait(1) {
+            if !ClipWait(0.25) {
                 Sleep(100)
             }
             
             if !WinActive("ahk_exe Cursor.exe") {
-                WinActivate("ahk_exe Cursor.exe")
+                PromptExecution_RequestCursorFocus("execute_prompt_reactivate_1")
                 Sleep(200)
             }
             
@@ -137,7 +242,7 @@ ExecutePrompt(Type, TemplateID := "") {
             Sleep(400)
             
             if !WinActive("ahk_exe Cursor.exe") {
-                WinActivate("ahk_exe Cursor.exe")
+                PromptExecution_RequestCursorFocus("execute_prompt_reactivate_2")
                 Sleep(200)
             }
             
@@ -183,6 +288,133 @@ ExecutePrompt(Type, TemplateID := "") {
 }
 
 ; 虚拟键盘 / 外部 vkExec：按模板 ID 走与 Explain 相同的 Cursor 发送流程
+ExecutePrompt_Continue(Prompt, SelectedCode, OldClipboard, CursorPath, AISleepTime) {
+    global CoreAsyncStrictMode, LegacySyncFallback
+    try {
+        if WinExist("ahk_exe Cursor.exe") {
+            PromptExecution_RequestCursorFocus("execute_prompt_open")
+            WinWaitActive("ahk_exe Cursor.exe", , 1)
+            Sleep(120)
+            if (SelectedCode = "" && WinActive("ahk_exe Cursor.exe") && LegacySyncFallback) {
+                if CoreAsyncStrictMode
+                    PromptExecution_LogGuard("legacy_sync_path_hit", "ExecutePrompt.cursor_second_copy")
+                Send("{Esc}")
+                Sleep(30)
+                A_Clipboard := ""
+                Send("^c")
+                if ClipWait(0.12)
+                    SelectedCode := A_Clipboard
+                A_Clipboard := OldClipboard
+            }
+            CodeBlockStart := "``````"
+            CodeBlockEnd := "``````"
+            if (SelectedCode != "")
+                FullPrompt := Prompt . "`n`n浠ヤ笅鏄€変腑鐨勪唬鐮侊細`n" . CodeBlockStart . "`n" . SelectedCode . "`n" . CodeBlockEnd
+            else
+                FullPrompt := Prompt
+            A_Clipboard := FullPrompt
+            Sleep(30)
+            if !WinActive("ahk_exe Cursor.exe") {
+                PromptExecution_RequestCursorFocus("execute_prompt_reactivate_1")
+                Sleep(120)
+            }
+            Send("{Esc}")
+            Sleep(60)
+            Send("^l")
+            Sleep(220)
+            if !WinActive("ahk_exe Cursor.exe") {
+                PromptExecution_RequestCursorFocus("execute_prompt_reactivate_2")
+                Sleep(120)
+            }
+            Send("^v")
+            Sleep(160)
+            Send("{Enter}")
+            Sleep(80)
+            A_Clipboard := OldClipboard
+        } else if (CursorPath != "" && FileExist(CursorPath)) {
+            Run(CursorPath)
+            Sleep(AISleepTime)
+            A_Clipboard := Prompt
+            Sleep(80)
+            Send("^l")
+            Sleep(160)
+            Send("^v")
+            Sleep(80)
+            Send("{Enter}")
+            Sleep(80)
+            A_Clipboard := OldClipboard
+        }
+    } catch as e {
+        MsgBox("鎵ц澶辫触: " . e.Message)
+    }
+    */
+}
+
+PromptExecution_OnInitialCopyDone(Prompt, OldClipboard, CursorPath, AISleepTime, SelectedCode) {
+    Func("PromptExecution_ContinueAsync").Call(Prompt, SelectedCode, OldClipboard, CursorPath, AISleepTime)
+}
+
+PromptExecution_ContinueAsync(Prompt, SelectedCode, OldClipboard, CursorPath, AISleepTime) {
+    global CoreAsyncStrictMode, LegacySyncFallback
+    try {
+        if WinExist("ahk_exe Cursor.exe") {
+            PromptExecution_RequestCursorFocus("execute_prompt_open")
+            WinWaitActive("ahk_exe Cursor.exe", , 1)
+            Sleep(120)
+            if (SelectedCode = "" && WinActive("ahk_exe Cursor.exe") && LegacySyncFallback) {
+                if CoreAsyncStrictMode
+                    PromptExecution_LogGuard("legacy_sync_path_hit", "ExecutePrompt.cursor_second_copy")
+                Send("{Esc}")
+                Sleep(30)
+                A_Clipboard := ""
+                Send("^c")
+                if ClipWait(0.12)
+                    SelectedCode := A_Clipboard
+                A_Clipboard := OldClipboard
+            }
+            CodeBlockStart := "``````"
+            CodeBlockEnd := "``````"
+            if (SelectedCode != "")
+                FullPrompt := Prompt . "`n`n以下是选中的代码：`n" . CodeBlockStart . "`n" . SelectedCode . "`n" . CodeBlockEnd
+            else
+                FullPrompt := Prompt
+            A_Clipboard := FullPrompt
+            Sleep(30)
+            if !WinActive("ahk_exe Cursor.exe") {
+                PromptExecution_RequestCursorFocus("execute_prompt_reactivate_1")
+                Sleep(120)
+            }
+            Send("{Esc}")
+            Sleep(60)
+            Send("^l")
+            Sleep(220)
+            if !WinActive("ahk_exe Cursor.exe") {
+                PromptExecution_RequestCursorFocus("execute_prompt_reactivate_2")
+                Sleep(120)
+            }
+            Send("^v")
+            Sleep(160)
+            Send("{Enter}")
+            Sleep(80)
+            A_Clipboard := OldClipboard
+        } else if (CursorPath != "" && FileExist(CursorPath)) {
+            Run(CursorPath)
+            Sleep(AISleepTime)
+            A_Clipboard := Prompt
+            Sleep(80)
+            Send("^l")
+            Sleep(160)
+            Send("^v")
+            Sleep(80)
+            Send("{Enter}")
+            Sleep(80)
+            A_Clipboard := OldClipboard
+        }
+    } catch as e {
+        MsgBox("执行失败: " . e.Message)
+    }
+}
+
 ExecutePromptByTemplateId(TemplateID) {
     if (TemplateID = "") {
         return
@@ -193,13 +425,14 @@ ExecutePromptByTemplateId(TemplateID) {
 ; ===================== 分割代码功能 =====================
 SplitCode() {
     global CursorPath, AISleepTime, CapsLock2, ClipboardHistory
+    global CoreAsyncStrictMode, LegacySyncFallback
     
     CapsLock2 := false  ; 清除标记，表示使用了功能
     HideCursorPanel()
     
     try {
         if WinExist("ahk_exe Cursor.exe") {
-            WinActivate("ahk_exe Cursor.exe")
+            PromptExecution_RequestCursorFocus("split_code_open")
             Sleep(200)
             
             ; 复制选中的代码
@@ -211,7 +444,9 @@ SplitCode() {
             
             A_Clipboard := ""
             Send("^c")
-            if !ClipWait(0.5) {
+            if (CoreAsyncStrictMode && LegacySyncFallback)
+                PromptExecution_LogGuard("legacy_sync_path_hit", "SplitCode.copy_selection")
+            if !ClipWait(0.18) {
                 A_Clipboard := OldClipboard
                 TrayTip(GetText("select_code_first"), GetText("tip"), "Iconi")
                 return
@@ -223,7 +458,7 @@ SplitCode() {
             Send("{Right}")
             Send("{Enter}")
             A_Clipboard := Separator
-            if ClipWait(0.5) {
+            if ClipWait(0.18) {
                 Send("^v")
                 Sleep(200)
             }

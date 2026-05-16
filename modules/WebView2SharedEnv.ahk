@@ -10,6 +10,8 @@ global g_WV2EnvCreatePromise := 0
 global g_WV2EnvReadyCallbacks := []
 global g_WV2EnvCreateFailed := false
 global g_WV2EnvCreateError := ""
+global CoreAsyncStrictMode := 1
+global LegacySyncFallback := 1
 
 WebView2_GetSharedUserDataPath() {
     return A_AppData "\CursorHelper\Wv2Data"
@@ -32,9 +34,15 @@ WebView2_GetOrCreateSharedEnvPromise() {
 }
 
 WebView2_EnsureSharedEnvBlocking() {
-    global g_WV2SharedEnv
+    global g_WV2SharedEnv, CoreAsyncStrictMode
     if g_WV2SharedEnv
         return g_WV2SharedEnv
+    try {
+        if CoreAsyncStrictMode
+            NMER_AsyncLog(A_ScriptDir . "\Cache\wv2_shared_env.log", "[" . A_Now . "][sync_blocked] WebView2_EnsureSharedEnvBlocking rejected`r`n")
+    }
+    catch {
+    }
     try OutputDebug("[WV2] blocking shared env request rejected on hot path")
     catch {
     }

@@ -18,8 +18,16 @@ class WebView2 {
 		}
 		p := createdEnvironment ? createdEnvironment.CreateCoreWebView2ControllerAsync(hwnd) :
 			this.CreateControllerAsync(hwnd, options, dataDir, edgeRuntime, dllPathOrFuncPtr)
-		if !IsSet(callback)
-			return p.await()
+		if !IsSet(callback) {
+			; Never block AHK main thread: always return Promise.
+			try {
+				global WebView2SyncAwait
+				if IsSet(WebView2SyncAwait) && WebView2SyncAwait
+					OutputDebug("[WebView2] WebView2SyncAwait ignored in create(); forcing async Promise")
+			}
+			try OutputDebug("[WebView2] async create(): returning Promise")
+			return p
+		}
 		p.then(callback)
 	}
 	/**
@@ -197,7 +205,16 @@ class WebView2 {
 		__Delete() => (ptr := this.ptr) && ObjRelease(ptr)
 		__Call(Name, Params) {
 			if HasMethod(this, Name 'Async')
-				return this.%Name%Async(Params*).await()
+			{
+				p := this.%Name%Async(Params*)
+				try {
+					global WebView2SyncAwait
+					if IsSet(WebView2SyncAwait) && WebView2SyncAwait
+						OutputDebug("[WebView2] WebView2SyncAwait ignored in __Call(" Name "); forcing async Promise")
+				}
+				try OutputDebug("[WebView2] async __Call(" Name "): returning Promise")
+				return p
+			}
 			if HasMethod(this, 'add_' Name)
 				return { ptr: this.ptr, __Delete: this.remove_%Name%.Bind(, this.add_%Name%(Params[1])) }
 			throw MethodError('This value of type "' this.__Class '" has no method named "' Name '".', -1)
