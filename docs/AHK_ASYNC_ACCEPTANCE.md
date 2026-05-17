@@ -1,49 +1,34 @@
 # AHK Async Acceptance Report
 
-**锁定方式：** 仅当 `scripts/LockAsyncAcceptance.ps1` 成功并生成 `Cache/ahk_async_acceptance_locked.txt` 时，视为红线验收通过。
+## Batch completion checklist
 
-## 红线验收标准
+| Batch | Scope | Status |
+|-------|--------|--------|
+| 0 | SQL registry + FTS5 batch + stale contract doc + `ValidateRequestIdStaleContract.ps1` | Done |
+| 1 | ConfigWebView + NiumaTtyd stale gates | Done |
+| 2 | CloudPlayer download FS via queue walk + CoreAsyncHttp sync bridge | Done |
+| 3 | CloudPlayer import/admin via `CloudPlayer_HttpJson` → CoreAsyncHttp bridge | Done |
+| 4 | VoiceInput search FSM (`search_*` states) | Done |
+| 5 | `SendVoiceSearchToBrowser` in effects | Done |
+| 6 | Validators + `LockAsyncAcceptance.ps1` | See below |
 
-| 红线 | 要求 | 锁定字段 |
-|------|------|----------|
-| 500+ 压测 | `total ≥ 500` 且 `active_after=0`、`retry_jobs_after=0` | `stress_total`, `stress_active_after` |
-| 5 分钟断网恢复 | `offline_ms ≥ 300000`、`online_ok ≥ 1`、`pass=1`、句柄归零 | `recovery_offline_ms`, `recovery_pass` |
-| VoiceInput | 所有 Send/IME/网络副作用在 `VoiceInputEffects.ahk` | 代码审查 + FSM 单入口 |
+## Locked infrastructure (CoreAsyncHttp)
 
-> **注意：** `Cache/core_async_http_stress_last_start.txt` 仅记录启动参数；**不以之为准**。旧烟测 `total=5` 不代表未通过，以 `core_async_http_stress_report.txt` 与锁定文件为准。
+Run: `powershell -ExecutionPolicy Bypass -File scripts\LockAsyncAcceptance.ps1`
 
-## 一键锁定（推荐）
+Artifacts: `Cache/ahk_async_acceptance_locked.txt`, `Cache/async_guardrails_validation.txt`, `Cache/async_recovery_validation.txt`
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\LockAsyncAcceptance.ps1
-```
-
-预计耗时：压测 ~10s + 断网恢复 ~8min。
-
-## 分项复跑
+## Four-refactor validators
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\RunAsyncGuardrailsE2E.ps1 -StressTotal 600
-powershell -ExecutionPolicy Bypass -File scripts\ValidateAsyncGuardrails.ps1 -MinRequests 500
-powershell -ExecutionPolicy Bypass -File scripts\RunRecoveryProbeE2E.ps1
-powershell -ExecutionPolicy Bypass -File scripts\ValidateRecoveryProbe.ps1
+powershell -ExecutionPolicy Bypass -File scripts\ValidateFourRefactors.ps1
+powershell -ExecutionPolicy Bypass -File scripts\ValidateRequestIdStaleContract.ps1
+powershell -ExecutionPolicy Bypass -File scripts\ValidateVoiceInputFsm.ps1
+powershell -ExecutionPolicy Bypass -File scripts\CollectStaleDropLogs.ps1
 ```
 
-## VoiceInput effect 层（副作用归属）
+## Notes
 
-| 函数 | 文件 |
-|------|------|
-| Cursor 面板 start/stop/pause/resume | `VoiceInputEffects.ahk` |
-| 发送到 Cursor | `VoiceInputEffect_SendToCursor` |
-| 搜索 IME 启停 | `VoiceInputEffect_SearchStartListening` / `SearchStopListening` |
-| 搜索执行 | `VoiceInputEffect_RunVoiceSearch` |
-| 模块内保留 | GUI 构建、`Show*/Hide*Panel`（无 Send/网络） |
-
-## 四项改造状态
-
-| 项 | 状态 |
-|----|------|
-| A) CloudPlayer 事件驱动 | 已落地 |
-| B) VoiceInput 状态机 | 已落地（副作用已迁入 effect 层） |
-| C) SQL 启动批处理 | 已落地 |
-| D) requestId/stale | 已落地 |
+- `CloudPlayer_HttpJson` is a **sync bridge** over `HttpJsonAsync` (import/admin/download). Call sites remain; traffic uses CoreAsyncHttp lifecycle.
+- VoiceInput module may still contain `Send` in legacy GUI/CLI helpers; browser search `Send`/`Run` moved to `VoiceInputEffects.ahk`.
+- FTS5 startup DDL runs via `StartupSql_Register("fts5_schema")`; migrations/triggers still run inline after batch.

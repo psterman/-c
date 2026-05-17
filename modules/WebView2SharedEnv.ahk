@@ -119,6 +119,20 @@ WebView2_CreateWithSharedEnvAsync(hwnd, callback, reason := "") {
     WebView2_OnSharedEnvReady((env, err := 0) => _WV2_CreateWithSharedEnvReady(hwnd, callback, reason, env, err))
 }
 
+; 脚本 Reload / 硬重启前调用，避免旧 Environment 与新建 WebView 竞态触发 0x8007139F
+WebView2_PrepareForScriptReload() {
+    global g_WV2SharedEnv, g_WV2EnvCreatePromise, g_WV2EnvReadyCallbacks
+    global g_WV2EnvCreateFailed, g_WV2EnvCreateError
+    g_WV2SharedEnv := 0
+    g_WV2EnvCreatePromise := 0
+    g_WV2EnvReadyCallbacks := []
+    g_WV2EnvCreateFailed := false
+    g_WV2EnvCreateError := ""
+    try OutputDebug("[WV2] PrepareForScriptReload: shared env reset")
+    catch {
+    }
+}
+
 _WV2_CreateWithSharedEnvReady(hwnd, callback, reason, env, err := 0) {
     if err || !env {
         try OutputDebug("[WV2] shared env failed reason=" . reason)

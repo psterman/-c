@@ -1,0 +1,407 @@
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "minimax/MiniMax-M2.7"
+      },
+      "models": {
+        "minimax/MiniMax-M2.7": {
+          "alias": "Minimax"
+        },
+        "modelstudio/MiniMax-M2.5": {},
+        "modelstudio/glm-4.7": {},
+        "modelstudio/glm-5": {},
+        "modelstudio/kimi-k2.5": {},
+        "modelstudio/qwen3-coder-next": {},
+        "modelstudio/qwen3-coder-plus": {},
+        "modelstudio/qwen3-max-2026-01-23": {},
+        "modelstudio/qwen3.5-plus": {
+          "alias": "Qwen"
+        }
+      },
+      "workspace": "C:\\Users\\Administrator\\.openclaw\\workspace",
+      "compaction": {
+        "mode": "safeguard"
+      }
+    },
+    "list": [
+      {
+        "id": "main"
+      },
+      {
+        "id": "second-phone",
+        "name": "second-phone",
+        "workspace": "C:\\Users\\Administrator\\.openclaw\\workspace-second",
+        "agentDir": "C:\\Users\\Administrator\\.openclaw\\agents\\second-phone\\agent"
+      }
+    ]
+  },
+  "auth": {
+    "profiles": {
+      "minimax:cn": {
+        "mode": "api_key",
+        "provider": "minimax"
+      },
+      "modelstudio:default": {
+        "mode": "api_key",
+        "provider": "modelstudio"
+      }
+    }
+  },
+  "bindings": [],
+  "channels": {
+    "feishu": {
+      "appId": "cli_a9438ac34af85cd6",
+      "appSecret": "AYt05OKA0f4cVDejfHKfqdczh53E5PX4",
+      "connectionMode": "websocket",
+      "dmPolicy": "pairing",
+      "domain": "feishu",
+      "enabled": false,
+      "groupPolicy": "allowlist",
+      "reactionNotifications": "own",
+      "resolveSenderNames": true,
+      "streaming": true,
+      "typingIndicator": true,
+      "webhookPath": "/feishu/events"
+    },
+    "telegram": {
+      "botToken": "8572395274:AAFiXW8HqxXk0wNNvBMFrZ2u5PNyI55MTic",
+      "dmPolicy": "pairing",
+      "enabled": false,
+      "groupAllowFrom": [
+        "5080595345"
+      ],
+      "groupPolicy": "allowlist",
+      "groups": {
+        "*": {
+          "requireMention": true
+        }
+      },
+      "streaming": {
+        "mode": "partial"
+      }
+    },
+    "openclaw-weixin": {
+      "channelConfigUpdatedAt": "2026-04-20T16:07:05.895Z"
+    },
+    "dingtalk": {
+      "domain": "dingtalk",
+      "enabled": false,
+      "dmPolicy": "open",
+      "groupPolicy": "open",
+      "webhookPath": "/dingtalk/events",
+      "accounts": {
+        "default": {
+          "clientId": "dingdrqobtsu8edk9sv3",
+          "clientSecret": "HUaB9MOT-BWJuxKEpoBEEMi7E6czpqQfYWG-QkQUU7NN2h2MOp0peP4I11-UeVbr"
+        }
+      },
+      "allowFrom": [
+        "*"
+      ]
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "ownerDisplay": "raw",
+    "restart": true
+  },
+  "gateway": {
+    "auth": {
+      "mode": "token",
+      "token": "76eaee39bd63168fa76b93bb8ac13e265f997a90bdaae6cd"
+    },
+    "bind": "loopback",
+    "controlUi": {
+      "allowInsecureAuth": true,
+      "allowedOrigins": [
+        "https://app.local"
+      ]
+    },
+    "mode": "local",
+    "nodes": {
+      "denyCommands": [
+        "camera.snap",
+        "camera.clip",
+        "screen.record",
+        "contacts.add",
+        "calendar.add",
+        "reminders.add",
+        "sms.send"
+      ]
+    },
+    "port": 18789,
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    }
+  },
+  "hooks": {
+    "internal": {
+      "enabled": true,
+      "entries": {
+        "session-memory": {
+          "enabled": true
+        }
+      }
+    }
+  },
+  "meta": {
+    "lastTouchedAt": "2026-04-28T02:06:20.018Z",
+    "lastTouchedVersion": "2026.4.11"
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "minimax": {
+        "api": "anthropic-messages",
+        "authHeader": true,
+        "baseUrl": "https://api.minimaxi.com/anthropic",
+        "models": [
+          {
+            "contextWindow": 204800,
+            "cost": {
+              "cacheRead": 0.06,
+              "cacheWrite": 0.375,
+              "input": 0.3,
+              "output": 1.2
+            },
+            "id": "MiniMax-M2.7",
+            "input": [
+              "text"
+            ],
+            "maxTokens": 131072,
+            "name": "MiniMax M2.7",
+            "reasoning": true
+          }
+        ]
+      },
+      "modelstudio": {
+        "api": "openai-completions",
+        "baseUrl": "https://coding.dashscope.aliyuncs.com/v1",
+        "models": [
+          {
+            "contextWindow": 1000000,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0
+            },
+            "id": "qwen3.5-plus",
+            "input": [
+              "text",
+              "image"
+            ],
+            "maxTokens": 65536,
+            "name": "qwen3.5-plus",
+            "reasoning": false
+          },
+          {
+            "contextWindow": 262144,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0
+            },
+            "id": "qwen3-max-2026-01-23",
+            "input": [
+              "text"
+            ],
+            "maxTokens": 65536,
+            "name": "qwen3-max-2026-01-23",
+            "reasoning": false
+          },
+          {
+            "contextWindow": 262144,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0
+            },
+            "id": "qwen3-coder-next",
+            "input": [
+              "text"
+            ],
+            "maxTokens": 65536,
+            "name": "qwen3-coder-next",
+            "reasoning": false
+          },
+          {
+            "contextWindow": 1000000,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0
+            },
+            "id": "qwen3-coder-plus",
+            "input": [
+              "text"
+            ],
+            "maxTokens": 65536,
+            "name": "qwen3-coder-plus",
+            "reasoning": false
+          },
+          {
+            "contextWindow": 1000000,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0
+            },
+            "id": "MiniMax-M2.5",
+            "input": [
+              "text"
+            ],
+            "maxTokens": 65536,
+            "name": "MiniMax-M2.5",
+            "reasoning": true
+          },
+          {
+            "contextWindow": 202752,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0
+            },
+            "id": "glm-5",
+            "input": [
+              "text"
+            ],
+            "maxTokens": 16384,
+            "name": "glm-5",
+            "reasoning": false
+          },
+          {
+            "contextWindow": 202752,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0
+            },
+            "id": "glm-4.7",
+            "input": [
+              "text"
+            ],
+            "maxTokens": 16384,
+            "name": "glm-4.7",
+            "reasoning": false
+          },
+          {
+            "contextWindow": 262144,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0
+            },
+            "id": "kimi-k2.5",
+            "input": [
+              "text",
+              "image"
+            ],
+            "maxTokens": 32768,
+            "name": "kimi-k2.5",
+            "reasoning": false
+          }
+        ]
+      },
+      "ollama": {
+        "api": "ollama",
+        "apiKey": "ollama-local",
+        "baseUrl": "http://127.0.0.1:11434",
+        "models": [
+          {
+            "contextWindow": 202752,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0
+            },
+            "id": "glm-5.1:cloud",
+            "input": [
+              "text"
+            ],
+            "name": "glm-5.1:cloud",
+            "reasoning": true
+          }
+        ]
+      }
+    }
+  },
+  "session": {
+    "dmScope": "per-channel-peer"
+  },
+  "tools": {
+    "alsoAllow": [
+      "ollama_web_search",
+      "ollama_web_fetch"
+    ],
+    "profile": "coding",
+    "web": {
+      "fetch": {
+        "enabled": false
+      },
+      "search": {
+        "enabled": false,
+        "provider": "gemini"
+      }
+    }
+  },
+  "wizard": {
+    "lastRunAt": "2026-04-28T01:22:48.226Z",
+    "lastRunCommand": "doctor",
+    "lastRunMode": "local",
+    "lastRunVersion": "2026.4.11"
+  },
+  "plugins": {
+    "allow": [
+      "openclaw-web-search",
+      "minimax",
+      "ollama",
+      "qwen",
+      "google",
+      "memory-core"
+    ],
+    "entries": {
+      "feishu": {
+        "config": {},
+        "enabled": false
+      },
+      "google": {
+        "config": {
+          "webSearch": {
+            "apiKey": "AIzaSyAqX9CLm9asT984PYoBHEyj0ddJur-4yFs"
+          }
+        },
+        "enabled": true
+      },
+      "minimax": {
+        "enabled": true
+      },
+      "ollama": {
+        "enabled": true
+      },
+      "openclaw-web-search": {
+        "enabled": true
+      },
+      "qwen": {
+        "enabled": true
+      },
+      "openclaw-weixin": {
+        "enabled": false
+      },
+      "dingtalk": {
+        "enabled": false
+      }
+    }
+  }
+}

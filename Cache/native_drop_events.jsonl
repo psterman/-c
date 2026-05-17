@@ -1051,3 +1051,12 @@
 {"at":"2026-05-17T09:30:13+08:00","kind":"drag_end","payloadKind":"none","x":1253,"y":245}
 {"at":"2026-05-17T09:32:44+08:00","kind":"drag_start","payloadKind":"none","x":3218,"y":278}
 {"at":"2026-05-17T09:32:46+08:00","kind":"drag_end","payloadKind":"none","x":2943,"y":215}
+{"at":"2026-05-17T09:35:29+08:00","kind":"drag_start","payloadKind":"none","x":1719,"y":971}
+{"at":"2026-05-17T09:35:30+08:00","kind":"drag_end","payloadKind":"none","x":382,"y":597}
+{"at":"2026-05-17T09:39:57+08:00","kind":"drag_start","payloadKind":"none","x":473,"y":436}
+{"at":"2026-05-17T09:39:58+08:00","kind":"drag_end","payloadKind":"none","x":1438,"y":702}
+{"at":"2026-05-17T09:46:41+08:00","kind":"drag_start","payloadKind":"none","x":1719,"y":430}
+{"at":"2026-05-17T09:46:44+08:00","kind":"drag_end","payloadKind":"none","x":1284,"y":269}
+{"at":"2026-05-17T09:48:44+08:00","kind":"drag_start","payloadKind":"none","x":1692,"y":789}
+{"at":"2026-05-17T09:48:45+08:00","kind":"drag_end","payloadKind":"none","x":1693,"y":794}
+{"at":"2026-05-17T09:55:57+08:00","kind":"bridge_ready","x":470,"y":699,"w":170,"h":210}

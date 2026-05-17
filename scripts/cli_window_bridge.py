@@ -18,6 +18,26 @@ AGENTS = {
     "codex_cli": {"name": "Codex", "executables": ["codex.cmd", "codex"]},
     "openclaw_cli": {"name": "OpenClaw", "executables": ["openclaw.cmd", "openclaw"]},
     "qwen_cli": {"name": "Qwen", "executables": ["qwen.cmd", "qwen"]},
+    "ollama_cli": {"name": "Ollama", "executables": ["ollama.exe", "ollama"]},
+    "claude_cli": {
+        "name": "Claude",
+        "executables": ["claude.exe", "claude.cmd", "claude"],
+    },
+    "deepseek_cli": {"name": "DeepSeek", "executables": ["deepseek.cmd", "deepseek", "dsvi.cmd"]},
+    "kimi_cli": {"name": "Kimi", "executables": ["kimi.cmd", "kimi"]},
+    "zhipu_cli": {
+        "name": "Zhipu",
+        "executables": [
+            "chelper.cmd",
+            "chelper.ps1",
+            "chelper",
+            "zhipu.cmd",
+            "zhipu",
+            "glm.cmd",
+            "glm",
+        ],
+    },
+    "copilot_cli": {"name": "Copilot", "executables": ["copilot.cmd", "copilot"]},
 }
 
 SW_RESTORE = 9
@@ -32,7 +52,22 @@ def queue_dir(root: Path, engine: str) -> Path:
     return root / "cache" / "cli_queue" / engine
 
 
+def _resolve_local_bin_exe(base_name: str) -> str | None:
+    home = os.environ.get("USERPROFILE", "")
+    if not home:
+        return None
+    name = base_name if "." in base_name else f"{base_name}.exe"
+    path = Path(home) / ".local" / "bin" / name
+    if path.is_file():
+        return str(path.resolve())
+    return None
+
+
 def find_executable(engine: str) -> str:
+    if engine == "claude_cli":
+        local = _resolve_local_bin_exe("claude")
+        if local:
+            return local
     for candidate in AGENTS[engine]["executables"]:
         resolved = shutil.which(candidate)
         if resolved:

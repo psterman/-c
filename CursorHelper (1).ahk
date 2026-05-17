@@ -1,4 +1,4 @@
-﻿; ===================== msg =====================
+; ===================== msg =====================
 #Requires AutoHotkey v2.0
 
 global pToken := Gdip_Startup()
@@ -1109,6 +1109,12 @@ GetText(Key) {
             "search_engine_cli_gemini", "Gemini",
             "search_engine_cli_openclaw", "OpenClaw",
             "search_engine_cli_qwen", "Qwen",
+            "search_engine_cli_ollama", "Ollama",
+            "search_engine_cli_claude", "Claude",
+            "search_engine_cli_deepseek", "DeepSeek",
+            "search_engine_cli_kimi", "Kimi",
+            "search_engine_cli_zhipu", "智谱",
+            "search_engine_cli_copilot", "Copilot",
             "search_category_ai", "AI",
             "search_category_cli", "CLI",
             "search_category_academic", "学术",
@@ -1556,6 +1562,12 @@ GetText(Key) {
             "search_engine_cli_gemini", "Gemini",
             "search_engine_cli_openclaw", "OpenClaw",
             "search_engine_cli_qwen", "Qwen",
+            "search_engine_cli_ollama", "Ollama",
+            "search_engine_cli_claude", "Claude",
+            "search_engine_cli_deepseek", "DeepSeek",
+            "search_engine_cli_kimi", "Kimi",
+            "search_engine_cli_zhipu", "Zhipu",
+            "search_engine_cli_copilot", "Copilot",
             "search_category_ai", "AI",
             "search_category_cli", "CLI",
             "search_category_academic", "Academic",

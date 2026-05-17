@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 
 global g_CloudPlayerGui := 0
 global g_CloudPlayerCtrl := 0
@@ -16,6 +16,7 @@ global g_CloudPlayerHealthProbeInflight := false
 global g_CloudPlayerLatestReq := Map()
 global g_CloudPlayerActiveHttpReq := Map()
 global g_CloudPlayerDownloadCancel := Map()
+global g_CloudPlayerDownloadWalk := Map()
 
 ShowCloudPlayer(*) {
     CloudPlayer_Show()
@@ -2610,7 +2611,13 @@ CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "", reqId :
 
         stats := Map("files", 0, "failed", 0)
         CloudPlayer_PostDownloadProgress("打包下载：正在扫描目录结构...", rid, "scanning", CloudPlayer_DownloadPhasePercent("scanning"))
-        CloudPlayer_DownloadFolderTree(p, stageRoot, headers, token, stats, 0, rid)
+        CloudPlayer_MarkLatestReq("download_fs_list", rid)
+        walkOk := CloudPlayer_DownloadFolderTreeAsync(p, stageRoot, headers, token, stats, rid)
+        if !walkOk {
+            try DirDelete(workRoot, true)
+            CloudPlayer_PostDownloadResult(false, "download walk failed or cancelled", "", name, rid, "walk_failed")
+            return
+        }
         if CloudPlayer_CheckDownloadStale(rid, "post_scan") {
             try DirDelete(workRoot, true)
             return
@@ -2664,20 +2671,52 @@ CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "", reqId :
     }
 }
 
-CloudPlayer_DownloadFolderTree(remotePath, localDir, headers, token, stats, depth := 0, reqId := "") {
-    if CloudPlayer_CheckDownloadStale(reqId, "walk")
+CloudPlayer_DownloadFolderTreeAsync(remotePath, localDir, headers, token, stats, reqId) {
+    global g_CloudPlayerDownloadWalk
+    rid := Trim(String(reqId))
+    if (rid = "")
+        return false
+    g_CloudPlayerDownloadWalk[rid] := Map(
+        "reqId", rid,
+        "headers", headers,
+        "token", token,
+        "stats", stats,
+        "queue", [Map("remote", remotePath, "local", localDir, "depth", 0)]
+    )
+    while (g_CloudPlayerDownloadWalk.Has(rid)) {
+        if CloudPlayer_CheckDownloadStale(rid, "walk_pump") || CloudPlayer_CheckDownloadCancelled(rid, "walk_pump") {
+            try g_CloudPlayerDownloadWalk.Delete(rid)
+            return false
+        }
+        CloudPlayer_DownloadWalkPumpOnce(rid)
+    }
+    return true
+}
+
+CloudPlayer_DownloadWalkPumpOnce(rid) {
+    global g_CloudPlayerDownloadWalk
+    rid := Trim(String(rid))
+    if !g_CloudPlayerDownloadWalk.Has(rid)
         return
-    if CloudPlayer_CheckDownloadCancelled(reqId, "walk")
+    st := g_CloudPlayerDownloadWalk[rid]
+    q := st["queue"]
+    if !(q is Array) || q.Length = 0 {
+        try g_CloudPlayerDownloadWalk.Delete(rid)
         return
+    }
+    job := q.RemoveAt(1)
+    remotePath := job["remote"]
+    localDir := job["local"]
+    depth := Integer(job["depth"])
     if (depth > 24)
         return
-    DirCreate(localDir)
-    items := CloudPlayer_ListFolderItems(remotePath, headers)
+    try DirCreate(localDir)
+    items := CloudPlayer_ListFolderItems(remotePath, st["headers"], rid)
     for _, item in items {
-        if CloudPlayer_CheckDownloadStale(reqId, "walk_loop")
+        if CloudPlayer_CheckDownloadStale(rid, "walk_loop") || CloudPlayer_CheckDownloadCancelled(rid, "walk_loop") {
+            try g_CloudPlayerDownloadWalk.Delete(rid)
             return
-        if CloudPlayer_CheckDownloadCancelled(reqId, "walk_loop")
-            return
+        }
         try name := String(item.Has("name") ? item["name"] : "")
         catch {
             name := ""
@@ -2695,26 +2734,27 @@ CloudPlayer_DownloadFolderTree(remotePath, localDir, headers, token, stats, dept
         }
         childLocal := localDir . "\" . safeName
         if isDir {
-            CloudPlayer_DownloadFolderTree(childRemote, childLocal, headers, token, stats, depth + 1, reqId)
+            q.Push(Map("remote", childRemote, "local", childLocal, "depth", depth + 1))
         } else {
-            urlInfo := CloudPlayer_ResolveDownloadUrl(childRemote, headers)
+            urlInfo := CloudPlayer_ResolveDownloadUrl(childRemote, st["headers"], rid)
             if !(urlInfo is Map) || !urlInfo.Has("url") || urlInfo["url"] = "" {
-                stats["failed"] += 1
+                st["stats"]["failed"] += 1
                 continue
             }
-            ok := CloudPlayer_DownloadBinary(urlInfo["url"], childLocal, token, urlInfo.Has("headers") ? urlInfo["headers"] : 0)
+            ok := CloudPlayer_DownloadBinary(urlInfo["url"], childLocal, st["token"], urlInfo.Has("headers") ? urlInfo["headers"] : 0)
             if ok
-                stats["files"] += 1
+                st["stats"]["files"] += 1
             else
-                stats["failed"] += 1
-            total := stats["files"] + stats["failed"]
+                st["stats"]["failed"] += 1
+            total := st["stats"]["files"] + st["stats"]["failed"]
             if (Mod(total, 5) = 0)
-                CloudPlayer_PostDownloadProgress("打包下载：已处理 " . total . " 个文件（成功 " . stats["files"] . "，失败 " . stats["failed"] . "）...", reqId, "downloading", CloudPlayer_DownloadPhasePercent("downloading", total))
+                CloudPlayer_PostDownloadProgress("打包下载：已处理 " . total . " 个文件（成功 " . st["stats"]["files"] . "，失败 " . st["stats"]["failed"] . "）...", rid, "downloading", CloudPlayer_DownloadPhasePercent("downloading", total))
         }
     }
+    st["queue"] := q
 }
 
-CloudPlayer_ListFolderItems(remotePath, headers) {
+CloudPlayer_ListFolderItems(remotePath, headers, reqId := "") {
     global g_CloudPlayerApiBase
     out := []
     page := 1
@@ -2727,7 +2767,7 @@ CloudPlayer_ListFolderItems(remotePath, headers) {
             "per_page", perPage,
             "refresh", false
         )), ["refresh"])
-        ret := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/fs/list", headers, body)
+        ret := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/fs/list", headers, body, reqId)
         if !ret["ok"]
             break
         content := 0
@@ -2746,9 +2786,9 @@ CloudPlayer_ListFolderItems(remotePath, headers) {
     return out
 }
 
-CloudPlayer_ResolveDownloadUrl(remotePath, headers) {
+CloudPlayer_ResolveDownloadUrl(remotePath, headers, reqId := "") {
     global g_CloudPlayerApiBase
-    ret := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/fs/get", headers, Jxon_Dump(Map("path", CloudPlayer_NormalizeRemotePath(remotePath), "password", "")))
+    ret := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/fs/get", headers, Jxon_Dump(Map("path", CloudPlayer_NormalizeRemotePath(remotePath), "password", "")), reqId)
     if !ret["ok"]
         return Map("url", "")
     data := 0
@@ -2996,84 +3036,112 @@ CloudPlayer_GetArchiveEntries(remotePath, token := "", reqId := "") {
     return out
 }
 
-CloudPlayer_HttpJson(method, url, headers := 0, body := "") {
+; Internal sync bridge over CoreAsyncHttp (import/admin still call this; runs off UI thread when in SetTimer tasks).
+CloudPlayer_HttpJson(method, url, headers := 0, body := "", reqId := "") {
     ret := Map("ok", false, "status", 0, "json", 0, "text", "", "error", "")
+    if !FuncExists("HttpJsonAsync")
+        return ret
+    bucket := Map("done", false, "ret", ret)
+    hdrs := (headers is Map) ? headers : Map()
+    rid := Trim(String(reqId))
     try {
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        whr.Open(String(method), String(url), true)
-        whr.SetTimeouts(5000, 5000, 10000, 15000)
-        if (headers is Map) {
-            for k, v in headers
-                whr.SetRequestHeader(String(k), String(v))
-        }
-        whr.Send(body != "" ? String(body) : "")
+        HttpJsonAsync(String(method), String(url), body != "" ? String(body) : "", (coreRet) => (
+            bucket["ret"] := CloudPlayer_HttpJsonFromCore(coreRet),
+            bucket["done"] := true
+        ), Map(
+            "headers", hdrs,
+            "timeoutMs", 15000,
+            "connectTimeoutMs", 5000,
+            "sendTimeoutMs", 10000,
+            "receiveTimeoutMs", 15000,
+            "reqId", rid,
+            "tag", "cp_http_sync_bridge"
+        ))
         deadline := A_TickCount + 15000
-        done := false
-        while (A_TickCount < deadline) {
-            ; Import task cancellation should short-circuit network waits.
+        while !bucket["done"] && (A_TickCount < deadline) {
             try {
                 global g_CloudPlayerImportTask
-                if (g_CloudPlayerImportTask is Map
-                    && g_CloudPlayerImportTask.Has("active")
-                    && g_CloudPlayerImportTask["active"]
-                    && g_CloudPlayerImportTask.Has("cancelled")
-                    && g_CloudPlayerImportTask["cancelled"]) {
-                    try whr.Abort()
-                    ret["error"] := "cancelled"
-                    return ret
+                if (g_CloudPlayerImportTask is Map && g_CloudPlayerImportTask.Has("active") && g_CloudPlayerImportTask["active"]
+                    && g_CloudPlayerImportTask.Has("cancelled") && g_CloudPlayerImportTask["cancelled"]) {
+                    bucket["ret"]["error"] := "cancelled"
+                    return bucket["ret"]
                 }
             } catch {
             }
-            try done := !!whr.WaitForResponse(0)
-            catch {
-                done := false
-            }
-            if done
-                break
             Sleep(10)
         }
-        if !done {
-            ret["error"] := "timeout"
-            return ret
-        }
-        st := Integer(whr.Status)
-        txt := String(whr.ResponseText)
-        ret["status"] := st
-        ret["text"] := txt
-        try ret["json"] := Jxon_Load(txt)
-        catch {
-            ret["json"] := 0
-        }
-        ret["ok"] := (st >= 200 && st < 300)
-
-        ; OpenList can return HTTP 200 with business error code in body.
-        if (ret["json"] is Map && ret["json"].Has("code")) {
-            bizCode := ""
-            try bizCode := Integer(ret["json"]["code"])
-            catch {
-                bizCode := ""
-            }
-            if (bizCode != "" && bizCode != 200) {
-                ret["ok"] := false
-                errBiz := ""
-                try errBiz := String(ret["json"].Has("message") ? ret["json"]["message"] : ("code " . bizCode))
-                catch {
-                    errBiz := "code " . bizCode
-                }
-                ret["error"] := errBiz
-            }
-        }
-
-        if !ret["ok"] && (ret["error"] = "") {
-            errMsg := ""
-            if (ret["json"] is Map && ret["json"].Has("message"))
-                errMsg := String(ret["json"]["message"])
-            ret["error"] := (errMsg != "") ? errMsg : ("http " . st)
-        }
+        if !bucket["done"]
+            bucket["ret"]["error"] := "timeout"
+        ret := bucket["ret"]
     } catch as e {
         ret["error"] := e.Message
     }
     return ret
+}
+
+CloudPlayer_HttpJsonFromCore(coreRet) {
+    ret := Map("ok", false, "status", 0, "json", 0, "text", "", "error", "")
+    if !(coreRet is Map)
+        return ret
+    try ret["ok"] := !!coreRet["ok"]
+    catch {
+        ret["ok"] := false
+    }
+    try ret["status"] := Integer(coreRet["status"])
+    catch {
+        ret["status"] := 0
+    }
+    try ret["text"] := String(coreRet["text"])
+    catch {
+        ret["text"] := ""
+    }
+    try ret["json"] := coreRet["json"]
+    catch {
+        ret["json"] := 0
+    }
+    try ret["error"] := String(coreRet["error"])
+    catch {
+        ret["error"] := ""
+    }
+    if (ret["json"] is Map && ret["json"].Has("code")) {
+        bizCode := ""
+        try bizCode := Integer(ret["json"]["code"])
+        catch {
+            bizCode := ""
+        }
+        if (bizCode != "" && bizCode != 200) {
+            ret["ok"] := false
+            errBiz := ""
+            try errBiz := String(ret["json"].Has("message") ? ret["json"]["message"] : ("code " . bizCode))
+            catch {
+                errBiz := "code " . bizCode
+            }
+            ret["error"] := errBiz
+        }
+    }
+    if !ret["ok"] && (ret["error"] = "") {
+        st := ret["status"]
+        errMsg := ""
+        if (ret["json"] is Map && ret["json"].Has("message"))
+            errMsg := String(ret["json"]["message"])
+        ret["error"] := (errMsg != "") ? errMsg : ("http " . st)
+    }
+    return ret
+}
+
+CloudPlayer_HttpJsonAsync(method, url, headers := 0, body := "", callback := 0, reqId := "", tag := "cp_http_async") {
+    cb := IsObject(callback) ? callback : 0
+    hdrs := (headers is Map) ? headers : Map()
+    rid := Trim(String(reqId))
+    HttpJsonAsync(String(method), String(url), body != "" ? String(body) : "", (coreRet) => (
+        cb ? cb.Call(CloudPlayer_HttpJsonFromCore(coreRet)) : 0
+    ), Map(
+        "headers", hdrs,
+        "timeoutMs", 12000,
+        "receiveTimeoutMs", 12000,
+        "reqId", rid,
+        "tag", String(tag)
+    ))
 }
 
 CloudPlayer_OpenExternalUrl(url) {

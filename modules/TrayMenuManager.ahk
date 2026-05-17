@@ -1119,6 +1119,11 @@ ReloadScriptFromPopupMenu(*) {
     try _Cfg_NormalizeIniEncoding(ConfigFile)
     catch {
     }
+    try {
+        if FuncExists("WebView2_PrepareForScriptReload")
+            WebView2_PrepareForScriptReload()
+    } catch {
+    }
     ; Avoid Reload's single-instance wait dialog in hole mode:
     ; spawn a fresh instance directly, then terminate current one.
     try {

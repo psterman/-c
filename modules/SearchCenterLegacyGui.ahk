@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 ; Legacy SearchCenter GUI (ListView path when not using WebView)
 
 ; ===================== 搜索中心导航处理函数 =====================
@@ -3253,14 +3253,7 @@ ToggleSearchCenterEngine(EngineValue, Index) {
     FoundIndex := ArrayContainsValue(SearchCenterSelectedEngines, EngineValue)
     IsSelected := (FoundIndex = 0)  ; 如果没找到，说明要选中
     
-    if (CategoryKey = "cli") {
-        ; CLI 终端只能发往一个：多选会导致 codex 在 Native 队列里先于 qwen 打开，用户只选 Qwen 时仍会激活 Codex
-        if (FoundIndex > 0) {
-            SearchCenterSelectedEngines.RemoveAt(FoundIndex)
-        } else {
-            SearchCenterSelectedEngines := [EngineValue]
-        }
-    } else if (FoundIndex > 0) {
+    if (FoundIndex > 0) {
         ; 取消选中
         SearchCenterSelectedEngines.RemoveAt(FoundIndex)
     } else {
@@ -3290,12 +3283,6 @@ ToggleSearchCenterEngine(EngineValue, Index) {
         IniWrite(CategoryEnginesStr, ConfigFile, "Settings", "SearchCenterSelectedEngines_" . CategoryKey)
     } catch as e {
         ; 忽略保存错误，不影响功能
-    }
-    
-    ; CLI 单选后必须重绘全部图标，否则其它 CLI 的勾号仍会残留
-    if (CategoryKey = "cli") {
-        RefreshSearchCenterEngineIcons()
-        return
     }
     
     ; 【优化】只更新当前图标的选中状态，避免重新创建所有图标导致闪烁

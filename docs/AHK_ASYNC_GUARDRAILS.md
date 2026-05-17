@@ -94,6 +94,23 @@ This document codifies required guardrails for async/state-machine refactors.
 - Step 7: Verify with race scenarios
   - rapid re-trigger, cancel + restart, late response after page switch.
 
+## 11) Module onboarding checklist (requestId / stale)
+
+| Module | stale domain | drop log tag | Mark latest | AttachMeta on host events |
+|--------|--------------|--------------|-------------|---------------------------|
+| CloudPlayer | `cloudplayer:<kind>` | `cloudplayer_drop_stale_req` | `CloudPlayer_MarkLatestReq` | `CloudPlayer_QueuePayload` |
+| ClipboardPanel | session `g_CP_RequestID` | `cp_drop_stale_req` | host message baseline | WebView payload |
+| SearchCenterWebView | token | `intent_drop_stale_token` | `g_SCWV_CurrentToken` | bridge payloads |
+| GlobalDragHoleOverlay | token | `gdho_*_drop_stale` | `g_GDHO_CurrentToken` | WebView payloads |
+| ConfigWebView | `config:<path>` | `config_drop_stale_req` | `ConfigWebView_MarkLatestReq` | async JSON callbacks |
+| NiumaTtyd | `ttyd:<action>` | `ttyd_drop_stale_req` | `NiumaTtyd_MarkLatestReq` | `NiumaTtyd_EmitStatus` / deferred jobs |
+
+**Required response fields:** `requestId` (canonical), optional `reqId`, `phase`, `errorCode`, `ts`.
+
+**Bridge rule ([`modules/AhkWebViewBridge.ahk`](modules/AhkWebViewBridge.ahk)):** bridge forwards IDs only; host module owns stale gates.
+
+Validate with: `scripts/ValidateRequestIdStaleContract.ps1`
+
 ## Acceptance checks
 
 - 500+ request stress run returns active request table to zero.

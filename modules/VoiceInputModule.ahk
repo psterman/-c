@@ -1,11 +1,21 @@
-; VoiceInputModule.ahk — 语音输入 / 语音搜索（由 CursorHelper 中枢 #Include）
+﻿; VoiceInputModule.ahk — 语音输入 / 语音搜索（由 CursorHelper 中枢 #Include）
 ; 依赖宿主：GetText、FormatText、HoverBtn、OnWindowSize、RestoreWindowPosition、GetWindowScreenIndex、
 ; GetScreenInfo、GetPanelPosition、HideCursorPanel、QueueWindowPositionSave、FlushPendingWindowPositions、
 ; ArrayContainsValue、ConfigFile、CursorPath、AISleepTime、PanelVisible、UI_Colors、ThemeMode、Language、
-; GetCLIAgentLaunchInfo、ShouldUseNativeCLITerminal、OpenCLIAgentTerminal、DispatchPromptToCLIAgent、InvokePythonCLIBridge 等。
+; CLI 副作用见 VoiceInputCliEffects.ahk（LaunchSelectedCLIAgents 经 FSM 转发）。
+
+; 宿主在 CursorPanelController.ahk 中提供 HideCursorPanel；用 Func 调用避免单文件静态检查误报未赋值局部变量
+VoiceInput_HideCursorPanelIfNeeded() {
+    try {
+        fn := Func("HideCursorPanel")
+        if fn
+            fn.Call()
+    } catch {
+    }
+}
 
 VoiceButtonAction(*) {
-    HideCursorPanel()
+    VoiceInput_HideCursorPanelIfNeeded()
     StartVoiceInput()
 }
 
@@ -639,48 +649,20 @@ ArrayContainsValue(Arr, Value) {
     return 0
 }
 
-; 开始语音搜索（显示输入框界面）
+; 开始语音搜索（经 FSM + effect）
 StartVoiceSearch() {
-    global VoiceSearchActive, VoiceSearchPanelVisible, PanelVisible
-    
-    ; 【关键修复】确保变量已初始化
-    if (!IsSet(VoiceSearchPanelVisible)) {
+    global VoiceSearchPanelVisible
+    if (!IsSet(VoiceSearchPanelVisible))
         VoiceSearchPanelVisible := false
-    }
-    if (!IsSet(VoiceSearchActive)) {
-        VoiceSearchActive := false
-    }
-    
-    ; 自动关闭 CapsLock 大写状态
-    SetCapsLockState("Off")
-    
-    ; 如果面板已显示，切换焦点到输入框并清空，然后激活语音输入
-    if (VoiceSearchPanelVisible) {
+    if (VoiceSearchPanelVisible && FuncExists("VoiceInput_IsSearchFsmState") && VoiceInput_IsSearchFsmState()) {
         FocusVoiceSearchInput()
-        Sleep(200)
-        ; 如果未在语音输入，开始语音输入
-        if (!VoiceSearchActive) {
-            StartVoiceInputInSearch()
-        }
+        if (VoiceFSM_State() = "search_listening")
+            VoiceFSM_Dispatch("search_listen_start")
         return
     }
-    
-    ; 如果正在语音输入中，先停止
-    if (VoiceSearchActive) {
-        StopVoiceInputInSearch()
-    }
-    
-    ; 如果快捷操作面板正在显示，先关闭它
-    if (PanelVisible) {
-        HideCursorPanel()
-    }
-    
-    try {
-        ; 显示语音搜索输入界面（会自动激活语音输入）
-        ShowVoiceSearchInputPanel()
-    } catch as e {
-        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
-    }
+    if (VoiceFSM_State() != "idle" && !(FuncExists("VoiceInput_IsSearchFsmState") && VoiceInput_IsSearchFsmState()))
+        VoiceFSM_Dispatch("search_stop")
+    VoiceFSM_Dispatch("search_open")
 }
 
 ; 获取所有搜索引擎（带分类信息）
@@ -710,6 +692,12 @@ GetAllSearchEngines() {
         {Name: GetText("search_engine_cli_gemini"), Value: "gemini_cli", Category: "cli"},
         {Name: GetText("search_engine_cli_openclaw"), Value: "openclaw_cli", Category: "cli"},
         {Name: GetText("search_engine_cli_qwen"), Value: "qwen_cli", Category: "cli"},
+        {Name: GetText("search_engine_cli_ollama"), Value: "ollama_cli", Category: "cli"},
+        {Name: GetText("search_engine_cli_claude"), Value: "claude_cli", Category: "cli"},
+        {Name: GetText("search_engine_cli_deepseek"), Value: "deepseek_cli", Category: "cli"},
+        {Name: GetText("search_engine_cli_kimi"), Value: "kimi_cli", Category: "cli"},
+        {Name: GetText("search_engine_cli_zhipu"), Value: "zhipu_cli", Category: "cli"},
+        {Name: GetText("search_engine_cli_copilot"), Value: "copilot_cli", Category: "cli"},
         
         ; 学术类
         {Name: GetText("search_engine_zhihu"), Value: "zhihu", Category: "academic"},
@@ -933,8 +921,40 @@ GetSortedSearchEngines(Category := "") {
     return FilteredEngines
 }
 
+; CLI 图标：优先 lib\images 下与引擎同名的 jpg/png（见目录内 codex.jpg、gemini.jpg、qwen.png 等）
+VoiceInput_ResolveCliIconInLibImages(EngineValue) {
+    static CliIconFiles := 0
+    if !IsObject(CliIconFiles) {
+        CliIconFiles := Map(
+            "codex_cli", ["codex.jpg", "codex.png", "codex1.png"],
+            "gemini_cli", ["gemini.jpg", "gemini.png"],
+            "openclaw_cli", ["openclaw.jpg", "openclaw.png"],
+            "qwen_cli", ["qwen.png", "qwen.jpg"],
+            "ollama_cli", ["ollama.png", "ollama.jpg"],
+            "claude_cli", ["claude.jpg", "claude.png", "Claude.png"],
+            "deepseek_cli", ["DeepSeek.png", "deepseek.png", "deepseek.jpg"],
+            "kimi_cli", ["kimi.png", "Kimi.png", "kimi.jpg"],
+            "zhipu_cli", ["zhipu.png", "zhipu.jpg"],
+            "copilot_cli", ["copilot.png", "Copilot.png", "copilot.jpg", "ChatGPT.png"]
+        )
+    }
+    if !CliIconFiles.Has(EngineValue)
+        return ""
+    imgDir := A_ScriptDir . "\lib\images\"
+    for _, fileName in CliIconFiles[EngineValue] {
+        full := imgDir . fileName
+        if FileExist(full)
+            return full
+    }
+    return ""
+}
+
 ; 获取搜索引擎对应的图标文件名
 GetSearchEngineIcon(EngineValue) {
+    cliIcon := VoiceInput_ResolveCliIconInLibImages(EngineValue)
+    if (cliIcon != "")
+        return cliIcon
+
     ; 根据搜索引擎值返回对应的图标文件名
     IconMap := Map(
         ; AI类
@@ -953,20 +973,15 @@ GetSearchEngineIcon(EngineValue) {
         "you", "You.png",
         "claude", "Claude.png",
         "monica", "Monica.png",
-        "webpilot", "WebPilot.png",
-        ; CLI类
-        "codex_cli", "codex.jpg",
-        "gemini_cli", "gemini.jpg",
-        "openclaw_cli", "openclaw.jpg",
-        "qwen_cli", "qwen.png"
-        ; 注意：其他分类的搜索引擎如果没有对应的图标文件，会返回空字符串，使用文本显示
+        "webpilot", "WebPilot.png"
+        ; CLI 类由 VoiceInput_ResolveCliIconInLibImages 解析；其他引擎若无图标则返回空字符串
     )
     
     IconName := IconMap.Get(EngineValue, "")
     if (IconName != "") {
         ; 返回完整的图标路径
         ScriptDir := A_ScriptDir
-        IconDirs := [ScriptDir . "\aiicons", ScriptDir . "\images"]
+        IconDirs := [ScriptDir . "\lib\images", ScriptDir . "\aiicons"]
         for _, DirPath in IconDirs {
             IconPath := DirPath . "\" . IconName
             if (FileExist(IconPath)) {
@@ -1267,16 +1282,16 @@ ExecuteVoiceSearch(*) {
     VoiceFSM_Dispatch("processing_begin")
 }
 
-; 开始语音输入（在语音搜索界面中，副作用在 effect 层）
+; 开始语音输入（在语音搜索界面中，经 FSM）
 StartVoiceInputInSearch() {
-    if FuncExists("VoiceInputEffect_SearchStartListening")
-        VoiceInputEffect_SearchStartListening()
+    VoiceFSM_Dispatch("search_listen_start")
 }
 
-; 停止语音输入（在语音搜索界面中，副作用在 effect 层）
+; 停止语音输入（在语音搜索界面中，经 FSM）
 StopVoiceInputInSearch() {
-    if FuncExists("VoiceInputEffect_SearchStopListening")
-        VoiceInputEffect_SearchStopListening()
+    if FuncExists("VoiceInputEffect_SearchStopListeningImpl")
+        VoiceInputEffect_SearchStopListeningImpl()
+    VoiceInput_SyncLegacyFlags()
 }
 
 ; 聚焦语音搜索输入框
@@ -1923,23 +1938,10 @@ ShowVoiceSearchInputPanel() {
 ; ===================== 语音搜索辅助函数 =====================
 ; 隐藏语音搜索输入界面
 HideVoiceSearchInputPanel(*) {
-    global GuiID_VoiceInput, VoiceSearchPanelVisible, VoiceSearchInputEdit
-    
-    ; 自动关闭 CapsLock 大写状态
-    SetCapsLockState("Off")
-    
-    ; 停止监听选中文本
-    SetTimer(MonitorSelectedText, 0)
-    
-    VoiceSearchPanelVisible := false
-    
-    if (GuiID_VoiceInput != 0) {
-        try {
-            GuiID_VoiceInput.Destroy()
-        }
-        GuiID_VoiceInput := 0
-    }
-    VoiceSearchInputEdit := 0
+    if FuncExists("VoiceInput_IsSearchFsmState") && VoiceInput_IsSearchFsmState()
+        VoiceFSM_Dispatch("search_stop")
+    else if FuncExists("VoiceInputEffect_DestroySearchPanel")
+        VoiceInputEffect_DestroySearchPanel()
 }
 
 ; 清空语音搜索输入框
@@ -2319,820 +2321,22 @@ OpenAdminWindowsPowerShell() {
     Run('*RunAs "' . PowerShellPath . '"')
 }
 
-GetCLIAgentLaunchInfo(Engine) {
-    switch Engine {
-        case "codex_cli":
-            return {Name: GetText("search_engine_cli_codex"), Command: GetPreferredCLIExecutable("codex_cli")}
-        case "gemini_cli":
-            return {Name: GetText("search_engine_cli_gemini"), Command: GetPreferredCLIExecutable("gemini_cli")}
-        case "openclaw_cli":
-            return {Name: GetText("search_engine_cli_openclaw"), Command: GetPreferredCLIExecutable("openclaw_cli")}
-        case "qwen_cli":
-            return {Name: GetText("search_engine_cli_qwen"), Command: GetPreferredCLIExecutable("qwen_cli")}
-        default:
-            return 0
-    }
-}
 
-; 使用 where.exe 解析 PATH 中的可执行文件，返回首个存在的完整路径
-TryResolveExecutableViaWhere(WhereExe, Name) {
-    if (Name = "" || !FileExist(WhereExe)) {
-        return ""
-    }
-    try {
-        Shell := ComObject("WScript.Shell")
-        Exec := Shell.Exec('"' . WhereExe . '" "' . Name . '"')
-        while (Exec.Status = 0) {
-            Sleep(20)
-        }
-        Out := Exec.StdOut.ReadAll()
-        for Line in StrSplit(Out, "`n", "`r") {
-            L := Trim(Line)
-            if (L = "" || InStr(L, "INFO:") = 1) {
-                continue
-            }
-            if (FileExist(L)) {
-                return L
-            }
-        }
-    } catch {
-    }
-    return ""
-}
-
-; 将裸名（如 codex.cmd）解析为 PATH 或 where.exe 找到的完整路径，避免 PowerShell 中 & 'codex.cmd' 因不在 PATH 而失败
-ResolveBareCLIExecutableInPath(ExecutableName) {
-    if (ExecutableName = "" || InStr(ExecutableName, "\")) {
-        return ExecutableName
-    }
-    if (FileExist(A_ScriptDir . "\" . ExecutableName)) {
-        return A_ScriptDir . "\" . ExecutableName
-    }
-    WhereExe := A_WinDir . "\System32\where.exe"
-    R := TryResolveExecutableViaWhere(WhereExe, ExecutableName)
-    if (R != "") {
-        return R
-    }
-    Base := StrReplace(StrReplace(ExecutableName, ".cmd", ""), ".exe", "")
-    if (Base != "" && Base != ExecutableName) {
-        R := TryResolveExecutableViaWhere(WhereExe, Base)
-        if (R != "") {
-            return R
-        }
-    }
-    return ExecutableName
-}
-
-GetPreferredCLIExecutable(Engine) {
-    LocalAppDataDir := EnvGet("LOCALAPPDATA")
-    Candidates := []
-    switch Engine {
-        case "codex_cli":
-            Candidates := [
-                A_AppData . "\npm-global\codex.cmd",
-                A_AppData . "\npm\codex.cmd",
-                LocalAppDataDir . "\npm\codex.cmd",
-                LocalAppDataDir . "\npm-global\codex.cmd",
-                "codex.cmd"
-            ]
-        case "gemini_cli":
-            Candidates := [
-                A_AppData . "\npm\gemini.cmd",
-                A_AppData . "\npm-global\gemini.cmd",
-                "gemini.cmd"
-            ]
-        case "openclaw_cli":
-            Candidates := [
-                LocalAppDataDir . "\pnpm\openclaw.cmd",
-                A_AppData . "\npm\openclaw.cmd",
-                A_AppData . "\npm-global\openclaw.cmd",
-                "C:\Program Files\Qclaw\resources\cli\openclaw.cmd",
-                "openclaw.cmd"
-            ]
-        case "qwen_cli":
-            Candidates := [
-                A_AppData . "\npm-global\qwen.cmd",
-                A_AppData . "\npm\qwen.cmd",
-                LocalAppDataDir . "\npm\qwen.cmd",
-                LocalAppDataDir . "\npm-global\qwen.cmd",
-                "qwen.cmd"
-            ]
-        default:
-            return ""
-    }
-    
-    for _, Candidate in Candidates {
-        if (InStr(Candidate, "\") && FileExist(Candidate)) {
-            return Candidate
-        }
-    }
-    Last := Candidates.Length > 0 ? Candidates[Candidates.Length] : ""
-    Resolved := ResolveBareCLIExecutableInPath(Last)
-    ; 仍未解析出磁盘路径时无法安全启动（避免 PowerShell 中 & 'codex.cmd' 报错）
-    if (Resolved != "" && !InStr(Resolved, "\") && !InStr(Resolved, "/")) {
-        return ""
-    }
-    return Resolved
-}
-
-GetCLIAgentWindowTitle(Engine) {
-    ; 必须与 scripts/cli_window_bridge.py 中 AGENTS 的英文 name 一致，否则无法匹配队列终端窗口标题
-    switch Engine {
-        case "codex_cli":
-            return "CursorHelper AI - Codex"
-        case "gemini_cli":
-            return "CursorHelper AI - Gemini"
-        case "openclaw_cli":
-            return "CursorHelper AI - OpenClaw"
-        case "qwen_cli":
-            return "CursorHelper AI - Qwen"
-        default:
-            AgentInfo := GetCLIAgentLaunchInfo(Engine)
-            if (!AgentInfo || !IsObject(AgentInfo)) {
-                return ""
-            }
-            return "CursorHelper AI - " . AgentInfo.Name
-    }
-}
-
-FindCLIAgentWindow(Engine) {
-    WindowTitle := GetCLIAgentWindowTitle(Engine)
-    if (WindowTitle = "") {
-        return 0
-    }
-    return WinExist(WindowTitle)
-}
-
-GetCLIAgentInputControl(WindowHwnd) {
-    if (!WindowHwnd) {
-        return ""
-    }
-
-    try {
-        FocusedControl := ControlGetFocus("ahk_id " . WindowHwnd)
-        if (FocusedControl != "") {
-            return FocusedControl
-        }
-    } catch {
-    }
-
-    PreferredPatterns := [
-        "CASCADIA_HOSTING_WINDOW_CLASS",
-        "Windows.UI",
-        "TermControl",
-        "Terminal",
-        "Console",
-        "Chrome_WidgetWin"
-    ]
-
-    try {
-        Controls := WinGetControls("ahk_id " . WindowHwnd)
-        for _, Pattern in PreferredPatterns {
-            for _, ControlName in Controls {
-                if (InStr(ControlName, Pattern)) {
-                    return ControlName
-                }
-            }
-        }
-        if (Controls.Length > 0) {
-            return Controls[1]
-        }
-    } catch {
-    }
-
-    return ""
-}
-
-RestoreClipboardDeferred(ClipboardBackup, DelayMs := 10000) {
-    SetTimer((*) => (
-        A_Clipboard := ClipboardBackup
-    ), -DelayMs)
-}
-
-SendPromptToCLIAgentWindow(WindowHwnd, PromptText, Engine := "") {
-    if (!WindowHwnd || PromptText = "") {
-        return
-    }
-
-    try {
-        LegacyGuard_RequestFocus("VoiceInput", WindowHwnd, 30, "voice_window_hwnd", 120)
-        WinWaitActive("ahk_id " . WindowHwnd, , 3)
-        Sleep((Engine = "qwen_cli" || Engine = "gemini_cli") ? 400 : 180)
-
-        if (Engine = "codex_cli") {
-            SendText(PromptText)
-            Sleep(100)
-            Send("{Enter}")
-            return
-        }
-
-        ; Qwen / Gemini TUI：Ctrl+V 往往无效；优先对终端子控件 ControlSend {Text}（与 Windows Terminal 兼容），否则回退 SendText
-        if (Engine = "qwen_cli" || Engine = "gemini_cli") {
-            TargetCtl := GetCLIAgentInputControl(WindowHwnd)
-            if (TargetCtl != "") {
-                try ControlFocus(TargetCtl, "ahk_id " . WindowHwnd)
-                Sleep(150)
-            }
-            try {
-                if (TargetCtl != "") {
-                    ControlSend("{Text}" . PromptText, TargetCtl, "ahk_id " . WindowHwnd)
-                    Sleep(80)
-                    ControlSend("{Enter}", TargetCtl, "ahk_id " . WindowHwnd)
-                } else {
-                    SendText(PromptText)
-                    Sleep(120)
-                    Send("{Enter}")
-                }
-            } catch {
-                SendText(PromptText)
-                Sleep(120)
-                Send("{Enter}")
-            }
-            return
-        }
-
-        TargetControl := GetCLIAgentInputControl(WindowHwnd)
-
-        if (TargetControl != "") {
-            ControlSend("{Text}" . PromptText, TargetControl, "ahk_id " . WindowHwnd)
-            Sleep(120)
-            ControlSend("{Enter}", TargetControl, "ahk_id " . WindowHwnd)
-            return
-        }
-
-        ControlSend("{Text}" . PromptText, , "ahk_id " . WindowHwnd)
-        Sleep(120)
-        ControlSend("{Enter}", , "ahk_id " . WindowHwnd)
-    } catch {
-    }
-}
-
-GetWindowTextSafe(WindowHwnd) {
-    if (!WindowHwnd) {
-        return ""
-    }
-    try {
-        return WinGetText("ahk_id " . WindowHwnd)
-    } catch {
-        return ""
-    }
-}
-
-GeminiWindowNeedsAuth(WindowHwnd) {
-    WindowText := StrLower(GetWindowTextSafe(WindowHwnd))
-    ; 文本尚不可读时不当作「仍在登录页」，避免永远不发（终端刚启动时常短暂为空）
-    if (WindowText = "") {
-        return false
-    }
-    AuthPatterns := [
-        "sign in",
-        "login",
-        "authenticate",
-        "authentication",
-        "browser",
-        "google account",
-        "continue in browser",
-        "waiting for authentication",
-        "open this url",
-        "open the following link",
-        "登录",
-        "在浏览器",
-        "verify it"
-    ]
-    for _, Pattern in AuthPatterns {
-        if (InStr(WindowText, Pattern)) {
-            return true
-        }
-    }
-    return false
-}
-
-RegisterPendingCLIAgentPrompt(WindowHwnd, PromptText, Engine := "gemini_cli") {
-    global CLIAgentPendingPrompts, CLIAgentPromptMonitorRunning
-    
-    if (PromptText = "") {
-        return
-    }
-    
-    PendingKey := String(WindowHwnd)
-    CLIAgentPendingPrompts[PendingKey] := {
-        Hwnd: WindowHwnd,
-        Prompt: PromptText,
-        Engine: Engine,
-        CreatedAt: A_TickCount,
-        ProbeSent: false,
-        InputWakeSent: false,
-        LastWindowText: "",
-        ReadySeenCount: 0,
-        EmptyWindowTextRounds: 0,
-        FallbackMode: false,
-        GeminiLastText: "",
-        GeminiStableRounds: 0,
-        GeminiEmptyPolls: 0
-    }
-    
-    if (!CLIAgentPromptMonitorRunning) {
-        CLIAgentPromptMonitorRunning := true
-        SetTimer(MonitorPendingCLIAgentPrompts, 500)
-    }
-}
-
-QueuePromptForCLIAgent(Engine, WindowHwnd, PromptText) {
-    AgentInfo := GetCLIAgentLaunchInfo(Engine)
-    if (!AgentInfo || !WindowHwnd || PromptText = "") {
-        return false
-    }
-    
-    if (Engine = "gemini_cli") {
-        RegisterPendingCLIAgentPrompt(WindowHwnd, PromptText, Engine)
-        TrayTip(AgentInfo.Name . " 正在等待终端就绪（登录完成后界面稳定即发送）。", "提示", "Iconi 2")
-        return true
-    }
-    
-    if (Engine = "codex_cli") {
-        RegisterPendingCLIAgentPrompt(WindowHwnd, PromptText, Engine)
-        TrayTip(AgentInfo.Name . " 正在等待终端就绪，准备好后会自动发送。", "提示", "Iconi 2")
-        return true
-    }
-    
-    if (Engine = "qwen_cli") {
-        RegisterPendingCLIAgentPrompt(WindowHwnd, PromptText, Engine)
-        TrayTip(AgentInfo.Name . " 正在等待终端就绪，准备好后会自动发送。", "提示", "Iconi 2")
-        return true
-    }
-    
-    return false
-}
-
-DispatchPromptToCLIAgent(Engine, LaunchResult, PromptText) {
-    if (PromptText = "" || !IsObject(LaunchResult) || !LaunchResult.Hwnd) {
-        return
-    }
-    
-    if (Engine = "codex_cli") {
-        if (LaunchResult.IsNew) {
-            QueuePromptForCLIAgent(Engine, LaunchResult.Hwnd, PromptText)
-        } else {
-            SendPromptToCLIAgentWindow(LaunchResult.Hwnd, PromptText, Engine)
-        }
-        return
-    }
-    
-    if (Engine = "qwen_cli") {
-        if (LaunchResult.IsNew) {
-            QueuePromptForCLIAgent(Engine, LaunchResult.Hwnd, PromptText)
-        } else {
-            SendPromptToCLIAgentWindow(LaunchResult.Hwnd, PromptText, Engine)
-        }
-        return
-    }
-    
-    if (Engine = "gemini_cli") {
-        if (LaunchResult.IsNew) {
-            QueuePromptForCLIAgent(Engine, LaunchResult.Hwnd, PromptText)
-        } else {
-            SendPromptToCLIAgentWindow(LaunchResult.Hwnd, PromptText, Engine)
-        }
-        return
-    } else if (LaunchResult.IsNew) {
-        AgentInfo := GetCLIAgentLaunchInfo(Engine)
-        if (AgentInfo && IsObject(AgentInfo)) {
-            TrayTip(AgentInfo.Name . " 已打开。首次启动可能需要认证或等待加载，准备好后再次点击发送。", "提示", "Iconi 2")
-        }
-        return
-    }
-    
-    SendPromptToCLIAgentWindow(LaunchResult.Hwnd, PromptText, Engine)
-}
-
-MonitorPendingCLIAgentPrompts() {
-    global CLIAgentPendingPrompts, CLIAgentPromptMonitorRunning
-    global CLIGeminiReadyMinMs, CLIGeminiStablePollsRequired, CLIGeminiForceSendAfterMs, CLIGeminiNoTextMinMs
-    
-    if (!IsSet(CLIAgentPendingPrompts) || CLIAgentPendingPrompts.Count = 0) {
-        CLIAgentPromptMonitorRunning := false
-        SetTimer(MonitorPendingCLIAgentPrompts, 0)
-        return
-    }
-    
-    CompletedKeys := []
-    for Key, Pending in CLIAgentPendingPrompts {
-        if (!WinExist("ahk_id " . Pending.Hwnd)) {
-            CompletedKeys.Push(Key)
-            continue
-        }
-        
-        MaxWaitMs := (Pending.Engine = "gemini_cli") ? 120000 : 90000
-        if ((A_TickCount - Pending.CreatedAt) > MaxWaitMs) {
-            CompletedKeys.Push(Key)
-            AgentInfo := GetCLIAgentLaunchInfo(Pending.Engine)
-            AgentName := (AgentInfo && IsObject(AgentInfo)) ? AgentInfo.Name : Pending.Engine
-            TrayTip(AgentName . " 等待就绪超时，请完成启动后重新发送。", "提示", "Icon! 2")
-            continue
-        }
-        
-        ; Gemini：登录态阻塞；有 WinGetText 时按文本稳定；无文本（Windows Terminal 常见）则按 EmptyPolls 回退，否则会永远不发送
-        if (Pending.Engine = "gemini_cli") {
-            LatestGeminiWindow := FindCLIAgentWindow("gemini_cli")
-            if (LatestGeminiWindow) {
-                Pending.Hwnd := LatestGeminiWindow
-            }
-            Hwnd := Pending.Hwnd
-            if (!Hwnd || !WinExist("ahk_id " . Hwnd)) {
-                CLIAgentPendingPrompts[Key] := Pending
-                continue
-            }
-            if (GeminiWindowNeedsAuth(Hwnd)) {
-                Pending.GeminiStableRounds := 0
-                Pending.GeminiLastText := ""
-                Pending.GeminiEmptyPolls := 0
-                CLIAgentPendingPrompts[Key] := Pending
-                continue
-            }
-            CurrentText := GetWindowTextSafe(Hwnd)
-            Elapsed := A_TickCount - Pending.CreatedAt
-            if (Elapsed < CLIGeminiReadyMinMs) {
-                Pending.GeminiLastText := CurrentText
-                Pending.GeminiStableRounds := 1
-                Pending.GeminiEmptyPolls := 0
-                CLIAgentPendingPrompts[Key] := Pending
-                continue
-            }
-            if (CurrentText = "") {
-                if (Elapsed < CLIGeminiNoTextMinMs) {
-                    Pending.GeminiStableRounds := 0
-                    Pending.GeminiLastText := ""
-                    Pending.GeminiEmptyPolls := 0
-                    CLIAgentPendingPrompts[Key] := Pending
-                    continue
-                }
-                Pending.GeminiLastText := ""
-                Pending.GeminiStableRounds := 0
-                Pending.GeminiEmptyPolls += 1
-                CLIAgentPendingPrompts[Key] := Pending
-                NoTextReady := (Pending.GeminiEmptyPolls >= CLIGeminiStablePollsRequired)
-                ForceSend := (CLIGeminiForceSendAfterMs > 0 && Elapsed >= CLIGeminiForceSendAfterMs)
-                if (NoTextReady || ForceSend) {
-                    SendPromptToCLIAgentWindow(Pending.Hwnd, Pending.Prompt, Pending.Engine)
-                    CompletedKeys.Push(Key)
-                }
-                continue
-            }
-            Pending.GeminiEmptyPolls := 0
-            if (CurrentText = Pending.GeminiLastText) {
-                Pending.GeminiStableRounds += 1
-            } else {
-                Pending.GeminiLastText := CurrentText
-                Pending.GeminiStableRounds := 1
-            }
-            CLIAgentPendingPrompts[Key] := Pending
-            StableReady := (Pending.GeminiStableRounds >= CLIGeminiStablePollsRequired)
-            ForceSend := false
-            if (CLIGeminiForceSendAfterMs > 0 && Elapsed >= CLIGeminiForceSendAfterMs) {
-                ForceSend := true
-            }
-            if (StableReady || ForceSend) {
-                SendPromptToCLIAgentWindow(Pending.Hwnd, Pending.Prompt, Pending.Engine)
-                CompletedKeys.Push(Key)
-            }
-            continue
-        }
-        
-        if (Pending.Engine = "codex_cli" || Pending.Engine = "qwen_cli") {
-            RequiredDelay := (Pending.Engine = "qwen_cli") ? 4000 : 2500
-            if ((A_TickCount - Pending.CreatedAt) < RequiredDelay) {
-                continue
-            }
-            SendPromptToCLIAgentWindow(Pending.Hwnd, Pending.Prompt, Pending.Engine)
-            CompletedKeys.Push(Key)
-            continue
-        }
-        
-        CurrentWindowText := GetWindowTextSafe(Pending.Hwnd)
-        if (CurrentWindowText = "") {
-            Pending.EmptyWindowTextRounds += 1
-            if (Pending.EmptyWindowTextRounds >= 20) {
-                Pending.FallbackMode := true
-            }
-            CLIAgentPendingPrompts[Key] := Pending
-        } else {
-            Pending.EmptyWindowTextRounds := 0
-            if (GeminiWindowNeedsAuth(Pending.Hwnd)) {
-                CLIAgentPendingPrompts[Key] := Pending
-                continue
-            }
-        }
-        
-        if (!Pending.FallbackMode && CurrentWindowText = "") {
-            continue
-        }
-        
-        if (!Pending.ProbeSent) {
-            try {
-                LegacyGuard_RequestFocus("VoiceInput", Pending.Hwnd, 30, "voice_pending_hwnd", 120)
-                WinWaitActive("ahk_id " . Pending.Hwnd, , 3)
-                Sleep(200)
-                Send("{Enter}")
-                Pending.ProbeSent := true
-                Pending.CreatedAt := A_TickCount
-                Pending.LastWindowText := CurrentWindowText
-                Pending.ReadySeenCount := 0
-                CLIAgentPendingPrompts[Key] := Pending
-            } catch {
-            }
-            continue
-        }
-        
-        if (Pending.FallbackMode) {
-            if ((A_TickCount - Pending.CreatedAt) < 1800) {
-                CLIAgentPendingPrompts[Key] := Pending
-                continue
-            }
-            SendPromptToCLIAgentWindow(Pending.Hwnd, Pending.Prompt, Pending.Engine)
-            CompletedKeys.Push(Key)
-            continue
-        }
-        
-        if (CurrentWindowText != Pending.LastWindowText) {
-            Pending.LastWindowText := CurrentWindowText
-            Pending.ReadySeenCount := 1
-            CLIAgentPendingPrompts[Key] := Pending
-            continue
-        }
-        
-        Pending.ReadySeenCount += 1
-        CLIAgentPendingPrompts[Key] := Pending
-        if (Pending.ReadySeenCount < 3) {
-            continue
-        }
-        
-        Sleep(200)
-        SendPromptToCLIAgentWindow(Pending.Hwnd, Pending.Prompt, Pending.Engine)
-        CompletedKeys.Push(Key)
-    }
-    
-    for _, Key in CompletedKeys {
-        try CLIAgentPendingPrompts.Delete(Key)
-    }
-    
-    if (CLIAgentPendingPrompts.Count = 0) {
-        CLIAgentPromptMonitorRunning := false
-        SetTimer(MonitorPendingCLIAgentPrompts, 0)
-    }
-}
-
-OpenCLIAgentTerminal(Engine) {
-    AgentInfo := GetCLIAgentLaunchInfo(Engine)
-    if (!AgentInfo || !IsObject(AgentInfo)) {
-        throw Error("未配置该 CLI: " . Engine)
-    }
-    if (AgentInfo.Command = "") {
-        throw Error("找不到 " . AgentInfo.Name . " 可执行文件。请安装 CLI（例如 npm 全局安装）或将其加入系统 PATH。")
-    }
-    
-    ExistingWindow := FindCLIAgentWindow(Engine)
-    if (ExistingWindow) {
-        try {
-            LegacyGuard_RequestFocus("VoiceInput", ExistingWindow, 30, "voice_existing_hwnd", 120)
-            WinWaitActive("ahk_id " . ExistingWindow, , 3)
-        } catch {
-        }
-        return {Hwnd: ExistingWindow, IsNew: false}
-    }
-    
-    PowerShellPath := A_WinDir . "\System32\WindowsPowerShell\v1.0\powershell.exe"
-    if (!FileExist(PowerShellPath)) {
-        throw Error("找不到 Windows PowerShell")
-    }
-    
-    WinTitleStr := GetCLIAgentWindowTitle(Engine)
-    if (WinTitleStr = "") {
-        WinTitleStr := "CursorHelper AI - " . AgentInfo.Name
-    }
-    ; Gemini：与 Qwen 一样走原生交互终端；启动前由 gemini_native_terminal.ps1 加载 .env / 注册表等（与队列 worker 共用 gemini_env.ps1）
-    if (Engine = "gemini_cli") {
-        NativeScript := A_ScriptDir . "\scripts\gemini_native_terminal.ps1"
-        if (!FileExist(NativeScript)) {
-            throw Error("找不到 Gemini 启动脚本: " . NativeScript)
-        }
-        EscapedTitle := StrReplace(WinTitleStr, "'", "''")
-        EscapedWorkDir := StrReplace(A_ScriptDir, "'", "''")
-        EscapedExe := StrReplace(AgentInfo.Command, "'", "''")
-        CommandLine := '"' . PowerShellPath . '" -NoExit -ExecutionPolicy Bypass -File "' . NativeScript . '" -Title "' . EscapedTitle . '" -Workdir "' . EscapedWorkDir . '" -Executable "' . EscapedExe . '"'
-        Run(CommandLine, A_ScriptDir, , &TerminalPid)
-        WinWaitActive("ahk_pid " . TerminalPid, , 5)
-        return {Hwnd: WinExist("ahk_pid " . TerminalPid), IsNew: true}
-    }
-    EscapedTitle := StrReplace(WinTitleStr, "'", "''")
-    EscapedWorkDir := StrReplace(A_ScriptDir, "'", "''")
-    EscapedCommand := StrReplace(AgentInfo.Command, "'", "''")
-    PowerShellCommand := "$Host.UI.RawUI.WindowTitle = '" . EscapedTitle . "'; Set-Location -LiteralPath '" . EscapedWorkDir . "'; & '" . EscapedCommand . "'"
-    CommandLine := '"' . PowerShellPath . '" -NoExit -ExecutionPolicy Bypass -Command "' . PowerShellCommand . '"'
-    Run(CommandLine, A_ScriptDir, , &TerminalPid)
-    WinWaitActive("ahk_pid " . TerminalPid, , 5)
-    return {Hwnd: WinExist("ahk_pid " . TerminalPid), IsNew: true}
-}
-
-; 通过 PowerShell 启动 cli_queue_worker.ps1（与 Python 版 bridge 等价），不依赖系统已安装 python
-InvokePythonCLIBridge(Engines, PromptText := "", Action := "send") {
-    global A_ScriptDir
-    if (!IsObject(Engines) || Engines.Length = 0) {
-        return 0
-    }
-    if (Action = "send" && PromptText = "") {
-        return 0
-    }
-    WorkerScript := A_ScriptDir . "\scripts\cli_queue_worker.ps1"
-    if (!FileExist(WorkerScript)) {
-        TrayTip("找不到 CLI 队列脚本: " . WorkerScript, "错误", "Iconx 2")
-        return 0
-    }
-    PowerShellPath := A_WinDir . "\System32\WindowsPowerShell\v1.0\powershell.exe"
-    if (!FileExist(PowerShellPath)) {
-        TrayTip("找不到 Windows PowerShell", "错误", "Iconx 2")
-        return 0
-    }
-    OkCount := 0
-    for _, Engine in Engines {
-        AgentInfo := GetCLIAgentLaunchInfo(Engine)
-        if (!AgentInfo || !IsObject(AgentInfo) || AgentInfo.Command = "") {
-            TrayTip("未找到 " . Engine . " 的可执行文件，请先安装 CLI 或配置 PATH", "错误", "Iconx 2")
-            continue
-        }
-        Title := GetCLIAgentWindowTitle(Engine)
-        if (Title = "") {
-            continue
-        }
-        QueueDir := A_ScriptDir . "\cache\cli_queue\" . Engine
-        try DirCreate(QueueDir)
-        Hwnd := FindCLIAgentWindow(Engine)
-        if (!Hwnd) {
-            CmdLine := '"' . PowerShellPath . '" -NoExit -ExecutionPolicy Bypass -File "' . WorkerScript . '"'
-            CmdLine .= ' -Engine "' . Engine . '" -Title "' . Title . '" -Workdir "' . A_ScriptDir . '" -QueueDir "' . QueueDir . '" -Executable "' . AgentInfo.Command . '"'
-            try {
-                Run(CmdLine, A_ScriptDir)
-            } catch as err {
-                TrayTip("启动 " . AgentInfo.Name . " 失败: " . err.Message, "错误", "Iconx 2")
-                continue
-            }
-            Deadline := A_TickCount + 12000
-            while (A_TickCount < Deadline) {
-                Hwnd := FindCLIAgentWindow(Engine)
-                if (Hwnd) {
-                    break
-                }
-                Sleep(250)
-            }
-        }
-        if (!Hwnd) {
-            TrayTip("超时：未检测到 " . AgentInfo.Name . " 终端窗口", "错误", "Iconx 2")
-            continue
-        }
-        if (Action = "send") {
-            PromptFile := QueueDir . "\" . A_TickCount . "_" . Random(1, 999999) . ".txt"
-            try FileAppend(PromptText, PromptFile, "UTF-8")
-        }
-        try {
-            LegacyGuard_RequestFocus("VoiceInput", Hwnd, 30, "voice_hwnd", 120)
-            WinWaitActive("ahk_id " . Hwnd, , 2)
-        } catch {
-        }
-        OkCount += 1
-        Sleep(150)
-    }
-    return OkCount
-}
-
-; 直接 PowerShell 里 & qwen.cmd / codex.cmd / gemini（无参即交互式），用户可在终端内连续输入；队列 worker 仅用于 openclaw 等非原生 CLI
-ShouldUseNativeCLITerminal(Engine) {
-    return (Engine = "codex_cli" || Engine = "qwen_cli" || Engine = "gemini_cli")
-}
-
+; --- CLI：Module 仅转发，实现在 VoiceInputCliEffects.ahk ---
 LaunchSelectedCLIAgents(PromptText := "") {
-    global SearchCenterSelectedEngines
-    
-    if (!IsSet(SearchCenterSelectedEngines) || !IsObject(SearchCenterSelectedEngines) || SearchCenterSelectedEngines.Length = 0) {
-        TrayTip("请至少选择一个 CLI", "提示", "Icon! 2")
-        return
-    }
-    
-    NativeEngines := []
-    BridgeEngines := []
-    for _, Engine in SearchCenterSelectedEngines {
-        if (ShouldUseNativeCLITerminal(Engine)) {
-            NativeEngines.Push(Engine)
-        } else {
-            BridgeEngines.Push(Engine)
-        }
-    }
-    
-    ProcessedCount := 0
-    for Index, Engine in NativeEngines {
-        AgentInfo := GetCLIAgentLaunchInfo(Engine)
-        if (!AgentInfo || !IsObject(AgentInfo)) {
-            continue
-        }
-        try {
-            LaunchResult := OpenCLIAgentTerminal(Engine)
-            ProcessedCount += 1
-            if (PromptText != "") {
-                DispatchPromptToCLIAgent(Engine, LaunchResult, PromptText)
-            }
-            if (Index < NativeEngines.Length) {
-                Sleep(400)
-            }
-        } catch as err {
-            TrayTip("启动 " . AgentInfo.Name . " 失败: " . err.Message, "错误", "Iconx 2")
-        }
-    }
-    
-    if (BridgeEngines.Length > 0) {
-        Action := (PromptText = "") ? "open" : "send"
-        BridgeOk := InvokePythonCLIBridge(BridgeEngines, PromptText, Action)
-        if (BridgeOk > 0) {
-            ProcessedCount += BridgeOk
-        }
-    }
-    
-    if (ProcessedCount > 0) {
-        if (PromptText = "") {
-            TrayTip("正在打开 " . ProcessedCount . " 个 AI 终端", "提示", "Iconi 1")
-        } else {
-            TrayTip("正在发送到 " . ProcessedCount . " 个 AI 终端", "提示", "Iconi 1")
-        }
-    }
+    act := (PromptText != "") ? "send" : "open"
+    VoiceInputEffect_DispatchCliAgents(PromptText, act)
 }
 
 OpenSelectedCLIAgents(*) {
     LaunchSelectedCLIAgents("")
 }
 
-; 发送语音搜索内容到浏览器
-SendVoiceSearchToBrowser(Content, Engine) {
-    try {
-        AgentInfo := GetCLIAgentLaunchInfo(Engine)
-        if (AgentInfo && IsObject(AgentInfo)) {
-            if (ShouldUseNativeCLITerminal(Engine)) {
-                LaunchResult := OpenCLIAgentTerminal(Engine)
-                DispatchPromptToCLIAgent(Engine, LaunchResult, Content)
-            } else {
-                InvokePythonCLIBridge([Engine], Content, "send")
-            }
-            return
-        }
 
-        ; URL编码搜索内容
-        EncodedContent := UriEncode(Content)
-        
-        ; 根据搜索引擎构建URL
-        SearchURL := ""
-        switch Engine {
-            case "deepseek":
-                SearchURL := "https://chat.deepseek.com/?q=" . EncodedContent
-            case "yuanbao":
-                SearchURL := "https://yuanbao.tencent.com/?q=" . EncodedContent
-            case "doubao":
-                SearchURL := "https://www.doubao.com/chat/?q=" . EncodedContent
-            case "zhipu":
-                SearchURL := "https://chatglm.cn/main/search?query=" . EncodedContent
-            case "mita":
-                SearchURL := "https://metaso.cn/?q=" . EncodedContent
-            case "wenxin":
-                SearchURL := "https://yiyan.baidu.com/search?query=" . EncodedContent
-            case "qianwen":
-                SearchURL := "https://tongyi.aliyun.com/qianwen/chat?intent=chat&query=" . EncodedContent
-            case "kimi":
-                SearchURL := "https://kimi.moonshot.cn/_prefill_chat?force_search=true&send_immediately=true&prefill_prompt=" . EncodedContent
-            case "perplexity":
-                SearchURL := "https://www.perplexity.ai/search?intent=qa&q=" . EncodedContent
-            case "copilot":
-                SearchURL := "https://copilot.microsoft.com/chat?q=" . EncodedContent
-            case "chatgpt":
-                SearchURL := "https://chat.openai.com/?q=" . EncodedContent
-            case "grok":
-                SearchURL := "https://grok.com/?q=" . EncodedContent
-            case "you":
-                SearchURL := "https://you.com/search?q=" . EncodedContent
-            case "claude":
-                SearchURL := "https://claude.ai/new?q=" . EncodedContent
-            case "monica":
-                SearchURL := "https://monica.so/answers/?q=" . EncodedContent
-            case "webpilot":
-                SearchURL := "https://webpilot.ai/search?q=" . EncodedContent
-            case "zhihu":
-                SearchURL := "https://www.zhihu.com/search?q=" . EncodedContent
-            case "baidu":
-                SearchURL := "https://www.baidu.com/s?wd=" . EncodedContent
-            default:
-                SearchURL := "https://chat.deepseek.com/?q=" . EncodedContent
-        }
-        
-        ; 打开浏览器
-        Run(SearchURL)
-        TrayTip(GetText("voice_search_sent"), GetText("tip"), "Iconi 1")
-    } catch as e {
-        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
-    }
+; 发送语音搜索内容到浏览器（副作用在 effect 层）
+SendVoiceSearchToBrowser(Content, Engine) {
+    if FuncExists("VoiceInputEffect_SendSearchToBrowser")
+        VoiceInputEffect_SendSearchToBrowser(Content, Engine)
 }
 SwitchToChineseIME(*) {
     try {
@@ -3252,3 +2456,6 @@ UriEncode(Uri) {
         return Uri
     }
 }
+
+; 与 Module 同目录加载，避免主脚本漏 #Include 导致 CLI 未注册
+#Include VoiceInputCliEffects.ahk

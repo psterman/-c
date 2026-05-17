@@ -1,7 +1,49 @@
-﻿; ConfigWebViewModule.ahk 鈥?璁剧疆涓績 WebView 瀹夸富涓庢秷鎭ˉ锛堢敱涓昏剼鏈?#Include锛?
+; ConfigWebViewModule.ahk 鈥?璁剧疆涓績 WebView 瀹夸富涓庢秷鎭ˉ锛堢敱涓昏剼鏈?#Include锛?
 ; 渚濊禆锛歐ebView2銆乄MActivateChain銆丣xon銆佷富鑴氭湰鍏ㄥ眬涓?BuildAppLocalUrl / WebView_DumpJson 绛夈€?
 
 global ConfigWebViewNavFallbackTried := false
+
+ConfigWebView_StaleDomain(pathKey) {
+    return "config:" . Trim(String(pathKey))
+}
+
+ConfigWebView_MarkLatestReq(pathKey, reqId) {
+    k := Trim(String(pathKey))
+    rid := Trim(String(reqId))
+    if (k = "" || rid = "")
+        return
+    if FuncExists("AsyncGuardrails_UpdateLatest")
+        AsyncGuardrails_UpdateLatest(ConfigWebView_StaleDomain(k), rid)
+}
+
+ConfigWebView_LogStaleDrop(pathKey, reqId) {
+    try CoreAsyncHttp_Log("config_drop_stale_req", "path=" . String(pathKey) . " req_id=" . String(reqId))
+}
+
+ConfigWebView_ShouldDropReq(pathKey, reqId) {
+    k := Trim(String(pathKey))
+    rid := Trim(String(reqId))
+    if (k = "" || rid = "")
+        return false
+    if FuncExists("AsyncGuardrails_ShouldDropStale")
+        return AsyncGuardrails_ShouldDropStale(ConfigWebView_StaleDomain(k), rid)
+    return false
+}
+
+ConfigWebView_HttpJsonAsync(method, url, body := "", callback := 0, reqId := 0) {
+    cb := IsObject(callback) ? callback : 0
+    rid := Trim(String(reqId))
+    pathKey := String(url)
+    if RegExMatch(pathKey, "://[^/]+(/.*)$", &m)
+        pathKey := m[1]
+    if (rid != "")
+        ConfigWebView_MarkLatestReq(pathKey, rid)
+    HttpJsonAsync(method, url, body, (resp) => (
+        (rid != "" && ConfigWebView_ShouldDropReq(pathKey, rid))
+            ? (ConfigWebView_LogStaleDrop(pathKey, rid), 0)
+            : (cb ? cb.Call(resp) : 0)
+    ), Map("timeoutMs", 2600, "reqId", reqId, "tag", "cfg_http_json"))
+}
 
 ConfigWebView_HostAlive() {
     global GuiID_ConfigGUI
@@ -324,13 +366,6 @@ ConfigWebView_HttpSearchCoreJson(method, path, body := "") {
 ConfigWebView_HttpSearchCoreJsonAsync(method, path, body := "", callback := 0, reqId := 0) {
     url := "http://127.0.0.1:8080" . path
     ConfigWebView_HttpJsonAsync(method, url, body, callback, reqId)
-}
-
-ConfigWebView_HttpJsonAsync(method, url, body := "", callback := 0, reqId := 0) {
-    cb := IsObject(callback) ? callback : 0
-    HttpJsonAsync(method, url, body, (resp) => (
-        cb ? cb.Call(resp) : 0
-    ), Map("timeoutMs", 2600, "reqId", reqId, "tag", "cfg_http_json"))
 }
 
 ConfigWebView_HealthProbeAsync(callback := 0) {

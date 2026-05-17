@@ -22,6 +22,46 @@ global ClipboardFTS5DB := 0  ; SQLite FTS5 数据库对象
 ; 获取主脚本目录（主脚本会在包含此模块前定义 MainScriptDir）
 global ClipboardFTS5DBPath := (IsSet(MainScriptDir) ? MainScriptDir : A_ScriptDir) "\Clipboard.db"  ; 数据库文件路径
 
+; ===================== 启动 SQL 批处理（核心 DDL）=====================
+ClipboardFTS5_GetStartupSqlStatements() {
+    sql := []
+    sql.Push("PRAGMA journal_mode = WAL;")
+    sql.Push(
+        "CREATE TABLE IF NOT EXISTS ClipMain ("
+        . "ID INTEGER PRIMARY KEY AUTOINCREMENT, "
+        . "Content TEXT, "
+        . "SourceApp TEXT, "
+        . "DataType TEXT, "
+        . "CharCount INTEGER, "
+        . "Timestamp DATETIME DEFAULT (datetime('now', 'localtime')), "
+        . "ImagePath TEXT, "
+        . "ThumbnailData BLOB, "
+        . "IsFavorite INTEGER DEFAULT 0)"
+    )
+    sql.Push(
+        "CREATE VIRTUAL TABLE IF NOT EXISTS ClipboardHistory USING fts5("
+        . "Content, SourceApp, DataType, LastCopyTime UNINDEXED, SourcePath UNINDEXED, "
+        . "IconPath UNINDEXED, CharCount UNINDEXED, Timestamp UNINDEXED, ImagePath UNINDEXED, "
+        . "IsFavorite UNINDEXED, CopyCount UNINDEXED, tokenize='unicode61')"
+    )
+    sql.Push("CREATE INDEX IF NOT EXISTS idx_clipmain_timestamp ON ClipMain(Timestamp DESC)")
+    sql.Push("CREATE INDEX IF NOT EXISTS idx_clipmain_datatype ON ClipMain(DataType)")
+    sql.Push("CREATE INDEX IF NOT EXISTS idx_clipmain_isfavorite ON ClipMain(IsFavorite)")
+    return sql
+}
+
+ClipboardFTS5_RegisterStartupSql() {
+    static registered := false
+    if (registered)
+        return
+    if !FuncExists("StartupSql_Register")
+        return
+    StartupSql_Register(ClipboardFTS5_GetStartupSqlStatements(), "fts5_schema", 8, 20)
+    registered := true
+}
+
+ClipboardFTS5_RegisterStartupSql()
+
 ; ===================== 数据库初始化 =====================
 ; 创建 Clipboard.db 数据库，开启 WAL 模式，创建 FTS5 虚拟表
 InitClipboardFTS5DB() {
@@ -47,32 +87,13 @@ InitClipboardFTS5DB() {
             return false
         }
         
-        ; 3. 开启 WAL 模式以支持并发读写
-        SQL := "PRAGMA journal_mode = WAL;"
-        if (!ClipboardFTS5DB.Exec(SQL)) {
-            MsgBox("开启 WAL 模式失败: " . ClipboardFTS5DB.ErrorMsg, "数据库初始化错误", "IconX")
-            ClipboardFTS5DB.CloseDB()
-            ClipboardFTS5DB := 0
-            return false
-        }
-        
-        ; 4. 创建主表 ClipMain（存储完整数据）
-        SQL := "CREATE TABLE IF NOT EXISTS ClipMain (" .
-               "ID INTEGER PRIMARY KEY AUTOINCREMENT, " .
-               "Content TEXT, " .
-               "SourceApp TEXT, " .
-               "DataType TEXT, " .
-               "CharCount INTEGER, " .
-               "Timestamp DATETIME DEFAULT (datetime('now', 'localtime')), " .
-               "ImagePath TEXT, " .
-               "ThumbnailData BLOB, " .
-               "IsFavorite INTEGER DEFAULT 0)"
-        
-        if (!ClipboardFTS5DB.Exec(SQL)) {
-            MsgBox("创建主表失败: " . ClipboardFTS5DB.ErrorMsg, "数据库初始化错误", "IconX")
-            ClipboardFTS5DB.CloseDB()
-            ClipboardFTS5DB := 0
-            return false
+        if FuncExists("StartupSql_RunAll") {
+            ClipboardFTS5_RegisterStartupSql()
+            batchRes := StartupSql_RunAll(ClipboardFTS5DB)
+            try {
+                if FuncExists("NMER_Log")
+                    NMER_Log("startup", "sql_batch_done", "label=fts5_schema batches=" . batchRes["batches"] . " total=" . batchRes["total"])
+            }
         }
         
         ; 4.1 添加新字段（如果表已存在，使用 ALTER TABLE）
@@ -165,28 +186,6 @@ InitClipboardFTS5DB() {
             ; 忽略错误，继续执行
         }
         
-        ; 5. 创建 FTS5 虚拟表（用于高性能全文搜索）
-        ; 使用 unicode61 分词器以完美支持中文搜索
-        SQL := "CREATE VIRTUAL TABLE IF NOT EXISTS ClipboardHistory USING fts5(" .
-               "Content, " .
-               "SourceApp, " .
-               "DataType, " .
-               "LastCopyTime UNINDEXED, " .
-               "SourcePath UNINDEXED, " .
-               "IconPath UNINDEXED, " .
-               "CharCount UNINDEXED, " .
-               "Timestamp UNINDEXED, " .
-               "ImagePath UNINDEXED, " .
-               "IsFavorite UNINDEXED, " .
-               "CopyCount UNINDEXED, " .
-               "tokenize='unicode61'" .
-               ")"
-        
-        if (!ClipboardFTS5DB.Exec(SQL)) {
-            ; 如果 FTS5 创建失败，记录但不中断（可能是 SQLite 版本不支持）
-            ; 继续使用普通表
-        }
-        
         ; 5.1 创建触发器，自动同步 ClipMain 表到 FTS5 虚拟表
         ; 先删除旧触发器（如果存在），避免字段不匹配问题
         ClipboardFTS5DB.Exec("DROP TRIGGER IF EXISTS clipmain_fts5_insert")
@@ -262,16 +261,6 @@ InitClipboardFTS5DB() {
                "COALESCE(CopyCount, 1) " .
                "FROM ClipMain " .
                "WHERE ID NOT IN (SELECT rowid FROM ClipboardHistory)"
-        ClipboardFTS5DB.Exec(SQL)
-        
-        ; 6. 创建索引以提升查询性能（针对 ClipMain 表）
-        SQL := "CREATE INDEX IF NOT EXISTS idx_clipmain_timestamp ON ClipMain(Timestamp DESC)"
-        ClipboardFTS5DB.Exec(SQL)
-        
-        SQL := "CREATE INDEX IF NOT EXISTS idx_clipmain_datatype ON ClipMain(DataType)"
-        ClipboardFTS5DB.Exec(SQL)
-        
-        SQL := "CREATE INDEX IF NOT EXISTS idx_clipmain_isfavorite ON ClipMain(IsFavorite)"
         ClipboardFTS5DB.Exec(SQL)
         
         return true

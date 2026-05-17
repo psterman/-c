@@ -1,4 +1,4 @@
-﻿; Niuma Chat 本机 ttyd 终端：端口检测、重试、WebView 回传
+; Niuma Chat 本机 ttyd 终端：端口检测、重试、WebView 回传
 ; 依赖主脚本中的 WebView_QueuePayload、A_ScriptDir
 
 global NiumaTtyd_Port := 7681
@@ -59,16 +59,49 @@ NiumaTtyd_IsHttpReady(waitMs := 1200) {
     return !!g_NiumaTtydHttpHealthy
 }
 
+NiumaTtyd_StaleDomain(action) {
+    return "ttyd:" . Trim(String(action))
+}
+
+NiumaTtyd_MarkLatestReq(action, reqId) {
+    a := Trim(String(action))
+    rid := Trim(String(reqId))
+    if (a = "" || rid = "")
+        return
+    if FuncExists("AsyncGuardrails_UpdateLatest")
+        AsyncGuardrails_UpdateLatest(NiumaTtyd_StaleDomain(a), rid)
+}
+
+NiumaTtyd_ShouldDropReq(action, reqId) {
+    a := Trim(String(action))
+    rid := Trim(String(reqId))
+    if (a = "" || rid = "")
+        return false
+    if FuncExists("AsyncGuardrails_ShouldDropStale")
+        return AsyncGuardrails_ShouldDropStale(NiumaTtyd_StaleDomain(a), rid)
+    return false
+}
+
+NiumaTtyd_LogStaleDrop(action, reqId) {
+    try CoreAsyncHttp_Log("ttyd_drop_stale_req", "action=" . String(action) . " req_id=" . String(reqId))
+}
+
 NiumaTtyd_IsHttpReadyAsync(cb, waitMs := 1200, reqId := 0) {
     global g_NiumaTtydHttpProbeInflight
     if g_NiumaTtydHttpProbeInflight
         return 0
     g_NiumaTtydHttpProbeInflight := true
     u := NiumaTtyd_BaseUrl()
+    rid := Trim(String(reqId))
+    act := "http_probe"
+    if (rid != "")
+        NiumaTtyd_MarkLatestReq(act, rid)
     opts := Map("timeoutMs", Integer(waitMs), "receiveTimeoutMs", Integer(waitMs), "tag", "ttyd_http_ready", "reqId", reqId)
     HttpGetAsync(u, (ret) => (
-        NiumaTtyd_OnHttpProbeDone((ret is Map) && ret["status"] >= 200 && ret["status"] < 500),
-        cb.Call((ret is Map) && ret["status"] >= 200 && ret["status"] < 500, ret)
+        (rid != "" && NiumaTtyd_ShouldDropReq(act, rid))
+            ? (NiumaTtyd_LogStaleDrop(act, rid), 0)
+            : (NiumaTtyd_OnHttpProbeDone((ret is Map) && ret["status"] >= 200 && ret["status"] < 500),
+                cb.Call((ret is Map) && ret["status"] >= 200 && ret["status"] < 500, ret))
     ), opts)
 }
 
@@ -354,6 +387,8 @@ NiumaTtyd_DeferredOpenJob(reqId := "") {
     global g_FTB_WV2
     wv2 := g_FTB_WV2
     rid := String(reqId)
+    if (rid != "")
+        NiumaTtyd_MarkLatestReq("open", rid)
     NiumaTtyd_EmitStatus(wv2, "starting", rid, "starting ttyd")
     if !FileExist(NiumaTtyd_ExePath()) {
         NiumaTtyd_NotifyWeb(wv2, false, "missing ttyd.exe", "", rid)
@@ -361,9 +396,11 @@ NiumaTtyd_DeferredOpenJob(reqId := "") {
     }
     NiumaTtyd_EmitStatus(wv2, "probing", rid, "probing ttyd")
     NiumaTtyd_EnsureReadyAsync((ok, reason) => (
-        ok
-            ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl(), rid)
-            : NiumaTtyd_NotifyWeb(wv2, false, "20s ready timeout: " . reason, "", rid)
+        (rid != "" && NiumaTtyd_ShouldDropReq("open", rid))
+            ? (NiumaTtyd_LogStaleDrop("open", rid), 0)
+            : (ok
+                ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl(), rid)
+                : NiumaTtyd_NotifyWeb(wv2, false, "20s ready timeout: " . reason, "", rid))
     ), 20000)
 }
 
@@ -371,6 +408,8 @@ NiumaTtyd_DeferredRestartJob(reqId := "") {
     global g_FTB_WV2
     wv2 := g_FTB_WV2
     rid := String(reqId)
+    if (rid != "")
+        NiumaTtyd_MarkLatestReq("restart", rid)
     NiumaTtyd_EmitStatus(wv2, "starting", rid, "restarting ttyd")
     if !FileExist(NiumaTtyd_ExePath()) {
         NiumaTtyd_NotifyWeb(wv2, false, "missing ttyd.exe", "", rid)
@@ -378,9 +417,11 @@ NiumaTtyd_DeferredRestartJob(reqId := "") {
     }
     try Run(A_ComSpec . ' /c "taskkill /F /IM ttyd.exe 2>nul"', , "Hide")
     SetTimer((*) => NiumaTtyd_EnsureReadyAsync((ok, reason) => (
-        ok
-            ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl(), rid)
-            : NiumaTtyd_NotifyWeb(wv2, false, "restart failed: " . reason, "", rid)
+        (rid != "" && NiumaTtyd_ShouldDropReq("restart", rid))
+            ? (NiumaTtyd_LogStaleDrop("restart", rid), 0)
+            : (ok
+                ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl(), rid)
+                : NiumaTtyd_NotifyWeb(wv2, false, "restart failed: " . reason, "", rid))
     ), 25000), -500)
 }
 

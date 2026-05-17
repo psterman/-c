@@ -102,6 +102,16 @@ if (-not $SkipRecovery) {
     }
 }
 
+$four = Join-Path $Root "scripts\ValidateFourRefactors.ps1"
+if (Test-Path $four) {
+    & powershell -ExecutionPolicy Bypass -File $four -Root $Root
+    if ($LASTEXITCODE -ne 0) {
+        Write-Output "RESULT=FAIL stage=validate_four_refactors"
+        exit 1
+    }
+}
+
+$fields["four_refactors"] = "PASS"
 Write-Locked -Fields $fields
 Write-Output "written=$locked"
 Get-Content -LiteralPath $locked -Encoding UTF8

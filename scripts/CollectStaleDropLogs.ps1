@@ -12,6 +12,9 @@ if ([string]::IsNullOrWhiteSpace($LogPath)) {
 
 $patterns = @(
     "cloudplayer_drop_stale_req",
+    "config_drop_stale_req",
+    "ttyd_drop_stale_req",
+    "cp_drop_stale_req",
     "async_http_cancelled",
     "async_http_retrying",
     "voice_fsm_reject"

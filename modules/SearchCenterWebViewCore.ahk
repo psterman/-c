@@ -756,7 +756,7 @@ SCWV_OnCreated(ctrl) {
     ApplyWebView2PerformanceSettings(g_SCWV_WV2)
     WebView2_RegisterHostBridge(g_SCWV_WV2)
 
-    g_SCWV_WV2.add_WebMessageReceived(SCWV_OnWebMessage)
+    try g_SCWV_WV2.add_WebMessageReceived(SCWV_OnWebMessage)
     try g_SCWV_WV2.add_NavigationCompleted(SCWV_OnNavigationCompleted)
     try g_SCWV_WV2.add_NavigationStarting(SCWV_OnNavigationStarting)
 
@@ -4347,8 +4347,9 @@ _SCWV_PathToWebAssetUrl(path) {
     } else {
         scriptRootWithSlash := scriptRoot . "/"
         if (SubStr(normalized, 1, StrLen(scriptRootWithSlash)) = scriptRootWithSlash) {
-            relativePath := SubStr(normalized, StrLen(scriptRootWithSlash) + 1)
-            resUrl := BuildAppAssetUrl(relativePath)
+            relativePath := StrReplace(SubStr(normalized, StrLen(scriptRootWithSlash) + 1), "\", "/")
+            ; Virtual host 映射到 A_ScriptDir：lib/images、aiicons 等应直链，勿加 assets/ 前缀
+            resUrl := BuildAppLocalUrl(relativePath)
         }
     }
 
@@ -4539,12 +4540,7 @@ _SCWV_ToggleEngine(EngineValue) {
         SearchCenterSelectedEngines := []
 
     idx := ArrayContainsValue(SearchCenterSelectedEngines, EngineValue)
-    if (CategoryKey = "cli") {
-        if (idx > 0)
-            SearchCenterSelectedEngines.RemoveAt(idx)
-        else
-            SearchCenterSelectedEngines := [EngineValue]
-    } else if (idx > 0) {
+    if (idx > 0) {
         SearchCenterSelectedEngines.RemoveAt(idx)
     } else {
         SearchCenterSelectedEngines.Push(EngineValue)

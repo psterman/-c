@@ -198,7 +198,24 @@ class WebView2 {
 						throw TypeError('Handler function requires 2 parameters.')
 					handler := WebView2.TypedHandler(handler, ObjFromPtrAddRef(pcls), ea)
 				}
-				return method(this, handler)
+				try {
+					return method(this, handler)
+				} catch as e {
+					msg := ""
+					try msg := e.Message
+					catch {
+						msg := String(e)
+					}
+					try OutputDebug("[WebView2] add_handler failed: " . msg)
+					catch {
+					}
+					try {
+						if FuncExists("NMER_Log")
+							NMER_Log("webview2", "add_handler_fail", msg)
+					} catch {
+					}
+					return 0
+				}
 			}
 		}
 		__New(ptr := 0) => ptr && (ObjAddRef(ptr), this.Ptr := ptr)

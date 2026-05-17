@@ -12,6 +12,11 @@ VoiceFSM_State() {
     return g_VoiceFSM["state"]
 }
 
+VoiceInput_IsSearchFsmState(st := "") {
+    s := (st != "") ? String(st) : VoiceFSM_State()
+    return (s = "search_listening" || s = "search_paused" || s = "search_processing")
+}
+
 VoiceFSM_Log(msg) {
     try CoreAsyncHttp_Log("voice_fsm", String(msg))
 }
@@ -56,22 +61,39 @@ VoiceFSM_ProcessEvent(event, payload := 0) {
         case "start_request":
             if (oldState = "idle" || oldState = "paused")
                 newState := "listening"
+        case "search_open":
+            if (oldState = "idle")
+                newState := "search_listening"
+        case "search_stop":
+            if VoiceInput_IsSearchFsmState(oldState)
+                newState := "idle"
+        case "search_listen_start":
+            if (oldState = "search_listening" || oldState = "idle")
+                newState := "search_listening"
         case "pause_request":
             if (oldState = "listening")
                 newState := "paused"
+            else if (oldState = "search_listening")
+                newState := "search_paused"
         case "resume_request":
             if (oldState = "paused")
                 newState := "listening"
+            else if (oldState = "search_paused")
+                newState := "search_listening"
         case "stop_request":
             newState := "idle"
         case "processing_begin":
-            if (oldState = "listening" || oldState = "paused")
+            if VoiceInput_IsSearchFsmState(oldState)
+                newState := "search_processing"
+            else if (oldState = "listening" || oldState = "paused")
                 newState := "processing"
             else if (oldState = "idle" && g_VoiceFSMSearchRun)
-                newState := "processing"
+                newState := "search_processing"
         case "processing_done":
-            if (oldState = "processing")
-                newState := g_VoiceFSMSearchRun ? "idle" : "listening"
+            if (oldState = "search_processing")
+                newState := "search_listening"
+            else if (oldState = "processing")
+                newState := "listening"
         case "error":
             newState := "error"
         case "reset":

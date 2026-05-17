@@ -449,6 +449,34 @@ function Invoke-AgentPrompt {
             }
             break
         }
+        "ollama_cli" {
+            $model = $env:OLLAMA_MODEL
+            if ([string]::IsNullOrWhiteSpace($model)) {
+                $model = "llama3.2"
+            }
+            & $Executable run $model $Prompt
+            break
+        }
+        "claude_cli" {
+            & $Executable -p $Prompt
+            break
+        }
+        "deepseek_cli" {
+            & $Executable $Prompt
+            break
+        }
+        "kimi_cli" {
+            & $Executable -p $Prompt
+            break
+        }
+        "zhipu_cli" {
+            & $Executable $Prompt
+            break
+        }
+        "copilot_cli" {
+            & $Executable -p $Prompt
+            break
+        }
         "openclaw_cli" {
             $env:OPENCLAW_STATE_DIR = $OpenClawStateDir
             $env:OPENCLAW_CONFIG_PATH = $OpenClawConfigPath
