@@ -389,6 +389,14 @@ CloudPlayer_OnWebMessage(sender, args) {
         SetTimer(CloudPlayer_DeferredAdminToken.Bind(reqId), -10)
         return
     }
+    if (typ = "cloudplayer_upload_pick") {
+        remoteDir := payload.Has("path") ? String(payload["path"]) : "/"
+        token := payload.Has("token") ? Trim(String(payload["token"])) : ""
+        reqId := payload.Has("reqId") ? String(payload["reqId"]) : requestId
+        CloudPlayer_MarkLatestReq("upload_pick", reqId)
+        SetTimer(CloudPlayer_DeferredUploadPick.Bind(reqId, remoteDir, token), -10)
+        return
+    }
 
     if (typ = "cloudplayer_fs_list") {
         path := payload.Has("path") ? String(payload["path"]) : "/"
@@ -5816,6 +5824,194 @@ CloudPlayer_DownloadViaUrlMon(url, outPath, expectedSize := 0) {
     if (exp > 1024 && sz < Floor(exp * 0.2))
         return false
     return true
+}
+
+CloudPlayer_DeferredUploadPick(reqId, remoteDir, token := "") {
+    global g_CloudPlayerWv2, g_CloudPlayerApiBase, g_CloudPlayerGui
+    rid := String(reqId)
+    dir := CloudPlayer_NormalizeRemotePath(remoteDir)
+    selected := ""
+    wasTopMost := false
+    try {
+        if (g_CloudPlayerGui && g_CloudPlayerGui.Hwnd) {
+            exStyle := WinGetExStyle("ahk_id " . g_CloudPlayerGui.Hwnd)
+            wasTopMost := !!(exStyle & 0x00000008)
+            if (wasTopMost)
+                WinSetAlwaysOnTop(0, "ahk_id " . g_CloudPlayerGui.Hwnd)
+        }
+    } catch {
+        wasTopMost := false
+    }
+    try selected := FileSelect("M3",, "Select file(s) to upload", "All Files (*.*)")
+    catch {
+        selected := ""
+    }
+    try {
+        if (wasTopMost && g_CloudPlayerGui && g_CloudPlayerGui.Hwnd)
+            WinSetAlwaysOnTop(1, "ahk_id " . g_CloudPlayerGui.Hwnd)
+    } catch {
+    }
+    if !selected {
+        CloudPlayer_QueuePayload(Map(
+            "type", "cloudplayer_upload_result",
+            "ok", false,
+            "path", dir,
+            "message", "cancelled",
+            "phase", "cancelled"
+        ), rid, "cancelled", "cancelled")
+        return
+    }
+    files := []
+    if (selected is Array) {
+        for _, p in selected {
+            pp := Trim(String(p))
+            if (pp != "")
+                files.Push(pp)
+        }
+    } else {
+        one := Trim(String(selected))
+        if (one != "")
+            files.Push(one)
+    }
+    if (files.Length = 0) {
+        CloudPlayer_QueuePayload(Map(
+            "type", "cloudplayer_upload_result",
+            "ok", false,
+            "path", dir,
+            "message", "no file selected"
+        ), rid, "error", "empty_selection")
+        return
+    }
+
+    okCount := 0
+    failCount := 0
+    lastErr := ""
+    total := files.Length
+    loop files.Length {
+        lp := String(files[A_Index])
+        nm := ""
+        try nm := RegExReplace(lp, "^.*[\\/]")
+        catch {
+            nm := "file_" . A_Index
+        }
+        CloudPlayer_QueuePayload(Map(
+            "type", "cloudplayer_upload_progress",
+            "path", dir,
+            "name", nm,
+            "message", "Uploading " . nm . " (" . A_Index . "/" . total . ")",
+            "index", A_Index,
+            "total", total,
+            "percent", Floor((A_Index - 1) * 100 / total)
+        ), rid, "progress", "")
+        upRet := CloudPlayer_UploadFileViaFsPut(lp, dir, token)
+        if (upRet["ok"]) {
+            okCount += 1
+        } else {
+            failCount += 1
+            lastErr := String(upRet.Has("error") ? upRet["error"] : "upload failed")
+        }
+    }
+    doneMsg := "uploaded " . okCount . " file(s)"
+    if (failCount > 0)
+        doneMsg .= ", failed " . failCount . ": " . lastErr
+    CloudPlayer_QueuePayload(Map(
+        "type", "cloudplayer_upload_result",
+        "ok", (okCount > 0),
+        "path", dir,
+        "message", doneMsg,
+        "successCount", okCount,
+        "failCount", failCount
+    ), rid, (okCount > 0) ? "done" : "error", (okCount > 0) ? "" : "upload_failed")
+}
+
+CloudPlayer_UploadFileViaFsPut(localPath, remoteDir, token := "") {
+    global g_CloudPlayerApiBase
+    ret := Map("ok", false, "status", 0, "error", "", "text", "")
+    lp := Trim(String(localPath))
+    if (lp = "" || !FileExist(lp)) {
+        ret["error"] := "local file not found"
+        return ret
+    }
+    fname := ""
+    try fname := RegExReplace(lp, "^.*[\\/]")
+    catch {
+        fname := "upload.bin"
+    }
+    remoteFull := CloudPlayer_CombineRemotePath(remoteDir, fname)
+    encodedRemote := CloudPlayer_UrlEncodeUtf8(remoteFull)
+    url := RTrim(g_CloudPlayerApiBase, "/") . "/api/fs/put"
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        whr.Open("PUT", url, false)
+        whr.SetTimeouts(10000, 10000, 30000, 180000)
+        whr.SetRequestHeader("Accept", "application/json")
+        whr.SetRequestHeader("File-Path", encodedRemote)
+        whr.SetRequestHeader("As-Task", "false")
+        whr.SetRequestHeader("Content-Type", "application/octet-stream")
+        if (Trim(String(token)) != "")
+            whr.SetRequestHeader("Authorization", Trim(String(token)))
+        bin := CloudPlayer_ReadFileBinaryVariant(lp)
+        if !IsObject(bin) {
+            ret["error"] := "read local file failed"
+            return ret
+        }
+        whr.Send(bin)
+        st := 0
+        txt := ""
+        try st := Integer(whr.Status)
+        catch {
+            st := 0
+        }
+        try txt := String(whr.ResponseText)
+        catch {
+            txt := ""
+        }
+        ret["status"] := st
+        ret["text"] := txt
+        if (st >= 200 && st < 300) {
+            ret["ok"] := true
+            if (txt != "") {
+                try {
+                    j := Jxon_Load(txt)
+                    if (j is Map && j.Has("code") && Integer(j["code"]) != 200) {
+                        ret["ok"] := false
+                        ret["error"] := j.Has("message") ? String(j["message"]) : ("code " . Integer(j["code"]))
+                    }
+                } catch {
+                }
+            }
+        } else {
+            ret["error"] := "http " . st
+        }
+        return ret
+    } catch as e {
+        ret["error"] := e.Message
+        return ret
+    }
+}
+
+CloudPlayer_ReadFileBinaryVariant(path) {
+    p := Trim(String(path))
+    if (p = "" || !FileExist(p))
+        return 0
+    ado := 0
+    try {
+        ado := ComObject("ADODB.Stream")
+        ado.Type := 1
+        ado.Open()
+        ado.LoadFromFile(p)
+        ado.Position := 0
+        data := ado.Read()
+        try ado.Close()
+        catch {
+        }
+        return data
+    } catch {
+        try ado.Close()
+        catch {
+        }
+        return 0
+    }
 }
 
 CloudPlayer_TryExtractBodyUrl(whr) {

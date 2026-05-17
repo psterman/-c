@@ -96,22 +96,28 @@ button.ghost{background:#151d2b}
 .path-search-wrap input::placeholder{color:#7f93b5}
 .path-search-wrap input:focus{outline:none}
 .list{flex:1;overflow:auto;padding:8px}
-.left-status{padding:8px 10px;border-top:1px solid var(--line)}
-.item{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:9px 8px;border-radius:10px;border:1px solid transparent}
+.left-status{padding:8px 10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.item{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 8px;border-radius:10px;border:1px solid transparent}
 .item:hover{background:rgba(255,255,255,.03);border-color:#26364f}
 .item.active{border-color:#3c5475;background:rgba(86,136,205,.14)}
 .item.selected{border-color:#486284;background:rgba(86,136,205,.22)}
-.item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.item .meta{color:var(--muted);font-size:12px}
+.item .name{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .meta{color:var(--muted);font-size:12px;display:flex;justify-content:flex-end;white-space:nowrap;flex:none}
+.item .meta .chip{border:1px solid #2a3a52;border-radius:999px;padding:1px 8px;min-width:54px;text-align:center;background:#121a27;color:#a9bdd8;font-size:11px;line-height:1.25}
 .ico{display:inline-flex;align-items:center;justify-content:center;color:#b8c9e8}
 .ico.dir{color:#ffd18c}
 .row-provider-ico{width:16px;height:16px;object-fit:contain;display:block}
 .empty{padding:16px;color:var(--muted)}
 .pin{color:#ffb24c;margin-right:4px}
+.status-progress{height:6px;border-radius:999px;background:#1a2536;border:1px solid #2a3a52;overflow:hidden}
+.status-progress .bar{height:100%;width:0%;background:linear-gradient(90deg,#ff8f35,#ffc06f);transition:width .18s ease}
 
 .right{display:flex;flex-direction:column;padding:10px;gap:10px;min-width:0}
 .playbar{display:flex;gap:8px}
 .playbar input{flex:1}
+#fileInfoPanel{border:1px solid #293245;border-radius:12px;background:#0b111b;padding:10px 12px}
+#fileInfoPanel .tit{font-size:12px;color:#8ea2c8;margin-bottom:6px}
+#fileInfoPanel .ln{font-size:12px;color:#d8e2f4;line-height:1.55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1px solid #293245;border-radius:12px}
 #artPlayerWrap{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1px solid #293245;border-radius:12px;overflow:hidden}
 #docPreview{width:100%;height:100%;min-height:320px;flex:1;background:#0a0f18;border:1px solid #293245;border-radius:12px;overflow:auto;padding:14px;line-height:1.7}
@@ -287,7 +293,9 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
           <button id="btnBack" class="navbtn ghost" title="后退">后退</button>
           <button id="btnForward" class="navbtn ghost" title="前进">前进</button>
           <button id="btnUp" class="navbtn ghost" title="上级目录">上级目录</button>
+          <button id="btnUpload" class="navbtn ghost" title="上传文件">上传</button>
           <input id="pathInput" class="hidden" value="/">
+          <input id="uploadInput" class="hidden" type="file" multiple>
           <button id="btnLoad" class="hidden">加载</button>
         </div>
         <div class="pathbar-search">
@@ -299,10 +307,14 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
         </div>
       </div>
       <div id="fileList" class="list"></div>
-      <div class="left-status"><div id="currentInfo" class="hint">未选择文件。</div></div>
+      <div class="left-status">
+        <div id="currentInfo" class="hint">未选择文件。</div>
+        <div id="statusProgress" class="status-progress hidden"><div id="statusProgressBar" class="bar"></div></div>
+      </div>
     </div>
     <div class="card right">
       <div class="playbar"><input id="manualUrl" placeholder="粘贴视频 URL（支持直链 / B站 / YouTube）"><button id="btnPlayUrl">播放 URL</button><div class="player-mode"><button id="btnModeNative" class="ghost mode-btn active">原生</button><button id="btnModeArt" class="ghost mode-btn">ArtPlayer</button></div></div>
+      <div id="fileInfoPanel"><div class="tit">文件信息</div><div id="fileInfoBody" class="ln">未选择文件。</div></div>
       <video id="video" controls playsinline preload="metadata"></video>
       <div id="artPlayerWrap" class="hidden"></div>
       <div id="docPreview" class="hidden"></div>
@@ -407,6 +419,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   var lastSmartLoginError = "";
   var pendingDownloadReqId = "";
   var pendingImportTaskId = "";
+  var pendingUploadReqId = "";
   // Host protocol gate helpers: enforce request/task affinity and stale drop.
   // Onboarding template for new async events:
   // 1) create pending id var -> 2) extractor -> 3) gate by isCurrentPendingEvent
@@ -446,6 +459,13 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   function isCurrentDownloadEvent(data){
     var id = downloadEventReqId(data);
     return isCurrentPendingEvent(pendingDownloadReqId, id);
+  }
+  function uploadEventReqId(data){
+    return getEventReqId(data);
+  }
+  function isCurrentUploadEvent(data){
+    var id = uploadEventReqId(data);
+    return isCurrentPendingEvent(pendingUploadReqId, id);
   }
   var navBackStack = [];
   var navForwardStack = [];
@@ -747,6 +767,19 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   }
 
   function text(node, v){ node.textContent = v == null ? "" : String(v); }
+  function setStatusProgress(percent){
+    var wrap = $("statusProgress"), bar = $("statusProgressBar");
+    if(!wrap || !bar) return;
+    var p = Number(percent || 0);
+    if(!isFinite(p) || p <= 0){
+      wrap.classList.add("hidden");
+      bar.style.width = "0%";
+      return;
+    }
+    if(p > 100) p = 100;
+    wrap.classList.remove("hidden");
+    bar.style.width = p + "%";
+  }
   function parsePathSearchInput(raw){
     var s = String(raw || "");
     var parts = s.split("|");
@@ -947,6 +980,14 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     return false;
   }
   function fmtSize(size){ var n = Number(size || 0); if (!isFinite(n) || n <= 0) return ""; var u=["B","KB","MB","GB","TB"], i=0; while(n>=1024 && i<u.length-1){n/=1024;i++;} return (i===0?Math.round(n):n.toFixed(1))+" "+u[i]; }
+  function formatModifiedForDisplay(s){
+    var raw = String(s || "").trim();
+    if(!raw) return "-";
+    var out = raw.replace("T", " ");
+    out = out.replace(/\.\d+/, "");
+    out = out.replace(/([+-]\d{2}:\d{2}|Z)$/i, "");
+    return out.trim() || raw;
+  }
   function escHtml(s){ return String(s==null?"":s).replace(/[&<>\"]/g, function(ch){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch] || ch; }); }
   function splitPath(full){ var p=normPath(full); if(p==="/") return { dir:"/", name:"" }; var i=p.lastIndexOf("/"); return { dir:i<=0?"/":p.slice(0,i), name:p.slice(i+1) }; }
   function parentPath(p){ var n=normPath(p||"/"); if(n==="/") return "/"; var i=n.lastIndexOf("/"); if(i<=0) return "/"; return n.slice(0,i); }
@@ -2005,7 +2046,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     return "";
   }
   function rowHtml(it){
-    var ico=it.isDir?"DIR":"FILE", size=it.isDir?"":fmtSize(it.size), pin=isPinned(it.path)?'<span class="pin">*</span>':"";
+    var ico=it.isDir?"DIR":"FILE", size=it.isDir?"":(fmtSize(it.size) || "-"), pin=isPinned(it.path)?'<span class="pin">*</span>':"";
     var icoHtml = escHtml(ico);
     if(it.isDir && normPath(state.path) === "/"){
       var pKey = providerByMountPath(it.path);
@@ -2013,7 +2054,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
         icoHtml = '<img class="row-provider-ico" src="' + escHtml(providerMap[pKey].icon) + '" alt="">';
       }
     }
-    return '<div class="item" data-path="'+encodeURIComponent(it.path)+'" data-dir="'+(it.isDir?"1":"0")+'"><span class="ico '+(it.isDir?"dir":"file")+'">'+icoHtml+'</span><span class="name">'+pin+escHtml(it.name)+'</span><span class="meta">'+escHtml(size)+'</span></div>';
+    return '<div class="item" data-path="'+encodeURIComponent(it.path)+'" data-dir="'+(it.isDir?"1":"0")+'"><span class="ico '+(it.isDir?"dir":"file")+'">'+icoHtml+'</span><span class="name">'+pin+escHtml(it.name)+'</span><span class="meta">'+(size?('<span class="chip">'+escHtml(size)+'</span>'):'')+'</span></div>';
   }
   function renderVirtualWindow(force){
     var wrap = $("fileList");
@@ -2043,9 +2084,9 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     virtualEnd = -1;
     if(!rows.length){
       if(normPath(state.path) === "/"){
-        wrap.innerHTML='<div class="empty">Top directory. Choose a cloud tab above to browse files.</div>';
+        wrap.innerHTML='<div class="empty">根目录。请点击上方云盘标签进入对应挂载。</div>';
       }else{
-        wrap.innerHTML='<div class="empty">No files in this folder, or access is currently unavailable.</div>';
+        wrap.innerHTML='<div class="empty">该目录暂无文件，或当前无访问权限。</div>';
       }
       return;
     }
@@ -2252,6 +2293,122 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     }
     text($("currentInfo"), (uiLang === "en" ? "Create folder failed: " : "\u65b0\u5efa\u5931\u8d25\uff1a") + ((ret.json && ret.json.message) || (ret.transport && ret.transport.error) || "unknown error"));
   }
+  async function uploadOneFileToPath(targetDir, file, token){
+    var ab = normalizeApiBase(($("apiBase") && $("apiBase").value) || state.apiBase);
+    state.apiBase = ab;
+    if($("apiBase")) $("apiBase").value = ab;
+    var tk = String(token || "").trim();
+    var form = new FormData();
+    form.append("path", normPath(targetDir || state.path || "/"));
+    form.append("file", file, file && file.name ? file.name : "upload.bin");
+    function uploadByXhr(){
+      return new Promise(function(resolve){
+        try{
+          var xhr = new XMLHttpRequest();
+          xhr.open("POST", ab.replace(/\/+$/,"") + "/api/fs/form", true);
+          xhr.timeout = 25000;
+          if(tk) xhr.setRequestHeader("Authorization", tk);
+          xhr.onload = function(){
+            var bodyText = String(xhr.responseText || "");
+            var json = null;
+            try{ json = JSON.parse(bodyText || "{}"); }catch(_){}
+            resolve({ ok:xhr.status >= 200 && xhr.status < 300, status:xhr.status, json:json, bodyText:bodyText, channel:"xhr" });
+          };
+          xhr.onerror = function(){
+            resolve({ ok:false, status:0, json:null, bodyText:"", error:"xhr upload failed", channel:"xhr" });
+          };
+          xhr.ontimeout = function(){
+            resolve({ ok:false, status:0, json:null, bodyText:"", error:"xhr upload timeout", channel:"xhr" });
+          };
+          xhr.send(form);
+        }catch(e){
+          resolve({ ok:false, status:0, json:null, bodyText:"", error:(e && e.message) ? e.message : "xhr upload failed", channel:"xhr" });
+        }
+      });
+    }
+    try{
+      var ctl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+      var timer = ctl ? setTimeout(function(){ try{ ctl.abort(); }catch(_){} }, 20000) : 0;
+      var res = await fetch(ab.replace(/\/+$/,"") + "/api/fs/form", {
+        method: "POST",
+        headers: tk ? { "Authorization": tk } : {},
+        body: form,
+        signal: ctl ? ctl.signal : undefined
+      });
+      if(timer) clearTimeout(timer);
+      var bodyText = await res.text();
+      var json = null;
+      try{ json = JSON.parse(bodyText || "{}"); }catch(_){}
+      return { ok:res.ok, status:res.status, json:json, bodyText:bodyText, channel:"fetch" };
+    }catch(e){
+      var msg = (e && e.message) ? e.message : "upload fetch failed";
+      var xr = await uploadByXhr();
+      if(xr && (xr.ok || xr.status > 0)) return xr;
+      return { ok:false, status:0, json:null, bodyText:"", error:msg + " (xhr fallback failed)" };
+    }
+  }
+  async function doUploadFiles(files, targetDir){
+    var arr = Array.prototype.slice.call(files || []);
+    if(!arr.length){
+      text($("currentInfo"), uiLang === "en" ? "No file selected." : "未选择文件。");
+      return;
+    }
+    var td = normPath(targetDir || state.path || "/");
+    var liveToken = await ensureLiveToken(3500);
+    var okCount = 0;
+    var failCount = 0;
+    var lastErr = "";
+    function uploadSucceeded(ret){
+      if(!ret) return false;
+      var st = Number(ret.status || 0);
+      var httpOk = st >= 200 && st < 300;
+      var hasJson = !!(ret.json && typeof ret.json === "object");
+      if(hasJson){
+        if(ret.json.code != null && !isNaN(Number(ret.json.code))){
+          return Number(ret.json.code) === 200;
+        }
+        if(ret.json.error === true) return false;
+        if(typeof ret.json.success === "boolean") return !!ret.json.success;
+        if(typeof ret.json.message === "string" && /fail|error|denied|forbidden|invalid/i.test(ret.json.message))
+          return false;
+      }
+      return httpOk;
+    }
+    for(var i=0;i<arr.length;i++){
+      var f = arr[i];
+      text($("currentInfo"), "上传中：" + (f && f.name ? f.name : ("#" + (i + 1))));
+      setStatusProgress(Math.floor((i * 100) / Math.max(1, arr.length)));
+      var ret = await uploadOneFileToPath(td, f, liveToken);
+      var code = Number((ret && ret.json && ret.json.code) || 0);
+      if(ret && (ret.status === 401 || code === 401)){
+        if($("token")) $("token").value = "";
+        state.token = "";
+        liveToken = await ensureLiveToken(3500);
+        ret = await uploadOneFileToPath(td, f, liveToken);
+        code = Number((ret && ret.json && ret.json.code) || 0);
+      }
+      if(uploadSucceeded(ret)){
+        okCount += 1;
+      }else{
+        failCount += 1;
+        var rawHint = "";
+        try{
+          rawHint = String((ret && ret.bodyText) || "").trim();
+          if(rawHint.length > 120) rawHint = rawHint.slice(0, 120) + "...";
+        }catch(_){}
+        lastErr = (ret && ret.json && ret.json.message) || (ret && ret.error) || ("HTTP " + Number((ret && ret.status) || 0) + (rawHint ? (" | " + rawHint) : ""));
+      }
+    }
+    if(okCount > 0){
+      setStatusProgress(100);
+      text($("currentInfo"), "上传完成：成功 " + okCount + " 个" + (failCount ? ("，失败 " + failCount + " 个") : ""));
+      await loadList(td, false, { fromHistory:true, forceRefresh:true });
+      setTimeout(function(){ setStatusProgress(0); }, 700);
+      return;
+    }
+    setStatusProgress(0);
+    text($("currentInfo"), "上传失败：" + (lastErr || "未知错误"));
+  }
   async function doPasteInto(targetDir){
     if(!copiedEntry){ text($("currentInfo"), "Paste failed: clipboard is empty."); return; }
     var sp = splitPath(copiedEntry.path);
@@ -2378,6 +2535,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   }
   function showEntryInfo(entry){
     if(!entry) return;
+    updateRightFileInfo(entry);
     var lines = [
       "Name: " + entry.name,
       "Path: " + entry.path,
@@ -2387,6 +2545,22 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       "Pinned: " + (isPinned(entry.path) ? "Yes" : "No")
     ];
     text($("currentInfo"), lines.join(" | "));
+  }
+  function updateRightFileInfo(entry){
+    var box = $("fileInfoBody");
+    if(!box) return;
+    if(!entry){
+      box.textContent = "未选择文件。";
+      return;
+    }
+    var oneLine = [
+      "名称：" + String(entry.name || "-"),
+      "路径：" + String(entry.path || "-"),
+      "类型：" + (entry.isDir ? "文件夹" : "文件"),
+      "大小：" + (entry.isDir ? "-" : (fmtSize(entry.size) || "0 B")),
+      "修改时间：" + formatModifiedForDisplay(entry.modified)
+    ].join(" | ");
+    box.textContent = oneLine;
   }
   async function onContextAction(act){
     var entry = $("ctxMenu")._entry || (selectedEntryPath ? findEntryByPath(selectedEntryPath) : null);
@@ -2435,7 +2609,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     if(!opts.keepSearch) setPathSearchInput(state.path, "");
     else setPathSearchInput(state.path, getCurrentSearchQuery());
     updateCtxMenuMkdirBtn();
-    text($("currentInfo"), "Loading: " + state.path);
+    text($("currentInfo"), "加载中：" + state.path);
     var liveToken = String(($("token") && $("token").value) || state.token || "").trim();
     if(!liveToken){
       var autoTk = await requestAdminToken(2800);
@@ -2485,7 +2659,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     }
     renderList(content, state.path);
     clearSelection(true);
-    text($("currentInfo"), "Loaded " + getVisibleItems().length + " items (" + state.path + ")");
+    text($("currentInfo"), "已加载 " + getVisibleItems().length + " 项（" + state.path + "）");
     if(state.provider) setProviderOnline(state.provider, true);
     else setProviderOnline("root", true);
   }
@@ -3095,7 +3269,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     if($("artPlayerWrap")) $("artPlayerWrap").classList.add("hidden");
     frame.classList.remove("hidden");
     try{ if(frame.src !== activeWebEmbed.url) frame.src = activeWebEmbed.url; }catch(_){ frame.src = activeWebEmbed.url; }
-    text($("currentInfo"), "Playing: " + (title || activeWebEmbed.url) + " [Web Embed]");
+    text($("currentInfo"), "正在播放：" + (title || activeWebEmbed.url) + " [网页嵌入]");
     return true;
   }
   function ensureArtPlayer(){
@@ -3349,7 +3523,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     try{
       var okPdfJs = await renderPdfByPdfJs(blob, entry.name || "PDF Preview");
       if(okPdfJs){
-        text($("currentInfo"), "PDF preview loaded: " + (entry.name || entry.path));
+        text($("currentInfo"), "PDF 预览已加载：" + (entry.name || entry.path));
         return true;
       }
     }catch(_){}
@@ -3360,7 +3534,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     var u = trackPreviewBlob(blob);
     if(!u) return false;
     try{ frame.src = u; }catch(_){ return false; }
-    text($("currentInfo"), "PDF preview loaded: " + (entry.name || entry.path));
+    text($("currentInfo"), "PDF 预览已加载：" + (entry.name || entry.path));
     return true;
   }
   async function previewImageEntry(entry, seq){
@@ -3377,7 +3551,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     if(!u) return false;
     var html = '<div style="display:flex;align-items:center;justify-content:center;min-height:320px;"><img src="' + escHtml(u) + '" alt="' + escHtml(entry.name||"image") + '" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;border:1px solid #2c3b55;"></div>';
     showDocPreview(html, entry.name || "Image Preview");
-    text($("currentInfo"), "Image preview loaded: " + (entry.name || entry.path));
+    text($("currentInfo"), "图片预览已加载：" + (entry.name || entry.path));
     return true;
   }
   async function previewAudioEntry(entry, seq){
@@ -3400,7 +3574,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     v.classList.remove("hidden");
     v.src = u;
     try{ await v.play(); }catch(_){}
-    text($("currentInfo"), "Audio preview loaded: " + (entry.name || entry.path));
+    text($("currentInfo"), "音频预览已加载：" + (entry.name || entry.path));
     return true;
   }
   async function previewTextEntry(entry, seq){
@@ -3428,7 +3602,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       ? renderSimpleMarkdown(txt)
       : ('<pre style="white-space:pre-wrap;word-break:break-word;margin:0;">' + escapeHtmlText(txt) + "</pre>");
     showDocPreview(body, entry.name || "Text Preview");
-    text($("currentInfo"), "Text preview loaded: " + (entry.name || entry.path));
+    text($("currentInfo"), "文本预览已加载：" + (entry.name || entry.path));
     return true;
   }
   function renderArchiveLoading(title, message, percent){
@@ -3460,7 +3634,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     var cached = archivePreviewCache[cacheKey];
     if(cached && Array.isArray(cached.entries) && cached.entries.length && (nowMs - Number(cached.at||0) < 5*60*1000)){
       renderArchiveEntries(entry.name || "Archive Preview", cached.entries);
-      text($("currentInfo"), "Archive preview loaded (cache): " + (entry.name || entry.path));
+      text($("currentInfo"), "压缩包预览已加载（缓存）：" + (entry.name || entry.path));
       return true;
     }
     var progressMsg = "正在连接 OpenList 并准备读取压缩包目录...";
@@ -3608,7 +3782,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
         tryRestoreSeekAfterLoad(lastPlayPath, u);
       }
     }
-    text($("currentInfo"), "Playing: " + (title || u) + (playerMode === "art" ? " [ArtPlayer]" : " [Native]"));
+    text($("currentInfo"), "正在播放：" + (title || u) + (playerMode === "art" ? " [ArtPlayer]" : " [原生]"));
   }
   function onPlaybackError(source){
     if(!lastPlayPath || !lastPlaySourceUrl) return;
@@ -3663,9 +3837,9 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       var okPreview = await previewOfficeEntry(entry);
       if(okPreview) return;
     }
-    text($("currentInfo"), "Resolving stream URL: " + entry.path);
+    text($("currentInfo"), "正在解析播放地址：" + entry.path);
     var link = await resolveFileUrl(entry.path);
-    if(!link || !link.url){ text($("currentInfo"), "Failed to resolve stream URL."); return; }
+    if(!link || !link.url){ text($("currentInfo"), "播放地址解析失败。"); return; }
     lastPlayCandidates = Array.isArray(link.candidates) ? link.candidates : [{ url:link.url, source:link.source||"", headers:(link.headers||{}) }];
     lastPlayCandidateIndex = 0;
     lastPlayPath = entry.path;
@@ -3691,6 +3865,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     selectedEntries = {};
     addSelection(fullPath);
     var entry = findEntryByPath(fullPath) || { path:fullPath, isDir:el.getAttribute("data-dir")==="1", name:splitPath(fullPath).name };
+    updateRightFileInfo(entry);
     if(entry.isDir) return;
     revokePreviewBlobs();
     var seq = beginPreviewSession(entry);
@@ -3710,6 +3885,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     selectedEntries = {};
     addSelection(fullPath);
     var entry = findEntryByPath(fullPath) || { path:fullPath, isDir:el.getAttribute("data-dir")==="1", name:splitPath(fullPath).name };
+    updateRightFileInfo(entry);
     if(entry.isDir){ await loadList(repairFsPath(fullPath)); return; }
     await playEntry(entry);
   }
@@ -3918,15 +4094,57 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       await loadList(next, false, { fromHistory:true });
     });
     $("btnUp").addEventListener("click", function(){ loadList(parentPath(state.path)); });
+    if($("btnUpload")) $("btnUpload").addEventListener("click", function(){
+      var inp = $("uploadInput");
+      var hostBridge = !!(window.chrome && window.chrome.webview && window.chrome.webview.postMessage);
+      if(hostBridge){
+        var reqId = makeReqId("upl");
+        pendingUploadReqId = reqId;
+        text($("currentInfo"), "正在打开宿主文件选择器…");
+        setStatusProgress(5);
+        postHost("cloudplayer_upload_pick", {
+          path: normPath(state.path || "/"),
+          token: String(($("token") && $("token").value) || state.token || "").trim(),
+          reqId: reqId,
+          requestId: reqId
+        });
+        return;
+      }
+      if(!inp){
+        text($("currentInfo"), uiLang === "en" ? "Upload input is unavailable." : "上传控件不可用。");
+        return;
+      }
+      text($("currentInfo"), "请选择要上传的文件…");
+      inp.value = "";
+      inp.click();
+    });
+    if($("uploadInput")) $("uploadInput").addEventListener("change", async function(){
+      var files = $("uploadInput").files;
+      var n = files ? Number(files.length || 0) : 0;
+      if(n <= 0){
+        setStatusProgress(0);
+        text($("currentInfo"), "已取消上传。");
+        return;
+      }
+      setStatusProgress(8);
+      text($("currentInfo"), "已选择 " + n + " 个文件，开始上传…");
+      try{
+        await doUploadFiles(files, state.path);
+      }catch(e){
+        setStatusProgress(0);
+        text($("currentInfo"), "上传失败：" + ((e && e.message) ? e.message : "未知错误"));
+      }
+      try{ $("uploadInput").value = ""; }catch(_){}
+    });
     if($("pathSearchInput")) $("pathSearchInput").addEventListener("input", function(){
       renderList(currentItems.map(function(it){ return it.raw || it; }));
       var vis = getVisibleItems();
-      text($("currentInfo"), "Filtered " + vis.length + " / " + currentItems.length + " items (" + state.path + ")");
+      text($("currentInfo"), "筛选结果 " + vis.length + " / " + currentItems.length + " 项（" + state.path + "）");
     });
     if($("btnSearchClear")) $("btnSearchClear").addEventListener("click", function(){
       setPathSearchInput(state.path, "");
       renderList(currentItems.map(function(it){ return it.raw || it; }));
-      text($("currentInfo"), "Loaded " + currentItems.length + " items (" + state.path + ")");
+      text($("currentInfo"), "已加载 " + currentItems.length + " 项（" + state.path + "）");
     });
     $("btnDashboard").addEventListener("click", function(){ postHost("cloudplayer_open_dashboard"); });
     $("btnRestart").addEventListener("click", function(){ postHost("cloudplayer_restart_openlist"); });
@@ -4167,6 +4385,34 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     }
     return false;
   }
+  function handleUploadHostEvent(data){
+    if(data.type==="cloudplayer_upload_progress"){
+      if(!isCurrentUploadEvent(data)) return true;
+      var umsg = String(data.message || "").trim();
+      var upct = Number(data.percent || 0);
+      setStatusProgress(upct > 0 ? upct : 12);
+      if(umsg) text($("currentInfo"), umsg + (upct > 0 ? (" (" + upct + "%)") : ""));
+      return true;
+    }
+    if(data.type==="cloudplayer_upload_result"){
+      if(!isCurrentUploadEvent(data)) return true;
+      var ur = uploadEventReqId(data);
+      if(ur && pendingUploadReqId === ur) pendingUploadReqId = "";
+      if(data.ok){
+        var succ = Number(data.successCount || 0);
+        var fail = Number(data.failCount || 0);
+        setStatusProgress(100);
+        text($("currentInfo"), "上传完成：成功 " + succ + " 个" + (fail > 0 ? ("，失败 " + fail + " 个") : ""));
+        loadList(state.path, false, { fromHistory:true, forceRefresh:true });
+        setTimeout(function(){ setStatusProgress(0); }, 700);
+      }else{
+        setStatusProgress(0);
+        text($("currentInfo"), "上传失败：" + String(data.message || "未知错误"));
+      }
+      return true;
+    }
+    return false;
+  }
   function handleAdminTokenHostEvent(data){
     if(data.type!=="cloudplayer_admin_token") return false;
     if(!isCurrentAdminTokenEvent(data)) return true;
@@ -4197,6 +4443,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     if(handleImportHostEvent(data)) return;
     if(handleAdminTokenHostEvent(data)) return;
     if(handleDownloadHostEvent(data)) return;
+    if(handleUploadHostEvent(data)) return;
   }
   async function boot(){
     loadProviderTokens();
@@ -4208,6 +4455,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     applyUiLanguage();
     loadPins();
     bindEvents();
+    updateRightFileInfo(null);
     if(window.NiumaBottomDock && typeof window.NiumaBottomDock.mount === "function"){
       __nmDock = window.NiumaBottomDock.mount({
         sceneId: "cloudplayer",

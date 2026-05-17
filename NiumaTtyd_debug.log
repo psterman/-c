@@ -140,3 +140,39 @@
 2026-05-18 06:50:04 ttyd started port 7681 pid 3136 cmd=cmd.exe /k codex
 2026-05-18 06:50:12 ttyd shell [qwen_cli] fallback_bare_name: cmd.exe /k qwen
 2026-05-18 06:50:14 ttyd started port 7684 pid 10444 cmd=cmd.exe /k qwen
+2026-05-18 07:00:46 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 07:00:50 ttyd started port 7681 pid 7060 cmd=cmd.exe /k codex
+2026-05-18 07:08:34 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 07:08:34 ttyd started port 7681 pid 8328 cmd=cmd.exe /k codex
+2026-05-18 07:08:38 ttyd shell [qwen_cli] fallback_bare_name: cmd.exe /k qwen
+2026-05-18 07:08:40 ttyd started port 7684 pid 7884 cmd=cmd.exe /k qwen
+2026-05-18 07:15:48 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 07:15:51 ttyd started port 7681 pid 17952 cmd=cmd.exe /k codex
+2026-05-18 07:20:05 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 07:20:05 ttyd started port 7681 pid 20392 cmd=cmd.exe /k codex
+2026-05-18 07:20:10 ttyd shell [qwen_cli] fallback_bare_name: cmd.exe /k qwen
+2026-05-18 07:20:12 ttyd started port 7684 pid 12776 cmd=cmd.exe /k qwen
+2026-05-18 07:21:34 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 07:21:38 ttyd started port 7681 pid 8120 cmd=cmd.exe /k codex
+2026-05-18 07:26:57 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 07:26:57 ttyd started port 7681 pid 9572 cmd=cmd.exe /k codex
+2026-05-18 07:27:05 ttyd shell [qwen_cli] fallback_bare_name: cmd.exe /k qwen
+2026-05-18 07:27:07 ttyd started port 7684 pid 19792 cmd=cmd.exe /k qwen
+2026-05-18 07:32:05 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 07:32:08 ttyd started port 7681 pid 20288 cmd=cmd.exe /k codex
+2026-05-18 07:37:16 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 07:37:16 ttyd started port 7681 pid 21376 cmd=cmd.exe /k codex
+2026-05-18 07:37:20 ttyd shell [qwen_cli] fallback_bare_name: cmd.exe /k qwen
+2026-05-18 07:37:22 ttyd started port 7684 pid 21088 cmd=cmd.exe /k qwen
+2026-05-18 07:41:24 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 07:41:27 ttyd started port 7681 pid 13344 cmd=cmd.exe /k codex
+2026-05-18 07:53:47 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 07:53:47 ttyd started port 7681 pid 5952 cmd=cmd.exe /k codex
+2026-05-18 07:53:52 ttyd shell [qwen_cli] fallback_bare_name: cmd.exe /k qwen
+2026-05-18 07:53:54 ttyd started port 7684 pid 19792 cmd=cmd.exe /k qwen
+2026-05-18 07:56:05 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 07:56:07 ttyd started port 7681 pid 19296 cmd=cmd.exe /k codex
+2026-05-18 07:57:19 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 07:57:19 ttyd started port 7681 pid 21004 cmd=cmd.exe /k codex
+2026-05-18 07:57:29 ttyd shell [qwen_cli] fallback_bare_name: cmd.exe /k qwen
+2026-05-18 07:57:31 ttyd started port 7684 pid 2688 cmd=cmd.exe /k qwen

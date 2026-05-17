@@ -317,3 +317,50 @@
 [2026-05-18 06:52:48] exit_from_menu begin
 [2026-05-18 06:52:48] force_break_begin reason=tray_exit_app
 [2026-05-18 06:52:48] force_break_end reason=tray_exit_app
+[2026-05-18 07:00:45] snapshot_dirty reason=update_tray_menu
+[2026-05-18 07:00:45] snapshot_dirty reason=init
+[2026-05-18 07:00:45] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 07:08:31] reload_hard_spawn_ok
+[2026-05-18 07:08:31] snapshot_dirty reason=update_tray_menu
+[2026-05-18 07:08:31] snapshot_dirty reason=init
+[2026-05-18 07:08:32] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 07:15:47] reload_hard_spawn_ok
+[2026-05-18 07:15:47] snapshot_dirty reason=update_tray_menu
+[2026-05-18 07:15:47] snapshot_dirty reason=init
+[2026-05-18 07:15:47] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 07:20:04] reload_hard_spawn_ok
+[2026-05-18 07:20:05] snapshot_dirty reason=update_tray_menu
+[2026-05-18 07:20:05] snapshot_dirty reason=init
+[2026-05-18 07:20:05] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 07:21:33] reload_hard_spawn_ok
+[2026-05-18 07:21:33] snapshot_dirty reason=update_tray_menu
+[2026-05-18 07:21:33] snapshot_dirty reason=init
+[2026-05-18 07:21:34] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 07:26:55] reload_hard_spawn_ok
+[2026-05-18 07:26:56] snapshot_dirty reason=update_tray_menu
+[2026-05-18 07:26:56] snapshot_dirty reason=init
+[2026-05-18 07:26:56] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 07:29:30] reload_hard_spawn_ok
+[2026-05-18 07:32:04] snapshot_dirty reason=update_tray_menu
+[2026-05-18 07:32:04] snapshot_dirty reason=init
+[2026-05-18 07:32:04] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 07:37:15] reload_hard_spawn_ok
+[2026-05-18 07:37:15] snapshot_dirty reason=update_tray_menu
+[2026-05-18 07:37:15] snapshot_dirty reason=init
+[2026-05-18 07:37:15] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 07:41:23] reload_hard_spawn_ok
+[2026-05-18 07:41:23] snapshot_dirty reason=update_tray_menu
+[2026-05-18 07:41:23] snapshot_dirty reason=init
+[2026-05-18 07:41:23] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 07:53:46] reload_hard_spawn_ok
+[2026-05-18 07:53:46] snapshot_dirty reason=update_tray_menu
+[2026-05-18 07:53:46] snapshot_dirty reason=init
+[2026-05-18 07:53:46] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 07:56:03] reload_hard_spawn_ok
+[2026-05-18 07:56:04] snapshot_dirty reason=update_tray_menu
+[2026-05-18 07:56:04] snapshot_dirty reason=init
+[2026-05-18 07:56:04] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 07:57:18] reload_hard_spawn_ok
+[2026-05-18 07:57:18] snapshot_dirty reason=update_tray_menu
+[2026-05-18 07:57:18] snapshot_dirty reason=init
+[2026-05-18 07:57:18] snapshot_rebuild_empty elapsed_ms=0

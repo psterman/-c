@@ -3449,3 +3449,803 @@
 [2026-05-18 06:52:44] selection lbutton_up no_trigger=click
 [2026-05-18 06:52:48] gdho gdho_redirect_hide_overlay
 [2026-05-18 06:52:48] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:00:45] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 07:00:45] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:00:45] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:00:45] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:00:45] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:00:45] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:00:45] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:00:45] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:00:45] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:00:45] gdho stop begin
+[2026-05-18 07:00:45] gdho poll disarm skip reason=stop
+[2026-05-18 07:00:45] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 07:00:45] gdho hide_frontend queue hide
+[2026-05-18 07:00:45] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 07:00:45] gdho stop done
+[2026-05-18 07:00:50] selection cursor_over_ui miss mouse_x=1713 mouse_y=895 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:00:50] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:00:50] selection lbutton_up no_trigger=click
+[2026-05-18 07:00:50] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:00:50] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:00:50] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:00:50] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:00:50] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:00:50] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:00:50] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:00:52] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=461208 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1844 mouse_y=962
+[2026-05-18 07:00:52] selection lbutton_up skip=our_ui
+[2026-05-18 07:00:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:00:52] gdho stop begin
+[2026-05-18 07:00:52] gdho poll disarm skip reason=stop
+[2026-05-18 07:00:52] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 07:00:52] gdho hide_frontend queue hide
+[2026-05-18 07:00:52] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 07:00:52] gdho stop done
+[2026-05-18 07:00:59] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330440 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1143 mouse_y=46
+[2026-05-18 07:00:59] selection lbutton_up skip=our_ui
+[2026-05-18 07:01:02] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330440 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=875 mouse_y=148
+[2026-05-18 07:01:02] selection lbutton_up skip=our_ui
+[2026-05-18 07:01:11] selection cursor_over_ui miss mouse_x=131 mouse_y=917 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:01:11] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:01:11] selection lbutton_up no_trigger=click
+[2026-05-18 07:01:18] selection cursor_over_ui miss mouse_x=162 mouse_y=898 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:01:18] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:01:18] selection lbutton_up no_trigger=click
+[2026-05-18 07:02:40] selection cursor_over_ui miss mouse_x=286 mouse_y=838 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:02:40] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:02:40] selection lbutton_up no_trigger=click
+[2026-05-18 07:02:40] selection cursor_over_ui miss mouse_x=258 mouse_y=919 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:02:40] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:02:40] selection lbutton_up no_trigger=click
+[2026-05-18 07:03:13] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330440 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=768 mouse_y=53
+[2026-05-18 07:03:13] selection lbutton_up skip=our_ui
+[2026-05-18 07:03:14] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330440 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1337 mouse_y=899
+[2026-05-18 07:03:14] selection lbutton_up skip=our_ui
+[2026-05-18 07:04:02] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330440 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1645 mouse_y=48
+[2026-05-18 07:04:02] selection lbutton_up skip=our_ui
+[2026-05-18 07:08:31] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:08:31] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:08:32] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 07:08:32] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:08:32] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:08:32] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:08:32] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:08:32] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:08:32] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:08:32] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:08:32] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:08:32] gdho stop begin
+[2026-05-18 07:08:32] gdho poll disarm skip reason=stop
+[2026-05-18 07:08:32] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 07:08:32] gdho hide_frontend queue hide
+[2026-05-18 07:08:32] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 07:08:32] gdho stop done
+[2026-05-18 07:08:40] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:08:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:08:40] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:08:40] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:08:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:08:40] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:08:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:14:20] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=723854 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1856 mouse_y=966
+[2026-05-18 07:14:20] selection lbutton_up skip=our_ui
+[2026-05-18 07:14:20] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:14:20] gdho stop begin
+[2026-05-18 07:14:20] gdho poll disarm skip reason=stop
+[2026-05-18 07:14:20] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 07:14:20] gdho hide_frontend queue hide
+[2026-05-18 07:14:20] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 07:14:20] gdho stop done
+[2026-05-18 07:14:24] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=461512 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=515 mouse_y=329
+[2026-05-18 07:14:24] selection lbutton_up skip=our_ui
+[2026-05-18 07:14:28] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=461512 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=548 mouse_y=442
+[2026-05-18 07:14:28] selection lbutton_up skip=our_ui
+[2026-05-18 07:14:28] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=461512 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=548 mouse_y=442
+[2026-05-18 07:14:28] selection lbutton_up skip=our_ui
+[2026-05-18 07:14:31] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=461512 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=363 mouse_y=886
+[2026-05-18 07:14:31] selection lbutton_up skip=our_ui
+[2026-05-18 07:14:34] selection cursor_over_ui miss mouse_x=231 mouse_y=924 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 07:14:34] selection lbutton_up dist_x=220 dist_y=47 drag=1 multi=0
+[2026-05-18 07:14:34] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:14:35] selection cursor_over_ui miss mouse_x=447 mouse_y=959 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 07:14:35] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:14:35] selection lbutton_up no_trigger=click
+[2026-05-18 07:14:36] selection cursor_over_ui miss mouse_x=155 mouse_y=920 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:14:36] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:14:36] selection lbutton_up no_trigger=click
+[2026-05-18 07:14:46] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=461512 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1613 mouse_y=81
+[2026-05-18 07:14:46] selection lbutton_up skip=our_ui
+[2026-05-18 07:15:47] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:15:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:15:47] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 07:15:47] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:15:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:15:47] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:15:47] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:15:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:15:47] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:15:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:15:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:15:47] gdho stop begin
+[2026-05-18 07:15:47] gdho poll disarm skip reason=stop
+[2026-05-18 07:15:47] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 07:15:47] gdho hide_frontend queue hide
+[2026-05-18 07:15:47] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 07:15:47] gdho stop done
+[2026-05-18 07:15:52] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:15:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:15:52] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:15:52] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:15:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:15:52] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:15:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:16:04] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=592388 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1839 mouse_y=955
+[2026-05-18 07:16:04] selection lbutton_up skip=our_ui
+[2026-05-18 07:16:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:16:04] gdho stop begin
+[2026-05-18 07:16:04] gdho poll disarm skip reason=stop
+[2026-05-18 07:16:04] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 07:16:04] gdho hide_frontend queue hide
+[2026-05-18 07:16:04] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 07:16:04] gdho stop done
+[2026-05-18 07:16:07] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657900 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=512 mouse_y=311
+[2026-05-18 07:16:07] selection lbutton_up skip=our_ui
+[2026-05-18 07:16:10] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657900 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=524 mouse_y=402
+[2026-05-18 07:16:10] selection lbutton_up skip=our_ui
+[2026-05-18 07:16:12] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657900 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=464 mouse_y=428
+[2026-05-18 07:16:12] selection lbutton_up skip=our_ui
+[2026-05-18 07:16:12] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657900 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=464 mouse_y=428
+[2026-05-18 07:16:12] selection lbutton_up skip=our_ui
+[2026-05-18 07:16:14] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657900 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=451 mouse_y=784
+[2026-05-18 07:16:14] selection lbutton_up skip=our_ui
+[2026-05-18 07:16:16] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657900 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=327 mouse_y=822
+[2026-05-18 07:16:16] selection lbutton_up skip=our_ui
+[2026-05-18 07:16:17] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657900 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=531 mouse_y=333
+[2026-05-18 07:16:17] selection lbutton_up skip=our_ui
+[2026-05-18 07:16:21] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657900 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=533 mouse_y=448
+[2026-05-18 07:16:21] selection lbutton_up skip=our_ui
+[2026-05-18 07:16:22] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657900 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=558 mouse_y=460
+[2026-05-18 07:16:22] selection lbutton_up skip=our_ui
+[2026-05-18 07:16:24] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657900 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1004 mouse_y=591
+[2026-05-18 07:16:24] selection lbutton_up skip=our_ui
+[2026-05-18 07:16:27] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657900 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=212 mouse_y=890
+[2026-05-18 07:16:27] selection lbutton_up skip=our_ui
+[2026-05-18 07:16:28] selection cursor_over_ui miss mouse_x=134 mouse_y=884 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:16:28] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:16:28] selection lbutton_up no_trigger=click
+[2026-05-18 07:16:29] selection cursor_over_ui miss mouse_x=134 mouse_y=893 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:16:29] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 07:16:29] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:20:04] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:20:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:20:05] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 07:20:05] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:20:05] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:20:05] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:20:05] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:20:05] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:20:05] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:20:05] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:20:05] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:20:05] gdho stop begin
+[2026-05-18 07:20:05] gdho poll disarm skip reason=stop
+[2026-05-18 07:20:05] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 07:20:05] gdho hide_frontend queue hide
+[2026-05-18 07:20:05] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 07:20:05] gdho stop done
+[2026-05-18 07:20:12] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:20:12] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:20:12] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:20:12] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:20:12] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:20:12] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:20:12] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:20:13] selection cursor_over_ui miss mouse_x=214 mouse_y=961 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:20:13] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:20:13] selection lbutton_up no_trigger=click
+[2026-05-18 07:20:14] selection cursor_over_ui miss mouse_x=314 mouse_y=918 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:20:14] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:20:14] selection lbutton_up no_trigger=click
+[2026-05-18 07:20:18] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=592550 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1942 mouse_y=970
+[2026-05-18 07:20:18] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:18] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:20:18] gdho stop begin
+[2026-05-18 07:20:18] gdho poll disarm skip reason=stop
+[2026-05-18 07:20:18] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 07:20:18] gdho hide_frontend queue hide
+[2026-05-18 07:20:18] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 07:20:18] gdho stop done
+[2026-05-18 07:20:22] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=500 mouse_y=325
+[2026-05-18 07:20:22] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:24] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=535 mouse_y=424
+[2026-05-18 07:20:24] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:25] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=514 mouse_y=496
+[2026-05-18 07:20:25] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:26] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=514 mouse_y=496
+[2026-05-18 07:20:26] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:28] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=423 mouse_y=770
+[2026-05-18 07:20:28] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:31] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=519 mouse_y=333
+[2026-05-18 07:20:31] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:34] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=560 mouse_y=475
+[2026-05-18 07:20:34] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:35] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=538 mouse_y=450
+[2026-05-18 07:20:35] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:36] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1007 mouse_y=593
+[2026-05-18 07:20:36] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:37] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=409 mouse_y=761
+[2026-05-18 07:20:37] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:38] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=297 mouse_y=883
+[2026-05-18 07:20:38] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:38] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=304 mouse_y=900
+[2026-05-18 07:20:38] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:39] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=331 mouse_y=494
+[2026-05-18 07:20:39] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:41] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=499 mouse_y=326
+[2026-05-18 07:20:41] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:44] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=496 mouse_y=451
+[2026-05-18 07:20:44] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:45] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1005 mouse_y=597
+[2026-05-18 07:20:45] selection lbutton_up skip=our_ui
+[2026-05-18 07:20:47] selection cursor_over_ui miss mouse_x=136 mouse_y=927 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:20:47] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:20:47] selection lbutton_up no_trigger=click
+[2026-05-18 07:21:25] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=657780 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=943 mouse_y=48
+[2026-05-18 07:21:25] selection lbutton_up skip=our_ui
+[2026-05-18 07:21:33] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:21:33] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:21:34] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 07:21:34] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:21:34] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:21:34] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:21:34] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:21:34] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:21:34] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:21:34] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:21:34] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:21:34] gdho stop begin
+[2026-05-18 07:21:34] gdho poll disarm skip reason=stop
+[2026-05-18 07:21:34] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 07:21:34] gdho hide_frontend queue hide
+[2026-05-18 07:21:34] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 07:21:34] gdho stop done
+[2026-05-18 07:21:39] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:21:39] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:21:39] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:21:39] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:21:39] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:21:39] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:21:39] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:22:51] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=657810 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1857 mouse_y=962
+[2026-05-18 07:22:51] selection lbutton_up skip=our_ui
+[2026-05-18 07:22:51] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:22:51] gdho stop begin
+[2026-05-18 07:22:51] gdho poll disarm skip reason=stop
+[2026-05-18 07:22:51] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 07:22:51] gdho hide_frontend queue hide
+[2026-05-18 07:22:51] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 07:22:51] gdho stop done
+[2026-05-18 07:22:55] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=723316 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=419 mouse_y=321
+[2026-05-18 07:22:55] selection lbutton_up skip=our_ui
+[2026-05-18 07:22:56] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=723316 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=334 mouse_y=454
+[2026-05-18 07:22:56] selection lbutton_up skip=our_ui
+[2026-05-18 07:22:58] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=723316 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=328 mouse_y=701
+[2026-05-18 07:22:58] selection lbutton_up skip=our_ui
+[2026-05-18 07:22:59] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=723316 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=328 mouse_y=701
+[2026-05-18 07:22:59] selection lbutton_up skip=our_ui
+[2026-05-18 07:23:00] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=723316 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=444 mouse_y=709
+[2026-05-18 07:23:00] selection lbutton_up skip=our_ui
+[2026-05-18 07:23:01] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=723316 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=508 mouse_y=336
+[2026-05-18 07:23:01] selection lbutton_up skip=our_ui
+[2026-05-18 07:23:04] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=723316 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=507 mouse_y=438
+[2026-05-18 07:23:04] selection lbutton_up skip=our_ui
+[2026-05-18 07:23:04] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=723316 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=507 mouse_y=438
+[2026-05-18 07:23:04] selection lbutton_up skip=our_ui
+[2026-05-18 07:23:08] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=723316 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=222 mouse_y=899
+[2026-05-18 07:23:08] selection lbutton_up skip=our_ui
+[2026-05-18 07:23:10] selection cursor_over_ui miss mouse_x=73 mouse_y=902 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:23:10] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:23:10] selection lbutton_up no_trigger=click
+[2026-05-18 07:23:10] selection cursor_over_ui miss mouse_x=91 mouse_y=898 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:23:10] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:23:10] selection lbutton_up no_trigger=click
+[2026-05-18 07:24:01] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=723316 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1281 mouse_y=93
+[2026-05-18 07:24:01] selection lbutton_up skip=our_ui
+[2026-05-18 07:26:55] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:26:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:26:56] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 07:26:56] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:26:56] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:26:56] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:26:56] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:26:56] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:26:56] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:26:56] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:26:56] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:26:56] gdho stop begin
+[2026-05-18 07:26:56] gdho poll disarm skip reason=stop
+[2026-05-18 07:26:56] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 07:26:56] gdho hide_frontend queue hide
+[2026-05-18 07:26:56] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 07:26:56] gdho stop done
+[2026-05-18 07:26:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:26:57] gdho stop begin
+[2026-05-18 07:26:57] gdho poll disarm skip reason=stop
+[2026-05-18 07:26:57] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 07:26:57] gdho hide_frontend queue hide
+[2026-05-18 07:26:57] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 07:26:57] gdho stop done
+[2026-05-18 07:27:01] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:27:01] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:27:01] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:27:01] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:27:01] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:27:01] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:27:01] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:27:10] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=854894 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1850 mouse_y=969
+[2026-05-18 07:27:10] selection lbutton_up skip=our_ui
+[2026-05-18 07:27:11] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:27:11] gdho stop begin
+[2026-05-18 07:27:11] gdho poll disarm skip reason=stop
+[2026-05-18 07:27:11] gdho gdho_phase CLOSED->CLOSING reason=stop token=3
+[2026-05-18 07:27:11] gdho hide_frontend queue hide
+[2026-05-18 07:27:11] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=3
+[2026-05-18 07:27:11] gdho stop done
+[2026-05-18 07:27:14] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=592320 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=507 mouse_y=316
+[2026-05-18 07:27:14] selection lbutton_up skip=our_ui
+[2026-05-18 07:27:16] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=592320 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=554 mouse_y=330
+[2026-05-18 07:27:16] selection lbutton_up skip=our_ui
+[2026-05-18 07:27:18] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=592320 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=908 mouse_y=86
+[2026-05-18 07:27:18] selection lbutton_up skip=our_ui
+[2026-05-18 07:27:20] selection cursor_over_ui miss mouse_x=236 mouse_y=661 top=hwnd=1051572 class=#32770 title=Select file(s) to upload exe=AutoHotkey64.exe
+[2026-05-18 07:27:20] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:27:20] selection lbutton_up no_trigger=click
+[2026-05-18 07:27:21] selection cursor_over_ui miss mouse_x=236 mouse_y=661 top=hwnd=1051572 class=#32770 title=Select file(s) to upload exe=AutoHotkey64.exe
+[2026-05-18 07:27:21] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:27:21] selection lbutton_up no_trigger=click
+[2026-05-18 07:27:21] selection cursor_over_ui miss mouse_x=236 mouse_y=661 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:27:21] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 07:27:21] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:27:26] selection cursor_over_ui miss mouse_x=438 mouse_y=876 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:27:26] selection lbutton_up dist_x=322 dist_y=22 drag=1 multi=0
+[2026-05-18 07:27:26] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:27:29] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=592320 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=969 mouse_y=177
+[2026-05-18 07:27:29] selection lbutton_up skip=our_ui
+[2026-05-18 07:27:30] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=592320 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1597 mouse_y=145
+[2026-05-18 07:27:30] selection lbutton_up skip=our_ui
+[2026-05-18 07:27:31] selection cursor_over_ui miss mouse_x=352 mouse_y=231 top=hwnd=1051056 class=#32770 title=Select file(s) to upload exe=AutoHotkey64.exe
+[2026-05-18 07:27:31] selection lbutton_up dist_x=646 dist_y=55 drag=1 multi=0
+[2026-05-18 07:27:31] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:27:32] selection cursor_over_ui miss mouse_x=938 mouse_y=225 top=hwnd=1051056 class=#32770 title=Select file(s) to upload exe=AutoHotkey64.exe
+[2026-05-18 07:27:32] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:27:32] selection lbutton_up no_trigger=click
+[2026-05-18 07:27:33] selection cursor_over_ui miss mouse_x=161 mouse_y=918 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:27:33] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:27:33] selection lbutton_up no_trigger=click
+[2026-05-18 07:29:30] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:29:30] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:32:04] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 07:32:04] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:32:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:32:04] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:32:04] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:32:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:32:04] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:32:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:32:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:32:04] gdho stop begin
+[2026-05-18 07:32:04] gdho poll disarm skip reason=stop
+[2026-05-18 07:32:04] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 07:32:04] gdho hide_frontend queue hide
+[2026-05-18 07:32:04] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 07:32:04] gdho stop done
+[2026-05-18 07:32:07] selection cursor_over_ui miss mouse_x=1217 mouse_y=418 top=hwnd=1116718 class=#32770 title=CursorHelper (1).ahk exe=AutoHotkey64.exe
+[2026-05-18 07:32:07] selection lbutton_up dist_x=1217 dist_y=418 drag=1 multi=0
+[2026-05-18 07:32:07] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:32:08] selection cursor_over_ui miss mouse_x=1228 mouse_y=400 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:32:08] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:32:08] selection lbutton_up no_trigger=click
+[2026-05-18 07:32:09] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:32:09] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:32:09] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:32:09] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:32:09] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:32:09] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:32:09] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:32:11] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=723662 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1943 mouse_y=970
+[2026-05-18 07:32:11] selection lbutton_up skip=our_ui
+[2026-05-18 07:32:11] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:32:11] gdho stop begin
+[2026-05-18 07:32:11] gdho poll disarm skip reason=stop
+[2026-05-18 07:32:11] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 07:32:11] gdho hide_frontend queue hide
+[2026-05-18 07:32:11] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 07:32:11] gdho stop done
+[2026-05-18 07:32:15] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=741 mouse_y=69
+[2026-05-18 07:32:15] selection lbutton_up skip=our_ui
+[2026-05-18 07:32:16] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=709 mouse_y=312
+[2026-05-18 07:32:16] selection lbutton_up skip=our_ui
+[2026-05-18 07:32:20] selection cursor_over_ui miss mouse_x=368 mouse_y=572 top=hwnd=985842 class=#32770 title=Select file(s) to upload exe=AutoHotkey64.exe
+[2026-05-18 07:32:20] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:32:20] selection lbutton_up no_trigger=click
+[2026-05-18 07:32:21] selection cursor_over_ui miss mouse_x=789 mouse_y=709 top=hwnd=985842 class=#32770 title=Select file(s) to upload exe=AutoHotkey64.exe
+[2026-05-18 07:32:21] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:32:21] selection lbutton_up no_trigger=click
+[2026-05-18 07:32:30] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=727 mouse_y=316
+[2026-05-18 07:32:30] selection lbutton_up skip=our_ui
+[2026-05-18 07:32:32] selection cursor_over_ui miss mouse_x=373 mouse_y=580 top=hwnd=2755594 class=#32770 title=Select file(s) to upload exe=AutoHotkey64.exe
+[2026-05-18 07:32:32] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:32:32] selection lbutton_up no_trigger=click
+[2026-05-18 07:32:34] selection cursor_over_ui miss mouse_x=358 mouse_y=604 top=hwnd=2755594 class=#32770 title=Select file(s) to upload exe=AutoHotkey64.exe
+[2026-05-18 07:32:34] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:32:34] selection lbutton_up no_trigger=click
+[2026-05-18 07:32:35] selection cursor_over_ui miss mouse_x=775 mouse_y=706 top=hwnd=2755594 class=#32770 title=Select file(s) to upload exe=AutoHotkey64.exe
+[2026-05-18 07:32:35] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:32:35] selection lbutton_up no_trigger=click
+[2026-05-18 07:32:43] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=705 mouse_y=750
+[2026-05-18 07:32:43] selection lbutton_up skip=our_ui
+[2026-05-18 07:32:45] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1307 mouse_y=567
+[2026-05-18 07:32:45] selection lbutton_up skip=our_ui
+[2026-05-18 07:32:46] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=603 mouse_y=641
+[2026-05-18 07:32:46] selection lbutton_up skip=our_ui
+[2026-05-18 07:32:49] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=692 mouse_y=736
+[2026-05-18 07:32:49] selection lbutton_up skip=our_ui
+[2026-05-18 07:32:51] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1252 mouse_y=578
+[2026-05-18 07:32:51] selection lbutton_up skip=our_ui
+[2026-05-18 07:32:52] selection cursor_over_ui miss mouse_x=211 mouse_y=904 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:32:52] selection lbutton_up dist_x=1 dist_y=1 drag=0 multi=0
+[2026-05-18 07:32:52] selection lbutton_up no_trigger=click
+[2026-05-18 07:33:52] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=705 mouse_y=317
+[2026-05-18 07:33:52] selection lbutton_up skip=our_ui
+[2026-05-18 07:33:59] selection cursor_over_ui miss mouse_x=901 mouse_y=717 top=hwnd=1182168 class=#32770 title=Select file(s) to upload exe=AutoHotkey64.exe
+[2026-05-18 07:33:59] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:33:59] selection lbutton_up no_trigger=click
+[2026-05-18 07:34:00] selection cursor_over_ui miss mouse_x=86 mouse_y=880 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:34:00] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:34:00] selection lbutton_up no_trigger=click
+[2026-05-18 07:34:01] selection cursor_over_ui miss mouse_x=79 mouse_y=886 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:34:01] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:34:01] selection lbutton_up no_trigger=click
+[2026-05-18 07:34:01] selection cursor_over_ui miss mouse_x=115 mouse_y=898 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:34:01] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 07:34:01] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:34:06] selection cursor_over_ui miss mouse_x=1465 mouse_y=1067 top=hwnd=65794 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-18 07:34:06] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:34:06] selection lbutton_up no_trigger=click
+[2026-05-18 07:34:09] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=592 mouse_y=230
+[2026-05-18 07:34:09] selection lbutton_up skip=our_ui
+[2026-05-18 07:34:10] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1801 mouse_y=101
+[2026-05-18 07:34:10] selection lbutton_up skip=our_ui
+[2026-05-18 07:34:12] selection cursor_over_ui miss mouse_x=1060 mouse_y=111 top=hwnd=132274 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-18 07:34:12] selection lbutton_up dist_x=551 dist_y=98 drag=1 multi=0
+[2026-05-18 07:34:12] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:34:13] selection cursor_over_ui miss mouse_x=235 mouse_y=880 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:34:13] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:34:13] selection lbutton_up no_trigger=click
+[2026-05-18 07:34:14] selection cursor_over_ui miss mouse_x=211 mouse_y=900 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:34:14] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:34:14] selection lbutton_up no_trigger=click
+[2026-05-18 07:34:14] selection cursor_over_ui miss mouse_x=216 mouse_y=892 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:34:14] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:34:14] selection lbutton_up no_trigger=click
+[2026-05-18 07:34:25] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1443 mouse_y=571
+[2026-05-18 07:34:25] selection lbutton_up skip=our_ui
+[2026-05-18 07:34:28] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=808 mouse_y=107
+[2026-05-18 07:34:28] selection lbutton_up skip=our_ui
+[2026-05-18 07:34:34] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4852074 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1140 mouse_y=95
+[2026-05-18 07:34:34] selection lbutton_up skip=our_ui
+[2026-05-18 07:34:36] selection cursor_over_ui miss mouse_x=258 mouse_y=894 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:34:36] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:34:36] selection lbutton_up no_trigger=click
+[2026-05-18 07:37:15] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:37:15] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:37:15] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 07:37:15] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:37:15] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:37:15] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:37:15] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:37:15] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:37:15] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:37:15] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:37:15] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:37:15] gdho stop begin
+[2026-05-18 07:37:15] gdho poll disarm skip reason=stop
+[2026-05-18 07:37:15] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 07:37:15] gdho hide_frontend queue hide
+[2026-05-18 07:37:15] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 07:37:15] gdho stop done
+[2026-05-18 07:37:22] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:37:22] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:37:22] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:37:22] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:37:22] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:37:22] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:37:22] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:38:12] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=986034 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1941 mouse_y=956
+[2026-05-18 07:38:12] selection lbutton_up skip=our_ui
+[2026-05-18 07:38:12] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:38:12] gdho stop begin
+[2026-05-18 07:38:12] gdho poll disarm skip reason=stop
+[2026-05-18 07:38:12] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 07:38:12] gdho hide_frontend queue hide
+[2026-05-18 07:38:12] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 07:38:12] gdho stop done
+[2026-05-18 07:38:24] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1313240 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1171 mouse_y=91
+[2026-05-18 07:38:24] selection lbutton_up skip=our_ui
+[2026-05-18 07:38:26] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1313240 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=783 mouse_y=704
+[2026-05-18 07:38:26] selection lbutton_up skip=our_ui
+[2026-05-18 07:38:28] selection cursor_over_ui miss mouse_x=118 mouse_y=922 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:38:28] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:38:28] selection lbutton_up no_trigger=click
+[2026-05-18 07:39:11] selection cursor_over_ui miss mouse_x=319 mouse_y=862 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:39:11] selection lbutton_up dist_x=102 dist_y=86 drag=1 multi=0
+[2026-05-18 07:39:11] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:41:23] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:41:23] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:41:23] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 07:41:23] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:41:23] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:41:23] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:41:23] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:41:23] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:41:23] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:41:23] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:41:24] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:41:24] gdho stop begin
+[2026-05-18 07:41:24] gdho poll disarm skip reason=stop
+[2026-05-18 07:41:24] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 07:41:24] gdho hide_frontend queue hide
+[2026-05-18 07:41:24] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 07:41:24] gdho stop done
+[2026-05-18 07:41:28] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:41:28] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:41:28] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:41:28] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:41:28] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:41:28] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:41:28] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:49:09] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=920580 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1948 mouse_y=959
+[2026-05-18 07:49:09] selection lbutton_up skip=our_ui
+[2026-05-18 07:49:09] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:49:09] gdho stop begin
+[2026-05-18 07:49:09] gdho poll disarm skip reason=stop
+[2026-05-18 07:49:09] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 07:49:09] gdho hide_frontend queue hide
+[2026-05-18 07:49:09] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 07:49:09] gdho stop done
+[2026-05-18 07:49:14] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1968812 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=524 mouse_y=443
+[2026-05-18 07:49:14] selection lbutton_up skip=our_ui
+[2026-05-18 07:49:15] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1968812 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=536 mouse_y=545
+[2026-05-18 07:49:15] selection lbutton_up skip=our_ui
+[2026-05-18 07:49:16] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1968812 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=531 mouse_y=470
+[2026-05-18 07:49:16] selection lbutton_up skip=our_ui
+[2026-05-18 07:49:17] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1968812 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=527 mouse_y=518
+[2026-05-18 07:49:17] selection lbutton_up skip=our_ui
+[2026-05-18 07:49:19] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1968812 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=399 mouse_y=622
+[2026-05-18 07:49:19] selection lbutton_up skip=our_ui
+[2026-05-18 07:49:19] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1968812 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=429 mouse_y=728
+[2026-05-18 07:49:19] selection lbutton_up skip=our_ui
+[2026-05-18 07:49:24] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1968812 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=477 mouse_y=616
+[2026-05-18 07:49:24] selection lbutton_up skip=our_ui
+[2026-05-18 07:49:30] selection cursor_over_ui miss mouse_x=607 mouse_y=880 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 07:49:30] selection lbutton_up dist_x=380 dist_y=485 drag=1 multi=0
+[2026-05-18 07:49:30] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:49:30] selection cursor_over_ui miss mouse_x=601 mouse_y=904 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 07:49:30] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:49:30] selection lbutton_up no_trigger=click
+[2026-05-18 07:49:31] selection cursor_over_ui miss mouse_x=139 mouse_y=913 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:49:31] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:49:31] selection lbutton_up no_trigger=click
+[2026-05-18 07:49:44] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1968812 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=862 mouse_y=58
+[2026-05-18 07:49:44] selection lbutton_up skip=our_ui
+[2026-05-18 07:49:45] selection cursor_over_ui miss mouse_x=287 mouse_y=895 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:49:45] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:49:45] selection lbutton_up no_trigger=click
+[2026-05-18 07:50:08] selection cursor_over_ui miss mouse_x=1885 mouse_y=472 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 07:50:08] selection lbutton_up dist_x=1068 dist_y=145 drag=1 multi=0
+[2026-05-18 07:50:08] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:50:08] selection cursor_over_ui miss mouse_x=1866 mouse_y=492 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 07:50:08] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:50:08] selection lbutton_up no_trigger=click
+[2026-05-18 07:50:10] selection cursor_over_ui miss mouse_x=311 mouse_y=893 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:50:10] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:50:10] selection lbutton_up no_trigger=click
+[2026-05-18 07:50:11] selection cursor_over_ui miss mouse_x=273 mouse_y=912 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:50:11] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:50:11] selection lbutton_up no_trigger=click
+[2026-05-18 07:50:12] selection cursor_over_ui miss mouse_x=331 mouse_y=900 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:50:12] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 07:50:12] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:51:01] selection cursor_over_ui miss mouse_x=324 mouse_y=858 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:51:01] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:51:01] selection lbutton_up no_trigger=click
+[2026-05-18 07:51:04] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1968812 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=555 mouse_y=152
+[2026-05-18 07:51:04] selection lbutton_up skip=our_ui
+[2026-05-18 07:51:06] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1968812 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=747 mouse_y=154
+[2026-05-18 07:51:06] selection lbutton_up skip=our_ui
+[2026-05-18 07:51:11] selection cursor_over_ui miss mouse_x=30 mouse_y=1053 top=hwnd=65794 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-18 07:51:11] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:51:11] selection lbutton_up no_trigger=click
+[2026-05-18 07:51:18] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1968812 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=999 mouse_y=669
+[2026-05-18 07:51:18] selection lbutton_up skip=our_ui
+[2026-05-18 07:51:19] selection cursor_over_ui miss mouse_x=210 mouse_y=903 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:51:19] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:51:19] selection lbutton_up no_trigger=click
+[2026-05-18 07:51:23] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=1968812 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=423 mouse_y=956
+[2026-05-18 07:51:23] selection lbutton_up skip=our_ui
+[2026-05-18 07:51:23] selection cursor_over_ui miss mouse_x=425 mouse_y=962 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:51:23] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:51:23] selection lbutton_up no_trigger=click
+[2026-05-18 07:53:46] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:53:46] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:53:46] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 07:53:46] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:53:46] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:53:46] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:53:46] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:53:46] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:53:46] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:53:46] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:53:46] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:53:46] gdho stop begin
+[2026-05-18 07:53:46] gdho poll disarm skip reason=stop
+[2026-05-18 07:53:46] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 07:53:46] gdho hide_frontend queue hide
+[2026-05-18 07:53:46] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 07:53:46] gdho stop done
+[2026-05-18 07:53:54] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:53:54] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:53:54] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:53:54] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:53:54] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:53:54] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:53:54] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:54:00] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=1116872 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1855 mouse_y=966
+[2026-05-18 07:54:00] selection lbutton_up skip=our_ui
+[2026-05-18 07:54:00] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:54:00] gdho stop begin
+[2026-05-18 07:54:00] gdho poll disarm skip reason=stop
+[2026-05-18 07:54:00] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 07:54:00] gdho hide_frontend queue hide
+[2026-05-18 07:54:00] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 07:54:00] gdho stop done
+[2026-05-18 07:54:05] selection cursor_over_ui miss mouse_x=128 mouse_y=908 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:54:05] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:54:05] selection lbutton_up no_trigger=click
+[2026-05-18 07:54:07] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=592032 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=436 mouse_y=547
+[2026-05-18 07:54:07] selection lbutton_up skip=our_ui
+[2026-05-18 07:54:11] selection cursor_over_ui miss mouse_x=130 mouse_y=917 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:54:11] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:54:11] selection lbutton_up no_trigger=click
+[2026-05-18 07:54:33] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=592032 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=982 mouse_y=74
+[2026-05-18 07:54:33] selection lbutton_up skip=our_ui
+[2026-05-18 07:54:34] selection cursor_over_ui miss mouse_x=318 mouse_y=891 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:54:34] selection lbutton_up dist_x=0 dist_y=1 drag=0 multi=0
+[2026-05-18 07:54:34] selection lbutton_up no_trigger=click
+[2026-05-18 07:55:30] selection cursor_over_ui miss mouse_x=810 mouse_y=911 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 07:55:30] selection lbutton_up dist_x=400 dist_y=535 drag=1 multi=0
+[2026-05-18 07:55:30] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:55:31] selection cursor_over_ui miss mouse_x=791 mouse_y=935 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 07:55:31] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:55:31] selection lbutton_up no_trigger=click
+[2026-05-18 07:55:32] selection cursor_over_ui miss mouse_x=294 mouse_y=913 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:55:32] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:55:32] selection lbutton_up no_trigger=click
+[2026-05-18 07:55:33] selection cursor_over_ui miss mouse_x=297 mouse_y=902 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:55:33] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:55:33] selection lbutton_up no_trigger=click
+[2026-05-18 07:55:34] selection cursor_over_ui miss mouse_x=331 mouse_y=905 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:55:34] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:55:34] selection lbutton_up no_trigger=click
+[2026-05-18 07:55:38] selection cursor_over_ui miss mouse_x=98 mouse_y=892 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:55:38] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:55:38] selection lbutton_up no_trigger=click
+[2026-05-18 07:56:03] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:56:03] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:56:04] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 07:56:04] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:56:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:56:04] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:56:04] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:56:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:56:04] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:56:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:56:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:56:04] gdho stop begin
+[2026-05-18 07:56:04] gdho poll disarm skip reason=stop
+[2026-05-18 07:56:04] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 07:56:04] gdho hide_frontend queue hide
+[2026-05-18 07:56:04] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 07:56:04] gdho stop done
+[2026-05-18 07:56:09] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:56:09] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:56:09] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:56:09] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:56:09] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:56:09] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:56:09] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:56:16] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=3213830 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1864 mouse_y=951
+[2026-05-18 07:56:16] selection lbutton_up skip=our_ui
+[2026-05-18 07:56:16] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:56:16] gdho stop begin
+[2026-05-18 07:56:16] gdho poll disarm skip reason=stop
+[2026-05-18 07:56:16] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 07:56:16] gdho hide_frontend queue hide
+[2026-05-18 07:56:16] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 07:56:16] gdho stop done
+[2026-05-18 07:56:20] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=4196826 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=349 mouse_y=579
+[2026-05-18 07:56:20] selection lbutton_up skip=our_ui
+[2026-05-18 07:56:27] selection cursor_over_ui miss mouse_x=225 mouse_y=614 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 07:56:27] selection lbutton_up dist_x=389 dist_y=53 drag=1 multi=0
+[2026-05-18 07:56:27] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 07:56:29] selection cursor_over_ui miss mouse_x=595 mouse_y=635 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 07:56:29] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:56:29] selection lbutton_up no_trigger=click
+[2026-05-18 07:56:30] selection cursor_over_ui miss mouse_x=116 mouse_y=910 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:56:30] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:56:30] selection lbutton_up no_trigger=click
+[2026-05-18 07:57:18] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:57:18] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:57:18] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 07:57:18] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:57:18] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:57:18] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:57:18] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:57:18] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:57:18] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:57:18] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:57:18] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:57:18] gdho stop begin
+[2026-05-18 07:57:18] gdho poll disarm skip reason=stop
+[2026-05-18 07:57:18] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 07:57:18] gdho hide_frontend queue hide
+[2026-05-18 07:57:18] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 07:57:18] gdho stop done
+[2026-05-18 07:57:23] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 07:57:23] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:57:23] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 07:57:23] gdho gdho_redirect_hide_frontend
+[2026-05-18 07:57:23] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:57:23] gdho gdho_redirect_hide_overlay
+[2026-05-18 07:57:23] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:57:33] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=1641242 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1921 mouse_y=960
+[2026-05-18 07:57:33] selection lbutton_up skip=our_ui
+[2026-05-18 07:57:33] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 07:57:33] gdho stop begin
+[2026-05-18 07:57:33] gdho poll disarm skip reason=stop
+[2026-05-18 07:57:33] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 07:57:33] gdho hide_frontend queue hide
+[2026-05-18 07:57:33] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 07:57:33] gdho stop done
+[2026-05-18 07:57:38] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=5572960 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=455 mouse_y=594
+[2026-05-18 07:57:38] selection lbutton_up skip=our_ui
+[2026-05-18 07:57:38] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=5572960 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=487 mouse_y=548
+[2026-05-18 07:57:38] selection lbutton_up skip=our_ui
+[2026-05-18 07:57:39] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=5572960 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=467 mouse_y=629
+[2026-05-18 07:57:39] selection lbutton_up skip=our_ui
+[2026-05-18 07:57:39] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=5572960 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=477 mouse_y=608
+[2026-05-18 07:57:39] selection lbutton_up skip=our_ui
+[2026-05-18 07:57:40] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=5572960 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=498 mouse_y=575
+[2026-05-18 07:57:40] selection lbutton_up skip=our_ui
+[2026-05-18 07:57:46] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=5572960 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1604 mouse_y=79
+[2026-05-18 07:57:46] selection lbutton_up skip=our_ui
+[2026-05-18 07:57:47] selection cursor_over_ui miss mouse_x=21 mouse_y=131 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:57:47] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:57:47] selection lbutton_up no_trigger=click
+[2026-05-18 07:57:49] selection cursor_over_ui miss mouse_x=456 mouse_y=149 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:57:49] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:57:49] selection lbutton_up no_trigger=click
+[2026-05-18 07:57:50] selection cursor_over_ui miss mouse_x=364 mouse_y=624 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:57:50] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:57:50] selection lbutton_up no_trigger=click
+[2026-05-18 07:57:52] selection cursor_over_ui miss mouse_x=1295 mouse_y=739 top=hwnd=2099992 class=CabinetWClass title=Thumbs exe=explorer.exe
+[2026-05-18 07:57:52] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:57:52] selection lbutton_up no_trigger=click
+[2026-05-18 07:57:57] selection cursor_over_ui miss mouse_x=435 mouse_y=101 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:57:57] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:57:57] selection lbutton_up no_trigger=click
+[2026-05-18 07:58:02] selection cursor_over_ui miss mouse_x=349 mouse_y=293 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 07:58:02] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 07:58:02] selection lbutton_up no_trigger=click
