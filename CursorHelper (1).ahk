@@ -2858,7 +2858,11 @@ _WebView_QueueFlush(*) {
         jsonStr := WebView_DumpJson(item["payload"])
     }
     if (jsonStr != "") {
-        try item["wv2"].PostWebMessageAsJson(jsonStr)
+        try {
+            if IsObject(item["wv2"])
+                item["wv2"].PostWebMessageAsJson(jsonStr)
+        } catch {
+        }
     }
     SetTimer(_WebView_QueueFlush, -10)
 }

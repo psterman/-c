@@ -17,6 +17,26 @@ global g_CloudPlayerLatestReq := Map()
 global g_CloudPlayerActiveHttpReq := Map()
 global g_CloudPlayerDownloadCancel := Map()
 global g_CloudPlayerDownloadWalk := Map()
+global g_CloudPlayerMainThreadId := 0
+global g_CloudPlayerUiOutbox := []
+global g_CloudPlayerDlThreadRunning := false
+global g_CloudPlayerDlJob := 0
+global g_CloudPlayerDlLastListErr := ""
+
+CloudPlayer_CurrentThreadId() {
+    return DllCall("GetCurrentThreadId", "uint")
+}
+
+CloudPlayer_EnsureMainThreadId() {
+    global g_CloudPlayerMainThreadId
+    if !g_CloudPlayerMainThreadId
+        g_CloudPlayerMainThreadId := CloudPlayer_CurrentThreadId()
+    return g_CloudPlayerMainThreadId
+}
+
+CloudPlayer_IsMainThread() {
+    return CloudPlayer_EnsureMainThreadId() = CloudPlayer_CurrentThreadId()
+}
 
 ShowCloudPlayer(*) {
     CloudPlayer_Show()
@@ -51,6 +71,7 @@ CloudPlayer_CreateGui() {
     global g_CloudPlayerGui, g_CloudPlayerCtrl, g_CloudPlayerWv2, g_CloudPlayerReady
     global g_CloudPlayerOpenListPid
     global g_CloudPlayerImportBusy, g_CloudPlayerAutoPulseEnabled
+    CloudPlayer_EnsureMainThreadId()
 
     if g_CloudPlayerGui {
         try g_CloudPlayerGui.Destroy()
@@ -277,10 +298,19 @@ CloudPlayer_OnWebMessage(sender, args) {
         folderPath := payload.Has("path") ? String(payload["path"]) : "/"
         folderName := payload.Has("name") ? String(payload["name"]) : ""
         token := payload.Has("token") ? Trim(String(payload["token"])) : ""
+        userToken := payload.Has("userToken") ? Trim(String(payload["userToken"])) : token
+        adminToken := payload.Has("adminToken") ? Trim(String(payload["adminToken"])) : ""
         reqId := payload.Has("reqId") ? String(payload["reqId"]) : requestId
         CloudPlayer_MarkLatestReq("download_folder", reqId)
         CloudPlayer_ClearDownloadCancelled(reqId)
-        SetTimer(CloudPlayer_DeferredDownloadFolder.Bind(reqId, folderPath, folderName, token), -10)
+        manifestFiles := 0
+        if payload.Has("files") {
+            try manifestFiles := CloudPlayer_NormalizeManifestFiles(payload["files"])
+            catch {
+                manifestFiles := 0
+            }
+        }
+        SetTimer(CloudPlayer_DeferredDownloadFolder.Bind(reqId, folderPath, folderName, token, manifestFiles, userToken, adminToken), -10)
         return
     }
     if (typ = "cloudplayer_download_cancel") {
@@ -712,11 +742,40 @@ CloudPlayer_IsStaleReq(kind, reqId) {
 }
 
 CloudPlayer_QueuePayload(payload, reqId := "", phase := "", errorCode := "") {
-    global g_CloudPlayerWv2
+    global g_CloudPlayerWv2, g_CloudPlayerMainThreadId, g_CloudPlayerUiOutbox
     if !g_CloudPlayerWv2
         return
     out := AsyncGuardrails_AttachMeta(payload, reqId, phase, errorCode)
+    if !CloudPlayer_IsMainThread() {
+        Critical "On"
+        try g_CloudPlayerUiOutbox.Push(out)
+        finally Critical "Off"
+        try SetTimer(CloudPlayer_FlushUiOutbox, -10)
+        return
+    }
     try WebView_QueuePayload(g_CloudPlayerWv2, out)
+}
+
+CloudPlayer_FlushUiOutbox(*) {
+    global g_CloudPlayerUiOutbox, g_CloudPlayerDlThreadRunning, g_CloudPlayerWv2
+    batch := []
+    Critical "On"
+    try {
+        if (g_CloudPlayerUiOutbox is Array) && g_CloudPlayerUiOutbox.Length > 0
+            batch := g_CloudPlayerUiOutbox.Clone()
+        g_CloudPlayerUiOutbox := []
+    } finally Critical "Off"
+    for _, out in batch {
+        try {
+            if g_CloudPlayerWv2
+                WebView_QueuePayload(g_CloudPlayerWv2, out)
+        } catch {
+        }
+    }
+    if g_CloudPlayerDlThreadRunning
+        SetTimer(CloudPlayer_FlushUiOutbox, 80)
+    else
+        SetTimer(CloudPlayer_FlushUiOutbox, 0)
 }
 
 CloudPlayer_MarkDownloadCancelled(reqId) {
@@ -2312,6 +2371,17 @@ CloudPlayer_ToBool(val, defaultVal := false) {
     return !!defaultVal
 }
 
+CloudPlayer_ResolveDownloadAuthToken(passedToken := "", &errMsg := "") {
+    errMsg := ""
+    tk := Trim(String(passedToken))
+    if (tk != "")
+        return tk
+    admin := CloudPlayer_GetOpenListAdminToken(&errMsg, 12000)
+    if (admin != "")
+        return admin
+    return ""
+}
+
 CloudPlayer_GetOpenListAdminToken(&errMsg := "", timeoutMs := 12000) {
     errMsg := ""
     exe := CloudPlayer_FindOpenListExe()
@@ -2474,12 +2544,410 @@ CloudPlayer_NormalizeApiBase(apiBase) {
     return RTrim(s, "/")
 }
 
-CloudPlayer_DeferredDownloadFolder(reqId, folderPath, folderName, token) {
+CloudPlayer_NormalizeManifestFiles(files) {
+    if !(files is Array)
+        return []
+    out := []
+    for _, raw in files {
+        if (raw is Map)
+            out.Push(raw)
+    }
+    return out
+}
+
+CloudPlayer_RelPathUnderRoot(rootPath, fullPath) {
+    root := CloudPlayer_NormalizeRemotePath(rootPath)
+    full := CloudPlayer_NormalizeRemotePath(fullPath)
+    prefix := (root = "/") ? "/" : (root . "/")
+    if (SubStr(full, 1, StrLen(prefix)) = prefix)
+        return SubStr(full, StrLen(prefix) + 1)
+    return CloudPlayer_RemoteBaseName(full)
+}
+
+CloudPlayer_StopDownloadJob() {
+    global g_CloudPlayerDlJob, g_CloudPlayerDlThreadRunning, g_CloudPlayerDlLastListErr
+    SetTimer(CloudPlayer_DownloadJobTick, 0)
+    g_CloudPlayerDlJob := 0
+    g_CloudPlayerDlThreadRunning := false
+    g_CloudPlayerDlLastListErr := ""
+}
+
+CloudPlayer_DownloadJobTick(*) {
+    global g_CloudPlayerDlJob
+    if !(g_CloudPlayerDlJob is Map)
+        return
+    if (g_CloudPlayerDlJob.Has("nextAt") && A_TickCount < Integer(g_CloudPlayerDlJob["nextAt"]))
+        return
+    g_CloudPlayerDlJob["nextAt"] := 0
+    try {
+        if !CloudPlayer_DownloadJobStep(g_CloudPlayerDlJob)
+            CloudPlayer_StopDownloadJob()
+    } catch as e {
+        rid := g_CloudPlayerDlJob.Has("reqId") ? String(g_CloudPlayerDlJob["reqId"]) : ""
+        name := g_CloudPlayerDlJob.Has("folderName") ? String(g_CloudPlayerDlJob["folderName"]) : ""
+        try CloudPlayer_PostDownloadResult(false, e.Message, "", name, rid, "exception")
+        catch {
+        }
+        try CloudPlayer_ClearDownloadCancelled(rid)
+        catch {
+        }
+        CloudPlayer_StopDownloadJob()
+    }
+}
+
+CloudPlayer_DownloadJobStep(job) {
+    if !(job is Map) || !job.Has("phase")
+        return false
+    phase := String(job["phase"])
+    if (phase = "init")
+        return CloudPlayer_DownloadJobPhaseInit(job)
+    if (phase = "scan")
+        return CloudPlayer_DownloadJobPhaseScan(job)
+    if (phase = "download")
+        return CloudPlayer_DownloadJobPhaseDownloadOne(job)
+    if (phase = "zip")
+        return CloudPlayer_DownloadJobPhaseZip(job)
+    return false
+}
+
+CloudPlayer_DownloadJobPhaseInit(job) {
+    global g_CloudPlayerDlLastListErr
+    rid := job.Has("reqId") ? Trim(String(job["reqId"])) : ""
+    g_CloudPlayerDlLastListErr := ""
+    name := job.Has("folderName") ? String(job["folderName"]) : "cloud-folder"
+    if CloudPlayer_CheckDownloadStale(rid, "job_init")
+        return false
+    if CloudPlayer_CheckDownloadCancelled(rid, "job_init") {
+        CloudPlayer_PostDownloadResult(false, "cancelled", "", name, rid, "cancelled")
+        return false
+    }
+    CloudPlayer_PostDownloadProgress("打包下载：准备中...", rid, "preparing", CloudPlayer_DownloadPhasePercent("preparing"))
+    passedTk := Trim(String(job.Has("userToken") ? job["userToken"] : (job.Has("token") ? job["token"] : "")))
+    adminFromPayload := Trim(String(job.Has("adminToken") ? job["adminToken"] : ""))
+    errTok := ""
+    apiTok := adminFromPayload != "" ? adminFromPayload : CloudPlayer_ResolveDownloadAuthToken(passedTk, &errTok)
+    if (apiTok = "") {
+        CloudPlayer_PostDownloadResult(false, "无法获取 OpenList 管理员 Token" . (errTok != "" ? ("：" . errTok) : ""), "", name, rid, "no_token")
+        CloudPlayer_ClearDownloadCancelled(rid)
+        return false
+    }
+    job["userToken"] := passedTk
+    job["token"] := apiTok
+    try CoreAsyncHttp_Log("cloudplayer_dl_token", "req_id=" . rid . " admin=" . StrLen(apiTok) . " user=" . StrLen(passedTk) . " same=" . (passedTk != "" && passedTk = apiTok ? 1 : 0))
+    headers := Map("Content-Type", "application/json", "Accept", "application/json")
+    headers["Authorization"] := apiTok
+    p := CloudPlayer_NormalizeRemotePath(job.Has("folderPath") ? job["folderPath"] : "/")
+    if (name = "")
+        name := CloudPlayer_SafeFileName(CloudPlayer_RemoteBaseName(p))
+    if (name = "")
+        name := "cloud-folder"
+    job["folderName"] := name
+    job["headers"] := headers
+    outDir := CloudPlayer_DownloadsDir() . "\牛马云下载"
+    DirCreate(outDir)
+    stamp := FormatTime(, "yyyyMMdd_HHmmss")
+    zipPath := outDir . "\" . name . "_" . stamp . ".zip"
+    workRoot := A_Temp . "\Nc_" . A_TickCount
+    stageRoot := workRoot . "\" . name
+    DirCreate(stageRoot)
+    job["stats"] := Map("files", 0, "failed", 0, "scanned", 0)
+    job["zipCtx"] := Map("name", name, "workRoot", workRoot, "stageRoot", stageRoot, "zipPath", zipPath, "stats", job["stats"])
+    job["walkOk"] := true
+    mf := CloudPlayer_NormalizeManifestFiles(job.Has("manifestFiles") ? job["manifestFiles"] : 0)
+    job["manifestFiles"] := mf
+    if mf.Length > 0 {
+        job["fileQueue"] := mf
+        job["fileIndex"] := 0
+        job["fileTotal"] := mf.Length
+        job["stats"]["scanned"] := 1
+        job["dlStep"] := "pick"
+        job["phase"] := "download"
+        try CoreAsyncHttp_Log("cloudplayer_dl_manifest", "req_id=" . rid . " count=" . mf.Length)
+        CloudPlayer_PostDownloadProgress("打包下载：共 " . mf.Length . " 个文件，开始下载...", rid, "downloading", CloudPlayer_DownloadPhasePercent("downloading", 0, mf.Length))
+        return true
+    }
+    job["fileQueue"] := []
+    job["fileIndex"] := 0
+    job["fileTotal"] := 0
+    job["scanQueue"] := [Map("remote", p, "local", stageRoot)]
+    job["scanDirs"] := 0
+    job["phase"] := "scan"
+    CloudPlayer_PostDownloadProgress("打包下载：正在扫描文件夹...", rid, "scanning", CloudPlayer_DownloadPhasePercent("scanning", 0))
+    return true
+}
+
+CloudPlayer_DownloadJobPhaseScan(job) {
+    global g_CloudPlayerDlLastListErr
+    rid := job.Has("reqId") ? Trim(String(job["reqId"])) : ""
+    if CloudPlayer_CheckDownloadStale(rid, "job_scan") || CloudPlayer_CheckDownloadCancelled(rid, "job_scan") {
+        job["walkOk"] := false
+        job["phase"] := "zip"
+        return true
+    }
+    q := job.Has("scanQueue") ? job["scanQueue"] : []
+    if !(q is Array) || q.Length = 0 {
+        fq := CloudPlayer_NormalizeManifestFiles(job.Has("fileQueue") ? job["fileQueue"] : [])
+        job["fileQueue"] := fq
+        job["fileTotal"] := fq.Length
+        job["fileIndex"] := 0
+        job["dlStep"] := "pick"
+        if (fq.Length > 0) {
+            job["phase"] := "download"
+            CloudPlayer_PostDownloadProgress("打包下载：扫描完成，共 " . fq.Length . " 个文件，开始下载...", rid, "downloading", CloudPlayer_DownloadPhasePercent("downloading", 0, fq.Length))
+        } else {
+            job["phase"] := "zip"
+        }
+        return true
+    }
+    scanDirs := job.Has("scanDirs") ? Integer(job["scanDirs"]) : 0
+    if (scanDirs >= 64) {
+        job["phase"] := "zip"
+        return true
+    }
+    job0 := q.RemoveAt(1)
+    if !(job0 is Map)
+        return true
+    rp := job0.Has("remote") ? String(job0["remote"]) : ""
+    loc := job0.Has("local") ? String(job0["local"]) : ""
+    headers := job.Has("headers") ? job["headers"] : Map()
+    stats := job["stats"]
+    job["scanDirs"] := scanDirs + 1
+    stats["scanned"] := job["scanDirs"]
+    scanPct := Min(24, 10 + job["scanDirs"])
+    CloudPlayer_PostDownloadProgress("打包下载：扫描 " . rp . " ...", rid, "scanning", scanPct)
+    try DirCreate(CloudPlayer_ToWinLongPath(loc))
+    items := CloudPlayer_ListFolderItemsSync(rp, headers, rid)
+    if (g_CloudPlayerDlLastListErr != "") {
+        job["walkOk"] := false
+        job["walkErr"] := String(g_CloudPlayerDlLastListErr)
+        job["phase"] := "zip"
+        return true
+    }
+    try {
+        if (items is Array && items.Length > 0) {
+            sample := CloudPlayer_WalkItemAsMap(items[1])
+            sn := sample.Has("name") ? String(sample["name"]) : ""
+            sp := sample.Has("path") ? String(sample["path"]) : ""
+            sd := sample.Has("is_dir") ? String(sample["is_dir"]) : ""
+            ss := sample.Has("size") ? String(sample["size"]) : ""
+            CoreAsyncHttp_Log("cloudplayer_dl_scan_sample", "req_id=" . rid . " path=" . rp . " n=" . sn . " p=" . sp . " d=" . sd . " s=" . ss)
+        } else {
+            CoreAsyncHttp_Log("cloudplayer_dl_scan_sample", "req_id=" . rid . " path=" . rp . " empty=1")
+        }
+    }
+    rootPath := job.Has("folderPath") ? job["folderPath"] : "/"
+    fq := job.Has("fileQueue") ? job["fileQueue"] : []
+    if !(fq is Array)
+        fq := []
+    for _, rawItem in items {
+        item := CloudPlayer_WalkItemAsMap(rawItem)
+        try nm := Trim(String(item.Has("name") ? item["name"] : ""))
+        catch {
+            nm := ""
+        }
+        if (nm = "")
+            continue
+        childRemote := CloudPlayer_WalkItemRemotePath(item, rp, nm)
+        if CloudPlayer_WalkItemIsDir(item, nm) {
+            safeName := CloudPlayer_SafeFileName(nm)
+            if (safeName = "")
+                safeName := "item"
+            q.Push(Map("remote", childRemote, "local", loc . "\" . safeName))
+            continue
+        }
+        fq.Push(Map(
+            "path", childRemote,
+            "name", nm,
+            "sign", CloudPlayer_WalkItemSign(item),
+            "rel", CloudPlayer_RelPathUnderRoot(rootPath, childRemote)
+        ))
+    }
+    job["fileQueue"] := fq
+    job["scanQueue"] := q
+    job["nextAt"] := A_TickCount + 80
+    Sleep(0)
+    return true
+}
+
+CloudPlayer_DownloadJobPhaseDownloadOne(job) {
+    rid := job.Has("reqId") ? Trim(String(job["reqId"])) : ""
+    if CloudPlayer_CheckDownloadStale(rid, "job_dl") || CloudPlayer_CheckDownloadCancelled(rid, "job_dl") {
+        job["walkOk"] := false
+        job["phase"] := "zip"
+        return true
+    }
+    q := job.Has("fileQueue") ? job["fileQueue"] : []
+    idx := job.Has("fileIndex") ? Integer(job["fileIndex"]) : 0
+    total := job.Has("fileTotal") ? Integer(job["fileTotal"]) : (q is Array ? q.Length : 0)
+    if !(q is Array) || idx >= total {
+        job["phase"] := "zip"
+        return true
+    }
+    step := job.Has("dlStep") ? String(job["dlStep"]) : "pick"
+    stats := job["stats"]
+    zipCtx := job["zipCtx"]
+    stageRoot := zipCtx.Has("stageRoot") ? String(zipCtx["stageRoot"]) : ""
+    headers := job.Has("headers") ? job["headers"] : Map()
+    token := job.Has("token") ? job["token"] : ""
+
+    if (step = "pick") {
+        rawItem := q[idx + 1]
+        item := CloudPlayer_WalkItemAsMap(rawItem)
+        childRemote := ""
+        try childRemote := Trim(String(item.Has("path") ? item["path"] : ""))
+        catch {
+            childRemote := ""
+        }
+        if (childRemote = "")
+            childRemote := CloudPlayer_CombineRemotePath(job.Has("folderPath") ? job["folderPath"] : "/", item.Has("name") ? item["name"] : "")
+        rel := ""
+        try rel := Trim(String(item.Has("rel") ? item["rel"] : ""))
+        catch {
+            rel := ""
+        }
+    if (rel = "")
+        rel := CloudPlayer_RemoteBaseName(childRemote)
+    rel := CloudPlayer_SanitizeLocalRelPath(rel)
+    listSign := ""
+        try listSign := Trim(String(item.Has("sign") ? item["sign"] : ""))
+        catch {
+            listSign := ""
+        }
+        if (listSign = "")
+            listSign := CloudPlayer_WalkItemSign(item)
+        job["dlCur"] := Map(
+            "remote", childRemote,
+            "local", stageRoot . "\" . rel,
+            "sign", listSign,
+            "name", CloudPlayer_RemoteBaseName(childRemote),
+            "manifestItem", item
+        )
+        curN := idx + 1
+        nm := job["dlCur"].Has("name") ? String(job["dlCur"]["name"]) : ("#" . curN)
+        CloudPlayer_PostDownloadProgress("打包下载：正在下载 " . curN . "/" . total . " " . nm . " ...", rid, "downloading", CloudPlayer_DownloadPhasePercent("downloading", idx, total))
+        try CoreAsyncHttp_Log("cloudplayer_dl_job_file", "req_id=" . rid . " n=" . curN . "/" . total . " remote=" . childRemote . " sign=" . StrLen(listSign))
+        job["dlStep"] := "fetch"
+        Sleep(0)
+        return true
+    }
+
+    cur := job.Has("dlCur") ? job["dlCur"] : Map()
+    childRemote := cur.Has("remote") ? String(cur["remote"]) : ""
+    childLocal := cur.Has("local") ? String(cur["local"]) : ""
+    listSign := cur.Has("sign") ? String(cur["sign"]) : ""
+
+    if (step = "fetch") {
+        if (childRemote = "") {
+            stats["failed"] += 1
+            job["fileIndex"] := idx + 1
+            job["dlStep"] := "pick"
+            job["nextAt"] := A_TickCount + 100
+            if (job["fileIndex"] >= total)
+                job["phase"] := "zip"
+            return true
+        }
+        try {
+            d := RegExReplace(CloudPlayer_ToWinLongPath(childLocal), "\\[^\\]*$")
+            if (d != "")
+                DirCreate(d)
+        } catch {
+        }
+        job["dlData"] := CloudPlayer_FetchFsGetDataSync(childRemote, headers, rid)
+        job["dlStep"] := "save"
+        Sleep(0)
+        return true
+    }
+
+    if (step = "save") {
+        data := job.Has("dlData") ? job["dlData"] : 0
+        freshSign := CloudPlayer_ParseFsGetSign(data)
+        if (freshSign != "")
+            listSign := freshSign
+        else if (listSign = "") {
+            try CoreAsyncHttp_Log("cloudplayer_dl_no_sign", "req_id=" . rid . " remote=" . childRemote)
+        }
+        manifestItem := (cur is Map && cur.Has("manifestItem")) ? cur["manifestItem"] : Map()
+        userTok := job.Has("userToken") ? Trim(String(job["userToken"])) : ""
+        apiTok := job.Has("token") ? Trim(String(job["token"])) : ""
+        dlTok := userTok != "" ? userTok : apiTok
+        fbTok := (userTok != "" && apiTok != "" && userTok != apiTok) ? apiTok : ""
+        expSize := 0
+        if (data is Map && data.Has("size")) {
+            try expSize := Integer(data["size"])
+            catch {
+                expSize := 0
+            }
+        }
+        dlRes := CloudPlayer_DownloadWalkSaveFile(childLocal, childRemote, dlTok, data, listSign, rid, fbTok, manifestItem, expSize)
+        if dlRes["ok"]
+            stats["files"] += 1
+        else
+            stats["failed"] += 1
+        job["fileIndex"] := idx + 1
+        job["dlStep"] := "pick"
+        done := job["fileIndex"]
+        CloudPlayer_PostDownloadProgress("打包下载：已处理 " . done . "/" . total . "（成功 " . stats["files"] . "，失败 " . stats["failed"] . "）...", rid, "downloading", CloudPlayer_DownloadPhasePercent("downloading", done, total))
+        job["nextAt"] := A_TickCount + 400
+        if (job["fileIndex"] >= total)
+            job["phase"] := "zip"
+        Sleep(0)
+        return true
+    }
+
+    job["dlStep"] := "pick"
+    return true
+}
+
+CloudPlayer_DownloadJobPhaseZip(job) {
+    rid := job.Has("reqId") ? Trim(String(job["reqId"])) : ""
+    walkOk := job.Has("walkOk") ? !!job["walkOk"] : true
+    zipCtx := job.Has("zipCtx") ? job["zipCtx"] : Map()
+    try {
+        CloudPlayer_DownloadFolderZipAfterWalk(walkOk, rid, zipCtx)
+    } catch as e {
+        name := job.Has("folderName") ? String(job["folderName"]) : ""
+        CloudPlayer_PostDownloadResult(false, e.Message, "", name, rid, "exception")
+        CloudPlayer_ClearDownloadCancelled(rid)
+    }
+    return false
+}
+
+CloudPlayer_DeferredDownloadFolder(reqId, folderPath, folderName, token, manifestFiles := 0, userToken := "", adminToken := "") {
     if CloudPlayer_IsStaleReq("download_folder", reqId) {
         try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=download_folder req_id=" . reqId . " phase=deferred")
         return
     }
-    CloudPlayer_DownloadFolderZip(folderPath, folderName, token, reqId)
+    global g_CloudPlayerDlThreadRunning, g_CloudPlayerDlJob
+    if g_CloudPlayerDlThreadRunning || (g_CloudPlayerDlJob is Map) {
+        CloudPlayer_QueuePayload(Map(
+            "type", "cloudplayer_download_result",
+            "ok", false,
+            "message", "已有打包下载任务进行中，请稍候",
+            "path", "",
+            "name", String(folderName)
+        ), reqId, "busy", "download_busy")
+        return
+    }
+    g_CloudPlayerDlThreadRunning := true
+    g_CloudPlayerDlJob := Map(
+        "phase", "init",
+        "reqId", reqId,
+        "folderPath", folderPath,
+        "folderName", folderName,
+        "token", token,
+        "userToken", userToken,
+        "adminToken", adminToken,
+        "manifestFiles", manifestFiles,
+        "fileQueue", [],
+        "fileIndex", 0,
+        "fileTotal", 0,
+        "nextAt", 0,
+        "walkOk", true,
+        "dlStep", "pick",
+        "scanQueue", [],
+        "scanDirs", 0
+    )
+    SetTimer(CloudPlayer_DownloadJobTick, 40)
 }
 
 CloudPlayer_CheckDownloadStale(reqId, phase := "") {
@@ -2532,18 +3000,25 @@ CloudPlayer_PostDownloadProgress(message, reqId := "", phase := "running", perce
     ), rid, String(phase), "")
 }
 
-CloudPlayer_DownloadPhasePercent(phase, processed := 0) {
+CloudPlayer_DownloadPhasePercent(phase, processed := 0, total := 0) {
     ph := StrLower(Trim(String(phase)))
     n := 0
+    t := 0
     try n := Integer(processed)
+    try t := Integer(total)
     if (n < 0)
         n := 0
+    if (t < 0)
+        t := 0
     if (ph = "preparing")
         return 2
     if (ph = "scanning")
-        return 10
-    if (ph = "downloading")
+        return (n > 0) ? Min(24, 10 + n) : 10
+    if (ph = "downloading") {
+        if (t > 0)
+            return Min(70, 10 + Floor((n / t) * 60))
         return Min(70, 10 + Floor(n * 0.9))
+    }
     if (ph = "zipping")
         return 82
     if (ph = "finalizing")
@@ -2571,9 +3046,10 @@ CloudPlayer_PostArchiveProgress(reqId, message, percent := 0) {
     ))
 }
 
-CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "", reqId := "") {
-    global g_CloudPlayerApiBase
+CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "", reqId := "", manifestFiles := 0) {
+    global g_CloudPlayerApiBase, g_CloudPlayerDlLastListErr
     rid := Trim(String(reqId))
+    g_CloudPlayerDlLastListErr := ""
     if CloudPlayer_CheckDownloadStale(rid, "start")
         return
     if CloudPlayer_CheckDownloadCancelled(rid, "start") {
@@ -2593,29 +3069,53 @@ CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "", reqId :
             CloudPlayer_PostDownloadResult(false, "cancelled", "", name, rid, "cancelled")
             return
         }
+        errTok := ""
+        token := CloudPlayer_ResolveDownloadAuthToken(token, &errTok)
         if (Trim(String(token)) = "") {
-            errTok := ""
-            token := CloudPlayer_GetOpenListAdminToken(&errTok, 12000)
+            CloudPlayer_PostDownloadResult(false, "无法获取 OpenList 管理员 Token" . (errTok != "" ? ("：" . errTok) : ""), "", name, rid, "no_token")
+            CloudPlayer_ClearDownloadCancelled(rid)
+            return
         }
+        try CoreAsyncHttp_Log("cloudplayer_dl_token", "req_id=" . rid . " src=admin len=" . StrLen(token))
         headers := Map("Content-Type", "application/json", "Accept", "application/json")
-        if (Trim(String(token)) != "")
-            headers["Authorization"] := Trim(String(token))
+        headers["Authorization"] := Trim(String(token))
 
         outDir := CloudPlayer_DownloadsDir() . "\牛马云下载"
         DirCreate(outDir)
         stamp := FormatTime(, "yyyyMMdd_HHmmss")
         zipPath := outDir . "\" . name . "_" . stamp . ".zip"
-        workRoot := A_Temp . "\NiumaCloudFolder_" . stamp . "_" . A_TickCount
+        workRoot := A_Temp . "\Nc_" . A_TickCount
         stageRoot := workRoot . "\" . name
         DirCreate(stageRoot)
 
-        stats := Map("files", 0, "failed", 0)
-        CloudPlayer_PostDownloadProgress("打包下载：正在扫描目录结构...", rid, "scanning", CloudPlayer_DownloadPhasePercent("scanning"))
-        CloudPlayer_MarkLatestReq("download_fs_list", rid)
-        walkOk := CloudPlayer_DownloadFolderTreeAsync(p, stageRoot, headers, token, stats, rid)
+        stats := Map("files", 0, "failed", 0, "scanned", 0)
+        zipCtx := Map("name", name, "workRoot", workRoot, "stageRoot", stageRoot, "zipPath", zipPath, "stats", stats)
+        ; Host-side recursive scan (paginated fs/list) is the reliable path for folder zips.
+        walkOk := CloudPlayer_DownloadFolderTreeSync(p, stageRoot, headers, token, stats, rid)
+        if (walkOk && stats["files"] = 0 && stats["failed"] = 0 && (manifestFiles is Array) && manifestFiles.Length > 0) {
+            try CoreAsyncHttp_Log("cloudplayer_dl_manifest_fallback", "req_id=" . rid . " count=" . manifestFiles.Length)
+            walkOk := CloudPlayer_DownloadManifestFiles(manifestFiles, stageRoot, headers, token, stats, rid)
+        }
+        CloudPlayer_DownloadFolderZipAfterWalk(walkOk, rid, zipCtx)
+    } catch as e {
+        CloudPlayer_PostDownloadResult(false, e.Message, "", name, rid, "exception")
+        CloudPlayer_ClearDownloadCancelled(rid)
+    }
+}
+
+CloudPlayer_DownloadFolderZipAfterWalk(walkOk, rid, zipCtx) {
+    global g_CloudPlayerDlLastListErr
+    name := zipCtx.Has("name") ? String(zipCtx["name"]) : "cloud-folder"
+    workRoot := zipCtx.Has("workRoot") ? String(zipCtx["workRoot"]) : ""
+    zipPath := zipCtx.Has("zipPath") ? String(zipCtx["zipPath"]) : ""
+    stats := zipCtx.Has("stats") ? zipCtx["stats"] : Map("files", 0, "failed", 0)
+    try {
         if !walkOk {
             try DirDelete(workRoot, true)
-            CloudPlayer_PostDownloadResult(false, "download walk failed or cancelled", "", name, rid, "walk_failed")
+            walkMsg := "download walk failed or cancelled"
+            if (Trim(String(g_CloudPlayerDlLastListErr)) != "")
+                walkMsg := "scan failed: " . String(g_CloudPlayerDlLastListErr)
+            CloudPlayer_PostDownloadResult(false, walkMsg, "", name, rid, "walk_failed")
             return
         }
         if CloudPlayer_CheckDownloadStale(rid, "post_scan") {
@@ -2629,31 +3129,38 @@ CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "", reqId :
         }
         if (stats["files"] <= 0) {
             try DirDelete(workRoot, true)
-            CloudPlayer_PostDownloadResult(false, "folder is empty or no file could be downloaded", "", name, rid, "empty_folder")
+            failN := stats.Has("failed") ? Integer(stats["failed"]) : 0
+            scanned := stats.Has("scanned") ? Integer(stats["scanned"]) : 0
+            msgEmpty := (failN > 0)
+                ? ("没有文件下载成功（" . failN . " 个失败，请完全退出并重启牛马助手后重试）")
+                : (scanned > 0)
+                    ? ("未找到可下载文件（已扫描 " . scanned . " 个目录，请确认文件夹内有图片/文件）")
+                    : "文件夹为空或列表读取失败，请完全退出并重启牛马助手后重试"
+            try CoreAsyncHttp_Log("cloudplayer_dl_zip_empty", "req_id=" . rid . " fail=" . failN . " scanned=" . scanned)
+            CloudPlayer_PostDownloadResult(false, msgEmpty, "", name, rid, "empty_folder")
             return
         }
 
-        sevenZip := A_ScriptDir . "\lib\7z.exe"
-        if !FileExist(sevenZip) {
-            try DirDelete(workRoot, true)
-            CloudPlayer_PostDownloadResult(false, "missing lib\7z.exe", "", name, rid, "missing_7z")
-            return
-        }
-        try FileDelete(zipPath)
+        stageRoot := zipCtx.Has("stageRoot") ? String(zipCtx["stageRoot"]) : (workRoot . "\" . name)
         CloudPlayer_PostDownloadProgress("打包下载：正在压缩，文件数 " . stats["files"] . "...", rid, "zipping", CloudPlayer_DownloadPhasePercent("zipping"))
-        capZip := CloudPlayer_ExecCapture(A_ComSpec . ' /d /c ""' . sevenZip . '" a -tzip -mx=5 "' . zipPath . '" "' . name . '""', 180000)
+        zipRes := CloudPlayer_ZipStageToFile(stageRoot, zipPath, 180000)
         if CloudPlayer_CheckDownloadCancelled(rid, "post_zip") {
             try DirDelete(workRoot, true)
             CloudPlayer_PostDownloadResult(false, "cancelled", "", name, rid, "cancelled")
             return
         }
-        zipTimedOut := false
-        zipExitCode := -1
-        try zipTimedOut := !!capZip["timedOut"]
-        try zipExitCode := Integer(capZip["exitCode"])
-        if (zipTimedOut || zipExitCode != 0 || !FileExist(zipPath)) {
+        if !zipRes["ok"] {
             try DirDelete(workRoot, true)
-            CloudPlayer_PostDownloadResult(false, zipTimedOut ? "zip timeout" : ("zip failed, exit code " . zipExitCode), "", name, rid, zipTimedOut ? "zip_timeout" : "zip_failed")
+            zipTimedOut := zipRes.Has("timedOut") ? !!zipRes["timedOut"] : false
+            zipExitCode := zipRes.Has("exitCode") ? Integer(zipRes["exitCode"]) : -1
+            zipErr := zipRes.Has("stderr") ? Trim(String(zipRes["stderr"])) : ""
+            if (zipErr = "" && zipRes.Has("error"))
+                zipErr := Trim(String(zipRes["error"]))
+            msgZip := zipTimedOut ? "zip timeout" : ("zip failed, exit code " . zipExitCode . (zipErr != "" ? (" (" . SubStr(zipErr, 1, 120) . ")") : ""))
+            errCode := zipTimedOut ? "zip_timeout" : "zip_failed"
+            if InStr(StrLower(zipErr), "missing lib\\7z.exe")
+                errCode := "missing_7z"
+            CloudPlayer_PostDownloadResult(false, msgZip, "", name, rid, errCode)
             return
         }
         try DirDelete(workRoot, true)
@@ -2663,7 +3170,6 @@ CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "", reqId :
             msg .= ", failed: " . stats["failed"]
         CloudPlayer_PostDownloadProgress("打包下载：已完成，准备打开目录...", rid, "finalizing", CloudPlayer_DownloadPhasePercent("finalizing"))
         CloudPlayer_PostDownloadResult(true, msg, zipPath, name, rid, "")
-        CloudPlayer_ClearDownloadCancelled(rid)
     } catch as e {
         CloudPlayer_PostDownloadResult(false, e.Message, "", name, rid, "exception")
     } finally {
@@ -2671,131 +3177,770 @@ CloudPlayer_DownloadFolderZip(folderPath, folderName := "", token := "", reqId :
     }
 }
 
-CloudPlayer_DownloadFolderTreeAsync(remotePath, localDir, headers, token, stats, reqId) {
-    global g_CloudPlayerDownloadWalk
-    rid := Trim(String(reqId))
-    if (rid = "")
-        return false
-    g_CloudPlayerDownloadWalk[rid] := Map(
-        "reqId", rid,
-        "headers", headers,
-        "token", token,
-        "stats", stats,
-        "queue", [Map("remote", remotePath, "local", localDir, "depth", 0)]
-    )
-    while (g_CloudPlayerDownloadWalk.Has(rid)) {
-        if CloudPlayer_CheckDownloadStale(rid, "walk_pump") || CloudPlayer_CheckDownloadCancelled(rid, "walk_pump") {
-            try g_CloudPlayerDownloadWalk.Delete(rid)
-            return false
-        }
-        CloudPlayer_DownloadWalkPumpOnce(rid)
-    }
-    return true
-}
-
-CloudPlayer_DownloadWalkPumpOnce(rid) {
-    global g_CloudPlayerDownloadWalk
-    rid := Trim(String(rid))
-    if !g_CloudPlayerDownloadWalk.Has(rid)
-        return
-    st := g_CloudPlayerDownloadWalk[rid]
-    q := st["queue"]
-    if !(q is Array) || q.Length = 0 {
-        try g_CloudPlayerDownloadWalk.Delete(rid)
-        return
-    }
-    job := q.RemoveAt(1)
-    remotePath := job["remote"]
-    localDir := job["local"]
-    depth := Integer(job["depth"])
-    if (depth > 24)
-        return
-    try DirCreate(localDir)
-    items := CloudPlayer_ListFolderItems(remotePath, st["headers"], rid)
-    for _, item in items {
-        if CloudPlayer_CheckDownloadStale(rid, "walk_loop") || CloudPlayer_CheckDownloadCancelled(rid, "walk_loop") {
-            try g_CloudPlayerDownloadWalk.Delete(rid)
-            return
-        }
-        try name := String(item.Has("name") ? item["name"] : "")
-        catch {
-            name := ""
-        }
-        if (name = "")
-            continue
-        childRemote := CloudPlayer_CombineRemotePath(remotePath, name)
-        safeName := CloudPlayer_SafeFileName(name)
-        if (safeName = "")
-            safeName := "item"
-        isDir := false
-        try isDir := !!item["is_dir"]
-        catch {
-            isDir := false
-        }
-        childLocal := localDir . "\" . safeName
-        if isDir {
-            q.Push(Map("remote", childRemote, "local", childLocal, "depth", depth + 1))
-        } else {
-            urlInfo := CloudPlayer_ResolveDownloadUrl(childRemote, st["headers"], rid)
-            if !(urlInfo is Map) || !urlInfo.Has("url") || urlInfo["url"] = "" {
-                st["stats"]["failed"] += 1
-                continue
-            }
-            ok := CloudPlayer_DownloadBinary(urlInfo["url"], childLocal, st["token"], urlInfo.Has("headers") ? urlInfo["headers"] : 0)
-            if ok
-                st["stats"]["files"] += 1
-            else
-                st["stats"]["failed"] += 1
-            total := st["stats"]["files"] + st["stats"]["failed"]
-            if (Mod(total, 5) = 0)
-                CloudPlayer_PostDownloadProgress("打包下载：已处理 " . total . " 个文件（成功 " . st["stats"]["files"] . "，失败 " . st["stats"]["failed"] . "）...", rid, "downloading", CloudPlayer_DownloadPhasePercent("downloading", total))
-        }
-    }
-    st["queue"] := q
-}
-
-CloudPlayer_ListFolderItems(remotePath, headers, reqId := "") {
-    global g_CloudPlayerApiBase
+CloudPlayer_ListFolderItemsSync(remotePath, headers, reqId := "") {
+    global g_CloudPlayerApiBase, g_CloudPlayerDlLastListErr
+    g_CloudPlayerDlLastListErr := ""
     out := []
     page := 1
     perPage := 500
-    loop 200 {
-        body := CloudPlayer_JsonForceBoolLiterals(Jxon_Dump(Map(
-            "path", CloudPlayer_NormalizeRemotePath(remotePath),
-            "password", "",
-            "page", page,
-            "per_page", perPage,
-            "refresh", false
-        )), ["refresh"])
-        ret := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/fs/list", headers, body, reqId)
-        if !ret["ok"]
+    loop 64 {
+        rid := Trim(String(reqId))
+        if (rid != "" && CloudPlayer_IsDownloadCancelled(rid))
             break
-        content := 0
-        try content := ret["json"]["data"]["content"]
-        catch {
-            content := 0
+        batch := []
+        fetchOk := false
+        ; Some OpenList/provider combos can return empty on first refresh=true probe.
+        ; Retry once with refresh=false before deciding it's empty.
+        for _, refreshFlag in [page = 1 ? true : false, false] {
+            body := CloudPlayer_JsonForceBoolLiterals(Jxon_Dump(Map(
+                "path", CloudPlayer_NormalizeRemotePath(remotePath),
+                "password", "",
+                "page", page,
+                "per_page", perPage,
+                "refresh", refreshFlag
+            )), ["refresh"])
+            ret := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/fs/list", headers, body, rid)
+            if !ret["ok"] {
+                g_CloudPlayerDlLastListErr := ret.Has("error") ? String(ret["error"]) : "fs/list transport error"
+                try CoreAsyncHttp_Log("cloudplayer_dl_scan_page", "req_id=" . rid . " path=" . remotePath . " page=" . page . " refresh=" . (refreshFlag ? 1 : 0) . " ok=0 err=" . g_CloudPlayerDlLastListErr)
+                continue
+            }
+            code := 0
+            try code := Integer(ret["json"]["code"])
+            catch {
+                code := 0
+            }
+            if (code != 200) {
+                msg := ""
+                try msg := String(ret["json"]["message"])
+                catch {
+                    msg := ""
+                }
+                g_CloudPlayerDlLastListErr := (msg != "") ? msg : ("fs/list code " . code)
+                try CoreAsyncHttp_Log("cloudplayer_dl_scan_page", "req_id=" . rid . " path=" . remotePath . " page=" . page . " refresh=" . (refreshFlag ? 1 : 0) . " ok=1 code=" . code . " msg=" . g_CloudPlayerDlLastListErr)
+                continue
+            }
+            fetchOk := true
+            dataObj := 0
+            try dataObj := ret["json"]["data"]
+            catch {
+                dataObj := 0
+            }
+            try {
+                keys := ""
+                if (dataObj is Map) {
+                    for k, _ in dataObj {
+                        ks := String(k)
+                        keys .= (keys = "" ? ks : ("," . ks))
+                        if (StrLen(keys) > 120) {
+                            keys .= "..."
+                            break
+                        }
+                    }
+                } else if (dataObj is Array) {
+                    keys := "[array]"
+                } else {
+                    keys := Type(dataObj)
+                }
+                CoreAsyncHttp_Log("cloudplayer_dl_scan_data", "req_id=" . rid . " path=" . remotePath . " page=" . page . " refresh=" . (refreshFlag ? 1 : 0) . " data_keys=" . keys)
+            }
+            batch := CloudPlayer_ParseFsListRows(dataObj)
+            try CoreAsyncHttp_Log("cloudplayer_dl_scan_page", "req_id=" . rid . " path=" . remotePath . " page=" . page . " refresh=" . (refreshFlag ? 1 : 0) . " ok=1 code=200 rows=" . batch.Length)
+            if (batch.Length > 0 || !refreshFlag)
+                break
+            Sleep(120)
         }
-        if !(content is Array) || content.Length = 0
+        if !fetchOk && g_CloudPlayerDlLastListErr != ""
             break
-        for _, row in content
+        if batch.Length = 0
+            break
+        for _, row in batch
             out.Push(row)
-        if (content.Length < perPage)
+        if (batch.Length < perPage)
             break
         page += 1
+        Sleep(0)
     }
     return out
 }
 
-CloudPlayer_ResolveDownloadUrl(remotePath, headers, reqId := "") {
-    global g_CloudPlayerApiBase
-    ret := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/fs/get", headers, Jxon_Dump(Map("path", CloudPlayer_NormalizeRemotePath(remotePath), "password", "")), reqId)
-    if !ret["ok"]
-        return Map("url", "")
-    data := 0
-    try data := ret["json"]["data"]
-    catch {
-        data := 0
+CloudPlayer_ParseFsListRows(dataObj) {
+    out := []
+    if (dataObj is Array) {
+        for _, row in dataObj
+            out.Push(row)
+        return out
     }
+    if !(dataObj is Map)
+        return out
+    for _, key in ["content", "files", "items", "children", "list"] {
+        try v := dataObj.Has(key) ? dataObj[key] : 0
+        catch {
+            v := 0
+        }
+        if (v is Array) {
+            for _, row in v
+                out.Push(row)
+            if (out.Length > 0)
+                return out
+        } else if (v is Map) {
+            for _, row in v
+                out.Push(row)
+            if (out.Length > 0)
+                return out
+        }
+    }
+    return out
+}
+
+CloudPlayer_FetchFsGetDataSync(remotePath, headers, reqId := "") {
+    global g_CloudPlayerApiBase
+    rp := CloudPlayer_NormalizeRemotePath(remotePath)
+    body := Jxon_Dump(Map("path", rp, "password", ""))
+    loop 2 {
+        ret := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/fs/get", headers, body, reqId)
+        if ret["ok"] {
+            try {
+                if (ret["json"] is Map && ret["json"].Has("data"))
+                    return ret["json"]["data"]
+            } catch {
+            }
+        }
+        if (A_Index = 2)
+            break
+        Sleep(80)
+    }
+    return 0
+}
+
+CloudPlayer_DownloadManifestFiles(files, stageRoot, headers, token, stats, reqId) {
+    rid := Trim(String(reqId))
+    if !(files is Array) || files.Length = 0
+        return true
+    stats["scanned"] := 1
+    for _, rawItem in files {
+        if CloudPlayer_CheckDownloadStale(rid, "walk_item") || CloudPlayer_CheckDownloadCancelled(rid, "walk_item")
+            return false
+        item := CloudPlayer_WalkItemAsMap(rawItem)
+        childRemote := ""
+        try childRemote := Trim(String(item.Has("path") ? item["path"] : ""))
+        catch {
+            childRemote := ""
+        }
+        if (childRemote = "")
+            continue
+        rel := ""
+        try rel := Trim(String(item.Has("rel") ? item["rel"] : ""))
+        catch {
+            rel := ""
+        }
+        if (rel = "")
+            rel := CloudPlayer_RemoteBaseName(childRemote)
+        rel := StrReplace(rel, "/", "\")
+        childLocal := stageRoot . "\" . rel
+        try {
+            d := RegExReplace(CloudPlayer_ToWinLongPath(childLocal), "\\[^\\]*$")
+            if (d != "")
+                DirCreate(d)
+        } catch {
+        }
+        listSign := ""
+        try listSign := Trim(String(item.Has("sign") ? item["sign"] : ""))
+        catch {
+            listSign := ""
+        }
+        data := CloudPlayer_FetchFsGetDataSync(childRemote, headers, rid)
+        dlRes := CloudPlayer_DownloadWalkSaveFile(childLocal, childRemote, token, data, listSign, rid)
+        if dlRes["ok"]
+            stats["files"] += 1
+        else
+            stats["failed"] += 1
+        total := stats["files"] + stats["failed"]
+        if (Mod(total, 2) = 0 || total = files.Length)
+            CloudPlayer_PostDownloadProgress("打包下载：已处理 " . total . "/" . files.Length . "（成功 " . stats["files"] . "，失败 " . stats["failed"] . "）...", rid, "downloading", CloudPlayer_DownloadPhasePercent("downloading", total))
+        Sleep(500)
+    }
+    return true
+}
+
+CloudPlayer_DownloadFolderTreeSync(remotePath, localDir, headers, token, stats, reqId) {
+    global g_CloudPlayerDlLastListErr
+    rid := Trim(String(reqId))
+    q := [Map("remote", remotePath, "local", localDir, "depth", 0)]
+    scannedDirs := 0
+    while (q is Array) && q.Length > 0 {
+        if CloudPlayer_CheckDownloadStale(rid, "walk") || CloudPlayer_CheckDownloadCancelled(rid, "walk")
+            return false
+        job := q.RemoveAt(1)
+        if !(job is Map)
+            continue
+        depth := Integer(job.Has("depth") ? job["depth"] : 0)
+        if (depth > 24)
+            continue
+        rp := job.Has("remote") ? String(job["remote"]) : ""
+        loc := job.Has("local") ? String(job["local"]) : ""
+        try DirCreate(CloudPlayer_ToWinLongPath(loc))
+        scannedDirs += 1
+        stats["scanned"] := scannedDirs
+        scanPct := Min(24, 10 + scannedDirs)
+        CloudPlayer_PostDownloadProgress("打包下载：扫描 " . rp . " ...", rid, "scanning", scanPct)
+        items := CloudPlayer_ListFolderItemsSync(rp, headers, rid)
+        if (g_CloudPlayerDlLastListErr != "")
+            return false
+        CloudPlayer_PostDownloadProgress("打包下载：扫描 " . rp . "（" . items.Length . " 项）...", rid, "scanning", scanPct)
+        for _, rawItem in items {
+            if CloudPlayer_CheckDownloadStale(rid, "walk_item") || CloudPlayer_CheckDownloadCancelled(rid, "walk_item")
+                return false
+            item := CloudPlayer_WalkItemAsMap(rawItem)
+            try name := String(item.Has("name") ? item["name"] : "")
+            catch {
+                name := ""
+            }
+            if (name = "")
+                continue
+            childRemote := CloudPlayer_WalkItemRemotePath(item, rp, name)
+            safeName := CloudPlayer_SafeFileName(name)
+            if (safeName = "")
+                safeName := "item"
+            childLocal := loc . "\" . safeName
+            if CloudPlayer_WalkItemIsDir(item, name) {
+                try DirCreate(CloudPlayer_ToWinLongPath(childLocal))
+                q.InsertAt(1, Map("remote", childRemote, "local", childLocal, "depth", depth + 1))
+                continue
+            }
+            data := CloudPlayer_FetchFsGetDataSync(childRemote, headers, rid)
+            dlRes := CloudPlayer_DownloadWalkSaveFile(childLocal, childRemote, token, data, CloudPlayer_WalkItemSign(item), rid)
+            if dlRes["ok"]
+                stats["files"] += 1
+            else
+                stats["failed"] += 1
+            total := stats["files"] + stats["failed"]
+            if (Mod(total, 2) = 0)
+                CloudPlayer_PostDownloadProgress("打包下载：已处理 " . total . " 个文件（成功 " . stats["files"] . "，失败 " . stats["failed"] . "）...", rid, "downloading", CloudPlayer_DownloadPhasePercent("downloading", total))
+            Sleep(500)
+        }
+    }
+    return true
+}
+
+CloudPlayer_WalkItemAsMap(item) {
+    if (item is Map)
+        return item
+    if (item is Array) {
+        m := Map()
+        ; Compatibility: some OpenList/provider responses may return tuple-like rows.
+        ; Try common positions: [name, path, is_dir, size]
+        try {
+            if (item.Length >= 1)
+                m["name"] := item[1]
+            if (item.Length >= 2)
+                m["path"] := item[2]
+            if (item.Length >= 3)
+                m["is_dir"] := item[3]
+            if (item.Length >= 4)
+                m["size"] := item[4]
+        }
+        return m
+    }
+    return Map()
+}
+
+CloudPlayer_WalkItemRemotePath(item, parentRemote, name) {
+    item := CloudPlayer_WalkItemAsMap(item)
+    if (item is Map && item.Has("path")) {
+        try p := Trim(String(item["path"]))
+        catch {
+            p := ""
+        }
+        if (p != "")
+            return CloudPlayer_NormalizeRemotePath(p)
+    }
+    return CloudPlayer_CombineRemotePath(parentRemote, name)
+}
+
+CloudPlayer_WalkItemIsDir(item, name := "") {
+    nm := Trim(String(name))
+    if (nm = "" && item is Map) {
+        try nm := Trim(String(item.Has("name") ? item["name"] : ""))
+        catch {
+            nm := ""
+        }
+    }
+    if (nm != "" && RegExMatch(nm, "i)\.(jpg|jpeg|png|gif|webp|bmp|svg|ico|mp4|mov|mkv|avi|wmv|flv|mp3|wav|flac|aac|zip|rar|7z|tar|gz|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|md|json|xml|csv)$"))
+        return false
+    if !(item is Map)
+        return false
+    try {
+        if item.Has("size") {
+            sz := item["size"]
+            if (Type(sz) = "Integer" || Type(sz) = "Float") {
+                if (Number(sz) > 0)
+                    return false
+            } else {
+                ssz := Trim(String(sz))
+                if (ssz != "" && ssz != "0")
+                    return false
+            }
+        }
+    } catch {
+    }
+    try {
+        if item.Has("is_dir") {
+            v := item["is_dir"]
+            if (v is Integer || v is Float)
+                return (Integer(v) != 0)
+            if (v is String) {
+                s := StrLower(Trim(v))
+                if (s = "true" || s = "1")
+                    return true
+                if (s = "false" || s = "0" || s = "")
+                    return false
+            }
+            return !!v
+        }
+    } catch {
+    }
+    try {
+        if item.Has("type") {
+            tp := StrLower(Trim(String(item["type"])))
+            if (tp = "dir" || tp = "folder" || tp = "directory")
+                return true
+            if (tp = "file" || tp = "f")
+                return false
+        }
+    } catch {
+    }
+    try {
+        p := Trim(String(item.Has("path") ? item["path"] : ""))
+        if (p != "" && SubStr(p, -1) = "/")
+            return true
+    } catch {
+    }
+    return false
+}
+
+CloudPlayer_AppendFsListContent(&listItems, content) {
+    if !(listItems is Array)
+        listItems := []
+    if (content is Array) {
+        for _, row in content
+            listItems.Push(row)
+    } else if (content is Map) {
+        for _, row in content
+            listItems.Push(row)
+    }
+    return listItems
+}
+
+CloudPlayer_WalkItemSign(item) {
+    item := CloudPlayer_WalkItemAsMap(item)
+    if !(item is Map)
+        return ""
+    try s := Trim(String(item.Has("sign") ? item["sign"] : ""))
+    catch {
+        s := ""
+    }
+    return s
+}
+
+CloudPlayer_SanitizeLocalRelPath(rel) {
+    rel := StrReplace(Trim(String(rel)), "/", "\")
+    if (rel = "")
+        return rel
+    parts := StrSplit(rel, "\")
+    out := ""
+    for i, part in parts {
+        if (part = "")
+            continue
+        safe := CloudPlayer_SafeFileName(StrReplace(part, ":", "_"))
+        if (safe = "")
+            safe := "item"
+        out .= (out = "") ? safe : ("\" . safe)
+    }
+    return out
+}
+
+CloudPlayer_ToWinLongPath(path) {
+    p := Trim(String(path))
+    if (p = "")
+        return p
+    if (SubStr(p, 1, 4) = "\\?\")
+        return p
+    if (SubStr(p, 1, 2) = "\\")
+        return "\\?\UNC\" . SubStr(p, 3)
+    return "\\?\" . p
+}
+
+CloudPlayer_StripWinLongPath(path) {
+    p := Trim(String(path))
+    if (SubStr(p, 1, 8) = "\\?\UNC\")
+        return "\\" . SubStr(p, 9)
+    if (SubStr(p, 1, 4) = "\\?\")
+        return SubStr(p, 5)
+    return p
+}
+
+CloudPlayer_WriteHttpBodyToFile(whr, outPath, expectedSize := 0) {
+    longPath := CloudPlayer_ToWinLongPath(outPath)
+    checkPath := CloudPlayer_StripWinLongPath(longPath)
+    dir := RegExReplace(longPath, "\\[^\\]*$")
+    if (dir != "")
+        DirCreate(dir)
+    try {
+        ct := ""
+        try ct := String(whr.GetResponseHeader("Content-Type"))
+        catch {
+            ct := ""
+        }
+        if (ct != "" && RegExMatch(ct, "i)text/html|application/json|text/plain"))
+            return false
+    } catch {
+    }
+    saved := false
+    try {
+        ado := ComObject("ADODB.Stream")
+        ado.Type := 1
+        ado.Open()
+        ado.Write(whr.ResponseBody)
+        try FileDelete(checkPath)
+        catch {
+        }
+        ado.SaveToFile(longPath, 2)
+        ado.Close()
+        saved := true
+    } catch {
+        saved := false
+    }
+    if !saved {
+        ext := ""
+        if RegExMatch(checkPath, "\.[^.\\]+$", &mExt)
+            ext := mExt[0]
+        tempPath := A_Temp . "\nd" . A_TickCount . "_" . Random(100000, 999999) . ext
+        try FileDelete(tempPath)
+        catch {
+        }
+        try {
+            body := whr.ResponseBody
+            if body {
+                f := FileOpen(tempPath, "w-d")
+                f.RawWrite(body)
+                f.Close()
+                saved := FileExist(tempPath)
+            }
+        } catch {
+            saved := false
+        }
+        if saved {
+            try FileDelete(checkPath)
+            catch {
+            }
+            if !FileMove(tempPath, longPath, 1)
+                saved := FileMove(tempPath, checkPath, 1)
+        }
+    }
+    if !saved || !FileExist(checkPath)
+        return false
+    gotSize := 0
+    try gotSize := FileGetSize(checkPath)
+    catch {
+        gotSize := 0
+    }
+    if (gotSize <= 0)
+        return false
+    exp := 0
+    try exp := Integer(expectedSize)
+    catch {
+        exp := 0
+    }
+    if (exp > 1024 && gotSize < Floor(exp * 0.2))
+        return false
+    return true
+}
+
+CloudPlayer_NormalizeHttpHeaders(hdr) {
+    out := Map()
+    if !(hdr is Map)
+        return out
+    for k, v in hdr {
+        if (IsObject(v) && !(v is Map))
+            continue
+        try out[String(k)] := String(v)
+        catch {
+        }
+    }
+    return out
+}
+
+CloudPlayer_StripAuthFromHeaders(hdr) {
+    out := CloudPlayer_NormalizeHttpHeaders(hdr)
+    for k, _ in out.Clone() {
+        if (StrLower(Trim(String(k))) = "authorization")
+            out.Delete(k)
+    }
+    return out
+}
+
+CloudPlayer_IsLocalOpenListProxyUrl(url) {
+    return RegExMatch(Trim(String(url)), "i)^https?://(?:127\.0\.0\.1|localhost)(?::\d+)?/(?:d|p)(?:/|\?|$)")
+}
+
+CloudPlayer_PushDownloadCandidate(&out, &seen, u, hdr) {
+    u := Trim(String(u))
+    if (u = "" || !RegExMatch(u, "i)^https?://") || RegExMatch(u, "i)/@manage(?:[/?#]|$)") || seen.Has(u))
+        return
+    seen[u] := true
+    out.Push(Map("url", u, "headers", hdr))
+}
+
+CloudPlayer_IsExternalCdnUrl(url) {
+    u := Trim(String(url))
+    if (u = "")
+        return false
+    if CloudPlayer_IsLocalOpenListProxyUrl(u)
+        return false
+    return RegExMatch(u, "i)(aliyundrive\.cloud|aliyuncs\.com|alipan\.com|download\.aliyun|drive\.google|googleusercontent\.com)")
+}
+
+CloudPlayer_ShouldUseExternalDownloadUrl(url, proxyOnly := true) {
+    u := Trim(String(url))
+    if (u = "" || !RegExMatch(u, "i)^https?://"))
+        return false
+    if CloudPlayer_IsLocalOpenListProxyUrl(u)
+        return true
+    if !proxyOnly
+        return true
+    return !CloudPlayer_IsExternalCdnUrl(u)
+}
+
+CloudPlayer_AppendDownloadUrlFromData(&out, &seen, data, fullHdr, cdnHdr, proxyOnly) {
+    if !(data is Map)
+        return
+    for _, key in ["url", "raw_url"] {
+        try u := Trim(String(data.Has(key) ? data[key] : ""))
+        catch {
+            u := ""
+        }
+        if (u = "" || !CloudPlayer_ShouldUseExternalDownloadUrl(u, proxyOnly))
+            continue
+        hdr := CloudPlayer_IsLocalOpenListProxyUrl(u) ? fullHdr : cdnHdr
+        CloudPlayer_PushDownloadCandidate(&out, &seen, u, hdr)
+    }
+    try {
+        if (data.Has("content") && data["content"] is Map && data["content"].Has("url")) {
+            u2 := Trim(String(data["content"]["url"]))
+            if (u2 != "" && CloudPlayer_ShouldUseExternalDownloadUrl(u2, proxyOnly)) {
+                hdr2 := CloudPlayer_IsLocalOpenListProxyUrl(u2) ? fullHdr : cdnHdr
+                CloudPlayer_PushDownloadCandidate(&out, &seen, u2, hdr2)
+            }
+        }
+    } catch {
+    }
+}
+
+CloudPlayer_BuildDownloadCandidates(data, remotePath, listSign := "", proxyOnly := true, manifestItem := 0) {
+    ; OpenList 官方流程（#1549）：先 /api/fs/get 拿 raw_url/sign，再用 /p/ 或 /d/?sign= 下载；
+    ; 「签名全部」开启时直链只认 sign，不认 Authorization。
+    out := []
+    seen := Map()
+    if (manifestItem is Map) && manifestItem.Has("downloadUrl") {
+        try {
+            u0 := Trim(String(manifestItem["downloadUrl"]))
+            if (u0 != "" && RegExMatch(u0, "i)^https?://")) {
+                hdr0 := Map()
+                if manifestItem.Has("downloadHeaders")
+                    hdr0 := CloudPlayer_NormalizeHttpHeaders(manifestItem["downloadHeaders"])
+                CloudPlayer_PushDownloadCandidate(&out, &seen, u0, hdr0)
+            }
+        } catch {
+        }
+    }
+    fullHdr := Map()
+    if (data is Map && data.Has("header"))
+        fullHdr := CloudPlayer_NormalizeHttpHeaders(data["header"])
+    cdnHdr := CloudPlayer_StripAuthFromHeaders(fullHdr)
+    sg := Trim(String(listSign))
+    if (sg = "" && data is Map)
+        sg := CloudPlayer_ParseFsGetSign(data)
+    if (sg = "" && manifestItem is Map && manifestItem.Has("sign")) {
+        try sg := Trim(String(manifestItem["sign"]))
+        catch {
+            sg := ""
+        }
+    }
+    CloudPlayer_AppendDownloadUrlFromData(&out, &seen, data, fullHdr, cdnHdr, proxyOnly)
+    if (sg != "") {
+        CloudPlayer_PushDownloadCandidate(&out, &seen, CloudPlayer_MakeProxyPUrl(remotePath, sg), Map())
+        CloudPlayer_PushDownloadCandidate(&out, &seen, CloudPlayer_MakeDirectDUrl(remotePath, sg), Map())
+    } else if !proxyOnly {
+        CloudPlayer_PushDownloadCandidate(&out, &seen, CloudPlayer_MakeProxyPUrl(remotePath, ""), Map())
+        CloudPlayer_PushDownloadCandidate(&out, &seen, CloudPlayer_MakeDirectDUrl(remotePath, ""), Map())
+    }
+    return out
+}
+
+CloudPlayer_AppendDownloadAuthToken(&tokens, tok) {
+    t := Trim(String(tok))
+    if (t = "")
+        return
+    if !(tokens is Array)
+        return
+    for _, existing in tokens {
+        if (existing = t)
+            return
+    }
+    tokens.Push(t)
+}
+
+CloudPlayer_ApplyDownloadRequestHeaders(whr, token, extraHeaders, localProxy) {
+    whr.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36")
+    whr.SetRequestHeader("Accept", "application/octet-stream,*/*")
+    tk := Trim(String(token))
+    hdrs := CloudPlayer_NormalizeHttpHeaders(extraHeaders)
+    if localProxy {
+        global g_CloudPlayerApiBase
+        base := RTrim(String(g_CloudPlayerApiBase), "/")
+        if (base != "")
+            whr.SetRequestHeader("Referer", base . "/")
+        for k, v in hdrs {
+            lk := StrLower(Trim(String(k)))
+            if (lk = "authorization" || lk = "host")
+                continue
+            try whr.SetRequestHeader(String(k), String(v))
+        }
+        return
+    } else {
+        for k, v in hdrs {
+            lk := StrLower(Trim(String(k)))
+            if (lk = "authorization" || lk = "host")
+                continue
+            try whr.SetRequestHeader(String(k), String(v))
+        }
+        if (tk != "")
+            whr.SetRequestHeader("Authorization", tk)
+    }
+}
+
+CloudPlayer_DownloadWalkSaveFile(childLocal, childRemote, token, data, listSign := "", reqId := "", fallbackToken := "", manifestItem := 0, expectedSize := 0) {
+    res := Map("ok", false, "error", "no_download_url")
+    candidates := CloudPlayer_BuildDownloadCandidates(data, childRemote, listSign, true, manifestItem)
+    if !(candidates is Array) || candidates.Length = 0
+        return res
+    lastErr := ""
+    tokens := []
+    CloudPlayer_AppendDownloadAuthToken(&tokens, token)
+    CloudPlayer_AppendDownloadAuthToken(&tokens, fallbackToken)
+    if (tokens.Length = 0) {
+        errEmpty := ""
+        CloudPlayer_AppendDownloadAuthToken(&tokens, CloudPlayer_ResolveDownloadAuthToken("", &errEmpty))
+    }
+    refreshedUsed := false
+    ti := 0
+    while (ti < tokens.Length) {
+        ti += 1
+        passTok := tokens[ti]
+        authFailed := false
+        for _, info in candidates {
+            if !(info is Map) || !info.Has("url") || info["url"] = ""
+                continue
+            u := Trim(String(info["url"]))
+            hdr := info.Has("headers") ? info["headers"] : 0
+            localPx := CloudPlayer_IsLocalOpenListProxyUrl(u)
+            useTok := localPx ? "" : passTok
+            dl := CloudPlayer_DownloadBinaryEx(u, childLocal, useTok, hdr, expectedSize)
+            if dl["ok"] {
+                res["ok"] := true
+                res["error"] := ""
+                return res
+            }
+            lastErr := dl.Has("error") ? String(dl["error"]) : "download failed"
+            if InStr(lastErr, "401") {
+                authFailed := true
+                break
+            }
+            if InStr(lastErr, "403") || InStr(lastErr, "429")
+                Sleep(1800)
+        }
+        if (lastErr != "" && !authFailed)
+            break
+        if (ti >= tokens.Length && !refreshedUsed) {
+            refreshedUsed := true
+            errRefresh := ""
+            refreshed := CloudPlayer_ResolveDownloadAuthToken("", &errRefresh)
+            if (refreshed != "")
+                CloudPlayer_AppendDownloadAuthToken(&tokens, refreshed)
+        }
+    }
+    res["error"] := lastErr
+    rid := Trim(String(reqId))
+    if (rid != "" || lastErr != "") {
+        nCand := (candidates is Array) ? candidates.Length : 0
+        hasPre := (manifestItem is Map && manifestItem.Has("downloadUrl") && Trim(String(manifestItem["downloadUrl"])) != "") ? 1 : 0
+        try CoreAsyncHttp_Log("cloudplayer_dl_file_fail", "req_id=" . rid . " remote=" . childRemote . " err=" . lastErr . " candidates=" . nCand . " pre_url=" . hasPre)
+    }
+    return res
+}
+
+CloudPlayer_ZipStageToFile(stageRoot, zipPath, timeoutMs := 180000) {
+    out := Map("ok", false, "timedOut", false, "exitCode", -1, "stderr", "", "error", "")
+    stageRoot := Trim(String(stageRoot))
+    zipPath := Trim(String(zipPath))
+    if (stageRoot = "" || !DirExist(stageRoot)) {
+        out["error"] := "stage folder missing"
+        return out
+    }
+    sevenZip := A_ScriptDir . "\lib\7z.exe"
+    if !FileExist(sevenZip) {
+        out["error"] := "missing lib\\7z.exe"
+        return out
+    }
+    try FileDelete(zipPath)
+    stageLong := CloudPlayer_ToWinLongPath(stageRoot)
+    cmd := '"' . sevenZip . '" a -tzip -mx=5 -bso0 -bsp0 "' . zipPath . '" "' . stageLong . '"'
+    cap := CloudPlayer_ExecCapture(cmd, timeoutMs)
+    out["timedOut"] := cap.Has("timedOut") ? !!cap["timedOut"] : false
+    out["stderr"] := cap.Has("stderr") ? String(cap["stderr"]) : ""
+    try out["exitCode"] := Integer(cap["exitCode"])
+    catch {
+        out["exitCode"] := -1
+    }
+    zipOk := false
+    try zipOk := FileExist(zipPath) && (FileGetSize(zipPath) > 0)
+    catch {
+        zipOk := FileExist(zipPath)
+    }
+    ex := out["exitCode"]
+    out["ok"] := zipOk && !out["timedOut"] && (ex = 0 || ex = 1)
+    if (!out["ok"] && out["error"] = "") {
+        if (out["timedOut"])
+            out["error"] := "zip timeout"
+        else if (!zipOk)
+            out["error"] := "zip not created"
+        else
+            out["error"] := "zip exit " . ex
+    }
+    return out
+}
+
+CloudPlayer_ParseFsGetSign(data) {
+    if !(data is Map)
+        return ""
+    sign := ""
+    try sign := Trim(String(data.Has("sign") ? data["sign"] : ""))
+    catch {
+        sign := ""
+    }
+    if (sign = "") {
+        try {
+            if (data.Has("content") && data["content"] is Map)
+                sign := Trim(String(data["content"].Has("sign") ? data["content"]["sign"] : ""))
+        } catch {
+            sign := ""
+        }
+    }
+    return sign
+}
+
+CloudPlayer_ParseFsGetUrlInfo(data, remotePath := "") {
     if !(data is Map)
         return Map("url", "")
     extraHeaders := data.Has("header") ? data["header"] : 0
@@ -2815,75 +3960,161 @@ CloudPlayer_ResolveDownloadUrl(remotePath, headers, reqId := "") {
         }
     } catch {
     }
-    sign := ""
-    try sign := Trim(String(data.Has("sign") ? data["sign"] : ""))
-    catch {
-        sign := ""
-    }
+    sign := CloudPlayer_ParseFsGetSign(data)
     return Map("url", CloudPlayer_MakeDirectDUrl(remotePath, sign), "headers", extraHeaders)
 }
 
+CloudPlayer_ResolveDownloadUrl(remotePath, headers, reqId := "") {
+    global g_CloudPlayerApiBase
+    ret := CloudPlayer_HttpJson("POST", g_CloudPlayerApiBase . "/api/fs/get", headers, Jxon_Dump(Map("path", CloudPlayer_NormalizeRemotePath(remotePath), "password", "")), reqId)
+    if !ret["ok"]
+        return Map("url", "")
+    data := 0
+    try data := ret["json"]["data"]
+    catch {
+        data := 0
+    }
+    return CloudPlayer_ParseFsGetUrlInfo(data, remotePath)
+}
+
 CloudPlayer_DownloadBinary(url, outPath, token := "", extraHeaders := 0) {
+    return CloudPlayer_DownloadBinaryEx(url, outPath, token, extraHeaders)["ok"]
+}
+
+CloudPlayer_DownloadBinaryEx(url, outPath, token := "", extraHeaders := 0, expectedSize := 0) {
+    res := Map("ok", false, "error", "", "status", 0)
     u := Trim(String(url))
-    if (u = "" || RegExMatch(u, "i)/@manage(?:[/?#]|$)"))
-        return false
+    if (u = "" || RegExMatch(u, "i)/@manage(?:[/?#]|$)")) {
+        res["error"] := "invalid url"
+        return res
+    }
     try {
-        dir := RegExReplace(outPath, "\\[^\\]*$")
-        if (dir != "")
-            DirCreate(dir)
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        whr.Open("GET", u, true)
-        whr.SetTimeouts(10000, 10000, 30000, 120000)
-        whr.SetRequestHeader("User-Agent", "Mozilla/5.0")
-        whr.SetRequestHeader("Accept", "application/octet-stream,*/*")
-        if (Trim(String(token)) != "")
-            whr.SetRequestHeader("Authorization", Trim(String(token)))
-        if (extraHeaders is Map) {
-            for k, v in extraHeaders
-                whr.SetRequestHeader(String(k), String(v))
-        }
-        whr.Send()
-        deadline := A_TickCount + 120000
-        done := false
-        while (A_TickCount < deadline) {
-            try done := !!whr.WaitForResponse(0)
-            catch {
-                done := false
+        if CloudPlayer_IsLocalOpenListProxyUrl(u) {
+            if CloudPlayer_DownloadViaUrlMon(u, outPath, expectedSize) {
+                res["ok"] := true
+                return res
             }
-            if done
-                break
-            Sleep(15)
+            try CoreAsyncHttp_Log("cloudplayer_dl_urlmon_fallback", "url=" . u . " out=" . outPath)
+            catch {
+            }
         }
-        if !done
-            return false
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        ; Use sync mode for binary downloads to avoid sporadic empty ResponseBody on async WaitForResponse.
+        whr.Open("GET", u, false)
+        whr.SetTimeouts(10000, 10000, 30000, 120000)
+        try whr.Option[9] := 2048
+        catch {
+        }
+        try whr.SetRequestHeader("Accept-Encoding", "identity")
+        catch {
+        }
+        localProxy := CloudPlayer_IsLocalOpenListProxyUrl(u)
+        CloudPlayer_ApplyDownloadRequestHeaders(whr, token, extraHeaders, localProxy)
+        whr.Send()
         st := 0
         try st := Integer(whr.Status)
+        catch {
+            st := 0
+        }
+        res["status"] := st
         finalUrl := ""
         try finalUrl := String(whr.Option(1))
         catch {
             finalUrl := u
         }
-        if (st < 200 || st >= 300 || RegExMatch(finalUrl, "i)/@manage(?:[/?#]|$)"))
-            return false
-        ado := ComObject("ADODB.Stream")
-        ado.Type := 1
-        ado.Open()
-        ado.Write(whr.ResponseBody)
-        try FileDelete(outPath)
-        ado.SaveToFile(outPath, 2)
-        ado.Close()
-        try return FileGetSize(outPath) >= 0
-        catch {
-            return FileExist(outPath)
+        if (st < 200 || st >= 300 || RegExMatch(finalUrl, "i)/@manage(?:[/?#]|$)")) {
+            res["error"] := "http " . st
+            return res
         }
-    } catch {
-        return false
+        if !CloudPlayer_WriteHttpBodyToFile(whr, outPath, expectedSize) {
+            redirectUrl := CloudPlayer_TryExtractBodyUrl(whr)
+            if (redirectUrl != "" && redirectUrl != u)
+                return CloudPlayer_DownloadBinaryEx(redirectUrl, outPath, token, extraHeaders, expectedSize)
+            gotSz := 0
+            try {
+                if FileExist(outPath)
+                    gotSz := FileGetSize(outPath)
+            } catch {
+                gotSz := 0
+            }
+            ct := ""
+            try ct := String(whr.GetResponseHeader("Content-Type"))
+            catch {
+                ct := ""
+            }
+            res["error"] := (st = 0) ? "save failed" : ("save failed after http " . st . " bytes=" . gotSz . " ct=" . ct)
+            return res
+        }
+        res["ok"] := true
+        return res
+    } catch as e {
+        res["error"] := e.Message
+        return res
     }
+}
+
+CloudPlayer_DownloadViaUrlMon(url, outPath, expectedSize := 0) {
+    u := Trim(String(url))
+    p := CloudPlayer_StripWinLongPath(CloudPlayer_ToWinLongPath(outPath))
+    if (u = "" || p = "")
+        return false
+    dir := RegExReplace(p, "\\[^\\]*$")
+    if (dir != "")
+        DirCreate(dir)
+    try FileDelete(p)
+    catch {
+    }
+    hr := DllCall("urlmon\URLDownloadToFileW"
+        , "ptr", 0
+        , "wstr", u
+        , "wstr", p
+        , "uint", 0
+        , "ptr", 0
+        , "uint")
+    if (hr != 0 || !FileExist(p))
+        return false
+    sz := 0
+    try sz := FileGetSize(p)
+    catch {
+        sz := 0
+    }
+    if (sz <= 0)
+        return false
+    exp := 0
+    try exp := Integer(expectedSize)
+    catch {
+        exp := 0
+    }
+    if (exp > 1024 && sz < Floor(exp * 0.2))
+        return false
+    return true
+}
+
+CloudPlayer_TryExtractBodyUrl(whr) {
+    try {
+        txt := Trim(String(whr.ResponseText))
+        if (txt = "" || StrLen(txt) > 4096)
+            return ""
+        ; Some providers return a one-line direct URL instead of binary bytes.
+        if RegExMatch(txt, "i)^https?://[^\s]+$")
+            return txt
+    } catch {
+    }
+    return ""
 }
 
 CloudPlayer_MakeDirectDUrl(remotePath, sign := "") {
     global g_CloudPlayerApiBase
     u := RTrim(g_CloudPlayerApiBase, "/") . "/d" . CloudPlayer_EncodeRemotePath(remotePath)
+    sg := Trim(String(sign))
+    if (sg != "")
+        u .= "?sign=" . CloudPlayer_UrlEncodeUtf8(sg)
+    return u
+}
+
+CloudPlayer_MakeProxyPUrl(remotePath, sign := "") {
+    global g_CloudPlayerApiBase
+    u := RTrim(g_CloudPlayerApiBase, "/") . "/p" . CloudPlayer_EncodeRemotePath(remotePath)
     sg := Trim(String(sign))
     if (sg != "")
         u .= "?sign=" . CloudPlayer_UrlEncodeUtf8(sg)
@@ -3039,6 +4270,10 @@ CloudPlayer_GetArchiveEntries(remotePath, token := "", reqId := "") {
 ; Internal sync bridge over CoreAsyncHttp (import/admin still call this; runs off UI thread when in SetTimer tasks).
 CloudPlayer_HttpJson(method, url, headers := 0, body := "", reqId := "") {
     ret := Map("ok", false, "status", 0, "json", 0, "text", "", "error", "")
+    if !FuncExists("HttpJsonAsync") {
+        try CoreAsyncHttp_Log("cloudplayer_http_bridge_missing", "method=" . method . " url=" . url . " req_id=" . reqId)
+        return CloudPlayer_HttpJsonDirect(method, url, headers, body)
+    }
     if !FuncExists("HttpJsonAsync")
         return ret
     bucket := Map("done", false, "ret", ret)
@@ -3073,10 +4308,79 @@ CloudPlayer_HttpJson(method, url, headers := 0, body := "", reqId := "") {
         if !bucket["done"]
             bucket["ret"]["error"] := "timeout"
         ret := bucket["ret"]
+        if !ret["ok"] && Trim(String(ret["error"])) = "" {
+            try CoreAsyncHttp_Log("cloudplayer_http_bridge_empty_fail", "method=" . method . " url=" . url . " req_id=" . rid)
+            ret := CloudPlayer_HttpJsonDirect(method, url, headers, body)
+        }
     } catch as e {
         ret["error"] := e.Message
     }
     return ret
+}
+
+CloudPlayer_HttpJsonDirect(method, url, headers := 0, body := "") {
+    ret := Map("ok", false, "status", 0, "json", 0, "text", "", "error", "")
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        whr.Open(String(method), String(url), false)
+        whr.SetTimeouts(5000, 5000, 10000, 15000)
+        if (headers is Map) {
+            for k, v in headers {
+                hk := Trim(String(k))
+                if (hk = "")
+                    continue
+                try whr.SetRequestHeader(hk, String(v))
+            }
+        }
+        m := StrUpper(Trim(String(method)))
+        if (m = "POST" || m = "PUT" || m = "PATCH") {
+            if !(headers is Map) || !CloudPlayer_HasHeader(headers, "Content-Type")
+                whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
+            whr.Send(body != "" ? String(body) : "{}")
+        } else {
+            whr.Send()
+        }
+        st := 0
+        txt := ""
+        try st := Integer(whr.Status)
+        try txt := String(whr.ResponseText)
+        ret["status"] := st
+        ret["text"] := txt
+        okHttp := (st >= 200 && st < 300)
+        if (txt != "") {
+            try ret["json"] := Jxon_Load(txt)
+        }
+        ret["ok"] := okHttp
+        if !okHttp
+            ret["error"] := "http " . st
+        if (ret["json"] is Map && ret["json"].Has("code")) {
+            biz := 0
+            try biz := Integer(ret["json"]["code"])
+            if (biz != 200) {
+                ret["ok"] := false
+                msg := ""
+                try msg := String(ret["json"].Has("message") ? ret["json"]["message"] : "")
+                ret["error"] := (msg != "") ? msg : ("code " . biz)
+            }
+        }
+        return ret
+    } catch as e {
+        ret["error"] := e.Message
+        return ret
+    }
+}
+
+CloudPlayer_HasHeader(headers, keyName) {
+    if !(headers is Map)
+        return false
+    want := StrLower(Trim(String(keyName)))
+    if (want = "")
+        return false
+    for k, _ in headers {
+        if (StrLower(Trim(String(k))) = want)
+            return true
+    }
+    return false
 }
 
 CloudPlayer_HttpJsonFromCore(coreRet) {
@@ -3176,5 +4480,3 @@ CloudPlayer_OpenExternalUrl(url) {
     }
     return false
 }
-
-

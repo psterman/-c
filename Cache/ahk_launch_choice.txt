@@ -1,2 +1,0 @@
-﻿exe=C:\Program Files\AutoHotkey\v2\AutoHotkey.exe
-mode=errorstdout_with_cwd

@@ -882,6 +882,63 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     if($("guideTokenInput")) $("guideTokenInput").value = tk;
   }
   function normPath(p){ var v = String(p || "/").trim() || "/"; if (!v.startsWith("/")) v = "/" + v; return v.replace(/\/{2,}/g, "/"); }
+  function getKnownMountPaths(){
+    var mounts = [];
+    Object.keys(providerMap).forEach(function(k){
+      var m = normPath(getProviderMountPath(k));
+      if(m && m !== "/" && mounts.indexOf(m) < 0) mounts.push(m);
+    });
+    mounts.sort(function(a,b){ return b.length - a.length; });
+    return mounts;
+  }
+  function fsPathHasKnownMount(path){
+    var p = normPath(path);
+    if(p === "/") return true;
+    var mounts = getKnownMountPaths();
+    for(var i=0;i<mounts.length;i++){
+      var m = mounts[i];
+      if(p === m || p.indexOf(m + "/") === 0) return true;
+    }
+    return false;
+  }
+  function mountPrefixFromPath(path){
+    var p = normPath(path || "/");
+    var mounts = getKnownMountPaths();
+    for(var i=0;i<mounts.length;i++){
+      var m = mounts[i];
+      if(p === m || p.indexOf(m + "/") === 0) return m;
+    }
+    return "";
+  }
+  function repairFsPath(path){
+    var p = normPath(path);
+    if(p === "/" || fsPathHasKnownMount(p)) return p;
+    var segs = p.split("/").filter(Boolean);
+    if(!segs.length) return "/";
+    var head = segs[0];
+    // Only fix mistaken numeric mount ids (e.g. /10/xxx), not real folder names like /拖把/xxx
+    if(!/^\d+$/.test(head)) return p;
+    var pk = (state.provider && providerMap[state.provider]) ? state.provider : "";
+    if(!pk) pk = providerKeyForFsPath(state.path) || "ali";
+    var mp = getProviderMountPath(pk);
+    if(!mp || mp === "/") return p;
+    var rest = segs.slice(1).join("/");
+    return rest ? (mp + "/" + rest) : mp;
+  }
+  function entryIsDir(raw, name){
+    var it = raw || {};
+    var nm = String(name || it.name || "").trim();
+    if(nm && /\.(jpg|jpeg|png|gif|webp|bmp|svg|ico|mp4|mov|mkv|avi|wmv|flv|mp3|wav|flac|aac|zip|rar|7z|tar|gz|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|md|json|xml|csv)$/i.test(nm))
+      return false;
+    if(it.is_dir === true || it.is_dir === 1 || it.is_dir === "1" || String(it.is_dir).toLowerCase() === "true") return true;
+    if(it.is_dir === false || it.is_dir === 0 || it.is_dir === "0" || String(it.is_dir).toLowerCase() === "false") return false;
+    var tp = String(it.type || "").toLowerCase();
+    if(tp === "dir" || tp === "folder" || tp === "directory") return true;
+    if(tp === "file" || tp === "f") return false;
+    var pp = String(it.path || "");
+    if(pp && /\/$/.test(pp)) return true;
+    return false;
+  }
   function fmtSize(size){ var n = Number(size || 0); if (!isFinite(n) || n <= 0) return ""; var u=["B","KB","MB","GB","TB"], i=0; while(n>=1024 && i<u.length-1){n/=1024;i++;} return (i===0?Math.round(n):n.toFixed(1))+" "+u[i]; }
   function escHtml(s){ return String(s==null?"":s).replace(/[&<>\"]/g, function(ch){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch] || ch; }); }
   function splitPath(full){ var p=normPath(full); if(p==="/") return { dir:"/", name:"" }; var i=p.lastIndexOf("/"); return { dir:i<=0?"/":p.slice(0,i), name:p.slice(i+1) }; }
@@ -956,16 +1013,65 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   }
   function openExternal(url){
     var u = String(url || "").trim();
-    if(!u) return;
+    if(!u) return false;
     if(/\/@manage(?:[/?#]|$)/i.test(u)){
-      text($("currentInfo"), "Blocked dashboard URL during download.");
-      return;
+      text($("currentInfo"), uiLang === "en" ? "Blocked dashboard URL during download." : "已拦截管理后台地址，无法用于下载。");
+      return false;
     }
     var hostBridge = !!(window.chrome && window.chrome.webview && window.chrome.webview.postMessage);
     if(hostBridge){
       postHost("cloudplayer_open_url", { url:u });
     }
     try{ window.open(u, "_blank"); }catch(_){}
+    return true;
+  }
+  function fsListContentFromData(data){
+    if(!data) return [];
+    if(Array.isArray(data)) return data;
+    if(typeof data !== "object") return [];
+    var c = data.content;
+    if(Array.isArray(c)) return c;
+    if(c && typeof c === "object"){
+      var out = [];
+      if(typeof c.length === "number"){
+        for(var i=0;i<c.length;i++) if(c[i]) out.push(c[i]);
+      }else{
+        var keys = Object.keys(c);
+        for(var j=0;j<keys.length;j++){
+          var row = c[keys[j]];
+          if(row) out.push(row);
+        }
+      }
+      if(out.length) return out;
+    }
+    var altKeys = ["files", "items", "children", "list"];
+    for(var k=0;k<altKeys.length;k++){
+      var alt = data[altKeys[k]];
+      if(Array.isArray(alt) && alt.length) return alt;
+    }
+    return [];
+  }
+  function pathUnderBase(fullPath, basePath){
+    var full = normPath(fullPath || "");
+    var base = normPath(basePath || "/");
+    if(base === "/") return true;
+    return full === base || full.indexOf(base + "/") === 0;
+  }
+  function resolveEntryPath(raw, parentPath){
+    var it = raw || {};
+    var base = normPath(parentPath || state.path || "/");
+    var name = String(it.name || "").trim();
+    var fromApi = String(it.path || "").trim();
+    if(!name && fromApi) name = splitPath(fromApi).name;
+    var candidate = fromApi ? normPath(fromApi) : normPath(base + "/" + (name || "item"));
+    if(base !== "/" && !pathUnderBase(candidate, base))
+      candidate = normPath(base + "/" + (name || splitPath(fromApi).name || "item"));
+    if(!fsPathHasKnownMount(candidate)){
+      var mount = mountPrefixFromPath(base);
+      if(mount && fromApi && fromApi.indexOf("/") !== 0)
+        candidate = normPath(base + "/" + fromApi);
+    }
+    return candidate;
   }
   function buildNoCacheUrl(url){
     var base = String(url || "").trim();
@@ -1303,7 +1409,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       var handler = function(evt){
         var data = evt && evt.data ? evt.data : null;
         if(!matchReqEvent(data, "cloudplayer_fs_list_result", reqId)) return;
-        if(String(data.path||"") !== String(path||"")) return;
+        if(normPath(data.path||"") !== normPath(path||"")) return;
         if(done) return;
         done = true;
         if(!cleaned){
@@ -1700,19 +1806,92 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     }
     return false;
   }
-  function buildEntry(raw){
+  function buildEntry(raw, parentPath){
     var it = raw || {};
-    var name = String(it.name || "");
-    var full = String(it.path || normPath(state.path + "/" + name));
+    var name = String(it.name || "").trim();
+    var full = resolveEntryPath(it, parentPath);
+    if(!name) name = splitPath(full).name;
     return {
       raw: it,
       name: name,
-      path: normPath(full),
-      isDir: !!it.is_dir,
+      path: full,
+      isDir: entryIsDir(it, name),
       size: Number(it.size || 0),
       modified: String(it.modified || it.updated_at || ""),
       sign: String(it.sign || "")
     };
+  }
+  async function fetchListContentForPath(dirPath, token, forceRefresh){
+    dirPath = normPath(dirPath || "/");
+    var all = [];
+    var page = 1;
+    var perPage = 500;
+    while(page <= 64){
+      var batch = [];
+      var gotPage = false;
+      if(page === 1){
+        var hostRet = await requestFsListViaHost(dirPath, token, !!forceRefresh, 12000);
+        if(hostRet && hostRet.json){
+          var hostCode = (hostRet.json.code != null && !isNaN(Number(hostRet.json.code))) ? Number(hostRet.json.code) : 200;
+          if(hostCode === 200){
+            batch = fsListContentFromData(hostRet.json.data || {});
+            gotPage = batch.length > 0;
+          }
+        }
+      }
+      if(!gotPage){
+        var ret = await apiPost("/api/fs/list", { path:dirPath, password:"", page:page, per_page:perPage, refresh:!!forceRefresh && page===1 });
+        if(!ret || !ret.json) break;
+        var code = (ret.json.code != null && !isNaN(Number(ret.json.code))) ? Number(ret.json.code) : 200;
+        if(code !== 200) break;
+        batch = fsListContentFromData(ret.json.data || {});
+      }
+      if(!batch.length) break;
+      all = all.concat(batch);
+      if(batch.length < perPage) break;
+      page += 1;
+    }
+    return all;
+  }
+  function relPathUnderRoot(rootPath, fullPath){
+    var root = normPath(rootPath || "/");
+    var full = normPath(fullPath || "");
+    if(full === root) return "";
+    var prefix = root === "/" ? "/" : (root + "/");
+    if(full.indexOf(prefix) === 0) return full.slice(prefix.length);
+    var sp = splitPath(full);
+    return sp.name || "";
+  }
+  async function listDirContentForZip(dirPath, token, refresh){
+    return await fetchListContentForPath(dirPath, token, !!refresh);
+  }
+  async function collectFolderFilesRecursive(rootPath, token){
+    rootPath = repairFsPath(normPath(rootPath || "/"));
+    var files = [];
+    var dirs = [rootPath];
+    var scanned = 0;
+    while(dirs.length){
+      var dir = dirs.pop();
+      scanned += 1;
+      text($("currentInfo"), "打包下载：扫描 " + dir + " ...");
+      var content = await listDirContentForZip(dir, token, scanned === 1);
+      for(var i=0; i<content.length; i++){
+        var ent = buildEntry(content[i], dir);
+        if(!ent.name) continue;
+        if(ent.isDir){
+          dirs.push(ent.path);
+          continue;
+        }
+        files.push({
+          path: ent.path,
+          name: ent.name,
+          sign: ent.sign || "",
+          rel: relPathUnderRoot(rootPath, ent.path)
+        });
+      }
+      if(scanned > 64) break;
+    }
+    return { files: files, scanned: scanned };
   }
   function getVisibleItems(){
     var q = getCurrentSearchQuery().toLowerCase();
@@ -1847,9 +2026,10 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     wrap.innerHTML = html;
     if(selectedEntryPath) setSelectedPath(selectedEntryPath);
   }
-  function renderList(items){
+  function renderList(items, listParentPath){
     var wrap=$("fileList");
-    currentItems = Array.isArray(items) ? items.map(buildEntry) : [];
+    var parentForBuild = normPath(listParentPath || state.path || "/");
+    currentItems = Array.isArray(items) ? items.map(function(raw){ return buildEntry(raw, parentForBuild); }) : [];
     var rows = getVisibleItems();
     virtualRows = rows;
     virtualStart = -1;
@@ -2120,6 +2300,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   }
   async function doDownloadEntry(entry){
     if(!entry) return false;
+    var fp = repairFsPath(entry.path);
     if(entry.isDir){
       var hostBridge = !!(window.chrome && window.chrome.webview && window.chrome.webview.postMessage);
       if(hostBridge){
@@ -2128,37 +2309,43 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
           postHost("cloudplayer_download_cancel", { reqId: pendingDownloadReqId });
         }
         pendingDownloadReqId = reqId;
-        text($("currentInfo"), "打包下载：已开始处理文件夹 " + entry.name);
-        var tk = await ensureLiveToken(4500);
-        postHost("cloudplayer_download_folder", {
+        text($("currentInfo"), "打包下载：正在准备 " + entry.name + " ...");
+        var packTok = await getZipPackTokens(4500);
+        var tk = packTok.token;
+        var payload = {
           apiBase: normalizeApiBase(($("apiBase") && $("apiBase").value) || state.apiBase),
-          path: entry.path,
+          path: fp,
           name: entry.name,
           token: tk,
+          userToken: packTok.userToken,
+          adminToken: packTok.adminToken,
           reqId: reqId
-        });
+        };
+        text($("currentInfo"), "打包下载：由宿主扫描并下载（" + entry.name + "）...");
+        postHost("cloudplayer_download_folder", payload);
         return true;
       }
-      text($("currentInfo"), "Folder download requires the desktop host.");
+      text($("currentInfo"), uiLang === "en" ? "Folder download requires the desktop host." : "文件夹打包下载需要桌面宿主程序。");
       return false;
     }
-    var res = await resolveFileUrl(entry.path);
-    var resolvedUrl = String((res && res.url) || "").trim();
-    if(resolvedUrl && !/\/@manage(?:[/?#]|$)/i.test(resolvedUrl)){
-      openExternal(resolvedUrl);
-      return true;
-    }
-    if(!entry.isDir){
-      var fileSign = String((res && res.sign) || entry.sign || "").trim();
-      var fileFallback = makeDirectDUrl(entry.path, fileSign);
-      openExternal(fileFallback);
-      return true;
-    }
+    var link = null;
+    try{ link = await resolveDownloadUrl(fp); }catch(_){ link = null; }
+    var fileSign = String((link && link.sign) || entry.sign || "").trim();
+    var fileFallback = makeDirectDUrl(fp, fileSign);
+    if(fileFallback && openExternal(fileFallback)) return true;
+    var resolvedUrl = String((link && link.url) || "").trim();
+    if(resolvedUrl && isLocalOpenListProxyUrl(resolvedUrl) && openExternal(resolvedUrl)) return true;
+    text($("currentInfo"), uiLang === "en"
+      ? ("Download failed: use OpenList /d/ proxy (avoid Aliyun CDN concurrency limit) for " + (entry.name || fp))
+      : ("下载失败：请通过本机 OpenList 代理下载（避免阿里云直链并发限制）：" + (entry.name || fp)));
     return false;
   }
   async function doDownloadEntries(entries){
     var arr = Array.isArray(entries) ? entries.filter(Boolean) : [];
-    if(!arr.length){ text($("currentInfo"), "No file selected."); return; }
+    if(!arr.length){
+      text($("currentInfo"), uiLang === "en" ? "No file selected." : "未选择文件。");
+      return;
+    }
     var ok = 0, fail = 0;
     for(var i=0;i<arr.length;i++){
       try{
@@ -2170,10 +2357,15 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       }
     }
     if(ok > 0){
-      text($("currentInfo"), "Download started: " + ok + " item(s)" + (fail > 0 ? (", failed: " + fail) : ""));
+      text($("currentInfo"), (uiLang === "en")
+        ? ("Download started: " + ok + " item(s)" + (fail > 0 ? (", failed: " + fail) : ""))
+        : ("已开始下载 " + ok + " 项" + (fail > 0 ? ("，失败 " + fail + " 项") : "")));
       return;
     }
-    text($("currentInfo"), "Download failed: cannot resolve URL.");
+    var cur = $("currentInfo") ? String($("currentInfo").textContent || "").trim() : "";
+    if(cur && (cur.indexOf("打包下载") >= 0 || cur.indexOf("下载失败") >= 0 || cur.indexOf("Download failed") >= 0 || cur.indexOf("Folder download") >= 0 || cur.indexOf("文件夹打包") >= 0))
+      return;
+    text($("currentInfo"), uiLang === "en" ? "Download failed: cannot resolve URL." : "下载失败：无法解析下载地址。");
   }
   function showEntryInfo(entry){
     if(!entry) return;
@@ -2215,7 +2407,13 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   async function loadList(path, retriedAuth, opts){
     opts = opts || {};
     var forceRefresh = !!(opts.forceRefresh || opts.refreshList);
-    var nextPath = normPath(path||state.path||"/");
+    var rawPath = normPath(path||state.path||"/");
+    var nextPath = repairFsPath(rawPath);
+    if(nextPath !== rawPath){
+      text($("currentInfo"), (uiLang === "en")
+        ? ("Path corrected: " + rawPath + " -> " + nextPath)
+        : ("路径已自动修正: " + rawPath + " → " + nextPath));
+    }
     var prevPath = normPath(state.path||"/");
     if(!opts.fromHistory && prevPath !== nextPath){
       navBackStack.push(prevPath);
@@ -2224,8 +2422,8 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     }
     state.path=nextPath;
     if($("pathInput")) $("pathInput").value=state.path;
-    var qKeep = getCurrentSearchQuery();
-    setPathSearchInput(state.path, qKeep);
+    if(!opts.keepSearch) setPathSearchInput(state.path, "");
+    else setPathSearchInput(state.path, getCurrentSearchQuery());
     updateCtxMenuMkdirBtn();
     text($("currentInfo"), "Loading: " + state.path);
     var liveToken = String(($("token") && $("token").value) || state.token || "").trim();
@@ -2237,70 +2435,70 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
         liveToken = autoTk.token;
       }
     }
-    var ret = null;
-    ret = await requestFsListViaHost(state.path, liveToken, forceRefresh, 4200);
-    if(!ret || !ret.json){
-      ret = await apiPost("/api/fs/list", { path:state.path, password:"", page:1, per_page:300, refresh:forceRefresh });
-    }else{
-      ret = { transport:{ ok:ret.ok, status:ret.status, error:ret.error }, json:ret.json, parseError:ret.parseError, bodyText:ret.bodyText };
+    var content = await fetchListContentForPath(state.path, liveToken, forceRefresh);
+    if(!content.length && !forceRefresh){
+      content = await fetchListContentForPath(state.path, liveToken, true);
     }
-    if(!ret.transport.ok && !ret.json){ renderList([]); text($("currentInfo"), "Load failed: " + (ret.transport.error||"network error")); if(state.provider) setProviderOnline(state.provider, false); return; }
-    if(!ret.json){
-      renderList([]);
-      var snippet = (ret.bodyText || "").replace(/\s+/g, " ").slice(0, 200);
-      text($("currentInfo"), "Load failed: response parse error (" + (ret.parseError||"unknown") + "), status=" + String(ret.transport && ret.transport.status || 0) + (snippet ? (", body=" + snippet) : ""));
-      if(state.provider) setProviderOnline(state.provider, false);
-      return;
-    }
-    var code = (ret.json && ret.json.code != null && !isNaN(Number(ret.json.code))) ? Number(ret.json.code) : null;
-    if(code !== null && code !== 200){
-      var msg = (ret.json && ret.json.message) ? String(ret.json.message) : ("API code " + code);
-      if(code === 401 && !retriedAuth){
-        text($("currentInfo"), "Authorizing OpenList...");
-        var tk = await requestAdminToken(3200);
-        if(tk.ok && tk.token){
-          $("token").value = tk.token;
-          state.token = tk.token;
-          await loadList(state.path, true, { fromHistory:true });
+    if(!content.length){
+      var probe = await apiPost("/api/fs/list", { path:state.path, password:"", page:1, per_page:1, refresh:false });
+      if(probe && probe.json){
+        var probeCode = (probe.json.code != null && !isNaN(Number(probe.json.code))) ? Number(probe.json.code) : 200;
+        if(probeCode === 401 && !retriedAuth){
+          text($("currentInfo"), "Authorizing OpenList...");
+          var tk = await requestAdminToken(3200);
+          if(tk.ok && tk.token){
+            $("token").value = tk.token;
+            state.token = tk.token;
+            await loadList(state.path, true, { fromHistory:true });
+            return;
+          }
+        }
+        if(probeCode !== 200){
+          var msg = (probe.json && probe.json.message) ? String(probe.json.message) : ("API code " + probeCode);
+          renderList([]);
+          if(probeCode === 401){
+            text($("currentInfo"), "Load failed: " + msg + ". Fill Token and retry.");
+          }else if(/storage not found/i.test(msg)){
+            var badSeg = (rawPath.split("/").filter(Boolean)[0] || "");
+            var hintMp = getProviderMountPath(state.provider || "ali");
+            var hint = (uiLang === "en")
+              ? ("Mount /" + badSeg + " is missing. Open cloud tab " + hintMp + " first, or re-import storage in OpenList.")
+              : ("云盘挂载 /" + badSeg + " 不存在。请先点顶部「阿里云盘」进入 " + hintMp + "，或在 OpenList 中重新导入该云盘");
+            text($("currentInfo"), "Load failed: " + msg + " — " + hint);
+          }else{
+            text($("currentInfo"), "Load failed: " + msg);
+          }
+          if(state.provider) setProviderOnline(state.provider, false);
           return;
         }
       }
-      renderList([]);
-      if(code === 401){
-        text($("currentInfo"), "Load failed: " + msg + ". Fill Token and retry.");
-      }else{
-        text($("currentInfo"), "Load failed: " + msg);
-      }
-      if(state.provider) setProviderOnline(state.provider, false);
-      return;
     }
-    var content = ret.json && ret.json.data && Array.isArray(ret.json.data.content) ? ret.json.data.content : [];
-    if(content.length === 0 && !forceRefresh){
-      var ret2Raw = await requestFsListViaHost(state.path, String(($("token") && $("token").value) || state.token || "").trim(), true, 4500);
-      var ret2 = null;
-      if(ret2Raw && ret2Raw.json){
-        ret2 = { transport:{ ok:ret2Raw.ok, status:ret2Raw.status, error:ret2Raw.error }, json:ret2Raw.json, parseError:ret2Raw.parseError, bodyText:ret2Raw.bodyText };
-      }else{
-        ret2 = await apiPost("/api/fs/list", { path:state.path, password:"", page:1, per_page:300, refresh:true });
-      }
-      if(ret2 && ret2.json && typeof ret2.json.code === "number" && ret2.json.code === 200){
-        var content2 = ret2.json && ret2.json.data && Array.isArray(ret2.json.data.content) ? ret2.json.data.content : [];
-        if(content2.length > 0){
-          content = content2;
-        }
-      }
-    }
-    renderList(content);
+    renderList(content, state.path);
     clearSelection(true);
-    text($("currentInfo"), "Loaded " + content.length + " items (" + state.path + ")");
+    text($("currentInfo"), "Loaded " + getVisibleItems().length + " items (" + state.path + ")");
     if(state.provider) setProviderOnline(state.provider, true);
     else setProviderOnline("root", true);
   }
+  function isLocalOpenListProxyUrl(url){
+    return /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?\/(?:d|p)(?:\/|\?|$)/i.test(String(url || "").trim());
+  }
+  function isExternalCdnUrl(url){
+    var u = String(url || "").trim();
+    if(!u || isLocalOpenListProxyUrl(u)) return false;
+    return /aliyundrive\.cloud|aliyuncs\.com|alipan\.com|download\.aliyun/i.test(u);
+  }
   function makeDirectDUrl(fullPath, sign){
+    return makeOpenListFileUrl(fullPath, sign, "d");
+  }
+  function makeProxyPUrl(fullPath, sign){
+    return makeOpenListFileUrl(fullPath, sign, "p");
+  }
+  function makeOpenListFileUrl(fullPath, sign, mode){
     state.apiBase = normalizeApiBase(state.apiBase || $("apiBase").value);
     var p = encodePathForUrl(fullPath);
     var base = state.apiBase.replace(/\/+$/,"");
-    var u = base + "/d" + p;
+    var m = (mode === "p") ? "p" : "d";
+    var u = base + "/" + m + p;
     var sg = String(sign || "").trim();
     if(sg){
       u += (u.indexOf("?") >= 0 ? "&" : "?") + "sign=" + encodeURIComponent(sg);
@@ -2439,7 +2637,9 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
    * 选路策略：网盘/存储直链优先，本机 OpenList 的 /d/ 仅作垫后；不做开播前多路 Range 探测，避免
    * 首包 TTFB 总偏向 127.0.0.1 且与 <video> 首帧抢带宽。失败时由 onPlaybackError 按 candidates 切下一跳。
    */
-  async function getOptimalUrl(fullPath, fileData){
+  async function getOptimalUrl(fullPath, fileData, opts){
+    opts = opts || {};
+    var downloadMode = !!opts.download;
     var d = fileData || {};
     var h = (d && d.header && typeof d.header === "object") ? d.header : {};
     var sign = String((d && (d.sign || (d.content && d.content.sign))) || "").trim();
@@ -2450,19 +2650,33 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       if(!url) return;
       if(!isHttpUrl(url)) return;
       if(/\/@manage(?:[/?#]|$)/i.test(url)) return;
+      if(downloadMode && isExternalCdnUrl(url)) return;
       if(seen[url]) return;
       seen[url] = 1;
       ordered.push({ url:url, source:String(source||""), headers:(headers && typeof headers==="object") ? headers : {}, direct: !!direct });
     };
-    if(d && typeof d.raw_url === "string" && isHttpUrl(d.raw_url)) push(d.raw_url, "raw_url", h, true);
-    if(d && typeof d.url === "string" && isHttpUrl(d.url)) push(d.url, "url", h, true);
-    if(d && d.content && typeof d.content.url === "string" && isHttpUrl(d.content.url)) push(d.content.url, "content.url", h, true);
-    var proxyUrl = makeDirectDUrl(fullPath, sign);
-    push(proxyUrl, "/d proxy", {}, false);
+    if(downloadMode){
+      push(makeProxyPUrl(fullPath, sign), "/p proxy", {}, false);
+      push(makeDirectDUrl(fullPath, sign), "/d proxy", {}, false);
+    }else{
+      push(makeDirectDUrl(fullPath, sign), "/d proxy", {}, false);
+    }
+    if(d && typeof d.raw_url === "string" && isHttpUrl(d.raw_url)){
+      if(isLocalOpenListProxyUrl(d.raw_url)) push(d.raw_url, "raw_url-local", h, false);
+      else if(!downloadMode) push(d.raw_url, "raw_url", h, true);
+    }
+    if(d && typeof d.url === "string" && isHttpUrl(d.url)){
+      if(isLocalOpenListProxyUrl(d.url)) push(d.url, "url-local", h, false);
+      else if(!downloadMode) push(d.url, "url", h, true);
+    }
+    if(d && d.content && typeof d.content.url === "string" && isHttpUrl(d.content.url)){
+      if(isLocalOpenListProxyUrl(d.content.url)) push(d.content.url, "content.url-local", h, false);
+      else if(!downloadMode) push(d.content.url, "content.url", h, true);
+    }
     if(!ordered.length) return { primary:{ url:"", source:"none", headers:{} }, candidates:[], debug:{ reason:"no_candidate" } };
     var p = ordered[0] || { url:"", source:"none", headers:{} };
-    logNet("optimal url selected", { source:p.source, url:p.url, strategy:"direct_first", probe:false });
-    return { primary:p, candidates:ordered, debug:{ strategy:"direct_first", noPreProbe:true } };
+    logNet("optimal url selected", { source:p.source, url:p.url, strategy:downloadMode ? "proxy_first" : "direct_first", probe:false });
+    return { primary:p, candidates:ordered, debug:{ strategy:downloadMode ? "proxy_first" : "direct_first", noPreProbe:true } };
   }
   async function fetchWithRange(url, options){
     options = options || {};
@@ -2736,6 +2950,43 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     }
     return tk;
   }
+  /** 与单文件下载相同：对每个文件调用 resolveDownloadUrl，把可用直链交给宿主 */
+  async function enrichManifestDownloadUrls(files, onProgress){
+    if(!Array.isArray(files) || !files.length) return [];
+    var out = [];
+    for(var i = 0; i < files.length; i++){
+      var ent = files[i] ? Object.assign({}, files[i]) : {};
+      var fp = repairFsPath(ent.path || "");
+      if(fp){
+        try{
+          var link = await resolveDownloadUrl(fp);
+          if(link && link.url){
+            ent.downloadUrl = String(link.url || "").trim();
+            ent.downloadHeaders = (link.headers && typeof link.headers === "object") ? link.headers : {};
+            if(link.sign) ent.sign = String(link.sign || "").trim();
+          }
+        }catch(_){}
+      }
+      out.push(ent);
+      if(typeof onProgress === "function") onProgress(i + 1, files.length, ent.name || fp);
+      if(i + 1 < files.length) await new Promise(function(r){ setTimeout(r, 150); });
+    }
+    return out;
+  }
+  /** 打包下载：保留网盘用户 Token，admin 仅用于列表/fs/get，避免覆盖百度等登录态 */
+  async function getZipPackTokens(timeoutMs){
+    timeoutMs = timeoutMs || 4500;
+    var userTk = String(($("token") && $("token").value) || state.token || "").trim();
+    var adminTk = "";
+    var adm = await requestAdminToken(timeoutMs);
+    if(adm && adm.ok && adm.token) adminTk = String(adm.token || "").trim();
+    return {
+      userToken: userTk,
+      adminToken: adminTk,
+      token: userTk || adminTk,
+      listToken: adminTk || userTk
+    };
+  }
   async function resolveFileUrl(fullPath){
     var liveToken = await ensureLiveToken(3500);
     var viaHost = await requestFsGetViaHost(fullPath, liveToken, 4200);
@@ -2757,10 +3008,36 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
         ret = await apiPost("/api/fs/get", { path:fullPath, password:"" });
       }
     }
-    var d = ret.json && ret.json.data ? ret.json.data : {};
+    if(!ret || !ret.json){
+      var proxyOnly = makeDirectDUrl(fullPath, "");
+      return { url:proxyOnly, source:"/d proxy", headers:{}, candidates:[], sign:"" };
+    }
+    var d = ret.json.data ? ret.json.data : {};
     var sign = String((d && (d.sign || (d.content && d.content.sign))) || "").trim();
-    var opt = await getOptimalUrl(fullPath, d);
-    if(!opt || !opt.primary || !opt.primary.url) return { url:"", source:"none", headers:{}, candidates:[], sign:sign };
+    var opt = await getOptimalUrl(fullPath, d, { download:false });
+    if(!opt || !opt.primary || !opt.primary.url){
+      var fallback = makeDirectDUrl(fullPath, sign);
+      return { url:fallback, source:"/d proxy", headers:{}, candidates:[], sign:sign };
+    }
+    return { url:opt.primary.url, source:opt.primary.source, headers:opt.primary.headers || {}, candidates:opt.candidates || [opt.primary], sign:sign };
+  }
+  async function resolveDownloadUrl(fullPath){
+    var liveToken = await ensureLiveToken(3500);
+    var viaHost = await requestFsGetViaHost(fullPath, liveToken, 4200);
+    var ret = null;
+    if(viaHost && viaHost.json){
+      ret = { transport:{ ok:viaHost.ok, status:viaHost.status, error:viaHost.error }, json:viaHost.json };
+    }else{
+      ret = await apiPost("/api/fs/get", { path:fullPath, password:"" });
+    }
+    if(!ret || !ret.json){
+      return { url:makeDirectDUrl(fullPath, ""), source:"/d proxy", headers:{}, sign:"" };
+    }
+    var d = ret.json.data ? ret.json.data : {};
+    var sign = String((d && (d.sign || (d.content && d.content.sign))) || "").trim();
+    var opt = await getOptimalUrl(fullPath, d, { download:true });
+    if(!opt || !opt.primary || !opt.primary.url)
+      return { url:makeDirectDUrl(fullPath, sign), source:"/d proxy", headers:{}, sign:sign };
     return { url:opt.primary.url, source:opt.primary.source, headers:opt.primary.headers || {}, candidates:opt.candidates || [opt.primary], sign:sign };
   }
   function setPlayerMode(mode){
@@ -3370,7 +3647,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   }
   async function playEntry(entry){
     if(!entry) return;
-    if(entry.isDir){ await loadList(entry.path); return; }
+    if(entry.isDir){ await loadList(repairFsPath(entry.path)); return; }
     persistPlaybackProgressNow();
     if(isOfficeDocPath(entry.path)){
       var okPreview = await previewOfficeEntry(entry);
@@ -3423,7 +3700,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     selectedEntries = {};
     addSelection(fullPath);
     var entry = findEntryByPath(fullPath) || { path:fullPath, isDir:el.getAttribute("data-dir")==="1", name:splitPath(fullPath).name };
-    if(entry.isDir){ await loadList(fullPath); return; }
+    if(entry.isDir){ await loadList(repairFsPath(fullPath)); return; }
     await playEntry(entry);
   }
   function openProvider(name){
@@ -3664,8 +3941,9 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     if($("pathSearchInput")) $("pathSearchInput").addEventListener("keydown", function(e){
       if(e.key !== "Enter") return;
       var parsed = parsePathSearchInput($("pathSearchInput").value);
-      if(parsed.path && normPath(parsed.path) !== normPath(state.path)){
-        loadList(parsed.path);
+      var gotoPath = parsed.path ? repairFsPath(parsed.path) : "";
+      if(gotoPath && normPath(gotoPath) !== normPath(state.path)){
+        loadList(gotoPath);
       }else{
         renderList(currentItems.map(function(it){ return it.raw || it; }));
       }
@@ -3863,6 +4141,9 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
         : ((String(data.phase||"") === "cancelled")
           ? ("打包下载已取消：" + (data.message || "cancelled"))
           : ("打包下载失败：" + (data.message || "unknown error")));
+      if(!data.ok && /missing lib\\7z\.exe|zip failed|zip timeout|no_token/i.test(String(data.errorCode || "") + " " + String(data.message || ""))){
+        msg += "（建议：检查 lib/7z.exe 与 OpenList Token，重启牛马助手后重试）";
+      }
       text($("currentInfo"), msg);
       return true;
     }
