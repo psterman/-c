@@ -7128,3 +7128,59 @@
 [2026-05-17 11:25:43] tray_msg lParam=1028 msg=1028
 [2026-05-17 11:28:36] tray_msg lParam=1026 msg=1028
 [2026-05-17 11:28:46] tray_msg lParam=1028 msg=1028
+[2026-05-17 11:36:53] dark_popup_show_begin items=12 pos=1322,351
+[2026-05-17 11:36:53] dark_popup_show_begin items=12 pos=1322,351
+[2026-05-17 11:36:53] dark_popup_show_done elapsed_ms=47 hwnd=22284990
+[2026-05-17 11:36:54] popup_state_reset reason=invoke_click
+[2026-05-17 11:36:54] invoke_click idx=12 text=重启脚本
+[2026-05-17 11:36:54] invoke_ok idx=12 text=重启脚本
+[2026-05-17 11:36:54] reload_hard_spawn_ok
+[2026-05-17 11:36:54] snapshot_dirty reason=update_tray_menu
+[2026-05-17 11:36:54] snapshot_dirty reason=init
+[2026-05-17 11:36:55] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-17 11:46:33] tray_msg lParam=516 msg=1028
+[2026-05-17 11:46:33] tray_msg lParam=517 msg=1028
+[2026-05-17 11:46:33] tray_popup_state mode=toolbar search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=2 native=0 waiting=0 phase=closed caps=0
+[2026-05-17 11:46:33] custom_popup_queue lParam=517
+[2026-05-17 11:46:33] custom_popup_return lParam=517 elapsed_ms=16
+[2026-05-17 11:46:33] custom_popup_begin lParam=517
+[2026-05-17 11:46:33] custom_popup_state mode=toolbar ft_vis=1 bub_vis=0 search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=2 native=0 waiting=0 create_inflight=0
+[2026-05-17 11:46:33] tray_build_phase=state elapsed_ms=0
+[2026-05-17 11:46:33] snapshot_miss scene=tray_menu dirty=1
+[2026-05-17 11:46:33] custom_popup_scene_items count=0 mode=toolbar
+[2026-05-17 11:46:33] tray_build_phase=snapshot elapsed_ms=0
+[2026-05-17 11:46:33] tray_build_phase=render elapsed_ms=0
+[2026-05-17 11:46:33] custom_popup_build_done items=11 elapsed_ms=0
+[2026-05-17 11:46:33] dark_popup_show_begin items=11 pos=1661,645
+[2026-05-17 11:46:33] scene_items_source scene=tray_menu mode=toolbar raw_count=60 vis_count=8 cmd_count=184
+[2026-05-17 11:46:33] scene_items_filtered scene=tray_menu count=8
+[2026-05-17 11:46:33] snapshot_rebuild_ok count=8 elapsed_ms=0
+[2026-05-17 11:46:33] dark_popup_show_done elapsed_ms=47 hwnd=256315072
+[2026-05-17 11:46:33] custom_popup_end lParam=517 elapsed_ms=79
+[2026-05-17 11:46:34] popup_state_reset reason=invoke_click
+[2026-05-17 11:46:34] invoke_click idx=9 text=重启脚本
+[2026-05-17 11:46:34] invoke_ok idx=9 text=重启脚本
+[2026-05-17 11:46:34] run_scene_cmd cmd=tray_reload_script mode=toolbar search_active=0
+[2026-05-17 11:46:34] reload_hard_spawn_ok
+[2026-05-17 11:46:35] snapshot_dirty reason=update_tray_menu
+[2026-05-17 11:46:35] snapshot_dirty reason=init
+[2026-05-17 11:46:35] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-17 11:48:21] dark_popup_show_begin items=12 pos=1237,519
+[2026-05-17 11:48:22] dark_popup_show_begin items=12 pos=1237,519
+[2026-05-17 11:48:22] dark_popup_show_done elapsed_ms=63 hwnd=36245234
+[2026-05-17 11:53:42] dark_popup_show_begin items=12 pos=1529,285
+[2026-05-17 11:53:42] dark_popup_show_begin items=12 pos=1529,285
+[2026-05-17 11:53:42] dark_popup_show_done elapsed_ms=62 hwnd=60690380
+[2026-05-17 11:53:43] popup_state_reset reason=invoke_click
+[2026-05-17 11:53:43] invoke_click idx=12 text=重启脚本
+[2026-05-17 11:53:43] invoke_ok idx=12 text=重启脚本
+[2026-05-17 11:53:43] reload_hard_spawn_ok
+[2026-05-17 11:53:43] snapshot_dirty reason=update_tray_menu
+[2026-05-17 11:53:43] snapshot_dirty reason=init
+[2026-05-17 11:53:43] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-17 11:54:49] snapshot_dirty reason=update_tray_menu
+[2026-05-17 11:54:49] snapshot_dirty reason=init
+[2026-05-17 11:54:49] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-17 11:57:25] snapshot_dirty reason=update_tray_menu
+[2026-05-17 11:57:25] snapshot_dirty reason=init
+[2026-05-17 11:57:25] snapshot_rebuild_empty elapsed_ms=0

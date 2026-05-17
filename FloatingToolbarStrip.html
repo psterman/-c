@@ -537,7 +537,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     SP = '你是一个擅长 AHK v2、自动化脚本和桌面工作流的助手。',
     P = {
       openai: { label: 'OpenAI', transport: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini', models: ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini', 'gpt-4o'] },
-      codex_cli: { label: '命令行（ttyd）', transport: 'cli', baseUrl: 'http://127.0.0.1:7681', model: '', models: [] },
+      codex_cli: { label: 'Codex CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7681/', model: '', models: [] },
+      gemini_cli: { label: 'Gemini CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7682/', model: '', models: [] },
+      openclaw_cli: { label: 'OpenClaw CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7683/', model: '', models: [] },
+      qwen_cli: { label: 'Qwen CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7684/', model: '', models: [] },
+      ollama_cli: { label: 'Ollama CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7685/', model: '', models: [] },
+      claude_cli: { label: 'Claude CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7686/', model: '', models: [] },
+      deepseek_cli: { label: 'DeepSeek CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7687/', model: '', models: [] },
+      kimi_cli: { label: 'Kimi CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7688/', model: '', models: [] },
+      zhipu_cli: { label: '智谱 CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7689/', model: '', models: [] },
+      copilot_cli: { label: 'Copilot CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7690/', model: '', models: [] },
       kimi: { label: 'Kimi', transport: 'openai', baseUrl: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k', models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'kimi-k2-0711-preview'] },
       qwen: { label: 'Qwen', transport: 'openai', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus', models: ['qwen-plus', 'qwen-turbo', 'qwen-max', 'qwen3-coder-plus'] },
       deepseek: { label: 'DeepSeek', transport: 'openai', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', models: ['deepseek-chat', 'deepseek-reasoner'] },
@@ -565,7 +574,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       openclaw: { label: 'OpenClaw', transport: 'openclaw', baseUrl: 'http://127.0.0.1:18789', model: 'gateway', models: ['gateway'] }
     },
     PROVIDER_PICK_ORDER = [
-      'openai', 'codex_cli', 'kimi', 'qwen', 'deepseek', 'claude', 'gemini', 'glm', 'siliconflow', 'minimax', 'zhipu', 'ollama', 'openclaw'
+      'openai',
+      'codex_cli', 'gemini_cli', 'openclaw_cli', 'qwen_cli', 'ollama_cli',
+      'claude_cli', 'deepseek_cli', 'kimi_cli', 'zhipu_cli', 'copilot_cli',
+      'kimi', 'qwen', 'deepseek', 'claude', 'gemini', 'glm', 'siliconflow', 'minimax', 'zhipu', 'ollama', 'openclaw'
     ],
     ICON_PRIMARY = 'aiicons/',
     ICON_SECOND = 'lib/images/',
@@ -573,7 +585,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     PROVIDER_ICON_EXTS = ['.png', '.jpg', '.jpeg', '.svg', '.webp'],
     PROVIDER_ICON_BASES = {
       openai: ['ChatGPT', 'chatgpt', 'openai', 'codex', 'Codex'],
-      codex_cli: ['terminal', 'cmd', 'cli', 'ttyd', 'console', 'codex', 'Codex', 'openai'],
+      codex_cli: ['codex', 'Codex', 'codex1', 'terminal', 'cmd'],
+      gemini_cli: ['gemini', 'Gemini'],
+      openclaw_cli: ['openclaw', 'OpenClaw'],
+      qwen_cli: ['qwen', 'Qwen'],
+      ollama_cli: ['ollama', 'Ollama'],
+      claude_cli: ['claude', 'Claude'],
+      deepseek_cli: ['DeepSeek', 'deepseek'],
+      kimi_cli: ['kimi', 'Kimi', 'moonshot'],
+      zhipu_cli: ['zhipu', 'Zhipu', 'glm', 'chelper'],
+      copilot_cli: ['copilot', 'Copilot', 'ChatGPT'],
       kimi: ['kimi', 'Kimi', 'moonshot'],
       qwen: ['qwen', 'Qwen'],
       deepseek: ['DeepSeek', 'deepseek'],
@@ -588,7 +609,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     },
     KEYMETA = {
       openai: { keyLabel: 'OpenAI API Key', keyPlaceholder: 'sk-...', keyHint: '仅保存到「OpenAI」槽位；与 Kimi、DeepSeek 等密钥互不覆盖。' },
-      codex_cli: { keyLabel: '无需 API Key', keyPlaceholder: '本模式不使用 API Key', keyHint: '本机 ttyd 本地终端，与上方 OpenAI 云端 API 无关。请配置 ttyd 地址与「终端启动命令」；不需要 Model。' },
+      codex_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 嵌入页（端口 7681）。自动启动 codex；可在下方「终端启动命令」覆写，或于 CursorShortcut.ini [NiumaTtyd] codex_cli_shell= 指定。' },
+      gemini_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7682，自动启动 gemini CLI。' },
+      openclaw_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7683，自动启动 openclaw。' },
+      qwen_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7684，自动启动 qwen。' },
+      ollama_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7685，自动启动 ollama。' },
+      claude_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7686，自动启动 claude（默认 %USERPROFILE%\\.local\\bin\\claude.exe）。' },
+      deepseek_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7687，自动启动 DeepSeek CLI。' },
+      kimi_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7688，自动启动 kimi。' },
+      zhipu_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7689，自动启动 chelper（@z_ai/coding-helper）。' },
+      copilot_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7690，自动启动 copilot CLI。' },
       kimi: { keyLabel: 'Kimi（Moonshot）API Key', keyPlaceholder: 'Moonshot 密钥', keyHint: 'Authorization: Bearer；单独保存在「Kimi」槽位。' },
       qwen: { keyLabel: 'DashScope API Key', keyPlaceholder: '阿里云百炼 / DashScope', keyHint: '通义千问兼容 OpenAI 接口；密钥仅存「Qwen」槽位。' },
       deepseek: { keyLabel: 'DeepSeek API Key', keyPlaceholder: 'DeepSeek 密钥', keyHint: '单独保存在「DeepSeek」槽位。' },
@@ -1429,6 +1459,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return providerTransport(s.provider) === 'cli';
   }
 
+  function cliPortFromUrl(u) {
+    try {
+      var o = new URL(String(u || ''), 'http://127.0.0.1/');
+      return parseInt(o.port, 10) || 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
   function cliUrlForSession(s) {
     if (!s) return '';
     var pid = normalizeProviderId(s.provider);
@@ -1436,9 +1475,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!p) return '';
     // CLI 视图以 baseUrl 作为 ttyd 页面地址
     var u = String((s.baseUrl || '').trim() || (p.baseUrl || '')).trim();
-    // 历史配置里若是 localhost，则归一到 127.0.0.1，避免 localhost->::1 导致拒绝连接
-    if (u === 'http://localhost:7681' || u === 'http://localhost:7681/')
-      u = 'http://127.0.0.1:7681/';
+    if (/^https?:\/\/localhost(?::\d+)?/i.test(u))
+      u = u.replace(/^https?:\/\/localhost/i, 'http://127.0.0.1');
     return cliUrlWithTheme(u);
   }
 
@@ -1529,12 +1567,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var prevWasCli = _niumaWasCli;
     _niumaWasCli = true;
     var directUrl = cliUrlForSession(s);
-    var needSpawn = !prevWasCli || !cliFrameUrlLooksLive();
-    if (!needSpawn && directUrl) applyCliFrameUrl(directUrl);
+    var curPort = fr ? cliPortFromUrl(fr.src || '') : 0;
+    var newPort = cliPortFromUrl(directUrl);
+    var portChanged = newPort > 0 && curPort > 0 && newPort !== curPort;
+    var needSpawn = !prevWasCli || !cliFrameUrlLooksLive() || portChanged;
+    if (directUrl && (needSpawn || portChanged)) applyCliFrameUrl(directUrl);
     if (needSpawn) throttledNiumaCliOpen(false);
     cstatForSession(
       s.id,
-      needSpawn ? '正在连接本机终端（ttyd）…' : '本机终端已加载，可在标签间切换。'
+      needSpawn ? '正在连接 ttyd（' + (P[s.provider] ? P[s.provider].label : s.provider) + '）…' : 'ttyd 已加载，切换标签将切换对应端口终端。'
     );
   }
 
@@ -1869,7 +1910,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return {
       id: sid,
       provider: pid,
-      model: p.transport === 'cli' ? '' : model.value.trim() || p.model,
+      model: (p.transport === 'cli') ? '' : model.value.trim() || p.model,
       baseUrl: baseUrl.value.trim(),
       gatewaySessionKey: pid === 'openclaw' ? wantedOpenClawKey || hintedOpenClawKey || buildOpenClawSessionKey(sid) : '',
       history: []
@@ -1893,7 +1934,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var pid = sp && P[sp] ? sp : 'openai';
     provider.value = pid;
     var p = P[pid] || P.openai;
-    if (p.transport === 'cli') {
+    if ((p.transport === 'cli')) {
       fillModels(pid, '');
       model.value = '';
     } else {
@@ -1916,7 +1957,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var pid = pv && P[pv] ? pv : 'openai';
     var p = P[pid] || P.openai;
     s.provider = pid;
-    s.model = p.transport === 'cli' ? '' : model.value.trim() || p.model;
+    s.model = (p.transport === 'cli') ? '' : model.value.trim() || p.model;
     s.baseUrl = baseUrl.value.trim();
     if (pid !== 'openclaw') s.gatewaySessionKey = '';
     else {
@@ -1976,7 +2017,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     apiKey.placeholder = km.keyPlaceholder || '填写密钥';
     try {
       var p = P[pid] || {};
-      var isCli = p && p.transport === 'cli';
+      var isCli = p && (p.transport === 'cli');
       apiKey.type = pid === 'openclaw' ? 'text' : 'password';
       apiKey.spellcheck = false;
       apiKey.disabled = !!isCli;
@@ -1998,11 +2039,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     pid = normalizeProviderId(pid);
     if (!(pid && P[pid])) pid = 'openai';
     var p = P[pid] || P.openai;
-    var isCli = p.transport === 'cli';
+    var isCli = (p.transport === 'cli');
+    var isTtyd = p.transport === 'cli';
     var isOpenClaw = pid === 'openclaw';
     if (fldModelDdCol) fldModelDdCol.style.display = isCli ? 'none' : '';
     if (fldModelRow) fldModelRow.style.display = isCli ? 'none' : '';
-    if (fldTtydShellRow) fldTtydShellRow.style.display = isCli ? '' : 'none';
+    if (fldTtydShellRow) fldTtydShellRow.style.display = isTtyd ? '' : 'none';
     if (fldOpenClawSessionRow) fldOpenClawSessionRow.style.display = !isCli && isOpenClaw ? '' : 'none';
     if (!isCli && isOpenClaw) refreshOpenClawSessionRows(false);
     if (fldBaseUrlRow) {
@@ -2110,8 +2152,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     addBtn.className = 'stab-add';
     addBtn.id = 'sessionTabAdd';
     addBtn.textContent = '+';
-    addBtn.setAttribute('title', '选择 AI 新建对话');
-    addBtn.setAttribute('aria-label', '选择 AI 新建对话');
+    addBtn.setAttribute('title', '选择 AI / 本机 CLI 新建对话');
+    addBtn.setAttribute('aria-label', '选择 AI / 本机 CLI 新建对话');
     sessionTabsEl.appendChild(addBtn);
     refreshSendUi();
     syncChatViewMode();
@@ -2124,7 +2166,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return;
     }
     if (isCliSession(s)) {
-      empty.textContent = '本机命令行：输入内容后点发送，将拉起或聚焦 ttyd 终端。';
+      empty.textContent = 'ttyd 命令行：点「+」选择 CLI（Codex / Claude / 智谱等），每标签独立端口；发送将连接对应 ttyd 终端页。';
     } else if (state.needSetup) {
       empty.textContent = '首次使用请点「设」完成 API。展开后工具条在输入框下方、发送按钮左侧。';
     } else {
@@ -2265,7 +2307,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return;
     }
     if (isCliSession(s)) {
-      // CLI 模式不渲染气泡历史（独立终端界面）
       emptyState();
       syncChatViewMode();
       return;
@@ -2417,7 +2458,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var s = {
       id: sid,
       provider: pid,
-      model: p.transport === 'cli' ? '' : p.model,
+      model: (p.transport === 'cli') ? '' : p.model,
       baseUrl: p.baseUrl,
       gatewaySessionKey: pid === 'openclaw' ? wantedOpenClawKey || buildOpenClawSessionKey(sid) : '',
       history: []
@@ -2531,9 +2572,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var sending = isSessionSending(sid);
     var s = activeSession();
     if (isCliSession(s)) {
-      // CLI 模式隐藏 composer，本按钮不作为主要入口；保持禁用避免误触
       send.disabled = true;
-      send.textContent = 'CLI 模式';
+      send.textContent = 'ttyd 模式';
       return;
     }
     send.disabled = sending;
@@ -2704,7 +2744,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   async function ensureDynamicModelsForActiveProvider(force) {
     var pid = normalizeProviderId(provider.value);
     if (!(pid && P[pid])) return;
-    if ((P[pid] || {}).transport === 'cli') return;
+    if (((P[pid] || {}).transport === 'cli')) return;
     var now = Date.now();
     var ttlMs = 5 * 60 * 1000;
     if (!force) {
@@ -2812,10 +2852,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!(pid && P[pid])) pid = 'openai';
     var p = P[pid] || P.openai;
     provider.value = pid;
-    fillModels(pid, p.transport === 'cli' ? '' : model.value.trim());
+    fillModels(pid, (p.transport === 'cli') ? '' : model.value.trim());
     hint(pid);
     if (!keep || !baseUrl.value.trim()) baseUrl.value = p.baseUrl;
-    if (!keep || !model.value.trim()) model.value = p.transport === 'cli' ? '' : p.model;
+    if (!keep || !model.value.trim()) model.value = (p.transport === 'cli') ? '' : p.model;
     if (!systemPrompt.value.trim()) systemPrompt.value = SP;
     syncProviderDdUi();
     updateProviderFormLayout(pid);
@@ -3151,7 +3191,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     var sp = normalizeProviderId(s.provider);
     var p = P[sp] || P.openai;
-    if (p.transport === 'cli') {
+    if ((p.transport === 'cli')) {
       state.needSetup = false;
       return;
     }
@@ -3284,7 +3324,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var bu = (s.baseUrl || '').trim() || p.baseUrl;
     return {
       provider: pid,
-      model: p.transport === 'cli' ? '' : (s.model || '').trim() || p.model,
+      model: (p.transport === 'cli') ? '' : (s.model || '').trim() || p.model,
       baseUrl: bu,
       openclawSessionKey:
         pid === 'openclaw'
@@ -3306,9 +3346,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     sstat('正在测试 API 连通性...', '');
     try {
       if (p.transport === 'cli') {
-        var rCli = await fetch(String(cfg.baseUrl || '').replace(/\/+$/, '') + '/', { method: 'GET' });
-        if (!rCli.ok) throw new Error('HTTP ' + rCli.status);
-        sstat('CLI 连接正常。', 'success');
+        post({ type: 'niuma_cli_open', engine: cfg.provider, reqId: 'test_' + Date.now() });
+        sstat('已请求连接 ttyd，请查看嵌入终端。', 'success');
         return;
       }
       if (p.transport === 'openclaw') {
@@ -4810,11 +4849,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!cfg) return;
     var p0 = P[cfg.provider] || P.openai;
     if (p0.transport === 'cli') {
-      // CLI 原生界面：不依赖 Base URL / Model 校验，点击即打开专属终端
       add('user', displayText);
       input.value = '';
       clearPendingAttach();
-      cstatForSession(sid, '正在连接本机 ttyd 终端…');
+      cstatForSession(sid, '正在连接 ttyd 终端…');
       throttledNiumaCliOpen(true);
       return;
     }
@@ -5043,7 +5081,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     saveCfg(true);
     if (ttydShellCommand) {
       try {
-        post({ type: 'niuma_save_ttyd_shell', shell: String(ttydShellCommand.value || '').trim() });
+        var actCli = activeSession();
+        post({
+          type: 'niuma_save_ttyd_shell',
+          shell: String(ttydShellCommand.value || '').trim(),
+          engine: actCli && actCli.provider ? actCli.provider : ''
+        });
       } catch (e) {}
     }
     setSettings(false);
@@ -5396,7 +5439,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       if (!s || !isCliSession(s)) return;
       cstatForSession(s.id, '正在重启 ttyd…');
       try {
-        post({ type: 'niuma_cli_restart', engine: s.provider });
+        post({ type: 'niuma_cli_restart', engine: s.provider, baseUrl: cliUrlForSession(s) });
       } catch (e) {}
     });
   }
@@ -5406,7 +5449,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       if (!s || !isCliSession(s)) return;
       cstatForSession(s.id, '正在调用系统浏览器打开终端…');
       try {
-        post({ type: 'niuma_cli_open_external', engine: s.provider });
+        post({ type: 'niuma_cli_open_external', engine: s.provider, baseUrl: cliUrlForSession(s) });
       } catch (e) {}
     });
   }
@@ -6133,6 +6176,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         var turl = String(d.baseUrl || '').trim();
         var ts = activeSession();
         if (!ts || !isCliSession(ts)) return;
+        if (String(d.engine || '') && normalizeProviderId(ts.provider) !== normalizeProviderId(d.engine)) return;
         if (_niumaPendingPop && turl) {
           _niumaPendingPop = false;
           try {

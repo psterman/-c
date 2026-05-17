@@ -1835,3 +1835,13 @@
 [2026-05-17 11:30:27][wm_chain_unregister_done] reason=gui_close count=0
 [2026-05-17 11:30:27][hide_done] visible=0 reason=gui_close
 [2026-05-17 11:30:27][force_close_done] reason=gui_close
+[2026-05-17 11:36:55][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-17 11:36:55][init_guard_drop] reason=empty
+[2026-05-17 11:46:35][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-17 11:46:35][init_guard_drop] reason=empty
+[2026-05-17 11:53:44][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-17 11:53:44][init_guard_drop] reason=empty
+[2026-05-17 11:54:50][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-17 11:54:50][init_guard_drop] reason=empty
+[2026-05-17 11:57:26][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-17 11:57:26][init_guard_drop] reason=empty

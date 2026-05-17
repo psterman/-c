@@ -1,4 +1,4 @@
-; Niuma Chat 本机 ttyd 终端：端口检测、重试、WebView 回传
+﻿; Niuma Chat 本机 ttyd 终端：端口检测、重试、WebView 回传
 ; 依赖主脚本中的 WebView_QueuePayload、A_ScriptDir
 
 global NiumaTtyd_Port := 7681
@@ -11,6 +11,61 @@ global g_NiumaTtydLastHttpTick := 0
 global g_NiumaTtydHttpTTL := 900
 global g_NiumaTtydHttpProbeInflight := false
 global g_NiumaTtydLastReqId := ""
+global g_NiumaTtydEnginePids := Map()
+global g_NiumaTtydHttpByPort := Map()
+global g_NiumaTtydEngineShell := Map()
+
+NiumaTtyd_CliEngineList() {
+    return [
+        "codex_cli", "gemini_cli", "openclaw_cli", "qwen_cli", "ollama_cli",
+        "claude_cli", "deepseek_cli", "kimi_cli", "zhipu_cli", "copilot_cli"
+    ]
+}
+
+NiumaTtyd_IsCliEngine(engine) {
+    e := "|codex_cli|gemini_cli|openclaw_cli|qwen_cli|ollama_cli|claude_cli|deepseek_cli|kimi_cli|zhipu_cli|copilot_cli|"
+    return InStr(e, "|" . Trim(String(engine)) . "|")
+}
+
+NiumaTtyd_NormalizeEngine(engine) {
+    eng := Trim(String(engine))
+    if (eng = "" || !NiumaTtyd_IsCliEngine(eng))
+        return "codex_cli"
+    return eng
+}
+
+NiumaTtyd_PortForEngine(engine) {
+    static Ports := 0
+    if !IsObject(Ports) {
+        Ports := Map(
+            "codex_cli", 7681,
+            "gemini_cli", 7682,
+            "openclaw_cli", 7683,
+            "qwen_cli", 7684,
+            "ollama_cli", 7685,
+            "claude_cli", 7686,
+            "deepseek_cli", 7687,
+            "kimi_cli", 7688,
+            "zhipu_cli", 7689,
+            "copilot_cli", 7690
+        )
+    }
+    eng := NiumaTtyd_NormalizeEngine(engine)
+    return Ports.Has(eng) ? Ports[eng] : 7681
+}
+
+NiumaTtyd_BaseUrlForEngine(engine) {
+    return "http://127.0.0.1:" . NiumaTtyd_PortForEngine(engine) . "/"
+}
+
+NiumaTtyd_EngineFromPort(port) {
+    port := Integer(port)
+    for eng in NiumaTtyd_CliEngineList() {
+        if (NiumaTtyd_PortForEngine(eng) = port)
+            return eng
+    }
+    return "codex_cli"
+}
 
 /**
  * 返回 ttyd.exe 的完整路径（与主程序同目录）。
@@ -59,26 +114,29 @@ NiumaTtyd_IsHttpReady(waitMs := 1200) {
     return !!g_NiumaTtydHttpHealthy
 }
 
-NiumaTtyd_StaleDomain(action) {
+NiumaTtyd_StaleDomain(action, engine := "") {
+    eng := Trim(String(engine))
+    if (eng != "")
+        return "ttyd:" . Trim(String(action)) . ":" . eng
     return "ttyd:" . Trim(String(action))
 }
 
-NiumaTtyd_MarkLatestReq(action, reqId) {
+NiumaTtyd_MarkLatestReq(action, reqId, engine := "") {
     a := Trim(String(action))
     rid := Trim(String(reqId))
     if (a = "" || rid = "")
         return
     if FuncExists("AsyncGuardrails_UpdateLatest")
-        AsyncGuardrails_UpdateLatest(NiumaTtyd_StaleDomain(a), rid)
+        AsyncGuardrails_UpdateLatest(NiumaTtyd_StaleDomain(a, engine), rid)
 }
 
-NiumaTtyd_ShouldDropReq(action, reqId) {
+NiumaTtyd_ShouldDropReq(action, reqId, engine := "") {
     a := Trim(String(action))
     rid := Trim(String(reqId))
     if (a = "" || rid = "")
         return false
     if FuncExists("AsyncGuardrails_ShouldDropStale")
-        return AsyncGuardrails_ShouldDropStale(NiumaTtyd_StaleDomain(a), rid)
+        return AsyncGuardrails_ShouldDropStale(NiumaTtyd_StaleDomain(a, engine), rid)
     return false
 }
 
@@ -348,24 +406,298 @@ NiumaTtyd_StopProcess() {
  * @param {String} errMsg 失败时短文案
  * @param {String} baseUrl 成功时页地址
  */
-NiumaTtyd_NotifyWeb(wv2, ok, errMsg, baseUrl, reqId := "") {
+NiumaTtyd_NotifyWeb(wv2, ok, errMsg, baseUrl, reqId := "", engine := "") {
     if !wv2
         return
+    eng := NiumaTtyd_NormalizeEngine(engine)
+    port := NiumaTtyd_PortForEngine(eng)
     try {
         NiumaTtyd_EmitStatus(wv2, ok ? "ready" : "error", reqId, ok ? "" : errMsg)
         if (ok) {
-            WebView_QueuePayload(wv2, Map("type", "ttyd_ready", "baseUrl", String(baseUrl), "reqId", String(reqId), "port", Integer(NiumaTtyd_Port)))
+            WebView_QueuePayload(wv2, Map(
+                "type", "ttyd_ready",
+                "baseUrl", baseUrl != "" ? String(baseUrl) : NiumaTtyd_BaseUrlForEngine(eng),
+                "reqId", String(reqId),
+                "port", port,
+                "engine", eng
+            ))
         } else {
-            WebView_QueuePayload(
-                wv2, Map("type", "ttyd_error", "message", errMsg = "" ? "终端未就绪" : errMsg, "reqId", String(reqId), "port", Integer(NiumaTtyd_Port))
-            )
+            WebView_QueuePayload(wv2, Map(
+                "type", "ttyd_error",
+                "message", errMsg = "" ? "终端未就绪" : errMsg,
+                "reqId", String(reqId),
+                "port", port,
+                "engine", eng
+            ))
         }
     } catch {
     }
 }
 
 NiumaTtyd_BaseUrl() {
-    return "http://127.0.0.1:" . NiumaTtyd_Port . "/"
+    return NiumaTtyd_BaseUrlForEngine("codex_cli")
+}
+
+; ttyd 需保持交互会话：用 cmd /k 或 PowerShell -NoExit（勿用 /c）
+NiumaTtyd_FormatShellForExe(exePath) {
+    exe := Trim(String(exePath))
+    if (exe = "")
+        return ""
+    if RegExMatch(exe, "i)\.ps1$")
+        return 'powershell.exe -NoExit -ExecutionPolicy Bypass -File "' . exe . '"'
+    return 'cmd.exe /k "' . exe . '"'
+}
+
+; AHK v2：对不存在的键 Delete 会抛错，须先 Has
+NiumaTtyd_MapRemoveKey(mapObj, key) {
+    if !IsObject(mapObj)
+        return
+    try {
+        if mapObj.Has(key)
+            mapObj.Delete(key)
+    } catch {
+    }
+}
+
+NiumaTtyd_LogShell(engine, shell, note := "") {
+    try {
+        FileAppend(
+            (FormatTime(, "yyyy-MM-dd HH:mm:ss")) . " ttyd shell [" . engine . "] " . note . ": " . shell . "`n",
+            A_ScriptDir . "\NiumaTtyd_debug.log", "UTF-8")
+    } catch {
+    }
+}
+
+NiumaTtyd_GetShellForEngine(engine) {
+    eng := NiumaTtyd_NormalizeEngine(engine)
+    try {
+        cf := A_ScriptDir . "\CursorShortcut.ini"
+        r := Trim(IniRead(cf, "NiumaTtyd", eng . "_shell", ""))
+        if (r != "") {
+            NiumaTtyd_LogShell(eng, r, "ini")
+            return r
+        }
+        r := Trim(IniRead(cf, "NiumaTtyd", "Shell_" . eng, ""))
+        if (r != "") {
+            NiumaTtyd_LogShell(eng, r, "ini_legacy")
+            return r
+        }
+    } catch {
+    }
+    if FuncExists("GetPreferredCLIExecutable") {
+        exe := GetPreferredCLIExecutable(eng)
+        if (exe != "") {
+            if (InStr(exe, "\") || InStr(exe, "/")) {
+                sh := NiumaTtyd_FormatShellForExe(exe)
+                NiumaTtyd_LogShell(eng, sh, "resolved_path")
+                return sh
+            }
+            sh := "cmd.exe /k " . exe
+            NiumaTtyd_LogShell(eng, sh, "resolved_bare")
+            return sh
+        }
+    }
+    static BareCli := 0
+    if !IsObject(BareCli) {
+        BareCli := Map(
+            "codex_cli", "codex",
+            "gemini_cli", "gemini",
+            "openclaw_cli", "openclaw",
+            "qwen_cli", "qwen",
+            "ollama_cli", "ollama",
+            "claude_cli", "claude",
+            "deepseek_cli", "deepseek",
+            "kimi_cli", "kimi",
+            "zhipu_cli", "chelper",
+            "copilot_cli", "copilot"
+        )
+    }
+    if BareCli.Has(eng) {
+        sh := "cmd.exe /k " . BareCli[eng]
+        NiumaTtyd_LogShell(eng, sh, "fallback_bare_name")
+        return sh
+    }
+    sh := NiumaTtyd_GetShell()
+    NiumaTtyd_LogShell(eng, sh, "fallback_global")
+    return sh
+}
+
+NiumaTtyd_IsHttpReadyOnPort(port, waitMs := 1200) {
+    global g_NiumaTtydHttpByPort, g_NiumaTtydHttpTTL
+    port := Integer(port)
+    if !IsObject(g_NiumaTtydHttpByPort)
+        g_NiumaTtydHttpByPort := Map()
+    now := A_TickCount
+    if g_NiumaTtydHttpByPort.Has(port) {
+        ent := g_NiumaTtydHttpByPort[port]
+        if ((now - Integer(ent["tick"])) <= Integer(g_NiumaTtydHttpTTL))
+            return !!ent["ok"]
+    }
+    url := "http://127.0.0.1:" . port . "/"
+    ok := false
+    try {
+        req := ComObject("WinHttp.WinHttpRequest.5.1")
+        req.Open("GET", url, false)
+        req.SetTimeouts(Integer(waitMs), Integer(waitMs), Integer(waitMs), Integer(waitMs))
+        req.Send()
+        st := Integer(req.Status)
+        ok := (st >= 200 && st < 500)
+    } catch {
+        ok := false
+    }
+    g_NiumaTtydHttpByPort[port] := Map("ok", ok, "tick", now)
+    return ok
+}
+
+NiumaTtyd_StartProcessOnPort(port, shellCommand) {
+    global g_NiumaTtydEnginePids, g_NiumaTtydEngineShell
+    ttydExe := NiumaTtyd_ExePath()
+    p := Integer(port)
+    if !FileExist(ttydExe) || p <= 0
+        return false
+    shell := Trim(String(shellCommand))
+    if (shell = "")
+        shell := "cmd.exe /k"
+    if (StrLen(shell) > 1200)
+        shell := "cmd.exe /k"
+    workDir := NiumaTtyd_WorkDir()
+    cmdLine := '"' . ttydExe . '" -W -i 127.0.0.1 -p ' . p . ' -t rendererType=dom -t fontSize=14 -w "' . workDir . '" ' . shell
+    try {
+        Run(cmdLine, workDir, "Hide", &pid)
+        if (pid > 0) {
+            eng := NiumaTtyd_EngineFromPort(p)
+            g_NiumaTtydEnginePids[eng] := pid
+            if !IsObject(g_NiumaTtydEngineShell)
+                g_NiumaTtydEngineShell := Map()
+            g_NiumaTtydEngineShell[eng] := shell
+            if (p = Integer(NiumaTtyd_Port))
+                NiumaTtyd_Pid := pid
+            try FileAppend(
+                (FormatTime(, "yyyy-MM-dd HH:mm:ss")) . " ttyd started port " . p . " pid " . pid . " cmd=" . shell . "`n",
+                A_ScriptDir . "\NiumaTtyd_debug.log", "UTF-8")
+            catch {
+            }
+        }
+    } catch as e {
+        try FileAppend(
+            (FormatTime(, "yyyy-MM-dd HH:mm:ss")) . " ttyd Run port " . p . " failed: " . e.Message . "`n",
+            A_ScriptDir . "\NiumaTtyd_debug.log", "UTF-8")
+        catch {
+        }
+        return false
+    }
+    return true
+}
+
+NiumaTtyd_StartProcessForEngine(engine, forceRestart := false) {
+    global g_NiumaTtydEngineShell, g_NiumaTtydHttpByPort
+    eng := NiumaTtyd_NormalizeEngine(engine)
+    port := NiumaTtyd_PortForEngine(eng)
+    shell := NiumaTtyd_GetShellForEngine(eng)
+    if !IsObject(g_NiumaTtydEngineShell)
+        g_NiumaTtydEngineShell := Map()
+    if !IsObject(g_NiumaTtydHttpByPort)
+        g_NiumaTtydHttpByPort := Map()
+    prev := ""
+    if g_NiumaTtydEngineShell.Has(eng)
+        prev := g_NiumaTtydEngineShell[eng]
+    httpOk := NiumaTtyd_IsHttpReadyOnPort(port, 400)
+    if (!forceRestart && httpOk && prev = shell)
+        return true
+    if (httpOk && (prev = "" || prev != shell || forceRestart))
+        NiumaTtyd_StopEngine(eng)
+    return NiumaTtyd_StartProcessOnPort(port, shell)
+}
+
+NiumaTtyd_StopEngine(engine) {
+    global g_NiumaTtydEnginePids, g_NiumaTtydHttpByPort, g_NiumaTtydEngineShell
+    eng := NiumaTtyd_NormalizeEngine(engine)
+    port := NiumaTtyd_PortForEngine(eng)
+    if !IsObject(g_NiumaTtydHttpByPort)
+        g_NiumaTtydHttpByPort := Map()
+    if !IsObject(g_NiumaTtydEngineShell)
+        g_NiumaTtydEngineShell := Map()
+    if !IsObject(g_NiumaTtydEnginePids)
+        g_NiumaTtydEnginePids := Map()
+    NiumaTtyd_MapRemoveKey(g_NiumaTtydHttpByPort, port)
+    NiumaTtyd_MapRemoveKey(g_NiumaTtydEngineShell, eng)
+    if g_NiumaTtydEnginePids.Has(eng) {
+        pid := Integer(g_NiumaTtydEnginePids[eng])
+        NiumaTtyd_MapRemoveKey(g_NiumaTtydEnginePids, eng)
+        if (pid > 0) {
+            try ProcessClose(pid)
+            catch {
+            }
+        }
+    }
+}
+
+NiumaTtyd_EnsureReadyForEngine(engine, timeoutMs := 20000) {
+    eng := NiumaTtyd_NormalizeEngine(engine)
+    port := NiumaTtyd_PortForEngine(eng)
+    deadline := A_TickCount + Integer(timeoutMs)
+    if !FileExist(NiumaTtyd_ExePath())
+        return false
+    if NiumaTtyd_IsHttpReadyOnPort(port, 1200)
+        return true
+    if !NiumaTtyd_StartProcessForEngine(eng, false)
+        return false
+    while (A_TickCount < deadline) {
+        if NiumaTtyd_IsHttpReadyOnPort(port, 1200)
+            return true
+        Sleep(150)
+    }
+    return NiumaTtyd_IsHttpReadyOnPort(port, 1200)
+}
+
+NiumaTtyd_EnsureReadyForEngineAsync(engine, cb, timeoutMs := 20000, reqId := "") {
+    global g_NiumaTtydReadyReqSeq, g_NiumaTtydReadyReqs
+    eng := NiumaTtyd_NormalizeEngine(engine)
+    if !FileExist(NiumaTtyd_ExePath()) {
+        cb.Call(false, "missing_ttyd_exe")
+        return 0
+    }
+    port := NiumaTtyd_PortForEngine(eng)
+    if NiumaTtyd_IsHttpReadyOnPort(port, 1200) {
+        cb.Call(true, "")
+        return 0
+    }
+    if !NiumaTtyd_StartProcessForEngine(eng, true) {
+        cb.Call(false, "start_failed")
+        return 0
+    }
+    g_NiumaTtydReadyReqSeq += 1
+    rid := g_NiumaTtydReadyReqSeq
+    g_NiumaTtydReadyReqs[rid] := Map(
+        "cb", cb,
+        "deadline", A_TickCount + Integer(timeoutMs),
+        "engine", eng,
+        "port", port,
+        "reqId", Trim(String(reqId))
+    )
+    SetTimer((*) => NiumaTtyd_EnsureEngineReadyStep(rid), -10)
+    return rid
+}
+
+NiumaTtyd_EnsureEngineReadyStep(rid) {
+    global g_NiumaTtydReadyReqs
+    if !(g_NiumaTtydReadyReqs is Map) || !g_NiumaTtydReadyReqs.Has(rid)
+        return
+    req := g_NiumaTtydReadyReqs[rid]
+    if (A_TickCount >= Integer(req["deadline"])) {
+        cb := req["cb"]
+        g_NiumaTtydReadyReqs.Delete(rid)
+        cb.Call(false, "timeout")
+        return
+    }
+    port := Integer(req["port"])
+    if NiumaTtyd_IsHttpReadyOnPort(port, 1200) {
+        cb := req["cb"]
+        g_NiumaTtydReadyReqs.Delete(rid)
+        cb.Call(true, "")
+        return
+    }
+    SetTimer((*) => NiumaTtyd_EnsureEngineReadyStep(rid), -180)
 }
 
 NiumaTtyd_OpenExternal(url := "") {
@@ -383,65 +715,63 @@ NiumaTtyd_OpenExternal(url := "") {
 }
 
 ; WebMessage 里同步长逻辑会卡 UI：延期到独立定时器
-NiumaTtyd_DeferredOpenJob(reqId := "") {
+NiumaTtyd_DeferredOpenJob(reqId := "", engine := "codex_cli") {
     global g_FTB_WV2
     wv2 := g_FTB_WV2
     rid := String(reqId)
+    eng := NiumaTtyd_NormalizeEngine(engine)
     if (rid != "")
-        NiumaTtyd_MarkLatestReq("open", rid)
-    NiumaTtyd_EmitStatus(wv2, "starting", rid, "starting ttyd")
+        NiumaTtyd_MarkLatestReq("open", rid, eng)
+    NiumaTtyd_EmitStatus(wv2, "starting", rid, "starting ttyd " . eng)
     if !FileExist(NiumaTtyd_ExePath()) {
-        NiumaTtyd_NotifyWeb(wv2, false, "missing ttyd.exe", "", rid)
+        NiumaTtyd_NotifyWeb(wv2, false, "missing ttyd.exe", "", rid, eng)
         return
     }
-    NiumaTtyd_EmitStatus(wv2, "probing", rid, "probing ttyd")
-    NiumaTtyd_EnsureReadyAsync((ok, reason) => (
-        (rid != "" && NiumaTtyd_ShouldDropReq("open", rid))
+    NiumaTtyd_EmitStatus(wv2, "probing", rid, "probing ttyd " . eng)
+    NiumaTtyd_EnsureReadyForEngineAsync(eng, (ok, reason) => (
+        (rid != "" && NiumaTtyd_ShouldDropReq("open", rid, eng))
             ? (NiumaTtyd_LogStaleDrop("open", rid), 0)
             : (ok
-                ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl(), rid)
-                : NiumaTtyd_NotifyWeb(wv2, false, "20s ready timeout: " . reason, "", rid))
-    ), 20000)
+                ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrlForEngine(eng), rid, eng)
+                : NiumaTtyd_NotifyWeb(wv2, false, "20s ready timeout: " . reason, "", rid, eng))
+    ), 20000, rid)
 }
 
-NiumaTtyd_DeferredRestartJob(reqId := "") {
+NiumaTtyd_DeferredRestartJob(reqId := "", engine := "codex_cli") {
     global g_FTB_WV2
     wv2 := g_FTB_WV2
     rid := String(reqId)
+    eng := NiumaTtyd_NormalizeEngine(engine)
     if (rid != "")
-        NiumaTtyd_MarkLatestReq("restart", rid)
-    NiumaTtyd_EmitStatus(wv2, "starting", rid, "restarting ttyd")
+        NiumaTtyd_MarkLatestReq("restart", rid, eng)
+    NiumaTtyd_EmitStatus(wv2, "starting", rid, "restarting ttyd " . eng)
     if !FileExist(NiumaTtyd_ExePath()) {
-        NiumaTtyd_NotifyWeb(wv2, false, "missing ttyd.exe", "", rid)
+        NiumaTtyd_NotifyWeb(wv2, false, "missing ttyd.exe", "", rid, eng)
         return
     }
-    try Run(A_ComSpec . ' /c "taskkill /F /IM ttyd.exe 2>nul"', , "Hide")
-    SetTimer((*) => NiumaTtyd_EnsureReadyAsync((ok, reason) => (
-        (rid != "" && NiumaTtyd_ShouldDropReq("restart", rid))
+    NiumaTtyd_StopEngine(eng)
+    SetTimer((*) => NiumaTtyd_EnsureReadyForEngineAsync(eng, (ok, reason) => (
+        (rid != "" && NiumaTtyd_ShouldDropReq("restart", rid, eng))
             ? (NiumaTtyd_LogStaleDrop("restart", rid), 0)
             : (ok
-                ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl(), rid)
-                : NiumaTtyd_NotifyWeb(wv2, false, "restart failed: " . reason, "", rid))
-    ), 25000), -500)
+                ? NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrlForEngine(eng), rid, eng)
+                : NiumaTtyd_NotifyWeb(wv2, false, "restart failed: " . reason, "", rid, eng))
+    ), 25000, rid), -500)
 }
 
-NiumaTtyd_DeferredExternalOpenJob(reqId := "", expectedBaseUrl := "") {
+NiumaTtyd_DeferredExternalOpenJob(reqId := "", expectedBaseUrl := "", engine := "codex_cli") {
     global g_FTB_WV2
     wv2 := g_FTB_WV2
     rid := String(reqId)
-    if (Trim(String(expectedBaseUrl)) != "") {
-        host0 := "", port0 := 0
-        n0 := NiumaTtyd_NormalizeUrl(expectedBaseUrl, &host0, &port0)
-        if (n0 = "" || port0 != Integer(NiumaTtyd_Port)) {
-            NiumaTtyd_NotifyWeb(wv2, false, "base_url_port_mismatch", "", rid)
-            return
-        }
-    }
-    NiumaTtyd_EnsureReadyAsync((ok, reason) => (
+    eng := NiumaTtyd_NormalizeEngine(engine)
+    url := Trim(String(expectedBaseUrl))
+    if (url = "")
+        url := NiumaTtyd_BaseUrlForEngine(eng)
+    NiumaTtyd_EnsureReadyForEngineAsync(eng, (ok, reason) => (
         ok
-            ? (Run(NiumaTtyd_BaseUrl()), NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrl(), rid))
-            : NiumaTtyd_NotifyWeb(wv2, false, "open external failed: " . reason, "", rid)
-    ), 20000)
+            ? (Run(url), NiumaTtyd_NotifyWeb(wv2, true, "", url, rid, eng))
+            : NiumaTtyd_NotifyWeb(wv2, false, "open external failed: " . reason, "", rid, eng)
+    ), 20000, rid)
 }
 
 /**
@@ -451,18 +781,18 @@ NiumaTtyd_DeferredExternalOpenJob(reqId := "", expectedBaseUrl := "") {
 AutoStartTtydForNiumaChat(*) {
     global NiumaTtyd__BootI
     NiumaTtyd__BootI := 0
-    NiumaTtyd_StartProcess()
+    NiumaTtyd_StartProcessForEngine("codex_cli")
     SetTimer(NiumaTtyd_BootstrapRetryStep, -600)
 }
 
 NiumaTtyd_BootstrapRetryStep(*) {
     global NiumaTtyd__BootI
     NiumaTtyd__BootI++
-    if (NiumaTtyd_IsPortOwnedByTtyd(NiumaTtyd_Port) || NiumaTtyd__BootI > 20) {
+    if (NiumaTtyd_IsHttpReadyOnPort(NiumaTtyd_PortForEngine("codex_cli"), 600) || NiumaTtyd__BootI > 20) {
         NiumaTtyd__BootI := 0
         return
     }
-    NiumaTtyd_StartProcess()
+    NiumaTtyd_StartProcessForEngine("codex_cli")
     SetTimer(NiumaTtyd_BootstrapRetryStep, -500)
 }
 

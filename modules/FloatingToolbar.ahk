@@ -1277,26 +1277,40 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
 
     if (typ = "niuma_cli_open") {
-        ; WebView 回调内不可长时间阻塞；端口就绪后由 NiumaTtyd 回传 ttyd_ready / ttyd_error
         reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
-        SetTimer(NiumaTtyd_DeferredOpenJob.Bind(reqId), -10)
+        engine := msg.Has("engine") ? Trim(String(msg["engine"])) : "codex_cli"
+        SetTimer(NiumaTtyd_DeferredOpenJob.Bind(reqId, engine), -10)
         return
     }
     if (typ = "niuma_cli_restart") {
         reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
-        SetTimer(NiumaTtyd_DeferredRestartJob.Bind(reqId), -10)
+        engine := msg.Has("engine") ? Trim(String(msg["engine"])) : "codex_cli"
+        SetTimer(NiumaTtyd_DeferredRestartJob.Bind(reqId, engine), -10)
         return
     }
     if (typ = "niuma_cli_open_external") {
         reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
         expectedBaseUrl := msg.Has("baseUrl") ? String(msg["baseUrl"]) : ""
-        SetTimer(NiumaTtyd_DeferredExternalOpenJob.Bind(reqId, expectedBaseUrl), -10)
+        engine := msg.Has("engine") ? Trim(String(msg["engine"])) : "codex_cli"
+        SetTimer(NiumaTtyd_DeferredExternalOpenJob.Bind(reqId, expectedBaseUrl, engine), -10)
         return
     }
     if (typ = "niuma_save_ttyd_shell") {
         sh := msg.Has("shell") ? Trim(String(msg["shell"])) : ""
-        NiumaTtyd_SaveShellIni(sh)
-        SetTimer(NiumaTtyd_DeferredRestartJob, -400)
+        engine := msg.Has("engine") ? Trim(String(msg["engine"])) : ""
+        if (engine != "" && FuncExists("NiumaTtyd_IsCliEngine") && NiumaTtyd_IsCliEngine(engine)) {
+            try {
+                cf := A_ScriptDir . "\CursorShortcut.ini"
+                if (sh = "")
+                    sh := "cmd.exe"
+                IniWrite(sh, cf, "NiumaTtyd", engine . "_shell")
+            } catch {
+            }
+            SetTimer(NiumaTtyd_DeferredRestartJob.Bind("", engine), -400)
+        } else {
+            NiumaTtyd_SaveShellIni(sh)
+            SetTimer(NiumaTtyd_DeferredRestartJob.Bind("", "codex_cli"), -400)
+        }
         return
     }
     if (typ = "niuma_openclaw_probe_token") {

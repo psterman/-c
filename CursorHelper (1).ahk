@@ -1,4 +1,4 @@
-; ===================== msg =====================
+﻿; ===================== msg =====================
 #Requires AutoHotkey v2.0
 
 global pToken := Gdip_Startup()
@@ -131,6 +131,8 @@ global MainScriptDir := A_ScriptDir
 #Include modules\ShellIconCache.ahk
 #Include modules\FileClassifier.ahk
 
+; CLI 启动逻辑须在 NiumaTtyd 之前，以便 ttyd 解析各引擎可执行文件（与搜索中心同源）
+#Include modules\VoiceInputCliEffects.ahk
 ; ttyd 本机终端（Niuma Chat CLI）：须在 FloatingToolbar 之前包含，供 Web 消息与定时器引用
 #Include modules\NiumaTtyd.ahk
 #Include modules\CloudPlayer.ahk

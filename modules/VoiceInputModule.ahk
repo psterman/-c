@@ -2457,5 +2457,4 @@ UriEncode(Uri) {
     }
 }
 
-; 与 Module 同目录加载，避免主脚本漏 #Include 导致 CLI 未注册
-#Include VoiceInputCliEffects.ahk
+; CLI 副作用由主脚本在 NiumaTtyd 之前 #Include VoiceInputCliEffects.ahk
