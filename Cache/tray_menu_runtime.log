@@ -240,3 +240,7 @@
 [2026-05-17 22:04:45] snapshot_dirty reason=update_tray_menu
 [2026-05-17 22:04:45] snapshot_dirty reason=init
 [2026-05-17 22:04:45] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-17 22:23:15] reload_hard_spawn_ok
+[2026-05-17 22:23:16] snapshot_dirty reason=update_tray_menu
+[2026-05-17 22:23:16] snapshot_dirty reason=init
+[2026-05-17 22:23:16] snapshot_rebuild_empty elapsed_ms=0

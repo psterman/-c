@@ -340,6 +340,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     <button class="ctx-item" data-act="mkdir">新建文件夹</button>
     <button class="ctx-item" data-act="delete">删除</button>
     <button class="ctx-item" data-act="download">下载</button>
+    <button class="ctx-item hidden" data-act="download_batch">批量下载(不打包)</button>
     <button class="ctx-item" data-act="rename">重命名</button>
     <button class="ctx-item" data-act="move">移动</button>
     <button class="ctx-item" data-act="playview">播放/查看</button>
@@ -593,6 +594,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     ctx_mkdir: "\u65b0\u5efa\u6587\u4ef6\u5939",
     ctx_delete: "\u5220\u9664",
     ctx_download: "\u4e0b\u8f7d",
+    ctx_download_batch: "\u6279\u91cf\u4e0b\u8f7d(\u4e0d\u6253\u5305)",
     ctx_rename: "\u91cd\u547d\u540d",
     ctx_move: "\u79fb\u52a8",
     ctx_playview: "\u64ad\u653e/\u67e5\u770b",
@@ -644,6 +646,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     ctx_mkdir: "New Folder",
     ctx_delete: "Delete",
     ctx_download: "Download",
+    ctx_download_batch: "Batch Download (No Zip)",
     ctx_rename: "Rename",
     ctx_move: "Move",
     ctx_playview: "Play/View",
@@ -704,6 +707,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
         mkdir: tr("ctx_mkdir"),
         delete: tr("ctx_delete"),
         download: tr("ctx_download"),
+        download_batch: tr("ctx_download_batch"),
         rename: tr("ctx_rename"),
         move: tr("ctx_move"),
         playview: tr("ctx_playview"),
@@ -841,6 +845,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   }
   function updateCtxMenuDownloadLabel(entry){
     var btn = document.querySelector("#ctxMenu .ctx-item[data-act=\"download\"]");
+    var btnBatch = document.querySelector("#ctxMenu .ctx-item[data-act=\"download_batch\"]");
     if(!btn) return;
     var target = entry || $("ctxMenu")._entry || null;
     var isFolder = !!(target && target.isDir);
@@ -852,9 +857,11 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     }
     if(isFolder){
       btn.textContent = (uiLang === "en" ? "Package Download" : "打包下载");
+      if(btnBatch) btnBatch.classList.remove("hidden");
       return;
     }
     btn.textContent = tr("ctx_download");
+    if(btnBatch) btnBatch.classList.add("hidden");
   }
   function loadProviderTokens(){
     try{
@@ -2298,18 +2305,19 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     }
     text($("currentInfo"), "Move failed: " + ((ret.json && ret.json.message) || (ret.transport && ret.transport.error) || "unknown error"));
   }
-  async function doDownloadEntry(entry){
+  async function doDownloadEntry(entry, mode){
+    mode = (mode === "batch") ? "batch" : "zip";
     if(!entry) return false;
     var fp = repairFsPath(entry.path);
     if(entry.isDir){
       var hostBridge = !!(window.chrome && window.chrome.webview && window.chrome.webview.postMessage);
       if(hostBridge){
-        var reqId = makeReqId("dlzip");
+        var reqId = makeReqId(mode === "batch" ? "dlbatch" : "dlzip");
         if(pendingDownloadReqId && pendingDownloadReqId !== reqId){
           postHost("cloudplayer_download_cancel", { reqId: pendingDownloadReqId });
         }
         pendingDownloadReqId = reqId;
-        text($("currentInfo"), "打包下载：正在准备 " + entry.name + " ...");
+        text($("currentInfo"), (mode === "batch" ? "批量下载" : "打包下载") + "：正在准备 " + entry.name + " ...");
         var packTok = await getZipPackTokens(4500);
         var tk = packTok.token;
         var payload = {
@@ -2319,9 +2327,10 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
           token: tk,
           userToken: packTok.userToken,
           adminToken: packTok.adminToken,
+          downloadMode: mode,
           reqId: reqId
         };
-        text($("currentInfo"), "打包下载：由宿主扫描并下载（" + entry.name + "）...");
+        text($("currentInfo"), (mode === "batch" ? "批量下载" : "打包下载") + "：由宿主扫描并下载（" + entry.name + "）...");
         postHost("cloudplayer_download_folder", payload);
         return true;
       }
@@ -2340,7 +2349,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       : ("下载失败：请通过本机 OpenList 代理下载（避免阿里云直链并发限制）：" + (entry.name || fp)));
     return false;
   }
-  async function doDownloadEntries(entries){
+  async function doDownloadEntries(entries, mode){
     var arr = Array.isArray(entries) ? entries.filter(Boolean) : [];
     if(!arr.length){
       text($("currentInfo"), uiLang === "en" ? "No file selected." : "未选择文件。");
@@ -2349,7 +2358,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     var ok = 0, fail = 0;
     for(var i=0;i<arr.length;i++){
       try{
-        var oneOk = await doDownloadEntry(arr[i]);
+        var oneOk = await doDownloadEntry(arr[i], mode);
         if(oneOk) ok++;
         else fail++;
       }catch(_){
@@ -2392,7 +2401,8 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       return doMkdirInto((entry && entry.isDir) ? entry.path : state.path);
     }
     if(act==="delete") return doDeleteEntry(entry);
-    if(act==="download") return doDownloadEntries(getSelectedEntries(entry));
+    if(act==="download") return doDownloadEntries(getSelectedEntries(entry), "zip");
+    if(act==="download_batch") return doDownloadEntries(getSelectedEntries(entry), "batch");
     if(act==="rename") return doRenameEntry(entry);
     if(act==="move") return doMoveEntry(entry);
     if(act==="playview") return playEntry(entry);
@@ -4136,11 +4146,12 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
       if(!isCurrentDownloadEvent(data)) return true;
       var rr = downloadEventReqId(data);
       if(rr && pendingDownloadReqId === rr) pendingDownloadReqId = "";
+      var isBatch = !!(data && data.path && !/\.zip$/i.test(String(data.path)));
       var msg = data.ok
-        ? ("打包下载完成：" + (data.path || data.name || "zip"))
+        ? ((isBatch ? "批量下载完成：" : "打包下载完成：") + (data.path || data.name || (isBatch ? "folder" : "zip")))
         : ((String(data.phase||"") === "cancelled")
-          ? ("打包下载已取消：" + (data.message || "cancelled"))
-          : ("打包下载失败：" + (data.message || "unknown error")));
+          ? ((isBatch ? "批量下载已取消：" : "打包下载已取消：") + (data.message || "cancelled"))
+          : ((isBatch ? "批量下载失败：" : "打包下载失败：") + (data.message || "unknown error")));
       if(!data.ok && /missing lib\\7z\.exe|zip failed|zip timeout|no_token/i.test(String(data.errorCode || "") + " " + String(data.message || ""))){
         msg += "（建议：检查 lib/7z.exe 与 OpenList Token，重启牛马助手后重试）";
       }

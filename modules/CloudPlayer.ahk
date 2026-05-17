@@ -300,6 +300,9 @@ CloudPlayer_OnWebMessage(sender, args) {
         token := payload.Has("token") ? Trim(String(payload["token"])) : ""
         userToken := payload.Has("userToken") ? Trim(String(payload["userToken"])) : token
         adminToken := payload.Has("adminToken") ? Trim(String(payload["adminToken"])) : ""
+        downloadMode := payload.Has("downloadMode") ? Trim(String(payload["downloadMode"])) : "zip"
+        if (downloadMode != "batch")
+            downloadMode := "zip"
         reqId := payload.Has("reqId") ? String(payload["reqId"]) : requestId
         CloudPlayer_MarkLatestReq("download_folder", reqId)
         CloudPlayer_ClearDownloadCancelled(reqId)
@@ -310,7 +313,7 @@ CloudPlayer_OnWebMessage(sender, args) {
                 manifestFiles := 0
             }
         }
-        SetTimer(CloudPlayer_DeferredDownloadFolder.Bind(reqId, folderPath, folderName, token, manifestFiles, userToken, adminToken), -10)
+        SetTimer(CloudPlayer_DeferredDownloadFolder.Bind(reqId, folderPath, folderName, token, manifestFiles, userToken, adminToken, downloadMode), -10)
         return
     }
     if (typ = "cloudplayer_download_cancel") {
@@ -2646,9 +2649,10 @@ CloudPlayer_DownloadJobPhaseInit(job) {
     outDir := CloudPlayer_DownloadsDir() . "\牛马云下载"
     DirCreate(outDir)
     stamp := FormatTime(, "yyyyMMdd_HHmmss")
+    dlMode := job.Has("downloadMode") ? String(job["downloadMode"]) : "zip"
     zipPath := outDir . "\" . name . "_" . stamp . ".zip"
-    workRoot := A_Temp . "\Nc_" . A_TickCount
-    stageRoot := workRoot . "\" . name
+    workRoot := (dlMode = "batch") ? (outDir . "\" . name . "_" . stamp) : (A_Temp . "\Nc_" . A_TickCount)
+    stageRoot := (dlMode = "batch") ? workRoot : (workRoot . "\" . name)
     DirCreate(stageRoot)
     job["stats"] := Map("files", 0, "failed", 0, "scanned", 0)
     job["zipCtx"] := Map("name", name, "workRoot", workRoot, "stageRoot", stageRoot, "zipPath", zipPath, "stats", job["stats"])
@@ -2902,6 +2906,33 @@ CloudPlayer_DownloadJobPhaseZip(job) {
     rid := job.Has("reqId") ? Trim(String(job["reqId"])) : ""
     walkOk := job.Has("walkOk") ? !!job["walkOk"] : true
     zipCtx := job.Has("zipCtx") ? job["zipCtx"] : Map()
+    dlMode := job.Has("downloadMode") ? String(job["downloadMode"]) : "zip"
+    if (dlMode = "batch") {
+        name := job.Has("folderName") ? String(job["folderName"]) : "cloud-folder"
+        stats := job.Has("stats") ? job["stats"] : Map("files", 0, "failed", 0, "scanned", 0)
+        stageRoot := zipCtx.Has("stageRoot") ? String(zipCtx["stageRoot"]) : ""
+        if !walkOk {
+            CloudPlayer_PostDownloadResult(false, "批量下载失败：扫描或下载中断", "", name, rid, "walk_failed")
+            CloudPlayer_ClearDownloadCancelled(rid)
+            return false
+        }
+        if (stats["files"] <= 0) {
+            failN := stats.Has("failed") ? Integer(stats["failed"]) : 0
+            scanned := stats.Has("scanned") ? Integer(stats["scanned"]) : 0
+            msgEmpty := (failN > 0)
+                ? ("批量下载失败：没有文件下载成功（" . failN . " 个失败）")
+                : (scanned > 0 ? ("未找到可下载文件（已扫描 " . scanned . " 个目录）") : "文件夹为空或列表读取失败")
+            CloudPlayer_PostDownloadResult(false, msgEmpty, "", name, rid, "empty_folder")
+            CloudPlayer_ClearDownloadCancelled(rid)
+            return false
+        }
+        if (stageRoot != "")
+            try Run('explorer.exe "' . stageRoot . '"')
+        msg := "批量下载完成：成功 " . stats["files"] . "，失败 " . stats["failed"]
+        CloudPlayer_PostDownloadResult(true, msg, stageRoot, name, rid, "")
+        CloudPlayer_ClearDownloadCancelled(rid)
+        return false
+    }
     try {
         CloudPlayer_DownloadFolderZipAfterWalk(walkOk, rid, zipCtx)
     } catch as e {
@@ -2912,7 +2943,7 @@ CloudPlayer_DownloadJobPhaseZip(job) {
     return false
 }
 
-CloudPlayer_DeferredDownloadFolder(reqId, folderPath, folderName, token, manifestFiles := 0, userToken := "", adminToken := "") {
+CloudPlayer_DeferredDownloadFolder(reqId, folderPath, folderName, token, manifestFiles := 0, userToken := "", adminToken := "", downloadMode := "zip") {
     if CloudPlayer_IsStaleReq("download_folder", reqId) {
         try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=download_folder req_id=" . reqId . " phase=deferred")
         return
@@ -2937,6 +2968,7 @@ CloudPlayer_DeferredDownloadFolder(reqId, folderPath, folderName, token, manifes
         "token", token,
         "userToken", userToken,
         "adminToken", adminToken,
+        "downloadMode", downloadMode,
         "manifestFiles", manifestFiles,
         "fileQueue", [],
         "fileIndex", 0,

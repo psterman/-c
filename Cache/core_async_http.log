@@ -2509,3 +2509,259 @@
 [20260517220944][async_http_done] id=50 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
 [20260517220956][async_http_send] id=51 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
 [20260517220956][async_http_done] id=51 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221008][async_http_send] id=52 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221008][async_http_done] id=52 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221020][async_http_send] id=53 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221020][async_http_done] id=53 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=46 attempt=1
+[20260517221028][async_http_send] id=54 req_id=fslist_1779027028927_449981 tag=cp_fs_list method=POST url=http://127.0.0.1:5244/api/fs/list attempt=1
+[20260517221028][async_http_done] id=54 req_id=fslist_1779027028927_449981 tag=cp_fs_list status=200 elapsed_ms=47 attempt=1
+[20260517221032][async_http_send] id=55 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221032][async_http_done] id=55 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221044][async_http_send] id=56 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221044][async_http_done] id=56 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221056][async_http_send] id=57 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221056][async_http_done] id=57 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221108][async_http_send] id=58 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221108][async_http_done] id=58 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221120][async_http_send] id=59 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221120][async_http_done] id=59 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221132][async_http_send] id=60 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221132][async_http_done] id=60 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221144][async_http_send] id=61 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221144][async_http_done] id=61 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221156][async_http_send] id=62 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221156][async_http_done] id=62 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221208][async_http_send] id=63 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221208][async_http_done] id=63 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221220][async_http_send] id=64 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221220][async_http_done] id=64 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221232][async_http_send] id=65 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221232][async_http_done] id=65 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221244][async_http_send] id=66 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221244][async_http_done] id=66 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221256][async_http_send] id=67 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221256][async_http_done] id=67 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221308][async_http_send] id=68 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221308][async_http_done] id=68 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221320][async_http_send] id=69 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221320][async_http_done] id=69 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221332][async_http_send] id=70 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221332][async_http_done] id=70 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221344][async_http_send] id=71 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221344][async_http_done] id=71 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221356][async_http_send] id=72 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221356][async_http_done] id=72 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221408][async_http_send] id=73 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221408][async_http_done] id=73 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=46 attempt=1
+[20260517221420][async_http_send] id=74 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221420][async_http_done] id=74 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221432][async_http_send] id=75 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221432][async_http_done] id=75 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221444][async_http_send] id=76 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221444][async_http_done] id=76 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221456][async_http_send] id=77 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221456][async_http_done] id=77 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221508][async_http_send] id=78 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221508][async_http_done] id=78 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221520][async_http_send] id=79 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221520][async_http_done] id=79 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221532][async_http_send] id=80 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221532][async_http_done] id=80 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221544][async_http_send] id=81 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221544][async_http_done] id=81 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221556][async_http_send] id=82 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221556][async_http_done] id=82 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221608][async_http_send] id=83 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221608][async_http_done] id=83 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221620][async_http_send] id=84 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221620][async_http_done] id=84 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221632][async_http_send] id=85 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221632][async_http_done] id=85 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221644][async_http_send] id=86 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221644][async_http_done] id=86 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221656][async_http_send] id=87 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221656][async_http_done] id=87 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221708][async_http_send] id=88 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221708][async_http_done] id=88 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221720][async_http_send] id=89 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221720][async_http_done] id=89 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221732][async_http_send] id=90 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221732][async_http_done] id=90 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221744][async_http_send] id=91 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221744][async_http_done] id=91 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221756][async_http_send] id=92 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221756][async_http_done] id=92 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=46 attempt=1
+[20260517221808][async_http_send] id=93 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221808][async_http_done] id=93 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221820][async_http_send] id=94 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221820][async_http_done] id=94 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221832][async_http_send] id=95 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221832][async_http_done] id=95 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221844][async_http_send] id=96 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221844][async_http_done] id=96 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221856][async_http_send] id=97 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221856][async_http_done] id=97 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221908][async_http_send] id=98 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221908][async_http_done] id=98 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221920][async_http_send] id=99 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221920][async_http_done] id=99 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=46 attempt=1
+[20260517221932][async_http_send] id=100 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221932][async_http_done] id=100 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221944][async_http_send] id=101 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221944][async_http_done] id=101 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221954][async_http_send] id=102 req_id=fslist_1779027594361_915477 tag=cp_fs_list method=POST url=http://127.0.0.1:5244/api/fs/list attempt=1
+[20260517221954][async_http_done] id=102 req_id=fslist_1779027594361_915477 tag=cp_fs_list status=200 elapsed_ms=31 attempt=1
+[20260517221956][async_http_send] id=103 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517221956][async_http_done] id=103 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517221958][async_http_send] id=104 req_id=fslist_1779027598131_958369 tag=cp_fs_list method=POST url=http://127.0.0.1:5244/api/fs/list attempt=1
+[20260517221958][async_http_done] id=104 req_id=fslist_1779027598131_958369 tag=cp_fs_list status=200 elapsed_ms=47 attempt=1
+[20260517222000][async_http_send] id=105 req_id=fslist_1779027600244_799394 tag=cp_fs_list method=POST url=http://127.0.0.1:5244/api/fs/list attempt=1
+[20260517222000][async_http_done] id=105 req_id=fslist_1779027600244_799394 tag=cp_fs_list status=200 elapsed_ms=31 attempt=1
+[20260517222001][async_http_send] id=106 req_id=fslist_1779027601364_926426 tag=cp_fs_list method=POST url=http://127.0.0.1:5244/api/fs/list attempt=1
+[20260517222001][async_http_done] id=106 req_id=fslist_1779027601364_926426 tag=cp_fs_list status=200 elapsed_ms=31 attempt=1
+[20260517222008][async_http_send] id=107 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222008][async_http_done] id=107 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222020][async_http_send] id=108 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222020][async_http_done] id=108 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222032][async_http_send] id=109 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222032][async_http_done] id=109 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222044][async_http_send] id=110 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222044][async_http_done] id=110 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222056][async_http_send] id=111 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222056][async_http_done] id=111 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222108][async_http_send] id=112 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222108][async_http_done] id=112 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222120][async_http_send] id=113 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222120][async_http_done] id=113 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222132][async_http_send] id=114 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222132][async_http_done] id=114 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222144][async_http_send] id=115 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222144][async_http_done] id=115 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222156][async_http_send] id=116 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222156][async_http_done] id=116 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222208][async_http_send] id=117 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222208][async_http_done] id=117 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222220][async_http_send] id=118 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222220][async_http_done] id=118 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222232][async_http_send] id=119 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222232][async_http_done] id=119 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222244][async_http_send] id=120 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222244][async_http_done] id=120 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222256][async_http_send] id=121 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222256][async_http_done] id=121 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222308][async_http_send] id=122 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222308][async_http_done] id=122 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222328][async_http_send] id=1 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260517222328][async_http_done] id=1 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=46 attempt=1
+[20260517222328][async_http_send] id=2 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260517222328][async_http_done] id=2 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
+[20260517222328][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260517222328][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260517222328][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260517222328][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260517222330][async_http_send] id=5 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222330][async_http_done] id=5 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=141 attempt=1
+[20260517222332][async_http_send] id=6 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222332][async_http_done] id=6 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=46 attempt=1
+[20260517222333][async_http_send] id=7 req_id=apjson_1779027813105_464933 tag=cp_api_json method=POST url=http://127.0.0.1:5244/api/fs/list attempt=1
+[20260517222333][async_http_done] id=7 req_id=apjson_1779027813105_464933 tag=cp_api_json status=200 elapsed_ms=31 attempt=1
+[20260517222333][async_http_send] id=8 req_id=fslist_1779027813151_592340 tag=cp_fs_list method=POST url=http://127.0.0.1:5244/api/fs/list attempt=1
+[20260517222333][async_http_done] id=8 req_id=fslist_1779027813151_592340 tag=cp_fs_list status=200 elapsed_ms=47 attempt=1
+[20260517222338][async_http_send] id=9 req_id=fslist_1779027818545_982701 tag=cp_fs_list method=POST url=http://127.0.0.1:5244/api/fs/list attempt=1
+[20260517222338][async_http_done] id=9 req_id=fslist_1779027818545_982701 tag=cp_fs_list status=200 elapsed_ms=31 attempt=1
+[20260517222342][cloudplayer_dl_token] req_id=dlbatch_1779027822494_854618 admin=109 user=109 same=1
+[20260517222342][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/list req_id=dlbatch_1779027822494_854618
+[20260517222343][cloudplayer_dl_scan_data] req_id=dlbatch_1779027822494_854618 path=/aliyun/老来网产品提报412/拖把 page=1 refresh=1 data_keys=content,header,provider,readme,total,write,write_content_bypass
+[20260517222343][cloudplayer_dl_scan_page] req_id=dlbatch_1779027822494_854618 path=/aliyun/老来网产品提报412/拖把 page=1 refresh=1 ok=1 code=200 rows=6
+[20260517222343][cloudplayer_dl_scan_sample] req_id=dlbatch_1779027822494_854618 path=/aliyun/老来网产品提报412/拖把 n=详情图 p= d=1 s=0
+[20260517222343][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/list req_id=dlbatch_1779027822494_854618
+[20260517222343][cloudplayer_dl_scan_data] req_id=dlbatch_1779027822494_854618 path=/aliyun/老来网产品提报412/拖把/详情图 page=1 refresh=1 data_keys=content,header,provider,readme,total,write,write_content_bypass
+[20260517222343][cloudplayer_dl_scan_page] req_id=dlbatch_1779027822494_854618 path=/aliyun/老来网产品提报412/拖把/详情图 page=1 refresh=1 ok=1 code=200 rows=18
+[20260517222343][cloudplayer_dl_scan_sample] req_id=dlbatch_1779027822494_854618 path=/aliyun/老来网产品提报412/拖把/详情图 n=IMG_7507.JPG p= d=0 s=25258
+[20260517222343][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=1/23 remote=/aliyun/老来网产品提报412/拖把/IMG_7481.JPG sign=46
+[20260517222343][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222344][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=2/23 remote=/aliyun/老来网产品提报412/拖把/IMG_7483.JPG sign=46
+[20260517222344][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222344][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=3/23 remote=/aliyun/老来网产品提报412/拖把/IMG_7485.JPG sign=46
+[20260517222344][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222345][async_http_send] id=10 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222345][async_http_done] id=10 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222345][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=4/23 remote=/aliyun/老来网产品提报412/拖把/IMG_7484.JPG sign=46
+[20260517222345][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222345][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=5/23 remote=/aliyun/老来网产品提报412/拖把/IMG_7480.JPG sign=46
+[20260517222345][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222346][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=6/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7507.JPG sign=46
+[20260517222346][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222346][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=7/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7506.JPG sign=46
+[20260517222346][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222349][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=8/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7505.JPG sign=46
+[20260517222349][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222351][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=9/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7504.JPG sign=46
+[20260517222351][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222354][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=10/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7503.JPG sign=46
+[20260517222354][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222356][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=11/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7502.JPG sign=46
+[20260517222356][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222358][async_http_send] id=11 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222358][async_http_done] id=11 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222359][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=12/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7501.JPG sign=46
+[20260517222359][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222402][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=13/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7500.JPG sign=46
+[20260517222402][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222402][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/p/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7500.JPG?sign=6c3nVeCRJbH9cVCvHSPgZdn5pisEvGLPaXpWU3lN2QE=:0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7500.JPG
+[20260517222404][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/p/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7500.JPG?sign=6c3nVeCRJbH9cVCvHSPgZdn5pisEvGLPaXpWU3lN2QE%3D%3A0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7500.JPG
+[20260517222406][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/d/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7500.JPG?sign=6c3nVeCRJbH9cVCvHSPgZdn5pisEvGLPaXpWU3lN2QE%3D%3A0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7500.JPG
+[20260517222408][cloudplayer_dl_file_fail] req_id=dlbatch_1779027822494_854618 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7500.JPG err=http 403 candidates=3 pre_url=0
+[20260517222409][async_http_send] id=12 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222409][async_http_done] id=12 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222409][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=14/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7499.JPG sign=46
+[20260517222409][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222409][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=15/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7498.JPG sign=46
+[20260517222409][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222410][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/p/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7498.JPG?sign=SMguIXMbzO0aKcmy8yG0_QAz5z5kh8I2WT4hLRkTM80=:0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7498.JPG
+[20260517222412][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=16/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7497.JPG sign=46
+[20260517222412][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222412][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=17/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7496.JPG sign=46
+[20260517222412][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222413][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=18/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7495.JPG sign=46
+[20260517222413][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222413][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=19/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7491.JPG sign=46
+[20260517222413][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222414][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=20/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7494.JPG sign=46
+[20260517222414][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222414][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/p/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7494.JPG?sign=gWpXA_WFAAxmKs9cJc9p8VFgFfX8H0OB2YH7fkjEW9Q=:0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7494.JPG
+[20260517222416][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/p/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7494.JPG?sign=gWpXA_WFAAxmKs9cJc9p8VFgFfX8H0OB2YH7fkjEW9Q%3D%3A0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7494.JPG
+[20260517222418][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/d/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7494.JPG?sign=gWpXA_WFAAxmKs9cJc9p8VFgFfX8H0OB2YH7fkjEW9Q%3D%3A0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7494.JPG
+[20260517222420][cloudplayer_dl_file_fail] req_id=dlbatch_1779027822494_854618 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7494.JPG err=http 403 candidates=3 pre_url=0
+[20260517222421][async_http_send] id=13 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222421][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=21/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7493.JPG sign=46
+[20260517222421][async_http_done] id=13 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222421][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222421][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/p/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7493.JPG?sign=9c4tmU23qXxNypV9SgKbN3XvVYjB3X2pCC2KOfMSFR8=:0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7493.JPG
+[20260517222423][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/p/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7493.JPG?sign=9c4tmU23qXxNypV9SgKbN3XvVYjB3X2pCC2KOfMSFR8%3D%3A0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7493.JPG
+[20260517222425][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/d/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7493.JPG?sign=9c4tmU23qXxNypV9SgKbN3XvVYjB3X2pCC2KOfMSFR8%3D%3A0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7493.JPG
+[20260517222427][cloudplayer_dl_file_fail] req_id=dlbatch_1779027822494_854618 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7493.JPG err=http 403 candidates=3 pre_url=0
+[20260517222427][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=22/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7492.JPG sign=46
+[20260517222427][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222428][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/p/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7492.JPG?sign=GI7qC6CjeEnfcnVPXKblbPoZ-fBysUtnohektDbpmkk=:0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7492.JPG
+[20260517222430][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/p/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7492.JPG?sign=GI7qC6CjeEnfcnVPXKblbPoZ-fBysUtnohektDbpmkk%3D%3A0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7492.JPG
+[20260517222432][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/d/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7492.JPG?sign=GI7qC6CjeEnfcnVPXKblbPoZ-fBysUtnohektDbpmkk%3D%3A0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7492.JPG
+[20260517222433][async_http_send] id=14 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222433][async_http_done] id=14 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=46 attempt=1
+[20260517222433][cloudplayer_dl_file_fail] req_id=dlbatch_1779027822494_854618 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7492.JPG err=http 403 candidates=3 pre_url=0
+[20260517222434][cloudplayer_dl_job_file] req_id=dlbatch_1779027822494_854618 n=23/23 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7490.JPG sign=46
+[20260517222434][cloudplayer_http_bridge_missing] method=POST url=http://127.0.0.1:5244/api/fs/get req_id=dlbatch_1779027822494_854618
+[20260517222434][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/p/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7490.JPG?sign=pd3aDm6PvnCiBsvd5acOfZ5SlGEGHjlE14qg18NyijU=:0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7490.JPG
+[20260517222436][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/p/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7490.JPG?sign=pd3aDm6PvnCiBsvd5acOfZ5SlGEGHjlE14qg18NyijU%3D%3A0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7490.JPG
+[20260517222438][cloudplayer_dl_urlmon_fallback] url=http://127.0.0.1:5244/d/aliyun/%E8%80%81%E6%9D%A5%E7%BD%91%E4%BA%A7%E5%93%81%E6%8F%90%E6%8A%A5412/%E6%8B%96%E6%8A%8A/%E8%AF%A6%E6%83%85%E5%9B%BE/IMG_7490.JPG?sign=pd3aDm6PvnCiBsvd5acOfZ5SlGEGHjlE14qg18NyijU%3D%3A0 out=C:\Users\Administrator\Downloads\牛马云下载\拖把_20260517_222342\详情图\IMG_7490.JPG
+[20260517222440][cloudplayer_dl_file_fail] req_id=dlbatch_1779027822494_854618 remote=/aliyun/老来网产品提报412/拖把/详情图/IMG_7490.JPG err=http 403 candidates=3 pre_url=0
+[20260517222445][async_http_send] id=15 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222445][async_http_done] id=15 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=46 attempt=1
+[20260517222457][async_http_send] id=16 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222457][async_http_done] id=16 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222509][async_http_send] id=17 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222509][async_http_done] id=17 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222521][async_http_send] id=18 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222521][async_http_done] id=18 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
+[20260517222533][async_http_send] id=19 req_id=0 tag=cloudplayer_probe method=GET url=http://127.0.0.1:5244/ attempt=1
+[20260517222533][async_http_done] id=19 req_id=0 tag=cloudplayer_probe status=200 elapsed_ms=31 attempt=1
