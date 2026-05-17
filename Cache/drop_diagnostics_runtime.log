@@ -2196,3 +2196,1256 @@
 [2026-05-17 22:25:35] selection cursor_over_ui miss mouse_x=289 mouse_y=276 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
 [2026-05-17 22:25:35] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
 [2026-05-17 22:25:35] selection lbutton_up no_trigger=click
+[2026-05-17 22:25:58] selection cursor_over_ui miss mouse_x=1380 mouse_y=52 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:25:58] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:25:58] selection lbutton_up no_trigger=click
+[2026-05-17 22:26:03] selection cursor_over_ui miss mouse_x=1883 mouse_y=174 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:03] selection lbutton_up dist_x=26 dist_y=676 drag=1 multi=0
+[2026-05-17 22:26:03] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:04] selection cursor_over_ui miss mouse_x=1591 mouse_y=60 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:04] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:26:04] selection lbutton_up no_trigger=click
+[2026-05-17 22:26:10] selection cursor_over_ui miss mouse_x=1904 mouse_y=79 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:10] selection lbutton_up dist_x=13 dist_y=199 drag=1 multi=0
+[2026-05-17 22:26:10] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:12] selection cursor_over_ui miss mouse_x=1907 mouse_y=74 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:12] selection lbutton_up dist_x=5 dist_y=160 drag=1 multi=0
+[2026-05-17 22:26:12] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:14] selection cursor_over_ui miss mouse_x=1908 mouse_y=94 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:14] selection lbutton_up dist_x=1 dist_y=83 drag=1 multi=0
+[2026-05-17 22:26:14] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:16] selection cursor_over_ui miss mouse_x=1912 mouse_y=102 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:16] selection lbutton_up dist_x=2 dist_y=81 drag=1 multi=0
+[2026-05-17 22:26:16] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:17] selection cursor_over_ui miss mouse_x=1906 mouse_y=96 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:17] selection lbutton_up dist_x=2 dist_y=56 drag=1 multi=0
+[2026-05-17 22:26:17] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:18] selection cursor_over_ui miss mouse_x=1912 mouse_y=80 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:18] selection lbutton_up dist_x=1 dist_y=73 drag=1 multi=0
+[2026-05-17 22:26:18] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:20] selection cursor_over_ui miss mouse_x=1911 mouse_y=88 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:20] selection lbutton_up dist_x=3 dist_y=97 drag=1 multi=0
+[2026-05-17 22:26:20] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:21] selection cursor_over_ui miss mouse_x=1911 mouse_y=82 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:21] selection lbutton_up dist_x=2 dist_y=91 drag=1 multi=0
+[2026-05-17 22:26:21] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:23] selection cursor_over_ui miss mouse_x=1913 mouse_y=80 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:23] selection lbutton_up dist_x=2 dist_y=39 drag=1 multi=0
+[2026-05-17 22:26:23] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:24] selection cursor_over_ui miss mouse_x=1911 mouse_y=72 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:24] selection lbutton_up dist_x=4 dist_y=69 drag=1 multi=0
+[2026-05-17 22:26:24] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:26] selection cursor_over_ui miss mouse_x=1904 mouse_y=59 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:26] selection lbutton_up dist_x=6 dist_y=64 drag=1 multi=0
+[2026-05-17 22:26:26] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:27] selection cursor_over_ui miss mouse_x=1912 mouse_y=104 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:27] selection lbutton_up dist_x=1 dist_y=22 drag=1 multi=0
+[2026-05-17 22:26:27] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:28] selection cursor_over_ui miss mouse_x=1915 mouse_y=84 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:28] selection lbutton_up dist_x=0 dist_y=26 drag=1 multi=0
+[2026-05-17 22:26:28] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:29] selection cursor_over_ui miss mouse_x=1908 mouse_y=88 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:29] selection lbutton_up dist_x=4 dist_y=38 drag=1 multi=0
+[2026-05-17 22:26:29] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:31] selection cursor_over_ui miss mouse_x=1909 mouse_y=77 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:31] selection lbutton_up dist_x=2 dist_y=52 drag=1 multi=0
+[2026-05-17 22:26:31] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:33] selection cursor_over_ui miss mouse_x=1912 mouse_y=82 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:33] selection lbutton_up dist_x=0 dist_y=49 drag=1 multi=0
+[2026-05-17 22:26:33] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:34] selection cursor_over_ui miss mouse_x=1911 mouse_y=90 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:34] selection lbutton_up dist_x=4 dist_y=33 drag=1 multi=0
+[2026-05-17 22:26:34] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:36] selection cursor_over_ui miss mouse_x=1910 mouse_y=78 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:36] selection lbutton_up dist_x=2 dist_y=23 drag=1 multi=0
+[2026-05-17 22:26:36] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:37] selection cursor_over_ui miss mouse_x=1911 mouse_y=82 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:37] selection lbutton_up dist_x=0 dist_y=39 drag=1 multi=0
+[2026-05-17 22:26:37] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:39] selection cursor_over_ui miss mouse_x=1911 mouse_y=77 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:39] selection lbutton_up dist_x=1 dist_y=28 drag=1 multi=0
+[2026-05-17 22:26:39] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:40] selection cursor_over_ui miss mouse_x=1911 mouse_y=75 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:40] selection lbutton_up dist_x=0 dist_y=40 drag=1 multi=0
+[2026-05-17 22:26:40] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:41] selection cursor_over_ui miss mouse_x=1914 mouse_y=81 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:41] selection lbutton_up dist_x=1 dist_y=18 drag=1 multi=0
+[2026-05-17 22:26:41] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:42] selection cursor_over_ui miss mouse_x=1911 mouse_y=63 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:42] selection lbutton_up dist_x=2 dist_y=31 drag=1 multi=0
+[2026-05-17 22:26:42] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:43] selection cursor_over_ui miss mouse_x=1911 mouse_y=74 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:43] selection lbutton_up dist_x=2 dist_y=25 drag=1 multi=0
+[2026-05-17 22:26:43] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:45] selection cursor_over_ui miss mouse_x=1909 mouse_y=66 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:45] selection lbutton_up dist_x=2 dist_y=39 drag=1 multi=0
+[2026-05-17 22:26:45] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:47] selection cursor_over_ui miss mouse_x=1908 mouse_y=57 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:47] selection lbutton_up dist_x=3 dist_y=40 drag=1 multi=0
+[2026-05-17 22:26:47] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:50] selection cursor_over_ui miss mouse_x=1913 mouse_y=67 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:50] selection lbutton_up dist_x=1 dist_y=25 drag=1 multi=0
+[2026-05-17 22:26:50] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:55] selection cursor_over_ui miss mouse_x=1911 mouse_y=68 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:55] selection lbutton_up dist_x=2 dist_y=26 drag=1 multi=0
+[2026-05-17 22:26:55] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:26:56] selection cursor_over_ui miss mouse_x=1914 mouse_y=74 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:26:56] selection lbutton_up dist_x=1 dist_y=37 drag=1 multi=0
+[2026-05-17 22:26:56] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:27:07] selection cursor_over_ui miss mouse_x=1848 mouse_y=668 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:27:07] selection lbutton_up dist_x=562 dist_y=373 drag=1 multi=0
+[2026-05-17 22:27:07] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:27:34] selection cursor_over_ui miss mouse_x=28 mouse_y=366 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:27:34] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:27:34] selection lbutton_up no_trigger=click
+[2026-05-17 22:27:36] selection cursor_over_ui miss mouse_x=442 mouse_y=90 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:27:36] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:27:36] selection lbutton_up no_trigger=click
+[2026-05-17 22:27:37] selection cursor_over_ui miss mouse_x=192 mouse_y=902 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:27:37] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:27:37] selection lbutton_up no_trigger=click
+[2026-05-17 22:28:53] selection cursor_over_ui miss mouse_x=80 mouse_y=966 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:28:53] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:28:53] selection lbutton_up no_trigger=click
+[2026-05-17 22:28:54] selection cursor_over_ui miss mouse_x=225 mouse_y=926 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:28:54] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:28:54] selection lbutton_up no_trigger=click
+[2026-05-17 22:28:56] selection cursor_over_ui miss mouse_x=229 mouse_y=888 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:28:56] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:28:56] selection lbutton_up no_trigger=click
+[2026-05-17 22:28:57] selection cursor_over_ui miss mouse_x=449 mouse_y=963 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:28:57] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:28:57] selection lbutton_up no_trigger=click
+[2026-05-17 22:31:19] selection cursor_over_ui miss mouse_x=244 mouse_y=812 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:31:19] selection lbutton_up dist_x=135 dist_y=26 drag=1 multi=0
+[2026-05-17 22:31:19] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:31:21] selection cursor_over_ui miss mouse_x=453 mouse_y=82 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:31:21] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:31:21] selection lbutton_up no_trigger=click
+[2026-05-17 22:31:22] selection cursor_over_ui miss mouse_x=282 mouse_y=913 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:31:22] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:31:22] selection lbutton_up no_trigger=click
+[2026-05-17 22:31:23] selection cursor_over_ui miss mouse_x=77 mouse_y=962 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:31:23] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:31:23] selection lbutton_up no_trigger=click
+[2026-05-17 22:31:25] selection cursor_over_ui miss mouse_x=163 mouse_y=885 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:31:25] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:31:25] selection lbutton_up no_trigger=click
+[2026-05-17 22:31:25] selection cursor_over_ui miss mouse_x=364 mouse_y=909 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:31:25] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:31:25] selection lbutton_up no_trigger=click
+[2026-05-17 22:31:29] selection cursor_over_ui miss mouse_x=462 mouse_y=963 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:31:29] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:31:29] selection lbutton_up no_trigger=click
+[2026-05-17 22:31:30] selection cursor_over_ui miss mouse_x=455 mouse_y=964 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:31:30] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:31:30] selection lbutton_up no_trigger=click
+[2026-05-17 22:31:31] selection cursor_over_ui miss mouse_x=455 mouse_y=964 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:31:31] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:31:31] selection lbutton_up no_trigger=click
+[2026-05-17 22:31:32] selection cursor_over_ui miss mouse_x=447 mouse_y=963 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:31:32] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:31:32] selection lbutton_up no_trigger=click
+[2026-05-17 22:33:46] selection cursor_over_ui miss mouse_x=253 mouse_y=842 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:33:46] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:33:46] selection lbutton_up no_trigger=click
+[2026-05-17 22:35:24] selection cursor_over_ui miss mouse_x=232 mouse_y=911 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:35:24] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:35:24] selection lbutton_up no_trigger=click
+[2026-05-17 22:38:40] selection cursor_over_ui miss mouse_x=401 mouse_y=86 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:38:40] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:38:40] selection lbutton_up no_trigger=click
+[2026-05-17 22:38:41] selection cursor_over_ui miss mouse_x=230 mouse_y=215 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:38:41] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:38:41] selection lbutton_up no_trigger=click
+[2026-05-17 22:38:50] selection cursor_over_ui miss mouse_x=296 mouse_y=568 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:38:50] selection lbutton_up dist_x=204 dist_y=21 drag=1 multi=0
+[2026-05-17 22:38:50] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:38:50] selection cursor_over_ui miss mouse_x=296 mouse_y=568 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:38:50] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:38:50] selection lbutton_up no_trigger=click
+[2026-05-17 22:38:54] selection cursor_over_ui miss mouse_x=432 mouse_y=617 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:38:54] selection lbutton_up dist_x=325 dist_y=55 drag=1 multi=0
+[2026-05-17 22:38:54] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:38:57] selection cursor_over_ui miss mouse_x=407 mouse_y=80 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:38:57] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:38:57] selection lbutton_up no_trigger=click
+[2026-05-17 22:38:58] selection cursor_over_ui miss mouse_x=238 mouse_y=184 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:38:58] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:38:58] selection lbutton_up no_trigger=click
+[2026-05-17 22:38:59] selection cursor_over_ui miss mouse_x=183 mouse_y=908 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:38:59] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:38:59] selection lbutton_up no_trigger=click
+[2026-05-17 22:42:49] selection cursor_over_ui miss mouse_x=393 mouse_y=82 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:42:49] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:42:49] selection lbutton_up no_trigger=click
+[2026-05-17 22:42:50] selection cursor_over_ui miss mouse_x=244 mouse_y=219 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:42:50] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:42:50] selection lbutton_up no_trigger=click
+[2026-05-17 22:43:28] selection cursor_over_ui miss mouse_x=209 mouse_y=272 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:43:28] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:43:28] selection lbutton_up no_trigger=click
+[2026-05-17 22:43:29] selection cursor_over_ui miss mouse_x=177 mouse_y=272 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:43:29] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:43:29] selection lbutton_up no_trigger=click
+[2026-05-17 22:43:29] selection cursor_over_ui miss mouse_x=177 mouse_y=272 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:43:29] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 22:43:29] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:43:43] selection cursor_over_ui miss mouse_x=193 mouse_y=315 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:43:43] selection lbutton_up dist_x=104 dist_y=90 drag=1 multi=0
+[2026-05-17 22:43:43] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:43:46] selection cursor_over_ui miss mouse_x=456 mouse_y=83 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:43:46] selection lbutton_up dist_x=0 dist_y=1 drag=0 multi=0
+[2026-05-17 22:43:46] selection lbutton_up no_trigger=click
+[2026-05-17 22:43:47] selection cursor_over_ui miss mouse_x=164 mouse_y=902 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:43:47] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:43:47] selection lbutton_up no_trigger=click
+[2026-05-17 22:45:12] selection cursor_over_ui miss mouse_x=946 mouse_y=526 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:45:12] selection lbutton_up dist_x=227 dist_y=1 drag=1 multi=0
+[2026-05-17 22:45:12] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:45:12] selection cursor_over_ui miss mouse_x=946 mouse_y=526 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:45:12] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:45:12] selection lbutton_up no_trigger=click
+[2026-05-17 22:45:14] selection cursor_over_ui miss mouse_x=434 mouse_y=575 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:45:14] selection lbutton_up dist_x=245 dist_y=34 drag=1 multi=0
+[2026-05-17 22:45:14] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:45:15] selection cursor_over_ui miss mouse_x=417 mouse_y=596 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:45:15] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:45:15] selection lbutton_up no_trigger=click
+[2026-05-17 22:45:30] selection cursor_over_ui miss mouse_x=64 mouse_y=735 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:45:30] selection lbutton_up dist_x=339 dist_y=3 drag=1 multi=0
+[2026-05-17 22:45:30] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:45:31] selection cursor_over_ui miss mouse_x=170 mouse_y=912 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:45:31] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:45:31] selection lbutton_up no_trigger=click
+[2026-05-17 22:45:33] selection cursor_over_ui miss mouse_x=582 mouse_y=905 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:45:33] selection lbutton_up dist_x=260 dist_y=9 drag=1 multi=0
+[2026-05-17 22:45:33] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 22:48:18] selection cursor_over_ui miss mouse_x=88 mouse_y=942 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:48:18] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:48:18] selection lbutton_up no_trigger=click
+[2026-05-17 22:48:19] selection cursor_over_ui miss mouse_x=172 mouse_y=889 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:48:19] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:48:19] selection lbutton_up no_trigger=click
+[2026-05-17 22:48:19] selection cursor_over_ui miss mouse_x=403 mouse_y=907 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:48:19] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:48:19] selection lbutton_up no_trigger=click
+[2026-05-17 22:48:20] selection cursor_over_ui miss mouse_x=431 mouse_y=953 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:48:20] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:48:20] selection lbutton_up no_trigger=click
+[2026-05-17 22:49:48] selection cursor_over_ui miss mouse_x=210 mouse_y=916 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:49:48] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:49:48] selection lbutton_up no_trigger=click
+[2026-05-17 22:50:08] selection cursor_over_ui miss mouse_x=114 mouse_y=994 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:50:08] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:50:08] selection lbutton_up no_trigger=click
+[2026-05-17 22:50:09] selection cursor_over_ui miss mouse_x=171 mouse_y=959 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:50:09] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:50:09] selection lbutton_up no_trigger=click
+[2026-05-17 22:50:10] selection cursor_over_ui miss mouse_x=210 mouse_y=997 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:50:10] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:50:10] selection lbutton_up no_trigger=click
+[2026-05-17 22:50:22] selection cursor_over_ui miss mouse_x=224 mouse_y=838 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:50:22] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:50:22] selection lbutton_up no_trigger=click
+[2026-05-17 22:50:56] selection cursor_over_ui miss mouse_x=282 mouse_y=923 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:50:56] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:50:56] selection lbutton_up no_trigger=click
+[2026-05-17 22:58:25] selection cursor_over_ui miss mouse_x=147 mouse_y=991 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:58:25] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:58:25] selection lbutton_up no_trigger=click
+[2026-05-17 22:58:26] selection cursor_over_ui miss mouse_x=198 mouse_y=968 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:58:26] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:58:26] selection lbutton_up no_trigger=click
+[2026-05-17 22:58:30] selection cursor_over_ui miss mouse_x=302 mouse_y=910 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 22:58:30] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 22:58:30] selection lbutton_up no_trigger=click
+[2026-05-17 23:00:38] selection cursor_over_ui miss mouse_x=1362 mouse_y=428 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:00:38] selection lbutton_up dist_x=150 dist_y=274 drag=1 multi=0
+[2026-05-17 23:00:38] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:00:42] selection cursor_over_ui miss mouse_x=1643 mouse_y=773 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:00:42] selection lbutton_up dist_x=150 dist_y=17 drag=1 multi=0
+[2026-05-17 23:00:42] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:00:43] selection cursor_over_ui miss mouse_x=1688 mouse_y=772 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:00:43] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:00:43] selection lbutton_up no_trigger=click
+[2026-05-17 23:03:10] selection cursor_over_ui miss mouse_x=221 mouse_y=908 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:03:10] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:03:10] selection lbutton_up no_trigger=click
+[2026-05-17 23:07:48] selection cursor_over_ui miss mouse_x=222 mouse_y=910 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:07:48] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:07:48] selection lbutton_up no_trigger=click
+[2026-05-17 23:10:04] selection cursor_over_ui miss mouse_x=320 mouse_y=912 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:10:04] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:10:04] selection lbutton_up no_trigger=click
+[2026-05-17 23:10:06] selection cursor_over_ui miss mouse_x=253 mouse_y=917 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:10:06] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:10:06] selection lbutton_up no_trigger=click
+[2026-05-17 23:10:10] selection cursor_over_ui miss mouse_x=403 mouse_y=90 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:10:10] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:10:10] selection lbutton_up no_trigger=click
+[2026-05-17 23:10:11] selection cursor_over_ui miss mouse_x=285 mouse_y=233 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:10:11] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:10:11] selection lbutton_up no_trigger=click
+[2026-05-17 23:10:29] selection cursor_over_ui miss mouse_x=195 mouse_y=293 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:10:29] selection lbutton_up dist_x=0 dist_y=52 drag=1 multi=0
+[2026-05-17 23:10:29] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:10:30] selection cursor_over_ui miss mouse_x=212 mouse_y=338 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:10:30] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:10:30] selection lbutton_up no_trigger=click
+[2026-05-17 23:10:33] selection cursor_over_ui miss mouse_x=37 mouse_y=115 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:10:33] selection lbutton_up dist_x=155 dist_y=228 drag=1 multi=0
+[2026-05-17 23:10:33] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:10:35] selection cursor_over_ui miss mouse_x=450 mouse_y=88 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:10:35] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:10:35] selection lbutton_up no_trigger=click
+[2026-05-17 23:10:37] selection cursor_over_ui miss mouse_x=176 mouse_y=900 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:10:37] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:10:37] selection lbutton_up no_trigger=click
+[2026-05-17 23:12:22] selection cursor_over_ui miss mouse_x=327 mouse_y=812 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:12:22] selection lbutton_up dist_x=5 dist_y=25 drag=1 multi=0
+[2026-05-17 23:12:22] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:12:31] selection cursor_over_ui miss mouse_x=201 mouse_y=914 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:12:31] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:12:31] selection lbutton_up no_trigger=click
+[2026-05-17 23:13:41] selection cursor_over_ui miss mouse_x=196 mouse_y=909 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:13:41] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:13:41] selection lbutton_up no_trigger=click
+[2026-05-17 23:14:41] selection cursor_over_ui miss mouse_x=79 mouse_y=232 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:14:41] selection lbutton_up dist_x=109 dist_y=348 drag=1 multi=0
+[2026-05-17 23:14:41] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:14:43] selection cursor_over_ui miss mouse_x=175 mouse_y=922 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:14:43] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:14:43] selection lbutton_up no_trigger=click
+[2026-05-17 23:14:44] selection cursor_over_ui miss mouse_x=462 mouse_y=88 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:14:44] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:14:44] selection lbutton_up no_trigger=click
+[2026-05-17 23:14:46] selection cursor_over_ui miss mouse_x=175 mouse_y=918 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:14:46] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:14:46] selection lbutton_up no_trigger=click
+[2026-05-17 23:14:49] selection cursor_over_ui miss mouse_x=85 mouse_y=964 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:14:49] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:14:49] selection lbutton_up no_trigger=click
+[2026-05-17 23:14:50] selection cursor_over_ui miss mouse_x=141 mouse_y=900 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:14:50] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:14:50] selection lbutton_up no_trigger=click
+[2026-05-17 23:14:51] selection cursor_over_ui miss mouse_x=437 mouse_y=959 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:14:51] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:14:51] selection lbutton_up no_trigger=click
+[2026-05-17 23:16:43] selection cursor_over_ui miss mouse_x=249 mouse_y=840 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:16:43] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:16:43] selection lbutton_up no_trigger=click
+[2026-05-17 23:16:58] selection cursor_over_ui miss mouse_x=296 mouse_y=842 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:16:58] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:16:58] selection lbutton_up no_trigger=click
+[2026-05-17 23:23:51] gdho gdho_redirect_hide_overlay
+[2026-05-17 23:23:51] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:25:40] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-17 23:25:40] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-17 23:25:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:25:40] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-17 23:25:40] gdho gdho_redirect_hide_frontend
+[2026-05-17 23:25:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:25:40] gdho gdho_redirect_hide_overlay
+[2026-05-17 23:25:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:25:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:25:40] gdho stop begin
+[2026-05-17 23:25:40] gdho poll disarm skip reason=stop
+[2026-05-17 23:25:40] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-17 23:25:40] gdho hide_frontend queue hide
+[2026-05-17 23:25:40] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-17 23:25:40] gdho stop done
+[2026-05-17 23:25:43] selection cursor_over_ui miss mouse_x=1659 mouse_y=518 top=hwnd=44112716 class=CabinetWClass title=牛马云下载 exe=explorer.exe
+[2026-05-17 23:25:43] selection lbutton_up dist_x=243 dist_y=177 drag=1 multi=0
+[2026-05-17 23:25:43] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:25:45] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-17 23:25:45] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:25:45] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-17 23:25:45] gdho gdho_redirect_hide_frontend
+[2026-05-17 23:25:45] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:25:45] gdho gdho_redirect_hide_overlay
+[2026-05-17 23:25:45] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:25:46] selection cursor_over_ui miss mouse_x=1663 mouse_y=499 top=hwnd=44112716 class=CabinetWClass title=牛马云下载 exe=explorer.exe
+[2026-05-17 23:25:46] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:25:46] selection lbutton_up no_trigger=click
+[2026-05-17 23:25:47] selection cursor_over_ui miss mouse_x=1511 mouse_y=330 top=hwnd=49087400 class=CabinetWClass title=详情图 exe=explorer.exe
+[2026-05-17 23:25:47] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:25:47] selection lbutton_up no_trigger=click
+[2026-05-17 23:25:48] selection cursor_over_ui miss mouse_x=1373 mouse_y=631 top=hwnd=68688902 class=CabinetWClass title=拖把_20260517_222342 exe=explorer.exe
+[2026-05-17 23:25:48] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:25:48] selection lbutton_up no_trigger=click
+[2026-05-17 23:25:49] selection cursor_over_ui miss mouse_x=1562 mouse_y=367 top=hwnd=68688902 class=CabinetWClass title=拖把_20260517_222342 exe=explorer.exe
+[2026-05-17 23:25:49] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:25:49] selection lbutton_up no_trigger=click
+[2026-05-17 23:25:51] selection cursor_over_ui miss mouse_x=1221 mouse_y=137 top=hwnd=45879916 class=BandizipClass title=拖把_20260517_220647.zip - Bandizip 6.26 exe=Bandizip.exe
+[2026-05-17 23:25:51] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:25:51] selection lbutton_up no_trigger=click
+[2026-05-17 23:25:52] selection cursor_over_ui miss mouse_x=1028 mouse_y=242 top=hwnd=5905754 class=CabinetWClass title=Thumbs exe=explorer.exe
+[2026-05-17 23:25:52] selection lbutton_up dist_x=229 dist_y=85 drag=1 multi=0
+[2026-05-17 23:25:52] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:25:53] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=24321098 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1847 mouse_y=961
+[2026-05-17 23:25:53] selection lbutton_up skip=our_ui
+[2026-05-17 23:25:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:25:53] gdho stop begin
+[2026-05-17 23:25:53] gdho poll disarm skip reason=stop
+[2026-05-17 23:25:53] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-17 23:25:53] gdho hide_frontend queue hide
+[2026-05-17 23:25:53] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-17 23:25:53] gdho stop done
+[2026-05-17 23:25:59] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=335442 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=397 mouse_y=655
+[2026-05-17 23:25:59] selection lbutton_up skip=our_ui
+[2026-05-17 23:26:08] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=335442 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=333 mouse_y=701
+[2026-05-17 23:26:08] selection lbutton_up skip=our_ui
+[2026-05-17 23:27:27] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=335442 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1133 mouse_y=550
+[2026-05-17 23:27:27] selection lbutton_up skip=our_ui
+[2026-05-17 23:27:29] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=335442 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1581 mouse_y=64
+[2026-05-17 23:27:29] selection lbutton_up skip=our_ui
+[2026-05-17 23:27:31] selection cursor_over_ui miss mouse_x=321 mouse_y=1047 top=hwnd=65784 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-17 23:27:31] selection lbutton_up dist_x=0 dist_y=1 drag=0 multi=0
+[2026-05-17 23:27:31] selection lbutton_up no_trigger=click
+[2026-05-17 23:27:33] selection cursor_over_ui miss mouse_x=1410 mouse_y=1074 top=hwnd=65784 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-17 23:27:33] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:27:33] selection lbutton_up no_trigger=click
+[2026-05-17 23:27:34] selection cursor_over_ui miss mouse_x=1410 mouse_y=1074 top=hwnd=65784 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-17 23:27:34] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:27:34] selection lbutton_up no_trigger=click
+[2026-05-17 23:27:35] selection cursor_over_ui miss mouse_x=335 mouse_y=1068 top=hwnd=65784 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-17 23:27:35] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:27:35] selection lbutton_up no_trigger=click
+[2026-05-17 23:27:36] selection cursor_over_ui miss mouse_x=335 mouse_y=1068 top=hwnd=65784 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-17 23:27:36] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:27:36] selection lbutton_up no_trigger=click
+[2026-05-17 23:27:37] selection cursor_over_ui miss mouse_x=662 mouse_y=1055 top=hwnd=65784 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-17 23:27:37] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:27:37] selection lbutton_up no_trigger=click
+[2026-05-17 23:27:39] selection cursor_over_ui miss mouse_x=29 mouse_y=357 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:27:39] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:27:39] selection lbutton_up no_trigger=click
+[2026-05-17 23:27:40] selection cursor_over_ui miss mouse_x=105 mouse_y=997 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:27:40] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:27:40] selection lbutton_up no_trigger=click
+[2026-05-17 23:27:41] selection cursor_over_ui miss mouse_x=216 mouse_y=961 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:27:41] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:27:41] selection lbutton_up no_trigger=click
+[2026-05-17 23:27:42] selection cursor_over_ui miss mouse_x=320 mouse_y=910 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:27:42] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:27:42] selection lbutton_up no_trigger=click
+[2026-05-17 23:27:49] selection cursor_over_ui miss mouse_x=172 mouse_y=919 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:27:49] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:27:49] selection lbutton_up no_trigger=click
+[2026-05-17 23:28:06] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=24321098 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1834 mouse_y=967
+[2026-05-17 23:28:06] selection lbutton_up skip=our_ui
+[2026-05-17 23:28:10] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=24321098 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1854 mouse_y=958
+[2026-05-17 23:28:10] selection lbutton_up skip=our_ui
+[2026-05-17 23:28:10] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:28:10] gdho stop begin
+[2026-05-17 23:28:10] gdho poll disarm skip reason=stop
+[2026-05-17 23:28:10] gdho gdho_phase CLOSED->CLOSING reason=stop token=3
+[2026-05-17 23:28:10] gdho hide_frontend queue hide
+[2026-05-17 23:28:10] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=3
+[2026-05-17 23:28:10] gdho stop done
+[2026-05-17 23:28:13] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=335442 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=488 mouse_y=770
+[2026-05-17 23:28:13] selection lbutton_up skip=our_ui
+[2026-05-17 23:29:30] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=335442 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1652 mouse_y=123
+[2026-05-17 23:29:30] selection lbutton_up skip=our_ui
+[2026-05-17 23:29:32] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=335442 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1589 mouse_y=80
+[2026-05-17 23:29:32] selection lbutton_up skip=our_ui
+[2026-05-17 23:29:33] selection cursor_over_ui miss mouse_x=674 mouse_y=449 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:33] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:33] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:34] selection cursor_over_ui miss mouse_x=680 mouse_y=467 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:34] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:34] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:35] selection cursor_over_ui miss mouse_x=675 mouse_y=472 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:35] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:35] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:37] selection cursor_over_ui miss mouse_x=895 mouse_y=201 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:37] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:37] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:40] selection cursor_over_ui miss mouse_x=431 mouse_y=962 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:29:40] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:40] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:42] selection cursor_over_ui miss mouse_x=687 mouse_y=445 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:42] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:42] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:43] selection cursor_over_ui miss mouse_x=683 mouse_y=446 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:43] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:43] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:43] selection cursor_over_ui miss mouse_x=670 mouse_y=447 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:43] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:43] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:44] selection cursor_over_ui miss mouse_x=886 mouse_y=206 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:44] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:44] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:47] selection cursor_over_ui miss mouse_x=638 mouse_y=460 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:47] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:47] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:47] selection cursor_over_ui miss mouse_x=668 mouse_y=488 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:47] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:47] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:50] selection cursor_over_ui miss mouse_x=2791 mouse_y=487 top=hwnd=67443640 class=#32770 title=另存为 exe=chrome.exe
+[2026-05-17 23:29:50] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:50] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:50] selection cursor_over_ui miss mouse_x=2802 mouse_y=499 top=hwnd=67443640 class=#32770 title=另存为 exe=chrome.exe
+[2026-05-17 23:29:50] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:50] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:52] selection cursor_over_ui miss mouse_x=666 mouse_y=486 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:52] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:52] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:53] selection cursor_over_ui miss mouse_x=667 mouse_y=478 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:53] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:53] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:54] selection cursor_over_ui miss mouse_x=624 mouse_y=631 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:54] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:54] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:55] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:55] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:55] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:55] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:55] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:55] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:55] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:55] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:55] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:56] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:56] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:56] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:56] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:56] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:56] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:56] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:56] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:56] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:56] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:56] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:56] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:57] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:57] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:57] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:57] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:57] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:57] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:57] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:57] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:57] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:57] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:57] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:57] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:58] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:58] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:58] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:58] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:58] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:58] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:29:58] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:58] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:29:58] selection lbutton_up no_trigger=click
+[2026-05-17 23:29:59] selection cursor_over_ui miss mouse_x=618 mouse_y=637 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:29:59] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-17 23:29:59] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:30:00] selection cursor_over_ui miss mouse_x=874 mouse_y=197 top=hwnd=82184438 class=Qt6101QWindowIcon title=Free Download Manager exe=fdm.exe
+[2026-05-17 23:30:00] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:30:00] selection lbutton_up no_trigger=click
+[2026-05-17 23:31:26] selection cursor_over_ui miss mouse_x=152 mouse_y=998 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:31:26] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:31:26] selection lbutton_up no_trigger=click
+[2026-05-17 23:31:26] selection cursor_over_ui miss mouse_x=226 mouse_y=956 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:31:26] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:31:26] selection lbutton_up no_trigger=click
+[2026-05-17 23:31:28] selection cursor_over_ui miss mouse_x=391 mouse_y=898 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:31:28] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:31:28] selection lbutton_up no_trigger=click
+[2026-05-17 23:31:43] selection cursor_over_ui miss mouse_x=469 mouse_y=677 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:31:43] selection lbutton_up dist_x=386 dist_y=82 drag=1 multi=0
+[2026-05-17 23:31:43] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-17 23:31:44] selection cursor_over_ui miss mouse_x=247 mouse_y=922 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:31:44] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:31:44] selection lbutton_up no_trigger=click
+[2026-05-17 23:31:54] selection cursor_over_ui miss mouse_x=96 mouse_y=951 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:31:54] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:31:54] selection lbutton_up no_trigger=click
+[2026-05-17 23:31:54] selection cursor_over_ui miss mouse_x=134 mouse_y=917 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:31:54] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:31:54] selection lbutton_up no_trigger=click
+[2026-05-17 23:31:55] selection cursor_over_ui miss mouse_x=149 mouse_y=893 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:31:55] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:31:55] selection lbutton_up no_trigger=click
+[2026-05-17 23:31:56] selection cursor_over_ui miss mouse_x=459 mouse_y=970 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:31:56] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:31:56] selection lbutton_up no_trigger=click
+[2026-05-17 23:31:57] selection cursor_over_ui miss mouse_x=436 mouse_y=959 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:31:57] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:31:57] selection lbutton_up no_trigger=click
+[2026-05-17 23:34:03] selection cursor_over_ui miss mouse_x=304 mouse_y=844 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:34:03] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:34:03] selection lbutton_up no_trigger=click
+[2026-05-17 23:34:26] selection cursor_over_ui miss mouse_x=323 mouse_y=916 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:34:26] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:34:26] selection lbutton_up no_trigger=click
+[2026-05-17 23:37:04] gdho gdho_redirect_hide_overlay
+[2026-05-17 23:37:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:37:04] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-17 23:37:04] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-17 23:37:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:37:04] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-17 23:37:04] gdho gdho_redirect_hide_frontend
+[2026-05-17 23:37:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:37:04] gdho gdho_redirect_hide_overlay
+[2026-05-17 23:37:04] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:37:05] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:37:05] gdho stop begin
+[2026-05-17 23:37:05] gdho poll disarm skip reason=stop
+[2026-05-17 23:37:05] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-17 23:37:05] gdho hide_frontend queue hide
+[2026-05-17 23:37:05] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-17 23:37:05] gdho stop done
+[2026-05-17 23:37:11] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=15015160 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1599 mouse_y=930
+[2026-05-17 23:37:11] selection lbutton_up skip=our_ui
+[2026-05-17 23:37:12] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-17 23:37:12] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:37:12] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-17 23:37:12] gdho gdho_redirect_hide_frontend
+[2026-05-17 23:37:12] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:37:12] gdho gdho_redirect_hide_overlay
+[2026-05-17 23:37:12] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:37:14] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=15015160 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1848 mouse_y=959
+[2026-05-17 23:37:14] selection lbutton_up skip=our_ui
+[2026-05-17 23:37:14] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-17 23:37:14] gdho stop begin
+[2026-05-17 23:37:14] gdho poll disarm skip reason=stop
+[2026-05-17 23:37:14] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-17 23:37:14] gdho hide_frontend queue hide
+[2026-05-17 23:37:14] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-17 23:37:14] gdho stop done
+[2026-05-17 23:37:19] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=2825902 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=907 mouse_y=35
+[2026-05-17 23:37:19] selection lbutton_up skip=our_ui
+[2026-05-17 23:37:21] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=2825902 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=551 mouse_y=548
+[2026-05-17 23:37:21] selection lbutton_up skip=our_ui
+[2026-05-17 23:37:21] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=2825902 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=551 mouse_y=548
+[2026-05-17 23:37:21] selection lbutton_up skip=our_ui
+[2026-05-17 23:37:22] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=2825902 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=551 mouse_y=548
+[2026-05-17 23:37:22] selection lbutton_up skip=our_ui
+[2026-05-17 23:37:33] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=2825902 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1169 mouse_y=63
+[2026-05-17 23:37:33] selection lbutton_up skip=our_ui
+[2026-05-17 23:37:42] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=2825902 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=689 mouse_y=652
+[2026-05-17 23:37:42] selection lbutton_up skip=our_ui
+[2026-05-17 23:37:45] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=2825902 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=737 mouse_y=673
+[2026-05-17 23:37:45] selection lbutton_up skip=our_ui
+[2026-05-17 23:38:41] selection cursor_over_ui miss mouse_x=176 mouse_y=903 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:38:41] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:38:41] selection lbutton_up no_trigger=click
+[2026-05-17 23:40:08] selection cursor_over_ui miss mouse_x=141 mouse_y=989 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:40:08] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:40:08] selection lbutton_up no_trigger=click
+[2026-05-17 23:40:09] selection cursor_over_ui miss mouse_x=218 mouse_y=953 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:40:09] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:40:09] selection lbutton_up no_trigger=click
+[2026-05-17 23:40:10] selection cursor_over_ui miss mouse_x=331 mouse_y=890 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:40:10] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:40:10] selection lbutton_up no_trigger=click
+[2026-05-17 23:40:12] selection cursor_over_ui miss mouse_x=430 mouse_y=942 top=hwnd=853890 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-17 23:40:12] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:40:12] selection lbutton_up no_trigger=click
+[2026-05-17 23:40:20] selection cursor_over_ui miss mouse_x=26 mouse_y=1057 top=hwnd=65784 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-17 23:40:20] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:40:20] selection lbutton_up no_trigger=click
+[2026-05-17 23:40:21] selection cursor_over_ui miss mouse_x=35 mouse_y=1008 top=hwnd=66088 class=Windows.UI.Core.CoreWindow title=启动 exe=StartMenuExperienceHost.exe
+[2026-05-17 23:40:21] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:40:21] selection lbutton_up no_trigger=click
+[2026-05-17 23:40:23] selection cursor_over_ui miss mouse_x=117 mouse_y=946 top=hwnd=22289038 class=Xaml_WindowedPopupClass title=主机弹出窗口 exe=StartMenuExperienceHost.exe
+[2026-05-17 23:40:23] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-17 23:40:23] selection lbutton_up no_trigger=click
+[2026-05-17 23:40:23] gdho gdho_redirect_hide_overlay
+[2026-05-17 23:40:23] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:34:03] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 06:34:03] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 06:34:03] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:34:03] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 06:34:03] gdho gdho_redirect_hide_frontend
+[2026-05-18 06:34:03] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:34:03] gdho gdho_redirect_hide_overlay
+[2026-05-18 06:34:03] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:34:03] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:34:03] gdho stop begin
+[2026-05-18 06:34:03] gdho poll disarm skip reason=stop
+[2026-05-18 06:34:03] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 06:34:03] gdho hide_frontend queue hide
+[2026-05-18 06:34:03] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 06:34:03] gdho stop done
+[2026-05-18 06:34:03] selection cursor_over_ui miss mouse_x=117 mouse_y=381 top=hwnd=722110 class=TXMiniSkin title=桌面整理 exe=DesktopMgr64.exe
+[2026-05-18 06:34:03] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:34:03] selection lbutton_up no_trigger=click
+[2026-05-18 06:34:04] selection cursor_over_ui miss mouse_x=117 mouse_y=381 top=hwnd=722110 class=TXMiniSkin title=桌面整理 exe=DesktopMgr64.exe
+[2026-05-18 06:34:04] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 06:34:04] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:34:07] selection cursor_over_ui miss mouse_x=757 mouse_y=569 top=hwnd=854476 class=CabinetWClass title=牛马nmer exe=explorer.exe
+[2026-05-18 06:34:07] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:34:07] selection lbutton_up no_trigger=click
+[2026-05-18 06:34:12] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 06:34:12] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:34:12] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 06:34:12] gdho gdho_redirect_hide_frontend
+[2026-05-18 06:34:12] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:34:12] gdho gdho_redirect_hide_overlay
+[2026-05-18 06:34:12] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:34:12] selection cursor_over_ui miss mouse_x=951 mouse_y=430 top=hwnd=199294 class=#32770 title=CursorHelper (1).ahk 属性 exe=explorer.exe
+[2026-05-18 06:34:12] selection lbutton_up dist_x=66 dist_y=66 drag=1 multi=0
+[2026-05-18 06:34:12] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:34:13] selection cursor_over_ui miss mouse_x=865 mouse_y=428 top=hwnd=199294 class=#32770 title=CursorHelper (1).ahk 属性 exe=explorer.exe
+[2026-05-18 06:34:13] selection lbutton_up dist_x=86 dist_y=2 drag=1 multi=0
+[2026-05-18 06:34:13] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:34:14] selection cursor_over_ui miss mouse_x=926 mouse_y=430 top=hwnd=199294 class=#32770 title=CursorHelper (1).ahk 属性 exe=explorer.exe
+[2026-05-18 06:34:14] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:34:14] selection lbutton_up no_trigger=click
+[2026-05-18 06:34:15] selection cursor_over_ui miss mouse_x=830 mouse_y=436 top=hwnd=199294 class=#32770 title=CursorHelper (1).ahk 属性 exe=explorer.exe
+[2026-05-18 06:34:15] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:34:15] selection lbutton_up no_trigger=click
+[2026-05-18 06:34:20] selection cursor_over_ui miss mouse_x=1062 mouse_y=1007 top=hwnd=199294 class=#32770 title=CursorHelper (1).ahk 属性 exe=explorer.exe
+[2026-05-18 06:34:20] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:34:20] selection lbutton_up no_trigger=click
+[2026-05-18 06:34:21] selection cursor_over_ui miss mouse_x=770 mouse_y=577 top=hwnd=854476 class=CabinetWClass title=牛马nmer exe=explorer.exe
+[2026-05-18 06:34:21] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:34:21] selection lbutton_up no_trigger=click
+[2026-05-18 06:34:22] selection cursor_over_ui miss mouse_x=777 mouse_y=566 top=hwnd=854476 class=CabinetWClass title=牛马nmer exe=explorer.exe
+[2026-05-18 06:34:22] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:34:22] selection lbutton_up no_trigger=click
+[2026-05-18 06:34:23] selection cursor_over_ui miss mouse_x=777 mouse_y=566 top=hwnd=854476 class=CabinetWClass title=牛马nmer exe=explorer.exe
+[2026-05-18 06:34:23] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:34:23] selection lbutton_up no_trigger=click
+[2026-05-18 06:34:25] selection cursor_over_ui miss mouse_x=1536 mouse_y=275 top=hwnd=854476 class=CabinetWClass title=牛马nmer exe=explorer.exe
+[2026-05-18 06:34:25] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:34:25] selection lbutton_up no_trigger=click
+[2026-05-18 06:34:27] selection cursor_over_ui miss mouse_x=671 mouse_y=1053 top=hwnd=65794 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-18 06:34:27] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:34:27] selection lbutton_up no_trigger=click
+[2026-05-18 06:34:57] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=5310824 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1862 mouse_y=960
+[2026-05-18 06:34:57] selection lbutton_up skip=our_ui
+[2026-05-18 06:34:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:34:57] gdho stop begin
+[2026-05-18 06:34:57] gdho poll disarm skip reason=stop
+[2026-05-18 06:34:57] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 06:34:57] gdho hide_frontend queue hide
+[2026-05-18 06:34:57] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 06:34:57] gdho stop done
+[2026-05-18 06:35:05] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=375 mouse_y=498
+[2026-05-18 06:35:05] selection lbutton_up skip=our_ui
+[2026-05-18 06:35:06] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=375 mouse_y=498
+[2026-05-18 06:35:06] selection lbutton_up skip=our_ui
+[2026-05-18 06:35:07] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=373 mouse_y=520
+[2026-05-18 06:35:07] selection lbutton_up skip=our_ui
+[2026-05-18 06:35:10] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=467 mouse_y=666
+[2026-05-18 06:35:10] selection lbutton_up skip=our_ui
+[2026-05-18 06:35:13] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1135 mouse_y=97
+[2026-05-18 06:35:13] selection lbutton_up skip=our_ui
+[2026-05-18 06:35:31] selection cursor_over_ui miss mouse_x=902 mouse_y=938 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 06:35:31] selection lbutton_up dist_x=379 dist_y=59 drag=1 multi=0
+[2026-05-18 06:35:31] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:35:32] selection cursor_over_ui miss mouse_x=894 mouse_y=956 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 06:35:32] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:35:32] selection lbutton_up no_trigger=click
+[2026-05-18 06:35:33] selection cursor_over_ui miss mouse_x=261 mouse_y=905 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:35:33] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:35:33] selection lbutton_up no_trigger=click
+[2026-05-18 06:35:36] selection cursor_over_ui miss mouse_x=267 mouse_y=893 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:35:36] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:35:36] selection lbutton_up no_trigger=click
+[2026-05-18 06:35:38] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=582 mouse_y=894
+[2026-05-18 06:35:38] selection lbutton_up skip=our_ui
+[2026-05-18 06:35:42] selection cursor_over_ui miss mouse_x=889 mouse_y=931 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 06:35:42] selection lbutton_up dist_x=366 dist_y=39 drag=1 multi=0
+[2026-05-18 06:35:42] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:35:43] selection cursor_over_ui miss mouse_x=877 mouse_y=955 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 06:35:43] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:35:43] selection lbutton_up no_trigger=click
+[2026-05-18 06:35:45] selection cursor_over_ui miss mouse_x=398 mouse_y=972 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:35:45] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:35:45] selection lbutton_up no_trigger=click
+[2026-05-18 06:35:49] selection cursor_over_ui miss mouse_x=233 mouse_y=908 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:35:49] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:35:49] selection lbutton_up no_trigger=click
+[2026-05-18 06:35:51] selection cursor_over_ui miss mouse_x=295 mouse_y=971 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:35:51] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:35:51] selection lbutton_up no_trigger=click
+[2026-05-18 06:35:53] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=615 mouse_y=917
+[2026-05-18 06:35:53] selection lbutton_up skip=our_ui
+[2026-05-18 06:35:55] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=852 mouse_y=907
+[2026-05-18 06:35:55] selection lbutton_up skip=our_ui
+[2026-05-18 06:35:56] selection cursor_over_ui miss mouse_x=187 mouse_y=893 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:35:56] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:35:56] selection lbutton_up no_trigger=click
+[2026-05-18 06:36:05] selection cursor_over_ui miss mouse_x=385 mouse_y=896 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:36:05] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:36:05] selection lbutton_up no_trigger=click
+[2026-05-18 06:36:05] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=793 mouse_y=903
+[2026-05-18 06:36:05] selection lbutton_up skip=our_ui
+[2026-05-18 06:36:06] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=859 mouse_y=923
+[2026-05-18 06:36:06] selection lbutton_up skip=our_ui
+[2026-05-18 06:36:08] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=508 mouse_y=926
+[2026-05-18 06:36:08] selection lbutton_up skip=our_ui
+[2026-05-18 06:36:12] selection cursor_over_ui miss mouse_x=234 mouse_y=888 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:36:12] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:36:12] selection lbutton_up no_trigger=click
+[2026-05-18 06:36:13] selection cursor_over_ui miss mouse_x=235 mouse_y=898 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:36:13] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:36:13] selection lbutton_up no_trigger=click
+[2026-05-18 06:36:15] selection cursor_over_ui miss mouse_x=235 mouse_y=898 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:36:15] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:36:15] selection lbutton_up no_trigger=click
+[2026-05-18 06:37:19] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=636 mouse_y=643
+[2026-05-18 06:37:19] selection lbutton_up skip=our_ui
+[2026-05-18 06:37:19] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=626 mouse_y=623
+[2026-05-18 06:37:19] selection lbutton_up skip=our_ui
+[2026-05-18 06:37:20] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=638 mouse_y=559
+[2026-05-18 06:37:20] selection lbutton_up skip=our_ui
+[2026-05-18 06:37:20] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=699 mouse_y=523
+[2026-05-18 06:37:20] selection lbutton_up skip=our_ui
+[2026-05-18 06:37:23] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=599 mouse_y=708
+[2026-05-18 06:37:23] selection lbutton_up skip=our_ui
+[2026-05-18 06:37:25] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=723 mouse_y=112
+[2026-05-18 06:37:25] selection lbutton_up skip=our_ui
+[2026-05-18 06:37:26] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1724 mouse_y=103
+[2026-05-18 06:37:26] selection lbutton_up skip=our_ui
+[2026-05-18 06:37:28] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=5310824 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1856 mouse_y=959
+[2026-05-18 06:37:28] selection lbutton_up skip=our_ui
+[2026-05-18 06:37:28] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:37:28] gdho stop begin
+[2026-05-18 06:37:28] gdho poll disarm skip reason=stop
+[2026-05-18 06:37:28] gdho gdho_phase CLOSED->CLOSING reason=stop token=3
+[2026-05-18 06:37:28] gdho hide_frontend queue hide
+[2026-05-18 06:37:28] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=3
+[2026-05-18 06:37:28] gdho stop done
+[2026-05-18 06:37:32] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=596 mouse_y=726
+[2026-05-18 06:37:32] selection lbutton_up skip=our_ui
+[2026-05-18 06:37:35] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1019 mouse_y=85
+[2026-05-18 06:37:35] selection lbutton_up skip=our_ui
+[2026-05-18 06:37:36] selection cursor_over_ui miss mouse_x=262 mouse_y=889 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:37:36] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:37:36] selection lbutton_up no_trigger=click
+[2026-05-18 06:37:44] selection cursor_over_ui miss mouse_x=840 mouse_y=924 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 06:37:44] selection lbutton_up dist_x=371 dist_y=40 drag=1 multi=0
+[2026-05-18 06:37:44] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:37:46] selection cursor_over_ui miss mouse_x=821 mouse_y=947 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 06:37:46] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:37:46] selection lbutton_up no_trigger=click
+[2026-05-18 06:37:46] selection cursor_over_ui miss mouse_x=285 mouse_y=926 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:37:46] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:37:46] selection lbutton_up no_trigger=click
+[2026-05-18 06:37:47] selection cursor_over_ui miss mouse_x=208 mouse_y=902 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:37:47] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:37:47] selection lbutton_up no_trigger=click
+[2026-05-18 06:37:49] selection cursor_over_ui miss mouse_x=269 mouse_y=974 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:37:49] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:37:49] selection lbutton_up no_trigger=click
+[2026-05-18 06:37:49] selection cursor_over_ui miss mouse_x=208 mouse_y=929 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:37:49] selection lbutton_up dist_x=0 dist_y=1 drag=0 multi=0
+[2026-05-18 06:37:49] selection lbutton_up no_trigger=click
+[2026-05-18 06:37:51] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=2094 mouse_y=506
+[2026-05-18 06:37:51] selection lbutton_up skip=our_ui
+[2026-05-18 06:37:52] selection cursor_over_ui miss mouse_x=1896 mouse_y=56 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:37:52] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:37:52] selection lbutton_up no_trigger=click
+[2026-05-18 06:37:55] selection cursor_over_ui miss mouse_x=1834 mouse_y=127 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:37:55] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:37:55] selection lbutton_up no_trigger=click
+[2026-05-18 06:37:59] selection cursor_over_ui miss mouse_x=220 mouse_y=900 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:37:59] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:37:59] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:06] selection cursor_over_ui miss mouse_x=1361 mouse_y=232 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:06] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:06] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:09] selection cursor_over_ui miss mouse_x=1527 mouse_y=142 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:09] selection lbutton_up dist_x=86 dist_y=71 drag=1 multi=0
+[2026-05-18 06:38:09] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:38:09] selection cursor_over_ui miss mouse_x=1454 mouse_y=177 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:09] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:09] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:11] selection cursor_over_ui miss mouse_x=1021 mouse_y=124 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:11] selection lbutton_up dist_x=433 dist_y=52 drag=1 multi=0
+[2026-05-18 06:38:11] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:38:12] selection cursor_over_ui miss mouse_x=1321 mouse_y=96 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:12] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:12] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:13] selection cursor_over_ui miss mouse_x=1279 mouse_y=101 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:13] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:13] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:14] selection cursor_over_ui miss mouse_x=1234 mouse_y=101 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:14] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:14] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:15] selection cursor_over_ui miss mouse_x=1202 mouse_y=101 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:15] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:15] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:16] selection cursor_over_ui miss mouse_x=1160 mouse_y=103 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:16] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:16] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:17] selection cursor_over_ui miss mouse_x=1115 mouse_y=102 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:17] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:17] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:17] selection cursor_over_ui miss mouse_x=1081 mouse_y=100 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:17] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:17] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:19] selection cursor_over_ui miss mouse_x=266 mouse_y=908 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:19] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:19] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:21] selection cursor_over_ui miss mouse_x=327 mouse_y=969 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:21] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:21] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:22] selection cursor_over_ui miss mouse_x=206 mouse_y=909 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:22] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:22] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:25] selection cursor_over_ui miss mouse_x=21 mouse_y=355 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:25] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:25] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:26] selection cursor_over_ui miss mouse_x=21 mouse_y=355 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:26] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:26] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:27] selection cursor_over_ui miss mouse_x=260 mouse_y=890 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:27] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:27] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:32] selection cursor_over_ui miss mouse_x=1155 mouse_y=119 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:32] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:32] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:36] selection cursor_over_ui miss mouse_x=1846 mouse_y=77 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:36] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:36] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:37] selection cursor_over_ui miss mouse_x=1853 mouse_y=66 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:37] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:37] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:37] selection cursor_over_ui miss mouse_x=1848 mouse_y=72 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:37] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:37] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:39] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1174 mouse_y=317
+[2026-05-18 06:38:39] selection lbutton_up skip=our_ui
+[2026-05-18 06:38:42] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1164 mouse_y=198
+[2026-05-18 06:38:42] selection lbutton_up skip=our_ui
+[2026-05-18 06:38:43] selection cursor_over_ui miss mouse_x=237 mouse_y=896 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:43] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:43] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:45] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=833 mouse_y=636
+[2026-05-18 06:38:45] selection lbutton_up skip=our_ui
+[2026-05-18 06:38:51] selection cursor_over_ui miss mouse_x=1054 mouse_y=1027 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 06:38:51] selection lbutton_up dist_x=386 dist_y=37 drag=1 multi=0
+[2026-05-18 06:38:51] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:38:52] selection cursor_over_ui miss mouse_x=1016 mouse_y=1052 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 06:38:52] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:52] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:54] selection cursor_over_ui miss mouse_x=1188 mouse_y=642 top=hwnd=330212 class=#32770 title=图像另存为 exe=snipaste.exe
+[2026-05-18 06:38:54] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:54] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:56] selection cursor_over_ui miss mouse_x=85 mouse_y=953 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:56] selection lbutton_up dist_x=0 dist_y=1 drag=0 multi=0
+[2026-05-18 06:38:56] selection lbutton_up no_trigger=click
+[2026-05-18 06:38:57] selection cursor_over_ui miss mouse_x=141 mouse_y=858 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:38:57] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:38:57] selection lbutton_up no_trigger=click
+[2026-05-18 06:39:00] selection cursor_over_ui miss mouse_x=185 mouse_y=302 top=hwnd=199494 class=#32770 title=Select files exe=Cursor.exe
+[2026-05-18 06:39:00] selection lbutton_up dist_x=438 dist_y=38 drag=1 multi=0
+[2026-05-18 06:39:00] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:39:01] selection cursor_over_ui miss mouse_x=330 mouse_y=325 top=hwnd=199494 class=#32770 title=Select files exe=Cursor.exe
+[2026-05-18 06:39:01] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:39:01] selection lbutton_up no_trigger=click
+[2026-05-18 06:39:04] selection cursor_over_ui miss mouse_x=447 mouse_y=698 top=hwnd=199494 class=#32770 title=Select files exe=Cursor.exe
+[2026-05-18 06:39:04] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:39:04] selection lbutton_up no_trigger=click
+[2026-05-18 06:39:09] selection cursor_over_ui miss mouse_x=471 mouse_y=493 top=hwnd=199494 class=#32770 title=Select files exe=Cursor.exe
+[2026-05-18 06:39:09] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:39:09] selection lbutton_up no_trigger=click
+[2026-05-18 06:39:10] selection cursor_over_ui miss mouse_x=471 mouse_y=493 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:39:10] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 06:39:10] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:39:11] selection cursor_over_ui miss mouse_x=430 mouse_y=961 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:39:11] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:39:11] selection lbutton_up no_trigger=click
+[2026-05-18 06:41:54] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264700 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=551 mouse_y=123
+[2026-05-18 06:41:54] selection lbutton_up skip=our_ui
+[2026-05-18 06:41:55] gdho gdho_redirect_hide_overlay
+[2026-05-18 06:41:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:41:56] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 06:41:56] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 06:41:56] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:41:56] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 06:41:56] gdho gdho_redirect_hide_frontend
+[2026-05-18 06:41:56] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:41:56] gdho gdho_redirect_hide_overlay
+[2026-05-18 06:41:56] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:41:56] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:41:56] gdho stop begin
+[2026-05-18 06:41:56] gdho poll disarm skip reason=stop
+[2026-05-18 06:41:56] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 06:41:56] gdho hide_frontend queue hide
+[2026-05-18 06:41:56] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 06:41:56] gdho stop done
+[2026-05-18 06:42:01] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 06:42:01] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:42:01] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 06:42:01] gdho gdho_redirect_hide_frontend
+[2026-05-18 06:42:01] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:42:01] gdho gdho_redirect_hide_overlay
+[2026-05-18 06:42:01] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:42:43] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=199054 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1827 mouse_y=975
+[2026-05-18 06:42:43] selection lbutton_up skip=our_ui
+[2026-05-18 06:42:43] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=199054 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1844 mouse_y=970
+[2026-05-18 06:42:43] selection lbutton_up skip=our_ui
+[2026-05-18 06:42:43] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:42:43] gdho stop begin
+[2026-05-18 06:42:43] gdho poll disarm skip reason=stop
+[2026-05-18 06:42:43] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 06:42:43] gdho hide_frontend queue hide
+[2026-05-18 06:42:43] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 06:42:43] gdho stop done
+[2026-05-18 06:42:57] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264664 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=393 mouse_y=581
+[2026-05-18 06:42:57] selection lbutton_up skip=our_ui
+[2026-05-18 06:42:57] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264664 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=393 mouse_y=581
+[2026-05-18 06:42:57] selection lbutton_up skip=our_ui
+[2026-05-18 06:43:00] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264664 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=431 mouse_y=694
+[2026-05-18 06:43:00] selection lbutton_up skip=our_ui
+[2026-05-18 06:43:06] selection cursor_over_ui miss mouse_x=114 mouse_y=907 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:43:06] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:43:06] selection lbutton_up no_trigger=click
+[2026-05-18 06:44:41] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264664 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=746 mouse_y=115
+[2026-05-18 06:44:41] selection lbutton_up skip=our_ui
+[2026-05-18 06:44:45] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=264664 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1907 mouse_y=112
+[2026-05-18 06:44:45] selection lbutton_up skip=our_ui
+[2026-05-18 06:44:47] gdho gdho_redirect_hide_overlay
+[2026-05-18 06:44:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:44:47] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 06:44:47] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 06:44:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:44:47] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 06:44:47] gdho gdho_redirect_hide_frontend
+[2026-05-18 06:44:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:44:47] gdho gdho_redirect_hide_overlay
+[2026-05-18 06:44:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:44:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:44:47] gdho stop begin
+[2026-05-18 06:44:47] gdho poll disarm skip reason=stop
+[2026-05-18 06:44:47] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 06:44:47] gdho hide_frontend queue hide
+[2026-05-18 06:44:47] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 06:44:47] gdho stop done
+[2026-05-18 06:44:52] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 06:44:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:44:52] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 06:44:52] gdho gdho_redirect_hide_frontend
+[2026-05-18 06:44:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:44:52] gdho gdho_redirect_hide_overlay
+[2026-05-18 06:44:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:46:32] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=264580 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1838 mouse_y=956
+[2026-05-18 06:46:32] selection lbutton_up skip=our_ui
+[2026-05-18 06:46:32] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:46:32] gdho stop begin
+[2026-05-18 06:46:32] gdho poll disarm skip reason=stop
+[2026-05-18 06:46:32] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 06:46:32] gdho hide_frontend queue hide
+[2026-05-18 06:46:32] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 06:46:32] gdho stop done
+[2026-05-18 06:46:38] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=392 mouse_y=594
+[2026-05-18 06:46:38] selection lbutton_up skip=our_ui
+[2026-05-18 06:46:38] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=392 mouse_y=594
+[2026-05-18 06:46:38] selection lbutton_up skip=our_ui
+[2026-05-18 06:46:39] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=391 mouse_y=529
+[2026-05-18 06:46:39] selection lbutton_up skip=our_ui
+[2026-05-18 06:46:40] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=401 mouse_y=521
+[2026-05-18 06:46:40] selection lbutton_up skip=our_ui
+[2026-05-18 06:46:41] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=551 mouse_y=669
+[2026-05-18 06:46:41] selection lbutton_up skip=our_ui
+[2026-05-18 06:46:53] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=316 mouse_y=504
+[2026-05-18 06:46:53] selection lbutton_up skip=our_ui
+[2026-05-18 06:46:53] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=316 mouse_y=504
+[2026-05-18 06:46:53] selection lbutton_up skip=our_ui
+[2026-05-18 06:46:55] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=369 mouse_y=439
+[2026-05-18 06:46:55] selection lbutton_up skip=our_ui
+[2026-05-18 06:46:55] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=369 mouse_y=439
+[2026-05-18 06:46:55] selection lbutton_up skip=our_ui
+[2026-05-18 06:46:58] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=410 mouse_y=324
+[2026-05-18 06:46:58] selection lbutton_up skip=our_ui
+[2026-05-18 06:46:59] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=465 mouse_y=326
+[2026-05-18 06:46:59] selection lbutton_up skip=our_ui
+[2026-05-18 06:47:00] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=370 mouse_y=519
+[2026-05-18 06:47:00] selection lbutton_up skip=our_ui
+[2026-05-18 06:47:02] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=479 mouse_y=674
+[2026-05-18 06:47:02] selection lbutton_up skip=our_ui
+[2026-05-18 06:47:07] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1123 mouse_y=80
+[2026-05-18 06:47:07] selection lbutton_up skip=our_ui
+[2026-05-18 06:47:11] selection cursor_over_ui miss mouse_x=840 mouse_y=918 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 06:47:11] selection lbutton_up dist_x=383 dist_y=55 drag=1 multi=0
+[2026-05-18 06:47:11] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:47:12] selection cursor_over_ui miss mouse_x=830 mouse_y=938 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 06:47:12] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:47:12] selection lbutton_up no_trigger=click
+[2026-05-18 06:47:13] selection cursor_over_ui miss mouse_x=259 mouse_y=908 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:47:13] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:47:13] selection lbutton_up no_trigger=click
+[2026-05-18 06:47:15] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1377 mouse_y=661
+[2026-05-18 06:47:15] selection lbutton_up skip=our_ui
+[2026-05-18 06:47:17] selection cursor_over_ui miss mouse_x=282 mouse_y=903 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:47:17] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:47:17] selection lbutton_up no_trigger=click
+[2026-05-18 06:47:17] selection cursor_over_ui miss mouse_x=283 mouse_y=901 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:47:17] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:47:17] selection lbutton_up no_trigger=click
+[2026-05-18 06:47:18] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=641 mouse_y=940
+[2026-05-18 06:47:18] selection lbutton_up skip=our_ui
+[2026-05-18 06:47:19] selection cursor_over_ui miss mouse_x=128 mouse_y=897 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:47:19] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:47:19] selection lbutton_up no_trigger=click
+[2026-05-18 06:47:44] selection cursor_over_ui miss mouse_x=800 mouse_y=908 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 06:47:44] selection lbutton_up dist_x=354 dist_y=45 drag=1 multi=0
+[2026-05-18 06:47:44] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:47:45] selection cursor_over_ui miss mouse_x=754 mouse_y=935 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 06:47:45] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:47:45] selection lbutton_up no_trigger=click
+[2026-05-18 06:47:47] selection cursor_over_ui miss mouse_x=734 mouse_y=537 top=hwnd=789110 class=#32770 title=图像另存为 exe=snipaste.exe
+[2026-05-18 06:47:47] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:47:47] selection lbutton_up no_trigger=click
+[2026-05-18 06:47:47] selection cursor_over_ui miss mouse_x=734 mouse_y=537 top=hwnd=789110 class=#32770 title=图像另存为 exe=snipaste.exe
+[2026-05-18 06:47:47] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 06:47:47] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:47:48] selection cursor_over_ui miss mouse_x=995 mouse_y=536 top=hwnd=199484 class=#32770 title=确认另存为 exe=snipaste.exe
+[2026-05-18 06:47:48] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:47:48] selection lbutton_up no_trigger=click
+[2026-05-18 06:47:50] selection cursor_over_ui miss mouse_x=89 mouse_y=945 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:47:50] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:47:50] selection lbutton_up no_trigger=click
+[2026-05-18 06:47:51] selection cursor_over_ui miss mouse_x=170 mouse_y=833 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:47:51] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:47:51] selection lbutton_up no_trigger=click
+[2026-05-18 06:47:54] selection cursor_over_ui miss mouse_x=209 mouse_y=347 top=hwnd=330324 class=#32770 title=Select files exe=Cursor.exe
+[2026-05-18 06:47:54] selection lbutton_up dist_x=207 dist_y=54 drag=1 multi=0
+[2026-05-18 06:47:54] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:47:57] selection cursor_over_ui miss mouse_x=97 mouse_y=566 top=hwnd=330324 class=#32770 title=Select files exe=Cursor.exe
+[2026-05-18 06:47:57] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:47:57] selection lbutton_up no_trigger=click
+[2026-05-18 06:47:59] selection cursor_over_ui miss mouse_x=295 mouse_y=685 top=hwnd=330324 class=#32770 title=Select files exe=Cursor.exe
+[2026-05-18 06:47:59] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:48:00] selection lbutton_up no_trigger=click
+[2026-05-18 06:48:00] selection cursor_over_ui miss mouse_x=295 mouse_y=685 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:48:00] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 06:48:00] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:48:01] selection cursor_over_ui miss mouse_x=425 mouse_y=956 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:48:01] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:48:01] selection lbutton_up no_trigger=click
+[2026-05-18 06:49:59] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1692 mouse_y=78
+[2026-05-18 06:49:59] selection lbutton_up skip=our_ui
+[2026-05-18 06:50:00] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=199408 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1841 mouse_y=78
+[2026-05-18 06:50:00] selection lbutton_up skip=our_ui
+[2026-05-18 06:50:02] gdho gdho_redirect_hide_overlay
+[2026-05-18 06:50:02] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:50:03] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 06:50:03] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 06:50:03] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:50:03] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 06:50:03] gdho gdho_redirect_hide_frontend
+[2026-05-18 06:50:03] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:50:03] gdho gdho_redirect_hide_overlay
+[2026-05-18 06:50:03] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:50:03] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:50:03] gdho stop begin
+[2026-05-18 06:50:03] gdho poll disarm skip reason=stop
+[2026-05-18 06:50:03] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 06:50:03] gdho hide_frontend queue hide
+[2026-05-18 06:50:03] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 06:50:03] gdho stop done
+[2026-05-18 06:50:08] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 06:50:08] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:50:08] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 06:50:08] gdho gdho_redirect_hide_frontend
+[2026-05-18 06:50:08] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:50:08] gdho gdho_redirect_hide_overlay
+[2026-05-18 06:50:08] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:50:26] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=330158 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1856 mouse_y=967
+[2026-05-18 06:50:26] selection lbutton_up skip=our_ui
+[2026-05-18 06:50:26] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 06:50:26] gdho stop begin
+[2026-05-18 06:50:26] gdho poll disarm skip reason=stop
+[2026-05-18 06:50:26] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 06:50:26] gdho hide_frontend queue hide
+[2026-05-18 06:50:26] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 06:50:26] gdho stop done
+[2026-05-18 06:50:32] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330570 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=429 mouse_y=581
+[2026-05-18 06:50:32] selection lbutton_up skip=our_ui
+[2026-05-18 06:50:33] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330570 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=429 mouse_y=581
+[2026-05-18 06:50:33] selection lbutton_up skip=our_ui
+[2026-05-18 06:50:34] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330570 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=341 mouse_y=520
+[2026-05-18 06:50:34] selection lbutton_up skip=our_ui
+[2026-05-18 06:50:36] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330570 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=489 mouse_y=675
+[2026-05-18 06:50:36] selection lbutton_up skip=our_ui
+[2026-05-18 06:51:25] selection cursor_over_ui miss mouse_x=0 mouse_y=812 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:51:25] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:51:25] selection lbutton_up no_trigger=click
+[2026-05-18 06:51:27] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330570 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=978 mouse_y=74
+[2026-05-18 06:51:27] selection lbutton_up skip=our_ui
+[2026-05-18 06:51:28] selection cursor_over_ui miss mouse_x=202 mouse_y=892 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:51:28] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:51:28] selection lbutton_up no_trigger=click
+[2026-05-18 06:51:39] selection cursor_over_ui miss mouse_x=370 mouse_y=1079 top=hwnd=65794 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-18 06:51:39] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:51:39] selection lbutton_up no_trigger=click
+[2026-05-18 06:51:41] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330570 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1242 mouse_y=85
+[2026-05-18 06:51:41] selection lbutton_up skip=our_ui
+[2026-05-18 06:51:41] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330570 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1529 mouse_y=134
+[2026-05-18 06:51:41] selection lbutton_up skip=our_ui
+[2026-05-18 06:51:42] selection cursor_over_ui miss mouse_x=783 mouse_y=541 top=hwnd=592380 class=CabinetWClass title=牛马云下载 exe=explorer.exe
+[2026-05-18 06:51:42] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:51:42] selection lbutton_up no_trigger=click
+[2026-05-18 06:51:44] selection cursor_over_ui miss mouse_x=816 mouse_y=481 top=hwnd=592380 class=CabinetWClass title=牛马云下载 exe=explorer.exe
+[2026-05-18 06:51:44] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:51:44] selection lbutton_up no_trigger=click
+[2026-05-18 06:51:44] selection cursor_over_ui miss mouse_x=816 mouse_y=481 top=hwnd=592380 class=CabinetWClass title=牛马云下载 exe=explorer.exe
+[2026-05-18 06:51:44] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 06:51:44] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:51:46] selection cursor_over_ui miss mouse_x=744 mouse_y=315 top=hwnd=789040 class=BandizipClass title=拖把_20260518_065036.zip - Bandizip 6.26 exe=Bandizip.exe
+[2026-05-18 06:51:46] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:51:46] selection lbutton_up no_trigger=click
+[2026-05-18 06:51:46] selection cursor_over_ui miss mouse_x=744 mouse_y=315 top=hwnd=789040 class=BandizipClass title=拖把_20260518_065036.zip - Bandizip 6.26 exe=Bandizip.exe
+[2026-05-18 06:51:46] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 06:51:46] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:51:48] selection cursor_over_ui miss mouse_x=254 mouse_y=176 top=hwnd=789040 class=BandizipClass title=拖把_20260518_065036.zip - Bandizip 6.26 exe=Bandizip.exe
+[2026-05-18 06:51:48] selection lbutton_up dist_x=466 dist_y=36 drag=1 multi=0
+[2026-05-18 06:51:48] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:51:49] selection cursor_over_ui miss mouse_x=740 mouse_y=171 top=hwnd=789040 class=BandizipClass title=拖把_20260518_065036.zip - Bandizip 6.26 exe=Bandizip.exe
+[2026-05-18 06:51:49] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:51:49] selection lbutton_up no_trigger=click
+[2026-05-18 06:51:50] selection cursor_over_ui miss mouse_x=332 mouse_y=888 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:51:50] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:51:50] selection lbutton_up no_trigger=click
+[2026-05-18 06:51:55] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330570 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=268 mouse_y=184
+[2026-05-18 06:51:55] selection lbutton_up skip=our_ui
+[2026-05-18 06:51:57] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330570 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1539 mouse_y=174
+[2026-05-18 06:51:57] selection lbutton_up skip=our_ui
+[2026-05-18 06:51:57] selection cursor_over_ui hit=g_CloudPlayerGui hwnd=330570 class=AutoHotkeyGUI title=牛马云 exe=AutoHotkey64.exe mouse_x=1539 mouse_y=174
+[2026-05-18 06:51:57] selection lbutton_up skip=our_ui
+[2026-05-18 06:52:19] selection cursor_over_ui miss mouse_x=332 mouse_y=520 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:52:19] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:52:19] selection lbutton_up no_trigger=click
+[2026-05-18 06:52:22] selection cursor_over_ui miss mouse_x=160 mouse_y=389 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:52:22] selection lbutton_up dist_x=154 dist_y=130 drag=1 multi=0
+[2026-05-18 06:52:22] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:52:23] selection cursor_over_ui miss mouse_x=261 mouse_y=906 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:52:23] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:52:23] selection lbutton_up no_trigger=click
+[2026-05-18 06:52:30] selection cursor_over_ui miss mouse_x=192 mouse_y=924 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:52:30] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:52:30] selection lbutton_up no_trigger=click
+[2026-05-18 06:52:32] selection cursor_over_ui miss mouse_x=247 mouse_y=868 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:52:32] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:52:32] selection lbutton_up no_trigger=click
+[2026-05-18 06:52:33] selection cursor_over_ui miss mouse_x=205 mouse_y=916 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:52:33] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:52:33] selection lbutton_up no_trigger=click
+[2026-05-18 06:52:39] selection cursor_over_ui miss mouse_x=89 mouse_y=397 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:52:39] selection lbutton_up dist_x=243 dist_y=122 drag=1 multi=0
+[2026-05-18 06:52:39] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 06:52:40] selection cursor_over_ui miss mouse_x=327 mouse_y=494 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:52:40] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:52:40] selection lbutton_up no_trigger=click
+[2026-05-18 06:52:42] selection cursor_over_ui miss mouse_x=149 mouse_y=921 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:52:42] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:52:42] selection lbutton_up no_trigger=click
+[2026-05-18 06:52:43] selection cursor_over_ui miss mouse_x=231 mouse_y=873 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:52:43] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:52:43] selection lbutton_up no_trigger=click
+[2026-05-18 06:52:44] selection cursor_over_ui miss mouse_x=172 mouse_y=924 top=hwnd=198436 class=Chrome_WidgetWin_1 title=CloudPlayer.html - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 06:52:44] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 06:52:44] selection lbutton_up no_trigger=click
+[2026-05-18 06:52:48] gdho gdho_redirect_hide_overlay
+[2026-05-18 06:52:48] gdho [ifs] [0x12/0x00/0x00]

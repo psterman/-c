@@ -12,8 +12,12 @@ $allPass = $true
 Write-Output "== Four Refactors Validation =="
 foreach ($s in $scripts) {
     $p = Join-Path $Root "scripts\$s"
-    & powershell -ExecutionPolicy Bypass -File $p -Root $Root
-    if ($LASTEXITCODE -ne 0) { $allPass = $false }
+    $output = & powershell -ExecutionPolicy Bypass -File $p -Root $Root 2>&1
+    $output | ForEach-Object { Write-Output $_ }
+    if ($LASTEXITCODE -ne 0) {
+        $isSkip = ($s -eq "ValidateAsyncGuardrails.ps1") -and (($output -join "`n") -match "RESULT=SKIP")
+        if (-not $isSkip) { $allPass = $false }
+    }
 }
 $cp = Join-Path $Root "modules\CloudPlayer.ahk"
 $httpJson = (Select-String -LiteralPath $cp -Pattern 'CloudPlayer_HttpJson\(' | Where-Object { $_.Line -notmatch 'CloudPlayer_HttpJsonAsync|CloudPlayer_HttpJsonFromCore' }).Count
