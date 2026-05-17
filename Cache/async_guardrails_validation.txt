@@ -1,0 +1,9 @@
+async_guardrails_validation
+ts=2026-05-17
+validator=scripts/ValidateAsyncGuardrails.ps1
+RESULT=PASS
+total=600
+done=600
+active_after=0
+retry_jobs_after=0
+stress_report=Cache/core_async_http_stress_report.txt

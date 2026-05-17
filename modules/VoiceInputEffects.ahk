@@ -136,11 +136,222 @@ VoiceInputEffect_Resume() {
 }
 
 VoiceInputEffect_ProcessingBegin() {
+    global g_VoiceFSMSearchRun
+    if (g_VoiceFSMSearchRun)
+        VoiceInputEffect_RunVoiceSearch()
 }
 
 VoiceInputEffect_ProcessingDone() {
+    global g_VoiceFSMSearchRun
+    g_VoiceFSMSearchRun := false
+}
+
+VoiceInputEffect_RunVoiceSearch() {
+    global VoiceSearchInputEdit, VoiceSearchSelectedEngines, VoiceSearchPanelVisible, g_VoiceFSMSearchRun
+    try {
+        if (!VoiceSearchPanelVisible || !VoiceSearchInputEdit) {
+            VoiceFSM_Dispatch("processing_done")
+            return
+        }
+        Content := VoiceSearchInputEdit.Value
+        if (Content = "" || StrLen(Content) = 0) {
+            VoiceFSM_Dispatch("processing_done")
+            return
+        }
+        if (!IsSet(VoiceSearchSelectedEngines) || !IsObject(VoiceSearchSelectedEngines) || VoiceSearchSelectedEngines.Length = 0) {
+            TrayTip(GetText("no_search_engine_selected"), GetText("tip"), "Icon! 2")
+            VoiceFSM_Dispatch("processing_done")
+            return
+        }
+        HideVoiceSearchInputPanel()
+        for Index, Engine in VoiceSearchSelectedEngines {
+            if (!IsSet(Engine) || Engine = "")
+                continue
+            SendVoiceSearchToBrowser(Content, Engine)
+            if (Index < VoiceSearchSelectedEngines.Length)
+                Sleep(300)
+        }
+        TrayTip(FormatText("search_engines_opened", VoiceSearchSelectedEngines.Length), GetText("tip"), "Iconi 1")
+        VoiceFSM_Dispatch("processing_done")
+    } catch as e {
+        g_VoiceFSMSearchRun := false
+        VoiceFSM_Dispatch("error")
+        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
+    }
 }
 
 VoiceInputEffect_Error() {
     SetTimer((*) => VoiceFSM_Dispatch("reset"), -300)
+}
+
+VoiceInputEffect_SendToCursor(Content) {
+    try {
+        if !WinActive("ahk_exe Cursor.exe") {
+            LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
+            WinWaitActive("ahk_exe Cursor.exe", , 1)
+            Sleep(200)
+        }
+        if !WinActive("ahk_exe Cursor.exe") {
+            LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
+            Sleep(200)
+        }
+        if (Content != "" && StrLen(Content) > 0) {
+            Send("^l")
+            Sleep(300)
+            Send("^a")
+            Sleep(100)
+            Send("{Delete}")
+            Sleep(100)
+            A_Clipboard := Content
+            Sleep(100)
+            Send("^v")
+            Sleep(200)
+            Send("{Enter}")
+            Sleep(300)
+        }
+    } catch as e {
+        TrayTip(GetText("voice_input_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
+    }
+}
+
+VoiceInputEffect_SearchStartListening() {
+    global VoiceSearchActive, VoiceInputMethod, VoiceSearchPanelVisible, VoiceSearchInputEdit, UI_Colors
+    if (VoiceSearchActive || !VoiceSearchPanelVisible)
+        return
+    try {
+        global GuiID_VoiceInput
+        if (GuiID_VoiceInput) {
+            LegacyGuard_RequestFocus("VoiceInput", GuiID_VoiceInput.Hwnd, 30, "voice_input_gui", 120)
+            Sleep(200)
+            if (!WinActive("ahk_id " . GuiID_VoiceInput.Hwnd)) {
+                LegacyGuard_RequestFocus("VoiceInput", GuiID_VoiceInput.Hwnd, 30, "voice_input_gui", 120)
+                Sleep(200)
+            }
+        }
+        if (VoiceSearchInputEdit) {
+            VoiceSearchInputEdit.Value := ""
+            InputEditHwnd := VoiceSearchInputEdit.Hwnd
+            try {
+                ControlFocus(InputEditHwnd, "ahk_id " . GuiID_VoiceInput.Hwnd)
+                Sleep(100)
+            } catch {
+                VoiceSearchInputEdit.Focus()
+                Sleep(100)
+            }
+        }
+        VoiceInputMethod := DetectInputMethod()
+        if (VoiceInputMethod = "baidu") {
+            if (VoiceSearchInputEdit) {
+                InputEditHwnd := VoiceSearchInputEdit.Hwnd
+                try {
+                    ControlFocus(InputEditHwnd, "ahk_id " . GuiID_VoiceInput.Hwnd)
+                    Sleep(150)
+                } catch {
+                    VoiceSearchInputEdit.Focus()
+                    Sleep(150)
+                }
+                SwitchToChineseIME()
+                Sleep(200)
+            }
+            Send("!y")
+            Sleep(220)
+            Send("{F2}")
+            Sleep(300)
+        } else if (VoiceInputMethod = "xunfei") {
+            Send("{F6}")
+            Sleep(220)
+            if (VoiceSearchInputEdit) {
+                InputEditHwnd := VoiceSearchInputEdit.Hwnd
+                try {
+                    ControlFocus(InputEditHwnd, "ahk_id " . GuiID_VoiceInput.Hwnd)
+                    Sleep(100)
+                } catch {
+                    VoiceSearchInputEdit.Focus()
+                    Sleep(100)
+                }
+            }
+        } else {
+            if (VoiceSearchInputEdit) {
+                InputEditHwnd := VoiceSearchInputEdit.Hwnd
+                try {
+                    ControlFocus(InputEditHwnd, "ahk_id " . GuiID_VoiceInput.Hwnd)
+                    Sleep(150)
+                } catch {
+                    VoiceSearchInputEdit.Focus()
+                    Sleep(150)
+                }
+                SwitchToChineseIME()
+                Sleep(200)
+            }
+            Send("!y")
+            Sleep(220)
+            Send("{F2}")
+            Sleep(300)
+        }
+        VoiceSearchActive := true
+        global VoiceSearchContent := ""
+        Sleep(500)
+    } catch as e {
+        VoiceSearchActive := false
+        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
+    }
+}
+
+VoiceInputEffect_SearchStopListening() {
+    global VoiceSearchActive, VoiceInputMethod, CapsLock, VoiceSearchInputEdit, VoiceSearchPanelVisible
+    if (!VoiceSearchActive || !VoiceSearchPanelVisible)
+        return
+    try {
+        if (CapsLock)
+            CapsLock := false
+        if (VoiceInputMethod = "baidu") {
+            Send("{F1}")
+            Sleep(220)
+            OldClipboard := A_Clipboard
+            Send("^a")
+            Sleep(200)
+            A_Clipboard := ""
+            Send("^c")
+            if ClipWait(0.2)
+                global VoiceSearchContent := A_Clipboard
+            A_Clipboard := OldClipboard
+            Send("!y")
+            Sleep(300)
+        } else if (VoiceInputMethod = "xunfei") {
+            Send("{F6}")
+            Sleep(260)
+            OldClipboard := A_Clipboard
+            Send("^a")
+            Sleep(200)
+            A_Clipboard := ""
+            Send("^c")
+            if ClipWait(0.2)
+                global VoiceSearchContent := A_Clipboard
+            A_Clipboard := OldClipboard
+        } else {
+            Send("{F1}")
+            Sleep(220)
+            OldClipboard := A_Clipboard
+            Send("^a")
+            Sleep(200)
+            A_Clipboard := ""
+            Send("^c")
+            if ClipWait(0.2)
+                global VoiceSearchContent := A_Clipboard
+            A_Clipboard := OldClipboard
+            Send("!y")
+            Sleep(300)
+        }
+        VoiceSearchActive := false
+        SetTimer(UpdateVoiceSearchInputInPanel, 0)
+        global VoiceSearchContent
+        if (VoiceSearchContent != "" && StrLen(VoiceSearchContent) > 0 && VoiceSearchInputEdit) {
+            VoiceSearchInputEdit.Value := VoiceSearchContent
+            VoiceSearchInputEdit.Focus()
+        }
+    } catch as e {
+        VoiceSearchActive := false
+        SetTimer(UpdateVoiceSearchInputInPanel, 0)
+        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
+    }
 }

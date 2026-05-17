@@ -89,3 +89,5 @@
 [2026-05-17 03:55:15][focus][release] owner=SearchCenter reason=gui_close
 [2026-05-17 04:14:48][focus][grant] owner=SearchCenter hwnd=7410516 priority=20 reason=show_focus
 [2026-05-17 04:14:51][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-17 09:35:01][focus][grant] owner=SearchCenter hwnd=788984 priority=20 reason=show_focus
+[2026-05-17 09:35:05][focus][release] owner=SearchCenter reason=gui_close

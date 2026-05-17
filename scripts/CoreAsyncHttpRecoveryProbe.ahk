@@ -36,6 +36,16 @@ if (A_Args.Length >= 3) {
             CRP_TimeoutMs := v3
     }
 }
+if (A_Args.Length >= 4) {
+    u := Trim(String(A_Args[4]))
+    if (u != "")
+        CRP_OfflineUrl := u
+}
+if (A_Args.Length >= 5) {
+    u := Trim(String(A_Args[5]))
+    if (u != "")
+        CRP_OnlineUrl := u
+}
 
 CRP_OnDone(ret, args*) {
     global CRP_Pending, CRP_Done, CRP_OfflineFail, CRP_OnlineOk, CRP_OnlineFail
@@ -47,9 +57,15 @@ CRP_OnDone(ret, args*) {
     try phase := String(ret["phase"])
     if (phase = "retrying" || phase = "retry_wait")
         return
-    if !ok
-        CRP_OfflineFail += 1
-    else
+    reqId := ""
+    try reqId := String(ret["reqId"])
+    isOnline := (SubStr(reqId, 1, 11) = "recovery_on")
+    if !ok {
+        if (isOnline)
+            CRP_OnlineFail += 1
+        else
+            CRP_OfflineFail += 1
+    } else if (isOnline)
         CRP_OnlineOk += 1
 }
 
@@ -87,21 +103,24 @@ while ((A_TickCount - startTick) < CRP_OfflineMs) {
     Sleep(25)
 }
 
-nextAt := A_TickCount
-onlineEnd := startTick + CRP_TimeoutMs
-while ((A_TickCount - startTick) < CRP_TimeoutMs) {
+onlinePhaseMs := CRP_TimeoutMs - CRP_OfflineMs
+if (onlinePhaseMs < 60000)
+    onlinePhaseMs := 60000
+onlineStart := A_TickCount
+nextAt := onlineStart
+while ((A_TickCount - onlineStart) < onlinePhaseMs) {
     if (CRP_OnlineOk > 0 && CRP_Pending = 0)
         break
     if (A_TickCount >= nextAt) {
         CRP_SendOne(CRP_OnlineUrl, "recovery_on_" . CRP_Sent)
         nextAt := A_TickCount + CRP_IntervalMs
     }
-    while (CRP_Pending > 0 && (A_TickCount - startTick) < CRP_TimeoutMs)
+    while (CRP_Pending > 0 && (A_TickCount - onlineStart) < onlinePhaseMs)
         Sleep(25)
     Sleep(25)
 }
 
-deadline := startTick + CRP_TimeoutMs + 15000
+deadline := onlineStart + onlinePhaseMs + 15000
 while (CRP_Pending > 0 && A_TickCount < deadline)
     Sleep(25)
 

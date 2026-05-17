@@ -1165,3 +1165,32 @@
 [2026-05-17 04:14:51][hide_done] visible=0 reason=gui_close
 [2026-05-17 04:14:51][force_close_done] reason=gui_close
 [2026-05-17 04:14:55][intent_drop_stale_token] token=1 current=3
+[2026-05-17 08:21:30][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-17 08:21:30][init_guard_drop] reason=empty
+[2026-05-17 09:29:52][ifs] [0x10/0x00/0x01]
+[2026-05-17 09:29:52][force_close_begin] reason=tray_show_hole visible=0 waiting=0 ready=0 ui_ready=0
+[2026-05-17 09:29:52][wm_chain_unregister_begin] reason=tray_show_hole count=0
+[2026-05-17 09:29:52][wm_chain_unregister_done] reason=tray_show_hole count=0
+[2026-05-17 09:29:52][hide_done] visible=0 reason=tray_show_hole
+[2026-05-17 09:29:52][force_close_done] reason=tray_show_hole
+[2026-05-17 09:29:58][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-17 09:29:58][init_guard_drop] reason=empty
+[2026-05-17 09:35:01][ifs] [0x11/0x00/0x01]
+[2026-05-17 09:35:01][show_begin] reason=tray_menu_search ready=0 ui_ready=0
+[2026-05-17 09:35:01][init_begin] reason=tray_menu_search gui=0 alive=0 inflight=0
+[2026-05-17 09:35:01][init_create_begin] reason=tray_menu_search hwnd=788984
+[2026-05-17 09:35:01][show_wait_ui_ready] reason=tray_menu_search
+[2026-05-17 09:35:01][wm_chain_register_begin] reason=tray_menu_search count=0
+[2026-05-17 09:35:01][wm_chain_register_done] reason=tray_menu_search count=1
+[2026-05-17 09:35:03][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-17 09:35:04][nav_completed] ok=1 visible=1
+[2026-05-17 09:35:05][gui_close_request] visible=1 waiting=0 gdho=0 native=0
+[2026-05-17 09:35:05][ifs] [0x10/0x00/0x03]
+[2026-05-17 09:35:05][wm_activate_seen] wparam=0 hwnd=788984 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-17 09:35:05][wm_activate_skip] reason=close_commit
+[2026-05-17 09:35:05][force_close_begin] reason=gui_close visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-17 09:35:05][wm_chain_unregister_begin] reason=gui_close count=1
+[2026-05-17 09:35:05][wm_chain_unregister_done] reason=gui_close count=0
+[2026-05-17 09:35:05][hide_done] visible=0 reason=gui_close
+[2026-05-17 09:35:05][force_close_done] reason=gui_close
+[2026-05-17 09:35:08][intent_drop_stale_token] token=1 current=3

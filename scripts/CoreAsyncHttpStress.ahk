@@ -4,6 +4,7 @@
 #Include ..\modules\CoreAsyncHttp.ahk
 
 global CHS_Total := 600
+global CHS_MinTotal := 500
 global CHS_Done := 0
 global CHS_Results := Map()
 global CHS_Start := A_TickCount
@@ -17,6 +18,8 @@ if (A_Args.Length >= 1) {
             CHS_Total := t
     }
 }
+if (CHS_Total < CHS_MinTotal)
+    CHS_Total := CHS_MinTotal
 if (A_Args.Length >= 2) {
     try {
         tm := Integer(A_Args[2])
@@ -87,7 +90,8 @@ try {
         FileAppend(line . "`r`n", alt, "UTF-8")
 }
 
-ExitApp(timedOut ? 2 : (snap["active"] = 0 ? 0 : 1))
+pass := (!timedOut && CHS_Done >= CHS_Total && CHS_Total >= CHS_MinTotal && snap["active"] = 0 && snap["retryJobs"] = 0)
+ExitApp(pass ? 0 : (timedOut ? 2 : 1))
 
 CHS_OnDone(ret, args*) {
     global CHS_Done, CHS_Results

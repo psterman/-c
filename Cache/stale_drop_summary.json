@@ -1,0 +1,11 @@
+﻿{
+    "ts":  "2026-05-17 08:45:52",
+    "logPath":  "C:\\Users\\Administrator\\Desktop\\牛马nmer\\Cache\\core_async_http.log",
+    "tailLines":  5000,
+    "counts":  {
+                   "async_http_cancelled":  0,
+                   "async_http_retrying":  0,
+                   "voice_fsm_reject":  0,
+                   "cloudplayer_drop_stale_req":  1
+               }
+}

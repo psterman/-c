@@ -5,6 +5,7 @@ global g_VoiceFSM := Map(
     "inDispatch", false,
     "queue", []
 )
+global g_VoiceFSMSearchRun := false
 
 VoiceFSM_State() {
     global g_VoiceFSM
@@ -48,7 +49,7 @@ VoiceFSM_DrainQueue(*) {
 }
 
 VoiceFSM_ProcessEvent(event, payload := 0) {
-    global g_VoiceFSM
+    global g_VoiceFSM, g_VoiceFSMSearchRun
     oldState := String(g_VoiceFSM["state"])
     newState := oldState
     switch event {
@@ -66,9 +67,11 @@ VoiceFSM_ProcessEvent(event, payload := 0) {
         case "processing_begin":
             if (oldState = "listening" || oldState = "paused")
                 newState := "processing"
+            else if (oldState = "idle" && g_VoiceFSMSearchRun)
+                newState := "processing"
         case "processing_done":
             if (oldState = "processing")
-                newState := "listening"
+                newState := g_VoiceFSMSearchRun ? "idle" : "listening"
         case "error":
             newState := "error"
         case "reset":

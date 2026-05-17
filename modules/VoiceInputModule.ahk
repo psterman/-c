@@ -233,7 +233,7 @@ ShowVoiceInputPanel() {
     CloseBtnY := 5
     VoiceInputCloseBtn := GuiID_VoiceInputPanel.Add("Text", "x" . CloseBtnX . " y" . CloseBtnY . " w" . CloseBtnSize . " h" . CloseBtnSize . " Center 0x200 cFFFFFF Background" . UI_Colors.BtnBg . " vVoiceInputCloseBtn", "✕")
     VoiceInputCloseBtn.SetFont("s12", "Segoe UI")
-    VoiceInputCloseBtn.OnEvent("Click", (*) => HideVoiceInputPanel())
+    VoiceInputCloseBtn.OnEvent("Click", (*) => StopVoiceInput())
     HoverBtn(VoiceInputCloseBtn, UI_Colors.BtnBg, "e81123")
     
     ; 启动动画定时器
@@ -261,7 +261,7 @@ ShowVoiceInputPanel() {
     }
     
     ; 添加 Escape 键关闭命令
-    GuiID_VoiceInputPanel.OnEvent("Escape", (*) => HideVoiceInputPanel())
+    GuiID_VoiceInputPanel.OnEvent("Escape", (*) => StopVoiceInput())
     
     GuiID_VoiceInputPanel.Show("w" . RestoredPos.Width . " h" . RestoredPos.Height . " x" . RestoredPos.X . " y" . RestoredPos.Y . " NoActivate")
     WinSetAlwaysOnTop(1, GuiID_VoiceInputPanel.Hwnd)
@@ -291,13 +291,9 @@ UpdateVoiceInputPanelState() {
     }
 }
 
-; 隐藏语音输入面板
+; 隐藏语音输入面板（仅 UI；状态由 FSM + VoiceInput_SyncLegacyFlags 维护）
 HideVoiceInputPanel() {
     global GuiID_VoiceInputPanel, VoiceInputAnimationText, VoiceInputStatusText, VoiceInputSendBtn, VoiceInputPauseBtn
-    global VoiceInputPaused
-    
-    ; 重置暂停状态
-    VoiceInputPaused := false
     
     SetTimer(UpdateVoiceAnimation, 0)
     
@@ -311,6 +307,8 @@ HideVoiceInputPanel() {
     VoiceInputStatusText := 0
     VoiceInputSendBtn := 0
     VoiceInputPauseBtn := 0
+    if FuncExists("VoiceInput_SyncLegacyFlags")
+        VoiceInput_SyncLegacyFlags()
 }
 
 ; 切换暂停/继续
@@ -608,47 +606,10 @@ HideVoiceInputActionSelection() {
     }
 }
 
-; 发送语音输入内容到 Cursor
+; 发送语音输入内容到 Cursor（副作用在 effect 层）
 SendVoiceInputToCursor(Content) {
-    global CursorPath, AISleepTime
-    
-    try {
-        if !WinActive("ahk_exe Cursor.exe") {
-            LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
-            WinWaitActive("ahk_exe Cursor.exe", , 1)
-            Sleep(200)
-        }
-        
-        if !WinActive("ahk_exe Cursor.exe") {
-            LegacyGuard_RequestCursorFocus("VoiceInput", "voice_input_cursor", 120)
-            Sleep(200)
-        }
-        
-        if (Content != "" && StrLen(Content) > 0) {
-            ; 确保输入框已打开
-            Send("^l")
-            Sleep(300)
-            
-            ; 清空输入框
-            Send("^a")
-            Sleep(100)
-            Send("{Delete}")
-            Sleep(100)
-            
-            ; 输入内容
-            A_Clipboard := Content
-            Sleep(100)
-            Send("^v")
-            Sleep(200)
-            
-            ; 发送
-            Send("{Enter}")
-            Sleep(300)
-            ; 不显示发送成功的提示，避免弹窗干扰
-        }
-    } catch as e {
-        TrayTip(GetText("voice_input_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
-    }
+    if FuncExists("VoiceInputEffect_SendToCursor")
+        VoiceInputEffect_SendToCursor(Content)
 }
 
 
@@ -1297,259 +1258,25 @@ DestroyOldSearchEngineButtons(OldButtons) {
 }
 
 ; ===================== 语音搜索相关函数 =====================
-; 执行语音搜索
+; 执行语音搜索（副作用在 VoiceInputEffect_ProcessingBegin）
 ExecuteVoiceSearch(*) {
-    global VoiceSearchInputEdit, VoiceSearchSelectedEngines, VoiceSearchPanelVisible
-    try VoiceFSM_Dispatch("processing_begin")
-    
-    if (!VoiceSearchPanelVisible || !VoiceSearchInputEdit) {
+    global VoiceSearchPanelVisible, g_VoiceFSMSearchRun
+    if (!VoiceSearchPanelVisible)
         return
-    }
-    
-    try {
-        Content := VoiceSearchInputEdit.Value
-        if (Content != "" && StrLen(Content) > 0) {
-            ; 检查是否有选中的搜索引擎
-            if (VoiceSearchSelectedEngines.Length = 0) {
-                TrayTip(GetText("no_search_engine_selected"), GetText("tip"), "Icon! 2")
-                try VoiceFSM_Dispatch("processing_done")
-                return
-            }
-            
-            ; 隐藏面板
-            HideVoiceSearchInputPanel()
-            
-            ; 打开所有选中的搜索引擎
-            ; 【修复】检查VoiceSearchSelectedEngines是否已初始化且不为空
-            if (!IsSet(VoiceSearchSelectedEngines) || !IsObject(VoiceSearchSelectedEngines) || VoiceSearchSelectedEngines.Length = 0) {
-                TrayTip(GetText("no_search_engine_selected"), GetText("tip"), "Icon! 2")
-                try VoiceFSM_Dispatch("processing_done")
-                return
-            }
-            
-            for Index, Engine in VoiceSearchSelectedEngines {
-                ; 【修复】检查Engine是否有值
-                if (!IsSet(Engine) || Engine = "") {
-                    continue  ; 跳过无效的引擎
-                }
-                SendVoiceSearchToBrowser(Content, Engine)
-                ; 每个搜索引擎之间稍作延迟，避免同时打开太多窗口
-                if (Index < VoiceSearchSelectedEngines.Length) {
-                    Sleep(300)
-                }
-            }
-            
-            TrayTip(FormatText("search_engines_opened", VoiceSearchSelectedEngines.Length), GetText("tip"), "Iconi 1")
-            try VoiceFSM_Dispatch("processing_done")
-        } else {
-            try VoiceFSM_Dispatch("processing_done")
-        }
-    } catch as e {
-        try VoiceFSM_Dispatch("error")
-        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
-    }
+    g_VoiceFSMSearchRun := true
+    VoiceFSM_Dispatch("processing_begin")
 }
 
-; 开始语音输入（在语音搜索界面中）
+; 开始语音输入（在语音搜索界面中，副作用在 effect 层）
 StartVoiceInputInSearch() {
-    global VoiceSearchActive, VoiceInputMethod, VoiceSearchPanelVisible, VoiceSearchInputEdit, UI_Colors
-    
-    if (VoiceSearchActive || !VoiceSearchPanelVisible) {
-        return
-    }
-    
-    try {
-        ; 确保窗口激活并输入框有真正的输入焦点
-        global GuiID_VoiceInput
-        if (GuiID_VoiceInput) {
-            ; 激活窗口
-            LegacyGuard_RequestFocus("VoiceInput", GuiID_VoiceInput.Hwnd, 30, "voice_input_gui", 120)
-            Sleep(200)
-            
-            ; 确保窗口真正激活
-            if (!WinActive("ahk_id " . GuiID_VoiceInput.Hwnd)) {
-                ; 如果仍未激活，再次尝试
-                LegacyGuard_RequestFocus("VoiceInput", GuiID_VoiceInput.Hwnd, 30, "voice_input_gui", 120)
-                Sleep(200)
-            }
-        }
-        
-        ; 确保输入框为空并获取真正的输入焦点
-        if (VoiceSearchInputEdit) {
-            VoiceSearchInputEdit.Value := ""
-            
-            ; 获取输入框的控件句柄
-            InputEditHwnd := VoiceSearchInputEdit.Hwnd
-            
-            ; 使用ControlFocus确保输入框有真正的输入焦点（IME焦点）
-            try {
-                ControlFocus(InputEditHwnd, "ahk_id " . GuiID_VoiceInput.Hwnd)
-                Sleep(100)
-            } catch as err {
-                ; 如果ControlFocus失败，使用Focus方法
-                VoiceSearchInputEdit.Focus()
-                Sleep(100)
-            }
-        }
-        
-        ; 自动检测输入法类型
-        VoiceInputMethod := DetectInputMethod()
-        
-        ; 根据输入法类型使用不同的快捷键
-        if (VoiceInputMethod = "baidu") {
-            ; 百度输入法：Alt+Y 激活，F2 开始
-            if (VoiceSearchInputEdit) {
-                InputEditHwnd := VoiceSearchInputEdit.Hwnd
-                try {
-                    ControlFocus(InputEditHwnd, "ahk_id " . GuiID_VoiceInput.Hwnd)
-                    Sleep(150)
-                } catch as err {
-                    VoiceSearchInputEdit.Focus()
-                    Sleep(150)
-                }
-                ; 切换到中文输入法，确保百度输入法处于活动状态
-                SwitchToChineseIME()
-                Sleep(200)
-            }
-            
-            ; 发送 Alt+Y 激活百度输入法
-            Send("!y")
-            Sleep(220)
-            
-            ; 发送 F2 开始语音输入
-            Send("{F2}")
-            Sleep(300)
-        } else if (VoiceInputMethod = "xunfei") {
-            ; 讯飞输入法：直接按 F6 开始语音输入
-            Send("{F6}")
-            Sleep(220)
-            if (VoiceSearchInputEdit) {
-                InputEditHwnd := VoiceSearchInputEdit.Hwnd
-                try {
-                    ControlFocus(InputEditHwnd, "ahk_id " . GuiID_VoiceInput.Hwnd)
-                    Sleep(100)
-                } catch as err {
-                    VoiceSearchInputEdit.Focus()
-                    Sleep(100)
-                }
-            }
-        } else {
-            ; 默认尝试百度方案
-            if (VoiceSearchInputEdit) {
-                InputEditHwnd := VoiceSearchInputEdit.Hwnd
-                try {
-                    ControlFocus(InputEditHwnd, "ahk_id " . GuiID_VoiceInput.Hwnd)
-                    Sleep(150)
-                } catch as err {
-                    VoiceSearchInputEdit.Focus()
-                    Sleep(150)
-                }
-                SwitchToChineseIME()
-                Sleep(200)
-            }
-            
-            Send("!y")
-            Sleep(220)
-            Send("{F2}")
-            Sleep(300)
-        }
-        
-        VoiceSearchActive := true
-        global VoiceSearchContent := ""
-        
-        ; 等待一下，确保语音输入已启动
-        Sleep(500)
-        ; 注意：自动更新和自动加载功能已移除，不再启动定时器
-    } catch as e {
-        VoiceSearchActive := false
-        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
-    }
+    if FuncExists("VoiceInputEffect_SearchStartListening")
+        VoiceInputEffect_SearchStartListening()
 }
 
-; 停止语音输入（在语音搜索界面中）
+; 停止语音输入（在语音搜索界面中，副作用在 effect 层）
 StopVoiceInputInSearch() {
-    global VoiceSearchActive, VoiceInputMethod, CapsLock, VoiceSearchInputEdit, VoiceSearchPanelVisible, UI_Colors
-    
-    if (!VoiceSearchActive || !VoiceSearchPanelVisible) {
-        return
-    }
-    
-    try {
-        ; 先确保CapsLock状态被重置
-        if (CapsLock) {
-            CapsLock := false
-        }
-        
-        ; 根据输入法类型使用不同的结束快捷键
-        if (VoiceInputMethod = "baidu") {
-            ; 百度输入法：F1 结束语音录入
-            Send("{F1}")
-            Sleep(220)
-            
-            ; 获取语音输入内容
-            OldClipboard := A_Clipboard
-            Send("^a")
-            Sleep(200)
-            A_Clipboard := ""
-            Send("^c")
-            if ClipWait(0.2) {
-                global VoiceSearchContent := A_Clipboard
-            }
-            A_Clipboard := OldClipboard
-            
-            ; 退出百度输入法语音模式
-            Send("!y")
-            Sleep(300)
-        } else if (VoiceInputMethod = "xunfei") {
-            ; 讯飞输入法：F6 结束
-            Send("{F6}")
-            Sleep(260)
-            
-            ; 获取语音输入内容
-            OldClipboard := A_Clipboard
-            Send("^a")
-            Sleep(200)
-            A_Clipboard := ""
-            Send("^c")
-            if ClipWait(0.2) {
-                global VoiceSearchContent := A_Clipboard
-            }
-            A_Clipboard := OldClipboard
-        } else {
-            ; 默认尝试百度方案
-            Send("{F1}")
-            Sleep(220)
-            
-            ; 获取语音输入内容
-            OldClipboard := A_Clipboard
-            Send("^a")
-            Sleep(200)
-            A_Clipboard := ""
-            Send("^c")
-            if ClipWait(0.2) {
-                global VoiceSearchContent := A_Clipboard
-            }
-            A_Clipboard := OldClipboard
-            
-            ; 退出百度输入法语音模式
-            Send("!y")
-            Sleep(300)
-        }
-        
-        VoiceSearchActive := false
-        SetTimer(UpdateVoiceSearchInputInPanel, 0)  ; 停止更新输入框
-        
-        ; 将内容填入输入框
-        global VoiceSearchContent
-        if (VoiceSearchContent != "" && StrLen(VoiceSearchContent) > 0 && VoiceSearchInputEdit) {
-            VoiceSearchInputEdit.Value := VoiceSearchContent
-            VoiceSearchInputEdit.Focus()
-        }
-    } catch as e {
-        VoiceSearchActive := false
-        SetTimer(UpdateVoiceSearchInputInPanel, 0)
-        TrayTip(GetText("voice_search_failed") . ": " . e.Message, GetText("error"), "Iconx 2")
-    }
+    if FuncExists("VoiceInputEffect_SearchStopListening")
+        VoiceInputEffect_SearchStopListening()
 }
 
 ; 聚焦语音搜索输入框

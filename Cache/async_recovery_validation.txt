@@ -1,0 +1,10 @@
+async_recovery_validation
+ts=2026-05-17
+validator=scripts/ValidateRecoveryProbe.ps1
+offline_ms=300000
+online_ok=1
+active_after=0
+retry_jobs_after=0
+pass=1
+RESULT=PASS
+report=Cache/core_async_http_recovery_report.txt

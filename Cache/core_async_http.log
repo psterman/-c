@@ -2221,3 +2221,26 @@ Source:	WinHttp.WinHttpRequest
 [20260517041446][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
 [20260517041446][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
 [20260517041446][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
+[20260517082134][async_http_send] id=1 req_id=1 tag=ttyd_http_ready method=GET url=http://127.0.0.1:7681/ attempt=1
+[20260517082134][async_http_done] id=1 req_id=1 tag=ttyd_http_ready status=200 elapsed_ms=47 attempt=1
+[20260517082138][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260517082139][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=531 attempt=1
+[20260517082139][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260517082139][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=15 attempt=1
+[20260517082139][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260517082139][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
+[20260517082139][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260517082139][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260517084537][cloudplayer_drop_stale_req] kind=fs_list req_id=cp_race_a_2577500 probe=race_supersede
+[20260517085655][cloudplayer_drop_stale_req] kind=fs_list req_id=cp_race_a_3255187 probe=race_supersede
+[20260517091048][cloudplayer_drop_stale_req] kind=fs_list req_id=cp_race_a_4088843 probe=race_supersede
+[20260517093005][async_http_send] id=1 req_id=1 tag=ttyd_http_ready method=GET url=http://127.0.0.1:7681/ attempt=1
+[20260517093005][async_http_done] id=1 req_id=1 tag=ttyd_http_ready status=200 elapsed_ms=47 attempt=1
+[20260517093010][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260517093010][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=47 attempt=1
+[20260517093010][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260517093010][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=15 attempt=1
+[20260517093010][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260517093010][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
+[20260517093010][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260517093010][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1

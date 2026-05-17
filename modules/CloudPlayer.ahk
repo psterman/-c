@@ -14,6 +14,7 @@ global g_CloudPlayerLastHealthTick := 0
 global g_CloudPlayerHealthTtlMs := 900
 global g_CloudPlayerHealthProbeInflight := false
 global g_CloudPlayerLatestReq := Map()
+global g_CloudPlayerActiveHttpReq := Map()
 global g_CloudPlayerDownloadCancel := Map()
 
 ShowCloudPlayer(*) {
@@ -681,12 +682,23 @@ CloudPlayer_StaleDomain(kind) {
 }
 
 CloudPlayer_MarkLatestReq(kind, reqId) {
-    global g_CloudPlayerLatestReq
+    global g_CloudPlayerLatestReq, g_CloudPlayerActiveHttpReq
     k := Trim(String(kind))
     rid := Trim(String(reqId))
     if (k = "" || rid = "")
         return
+    if (g_CloudPlayerActiveHttpReq is Map && g_CloudPlayerActiveHttpReq.Has(k)) {
+        oldRid := Trim(String(g_CloudPlayerActiveHttpReq[k]))
+        if (oldRid != "" && oldRid != rid && FuncExists("CoreAsyncHttp_Cancel")) {
+            try {
+                n := CoreAsyncHttp_Cancel(oldRid)
+                if (n > 0)
+                    CoreAsyncHttp_Log("cloudplayer_cancel_superseded", "kind=" . k . " old_req_id=" . oldRid . " new_req_id=" . rid)
+            }
+        }
+    }
     g_CloudPlayerLatestReq[k] := rid
+    g_CloudPlayerActiveHttpReq[k] := rid
     AsyncGuardrails_UpdateLatest(CloudPlayer_StaleDomain(k), rid)
 }
 
@@ -2545,6 +2557,10 @@ CloudPlayer_PostArchiveProgress(reqId, message, percent := 0) {
     rid := Trim(String(reqId))
     if (rid = "")
         return
+    if CloudPlayer_IsStaleReq("archive_list", rid) {
+        try CoreAsyncHttp_Log("cloudplayer_drop_stale_req", "kind=archive_list req_id=" . rid . " phase=progress")
+        return
+    }
     msg := Trim(String(message))
     try WebView_QueuePayload(g_CloudPlayerWv2, Map(
         "type", "cloudplayer_archive_progress",

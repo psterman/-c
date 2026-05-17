@@ -777,12 +777,13 @@ CapsLock:: {
         ; 设置定时器：300ms 后清除 CapsLock2（用于检测是否按了其他键）
         SetTimer(ClearCapsLock2Timer, -300)
         
-        ; 如果未暂停，则暂停语音输入
-        if (!VoiceInputPaused) {
+        ; 如果未暂停，则暂停语音输入（FSM 路径优先）
+        if (VoiceInputActive && FuncExists("VoiceFSM_State") && VoiceFSM_State() = "listening") {
+            if FuncExists("PauseVoiceInput")
+                PauseVoiceInput()
+        } else if (!VoiceInputPaused) {
             VoiceInputPaused := true
             UpdateVoiceInputPausedState(true)
-            
-            ; 使用 Cursor 的快捷键 Ctrl+Shift+Space 暂停语音输入
             if (VoiceInputActive) {
                 Send("^+{Space}")
                 Sleep(200)
@@ -804,18 +805,17 @@ CapsLock:: {
         ; 如果只按了CapsLock（CapsLock2仍然为true），且是短按，则恢复语音输入或搜索
         if (CapsLock2 && PressDuration < 1500) {
             ; 只按了CapsLock，没有按其他键，恢复语音输入或搜索
-            if (VoiceInputPaused) {
+            if (VoiceInputActive && FuncExists("VoiceFSM_State") && VoiceFSM_State() = "paused") {
+                if FuncExists("ResumeVoiceInput")
+                    ResumeVoiceInput()
+            } else if (VoiceInputPaused) {
                 VoiceInputPaused := false
                 if (VoiceInputActive) {
-                    UpdateVoiceInputPausedState(false)  ; 更新动画状态，显示恢复
-                } else if (VoiceSearchActive) {
-                    ; 语音搜索的恢复逻辑（如果需要的话）
-                }
-                
-                ; 使用 Cursor 的快捷键 Ctrl+Shift+Space 恢复语音输入
-                if (VoiceInputActive) {
+                    UpdateVoiceInputPausedState(false)
                     Send("^+{Space}")
                     Sleep(200)
+                } else if (VoiceSearchActive) {
+                    ; 语音搜索的恢复逻辑（如果需要的话）
                 }
             }
         }

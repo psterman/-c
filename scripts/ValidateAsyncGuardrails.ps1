@@ -37,12 +37,20 @@ $cacheDir = Join-Path $Root "Cache"
 $stressReport = Join-Path $cacheDir "core_async_http_stress_report.txt"
 $coreLog = Join-Path $cacheDir "core_async_http.log"
 
+$lastStartPath = Join-Path $cacheDir "core_async_http_stress_last_start.txt"
 $report = Parse-StressReport -Path $stressReport
 if ($null -eq $report) {
     Write-Output "== Async Guardrails Validation =="
     Write-Output "stress_report_missing=$stressReport"
     Write-Output "RESULT=SKIP"
     exit 2
+}
+
+$lastStartTotal = 0
+if (Test-Path $lastStartPath) {
+    foreach ($line in (Get-Content -LiteralPath $lastStartPath -Encoding UTF8)) {
+        if ($line -match "total=(\d+)") { $lastStartTotal = [int]$Matches[1] }
+    }
 }
 
 $total = [int]($report["total"])
@@ -58,6 +66,7 @@ $doneCount = Count-LogPattern -Path $coreLog -Pattern "[async_http_done]"
 
 $checks = @(
     [pscustomobject]@{ Name = "total_requests"; Pass = ($total -ge $MinRequests); Detail = "total=$total min=$MinRequests" },
+    [pscustomobject]@{ Name = "last_start_not_smoke"; Pass = ($lastStartTotal -eq 0 -or $lastStartTotal -ge $MinRequests); Detail = "last_start_total=$lastStartTotal min=$MinRequests" },
     [pscustomobject]@{ Name = "all_done"; Pass = ($done -eq $total); Detail = "done=$done total=$total" },
     [pscustomobject]@{ Name = "not_timed_out"; Pass = ($timedOut -eq 0); Detail = "timed_out=$timedOut" },
     [pscustomobject]@{ Name = "active_zero_after"; Pass = ($activeAfter -eq 0); Detail = "active_after=$activeAfter" },
