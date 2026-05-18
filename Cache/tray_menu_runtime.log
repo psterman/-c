@@ -541,3 +541,22 @@
 [2026-05-18 08:52:13] handoff_step hide_gui_async_begin reason=tray_open_ui_finalize
 [2026-05-18 08:52:13] handoff_step hide_gui_async_done reason=tray_open_ui_finalize
 [2026-05-18 08:52:13] popup_state_reset reason=invoke_click_deferred_2
+[2026-05-18 08:56:09] tray_msg lParam=516 msg=1028
+[2026-05-18 08:56:09] tray_msg lParam=517 msg=1028
+[2026-05-18 08:56:09] tray_popup_state mode=bubble search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=8 native=0 waiting=0 phase=closed caps=0
+[2026-05-18 08:56:09] custom_popup_queue lParam=517
+[2026-05-18 08:56:09] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-18 08:56:09] custom_popup_begin lParam=517
+[2026-05-18 08:56:09] custom_popup_state mode=bubble ft_vis=0 bub_vis=1 search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=8 native=0 waiting=0 create_inflight=0
+[2026-05-18 08:56:09] tray_build_phase=state elapsed_ms=0
+[2026-05-18 08:56:09] snapshot_miss scene=tray_menu dirty=1
+[2026-05-18 08:56:09] custom_popup_scene_items count=0 mode=bubble
+[2026-05-18 08:56:09] tray_build_phase=snapshot elapsed_ms=0
+[2026-05-18 08:56:09] tray_build_phase=render elapsed_ms=0
+[2026-05-18 08:56:09] custom_popup_build_done items=9 elapsed_ms=0
+[2026-05-18 08:56:09] dark_popup_show_begin items=9 pos=1665,720
+[2026-05-18 08:56:09] scene_items_source scene=tray_menu mode=bubble raw_count=60 vis_count=8 cmd_count=184
+[2026-05-18 08:56:09] scene_items_filtered scene=tray_menu count=8
+[2026-05-18 08:56:09] snapshot_rebuild_ok count=8 elapsed_ms=0
+[2026-05-18 08:56:10] dark_popup_show_done elapsed_ms=94 hwnd=201208
+[2026-05-18 08:56:10] custom_popup_end lParam=517 elapsed_ms=125

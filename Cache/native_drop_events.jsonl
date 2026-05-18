@@ -1,2 +1,6 @@
 ﻿{"at":"2026-05-18T08:52:04+08:00","kind":"bridge_ready","x":1535,"y":572,"w":170,"h":210}
 {"at":"2026-05-18T08:52:13+08:00","kind":"bridge_ready","x":1535,"y":572,"w":170,"h":210}
+{"at":"2026-05-18T08:54:33+08:00","kind":"drag_start","payloadKind":"none","x":1582,"y":802}
+{"at":"2026-05-18T08:54:34+08:00","kind":"drag_end","payloadKind":"none","x":2121,"y":731}
+{"at":"2026-05-18T08:54:37+08:00","kind":"drag_start","payloadKind":"none","x":2134,"y":746}
+{"at":"2026-05-18T08:54:37+08:00","kind":"drag_end","payloadKind":"none","x":2291,"y":770}

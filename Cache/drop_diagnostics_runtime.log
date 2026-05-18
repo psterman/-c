@@ -5414,3 +5414,81 @@
 [2026-05-18 08:54:26] selection cursor_over_ui miss mouse_x=315 mouse_y=285 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
 [2026-05-18 08:54:26] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
 [2026-05-18 08:54:26] selection lbutton_up no_trigger=click
+[2026-05-18 08:54:34] selection cursor_over_ui miss mouse_x=2122 mouse_y=730 top=hwnd=1641552 class=AutoHotkeyGUI title=Floating Bubble exe=AutoHotkey64.exe
+[2026-05-18 08:54:34] selection lbutton_up dist_x=561 dist_y=98 drag=1 multi=0
+[2026-05-18 08:54:34] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 08:54:35] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 08:54:35] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:35] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 08:54:35] gdho gdho_redirect_hide_frontend
+[2026-05-18 08:54:35] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:35] gdho gdho_redirect_hide_overlay
+[2026-05-18 08:54:35] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:37] gdho stop begin
+[2026-05-18 08:54:37] gdho poll disarm skip reason=stop
+[2026-05-18 08:54:37] gdho gdho_phase CLOSED->CLOSING reason=stop token=7
+[2026-05-18 08:54:37] gdho hide_frontend queue hide
+[2026-05-18 08:54:37] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=7
+[2026-05-18 08:54:37] gdho stop done
+[2026-05-18 08:54:38] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 08:54:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:38] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 08:54:38] gdho gdho_redirect_hide_frontend
+[2026-05-18 08:54:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:38] gdho gdho_redirect_hide_overlay
+[2026-05-18 08:54:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:38] selection cursor_over_ui miss mouse_x=2142 mouse_y=733 top=hwnd=1641552 class=AutoHotkeyGUI title=Floating Bubble exe=AutoHotkey64.exe
+[2026-05-18 08:54:38] selection lbutton_up dist_x=5 dist_y=5 drag=1 multi=0
+[2026-05-18 08:54:38] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 08:54:39] selection cursor_over_ui miss mouse_x=1641 mouse_y=849 top=hwnd=1641552 class=AutoHotkeyGUI title=Floating Bubble exe=AutoHotkey64.exe
+[2026-05-18 08:54:39] selection lbutton_up dist_x=484 dist_y=117 drag=1 multi=0
+[2026-05-18 08:54:39] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 08:54:40] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 08:54:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:40] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 08:54:40] gdho gdho_redirect_hide_frontend
+[2026-05-18 08:54:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:40] gdho gdho_redirect_hide_overlay
+[2026-05-18 08:54:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:42] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:42] gdho stop begin
+[2026-05-18 08:54:42] gdho poll disarm skip reason=stop
+[2026-05-18 08:54:42] gdho gdho_phase CLOSED->CLOSING reason=stop token=8
+[2026-05-18 08:54:42] gdho hide_frontend queue hide
+[2026-05-18 08:54:42] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=8
+[2026-05-18 08:54:42] gdho stop done
+[2026-05-18 08:54:42] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 08:54:42] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:42] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 08:54:42] gdho gdho_redirect_hide_frontend
+[2026-05-18 08:54:42] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:54:42] gdho gdho_redirect_hide_overlay
+[2026-05-18 08:54:42] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 08:55:27] selection cursor_over_ui miss mouse_x=1617 mouse_y=872 top=hwnd=4526420 class=#32768 title= exe=tailscale-ipn.exe
+[2026-05-18 08:55:27] selection lbutton_up dist_x=2 dist_y=0 drag=0 multi=0
+[2026-05-18 08:55:27] selection lbutton_up no_trigger=click
+[2026-05-18 08:55:29] selection cursor_over_ui miss mouse_x=1482 mouse_y=891 top=hwnd=7672218 class=#32768 title= exe=tailscale-ipn.exe
+[2026-05-18 08:55:29] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 08:55:29] selection lbutton_up no_trigger=click
+[2026-05-18 08:56:17] selection cursor_over_ui miss mouse_x=1428 mouse_y=904 top=hwnd=9245068 class=#32768 title= exe=tailscale-ipn.exe
+[2026-05-18 08:56:17] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 08:56:17] selection lbutton_up no_trigger=click
+[2026-05-18 08:56:20] selection cursor_over_ui miss mouse_x=2176 mouse_y=13 top=hwnd=67720 class=Chrome_WidgetWin_1 title=Machines - Tailscale - Google Chrome exe=chrome.exe
+[2026-05-18 08:56:20] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 08:56:20] selection lbutton_up no_trigger=click
+[2026-05-18 08:57:01] selection cursor_over_ui miss mouse_x=354 mouse_y=1362 top=hwnd=65794 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-18 08:57:01] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 08:57:01] selection lbutton_up no_trigger=click
+[2026-05-18 08:57:03] selection cursor_over_ui miss mouse_x=293 mouse_y=1349 top=hwnd=65794 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-18 08:57:03] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 08:57:03] selection lbutton_up no_trigger=click
+[2026-05-18 08:57:10] selection cursor_over_ui miss mouse_x=800 mouse_y=427 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 08:57:10] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 08:57:10] selection lbutton_up no_trigger=click
+[2026-05-18 08:57:14] selection cursor_over_ui miss mouse_x=1347 mouse_y=689 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 08:57:14] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 08:57:14] selection lbutton_up no_trigger=click
+[2026-05-18 08:57:20] selection cursor_over_ui miss mouse_x=376 mouse_y=696 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Cursor Settings - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 08:57:20] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 08:57:20] selection lbutton_up no_trigger=click
