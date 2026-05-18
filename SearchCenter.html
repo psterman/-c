@@ -31,6 +31,7 @@
     U+F900-FAFF;
 }
 :root {
+  --sc-content-max: 960px;
   --bg: #0d1016;
   --bg-main: #0c1119;
   --bg-surface: #121a26;
@@ -165,8 +166,8 @@ html[data-theme="light"] #startup-splash {
   width: 100%;
   height: 100%;
   min-height: 0;
-  gap: 10px;
-  padding: 10px 16px 12px;
+  gap: 14px;
+  padding: 12px 20px 14px;
 }
 #app {
   display: grid;
@@ -174,8 +175,8 @@ html[data-theme="light"] #startup-splash {
   width: 100%;
   height: 100%;
   min-height: 0;
-  gap: 10px;
-  padding: 10px 16px 12px;
+  gap: 14px;
+  padding: 12px 20px 14px;
 }
 /* 须显示标题栏：极速/标准 与窗口控制在此；勿 display:none（会隐藏引擎切换） */
 #chrome-header {
@@ -639,13 +640,6 @@ html[data-theme="light"] #startup-splash {
   min-width: 68px;
   font-weight: 700;
 }
-#results-head {
-  flex-shrink: 0;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 10px;
-}
 #head-filters {
   min-width: 0;
   position: relative;
@@ -722,9 +716,21 @@ html[data-theme="light"] #startup-splash {
 #categories,
 #engines {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   overflow: auto hidden;
-  padding: 8px 10px;
+  padding: 4px 2px;
+}
+#engines {
+  flex-wrap: wrap;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 132px;
+  align-content: flex-start;
+}
+.sc-section-web-cats #categories {
+  flex-wrap: wrap;
+  overflow: visible;
+  max-height: none;
 }
 #categories::-webkit-scrollbar,
 #engines::-webkit-scrollbar,
@@ -762,11 +768,21 @@ html[data-theme="light"] #startup-splash {
   transition: .16s ease;
 }
 .chip {
-  padding: 10px 14px;
+  padding: 7px 12px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   white-space: nowrap;
+  font-size: 12px;
+}
+.sc-section-web-cats .chip {
+  padding: 6px 11px;
+  font-size: 11px;
+}
+.sc-section-web-cats .chip .count {
+  min-width: 18px;
+  padding: 1px 6px;
+  font-size: 10px;
 }
 .chip .chip-main {
   display: flex;
@@ -793,15 +809,15 @@ html[data-theme="light"] #startup-splash {
   text-align: center;
 }
 .engine-chip {
-  min-width: 64px;
-  max-width: 92px;
-  padding: 10px 8px;
+  min-width: 56px;
+  max-width: 76px;
+  padding: 8px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px;
-  border-radius: 14px;
+  gap: 5px;
+  border-radius: 12px;
 }
 .engine-chip .engine-icon-wrap {
   display: flex;
@@ -810,9 +826,9 @@ html[data-theme="light"] #startup-splash {
   flex: 0 0 auto;
 }
 .engine-chip img, .engine-fallback {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   flex: 0 0 auto;
   display: block;
 }
@@ -891,26 +907,41 @@ html[data-theme="light"] #startup-splash {
   border-color: rgba(255,200,120,.72);
   background: rgba(255,141,42,.24);
 }
-#layout {
-  display: grid;
-  grid-template-columns: minmax(380px, 1.1fr) minmax(320px, .9fr);
-  gap: 16px;
+#layout,
+#layout.sc-split-layout,
+#layout.sc-list-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
+  gap: 0;
 }
-#results-card, #preview-card {
+#results-card {
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  position: relative;
 }
-#results-head {
+#results-card > * {
+  position: relative;
+  z-index: 1;
+}
+#preview-dock-stash {
+  display: none;
+}
+#inline-preview.hidden {
+  display: none !important;
+}
+#results-head.results-head-compact {
   flex-shrink: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border-subtle);
   background: rgba(255,255,255,.02);
 }
 #preview-head {
@@ -942,21 +973,75 @@ html[data-theme="light"] #startup-splash {
   padding: 10px 12px 12px;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
 }
 .result-item {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  gap: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: default;
+  transition: .14s ease;
+  overflow: hidden;
+  min-height: min-content;
+}
+.result-item-head {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
   padding: 9px 10px;
-  border: 1px solid transparent;
-  border-radius: 10px;
   cursor: pointer;
-  transition: .14s ease;
 }
-.result-item + .result-item { margin-top: 5px; }
-.result-item:hover {
+.result-item-expand {
+  display: none;
+  min-width: 0;
+}
+.result-item.expanded {
+  border-color: rgba(255,179,71,.28);
+  background: rgba(255,141,42,.04);
+}
+.result-item.expanded .result-item-expand {
+  display: block;
+}
+.result-item + .result-item { margin-top: 6px; }
+.result-item-head:hover {
   background: rgba(255,255,255,.03);
-  border-color: rgba(255,255,255,.05);
+}
+.result-item.active .result-item-head {
+  border-left: 3px solid var(--accent);
+  padding-left: 7px;
+}
+.inline-preview-shell {
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(0,0,0,.14);
+  border-radius: 0 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.inline-preview-meta {
+  flex-shrink: 0;
+  padding: 10px 12px 0;
+}
+.inline-preview-meta .preview-meta-grid {
+  margin-top: 0;
+}
+#inline-preview #preview-panel {
+  min-height: 200px;
+  max-height: min(52vh, 560px);
+}
+#inline-preview #preview-web-scroll {
+  min-height: 180px;
+  max-height: min(48vh, 520px);
+}
+#inline-preview #preview-host.mode-native {
+  min-height: 200px;
+  max-height: min(48vh, 520px);
+  margin: 0 10px 10px;
 }
 .result-item.active {
   background: linear-gradient(180deg, rgba(255,141,42,.16), rgba(255,141,42,.06));
@@ -1624,7 +1709,8 @@ html[data-theme="light"] #startup-splash {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 .skeleton-item {
   display: grid;
@@ -1871,16 +1957,21 @@ mark {
 .hidden {
   display: none !important;
 }
+.sc-page-column {
+  width: 100%;
+  max-width: var(--sc-content-max);
+  margin-inline: auto;
+  min-width: 0;
+}
 .sc-header {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
 }
 .search-wrapper {
-  max-width: 920px;
   width: 100%;
-  margin: 0 auto;
+  margin: 0;
   transition: box-shadow .2s ease;
 }
 .search-wrapper.focused .search-box-inner,
@@ -1924,9 +2015,22 @@ mark {
   flex-shrink: 0;
 }
 .search-controls-right #limit {
-  height: 34px;
-  min-width: 72px;
-  border-radius: 10px;
+  display: none;
+}
+.search-more-pop .limit-menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 2px 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.search-more-pop .limit-menu-row #limit {
+  display: block;
+  height: 32px;
+  min-width: 88px;
+  border-radius: 8px;
 }
 .search-controls-right #btn-run {
   height: 34px;
@@ -2009,37 +2113,61 @@ mark {
   justify-content: flex-start;
 }
 .filter-drawer {
-  max-width: 920px;
   width: 100%;
-  margin: 0 auto;
-  border-radius: 14px;
+  margin: 0;
+  border-radius: 16px;
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
   overflow: hidden;
 }
+.filter-drawer-head {
+  display: block;
+}
 .filter-drawer-toggle {
   width: 100%;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 10px 14px;
   border: none;
   background: transparent;
-  color: var(--muted);
+  color: var(--text);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  text-align: left;
 }
-.filter-drawer-toggle:hover { color: var(--text); }
+.filter-drawer-toggle:hover { background: rgba(255,255,255,.03); }
+.filter-drawer-title {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.filter-drawer-summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.filter-drawer-toggle .chevron {
+  color: var(--muted);
+  font-size: 10px;
+  flex-shrink: 0;
+}
 .filter-drawer-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 0 8px 10px;
-  max-height: 320px;
+  gap: 14px;
+  padding: 0 14px 16px;
+  max-height: 280px;
   overflow: auto;
-  transition: max-height .22s ease, opacity .2s ease, padding .2s ease;
+  transition: max-height .24s ease, opacity .2s ease, padding .2s ease;
 }
 .filter-drawer.collapsed .filter-drawer-body {
   max-height: 0;
@@ -2049,29 +2177,104 @@ mark {
   overflow: hidden;
   pointer-events: none;
 }
+.sc-mode-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(0,0,0,.12);
+}
+.mode-seg {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: .16s ease;
+  min-width: 0;
+}
+.mode-seg:hover {
+  color: var(--text);
+  background: rgba(255,255,255,.04);
+}
+.mode-seg.active {
+  border-color: rgba(255,179,71,.45);
+  background: linear-gradient(180deg, rgba(255,179,71,.16), rgba(255,141,42,.08));
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(255,141,42,.12);
+}
+.mode-seg-label {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.mode-seg-desc {
+  font-size: 10px;
+  line-height: 1.25;
+  opacity: .82;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.sc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+}
+.sc-section + .sc-section {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 14px;
+}
+.sc-section-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--muted);
+}
+.sc-section-cli-hint {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  background: rgba(255,255,255,.02);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
 .filter-drawer .sc-tag-card {
   border: none;
   box-shadow: none;
   background: transparent;
-  padding: 4px 4px 0;
+  padding: 0;
 }
 .filter-drawer .sc-tag-card::after { display: none; }
+#tag-card { padding: 0; gap: 8px; }
 .results-filter-strip {
-  padding: 0 4px 4px;
+  padding: 0;
 }
 .filter-strip-label {
-  margin: 0 0 6px 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
+  display: none;
+}
+#filters {
+  flex-wrap: wrap;
+  overflow: visible;
 }
 #filter-drawer #head-filters {
   display: block;
 }
 .ft-drawer {
-  max-width: 920px;
   width: 100%;
-  margin: 0 auto;
+  margin: 0;
   border-radius: 12px;
   border: 1px solid var(--border-subtle);
   background: rgba(255,255,255,.02);
@@ -2117,7 +2320,6 @@ mark {
   align-self: center;
 }
 .sc-ft-section {
-  max-width: 920px;
   width: 100%;
   margin: 0 auto;
   min-width: 0;
@@ -2133,12 +2335,17 @@ mark {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+#layout.sc-list-layout {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 #layout.sc-split-layout {
   flex: 1 1 auto;
   min-height: 0;
-  grid-template-columns: minmax(0, 42%) minmax(0, 58%);
-  gap: 12px;
 }
 .results-column,
 .preview-column {
@@ -2147,22 +2354,26 @@ mark {
   background: var(--bg-surface);
   box-shadow: var(--shadow);
 }
-.results-head-compact {
+.results-head-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-subtle);
+  min-width: 0;
 }
-#layout .result-item {
-  border-radius: 12px;
-  border-left: 3px solid transparent;
-  padding: 10px 12px;
+.results-local-filters {
+  padding-top: 2px;
 }
-#layout .result-item.active {
-  border-left-color: var(--accent);
-  background: linear-gradient(90deg, rgba(255,141,42,.14), rgba(255,141,42,.04));
+.results-local-filters.hidden {
+  display: none !important;
+}
+.results-local-filters #head-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.results-local-filters #filters {
+  padding: 0;
 }
 #preview-panel {
   border-radius: 0 0 16px 16px;
@@ -2183,6 +2394,7 @@ mark {
   font-size: 12px;
   color: var(--muted);
   min-height: 40px;
+  width: 100%;
 }
 .sc-footer-dock .dock-left {
   display: inline-flex;
@@ -2247,12 +2459,13 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
 }
 
 @media (max-width: 960px) {
-  #layout.sc-split-layout,
-  #layout { grid-template-columns: 1fr; }
-  #preview-card { display: none; min-height: 0; }
-  body.sc-narrow-preview #preview-card {
-    display: flex;
-    min-height: min(42vh, 360px);
+  .sc-mode-bar {
+    grid-template-columns: 1fr;
+  }
+  .mode-seg-desc { white-space: normal; }
+  #inline-preview #preview-web-scroll,
+  #inline-preview #preview-host.mode-native {
+    max-height: min(42vh, 400px);
   }
   .search-box-inner {
     grid-template-columns: 1fr auto;
@@ -2310,7 +2523,7 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
     </div>
   </header>
 
-  <section class="sc-header">
+  <section class="sc-header sc-page-column">
     <div class="search-wrapper" id="searchWrapper">
       <div class="search-box-inner" id="searchBoxInner">
         <span class="search-icon-left" id="search-icon-inline">&#128269;</span>
@@ -2318,15 +2531,6 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
           <input id="search" type="text" placeholder="搜索本地结果，或直接作为网络搜索 / CLI 提示词发送" autocomplete="off" spellcheck="false">
         </div>
         <div class="search-controls-right">
-          <select id="limit" title="结果条数上限">
-            <option value="10">10 条</option>
-            <option value="20">20 条</option>
-            <option value="30">30 条</option>
-            <option value="50">50 条</option>
-            <option value="100">100 条</option>
-            <option value="200">200 条</option>
-            <option value="500">全部搜索结果</option>
-          </select>
           <button id="btn-run" class="btn primary" type="button">搜索</button>
           <button type="button" class="engine-switch-capsule" id="engineToggle" aria-label="切换搜索引擎模式">
             <span class="engine-indicator" aria-hidden="true"></span>
@@ -2337,6 +2541,15 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
           <details class="search-more-menu">
             <summary class="btn ghost btn-more" title="更多操作">⋯</summary>
             <div class="search-more-pop">
+              <label class="limit-menu-row">结果条数<select id="limit" title="结果条数上限">
+                <option value="10">10 条</option>
+                <option value="20">20 条</option>
+                <option value="30">30 条</option>
+                <option value="50">50 条</option>
+                <option value="100">100 条</option>
+                <option value="200">200 条</option>
+                <option value="500">全部搜索结果</option>
+              </select></label>
               <button id="btn-hotkey-plus" class="btn btn-hotkey-plus" type="button" title="快捷键+：快速进入 Caps 热键提示与绑定">快捷键+</button>
               <button id="btn-web-search" class="btn" type="button">网页搜索</button>
               <button id="btn-open-cli" class="btn" type="button">打开所选终端</button>
@@ -2346,18 +2559,43 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
       </div>
     </div>
 
-    <div class="filter-drawer" id="filter-drawer">
-      <button type="button" class="filter-drawer-toggle" id="btn-filter-drawer-toggle" aria-expanded="true">
-        <span>筛选与引擎</span>
-        <span class="chevron" id="filter-drawer-chevron" aria-hidden="true">▼</span>
-      </button>
+    <div class="filter-drawer collapsed" id="filter-drawer">
+      <div class="filter-drawer-head">
+        <button type="button" class="filter-drawer-toggle" id="btn-filter-drawer-toggle" aria-expanded="false">
+          <span class="filter-drawer-title">筛选</span>
+          <span class="filter-drawer-summary" id="filter-drawer-summary">本地搜索</span>
+          <span class="chevron" id="filter-drawer-chevron" aria-hidden="true">▶</span>
+        </button>
+      </div>
       <div class="filter-drawer-body" id="filter-drawer-body">
-        <div id="tag-card" class="card sc-tag-card">
-          <div id="categories"></div>
+        <div class="sc-mode-bar" id="mode-bar" role="tablist" aria-label="搜索模式"></div>
+        <section class="sc-section sc-section-web-cats hidden" id="section-web-cats">
+          <h4 class="sc-section-label">联网分类</h4>
+          <div id="tag-card" class="sc-tag-card">
+            <div id="categories"></div>
+          </div>
+        </section>
+        <section class="sc-section sc-section-engines hidden" id="section-engines">
+          <h4 class="sc-section-label">搜索引擎</h4>
           <div id="engines"></div>
+        </section>
+        <section class="sc-section sc-section-cli hidden" id="section-cli">
+          <p class="sc-section-cli-hint">输入内容后按 Enter 或「搜索」，将发送到已选终端。可在「更多 ⋯」中打开终端列表。</p>
+        </section>
+      </div>
+    </div>
+
+  </section>
+
+  <main class="sc-main-content sc-page-column">
+  <div id="layout" class="sc-list-layout">
+    <div id="results-card" class="card results-column">
+      <div id="results-head" class="results-head-compact">
+        <div class="results-head-row">
+          <div class="head-title">本地结果</div>
+          <div class="head-sub" id="result-count">0 条</div>
         </div>
-        <div class="results-filter-strip">
-          <h4 class="filter-strip-label">结果筛选</h4>
+        <div id="results-local-filters" class="results-local-filters">
           <div id="head-filters">
             <div id="filters"></div>
             <div id="subtag-panel" class="hidden">
@@ -2368,33 +2606,19 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
           </div>
         </div>
       </div>
-    </div>
-
-  </section>
-
-  <main class="sc-main-content">
-  <div id="layout" class="sc-split-layout">
-    <div id="results-card" class="card results-column">
-      <div id="results-head" class="results-head-compact">
-        <div class="head-title">本地结果</div>
-        <div class="head-sub" id="result-count">0 条</div>
-      </div>
       <div id="result-list"></div>
     </div>
-    <div id="preview-card" class="card preview-column">
-      <div id="preview-head">
-        <div style="width: 100%;">
-          <div class="head-title">预览</div>
-          <div id="preview-meta" class="preview-meta-grid">
-             <div class="preview-empty-meta">未选中结果</div>
-          </div>
+  </div>
+  <div id="preview-dock-stash" aria-hidden="true">
+    <div id="inline-preview" class="inline-preview-shell hidden">
+      <div class="inline-preview-meta">
+        <div id="preview-meta" class="preview-meta-grid">
+          <div class="preview-meta-item preview-empty-meta">点击列表项展开预览</div>
         </div>
       </div>
       <div id="preview-panel">
         <div id="preview-main">
-          <div id="preview-web-scroll">当前未选中本地结果。
-
-在输入框中输入内容可实时过滤数据，点击列表项后会在这里显示详细预览。</div>
+          <div id="preview-web-scroll" class="sc-empty-hint">点击上方结果卡片可在此查看详细预览。</div>
           <div id="preview-host" aria-hidden="true"></div>
         </div>
         <div id="preview-ql-hint" class="hidden">
@@ -2413,7 +2637,7 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
   </div>
   </main>
 
-  <section class="sc-ft-section" aria-label="全文索引状态">
+  <section class="sc-ft-section sc-page-column" aria-label="全文索引状态">
     <div id="ft-drawer" class="ft-drawer ft-collapsed">
       <div class="ft-drawer-head">
         <button type="button" class="ft-drawer-toggle" id="btn-ft-drawer-toggle" aria-expanded="false">
@@ -2446,13 +2670,13 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
     </div>
   </section>
 
-  <footer id="footer" class="sc-footer-dock">
+  <footer id="footer" class="sc-footer-dock sc-page-column">
     <div class="dock-left">
       <span class="dock-status-dot" id="dock-sync-dot"></span>
       <span id="status">准备中...</span>
     </div>
     <div class="dock-center">
-      <span class="dock-hint">Enter 执行主操作 · Esc 关闭 · 双击结果立即处理</span>
+      <span class="dock-hint">单击展开预览 · 再按 Esc 收起 · Enter 执行 · 双击立即处理</span>
     </div>
     <div class="dock-right">
       <div class="footer-inline-btns">
@@ -2515,7 +2739,11 @@ if (typeof BasePanel === 'undefined') {
 const SC_ENGINE_MODE_KEY = "sc_engine_mode";
 const SC_HOTKEY_BINDINGS_KEY = "sc_hotkey_bindings_v1";
 const SC_FT_COLLAPSED_KEY = "sc_ft_collapsed_v1";
-const SC_FILTER_COLLAPSED_KEY = "sc_filter_collapsed_v1";
+const SC_FILTER_COLLAPSED_KEY = "sc_filter_collapsed_v2";
+const SC_UI_MODE_KEY = "sc_ui_mode_v1";
+const SC_WEB_CATEGORY_KEYS = new Set([
+  "ai", "academic", "baidu", "image", "audio", "video", "book", "price", "medical", "cloud"
+]);
 const SC_SUBTAG_AUDIENCE_KEY = "sc_subtag_audience_v1";
 const SC_SUBTAG_SELECTION_KEY = "sc_subtag_selection_v1";
 const SC_SUBTAG_DEBUG_KEY = "sc_subtag_debug_v1";
@@ -2584,6 +2812,7 @@ const state = {
   isCliCategory: false,
   statusLine: "",
   selectedRow: 1,
+  expandedRow: 0,
   capsHintActive: false,
   capsPressedKey: "",
   hotkeyBindings: null,
@@ -2612,6 +2841,7 @@ const state = {
   pdfWebBroken: false,
   pdfJsRx: null,
   hostTopMost: false,
+  uiMode: "local",
   unifiedMode: "search",
   modeSwitchGuardUntil: 0,
   modeSwitchGuardMs: 120,
@@ -3189,9 +3419,10 @@ function handleHotkeyBindKeydown(event) {
 }
 
 function getFooterHintText() {
-  return state.isCliCategory
-    ? "CLI 分类：输入后可直接发送到已选终端"
-    : "网络分类：输入后会并发打开已选搜索引擎";
+  const mode = getUIMode();
+  if (mode === "local") return "本地模式：输入过滤结果；方向键选择，Enter 执行";
+  if (mode === "cli" || state.isCliCategory) return "CLI：输入后发送到已选终端";
+  return "联网模式：输入后并发打开已选搜索引擎";
 }
 
 function syncFooterHint() {
@@ -3214,13 +3445,117 @@ function isScNarrow() {
   return window.innerWidth < 960;
 }
 
+function loadUIModePref() {
+  try {
+    const v = localStorage.getItem(SC_UI_MODE_KEY);
+    if (v === "local" || v === "web" || v === "cli") state.uiMode = v;
+  } catch (_) {}
+  if (!state.uiMode) state.uiMode = "local";
+}
+
+function inferUIModeFromCategory(key) {
+  const k = String(key || "");
+  if (k === "cli") return "cli";
+  return "web";
+}
+
+function getUIMode() {
+  if (state.uiMode === "local" || state.uiMode === "web" || state.uiMode === "cli") {
+    return state.uiMode;
+  }
+  return inferUIModeFromCategory(state.currentCategoryKey);
+}
+
+function syncModeSections() {
+  const mode = getUIMode();
+  const secCats = document.getElementById("section-web-cats");
+  const secEng = document.getElementById("section-engines");
+  const secCli = document.getElementById("section-cli");
+  const resultsFilters = document.getElementById("results-local-filters");
+  if (secCats) secCats.classList.toggle("hidden", mode !== "web");
+  if (secEng) secEng.classList.toggle("hidden", mode !== "web");
+  if (secCli) secCli.classList.toggle("hidden", mode !== "cli");
+  if (resultsFilters) resultsFilters.classList.toggle("hidden", mode !== "local");
+  const drawer = document.getElementById("filter-drawer");
+  if (drawer) {
+    drawer.classList.toggle("sc-mode-local", mode === "local");
+    drawer.classList.toggle("sc-mode-web", mode === "web");
+    drawer.classList.toggle("sc-mode-cli", mode === "cli");
+  }
+}
+
+function renderModeBar() {
+  const bar = document.getElementById("mode-bar");
+  if (!bar) return;
+  const mode = getUIMode();
+  const modes = [
+    { id: "local", label: "本地搜索", desc: "文件、剪贴板、配置" },
+    { id: "web", label: "联网搜索", desc: "打开已选搜索引擎" },
+    { id: "cli", label: "终端 CLI", desc: "发送到终端" }
+  ];
+  bar.innerHTML = "";
+  modes.forEach((m) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "mode-seg" + (mode === m.id ? " active" : "");
+    btn.setAttribute("role", "tab");
+    btn.setAttribute("aria-selected", mode === m.id ? "true" : "false");
+    btn.innerHTML =
+      "<span class=\"mode-seg-label\">" + escapeHtml(m.label) + "</span>" +
+      "<span class=\"mode-seg-desc\">" + escapeHtml(m.desc) + "</span>";
+    btn.addEventListener("click", () => setUIMode(m.id, true));
+    bar.appendChild(btn);
+  });
+}
+
+function setUIMode(mode, persist) {
+  const m = mode === "cli" ? "cli" : mode === "web" ? "web" : "local";
+  state.uiMode = m;
+  if (persist) {
+    try { localStorage.setItem(SC_UI_MODE_KEY, m); } catch (_) {}
+  }
+  if (m === "cli") {
+    postToAhk({ type: "setCategory", category: "cli" });
+  } else if (m === "web" && state.currentCategoryKey === "cli") {
+    postToAhk({ type: "setCategory", category: "ai" });
+  }
+  renderModeBar();
+  syncModeSections();
+  syncFilterDrawerSummary();
+  syncFooterHint();
+  const drawer = document.getElementById("filter-drawer");
+  if (drawer && drawer.classList.contains("collapsed")) {
+    setFilterCollapsed(false, false);
+  }
+}
+
+function syncFilterDrawerSummary() {
+  const el = document.getElementById("filter-drawer-summary");
+  if (!el) return;
+  const mode = getUIMode();
+  if (mode === "local") {
+    const row = (state.filters || []).find((f) => String(f.key || "") === String(state.filterType || ""));
+    const ft = row ? row.text : (state.filterType ? state.filterType : "全部");
+    el.textContent = "本地搜索";
+    return;
+  }
+  if (mode === "cli") {
+    el.textContent = "终端 · 发送到 CLI";
+    return;
+  }
+  const cat = (state.categories || []).find((c) => c.key === state.currentCategoryKey);
+  const catText = cat ? cat.text : (state.currentCategoryKey || "联网");
+  const n = (state.selectedEngines || []).length;
+  el.textContent = "联网 · " + catText + " · " + n + " 个引擎";
+}
+
 function getFilterCollapsedPref() {
   try {
     const v = localStorage.getItem(SC_FILTER_COLLAPSED_KEY);
     if (v === "1") return true;
     if (v === "0") return false;
   } catch (_) {}
-  return isScNarrow();
+  return true;
 }
 
 function syncFilterDrawerUi() {
@@ -3241,12 +3576,17 @@ function setFilterCollapsed(collapsed, persist) {
     try { localStorage.setItem(SC_FILTER_COLLAPSED_KEY, collapsed ? "1" : "0"); } catch (_) {}
   }
   syncFilterDrawerUi();
+  syncFilterDrawerSummary();
 }
 
 function initFilterDrawer() {
+  loadUIModePref();
   const drawer = document.getElementById("filter-drawer");
   const btn = document.getElementById("btn-filter-drawer-toggle");
   if (!drawer) return;
+  renderModeBar();
+  syncModeSections();
+  syncFilterDrawerSummary();
   setFilterCollapsed(getFilterCollapsedPref(), false);
   if (btn) {
     btn.addEventListener("click", () => {
@@ -4400,7 +4740,11 @@ function renderCategories() {
     el.dataset.hotkeyValue = String(cat.key || "");
     el.dataset.hotkeyLabel = String(cat.text || cat.key || "");
     el.innerHTML = "<span class=\"chip-main\"><span class=\"chip-title\">" + escapeHtml(cat.text) + "</span>" + hotkeyHintHtml(hotkey, "category", cat.key, cat.text) + "</span><span class=\"count\">" + (cat.selectedCount || 0) + "</span>";
-    el.onclick = () => postToAhk({ type: "setCategory", category: cat.key });
+    el.onclick = () => {
+      if (cat.key === "cli") setUIMode("cli", true);
+      else if (SC_WEB_CATEGORY_KEYS.has(cat.key)) setUIMode("web", true);
+      postToAhk({ type: "setCategory", category: cat.key });
+    };
     wrap.appendChild(el);
   });
   updateHotkeyHighlights();
@@ -4443,6 +4787,7 @@ function renderFilters() {
     el.dataset.filterKey = filter.key || "";
     el.innerHTML = "<span class=\"filter-label\">" + escapeHtml(filter.text) + "</span>" + hotkeyHintHtml(hotkey, "filter", filter.key, filter.text);
     const applyFilter = () => {
+      if (getUIMode() !== "local") setUIMode("local", true);
       const input = document.getElementById("search");
       const keyword = input ? String(input.value || "") : String(state.keyword || "");
       state.keyword = keyword;
@@ -4472,12 +4817,71 @@ function renderFilters() {
   updateHotkeyHighlights();
 }
 
+function unmountInlinePreview() {
+  const dock = document.getElementById("inline-preview");
+  const stash = document.getElementById("preview-dock-stash");
+  if (!dock || !stash) return;
+  if (dock.parentElement !== stash) stash.appendChild(dock);
+  dock.classList.add("hidden");
+  stopNativePreview();
+  setQuickLookHintVisible(false);
+}
+
+function mountInlinePreview() {
+  const row = Number(state.expandedRow) || 0;
+  const dock = document.getElementById("inline-preview");
+  if (!dock) return;
+  if (!row) {
+    unmountInlinePreview();
+    return;
+  }
+  const itemEl = document.querySelector('.result-item[data-row="' + row + '"]');
+  const slot = itemEl ? itemEl.querySelector(".result-item-expand") : null;
+  if (!slot) return;
+  dock.classList.remove("hidden");
+  slot.appendChild(dock);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => scheduleRunPreview());
+  });
+}
+
+function toggleResultExpand(row) {
+  const r = Number(row) || 0;
+  if (state.expandedRow === r) {
+    state.expandedRow = 0;
+    unmountInlinePreview();
+  } else {
+    state.expandedRow = r;
+    state.selectedRow = r;
+  }
+  renderResults();
+}
+
+function getPreviewTargetRow() {
+  return Number(state.expandedRow) || 0;
+}
+
+function getPreviewTargetItem() {
+  const row = getPreviewTargetRow();
+  if (!row) return null;
+  return state.results.find((entry) => entry.row == row) || null;
+}
+
+function clearResultList(list) {
+  if (!list) return;
+  unmountInlinePreview();
+  while (list.firstChild) list.removeChild(list.firstChild);
+}
+
 function renderResults() {
   const list = document.getElementById("result-list");
-  list.innerHTML = "";
+  if (!list) return;
+  clearResultList(list);
   disconnectLoadMoreObserver();
 
   if (!state.results.length) {
+    state.expandedRow = 0;
+    unmountInlinePreview();
     const isFulltextFilter = resolveFilterKey() === "fulltext";
     const inTransition = isFulltextFilter && Date.now() < Number(state.fulltextEmptyTransitionUntil || 0);
     const emptyClass = "empty" + (inTransition ? " empty-transition" : "");
@@ -4487,17 +4891,22 @@ function renderResults() {
     list.innerHTML =
       "<div class=\"" + emptyClass + "\">" + lead + "暂无结果。<br>你可以在输入框输入关键词搜索本地内容，或选择引擎后执行网络搜索 / CLI 发送。</div>" +
       buildSkeletonListHtml(7);
-    renderPreview();
     return;
   }
 
-  if (state.selectedRow < 1 || state.selectedRow > state.results.length) {
-    state.selectedRow = 1;
+  if (state.selectedRow < 1 || !state.results.some((entry) => entry.row == state.selectedRow)) {
+    state.selectedRow = state.results.length ? state.results[0].row : 1;
+  }
+  if (state.expandedRow && !state.results.some((entry) => entry.row == state.expandedRow)) {
+    state.expandedRow = 0;
+    unmountInlinePreview();
   }
 
   state.results.forEach((item) => {
+    const expanded = item.row === state.expandedRow;
     const row = document.createElement("div");
-    row.className = "result-item" + (item.row === state.selectedRow ? " active" : "");
+    row.className = "result-item" + (item.row === state.selectedRow ? " active" : "") + (expanded ? " expanded" : "");
+    row.dataset.row = String(item.row);
     const pinMark = item.pinned ? "<span class=\"pin-ico\" title=\"置顶\">🔝</span>" : "";
     const hitCtx = getHitContextList(item);
     let hitBlock = "";
@@ -4513,7 +4922,9 @@ function renderResults() {
         "<button type=\"button\" class=\"hit-ctx-btn\">命中上下文 · " + hitCtx.length + "</button>" +
         "<div class=\"hit-ctx-body hidden\">" + lines.join("<br>") + "</div></div>";
     }
-    row.innerHTML =
+    const head = document.createElement("div");
+    head.className = "result-item-head";
+    head.innerHTML =
       "<div>" +
         "<div class=\"result-title\">" + pinMark + highlight(item.title, state.keyword) + "</div>" +
         "<div class=\"result-sub\">" + escapeHtml(item.subtitle || "") + "</div>" +
@@ -4525,8 +4936,8 @@ function renderResults() {
         "<span class=\"time\">" + escapeHtml(item.time || "") + "</span>" +
       "</div>";
     if (hitCtx) {
-      const btn = row.querySelector(".hit-ctx-btn");
-      const body = row.querySelector(".hit-ctx-body");
+      const btn = head.querySelector(".hit-ctx-btn");
+      const body = head.querySelector(".hit-ctx-body");
       if (btn && body) {
         btn.addEventListener("click", (e) => {
           e.preventDefault();
@@ -4535,11 +4946,20 @@ function renderResults() {
         });
       }
     }
-    row.onclick = () => {
-      state.selectedRow = item.row;
-      renderResults();
-    };
-    row.oncontextmenu = (ev) => {
+    head.addEventListener("click", (e) => {
+      if (e.target.closest(".hit-ctx-btn")) return;
+      toggleResultExpand(item.row);
+    });
+    head.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      postToAhk({ type: "activateResult", row: item.row });
+    });
+    const expandSlot = document.createElement("div");
+    expandSlot.className = "result-item-expand";
+    row.appendChild(head);
+    row.appendChild(expandSlot);
+    row.addEventListener("contextmenu", (ev) => {
       ev.preventDefault();
       state.selectedRow = item.row;
       renderResults();
@@ -4550,10 +4970,7 @@ function renderResults() {
         screenX: ev.screenX,
         screenY: ev.screenY,
       });
-    };
-    row.ondblclick = () => {
-      postToAhk({ type: "activateResult", row: item.row });
-    };
+    });
     list.appendChild(row);
   });
 
@@ -4571,8 +4988,11 @@ function renderResults() {
     setupLoadMoreObserver();
   }
 
-  renderPreview();
-  syncNarrowPreview();
+  mountInlinePreview();
+  if (state.expandedRow) {
+    const el = document.querySelector('.result-item[data-row="' + state.expandedRow + '"]');
+    if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
 }
 
 function looksLikeWindowsPath(s) {
@@ -5350,13 +5770,13 @@ function runPreviewForSelection() {
   const seq = state.previewSeq;
   const meta = document.getElementById("preview-meta");
   const pane = document.getElementById("preview-web-scroll");
-  const item = state.results.find((entry) => entry.row == state.selectedRow);
+  const item = getPreviewTargetItem();
   if (!meta || !pane) return;
 
   if (!item) {
-    meta.textContent = "未选中结果";
+    meta.innerHTML = "<div class=\"preview-meta-item preview-empty-meta\">未展开预览</div>";
     pane.innerHTML =
-      "<div class=\"preview-empty\">当前未选中本地结果。<br><br>在输入框中输入内容可实时过滤数据，点击列表项后会在这里显示详细预览。<br><br>" +
+      "<div class=\"preview-empty\">点击列表项展开卡片即可查看详细预览。<br><br>" +
       "<div class=\"sk-line w1\"></div><div class=\"sk-line w3\"></div><div class=\"sk-line w2\"></div></div>";
     setPreviewLayoutMode("web");
     setQuickLookHintVisible(false);
@@ -5855,8 +6275,13 @@ function applyState(payload) {
   }
 
   const wasSelected = state.selectedRow;
+  const wasExpanded = state.expandedRow;
   if (!state.results.some((item) => item.row == wasSelected)) {
     state.selectedRow = state.results.length ? state.results[0].row : 1;
+  }
+  if (wasExpanded && !state.results.some((item) => item.row == wasExpanded)) {
+    state.expandedRow = 0;
+    unmountInlinePreview();
   }
 
   document.getElementById("search").value = state.keyword;
@@ -5872,15 +6297,20 @@ function applyState(payload) {
     renderRecycleModalList();
   }
 
+  if (state.currentCategoryKey === "cli" && state.uiMode !== "local") {
+    state.uiMode = "cli";
+  }
+  renderModeBar();
+  syncModeSections();
   renderCategories();
   renderEngines();
   renderFilters();
+  syncFilterDrawerSummary();
   scheduleScHotkeyBindingsSync();
   renderResults();
   syncEngineModeButton();
   syncFilterDrawerUi();
   syncFtDrawerSummary();
-  syncNarrowPreview();
   updateChromeTopMostButton();
   requestAnimationFrame(() => {
     window.dispatchEvent(new Event("resize"));
@@ -6177,6 +6607,12 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "Escape") {
     event.preventDefault();
+    if (state.expandedRow) {
+      state.expandedRow = 0;
+      unmountInlinePreview();
+      renderResults();
+      return;
+    }
     requestHostClose("escape");
     return;
   }
@@ -6191,7 +6627,12 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === " ") {
     event.preventDefault();
-    if (state.previewPath) {
+    if (!state.expandedRow && state.selectedRow) {
+      state.expandedRow = state.selectedRow;
+      renderResults();
+      return;
+    }
+    if (state.previewPath || state.expandedRow) {
       scheduleRunPreview();
     }
     return;
@@ -6199,17 +6640,21 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "ArrowDown" && state.results.length) {
     event.preventDefault();
+    const followExpand = state.expandedRow > 0;
     const current = state.results.findIndex((item) => item.row === state.selectedRow);
     const next = Math.min(state.results.length - 1, Math.max(0, current + 1));
     state.selectedRow = state.results[next].row;
+    if (followExpand) state.expandedRow = state.selectedRow;
     renderResults();
   }
 
   if (event.key === "ArrowUp" && state.results.length) {
     event.preventDefault();
+    const followExpand = state.expandedRow > 0;
     const current = state.results.findIndex((item) => item.row === state.selectedRow);
     const next = Math.max(0, (current < 0 ? 0 : current) - 1);
     state.selectedRow = state.results[next].row;
+    if (followExpand) state.expandedRow = state.selectedRow;
     renderResults();
   }
 

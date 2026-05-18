@@ -79,3 +79,34 @@
 [2026-05-18 16:40:05][focus][release] owner=SearchCenter reason=wm_deactivate
 [2026-05-18 16:45:53][focus][grant] owner=SearchCenter hwnd=13304474 priority=20 reason=show_focus
 [2026-05-18 16:46:05][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 16:48:30][focus][grant] owner=SearchCenter hwnd=16124864 priority=20 reason=show_focus
+[2026-05-18 16:49:00][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-18 17:05:55][focus][grant] owner=SearchCenter hwnd=27460160 priority=20 reason=show_focus
+[2026-05-18 17:07:16][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 17:15:46][focus][grant] owner=SearchCenter hwnd=42404898 priority=20 reason=show_focus
+[2026-05-18 17:15:58][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 17:19:49][focus][grant] owner=SearchCenter hwnd=33362388 priority=20 reason=show_focus
+[2026-05-18 17:22:08][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 17:27:47][focus][grant] owner=SearchCenter hwnd=10097152 priority=20 reason=show_focus
+[2026-05-18 17:28:02][focus][grant] owner=SearchCenter hwnd=10097152 priority=20 reason=show_focus
+[2026-05-18 17:28:02][focus][grant] owner=SearchCenter hwnd=10097152 priority=20 reason=focus_deferred
+[2026-05-18 17:28:02][focus][grant] owner=SearchCenter hwnd=10097152 priority=20 reason=deferred_move_focus
+[2026-05-18 17:28:03][focus][grant] owner=SearchCenter hwnd=10097152 priority=20 reason=focus_for_ime
+[2026-05-18 17:29:15][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 17:35:25][focus][grant] owner=SearchCenter hwnd=26088274 priority=20 reason=show_focus
+[2026-05-18 17:36:21][focus][grant] owner=SearchCenter hwnd=26088274 priority=20 reason=show_focus
+[2026-05-18 17:36:21][focus][grant] owner=SearchCenter hwnd=26088274 priority=20 reason=focus_deferred
+[2026-05-18 17:36:21][focus][grant] owner=SearchCenter hwnd=26088274 priority=20 reason=deferred_move_focus
+[2026-05-18 17:36:22][focus][grant] owner=SearchCenter hwnd=26088274 priority=20 reason=focus_for_ime
+[2026-05-18 17:37:01][focus][grant] owner=SearchCenter hwnd=6488658 priority=20 reason=dark_ctx_menu
+[2026-05-18 17:37:01][focus][grant] owner=SearchCenter hwnd=14225890 priority=20 reason=dark_sub_menu
+[2026-05-18 17:37:05][focus][grant] owner=SearchCenter hwnd=7144018 priority=20 reason=dark_ctx_menu
+[2026-05-18 17:37:06][focus][grant] owner=SearchCenter hwnd=17697688 priority=20 reason=dark_sub_menu
+[2026-05-18 17:37:08][focus][grant] owner=SearchCenter hwnd=17763224 priority=20 reason=dark_sub_menu
+[2026-05-18 17:40:31][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 17:45:49][focus][grant] owner=SearchCenter hwnd=25496950 priority=20 reason=show_focus
+[2026-05-18 17:47:18][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 17:47:35][focus][grant] owner=SearchCenter hwnd=76350106 priority=20 reason=show_focus
+[2026-05-18 17:47:44][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 17:54:32][focus][grant] owner=SearchCenter hwnd=105449860 priority=20 reason=show_focus
+[2026-05-18 17:55:21][focus][release] owner=SearchCenter reason=wm_deactivate

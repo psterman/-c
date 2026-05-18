@@ -9821,3 +9821,1497 @@
 [2026-05-18 16:48:27] selection cursor_over_ui miss mouse_x=321 mouse_y=256 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
 [2026-05-18 16:48:27] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
 [2026-05-18 16:48:27] selection lbutton_up no_trigger=click
+[2026-05-18 16:48:30] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:48:30] gdho stop begin
+[2026-05-18 16:48:30] gdho poll disarm skip reason=stop
+[2026-05-18 16:48:30] gdho gdho_phase CLOSED->CLOSING reason=stop token=3
+[2026-05-18 16:48:30] gdho hide_frontend queue hide
+[2026-05-18 16:48:30] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=3
+[2026-05-18 16:48:30] gdho stop done
+[2026-05-18 16:48:34] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1494 mouse_y=140
+[2026-05-18 16:48:34] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:37] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1379 mouse_y=167
+[2026-05-18 16:48:37] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:38] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1409 mouse_y=166
+[2026-05-18 16:48:38] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:39] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1409 mouse_y=166
+[2026-05-18 16:48:39] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:40] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1153 mouse_y=851
+[2026-05-18 16:48:40] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:41] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=821 mouse_y=921
+[2026-05-18 16:48:41] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:43] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1119 mouse_y=167
+[2026-05-18 16:48:43] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:44] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1119 mouse_y=167
+[2026-05-18 16:48:44] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:44] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=887 mouse_y=103
+[2026-05-18 16:48:44] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:45] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=877 mouse_y=160
+[2026-05-18 16:48:45] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:46] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=916 mouse_y=162
+[2026-05-18 16:48:46] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:47] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=852 mouse_y=148
+[2026-05-18 16:48:47] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:47] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=857 mouse_y=161
+[2026-05-18 16:48:47] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:48] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=952 mouse_y=178
+[2026-05-18 16:48:48] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:50] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=433 mouse_y=407
+[2026-05-18 16:48:50] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:50] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=546 mouse_y=461
+[2026-05-18 16:48:50] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:51] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=574 mouse_y=604
+[2026-05-18 16:48:51] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:51] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=592 mouse_y=714
+[2026-05-18 16:48:51] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:52] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=616 mouse_y=758
+[2026-05-18 16:48:52] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:57] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=819 mouse_y=192
+[2026-05-18 16:48:57] selection lbutton_up skip=our_ui
+[2026-05-18 16:48:58] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=788 mouse_y=139
+[2026-05-18 16:48:58] selection lbutton_up skip=our_ui
+[2026-05-18 16:49:00] selection cursor_over_ui hit=g_SCWV_Gui hwnd=16124864 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1897 mouse_y=13
+[2026-05-18 16:49:00] selection lbutton_up skip=our_ui
+[2026-05-18 16:49:00] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:49:00] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:49:00] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 16:49:00] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 16:49:00] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 16:49:00] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 16:49:00] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 16:49:00] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 16:49:00] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 16:49:00] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 16:49:00] reset_session_step js_done reason=search_center_exit
+[2026-05-18 16:49:00] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 16:49:00] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 16:49:02] selection cursor_over_ui miss mouse_x=26 mouse_y=141 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:49:02] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:49:02] selection lbutton_up no_trigger=click
+[2026-05-18 16:49:03] selection cursor_over_ui miss mouse_x=22 mouse_y=374 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:49:03] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:49:03] selection lbutton_up no_trigger=click
+[2026-05-18 16:49:04] selection cursor_over_ui miss mouse_x=30 mouse_y=356 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:49:04] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 16:49:04] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 16:49:06] selection cursor_over_ui miss mouse_x=1836 mouse_y=60 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:49:06] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:49:06] selection lbutton_up no_trigger=click
+[2026-05-18 16:49:07] selection cursor_over_ui miss mouse_x=1836 mouse_y=60 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:49:07] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 16:49:07] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 16:49:08] selection cursor_over_ui miss mouse_x=1545 mouse_y=53 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:49:08] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:49:08] selection lbutton_up no_trigger=click
+[2026-05-18 16:49:09] selection cursor_over_ui miss mouse_x=1579 mouse_y=55 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:49:09] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:49:09] selection lbutton_up no_trigger=click
+[2026-05-18 16:49:10] selection cursor_over_ui miss mouse_x=1546 mouse_y=143 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:49:10] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:49:10] selection lbutton_up no_trigger=click
+[2026-05-18 16:52:07] selection cursor_over_ui miss mouse_x=2206 mouse_y=388 top=hwnd=67720 class=Chrome_WidgetWin_1 title=搜索排序算法优化批判 - Google Gemini - Google Chrome exe=chrome.exe
+[2026-05-18 16:52:07] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:52:07] selection lbutton_up no_trigger=click
+[2026-05-18 16:52:37] selection cursor_over_ui miss mouse_x=2266 mouse_y=375 top=hwnd=8323816 class=HwndWrapper[Raycast;Main;45f2cfa9-4445-445c-ad26-bd5499adc0be] title=Raycast exe=Raycast.exe
+[2026-05-18 16:52:37] selection lbutton_up dist_x=275 dist_y=56 drag=1 multi=0
+[2026-05-18 16:52:37] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 16:52:39] selection cursor_over_ui miss mouse_x=397 mouse_y=877 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:52:39] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:52:39] selection lbutton_up no_trigger=click
+[2026-05-18 16:52:40] selection cursor_over_ui miss mouse_x=398 mouse_y=883 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:52:40] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:52:40] selection lbutton_up no_trigger=click
+[2026-05-18 16:52:40] selection cursor_over_ui miss mouse_x=366 mouse_y=902 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:52:40] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:52:40] selection lbutton_up no_trigger=click
+[2026-05-18 16:53:22] selection cursor_over_ui miss mouse_x=227 mouse_y=921 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:53:22] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:53:22] selection lbutton_up no_trigger=click
+[2026-05-18 16:58:18] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=49877266 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=859 mouse_y=728
+[2026-05-18 16:58:18] selection lbutton_up skip=our_ui
+[2026-05-18 17:05:02] selection cursor_over_ui miss mouse_x=1854 mouse_y=174 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:05:02] selection lbutton_up dist_x=207 dist_y=0 drag=1 multi=0
+[2026-05-18 17:05:02] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 17:05:03] selection cursor_over_ui miss mouse_x=1779 mouse_y=226 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:05:03] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:05:03] selection lbutton_up no_trigger=click
+[2026-05-18 17:05:46] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=49877266 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1502 mouse_y=653
+[2026-05-18 17:05:46] selection lbutton_up skip=our_ui
+[2026-05-18 17:05:48] selection cursor_over_ui miss mouse_x=824 mouse_y=931 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:05:48] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:05:48] selection lbutton_up no_trigger=click
+[2026-05-18 17:05:55] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=49877266 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1515 mouse_y=668
+[2026-05-18 17:05:55] selection lbutton_up skip=our_ui
+[2026-05-18 17:05:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:05:55] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:05:55] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:05:55] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 17:05:55] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 17:05:55] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 17:05:55] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:05:55] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:05:55] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 17:05:55] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 17:05:55] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 17:05:55] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 17:05:55] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 17:05:55] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 17:05:55] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 17:05:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:05:55] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 17:05:55] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:05:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:05:55] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 17:05:55] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 17:05:55] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:05:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:05:55] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 17:05:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:05:55] gdho stop begin
+[2026-05-18 17:05:55] gdho poll disarm skip reason=stop
+[2026-05-18 17:05:55] gdho gdho_phase CLOSED->CLOSING reason=stop token=4
+[2026-05-18 17:05:55] gdho hide_frontend queue hide
+[2026-05-18 17:05:55] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=4
+[2026-05-18 17:05:55] gdho stop done
+[2026-05-18 17:06:48] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1251 mouse_y=731
+[2026-05-18 17:06:48] selection lbutton_up skip=our_ui
+[2026-05-18 17:06:49] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=982 mouse_y=811
+[2026-05-18 17:06:49] selection lbutton_up skip=our_ui
+[2026-05-18 17:06:50] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1026 mouse_y=795
+[2026-05-18 17:06:50] selection lbutton_up skip=our_ui
+[2026-05-18 17:06:56] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1179 mouse_y=725
+[2026-05-18 17:06:56] selection lbutton_up skip=our_ui
+[2026-05-18 17:06:58] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1230 mouse_y=380
+[2026-05-18 17:06:58] selection lbutton_up skip=our_ui
+[2026-05-18 17:07:00] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1201 mouse_y=238
+[2026-05-18 17:07:00] selection lbutton_up skip=our_ui
+[2026-05-18 17:07:01] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1182 mouse_y=241
+[2026-05-18 17:07:01] selection lbutton_up skip=our_ui
+[2026-05-18 17:07:01] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1186 mouse_y=358
+[2026-05-18 17:07:01] selection lbutton_up skip=our_ui
+[2026-05-18 17:07:02] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1009 mouse_y=291
+[2026-05-18 17:07:02] selection lbutton_up skip=our_ui
+[2026-05-18 17:07:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1009 mouse_y=291
+[2026-05-18 17:07:03] selection lbutton_up skip=our_ui
+[2026-05-18 17:07:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=994 mouse_y=286
+[2026-05-18 17:07:04] selection lbutton_up skip=our_ui
+[2026-05-18 17:07:06] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1025 mouse_y=290
+[2026-05-18 17:07:06] selection lbutton_up skip=our_ui
+[2026-05-18 17:07:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=825 mouse_y=303
+[2026-05-18 17:07:07] selection lbutton_up skip=our_ui
+[2026-05-18 17:07:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=785 mouse_y=289
+[2026-05-18 17:07:08] selection lbutton_up skip=our_ui
+[2026-05-18 17:07:10] selection cursor_over_ui hit=g_SCWV_Gui hwnd=27460160 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=787 mouse_y=286
+[2026-05-18 17:07:10] selection lbutton_up skip=our_ui
+[2026-05-18 17:07:16] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:07:16] gdho stop begin
+[2026-05-18 17:07:16] gdho poll disarm skip reason=stop
+[2026-05-18 17:07:16] gdho gdho_phase CLOSED->CLOSING reason=stop token=5
+[2026-05-18 17:07:16] gdho hide_frontend queue hide
+[2026-05-18 17:07:16] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=5
+[2026-05-18 17:07:16] gdho stop done
+[2026-05-18 17:07:16] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:07:16] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:07:16] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 17:07:16] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 17:07:16] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 17:07:16] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 17:07:16] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 17:07:16] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 17:07:16] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 17:07:16] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 17:07:16] reset_session_step js_done reason=search_center_exit
+[2026-05-18 17:07:16] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 17:07:16] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 17:07:18] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:07:18] gdho stop begin
+[2026-05-18 17:07:18] gdho poll disarm skip reason=stop
+[2026-05-18 17:07:18] gdho gdho_phase CLOSED->CLOSING reason=stop token=6
+[2026-05-18 17:07:18] gdho hide_frontend queue hide
+[2026-05-18 17:07:18] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=6
+[2026-05-18 17:07:18] gdho stop done
+[2026-05-18 17:07:22] selection cursor_over_ui miss mouse_x=275 mouse_y=908 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:07:22] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:07:22] selection lbutton_up no_trigger=click
+[2026-05-18 17:07:43] selection cursor_over_ui miss mouse_x=1440 mouse_y=1067 top=hwnd=65794 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-18 17:07:43] selection lbutton_up dist_x=19 dist_y=400 drag=1 multi=0
+[2026-05-18 17:07:43] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 17:07:46] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:07:46] gdho stop begin
+[2026-05-18 17:07:46] gdho poll disarm skip reason=stop
+[2026-05-18 17:07:46] gdho gdho_phase CLOSED->CLOSING reason=stop token=7
+[2026-05-18 17:07:46] gdho hide_frontend queue hide
+[2026-05-18 17:07:46] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=7
+[2026-05-18 17:07:46] gdho stop done
+[2026-05-18 17:07:51] selection cursor_over_ui miss mouse_x=3684 mouse_y=191 top=hwnd=33491550 class=Chrome_WidgetWin_1 title= exe=chrome.exe
+[2026-05-18 17:07:51] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:07:51] selection lbutton_up no_trigger=click
+[2026-05-18 17:07:52] selection cursor_over_ui miss mouse_x=2768 mouse_y=603 top=hwnd=21105364 class=Chrome_WidgetWin_1 title=Wails Toolbar Skeleton - Google Chrome exe=chrome.exe
+[2026-05-18 17:07:52] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:07:52] selection lbutton_up no_trigger=click
+[2026-05-18 17:07:53] selection cursor_over_ui miss mouse_x=2746 mouse_y=555 top=hwnd=21105364 class=Chrome_WidgetWin_1 title=Wails Toolbar Skeleton - Google Chrome exe=chrome.exe
+[2026-05-18 17:07:53] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 17:07:53] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 17:07:53] selection cursor_over_ui miss mouse_x=2762 mouse_y=572 top=hwnd=21105364 class=Chrome_WidgetWin_1 title=Wails Toolbar Skeleton - Google Chrome exe=chrome.exe
+[2026-05-18 17:07:53] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:07:53] selection lbutton_up no_trigger=click
+[2026-05-18 17:07:54] selection cursor_over_ui miss mouse_x=2692 mouse_y=576 top=hwnd=21105364 class=Chrome_WidgetWin_1 title=Wails Toolbar Skeleton - Google Chrome exe=chrome.exe
+[2026-05-18 17:07:54] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:07:54] selection lbutton_up no_trigger=click
+[2026-05-18 17:07:55] selection cursor_over_ui miss mouse_x=2632 mouse_y=561 top=hwnd=21105364 class=Chrome_WidgetWin_1 title=Wails Toolbar Skeleton - Google Chrome exe=chrome.exe
+[2026-05-18 17:07:55] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:07:55] selection lbutton_up no_trigger=click
+[2026-05-18 17:07:57] selection cursor_over_ui miss mouse_x=3696 mouse_y=220 top=hwnd=16913252 class=Chrome_WidgetWin_1 title=V2EX Polish 已被禁用 exe=chrome.exe
+[2026-05-18 17:07:57] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:07:57] selection lbutton_up no_trigger=click
+[2026-05-18 17:07:59] selection cursor_over_ui miss mouse_x=2945 mouse_y=600 top=hwnd=21105364 class=Chrome_WidgetWin_1 title=Wails Toolbar Skeleton - Google Chrome exe=chrome.exe
+[2026-05-18 17:07:59] selection lbutton_up dist_x=2 dist_y=3 drag=0 multi=0
+[2026-05-18 17:07:59] selection lbutton_up no_trigger=click
+[2026-05-18 17:07:59] selection cursor_over_ui miss mouse_x=2911 mouse_y=585 top=hwnd=21105364 class=Chrome_WidgetWin_1 title=Wails Toolbar Skeleton - Google Chrome exe=chrome.exe
+[2026-05-18 17:07:59] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=1
+[2026-05-18 17:07:59] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 17:08:02] selection cursor_over_ui miss mouse_x=828 mouse_y=927 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:08:02] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:08:02] selection lbutton_up no_trigger=click
+[2026-05-18 17:08:04] selection cursor_over_ui miss mouse_x=1507 mouse_y=972 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:08:04] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:08:04] selection lbutton_up no_trigger=click
+[2026-05-18 17:08:04] selection cursor_over_ui miss mouse_x=1497 mouse_y=956 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:08:04] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:08:04] selection lbutton_up no_trigger=click
+[2026-05-18 17:08:06] selection cursor_over_ui miss mouse_x=1450 mouse_y=955 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:08:06] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:08:06] selection lbutton_up no_trigger=click
+[2026-05-18 17:10:16] selection cursor_over_ui miss mouse_x=1784 mouse_y=449 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:10:16] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:10:16] selection lbutton_up no_trigger=click
+[2026-05-18 17:10:19] selection cursor_over_ui miss mouse_x=1878 mouse_y=488 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:10:19] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:10:19] selection lbutton_up no_trigger=click
+[2026-05-18 17:11:21] selection cursor_over_ui miss mouse_x=1682 mouse_y=798 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:11:21] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:11:21] selection lbutton_up no_trigger=click
+[2026-05-18 17:11:29] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:11:29] gdho stop begin
+[2026-05-18 17:11:29] gdho poll disarm skip reason=stop
+[2026-05-18 17:11:29] gdho gdho_phase CLOSED->CLOSING reason=stop token=8
+[2026-05-18 17:11:29] gdho hide_frontend queue hide
+[2026-05-18 17:11:29] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=8
+[2026-05-18 17:11:29] gdho stop done
+[2026-05-18 17:11:34] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:11:34] gdho stop begin
+[2026-05-18 17:11:34] gdho poll disarm skip reason=stop
+[2026-05-18 17:11:34] gdho gdho_phase CLOSED->CLOSING reason=stop token=9
+[2026-05-18 17:11:34] gdho hide_frontend queue hide
+[2026-05-18 17:11:34] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=9
+[2026-05-18 17:11:34] gdho stop done
+[2026-05-18 17:11:40] selection cursor_over_ui miss mouse_x=1766 mouse_y=822 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:11:40] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:11:40] selection lbutton_up no_trigger=click
+[2026-05-18 17:11:54] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=49877266 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1480 mouse_y=889
+[2026-05-18 17:11:54] selection lbutton_up skip=our_ui
+[2026-05-18 17:14:50] selection cursor_over_ui miss mouse_x=1577 mouse_y=955 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:14:50] selection lbutton_up dist_x=46 dist_y=27 drag=1 multi=0
+[2026-05-18 17:14:50] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 17:14:51] selection cursor_over_ui miss mouse_x=1615 mouse_y=961 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:14:51] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:14:51] selection lbutton_up no_trigger=click
+[2026-05-18 17:15:46] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=49877266 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1501 mouse_y=903
+[2026-05-18 17:15:46] selection lbutton_up skip=our_ui
+[2026-05-18 17:15:46] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:15:46] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:15:46] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:15:46] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 17:15:46] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 17:15:46] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 17:15:46] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:15:46] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:15:46] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 17:15:46] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 17:15:46] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:15:46] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 17:15:46] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:15:46] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:15:46] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 17:15:46] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 17:15:46] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:15:46] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:15:46] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 17:15:46] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 17:15:46] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 17:15:46] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 17:15:46] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 17:15:46] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 17:15:46] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:15:46] gdho stop begin
+[2026-05-18 17:15:46] gdho poll disarm skip reason=stop
+[2026-05-18 17:15:46] gdho gdho_phase CLOSED->CLOSING reason=stop token=10
+[2026-05-18 17:15:46] gdho hide_frontend queue hide
+[2026-05-18 17:15:46] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=10
+[2026-05-18 17:15:46] gdho stop done
+[2026-05-18 17:15:50] selection cursor_over_ui hit=g_SCWV_Gui hwnd=42404898 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1484 mouse_y=129
+[2026-05-18 17:15:50] selection lbutton_up skip=our_ui
+[2026-05-18 17:15:53] selection cursor_over_ui hit=g_SCWV_Gui hwnd=42404898 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1070 mouse_y=909
+[2026-05-18 17:15:53] selection lbutton_up skip=our_ui
+[2026-05-18 17:15:58] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:15:58] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:15:58] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 17:15:58] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 17:15:58] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 17:15:58] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 17:15:58] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 17:15:58] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 17:15:58] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 17:15:58] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 17:15:58] reset_session_step js_done reason=search_center_exit
+[2026-05-18 17:15:58] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 17:15:58] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 17:15:59] selection cursor_over_ui miss mouse_x=1391 mouse_y=862 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 17:15:59] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:15:59] selection lbutton_up no_trigger=click
+[2026-05-18 17:16:01] selection cursor_over_ui miss mouse_x=1908 mouse_y=1021 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 17:16:01] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:16:01] selection lbutton_up no_trigger=click
+[2026-05-18 17:16:02] selection cursor_over_ui miss mouse_x=1597 mouse_y=966 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:16:02] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:16:02] selection lbutton_up no_trigger=click
+[2026-05-18 17:17:14] selection cursor_over_ui miss mouse_x=31 mouse_y=141 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:17:14] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:17:14] selection lbutton_up no_trigger=click
+[2026-05-18 17:17:18] selection cursor_over_ui miss mouse_x=1783 mouse_y=953 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:17:18] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:17:18] selection lbutton_up no_trigger=click
+[2026-05-18 17:17:21] selection cursor_over_ui miss mouse_x=370 mouse_y=1063 top=hwnd=65794 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-18 17:17:21] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:17:21] selection lbutton_up no_trigger=click
+[2026-05-18 17:17:22] selection cursor_over_ui miss mouse_x=390 mouse_y=953 top=hwnd=65902 class=TaskListThumbnailWnd title= exe=explorer.exe
+[2026-05-18 17:17:22] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:17:22] selection lbutton_up no_trigger=click
+[2026-05-18 17:19:48] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=49877266 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1501 mouse_y=894
+[2026-05-18 17:19:48] selection lbutton_up skip=our_ui
+[2026-05-18 17:19:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:19:49] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:19:49] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:19:49] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 17:19:49] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 17:19:49] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 17:19:49] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:19:49] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:19:49] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 17:19:49] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 17:19:49] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 17:19:49] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 17:19:49] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 17:19:49] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 17:19:49] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 17:19:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:19:49] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 17:19:49] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:19:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:19:49] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 17:19:49] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 17:19:49] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:19:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:19:49] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 17:19:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:19:49] gdho stop begin
+[2026-05-18 17:19:49] gdho poll disarm skip reason=stop
+[2026-05-18 17:19:49] gdho gdho_phase CLOSED->CLOSING reason=stop token=11
+[2026-05-18 17:19:49] gdho hide_frontend queue hide
+[2026-05-18 17:19:49] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=11
+[2026-05-18 17:19:49] gdho stop done
+[2026-05-18 17:19:54] selection cursor_over_ui hit=g_SCWV_Gui hwnd=33362388 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=713 mouse_y=249
+[2026-05-18 17:19:54] selection lbutton_up skip=our_ui
+[2026-05-18 17:19:55] selection cursor_over_ui hit=g_SCWV_Gui hwnd=33362388 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=709 mouse_y=450
+[2026-05-18 17:19:55] selection lbutton_up skip=our_ui
+[2026-05-18 17:19:58] selection cursor_over_ui hit=g_SCWV_Gui hwnd=33362388 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1207 mouse_y=236
+[2026-05-18 17:19:58] selection lbutton_up skip=our_ui
+[2026-05-18 17:19:59] selection cursor_over_ui hit=g_SCWV_Gui hwnd=33362388 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1207 mouse_y=236
+[2026-05-18 17:19:59] selection lbutton_up skip=our_ui
+[2026-05-18 17:19:59] selection cursor_over_ui hit=g_SCWV_Gui hwnd=33362388 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1239 mouse_y=230
+[2026-05-18 17:19:59] selection lbutton_up skip=our_ui
+[2026-05-18 17:20:00] selection cursor_over_ui hit=g_SCWV_Gui hwnd=33362388 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1404 mouse_y=245
+[2026-05-18 17:20:00] selection lbutton_up skip=our_ui
+[2026-05-18 17:20:02] selection cursor_over_ui hit=g_SCWV_Gui hwnd=33362388 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1465 mouse_y=278
+[2026-05-18 17:20:02] selection lbutton_up skip=our_ui
+[2026-05-18 17:20:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=33362388 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1498 mouse_y=145
+[2026-05-18 17:20:04] selection lbutton_up skip=our_ui
+[2026-05-18 17:20:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=33362388 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=867 mouse_y=82
+[2026-05-18 17:20:05] selection lbutton_up skip=our_ui
+[2026-05-18 17:20:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=33362388 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=861 mouse_y=113
+[2026-05-18 17:20:05] selection lbutton_up skip=our_ui
+[2026-05-18 17:22:08] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:22:08] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:22:08] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 17:22:08] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 17:22:08] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 17:22:08] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 17:22:08] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 17:22:08] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 17:22:08] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 17:22:08] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 17:22:08] reset_session_step js_done reason=search_center_exit
+[2026-05-18 17:22:08] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 17:22:08] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 17:22:08] selection cursor_over_ui miss mouse_x=1794 mouse_y=5 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:22:08] selection lbutton_up dist_x=1 dist_y=1 drag=0 multi=0
+[2026-05-18 17:22:08] selection lbutton_up no_trigger=click
+[2026-05-18 17:23:05] selection cursor_over_ui miss mouse_x=1534 mouse_y=966 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:23:05] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:23:05] selection lbutton_up no_trigger=click
+[2026-05-18 17:23:06] selection cursor_over_ui miss mouse_x=1538 mouse_y=964 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:23:06] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:23:06] selection lbutton_up no_trigger=click
+[2026-05-18 17:27:36] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:27:36] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:37] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 17:27:37] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 17:27:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:37] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 17:27:37] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:27:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:37] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:27:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:37] gdho stop begin
+[2026-05-18 17:27:37] gdho poll disarm skip reason=stop
+[2026-05-18 17:27:37] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 17:27:37] gdho hide_frontend queue hide
+[2026-05-18 17:27:37] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 17:27:37] gdho stop done
+[2026-05-18 17:27:45] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 17:27:45] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:45] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 17:27:45] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:27:45] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:45] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:27:45] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:46] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=13832452 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1590 mouse_y=959
+[2026-05-18 17:27:46] selection lbutton_up skip=our_ui
+[2026-05-18 17:27:46] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:47] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:27:47] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:27:47] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 17:27:47] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 17:27:47] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 17:27:47] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:27:47] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:27:47] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 17:27:47] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 17:27:47] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 17:27:47] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 17:27:47] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 17:27:47] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 17:27:47] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 17:27:47] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 17:27:47] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:27:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:47] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 17:27:47] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 17:27:47] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:27:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:47] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 17:27:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:47] gdho stop begin
+[2026-05-18 17:27:47] gdho poll disarm skip reason=stop
+[2026-05-18 17:27:47] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 17:27:47] gdho hide_frontend queue hide
+[2026-05-18 17:27:47] gdho gdho_phase CLOSING->CLOSING reason=desktop_unpin token=3
+[2026-05-18 17:27:47] gdho gdho_phase CLOSING->CLOSED reason=closed_after_hide_desktop_unpin token=3
+[2026-05-18 17:27:47] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:27:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:27:47] gdho gdho_phase CLOSED->CLOSED reason=stop_done token=3
+[2026-05-18 17:27:47] gdho stop done
+[2026-05-18 17:28:02] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:28:02] selection cursor_over_ui miss mouse_x=1732 mouse_y=790 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:28:02] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:28:02] selection lbutton_up no_trigger=click
+[2026-05-18 17:28:02] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:28:02] gdho stop begin
+[2026-05-18 17:28:02] gdho poll disarm skip reason=stop
+[2026-05-18 17:28:02] gdho gdho_phase CLOSED->CLOSING reason=stop token=4
+[2026-05-18 17:28:02] gdho hide_frontend queue hide
+[2026-05-18 17:28:02] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=4
+[2026-05-18 17:28:02] gdho stop done
+[2026-05-18 17:28:02] reset_session_async_begin reason=tray_open_search hide_ms=0
+[2026-05-18 17:28:02] reset_session_begin reason=tray_open_search hide_ms=0
+[2026-05-18 17:28:02] reset_session_step state_cleared reason=tray_open_search
+[2026-05-18 17:28:02] reset_session_step drag_tick_stopped reason=tray_open_search
+[2026-05-18 17:28:02] reset_session_step hide_frontend_queued reason=tray_open_search
+[2026-05-18 17:28:02] reset_session_step clickthrough_begin reason=tray_open_search
+[2026-05-18 17:28:02] reset_session_step clickthrough_done reason=tray_open_search
+[2026-05-18 17:28:02] reset_session_step silent_mode=0 reason=tray_open_search
+[2026-05-18 17:28:02] reset_session_step start_bridge_begin reason=tray_open_search
+[2026-05-18 17:28:02] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:28:02] reset_session_step hide_frontend_async_begin reason=tray_open_search
+[2026-05-18 17:28:02] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:28:02] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:28:02] reset_session_step hide_frontend_async_done reason=tray_open_search
+[2026-05-18 17:28:02] reset_session_step hide_overlay_async_begin reason=tray_open_search
+[2026-05-18 17:28:02] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:28:02] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:28:02] reset_session_step hide_overlay_async_done reason=tray_open_search
+[2026-05-18 17:28:02] reset_session_step start_bridge_done reason=tray_open_search
+[2026-05-18 17:28:02] reset_session_step js_begin reason=tray_open_search
+[2026-05-18 17:28:02] reset_session_step js_done reason=tray_open_search
+[2026-05-18 17:28:02] route reset_session reason=tray_open_search hide_ms=0
+[2026-05-18 17:28:02] reset_session_async_done reason=tray_open_search hide_ms=0
+[2026-05-18 17:28:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1479 mouse_y=132
+[2026-05-18 17:28:04] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=988 mouse_y=210
+[2026-05-18 17:28:05] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:06] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1214 mouse_y=230
+[2026-05-18 17:28:06] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:06] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=903 mouse_y=219
+[2026-05-18 17:28:06] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=763 mouse_y=212
+[2026-05-18 17:28:07] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=914 mouse_y=226
+[2026-05-18 17:28:07] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1163 mouse_y=225
+[2026-05-18 17:28:08] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:09] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=943 mouse_y=209
+[2026-05-18 17:28:09] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:09] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=741 mouse_y=235
+[2026-05-18 17:28:09] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:11] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=938 mouse_y=226
+[2026-05-18 17:28:11] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:12] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1166 mouse_y=230
+[2026-05-18 17:28:12] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:13] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=895 mouse_y=224
+[2026-05-18 17:28:13] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:15] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=655 mouse_y=323
+[2026-05-18 17:28:15] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:18] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=843 mouse_y=235
+[2026-05-18 17:28:18] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:21] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=703 mouse_y=248
+[2026-05-18 17:28:21] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:23] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=951 mouse_y=222
+[2026-05-18 17:28:23] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:26] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=538 mouse_y=463
+[2026-05-18 17:28:26] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:28] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1457 mouse_y=149
+[2026-05-18 17:28:28] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:30] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=641 mouse_y=319
+[2026-05-18 17:28:30] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:31] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=909 mouse_y=218
+[2026-05-18 17:28:31] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:32] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=763 mouse_y=323
+[2026-05-18 17:28:32] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:34] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1205 mouse_y=233
+[2026-05-18 17:28:34] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:36] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=811 mouse_y=319
+[2026-05-18 17:28:36] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:36] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=822 mouse_y=310
+[2026-05-18 17:28:36] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:37] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=877 mouse_y=251
+[2026-05-18 17:28:37] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:37] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=719 mouse_y=237
+[2026-05-18 17:28:37] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:38] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=970 mouse_y=236
+[2026-05-18 17:28:38] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:39] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1115 mouse_y=229
+[2026-05-18 17:28:39] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:39] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=981 mouse_y=230
+[2026-05-18 17:28:39] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:40] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=748 mouse_y=228
+[2026-05-18 17:28:40] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:40] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1137 mouse_y=216
+[2026-05-18 17:28:40] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:40] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1230 mouse_y=226
+[2026-05-18 17:28:40] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:41] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=924 mouse_y=221
+[2026-05-18 17:28:41] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:41] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=770 mouse_y=228
+[2026-05-18 17:28:41] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:41] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1076 mouse_y=228
+[2026-05-18 17:28:41] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:42] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1171 mouse_y=232
+[2026-05-18 17:28:42] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:42] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=840 mouse_y=228
+[2026-05-18 17:28:42] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:42] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=699 mouse_y=238
+[2026-05-18 17:28:42] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:43] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1050 mouse_y=233
+[2026-05-18 17:28:43] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:43] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1154 mouse_y=236
+[2026-05-18 17:28:43] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:43] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=885 mouse_y=231
+[2026-05-18 17:28:43] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:44] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=680 mouse_y=224
+[2026-05-18 17:28:44] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:44] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1058 mouse_y=225
+[2026-05-18 17:28:44] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:45] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1281 mouse_y=233
+[2026-05-18 17:28:45] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:45] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=971 mouse_y=223
+[2026-05-18 17:28:45] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:45] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=676 mouse_y=229
+[2026-05-18 17:28:45] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:45] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=589 mouse_y=224
+[2026-05-18 17:28:45] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:46] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1356 mouse_y=108
+[2026-05-18 17:28:46] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:48] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1409 mouse_y=115
+[2026-05-18 17:28:48] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:48] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1394 mouse_y=166
+[2026-05-18 17:28:48] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:49] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1406 mouse_y=166
+[2026-05-18 17:28:49] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:49] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1077 mouse_y=152
+[2026-05-18 17:28:49] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:50] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1432 mouse_y=123
+[2026-05-18 17:28:50] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:51] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1404 mouse_y=118
+[2026-05-18 17:28:51] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:52] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=725 mouse_y=110
+[2026-05-18 17:28:52] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:54] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=627 mouse_y=373
+[2026-05-18 17:28:54] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:54] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=992 mouse_y=390
+[2026-05-18 17:28:54] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:55] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=738 mouse_y=828
+[2026-05-18 17:28:55] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:56] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=733 mouse_y=841
+[2026-05-18 17:28:56] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:58] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=810 mouse_y=972
+[2026-05-18 17:28:58] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:58] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=821 mouse_y=965
+[2026-05-18 17:28:58] selection lbutton_up skip=our_ui
+[2026-05-18 17:28:59] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=614 mouse_y=927
+[2026-05-18 17:28:59] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:00] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=659 mouse_y=915
+[2026-05-18 17:29:00] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=596 mouse_y=965
+[2026-05-18 17:29:04] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1179 mouse_y=461
+[2026-05-18 17:29:05] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1185 mouse_y=449
+[2026-05-18 17:29:05] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:06] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=364 mouse_y=528
+[2026-05-18 17:29:06] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=363 mouse_y=523
+[2026-05-18 17:29:07] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1204 mouse_y=461
+[2026-05-18 17:29:08] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:10] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=413 mouse_y=442
+[2026-05-18 17:29:10] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:11] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=378 mouse_y=581
+[2026-05-18 17:29:11] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:11] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=615 mouse_y=479
+[2026-05-18 17:29:11] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:11] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=394 mouse_y=559
+[2026-05-18 17:29:11] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:12] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=477 mouse_y=476
+[2026-05-18 17:29:12] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:12] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=530 mouse_y=541
+[2026-05-18 17:29:12] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:13] selection cursor_over_ui hit=g_SCWV_Gui hwnd=10097152 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=419 mouse_y=481
+[2026-05-18 17:29:13] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:15] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:29:15] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:29:15] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 17:29:15] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 17:29:15] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 17:29:15] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 17:29:15] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 17:29:15] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 17:29:15] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 17:29:15] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 17:29:15] reset_session_step js_done reason=search_center_exit
+[2026-05-18 17:29:15] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 17:29:15] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 17:29:15] selection cursor_over_ui miss mouse_x=650 mouse_y=1051 top=hwnd=65794 class=Shell_TrayWnd title= exe=explorer.exe
+[2026-05-18 17:29:15] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:29:15] selection lbutton_up no_trigger=click
+[2026-05-18 17:29:16] selection cursor_over_ui miss mouse_x=1478 mouse_y=960 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:29:16] selection lbutton_up dist_x=2 dist_y=1 drag=0 multi=0
+[2026-05-18 17:29:16] selection lbutton_up no_trigger=click
+[2026-05-18 17:29:26] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=13832452 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1426 mouse_y=663
+[2026-05-18 17:29:26] selection lbutton_up skip=our_ui
+[2026-05-18 17:29:27] selection cursor_over_ui miss mouse_x=1568 mouse_y=961 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:29:27] selection lbutton_up dist_x=1 dist_y=2 drag=0 multi=0
+[2026-05-18 17:29:27] selection lbutton_up no_trigger=click
+[2026-05-18 17:34:50] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:34:50] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:34:51] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 17:34:51] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 17:34:51] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:34:51] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 17:34:51] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:34:51] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:34:51] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:34:51] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:34:51] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:34:51] gdho stop begin
+[2026-05-18 17:34:51] gdho poll disarm skip reason=stop
+[2026-05-18 17:34:51] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 17:34:51] gdho hide_frontend queue hide
+[2026-05-18 17:34:51] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 17:34:51] gdho stop done
+[2026-05-18 17:34:56] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 17:34:56] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:34:56] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 17:34:56] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:34:56] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:34:56] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:34:56] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:35:25] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:35:25] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:35:25] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:35:25] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 17:35:25] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 17:35:25] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 17:35:25] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:35:25] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:35:25] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 17:35:25] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 17:35:25] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:35:25] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 17:35:25] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:35:25] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:35:25] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 17:35:25] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 17:35:25] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:35:25] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:35:25] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 17:35:25] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 17:35:25] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 17:35:25] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 17:35:25] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 17:35:25] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 17:35:25] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:35:25] gdho stop begin
+[2026-05-18 17:35:25] gdho poll disarm skip reason=stop
+[2026-05-18 17:35:25] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 17:35:25] gdho hide_frontend queue hide
+[2026-05-18 17:35:25] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 17:35:25] gdho stop done
+[2026-05-18 17:36:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:36:21] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1756 mouse_y=493
+[2026-05-18 17:36:21] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:36:21] gdho stop begin
+[2026-05-18 17:36:21] gdho poll disarm skip reason=stop
+[2026-05-18 17:36:21] gdho gdho_phase CLOSED->CLOSING reason=stop token=3
+[2026-05-18 17:36:21] gdho hide_frontend queue hide
+[2026-05-18 17:36:21] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=3
+[2026-05-18 17:36:21] gdho stop done
+[2026-05-18 17:36:21] reset_session_async_begin reason=tray_open_search hide_ms=0
+[2026-05-18 17:36:21] reset_session_begin reason=tray_open_search hide_ms=0
+[2026-05-18 17:36:21] reset_session_step state_cleared reason=tray_open_search
+[2026-05-18 17:36:21] reset_session_step drag_tick_stopped reason=tray_open_search
+[2026-05-18 17:36:21] reset_session_step hide_frontend_queued reason=tray_open_search
+[2026-05-18 17:36:21] reset_session_step clickthrough_begin reason=tray_open_search
+[2026-05-18 17:36:21] reset_session_step clickthrough_done reason=tray_open_search
+[2026-05-18 17:36:21] reset_session_step silent_mode=0 reason=tray_open_search
+[2026-05-18 17:36:21] reset_session_step start_bridge_begin reason=tray_open_search
+[2026-05-18 17:36:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:36:21] reset_session_step hide_frontend_async_begin reason=tray_open_search
+[2026-05-18 17:36:21] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:36:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:36:21] reset_session_step hide_frontend_async_done reason=tray_open_search
+[2026-05-18 17:36:21] reset_session_step hide_overlay_async_begin reason=tray_open_search
+[2026-05-18 17:36:21] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:36:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:36:21] reset_session_step hide_overlay_async_done reason=tray_open_search
+[2026-05-18 17:36:21] reset_session_step start_bridge_done reason=tray_open_search
+[2026-05-18 17:36:21] reset_session_step js_begin reason=tray_open_search
+[2026-05-18 17:36:21] reset_session_step js_done reason=tray_open_search
+[2026-05-18 17:36:21] route reset_session reason=tray_open_search hide_ms=0
+[2026-05-18 17:36:21] reset_session_async_done reason=tray_open_search hide_ms=0
+[2026-05-18 17:36:23] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1496 mouse_y=138
+[2026-05-18 17:36:23] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:25] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=658 mouse_y=97
+[2026-05-18 17:36:25] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:25] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=658 mouse_y=103
+[2026-05-18 17:36:25] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:32] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=432 mouse_y=447
+[2026-05-18 17:36:32] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:33] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=439 mouse_y=621
+[2026-05-18 17:36:33] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:34] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=442 mouse_y=605
+[2026-05-18 17:36:34] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:40] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=668 mouse_y=446
+[2026-05-18 17:36:40] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:41] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=555 mouse_y=456
+[2026-05-18 17:36:41] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:42] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=579 mouse_y=437
+[2026-05-18 17:36:42] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:42] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=543 mouse_y=481
+[2026-05-18 17:36:42] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:43] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=512 mouse_y=514
+[2026-05-18 17:36:43] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:43] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=469 mouse_y=583
+[2026-05-18 17:36:43] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:45] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1145 mouse_y=532
+[2026-05-18 17:36:45] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:49] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=623 mouse_y=310
+[2026-05-18 17:36:49] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:50] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1063 mouse_y=618
+[2026-05-18 17:36:50] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:53] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=583 mouse_y=345
+[2026-05-18 17:36:53] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:55] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=534 mouse_y=337
+[2026-05-18 17:36:55] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:57] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=720 mouse_y=376
+[2026-05-18 17:36:57] selection lbutton_up skip=our_ui
+[2026-05-18 17:36:59] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=514 mouse_y=372
+[2026-05-18 17:36:59] selection lbutton_up skip=our_ui
+[2026-05-18 17:37:00] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=349 mouse_y=558
+[2026-05-18 17:37:00] selection lbutton_up skip=our_ui
+[2026-05-18 17:37:02] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=722 mouse_y=667
+[2026-05-18 17:37:02] selection lbutton_up skip=our_ui
+[2026-05-18 17:37:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=593 mouse_y=713
+[2026-05-18 17:37:04] selection lbutton_up skip=our_ui
+[2026-05-18 17:37:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=674 mouse_y=760
+[2026-05-18 17:37:05] selection lbutton_up skip=our_ui
+[2026-05-18 17:37:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1427 mouse_y=665
+[2026-05-18 17:37:08] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:39] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=545 mouse_y=282
+[2026-05-18 17:39:39] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:39] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=517 mouse_y=307
+[2026-05-18 17:39:39] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:41] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=829 mouse_y=226
+[2026-05-18 17:39:41] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:41] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1199 mouse_y=218
+[2026-05-18 17:39:41] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:42] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=910 mouse_y=230
+[2026-05-18 17:39:42] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:42] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=651 mouse_y=239
+[2026-05-18 17:39:42] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:43] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=942 mouse_y=231
+[2026-05-18 17:39:43] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:44] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1176 mouse_y=234
+[2026-05-18 17:39:44] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:44] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=962 mouse_y=234
+[2026-05-18 17:39:44] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:45] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=662 mouse_y=243
+[2026-05-18 17:39:45] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:45] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=989 mouse_y=227
+[2026-05-18 17:39:45] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:46] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1148 mouse_y=224
+[2026-05-18 17:39:46] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:47] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=762 mouse_y=317
+[2026-05-18 17:39:47] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:47] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=850 mouse_y=248
+[2026-05-18 17:39:47] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:48] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=633 mouse_y=246
+[2026-05-18 17:39:48] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:49] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=959 mouse_y=239
+[2026-05-18 17:39:49] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:49] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1154 mouse_y=225
+[2026-05-18 17:39:49] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:49] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=890 mouse_y=230
+[2026-05-18 17:39:49] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:50] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=661 mouse_y=242
+[2026-05-18 17:39:50] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:50] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1028 mouse_y=221
+[2026-05-18 17:39:50] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:50] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1196 mouse_y=212
+[2026-05-18 17:39:50] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:51] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=888 mouse_y=224
+[2026-05-18 17:39:51] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:51] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=710 mouse_y=238
+[2026-05-18 17:39:51] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:52] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=914 mouse_y=228
+[2026-05-18 17:39:52] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:52] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1151 mouse_y=224
+[2026-05-18 17:39:52] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:52] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=831 mouse_y=237
+[2026-05-18 17:39:52] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:53] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=665 mouse_y=243
+[2026-05-18 17:39:53] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:53] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=944 mouse_y=235
+[2026-05-18 17:39:53] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:54] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1173 mouse_y=227
+[2026-05-18 17:39:54] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:54] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=871 mouse_y=242
+[2026-05-18 17:39:54] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:55] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=612 mouse_y=245
+[2026-05-18 17:39:55] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:55] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=903 mouse_y=231
+[2026-05-18 17:39:55] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:58] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=700 mouse_y=220
+[2026-05-18 17:39:58] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:58] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1039 mouse_y=218
+[2026-05-18 17:39:58] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:59] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1191 mouse_y=218
+[2026-05-18 17:39:59] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:59] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=912 mouse_y=225
+[2026-05-18 17:39:59] selection lbutton_up skip=our_ui
+[2026-05-18 17:39:59] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=728 mouse_y=225
+[2026-05-18 17:39:59] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:00] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1014 mouse_y=223
+[2026-05-18 17:40:00] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:00] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1223 mouse_y=214
+[2026-05-18 17:40:00] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:01] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=863 mouse_y=225
+[2026-05-18 17:40:01] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:01] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=651 mouse_y=223
+[2026-05-18 17:40:01] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:01] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1053 mouse_y=222
+[2026-05-18 17:40:01] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:02] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1205 mouse_y=233
+[2026-05-18 17:40:02] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:02] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=907 mouse_y=232
+[2026-05-18 17:40:02] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=604 mouse_y=239
+[2026-05-18 17:40:03] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=860 mouse_y=227
+[2026-05-18 17:40:03] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1252 mouse_y=224
+[2026-05-18 17:40:03] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=829 mouse_y=236
+[2026-05-18 17:40:04] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=660 mouse_y=237
+[2026-05-18 17:40:04] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=953 mouse_y=221
+[2026-05-18 17:40:04] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1205 mouse_y=217
+[2026-05-18 17:40:05] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=988 mouse_y=234
+[2026-05-18 17:40:05] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=572 mouse_y=226
+[2026-05-18 17:40:05] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:06] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=882 mouse_y=223
+[2026-05-18 17:40:06] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:06] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1134 mouse_y=222
+[2026-05-18 17:40:06] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=855 mouse_y=226
+[2026-05-18 17:40:07] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=683 mouse_y=231
+[2026-05-18 17:40:07] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=883 mouse_y=227
+[2026-05-18 17:40:07] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1172 mouse_y=230
+[2026-05-18 17:40:08] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=970 mouse_y=228
+[2026-05-18 17:40:08] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:09] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=545 mouse_y=223
+[2026-05-18 17:40:09] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:09] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=914 mouse_y=225
+[2026-05-18 17:40:09] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:10] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1215 mouse_y=224
+[2026-05-18 17:40:10] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:10] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=641 mouse_y=223
+[2026-05-18 17:40:10] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:11] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1023 mouse_y=226
+[2026-05-18 17:40:11] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:11] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1179 mouse_y=228
+[2026-05-18 17:40:11] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:12] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=609 mouse_y=220
+[2026-05-18 17:40:12] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:12] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=681 mouse_y=233
+[2026-05-18 17:40:12] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:13] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=584 mouse_y=325
+[2026-05-18 17:40:13] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:14] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=509 mouse_y=311
+[2026-05-18 17:40:14] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:16] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=813 mouse_y=313
+[2026-05-18 17:40:16] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:19] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=523 mouse_y=118
+[2026-05-18 17:40:19] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:21] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=686 mouse_y=122
+[2026-05-18 17:40:21] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:22] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=670 mouse_y=134
+[2026-05-18 17:40:22] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:24] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=479 mouse_y=108
+[2026-05-18 17:40:24] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:27] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=906 mouse_y=221
+[2026-05-18 17:40:27] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:27] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1123 mouse_y=231
+[2026-05-18 17:40:27] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:28] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=909 mouse_y=228
+[2026-05-18 17:40:28] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:28] selection cursor_over_ui hit=g_SCWV_Gui hwnd=26088274 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=665 mouse_y=221
+[2026-05-18 17:40:28] selection lbutton_up skip=our_ui
+[2026-05-18 17:40:30] selection cursor_over_ui miss mouse_x=1802 mouse_y=2 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:40:30] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:40:30] selection lbutton_up no_trigger=click
+[2026-05-18 17:40:30] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:40:30] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:40:30] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 17:40:30] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 17:40:30] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 17:40:30] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 17:40:30] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 17:40:30] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 17:40:30] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 17:40:30] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 17:40:30] reset_session_step js_done reason=search_center_exit
+[2026-05-18 17:40:30] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 17:40:30] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 17:40:33] selection cursor_over_ui miss mouse_x=1450 mouse_y=763 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:40:33] selection lbutton_up dist_x=12 dist_y=177 drag=1 multi=0
+[2026-05-18 17:40:33] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 17:40:33] selection cursor_over_ui miss mouse_x=1454 mouse_y=951 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:40:33] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:40:33] selection lbutton_up no_trigger=click
+[2026-05-18 17:41:01] selection cursor_over_ui miss mouse_x=1796 mouse_y=954 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:41:01] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:41:01] selection lbutton_up no_trigger=click
+[2026-05-18 17:42:35] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=5704768 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1148 mouse_y=856
+[2026-05-18 17:42:35] selection lbutton_up skip=our_ui
+[2026-05-18 17:42:37] selection cursor_over_ui miss mouse_x=1772 mouse_y=441 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:42:37] selection lbutton_up dist_x=0 dist_y=1 drag=0 multi=0
+[2026-05-18 17:42:37] selection lbutton_up no_trigger=click
+[2026-05-18 17:42:38] selection cursor_over_ui miss mouse_x=1883 mouse_y=489 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:42:38] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:42:38] selection lbutton_up no_trigger=click
+[2026-05-18 17:42:40] selection cursor_over_ui miss mouse_x=1213 mouse_y=288 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:42:40] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:42:40] selection lbutton_up no_trigger=click
+[2026-05-18 17:45:28] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:45:28] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:29] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 17:45:29] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 17:45:29] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:29] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 17:45:29] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:45:29] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:29] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:45:29] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:29] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:29] gdho stop begin
+[2026-05-18 17:45:29] gdho poll disarm skip reason=stop
+[2026-05-18 17:45:29] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 17:45:29] gdho hide_frontend queue hide
+[2026-05-18 17:45:29] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 17:45:29] gdho stop done
+[2026-05-18 17:45:38] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 17:45:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:38] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 17:45:38] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:45:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:38] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:45:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:48] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=60821964 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=886 mouse_y=935
+[2026-05-18 17:45:48] selection lbutton_up skip=our_ui
+[2026-05-18 17:45:49] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=60821964 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=943 mouse_y=922
+[2026-05-18 17:45:49] selection lbutton_up skip=our_ui
+[2026-05-18 17:45:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:49] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:45:49] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:45:49] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 17:45:49] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 17:45:49] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 17:45:49] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:45:49] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:45:49] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 17:45:49] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 17:45:49] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 17:45:49] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 17:45:49] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 17:45:49] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 17:45:49] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 17:45:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:49] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 17:45:49] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:45:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:49] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 17:45:49] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 17:45:49] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:45:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:49] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 17:45:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:45:49] gdho stop begin
+[2026-05-18 17:45:49] gdho poll disarm skip reason=stop
+[2026-05-18 17:45:49] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 17:45:49] gdho hide_frontend queue hide
+[2026-05-18 17:45:49] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 17:45:49] gdho stop done
+[2026-05-18 17:45:55] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1488 mouse_y=133
+[2026-05-18 17:45:55] selection lbutton_up skip=our_ui
+[2026-05-18 17:45:57] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=946 mouse_y=231
+[2026-05-18 17:45:57] selection lbutton_up skip=our_ui
+[2026-05-18 17:45:58] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1178 mouse_y=233
+[2026-05-18 17:45:58] selection lbutton_up skip=our_ui
+[2026-05-18 17:45:58] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=670 mouse_y=229
+[2026-05-18 17:45:58] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:00] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=902 mouse_y=239
+[2026-05-18 17:46:00] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:00] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1194 mouse_y=222
+[2026-05-18 17:46:00] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:01] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=924 mouse_y=219
+[2026-05-18 17:46:01] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:01] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=722 mouse_y=230
+[2026-05-18 17:46:01] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:02] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=948 mouse_y=229
+[2026-05-18 17:46:02] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:02] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1176 mouse_y=219
+[2026-05-18 17:46:02] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:02] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=986 mouse_y=224
+[2026-05-18 17:46:02] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=700 mouse_y=210
+[2026-05-18 17:46:03] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=989 mouse_y=231
+[2026-05-18 17:46:03] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1178 mouse_y=225
+[2026-05-18 17:46:03] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=975 mouse_y=228
+[2026-05-18 17:46:04] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=778 mouse_y=227
+[2026-05-18 17:46:04] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=970 mouse_y=228
+[2026-05-18 17:46:04] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1238 mouse_y=232
+[2026-05-18 17:46:05] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1090 mouse_y=230
+[2026-05-18 17:46:05] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=767 mouse_y=224
+[2026-05-18 17:46:05] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:06] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1078 mouse_y=245
+[2026-05-18 17:46:06] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:06] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1308 mouse_y=240
+[2026-05-18 17:46:06] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=773 mouse_y=247
+[2026-05-18 17:46:07] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=588 mouse_y=235
+[2026-05-18 17:46:07] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1044 mouse_y=221
+[2026-05-18 17:46:07] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1336 mouse_y=226
+[2026-05-18 17:46:08] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=840 mouse_y=219
+[2026-05-18 17:46:08] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=648 mouse_y=221
+[2026-05-18 17:46:08] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:09] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1093 mouse_y=230
+[2026-05-18 17:46:09] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:09] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1300 mouse_y=219
+[2026-05-18 17:46:09] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:09] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=920 mouse_y=234
+[2026-05-18 17:46:09] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:09] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=670 mouse_y=233
+[2026-05-18 17:46:09] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:10] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=992 mouse_y=222
+[2026-05-18 17:46:10] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:10] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1264 mouse_y=221
+[2026-05-18 17:46:10] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:10] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=835 mouse_y=241
+[2026-05-18 17:46:10] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:11] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=693 mouse_y=235
+[2026-05-18 17:46:11] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:11] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1223 mouse_y=224
+[2026-05-18 17:46:11] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:11] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1038 mouse_y=230
+[2026-05-18 17:46:11] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:12] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=755 mouse_y=238
+[2026-05-18 17:46:12] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:12] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1150 mouse_y=240
+[2026-05-18 17:46:12] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:12] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=877 mouse_y=226
+[2026-05-18 17:46:12] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:13] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=749 mouse_y=229
+[2026-05-18 17:46:13] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:13] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1144 mouse_y=230
+[2026-05-18 17:46:13] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:13] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=880 mouse_y=239
+[2026-05-18 17:46:13] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:14] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=681 mouse_y=245
+[2026-05-18 17:46:14] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:14] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1051 mouse_y=234
+[2026-05-18 17:46:14] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:14] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1213 mouse_y=231
+[2026-05-18 17:46:14] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:14] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=689 mouse_y=234
+[2026-05-18 17:46:14] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:15] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1111 mouse_y=244
+[2026-05-18 17:46:15] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:15] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=923 mouse_y=235
+[2026-05-18 17:46:15] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:16] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=694 mouse_y=230
+[2026-05-18 17:46:16] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:16] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1113 mouse_y=220
+[2026-05-18 17:46:16] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:16] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1220 mouse_y=229
+[2026-05-18 17:46:16] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:17] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=829 mouse_y=246
+[2026-05-18 17:46:17] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:17] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=660 mouse_y=241
+[2026-05-18 17:46:17] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:17] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1150 mouse_y=237
+[2026-05-18 17:46:17] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:18] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=974 mouse_y=234
+[2026-05-18 17:46:18] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:18] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=743 mouse_y=234
+[2026-05-18 17:46:18] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:18] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1126 mouse_y=247
+[2026-05-18 17:46:18] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:19] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=867 mouse_y=242
+[2026-05-18 17:46:19] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:19] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=706 mouse_y=256
+[2026-05-18 17:46:19] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:20] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=783 mouse_y=229
+[2026-05-18 17:46:20] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:20] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=958 mouse_y=244
+[2026-05-18 17:46:20] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:21] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1184 mouse_y=229
+[2026-05-18 17:46:21] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:21] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=727 mouse_y=246
+[2026-05-18 17:46:21] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:21] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=901 mouse_y=239
+[2026-05-18 17:46:21] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:22] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1184 mouse_y=239
+[2026-05-18 17:46:22] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:22] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=715 mouse_y=233
+[2026-05-18 17:46:22] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:23] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=901 mouse_y=226
+[2026-05-18 17:46:23] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:25] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=660 mouse_y=314
+[2026-05-18 17:46:25] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:26] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=792 mouse_y=225
+[2026-05-18 17:46:26] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:26] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=865 mouse_y=229
+[2026-05-18 17:46:26] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:29] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=642 mouse_y=254
+[2026-05-18 17:46:29] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:29] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=698 mouse_y=241
+[2026-05-18 17:46:29] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:31] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=914 mouse_y=241
+[2026-05-18 17:46:31] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:35] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=776 mouse_y=258
+[2026-05-18 17:46:35] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:35] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=744 mouse_y=246
+[2026-05-18 17:46:35] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:36] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1017 mouse_y=208
+[2026-05-18 17:46:36] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:36] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1232 mouse_y=233
+[2026-05-18 17:46:36] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:37] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=833 mouse_y=218
+[2026-05-18 17:46:37] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:37] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=590 mouse_y=245
+[2026-05-18 17:46:37] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:38] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1039 mouse_y=227
+[2026-05-18 17:46:38] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:38] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1166 mouse_y=231
+[2026-05-18 17:46:38] selection lbutton_up skip=our_ui
+[2026-05-18 17:46:39] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=664 mouse_y=843
+[2026-05-18 17:46:39] selection lbutton_up skip=our_ui
+[2026-05-18 17:47:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=669 mouse_y=399
+[2026-05-18 17:47:08] selection lbutton_up skip=our_ui
+[2026-05-18 17:47:09] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=695 mouse_y=134
+[2026-05-18 17:47:09] selection lbutton_up skip=our_ui
+[2026-05-18 17:47:11] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=629 mouse_y=253
+[2026-05-18 17:47:11] selection lbutton_up skip=our_ui
+[2026-05-18 17:47:17] selection cursor_over_ui hit=g_SCWV_Gui hwnd=25496950 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=812 mouse_y=67
+[2026-05-18 17:47:17] selection lbutton_up skip=our_ui
+[2026-05-18 17:47:18] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:47:18] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:47:18] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 17:47:18] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 17:47:18] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 17:47:18] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 17:47:18] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 17:47:18] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 17:47:18] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 17:47:18] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 17:47:18] reset_session_step js_done reason=search_center_exit
+[2026-05-18 17:47:18] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 17:47:18] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 17:47:18] selection cursor_over_ui miss mouse_x=1468 mouse_y=953 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:47:18] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:47:18] selection lbutton_up no_trigger=click
+[2026-05-18 17:47:34] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=60821964 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=956 mouse_y=939
+[2026-05-18 17:47:34] selection lbutton_up skip=our_ui
+[2026-05-18 17:47:34] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:47:34] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:47:34] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:47:34] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 17:47:34] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 17:47:34] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 17:47:34] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:47:34] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:47:34] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 17:47:34] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 17:47:35] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 17:47:35] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 17:47:35] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 17:47:35] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 17:47:35] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 17:47:35] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:47:35] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 17:47:35] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:47:35] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:47:35] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 17:47:35] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 17:47:35] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:47:35] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:47:35] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 17:47:35] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:47:35] gdho stop begin
+[2026-05-18 17:47:35] gdho poll disarm skip reason=stop
+[2026-05-18 17:47:35] gdho gdho_phase CLOSED->CLOSING reason=stop token=3
+[2026-05-18 17:47:35] gdho hide_frontend queue hide
+[2026-05-18 17:47:35] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=3
+[2026-05-18 17:47:35] gdho stop done
+[2026-05-18 17:47:44] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:47:44] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:47:44] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 17:47:44] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 17:47:44] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 17:47:44] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 17:47:44] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 17:47:44] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 17:47:44] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 17:47:44] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 17:47:44] reset_session_step js_done reason=search_center_exit
+[2026-05-18 17:47:44] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 17:47:44] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 17:47:49] selection cursor_over_ui miss mouse_x=1457 mouse_y=856 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 17:47:49] selection lbutton_up dist_x=992 dist_y=644 drag=1 multi=0
+[2026-05-18 17:47:49] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 17:47:50] selection cursor_over_ui miss mouse_x=1449 mouse_y=878 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 17:47:50] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:47:50] selection lbutton_up no_trigger=click
+[2026-05-18 17:47:51] selection cursor_over_ui miss mouse_x=1649 mouse_y=961 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:47:51] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:47:51] selection lbutton_up no_trigger=click
+[2026-05-18 17:47:52] selection cursor_over_ui miss mouse_x=1881 mouse_y=991 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:47:52] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:47:52] selection lbutton_up no_trigger=click
+[2026-05-18 17:53:57] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:53:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:53:57] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 17:53:57] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 17:53:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:53:57] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 17:53:57] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:53:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:53:57] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:53:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:53:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:53:57] gdho stop begin
+[2026-05-18 17:53:57] gdho poll disarm skip reason=stop
+[2026-05-18 17:53:57] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 17:53:57] gdho hide_frontend queue hide
+[2026-05-18 17:53:57] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 17:53:57] gdho stop done
+[2026-05-18 17:54:02] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 17:54:02] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:54:02] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 17:54:02] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:54:02] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:54:02] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:54:02] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:54:32] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=54989548 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1500 mouse_y=957
+[2026-05-18 17:54:32] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:32] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:54:32] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:54:32] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 17:54:32] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 17:54:32] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 17:54:32] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 17:54:32] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:54:32] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:54:32] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 17:54:32] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 17:54:32] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:54:32] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 17:54:32] gdho gdho_redirect_hide_frontend
+[2026-05-18 17:54:32] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:54:32] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 17:54:32] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 17:54:32] gdho gdho_redirect_hide_overlay
+[2026-05-18 17:54:32] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:54:32] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 17:54:32] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 17:54:32] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 17:54:32] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 17:54:32] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 17:54:32] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 17:54:32] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 17:54:32] gdho stop begin
+[2026-05-18 17:54:32] gdho poll disarm skip reason=stop
+[2026-05-18 17:54:32] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 17:54:32] gdho hide_frontend queue hide
+[2026-05-18 17:54:32] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 17:54:32] gdho stop done
+[2026-05-18 17:54:39] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1475 mouse_y=135
+[2026-05-18 17:54:39] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:46] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=980 mouse_y=905
+[2026-05-18 17:54:46] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:49] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1090 mouse_y=846
+[2026-05-18 17:54:49] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:50] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=575 mouse_y=977
+[2026-05-18 17:54:50] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:50] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=655 mouse_y=969
+[2026-05-18 17:54:50] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:51] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=768 mouse_y=967
+[2026-05-18 17:54:51] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:51] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=861 mouse_y=961
+[2026-05-18 17:54:51] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:52] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=918 mouse_y=962
+[2026-05-18 17:54:52] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:52] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=962 mouse_y=966
+[2026-05-18 17:54:52] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:54] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1182 mouse_y=964
+[2026-05-18 17:54:54] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:54] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1401 mouse_y=969
+[2026-05-18 17:54:54] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:55] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1401 mouse_y=969
+[2026-05-18 17:54:55] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:56] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1267 mouse_y=900
+[2026-05-18 17:54:56] selection lbutton_up skip=our_ui
+[2026-05-18 17:54:57] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1290 mouse_y=915
+[2026-05-18 17:54:57] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1144 mouse_y=843
+[2026-05-18 17:55:04] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1179 mouse_y=236
+[2026-05-18 17:55:07] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=936 mouse_y=239
+[2026-05-18 17:55:07] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=702 mouse_y=234
+[2026-05-18 17:55:08] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=951 mouse_y=245
+[2026-05-18 17:55:08] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:09] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=700 mouse_y=237
+[2026-05-18 17:55:09] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:10] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=844 mouse_y=253
+[2026-05-18 17:55:10] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:11] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=780 mouse_y=252
+[2026-05-18 17:55:11] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:13] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=973 mouse_y=251
+[2026-05-18 17:55:13] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:13] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=709 mouse_y=240
+[2026-05-18 17:55:13] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:16] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=862 mouse_y=248
+[2026-05-18 17:55:16] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:16] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=780 mouse_y=237
+[2026-05-18 17:55:16] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:17] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=955 mouse_y=248
+[2026-05-18 17:55:17] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:18] selection cursor_over_ui hit=g_SCWV_Gui hwnd=105449860 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=619 mouse_y=206
+[2026-05-18 17:55:18] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:20] selection cursor_over_ui miss mouse_x=1792 mouse_y=13 top=hwnd=198436 class=Chrome_WidgetWin_1 title=搜索中心 - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:55:20] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:55:20] selection lbutton_up no_trigger=click
+[2026-05-18 17:55:20] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:55:20] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 17:55:20] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 17:55:20] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 17:55:20] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 17:55:20] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 17:55:20] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 17:55:20] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 17:55:20] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 17:55:20] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 17:55:20] reset_session_step js_done reason=search_center_exit
+[2026-05-18 17:55:20] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 17:55:20] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 17:55:22] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=54989548 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=852 mouse_y=655
+[2026-05-18 17:55:22] selection lbutton_up skip=our_ui
+[2026-05-18 17:55:23] selection cursor_over_ui miss mouse_x=1493 mouse_y=960 top=hwnd=198436 class=Chrome_WidgetWin_1 title=搜索中心 - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:55:23] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:55:23] selection lbutton_up no_trigger=click
+[2026-05-18 17:55:26] selection cursor_over_ui miss mouse_x=183 mouse_y=154 top=hwnd=198436 class=Chrome_WidgetWin_1 title=搜索中心 - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:55:26] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:55:26] selection lbutton_up no_trigger=click
+[2026-05-18 17:55:49] selection cursor_over_ui miss mouse_x=421 mouse_y=165 top=hwnd=198436 class=Chrome_WidgetWin_1 title=搜索中心 - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:55:49] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:55:49] selection lbutton_up no_trigger=click
+[2026-05-18 17:55:51] selection cursor_over_ui miss mouse_x=418 mouse_y=189 top=hwnd=198436 class=Chrome_WidgetWin_1 title=搜索中心 - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 17:55:51] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 17:55:51] selection lbutton_up no_trigger=click

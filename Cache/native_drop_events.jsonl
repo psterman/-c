@@ -28,3 +28,17 @@
 {"at":"2026-05-18T16:20:43+08:00","kind":"drag_start","payloadKind":"none","x":1418,"y":788}
 {"at":"2026-05-18T16:20:44+08:00","kind":"drag_end","payloadKind":"none","x":1416,"y":790}
 {"at":"2026-05-18T16:45:53+08:00","kind":"bridge_ready","x":1563,"y":706,"w":170,"h":210}
+{"at":"2026-05-18T17:28:02+08:00","kind":"bridge_ready","x":1653,"y":706,"w":170,"h":210}
+{"at":"2026-05-18T17:28:27+08:00","kind":"drag_start","payloadKind":"none","x":1427,"y":268}
+{"at":"2026-05-18T17:28:29+08:00","kind":"drag_end","payloadKind":"none","x":1457,"y":149}
+{"at":"2026-05-18T17:29:26+08:00","kind":"drag_start","payloadKind":"none","x":1521,"y":925}
+{"at":"2026-05-18T17:29:26+08:00","kind":"drag_end","payloadKind":"none","x":1426,"y":663}
+{"at":"2026-05-18T17:36:21+08:00","kind":"bridge_ready","x":1563,"y":706,"w":170,"h":210}
+{"at":"2026-05-18T17:40:19+08:00","kind":"drag_start","payloadKind":"none","x":557,"y":119}
+{"at":"2026-05-18T17:40:19+08:00","kind":"drag_end","payloadKind":"none","x":523,"y":118}
+{"at":"2026-05-18T17:40:24+08:00","kind":"drag_start","payloadKind":"none","x":619,"y":110}
+{"at":"2026-05-18T17:40:24+08:00","kind":"drag_end","payloadKind":"none","x":479,"y":108}
+{"at":"2026-05-18T17:40:32+08:00","kind":"drag_start","payloadKind":"none","x":1440,"y":918}
+{"at":"2026-05-18T17:40:33+08:00","kind":"drag_end","payloadKind":"none","x":1450,"y":763}
+{"at":"2026-05-18T17:42:35+08:00","kind":"drag_start","payloadKind":"none","x":1657,"y":857}
+{"at":"2026-05-18T17:42:36+08:00","kind":"drag_end","payloadKind":"none","x":1148,"y":856}

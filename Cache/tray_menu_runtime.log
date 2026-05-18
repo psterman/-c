@@ -1223,3 +1223,281 @@
 [2026-05-18 16:45:53] handoff_cleanup_done reason=tray_open_ui gdho=0 gdho_phase=CLOSED gdho_token=2 native=0
 [2026-05-18 16:45:53] handoff_step hide_gui_async_begin reason=tray_open_ui_finalize
 [2026-05-18 16:45:53] handoff_step hide_gui_async_done reason=tray_open_ui_finalize
+[2026-05-18 17:05:55] queued_ui_open_begin reason=ftb_ctx_search
+[2026-05-18 17:05:55] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-18 17:05:55] handoff_begin reason=tray_open_ui search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=3 native=0 phase=closed
+[2026-05-18 17:05:55] handoff_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:05:55] handoff_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:05:55] handoff_step hide_gui_queue reason=tray_open_ui
+[2026-05-18 17:05:55] handoff_queued reason=tray_open_ui token=2 timeout_ms=1800
+[2026-05-18 17:05:55] prepare_ui_from_hole_done
+[2026-05-18 17:05:55] queued_ui_open_after_prep reason=ftb_ctx_search
+[2026-05-18 17:05:55] queued_ui_open_done reason=ftb_ctx_search
+[2026-05-18 17:05:55] handoff_step hide_gui_async_begin reason=tray_open_ui
+[2026-05-18 17:05:55] handoff_step hide_gui_async_done reason=tray_open_ui
+[2026-05-18 17:05:55] open_search_from_menu
+[2026-05-18 17:05:55] handoff_cleanup_done reason=tray_open_ui gdho=0 gdho_phase=CLOSED gdho_token=3 native=0
+[2026-05-18 17:05:55] handoff_step hide_gui_async_begin reason=tray_open_ui_finalize
+[2026-05-18 17:05:55] handoff_step hide_gui_async_done reason=tray_open_ui_finalize
+[2026-05-18 17:07:48] tray_msg lParam=1026 msg=1028
+[2026-05-18 17:07:49] tray_msg lParam=1028 msg=1028
+[2026-05-18 17:07:49] tray_msg lParam=1026 msg=1028
+[2026-05-18 17:07:55] tray_msg lParam=1028 msg=1028
+[2026-05-18 17:15:46] queued_ui_open_begin reason=ftb_ctx_search
+[2026-05-18 17:15:46] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-18 17:15:46] handoff_begin reason=tray_open_ui search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=9 native=0 phase=closed
+[2026-05-18 17:15:46] handoff_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:15:46] handoff_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:15:46] handoff_step hide_gui_queue reason=tray_open_ui
+[2026-05-18 17:15:46] handoff_queued reason=tray_open_ui token=3 timeout_ms=1800
+[2026-05-18 17:15:46] prepare_ui_from_hole_done
+[2026-05-18 17:15:46] queued_ui_open_after_prep reason=ftb_ctx_search
+[2026-05-18 17:15:46] queued_ui_open_done reason=ftb_ctx_search
+[2026-05-18 17:15:46] handoff_step hide_gui_async_begin reason=tray_open_ui
+[2026-05-18 17:15:46] handoff_step hide_gui_async_done reason=tray_open_ui
+[2026-05-18 17:15:46] open_search_from_menu
+[2026-05-18 17:15:46] handoff_cleanup_done reason=tray_open_ui gdho=0 gdho_phase=CLOSED gdho_token=9 native=0
+[2026-05-18 17:15:46] handoff_step hide_gui_async_begin reason=tray_open_ui_finalize
+[2026-05-18 17:15:46] handoff_step hide_gui_async_done reason=tray_open_ui_finalize
+[2026-05-18 17:19:49] queued_ui_open_begin reason=ftb_ctx_search
+[2026-05-18 17:19:49] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-18 17:19:49] handoff_begin reason=tray_open_ui search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=10 native=0 phase=closed
+[2026-05-18 17:19:49] handoff_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:19:49] handoff_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:19:49] handoff_step hide_gui_queue reason=tray_open_ui
+[2026-05-18 17:19:49] handoff_queued reason=tray_open_ui token=4 timeout_ms=1800
+[2026-05-18 17:19:49] prepare_ui_from_hole_done
+[2026-05-18 17:19:49] queued_ui_open_after_prep reason=ftb_ctx_search
+[2026-05-18 17:19:49] queued_ui_open_done reason=ftb_ctx_search
+[2026-05-18 17:19:49] handoff_step hide_gui_async_begin reason=tray_open_ui
+[2026-05-18 17:19:49] handoff_step hide_gui_async_done reason=tray_open_ui
+[2026-05-18 17:19:49] open_search_from_menu
+[2026-05-18 17:19:49] handoff_cleanup_done reason=tray_open_ui gdho=0 gdho_phase=CLOSED gdho_token=10 native=0
+[2026-05-18 17:19:49] handoff_step hide_gui_async_begin reason=tray_open_ui_finalize
+[2026-05-18 17:19:49] handoff_step hide_gui_async_done reason=tray_open_ui_finalize
+[2026-05-18 17:27:36] dark_popup_show_begin items=13 pos=1503,397
+[2026-05-18 17:27:36] dark_popup_show_begin items=13 pos=1503,397
+[2026-05-18 17:27:36] dark_popup_show_done elapsed_ms=47 hwnd=20779738
+[2026-05-18 17:27:36] popup_state_reset reason=invoke_click
+[2026-05-18 17:27:36] invoke_click idx=12 text=重启脚本
+[2026-05-18 17:27:36] invoke_ok idx=12 text=重启脚本
+[2026-05-18 17:27:36] reload_hard_spawn_ok
+[2026-05-18 17:27:37] snapshot_dirty reason=update_tray_menu
+[2026-05-18 17:27:37] snapshot_dirty reason=init
+[2026-05-18 17:27:37] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 17:27:46] queued_ui_open_begin reason=ftb_ctx_search
+[2026-05-18 17:27:46] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-18 17:27:46] handoff_begin reason=tray_open_ui search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=1 native=0 phase=closed
+[2026-05-18 17:27:46] handoff_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:27:46] handoff_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:27:46] handoff_step hide_gui_queue reason=tray_open_ui
+[2026-05-18 17:27:46] handoff_queued reason=tray_open_ui token=1 timeout_ms=1800
+[2026-05-18 17:27:46] prepare_ui_from_hole_done
+[2026-05-18 17:27:46] queued_ui_open_after_prep reason=ftb_ctx_search
+[2026-05-18 17:27:46] queued_ui_open_done reason=ftb_ctx_search
+[2026-05-18 17:27:46] handoff_step hide_gui_async_begin reason=tray_open_ui
+[2026-05-18 17:27:46] handoff_step hide_gui_async_done reason=tray_open_ui
+[2026-05-18 17:27:46] open_search_from_menu
+[2026-05-18 17:27:47] handoff_cleanup_done reason=tray_open_ui gdho=0 gdho_phase=CLOSED gdho_token=1 native=0
+[2026-05-18 17:27:47] handoff_step hide_gui_async_begin reason=tray_open_ui_finalize
+[2026-05-18 17:27:47] handoff_step hide_gui_async_done reason=tray_open_ui_finalize
+[2026-05-18 17:28:00] tray_msg lParam=516 msg=1028
+[2026-05-18 17:28:00] tray_msg lParam=517 msg=1028
+[2026-05-18 17:28:00] tray_popup_state mode=toolbar search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=3 native=0 waiting=0 phase=open caps=0
+[2026-05-18 17:28:00] custom_popup_queue lParam=517
+[2026-05-18 17:28:00] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-18 17:28:00] custom_popup_begin lParam=517
+[2026-05-18 17:28:00] custom_popup_state mode=toolbar ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=3 native=0 waiting=0 create_inflight=0
+[2026-05-18 17:28:00] tray_build_phase=state elapsed_ms=0
+[2026-05-18 17:28:00] snapshot_miss scene=tray_menu dirty=1
+[2026-05-18 17:28:00] custom_popup_scene_items count=0 mode=toolbar
+[2026-05-18 17:28:00] tray_build_phase=snapshot elapsed_ms=0
+[2026-05-18 17:28:00] tray_build_phase=render elapsed_ms=0
+[2026-05-18 17:28:00] custom_popup_build_done items=9 elapsed_ms=0
+[2026-05-18 17:28:00] dark_popup_show_begin items=9 pos=1660,722
+[2026-05-18 17:28:00] scene_items_source scene=tray_menu mode=toolbar raw_count=60 vis_count=8 cmd_count=185
+[2026-05-18 17:28:00] scene_items_filtered scene=tray_menu count=8
+[2026-05-18 17:28:00] snapshot_rebuild_ok count=8 elapsed_ms=0
+[2026-05-18 17:28:00] dark_popup_show_done elapsed_ms=62 hwnd=45550626
+[2026-05-18 17:28:00] custom_popup_end lParam=517 elapsed_ms=78
+[2026-05-18 17:28:02] popup_state_reset reason=invoke_click
+[2026-05-18 17:28:02] invoke_click idx=2 text=搜索中心
+[2026-05-18 17:28:02] invoke_ok idx=2 text=搜索中心
+[2026-05-18 17:28:02] show_search_from_menu_begin
+[2026-05-18 17:28:02] show_search_from_menu_end
+[2026-05-18 17:28:02] queued_ui_open_begin reason=search
+[2026-05-18 17:28:02] prepare_search_from_hole search_active=0 caps=0
+[2026-05-18 17:28:02] handoff_begin reason=tray_open_search search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=3 native=0 phase=open
+[2026-05-18 17:28:02] handoff_step clickthrough_begin reason=tray_open_search
+[2026-05-18 17:28:02] handoff_step clickthrough_done reason=tray_open_search
+[2026-05-18 17:28:02] handoff_step hide_gui_queue reason=tray_open_search
+[2026-05-18 17:28:02] handoff_queued reason=tray_open_search token=2 timeout_ms=1200
+[2026-05-18 17:28:02] prepare_search_from_hole_done
+[2026-05-18 17:28:02] queued_ui_open_after_prep reason=search
+[2026-05-18 17:28:02] queued_ui_open_done reason=search
+[2026-05-18 17:28:02] handoff_step hide_gui_async_begin reason=tray_open_search
+[2026-05-18 17:28:02] handoff_step hide_gui_async_done reason=tray_open_search
+[2026-05-18 17:28:02] open_search_from_menu
+[2026-05-18 17:28:02] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 17:28:02] handoff_cleanup_done reason=tray_open_search gdho=0 gdho_phase=CLOSED gdho_token=4 native=0
+[2026-05-18 17:28:02] handoff_step hide_gui_async_begin reason=tray_open_search_finalize
+[2026-05-18 17:28:02] handoff_step hide_gui_async_done reason=tray_open_search_finalize
+[2026-05-18 17:28:02] popup_state_reset reason=invoke_click_deferred_2
+[2026-05-18 17:34:50] reload_hard_spawn_ok
+[2026-05-18 17:34:51] snapshot_dirty reason=update_tray_menu
+[2026-05-18 17:34:51] snapshot_dirty reason=init
+[2026-05-18 17:34:51] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 17:35:25] queued_ui_open_begin reason=ftb_ctx_search
+[2026-05-18 17:35:25] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-18 17:35:25] handoff_begin reason=tray_open_ui search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=1 native=0 phase=closed
+[2026-05-18 17:35:25] handoff_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:35:25] handoff_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:35:25] handoff_step hide_gui_queue reason=tray_open_ui
+[2026-05-18 17:35:25] handoff_queued reason=tray_open_ui token=1 timeout_ms=1800
+[2026-05-18 17:35:25] prepare_ui_from_hole_done
+[2026-05-18 17:35:25] queued_ui_open_after_prep reason=ftb_ctx_search
+[2026-05-18 17:35:25] queued_ui_open_done reason=ftb_ctx_search
+[2026-05-18 17:35:25] handoff_step hide_gui_async_begin reason=tray_open_ui
+[2026-05-18 17:35:25] handoff_step hide_gui_async_done reason=tray_open_ui
+[2026-05-18 17:35:25] open_search_from_menu
+[2026-05-18 17:35:25] handoff_cleanup_done reason=tray_open_ui gdho=0 gdho_phase=CLOSED gdho_token=1 native=0
+[2026-05-18 17:35:25] handoff_step hide_gui_async_begin reason=tray_open_ui_finalize
+[2026-05-18 17:35:25] handoff_step hide_gui_async_done reason=tray_open_ui_finalize
+[2026-05-18 17:36:18] tray_msg lParam=516 msg=1028
+[2026-05-18 17:36:18] tray_msg lParam=517 msg=1028
+[2026-05-18 17:36:18] tray_popup_state mode=toolbar search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=2 native=0 waiting=0 phase=open caps=0
+[2026-05-18 17:36:18] custom_popup_queue lParam=517
+[2026-05-18 17:36:18] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-18 17:36:18] custom_popup_begin lParam=517
+[2026-05-18 17:36:18] custom_popup_state mode=toolbar ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=2 native=0 waiting=0 create_inflight=0
+[2026-05-18 17:36:18] tray_build_phase=state elapsed_ms=0
+[2026-05-18 17:36:18] snapshot_miss scene=tray_menu dirty=1
+[2026-05-18 17:36:18] custom_popup_scene_items count=0 mode=toolbar
+[2026-05-18 17:36:18] tray_build_phase=snapshot elapsed_ms=0
+[2026-05-18 17:36:18] tray_build_phase=render elapsed_ms=0
+[2026-05-18 17:36:18] custom_popup_build_done items=9 elapsed_ms=0
+[2026-05-18 17:36:18] dark_popup_show_begin items=9 pos=1656,705
+[2026-05-18 17:36:18] scene_items_source scene=tray_menu mode=toolbar raw_count=60 vis_count=8 cmd_count=185
+[2026-05-18 17:36:18] scene_items_filtered scene=tray_menu count=8
+[2026-05-18 17:36:18] snapshot_rebuild_ok count=8 elapsed_ms=0
+[2026-05-18 17:36:18] dark_popup_show_done elapsed_ms=62 hwnd=12653400
+[2026-05-18 17:36:18] custom_popup_end lParam=517 elapsed_ms=78
+[2026-05-18 17:36:20] tray_msg lParam=516 msg=1028
+[2026-05-18 17:36:20] tray_msg lParam=517 msg=1028
+[2026-05-18 17:36:20] tray_popup_state mode=toolbar search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=2 native=0 waiting=0 phase=open caps=0
+[2026-05-18 17:36:20] custom_popup_queue lParam=517
+[2026-05-18 17:36:20] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-18 17:36:20] custom_popup_begin lParam=517
+[2026-05-18 17:36:20] custom_popup_state mode=toolbar ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=2 native=0 waiting=0 create_inflight=0
+[2026-05-18 17:36:20] tray_build_phase=state elapsed_ms=0
+[2026-05-18 17:36:20] snapshot_hit scene=tray_menu count=8
+[2026-05-18 17:36:20] custom_popup_scene_items count=8 mode=toolbar
+[2026-05-18 17:36:20] scene_items_appended count=8 mode=toolbar
+[2026-05-18 17:36:20] tray_build_phase=snapshot elapsed_ms=0
+[2026-05-18 17:36:20] tray_build_phase=render elapsed_ms=0
+[2026-05-18 17:36:20] custom_popup_build_done items=17 elapsed_ms=0
+[2026-05-18 17:36:20] dark_popup_show_begin items=17 pos=1669,436
+[2026-05-18 17:36:20] dark_popup_show_done elapsed_ms=62 hwnd=23073442
+[2026-05-18 17:36:20] custom_popup_end lParam=517 elapsed_ms=78
+[2026-05-18 17:36:21] popup_state_reset reason=invoke_click
+[2026-05-18 17:36:21] invoke_click idx=2 text=搜索中心
+[2026-05-18 17:36:21] invoke_ok idx=2 text=搜索中心
+[2026-05-18 17:36:21] show_search_from_menu_begin
+[2026-05-18 17:36:21] show_search_from_menu_end
+[2026-05-18 17:36:21] queued_ui_open_begin reason=search
+[2026-05-18 17:36:21] prepare_search_from_hole search_active=0 caps=0
+[2026-05-18 17:36:21] handoff_begin reason=tray_open_search search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=2 native=0 phase=open
+[2026-05-18 17:36:21] handoff_step clickthrough_begin reason=tray_open_search
+[2026-05-18 17:36:21] handoff_step clickthrough_done reason=tray_open_search
+[2026-05-18 17:36:21] handoff_step hide_gui_queue reason=tray_open_search
+[2026-05-18 17:36:21] handoff_queued reason=tray_open_search token=2 timeout_ms=1200
+[2026-05-18 17:36:21] prepare_search_from_hole_done
+[2026-05-18 17:36:21] queued_ui_open_after_prep reason=search
+[2026-05-18 17:36:21] queued_ui_open_done reason=search
+[2026-05-18 17:36:21] handoff_step hide_gui_async_begin reason=tray_open_search
+[2026-05-18 17:36:21] handoff_step hide_gui_async_done reason=tray_open_search
+[2026-05-18 17:36:21] open_search_from_menu
+[2026-05-18 17:36:21] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 17:36:21] handoff_cleanup_done reason=tray_open_search gdho=0 gdho_phase=CLOSED gdho_token=3 native=0
+[2026-05-18 17:36:21] handoff_step hide_gui_async_begin reason=tray_open_search_finalize
+[2026-05-18 17:36:21] handoff_step hide_gui_async_done reason=tray_open_search_finalize
+[2026-05-18 17:36:21] popup_state_reset reason=invoke_click_deferred_2
+[2026-05-18 17:45:28] reload_hard_spawn_ok
+[2026-05-18 17:45:29] snapshot_dirty reason=update_tray_menu
+[2026-05-18 17:45:29] snapshot_dirty reason=init
+[2026-05-18 17:45:29] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 17:45:49] queued_ui_open_begin reason=ftb_ctx_search
+[2026-05-18 17:45:49] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-18 17:45:49] handoff_begin reason=tray_open_ui search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=1 native=0 phase=closed
+[2026-05-18 17:45:49] handoff_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:45:49] handoff_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:45:49] handoff_step hide_gui_queue reason=tray_open_ui
+[2026-05-18 17:45:49] handoff_queued reason=tray_open_ui token=1 timeout_ms=1800
+[2026-05-18 17:45:49] prepare_ui_from_hole_done
+[2026-05-18 17:45:49] queued_ui_open_after_prep reason=ftb_ctx_search
+[2026-05-18 17:45:49] queued_ui_open_done reason=ftb_ctx_search
+[2026-05-18 17:45:49] handoff_step hide_gui_async_begin reason=tray_open_ui
+[2026-05-18 17:45:49] handoff_step hide_gui_async_done reason=tray_open_ui
+[2026-05-18 17:45:49] open_search_from_menu
+[2026-05-18 17:45:49] handoff_cleanup_done reason=tray_open_ui gdho=0 gdho_phase=CLOSED gdho_token=1 native=0
+[2026-05-18 17:45:49] handoff_step hide_gui_async_begin reason=tray_open_ui_finalize
+[2026-05-18 17:45:49] handoff_step hide_gui_async_done reason=tray_open_ui_finalize
+[2026-05-18 17:47:34] queued_ui_open_begin reason=ftb_ctx_search
+[2026-05-18 17:47:34] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-18 17:47:34] handoff_begin reason=tray_open_ui search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=2 native=0 phase=closed
+[2026-05-18 17:47:34] handoff_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:47:34] handoff_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:47:34] handoff_step hide_gui_queue reason=tray_open_ui
+[2026-05-18 17:47:34] handoff_queued reason=tray_open_ui token=2 timeout_ms=1800
+[2026-05-18 17:47:34] prepare_ui_from_hole_done
+[2026-05-18 17:47:34] queued_ui_open_after_prep reason=ftb_ctx_search
+[2026-05-18 17:47:34] queued_ui_open_done reason=ftb_ctx_search
+[2026-05-18 17:47:34] handoff_step hide_gui_async_begin reason=tray_open_ui
+[2026-05-18 17:47:34] handoff_step hide_gui_async_done reason=tray_open_ui
+[2026-05-18 17:47:34] open_search_from_menu
+[2026-05-18 17:47:34] handoff_cleanup_done reason=tray_open_ui gdho=0 gdho_phase=CLOSED gdho_token=2 native=0
+[2026-05-18 17:47:35] handoff_step hide_gui_async_begin reason=tray_open_ui_finalize
+[2026-05-18 17:47:35] handoff_step hide_gui_async_done reason=tray_open_ui_finalize
+[2026-05-18 17:53:57] reload_hard_spawn_ok
+[2026-05-18 17:53:57] snapshot_dirty reason=update_tray_menu
+[2026-05-18 17:53:57] snapshot_dirty reason=init
+[2026-05-18 17:53:57] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 17:54:30] tray_msg lParam=516 msg=1028
+[2026-05-18 17:54:30] tray_msg lParam=517 msg=1028
+[2026-05-18 17:54:30] tray_popup_state mode=toolbar search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=1 native=0 waiting=0 phase=closed caps=0
+[2026-05-18 17:54:30] custom_popup_queue lParam=517
+[2026-05-18 17:54:30] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-18 17:54:30] custom_popup_begin lParam=517
+[2026-05-18 17:54:30] custom_popup_state mode=toolbar ft_vis=1 bub_vis=0 search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=1 native=0 waiting=0 create_inflight=0
+[2026-05-18 17:54:30] tray_build_phase=state elapsed_ms=0
+[2026-05-18 17:54:30] snapshot_miss scene=tray_menu dirty=1
+[2026-05-18 17:54:30] custom_popup_scene_items count=0 mode=toolbar
+[2026-05-18 17:54:30] tray_build_phase=snapshot elapsed_ms=0
+[2026-05-18 17:54:30] tray_build_phase=render elapsed_ms=0
+[2026-05-18 17:54:30] custom_popup_build_done items=11 elapsed_ms=0
+[2026-05-18 17:54:30] dark_popup_show_begin items=11 pos=1660,642
+[2026-05-18 17:54:30] scene_items_source scene=tray_menu mode=toolbar raw_count=60 vis_count=8 cmd_count=185
+[2026-05-18 17:54:30] scene_items_filtered scene=tray_menu count=8
+[2026-05-18 17:54:30] snapshot_rebuild_ok count=8 elapsed_ms=0
+[2026-05-18 17:54:30] dark_popup_show_done elapsed_ms=62 hwnd=8983238
+[2026-05-18 17:54:30] custom_popup_end lParam=517 elapsed_ms=78
+[2026-05-18 17:54:31] dark_popup_show_begin items=13 pos=1705,486
+[2026-05-18 17:54:31] dark_popup_show_begin items=13 pos=1705,486
+[2026-05-18 17:54:32] dark_popup_show_done elapsed_ms=766 hwnd=9048774
+[2026-05-18 17:54:32] dark_popup_show_done elapsed_ms=843 hwnd=267260
+[2026-05-18 17:54:32] queued_ui_open_begin reason=ftb_ctx_search
+[2026-05-18 17:54:32] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-18 17:54:32] handoff_begin reason=tray_open_ui search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=1 native=0 phase=closed
+[2026-05-18 17:54:32] handoff_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 17:54:32] handoff_step clickthrough_done reason=tray_open_ui
+[2026-05-18 17:54:32] handoff_step hide_gui_queue reason=tray_open_ui
+[2026-05-18 17:54:32] handoff_queued reason=tray_open_ui token=1 timeout_ms=1800
+[2026-05-18 17:54:32] prepare_ui_from_hole_done
+[2026-05-18 17:54:32] queued_ui_open_after_prep reason=ftb_ctx_search
+[2026-05-18 17:54:32] queued_ui_open_done reason=ftb_ctx_search
+[2026-05-18 17:54:32] handoff_step hide_gui_async_begin reason=tray_open_ui
+[2026-05-18 17:54:32] handoff_step hide_gui_async_done reason=tray_open_ui
+[2026-05-18 17:54:32] open_search_from_menu
+[2026-05-18 17:54:32] handoff_cleanup_done reason=tray_open_ui gdho=0 gdho_phase=CLOSED gdho_token=1 native=0
+[2026-05-18 17:54:32] handoff_step hide_gui_async_begin reason=tray_open_ui_finalize
+[2026-05-18 17:54:32] handoff_step hide_gui_async_done reason=tray_open_ui_finalize
