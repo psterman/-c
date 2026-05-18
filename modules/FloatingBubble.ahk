@@ -15,6 +15,7 @@ global FloatingBubble_DragOriginScreenY := 0
 global FloatingBubble_DragOriginWinX := 0
 global FloatingBubble_DragOriginWinY := 0
 global FloatingBubbleSize := 48
+global g_FB_LayeredAlpha := 255
 global g_FB_WV2_CreateRetry := 0
 global g_FB_HostMouseDownTick := 0
 global g_FB_HostMouseDownX := 0
@@ -332,7 +333,14 @@ FloatingBubble_RenderLayered(mode := "") {
     hBitmap := Gdip_CreateHBITMAPFromBitmap(pBitmap, 0x00000000)
     hdc := CreateCompatibleDC()
     obm := SelectObject(hdc, hBitmap)
-    try UpdateLayeredWindow(FloatingBubbleGUI.Hwnd, hdc, "", "", sz, sz, 255)
+    alpha := 255
+    try {
+        if IsSet(g_FB_LayeredAlpha)
+            alpha := Max(0, Min(255, Integer(g_FB_LayeredAlpha)))
+    } catch {
+        alpha := 255
+    }
+    try UpdateLayeredWindow(FloatingBubbleGUI.Hwnd, hdc, "", "", sz, sz, alpha)
     SelectObject(hdc, obm)
     DeleteObject(hBitmap)
     DeleteDC(hdc)
@@ -442,6 +450,102 @@ FloatingBubble_DragRun(*) {
 }
 
 InitFloatingBubble() {
+}
+
+FloatingBubble_ClampPos(&x, &y, sz) {
+    ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+    vr := vl + vw
+    vb := vt + vh
+    if (x < vl)
+        x := vl
+    if (y < vt)
+        y := vt
+    if (x + sz > vr)
+        x := vr - sz
+    if (y + sz > vb)
+        y := vb - sz
+}
+
+FloatingBubble_FadeLayered(fromAlpha, toAlpha, durationMs, onDone := "") {
+    global g_FB_LayeredAlpha, FloatingBubbleGUI
+    if !FloatingBubbleGUI
+        return
+    steps := Max(8, Integer(durationMs / 16))
+    tickMs := Max(10, Integer(durationMs / steps))
+    curStep := 0
+    FadeStep(*) {
+        curStep++
+        t := curStep / steps
+        if (t > 1)
+            t := 1.0
+        eased := 1 - (1 - t) ** 3
+        g_FB_LayeredAlpha := Round(fromAlpha + (toAlpha - fromAlpha) * eased)
+        try FloatingBubble_RenderLayered()
+        catch {
+        }
+        if (curStep >= steps) {
+            g_FB_LayeredAlpha := Round(toAlpha)
+            try FloatingBubble_RenderLayered()
+            catch {
+            }
+            if (onDone != "") {
+                if (IsObject(onDone))
+                    try onDone.Call()
+                catch {
+                }
+            }
+            return
+        }
+        SetTimer(FadeStep, -tickMs)
+    }
+    g_FB_LayeredAlpha := Max(0, Min(255, Integer(fromAlpha)))
+    try FloatingBubble_RenderLayered()
+    catch {
+    }
+    SetTimer(FadeStep, -tickMs)
+}
+
+ShowFloatingBubbleAt(centerX, centerY, sizePx := 0, initialAlpha := 255) {
+    global FloatingBubbleGUI, FloatingBubbleIsVisible, FloatingBubbleWindowX, FloatingBubbleWindowY, FloatingBubbleSize, g_FB_LayeredAlpha
+
+    g_FB_LayeredAlpha := Max(0, Min(255, Integer(initialAlpha)))
+
+    sz := Integer(sizePx)
+    if (sz < 40)
+        sz := FloatingBubble_GetSize()
+    if (sz > 96)
+        sz := 96
+    FloatingBubbleSize := sz
+
+    if (FloatingBubbleGUI = 0)
+        CreateFloatingBubbleGUI()
+
+    nx := Round(centerX - (sz / 2.0))
+    ny := Round(centerY - (sz / 2.0))
+    FloatingBubble_ClampPos(&nx, &ny, sz)
+    FloatingBubbleWindowX := nx
+    FloatingBubbleWindowY := ny
+
+    try FloatingBubbleGUI.Show("x" . nx . " y" . ny . " w" . sz . " h" . sz . " NoActivate")
+    catch {
+    }
+    FloatingBubble_ApplyWebViewBounds()
+    FloatingBubbleIsVisible := true
+    try WebView2_NotifyShown(g_FB_WV2)
+    try FloatingBubble_RenderLayered()
+    catch {
+    }
+    SaveFloatingBubblePosition()
+    SetTimer(FloatingBubble_PushLogoToWeb, -50)
+}
+
+FloatingBubble_PlayEnterAnim() {
+    global g_FB_WV2
+    if !g_FB_WV2
+        return
+    try WebView_QueuePayload(g_FB_WV2, Map("type", "bubble_enter"))
+    catch {
+    }
 }
 
 ShowFloatingBubble() {

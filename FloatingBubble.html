@@ -26,10 +26,19 @@
       border-radius: 50%;
       overflow: hidden;
       isolation: isolate;
-      transform: translateZ(0);
+      transform: translateZ(0) scale(1);
       backface-visibility: hidden;
-      will-change: transform;
+      will-change: transform, opacity;
       box-shadow: 0 0 0 1px rgba(255,255,255,.07);
+      transition: transform .28s cubic-bezier(.22,1,.36,1), opacity .24s ease, box-shadow .28s ease;
+    }
+    .wrap.fb-enter {
+      animation: fbPopIn .34s cubic-bezier(.22,1,.36,1);
+    }
+    @keyframes fbPopIn {
+      0% { transform: scale(.72); opacity: .15; }
+      65% { transform: scale(1.06); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
     }
     .wrap::before {
       content: "";
@@ -156,6 +165,13 @@
           if (d && d.type === 'set_theme') {
             var tm = String((d.themeMode || d.theme || '')).toLowerCase() === 'light' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', tm);
+            return;
+          }
+          if (d && d.type === 'bubble_enter') {
+            root.classList.remove('fb-enter');
+            void root.offsetWidth;
+            root.classList.add('fb-enter');
+            setTimeout(function () { root.classList.remove('fb-enter'); }, 380);
             return;
           }
         } catch (err) {}

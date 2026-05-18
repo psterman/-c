@@ -479,7 +479,7 @@ global FloatingToolbarMenuOptions := [
     Map("id", "ExitApp", "name", "退出程序")
 ]
 
-; 激活方式：toolbar=悬浮栏 hole=黑洞模式 tray=后台（仅托盘，无悬浮 UI）
+; 激活方式：toolbar=悬浮栏 bubble=悬浮球(滚轮缩小) hole=黑洞模式 tray=后台（仅托盘，无悬浮 UI）
 global AppearanceActivationMode := "toolbar"
 
 ; ===================== UI 颜色初始化（必须在脚本早期初始化）=====================
@@ -2442,9 +2442,8 @@ SyncPromptTemplatesToDB() {
 ; ===================== 激活方式规范化 =====================
 NormalizeAppearanceActivationMode(v) {
     s := Trim(String(v))
-    if (s = "bubble")
-        return "hole"
-    if (s = "hole" || s = "tray" || s = "toolbar")
+    ; bubble = 悬浮球圆圈（滚轮缩小）；hole = GDHO 黑洞模式，二者互不相同
+    if (s = "bubble" || s = "hole" || s = "tray" || s = "toolbar")
         return s
     return "toolbar"
 }
@@ -2655,6 +2654,20 @@ ApplyAppearanceActivationMode_Run(m, token) {
             catch {
             }
             NMER_Log("activation", "apply_mode_toolbar", "ok=1")
+            return
+        }
+        if (m = "bubble") {
+            try ApplyActivationRuntimeAsync("toolbar")
+            try FloatingToolbarChatDrawerOpen := false
+            catch {
+            }
+            try HideFloatingToolbar()
+            catch {
+            }
+            try ShowFloatingBubble()
+            catch {
+            }
+            NMER_Log("activation", "apply_mode_bubble", "ok=1")
             return
         }
         if (m = "hole") {
@@ -6034,7 +6047,7 @@ p:: {
 }
 
 !WheelDown:: {
-    try FloatingToolbar_SetActivationMode("hole")
+    try FloatingToolbar_SetActivationMode("bubble")
 }
 
 ; 强制恢复悬浮工具栏到可见区域（紧急兜底）

@@ -51,6 +51,10 @@ global FloatingToolbarScale := 1.0
 global FloatingToolbarMinScale := 0.85
 global FloatingToolbarMaxScale := 2.0
 global FloatingToolbarCompactDiameter := 62
+global g_FTB_ModeTransitionBusy := false
+global g_FTB_BubbleHandoffMs := 420
+global g_FTB_ModeFadeMs := 280
+global g_FTB_CrossfadeMs := 340
 global FloatingToolbarDragging := false
 global FloatingToolbar_DragOriginScreenX := 0
 global FloatingToolbar_DragOriginScreenY := 0
@@ -649,7 +653,7 @@ ToggleFloatingToolbar() {
     }
 
     mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
-    if (mode = "hole") {
+    if (mode = "hole" || mode = "bubble") {
         return
     }
     if (mode = "tray") {
@@ -2327,7 +2331,7 @@ FloatingToolbarOpenSettings() {
 ; ===================== 濠婃俺鐤嗙紓鈺傛杹婢跺嫮鎮?=====================
 FloatingToolbarWM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
     global FloatingToolbarGUI, FloatingToolbarIsVisible, FloatingToolbarChatDrawerOpen
-    global AppearanceActivationMode
+    global FloatingBubbleGUI, FloatingBubbleIsVisible, AppearanceActivationMode
     wheelDelta := (wParam >> 16) & 0xFFFF
     if (wheelDelta > 0x7FFF)
         wheelDelta := wheelDelta - 0x10000
@@ -2345,6 +2349,25 @@ FloatingToolbarWM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
         if (mx1 >= tx && mx1 <= tx + tw && my1 >= ty && my1 <= ty + th)
             mouseInToolbar := true
     }
+
+    mouseInBubble := false
+    if (FloatingBubbleIsVisible && IsSet(FloatingBubbleGUI) && IsObject(FloatingBubbleGUI) && (FloatingBubbleGUI is Gui)) {
+        MouseGetPos(&mx2, &my2)
+        try FloatingBubbleGUI.GetPos(&bx, &by, &bw, &bh)
+        catch {
+            bx := by := bw := bh := 0
+        }
+        if (mx2 >= bx && mx2 <= bx + bw && my2 >= by && my2 <= by + bh)
+            mouseInBubble := true
+    }
+
+    if (mouseInToolbar || mouseInBubble) {
+        FloatingToolbar_SwitchActivationByWheel(delta)
+        return 0
+    }
+
+    if (g_FTB_ModeTransitionBusy)
+        return 0
     if (!mouseInToolbar)
         return
     if (mode != "toolbar")
@@ -2358,13 +2381,292 @@ FloatingToolbarWM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
     return 0
 }
 
-FloatingToolbar_SetActivationMode(mode) {
-    global AppearanceActivationMode
-    m := NormalizeAppearanceActivationMode(mode)
-    if (m != "toolbar" && m != "hole" && m != "tray")
+FloatingToolbar_ClampRect(&x, &y, w, h) {
+    ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+    vr := vl + vw
+    vb := vt + vh
+    if (x < vl)
+        x := vl
+    if (y < vt)
+        y := vt
+    if (x + w > vr)
+        x := vr - w
+    if (y + h > vb)
+        y := vb - h
+}
+
+FloatingToolbar_GetGuiCenter(gui, &cx, &cy) {
+    cx := 0.0
+    cy := 0.0
+    if !IsObject(gui)
+        return false
+    try gui.GetPos(&x, &y, &w, &h)
+    catch {
+        return false
+    }
+    cx := x + (w / 2.0)
+    cy := y + (h / 2.0)
+    return true
+}
+
+FloatingToolbar_FadeGui(hwnd, fromAlpha, toAlpha, durationMs, onDone := "") {
+    if !hwnd
         return
+    steps := Max(6, Integer(durationMs / 18))
+    tickMs := Max(12, Integer(durationMs / steps))
+    curStep := 0
+    FadeStep(*) {
+        curStep++
+        t := curStep / steps
+        if (t > 1)
+            t := 1.0
+        eased := 1 - (1 - t) ** 3
+        a := fromAlpha + (toAlpha - fromAlpha) * eased
+        try WinSetTransparent(Round(a), "ahk_id " . hwnd)
+        if (curStep >= steps) {
+            if (onDone != "") {
+                if (IsObject(onDone))
+                    try onDone.Call()
+                catch {
+                }
+            }
+            return
+        }
+        SetTimer(FadeStep, -tickMs)
+    }
+    try WinSetTransparent(Round(fromAlpha), "ahk_id " . hwnd)
+    SetTimer(FadeStep, -tickMs)
+}
+
+FloatingToolbar_PersistActivationBubble() {
+    global AppearanceActivationMode
+    AppearanceActivationMode := "bubble"
+    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    try IniWrite("bubble", cfg, "Appearance", "ActivationMode")
+    catch {
+    }
+    try ApplyActivationRuntimeAsync("toolbar")
+    catch {
+    }
+}
+
+FloatingToolbar_RequestHandoffToBubble() {
+    global g_FTB_WV2
+    if !g_FTB_WV2
+        return
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "handoff_to_bubble"))
+    catch {
+    }
+}
+
+FloatingToolbar_ClearHandoffWeb() {
+    global g_FTB_WV2
+    if !g_FTB_WV2
+        return
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "handoff_clear"))
+    catch {
+    }
+}
+
+FloatingToolbar_FinalizeBubbleSwitch(*) {
+    global g_FTB_ModeTransitionBusy
+    try FloatingToolbar_ClearHandoffWeb()
+    try FloatingToolbar_PersistActivationBubble()
+    try HideFloatingToolbar()
+    catch {
+    }
+    g_FTB_ModeTransitionBusy := false
+}
+
+FloatingToolbar_AnimatedSwitchToBubble_Crossfade(*) {
+    global g_FTB_ModeTransitionBusy, FloatingToolbarGUI, FloatingToolbarCompactDiameter, g_FTB_CrossfadeMs, g_FTB_WV2
+    if !g_FTB_ModeTransitionBusy
+        return
+    if !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui) {
+        g_FTB_ModeTransitionBusy := false
+        return
+    }
+    cx := 0.0, cy := 0.0
+    if !FloatingToolbar_GetGuiCenter(FloatingToolbarGUI, &cx, &cy) {
+        g_FTB_ModeTransitionBusy := false
+        return
+    }
+    sz := Round(FloatingToolbarCompactDiameter)
+    hwndTb := FloatingToolbarGUI.Hwnd
+    fadeMs := g_FTB_CrossfadeMs
+
+    try ShowFloatingBubbleAt(cx, cy, sz, 0)
+    catch {
+        try ShowFloatingBubble()
+        try {
+            global g_FB_LayeredAlpha
+            g_FB_LayeredAlpha := 0
+            FloatingBubble_RenderLayered()
+        } catch {
+        }
+    }
+
+    try FloatingToolbar_RequestHandoffToBubble()
+    SetTimer(FloatingToolbar_AnimatedSwitchToBubble_CrossfadeFade, -48)
+}
+
+FloatingToolbar_AnimatedSwitchToBubble_CrossfadeFade(*) {
+    global g_FTB_ModeTransitionBusy, FloatingToolbarGUI, g_FTB_CrossfadeMs, g_FTB_WV2
+    if !g_FTB_ModeTransitionBusy
+        return
+    if !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui)
+        return
+    hwndTb := FloatingToolbarGUI.Hwnd
+    fadeMs := g_FTB_CrossfadeMs
+
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "handoff_fade_out"))
+    catch {
+    }
+
+    FloatingToolbar_FadeGui(hwndTb, 255, 0, fadeMs + 40, (*) => 0)
+    SetTimer((*) => FloatingBubble_FadeLayered(0, 255, fadeMs + 100, FloatingToolbar_FinalizeBubbleSwitch), -72)
+}
+
+FloatingToolbar_AnimatedSwitchToBubble(*) {
+    global g_FTB_ModeTransitionBusy, FloatingToolbarGUI, FloatingToolbarIsVisible
+    global FloatingToolbarScale, FloatingToolbarMinScale, FloatingToolbarWindowX, FloatingToolbarWindowY
+    global g_FTB_BubbleHandoffMs, g_FTB_WV2
+    if g_FTB_ModeTransitionBusy
+        return
+    if !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui) || !FloatingToolbarIsVisible
+        return
+    g_FTB_ModeTransitionBusy := true
+    try FloatingToolbar_RequestHandoffToBubble()
+
+    if !FloatingToolbarIsCompactMode() {
+        cx := 0.0, cy := 0.0
+        if !FloatingToolbar_GetGuiCenter(FloatingToolbarGUI, &cx, &cy) {
+            g_FTB_ModeTransitionBusy := false
+            return
+        }
+        FloatingToolbarScale := FloatingToolbarMinScale
+        tw := FloatingToolbarCalculateWidth()
+        th := FloatingToolbarCalculateHeight()
+        newX := Round(cx - (tw / 2.0))
+        newY := Round(cy - (th / 2.0))
+        FloatingToolbar_ClampRect(&newX, &newY, tw, th)
+        FloatingToolbarWindowX := newX
+        FloatingToolbarWindowY := newY
+        try FloatingToolbarGUI.Move(newX, newY, tw, th)
+        FloatingToolbarPushScaleStateToWeb(FloatingToolbarScale)
+        try FloatingToolbar_ApplyWebViewBounds()
+        try FloatingToolbarApplyRoundedCorners()
+        try FloatingToolbar_RequestHandoffToBubble()
+        SetTimer(FloatingToolbar_AnimatedSwitchToBubble_Crossfade, -g_FTB_BubbleHandoffMs)
+        return
+    }
+    SetTimer(FloatingToolbar_AnimatedSwitchToBubble_Crossfade, -260)
+}
+
+FloatingToolbar_FinishToolbarExpandSwitch(*) {
+    global g_FTB_ModeTransitionBusy
+    g_FTB_ModeTransitionBusy := false
+}
+
+FloatingToolbar_AnimatedSwitchToToolbar(*) {
+    global g_FTB_ModeTransitionBusy, FloatingToolbarGUI, FloatingToolbarIsVisible
+    global FloatingBubbleGUI, FloatingBubbleIsVisible
+    global FloatingToolbarScale, FloatingToolbarMinScale, FloatingToolbarMaxScale
+    global FloatingToolbarWindowX, FloatingToolbarWindowY, g_FTB_WV2, g_FTB_ModeFadeMs
+    if g_FTB_ModeTransitionBusy
+        return
+
+    cx := 0.0, cy := 0.0
+    if (FloatingBubbleIsVisible && IsObject(FloatingBubbleGUI) && (FloatingBubbleGUI is Gui)) {
+        if !FloatingToolbar_GetGuiCenter(FloatingBubbleGUI, &cx, &cy)
+            return
+    } else if (IsObject(FloatingToolbarGUI) && (FloatingToolbarGUI is Gui)) {
+        if !FloatingToolbar_GetGuiCenter(FloatingToolbarGUI, &cx, &cy)
+            return
+    } else {
+        return
+    }
+
+    g_FTB_ModeTransitionBusy := true
+
+    if FloatingToolbarIsCompactMode() {
+        targetScale := FloatingToolbarMinScale + 0.15
+        if (targetScale > FloatingToolbarMaxScale)
+            targetScale := FloatingToolbarMaxScale
+        FloatingToolbarScale := targetScale
+    }
+
+    tw := FloatingToolbarCalculateWidth()
+    th := FloatingToolbarCalculateHeight()
+    newX := Round(cx - (tw / 2.0))
+    newY := Round(cy - (th / 2.0))
+    FloatingToolbar_ClampRect(&newX, &newY, tw, th)
+    FloatingToolbarWindowX := newX
+    FloatingToolbarWindowY := newY
+
+    if (FloatingBubbleIsVisible) {
+        FloatingBubble_FadeLayered(255, 0, g_FTB_ModeFadeMs, FloatingToolbar_AnimatedSwitchToToolbar_Reveal.Bind(newX, newY, tw, th))
+        return
+    }
+    FloatingToolbar_AnimatedSwitchToToolbar_Reveal(newX, newY, tw, th)
+}
+
+FloatingToolbar_AnimatedSwitchToToolbar_Reveal(newX, newY, tw, th, *) {
+    global g_FTB_ModeTransitionBusy, FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WV2, g_FTB_ModeFadeMs
+    global FloatingToolbarScale, AppearanceActivationMode
+
+    try HideFloatingBubble()
+    catch {
+    }
+
+    AppearanceActivationMode := "toolbar"
+    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    try IniWrite("toolbar", cfg, "Appearance", "ActivationMode")
+    catch {
+    }
+    try ApplyActivationRuntimeAsync("toolbar")
+    catch {
+    }
+    try FloatingToolbar_ClearHandoffWeb()
+
+    if !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui) {
+        try ShowFloatingToolbar()
+        g_FTB_ModeTransitionBusy := false
+        return
+    }
+
+    hwnd := FloatingToolbarGUI.Hwnd
+    FloatingToolbarWindowX := newX
+    FloatingToolbarWindowY := newY
+    try WinSetTransparent(0, "ahk_id " . hwnd)
+    try FloatingToolbarGUI.Move(newX, newY, tw, th)
+    FloatingToolbarPushScaleStateToWeb(FloatingToolbarScale)
+    try FloatingToolbar_ApplyWebViewBounds()
+    try FloatingToolbarApplyRoundedCorners()
+    try FloatingToolbarGUI.Show("x" . newX . " y" . newY . " w" . tw . " h" . th . " NoActivate")
+    FloatingToolbarIsVisible := true
+    try WebView2_NotifyShown(g_FTB_WV2)
+    FloatingToolbar_FadeGui(hwnd, 0, 255, g_FTB_ModeFadeMs + 60, FloatingToolbar_FinishToolbarExpandSwitch)
+}
+
+FloatingToolbar_SetActivationMode(mode) {
+    global AppearanceActivationMode, g_FTB_ModeTransitionBusy, FloatingToolbarIsVisible, FloatingBubbleIsVisible
+    if g_FTB_ModeTransitionBusy
+        return
+    m := NormalizeAppearanceActivationMode(mode)
+    if (m != "toolbar" && m != "bubble" && m != "hole" && m != "tray")
+        return
+    cur := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    if (m = "bubble" && cur = "toolbar" && FloatingToolbarIsVisible) {
+        FloatingToolbar_AnimatedSwitchToBubble()
+        return
+    }
+    if (m = "toolbar" && cur = "bubble" && FloatingBubbleIsVisible) {
+        FloatingToolbar_AnimatedSwitchToToolbar()
+        return
+    }
     ; Idempotent guard: wheel/UI can emit repeated same-mode toggles in a short burst.
-    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) = m)
+    if (cur = m)
         return
     AppearanceActivationMode := m
     cfg := A_ScriptDir . "\CursorShortcut.ini"
@@ -2377,20 +2679,21 @@ FloatingToolbar_SetActivationMode(mode) {
 }
 
 FloatingToolbar_SwitchActivationByWheel(delta) {
-    global AppearanceActivationMode
+    global AppearanceActivationMode, g_FTB_ModeTransitionBusy
+    if g_FTB_ModeTransitionBusy
+        return
     mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
     if (delta > 0) {
-        if (mode != "toolbar") {
+        if (mode = "bubble")
+            FloatingToolbar_AnimatedSwitchToToolbar()
+        else if (mode != "toolbar")
             FloatingToolbar_SetActivationMode("toolbar")
-        }
         return
     }
-    if (mode = "toolbar") {
-        ; Directly switch to real GDHO hole runtime (not toolbar compact skin).
-        FloatingToolbar_SetActivationMode("hole")
-    } else if (mode != "tray") {
-        FloatingToolbar_SetActivationMode("hole")
-    }
+    if (mode = "toolbar")
+        FloatingToolbar_AnimatedSwitchToBubble()
+    else if (mode = "bubble")
+        FloatingToolbar_AnimatedSwitchToBubble()
 }
 
 FloatingToolbarApplyWheelDelta(delta) {
@@ -2404,6 +2707,13 @@ FloatingToolbarApplyWheelDelta(delta) {
     scaleStep := 0.15
     newScale := FloatingToolbarScale
 
+    ; 已在最小缩放附近继续缩小：等紧凑态动画后再切到悬浮球
+    if (delta < 0 && (FloatingToolbarScale - scaleStep) <= (FloatingToolbarMinScale + 0.0001)) {
+        global g_FTB_BubbleHandoffMs
+        SetTimer(FloatingToolbar_AnimatedSwitchToBubble, -g_FTB_BubbleHandoffMs)
+        return
+    }
+
     if (delta > 0) {
         newScale := FloatingToolbarScale + scaleStep
         if (newScale > FloatingToolbarMaxScale)
@@ -2412,12 +2722,6 @@ FloatingToolbarApplyWheelDelta(delta) {
         newScale := FloatingToolbarScale - scaleStep
         if (newScale < FloatingToolbarMinScale)
             newScale := FloatingToolbarMinScale
-    }
-
-    ; Reaching minimum while shrinking: switch directly to hole mode.
-    if (delta < 0 && FloatingToolbarIsCompactMode(newScale)) {
-        FloatingToolbar_SetActivationMode("hole")
-        return
     }
 
     if (newScale != FloatingToolbarScale) {
@@ -2465,6 +2769,10 @@ FloatingToolbarApplyWheelDelta(delta) {
             try FloatingToolbar_EnterHoleCompactRuntime()
         } else if (!nowCompact && wasCompact) {
             try FloatingToolbar_ExitHoleCompactRuntime()
+        }
+        if (delta < 0 && FloatingToolbarIsCompactMode(newScale)) {
+            global g_FTB_BubbleHandoffMs
+            SetTimer(FloatingToolbar_AnimatedSwitchToBubble, -g_FTB_BubbleHandoffMs)
         }
 
     }
@@ -3200,8 +3508,8 @@ MinimizeFloatingToolbarToEdge() {
     if (!FloatingToolbarIsVisible || !IsSet(FloatingToolbarGUI) || FloatingToolbarGUI = 0)
         return
 
-    ; Directly switch to real GDHO hole runtime.
-    FloatingToolbar_SetActivationMode("hole")
+    ; 与早期一致：最小化表现为悬浮球圆圈，带过渡动画
+    FloatingToolbar_AnimatedSwitchToBubble()
 }
 
 RestoreFloatingToolbar() {

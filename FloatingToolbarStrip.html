@@ -117,7 +117,7 @@ body.ftb-compact #collapsedRoot{
   border:1px solid transparent;
   background:#0d1016;
   box-shadow:0 4px 18px rgba(0,0,0,.28);
-  transition:none
+  transition:border-radius .32s cubic-bezier(.22,1,.36,1),padding .32s cubic-bezier(.22,1,.36,1),gap .28s cubic-bezier(.22,1,.36,1),box-shadow .32s ease,background .28s ease,transform .32s cubic-bezier(.22,1,.36,1)
 }
 body.ftb-compact #collapsedRoot::after{
   inset:-1px!important;
@@ -178,11 +178,41 @@ body.ftb-compact #collapsedRoot .logo-btn .logo-img{
   transform:scale(.92);
   filter:drop-shadow(0 0 8px rgba(122,177,255,.5));
 }
-body.ftb-compact-transition-in #collapsedRoot{animation:ftbMorphToHole .34s cubic-bezier(.22,1,.36,1)}
-body.ftb-compact-transition-out #collapsedRoot{animation:ftbMorphFromHole .3s cubic-bezier(.22,1,.36,1)}
+/* 切到悬浮球前：去掉黑洞光晕，视觉与 FloatingBubble 对齐 */
+body.ftb-handoff-to-bubble.ftb-compact #collapsedRoot::before{display:none!important;opacity:0!important}
+body.ftb-handoff-to-bubble.ftb-compact #collapsedRoot::after{opacity:0!important;animation:none!important}
+body.ftb-handoff-to-bubble.ftb-compact #collapsedRoot{
+  background:#121212!important;
+  border:1px solid rgba(255,255,255,.07)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.07)!important;
+  transition:background .36s ease,border-color .36s ease,box-shadow .36s ease,transform .36s cubic-bezier(.22,1,.36,1),opacity .32s ease!important
+}
+body.ftb-handoff-to-bubble.ftb-compact #collapsedRoot .logo-btn{
+  border:1px solid transparent!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  filter:none!important
+}
+body.ftb-handoff-to-bubble.ftb-compact #collapsedRoot .logo-btn .logo-img{
+  opacity:1!important;
+  transform:scale(1)!important;
+  filter:none!important
+}
+body.ftb-handoff-fade-out.ftb-compact #collapsedRoot{
+  opacity:0!important;
+  transform:scale(.94)!important;
+  transition:opacity .36s cubic-bezier(.22,1,.36,1),transform .4s cubic-bezier(.22,1,.36,1)!important;
+  pointer-events:none!important
+}
+body.ftb-handoff-fade-out.ftb-compact #app,
+body.ftb-handoff-fade-out.ftb-compact html.ftb-compact{
+  background:transparent!important
+}
+body.ftb-compact-transition-in #collapsedRoot{animation:ftbMorphToCompact .36s cubic-bezier(.22,1,.36,1)}
+body.ftb-compact-transition-out #collapsedRoot{animation:ftbMorphFromCompact .34s cubic-bezier(.22,1,.36,1)}
 @keyframes ftbHoleAura{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@keyframes ftbMorphToHole{0%{transform:scale(.85);filter:saturate(.8)}100%{transform:scale(1);filter:saturate(1)}}
-@keyframes ftbMorphFromHole{0%{transform:scale(1)}100%{transform:scale(1.03)}}
+@keyframes ftbMorphToCompact{0%{transform:scale(.88);opacity:.92}55%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+@keyframes ftbMorphFromCompact{0%{transform:scale(1);opacity:1}100%{transform:scale(.94);opacity:1}}
 body[data-theme="light"].ftb-compact #collapsedRoot{
   border:1px solid transparent!important;
   background:var(--toolbar-bg)!important;
@@ -1241,6 +1271,22 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     });
   }
 
+  function setHandoffToBubble(on) {
+    var v = !!on;
+    document.body.classList.toggle('ftb-handoff-to-bubble', v);
+    document.documentElement.classList.toggle('ftb-handoff-to-bubble', v);
+    if (!v) {
+      document.body.classList.remove('ftb-handoff-fade-out');
+      document.documentElement.classList.remove('ftb-handoff-fade-out');
+    }
+  }
+
+  function setHandoffFadeOut(on) {
+    var v = !!on;
+    document.body.classList.toggle('ftb-handoff-fade-out', v);
+    document.documentElement.classList.toggle('ftb-handoff-fade-out', v);
+  }
+
   function setCompact(v) {
     var wasCompact = !!state.compact;
     state.compact = !!v;
@@ -1249,11 +1295,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (state.compact && !wasCompact) {
       document.body.classList.remove('ftb-compact-transition-out');
       document.body.classList.add('ftb-compact-transition-in');
-      setTimeout(function () { document.body.classList.remove('ftb-compact-transition-in'); }, 380);
+      setTimeout(function () { document.body.classList.remove('ftb-compact-transition-in'); }, 400);
     } else if (!state.compact && wasCompact) {
       document.body.classList.remove('ftb-compact-transition-in');
       document.body.classList.add('ftb-compact-transition-out');
-      setTimeout(function () { document.body.classList.remove('ftb-compact-transition-out'); }, 340);
+      setTimeout(function () { document.body.classList.remove('ftb-compact-transition-out'); }, 360);
     }
   }
 
@@ -6123,6 +6169,19 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       if (d.type === 'set_scale') {
         scale(d.scale || 1);
         setCompact(!!d.compact);
+        return;
+      }
+      if (d.type === 'handoff_to_bubble') {
+        setHandoffToBubble(true);
+        return;
+      }
+      if (d.type === 'handoff_fade_out') {
+        setHandoffFadeOut(true);
+        return;
+      }
+      if (d.type === 'handoff_clear') {
+        setHandoffToBubble(false);
+        setHandoffFadeOut(false);
         return;
       }
       if (d.type === 'set_toolbar_config') {

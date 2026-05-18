@@ -730,7 +730,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                 try FloatingToolbar_ForceRecoverVisible()
                 executed := true
             case "gk_alt_wheel_down":
-                try FloatingToolbar_SetActivationMode("hole")
+                try FloatingToolbar_SetActivationMode("bubble")
                 executed := true
             case "gk_toolbar_mode":
                 try AppearanceActivationMode := "toolbar"

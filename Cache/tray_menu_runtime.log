@@ -364,3 +364,38 @@
 [2026-05-18 07:57:18] snapshot_dirty reason=update_tray_menu
 [2026-05-18 07:57:18] snapshot_dirty reason=init
 [2026-05-18 07:57:18] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 08:20:45] reload_hard_spawn_ok
+[2026-05-18 08:20:46] snapshot_dirty reason=update_tray_menu
+[2026-05-18 08:20:46] snapshot_dirty reason=init
+[2026-05-18 08:20:46] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 08:34:38] reload_hard_spawn_ok
+[2026-05-18 08:34:38] snapshot_dirty reason=update_tray_menu
+[2026-05-18 08:34:38] snapshot_dirty reason=init
+[2026-05-18 08:34:39] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 08:34:57] dark_popup_show_begin items=12 pos=1429,319
+[2026-05-18 08:34:57] dark_popup_show_done elapsed_ms=250 hwnd=1641326
+[2026-05-18 08:34:59] popup_state_reset reason=invoke_click
+[2026-05-18 08:34:59] invoke_click idx=12 text=重启脚本
+[2026-05-18 08:34:59] invoke_ok idx=12 text=重启脚本
+[2026-05-18 08:34:59] reload_hard_spawn_ok
+[2026-05-18 08:34:59] snapshot_dirty reason=update_tray_menu
+[2026-05-18 08:34:59] snapshot_dirty reason=init
+[2026-05-18 08:35:00] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 08:35:12] dark_popup_show_begin items=12 pos=1518,377
+[2026-05-18 08:35:12] dark_popup_show_done elapsed_ms=31 hwnd=527704
+[2026-05-18 08:37:00] snapshot_dirty reason=update_tray_menu
+[2026-05-18 08:37:00] snapshot_dirty reason=init
+[2026-05-18 08:37:00] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 08:42:05] reload_hard_spawn_ok
+[2026-05-18 08:42:06] snapshot_dirty reason=update_tray_menu
+[2026-05-18 08:42:06] snapshot_dirty reason=init
+[2026-05-18 08:42:06] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 08:42:19] dark_popup_show_begin items=12 pos=1365,445
+[2026-05-18 08:42:19] dark_popup_show_done elapsed_ms=31 hwnd=1444944
+[2026-05-18 08:42:21] popup_state_reset reason=invoke_click
+[2026-05-18 08:42:21] invoke_click idx=12 text=重启脚本
+[2026-05-18 08:42:21] invoke_ok idx=12 text=重启脚本
+[2026-05-18 08:42:21] reload_hard_spawn_ok
+[2026-05-18 08:42:21] snapshot_dirty reason=update_tray_menu
+[2026-05-18 08:42:21] snapshot_dirty reason=init
+[2026-05-18 08:42:21] snapshot_rebuild_empty elapsed_ms=0

@@ -1442,7 +1442,7 @@ ConfigWebView_SaveAppearanceActivationMode(mode, &errorMsg := "") {
             try SetTimer(FloatingToolbar_ShowForActivationMode, -40)
             catch {
             }
-        } else if (newMode = "hole") {
+        } else if (newMode = "hole" || newMode = "bubble") {
             try SetTimer((*) => HideFloatingToolbar(), -50)
             catch {
             }

@@ -1,0 +1,10 @@
+﻿[2026-05-18 08:26:48][focus][grant] owner=SearchCenter hwnd=4656140 priority=20 reason=show_focus
+[2026-05-18 08:29:03][focus][grant] owner=SearchCenter hwnd=396504 priority=20 reason=dark_ctx_menu
+[2026-05-18 08:29:03][focus][grant] owner=SearchCenter hwnd=68888 priority=20 reason=dark_sub_menu
+[2026-05-18 08:29:03][focus][drop_dedupe] owner=SearchCenter reason=dark_sub_menu delta=94
+[2026-05-18 08:29:04][focus][grant] owner=SearchCenter hwnd=199960 priority=20 reason=dark_sub_menu
+[2026-05-18 08:29:04][focus][grant] owner=SearchCenter hwnd=265496 priority=20 reason=dark_sub_menu
+[2026-05-18 08:29:06][focus][grant] owner=SearchCenter hwnd=331032 priority=20 reason=dark_sub_menu
+[2026-05-18 08:29:06][focus][drop_dedupe] owner=SearchCenter reason=dark_sub_menu delta=109
+[2026-05-18 08:29:07][focus][grant] owner=SearchCenter hwnd=4656140 priority=20 reason=ctx_refocus
+[2026-05-18 08:29:09][focus][release] owner=SearchCenter reason=wm_deactivate
