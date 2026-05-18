@@ -515,6 +515,9 @@ FloatingToolbar_FinishReveal() {
     }
 
     FloatingToolbarIsVisible := true
+    try FloatingToolbar_ClearHandoffWeb()
+    catch {
+    }
     try WebView2_NotifyShown(g_FTB_WV2)
     FloatingToolbarApplyRoundedCorners()
     FloatingToolbar_ApplyWebViewBounds()
@@ -2005,6 +2008,13 @@ FloatingToolbar_DeferredOpenSearchByKeyword(keyword, *) {
     }
 }
 
+FloatingToolbar_OpenSearchCenterFromMenu(*) {
+    try TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenSearchAction, "ftb_ctx_search")
+    catch {
+        SetTimer(FloatingToolbar_ActivateSearchCenter, -10)
+    }
+}
+
 FloatingToolbar_ActivateSearchCenter() {
     global g_SCWV_WaitingUiFinishedReveal, AppearanceActivationMode
     selectedText := ""
@@ -2012,7 +2022,7 @@ FloatingToolbar_ActivateSearchCenter() {
     usedWebView := false
 
     try usedWebView := SearchCenter_ShouldUseWebView()
-    try SCWV_Log("ftb_activate_search_center_begin", "used_webview=" . (usedWebView ? "1" : "0"))
+    try SCWV_Log("toolbar_activate_search_begin", "used_webview=" . (usedWebView ? "1" : "0"))
     ; If the app is already in hole mode and SearchCenter is not visible, reuse the same hard
     ; handoff that tray opening uses. This clears stale overlay / native drag state before we
     ; try to wake SearchCenter again.
@@ -2025,11 +2035,11 @@ FloatingToolbar_ActivateSearchCenter() {
         if (SearchCenter_IsOpeningOrBusy()) {
             try SCWV_Log("ftb_activate_search_center_busy", "active=" . (IsSearchCenterActive() ? "1" : "0") . " vis=" . (SCWV_IsVisible() ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
             if (SCWV_IsVisible()) {
-                SCWV_SubmitIntent("open", 20, Map("reason", "ftb_activate_reuse"))
+                SCWV_SubmitIntent("open", 20, Map("reason", "toolbar_search_reuse"))
                 opened := true
                 return
             }
-            try SCWV_RequestHardClose("ftb_activate_busy_recover")
+            try SCWV_RequestHardClose("toolbar_search_busy_recover")
             catch {
             }
         }
@@ -2049,20 +2059,19 @@ FloatingToolbar_ActivateSearchCenter() {
         if (selectedText != "")
             SearchCenter_RunQueryWithKeyword(selectedText)
         else if (usedWebView) {
-            SCWV_SubmitIntent("open", 20, Map("reason", "ftb_activate"))
+            SCWV_SubmitIntent("open", 20, Map("reason", "toolbar_search_open"))
         } else
             ShowSearchCenter()
         opened := true
     } catch {
     }
 
-    try SCWV_Log("ftb_activate_search_center_mid", "selected_len=" . StrLen(selectedText) . " opened=" . (opened ? "1" : "0") . " vis=" . (usedWebView ? (SCWV_IsVisible() ? "1" : "0") : "n/a"))
+    try SCWV_Log("toolbar_activate_search_mid", "selected_len=" . StrLen(selectedText) . " opened=" . (opened ? "1" : "0") . " vis=" . (usedWebView ? (SCWV_IsVisible() ? "1" : "0") : "n/a"))
 
-    ; 鍏滃簳閲嶅缓锛氶伩鍏?g_SCWV_Visible / 瀹夸富鍙ユ焺娈嬬暀瀵艰嚧鈥滃垽瀹氬凡寮€浣嗛潰鏉挎病鍑烘潵鈥濄€?
     if (!opened && usedWebView) {
         try {
             SCWV_ResetHostState()
-            SCWV_SubmitIntent("open", 20, Map("reason", "ftb_recover_open"))
+            SCWV_SubmitIntent("open", 20, Map("reason", "toolbar_search_recover"))
             opened := true
         } catch {
         }
@@ -2074,21 +2083,9 @@ FloatingToolbar_ActivateSearchCenter() {
         }
     }
 
-    ; 涓嶈鍏ュ彛鏉ヨ嚜鍥炬爣杩樻槸鍙抽敭鑿滃崟锛屾渶鍚庨兘鍐嶅己鍒朵竴娆″彲瑙佷笌杈撳叆鐒︾偣銆?
     if (usedWebView) {
-        try {
-            if (!SCWV_IsVisible())
-                SCWV_SubmitIntent("open", 20, Map("reason", "ftb_show_visible_check"))
-        } catch {
-            try {
-                SCWV_ResetHostState()
-                SCWV_SubmitIntent("open", 20, Map("reason", "ftb_show_recover"))
-            } catch {
-            }
-        }
-        try {
-            SCWV_RequestFocusInput()
-        } catch {
+        try SCWV_RequestFocusInput()
+        catch {
         }
     }
 
@@ -2099,7 +2096,7 @@ FloatingToolbar_ActivateSearchCenter() {
     ; 防竞态：若焦点/宿主状态异常导致搜索中心未出现，自动回滚工具栏隐藏态
     SetTimer(FloatingToolbar_VerifySearchCenterOpen, -260)
     SetTimer(FloatingToolbar_VerifySearchCenterOpen, -900)
-    try SCWV_Log("ftb_activate_search_center_end", "opened=" . (opened ? "1" : "0") . " vis=" . (usedWebView ? (SCWV_IsVisible() ? "1" : "0") : "n/a"))
+    try SCWV_Log("toolbar_activate_search_end", "opened=" . (opened ? "1" : "0") . " vis=" . (usedWebView ? (SCWV_IsVisible() ? "1" : "0") : "n/a"))
 }
 
 FloatingToolbarExecuteButtonAction(action, buttonHwnd) {
@@ -3165,14 +3162,19 @@ FloatingToolbarPushScaleStateToWeb(userScale := "") {
     }
 }
 
+FloatingToolbar_MakeContextMenuAction(cmdId) {
+    c := String(cmdId)
+    return (*) => SetTimer(FloatingToolbar_DeferredToolbarCmd.Bind(c), -10)
+}
+
 FloatingToolbar_DeferredToolbarCmd(cmdId) {
     c := String(cmdId)
     ; 命令工具栏与面板类入口统一走 toggle，保证同一按钮可显可隐
-    if (c = "sc_activate_search") {
-        FloatingToolbarToggleButtonAction("Search")
+    if (c = "sc_activate_search" || c = "ftm_search_center") {
+        FloatingToolbar_OpenSearchCenterFromMenu()
         return
     }
-    if (c = "qa_clipboard") {
+    if (c = "qa_clipboard" || c = "ftm_clipboard") {
         FloatingToolbarToggleButtonAction("Record")
         return
     }

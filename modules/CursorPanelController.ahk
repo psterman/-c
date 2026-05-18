@@ -178,7 +178,7 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
                         nm := cmdList[c]["name"]
                         if (nm = "")
                             nm := c
-                        MenuItems.Push({ Text: nm, Icon: "▸", Action: VK_MakeToolbarContextMenuAction(c) })
+                        MenuItems.Push({ Text: nm, Icon: "▸", Action: FloatingToolbar_MakeContextMenuAction(c) })
                     }
                 } else {
                     try OutputDebug("[FTBCTX] skip floating_bar scene menu mode=" . mode . " search_busy=" . (searchBusy ? "1" : "0") . " count=" . sceneMenus["floating_bar"].Length)
@@ -205,7 +205,7 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
                     nm := cmdList[cid]["name"]
                     if (nm = "")
                         nm := cid
-                    MenuItems.Push({ Text: nm, Icon: "▸", Action: VK_MakeToolbarContextMenuAction(cid) })
+                    MenuItems.Push({ Text: nm, Icon: "▸", Action: FloatingToolbar_MakeContextMenuAction(cid) })
                 }
             }
         }
@@ -228,7 +228,7 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
                 nm := cmdList[c]["name"]
                 if (nm = "")
                     nm := c
-                MenuItems.Push({ Text: nm, Icon: "·", Action: VK_MakeToolbarContextMenuAction(c) })
+                MenuItems.Push({ Text: nm, Icon: "·", Action: FloatingToolbar_MakeContextMenuAction(c) })
             }
         }
     }

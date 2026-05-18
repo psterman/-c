@@ -266,16 +266,16 @@ _SCWV_ShouldStartHandoff(reason := "") {
     r := StrLower(Trim(String(reason)))
     if (r = "")
         return false
-    ; Tray path already has hole handoff in TrayMenuManager.
-    ; Starting another handoff here can black-hole OPEN intents.
+    ; Tray/toolbar 用户显式打开：不再进入 handoff，避免 OPEN 被排队 1.5s 看起来像“点了没反应”。
     if (InStr(r, "tray_") || InStr(r, "traymenu_") || InStr(r, "tray_menu_"))
+        return false
+    if (InStr(r, "toolbar_search") || InStr(r, "toolbar_open") || InStr(r, "ftb_ctx"))
         return false
     if (SubStr(r, 1, 15) = "handoff_replay_")
         return false
     if (g_SCWV_UI_Ready || g_SCWV_FirstFrameSeen)
         return false
-    return (InStr(r, "ftb_")
-        || InStr(r, "show_redirect")
+    return (InStr(r, "show_redirect")
         || InStr(r, "storm_open"))
 }
 

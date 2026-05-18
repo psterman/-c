@@ -762,6 +762,17 @@ VK_ExecCursorHelperCmd(cmdId) {
                     }
                 }
                 executed := true
+            case "ftb_scratchpad":
+                try SelectionSense_OpenHubCapsuleFromToolbar()
+                catch as err {
+                    try TrayTip("草稿本", "无法打开 HubCapsule: " . err.Message, "Iconx 2")
+                    catch {
+                    }
+                }
+                executed := true
+            case "ftb_screenshot":
+                SetTimer(FloatingToolbar_DeferredScreenshot, -10)
+                executed := true
             case "ftb_cloud_player":
             case "open_cloudplayer":
                 try ShowCloudPlayer()

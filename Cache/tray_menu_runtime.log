@@ -399,3 +399,145 @@
 [2026-05-18 08:42:21] snapshot_dirty reason=update_tray_menu
 [2026-05-18 08:42:21] snapshot_dirty reason=init
 [2026-05-18 08:42:21] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 08:43:21] dark_popup_show_begin items=12 pos=1443,263
+[2026-05-18 08:43:21] dark_popup_show_done elapsed_ms=31 hwnd=4459424
+[2026-05-18 08:43:23] popup_state_reset reason=invoke_click
+[2026-05-18 08:43:23] invoke_click idx=1 text=搜索
+[2026-05-18 08:43:23] invoke_ok idx=1 text=搜索
+[2026-05-18 08:43:24] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 08:43:24] popup_state_reset reason=invoke_click_deferred_2
+[2026-05-18 08:43:40] dark_popup_show_begin items=12 pos=1460,389
+[2026-05-18 08:43:40] dark_popup_show_done elapsed_ms=47 hwnd=4524960
+[2026-05-18 08:43:42] popup_state_reset reason=invoke_click
+[2026-05-18 08:43:42] invoke_click idx=1 text=搜索
+[2026-05-18 08:43:42] invoke_ok idx=1 text=搜索
+[2026-05-18 08:43:42] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 08:43:42] popup_state_reset reason=invoke_click_deferred_2
+[2026-05-18 08:43:43] dark_popup_show_begin items=12 pos=1426,363
+[2026-05-18 08:43:43] dark_popup_show_done elapsed_ms=47 hwnd=4590496
+[2026-05-18 08:43:49] popup_state_reset reason=invoke_click
+[2026-05-18 08:43:49] invoke_click idx=11 text=打开设置
+[2026-05-18 08:43:49] invoke_ok idx=11 text=打开设置
+[2026-05-18 08:43:49] show_config_from_menu_begin
+[2026-05-18 08:43:49] open_config_from_menu
+[2026-05-18 08:43:49] open_config_from_menu_done
+[2026-05-18 08:43:49] show_config_from_menu_end
+[2026-05-18 08:43:50] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 08:43:50] popup_state_reset reason=invoke_click_deferred_2
+[2026-05-18 08:43:51] snapshot_dirty reason=update_tray_menu
+[2026-05-18 08:43:51] scene_items_source scene=tray_menu mode=bubble raw_count=60 vis_count=8 cmd_count=184
+[2026-05-18 08:43:51] scene_items_filtered scene=tray_menu count=8
+[2026-05-18 08:43:51] snapshot_rebuild_ok count=8 elapsed_ms=0
+[2026-05-18 08:43:52] snapshot_dirty reason=update_tray_menu
+[2026-05-18 08:43:52] scene_items_source scene=tray_menu mode=bubble raw_count=60 vis_count=8 cmd_count=184
+[2026-05-18 08:43:52] scene_items_filtered scene=tray_menu count=8
+[2026-05-18 08:43:52] snapshot_rebuild_ok count=8 elapsed_ms=0
+[2026-05-18 08:43:52] dark_popup_show_begin items=12 pos=1438,379
+[2026-05-18 08:43:52] dark_popup_show_done elapsed_ms=79 hwnd=1380618
+[2026-05-18 08:43:53] popup_state_reset reason=invoke_click
+[2026-05-18 08:43:53] invoke_click idx=2 text=提示词
+[2026-05-18 08:43:53] invoke_ok idx=2 text=提示词
+[2026-05-18 08:43:53] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 08:43:54] popup_state_reset reason=invoke_click_deferred_2
+[2026-05-18 08:43:56] tray_msg lParam=1026 msg=1028
+[2026-05-18 08:43:56] dark_popup_show_begin items=12 pos=1452,375
+[2026-05-18 08:43:56] dark_popup_show_done elapsed_ms=47 hwnd=1839328
+[2026-05-18 08:43:59] tray_msg lParam=1028 msg=1028
+[2026-05-18 08:44:00] dark_popup_show_begin items=12 pos=1436,371
+[2026-05-18 08:44:00] dark_popup_show_done elapsed_ms=46 hwnd=528676
+[2026-05-18 08:44:02] popup_state_reset reason=invoke_click
+[2026-05-18 08:44:02] invoke_click idx=4 text=截图
+[2026-05-18 08:44:02] invoke_ok idx=4 text=截图
+[2026-05-18 08:44:02] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 08:44:02] popup_state_reset reason=invoke_click_deferred_2
+[2026-05-18 08:44:04] dark_popup_show_begin items=12 pos=1434,380
+[2026-05-18 08:44:04] dark_popup_show_done elapsed_ms=32 hwnd=594212
+[2026-05-18 08:44:05] popup_state_reset reason=invoke_click
+[2026-05-18 08:44:05] invoke_click idx=6 text=草稿本
+[2026-05-18 08:44:05] invoke_ok idx=6 text=草稿本
+[2026-05-18 08:44:05] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 08:44:05] popup_state_reset reason=invoke_click_deferred_2
+[2026-05-18 08:44:06] dark_popup_show_begin items=12 pos=1435,379
+[2026-05-18 08:44:06] dark_popup_show_done elapsed_ms=47 hwnd=659748
+[2026-05-18 08:47:38] dark_popup_show_begin items=12 pos=1436,386
+[2026-05-18 08:47:38] dark_popup_show_done elapsed_ms=47 hwnd=855766
+[2026-05-18 08:47:39] popup_state_reset reason=invoke_click
+[2026-05-18 08:47:39] invoke_click idx=12 text=重启脚本
+[2026-05-18 08:47:39] invoke_ok idx=12 text=重启脚本
+[2026-05-18 08:47:39] reload_hard_spawn_ok
+[2026-05-18 08:47:39] snapshot_dirty reason=update_tray_menu
+[2026-05-18 08:47:39] snapshot_dirty reason=init
+[2026-05-18 08:47:39] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 08:47:50] dark_popup_show_begin items=12 pos=1426,366
+[2026-05-18 08:47:50] dark_popup_show_done elapsed_ms=62 hwnd=528688
+[2026-05-18 08:47:52] popup_state_reset reason=invoke_click
+[2026-05-18 08:47:52] invoke_click idx=2 text=提示词
+[2026-05-18 08:47:52] invoke_ok idx=2 text=提示词
+[2026-05-18 08:47:52] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 08:47:52] popup_state_reset reason=invoke_click_deferred_2
+[2026-05-18 08:47:54] dark_popup_show_begin items=12 pos=1420,360
+[2026-05-18 08:47:54] dark_popup_show_done elapsed_ms=47 hwnd=463166
+[2026-05-18 08:47:55] popup_state_reset reason=invoke_click
+[2026-05-18 08:47:55] invoke_click idx=1 text=搜索
+[2026-05-18 08:47:55] invoke_ok idx=1 text=搜索
+[2026-05-18 08:47:55] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 08:47:55] popup_state_reset reason=invoke_click_deferred_2
+[2026-05-18 08:51:44] dark_popup_show_begin items=10 pos=1433,431
+[2026-05-18 08:51:44] dark_popup_show_done elapsed_ms=78 hwnd=1903310
+[2026-05-18 08:51:46] popup_state_reset reason=invoke_click
+[2026-05-18 08:51:46] invoke_click idx=9 text=重启脚本
+[2026-05-18 08:51:46] invoke_ok idx=9 text=重启脚本
+[2026-05-18 08:51:46] reload_hard_spawn_ok
+[2026-05-18 08:51:46] snapshot_dirty reason=update_tray_menu
+[2026-05-18 08:51:46] snapshot_dirty reason=init
+[2026-05-18 08:51:46] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 08:51:49] dark_popup_show_begin items=1 pos=1425,787
+[2026-05-18 08:51:50] dark_popup_show_done elapsed_ms=906 hwnd=528320
+[2026-05-18 08:51:52] dark_popup_show_begin items=12 pos=1427,392
+[2026-05-18 08:51:52] dark_popup_show_done elapsed_ms=47 hwnd=2165110
+[2026-05-18 08:52:02] dark_popup_show_begin items=12 pos=1416,385
+[2026-05-18 08:52:02] dark_popup_show_done elapsed_ms=63 hwnd=921932
+[2026-05-18 08:52:03] popup_state_reset reason=invoke_click
+[2026-05-18 08:52:03] invoke_click idx=1 text=搜索
+[2026-05-18 08:52:03] invoke_ok idx=1 text=搜索
+[2026-05-18 08:52:03] queued_ui_open_begin reason=ftb_ctx_search
+[2026-05-18 08:52:03] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-18 08:52:03] handoff_begin reason=tray_open_ui search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=4 native=0 phase=closed
+[2026-05-18 08:52:03] handoff_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 08:52:03] handoff_step clickthrough_done reason=tray_open_ui
+[2026-05-18 08:52:03] handoff_step hide_gui_queue reason=tray_open_ui
+[2026-05-18 08:52:03] handoff_queued reason=tray_open_ui token=1 timeout_ms=1800
+[2026-05-18 08:52:03] prepare_ui_from_hole_done
+[2026-05-18 08:52:03] queued_ui_open_after_prep reason=ftb_ctx_search
+[2026-05-18 08:52:03] queued_ui_open_done reason=ftb_ctx_search
+[2026-05-18 08:52:03] handoff_step hide_gui_async_begin reason=tray_open_ui
+[2026-05-18 08:52:03] handoff_step hide_gui_async_done reason=tray_open_ui
+[2026-05-18 08:52:03] open_search_from_menu
+[2026-05-18 08:52:04] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 08:52:04] handoff_cleanup_done reason=tray_open_ui gdho=0 gdho_phase=CLOSED gdho_token=5 native=0
+[2026-05-18 08:52:04] handoff_step hide_gui_async_begin reason=tray_open_ui_finalize
+[2026-05-18 08:52:04] handoff_step hide_gui_async_done reason=tray_open_ui_finalize
+[2026-05-18 08:52:04] popup_state_reset reason=invoke_click_deferred_2
+[2026-05-18 08:52:12] dark_popup_show_begin items=12 pos=1435,365
+[2026-05-18 08:52:12] dark_popup_show_done elapsed_ms=31 hwnd=3411192
+[2026-05-18 08:52:13] popup_state_reset reason=invoke_click
+[2026-05-18 08:52:13] invoke_click idx=1 text=搜索
+[2026-05-18 08:52:13] invoke_ok idx=1 text=搜索
+[2026-05-18 08:52:13] queued_ui_open_begin reason=ftb_ctx_search
+[2026-05-18 08:52:13] prepare_ui_from_hole search_active=0 vk_visible=0 caps=0
+[2026-05-18 08:52:13] handoff_begin reason=tray_open_ui search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=5 native=0 phase=closed
+[2026-05-18 08:52:13] handoff_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 08:52:13] handoff_step clickthrough_done reason=tray_open_ui
+[2026-05-18 08:52:13] handoff_step hide_gui_queue reason=tray_open_ui
+[2026-05-18 08:52:13] handoff_queued reason=tray_open_ui token=2 timeout_ms=1800
+[2026-05-18 08:52:13] prepare_ui_from_hole_done
+[2026-05-18 08:52:13] queued_ui_open_after_prep reason=ftb_ctx_search
+[2026-05-18 08:52:13] queued_ui_open_done reason=ftb_ctx_search
+[2026-05-18 08:52:13] handoff_step hide_gui_async_begin reason=tray_open_ui
+[2026-05-18 08:52:13] handoff_step hide_gui_async_done reason=tray_open_ui
+[2026-05-18 08:52:13] open_search_from_menu
+[2026-05-18 08:52:13] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 08:52:13] handoff_cleanup_done reason=tray_open_ui gdho=0 gdho_phase=CLOSED gdho_token=6 native=0
+[2026-05-18 08:52:13] handoff_step hide_gui_async_begin reason=tray_open_ui_finalize
+[2026-05-18 08:52:13] handoff_step hide_gui_async_done reason=tray_open_ui_finalize
+[2026-05-18 08:52:13] popup_state_reset reason=invoke_click_deferred_2
