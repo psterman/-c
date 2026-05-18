@@ -560,3 +560,35 @@
 [2026-05-18 08:56:09] snapshot_rebuild_ok count=8 elapsed_ms=0
 [2026-05-18 08:56:10] dark_popup_show_done elapsed_ms=94 hwnd=201208
 [2026-05-18 08:56:10] custom_popup_end lParam=517 elapsed_ms=125
+[2026-05-18 08:59:07] dark_popup_show_begin items=12 pos=1296,417
+[2026-05-18 08:59:07] dark_popup_show_done elapsed_ms=47 hwnd=1511980
+[2026-05-18 08:59:11] dark_popup_show_begin items=12 pos=1296,417
+[2026-05-18 08:59:11] dark_popup_show_done elapsed_ms=47 hwnd=1577516
+[2026-05-18 09:01:57] dark_popup_show_begin items=12 pos=1276,403
+[2026-05-18 09:01:57] dark_popup_show_done elapsed_ms=31 hwnd=529060
+[2026-05-18 09:01:58] popup_state_reset reason=invoke_click
+[2026-05-18 09:01:58] invoke_click idx=12 text=重启脚本
+[2026-05-18 09:01:58] invoke_ok idx=12 text=重启脚本
+[2026-05-18 09:01:58] reload_hard_spawn_ok
+[2026-05-18 09:01:59] snapshot_dirty reason=update_tray_menu
+[2026-05-18 09:01:59] snapshot_dirty reason=init
+[2026-05-18 09:01:59] snapshot_rebuild_empty elapsed_ms=0
+[2026-05-18 09:02:04] dark_popup_show_begin items=14 pos=1262,330
+[2026-05-18 09:02:04] dark_popup_show_begin items=14 pos=1262,330
+[2026-05-18 09:02:04] dark_popup_show_done elapsed_ms=375 hwnd=1051712
+[2026-05-18 09:02:07] dark_popup_show_begin items=14 pos=1500,315
+[2026-05-18 09:02:07] dark_popup_show_begin items=14 pos=1500,315
+[2026-05-18 09:02:07] dark_popup_show_done elapsed_ms=63 hwnd=1182784
+[2026-05-18 09:02:10] dark_popup_show_begin items=14 pos=1296,331
+[2026-05-18 09:02:11] dark_popup_show_done elapsed_ms=46 hwnd=4391656
+[2026-05-18 09:02:16] dark_popup_show_begin items=13 pos=1268,398
+[2026-05-18 09:02:16] dark_popup_show_done elapsed_ms=94 hwnd=4457192
+[2026-05-18 09:02:17] popup_state_reset reason=invoke_click
+[2026-05-18 09:02:17] invoke_click idx=13 text=切换到黑洞
+[2026-05-18 09:02:17] invoke_ok idx=13 text=切换到黑洞
+[2026-05-18 09:02:18] popup_state_reset reason=invoke_click_deferred_1
+[2026-05-18 09:02:18] popup_state_reset reason=tray_show_hole_begin
+[2026-05-18 09:02:18] tray_show_hole_begin
+[2026-05-18 09:02:18] tray_show_hole positioned host_x=771 host_y=184 hole_x=861 hole_y=240 w=620 h=620
+[2026-05-18 09:02:18] popup_state_reset reason=tray_show_hole_end
+[2026-05-18 09:02:18] popup_state_reset reason=invoke_click_deferred_2

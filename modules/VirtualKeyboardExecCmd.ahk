@@ -680,6 +680,10 @@ VK_ExecCursorHelperCmd(cmdId) {
             case "ftm_search_center":
                 _VK_H("ShowSearchCenterFromMenu")
                 executed := true
+            case "ftm_switch_hole":
+                if IsSet(FloatingToolbar_SwitchToHoleMode)
+                    FloatingToolbar_SwitchToHoleMode()
+                executed := true
             case "ftm_clipboard":
                 ShowClipboardFromMenu()
                 executed := true

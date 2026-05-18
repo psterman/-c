@@ -3162,6 +3162,54 @@ FloatingToolbarPushScaleStateToWeb(userScale := "") {
     }
 }
 
+FloatingToolbar_SwitchToToolbarFromMenu(*) {
+    try FloatingToolbar_SetActivationMode("toolbar")
+    catch {
+    }
+}
+
+FloatingToolbar_SwitchToHoleMode(*) {
+    global AppearanceActivationMode
+    cur := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+    if (cur = "hole") {
+        try FloatingBubbleShowFromMenu()
+        catch {
+        }
+        return
+    }
+    try FloatingToolbar_SetActivationMode("hole")
+    catch {
+    }
+    try SetTimer(FloatingBubbleShowFromMenu, -100)
+    catch {
+    }
+}
+
+FloatingToolbar_AppendActivationModeMenuItems(&MenuItems, mode := "", seenSlots := "") {
+    global AppearanceActivationMode, GDHO_VISIBLE, g_GDHO_CurrentPhase, GDHO_PHASE_OPEN, GDHO_PHASE_OPENING
+    if (IsObject(seenSlots) && seenSlots.Has("slot:switch_hole"))
+        return
+    m := (mode != "") ? NormalizeAppearanceActivationMode(mode) : NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    if (m = "hole") {
+        holeVisible := false
+        try holeVisible := (g_GDHO_CurrentPhase = GDHO_PHASE_OPEN || g_GDHO_CurrentPhase = GDHO_PHASE_OPENING || GDHO_VISIBLE)
+        catch {
+            holeVisible := false
+        }
+        if (holeVisible)
+            MenuItems.Push({ Text: "隐藏黑洞", Action: FloatingBubbleHideFromMenu, Icon: "◉" })
+        else
+            MenuItems.Push({ Text: "显示黑洞", Action: FloatingBubbleShowFromMenu, Icon: "◉" })
+        MenuItems.Push({ Text: "切换到悬浮栏", Action: FloatingToolbar_SwitchToToolbarFromMenu, Icon: "▤" })
+    } else {
+        MenuItems.Push({ Text: "切换到黑洞", Action: FloatingToolbar_SwitchToHoleMode, Icon: "◉" })
+        if (m = "bubble")
+            MenuItems.Push({ Text: "切换到悬浮栏", Action: FloatingToolbar_SwitchToToolbarFromMenu, Icon: "▤" })
+    }
+    if (IsObject(seenSlots))
+        seenSlots["slot:switch_hole"] := true
+}
+
 FloatingToolbar_MakeContextMenuAction(cmdId) {
     c := String(cmdId)
     return (*) => SetTimer(FloatingToolbar_DeferredToolbarCmd.Bind(c), -10)
@@ -3209,6 +3257,10 @@ FloatingToolbar_DeferredToolbarCmd(cmdId) {
     }
     if (c = "ftb_cursor_menu") {
         FloatingToolbar_ShowCursorQuickMenu()
+        return
+    }
+    if (c = "ftm_switch_hole") {
+        FloatingToolbar_SwitchToHoleMode()
         return
     }
     try {

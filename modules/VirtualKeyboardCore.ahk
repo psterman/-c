@@ -446,6 +446,7 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "sys_show_vk", "name", "快捷键设置", "desc", "与 CapsLock+G 相同，便于未绑物理键时从列表触发", "fn", "SHOW_VK"),
             Map("id", "ftm_reset_scale", "name", "重置大小", "desc", "悬浮工具栏右键：重置缩放", "fn", "CH_RUN"),
             Map("id", "ftm_search_center", "name", "搜索", "desc", "悬浮工具栏右键：打开搜索中心", "fn", "CH_RUN"),
+            Map("id", "ftm_switch_hole", "name", "切换到黑洞", "desc", "悬浮工具栏右键：切换到黑洞模式", "fn", "CH_RUN"),
             Map("id", "ftm_clipboard", "name", "剪贴板", "desc", "悬浮工具栏右键：打开剪贴板", "fn", "CH_RUN"),
             Map("id", "ftm_minimize_to_edge", "name", "最小化到边缘", "desc", "悬浮工具栏右键：吸附到边缘", "fn", "CH_RUN"),
             Map("id", "ftm_exit_app", "name", "退出程序", "desc", "悬浮工具栏右键：退出程序", "fn", "CH_RUN"),
@@ -1455,7 +1456,7 @@ _VK_DefaultSceneMenuGlobalHotkeysCmds() {
 }
 
 _VK_DefaultSceneMenuFloatingToolbarMenuCmds() {
-    return ["ftm_reset_scale", "ftm_search_center", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script"]
+    return ["ftm_reset_scale", "ftm_search_center", "ftm_switch_hole", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script"]
 }
 
 _VK_DefaultSceneMenuTrayMenuCmds() {
@@ -1854,7 +1855,7 @@ _VK_SceneCtxActMap(sceneKey) {
     }
     if (sk = "floating_bar") {
         m := Map()
-        for c in ["ftm_reset_scale", "ftm_search_center", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script", "ftb_scratchpad", "ftb_screenshot", "ftb_cursor_menu", "ftb_cloud_player", "hub_capsule", "pqp_capture", "qa_clipboard", "sc_activate_search", "sys_show_vk"]
+        for c in ["ftm_reset_scale", "ftm_search_center", "ftm_switch_hole", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script", "ftb_scratchpad", "ftb_screenshot", "ftb_cursor_menu", "ftb_cloud_player", "hub_capsule", "pqp_capture", "qa_clipboard", "sc_activate_search", "sys_show_vk"]
             m[c] := c
         return m
     }
@@ -2452,6 +2453,7 @@ _VK_EnsureToolbarLayout() {
     menuDefaults := Map(
         "ftm_reset_scale", true,
         "ftm_search_center", true,
+        "ftm_switch_hole", true,
         "ftm_clipboard", true,
         "ftm_minimize_to_edge", true,
         "ftm_exit_app", true,
@@ -2460,7 +2462,7 @@ _VK_EnsureToolbarLayout() {
         "ftm_toggle_toolbar", true,
         "ftm_reload_script", true
     )
-    menuDefaultOrder := ["ftm_reset_scale", "ftm_search_center", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script"]
+    menuDefaultOrder := ["ftm_reset_scale", "ftm_search_center", "ftm_switch_hole", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script"]
     for cmdId, _ in cmdList {
         if (SubStr(cmdId, 1, 3) = "pt_")
             continue

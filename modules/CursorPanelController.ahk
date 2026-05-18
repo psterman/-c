@@ -128,6 +128,8 @@ FTB_UnifiedContextMenuDedupeSlotKey(cmdId) {
         return "slot:clipboard"
     if (c = "ftb_scratchpad" || c = "hub_capsule")
         return "slot:scratchpad"
+    if (c = "ftm_switch_hole")
+        return "slot:switch_hole"
     return "id:" . c
 }
 
@@ -234,6 +236,10 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
     }
     if (MenuItems.Length = 0)
         MenuItems.Push({ Text: "（右键菜单暂无命令）", Icon: "·", Action: (*) => 0 })
+
+    try FloatingToolbar_AppendActivationModeMenuItems(&MenuItems, mode, seenMenuSlots)
+    catch {
+    }
 
     try OutputDebug("[FTBCTX] menu items=" . MenuItems.Length . " floating_scene=" . (useFloatingSceneMenu ? "1" : "0"))
     catch {
