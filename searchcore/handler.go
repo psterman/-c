@@ -114,6 +114,7 @@ func handleSearchWithDB(w http.ResponseWriter, r *http.Request, db *sql.DB, base
 		}()
 	}
 
+	heavyFullText := shouldRunHeavyFullText(q)
 	switch typeStr {
 	case "all":
 		run(func() ([]map[string]any, error) {
@@ -147,21 +148,33 @@ func handleSearchWithDB(w http.ResponseWriter, r *http.Request, db *sql.DB, base
 			}
 			return items, nil
 		})
-		run(func() ([]map[string]any, error) {
-			return searchTemplates(baseDir, q, fetchCap, 0), nil
-		})
-		run(func() ([]map[string]any, error) {
-			return searchConfigItems(baseDir, q, fetchCap, 0), nil
-		})
-		run(func() ([]map[string]any, error) {
-			return searchHotkeys(baseDir, q, fetchCap, 0), nil
-		})
-		run(func() ([]map[string]any, error) {
-			return searchFunctions(q, fetchCap, 0), nil
-		})
-		run(func() ([]map[string]any, error) {
-			return searchUI(q, fetchCap, 0), nil
-		})
+		if heavyFullText {
+			run(func() ([]map[string]any, error) {
+				ctx, cancel := context.WithTimeout(r.Context(), 1200*time.Millisecond)
+				defer cancel()
+				items, err := searchFullTextWithBackendContext(ctx, baseDir, q, fetchCap)
+				if err != nil {
+					log.Printf("[search] fulltext async degraded (type=all): %v", err)
+					return nil, nil
+				}
+				return items, nil
+			})
+			run(func() ([]map[string]any, error) {
+				return searchTemplates(baseDir, q, fetchCap, 0), nil
+			})
+			run(func() ([]map[string]any, error) {
+				return searchConfigItems(baseDir, q, fetchCap, 0), nil
+			})
+			run(func() ([]map[string]any, error) {
+				return searchHotkeys(baseDir, q, fetchCap, 0), nil
+			})
+			run(func() ([]map[string]any, error) {
+				return searchFunctions(q, fetchCap, 0), nil
+			})
+			run(func() ([]map[string]any, error) {
+				return searchUI(q, fetchCap, 0), nil
+			})
+		}
 	case "clipboard":
 		run(func() ([]map[string]any, error) {
 			items, _, err := searchClipboard(db, q, tokens, fetchCap, 0)
@@ -245,8 +258,13 @@ func handleSearchWithDB(w http.ResponseWriter, r *http.Request, db *sql.DB, base
 		merged = merged[:180]
 	}
 
-	files, others := splitFileAndOther(merged)
-	sorted := sortSearchCenterMerged(files, others, q)
+	var sorted []map[string]any
+	if typeStr == "all" {
+		sorted = rankAllUnified(merged, q)
+	} else {
+		files, others := splitFileAndOther(merged)
+		sorted = sortSearchCenterMerged(files, others, q)
+	}
 
 	// 涓?AHK SearchAllDataSources 瀵归綈锛氭爣鍑嗘ā寮忓姣忎釜鏁版嵁婧愬悇鍙?MaxResults 鍐嶅悎骞讹紝鏉℃暟绾︿负銆屾瘡绫讳笂闄愪箣鍜屻€嶏紱
 	// 鏋侀€熸ā寮忓師鍏堝叏灞€娣锋帓鍚庡彧鍙栦竴椤?limit锛屾槗琛ㄧ幇涓恒€岀害灏戜竴鍗娿€嶃€倀ype=all 鏃舵斁瀹戒负姣忛〉鏈€澶?2*limit銆?

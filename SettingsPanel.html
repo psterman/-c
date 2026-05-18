@@ -2154,7 +2154,7 @@
     <div class="row"><div class="label">单文件间隔（ms）</div><div><input id="ftPauseMS" data-nosave="1" type="number" min="0" max="100" step="1" value="${esc(ftCfg.pauseMS ?? 5)}"></div></div>
     <div class="row"><div class="label">超大文本扫描</div><div class="inline"><input id="ftIncludeLarge" data-nosave="1" type="checkbox" ${checked(ftCfg.includeLargeText)}><span class="ft-kv">允许扫描超过 2MB 文本</span></div></div>
     <div class="row"><div class="label">超大文本大小上限（MB）</div><div><input id="ftMaxFileMB" data-nosave="1" type="number" min="1" max="512" step="1" value="${esc(ftCfg.maxFileSizeMB || 8)}"></div></div>
-    <div id="ftHint" class="hint">${ft.lastError ? esc(ft.lastError) : "设置会自动保存并自动应用到索引引擎。"}</div>
+    <div id="ftHint" class="hint">${ft.lastError ? esc(ft.lastError) : "更改会保存并应用到索引引擎；与索引无关的选项请使用上方「搜索设置」卡片。"}</div>
   </div>
 </div>`;
         const bindDropdown = (wrapId, btnId, target) => {

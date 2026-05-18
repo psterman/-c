@@ -27,6 +27,7 @@ global g_SCWV_SkipHostSort := false     ; Go 已混排时跳过 AHK SortSearchCe
 global g_SCWV_PendingJsonQueue := []  ; WebView 鏈?ready 鏃舵殏瀛橈紝ready 鍚庣敱 SCWV_FlushPendingJsonQueue 鍙戝嚭
 global g_SCWV_RowCtxMenu := 0  ; 鍏煎鍗犱綅锛堟繁鑹茶彍鍗曚笉鍐嶄娇鐢ㄥ師鐢?Menu锛?
 global g_SCWV_MenuActionRow := 0  ; 褰撳墠鑿滃崟瀵瑰簲鐨勫彲瑙佺粨鏋滆鍙凤紙1-based锛?
+global g_SCWV_MenuActionUid := ""
 global g_SCWV_DarkCtxGui := 0  ; 鎼滅储缁撴灉琛屾繁鑹插彸閿彍鍗?GUI
 global g_SCWV_DarkCtxHoverIdx := 0
 global g_SCWV_DarkCtxCmdByIdx := Map()  ; 1-based琛屽彿 -> cmdId
@@ -73,6 +74,9 @@ global SCWV_PHASE_OPEN := "OPEN"
 global SCWV_PHASE_CLOSING := "CLOSING"
 global g_SCWV_CurrentPhase := SCWV_PHASE_CLOSED
 global g_SCWV_CurrentToken := 0
+global g_SCWV_ChannelTokens := Map("openclose", 0, "search", 0, "menu", 0, "preview", 0)
+global g_SCWV_ParentTxnID := 0
+global g_SCWV_UnifiedMode := "search" ; search | clipboard
 global g_SCWV_PhaseLastChanged := 0
 global g_SCWV_CloseAfterReady := false
 global g_SCWV_AntiHangTimerArmed := false
@@ -107,6 +111,10 @@ global g_SCWV_LastOpenIntentTick := 0
 global g_SCWV_CloseCommitActive := false
 global g_SCWV_CloseCommitUntilTick := 0
 global g_SCWV_LastStaleDropTick := 0
+global g_SCWV_ModeSwitchGuard := false
+global g_SCWV_ModeSwitchGuardUntilTick := 0
+global g_SCWV_ModeSwitchGuardEpoch := 0
+global g_SCWV_ModeSwitchDeferredCaps := Map()
 
 SCWV_Log(event, detail := "") {
     try {
@@ -437,6 +445,12 @@ SCWV_HandleIntent(intent, payload := 0, priority := 50) {
     reason := payload is Map && payload.Has("reason") ? payload["reason"] : "intent_" . StrLower(iname)
     switch iname {
         case "OPEN":
+            try {
+                if (payload is Map && payload.Has("initialMode"))
+                    SCWV_SetUnifiedMode(String(payload["initialMode"]), false)
+                else
+                    SCWV_SetUnifiedMode("search", false)
+            }
             SCWV_TransitionTo(SCWV_PHASE_OPEN, reason, payload, Integer(priority))
         case "CLOSE":
             SCWV_TransitionTo(SCWV_PHASE_CLOSED, reason, payload, Integer(priority))
@@ -444,6 +458,10 @@ SCWV_HandleIntent(intent, payload := 0, priority := 50) {
             global g_SCWV_CurrentToken, g_SCWV_AsyncPollToken
             g_SCWV_CurrentToken += 1
             g_SCWV_AsyncPollToken += 1
+            SCWV_BumpChannelToken("openclose", true)
+            SCWV_BumpChannelToken("search")
+            SCWV_BumpChannelToken("menu")
+            SCWV_BumpChannelToken("preview")
             SCWV_ForceCloseHost(reason)
             SCWV_SetPhase(SCWV_PHASE_CLOSED, "force_reset_" . reason)
     }
@@ -471,6 +489,39 @@ SCWV_IsCurrentToken(token) {
         }
     }
     return ok
+}
+
+SCWV_BumpChannelToken(channel, resetParentTxn := false) {
+    global g_SCWV_ChannelTokens, g_SCWV_ParentTxnID
+    ch := StrLower(Trim(String(channel)))
+    if (ch = "")
+        ch := "openclose"
+    if !(g_SCWV_ChannelTokens is Map)
+        g_SCWV_ChannelTokens := Map("openclose", 0, "search", 0, "menu", 0, "preview", 0)
+    cur := g_SCWV_ChannelTokens.Has(ch) ? Integer(g_SCWV_ChannelTokens[ch]) : 0
+    cur += 1
+    g_SCWV_ChannelTokens[ch] := cur
+    if resetParentTxn
+        g_SCWV_ParentTxnID += 1
+    return cur
+}
+
+SCWV_GetChannelToken(channel) {
+    global g_SCWV_ChannelTokens
+    ch := StrLower(Trim(String(channel)))
+    if !(g_SCWV_ChannelTokens is Map)
+        return 0
+    return g_SCWV_ChannelTokens.Has(ch) ? Integer(g_SCWV_ChannelTokens[ch]) : 0
+}
+
+SCWV_IsCurrentChannelToken(channel, token, parentTxn := 0) {
+    global g_SCWV_ParentTxnID
+    chNow := SCWV_GetChannelToken(channel)
+    if (Integer(token) != Integer(chNow))
+        return false
+    if (parentTxn && Integer(parentTxn) != Integer(g_SCWV_ParentTxnID))
+        return false
+    return true
 }
 
 SCWV_ArmAntiHang(token) {
@@ -535,6 +586,7 @@ SCWV_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
         if (cur = SCWV_PHASE_CLOSING)
             SCWV_SetPhase(SCWV_PHASE_OPENING, "interrupt_open_" . reason)
         g_SCWV_CurrentToken += 1
+        SCWV_BumpChannelToken("openclose", true)
         token := g_SCWV_CurrentToken
         SCWV_SetPhase(SCWV_PHASE_OPENING, reason)
         SCWV_ArmAntiHang(token)
@@ -550,6 +602,7 @@ SCWV_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
         if (cur = SCWV_PHASE_CLOSED || cur = SCWV_PHASE_CLOSING)
             return true
         g_SCWV_CurrentToken += 1
+        SCWV_BumpChannelToken("openclose", true)
         token := g_SCWV_CurrentToken
         SCWV_SetPhase(SCWV_PHASE_CLOSING, reason)
         SCWV_ArmAntiHang(token)
@@ -567,6 +620,104 @@ SearchCenter_ShouldUseWebView() {
 SCWV_IsVisible() {
     global g_SCWV_Visible
     return g_SCWV_Visible
+}
+
+SCWV_SetUnifiedMode(mode := "search", syncWeb := true) {
+    global g_SCWV_UnifiedMode
+    m := StrLower(Trim(String(mode)))
+    if (m != "clipboard")
+        m := "search"
+    g_SCWV_UnifiedMode := m
+    if syncWeb {
+        try SCWV_PostJson(Map("type", "setUnifiedMode", "mode", m))
+    }
+}
+
+SCWV_GetUnifiedMode() {
+    global g_SCWV_UnifiedMode
+    m := StrLower(Trim(String(g_SCWV_UnifiedMode)))
+    return (m = "clipboard") ? "clipboard" : "search"
+}
+
+SCWV_IsClipboardUnifiedActive() {
+    return (SCWV_IsVisible() && SCWV_GetUnifiedMode() = "clipboard")
+}
+
+SCWV_OpenUnified(mode := "search", keyword := "") {
+    global SearchCenterFilterType, SearchCenterWebKeyword
+    m := StrLower(Trim(String(mode)))
+    if (m != "clipboard")
+        m := "search"
+    SCWV_SetUnifiedMode(m, false)
+    if (m = "clipboard") {
+        try _SCWV_SetCategoryByKey("clipboard")
+        try SearchCenterFilterType := "clipboard"
+    }
+    if (Trim(String(keyword)) != "") {
+        SearchCenterWebKeyword := Trim(String(keyword))
+    }
+    payload := Map("reason", "unified_open_" . m, "initialMode", m)
+    if (SearchCenterWebKeyword != "")
+        payload["keyword"] := SearchCenterWebKeyword
+    SCWV_SubmitIntent("open", 20, payload)
+    SetTimer((*) => SCWV_PostJson(Map("type", "setUnifiedMode", "mode", m)), -80)
+    if (m = "clipboard")
+        SetTimer((*) => SCWV_PushState("state"), -90)
+}
+
+SCWV_ModeSwitchGuardBegin(ms := 120) {
+    global g_SCWV_ModeSwitchGuard, g_SCWV_ModeSwitchGuardUntilTick, g_SCWV_ModeSwitchGuardEpoch
+    span := Integer(ms)
+    if (span < 80)
+        span := 80
+    g_SCWV_ModeSwitchGuard := true
+    g_SCWV_ModeSwitchGuardUntilTick := A_TickCount + span
+    g_SCWV_ModeSwitchGuardEpoch += 1
+    ep := g_SCWV_ModeSwitchGuardEpoch
+    ; watchdog: UI 没有回传结束也要强制解禁 + flush，避免永久吞键
+    SetTimer((*) => SCWV_ModeSwitchGuardWatchdog(ep), -150)
+}
+
+SCWV_ModeSwitchGuardWatchdog(epoch, *) {
+    global g_SCWV_ModeSwitchGuardEpoch
+    if (Integer(epoch) != Integer(g_SCWV_ModeSwitchGuardEpoch))
+        return
+    SCWV_ModeSwitchGuardEnd("watchdog_auto_flush")
+}
+
+SCWV_ModeSwitchGuardEnd(reason := "") {
+    global g_SCWV_ModeSwitchGuard
+    if !g_SCWV_ModeSwitchGuard
+        return
+    g_SCWV_ModeSwitchGuard := false
+    SCWV_FlushDeferredCapsHintPress(reason)
+}
+
+SCWV_PostCapsHintPressGuarded(key) {
+    global g_SCWV_ModeSwitchGuard, g_SCWV_ModeSwitchDeferredCaps
+    k := StrLower(Trim(String(key)))
+    if (k = "")
+        return
+    if g_SCWV_ModeSwitchGuard {
+        g_SCWV_ModeSwitchDeferredCaps[k] := Map("key", k, "ts", A_TickCount)
+        return
+    }
+    SCWV_PostJson('{"type":"capsHintPress","key":"' . k . '"}')
+}
+
+SCWV_FlushDeferredCapsHintPress(reason := "") {
+    global g_SCWV_ModeSwitchDeferredCaps
+    if !(g_SCWV_ModeSwitchDeferredCaps is Map)
+        return
+    for _, ent in g_SCWV_ModeSwitchDeferredCaps {
+        if !(ent is Map) || !ent.Has("key")
+            continue
+        k := StrLower(Trim(String(ent["key"])))
+        if (k = "")
+            continue
+        SCWV_PostJson('{"type":"capsHintPress","key":"' . k . '"}')
+    }
+    g_SCWV_ModeSwitchDeferredCaps := Map()
 }
 
 SearchCenter_IsOpeningOrBusy() {
@@ -2074,11 +2225,11 @@ _SCWV_RunPendingGoSearch(*) {
 }
 
 SCWV_RecordLastSearchIntent(offset, keyword, goType, limit) {
-    global g_SCWV_LastSearchIntent, g_SCWV_CurrentToken, g_SCWV_GoStartGen
+    global g_SCWV_LastSearchIntent, g_SCWV_CurrentToken, g_SCWV_GoStartGen, g_SCWV_ParentTxnID
     kw := Trim(String(keyword))
     if (kw = "")
         return
-    g_SCWV_LastSearchIntent := Map("offset", Integer(offset), "keyword", kw, "goType", String(goType), "limit", Integer(limit), "token", Integer(g_SCWV_CurrentToken), "gen", Integer(g_SCWV_GoStartGen), "tick", A_TickCount)
+    g_SCWV_LastSearchIntent := Map("offset", Integer(offset), "keyword", kw, "goType", String(goType), "limit", Integer(limit), "token", Integer(g_SCWV_CurrentToken), "searchToken", Integer(SCWV_GetChannelToken("search")), "parentTxn", Integer(g_SCWV_ParentTxnID), "gen", Integer(g_SCWV_GoStartGen), "tick", A_TickCount)
 }
 
 SCWV_ReplayLastSearchIntent(reason := "") {
@@ -2102,6 +2253,8 @@ SCWV_ReplayLastSearchIntentDelayed(token, gen, intentObj, reason := "", *) {
     if g_SCWV_DegradedMode
         return
     if (Integer(token) != Integer(g_SCWV_CurrentToken))
+        return
+    if (intentObj.Has("searchToken") && !SCWV_IsCurrentChannelToken("search", Integer(intentObj["searchToken"]), intentObj.Has("parentTxn") ? Integer(intentObj["parentTxn"]) : 0))
         return
     if (Integer(gen) != Integer(g_SCWV_GoStartGen))
         return
@@ -2183,9 +2336,11 @@ _SCWV_ProcessGoSearchResponse(resp, kw, off, gt, lim) {
     SCWV_PushState("state")
 }
 
-_SCWV_HandleSearchResponse(token, reqID, resp, kw, off, gt, lim) {
+_SCWV_HandleSearchResponse(token, reqID, resp, kw, off, gt, lim, searchToken := 0, parentTxn := 0) {
     global g_SCWV_LastRenderedID, g_SCWV_ForceResetStreak, g_SCWV_DegradedMode, TrayMenuCustomFailStreak, g_SCWV_BackendHealthy
     if (token && !SCWV_IsCurrentToken(token))
+        return false
+    if (searchToken && !SCWV_IsCurrentChannelToken("search", searchToken, parentTxn))
         return false
     if (reqID < g_SCWV_LastRenderedID)
         return false
@@ -2206,7 +2361,7 @@ _SCWV_HandleSearchResponse(token, reqID, resp, kw, off, gt, lim) {
 _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) {
     global SearchCenterWebKeyword, SearchCenterCurrentLimit, SearchCenterFilterType
     global g_SCWV_SearchHttpInFlight, g_SCWV_SearchPendingReq
-    global g_SCWV_RequestID, g_SCWV_LastRenderedID, g_SCWV_AsyncWhr, g_SCWV_AsyncReqMeta, g_SCWV_CurrentToken, g_SCWV_AsyncPollToken, g_SCWV_DegradedMode
+    global g_SCWV_RequestID, g_SCWV_LastRenderedID, g_SCWV_AsyncWhr, g_SCWV_AsyncReqMeta, g_SCWV_CurrentToken, g_SCWV_AsyncPollToken, g_SCWV_DegradedMode, g_SCWV_ParentTxnID
     if g_SCWV_DegradedMode
         return
 
@@ -2235,6 +2390,7 @@ _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) 
 
     reqID := g_SCWV_RequestID + 1
     g_SCWV_RequestID := reqID
+    searchToken := SCWV_BumpChannelToken("search")
     SCWV_RecordLastSearchIntent(off, kw, gt, lim)
     _SCWV_BlockDeactivate(2500, "search_http")
     try {
@@ -2259,7 +2415,7 @@ _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) 
         whr.SetTimeouts(900, 900, 2200, 2200)
         whr.Send()
         g_SCWV_AsyncWhr := whr
-        g_SCWV_AsyncReqMeta := Map("reqID", reqID, "kw", kw, "off", off, "gt", gt, "lim", lim, "startTick", A_TickCount, "token", g_SCWV_CurrentToken, "gen", g_SCWV_GoStartGen)
+        g_SCWV_AsyncReqMeta := Map("reqID", reqID, "kw", kw, "off", off, "gt", gt, "lim", lim, "startTick", A_TickCount, "token", g_SCWV_CurrentToken, "searchToken", searchToken, "parentTxn", g_SCWV_ParentTxnID, "gen", g_SCWV_GoStartGen)
         g_SCWV_SearchHttpInFlight := true
         g_SCWV_AsyncPollToken += 1
         pollToken := g_SCWV_AsyncPollToken
@@ -2296,7 +2452,9 @@ _SCWV_AsyncPollSearchHttp(pollToken := 0, *) {
         if (gen != Integer(g_SCWV_GoStartGen))
             return
         resp := Map("status", st, "body", (st = 200) ? raw : "", "responseText", raw)
-        _SCWV_HandleSearchResponse(token, reqID, resp, meta["kw"], meta["off"], meta["gt"], meta["lim"])
+        searchToken := meta.Has("searchToken") ? Integer(meta["searchToken"]) : 0
+        parentTxn := meta.Has("parentTxn") ? Integer(meta["parentTxn"]) : 0
+        _SCWV_HandleSearchResponse(token, reqID, resp, meta["kw"], meta["off"], meta["gt"], meta["lim"], searchToken, parentTxn)
     } catch as err {
         _SCWV_LogRuntime("AsyncPollSearchHttp error: " . err.Message)
     } finally {
@@ -2982,6 +3140,14 @@ SCWV_OnWebMessage(sender, args) {
             _SCWV_SyncScHotkeyBindings(pl)
         case "openSettingsPanel":
             try {
+                global g_ConfigWebView_OneShotDefaultTab
+                g_ConfigWebView_OneShotDefaultTab := ""
+                if (msg.Has("defaultStartTab")) {
+                    tab := Trim(String(msg["defaultStartTab"]))
+                    validTabs := Map("general", true, "appearance", true, "prompts", true, "hotkeys", true, "advanced", true, "screenshot", true, "search", true)
+                    if (tab != "" && validTabs.Has(tab))
+                        g_ConfigWebView_OneShotDefaultTab := tab
+                }
                 if IsSet(ShowConfigWebViewGUI) {
                     ShowConfigWebViewGUI()
                 } else if IsSet(ShowConfigGUI) {
@@ -3076,9 +3242,18 @@ SCWV_OnWebMessage(sender, args) {
             _SCWV_ActivateResultRow(row)
         case "searchCenterContextMenu":
             row := msg.Has("row") ? Integer(msg["row"]) : 0
+            itemUid := msg.Has("itemUid") ? String(msg["itemUid"]) : ""
             sx := msg.Has("screenX") ? Integer(msg["screenX"]) : 0
             sy := msg.Has("screenY") ? Integer(msg["screenY"]) : 0
-            _SCWV_ShowSearchCenterRowMenu(row, sx, sy)
+            SCWV_BumpChannelToken("menu")
+            _SCWV_ShowSearchCenterRowMenu(row, sx, sy, itemUid)
+        case "modeSwitchGuard":
+            active := msg.Has("active") ? !!msg["active"] : false
+            span := msg.Has("ms") ? Integer(msg["ms"]) : 120
+            if active
+                SCWV_ModeSwitchGuardBegin(span)
+            else
+                SCWV_ModeSwitchGuardEnd("ui_ack")
         case "close":
             try SCWV_Log("webmsg_close", "visible=" . (g_SCWV_Visible ? "1" : "0"))
             SCWV_SubmitIntent("close", 20, Map("reason", "webmsg_close"))
@@ -3112,15 +3287,18 @@ SCWV_OnWebMessage(sender, args) {
         case "WEB_PREVIEW_TEXT":
             p := msg.Has("path") ? String(msg["path"]) : ""
             sq := msg.Has("seq") ? Integer(msg["seq"]) : 0
+            SCWV_BumpChannelToken("preview")
             SCWV_Preview_OnWebText(p, sq)
         case "WEB_PREVIEW_IMAGE":
             p := msg.Has("path") ? String(msg["path"]) : ""
             sq := msg.Has("seq") ? Integer(msg["seq"]) : 0
+            SCWV_BumpChannelToken("preview")
             SCWV_Preview_OnWebImage(p, sq)
         case "NATIVE_PREVIEW":
             p := msg.Has("path") ? String(msg["path"]) : ""
             sq := msg.Has("seq") ? Integer(msg["seq"]) : 0
             bmap := msg.Has("bounds") && (msg["bounds"] is Map) ? msg["bounds"] : 0
+            SCWV_BumpChannelToken("preview")
             SCWV_Preview_OnNative(p, sq, bmap)
         case "PREVIEW_NATIVE_STOP":
             SCWV_Preview_UnloadNative()
@@ -3687,6 +3865,7 @@ SCWV_PushState(msgType := "state") {
         }
         rowMap := Map(
             "row", index,
+            "itemUid", _SCWV_SanitizeForJson(_SCWV_ResultActionUid(item, index)),
             "title", _SCWV_SanitizeForJson(rowTitle),
             "subtitle", _SCWV_SanitizeForJson(rowSubtitle),
             "type", _SCWV_SanitizeForJson(typeDisplay),
@@ -4423,6 +4602,19 @@ _SCWV_CopyArray(arr) {
     for _, v in arr
         out.Push(v)
     return out
+}
+
+_SCWV_ResultActionUid(item, row := 0) {
+    if !IsObject(item)
+        return ""
+    pk := _SCWV_ResultPinKey(item)
+    if (pk != "")
+        return pk
+    t := item.HasProp("Title") ? String(item.Title) : ""
+    s := item.HasProp("Source") ? String(item.Source) : ""
+    tm := item.HasProp("Time") ? String(item.Time) : ""
+    c := item.HasProp("Content") ? SubStr(String(item.Content), 1, 64) : ""
+    return "row:" . Integer(row) . "|" . t . "|" . s . "|" . tm . "|" . c
 }
 
 _SCWV_EnsureCurrentCategoryState() {
@@ -5336,7 +5528,7 @@ _SCWV_OnDarkSubMenuClick_Continue(idx, c, row, *) {
     global g_SCWV_Gui
     _SCWV_DestroyDarkRowMenus()
     SetTimer(SCWV_WMDeactivateHideTick, 0)
-    if (c != "")
+    if (c != "" && _SCWV_IsMenuTargetStillValid(row))
         SC_ExecuteContextCommand(c, row)
     if _SCWV_ShouldRefocusSearchAfterCmd(c) && g_SCWV_Gui {
         try FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "ctx_refocus", 300)
@@ -5348,6 +5540,24 @@ _SCWV_OnDarkSubMenuClick_Continue(idx, c, row, *) {
         catch as _eb {
         }
     }
+}
+
+_SCWV_IsMenuTargetStillValid(row) {
+    global g_SCWV_MenuActionUid
+    r := Integer(row)
+    if (r < 1)
+        return false
+    expectedUid := Trim(String(g_SCWV_MenuActionUid))
+    if (expectedUid = "")
+        return true
+    it := GetSearchCenterResultItemByRow(r)
+    if !IsObject(it)
+        return false
+    nowUid := _SCWV_ResultActionUid(it, r)
+    if (nowUid = expectedUid)
+        return true
+    try SCWV_Log("menu_target_mismatch", "row=" . r . " expected=" . expectedUid . " now=" . nowUid)
+    return false
 }
 
 _SCWV_CheckDarkSubCtxMouse(*) {
@@ -5542,7 +5752,7 @@ _SCWV_OnDarkSearchMenuClick_Continue(c, row, *) {
     global g_SCWV_Gui
     _SCWV_DestroyDarkRowMenus()
     SetTimer(SCWV_WMDeactivateHideTick, 0)
-    if (c != "")
+    if (c != "" && _SCWV_IsMenuTargetStillValid(row))
         SC_ExecuteContextCommand(c, row)
     if _SCWV_ShouldRefocusSearchAfterCmd(c) && g_SCWV_Gui {
         try FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "ctx_refocus", 300)
@@ -5672,8 +5882,8 @@ _SCWV_FilterToolbarSearchRows() {
     return out
 }
 
-_SCWV_ShowSearchCenterRowMenu(row, sx, sy) {
-    global g_SCWV_MenuActionRow
+_SCWV_ShowSearchCenterRowMenu(row, sx, sy, itemUid := "") {
+    global g_SCWV_MenuActionRow, g_SCWV_MenuActionUid
 
     r := Integer(row)
     if (r < 1)
@@ -5683,6 +5893,7 @@ _SCWV_ShowSearchCenterRowMenu(row, sx, sy) {
         return
 
     g_SCWV_MenuActionRow := r
+    g_SCWV_MenuActionUid := (Trim(String(itemUid)) != "") ? String(itemUid) : _SCWV_ResultActionUid(Item, r)
     posX := Integer(sx)
     posY := Integer(sy)
     if (posX < 1 || posY < 1) {

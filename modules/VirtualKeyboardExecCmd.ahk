@@ -917,6 +917,11 @@ VK_HubCapsuleAction(actionName) {
 }
 
 VK_IsClipboardPanelActive() {
+    try {
+        if (SCWV_IsClipboardUnifiedActive())
+            return true
+    } catch {
+    }
     try return CP_IsForeground()
     catch {
         return false
@@ -926,6 +931,13 @@ VK_IsClipboardPanelActive() {
 VK_ClipboardPost(payloadJson) {
     if !VK_IsClipboardPanelActive()
         return false
+    try {
+        if (SCWV_IsClipboardUnifiedActive()) {
+            SCWV_PostJson(payloadJson)
+            return true
+        }
+    } catch {
+    }
     try {
         CP_SendToWeb(payloadJson)
         return true

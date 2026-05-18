@@ -26,6 +26,7 @@ global g_CP_LastHealthTick := 0
 global g_CP_HealthTTL := 800
 global g_CP_RequestID := 0
 global g_CP_LastRenderedID := 0
+global g_CP_UnifiedRedirectEnabled := true
 
 ; --- SearchCenterCore：剪贴板列表 /clip/search ---
 _CP_UrlEncode(str) {
@@ -360,6 +361,12 @@ CP_Init() {
 
 ; ===================== 显示 / 隐藏 =====================
 CP_IsForeground() {
+    global g_CP_UnifiedRedirectEnabled
+    if g_CP_UnifiedRedirectEnabled {
+        try return SCWV_IsClipboardUnifiedActive()
+        catch {
+        }
+    }
     global g_CP_Gui, g_CP_Visible
     if !g_CP_Visible || !g_CP_Gui
         return false
@@ -372,6 +379,12 @@ CP_IsForeground() {
 }
 
 CP_Show() {
+    global g_CP_UnifiedRedirectEnabled, g_CP_LastKeyword
+    if g_CP_UnifiedRedirectEnabled {
+        try FloatingToolbar_PageDockEnter("clipboard")
+        try SCWV_OpenUnified("clipboard", g_CP_LastKeyword)
+        return
+    }
     global g_CP_Gui, g_CP_Visible, g_CP_Ready, g_CP_Ctrl
     try FloatingToolbar_PageDockEnter("clipboard")
 
@@ -424,6 +437,15 @@ _CP_FocusDeferred() {
 }
 
 CP_Hide() {
+    global g_CP_UnifiedRedirectEnabled
+    if g_CP_UnifiedRedirectEnabled {
+        try FloatingToolbar_PageDockLeave("clipboard")
+        try {
+            if SCWV_IsClipboardUnifiedActive()
+                SCWV_SubmitIntent("close", 30, Map("reason", "clipboard_unified_hide"))
+        }
+        return
+    }
     global g_CP_Gui, g_CP_Visible, g_CP_SearchTimer, g_CP_WM_ActivateHideCallback
     try FloatingToolbar_PageDockLeave("clipboard")
 

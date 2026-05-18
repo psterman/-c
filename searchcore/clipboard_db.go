@@ -392,6 +392,8 @@ func buildClipItemFromStrings(id int64, content, sourceApp, dataType, lastCopyTi
 		"CharCount":     cc,
 		"CopyCount":     cp,
 	}
+	st := clipStrategyTag(c)
+	meta["StrategyTag"] = st
 	return map[string]any{
 		"originalDataType": "clipboard",
 		"DataType":         "clipboard",
@@ -406,6 +408,11 @@ func buildClipItemFromStrings(id int64, content, sourceApp, dataType, lastCopyTi
 		"Timestamp":        lct,
 		"Source":           displayName,
 		"Metadata":         meta,
+		"StrategyTag":      st,
+		"ClipLayer":        "history",
+		"SourceRank":       "clipboard",
+		"AnchorClass":      "clip_history",
+		"RankReason":       "clip_base",
 	}
 }
 
@@ -456,6 +463,8 @@ func buildLegacyClipItem(id int64, content, sourceApp, sourceTitle, sourcePath, 
 		"CharCount":     cc,
 		"WordCount":     wc,
 	}
+	stg := clipStrategyTag(c)
+	meta["StrategyTag"] = stg
 	return map[string]any{
 		"originalDataType": "clipboard",
 		"DataType":         "clipboard",
@@ -470,6 +479,11 @@ func buildLegacyClipItem(id int64, content, sourceApp, sourceTitle, sourcePath, 
 		"Timestamp":        ts,
 		"Source":           displayName,
 		"Metadata":         meta,
+		"StrategyTag":      stg,
+		"ClipLayer":        "history",
+		"SourceRank":       "clipboard",
+		"AnchorClass":      "clip_history",
+		"RankReason":       "clip_legacy_base",
 		"Action":           "copy_to_clipboard",
 		"ActionParams":     map[string]any{"ID": id, "Content": c},
 	}

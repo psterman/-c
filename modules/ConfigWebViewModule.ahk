@@ -2,6 +2,8 @@
 ; 渚濊禆锛歐ebView2銆乄MActivateChain銆丣xon銆佷富鑴氭湰鍏ㄥ眬涓?BuildAppLocalUrl / WebView_DumpJson 绛夈€?
 
 global ConfigWebViewNavFallbackTried := false
+; 由搜索中心等单次打开设置时覆盖首屏标签，不写入 INI
+global g_ConfigWebView_OneShotDefaultTab := ""
 
 ConfigWebView_StaleDomain(pathKey) {
     return "config:" . Trim(String(pathKey))
@@ -618,7 +620,7 @@ ConfigWebView_GetKeybinderToolbarSnapshot() {
 }
 
 ConfigWebView_BuildInitData() {
-    global CursorPath, CapsLockHoldTimeSeconds, CapsLockHoldVkEnabled, AutoStart, DefaultStartTab
+    global CursorPath, CapsLockHoldTimeSeconds, CapsLockHoldVkEnabled, AutoStart, DefaultStartTab, g_ConfigWebView_OneShotDefaultTab
     global ThemeMode, FunctionPanelPos, ConfigPanelScreenIndex, ConfigPanelPos, ClipboardPanelPos, PanelScreenIndex
     global Prompt_Explain, Prompt_Refactor, Prompt_Optimize
     global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ, SplitHotkey, BatchHotkey, HotkeyT, HotkeyF, HotkeyP
@@ -719,12 +721,17 @@ ConfigWebView_BuildInitData() {
         "ocrPunctuationMode", IniRead(ConfigFile, "Settings", "ScreenshotOCRPunctuationMode", "keep"),
         "ocrDirectCopyEnabled", IniRead(ConfigFile, "Settings", "ScreenshotOCRDirectCopyEnabled", "0") = "1"
     )
+    startTabForOpen := DefaultStartTab
+    if (IsSet(g_ConfigWebView_OneShotDefaultTab) && g_ConfigWebView_OneShotDefaultTab != "") {
+        startTabForOpen := g_ConfigWebView_OneShotDefaultTab
+        g_ConfigWebView_OneShotDefaultTab := ""
+    }
     cfgPayload := Map(
         "cursorPath", CursorPath,
         "capslockHoldTimeSeconds", CapsLockHoldTimeSeconds,
         "capsLockHoldVkEnabled", CapsLockHoldVkEnabled,
         "autoStart", AutoStart,
-        "defaultStartTab", DefaultStartTab,
+        "defaultStartTab", startTabForOpen,
         ; 蹇呴』浠?INI 涓哄噯锛氬唴瀛樹腑 ThemeMode 鍙兘涓庣鐩樹笉涓€鑷达紙渚嬪浠?WebView 鍥炶皟鎵撳紑璁剧疆鏃讹級
         "themeMode", ReadPersistedThemeMode(),
         "popupScreenIndex", popupScreenIndex,

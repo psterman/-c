@@ -468,7 +468,7 @@ SearchCenter_FlashCapsHintKey(key) {
         return
     try {
         if (SearchCenter_ShouldUseWebView() && IsSearchCenterActive()) {
-            SCWV_PostJson('{"type":"capsHintPress","key":"' . k . '"}')
+            SCWV_PostCapsHintPressGuarded(k)
         }
     } catch {
     }

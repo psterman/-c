@@ -32,6 +32,10 @@
 }
 :root {
   --bg: #0d1016;
+  --bg-main: #0c1119;
+  --bg-surface: #121a26;
+  --bg-elevate: #182433;
+  --border-subtle: rgba(255,255,255,.08);
   --panel: #122033;
   --panel-2: #16283d;
   --border: #2a3f5a;
@@ -48,6 +52,10 @@
 }
 html[data-theme="light"] {
   --bg: #f4f6f8;
+  --bg-main: #f4f6f8;
+  --bg-surface: #ffffff;
+  --bg-elevate: #f0f3f7;
+  --border-subtle: rgba(20,32,48,.1);
   --panel: #ffffff;
   --panel-2: #f7f9fb;
   --border: #d9e1ea;
@@ -151,14 +159,23 @@ html[data-theme="light"] #startup-splash {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-#app {
+#app.sc-container {
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto;
+  grid-template-rows: auto minmax(0, auto) minmax(0, 1fr) auto auto;
   width: 100%;
   height: 100%;
   min-height: 0;
-  gap: 12px;
-  padding: 14px 26px 18px;
+  gap: 10px;
+  padding: 10px 16px 12px;
+}
+#app {
+  display: grid;
+  grid-template-rows: auto minmax(0, auto) minmax(0, 1fr) auto auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 10px;
+  padding: 10px 16px 12px;
 }
 /* 须显示标题栏：极速/标准 与窗口控制在此；勿 display:none（会隐藏引擎切换） */
 #chrome-header {
@@ -447,7 +464,8 @@ html[data-theme="light"] #startup-splash {
   color: #b9cad9;
 }
 #search-bar.ft-collapsed .fulltext-inline .ft-metric-box,
-#search-bar.ft-collapsed .fulltext-inline .ft-light-pack {
+#search-bar.ft-collapsed .fulltext-inline .ft-light-pack,
+#ft-drawer.ft-collapsed #ft-drawer-body {
   display: none;
 }
 #search-bar.ft-collapsed .fulltext-inline {
@@ -1837,44 +1855,431 @@ mark {
   padding: 0 2px;
   border-radius: 3px;
 }
-@media (max-width: 980px) {
+
+/* --- 搜索中心简约布局 (sc-*) --- */
+.sc-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+.hidden {
+  display: none !important;
+}
+.sc-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.search-wrapper {
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+  transition: box-shadow .2s ease;
+}
+.search-wrapper.focused .search-box-inner,
+.search-wrapper.has-content .search-box-inner {
+  border-color: rgba(255,141,42,.45);
+  box-shadow: 0 0 0 3px rgba(255,141,42,.12), 0 8px 28px rgba(4,10,20,.35);
+}
+.search-box-inner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0)), var(--bg-surface);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.08);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.search-box-inner .search-icon-left {
+  color: var(--accent);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.search-box-inner #search {
+  height: 44px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0 4px;
+  font-size: 14px;
+}
+.search-box-inner #search:focus {
+  border: none;
+  outline: none;
+}
+.search-controls-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.search-controls-right #limit {
+  height: 34px;
+  min-width: 72px;
+  border-radius: 10px;
+}
+.search-controls-right #btn-run {
+  height: 34px;
+  min-width: 64px;
+}
+.engine-switch-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,179,71,.4);
+  background: linear-gradient(180deg, rgba(255,179,71,.18), rgba(255,141,42,.1));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform .14s ease, border-color .2s ease, background .2s ease;
+}
+.engine-switch-capsule:hover {
+  border-color: rgba(255,179,71,.65);
+  background: linear-gradient(180deg, rgba(255,179,71,.28), rgba(255,141,42,.16));
+}
+.engine-switch-capsule.ahk-mode {
+  border-color: var(--border);
+  background: var(--panel-2);
+  color: var(--muted);
+}
+.engine-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  box-shadow: 0 0 8px rgba(255,179,71,.75);
+}
+.engine-switch-capsule.ahk-mode .engine-indicator {
+  background: #7a8a9a;
+  box-shadow: none;
+}
+.search-more-menu {
+  position: relative;
+}
+.search-more-menu > summary {
+  list-style: none;
+  cursor: pointer;
+  height: 34px;
+  min-width: 38px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+}
+.search-more-menu > summary::-webkit-details-marker { display: none; }
+.search-more-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 148px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevate);
+  box-shadow: var(--shadow);
+}
+.search-more-pop .btn {
+  width: 100%;
+  justify-content: flex-start;
+}
+.filter-drawer {
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+.filter-drawer-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.filter-drawer-toggle:hover { color: var(--text); }
+.filter-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 8px 10px;
+  max-height: 320px;
+  overflow: auto;
+  transition: max-height .22s ease, opacity .2s ease, padding .2s ease;
+}
+.filter-drawer.collapsed .filter-drawer-body {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.filter-drawer .sc-tag-card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 4px 4px 0;
+}
+.filter-drawer .sc-tag-card::after { display: none; }
+.results-filter-strip {
+  padding: 0 4px 4px;
+}
+.filter-strip-label {
+  margin: 0 0 6px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+#filter-drawer #head-filters {
+  display: block;
+}
+.ft-drawer {
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255,255,255,.02);
+  overflow: hidden;
+}
+.ft-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+}
+.ft-drawer-toggle {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+}
+.ft-drawer-toggle:hover { color: var(--text); }
+.ft-drawer #ft-drawer-body {
+  padding: 0 10px 10px;
+}
+.ft-drawer #fulltext-inline {
+  margin-top: 0;
+}
+.fulltext-inline.ft-inline-readonly {
+  align-items: flex-start;
+}
+.fulltext-inline.ft-inline-readonly .ft-hint-box {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.fulltext-inline.ft-inline-readonly #btn-ft-toggle,
+.fulltext-inline.ft-inline-readonly #btn-ft-open-console {
+  flex: 0 0 auto;
+  align-self: center;
+}
+.sc-ft-section {
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+  min-width: 0;
+}
+.ft-drawer-toggle .ft-drawer-chevron {
+  flex: 0 0 auto;
+  font-size: 10px;
+  opacity: 0.75;
+  width: 1em;
+  text-align: center;
+}
+.sc-main-content {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+#layout.sc-split-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-template-columns: minmax(0, 42%) minmax(0, 58%);
+  gap: 12px;
+}
+.results-column,
+.preview-column {
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow);
+}
+.results-head-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+#layout .result-item {
+  border-radius: 12px;
+  border-left: 3px solid transparent;
+  padding: 10px 12px;
+}
+#layout .result-item.active {
+  border-left-color: var(--accent);
+  background: linear-gradient(90deg, rgba(255,141,42,.14), rgba(255,141,42,.04));
+}
+#preview-panel {
+  border-radius: 0 0 16px 16px;
+}
+#preview-web-scroll:empty::before,
+#preview-web-scroll.sc-empty-hint {
+  color: var(--muted);
+}
+.sc-footer-dock {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 40px;
+}
+.sc-footer-dock .dock-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.sc-footer-dock #status {
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dock-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #5a6a7a;
+  flex-shrink: 0;
+}
+.dock-status-dot.active {
+  background: #22d3ee;
+  box-shadow: 0 0 8px rgba(34,211,238,.7);
+}
+.dock-status-dot.ready {
+  background: var(--accent-2);
+  box-shadow: 0 0 8px rgba(255,179,71,.65);
+}
+.dock-status-dot.warn {
+  background: #f59e0b;
+}
+.sc-footer-dock .dock-center {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+.sc-footer-dock .dock-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.search-wrapper:not(.focused):not(.has-content) + .filter-drawer {
+  opacity: .92;
+}
+html[data-theme="light"] .search-box-inner,
+html[data-theme="light"] .filter-drawer,
+html[data-theme="light"] .ft-drawer,
+html[data-theme="light"] .results-column,
+html[data-theme="light"] .preview-column,
+html[data-theme="light"] .sc-footer-dock {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+}
+html[data-theme="light"] .search-wrapper.focused .search-box-inner,
+html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
+  box-shadow: 0 0 0 3px rgba(214,111,26,.14), 0 8px 24px rgba(20,32,48,.08);
+}
+
+@media (max-width: 960px) {
+  #layout.sc-split-layout,
   #layout { grid-template-columns: 1fr; }
-  #preview-card { min-height: 240px; }
-  #search-bar {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-  #search-icon-inline {
-    display: none;
-  }
-  .search-actions {
+  #preview-card { display: none; min-height: 0; }
+  body.sc-narrow-preview #preview-card {
     display: flex;
-    width: 100%;
-    margin-left: 0;
+    min-height: min(42vh, 360px);
+  }
+  .search-box-inner {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+  }
+  .search-box-inner .search-icon-left { display: none; }
+  .search-input-wrap { grid-column: 1 / -1; }
+  .search-controls-right {
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .filter-drawer.collapsed .filter-drawer-body {
+    max-height: 0;
+  }
+  .sc-footer-dock {
+    grid-template-columns: 1fr;
+    row-gap: 6px;
+  }
+  .sc-footer-dock .dock-center { text-align: left; }
+  .sc-footer-dock .dock-right {
     flex-wrap: wrap;
     justify-content: flex-start;
   }
-  .fulltext-inline {
-    flex-wrap: wrap;
-  }
-  #footer {
-    flex-wrap: wrap;
-    row-gap: 4px;
-  }
-  #footer-hint {
-    flex-basis: 100%;
-    text-align: left;
-  }
 }
-@media (max-width: 1320px) and (min-width: 981px) {
-  #search-bar {
-    grid-template-columns: auto minmax(420px, 1fr);
-  }
-  .search-actions {
-    grid-column: 1 / -1;
-    margin-left: 0;
-    justify-self: start;
-  }
+@media (max-width: 1320px) and (min-width: 961px) {
+  .search-controls-right { flex-wrap: wrap; }
 }
 </style>
 <script src="https://app.local/assets/js/BasePanel.js"></script>
@@ -1896,7 +2301,7 @@ mark {
     <div class="startup-splash-text">NIUMA</div>
   </div>
 </div>
-<div id="app">
+<div id="app" class="sc-container">
     <header id="chrome-header" class="chrome-header window-titlebar">
     <div class="chrome-drag" id="chrome-drag" title="拖动窗口">搜索中心</div>
     <div class="chrome-controls">
@@ -1905,72 +2310,78 @@ mark {
     </div>
   </header>
 
-  <div id="tag-card" class="card">
-    <div id="categories"></div>
-    <div id="engines">    </div>
-  </div>
-
-  <div id="search-bar" class="card">
-    <span id="search-icon-inline">&#128269;</span>
-    <div class="search-input-wrap">
-      <input id="search" type="text" placeholder="搜索本地结果，或直接作为网络搜索 / CLI 提示词发送">
-      <div id="status" class="search-status-inline">准备中...</div>
-      <div id="fulltext-inline" class="fulltext-inline">
-        <button id="btn-ft-toggle" class="ft-control-btn" title="启动或停止全文索引">启动索引</button>
-        <button id="btn-ft-collapse" class="ft-control-btn secondary" title="折叠/展开索引状态区">收起索引</button>
-        <span class="ft-light-pack hidden">
-          <span class="ft-mini-light" id="ftl1"></span>
-          <span class="ft-mini-light" id="ftl2"></span>
-          <span class="ft-mini-light" id="ftl3"></span>
-          <span class="ft-mini-light" id="ftl4"></span>
-        </span>
-        <span id="ft-state-box" class="ft-metric-box ft-state-box" title="索引当前运行状态">状态: 准备中</span>
-        <span id="ft-progress-box" class="ft-metric-box" title="本轮处理进度（已处理/总量）">进度: 0/0</span>
-        <span id="ft-queue-box" class="ft-metric-box" title="待处理任务队列（当前/容量）">队列: 0/0</span>
-        <span id="ft-indexed-box" class="ft-metric-box" title="索引库累计记录数量">数量: 索引库累计 0 · 本轮发现 0</span>
-        <span id="ft-incremental-box" class="ft-metric-box ft-incremental-box" title="增量索引状态">增量: 准备中</span>
-        <span id="ft-speed-box" class="ft-metric-box" title="当前索引吞吐速度">速度: 0 文件/秒</span>
-        <span id="ft-current-box" class="ft-metric-box ft-current-box" title="当前正在处理的文件">当前: 空闲</span>
-        <span id="ft-version-box" class="ft-metric-box" title="索引版本与扫描模式">版本: -</span>
-        <span id="ft-quick-hint" class="ft-metric-box ft-hint-box" title="索引提示">说明: 等待索引状态…</span>
+  <section class="sc-header">
+    <div class="search-wrapper" id="searchWrapper">
+      <div class="search-box-inner" id="searchBoxInner">
+        <span class="search-icon-left" id="search-icon-inline">&#128269;</span>
+        <div class="search-input-wrap">
+          <input id="search" type="text" placeholder="搜索本地结果，或直接作为网络搜索 / CLI 提示词发送" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="search-controls-right">
+          <select id="limit" title="结果条数上限">
+            <option value="10">10 条</option>
+            <option value="20">20 条</option>
+            <option value="30">30 条</option>
+            <option value="50">50 条</option>
+            <option value="100">100 条</option>
+            <option value="200">200 条</option>
+            <option value="500">全部搜索结果</option>
+          </select>
+          <button id="btn-run" class="btn primary" type="button">搜索</button>
+          <button type="button" class="engine-switch-capsule" id="engineToggle" aria-label="切换搜索引擎模式">
+            <span class="engine-indicator" aria-hidden="true"></span>
+            <span class="engine-text" id="engineLabel">GO</span>
+          </button>
+          <button type="button" id="engine-mode-go-inline" class="sc-visually-hidden" data-engine="go" tabindex="-1" aria-hidden="true"></button>
+          <button type="button" id="engine-mode-ahk-inline" class="sc-visually-hidden" data-engine="ahk" tabindex="-1" aria-hidden="true"></button>
+          <details class="search-more-menu">
+            <summary class="btn ghost btn-more" title="更多操作">⋯</summary>
+            <div class="search-more-pop">
+              <button id="btn-hotkey-plus" class="btn btn-hotkey-plus" type="button" title="快捷键+：快速进入 Caps 热键提示与绑定">快捷键+</button>
+              <button id="btn-web-search" class="btn" type="button">网页搜索</button>
+              <button id="btn-open-cli" class="btn" type="button">打开所选终端</button>
+            </div>
+          </details>
+        </div>
       </div>
     </div>
-    <div class="search-actions">
-      <select id="limit">
-        <option value="10">10 条</option>
-          <option value="20">20 条</option>
-          <option value="30">30 条</option>
-          <option value="50">50 条</option>
-        <option value="100">100 条</option>
-        <option value="200">200 条</option>
-        <option value="500">全部搜索结果</option>
-      </select>
-      <button id="btn-run" class="btn primary">搜索</button>
-      <button id="btn-hotkey-plus" class="btn btn-hotkey-plus" title="快捷键+：快速进入 Caps 热键提示与绑定">快捷键+</button>
-      <button id="btn-web-search" class="btn">网页搜索</button>
-      <button id="btn-open-cli" class="btn">打开所选终端</button>
-    </div>
-  </div>
 
-  <div id="layout">
-    <div id="results-card" class="card">
-      <div id="results-head">
-        <div>
-          <div class="head-title">本地结果</div>
+    <div class="filter-drawer" id="filter-drawer">
+      <button type="button" class="filter-drawer-toggle" id="btn-filter-drawer-toggle" aria-expanded="true">
+        <span>筛选与引擎</span>
+        <span class="chevron" id="filter-drawer-chevron" aria-hidden="true">▼</span>
+      </button>
+      <div class="filter-drawer-body" id="filter-drawer-body">
+        <div id="tag-card" class="card sc-tag-card">
+          <div id="categories"></div>
+          <div id="engines"></div>
         </div>
-        <div id="head-filters">
-          <div id="filters"></div>
-          <div id="subtag-panel" class="hidden">
-            <div id="subtag-modes"></div>
-            <div id="subtags"></div>
-            <div id="subtag-desc"></div>
+        <div class="results-filter-strip">
+          <h4 class="filter-strip-label">结果筛选</h4>
+          <div id="head-filters">
+            <div id="filters"></div>
+            <div id="subtag-panel" class="hidden">
+              <div id="subtag-modes"></div>
+              <div id="subtags"></div>
+              <div id="subtag-desc"></div>
+            </div>
           </div>
         </div>
+      </div>
+    </div>
+
+  </section>
+
+  <main class="sc-main-content">
+  <div id="layout" class="sc-split-layout">
+    <div id="results-card" class="card results-column">
+      <div id="results-head" class="results-head-compact">
+        <div class="head-title">本地结果</div>
         <div class="head-sub" id="result-count">0 条</div>
       </div>
       <div id="result-list"></div>
     </div>
-    <div id="preview-card" class="card">
+    <div id="preview-card" class="card preview-column">
       <div id="preview-head">
         <div style="width: 100%;">
           <div class="head-title">预览</div>
@@ -2000,17 +2411,57 @@ mark {
       </div>
     </div>
   </div>
+  </main>
 
-  <div id="footer">
-    <div class="footer-row-main">
-      <span>Enter 执行主操作 · Esc 关闭 · 双击结果立即处理</span>
+  <section class="sc-ft-section" aria-label="全文索引状态">
+    <div id="ft-drawer" class="ft-drawer ft-collapsed">
+      <div class="ft-drawer-head">
+        <button type="button" class="ft-drawer-toggle" id="btn-ft-drawer-toggle" aria-expanded="false">
+          <span class="ft-drawer-chevron" id="ft-drawer-chevron" aria-hidden="true">▶</span>
+          <span class="dock-status-dot" id="ft-summary-dot"></span>
+          <span id="ft-summary-text">索引: 准备中</span>
+        </button>
+      </div>
+      <div id="ft-drawer-body">
+        <div id="fulltext-inline" class="fulltext-inline ft-inline-readonly">
+          <button id="btn-ft-toggle" class="ft-control-btn" type="button" title="启动或停止全文索引">启动索引</button>
+          <span class="ft-light-pack hidden">
+            <span class="ft-mini-light" id="ftl1"></span>
+            <span class="ft-mini-light" id="ftl2"></span>
+            <span class="ft-mini-light" id="ftl3"></span>
+            <span class="ft-mini-light" id="ftl4"></span>
+          </span>
+          <span id="ft-state-box" class="ft-metric-box ft-state-box" title="索引当前运行状态">状态: 准备中</span>
+          <span id="ft-progress-box" class="ft-metric-box" title="本轮处理进度（已处理/总量）">进度: 0/0</span>
+          <span id="ft-queue-box" class="ft-metric-box" title="待处理任务队列（当前/容量）">队列: 0/0</span>
+          <span id="ft-indexed-box" class="ft-metric-box" title="索引库累计记录数量">数量: 索引库累计 0 · 本轮发现 0</span>
+          <span id="ft-incremental-box" class="ft-metric-box ft-incremental-box" title="增量索引状态">增量: 准备中</span>
+          <span id="ft-speed-box" class="ft-metric-box" title="当前索引吞吐速度">速度: 0 文件/秒</span>
+          <span id="ft-current-box" class="ft-metric-box ft-current-box" title="当前正在处理的文件">当前: 空闲</span>
+          <span id="ft-version-box" class="ft-metric-box" title="索引版本与扫描模式">版本: -</span>
+          <span id="ft-quick-hint" class="ft-metric-box ft-hint-box" title="索引提示">说明: 等待索引状态…</span>
+          <button type="button" id="btn-ft-open-console" class="ft-control-btn secondary" title="打开配置面板，并进入搜索设置中的全文索引控制台">全文索引控制台…</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer id="footer" class="sc-footer-dock">
+    <div class="dock-left">
+      <span class="dock-status-dot" id="dock-sync-dot"></span>
+      <span id="status">准备中...</span>
+    </div>
+    <div class="dock-center">
+      <span class="dock-hint">Enter 执行主操作 · Esc 关闭 · 双击结果立即处理</span>
+    </div>
+    <div class="dock-right">
       <div class="footer-inline-btns">
         <button type="button" id="btn-sc-recycle" class="btn ghost">搜索回收站<span class="recycle-badge muted" id="recycle-badge">0</span></button>
         <button type="button" id="btn-win-recycle-sc" class="btn ghost">系统回收站</button>
       </div>
+      <div id="footer-hint">WebView2 模式</div>
     </div>
-    <div id="footer-hint">WebView2 模式</div>
-  </div>
+  </footer>
 
   <div id="recycle-overlay" class="recycle-overlay" aria-hidden="true">
     <div class="recycle-dialog card" role="dialog" aria-modal="true" aria-labelledby="recycle-dlg-title">
@@ -2063,8 +2514,8 @@ if (typeof BasePanel === 'undefined') {
 }
 const SC_ENGINE_MODE_KEY = "sc_engine_mode";
 const SC_HOTKEY_BINDINGS_KEY = "sc_hotkey_bindings_v1";
-const SC_FT_ADVANCED_KEY = "sc_ft_ui_advanced";
 const SC_FT_COLLAPSED_KEY = "sc_ft_collapsed_v1";
+const SC_FILTER_COLLAPSED_KEY = "sc_filter_collapsed_v1";
 const SC_SUBTAG_AUDIENCE_KEY = "sc_subtag_audience_v1";
 const SC_SUBTAG_SELECTION_KEY = "sc_subtag_selection_v1";
 const SC_SUBTAG_DEBUG_KEY = "sc_subtag_debug_v1";
@@ -2103,6 +2554,12 @@ let fulltextProgressES = null;
 let fulltextPollTimer = 0;
 let fulltextEsBackoffMs = 2000;
 let fulltextEsReconnectTimer = 0;
+const HOTKEY_QUEUE_TTL_MS = 250;
+const HOTKEY_QUEUE_TICK_MS = 16;
+let hotkeyDispatchTimer = 0;
+const hotkeyDispatchMap = new Map();
+const deferredConflictSlots = new Map();
+const HOTKEY_CRITICAL_WHITELIST = new Set(["escape_close", "stop_preview"]);
 
 const state = {
   themeMode: getCachedThemeMode(),
@@ -2154,6 +2611,10 @@ const state = {
   pdfWebBroken: false,
   pdfJsRx: null,
   hostTopMost: false,
+  unifiedMode: "search",
+  modeSwitchGuardUntil: 0,
+  modeSwitchGuardMs: 120,
+  modeSwitchHintUntil: 0,
   fulltext: {
     running: false,
     ready: false,
@@ -2189,9 +2650,18 @@ const state = {
     busy: false,
     last: null
   },
-  fulltextCollapsed: (typeof localStorage !== "undefined" && localStorage.getItem(SC_FT_COLLAPSED_KEY) === "1"),
+  fulltextCollapsed: (function scFtCollapsedDefault() {
+    try {
+      if (typeof localStorage === "undefined") return true;
+      const v = localStorage.getItem(SC_FT_COLLAPSED_KEY);
+      if (v === "0") return false;
+      if (v === "1") return true;
+      return true;
+    } catch (_) {
+      return true;
+    }
+  })(),
   fulltextEmptyTransitionUntil: 0,
-  fulltextUiAdvanced: (typeof localStorage !== "undefined" && localStorage.getItem(SC_FT_ADVANCED_KEY) === "1"),
   subtagDebug: (typeof localStorage !== "undefined" && localStorage.getItem(SC_SUBTAG_DEBUG_KEY) === "1"),
   quickLook: {
     installed: false,
@@ -2259,6 +2729,17 @@ function requestHostClose(source = "ui") {
 
 function syncEngineModeButton() {
   const isGo = state.engineMode === "go";
+  const cap = document.getElementById("engineToggle");
+  const label = document.getElementById("engineLabel");
+  const box = document.getElementById("searchBoxInner");
+  if (cap) {
+    cap.classList.toggle("ahk-mode", !isGo);
+    cap.title = isGo
+      ? "当前：极速（Go）。点击切换为标准（AHK）"
+      : "当前：标准（AHK）。点击切换为极速（Go）";
+  }
+  if (label) label.textContent = isGo ? "GO" : "AHK";
+  if (box) box.classList.toggle("ahk-focus", !isGo);
   const ids = [
     ["engine-mode-go", "go"],
     ["engine-mode-ahk", "ahk"],
@@ -2728,15 +3209,119 @@ function saveFulltextCollapsed() {
   } catch (_) {}
 }
 
-function applyFulltextCollapsedUi() {
-  const bar = document.getElementById("search-bar");
-  const btn = document.getElementById("btn-ft-collapse");
-  const collapsed = !!state.fulltextCollapsed;
-  if (bar) bar.classList.toggle("ft-collapsed", collapsed);
-  if (btn) {
-    btn.textContent = collapsed ? "展开索引" : "收起索引";
-    btn.title = collapsed ? "展开索引状态区" : "折叠索引状态区";
+function isScNarrow() {
+  return window.innerWidth < 960;
+}
+
+function getFilterCollapsedPref() {
+  try {
+    const v = localStorage.getItem(SC_FILTER_COLLAPSED_KEY);
+    if (v === "1") return true;
+    if (v === "0") return false;
+  } catch (_) {}
+  return isScNarrow();
+}
+
+function syncFilterDrawerUi() {
+  const drawer = document.getElementById("filter-drawer");
+  if (!drawer) return;
+  const collapsed = drawer.classList.contains("collapsed");
+  const chevron = document.getElementById("filter-drawer-chevron");
+  const toggle = document.getElementById("btn-filter-drawer-toggle");
+  if (chevron) chevron.textContent = collapsed ? "▶" : "▼";
+  if (toggle) toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+}
+
+function setFilterCollapsed(collapsed, persist) {
+  const drawer = document.getElementById("filter-drawer");
+  if (!drawer) return;
+  drawer.classList.toggle("collapsed", !!collapsed);
+  if (persist) {
+    try { localStorage.setItem(SC_FILTER_COLLAPSED_KEY, collapsed ? "1" : "0"); } catch (_) {}
   }
+  syncFilterDrawerUi();
+}
+
+function initFilterDrawer() {
+  const drawer = document.getElementById("filter-drawer");
+  const btn = document.getElementById("btn-filter-drawer-toggle");
+  if (!drawer) return;
+  setFilterCollapsed(getFilterCollapsedPref(), false);
+  if (btn) {
+    btn.addEventListener("click", () => {
+      setFilterCollapsed(!drawer.classList.contains("collapsed"), true);
+    });
+  }
+  let resizeTimer = 0;
+  window.addEventListener("resize", () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      resizeTimer = 0;
+      try {
+        if (localStorage.getItem(SC_FILTER_COLLAPSED_KEY) != null) return;
+      } catch (_) {}
+      setFilterCollapsed(isScNarrow(), false);
+      syncNarrowPreview();
+    }, 120);
+  });
+}
+
+function syncFtDrawerSummary() {
+  const txt = document.getElementById("ft-summary-text");
+  const dot = document.getElementById("ft-summary-dot");
+  const stateBox = document.getElementById("ft-state-box");
+  const raw = stateBox ? String(stateBox.textContent || "") : "";
+  const summary = raw.replace(/^状态:\s*/, "") || "准备中";
+  if (txt) txt.textContent = "索引: " + summary;
+  if (dot) {
+    dot.classList.remove("active", "ready", "warn");
+    const ft = state.fulltext || {};
+    if (ft.running && !ft.ready) dot.classList.add("active");
+    else if (ft.ready) dot.classList.add("ready");
+    else if (ft.lastError) dot.classList.add("warn");
+  }
+  const ftToggle = document.getElementById("btn-ft-drawer-toggle");
+  if (ftToggle) ftToggle.setAttribute("aria-expanded", state.fulltextCollapsed ? "false" : "true");
+}
+
+function syncNarrowPreview() {
+  const hasSel = state.results && state.results.length && state.selectedRow >= 1;
+  document.body.classList.toggle("sc-narrow-preview", isScNarrow() && hasSel);
+}
+
+function initSearchWrapperFocus() {
+  const wrap = document.getElementById("searchWrapper");
+  const input = document.getElementById("search");
+  if (!wrap || !input) return;
+  const sync = () => {
+    wrap.classList.toggle("has-content", !!String(input.value || "").trim());
+    wrap.classList.toggle("focused", document.activeElement === input);
+  };
+  input.addEventListener("focus", sync);
+  input.addEventListener("blur", sync);
+  input.addEventListener("input", sync);
+  sync();
+}
+
+function initFtDrawerToggle() {
+  const btn = document.getElementById("btn-ft-drawer-toggle");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    state.fulltextCollapsed = !state.fulltextCollapsed;
+    saveFulltextCollapsed();
+    applyFulltextCollapsedUi();
+  });
+}
+
+function applyFulltextCollapsedUi() {
+  const drawer = document.getElementById("ft-drawer");
+  const bar = document.getElementById("search-bar");
+  const chevron = document.getElementById("ft-drawer-chevron");
+  const collapsed = !!state.fulltextCollapsed;
+  if (drawer) drawer.classList.toggle("ft-collapsed", collapsed);
+  if (bar) bar.classList.toggle("ft-collapsed", collapsed);
+  if (chevron) chevron.textContent = collapsed ? "▶" : "▼";
+  syncFtDrawerSummary();
 }
 
 function openQuickHotkeyEntry() {
@@ -3026,7 +3611,6 @@ function applyFulltextStatus(payload) {
     state.fulltextConfig.useUSN = (typeof cfg.useUSN === "boolean") ? cfg.useUSN : true;
     state.fulltextConfig.indexDir = String(cfg.indexDir || "");
     syncFulltextSchemeUi();
-    syncFulltextAdvancedUi();
   }
   const lightIds = ["ftl1", "ftl2", "ftl3", "ftl4"];
   lightIds.forEach((id, idx) => {
@@ -3038,7 +3622,7 @@ function applyFulltextStatus(payload) {
   const phaseRaw = String(state.fulltext.scanPhase || "").toLowerCase();
   const hasCurrentIndexingFile = !!extractIndexerPath(state.fulltext.indexing_file || "");
   const indexingActive = !!state.fulltext.running && phaseRaw === "indexing" && hasCurrentIndexingFile;
-  const lightPackEl = document.querySelector(".ft-light-pack");
+  const lightPackEl = document.querySelector("#fulltext-inline .ft-light-pack");
   if (lightPackEl) {
     lightPackEl.classList.toggle("hidden", !indexingActive);
   }
@@ -3127,21 +3711,20 @@ function applyFulltextStatus(payload) {
   if (hintEl) {
     const alerts = Array.isArray(state.fulltext.alerts) ? state.fulltext.alerts : [];
     const hasForceRebuild = alerts.some((x) => isForceRebuildAlert(x));
-    const phase = String(state.fulltext.scanPhase || "").toLowerCase();
+    const phaseLo = String(state.fulltext.scanPhase || "").toLowerCase();
     const isBuilding = !!state.fulltext.running && (!state.fulltext.ready || !state.fulltext.initialScanDone) &&
-      (phase === "walking" || phase === "indexing" || phase === "incremental_sync" || (Number(state.fulltext.pendingTasks) || 0) > 0);
-    let hint = "推荐方案、增量更新、索引目录等低频配置已迁移到「搜索设置 > 全文索引控制台」。";
+      (phaseLo === "walking" || phaseLo === "indexing" || phaseLo === "incremental_sync" || (Number(state.fulltext.pendingTasks) || 0) > 0);
+    let hint = "启停索引、扫描方案、存储目录等请在配置面板「搜索设置」内的全文索引控制台操作。";
     if (hasForceRebuild) {
       hint = "检测到索引版本升级，正在首次重建全文索引。重建期间可先用“文件”标签，全文命中会逐步完整。";
-      const eta = formatEtaHuman(state.fulltext.etaSeconds);
-      if (eta) hint += ` 预计剩余约 ${eta}。`;
+      const etaFr = formatEtaHuman(state.fulltext.etaSeconds);
+      if (etaFr) hint += ` 预计剩余约 ${etaFr}。`;
     } else if (isBuilding) {
-      const eta = formatEtaHuman(state.fulltext.etaSeconds);
       hint = eta
-        ? `索引构建中，预计剩余约 ${eta}。增量变更会排队重试，首次构建时建议优先使用“文件/子标签”进行快速定位。`
-        : "索引构建中。增量变更会排队重试，首次构建时建议优先使用“文件/子标签”进行快速定位。";
+        ? `索引构建中，预计剩余约 ${eta}。增量变更会排队重试；首次构建时可优先用「文件」子标签定位。`
+        : "索引构建中。增量变更会排队重试；首次构建时可优先用「文件」子标签定位。";
     } else if (state.fulltext.ready && state.fulltext.indexVersion) {
-      hint = `全文索引已就绪（版本 ${state.fulltext.indexVersion}）。如需全量重建，可在「搜索设置 > 全文索引控制台」执行。`;
+      hint = `全文索引已就绪（版本 ${state.fulltext.indexVersion}）。重建与高级参数请打开全文索引控制台。`;
     } else if (state.fulltext.lastError) {
       hint = `索引提示：${state.fulltext.lastError}`;
     }
@@ -3158,6 +3741,7 @@ function applyFulltextStatus(payload) {
       toggleBtn.title = "点击启动全文索引";
     }
   }
+  syncFtDrawerSummary();
 }
 
 function requestFulltextStatus(withConfig = false) {
@@ -3179,35 +3763,6 @@ function schemeDisplayName(scheme) {
   if (v === "everything") return "快速扫描（需 Everything）";
   if (v === "walk") return "兼容扫描（最稳定）";
   return "自动选择（推荐）";
-}
-
-function syncFulltextAdvancedUi() {
-  const wrap = document.getElementById("ft-advanced-wrap");
-  const btn = document.getElementById("btn-ft-advanced-toggle");
-  const help = document.getElementById("ft-scheme-help");
-  const open = !!state.fulltextUiAdvanced;
-  if (wrap) wrap.classList.toggle("hidden", !open);
-  if (btn) btn.textContent = open ? "技术详情 ▴" : "技术详情 ▾";
-  if (help) {
-    const rec = state.fulltextProbe && state.fulltextProbe.last
-      ? String((state.fulltextProbe.last.recommendedScheme || "")).toLowerCase()
-      : "";
-    if (rec) {
-      help.textContent = "推荐方式：" + schemeDisplayName(rec) + "。通常无需手动调整。";
-    } else {
-      help.textContent = "建议先点“检测可行性”，再点“一键推荐”。系统会自动选择更稳妥的方式。";
-    }
-  }
-}
-
-function collectFulltextSchemePayload() {
-  const sel = document.getElementById("ft-scheme-select");
-  const usn = document.getElementById("ft-usn-toggle");
-  const idx = document.getElementById("ft-index-dir");
-  const scheme = sel ? String(sel.value || "auto") : "auto";
-  const useUSN = usn ? !!usn.checked : true;
-  const indexDir = idx ? String(idx.value || "").trim() : "";
-  return { scanScheme: scheme, useUSN, indexDir };
 }
 
 function setFulltextProbeSummary(text) {
@@ -3250,7 +3805,6 @@ function renderFulltextProbe(probe) {
     extra.push("推荐: " + schemeDisplayName(String(p.recommendedScheme)));
   }
   setFulltextProbeSummary(extra.join(" · "));
-  syncFulltextAdvancedUi();
 }
 
 function updateHotkeyHighlights() {
@@ -3320,6 +3874,97 @@ function triggerHotkeyButtonByKey(rawKey) {
   return false;
 }
 
+function inModeSwitchGuardWindow() {
+  return Date.now() < Number(state.modeSwitchGuardUntil || 0);
+}
+
+function isConflictHotkeyKey(key) {
+  const k = normalizeHintKey(key);
+  if (!k) return false;
+  return true;
+}
+
+function flashModeGuardHint() {
+  state.modeSwitchHintUntil = Date.now() + 220;
+  try {
+    const el = document.getElementById("status");
+    if (!el) return;
+    const prev = el.textContent || "";
+    el.textContent = "模式切换中，快捷键将稍后生效…";
+    setTimeout(() => {
+      if (Date.now() > state.modeSwitchHintUntil && el.textContent === "模式切换中，快捷键将稍后生效…") {
+        el.textContent = prev;
+      }
+    }, 260);
+  } catch (_) {}
+}
+
+function flushDeferredConflictSlots() {
+  if (inModeSwitchGuardWindow()) return;
+  const now = Date.now();
+  for (const [dispatchKey, evt] of deferredConflictSlots.entries()) {
+    deferredConflictSlots.delete(dispatchKey);
+    if (!evt || (now - Number(evt.ts || 0)) > HOTKEY_QUEUE_TTL_MS) continue;
+    enqueueHotkeyDispatch(evt);
+  }
+}
+
+function enqueueHotkeyDispatch(eventObj) {
+  if (!eventObj || !eventObj.dispatchKey) return;
+  hotkeyDispatchMap.set(eventObj.dispatchKey, eventObj);
+  if (hotkeyDispatchTimer) return;
+  hotkeyDispatchTimer = setInterval(() => {
+    const now = Date.now();
+    const snapshot = Array.from(hotkeyDispatchMap.values());
+    hotkeyDispatchMap.clear();
+    for (const evt of snapshot) {
+      if (!evt) continue;
+      if (HOTKEY_CRITICAL_WHITELIST.has(String(evt.kind || ""))) {
+        try { evt.exec && evt.exec(); } catch (_) {}
+        continue;
+      }
+      if ((now - Number(evt.ts || 0)) > HOTKEY_QUEUE_TTL_MS) continue;
+      if (inModeSwitchGuardWindow() && evt.conflict) {
+        deferredConflictSlots.set(evt.dispatchKey, evt);
+        flashModeGuardHint();
+        continue;
+      }
+      try { evt.exec && evt.exec(); } catch (_) {}
+    }
+    flushDeferredConflictSlots();
+    if (!hotkeyDispatchMap.size && !deferredConflictSlots.size) {
+      clearInterval(hotkeyDispatchTimer);
+      hotkeyDispatchTimer = 0;
+    }
+  }, HOTKEY_QUEUE_TICK_MS);
+}
+
+function queueCapsHotkeyTrigger(rawKey, modeScope = "search", targetChannel = "caps") {
+  const key = normalizeHintKey(rawKey);
+  if (!key) return false;
+  const dispatchKey = `${key}|${modeScope}|${targetChannel}`;
+  const evt = {
+    dispatchKey,
+    ts: Date.now(),
+    conflict: isConflictHotkeyKey(key),
+    kind: "caps_hotkey",
+    exec: () => triggerHotkeyButtonByKey(key)
+  };
+  enqueueHotkeyDispatch(evt);
+  return true;
+}
+
+function applyUnifiedMode(mode) {
+  const m = String(mode || "").toLowerCase() === "clipboard" ? "clipboard" : "search";
+  state.unifiedMode = m;
+  if (m === "clipboard") {
+    postToAhk({ type: "setCategory", category: "clipboard" });
+    postToAhk({ type: "setFilter", filterType: "clipboard", keyword: state.keyword || "" });
+    const status = document.getElementById("status");
+    if (status) status.textContent = "剪贴板合并模式";
+  }
+}
+
 function shouldHandleCapsChordNow() {
   if (state.capsHintActive) return true;
   if (!lastCapsDownAt) return false;
@@ -3347,7 +3992,7 @@ function scheduleHostCapsHotkeyFallback(rawKey) {
     if (state.hotkeyBindDialog && state.hotkeyBindDialog.open) return;
     const now = captureHotkeyActivationState();
     if (!isSameHotkeyActivationState(before, now)) return;
-    triggerHotkeyButtonByKey(key);
+    queueCapsHotkeyTrigger(key, String(state.engineMode || "go"), "host_fallback");
   }, 90);
 }
 
@@ -3870,6 +4515,7 @@ function renderResults() {
       postToAhk({
         type: "searchCenterContextMenu",
         row: item.row,
+        itemUid: String(item.itemUid || ""),
         screenX: ev.screenX,
         screenY: ev.screenY,
       });
@@ -3895,6 +4541,7 @@ function renderResults() {
   }
 
   renderPreview();
+  syncNarrowPreview();
 }
 
 function looksLikeWindowsPath(s) {
@@ -5200,6 +5847,9 @@ function applyState(payload) {
   scheduleScHotkeyBindingsSync();
   renderResults();
   syncEngineModeButton();
+  syncFilterDrawerUi();
+  syncFtDrawerSummary();
+  syncNarrowPreview();
   updateChromeTopMostButton();
   requestAnimationFrame(() => {
     window.dispatchEvent(new Event("resize"));
@@ -5319,16 +5969,17 @@ document.getElementById("btn-web-search").addEventListener("click", () => {
 document.getElementById("btn-open-cli").addEventListener("click", () => {
   postToAhk({ type: "cliOpen" });
 });
-document.getElementById("btn-ft-toggle").addEventListener("click", () => {
-  const act = state.fulltext && state.fulltext.running ? "stop" : "start";
-  postToAhk({ type: "fulltextControl", control: act });
-});
-const btnFtCollapse = document.getElementById("btn-ft-collapse");
-if (btnFtCollapse) {
-  btnFtCollapse.addEventListener("click", () => {
-    state.fulltextCollapsed = !state.fulltextCollapsed;
-    saveFulltextCollapsed();
-    applyFulltextCollapsedUi();
+const btnFtToggle = document.getElementById("btn-ft-toggle");
+if (btnFtToggle) {
+  btnFtToggle.addEventListener("click", () => {
+    const act = state.fulltext && state.fulltext.running ? "stop" : "start";
+    postToAhk({ type: "fulltextControl", control: act });
+  });
+}
+const btnFtOpenConsole = document.getElementById("btn-ft-open-console");
+if (btnFtOpenConsole) {
+  btnFtOpenConsole.addEventListener("click", () => {
+    postToAhk({ type: "openSettingsPanel", defaultStartTab: "search" });
   });
 }
 const btnHotkeyPlus = document.getElementById("btn-hotkey-plus");
@@ -5445,7 +6096,9 @@ if (chromeTopMostBtn) {
 updateChromeTopMostButton();
 applyFulltextCollapsedUi();
 syncFulltextSchemeUi();
-syncFulltextAdvancedUi();
+initFilterDrawer();
+initSearchWrapperFocus();
+initFtDrawerToggle();
 
 (function initChromeDrag() {
   const dragHost = document.getElementById("chrome-header");
@@ -5479,7 +6132,7 @@ document.addEventListener("keydown", (event) => {
 
   if (!event.repeat && shouldHandleCapsChordNow()) {
     const pressed = normalizeHintKey(event.key);
-    if (pressed && triggerHotkeyButtonByKey(pressed)) {
+    if (pressed && queueCapsHotkeyTrigger(pressed, String(state.engineMode || "go"), "caps")) {
       event.preventDefault();
       flashCapsPressedKey(pressed);
       return;
@@ -5576,6 +6229,7 @@ if (window.chrome && window.chrome.webview) {
     }
     if (payload.type === "capsHintPress") {
       flashCapsPressedKey(payload.key || "");
+      queueCapsHotkeyTrigger(payload.key || "", String(state.engineMode || "go"), "host_caps");
       scheduleHostCapsHotkeyFallback(payload.key || "");
       return;
     }
@@ -5616,6 +6270,27 @@ if (window.chrome && window.chrome.webview) {
     }
     if (payload.type === "set_theme") {
       applyTheme(payload.themeMode || payload.theme || "dark", false);
+      return;
+    }
+    if (payload.type === "setUnifiedMode") {
+      applyUnifiedMode(payload.mode || "search");
+      return;
+    }
+    if (payload.type === "vk_set_filter") {
+      const f = String(payload.filterType || "").toLowerCase();
+      const mapped = (f === "favorite" || f === "image" || f === "clipboard" || f === "url" || f === "code" || f === "text") ? f : "";
+      postToAhk({ type: "setFilter", filterType: mapped, keyword: state.keyword || "" });
+      return;
+    }
+    if (payload.type === "vk_search") {
+      runSearchNow();
+      return;
+    }
+    if (payload.type === "vk_clear_search") {
+      const input = document.getElementById("search");
+      state.keyword = "";
+      if (input) input.value = "";
+      runSearchNow();
       return;
     }
     if (payload.type === "lifecycle") {
@@ -5772,7 +6447,7 @@ if (window.chrome && window.chrome.webview) {
       if (payload.ok && payload.path) {
         state.fulltextConfig.indexDir = String(payload.path);
         syncFulltextSchemeUi();
-        document.getElementById("status").textContent = "索引目录已选择，请到「搜索设置 > 全文索引控制台」应用。";
+        document.getElementById("status").textContent = "索引目录已选择，请在配置面板「搜索设置」的全文索引控制台中应用。";
       }
       return;
     }
@@ -5794,6 +6469,9 @@ applyTheme(state.themeMode, false);
   const setMode = (mode) => {
     const next = mode === "ahk" ? "ahk" : "go";
     if (state.engineMode === next) return;
+    const guardMs = Math.max(80, Number(state.modeSwitchGuardMs || 120));
+    state.modeSwitchGuardUntil = Date.now() + guardMs;
+    postToAhk({ type: "modeSwitchGuard", active: true, ms: guardMs });
     state.engineMode = next;
     try {
       localStorage.setItem(SC_ENGINE_MODE_KEY, state.engineMode);
@@ -5805,8 +6483,24 @@ applyTheme(state.themeMode, false);
     } else {
       postToAhk({ type: "search", keyword: state.keyword });
     }
+    setTimeout(() => {
+      flushDeferredConflictSlots();
+      postToAhk({ type: "modeSwitchGuard", active: false, ms: guardMs });
+    }, guardMs + 10);
   };
   syncEngineModeButton();
+  const engineToggle = document.getElementById("engineToggle");
+  if (engineToggle) {
+    engineToggle.addEventListener("click", () => {
+      setMode(state.engineMode === "go" ? "ahk" : "go");
+    });
+    engineToggle.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setMode(state.engineMode === "go" ? "ahk" : "go");
+      }
+    });
+  }
   [
     "engine-mode-go", "engine-mode-ahk",
     "engine-mode-go-inline", "engine-mode-ahk-inline"
