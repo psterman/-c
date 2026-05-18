@@ -200,22 +200,30 @@ type blugeIndexer struct {
 }
 
 type fullTextProgressPayload struct {
-	Progress       float64  `json:"progress"`
-	ProgressText   string   `json:"progressText"`
-	ProgressDetail string   `json:"progressDetail"`
-	EfficiencyText string   `json:"efficiencyText"`
-	ScanPhase      string   `json:"scanPhase"`
-	IndexingFile   string   `json:"indexing_file"`
-	Ready          bool     `json:"ready"`
-	Running        bool     `json:"running"`
-	LowDisk        bool     `json:"lowDisk"`
-	FilesPerSec    float64  `json:"filesPerSec"`
-	ETASeconds     int64    `json:"etaSeconds"`
-	EngineLights   []string `json:"engine_lights"`
-	Alerts         []string `json:"alerts,omitempty"`
-	ScanMode       string   `json:"scan_mode,omitempty"`
-	IndexEpoch     uint64   `json:"indexEpoch,omitempty"`
-	IndexVersion   string   `json:"indexVersion,omitempty"`
+	Progress        float64  `json:"progress"`
+	ProgressText    string   `json:"progressText"`
+	ProgressDetail  string   `json:"progressDetail"`
+	EfficiencyText  string   `json:"efficiencyText"`
+	ScanPhase       string   `json:"scanPhase"`
+	IndexingFile    string   `json:"indexing_file"`
+	Ready           bool     `json:"ready"`
+	Running         bool     `json:"running"`
+	InitialScanDone bool     `json:"initialScanDone"`
+	LowDisk         bool     `json:"lowDisk"`
+	IndexedFiles    int64    `json:"indexedFiles"`
+	DiscoveredFiles int64    `json:"discoveredFiles"`
+	ProcessedFiles  int64    `json:"processedFiles"`
+	PendingTasks    int      `json:"pendingTasks"`
+	QueueCapacity   int      `json:"queueCapacity"`
+	QueueSaturated  bool     `json:"queueSaturated"`
+	FilesPerSec     float64  `json:"filesPerSec"`
+	ETASeconds      int64    `json:"etaSeconds"`
+	EngineLights    []string `json:"engine_lights"`
+	Alerts          []string `json:"alerts,omitempty"`
+	LastError       string   `json:"lastError,omitempty"`
+	ScanMode        string   `json:"scan_mode,omitempty"`
+	IndexEpoch      uint64   `json:"indexEpoch,omitempty"`
+	IndexVersion    string   `json:"indexVersion,omitempty"`
 }
 
 func StartIndexer(baseDir string) error {
@@ -274,22 +282,30 @@ func GetStatus() FullTextStatus {
 func GetProgressPayload() fullTextProgressPayload {
 	st := GetStatus()
 	return fullTextProgressPayload{
-		Progress:       st.Progress,
-		ProgressText:   st.ProgressText,
-		ProgressDetail: st.ProgressDetail,
-		EfficiencyText: st.EfficiencyText,
-		ScanPhase:      st.ScanPhase,
-		IndexingFile:   st.IndexingFile,
-		Ready:          st.Ready,
-		Running:        st.Running,
-		LowDisk:        st.LowDisk,
-		FilesPerSec:    st.FilesPerSec,
-		ETASeconds:     st.ETASeconds,
-		EngineLights:   buildEngineLights(st),
-		Alerts:         st.Alerts,
-		ScanMode:       st.ScanMode,
-		IndexEpoch:     st.IndexEpoch,
-		IndexVersion:   st.IndexVersion,
+		Progress:        st.Progress,
+		ProgressText:    st.ProgressText,
+		ProgressDetail:  st.ProgressDetail,
+		EfficiencyText:  st.EfficiencyText,
+		ScanPhase:       st.ScanPhase,
+		IndexingFile:    st.IndexingFile,
+		Ready:           st.Ready,
+		Running:         st.Running,
+		InitialScanDone: st.InitialScanDone,
+		LowDisk:         st.LowDisk,
+		IndexedFiles:    st.IndexedFiles,
+		DiscoveredFiles: st.DiscoveredFiles,
+		ProcessedFiles:  st.ProcessedFiles,
+		PendingTasks:    st.PendingTasks,
+		QueueCapacity:   st.QueueCapacity,
+		QueueSaturated:  st.QueueSaturated,
+		FilesPerSec:     st.FilesPerSec,
+		ETASeconds:      st.ETASeconds,
+		EngineLights:    buildEngineLights(st),
+		Alerts:          st.Alerts,
+		LastError:       st.LastError,
+		ScanMode:        st.ScanMode,
+		IndexEpoch:      st.IndexEpoch,
+		IndexVersion:    st.IndexVersion,
 	}
 }
 

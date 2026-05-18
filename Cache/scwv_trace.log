@@ -527,3 +527,164 @@
 [2026-05-18 16:09:30][wm_chain_unregister_done] reason=wm_deactivate count=0
 [2026-05-18 16:09:30][hide_done] visible=0 reason=wm_deactivate
 [2026-05-18 16:09:30][force_close_done] reason=wm_deactivate
+[2026-05-18 16:10:38][ifs] [0x11/0x00/0x01]
+[2026-05-18 16:10:38][show_begin] reason=tray_menu_search_fallback ready=0 ui_ready=0
+[2026-05-18 16:10:38][init_begin] reason=tray_menu_search_fallback gui=0 alive=0 inflight=0
+[2026-05-18 16:10:38][init_create_begin] reason=tray_menu_search_fallback hwnd=25627308
+[2026-05-18 16:10:38][show_wait_ui_ready] reason=tray_menu_search_fallback
+[2026-05-18 16:10:38][wm_chain_register_begin] reason=tray_menu_search_fallback count=0
+[2026-05-18 16:10:38][wm_chain_register_done] reason=tray_menu_search_fallback count=1
+[2026-05-18 16:10:40][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-18 16:10:41][nav_completed] ok=1 visible=1
+[2026-05-18 16:10:47][wm_activate_seen] wparam=0 hwnd=25627308 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:10:47][wm_activate_queue] reason=wm_deactivate_intent count=1
+[2026-05-18 16:10:47][ifs] [0x12/0x00/0x03]
+[2026-05-18 16:10:47][force_close_begin] reason=wm_deactivate visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-18 16:10:47][wm_chain_unregister_begin] reason=wm_deactivate count=1
+[2026-05-18 16:10:47][wm_chain_unregister_done] reason=wm_deactivate count=0
+[2026-05-18 16:10:47][hide_done] visible=0 reason=wm_deactivate
+[2026-05-18 16:10:47][force_close_done] reason=wm_deactivate
+[2026-05-18 16:18:54][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-18 16:18:54][init_guard_drop] reason=empty
+[2026-05-18 16:19:22][ifs] [0x11/0x00/0x01]
+[2026-05-18 16:19:22][show_begin] reason=tray_menu_search_fallback ready=0 ui_ready=0
+[2026-05-18 16:19:22][init_begin] reason=tray_menu_search_fallback gui=0 alive=0 inflight=0
+[2026-05-18 16:19:22][init_create_begin] reason=tray_menu_search_fallback hwnd=46732046
+[2026-05-18 16:19:26][show_wait_ui_ready] reason=tray_menu_search_fallback
+[2026-05-18 16:19:26][wm_chain_register_begin] reason=tray_menu_search_fallback count=0
+[2026-05-18 16:19:26][wm_chain_register_done] reason=tray_menu_search_fallback count=1
+[2026-05-18 16:19:43][wm_activate_seen] wparam=0 hwnd=46732046 visible=0 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:19:43][wm_activate_seen] wparam=1 hwnd=7080768 visible=0 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:19:44][wm_activate_seen] wparam=0 hwnd=7080768 visible=0 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:19:45][wm_activate_seen] wparam=1 hwnd=12391208 visible=0 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:19:48][wm_activate_seen] wparam=0 hwnd=12391208 visible=0 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:19:48][ifs] [0x11/0x00/0x03]
+[2026-05-18 16:19:48][show_begin] reason=tray_menu_search_fallback ready=1 ui_ready=1
+[2026-05-18 16:19:48][wm_activate_seen] wparam=1 hwnd=46732046 visible=0 waiting=0 focus_pending=0 phase=opening search_http=0
+[2026-05-18 16:19:49][show_finish_reveal_immediate] reason=tray_menu_search_fallback
+[2026-05-18 16:19:49][wm_chain_register_begin] reason=tray_menu_search_fallback count=1
+[2026-05-18 16:19:49][wm_chain_register_done] reason=tray_menu_search_fallback count=1
+[2026-05-18 16:20:05][wm_activate_seen] wparam=0 hwnd=46732046 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:20:05][wm_activate_queue] reason=wm_deactivate_intent count=1
+[2026-05-18 16:20:05][ifs] [0x12/0x00/0x03]
+[2026-05-18 16:20:05][wm_activate_seen] wparam=1 hwnd=5442416 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:20:05][force_close_begin] reason=wm_deactivate visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-18 16:20:05][wm_chain_unregister_begin] reason=wm_deactivate count=1
+[2026-05-18 16:20:05][wm_chain_unregister_done] reason=wm_deactivate count=0
+[2026-05-18 16:20:05][hide_done] visible=0 reason=wm_deactivate
+[2026-05-18 16:20:05][force_close_done] reason=wm_deactivate
+[2026-05-18 16:20:25][ifs] [0x11/0x00/0x01]
+[2026-05-18 16:20:25][show_begin] reason=tray_menu_search_fallback ready=0 ui_ready=0
+[2026-05-18 16:20:25][init_begin] reason=tray_menu_search_fallback gui=0 alive=0 inflight=0
+[2026-05-18 16:20:25][init_create_begin] reason=tray_menu_search_fallback hwnd=17109722
+[2026-05-18 16:20:26][show_wait_ui_ready] reason=tray_menu_search_fallback
+[2026-05-18 16:20:26][wm_chain_register_begin] reason=tray_menu_search_fallback count=0
+[2026-05-18 16:20:26][wm_chain_register_done] reason=tray_menu_search_fallback count=1
+[2026-05-18 16:20:27][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-18 16:20:28][nav_completed] ok=1 visible=1
+[2026-05-18 16:20:35][wm_activate_seen] wparam=0 hwnd=17109722 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:20:35][wm_activate_queue] reason=wm_deactivate_intent count=1
+[2026-05-18 16:20:35][ifs] [0x12/0x00/0x03]
+[2026-05-18 16:20:35][force_close_begin] reason=wm_deactivate visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-18 16:20:35][wm_chain_unregister_begin] reason=wm_deactivate count=1
+[2026-05-18 16:20:35][wm_chain_unregister_done] reason=wm_deactivate count=0
+[2026-05-18 16:20:35][hide_done] visible=0 reason=wm_deactivate
+[2026-05-18 16:20:35][force_close_done] reason=wm_deactivate
+[2026-05-18 16:23:53][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-18 16:23:53][init_guard_drop] reason=empty
+[2026-05-18 16:25:15][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-18 16:25:15][init_guard_drop] reason=empty
+[2026-05-18 16:25:55][ifs] [0x11/0x00/0x01]
+[2026-05-18 16:25:55][show_begin] reason=tray_menu_search_fallback ready=0 ui_ready=0
+[2026-05-18 16:25:55][init_begin] reason=tray_menu_search_fallback gui=0 alive=0 inflight=0
+[2026-05-18 16:25:55][init_create_begin] reason=tray_menu_search_fallback hwnd=11667832
+[2026-05-18 16:25:55][show_wait_ui_ready] reason=tray_menu_search_fallback
+[2026-05-18 16:25:55][wm_chain_register_begin] reason=tray_menu_search_fallback count=0
+[2026-05-18 16:25:55][wm_chain_register_done] reason=tray_menu_search_fallback count=1
+[2026-05-18 16:25:57][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-18 16:25:59][nav_completed] ok=1 visible=1
+[2026-05-18 16:26:15][wm_activate_seen] wparam=0 hwnd=11667832 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:26:15][wm_activate_queue] reason=wm_deactivate_intent count=1
+[2026-05-18 16:26:15][ifs] [0x12/0x00/0x03]
+[2026-05-18 16:26:15][wm_activate_seen] wparam=1 hwnd=4328320 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:26:15][force_close_begin] reason=wm_deactivate visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-18 16:26:15][wm_chain_unregister_begin] reason=wm_deactivate count=1
+[2026-05-18 16:26:15][wm_chain_unregister_done] reason=wm_deactivate count=0
+[2026-05-18 16:26:15][hide_done] visible=0 reason=wm_deactivate
+[2026-05-18 16:26:15][force_close_done] reason=wm_deactivate
+[2026-05-18 16:29:51][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-18 16:29:51][init_guard_drop] reason=empty
+[2026-05-18 16:30:21][ifs] [0x11/0x00/0x01]
+[2026-05-18 16:30:21][show_begin] reason=tray_menu_search_fallback ready=0 ui_ready=0
+[2026-05-18 16:30:21][init_begin] reason=tray_menu_search_fallback gui=0 alive=0 inflight=0
+[2026-05-18 16:30:21][init_create_begin] reason=tray_menu_search_fallback hwnd=17568392
+[2026-05-18 16:30:21][show_wait_ui_ready] reason=tray_menu_search_fallback
+[2026-05-18 16:30:21][wm_chain_register_begin] reason=tray_menu_search_fallback count=0
+[2026-05-18 16:30:21][wm_chain_register_done] reason=tray_menu_search_fallback count=1
+[2026-05-18 16:30:22][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-18 16:30:23][nav_completed] ok=1 visible=1
+[2026-05-18 16:30:39][wm_activate_seen] wparam=0 hwnd=17568392 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:30:39][wm_activate_queue] reason=wm_deactivate_intent count=1
+[2026-05-18 16:30:39][ifs] [0x12/0x00/0x03]
+[2026-05-18 16:30:39][force_close_begin] reason=wm_deactivate visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-18 16:30:39][wm_chain_unregister_begin] reason=wm_deactivate count=1
+[2026-05-18 16:30:39][wm_chain_unregister_done] reason=wm_deactivate count=0
+[2026-05-18 16:30:39][hide_done] visible=0 reason=wm_deactivate
+[2026-05-18 16:30:39][force_close_done] reason=wm_deactivate
+[2026-05-18 16:32:20][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-18 16:32:20][init_guard_drop] reason=empty
+[2026-05-18 16:33:09][ifs] [0x11/0x00/0x01]
+[2026-05-18 16:33:09][show_begin] reason=tray_menu_search_fallback ready=0 ui_ready=0
+[2026-05-18 16:33:09][init_begin] reason=tray_menu_search_fallback gui=0 alive=0 inflight=0
+[2026-05-18 16:33:09][init_create_begin] reason=tray_menu_search_fallback hwnd=14095016
+[2026-05-18 16:33:09][show_wait_ui_ready] reason=tray_menu_search_fallback
+[2026-05-18 16:33:09][wm_chain_register_begin] reason=tray_menu_search_fallback count=0
+[2026-05-18 16:33:09][wm_chain_register_done] reason=tray_menu_search_fallback count=1
+[2026-05-18 16:33:10][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-18 16:33:12][nav_completed] ok=1 visible=1
+[2026-05-18 16:33:26][wm_activate_seen] wparam=0 hwnd=14095016 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:33:26][wm_activate_queue] reason=wm_deactivate_intent count=1
+[2026-05-18 16:33:26][ifs] [0x12/0x00/0x03]
+[2026-05-18 16:33:26][force_close_begin] reason=wm_deactivate visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-18 16:33:26][wm_chain_unregister_begin] reason=wm_deactivate count=1
+[2026-05-18 16:33:26][wm_chain_unregister_done] reason=wm_deactivate count=0
+[2026-05-18 16:33:26][hide_done] visible=0 reason=wm_deactivate
+[2026-05-18 16:33:26][force_close_done] reason=wm_deactivate
+[2026-05-18 16:39:38][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-18 16:39:38][init_guard_drop] reason=empty
+[2026-05-18 16:39:54][ifs] [0x11/0x00/0x01]
+[2026-05-18 16:39:54][show_begin] reason=tray_menu_search_fallback ready=0 ui_ready=0
+[2026-05-18 16:39:54][init_begin] reason=tray_menu_search_fallback gui=0 alive=0 inflight=0
+[2026-05-18 16:39:54][init_create_begin] reason=tray_menu_search_fallback hwnd=13833060
+[2026-05-18 16:39:54][show_wait_ui_ready] reason=tray_menu_search_fallback
+[2026-05-18 16:39:54][wm_chain_register_begin] reason=tray_menu_search_fallback count=0
+[2026-05-18 16:39:54][wm_chain_register_done] reason=tray_menu_search_fallback count=1
+[2026-05-18 16:39:56][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-18 16:39:57][nav_completed] ok=1 visible=1
+[2026-05-18 16:40:05][wm_activate_seen] wparam=0 hwnd=13833060 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:40:05][wm_activate_queue] reason=wm_deactivate_intent count=1
+[2026-05-18 16:40:05][ifs] [0x12/0x00/0x03]
+[2026-05-18 16:40:05][force_close_begin] reason=wm_deactivate visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-18 16:40:05][wm_chain_unregister_begin] reason=wm_deactivate count=1
+[2026-05-18 16:40:05][wm_chain_unregister_done] reason=wm_deactivate count=0
+[2026-05-18 16:40:05][hide_done] visible=0 reason=wm_deactivate
+[2026-05-18 16:40:05][force_close_done] reason=wm_deactivate
+[2026-05-18 16:44:54][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-18 16:44:54][init_guard_drop] reason=empty
+[2026-05-18 16:45:53][ifs] [0x11/0x00/0x01]
+[2026-05-18 16:45:53][show_begin] reason=tray_menu_search_fallback ready=0 ui_ready=0
+[2026-05-18 16:45:53][init_begin] reason=tray_menu_search_fallback gui=0 alive=0 inflight=0
+[2026-05-18 16:45:53][init_create_begin] reason=tray_menu_search_fallback hwnd=13304474
+[2026-05-18 16:45:53][show_wait_ui_ready] reason=tray_menu_search_fallback
+[2026-05-18 16:45:53][wm_chain_register_begin] reason=tray_menu_search_fallback count=0
+[2026-05-18 16:45:53][wm_chain_register_done] reason=tray_menu_search_fallback count=1
+[2026-05-18 16:45:55][force_reveal_skip_not_ready] ready=0 ui_ready=0 first_frame=0
+[2026-05-18 16:45:56][nav_completed] ok=1 visible=1
+[2026-05-18 16:46:05][wm_activate_seen] wparam=0 hwnd=13304474 visible=1 waiting=0 focus_pending=0 phase=open search_http=0
+[2026-05-18 16:46:05][wm_activate_queue] reason=wm_deactivate_intent count=1
+[2026-05-18 16:46:05][ifs] [0x12/0x00/0x03]
+[2026-05-18 16:46:05][force_close_begin] reason=wm_deactivate visible=1 waiting=0 ready=1 ui_ready=1
+[2026-05-18 16:46:05][wm_chain_unregister_begin] reason=wm_deactivate count=1
+[2026-05-18 16:46:05][wm_chain_unregister_done] reason=wm_deactivate count=0
+[2026-05-18 16:46:05][hide_done] visible=0 reason=wm_deactivate
+[2026-05-18 16:46:05][force_close_done] reason=wm_deactivate

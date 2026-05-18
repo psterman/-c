@@ -695,12 +695,12 @@ func decodeUTF16LEText(data []byte) (string, bool) {
 
 func handleFullTextControl(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		writeFullTextErrJSON(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 	baseDir := fullTextBaseDir()
 	if baseDir == "" {
-		http.Error(w, "base dir not initialized", http.StatusInternalServerError)
+		writeFullTextErrJSON(w, http.StatusInternalServerError, "base dir not initialized")
 		return
 	}
 	ensureFullTextRuntime(baseDir)
@@ -733,11 +733,11 @@ func handleFullTextControl(w http.ResponseWriter, r *http.Request) {
 		err = StartIndexer(baseDir)
 		_ = os.Unsetenv("SEARCHCENTER_FT_FORCE_RECHECK")
 	default:
-		http.Error(w, "invalid action", http.StatusBadRequest)
+		writeFullTextErrJSON(w, http.StatusBadRequest, "invalid action")
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeFullTextErrJSON(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -772,4 +772,8 @@ func writeFullTextJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func writeFullTextErrJSON(w http.ResponseWriter, status int, msg string) {
+	writeFullTextJSON(w, status, map[string]any{"ok": false, "error": msg})
 }

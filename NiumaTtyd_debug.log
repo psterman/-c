@@ -236,3 +236,31 @@
 2026-05-18 16:07:31 ttyd started port 7681 pid 3196 cmd=cmd.exe /k codex
 2026-05-18 16:07:39 ttyd shell [gemini_cli] fallback_bare_name: cmd.exe /k gemini
 2026-05-18 16:07:41 ttyd started port 7682 pid 8272 cmd=cmd.exe /k gemini
+2026-05-18 16:18:54 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 16:18:56 ttyd started port 7681 pid 24608 cmd=cmd.exe /k codex
+2026-05-18 16:19:02 ttyd shell [gemini_cli] fallback_bare_name: cmd.exe /k gemini
+2026-05-18 16:19:06 ttyd started port 7682 pid 11792 cmd=cmd.exe /k gemini
+2026-05-18 16:23:53 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 16:23:53 ttyd started port 7681 pid 21792 cmd=cmd.exe /k codex
+2026-05-18 16:24:02 ttyd shell [gemini_cli] fallback_bare_name: cmd.exe /k gemini
+2026-05-18 16:24:04 ttyd started port 7682 pid 21560 cmd=cmd.exe /k gemini
+2026-05-18 16:25:15 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 16:25:17 ttyd started port 7681 pid 22776 cmd=cmd.exe /k codex
+2026-05-18 16:25:31 ttyd shell [gemini_cli] fallback_bare_name: cmd.exe /k gemini
+2026-05-18 16:25:35 ttyd started port 7682 pid 17976 cmd=cmd.exe /k gemini
+2026-05-18 16:29:51 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 16:29:51 ttyd started port 7681 pid 22836 cmd=cmd.exe /k codex
+2026-05-18 16:30:03 ttyd shell [gemini_cli] fallback_bare_name: cmd.exe /k gemini
+2026-05-18 16:30:03 ttyd started port 7682 pid 24348 cmd=cmd.exe /k gemini
+2026-05-18 16:32:20 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 16:32:22 ttyd started port 7681 pid 20180 cmd=cmd.exe /k codex
+2026-05-18 16:32:32 ttyd shell [gemini_cli] fallback_bare_name: cmd.exe /k gemini
+2026-05-18 16:32:36 ttyd started port 7682 pid 23096 cmd=cmd.exe /k gemini
+2026-05-18 16:39:38 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 16:39:38 ttyd started port 7681 pid 23756 cmd=cmd.exe /k codex
+2026-05-18 16:39:49 ttyd shell [gemini_cli] fallback_bare_name: cmd.exe /k gemini
+2026-05-18 16:39:50 ttyd started port 7682 pid 21040 cmd=cmd.exe /k gemini
+2026-05-18 16:44:54 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-18 16:45:02 ttyd shell [gemini_cli] fallback_bare_name: cmd.exe /k gemini
+2026-05-18 16:45:06 ttyd started port 7682 pid 11104 cmd=cmd.exe /k gemini
+2026-05-18 16:45:10 ttyd started port 7681 pid 16232 cmd=cmd.exe /k codex

@@ -9035,3 +9035,789 @@
 [2026-05-18 16:10:31] selection cursor_over_ui miss mouse_x=474 mouse_y=255 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
 [2026-05-18 16:10:31] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
 [2026-05-18 16:10:31] selection lbutton_up no_trigger=click
+[2026-05-18 16:10:34] selection cursor_over_ui miss mouse_x=37 mouse_y=349 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:10:34] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:10:34] selection lbutton_up no_trigger=click
+[2026-05-18 16:10:36] selection cursor_over_ui miss mouse_x=1598 mouse_y=971 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:10:36] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:10:36] selection lbutton_up no_trigger=click
+[2026-05-18 16:10:37] selection cursor_over_ui miss mouse_x=1602 mouse_y=964 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:10:37] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:10:37] selection lbutton_up no_trigger=click
+[2026-05-18 16:10:38] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=8917652 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1512 mouse_y=835
+[2026-05-18 16:10:38] selection lbutton_up skip=our_ui
+[2026-05-18 16:10:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:10:38] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:10:38] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:10:38] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 16:10:38] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 16:10:38] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 16:10:38] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 16:10:38] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 16:10:38] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 16:10:38] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 16:10:38] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 16:10:38] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 16:10:38] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 16:10:38] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 16:10:38] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 16:10:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:10:38] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 16:10:38] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:10:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:10:38] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 16:10:38] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 16:10:38] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:10:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:10:38] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 16:10:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:10:38] gdho stop begin
+[2026-05-18 16:10:38] gdho poll disarm skip reason=stop
+[2026-05-18 16:10:38] gdho gdho_phase CLOSED->CLOSING reason=stop token=6
+[2026-05-18 16:10:38] gdho hide_frontend queue hide
+[2026-05-18 16:10:38] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=6
+[2026-05-18 16:10:38] gdho stop done
+[2026-05-18 16:10:47] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:10:47] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:10:47] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 16:10:47] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 16:10:47] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 16:10:47] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 16:10:47] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 16:10:47] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 16:10:47] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 16:10:47] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 16:10:47] reset_session_step js_done reason=search_center_exit
+[2026-05-18 16:10:47] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 16:10:47] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 16:10:51] selection cursor_over_ui miss mouse_x=1438 mouse_y=813 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 16:10:51] selection lbutton_up dist_x=939 dist_y=107 drag=1 multi=0
+[2026-05-18 16:10:51] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 16:10:52] selection cursor_over_ui miss mouse_x=1428 mouse_y=841 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 16:10:52] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:10:52] selection lbutton_up no_trigger=click
+[2026-05-18 16:10:52] selection cursor_over_ui miss mouse_x=1520 mouse_y=949 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:10:52] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:10:52] selection lbutton_up no_trigger=click
+[2026-05-18 16:18:52] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:18:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:18:52] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 16:18:52] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:18:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:18:52] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:18:52] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:18:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:18:52] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:18:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:18:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:18:52] gdho stop begin
+[2026-05-18 16:18:52] gdho poll disarm skip reason=stop
+[2026-05-18 16:18:52] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 16:18:52] gdho hide_frontend queue hide
+[2026-05-18 16:18:52] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 16:18:52] gdho stop done
+[2026-05-18 16:18:57] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:18:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:18:57] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:18:57] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:18:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:18:57] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:18:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:19:22] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:19:26] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:19:26] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:19:26] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 16:19:26] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 16:19:26] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 16:19:26] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 16:19:26] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 16:19:26] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 16:19:26] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 16:19:26] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:19:26] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 16:19:26] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:19:26] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:19:26] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 16:19:26] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 16:19:26] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:19:26] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:19:26] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 16:19:26] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 16:19:26] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 16:19:26] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 16:19:26] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 16:19:26] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 16:19:26] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:19:26] gdho stop begin
+[2026-05-18 16:19:26] gdho poll disarm skip reason=stop
+[2026-05-18 16:19:26] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 16:19:26] gdho hide_frontend queue hide
+[2026-05-18 16:19:26] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 16:19:26] gdho stop done
+[2026-05-18 16:19:48] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:19:48] selection cursor_over_ui miss mouse_x=1734 mouse_y=494 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:19:48] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:19:48] selection lbutton_up no_trigger=click
+[2026-05-18 16:19:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:19:49] gdho stop begin
+[2026-05-18 16:19:49] gdho poll disarm skip reason=stop
+[2026-05-18 16:19:49] gdho gdho_phase CLOSED->CLOSING reason=stop token=3
+[2026-05-18 16:19:49] gdho hide_frontend queue hide
+[2026-05-18 16:19:49] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=3
+[2026-05-18 16:19:49] gdho stop done
+[2026-05-18 16:19:49] reset_session_async_begin reason=tray_open_search hide_ms=0
+[2026-05-18 16:19:49] reset_session_begin reason=tray_open_search hide_ms=0
+[2026-05-18 16:19:49] reset_session_step state_cleared reason=tray_open_search
+[2026-05-18 16:19:49] reset_session_step drag_tick_stopped reason=tray_open_search
+[2026-05-18 16:19:49] reset_session_step hide_frontend_queued reason=tray_open_search
+[2026-05-18 16:19:49] reset_session_step clickthrough_begin reason=tray_open_search
+[2026-05-18 16:19:49] reset_session_step clickthrough_done reason=tray_open_search
+[2026-05-18 16:19:49] reset_session_step silent_mode=0 reason=tray_open_search
+[2026-05-18 16:19:49] reset_session_step start_bridge_begin reason=tray_open_search
+[2026-05-18 16:19:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:19:49] reset_session_step hide_frontend_async_begin reason=tray_open_search
+[2026-05-18 16:19:49] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:19:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:19:49] reset_session_step hide_frontend_async_done reason=tray_open_search
+[2026-05-18 16:19:49] reset_session_step hide_overlay_async_begin reason=tray_open_search
+[2026-05-18 16:19:49] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:19:49] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:19:49] reset_session_step hide_overlay_async_done reason=tray_open_search
+[2026-05-18 16:19:49] reset_session_step start_bridge_done reason=tray_open_search
+[2026-05-18 16:19:49] reset_session_step js_begin reason=tray_open_search
+[2026-05-18 16:19:49] reset_session_step js_done reason=tray_open_search
+[2026-05-18 16:19:49] route reset_session reason=tray_open_search hide_ms=0
+[2026-05-18 16:19:49] reset_session_async_done reason=tray_open_search hide_ms=0
+[2026-05-18 16:19:50] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1488 mouse_y=144
+[2026-05-18 16:19:50] selection lbutton_up skip=our_ui
+[2026-05-18 16:19:53] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=965 mouse_y=889
+[2026-05-18 16:19:53] selection lbutton_up skip=our_ui
+[2026-05-18 16:19:54] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=790 mouse_y=888
+[2026-05-18 16:19:54] selection lbutton_up skip=our_ui
+[2026-05-18 16:19:55] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=716 mouse_y=882
+[2026-05-18 16:19:55] selection lbutton_up skip=our_ui
+[2026-05-18 16:19:55] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=637 mouse_y=884
+[2026-05-18 16:19:55] selection lbutton_up skip=our_ui
+[2026-05-18 16:19:55] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=604 mouse_y=880
+[2026-05-18 16:19:55] selection lbutton_up skip=our_ui
+[2026-05-18 16:19:56] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=515 mouse_y=912
+[2026-05-18 16:19:56] selection lbutton_up skip=our_ui
+[2026-05-18 16:19:57] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=524 mouse_y=896
+[2026-05-18 16:19:57] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:00] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1156 mouse_y=888
+[2026-05-18 16:20:00] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:01] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1009 mouse_y=880
+[2026-05-18 16:20:01] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:02] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1081 mouse_y=880
+[2026-05-18 16:20:02] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=923 mouse_y=910
+[2026-05-18 16:20:03] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1110 mouse_y=916
+[2026-05-18 16:20:04] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=46732046 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1399 mouse_y=919
+[2026-05-18 16:20:05] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:05] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:20:05] gdho stop begin
+[2026-05-18 16:20:05] gdho poll disarm skip reason=stop
+[2026-05-18 16:20:05] gdho gdho_phase CLOSED->CLOSING reason=stop token=4
+[2026-05-18 16:20:05] gdho hide_frontend queue hide
+[2026-05-18 16:20:05] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=4
+[2026-05-18 16:20:05] gdho stop done
+[2026-05-18 16:20:05] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:20:05] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:20:05] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 16:20:05] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 16:20:05] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 16:20:05] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 16:20:05] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 16:20:05] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 16:20:05] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 16:20:05] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 16:20:05] reset_session_step js_done reason=search_center_exit
+[2026-05-18 16:20:05] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 16:20:05] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 16:20:17] selection cursor_over_ui hit=GuiID_ConfigGUI hwnd=5442416 class=AutoHotkeyGUI title=Cursor助手 - 配置面板 exe=AutoHotkey64.exe mouse_x=1401 mouse_y=571
+[2026-05-18 16:20:17] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:19] selection cursor_over_ui hit=GuiID_ConfigGUI hwnd=5442416 class=AutoHotkeyGUI title=Cursor助手 - 配置面板 exe=AutoHotkey64.exe mouse_x=764 mouse_y=652
+[2026-05-18 16:20:19] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:20] selection cursor_over_ui hit=GuiID_ConfigGUI hwnd=5442416 class=AutoHotkeyGUI title=Cursor助手 - 配置面板 exe=AutoHotkey64.exe mouse_x=765 mouse_y=675
+[2026-05-18 16:20:20] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:20] selection cursor_over_ui hit=GuiID_ConfigGUI hwnd=5442416 class=AutoHotkeyGUI title=Cursor助手 - 配置面板 exe=AutoHotkey64.exe mouse_x=775 mouse_y=695
+[2026-05-18 16:20:20] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:21] selection cursor_over_ui hit=GuiID_ConfigGUI hwnd=5442416 class=AutoHotkeyGUI title=Cursor助手 - 配置面板 exe=AutoHotkey64.exe mouse_x=866 mouse_y=714
+[2026-05-18 16:20:21] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:24] selection cursor_over_ui miss mouse_x=1636 mouse_y=125 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:20:24] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:20:24] selection lbutton_up no_trigger=click
+[2026-05-18 16:20:24] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:20:24] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:20:24] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:20:24] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:20:24] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:20:24] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:20:24] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:20:25] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=3346924 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1497 mouse_y=962
+[2026-05-18 16:20:25] selection lbutton_up skip=our_ui
+[2026-05-18 16:20:25] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:20:26] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:20:26] gdho stop begin
+[2026-05-18 16:20:26] gdho poll disarm skip reason=stop
+[2026-05-18 16:20:26] gdho gdho_phase CLOSED->CLOSING reason=stop token=5
+[2026-05-18 16:20:26] gdho hide_frontend queue hide
+[2026-05-18 16:20:26] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=5
+[2026-05-18 16:20:26] gdho stop done
+[2026-05-18 16:20:26] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:20:26] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:20:26] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 16:20:26] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 16:20:26] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 16:20:26] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 16:20:26] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 16:20:26] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 16:20:26] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 16:20:26] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 16:20:26] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 16:20:26] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 16:20:26] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 16:20:26] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 16:20:26] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:20:26] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 16:20:26] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:20:26] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:20:26] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 16:20:26] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 16:20:26] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:20:26] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:20:26] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 16:20:35] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:20:35] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:20:35] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 16:20:35] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 16:20:35] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 16:20:35] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 16:20:35] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 16:20:35] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 16:20:35] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 16:20:35] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 16:20:35] reset_session_step js_done reason=search_center_exit
+[2026-05-18 16:20:35] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 16:20:35] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 16:20:40] selection cursor_over_ui miss mouse_x=1419 mouse_y=792 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 16:20:40] selection lbutton_up dist_x=921 dist_y=87 drag=1 multi=0
+[2026-05-18 16:20:40] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 16:20:41] selection cursor_over_ui miss mouse_x=1420 mouse_y=813 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 16:20:41] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:20:41] selection lbutton_up no_trigger=click
+[2026-05-18 16:20:44] selection cursor_over_ui miss mouse_x=1416 mouse_y=790 top=hwnd=67682 class=Qt624QWindowToolSaveBits title=Snipper - Snipaste exe=snipaste.exe
+[2026-05-18 16:20:44] selection lbutton_up dist_x=2 dist_y=27 drag=1 multi=0
+[2026-05-18 16:20:44] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-18 16:20:45] selection cursor_over_ui miss mouse_x=1406 mouse_y=826 top=hwnd=199024 class=Qt624QWindowIcon title=Snipaste exe=snipaste.exe
+[2026-05-18 16:20:45] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:20:45] selection lbutton_up no_trigger=click
+[2026-05-18 16:20:46] selection cursor_over_ui miss mouse_x=210 mouse_y=895 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:20:46] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:20:46] selection lbutton_up no_trigger=click
+[2026-05-18 16:23:52] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:23:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:23:52] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 16:23:52] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:23:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:23:52] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:23:52] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:23:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:23:52] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:23:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:23:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:23:53] gdho stop begin
+[2026-05-18 16:23:53] gdho poll disarm skip reason=stop
+[2026-05-18 16:23:53] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 16:23:53] gdho hide_frontend queue hide
+[2026-05-18 16:23:53] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 16:23:53] gdho stop done
+[2026-05-18 16:23:57] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:23:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:23:57] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:23:57] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:23:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:23:57] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:23:57] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:14] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:25:14] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:14] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 16:25:14] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:25:14] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:14] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:25:14] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:25:14] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:14] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:25:14] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:14] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:14] gdho stop begin
+[2026-05-18 16:25:14] gdho poll disarm skip reason=stop
+[2026-05-18 16:25:14] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 16:25:14] gdho hide_frontend queue hide
+[2026-05-18 16:25:14] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 16:25:14] gdho stop done
+[2026-05-18 16:25:17] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:17] gdho stop begin
+[2026-05-18 16:25:17] gdho poll disarm skip reason=stop
+[2026-05-18 16:25:17] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 16:25:17] gdho hide_frontend queue hide
+[2026-05-18 16:25:17] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 16:25:17] gdho stop done
+[2026-05-18 16:25:19] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:25:19] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:19] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:25:19] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:25:19] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:19] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:25:19] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:39] selection cursor_over_ui miss mouse_x=1509 mouse_y=919 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:25:39] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:25:39] selection lbutton_up no_trigger=click
+[2026-05-18 16:25:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:55] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:25:55] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:25:55] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 16:25:55] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 16:25:55] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 16:25:55] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 16:25:55] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 16:25:55] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 16:25:55] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 16:25:55] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 16:25:55] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 16:25:55] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 16:25:55] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 16:25:55] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 16:25:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:55] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 16:25:55] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:25:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:55] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 16:25:55] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 16:25:55] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:25:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:55] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 16:25:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:25:55] gdho stop begin
+[2026-05-18 16:25:55] gdho poll disarm skip reason=stop
+[2026-05-18 16:25:55] gdho gdho_phase CLOSED->CLOSING reason=stop token=3
+[2026-05-18 16:25:55] gdho hide_frontend queue hide
+[2026-05-18 16:25:55] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=3
+[2026-05-18 16:25:55] gdho stop done
+[2026-05-18 16:26:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=11667832 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=541 mouse_y=759
+[2026-05-18 16:26:03] selection lbutton_up skip=our_ui
+[2026-05-18 16:26:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=11667832 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=569 mouse_y=731
+[2026-05-18 16:26:07] selection lbutton_up skip=our_ui
+[2026-05-18 16:26:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=11667832 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=645 mouse_y=779
+[2026-05-18 16:26:08] selection lbutton_up skip=our_ui
+[2026-05-18 16:26:10] selection cursor_over_ui hit=g_SCWV_Gui hwnd=11667832 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=871 mouse_y=755
+[2026-05-18 16:26:10] selection lbutton_up skip=our_ui
+[2026-05-18 16:26:13] selection cursor_over_ui hit=g_SCWV_Gui hwnd=11667832 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=514 mouse_y=758
+[2026-05-18 16:26:13] selection lbutton_up skip=our_ui
+[2026-05-18 16:26:15] selection cursor_over_ui hit=g_SCWV_Gui hwnd=11667832 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1366 mouse_y=790
+[2026-05-18 16:26:15] selection lbutton_up skip=our_ui
+[2026-05-18 16:26:15] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:26:15] gdho stop begin
+[2026-05-18 16:26:15] gdho poll disarm skip reason=stop
+[2026-05-18 16:26:15] gdho gdho_phase CLOSED->CLOSING reason=stop token=4
+[2026-05-18 16:26:15] gdho hide_frontend queue hide
+[2026-05-18 16:26:15] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=4
+[2026-05-18 16:26:15] gdho stop done
+[2026-05-18 16:26:15] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:26:15] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:26:15] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 16:26:15] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 16:26:15] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 16:26:15] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 16:26:15] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 16:26:15] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 16:26:15] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 16:26:15] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 16:26:15] reset_session_step js_done reason=search_center_exit
+[2026-05-18 16:26:15] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 16:26:15] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 16:26:19] selection cursor_over_ui hit=GuiID_ConfigGUI hwnd=4328320 class=AutoHotkeyGUI title=Cursor助手 - 配置面板 exe=AutoHotkey64.exe mouse_x=1360 mouse_y=133
+[2026-05-18 16:26:19] selection lbutton_up skip=our_ui
+[2026-05-18 16:26:21] selection cursor_over_ui miss mouse_x=314 mouse_y=893 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:26:21] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:26:21] selection lbutton_up no_trigger=click
+[2026-05-18 16:26:21] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:26:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:26:21] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:26:21] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:26:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:26:21] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:26:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:29:50] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:29:50] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:29:50] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 16:29:50] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:29:50] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:29:50] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:29:50] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:29:50] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:29:50] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:29:50] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:29:50] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:29:50] gdho stop begin
+[2026-05-18 16:29:50] gdho poll disarm skip reason=stop
+[2026-05-18 16:29:50] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 16:29:50] gdho hide_frontend queue hide
+[2026-05-18 16:29:50] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 16:29:50] gdho stop done
+[2026-05-18 16:29:55] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:29:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:29:55] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:29:55] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:29:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:29:55] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:29:55] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:30:21] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=3674802 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1583 mouse_y=969
+[2026-05-18 16:30:21] selection lbutton_up skip=our_ui
+[2026-05-18 16:30:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:30:21] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:30:21] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:30:21] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 16:30:21] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 16:30:21] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 16:30:21] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 16:30:21] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 16:30:21] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 16:30:21] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 16:30:21] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 16:30:21] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 16:30:21] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 16:30:21] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 16:30:21] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 16:30:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:30:21] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 16:30:21] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:30:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:30:21] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 16:30:21] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 16:30:21] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:30:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:30:21] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 16:30:21] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:30:21] gdho stop begin
+[2026-05-18 16:30:21] gdho poll disarm skip reason=stop
+[2026-05-18 16:30:21] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 16:30:21] gdho hide_frontend queue hide
+[2026-05-18 16:30:21] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 16:30:21] gdho stop done
+[2026-05-18 16:30:28] selection cursor_over_ui hit=g_SCWV_Gui hwnd=17568392 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=544 mouse_y=758
+[2026-05-18 16:30:28] selection lbutton_up skip=our_ui
+[2026-05-18 16:30:37] selection cursor_over_ui hit=g_SCWV_Gui hwnd=17568392 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1127 mouse_y=747
+[2026-05-18 16:30:37] selection lbutton_up skip=our_ui
+[2026-05-18 16:30:38] selection cursor_over_ui hit=g_SCWV_Gui hwnd=17568392 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1038 mouse_y=750
+[2026-05-18 16:30:38] selection lbutton_up skip=our_ui
+[2026-05-18 16:30:39] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:30:39] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:30:39] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 16:30:39] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 16:30:39] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 16:30:39] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 16:30:39] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 16:30:39] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 16:30:39] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 16:30:39] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 16:30:39] reset_session_step js_done reason=search_center_exit
+[2026-05-18 16:30:39] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 16:30:39] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 16:30:39] selection cursor_over_ui miss mouse_x=278 mouse_y=912 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:30:39] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:30:39] selection lbutton_up no_trigger=click
+[2026-05-18 16:32:18] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:32:18] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:32:19] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 16:32:19] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:32:19] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:32:19] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:32:19] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:32:19] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:32:19] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:32:19] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:32:19] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:32:19] gdho stop begin
+[2026-05-18 16:32:19] gdho poll disarm skip reason=stop
+[2026-05-18 16:32:19] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 16:32:19] gdho hide_frontend queue hide
+[2026-05-18 16:32:19] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 16:32:19] gdho stop done
+[2026-05-18 16:32:22] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:32:22] gdho stop begin
+[2026-05-18 16:32:22] gdho poll disarm skip reason=stop
+[2026-05-18 16:32:22] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 16:32:22] gdho hide_frontend queue hide
+[2026-05-18 16:32:22] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 16:32:22] gdho stop done
+[2026-05-18 16:32:24] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:32:24] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:32:24] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:32:24] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:32:24] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:32:24] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:32:24] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:33:09] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=2101170 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1499 mouse_y=974
+[2026-05-18 16:33:09] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:09] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:33:09] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:33:09] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:33:09] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 16:33:09] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 16:33:09] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 16:33:09] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 16:33:09] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 16:33:09] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 16:33:09] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 16:33:09] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 16:33:09] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 16:33:09] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 16:33:09] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 16:33:09] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 16:33:09] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:33:09] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 16:33:09] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:33:09] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:33:09] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 16:33:09] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 16:33:09] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:33:09] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:33:09] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 16:33:09] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:33:09] gdho stop begin
+[2026-05-18 16:33:09] gdho poll disarm skip reason=stop
+[2026-05-18 16:33:09] gdho gdho_phase CLOSED->CLOSING reason=stop token=3
+[2026-05-18 16:33:09] gdho hide_frontend queue hide
+[2026-05-18 16:33:09] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=3
+[2026-05-18 16:33:09] gdho stop done
+[2026-05-18 16:33:14] selection cursor_over_ui hit=g_SCWV_Gui hwnd=14095016 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=551 mouse_y=760
+[2026-05-18 16:33:14] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:15] selection cursor_over_ui hit=g_SCWV_Gui hwnd=14095016 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=551 mouse_y=760
+[2026-05-18 16:33:15] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:16] selection cursor_over_ui hit=g_SCWV_Gui hwnd=14095016 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=551 mouse_y=760
+[2026-05-18 16:33:16] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:17] selection cursor_over_ui hit=g_SCWV_Gui hwnd=14095016 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=551 mouse_y=760
+[2026-05-18 16:33:17] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:17] selection cursor_over_ui hit=g_SCWV_Gui hwnd=14095016 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=551 mouse_y=760
+[2026-05-18 16:33:17] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:18] selection cursor_over_ui hit=g_SCWV_Gui hwnd=14095016 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=525 mouse_y=843
+[2026-05-18 16:33:18] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:19] selection cursor_over_ui hit=g_SCWV_Gui hwnd=14095016 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=450 mouse_y=837
+[2026-05-18 16:33:19] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:21] selection cursor_over_ui hit=g_SCWV_Gui hwnd=14095016 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=492 mouse_y=840
+[2026-05-18 16:33:21] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:22] selection cursor_over_ui hit=g_SCWV_Gui hwnd=14095016 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=550 mouse_y=760
+[2026-05-18 16:33:22] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:23] selection cursor_over_ui hit=g_SCWV_Gui hwnd=14095016 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=550 mouse_y=760
+[2026-05-18 16:33:23] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:23] selection cursor_over_ui hit=g_SCWV_Gui hwnd=14095016 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=495 mouse_y=848
+[2026-05-18 16:33:23] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:25] selection cursor_over_ui hit=g_SCWV_Gui hwnd=14095016 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=507 mouse_y=833
+[2026-05-18 16:33:25] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:26] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:33:26] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:33:26] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 16:33:26] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 16:33:26] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 16:33:26] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 16:33:26] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 16:33:26] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 16:33:26] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 16:33:26] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 16:33:26] reset_session_step js_done reason=search_center_exit
+[2026-05-18 16:33:26] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 16:33:26] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 16:33:26] selection cursor_over_ui miss mouse_x=222 mouse_y=899 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:33:26] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:33:26] selection lbutton_up no_trigger=click
+[2026-05-18 16:33:31] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=2101170 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1621 mouse_y=762
+[2026-05-18 16:33:31] selection lbutton_up skip=our_ui
+[2026-05-18 16:33:31] selection cursor_over_ui miss mouse_x=1499 mouse_y=961 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:33:31] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:33:31] selection lbutton_up no_trigger=click
+[2026-05-18 16:34:28] selection cursor_over_ui miss mouse_x=1711 mouse_y=424 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:34:28] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:34:28] selection lbutton_up no_trigger=click
+[2026-05-18 16:34:29] selection cursor_over_ui miss mouse_x=1882 mouse_y=467 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:34:29] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:34:29] selection lbutton_up no_trigger=click
+[2026-05-18 16:39:37] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:39:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:37] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 16:39:37] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:39:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:37] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:39:37] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:39:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:37] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:39:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:38] gdho stop begin
+[2026-05-18 16:39:38] gdho poll disarm skip reason=stop
+[2026-05-18 16:39:38] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 16:39:38] gdho hide_frontend queue hide
+[2026-05-18 16:39:38] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 16:39:38] gdho stop done
+[2026-05-18 16:39:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:38] gdho stop begin
+[2026-05-18 16:39:38] gdho poll disarm skip reason=stop
+[2026-05-18 16:39:38] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 16:39:38] gdho hide_frontend queue hide
+[2026-05-18 16:39:38] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 16:39:38] gdho stop done
+[2026-05-18 16:39:42] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:39:42] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:42] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:39:42] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:39:42] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:42] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:39:42] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:54] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=13896600 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1489 mouse_y=961
+[2026-05-18 16:39:54] selection lbutton_up skip=our_ui
+[2026-05-18 16:39:54] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:54] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:39:54] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:39:54] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 16:39:54] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 16:39:54] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 16:39:54] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 16:39:54] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 16:39:54] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 16:39:54] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 16:39:54] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 16:39:54] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 16:39:54] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 16:39:54] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 16:39:54] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 16:39:54] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:54] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 16:39:54] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:39:54] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:54] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 16:39:54] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 16:39:54] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:39:54] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:54] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 16:39:54] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:39:54] gdho stop begin
+[2026-05-18 16:39:54] gdho poll disarm skip reason=stop
+[2026-05-18 16:39:54] gdho gdho_phase CLOSED->CLOSING reason=stop token=3
+[2026-05-18 16:39:54] gdho hide_frontend queue hide
+[2026-05-18 16:39:54] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=3
+[2026-05-18 16:39:54] gdho stop done
+[2026-05-18 16:40:01] selection cursor_over_ui hit=g_SCWV_Gui hwnd=13833060 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=538 mouse_y=761
+[2026-05-18 16:40:01] selection lbutton_up skip=our_ui
+[2026-05-18 16:40:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=13833060 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=709 mouse_y=843
+[2026-05-18 16:40:03] selection lbutton_up skip=our_ui
+[2026-05-18 16:40:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=13833060 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=709 mouse_y=843
+[2026-05-18 16:40:03] selection lbutton_up skip=our_ui
+[2026-05-18 16:40:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=13833060 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=709 mouse_y=843
+[2026-05-18 16:40:03] selection lbutton_up skip=our_ui
+[2026-05-18 16:40:05] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:40:05] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:40:05] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 16:40:05] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 16:40:05] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 16:40:05] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 16:40:05] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 16:40:05] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 16:40:05] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 16:40:05] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 16:40:05] reset_session_step js_done reason=search_center_exit
+[2026-05-18 16:40:05] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 16:40:05] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 16:40:05] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=13896600 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1576 mouse_y=961
+[2026-05-18 16:40:05] selection lbutton_up skip=our_ui
+[2026-05-18 16:40:07] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=13896600 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1540 mouse_y=830
+[2026-05-18 16:40:07] selection lbutton_up skip=our_ui
+[2026-05-18 16:40:08] selection cursor_over_ui miss mouse_x=1478 mouse_y=953 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:40:08] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:40:08] selection lbutton_up no_trigger=click
+[2026-05-18 16:40:09] selection cursor_over_ui miss mouse_x=1886 mouse_y=980 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:40:09] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:40:09] selection lbutton_up no_trigger=click
+[2026-05-18 16:44:52] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:44:52] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:44:53] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-18 16:44:53] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:44:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:44:53] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:44:53] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:44:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:44:53] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:44:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:44:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:44:53] gdho stop begin
+[2026-05-18 16:44:53] gdho poll disarm skip reason=stop
+[2026-05-18 16:44:53] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-18 16:44:53] gdho hide_frontend queue hide
+[2026-05-18 16:44:53] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-18 16:44:53] gdho stop done
+[2026-05-18 16:45:06] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-18 16:45:06] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:45:06] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-18 16:45:06] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:45:06] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:45:06] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:45:06] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:45:53] selection cursor_over_ui hit=FloatingToolbarGUI hwnd=49877266 class=AutoHotkeyGUI title=Floating Toolbar exe=AutoHotkey64.exe mouse_x=1479 mouse_y=948
+[2026-05-18 16:45:53] selection lbutton_up skip=our_ui
+[2026-05-18 16:45:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:45:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:45:53] gdho stop begin
+[2026-05-18 16:45:53] gdho poll disarm skip reason=stop
+[2026-05-18 16:45:53] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-18 16:45:53] gdho hide_frontend queue hide
+[2026-05-18 16:45:53] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-18 16:45:53] gdho stop done
+[2026-05-18 16:45:53] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:45:53] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-18 16:45:53] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-18 16:45:53] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-18 16:45:53] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-18 16:45:53] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-18 16:45:53] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-18 16:45:53] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-18 16:45:53] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-18 16:45:53] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-18 16:45:53] reset_session_step js_begin reason=tray_open_ui
+[2026-05-18 16:45:53] reset_session_step js_done reason=tray_open_ui
+[2026-05-18 16:45:53] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-18 16:45:53] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-18 16:45:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:45:53] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-18 16:45:53] gdho gdho_redirect_hide_frontend
+[2026-05-18 16:45:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:45:53] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-18 16:45:53] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-18 16:45:53] gdho gdho_redirect_hide_overlay
+[2026-05-18 16:45:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-18 16:45:53] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-18 16:46:05] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:46:05] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-18 16:46:05] reset_session_step state_cleared reason=search_center_exit
+[2026-05-18 16:46:05] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-18 16:46:05] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-18 16:46:05] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-18 16:46:05] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-18 16:46:05] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-18 16:46:05] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-18 16:46:05] reset_session_step js_begin reason=search_center_exit
+[2026-05-18 16:46:05] reset_session_step js_done reason=search_center_exit
+[2026-05-18 16:46:05] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-18 16:46:05] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-18 16:46:05] selection cursor_over_ui miss mouse_x=33 mouse_y=148 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:46:05] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:46:05] selection lbutton_up no_trigger=click
+[2026-05-18 16:46:07] selection cursor_over_ui miss mouse_x=607 mouse_y=158 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:46:07] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:46:07] selection lbutton_up no_trigger=click
+[2026-05-18 16:46:08] selection cursor_over_ui miss mouse_x=592 mouse_y=152 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:46:08] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:46:08] selection lbutton_up no_trigger=click
+[2026-05-18 16:48:27] selection cursor_over_ui miss mouse_x=321 mouse_y=256 top=hwnd=198436 class=Chrome_WidgetWin_1 title=Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-18 16:48:27] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-18 16:48:27] selection lbutton_up no_trigger=click

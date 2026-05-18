@@ -1574,6 +1574,16 @@ _SCWV_WinHttpReadUtf8Text(whr) {
     }
 }
 
+; WinHttp.WinHttpRequest.5.1 无 MSXML 的 ReadyState；异步轮询用 WaitForResponse(0)（0 秒超时即返回，True 表示响应已到）。
+_SCWV_WinHttpAsyncPollResponseReady(whr) {
+    if !IsObject(whr)
+        return Map("fatal", true, "err", "invalid whr")
+    try
+        return Map("fatal", false, "ready", !!whr.WaitForResponse(0))
+    catch as e
+        return Map("fatal", true, "err", e.Message)
+}
+
 ; 返回 Map: status, body（仅 status=200 时 body 为 JSON 文本）
 _SCWV_HttpGetSearchCoreResp(queryString) {
     ; Sync HTTP on AHK main thread is disabled on runtime hot paths.
@@ -1607,7 +1617,15 @@ _SCWV_HttpSearchCoreJsonAsync(method, path, body := "", callback := 0, timeoutMs
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         url := "http://127.0.0.1:8080" . path
         whr.Open(method, url, true)
-        whr.SetTimeouts(900, 900, 2200, 2200)
+        pollMs := Integer(timeoutMs)
+        recvMs := 2200
+        m := StrUpper(Trim(String(method)))
+        if (m = "POST" && (InStr(path, "/v1/fulltext/control") || InStr(path, "/v1/fulltext/config"))) {
+            recvMs := 120000
+            if (pollMs < recvMs + 15000)
+                pollMs := recvMs + 15000
+        }
+        whr.SetTimeouts(900, 900, 2200, recvMs)
         if (method = "POST" || method = "PUT" || method = "PATCH") {
             whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
             payload := (Trim(String(body)) = "") ? "{}" : body
@@ -1617,11 +1635,47 @@ _SCWV_HttpSearchCoreJsonAsync(method, path, body := "", callback := 0, timeoutMs
         }
         g_SCWV_CoreHttpReqSeq += 1
         reqId := g_SCWV_CoreHttpReqSeq
-        g_SCWV_CoreHttpReqs[reqId] := Map("whr", whr, "cb", cb, "start", A_TickCount, "timeout", Integer(timeoutMs))
+        g_SCWV_CoreHttpReqs[reqId] := Map("whr", whr, "cb", cb, "start", A_TickCount, "timeout", pollMs)
         _SCWV_CoreHttpArmPoll()
     } catch as err {
+        _SCWV_HttpSearchCoreJsonAsync_Fallback(method, path, body, cb, timeoutMs, err.Message)
+    }
+}
+
+_SCWV_HttpSearchCoreJsonAsync_Fallback(method, path, body := "", cb := 0, timeoutMs := 10000, reason := "") {
+    SetTimer((*) => _SCWV_HttpSearchCoreJsonFallback_Run(method, path, body, cb, timeoutMs, reason), -1)
+}
+
+_SCWV_HttpSearchCoreJsonFallback_Run(method, path, body := "", cb := 0, timeoutMs := 10000, reason := "") {
+    url := "http://127.0.0.1:8080" . path
+    try {
+        xhr := ComObject("MSXML2.ServerXMLHTTP.6.0")
+        t := Integer(timeoutMs)
+        if (t <= 0)
+            t := 10000
+        ; resolve, connect, send, receive
+        xhr.setTimeouts(900, 900, t, t)
+        xhr.open(method, url, false)
+        if (method = "POST" || method = "PUT" || method = "PATCH") {
+            xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8")
+            payload := (Trim(String(body)) = "") ? "{}" : body
+            xhr.send(payload)
+        } else {
+            xhr.send()
+        }
+        st := 0
+        txt := ""
+        obj := 0
+        try st := Integer(xhr.status)
+        try txt := String(xhr.responseText)
+        if (Trim(String(txt)) != "") {
+            try obj := Jxon_Load(txt)
+        }
         if cb
-            try cb.Call(Map("status", 0, "text", "", "json", 0, "error", err.Message))
+            try cb.Call(Map("status", st, "text", txt, "json", obj, "fallback", "msxml"))
+    } catch as e2 {
+        if cb
+            try cb.Call(Map("status", 0, "text", "", "json", 0, "error", (reason != "" ? reason . " | " : "") . e2.Message))
     }
 }
 
@@ -1649,15 +1703,14 @@ _SCWV_CoreHttpPollTick(*) {
             removeIds.Push(reqId)
             continue
         }
-        rs := 0
-        try rs := Integer(whr.ReadyState)
-        catch as err {
+        pr := _SCWV_WinHttpAsyncPollResponseReady(whr)
+        if pr["fatal"] {
             if cb
-                try cb.Call(Map("status", 0, "text", "", "json", 0, "error", err.Message))
+                try cb.Call(Map("status", 0, "text", "", "json", 0, "error", pr["err"]))
             removeIds.Push(reqId)
             continue
         }
-        if (rs < 4)
+        if !pr["ready"]
             continue
         st := 0
         txt := ""
@@ -1684,6 +1737,7 @@ _SCWV_DefaultFullTextStatusPayload() {
     return Map(
         "running", false,
         "ready", false,
+        "initialScanDone", false,
         "progress", 0,
         "progressText", "0.0%",
         "progressDetail", "未开始扫描",
@@ -1693,6 +1747,10 @@ _SCWV_DefaultFullTextStatusPayload() {
         "engine_lights", ["off", "off", "off", "off"],
         "discoveredFiles", 0,
         "processedFiles", 0,
+        "indexedFiles", 0,
+        "pendingTasks", 0,
+        "queueCapacity", 0,
+        "queueSaturated", false,
         "filesPerSec", 0,
         "etaSeconds", 0,
         "workerCount", 0,
@@ -1702,7 +1760,8 @@ _SCWV_DefaultFullTextStatusPayload() {
         "indexDir", "",
         "lastError", "",
         "scan_mode", "",
-        "indexEpoch", 0
+        "indexEpoch", 0,
+        "indexVersion", ""
     )
 }
 
@@ -1774,6 +1833,34 @@ _SCWV_MergeMap(target, source) {
     return target
 }
 
+; 统一从 WinHttp/回退回调的 resp Map 中取出可读错误（避免 text 为空时前端只显示泛化失败）
+_SCWV_FormatSearchCoreHttpErr(resp) {
+    if !(resp is Map)
+        return "SearchCenterCore 无响应"
+    errMsg := ""
+    if resp.Has("text")
+        errMsg := Trim(String(resp["text"]))
+    if (errMsg = "" && resp.Has("error"))
+        errMsg := Trim(String(resp["error"]))
+    if (errMsg = "" && resp.Has("json") && (resp["json"] is Map)) {
+        j := resp["json"]
+        if j.Has("error")
+            errMsg := Trim(String(j["error"]))
+        else if j.Has("message")
+            errMsg := Trim(String(j["message"]))
+    }
+    stv := 0
+    if resp.Has("status")
+        stv := Integer(resp["status"])
+    if (errMsg = "") {
+        if (stv = 0)
+            errMsg := "无法连接 SearchCenterCore（超时、未启动或端口 8080 不可用）"
+        else
+            errMsg := "HTTP " . String(stv)
+    }
+    return errMsg
+}
+
 _SCWV_PostFullTextStatus(withConfig := false) {
     payload := _SCWV_DefaultFullTextStatusPayload()
     if !_SCWV_EnsureSearchCoreRunning() {
@@ -1827,9 +1914,7 @@ _SCWV_ControlFullText(action := "start") {
 
 _SCWV_ControlFullText_OnResp(act, resp) {
     ok := (resp is Map && resp.Has("status") && Integer(resp["status"]) = 200)
-    errMsg := ""
-    if !ok
-        errMsg := (resp is Map && resp.Has("text")) ? String(resp["text"]) : ("HTTP " . ((resp is Map && resp.Has("status")) ? String(resp["status"]) : "0"))
+    errMsg := ok ? "" : _SCWV_FormatSearchCoreHttpErr(resp)
     SCWV_PostJson(Map("type", "fulltextActionResult", "ok", ok, "action", act, "error", errMsg))
     _SCWV_PostFullTextStatus(true)
 }
@@ -1850,9 +1935,7 @@ _SCWV_UpdateFullTextConfig(payloadMap) {
 
 _SCWV_UpdateFullTextConfig_OnResp(payloadMap, req, resp) {
     ok := (resp is Map && resp.Has("status") && Integer(resp["status"]) = 200)
-    errMsg := ""
-    if !ok
-        errMsg := (resp is Map && resp.Has("text")) ? String(resp["text"]) : ("HTTP " . ((resp is Map && resp.Has("status")) ? String(resp["status"]) : "0"))
+    errMsg := ok ? "" : _SCWV_FormatSearchCoreHttpErr(resp)
     lowErr := StrLower(errMsg)
     if (!ok && InStr(lowErr, "invalid json body") > 0) {
         reqWrapped := Jxon_Dump(Map("payload", payloadMap))
@@ -1865,9 +1948,7 @@ _SCWV_UpdateFullTextConfig_OnResp(payloadMap, req, resp) {
 
 _SCWV_UpdateFullTextConfig_OnRespWrapped(req, resp2) {
     ok := (resp2 is Map && resp2.Has("status") && Integer(resp2["status"]) = 200)
-    errMsg := ""
-    if !ok
-        errMsg := (resp2 is Map && resp2.Has("text")) ? String(resp2["text"]) : ("HTTP " . ((resp2 is Map && resp2.Has("status")) ? String(resp2["status"]) : "0"))
+    errMsg := ok ? "" : _SCWV_FormatSearchCoreHttpErr(resp2)
     lowErr2 := StrLower(errMsg)
     if (!ok && InStr(lowErr2, "invalid json body") > 0 && _SCWV_RestartSearchCore()) {
         SetTimer((*) => _SCWV_HttpSearchCoreJsonAsync("POST", "/v1/fulltext/config", req, _SCWV_UpdateFullTextConfig_OnRespFinal), -120)
@@ -1879,9 +1960,7 @@ _SCWV_UpdateFullTextConfig_OnRespWrapped(req, resp2) {
 
 _SCWV_UpdateFullTextConfig_OnRespFinal(resp3) {
     ok := (resp3 is Map && resp3.Has("status") && Integer(resp3["status"]) = 200)
-    errMsg := ""
-    if !ok
-        errMsg := (resp3 is Map && resp3.Has("text")) ? String(resp3["text"]) : ("HTTP " . ((resp3 is Map && resp3.Has("status")) ? String(resp3["status"]) : "0"))
+    errMsg := ok ? "" : _SCWV_FormatSearchCoreHttpErr(resp3)
     SCWV_PostJson(Map("type", "fulltextConfigResult", "ok", ok, "error", errMsg))
     _SCWV_PostFullTextStatus(true)
 }
@@ -2425,6 +2504,16 @@ _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) 
     }
 }
 
+_SCWV_AsyncPollSearchHttp_FinishInFlight(*) {
+    global g_SCWV_AsyncWhr, g_SCWV_AsyncReqMeta, g_SCWV_SearchHttpInFlight, g_SCWV_AsyncPollToken, g_SCWV_SearchPendingReq
+    g_SCWV_AsyncPollToken += 1
+    g_SCWV_AsyncWhr := 0
+    g_SCWV_AsyncReqMeta := 0
+    g_SCWV_SearchHttpInFlight := false
+    if (g_SCWV_SearchPendingReq is Map)
+        SetTimer(_SCWV_RunPendingGoSearch, -10)
+}
+
 _SCWV_AsyncPollSearchHttp(pollToken := 0, *) {
     global g_SCWV_AsyncWhr, g_SCWV_AsyncReqMeta, g_SCWV_SearchHttpInFlight
     global g_SCWV_LastRenderedID, g_SCWV_SearchPendingReq, g_SCWV_AsyncPollToken, g_SCWV_GoStartGen
@@ -2437,34 +2526,43 @@ _SCWV_AsyncPollSearchHttp(pollToken := 0, *) {
     }
     whr := g_SCWV_AsyncWhr
     meta := g_SCWV_AsyncReqMeta
-    try {
-        rs := 0
-        try rs := Integer(whr.ReadyState)
-        if (rs < 4)
-            return
+    startTick := meta.Has("startTick") ? Integer(meta["startTick"]) : A_TickCount
+    if (A_TickCount - startTick > 60000) {
+        try whr.Abort()
         try SetTimer((*) => _SCWV_AsyncPollSearchHttp(pollToken), 0)
+        _SCWV_LogRuntime("AsyncPollSearchHttp client_timeout")
+        _SCWV_AsyncPollSearchHttp_FinishInFlight()
+        return
+    }
+    pr := _SCWV_WinHttpAsyncPollResponseReady(whr)
+    if pr["fatal"] {
+        try SetTimer((*) => _SCWV_AsyncPollSearchHttp(pollToken), 0)
+        _SCWV_LogRuntime("AsyncPollSearchHttp WaitForResponse: " . pr["err"])
+        _SCWV_AsyncPollSearchHttp_FinishInFlight()
+        return
+    }
+    if !pr["ready"]
+        return
+    try SetTimer((*) => _SCWV_AsyncPollSearchHttp(pollToken), 0)
+    try {
         st := 0
         try st := Integer(whr.Status)
         raw := _SCWV_WinHttpReadUtf8Text(whr)
         reqID := Integer(meta["reqID"])
         token := meta.Has("token") ? Integer(meta["token"]) : 0
         gen := meta.Has("gen") ? Integer(meta["gen"]) : 0
-        if (gen != Integer(g_SCWV_GoStartGen))
+        if (gen != Integer(g_SCWV_GoStartGen)) {
+            _SCWV_AsyncPollSearchHttp_FinishInFlight()
             return
+        }
         resp := Map("status", st, "body", (st = 200) ? raw : "", "responseText", raw)
         searchToken := meta.Has("searchToken") ? Integer(meta["searchToken"]) : 0
         parentTxn := meta.Has("parentTxn") ? Integer(meta["parentTxn"]) : 0
         _SCWV_HandleSearchResponse(token, reqID, resp, meta["kw"], meta["off"], meta["gt"], meta["lim"], searchToken, parentTxn)
     } catch as err {
         _SCWV_LogRuntime("AsyncPollSearchHttp error: " . err.Message)
-    } finally {
-        g_SCWV_AsyncPollToken += 1
-        g_SCWV_AsyncWhr := 0
-        g_SCWV_AsyncReqMeta := 0
-        g_SCWV_SearchHttpInFlight := false
-        if (g_SCWV_SearchPendingReq is Map)
-            SetTimer(_SCWV_RunPendingGoSearch, -10)
     }
+    _SCWV_AsyncPollSearchHttp_FinishInFlight()
 }
 
 _SCWV_PostRequestSearchGo(*) {

@@ -59,3 +59,23 @@
 [2026-05-18 16:03:14][focus][release] owner=SearchCenter reason=wm_deactivate
 [2026-05-18 16:07:55][focus][grant] owner=SearchCenter hwnd=2495330 priority=20 reason=show_focus
 [2026-05-18 16:09:30][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 16:10:38][focus][grant] owner=SearchCenter hwnd=25627308 priority=20 reason=show_focus
+[2026-05-18 16:10:47][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 16:19:26][focus][grant] owner=SearchCenter hwnd=46732046 priority=20 reason=show_focus
+[2026-05-18 16:19:49][focus][grant] owner=SearchCenter hwnd=46732046 priority=20 reason=show_focus
+[2026-05-18 16:19:49][focus][grant] owner=SearchCenter hwnd=46732046 priority=20 reason=focus_deferred
+[2026-05-18 16:19:49][focus][grant] owner=SearchCenter hwnd=46732046 priority=20 reason=deferred_move_focus
+[2026-05-18 16:19:49][focus][grant] owner=SearchCenter hwnd=46732046 priority=20 reason=focus_for_ime
+[2026-05-18 16:20:05][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 16:20:26][focus][grant] owner=SearchCenter hwnd=17109722 priority=20 reason=show_focus
+[2026-05-18 16:20:35][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 16:25:55][focus][grant] owner=SearchCenter hwnd=11667832 priority=20 reason=show_focus
+[2026-05-18 16:26:15][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 16:30:21][focus][grant] owner=SearchCenter hwnd=17568392 priority=20 reason=show_focus
+[2026-05-18 16:30:39][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 16:33:09][focus][grant] owner=SearchCenter hwnd=14095016 priority=20 reason=show_focus
+[2026-05-18 16:33:26][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 16:39:55][focus][grant] owner=SearchCenter hwnd=13833060 priority=20 reason=show_focus
+[2026-05-18 16:40:05][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-18 16:45:53][focus][grant] owner=SearchCenter hwnd=13304474 priority=20 reason=show_focus
+[2026-05-18 16:46:05][focus][release] owner=SearchCenter reason=wm_deactivate
