@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 
 ; GlobalDragHoleOverlay.ahk
 ; AHK global drag pre-judge -> drive Wails/WebView2 hole frontend (window.HoleOverlay.*)
@@ -123,6 +123,330 @@ global GDHO_CX := 0
 global GDHO_CY := 0
 global GDHO_INNER_RADIUS := 76
 global GDHO_SUCK_RADIUS := 140
+; Release coalesce (multi-channel) + HoleRouter
+global g_GDHO_ReleaseCoalesceMs := 120
+global g_GDHO_RelBundle := Map()
+global g_GDHO_LastRouteSig := ""
+global g_GDHO_LastRouteTick := 0
+global g_GDHO_StuckRecycleCooldownUntil := 0
+
+GDHO_RelBundleReset() {
+    global g_GDHO_RelBundle
+    g_GDHO_RelBundle := Map(
+        "maxPri", 0,
+        "text", "",
+        "files", [],
+        "dropEvt", 0,
+        "bridgeTextCommit", false,
+        "webRichPayload", 0,
+        "phys", Map("mx", 0, "my", 0, "suck", false, "valid", false)
+    )
+}
+
+GDHO_CancelReleaseCoalesceTimer() {
+    SetTimer(GDHO_FlushReleaseCoalesce, 0)
+}
+
+GDHO_SubmitReleaseSignal(source, ctx := 0) {
+    global g_GDHO_RelBundle, g_GDHO_ReleaseCoalesceMs
+    if !(ctx is Map)
+        ctx := Map()
+    if !IsSet(g_GDHO_RelBundle) || !(g_GDHO_RelBundle is Map) || g_GDHO_RelBundle.Count = 0
+        GDHO_RelBundleReset()
+    b := g_GDHO_RelBundle
+    src := StrLower(Trim(String(source)))
+    if (src = "webview_drop") {
+        if (ctx.Has("richPayload") && (ctx["richPayload"] is Map)) {
+            b["webRichPayload"] := ctx["richPayload"]
+            b["maxPri"] := Max(Integer(b["maxPri"]), 45)
+        } else {
+            k := ctx.Has("kind") ? StrLower(Trim(String(ctx["kind"]))) : ""
+            if (k = "file" && ctx.Has("files") && (ctx["files"] is Array)) {
+                b["files"] := ctx["files"]
+                b["text"] := ""
+                b["maxPri"] := Max(Integer(b["maxPri"]), 40)
+            } else if (k = "text" && ctx.Has("text")) {
+                b["text"] := Trim(String(ctx["text"]))
+                b["files"] := []
+                b["maxPri"] := Max(Integer(b["maxPri"]), 40)
+            }
+        }
+    } else if (src = "bridge_drop") {
+        if (ctx is Map) {
+            clone := Map()
+            for kk, vv in ctx
+                clone[kk] := vv
+            b["dropEvt"] := clone
+            b["maxPri"] := Max(Integer(b["maxPri"]), 40)
+        }
+    } else if (src = "bridge_drag_end") {
+        global NativeDropSessionPayload
+        pl := ctx.Has("payload") ? String(ctx["payload"]) : (IsSet(NativeDropSessionPayload) ? NativeDropSessionPayload : "")
+        if (ctx.Has("canCommit") && ctx["canCommit"] && pl = "text") {
+            b["bridgeTextCommit"] := true
+            b["maxPri"] := Max(Integer(b["maxPri"]), 30)
+        }
+    } else if (src = "physical") {
+        mx := ctx.Has("mx") ? Integer(ctx["mx"]) : 0
+        my := ctx.Has("my") ? Integer(ctx["my"]) : 0
+        suck := !!(ctx.Has("inSuckZone") && ctx["inSuckZone"])
+        b["phys"] := Map("mx", mx, "my", my, "suck", suck, "valid", true)
+        pri := suck ? 20 : 10
+        b["maxPri"] := Max(Integer(b["maxPri"]), pri)
+    }
+    try NativeDropDiag_Log("[ReleaseCoalesce] submit source=" . src . " maxPri=" . b["maxPri"])
+    ms := IsSet(g_GDHO_ReleaseCoalesceMs) ? Integer(g_GDHO_ReleaseCoalesceMs) : 120
+    SetTimer(GDHO_FlushReleaseCoalesce, 0)
+    SetTimer(GDHO_FlushReleaseCoalesce, -ms)
+}
+
+GDHO_FlushApplyBridgeDropEvt(evt) {
+    if !(evt is Map)
+        return false
+    kind := ""
+    try kind := NativeDropBridge_NormalizeHolePayloadKind(StrLower(Trim(String(evt.Has("payloadKind") ? evt["payloadKind"] : ""))))
+    catch {
+        kind := ""
+    }
+    fbDetail := ""
+    if (kind = "")
+        kind := NativeDropBridge_GuessPayloadForUnknownDrag(&fbDetail)
+    if (kind = "")
+        kind := "file"
+    try NativeDropDiag_Log("[ReleaseFlush] bridge_drop mapped=" . kind)
+    if (kind = "text") {
+        t := ""
+        try t := Trim(String(NativeDropBridge_CaptureTextSeed()))
+        if (t = "" && evt.Has("text"))
+            try t := Trim(String(evt["text"]))
+        if (t != "") {
+            GDHO_RoutePayload("text", t)
+            return true
+        }
+        return false
+    }
+    files := []
+    if (evt.Has("files") && (evt["files"] is Array)) {
+        for _, p in evt["files"] {
+            s := Trim(String(p))
+            if (s != "")
+                files.Push(s)
+        }
+    }
+    if (evt.Has("folders") && (evt["folders"] is Array)) {
+        for _, p in evt["folders"] {
+            s := Trim(String(p))
+            if (s != "")
+                files.Push(s)
+        }
+    }
+    if (files.Length > 0) {
+        GDHO_RoutePayload("file", files)
+        return true
+    }
+    try NativeDropBridge_ApplyDropAction(evt, kind)
+    return false
+}
+
+GDHO_FlushReleaseCoalesce(*) {
+    global g_GDHO_RelBundle, NativeDropHideDelayMs, GDHO_ACTIVE, NativeDropSessionActive, GDHO_LAST_UPDATE_TICK, GDHO_MAX_IDLE_HIDE_MS
+    if !IsSet(g_GDHO_RelBundle) || !(g_GDHO_RelBundle is Map)
+        return
+    b := g_GDHO_RelBundle
+    try NativeDropDiag_Log("[ReleaseFlush] begin maxPri=" . b["maxPri"] . " bridgeCommit=" . (b["bridgeTextCommit"] ? "1" : "0"))
+    routed := false
+    if (b.Has("webRichPayload") && (b["webRichPayload"] is Map)) {
+        try NativeDropDiag_Log("[ReleaseFlush] web_rich_payload")
+        GDHO_RequestClose("frontend_hole_web_drop")
+        GDHO_HandleDropPayload(b["webRichPayload"])
+        routed := true
+    }
+    if !routed && IsObject(b["dropEvt"]) {
+        routed := GDHO_FlushApplyBridgeDropEvt(b["dropEvt"])
+    }
+    if !routed && Integer(b["maxPri"]) >= 40 {
+        if (b["files"] is Array) && b["files"].Length > 0 {
+            GDHO_RoutePayload("file", b["files"])
+            routed := true
+        } else if (Trim(String(b["text"])) != "") {
+            GDHO_RoutePayload("text", Trim(String(b["text"])))
+            routed := true
+        }
+    }
+    if !routed && b["bridgeTextCommit"] {
+        t := ""
+        try t := Trim(String(NativeDropBridge_CaptureTextSeed()))
+        if (t != "") {
+            GDHO_RoutePayload("text", t)
+            routed := true
+        }
+    }
+    if !routed {
+        global NativeDropSessionPayload, NativeDropSeedText, NativeDropWasOverHole
+        seed := ""
+        try seed := Trim(String(NativeDropSeedText))
+        if (seed = "")
+            try seed := Trim(String(NativeDropBridge_CaptureTextSeed()))
+        if (seed != "" && String(NativeDropSessionPayload) = "text"
+            && (NativeDropWasOverHole || GDHO_ACTIVE)) {
+            try NativeDropDiag_Log("[ReleaseFlush] text_seed_fallback len=" . StrLen(seed))
+            GDHO_RoutePayload("text", seed)
+            routed := true
+        }
+    }
+    phys := b["phys"]
+    didSuck := false
+    if !routed && (phys is Map) && phys.Has("valid") && phys["valid"] {
+        mx := Integer(phys["mx"]), my := Integer(phys["my"])
+        if phys["suck"] {
+            distNow := GDHO_GetDistanceToHoleCenter(mx, my)
+            try NativeDropDiag_Log("[ReleaseFlush] physical_suck dist=" . Format("{:.1f}", distNow))
+            GDHO_ForceSuckAction()
+            SetTimer(GDHO_FinishSuckSession, -2000)
+            didSuck := true
+        } else {
+            if (GDHO_ACTIVE || NativeDropSessionActive) {
+                GDHO_RequestClose("drag_release")
+                GDHO_ResetSession()
+            } else if (A_TickCount - GDHO_LAST_UPDATE_TICK > GDHO_MAX_IDLE_HIDE_MS) {
+                GDHO_RequestClose("drag_idle_timeout")
+            }
+            GDHO_ResetSession()
+        }
+    }
+    GDHO_RelBundleReset()
+    if !didSuck {
+        hd := IsSet(NativeDropHideDelayMs) ? Integer(NativeDropHideDelayMs) : 1800
+        try NativeDropBridge_ResetSessionAsync("release_coalesce", hd)
+    } else {
+        try NativeDropBridge_ResetSessionAsync("release_coalesce_after_suck", 400)
+    }
+}
+
+GDHO_EnsureDragSessionInteractive() {
+    global GDHO_GUI, GDHO_CLICKTHROUGH, NativeDropSessionActive, GDHO_ACTIVE
+    if !GDHO_GUI
+        return
+    if !(NativeDropSessionActive || GDHO_ACTIVE)
+        return
+    if GDHO_CLICKTHROUGH {
+        try WinSetExStyle("-0x20", "ahk_id " GDHO_GUI.Hwnd)
+        GDHO_CLICKTHROUGH := false
+    }
+}
+
+GDHO_TriggerSearchCenter(keyword) {
+    global g_HoleRuntimeEnabled
+    kw := Trim(String(keyword))
+    if (kw = "")
+        return
+    if (IsSet(g_HoleRuntimeEnabled) && !g_HoleRuntimeEnabled)
+        return
+    if FuncExists("TrayMenu_HardenHoleUiTransition") {
+        try
+            TrayMenu_HardenHoleUiTransition("hole_search_commit", 1200)
+        catch {
+            if FuncExists("TrayMenu_PrepareUiOpenFromHoleMode")
+                try TrayMenu_PrepareUiOpenFromHoleMode()
+        }
+    }
+    try GDHO_SetClickThrough(true)
+    if FuncExists("FloatingToolbar_RequestSearchByKeyword") {
+        try FloatingToolbar_RequestSearchByKeyword(kw)
+    } else if FuncExists("SearchCenter_RunQueryWithKeyword") {
+        try SearchCenter_RunQueryWithKeyword(kw)
+    }
+}
+
+GDHO_RoutePayload(payloadType, data) {
+    global g_GDHO_LastRouteSig, g_GDHO_LastRouteTick
+    pt := StrLower(Trim(String(payloadType)))
+    try NativeDropDiag_Log("[HoleRouter] type=" . pt)
+    if (pt = "text") {
+        t := Trim(String(data))
+        if (t = "")
+            return
+        sig := StrLen(t) . ":" . SubStr(t, 1, 24)
+        if (sig = g_GDHO_LastRouteSig && (A_TickCount - g_GDHO_LastRouteTick) < 400)
+            return
+        g_GDHO_LastRouteSig := sig
+        g_GDHO_LastRouteTick := A_TickCount
+        GDHO_TriggerSearchCenter(t)
+    } else if (pt = "file") {
+        if !(data is Array) || data.Length = 0
+            return
+        if FuncExists("FloatingToolbar_HandleDroppedFiles")
+            try FloatingToolbar_HandleDroppedFiles(data)
+    } else if (pt = "image") {
+        try NativeDropDiag_Log("[HoleRouter] image stub")
+    } else {
+        try NativeDropDiag_Log("[HoleRouter] unknown type=" . pt)
+    }
+}
+
+GDHO_StuckOpeningGuard(lDown) {
+    global g_GDHO_CurrentPhase, g_GDHO_PhaseLastChanged, GDHO_READY, GDHO_PHASE_OPENING, GDHO_PHASE_CLOSING
+    global g_GDHO_StuckRecycleCooldownUntil
+    if lDown
+        return
+    if (A_TickCount < g_GDHO_StuckRecycleCooldownUntil)
+        return
+    ph := StrUpper(Trim(String(g_GDHO_CurrentPhase)))
+    if !(ph = GDHO_PHASE_OPENING || ph = GDHO_PHASE_CLOSING)
+        return
+    elapsed := A_TickCount - g_GDHO_PhaseLastChanged
+    if (elapsed < 3000)
+        return
+    if (GDHO_READY && ph = GDHO_PHASE_OPENING)
+        return
+    try NativeDropDiag_Log("gdho stuck_opening_guard elapsed_ms=" . elapsed)
+    GDHO_HardRecycleHost("stuck_opening_guard")
+}
+
+GDHO_HardRecycleHost(reason := "") {
+    global GDHO_GUI, GDHO_WV2_CTRL, GDHO_WV2, GDHO_READY, GDHO_VISIBLE, g_GDHO_CreateInFlight
+    global g_GDHO_CurrentToken, g_HoleRuntimeEnabled, GDHO_DIAG_CTRL, GDHO_DIAG_VISIBLE
+    global g_GDHO_TransitionCtx, g_GDHO_AntiHangTimerArmed, g_GDHO_StuckRecycleCooldownUntil
+    try NativeDropDiag_Log("gdho hard_recycle begin reason=" . String(reason))
+    GDHO_CancelReleaseCoalesceTimer()
+    GDHO_RelBundleReset()
+    g_GDHO_CurrentToken += 1
+    g_GDHO_CreateInFlight := false
+    g_GDHO_AntiHangTimerArmed := false
+    if IsObject(GDHO_WV2_CTRL) {
+        try GDHO_WV2_CTRL.Close()
+        catch {
+        }
+    }
+    GDHO_WV2_CTRL := 0
+    GDHO_WV2 := 0
+    GDHO_READY := false
+    if IsObject(GDHO_GUI) {
+        try {
+            GDHO_GUI.Destroy()
+        } catch {
+        }
+    }
+    GDHO_GUI := 0
+    GDHO_DIAG_CTRL := 0
+    GDHO_DIAG_VISIBLE := false
+    GDHO_VISIBLE := false
+    g_GDHO_StuckRecycleCooldownUntil := A_TickCount + 10000
+    GDHO_ForceReset(reason != "" ? reason : "hard_recycle")
+    try NativeDropDiag_Log("gdho hard_recycle done")
+    if (IsSet(g_HoleRuntimeEnabled) && g_HoleRuntimeEnabled) {
+        SetTimer(GDHO_HardRecycleReinit, -220)
+    }
+}
+
+GDHO_HardRecycleReinit(*) {
+    global g_GDHO_TransitionCtx
+    GDHO_SetPhase(GDHO_PHASE_CLOSED, "hard_recycle_reinit")
+    g_GDHO_TransitionCtx["allow"] := true
+    try GDHO_Init()
+    finally g_GDHO_TransitionCtx["allow"] := false
+    try GDHO_PrewarmOffscreen()
+}
 
 GDHO_ApplyHideDockSettings(enabled := true, edge := "right", margin := 10) {
     global GDHO_HIDE_DOCK_ENABLED, GDHO_HIDE_DOCK_EDGE, GDHO_HIDE_DOCK_MARGIN
@@ -334,8 +658,8 @@ GDHO_AntiHangTick(token) {
     timeoutMs := (g_GDHO_CurrentPhase = GDHO_PHASE_OPENING) ? 7000 : 2500
     if (elapsed > timeoutMs) {
         g_GDHO_AntiHangTimerArmed := false
-        try GDHO_Trace("gdho_force_reset_watchdog phase=" . g_GDHO_CurrentPhase . " elapsed=" . elapsed)
-        GDHO_SubmitIntent("FORCE_RESET", 5, Map("reason", "anti_hang_" . g_GDHO_CurrentPhase))
+        try GDHO_Trace("gdho_hard_recycle_watchdog phase=" . g_GDHO_CurrentPhase . " elapsed=" . elapsed)
+        GDHO_HardRecycleHost("anti_hang_" . g_GDHO_CurrentPhase)
         return
     }
     SetTimer((*) => GDHO_AntiHangTick(token), -80)
@@ -443,7 +767,7 @@ GDHO_ForceReset(reason := "") {
     global GDHO_VISIBLE, GDHO_ACTIVE, GDHO_READY, GDHO_INTERACTIVE, GDHO_CLICKTHROUGH, GDHO_FIRST_REVEAL_DONE, GDHO_ERROR
     global GDHO_FRONTEND_PENDING_JS, g_GDHO_FrontendQueue, g_GDHO_WaitingReadyReveal, g_GDHO_CloseAfterReady
     global GDHO_RELEASE_PENDING, GDHO_RELEASE_DEADLINE_TICK, GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD, NativeDropSessionActive
-    global g_GDHO_CreateInFlight, g_GDHO_CreateStartTick
+    global g_GDHO_CreateInFlight, g_GDHO_CreateStartTick, g_GDHO_CurrentPhase
     try GDHO_Trace("gdho_force_reset reason=" . reason)
     GDHO_FRONTEND_PENDING_JS := ""
     g_GDHO_FrontendQueue := []
@@ -468,6 +792,9 @@ GDHO_ForceReset(reason := "") {
     try GDHO_ParkOverlay()
     catch {
     }
+    g_GDHO_WaitingReadyReveal := false
+    g_GDHO_CreateInFlight := false
+    GDHO_SetPhase(GDHO_PHASE_CLOSED, "force_reset_" . reason)
 }
 
 GDHO_SetAnchorMode(mode := "toolbar_center") {
@@ -601,11 +928,14 @@ GDHO_CreateOverlayGui() {
 
 GDHO_DIAG_LOG(msg, elapsedMs := "") {
     global GDHO_DIAG_CTRL, GDHO_DIAG_VISIBLE
+    GDHO_DIAG_VISIBLE := false
     if !IsObject(GDHO_DIAG_CTRL)
         return
-    ; Runtime diagnostics should not leak into the drag overlay UI.
-    GDHO_DIAG_CTRL.Visible := false
-    GDHO_DIAG_VISIBLE := false
+    try
+        GDHO_DIAG_CTRL.Visible := false
+    catch {
+        GDHO_DIAG_CTRL := 0
+    }
 }
 
 GDHO_ApplyAdaptiveAnimLevel() {
@@ -664,10 +994,25 @@ GDHO_SetProximity(prox) {
 
 GDHO_OnWebViewCreated(ctrl) {
     global GDHO_WV2_CTRL, GDHO_WV2, GDHO_READY, GDHO_PAGE_URL, GDHO_NAV_FAIL_COUNT
-    global g_GDHO_CreateInFlight, g_GDHO_CreateStartTick, g_GDHO_CreateToken
+    global g_GDHO_CreateInFlight, g_GDHO_CreateStartTick, g_GDHO_CreateToken, GDHO_GUI
 
     if !GDHO_IsCurrentToken(g_GDHO_CreateToken) {
         try GDHO_Trace("gdho_webview_create_drop_stale token=" . g_GDHO_CreateToken)
+        try {
+            if IsObject(ctrl)
+                ctrl.Close()
+        } catch {
+        }
+        return
+    }
+    if !IsObject(GDHO_GUI) {
+        g_GDHO_CreateInFlight := false
+        g_GDHO_CreateStartTick := 0
+        try {
+            if IsObject(ctrl)
+                ctrl.Close()
+        } catch {
+        }
         return
     }
     g_GDHO_CreateInFlight := false
@@ -757,8 +1102,27 @@ GDHO_OnWebMessage(sender, args) {
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'ack:first_frame' })")
         return
     }
+    if (typ = "hole_web_drop") {
+        if GDHO_CLICKTHROUGH
+            try NativeDropDiag_Log("selection webview_drop_while_clickthrough")
+        wctx := Map()
+        if (msg.Has("richPayload") && (msg["richPayload"] is Map)) {
+            wctx["richPayload"] := msg["richPayload"]
+            wctx["kind"] := msg.Has("kind") ? StrLower(Trim(String(msg["kind"]))) : ""
+        } else {
+            wk := msg.Has("kind") ? StrLower(Trim(String(msg["kind"]))) : ""
+            wctx["kind"] := wk
+            if (wk = "text" && msg.Has("text"))
+                wctx["text"] := msg["text"]
+            if (wk = "file" && msg.Has("files"))
+                wctx["files"] := msg["files"]
+        }
+        GDHO_SubmitReleaseSignal("webview_drop", wctx)
+        return
+    }
     if (typ = "hole_close") {
         GDHO_Trace("webmsg hole_close")
+        GDHO_CancelReleaseCoalesceTimer()
         GDHO_IS_SUCKING := false
         GDHO_EXPANDED_HOLD := false
         GDHO_RequestClose("frontend_hole_close")
@@ -786,6 +1150,7 @@ GDHO_HandleDropPayload(payload) {
             GDHO_LAST_DROPPED_TEXT := txt
             GDHO_SESSION_TEXT := txt
             try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:captured' })")
+            GDHO_RoutePayload("text", txt)
         }
         return
     }
@@ -891,7 +1256,10 @@ GDHO_ResizeToVirtualScreen() {
     try GDHO_GUI.Move(gx, gy, hostW, hostH)
     rc := WebView2.RECT()
     rc.left := 0, rc.top := 0, rc.right := hostW, rc.bottom := hostH
-    try GDHO_WV2_CTRL.Bounds := rc
+    try
+        GDHO_WV2_CTRL.Bounds := rc
+    catch {
+    }
 }
 
 GDHO_PrewarmOffscreen(*) {
@@ -1310,8 +1678,10 @@ GDHO_Show(payload := "file", x := "", y := "") {
 GDHO_Update(payload := "file", x := "", y := "") {
     global GDHO_LAST_UPDATE_TICK, GDHO_UPDATE_MIN_INTERVAL_MS, GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_POSITION_MODE
     global GDHO_LAST_X, GDHO_LAST_Y, GDHO_JUMP_LERP_THRESHOLD_PX, GDHO_GUI, GDHO_CLICKTHROUGH, GDHO_HITTEST_CAPTURED
-    global GDHO_LAST_DIST_TO_HOLE, GDHO_SUCK_RADIUS, GDHO_IS_SUCKING
+    global GDHO_LAST_DIST_TO_HOLE, GDHO_SUCK_RADIUS, GDHO_IS_SUCKING, NativeDropSessionActive, GDHO_ACTIVE
     nowTick := A_TickCount
+    if (NativeDropSessionActive || GDHO_ACTIVE)
+        GDHO_EnsureDragSessionInteractive()
     if (GDHO_LAST_UPDATE_TICK && (nowTick - GDHO_LAST_UPDATE_TICK < GDHO_UPDATE_MIN_INTERVAL_MS))
         return
     p := (payload = "text") ? "text" : "file"
@@ -1406,6 +1776,8 @@ GDHO_ExecuteDropCommand(payload := "file") {
             try txt := Trim(String(A_Clipboard))
         }
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:" (txt != "" ? "captured" : "empty") "' })")
+        if (txt != "")
+            GDHO_RoutePayload("text", txt)
         GDHO_SESSION_TEXT := ""
         return
     }
@@ -1613,6 +1985,8 @@ GDHO_CompleteSessionTextCapture(ticket, *) {
         GDHO_SESSION_TEXT := ""
     }
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:" (GDHO_SESSION_TEXT != "" ? "captured" : "empty") "' })")
+    if (GDHO_SESSION_TEXT != "")
+        GDHO_RoutePayload("text", GDHO_SESSION_TEXT)
 }
 
 GDHO_FinishSuckSession(*) {
@@ -1743,6 +2117,7 @@ GDHO_PollDrag(*) {
         pollStartTick := A_TickCount
 
         lDown := GetKeyState("LButton", "P")
+        GDHO_StuckOpeningGuard(lDown)
         CoordMode("Mouse", "Screen")
         MouseGetPos(&mx, &my, &hwnd)
         isOwn := GDHO_IsOwnWindowHwnd(hwnd)
@@ -1781,6 +2156,10 @@ GDHO_PollDrag(*) {
             GDHO_DRAG_CURSOR_STREAK := 0
             distNow := GDHO_GetDistanceToHoleCenter(mx, my)
             inSuckZone := (distNow <= Float(GDHO_SUCK_RADIUS) || GDHO_LAST_DIST_TO_HOLE <= Float(GDHO_SUCK_RADIUS))
+            if NativeDropSessionActive {
+                GDHO_SubmitReleaseSignal("physical", Map("mx", mx, "my", my, "inSuckZone", inSuckZone))
+                return
+            }
             if ((GDHO_ACTIVE || NativeDropSessionActive) && inSuckZone) {
                 try NativeDropDiag_Log("[Physical_Suck_Release] dist=" . Format("{:.1f}", distNow) . " lastDist=" . Format("{:.1f}", GDHO_LAST_DIST_TO_HOLE))
                 GDHO_ForceSuckAction()

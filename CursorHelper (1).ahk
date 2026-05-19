@@ -1,4 +1,4 @@
-﻿; ===================== msg =====================
+; ===================== msg =====================
 #Requires AutoHotkey v2.0
 
 global pToken := Gdip_Startup()
@@ -3219,6 +3219,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
         return
     }
     if (kindRaw = "drag_end") {
+        canCommit := false
         try {
             endX := ""
             endY := ""
@@ -3252,7 +3253,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
                 try NativeDropDiag_Log("route drag_end_text action=blocked dist=" . Round(NativeDropCurrentMoveDistance, 1) . " min_dist=" . NativeDropMinCommitDistancePx . " ms=" . sinceStartMs . " min_ms=" . NativeDropMinCommitMs . " hover_valid=" . (GDHO_HOVER_VALID ? "1" : "0") . " over_hole=" . (NativeDropOverHole ? "1" : "0") . " strict_over_hole=" . (strictOverHole ? "1" : "0") . " dwell_ms=" . dwellMs . " min_dwell=" . NativeDropMinDwellInHoleMs)
         } catch {
         }
-        NativeDropBridge_ResetSessionAsync("drag_end", NativeDropHideDelayMs)
+        try GDHO_SubmitReleaseSignal("bridge_drag_end", Map("canCommit", canCommit, "payload", NativeDropSessionPayload))
         return
     }
 
@@ -3265,7 +3266,11 @@ NativeDropBridge_TriggerHolePulse(evt) {
             return
         }
         if (kind = "text") {
-            try NativeDropDiag_Log("route kind=drop action=ignore_text reason=strict_drag_end_commit")
+            try NativeDropDiag_Log("route kind=drop action=coalesce_text")
+            clone := Map()
+            for kk, vv in evt
+                clone[kk] := vv
+            try GDHO_SubmitReleaseSignal("bridge_drop", clone)
             return
         }
         NativeDropSessionPayload := kind
@@ -3313,8 +3318,16 @@ NativeDropBridge_ApplyDropAction(evt, kind := "") {
         kind0 := "text"
 
     if (kind0 = "text") {
-        ; Baseline mode: text drag only shows hole overlay, no auto-search action.
-        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text_drag_overlay_only' })")
+        t := ""
+        try t := Trim(String(NativeDropSeedText))
+        if (t = "")
+            try t := Trim(String(NativeDropBridge_CaptureTextSeed()))
+        if (t != "") {
+            try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text_drag_commit' })")
+            GDHO_RoutePayload("text", t)
+        } else {
+            try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text_drag_overlay_only' })")
+        }
         return true
     }
 
@@ -3432,7 +3445,7 @@ NativeDropBridge_DragSessionTick(*) {
     if !NativeDropSessionActive
         return
     try {
-        GDHO_SetClickThrough(true)
+        GDHO_EnsureDragSessionInteractive()
         CoordMode("Mouse", "Screen")
         MouseGetPos(&mx, &my)
         NativeDropLastEventTick := A_TickCount
@@ -3735,7 +3748,7 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
         return
     }
     try NativeDropDiag_Log("reset_session_async_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
-    hideOverlay := !(r = "caps_f_search" || r = "search_center_exit" || r = "hole_close")
+    hideOverlay := !(r = "caps_f_search" || r = "search_center_exit" || r = "hole_close" || r = "hole_search_commit")
     try NativeDropBridge_ResetSession(reason, hideDelayMs, silentMode, hideOverlay)
     catch as err {
         try NativeDropDiag_Log("reset_session_async_error reason=" . reason . " msg=" . err.Message)

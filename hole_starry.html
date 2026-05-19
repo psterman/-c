@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
@@ -363,6 +363,25 @@
           try { e.dataTransfer.dropEffect = 'copy'; } catch (_) {}
         }
         const hasFiles = !!(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0);
+        const paths = [];
+        if (hasFiles) {
+          for (let i = 0; i < e.dataTransfer.files.length; i++) {
+            try {
+              const f = e.dataTransfer.files[i];
+              if (f && f.path) paths.push(String(f.path));
+            } catch (_) {}
+          }
+        }
+        let plain = '';
+        try { plain = (e.dataTransfer && e.dataTransfer.getData) ? String(e.dataTransfer.getData('text/plain') || '').trim() : ''; } catch (_) {}
+        try {
+          if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+            const msg = hasFiles && paths.length
+              ? { type: 'hole_web_drop', kind: 'file', files: paths }
+              : { type: 'hole_web_drop', kind: 'text', text: plain || '' };
+            window.chrome.webview.postMessage(JSON.stringify(msg));
+          }
+        } catch (_) {}
         window.HoleOverlay.drop({ payload: hasFiles ? 'file' : 'text' });
       }, true);
 

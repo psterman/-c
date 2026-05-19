@@ -1,0 +1,20 @@
+﻿[2026-05-19 16:11:14][ifs] [0x10/0x00/0x01]
+[2026-05-19 16:11:14][force_close_begin] reason=tray_show_hole visible=0 waiting=0 ready=0 ui_ready=0
+[2026-05-19 16:11:14][wm_chain_unregister_begin] reason=tray_show_hole count=0
+[2026-05-19 16:11:14][wm_chain_unregister_done] reason=tray_show_hole count=0
+[2026-05-19 16:11:14][hide_done] visible=0 reason=tray_show_hole
+[2026-05-19 16:11:14][force_close_done] reason=tray_show_hole
+[2026-05-19 16:15:57][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-19 16:15:57][init_guard_drop] reason=empty
+[2026-05-19 17:46:33][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-19 17:46:33][init_guard_drop] reason=empty
+[2026-05-19 17:55:49][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-19 17:55:49][init_guard_drop] reason=empty
+[2026-05-19 18:22:33][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-19 18:22:33][init_guard_drop] reason=empty
+[2026-05-19 18:24:09][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-19 18:24:09][init_guard_drop] reason=empty
+[2026-05-19 19:32:03][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-19 19:32:03][init_guard_drop] reason=empty
+[2026-05-19 19:54:46][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-19 19:54:46][init_guard_drop] reason=empty

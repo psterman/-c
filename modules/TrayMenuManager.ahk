@@ -1,4 +1,4 @@
-﻿; TrayMenuManager.ahk — 托盘高分辨率图标、自定义暗色菜单、监听 0x0404（与历史脚本中的 0x404 同值）
+; TrayMenuManager.ahk — 托盘高分辨率图标、自定义暗色菜单、监听 0x0404（与历史脚本中的 0x404 同值）
 ; 依赖：主脚本已 #Include lib\Gdip_All.ahk；其余符号（GetText、CleanUp、ExecuteScreenshotWithMenu、ShowSearchCenter、
 ; FloatingToolbar_*、CP_Show、ShowConfigGUI 等）在运行时至托盘点击时已解析。
 
@@ -590,7 +590,7 @@ TrayMenu_HardenHoleUiTransition(target := "tray_open_ui", timeoutMs := 1800) {
     Critical "Off"
     global GDHO_VISIBLE, NativeDropSessionActive, g_IsUIVisibleTransitioning, g_TrayMenuTransitionToken, g_TrayMenuTransitionStartTick
     global g_GDHO_CurrentPhase, g_GDHO_CurrentToken
-    isSearchOpen := (target = "tray_open_search" || target = "caps_f_search" || target = "search")
+    isSearchOpen := (target = "tray_open_search" || target = "caps_f_search" || target = "search" || target = "hole_search_commit")
     g_IsUIVisibleTransitioning := true
     g_TrayMenuTransitionToken += 1
     g_TrayMenuTransitionStartTick := A_TickCount

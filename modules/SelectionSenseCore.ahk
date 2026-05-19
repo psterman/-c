@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 ; 閫夊尯鎰熷簲锛殈LButton Up 鍚庯紝鑻?Hub 宸插紑涓旂劍鐐瑰湪 Cursor锛屽垯鏉′欢妯℃嫙 ^c 鈫?preview_update锛涘惁鍒欐竻閫夊尯缂撳瓨銆?; HubCapsule锛氬伐鍏锋爮銆屾柊銆嶃€丆ursor 鍐呭弻鍑?Ctrl+C锛坉raft_collect锛夈€丆apsLock+C銆佹樉寮忓瓨鍏ワ紱棰勮涓庤崏绋挎秷鎭垎娴併€?
 global g_SelSense_Enabled := true
 global g_SelSense_CopyDelayMs := 55
@@ -1688,9 +1688,12 @@ global g_SelSense_LButtonDownX := 0
 global g_SelSense_LButtonDownY := 0
 global g_SelSense_LButtonDownTick := 0
 global g_SelSense_LButtonClicks := 0
+global g_SelSense_HoleRouteSerial := 0
 
 SelectionSense_OnLButtonDown(*) {
     global g_SelSense_LButtonDownX, g_SelSense_LButtonDownY, g_SelSense_LButtonDownTick, g_SelSense_LButtonClicks
+    global g_SelSense_HoleRouteSerial
+    g_SelSense_HoleRouteSerial += 1
     CoordMode("Mouse", "Screen")
     MouseGetPos(&g_SelSense_LButtonDownX, &g_SelSense_LButtonDownY)
     if (A_TickCount - g_SelSense_LButtonDownTick < 400) {
@@ -1704,6 +1707,7 @@ SelectionSense_OnLButtonDown(*) {
 SelectionSense_OnLButtonUp(*) {
     global g_SelSense_Enabled, g_SelSense_RequireIBeam
     global g_SelSense_LButtonDownX, g_SelSense_LButtonDownY, g_SelSense_LButtonClicks, g_SelSense_LButtonDownTick
+    global g_HoleRuntimeEnabled, EnableHoleOverlayOnNativeDrop
     if !g_SelSense_Enabled {
         SelectionSense_Diag_Log("lbutton_up skip=disabled")
         return
@@ -1732,7 +1736,18 @@ SelectionSense_OnLButtonUp(*) {
         return
     }
 
-    ; New baseline: selection should not auto-copy or auto-open search center.
+    hubPreviewActive := false
+    try hubPreviewActive := (SelectionSense_HubCapsuleHostIsOpen() && SelectionSense_IsCursorEditorActive())
+    catch {
+        hubPreviewActive := false
+    }
+    holeCapture := !!(g_HoleRuntimeEnabled && EnableHoleOverlayOnNativeDrop)
+    if (holeCapture || hubPreviewActive) {
+        delayMs := Max(1, SelectionSense_CopyDelayMsEffective())
+        SelectionSense_Diag_Log("lbutton_up trigger=process_deferred hole=" . SelectionSense_Diag_Bool(holeCapture) . " hub=" . SelectionSense_Diag_Bool(hubPreviewActive) . " delay_ms=" . delayMs)
+        SetTimer(SelectionSense_ProcessDeferredTimerWrapper, -delayMs)
+        return
+    }
     SelectionSense_Diag_Log("lbutton_up trigger=selection_only_no_copy")
 }
 
@@ -1747,7 +1762,7 @@ SelectionSense_ProcessDeferredTimerWrapper() {
 SelectionSense_ProcessDeferred(*) {
     global g_SelSense_Enabled, g_SelSense_LastClipSig, g_SelSense_LastFireTick
     global g_SelSense_LastFullText, g_SelSense_LastTick, g_SelSense_UserCopyInProgress, g_SelSense_UserCopyEndTick
-    global g_SelSense_ClipWaitSec, CapsLockCopyInProgress
+    global g_SelSense_ClipWaitSec, CapsLockCopyInProgress, g_SelSense_CopyTicket
 
     if !g_SelSense_Enabled {
         SelectionSense_Diag_Log("process skip=disabled")
@@ -1898,8 +1913,27 @@ SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActi
     }
 }
 
+SelectionSense_RunPendingHoleRoute(serial, txt, *) {
+    global g_SelSense_HoleRouteSerial, g_SelSense_UserCopyInProgress, g_SelSense_UserCopyEndTick, CapsLockCopyInProgress
+    if (Integer(serial) != Integer(g_SelSense_HoleRouteSerial)) {
+        SelectionSense_Diag_Log("hole_route skip=stale_serial")
+        return
+    }
+    if (g_SelSense_UserCopyInProgress || (A_TickCount - g_SelSense_UserCopyEndTick < 950) || CapsLockCopyInProgress) {
+        SelectionSense_Diag_Log("hole_abort=user_copy_guard")
+        return
+    }
+    if (GetKeyState("v", "P") && (GetKeyState("Ctrl", "P") || GetKeyState("Ctrl"))) {
+        SelectionSense_Diag_Log("hole_abort=paste_detected")
+        return
+    }
+    if FuncExists("GDHO_RoutePayload")
+        try GDHO_RoutePayload("text", txt)
+}
+
 SelectionSense_TryActivateHoleFromSelection(selectedText) {
     global g_HoleRuntimeEnabled, EnableHoleOverlayOnNativeDrop, GDHO_TriggerSource
+    global g_SelSense_HoleRouteSerial
     if !g_HoleRuntimeEnabled {
         SelectionSense_Diag_Log("hole skip=runtime_disabled")
         return
@@ -1915,15 +1949,17 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
         return
     }
 
-    ; Mouse selection auto-copy has no native drag events, so trigger hole/search directly.
+    ; Mouse selection auto-copy has no native drag events, so trigger hole preview then deferred search.
     SelectionSense_Diag_Log("hole show begin len=" . StrLen(t))
     GDHO_TriggerSource := "selection_copy"
     try GDHO_RequestOpen(Map("reason", "selection_copy", "payload", "text"))
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'selection_copy', dispatch: 'show:text', active: 1, overHole: 0, wasOverHole: 0, payload: 'text' })")
-    try FloatingToolbar_ActivateSearchCenter()
-    try FloatingToolbar_RequestSearchByKeyword(t)
+    try GDHO_RunJS("window.HoleOverlay?.update({ proximity: 0.62 })")
+    g_SelSense_HoleRouteSerial += 1
+    sid := g_SelSense_HoleRouteSerial
+    SetTimer(SelectionSense_RunPendingHoleRoute.Bind(sid, t), -120)
     try SetTimer(SelectionSense_HideHoleAfterSelection, -2200)
-    SelectionSense_Diag_Log("hole show scheduled hide_ms=2200")
+    SelectionSense_Diag_Log("hole show scheduled hide_ms=2200 route_serial=" . sid)
 }
 
 SelectionSense_HideHoleAfterSelection(*) {

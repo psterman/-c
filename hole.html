@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
@@ -795,7 +795,14 @@
         if (payload.kind === 'none')
           return;
         try { window.HoleOverlay.drop({ payload: payload.kind === 'text' ? 'text' : 'file' }); } catch (_) {}
-        postHostMessage({ type: 'hole_drop', payload: payload });
+        try {
+          postHostMessage(JSON.stringify({
+            type: 'hole_web_drop',
+            kind: payload.kind,
+            text: String(payload.text || ''),
+            richPayload: payload
+          }));
+        } catch (_) {}
       }, true);
       window.addEventListener('resize', function () { clampPos(pos.x, pos.y); });
       applyPos();

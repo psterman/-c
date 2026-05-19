@@ -381,9 +381,16 @@ class WebView2 {
 		static IID := '{4d00c0d1-9434-4eb6-8078-8697a560334f}'
 		Fill() {
 			if !this.ptr
-				return
-			DllCall('user32\GetClientRect', 'ptr', this.ParentWindow, 'ptr', RECT := Buffer(16))
-			this.Bounds := RECT
+				return this
+			try {
+				parentHwnd := this.ParentWindow
+				if !parentHwnd || !DllCall('IsWindow', 'Ptr', parentHwnd)
+					return this
+				DllCall('user32\GetClientRect', 'ptr', parentHwnd, 'ptr', RECT := Buffer(16))
+				this.Bounds := RECT
+			} catch as e {
+				try OutputDebug('[WebView2] Fill skipped: ' . e.Message)
+			}
 			return this
 		}
 		IsVisible {
