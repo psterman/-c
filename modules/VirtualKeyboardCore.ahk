@@ -264,7 +264,7 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "ch_z", "name", "结果过滤 / 文本", "desc", "CapsLock+Z：只看文本结果", "fn", "CH_RUN", "suggested", "z"),
             Map("id", "ch_x", "name", "结果过滤 / 剪贴板", "desc", "CapsLock+X：只看剪贴板结果", "fn", "CH_RUN", "suggested", "x"),
             Map("id", "ch_c", "name", "结果过滤 / 提示词", "desc", "CapsLock+C：只看提示词结果", "fn", "CH_RUN", "suggested", "c"),
-            Map("id", "ch_v", "name", "结果过滤 / 配置", "desc", "CapsLock+V：只看配置结果", "fn", "CH_RUN", "suggested", "v"),
+            Map("id", "ch_v", "name", "剪贴板时间线", "desc", "CapsLock+V：剪贴板时间线；Shift+V：Hub 合并粘贴", "fn", "CH_RUN", "suggested", "v"),
             Map("id", "ch_f", "name", "搜索中心 / 语音搜索", "desc", "CapsLock+F：打开搜索中心或语音搜索", "fn", "CH_RUN", "suggested", "f"),
             Map("id", "ch_g", "name", "显示虚拟键盘", "desc", "CapsLock+G：打开 VK KeyBinder（搜索中心内语义以面板为准）", "fn", "CH_RUN", "suggested", "g"),
             Map("id", "sc_activate_search", "name", "搜索", "desc", "打开并激活搜索中心", "fn", "CH_RUN"),
@@ -298,9 +298,9 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "sc_eng_wepilot", "name", "引擎 / wepilot", "desc", "切换 wepilot 选中状态（兼容别名）", "fn", "CH_RUN"),
             Map("id", "sc_filter_text", "name", "过滤 / 文本", "desc", "只看文本结果", "fn", "CH_RUN", "suggested", "z"),
             Map("id", "sc_filter_fulltext", "name", "过滤 / 全文搜索", "desc", "只看全文搜索结果", "fn", "CH_RUN"),
-            Map("id", "sc_filter_clipboard", "name", "过滤 / 剪贴板", "desc", "只看剪贴板结果", "fn", "CH_RUN", "suggested", "x"),
+            Map("id", "sc_filter_clipboard", "name", "过滤 / 剪贴板", "desc", "只看剪贴板结果", "fn", "CH_RUN", "suggested", "v"),
             Map("id", "sc_filter_prompt", "name", "过滤 / 提示词", "desc", "只看提示词结果", "fn", "CH_RUN", "suggested", "c"),
-            Map("id", "sc_filter_config", "name", "过滤 / 配置", "desc", "只看配置结果", "fn", "CH_RUN", "suggested", "v"),
+            Map("id", "sc_filter_config", "name", "过滤 / 配置", "desc", "只看配置结果", "fn", "CH_RUN"),
             Map("id", "sc_filter_hotkey", "name", "过滤 / 快捷键", "desc", "只看快捷键结果", "fn", "CH_RUN"),
             Map("id", "sc_filter_function", "name", "过滤 / 功能", "desc", "只看功能结果", "fn", "CH_RUN"),
             Map("id", "sc_filter_pinned", "name", "过滤 / 置顶", "desc", "只看置顶结果", "fn", "CH_RUN", "suggested", "p"),
@@ -342,7 +342,7 @@ _VK_BuiltinCommandCatalog() {
         ]),
         Map("id", "clipboard", "name", "📋 剪贴板", "commands", [
             Map("id", "ch_c", "name", "连续复制", "desc", "CapsLock+C：连续复制选区", "fn", "CH_RUN", "suggested", "c"),
-            Map("id", "ch_v", "name", "合并粘贴", "desc", "CapsLock+V：合并并粘贴已复制内容", "fn", "CH_RUN", "suggested", "v"),
+            Map("id", "ch_v", "name", "合并粘贴", "desc", "CapsLock+Shift+V：Hub 合并粘贴（CapsLock+V 为搜索中心剪贴板）", "fn", "CH_RUN", "suggested", "v"),
             Map("id", "ch_x", "name", "剪贴板管理", "desc", "CapsLock+X：打开剪贴板管理面板", "fn", "CH_RUN", "suggested", "x"),
             Map("id", "cp_search", "name", "搜索", "desc", "Ctrl+Enter：立即执行搜索", "fn", "CH_RUN", "suggested", "^Enter"),
             Map("id", "cp_clear_search", "name", "清空搜索框", "desc", "Ctrl+Backspace：清空搜索框", "fn", "CH_RUN", "suggested", "^Backspace"),
@@ -3261,7 +3261,7 @@ VK_SearchCenterResolveCapsChordCmd(physKey) {
         "z", "sc_filter_text",
         "x", "sc_filter_clipboard",
         "c", "sc_filter_prompt",
-        "v", "sc_filter_config",
+        "v", "sc_filter_clipboard",
         "p", "sc_filter_pinned"
     )
     if !def.Has(k)

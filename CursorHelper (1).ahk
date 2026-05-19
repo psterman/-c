@@ -5607,16 +5607,22 @@ $c:: {
         Send("c")
 }
 
-; V 键合并粘贴
+; V 键：Shift+V 合并粘贴（Hub）；否则一律唤醒剪贴板时间线（不走 HotkeyV / VK 绑定）
 $v:: {
-    if (SearchCenter_HandleCapsChordKey("v"))
-        return
-    if (VirtualKeyboard_HandleKey("v"))
-        return
-    if (HandleDynamicHotkey("v", "V"))
+    if GetKeyState("Shift", "P") {
+        CapsLock2 := false
+        RestoreCapsLockAfterChord()
+        CapsLockPaste()
         VK_NoteLastChFromCapsLockKey("v")
+        return
+    }
+    CapsLock2 := false
+    RestoreCapsLockAfterChord()
+    if (SearchCenter_ShouldUseWebView())
+        SCWV_OpenUnified("clipboard", "", "clipboard_hotkey")
     else
-        Send("v")
+        ShowSearchCenter()
+    VK_NoteLastChFromCapsLockKey("v")
 }
 
 ; X 键打开剪贴板管理面板（新的 FTS5 剪贴板管理器）
@@ -5739,8 +5745,11 @@ f:: {
         HandleSearchCenterF()
         VK_NoteLastChFromCapsLockKey("f")
     } else {
-        ; 否则激活搜索中心窗口
-        ShowSearchCenter()
+        ; 否则激活搜索中心窗口（综合搜索意图）
+        if (SearchCenter_ShouldUseWebView())
+            SCWV_OpenUnified("search", "", "search_hotkey")
+        else
+            ShowSearchCenter()
         VK_NoteLastChFromCapsLockKey("f")
     }
 }
@@ -5883,7 +5892,17 @@ $d::SearchCenter_HandleCapsChordKey("d")
 $z::SearchCenter_HandleCapsChordKey("z")
 $x::SearchCenter_HandleCapsChordKey("x")
 $c::SearchCenter_HandleCapsChordKey("c")
-$v::SearchCenter_HandleCapsChordKey("v")
+$v:: {
+    if GetKeyState("Shift", "P") {
+        CapsLock2 := false
+        RestoreCapsLockAfterChord()
+        CapsLockPaste()
+        return
+    }
+    CapsLock2 := false
+    RestoreCapsLockAfterChord()
+    SCWV_OpenUnified("clipboard", "", "clipboard_hotkey")
+}
 
 ; F 键：在倒计时期间加速执行
 $f:: {

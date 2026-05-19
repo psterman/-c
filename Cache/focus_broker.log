@@ -86,3 +86,24 @@
 [2026-05-19 10:30:09][focus][release] owner=SearchCenter reason=wm_deactivate
 [2026-05-19 10:35:17][focus][grant] owner=SearchCenter hwnd=16977754 priority=20 reason=show_focus
 [2026-05-19 10:36:34][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-19 10:37:55][focus][grant] owner=SearchCenter hwnd=16319908 priority=20 reason=show_focus
+[2026-05-19 10:38:52][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-19 10:55:29][focus][grant] owner=SearchCenter hwnd=6491536 priority=20 reason=show_focus
+[2026-05-19 11:17:54][focus][grant] owner=SearchCenter hwnd=42862600 priority=20 reason=show_focus
+[2026-05-19 11:18:13][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-19 11:19:02][focus][grant] owner=HubCapsule hwnd=16125850 priority=30 reason=show_menu
+[2026-05-19 11:19:02][focus][grant] owner=HubCapsule hwnd=16125850 priority=30 reason=nudge_focus
+[2026-05-19 11:19:04][focus][release] owner=HubCapsule reason=hide_menu_request
+[2026-05-19 11:24:48][focus][grant] owner=SearchCenter hwnd=48039934 priority=20 reason=show_focus
+[2026-05-19 11:24:57][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-19 11:25:04][focus][grant] owner=SearchCenter hwnd=48104574 priority=20 reason=focus_for_ime
+[2026-05-19 11:25:36][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-19 11:30:26][focus][grant] owner=SearchCenter hwnd=16780984 priority=20 reason=show_focus
+[2026-05-19 11:30:38][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-19 11:31:37][focus][grant] owner=SearchCenter hwnd=24185192 priority=20 reason=show_focus
+[2026-05-19 11:31:45][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-19 11:32:56][focus][grant] owner=SearchCenter hwnd=24316394 priority=20 reason=show_focus
+[2026-05-19 11:33:12][focus][release] owner=SearchCenter reason=wm_deactivate
+[2026-05-19 11:42:53][focus][grant] owner=SearchCenter hwnd=6819272 priority=20 reason=show_focus
+[2026-05-19 11:42:58][focus][release] owner=SearchCenter reason=gui_close
+[2026-05-19 12:21:06][focus][grant] owner=SearchCenter hwnd=24970194 priority=20 reason=show_focus

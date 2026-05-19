@@ -633,3 +633,111 @@
 2026-05-19 10:34:20 ttyd started port 7684 pid 13760 cmd=cmd.exe /k qwen
 2026-05-19 10:35:20 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
 2026-05-19 10:35:20 ttyd started port 7682 pid 15596 cmd=cmd.exe /k gemini
+2026-05-19 11:17:17 ttyd shell [qwen_cli] ttyd_auto_cli: cmd.exe /k qwen
+2026-05-19 11:17:17 ttyd started port 7684 pid 18596 cmd=cmd.exe /k qwen
+2026-05-19 11:17:33 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:17:33 ttyd started port 7682 pid 5988 cmd=cmd.exe /k gemini
+2026-05-19 11:17:45 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:17:45 ttyd started port 7682 pid 18388 cmd=cmd.exe /k gemini
+2026-05-19 11:17:57 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:17:57 ttyd started port 7682 pid 14684 cmd=cmd.exe /k gemini
+2026-05-19 11:18:09 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:18:09 ttyd started port 7682 pid 5424 cmd=cmd.exe /k gemini
+2026-05-19 11:18:21 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:18:21 ttyd started port 7682 pid 2908 cmd=cmd.exe /k gemini
+2026-05-19 11:18:33 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:18:33 ttyd started port 7682 pid 3996 cmd=cmd.exe /k gemini
+2026-05-19 11:18:45 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:18:45 ttyd started port 7682 pid 8904 cmd=cmd.exe /k gemini
+2026-05-19 11:18:57 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:18:57 ttyd started port 7682 pid 13496 cmd=cmd.exe /k gemini
+2026-05-19 11:19:09 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:19:09 ttyd started port 7682 pid 17336 cmd=cmd.exe /k gemini
+2026-05-19 11:19:21 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:19:21 ttyd started port 7682 pid 13248 cmd=cmd.exe /k gemini
+2026-05-19 11:19:33 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:19:33 ttyd started port 7682 pid 14760 cmd=cmd.exe /k gemini
+2026-05-19 11:19:45 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:19:45 ttyd started port 7682 pid 20320 cmd=cmd.exe /k gemini
+2026-05-19 11:19:57 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:19:57 ttyd started port 7682 pid 1616 cmd=cmd.exe /k gemini
+2026-05-19 11:20:09 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:20:09 ttyd started port 7682 pid 19224 cmd=cmd.exe /k gemini
+2026-05-19 11:20:22 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:20:22 ttyd started port 7682 pid 17284 cmd=cmd.exe /k gemini
+2026-05-19 11:20:34 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:20:34 ttyd started port 7682 pid 12236 cmd=cmd.exe /k gemini
+2026-05-19 11:20:46 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:20:46 ttyd started port 7682 pid 17228 cmd=cmd.exe /k gemini
+2026-05-19 11:20:58 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:20:58 ttyd started port 7682 pid 6872 cmd=cmd.exe /k gemini
+2026-05-19 11:21:10 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:21:10 ttyd started port 7682 pid 2996 cmd=cmd.exe /k gemini
+2026-05-19 11:21:22 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:21:22 ttyd started port 7682 pid 7752 cmd=cmd.exe /k gemini
+2026-05-19 11:21:34 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:21:34 ttyd started port 7682 pid 14724 cmd=cmd.exe /k gemini
+2026-05-19 11:21:46 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:21:46 ttyd started port 7682 pid 18904 cmd=cmd.exe /k gemini
+2026-05-19 11:21:58 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:21:58 ttyd started port 7682 pid 20072 cmd=cmd.exe /k gemini
+2026-05-19 11:22:42 ttyd shell [qwen_cli] ttyd_auto_cli: cmd.exe /k qwen
+2026-05-19 11:22:42 ttyd started port 7684 pid 7488 cmd=cmd.exe /k qwen
+2026-05-19 11:30:18 ttyd shell [qwen_cli] ttyd_auto_cli: cmd.exe /k qwen
+2026-05-19 11:30:18 ttyd started port 7684 pid 19088 cmd=cmd.exe /k qwen
+2026-05-19 11:30:50 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:30:50 ttyd started port 7682 pid 15204 cmd=cmd.exe /k gemini
+2026-05-19 11:30:52 ttyd shell [codex_cli] ttyd_auto_cli: cmd.exe /k codex
+2026-05-19 11:30:52 ttyd started port 7681 pid 9484 cmd=cmd.exe /k codex
+2026-05-19 11:31:02 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:31:02 ttyd started port 7682 pid 15864 cmd=cmd.exe /k gemini
+2026-05-19 11:31:10 ttyd shell [openclaw_cli] ttyd_auto_cli: cmd.exe /k openclaw
+2026-05-19 11:31:10 ttyd started port 7683 pid 11608 cmd=cmd.exe /k openclaw
+2026-05-19 11:31:14 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:31:14 ttyd started port 7682 pid 4820 cmd=cmd.exe /k gemini
+2026-05-19 11:31:26 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:31:26 ttyd started port 7682 pid 8268 cmd=cmd.exe /k gemini
+2026-05-19 11:31:38 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:31:38 ttyd started port 7682 pid 15184 cmd=cmd.exe /k gemini
+2026-05-19 11:31:40 ttyd shell [codex_cli] ttyd_auto_cli: cmd.exe /k codex
+2026-05-19 11:31:40 ttyd started port 7681 pid 19444 cmd=cmd.exe /k codex
+2026-05-19 11:31:50 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:31:50 ttyd started port 7682 pid 6016 cmd=cmd.exe /k gemini
+2026-05-19 11:32:02 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:32:02 ttyd started port 7682 pid 11180 cmd=cmd.exe /k gemini
+2026-05-19 11:32:15 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:32:15 ttyd started port 7682 pid 19012 cmd=cmd.exe /k gemini
+2026-05-19 11:32:27 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:32:27 ttyd started port 7682 pid 14924 cmd=cmd.exe /k gemini
+2026-05-19 11:32:39 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:32:39 ttyd started port 7682 pid 14480 cmd=cmd.exe /k gemini
+2026-05-19 11:32:51 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:32:51 ttyd started port 7682 pid 13876 cmd=cmd.exe /k gemini
+2026-05-19 11:33:03 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:33:03 ttyd started port 7682 pid 19588 cmd=cmd.exe /k gemini
+2026-05-19 11:33:04 ttyd shell [codex_cli] ttyd_auto_cli: cmd.exe /k codex
+2026-05-19 11:33:04 ttyd started port 7681 pid 19140 cmd=cmd.exe /k codex
+2026-05-19 11:33:15 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:33:15 ttyd started port 7682 pid 10972 cmd=cmd.exe /k gemini
+2026-05-19 11:33:27 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:33:27 ttyd started port 7682 pid 20104 cmd=cmd.exe /k gemini
+2026-05-19 11:33:40 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:33:40 ttyd started port 7682 pid 10128 cmd=cmd.exe /k gemini
+2026-05-19 11:33:52 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:33:52 ttyd started port 7682 pid 20296 cmd=cmd.exe /k gemini
+2026-05-19 11:34:37 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 11:34:37 ttyd started port 7682 pid 1224 cmd=cmd.exe /k gemini
+2026-05-19 11:36:58 ttyd shell [qwen_cli] ttyd_auto_cli: cmd.exe /k qwen
+2026-05-19 11:36:58 ttyd started port 7684 pid 15508 cmd=cmd.exe /k qwen
+2026-05-19 11:41:35 ttyd shell [qwen_cli] ttyd_auto_cli: cmd.exe /k qwen
+2026-05-19 11:41:35 ttyd started port 7684 pid 14772 cmd=cmd.exe /k qwen
+2026-05-19 11:48:11 ttyd shell [qwen_cli] ttyd_auto_cli: cmd.exe /k qwen
+2026-05-19 11:48:11 ttyd started port 7684 pid 3356 cmd=cmd.exe /k qwen
+2026-05-19 12:07:45 ttyd shell [qwen_cli] ttyd_auto_cli: cmd.exe /k qwen
+2026-05-19 12:07:45 ttyd started port 7684 pid 18088 cmd=cmd.exe /k qwen
+2026-05-19 12:15:52 ttyd shell [qwen_cli] ttyd_auto_cli: cmd.exe /k qwen
+2026-05-19 12:15:52 ttyd started port 7684 pid 20272 cmd=cmd.exe /k qwen
+2026-05-19 12:21:11 ttyd shell [codex_cli] ttyd_auto_cli: cmd.exe /k codex
+2026-05-19 12:21:11 ttyd started port 7681 pid 12052 cmd=cmd.exe /k codex
+2026-05-19 12:21:12 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-05-19 12:21:12 ttyd started port 7682 pid 3368 cmd=cmd.exe /k gemini

@@ -154,7 +154,16 @@ HandleDynamicHotkey(PressedKey, ActionType) {
                 ; 调用复制函数
                 CapsLockCopy()
             case "V":
-                CapsLockPaste()
+                ; CapsLock+V 已改为剪贴板时间线；合并粘贴仅 CapsLock+Shift+V
+                if GetKeyState("Shift", "P") {
+                    CapsLockPaste()
+                } else if (FuncExists("SearchCenter_ShouldUseWebView") && SearchCenter_ShouldUseWebView()) {
+                    SCWV_OpenUnified("clipboard", "", "clipboard_hotkey")
+                } else if (FuncExists("ShowSearchCenter")) {
+                    ShowSearchCenter()
+                } else {
+                    CapsLockPaste()
+                }
             case "X":
                 CapsLock2 := false
                 CP_Show()

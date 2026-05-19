@@ -562,7 +562,7 @@ InitGDI() {
 ; 显示搜索中心窗口（无边框，带分类标签栏）
 ShowSearchCenter() {
     if (SearchCenter_ShouldUseWebView()) {
-        SCWV_OpenUnified("search")
+        SCWV_OpenUnified("search", "", "search_hotkey")
         return
     }
     global GuiID_SearchCenter, UI_Colors, ThemeMode

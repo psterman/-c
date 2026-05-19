@@ -995,6 +995,63 @@ html[data-theme="light"] #startup-splash {
   font-size: 12px;
   color: var(--muted);
 }
+.sc-clip-float {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 6px;
+  padding: 6px 10px;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  overflow-x: auto;
+}
+.sc-clip-float.hidden {
+  display: none;
+}
+.sc-clip-float-label {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.sc-clip-float-chips {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 6px;
+  min-width: 0;
+}
+.sc-clip-chip {
+  flex: 0 1 auto;
+  max-width: 240px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--panel);
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sc-clip-chip:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+}
+.sc-clip-chip.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.result-item--clip-hot {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+  box-shadow: inset 3px 0 0 var(--accent);
+}
 #result-list {
   flex: 1 1 auto;
   min-height: 0;
@@ -2875,6 +2932,10 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
           </div>
         </div>
       </div>
+      <div id="sc-clip-float" class="sc-clip-float hidden" aria-label="最近剪贴板">
+        <span class="sc-clip-float-label">📋 刚刚复制</span>
+        <div id="sc-clip-float-chips" class="sc-clip-float-chips"></div>
+      </div>
       <div id="result-list"></div>
     </div>
     <div id="cli-workspace" class="cli-workspace hidden" aria-label="CLI 终端">
@@ -3230,6 +3291,10 @@ const state = {
   pdfWebBroken: false,
   pdfJsRx: null,
   hostTopMost: false,
+  recentClips: [],
+  clipFloatMaxAgeMs: 180000,
+  clipFloatExpanded: false,
+  clipboardHomeLock: false,
   uiMode: "local",
   activeCliEngine: "",
   cliReadyEngines: {},
@@ -3498,9 +3563,9 @@ const HOTKEY_HINT_DEFAULT_MAP = Object.freeze({
   }),
   filter: Object.freeze({
     File: "z",
-    clipboard: "x",
+    fulltext: "f",
+    clipboard: "v",
     template: "c",
-    config: "v",
     pinned: "p"
   })
 });
@@ -3610,6 +3675,32 @@ function emptyHotkeyBindingMap() {
   return { category: {}, engine: {}, filter: {} };
 }
 
+function migrateHotkeyBindings(map) {
+  if (!map || typeof map !== "object") return map;
+  const f = map.filter;
+  if (!f || typeof f !== "object") return map;
+  let changed = false;
+  if (f.fulltext === "v") {
+    f.clipboard = "v";
+    delete f.fulltext;
+    changed = true;
+  }
+  if (f.clipboard === "x" && f.config !== "x") {
+    if (!f.config || f.config === "v") f.config = "x";
+    f.clipboard = "v";
+    changed = true;
+  }
+  if (f.config === "v" && f.clipboard !== "v") {
+    f.clipboard = "v";
+    delete f.config;
+    changed = true;
+  }
+  if (changed) {
+    try { localStorage.setItem(SC_HOTKEY_BINDINGS_KEY, JSON.stringify(map)); } catch (_) {}
+  }
+  return map;
+}
+
 function loadHotkeyBindings() {
   try {
     const raw = localStorage.getItem(SC_HOTKEY_BINDINGS_KEY);
@@ -3624,7 +3715,7 @@ function loadHotkeyBindings() {
         out[group][k] = normalizeHintKey(src[k] || "");
       });
     });
-    return out;
+    return migrateHotkeyBindings(out);
   } catch {
     return emptyHotkeyBindingMap();
   }
@@ -4201,7 +4292,15 @@ function syncFilterDrawerSummary() {
   if (!el) return;
   const mode = getUIMode();
   if (mode === "local") {
-    el.textContent = "本地搜索";
+    const ft = String(state.filterType || "");
+    const chip = (state.filters || []).find((f) => f && f.key === ft);
+    if (ft === "clipboard") {
+      el.textContent = "本地搜索 · 剪贴板时间线";
+    } else if (chip && chip.text) {
+      el.textContent = "本地搜索 · " + chip.text;
+    } else {
+      el.textContent = "本地搜索";
+    }
     return;
   }
   if (mode === "cli") {
@@ -5566,15 +5665,195 @@ function queueCapsHotkeyTrigger(rawKey, modeScope = "search", targetChannel = "c
   return true;
 }
 
+function syncDockStatusText() {
+  const status = document.getElementById("status");
+  if (!status) return;
+  if (state.clipboardHomeLock || String(state.filterType || "") === "clipboard") {
+    const n = Array.isArray(state.results) ? state.results.length : 0;
+    status.textContent = n > 0 ? ("剪贴板时间线 · " + n + " 条") : "剪贴板时间线";
+    return;
+  }
+  status.textContent = state.statusLine || "已同步";
+}
+
 function applyUnifiedMode(mode) {
   const m = String(mode || "").toLowerCase() === "clipboard" ? "clipboard" : "search";
+  if (state.clipboardHomeLock && m !== "clipboard") return;
+  const prevFilter = String(state.filterType || "");
   state.unifiedMode = m;
   if (m === "clipboard") {
-    postToAhk({ type: "setCategory", category: "clipboard" });
-    postToAhk({ type: "setFilter", filterType: "clipboard", keyword: state.keyword || "" });
-    const status = document.getElementById("status");
-    if (status) status.textContent = "剪贴板合并模式";
+    state.clipboardHomeLock = true;
+    if (getUIMode() !== "local") setUIMode("local", false);
+    state.filterType = "clipboard";
+    if (prevFilter !== "clipboard") {
+      postToAhk({ type: "setFilter", filterType: "clipboard", keyword: state.keyword || "" });
+    }
+  } else {
+    state.clipboardHomeLock = false;
+    if (getUIMode() !== "local") setUIMode("local", false);
+    state.filterType = "";
+    if (prevFilter !== "") {
+      postToAhk({ type: "setFilter", filterType: "", keyword: state.keyword || "" });
+    }
   }
+  syncDockStatusText();
+  renderFilters();
+  syncFilterDrawerSummary();
+  const drawer = document.getElementById("filter-drawer");
+  if (drawer && drawer.classList.contains("collapsed")) setFilterCollapsed(false, false);
+}
+
+function focusSearchInput() {
+  const input = document.getElementById("search");
+  if (input) {
+    input.focus();
+    try { input.select(); } catch (_) {}
+  }
+}
+
+function focusResultListFirstRow() {
+  const list = document.getElementById("result-list");
+  if (!list) return;
+  const first = list.querySelector(".result-item");
+  if (first) {
+    try { first.focus({ preventScroll: false }); } catch (_) {}
+    first.scrollIntoView({ block: "nearest" });
+  } else {
+    list.focus();
+  }
+}
+
+function clipFloatHasFreshItems() {
+  const maxAge = Number(state.clipFloatMaxAgeMs) || 180000;
+  const items = Array.isArray(state.recentClips) ? state.recentClips : [];
+  if (!items.length) return false;
+  const ts = String(items[0].timestamp || "").trim();
+  if (!ts) return true;
+  const ms = Date.parse(ts.replace(" ", "T"));
+  if (!Number.isFinite(ms)) return true;
+  return (Date.now() - ms) < maxAge;
+}
+
+function renderClipFloatBar() {
+  const bar = document.getElementById("sc-clip-float");
+  const chips = document.getElementById("sc-clip-float-chips");
+  if (!bar || !chips) return;
+  const items = Array.isArray(state.recentClips) ? state.recentClips : [];
+  const fresh = clipFloatHasFreshItems();
+  if (!fresh || !items.length) {
+    bar.classList.add("hidden");
+    chips.innerHTML = "";
+    return;
+  }
+  bar.classList.remove("hidden");
+  chips.innerHTML = "";
+  items.slice(0, 3).forEach((item, idx) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "sc-clip-chip" + (idx === 0 ? " active" : "");
+    const preview = String(item.preview || item.content || "").replace(/\s+/g, " ").trim();
+    btn.textContent = preview.length > 72 ? preview.slice(0, 72) + "…" : preview;
+    btn.title = String(item.content || preview);
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      activateClipFloatItem(item);
+    });
+    btn.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const row = findResultRowForClipContent(item);
+      if (row > 0) postToAhk({ type: "activateResult", row });
+    });
+    chips.appendChild(btn);
+  });
+}
+
+function showClipFloatBar(show, expanded) {
+  if (typeof expanded === "boolean") state.clipFloatExpanded = expanded;
+  if (!show) {
+    const bar = document.getElementById("sc-clip-float");
+    if (bar) bar.classList.add("hidden");
+    return;
+  }
+  renderClipFloatBar();
+}
+
+function findResultRowForClipContent(item) {
+  const needle = String(item && item.content || "").trim();
+  if (!needle) return 0;
+  const hit = (state.results || []).find((r) => {
+    const c = String(r.content || "").trim();
+    const p = String(r.preview || "").trim();
+    return c === needle || p === needle || c.includes(needle) || needle.includes(c);
+  });
+  return hit ? Number(hit.row) || 0 : 0;
+}
+
+function activateClipFloatItem(item) {
+  const row = findResultRowForClipContent(item);
+  if (row > 0) {
+    state.selectedRow = row;
+    renderResults();
+    focusResultListFirstRow();
+    return;
+  }
+  postToAhk({ type: "setFilter", filterType: "clipboard", keyword: String(item.content || "").slice(0, 200) });
+}
+
+function applyClipFloatPayload(payload) {
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  state.recentClips = items.map((it) => ({
+    content: String(it.content || ""),
+    preview: String(it.preview || it.content || ""),
+    timestamp: String(it.timestamp || ""),
+    dataType: String(it.dataType || "")
+  }));
+  if (payload.maxAgeMs != null) state.clipFloatMaxAgeMs = Number(payload.maxAgeMs) || 180000;
+  renderClipFloatBar();
+}
+
+function refreshClipFloatFromServer() {
+  renderClipFloatBar();
+}
+
+function applyHostShow(payload) {
+  if (payload && payload.clipboardHomeLock) state.clipboardHomeLock = true;
+  const src = String(payload && payload.triggerSource || "");
+  if (src === "clipboard_hotkey") {
+    const alreadyClip =
+      state.clipboardHomeLock
+      && state.unifiedMode === "clipboard"
+      && String(state.filterType || "") === "clipboard"
+      && !String(state.keyword || "").trim();
+    state.clipboardHomeLock = true;
+    if (!alreadyClip) {
+      state.keyword = "";
+      const input = document.getElementById("search");
+      if (input) input.value = "";
+      applyUnifiedMode("clipboard");
+      postToAhk({
+        type: "searchGoRequest",
+        keyword: "",
+        offset: 0,
+        limit: effectiveSearchLimit(),
+        goType: "clipboard"
+      });
+    }
+    syncDockStatusText();
+    showClipFloatBar(true, true);
+    setTimeout(() => focusResultListFirstRow(), 120);
+    return;
+  }
+  if (state.clipboardHomeLock || payload.clipboardHomeLock) return;
+  state.clipboardHomeLock = false;
+  state.keyword = "";
+  const input = document.getElementById("search");
+  if (input) input.value = "";
+  applyUnifiedMode("search");
+  postToAhk({ type: "reloadBlankHome" });
+  focusSearchInput();
+  refreshClipFloatFromServer();
 }
 
 function shouldHandleCapsChordNow() {
@@ -6150,7 +6429,11 @@ function renderResults() {
   state.results.forEach((item) => {
     const expanded = item.row === state.expandedRow;
     const row = document.createElement("div");
-    row.className = "result-item" + (item.row === state.selectedRow ? " active" : "") + (expanded ? " expanded" : "");
+    const origDt = String(item.originalDataType || item.originaldatatype || "").toLowerCase();
+    row.className = "result-item"
+      + (item.row === state.selectedRow ? " active" : "")
+      + (expanded ? " expanded" : "")
+      + (origDt === "clipboard_top" ? " result-item--clip-hot" : "");
     row.dataset.row = String(item.row);
     const pinMark = item.pinned ? "<span class=\"pin-ico\" title=\"置顶\">🔝</span>" : "";
     const hitCtx = getHitContextList(item);
@@ -7476,6 +7759,14 @@ function applyState(payload) {
     applyTheme(payload.themeMode, false);
   }
   const prevFilterType = String(state.filterType || "");
+  const incomingFilter = String(payload.filterType || "");
+  const msgType = String(payload.type || "");
+  if (state.clipboardHomeLock && incomingFilter !== "clipboard") {
+    return;
+  }
+  if (state.unifiedMode === "clipboard" && msgType === "init" && incomingFilter !== "clipboard") {
+    return;
+  }
   state.keyword = payload.keyword || "";
   state.limit = payload.limit || 50;
   state.categories = normalizeListPayload(payload.categories);
@@ -7531,7 +7822,7 @@ function applyState(payload) {
 
   document.getElementById("search").value = state.keyword;
   document.getElementById("limit").value = String(state.limit);
-  document.getElementById("status").textContent = state.statusLine || "已同步";
+  syncDockStatusText();
   // CLI 模式下全文状态降频刷新，降低 UI 抖动与整体卡顿
   if (getUIMode() === "cli") {
     const nowFt = Date.now();
@@ -7578,7 +7869,12 @@ function applyState(payload) {
   if (getUIMode() !== "cli") {
     renderResults();
     // 本地首屏偶发空白兜底：空词+空结果时补拉一次默认搜索
-    if (!state.loading && !state.keyword && (!Array.isArray(state.resultsRaw) || state.resultsRaw.length === 0)) {
+    if (
+      !state.clipboardHomeLock
+      && !state.loading
+      && !state.keyword
+      && (!Array.isArray(state.resultsRaw) || state.resultsRaw.length === 0)
+    ) {
       const now = Date.now();
       if (now - _localInitKickAt > 1200) {
         _localInitKickAt = now;
@@ -8053,7 +8349,18 @@ if (window.chrome && window.chrome.webview) {
       return;
     }
     if (payload.type === "setUnifiedMode") {
-      applyUnifiedMode(payload.mode || "search");
+      const um = String(payload.mode || "search").toLowerCase();
+      if (!(state.clipboardHomeLock && um !== "clipboard")) {
+        applyUnifiedMode(payload.mode || "search");
+      }
+      return;
+    }
+    if (payload.type === "hostShow") {
+      applyHostShow(payload);
+      return;
+    }
+    if (payload.type === "clipFloat") {
+      applyClipFloatPayload(payload);
       return;
     }
     if (payload.type === "vk_set_filter") {
@@ -8246,6 +8553,7 @@ if (window.chrome && window.chrome.webview) {
     }
     if (payload.type === "init" || payload.type === "state") {
       applyState(payload);
+      renderClipFloatBar();
     }
   });
   if (window.NiumaBottomDock && typeof window.NiumaBottomDock.mount === "function")

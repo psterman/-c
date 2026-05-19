@@ -280,8 +280,13 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_SearchCenterSetFilter("fulltext")
                 executed := true
             case "sc_filter_clipboard":
-                if (_VK_H("IsSearchCenterActive"))
+                if (_VK_H("IsSearchCenterActive")) {
+                    global SearchCenterFilterType, SearchCenterWebKeyword, SearchCenterCurrentLimit
+                    SearchCenterFilterType := "clipboard"
+                    try SCWV_SetUnifiedMode("clipboard", true)
                     VK_SearchCenterSetFilter("clipboard")
+                    _SCWV_RunClipboardTimelineSearch(Trim(SearchCenterWebKeyword), 0, SearchCenterCurrentLimit)
+                }
                 executed := true
             case "sc_filter_prompt":
                 if (_VK_H("IsSearchCenterActive"))
@@ -391,10 +396,17 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_ClipboardSetContinuousPaste(true)
                     executed := true
                 } else if (_VK_H("IsSearchCenterActive")) {
-                    VK_SearchCenterSetFilter("config")
+                    VK_SearchCenterSetFilter("clipboard")
+                    try SCWV_SetUnifiedMode("clipboard", true)
+                    executed := true
+                } else if GetKeyState("Shift", "P") {
+                    _VK_H("CapsLockPaste")
+                    executed := true
+                } else if (_VK_H("SearchCenter_ShouldUseWebView") && _VK_H("SearchCenter_ShouldUseWebView")()) {
+                    SCWV_OpenUnified("clipboard", "", "clipboard_hotkey")
                     executed := true
                 } else {
-                    _VK_H("HandleDynamicHotkey",HotkeyV != "" ? HotkeyV : "v", "V")
+                    _VK_H("ShowSearchCenter")
                     executed := true
                 }
             case "ch_x":
