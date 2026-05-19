@@ -717,6 +717,13 @@ ConfigWebView_BuildInitData() {
         "imageFormat", IniRead(ConfigFile, "Screenshot", "ImageFormat", "png"),
         "jpegQuality", Integer(IniRead(ConfigFile, "Screenshot", "JpegQuality", "90")),
         "saveFilenamePattern", IniRead(ConfigFile, "Screenshot", "SaveFilenamePattern", "Screenshot_{yyyyMMdd_HHmmss}"),
+        "ocrEnhanceEnabled", IniRead(ConfigFile, "Screenshot", "OcrEnhanceEnabled", "1") != "0",
+        "ocrScalePrimary", Integer(IniRead(ConfigFile, "Screenshot", "OcrScalePrimary", "150")),
+        "ocrScaleSecondary", Integer(IniRead(ConfigFile, "Screenshot", "OcrScaleSecondary", "200")),
+        "ocrUseGrayscale", IniRead(ConfigFile, "Screenshot", "OcrUseGrayscale", "1") != "0",
+        "ocrMonochromeLow", Integer(IniRead(ConfigFile, "Screenshot", "OcrMonochromeLow", "160")),
+        "ocrMonochromeHigh", Integer(IniRead(ConfigFile, "Screenshot", "OcrMonochromeHigh", "175")),
+        "ocrUseInvert", IniRead(ConfigFile, "Screenshot", "OcrUseInvert", "1") != "0",
         "ocrTextLayoutMode", IniRead(ConfigFile, "Settings", "ScreenshotOCRTextLayoutMode", "keep"),
         "ocrPunctuationMode", IniRead(ConfigFile, "Settings", "ScreenshotOCRPunctuationMode", "keep"),
         "ocrDirectCopyEnabled", IniRead(ConfigFile, "Settings", "ScreenshotOCRDirectCopyEnabled", "0") = "1"
@@ -1042,6 +1049,13 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
             "imageFormat", "png",
             "jpegQuality", 90,
             "saveFilenamePattern", "Screenshot_{yyyyMMdd_HHmmss}",
+            "ocrEnhanceEnabled", true,
+            "ocrScalePrimary", 150,
+            "ocrScaleSecondary", 200,
+            "ocrUseGrayscale", true,
+            "ocrMonochromeLow", 160,
+            "ocrMonochromeHigh", 175,
+            "ocrUseInvert", true,
             "ocrTextLayoutMode", "keep",
             "ocrPunctuationMode", "keep",
             "ocrDirectCopyEnabled", false
@@ -1067,6 +1081,28 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
                 jq := 10
             if (jq > 100)
                 jq := 100
+            ocrScalePrimary := Integer(sc.Get("ocrScalePrimary", 150))
+            if (ocrScalePrimary < 100)
+                ocrScalePrimary := 100
+            if (ocrScalePrimary > 300)
+                ocrScalePrimary := 300
+            ocrScaleSecondary := Integer(sc.Get("ocrScaleSecondary", 200))
+            if (ocrScaleSecondary < 100)
+                ocrScaleSecondary := 100
+            if (ocrScaleSecondary > 300)
+                ocrScaleSecondary := 300
+            ocrMonoLow := Integer(sc.Get("ocrMonochromeLow", 160))
+            if (ocrMonoLow < 0)
+                ocrMonoLow := 0
+            if (ocrMonoLow > 255)
+                ocrMonoLow := 255
+            ocrMonoHigh := Integer(sc.Get("ocrMonochromeHigh", 175))
+            if (ocrMonoHigh < 0)
+                ocrMonoHigh := 0
+            if (ocrMonoHigh > 255)
+                ocrMonoHigh := 255
+            if (ocrMonoHigh < ocrMonoLow)
+                ocrMonoHigh := ocrMonoLow
             pat := Trim(String(sc.Get("saveFilenamePattern", "Screenshot_{yyyyMMdd_HHmmss}")))
             if (pat = "")
                 pat := "Screenshot_{yyyyMMdd_HHmmss}"
@@ -1085,6 +1121,13 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
                 "imageFormat", sf,
                 "jpegQuality", jq,
                 "saveFilenamePattern", pat,
+                "ocrEnhanceEnabled", sc.Get("ocrEnhanceEnabled", true) ? true : false,
+                "ocrScalePrimary", ocrScalePrimary,
+                "ocrScaleSecondary", ocrScaleSecondary,
+                "ocrUseGrayscale", sc.Get("ocrUseGrayscale", true) ? true : false,
+                "ocrMonochromeLow", ocrMonoLow,
+                "ocrMonochromeHigh", ocrMonoHigh,
+                "ocrUseInvert", sc.Get("ocrUseInvert", true) ? true : false,
                 "ocrTextLayoutMode", tl,
                 "ocrPunctuationMode", pm,
                 "ocrDirectCopyEnabled", sc.Get("ocrDirectCopyEnabled", false) ? true : false
@@ -1272,6 +1315,13 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         IniWrite(NewScreenshotCfg["imageFormat"], ConfigFile, "Screenshot", "ImageFormat")
         IniWrite(String(NewScreenshotCfg["jpegQuality"]), ConfigFile, "Screenshot", "JpegQuality")
         IniWrite(NewScreenshotCfg["saveFilenamePattern"], ConfigFile, "Screenshot", "SaveFilenamePattern")
+        IniWrite(NewScreenshotCfg["ocrEnhanceEnabled"] ? "1" : "0", ConfigFile, "Screenshot", "OcrEnhanceEnabled")
+        IniWrite(String(NewScreenshotCfg["ocrScalePrimary"]), ConfigFile, "Screenshot", "OcrScalePrimary")
+        IniWrite(String(NewScreenshotCfg["ocrScaleSecondary"]), ConfigFile, "Screenshot", "OcrScaleSecondary")
+        IniWrite(NewScreenshotCfg["ocrUseGrayscale"] ? "1" : "0", ConfigFile, "Screenshot", "OcrUseGrayscale")
+        IniWrite(String(NewScreenshotCfg["ocrMonochromeLow"]), ConfigFile, "Screenshot", "OcrMonochromeLow")
+        IniWrite(String(NewScreenshotCfg["ocrMonochromeHigh"]), ConfigFile, "Screenshot", "OcrMonochromeHigh")
+        IniWrite(NewScreenshotCfg["ocrUseInvert"] ? "1" : "0", ConfigFile, "Screenshot", "OcrUseInvert")
         IniWrite(NewScreenshotCfg["ocrTextLayoutMode"], ConfigFile, "Settings", "ScreenshotOCRTextLayoutMode")
         IniWrite(NewScreenshotCfg["ocrPunctuationMode"], ConfigFile, "Settings", "ScreenshotOCRPunctuationMode")
         IniWrite(NewScreenshotCfg["ocrDirectCopyEnabled"] ? "1" : "0", ConfigFile, "Settings", "ScreenshotOCRDirectCopyEnabled")
@@ -1773,4 +1823,3 @@ ConfigWebView_Close() {
     } catch {
     }
 }
-

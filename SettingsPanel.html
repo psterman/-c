@@ -930,6 +930,13 @@
           imageFormat: "png",
           jpegQuality: 90,
           saveFilenamePattern: "Screenshot_{yyyyMMdd_HHmmss}",
+          ocrEnhanceEnabled: true,
+          ocrScalePrimary: 150,
+          ocrScaleSecondary: 200,
+          ocrUseGrayscale: true,
+          ocrMonochromeLow: 160,
+          ocrMonochromeHigh: 175,
+          ocrUseInvert: true,
           ocrTextLayoutMode: "keep",
           ocrPunctuationMode: "keep",
           ocrDirectCopyEnabled: false
@@ -1611,21 +1618,41 @@
     }
     function readScreenshot(d) {
       const base = { ...(d.screenshotConfig || {}) };
+      const pickChecked = (id, fallback=false) => {
+        const el = document.getElementById(id);
+        return el ? !!el.checked : !!fallback;
+      };
       base.captureMode = document.getElementById("ssCaptureMode")?.value || base.captureMode || "selection";
       base.outputTarget = document.getElementById("ssOutputTarget")?.value || base.outputTarget || "editor";
-      base.includeCursor = !!document.getElementById("ssIncludeCursor")?.checked;
-      base.autoCopyClipboard = !!document.getElementById("ssAutoCopyClipboard")?.checked;
+      base.includeCursor = pickChecked("ssIncludeCursor", base.includeCursor);
+      base.autoCopyClipboard = pickChecked("ssAutoCopyClipboard", base.autoCopyClipboard);
       base.scalePercent = Number(document.getElementById("ssScalePercent")?.value || base.scalePercent || 100);
       base.imageFormat = document.getElementById("ssImageFormat")?.value || base.imageFormat || "png";
       base.jpegQuality = Number(document.getElementById("ssJpegQuality")?.value || base.jpegQuality || 90);
       base.saveFilenamePattern = (document.getElementById("ssFilenamePattern")?.value || base.saveFilenamePattern || "Screenshot_{yyyyMMdd_HHmmss}").trim();
+      base.ocrEnhanceEnabled = pickChecked("ssOcrEnhanceEnabled", base.ocrEnhanceEnabled !== false);
+      base.ocrScalePrimary = Number(document.getElementById("ssOcrScalePrimary")?.value || base.ocrScalePrimary || 150);
+      base.ocrScaleSecondary = Number(document.getElementById("ssOcrScaleSecondary")?.value || base.ocrScaleSecondary || 200);
+      base.ocrUseGrayscale = pickChecked("ssOcrUseGrayscale", base.ocrUseGrayscale !== false);
+      base.ocrMonochromeLow = Number(document.getElementById("ssOcrMonoLow")?.value || base.ocrMonochromeLow || 160);
+      base.ocrMonochromeHigh = Number(document.getElementById("ssOcrMonoHigh")?.value || base.ocrMonochromeHigh || 175);
+      base.ocrUseInvert = pickChecked("ssOcrUseInvert", base.ocrUseInvert !== false);
       base.ocrTextLayoutMode = document.getElementById("ssOcrLayout")?.value || base.ocrTextLayoutMode || "keep";
       base.ocrPunctuationMode = document.getElementById("ssOcrPunc")?.value || base.ocrPunctuationMode || "keep";
-      base.ocrDirectCopyEnabled = !!document.getElementById("ssOcrDirectCopy")?.checked;
+      base.ocrDirectCopyEnabled = pickChecked("ssOcrDirectCopy", base.ocrDirectCopyEnabled);
       if (!Number.isFinite(base.scalePercent) || base.scalePercent < 25) base.scalePercent = 25;
       if (base.scalePercent > 300) base.scalePercent = 300;
       if (!Number.isFinite(base.jpegQuality) || base.jpegQuality < 10) base.jpegQuality = 10;
       if (base.jpegQuality > 100) base.jpegQuality = 100;
+      if (!Number.isFinite(base.ocrScalePrimary) || base.ocrScalePrimary < 100) base.ocrScalePrimary = 100;
+      if (base.ocrScalePrimary > 300) base.ocrScalePrimary = 300;
+      if (!Number.isFinite(base.ocrScaleSecondary) || base.ocrScaleSecondary < 100) base.ocrScaleSecondary = 100;
+      if (base.ocrScaleSecondary > 300) base.ocrScaleSecondary = 300;
+      if (!Number.isFinite(base.ocrMonochromeLow) || base.ocrMonochromeLow < 0) base.ocrMonochromeLow = 0;
+      if (base.ocrMonochromeLow > 255) base.ocrMonochromeLow = 255;
+      if (!Number.isFinite(base.ocrMonochromeHigh) || base.ocrMonochromeHigh < 0) base.ocrMonochromeHigh = 0;
+      if (base.ocrMonochromeHigh > 255) base.ocrMonochromeHigh = 255;
+      if (base.ocrMonochromeHigh < base.ocrMonochromeLow) base.ocrMonochromeHigh = base.ocrMonochromeLow;
       if (!base.saveFilenamePattern) base.saveFilenamePattern = "Screenshot_{yyyyMMdd_HHmmss}";
       d.screenshotConfig = base;
       return d;
@@ -2086,6 +2113,7 @@
           <div class="row"><div class="label">保存文件名模板</div><input id="ssFilenamePattern" type="text" value="${esc(ss.saveFilenamePattern || "Screenshot_{yyyyMMdd_HHmmss}")}"></div>
           <div class="hint">可用占位符：<code>{yyyyMMdd_HHmmss}</code></div>`;
         } else {
+          const ssOcrEnhanceEnabled = (ss.ocrEnhanceEnabled !== false);
           body = `<div class="row"><div class="label">OCR 文本排版</div><select id="ssOcrLayout">${optionsKV([
             { value:"keep", label:"保持原样" },
             { value:"single_line", label:"合并单行" },
@@ -2096,7 +2124,14 @@
             { value:"halfwidth", label:"转半角" },
             { value:"strip", label:"去除标点" }
           ], ss.ocrPunctuationMode || "keep")}</select></div>
-          <div class="row"><div class="label">识别后直接复制</div><div><input id="ssOcrDirectCopy" type="checkbox" ${checked(!!ss.ocrDirectCopyEnabled)}></div></div>`;
+          <div class="row"><div class="label">识别后直接复制</div><div><input id="ssOcrDirectCopy" type="checkbox" ${checked(!!ss.ocrDirectCopyEnabled)}></div></div>
+          <div class="row"><div class="label">启用 OCR 增强重试</div><div><input id="ssOcrEnhanceEnabled" type="checkbox" ${checked(ssOcrEnhanceEnabled)}></div></div>
+          <div class="row"><div class="label">主缩放倍率 (%)</div><input id="ssOcrScalePrimary" type="number" min="100" max="300" step="10" value="${esc(ss.ocrScalePrimary || 150)}"></div>
+          <div class="row"><div class="label">次缩放倍率 (%)</div><input id="ssOcrScaleSecondary" type="number" min="100" max="300" step="10" value="${esc(ss.ocrScaleSecondary || 200)}"></div>
+          <div class="row"><div class="label">灰度预处理</div><div><input id="ssOcrUseGrayscale" type="checkbox" ${checked(ss.ocrUseGrayscale !== false)}></div></div>
+          <div class="row"><div class="label">二值阈值（低）</div><input id="ssOcrMonoLow" type="number" min="0" max="255" step="1" value="${esc(ss.ocrMonochromeLow || 160)}"></div>
+          <div class="row"><div class="label">二值阈值（高）</div><input id="ssOcrMonoHigh" type="number" min="0" max="255" step="1" value="${esc(ss.ocrMonochromeHigh || 175)}"></div>
+          <div class="row"><div class="label">深色背景反色重试</div><div><input id="ssOcrUseInvert" type="checkbox" ${checked(ss.ocrUseInvert !== false)}></div></div>`;
         }
         panel.innerHTML = `<div class="card"><div class="title">截图设置</div>${capTabs}${body}<div class="inline" style="margin-top:8px;"><button class="btn legacy-compact" id="btnOpenLegacyScreenshot">打开原版截图设置</button></div></div>`;
         document.querySelectorAll("[data-ss-subtab]").forEach(el => el.addEventListener("click", () => {

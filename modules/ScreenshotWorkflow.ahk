@@ -1162,6 +1162,101 @@ ScreenshotCapturePayload(&outClip, &outFilePath, waitMs := 3200) {
     return false
 }
 
+OCR_FromFileBestEffort(filePath, lang := "zh-CN") {
+    cfg := OCR_ReadEnhanceConfig()
+    bestResult := ""
+    bestScore := -1
+    strategies := OCR_BuildStrategies(cfg)
+    for _, strategy in strategies {
+        try {
+            options := {lang: lang}
+            for k, v in strategy.OwnProps()
+                options.%k% := v
+            result := OCR.FromFile(filePath, options)
+            score := OCR_ScoreResult(result)
+            if (score > bestScore) {
+                bestScore := score
+                bestResult := result
+            }
+        } catch {
+        }
+    }
+    return bestResult
+}
+
+OCR_ReadEnhanceConfig() {
+    cfgFile := A_ScriptDir "\CursorShortcut.ini"
+    cfg := Map()
+    cfg["enabled"] := IniRead(cfgFile, "Screenshot", "OcrEnhanceEnabled", "1") != "0"
+    cfg["scalePrimary"] := Integer(IniRead(cfgFile, "Screenshot", "OcrScalePrimary", "150"))
+    cfg["scaleSecondary"] := Integer(IniRead(cfgFile, "Screenshot", "OcrScaleSecondary", "200"))
+    cfg["useGrayscale"] := IniRead(cfgFile, "Screenshot", "OcrUseGrayscale", "1") != "0"
+    cfg["monoLow"] := Integer(IniRead(cfgFile, "Screenshot", "OcrMonochromeLow", "160"))
+    cfg["monoHigh"] := Integer(IniRead(cfgFile, "Screenshot", "OcrMonochromeHigh", "175"))
+    cfg["useInvert"] := IniRead(cfgFile, "Screenshot", "OcrUseInvert", "1") != "0"
+    if (cfg["scalePrimary"] < 100)
+        cfg["scalePrimary"] := 100
+    if (cfg["scalePrimary"] > 300)
+        cfg["scalePrimary"] := 300
+    if (cfg["scaleSecondary"] < 100)
+        cfg["scaleSecondary"] := 100
+    if (cfg["scaleSecondary"] > 300)
+        cfg["scaleSecondary"] := 300
+    if (cfg["monoLow"] < 0)
+        cfg["monoLow"] := 0
+    if (cfg["monoLow"] > 255)
+        cfg["monoLow"] := 255
+    if (cfg["monoHigh"] < cfg["monoLow"])
+        cfg["monoHigh"] := cfg["monoLow"]
+    if (cfg["monoHigh"] > 255)
+        cfg["monoHigh"] := 255
+    return cfg
+}
+
+OCR_BuildStrategies(cfg) {
+    if !(cfg is Map) || !cfg.Get("enabled", true)
+        return [{scale: 1.0}]
+
+    p := cfg["scalePrimary"] / 100.0
+    s := cfg["scaleSecondary"] / 100.0
+    useGray := cfg["useGrayscale"]
+    low := cfg["monoLow"]
+    high := cfg["monoHigh"]
+    useInvert := cfg["useInvert"]
+
+    strategies := [{scale: 1.0}, {scale: p}, {scale: s}]
+    if (useGray) {
+        strategies.Push({scale: p, grayscale: 1})
+        strategies.Push({scale: p, grayscale: 1, monochrome: low})
+        strategies.Push({scale: p, grayscale: 1, monochrome: high})
+        strategies.Push({scale: s, grayscale: 1})
+        strategies.Push({scale: s, grayscale: 1, monochrome: low})
+        strategies.Push({scale: s, grayscale: 1, monochrome: high})
+        if (useInvert)
+            strategies.Push({scale: p, grayscale: 1, monochrome: low, invertcolors: 1})
+        if (useInvert)
+            strategies.Push({scale: s, grayscale: 1, monochrome: low, invertcolors: 1})
+    } else if (useInvert) {
+        strategies.Push({scale: p, invertcolors: 1})
+        strategies.Push({scale: s, invertcolors: 1})
+    }
+    return strategies
+}
+
+OCR_ScoreResult(result) {
+    try {
+        if (!result || !result.HasProp("Text"))
+            return -1
+        text := Trim(String(result.Text), " `t`r`n")
+        if (text = "")
+            return 0
+        dense := RegExReplace(text, "\s", "")
+        return StrLen(dense)
+    } catch {
+        return -1
+    }
+}
+
 ProcessOCR(Mode := "preserve_layout") {
     global UI_Colors, ScreenshotClipboard
     
@@ -1202,7 +1297,7 @@ ProcessOCR(Mode := "preserve_layout") {
             pBitmap := ""
             
             ; 浣跨敤 OCR.FromFile 璇嗗埆锛堟敮鎸佹洿澶氭牸寮忥紝鎬ц兘鏇村ソ锛?
-            OCRResult := OCR.FromFile(TempFile)
+            OCRResult := OCR_FromFileBestEffort(TempFile, "zh-CN")
             
             ; 鍒犻櫎涓存椂鏂囦欢
             try {

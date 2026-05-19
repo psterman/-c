@@ -428,7 +428,16 @@ class WebView2 {
 		}
 		NotifyParentWindowPositionChanged() => ComCall(23, this)
 		Close() => ComCall(24, this)
-		CoreWebView2 => (ComCall(25, this, 'ptr*', coreWebView2 := WebView2.Core()), coreWebView2)
+		CoreWebView2 {
+			get {
+				try {
+					ComCall(25, this, 'ptr*', coreWebView2 := WebView2.Core())
+					return coreWebView2
+				} catch {
+					return 0
+				}
+			}
+		}
 
 		static IID_2 := '{c979903e-d4ca-4228-92eb-47ee3fa96eab}'
 		DefaultBackgroundColor {
@@ -685,8 +694,20 @@ class WebView2 {
 		}
 		Settings => (ComCall(3, this, 'ptr*', settings := WebView2.Settings()), settings)
 		Source => (ComCall(4, this, 'ptr*', &uri := 0), CoTaskMem_String(uri))
-		Navigate(uri) => ComCall(5, this, 'wstr', uri)
-		NavigateToString(htmlContent) => ComCall(6, this, 'wstr', htmlContent)
+		Navigate(uri) {
+			try {
+				return ComCall(5, this, 'wstr', uri)
+			} catch {
+				return 0x8007139F ; ERROR_INVALID_STATE
+			}
+		}
+		NavigateToString(htmlContent) {
+			try {
+				return ComCall(6, this, 'wstr', htmlContent)
+			} catch {
+				return 0x8007139F ; ERROR_INVALID_STATE
+			}
+		}
 		/** @param {(sender: WebView2.Core, args: WebView2.NavigationStartingEventArgs) => void} eventHandler */
 		add_NavigationStarting(eventHandler) => (ComCall(7, this, 'ptr', eventHandler, 'int64*', &token := 0), token)	; ICoreWebView2NavigationStartingEventHandler
 		remove_NavigationStarting(token) => ComCall(8, this, 'int64', token)
@@ -724,9 +745,27 @@ class WebView2 {
 		ExecuteScriptAsync(javaScript) => (ComCall(29, this, 'wstr', javaScript, 'ptr', WebView2.AsyncHandler(&p, StrGet)), p)
 		/** @returns {Promise<void>} */
 		CapturePreviewAsync(imageFormat, imageStream) => (ComCall(30, this, 'int', imageFormat, 'ptr', imageStream, 'ptr', WebView2.AsyncHandler(&p)), p)
-		Reload() => ComCall(31, this)
-		PostWebMessageAsJson(webMessageAsJson) => ComCall(32, this, 'wstr', webMessageAsJson)
-		PostWebMessageAsString(webMessageAsString) => ComCall(33, this, 'wstr', webMessageAsString)
+		Reload() {
+			try {
+				return ComCall(31, this)
+			} catch {
+				return 0x8007139F
+			}
+		}
+		PostWebMessageAsJson(webMessageAsJson) {
+			try {
+				return ComCall(32, this, 'wstr', webMessageAsJson)
+			} catch {
+				return 0x8007139F
+			}
+		}
+		PostWebMessageAsString(webMessageAsString) {
+			try {
+				return ComCall(33, this, 'wstr', webMessageAsString)
+			} catch {
+				return 0x8007139F
+			}
+		}
 		/** @param {(sender: WebView2.Core, args: WebView2.WebMessageReceivedEventArgs) => void} eventHandler */
 		add_WebMessageReceived(eventHandler) => (ComCall(34, this, 'ptr', eventHandler, 'int64*', &token := 0), token)	; ICoreWebView2WebMessageReceivedEventHandler
 		remove_WebMessageReceived(token) => ComCall(35, this, 'int64', token)

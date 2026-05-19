@@ -102,7 +102,7 @@ class ScreenshotEditorPlugin {
     static ScreenshotArrowOptions := Map("width", 4)
     static ScreenshotRectOptions := Map("width", 4)
     static ScreenshotEllipseOptions := Map("width", 4)
-    static ScreenshotDebugEnabled := true
+    static ScreenshotDebugEnabled := false
     static ScreenshotDebugSessionId := ""
 
     static IsScreenshotEditorActive() {
@@ -1458,8 +1458,22 @@ class ScreenshotEditorPlugin {
         }
         return
     }
+    core := 0
+    try core := ctrl.CoreWebView2
+    catch {
+        this.ScreenshotPreviewWV2Ctrl := 0
+        this.ScreenshotPreviewWV2 := 0
+        this.ScreenshotPreviewWV2Ready := false
+        return
+    }
+    if !IsObject(core) {
+        this.ScreenshotPreviewWV2Ctrl := 0
+        this.ScreenshotPreviewWV2 := 0
+        this.ScreenshotPreviewWV2Ready := false
+        return
+    }
     this.ScreenshotPreviewWV2Ctrl := ctrl
-    this.ScreenshotPreviewWV2 := ctrl.CoreWebView2
+    this.ScreenshotPreviewWV2 := core
     this.ScreenshotPreviewWV2Ready := false
     try this.ScreenshotPreviewWV2Ctrl.DefaultBackgroundColor := this.ScreenshotToolbarThemeArgb()
     try this.ScreenshotPreviewWV2.add_WebMessageReceived(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnMessage"))
@@ -1483,6 +1497,17 @@ class ScreenshotEditorPlugin {
         try TrayTip("截图预览", "预览页面加载失败: " . e.Message, "Iconx 2")
         catch {
         }
+    }
+}
+
+    static ScreenshotPreviewShell_ControllerAlive() {
+    if !IsObject(this.ScreenshotPreviewWV2Ctrl)
+        return false
+    try {
+        core := this.ScreenshotPreviewWV2Ctrl.CoreWebView2
+        return IsObject(core)
+    } catch {
+        return false
     }
 }
 
@@ -1639,6 +1664,12 @@ class ScreenshotEditorPlugin {
 }
 
     static ScreenshotPreviewShell_ApplyBounds() {
+    if !this.ScreenshotPreviewShell_ControllerAlive() {
+        this.ScreenshotPreviewWV2Ctrl := 0
+        this.ScreenshotPreviewWV2 := 0
+        this.ScreenshotPreviewWV2Ready := false
+        return
+    }
     if !this.ScreenshotPreviewWV2Ctrl
         return
     b := this.ScreenshotPreviewBounds
@@ -2449,7 +2480,7 @@ class ScreenshotEditorPlugin {
             this.ScreenshotDoc_RenderToPath(this.ScreenshotDocObjects, this.ScreenshotSelectedObjectId, false, "")
             return
         }
-        this.ScreenshotEditSession := Map("tool", tool, "x0", x, "y0", y, "x1", x, "y1", y, "points", [])
+        this.ScreenshotEditSession := Map("tool", tool, "x0", x, "y0", y, "x1", x, "y1", y, "points", [], "basePath", this.ScreenshotDocCurrentPath)
         if (tool = "mosaic" || tool = "eraser") {
             this.ScreenshotEditSession["points"].Push(Map("x", x, "y", y))
         }
@@ -2487,6 +2518,34 @@ class ScreenshotEditorPlugin {
                 previewObjs[idx] := work
                 this.ScreenshotDoc_RenderToPath(previewObjs, this.ScreenshotSelectedObjectId, false, "")
             }
+            return
+        }
+        if (this.ScreenshotEditSession["tool"] = "arrow") {
+            if (Abs(x - Number(this.ScreenshotEditSession["x0"])) >= 2 || Abs(y - Number(this.ScreenshotEditSession["y0"])) >= 2) {
+                previewObjs := this.ScreenshotDoc_CloneObjects(this.ScreenshotDocObjects)
+                previewObjs.Push(Map(
+                    "id", "__preview_arrow__",
+                    "type", "arrow",
+                    "x1", Number(this.ScreenshotEditSession["x0"]),
+                    "y1", Number(this.ScreenshotEditSession["y0"]),
+                    "x2", x,
+                    "y2", y,
+                    "color", this.ScreenshotDrawColor,
+                    "width", Max(2, Min(12, Integer(this.ScreenshotArrowOptions.Get("width", 4))))
+                ))
+                this.ScreenshotDoc_RenderToPath(previewObjs, this.ScreenshotSelectedObjectId, false, "")
+            }
+            return
+        }
+        if (this.ScreenshotEditSession["tool"] = "rect" || this.ScreenshotEditSession["tool"] = "ellipse") {
+            this.ScreenshotEditor_RenderShapePreview(
+                this.ScreenshotEditSession["tool"],
+                Number(this.ScreenshotEditSession["x0"]),
+                Number(this.ScreenshotEditSession["y0"]),
+                x,
+                y,
+                String(this.ScreenshotEditSession.Get("basePath", this.ScreenshotDocCurrentPath))
+            )
             return
         }
         if (this.ScreenshotEditSession["tool"] = "text" && this.ScreenshotEditSession.Has("mode")) {
@@ -2685,7 +2744,7 @@ class ScreenshotEditorPlugin {
                 }
             }
         } else if (t2 = "rect" || t2 = "ellipse") {
-            this.ScreenshotEditor_ApplyShape(t2, x0, y0, x1, y1)
+            this.ScreenshotEditor_ApplyShape(t2, x0, y0, x1, y1, String(sess.Get("basePath", this.ScreenshotDocCurrentPath)))
         } else if (t2 = "number") {
             this.ScreenshotEditor_ApplyNumber(x1, y1)
         } else if (t2 = "symbol") {
@@ -2707,8 +2766,9 @@ class ScreenshotEditorPlugin {
     }
 }
 
-    static ScreenshotEditor_ApplyShape(kind, x0, y0, x1, y1) {
-    srcPath := this.ScreenshotDocCurrentPath
+    static ScreenshotEditor_ApplyShape(kind, x0, y0, x1, y1, srcPath := "") {
+    if (srcPath = "")
+        srcPath := this.ScreenshotDocCurrentPath
     if (srcPath = "" || !FileExist(srcPath))
         return
     pBmp := 0, pG := 0, pPen := 0
@@ -3269,6 +3329,15 @@ class ScreenshotEditorPlugin {
     }
     bx := Max(0, Min(w - 2, bx)), by := Max(0, Min(h - 2, by))
     bw := Max(20, Min(w - bx, bw)), bh := Max(20, Min(h - by, bh))
+    ; Guard against malformed toolbar layout metadata causing severe clipping.
+    ; If the bar region is too narrow, fall back to full window region.
+    if (bw < 180 || bh < 28) {
+        rgnFull := DllCall("gdi32\CreateRoundRectRgn", "Int", 0, "Int", 0, "Int", w + 1, "Int", h + 1, "Int", 24, "Int", 24, "Ptr")
+        if (rgnFull) {
+            DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", rgnFull, "Int", 1)
+        }
+        return
+    }
     rgnBar := DllCall("gdi32\CreateRoundRectRgn", "Int", bx, "Int", by, "Int", bx + bw + 1, "Int", by + bh + 1, "Int", 24, "Int", 24, "Ptr")
     if !rgnBar
         return
@@ -3556,6 +3625,53 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     }
 }
 
+    static ScreenshotEditor_RenderShapePreview(kind, x0, y0, x1, y1, srcPath := "") {
+    if (srcPath = "")
+        srcPath := this.ScreenshotDocCurrentPath
+    if (srcPath = "" || !FileExist(srcPath))
+        return
+    pBmp := 0, pG := 0, pPen := 0
+    try {
+        pBmp := Gdip_CreateBitmapFromFile(srcPath)
+        if !pBmp
+            return
+        pG := Gdip_GraphicsFromImage(pBmp)
+        if !pG
+            return
+        try DllCall("gdiplus\\GdipSetSmoothingMode", "Ptr", pG, "Int", 4)
+
+        sw := (kind = "rect") ? Integer(this.ScreenshotRectOptions.Get("width", 4)) : Integer(this.ScreenshotEllipseOptions.Get("width", 4))
+        pPen := Gdip_CreatePen(this.ScreenshotDrawColor, Max(2, Min(12, sw)))
+        if !pPen
+            return
+
+        x := Min(x0, x1), y := Min(y0, y1)
+        w := Abs(x1 - x0), h := Abs(y1 - y0)
+        if (w < 2 && h < 2)
+            return
+
+        if (kind = "rect")
+            Gdip_DrawRectangle(pG, pPen, x, y, w, h)
+        else if (kind = "ellipse")
+            Gdip_DrawEllipse(pG, pPen, x, y, w, h)
+        else
+            return
+
+        outPath := A_Temp "\\ScreenshotEdit_" . A_TickCount . ".png"
+        if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
+            return
+        this.ScreenshotHistory_SetCurrent(outPath)
+    } catch {
+    } finally {
+        if (pPen)
+            try Gdip_DeletePen(pPen)
+        if (pG)
+            try Gdip_DeleteGraphics(pG)
+        if (pBmp)
+            try Gdip_DisposeImage(pBmp)
+    }
+}
+
     static ScreenshotEditorEnsureActivated(*) {
     if !(IsObject(this.GuiID_ScreenshotEditor) && this.GuiID_ScreenshotEditor != 0)
         return
@@ -3774,8 +3890,12 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     try {
         if !(this.ScreenshotUseUnifiedWebView)
             return
-        if !(this.ScreenshotPreviewWV2Ctrl)
+        if !(this.ScreenshotPreviewShell_ControllerAlive()) {
+            this.ScreenshotPreviewWV2Ctrl := 0
+            this.ScreenshotPreviewWV2 := 0
+            this.ScreenshotPreviewWV2Ready := false
             return
+        }
         this.ScreenshotPreviewBounds := Map("x", 0, "y", 0, "w", width, "h", height)
         this.ScreenshotPreviewShell_ApplyBounds()
         try this.ScreenshotPreviewWV2Ctrl.NotifyParentWindowPositionChanged()
@@ -5114,24 +5234,119 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
 
     static ScreenshotOCRLayoutModeLabel(layoutMode) {
     if (layoutMode = "single_line")
-        return "绉婚櫎鎹㈣"
+        return "移除换行"
     if (layoutMode = "multi_line")
-        return "澶氳"
-    return "鑷姩"
+        return "多行"
+    return "自动"
 }
 
     static ScreenshotOCRPunctuationModeLabel(punctMode) {
     if (punctMode = "halfwidth")
-        return "鍗婅"
+        return "半角"
     if (punctMode = "strip")
         return "去标点"
-    return "淇濈暀"
+    return "保留"
 }
 
 ; 鎵ц鎴浘OCR璇嗗埆锛堜紭鍖栫増锛屼笓涓轰唬鐮佹埅鍥捐璁★級
+    static ScreenshotOCRFromFileBestEffort(filePath, lang := "zh-CN") {
+    cfg := this.ScreenshotOCRReadEnhanceConfig()
+    bestResult := ""
+    bestScore := -1
+    strategies := this.ScreenshotOCRBuildStrategies(cfg)
+    for _, strategy in strategies {
+        try {
+            options := {lang: lang}
+            for k, v in strategy.OwnProps()
+                options.%k% := v
+            result := OCR.FromFile(filePath, options)
+            score := this.ScreenshotOCRScoreResult(result)
+            if (score > bestScore) {
+                bestScore := score
+                bestResult := result
+            }
+        } catch {
+        }
+    }
+    return bestResult
+}
+
+    static ScreenshotOCRReadEnhanceConfig() {
+    cfgFile := A_ScriptDir "\CursorShortcut.ini"
+    cfg := Map()
+    cfg["enabled"] := IniRead(cfgFile, "Screenshot", "OcrEnhanceEnabled", "1") != "0"
+    cfg["scalePrimary"] := Integer(IniRead(cfgFile, "Screenshot", "OcrScalePrimary", "150"))
+    cfg["scaleSecondary"] := Integer(IniRead(cfgFile, "Screenshot", "OcrScaleSecondary", "200"))
+    cfg["useGrayscale"] := IniRead(cfgFile, "Screenshot", "OcrUseGrayscale", "1") != "0"
+    cfg["monoLow"] := Integer(IniRead(cfgFile, "Screenshot", "OcrMonochromeLow", "160"))
+    cfg["monoHigh"] := Integer(IniRead(cfgFile, "Screenshot", "OcrMonochromeHigh", "175"))
+    cfg["useInvert"] := IniRead(cfgFile, "Screenshot", "OcrUseInvert", "1") != "0"
+    if (cfg["scalePrimary"] < 100)
+        cfg["scalePrimary"] := 100
+    if (cfg["scalePrimary"] > 300)
+        cfg["scalePrimary"] := 300
+    if (cfg["scaleSecondary"] < 100)
+        cfg["scaleSecondary"] := 100
+    if (cfg["scaleSecondary"] > 300)
+        cfg["scaleSecondary"] := 300
+    if (cfg["monoLow"] < 0)
+        cfg["monoLow"] := 0
+    if (cfg["monoLow"] > 255)
+        cfg["monoLow"] := 255
+    if (cfg["monoHigh"] < cfg["monoLow"])
+        cfg["monoHigh"] := cfg["monoLow"]
+    if (cfg["monoHigh"] > 255)
+        cfg["monoHigh"] := 255
+    return cfg
+}
+
+    static ScreenshotOCRBuildStrategies(cfg) {
+    if !(cfg is Map) || !cfg.Get("enabled", true)
+        return [{scale: 1.0}]
+
+    p := cfg["scalePrimary"] / 100.0
+    s := cfg["scaleSecondary"] / 100.0
+    useGray := cfg["useGrayscale"]
+    low := cfg["monoLow"]
+    high := cfg["monoHigh"]
+    useInvert := cfg["useInvert"]
+
+    strategies := [{scale: 1.0}, {scale: p}, {scale: s}]
+    if (useGray) {
+        strategies.Push({scale: p, grayscale: 1})
+        strategies.Push({scale: p, grayscale: 1, monochrome: low})
+        strategies.Push({scale: p, grayscale: 1, monochrome: high})
+        strategies.Push({scale: s, grayscale: 1})
+        strategies.Push({scale: s, grayscale: 1, monochrome: low})
+        strategies.Push({scale: s, grayscale: 1, monochrome: high})
+        if (useInvert)
+            strategies.Push({scale: p, grayscale: 1, monochrome: low, invertcolors: 1})
+        if (useInvert)
+            strategies.Push({scale: s, grayscale: 1, monochrome: low, invertcolors: 1})
+    } else if (useInvert) {
+        strategies.Push({scale: p, invertcolors: 1})
+        strategies.Push({scale: s, invertcolors: 1})
+    }
+    return strategies
+}
+
+    static ScreenshotOCRScoreResult(result) {
+    try {
+        if (!result || !result.HasProp("Text"))
+            return -1
+        text := Trim(String(result.Text), " `t`r`n")
+        if (text = "")
+            return 0
+        dense := RegExReplace(text, "\s", "")
+        return StrLen(dense)
+    } catch {
+        return -1
+    }
+}
+
     static ExecuteScreenshotOCR() {
     
-    ToolTip("姝ｅ湪浼樺寲浠ｇ爜鏍煎紡骞惰瘑鍒?..")
+    ToolTip("正在识别文本...")
     
     try {
         ; 浣跨敤鎴浘缂栬緫鍣ㄤ腑鐨勪綅鍥?
@@ -5149,7 +5364,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
                 throw Error("浣嶅浘灏哄鏃犳晥: " . testWidth . "x" . testHeight)
             }
         } catch as e {
-            TrayTip("閿欒", "浣嶅浘鏃犳晥: " . e.Message, "Iconx 2")
+            TrayTip("错误", "位图无效: " . e.Message, "Iconx 2")
             ToolTip()
             return
         }
@@ -5159,14 +5374,14 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         TempPath := A_Temp "\OCR_Screenshot_" . A_TickCount . ".png"
         result := Gdip_SaveBitmapToFile(this.ScreenshotEditorBitmap, TempPath)
         if (result != 0) {
-            TrayTip("閿欒", "淇濆瓨涓存椂鍥剧墖澶辫触", "Iconx 2")
+            TrayTip("错误", "保存临时图片失败", "Iconx 2")
             ToolTip()
             return
         }
 
         ; 璋冪敤OCR璇嗗埆锛堟寚瀹氫腑鏂囪瑷€锛?
-        ToolTip("姝ｅ湪璇嗗埆鏂囧瓧...")
-        Result := OCR.FromFile(TempPath, "zh-CN")
+        ToolTip("正在识别文字...")
+        Result := this.ScreenshotOCRFromFileBestEffort(TempPath, "zh-CN")
 
         ; 鍒犻櫎涓存椂鏂囦欢
         try {
@@ -5175,7 +5390,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         }
 
         if (!Result) {
-            TrayTip("鎻愮ず", "OCR璇嗗埆澶辫触锛岃閲嶈瘯", "Iconi 1")
+            TrayTip("提示", "OCR 识别失败，请重试", "Iconi 1")
             ToolTip()
             return
         }
@@ -5195,7 +5410,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             try {
                 cleanedText := this.CleanCodeOCRText(Result)
             } catch as e {
-                TrayTip("閿欒", "澶勭悊OCR缁撴灉澶辫触: " . e.Message, "Iconx 2")
+                TrayTip("错误", "处理 OCR 结果失败: " . e.Message, "Iconx 2")
                 ToolTip()
                 return
             }
@@ -5220,7 +5435,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         ; 鏄剧ずOCR缁撴灉锛堟敮鎸佸鍒舵帓鐗堬級
         OCRResultGui := Gui("+AlwaysOnTop -Caption")
         OCRResultGui.BackColor := UI_Colors.Background
-        OCRResultGui.SetFont("s10 c" . UI_Colors.Text, "Segoe UI")
+        OCRResultGui.SetFont("s10 c" . UI_Colors.Text, "Microsoft YaHei UI")
         OCRResultGui.OnEvent("Escape", (*) => OCRResultGui.Destroy())
 
         rawText := cleanedText
@@ -5229,32 +5444,32 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         previewText := this.ScreenshotOCRApplyTextFormattingByMode(rawText, layoutMode, punctuationMode)
 
         ResultText := OCRResultGui.Add("Edit", "x10 y10 w560 h310 ReadOnly Multi Background" . UI_Colors.InputBg . " c" . UI_Colors.Text, previewText)
-        ResultText.SetFont("s11", "Consolas")
+        ResultText.SetFont("s11", "Microsoft YaHei UI")
 
         CloseBtn := OCRResultGui.Add("Text", "x550 y2 w20 h20 Center 0x200 c" . UI_Colors.Text . " Background" . UI_Colors.Background, "×")
         CloseBtn.SetFont("s10", "Segoe UI")
         CloseBtn.OnEvent("Click", (*) => OCRResultGui.Destroy())
         HoverBtnWithAnimation(CloseBtn, UI_Colors.Background, UI_Colors.BtnDanger)
 
-        DirectCopyCheck := OCRResultGui.Add("CheckBox", "x10 y330 w180 h24 c" . UI_Colors.Text, "涓嬫鐩存帴澶嶅埗鏂囨湰")
+        DirectCopyCheck := OCRResultGui.Add("CheckBox", "x10 y330 w180 h24 c" . UI_Colors.Text, "下次直接复制文本")
         DirectCopyCheck.Value := this.ScreenshotOCRDirectCopyEnabled ? 1 : 0
 
-        LayoutBtn := OCRResultGui.Add("Text", "x340 y328 w90 h30 Center 0x200 cFFFFFF Background" . UI_Colors.BtnBg, "鎺掔増")
+        LayoutBtn := OCRResultGui.Add("Text", "x340 y328 w90 h30 Center 0x200 cFFFFFF Background" . UI_Colors.BtnBg, "排版")
         LayoutBtn.SetFont("s10", "Segoe UI")
         HoverBtnWithAnimation(LayoutBtn, UI_Colors.BtnBg, UI_Colors.BtnHover)
 
-        CopyBtn := OCRResultGui.Add("Text", "x438 y328 w64 h30 Center 0x200 cFFFFFF Background" . UI_Colors.BtnPrimary, "澶嶅埗")
+        CopyBtn := OCRResultGui.Add("Text", "x438 y328 w64 h30 Center 0x200 cFFFFFF Background" . UI_Colors.BtnPrimary, "复制")
         CopyBtn.SetFont("s10", "Segoe UI")
         HoverBtnWithAnimation(CopyBtn, UI_Colors.BtnPrimary, UI_Colors.BtnPrimaryHover)
 
-        PasteBtn := OCRResultGui.Add("Text", "x506 y328 w64 h30 Center 0x200 cFFFFFF Background" . UI_Colors.BtnPrimary, "绮樿创")
+        PasteBtn := OCRResultGui.Add("Text", "x506 y328 w64 h30 Center 0x200 cFFFFFF Background" . UI_Colors.BtnPrimary, "粘贴")
         PasteBtn.SetFont("s10", "Segoe UI")
         HoverBtnWithAnimation(PasteBtn, UI_Colors.BtnPrimary, UI_Colors.BtnPrimaryHover)
 
         RefreshPreviewText() {
             formatted := this.ScreenshotOCRApplyTextFormattingByMode(rawText, layoutMode, punctuationMode)
             ResultText.Value := formatted
-            LayoutBtn.Value := "鎺掔増 " . this.ScreenshotOCRLayoutModeLabel(layoutMode)
+            LayoutBtn.Value := "排版 " . this.ScreenshotOCRLayoutModeLabel(layoutMode)
         }
 
         SaveModeToGlobal() {
@@ -5266,7 +5481,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         CopyCurrentText(*) {
             txt := ResultText.Value
             if (txt = "") {
-                TrayTip("澶嶅埗", "娌℃湁鍙鍒剁殑鏂囨湰", "Iconx 1")
+                TrayTip("复制", "没有可复制的文本", "Iconx 1")
                 return
             }
             A_Clipboard := txt
@@ -5284,16 +5499,16 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
 
         ShowLayoutMenu(*) {
             punctMenu := Menu()
-            punctMenu.Add((punctuationMode = "keep" ? "鉁?" : "") . "淇濈暀鏍囩偣", (*) => (punctuationMode := "keep", SaveModeToGlobal(), RefreshPreviewText()))
+            punctMenu.Add((punctuationMode = "keep" ? "✓ " : "") . "保留标点", (*) => (punctuationMode := "keep", SaveModeToGlobal(), RefreshPreviewText()))
             punctMenu.Add((punctuationMode = "halfwidth" ? "✓" : "") . "转半角标点", (*) => (punctuationMode := "halfwidth", SaveModeToGlobal(), RefreshPreviewText()))
-            punctMenu.Add((punctuationMode = "strip" ? "鉁?" : "") . "绉婚櫎鏍囩偣", (*) => (punctuationMode := "strip", SaveModeToGlobal(), RefreshPreviewText()))
+            punctMenu.Add((punctuationMode = "strip" ? "✓ " : "") . "移除标点", (*) => (punctuationMode := "strip", SaveModeToGlobal(), RefreshPreviewText()))
 
             layoutMenu := Menu()
-            layoutMenu.Add((layoutMode = "auto" ? "鉁?" : "") . "鑷姩", (*) => (layoutMode := "auto", SaveModeToGlobal(), RefreshPreviewText()))
+            layoutMenu.Add((layoutMode = "auto" ? "✓ " : "") . "自动", (*) => (layoutMode := "auto", SaveModeToGlobal(), RefreshPreviewText()))
             layoutMenu.Add((layoutMode = "single_line" ? "✓" : "") . "移除换行符", (*) => (layoutMode := "single_line", SaveModeToGlobal(), RefreshPreviewText()))
-            layoutMenu.Add((layoutMode = "multi_line" ? "鉁?" : "") . "澶氳", (*) => (layoutMode := "multi_line", SaveModeToGlobal(), RefreshPreviewText()))
+            layoutMenu.Add((layoutMode = "multi_line" ? "✓ " : "") . "多行", (*) => (layoutMode := "multi_line", SaveModeToGlobal(), RefreshPreviewText()))
             layoutMenu.Add()
-            layoutMenu.Add("鏍囩偣", punctMenu)
+            layoutMenu.Add("标点", punctMenu)
 
             MouseGetPos(&mx, &my)
             layoutMenu.Show(mx, my)
@@ -5334,7 +5549,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             return ""
         }
 
-        ocrResult := OCR.FromFile(tempPath, "zh-CN")
+        ocrResult := this.ScreenshotOCRFromFileBestEffort(tempPath, "zh-CN")
         try FileDelete(tempPath)
 
         if (!ocrResult) {
@@ -5591,7 +5806,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
 
         ; 鎵цOCR璇嗗埆
         TrayTip("识别中", "正在识别图片中的文字...", "Iconi 1")
-        ocrResult := OCR.FromFile(TempPath, "zh-CN")
+        ocrResult := this.ScreenshotOCRFromFileBestEffort(TempPath, "zh-CN")
 
         ; 鍒犻櫎涓存椂鏂囦欢
         try {

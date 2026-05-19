@@ -782,14 +782,27 @@ FloatingToolbarApplyRoundedCorners() {
 FloatingToolbar_OnWebViewCreated(ctrl) {
     global g_FTB_WV2_Ctrl, g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_WV2_CreateRetry
 
-    if !IsObject(ctrl) || !ctrl.HasProp("CoreWebView2") {
+    if !IsObject(ctrl) {
         OutputDebug("[FTB] WebView2 create failed: invalid controller")
         FloatingToolbar_RetryCreateWebView()
         return
     }
     g_FTB_WV2_CreateRetry := 0
     g_FTB_WV2_Ctrl := ctrl
-    g_FTB_WV2 := ctrl.CoreWebView2
+    g_FTB_WV2 := 0
+    try g_FTB_WV2 := ctrl.CoreWebView2
+    catch {
+        g_FTB_WV2 := 0
+    }
+    if !IsObject(g_FTB_WV2) {
+        OutputDebug("[FTB] WebView2 create failed: CoreWebView2 unavailable")
+        g_FTB_WV2_Ctrl := 0
+        g_FTB_WV2 := 0
+        g_FTB_WV2_Ready := false
+        g_FTB_WV2_FrameReady := false
+        FloatingToolbar_RetryCreateWebView()
+        return
+    }
     g_FTB_WV2_Ready := false
     g_FTB_WV2_FrameReady := false
 
@@ -799,11 +812,17 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
 
     FloatingToolbar_ApplyWebViewBounds()
 
-    s := g_FTB_WV2.Settings
-    s.AreDefaultContextMenusEnabled := false
-    s.AreDevToolsEnabled := false
+    s := 0
+    try s := g_FTB_WV2.Settings
+    if IsObject(s) {
+        s.AreDefaultContextMenusEnabled := false
+        s.AreDevToolsEnabled := false
+    }
     ; 避免 Ctrl+1/2/W 等被浏览器加速键先消费，确保 Niuma Chat 内快捷键优先生效
-    try s.AreBrowserAcceleratorKeysEnabled := false
+    try {
+        if IsObject(s)
+            s.AreBrowserAcceleratorKeysEnabled := false
+    }
     ApplyWebView2PerformanceSettings(g_FTB_WV2)
     WebView2_RegisterHostBridge(g_FTB_WV2)
 
