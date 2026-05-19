@@ -1,4 +1,4 @@
-﻿; ===================== msg =====================
+; ===================== msg =====================
 #Requires AutoHotkey v2.0
 
 global pToken := Gdip_Startup()
@@ -5794,6 +5794,12 @@ Enter:: {
     if (IsCountdownActive) {
         ExecuteCountdownAction()
         return
+    }
+    ; WebView 搜索中心：撰写区 Enter/Ctrl+Enter 由页面处理，避免抢键导致 TrayTip/批量搜索
+    try {
+        if (SearchCenter_ShouldUseWebView() && SCWV_IsVisible())
+            return
+    } catch {
     }
     global SearchCenterActiveArea, SearchCenterResultLV, SearchCenterSearchResults, SearchCenterSearchEdit
     

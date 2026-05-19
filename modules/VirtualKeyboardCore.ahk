@@ -1,4 +1,4 @@
-﻿; VirtualKeyboard 核心（供 CursorHelper #Include 或独立 VirtualKeyboard.ahk #Include）
+; VirtualKeyboard 核心（供 CursorHelper #Include 或独立 VirtualKeyboard.ahk #Include）
 ; 依赖：调用方已 #Include lib\WebView2.ahk 与 lib\Jxon.ahk
 ; 嵌入 CursorHelper 时：#Include modules\VirtualKeyboardExecCmd.ahk 须在本文件之前
 #Include *i CursorShortcutMapper.ahk
@@ -304,6 +304,9 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "sc_filter_hotkey", "name", "过滤 / 快捷键", "desc", "只看快捷键结果", "fn", "CH_RUN"),
             Map("id", "sc_filter_function", "name", "过滤 / 功能", "desc", "只看功能结果", "fn", "CH_RUN"),
             Map("id", "sc_filter_pinned", "name", "过滤 / 置顶", "desc", "只看置顶结果", "fn", "CH_RUN", "suggested", "p"),
+            Map("id", "sc_compose_send", "name", "撰写 / 发送到终端", "desc", "CLI 模式：将顶部输入发送到当前 ttyd 终端（默认 Enter）", "fn", "CH_RUN"),
+            Map("id", "sc_compose_newline", "name", "撰写 / 换行", "desc", "CLI 模式：在顶部输入框插入换行（默认 Shift+Enter）", "fn", "CH_RUN"),
+            Map("id", "sc_compose_run", "name", "撰写 / 立即执行", "desc", "搜索中心：立即搜索或执行（默认 Ctrl+Enter）", "fn", "CH_RUN", "suggested", "^Enter"),
             Map("id", "sc_execute", "name", "立即执行", "desc", "搜索中心结果：智能执行", "fn", "CH_RUN"),
             Map("id", "sc_run_as_admin", "name", "以管理员运行", "desc", "搜索中心结果：提升权限运行", "fn", "CH_RUN"),
             Map("id", "sc_open_path", "name", "打开文件位置", "desc", "搜索中心结果：资源管理器选中", "fn", "CH_RUN"),

@@ -757,3 +757,1051 @@ Source:	WinHttp.WinHttpRequest
 [20260519085244][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
 [20260519085244][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
 [20260519085244][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519092008][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519092008][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=47 attempt=1
+[20260519092013][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519092013][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=532 attempt=1
+[20260519092013][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519092013][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519092013][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519092013][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519092013][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519092013][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519092025][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519092025][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=532 attempt=1
+[20260519092029][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519092030][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=516 attempt=1
+[20260519092030][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519092030][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519092030][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519092030][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
+[20260519092030][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519092030][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519092045][async_http_send] id=6 req_id=7681 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7681/ attempt=1
+[20260519092046][async_http_done] id=6 req_id=7681 tag=ttyd_port_probe status=200 elapsed_ms=531 attempt=1
+[20260519092049][async_http_send] id=7 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519092049][async_http_done] id=7 req_id=7682 tag=ttyd_port_probe status=200 elapsed_ms=32 attempt=1
+[20260519092130][async_http_send] id=8 req_id=7683 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7683/ attempt=1
+[20260519092131][async_http_done] id=8 req_id=7683 tag=ttyd_port_probe status=200 elapsed_ms=531 attempt=1
+[20260519093547][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519093547][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=547 attempt=1
+[20260519093551][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519093551][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=532 attempt=1
+[20260519093551][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519093551][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519093551][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519093551][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519093551][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519093551][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519093602][async_http_send] id=6 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093603][async_http_error] id=6 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519093606][async_http_send] id=7 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093606][async_http_timeout] id=7 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093609][async_http_send] id=8 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093609][async_http_timeout] id=8 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093612][async_http_send] id=9 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093612][async_http_timeout] id=9 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093615][async_http_send] id=10 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093616][async_http_send] id=11 req_id=7681 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7681/ attempt=1
+[20260519093616][async_http_timeout] id=10 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093616][async_http_done] id=11 req_id=7681 tag=ttyd_port_probe status=200 elapsed_ms=78 attempt=1
+[20260519093619][async_http_send] id=12 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093619][async_http_timeout] id=12 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093622][async_http_send] id=13 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093622][async_http_timeout] id=13 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093625][async_http_send] id=14 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093625][async_http_timeout] id=14 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093628][async_http_send] id=15 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093629][async_http_timeout] id=15 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093632][async_http_send] id=16 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093632][async_http_timeout] id=16 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093635][async_http_send] id=17 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093635][async_http_timeout] id=17 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093638][async_http_send] id=18 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093638][async_http_timeout] id=18 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093641][async_http_send] id=19 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093641][async_http_timeout] id=19 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093644][async_http_send] id=20 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093645][async_http_timeout] id=20 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093648][async_http_send] id=21 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093648][async_http_timeout] id=21 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093651][async_http_send] id=22 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093652][async_http_timeout] id=22 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093655][async_http_send] id=23 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093655][async_http_timeout] id=23 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093659][async_http_send] id=24 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093659][async_http_timeout] id=24 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093702][async_http_send] id=25 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093702][async_http_timeout] id=25 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093705][async_http_send] id=26 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093706][async_http_timeout] id=26 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093709][async_http_send] id=27 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093709][async_http_timeout] id=27 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093712][async_http_send] id=28 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093712][async_http_timeout] id=28 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093715][async_http_send] id=29 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093716][async_http_timeout] id=29 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093719][async_http_send] id=30 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093719][async_http_timeout] id=30 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093722][async_http_send] id=31 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093723][async_http_timeout] id=31 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093726][async_http_send] id=32 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093726][async_http_timeout] id=32 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093730][async_http_send] id=33 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093730][async_http_timeout] id=33 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093733][async_http_send] id=34 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093734][async_http_timeout] id=34 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093737][async_http_send] id=35 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093738][async_http_timeout] id=35 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093741][async_http_send] id=36 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093741][async_http_timeout] id=36 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093744][async_http_send] id=37 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093744][async_http_timeout] id=37 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093747][async_http_send] id=38 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093747][async_http_timeout] id=38 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093750][async_http_send] id=39 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093751][async_http_error] id=39 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519093754][async_http_send] id=40 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093755][async_http_timeout] id=40 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093758][async_http_send] id=41 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093758][async_http_timeout] id=41 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093802][async_http_send] id=42 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093802][async_http_timeout] id=42 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093805][async_http_send] id=43 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093806][async_http_timeout] id=43 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093809][async_http_send] id=44 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093809][async_http_timeout] id=44 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093812][async_http_send] id=45 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093813][async_http_timeout] id=45 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093816][async_http_send] id=46 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093816][async_http_timeout] id=46 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093819][async_http_send] id=47 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093820][async_http_timeout] id=47 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093823][async_http_send] id=48 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093824][async_http_timeout] id=48 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093827][async_http_send] id=49 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093827][async_http_timeout] id=49 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093830][async_http_send] id=50 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093831][async_http_timeout] id=50 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093834][async_http_send] id=51 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093834][async_http_timeout] id=51 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093837][async_http_send] id=52 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093837][async_http_timeout] id=52 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093840][async_http_send] id=53 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093840][async_http_timeout] id=53 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093843][async_http_send] id=54 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093843][async_http_timeout] id=54 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093846][async_http_send] id=55 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093847][async_http_error] id=55 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519093850][async_http_send] id=56 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093851][async_http_timeout] id=56 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093854][async_http_send] id=57 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093855][async_http_timeout] id=57 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093858][async_http_send] id=58 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093858][async_http_timeout] id=58 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093901][async_http_send] id=59 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093902][async_http_timeout] id=59 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093905][async_http_send] id=60 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093906][async_http_timeout] id=60 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093909][async_http_send] id=61 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093909][async_http_timeout] id=61 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093912][async_http_send] id=62 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093913][async_http_timeout] id=62 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093916][async_http_send] id=63 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093916][async_http_timeout] id=63 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093919][async_http_send] id=64 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093920][async_http_timeout] id=64 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093923][async_http_send] id=65 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093924][async_http_timeout] id=65 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093927][async_http_send] id=66 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093928][async_http_timeout] id=66 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093931][async_http_send] id=67 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093931][async_http_error] id=67 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519093934][async_http_send] id=68 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093935][async_http_timeout] id=68 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093938][async_http_send] id=69 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093939][async_http_timeout] id=69 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093942][async_http_send] id=70 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093942][async_http_timeout] id=70 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093945][async_http_send] id=71 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093946][async_http_timeout] id=71 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093949][async_http_send] id=72 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093949][async_http_timeout] id=72 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519093952][async_http_send] id=73 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093953][async_http_timeout] id=73 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519093956][async_http_send] id=74 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519093957][async_http_timeout] id=74 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094000][async_http_send] id=75 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094000][async_http_timeout] id=75 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094003][async_http_send] id=76 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094004][async_http_timeout] id=76 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094007][async_http_send] id=77 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094007][async_http_timeout] id=77 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094010][async_http_send] id=78 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094010][async_http_timeout] id=78 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094013][async_http_send] id=79 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094013][async_http_timeout] id=79 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094016][async_http_send] id=80 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094016][async_http_timeout] id=80 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094019][async_http_send] id=81 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094020][async_http_timeout] id=81 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094023][async_http_send] id=82 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094023][async_http_timeout] id=82 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094026][async_http_send] id=83 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094026][async_http_timeout] id=83 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094029][async_http_send] id=84 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094029][async_http_timeout] id=84 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094032][async_http_send] id=85 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094033][async_http_timeout] id=85 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094036][async_http_send] id=86 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094037][async_http_timeout] id=86 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094040][async_http_send] id=87 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094041][async_http_timeout] id=87 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094044][async_http_send] id=88 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094045][async_http_timeout] id=88 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094048][async_http_send] id=89 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094048][async_http_timeout] id=89 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094051][async_http_send] id=90 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094052][async_http_timeout] id=90 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094055][async_http_send] id=91 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094055][async_http_timeout] id=91 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094059][async_http_send] id=92 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094059][async_http_error] id=92 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519094102][async_http_send] id=93 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094103][async_http_timeout] id=93 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094106][async_http_send] id=94 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094106][async_http_timeout] id=94 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094109][async_http_send] id=95 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094110][async_http_timeout] id=95 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094113][async_http_send] id=96 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094113][async_http_timeout] id=96 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094116][async_http_send] id=97 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094116][async_http_timeout] id=97 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094119][async_http_send] id=98 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094120][async_http_timeout] id=98 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094123][async_http_send] id=99 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094124][async_http_timeout] id=99 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094127][async_http_send] id=100 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094128][async_http_timeout] id=100 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094131][async_http_send] id=101 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094131][async_http_error] id=101 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519094134][async_http_send] id=102 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094135][async_http_timeout] id=102 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094138][async_http_send] id=103 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094138][async_http_timeout] id=103 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094141][async_http_send] id=104 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094141][async_http_timeout] id=104 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094144][async_http_send] id=105 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094144][async_http_timeout] id=105 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094147][async_http_send] id=106 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094147][async_http_timeout] id=106 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094150][async_http_send] id=107 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094151][async_http_timeout] id=107 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094154][async_http_send] id=108 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094154][async_http_timeout] id=108 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094157][async_http_send] id=109 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094158][async_http_timeout] id=109 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094201][async_http_send] id=110 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094201][async_http_timeout] id=110 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094205][async_http_send] id=111 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094205][async_http_timeout] id=111 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094208][async_http_send] id=112 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094209][async_http_timeout] id=112 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094212][async_http_send] id=113 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094212][async_http_timeout] id=113 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094215][async_http_send] id=114 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094216][async_http_timeout] id=114 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094219][async_http_send] id=115 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094220][async_http_timeout] id=115 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094223][async_http_send] id=116 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094224][async_http_timeout] id=116 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094227][async_http_send] id=117 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094227][async_http_timeout] id=117 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094230][async_http_send] id=118 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094230][async_http_timeout] id=118 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094233][async_http_send] id=119 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094234][async_http_timeout] id=119 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094241][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519094241][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=31 attempt=1
+[20260519094245][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519094245][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=532 attempt=1
+[20260519094245][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519094245][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519094245][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519094245][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519094245][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519094245][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519094431][async_http_send] id=6 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094432][async_http_timeout] id=6 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094435][async_http_send] id=7 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094435][async_http_timeout] id=7 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094438][async_http_send] id=8 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094439][async_http_timeout] id=8 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094442][async_http_send] id=9 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094442][async_http_timeout] id=9 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094445][async_http_send] id=10 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094445][async_http_timeout] id=10 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094448][async_http_send] id=11 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094448][async_http_timeout] id=11 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094451][async_http_send] id=12 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094451][async_http_timeout] id=12 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094454][async_http_send] id=13 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094454][async_http_timeout] id=13 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094457][async_http_send] id=14 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094457][async_http_send] id=15 req_id=7683 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7683/ attempt=1
+[20260519094458][async_http_done] id=15 req_id=7683 tag=ttyd_port_probe status=200 elapsed_ms=31 attempt=1
+[20260519094458][async_http_timeout] id=14 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094501][async_http_send] id=16 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094501][async_http_send] id=17 req_id=7681 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7681/ attempt=1
+[20260519094501][async_http_done] id=17 req_id=7681 tag=ttyd_port_probe status=200 elapsed_ms=63 attempt=1
+[20260519094501][async_http_timeout] id=16 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094504][async_http_send] id=18 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094504][async_http_timeout] id=18 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094507][async_http_send] id=19 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094507][async_http_timeout] id=19 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094510][async_http_send] id=20 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094511][async_http_timeout] id=20 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094514][async_http_send] id=21 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094514][async_http_timeout] id=21 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094517][async_http_send] id=22 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094517][async_http_timeout] id=22 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094520][async_http_send] id=23 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094521][async_http_timeout] id=23 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094524][async_http_send] id=24 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094524][async_http_timeout] id=24 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094527][async_http_send] id=25 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094527][async_http_timeout] id=25 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094530][async_http_send] id=26 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094531][async_http_timeout] id=26 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094534][async_http_send] id=27 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094534][async_http_timeout] id=27 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094537][async_http_send] id=28 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094537][async_http_timeout] id=28 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094540][async_http_send] id=29 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094540][async_http_timeout] id=29 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094543][async_http_send] id=30 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094543][async_http_timeout] id=30 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094546][async_http_send] id=31 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094546][async_http_timeout] id=31 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094549][async_http_send] id=32 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094550][async_http_timeout] id=32 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094553][async_http_send] id=33 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094553][async_http_timeout] id=33 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094556][async_http_send] id=34 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094556][async_http_timeout] id=34 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094559][async_http_send] id=35 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094559][async_http_timeout] id=35 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094602][async_http_send] id=36 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094602][async_http_timeout] id=36 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094605][async_http_send] id=37 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094606][async_http_timeout] id=37 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094609][async_http_send] id=38 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094609][async_http_timeout] id=38 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094612][async_http_send] id=39 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094613][async_http_timeout] id=39 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519094616][async_http_send] id=40 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094616][async_http_timeout] id=40 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094619][async_http_send] id=41 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094619][async_http_timeout] id=41 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094622][async_http_send] id=42 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094622][async_http_timeout] id=42 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094625][async_http_send] id=43 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094626][async_http_timeout] id=43 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094629][async_http_send] id=44 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094629][async_http_timeout] id=44 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094632][async_http_send] id=45 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094632][async_http_timeout] id=45 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094635][async_http_send] id=46 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094635][async_http_timeout] id=46 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094638][async_http_send] id=47 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094639][async_http_timeout] id=47 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094642][async_http_send] id=48 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094642][async_http_timeout] id=48 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094645][async_http_send] id=49 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094645][async_http_timeout] id=49 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094648][async_http_send] id=50 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094648][async_http_timeout] id=50 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094651][async_http_send] id=51 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094651][async_http_timeout] id=51 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094654][async_http_send] id=52 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094655][async_http_timeout] id=52 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094658][async_http_send] id=53 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094658][async_http_timeout] id=53 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094701][async_http_send] id=54 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094701][async_http_timeout] id=54 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094704][async_http_send] id=55 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094704][async_http_timeout] id=55 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094707][async_http_send] id=56 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094707][async_http_timeout] id=56 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094710][async_http_send] id=57 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094710][async_http_timeout] id=57 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094713][async_http_send] id=58 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094714][async_http_timeout] id=58 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094717][async_http_send] id=59 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094717][async_http_timeout] id=59 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094720][async_http_send] id=60 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094720][async_http_timeout] id=60 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094723][async_http_send] id=61 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094723][async_http_timeout] id=61 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094726][async_http_send] id=62 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094726][async_http_timeout] id=62 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094729][async_http_send] id=63 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519094730][async_http_timeout] id=63 req_id=7682 tag=ttyd_port_probe timeout_ms=180
+[20260519094931][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519094931][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=31 attempt=1
+[20260519094935][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519094935][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=110 attempt=1
+[20260519094941][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519094941][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=531 attempt=1
+[20260519094941][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519094941][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
+[20260519094941][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519094941][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519094941][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519094941][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519095001][async_http_send] id=6 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095002][async_http_done] id=6 req_id=7682 tag=ttyd_port_probe status=200 elapsed_ms=531 attempt=1
+[20260519095018][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519095018][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=532 attempt=1
+[20260519095022][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519095022][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=32 attempt=1
+[20260519095022][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519095022][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519095022][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519095022][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519095022][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519095022][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519095024][async_http_send] id=6 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095025][async_http_timeout] id=6 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519095028][async_http_send] id=7 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095029][async_http_timeout] id=7 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095032][async_http_send] id=8 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095032][async_http_timeout] id=8 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095036][async_http_send] id=9 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095036][async_http_timeout] id=9 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095039][async_http_send] id=10 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095040][async_http_timeout] id=10 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095043][async_http_send] id=11 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095044][async_http_timeout] id=11 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095047][async_http_send] id=12 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095048][async_http_timeout] id=12 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095352][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519095352][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=47 attempt=1
+[20260519095357][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519095357][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=31 attempt=1
+[20260519095357][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519095357][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519095357][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519095357][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519095357][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519095357][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
+[20260519095509][async_http_send] id=6 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095510][async_http_timeout] id=6 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519095513][async_http_send] id=7 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095514][async_http_timeout] id=7 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095517][async_http_send] id=8 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095518][async_http_timeout] id=8 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095521][async_http_send] id=9 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095521][async_http_timeout] id=9 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095525][async_http_send] id=10 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095525][async_http_timeout] id=10 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095528][async_http_send] id=11 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095529][async_http_timeout] id=11 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095532][async_http_send] id=12 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095533][async_http_timeout] id=12 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095536][async_http_send] id=13 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095536][async_http_timeout] id=13 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095539][async_http_send] id=14 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095540][async_http_timeout] id=14 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095543][async_http_send] id=15 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095544][async_http_timeout] id=15 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095547][async_http_send] id=16 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095548][async_http_timeout] id=16 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095551][async_http_send] id=17 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095551][async_http_timeout] id=17 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095554][async_http_send] id=18 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095555][async_http_error] id=18 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519095558][async_http_send] id=19 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095559][async_http_timeout] id=19 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095602][async_http_send] id=20 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095603][async_http_timeout] id=20 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095606][async_http_send] id=21 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095606][async_http_timeout] id=21 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095609][async_http_send] id=22 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095610][async_http_timeout] id=22 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095613][async_http_send] id=23 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095614][async_http_timeout] id=23 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095617][async_http_send] id=24 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095618][async_http_timeout] id=24 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095621][async_http_send] id=25 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095621][async_http_timeout] id=25 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095624][async_http_send] id=26 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095625][async_http_timeout] id=26 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095628][async_http_send] id=27 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095629][async_http_timeout] id=27 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095632][async_http_send] id=28 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095633][async_http_timeout] id=28 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095636][async_http_send] id=29 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095636][async_http_timeout] id=29 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095639][async_http_send] id=30 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095640][async_http_timeout] id=30 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095643][async_http_send] id=31 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095644][async_http_timeout] id=31 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095647][async_http_send] id=32 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095648][async_http_timeout] id=32 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095651][async_http_send] id=33 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095651][async_http_timeout] id=33 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095654][async_http_send] id=34 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095655][async_http_send] id=35 req_id=7681 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7681/ attempt=1
+[20260519095655][async_http_done] id=35 req_id=7681 tag=ttyd_port_probe status=200 elapsed_ms=16 attempt=1
+[20260519095655][async_http_error] id=34 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519095658][async_http_send] id=36 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095659][async_http_timeout] id=36 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095702][async_http_send] id=37 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095702][async_http_timeout] id=37 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095705][async_http_send] id=38 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095706][async_http_timeout] id=38 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095709][async_http_send] id=39 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095710][async_http_timeout] id=39 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095713][async_http_send] id=40 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095713][async_http_timeout] id=40 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095716][async_http_send] id=41 req_id=7681 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7681/ attempt=1
+[20260519095717][async_http_done] id=41 req_id=7681 tag=ttyd_port_probe status=200 elapsed_ms=31 attempt=1
+[20260519095720][async_http_send] id=42 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095720][async_http_send] id=43 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519095720][async_http_done] id=43 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=15 attempt=1
+[20260519095720][async_http_timeout] id=42 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095723][async_http_send] id=44 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095724][async_http_timeout] id=44 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095727][async_http_send] id=45 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095728][async_http_timeout] id=45 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519095731][async_http_send] id=46 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095732][async_http_timeout] id=46 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095735][async_http_send] id=47 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095735][async_http_timeout] id=47 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095739][async_http_send] id=48 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095739][async_http_error] id=48 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519095742][async_http_send] id=49 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095743][async_http_timeout] id=49 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095746][async_http_send] id=50 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095746][async_http_timeout] id=50 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095750][async_http_send] id=51 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095750][async_http_timeout] id=51 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095753][async_http_send] id=52 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095754][async_http_timeout] id=52 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095757][async_http_send] id=53 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095758][async_http_timeout] id=53 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095801][async_http_send] id=54 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095802][async_http_timeout] id=54 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095805][async_http_send] id=55 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095805][async_http_timeout] id=55 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095808][async_http_send] id=56 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095809][async_http_timeout] id=56 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095812][async_http_send] id=57 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095813][async_http_timeout] id=57 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095816][async_http_send] id=58 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095817][async_http_timeout] id=58 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095820][async_http_send] id=59 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095820][async_http_timeout] id=59 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095823][async_http_send] id=60 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095824][async_http_timeout] id=60 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095827][async_http_send] id=61 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095828][async_http_timeout] id=61 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095831][async_http_send] id=62 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095832][async_http_timeout] id=62 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095835][async_http_send] id=63 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095835][async_http_timeout] id=63 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095838][async_http_send] id=64 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095839][async_http_error] id=64 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519095842][async_http_send] id=65 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095843][async_http_timeout] id=65 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095846][async_http_send] id=66 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095846][async_http_timeout] id=66 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095849][async_http_send] id=67 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095850][async_http_timeout] id=67 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095853][async_http_send] id=68 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095854][async_http_timeout] id=68 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095857][async_http_send] id=69 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095858][async_http_timeout] id=69 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095909][async_http_send] id=70 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095910][async_http_timeout] id=70 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519095913][async_http_send] id=71 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095913][async_http_timeout] id=71 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095917][async_http_send] id=72 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095917][async_http_timeout] id=72 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095920][async_http_send] id=73 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095921][async_http_timeout] id=73 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095924][async_http_send] id=74 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095925][async_http_timeout] id=74 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095928][async_http_send] id=75 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095928][async_http_send] id=76 req_id=7681 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7681/ attempt=1
+[20260519095928][async_http_timeout] id=75 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095928][async_http_done] id=76 req_id=7681 tag=ttyd_port_probe status=200 elapsed_ms=62 attempt=1
+[20260519095932][async_http_send] id=77 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095932][async_http_timeout] id=77 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095935][async_http_send] id=78 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095936][async_http_timeout] id=78 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095939][async_http_send] id=79 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095940][async_http_timeout] id=79 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095943][async_http_send] id=80 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095944][async_http_timeout] id=80 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095947][async_http_send] id=81 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095947][async_http_timeout] id=81 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095950][async_http_send] id=82 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095951][async_http_error] id=82 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519095954][async_http_send] id=83 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095955][async_http_timeout] id=83 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519095958][async_http_send] id=84 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519095959][async_http_timeout] id=84 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100002][async_http_send] id=85 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100002][async_http_timeout] id=85 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100005][async_http_send] id=86 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100006][async_http_timeout] id=86 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100009][async_http_send] id=87 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100010][async_http_timeout] id=87 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100013][async_http_send] id=88 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100014][async_http_timeout] id=88 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100017][async_http_send] id=89 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100017][async_http_timeout] id=89 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100020][async_http_send] id=90 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100021][async_http_timeout] id=90 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100024][async_http_send] id=91 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100025][async_http_timeout] id=91 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100028][async_http_send] id=92 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100029][async_http_timeout] id=92 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100032][async_http_send] id=93 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100032][async_http_timeout] id=93 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100035][async_http_send] id=94 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100036][async_http_timeout] id=94 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100039][async_http_send] id=95 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100040][async_http_timeout] id=95 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100043][async_http_send] id=96 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100044][async_http_timeout] id=96 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100047][async_http_send] id=97 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100047][async_http_timeout] id=97 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100050][async_http_send] id=98 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100051][async_http_error] id=98 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519100054][async_http_send] id=99 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100055][async_http_timeout] id=99 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100342][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519100342][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=31 attempt=1
+[20260519100347][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519100348][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=531 attempt=1
+[20260519100348][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519100348][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519100348][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519100348][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519100348][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519100348][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
+[20260519100632][async_http_send] id=6 req_id=7681 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7681/ attempt=1
+[20260519100632][async_http_done] id=6 req_id=7681 tag=ttyd_port_probe status=200 elapsed_ms=531 attempt=1
+[20260519100639][async_http_send] id=7 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100640][async_http_timeout] id=7 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519100643][async_http_send] id=8 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100644][async_http_timeout] id=8 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100647][async_http_send] id=9 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100648][async_http_timeout] id=9 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100651][async_http_send] id=10 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100651][async_http_timeout] id=10 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100654][async_http_send] id=11 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100655][async_http_timeout] id=11 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100658][async_http_send] id=12 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100659][async_http_timeout] id=12 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100702][async_http_send] id=13 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100703][async_http_timeout] id=13 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100706][async_http_send] id=14 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100706][async_http_timeout] id=14 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100709][async_http_send] id=15 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100710][async_http_timeout] id=15 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100713][async_http_send] id=16 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100714][async_http_timeout] id=16 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100717][async_http_send] id=17 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100718][async_http_timeout] id=17 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100721][async_http_send] id=18 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100721][async_http_timeout] id=18 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100725][async_http_send] id=19 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100725][async_http_error] id=19 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519100728][async_http_send] id=20 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100729][async_http_timeout] id=20 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100732][async_http_send] id=21 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100733][async_http_timeout] id=21 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100736][async_http_send] id=22 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100736][async_http_timeout] id=22 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100740][async_http_send] id=23 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100740][async_http_timeout] id=23 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100743][async_http_send] id=24 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100744][async_http_timeout] id=24 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100747][async_http_send] id=25 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100748][async_http_timeout] id=25 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100751][async_http_send] id=26 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100751][async_http_timeout] id=26 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100755][async_http_send] id=27 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100755][async_http_timeout] id=27 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100758][async_http_send] id=28 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100759][async_http_timeout] id=28 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100802][async_http_send] id=29 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100803][async_http_timeout] id=29 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519100806][async_http_send] id=30 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519100806][async_http_timeout] id=30 req_id=7682 tag=ttyd_port_probe timeout_ms=600
+[20260519101817][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519101817][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=47 attempt=1
+[20260519101821][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519101822][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=531 attempt=1
+[20260519101822][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519101822][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519101822][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519101822][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519101822][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519101822][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
+[20260519102129][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519102129][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=563 attempt=1
+[20260519102134][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519102134][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=516 attempt=1
+[20260519102134][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519102134][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519102134][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519102134][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519102134][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519102134][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519102137][async_http_send] id=6 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102138][async_http_done] id=6 req_id=7682 tag=ttyd_port_probe status=200 elapsed_ms=547 attempt=1
+[20260519102142][async_http_send] id=7 req_id=7681 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7681/ attempt=1
+[20260519102142][async_http_done] id=7 req_id=7681 tag=ttyd_port_probe status=200 elapsed_ms=219 attempt=1
+[20260519102456][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519102456][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=31 attempt=1
+[20260519102501][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519102502][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=532 attempt=1
+[20260519102502][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519102502][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519102502][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519102502][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519102502][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519102502][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519102534][async_http_send] id=6 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102534][async_http_timeout] id=6 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102538][async_http_send] id=7 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102538][async_http_timeout] id=7 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102542][async_http_send] id=8 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102542][async_http_timeout] id=8 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102546][async_http_send] id=9 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102546][async_http_timeout] id=9 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102550][async_http_send] id=10 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102550][async_http_timeout] id=10 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102554][async_http_send] id=11 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102554][async_http_timeout] id=11 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102555][async_http_send] id=12 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102556][async_http_timeout] id=12 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102557][async_http_send] id=13 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102558][async_http_timeout] id=13 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102601][async_http_send] id=14 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102602][async_http_timeout] id=14 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102602][async_http_send] id=15 req_id=7683 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7683/ attempt=1
+[20260519102603][async_http_done] id=15 req_id=7683 tag=ttyd_port_probe status=200 elapsed_ms=532 attempt=1
+[20260519102605][async_http_send] id=16 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102605][async_http_timeout] id=16 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102606][async_http_send] id=17 req_id=7688 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7688/ attempt=1
+[20260519102607][async_http_done] id=17 req_id=7688 tag=ttyd_port_probe status=200 elapsed_ms=563 attempt=1
+[20260519102609][async_http_send] id=18 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102609][async_http_send] id=19 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102609][async_http_timeout] id=18 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102609][async_http_send] id=20 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102610][async_http_timeout] id=19 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102610][async_http_timeout] id=20 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102610][async_http_send] id=21 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102611][async_http_timeout] id=21 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102614][async_http_send] id=22 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102615][async_http_timeout] id=22 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102618][async_http_send] id=23 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102619][async_http_timeout] id=23 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102619][async_http_send] id=24 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102620][async_http_timeout] id=24 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102620][async_http_send] id=25 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102620][async_http_error] id=25 req_id=7682 tag=ttyd_port_probe msg=(0x80072EE2) 
+操作超时
+
+Source:	WinHttp.WinHttpRequest
+[20260519102621][async_http_send] id=26 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102622][async_http_timeout] id=26 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102625][async_http_send] id=27 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102626][async_http_timeout] id=27 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102629][async_http_send] id=28 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102630][async_http_timeout] id=28 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102633][async_http_send] id=29 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102634][async_http_timeout] id=29 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102637][async_http_send] id=30 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102638][async_http_timeout] id=30 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102641][async_http_send] id=31 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102642][async_http_timeout] id=31 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102645][async_http_send] id=32 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102646][async_http_timeout] id=32 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102649][async_http_send] id=33 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102650][async_http_timeout] id=33 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102653][async_http_send] id=34 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102654][async_http_timeout] id=34 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102657][async_http_send] id=35 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102658][async_http_timeout] id=35 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102701][async_http_send] id=36 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102702][async_http_timeout] id=36 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102705][async_http_send] id=37 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102706][async_http_timeout] id=37 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102706][async_http_send] id=38 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102707][async_http_timeout] id=38 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102710][async_http_send] id=39 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102711][async_http_timeout] id=39 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102714][async_http_send] id=40 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102715][async_http_timeout] id=40 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102718][async_http_send] id=41 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102719][async_http_timeout] id=41 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102722][async_http_send] id=42 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102723][async_http_timeout] id=42 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102726][async_http_send] id=43 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102727][async_http_timeout] id=43 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102730][async_http_send] id=44 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102731][async_http_timeout] id=44 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102734][async_http_send] id=45 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102735][async_http_timeout] id=45 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102738][async_http_send] id=46 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102739][async_http_timeout] id=46 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102742][async_http_send] id=47 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102743][async_http_timeout] id=47 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102746][async_http_send] id=48 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102747][async_http_timeout] id=48 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102750][async_http_send] id=49 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102751][async_http_timeout] id=49 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102937][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519102938][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=532 attempt=1
+[20260519102942][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519102943][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=531 attempt=1
+[20260519102943][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519102943][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519102943][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519102943][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519102943][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519102943][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
+[20260519102950][async_http_send] id=6 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102951][async_http_timeout] id=6 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102954][async_http_send] id=7 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102955][async_http_timeout] id=7 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102957][async_http_send] id=8 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102958][async_http_send] id=9 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102958][async_http_timeout] id=8 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102958][async_http_send] id=10 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102959][async_http_timeout] id=9 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102959][async_http_send] id=11 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102959][async_http_send] id=12 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102959][async_http_timeout] id=10 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519102959][async_http_send] id=13 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519102959][async_http_timeout] id=11 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103000][async_http_timeout] id=12 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103000][async_http_send] id=14 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103000][async_http_timeout] id=13 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103000][async_http_timeout] id=14 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103000][async_http_send] id=15 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103001][async_http_timeout] id=15 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103004][async_http_send] id=16 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103005][async_http_timeout] id=16 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103008][async_http_send] id=17 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103009][async_http_timeout] id=17 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103009][async_http_send] id=18 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103010][async_http_timeout] id=18 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103011][async_http_send] id=19 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103012][async_http_timeout] id=19 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103012][async_http_send] id=20 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103013][async_http_timeout] id=20 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103016][async_http_send] id=21 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103017][async_http_timeout] id=21 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103020][async_http_send] id=22 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103020][async_http_timeout] id=22 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103023][async_http_send] id=23 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103024][async_http_timeout] id=23 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103024][async_http_send] id=24 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103025][async_http_timeout] id=24 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103028][async_http_send] id=25 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103029][async_http_timeout] id=25 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103029][async_http_send] id=26 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103029][async_http_timeout] id=26 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103032][async_http_send] id=27 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103033][async_http_timeout] id=27 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103035][async_http_send] id=28 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103036][async_http_timeout] id=28 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103039][async_http_send] id=29 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103040][async_http_timeout] id=29 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103040][async_http_send] id=30 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103041][async_http_timeout] id=30 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103044][async_http_send] id=31 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103045][async_http_timeout] id=31 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103047][async_http_send] id=32 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103048][async_http_timeout] id=32 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103048][async_http_send] id=33 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103049][async_http_timeout] id=33 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103052][async_http_send] id=34 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103053][async_http_timeout] id=34 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103053][async_http_send] id=35 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103054][async_http_timeout] id=35 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103057][async_http_send] id=36 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103057][async_http_timeout] id=36 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103057][async_http_send] id=37 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103058][async_http_timeout] id=37 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103059][async_http_send] id=38 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103100][async_http_timeout] id=38 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103100][async_http_send] id=39 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103101][async_http_timeout] id=39 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103104][async_http_send] id=40 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103105][async_http_timeout] id=40 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103105][async_http_send] id=41 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103106][async_http_timeout] id=41 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103109][async_http_send] id=42 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103110][async_http_timeout] id=42 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103110][async_http_send] id=43 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103110][async_http_timeout] id=43 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103111][async_http_send] id=44 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103112][async_http_timeout] id=44 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103115][async_http_send] id=45 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103116][async_http_timeout] id=45 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103116][async_http_send] id=46 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103117][async_http_timeout] id=46 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103120][async_http_send] id=47 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103121][async_http_timeout] id=47 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103121][async_http_send] id=48 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103122][async_http_timeout] id=48 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103123][async_http_send] id=49 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103124][async_http_timeout] id=49 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103124][async_http_send] id=50 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103125][async_http_timeout] id=50 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103128][async_http_send] id=51 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103129][async_http_timeout] id=51 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103132][async_http_send] id=52 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103133][async_http_timeout] id=52 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103135][async_http_send] id=53 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103136][async_http_timeout] id=53 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103139][async_http_send] id=54 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103140][async_http_timeout] id=54 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103143][async_http_send] id=55 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103144][async_http_timeout] id=55 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103147][async_http_send] id=56 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103148][async_http_send] id=57 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103148][async_http_timeout] id=56 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103148][async_http_send] id=58 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103148][async_http_timeout] id=57 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103149][async_http_timeout] id=58 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103152][async_http_send] id=59 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103153][async_http_timeout] id=59 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103156][async_http_send] id=60 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103156][async_http_timeout] id=60 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103159][async_http_send] id=61 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103200][async_http_send] id=62 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103200][async_http_timeout] id=61 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103200][async_http_timeout] id=62 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103203][async_http_send] id=63 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103204][async_http_timeout] id=63 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103207][async_http_send] id=64 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103208][async_http_timeout] id=64 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103211][async_http_send] id=65 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103212][async_http_send] id=66 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103212][async_http_timeout] id=65 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103212][async_http_timeout] id=66 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103215][async_http_send] id=67 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103216][async_http_timeout] id=67 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103219][async_http_send] id=68 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103220][async_http_timeout] id=68 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103223][async_http_send] id=69 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103224][async_http_send] id=70 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103224][async_http_timeout] id=69 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103225][async_http_timeout] id=70 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103228][async_http_send] id=71 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103229][async_http_timeout] id=71 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103232][async_http_send] id=72 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103232][async_http_timeout] id=72 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103236][async_http_send] id=73 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103236][async_http_timeout] id=73 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103240][async_http_send] id=74 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103240][async_http_timeout] id=74 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103244][async_http_send] id=75 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103244][async_http_timeout] id=75 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103248][async_http_send] id=76 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103248][async_http_timeout] id=76 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103252][async_http_send] id=77 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103252][async_http_timeout] id=77 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103256][async_http_send] id=78 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103256][async_http_timeout] id=78 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103300][async_http_send] id=79 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103300][async_http_timeout] id=79 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103304][async_http_send] id=80 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103304][async_http_timeout] id=80 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103308][async_http_send] id=81 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103308][async_http_timeout] id=81 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103309][async_http_send] id=82 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103310][async_http_timeout] id=82 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103313][async_http_send] id=83 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103314][async_http_timeout] id=83 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103317][async_http_send] id=84 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103318][async_http_timeout] id=84 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103321][async_http_send] id=85 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103322][async_http_timeout] id=85 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103325][async_http_send] id=86 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103326][async_http_timeout] id=86 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103329][async_http_send] id=87 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103330][async_http_timeout] id=87 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103333][async_http_send] id=88 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103334][async_http_timeout] id=88 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103337][async_http_send] id=89 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103338][async_http_timeout] id=89 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103341][async_http_send] id=90 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103342][async_http_timeout] id=90 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103345][async_http_send] id=91 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103346][async_http_timeout] id=91 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103349][async_http_send] id=92 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103350][async_http_timeout] id=92 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103353][async_http_send] id=93 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103354][async_http_timeout] id=93 req_id=7682 tag=ttyd_port_probe timeout_ms=800
+[20260519103420][async_http_send] id=1 req_id=7684 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7684/ attempt=1
+[20260519103420][async_http_done] id=1 req_id=7684 tag=ttyd_port_probe status=200 elapsed_ms=32 attempt=1
+[20260519103425][async_http_send] id=2 req_id=0 tag=cfg_health_probe method=GET url=http://127.0.0.1:8080/health attempt=1
+[20260519103425][async_http_done] id=2 req_id=0 tag=cfg_health_probe status=200 elapsed_ms=531 attempt=1
+[20260519103425][async_http_send] id=3 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/status attempt=1
+[20260519103425][async_http_done] id=3 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519103425][async_http_send] id=4 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/progress attempt=1
+[20260519103425][async_http_done] id=4 req_id=0 tag=cfg_http_json status=200 elapsed_ms=31 attempt=1
+[20260519103425][async_http_send] id=5 req_id=0 tag=cfg_http_json method=GET url=http://127.0.0.1:8080/v1/fulltext/config attempt=1
+[20260519103425][async_http_done] id=5 req_id=0 tag=cfg_http_json status=200 elapsed_ms=32 attempt=1
+[20260519103520][async_http_send] id=6 req_id=7682 tag=ttyd_port_probe method=GET url=http://127.0.0.1:7682/ attempt=1
+[20260519103520][async_http_done] id=6 req_id=7682 tag=ttyd_port_probe status=200 elapsed_ms=532 attempt=1

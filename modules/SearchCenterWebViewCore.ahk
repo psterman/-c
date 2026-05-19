@@ -117,6 +117,10 @@ global g_SCWV_ModeSwitchGuardUntilTick := 0
 global g_SCWV_ModeSwitchGuardEpoch := 0
 global g_SCWV_ModeSwitchDeferredCaps := Map()
 global g_SCWV_GuardPausedSearchTimer := 0
+; 微创：搜索历史内存缓存 + 防抖写盘（热路径不再每次 FileRead/Jxon_Dump）
+global g_SC_HistoryCache := ""      ; ""=未加载；Array=已加载历史关键词列表
+global g_SC_HistoryFileMtime := ""    ; SearchCenterHistory.json 上次同步时的修改时间
+global g_SC_HistoryDirty := false   ; 内存比磁盘新，待防抖写回
 
 SCWV_Log(event, detail := "") {
     try {
@@ -1405,11 +1409,17 @@ _SCWV_ApplySearchCoreDefaults() {
     }
 }
 
+_SCWV_IsSearchCoreStarting() {
+    global g_SCWV_GoStartPhase
+    phase := String(g_SCWV_GoStartPhase)
+    return (phase = "KILLING" || phase = "STARTING")
+}
+
 _SCWV_RestartSearchCore() {
     global g_SCWV_GoStartPhase, g_SCWV_GoStartGen, g_SCWV_GoStartPending, g_SCWV_GoKillLastTick, g_SCWV_GoPhaseSinceTick, g_SCWV_GoStartTryCount
-    if (g_SCWV_GoStartPhase = "KILLING" || g_SCWV_GoStartPhase = "STARTING") {
+    if _SCWV_IsSearchCoreStarting() {
         g_SCWV_GoStartPending := true
-        return false
+        return true
     }
     g_SCWV_GoStartGen += 1
     myGen := g_SCWV_GoStartGen
@@ -1434,7 +1444,7 @@ _SCWV_RestartSearchCore() {
         return false
     g_SCWV_GoStartTryCount := 0
     SetTimer((*) => _SCWV_StartSearchCoreLaunch(myGen, exe), -120)
-    return false
+    return true
 }
 
 _SCWV_StartSearchCoreLaunch(gen, exe, *) {
@@ -1458,6 +1468,8 @@ _SCWV_CheckSearchCoreStartup(gen, *) {
         g_SCWV_GoPhaseSinceTick := A_TickCount
         g_SCWV_GoStartPending := false
         g_SCWV_BackendHealthy := true
+        SetTimer(_SCWV_RunPendingGoSearch, -60)
+        SetTimer((*) => _SCWV_PostFullTextStatus(false), -120)
         return
     }
     g_SCWV_GoStartTryCount += 1
@@ -1471,6 +1483,8 @@ _SCWV_CheckSearchCoreStartup(gen, *) {
         g_SCWV_GoStartPending := false
         SetTimer(_SCWV_RunDeferredSearchCoreEnsure, -10)
     }
+    if !ProcessExist("SearchCenterCore.exe")
+        _SCWV_ShowSearchCoreError("SearchCenterCore 启动超时（请检查 searchcore\\SearchCenterCore.exe）")
     return false
 }
 
@@ -1480,6 +1494,8 @@ _SCWV_EnsureSearchCoreRunning() {
         g_SCWV_GoStartPhase := "RUNNING"
         return true
     }
+    if (_SCWV_SearchCoreExePath() = "")
+        return false
     return _SCWV_RestartSearchCore()
 }
 
@@ -1893,11 +1909,15 @@ _SCWV_FormatSearchCoreHttpErr(resp) {
 }
 
 _SCWV_PostFullTextStatus(withConfig := false) {
-    payload := _SCWV_DefaultFullTextStatusPayload()
     if !_SCWV_EnsureSearchCoreRunning() {
-        SCWV_PostJson(Map("type", "fulltextStatus", "payload", payload))
+        if (_SCWV_SearchCoreExePath() != "" && (_SCWV_IsSearchCoreStarting() || !ProcessExist("SearchCenterCore.exe"))) {
+            SetTimer((*) => _SCWV_PostFullTextStatus(withConfig), -600)
+            return
+        }
+        ; 核心不可用时勿推送默认 0/0，避免索引区被前端误判为「清空重来」
         return
     }
+    payload := Map()
     _SCWV_HttpSearchCoreJsonAsync("GET", "/v1/fulltext/status", "", (stResp) => _SCWV_PostFullTextStatus_AfterStatus(payload, withConfig, stResp))
 }
 
@@ -2508,8 +2528,12 @@ _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) 
             global SearchCenterSearchResults, SearchCenterHasMoreData
             SearchCenterSearchResults := []
             SearchCenterHasMoreData := false
-            _SCWV_ShowSearchCoreError("SearchCenterCore 未启动或无法连接（请检查 SearchCenterCore.exe）")
+            _SCWV_ShowSearchCoreError("SearchCenterCore 未找到（请检查 searchcore\\SearchCenterCore.exe）")
             SCWV_PushState("state")
+            return
+        }
+        if !ProcessExist("SearchCenterCore.exe") {
+            _SCWV_SetPendingGoSearch(off, kw, gt, lim)
             return
         }
 
@@ -3385,7 +3409,12 @@ SCWV_OnWebMessage(sender, args) {
             _SCWV_BatchSearch()
         case "cliSend":
             prompt := msg.Has("prompt") ? String(msg["prompt"]) : ""
-            _SCWV_SendToCLI(prompt)
+            eng := msg.Has("engine") ? Trim(String(msg["engine"])) : ""
+            _SCWV_SendToCLI(prompt, eng)
+        case "cliInject":
+            prompt := msg.Has("prompt") ? String(msg["prompt"]) : ""
+            eng := msg.Has("engine") ? Trim(String(msg["engine"])) : ""
+            _SCWV_InjectPromptToTtyd(prompt, eng)
         case "cliOpen":
             OpenSelectedCLIAgents()
         case "cliTerminalFocus":
@@ -5020,7 +5049,7 @@ _SCWV_BatchSearchStep(keyword, idx, *) {
     SetTimer((*) => _SCWV_BatchSearchStep(keyword, idx + 1), -300)
 }
 
-_SCWV_SendToCLI(prompt) {
+_SCWV_SendToCLI(prompt, engine := "") {
     global SearchCenterWebKeyword
 
     if (Trim(prompt) = "")
@@ -5030,10 +5059,64 @@ _SCWV_SendToCLI(prompt) {
         TrayTip("请输入要发送给 AI 的内容", "提示", "Icon! 2")
         return
     }
-    
-    _SCWV_RecordSearchHistory(prompt)
 
-    LaunchSelectedCLIAgents(prompt)
+    _SCWV_RecordSearchHistory(prompt)
+    _SCWV_InjectPromptToTtyd(prompt, engine)
+}
+
+; 将顶部撰写区内容注入当前 ttyd iframe（行业惯例：Enter 发到用户正在看的终端）
+_SCWV_InjectPromptToTtyd(prompt, engine := "") {
+    global g_SCWV_Gui, g_SCWV_WV2
+    p := Trim(String(prompt))
+    if (p = "")
+        return false
+    eng := Trim(String(engine))
+    if (eng = "")
+        eng := "codex_cli"
+    try eng := NiumaTtyd_NormalizeEngine(eng)
+    catch {
+        eng := "codex_cli"
+    }
+    port := NiumaTtyd_PortForEngine(eng)
+    if !NiumaTtyd_IsHttpReadyOnPort(port, 400) {
+        try NiumaTtyd_QueuePortProbe(port, 600)
+        catch {
+        }
+    }
+    try SCWV_PostJson(Map("type", "focusCliFrame", "engine", eng))
+    catch {
+    }
+    Sleep(140)
+    clipBak := ""
+    try clipBak := ClipboardAll()
+    catch {
+    }
+    try A_Clipboard := p
+    catch {
+        try A_Clipboard := ""
+    }
+    Sleep(60)
+    try {
+        if (IsObject(g_SCWV_Gui) && g_SCWV_Gui.HasProp("Hwnd")) {
+            hwnd := g_SCWV_Gui.Hwnd
+            if (hwnd && WinExist("ahk_id " . hwnd))
+                WinActivate("ahk_id " . hwnd)
+        }
+    } catch {
+    }
+    Sleep(80)
+    try {
+        Send("^v")
+        Sleep(70)
+        Send("{Enter}")
+    } catch {
+    }
+    try {
+        if (clipBak != "")
+            A_Clipboard := clipBak
+    } catch {
+    }
+    return true
 }
 
 ; 搜索中心结果执行：smartTextSearch=true 时，在有关键词且非文件/链接情况下用内容二次搜索（右键“立即执行”）；双击仍为粘贴
@@ -7999,19 +8082,36 @@ class PreviewManager {
     }
 }
 
-_SCWV_RecordSearchHistory(keyword) {
-    global SearchCenterCurrentLimit
-    k := Trim(String(keyword))
-    if (k == "")
+_SCWV_HistoryFilePath() {
+    return A_ScriptDir . "\Data\SearchCenterHistory.json"
+}
+
+_SCWV_HistoryReadFileMtime() {
+    path := _SCWV_HistoryFilePath()
+    if !FileExist(path)
+        return ""
+    try
+        return FileGetTime(path, "M")
+    catch
+        return ""
+}
+
+; 冷启动或 Record 首次：同步读盘一次填入内存缓存
+_SCWV_EnsureHistoryCacheLoaded() {
+    global g_SC_HistoryCache, g_SC_HistoryFileMtime
+    if (Type(g_SC_HistoryCache) = "Array")
         return
-        
-    historyFile := A_ScriptDir . "\Data\SearchCenterHistory.json"
+    _SCWV_ReloadHistoryFromDisk()
+}
+
+; 强制从磁盘重载（外部改文件或 mtime 变化）
+_SCWV_ReloadHistoryFromDisk() {
+    global g_SC_HistoryCache, g_SC_HistoryFileMtime
+    path := _SCWV_HistoryFilePath()
     historyArr := []
-    
-    ; 璇诲彇鐜版湁璁板綍
-    if FileExist(historyFile) {
+    if FileExist(path) {
         try {
-            content := FileRead(historyFile, "UTF-8")
+            content := FileRead(path, "UTF-8")
             if (content != "")
                 historyArr := Jxon_Load(content)
         } catch {
@@ -8020,36 +8120,27 @@ _SCWV_RecordSearchHistory(keyword) {
     }
     if (Type(historyArr) != "Array")
         historyArr := []
-        
-    ; 鍘婚噸骞舵斁鑷抽槦棣?
-    newArr := [k]
-    for _, item in historyArr {
-        if (String(item) != k)
-            newArr.Push(String(item))
-    }
-    
-    ; 铏界劧鍓嶇鍙互閫夋嫨 LIMIT锛屼絾鎴戜滑鍦ㄦ湰鍦版渶澶氫繚鐣?1000 鏉★紝璇诲彇鏃跺啀鎴柇銆?
-    if (newArr.Length > 1000)
-        newArr.Length := 1000
-        
-    if !DirExist(A_ScriptDir . "\Data")
-        DirCreate(A_ScriptDir . "\Data")
-        
-    try {
-        f := FileOpen(historyFile, "w", "UTF-8")
-        if (f) {
-            f.Write(Jxon_Dump(newArr))
-            f.Close()
-        }
-    }
+    g_SC_HistoryCache := historyArr
+    g_SC_HistoryFileMtime := _SCWV_HistoryReadFileMtime()
 }
 
-_SCWV_LoadSearchHistory() {
+_SCWV_HistoryDedupeToFront(keyword, historyArr) {
+    k := Trim(String(keyword))
+    newArr := [k]
+    if (Type(historyArr) = "Array") {
+        for _, item in historyArr {
+            if (String(item) != k)
+                newArr.Push(String(item))
+        }
+    }
+    if (newArr.Length > 1000)
+        newArr.Length := 1000
+    return newArr
+}
+
+; 教程卡 + 历史项推送到 UI（从 Load 抽出，避免重复拼装）
+_SCWV_HistoryPushResultsToUI(historyArr) {
     global SearchCenterCurrentLimit, SearchCenterSearchResults, SearchCenterHasMoreData
-    historyFile := A_ScriptDir "\Data\SearchCenterHistory.json"
-    historyArr := []
-    
-    ; 1. 缁勮鏂版墜鎸囧崡鍗＄墖 (Master Guide Card)
     SearchCenterSearchResults := []
     tutorialContent := "快速上手（30秒）`n"
                      . "1. 输入关键词：支持文件名、路径片段、剪贴板内容、模板名。`n"
@@ -8075,16 +8166,7 @@ _SCWV_LoadSearchHistory() {
         Source: "新手引导",
         Time: "快速开始"
     })
-    ; 2. 璇诲彇骞舵坊鍔犵敤鎴风湡瀹炲巻鍙?(User History)
-    if FileExist(historyFile) {
-        try {
-            content := FileRead(historyFile, "UTF-8")
-            if (content != "")
-                historyArr := Jxon_Load(content)
-        }
-    }
-    
-    if (Type(historyArr) == "Array") {
+    if (Type(historyArr) = "Array") {
         limit := (SearchCenterCurrentLimit && SearchCenterCurrentLimit > 0) ? SearchCenterCurrentLimit : 30
         for _, item in historyArr {
             SearchCenterSearchResults.Push({
@@ -8095,12 +8177,59 @@ _SCWV_LoadSearchHistory() {
                 Path: String(item),
                 OriginalDataType: "history"
             })
-            ; 5 是教程占位数量
             if (SearchCenterSearchResults.Length >= (limit + 5))
                 break
         }
     }
-    
     SearchCenterHasMoreData := false
     SCWV_PushState("state")
+}
+
+; 防抖写盘：停笔 1.5s 后单次全量序列化（主线程空闲时执行）
+_SCWV_FlushSearchHistory(*) {
+    global g_SC_HistoryCache, g_SC_HistoryFileMtime, g_SC_HistoryDirty
+    if !g_SC_HistoryDirty
+        return
+    if (Type(g_SC_HistoryCache) != "Array")
+        return
+    if !DirExist(A_ScriptDir . "\Data")
+        DirCreate(A_ScriptDir . "\Data")
+    try {
+        f := FileOpen(_SCWV_HistoryFilePath(), "w", "UTF-8")
+        if (f) {
+            f.Write(Jxon_Dump(g_SC_HistoryCache))
+            f.Close()
+            g_SC_HistoryFileMtime := _SCWV_HistoryReadFileMtime()
+            g_SC_HistoryDirty := false
+        }
+    } catch {
+    }
+}
+
+; 微创：Record 热路径只更新内存，不写盘
+_SCWV_RecordSearchHistory(keyword) {
+    global g_SC_HistoryCache, g_SC_HistoryDirty
+    k := Trim(String(keyword))
+    if (k == "")
+        return
+    _SCWV_EnsureHistoryCacheLoaded()
+    g_SC_HistoryCache := _SCWV_HistoryDedupeToFront(k, g_SC_HistoryCache)
+    g_SC_HistoryDirty := true
+    SetTimer(_SCWV_FlushSearchHistory, 0)
+    SetTimer(_SCWV_FlushSearchHistory, -1500)
+}
+
+; 微创：Load 优先内存缓存，mtime 未变则 0 读盘
+_SCWV_LoadSearchHistory() {
+    global g_SC_HistoryCache, g_SC_HistoryFileMtime, g_SC_HistoryDirty
+    needDiskRead := true
+    if (Type(g_SC_HistoryCache) = "Array") {
+        if g_SC_HistoryDirty
+            needDiskRead := false
+        else if (_SCWV_HistoryReadFileMtime() = g_SC_HistoryFileMtime)
+            needDiskRead := false
+    }
+    if needDiskRead
+        _SCWV_ReloadHistoryFromDisk()
+    _SCWV_HistoryPushResultsToUI(g_SC_HistoryCache)
 }

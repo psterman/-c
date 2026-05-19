@@ -303,6 +303,18 @@ VK_ExecCursorHelperCmd(cmdId) {
                 if (_VK_H("IsSearchCenterActive"))
                     VK_SearchCenterSetFilter("pinned")
                 executed := true
+            case "sc_compose_send":
+                if (_VK_H("IsSearchCenterActive"))
+                    VK_SearchCenterPost('{"type":"vk_compose","action":"send"}')
+                executed := true
+            case "sc_compose_newline":
+                if (_VK_H("IsSearchCenterActive"))
+                    VK_SearchCenterPost('{"type":"vk_compose","action":"newline"}')
+                executed := true
+            case "sc_compose_run":
+                if (_VK_H("IsSearchCenterActive"))
+                    VK_SearchCenterPost('{"type":"vk_compose","action":"run"}')
+                executed := true
 
             case "cp_search":
                 if (VK_IsClipboardPanelActive())

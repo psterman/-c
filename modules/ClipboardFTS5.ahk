@@ -80,6 +80,18 @@ InitClipboardFTS5DB() {
     
     ; 2. 创建 SQLiteDB 实例并打开数据库
     try {
+        ; 默认字段存在性（必须在函数作用域先初始化，避免后续触发器构建读到“未赋值局部变量”）
+        hasSourcePath := false
+        hasIconPath := false
+        hasLastCopyTime := false
+        hasCopyCount := false
+        hasSourceUrl := false
+        hasImageFormat := false
+        hasImageWidth := false
+        hasImageHeight := false
+        hasFileSize := false
+        hasThumbPath := false
+
         ClipboardFTS5DB := SQLiteDB()
         if (!ClipboardFTS5DB.OpenDB(ClipboardFTS5DBPath)) {
             MsgBox("无法打开数据库: " . ClipboardFTS5DBPath . "`n错误: " . ClipboardFTS5DB.ErrorMsg, "数据库初始化错误", "IconX")
@@ -102,17 +114,6 @@ InitClipboardFTS5DB() {
             SQL := "PRAGMA table_info(ClipMain)"
             table := ""
             if (ClipboardFTS5DB.GetTable(SQL, &table)) {
-                hasSourcePath := false
-                hasIconPath := false
-                hasLastCopyTime := false
-                hasCopyCount := false
-                hasSourceUrl := false
-                hasImageFormat := false
-                hasImageWidth := false
-                hasImageHeight := false
-                hasFileSize := false
-                hasThumbPath := false
-                
                 if (table.HasRows && table.Rows.Length > 0) {
                     Loop table.Rows.Length {
                         row := table.Rows[A_Index]

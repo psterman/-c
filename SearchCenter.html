@@ -385,16 +385,45 @@ html[data-theme="light"] #startup-splash {
   width: 100%;
   display: block;
   min-width: 0;
-  height: 40px;
+  min-height: 40px;
+  max-height: 120px;
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 12px;
   color: var(--text);
-  padding: 0 14px;
+  padding: 8px 14px;
   outline: none;
   caret-color: var(--accent);
   user-select: text;
   -webkit-user-select: text;
+  resize: vertical;
+  line-height: 1.35;
+  font-family: inherit;
+  font-size: inherit;
+}
+.sc-compose-hints {
+  display: none;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  padding-left: 2px;
+}
+.sc-compose-hints.visible { display: flex; }
+.sc-compose-hint {
+  font-size: 10px;
+  color: #8a96a3;
+  border: 1px dashed rgba(214, 111, 26, 0.35);
+  border-radius: 8px;
+  padding: 2px 8px;
+  cursor: pointer;
+  background: rgba(214, 111, 26, 0.06);
+}
+.sc-compose-hint:hover { border-color: var(--accent); color: var(--accent); }
+.sc-compose-hint kbd {
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--accent-strong, #ff9a4d);
+  margin-right: 4px;
 }
 #search::placeholder { color: #6f7d8b; }
 #search:focus, #limit:focus { border-color: var(--accent); }
@@ -2766,7 +2795,12 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
       <div class="search-box-inner" id="searchBoxInner">
         <span class="search-icon-left" id="search-icon-inline">&#128269;</span>
         <div class="search-input-wrap">
-          <input id="search" type="text" placeholder="搜索本地结果，或直接作为网络搜索 / CLI 提示词发送" autocomplete="off" spellcheck="false">
+          <textarea id="search" rows="1" placeholder="搜索本地结果，或直接作为网络搜索 / CLI 提示词发送" autocomplete="off" spellcheck="false"></textarea>
+          <div id="sc-compose-hints" class="sc-compose-hints" aria-label="撰写区快捷键">
+            <span class="sc-compose-hint" data-compose-action="cli_send" title="点击修改"><kbd id="sc-hint-cli-send">Enter</kbd>发送到终端</span>
+            <span class="sc-compose-hint" data-compose-action="compose_newline" title="点击修改"><kbd id="sc-hint-compose-newline">Shift+Enter</kbd>换行</span>
+            <span class="sc-compose-hint" data-compose-action="compose_run" title="点击修改"><kbd id="sc-hint-compose-run">Ctrl+Enter</kbd>立即搜索</span>
+          </div>
         </div>
         <div class="search-controls-right">
           <button id="btn-run" class="btn primary" type="button">搜索</button>
@@ -2978,6 +3012,19 @@ if (typeof BasePanel === 'undefined') {
 }
 const SC_ENGINE_MODE_KEY = "sc_engine_mode";
 const SC_HOTKEY_BINDINGS_KEY = "sc_hotkey_bindings_v1";
+const SC_COMPOSE_BINDINGS_KEY = "sc_compose_bindings_v1";
+const COMPOSE_BINDINGS_DEFAULT = Object.freeze({
+  cli_send: "enter",
+  compose_newline: "shift+enter",
+  compose_run: "ctrl+enter",
+  local_run: "enter"
+});
+const COMPOSE_ACTION_LABELS = Object.freeze({
+  cli_send: "发送到终端",
+  compose_newline: "换行",
+  compose_run: "立即搜索（CLI 下）",
+  local_run: "立即搜索（本地）"
+});
 const SC_FT_COLLAPSED_KEY = "sc_ft_collapsed_v1";
 const SC_FILTER_COLLAPSED_KEY = "sc_filter_collapsed_v2";
 const SC_UI_MODE_KEY = "sc_ui_mode_v1";
@@ -3055,6 +3102,21 @@ function getCliEnginesForTabs() {
   });
 }
 const _cliOpenThrottleByEngine = new Map();
+const _cliUrlByEngine = new Map(); // engineId -> 最近 ttyd_ready 的 URL（切标签可立即挂载）
+const _cliAutoBootDone = new Set(); // 本会话是否已自动注入启动 CLI
+/** ttyd 用轻量 cmd 时，iframe 就绪后自动注入的首条命令（与 codex 的 cmd /k 行为等价） */
+const SC_CLI_AUTO_BOOT_CMD = {
+  codex_cli: "codex",
+  gemini_cli: "gemini",
+  openclaw_cli: "openclaw",
+  qwen_cli: "qwen",
+  ollama_cli: "ollama",
+  claude_cli: "claude",
+  deepseek_cli: "deepseek",
+  kimi_cli: "kimi",
+  zhipu_cli: "chelper",
+  copilot_cli: "copilot"
+};
 let _cliSyncDebounceTimer = 0;
 let _cliTerminalFocusLock = false;
 let _cliFrameLoadedPort = 0;
@@ -3063,6 +3125,8 @@ let _localInitKickAt = 0; // 本地首屏空结果兜底补拉节流
 let _cliAutoRetryTimer = 0;
 const _cliAutoRetryCountByEngine = new Map();
 let _cliConnectFallbackTimer = 0;
+let _cliLoadingPollTimer = 0;
+const _cliLoadingPollCountByEngine = new Map();
 let _lastFtUiApplyAt = 0;
 const SC_CLI_OPEN_THROTTLE_MS = 1200;
 const SC_CLI_READY_TTL_MS = 300000;
@@ -3140,11 +3204,14 @@ const state = {
   hotkeyBindings: null,
   hotkeyBindDialog: {
     open: false,
+    mode: "caps",
+    composeAction: "",
     group: "",
     value: "",
     label: "",
     draftKey: ""
   },
+  composeBindings: null,
   recycleBin: [],
   recycleCount: 0,
   previewTimer: 0,
@@ -3263,6 +3330,7 @@ if (startupSplashLogo) {
 }
 setTimeout(() => dismissStartupSplash(true), SC_SPLASH_FALLBACK_MS);
 state.hotkeyBindings = loadHotkeyBindings();
+state.composeBindings = loadComposeBindings();
 try {
   const rawSubtagMap = localStorage.getItem(SC_SUBTAG_SELECTION_KEY);
   if (rawSubtagMap) {
@@ -3660,6 +3728,11 @@ function syncHotkeyBindDialogUi() {
   const keyEl = document.getElementById("hotkey-bind-key");
   if (!target || !keyEl) return;
   const d = state.hotkeyBindDialog || {};
+  if (d.mode === "compose") {
+    target.textContent = "撰写区：" + String(d.label || d.composeAction || "");
+    keyEl.textContent = formatComposeChordLabel(d.draftKey || "");
+    return;
+  }
   const key = normalizeHintKey(d.draftKey || "");
   target.textContent = "目标按钮：" + String(d.label || d.value || "");
   keyEl.textContent = key ? ("Caps+" + key.toUpperCase()) : "未设置";
@@ -3669,7 +3742,11 @@ function openHotkeyBindDialog(group, value, label) {
   if (!group || !value) return;
   const ov = document.getElementById("hotkey-bind-overlay");
   if (!ov) return;
+  const tip = document.getElementById("hotkey-bind-tip");
+  if (tip) tip.textContent = "按下 A-Z 或 0-9 作为 Caps+ 快捷键。按 Delete/Backspace 清空，按 Enter 保存。";
   state.hotkeyBindDialog.open = true;
+  state.hotkeyBindDialog.mode = "caps";
+  state.hotkeyBindDialog.composeAction = "";
   state.hotkeyBindDialog.group = String(group);
   state.hotkeyBindDialog.value = String(value);
   state.hotkeyBindDialog.label = String(label || value);
@@ -3689,6 +3766,17 @@ function closeHotkeyBindDialog() {
 
 function applyHotkeyBindDialog() {
   const d = state.hotkeyBindDialog || {};
+  if (d.mode === "compose") {
+    const act = String(d.composeAction || "");
+    if (!act) return;
+    const b = getComposeBindings();
+    b[act] = normalizeComposeChord(d.draftKey || "");
+    state.composeBindings = b;
+    saveComposeBindings();
+    syncComposeHintsUi();
+    closeHotkeyBindDialog();
+    return;
+  }
   const group = String(d.group || "");
   const value = String(d.value || "");
   const key = normalizeHintKey(d.draftKey || "");
@@ -3726,6 +3814,23 @@ function handleHotkeyBindKeydown(event) {
     closeHotkeyBindDialog();
     return true;
   }
+  if (state.hotkeyBindDialog.mode === "compose") {
+    if (event.key === "Backspace" || event.key === "Delete") {
+      event.preventDefault();
+      state.hotkeyBindDialog.draftKey = "";
+      syncHotkeyBindDialogUi();
+      return true;
+    }
+    const chord = normalizeComposeChordFromEvent(event);
+    if (chord) {
+      event.preventDefault();
+      state.hotkeyBindDialog.draftKey = chord;
+      syncHotkeyBindDialogUi();
+      applyHotkeyBindDialog();
+      return true;
+    }
+    return true;
+  }
   if (event.key === "Enter") {
     event.preventDefault();
     applyHotkeyBindDialog();
@@ -3745,14 +3850,210 @@ function handleHotkeyBindKeydown(event) {
   return true;
 }
 
+function normalizeComposeChord(chord) {
+  return String(chord || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace("control", "ctrl")
+    .replace("cmd", "meta");
+}
+
+function normalizeComposeChordFromEvent(event) {
+  if (!event) return "";
+  const key = String(event.key || "").toLowerCase();
+  if (key === "escape" || key === "process") return "";
+  const parts = [];
+  if (event.ctrlKey) parts.push("ctrl");
+  if (event.shiftKey) parts.push("shift");
+  if (event.altKey) parts.push("alt");
+  if (event.metaKey) parts.push("meta");
+  let main = key;
+  if (main === " ") main = "space";
+  const allowed = ["enter", "tab", "backspace", "delete", "space"];
+  if (allowed.indexOf(main) >= 0 || (main.length === 1 && /[a-z0-9]/.test(main))) {
+    parts.push(main);
+    return parts.join("+");
+  }
+  return "";
+}
+
+function chordMatchesEvent(event, chord) {
+  const want = normalizeComposeChord(chord);
+  if (!want) return false;
+  const got = normalizeComposeChordFromEvent(event);
+  return got === want;
+}
+
+function formatComposeChordLabel(chord) {
+  const c = normalizeComposeChord(chord);
+  if (!c) return "未设置";
+  return c.split("+").map((p) => {
+    if (p === "ctrl") return "Ctrl";
+    if (p === "shift") return "Shift";
+    if (p === "alt") return "Alt";
+    if (p === "meta") return "Win";
+    if (p === "enter") return "Enter";
+    if (p === "space") return "Space";
+    return p.length === 1 ? p.toUpperCase() : p;
+  }).join("+");
+}
+
+function loadComposeBindings() {
+  try {
+    const raw = localStorage.getItem(SC_COMPOSE_BINDINGS_KEY);
+    if (!raw) return Object.assign({}, COMPOSE_BINDINGS_DEFAULT);
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return Object.assign({}, COMPOSE_BINDINGS_DEFAULT);
+    return Object.assign({}, COMPOSE_BINDINGS_DEFAULT, parsed);
+  } catch {
+    return Object.assign({}, COMPOSE_BINDINGS_DEFAULT);
+  }
+}
+
+function saveComposeBindings() {
+  try {
+    localStorage.setItem(SC_COMPOSE_BINDINGS_KEY, JSON.stringify(state.composeBindings || COMPOSE_BINDINGS_DEFAULT));
+  } catch (_) {}
+}
+
+function getComposeBindings() {
+  if (!state.composeBindings || typeof state.composeBindings !== "object") {
+    state.composeBindings = loadComposeBindings();
+  }
+  return state.composeBindings;
+}
+
+function syncComposeHintsUi() {
+  const bar = document.getElementById("sc-compose-hints");
+  if (!bar) return;
+  const mode = getUIMode();
+  const b = getComposeBindings();
+  bar.classList.toggle("visible", mode === "cli" || mode === "local");
+  const map = {
+    cli_send: document.getElementById("sc-hint-cli-send"),
+    compose_newline: document.getElementById("sc-hint-compose-newline"),
+    compose_run: document.getElementById("sc-hint-compose-run")
+  };
+  if (map.cli_send) map.cli_send.textContent = formatComposeChordLabel(b.cli_send);
+  if (map.compose_newline) map.compose_newline.textContent = formatComposeChordLabel(b.compose_newline);
+  if (map.compose_run) map.compose_run.textContent = formatComposeChordLabel(b.compose_run);
+  const sendRow = bar.querySelector('[data-compose-action="cli_send"]');
+  if (sendRow) sendRow.style.display = mode === "cli" ? "" : "none";
+  const runHint = bar.querySelector('[data-compose-action="compose_run"]');
+  if (runHint) {
+    const kbd = runHint.querySelector("kbd");
+    if (kbd) kbd.textContent = mode === "cli" ? formatComposeChordLabel(b.compose_run) : formatComposeChordLabel(b.local_run);
+  }
+}
+
+function insertNewlineInCompose(el) {
+  if (!el) return;
+  const v = String(el.value || "");
+  const start = typeof el.selectionStart === "number" ? el.selectionStart : v.length;
+  const end = typeof el.selectionEnd === "number" ? el.selectionEnd : start;
+  el.value = v.slice(0, start) + "\n" + v.slice(end);
+  const pos = start + 1;
+  try {
+    el.selectionStart = el.selectionEnd = pos;
+  } catch (_) {}
+  state.keyword = el.value;
+  try {
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  } catch (_) {}
+}
+
+function sendComposeToCli() {
+  const input = document.getElementById("search");
+  const keyword = input ? String(input.value || "") : "";
+  state.keyword = keyword;
+  if (!keyword.trim()) {
+    const st = document.getElementById("status");
+    if (st) st.textContent = "请输入要发送的内容";
+    return;
+  }
+  const eng = getActiveCliEngine();
+  const ready = isCliEngineReady(eng) && cliFrameUrlLooksLiveForPort(cliPortForEngine(eng));
+  if (!ready) {
+    setCliLoadingVisible(true, "终端初始化中，请稍候…");
+    throttledNiumaCliOpen(false);
+  }
+  postToAhk({ type: "cliSend", prompt: keyword, engine: eng });
+  try {
+    input.focus();
+  } catch (_) {}
+}
+
+function runVkComposeAction(action) {
+  const act = String(action || "").toLowerCase();
+  const input = document.getElementById("search");
+  if (act === "newline") {
+    insertNewlineInCompose(input);
+    return;
+  }
+  if (act === "send") {
+    if (getUIMode() === "cli") sendComposeToCli();
+    else runSearchNow();
+    return;
+  }
+  if (act === "run") runSearchNow();
+}
+
+function handleSearchComposeKeydown(event) {
+  const el = document.getElementById("search");
+  if (!el || document.activeElement !== el) return false;
+  if (searchCompositionActive) return false;
+  const b = getComposeBindings();
+  const mode = getUIMode();
+  if (chordMatchesEvent(event, b.compose_newline)) {
+    event.preventDefault();
+    insertNewlineInCompose(el);
+    return true;
+  }
+  if (mode === "cli" && chordMatchesEvent(event, b.cli_send)) {
+    event.preventDefault();
+    sendComposeToCli();
+    return true;
+  }
+  const runChord = mode === "cli" ? b.compose_run : b.local_run;
+  if (chordMatchesEvent(event, runChord)) {
+    event.preventDefault();
+    runSearchNow();
+    return true;
+  }
+  return false;
+}
+
+function openComposeBindDialog(action) {
+  const ov = document.getElementById("hotkey-bind-overlay");
+  if (!ov) return;
+  const label = COMPOSE_ACTION_LABELS[action] || action;
+  state.hotkeyBindDialog.open = true;
+  state.hotkeyBindDialog.mode = "compose";
+  state.hotkeyBindDialog.composeAction = String(action || "");
+  state.hotkeyBindDialog.group = "";
+  state.hotkeyBindDialog.value = "";
+  state.hotkeyBindDialog.label = label;
+  const b = getComposeBindings();
+  state.hotkeyBindDialog.draftKey = b[action] || "";
+  const tip = document.getElementById("hotkey-bind-tip");
+  if (tip) tip.textContent = "按下组合键（如 Enter、Ctrl+Enter、Shift+Enter）。Delete 清空，Enter 保存。";
+  syncHotkeyBindDialogUi();
+  ov.classList.add("open");
+  ov.setAttribute("aria-hidden", "false");
+}
+
 function getFooterHintText() {
   const mode = getUIMode();
-  if (mode === "cli") return "";
+  if (mode === "cli") {
+    const b = getComposeBindings();
+    return formatComposeChordLabel(b.cli_send) + " 发送 · " + formatComposeChordLabel(b.compose_newline) + " 换行";
+  }
   return "";
 }
 
 function syncFooterHint() {
-  /* 底栏提示已合并至索引条，保留空实现供既有调用 */
+  syncComposeHintsUi();
 }
 
 function saveFulltextCollapsed() {
@@ -3876,9 +4177,10 @@ function setUIMode(mode, persist) {
   syncFooterHint();
   renderCliEngineTabs();
   if (searchInput) {
+    const b = getComposeBindings();
     searchInput.placeholder = m === "cli"
-      ? "输入提示词，Enter 发送到已选 CLI 终端"
-      : "搜索本地结果，或直接作为网络搜索 / CLI 提示词发送";
+      ? ("输入提示词，" + formatComposeChordLabel(b.cli_send) + " 发送到下方终端（点击快捷键条可改）")
+      : ("搜索本地结果，" + formatComposeChordLabel(b.local_run) + " 搜索");
   }
   const drawer = document.getElementById("filter-drawer");
   if (drawer) {
@@ -4059,11 +4361,52 @@ function setActiveCliFrame(engine) {
   });
 }
 
+function stopCliLoadingPoll() {
+  if (_cliLoadingPollTimer) {
+    clearInterval(_cliLoadingPollTimer);
+    _cliLoadingPollTimer = 0;
+  }
+}
+
+function startCliLoadingPoll() {
+  stopCliLoadingPoll();
+  const engine = normalizeCliEngineId(getActiveCliEngine());
+  _cliLoadingPollCountByEngine.set(engine, 0);
+  _cliLoadingPollTimer = setInterval(() => {
+    const el = document.getElementById("cliLoading");
+    if (!el || el.classList.contains("hidden") || getUIMode() !== "cli") {
+      stopCliLoadingPoll();
+      return;
+    }
+    const active = normalizeCliEngineId(getActiveCliEngine());
+    if (active !== engine) {
+      stopCliLoadingPoll();
+      return;
+    }
+    const n = Number(_cliLoadingPollCountByEngine.get(engine) || 0) + 1;
+    _cliLoadingPollCountByEngine.set(engine, n);
+    // 轮询期间持续轻量请求 open，避免首个 open 丢失后永久卡住
+    throttledNiumaCliOpen(false);
+    // 约 6 秒仍未就绪时自动重启一次该引擎
+    if (n === 5) {
+      postToAhk({
+        type: "niuma_cli_restart",
+        engine,
+        baseUrl: cliBaseUrlForEngine(engine),
+        reqId: "sc_poll_r_" + Date.now()
+      });
+    }
+    syncCliWorkspace(false);
+  }, 450);
+}
+
 function setCliLoadingVisible(on, msg) {
   const el = document.getElementById("cliLoading");
   if (!el) return;
   el.classList.toggle("hidden", !on);
   if (msg) el.textContent = msg;
+  if (on) startCliLoadingPoll();
+  else stopCliLoadingPoll();
   if (!on && _cliAutoRetryTimer) {
     clearTimeout(_cliAutoRetryTimer);
     _cliAutoRetryTimer = 0;
@@ -4080,9 +4423,21 @@ function cliFrameCurrentPort() {
   }
 }
 
+function cliFrameElForPort(port) {
+  port = Number(port) || 0;
+  if (!port) return null;
+  for (const eng of Object.keys(SC_CLI_PORTS)) {
+    if (Number(SC_CLI_PORTS[eng]) === port) {
+      const fr = getCliFrameElForEngine(eng);
+      if (fr) return fr;
+    }
+  }
+  return getActiveCliFrameEl();
+}
+
 function cliFrameUrlLooksLiveForPort(port) {
   port = Number(port) || 0;
-  const fr = getActiveCliFrameEl();
+  const fr = cliFrameElForPort(port);
   if (!fr || !port) return false;
   const u = String(fr.src || "").trim();
   if (!u || u === "about:blank") return false;
@@ -4102,11 +4457,13 @@ function cliUrlBaseKey(u) {
   }
 }
 
-function applyCliFrameUrl(u) {
+function applyCliFrameUrl(u, engine) {
   u = String(u || "").trim();
   if (!u) return;
-  const fr = getActiveCliFrameEl();
+  const eng = normalizeCliEngineId(engine || getActiveCliEngine());
+  const fr = ensureCliFrameForEngine(eng) || getCliFrameElForEngine(eng);
   if (!fr) return;
+  if (eng) _cliUrlByEngine.set(eng, u);
   const cur = String(fr.src || "").trim();
   if (cur && cliUrlBaseKey(cur) === cliUrlBaseKey(u)) return;
   fr.src = u;
@@ -4162,6 +4519,18 @@ function resetCliOpenThrottle(engine) {
   _cliOpenThrottleByEngine.delete(eng);
 }
 
+function scheduleCliAutoBoot(engine, bootCmd) {
+  const eng = normalizeCliEngineId(engine);
+  const cmd = String(bootCmd || SC_CLI_AUTO_BOOT_CMD[eng] || "").trim();
+  if (!cmd || _cliAutoBootDone.has(eng)) return;
+  _cliAutoBootDone.add(eng);
+  setTimeout(() => {
+    if (normalizeCliEngineId(getActiveCliEngine()) !== eng) return;
+    if (!isCliEngineReady(eng)) return;
+    postToAhk({ type: "cliSend", prompt: cmd, engine: eng, autoBoot: true });
+  }, 900);
+}
+
 function syncCliWorkspace(spawnIfNeeded) {
   if (getUIMode() !== "cli") return;
   const engine = getActiveCliEngine();
@@ -4175,18 +4544,26 @@ function syncCliWorkspace(spawnIfNeeded) {
     titleEl.textContent = (engRow ? engRow.name : engine) + " · ttyd :" + cliPortForEngine(engine);
   }
   const port = cliPortForEngine(engine);
+  ensureCliFrameForEngine(engine);
+  setActiveCliFrame(engine);
   const engineReady = isCliEngineReady(engine);
+  const cachedUrl = _cliUrlByEngine.get(engine) || "";
+  const mountUrl = cachedUrl || cliUrlWithTheme(cliBaseUrlForEngine(engine));
   const frameLive = engineReady && cliFrameUrlLooksLiveForPort(port);
   if (frameLive) {
-    applyCliFrameUrl(cliUrlWithTheme(cliBaseUrlForEngine(engine)));
+    applyCliFrameUrl(mountUrl, engine);
     setCliLoadingVisible(false);
     if (_cliConnectFallbackTimer) {
       clearTimeout(_cliConnectFallbackTimer);
       _cliConnectFallbackTimer = 0;
     }
+  } else if (engineReady && mountUrl) {
+    // 后端已 ttyd_ready，但 iframe 尚未加载：挂载 URL，勿回到「正在连接」
+    applyCliFrameUrl(mountUrl, engine);
+    setCliLoadingVisible(true, "终端加载中…");
   } else {
     // 未就绪时保持 about:blank，避免出现“127.0.0.1 拒绝连接”错误页
-    const fr = getActiveCliFrameEl();
+    const fr = getCliFrameElForEngine(engine);
     if (fr) {
       const cur = String(fr.src || "");
       if (!cur || cur.indexOf("about:blank") !== 0) {
@@ -4248,12 +4625,21 @@ function initCliTerminalControls() {
   const reloadBtn = document.getElementById("cliReloadBtn");
   const popBtn = document.getElementById("cliPopBtn");
   if (openBtn) {
-    openBtn.addEventListener("click", () => throttledNiumaCliOpen(true));
+    openBtn.addEventListener("click", () => {
+      setCliLoadingVisible(true, "正在连接 ttyd…");
+      const st = document.getElementById("status");
+      if (st) st.textContent = "正在打开终端…";
+      throttledNiumaCliOpen(true);
+    });
   }
   if (restartBtn) {
     restartBtn.addEventListener("click", () => {
       const engine = getActiveCliEngine();
       clearCliEngineReady(engine);
+      _cliAutoBootDone.delete(normalizeCliEngineId(engine));
+      setCliLoadingVisible(true, "正在重启 ttyd…");
+      const st = document.getElementById("status");
+      if (st) st.textContent = "正在重启终端…";
       postToAhk({ type: "niuma_cli_restart", engine, baseUrl: cliBaseUrlForEngine(engine), reqId: "sc_r_" + Date.now() });
     });
   }
@@ -4304,18 +4690,27 @@ function handleTtydHostMessage(payload) {
   if (!payload || !payload.type) return false;
   if (payload.type === "ttyd_ready") {
     const eng = normalizeCliEngineId(payload.engine || getActiveCliEngine());
-    if (eng) markCliEngineReady(eng);
+    if (eng) {
+      markCliEngineReady(eng);
+      ensureCliFrameForEngine(eng);
+    }
     resetCliOpenThrottle(eng);
     _cliAutoRetryCountByEngine.delete(eng);
-    const port = cliPortForEngine(eng);
+    _cliLoadingPollCountByEngine.delete(eng);
     let turl = String(payload.baseUrl || "").trim();
     if (!turl) turl = cliUrlWithTheme(cliBaseUrlForEngine(eng));
     else turl = cliUrlWithTheme(turl);
-    if (turl && normalizeCliEngineId(getActiveCliEngine()) === eng) {
-      applyCliFrameUrl(turl);
+    if (turl && eng) _cliUrlByEngine.set(eng, turl);
+    const active = normalizeCliEngineId(getActiveCliEngine());
+    if (turl && active === eng) {
+      setActiveCliFrame(eng);
+      applyCliFrameUrl(turl, eng);
       setCliLoadingVisible(false);
+      stopCliLoadingPoll();
     }
-    if (eng !== getActiveCliEngine()) return true;
+    const bootCmd = String(payload.autoBootCmd || "").trim();
+    if (bootCmd) scheduleCliAutoBoot(eng, bootCmd);
+    if (active !== eng) return true;
     const st = document.getElementById("status");
     if (st) st.textContent = "ttyd 终端已就绪";
     return true;
@@ -4326,6 +4721,7 @@ function handleTtydHostMessage(payload) {
     if (eng) clearCliEngineReady(eng);
     resetCliOpenThrottle(eng);
     _cliAutoRetryCountByEngine.delete(eng);
+    _cliLoadingPollCountByEngine.delete(eng);
     if (eng === getActiveCliEngine()) setCliLoadingVisible(true, "ttyd 连接失败，可点「打开」重试");
     const st = document.getElementById("status");
     const msg = String(payload.message || "启动失败");
@@ -4777,8 +5173,33 @@ window.onWebViewResetState = function onWebViewResetState() {
   stopFulltextBackgroundTasks();
 };
 
+function fulltextLooksLikePlaceholder(ft) {
+  if (!ft || typeof ft !== "object") return true;
+  const disc = Number(ft.discoveredFiles) || 0;
+  const proc = Number(ft.processedFiles) || 0;
+  const phase = String(ft.scanPhase || "").toLowerCase();
+  const detail = String(ft.progressDetail || "");
+  return disc === 0 && proc === 0 && (!phase || phase === "idle") && (!detail || detail === "未开始扫描");
+}
+
 function applyFulltextStatus(payload) {
-  state.fulltext = normalizeFulltextPayload(Object.assign({}, state.fulltext, payload || {}));
+  const prev = state.fulltext && typeof state.fulltext === "object" ? state.fulltext : {};
+  const incoming = normalizeFulltextPayload(payload || {});
+  const merged = Object.assign({}, prev, incoming);
+  if (fulltextLooksLikePlaceholder(incoming) && !fulltextLooksLikePlaceholder(prev)) {
+    if ((Number(prev.discoveredFiles) || 0) > 0) merged.discoveredFiles = prev.discoveredFiles;
+    if ((Number(prev.processedFiles) || 0) > 0) merged.processedFiles = prev.processedFiles;
+    if ((Number(prev.indexedFiles) || 0) > 0) merged.indexedFiles = prev.indexedFiles;
+    if ((Number(prev.pendingTasks) || 0) > 0) merged.pendingTasks = prev.pendingTasks;
+    if (prev.ready && !incoming.ready) merged.ready = prev.ready;
+    if (prev.initialScanDone && !incoming.initialScanDone) merged.initialScanDone = prev.initialScanDone;
+    if (prev.running && !incoming.running) merged.running = prev.running;
+    if (String(prev.scanPhase || "") && fulltextLooksLikePlaceholder(incoming)) merged.scanPhase = prev.scanPhase;
+    if (String(prev.progressDetail || "") && (!incoming.progressDetail || incoming.progressDetail === "未开始扫描")) {
+      merged.progressDetail = prev.progressDetail;
+    }
+  }
+  state.fulltext = normalizeFulltextPayload(merged);
   const cfg = payload && payload.config && typeof payload.config === "object" ? payload.config : null;
   if (cfg) {
     let scheme = String(cfg.scanScheme || "").trim().toLowerCase();
@@ -7214,7 +7635,7 @@ function runSearchNow() {
       throttledNiumaCliOpen(false);
       return;
     }
-    if (keyword.trim()) postToAhk({ type: "cliSend", prompt: keyword });
+    if (keyword.trim()) postToAhk({ type: "cliSend", prompt: keyword, engine: eng });
     return;
   }
   if (state.engineMode === "go") {
@@ -7430,6 +7851,13 @@ syncFulltextSchemeUi();
 initFilterDrawer();
 initCliTerminalControls();
 initSearchWrapperFocus();
+document.querySelectorAll(".sc-compose-hint[data-compose-action]").forEach((el) => {
+  el.addEventListener("click", () => {
+    const act = String(el.getAttribute("data-compose-action") || "");
+    if (act) openComposeBindDialog(act);
+  });
+});
+syncComposeHintsUi();
 
 (function initChromeDrag() {
   const dragHost = document.getElementById("chrome-header");
@@ -7487,10 +7915,8 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
-  if (event.key === "Enter" && document.activeElement && document.activeElement.id === "search") {
-    event.preventDefault();
-    runSearchNow();
-    return;
+  if (document.activeElement && document.activeElement.id === "search") {
+    if (handleSearchComposeKeydown(event)) return;
   }
 
   if (isTyping) return;
@@ -7634,6 +8060,18 @@ if (window.chrome && window.chrome.webview) {
       const f = String(payload.filterType || "").toLowerCase();
       const mapped = (f === "favorite" || f === "image" || f === "clipboard" || f === "url" || f === "code" || f === "text") ? f : "";
       postToAhk({ type: "setFilter", filterType: mapped, keyword: state.keyword || "" });
+      return;
+    }
+    if (payload.type === "vk_compose") {
+      runVkComposeAction(payload.action || "");
+      return;
+    }
+    if (payload.type === "focusCliFrame") {
+      const eng = normalizeCliEngineId(payload.engine || getActiveCliEngine());
+      state.activeCliEngine = eng;
+      setActiveCliFrame(eng);
+      setCliTerminalFocusLock(true);
+      focusCliTerminalFrame();
       return;
     }
     if (payload.type === "vk_search") {
