@@ -730,7 +730,11 @@ TrayMenu_OpenSearchActionRun(*) {
     try {
         if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole") {
             try {
-                SCWV_SubmitIntent("open", 20, Map("reason", "tray_menu_search"))
+                SCWV_SubmitIntent("open", 20, Map(
+                    "reason", "tray_menu_search",
+                    "initialMode", "search",
+                    "triggerSource", "search_hotkey"
+                ))
                 return
             } catch as err {
                 try TrayMenu_Log("open_search_direct_failed msg=" . err.Message)
@@ -738,7 +742,11 @@ TrayMenu_OpenSearchActionRun(*) {
         }
         ; Non-hole path also use robust init+show instead of mixed entry points.
         try {
-            SCWV_SubmitIntent("open", 20, Map("reason", "tray_menu_search_fallback"))
+            SCWV_SubmitIntent("open", 20, Map(
+                "reason", "tray_menu_search_fallback",
+                "initialMode", "search",
+                "triggerSource", "search_hotkey"
+            ))
             return
         } catch as err2 {
             try TrayMenu_Log("open_search_fallback_failed msg=" . err2.Message)

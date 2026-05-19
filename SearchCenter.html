@@ -5845,7 +5845,12 @@ function applyHostShow(payload) {
     setTimeout(() => focusResultListFirstRow(), 120);
     return;
   }
-  if (state.clipboardHomeLock || payload.clipboardHomeLock) return;
+  if (payload && payload.clipboardHomeLock === false) state.clipboardHomeLock = false;
+  if (payload && payload.clipboardHomeLock === true) {
+    state.clipboardHomeLock = true;
+    return;
+  }
+  if (state.clipboardHomeLock) return;
   state.clipboardHomeLock = false;
   state.keyword = "";
   const input = document.getElementById("search");
@@ -6315,7 +6320,9 @@ function renderFilters() {
       const input = document.getElementById("search");
       const keyword = input ? String(input.value || "") : String(state.keyword || "");
       state.keyword = keyword;
-      postToAhk({ type: "setFilter", filterType: filter.key, keyword });
+      const fk = String(filter.key || "");
+      if (fk !== "clipboard") state.clipboardHomeLock = false;
+      postToAhk({ type: "setFilter", filterType: fk, keyword });
     };
     let pressedHandled = false;
     let pressedAt = 0;
@@ -7761,10 +7768,14 @@ function applyState(payload) {
   const prevFilterType = String(state.filterType || "");
   const incomingFilter = String(payload.filterType || "");
   const msgType = String(payload.type || "");
-  if (state.clipboardHomeLock && incomingFilter !== "clipboard") {
-    return;
+  const lockBlocksFilter =
+    state.clipboardHomeLock
+    && incomingFilter !== "clipboard"
+    && incomingFilter !== "";
+  if (lockBlocksFilter) {
+    payload.filterType = "clipboard";
   }
-  if (state.unifiedMode === "clipboard" && msgType === "init" && incomingFilter !== "clipboard") {
+  if (state.unifiedMode === "clipboard" && msgType === "init" && incomingFilter !== "clipboard" && incomingFilter !== "") {
     return;
   }
   state.keyword = payload.keyword || "";
@@ -8350,6 +8361,8 @@ if (window.chrome && window.chrome.webview) {
     }
     if (payload.type === "setUnifiedMode") {
       const um = String(payload.mode || "search").toLowerCase();
+      if (payload.clipboardHomeLock === false) state.clipboardHomeLock = false;
+      else if (payload.clipboardHomeLock === true) state.clipboardHomeLock = true;
       if (!(state.clipboardHomeLock && um !== "clipboard")) {
         applyUnifiedMode(payload.mode || "search");
       }

@@ -5855,3 +5855,508 @@
 [2026-05-19 12:22:13] selection cursor_over_ui miss mouse_x=295 mouse_y=275 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
 [2026-05-19 12:22:13] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
 [2026-05-19 12:22:13] selection lbutton_up no_trigger=click
+[2026-05-19 12:22:24] selection cursor_over_ui miss mouse_x=1285 mouse_y=609 top=hwnd=64358930 class=AutoHotkeyGUI title=Floating Bubble exe=AutoHotkey64.exe
+[2026-05-19 12:22:24] selection lbutton_up dist_x=24 dist_y=87 drag=1 multi=0
+[2026-05-19 12:22:24] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-19 12:22:27] selection cursor_over_ui miss mouse_x=1478 mouse_y=656 top=hwnd=64358930 class=AutoHotkeyGUI title=Floating Bubble exe=AutoHotkey64.exe
+[2026-05-19 12:22:27] selection lbutton_up dist_x=193 dist_y=40 drag=1 multi=0
+[2026-05-19 12:22:27] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-19 12:22:37] selection cursor_over_ui miss mouse_x=1468 mouse_y=819 top=hwnd=64358930 class=AutoHotkeyGUI title=Floating Bubble exe=AutoHotkey64.exe
+[2026-05-19 12:22:37] selection lbutton_up dist_x=17 dist_y=168 drag=1 multi=0
+[2026-05-19 12:22:37] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-19 12:22:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:22:40] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:22:40] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:22:40] reset_session_step state_cleared reason=search_center_exit
+[2026-05-19 12:22:40] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-19 12:22:40] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-19 12:22:40] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-19 12:22:40] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-19 12:22:40] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-19 12:22:40] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-19 12:22:40] reset_session_step js_begin reason=search_center_exit
+[2026-05-19 12:22:40] reset_session_step js_done reason=search_center_exit
+[2026-05-19 12:22:40] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-19 12:22:40] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-19 12:22:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:22:40] gdho stop begin
+[2026-05-19 12:22:40] gdho poll disarm skip reason=stop
+[2026-05-19 12:22:40] gdho gdho_phase CLOSED->CLOSING reason=stop token=4
+[2026-05-19 12:22:40] gdho hide_frontend queue hide
+[2026-05-19 12:22:40] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=4
+[2026-05-19 12:22:40] gdho stop done
+[2026-05-19 12:22:40] selection cursor_over_ui miss mouse_x=1725 mouse_y=818 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:22:40] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:22:40] selection lbutton_up no_trigger=click
+[2026-05-19 12:22:40] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-19 12:22:40] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-19 12:22:40] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-19 12:22:40] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-19 12:22:40] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-19 12:22:40] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-19 12:22:40] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-19 12:22:40] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-19 12:22:40] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-19 12:22:40] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-19 12:22:40] reset_session_step js_begin reason=tray_open_ui
+[2026-05-19 12:22:40] reset_session_step js_done reason=tray_open_ui
+[2026-05-19 12:22:40] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-19 12:22:40] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-19 12:22:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:22:40] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-19 12:22:40] gdho gdho_redirect_hide_frontend
+[2026-05-19 12:22:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:22:40] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-19 12:22:40] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-19 12:22:40] gdho gdho_redirect_hide_overlay
+[2026-05-19 12:22:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:22:40] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-19 12:22:40] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:22:40] gdho stop begin
+[2026-05-19 12:22:40] gdho poll disarm skip reason=stop
+[2026-05-19 12:22:40] gdho gdho_phase CLOSED->CLOSING reason=stop token=5
+[2026-05-19 12:22:40] gdho hide_frontend queue hide
+[2026-05-19 12:22:40] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=5
+[2026-05-19 12:22:40] gdho stop done
+[2026-05-19 12:22:46] selection cursor_over_ui hit=g_SCWV_Gui hwnd=13830776 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1885 mouse_y=15
+[2026-05-19 12:22:46] selection lbutton_up skip=our_ui
+[2026-05-19 12:22:46] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:22:46] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:22:46] reset_session_step state_cleared reason=search_center_exit
+[2026-05-19 12:22:46] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-19 12:22:46] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-19 12:22:46] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-19 12:22:46] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-19 12:22:46] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-19 12:22:46] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-19 12:22:46] reset_session_step js_begin reason=search_center_exit
+[2026-05-19 12:22:46] reset_session_step js_done reason=search_center_exit
+[2026-05-19 12:22:46] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-19 12:22:46] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-19 12:22:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:22:53] selection cursor_over_ui miss mouse_x=1380 mouse_y=312 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:22:53] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:22:53] selection lbutton_up no_trigger=click
+[2026-05-19 12:22:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:22:53] gdho stop begin
+[2026-05-19 12:22:53] gdho poll disarm skip reason=stop
+[2026-05-19 12:22:53] gdho gdho_phase CLOSED->CLOSING reason=stop token=6
+[2026-05-19 12:22:53] gdho hide_frontend queue hide
+[2026-05-19 12:22:53] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=6
+[2026-05-19 12:22:53] gdho stop done
+[2026-05-19 12:22:53] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-19 12:22:53] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-19 12:22:53] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-19 12:22:53] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-19 12:22:53] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-19 12:22:53] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-19 12:22:53] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-19 12:22:53] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-19 12:22:53] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-19 12:22:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:22:53] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-19 12:22:53] gdho gdho_redirect_hide_frontend
+[2026-05-19 12:22:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:22:53] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-19 12:22:53] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-19 12:22:53] gdho gdho_redirect_hide_overlay
+[2026-05-19 12:22:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:22:53] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-19 12:22:53] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-19 12:22:53] reset_session_step js_begin reason=tray_open_ui
+[2026-05-19 12:22:53] reset_session_step js_done reason=tray_open_ui
+[2026-05-19 12:22:53] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-19 12:22:53] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-19 12:22:57] selection cursor_over_ui hit=g_SCWV_Gui hwnd=11800080 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=499 mouse_y=380
+[2026-05-19 12:22:57] selection lbutton_up skip=our_ui
+[2026-05-19 12:22:58] selection cursor_over_ui hit=g_SCWV_Gui hwnd=11800080 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=523 mouse_y=377
+[2026-05-19 12:22:58] selection lbutton_up skip=our_ui
+[2026-05-19 12:23:02] selection cursor_over_ui hit=g_SCWV_Gui hwnd=11800080 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=523 mouse_y=377
+[2026-05-19 12:23:02] selection lbutton_up skip=our_ui
+[2026-05-19 12:23:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=11800080 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=714 mouse_y=378
+[2026-05-19 12:23:04] selection lbutton_up skip=our_ui
+[2026-05-19 12:23:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=11800080 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=982 mouse_y=125
+[2026-05-19 12:23:05] selection lbutton_up skip=our_ui
+[2026-05-19 12:23:06] selection cursor_over_ui hit=g_SCWV_Gui hwnd=11800080 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1899 mouse_y=16
+[2026-05-19 12:23:06] selection lbutton_up skip=our_ui
+[2026-05-19 12:23:06] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:23:06] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:23:06] reset_session_step state_cleared reason=search_center_exit
+[2026-05-19 12:23:06] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-19 12:23:06] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-19 12:23:06] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-19 12:23:06] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-19 12:23:06] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-19 12:23:06] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-19 12:23:06] reset_session_step js_begin reason=search_center_exit
+[2026-05-19 12:23:06] reset_session_step js_done reason=search_center_exit
+[2026-05-19 12:23:06] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-19 12:23:06] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-19 12:23:56] selection cursor_over_ui miss mouse_x=1494 mouse_y=957 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:23:56] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:23:56] selection lbutton_up no_trigger=click
+[2026-05-19 12:24:00] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:24:00] gdho stop begin
+[2026-05-19 12:24:00] gdho poll disarm skip reason=stop
+[2026-05-19 12:24:00] gdho gdho_phase CLOSED->CLOSING reason=stop token=7
+[2026-05-19 12:24:00] gdho hide_frontend queue hide
+[2026-05-19 12:24:00] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=7
+[2026-05-19 12:24:00] gdho stop done
+[2026-05-19 12:24:01] selection cursor_over_ui miss mouse_x=1515 mouse_y=957 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:24:01] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:24:01] selection lbutton_up no_trigger=click
+[2026-05-19 12:24:36] selection cursor_over_ui miss mouse_x=1634 mouse_y=670 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:24:36] selection lbutton_up dist_x=81 dist_y=6 drag=1 multi=0
+[2026-05-19 12:24:36] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-19 12:24:41] selection cursor_over_ui miss mouse_x=1685 mouse_y=954 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:24:41] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:24:41] selection lbutton_up no_trigger=click
+[2026-05-19 12:24:42] selection cursor_over_ui miss mouse_x=1681 mouse_y=956 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:24:42] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:24:42] selection lbutton_up no_trigger=click
+[2026-05-19 12:25:26] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:26] gdho stop begin
+[2026-05-19 12:25:26] gdho poll disarm skip reason=stop
+[2026-05-19 12:25:26] gdho gdho_phase CLOSED->CLOSING reason=stop token=8
+[2026-05-19 12:25:26] gdho hide_frontend queue hide
+[2026-05-19 12:25:26] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=8
+[2026-05-19 12:25:26] gdho stop done
+[2026-05-19 12:25:32] selection cursor_over_ui miss mouse_x=1754 mouse_y=488 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:25:32] selection lbutton_up dist_x=0 dist_y=1 drag=0 multi=0
+[2026-05-19 12:25:32] selection lbutton_up no_trigger=click
+[2026-05-19 12:25:36] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:36] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:25:36] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:25:36] reset_session_step state_cleared reason=search_center_exit
+[2026-05-19 12:25:36] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-19 12:25:36] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-19 12:25:36] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-19 12:25:36] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-19 12:25:36] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-19 12:25:36] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-19 12:25:36] reset_session_step js_begin reason=search_center_exit
+[2026-05-19 12:25:36] reset_session_step js_done reason=search_center_exit
+[2026-05-19 12:25:36] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-19 12:25:36] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-19 12:25:36] selection cursor_over_ui miss mouse_x=1396 mouse_y=445 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:25:36] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:25:36] selection lbutton_up no_trigger=click
+[2026-05-19 12:25:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:37] gdho stop begin
+[2026-05-19 12:25:37] gdho poll disarm skip reason=stop
+[2026-05-19 12:25:37] gdho gdho_phase CLOSED->CLOSING reason=stop token=9
+[2026-05-19 12:25:37] gdho hide_frontend queue hide
+[2026-05-19 12:25:37] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=9
+[2026-05-19 12:25:37] gdho stop done
+[2026-05-19 12:25:37] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-19 12:25:37] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-19 12:25:37] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-19 12:25:37] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-19 12:25:37] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-19 12:25:37] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-19 12:25:37] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-19 12:25:37] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-19 12:25:37] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-19 12:25:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:37] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-19 12:25:37] gdho gdho_redirect_hide_frontend
+[2026-05-19 12:25:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:37] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-19 12:25:37] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-19 12:25:37] gdho gdho_redirect_hide_overlay
+[2026-05-19 12:25:37] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:37] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-19 12:25:37] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-19 12:25:37] reset_session_step js_begin reason=tray_open_ui
+[2026-05-19 12:25:37] reset_session_step js_done reason=tray_open_ui
+[2026-05-19 12:25:37] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-19 12:25:37] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-19 12:25:39] selection cursor_over_ui miss mouse_x=1533 mouse_y=795 top=hwnd=64358930 class=AutoHotkeyGUI title=Floating Bubble exe=AutoHotkey64.exe
+[2026-05-19 12:25:39] selection lbutton_up dist_x=77 dist_y=20 drag=1 multi=0
+[2026-05-19 12:25:39] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-19 12:25:41] selection cursor_over_ui hit=g_SCWV_Gui hwnd=60623556 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1881 mouse_y=3
+[2026-05-19 12:25:41] selection lbutton_up skip=our_ui
+[2026-05-19 12:25:41] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:25:41] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:25:41] reset_session_step state_cleared reason=search_center_exit
+[2026-05-19 12:25:41] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-19 12:25:41] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-19 12:25:41] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-19 12:25:41] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-19 12:25:41] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-19 12:25:41] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-19 12:25:41] reset_session_step js_begin reason=search_center_exit
+[2026-05-19 12:25:41] reset_session_step js_done reason=search_center_exit
+[2026-05-19 12:25:41] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-19 12:25:41] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-19 12:25:44] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:44] selection cursor_over_ui miss mouse_x=1727 mouse_y=495 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:25:44] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:25:44] selection lbutton_up no_trigger=click
+[2026-05-19 12:25:44] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:44] gdho stop begin
+[2026-05-19 12:25:44] gdho poll disarm skip reason=stop
+[2026-05-19 12:25:44] gdho gdho_phase CLOSED->CLOSING reason=stop token=10
+[2026-05-19 12:25:44] gdho hide_frontend queue hide
+[2026-05-19 12:25:44] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=10
+[2026-05-19 12:25:44] gdho stop done
+[2026-05-19 12:25:44] reset_session_async_begin reason=tray_open_search hide_ms=0
+[2026-05-19 12:25:44] reset_session_begin reason=tray_open_search hide_ms=0
+[2026-05-19 12:25:44] reset_session_step state_cleared reason=tray_open_search
+[2026-05-19 12:25:44] reset_session_step drag_tick_stopped reason=tray_open_search
+[2026-05-19 12:25:44] reset_session_step hide_frontend_queued reason=tray_open_search
+[2026-05-19 12:25:44] reset_session_step clickthrough_begin reason=tray_open_search
+[2026-05-19 12:25:44] reset_session_step clickthrough_done reason=tray_open_search
+[2026-05-19 12:25:44] reset_session_step silent_mode=0 reason=tray_open_search
+[2026-05-19 12:25:44] reset_session_step start_bridge_begin reason=tray_open_search
+[2026-05-19 12:25:44] reset_session_step start_bridge_done reason=tray_open_search
+[2026-05-19 12:25:44] reset_session_step js_begin reason=tray_open_search
+[2026-05-19 12:25:44] reset_session_step js_done reason=tray_open_search
+[2026-05-19 12:25:44] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:44] reset_session_step hide_frontend_async_begin reason=tray_open_search
+[2026-05-19 12:25:44] gdho gdho_redirect_hide_frontend
+[2026-05-19 12:25:44] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:44] reset_session_step hide_frontend_async_done reason=tray_open_search
+[2026-05-19 12:25:44] reset_session_step hide_overlay_async_begin reason=tray_open_search
+[2026-05-19 12:25:44] gdho gdho_redirect_hide_overlay
+[2026-05-19 12:25:44] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:44] reset_session_step hide_overlay_async_done reason=tray_open_search
+[2026-05-19 12:25:44] route reset_session reason=tray_open_search hide_ms=0
+[2026-05-19 12:25:44] reset_session_async_done reason=tray_open_search hide_ms=0
+[2026-05-19 12:25:44] selection cursor_over_ui miss mouse_x=1808 mouse_y=953 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:25:44] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:25:44] selection lbutton_up no_trigger=click
+[2026-05-19 12:25:59] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:59] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:25:59] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:25:59] reset_session_step state_cleared reason=search_center_exit
+[2026-05-19 12:25:59] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-19 12:25:59] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-19 12:25:59] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-19 12:25:59] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-19 12:25:59] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-19 12:25:59] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-19 12:25:59] reset_session_step js_begin reason=search_center_exit
+[2026-05-19 12:25:59] reset_session_step js_done reason=search_center_exit
+[2026-05-19 12:25:59] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-19 12:25:59] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-19 12:25:59] selection cursor_over_ui miss mouse_x=1491 mouse_y=451 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:25:59] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:25:59] selection lbutton_up no_trigger=click
+[2026-05-19 12:25:59] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:59] gdho stop begin
+[2026-05-19 12:25:59] gdho poll disarm skip reason=stop
+[2026-05-19 12:25:59] gdho gdho_phase CLOSED->CLOSING reason=stop token=11
+[2026-05-19 12:25:59] gdho hide_frontend queue hide
+[2026-05-19 12:25:59] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=11
+[2026-05-19 12:25:59] gdho stop done
+[2026-05-19 12:25:59] reset_session_async_begin reason=tray_open_ui hide_ms=0
+[2026-05-19 12:25:59] reset_session_begin reason=tray_open_ui hide_ms=0
+[2026-05-19 12:25:59] reset_session_step state_cleared reason=tray_open_ui
+[2026-05-19 12:25:59] reset_session_step drag_tick_stopped reason=tray_open_ui
+[2026-05-19 12:25:59] reset_session_step hide_frontend_queued reason=tray_open_ui
+[2026-05-19 12:25:59] reset_session_step clickthrough_begin reason=tray_open_ui
+[2026-05-19 12:25:59] reset_session_step clickthrough_done reason=tray_open_ui
+[2026-05-19 12:25:59] reset_session_step silent_mode=0 reason=tray_open_ui
+[2026-05-19 12:25:59] reset_session_step start_bridge_begin reason=tray_open_ui
+[2026-05-19 12:25:59] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:59] reset_session_step hide_frontend_async_begin reason=tray_open_ui
+[2026-05-19 12:25:59] gdho gdho_redirect_hide_frontend
+[2026-05-19 12:25:59] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:59] reset_session_step hide_frontend_async_done reason=tray_open_ui
+[2026-05-19 12:25:59] reset_session_step hide_overlay_async_begin reason=tray_open_ui
+[2026-05-19 12:25:59] gdho gdho_redirect_hide_overlay
+[2026-05-19 12:25:59] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:25:59] reset_session_step hide_overlay_async_done reason=tray_open_ui
+[2026-05-19 12:25:59] reset_session_step start_bridge_done reason=tray_open_ui
+[2026-05-19 12:25:59] reset_session_step js_begin reason=tray_open_ui
+[2026-05-19 12:25:59] reset_session_step js_done reason=tray_open_ui
+[2026-05-19 12:25:59] route reset_session reason=tray_open_ui hide_ms=0
+[2026-05-19 12:25:59] reset_session_async_done reason=tray_open_ui hide_ms=0
+[2026-05-19 12:26:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=532 mouse_y=370
+[2026-05-19 12:26:03] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:03] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=583 mouse_y=374
+[2026-05-19 12:26:03] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=692 mouse_y=372
+[2026-05-19 12:26:04] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:04] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=868 mouse_y=367
+[2026-05-19 12:26:04] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:05] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1194 mouse_y=365
+[2026-05-19 12:26:05] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:06] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=999 mouse_y=372
+[2026-05-19 12:26:06] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:06] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=960 mouse_y=372
+[2026-05-19 12:26:06] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:07] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=950 mouse_y=373
+[2026-05-19 12:26:07] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=687 mouse_y=378
+[2026-05-19 12:26:08] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:08] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=589 mouse_y=386
+[2026-05-19 12:26:08] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:09] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=494 mouse_y=376
+[2026-05-19 12:26:09] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:09] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=504 mouse_y=374
+[2026-05-19 12:26:09] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:10] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=719 mouse_y=115
+[2026-05-19 12:26:10] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:13] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=527 mouse_y=383
+[2026-05-19 12:26:13] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:13] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=527 mouse_y=383
+[2026-05-19 12:26:13] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:15] selection cursor_over_ui hit=g_SCWV_Gui hwnd=52957132 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1901 mouse_y=12
+[2026-05-19 12:26:15] selection lbutton_up skip=our_ui
+[2026-05-19 12:26:15] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:26:15] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:26:15] reset_session_step state_cleared reason=search_center_exit
+[2026-05-19 12:26:15] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-19 12:26:15] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-19 12:26:15] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-19 12:26:15] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-19 12:26:15] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-19 12:26:15] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-19 12:26:15] reset_session_step js_begin reason=search_center_exit
+[2026-05-19 12:26:15] reset_session_step js_done reason=search_center_exit
+[2026-05-19 12:26:15] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-19 12:26:15] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-19 12:26:16] selection cursor_over_ui miss mouse_x=1608 mouse_y=968 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:26:16] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:26:16] selection lbutton_up no_trigger=click
+[2026-05-19 12:26:16] selection cursor_over_ui miss mouse_x=1618 mouse_y=953 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:26:16] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:26:16] selection lbutton_up no_trigger=click
+[2026-05-19 12:29:40] selection cursor_over_ui miss mouse_x=1744 mouse_y=480 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:29:40] selection lbutton_up dist_x=185 dist_y=10 drag=1 multi=0
+[2026-05-19 12:29:40] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-19 12:29:42] selection cursor_over_ui miss mouse_x=1622 mouse_y=580 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:29:42] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:29:42] selection lbutton_up no_trigger=click
+[2026-05-19 12:29:47] gdho gdho_redirect_hide_overlay
+[2026-05-19 12:29:47] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:29:48] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-19 12:29:48] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:29:48] gdho stop begin
+[2026-05-19 12:29:48] gdho poll disarm skip reason=stop
+[2026-05-19 12:29:48] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-19 12:29:48] gdho hide_frontend queue hide
+[2026-05-19 12:29:48] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-19 12:29:48] gdho stop done
+[2026-05-19 12:29:48] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-19 12:29:48] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:29:48] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-19 12:29:48] gdho gdho_redirect_hide_frontend
+[2026-05-19 12:29:48] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:29:48] gdho gdho_redirect_hide_overlay
+[2026-05-19 12:29:48] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:29:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:29:53] gdho stop begin
+[2026-05-19 12:29:53] gdho poll disarm skip reason=stop
+[2026-05-19 12:29:53] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-19 12:29:53] gdho hide_frontend queue hide
+[2026-05-19 12:29:53] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-19 12:29:53] gdho stop done
+[2026-05-19 12:29:53] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-19 12:29:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:29:53] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-19 12:29:53] gdho gdho_redirect_hide_frontend
+[2026-05-19 12:29:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:29:53] gdho gdho_redirect_hide_overlay
+[2026-05-19 12:29:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:32] gdho gdho_redirect_hide_overlay
+[2026-05-19 12:32:32] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:33] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:33] gdho stop begin
+[2026-05-19 12:32:33] gdho poll disarm skip reason=stop
+[2026-05-19 12:32:33] gdho gdho_phase CLOSED->CLOSING reason=stop token=1
+[2026-05-19 12:32:33] gdho hide_frontend queue hide
+[2026-05-19 12:32:33] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=1
+[2026-05-19 12:32:33] gdho stop done
+[2026-05-19 12:32:33] selection init enabled=1 copy_delay=55 require_ibeam=0 copy_trigger=double
+[2026-05-19 12:32:33] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-19 12:32:33] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:33] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-19 12:32:33] gdho gdho_redirect_hide_frontend
+[2026-05-19 12:32:33] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:33] gdho gdho_redirect_hide_overlay
+[2026-05-19 12:32:33] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:38] gdho stop begin
+[2026-05-19 12:32:38] gdho poll disarm skip reason=stop
+[2026-05-19 12:32:38] gdho gdho_phase CLOSED->CLOSING reason=stop token=2
+[2026-05-19 12:32:38] gdho hide_frontend queue hide
+[2026-05-19 12:32:38] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=2
+[2026-05-19 12:32:38] gdho stop done
+[2026-05-19 12:32:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:38] gdho stop begin
+[2026-05-19 12:32:38] gdho poll disarm skip reason=stop
+[2026-05-19 12:32:38] gdho gdho_phase CLOSED->CLOSING reason=stop token=3
+[2026-05-19 12:32:38] gdho hide_frontend queue hide
+[2026-05-19 12:32:38] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=3
+[2026-05-19 12:32:38] gdho stop done
+[2026-05-19 12:32:38] bridge_silent_mode on reason=runtime_toolbar
+[2026-05-19 12:32:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:38] gdho poll disarm skip reason=runtime_toolbar
+[2026-05-19 12:32:38] gdho gdho_redirect_hide_frontend
+[2026-05-19 12:32:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:38] gdho gdho_redirect_hide_overlay
+[2026-05-19 12:32:38] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:41] selection cursor_over_ui hit=g_SCWV_Gui hwnd=9112984 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=584 mouse_y=502
+[2026-05-19 12:32:41] selection lbutton_up skip=our_ui
+[2026-05-19 12:32:43] selection cursor_over_ui hit=g_SCWV_Gui hwnd=9112984 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=820 mouse_y=502
+[2026-05-19 12:32:43] selection lbutton_up skip=our_ui
+[2026-05-19 12:32:44] selection cursor_over_ui hit=g_SCWV_Gui hwnd=9112984 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=518 mouse_y=505
+[2026-05-19 12:32:44] selection lbutton_up skip=our_ui
+[2026-05-19 12:32:47] selection cursor_over_ui hit=g_SCWV_Gui hwnd=9112984 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=843 mouse_y=502
+[2026-05-19 12:32:47] selection lbutton_up skip=our_ui
+[2026-05-19 12:32:51] selection cursor_over_ui hit=g_SCWV_Gui hwnd=9112984 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1530 mouse_y=141
+[2026-05-19 12:32:51] selection lbutton_up skip=our_ui
+[2026-05-19 12:32:51] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:32:51] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:32:51] reset_session_step state_cleared reason=search_center_exit
+[2026-05-19 12:32:51] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-19 12:32:51] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-19 12:32:51] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-19 12:32:51] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-19 12:32:51] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-19 12:32:51] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-19 12:32:51] reset_session_step js_begin reason=search_center_exit
+[2026-05-19 12:32:51] reset_session_step js_done reason=search_center_exit
+[2026-05-19 12:32:51] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-19 12:32:51] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-19 12:32:52] selection cursor_over_ui miss mouse_x=1694 mouse_y=659 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:32:52] selection lbutton_up dist_x=208 dist_y=22 drag=1 multi=0
+[2026-05-19 12:32:52] selection lbutton_up trigger=selection_only_no_copy
+[2026-05-19 12:32:53] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:53] gdho stop begin
+[2026-05-19 12:32:53] gdho poll disarm skip reason=stop
+[2026-05-19 12:32:53] gdho gdho_phase CLOSED->CLOSING reason=stop token=4
+[2026-05-19 12:32:53] gdho hide_frontend queue hide
+[2026-05-19 12:32:53] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=4
+[2026-05-19 12:32:53] gdho stop done
+[2026-05-19 12:32:54] gdho [ifs] [0x12/0x00/0x00]
+[2026-05-19 12:32:54] gdho stop begin
+[2026-05-19 12:32:54] gdho poll disarm skip reason=stop
+[2026-05-19 12:32:54] gdho gdho_phase CLOSED->CLOSING reason=stop token=5
+[2026-05-19 12:32:54] gdho hide_frontend queue hide
+[2026-05-19 12:32:54] gdho gdho_phase CLOSING->CLOSED reason=stop_done token=5
+[2026-05-19 12:32:54] gdho stop done
+[2026-05-19 12:33:00] selection cursor_over_ui hit=g_SCWV_Gui hwnd=4656222 class=AutoHotkeyGUI title=搜索中心 exe=AutoHotkey64.exe mouse_x=1885 mouse_y=2
+[2026-05-19 12:33:00] selection lbutton_up skip=our_ui
+[2026-05-19 12:33:00] reset_session_async_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:33:00] reset_session_begin reason=search_center_exit hide_ms=0
+[2026-05-19 12:33:00] reset_session_step state_cleared reason=search_center_exit
+[2026-05-19 12:33:00] reset_session_step drag_tick_stopped reason=search_center_exit
+[2026-05-19 12:33:00] reset_session_step hide_skipped reason=search_center_exit
+[2026-05-19 12:33:00] reset_session_step clickthrough_begin reason=search_center_exit
+[2026-05-19 12:33:00] reset_session_step clickthrough_done reason=search_center_exit
+[2026-05-19 12:33:00] reset_session_step silent_mode=0 reason=search_center_exit
+[2026-05-19 12:33:00] reset_session_step bridge_restart_skipped reason=search_center_exit
+[2026-05-19 12:33:00] reset_session_step js_begin reason=search_center_exit
+[2026-05-19 12:33:00] reset_session_step js_done reason=search_center_exit
+[2026-05-19 12:33:00] route reset_session reason=search_center_exit hide_ms=0
+[2026-05-19 12:33:00] reset_session_async_done reason=search_center_exit hide_ms=0
+[2026-05-19 12:33:02] selection cursor_over_ui miss mouse_x=592 mouse_y=146 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:33:02] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:33:02] selection lbutton_up no_trigger=click
+[2026-05-19 12:33:11] selection cursor_over_ui miss mouse_x=367 mouse_y=277 top=hwnd=262398 class=Chrome_WidgetWin_1 title=优化 AI 对话卡顿延迟 - Google Gemini - 牛马nmer - Cursor [Administrator] exe=Cursor.exe
+[2026-05-19 12:33:11] selection lbutton_up dist_x=0 dist_y=0 drag=0 multi=0
+[2026-05-19 12:33:11] selection lbutton_up no_trigger=click

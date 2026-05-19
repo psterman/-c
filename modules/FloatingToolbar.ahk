@@ -2035,7 +2035,11 @@ FloatingToolbar_ActivateSearchCenter() {
         if (SearchCenter_IsOpeningOrBusy()) {
             try SCWV_Log("ftb_activate_search_center_busy", "active=" . (IsSearchCenterActive() ? "1" : "0") . " vis=" . (SCWV_IsVisible() ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
             if (SCWV_IsVisible()) {
-                SCWV_SubmitIntent("open", 20, Map("reason", "toolbar_search_reuse"))
+                SCWV_SubmitIntent("open", 20, Map(
+                    "reason", "toolbar_search_reuse",
+                    "initialMode", "search",
+                    "triggerSource", "search_hotkey"
+                ))
                 opened := true
                 return
             }
@@ -2059,7 +2063,11 @@ FloatingToolbar_ActivateSearchCenter() {
         if (selectedText != "")
             SearchCenter_RunQueryWithKeyword(selectedText)
         else if (usedWebView) {
-            SCWV_SubmitIntent("open", 20, Map("reason", "toolbar_search_open"))
+            SCWV_SubmitIntent("open", 20, Map(
+                "reason", "toolbar_search_open",
+                "initialMode", "search",
+                "triggerSource", "search_hotkey"
+            ))
         } else
             ShowSearchCenter()
         opened := true
@@ -2071,7 +2079,11 @@ FloatingToolbar_ActivateSearchCenter() {
     if (!opened && usedWebView) {
         try {
             SCWV_ResetHostState()
-            SCWV_SubmitIntent("open", 20, Map("reason", "toolbar_search_recover"))
+            SCWV_SubmitIntent("open", 20, Map(
+                "reason", "toolbar_search_recover",
+                "initialMode", "search",
+                "triggerSource", "search_hotkey"
+            ))
             opened := true
         } catch {
         }

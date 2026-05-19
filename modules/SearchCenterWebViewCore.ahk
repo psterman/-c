@@ -470,6 +470,10 @@ SCWV_HandleIntent(intent, payload := 0, priority := 50) {
                     tsOpen := Trim(String(payload["triggerSource"]))
                     g_SCWV_PendingTriggerSource := tsOpen
                     g_SCWV_ClipboardHomeLock := (tsOpen = "clipboard_hotkey")
+                } else {
+                    g_SCWV_ClipboardHomeLock := false
+                    if !(payload is Map && payload.Has("initialMode") && StrLower(String(payload["initialMode"])) = "clipboard")
+                        g_SCWV_PendingTriggerSource := "search_hotkey"
                 }
             }
             SCWV_TransitionTo(SCWV_PHASE_OPEN, reason, payload, Integer(priority))
@@ -601,7 +605,7 @@ SCWV_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
     }
     if (ts = SCWV_PHASE_OPEN) {
         if (cur = SCWV_PHASE_OPEN && SCWV_IsVisible()) {
-            try SCWV_RequestFocusInput()
+            _SCWV_ApplyOpenWhileVisible(payload)
             return true
         }
         if (cur = SCWV_PHASE_CLOSING)
@@ -667,6 +671,43 @@ SCWV_IsClipboardUnifiedActive() {
     return (SCWV_IsVisible() && SCWV_GetUnifiedMode() = "clipboard")
 }
 
+_SCWV_ApplyOpenWhileVisible(payload := 0) {
+    global g_SCWV_PendingTriggerSource, g_SCWV_ClipboardHomeLock, SearchCenterFilterType, SearchCenterWebKeyword
+    global SearchCenterCurrentLimit, SearchCenterEngineMode
+    ts := Trim(String(g_SCWV_PendingTriggerSource))
+    if (payload is Map) {
+        if (payload.Has("triggerSource") && Trim(String(payload["triggerSource"])) != "")
+            ts := Trim(String(payload["triggerSource"]))
+        if (payload.Has("initialMode")) {
+            im := StrLower(Trim(String(payload["initialMode"])))
+            if (im = "clipboard")
+                ts := "clipboard_hotkey"
+            else if (ts = "")
+                ts := "search_hotkey"
+        }
+    }
+    if (ts = "")
+        ts := (SCWV_GetUnifiedMode() = "clipboard") ? "clipboard_hotkey" : "search_hotkey"
+    g_SCWV_PendingTriggerSource := ts
+    g_SCWV_ClipboardHomeLock := (ts = "clipboard_hotkey")
+    if (ts = "clipboard_hotkey") {
+        SearchCenterFilterType := "clipboard"
+        SearchCenterWebKeyword := ""
+        try SCWV_SetUnifiedMode("clipboard", true)
+        SetTimer((*) => _SCWV_RunClipboardTimelineSearch("", 0, SearchCenterCurrentLimit), -20)
+        SetTimer(SCWV_PostHostShow, -80)
+        return
+    }
+    g_SCWV_ClipboardHomeLock := false
+    g_SCWV_PendingTriggerSource := "search_hotkey"
+    try SearchCenterFilterType := ""
+    try SCWV_SetUnifiedMode("search", true)
+    if (Trim(SearchCenterWebKeyword) = "")
+        _SCWV_LoadSearchHistory()
+    SetTimer(SCWV_PostHostShow, -80)
+    try SCWV_RequestFocusInput()
+}
+
 SCWV_OpenUnified(mode := "search", keyword := "", triggerSource := "") {
     global SearchCenterFilterType, SearchCenterWebKeyword, g_SCWV_PendingTriggerSource, g_SCWV_ClipboardHomeLock
     m := StrLower(Trim(String(mode)))
@@ -693,7 +734,8 @@ SCWV_OpenUnified(mode := "search", keyword := "", triggerSource := "") {
     if (SearchCenterWebKeyword != "")
         payload["keyword"] := SearchCenterWebKeyword
     SCWV_SubmitIntent("open", 20, payload)
-    SetTimer((*) => SCWV_PostJson(Map("type", "setUnifiedMode", "mode", m)), -80)
+    lockVal := g_SCWV_ClipboardHomeLock ? true : false
+    SetTimer((*) => SCWV_PostJson(Map("type", "setUnifiedMode", "mode", m, "clipboardHomeLock", lockVal)), -80)
 }
 
 SCWV_PostHostShow(*) {
@@ -3505,8 +3547,11 @@ SCWV_OnWebMessage(sender, args) {
                 SearchCenterFilterType := "fulltext"
             else if (g_SCWV_ClipboardHomeLock && nextFilter = "clipboard")
                 SearchCenterFilterType := "clipboard"
-            else
+            else {
+                if (nextFilter != "clipboard" && nextFilter != "")
+                    g_SCWV_ClipboardHomeLock := false
                 SearchCenterFilterType := (SearchCenterFilterType = nextFilter) ? "" : nextFilter
+            }
             if msg.Has("keyword")
                 SearchCenterWebKeyword := Trim(String(msg["keyword"]))
             ; 普通过滤标签优先使用上一次「全部结果」本地切换，避免切标签还要等待后端。
