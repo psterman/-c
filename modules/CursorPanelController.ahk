@@ -302,19 +302,8 @@ IsSearchCenterActive() {
         if (SearchCenter_ShouldUseWebView()) {
             ; WebView 模式：以 SCWV 可见且宿主窗口仍存在为准（不要求前台，避免句柄瞬时为空误判）
             try {
-                if (SCWV_IsVisible()) {
-                    g := 0
-                    try g := SCWV_GetGui()
-                    if (IsObject(g) && g.HasProp("Hwnd")) {
-                        h := g.Hwnd
-                        if (h && WinExist("ahk_id " . h))
-                            return true
-                    }
-                    hwnd := 0
-                    try hwnd := SCWV_GetGuiHwnd()
-                    if (hwnd && WinExist("ahk_id " . hwnd))
-                        return true
-                }
+                if (SCWV_IsRevealedToUser())
+                    return true
             } catch {
             }
             return false

@@ -730,11 +730,7 @@ TrayMenu_OpenSearchActionRun(*) {
     try {
         if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole") {
             try {
-                SCWV_SubmitIntent("open", 20, Map(
-                    "reason", "tray_menu_search",
-                    "initialMode", "search",
-                    "triggerSource", "search_hotkey"
-                ))
+                SCWV_OpenUnified("search", "", "search_hotkey")
                 return
             } catch as err {
                 try TrayMenu_Log("open_search_direct_failed msg=" . err.Message)
@@ -742,11 +738,7 @@ TrayMenu_OpenSearchActionRun(*) {
         }
         ; Non-hole path also use robust init+show instead of mixed entry points.
         try {
-            SCWV_SubmitIntent("open", 20, Map(
-                "reason", "tray_menu_search_fallback",
-                "initialMode", "search",
-                "triggerSource", "search_hotkey"
-            ))
+            SCWV_OpenUnified("search", "", "search_hotkey")
             return
         } catch as err2 {
             try TrayMenu_Log("open_search_fallback_failed msg=" . err2.Message)
@@ -791,7 +783,7 @@ ShowSearchCenterFromMenuRun(*) {
 
     try TrayMenu_Log("show_search_from_menu_begin")
     try {
-        if (SCWV_IsVisible() && !SearchCenter_IsOpeningOrBusy()) {
+        if (SCWV_IsRevealedToUser() && !SearchCenter_IsOpeningOrBusy()) {
             TrayMenu_Log("show_search_from_menu_toggle_close")
             if (TrayMenuGUI != 0) {
                 try {
@@ -818,7 +810,7 @@ ShowSearchCenterFromMenuRun(*) {
                 }
             }
             ; opening/busy 时优先复用当前实例，避免强制关闭打断 WebView 初始化造成白屏。
-            try SCWV_SubmitIntent("open", 20, Map("reason", "tray_busy_reuse"))
+            try SCWV_OpenUnified("search", "", "search_hotkey")
             return
         }
     } catch {

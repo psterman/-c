@@ -3652,12 +3652,27 @@ FloatingToolbar_SendTextToNiumaChat(text, sendNow := true, appendMode := true, o
     }
 }
 
-; ===================== 閸掓繂顫愰崠?=====================
+; ===================== 初始化 =====================
 InitFloatingToolbar() {
-    try ShowFloatingToolbar()
-    ; 启动后兜底重试，避免共享环境/首帧竞态导致工具栏未显示
-    SetTimer((*) => ShowFloatingToolbar(), -1200)
-    SetTimer((*) => ShowFloatingToolbar(), -3200)
+    ; 不在 WebView2 共享环境就绪前 Show：否则会先闪一小窗圆形启动图（ftbBootSplash），
+    ; 再由 _WV2_BeginWarmupAfterEnv → ApplyAppearanceActivationMode 拉成完整悬浮栏。
+    ; 正常展示由 ApplyAppearanceActivationMode / FloatingToolbar_ShowForActivationMode 负责。
+    SetTimer(FloatingToolbar_InitShowFallback, -1800)
+    SetTimer(FloatingToolbar_InitShowFallback, -4000)
+}
+
+FloatingToolbar_InitShowFallback(*) {
+    global AppearanceActivationMode, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal
+    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+        return
+    if (FloatingToolbarIsVisible && !g_FTB_WaitingUiFinishedReveal)
+        return
+    try FloatingToolbar_ShowForActivationMode()
+    catch {
+        try ShowFloatingToolbar()
+        catch {
+        }
+    }
 }
 
 FloatingToolbar_HandleDroppedFiles(filePaths) {

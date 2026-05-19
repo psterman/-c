@@ -1,4 +1,4 @@
-; ===================== msg =====================
+﻿; ===================== msg =====================
 #Requires AutoHotkey v2.0
 
 global pToken := Gdip_Startup()
@@ -5726,7 +5726,7 @@ f:: {
         catch {
         }
     }
-    if (IsSearchCenterActive() && SearchCenter_HandleCapsChordKey("f")) {
+    if (IsSearchCenterActive() && SCWV_IsRevealedToUser() && SearchCenter_HandleCapsChordKey("f")) {
         VK_NoteLastChFromCapsLockKey("f")
         return
     }
@@ -5740,8 +5740,8 @@ f:: {
         return
     }
     
-    ; 如果 SearchCenter 窗口已激活，执行区域内操作逻辑
-    if (IsSearchCenterActive()) {
+    ; 如果 SearchCenter 已真正显示且激活，执行区域内操作逻辑
+    if (IsSearchCenterActive() && SCWV_IsRevealedToUser()) {
         HandleSearchCenterF()
         VK_NoteLastChFromCapsLockKey("f")
     } else {

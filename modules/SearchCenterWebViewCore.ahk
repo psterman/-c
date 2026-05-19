@@ -604,7 +604,7 @@ SCWV_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
         }
     }
     if (ts = SCWV_PHASE_OPEN) {
-        if (cur = SCWV_PHASE_OPEN && SCWV_IsVisible()) {
+        if (cur = SCWV_PHASE_OPEN && SCWV_IsRevealedToUser()) {
             _SCWV_ApplyOpenWhileVisible(payload)
             return true
         }
@@ -650,6 +650,22 @@ SCWV_IsVisible() {
     return g_SCWV_Visible
 }
 
+; 用户是否已能看到搜索中心（非透明等待首帧、宿主仍存活）
+SCWV_IsRevealedToUser() {
+    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal
+    if !g_SCWV_Visible || g_SCWV_WaitingUiFinishedReveal
+        return false
+    if !SCWV_HostAlive() || !g_SCWV_Gui
+        return false
+    try {
+        if !WinExist("ahk_id " . g_SCWV_Gui.Hwnd)
+            return false
+    } catch {
+        return false
+    }
+    return true
+}
+
 SCWV_SetUnifiedMode(mode := "search", syncWeb := true) {
     global g_SCWV_UnifiedMode
     m := StrLower(Trim(String(mode)))
@@ -673,7 +689,19 @@ SCWV_IsClipboardUnifiedActive() {
 
 _SCWV_ApplyOpenWhileVisible(payload := 0) {
     global g_SCWV_PendingTriggerSource, g_SCWV_ClipboardHomeLock, SearchCenterFilterType, SearchCenterWebKeyword
-    global SearchCenterCurrentLimit, SearchCenterEngineMode
+    global SearchCenterCurrentLimit, SearchCenterEngineMode, g_SCWV_TransitionCtx
+    if !SCWV_IsRevealedToUser() {
+        tsReopen := Trim(String(g_SCWV_PendingTriggerSource))
+        if (payload is Map && payload.Has("triggerSource") && Trim(String(payload["triggerSource"])) != "")
+            tsReopen := Trim(String(payload["triggerSource"]))
+        reasonReopen := "reopen_not_revealed"
+        if (payload is Map && payload.Has("reason") && Trim(String(payload["reason"])) != "")
+            reasonReopen := String(payload["reason"])
+        g_SCWV_TransitionCtx["allow"] := true
+        try SCWV_Show(reasonReopen, tsReopen)
+        finally g_SCWV_TransitionCtx["allow"] := false
+        return
+    }
     ts := Trim(String(g_SCWV_PendingTriggerSource))
     if (payload is Map) {
         if (payload.Has("triggerSource") && Trim(String(payload["triggerSource"])) != "")
@@ -871,8 +899,6 @@ SearchCenter_IsOpeningOrBusy() {
         }
         if (g_SCWV_LifecyclePhase = "opening" || g_SCWV_LifecyclePhase = "closing")
             return true
-        if (SCWV_IsVisible())
-            return true
     } catch {
     }
     try SCWV_ClearStaleHostState("is_opening_or_busy")
@@ -1059,7 +1085,15 @@ SCWV_OnCreated(ctrl) {
 
 SCWV_OnGuiClose(*) {
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Visible
-    global g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
+    global g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick, g_SCWV_ShowWaitStartTick, g_SCWV_CreateInFlight
+    if (g_SCWV_WaitingUiFinishedReveal || g_SCWV_CreateInFlight) {
+        try SCWV_Log("gui_close_ignored", "waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " inflight=" . (g_SCWV_CreateInFlight ? "1" : "0"))
+        return
+    }
+    if (g_SCWV_ShowWaitStartTick > 0 && (A_TickCount - g_SCWV_ShowWaitStartTick) < 4000 && !SCWV_IsRevealedToUser()) {
+        try SCWV_Log("gui_close_ignored", "reason=early_after_show_ms=" . (A_TickCount - g_SCWV_ShowWaitStartTick))
+        return
+    }
     g_SCWV_CloseCommitActive := true
     g_SCWV_CloseCommitUntilTick := A_TickCount + 260
     try SCWV_Log("gui_close_request", "visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " gdho=" . (GDHO_VISIBLE ? "1" : "0") . " native=" . (NativeDropSessionActive ? "1" : "0"))
@@ -1077,8 +1111,9 @@ SCWV_OnGuiResize(GuiObj, MinMax, Width, Height) {
 
 SCWV_OnNavigationCompleted(sender, args) {
     global g_SCWV_Visible, g_SCWV_NavFallbackTried, g_SCWV_FirstFrameSeen, g_SCWV_NavProgressTick
+    global g_SCWV_WaitingUiFinishedReveal, g_SCWV_UI_Ready
 
-    if !g_SCWV_Visible
+    if !g_SCWV_Visible && !g_SCWV_WaitingUiFinishedReveal
         return
 
     try ok := args.IsSuccess
@@ -1100,6 +1135,8 @@ SCWV_OnNavigationCompleted(sender, args) {
     g_SCWV_FirstFrameSeen := true
     g_SCWV_NavProgressTick := A_TickCount
     _SCWV_HandoffEnd("first_frame")
+    if (g_SCWV_WaitingUiFinishedReveal && (g_SCWV_UI_Ready || g_SCWV_FirstFrameSeen))
+        SCWV_FinishReveal()
 
     SCWV_RefreshComposition()
 }
@@ -2803,7 +2840,7 @@ SCWV_Show(reason := "", triggerSource := "") {
 
     GuiID_SearchCenter := g_SCWV_Gui
 
-    if g_SCWV_Visible {
+    if SCWV_IsRevealedToUser() {
         try SCWV_Log("show_already_visible", "reason=" . reason . " trigger=" . ts)
         if (ts = "clipboard_hotkey") {
             SearchCenterFilterType := "clipboard"
