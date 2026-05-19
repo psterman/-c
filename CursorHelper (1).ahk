@@ -6284,6 +6284,17 @@ ExitFunc(ExitReason, ExitCode) {
     try NormalizeCapsLockRuntimeForUiOpen()
     try GDHO_HideOverlay()
     try NiumaTtyd_StopProcess()
+    ; 退出时显式关闭 WebView 宿主与 Go 搜索核心，避免 msedgewebview2 / SearchCenterCore 残留占 CPU
+    try {
+        if (IsSet(SCWV_RequestHardClose) && Func(SCWV_RequestHardClose))
+            SCWV_RequestHardClose("app_exit")
+    } catch {
+    }
+    try {
+        if ProcessExist("SearchCenterCore.exe")
+            ProcessClose("SearchCenterCore.exe")
+    } catch {
+    }
     if (ClipboardDB && ClipboardDB != 0) {
         try {
             ClipboardDB.CloseDB()

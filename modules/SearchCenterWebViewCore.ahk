@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 
 global g_SCWV_Gui := 0
 global g_SCWV_Ctrl := 0
@@ -15,6 +15,7 @@ global g_SCWV_ShowWaitStartTick := 0
 global g_SCWV_ShowRecoveryAttempts := 0
 global g_SCWV_SearchTimer := 0
 global g_SCWV_FocusPending := false
+global g_SCWV_CliTerminalFocus := false
 global SearchCenterWebKeyword := ""
 global SearchCenterSearchResults := []
 global g_SCWV_AllResultsCache := []
@@ -115,6 +116,7 @@ global g_SCWV_ModeSwitchGuard := false
 global g_SCWV_ModeSwitchGuardUntilTick := 0
 global g_SCWV_ModeSwitchGuardEpoch := 0
 global g_SCWV_ModeSwitchDeferredCaps := Map()
+global g_SCWV_GuardPausedSearchTimer := 0
 
 SCWV_Log(event, detail := "") {
     try {
@@ -183,7 +185,7 @@ SCWV_ResetHostState() {
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
     global g_SCWV_FocusPending, g_SCWV_PendingJsonQueue, GuiID_SearchCenter
     global g_SCWV_LifecyclePhase
-    global g_SCWV_HandoffActive, g_SCWV_HandoffPendingOpen, g_SCWV_HandoffUntilTick
+    global g_SCWV_HandoffActive, g_SCWV_HandoffPendingOpen, g_SCWV_HandoffUntilTick, g_SCWV_CliTerminalFocus
 
     g_SCWV_Gui := 0
     g_SCWV_Ctrl := 0
@@ -202,6 +204,7 @@ SCWV_ResetHostState() {
     g_SCWV_HandoffActive := false
     g_SCWV_HandoffPendingOpen := 0
     g_SCWV_HandoffUntilTick := 0
+    g_SCWV_CliTerminalFocus := false
     SetTimer(SCWV_Show, 0)
     SetTimer(SCWV_RecoverAfterShowWaitTimeout, 0)
     SetTimer(SCWV_ForceRevealIfStuck, 0)
@@ -672,10 +675,11 @@ SCWV_ModeSwitchGuardBegin(ms := 120) {
         span := 80
     g_SCWV_ModeSwitchGuard := true
     g_SCWV_ModeSwitchGuardUntilTick := A_TickCount + span
+    SCWV_ModeSwitchGuardSuspendHeavyWork(true)
     g_SCWV_ModeSwitchGuardEpoch += 1
     ep := g_SCWV_ModeSwitchGuardEpoch
     ; watchdog: UI 没有回传结束也要强制解禁 + flush，避免永久吞键
-    SetTimer((*) => SCWV_ModeSwitchGuardWatchdog(ep), -150)
+    SetTimer((*) => SCWV_ModeSwitchGuardWatchdog(ep), -(span + 40))
 }
 
 SCWV_ModeSwitchGuardWatchdog(epoch, *) {
@@ -690,7 +694,25 @@ SCWV_ModeSwitchGuardEnd(reason := "") {
     if !g_SCWV_ModeSwitchGuard
         return
     g_SCWV_ModeSwitchGuard := false
+    SCWV_ModeSwitchGuardSuspendHeavyWork(false)
     SCWV_FlushDeferredCapsHintPress(reason)
+}
+
+SCWV_ModeSwitchGuardSuspendHeavyWork(suspend := true) {
+    global g_SCWV_SearchTimer, g_SCWV_GuardPausedSearchTimer
+    if suspend {
+        if g_SCWV_SearchTimer {
+            g_SCWV_GuardPausedSearchTimer := g_SCWV_SearchTimer
+            try SetTimer(g_SCWV_SearchTimer, 0)
+            g_SCWV_SearchTimer := 0
+        }
+        return
+    }
+    if g_SCWV_GuardPausedSearchTimer {
+        ; 释放守护后小延迟恢复，优先让 ttyd 首帧绘制
+        try SetTimer(g_SCWV_GuardPausedSearchTimer, -80)
+        g_SCWV_GuardPausedSearchTimer := 0
+    }
 }
 
 SCWV_PostCapsHintPressGuarded(key) {
@@ -904,6 +926,8 @@ SCWV_OnCreated(ctrl) {
     s := g_SCWV_WV2.Settings
     s.AreDefaultContextMenusEnabled := true
     s.AreDevToolsEnabled := true
+    ; 保持 WebView2 原生按键/IME 行为，减少与宿主全局钩子的焦点竞争
+    try s.AreBrowserAcceleratorKeysEnabled := true
     ApplyWebView2PerformanceSettings(g_SCWV_WV2)
     WebView2_RegisterHostBridge(g_SCWV_WV2)
 
@@ -928,7 +952,7 @@ SCWV_OnGuiClose(*) {
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Visible
     global g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
     g_SCWV_CloseCommitActive := true
-    g_SCWV_CloseCommitUntilTick := A_TickCount + 1200
+    g_SCWV_CloseCommitUntilTick := A_TickCount + 260
     try SCWV_Log("gui_close_request", "visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " gdho=" . (GDHO_VISIBLE ? "1" : "0") . " native=" . (NativeDropSessionActive ? "1" : "0"))
     SearchCenterUnifiedClose("gui_close", true, true)
 }
@@ -1299,7 +1323,9 @@ SearchCenterUnifiedClose(reason := "unknown", preferHardClose := false, PersistS
 
 ; WebView 鍐呰仈杈撳叆渚濊禆瀹夸富婵€娲?+ WebView 鍙栫劍锛孖MM/TSF 鎵嶈兘绋冲畾闄勭潃锛堝惁鍒欒〃鐜颁负鏈夋椂涓枃銆佹湁鏃惰嫳鏂囧皬鍐欙級
 SCWV_FocusForIME(*) {
-    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ctrl, g_SCWV_WV2, g_SCWV_Ready
+    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ctrl, g_SCWV_WV2, g_SCWV_Ready, g_SCWV_CliTerminalFocus
+    if g_SCWV_CliTerminalFocus
+        return
     if !g_SCWV_Visible || !g_SCWV_Gui || !g_SCWV_Ctrl
         return
     try {
@@ -2566,15 +2592,22 @@ _SCWV_AsyncPollSearchHttp(pollToken := 0, *) {
 }
 
 _SCWV_PostRequestSearchGo(*) {
-    global SearchCenterEngineMode, SearchCenterWebKeyword
-    kw := Trim(SearchCenterWebKeyword)
-    if (kw = "")
+    global SearchCenterEngineMode, SearchCenterWebKeyword, g_SCWV_ModeSwitchGuard
+    if g_SCWV_ModeSwitchGuard {
+        SetTimer(_SCWV_PostRequestSearchGo, -90)
         return
+    }
     if (SearchCenterEngineMode = "go") {
-        _SCWV_ExecuteGoSearchHttp(0, "", "", 0)
+        ; Go 模式：即使关键词为空也拉取默认首屏结果，避免进入搜索中心后白屏等待
+        _SCWV_ExecuteGoSearchHttp(0, SearchCenterWebKeyword, "", 0)
     } else {
-        _SCWV_RunAhkSearch(0)
-        SCWV_PushState("state")
+        kw := Trim(SearchCenterWebKeyword)
+        if (kw != "") {
+            _SCWV_RunAhkSearch(0)
+            SCWV_PushState("state")
+        } else {
+            _SCWV_LoadSearchHistory()
+        }
     }
 }
 
@@ -2719,8 +2752,9 @@ SCWV_Show(reason := "") {
     else
         SetTimer(SCWV_DeferredPush, -250)
 
-    if (Trim(SearchCenterWebKeyword) != "")
-        SetTimer(_SCWV_PostRequestSearchGo, -120)
+    ; 首屏统一触发一次查询：Go 模式可返回默认数据；AHK 模式在空词时仅回落历史
+    ; 首屏本地结果尽快出：提前触发首次查询
+    SetTimer(_SCWV_PostRequestSearchGo, -20)
 
     try FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "show_focus", 300, (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
     curToken := g_SCWV_CurrentToken
@@ -2768,7 +2802,9 @@ SCWV_FocusDeferred(token := 0, *) {
 }
 
 SCWV_RequestFocusInput() {
-    global g_SCWV_WV2, g_SCWV_Ready, g_SCWV_FocusPending
+    global g_SCWV_WV2, g_SCWV_Ready, g_SCWV_FocusPending, g_SCWV_CliTerminalFocus
+    if g_SCWV_CliTerminalFocus
+        return
     if g_SCWV_WV2 && g_SCWV_Ready {
         WebView_QueueJson(g_SCWV_WV2, '{"type":"focus_input"}')
         g_SCWV_FocusPending := false
@@ -2780,7 +2816,7 @@ SCWV_RequestFocusInput() {
 SCWV_Hide(PersistSelection := true) {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_SearchTimer, GuiID_SearchCenter, g_SCWV_PendingJsonQueue
     global g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason, g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
-    global g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx
+    global g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx, g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
     if !(g_SCWV_TransitionCtx is Map) || !g_SCWV_TransitionCtx["allow"] {
         try SCWV_Log("hide_redirect_intent", "persist=" . (PersistSelection ? "1" : "0"))
         SCWV_SubmitIntent("close", 25, Map("reason", "hide_redirect", "persist", PersistSelection ? 1 : 0))
@@ -2865,6 +2901,8 @@ SCWV_Hide(PersistSelection := true) {
     } catch {
     }
     try SCWV_Log("hide_done", "visible=" . (g_SCWV_Visible ? "1" : "0"))
+    g_SCWV_CloseCommitActive := false
+    g_SCWV_CloseCommitUntilTick := 0
     try SCWV_Preview_UnloadNative()
     catch {
     }
@@ -2908,6 +2946,11 @@ SCWV_WMDeactivateHideTick(*) {
             return
         }
     } catch {
+    }
+    global g_SCWV_CliTerminalFocus
+    if g_SCWV_CliTerminalFocus {
+        try SCWV_Log("hide_skip", "reason=cli_terminal_focus")
+        return
     }
     try SCWV_Log("hide_trigger", "reason=wm_deactivate_intent")
     SCWV_SubmitIntent("close", 40, Map("reason", "wm_deactivate"))
@@ -2961,6 +3004,11 @@ SCWV_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
                 return
             }
         } catch {
+        }
+        global g_SCWV_CliTerminalFocus
+        if g_SCWV_CliTerminalFocus {
+            try SCWV_Log("wm_activate_skip", "reason=cli_terminal_focus")
+            return
         }
         if _SCWV_IsDarkCtxMenuOpen() {
             try SCWV_Log("wm_activate_skip", "reason=dark_ctx_menu")
@@ -3335,6 +3383,27 @@ SCWV_OnWebMessage(sender, args) {
             _SCWV_SendToCLI(prompt)
         case "cliOpen":
             OpenSelectedCLIAgents()
+        case "cliTerminalFocus":
+            global g_SCWV_CliTerminalFocus
+            g_SCWV_CliTerminalFocus := msg.Has("active") ? !!msg["active"] : false
+            if g_SCWV_CliTerminalFocus
+                _SCWV_BlockDeactivate(4500, "cli_terminal")
+        case "niuma_cli_open":
+            global g_SCWV_WV2
+            reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+            engine := msg.Has("engine") ? Trim(String(msg["engine"])) : "codex_cli"
+            SetTimer(NiumaTtyd_DeferredOpenJob.Bind(reqId, engine, g_SCWV_WV2), -10)
+        case "niuma_cli_restart":
+            global g_SCWV_WV2
+            reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+            engine := msg.Has("engine") ? Trim(String(msg["engine"])) : "codex_cli"
+            SetTimer(NiumaTtyd_DeferredRestartJob.Bind(reqId, engine, g_SCWV_WV2), -10)
+        case "niuma_cli_open_external":
+            global g_SCWV_WV2
+            reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+            expectedBaseUrl := msg.Has("baseUrl") ? String(msg["baseUrl"]) : ""
+            engine := msg.Has("engine") ? Trim(String(msg["engine"])) : "codex_cli"
+            SetTimer(NiumaTtyd_DeferredExternalOpenJob.Bind(reqId, expectedBaseUrl, engine, g_SCWV_WV2), -10)
         case "activateResult":
             row := msg.Has("row") ? Integer(msg["row"]) : 0
             _SCWV_ActivateResultRow(row)
@@ -3522,7 +3591,7 @@ _SCWV_ExecuteDockCmd(msg) {
 }
 
 SCWV_QueueSearch(keyword) {
-    global g_SCWV_SearchTimer, SearchCenterWebKeyword
+    global g_SCWV_SearchTimer, SearchCenterWebKeyword, g_SCWV_ModeSwitchGuard
 
     SearchCenterWebKeyword := keyword
 
@@ -3533,7 +3602,7 @@ SCWV_QueueSearch(keyword) {
 
     fn := _SCWV_FireSearch.Bind()
     g_SCWV_SearchTimer := fn
-    SetTimer(fn, -150)
+    SetTimer(fn, g_SCWV_ModeSwitchGuard ? -260 : -150)
 }
 
 _SCWV_FireSearch(*) {
