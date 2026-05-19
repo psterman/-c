@@ -358,6 +358,11 @@ SCWV_SubmitIntent(intent, priority := 50, payload := 0) {
         normalized := "FORCE_RESET"
     if (normalized = "")
         return
+    if (g_SCWV_CloseCommitActive && A_TickCount >= g_SCWV_CloseCommitUntilTick) {
+        ; 关闭提交窗口已过期，立即释放，避免 OPEN 被永久拦截
+        g_SCWV_CloseCommitActive := false
+        g_SCWV_CloseCommitUntilTick := 0
+    }
     if (g_SCWV_CloseCommitActive && A_TickCount < g_SCWV_CloseCommitUntilTick && normalized = "OPEN") {
         try SCWV_Log("intent_drop_close_commit", "intent=OPEN remain_ms=" . (g_SCWV_CloseCommitUntilTick - A_TickCount))
         return

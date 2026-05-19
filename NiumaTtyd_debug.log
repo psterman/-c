@@ -466,3 +466,13 @@
 2026-05-19 08:30:34 ttyd started port 7689 pid 4136 cmd=cmd.exe /k chelper
 2026-05-19 08:33:15 ttyd shell [qwen_cli] fallback_bare_name: cmd.exe /k qwen
 2026-05-19 08:33:17 ttyd started port 7684 pid 8480 cmd=cmd.exe /k qwen
+2026-05-19 08:37:54 ttyd shell [codex_cli] fallback_bare_name: cmd.exe /k codex
+2026-05-19 08:37:56 ttyd started port 7681 pid 1220 cmd=cmd.exe /k codex
+2026-05-19 08:38:53 ttyd shell [gemini_cli] fallback_bare_name: cmd.exe /k gemini
+2026-05-19 08:38:57 ttyd started port 7682 pid 14724 cmd=cmd.exe /k gemini
+2026-05-19 08:39:53 ttyd shell [gemini_cli] fallback_bare_name: cmd.exe /k gemini
+2026-05-19 08:39:57 ttyd started port 7682 pid 2928 cmd=cmd.exe /k gemini
+2026-05-19 08:45:40 ttyd shell [gemini_cli] fallback_bare_name: cmd.exe /k gemini
+2026-05-19 08:45:42 ttyd started port 7682 pid 5472 cmd=cmd.exe /k gemini
+2026-05-19 08:48:09 ttyd shell [qwen_cli] fallback_bare_name: cmd.exe /k qwen
+2026-05-19 08:48:11 ttyd started port 7684 pid 4876 cmd=cmd.exe /k qwen

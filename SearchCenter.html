@@ -3062,6 +3062,8 @@ const _cliFrameCache = new Map(); // engineId -> iframe（保活）
 let _localInitKickAt = 0; // 本地首屏空结果兜底补拉节流
 let _cliAutoRetryTimer = 0;
 const _cliAutoRetryCountByEngine = new Map();
+let _cliConnectFallbackTimer = 0;
+let _lastFtUiApplyAt = 0;
 const SC_CLI_OPEN_THROTTLE_MS = 1200;
 const SC_CLI_READY_TTL_MS = 300000;
 const SC_SUBTAG_AUDIENCE_KEY = "sc_subtag_audience_v1";
@@ -3276,8 +3278,11 @@ const PDF_JS_ASSET_BASE = "https://app.local/assets/pdfjs/";
 const postToAhk = (obj) => BasePanel.postToAhk(obj);
 
 function requestHostClose(source = "ui") {
-  if (state.hostLifecycle === "closing" || state.hostLifecycle === "closed") return;
+  // 双通道关闭：优先 lifecycle，兜底 direct close，避免宿主状态机偶发悬挂
   postToAhk({ type: "lifecycle", phase: "close_request", source });
+  setTimeout(() => {
+    postToAhk({ type: "close" });
+  }, 60);
 }
 
 function syncEngineModeButton() {
@@ -4034,6 +4039,11 @@ function ensureCliFrameForEngine(engine) {
   fr.style.display = "none";
   fr.style.opacity = "0";
   fr.style.pointerEvents = "none";
+  fr.addEventListener("load", () => {
+    if (normalizeCliEngineId(getActiveCliEngine()) !== k) return;
+    const cur = String(fr.src || "");
+    if (cur && cur.indexOf("about:blank") !== 0) setCliLoadingVisible(false);
+  });
   stack.appendChild(fr);
   _cliFrameCache.set(k, fr);
   return fr;
@@ -4170,9 +4180,19 @@ function syncCliWorkspace(spawnIfNeeded) {
   if (frameLive) {
     applyCliFrameUrl(cliUrlWithTheme(cliBaseUrlForEngine(engine)));
     setCliLoadingVisible(false);
+    if (_cliConnectFallbackTimer) {
+      clearTimeout(_cliConnectFallbackTimer);
+      _cliConnectFallbackTimer = 0;
+    }
   } else {
-    // 先直连目标端口，避免仅依赖 ttyd_ready 回执导致永久 loading
-    applyCliFrameUrl(cliUrlWithTheme(cliBaseUrlForEngine(engine)));
+    // 未就绪时保持 about:blank，避免出现“127.0.0.1 拒绝连接”错误页
+    const fr = getActiveCliFrameEl();
+    if (fr) {
+      const cur = String(fr.src || "");
+      if (!cur || cur.indexOf("about:blank") !== 0) {
+        try { fr.src = "about:blank"; } catch (_) {}
+      }
+    }
     setCliLoadingVisible(true, "正在连接 ttyd…");
     if (spawnIfNeeded) throttledNiumaCliOpen(false);
   }
@@ -7091,7 +7111,17 @@ function applyState(payload) {
   document.getElementById("search").value = state.keyword;
   document.getElementById("limit").value = String(state.limit);
   document.getElementById("status").textContent = state.statusLine || "已同步";
-  applyFulltextStatus(state.fulltext);
+  // CLI 模式下全文状态降频刷新，降低 UI 抖动与整体卡顿
+  if (getUIMode() === "cli") {
+    const nowFt = Date.now();
+    if (nowFt - _lastFtUiApplyAt > 1200) {
+      applyFulltextStatus(state.fulltext);
+      _lastFtUiApplyAt = nowFt;
+    }
+  } else {
+    applyFulltextStatus(state.fulltext);
+    _lastFtUiApplyAt = Date.now();
+  }
   syncResultCountLabel();
   document.getElementById("btn-run").textContent = getUIMode() === "cli" ? "发送" : "搜索";
   document.getElementById("btn-open-cli").style.display = state.isCliCategory ? "inline-flex" : "none";
