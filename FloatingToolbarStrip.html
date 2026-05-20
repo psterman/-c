@@ -5891,12 +5891,26 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function detectPayloadFromDataTransfer(dt) {
     if (!dt) return '';
     try {
+      if (dt.files && dt.files.length) return 'file';
+      if (dt.items && dt.items.length) {
+        for (var i = 0; i < dt.items.length; i++) {
+          var kind = String((dt.items[i] && dt.items[i].kind) || '').toLowerCase();
+          if (kind === 'file') return 'file';
+          if (kind === 'string') return 'text';
+        }
+      }
       var types = Array.prototype.slice.call(dt.types || []);
       var hasFiles = types.indexOf('Files') >= 0 || types.indexOf('application/x-moz-file') >= 0;
       var hasText = types.indexOf('text/plain') >= 0 || types.indexOf('Text') >= 0 || types.indexOf('text/uri-list') >= 0;
+      if (!hasText) {
+        hasText = types.some(function (t) {
+          return String(t || '').toLowerCase().indexOf('text/') === 0;
+        });
+      }
       if (hasFiles) return 'file';
       if (hasText) return 'text';
-      if (dt.files && dt.files.length) return 'file';
+      var plain = (dt.getData && (dt.getData('text/plain') || dt.getData('Text') || dt.getData('text/uri-list'))) || '';
+      if (String(plain || '').trim()) return 'text';
     } catch (_) {}
     return '';
   }
@@ -6044,12 +6058,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     try {
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
     } catch (e2) {}
-    var payload = detectPayloadFromDataTransfer(e.dataTransfer);
-    if (payload) {
-      holeDragUpdate(payload, e);
-    } else {
-      holeDragHide();
-    }
+    var payload = detectPayloadFromDataTransfer(e.dataTransfer) || 'text';
+    holeDragUpdate(payload, e);
     var targetBtn = findDropButtonTarget(e);
     setActiveDropBtn(targetBtn);
     if (targetBtn) applyFishEye(targetBtn, e.clientX || 0);
@@ -6089,10 +6099,26 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   document.body.addEventListener('dragover', function (e) {
     e.preventDefault();
+    try {
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    } catch (_) {}
   });
   document.body.addEventListener('dragenter', function () {
     forceReleaseInteractionLocks();
   });
+  // Strong fallback: capture-phase handlers keep external text drag from showing "forbidden" cursor.
+  window.addEventListener('dragenter', function (e) {
+    try {
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    } catch (_) {}
+    try { e.preventDefault(); } catch (_) {}
+  }, true);
+  window.addEventListener('dragover', function (e) {
+    try {
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    } catch (_) {}
+    try { e.preventDefault(); } catch (_) {}
+  }, true);
 
   document.body.addEventListener('drop', function (e) {
     e.preventDefault();

@@ -43,6 +43,7 @@ global NativeDropStartMouseX := 0
 global NativeDropStartMouseY := 0
 global NativeDropMovedEnough := false
 global NativeDropMoveThresholdPx := 14
+global NativeDropTextMoveThresholdPx := 48
 global NativeDropMinCommitDistancePx := 20
 global NativeDropCurrentMoveDistance := 0.0
 global NativeDropMinCommitMs := 140
@@ -61,7 +62,10 @@ global NativeDropLastTickMouseY := 0
 global NativeDropLastStartTick := 0
 global NativeDropRearmUntil := 0
 global NativeDropBridgeSilentMode := false
+global g_NativeDropBridgePausedForText := false
 global GDHO_TriggerSource := ""
+; Hole drag hook bus: activate / position / release
+global g_HoleDragHooks := Map("activate", [], "position", [], "release", [])
 global g_LastValidTrayMenu := []
 global g_IsUIVisibleTransitioning := false
 global g_ActivationApplyToken := 0
@@ -83,6 +87,49 @@ DetectHiddenWindows(true)
 CoordMode("Mouse", "Screen")
 CoordMode("Pixel", "Screen")
 CoordMode("ToolTip", "Screen")
+
+HoleDragHooks_On(eventName, callback) {
+    global g_HoleDragHooks
+    ev := StrLower(Trim(String(eventName)))
+    if !g_HoleDragHooks.Has(ev)
+        g_HoleDragHooks[ev] := []
+    if !(callback is Func) && !(callback is BoundFunc)
+        return false
+    for _, cb in g_HoleDragHooks[ev] {
+        if (cb = callback)
+            return true
+    }
+    g_HoleDragHooks[ev].Push(callback)
+    return true
+}
+
+HoleDragHooks_Off(eventName, callback := 0) {
+    global g_HoleDragHooks
+    ev := StrLower(Trim(String(eventName)))
+    if !g_HoleDragHooks.Has(ev)
+        return false
+    if !(callback is Func) && !(callback is BoundFunc) {
+        g_HoleDragHooks[ev] := []
+        return true
+    }
+    kept := []
+    for _, cb in g_HoleDragHooks[ev] {
+        if (cb != callback)
+            kept.Push(cb)
+    }
+    g_HoleDragHooks[ev] := kept
+    return true
+}
+
+HoleDragHooks_Emit(eventName, data := 0) {
+    global g_HoleDragHooks
+    ev := StrLower(Trim(String(eventName)))
+    if !g_HoleDragHooks.Has(ev)
+        return
+    for _, cb in g_HoleDragHooks[ev] {
+        try cb.Call(data)
+    }
+}
 ; 托盘图标与 0x0404 自定义菜单：在 #Include lib\ImagePut.ahk 之后调用 TrayMenu_Init()（依赖 Gdip_All）
 
 ; ===================== 包含 SQLite 数据库类 =====================
@@ -138,6 +185,7 @@ global MainScriptDir := A_ScriptDir
 #Include modules\CloudPlayer.ahk
 
 ; ===================== 包含悬浮工具栏模块 =====================
+#Include modules\HoleWhisperStt.ahk
 #Include modules\GlobalDragHoleOverlay.ahk
 #Include modules\FloatingToolbar.ahk
 #Include modules\FloatingBubble.ahk
@@ -2548,6 +2596,14 @@ ApplyActivationRuntimeDeferred(mode, token) {
     }
     if (m = "hole") {
         try SetHoleRuntimeEnabled(true)
+        try {
+            localHole := GDHO_BuildFileUrl(A_ScriptDir . "\hole_starry.html")
+            if FileExist(A_ScriptDir . "\hole_starry.html") {
+                GDHO_SetPageUrl(localHole)
+                GDHO_SetFallbackUrl(localHole)
+            }
+        } catch {
+        }
         try GDHO_Start()
         catch {
         }
@@ -2559,6 +2615,9 @@ ApplyActivationRuntimeDeferred(mode, token) {
         catch {
         }
         try NativeDropBridge_Start()
+        catch {
+        }
+        try NativeDropBridge_RestartForHoleDropRect()
         catch {
         }
         try NativeDropBridge_SetSilentMode(false, "runtime_hole")
@@ -2983,9 +3042,22 @@ NativeDropBridge_Start() {
 
 NativeDropBridge_GetDropRect() {
     global NativeDropBridgeFullScreenHitTest
+    global GDHO_GUI, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_HOST_W, GDHO_HOST_H
     if (NativeDropBridgeFullScreenHitTest) {
         left := SysGet(76), top := SysGet(77), vw := SysGet(78), vh := SysGet(79)
         return Map("x", Integer(left), "y", Integer(top), "w", Integer(vw), "h", Integer(vh))
+    }
+    if (FuncExists("GDHO_IsHoleOnlyMode") && GDHO_IsHoleOnlyMode()) {
+        hx := Integer(GDHO_LAST_HOST_X), hy := Integer(GDHO_LAST_HOST_Y)
+        hw := Integer(GDHO_HOST_W), hh := Integer(GDHO_HOST_H)
+        if (GDHO_GUI && GDHO_GUI.Hwnd) {
+            try {
+                GDHO_GUI.GetPos(&hx, &hy, &hw, &hh)
+            } catch {
+            }
+        }
+        if (hw > 0 && hh > 0)
+            return Map("x", hx, "y", hy, "w", hw, "h", hh)
     }
     ; Keep receiver roughly aligned to hole visual area near toolbar.
     x := 300, y := 300, w := 170, h := 210
@@ -3142,6 +3214,7 @@ NativeDropBridge_TriggerHolePulse(evt) {
     kindMapped := NativeDropBridge_NormalizeHolePayloadKind(payloadRaw)
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . kindRaw . "', dispatch: 'route', active: " . (NativeDropSessionActive ? "1" : "0") . ", overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
     fallbackPayload := ""
+    resolveDetail := ""
     if (kindRaw = "drag_start" || kindRaw = "drag_enter") {
         nowTick := A_TickCount
         ; Rearm gate: after closing SearchCenter/reset, ignore a few stale bridge ticks.
@@ -3155,19 +3228,25 @@ NativeDropBridge_TriggerHolePulse(evt) {
             return
         }
         NativeDropLastStartTick := nowTick
+        guessX := "", guessY := ""
+        try guessX := Integer(evt["x"])
+        try guessY := Integer(evt["y"])
         if (kindMapped = "")
-            kindMapped := NativeDropBridge_GuessPayloadForUnknownDrag(&fallbackPayload)
-        ; Text-first experience: unknown drags should still reveal the weak black-hole preview.
-        if (kindMapped = "" && kindRaw = "drag_start")
-            kindMapped := "text"
+            kindMapped := NativeDropBridge_GuessPayloadForUnknownDrag(&fallbackPayload, guessX, guessY)
+        if (kindMapped = "")
+            kindMapped := NativeDropBridge_ResolveStartKind(evt, &resolveDetail)
+        if (IsSet(resolveDetail) && resolveDetail != "")
+            fallbackPayload := (fallbackPayload != "" ? fallbackPayload . ";" : "") . resolveDetail
         if NativeDropBridge_ShouldIgnoreDragEvent(kindRaw, payloadRaw, kindMapped) {
             NativeDropSessionActive := false
             try SetTimer(NativeDropBridge_DragSessionTick, 0)
             return
         }
-        if (kindMapped = "") {
-            kindMapped := "file"
-            fallbackPayload := (fallbackPayload != "" ? fallbackPayload . ";" : "") . "default=file"
+        if (kindMapped = "")
+            kindMapped := "text"
+        if (kindMapped = "text" && FuncExists("SelectionSense_ShouldBlockBridgeTextDrag") && SelectionSense_ShouldBlockBridgeTextDrag()) {
+            try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore_text reason=not_dragging_phase")
+            return
         }
         ; Init session only once (usually on drag_start). Repeated drag_enter should not
         ; reset movement gate, otherwise weak preview may never show.
@@ -3205,17 +3284,48 @@ NativeDropBridge_TriggerHolePulse(evt) {
         } else {
             NativeDropSessionPayload := kindMapped
         }
-        if (kindMapped = "text")
-            NativeDropSeedText := NativeDropBridge_CaptureTextSeed()
-        else
+        if (kindMapped = "text") {
+            if !GetKeyState("LButton", "P") {
+                try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore_text reason=lbutton_up")
+                return
+            }
+            srcHwnd := 0
+            try {
+                if (evt.Has("x") && evt.Has("y") && FuncExists("GDHO_HwndFromScreenPoint"))
+                    srcHwnd := GDHO_HwndFromScreenPoint(Integer(evt["x"]), Integer(evt["y"]))
+            } catch {
+            }
+            if FuncExists("GDHO_CaptureTextSeedAtDragStart") {
+                try NativeDropSeedText := GDHO_CaptureTextSeedAtDragStart(srcHwnd)
+            } else {
+                NativeDropSeedText := NativeDropBridge_CaptureTextSeed()
+            }
+            if FuncExists("NativeDropBridge_SetReceiverVisible")
+                try NativeDropBridge_SetReceiverVisible(false)
+        } else {
             NativeDropSeedText := ""
+            if FuncExists("NativeDropBridge_SetReceiverVisible")
+                try NativeDropBridge_SetReceiverVisible(true)
+        }
         try SetTimer(NativeDropBridge_DelayedHide, 0) ; cancel pending hide
         try SetTimer(NativeDropBridge_DragSessionTick, 60)
+        if (kindMapped = "file")
+            NativeDropBridge_ActivateFileDragHole(evt)
         ; Basic mode: do not show hole on drag_start.
         ; Show only after real move gate is passed in DragSessionTick.
-        actionTag := isFreshSession ? "arm_wait_move" : "arm_keep_session"
+        actionTag := isFreshSession ? (kindMapped = "file" ? "arm_file_preview" : "arm_wait_move") : "arm_keep_session"
         try NativeDropDiag_Log("route kind=" . kindRaw . " action=" . actionTag . " payload=" . payloadRaw . " mapped=" . kindMapped . (fallbackPayload != "" ? " fallback=" . fallbackPayload : ""))
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . kindRaw . "', dispatch: '" . actionTag . ":" . kindMapped . "', active: 1, overHole: 0, wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . kindMapped . "' })")
+        try HoleDragHooks_Emit("activate", Map(
+            "kind", kindRaw,
+            "payload", kindMapped,
+            "active", true,
+            "overHole", false,
+            "wasOverHole", !!NativeDropWasOverHole,
+            "x", evt.Has("x") ? Integer(evt["x"]) : 0,
+            "y", evt.Has("y") ? Integer(evt["y"]) : 0,
+            "ts", A_TickCount
+        ))
         return
     }
     if (kindRaw = "drag_end") {
@@ -3249,11 +3359,52 @@ NativeDropBridge_TriggerHolePulse(evt) {
                 && (NativeDropCurrentMoveDistance >= NativeDropMinCommitDistancePx)
                 && (sinceStartMs >= NativeDropMinCommitMs)
                 && (dwellMs >= NativeDropMinDwellInHoleMs)
-            if (NativeDropSessionPayload = "text" && !canCommit)
+            if (NativeDropSessionPayload = "text" && !canCommit) {
                 try NativeDropDiag_Log("route drag_end_text action=blocked dist=" . Round(NativeDropCurrentMoveDistance, 1) . " min_dist=" . NativeDropMinCommitDistancePx . " ms=" . sinceStartMs . " min_ms=" . NativeDropMinCommitMs . " hover_valid=" . (GDHO_HOVER_VALID ? "1" : "0") . " over_hole=" . (NativeDropOverHole ? "1" : "0") . " strict_over_hole=" . (strictOverHole ? "1" : "0") . " dwell_ms=" . dwellMs . " min_dwell=" . NativeDropMinDwellInHoleMs)
+                if (NativeDropOverHole || (endX != "" && endY != "" && FuncExists("GDHO_ShouldTextSuckAtPoint") && GDHO_ShouldTextSuckAtPoint(Integer(endX), Integer(endY)))) {
+                    try GDHO_SubmitReleaseSignal("physical", Map("mx", (endX != "" ? Integer(endX) : NativeDropLastTickMouseX), "my", (endY != "" ? Integer(endY) : NativeDropLastTickMouseY), "inSuckZone", true))
+                }
+            }
+            if (NativeDropSessionPayload = "file") {
+                fileCommit := NativeDropOverHole && strictOverHole
+                    && (NativeDropCurrentMoveDistance >= NativeDropMinCommitDistancePx)
+                try NativeDropDiag_Log("route drag_end_file action=" . (fileCommit ? "commit" : "cancel") . " over_hole=" . (NativeDropOverHole ? "1" : "0"))
+                try HoleDragHooks_Emit("release", Map(
+                    "kind", "drag_end",
+                    "payload", NativeDropSessionPayload,
+                    "commit", !!fileCommit,
+                    "overHole", !!NativeDropOverHole,
+                    "strictOverHole", !!strictOverHole,
+                    "wasOverHole", !!NativeDropWasOverHole,
+                    "hoverValid", !!GDHO_HOVER_VALID,
+                    "x", (endX != "" ? Integer(endX) : 0),
+                    "y", (endY != "" ? Integer(endY) : 0),
+                    "distance", Round(NativeDropCurrentMoveDistance, 1),
+                    "ts", A_TickCount
+                ))
+                if fileCommit {
+                    try {
+                        GDHO_ForceSuckAction()
+                        SetTimer(GDHO_FinishSuckSession, -2000)
+                    } catch {
+                    }
+                }
+                try NativeDropBridge_ResetSessionAsync("drag_end_file", 300)
+                return
+            }
         } catch {
         }
         try GDHO_SubmitReleaseSignal("bridge_drag_end", Map("canCommit", canCommit, "payload", NativeDropSessionPayload))
+        try HoleDragHooks_Emit("release", Map(
+            "kind", "drag_end",
+            "payload", NativeDropSessionPayload,
+            "commit", !!canCommit,
+            "overHole", !!NativeDropOverHole,
+            "wasOverHole", !!NativeDropWasOverHole,
+            "hoverValid", !!GDHO_HOVER_VALID,
+            "distance", Round(NativeDropCurrentMoveDistance, 1),
+            "ts", A_TickCount
+        ))
         return
     }
 
@@ -3276,6 +3427,14 @@ NativeDropBridge_TriggerHolePulse(evt) {
         NativeDropSessionPayload := kind
         try NativeDropDiag_Log("route kind=drop payload=" . payloadRaw . " mapped=" . kind . (fallbackPayload != "" ? " fallback=" . fallbackPayload : ""))
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drop', dispatch: 'mapped:" . kind . "', active: 1, overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . kind . "' })")
+        try HoleDragHooks_Emit("release", Map(
+            "kind", "drop",
+            "payload", kind,
+            "commit", true,
+            "overHole", !!NativeDropOverHole,
+            "wasOverHole", !!NativeDropWasOverHole,
+            "ts", A_TickCount
+        ))
         try {
             SetTimer(NativeDropBridge_DelayedHide, 0)
             SetTimer(NativeDropBridge_DragSessionTick, 0)
@@ -3369,6 +3528,12 @@ NativeDropBridge_ApplyDropAction(evt, kind := "") {
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'files:" . files.Length . "' })")
         if (itemCount > 0)
             try NativeDropDiag_Log("drop action files count=" . itemCount . " source=" . sourceFmt)
+        if FuncExists("GDHO_RoutePayload") {
+            try GDHO_RoutePayload("file", files)
+            return true
+        }
+        if FuncExists("HoleWhisper_TryRouteAudioFiles") && HoleWhisper_TryRouteAudioFiles(files)
+            return true
         try return FloatingToolbar_HandleDroppedFiles(files)
     }
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'files:empty' })")
@@ -3383,11 +3548,20 @@ NativeDropBridge_ShouldIgnoreDragEvent(kindRaw, payloadRaw, kindMapped := "") {
         try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=toolbar_dragging")
         return true
     }
+    if (kindMapped = "file" && FuncExists("GDHO_IsHoleOnlyMode") && GDHO_IsHoleOnlyMode()) {
+        try NativeDropDiag_Log("route kind=" . kindRaw . " action=allow_file_hole_mode")
+        return false
+    }
+    if (kindMapped = "file") {
+        ; File drags (including mp3) should always be allowed to arm hole workflow.
+        try NativeDropDiag_Log("route kind=" . kindRaw . " action=allow_file")
+        return false
+    }
     if (GDHO_IsOwnWindowHwnd(hwnd) || GDHO_IsOwnProcessHwnd(hwnd)) {
         try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=own_ui_or_process")
         return true
     }
-    if (kindMapped != "text" && GDHO_IsPointInToolbar(mx, my)) {
+    if (kindMapped != "text" && GDHO_IsPointInToolbar(mx, my) && !(FuncExists("GDHO_IsHoleOnlyMode") && GDHO_IsHoleOnlyMode())) {
         try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore reason=cursor_in_toolbar")
         return true
     }
@@ -3400,10 +3574,171 @@ NativeDropBridge_ShouldIgnoreDragEvent(kindRaw, payloadRaw, kindMapped := "") {
     return false
 }
 
-NativeDropBridge_GuessPayloadForUnknownDrag(&detail := "") {
+NativeDropBridge_ResolveStartKind(evt := 0, &detail := "") {
     detail := ""
+    payloadRaw := ""
+    try payloadRaw := StrLower(Trim(String(evt["payloadKind"])))
+    kind := NativeDropBridge_NormalizeHolePayloadKind(payloadRaw)
+    if (kind != "") {
+        detail := "payload=" . payloadRaw
+        return kind
+    }
+    ; payloadKind may be "none" on drag_start: infer file intent from source metadata.
+    srcFmt := ""
+    try srcFmt := StrLower(Trim(String(evt["sourceFormat"])))
+    if (srcFmt != "") {
+        if (InStr(srcFmt, "hdrop") || InStr(srcFmt, "filegroupdescriptor")
+            || InStr(srcFmt, "shell idlist") || InStr(srcFmt, "shellidlist")
+            || InStr(srcFmt, "filename")) {
+            detail := "source=" . srcFmt
+            return "file"
+        }
+    }
+    if (IsObject(evt) && evt.Has("files") && (evt["files"] is Array) && evt["files"].Length > 0) {
+        detail := (detail != "" ? detail . ";" : "") . "evt.files>0"
+        return "file"
+    }
+    if (IsObject(evt) && evt.Has("folders") && (evt["folders"] is Array) && evt["folders"].Length > 0) {
+        detail := (detail != "" ? detail . ";" : "") . "evt.folders>0"
+        return "file"
+    }
+    guessX := "", guessY := ""
+    try guessX := Integer(evt["x"])
+    try guessY := Integer(evt["y"])
+    g := NativeDropBridge_GuessPayloadForUnknownDrag(&detail, guessX, guessY)
+    if (g != "")
+        return g
     CoordMode("Mouse", "Screen")
     MouseGetPos(, , &hwnd)
+    srcClass := GDHO_GetClassByHwnd(hwnd)
+    detail := (detail != "" ? detail . ";" : "") . "mouse_class=" . srcClass
+    if FuncExists("GDHO_IsExplorerFileDragSource") && GDHO_IsExplorerFileDragSource(srcClass)
+        return "file"
+    if (srcClass = "Chrome_WidgetWin_1" || srcClass = "Edit" || srcClass = "MozillaWindowClass"
+        || srcClass = "Notepad" || srcClass = "RichEditD2DPT" || srcClass = "Chrome_RenderWidgetHostHWND")
+        return "text"
+    return "text"
+}
+
+NativeDropBridge_ActivateFileDragHole(evt := 0) {
+    global NativeDropSessionPayload, NativeDropWeakPreviewShown, NativeDropMovedEnough, GDHO_ACTIVE, GDHO_PAYLOAD
+    global GDHO_POSITION_MODE, GDHO_SIZE_SCALE, GDHO_ANIM_LEVEL, GDHO_VISUAL_STYLE, GDHO_DRAG_SOURCE_CLASS
+    NativeDropSessionPayload := "file"
+    GDHO_PAYLOAD := "file"
+    NativeDropMovedEnough := true
+    mx := "", my := ""
+    if IsObject(evt) {
+        try mx := Integer(evt["x"])
+        try my := Integer(evt["y"])
+    }
+    if (mx = "" || my = "") {
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&mx, &my)
+    }
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(, , &hwndUnder)
+    GDHO_DRAG_SOURCE_CLASS := GDHO_GetClassByHwnd(hwndUnder)
+    try {
+        GDHO_RequestOpen(Map("reason", "file_drag_start", "payload", "file", "screenX", mx, "screenY", my, "positionMode", GDHO_POSITION_MODE))
+        GDHO_ACTIVE := true
+        NativeDropSessionActive := true
+        try GDHO_ArmPolling()
+        if FuncExists("GDHO_ShowForDrag")
+            GDHO_ShowForDrag("file", mx, my)
+        else
+            GDHO_Show("file", mx, my)
+        if FuncExists("NativeDropBridge_ResumeFromTextDrag")
+            try NativeDropBridge_ResumeFromTextDrag()
+        if FuncExists("GDHO_SetFileDropCapture") && GDHO_IsExplorerFileDragSource()
+            GDHO_SetFileDropCapture(true)
+        GDHO_EnsureDragSessionInteractive()
+        try NativeDropBridge_RestartForHoleDropRect()
+        GDHO_Update("file", mx, my)
+        GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
+        NativeDropWeakPreviewShown := true
+        try NativeDropDiag_Log("route file_drag_start action=show_hole x=" . mx . " y=" . my . " src=" . GDHO_DRAG_SOURCE_CLASS)
+    } catch as e {
+        try NativeDropDiag_Log("route file_drag_start action=show_failed err=" . e.Message)
+    }
+}
+
+NativeDropBridge_SetReceiverVisible(visible := true) {
+    static s_lastVisible := -1
+    want := !!visible
+    if (want = s_lastVisible)
+        return
+    s_lastVisible := want
+    hwnd := 0
+    try hwnd := WinExist("ahk_class NMERNativeDropBridgeWnd")
+    catch {
+        hwnd := 0
+    }
+    if !hwnd
+        return
+    try {
+        if want {
+            rect := NativeDropBridge_GetDropRect()
+            WinMove(Integer(rect["x"]), Integer(rect["y"]), Integer(rect["w"]), Integer(rect["h"]), "ahk_id " hwnd)
+            WinShow("ahk_id " hwnd)
+        } else {
+            WinMove(-32000, -32000, 1, 1, "ahk_id " hwnd)
+            WinHide("ahk_id " hwnd)
+        }
+        try NativeDropDiag_Log("native_drop_bridge_receiver visible=" . (want ? "1" : "0"))
+    } catch {
+    }
+}
+
+NativeDropBridge_PauseForTextDrag() {
+    global g_NativeDropBridgePausedForText, EnableNativeDropBridge
+    if !EnableNativeDropBridge
+        return
+    if g_NativeDropBridgePausedForText
+        return
+    g_NativeDropBridgePausedForText := true
+    try NativeDropBridge_SetReceiverVisible(false)
+    try NativeDropDiag_Log("native_drop_bridge_receiver_hidden reason=text_drag")
+}
+
+NativeDropBridge_ResumeFromTextDrag() {
+    global g_NativeDropBridgePausedForText, EnableNativeDropBridge, g_HoleRuntimeEnabled, NativeDropBridgePID
+    if !g_NativeDropBridgePausedForText
+        return
+    g_NativeDropBridgePausedForText := false
+    if (!g_HoleRuntimeEnabled || !EnableNativeDropBridge)
+        return
+    if !(NativeDropBridgePID && ProcessExist(NativeDropBridgePID))
+        try NativeDropBridge_Start()
+    try NativeDropBridge_SetReceiverVisible(true)
+    try NativeDropDiag_Log("native_drop_bridge_resumed reason=text_drag_end")
+}
+
+NativeDropBridge_RestartForHoleDropRect() {
+    global EnableNativeDropBridge, NativeDropBridgePID, g_HoleRuntimeEnabled
+    if !EnableNativeDropBridge
+        return
+    if !(g_HoleRuntimeEnabled || (FuncExists("GDHO_IsHoleOnlyMode") && GDHO_IsHoleOnlyMode()))
+        return
+    try NativeDropDiag_Log("native_drop_bridge_restart hole_rect")
+    NativeDropBridge_Stop()
+    NativeDropBridge_Start()
+}
+
+NativeDropBridge_GuessPayloadForUnknownDrag(&detail := "", x := "", y := "") {
+    detail := ""
+    hwnd := 0
+    if (x != "" && y != "") {
+        try hwnd := GDHO_HwndFromScreenPoint(Integer(x), Integer(y))
+        catch {
+            hwnd := 0
+        }
+        if hwnd
+            detail := "xy=" . Integer(x) . "," . Integer(y)
+    }
+    if !hwnd {
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(, , &hwnd)
+    }
     srcClass := GDHO_GetClassByHwnd(hwnd)
     ; Explorer/Desktop drags are highly likely file/folder payload.
     if (srcClass = "CabinetWClass" || srcClass = "ExploreWClass" || srcClass = "WorkerW" || srcClass = "Progman") {
@@ -3455,24 +3790,42 @@ NativeDropBridge_DragSessionTick(*) {
         dym := Integer(my) - Integer(NativeDropStartMouseY)
         moveDist := Sqrt(dxm * dxm + dym * dym)
         NativeDropCurrentMoveDistance := moveDist
-        if (!NativeDropMovedEnough && moveDist >= NativeDropMoveThresholdPx) {
+        moveThresh := (NativeDropSessionPayload = "text") ? NativeDropTextMoveThresholdPx : NativeDropMoveThresholdPx
+        if (!NativeDropMovedEnough && moveDist >= moveThresh) {
             GDHO_STATE := "TRACKING"
             GDHO_DRAG_CONFIDENCE := 0.9
             NativeDropMovedEnough := true
             try NativeDropDiag_Log("route drag_tick action=move_gate_passed dist=" . Round(moveDist, 1))
-            if (!NativeDropWeakPreviewShown && NativeDropSessionPayload = "text") {
+            if (!NativeDropWeakPreviewShown && (NativeDropSessionPayload = "text" || NativeDropSessionPayload = "file")) {
                 try {
-                    GDHO_Init()
-                    GDHO_Show(NativeDropSessionPayload)
-                    GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
-                    NativeDropWeakPreviewShown := true
-                    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: 'preview_strong_after_move', active: 1, overHole: 0, wasOverHole: 0, payload: '" . NativeDropSessionPayload . "' })")
+                    if (NativeDropSessionPayload = "file") {
+                        if FuncExists("GDHO_ShowForDrag")
+                            GDHO_ShowForDrag(NativeDropSessionPayload)
+                        else {
+                            GDHO_Init()
+                            GDHO_Show(NativeDropSessionPayload)
+                        }
+                        GDHO_EnsureDragSessionInteractive()
+                        GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
+                        try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: 'preview_strong_after_move', active: 1, overHole: 0, wasOverHole: 0, payload: 'file' })")
+                    } else {
+                        ; Text hole: no preview at move gate; only near-hole via GDHO_ManageTextDragOverlay.
+                        try NativeDropDiag_Log("route drag_tick action=text_wait_near_hole dist=" . Round(moveDist, 1))
+                        NativeDropWeakPreviewShown := true
+                    }
+                    if (NativeDropSessionPayload = "file")
+                        NativeDropWeakPreviewShown := true
                 } catch {
                 }
             }
         }
         if !NativeDropMovedEnough {
-            GDHO_Update(NativeDropSessionPayload, mx, my)
+            if (NativeDropSessionPayload != "text")
+                GDHO_Update(NativeDropSessionPayload, mx, my)
+            return
+        }
+        if (NativeDropSessionPayload = "text" && FuncExists("GDHO_ManageTextDragOverlay")) {
+            try GDHO_ManageTextDragOverlay(mx, my)
             return
         }
         NativeDropOverHole := GDHO_IsPointInHole(mx, my, 30)
@@ -3506,8 +3859,18 @@ NativeDropBridge_DragSessionTick(*) {
             try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: 'promote_on_enter', active: 1, overHole: 1, wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
             try {
                 if !GDHO_VISIBLE {
-                    GDHO_Init()
-                    GDHO_Show(NativeDropSessionPayload)
+                    if FuncExists("GDHO_ShowForDrag")
+                        GDHO_ShowForDrag(NativeDropSessionPayload)
+                    else {
+                        GDHO_Init()
+                        GDHO_Show(NativeDropSessionPayload)
+                    }
+                }
+                if (NativeDropSessionPayload = "text") {
+                    if FuncExists("GDHO_EnsureTextDragPassthrough")
+                        try GDHO_EnsureTextDragPassthrough()
+                    if FuncExists("GDHO_RaiseTextDragOverlay")
+                        try GDHO_RaiseTextDragOverlay()
                 }
                 ; Restore normal style when pointer first enters hole area.
                 if NativeDropWeakPreviewShown {
@@ -3520,6 +3883,19 @@ NativeDropBridge_DragSessionTick(*) {
         if NativeDropOverHole
             NativeDropWasOverHole := true
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: '" . (NativeDropOverHole ? "over_hole" : "tracking") . "', state: '" . GDHO_STATE . "', ready: " . (GDHO_HOVER_VALID ? "1" : "0") . ", proximity: " . Round(GDHO_LAST_PROXIMITY, 3) . ", active: 1, overHole: " . (NativeDropOverHole ? "1" : "0") . ", wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . NativeDropSessionPayload . "' })")
+        try HoleDragHooks_Emit("position", Map(
+            "kind", "drag_tick",
+            "payload", NativeDropSessionPayload,
+            "active", true,
+            "x", Integer(mx),
+            "y", Integer(my),
+            "overHole", !!NativeDropOverHole,
+            "wasOverHole", !!NativeDropWasOverHole,
+            "hoverValid", !!GDHO_HOVER_VALID,
+            "proximity", Round(GDHO_LAST_PROXIMITY, 3),
+            "distance", Round(NativeDropCurrentMoveDistance, 1),
+            "ts", A_TickCount
+        ))
         GDHO_Update(NativeDropSessionPayload, mx, my)
         ; If OS missed/late drag_end, use release fallback.
         ; Guard the first ~280ms to avoid false release on some text-drag sources.
@@ -3625,6 +4001,11 @@ NativeDropBridge_CaptureTextSeed() {
 }
 
 NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := false, hideOverlay := true) {
+    if FuncExists("SelectionSense_OnHoleDragSessionEnded") {
+        try SelectionSense_OnHoleDragSessionEnded()
+        catch {
+        }
+    }
     global NativeDropSessionActive, NativeDropOverHole, NativeDropWasOverHole, NativeDropWeakPreviewShown, NativeDropSawOutsideHole, NativeDropValidEnterHole, NativeDropStartMouseX, NativeDropStartMouseY, NativeDropMovedEnough, NativeDropCurrentMoveDistance, NativeDropEnterHoleTick, NativeDropSeedText
     global NativeDropLastTickMouseX, NativeDropLastTickMouseY
     global NativeDropSessionPayload, NativeDropLastEventTick, NativeDropLastStartTick, NativeDropRearmUntil, NativeDropBridgeSilentMode
@@ -3641,6 +4022,14 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
         return
     }
     try NativeDropDiag_Log("reset_session_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
+    if FuncExists("GDHO_SetFileDropCapture") {
+        try GDHO_SetFileDropCapture(false)
+    }
+    if FuncExists("GDHO_RestoreTextDragHostState") {
+        try GDHO_RestoreTextDragHostState()
+    } else if FuncExists("NativeDropBridge_SetReceiverVisible") {
+        try NativeDropBridge_SetReceiverVisible(true)
+    }
     NativeDropSessionActive := false
     NativeDropSessionPayload := "text"
     NativeDropOverHole := false
@@ -6361,7 +6750,4 @@ $^+q:: {
 }
 
 OnExit(ExitFunc)
-
-
-
 

@@ -65,6 +65,18 @@ global g_SelSense_HubDictLookupCache := Map()
 global g_SelSense_HubDictImportBusy := false
 global g_SelSense_AsyncCmdJobs := Map()
 global g_SelSense_AsyncCmdSeq := 0
+global g_SelSense_DragHintEnabled := false
+global g_SelSense_DragHintGui := 0
+global g_SelSense_DragHintIconCtrl := 0
+global g_SelSense_DragHintVisible := false
+global g_SelSense_DragHintPulse := 0
+global g_SelSense_DragHintHideSerial := 0
+global g_SelSense_LastAnchorX := 0
+global g_SelSense_LastAnchorY := 0
+global g_SelSense_TextCaptured := false
+global g_SelSense_AllowTextHoleGesture := false
+global g_SelSense_TextHoleDragWindowMs := 5000
+global g_SelSense_HoleDragPhase := "idle"
 
 SelectionSense_Diag_Log(msg) {
     try NativeDropDiag_Log("selection " . String(msg))
@@ -1536,6 +1548,7 @@ SelectionSense_OnToolbarSearchClick() {
 
 SelectionSense_LoadIni() {
     global g_SelSense_Enabled, g_SelSense_CopyDelayMs, g_SelSense_RequireIBeam, g_SelSense_ClipWaitSec, g_SelSense_HubCopyTriggerMode
+    global g_SelSense_DragHintEnabled
     cfg := (IsSet(ConfigFile) && ConfigFile != "") ? ConfigFile : (A_ScriptDir "\CursorShortcut.ini")
     try {
         g_SelSense_Enabled := (IniRead(cfg, "SelectionSense", "Enable", "1") != "0")
@@ -1545,6 +1558,7 @@ SelectionSense_LoadIni() {
         mode := Trim(StrLower(IniRead(cfg, "SelectionSense", "HubCopyTriggerMode", "capslock")))
         ; 鍏煎鏃у€?single锛氳縼绉诲埌 capslock
         g_SelSense_HubCopyTriggerMode := (mode = "double") ? "double" : "capslock"
+        g_SelSense_DragHintEnabled := (IniRead(cfg, "SelectionSense", "EnableDragHintToast", "0") != "0")
         w := IniRead(cfg, "SelectionSense", "ClipWaitSec", "")
         if (w != "" && w != "ERROR") {
             f := Float(w)
@@ -1692,7 +1706,8 @@ global g_SelSense_HoleRouteSerial := 0
 
 SelectionSense_OnLButtonDown(*) {
     global g_SelSense_LButtonDownX, g_SelSense_LButtonDownY, g_SelSense_LButtonDownTick, g_SelSense_LButtonClicks
-    global g_SelSense_HoleRouteSerial
+    global g_SelSense_HoleRouteSerial, g_SelSense_TextCaptured, g_SelSense_AllowTextHoleGesture, g_SelSense_LastTick
+    global g_SelSense_TextHoleDragWindowMs, g_SelSense_HoleDragPhase
     g_SelSense_HoleRouteSerial += 1
     CoordMode("Mouse", "Screen")
     MouseGetPos(&g_SelSense_LButtonDownX, &g_SelSense_LButtonDownY)
@@ -1702,11 +1717,71 @@ SelectionSense_OnLButtonDown(*) {
         g_SelSense_LButtonClicks := 1
     }
     g_SelSense_LButtonDownTick := A_TickCount
+    if (g_SelSense_HoleDragPhase = "armed" && g_SelSense_TextCaptured) {
+        g_SelSense_HoleDragPhase := "dragging"
+        g_SelSense_AllowTextHoleGesture := true
+        SelectionSense_Diag_Log("lbutton_down phase=dragging")
+    } else {
+        g_SelSense_HoleDragPhase := "selecting"
+        g_SelSense_AllowTextHoleGesture := false
+        g_SelSense_TextCaptured := false
+        SelectionSense_Diag_Log("lbutton_down phase=selecting")
+    }
+    if (g_SelSense_HoleDragPhase = "selecting") {
+        try SelectionSense_HideDragHintToast("new_press")
+        catch {
+        }
+    }
+}
+
+SelectionSense_ShouldBlockBridgeTextDrag() {
+    global g_SelSense_HoleDragPhase
+    return (g_SelSense_HoleDragPhase != "dragging")
+}
+
+SelectionSense_IsTextReadyForHole() {
+    global g_SelSense_TextCaptured, g_SelSense_AllowTextHoleGesture, g_SelSense_HoleDragPhase
+    global NativeDropSessionActive, NativeDropMovedEnough
+    if (g_SelSense_HoleDragPhase != "dragging")
+        return false
+    if !(g_SelSense_TextCaptured && g_SelSense_AllowTextHoleGesture)
+        return false
+    if !(NativeDropSessionActive && NativeDropMovedEnough)
+        return false
+    return true
+}
+
+SelectionSense_OnHoleDragSessionEnded() {
+    global g_SelSense_HoleDragPhase, g_SelSense_TextCaptured, g_SelSense_AllowTextHoleGesture
+    g_SelSense_AllowTextHoleGesture := false
+    if g_SelSense_TextCaptured
+        g_SelSense_HoleDragPhase := "armed"
+    else
+        g_SelSense_HoleDragPhase := "idle"
+}
+
+SelectionSense_SuppressHoleAfterSelection() {
+    try {
+        if FuncExists("NativeDropBridge_ResetSessionAsync")
+            NativeDropBridge_ResetSessionAsync("selection_captured", 60)
+    } catch {
+    }
+    try {
+        if FuncExists("GDHO_RequestClose")
+            GDHO_RequestClose("selection_captured")
+    } catch {
+    }
+    try {
+        if FuncExists("GDHO_ResetSession")
+            GDHO_ResetSession()
+    } catch {
+    }
 }
 
 SelectionSense_OnLButtonUp(*) {
     global g_SelSense_Enabled, g_SelSense_RequireIBeam
     global g_SelSense_LButtonDownX, g_SelSense_LButtonDownY, g_SelSense_LButtonClicks, g_SelSense_LButtonDownTick
+    global g_SelSense_LastAnchorX, g_SelSense_LastAnchorY
     global g_HoleRuntimeEnabled, EnableHoleOverlayOnNativeDrop
     if !g_SelSense_Enabled {
         SelectionSense_Diag_Log("lbutton_up skip=disabled")
@@ -1723,6 +1798,8 @@ SelectionSense_OnLButtonUp(*) {
         
     CoordMode("Mouse", "Screen")
     MouseGetPos(&upX, &upY)
+    g_SelSense_LastAnchorX := upX
+    g_SelSense_LastAnchorY := upY
     distX := Abs(upX - g_SelSense_LButtonDownX)
     distY := Abs(upY - g_SelSense_LButtonDownY)
     
@@ -1734,6 +1811,10 @@ SelectionSense_OnLButtonUp(*) {
         try FloatingToolbar_NotifySelectionClear()
         SelectionSense_Diag_Log("lbutton_up no_trigger=click")
         return
+    }
+
+    try SelectionSense_ResetIncidentalTextDragSession()
+    catch {
     }
 
     hubPreviewActive := false
@@ -1849,6 +1930,7 @@ SelectionSense_IsTrayMenuOpen() {
 SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActive, deadlineTick, *) {
     global g_SelSense_CopyTicket, g_SelSense_LastClipSig, g_SelSense_LastFireTick
     global g_SelSense_LastFullText, g_SelSense_LastTick
+    global g_SelSense_TextCaptured, g_SelSense_AllowTextHoleGesture
     if (ticket != g_SelSense_CopyTicket)
         return
     if SelectionSense_IsTrayMenuOpen() {
@@ -1887,6 +1969,11 @@ SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActi
 
     if (text = "") {
         SelectionSense_Diag_Log("process empty_clipboard timeout=1 ticket=" . ticket)
+        global g_SelSense_HoleDragPhase
+        g_SelSense_HoleDragPhase := "idle"
+        try SelectionSense_HideDragHintToast("empty_clip")
+        catch {
+        }
         SelectionSense_ClearLastSelected()
         if hubPreviewActive {
             try FloatingToolbar_NotifySelectionClear()
@@ -1903,13 +1990,48 @@ SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActi
     g_SelSense_LastFireTick := A_TickCount
     g_SelSense_LastFullText := text
     g_SelSense_LastTick := A_TickCount
-    SelectionSense_Diag_Log("process text len=" . StrLen(text) . " sig=" . sig . " preview=" . SubStr(text, 1, 48))
+    g_SelSense_TextCaptured := true
+    g_SelSense_AllowTextHoleGesture := false
+    g_SelSense_HoleDragPhase := "armed"
+    SelectionSense_Diag_Log("process text len=" . StrLen(text) . " sig=" . sig . " phase=armed preview=" . SubStr(text, 1, 48))
+    try SelectionSense_SuppressHoleAfterSelection()
+    catch {
+    }
     SelectionSense_TryActivateHoleFromSelection(text)
     if hubPreviewActive {
         try FloatingToolbar_NotifySelectionChange(text)
         catch {
         }
         SelectionSense_QueueHubPreviewUpdate(text)
+    }
+}
+
+SelectionSense_ResetIncidentalTextDragSession() {
+    global NativeDropSessionActive, NativeDropMovedEnough, NativeDropSessionPayload
+    global GDHO_ACTIVE, GDHO_PAYLOAD, GDHO_VISIBLE
+    try {
+        if (NativeDropSessionActive && NativeDropSessionPayload = "text" && !NativeDropMovedEnough) {
+            if FuncExists("NativeDropBridge_ResetSessionAsync")
+                NativeDropBridge_ResetSessionAsync("selection_release", 60)
+        }
+    } catch {
+    }
+    try {
+        isText := (GDHO_PAYLOAD = "text" || NativeDropSessionPayload = "text")
+        if (isText && (!NativeDropMovedEnough || !SelectionSense_IsTextReadyForHole())) {
+            if FuncExists("GDHO_RequestClose")
+                GDHO_RequestClose("selection_release")
+            if FuncExists("GDHO_ResetSession")
+                GDHO_ResetSession()
+        }
+    } catch {
+    }
+    try {
+        if (GDHO_VISIBLE && (GDHO_PAYLOAD = "text" || NativeDropSessionPayload = "text") && !SelectionSense_IsTextReadyForHole()) {
+            if FuncExists("GDHO_RequestClose")
+                GDHO_RequestClose("selection_release_visible")
+        }
+    } catch {
     }
 }
 
@@ -1931,35 +2053,143 @@ SelectionSense_RunPendingHoleRoute(serial, txt, *) {
         try GDHO_RoutePayload("text", txt)
 }
 
-SelectionSense_TryActivateHoleFromSelection(selectedText) {
-    global g_HoleRuntimeEnabled, EnableHoleOverlayOnNativeDrop, GDHO_TriggerSource
-    global g_SelSense_HoleRouteSerial
-    if !g_HoleRuntimeEnabled {
-        SelectionSense_Diag_Log("hole skip=runtime_disabled")
+SelectionSense_EnsureDragHintToast() {
+    global g_SelSense_DragHintGui, g_SelSense_DragHintIconCtrl
+    if (g_SelSense_DragHintGui && g_SelSense_DragHintIconCtrl)
+        return
+    if g_SelSense_DragHintGui {
+        try g_SelSense_DragHintGui.Destroy()
+        catch {
+        }
+        g_SelSense_DragHintGui := 0
+        g_SelSense_DragHintIconCtrl := 0
+    }
+    g_SelSense_DragHintGui := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x20", "SelectionDragHint")
+    g_SelSense_DragHintGui.BackColor := "010101"
+    g_SelSense_DragHintGui.MarginX := 0
+    g_SelSense_DragHintGui.MarginY := 0
+    g_SelSense_DragHintIconCtrl := g_SelSense_DragHintGui.Add("Text", "x0 y0 w32 h32 Center c7DD3FC BackgroundTrans", "⬇")
+    g_SelSense_DragHintIconCtrl.SetFont("s18", "Segoe UI Symbol")
+}
+
+SelectionSense_HideDragHintToast(reason := "") {
+    global g_SelSense_DragHintGui, g_SelSense_DragHintVisible, g_SelSense_DragHintHideSerial
+    g_SelSense_DragHintHideSerial += 1
+    g_SelSense_DragHintVisible := false
+    SetTimer(SelectionSense_DragHintAnimTick, 0)
+    SetTimer(SelectionSense_DragHintAutoHide, 0)
+    try {
+        if g_SelSense_DragHintGui
+            g_SelSense_DragHintGui.Hide()
+    } catch {
+    }
+    SelectionSense_Diag_Log("drag_hint hide reason=" . String(reason))
+}
+
+SelectionSense_DragHintAutoHide(*) {
+    SelectionSense_HideDragHintToast("timeout")
+}
+
+SelectionSense_DragHintAnimTick(*) {
+    global g_SelSense_DragHintVisible, g_SelSense_DragHintIconCtrl, g_SelSense_DragHintPulse
+    global g_SelSense_LButtonDownX, g_SelSense_LButtonDownY, NativeDropSessionActive, NativeDropMovedEnough
+    if !g_SelSense_DragHintVisible
+        return
+    try {
+        if (NativeDropSessionActive && NativeDropMovedEnough) {
+            SelectionSense_HideDragHintToast("native_drop")
+            return
+        }
+    } catch {
+    }
+    if GetKeyState("LButton", "P") {
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&mx, &my)
+        dx := mx - g_SelSense_LButtonDownX
+        dy := my - g_SelSense_LButtonDownY
+        if (dx * dx + dy * dy >= 64) {
+            SelectionSense_HideDragHintToast("drag_start")
+            return
+        }
+    }
+    icons := ["⬇", "↧", "⬇"]
+    g_SelSense_DragHintPulse := Mod(g_SelSense_DragHintPulse + 1, icons.Length)
+    try g_SelSense_DragHintIconCtrl.Value := icons[g_SelSense_DragHintPulse + 1]
+    catch {
+    }
+}
+
+SelectionSense_ShowDragHintToast(selectedText, anchorX := "", anchorY := "") {
+    global g_HoleRuntimeEnabled, EnableHoleOverlayOnNativeDrop, g_SelSense_DragHintEnabled
+    global g_SelSense_DragHintVisible, g_SelSense_DragHintHideSerial, g_SelSense_DragHintPulse, g_SelSense_DragHintIconCtrl
+    global g_SelSense_LastAnchorX, g_SelSense_LastAnchorY, NativeDropSessionActive, NativeDropMovedEnough
+    if !g_SelSense_DragHintEnabled {
+        SelectionSense_Diag_Log("drag_hint skip=disabled")
         return
     }
-    if !EnableHoleOverlayOnNativeDrop {
-        SelectionSense_Diag_Log("hole skip=feature_disabled")
+    if !g_HoleRuntimeEnabled || !EnableHoleOverlayOnNativeDrop {
+        SelectionSense_Diag_Log("drag_hint skip=hole_off")
         return
+    }
+    try {
+        if (NativeDropSessionActive && NativeDropMovedEnough) {
+            SelectionSense_Diag_Log("drag_hint skip=native_drop_drag")
+            return
+        }
+    } catch {
     }
     t := ""
     try t := Trim(String(selectedText))
     if (t = "") {
-        SelectionSense_Diag_Log("hole skip=empty_text")
+        SelectionSense_Diag_Log("drag_hint skip=empty")
         return
     }
+    ax := (anchorX != "" && anchorY != "") ? Integer(anchorX) : Integer(g_SelSense_LastAnchorX)
+    ay := (anchorX != "" && anchorY != "") ? Integer(anchorY) : Integer(g_SelSense_LastAnchorY)
+    if (ax = 0 && ay = 0) {
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&ax, &ay)
+    }
+    SelectionSense_EnsureDragHintToast()
+    g_SelSense_DragHintPulse := 0
+    try g_SelSense_DragHintIconCtrl.Value := "⬇"
+    catch {
+    }
+    g_SelSense_DragHintHideSerial += 1
+    hideSerial := g_SelSense_DragHintHideSerial
+    tw := 32
+    th := 32
+    try {
+        ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+        tx := ax - (tw // 2) + 12
+        ty := ay - th - 36
+        if (tx < vl + 4)
+            tx := vl + 4
+        if (tx + tw > vl + vw - 4)
+            tx := vl + vw - tw - 4
+        if (ty < vt + 4)
+            ty := ay + 20
+        if (ty + th > vt + vh - 4)
+            ty := vt + vh - th - 4
+        g_SelSense_DragHintGui.Show("NA x" . tx . " y" . ty . " w" . tw . " h" . th . " NoActivate")
+        try WinSetTransColor("010101", g_SelSense_DragHintGui.Hwnd)
+        catch {
+        }
+        try WinSetAlwaysOnTop(1, "ahk_id " . g_SelSense_DragHintGui.Hwnd)
+        catch {
+        }
+        g_SelSense_DragHintVisible := true
+        SetTimer(SelectionSense_DragHintAnimTick, 380)
+        SetTimer(SelectionSense_DragHintAutoHide, -2800)
+        SelectionSense_Diag_Log("drag_hint icon x=" . tx . " y=" . ty . " len=" . StrLen(t) . " serial=" . hideSerial)
+    } catch as e {
+        SelectionSense_Diag_Log("drag_hint show_fail msg=" . e.Message)
+    }
+}
 
-    ; Mouse selection auto-copy has no native drag events, so trigger hole preview then deferred search.
-    SelectionSense_Diag_Log("hole show begin len=" . StrLen(t))
-    GDHO_TriggerSource := "selection_copy"
-    try GDHO_RequestOpen(Map("reason", "selection_copy", "payload", "text"))
-    try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'selection_copy', dispatch: 'show:text', active: 1, overHole: 0, wasOverHole: 0, payload: 'text' })")
-    try GDHO_RunJS("window.HoleOverlay?.update({ proximity: 0.62 })")
-    g_SelSense_HoleRouteSerial += 1
-    sid := g_SelSense_HoleRouteSerial
-    SetTimer(SelectionSense_RunPendingHoleRoute.Bind(sid, t), -120)
-    try SetTimer(SelectionSense_HideHoleAfterSelection, -2200)
-    SelectionSense_Diag_Log("hole show scheduled hide_ms=2200 route_serial=" . sid)
+SelectionSense_TryActivateHoleFromSelection(selectedText) {
+    ; 选区提示已关闭；文本黑洞仅在 dragging 阶段且靠近黑洞时显示。
+    return
 }
 
 SelectionSense_HideHoleAfterSelection(*) {
@@ -1978,6 +2208,9 @@ SelectionSense_HideHoleAfterSelection(*) {
     } catch {
     }
     SelectionSense_Diag_Log("hole hide now")
+    try SelectionSense_HideDragHintToast("selection_hide")
+    catch {
+    }
     try GDHO_RequestClose("selection_copy_timeout")
 }
 
@@ -3314,13 +3547,8 @@ SelectionSense_Init() {
         Hotkey("~^c", SelectionSense_OnUserCopy, "Off")
     }
     try SelectionSense_PrewarmHubCapsule()
-    try {
-        if EnableHoleOverlayOnNativeDrop && IsHoleRuntimeEnabledByActivationMode() {
-            GDHO_RequestOpen(Map("reason", "selection_prewarm", "payload", "text"))
-            SetTimer((*) => GDHO_RequestClose("selection_prewarm_close"), -900)
-            SelectionSense_Diag_Log("init hole_prewarm enabled")
-        }
-    } catch {
+    try SelectionSense_HideDragHintToast("init")
+    catch {
     }
 }
 
