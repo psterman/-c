@@ -1,5 +1,7 @@
 #Requires AutoHotkey v2.0
 
+#Include GDHO_P0Messenger.ahk
+
 ; De-coupled multi-window topology: starry ghost + interactive panel HUD.
 ; User flow: docs/TEXT_HOLE_FLOW.md — selection → weak_preview → commit → panel_open → dismiss.
 
@@ -23,6 +25,7 @@ global GDHO_PANEL_LAST_X := 24
 global GDHO_PANEL_LAST_Y := 24
 global GDHO_WM_ACTIVATE := 0x6
 global g_GDHO_PanelCreateInFlight := false
+global g_GDHO_PanelCreateStartedTick := 0
 global g_GDHO_StarryCreateInFlight := false
 global g_GDHO_PanelDeactivatePending := false
 global g_GDHO_TextDragHandoffDone := false
@@ -72,6 +75,8 @@ global g_GDHO_PanelUserDragging := false
 global g_GDHO_PanelDragGraceUntil := 0
 global g_GDHO_PanelDragBaseW := 0
 global g_GDHO_PanelDragBaseH := 0
+global g_GDHO_PanelDragInProgress := false
+global g_GDHO_PanelLastMoveTick := 0
 global g_GDHO_TextHolePanelLocked := false
 global g_GDHO_UserTextHolePanelEngaged := false
 global g_GDHO_TextHolePresentRetryArmed := false
@@ -178,15 +183,24 @@ GDHO_ResolvePanelPageUrl() {
 }
 
 GDHO_EnsureDecoupledPanelWebHost() {
-    global GDHO_WV2_PANEL, GDHO_PANEL_READY, g_GDHO_PanelCreateInFlight, GDHO_PANEL_GUI, GDHO_WV2_CTRL_PANEL
+    global GDHO_WV2_PANEL, GDHO_PANEL_READY, g_GDHO_PanelCreateInFlight, g_GDHO_PanelCreateStartedTick
+    global GDHO_PANEL_GUI, GDHO_WV2_CTRL_PANEL
     if !GDHO_IsDecoupled()
         return GDHO_PANEL_READY
     if !IsObject(GDHO_PANEL_GUI)
         try GDHO_CreatePanelGui()
     if IsObject(GDHO_WV2_PANEL)
         return GDHO_PANEL_READY
+    if g_GDHO_PanelCreateInFlight && !IsObject(GDHO_WV2_PANEL) && g_GDHO_PanelCreateStartedTick > 0
+        && (A_TickCount - g_GDHO_PanelCreateStartedTick) > 4500 {
+        g_GDHO_PanelCreateInFlight := false
+        g_GDHO_PanelCreateStartedTick := 0
+        try NativeDropDiag_Log("[TextHole] panel_create_stall_reset")
+    }
     if !IsObject(GDHO_WV2_CTRL_PANEL) && !g_GDHO_PanelCreateInFlight && IsObject(GDHO_PANEL_GUI) {
         g_GDHO_PanelCreateInFlight := true
+        g_GDHO_PanelCreateStartedTick := A_TickCount
+        try NativeDropDiag_Log("[TextHole] panel_webview_create_begin hwnd=" . GDHO_PANEL_GUI.Hwnd)
         try WebView2_CreateWithSharedEnvAsync(GDHO_PANEL_GUI.Hwnd, GDHO_OnPanelWebViewCreated, "gdho_panel_ensure")
     }
     return false
@@ -204,6 +218,34 @@ GDHO_EnsurePanelWebWarm() {
         try GDHO_WV2_PANEL.Navigate(url)
         return false
     }
+    return false
+}
+
+; P1 full_defer: 弱预览不创建面板宿主；commit/analyzing 才 CreatePanelGui + WebView2。
+GDHO_EnsurePanelHostForPhase(phase := "") {
+    global GDHO_PANEL_READY
+    if !GDHO_IsDecoupled()
+        return false
+    p := StrLower(Trim(String(phase)))
+    if (p = "" || p = "idle" || p = "weak_preview" || InStr(p, "weak_preview") || InStr(p, "selection_preview")) {
+        try NativeDropDiag_Log("[TextHole] panel_host_defer phase=" . (p != "" ? p : "unspecified"))
+        return false
+    }
+    if (p = "committing" || p = "analyzing" || InStr(p, "commit")) {
+        try GDHO_CreatePanelGui()
+        try GDHO_EnsureDecoupledPanelWebHost()
+        try NativeDropDiag_Log("[TextHole] panel_host_warm phase=" . p)
+        return GDHO_EnsurePanelWebWarm()
+    }
+    if (p = "panel_open" || p = "resulting" || p = "panel" || InStr(p, "present")) {
+        if !IsObject(GDHO_PANEL_GUI)
+            try GDHO_CreatePanelGui()
+        try GDHO_EnsureDecoupledPanelWebHost()
+        if !GDHO_PANEL_READY
+            try GDHO_EnsurePanelWebWarm()
+        return !!GDHO_PANEL_READY
+    }
+    try NativeDropDiag_Log("[TextHole] panel_host_defer phase=" . p)
     return false
 }
 
@@ -256,6 +298,7 @@ GDHO_TextHole_OnSelectionPreviewStart(txt := "", mx := "", my := "") {
         GDHO_CURSOR_Y := Integer(my)
     }
     GDHO_TextHoleTransition(GDHO_TEXT_HOLE_STATE_PREVIEW, "selection_preview_start", "", StrLen(t))
+    try GDHO_ShelvePanelHost("selection_preview")
 }
 
 GDHO_TextHole_OnExpandComplete(sessionId := 0) {
@@ -469,10 +512,117 @@ GDHO_ShouldSkipSelectionPreviewRestart(newText := "") {
 }
 
 GDHO_IsPanelDragProtected() {
-    global g_GDHO_PanelUserDragging, g_GDHO_PanelDragGraceUntil
-    if g_GDHO_PanelUserDragging
+    global g_GDHO_PanelUserDragging, g_GDHO_PanelDragGraceUntil, g_GDHO_PanelDragInProgress
+    if g_GDHO_PanelDragInProgress || g_GDHO_PanelUserDragging
         return true
     return (g_GDHO_PanelDragGraceUntil > A_TickCount)
+}
+
+GDHO_PanelDragSetOpaque(enable := true) {
+    global GDHO_WV2_CTRL_PANEL
+    if !IsObject(GDHO_WV2_CTRL_PANEL)
+        return
+    try {
+        if enable
+            GDHO_WV2_CTRL_PANEL.DefaultBackgroundColor := 0xFF0A0E14
+        else
+            GDHO_WV2_CTRL_PANEL.DefaultBackgroundColor := 0x00000000
+    } catch {
+    }
+}
+
+; 面板宿主：平时隐藏 + 穿透；黑洞提交后再激活显示。
+GDHO_SetPanelClickThrough(enable := true, reason := "") {
+    global GDHO_PANEL_GUI
+    if !IsObject(GDHO_PANEL_GUI) || !GDHO_PANEL_GUI.Hwnd
+        return
+    hwnd := GDHO_PANEL_GUI.Hwnd
+    try {
+        ex := DllCall("GetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr")
+        if enable
+            ex := (ex | 0x20) | 0x08000000
+        else
+            ex := (ex & ~0x20) | 0x08000000
+        DllCall("SetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr", ex, "Ptr")
+    } catch {
+    }
+    try GDHO_PanelDragSetOpaque(!enable)
+    if enable {
+        try GDHO_PANEL_GUI.BackColor := "010101"
+        try WinSetTransparent(255, "ahk_id " hwnd)
+        try WinSetTransColor("010101", "ahk_id " hwnd)
+    }
+    try GDHO_Trace("panel_clickthrough=" . (enable ? "1" : "0") . " reason=" . Trim(String(reason)))
+}
+
+GDHO_ShelvePanelHost(reason := "passive") {
+    if GDHO_IsPanelDragProtected()
+        return
+    r := StrLower(Trim(String(reason)))
+    if FuncExists("GDHO_IsTextHoleUserPanelActive") && GDHO_IsTextHoleUserPanelActive()
+        && !(InStr(r, "dismiss") || InStr(r, "close") || InStr(r, "reset") || InStr(r, "esc"))
+        return
+    GDHO_SetPanelClickThrough(true, reason)
+    try GDHO_HidePanel("shelve:" . reason)
+    try GDHO_RunPanelJS("try{window.HolePanel?.onHostHide?.();var r=document.getElementById('panelRoot');if(r){r.dataset.interactionState='idle';r.style.opacity='0';r.style.pointerEvents='none';}}catch(_e){}")
+}
+
+GDHO_ActivatePanelHost(reason := "activate") {
+    global GDHO_PANEL_GUI
+    if !IsObject(GDHO_PANEL_GUI)
+        return
+    try GDHO_PANEL_GUI.BackColor := "0A0E14"
+    GDHO_SetPanelClickThrough(false, reason)
+    GDHO_SetPanelInteractive(reason)
+    try GDHO_PushPanelCapturedText()
+}
+
+; Win32 无边框窗体拖动（不依赖 WebView postMessage 流）。
+GDHO_BeginPanelHostDrag() {
+    global GDHO_PANEL_GUI
+    if !IsObject(GDHO_PANEL_GUI) || !GDHO_PANEL_GUI.Hwnd
+        return false
+    GDHO_ActivatePanelHost("native_panel_drag")
+    hwnd := GDHO_PANEL_GUI.Hwnd
+    try {
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&mx, &my)
+        try GDHO_PANEL_GUI.GetPos(&wx, &wy)
+        catch {
+            wx := 0, wy := 0
+        }
+        cx := Integer(mx - wx) & 0xFFFF
+        cy := Integer(my - wy) & 0xFFFF
+        lParam := (cy << 16) | cx
+        DllCall("ReleaseCapture")
+        PostMessage(0xA1, 2, lParam, 0, "ahk_id " hwnd)
+        return true
+    } catch {
+        return false
+    }
+}
+
+GDHO_PushPanelCapturedText() {
+    global g_GDHO_PendingPanelText, GDHO_PANEL_READY
+    t := Trim(String(g_GDHO_PendingPanelText))
+    if (t = "")
+        t := GDHO_GetTextHoleCapturedText()
+    if FuncExists("GDHO_RefreshTextHoleCapturedTextFromSelection")
+        try t := GDHO_RefreshTextHoleCapturedTextFromSelection(4)
+    if (t = "")
+        return false
+    g_GDHO_PendingPanelText := t
+    if GDHO_PANEL_READY && FuncExists("GDHO_RunPanelJS") {
+        jsBody := GDHO_QuoteJsString(t)
+        if GDHO_RunPanelJS("try{window.HolePanel?.ensurePanelLoaded?.();window.HolePanel?.setCapturedText?.(" . jsBody . ");window.HolePanel?.focusPrompt?.(false);}catch(_e){}") {
+            g_GDHO_PendingPanelText := ""
+            try NativeDropDiag_Log("[TextHole] push_panel_text len=" . StrLen(t))
+            return true
+        }
+        try NativeDropDiag_Log("[TextHole] push_panel_text_fail len=" . StrLen(t) . " ready=1 run_js=0")
+    }
+    try NativeDropDiag_Log("[TextHole] push_panel_text_defer len=" . StrLen(t) . " ready=" . (GDHO_PANEL_READY ? "1" : "0"))
+    return false
 }
 
 ; 用户已激活输入面板：在 Esc/关闭按钮退出前，禁止任何黑洞/弱预览再入场。
@@ -521,6 +671,27 @@ GDHO_ShouldKeepTextHolePanel() {
     if GDHO_IsTextHolePanelOpen() || g_GDHO_TextHoleStickyPanel
         return true
     return GDHO_IsPostSuckProtected()
+}
+
+GDHO_RefreshTextHoleCapturedTextFromSelection(minLen := 4) {
+    global g_GDHO_TextHoleCapturedText, GDHO_SESSION_TEXT
+    t := Trim(String(g_GDHO_TextHoleCapturedText))
+    if (t = "")
+        try t := Trim(String(GDHO_SESSION_TEXT))
+    if (StrLen(t) >= Integer(minLen))
+        return t
+    fresh := ""
+    if FuncExists("SelectionSense_GetLastSelectedText")
+        try fresh := Trim(SelectionSense_GetLastSelectedText())
+    if (fresh = "" && FuncExists("GDHO_GetBestSelectedText"))
+        try fresh := Trim(GDHO_GetBestSelectedText())
+    if (StrLen(fresh) > StrLen(t)) {
+        g_GDHO_TextHoleCapturedText := fresh
+        GDHO_SESSION_TEXT := fresh
+        try NativeDropDiag_Log("[TextHole] capture_refresh len=" . StrLen(fresh) . " was=" . StrLen(t))
+        return fresh
+    }
+    return t
 }
 
 GDHO_GetTextHoleCapturedText() {
@@ -582,6 +753,7 @@ GDHO_ResetTextHoleSession() {
     g_GDHO_TextHoleProxWasOutside := true
     GDHO_TextHoleTransition(GDHO_TEXT_HOLE_STATE_IDLE, "reset_session")
     GDHO_SetInteractionPhase(GDHO_PHASE_IDLE, "reset_session")
+    try GDHO_ShelvePanelHost("reset_session")
 }
 
 GDHO_DismissTextHolePanel(reason := "panel_dismiss") {
@@ -595,7 +767,9 @@ GDHO_DismissTextHolePanel(reason := "panel_dismiss") {
     g_GDHO_TextHoleStickyPanel := false
     g_GDHO_SuppressSelectionAutoHide := false
     try GDHO_HideStarryAfterPanel("dismiss_" . reason)
-    try GDHO_HidePanel("panel_hole_close")
+    if FuncExists("GDHO_WS_Send")
+        try GDHO_WS_Send("dismiss", "", "", "", String(reason))
+    try GDHO_ShelvePanelHost("dismiss_" . reason)
     GDHO_ResetTextHoleSession()
     GDHO_TextHoleTransition(GDHO_TEXT_HOLE_STATE_CLOSED, "dismiss_" . String(reason))
     try GDHO_Trace("text_hole_dismiss reason=" . String(reason))
@@ -617,7 +791,8 @@ GDHO_HideStarryAfterPanel(reason := "") {
     if !IsObject(gui)
         return
     try GDHO_RunStarryJS("window.HoleOverlay?.hideSilent?.()")
-    try gui.Move(Integer(GDHO_PARK_X), Integer(GDHO_PARK_Y), Integer(GDHO_HOST_W), Integer(GDHO_HOST_H))
+    if !GDHO_P0_BlockHostMoveHide("hide_starry_after_panel")
+        try gui.Move(Integer(GDHO_PARK_X), Integer(GDHO_PARK_Y), Integer(GDHO_HOST_W), Integer(GDHO_HOST_H))
     GDHO_VISIBLE := false
     GDHO_ACTIVE := false
     try GDHO_Trace("hide_starry_after_panel reason=" . String(reason))
@@ -631,13 +806,13 @@ GDHO_CancelSelectionPreviewPanelGuards() {
 GDHO_SelectionPreviewPanelGuard(*) {
     if GDHO_ShouldKeepTextHolePanel()
         return
-    GDHO_HidePanel("selection_preview_guard")
+    try GDHO_ShelvePanelHost("selection_preview_guard")
 }
 
 GDHO_SelectionPreviewPanelGuardLate(*) {
     if GDHO_ShouldKeepTextHolePanel()
         return
-    GDHO_HidePanel("selection_preview_guard_late")
+    try GDHO_ShelvePanelHost("selection_preview_guard_late")
 }
 
 GDHO_ArmPanelHold() {
@@ -755,7 +930,27 @@ GDHO_CreateStarryGui() {
 
 GDHO_CreatePanelGui() {
     global GDHO_PANEL_GUI, GDHO_PANEL_W, GDHO_PANEL_H, GDHO_PANEL_LAST_X, GDHO_PANEL_LAST_Y
-    global GDHO_PARK_X, GDHO_PARK_Y, GDHO_WM_ACTIVATE
+    global GDHO_PARK_X, GDHO_PARK_Y, GDHO_WM_ACTIVATE, GDHO_WV2_CTRL_PANEL, GDHO_WV2_PANEL, GDHO_PANEL_READY
+    global g_GDHO_PanelCreateInFlight, g_GDHO_PanelCreateStartedTick
+    if IsObject(GDHO_PANEL_GUI) && GDHO_PANEL_GUI.Hwnd {
+        return GDHO_PANEL_GUI
+    }
+    if IsObject(GDHO_WV2_CTRL_PANEL) {
+        try GDHO_WV2_CTRL_PANEL.Close()
+        catch {
+        }
+    }
+    GDHO_WV2_CTRL_PANEL := 0
+    GDHO_WV2_PANEL := 0
+    GDHO_PANEL_READY := false
+    g_GDHO_PanelCreateInFlight := false
+    g_GDHO_PanelCreateStartedTick := 0
+    if IsObject(GDHO_PANEL_GUI) {
+        try GDHO_PANEL_GUI.Destroy()
+        catch {
+        }
+    }
+    GDHO_PANEL_GUI := 0
     pw := Integer(GDHO_PANEL_W), ph := Integer(GDHO_PANEL_H)
     if (pw < 320)
         pw := 320
@@ -841,12 +1036,16 @@ GDHO_ComputePanelRectFromHoleHost(hostX := "", hostY := "") {
 }
 
 GDHO_SyncPanelPositionToStarry() {
+    if GDHO_P0_BlockHostMoveHide("sync_panel_to_starry")
+        return
     global GDHO_PANEL_LAST_X, GDHO_PANEL_LAST_Y, GDHO_PANEL_GUI, GDHO_PANEL_PINNED
     if FuncExists("GDHO_IsPanelDragProtected") && GDHO_IsPanelDragProtected()
         return
     if !IsObject(GDHO_PANEL_GUI)
         return
     if GDHO_PANEL_PINNED
+        return
+    if !GDHO_IsStarryHostOnScreen()
         return
     rect := GDHO_ComputePanelRectFromHoleHost()
     px := rect.x, py := rect.y
@@ -861,14 +1060,22 @@ GDHO_IsStarryHostOnScreen() {
     return (hx > -2800 && hy > -2800)
 }
 
-GDHO_EnsurePanelShowPosition(mx := "", my := "") {
+GDHO_EnsurePanelShowPosition(mx := "", my := "", forceNearCursor := false) {
     global GDHO_PANEL_LAST_X, GDHO_PANEL_LAST_Y, GDHO_PANEL_GUI, GDHO_PANEL_PINNED
     if !IsObject(GDHO_PANEL_GUI) || GDHO_PANEL_PINNED
         return
     px := Integer(GDHO_PANEL_LAST_X), py := Integer(GDHO_PANEL_LAST_Y)
     offScreen := (px < -2800 || py < -2800 || (px = 0 && py = 0))
-    if !offScreen && GDHO_IsStarryHostOnScreen() {
-        GDHO_SyncPanelPositionToStarry()
+    staleDefault := (px <= 48 && py <= 48)
+    if !(FuncExists("GDHO_IsPanelDragProtected") && GDHO_IsPanelDragProtected()) && !forceNearCursor && !staleDefault {
+        if !offScreen && GDHO_IsStarryHostOnScreen() {
+            px0 := px, py0 := py
+            GDHO_SyncPanelPositionToStarry()
+            px1 := Integer(GDHO_PANEL_LAST_X), py1 := Integer(GDHO_PANEL_LAST_Y)
+            if (px1 != px0 || py1 != py0) && !(px1 <= 48 && py1 <= 48)
+                return
+        }
+    } else if !offScreen && !staleDefault && !forceNearCursor {
         return
     }
     if (mx = "" || my = "") {
@@ -891,6 +1098,8 @@ GDHO_EnsurePanelShowPosition(mx := "", my := "") {
 }
 
 GDHO_SyncPanelPositionNearCursor(mx, my) {
+    if GDHO_P0_BlockHostMoveHide("sync_panel_near_cursor")
+        return
     global GDHO_PANEL_LAST_X, GDHO_PANEL_LAST_Y, GDHO_PANEL_W, GDHO_PANEL_H, GDHO_PANEL_GUI, GDHO_PANEL_PINNED
     if FuncExists("GDHO_IsPanelDragProtected") && GDHO_IsPanelDragProtected()
         return
@@ -923,8 +1132,18 @@ GDHO_SyncPanelPositionNearCursor(mx, my) {
 
 ; 拖动时只移动宿主位置，绝不改宽高（改宽高会导致面板越拖越小然后消失）。
 GDHO_MovePanelHostScreen(sx, sy) {
+    dragMove := false
+    if FuncExists("GDHO_IsPanelDragProtected") {
+        try dragMove := GDHO_IsPanelDragProtected()
+        catch {
+        }
+    }
+    if !dragMove && GDHO_P0_BlockHostMoveHide("move_panel_host_screen") {
+        try GDHO_WS_Send("pointer_move", sx, sy)
+        return
+    }
     global GDHO_PANEL_GUI, GDHO_PANEL_LAST_X, GDHO_PANEL_LAST_Y, GDHO_PANEL_W, GDHO_PANEL_H, GDHO_PANEL_PINNED
-    global g_GDHO_PanelDragBaseW, g_GDHO_PanelDragBaseH
+    global GDHO_PANEL_VISIBLE, g_GDHO_PanelDragBaseW, g_GDHO_PanelDragBaseH
     if !IsObject(GDHO_PANEL_GUI) || GDHO_PANEL_PINNED
         return
     x := Integer(sx), y := Integer(sy)
@@ -954,10 +1173,28 @@ GDHO_MovePanelHostScreen(sx, sy) {
     }
     GDHO_PANEL_LAST_X := x
     GDHO_PANEL_LAST_Y := y
-    try GDHO_PANEL_GUI.Move(x, y, pw, ph)
+    hwnd := GDHO_PANEL_GUI.Hwnd
+    if hwnd {
+        ; SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE — 避免 Gui.Move 在 WebView2 上触发布局/透明异常
+        try DllCall("SetWindowPos", "Ptr", hwnd, "Ptr", 0, "Int", x, "Int", y, "Int", 0, "Int", 0, "UInt", 0x0015)
+        catch {
+            try GDHO_PANEL_GUI.Move(x, y, pw, ph)
+        }
+    } else {
+        try GDHO_PANEL_GUI.Move(x, y, pw, ph)
+    }
+    if !GDHO_PANEL_VISIBLE {
+        try GDHO_PANEL_GUI.Show("NA x" . x . " y" . y . " w" . pw . " h" . ph)
+        GDHO_PANEL_VISIBLE := true
+    }
+    try GDHO_SetPanelInteractive("panel_moved")
 }
 
 GDHO_ApplyPanelHostScreenRect(sx, sy, sw := "", sh := "") {
+    if GDHO_P0_BlockHostMoveHide("apply_panel_host_rect") {
+        try GDHO_WS_Send("pointer_move", sx, sy)
+        return
+    }
     if FuncExists("GDHO_IsPanelDragProtected") && GDHO_IsPanelDragProtected() {
         try GDHO_MovePanelHostScreen(sx, sy)
         return
@@ -1013,16 +1250,7 @@ GDHO_ClearTextDragHandoff(cancelPostSuckTimer := true) {
 }
 
 GDHO_FlushPendingPanelText() {
-    global g_GDHO_PendingPanelText, GDHO_PANEL_READY
-    t := Trim(String(g_GDHO_PendingPanelText))
-    if (t = "" || !GDHO_PANEL_READY || !FuncExists("GDHO_RunPanelJS"))
-        return
-    try {
-        jsBody := GDHO_QuoteJsString(t)
-        GDHO_RunPanelJS("try{window.HolePanel?.setCapturedText?.(" . jsBody . ");window.HolePanel?.setManualPanelVisible?.(true);}catch(_e){}")
-        g_GDHO_PendingPanelText := ""
-    } catch {
-    }
+    try GDHO_PushPanelCapturedText()
 }
 
 GDHO_ArmPostSuckPanelTimer(reason := "") {
@@ -1039,6 +1267,8 @@ GDHO_ArmPostSuckPanelTimer(reason := "") {
         g_GDHO_PostSuckPresentDone := false
     g_GDHO_PostSuckTimerArmed := true
     g_GDHO_PostSuckProtectUntil := A_TickCount + 5000
+    ; P1: 吸入动画期间并行创建 panel WebView2（物理吸入不走 CommitTextHoleToPanel）。
+    try GDHO_EnsurePanelHostForPhase("analyzing")
     try SetTimer(GDHO_PostSuckPanelTimer, 0)
     delayMs := Integer(GDHO_TEXT_HOLE_EXPAND_MS) + 320
     if (delayMs < 1500)
@@ -1152,6 +1382,7 @@ GDHO_PresentPanelAfterTextHoleDrop(txt := "", mx := "", my := "", reason := "pos
         return false
     }
     if ((g_GDHO_TextHolePresentedSessionId = sid || g_GDHO_PostSuckPresentDone) && GDHO_PANEL_VISIBLE && GDHO_IsTextHolePanelOpen()) {
+        try GDHO_PushPanelCapturedText()
         try NativeDropDiag_Log("[PostSuck] present_skip reason=already_presented sid=" . sid . " source=" . String(reason))
         return true
     }
@@ -1189,6 +1420,8 @@ GDHO_PresentPanelAfterTextHoleDrop(txt := "", mx := "", my := "", reason := "pos
     t := Trim(String(txt))
     if (t = "")
         t := GDHO_GetTextHoleCapturedText()
+    if FuncExists("GDHO_RefreshTextHoleCapturedTextFromSelection")
+        try t := GDHO_RefreshTextHoleCapturedTextFromSelection(4)
     if (mx = "" || my = "") {
         CoordMode("Mouse", "Screen")
         MouseGetPos(&mx, &my)
@@ -1228,13 +1461,8 @@ GDHO_PresentPanelAfterTextHoleDrop(txt := "", mx := "", my := "", reason := "pos
     GDHO_PAYLOAD := "text"
     GDHO_ACTIVE := true
     try SetTimer(SelectionSense_HideHoleAfterSelection, 0)
-    if !IsObject(GDHO_PANEL_GUI) {
-        try GDHO_CreatePanelGui()
-        catch {
-        }
-    }
-    try GDHO_EnsureDecoupledPanelWebHost()
-    GDHO_EnsurePanelShowPosition(mx, my)
+    try GDHO_EnsurePanelHostForPhase("resulting")
+    GDHO_EnsurePanelShowPosition(mx, my, true)
     GDHO_ShowPanelWhenReady(reason)
     if !GDHO_PANEL_VISIBLE {
         try NativeDropDiag_Log("[PostSuck] present_retry reason=panel_not_visible source=" . String(reason))
@@ -1256,22 +1484,12 @@ GDHO_PresentPanelAfterTextHoleDrop(txt := "", mx := "", my := "", reason := "pos
     GDHO_LockTextHoleUserPanel()
     GDHO_SetInteractionPhase(GDHO_PHASE_PANEL_OPEN, "present:" . String(reason))
     GDHO_CancelTextHolePresentTimers()
-    global g_GDHO_PendingPanelText, GDHO_PANEL_READY
-    if (t != "") {
-        if (GDHO_PANEL_READY && FuncExists("GDHO_RunPanelJS")) {
-            try {
-                jsBody := GDHO_QuoteJsString(t)
-                GDHO_RunPanelJS("try{window.HolePanel?.setCapturedText?.(" . jsBody . ");window.HolePanel?.setManualPanelVisible?.(true);window.HolePanel?.focusPrompt?.(false);}catch(_e){}")
-            } catch {
-                g_GDHO_PendingPanelText := t
-            }
-        } else {
-            g_GDHO_PendingPanelText := t
-        }
-    } else {
-        g_GDHO_PendingPanelText := ""
-    }
+    global g_GDHO_PendingPanelText
+    g_GDHO_PendingPanelText := (t != "") ? t : ""
+    try GDHO_PushPanelCapturedText()
     try NativeDropDiag_Log("[PostSuck] present_done sid=" . sid . " len=" . StrLen(t) . " reason=" . String(reason) . " panel_ready=" . (GDHO_PANEL_READY ? "1" : "0"))
+    if FuncExists("GDHO_WS_SendPanelPresent")
+        try GDHO_WS_SendPanelPresent(mx, my, t)
     GDHO_TextHoleTransition(GDHO_TEXT_HOLE_STATE_PANEL_SHOWN, String(reason), "", StrLen(t))
     GDHO_ArmPanelHold()
     try GDHO_Trace("present_post_suck_panel len=" . StrLen(t) . " reason=" . String(reason))
@@ -1291,8 +1509,14 @@ GDHO_PendingPanelShowPump(*) {
     }
     if (g_GDHO_PendingPanelShowSince > 0 && (A_TickCount - g_GDHO_PendingPanelShowSince) < 9000)
         SetTimer(GDHO_PendingPanelShowPump, -160)
-    else
+    else {
         try NativeDropDiag_Log("[PostSuck] pending_panel_show_timeout reason=" . g_GDHO_PendingPanelShowReason)
+        global g_GDHO_PanelCreateInFlight
+        g_GDHO_PanelCreateInFlight := false
+        try GDHO_EnsurePanelHostForPhase("resulting")
+        g_GDHO_PendingPanelShowSince := A_TickCount
+        SetTimer(GDHO_PendingPanelShowPump, -200)
+    }
 }
 
 GDHO_ShowPanelWhenReady(reason := "") {
@@ -1312,16 +1536,46 @@ GDHO_ShowPanelWhenReady(reason := "") {
     return false
 }
 
+GDHO_NotifyPanelHostPresent(text := "") {
+    global GDHO_WV2_PANEL, GDHO_PANEL_READY
+    if !(GDHO_PANEL_READY && IsObject(GDHO_WV2_PANEL))
+        return false
+    t := Trim(String(text))
+    if (t != "") {
+        te := StrReplace(t, "\", "\\")
+        te := StrReplace(te, "`"", "\`"")
+        te := StrReplace(te, "`r", "\r")
+        te := StrReplace(te, "`n", "\n")
+        payload := '{"type":"host_present","text":"' . te . '"}'
+    } else
+        payload := '{"type":"host_present"}'
+    try {
+        GDHO_WV2_PANEL.PostWebMessageAsJson(payload)
+        return true
+    } catch {
+        return false
+    }
+}
+
 GDHO_ApplyPanelVisibleChrome() {
+    global g_GDHO_PendingPanelText
     if !GDHO_PANEL_READY
         return
-    try GDHO_RunPanelJS("try{document.documentElement.style.background='rgba(5,10,16,0.96)';document.body.style.background='rgba(5,10,16,0.96)';window.HolePanel?.setManualPanelVisible?.(true);window.HolePanel?.onHostShow?.();}catch(_e){}")
+    t := Trim(String(g_GDHO_PendingPanelText))
+    if (t = "")
+        t := GDHO_GetTextHoleCapturedText()
+    try GDHO_RunPanelJS("try{document.documentElement.style.background='transparent';document.body.style.background='transparent';window.HolePanel?.ensurePanelLoaded?.();window.HolePanel?.onHostShow?.();}catch(_e){}")
+    try GDHO_NotifyPanelHostPresent(t)
+    try GDHO_PushPanelCapturedText()
 }
 
 GDHO_ShowPanelForced(reason := "") {
     global GDHO_PANEL_GUI, GDHO_PANEL_VISIBLE, GDHO_PANEL_W, GDHO_PANEL_H
     global GDHO_PANEL_LAST_X, GDHO_PANEL_LAST_Y, GDHO_PANEL_READY, GDHO_CURSOR_X, GDHO_CURSOR_Y
-    global g_GDHO_PendingPanelShow
+    global g_GDHO_PendingPanelShow, g_GDHO_PendingPanelShowSince, g_GDHO_PendingPanelText
+    r0 := StrLower(Trim(String(reason)))
+    textHoleShow := (InStr(r0, "present") || InStr(r0, "post_suck") || InStr(r0, "hole_expand") || InStr(r0, "expand_complete")
+        || Trim(String(g_GDHO_PendingPanelText)) != "")
     if !IsObject(GDHO_PANEL_GUI) {
         try GDHO_CreatePanelGui()
     }
@@ -1331,10 +1585,27 @@ GDHO_ShowPanelForced(reason := "") {
         GDHO_PANEL_VISIBLE := false
         return
     }
-    if (Integer(GDHO_PANEL_LAST_X) < -2800 || Integer(GDHO_PANEL_LAST_Y) < -2800)
-        GDHO_EnsurePanelShowPosition(GDHO_CURSOR_X, GDHO_CURSOR_Y)
+    ; Avoid showing a blank/black panel before the WebView has finished navigating.
+    if !GDHO_PANEL_READY {
+        if textHoleShow {
+            try GDHO_EnsurePanelHostForPhase("resulting")
+        } else {
+            try GDHO_EnsurePanelWebWarm()
+        }
+        g_GDHO_PendingPanelShow := true
+        g_GDHO_PendingPanelShowSince := A_TickCount
+        try NativeDropDiag_Log("[PostSuck] show_panel_defer_until_nav reason=" . String(reason))
+        try SetTimer(GDHO_PendingPanelShowPump, 0)
+        SetTimer(GDHO_PendingPanelShowPump, -160)
+        GDHO_PANEL_VISIBLE := false
+        try GDHO_PANEL_GUI.Hide()
+        return
+    }
+    if (Integer(GDHO_PANEL_LAST_X) < -2800 || Integer(GDHO_PANEL_LAST_Y) < -2800
+        || (Integer(GDHO_PANEL_LAST_X) <= 48 && Integer(GDHO_PANEL_LAST_Y) <= 48))
+        GDHO_EnsurePanelShowPosition(GDHO_CURSOR_X, GDHO_CURSOR_Y, true)
     try SetTimer(GDHO_PanelDeactivateCheck, 0)
-    GDHO_SetPanelInteractive("show_panel_forced")
+    GDHO_ActivatePanelHost("show_panel_forced")
     shownOk := false
     try {
         GDHO_PANEL_GUI.Show("NA x" Integer(GDHO_PANEL_LAST_X) " y" Integer(GDHO_PANEL_LAST_Y)
@@ -1656,6 +1927,8 @@ GDHO_CommitTextHoleToPanel(reason := "commit", mx := "", my := "") {
     g_GDHO_TextHoleAwaitingExpand := true
     g_GDHO_PostSuckPanelPending := false
     g_GDHO_SuppressSelectionAutoHide := true
+    if FuncExists("GDHO_WS_Send")
+        try GDHO_WS_Send("hole_commit", mx, my, t, String(reason))
     GDHO_DisarmTextHoleProximityPoll()
     GDHO_ArmTextHoleCommitWatch()
     GDHO_ClearTextDragHandoff(false)
@@ -1676,9 +1949,16 @@ GDHO_CommitTextHoleToPanel(reason := "commit", mx := "", my := "") {
     ; Single present fallback if hole_expand_complete is lost (was 3+ parallel timers).
     SetTimer(GDHO_TextHoleExpandFallback, -fbMs)
     GDHO_TextHoleTransition(GDHO_TEXT_HOLE_STATE_EXPANDING, "dispatch_drop", "", StrLen(t))
-    GDHO_EnsurePanelWebWarm()
+    try GDHO_EnsurePanelHostForPhase("analyzing")
     GDHO_TraceInteraction("commit", String(reason))
     try GDHO_RunStarryJS("window.HoleOverlay?.drop?.({payload:'text',force:true});")
+    global g_GDHO_TextHoleFastPresentSid, g_GDHO_TextHoleFastPresentText, g_GDHO_TextHoleFastPresentX, g_GDHO_TextHoleFastPresentY
+    g_GDHO_TextHoleFastPresentText := t
+    g_GDHO_TextHoleFastPresentX := mx
+    g_GDHO_TextHoleFastPresentY := my
+    g_GDHO_TextHoleFastPresentSid := Integer(g_GDHO_TextHoleSessionSerial)
+    try SetTimer(GDHO_TextHoleFastPresentTimer, 0)
+    SetTimer(GDHO_TextHoleFastPresentTimer, -420)
     try NativeDropDiag_Log("[PostSuck] commit sid=" . g_GDHO_TextHoleSessionSerial . " reason=" . String(reason) . " len=" . StrLen(t) . " expand_ms=" . expMs)
     return true
 }
@@ -1805,30 +2085,33 @@ GDHO_OnStarryWebViewCreated(ctrl) {
     try GDHO_WV2_STAR.add_WebMessageReceived(GDHO_OnWebMessage)
     try GDHO_WV2_STAR.add_NavigationCompleted(GDHO_OnStarryNavigationCompleted)
     try GDHO_WV2_STAR.Navigate(GDHO_PAGE_URL)
-    if !g_GDHO_PanelCreateInFlight && !IsObject(GDHO_WV2_CTRL_PANEL) {
-        g_GDHO_PanelCreateInFlight := true
-        try WebView2_CreateWithSharedEnvAsync(GDHO_PANEL_GUI.Hwnd, GDHO_OnPanelWebViewCreated, "gdho_panel")
-    }
+    ; P1: panel WebView2 deferred until analyzing (GDHO_EnsurePanelHostForPhase).
 }
 
 GDHO_OnPanelWebViewCreated(ctrl) {
     global GDHO_WV2_CTRL_PANEL, GDHO_WV2_PANEL, GDHO_PANEL_READY, GDHO_PANEL_PAGE_URL
-    global g_GDHO_PanelCreateInFlight, g_GDHO_CreateToken, GDHO_PANEL_GUI
+    global g_GDHO_PanelCreateInFlight, g_GDHO_PanelCreateStartedTick, GDHO_PANEL_GUI
     g_GDHO_PanelCreateInFlight := false
-    if !GDHO_IsCurrentToken(g_GDHO_CreateToken) {
+    g_GDHO_PanelCreateStartedTick := 0
+    if !IsObject(GDHO_PANEL_GUI) || !GDHO_PANEL_GUI.Hwnd {
+        try NativeDropDiag_Log("[TextHole] panel_webview_abort reason=no_panel_gui")
         try ctrl.Close()
         catch {
         }
         return
     }
-    if !IsObject(GDHO_PANEL_GUI) {
-        try ctrl.Close()
-        catch {
+    try {
+        if IsObject(ctrl) && ctrl.Hwnd && (Integer(ctrl.Hwnd) != Integer(GDHO_PANEL_GUI.Hwnd)) {
+            try NativeDropDiag_Log("[TextHole] panel_webview_abort reason=hwnd_mismatch panel=" . GDHO_PANEL_GUI.Hwnd . " ctrl=" . ctrl.Hwnd)
+            try ctrl.Close()
+            catch {
+            }
+            return
         }
-        return
+    } catch {
     }
     if !IsObject(ctrl) || !ctrl.HasProp("CoreWebView2") {
-        try GDHO_Trace("panel_webview_create_failed")
+        try NativeDropDiag_Log("[TextHole] panel_webview_create_failed")
         return
     }
     GDHO_WV2_CTRL_PANEL := ctrl
@@ -1850,6 +2133,7 @@ GDHO_OnPanelWebViewCreated(ctrl) {
     try GDHO_WV2_PANEL.add_WebMessageReceived(GDHO_OnPanelWebMessage)
     try GDHO_WV2_PANEL.add_NavigationCompleted(GDHO_OnPanelNavigationCompleted)
     navUrl := GDHO_ResolvePanelPageUrl()
+    try NativeDropDiag_Log("[TextHole] panel_webview_created url=" . (navUrl != "" ? "ok" : "empty"))
     if (navUrl != "")
         try GDHO_WV2_PANEL.Navigate(navUrl)
 }
@@ -1914,9 +2198,12 @@ GDHO_OnPanelNavigationCompleted(sender, args) {
             GDHO_ShowPanelForced(g_GDHO_PendingPanelShowReason)
             return
         }
-        global g_GDHO_TextHolePanelLocked, g_GDHO_PendingPanelText
+        global g_GDHO_TextHolePanelLocked, g_GDHO_PendingPanelText, g_GDHO_TextHoleAwaitingExpand, g_GDHO_PostSuckTimerArmed
+        phNav := GDHO_GetInteractionPhase()
         forceKeepPanel := !!(g_GDHO_PostSuckPanelPending || g_GDHO_PendingPanelShow || g_GDHO_TextHolePanelOpen
             || g_GDHO_TextHoleStickyPanel || g_GDHO_TextHolePanelLocked || GDHO_PANEL_VISIBLE
+            || g_GDHO_TextHoleAwaitingExpand || g_GDHO_PostSuckTimerArmed
+            || (phNav = GDHO_PHASE_COMMITTING || phNav = GDHO_PHASE_PANEL_OPEN)
             || Trim(String(g_GDHO_PendingPanelText)) != "")
         if FuncExists("GDHO_ShouldKeepTextHolePanel") {
             try forceKeepPanel := (forceKeepPanel || GDHO_ShouldKeepTextHolePanel())
@@ -1933,8 +2220,9 @@ GDHO_OnPanelNavigationCompleted(sender, args) {
             try GDHO_ShowPanel("panel_nav_keep")
             GDHO_ApplyPanelVisibleChrome()
         } else {
-            try GDHO_HidePanel("panel_nav_suppressed")
-            try GDHO_RunPanelJS("window.HolePanel?.setManualPanelVisible?.(false)")
+            try NativeDropDiag_Log("[TextHole] panel_nav_idle_keep_wv2 reason=no_present_intent")
+            if FuncExists("GDHO_FlushPendingPanelText")
+                GDHO_FlushPendingPanelText()
         }
         return
     }
@@ -1967,6 +2255,8 @@ GDHO_OnPanelWebMessage(sender, args) {
     if !(msg is Map)
         return
     typ := msg.Has("type") ? String(msg["type"]) : ""
+    if FuncExists("GDHO_WS_RelayPanelMessage")
+        try GDHO_WS_RelayPanelMessage(msg)
     if (typ = "hole_close") {
         rs := msg.Has("reason") ? StrLower(Trim(String(msg["reason"]))) : ""
         if (rs != "panel_close_btn" && rs != "panel_escape") {
@@ -2001,47 +2291,73 @@ GDHO_OnPanelWebMessage(sender, args) {
         return
     }
     if (typ = "panel_drag_start") {
+        try GDHO_ActivatePanelHost("panel_drag_start")
         try GDHO_LockTextHoleUserPanel()
         global g_GDHO_PanelUserDragging, g_GDHO_PanelDragBaseW, g_GDHO_PanelDragBaseH
+        global GDHO_PANEL_LAST_X, GDHO_PANEL_LAST_Y, g_GDHO_PanelDragInProgress, g_GDHO_PanelLastMoveTick
+        g_GDHO_PanelDragInProgress := true
+        g_GDHO_PanelLastMoveTick := 0
         g_GDHO_PanelUserDragging := true
         g_GDHO_PanelDragBaseW := Integer(GDHO_PANEL_W)
         g_GDHO_PanelDragBaseH := Integer(GDHO_PANEL_H)
         if IsObject(GDHO_PANEL_GUI) {
-            try GDHO_PANEL_GUI.GetPos(, , &gw, &gh)
+            try GDHO_PANEL_GUI.GetPos(&gx, &gy, &gw, &gh)
             if (Integer(gw) >= 320)
                 g_GDHO_PanelDragBaseW := Integer(gw)
             if (Integer(gh) >= 280)
                 g_GDHO_PanelDragBaseH := Integer(gh)
+            if (Integer(gx) > -2800 && Integer(gy) > -2800) {
+                GDHO_PANEL_LAST_X := Integer(gx)
+                GDHO_PANEL_LAST_Y := Integer(gy)
+            }
+        }
+        ax := msg.Has("screenX") ? Integer(msg["screenX"]) : Integer(GDHO_PANEL_LAST_X)
+        ay := msg.Has("screenY") ? Integer(msg["screenY"]) : Integer(GDHO_PANEL_LAST_Y)
+        if (ax > -2800 && ay > -2800) {
+            GDHO_PANEL_LAST_X := ax
+            GDHO_PANEL_LAST_Y := ay
         }
         try GDHO_DisarmTextHoleProximityPoll()
         try GDHO_DisarmTextHoleCommitWatch()
         try GDHO_CancelTextHolePresentTimers()
         try GDHO_HideStarryAfterPanel("panel_drag")
         try GDHO_SetProximity(0.0)
-        try NativeDropDiag_Log("[TextHole] panel_drag_start suppress_starry=1")
-        try GDHO_ArmPanelDragGrace(2500)
+        try NativeDropDiag_Log("[TextHole] panel_drag_start suppress_starry=1 x=" . GDHO_PANEL_LAST_X . " y=" . GDHO_PANEL_LAST_Y)
+        try GDHO_ArmPanelDragGrace(6000)
         try SetTimer(GDHO_ClearPanelUserDragging, 0)
-        try GDHO_RunPanelJS("try{document.getElementById('panelRoot')&&(document.getElementById('panelRoot').style.pointerEvents='auto');}catch(_e){}")
+        try GDHO_PanelDragSetOpaque(true)
+        try GDHO_RunPanelJS("try{window.HolePanel?.syncDragHostAnchor?.(" . Integer(GDHO_PANEL_LAST_X) . "," . Integer(GDHO_PANEL_LAST_Y) . ");document.getElementById('panelRoot')&&(document.getElementById('panelRoot').style.pointerEvents='auto');}catch(_e){}")
+        if !GDHO_BeginPanelHostDrag() {
+            try GDHO_ActivatePanelHost("panel_drag_start")
+        }
         return
     }
     if (typ = "panel_drag_end") {
-        global g_GDHO_PanelUserDragging, g_GDHO_PanelDragBaseW, g_GDHO_PanelDragBaseH
+        global g_GDHO_PanelUserDragging, g_GDHO_PanelDragBaseW, g_GDHO_PanelDragBaseH, g_GDHO_PanelDragInProgress
+        g_GDHO_PanelDragInProgress := false
         g_GDHO_PanelUserDragging := true
         g_GDHO_PanelDragBaseW := 0
         g_GDHO_PanelDragBaseH := 0
         try GDHO_ArmPanelDragGrace(1200)
         try GDHO_LockTextHoleUserPanel()
+        try GDHO_PanelDragSetOpaque(false)
+        try GDHO_SetPanelInteractive("panel_drag_end")
         try SetTimer(GDHO_ClearPanelUserDragging, -900)
-        try GDHO_RunPanelJS("try{var r=document.getElementById('panelRoot');if(r)r.style.pointerEvents='none';window.HolePanel?.resetPanelLayout?.();}catch(_e){}")
+        try GDHO_RunPanelJS("try{var mp=document.getElementById('manualPanel');if(mp)mp.classList.remove('dragging');window.HolePanel?.onHostShow?.();}catch(_e){}")
         return
     }
     if (typ = "panel_moved") {
-        global g_GDHO_PanelUserDragging
+        global g_GDHO_PanelUserDragging, g_GDHO_PanelDragInProgress, g_GDHO_PanelLastMoveTick
+        g_GDHO_PanelDragInProgress := true
         g_GDHO_PanelUserDragging := true
-        try GDHO_ArmPanelDragGrace(2500)
-        if msg.Has("screenX") && msg.Has("screenY") {
-            try GDHO_MovePanelHostScreen(msg["screenX"], msg["screenY"])
-        }
+        try GDHO_ArmPanelDragGrace(6000)
+        if !(msg.Has("screenX") && msg.Has("screenY"))
+            return
+        now := A_TickCount
+        if (g_GDHO_PanelLastMoveTick > 0 && (now - g_GDHO_PanelLastMoveTick) < 10)
+            return
+        g_GDHO_PanelLastMoveTick := now
+        try GDHO_MovePanelHostScreen(msg["screenX"], msg["screenY"])
         return
     }
 }
@@ -2063,28 +2379,46 @@ GDHO_PanelDeactivateCheck(*) {
 
 GDHO_ShowPanel(reason := "") {
     global GDHO_PANEL_GUI, GDHO_PANEL_VISIBLE, GDHO_PANEL_W, GDHO_PANEL_H, GDHO_PANEL_PINNED
+    global GDHO_PANEL_READY
     global GDHO_STAR_GUI, GDHO_VISIBLE, GDHO_MANUAL_PANEL_MODE, GDHO_ACTIVE, GDHO_DESKTOP_PINNED
     global NativeDropSessionActive, GDHO_PANEL_LAST_X, GDHO_PANEL_LAST_Y
     if !IsObject(GDHO_PANEL_GUI)
         return
     if !(FuncExists("GDHO_ShouldShowDecoupledPanel") && GDHO_ShouldShowDecoupledPanel(reason))
         return
-    GDHO_SetPanelInteractive("show_panel")
-    GDHO_SyncPanelPositionToStarry()
+    ; Ensure panel WebView is ready before showing (prevents blank/black window).
+    if !GDHO_PANEL_READY {
+        GDHO_ShowPanelWhenReady("show_panel:" . String(reason))
+        return
+    }
+    GDHO_ActivatePanelHost("show_panel")
+    if !(GDHO_P0_IsReadonly()) && !(FuncExists("GDHO_IsPanelDragProtected") && GDHO_IsPanelDragProtected())
+        GDHO_SyncPanelPositionToStarry()
     try GDHO_PANEL_GUI.Show("NA x" Integer(GDHO_PANEL_LAST_X) " y" Integer(GDHO_PANEL_LAST_Y)
         . " w" Integer(GDHO_PANEL_W) " h" Integer(GDHO_PANEL_H))
     GDHO_PANEL_VISIBLE := true
     GDHO_HideStarryAfterPanel("show_panel")
     GDHO_RaisePanelAboveStarry()
-    try GDHO_RunPanelJS("window.HolePanel?.onHostShow?.()")
+    try GDHO_ApplyPanelVisibleChrome()
     try GDHO_Trace("show_panel reason=" . String(reason))
     GDHO_TraceTopology("show_panel")
 }
 
 GDHO_HidePanel(reason := "") {
+    if GDHO_P0_BlockHostMoveHide("hide_panel:" . String(reason))
+        return
     global GDHO_PANEL_GUI, GDHO_PANEL_VISIBLE, GDHO_PANEL_PINNED
     global g_GDHO_PanelHoldUntil, g_GDHO_PostSuckPanelPending, g_GDHO_TextHoleStickyPanel
     r0 := StrLower(Trim(String(reason)))
+    if FuncExists("GDHO_IsPanelDragProtected") {
+        try {
+            if GDHO_IsPanelDragProtected() && !GDHO_IsExplicitTextHolePanelCloseReason(r0) {
+                try GDHO_Trace("hide_panel_skip reason=" . String(reason) . " policy=panel_drag")
+                return
+            }
+        } catch {
+        }
+    }
     if !GDHO_MayAutoHideTextHolePanel(r0) {
         try GDHO_Trace("hide_panel_skip reason=" . String(reason) . " policy=panel_locked")
         try NativeDropDiag_Log("[TextHole] hide_panel_skip reason=" . r0 . " policy=panel_locked")
@@ -2114,7 +2448,27 @@ GDHO_HidePanel(reason := "") {
 }
 
 GDHO_ParkPanel() {
+    if GDHO_P0_BlockHostMoveHide("park_panel")
+        return
     global GDHO_PANEL_GUI, GDHO_PARK_X, GDHO_PARK_Y, GDHO_PANEL_W, GDHO_PANEL_H, GDHO_PANEL_VISIBLE
+    if FuncExists("GDHO_IsPanelDragProtected") {
+        try {
+            if GDHO_IsPanelDragProtected() {
+                try GDHO_Trace("park_panel_skip policy=panel_drag")
+                return
+            }
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+        try {
+            if GDHO_IsTextHoleUserPanelActive() {
+                try GDHO_Trace("park_panel_skip policy=panel_engaged")
+                return
+            }
+        } catch {
+        }
+    }
     if !IsObject(GDHO_PANEL_GUI)
         return
     GDHO_PANEL_VISIBLE := false
@@ -2129,13 +2483,10 @@ GDHO_InitDecoupled() {
     global g_GDHO_StarryCreateInFlight, g_GDHO_PanelCreateInFlight, GDHO_PREWARM_DONE, GDHO_FIRST_REVEAL_DONE
     global GDHO_WV2_CTRL, GDHO_WV2, GDHO_GUI
 
-    if (GDHO_STAR_GUI || g_GDHO_StarryCreateInFlight) {
-        try GDHO_EnsureDecoupledPanelWebHost()
+    if (GDHO_STAR_GUI || g_GDHO_StarryCreateInFlight)
         return
-    }
     GDHO_TraceTopology("init_decoupled_begin")
     GDHO_CreateStarryGui()
-    GDHO_CreatePanelGui()
     GDHO_WV2_CTRL_STAR := 0
     GDHO_WV2_STAR := 0
     GDHO_WV2_CTRL_PANEL := 0
@@ -2204,6 +2555,7 @@ GDHO_HardRecycleDecoupled(reason := "") {
     g_GDHO_CreateStartTick := 0
     g_GDHO_StarryCreateInFlight := false
     g_GDHO_PanelCreateInFlight := false
+    g_GDHO_PanelCreateStartedTick := 0
     GDHO_TraceTopology("hard_recycle " . String(reason))
 }
 

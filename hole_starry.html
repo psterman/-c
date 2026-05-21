@@ -223,6 +223,8 @@
       const HOLE_WS_URL = 'ws://127.0.0.1:18790/hole';
       let holeSocket = null;
       let gravityBoostUntil = 0;
+      let interactionState = 'idle';
+      let lastInteractionVersion = 0;
 
       let p = 0;
       let isGalaxyOpen = false;
@@ -340,6 +342,53 @@
         root.style.setProperty('--p', String(p));
         const alpha = 0.20 + p * 0.70;
         root.style.setProperty('--hole-alpha', String(Math.max(0.08, Math.min(1, alpha))));
+      }
+
+      function acceptStarryWs(typ) {
+        const t = String(typ || '');
+        if (t === 'interaction_state' || t === 'bridge_ready') return true;
+        if (interactionState === 'weak_preview')
+          return t === 'dragenter' || t === 'dragleave';
+        if (interactionState === 'analyzing')
+          return t === 'dragenter' || t === 'dragleave' || t === 'drop';
+        return false;
+      }
+
+      function applyInteractionStateStarry(msg) {
+        if (msg && msg.version != null) {
+          const v = Number(msg.version);
+          if (!Number.isNaN(v) && v <= lastInteractionVersion) return;
+          if (!Number.isNaN(v)) lastInteractionVersion = v;
+        }
+        const st = String((msg && msg.state) || 'idle');
+        interactionState = st;
+        if (st === 'idle') {
+          if (transcriptPanel) transcriptPanel.classList.remove('show');
+          window.HoleOverlay.setSleepMode(true);
+          window.HoleOverlay.hideSilent();
+          return;
+        }
+        if (st === 'weak_preview') {
+          if (transcriptPanel) transcriptPanel.classList.remove('show');
+          window.HoleOverlay.setSleepMode(false);
+          root.classList.add('show');
+          setP(0.55);
+          wakeRender();
+          return;
+        }
+        if (st === 'analyzing') {
+          window.HoleOverlay.setSleepMode(false);
+          if (!root.classList.contains('show')) {
+            root.classList.add('show');
+            setP(0.55);
+            wakeRender();
+          }
+          return;
+        }
+        if (st === 'resulting' || st === 'dragging') {
+          window.HoleOverlay.hideSilent();
+          window.HoleOverlay.setSleepMode(true);
+        }
       }
 
       window.HoleOverlay = {
@@ -524,6 +573,11 @@
             let msg;
             try { msg = JSON.parse(e.data); } catch (_) { return; }
             const t = String(msg.type || '');
+            if (t === 'interaction_state') {
+              applyInteractionStateStarry(msg);
+              return;
+            }
+            if (!acceptStarryWs(t)) return;
             if (t === 'bridge_ready') return;
             if (t === 'dragenter') {
               gravityBoostUntil = performance.now() + 1200;

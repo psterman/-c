@@ -22,6 +22,17 @@
       justify-content: flex-start;
       padding: 12px;
       pointer-events: none;
+      transition: opacity 0.18s ease;
+    }
+    #panelRoot[data-interaction-state="idle"] {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    #manualPanel.dragging {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background: rgb(5, 10, 16);
+      opacity: 1 !important;
     }
     #manualPanel {
       position: relative;
@@ -162,6 +173,9 @@
   </style>
 </head>
 <body>
+  <div id="panelBootPlaceholder" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#9df7cc;font:14px/1.5 'Segoe UI','Microsoft YaHei',sans-serif;background:rgba(5,10,16,0.94);z-index:0;">
+    正在加载 AI 面板…
+  </div>
   <div id="panelRoot">
     <div id="manualPanel">
       <div id="manualPanelHeader">
@@ -249,6 +263,40 @@
       let manualPanelDragMoved = false;
       let manualDragOffsetX = 0;
       let manualDragOffsetY = 0;
+      let dragHostOriginX = 0;
+      let dragHostOriginY = 0;
+      let dragPointerScreenX = 0;
+      let dragPointerScreenY = 0;
+      let dragMoveRaf = 0;
+      let dragPendingX = 0;
+      let dragPendingY = 0;
+      let interactionState = 'idle';
+      let hostPresented = false;
+      let panelLoaded = false;
+      let lastInteractionVersion = 0;
+
+      const PANEL_WS_ALLOW = {
+        idle: new Set(['interaction_state', 'bridge_ready']),
+        weak_preview: new Set(['interaction_state', 'bridge_ready']),
+        analyzing: new Set(['interaction_state', 'bridge_ready', 'drop']),
+        resulting: null,
+        dragging: null
+      };
+
+      function acceptPanelWs(typ) {
+        const t = String(typ || '');
+        const allow = PANEL_WS_ALLOW[interactionState];
+        if (allow === null) return true;
+        return allow ? allow.has(t) : false;
+      }
+
+      function ensurePanelLoaded() {
+        if (panelLoaded) return;
+        panelLoaded = true;
+        loadManualConfig();
+        applyProviderPreset(apiProviderSelect?.value || 'deepseek');
+        connectHoleWs();
+      }
 
       function postHost(payload) {
         try {
@@ -262,10 +310,69 @@
       function setManualPanelVisible(visible) {
         manualPanelVisible = !!visible;
         if (!manualPanel) return;
-        manualPanel.style.display = manualPanelVisible ? 'block' : 'none';
+        if (!visible) {
+          manualPanel.style.display = 'none';
+          return;
+        }
+        if (interactionState === 'idle' && !hostPresented) {
+          manualPanel.style.display = 'none';
+          return;
+        }
+        manualPanel.style.display = 'block';
         if (manualPanelMiniBtn) {
           manualPanelMiniBtn.style.display = manualPanelVisible ? 'none' : 'block';
         }
+      }
+
+      function applyInteractionState(msg) {
+        if (msg && msg.version != null) {
+          const v = Number(msg.version);
+          if (!Number.isNaN(v) && v <= lastInteractionVersion) return;
+          if (!Number.isNaN(v)) lastInteractionVersion = v;
+        }
+        const st = String((msg && msg.state) || 'idle');
+        interactionState = st;
+        const root = document.getElementById('panelRoot');
+        if (root) {
+          root.dataset.interactionState = st;
+          if (st === 'idle') {
+            hostPresented = false;
+            root.style.opacity = '0';
+            root.style.pointerEvents = 'none';
+          } else {
+            root.style.opacity = '';
+            root.style.pointerEvents = '';
+          }
+        }
+        if (st === 'idle') {
+          setManualPanelVisible(false);
+          return;
+        }
+        if (st === 'weak_preview') {
+          hostPresented = false;
+          setManualPanelVisible(false);
+          return;
+        }
+        if (st === 'analyzing') {
+          ensurePanelLoaded();
+          if (hostPresented) return;
+          hostPresented = false;
+          setManualPanelVisible(false);
+          return;
+        }
+        if (st === 'resulting' || st === 'dragging') {
+          ensurePanelLoaded();
+          hostPresented = true;
+          setManualPanelVisible(true);
+          try { window.HolePanel?.onHostShow?.(); } catch (_) {}
+        }
+      }
+
+      function sendPointerMoveWs(x, y) {
+        if (!holeSocket || holeSocket.readyState !== WebSocket.OPEN) return;
+        try {
+          holeSocket.send(JSON.stringify({ type: 'pointer_move', screenX: x, screenY: y }));
+        } catch (_) {}
       }
 
       function focusPromptInput(selectAll = false) {
@@ -411,7 +518,8 @@
           root.style.alignItems = 'flex-end';
           root.style.justifyContent = 'flex-start';
           root.style.padding = '12px';
-          root.style.pointerEvents = 'none';
+          if (!hostPresented)
+            root.style.pointerEvents = 'none';
         }
         if (mp) {
           mp.style.position = 'relative';
@@ -422,13 +530,35 @@
       }
 
       window.HolePanel = {
+        ensurePanelLoaded: () => ensurePanelLoaded(),
         onHostShow: () => {
+          ensurePanelLoaded();
+          hostPresented = true;
+          interactionState = 'resulting';
+          const boot = document.getElementById('panelBootPlaceholder');
+          if (boot) boot.style.display = 'none';
+          const root = document.getElementById('panelRoot');
+          if (root) {
+            root.dataset.interactionState = 'resulting';
+            root.style.opacity = '';
+            root.style.pointerEvents = '';
+          }
           setManualPanelVisible(true);
           resetPanelLayout();
           setTimeout(() => focusPromptInput(false), 0);
         },
-        onHostHide: () => {},
+        onHostHide: () => {
+          hostPresented = false;
+          const root = document.getElementById('panelRoot');
+          if (root) {
+            root.dataset.interactionState = 'idle';
+            root.style.opacity = '0';
+            root.style.pointerEvents = 'none';
+          }
+          setManualPanelVisible(false);
+        },
         resetPanelLayout: () => resetPanelLayout(),
+        syncDragHostAnchor: (x, y) => syncDragHostAnchorFromHost(x, y),
         setManualPanelVisible: (v) => setManualPanelVisible(v),
         focusPrompt: (selectAll) => focusPromptInput(!!selectAll),
         setStreamHud: (text, show) => {
@@ -442,7 +572,16 @@
           if (manualPromptInput && body != null) manualPromptInput.value = String(body);
         },
         setCapturedText: (text) => {
+          ensurePanelLoaded();
           const t = String(text || '');
+          hostPresented = true;
+          interactionState = 'resulting';
+          const root = document.getElementById('panelRoot');
+          if (root) {
+            root.dataset.interactionState = 'resulting';
+            root.style.opacity = '';
+            root.style.pointerEvents = '';
+          }
           if (resultHead) resultHead.textContent = '已捕获文本';
           if (resultBody) resultBody.textContent = t;
           if (manualPromptInput) manualPromptInput.value = t;
@@ -463,8 +602,14 @@
             let msg;
             try { msg = JSON.parse(e.data); } catch (_) { return; }
             const t = String(msg.type || '');
+            if (t === 'interaction_state') {
+              applyInteractionState(msg);
+              return;
+            }
+            if (!acceptPanelWs(t)) return;
             if (t === 'bridge_ready') return;
             if (t === 'drop') {
+              if (interactionState !== 'resulting' && interactionState !== 'dragging') return;
               activeRequestId = msg.requestId != null ? msg.requestId : null;
               streamBuffer = '';
               if (resultHead) resultHead.textContent = '结果输出（流式中）';
@@ -475,6 +620,9 @@
               }
               postHost({ type: 'panel_stream_start' });
               return;
+            }
+            if (t === 'stream_chunk' || t === 'stream_done' || t === 'stream_abort' || t === 'stream_error') {
+              if (interactionState !== 'resulting' && interactionState !== 'dragging') return;
             }
             if (t === 'stream_chunk') {
               if (msg.requestId != null && activeRequestId != null && msg.requestId !== activeRequestId) return;
@@ -585,6 +733,11 @@
         } catch (_) {}
       }
 
+      function syncDragHostAnchorFromHost(ox, oy) {
+        if (Number.isFinite(ox)) dragHostOriginX = ox;
+        if (Number.isFinite(oy)) dragHostOriginY = oy;
+      }
+
       if (manualPanelHeader && manualPanel) {
         manualPanelHeader.addEventListener('mousedown', (e) => {
           if (e.button !== 0) return;
@@ -595,23 +748,50 @@
           manualPanelDragMoved = false;
           manualDragOffsetX = e.clientX - rect.left;
           manualDragOffsetY = e.clientY - rect.top;
-          try { postHost({ type: 'panel_drag_start' }); } catch (_) {}
+          dragPointerScreenX = e.screenX;
+          dragPointerScreenY = e.screenY;
+          const winX = (window.screenLeft != null) ? window.screenLeft : (window.screenX || 0);
+          const winY = (window.screenTop != null) ? window.screenTop : (window.screenY || 0);
+          dragHostOriginX = winX;
+          dragHostOriginY = winY;
+          manualPanel.classList.add('dragging');
+          try {
+            document.documentElement.style.background = 'rgb(5, 10, 16)';
+            document.body.style.background = 'rgb(5, 10, 16)';
+            manualPanel.style.opacity = '1';
+          } catch (_) {}
+          try { postHost({ type: 'panel_drag_start', screenX: dragHostOriginX, screenY: dragHostOriginY }); } catch (_) {}
           e.preventDefault();
+          e.stopPropagation();
         });
         window.addEventListener('mousemove', (e) => {
           if (!manualPanelDragging) return;
           manualPanelDragMoved = true;
-          const originX = (window.screenLeft != null) ? window.screenLeft : (window.screenX || 0);
-          const originY = (window.screenTop != null) ? window.screenTop : (window.screenY || 0);
-          const sx = Math.round(originX + e.clientX - manualDragOffsetX);
-          const sy = Math.round(originY + e.clientY - manualDragOffsetY);
-          postHost({ type: 'panel_moved', screenX: sx, screenY: sy });
+          dragPendingX = Math.round(dragHostOriginX + (e.screenX - dragPointerScreenX));
+          dragPendingY = Math.round(dragHostOriginY + (e.screenY - dragPointerScreenY));
+          if (dragMoveRaf) return;
+          dragMoveRaf = requestAnimationFrame(() => {
+            dragMoveRaf = 0;
+            try {
+              postHost({ type: 'panel_moved', screenX: dragPendingX, screenY: dragPendingY });
+            } catch (_) {}
+            sendPointerMoveWs(dragPendingX, dragPendingY);
+          });
         });
         window.addEventListener('mouseup', () => {
           if (manualPanelDragging) {
+            if (dragMoveRaf) {
+              cancelAnimationFrame(dragMoveRaf);
+              dragMoveRaf = 0;
+            }
+            try {
+              postHost({ type: 'panel_moved', screenX: dragPendingX, screenY: dragPendingY });
+            } catch (_) {}
+            sendPointerMoveWs(dragPendingX, dragPendingY);
             try { postHost({ type: 'panel_drag_end' }); } catch (_) {}
           }
           manualPanelDragging = false;
+          if (manualPanel) manualPanel.classList.remove('dragging');
           setTimeout(() => { manualPanelDragMoved = false; }, 320);
         });
       }
@@ -684,10 +864,26 @@
         el.addEventListener('blur', saveManualConfig);
       });
 
-      loadManualConfig();
-      applyProviderPreset(apiProviderSelect?.value || 'deepseek');
-      setManualPanelVisible(true);
-      connectHoleWs();
+      setManualPanelVisible(false);
+      const panelRootEl = document.getElementById('panelRoot');
+      if (panelRootEl) {
+        panelRootEl.dataset.interactionState = 'idle';
+        panelRootEl.style.opacity = '0';
+        panelRootEl.style.pointerEvents = 'none';
+      }
+      try {
+        window.chrome?.webview?.addEventListener?.('message', (ev) => {
+          const raw = ev?.data;
+          if (!raw) return;
+          let msg;
+          try { msg = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (_) { return; }
+          if (String(msg?.type || '') === 'host_present') {
+            window.HolePanel?.ensurePanelLoaded?.();
+            window.HolePanel?.onHostShow?.();
+            if (msg.text != null) window.HolePanel?.setCapturedText?.(String(msg.text));
+          }
+        });
+      } catch (_) {}
     })();
   </script>
 </body>

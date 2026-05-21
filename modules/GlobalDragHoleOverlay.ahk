@@ -1431,7 +1431,11 @@ GDHO_OpenSelectionTextPreview(mx, my) {
     else if FuncExists("GDHO_ClearTextDragHandoff")
         GDHO_ClearTextDragHandoff()
     if GDHO_IsDecoupled() {
-        try GDHO_HidePanel("panel_hole_close_new_selection")
+        if FuncExists("GDHO_ShelvePanelHost") {
+            try GDHO_ShelvePanelHost("selection_preview_new")
+        } else {
+            try GDHO_HidePanel("panel_hole_close_new_selection")
+        }
     }
     if FuncExists("GDHO_StampTextHoleCapturedText") {
         try GDHO_StampTextHoleCapturedText(SelectionSense_GetLastSelectedText())
@@ -1444,7 +1448,11 @@ GDHO_OpenSelectionTextPreview(mx, my) {
         }
     }
     if GDHO_IsDecoupled() {
-        try GDHO_HidePanel("selection_preview_prep")
+        if FuncExists("GDHO_ShelvePanelHost") {
+            try GDHO_ShelvePanelHost("selection_preview_prep")
+        } else {
+            try GDHO_HidePanel("selection_preview_prep")
+        }
         GDHO_DESKTOP_PINNED := false
     }
     pl := Map(
@@ -1466,11 +1474,13 @@ GDHO_OpenSelectionTextPreview(mx, my) {
         GDHO_SubmitIntent("OPEN", 15, pl)
         GDHO_ShowTextDragAt(x0, y0, true)
         if GDHO_IsDecoupled() {
-            try GDHO_HidePanel("selection_preview_post")
+            if FuncExists("GDHO_ShelvePanelHost") {
+                try GDHO_ShelvePanelHost("selection_preview_post")
+            } else {
+                try GDHO_HidePanel("selection_preview_post")
+            }
             if FuncExists("GDHO_CancelSelectionPreviewPanelGuards")
                 GDHO_CancelSelectionPreviewPanelGuards()
-            if FuncExists("GDHO_EnsurePanelWebWarm")
-                GDHO_EnsurePanelWebWarm()
             if FuncExists("GDHO_ArmTextHoleProximityPoll")
                 GDHO_ArmTextHoleProximityPoll()
             SetTimer(GDHO_ApplyTextPreviewStarryInteractive, -160)
@@ -1487,6 +1497,12 @@ GDHO_OpenSelectionTextPreview(mx, my) {
             NativeDropSessionActive := false
             try SetTimer(NativeDropBridge_DragSessionTick, 0)
             try NativeDropDiag_Log("[TextHole] bridge_session_cleared reason=selection_preview")
+        }
+        if FuncExists("GDHO_WS_SendSelectionPreview") {
+            tPrev := ""
+            if FuncExists("SelectionSense_GetLastSelectedText")
+                try tPrev := Trim(SelectionSense_GetLastSelectedText())
+            try GDHO_WS_SendSelectionPreview(tPrev, x0, y0)
         }
     } finally {
         GDHO_EndTransitionAllow()
@@ -2072,6 +2088,8 @@ GDHO_SetSleepMode(enable := true) {
 GDHO_ParkOverlay() {
     global GDHO_GUI, GDHO_HOST_W, GDHO_HOST_H, GDHO_PARK_X, GDHO_PARK_Y
     global GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_INTERACTIVE
+    if FuncExists("GDHO_P0_BlockHostMoveHide") && GDHO_P0_BlockHostMoveHide("park_overlay")
+        return
     gui := GDHO_IsDecoupled() ? GDHO_GetStarryGui() : GDHO_GUI
     if !IsObject(gui)
         return
@@ -2302,6 +2320,8 @@ GDHO_OnWebMessage(sender, args) {
             CoordMode("Mouse", "Screen")
             MouseGetPos(&mx0, &my0)
             if (g_GDHO_PostSuckPresentDone && GDHO_PANEL_VISIBLE && FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()) {
+                if FuncExists("GDHO_PushPanelCapturedText")
+                    try GDHO_PushPanelCapturedText()
                 try NativeDropDiag_Log("[PostSuck] expand_complete_skip reason=panel_already_visible sid=" . sid)
                 if FuncExists("GDHO_CancelTextHolePresentTimers")
                     try GDHO_CancelTextHolePresentTimers()
@@ -2309,6 +2329,8 @@ GDHO_OnWebMessage(sender, args) {
             }
             if FuncExists("GDHO_CancelTextHolePresentTimers")
                 try GDHO_CancelTextHolePresentTimers()
+            if FuncExists("GDHO_EnsurePanelHostForPhase")
+                try GDHO_EnsurePanelHostForPhase("analyzing")
             g_GDHO_TextHoleExpandCompleteSessionId := sid
             if FuncExists("GDHO_TextHole_OnExpandComplete")
                 try GDHO_TextHole_OnExpandComplete(sid)
@@ -2830,6 +2852,15 @@ GDHO_AnchorHoleByScreen() {
 
 GDHO_MoveHostToHole(holeX, holeY) {
     global GDHO_GUI, GDHO_HOST_W, GDHO_HOST_H, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_CX, GDHO_CY
+    if FuncExists("GDHO_P0_BlockHostMoveHide") && GDHO_P0_BlockHostMoveHide("move_host_to_hole") {
+        if FuncExists("GDHO_WS_Send") {
+            try GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+            ax := Integer(vl + Integer(holeX))
+            ay := Integer(vt + Integer(holeY))
+            try GDHO_WS_Send("pointer_move", ax, ay)
+        }
+        return
+    }
     if !GDHO_GUI
         return
     GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
@@ -2851,8 +2882,10 @@ GDHO_MoveHostToHole(holeX, holeY) {
     GDHO_CX := hx + 180
     GDHO_CY := hy + 159
     try GDHO_GUI.Move(hx, hy, hostW, hostH)
-    if GDHO_IsDecoupled()
-        try GDHO_SyncPanelPositionToStarry()
+    if GDHO_IsDecoupled() {
+        if !(FuncExists("GDHO_IsPanelDragProtected") && GDHO_IsPanelDragProtected())
+            try GDHO_SyncPanelPositionToStarry()
+    }
 }
 
 GDHO_GlobalPointToHostLocal(globalX, globalY, &localX, &localY) {
@@ -2887,6 +2920,24 @@ GDHO_HideOverlay() {
         try GDHO_Trace("hide_overlay_skip post_suck_protected")
         return
     }
+    if FuncExists("GDHO_IsPanelDragProtected") {
+        try {
+            if GDHO_IsPanelDragProtected() {
+                try GDHO_Trace("hide_overlay_skip panel_drag")
+                return
+            }
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+        try {
+            if GDHO_IsTextHoleUserPanelActive() {
+                try GDHO_Trace("hide_overlay_skip text_hole_panel")
+                return
+            }
+        } catch {
+        }
+    }
     if !GDHO_InternalCallAllowed() {
         try GDHO_Trace("gdho_redirect_hide_overlay")
         GDHO_RequestClose("hide_overlay_redirect")
@@ -2906,7 +2957,19 @@ GDHO_HideOverlay() {
     GDHO_SetSleepMode(true)
     try GDHO_ParkOverlay()
     if GDHO_IsDecoupled() {
-        GDHO_HidePanel("hide_overlay")
+        skipPanelHide := false
+        if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+            try skipPanelHide := GDHO_IsTextHoleUserPanelActive()
+            catch {
+            }
+        }
+        if FuncExists("GDHO_IsPanelDragProtected") {
+            try skipPanelHide := (skipPanelHide || GDHO_IsPanelDragProtected())
+            catch {
+            }
+        }
+        if !skipPanelHide
+            GDHO_HidePanel("hide_overlay")
         if FuncExists("GDHO_ClearTextDragHandoff")
             GDHO_ClearTextDragHandoff()
     }
@@ -2964,9 +3027,12 @@ GDHO_DockHostWhenHidden() {
 
     GDHO_LAST_HOST_X := x
     GDHO_LAST_HOST_Y := y
-    try GDHO_GUI.Move(x, y, hostW, hostH)
-    if GDHO_IsDecoupled()
-        try GDHO_SyncPanelPositionToStarry()
+    if !(FuncExists("GDHO_P0_BlockHostMoveHide") && GDHO_P0_BlockHostMoveHide("dock_host_when_hidden"))
+        try GDHO_GUI.Move(x, y, hostW, hostH)
+    if GDHO_IsDecoupled() {
+        if !(FuncExists("GDHO_IsPanelDragProtected") && GDHO_IsPanelDragProtected())
+            try GDHO_SyncPanelPositionToStarry()
+    }
 }
 
 GDHO_PushThemeToWeb() {
@@ -3141,7 +3207,8 @@ GDHO_Update(payload := "file", x := "", y := "") {
         if GDHO_IsDecoupled() {
             if (GDHO_IsFileDragSession() && GDHO_ShouldShowDecoupledPanel("update_decoupled_drag_only")) {
                 GDHO_ShowPanel("update_decoupled_drag_only")
-                GDHO_SyncPanelPositionToStarry()
+                if !(FuncExists("GDHO_IsPanelDragProtected") && GDHO_IsPanelDragProtected())
+                    GDHO_SyncPanelPositionToStarry()
             }
             if GDHO_IsTextDragSession()
                 try GDHO_SetWebOlePassthrough(true)
