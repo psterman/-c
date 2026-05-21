@@ -1,5 +1,7 @@
 #Requires AutoHotkey v2.0
 
+#Include GlobalDragHoleDecoupled.ahk
+
 ; GlobalDragHoleOverlay.ahk
 ; AHK global drag pre-judge -> drive Wails/WebView2 hole frontend (window.HoleOverlay.*)
 
@@ -46,6 +48,7 @@ global GDHO_ANCHOR_OFFSET_Y := 0
 global GDHO_SCREEN_X := 120
 global GDHO_SCREEN_Y := 120
 global GDHO_CLICKTHROUGH := true
+global GDHO_MANUAL_PANEL_MODE := false
 global GDHO_UPDATE_MIN_INTERVAL_MS := 72
 global GDHO_POLL_BUSY := false
 global GDHO_CURSOR_X := 0
@@ -89,6 +92,7 @@ global g_GDHO_FrontendQueue := []
 global g_GDHO_FileDropCapture := false
 global g_GDHO_HostChildOlePassthrough := false
 global g_GDHO_TextOlePassthrough := false
+global g_GDHO_HostChromaOn := true
 global GDHO_WM_NCHITTEST := 0x84
 global GDHO_PHASE_CLOSED := "CLOSED"
 global GDHO_PHASE_OPENING := "OPENING"
@@ -296,13 +300,27 @@ GDHO_FlushReleaseCoalesce(*) {
     if !routed && (phys is Map) && phys.Has("valid") && phys["valid"] {
         mx := Integer(phys["mx"]), my := Integer(phys["my"])
         if phys["suck"] {
-            distNow := GDHO_GetDistanceToHoleCenter(mx, my)
-            try NativeDropDiag_Log("[ReleaseFlush] physical_suck dist=" . Format("{:.1f}", distNow))
-            GDHO_PAYLOAD := "text"
-            GDHO_ForceSuckAction()
-            SetTimer(GDHO_FinishSuckSession, -2000)
-            didSuck := true
-            routed := true
+            skipSuck := false
+            if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
+                try {
+                    if FuncExists("GDHO_IsTextSelectionPreviewReady") && GDHO_IsTextSelectionPreviewReady()
+                        skipSuck := true
+                    else if FuncExists("SelectionSense_IsSelectionHolePreviewActive") && SelectionSense_IsSelectionHolePreviewActive()
+                        skipSuck := true
+                    else if FuncExists("GDHO_IsPostSuckProtected") && GDHO_IsPostSuckProtected()
+                        skipSuck := true
+                } catch {
+                }
+            }
+            if !skipSuck {
+                distNow := GDHO_GetDistanceToHoleCenter(mx, my)
+                try NativeDropDiag_Log("[ReleaseFlush] physical_suck dist=" . Format("{:.1f}", distNow))
+                GDHO_PAYLOAD := "text"
+                GDHO_ForceSuckAction()
+                SetTimer(GDHO_FinishSuckSession, -2000)
+                didSuck := true
+                routed := true
+            }
         } else {
             if (GDHO_ACTIVE || NativeDropSessionActive) {
                 GDHO_RequestClose("drag_release")
@@ -322,9 +340,19 @@ GDHO_FlushReleaseCoalesce(*) {
         if (seed = "")
             try seed := Trim(String(NativeDropBridge_CaptureTextSeed()))
         if (seed != "" && String(NativeDropSessionPayload) = "text" && StrLen(seed) >= 2) {
-            try NativeDropDiag_Log("[ReleaseFlush] text_seed_fallback len=" . StrLen(seed))
-            GDHO_RoutePayload("text", seed)
-            routed := true
+            skipSeed := false
+            if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY && FuncExists("GDHO_IsTextSelectionPreviewReady")) {
+                try {
+                    if GDHO_IsTextSelectionPreviewReady()
+                        skipSeed := true
+                } catch {
+                }
+            }
+            if !skipSeed {
+                try NativeDropDiag_Log("[ReleaseFlush] text_seed_fallback len=" . StrLen(seed))
+                GDHO_RoutePayload("text", seed)
+                routed := true
+            }
         }
     }
     GDHO_RelBundleReset()
@@ -332,7 +360,12 @@ GDHO_FlushReleaseCoalesce(*) {
         hd := IsSet(NativeDropHideDelayMs) ? Integer(NativeDropHideDelayMs) : 1800
         try NativeDropBridge_ResetSessionAsync("release_coalesce", hd)
     } else {
-        try NativeDropBridge_ResetSessionAsync("release_coalesce_after_suck", 400)
+        if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY
+            && (NativeDropSessionPayload = "text" || GDHO_PAYLOAD = "text")) {
+            try NativeDropBridge_ResetSessionAsync("release_coalesce_after_suck", 0, false)
+        } else {
+            try NativeDropBridge_ResetSessionAsync("release_coalesce_after_suck", 400)
+        }
     }
 }
 
@@ -366,10 +399,13 @@ GDHO_IsTextDragSession() {
 }
 
 GDHO_ApplyHostChildOlePassthrough(enable := true) {
-    global GDHO_GUI, g_GDHO_HostChildOlePassthrough
+    global GDHO_GUI, g_GDHO_HostChildOlePassthrough, GDHO_MANUAL_PANEL_MODE
     if !GDHO_GUI
         return
     want := !!enable
+    ; 手动输入模式下，子窗口一律不穿透，保证输入框可点击。
+    if GDHO_MANUAL_PANEL_MODE
+        want := false
     g_GDHO_HostChildOlePassthrough := want
     hwnd := DllCall("GetWindow", "Ptr", GDHO_GUI.Hwnd, "UInt", 5, "Ptr")
     while hwnd {
@@ -460,18 +496,153 @@ GDHO_ReadSelectionFromHwnd(hwnd) {
     }
 }
 
+GDHO_SetHostChromaTransparent(enable := true, reason := "") {
+    global GDHO_GUI, g_GDHO_HostChromaOn
+    gui := GDHO_IsDecoupled() ? GDHO_GetStarryGui() : GDHO_GUI
+    if !IsObject(gui) || !gui.Hwnd
+        return
+    if GDHO_IsDecoupled() {
+        enable := true
+    }
+    wantChroma := !!enable
+    if (g_GDHO_HostChromaOn = wantChroma)
+        return
+    g_GDHO_HostChromaOn := wantChroma
+    r := Trim(String(reason))
+    if (r = "")
+        r := "?"
+    try {
+        if wantChroma
+            WinSetTransColor("010101", "ahk_id " gui.Hwnd)
+        else
+            WinSetTransColor("Off", "ahk_id " gui.Hwnd)
+        GDHO_HitTestDbgLog("SetHostChromaTransparent chromaKey=" . (wantChroma ? "010101" : "Off")
+            . " reason=" . r
+            . " hint=010101仅透明星空底;输入面板用非色键不透明底色")
+    } catch as e {
+        GDHO_HitTestDbgLog("SetHostChromaTransparent failed reason=" . r . " msg=" . e.Message)
+    }
+}
+
+GDHO_LogMouseHitDiag(ctx := "") {
+    global GDHO_GUI, GDHO_WV2_CTRL
+    if !IsObject(GDHO_GUI) || !GDHO_GUI.Hwnd
+        return
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&mx, &my, &hwndUnder)
+    hostHwnd := GDHO_GUI.Hwnd
+    wvHwnd := 0
+    if IsObject(GDHO_WV2_CTRL) {
+        try wvHwnd := GDHO_WV2_CTRL.Hwnd
+        catch {
+            try wvHwnd := GDHO_WV2_CTRL.hwnd
+            catch {
+                wvHwnd := 0
+            }
+        }
+    }
+    underHost := (hwndUnder = hostHwnd) ? 1 : 0
+    underWv := (wvHwnd && hwndUnder = wvHwnd) ? 1 : 0
+    underChild := 0
+    h := hwndUnder
+    loop 8 {
+        if !h
+            break
+        if (h = hostHwnd) {
+            underChild := 1
+            break
+        }
+        try h := DllCall("GetParent", "Ptr", h, "Ptr")
+        catch
+            break
+    }
+    exUnder := 0
+    try exUnder := DllCall("GetWindowLongPtr", "Ptr", hwndUnder, "Int", -20, "Ptr")
+    GDHO_HitTestDbgLog("MouseHit ctx=" . ctx . " xy=" . mx . "," . my
+        . " hwndUnder=" . hwndUnder
+        . " host=" . hostHwnd
+        . " wv=" . wvHwnd
+        . " underHost=" . underHost
+        . " underWv=" . underWv
+        . " underChildTree=" . underChild
+        . " exUnder=0x" . Format("{:X}", exUnder)
+        . " bit20=" . (!!(exUnder & 0x20) ? "1" : "0"))
+}
+
+GDHO_ApplyManualPanelInteractive(reason := "") {
+    global GDHO_MANUAL_PANEL_MODE, GDHO_WV2_CTRL
+    if !GDHO_MANUAL_PANEL_MODE
+        return
+    if GDHO_IsDecoupled() {
+        GDHO_ShowPanel("manual_interactive:" . Trim(String(reason)))
+        try {
+            if IsObject(GDHO_WV2_CTRL_PANEL)
+                GDHO_WV2_CTRL_PANEL.Focus()
+        } catch {
+        }
+        try {
+            if IsObject(GDHO_PANEL_GUI)
+                WinActivate("ahk_id " . GDHO_PANEL_GUI.Hwnd)
+        } catch {
+        }
+        return
+    }
+    r := Trim(String(reason))
+    if (r = "")
+        r := "apply_manual_panel"
+    ; 勿在此开启色键：由 NativeDrop_ManualPanelZoneTicker 按鼠标区域切换（面板区 Off / 星空区 On）
+    try GDHO_SetWebOlePassthrough(false)
+    try GDHO_SetClickThrough(false, r)
+    try GDHO_ApplyHostChildOlePassthrough(false)
+    try {
+        if IsObject(GDHO_WV2_CTRL)
+            GDHO_WV2_CTRL.Focus()
+    } catch {
+    }
+    try WinActivate("ahk_id " GDHO_GUI.Hwnd)
+    ; 强制输入面板可点击：取消「面板穿透」、关闭 ole-passthrough
+    js := "(function(){try{var p=document.getElementById('manualPanel');var cb=document.getElementById('panelPassthrough');var root=document.getElementById('root');if(cb){cb.checked=false;cb.disabled=true;}if(p){p.style.pointerEvents='auto';p.style.opacity='1';}window.__gdhoOlePassthrough=false;if(root)root.classList.remove('ole-passthrough');if(window.chrome&&window.chrome.webview&&window.chrome.webview.postMessage)window.chrome.webview.postMessage(JSON.stringify({type:'gdho_dbg_panel_pointer',passthrough:false,pointerEvents:p?String(p.style.pointerEvents||''):'auto',reason:'" . r . "'}));}catch(_e){}})();"
+    try GDHO_RunJS(js)
+    GDHO_HitTestDbgLog("ApplyManualPanelInteractive reason=" . r)
+}
+
+; 手动模式：鼠标在面板/HUD 上关闭色键（可输入），在星空区开启色键（背景透明）
+GDHO_SyncManualChromaByMouse(inInteractiveZone := false, reason := "") {
+    global GDHO_MANUAL_PANEL_MODE
+    if GDHO_IsDecoupled()
+        return
+    if !GDHO_MANUAL_PANEL_MODE
+        return
+    r := Trim(String(reason))
+    if (r = "")
+        r := "sync_chroma"
+    if inInteractiveZone {
+        try GDHO_SetHostChromaTransparent(false, r . "_zone_solid")
+        return
+    }
+    try GDHO_SetHostChromaTransparent(true, r . "_zone_chroma")
+}
+
 GDHO_SetWebOlePassthrough(enable := true) {
-    global g_GDHO_TextOlePassthrough
+    global g_GDHO_TextOlePassthrough, GDHO_MANUAL_PANEL_MODE
     want := !!enable
+    if GDHO_MANUAL_PANEL_MODE
+        want := false
     if (g_GDHO_TextOlePassthrough = want)
         return
     g_GDHO_TextOlePassthrough := want
+    GDHO_HitTestDbgLog("SetWebOlePassthrough req=" . (enable ? "1" : "0") . " appliedToJs=" . (want ? "1" : "0") . " manualMode=" . (GDHO_MANUAL_PANEL_MODE ? "1" : "0"))
     try GDHO_RunJS("window.HoleOverlay?.setOlePassthrough?.(" . (want ? "true" : "false") . ")")
+    if GDHO_MANUAL_PANEL_MODE && !want
+        GDHO_ApplyManualPanelInteractive("after_ole_passthrough_off")
 }
 
 GDHO_OnHostNcHitTest(wParam, lParam, msg, hwnd) {
-    global GDHO_GUI, GDHO_VISIBLE, g_GDHO_TextOlePassthrough, g_GDHO_FileDropCapture
+    global GDHO_GUI, GDHO_VISIBLE, g_GDHO_TextOlePassthrough, g_GDHO_FileDropCapture, GDHO_MANUAL_PANEL_MODE
     if !GDHO_GUI || (hwnd != GDHO_GUI.Hwnd)
+        return
+    ; 手动输入模式下，宿主必须可命中，不能走 HTTRANSPARENT。
+    if GDHO_MANUAL_PANEL_MODE
         return
     if GDHO_IsTextDragSession()
         return -1
@@ -485,10 +656,8 @@ GDHO_SetWebTextReceiveMode(enable := true) {
     if want {
         g_GDHO_TextOlePassthrough := false
         try GDHO_SetWebOlePassthrough(false)
-        if GDHO_GUI {
-            try WinSetExStyle("-0x20", "ahk_id " GDHO_GUI.Hwnd)
-            GDHO_CLICKTHROUGH := false
-        }
+        if GDHO_GUI
+            try GDHO_SetClickThrough(false, "set_web_text_receive_on")
         try GDHO_ApplyHostChildOlePassthrough(false)
         if GDHO_WV2_CTRL {
             try GDHO_WV2_CTRL.AllowExternalDrop := false
@@ -560,10 +729,18 @@ GDHO_TextDragMoveDist(mx, my) {
 
 GDHO_ShouldAllowTextHole() {
     if FuncExists("SelectionSense_IsTextReadyForHole") {
-        try return !!SelectionSense_IsTextReadyForHole()
-        catch {
+        try {
+            if SelectionSense_IsTextReadyForHole()
+                return true
+        } catch {
         }
-        return false
+    }
+    if FuncExists("SelectionSense_IsTextCapturedForHole") {
+        try {
+            if SelectionSense_IsTextCapturedForHole()
+                return true
+        } catch {
+        }
     }
     return true
 }
@@ -591,6 +768,13 @@ GDHO_TextDragProximity(mx, my) {
 GDHO_ManageTextDragOverlay(mx, my) {
     global GDHO_VISIBLE, GDHO_IS_SUCKING, GDHO_LAST_PROXIMITY, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y
     global GDHO_HOST_W, GDHO_HOST_H, GDHO_LAST_DIST_TO_HOLE, NativeDropSessionPayload, GDHO_PAYLOAD
+    if (GDHO_IsDecoupled() && FuncExists("GDHO_IsTextSelectionPreviewReady")) {
+        try {
+            if GDHO_IsTextSelectionPreviewReady()
+                return
+        } catch {
+        }
+    }
     if !GDHO_ShouldAllowTextHole()
         return
     if FuncExists("SelectionSense_HideDragHintToast") {
@@ -629,14 +813,24 @@ GDHO_ManageTextDragOverlay(mx, my) {
 }
 
 GDHO_EnsureTextDragPassthrough() {
-    global GDHO_GUI, GDHO_WV2_CTRL, GDHO_VISIBLE
+    global GDHO_GUI, GDHO_WV2_CTRL, GDHO_VISIBLE, GDHO_MANUAL_PANEL_MODE
+    if GDHO_MANUAL_PANEL_MODE {
+        ; 手动输入模式：文本激活时保持可交互，不允许切回穿透。
+        if GDHO_WV2_CTRL {
+            try GDHO_WV2_CTRL.AllowExternalDrop := false
+        }
+        try GDHO_ApplyManualPanelInteractive("ensure_text_drag_manual")
+        try GDHO_ApplyHostChildOlePassthrough(false)
+        try GDHO_ApplyHostZForDragSession()
+        return
+    }
     if g_GDHO_FileDropCapture
         GDHO_SetFileDropCapture(false)
     if GDHO_WV2_CTRL {
         try GDHO_WV2_CTRL.AllowExternalDrop := false
     }
     try GDHO_SetWebOlePassthrough(true)
-    try GDHO_SetClickThrough(true)
+    try GDHO_SetClickThrough(true, "ensure_text_drag_nonmanual")
     try GDHO_ApplyHostChildOlePassthrough(true)
     try GDHO_ApplyHostZForDragSession()
     if FuncExists("NativeDropBridge_PauseForTextDrag") {
@@ -672,22 +866,29 @@ GDHO_SetFileDropCapture(enable := true) {
             try GDHO_ShowOverlay()
             finally GDHO_EndTransitionAllow()
         }
-        try WinSetExStyle("-0x20", "ahk_id " GDHO_GUI.Hwnd)
-        GDHO_CLICKTHROUGH := false
-        GDHO_INTERACTIVE := true
-        try WinSetAlwaysOnTop(1, "ahk_id " GDHO_GUI.Hwnd)
-        if GDHO_WV2_CTRL {
-            try GDHO_WV2_CTRL.AllowExternalDrop := true
+        if GDHO_IsDecoupled() {
+            GDHO_ShowPanel("file_drop_capture")
+            GDHO_INTERACTIVE := false
+        } else {
+            try GDHO_SetClickThrough(false, "file_drop_capture_on")
+            GDHO_INTERACTIVE := true
+            if GDHO_WV2_CTRL
+                try GDHO_WV2_CTRL.AllowExternalDrop := true
         }
-        try GDHO_SetWebOlePassthrough(false)
-        try GDHO_ApplyHostChildOlePassthrough(false)
+        try WinSetAlwaysOnTop(1, "ahk_id " GDHO_GUI.Hwnd)
+        if !GDHO_IsDecoupled() {
+            try GDHO_SetWebOlePassthrough(false)
+            try GDHO_ApplyHostChildOlePassthrough(false)
+        }
         try GDHO_ApplyHostZForDragSession()
-        try GDHO_Trace("file_drop_capture on")
+        try GDHO_Trace("file_drop_capture on decoupled=" . (GDHO_IsDecoupled() ? "1" : "0"))
     } else {
         if GDHO_WV2_CTRL {
             try GDHO_WV2_CTRL.AllowExternalDrop := false
         }
-        try GDHO_SetClickThrough(true)
+        try GDHO_SetClickThrough(true, "file_drop_capture_off")
+        if GDHO_IsDecoupled()
+            try GDHO_HidePanel("file_drop_capture_off")
         try GDHO_ApplyHostChildOlePassthrough(false)
         try GDHO_KeepBelowToolbar()
         try GDHO_Trace("file_drop_capture off")
@@ -728,7 +929,7 @@ GDHO_TriggerSearchCenter(keyword) {
                 try TrayMenu_PrepareUiOpenFromHoleMode()
         }
     }
-    try GDHO_SetClickThrough(true)
+    try GDHO_SetClickThrough(true, "trigger_search_center")
     if (GDHO_IsHoleOnlyMode() && FuncExists("SearchCenter_RunQueryWithKeyword")) {
         try SearchCenter_RunQueryWithKeyword(kw)
     } else if FuncExists("FloatingToolbar_RequestSearchByKeyword") {
@@ -751,6 +952,26 @@ GDHO_RoutePayload(payloadType, data) {
             return
         g_GDHO_LastRouteSig := sig
         g_GDHO_LastRouteTick := A_TickCount
+        if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
+            global GDHO_SESSION_TEXT, g_GDHO_TextHoleCommitDone
+            if FuncExists("GDHO_IsTextSelectionPreviewReady") {
+                try {
+                    if GDHO_IsTextSelectionPreviewReady()
+                        return
+                } catch {
+                }
+            }
+            if g_GDHO_TextHoleCommitDone {
+                GDHO_SESSION_TEXT := t
+                if FuncExists("GDHO_StampTextHoleCapturedText")
+                    GDHO_StampTextHoleCapturedText(t)
+                return
+            }
+            GDHO_SESSION_TEXT := t
+            try NativeDropDiag_Log("[HoleRouter] decoupled_text_skip_preview len=" . StrLen(t))
+            return
+        }
+        try NativeDropDiag_Log("[HoleRouter] legacy_search_center len=" . StrLen(t))
         GDHO_TriggerSearchCenter(t)
     } else if (pt = "file") {
         if !(data is Array) || data.Length = 0
@@ -795,21 +1016,25 @@ GDHO_HardRecycleHost(reason := "") {
     g_GDHO_CurrentToken += 1
     g_GDHO_CreateInFlight := false
     g_GDHO_AntiHangTimerArmed := false
-    if IsObject(GDHO_WV2_CTRL) {
-        try GDHO_WV2_CTRL.Close()
-        catch {
+    if GDHO_IsDecoupled() {
+        GDHO_HardRecycleDecoupled(reason)
+    } else {
+        if IsObject(GDHO_WV2_CTRL) {
+            try GDHO_WV2_CTRL.Close()
+            catch {
+            }
         }
-    }
-    GDHO_WV2_CTRL := 0
-    GDHO_WV2 := 0
-    GDHO_READY := false
-    if IsObject(GDHO_GUI) {
-        try {
-            GDHO_GUI.Destroy()
-        } catch {
+        GDHO_WV2_CTRL := 0
+        GDHO_WV2 := 0
+        GDHO_READY := false
+        if IsObject(GDHO_GUI) {
+            try {
+                GDHO_GUI.Destroy()
+            } catch {
+            }
         }
+        GDHO_GUI := 0
     }
-    GDHO_GUI := 0
     GDHO_DIAG_CTRL := 0
     GDHO_DIAG_VISIBLE := false
     GDHO_VISIBLE := false
@@ -968,6 +1193,7 @@ GDHO_ShowTextDragAt(mx, my, weakPreview := false) {
             "positionMode", "relative",
             "weakPreview", !!weakPreview
         )
+        GDHO_StampOpenPayload(pl)
         GDHO_Show(pl)
         try GDHO_RaiseTextDragOverlay()
         try GDHO_EnsureTextDragPassthrough()
@@ -985,11 +1211,142 @@ GDHO_IsOpeningOrBusy() {
         || g_GDHO_CreateInFlight)
 }
 
+GDHO_StampOpenPayload(payloadMap) {
+    global g_GDHO_OpenPayload, g_GDHO_WaitingReadyReveal, GDHO_READY
+    if !(payloadMap is Map)
+        return
+    g_GDHO_OpenPayload := payloadMap
+    if !GDHO_READY
+        g_GDHO_WaitingReadyReveal := true
+}
+
+GDHO_ClearPendingCloseIntents() {
+    global g_GDHO_IntentQueue
+    if !(g_GDHO_IntentQueue is Array) || !g_GDHO_IntentQueue.Length
+        return
+    kept := []
+    for _, item in g_GDHO_IntentQueue {
+        if !(item is Map)
+            continue
+        if (StrUpper(Trim(String(item["intent"]))) = "CLOSE")
+            continue
+        kept.Push(item)
+    }
+    g_GDHO_IntentQueue := kept
+}
+
+GDHO_IsWeakPreviewReason(reason := "") {
+    r := StrLower(Trim(String(reason)))
+    return (InStr(r, "preview") || InStr(r, "select") || r = "text_drag_preview" || r = "text_select_preview")
+}
+
+; 解耦拓扑：输入面板仅在真实拖放/钉住/手动模式时出现，划选弱预览（仅星空可见）绝不拉起面板。
+GDHO_ShouldShowDecoupledPanel(reason := "") {
+    global GDHO_PANEL_PINNED, GDHO_MANUAL_PANEL_MODE, GDHO_ACTIVE, NativeDropSessionActive
+    global g_GDHO_OpenPayload, g_GDHO_TextDragHandoffDone, g_GDHO_PostSuckPanelPending, g_GDHO_PostSuckTimerArmed
+    if !GDHO_IsDecoupled()
+        return true
+    if FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()
+        return true
+    if (g_GDHO_TextDragHandoffDone || g_GDHO_PostSuckPanelPending)
+        return true
+    r := StrLower(Trim(String(reason)))
+    if (InStr(r, "handoff") || InStr(r, "text_drag_handoff") || InStr(r, "post_suck") || InStr(r, "text_hole"))
+        return true
+    if GDHO_IsWeakPreviewReason(r)
+        return false
+    if (g_GDHO_OpenPayload is Map) {
+        rOpen := g_GDHO_OpenPayload.Has("reason") ? StrLower(String(g_GDHO_OpenPayload["reason"])) : ""
+        if (rOpen != "" && GDHO_IsWeakPreviewReason(rOpen))
+            return false
+        if (g_GDHO_OpenPayload.Has("weakPreview") && g_GDHO_OpenPayload["weakPreview"])
+            return false
+    }
+    if FuncExists("SelectionSense_IsSelectionHolePreviewActive") {
+        try {
+            if SelectionSense_IsSelectionHolePreviewActive()
+                return false
+        } catch {
+        }
+    }
+    if (GDHO_PANEL_PINNED || GDHO_MANUAL_PANEL_MODE)
+        return true
+    if (GDHO_IsFileDragSession())
+        return true
+    if (NativeDropSessionActive && (NativeDropSessionPayload = "text" || GDHO_PAYLOAD = "text"))
+        return false
+    if (NativeDropSessionActive && GDHO_ACTIVE)
+        return true
+    if (NativeDropSessionActive && !FuncExists("SelectionSense_IsSelectionHolePreviewActive"))
+        return true
+    return false
+}
+
+GDHO_OpenSelectionTextPreview(mx, my) {
+    global g_GDHO_CloseAfterReady, GDHO_PAYLOAD, GDHO_DESKTOP_PINNED
+    if FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen() {
+        if FuncExists("GDHO_DismissTextHolePanel")
+            try GDHO_DismissTextHolePanel("new_selection_preview")
+            catch {
+            }
+    } else if FuncExists("GDHO_AbortTextHoleCommit")
+        try GDHO_AbortTextHoleCommit("new_selection_preview")
+        catch {
+        }
+    if FuncExists("GDHO_ResetTextHoleSession")
+        GDHO_ResetTextHoleSession()
+    else if FuncExists("GDHO_ResetTextHoleCommitState")
+        GDHO_ResetTextHoleCommitState()
+    else if FuncExists("GDHO_ClearTextDragHandoff")
+        GDHO_ClearTextDragHandoff()
+    if GDHO_IsDecoupled() {
+        try GDHO_HidePanel("panel_hole_close_new_selection")
+    }
+    if FuncExists("GDHO_StampTextHoleCapturedText") {
+        try GDHO_StampTextHoleCapturedText(SelectionSense_GetLastSelectedText())
+        catch {
+        }
+    }
+    if GDHO_IsDecoupled() {
+        try GDHO_HidePanel("selection_preview_prep")
+        GDHO_DESKTOP_PINNED := false
+    }
+    pl := Map(
+        "reason", "text_select_preview",
+        "payload", "text",
+        "screenX", Integer(mx),
+        "screenY", Integer(my),
+        "positionMode", "relative",
+        "weakPreview", true
+    )
+    GDHO_StampOpenPayload(pl)
+    g_GDHO_CloseAfterReady := false
+    GDHO_ClearPendingCloseIntents()
+    GDHO_PAYLOAD := "text"
+    GDHO_BeginTransitionAllow()
+    try {
+        GDHO_Init()
+        GDHO_SubmitIntent("OPEN", 15, pl)
+        GDHO_ShowTextDragAt(Integer(mx), Integer(my), true)
+        if GDHO_IsDecoupled() {
+            try GDHO_HidePanel("selection_preview_post")
+            if FuncExists("GDHO_CancelSelectionPreviewPanelGuards")
+                GDHO_CancelSelectionPreviewPanelGuards()
+            if FuncExists("GDHO_ArmTextHoleProximityPoll")
+                GDHO_ArmTextHoleProximityPoll()
+            SetTimer(GDHO_ApplyTextPreviewStarryInteractive, -160)
+        }
+    } finally {
+        GDHO_EndTransitionAllow()
+    }
+}
+
 GDHO_RequestOpen(payload := 0) {
     if !(payload is Map)
         payload := Map("payload", payload)
     if !payload.Has("reason")
         payload["reason"] := "request_open"
+    try GDHO_StampOpenPayload(payload)
     GDHO_SubmitIntent("OPEN", 30, payload)
 }
 
@@ -1116,7 +1473,8 @@ GDHO_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
         return false
     if (ts = GDHO_PHASE_OPEN) {
         rOpen := StrLower(Trim(String(reason)))
-        if (InStr(rOpen, "selection_"))
+        if (rOpen = "selection_copy" || rOpen = "selection_copy_timeout" || rOpen = "selection_release"
+            || rOpen = "selection_release_visible" || rOpen = "selection_captured")
             return false
         if (payload is Map) {
             op0 := payload.Has("payload") ? StrLower(String(payload["payload"])) : ""
@@ -1148,12 +1506,18 @@ GDHO_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
         try GDHO_Trace("gdho_close_defer_until_ready reason=" . reason)
         return true
     }
-    if (GDHO_DESKTOP_PINNED && reason != "desktop_unpin") {
+    if (GDHO_DESKTOP_PINNED && reason != "desktop_unpin" && !GDHO_IsWeakPreviewReason(reason)) {
         try GDHO_Trace("gdho_intent_drop_pinned_close reason=" . reason)
         return false
     }
     if (cur = GDHO_PHASE_CLOSED && !GDHO_VISIBLE)
         return true
+    if (FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()) {
+        rClose := StrLower(Trim(String(reason)))
+        if !(InStr(rClose, "panel_hole_close"))
+            try GDHO_Trace("gdho_close_skip_panel_open reason=" . reason)
+            return true
+    }
     g_GDHO_CurrentToken += 1
     token := g_GDHO_CurrentToken
     GDHO_SetPhase(GDHO_PHASE_CLOSING, reason)
@@ -1191,11 +1555,12 @@ GDHO_RevealIfReady(token := 0, reason := "") {
         op := g_GDHO_OpenPayload.Has("payload") ? String(g_GDHO_OpenPayload["payload"]) : ""
         pm := g_GDHO_OpenPayload.Has("positionMode") ? StrLower(String(g_GDHO_OpenPayload["positionMode"])) : ""
         r0 := g_GDHO_OpenPayload.Has("reason") ? StrLower(String(g_GDHO_OpenPayload["reason"])) : ""
-        if (InStr(r0, "selection_"))
+        if (r0 = "selection_copy" || r0 = "selection_copy_timeout" || r0 = "selection_release"
+            || r0 = "selection_release_visible" || r0 = "selection_captured")
             return false
         if (op = "text" && !GDHO_ShouldAllowTextHole())
             return false
-        if (op = "text" && pm != "relative" && !InStr(r0, "text_drag") && !InStr(r0, "preview")) {
+        if (op = "text" && pm != "relative" && !InStr(r0, "text_drag") && !InStr(r0, "preview") && !InStr(r0, "desktop_pin")) {
             CoordMode("Mouse", "Screen")
             MouseGetPos(&mx, &my)
             if (GDHO_GetDistanceToHoleCenter(mx, my) > 360) {
@@ -1220,6 +1585,11 @@ GDHO_InternalClose(reason := "", token := 0) {
     global g_GDHO_TransitionCtx
     if (token && !GDHO_IsCurrentToken(token))
         return
+    try {
+        if FuncExists("NativeDrop_StopHitTestGuard")
+            NativeDrop_StopHitTestGuard()
+    } catch {
+    }
     g_GDHO_TransitionCtx["allow"] := true
     try {
         GDHO_HideFrontend()
@@ -1252,10 +1622,12 @@ GDHO_ForceReset(reason := "") {
     GDHO_VISIBLE := false
     GDHO_ERROR := false
     GDHO_FIRST_REVEAL_DONE := false
-    try GDHO_SetClickThrough(true)
-    catch {
+    try {
+        if FuncExists("NativeDrop_StopHitTestGuard")
+            NativeDrop_StopHitTestGuard()
+    } catch {
     }
-    try GDHO_ParkOverlay()
+    try GDHO_SetClickThrough(true, "force_reset")
     catch {
     }
     g_GDHO_WaitingReadyReveal := false
@@ -1347,10 +1719,17 @@ GDHO_Init() {
         GDHO_RequestOpen(Map("reason", "init_redirect", "payload", GDHO_PAYLOAD))
         return
     }
+    if GDHO_IsDecoupled() {
+        if (GDHO_STAR_GUI || g_GDHO_CreateInFlight)
+            return
+        try GDHO_LoadPanelPositionFromIni()
+        GDHO_InitDecoupled()
+        return
+    }
     if (GDHO_GUI || g_GDHO_CreateInFlight)
         return
 
-    GDHO_Trace("init begin")
+    GDHO_Trace("init begin topology=legacy")
 
     GDHO_CreateOverlayGui()
     GDHO_WV2_CTRL := 0
@@ -1369,7 +1748,7 @@ GDHO_Init() {
 }
 
 GDHO_CreateOverlayGui() {
-    global GDHO_GUI, GDHO_DIAG_CTRL, GDHO_WM_NCHITTEST
+    global GDHO_GUI, GDHO_DIAG_CTRL, GDHO_WM_NCHITTEST, GDHO_MANUAL_PANEL_MODE
     OnMessage(GDHO_FRONTEND_POST_MSG, GDHO_OnFrontendPostMessage)
     GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
     hostW := Integer(GDHO_HOST_W), hostH := Integer(GDHO_HOST_H)
@@ -1378,19 +1757,24 @@ GDHO_CreateOverlayGui() {
     if (hostH < 220)
         hostH := 220
     x := -9999, y := -9999
-    ; WS_EX_LAYERED + WS_EX_NOACTIVATE + WS_EX_TRANSPARENT.
-    ; The host is always shown NoActivate and parked offscreen until needed.
-    GDHO_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x08080020", "Global Drag Hole Overlay")
+    ; 手动常驻模式：去掉 NOACTIVATE 与 TRANSPARENT，确保输入框可聚焦。
+    exStyle := GDHO_MANUAL_PANEL_MODE ? "+E0x00080000" : "+E0x08080020"
+    GDHO_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale " exStyle, "Global Drag Hole Overlay")
     GDHO_DIAG_CTRL := GDHO_GUI.AddText("Hidden x6 y6 w340 h44 BackgroundTrans c66FF66", "")
     ; Use dedicated chroma key to keep host transparent before first WebView paint.
     GDHO_GUI.BackColor := "010101"
     ; Click-through + no activate overlay host.
-    GDHO_GUI.Show("x" x " y" y " w" hostW " h" hostH " NoActivate")
+    showOpt := "x" x " y" y " w" hostW " h" hostH
+    if !GDHO_MANUAL_PANEL_MODE
+        showOpt .= " NoActivate"
+    GDHO_GUI.Show(showOpt)
     try GDHO_GUI.OnMessage(GDHO_WM_NCHITTEST, GDHO_OnHostNcHitTest)
     ; Keep window normal opacity; transparency comes from chroma-key immediately.
     try WinSetTransparent(255, "ahk_id " GDHO_GUI.Hwnd)
-    try WinSetTransColor("010101", "ahk_id " GDHO_GUI.Hwnd)
-    GDHO_SetClickThrough(true)
+    try GDHO_SetHostChromaTransparent(true, "create_overlay_gui_initial")
+    GDHO_SetClickThrough(GDHO_MANUAL_PANEL_MODE ? false : true, "create_overlay_gui_initial")
+    if GDHO_MANUAL_PANEL_MODE
+        try GDHO_ApplyManualPanelInteractive("create_overlay_gui_initial")
 }
 
 GDHO_DIAG_LOG(msg, elapsedMs := "") {
@@ -1416,12 +1800,35 @@ GDHO_ApplyAdaptiveAnimLevel() {
     GDHO_LAST_APPLIED_ANIM_LEVEL := targetAnim
 }
 
-GDHO_SetClickThrough(enable := true) {
-    global GDHO_GUI, GDHO_CLICKTHROUGH
+GDHO_HitTestDbgLog(msg) {
+    s := String(msg)
+    try NativeDropDiag_Log("[GDHO_HITTEST] " . s)
+    catch {
+        try OutputDebug("[GDHO_HITTEST] " . s)
+    }
+}
+
+GDHO_SetClickThrough(enable := true, reason := "") {
+    global GDHO_GUI, GDHO_CLICKTHROUGH, GDHO_MANUAL_PANEL_MODE, GDHO_DESKTOP_PINNED
+    if GDHO_IsDecoupled() {
+        GDHO_SetStarryClickThrough(true, reason)
+        return
+    }
     if !GDHO_GUI
         return
-    ex := DllCall("GetWindowLongPtr", "Ptr", GDHO_GUI.Hwnd, "Int", -20, "Ptr")
-    if (enable) {
+    r := Trim(String(reason))
+    if (r = "")
+        r := "?"
+    exBefore := DllCall("GetWindowLongPtr", "Ptr", GDHO_GUI.Hwnd, "Int", -20, "Ptr")
+    req := !!enable
+    forced := false
+    ; 手动常驻输入模式下，始终优先可交互（不穿透），避免输入框无法聚焦。
+    if (GDHO_MANUAL_PANEL_MODE && req) {
+        req := false
+        forced := true
+    }
+    ex := exBefore
+    if req {
         ex := ex | 0x20 ; WS_EX_TRANSPARENT
         GDHO_CLICKTHROUGH := true
     } else {
@@ -1429,6 +1836,20 @@ GDHO_SetClickThrough(enable := true) {
         GDHO_CLICKTHROUGH := false
     }
     DllCall("SetWindowLongPtr", "Ptr", GDHO_GUI.Hwnd, "Int", -20, "Ptr", ex, "Ptr")
+    exAfter := DllCall("GetWindowLongPtr", "Ptr", GDHO_GUI.Hwnd, "Int", -20, "Ptr")
+    bit20 := !!(exAfter & 0x20)
+    GDHO_HitTestDbgLog(
+        "SetClickThrough reason=" . r
+        . " reqTransparent=" . (enable ? "1" : "0")
+        . " appliedTransparent=" . (req ? "1" : "0")
+        . " manualForcedOff=" . (forced ? "1" : "0")
+        . " ex_before=0x" . Format("{:X}", exBefore)
+        . " ex_after=0x" . Format("{:X}", exAfter)
+        . " bit_WS_EX_TRANSPARENT=" . (bit20 ? "1" : "0")
+        . " GDHO_CLICKTHROUGH=" . (GDHO_CLICKTHROUGH ? "1" : "0")
+        . " manualMode=" . (GDHO_MANUAL_PANEL_MODE ? "1" : "0")
+        . " desktopPinned=" . (GDHO_DESKTOP_PINNED ? "1" : "0")
+    )
 }
 
 GDHO_SetSleepMode(enable := true) {
@@ -1440,14 +1861,16 @@ GDHO_SetSleepMode(enable := true) {
 GDHO_ParkOverlay() {
     global GDHO_GUI, GDHO_HOST_W, GDHO_HOST_H, GDHO_PARK_X, GDHO_PARK_Y
     global GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_INTERACTIVE
-    if !GDHO_GUI
+    gui := GDHO_IsDecoupled() ? GDHO_GetStarryGui() : GDHO_GUI
+    if !IsObject(gui)
         return
     GDHO_INTERACTIVE := false
     GDHO_LAST_HOST_X := Integer(GDHO_PARK_X)
     GDHO_LAST_HOST_Y := Integer(GDHO_PARK_Y)
-    GDHO_SetClickThrough(true)
-    try WinSetAlwaysOnTop(0, "ahk_id " GDHO_GUI.Hwnd)
-    try GDHO_GUI.Move(Integer(GDHO_PARK_X), Integer(GDHO_PARK_Y), Integer(GDHO_HOST_W), Integer(GDHO_HOST_H))
+    GDHO_SetClickThrough(true, "park_overlay")
+    try gui.Move(Integer(GDHO_PARK_X), Integer(GDHO_PARK_Y), Integer(GDHO_HOST_W), Integer(GDHO_HOST_H))
+    if GDHO_IsDecoupled()
+        GDHO_ParkPanel()
 }
 
 GDHO_SetProximity(prox) {
@@ -1564,15 +1987,86 @@ GDHO_OnWebMessage(sender, args) {
     if !(msg is Map)
         return
     typ := msg.Has("type") ? String(msg["type"]) : ""
+    ; 诊断：前端面板穿透 / OLE 穿透（与宿主 WS_EX_TRANSPARENT 无关时也能导致“点不到”）
+    if (typ = "gdho_dbg_panel_pointer") {
+        pas := msg.Has("passthrough") ? (msg["passthrough"] ? "1" : "0") : "?"
+        pe := msg.Has("pointerEvents") ? String(msg["pointerEvents"]) : "?"
+        GDHO_HitTestDbgLog("webview panelPassthroughCheck=" . pas . " manualPanel.pointerEvents=" . pe . " hint=若勾选且为none则事件被CSS吃掉")
+        return
+    }
+    if (typ = "gdho_dbg_ole_passthrough") {
+        on := msg.Has("on") ? (msg["on"] ? "1" : "0") : "?"
+        GDHO_HitTestDbgLog("webview ole_passthrough=" . on . " hint=ole-passthrough 时 #root * pointer-events:none")
+        return
+    }
+    ; Host-driven Hit-Test Guard: polled rect report (from ExecuteScript-triggered postMessage)
+    if (typ = "HITTEST_RECTS") {
+        try {
+            if FuncExists("NativeDrop_HandlePanelRectsMessage")
+                NativeDrop_HandlePanelRectsMessage(args.TryGetWebMessageAsString())
+        } catch {
+            try {
+                if FuncExists("NativeDrop_HandlePanelRectsMessage")
+                    NativeDrop_HandlePanelRectsMessage(args.WebMessageAsJson)
+            } catch {
+            }
+        }
+        return
+    }
     if (typ = "hole_drop_ack") {
         GDHO_DROP_ACK_TICK := A_TickCount
         GDHO_Trace("webmsg hole_drop_ack")
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'ack:first_frame' })")
         return
     }
+    if (typ = "hole_click") {
+        if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
+            CoordMode("Mouse", "Screen")
+            MouseGetPos(&mx, &my)
+            if FuncExists("GDHO_TryCommitTextHoleOnClick")
+                GDHO_TryCommitTextHoleOnClick(mx, my)
+        }
+        return
+    }
+    if (typ = "hole_expand_complete") {
+        if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
+            global g_GDHO_TextHoleAwaitingExpand, g_GDHO_PostSuckTimerArmed, g_GDHO_PostSuckPresentDone, GDHO_SESSION_TEXT
+            if g_GDHO_PostSuckPresentDone {
+                try NativeDropDiag_Log("[PostSuck] hole_expand_complete_skip reason=present_done")
+                return
+            }
+            allowPresent := (FuncExists("GDHO_TextHolePresentAllowed") && GDHO_TextHolePresentAllowed())
+            if !allowPresent {
+                tForce := ""
+                if FuncExists("GDHO_GetTextHoleCapturedText")
+                    try tForce := Trim(String(GDHO_GetTextHoleCapturedText()))
+                if (tForce = "")
+                    try tForce := Trim(String(GDHO_SESSION_TEXT))
+                if (tForce = "") && FuncExists("SelectionSense_GetLastSelectedText")
+                    try tForce := Trim(String(SelectionSense_GetLastSelectedText()))
+                if (tForce = "") {
+                    try NativeDropDiag_Log("[PostSuck] hole_expand_complete_ignored reason=stale_or_not_awaiting_and_no_text")
+                    return
+                }
+                try NativeDropDiag_Log("[PostSuck] hole_expand_complete_force_present len=" . StrLen(tForce))
+                try GDHO_SESSION_TEXT := tForce
+                if FuncExists("GDHO_StampTextHoleCapturedText")
+                    try GDHO_StampTextHoleCapturedText(tForce)
+            }
+            try SetTimer(GDHO_PostSuckPanelTimer, 0)
+            try SetTimer(GDHO_TextHoleExpandFallback, 0)
+            g_GDHO_PostSuckTimerArmed := false
+            try NativeDropDiag_Log("[PostSuck] hole_expand_complete")
+            GDHO_PresentPanelAfterTextHoleDrop("", "", "", "hole_expand_complete")
+        }
+        return
+    }
     if (typ = "hole_web_drop") {
-        if GDHO_CLICKTHROUGH
+        if GDHO_IsDecoupled() {
+            try NativeDropDiag_Log("selection webview_drop_while_decoupled")
+        } else if GDHO_CLICKTHROUGH {
             try NativeDropDiag_Log("selection webview_drop_while_clickthrough")
+        }
         wctx := Map()
         if (msg.Has("richPayload") && (msg["richPayload"] is Map)) {
             wctx["richPayload"] := msg["richPayload"]
@@ -1593,6 +2087,19 @@ GDHO_OnWebMessage(sender, args) {
         GDHO_CancelReleaseCoalesceTimer()
         GDHO_IS_SUCKING := false
         GDHO_EXPANDED_HOLD := false
+        if GDHO_IsDecoupled() {
+            if (FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()) {
+                if FuncExists("GDHO_HideStarryAfterPanel")
+                    try GDHO_HideStarryAfterPanel("starry_hole_close_keep_panel")
+                return
+            }
+            if (FuncExists("GDHO_IsPostSuckProtected") && GDHO_IsPostSuckProtected()) {
+                if FuncExists("GDHO_HideStarryAfterPanel")
+                    try GDHO_HideStarryAfterPanel("starry_hole_close_keep_panel")
+                return
+            }
+            try GDHO_HidePanel("starry_hole_close")
+        }
         GDHO_RequestClose("frontend_hole_close")
         try GDHO_ResetSession()
         try GDHO_ArmPolling()
@@ -1694,7 +2201,8 @@ GDHO_OnNavigationCompleted(sender, args) {
         GDHO_NAV_FAIL_COUNT := 0
         ; Re-apply transparency after document init to avoid occasional white/black flash.
         try GDHO_WV2_CTRL.DefaultBackgroundColor := 0x00000000
-        try WinSetTransColor("010101", "ahk_id " GDHO_GUI.Hwnd)
+        if !GDHO_MANUAL_PANEL_MODE
+            try GDHO_SetHostChromaTransparent(true, "nav_completed")
         if !GDHO_PREWARM_DONE {
             GDHO_PREWARM_DONE := true
             ; Warm-up strategy: render one full state offscreen, then hide.
@@ -1706,8 +2214,19 @@ GDHO_OnNavigationCompleted(sender, args) {
             SetTimer((*) => GDHO_QueueFrontendJs("window.HoleOverlay?.show('" p "')", g_GDHO_CurrentToken), -180)
         }
         GDHO_RevealIfReady(g_GDHO_CurrentToken, "nav_completed")
-        if (GDHO_IsTextDragSession() || g_GDHO_TextOlePassthrough)
+        if GDHO_MANUAL_PANEL_MODE {
+            try GDHO_ApplyManualPanelInteractive("nav_completed_manual")
+        } else if (GDHO_IsTextDragSession() || g_GDHO_TextOlePassthrough) {
             try GDHO_SetWebOlePassthrough(true)
+        }
+        ; Host-driven Hit-Test Guard: legacy single-window only.
+        if !GDHO_IsDecoupled() {
+            try {
+                if FuncExists("NativeDrop_StartHitTestGuard")
+                    NativeDrop_StartHitTestGuard()
+            } catch {
+            }
+        }
         return
     }
 
@@ -1721,6 +2240,10 @@ GDHO_OnNavigationCompleted(sender, args) {
 
 GDHO_ResizeToVirtualScreen() {
     global GDHO_GUI, GDHO_WV2_CTRL, GDHO_HOST_W, GDHO_HOST_H
+    if GDHO_IsDecoupled() {
+        GDHO_ResizeStarryHost()
+        return
+    }
     if !(GDHO_GUI && GDHO_WV2_CTRL)
         return
     try GDHO_GUI.GetPos(&gx, &gy)
@@ -1746,6 +2269,12 @@ GDHO_PrewarmOffscreen(*) {
 
 GDHO_RunJS(js) {
     global GDHO_WV2, GDHO_READY
+    s := String(js)
+    if GDHO_IsDecoupled() {
+        if InStr(s, "HolePanel")
+            return GDHO_RunPanelJS(s)
+        return GDHO_RunStarryJS(s)
+    }
     if !(GDHO_WV2 && GDHO_READY)
         return false
     try {
@@ -1810,54 +2339,93 @@ GDHO_OnFrontendPostMessage(wParam, lParam, msg, hwnd) {
 
 GDHO_ShowOverlay() {
     global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_READY, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_HOST_W, GDHO_HOST_H, GDHO_FIRST_REVEAL_DONE, GDHO_INTERACTIVE, GDHO_PAYLOAD
-    global g_GDHO_CurrentToken
-    global GDHO_CX, GDHO_CY
+    global g_GDHO_CurrentToken, g_GDHO_OpenPayload, g_GDHO_WaitingReadyReveal
+    global GDHO_CX, GDHO_CY, GDHO_MANUAL_PANEL_MODE
+    gui := GDHO_IsDecoupled() ? GDHO_GetStarryGui() : GDHO_GUI
     if !GDHO_InternalCallAllowed() {
         try GDHO_Trace("gdho_redirect_show_overlay")
         GDHO_RequestOpen(Map("reason", "show_overlay_redirect", "payload", GDHO_PAYLOAD))
         return
     }
-    if !GDHO_GUI
+    if !IsObject(gui)
         return
     ; Avoid first-frame black flash: don't reveal host before WebView content is ready.
-    if !GDHO_READY
+    if !GDHO_READY {
+        if (g_GDHO_WaitingReadyReveal && g_GDHO_OpenPayload is Map) {
+            r0 := g_GDHO_OpenPayload.Has("reason") ? StrLower(String(g_GDHO_OpenPayload["reason"])) : ""
+            if (InStr(r0, "preview") || InStr(r0, "select")) {
+                try {
+                    showOpt := "x" Integer(GDHO_LAST_HOST_X) " y" Integer(GDHO_LAST_HOST_Y) " w" Integer(GDHO_HOST_W) " h" Integer(GDHO_HOST_H) . " NoActivate"
+                    gui.Show(showOpt)
+                    GDHO_SetStarryClickThrough(true, "show_overlay_wait_ready")
+                } catch {
+                }
+            }
+        }
         return
+    }
     if !GDHO_FIRST_REVEAL_DONE {
         GDHO_FIRST_REVEAL_DONE := true
         SetTimer((*) => GDHO_RevealIfReady(g_GDHO_CurrentToken, "first_reveal"), -16)
         return
     }
-    if (GDHO_IsTextDragSession() || g_GDHO_TextOlePassthrough)
+    if GDHO_IsDecoupled() {
+        if GDHO_ShouldShowDecoupledPanel("show_overlay_decoupled_drag_only")
+            GDHO_ShowPanel("show_overlay_decoupled_drag_only")
+    } else if GDHO_MANUAL_PANEL_MODE {
+        try GDHO_ApplyManualPanelInteractive("show_overlay_manual")
+    } else if (GDHO_IsTextDragSession() || g_GDHO_TextOlePassthrough) {
         try GDHO_SetWebOlePassthrough(true)
+    }
     if !GDHO_VISIBLE {
         GDHO_SetSleepMode(false)
-        try GDHO_GUI.Show("x" Integer(GDHO_LAST_HOST_X) " y" Integer(GDHO_LAST_HOST_Y) " w" Integer(GDHO_HOST_W) " h" Integer(GDHO_HOST_H) " NoActivate")
+        showOpt := "x" Integer(GDHO_LAST_HOST_X) " y" Integer(GDHO_LAST_HOST_Y) " w" Integer(GDHO_HOST_W) " h" Integer(GDHO_HOST_H)
+        if !GDHO_MANUAL_PANEL_MODE && !GDHO_IsDecoupled()
+            showOpt .= " NoActivate"
+        if GDHO_IsDecoupled()
+            showOpt .= " NoActivate"
+        try gui.Show(showOpt)
         try GDHO_ApplyHostZForDragSession()
         GDHO_CX := Integer(GDHO_LAST_HOST_X) + 180
         GDHO_CY := Integer(GDHO_LAST_HOST_Y) + 159
-        try WinSetTransColor("010101", "ahk_id " GDHO_GUI.Hwnd)
-        ; Stay transparent until drag confidence/proximity promotes interaction.
-        if (!GDHO_IsTextDragSession() && (g_GDHO_FileDropCapture || GDHO_IsFileDragSession())) {
+        try GDHO_SetHostChromaTransparent(true, "show_overlay")
+        if GDHO_IsDecoupled() {
+            GDHO_SetStarryClickThrough(true, "show_overlay_decoupled")
+            GDHO_INTERACTIVE := false
+            if GDHO_IsTextDragSession() {
+                try GDHO_SetWebOlePassthrough(true)
+                try GDHO_RaiseTextDragOverlay()
+            } else {
+                GDHO_KeepBelowToolbar()
+            }
+        } else if (!GDHO_IsTextDragSession() && (g_GDHO_FileDropCapture || GDHO_IsFileDragSession())) {
             GDHO_INTERACTIVE := true
-            GDHO_SetClickThrough(false)
-            try WinSetAlwaysOnTop(1, "ahk_id " GDHO_GUI.Hwnd)
+            GDHO_SetClickThrough(false, "show_overlay_file_capture")
+            try WinSetAlwaysOnTop(1, "ahk_id " gui.Hwnd)
             if GDHO_WV2_CTRL
                 try GDHO_WV2_CTRL.AllowExternalDrop := true
         } else {
             GDHO_INTERACTIVE := false
-            GDHO_SetClickThrough(true)
-            try GDHO_ApplyHostChildOlePassthrough(true)
+            if GDHO_MANUAL_PANEL_MODE {
+                try GDHO_ApplyManualPanelInteractive("show_overlay_manual_else")
+                try GDHO_ApplyHostChildOlePassthrough(false)
+            } else {
+                GDHO_SetClickThrough(true, "show_overlay_default_else")
+                try GDHO_ApplyHostChildOlePassthrough(true)
+            }
             if GDHO_IsTextDragSession() {
-                try WinSetAlwaysOnTop(1, "ahk_id " GDHO_GUI.Hwnd)
+                try WinSetAlwaysOnTop(1, "ahk_id " gui.Hwnd)
             } else {
                 GDHO_KeepBelowToolbar()
             }
         }
-        if GDHO_IsTextDragSession() {
+        if !GDHO_IsDecoupled() && GDHO_IsTextDragSession() {
             try GDHO_EnsureTextDragPassthrough()
             try GDHO_RaiseTextDragOverlay()
         }
         GDHO_VISIBLE := true
+        if GDHO_IsDecoupled()
+            GDHO_RaisePanelAboveStarry()
         try WebView2_NotifyShown(GDHO_WV2)
     }
 }
@@ -2007,6 +2575,8 @@ GDHO_MoveHostToHole(holeX, holeY) {
     GDHO_CX := hx + 180
     GDHO_CY := hy + 159
     try GDHO_GUI.Move(hx, hy, hostW, hostH)
+    if GDHO_IsDecoupled()
+        try GDHO_SyncPanelPositionToStarry()
 }
 
 GDHO_GlobalPointToHostLocal(globalX, globalY, &localX, &localY) {
@@ -2024,12 +2594,17 @@ GDHO_GlobalPointToHostLocal(globalX, globalY, &localX, &localY) {
 
 GDHO_HideOverlay() {
     global GDHO_GUI, GDHO_VISIBLE, GDHO_WV2, GDHO_LAST_HIDE_OVERLAY_TICK, g_GDHO_WaitingReadyReveal
+    if (FuncExists("GDHO_IsPostSuckProtected") && GDHO_IsPostSuckProtected()) {
+        try GDHO_Trace("hide_overlay_skip post_suck_protected")
+        return
+    }
     if !GDHO_InternalCallAllowed() {
         try GDHO_Trace("gdho_redirect_hide_overlay")
         GDHO_RequestClose("hide_overlay_redirect")
         return
     }
-    if !GDHO_GUI
+    gui := GDHO_IsDecoupled() ? GDHO_GetStarryGui() : GDHO_GUI
+    if !IsObject(gui)
         return
     nowTick := A_TickCount
     if (GDHO_LAST_HIDE_OVERLAY_TICK && (nowTick - GDHO_LAST_HIDE_OVERLAY_TICK < 120))
@@ -2041,6 +2616,11 @@ GDHO_HideOverlay() {
     GDHO_SetProximity(0.0)
     GDHO_SetSleepMode(true)
     try GDHO_ParkOverlay()
+    if GDHO_IsDecoupled() {
+        GDHO_HidePanel("hide_overlay")
+        if FuncExists("GDHO_ClearTextDragHandoff")
+            GDHO_ClearTextDragHandoff()
+    }
     GDHO_VISIBLE := false
     g_GDHO_WaitingReadyReveal := false
 }
@@ -2096,6 +2676,8 @@ GDHO_DockHostWhenHidden() {
     GDHO_LAST_HOST_X := x
     GDHO_LAST_HOST_Y := y
     try GDHO_GUI.Move(x, y, hostW, hostH)
+    if GDHO_IsDecoupled()
+        try GDHO_SyncPanelPositionToStarry()
 }
 
 GDHO_PushThemeToWeb() {
@@ -2131,6 +2713,7 @@ GDHO_Show(payload := "file", x := "", y := "") {
     payloadMap := 0
     if (payload is Map) {
         payloadMap := payload
+        try GDHO_StampOpenPayload(payloadMap)
         if payloadMap.Has("screenX")
             x := payloadMap["screenX"]
         if payloadMap.Has("screenY")
@@ -2179,13 +2762,13 @@ GDHO_Show(payload := "file", x := "", y := "") {
         GDHO_QueueFrontendJs("window.HoleOverlay?.show('" p "', { forceAccept: true })", g_GDHO_CurrentToken)
     GDHO_QueueFrontendJs("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })", g_GDHO_CurrentToken)
     if weakJs
-        GDHO_QueueFrontendJs("window.HoleOverlay?.setProximity?.(0.06)", g_GDHO_CurrentToken)
+        GDHO_QueueFrontendJs("window.HoleOverlay?.setProximity?.(0.34)", g_GDHO_CurrentToken)
 }
 
 GDHO_Update(payload := "file", x := "", y := "") {
     global GDHO_LAST_UPDATE_TICK, GDHO_UPDATE_MIN_INTERVAL_MS, GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_POSITION_MODE
     global GDHO_LAST_X, GDHO_LAST_Y, GDHO_JUMP_LERP_THRESHOLD_PX, GDHO_GUI, GDHO_CLICKTHROUGH, GDHO_HITTEST_CAPTURED
-    global GDHO_LAST_DIST_TO_HOLE, GDHO_SUCK_RADIUS, GDHO_IS_SUCKING, NativeDropSessionActive, GDHO_ACTIVE
+    global GDHO_LAST_DIST_TO_HOLE, GDHO_SUCK_RADIUS, GDHO_IS_SUCKING, NativeDropSessionActive, GDHO_ACTIVE, GDHO_MANUAL_PANEL_MODE
     nowTick := A_TickCount
     if (NativeDropSessionActive || GDHO_ACTIVE)
         GDHO_EnsureDragSessionInteractive()
@@ -2240,24 +2823,38 @@ GDHO_Update(payload := "file", x := "", y := "") {
         }
     }
     GDHO_SetProximity(prox)
-    if (x != "" && y != "" && GDHO_GUI) {
-        if GDHO_IsTextDragSession() {
+    if (x != "" && y != "") {
+        guiUp := GDHO_IsDecoupled() ? GDHO_GetStarryGui() : GDHO_GUI
+        if !IsObject(guiUp)
+            guiUp := 0
+    } else {
+        guiUp := 0
+    }
+    if guiUp {
+        if GDHO_IsDecoupled() {
+            if (GDHO_IsFileDragSession() && GDHO_ShouldShowDecoupledPanel("update_decoupled_drag_only")) {
+                GDHO_ShowPanel("update_decoupled_drag_only")
+                GDHO_SyncPanelPositionToStarry()
+            }
+            if GDHO_IsTextDragSession()
+                try GDHO_SetWebOlePassthrough(true)
+        } else if GDHO_MANUAL_PANEL_MODE {
+            try GDHO_ApplyManualPanelInteractive("update_manual_mode")
+            GDHO_HITTEST_CAPTURED := true
+        } else if GDHO_IsTextDragSession() {
             GDHO_EnsureTextDragPassthrough()
         } else if (g_GDHO_FileDropCapture || GDHO_IsFileDragSession()) {
             if GDHO_CLICKTHROUGH {
-                try WinSetExStyle("-0x20", "ahk_id " GDHO_GUI.Hwnd)
-                GDHO_CLICKTHROUGH := false
+                try GDHO_SetClickThrough(false, "update_file_drag_solid")
                 GDHO_HITTEST_CAPTURED := true
             }
         } else {
             inInner := (distToCenter <= Float(GDHO_INNER_RADIUS))
             if (inInner && GDHO_CLICKTHROUGH) {
-                try WinSetExStyle("-0x20", "ahk_id " GDHO_GUI.Hwnd)
-                GDHO_CLICKTHROUGH := false
+                try GDHO_SetClickThrough(false, "update_inner_radius_solid")
                 GDHO_HITTEST_CAPTURED := true
             } else if (!inInner && !GDHO_CLICKTHROUGH) {
-                try WinSetExStyle("+0x20", "ahk_id " GDHO_GUI.Hwnd)
-                GDHO_CLICKTHROUGH := true
+                try GDHO_SetClickThrough(true, "update_leave_inner_transparent")
                 GDHO_HITTEST_CAPTURED := false
             }
         }
@@ -2297,8 +2894,10 @@ GDHO_ExecuteDropCommand(payload := "file") {
             try txt := Trim(String(A_Clipboard))
         }
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:" (txt != "" ? "captured" : "empty") "' })")
-        if (txt != "")
+        if (txt != "") {
+            GDHO_SESSION_TEXT := txt
             GDHO_RoutePayload("text", txt)
+        }
         GDHO_SESSION_TEXT := ""
         return
     }
@@ -2379,6 +2978,11 @@ GDHO_Stop() {
     GDHO_DisarmPolling("stop")
     g_GDHO_CurrentToken += 1
     GDHO_SetPhase(GDHO_PHASE_CLOSING, "stop")
+    try {
+        if FuncExists("NativeDrop_StopHitTestGuard")
+            NativeDrop_StopHitTestGuard()
+    } catch {
+    }
     g_GDHO_TransitionCtx["allow"] := true
     try {
         GDHO_HideFrontend()
@@ -2478,9 +3082,35 @@ GDHO_HandleDropAction() {
     try NativeDropDiag_Log("[Drop_Sent] target=hole_starry payload=" . GDHO_PAYLOAD)
 }
 
+GDHO_ShouldBlockDecoupledPhysicalTextSuck() {
+    if !(IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY)
+        return false
+    try {
+        if FuncExists("GDHO_IsTextSelectionPreviewReady") && GDHO_IsTextSelectionPreviewReady()
+            return true
+    } catch {
+    }
+    try {
+        if FuncExists("SelectionSense_IsSelectionHolePreviewActive") && SelectionSense_IsSelectionHolePreviewActive()
+            return true
+    } catch {
+    }
+    try {
+        if FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()
+            return true
+    } catch {
+    }
+    global g_GDHO_TextHoleCommitDone, g_GDHO_TextHoleAwaitingExpand
+    if (g_GDHO_TextHoleAwaitingExpand && !(FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()))
+        return true
+    return !!g_GDHO_TextHoleCommitDone
+}
+
 GDHO_ForceSuckAction() {
     global GDHO_PAYLOAD, GDHO_DROP_LOCK, GDHO_SESSION_TEXT
     global GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD, GDHO_GUI, GDHO_CLICKTHROUGH, GDHO_HITTEST_CAPTURED, GDHO_SESSION_CAPTURE_TICKET
+    if (GDHO_PAYLOAD = "text" && FuncExists("GDHO_ShouldBlockDecoupledPhysicalTextSuck") && GDHO_ShouldBlockDecoupledPhysicalTextSuck())
+        return
     if (GDHO_IS_SUCKING)
         return
     GDHO_IS_SUCKING := true
@@ -2494,6 +3124,8 @@ GDHO_ForceSuckAction() {
         GDHO_SESSION_CAPTURE_TICKET += 1
         ticket := GDHO_SESSION_CAPTURE_TICKET
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'text:pending' })")
+        if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY)
+            GDHO_ArmPostSuckPanelTimer("force_suck_text")
         SetTimer((*) => GDHO_BeginTextSuckCapture(ticket), -140)
     } else {
         GDHO_SetFileDropCapture(true)
@@ -2542,10 +3174,15 @@ GDHO_CompleteSessionTextCapture(ticket, *) {
 }
 
 GDHO_FinishSuckSession(*) {
-    global GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD
+    global GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD, GDHO_SESSION_TEXT, GDHO_PAYLOAD
     GDHO_IS_SUCKING := false
     GDHO_EXPANDED_HOLD := false
     try GDHO_SetFileDropCapture(false)
+    if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY && GDHO_PAYLOAD = "text") {
+        if !(FuncExists("GDHO_IsPostSuckProtected") && GDHO_IsPostSuckProtected())
+            GDHO_ArmPostSuckPanelTimer("finish_suck_fallback")
+        return
+    }
     GDHO_ResetSession()
 }
 
@@ -2553,6 +3190,8 @@ GDHO_ResetSession(*) {
     global GDHO_ACTIVE, NativeDropSessionActive, GDHO_DROP_LOCK, GDHO_HITTEST_CAPTURED
     global GDHO_RELEASE_PENDING, GDHO_RELEASE_DEADLINE_TICK, GDHO_SAW_DRAG_CURSOR, GDHO_DRAG_CURSOR_STREAK
     global GDHO_SESSION_TEXT, GDHO_SUPPRESS_UNTIL_RELEASE, GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD
+    if FuncExists("GDHO_ClearTextDragHandoff")
+        GDHO_ClearTextDragHandoff(!GDHO_IsPostSuckProtected())
     if (GDHO_IS_SUCKING)
         return
     try GDHO_SetFileDropCapture(false)
@@ -2602,8 +3241,14 @@ GDHO_PinToDesktop(payload := "text") {
     global GDHO_DESKTOP_PINNED, GDHO_PIN_PAYLOAD, GDHO_ACTIVE, GDHO_SCREEN_X, GDHO_SCREEN_Y
     p := (payload = "file") ? "file" : "text"
     GDHO_PIN_PAYLOAD := p
-    GDHO_DESKTOP_PINNED := true
     GDHO_ACTIVE := false
+    if GDHO_IsDecoupled() {
+        GDHO_DESKTOP_PINNED := false
+        try GDHO_HidePanel("desktop_pin_decoupled")
+        GDHO_RequestOpen(Map("reason", "hole_mode_starry", "payload", p, "positionMode", "fixed", "screenX", GDHO_SCREEN_X, "screenY", GDHO_SCREEN_Y))
+        return
+    }
+    GDHO_DESKTOP_PINNED := true
     GDHO_RequestOpen(Map("reason", "desktop_pin", "payload", p, "positionMode", "fixed", "screenX", GDHO_SCREEN_X, "screenY", GDHO_SCREEN_Y))
 }
 
@@ -2665,7 +3310,12 @@ GDHO_PollDrag(*) {
     global GDHO_RELEASE_PENDING, GDHO_RELEASE_DEADLINE_TICK, GDHO_RELEASE_SETTLE_MS
     global GDHO_LAST_CURSOR_NAME, GDHO_SAW_DRAG_CURSOR, GDHO_STRICT_MODE, GDHO_DRAG_CURSOR_STREAK
     global GDHO_DROP_LOCK, GDHO_IS_SUCKING, GDHO_EXPANDED_HOLD, GDHO_LAST_DIST_TO_HOLE, GDHO_INNER_RADIUS, GDHO_SUCK_RADIUS
-    global NativeDropSessionPayload
+    global NativeDropSessionPayload, GDHO_DESKTOP_PINNED, GDHO_MANUAL_PANEL_MODE, GDHO_GUI, GDHO_CLICKTHROUGH
+    if GDHO_MANUAL_PANEL_MODE {
+        ; 常驻输入模式保持可交互，但仍允许拖拽会话逻辑继续运行（动效/吸附/drop）。
+        if GDHO_GUI && GDHO_CLICKTHROUGH
+            GDHO_SetClickThrough(false, "poll_manual_ct_cleanup")
+    }
     if GDHO_POLL_BUSY
         return
     GDHO_POLL_BUSY := true
@@ -2679,6 +3329,12 @@ GDHO_PollDrag(*) {
         MouseGetPos(&mx, &my, &hwnd)
         isOwn := GDHO_IsOwnWindowHwnd(hwnd)
         isOwnProc := GDHO_IsOwnProcessHwnd(hwnd)
+        ; 手动输入模式下，鼠标已命中自身窗口（含输入框/HUD）时，
+        ; 必须让 WebView 交互优先，避免被拖拽状态机抢占。
+        if (GDHO_MANUAL_PANEL_MODE && isOwn) {
+            GDHO_ACTIVE := false
+            return
+        }
         cName := ""
         try cName := String(A_Cursor)
         if (cName != "") {
@@ -2717,18 +3373,22 @@ GDHO_PollDrag(*) {
             if NativeDropSessionActive {
                 isText := (NativeDropSessionPayload = "text" || GDHO_PAYLOAD = "text")
                 if (isText && inSuckZone) {
-                    try NativeDropDiag_Log("[Physical_Suck_Release] dist=" . Format("{:.1f}", distNow) . " session=bridge")
-                    GDHO_PAYLOAD := "text"
-                    GDHO_ForceSuckAction()
-                    SetTimer(GDHO_FinishSuckSession, -2000)
+                    if !(FuncExists("GDHO_ShouldBlockDecoupledPhysicalTextSuck") && GDHO_ShouldBlockDecoupledPhysicalTextSuck()) {
+                        try NativeDropDiag_Log("[Physical_Suck_Release] dist=" . Format("{:.1f}", distNow) . " session=bridge")
+                        GDHO_PAYLOAD := "text"
+                        GDHO_ForceSuckAction()
+                        SetTimer(GDHO_FinishSuckSession, -2000)
+                    }
                 }
                 GDHO_SubmitReleaseSignal("physical", Map("mx", mx, "my", my, "inSuckZone", inSuckZone))
                 return
             }
             if ((GDHO_ACTIVE || NativeDropSessionActive) && inSuckZone) {
-                try NativeDropDiag_Log("[Physical_Suck_Release] dist=" . Format("{:.1f}", distNow) . " lastDist=" . Format("{:.1f}", GDHO_LAST_DIST_TO_HOLE))
-                GDHO_ForceSuckAction()
-                SetTimer(GDHO_FinishSuckSession, -2000)
+                if !(FuncExists("GDHO_ShouldBlockDecoupledPhysicalTextSuck") && GDHO_ShouldBlockDecoupledPhysicalTextSuck()) {
+                    try NativeDropDiag_Log("[Physical_Suck_Release] dist=" . Format("{:.1f}", distNow) . " lastDist=" . Format("{:.1f}", GDHO_LAST_DIST_TO_HOLE))
+                    GDHO_ForceSuckAction()
+                    SetTimer(GDHO_FinishSuckSession, -2000)
+                }
                 return
             }
             if (GDHO_ACTIVE || NativeDropSessionActive) {
@@ -2755,6 +3415,10 @@ GDHO_PollDrag(*) {
         textDragSession := ((GDHO_ACTIVE || NativeDropSessionActive)
             && (GDHO_PAYLOAD = "text" || NativeDropSessionPayload = "text"))
         if isOwn && !fileDragSession && !textDragSession {
+            if GDHO_MANUAL_PANEL_MODE {
+                ; 常驻手动输入模式：点击自身窗口（含输入框）不再触发关闭。
+                return
+            }
             GDHO_SUPPRESS_UNTIL_RELEASE := true
             GDHO_ACTIVE := false
             GDHO_RequestClose("own_window_guard")
@@ -2762,6 +3426,10 @@ GDHO_PollDrag(*) {
             return
         }
         if isOwnProc && !fileDragSession && !textDragSession {
+            if GDHO_MANUAL_PANEL_MODE {
+                ; 常驻手动输入模式：允许宿主进程内交互，不抢关闭。
+                return
+            }
             GDHO_SUPPRESS_UNTIL_RELEASE := true
             GDHO_ACTIVE := false
             GDHO_RequestClose("own_process_guard")
@@ -2878,8 +3546,16 @@ GDHO_PollDrag(*) {
 GDHO_ApplyDropHitTestByProximity(p) {
     global GDHO_GUI, GDHO_ACTIVE, GDHO_CLICKTHROUGH, GDHO_DRAG_CONFIDENCE, GDHO_INTERACTIVE, NativeDropSessionActive
     global GDHO_PAYLOAD, NativeDropSessionPayload
+    global GDHO_MANUAL_PANEL_MODE, GDHO_DESKTOP_PINNED
     if !GDHO_GUI
         return
+    if GDHO_MANUAL_PANEL_MODE {
+        if GDHO_CLICKTHROUGH {
+            try GDHO_SetClickThrough(false, "proximity_manual_fix_ct")
+        }
+        GDHO_INTERACTIVE := true
+        return
+    }
     if GDHO_IsTextDragSession() {
         GDHO_EnsureTextDragPassthrough()
         return
@@ -2890,22 +3566,19 @@ GDHO_ApplyDropHitTestByProximity(p) {
     needProx := isFileDrag ? 0.42 : 0.88
     needConf := isFileDrag ? 0.55 : 0.85
     if (sessionActive && GDHO_DRAG_CONFIDENCE >= needConf && prox >= needProx) {
-        try WinSetExStyle("-0x20", "ahk_id " GDHO_GUI.Hwnd)
-        GDHO_CLICKTHROUGH := false
+        try GDHO_SetClickThrough(false, "proximity_high_conf_solid")
         GDHO_INTERACTIVE := true
         return
     }
     if isFileDrag && sessionActive {
-        try WinSetExStyle("-0x20", "ahk_id " GDHO_GUI.Hwnd)
-        GDHO_CLICKTHROUGH := false
+        try GDHO_SetClickThrough(false, "proximity_file_drag_solid")
         GDHO_INTERACTIVE := true
         return
     }
     if (g_GDHO_FileDropCapture || isFileDrag)
         return
     if (!sessionActive || prox < 0.82 || GDHO_DRAG_CONFIDENCE < 0.85) {
-        try WinSetExStyle("+0x20", "ahk_id " GDHO_GUI.Hwnd)
-        GDHO_CLICKTHROUGH := true
+        try GDHO_SetClickThrough(true, "proximity_low_conf_transparent")
         GDHO_INTERACTIVE := false
     }
 }
@@ -3171,6 +3844,3 @@ GDHO_TryHandleExplorerDrop() {
         try FloatingToolbar_HandleDroppedFiles(files)
     }
 }
-
-
-

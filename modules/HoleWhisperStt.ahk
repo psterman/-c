@@ -69,11 +69,14 @@ HoleWhisper_JsonStr(s) {
 }
 
 HoleWhisper_UpdateHoleUI(text, status := "ready") {
-    if !FuncExists("GDHO_RunJS")
-        return
     t := HoleWhisper_JsonStr(text)
     st := HoleWhisper_JsonStr(status)
-    try GDHO_RunJS("window.HoleOverlay?.setTranscript?.(" . t . "," . st . ")")
+    js := "window.HoleOverlay?.setTranscript?.(" . t . "," . st . ")"
+    if (FuncExists("GDHO_RunStarryJS")) {
+        try GDHO_RunStarryJS(js)
+    } else if FuncExists("GDHO_RunJS") {
+        try GDHO_RunJS(js)
+    }
 }
 
 HoleWhisper_TryRouteAudioFiles(filePaths) {

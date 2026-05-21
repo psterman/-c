@@ -24,6 +24,7 @@ const (
 	wsExLayered              = 0x00080000
 	wsExToolWindow           = 0x00000080
 	wsExTopmost              = 0x00000008
+	wsExNoActivate           = 0x08000000
 	wsPopup                  = 0x80000000
 	cfUnicodeText            = 13
 	cfHDrop                  = 15
@@ -170,6 +171,7 @@ var (
 	procDispatchMessageW           = modUser32.NewProc("DispatchMessageW")
 	procShowWindow                 = modUser32.NewProc("ShowWindow")
 	procSetLayeredWindowAttributes = modUser32.NewProc("SetLayeredWindowAttributes")
+	procSetWindowPos               = modUser32.NewProc("SetWindowPos")
 	procGetAsyncKeyState           = modUser32.NewProc("GetAsyncKeyState")
 	procSetWinEventHook            = modUser32.NewProc("SetWinEventHook")
 	procUnhookWinEvent             = modUser32.NewProc("UnhookWinEvent")
@@ -215,6 +217,11 @@ var (
 	ahkReceiver            uintptr
 	enableCopyData         bool
 	cfFileGroupDescriptorW uint16
+	cfHTML                 uint16
+	cfURILIST              uint16
+
+	gateFollow bool
+	wsListen   string
 )
 
 func main() {
@@ -228,9 +235,16 @@ func main() {
 	sendCopyData := flag.Bool("copydata", false, "send JSON events via WM_COPYDATA to AHK hidden window")
 	monitor := flag.String("monitor", "custom", "receiver area: custom|primary|all|rect")
 	rect := flag.String("rect", "", "rect as x,y,w,h (used when --monitor rect)")
+	wsAddr := flag.String("ws", "127.0.0.1:18790", "WebSocket listen address")
+	gateFollowFlag := flag.Bool("gate-follow", true, "gate bridge window: only follow cursor during OLE drag")
 	flag.Parse()
-	rx, ry, rw, rh := resolveReceiverRect(*monitor, *rect, *x, *y, *w, *h)
-	if err := run(*out, rx, ry, rw, rh, *ahkClass, *ahkTitle, *sendCopyData); err != nil {
+	gateFollow = *gateFollowFlag
+	wsListen = *wsAddr
+	rx, ry, _, _ := resolveReceiverRect(*monitor, *rect, *x, *y, *w, *h)
+	if *gateFollowFlag {
+		rx, ry = parkX, parkY
+	}
+	if err := run(*out, rx, ry, bridgeSize, bridgeSize, *ahkClass, *ahkTitle, *sendCopyData); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -301,9 +315,16 @@ func run(outPath string, x int, y int, w int, h int, ahkClass string, ahkTitle s
 		activeWriterF = nil
 	}()
 
+	globalHub.start(wsListen)
+
 	hwnd, err := createHostWindow(x, y, w, h)
 	if err != nil {
 		return err
+	}
+	globalGate.setHWND(hwnd)
+	subclassBridgeWindow(hwnd)
+	if gateFollow {
+		hideBridge(hwnd)
 	}
 	defer procDestroyWindow.Call(hwnd)
 	dragHook := installDragDropWinEventHook()
@@ -324,6 +345,7 @@ func run(outPath string, x int, y int, w int, h int, ahkClass string, ahkTitle s
 		H:    int32(h),
 	}
 	writeDropEvent(ready)
+	hubEmit("bridge_ready", map[string]any{"ws": wsListen, "gateFollow": gateFollow})
 
 	hr, _, _ = procRegisterDragDrop.Call(hwnd, uintptr(unsafe.Pointer(target)))
 	if int32(hr) < 0 {
@@ -351,9 +373,18 @@ func setDPIAwareness() {
 }
 
 func registerFormats() {
-	name, _ := syscall.UTF16PtrFromString("FileGroupDescriptorW")
-	r, _, _ := procRegisterClipboardFormatW.Call(uintptr(unsafe.Pointer(name)))
-	cfFileGroupDescriptorW = uint16(r)
+	for _, n := range []string{"FileGroupDescriptorW", "text/html", "text/uri-list", "UniformResourceLocator"} {
+		name, _ := syscall.UTF16PtrFromString(n)
+		r, _, _ := procRegisterClipboardFormatW.Call(uintptr(unsafe.Pointer(name)))
+		switch n {
+		case "FileGroupDescriptorW":
+			cfFileGroupDescriptorW = uint16(r)
+		case "text/html":
+			cfHTML = uint16(r)
+		case "text/uri-list":
+			cfURILIST = uint16(r)
+		}
+	}
 }
 
 func resolveAHKReceiver(className, title string, enabled bool) {
@@ -424,8 +455,11 @@ func winEventProc(hWinEventHook, event, hwnd, idObject, idChild, idEventThread, 
 	switch uint32(event) {
 	case eventSystemDragDropStart:
 		kind = "drag_start"
+		globalGate.Arm("win_event")
 	case eventSystemDragDropEnd:
 		kind = "drag_end"
+		globalGate.Park()
+		hubEmit("dragleave", map[string]any{"reason": "win_event_end"})
 	default:
 		return 0
 	}
@@ -434,6 +468,9 @@ func winEventProc(hWinEventHook, event, hwnd, idObject, idChild, idEventThread, 
 		Kind:        kind,
 		PayloadKind: "none",
 	})
+	if kind == "drag_start" {
+		hubEmit("dragenter", map[string]any{"source": "win_event", "payloadKind": "none"})
+	}
 	return 0
 }
 
@@ -465,6 +502,8 @@ func startMouseDragFallback() func() {
 					seeded = false
 					if active {
 						active = false
+						globalGate.Park()
+						hubEmit("dragleave", map[string]any{"reason": "mouse_release", "x": x, "y": y})
 						writeDropEvent(dropEvent{At: time.Now().Format(time.RFC3339), Kind: "drag_end", PayloadKind: "none", X: x, Y: y})
 					}
 					continue
@@ -478,7 +517,9 @@ func startMouseDragFallback() func() {
 				dy := int(y - sy)
 				if !active && (dx*dx+dy*dy >= threshold*threshold) {
 					active = true
+					globalGate.Arm("mouse_threshold")
 					writeDropEvent(dropEvent{At: time.Now().Format(time.RFC3339), Kind: "drag_start", PayloadKind: "none", X: x, Y: y})
+					hubEmit("dragenter", map[string]any{"source": "mouse_fallback", "payloadKind": "none", "x": x, "y": y})
 				}
 			case <-stop:
 				return
@@ -503,18 +544,18 @@ func getCursorPos() (int32, int32, bool) {
 }
 
 func createHostWindow(x int, y int, w int, h int) (uintptr, error) {
-	cn, _ := syscall.UTF16PtrFromString("NMERNativeDropBridge")
-	wn, _ := syscall.UTF16PtrFromString("NMERNativeDropBridgeWnd")
-	wc := wndClassEx{CbSize: uint32(unsafe.Sizeof(wndClassEx{})), LpfnWndProc: procDefWindowProcW.Addr(), LpszClassName: uintptr(unsafe.Pointer(cn))}
+	cn, _ := syscall.UTF16PtrFromString("NMER_NativeDropBridge")
+	wn, _ := syscall.UTF16PtrFromString("NMER_NativeDropBridgeWnd")
+	wc := wndClassEx{CbSize: uint32(unsafe.Sizeof(wndClassEx{})), LpfnWndProc: callbackBridgeWndProc, LpszClassName: uintptr(unsafe.Pointer(cn))}
 	procRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
-	if w < 40 {
-		w = 40
+	if w <= 0 {
+		w = bridgeSize
 	}
-	if h < 40 {
-		h = 40
+	if h <= 0 {
+		h = bridgeSize
 	}
 	hwnd, _, e := procCreateWindowExW.Call(
-		wsExLayered|wsExToolWindow|wsExTopmost,
+		wsExLayered|wsExToolWindow|wsExTopmost|wsExNoActivate,
 		uintptr(unsafe.Pointer(cn)),
 		uintptr(unsafe.Pointer(wn)),
 		wsPopup,
@@ -537,9 +578,24 @@ func (d *dropTarget) drop(dataObj *iDataObject, pt pointl, effect *uint32) uintp
 		*effect = dropEffectCopy
 	}
 	ev := buildDropEvent("drop", dataObj, pt)
-	if ev.PayloadKind != "none" && d.onDrop != nil {
-		d.onDrop(ev)
+	if ev.PayloadKind != "none" {
+		reqID := globalPipeline.beginDrop(ev)
+		if reqID != 0 {
+			hubEmit("drop", map[string]any{
+				"requestId":   reqID,
+				"session":     globalGate.Session(),
+				"payloadKind": ev.PayloadKind,
+				"x":           ev.X,
+				"y":           ev.Y,
+				"text":        ev.Text,
+				"files":       ev.Files,
+			})
+		}
+		if d.onDrop != nil {
+			d.onDrop(ev)
+		}
 	}
+	globalGate.Park()
 	if d.onDrop != nil {
 		d.onDrop(dropEvent{At: time.Now().Format(time.RFC3339), Kind: "DRAG_END_PHYSICAL", PayloadKind: "none", X: pt.X, Y: pt.Y})
 	}
@@ -550,8 +606,16 @@ func (d *dropTarget) dragEnterLog(dataObj *iDataObject, pt pointl, effect *uint3
 	if effect != nil {
 		*effect = dropEffectCopy
 	}
+	ev := buildDropEvent("drag_enter", dataObj, pt)
+	globalGate.OnDragEnter(pt.X, pt.Y)
+	hubEmit("dragenter", map[string]any{
+		"payloadKind": ev.PayloadKind,
+		"x":           pt.X,
+		"y":           pt.Y,
+		"session":     globalGate.Session(),
+	})
 	if d.onEnter != nil {
-		d.onEnter(buildDropEvent("drag_enter", dataObj, pt))
+		d.onEnter(ev)
 	}
 	return sOk
 }
@@ -583,8 +647,66 @@ func buildDropEvent(kind string, dataObj *iDataObject, pt pointl) dropEvent {
 		} else {
 			ev.PayloadKind = "text"
 		}
+		return ev
+	}
+	if cfHTML != 0 {
+		if t, ok := readFormatText(dataObj, cfHTML); ok && strings.TrimSpace(t) != "" {
+			ev.Text = stripHTMLBasic(strings.TrimSpace(t))
+			ev.SourceFormat = "text/html"
+			ev.PayloadKind = "text"
+			return ev
+		}
+	}
+	if cfURILIST != 0 {
+		if t, ok := readFormatText(dataObj, cfURILIST); ok {
+			lines := strings.Split(strings.TrimSpace(t), "\n")
+			for _, ln := range lines {
+				ln = strings.TrimSpace(ln)
+				if ln != "" && !strings.HasPrefix(ln, "#") {
+					ev.Link = ln
+					ev.Text = ln
+					ev.SourceFormat = "text/uri-list"
+					ev.PayloadKind = "link"
+					return ev
+				}
+			}
+		}
 	}
 	return ev
+}
+
+func readFormatText(dataObj *iDataObject, cf uint16) (string, bool) {
+	fe := formatEtc{CfFormat: cf, DwAspect: dvaspectContent, Lindex: -1, Tymed: tymedHGlobal}
+	var med stgMedium
+	if int32(getData(dataObj, &fe, &med)) < 0 || med.Handle == 0 {
+		return "", false
+	}
+	defer procReleaseStgMedium.Call(uintptr(unsafe.Pointer(&med)))
+	ptr, _, _ := procGlobalLock.Call(med.Handle)
+	if ptr == 0 {
+		return "", false
+	}
+	defer procGlobalUnlock.Call(med.Handle)
+	return utf16PtrToString((*uint16)(unsafe.Pointer(ptr))), true
+}
+
+func stripHTMLBasic(s string) string {
+	s = strings.ReplaceAll(s, "<br>", "\n")
+	s = strings.ReplaceAll(s, "<br/>", "\n")
+	s = strings.ReplaceAll(s, "<br />", "\n")
+	var out strings.Builder
+	inTag := false
+	for _, r := range s {
+		switch {
+		case r == '<':
+			inTag = true
+		case r == '>':
+			inTag = false
+		case !inTag:
+			out.WriteRune(r)
+		}
+	}
+	return strings.TrimSpace(out.String())
 }
 
 func classifyPayload(files []string, folders []string) string {
@@ -752,11 +874,17 @@ func dropDragOver(self, keyState, pt, effect uintptr) uintptr {
 	if effect != 0 {
 		*(*uint32)(unsafe.Pointer(effect)) = dropEffectCopy
 	}
+	if pt != 0 {
+		p := *(*pointl)(unsafe.Pointer(pt))
+		globalGate.FollowOLEPoint(p.X, p.Y)
+	}
 	return sOk
 }
 
 func dropDragLeave(self uintptr) uintptr {
 	defer recoverCallback("dropDragLeave")
+	globalGate.OnDragLeave()
+	hubEmit("dragleave", map[string]any{"reason": "ole_drag_leave"})
 	return sOk
 }
 

@@ -127,6 +127,8 @@ global g_TrayMenuSuppressOpenUntil := 0
 global g_TrayShowHolePending := false
 global g_TrayShowHoleRetryCount := 0
 global g_TrayShowHolePendingSince := 0
+global g_TrayHoleInputPanelVisible := true
+global g_TrayHolePanelPassthrough := false
 
 TrayMenu_Log(msg) {
     try {
@@ -859,7 +861,7 @@ TrayMenu_OpenConfigAction(*) {
 }
 
 TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis) {
-    global GDHO_VISIBLE, g_GDHO_CurrentPhase, GDHO_PHASE_OPEN, GDHO_PHASE_OPENING
+    global GDHO_VISIBLE, g_GDHO_CurrentPhase, GDHO_PHASE_OPEN, GDHO_PHASE_OPENING, g_TrayHoleInputPanelVisible, g_TrayHolePanelPassthrough
     if (mode = "hole") {
         holeVisible := false
         try holeVisible := (g_GDHO_CurrentPhase = GDHO_PHASE_OPEN || g_GDHO_CurrentPhase = GDHO_PHASE_OPENING || GDHO_VISIBLE)
@@ -871,6 +873,14 @@ TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis) {
         } else {
             MenuItems.Push({ Text: "显示黑洞", Action: FloatingBubbleShowFromMenu, Icon: "☰" })
         }
+        if (g_TrayHoleInputPanelVisible)
+            MenuItems.Push({ Text: "隐藏输入面板", Action: ((*) => TrayMenu_RunSceneCmd("tray_hide_hole_input_panel")), Icon: "⌨" })
+        else
+            MenuItems.Push({ Text: "显示输入面板", Action: ((*) => TrayMenu_RunSceneCmd("tray_show_hole_input_panel")), Icon: "⌨" })
+        if g_TrayHolePanelPassthrough
+            MenuItems.Push({ Text: "输入面板：穿透", Action: ((*) => TrayMenu_RunSceneCmd("tray_toggle_hole_panel_passthrough")), Icon: "◌" })
+        else
+            MenuItems.Push({ Text: "输入面板：常驻不穿透", Action: ((*) => TrayMenu_RunSceneCmd("tray_toggle_hole_panel_passthrough")), Icon: "●" })
         return
     }
     if (mode != "tray") {
@@ -1577,6 +1587,15 @@ TrayMenu_RunSceneCmdRun(cmdId) {
         case "tray_exit_app":
             try ExitFromMenu()
             return
+        case "tray_show_hole_input_panel":
+            try TrayMenu_ShowHoleInputPanel()
+            return
+        case "tray_hide_hole_input_panel":
+            try TrayMenu_HideHoleInputPanel()
+            return
+        case "tray_toggle_hole_panel_passthrough":
+            try TrayMenu_ToggleHolePanelPassthrough()
+            return
     }
     try {
         if IsSet(VK_Execute) {
@@ -1611,6 +1630,9 @@ TrayMenu_NormalizeCmdId(cmdId) {
     c := StrReplace(c, "tray:reload_script", "tray_reload_script")
     c := StrReplace(c, "tray:force_reinit_search", "tray_force_reinit_search")
     c := StrReplace(c, "tray:exit_app", "tray_exit_app")
+    c := StrReplace(c, "tray:show_hole_input_panel", "tray_show_hole_input_panel")
+    c := StrReplace(c, "tray:hide_hole_input_panel", "tray_hide_hole_input_panel")
+    c := StrReplace(c, "tray:toggle_hole_panel_passthrough", "tray_toggle_hole_panel_passthrough")
     return c
 }
 
@@ -1710,8 +1732,59 @@ TrayMenu_GetSceneFallbackLabel(cmdId, defaultLabel := "") {
             return "[!] 强制重置搜索中心"
         case "tray_exit_app":
             return "退出工具"
+        case "tray_show_hole_input_panel":
+            return "显示输入面板"
+        case "tray_hide_hole_input_panel":
+            return "隐藏输入面板"
+        case "tray_toggle_hole_panel_passthrough":
+            return "切换输入面板穿透"
         default:
             return defaultLabel
+    }
+}
+
+TrayMenu_ShowHoleInputPanel() {
+    global g_TrayHoleInputPanelVisible
+    g_TrayHoleInputPanelVisible := true
+    try GDHO_RunJS("window.HoleOverlay?.setManualPanelVisible?.(true)")
+    TrayMenu_MarkSceneDirty("show_hole_input_panel")
+}
+
+TrayMenu_HideHoleInputPanel() {
+    global g_TrayHoleInputPanelVisible
+    g_TrayHoleInputPanelVisible := false
+    try GDHO_RunJS("window.HoleOverlay?.setManualPanelVisible?.(false)")
+    TrayMenu_MarkSceneDirty("hide_hole_input_panel")
+}
+
+TrayMenu_ToggleHolePanelPassthrough() {
+    global g_TrayHolePanelPassthrough
+    g_TrayHolePanelPassthrough := !g_TrayHolePanelPassthrough
+    TrayMenu_ApplyHolePanelPassthrough(g_TrayHolePanelPassthrough)
+    TrayMenu_MarkSceneDirty("toggle_hole_panel_passthrough")
+}
+
+TrayMenu_ApplyHolePanelPassthrough(enable := false) {
+    global g_TrayHolePanelPassthrough
+    on := !!enable
+    g_TrayHolePanelPassthrough := on
+    try NativeDropDiag_Log("[TRAY_PANEL_PE] tray_apply passthrough=" . (on ? "1" : "0") . " (1=CSS pointer-events:none on manual panel)")
+    if !on {
+        if FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled() {
+            if FuncExists("GDHO_ShowPanel")
+                try GDHO_ShowPanel("tray_panel_solid")
+            return
+        }
+        if FuncExists("GDHO_ApplyManualPanelInteractive") {
+            try GDHO_ApplyManualPanelInteractive("tray_panel_solid")
+            return
+        }
+    }
+    js := "(function(){try{var on=" . (on ? "true" : "false") . ";var p=document.querySelector('#manual-config-panel')||document.querySelector('#manualPanel');var cb=document.getElementById('panelPassthrough');if(cb)cb.checked=on;if(p)p.style.pointerEvents=on?'none':'auto';if(cb){try{cb.dispatchEvent(new Event('change'));}catch(_e){}}}catch(_e){}})();"
+    if FuncExists("GDHO_RunPanelJS") {
+        try GDHO_RunPanelJS(js)
+    } else if FuncExists("GDHO_RunJS") {
+        try GDHO_RunJS(js)
     }
 }
 

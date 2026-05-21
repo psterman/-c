@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 #SingleInstance Force
 #Persistent
 
@@ -12,6 +12,13 @@ SetWorkingDir(A_ScriptDir "\..")
 
 ; If your hole page is hosted by local dev server:
 GDHO_SetPageUrl("http://127.0.0.1:5173/hole_starry.html")
+if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
+    GDHO_SetPanelPageUrl("http://127.0.0.1:5173/hole_panel.html")
+    panelPath := A_ScriptDir . "\..\hole_panel.html"
+    panelFb := "file:///" . StrReplace(panelPath, "\", "/")
+    try GDHO_SetPanelFallbackUrl(panelFb)
+    try GDHO_SetPanelPageUrl(panelFb)
+}
 
 GDHO_Start()
 TrayTip("Global Drag Hole", "Started. Drag text/file/folder on desktop to trigger hole. Ctrl+Alt+H to exit.", "Iconi Mute")

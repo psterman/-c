@@ -30,10 +30,13 @@
       pointer-events: none;
       z-index: 9999;
     }
-  /* 默认 show 时可接收拖放；文本外部拖入时由 AHK 加 ole-passthrough 保持穿透 */
-    #root.show, #root.drop { pointer-events: auto; }
-    #root.show.ole-passthrough,
-    #root.show.ole-passthrough * {
+  /* 仅黑洞本体区域接收拖放 */
+    #root.show .hole-wrap,
+    #root.drop .hole-wrap {
+      pointer-events: auto;
+    }
+    #root.show.ole-passthrough .hole-wrap,
+    #root.drop.ole-passthrough .hole-wrap {
       pointer-events: none !important;
     }
 
@@ -87,6 +90,7 @@
       padding: 2.5px;
       background: conic-gradient(from var(--ring-angle), var(--ai-blue), var(--ai-green), var(--ai-yellow), var(--ai-red), var(--ai-blue));
       -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
       animation: spin 4s linear infinite;
@@ -175,6 +179,20 @@
       margin-bottom: 8px;
     }
 
+    #root.swallow-flash::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at var(--hx) var(--hy), rgba(0,255,120,0.35), transparent 55%);
+      pointer-events: none;
+      animation: swallowFlash 420ms ease-out forwards;
+      z-index: 9998;
+    }
+    @keyframes swallowFlash {
+      0% { opacity: 0.9; }
+      100% { opacity: 0; }
+    }
+
     @keyframes spin { to { --ring-angle: 360deg; } }
   </style>
 </head>
@@ -202,6 +220,9 @@
       const holeBody = document.getElementById('holeBody');
       const transcriptPanel = document.getElementById('transcriptPanel');
       const transcriptBody = document.getElementById('transcriptBody');
+      const HOLE_WS_URL = 'ws://127.0.0.1:18790/hole';
+      let holeSocket = null;
+      let gravityBoostUntil = 0;
 
       let p = 0;
       let isGalaxyOpen = false;
@@ -328,18 +349,22 @@
           window.HoleOverlay.setSleepMode(false);
           if(!isGalaxyOpen) {
             root.classList.add('show');
-            setP(opts && opts.prewarm ? 0.08 : 0.55);
+            setP(opts && opts.prewarm ? 0.32 : 0.55);
           }
         },
-        hide: () => { 
+        hideSilent: () => {
           window.__gdhoUserInteracting = false;
           if (expandTimer) {
             clearTimeout(expandTimer);
             expandTimer = 0;
           }
-          root.classList.remove('show', 'drop', 'expanding', 'expanded'); 
-          isGalaxyOpen = false; setP(0); 
-          try { window.chrome?.webview?.postMessage(JSON.stringify({ type: 'hole_close' })); } catch (_) {}
+          root.classList.remove('show', 'drop', 'expanding', 'expanded');
+          isGalaxyOpen = false;
+          setP(0);
+        },
+        hide: () => {
+          window.HoleOverlay.hideSilent();
+          try { window.chrome?.webview?.postMessage(JSON.stringify({ type: 'hole_close', windowRole: 'starry' })); } catch (_) {}
         },
         moveTo: (o) => {
           if(isGalaxyOpen) return;
@@ -379,7 +404,8 @@
           if (!sleepMode) wakeRender();
         },
         drop: (o) => {
-          if(isGalaxyOpen) return;
+          const force = !!(o && o.force);
+          if (isGalaxyOpen && !force) return;
           if (o && (o.payload === 'text' || o.payload === 'file')) payloadType = o.payload;
           window.HoleOverlay.setSleepMode(false);
           root.classList.add('show');
@@ -393,6 +419,15 @@
             root.classList.remove('expanding');
             root.classList.add('expanded');
             expandTimer = 0;
+            try {
+              if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+                window.chrome.webview.postMessage(JSON.stringify({
+                  type: 'hole_expand_complete',
+                  windowRole: 'starry',
+                  payload: payloadType || 'text'
+                }));
+              }
+            } catch (_) {}
           }, 1250);
         },
         setStyle: () => {},
@@ -408,12 +443,21 @@
           window.__gdhoOlePassthrough = enable;
           if (enable) root.classList.add('ole-passthrough');
           else root.classList.remove('ole-passthrough');
+          try {
+            if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+              window.chrome.webview.postMessage(JSON.stringify({ type: 'gdho_dbg_ole_passthrough', on: enable }));
+            }
+          } catch (_) {}
         }
       };
 
       holeBody.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!isGalaxyOpen) window.HoleOverlay.drop();
+        try {
+          if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+            window.chrome.webview.postMessage(JSON.stringify({ type: 'hole_click', windowRole: 'starry' }));
+          }
+        } catch (_) {}
       });
 
       const dragAccept = (e) => {
@@ -460,18 +504,53 @@
         try {
           if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
             const msg = hasFiles && paths.length
-              ? { type: 'hole_web_drop', kind: 'file', files: paths }
-              : { type: 'hole_web_drop', kind: 'text', text: plain || '' };
+              ? { type: 'hole_web_drop', windowRole: 'starry', kind: 'file', files: paths }
+              : { type: 'hole_web_drop', windowRole: 'starry', kind: 'text', text: plain || '' };
             window.chrome.webview.postMessage(JSON.stringify(msg));
           }
         } catch (_) {}
         window.HoleOverlay.drop({ payload: hasFiles ? 'file' : 'text' });
       }, true);
 
-      window.addEventListener('click', () => { if(isGalaxyOpen) window.HoleOverlay.hide(); });
+      // 常驻模式：不再使用全局点击自动隐藏，避免输入面板获取焦点时黑洞消失。
+      // 关闭路径仅保留：右上角关闭按钮 / AHK 热键 / 显式调用 HoleOverlay.hide()。
+
+      function connectHoleWs() {
+        if (holeSocket && (holeSocket.readyState === WebSocket.OPEN || holeSocket.readyState === WebSocket.CONNECTING))
+          return;
+        try {
+          holeSocket = new WebSocket(HOLE_WS_URL);
+          holeSocket.onmessage = (e) => {
+            let msg;
+            try { msg = JSON.parse(e.data); } catch (_) { return; }
+            const t = String(msg.type || '');
+            if (t === 'bridge_ready') return;
+            if (t === 'dragenter') {
+              gravityBoostUntil = performance.now() + 1200;
+              if (typeof msg.x === 'number' && typeof msg.y === 'number') {
+                root.style.setProperty('--hx', Math.max(80, msg.x) + 'px');
+                root.style.setProperty('--hy', Math.max(80, msg.y) + 'px');
+              }
+              window.HoleOverlay.update({ proximity: 1 });
+              wakeRender();
+              return;
+            }
+            if (t === 'drop') {
+              root.classList.add('swallow-flash');
+              setTimeout(() => root.classList.remove('swallow-flash'), 450);
+              window.HoleOverlay.drop({ payload: msg.payloadKind === 'file' ? 'file' : 'text' });
+              return;
+            }
+          };
+          holeSocket.onclose = () => { setTimeout(connectHoleWs, 1500); };
+        } catch (_) {}
+      }
 
       initGalaxy();
       window.HoleOverlay.setSleepMode(true);
+      window.__gdhoOlePassthrough = false;
+      root.classList.remove('ole-passthrough');
+      connectHoleWs();
 
       if (!(window.chrome && window.chrome.webview)) {
         document.body.style.background = "#050508";
@@ -486,6 +565,3 @@
   </script>
 </body>
 </html>
-
-
-

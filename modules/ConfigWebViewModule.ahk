@@ -785,7 +785,10 @@ ConfigWebView_BuildInitData() {
         "holeVisualStyle", IniRead(ConfigFile, "Appearance", "HoleVisualStyle", "ring"),
         "holeHideDockEnabled", (IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1"),
         "holeHideDockEdge", IniRead(ConfigFile, "Appearance", "HoleHideDockEdge", "right"),
-        "holeHideDockMargin", Integer(IniRead(ConfigFile, "Appearance", "HoleHideDockMargin", "10"))
+        "holeHideDockMargin", Integer(IniRead(ConfigFile, "Appearance", "HoleHideDockMargin", "10")),
+        "holeDecoupledTopology", (IniRead(ConfigFile, "Appearance", "HoleDecoupledTopology", "1") = "1"),
+        "holeStarFullscreen", (IniRead(ConfigFile, "Appearance", "HoleStarFullscreen", "0") = "1"),
+        "holePanelPinned", (IniRead(ConfigFile, "Appearance", "HolePanelPinned", "0") = "1")
     )
     kbSnap := ConfigWebView_GetKeybinderToolbarSnapshot()
     cfgPayload["keybinderToolbarLayout"] := kbSnap["toolbarLayout"]
@@ -1378,6 +1381,17 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         IniWrite(NewHoleHideDockEnabled ? "1" : "0", ConfigFile, "Appearance", "HoleHideDockEnabled")
         IniWrite(NewHoleHideDockEdge, ConfigFile, "Appearance", "HoleHideDockEdge")
         IniWrite(String(NewHoleHideDockMargin), ConfigFile, "Appearance", "HoleHideDockMargin")
+        NewHoleDecoupled := payload.Has("holeDecoupledTopology") ? !!payload["holeDecoupledTopology"] : true
+        NewHoleStarFullscreen := payload.Has("holeStarFullscreen") ? !!payload["holeStarFullscreen"] : false
+        NewHolePanelPinned := payload.Has("holePanelPinned") ? !!payload["holePanelPinned"] : false
+        IniWrite(NewHoleDecoupled ? "1" : "0", ConfigFile, "Appearance", "HoleDecoupledTopology")
+        IniWrite(NewHoleStarFullscreen ? "1" : "0", ConfigFile, "Appearance", "HoleStarFullscreen")
+        IniWrite(NewHolePanelPinned ? "1" : "0", ConfigFile, "Appearance", "HolePanelPinned")
+        try GDHO_DECOUPLED_TOPOLOGY := NewHoleDecoupled
+        try GDHO_STAR_FULLSCREEN := NewHoleStarFullscreen
+        try GDHO_PANEL_PINNED := NewHolePanelPinned
+        if FuncExists("GDHO_SavePanelPositionToIni")
+            try GDHO_SavePanelPositionToIni()
         IniWrite(FunctionPanelPos, ConfigFile, "Appearance", "FunctionPanelPos")
         IniWrite(ConfigPanelPos, ConfigFile, "Appearance", "ConfigPanelPos")
         IniWrite(ClipboardPanelPos, ConfigFile, "Appearance", "ClipboardPanelPos")

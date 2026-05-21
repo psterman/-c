@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hole Interactive Panel</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      user-select: text;
+    }
+    #panelRoot {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-start;
+      padding: 12px;
+      pointer-events: none;
+    }
+    #manualPanel {
+      position: relative;
+      width: min(460px, 100%);
+      max-height: calc(100vh - 24px);
+      overflow: auto;
+      background: rgba(5, 10, 16, 0.72);
+      border: 1px solid rgba(0, 255, 170, 0.28);
+      border-radius: 12px;
+      padding: 12px;
+      color: #d6fff1;
+      font: 12px/1.4 "Segoe UI", "Microsoft YaHei", sans-serif;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      pointer-events: auto !important;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    }
+    #manualPanelHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+      cursor: move;
+    }
+    #manualPanelTitle { font-weight: 700; letter-spacing: 0.02em; }
+    #manualCloseBtn {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      padding: 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 120, 120, 0.65);
+      background: rgba(255, 70, 70, 0.2);
+      color: #ffd7d7;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    #manualPanel .row { display: flex; gap: 8px; margin-top: 8px; }
+    #manualPanel input, #manualPanel textarea, #manualPanel button {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid rgba(160, 255, 220, 0.25);
+      background: rgb(12, 18, 24);
+      color: #d9fff4;
+      padding: 8px;
+      font: inherit;
+      outline: none;
+    }
+    #manualPanel textarea { min-height: 72px; resize: vertical; }
+    #manualPanel button {
+      width: auto;
+      cursor: pointer;
+      background: rgba(0, 255, 140, 0.18);
+      border-color: rgba(0, 255, 140, 0.45);
+    }
+    #manualPanel .send-btn {
+      min-width: 132px;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, rgba(0,255,140,0.32), rgba(0,180,255,0.28));
+    }
+    #manualPanel .hint { opacity: 0.8; font-size: 11px; margin-top: 6px; }
+    #holeStreamHud {
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 120, 0.35);
+      background: rgba(0, 12, 8, 0.55);
+      color: #00ff7a;
+      font: 400 12px/1.5 "Cascadia Mono", "Consolas", monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: min(200px, 28vh);
+      overflow: auto;
+      opacity: 0;
+      transition: opacity 220ms ease;
+    }
+    #holeStreamHud.show { opacity: 1; }
+    #resultPanel {
+      margin-top: 10px;
+      border: 1px solid rgba(0, 255, 120, 0.3);
+      border-radius: 10px;
+      padding: 8px;
+      background: rgba(0, 14, 10, 0.46);
+    }
+    #resultHead { font-size: 11px; color: #9df7cc; margin-bottom: 6px; }
+    #resultBody {
+      min-height: 90px;
+      max-height: 240px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font: 13px/1.5 "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: #e9fff5;
+    }
+    #manualPanelMiniBtn {
+      position: fixed;
+      left: 20px;
+      bottom: 20px;
+      z-index: 2;
+      display: none;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 255, 180, 0.6);
+      background: rgba(0, 40, 30, 0.8);
+      color: #bfffea;
+      padding: 8px 12px;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+    #panelPassthroughWrap { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="panelRoot">
+    <div id="manualPanel">
+      <div id="manualPanelHeader">
+        <div id="manualPanelTitle">AI 黑洞手动激活</div>
+        <button id="manualCloseBtn" type="button" title="隐藏输入面板">×</button>
+      </div>
+      <div class="row">
+        <select id="apiProvider">
+          <option value="deepseek">DeepSeek</option>
+          <option value="openai">OpenAI</option>
+          <option value="ollama">Ollama (本地)</option>
+          <option value="custom">自定义</option>
+        </select>
+      </div>
+      <div class="row">
+        <input id="apiBaseUrl" placeholder="Base URL" />
+        <input id="apiModel" placeholder="Model" />
+      </div>
+      <div class="row">
+        <input id="apiKey" placeholder="API Key" />
+      </div>
+      <div class="row">
+        <textarea id="manualPrompt" placeholder="输入文本后点击发送"></textarea>
+      </div>
+      <div class="row">
+        <button id="sendManualBtn" type="button">发送到黑洞</button>
+      </div>
+      <div class="hint">提示：支持 Ctrl+Enter 发送</div>
+      <div id="holeStreamHud" aria-live="polite"></div>
+      <div id="resultPanel">
+        <div id="resultHead">结果输出</div>
+        <div id="resultBody">等待输入后发送...</div>
+      </div>
+    </div>
+  </div>
+  <button id="manualPanelMiniBtn" type="button">显示输入面板</button>
+
+  <script>
+    (function () {
+      const manualPanel = document.getElementById('manualPanel');
+      const manualPanelHeader = document.getElementById('manualPanelHeader');
+      const manualPanelMiniBtn = document.getElementById('manualPanelMiniBtn');
+      const manualCloseBtn = document.getElementById('manualCloseBtn');
+      const streamHud = document.getElementById('holeStreamHud');
+      const apiBaseUrlInput = document.getElementById('apiBaseUrl');
+      const apiModelInput = document.getElementById('apiModel');
+      const apiKeyInput = document.getElementById('apiKey');
+      const manualPromptInput = document.getElementById('manualPrompt');
+      const sendManualBtn = document.getElementById('sendManualBtn');
+      const apiProviderSelect = document.getElementById('apiProvider');
+      const resultHead = document.getElementById('resultHead');
+      const resultBody = document.getElementById('resultBody');
+      const STORAGE_KEY = 'nmer_hole_manual_cfg_v1';
+      const HOLE_WS_URL = 'ws://127.0.0.1:18790/hole';
+      let holeSocket = null;
+      let activeRequestId = null;
+      let streamBuffer = '';
+      let manualPanelVisible = true;
+      let manualPanelDragging = false;
+      let manualDragOffsetX = 0;
+      let manualDragOffsetY = 0;
+
+      function postHost(payload) {
+        try {
+          const wv = window.chrome && window.chrome.webview;
+          if (!wv || !wv.postMessage) return;
+          const body = typeof payload === 'string' ? payload : JSON.stringify(Object.assign({ windowRole: 'panel' }, payload));
+          wv.postMessage(body);
+        } catch (_) {}
+      }
+
+      function setManualPanelVisible(visible) {
+        manualPanelVisible = !!visible;
+        if (!manualPanel) return;
+        manualPanel.style.display = manualPanelVisible ? 'block' : 'none';
+        if (manualPanelMiniBtn) {
+          manualPanelMiniBtn.style.display = manualPanelVisible ? 'none' : 'block';
+        }
+      }
+
+      function focusPromptInput(selectAll = false) {
+        if (!manualPromptInput) return;
+        try {
+          manualPromptInput.focus({ preventScroll: true });
+          if (selectAll && manualPromptInput.value) {
+            manualPromptInput.setSelectionRange(0, manualPromptInput.value.length);
+          } else {
+            const end = manualPromptInput.value ? manualPromptInput.value.length : 0;
+            manualPromptInput.setSelectionRange(end, end);
+          }
+        } catch (_) {}
+      }
+
+      function applyProviderPreset(provider) {
+        const p = String(provider || '').toLowerCase();
+        if (p === 'deepseek') {
+          apiBaseUrlInput.value = apiBaseUrlInput.value || 'https://api.deepseek.com';
+          apiModelInput.value = apiModelInput.value || 'deepseek-chat';
+        } else if (p === 'openai') {
+          apiBaseUrlInput.value = apiBaseUrlInput.value || 'https://api.openai.com';
+          apiModelInput.value = apiModelInput.value || 'gpt-4o-mini';
+        } else if (p === 'ollama') {
+          apiBaseUrlInput.value = apiBaseUrlInput.value || 'http://127.0.0.1:11434';
+          apiModelInput.value = apiModelInput.value || 'qwen2.5:7b';
+        }
+      }
+
+      window.HolePanel = {
+        onHostShow: () => {
+          setManualPanelVisible(true);
+          setTimeout(() => focusPromptInput(false), 0);
+        },
+        onHostHide: () => {},
+        setManualPanelVisible: (v) => setManualPanelVisible(v),
+        focusPrompt: (selectAll) => focusPromptInput(!!selectAll),
+        setStreamHud: (text, show) => {
+          if (!streamHud) return;
+          streamHud.textContent = String(text || '');
+          streamHud.classList.toggle('show', show !== false && streamHud.textContent.length > 0);
+        },
+        setResult: (head, body) => {
+          if (resultHead && head != null) resultHead.textContent = String(head);
+          if (resultBody && body != null) resultBody.textContent = String(body);
+          if (manualPromptInput && body != null) manualPromptInput.value = String(body);
+        },
+        setCapturedText: (text) => {
+          const t = String(text || '');
+          if (resultHead) resultHead.textContent = '已捕获文本';
+          if (resultBody) resultBody.textContent = t;
+          if (manualPromptInput) manualPromptInput.value = t;
+          setManualPanelVisible(true);
+          setTimeout(() => focusPromptInput(false), 0);
+        },
+        notifyStreamStart: () => {
+          postHost({ type: 'panel_stream_start' });
+        }
+      };
+
+      function connectHoleWs() {
+        if (holeSocket && (holeSocket.readyState === WebSocket.OPEN || holeSocket.readyState === WebSocket.CONNECTING))
+          return;
+        try {
+          holeSocket = new WebSocket(HOLE_WS_URL);
+          holeSocket.onmessage = (e) => {
+            let msg;
+            try { msg = JSON.parse(e.data); } catch (_) { return; }
+            const t = String(msg.type || '');
+            if (t === 'bridge_ready') return;
+            if (t === 'drop') {
+              activeRequestId = msg.requestId != null ? msg.requestId : null;
+              streamBuffer = '';
+              if (resultHead) resultHead.textContent = '结果输出（流式中）';
+              if (resultBody) resultBody.textContent = '';
+              if (streamHud) {
+                streamHud.textContent = '';
+                streamHud.classList.remove('show');
+              }
+              postHost({ type: 'panel_stream_start' });
+              return;
+            }
+            if (t === 'stream_chunk') {
+              if (msg.requestId != null && activeRequestId != null && msg.requestId !== activeRequestId) return;
+              if (msg.requestId != null) activeRequestId = msg.requestId;
+              streamBuffer += String(msg.delta || '');
+              if (resultBody) resultBody.textContent = streamBuffer;
+              if (streamHud) {
+                streamHud.textContent = streamBuffer;
+                streamHud.classList.add('show');
+              }
+              return;
+            }
+            if (t === 'stream_done') {
+              if (resultHead) resultHead.textContent = '结果输出（完成）';
+              return;
+            }
+            if (t === 'stream_abort') {
+              streamBuffer = '';
+              if (streamHud) {
+                streamHud.textContent = '';
+                streamHud.classList.remove('show');
+              }
+              if (resultHead) resultHead.textContent = '结果输出（已取消）';
+              activeRequestId = null;
+            }
+            if (t === 'stream_error') {
+              if (resultHead) resultHead.textContent = '结果输出（错误）';
+              if (resultBody) resultBody.textContent = String(msg.error || '未知错误');
+            }
+          };
+          holeSocket.onclose = () => { setTimeout(connectHoleWs, 1500); };
+        } catch (_) {}
+      }
+
+      function sendManualPrompt() {
+        const prompt = String(manualPromptInput?.value || '').trim();
+        if (!prompt || !holeSocket || holeSocket.readyState !== WebSocket.OPEN) return;
+        if (resultHead) resultHead.textContent = '结果输出（请求中）';
+        if (resultBody) resultBody.textContent = '';
+        postHost({ type: 'panel_stream_start' });
+        holeSocket.send(JSON.stringify({
+          type: 'manual_prompt',
+          prompt,
+          baseUrl: String(apiBaseUrlInput?.value || '').trim(),
+          model: String(apiModelInput?.value || '').trim(),
+          apiKey: String(apiKeyInput?.value || '').trim()
+        }));
+      }
+
+      function loadManualConfig() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const cfg = JSON.parse(raw);
+          if (apiProviderSelect && typeof cfg.provider === 'string') apiProviderSelect.value = cfg.provider;
+          if (apiBaseUrlInput && typeof cfg.baseUrl === 'string') apiBaseUrlInput.value = cfg.baseUrl;
+          if (apiModelInput && typeof cfg.model === 'string') apiModelInput.value = cfg.model;
+          if (apiKeyInput && typeof cfg.apiKey === 'string') apiKeyInput.value = cfg.apiKey;
+        } catch (_) {}
+      }
+
+      function saveManualConfig() {
+        const cfg = {
+          provider: String(apiProviderSelect?.value || 'deepseek'),
+          baseUrl: String(apiBaseUrlInput?.value || '').trim(),
+          model: String(apiModelInput?.value || '').trim(),
+          apiKey: String(apiKeyInput?.value || '').trim()
+        };
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); } catch (_) {}
+      }
+
+      if (manualPanelHeader && manualPanel) {
+        manualPanelHeader.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+          const t = e.target;
+          if (t && t.closest && t.closest('button, input, select, textarea, label, a')) return;
+          const rect = manualPanel.getBoundingClientRect();
+          manualPanelDragging = true;
+          manualDragOffsetX = e.clientX - rect.left;
+          manualDragOffsetY = e.clientY - rect.top;
+          e.preventDefault();
+        });
+        window.addEventListener('mousemove', (e) => {
+          if (!manualPanelDragging) return;
+          const root = document.getElementById('panelRoot');
+          const maxLeft = Math.max(0, window.innerWidth - manualPanel.offsetWidth - 24);
+          const maxTop = Math.max(0, window.innerHeight - manualPanel.offsetHeight - 24);
+          const nextLeft = Math.max(12, Math.min(maxLeft, e.clientX - manualDragOffsetX));
+          const nextTop = Math.max(12, Math.min(maxTop, e.clientY - manualDragOffsetY));
+          if (root) {
+            root.style.alignItems = 'flex-start';
+            root.style.justifyContent = 'flex-start';
+            root.style.padding = '0';
+          }
+          manualPanel.style.position = 'fixed';
+          manualPanel.style.left = nextLeft + 'px';
+          manualPanel.style.top = nextTop + 'px';
+          manualPanel.style.margin = '0';
+          postHost({ type: 'panel_moved', x: nextLeft, y: nextTop });
+        });
+        window.addEventListener('mouseup', () => { manualPanelDragging = false; });
+      }
+
+      if (manualCloseBtn) {
+        manualCloseBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          setManualPanelVisible(false);
+          postHost({ type: 'hole_close', reason: 'panel_close_btn' });
+        });
+      }
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && manualPanelVisible) {
+          e.preventDefault();
+          e.stopPropagation();
+          setManualPanelVisible(false);
+          postHost({ type: 'hole_close', reason: 'panel_escape' });
+        }
+      });
+      if (manualPanelMiniBtn) {
+        manualPanelMiniBtn.addEventListener('click', () => {
+          setManualPanelVisible(true);
+          postHost({ type: 'panel_show_request' });
+        });
+      }
+
+      if (sendManualBtn) {
+        sendManualBtn.classList.add('send-btn');
+        sendManualBtn.addEventListener('click', () => { saveManualConfig(); sendManualPrompt(); });
+      }
+      if (apiProviderSelect) {
+        apiProviderSelect.addEventListener('change', () => {
+          applyProviderPreset(apiProviderSelect.value);
+          saveManualConfig();
+        });
+      }
+      if (manualPromptInput) {
+        manualPromptInput.addEventListener('focus', () => {
+          postHost({ type: 'panel_input_focus' });
+        });
+        manualPromptInput.addEventListener('input', () => {
+          postHost({ type: 'panel_input_activity' });
+        });
+        manualPromptInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            sendManualPrompt();
+          }
+        });
+      }
+      [apiBaseUrlInput, apiModelInput, apiKeyInput].forEach((el) => {
+        if (!el) return;
+        el.addEventListener('focus', () => postHost({ type: 'panel_input_focus' }));
+        el.addEventListener('input', () => postHost({ type: 'panel_input_activity' }));
+        el.addEventListener('change', saveManualConfig);
+        el.addEventListener('blur', saveManualConfig);
+      });
+
+      loadManualConfig();
+      applyProviderPreset(apiProviderSelect?.value || 'deepseek');
+      setManualPanelVisible(true);
+      connectHoleWs();
+    })();
+  </script>
+</body>
+</html>

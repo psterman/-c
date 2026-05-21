@@ -1,6 +1,7 @@
 ; ===================== msg =====================
 #Requires AutoHotkey v2.0
 
+OnError(NMER_StartupOnError)
 global pToken := Gdip_Startup()
 if (!pToken) {
     MsgBox "GDI+ 启动失败，请检查 lib\Gdip_All.ahk"
@@ -16,6 +17,7 @@ global FloatingBubbleIsVisible := false
 ; Emergency switch: disable hole overlay to avoid toolbar/page freeze.
 global EnableHoleOverlay := true
 global EnableHoleOverlayOnNativeDrop := true
+global GDHO_DECOUPLED_TOPOLOGY := true
 ; Decoupled Go native drop bridge (out-of-process).
 global EnableNativeDropBridge := true
 global NativeDropBridgePID := 0
@@ -187,6 +189,7 @@ global MainScriptDir := A_ScriptDir
 ; ===================== 包含悬浮工具栏模块 =====================
 #Include modules\HoleWhisperStt.ahk
 #Include modules\GlobalDragHoleOverlay.ahk
+#Include modules\NativeDropCursorSync.ahk
 #Include modules\FloatingToolbar.ahk
 #Include modules\FloatingBubble.ahk
 #Include modules\GravityPump.ahk
@@ -203,6 +206,11 @@ global MainScriptDir := A_ScriptDir
 if (EnableHoleOverlay || EnableHoleOverlayOnNativeDrop) {
     holeFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\hole_starry.html")
     try GDHO_SetFallbackUrl(holeFallbackUrl)
+    if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
+        panelFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\hole_panel.html")
+        try GDHO_SetPanelFallbackUrl(panelFallbackUrl)
+        try GDHO_SetPanelPageUrl(panelFallbackUrl)
+    }
 }
 if (EnableHoleOverlayOnNativeDrop) {
     holeFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\hole_starry.html")
@@ -2602,17 +2610,29 @@ ApplyActivationRuntimeDeferred(mode, token) {
                 GDHO_SetPageUrl(localHole)
                 GDHO_SetFallbackUrl(localHole)
             }
+            if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
+                localPanel := GDHO_BuildFileUrl(A_ScriptDir . "\hole_panel.html")
+                if FileExist(A_ScriptDir . "\hole_panel.html") {
+                    GDHO_SetPanelPageUrl(localPanel)
+                    GDHO_SetPanelFallbackUrl(localPanel)
+                }
+            }
         } catch {
         }
         try GDHO_Start()
         catch {
         }
-        ; Safety: do not pin persistent overlay in hole mode, avoid interfering with other app UIs.
-        try GDHO_UnpinFromDesktop()
-        catch {
-        }
-        try GDHO_SetClickThrough(true)
-        catch {
+        ; 常驻黑洞模式：启动即固定显示，并允许输入面板交互（不穿透）。
+        ; 常驻入口使用 file 载荷可绕开文本近距门槛，确保模式切换后立刻可见。
+        if (FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled()) {
+            try GDHO_PinToDesktop("file")
+            catch {
+            }
+        } else {
+            try GDHO_PinToDesktop("file")
+            catch {
+            }
+            try GDHO_SetClickThrough(false)
         }
         try NativeDropBridge_Start()
         catch {
@@ -2868,6 +2888,20 @@ GDHO_LoadSettingsFromIni() {
     try GDHO_SetScreenAnchor(fx, fy)
     try GDHO_ApplySettings(mode, td, dd, fx, fy, ss, al, vs)
     try GDHO_ApplyHideDockSettings(hideDockEnabled, hideDockEdge, hideDockMargin)
+    try {
+        if (IniRead(ConfigFile, "Appearance", "HoleDecoupledTopology", "1") = "0")
+            GDHO_DECOUPLED_TOPOLOGY := false
+        else
+            GDHO_DECOUPLED_TOPOLOGY := true
+    }
+    try {
+        if (IniRead(ConfigFile, "Appearance", "HoleStarFullscreen", "0") = "1")
+            GDHO_STAR_FULLSCREEN := true
+        else
+            GDHO_STAR_FULLSCREEN := false
+    }
+    if FuncExists("GDHO_LoadPanelPositionFromIni")
+        try GDHO_LoadPanelPositionFromIni()
 }
 
 ApplyUnifiedWebViewAssets(wv2) {
@@ -3026,6 +3060,7 @@ NativeDropBridge_Start() {
         rect := NativeDropBridge_GetDropRect()
         rx := Integer(rect["x"]), ry := Integer(rect["y"]), rw := Integer(rect["w"]), rh := Integer(rect["h"])
         cmd := '"' . NativeDropBridgeExe . '" --out "' . NativeDropBridgeOut . '" --x ' . rx . ' --y ' . ry . ' --w ' . rw . ' --h ' . rh
+        cmd .= ' --ws 127.0.0.1:18790 --gate-follow'
         if (NativeDropBridgeUseCopyData && NativeDropBridgeCopyDataReady)
             cmd .= ' --copydata --ahk-class "AutoHotkey" --ahk-title "' . NativeDropBridgeCopyDataTitle . '"'
         Run(cmd, A_ScriptDir, "Hide", &pid)
@@ -3252,6 +3287,10 @@ NativeDropBridge_TriggerHolePulse(evt) {
         ; reset movement gate, otherwise weak preview may never show.
         isFreshSession := !NativeDropSessionActive
         if isFreshSession {
+            if FuncExists("NativeDropBridge_BumpSessionId")
+                NativeDropBridge_BumpSessionId()
+            if FuncExists("NativeDropCursorSync_Start")
+                NativeDropCursorSync_Start()
             NativeDropSessionActive := true
             NativeDropAwaitingDragEnd := false
             NativeDropAwaitingDragEndSince := 0
@@ -3285,9 +3324,21 @@ NativeDropBridge_TriggerHolePulse(evt) {
             NativeDropSessionPayload := kindMapped
         }
         if (kindMapped = "text") {
+            ; Some apps report text-drag starts with transient/false LButton state.
+            ; Keep routing when selection state indicates text is already captured.
             if !GetKeyState("LButton", "P") {
-                try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore_text reason=lbutton_up")
-                return
+                allowBySelectionState := false
+                try {
+                    if FuncExists("SelectionSense_IsTextCapturedForHole")
+                        allowBySelectionState := !!SelectionSense_IsTextCapturedForHole()
+                } catch {
+                    allowBySelectionState := false
+                }
+                if !allowBySelectionState {
+                    try NativeDropDiag_Log("route kind=" . kindRaw . " action=ignore_text reason=lbutton_up")
+                    return
+                }
+                try NativeDropDiag_Log("route kind=" . kindRaw . " action=allow_text reason=lbutton_up_selection_state")
             }
             srcHwnd := 0
             try {
@@ -3311,11 +3362,22 @@ NativeDropBridge_TriggerHolePulse(evt) {
         try SetTimer(NativeDropBridge_DragSessionTick, 60)
         if (kindMapped = "file")
             NativeDropBridge_ActivateFileDragHole(evt)
-        ; Basic mode: do not show hole on drag_start.
-        ; Show only after real move gate is passed in DragSessionTick.
-        actionTag := isFreshSession ? (kindMapped = "file" ? "arm_file_preview" : "arm_wait_move") : "arm_keep_session"
+        ; Restore event-driven preview on drag_start/drag_enter (legacy-stable behavior):
+        ; users should see starry hole activate immediately when text/file drag begins.
+        actionTag := isFreshSession ? "arm_show_preview" : "arm_keep_session"
         try NativeDropDiag_Log("route kind=" . kindRaw . " action=" . actionTag . " payload=" . payloadRaw . " mapped=" . kindMapped . (fallbackPayload != "" ? " fallback=" . fallbackPayload : ""))
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . kindRaw . "', dispatch: '" . actionTag . ":" . kindMapped . "', active: 1, overHole: 0, wasOverHole: " . (NativeDropWasOverHole ? "1" : "0") . ", payload: '" . kindMapped . "' })")
+        if isFreshSession {
+            try {
+                GDHO_Init()
+                GDHO_Show(kindMapped)
+                ; WebView readiness can be delayed for the first tick; retry quickly.
+                SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -120)
+                SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -320)
+                SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -620)
+            } catch {
+            }
+        }
         try HoleDragHooks_Emit("activate", Map(
             "kind", kindRaw,
             "payload", kindMapped,
@@ -3669,7 +3731,9 @@ NativeDropBridge_SetReceiverVisible(visible := true) {
         return
     s_lastVisible := want
     hwnd := 0
-    try hwnd := WinExist("ahk_class NMERNativeDropBridgeWnd")
+    try hwnd := WinExist("ahk_class NMER_NativeDropBridge")
+    if !hwnd
+        try hwnd := WinExist("ahk_class NMERNativeDropBridge")
     catch {
         hwnd := 0
     }
@@ -3809,8 +3873,7 @@ NativeDropBridge_DragSessionTick(*) {
                         GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
                         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'drag_tick', dispatch: 'preview_strong_after_move', active: 1, overHole: 0, wasOverHole: 0, payload: 'file' })")
                     } else {
-                        ; Text hole: no preview at move gate; only near-hole via GDHO_ManageTextDragOverlay.
-                        try NativeDropDiag_Log("route drag_tick action=text_wait_near_hole dist=" . Round(moveDist, 1))
+                        try NativeDropDiag_Log("route drag_tick action=text_select_preview dist=" . Round(moveDist, 1))
                         NativeDropWeakPreviewShown := true
                     }
                     if (NativeDropSessionPayload = "file")
@@ -4016,10 +4079,31 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
         try NativeDropDiag_Log("reset_session_skip reason=drag_end trigger_source=selection_copy")
         return
     }
+    if FuncExists("SelectionSense_IsSelectionHolePreviewActive") {
+        try {
+            if SelectionSense_IsSelectionHolePreviewActive() {
+                if (r0 = "release_coalesce" || r0 = "release_coalesce_after_suck" || r0 = "watchdog" || r0 = "drag_release"
+                    || r0 = "selection_release" || r0 = "selection_captured" || r0 = "drag_idle_timeout") {
+                    try NativeDropDiag_Log("reset_session_skip reason=" . reason . " selection_preview=1 hide=0")
+                    NativeDropSessionActive := false
+                    return
+                }
+                hideOverlay := false
+            }
+        } catch {
+        }
+    }
     specialUiReason := (r0 = "caps_f_search" || r0 = "search_center_exit" || r0 = "hole_close")
     if (NativeDropSessionActive && specialUiReason) {
         try NativeDropDiag_Log("reset_session_skip reason=" . reason . " active_drag=1")
         return
+    }
+    if (FuncExists("GDHO_IsPostSuckProtected") && GDHO_IsPostSuckProtected()) {
+        hideOverlay := false
+        try NativeDropDiag_Log("reset_session_post_suck_protect reason=" . reason . " hide=0")
+    } else if (r0 = "release_coalesce_after_suck" && FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled()) {
+        hideOverlay := false
+        try NativeDropDiag_Log("reset_session_after_suck_no_hide reason=" . reason)
     }
     try NativeDropDiag_Log("reset_session_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
     if FuncExists("GDHO_SetFileDropCapture") {
@@ -4031,6 +4115,8 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
         try NativeDropBridge_SetReceiverVisible(true)
     }
     NativeDropSessionActive := false
+    if FuncExists("NativeDropCursorSync_Stop")
+        NativeDropCursorSync_Stop()
     NativeDropSessionPayload := "text"
     NativeDropOverHole := false
     NativeDropWasOverHole := false
@@ -4074,7 +4160,14 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
     }
     ; Ensure overlay window returns to transparent hit-test state after forced cleanup.
     try NativeDropDiag_Log("reset_session_step clickthrough_begin reason=" . reason)
-    try GDHO_SetClickThrough(true)
+    if (FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled()) {
+        if FuncExists("GDHO_SetStarryClickThrough")
+            try GDHO_SetStarryClickThrough(true, "reset_session_" . reason)
+        if FuncExists("GDHO_SetPanelInteractive")
+            try GDHO_SetPanelInteractive("reset_session_" . reason)
+    } else {
+        try GDHO_SetClickThrough(true)
+    }
     try NativeDropDiag_Log("reset_session_step clickthrough_done reason=" . reason)
     NativeDropBridgeSilentMode := !!silentMode
     try NativeDropDiag_Log("reset_session_step silent_mode=" . (NativeDropBridgeSilentMode ? "1" : "0") . " reason=" . reason)
@@ -4127,6 +4220,24 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
     if (r = "drag_end" && GDHO_TriggerSource = "selection_copy") {
         try NativeDropDiag_Log("reset_session_async_skip reason=drag_end trigger_source=selection_copy")
         return
+    }
+    if (FuncExists("GDHO_IsPostSuckProtected") && GDHO_IsPostSuckProtected()) {
+        if (r = "release_coalesce_after_suck" || r = "release_coalesce" || r = "drag_idle_timeout" || r = "drag_release"
+            || r = "hide_overlay" || r = "hide_overlay_redirect") {
+            try NativeDropDiag_Log("reset_session_async_post_suck_protect reason=" . reason)
+            try NativeDropBridge_ResetSession(reason, 0, false, false)
+            return
+        }
+    }
+    if FuncExists("SelectionSense_IsSelectionHolePreviewActive") {
+        try {
+            if SelectionSense_IsSelectionHolePreviewActive() && (r = "release_coalesce" || r = "release_coalesce_after_suck" || r = "watchdog"
+                || r = "drag_release" || r = "selection_release" || r = "selection_captured" || r = "drag_idle_timeout") {
+                try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " selection_preview=1")
+                return
+            }
+        } catch {
+        }
     }
     if (NativeDropSessionActive && (r = "caps_f_search" || r = "search_center_exit" || r = "hole_close")) {
         try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " active_drag=1")
@@ -4876,6 +4987,22 @@ ConfigOpenFlightRelease(*) {
     } else {
         NMER_Log("ui", "open_config_force_release", "vis=1")
     }
+}
+
+NMER_StartupOnError(err, mode) {
+    if (mode = "Return")
+        return false
+    line := 0
+    try line := err.Line
+    msg := "启动或运行出错：`n" . err.Message
+    if (line)
+        msg .= "`n`n" . err.File . " (行 " . line . ")"
+    try NMER_Log("startup", "unhandled_error", err.Message . " line=" . line)
+    catch {
+        try FileAppend(Format("{} {}\n", A_Now, msg), A_ScriptDir "\Cache\startup_error.log")
+    }
+    try MsgBox(msg, "CursorHelper", 0x10)
+    return false
 }
 
 NMER_Log(scope, event, detail := "") {
@@ -6750,4 +6877,3 @@ $^+q:: {
 }
 
 OnExit(ExitFunc)
-
