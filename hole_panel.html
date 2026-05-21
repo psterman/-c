@@ -209,7 +209,7 @@
         <button id="sendManualBtn" type="button">发送到黑洞</button>
         <button id="testApiBtn" type="button">测试连接</button>
       </div>
-      <div class="hint">提示：支持 Ctrl+Enter 发送</div>
+      <div class="hint">提示：支持 Ctrl+Enter 发送；MiniMax Anthropic 地址请用 https://api.minimaxi.com/anthropic 或 https://api.minimax.io/anthropic（勿写成 api.minimax.com）</div>
       <div id="holeStreamHud" aria-live="polite"></div>
       <div id="resultPanel">
         <div id="resultHead">结果输出</div>
@@ -444,7 +444,7 @@
             if (p2 && keys[p2] != null) k = String(keys[p2] || '').trim();
           }
           if (!k && typeof cfg.apiKey === 'string') k = String(cfg.apiKey || '').trim();
-          if (!k) {
+          if (!k && pid !== 'minimax') {
             const firstKey = Object.keys(keys || {}).find(name => String(keys[name] || '').trim() !== '');
             if (firstKey) k = String(keys[firstKey] || '').trim();
           }
@@ -455,8 +455,38 @@
         }
       }
 
+      function normalizeMiniMaxBaseURL(base) {
+        let u = String(base || '').trim();
+        if (!u) return u;
+        try {
+          const parsed = new URL(u);
+          if (parsed.hostname.toLowerCase() === 'api.minimax.com') parsed.hostname = 'api.minimaxi.com';
+          if (parsed.pathname.endsWith('/anthrop')) parsed.pathname = parsed.pathname.slice(0, -'/anthrop'.length) + '/anthropic';
+          return parsed.toString();
+        } catch (_) {
+          if (u.endsWith('/anthrop')) u = u.slice(0, -'/anthrop'.length) + '/anthropic';
+          return u;
+        }
+      }
+
+      function shouldUseAnthropic(provider, baseUrl) {
+        const p = String(provider || '').trim().toLowerCase();
+        const u = String(baseUrl || '').trim().toLowerCase();
+        if (p === 'claude') return true;
+        return p === 'minimax' && u.includes('/anthropic');
+      }
+
+      function anthropicCompatUrl(base) {
+        let u = normalizeMiniMaxBaseURL(String(base || '').trim()).replace(/\/+$/g, '');
+        if (!u) return 'https://api.anthropic.com/v1/messages';
+        const lu = u.toLowerCase();
+        if (lu.endsWith('/v1/messages') || lu.endsWith('/messages')) return u;
+        if (lu.endsWith('/v1')) return u + '/messages';
+        return u + '/v1/messages';
+      }
+
       function openAICompatUrl(base) {
-        const u0 = String(base || '').trim().replace(/\/+$/g, '');
+        const u0 = normalizeMiniMaxBaseURL(String(base || '').trim()).replace(/\/+$/g, '');
         if (!u0) return '';
         const u = u0.toLowerCase();
         if (u.endsWith('/chat/completions')) return u0;
@@ -476,25 +506,28 @@
           if (resultBody) resultBody.textContent = '请先填写完整的 Base URL / Model / API Key。';
           return;
         }
-        const url = openAICompatUrl(baseUrl);
+        const useAnthropic = shouldUseAnthropic(provider, baseUrl);
+        const url = useAnthropic ? anthropicCompatUrl(baseUrl) : openAICompatUrl(baseUrl);
         if (!url) {
           if (resultHead) resultHead.textContent = '结果输出（错误）';
           if (resultBody) resultBody.textContent = 'Base URL 无效。';
           return;
         }
         try {
-          const payload = {
-            model,
-            stream: false,
-            messages: [{ role: 'user', content: 'ping' }],
-            max_tokens: 8
-          };
+          const payload = useAnthropic
+            ? { model, max_tokens: 8, messages: [{ role: 'user', content: 'ping' }] }
+            : { model, stream: false, messages: [{ role: 'user', content: 'ping' }], max_tokens: 8 };
+          const headers = { 'Content-Type': 'application/json' };
+          if (useAnthropic) {
+            headers['anthropic-version'] = '2023-06-01';
+            if (provider === 'minimax' || /minimax/i.test(baseUrl)) headers['Authorization'] = 'Bearer ' + apiKey;
+            else headers['x-api-key'] = apiKey;
+          } else {
+            headers['Authorization'] = 'Bearer ' + apiKey;
+          }
           const resp = await fetch(url, {
             method: 'POST',
-            headers: {
-              'Authorization': 'Bearer ' + apiKey,
-              'Content-Type': 'application/json'
-            },
+            headers,
             body: JSON.stringify(payload)
           });
           const raw = await resp.text();

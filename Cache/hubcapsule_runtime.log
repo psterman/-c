@@ -46,3 +46,6 @@
 [2026-05-21 23:47:39][hub][webview_create_gate][0/0/0] gen=0 hwnd=658424
 [2026-05-21 23:47:46][hub][phase][0/0/2] phase=OPEN reason=hub_ready
 [2026-05-21 23:47:46][hub][phase][0/0/2] phase=OPEN reason=selection_menu_ready
+[2026-05-21 23:54:40][hub][webview_create_gate][0/0/0] gen=0 hwnd=723886
+[2026-05-21 23:54:45][hub][phase][0/0/2] phase=OPEN reason=hub_ready
+[2026-05-21 23:54:45][hub][phase][0/0/2] phase=OPEN reason=selection_menu_ready

@@ -30,3 +30,5 @@
 [2026-05-21 23:46:41][init_guard_drop] reason=empty
 [2026-05-21 23:47:40][init_begin] reason= gui=0 alive=0 inflight=0
 [2026-05-21 23:47:40][init_guard_drop] reason=empty
+[2026-05-21 23:54:41][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 23:54:41][init_guard_drop] reason=empty

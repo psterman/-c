@@ -278,3 +278,30 @@
 [2026-05-21 23:47:39] scene_items_fallback_default count=8 mode=hole
 [2026-05-21 23:47:39] scene_items_fallback_context scene=tray_menu hidden_count=0 cmd_count=0
 [2026-05-21 23:47:39] snapshot_rebuild_ok count=8 elapsed_ms=0
+[2026-05-21 23:54:39] tray_msg lParam=516 msg=1028
+[2026-05-21 23:54:39] tray_msg lParam=517 msg=1028
+[2026-05-21 23:54:39] tray_popup_state mode=hole search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=13 native=0 waiting=0 phase=closed caps=0
+[2026-05-21 23:54:39] custom_popup_queue lParam=517
+[2026-05-21 23:54:39] custom_popup_return lParam=517 elapsed_ms=0
+[2026-05-21 23:54:39] custom_popup_begin lParam=517
+[2026-05-21 23:54:39] custom_popup_state mode=hole ft_vis=0 bub_vis=0 search_active=0 search_visible=0 gdho=0 gdho_phase=CLOSED gdho_token=13 native=0 waiting=0 create_inflight=0
+[2026-05-21 23:54:39] tray_build_phase=state elapsed_ms=0
+[2026-05-21 23:54:39] snapshot_hit scene=tray_menu count=8
+[2026-05-21 23:54:39] custom_popup_scene_items count=8 mode=hole
+[2026-05-21 23:54:39] scene_items_appended count=8 mode=hole
+[2026-05-21 23:54:39] tray_build_phase=snapshot elapsed_ms=0
+[2026-05-21 23:54:39] tray_build_phase=render elapsed_ms=0
+[2026-05-21 23:54:39] custom_popup_build_done items=10 elapsed_ms=0
+[2026-05-21 23:54:39] dark_popup_show_begin items=10 pos=1632,680
+[2026-05-21 23:54:39] dark_popup_show_done elapsed_ms=62 hwnd=2165316
+[2026-05-21 23:54:39] custom_popup_end lParam=517 elapsed_ms=78
+[2026-05-21 23:54:39] popup_state_reset reason=invoke_click
+[2026-05-21 23:54:39] invoke_click idx=9 text=重启脚本
+[2026-05-21 23:54:39] invoke_ok idx=9 text=重启脚本
+[2026-05-21 23:54:39] run_scene_cmd cmd=tray_reload_script mode=hole search_active=0
+[2026-05-21 23:54:39] reload_hard_spawn_ok
+[2026-05-21 23:54:40] snapshot_dirty reason=update_tray_menu
+[2026-05-21 23:54:40] snapshot_dirty reason=init
+[2026-05-21 23:54:40] scene_items_fallback_default count=8 mode=hole
+[2026-05-21 23:54:40] scene_items_fallback_context scene=tray_menu hidden_count=0 cmd_count=0
+[2026-05-21 23:54:40] snapshot_rebuild_ok count=8 elapsed_ms=0

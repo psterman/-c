@@ -273,17 +273,16 @@ func normalizeMiniMaxBaseURL(baseURL string) string {
 	}
 	parsed, err := url.Parse(u)
 	if err != nil || parsed.Host == "" {
-		// Fallback string-level patch.
-		v := strings.ReplaceAll(u, "api.minimax.com", "api.minimax.io")
-		v = strings.ReplaceAll(v, "/anthrop/", "/anthropic/")
+		v := strings.ReplaceAll(u, "/anthrop/", "/anthropic/")
 		if strings.HasSuffix(v, "/anthrop") {
 			v = strings.TrimSuffix(v, "/anthrop") + "/anthropic"
 		}
 		return v
 	}
 	host := strings.ToLower(strings.TrimSpace(parsed.Host))
+	// Common typo: api.minimax.com (missing "i") → China Open Platform host.
 	if host == "api.minimax.com" {
-		parsed.Host = "api.minimax.io"
+		parsed.Host = "api.minimaxi.com"
 	}
 	path := strings.ReplaceAll(parsed.Path, "/anthrop/", "/anthropic/")
 	if strings.HasSuffix(path, "/anthrop") {
@@ -291,6 +290,11 @@ func normalizeMiniMaxBaseURL(baseURL string) string {
 	}
 	parsed.Path = path
 	return parsed.String()
+}
+
+func isMiniMaxHost(baseURL string) bool {
+	u := strings.ToLower(strings.TrimSpace(baseURL))
+	return strings.Contains(u, "minimax.io") || strings.Contains(u, "minimaxi.com") || strings.Contains(u, "minimax.com")
 }
 
 func shouldUseAnthropic(provider, baseURL string) bool {
@@ -321,7 +325,18 @@ func anthropicCompatURL(baseURL string) string {
 	return u + "/v1/messages"
 }
 
-func (p *dropPipeline) streamAnthropic(ctx context.Context, reqID uint64, baseURL, apiKey, model, prompt string) error {
+func setAnthropicAuthHeaders(req *http.Request, provider, baseURL, apiKey string) {
+	apiKey = strings.TrimSpace(apiKey)
+	p := strings.ToLower(strings.TrimSpace(provider))
+	if p == "minimax" || isMiniMaxHost(baseURL) {
+		// MiniMax Anthropic-compatible API expects Bearer, not x-api-key.
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+		return
+	}
+	req.Header.Set("x-api-key", apiKey)
+}
+
+func (p *dropPipeline) streamAnthropic(ctx context.Context, reqID uint64, provider, baseURL, apiKey, model, prompt string) error {
 	url := anthropicCompatURL(normalizeMiniMaxBaseURL(baseURL))
 	body, _ := json.Marshal(map[string]any{
 		"model": model,
@@ -334,7 +349,7 @@ func (p *dropPipeline) streamAnthropic(ctx context.Context, reqID uint64, baseUR
 	if err != nil {
 		return err
 	}
-	req.Header.Set("x-api-key", apiKey)
+	setAnthropicAuthHeaders(req, provider, baseURL, apiKey)
 	req.Header.Set("anthropic-version", "2023-06-01")
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
@@ -383,7 +398,7 @@ func (p *dropPipeline) streamChat(ctx context.Context, reqID uint64, provider, b
 		baseURL = normalizeMiniMaxBaseURL(baseURL)
 	}
 	if shouldUseAnthropic(provider, baseURL) {
-		return p.streamAnthropic(ctx, reqID, baseURL, apiKey, model, prompt)
+		return p.streamAnthropic(ctx, reqID, provider, baseURL, apiKey, model, prompt)
 	}
 	url := openAICompatURL(baseURL)
 	body, _ := json.Marshal(map[string]any{
