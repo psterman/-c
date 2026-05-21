@@ -234,8 +234,21 @@ NativeDrop_SetHoleSolid(isSolid := false, requestFocus := false) {
             if requestFocus && FuncExists("NativeDrop_EnsureHostFocus")
                 NativeDrop_EnsureHostFocus()
         } else {
-            if FuncExists("GDHO_HidePanel") && !GDHO_MANUAL_PANEL_MODE
-                try GDHO_HidePanel("hit_guard_transparent")
+            if FuncExists("GDHO_HidePanel") && !GDHO_MANUAL_PANEL_MODE {
+                skipHide := false
+                if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+                    try skipHide := GDHO_IsTextHoleUserPanelActive()
+                    catch {
+                    }
+                }
+                if FuncExists("GDHO_IsPanelDragProtected") {
+                    try skipHide := (skipHide || GDHO_IsPanelDragProtected())
+                    catch {
+                    }
+                }
+                if !skipHide
+                    try GDHO_HidePanel("hit_guard_transparent")
+            }
         }
         return
     }
@@ -279,10 +292,26 @@ NativeDrop_SetHoleSolid(isSolid := false, requestFocus := false) {
 }
 
 NativeDrop_EnsureHostFocus() {
-    global GDHO_GUI, GDHO_PANEL_GUI, g_HoleLastFocusTick
+    global GDHO_GUI, GDHO_PANEL_GUI, g_HoleLastFocusTick, GDHO_PANEL_VISIBLE
+    if FuncExists("GDHO_IsPanelDragProtected") {
+        try {
+            if GDHO_IsPanelDragProtected()
+                return
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+        try {
+            if GDHO_IsTextHoleUserPanelActive()
+                return
+        } catch {
+        }
+    }
+    if (FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled() && IsSet(GDHO_PANEL_VISIBLE) && GDHO_PANEL_VISIBLE)
+        return
     focusGui := 0
     if (FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled() && IsObject(GDHO_PANEL_GUI))
-        focusGui := GDHO_PANEL_GUI
+        return
     else if IsObject(GDHO_GUI)
         focusGui := GDHO_GUI
     if !IsObject(focusGui) || !focusGui.Hwnd

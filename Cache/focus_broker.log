@@ -1,3 +1,0 @@
-﻿[2026-05-21 08:28:14][focus][grant] owner=HubCapsule hwnd=2166524 priority=30 reason=show_menu
-[2026-05-21 08:28:14][focus][grant] owner=HubCapsule hwnd=2166524 priority=30 reason=nudge_focus
-[2026-05-21 08:28:21][focus][release] owner=HubCapsule reason=hide_menu_request

@@ -29,6 +29,7 @@ type wsInbound struct {
 	APIKey  string `json:"apiKey"`
 	BaseURL string `json:"baseUrl"`
 	Model   string `json:"model"`
+	Provider string `json:"provider"`
 }
 
 func (h *wsHub) start(addr string) {
@@ -75,6 +76,7 @@ func (h *wsHub) handleWS(w http.ResponseWriter, r *http.Request) {
 				APIKey:  strings.TrimSpace(in.APIKey),
 				BaseURL: strings.TrimSpace(in.BaseURL),
 				Model:   strings.TrimSpace(in.Model),
+				Provider: strings.TrimSpace(in.Provider),
 			}
 			reqID := globalPipeline.beginManual(strings.TrimSpace(in.Prompt), cfg)
 			if reqID == 0 {

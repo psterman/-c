@@ -860,8 +860,28 @@ TrayMenu_OpenConfigAction(*) {
     }
 }
 
+TrayMenu_SwitchToToolbarFromHoleMenu(*) {
+    try TrayMenu_Log("switch_to_toolbar_from_hole_menu")
+    try {
+        if FuncExists("TrayMenu_HardenHoleUiTransition")
+            TrayMenu_HardenHoleUiTransition("tray_switch_toolbar", 1200)
+    } catch {
+    }
+    try {
+        if FuncExists("FloatingToolbar_SetActivationMode")
+            FloatingToolbar_SetActivationMode("toolbar")
+        else if FuncExists("ApplyAppearanceActivationMode") {
+            global AppearanceActivationMode
+            AppearanceActivationMode := "toolbar"
+            ApplyAppearanceActivationMode()
+        }
+    } catch as err {
+        try TrayMenu_Log("switch_to_toolbar_failed msg=" . err.Message)
+    }
+}
+
 TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis) {
-    global GDHO_VISIBLE, g_GDHO_CurrentPhase, GDHO_PHASE_OPEN, GDHO_PHASE_OPENING, g_TrayHoleInputPanelVisible, g_TrayHolePanelPassthrough
+    global GDHO_VISIBLE, g_GDHO_CurrentPhase, GDHO_PHASE_OPEN, GDHO_PHASE_OPENING
     if (mode = "hole") {
         holeVisible := false
         try holeVisible := (g_GDHO_CurrentPhase = GDHO_PHASE_OPEN || g_GDHO_CurrentPhase = GDHO_PHASE_OPENING || GDHO_VISIBLE)
@@ -873,14 +893,10 @@ TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis) {
         } else {
             MenuItems.Push({ Text: "显示黑洞", Action: FloatingBubbleShowFromMenu, Icon: "☰" })
         }
-        if (g_TrayHoleInputPanelVisible)
-            MenuItems.Push({ Text: "隐藏输入面板", Action: ((*) => TrayMenu_RunSceneCmd("tray_hide_hole_input_panel")), Icon: "⌨" })
+        if FuncExists("FloatingToolbar_SwitchToToolbarFromMenu")
+            MenuItems.Push({ Text: "切换到悬浮栏", Action: FloatingToolbar_SwitchToToolbarFromMenu, Icon: "▤" })
         else
-            MenuItems.Push({ Text: "显示输入面板", Action: ((*) => TrayMenu_RunSceneCmd("tray_show_hole_input_panel")), Icon: "⌨" })
-        if g_TrayHolePanelPassthrough
-            MenuItems.Push({ Text: "输入面板：穿透", Action: ((*) => TrayMenu_RunSceneCmd("tray_toggle_hole_panel_passthrough")), Icon: "◌" })
-        else
-            MenuItems.Push({ Text: "输入面板：常驻不穿透", Action: ((*) => TrayMenu_RunSceneCmd("tray_toggle_hole_panel_passthrough")), Icon: "●" })
+            MenuItems.Push({ Text: "切换到悬浮栏", Action: TrayMenu_SwitchToToolbarFromHoleMenu, Icon: "▤" })
         return
     }
     if (mode != "tray") {
@@ -1460,80 +1476,47 @@ TrayMenu_ResetPopupState(reason := "") {
 }
 
 FloatingBubbleShowFromMenu(*) {
-    SetTimer(FloatingBubbleShowFromMenuRun, -10)
+    FloatingBubbleShowFromMenuRun()
+}
+
+TrayMenu_DeferCloseSearchAfterHoleShow(*) {
+    try SCWV_SubmitIntent("FORCE_CLOSE", 10, Map("reason", "tray_menu_show_hole"))
+    catch {
+    }
 }
 
 FloatingBubbleShowFromMenuRun(*) {
     global GDHO_HOST_W, GDHO_HOST_H, GDHO_POSITION_MODE, g_IsUIVisibleTransitioning
     global GDHO_SCREEN_X, GDHO_SCREEN_Y, GDHO_FIXED_X, GDHO_FIXED_Y
-    global g_TrayMenuTransitionStartTick
-    global g_TrayShowHolePending, g_TrayShowHoleRetryCount, g_TrayShowHolePendingSince
-    global g_TrayMenuSuppressOpenUntil
-    ; Ensure tray popup state is released before hole transition.
+    global g_TrayMenuTransitionStartTick, g_TrayMenuSuppressOpenUntil
     try CloseDarkStylePopupMenu()
-    try TrayMenu_ResetPopupState("tray_show_hole_begin")
-    g_TrayMenuSuppressOpenUntil := A_TickCount + 420
-    if g_TrayShowHolePending {
-        if (g_TrayShowHolePendingSince > 0 && (A_TickCount - g_TrayShowHolePendingSince) > 2200) {
-            g_TrayShowHolePending := false
-            g_TrayShowHolePendingSince := 0
-            try TrayMenu_Log("tray_show_hole_pending_watchdog_release")
-        } else {
-        try TrayMenu_Log("tray_show_hole_skip reason=pending")
-        return
-        }
-    }
-    g_TrayShowHolePending := true
-    g_TrayShowHolePendingSince := A_TickCount
+    try TrayMenu_ResetPopupState("tray_menu_show_hole_begin")
+    g_TrayMenuSuppressOpenUntil := A_TickCount + 120
+    g_IsUIVisibleTransitioning := false
+    g_TrayMenuTransitionStartTick := 0
     try {
-        if (g_IsUIVisibleTransitioning) {
-            elapsedTrans := A_TickCount - g_TrayMenuTransitionStartTick
-            if (elapsedTrans > 1800) {
-                g_IsUIVisibleTransitioning := false
-                g_TrayMenuTransitionStartTick := 0
-                try TrayMenu_Log("tray_show_hole_force_clear_transition elapsed_ms=" . elapsedTrans)
-            } else {
-                try TrayMenu_Log("tray_show_hole_skip reason=ui_transitioning")
-                return
-            }
-        }
-        try TrayMenu_Log("tray_show_hole_begin")
-        try SCWV_SubmitIntent("FORCE_CLOSE", 10, Map("reason", "tray_show_hole"))
-        catch {
-        }
+        try TrayMenu_Log("tray_menu_show_hole_begin")
         GDHO_POSITION_MODE := "fixed"
-        monL := SysGet(76), monT := SysGet(77), monW := SysGet(78), monH := SysGet(79)
-        hostW := (IsSet(GDHO_HOST_W) && GDHO_HOST_W > 0) ? GDHO_HOST_W : 360
-        hostH := (IsSet(GDHO_HOST_H) && GDHO_HOST_H > 0) ? GDHO_HOST_H : 420
+        CoordMode("Mouse", "Screen")
         MouseGetPos(&mx, &my)
-        cx := Integer(mx - hostW + 36)
-        cy := Integer(my - hostH - 36)
-        minX := monL + 2, minY := monT + 2
-        maxX := monL + monW - hostW - 2, maxY := monT + monH - hostH - 2
-        if (cx < minX)
-            cx := minX
-        if (cy < minY)
-            cy := minY
-        if (cx > maxX)
-            cx := maxX
-        if (cy > maxY)
-            cy := maxY
-        holeX := Integer(cx - monL + 90)
-        holeY := Integer(cy - monT + 56)
-        try GDHO_SCREEN_X := monL + holeX
-        try GDHO_SCREEN_Y := monT + holeY
-        try GDHO_FIXED_X := monL + holeX
-        try GDHO_FIXED_Y := monT + holeY
-        try GDHO_RequestOpen(Map("reason", "tray_show_hole", "payload", "text", "positionMode", "fixed", "screenX", monL + holeX, "screenY", monT + holeY))
-        catch as err {
-            try TrayMenu_Log("tray_show_hole_open_failed msg=" . err.Message)
-            return
-        }
-        try TrayMenu_Log("tray_show_hole positioned host_x=" . cx . " host_y=" . cy . " hole_x=" . (monL + holeX) . " hole_y=" . (monT + holeY) . " w=" . hostW . " h=" . hostH)
+        hostW := Integer(GDHO_HOST_W > 0 ? GDHO_HOST_W : 620)
+        hostH := Integer(GDHO_HOST_H > 0 ? GDHO_HOST_H : 620)
+        sx := Integer(mx - hostW + 36)
+        sy := Integer(my - 56)
+        try GDHO_SCREEN_X := sx
+        try GDHO_SCREEN_Y := sy
+        try GDHO_FIXED_X := sx
+        try GDHO_FIXED_Y := sy
+        if FuncExists("GDHO_PinToDesktop")
+            GDHO_PinToDesktop("text")
+        else
+            GDHO_RequestOpen(Map("reason", "hole_mode_starry", "payload", "text", "positionMode", "fixed", "screenX", sx, "screenY", sy))
+        try TrayMenu_Log("tray_menu_show_hole positioned screen_x=" . sx . " screen_y=" . sy)
+        SetTimer(TrayMenu_DeferCloseSearchAfterHoleShow, -1)
+    } catch as err {
+        try TrayMenu_Log("tray_menu_show_hole_failed msg=" . err.Message)
     } finally {
-        g_TrayShowHolePending := false
-        g_TrayShowHolePendingSince := 0
-        try TrayMenu_ResetPopupState("tray_show_hole_end")
+        try TrayMenu_ResetPopupState("tray_menu_show_hole_end")
     }
 }
 
@@ -1695,6 +1678,8 @@ TrayMenu_BuildItemsFromSceneIds(sceneIds, cmdList, vm := 0) {
     for cid0 in sceneIds {
         cid := TrayMenu_NormalizeCmdId(cid0)
         if (cid = "" || seen.Has(cid))
+            continue
+        if (cid = "tray_show_hole_input_panel" || cid = "tray_hide_hole_input_panel" || cid = "tray_toggle_hole_panel_passthrough")
             continue
         seen[cid] := true
         if (IsObject(vm) && vm.Has(cid) && !vm[cid])

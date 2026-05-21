@@ -1,5 +1,5 @@
 #Requires AutoHotkey v2.0
-; 閫夊尯鎰熷簲锛殈LButton Up 鍚庯紝鑻?Hub 宸插紑涓旂劍鐐瑰湪 Cursor锛屽垯鏉′欢妯℃嫙 ^c 鈫?preview_update锛涘惁鍒欐竻閫夊尯缂撳瓨銆?; HubCapsule锛氬伐鍏锋爮銆屾柊銆嶃€丆ursor 鍐呭弻鍑?Ctrl+C锛坉raft_collect锛夈€丆apsLock+C銆佹樉寮忓瓨鍏ワ紱棰勮涓庤崏绋挎秷鎭垎娴併€?
+; 选区感应：划选 → 弱预览黑洞 → 提交面板。用户动线见 docs/TEXT_HOLE_FLOW.md
 global g_SelSense_Enabled := true
 global g_SelSense_CopyDelayMs := 55
 global g_SelSense_RequireIBeam := false
@@ -8,6 +8,7 @@ global g_SelSense_MenuAnchorY := 0
 global g_SelSense_LastFullText := ""
 global g_SelSense_LastTick := 0
 global g_SelSense_LastClipSig := ""
+global g_SelSense_ClipSigBeforeCopy := ""
 global g_SelSense_LastFireTick := 0
 global g_SelSense_MenuGui := 0
 global g_SelSense_MenuCtrl := 0
@@ -1665,6 +1666,12 @@ SelectionSense_DetectKnownGuiName(hwnd) {
         return "PromptQuickPadCtxMenuGUI"
     if (IsSet(g_CloudPlayerGui) && g_CloudPlayerGui && SelectionSense_GuiHwndMatches(g_CloudPlayerGui, hwnd))
         return "g_CloudPlayerGui"
+    if (IsSet(GDHO_PANEL_GUI) && IsObject(GDHO_PANEL_GUI) && SelectionSense_GuiHwndMatches(GDHO_PANEL_GUI, hwnd))
+        return "GDHO_PANEL_GUI"
+    if (IsSet(GDHO_STAR_GUI) && IsObject(GDHO_STAR_GUI) && SelectionSense_GuiHwndMatches(GDHO_STAR_GUI, hwnd))
+        return "GDHO_STAR_GUI"
+    if (IsSet(GDHO_GUI) && IsObject(GDHO_GUI) && SelectionSense_GuiHwndMatches(GDHO_GUI, hwnd))
+        return "GDHO_GUI"
     return ""
 }
 
@@ -1726,6 +1733,28 @@ SelectionSense_OnLButtonDown(*) {
     global g_SelSense_LButtonDownX, g_SelSense_LButtonDownY, g_SelSense_LButtonDownTick, g_SelSense_LButtonClicks
     global g_SelSense_HoleRouteSerial, g_SelSense_TextCaptured, g_SelSense_AllowTextHoleGesture, g_SelSense_LastTick
     global g_SelSense_TextHoleDragWindowMs, g_SelSense_HoleDragPhase
+    if SelectionSense_CursorOverOurUi() {
+        SelectionSense_Diag_Log("lbutton_down skip=our_ui")
+        return
+    }
+    if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+        try {
+            if GDHO_IsTextHoleUserPanelActive() {
+                SelectionSense_Diag_Log("lbutton_down skip=text_hole_panel")
+                return
+            }
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_IsPanelDragProtected") {
+        try {
+            if GDHO_IsPanelDragProtected() {
+                SelectionSense_Diag_Log("lbutton_down skip=panel_drag")
+                return
+            }
+        } catch {
+        }
+    }
     g_SelSense_HoleRouteSerial += 1
     CoordMode("Mouse", "Screen")
     MouseGetPos(&g_SelSense_LButtonDownX, &g_SelSense_LButtonDownY)
@@ -1737,6 +1766,15 @@ SelectionSense_OnLButtonDown(*) {
     g_SelSense_LButtonDownTick := A_TickCount
     if (g_SelSense_HoleDragPhase = "armed" && g_SelSense_TextCaptured) {
         if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
+            if FuncExists("GDHO_ShouldBlockStarryReentry") {
+                try {
+                    if GDHO_ShouldBlockStarryReentry() {
+                        SelectionSense_Diag_Log("lbutton_down skip=panel_blocks_starry")
+                        return
+                    }
+                } catch {
+                }
+            }
             SelectionSense_Diag_Log("lbutton_down phase=armed_click")
             if FuncExists("GDHO_TryCommitTextHoleOnClick") {
                 try GDHO_TryCommitTextHoleOnClick(g_SelSense_LButtonDownX, g_SelSense_LButtonDownY)
@@ -1782,6 +1820,13 @@ SelectionSense_IsSelectionGestureActive() {
 
 SelectionSense_IsSelectionHolePreviewActive() {
     global g_SelSense_HoleDragPhase, g_SelSense_TextCaptured, g_SelSense_LastFireTick
+    if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+        try {
+            if GDHO_IsTextHoleUserPanelActive()
+                return false
+        } catch {
+        }
+    }
     if FuncExists("GDHO_IsTextHolePanelOpen") {
         try {
             if GDHO_IsTextHolePanelOpen()
@@ -1790,7 +1835,7 @@ SelectionSense_IsSelectionHolePreviewActive() {
         }
     }
     ph := StrLower(Trim(String(g_SelSense_HoleDragPhase)))
-    if (ph = "armed" || ph = "dragging")
+    if (ph = "armed" || ph = "dragging" || ph = "armed_click" || ph = "preview")
         return true
     if (g_SelSense_TextCaptured && (A_TickCount - g_SelSense_LastFireTick) < 3200)
         return true
@@ -1804,7 +1849,8 @@ SelectionSense_ShouldBlockBridgeTextDrag() {
     ph := StrLower(Trim(String(g_SelSense_HoleDragPhase)))
     if (ph = "dragging")
         return false
-    if (ph = "armed" && IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY && g_SelSense_TextCaptured)
+    if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY && g_SelSense_TextCaptured
+        && (ph = "armed" || ph = "armed_click" || ph = "preview"))
         return true
 
     ; During selecting phase, only block obvious click/micro-move.
@@ -1866,6 +1912,13 @@ SelectionSense_OnHoleDragSessionEnded() {
         } catch {
         }
     }
+    if FuncExists("GDHO_IsTextSelectionPreviewReady") {
+        try {
+            if GDHO_IsTextSelectionPreviewReady()
+                return
+        } catch {
+        }
+    }
     if FuncExists("GDHO_ResetTextHoleCommitState")
         GDHO_ResetTextHoleCommitState()
     else if FuncExists("GDHO_ClearTextDragHandoff")
@@ -1895,6 +1948,24 @@ SelectionSense_OnLButtonUp(*) {
         SelectionSense_Diag_Log("lbutton_up skip=disabled")
         return
     }
+    if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+        try {
+            if GDHO_IsTextHoleUserPanelActive() {
+                SelectionSense_Diag_Log("lbutton_up skip=text_hole_panel")
+                return
+            }
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_IsPanelDragProtected") {
+        try {
+            if GDHO_IsPanelDragProtected() {
+                SelectionSense_Diag_Log("lbutton_up skip=panel_drag")
+                return
+            }
+        } catch {
+        }
+    }
     if SelectionSense_CursorOverOurUi() {
         SelectionSense_Diag_Log("lbutton_up skip=our_ui")
         return
@@ -1913,9 +1984,17 @@ SelectionSense_OnLButtonUp(*) {
     
     isDrag := (distX > 3 || distY > 3)
     isMultiClick := (g_SelSense_LButtonClicks >= 2 && (A_TickCount - g_SelSense_LButtonDownTick < 400))
-    SelectionSense_Diag_Log("lbutton_up dist_x=" . distX . " dist_y=" . distY . " drag=" . SelectionSense_Diag_Bool(isDrag) . " multi=" . SelectionSense_Diag_Bool(isMultiClick))
+    hubPreviewActive := false
+    try hubPreviewActive := (SelectionSense_HubCapsuleHostIsOpen() && SelectionSense_IsCursorEditorActive())
+    catch {
+        hubPreviewActive := false
+    }
+    holeCapture := SelectionSense_IsHoleCaptureEnabled()
+    ; 黑洞路径必须真实划选；纯双击仅允许 Hub 预览，避免无选区误触发弱预览。
+    triggerCopy := isDrag || (isMultiClick && hubPreviewActive && !holeCapture)
+    SelectionSense_Diag_Log("lbutton_up dist_x=" . distX . " dist_y=" . distY . " drag=" . SelectionSense_Diag_Bool(isDrag) . " multi=" . SelectionSense_Diag_Bool(isMultiClick) . " trigger=" . SelectionSense_Diag_Bool(triggerCopy))
     
-    if !(isDrag || isMultiClick) {
+    if !triggerCopy {
         try FloatingToolbar_NotifySelectionClear()
         SelectionSense_Diag_Log("lbutton_up no_trigger=click")
         return
@@ -1925,12 +2004,6 @@ SelectionSense_OnLButtonUp(*) {
     catch {
     }
 
-    hubPreviewActive := false
-    try hubPreviewActive := (SelectionSense_HubCapsuleHostIsOpen() && SelectionSense_IsCursorEditorActive())
-    catch {
-        hubPreviewActive := false
-    }
-    holeCapture := SelectionSense_IsHoleCaptureEnabled()
     if (holeCapture || hubPreviewActive) {
         delayMs := Max(1, SelectionSense_CopyDelayMsEffective())
         SelectionSense_Diag_Log("lbutton_up trigger=process_deferred hole=" . SelectionSense_Diag_Bool(holeCapture) . " hub=" . SelectionSense_Diag_Bool(hubPreviewActive) . " delay_ms=" . delayMs)
@@ -1999,6 +2072,14 @@ SelectionSense_ProcessDeferred(*) {
         clipSaved := ""
     }
 
+    global g_SelSense_ClipSigBeforeCopy
+    preClip := ""
+    try preClip := Trim(String(A_Clipboard), " `t`r`n")
+    catch {
+        preClip := ""
+    }
+    g_SelSense_ClipSigBeforeCopy := (preClip != "") ? (StrLen(preClip) . ":" . SubStr(preClip, 1, 24)) : ""
+
     A_Clipboard := ""
     if IsSet(GDHO_TriggerSource)
         GDHO_TriggerSource := "selection_copy"
@@ -2039,7 +2120,7 @@ SelectionSense_IsTrayMenuOpen() {
 
 SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActive, deadlineTick, *) {
     global g_SelSense_CopyTicket, g_SelSense_LastClipSig, g_SelSense_LastFireTick
-    global g_SelSense_LastFullText, g_SelSense_LastTick
+    global g_SelSense_LastFullText, g_SelSense_LastTick, g_SelSense_ClipSigBeforeCopy
     global g_SelSense_TextCaptured, g_SelSense_AllowTextHoleGesture
     if (ticket != g_SelSense_CopyTicket)
         return
@@ -2096,6 +2177,14 @@ SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActi
     sig := StrLen(text) . ":" . SubStr(text, 1, 24)
     if (sig = g_SelSense_LastClipSig && (A_TickCount - g_SelSense_LastFireTick < 400))
         return
+    holeCapture := SelectionSense_IsHoleCaptureEnabled()
+    if holeCapture && (g_SelSense_ClipSigBeforeCopy != "") && (sig = g_SelSense_ClipSigBeforeCopy) {
+        SelectionSense_Diag_Log("process skip=clipboard_unchanged sig=" . sig)
+        global g_SelSense_HoleDragPhase
+        g_SelSense_HoleDragPhase := "idle"
+        g_SelSense_TextCaptured := false
+        return
+    }
     g_SelSense_LastClipSig := sig
     g_SelSense_LastFireTick := A_TickCount
     g_SelSense_LastFullText := text
@@ -2314,6 +2403,15 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
     global g_SelSense_LastAnchorX, g_SelSense_LastAnchorY
     if !SelectionSense_IsHoleCaptureEnabled()
         return
+    if FuncExists("GDHO_CanOpenWeakPreview") {
+        try {
+            if !GDHO_CanOpenWeakPreview() {
+                SelectionSense_Diag_Log("hole_preview_skip reason=interaction_phase phase=" . GDHO_GetInteractionPhase())
+                return
+            }
+        } catch {
+        }
+    }
     t := Trim(String(selectedText))
     if (t = "")
         return
@@ -2324,6 +2422,24 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
         MouseGetPos(&ax, &ay)
     }
     SelectionSense_Diag_Log("hole_preview_activate len=" . StrLen(t) . " x=" . ax . " y=" . ay)
+    if FuncExists("GDHO_ShouldBlockStarryReentry") {
+        try {
+            if GDHO_ShouldBlockStarryReentry() {
+                SelectionSense_Diag_Log("hole_preview_skip reason=user_panel_until_exit")
+                return
+            }
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_ShouldSkipSelectionPreviewRestart") {
+        try {
+            if GDHO_ShouldSkipSelectionPreviewRestart(t) {
+                SelectionSense_Diag_Log("hole_preview_skip reason=panel_active")
+                return
+            }
+        } catch {
+        }
+    }
     if FuncExists("GDHO_OpenSelectionTextPreview") {
         try GDHO_OpenSelectionTextPreview(ax, ay)
         catch as err {
@@ -2352,6 +2468,24 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
 
 SelectionSense_HideHoleAfterSelection(*) {
     global NativeDropSessionActive, g_GDHO_SuppressSelectionAutoHide
+    if FuncExists("GDHO_ShouldDeferSelectionAutoHide") {
+        try {
+            if GDHO_ShouldDeferSelectionAutoHide() {
+                SelectionSense_Diag_Log("hole hide skip=interaction_phase phase=" . GDHO_GetInteractionPhase())
+                return
+            }
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+        try {
+            if GDHO_IsTextHoleUserPanelActive() {
+                SelectionSense_Diag_Log("hole hide skip=panel_locked")
+                return
+            }
+        } catch {
+        }
+    }
     if g_GDHO_SuppressSelectionAutoHide {
         SelectionSense_Diag_Log("hole hide skip=suppress_until_panel")
         return
@@ -2368,6 +2502,22 @@ SelectionSense_HideHoleAfterSelection(*) {
             return
         }
     } catch {
+    }
+    if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+        try {
+            if GDHO_IsTextHoleUserPanelActive() {
+                SelectionSense_Diag_Log("hole hide skip_panel_open")
+                try SelectionSense_HideDragHintToast("selection_hide")
+                catch {
+                }
+                if FuncExists("GDHO_HideStarryKeepPanel")
+                    try GDHO_HideStarryKeepPanel("selection_timeout_starry")
+                catch {
+                }
+                return
+            }
+        } catch {
+        }
     }
     if FuncExists("GDHO_IsTextHolePanelOpen") {
         try {
@@ -2389,7 +2539,17 @@ SelectionSense_HideHoleAfterSelection(*) {
         try {
             if GDHO_TextHolePresentAllowed() {
                 SelectionSense_Diag_Log("hole hide defer=text_hole_awaiting_panel")
-                try SetTimer(SelectionSense_HideHoleAfterSelection, -1200)
+                try SetTimer(SelectionSense_HideHoleAfterSelection, -2200)
+                return
+            }
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_IsTextHoleAwaitingExpand") {
+        try {
+            if GDHO_IsTextHoleAwaitingExpand() {
+                SelectionSense_Diag_Log("hole hide defer=awaiting_expand")
+                try SetTimer(SelectionSense_HideHoleAfterSelection, -2200)
                 return
             }
         } catch {

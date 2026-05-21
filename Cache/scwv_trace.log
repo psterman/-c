@@ -1,136 +1,28 @@
-﻿[2026-05-20 19:07:49][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-20 19:07:49][init_guard_drop] reason=empty
-[2026-05-20 19:28:49][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-20 19:28:49][init_guard_drop] reason=empty
-[2026-05-20 20:07:49][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-20 20:07:49][init_guard_drop] reason=empty
-[2026-05-20 20:36:21][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-20 20:36:21][init_guard_drop] reason=empty
-[2026-05-20 21:32:56][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-20 21:32:56][init_guard_drop] reason=empty
-[2026-05-20 21:33:44][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-20 21:33:44][init_guard_drop] reason=empty
-[2026-05-20 21:36:04][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-20 21:36:04][init_guard_drop] reason=empty
-[2026-05-21 05:34:47][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 05:34:47][init_guard_drop] reason=empty
-[2026-05-21 06:03:24][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 06:03:24][init_guard_drop] reason=empty
-[2026-05-21 06:16:00][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 06:16:00][init_guard_drop] reason=empty
-[2026-05-21 06:17:48][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 06:17:48][init_guard_drop] reason=empty
-[2026-05-21 06:18:52][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 06:18:52][init_guard_drop] reason=empty
-[2026-05-21 06:23:15][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 06:23:15][init_guard_drop] reason=empty
-[2026-05-21 06:23:19][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 06:23:19][init_guard_drop] reason=empty
-[2026-05-21 06:35:47][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 06:35:47][init_guard_drop] reason=empty
-[2026-05-21 06:41:27][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 06:41:27][init_guard_drop] reason=empty
-[2026-05-21 07:10:31][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 07:10:31][init_guard_drop] reason=empty
-[2026-05-21 07:41:29][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 07:41:29][init_guard_drop] reason=empty
-[2026-05-21 07:41:53][ifs] [0x10/0x00/0x01]
-[2026-05-21 07:41:53][force_close_begin] reason=tray_show_hole visible=0 waiting=0 ready=0 ui_ready=0
-[2026-05-21 07:41:53][wm_chain_unregister_begin] reason=tray_show_hole count=0
-[2026-05-21 07:41:53][wm_chain_unregister_done] reason=tray_show_hole count=0
-[2026-05-21 07:41:53][hide_done] visible=0 reason=tray_show_hole
-[2026-05-21 07:41:53][force_close_done] reason=tray_show_hole
-[2026-05-21 07:43:43][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 07:43:43][init_guard_drop] reason=empty
-[2026-05-21 07:44:59][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 07:44:59][init_guard_drop] reason=empty
-[2026-05-21 07:49:53][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 07:49:53][init_guard_drop] reason=empty
-[2026-05-21 07:50:18][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 07:50:18][init_guard_drop] reason=empty
-[2026-05-21 07:58:41][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 07:58:41][init_guard_drop] reason=empty
-[2026-05-21 08:03:03][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 08:03:03][init_guard_drop] reason=empty
-[2026-05-21 08:07:11][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 08:07:11][init_guard_drop] reason=empty
-[2026-05-21 08:13:54][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 08:13:54][init_guard_drop] reason=empty
-[2026-05-21 08:14:05][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 08:14:05][init_guard_drop] reason=empty
-[2026-05-21 08:21:56][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 08:21:56][init_guard_drop] reason=empty
-[2026-05-21 08:32:42][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 08:32:42][init_guard_drop] reason=empty
-[2026-05-21 08:43:10][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 08:43:10][init_guard_drop] reason=empty
-[2026-05-21 08:55:58][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 08:55:58][init_guard_drop] reason=empty
-[2026-05-21 08:59:49][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 08:59:49][init_guard_drop] reason=empty
-[2026-05-21 09:02:58][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:02:58][init_guard_drop] reason=empty
-[2026-05-21 09:06:55][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:06:55][init_guard_drop] reason=empty
-[2026-05-21 09:07:07][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:07:07][init_guard_drop] reason=empty
-[2026-05-21 09:14:09][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:14:09][init_guard_drop] reason=empty
-[2026-05-21 09:16:34][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:16:34][init_guard_drop] reason=empty
-[2026-05-21 09:16:39][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:16:39][init_guard_drop] reason=empty
-[2026-05-21 09:21:36][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:21:36][init_guard_drop] reason=empty
-[2026-05-21 09:27:53][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:27:53][init_guard_drop] reason=empty
-[2026-05-21 09:28:56][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:28:56][init_guard_drop] reason=empty
-[2026-05-21 09:29:49][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:29:49][init_guard_drop] reason=empty
-[2026-05-21 09:33:13][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:33:13][init_guard_drop] reason=empty
-[2026-05-21 09:33:18][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:33:18][init_guard_drop] reason=empty
-[2026-05-21 09:42:16][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:42:16][init_guard_drop] reason=empty
-[2026-05-21 09:43:41][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:43:41][init_guard_drop] reason=empty
-[2026-05-21 09:44:04][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:44:04][init_guard_drop] reason=empty
-[2026-05-21 09:48:54][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:48:54][init_guard_drop] reason=empty
-[2026-05-21 09:49:10][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:49:10][init_guard_drop] reason=empty
-[2026-05-21 09:52:36][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:52:36][init_guard_drop] reason=empty
-[2026-05-21 09:53:17][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:53:17][init_guard_drop] reason=empty
-[2026-05-21 09:59:14][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 09:59:14][init_guard_drop] reason=empty
-[2026-05-21 10:02:51][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:02:51][init_guard_drop] reason=empty
-[2026-05-21 10:04:14][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:04:14][init_guard_drop] reason=empty
-[2026-05-21 10:06:41][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:06:41][init_guard_drop] reason=empty
-[2026-05-21 10:08:39][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:08:39][init_guard_drop] reason=empty
-[2026-05-21 10:09:41][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:09:41][init_guard_drop] reason=empty
-[2026-05-21 10:12:39][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:12:39][init_guard_drop] reason=empty
-[2026-05-21 10:12:44][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:12:44][init_guard_drop] reason=empty
-[2026-05-21 10:13:15][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:13:15][init_guard_drop] reason=empty
-[2026-05-21 10:17:36][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:17:36][init_guard_drop] reason=empty
-[2026-05-21 10:17:43][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:17:43][init_guard_drop] reason=empty
-[2026-05-21 10:18:59][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:18:59][init_guard_drop] reason=empty
-[2026-05-21 10:20:56][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:20:56][init_guard_drop] reason=empty
-[2026-05-21 10:23:20][init_begin] reason= gui=0 alive=0 inflight=0
-[2026-05-21 10:23:20][init_guard_drop] reason=empty
+﻿[2026-05-21 16:52:16][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 16:52:16][init_guard_drop] reason=empty
+[2026-05-21 17:04:55][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 17:04:55][init_guard_drop] reason=empty
+[2026-05-21 17:16:50][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 17:16:50][init_guard_drop] reason=empty
+[2026-05-21 17:27:55][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 17:27:55][init_guard_drop] reason=empty
+[2026-05-21 17:38:06][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 17:38:06][init_guard_drop] reason=empty
+[2026-05-21 17:45:09][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 17:45:09][init_guard_drop] reason=empty
+[2026-05-21 17:47:41][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 17:47:41][init_guard_drop] reason=empty
+[2026-05-21 17:58:38][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 17:58:38][init_guard_drop] reason=empty
+[2026-05-21 18:08:19][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 18:08:19][init_guard_drop] reason=empty
+[2026-05-21 18:11:10][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 18:11:10][init_guard_drop] reason=empty
+[2026-05-21 19:53:16][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 19:53:16][init_guard_drop] reason=empty
+[2026-05-21 20:31:18][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 20:31:18][init_guard_drop] reason=empty
+[2026-05-21 20:39:36][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 20:39:36][init_guard_drop] reason=empty
+[2026-05-21 20:51:41][init_begin] reason= gui=0 alive=0 inflight=0
+[2026-05-21 20:51:41][init_guard_drop] reason=empty

@@ -3898,8 +3898,16 @@ NativeDropBridge_DragSessionTick(*) {
         dyh := Integer(my) - hy
         holeDist := Sqrt(dxh * dxh + dyh * dyh)
         GDHO_LAST_PROXIMITY := Max(0.0, Min(1.0, 1.0 - (holeDist / 260.0)))
-        try GDHO_SetProximity(GDHO_LAST_PROXIMITY)
-        try GDHO_ApplyDropHitTestByProximity(GDHO_LAST_PROXIMITY)
+        skipProx := false
+        if FuncExists("GDHO_ShouldBlockStarryReentry") {
+            try skipProx := GDHO_ShouldBlockStarryReentry()
+            catch {
+            }
+        }
+        if !skipProx {
+            try GDHO_SetProximity(GDHO_LAST_PROXIMITY)
+            try GDHO_ApplyDropHitTestByProximity(GDHO_LAST_PROXIMITY)
+        }
         if !NativeDropOverHole
             NativeDropSawOutsideHole := true
         if (NativeDropOverHole && NativeDropSawOutsideHole) {
@@ -4064,11 +4072,6 @@ NativeDropBridge_CaptureTextSeed() {
 }
 
 NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := false, hideOverlay := true) {
-    if FuncExists("SelectionSense_OnHoleDragSessionEnded") {
-        try SelectionSense_OnHoleDragSessionEnded()
-        catch {
-        }
-    }
     global NativeDropSessionActive, NativeDropOverHole, NativeDropWasOverHole, NativeDropWeakPreviewShown, NativeDropSawOutsideHole, NativeDropValidEnterHole, NativeDropStartMouseX, NativeDropStartMouseY, NativeDropMovedEnough, NativeDropCurrentMoveDistance, NativeDropEnterHoleTick, NativeDropSeedText
     global NativeDropLastTickMouseX, NativeDropLastTickMouseY
     global NativeDropSessionPayload, NativeDropLastEventTick, NativeDropLastStartTick, NativeDropRearmUntil, NativeDropBridgeSilentMode
@@ -4091,6 +4094,74 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
                 hideOverlay := false
             }
         } catch {
+        }
+    }
+    if FuncExists("GDHO_ShouldDeferStarryCloseForTextHole") {
+        try {
+            if GDHO_ShouldDeferStarryCloseForTextHole(r0) {
+                hideOverlay := false
+                if (r0 = "release_coalesce" || r0 = "release_coalesce_after_suck" || r0 = "release_fallback_timeout"
+                    || r0 = "watchdog" || r0 = "drag_release" || r0 = "drag_idle_timeout"
+                    || r0 = "selection_release" || r0 = "selection_captured" || r0 = "hide_overlay"
+                    || r0 = "hide_overlay_redirect" || r0 = "finish_suck_fallback" || r0 = "drag_end") {
+                    try NativeDropDiag_Log("reset_session_skip reason=" . reason . " text_hole_expand=1")
+                    NativeDropSessionActive := false
+                    return
+                }
+            }
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+        try {
+            if GDHO_IsTextHoleUserPanelActive() {
+                explicitClose := false
+                if FuncExists("GDHO_IsExplicitTextHolePanelCloseReason")
+                    try explicitClose := GDHO_IsExplicitTextHolePanelCloseReason(r0)
+                if !explicitClose {
+                    hideOverlay := false
+                    if (r0 = "release_coalesce" || r0 = "release_coalesce_after_suck" || r0 = "release_fallback_timeout"
+                        || r0 = "watchdog" || r0 = "drag_release" || r0 = "drag_idle_timeout"
+                        || r0 = "selection_release" || r0 = "selection_captured" || r0 = "hide_overlay"
+                        || r0 = "hide_overlay_redirect" || r0 = "finish_suck_fallback" || r0 = "drag_end") {
+                        try NativeDropDiag_Log("reset_session_skip reason=" . reason . " panel_locked=1")
+                        NativeDropSessionActive := false
+                        return
+                    }
+                }
+            }
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_ShouldKeepTextHolePanel") {
+        try {
+            if GDHO_ShouldKeepTextHolePanel() {
+                if (r0 = "release_coalesce" || r0 = "release_coalesce_after_suck" || r0 = "release_fallback_timeout"
+                    || r0 = "watchdog" || r0 = "drag_release" || r0 = "drag_idle_timeout"
+                    || r0 = "selection_release" || r0 = "selection_captured") {
+                    try NativeDropDiag_Log("reset_session_skip reason=" . reason . " text_hole_panel=1")
+                    NativeDropSessionActive := false
+                    return
+                }
+                hideOverlay := false
+            }
+        } catch {
+        }
+    }
+    global g_SelSense_TextCaptured, g_SelSense_LastFireTick
+    if (g_SelSense_TextCaptured && (A_TickCount - Integer(g_SelSense_LastFireTick)) < 8000) {
+        if (r0 = "release_coalesce" || r0 = "release_coalesce_after_suck" || r0 = "release_fallback_timeout"
+            || r0 = "watchdog" || r0 = "drag_release" || r0 = "drag_idle_timeout"
+            || r0 = "selection_release" || r0 = "selection_captured") {
+            try NativeDropDiag_Log("reset_session_skip reason=" . reason . " text_captured=1 hide=0")
+            NativeDropSessionActive := false
+            return
+        }
+        hideOverlay := false
+    }
+    if FuncExists("SelectionSense_OnHoleDragSessionEnded") {
+        try SelectionSense_OnHoleDragSessionEnded()
+        catch {
         }
     }
     specialUiReason := (r0 = "caps_f_search" || r0 = "search_center_exit" || r0 = "hole_close")
@@ -4239,6 +4310,54 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
         } catch {
         }
     }
+    if FuncExists("GDHO_ShouldDeferStarryCloseForTextHole") {
+        try {
+            if GDHO_ShouldDeferStarryCloseForTextHole(r) && (r = "release_coalesce" || r = "release_coalesce_after_suck"
+                || r = "release_fallback_timeout" || r = "watchdog" || r = "drag_release" || r = "drag_idle_timeout"
+                || r = "selection_release" || r = "selection_captured" || r = "hide_overlay"
+                || r = "hide_overlay_redirect" || r = "finish_suck_fallback" || r = "drag_end") {
+                try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " text_hole_expand=1")
+                return
+            }
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+        try {
+            if GDHO_IsTextHoleUserPanelActive() {
+                explicitClose := false
+                if FuncExists("GDHO_IsExplicitTextHolePanelCloseReason")
+                    try explicitClose := GDHO_IsExplicitTextHolePanelCloseReason(r)
+                if !explicitClose && (r = "release_coalesce" || r = "release_coalesce_after_suck"
+                    || r = "release_fallback_timeout" || r = "watchdog" || r = "drag_release" || r = "drag_idle_timeout"
+                    || r = "selection_release" || r = "selection_captured" || r = "hide_overlay"
+                    || r = "hide_overlay_redirect" || r = "finish_suck_fallback" || r = "drag_end") {
+                    try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " panel_locked=1")
+                    return
+                }
+            }
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_ShouldKeepTextHolePanel") {
+        try {
+            if (GDHO_ShouldKeepTextHolePanel() && (r = "release_coalesce" || r = "release_coalesce_after_suck"
+                || r = "release_fallback_timeout" || r = "watchdog" || r = "drag_release" || r = "drag_idle_timeout"
+                || r = "selection_release" || r = "selection_captured")) {
+                try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " text_hole_panel=1")
+                return
+            }
+        } catch {
+        }
+    }
+    global g_SelSense_TextCaptured, g_SelSense_LastFireTick
+    if (g_SelSense_TextCaptured && (A_TickCount - Integer(g_SelSense_LastFireTick)) < 8000
+        && (r = "release_coalesce" || r = "release_coalesce_after_suck" || r = "release_fallback_timeout"
+            || r = "watchdog" || r = "drag_release" || r = "selection_release" || r = "selection_captured"
+            || r = "drag_idle_timeout")) {
+        try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " text_captured=1")
+        return
+    }
     if (NativeDropSessionActive && (r = "caps_f_search" || r = "search_center_exit" || r = "hole_close")) {
         try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " active_drag=1")
         return
@@ -4249,6 +4368,15 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
     }
     try NativeDropDiag_Log("reset_session_async_begin reason=" . reason . " hide_ms=" . Integer(hideDelayMs))
     hideOverlay := !(r = "caps_f_search" || r = "search_center_exit" || r = "hole_close" || r = "hole_search_commit")
+    if (r = "release_coalesce_after_suck" && FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled())
+        hideOverlay := false
+    if FuncExists("SelectionSense_IsSelectionHolePreviewActive") {
+        try {
+            if SelectionSense_IsSelectionHolePreviewActive()
+                hideOverlay := false
+        } catch {
+        }
+    }
     try NativeDropBridge_ResetSession(reason, hideDelayMs, silentMode, hideOverlay)
     catch as err {
         try NativeDropDiag_Log("reset_session_async_error reason=" . reason . " msg=" . err.Message)
@@ -6046,6 +6174,16 @@ Esc:: {
         return
     }
     try {
+        if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+            try {
+                if GDHO_IsTextHoleUserPanelActive() && FuncExists("GDHO_DismissTextHolePanel") {
+                    try NativeDropDiag_Log("route esc key=Esc path=text_hole_panel_dismiss")
+                    GDHO_DismissTextHolePanel("esc_global")
+                    return
+                }
+            } catch {
+            }
+        }
         if (GDHO_VISIBLE || NativeDropSessionActive || g_SCWV_WaitingUiFinishedReveal) {
             try NativeDropDiag_Log("route esc key=Esc path=hard_force_close")
             SearchCenterUnifiedClose("esc_black_hole", true, true)
@@ -6087,6 +6225,16 @@ Esc:: {
     ; 搜索中心优先：避免 WebView 激活态瞬时判定失败时，Esc 误落到全局动态热键（如关闭工具栏）
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
     try {
+        if FuncExists("GDHO_IsTextHoleUserPanelActive") {
+            try {
+                if GDHO_IsTextHoleUserPanelActive() && FuncExists("GDHO_DismissTextHolePanel") {
+                    try NativeDropDiag_Log("route esc key=Esc path=text_hole_panel_dismiss_caps")
+                    GDHO_DismissTextHolePanel("esc_global")
+                    return
+                }
+            } catch {
+            }
+        }
         if (GDHO_VISIBLE || NativeDropSessionActive || g_SCWV_WaitingUiFinishedReveal) {
             try NativeDropDiag_Log("route esc key=Esc path=hard_force_close_caps")
             SearchCenterUnifiedClose("esc_black_hole_caps", true, true)

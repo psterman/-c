@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -33,6 +34,7 @@ type llmConfig struct {
 	BaseURL string
 	APIKey  string
 	Model   string
+	Provider string
 }
 
 func (p *dropPipeline) beginDrop(ev dropEvent) uint64 {
@@ -131,7 +133,7 @@ func (p *dropPipeline) process(ctx context.Context, reqID uint64, ev dropEvent) 
 		model = "deepseek-chat"
 	}
 
-	if err := p.streamChat(ctx, reqID, baseURL, apiKey, model, prompt); err != nil {
+	if err := p.streamChat(ctx, reqID, "deepseek", baseURL, apiKey, model, prompt); err != nil {
 		if ctx.Err() != nil {
 			return
 		}
@@ -146,6 +148,7 @@ func (p *dropPipeline) processManual(ctx context.Context, reqID uint64, prompt s
 	apiKey := strings.TrimSpace(cfg.APIKey)
 	baseURL := strings.TrimSpace(cfg.BaseURL)
 	model := strings.TrimSpace(cfg.Model)
+	provider := strings.ToLower(strings.TrimSpace(cfg.Provider))
 	if baseURL == "" {
 		baseURL = strings.TrimSpace(os.Getenv("NMER_LLM_BASE_URL"))
 	}
@@ -168,7 +171,7 @@ func (p *dropPipeline) processManual(ctx context.Context, reqID uint64, prompt s
 		})
 		return
 	}
-	if err := p.streamChat(ctx, reqID, baseURL, apiKey, model, prompt); err != nil {
+	if err := p.streamChat(ctx, reqID, provider, baseURL, apiKey, model, prompt); err != nil {
 		if ctx.Err() != nil {
 			return
 		}
@@ -246,8 +249,143 @@ func min(a, b int) int {
 	return b
 }
 
-func (p *dropPipeline) streamChat(ctx context.Context, reqID uint64, baseURL, apiKey, model, prompt string) error {
-	url := strings.TrimRight(baseURL, "/") + "/v1/chat/completions"
+func openAICompatURL(baseURL string) string {
+	u := strings.TrimSpace(baseURL)
+	u = strings.TrimRight(u, "/")
+	if u == "" {
+		return "https://api.deepseek.com/v1/chat/completions"
+	}
+	lu := strings.ToLower(u)
+	if strings.HasSuffix(lu, "/chat/completions") {
+		return u
+	}
+	// If already on version root (e.g. .../v1 or .../v1beta), append only /chat/completions.
+	if strings.HasSuffix(lu, "/v1") || strings.HasSuffix(lu, "/v1beta") || strings.HasSuffix(lu, "/v4") {
+		return u + "/chat/completions"
+	}
+	return u + "/v1/chat/completions"
+}
+
+func normalizeMiniMaxBaseURL(baseURL string) string {
+	u := strings.TrimSpace(baseURL)
+	if u == "" {
+		return u
+	}
+	parsed, err := url.Parse(u)
+	if err != nil || parsed.Host == "" {
+		// Fallback string-level patch.
+		v := strings.ReplaceAll(u, "api.minimax.com", "api.minimax.io")
+		v = strings.ReplaceAll(v, "/anthrop/", "/anthropic/")
+		if strings.HasSuffix(v, "/anthrop") {
+			v = strings.TrimSuffix(v, "/anthrop") + "/anthropic"
+		}
+		return v
+	}
+	host := strings.ToLower(strings.TrimSpace(parsed.Host))
+	if host == "api.minimax.com" {
+		parsed.Host = "api.minimax.io"
+	}
+	path := strings.ReplaceAll(parsed.Path, "/anthrop/", "/anthropic/")
+	if strings.HasSuffix(path, "/anthrop") {
+		path = strings.TrimSuffix(path, "/anthrop") + "/anthropic"
+	}
+	parsed.Path = path
+	return parsed.String()
+}
+
+func shouldUseAnthropic(provider, baseURL string) bool {
+	p := strings.ToLower(strings.TrimSpace(provider))
+	u := strings.ToLower(strings.TrimSpace(baseURL))
+	if p == "claude" {
+		return true
+	}
+	if p == "minimax" && strings.Contains(u, "/anthropic") {
+		return true
+	}
+	return false
+}
+
+func anthropicCompatURL(baseURL string) string {
+	u := strings.TrimSpace(baseURL)
+	u = strings.TrimRight(u, "/")
+	if u == "" {
+		return "https://api.anthropic.com/v1/messages"
+	}
+	lu := strings.ToLower(u)
+	if strings.HasSuffix(lu, "/v1/messages") || strings.HasSuffix(lu, "/messages") {
+		return u
+	}
+	if strings.HasSuffix(lu, "/v1") {
+		return u + "/messages"
+	}
+	return u + "/v1/messages"
+}
+
+func (p *dropPipeline) streamAnthropic(ctx context.Context, reqID uint64, baseURL, apiKey, model, prompt string) error {
+	url := anthropicCompatURL(normalizeMiniMaxBaseURL(baseURL))
+	body, _ := json.Marshal(map[string]any{
+		"model": model,
+		"max_tokens": 1024,
+		"messages": []map[string]string{
+			{"role": "user", "content": prompt},
+		},
+	})
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("x-api-key", apiKey)
+	req.Header.Set("anthropic-version", "2023-06-01")
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 16384))
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("llm http %d: %s", resp.StatusCode, string(raw))
+	}
+	var out struct {
+		Content []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"content"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return fmt.Errorf("llm parse error: %v", err)
+	}
+	var acc strings.Builder
+	for _, c := range out.Content {
+		if strings.ToLower(strings.TrimSpace(c.Type)) == "text" && strings.TrimSpace(c.Text) != "" {
+			acc.WriteString(c.Text)
+		}
+	}
+	txt := strings.TrimSpace(acc.String())
+	if txt == "" {
+		txt = "（空响应）"
+	}
+	hubEmit("stream_chunk", map[string]any{
+		"requestId": reqID,
+		"session": globalGate.Session(),
+		"delta": txt,
+		"done": false,
+	})
+	hubEmit("stream_done", map[string]any{
+		"requestId": reqID,
+		"session": globalGate.Session(),
+	})
+	return nil
+}
+
+func (p *dropPipeline) streamChat(ctx context.Context, reqID uint64, provider, baseURL, apiKey, model, prompt string) error {
+	if strings.ToLower(strings.TrimSpace(provider)) == "minimax" {
+		baseURL = normalizeMiniMaxBaseURL(baseURL)
+	}
+	if shouldUseAnthropic(provider, baseURL) {
+		return p.streamAnthropic(ctx, reqID, baseURL, apiKey, model, prompt)
+	}
+	url := openAICompatURL(baseURL)
 	body, _ := json.Marshal(map[string]any{
 		"model":  model,
 		"stream": true,
