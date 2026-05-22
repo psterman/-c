@@ -53,6 +53,7 @@ global g_GDHO_TextHoleCommitTick := 0
 global GDHO_TEXT_HOLE_EXPAND_MS := 1250
 global GDHO_TEXT_HOLE_ABORT_GRACE_MS := 1500
 global g_GDHO_SuppressSelectionAutoHide := false
+global g_GDHO_GestureOpenGraceUntil := 0
 global GDHO_TEXT_HOLE_STATE_IDLE := "idle"
 global GDHO_TEXT_HOLE_STATE_PREVIEW := "preview"
 global GDHO_TEXT_HOLE_STATE_ARMED := "armed"
@@ -156,6 +157,86 @@ GDHO_CanOpenWeakPreview() {
     return true
 }
 
+GDHO_CanOpenGestureHole(reason := "") {
+    global g_GDHO_GestureOpenGraceUntil, g_GDHO_TextHoleAwaitingExpand
+    if !GDHO_IsDecoupled()
+        return true
+    if GDHO_IsTextHoleUserPanelActive()
+        return false
+    if (g_GDHO_GestureOpenGraceUntil > A_TickCount)
+        return true
+    if FuncExists("HoleActivation_IsGestureGraceActive") {
+        try {
+            if HoleActivation_IsGestureGraceActive()
+                return true
+        } catch {
+        }
+    }
+    ph := GDHO_GetInteractionPhase()
+    if (ph = GDHO_PHASE_PANEL_OPEN)
+        return false
+    if (ph = GDHO_PHASE_COMMITTING && !g_GDHO_TextHoleAwaitingExpand)
+        return false
+    return true
+}
+
+GDHO_ArmGestureOpenGrace(ms := 3200) {
+    global g_GDHO_GestureOpenGraceUntil, g_GDHO_SuppressSelectionAutoHide
+    g_GDHO_GestureOpenGraceUntil := A_TickCount + Max(800, Integer(ms))
+    g_GDHO_SuppressSelectionAutoHide := true
+    if FuncExists("HoleActivation_ArmGestureGrace") {
+        try HoleActivation_ArmGestureGrace(ms)
+        catch {
+        }
+    }
+}
+
+GDHO_IsGestureOpenGraceActive() {
+    global g_GDHO_GestureOpenGraceUntil
+    if (g_GDHO_GestureOpenGraceUntil > A_TickCount)
+        return true
+    if FuncExists("HoleActivation_IsGestureGraceActive") {
+        try return HoleActivation_IsGestureGraceActive()
+        catch {
+        }
+    }
+    return false
+}
+
+GDHO_BeginGestureHoleSession(ax, ay, reason := "gesture") {
+    global GDHO_CURSOR_X, GDHO_CURSOR_Y, g_GDHO_SuppressSelectionAutoHide
+    global GDHO_EXPANDED_HOLD, GDHO_IS_SUCKING
+    ix := Integer(ax), iy := Integer(ay)
+    GDHO_ArmGestureOpenGrace(3200)
+    GDHO_CURSOR_X := ix
+    GDHO_CURSOR_Y := iy
+    GDHO_EXPANDED_HOLD := false
+    GDHO_IS_SUCKING := false
+    if FuncExists("SelectionSense_ArmHoleGesturePreview") {
+        try SelectionSense_ArmHoleGesturePreview(ix, iy)
+        catch {
+        }
+    }
+    try GDHO_UpdateHoleCenterFromPolicy(ix, iy)
+    catch {
+    }
+    if (GDHO_CX > 50 && GDHO_CY > 50) {
+        try GDHO_RememberOnScreenHoleCenter(GDHO_CX, GDHO_CY)
+        catch {
+        }
+    }
+    try GDHO_SetInteractionPhase(GDHO_PHASE_WEAK_PREVIEW, "gesture_begin:" . String(reason))
+    catch {
+    }
+    if FuncExists("GDHO_TextHole_OnSelectionPreviewStart") {
+        try GDHO_TextHole_OnSelectionPreviewStart("", ix, iy)
+        catch {
+        }
+    }
+    try NativeDropDiag_Log("[TextHole] gesture_session_begin x=" . ix . " y=" . iy . " cx=" . GDHO_CX . " cy=" . GDHO_CY . " reason=" . String(reason))
+    return true
+}
+
 GDHO_CanCommitTextHole() {
     global g_GDHO_TextHoleAwaitingExpand
     if g_GDHO_TextHoleAwaitingExpand || GDHO_IsTextHoleUserPanelActive()
@@ -167,6 +248,8 @@ GDHO_ShouldDeferSelectionAutoHide() {
     global g_GDHO_SuppressSelectionAutoHide, g_GDHO_StarryLauncherOpen
     ph := GDHO_GetInteractionPhase()
     if (ph = GDHO_PHASE_COMMITTING || ph = GDHO_PHASE_PANEL_OPEN || ph = GDHO_PHASE_CLOSING)
+        return true
+    if GDHO_IsGestureOpenGraceActive()
         return true
     if g_GDHO_SuppressSelectionAutoHide
         return true
@@ -709,6 +792,8 @@ GDHO_IsStarryOpenIntentBlocked(reason := "", payload := 0) {
     }
     if FuncExists("GDHO_IsWeakPreviewReason") && GDHO_IsWeakPreviewReason(r)
         return true
+    if (InStr(r, "gesture") || InStr(r, "circle") || InStr(r, "rbutton_hold") || InStr(r, "hold_early"))
+        return false
     return (InStr(r, "text_drag") || InStr(r, "drag_activate") || InStr(r, "selection_copy")
         || InStr(r, "hole_mode") || InStr(r, "post_suck") || InStr(r, "physical_suck")
         || InStr(r, "preview") || InStr(r, "proximity"))
@@ -812,6 +897,97 @@ GDHO_PrepareDecoupledHoleForTextSelection(reason := "activation_hole") {
         try GDHO_ParkOverlay()
     try NativeDropDiag_Log("[TextHole] prepare_decoupled_hole reason=" . String(reason) . " phase=" . GDHO_GetInteractionPhase())
     return true
+}
+
+; 画圈/长按等无划选手势：在光标处弹出启动层（starry 拓扑），与划选弱预览同会话标记
+GDHO_PresentGestureHoleAt(mx, my, reason := "gesture") {
+    global GDHO_CX, GDHO_CY, GDHO_LAUNCHER_VISIBLE, g_GDHO_StarryLauncherOpen, GDHO_STAR_GUI
+    ax := Integer(mx), ay := Integer(my)
+    if (ax = 0 && ay = 0) {
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&ax, &ay)
+    }
+    try NativeDropDiag_Log("[TextHole] gesture_present_begin x=" . ax . " y=" . ay . " reason=" . String(reason)
+        . " phase=" . GDHO_GetInteractionPhase())
+    if GDHO_IsDecoupled() && !GDHO_CanOpenGestureHole(reason) {
+        try GDHO_PrepareDecoupledHoleForTextSelection("gesture_present:" . String(reason))
+        catch {
+        }
+    }
+    if !IsObject(GDHO_STAR_GUI) {
+        try GDHO_CreateStarryGui()
+        catch {
+        }
+    }
+    sessionOk := true
+    try GDHO_BeginGestureHoleSession(ax, ay, reason)
+    catch as e0 {
+        sessionOk := false
+        try NativeDropDiag_Log("[TextHole] gesture_session_fail msg=" . e0.Message)
+    }
+    ok := false
+    if GDHO_UseLauncherLayer() {
+        try GDHO_ShowStarryPassthroughOnly("gesture:" . String(reason))
+        catch {
+        }
+        try GDHO_UpdateHoleCenterFromPolicy(ax, ay)
+        catch {
+        }
+        if !GDHO_EnsureStarryOnScreenForLauncher() {
+            try {
+                if !IsObject(GDHO_STAR_GUI) && FuncExists("GDHO_CreateStarryGui")
+                    GDHO_CreateStarryGui()
+                if IsObject(GDHO_STAR_GUI)
+                    GDHO_STAR_GUI.Show("NA")
+            } catch {
+            }
+            try GDHO_EnsureStarryOnScreenForLauncher()
+            catch {
+            }
+        }
+        try ok := GDHO_ShowLauncherLayerForced("gesture:" . String(reason))
+        catch {
+        }
+        if !ok && FuncExists("GDHO_ForceShowLauncherLayerByPolicy") {
+            try ok := GDHO_ForceShowLauncherLayerByPolicy(ax, ay, "gesture_present:" . String(reason))
+            catch {
+            }
+        }
+        try GDHO_SetStarryClickThrough(false, "gesture_interactive")
+        catch {
+        }
+        if FuncExists("GDHO_ArmTextHoleProximityPoll") {
+            try GDHO_ArmTextHoleProximityPoll()
+            catch {
+            }
+        }
+        if (ok || GDHO_LAUNCHER_VISIBLE || g_GDHO_StarryLauncherOpen)
+            ok := true
+        try NativeDropDiag_Log("[TextHole] gesture_launcher ok=" . (ok ? "1" : "0") . " x=" . ax . " y=" . ay
+            . " cx=" . GDHO_CX . " cy=" . GDHO_CY . " lv=" . (GDHO_LAUNCHER_VISIBLE ? "1" : "0") . " reason=" . String(reason))
+        if ok
+            return true
+    }
+    if FuncExists("GDHO_ForceShowLauncherLayerByPolicy") {
+        try {
+            if ok := GDHO_ForceShowLauncherLayerByPolicy(ax, ay, "gesture_drag_fallback:" . String(reason))
+                return true
+        } catch {
+        }
+    }
+    if FuncExists("GDHO_ShowTextDragAt") {
+        try {
+            if GDHO_ShowTextDragAt(ax, ay, true, true)
+                return true
+        } catch {
+        }
+    }
+    try NativeDropDiag_Log("[TextHole] gesture_open_fail reason=" . String(reason) . " session=" . (sessionOk ? "1" : "0"))
+    return false
+}
+
+GDHO_OpenGestureHoleAt(mx, my, reason := "gesture") {
+    return GDHO_PresentGestureHoleAt(mx, my, reason)
 }
 
 GDHO_ForceApplyAppearanceMode(mode := "hole") {
@@ -3244,6 +3420,15 @@ GDHO_ShouldDeferStarryCloseForTextHole(reason := "") {
     if FuncExists("GDHO_TextHolePresentAllowed") {
         try {
             if GDHO_TextHolePresentAllowed()
+                return true
+        } catch {
+        }
+    }
+    if GDHO_IsGestureOpenGraceActive()
+        return true
+    if FuncExists("SelectionSense_IsSelectionHolePreviewActive") {
+        try {
+            if SelectionSense_IsSelectionHolePreviewActive() && (InStr(r, "drag_idle") || InStr(r, "drag_release") || InStr(r, "hide_overlay"))
                 return true
         } catch {
         }

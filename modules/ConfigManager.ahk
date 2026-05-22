@@ -698,6 +698,15 @@ InitConfig() {
             
             global AppearanceActivationMode
             AppearanceActivationMode := NormalizeAppearanceActivationMode(IniRead(ConfigFile, "Appearance", "ActivationMode", "toolbar"))
+            if FuncExists("HoleTriggers_LoadFromIni") {
+                try HoleTriggers_LoadFromIni(ConfigFile)
+                catch as holeTrigErr {
+                    if FuncExists("HoleTriggers_DiagLog")
+                        try HoleTriggers_DiagLog("[HoleTrigger] init_load_fail msg=" . holeTrigErr.Message)
+                    catch {
+                    }
+                }
+            }
             
             ; 加载快捷操作按钮配置
             QuickActionButtons := []
@@ -827,6 +836,15 @@ InitConfig() {
     
     global AppearanceActivationMode
     AppearanceActivationMode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    if FuncExists("HoleTriggers_LoadFromIni") {
+        try HoleTriggers_LoadFromIni(ConfigFile)
+        catch as holeTrigErr2 {
+            if FuncExists("HoleTriggers_DiagLog")
+                try HoleTriggers_DiagLog("[HoleTrigger] post_init_load_fail msg=" . holeTrigErr2.Message)
+            catch {
+            }
+        }
+    }
     
     ; 验证语言设置
     if (Language != "zh" && Language != "en") {

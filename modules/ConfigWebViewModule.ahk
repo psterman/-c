@@ -788,7 +788,14 @@ ConfigWebView_BuildInitData() {
         "holeHideDockMargin", Integer(IniRead(ConfigFile, "Appearance", "HoleHideDockMargin", "10")),
         "holeDecoupledTopology", (IniRead(ConfigFile, "Appearance", "HoleDecoupledTopology", "1") = "1"),
         "holeStarFullscreen", (IniRead(ConfigFile, "Appearance", "HoleStarFullscreen", "0") = "1"),
-        "holePanelPinned", (IniRead(ConfigFile, "Appearance", "HolePanelPinned", "0") = "1")
+        "holePanelPinned", (IniRead(ConfigFile, "Appearance", "HolePanelPinned", "0") = "1"),
+        "holeTriggerTextSelect", (IniRead(ConfigFile, "Appearance", "HoleTriggerTextSelect", "1") = "1"),
+        "holeTriggerCircleCw", (IniRead(ConfigFile, "Appearance", "HoleTriggerCircleCw", "0") = "1"),
+        "holeTriggerCircleCcw", (IniRead(ConfigFile, "Appearance", "HoleTriggerCircleCcw", "0") = "1"),
+        "holeTriggerRButtonHold", (IniRead(ConfigFile, "Appearance", "HoleTriggerRButtonHold", "0") = "1"),
+        "holeRButtonHoldMs", Integer(IniRead(ConfigFile, "Appearance", "HoleRButtonHoldMs", "480")),
+        "holeSensitivityPreset", ConfigWebView_ReadHoleSensitivityPreset(),
+        "holePlacementPreset", ConfigWebView_ReadHolePlacementPreset()
     )
     kbSnap := ConfigWebView_GetKeybinderToolbarSnapshot()
     cfgPayload["keybinderToolbarLayout"] := kbSnap["toolbarLayout"]
@@ -1160,6 +1167,16 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         NewFloatingToolbarButtons := FTB_SanitizeToolbarButtonItems(FloatingToolbarButtonItems)
         if (payload.Has("floatingToolbarButtons") && payload["floatingToolbarButtons"] is Array)
             NewFloatingToolbarButtons := FTB_SanitizeToolbarButtonItems(payload["floatingToolbarButtons"])
+        if payload.Has("holePlacementPreset") {
+            placeMap := ConfigWebView_ApplyHolePlacementPreset(payload["holePlacementPreset"])
+            for k, v in placeMap
+                payload[k] := v
+        }
+        if payload.Has("holeSensitivityPreset") && FuncExists("HoleTriggers_MapSensitivityPreset") {
+            dist := HoleTriggers_MapSensitivityPreset(payload["holeSensitivityPreset"])
+            payload["holeTriggerDistance"] := dist["trigger"]
+            payload["holeDismissDistance"] := dist["dismiss"]
+        }
         NewHolePositionMode := Trim(String(payload.Get("holePositionMode", IniRead(ConfigFile, "Appearance", "HolePositionMode", "anchor"))))
         if (NewHolePositionMode != "anchor" && NewHolePositionMode != "fixed" && NewHolePositionMode != "relative")
             NewHolePositionMode := "anchor"
@@ -1406,6 +1423,8 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         try GDHO_SetScreenAnchor(NewHoleFixedX, NewHoleFixedY)
         try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel, NewHoleVisualStyle)
         try GDHO_ApplyHideDockSettings(NewHoleHideDockEnabled, NewHoleHideDockEdge, NewHoleHideDockMargin)
+        try ConfigWebView_WriteHolePresetIni(payload)
+        try ConfigWebView_MergeHoleTriggerPayload(payload)
         ; Apply mode asynchronously to avoid blocking settings WebView thread.
         try SetTimer((*) => ApplyAppearanceActivationMode(), -20)
         catch {
@@ -1417,12 +1436,129 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
     }
 }
 
+ConfigWebView_CoerceBool(val, default := false) {
+    if (val = true || val = false)
+        return !!val
+    s := StrLower(Trim(String(val)))
+    if (s = "1" || s = "true" || s = "yes" || s = "on")
+        return true
+    if (s = "0" || s = "false" || s = "no" || s = "off" || s = "")
+        return false
+    return !!default
+}
+
+ConfigWebView_InferHolePlacementPreset(positionMode, hideDockEnabled) {
+    pm := Trim(String(positionMode))
+    if (pm = "fixed")
+        return "fixed"
+    if hideDockEnabled
+        return "edge"
+    return "cursor"
+}
+
+ConfigWebView_ReadHoleSensitivityPreset() {
+    global ConfigFile
+    raw := Trim(String(IniRead(ConfigFile, "Appearance", "HoleSensitivityPreset", "")))
+    if (raw = "compact" || raw = "standard" || raw = "relaxed")
+        return raw
+    if FuncExists("HoleTriggers_InferSensitivityPreset")
+        return HoleTriggers_InferSensitivityPreset(
+            Integer(IniRead(ConfigFile, "Appearance", "HoleTriggerDistance", "260")),
+            Integer(IniRead(ConfigFile, "Appearance", "HoleDismissDistance", "320")))
+    return "standard"
+}
+
+ConfigWebView_ReadHolePlacementPreset() {
+    global ConfigFile
+    raw := Trim(String(IniRead(ConfigFile, "Appearance", "HolePlacementPreset", "")))
+    if (raw = "cursor" || raw = "fixed" || raw = "edge")
+        return raw
+    return ConfigWebView_InferHolePlacementPreset(
+        IniRead(ConfigFile, "Appearance", "HolePositionMode", "anchor"),
+        IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1")
+}
+
+ConfigWebView_ApplyHolePlacementPreset(preset) {
+    p := StrLower(Trim(String(preset)))
+    switch p {
+        case "fixed":
+            return Map("holePositionMode", "fixed", "holeHideDockEnabled", false)
+        case "edge":
+            return Map("holePositionMode", "anchor", "holeHideDockEnabled", true, "holeHideDockEdge", "right")
+        default:
+            return Map("holePositionMode", "anchor", "holeHideDockEnabled", false)
+    }
+}
+
+ConfigWebView_WriteHolePresetIni(payload) {
+    global ConfigFile
+    sens := Trim(String(payload.Get("holeSensitivityPreset", IniRead(ConfigFile, "Appearance", "HoleSensitivityPreset", "standard"))))
+    if (sens != "compact" && sens != "standard" && sens != "relaxed")
+        sens := "standard"
+    place := Trim(String(payload.Get("holePlacementPreset", IniRead(ConfigFile, "Appearance", "HolePlacementPreset", "cursor"))))
+    if (place != "cursor" && place != "fixed" && place != "edge")
+        place := "cursor"
+    IniWrite(sens, ConfigFile, "Appearance", "HoleSensitivityPreset")
+    IniWrite(place, ConfigFile, "Appearance", "HolePlacementPreset")
+}
+
+ConfigWebView_MergeHoleTriggerPayload(payload) {
+    global ConfigFile
+    if !(payload is Map)
+        return
+    trig := Map(
+        "textSelect", ConfigWebView_CoerceBool(payload.Get("holeTriggerTextSelect", true), true),
+        "circleCw", ConfigWebView_CoerceBool(payload.Get("holeTriggerCircleCw", false), false),
+        "circleCcw", ConfigWebView_CoerceBool(payload.Get("holeTriggerCircleCcw", false), false),
+        "rbuttonHold", ConfigWebView_CoerceBool(payload.Get("holeTriggerRButtonHold", false), false),
+        "rbuttonHoldMs", Integer(payload.Get("holeRButtonHoldMs", 480))
+    )
+    hm := trig["rbuttonHoldMs"]
+    if (hm < 200)
+        hm := 200
+    if (hm > 2000)
+        hm := 2000
+    trig["rbuttonHoldMs"] := hm
+    IniWrite(trig["textSelect"] ? "1" : "0", ConfigFile, "Appearance", "HoleTriggerTextSelect")
+    IniWrite(trig["circleCw"] ? "1" : "0", ConfigFile, "Appearance", "HoleTriggerCircleCw")
+    IniWrite(trig["circleCcw"] ? "1" : "0", ConfigFile, "Appearance", "HoleTriggerCircleCcw")
+    IniWrite(trig["rbuttonHold"] ? "1" : "0", ConfigFile, "Appearance", "HoleTriggerRButtonHold")
+    IniWrite(String(hm), ConfigFile, "Appearance", "HoleRButtonHoldMs")
+    if FuncExists("HoleTriggers_ApplyConfig") {
+        try {
+            HoleTriggers_ApplyConfig(trig)
+            if FuncExists("HoleTriggers_DiagLog")
+                HoleTriggers_DiagLog("[HoleTrigger] web_apply cw=" . (trig["circleCw"] ? "1" : "0")
+                    . " ccw=" . (trig["circleCcw"] ? "1" : "0") . " hold=" . (trig["rbuttonHold"] ? "1" : "0"))
+        } catch as e {
+            if FuncExists("HoleTriggers_DiagLog")
+                try HoleTriggers_DiagLog("[HoleTrigger] web_apply_fail msg=" . e.Message)
+                catch {
+                }
+        }
+    } else if FuncExists("HoleTriggers_SaveToIni") {
+        try HoleTriggers_SaveToIni(trig)
+        catch {
+        }
+    }
+}
+
 ConfigWebView_SaveHoleOnly(payload, &errorMsg := "") {
     global ConfigFile
     try {
         if !(payload is Map) {
             errorMsg := "payload 鏃犳晥"
             return false
+        }
+        if payload.Has("holePlacementPreset") {
+            placeMap := ConfigWebView_ApplyHolePlacementPreset(payload["holePlacementPreset"])
+            for k, v in placeMap
+                payload[k] := v
+        }
+        if payload.Has("holeSensitivityPreset") && FuncExists("HoleTriggers_MapSensitivityPreset") {
+            dist := HoleTriggers_MapSensitivityPreset(payload["holeSensitivityPreset"])
+            payload["holeTriggerDistance"] := dist["trigger"]
+            payload["holeDismissDistance"] := dist["dismiss"]
         }
         NewHolePositionMode := Trim(String(payload.Get("holePositionMode", IniRead(ConfigFile, "Appearance", "HolePositionMode", "anchor"))))
         if (NewHolePositionMode != "anchor" && NewHolePositionMode != "fixed" && NewHolePositionMode != "relative")
@@ -1473,12 +1609,14 @@ ConfigWebView_SaveHoleOnly(payload, &errorMsg := "") {
         IniWrite(NewHoleHideDockEnabled ? "1" : "0", ConfigFile, "Appearance", "HoleHideDockEnabled")
         IniWrite(NewHoleHideDockEdge, ConfigFile, "Appearance", "HoleHideDockEdge")
         IniWrite(String(NewHoleHideDockMargin), ConfigFile, "Appearance", "HoleHideDockMargin")
+        try ConfigWebView_WriteHolePresetIni(payload)
         try GDHO_SetScreenAnchor(NewHoleFixedX, NewHoleFixedY)
         try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel, NewHoleVisualStyle)
         try GDHO_ApplyHideDockSettings(NewHoleHideDockEnabled, NewHoleHideDockEdge, NewHoleHideDockMargin)
+        try ConfigWebView_MergeHoleTriggerPayload(payload)
         return true
     } catch as err {
-        errorMsg := "淇濆瓨澶辫触: " . err.Message
+        errorMsg := "保存失败: " . err.Message
         return false
     }
 }
@@ -1653,7 +1791,19 @@ ConfigWebView_OnMessage(sender, args) {
                 payload := Map()
             err := ""
             ok := ConfigWebView_SaveHoleOnly(payload, &err)
-            ConfigWebView_Send(Map("type", "saveHoleResult", "ok", ok, "error", err))
+            resp := Map("type", "saveHoleResult", "ok", ok, "error", err)
+            if ok && (payload is Map) {
+                resp["saved"] := Map(
+                    "holeTriggerTextSelect", ConfigWebView_CoerceBool(payload.Get("holeTriggerTextSelect", true), true),
+                    "holeTriggerCircleCw", ConfigWebView_CoerceBool(payload.Get("holeTriggerCircleCw", false), false),
+                    "holeTriggerCircleCcw", ConfigWebView_CoerceBool(payload.Get("holeTriggerCircleCcw", false), false),
+                    "holeTriggerRButtonHold", ConfigWebView_CoerceBool(payload.Get("holeTriggerRButtonHold", false), false),
+                    "holeRButtonHoldMs", Integer(payload.Get("holeRButtonHoldMs", 480)),
+                    "holeSensitivityPreset", Trim(String(payload.Get("holeSensitivityPreset", "standard"))),
+                    "holePlacementPreset", Trim(String(payload.Get("holePlacementPreset", "cursor")))
+                )
+            }
+            ConfigWebView_Send(resp)
         case "saveKeybinderToolbarLayout":
             tl := msg.Has("toolbarLayout") && msg["toolbarLayout"] is Array ? msg["toolbarLayout"] : []
             cml := msg.Has("contextMenuLayout") && msg["contextMenuLayout"] is Array ? msg["contextMenuLayout"] : []

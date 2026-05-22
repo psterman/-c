@@ -197,6 +197,8 @@ global MainScriptDir := A_ScriptDir
 #Include modules\PromptQuickPadCore.ahk
 #Include modules\SearchCenterWebViewCore.ahk
 #Include modules\SelectionSenseCore.ahk
+#Include modules\HoleActivationRouter.ahk
+#Include modules\HoleActivationTriggers.ahk
 #Include modules\PromptSyncService.ahk
 #Include modules\PromptQuickPadCapsLockB.ahk
 
@@ -2519,6 +2521,10 @@ global g_ScreenshotSuspendActivationToken := 0
 SetHoleRuntimeEnabled(enabled) {
     global g_HoleRuntimeEnabled
     g_HoleRuntimeEnabled := !!enabled
+    if FuncExists("HoleTriggers_SyncInputCapture")
+        try HoleTriggers_SyncInputCapture()
+    catch {
+    }
 }
 
 BeginScreenshotUiSession() {
@@ -2651,11 +2657,17 @@ ApplyActivationRuntimeDeferred(mode, token) {
         try NativeDropBridge_SetSilentMode(false, "runtime_hole")
         catch {
         }
+        if FuncExists("HoleTriggers_LoadFromIni")
+            try HoleTriggers_LoadFromIni(ConfigFile)
+        if FuncExists("HoleTriggers_SyncInputCapture")
+            try HoleTriggers_SyncInputCapture()
         NMER_Log("activation", "runtime_hole_ready", "elapsed_ms=" . (A_TickCount - t0))
         return
     }
     if (m = "disabled") {
         try SetHoleRuntimeEnabled(false)
+        if FuncExists("HoleTriggers_SyncInputCapture")
+            try HoleTriggers_SyncInputCapture()
         try NativeDropBridge_Stop()
         catch {
         }
@@ -2922,6 +2934,8 @@ GDHO_LoadSettingsFromIni() {
     try GDHO_SetScreenAnchor(fx, fy)
     try GDHO_ApplySettings(mode, td, dd, fx, fy, ss, al, vs)
     try GDHO_ApplyHideDockSettings(hideDockEnabled, hideDockEdge, hideDockMargin)
+    if FuncExists("HoleTriggers_LoadFromIni")
+        try HoleTriggers_LoadFromIni(ConfigFile)
     try {
         if (IniRead(ConfigFile, "Appearance", "HoleDecoupledTopology", "1") = "0")
             GDHO_DECOUPLED_TOPOLOGY := false
@@ -4459,6 +4473,8 @@ StartWebViewWarmup(*) {
 #Include modules\ConfigManager.ahk
 InitConfig() ; 启动初始化
 try GDHO_LoadSettingsFromIni()
+if FuncExists("HoleTriggers_EnsureInputAlive")
+    try HoleTriggers_EnsureInputAlive()
 ; 启动时统一归一化 CapsLock 状态，避免继承系统残留 On 状态导致后续组合键流程反复恢复为大写
 SetCapsLockState("Off")
 try NormalizeCapsLockRuntimeForUiOpen()
@@ -7026,6 +7042,8 @@ SwitchToChineseIMEForSearchCenter(*) {
 ; 在脚本退出前关闭数据库连接，确保数据完全写入
 ExitFunc(ExitReason, ExitCode) {
     global ClipboardDB
+    if FuncExists("HoleTriggers_RemoveMouseHook")
+        try HoleTriggers_RemoveMouseHook()
     try Send("{CapsLock up}")
     try SetCapsLockState("Off")
     try NormalizeCapsLockRuntimeForUiOpen()
@@ -7063,6 +7081,8 @@ RButton:: {
     VK_ShowToolbarLayoutContextMenu()
 }
 #HotIf
+
+; 黑洞手势由 HoleActivationTriggers 内 WH_MOUSE_LL 钩子捕获（HoleTriggers_SyncInputCapture）
 
 ; 保底全局热键：重启脚本（避免 Ctrl+Shift 组合被输入法/系统层抢占时 VK 动态绑定失效）
 $^+q:: {

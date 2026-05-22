@@ -338,6 +338,10 @@ GDHO_FlushReleaseCoalesce(*) {
                         skipDragReleaseClose := true
                     else if FuncExists("SelectionSense_IsSelectionHolePreviewActive") && SelectionSense_IsSelectionHolePreviewActive()
                         skipDragReleaseClose := true
+                    else if FuncExists("GDHO_IsGestureOpenGraceActive") && GDHO_IsGestureOpenGraceActive()
+                        skipDragReleaseClose := true
+                    else if FuncExists("HoleActivation_IsGestureGraceActive") && HoleActivation_IsGestureGraceActive()
+                        skipDragReleaseClose := true
                 } catch {
                 }
             }
@@ -353,6 +357,10 @@ GDHO_FlushReleaseCoalesce(*) {
                         if FuncExists("GDHO_ShouldKeepTextHolePanel") && GDHO_ShouldKeepTextHolePanel()
                             skipIdleFlush := true
                         else if FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()
+                            skipIdleFlush := true
+                        else if FuncExists("GDHO_IsGestureOpenGraceActive") && GDHO_IsGestureOpenGraceActive()
+                            skipIdleFlush := true
+                        else if FuncExists("HoleActivation_IsGestureGraceActive") && HoleActivation_IsGestureGraceActive()
                             skipIdleFlush := true
                     } catch {
                     }
@@ -1270,16 +1278,16 @@ GDHO_ShowForDrag(payload := "file", x := "", y := "") {
     }
 }
 
-GDHO_ShowTextDragAt(mx, my, weakPreview := false) {
-    if FuncExists("GDHO_IsStarryOpenIntentBlocked") {
+GDHO_ShowTextDragAt(mx, my, weakPreview := false, forGesture := false) {
+    if !forGesture && FuncExists("GDHO_IsStarryOpenIntentBlocked") {
         try {
             if GDHO_IsStarryOpenIntentBlocked("text_drag_preview")
-                return
+                return false
         } catch {
         }
     }
     if !GDHO_ShouldAllowTextHole()
-        return
+        return false
     if FuncExists("SelectionSense_HideDragHintToast") {
         try SelectionSense_HideDragHintToast("text_drag_show")
         catch {
@@ -1300,10 +1308,12 @@ GDHO_ShowTextDragAt(mx, my, weakPreview := false) {
         GDHO_Show(pl)
         try GDHO_RaiseTextDragOverlay()
         try GDHO_EnsureTextDragPassthrough()
-        try NativeDropDiag_Log("gdho text_drag_preview x=" . Integer(mx) . " y=" . Integer(my) . " weak=" . (weakPreview ? "1" : "0"))
+        try NativeDropDiag_Log("gdho text_drag_preview x=" . Integer(mx) . " y=" . Integer(my) . " weak=" . (weakPreview ? "1" : "0") . " gesture=" . (forGesture ? "1" : "0"))
+        return true
     } finally {
         GDHO_EndTransitionAllow()
     }
+    return false
 }
 
 GDHO_IsOpeningOrBusy() {
@@ -1340,7 +1350,8 @@ GDHO_ClearPendingCloseIntents() {
 
 GDHO_IsWeakPreviewReason(reason := "") {
     r := StrLower(Trim(String(reason)))
-    return (InStr(r, "preview") || InStr(r, "select") || r = "text_drag_preview" || r = "text_select_preview")
+    return (InStr(r, "preview") || InStr(r, "select") || InStr(r, "gesture") || InStr(r, "circle")
+        || InStr(r, "rbutton_hold") || InStr(r, "hold_early") || r = "text_drag_preview" || r = "text_select_preview")
 }
 
 GDHO_IsManualStarryOpenReason(reason := "") {

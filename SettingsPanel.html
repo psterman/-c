@@ -253,6 +253,35 @@
       padding: 14px;
       margin-bottom: 12px;
     }
+    .hole-trigger-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 14px;
+      margin: 10px 0 4px;
+    }
+    .hole-trigger-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .hole-trigger-item input { flex-shrink: 0; }
+    details.hole-advanced {
+      margin-top: 10px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+    details.hole-advanced summary {
+      cursor: pointer;
+      color: var(--text-dim);
+      font-size: 13px;
+      user-select: none;
+    }
+    details.hole-advanced[open] summary { margin-bottom: 10px; color: var(--text); }
+    .hole-fixed-row { display: none; }
+    .hole-fixed-row.visible { display: flex; }
     .title { color: var(--title-text); font-weight: 700; }
     input[type="text"], input[type="number"], textarea, select {
       background: var(--surface2);
@@ -959,7 +988,14 @@
         holeVisualStyle: "ring",
         holeHideDockEnabled: true,
         holeHideDockEdge: "right",
-        holeHideDockMargin: 10
+        holeHideDockMargin: 10,
+        holeTriggerTextSelect: true,
+        holeTriggerCircleCw: false,
+        holeTriggerCircleCcw: false,
+        holeTriggerRButtonHold: false,
+        holeRButtonHoldMs: 480,
+        holeSensitivityPreset: "standard",
+        holePlacementPreset: "cursor"
       }
     };
     let __nmDock = null;
@@ -1543,22 +1579,134 @@
         localStorage.setItem("settings.prompts.customCategories", JSON.stringify(state.customPromptCategories || []));
       } catch {}
     }
-    function readGeneral(d){ d.cursorPath = document.getElementById("cursorPath")?.value.trim() ?? d.cursorPath; d.capslockHoldTimeSeconds = Number(document.getElementById("holdTime")?.value ?? d.capslockHoldTimeSeconds); d.autoStart = !!document.getElementById("autoStart")?.checked; d.defaultStartTab = document.getElementById("defaultStartTab")?.value ?? d.defaultStartTab; return d; }
-    function readAppearance(d){
-      d.themeMode = document.getElementById("themeMode")?.value ?? d.themeMode;
-      d.popupScreenIndex = Number(document.getElementById("popupScreenIndex")?.value ?? d.popupScreenIndex);
-      d.holePositionMode = document.getElementById("holePositionMode")?.value ?? (d.holePositionMode || "anchor");
-      d.holeTriggerDistance = Number(document.getElementById("holeTriggerDistance")?.value ?? d.holeTriggerDistance ?? 260);
-      d.holeDismissDistance = Number(document.getElementById("holeDismissDistance")?.value ?? d.holeDismissDistance ?? 320);
-      d.holeFixedX = Number(document.getElementById("holeFixedX")?.value ?? d.holeFixedX ?? 360);
-      d.holeFixedY = Number(document.getElementById("holeFixedY")?.value ?? d.holeFixedY ?? 260);
-      d.holeSizeScale = Number(document.getElementById("holeSizeScale")?.value ?? d.holeSizeScale ?? 1.0);
-      d.holeAnimLevel = Number(document.getElementById("holeAnimLevel")?.value ?? d.holeAnimLevel ?? 1.0);
-      d.holeVisualStyle = document.getElementById("holeVisualStyle")?.value ?? (d.holeVisualStyle || "ring");
-      d.holeHideDockEnabled = !!document.getElementById("holeHideDockEnabled")?.checked;
-      d.holeHideDockEdge = document.getElementById("holeHideDockEdge")?.value ?? (d.holeHideDockEdge || "right");
-      d.holeHideDockMargin = Number(document.getElementById("holeHideDockMargin")?.value ?? d.holeHideDockMargin ?? 10);
+    function readGeneral(d){
+      const cp = document.getElementById("cursorPath");
+      if (cp) d.cursorPath = cp.value.trim();
+      const ht = document.getElementById("holdTime");
+      if (ht) d.capslockHoldTimeSeconds = Number(ht.value);
+      const as = document.getElementById("autoStart");
+      if (as) d.autoStart = !!as.checked;
+      const dst = document.getElementById("defaultStartTab");
+      if (dst) d.defaultStartTab = dst.value;
       return d;
+    }
+    function readAppearance(d){
+      const pick = (id, fn) => {
+        const el = document.getElementById(id);
+        if (el) fn(el);
+      };
+      pick("themeMode", (el) => { d.themeMode = el.value; });
+      pick("popupScreenIndex", (el) => { d.popupScreenIndex = Number(el.value); });
+      pick("holePositionMode", (el) => { d.holePositionMode = el.value; });
+      pick("holeTriggerDistance", (el) => { d.holeTriggerDistance = Number(el.value); });
+      pick("holeDismissDistance", (el) => { d.holeDismissDistance = Number(el.value); });
+      pick("holeFixedX", (el) => { d.holeFixedX = Number(el.value); });
+      pick("holeFixedY", (el) => { d.holeFixedY = Number(el.value); });
+      pick("holeSizeScale", (el) => { d.holeSizeScale = Number(el.value); });
+      pick("holeAnimLevel", (el) => { d.holeAnimLevel = Number(el.value); });
+      pick("holeVisualStyle", (el) => { d.holeVisualStyle = el.value; });
+      pick("holeHideDockEnabled", (el) => { d.holeHideDockEnabled = !!el.checked; });
+      pick("holeHideDockEdge", (el) => { d.holeHideDockEdge = el.value; });
+      pick("holeHideDockMargin", (el) => { d.holeHideDockMargin = Number(el.value); });
+      pick("holeTriggerTextSelect", (el) => { d.holeTriggerTextSelect = !!el.checked; });
+      pick("holeTriggerCircleCw", (el) => { d.holeTriggerCircleCw = !!el.checked; });
+      pick("holeTriggerCircleCcw", (el) => { d.holeTriggerCircleCcw = !!el.checked; });
+      pick("holeTriggerRButtonHold", (el) => { d.holeTriggerRButtonHold = !!el.checked; });
+      pick("holeRButtonHoldMs", (el) => { d.holeRButtonHoldMs = Number(el.value); });
+      pick("holeSensitivityPreset", (el) => { d.holeSensitivityPreset = el.value; });
+      pick("holePlacementPreset", (el) => { d.holePlacementPreset = el.value; });
+      return d;
+    }
+    function captureAppearanceTabState() {
+      state.data = syncHoleDerivedFields(readAppearance({ ...state.data }));
+      return state.data;
+    }
+    function validateHoleTriggers(d) {
+      if (d.holeTriggerTextSelect || d.holeTriggerCircleCw || d.holeTriggerCircleCcw || d.holeTriggerRButtonHold) return "";
+      return "请至少启用一种黑洞触发方式";
+    }
+    function validateHoleSettingsOnly(d) {
+      const trigErr = validateHoleTriggers(d);
+      if (trigErr) return trigErr;
+      if (!Number.isFinite(Number(d.holeRButtonHoldMs)) || Number(d.holeRButtonHoldMs) < 200 || Number(d.holeRButtonHoldMs) > 2000) return "长按右键时长非法";
+      if (!["cursor","fixed","edge"].includes(String(d.holePlacementPreset || "cursor"))) return "黑洞出现位置非法";
+      if (!["compact","standard","relaxed"].includes(String(d.holeSensitivityPreset || "standard"))) return "接近灵敏度非法";
+      if (!["ring","starry"].includes(String(d.holeVisualStyle || "ring"))) return "黑洞样式非法";
+      const ss = Number(d.holeSizeScale);
+      if (!Number.isFinite(ss) || ss < 0.6 || ss > 1.8) return "黑洞大小非法";
+      return "";
+    }
+    const HOLE_SENSITIVITY_DIST = { compact: [200, 260], standard: [260, 320], relaxed: [340, 420] };
+    function syncHoleDerivedFields(d) {
+      const sens = HOLE_SENSITIVITY_DIST[d.holeSensitivityPreset] || HOLE_SENSITIVITY_DIST.standard;
+      d.holeTriggerDistance = sens[0];
+      d.holeDismissDistance = sens[1];
+      const place = String(d.holePlacementPreset || "cursor");
+      if (place === "fixed") {
+        d.holePositionMode = "fixed";
+        d.holeHideDockEnabled = false;
+      } else if (place === "edge") {
+        d.holePositionMode = "anchor";
+        d.holeHideDockEnabled = true;
+        if (!d.holeHideDockEdge) d.holeHideDockEdge = "right";
+      } else {
+        d.holePositionMode = "anchor";
+        d.holeHideDockEnabled = false;
+      }
+      return d;
+    }
+    let holeSettingsSaveTimer = 0;
+    function flushHoleSettingsSaveNow() {
+      if (suppressAutoSave || !initDataReceived) return;
+      if (holeSettingsSaveTimer) {
+        clearTimeout(holeSettingsSaveTimer);
+        holeSettingsSaveTimer = 0;
+      }
+      const d = syncHoleDerivedFields({ ...state.data });
+      const err = validateHoleSettingsOnly(d);
+      if (err) return setStatus(err, "err");
+      post({ type: "saveHoleSettings", payload: collectHoleSettingsPayload(d) });
+      setStatus("黑洞设置保存中...", "ok");
+    }
+    function scheduleHoleSettingsSave(delay = 400) {
+      if (suppressAutoSave || !initDataReceived) return;
+      if (holeSettingsSaveTimer) clearTimeout(holeSettingsSaveTimer);
+      holeSettingsSaveTimer = setTimeout(() => {
+        holeSettingsSaveTimer = 0;
+        flushHoleSettingsSaveNow();
+      }, delay);
+    }
+    function bindHolePlacementPresetUi() {
+      const sel = document.getElementById("holePlacementPreset");
+      const row = document.getElementById("holeFixedRow");
+      const sync = () => {
+        if (row) row.classList.toggle("visible", sel && sel.value === "fixed");
+      };
+      if (sel) sel.addEventListener("change", sync);
+      sync();
+    }
+    function collectHoleSettingsPayload(d) {
+      d = syncHoleDerivedFields({ ...d });
+      return {
+        holeTriggerTextSelect: d.holeTriggerTextSelect,
+        holeTriggerCircleCw: d.holeTriggerCircleCw,
+        holeTriggerCircleCcw: d.holeTriggerCircleCcw,
+        holeTriggerRButtonHold: d.holeTriggerRButtonHold,
+        holeRButtonHoldMs: d.holeRButtonHoldMs,
+        holeSensitivityPreset: d.holeSensitivityPreset,
+        holePlacementPreset: d.holePlacementPreset,
+        holePositionMode: d.holePositionMode,
+        holeTriggerDistance: d.holeTriggerDistance,
+        holeDismissDistance: d.holeDismissDistance,
+        holeFixedX: d.holeFixedX,
+        holeFixedY: d.holeFixedY,
+        holeSizeScale: d.holeSizeScale,
+        holeAnimLevel: d.holeAnimLevel,
+        holeVisualStyle: d.holeVisualStyle,
+        holeHideDockEnabled: d.holeHideDockEnabled,
+        holeHideDockEdge: d.holeHideDockEdge,
+        holeHideDockMargin: d.holeHideDockMargin
+      };
     }
     function readPrompts(d){
       d.promptExplain = document.getElementById("promptExplain")?.value ?? d.promptExplain;
@@ -1587,10 +1735,18 @@
       return d;
     }
     function readAdvanced(d){
-      d.language = document.getElementById("language")?.value ?? d.language;
-      const aiSleepSeconds = Number(document.getElementById("aiSleepTimeSeconds")?.value ?? (Number(d.aiSleepTime) / 1000));
-      d.aiSleepTime = Math.max(0.05, aiSleepSeconds) * 1000;
-      d.launchDelaySeconds = Number(document.getElementById("launchDelaySeconds")?.value ?? d.launchDelaySeconds);
+      const lang = document.getElementById("language");
+      if (lang) d.language = lang.value;
+      const aiSec = document.getElementById("aiSleepTimeSeconds");
+      if (aiSec) {
+        const aiSleepSeconds = Number(aiSec.value);
+        if (Number.isFinite(aiSleepSeconds)) d.aiSleepTime = Math.max(50, aiSleepSeconds * 1000);
+      }
+      const ld = document.getElementById("launchDelaySeconds");
+      if (ld) {
+        const v = Number(ld.value);
+        if (Number.isFinite(v)) d.launchDelaySeconds = v;
+      }
       const listValues = (id) => Array.from(document.getElementById(id)?.options || []).map(o => o.value).filter(Boolean);
       if (document.getElementById("toolbarButtonsList")) {
         const btns = listValues("toolbarButtonsList");
@@ -1669,7 +1825,7 @@
       syncActivationModeFromDom();
       syncThemeAndPopupFromDom();
       let d = { ...state.data, hotkeys: { ...state.data.hotkeys }, quickActions: [...state.data.quickActions], voiceSearchEnabledCategories: [...state.data.voiceSearchEnabledCategories], floatingToolbarButtons: [...(state.data.floatingToolbarButtons||[])], floatingToolbarMenuItems: [...(state.data.floatingToolbarMenuItems||[])] };
-      d = readGeneral(d); d = readAppearance(d); d = readPrompts(d); d = readHotkeys(d); d = readAdvanced(d); d = readScreenshot(d); d = readSearch(d);
+      d = readGeneral(d); d = readAppearance(d); d = syncHoleDerivedFields(d); d = readPrompts(d); d = readHotkeys(d); d = readAdvanced(d); d = readScreenshot(d); d = readSearch(d);
       d.appearanceActivationMode = normalizeActivationMode(state.appearanceActivationMode);
       state.data.appearanceActivationMode = d.appearanceActivationMode;
       return d;
@@ -1868,18 +2024,33 @@
       } else if (state.activeTab === "appearance") {
         const activationMode = normalizeActivationMode(state.appearanceActivationMode);
         panel.innerHTML = `<div class="card"><div class="title">外观设置</div><div class="row"><div class="label">主题模式</div><select id="themeMode">${optionsKV([{value:"dark",label:"深色"},{value:"light",label:"浅色"}],d.themeMode)}</select></div><div class="row"><div class="label">弹窗位置</div><select id="popupScreenIndex">${optionsKV(screenOpts, String(d.popupScreenIndex || 1))}</select></div><div class="hint">已自动识别显示器数量：${esc(monitorCount)}。此设置会应用到所有弹窗并固定保存。</div></div>
-<div class="card"><div class="title">黑洞交互</div>
-<div class="row"><div class="label">黑洞位置模式</div><select id="holePositionMode" data-nosave="1">${optionsKV([{value:"anchor",label:"靠近工具栏"},{value:"fixed",label:"固定位置"},{value:"relative",label:"相对拖动"}], String(d.holePositionMode || "anchor"))}</select></div>
-<div class="row"><div class="label">触发距离</div><select id="holeTriggerDistance" data-nosave="1">${optionsKV(withCurrentOption([{value:"200",label:"紧凑（200px）"},{value:"260",label:"标准（260px）"},{value:"340",label:"宽松（340px）"},{value:"420",label:"远距（420px）"}], d.holeTriggerDistance ?? 260), String(d.holeTriggerDistance ?? 260))}</select></div>
-<div class="row"><div class="label">消失距离</div><select id="holeDismissDistance" data-nosave="1">${optionsKV(withCurrentOption([{value:"260",label:"紧凑（260px）"},{value:"320",label:"标准（320px）"},{value:"420",label:"宽松（420px）"},{value:"560",label:"远距（560px）"}], d.holeDismissDistance ?? 320), String(d.holeDismissDistance ?? 320))}</select></div>
-<div class="row"><div class="label">固定位置 X / Y</div><div class="inline"><input id="holeFixedX" data-nosave="1" type="number" step="1" value="${esc(d.holeFixedX ?? 360)}"><input id="holeFixedY" data-nosave="1" type="number" step="1" value="${esc(d.holeFixedY ?? 260)}"></div></div>
-<div class="row"><div class="label">黑洞大小</div><select id="holeSizeScale" data-nosave="1">${optionsKV(withCurrentOption([{value:"0.85",label:"小（0.85x）"},{value:"1.0",label:"标准（1.0x）"},{value:"1.25",label:"大（1.25x）"},{value:"1.5",label:"超大（1.5x）"}], d.holeSizeScale ?? 1.0), String(d.holeSizeScale ?? 1.0))}</select></div>
-<div class="row"><div class="label">动画强度</div><select id="holeAnimLevel" data-nosave="1">${optionsKV(withCurrentOption([{value:"0.8",label:"柔和（0.8）"},{value:"1.0",label:"标准（1.0）"},{value:"1.4",label:"增强（1.4）"},{value:"2.0",label:"强烈（2.0）"}], d.holeAnimLevel ?? 1.0), String(d.holeAnimLevel ?? 1.0))}</select></div>
-<div class="row"><div class="label">黑洞样式</div><select id="holeVisualStyle" data-nosave="1">${optionsKV([{value:"ring",label:"彩环黑洞"},{value:"starry",label:"星空黑洞"}], String(d.holeVisualStyle || "ring"))}</select></div>
-<div class="row"><div class="label">隐藏时吸附到屏幕内侧</div><div><input id="holeHideDockEnabled" data-nosave="1" type="checkbox" ${checked(d.holeHideDockEnabled !== false)}></div></div>
-<div class="row"><div class="label">吸附边缘</div><select id="holeHideDockEdge" data-nosave="1">${optionsKV([{value:"right",label:"右侧"},{value:"left",label:"左侧"},{value:"top",label:"顶部"},{value:"bottom",label:"底部"}], String(d.holeHideDockEdge || "right"))}</select></div>
-<div class="row"><div class="label">吸附内边距（px）</div><input id="holeHideDockMargin" data-nosave="1" type="number" min="0" max="80" step="1" value="${esc(d.holeHideDockMargin ?? 10)}"></div>
-<div class="inline" style="margin-top:8px;"><button class="btn" id="btnApplyHoleSettings">应用黑洞设置</button></div>
+<div class="card"><div class="title">黑洞 · 怎么唤起</div>
+<div class="hint">仅在下方「激活方式」选为<strong>黑洞模式</strong>时生效；可多选。</div>
+<div class="hole-trigger-grid">
+<label class="hole-trigger-item"><input id="holeTriggerTextSelect" type="checkbox" ${checked(!!d.holeTriggerTextSelect)}>选中文本</label>
+<label class="hole-trigger-item"><input id="holeTriggerCircleCw" type="checkbox" ${checked(!!d.holeTriggerCircleCw)}>鼠标画圈（顺时针）</label>
+<label class="hole-trigger-item"><input id="holeTriggerCircleCcw" type="checkbox" ${checked(!!d.holeTriggerCircleCcw)}>鼠标画圈（逆时针）</label>
+<label class="hole-trigger-item"><input id="holeTriggerRButtonHold" type="checkbox" ${checked(!!d.holeTriggerRButtonHold)}>长按鼠标右键</label>
+</div>
+<div class="row"><div class="label">长按右键时长（ms）</div><input id="holeRButtonHoldMs" type="number" min="200" max="2000" step="20" value="${esc(d.holeRButtonHoldMs ?? 480)}"></div>
+<div class="hint">画圈：无需按键，移动鼠标画出闭合圆环（停顿约 0.3 秒后识别）；长按：按住右键达到时长且几乎不移动。</div>
+</div>
+<div class="card"><div class="title">黑洞 · 外观与位置</div>
+<div class="row"><div class="label">接近灵敏度</div><select id="holeSensitivityPreset">${optionsKV([{value:"compact",label:"紧凑"},{value:"standard",label:"标准"},{value:"relaxed",label:"宽松"}], String(d.holeSensitivityPreset || "standard"))}</select></div>
+<div class="row"><div class="label">出现位置</div><select id="holePlacementPreset">${optionsKV([{value:"cursor",label:"跟随选区/光标"},{value:"fixed",label:"屏幕固定坐标"},{value:"edge",label:"隐藏时贴屏幕边缘"}], String(d.holePlacementPreset || "cursor"))}</select></div>
+<div class="row hole-fixed-row" id="holeFixedRow"><div class="label">固定坐标 X / Y</div><div class="inline"><input id="holeFixedX" type="number" step="1" value="${esc(d.holeFixedX ?? 360)}"><input id="holeFixedY" type="number" step="1" value="${esc(d.holeFixedY ?? 260)}"></div></div>
+<div class="row"><div class="label">视觉样式</div><select id="holeVisualStyle">${optionsKV([{value:"ring",label:"彩环黑洞"},{value:"starry",label:"星空黑洞"}], String(d.holeVisualStyle || "ring"))}</select></div>
+<div class="row"><div class="label">大小</div><select id="holeSizeScale">${optionsKV(withCurrentOption([{value:"0.85",label:"小"},{value:"1.0",label:"标准"},{value:"1.25",label:"大"},{value:"1.5",label:"超大"}], d.holeSizeScale ?? 1.0), String(d.holeSizeScale ?? 1.0))}</select></div>
+<details class="hole-advanced"><summary>高级选项（触发/消失距离、动画、边缘吸附细节）</summary>
+<input type="hidden" id="holePositionMode" value="${esc(d.holePositionMode || "anchor")}">
+<select id="holeTriggerDistance" style="display:none">${optionsKV(withCurrentOption([{value:"200",label:"200"},{value:"260",label:"260"},{value:"340",label:"340"},{value:"420",label:"420"}], d.holeTriggerDistance ?? 260), String(d.holeTriggerDistance ?? 260))}</select>
+<select id="holeDismissDistance" style="display:none">${optionsKV(withCurrentOption([{value:"260",label:"260"},{value:"320",label:"320"},{value:"420",label:"420"},{value:"560",label:"560"}], d.holeDismissDistance ?? 320), String(d.holeDismissDistance ?? 320))}</select>
+<div class="row"><div class="label">动画强度</div><select id="holeAnimLevel">${optionsKV(withCurrentOption([{value:"0.8",label:"柔和"},{value:"1.0",label:"标准"},{value:"1.4",label:"增强"},{value:"2.0",label:"强烈"}], d.holeAnimLevel ?? 1.0), String(d.holeAnimLevel ?? 1.0))}</select></div>
+<div class="row"><div class="label">隐藏时贴边</div><div><input id="holeHideDockEnabled" type="checkbox" ${checked(d.holeHideDockEnabled !== false)}></div></div>
+<div class="row"><div class="label">贴边方向</div><select id="holeHideDockEdge">${optionsKV([{value:"right",label:"右侧"},{value:"left",label:"左侧"},{value:"top",label:"顶部"},{value:"bottom",label:"底部"}], String(d.holeHideDockEdge || "right"))}</select></div>
+<div class="row"><div class="label">贴边边距（px）</div><input id="holeHideDockMargin" type="number" min="0" max="80" step="1" value="${esc(d.holeHideDockMargin ?? 10)}"></div>
+</details>
+<div class="inline" style="margin-top:8px;"><button class="btn" id="btnApplyHoleSettings">保存黑洞设置</button></div>
 </div>
 <div class="card">
   <div class="title">激活方式</div>
@@ -1891,27 +2062,27 @@
   </div>
 </div>`;
         bindAppearanceActivationMode();
+        bindHolePlacementPresetUi();
+        const holeSaveIds = ["holeTriggerTextSelect","holeTriggerCircleCw","holeTriggerCircleCcw","holeTriggerRButtonHold","holeRButtonHoldMs","holeSensitivityPreset","holePlacementPreset","holeFixedX","holeFixedY","holeVisualStyle","holeSizeScale","holeAnimLevel","holeHideDockEnabled","holeHideDockEdge","holeHideDockMargin"];
+        holeSaveIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const onHoleFieldChange = () => {
+            captureAppearanceTabState();
+            scheduleHoleSettingsSave(500);
+          };
+          el.addEventListener("change", onHoleFieldChange);
+          if (el.type === "number" || el.type === "text") el.addEventListener("input", onHoleFieldChange);
+        });
         const holeBtn = document.getElementById("btnApplyHoleSettings");
         if (holeBtn) {
           holeBtn.addEventListener("click", () => {
-            const d = readFromUI();
-            const err = validate(d);
+            if (holeSettingsSaveTimer) { clearTimeout(holeSettingsSaveTimer); holeSettingsSaveTimer = 0; }
+            const d = syncHoleDerivedFields(readFromUI());
+            const err = validateHoleSettingsOnly(d);
             if (err) return setStatus(err, "err");
-            const holePayload = {
-              holePositionMode: d.holePositionMode,
-              holeTriggerDistance: d.holeTriggerDistance,
-              holeDismissDistance: d.holeDismissDistance,
-              holeFixedX: d.holeFixedX,
-              holeFixedY: d.holeFixedY,
-              holeSizeScale: d.holeSizeScale,
-              holeAnimLevel: d.holeAnimLevel,
-              holeVisualStyle: d.holeVisualStyle,
-              holeHideDockEnabled: d.holeHideDockEnabled,
-              holeHideDockEdge: d.holeHideDockEdge,
-              holeHideDockMargin: d.holeHideDockMargin
-            };
-            post({ type: "saveHoleSettings", payload: holePayload });
-            setStatus("黑洞设置应用中...");
+            post({ type: "saveHoleSettings", payload: collectHoleSettingsPayload(d) });
+            setStatus("黑洞设置保存中...", "ok");
           });
         }
       } else if (state.activeTab === "prompts") {
@@ -2216,6 +2387,10 @@
       if (!Number.isInteger(d.popupScreenIndex) || d.popupScreenIndex < 1) return "弹窗屏幕序号非法";
       const maxMonitors = Math.max(1, Number(d.monitorCount || 1));
       if (d.popupScreenIndex > maxMonitors) return "弹窗屏幕序号超出显示器范围";
+      if (!["cursor","fixed","edge"].includes(String(d.holePlacementPreset || "cursor"))) return "黑洞出现位置非法";
+      const trigErr = validateHoleTriggers(d);
+      if (trigErr) return trigErr;
+      if (!Number.isFinite(Number(d.holeRButtonHoldMs)) || Number(d.holeRButtonHoldMs) < 200 || Number(d.holeRButtonHoldMs) > 2000) return "长按右键时长非法";
       if (!["anchor","fixed","relative"].includes(String(d.holePositionMode || "anchor"))) return "黑洞位置模式非法";
       if (!Number.isFinite(Number(d.holeTriggerDistance)) || Number(d.holeTriggerDistance) < 80 || Number(d.holeTriggerDistance) > 1200) return "黑洞触发距离非法";
       if (!Number.isFinite(Number(d.holeDismissDistance)) || Number(d.holeDismissDistance) < 120 || Number(d.holeDismissDistance) > 1600) return "黑洞消失距离非法";
@@ -2231,8 +2406,13 @@
       return "";
     }
     document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => {
+      const nextTab = btn.dataset.tab;
+      if (state.activeTab === "appearance" && nextTab !== "appearance") {
+        captureAppearanceTabState();
+        flushHoleSettingsSaveNow();
+      }
+      state.activeTab = nextTab;
       state.data = readFromUI();
-      state.activeTab = btn.dataset.tab;
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       render();
@@ -2381,7 +2561,13 @@
         return;
       }
       if (msg.type === "saveHoleResult") {
-        setStatus(msg.ok ? "黑洞设置已应用" : (msg.error || "黑洞设置应用失败"), msg.ok ? "ok" : "err");
+        if (msg.ok) {
+          const saved = (msg.saved && typeof msg.saved === "object") ? msg.saved : collectHoleSettingsPayload(readFromUI());
+          state.data = { ...state.data, ...saved };
+          lastSavedHash = stableStringify(state.data);
+          lastSentHash = lastSavedHash;
+        }
+        setStatus(msg.ok ? "黑洞设置已保存" : (msg.error || "黑洞设置保存失败"), msg.ok ? "ok" : "err");
         return;
       }
       if (msg.type === "actionResult") { setStatus(msg.ok ? "操作成功" : (msg.error || "操作失败"), msg.ok ? "ok" : "err"); }

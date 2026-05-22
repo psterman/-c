@@ -1818,6 +1818,19 @@ SelectionSense_IsSelectionGestureActive() {
     return (StrLower(Trim(String(g_SelSense_HoleDragPhase))) = "selecting")
 }
 
+; 画圈/长按右键等无划选手势：标记弱预览会话，供解耦拓扑 GDHO_IsTextSelectionPreviewReady 等路径识别
+SelectionSense_ArmHoleGesturePreview(mx, my) {
+    global g_SelSense_TextCaptured, g_SelSense_AllowTextHoleGesture, g_SelSense_HoleDragPhase
+    global g_SelSense_LastFireTick, g_SelSense_LastAnchorX, g_SelSense_LastAnchorY
+    g_SelSense_TextCaptured := true
+    g_SelSense_AllowTextHoleGesture := true
+    g_SelSense_HoleDragPhase := "preview"
+    g_SelSense_LastFireTick := A_TickCount
+    g_SelSense_LastAnchorX := Integer(mx)
+    g_SelSense_LastAnchorY := Integer(my)
+    SelectionSense_Diag_Log("gesture_preview_arm x=" . g_SelSense_LastAnchorX . " y=" . g_SelSense_LastAnchorY)
+}
+
 SelectionSense_IsSelectionHolePreviewActive() {
     global g_SelSense_HoleDragPhase, g_SelSense_TextCaptured, g_SelSense_LastFireTick
     if FuncExists("GDHO_IsTextHoleUserPanelActive") {
@@ -2399,10 +2412,54 @@ SelectionSense_ShowDragHintToast(selectedText, anchorX := "", anchorY := "") {
     }
 }
 
+SelectionSense_OpenHolePreviewAt(ax, ay, selectedText := "") {
+    global g_SelSense_LastAnchorX, g_SelSense_LastAnchorY, g_SelSense_TextCaptured
+    t := Trim(String(selectedText))
+    if (t != "") {
+        if FuncExists("GDHO_StampTextHoleCapturedText")
+            try GDHO_StampTextHoleCapturedText(t)
+        g_SelSense_TextCaptured := true
+    }
+    ix := Integer(ax), iy := Integer(ay)
+    if (ix = 0 && iy = 0) {
+        ix := Integer(g_SelSense_LastAnchorX)
+        iy := Integer(g_SelSense_LastAnchorY)
+    }
+    if (ix = 0 && iy = 0) {
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&ix, &iy)
+    }
+    SelectionSense_Diag_Log("hole_preview_activate len=" . StrLen(t) . " x=" . ix . " y=" . iy)
+    if FuncExists("HoleActivation_OpenAt") {
+        try {
+            if HoleActivation_OpenAt(ix, iy, "selection", "selection_preview")
+                return true
+        } catch as e {
+            SelectionSense_Diag_Log("hole_preview_router_fail msg=" . e.Message)
+        }
+    }
+    if FuncExists("GDHO_OpenSelectionTextPreview") {
+        try {
+            GDHO_OpenSelectionTextPreview(ix, iy)
+            return true
+        } catch as err {
+            SelectionSense_Diag_Log("hole_preview_fail msg=" . err.Message)
+        }
+    }
+    return false
+}
+
 SelectionSense_TryActivateHoleFromSelection(selectedText) {
     global g_SelSense_LastAnchorX, g_SelSense_LastAnchorY
     if !SelectionSense_IsHoleCaptureEnabled()
         return
+    if FuncExists("HoleTriggers_IsTextSelectEnabled") {
+        try {
+            if !HoleTriggers_IsTextSelectEnabled()
+                return
+        } catch {
+        }
+    }
     if FuncExists("GDHO_CanOpenWeakPreview") {
         try {
             if !GDHO_CanOpenWeakPreview() {
@@ -2417,11 +2474,6 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
         return
     ax := Integer(g_SelSense_LastAnchorX)
     ay := Integer(g_SelSense_LastAnchorY)
-    if (ax = 0 && ay = 0) {
-        CoordMode("Mouse", "Screen")
-        MouseGetPos(&ax, &ay)
-    }
-    SelectionSense_Diag_Log("hole_preview_activate len=" . StrLen(t) . " x=" . ax . " y=" . ay)
     if FuncExists("GDHO_ShouldBlockStarryReentry") {
         try {
             if GDHO_ShouldBlockStarryReentry() {
@@ -2440,30 +2492,8 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
         } catch {
         }
     }
-    if FuncExists("GDHO_OpenSelectionTextPreview") {
-        try GDHO_OpenSelectionTextPreview(ax, ay)
-        catch as err {
-            SelectionSense_Diag_Log("hole_preview_fail msg=" . err.Message)
-        }
-        try SetTimer(SelectionSense_HideHoleAfterSelection, -2600)
-        return
-    }
-    if FuncExists("GDHO_ShowTextDragAt") {
-        try GDHO_ShowTextDragAt(ax, ay, true)
-        return
-    }
-    if FuncExists("GDHO_RequestOpen") {
-        try GDHO_RequestOpen(Map(
-            "reason", "text_select_preview",
-            "payload", "text",
-            "screenX", ax,
-            "screenY", ay,
-            "positionMode", "relative",
-            "weakPreview", true
-        ))
-    }
-    if IsSet(GDHO_TriggerSource)
-        SetTimer((*) => (GDHO_TriggerSource := ""), -3200)
+    SelectionSense_OpenHolePreviewAt(ax, ay, t)
+    try SetTimer(SelectionSense_HideHoleAfterSelection, -2600)
 }
 
 SelectionSense_HideHoleAfterSelection(*) {
