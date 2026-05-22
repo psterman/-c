@@ -1883,6 +1883,18 @@ GDHO_SyncHoleCenterFromStarryWindow() {
     }
 }
 
+GDHO_ApplyLauncherNoActivateStyle() {
+    global GDHO_LAUNCHER_GUI
+    if !IsObject(GDHO_LAUNCHER_GUI) || !GDHO_LAUNCHER_GUI.Hwnd
+        return
+    try {
+        ex := DllCall("GetWindowLongPtr", "Ptr", GDHO_LAUNCHER_GUI.Hwnd, "Int", -20, "Ptr")
+        ex := (ex & ~0x20) | 0x08000000 ; WS_EX_NOACTIVATE：显示启动层不抢前台，避免最大化窗口被系统还原
+        DllCall("SetWindowLongPtr", "Ptr", GDHO_LAUNCHER_GUI.Hwnd, "Int", -20, "Ptr", ex, "Ptr")
+    } catch {
+    }
+}
+
 GDHO_ApplyLauncherLayerInteractive(reason := "") {
     global GDHO_LAUNCHER_GUI
     if !IsObject(GDHO_LAUNCHER_GUI) || !GDHO_LAUNCHER_GUI.Hwnd
@@ -1890,6 +1902,7 @@ GDHO_ApplyLauncherLayerInteractive(reason := "") {
     hwnd := GDHO_LAUNCHER_GUI.Hwnd
     try WinSetTransColor("Off", "ahk_id " hwnd)
     try WinSetTransparent(255, "ahk_id " hwnd)
+    try GDHO_ApplyLauncherNoActivateStyle()
     try {
         ex := DllCall("GetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr")
         ex := ex & ~0x20
@@ -1955,7 +1968,7 @@ GDHO_CreateLauncherGui() {
     if (lh < 360)
         lh := 360
     rect := GDHO_ComputeLauncherRectFromHole(lw)
-    GDHO_LAUNCHER_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale", "Global Drag Hole Launcher")
+    GDHO_LAUNCHER_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x08000000 -DPIScale", "Global Drag Hole Launcher")
     GDHO_LAUNCHER_GUI.BackColor := "010101"
     GDHO_LAUNCHER_GUI.Show("x" rect.x " y" rect.y " w" rect.w " h" rect.h . " Hide NA")
     try GDHO_ApplyLauncherLayerInteractive("create_launcher_gui")
@@ -2261,7 +2274,7 @@ GDHO_ShowLauncherLayerForced(reason := "") {
     if !IsObject(GDHO_LAUNCHER_GUI)
         try GDHO_CreateLauncherGui()
     try GDHO_LAUNCHER_GUI.Move(rect.x, rect.y, rect.w, rect.h)
-    try GDHO_LAUNCHER_GUI.Show("x" rect.x " y" rect.y " w" rect.w " h" rect.h)
+    try GDHO_LAUNCHER_GUI.Show("NA x" rect.x " y" rect.y " w" rect.w " h" rect.h)
     GDHO_LAUNCHER_VISIBLE := true
     try GDHO_ApplyLauncherLayerInteractive("show_launcher_layer:" . reason)
     try GDHO_ApplyStarryHostChildPassthrough(true, "show_launcher_layer")
@@ -2692,9 +2705,6 @@ GDHO_HandleLauncherPick(msg) {
     if (typ = "panel_scene_pick") {
         if (cmdId = "")
             return
-        global GDHO_LAUNCHER_GUI
-        if IsObject(GDHO_LAUNCHER_GUI) && GDHO_LAUNCHER_GUI.Hwnd
-            try WinActivate("ahk_id " GDHO_LAUNCHER_GUI.Hwnd)
         try GDHO_ApplyStarryHostChildPassthrough(false, "panel_scene_pick")
         GDHO_ArmLauncherCmdInFlight((cmdId = "sc_activate_search" || cmdId = "ftm_search_center") ? 3200 : 2200)
         ok := false
