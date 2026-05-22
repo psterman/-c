@@ -330,7 +330,11 @@ GDHO_FlushReleaseCoalesce(*) {
             skipDragReleaseClose := false
             if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
                 try {
-                    if FuncExists("GDHO_IsTextSelectionPreviewReady") && GDHO_IsTextSelectionPreviewReady()
+                    if FuncExists("GDHO_IsLauncherCmdInFlight") && GDHO_IsLauncherCmdInFlight()
+                        skipDragReleaseClose := true
+                    else if FuncExists("GDHO_IsLauncherContextActive") && GDHO_IsLauncherContextActive()
+                        skipDragReleaseClose := true
+                    else if FuncExists("GDHO_IsTextSelectionPreviewReady") && GDHO_IsTextSelectionPreviewReady()
                         skipDragReleaseClose := true
                     else if FuncExists("SelectionSense_IsSelectionHolePreviewActive") && SelectionSense_IsSelectionHolePreviewActive()
                         skipDragReleaseClose := true
@@ -1536,7 +1540,18 @@ GDHO_RequestOpen(payload := 0) {
 }
 
 GDHO_RequestClose(reason := "") {
-    GDHO_SubmitIntent("CLOSE", 30, Map("reason", reason != "" ? reason : "request_close"))
+    r := Trim(String(reason))
+    if FuncExists("GDHO_IsLauncherCmdInFlight") {
+        try {
+            if GDHO_IsLauncherCmdInFlight() && (r = "desktop_unpin" || r = "drag_release" || r = "hide_frontend_redirect"
+                || r = "hide_overlay" || r = "hide_overlay_redirect") {
+                try NativeDropDiag_Log("gdho request_close skip launcher_cmd_in_flight reason=" . r)
+                return
+            }
+        } catch {
+        }
+    }
+    GDHO_SubmitIntent("CLOSE", 30, Map("reason", r != "" ? r : "request_close"))
 }
 
 GDHO_RequestForceReset(reason := "") {
@@ -3415,6 +3430,15 @@ GDHO_DisarmPolling(reason := "") {
 
 GDHO_Stop() {
     global GDHO_MONITORING, GDHO_ACTIVE, g_GDHO_TransitionCtx, g_GDHO_CurrentToken
+    if FuncExists("GDHO_IsLauncherCmdInFlight") {
+        try {
+            if GDHO_IsLauncherCmdInFlight() {
+                try NativeDropDiag_Log("gdho stop skip launcher_cmd_in_flight")
+                return
+            }
+        } catch {
+        }
+    }
     try NativeDropDiag_Log("gdho stop begin")
     GDHO_DisarmPolling("stop")
     g_GDHO_CurrentToken += 1
@@ -3868,6 +3892,16 @@ GDHO_PollDrag(*) {
             if !lDown
                 return
             if !GDHO_IsPointInHole(mx, my, 40) {
+                skipExit := false
+                if FuncExists("GDHO_IsPostSuckProtected") && GDHO_IsPostSuckProtected()
+                    skipExit := true
+                if FuncExists("GDHO_IsStarryLauncherMode") && GDHO_IsStarryLauncherMode() {
+                    global g_GDHO_TextHoleAwaitingExpand, g_GDHO_PostSuckPanelPending, g_GDHO_PostSuckTimerArmed
+                    if (g_GDHO_TextHoleAwaitingExpand || g_GDHO_PostSuckPanelPending || g_GDHO_PostSuckTimerArmed)
+                        skipExit := true
+                }
+                if skipExit
+                    return
                 GDHO_EXPANDED_HOLD := false
                 GDHO_IS_SUCKING := false
                 GDHO_RequestClose("expanded_hold_exit")

@@ -33,6 +33,7 @@ button,input,textarea,select{font:inherit}
 }
 @keyframes ftbBootSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 #app{position:relative;width:100%;height:100%;background:var(--toolbar-bg)}
+html.ftb-handoff-no-anim #collapsedRoot,html.ftb-handoff-no-anim #drawerRoot,html.ftb-handoff-no-anim #panel,html.ftb-handoff-no-anim #stage{transition:none!important}
 body.drawer-open{background:var(--toolbar-bg)}
 /* 标准圆角矩形：CSS border-radius 各向一致，避免 SVG 非等比拉伸成“药丸/鼓边” */
 #collapsedRoot{position:relative;display:flex;flex-direction:row;align-items:center;height:100%;width:100%;gap:calc(8px * var(--ui));padding:calc(6px * var(--ui)) calc(8px * var(--ui));background:var(--toolbar-bg);background-clip:padding-box;border-radius:calc(10px * var(--ui));border:none;box-shadow:none;opacity:0;visibility:hidden;transition:opacity .12s ease,visibility .12s ease,border-radius .22s cubic-bezier(.22,1,.36,1),padding .22s cubic-bezier(.22,1,.36,1),gap .22s cubic-bezier(.22,1,.36,1);isolation:isolate;transform:translateZ(0)}
@@ -6348,7 +6349,24 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         cstat('Attachments added: ' + arr.length, 'success');
         return;
       }
+      if (d.type === 'host_set_drawer') {
+        var wantOpen = !!d.open;
+        if (wantOpen === !!state.drawer) return;
+        document.documentElement.classList.add('ftb-handoff-no-anim');
+        setDrawer(wantOpen);
+        requestAnimationFrame(function () {
+          try { document.documentElement.classList.remove('ftb-handoff-no-anim'); } catch (_) {}
+        });
+        return;
+      }
       if (d.type === 'host_request_reveal') {
+        if (d.preserve_drawer || state.drawer || document.body.classList.contains('drawer-open')) {
+          document.body.classList.add('ftb-ready');
+          try {
+            dismissBootSplash(false);
+          } catch (_) {}
+          return;
+        }
         resetToolbarHomeUi();
         return;
       }

@@ -68,6 +68,8 @@ global g_GDHO_TextHoleFastPresentSid := 0
 global g_GDHO_TextHoleFastPresentText := ""
 global g_GDHO_TextHoleFastPresentX := 0
 global g_GDHO_TextHoleFastPresentY := 0
+global g_GDHO_LastOnScreenHoleCx := 0
+global g_GDHO_LastOnScreenHoleCy := 0
 global g_GDHO_PendingPanelShow := false
 global g_GDHO_PendingPanelShowReason := ""
 global g_GDHO_PendingPanelShowSince := 0
@@ -95,6 +97,7 @@ global GDHO_LAUNCHER_PAGE_URL := ""
 global GDHO_LAUNCHER_FALLBACK_URL := ""
 global g_GDHO_LauncherCreateInFlight := false
 global g_GDHO_PendingLauncherShow := false
+global g_GDHO_LauncherCmdInFlightUntil := 0
 global g_GDHO_P2_LastPolicyTick := 0
 global g_GDHO_P2_ExpandEnsureReason := ""
 global GDHO_PHASE_IDLE := "idle"
@@ -768,6 +771,60 @@ GDHO_GetTextHoleCapturedText() {
     return t
 }
 
+; 解耦拓扑进入黑洞模式：不钉住桌面 file 态，清会话后保持空闲，等待划选文字触发弱预览。
+GDHO_PrepareDecoupledHoleForTextSelection(reason := "activation_hole") {
+    global GDHO_EXPANDED_HOLD, GDHO_IS_SUCKING, GDHO_VISIBLE
+    global g_GDHO_UserTextHolePanelEngaged, g_GDHO_TextHolePanelLocked
+    if !GDHO_IsDecoupled()
+        return false
+    try GDHO_UnpinFromDesktop()
+    catch {
+    }
+    try GDHO_UnlockTextHoleUserPanel()
+    catch {
+    }
+    g_GDHO_UserTextHolePanelEngaged := false
+    g_GDHO_TextHolePanelLocked := false
+    GDHO_EXPANDED_HOLD := false
+    GDHO_IS_SUCKING := false
+    try GDHO_DismissLauncherUI("prepare_hole:" . String(reason))
+    catch {
+    }
+    if GDHO_VISIBLE {
+        if FuncExists("GDHO_RequestClose")
+            try GDHO_RequestClose("prepare_hole:" . String(reason))
+    }
+    global g_GDHO_PostSuckPresentDone, g_GDHO_TextHolePanelOpen, g_GDHO_TextHoleStickyPanel, g_GDHO_PostSuckPanelPending
+    global g_GDHO_PostSuckTimerArmed, g_GDHO_TextHoleState, g_GDHO_StarryLauncherOpen
+    g_GDHO_PostSuckPresentDone := false
+    g_GDHO_TextHolePanelOpen := false
+    g_GDHO_TextHoleStickyPanel := false
+    g_GDHO_PostSuckPanelPending := false
+    g_GDHO_PostSuckTimerArmed := false
+    g_GDHO_StarryLauncherOpen := false
+    try GDHO_ResetTextHoleSession()
+    catch {
+    }
+    try GDHO_SetInteractionPhase(GDHO_PHASE_IDLE, "prepare_hole:" . String(reason))
+    if FuncExists("GDHO_HideStarryHost")
+        try GDHO_HideStarryHost("prepare_hole:" . String(reason))
+    if FuncExists("GDHO_ParkOverlay")
+        try GDHO_ParkOverlay()
+    try NativeDropDiag_Log("[TextHole] prepare_decoupled_hole reason=" . String(reason) . " phase=" . GDHO_GetInteractionPhase())
+    return true
+}
+
+GDHO_ForceApplyAppearanceMode(mode := "hole") {
+    global AppearanceActivationMode, g_ActivationApplyLastMode, g_ActivationApplyLastTick
+    m := NormalizeAppearanceActivationMode(mode)
+    AppearanceActivationMode := m
+    g_ActivationApplyLastMode := ""
+    g_ActivationApplyLastTick := 0
+    if FuncExists("ApplyAppearanceActivationMode")
+        return ApplyAppearanceActivationMode()
+    return false
+}
+
 GDHO_ResetTextHoleSession() {
     if GDHO_IsTextHoleUserPanelActive() {
         try NativeDropDiag_Log("[TextHole] reset_session_skip reason=panel_locked")
@@ -780,8 +837,11 @@ GDHO_ResetTextHoleSession() {
     global g_GDHO_PostSuckPresentDone, g_GDHO_TextHoleSessionSerial, g_GDHO_TextHoleCommitSerial
     global g_GDHO_TextHolePresentedSessionId, g_GDHO_TextHoleFallbackSessionId, g_GDHO_TextHoleExpandCompleteSessionId
     global g_GDHO_StarryLauncherOpen, g_GDHO_PendingStarryLauncherShow
+    global g_GDHO_LastOnScreenHoleCx, g_GDHO_LastOnScreenHoleCy
     g_GDHO_StarryLauncherOpen := false
     g_GDHO_PendingStarryLauncherShow := false
+    g_GDHO_LastOnScreenHoleCx := 0
+    g_GDHO_LastOnScreenHoleCy := 0
     try GDHO_HideStarryLauncher()
     try GDHO_HideLauncherLayer("reset_session")
     try GDHO_RestoreStarryPassthroughIfIdle("reset_session")
@@ -1576,6 +1636,7 @@ GDHO_PresentPanelAfterTextHoleDrop(txt := "", mx := "", my := "", reason := "pos
     try SetTimer(GDHO_TextHoleExpandFallback, 0)
     GDHO_CURSOR_X := mx
     GDHO_CURSOR_Y := my
+    try GDHO_RememberOnScreenHoleCenter(mx, my)
     g_GDHO_PostSuckPanelPending := true
     g_GDHO_TextHolePanelOpen := true
     g_GDHO_TextHoleStickyPanel := true
@@ -1723,23 +1784,103 @@ GDHO_MarkTextHoleExpandedHold() {
     try GDHO_SyncHoleCenterFromStarryWindow()
 }
 
+GDHO_IsHostParkedPos(x, y) {
+    global GDHO_PARK_X, GDHO_PARK_Y
+    ix := Integer(x), iy := Integer(y)
+    if (ix < -5000 || iy < -5000)
+        return true
+    return (Abs(ix - Integer(GDHO_PARK_X)) < 80 && Abs(iy - Integer(GDHO_PARK_Y)) < 80)
+}
+
+GDHO_RememberOnScreenHoleCenter(cx, cy) {
+    global g_GDHO_LastOnScreenHoleCx, g_GDHO_LastOnScreenHoleCy
+    x := Integer(cx), y := Integer(cy)
+    if (x > 50 && y > 50 && !GDHO_IsHostParkedPos(x, y)) {
+        g_GDHO_LastOnScreenHoleCx := x
+        g_GDHO_LastOnScreenHoleCy := y
+    }
+}
+
+GDHO_GetRememberedHoleCenter() {
+    global g_GDHO_LastOnScreenHoleCx, g_GDHO_LastOnScreenHoleCy, GDHO_CURSOR_X, GDHO_CURSOR_Y
+    if (g_GDHO_LastOnScreenHoleCx > 50 && g_GDHO_LastOnScreenHoleCy > 50)
+        return { x: g_GDHO_LastOnScreenHoleCx, y: g_GDHO_LastOnScreenHoleCy }
+    mx := Integer(GDHO_CURSOR_X), my := Integer(GDHO_CURSOR_Y)
+    if (mx > 50 && my > 50)
+        return { x: mx, y: my }
+    return { x: 0, y: 0 }
+}
+
+GDHO_EnsureStarryOnScreenForLauncher() {
+    global GDHO_STAR_GUI, GDHO_STAR_FULLSCREEN, GDHO_HOST_W, GDHO_HOST_H
+    global GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_VISIBLE, GDHO_ACTIVE
+    gui := GDHO_GetStarryGui()
+    if !IsObject(gui) || !gui.Hwnd
+        return false
+    sx := 0, sy := 0, sw := 0, sh := 0
+    try WinGetPos(&sx, &sy, &sw, &sh, "ahk_id " gui.Hwnd)
+    if !GDHO_IsHostParkedPos(sx, sy)
+        return true
+    if GDHO_STAR_FULLSCREEN {
+        GDHO_ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+        if !(FuncExists("GDHO_P0_BlockHostMoveHide") && GDHO_P0_BlockHostMoveHide("ensure_starry_for_launcher"))
+            try gui.Move(vl, vt, vw, vh)
+        GDHO_LAST_HOST_X := vl
+        GDHO_LAST_HOST_Y := vt
+        GDHO_HOST_W := vw
+        GDHO_HOST_H := vh
+    } else {
+        c := GDHO_GetRememberedHoleCenter()
+        if (c.x < 50)
+            return false
+        hw := Integer(GDHO_HOST_W), hh := Integer(GDHO_HOST_H)
+        if (hw < 260)
+            hw := 260
+        if (hh < 220)
+            hh := 220
+        nx := c.x - (hw // 2), ny := c.y - (hh // 2)
+        if !(FuncExists("GDHO_P0_BlockHostMoveHide") && GDHO_P0_BlockHostMoveHide("ensure_starry_for_launcher"))
+            try gui.Move(nx, ny, hw, hh)
+        GDHO_LAST_HOST_X := nx
+        GDHO_LAST_HOST_Y := ny
+    }
+    GDHO_VISIBLE := true
+    GDHO_ACTIVE := true
+    try gui.Show("NA")
+    try GDHO_ResizeStarryHost()
+    return true
+}
+
 GDHO_SyncHoleCenterFromStarryWindow() {
     global GDHO_STAR_GUI, GDHO_CX, GDHO_CY, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_HOST_W, GDHO_HOST_H
     if IsObject(GDHO_STAR_GUI) && GDHO_STAR_GUI.Hwnd {
         try {
             WinGetPos(&sx, &sy, &sw, &sh, "ahk_id " GDHO_STAR_GUI.Hwnd)
-            GDHO_CX := sx + (sw // 2)
-            GDHO_CY := sy + (sh // 2)
-            GDHO_LAST_HOST_X := sx
-            GDHO_LAST_HOST_Y := sy
-            GDHO_HOST_W := sw
-            GDHO_HOST_H := sh
-            return
+            if !GDHO_IsHostParkedPos(sx, sy) {
+                GDHO_CX := sx + (sw // 2)
+                GDHO_CY := sy + (sh // 2)
+                GDHO_LAST_HOST_X := sx
+                GDHO_LAST_HOST_Y := sy
+                GDHO_HOST_W := sw
+                GDHO_HOST_H := sh
+                try GDHO_RememberOnScreenHoleCenter(GDHO_CX, GDHO_CY)
+                return
+            }
         } catch {
         }
     }
-    GDHO_CX := Integer(GDHO_LAST_HOST_X) + (Integer(GDHO_HOST_W) // 2)
-    GDHO_CY := Integer(GDHO_LAST_HOST_Y) + (Integer(GDHO_HOST_H) // 2)
+    rem := GDHO_GetRememberedHoleCenter()
+    if (rem.x > 50) {
+        GDHO_CX := rem.x
+        GDHO_CY := rem.y
+        return
+    }
+    lx := Integer(GDHO_LAST_HOST_X), ly := Integer(GDHO_LAST_HOST_Y)
+    if !GDHO_IsHostParkedPos(lx, ly) {
+        GDHO_CX := lx + (Integer(GDHO_HOST_W) // 2)
+        GDHO_CY := ly + (Integer(GDHO_HOST_H) // 2)
+        return
+    }
 }
 
 GDHO_ApplyLauncherLayerInteractive(reason := "") {
@@ -1895,6 +2036,8 @@ GDHO_ShowStarryPassthroughOnly(reason := "p2_starry_passthrough") {
     global GDHO_STAR_GUI, GDHO_STAR_FULLSCREEN
     if !IsObject(GDHO_STAR_GUI)
         try GDHO_CreateStarryGui()
+    if GDHO_UseLauncherLayer()
+        try GDHO_EnsureStarryOnScreenForLauncher()
     if IsObject(GDHO_STAR_GUI) {
         try GDHO_STAR_GUI.Show("NA")
     }
@@ -2106,6 +2249,7 @@ GDHO_ShowLauncherLayerForced(reason := "") {
     g_GDHO_LauncherLastShowTick := now
     g_GDHO_StarryLauncherOpen := true
     try GDHO_MarkTextHoleExpandedHold()
+    try GDHO_EnsureStarryOnScreenForLauncher()
     try GDHO_SyncHoleCenterFromStarryWindow()
     try GDHO_SuppressEmbeddedStarryLauncher()
     try GDHO_EnsureLauncherLayerHost()
@@ -2187,6 +2331,7 @@ GDHO_LauncherShowPump(*) {
     }
     if GDHO_LAUNCHER_READY {
         g_GDHO_PendingLauncherShow := false
+        try GDHO_EnsureStarryOnScreenForLauncher()
         GDHO_ShowLauncherLayerForced("launcher_show_pump")
         return
     }
@@ -2219,15 +2364,27 @@ GDHO_UpdateHoleCenterFromPolicy(screenX := 0, screenY := 0) {
         if IsObject(GDHO_STAR_GUI) && GDHO_STAR_GUI.Hwnd {
             try {
                 WinGetPos(&ox, &oy, &ow, &oh, "ahk_id " GDHO_STAR_GUI.Hwnd)
-                GDHO_CX := ox + (ow // 2)
-                GDHO_CY := oy + (oh // 2)
-                return
+                if !GDHO_IsHostParkedPos(ox, oy) {
+                    GDHO_CX := ox + (ow // 2)
+                    GDHO_CY := oy + (oh // 2)
+                    try GDHO_RememberOnScreenHoleCenter(GDHO_CX, GDHO_CY)
+                    return
+                }
             } catch {
             }
         }
-        GDHO_CX := Integer(GDHO_LAST_HOST_X) + (Integer(GDHO_HOST_W) // 2)
-        GDHO_CY := Integer(GDHO_LAST_HOST_Y) + (Integer(GDHO_HOST_H) // 2)
-        return
+        rem := GDHO_GetRememberedHoleCenter()
+        if (rem.x > 50) {
+            GDHO_CX := rem.x
+            GDHO_CY := rem.y
+            return
+        }
+        lx := Integer(GDHO_LAST_HOST_X), ly := Integer(GDHO_LAST_HOST_Y)
+        if !GDHO_IsHostParkedPos(lx, ly) {
+            GDHO_CX := lx + (Integer(GDHO_HOST_W) // 2)
+            GDHO_CY := ly + (Integer(GDHO_HOST_H) // 2)
+            return
+        }
     }
     if (sx > 0 && sy > 0) {
         o := GDHO_GetStarryClientOrigin()
@@ -2276,14 +2433,22 @@ GDHO_GetHoleCenterScreenCoords() {
         if IsObject(GDHO_STAR_GUI) && GDHO_STAR_GUI.Hwnd {
             try {
                 WinGetPos(&sx, &sy, &sw, &sh, "ahk_id " GDHO_STAR_GUI.Hwnd)
-                return { x: sx + (sw // 2), y: sy + (sh // 2) }
+                if !GDHO_IsHostParkedPos(sx, sy)
+                    return { x: sx + (sw // 2), y: sy + (sh // 2) }
             } catch {
             }
         }
-        return {
-            x: Integer(GDHO_LAST_HOST_X) + (Integer(GDHO_HOST_W) // 2),
-            y: Integer(GDHO_LAST_HOST_Y) + (Integer(GDHO_HOST_H) // 2)
+        rem := GDHO_GetRememberedHoleCenter()
+        if (rem.x > 50)
+            return rem
+        lx := Integer(GDHO_LAST_HOST_X), ly := Integer(GDHO_LAST_HOST_Y)
+        if !GDHO_IsHostParkedPos(lx, ly) {
+            return {
+                x: lx + (Integer(GDHO_HOST_W) // 2),
+                y: ly + (Integer(GDHO_HOST_H) // 2)
+            }
         }
+        return rem
     }
     cx := Integer(GDHO_CX)
     cy := Integer(GDHO_CY)
@@ -2412,6 +2577,106 @@ GDHO_DismissTextHoleAfterLauncherPick(*) {
         try GDHO_DismissTextHolePanel("panel_scene_pick_delayed")
 }
 
+GDHO_IsLauncherCmdInFlight() {
+    global g_GDHO_LauncherCmdInFlightUntil
+    return (g_GDHO_LauncherCmdInFlightUntil > 0 && A_TickCount < g_GDHO_LauncherCmdInFlightUntil)
+}
+
+GDHO_ArmLauncherCmdInFlight(ms := 2800) {
+    global g_GDHO_LauncherCmdInFlightUntil
+    g_GDHO_LauncherCmdInFlightUntil := A_TickCount + Max(800, Integer(ms))
+}
+
+GDHO_IsLauncherContextActive() {
+    global g_GDHO_StarryLauncherOpen, GDHO_LAUNCHER_VISIBLE
+    if (GDHO_LAUNCHER_VISIBLE || g_GDHO_StarryLauncherOpen)
+        return true
+    if GDHO_IsPostSuckProtected()
+        return true
+    if GDHO_IsTextSelectionPreviewReady()
+        return true
+    return false
+}
+
+GDHO_LauncherSearchHandoffWatch(*) {
+    static tries := 0
+    global g_GDHO_LauncherCmdInFlightUntil
+    vis := false
+    busy := false
+    try vis := SCWV_IsVisible()
+    catch {
+        vis := false
+    }
+    if !vis {
+        try vis := IsSearchCenterActive()
+        catch {
+        }
+    }
+    try busy := SearchCenter_IsOpeningOrBusy()
+    catch {
+        busy := false
+    }
+    if (vis || busy) {
+        tries := 0
+        g_GDHO_LauncherCmdInFlightUntil := 0
+        try NativeDropDiag_Log("[LauncherPick] search_handoff_ok vis=" . (vis ? "1" : "0") . " busy=" . (busy ? "1" : "0"))
+        return
+    }
+    if !GDHO_IsLauncherCmdInFlight() {
+        tries := 0
+        return
+    }
+    tries += 1
+    if (tries > 5) {
+        tries := 0
+        g_GDHO_LauncherCmdInFlightUntil := 0
+        try NativeDropDiag_Log("[LauncherPick] search_handoff_giveup")
+        return
+    }
+    try NativeDropDiag_Log("[LauncherPick] search_handoff_retry try=" . tries)
+    try {
+        if FuncExists("TrayMenu_OpenSearchActionRun")
+            TrayMenu_OpenSearchActionRun()
+        else
+            FloatingToolbar_ActivateSearchCenter()
+    } catch as e {
+        try NativeDropDiag_Log("[LauncherPick] search_handoff_retry_ERR " . e.Message)
+    }
+}
+
+GDHO_OpenSearchFromLauncher() {
+    global g_GDHO_PendingPanelText, g_GDHO_TextHoleCapturedText
+    kw := ""
+    try kw := Trim(String(g_GDHO_TextHoleCapturedText))
+    if (kw = "")
+        try kw := Trim(String(g_GDHO_PendingPanelText))
+    try {
+        TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenSearchAction, "search")
+        try NativeDropDiag_Log("[LauncherPick] exec_path=TrayMenu_QueueUiOpenFromHoleMode launcher_ctx kw_len=" . StrLen(kw))
+        SetTimer(GDHO_LauncherSearchHandoffWatch, -120)
+        SetTimer(GDHO_LauncherSearchHandoffWatch, -520)
+        SetTimer(GDHO_LauncherSearchHandoffWatch, -1100)
+        return true
+    } catch as e {
+        try NativeDropDiag_Log("[LauncherPick] launcher_search_queue_ERR msg=" . e.Message)
+    }
+    try {
+        if (kw != "") {
+            SearchCenter_RunQueryWithKeyword(kw)
+            try NativeDropDiag_Log("[LauncherPick] exec_path=SearchCenter_RunQueryWithKeyword kw_len=" . StrLen(kw))
+        } else {
+            FloatingToolbar_ActivateSearchCenter()
+            try NativeDropDiag_Log("[LauncherPick] exec_path=FloatingToolbar_ActivateSearchCenter launcher_fallback")
+        }
+        SetTimer(GDHO_LauncherSearchHandoffWatch, -200)
+        SetTimer(GDHO_LauncherSearchHandoffWatch, -700)
+        return true
+    } catch as e2 {
+        try NativeDropDiag_Log("[LauncherPick] launcher_search_direct_ERR msg=" . e2.Message)
+        return false
+    }
+}
+
 GDHO_HandleLauncherPick(msg) {
     if !(msg is Map)
         return
@@ -2431,13 +2696,21 @@ GDHO_HandleLauncherPick(msg) {
         if IsObject(GDHO_LAUNCHER_GUI) && GDHO_LAUNCHER_GUI.Hwnd
             try WinActivate("ahk_id " GDHO_LAUNCHER_GUI.Hwnd)
         try GDHO_ApplyStarryHostChildPassthrough(false, "panel_scene_pick")
+        GDHO_ArmLauncherCmdInFlight((cmdId = "sc_activate_search" || cmdId = "ftm_search_center") ? 3200 : 2200)
         ok := false
         try ok := GDHO_ExecutePanelDockCmd(cmdId)
         try NativeDropDiag_Log("[LauncherPick] execute ok=" . (ok ? "1" : "0") . " cmdId=" . cmdId)
         if ok {
-            try GDHO_DismissLauncherUI("panel_scene_pick")
-            try SetTimer(GDHO_DismissTextHoleAfterLauncherPick, -450)
+            if (cmdId = "sc_activate_search" || cmdId = "ftm_search_center" || cmdId = "ch_r") {
+                try GDHO_DismissLauncherUI("panel_scene_pick_" . cmdId)
+                try SetTimer(GDHO_DismissTextHoleAfterLauncherPick, -1500)
+            } else {
+                try GDHO_DismissLauncherUI("panel_scene_pick")
+                try SetTimer(GDHO_DismissTextHoleAfterLauncherPick, -450)
+            }
         } else {
+            global g_GDHO_LauncherCmdInFlightUntil
+            g_GDHO_LauncherCmdInFlightUntil := 0
             try TrayTip("黑洞启动层", "未能打开功能，请查看日志 cmdId=" . cmdId, "Icon! 3")
         }
         return
@@ -2576,15 +2849,45 @@ GDHO_TryCall(fnName, args*) {
 
 GDHO_OpenNiumaChatFromLauncher(*) {
     Critical "Off"
-    global AppearanceActivationMode
-    try {
-        if (IsSet(AppearanceActivationMode) && NormalizeAppearanceActivationMode(AppearanceActivationMode) = "hole")
-            AppearanceActivationMode := "toolbar"
-        ShowFloatingToolbar()
-        FloatingToolbarSetChatDrawerState(true)
-    } catch as e {
-        try NativeDropDiag_Log("[LauncherPick] niuma_open_ERR msg=" . e.Message)
-        throw e
+    global AppearanceActivationMode, ConfigFile, g_FTB_PendingOpenNiumaDrawer, g_FTB_ReturnToHoleAfterNiuma
+    try NativeDropDiag_Log("[LauncherPick] niuma_open_begin mode=" . (IsSet(AppearanceActivationMode) ? AppearanceActivationMode : ""))
+    g_FTB_ReturnToHoleAfterNiuma := true
+    g_FTB_PendingOpenNiumaDrawer := true
+    if FuncExists("FloatingToolbar_MarkNiumaHandoffActive")
+        try FloatingToolbar_MarkNiumaHandoffActive(4000)
+    if FuncExists("GDHO_PrepareDecoupledHoleForTextSelection")
+        try GDHO_PrepareDecoupledHoleForTextSelection("niuma_handoff_open")
+    AppearanceActivationMode := "toolbar"
+    try IniWrite("toolbar", ConfigFile, "Appearance", "ActivationMode")
+    catch {
+    }
+    if FuncExists("GDHO_ForceApplyAppearanceMode") {
+        try GDHO_ForceApplyAppearanceMode("toolbar")
+    } else {
+        try ApplyAppearanceActivationMode()
+        catch as e {
+            try NativeDropDiag_Log("[LauncherPick] niuma_apply_mode_ERR msg=" . e.Message)
+        }
+    }
+    try SetTimer(GDHO_NiumaDrawerOpenPump, -80)
+    try SetTimer(GDHO_NiumaDrawerOpenPump, -320)
+    try SetTimer(GDHO_NiumaDrawerOpenPump, -720)
+    try SetTimer(GDHO_NiumaDrawerOpenPump, -1200)
+}
+
+GDHO_NiumaDrawerOpenPump(*) {
+    global g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening, AppearanceActivationMode
+    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+        return
+    if !(g_FTB_PendingOpenNiumaDrawer || g_FTB_NiumaHandoffOpening)
+        return
+    if FuncExists("FloatingToolbar_OpenNiumaChatDrawer") {
+        try {
+            ok := FloatingToolbar_OpenNiumaChatDrawer(true)
+            try NativeDropDiag_Log("[LauncherPick] niuma_open_drawer ok=" . (ok ? "1" : "0") . " pending=" . (g_FTB_PendingOpenNiumaDrawer ? "1" : "0"))
+        } catch as e {
+            try NativeDropDiag_Log("[LauncherPick] niuma_open_drawer_ERR msg=" . e.Message)
+        }
     }
 }
 
@@ -2601,15 +2904,8 @@ GDHO_ExecutePanelDockCmd(cmdId) {
     }
     switch cmdId {
         case "sc_activate_search", "ftm_search_center":
-            if inHole {
-                try {
-                    TrayMenu_QueueUiOpenFromHoleMode(TrayMenu_OpenSearchAction, "search")
-                    try NativeDropDiag_Log("[LauncherPick] exec_path=TrayMenu_QueueUiOpenFromHoleMode search")
-                    return true
-                } catch as e {
-                    try NativeDropDiag_Log("[LauncherPick] hole_search_queue_ERR msg=" . e.Message)
-                }
-            }
+            if GDHO_IsLauncherContextActive() || inHole
+                return GDHO_OpenSearchFromLauncher()
             try {
                 FloatingToolbar_ActivateSearchCenter()
                 try NativeDropDiag_Log("[LauncherPick] exec_path=FloatingToolbar_ActivateSearchCenter")
@@ -2625,14 +2921,22 @@ GDHO_ExecutePanelDockCmd(cmdId) {
                 try NativeDropDiag_Log("[LauncherPick] ShowSearchCenter_ERR msg=" . e2.Message)
             }
         case "ch_r":
-            if inHole {
+            if GDHO_IsLauncherContextActive() || inHole {
                 try {
-                    TrayMenu_QueueUiOpenFromHoleMode(GDHO_OpenNiumaChatFromLauncher, "launcher_niuma")
-                    try NativeDropDiag_Log("[LauncherPick] exec_path=TrayMenu_QueueUiOpenFromHoleMode niuma")
+                    GDHO_OpenNiumaChatFromLauncher()
+                    try NativeDropDiag_Log("[LauncherPick] exec_path=GDHO_OpenNiumaChatFromLauncher direct")
                     return true
                 } catch as e {
-                    try NativeDropDiag_Log("[LauncherPick] hole_niuma_queue_ERR msg=" . e.Message)
+                    try NativeDropDiag_Log("[LauncherPick] hole_niuma_direct_ERR msg=" . e.Message)
                 }
+            }
+            try {
+                if FloatingToolbar_OpenNiumaChatDrawer(true) {
+                    try NativeDropDiag_Log("[LauncherPick] exec_path=FloatingToolbar_OpenNiumaChatDrawer")
+                    return true
+                }
+            } catch as e {
+                try NativeDropDiag_Log("[LauncherPick] FTB_NiumaDrawer_ERR msg=" . e.Message)
             }
             try {
                 VK_EnsureNiumaWindow(true)
@@ -3118,6 +3422,7 @@ GDHO_CommitTextHoleToPanel(reason := "commit", mx := "", my := "") {
     GDHO_PAYLOAD := "text"
     GDHO_CURSOR_X := mx
     GDHO_CURSOR_Y := my
+    try GDHO_RememberOnScreenHoleCenter(mx, my)
     g_GDHO_TextHoleFallbackSessionId := g_GDHO_TextHoleSessionSerial
     GDHO_SetInteractionPhase(GDHO_PHASE_COMMITTING, "commit_begin:" . String(reason))
     GDHO_TextHoleTransition(GDHO_TEXT_HOLE_STATE_COMMITTED, String(reason), "", StrLen(t))

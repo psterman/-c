@@ -90,6 +90,10 @@ global g_FTB_WV2_Ready := false
 global g_FTB_WV2_FrameReady := false
 global g_FTB_PendingSelection := ""
 global g_FTB_PendingNiumaCompose := []
+global g_FTB_PendingOpenNiumaDrawer := false
+global g_FTB_NiumaHandoffOpening := false
+global g_FTB_ReturnToHoleAfterNiuma := false
+global g_FTB_SuspendToolbarHomeResetUntil := 0
 global g_FTB_UI_Ready := false
 global g_FTB_WaitingUiFinishedReveal := false
 global g_FTB_ScreenshotDeferLastTick := 0  ; 闃叉姈锛歐ebView 鐭椂鍙屽彂 postMessage 浼氭帓闃熶袱娆?Deferred锛岄伩鍏嶇浜屾鍐嶈窇瀹屾暣鎴浘鍔╂墜娴佺▼
@@ -204,8 +208,10 @@ FloatingToolbar_SoftRecoverVisible(*) {
         try WebView2_NotifyShown(g_FTB_WV2)
         catch {
         }
-        try FloatingToolbar_ResetWebToToolbarHome()
-        catch {
+        if !FloatingToolbar_ShouldSuppressToolbarHomeReset() {
+            try FloatingToolbar_ResetWebToToolbarHome()
+            catch {
+            }
         }
         SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
         SetTimer(FloatingToolbar_PushLayoutDeferred, -180)
@@ -222,6 +228,85 @@ FloatingToolbar_SoftRecoverVisible(*) {
     }
 }
 
+FloatingToolbar_IsNiumaHandoffActive() {
+    global g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening, FloatingToolbarChatDrawerOpen
+    return !!(g_FTB_PendingOpenNiumaDrawer || g_FTB_NiumaHandoffOpening || FloatingToolbarChatDrawerOpen)
+}
+
+FloatingToolbar_ShouldSuppressToolbarHomeReset() {
+    global g_FTB_SuspendToolbarHomeResetUntil
+    if FloatingToolbar_IsNiumaHandoffActive()
+        return true
+    return (g_FTB_SuspendToolbarHomeResetUntil > 0 && A_TickCount < g_FTB_SuspendToolbarHomeResetUntil)
+}
+
+FloatingToolbar_MarkNiumaHandoffActive(ms := 3000) {
+    global g_FTB_SuspendToolbarHomeResetUntil
+    g_FTB_SuspendToolbarHomeResetUntil := A_TickCount + Max(800, Integer(ms))
+}
+
+FloatingToolbar_CancelToolbarRecoveryTimers() {
+    try SetTimer(FloatingToolbar_EnsureVisibleAfterActivation, 0)
+    catch {
+    }
+    try SetTimer(FloatingToolbar_SoftRecoverVisible, 0)
+    catch {
+    }
+    try SetTimer(FloatingToolbar_RunNiumaHandoffOpen, 0)
+    catch {
+    }
+    try SetTimer(FloatingToolbar_NiumaDrawerHandoffRetry, 0)
+    catch {
+    }
+}
+
+FloatingToolbar_TryReturnToHoleAfterNiuma(*) {
+    global g_FTB_ReturnToHoleAfterNiuma, g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
+    global AppearanceActivationMode, FloatingToolbarChatDrawerOpen, g_FTB_SuspendToolbarHomeResetUntil
+    if !g_FTB_ReturnToHoleAfterNiuma
+        return false
+    g_FTB_ReturnToHoleAfterNiuma := false
+    g_FTB_PendingOpenNiumaDrawer := false
+    g_FTB_NiumaHandoffOpening := false
+    g_FTB_SuspendToolbarHomeResetUntil := 0
+    try FloatingToolbarChatDrawerOpen := false
+    catch {
+    }
+    try FloatingToolbar_CancelToolbarRecoveryTimers()
+    catch {
+    }
+    try NativeDropDiag_Log("[LauncherPick] niuma_close_restore_hole begin")
+    catch {
+    }
+    try HideFloatingToolbar()
+    catch {
+    }
+    if FuncExists("GDHO_PrepareDecoupledHoleForTextSelection") {
+        try GDHO_PrepareDecoupledHoleForTextSelection("niuma_close_restore")
+    }
+    if FuncExists("GDHO_ForceApplyAppearanceMode") {
+        try GDHO_ForceApplyAppearanceMode("hole")
+    } else {
+        AppearanceActivationMode := "hole"
+        try {
+            global ConfigFile
+            if !IsSet(ConfigFile) || (Trim(String(ConfigFile)) = "")
+                ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+            IniWrite("hole", ConfigFile, "Appearance", "ActivationMode")
+        } catch {
+        }
+        if FuncExists("ApplyAppearanceActivationMode") {
+            try ApplyAppearanceActivationMode()
+        } else if FuncExists("ApplyActivationRuntimeAsync") {
+            try ApplyActivationRuntimeAsync("hole")
+        }
+    }
+    try NativeDropDiag_Log("[LauncherPick] niuma_close_restore_hole done")
+    catch {
+    }
+    return true
+}
+
 FloatingToolbar_EnsureVisibleAfterActivation(*) {
     global AppearanceActivationMode, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal
     if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
@@ -231,8 +316,10 @@ FloatingToolbar_EnsureVisibleAfterActivation(*) {
     try FloatingToolbar_ClearOverlaySuppression()
     catch {
     }
-    try FloatingToolbar_ResetWebToToolbarHome()
-    catch {
+    if !FloatingToolbar_ShouldSuppressToolbarHomeReset() {
+        try FloatingToolbar_ResetWebToToolbarHome()
+        catch {
+        }
     }
     if g_FTB_WaitingUiFinishedReveal {
         SetTimer(FloatingToolbar_FinishReveal, -120)
@@ -251,9 +338,29 @@ FloatingToolbar_RequestWebReveal() {
     }
 }
 
+; 黑洞/启动层 handoff 打开牛马 Chat 时：禁止 host_request_reveal 把 Web 侧抽屉打回折叠条。
+FloatingToolbar_RequestWebRevealSafe() {
+    global g_FTB_WV2, g_FTB_PendingOpenNiumaDrawer, FloatingToolbarChatDrawerOpen
+    if !g_FTB_WV2
+        return
+    if FloatingToolbar_ShouldSuppressToolbarHomeReset() {
+        if (FloatingToolbarChatDrawerOpen || g_FTB_PendingOpenNiumaDrawer) {
+            try FloatingToolbar_NotifyWebDrawerState(true)
+            catch {
+            }
+        }
+        return
+    }
+    try FloatingToolbar_RequestWebReveal()
+    catch {
+    }
+}
+
 ; 收起 Niuma 抽屉/设置叠层并恢复折叠工具条（子窗口关闭、隐藏后显示时均需调用）。
 FloatingToolbar_ResetWebToToolbarHome() {
     global g_FTB_WV2, FloatingToolbarChatDrawerOpen
+    if FloatingToolbar_ShouldSuppressToolbarHomeReset()
+        return
     try FloatingToolbarChatDrawerOpen := false
     catch {
     }
@@ -288,7 +395,7 @@ FloatingToolbar_PushLayoutDeferred(*) {
     try FloatingToolbar_PushLogoToWeb()
     catch {
     }
-    try FloatingToolbar_RequestWebReveal()
+    try FloatingToolbar_RequestWebRevealSafe()
     catch {
     }
 }
@@ -524,9 +631,11 @@ FloatingToolbar_FinishReveal() {
     SetTimer(FloatingToolbarCheckWindowPosition, 100)
     SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
     SetTimer(FloatingToolbar_PushLayoutDeferred, -150)
-    try FloatingToolbar_RequestWebReveal()
+    try FloatingToolbar_RequestWebRevealSafe()
     catch {
     }
+    if g_FTB_PendingOpenNiumaDrawer
+        FloatingToolbar_ScheduleNiumaDrawerOpen(100)
 }
 
 FloatingToolbar_ForceRevealIfStuck() {
@@ -556,8 +665,10 @@ ShowFloatingToolbar() {
     global FloatingToolbarGUI, FloatingToolbarIsVisible, FloatingToolbarWindowX, FloatingToolbarWindowY
     global g_FTB_UI_Ready, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2_Ready, FloatingToolbarChatDrawerOpen
 
-    ; Safety: entering toolbar mode should always start from collapsed bar state.
-    FloatingToolbarChatDrawerOpen := false
+    ; Safety: entering toolbar mode should start collapsed — unless we are opening Niuma from hole handoff.
+    global g_FTB_PendingOpenNiumaDrawer
+    if !g_FTB_PendingOpenNiumaDrawer
+        FloatingToolbarChatDrawerOpen := false
 
     if !FloatingToolbar_CanShowOverlay() {
         if (NormalizeAppearanceActivationMode(AppearanceActivationMode) = "toolbar")
@@ -569,6 +680,11 @@ ShowFloatingToolbar() {
     }
 
     if (FloatingToolbarIsVisible && FloatingToolbarGUI != 0 && !g_FTB_WaitingUiFinishedReveal) {
+        if FloatingToolbar_IsNiumaHandoffActive() {
+            try FloatingToolbar_OpenNiumaChatDrawer(true)
+            catch {
+            }
+        }
         return
     }
     ; 鑻ヤ笂娆′粛鍦ㄣ€岀瓑 UI_FINISHED銆嶏紝鍏堝彇娑堣秴鏃跺畾鏃跺櫒锛岄伩鍏嶉噸澶?reveal
@@ -606,11 +722,6 @@ ShowFloatingToolbar() {
         }
         FloatingToolbarGUI.Show("x" . FloatingToolbarWindowX . " y" . FloatingToolbarWindowY . " w" . ToolbarWidth . " h" . ToolbarHeight . " NoActivate")
         FloatingToolbar_FinishReveal()
-        SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
-        SetTimer(FloatingToolbar_PushLayoutDeferred, -150)
-        try FloatingToolbar_RequestWebReveal()
-        catch {
-        }
         return
     }
 
@@ -1284,8 +1395,11 @@ FloatingToolbar_OnWebMessage(sender, args) {
 
     if (typ = "drawer_state") {
         open := msg.Has("open") && !!msg["open"]
+        global FloatingToolbarChatDrawerOpen, g_FTB_NiumaHandoffOpening
+        if (open = !!FloatingToolbarChatDrawerOpen && !g_FTB_NiumaHandoffOpening)
+            return
         FTB_Debug("drawer_state open=" . open)
-        FloatingToolbarSetChatDrawerState(open)
+        FloatingToolbarSetChatDrawerState(open, g_FTB_NiumaHandoffOpening && open)
         return
     }
 
@@ -1774,7 +1888,7 @@ FloatingToolbarLoadDrawerWidth() {
     }
 }
 
-FloatingToolbarSetChatDrawerState(open) {
+FloatingToolbarSetChatDrawerState(open, force := false) {
     global FloatingToolbarGUI, FloatingToolbarChatDrawerOpen, AppearanceActivationMode
     global FloatingToolbarWindowX, FloatingToolbarWindowY, FloatingToolbarIsVisible
     global FloatingToolbarLastClosedX, FloatingToolbarLastClosedY
@@ -1782,10 +1896,19 @@ FloatingToolbarSetChatDrawerState(open) {
     open := !!open
     if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
         open := false
-    ; Do not gate by FloatingToolbarIsVisible: this state flag can lag behind
-    ; WebView UI transitions and would block drawer open/close resize.
     if (!FloatingToolbarGUI)
         return
+    if (!force && open = !!FloatingToolbarChatDrawerOpen) {
+        if (!open)
+            return
+        curW := 0
+        try FloatingToolbarGUI.GetPos(, , &curW, )
+        expW := FloatingToolbarCalculateWidth()
+        if (curW > 0 && Abs(curW - expW) <= 12) {
+            FloatingToolbar_NotifyWebDrawerState(true)
+            return
+        }
+    }
 
     try FloatingToolbarGUI.GetPos(&oldX, &oldY, &oldW, &oldH)
     catch {
@@ -1838,6 +1961,90 @@ FloatingToolbarSetChatDrawerState(open) {
     FloatingToolbar_ApplyWebViewBounds()
     FloatingToolbarPushScaleStateToWeb(FloatingToolbarScale)
     SaveFloatingToolbarPosition()
+    FloatingToolbar_NotifyWebDrawerState(open)
+    if !open
+        SetTimer(FloatingToolbar_TryReturnToHoleAfterNiuma, -50)
+}
+
+FloatingToolbar_ScheduleNiumaDrawerOpen(delayMs := 380) {
+    global g_FTB_PendingOpenNiumaDrawer
+    if !g_FTB_PendingOpenNiumaDrawer
+        return
+    SetTimer(FloatingToolbar_RunNiumaHandoffOpen, 0)
+    SetTimer(FloatingToolbar_RunNiumaHandoffOpen, -Max(60, Integer(delayMs)))
+}
+
+FloatingToolbar_RunNiumaHandoffOpen(*) {
+    global g_FTB_PendingOpenNiumaDrawer
+    if !g_FTB_PendingOpenNiumaDrawer
+        return
+    FloatingToolbar_OpenNiumaChatDrawer(true)
+}
+
+FloatingToolbar_NotifyWebDrawerState(open := false) {
+    global g_FTB_WV2, g_FTB_WV2_Ready
+    if !(g_FTB_WV2 && g_FTB_WV2_Ready)
+        return
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_set_drawer", "open", !!open))
+    catch as _e {
+    }
+}
+
+FloatingToolbar_OpenNiumaChatDrawer(open := true) {
+    global FloatingToolbarGUI, FloatingToolbarIsVisible, AppearanceActivationMode
+    global FloatingToolbarChatDrawerOpen, g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
+    global g_FTB_WV2_Ready
+    open := !!open
+    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+        return false
+    if open {
+        g_FTB_NiumaHandoffOpening := true
+        try FloatingToolbar_MarkNiumaHandoffActive(4000)
+        catch {
+        }
+        try FloatingToolbar_ClearOverlaySuppression()
+        catch {
+        }
+        if !(IsObject(FloatingToolbarGUI) && FloatingToolbarGUI && FloatingToolbarIsVisible) {
+            try FloatingToolbar_ShowForActivationMode()
+            catch {
+                global g_FTB_PendingOpenNiumaDrawer
+                g_FTB_PendingOpenNiumaDrawer := true
+                try ShowFloatingToolbar()
+                catch {
+                }
+            }
+        }
+    }
+    forceApply := open && !!g_FTB_NiumaHandoffOpening
+    FloatingToolbarSetChatDrawerState(open, forceApply)
+    if open {
+        if (g_FTB_WV2_Ready && FloatingToolbarIsVisible)
+            FloatingToolbar_NotifyWebDrawerState(true)
+        SetTimer((*) => (g_FTB_NiumaHandoffOpening := false), -1200)
+        SetTimer(FloatingToolbar_NiumaDrawerHandoffRetry, -520)
+        SetTimer(FloatingToolbar_NiumaDrawerHandoffRetry, -1100)
+    } else
+        g_FTB_NiumaHandoffOpening := false
+    return true
+}
+
+FloatingToolbar_NiumaDrawerHandoffRetry(*) {
+    global FloatingToolbarChatDrawerOpen, FloatingToolbarIsVisible, g_FTB_WV2_Ready, AppearanceActivationMode
+    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+        return
+    if !FloatingToolbarIsVisible || !g_FTB_WV2_Ready
+        return
+    if !FloatingToolbarChatDrawerOpen {
+        try FloatingToolbar_OpenNiumaChatDrawer(true)
+        return
+    }
+    global g_FTB_PendingOpenNiumaDrawer
+    g_FTB_PendingOpenNiumaDrawer := false
+    FloatingToolbarSetChatDrawerState(true, true)
+    try FloatingToolbar_NotifyWebDrawerState(true)
+    catch {
+    }
 }
 
 FloatingToolbarCollapseTransientUi(forceResize := true) {

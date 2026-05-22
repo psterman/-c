@@ -2626,13 +2626,17 @@ ApplyActivationRuntimeDeferred(mode, token) {
         try GDHO_Start()
         catch {
         }
-        ; 常驻黑洞模式：启动即固定显示，并允许输入面板交互（不穿透）。
-        ; 常驻入口使用 file 载荷可绕开文本近距门槛，确保模式切换后立刻可见。
         if (FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled()) {
-            try GDHO_PinToDesktop("file")
-            catch {
+            ; 解耦：划选驱动弱预览，切换模式时不钉 file 常驻态（否则会挡住文字黑洞）。
+            if FuncExists("GDHO_PrepareDecoupledHoleForTextSelection") {
+                try GDHO_PrepareDecoupledHoleForTextSelection("runtime_hole")
+            } else {
+                try GDHO_UnpinFromDesktop()
+                catch {
+                }
             }
         } else {
+            ; 旧拓扑：常驻钉住 file 黑洞，绕开文本近距门槛。
             try GDHO_PinToDesktop("file")
             catch {
             }
@@ -2708,18 +2712,25 @@ ApplyAppearanceActivationMode_Run(m, token) {
     try {
         NMER_Log("activation", "apply_mode_begin", "mode=" . m)
         if (m = "toolbar") {
+            openNiumaDrawer := false
+            try openNiumaDrawer := !!g_FTB_PendingOpenNiumaDrawer
+            catch {
+                openNiumaDrawer := false
+            }
             try ApplyActivationRuntimeAsync("toolbar")
             try FloatingBubble_DestroyCompletely()
             catch {
             }
-            try FloatingToolbarChatDrawerOpen := false
-            catch {
-            }
-            try {
-                if (IsSet(g_FTB_WV2) && g_FTB_WV2) {
-                    WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
+            if !openNiumaDrawer {
+                try FloatingToolbarChatDrawerOpen := false
+                catch {
                 }
-            } catch {
+                try {
+                    if (IsSet(g_FTB_WV2) && g_FTB_WV2) {
+                        WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
+                    }
+                } catch {
+                }
             }
             try FloatingToolbar_ShowForActivationMode()
             catch {
@@ -2727,16 +2738,25 @@ ApplyAppearanceActivationMode_Run(m, token) {
                 catch {
                 }
             }
-            try FloatingToolbarReloadFromToolbarLayout()
-            catch {
+            if !openNiumaDrawer {
+                try FloatingToolbarReloadFromToolbarLayout()
+                catch {
+                }
+                try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -120)
+                catch {
+                }
+                try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -520)
+                catch {
+                }
+            } else {
+                try FloatingToolbar_ScheduleNiumaDrawerOpen(280)
+                catch {
+                }
+                try SetTimer(FloatingToolbar_NiumaDrawerHandoffRetry, -720)
+                catch {
+                }
             }
-            try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -120)
-            catch {
-            }
-            try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -520)
-            catch {
-            }
-            NMER_Log("activation", "apply_mode_toolbar", "ok=1")
+            NMER_Log("activation", "apply_mode_toolbar", "ok=1 open_niuma=" . (openNiumaDrawer ? "1" : "0"))
             return
         }
         if (m = "bubble") {
@@ -2754,11 +2774,21 @@ ApplyAppearanceActivationMode_Run(m, token) {
             return
         }
         if (m = "hole") {
+            if FuncExists("FloatingToolbar_CancelToolbarRecoveryTimers") {
+                try FloatingToolbar_CancelToolbarRecoveryTimers()
+                catch {
+                }
+            }
             try HideFloatingToolbar()
             catch {
             }
             try FloatingBubble_DestroyCompletely()
             catch {
+            }
+            if FuncExists("GDHO_PrepareDecoupledHoleForTextSelection") {
+                try GDHO_PrepareDecoupledHoleForTextSelection("apply_mode_hole")
+                catch {
+                }
             }
             try ApplyActivationRuntimeAsync("hole")
             NMER_Log("activation", "apply_mode_hole", "ok=1")
@@ -4295,6 +4325,17 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
     if (r = "drag_end" && GDHO_TriggerSource = "selection_copy") {
         try NativeDropDiag_Log("reset_session_async_skip reason=drag_end trigger_source=selection_copy")
         return
+    }
+    if FuncExists("GDHO_IsLauncherCmdInFlight") {
+        try {
+            if GDHO_IsLauncherCmdInFlight() && (r = "release_coalesce" || r = "release_coalesce_after_suck" || r = "drag_release"
+                || r = "drag_idle_timeout" || r = "hide_overlay" || r = "hide_overlay_redirect" || r = "hole_close"
+                || r = "desktop_unpin" || r = "frontend_hole_close") {
+                try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " launcher_cmd_in_flight=1")
+                return
+            }
+        } catch {
+        }
     }
     if (FuncExists("GDHO_IsPostSuckProtected") && GDHO_IsPostSuckProtected()) {
         if (r = "release_coalesce_after_suck" || r = "release_coalesce" || r = "drag_idle_timeout" || r = "drag_release"
