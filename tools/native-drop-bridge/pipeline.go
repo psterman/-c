@@ -121,6 +121,7 @@ func (p *dropPipeline) process(ctx context.Context, reqID uint64, ev dropEvent) 
 			"done":      false,
 		})
 		hubEmit("stream_done", map[string]any{"requestId": reqID, "session": globalGate.Session()})
+		notifyStreamDone()
 		return
 	}
 
@@ -390,6 +391,7 @@ func (p *dropPipeline) streamAnthropic(ctx context.Context, reqID uint64, provid
 		"requestId": reqID,
 		"session": globalGate.Session(),
 	})
+	notifyStreamDone()
 	return nil
 }
 
@@ -466,5 +468,6 @@ func (p *dropPipeline) streamChat(ctx context.Context, reqID uint64, provider, b
 		"requestId": reqID,
 		"session":   globalGate.Session(),
 	})
+	notifyStreamDone()
 	return sc.Err()
 }

@@ -6,23 +6,25 @@
 ; - 与「每次 Func(字符串)」相比，首次进入时一次性绑定，减少异常时机问题
 
 _VK_H(name, args*) {
-    static _m := 0
-    if (_m = 0) {
-        _m := Map()
-        for _n in [
-            "FloatingToolbarSetChatDrawerState", "ShowSearchCenter", "ShowSearchCenterFromMenu",
-            "IsSearchCenterActive", "IsScreenshotEditorActive", "ToggleScreenshotEditorAlwaysOnTop",
-            "ExecuteScreenshotOCR", "PasteScreenshotAsText", "SaveScreenshotToFile",
-            "ScreenshotEditorSendToAI", "ScreenshotEditorSearchText", "CloseScreenshotEditor",
-            "HandleDynamicHotkey", "ExecuteCountdownAction", "HandleSearchCenterF",
-            "SelectionSense_OnToolbarSearchClick", "FloatingToolbar_ActivateSearchCenter",
-            "FloatingToolbarResetScale", "MinimizeFloatingToolbarToEdge",
-            "HideFloatingToolbarFromPopupMenu", "ToggleFloatingToolbarFromMenu",
-            "ShowFloatingToolbar", "FloatingToolbar_SendTextToNiumaChat"
-        ]
-            _m[_n] := Func(_n)
+    ; 用 %name%() 间接调用，避免 Func(长名).Call 在部分宿主上下文报 Invalid base
+    try {
+        if (args.Length = 0)
+            return %name%()
+        if (args.Length = 1)
+            return %name%(args[1])
+        if (args.Length = 2)
+            return %name%(args[1], args[2])
+        if (args.Length = 3)
+            return %name%(args[1], args[2], args[3])
+        if (args.Length = 4)
+            return %name%(args[1], args[2], args[3], args[4])
+        if (args.Length = 5)
+            return %name%(args[1], args[2], args[3], args[4], args[5])
+        throw Error("too many args for _VK_H")
+    } catch as e {
+        OutputDebug("[VK-H] " . name . " err=" . e.Message)
+        throw e
     }
-    return _m[name].Call(args*)
 }
 
 ; 统一执行入口：所有输入源（热键/托盘/工具栏）都应调用本函数。
@@ -65,12 +67,18 @@ VK_Execute(cmdId) {
     if g_VK_Embedded
         return VK_ExecCursorHelperCmd(cid)
 
+    ; 同进程：不走 WM_COPYDATA（SendMessage 成功≠命令已执行）
+    try {
+        if (A_ScriptHwnd && WinExist("ahk_id " A_ScriptHwnd))
+            return VK_ExecCursorHelperCmd(cid)
+    } catch {
+    }
+
     try {
         if NotifyScript("CursorHelper", '{"type":"vkExec","cmdId":"' . cid . '"}')
             return true
     } catch {
     }
-    ; 兜底：主脚本本地执行（兼容托盘/工具栏直接调用）
     return VK_ExecCursorHelperCmd(cid)
 }
 
@@ -154,7 +162,9 @@ VK_ExecCursorHelperCmd(cmdId) {
             case "sc_activate_search":
                 try _VK_H("FloatingToolbar_ActivateSearchCenter")
                 catch {
-                    _VK_H("ShowSearchCenter")
+                    try _VK_H("ShowSearchCenter")
+                    catch {
+                    }
                 }
                 executed := true
             case "sc_cat_ai":

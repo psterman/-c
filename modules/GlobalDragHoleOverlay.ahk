@@ -673,6 +673,8 @@ GDHO_SetWebOlePassthrough(enable := true) {
     want := !!enable
     if GDHO_MANUAL_PANEL_MODE
         want := false
+    if FuncExists("GDHO_IsLauncherLayerActive") && GDHO_IsLauncherLayerActive()
+        want := false
     if (g_GDHO_TextOlePassthrough = want)
         return
     g_GDHO_TextOlePassthrough := want
@@ -896,6 +898,13 @@ GDHO_EnsureTextDragPassthrough() {
         try GDHO_ApplyManualPanelInteractive("ensure_text_drag_manual")
         try GDHO_ApplyHostChildOlePassthrough(false)
         try GDHO_ApplyHostZForDragSession()
+        return
+    }
+    if FuncExists("GDHO_ShouldStarryWindowReceiveClicks") && GDHO_ShouldStarryWindowReceiveClicks("text_drag")
+        return
+    if FuncExists("GDHO_IsLauncherLayerActive") && GDHO_IsLauncherLayerActive() {
+        if FuncExists("GDHO_ApplyStarryHostChildPassthrough")
+            try GDHO_ApplyStarryHostChildPassthrough(true, "ensure_text_drag_launcher_active")
         return
     }
     if g_GDHO_FileDropCapture
@@ -1341,6 +1350,14 @@ GDHO_ShouldShowDecoupledPanel(reason := "") {
     global g_GDHO_OpenPayload, g_GDHO_TextDragHandoffDone, g_GDHO_PostSuckPanelPending, g_GDHO_PostSuckTimerArmed
     if !GDHO_IsDecoupled()
         return true
+    if FuncExists("GDHO_IsStarryLauncherMode") && GDHO_IsStarryLauncherMode() {
+        r0 := StrLower(Trim(String(reason)))
+        if (InStr(r0, "manual") || InStr(r0, "stream") || InStr(r0, "panel_open_manual"))
+            return true
+        if (InStr(r0, "present") || InStr(r0, "post_suck") || InStr(r0, "expand") || InStr(r0, "hole_expand")
+            || InStr(r0, "panel_nav") || InStr(r0, "ensure_after") || InStr(r0, "text_hole"))
+            return false
+    }
     if FuncExists("GDHO_IsTextHoleUserPanelActive") {
         try {
             if GDHO_IsTextHoleUserPanelActive()
@@ -1819,6 +1836,8 @@ GDHO_InternalClose(reason := "", token := 0) {
     }
     g_GDHO_TransitionCtx["allow"] := true
     try {
+        if FuncExists("GDHO_HideLauncherLayer")
+            try GDHO_HideLauncherLayer("internal_close:" . reason)
         GDHO_HideFrontend()
         GDHO_HideOverlay()
     } finally {
@@ -1906,13 +1925,13 @@ GDHO_ApplySettings(positionMode := "anchor", triggerDistance := 260, dismissDist
     GDHO_TOOLBAR_DISMISS_RADIUS_PX := dd
     GDHO_FIXED_X := Integer(fixedX)
     GDHO_FIXED_Y := Integer(fixedY)
-    ss := Float(sizeScale)
+    ss := IsSet(CfgParseFloat) ? CfgParseFloat(sizeScale, 1.0) : Number(sizeScale)
     if (ss < 0.6)
         ss := 0.6
     if (ss > 1.8)
         ss := 1.8
     GDHO_SIZE_SCALE := ss
-    al := Float(animLevel)
+    al := IsSet(CfgParseFloat) ? CfgParseFloat(animLevel, 1.0) : Number(animLevel)
     if (al < 0.4)
         al := 0.4
     if (al > 2.2)
@@ -2038,7 +2057,16 @@ GDHO_HitTestDbgLog(msg) {
 GDHO_SetClickThrough(enable := true, reason := "") {
     global GDHO_GUI, GDHO_CLICKTHROUGH, GDHO_MANUAL_PANEL_MODE, GDHO_DESKTOP_PINNED
     if GDHO_IsDecoupled() {
-        GDHO_SetStarryClickThrough(true, reason)
+        if FuncExists("GDHO_P2_IsEnabled") && GDHO_P2_IsEnabled() {
+            GDHO_SetStarryClickThrough(true, reason)
+            return
+        }
+        if FuncExists("GDHO_IsLauncherLayerActive") && GDHO_IsLauncherLayerActive()
+            GDHO_SetStarryClickThrough(true, reason)
+        else if FuncExists("GDHO_ShouldStarryWindowReceiveClicks") && GDHO_ShouldStarryWindowReceiveClicks(reason)
+            GDHO_SetStarryClickThrough(false, reason)
+        else
+            GDHO_SetStarryClickThrough(enable, reason)
         return
     }
     if !GDHO_GUI
@@ -2223,6 +2251,21 @@ GDHO_OnWebMessage(sender, args) {
     if !(msg is Map)
         return
     typ := msg.Has("type") ? String(msg["type"]) : ""
+    if (typ = "launcher_expand_start") {
+        if FuncExists("GDHO_OnLauncherExpandStart")
+            try GDHO_OnLauncherExpandStart(msg)
+        return
+    }
+    if (typ = "window_policy") {
+        if FuncExists("GDHO_P2_IsEnabled") && FuncExists("GDHO_ApplyWindowPolicyFromGo") {
+            try {
+                if GDHO_P2_IsEnabled()
+                    GDHO_ApplyWindowPolicyFromGo(msg)
+            } catch {
+            }
+        }
+        return
+    }
     ; 诊断：前端面板穿透 / OLE 穿透（与宿主 WS_EX_TRANSPARENT 无关时也能导致“点不到”）
     if (typ = "gdho_dbg_panel_pointer") {
         pas := msg.Has("passthrough") ? (msg["passthrough"] ? "1" : "0") : "?"
@@ -2276,6 +2319,16 @@ GDHO_OnWebMessage(sender, args) {
         }
         return
     }
+    if (typ = "panel_open_manual" || typ = "panel_scene_pick") {
+        if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
+            try {
+                GDHO_HandleLauncherPick(msg)
+            } catch as e {
+                try NativeDropDiag_Log("[GDHO_OnWebMessage] HandleLauncherPick_ERR " . e.Message)
+            }
+        }
+        return
+    }
     if (typ = "hole_expand_complete") {
         if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
             global g_GDHO_TextHoleAwaitingExpand, g_GDHO_PostSuckTimerArmed, g_GDHO_PostSuckPresentDone, GDHO_SESSION_TEXT
@@ -2319,10 +2372,17 @@ GDHO_OnWebMessage(sender, args) {
                 try tForce := Trim(String(GDHO_SESSION_TEXT))
             CoordMode("Mouse", "Screen")
             MouseGetPos(&mx0, &my0)
-            if (g_GDHO_PostSuckPresentDone && GDHO_PANEL_VISIBLE && FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()) {
+            skipPresent := false
+            if g_GDHO_PostSuckPresentDone {
+                if (IsSet(g_GDHO_StarryLauncherOpen) && g_GDHO_StarryLauncherOpen)
+                    skipPresent := true
+                else if GDHO_PANEL_VISIBLE && FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()
+                    skipPresent := true
+            }
+            if skipPresent {
                 if FuncExists("GDHO_PushPanelCapturedText")
                     try GDHO_PushPanelCapturedText()
-                try NativeDropDiag_Log("[PostSuck] expand_complete_skip reason=panel_already_visible sid=" . sid)
+                try NativeDropDiag_Log("[PostSuck] expand_complete_skip reason=launcher_already_visible sid=" . sid)
                 if FuncExists("GDHO_CancelTextHolePresentTimers")
                     try GDHO_CancelTextHolePresentTimers()
                 return
@@ -2377,6 +2437,11 @@ GDHO_OnWebMessage(sender, args) {
                 if FuncExists("GDHO_HideStarryAfterPanel")
                     try GDHO_HideStarryAfterPanel("starry_hole_close_keep_panel")
                 return
+            }
+            if FuncExists("GDHO_DismissLauncherUI") {
+                try GDHO_DismissLauncherUI("starry_hole_close")
+            } else if FuncExists("GDHO_HideLauncherLayer") {
+                try GDHO_HideLauncherLayer("starry_hole_close")
             }
             try GDHO_HidePanel("starry_hole_close")
         }
@@ -2957,6 +3022,8 @@ GDHO_HideOverlay() {
     GDHO_SetSleepMode(true)
     try GDHO_ParkOverlay()
     if GDHO_IsDecoupled() {
+        if FuncExists("GDHO_HideLauncherLayer")
+            try GDHO_HideLauncherLayer("hide_overlay")
         skipPanelHide := false
         if FuncExists("GDHO_IsTextHoleUserPanelActive") {
             try skipPanelHide := GDHO_IsTextHoleUserPanelActive()
@@ -4022,6 +4089,12 @@ GDHO_ApplyDropHitTestByProximity(p) {
     global GDHO_GUI, GDHO_ACTIVE, GDHO_CLICKTHROUGH, GDHO_DRAG_CONFIDENCE, GDHO_INTERACTIVE, NativeDropSessionActive
     global GDHO_PAYLOAD, NativeDropSessionPayload
     global GDHO_MANUAL_PANEL_MODE, GDHO_DESKTOP_PINNED
+    if FuncExists("GDHO_P2_IsEnabled") && GDHO_P2_IsEnabled() && FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled()
+        return
+    if FuncExists("GDHO_IsLauncherLayerActive") && GDHO_IsLauncherLayerActive()
+        return
+    if FuncExists("GDHO_ShouldStarryWindowReceiveClicks") && GDHO_ShouldStarryWindowReceiveClicks("proximity")
+        return
     if !GDHO_GUI
         return
     if GDHO_MANUAL_PANEL_MODE {

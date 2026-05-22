@@ -316,6 +316,7 @@ func run(outPath string, x int, y int, w int, h int, ahkClass string, ahkTitle s
 	}()
 
 	globalHub.start(wsListen)
+	initInteractionManager(readLauncherModeFromINI())
 
 	hwnd, err := createHostWindow(x, y, w, h)
 	if err != nil {

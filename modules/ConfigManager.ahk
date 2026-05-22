@@ -4,6 +4,18 @@
 ; GetClipboardDataForCurrentTab、RefreshClipboardList、ShowImportSuccessTip 等。
 
 ; ===================== 初始化配置 =====================
+; AHK 部分版本下 Float() 仅接受 Number；IniRead 恒为字符串，统一经此解析。
+CfgParseFloat(val, default := 0.0) {
+    if IsNumber(val)
+        return Number(val) + 0.0
+    s := Trim(String(val))
+    if (s = "" || s = "ERROR")
+        return Number(default) + 0.0
+    if RegExMatch(s, "^[+-]?\d+(?:\.\d+)?", &m)
+        return Number(m[0]) + 0.0
+    return Number(default) + 0.0
+}
+
 _Cfg_FindAsciiMarker(rawBuf, markerText) {
     if !(rawBuf is Buffer)
         return -1
@@ -448,7 +460,7 @@ InitConfig() {
             if (!IsSet(DefaultCapsLockHoldTimeSeconds)) {
                 DefaultCapsLockHoldTimeSeconds := 0.5
             }
-            CapsLockHoldTimeSeconds := Float(IniRead(ConfigFile, "Settings", "CapsLockHoldTimeSeconds", DefaultCapsLockHoldTimeSeconds))
+            CapsLockHoldTimeSeconds := CfgParseFloat(IniRead(ConfigFile, "Settings", "CapsLockHoldTimeSeconds", String(DefaultCapsLockHoldTimeSeconds)), DefaultCapsLockHoldTimeSeconds)
             ; 确保值在合理范围内（0.1秒到5秒）
             if (CapsLockHoldTimeSeconds < 0.1) {
                 CapsLockHoldTimeSeconds := 0.1
@@ -462,7 +474,7 @@ InitConfig() {
             if (!IsSet(LaunchDelaySeconds)) {
                 LaunchDelaySeconds := 3.0
             }
-            LaunchDelaySeconds := Float(IniRead(ConfigFile, "Settings", "LaunchDelaySeconds", LaunchDelaySeconds))
+            LaunchDelaySeconds := CfgParseFloat(IniRead(ConfigFile, "Settings", "LaunchDelaySeconds", String(LaunchDelaySeconds)), LaunchDelaySeconds)
             ; 确保值在合理范围内（0.5秒到10秒）
             if (LaunchDelaySeconds < 0.5) {
                 LaunchDelaySeconds := 0.5

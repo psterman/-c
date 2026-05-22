@@ -278,3 +278,919 @@
 [2026-05-21 23:54:46][20260521-235440-66107125][activation][native_drop_bridge_stopped] elapsed_ms=0
 [2026-05-21 23:54:46][20260521-235440-66107125][activation][native_drop_bridge_started] pid=6680 elapsed_ms=62
 [2026-05-21 23:54:46][20260521-235440-66107125][activation][runtime_hole_ready] elapsed_ms=640
+[2026-05-21 23:58:19][20260521-235440-66107125][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 06:28:59][20260522-062859-1709109][startup][boot] gdip=ok
+[2026-05-22 06:28:59][20260522-062859-1709109][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 06:29:01][20260522-062859-1709109][activation][apply_mode_begin] mode=hole
+[2026-05-22 06:29:01][20260522-062859-1709109][activation][apply_mode_hole] ok=1
+[2026-05-22 06:29:01][20260522-062859-1709109][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 06:29:01][20260522-062859-1709109][activation][native_drop_bridge_started] pid=12604 elapsed_ms=62
+[2026-05-22 06:29:01][20260522-062859-1709109][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 06:29:01][20260522-062859-1709109][activation][native_drop_bridge_reused] pid=12604 elapsed_ms=0
+[2026-05-22 06:29:01][20260522-062859-1709109][activation][runtime_hole_ready] elapsed_ms=78
+[2026-05-22 06:29:06][20260522-062859-1709109][activation][apply_mode_begin] mode=hole
+[2026-05-22 06:29:06][20260522-062859-1709109][activation][apply_mode_hole] ok=1
+[2026-05-22 06:29:06][20260522-062859-1709109][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 06:29:06][20260522-062859-1709109][activation][native_drop_bridge_started] pid=11648 elapsed_ms=47
+[2026-05-22 06:29:06][20260522-062859-1709109][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 06:29:06][20260522-062859-1709109][activation][native_drop_bridge_started] pid=8632 elapsed_ms=47
+[2026-05-22 06:29:06][20260522-062859-1709109][activation][runtime_hole_ready] elapsed_ms=94
+[2026-05-22 06:30:05][20260522-062859-1709109][ui][open_config_safe_begin] 
+[2026-05-22 06:30:05][20260522-062859-1709109][ui][open_config_recover_stale_host] 
+[2026-05-22 06:30:05][20260522-062859-1709109][ui][open_config_safe_scheduled] 
+[2026-05-22 06:30:07][20260522-062859-1709109][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 06:30:07][20260522-062859-1709109][activation][apply_mode_toolbar] ok=1
+[2026-05-22 06:30:07][20260522-062859-1709109][activation][runtime_deferred] mode=toolbar token=4
+[2026-05-22 06:30:07][20260522-062859-1709109][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 06:30:08][20260522-062859-1709109][ui][open_config_force_release] vis=1
+[2026-05-22 06:30:09][20260522-062859-1709109][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 06:30:09][20260522-062859-1709109][activation][apply_mode_toolbar] ok=1
+[2026-05-22 06:30:09][20260522-062859-1709109][activation][runtime_deferred] mode=toolbar token=6
+[2026-05-22 06:30:09][20260522-062859-1709109][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 06:30:16][20260522-062859-1709109][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 06:42:08][20260522-062859-1709109][activation][native_drop_bridge_started] pid=12708 elapsed_ms=63
+[2026-05-22 06:42:08][20260522-062859-1709109][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 06:45:23][20260522-062859-1709109][activation][native_drop_bridge_started] pid=12176 elapsed_ms=78
+[2026-05-22 07:43:17][20260522-062859-1709109][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 08:49:46][20260522-084946-815171][startup][boot] gdip=ok
+[2026-05-22 08:49:46][20260522-084946-815171][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 08:49:48][20260522-084946-815171][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 08:49:48][20260522-084946-815171][activation][apply_mode_toolbar] ok=1
+[2026-05-22 08:49:48][20260522-084946-815171][activation][runtime_deferred] mode=toolbar token=2
+[2026-05-22 08:49:48][20260522-084946-815171][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 08:49:48][20260522-084946-815171][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 08:49:53][20260522-084946-815171][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 08:49:53][20260522-084946-815171][activation][runtime_deferred] mode=toolbar token=3
+[2026-05-22 08:49:53][20260522-084946-815171][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 08:49:53][20260522-084946-815171][activation][apply_mode_toolbar] ok=1
+[2026-05-22 08:54:06][20260522-084946-815171][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 08:54:06][20260522-085406-1075875][startup][boot] gdip=ok
+[2026-05-22 08:54:07][20260522-085406-1075875][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 08:54:07][20260522-085406-1075875][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 08:54:07][20260522-085406-1075875][activation][apply_mode_toolbar] ok=1
+[2026-05-22 08:54:07][20260522-085406-1075875][activation][runtime_deferred] mode=toolbar token=2
+[2026-05-22 08:54:07][20260522-085406-1075875][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 08:54:07][20260522-085406-1075875][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 08:54:08][20260522-085406-1075875][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 08:54:12][20260522-085406-1075875][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 08:54:12][20260522-085406-1075875][activation][runtime_deferred] mode=toolbar token=3
+[2026-05-22 08:54:12][20260522-085406-1075875][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 08:54:12][20260522-085406-1075875][activation][apply_mode_toolbar] ok=1
+[2026-05-22 08:54:31][20260522-085406-1075875][ui][open_config_safe_begin] 
+[2026-05-22 08:54:31][20260522-085406-1075875][ui][open_config_recover_stale_host] 
+[2026-05-22 08:54:31][20260522-085406-1075875][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 08:54:31][20260522-085406-1075875][ui][open_config_safe_scheduled] 
+[2026-05-22 08:54:31][20260522-085406-1075875][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 08:54:33][20260522-085406-1075875][activation][apply_mode_begin] mode=hole
+[2026-05-22 08:54:33][20260522-085406-1075875][activation][apply_mode_hole] ok=1
+[2026-05-22 08:54:33][20260522-085406-1075875][activation][runtime_deferred] mode=hole token=4
+[2026-05-22 08:54:33][20260522-085406-1075875][activation][native_drop_bridge_started] pid=12624 elapsed_ms=62
+[2026-05-22 08:54:33][20260522-085406-1075875][activation][native_drop_bridge_stopped] elapsed_ms=16
+[2026-05-22 08:54:33][20260522-085406-1075875][activation][native_drop_bridge_started] pid=6224 elapsed_ms=94
+[2026-05-22 08:54:33][20260522-085406-1075875][activation][runtime_hole_ready] elapsed_ms=188
+[2026-05-22 08:54:33][20260522-085406-1075875][ui][open_config_force_release] vis=1
+[2026-05-22 08:54:34][20260522-085406-1075875][activation][apply_mode_begin] mode=hole
+[2026-05-22 08:54:34][20260522-085406-1075875][activation][apply_mode_hole] ok=1
+[2026-05-22 08:54:35][20260522-085406-1075875][activation][runtime_deferred] mode=hole token=6
+[2026-05-22 08:54:36][20260522-085406-1075875][activation][native_drop_bridge_stopped] elapsed_ms=1344
+[2026-05-22 08:54:36][20260522-085406-1075875][activation][native_drop_bridge_started] pid=19256 elapsed_ms=47
+[2026-05-22 08:54:36][20260522-085406-1075875][activation][runtime_hole_ready] elapsed_ms=1391
+[2026-05-22 09:07:32][20260522-085406-1075875][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:07:32][20260522-090732-1881812][startup][boot] gdip=ok
+[2026-05-22 09:07:32][20260522-090732-1881812][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:07:33][20260522-090732-1881812][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:07:33][20260522-090732-1881812][activation][apply_mode_hole] ok=1
+[2026-05-22 09:07:33][20260522-090732-1881812][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:07:33][20260522-090732-1881812][activation][native_drop_bridge_started] pid=8452 elapsed_ms=47
+[2026-05-22 09:07:33][20260522-090732-1881812][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:07:33][20260522-090732-1881812][activation][native_drop_bridge_started] pid=2348 elapsed_ms=47
+[2026-05-22 09:07:33][20260522-090732-1881812][activation][runtime_hole_ready] elapsed_ms=94
+[2026-05-22 09:07:38][20260522-090732-1881812][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:07:38][20260522-090732-1881812][activation][apply_mode_hole] ok=1
+[2026-05-22 09:07:38][20260522-090732-1881812][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:07:38][20260522-090732-1881812][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:07:38][20260522-090732-1881812][activation][native_drop_bridge_reused] pid=2348 elapsed_ms=16
+[2026-05-22 09:07:38][20260522-090732-1881812][activation][runtime_hole_ready] elapsed_ms=16
+[2026-05-22 09:07:38][20260522-090732-1881812][activation][native_drop_bridge_started] pid=15728 elapsed_ms=47
+[2026-05-22 09:08:14][20260522-090732-1881812][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:08:14][20260522-090814-1923765][startup][boot] gdip=ok
+[2026-05-22 09:08:14][20260522-090814-1923765][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:08:14][20260522-090814-1923765][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:08:14][20260522-090814-1923765][activation][apply_mode_hole] ok=1
+[2026-05-22 09:08:15][20260522-090814-1923765][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:08:15][20260522-090814-1923765][activation][native_drop_bridge_started] pid=18888 elapsed_ms=47
+[2026-05-22 09:08:15][20260522-090814-1923765][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:08:15][20260522-090814-1923765][activation][native_drop_bridge_started] pid=8280 elapsed_ms=47
+[2026-05-22 09:08:15][20260522-090814-1923765][activation][runtime_hole_ready] elapsed_ms=94
+[2026-05-22 09:08:19][20260522-090814-1923765][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:08:19][20260522-090814-1923765][activation][apply_mode_hole] ok=1
+[2026-05-22 09:08:20][20260522-090814-1923765][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:08:22][20260522-090814-1923765][activation][native_drop_bridge_stopped] elapsed_ms=2140
+[2026-05-22 09:08:22][20260522-090814-1923765][activation][native_drop_bridge_started] pid=8424 elapsed_ms=47
+[2026-05-22 09:08:22][20260522-090814-1923765][activation][runtime_hole_ready] elapsed_ms=2187
+[2026-05-22 09:12:05][20260522-090814-1923765][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:12:59][20260522-091259-2208359][startup][boot] gdip=ok
+[2026-05-22 09:12:59][20260522-091259-2208359][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:12:59][20260522-091259-2208359][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:12:59][20260522-091259-2208359][activation][apply_mode_hole] ok=1
+[2026-05-22 09:12:59][20260522-091259-2208359][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:12:59][20260522-091259-2208359][activation][native_drop_bridge_started] pid=11408 elapsed_ms=47
+[2026-05-22 09:12:59][20260522-091259-2208359][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:12:59][20260522-091259-2208359][activation][native_drop_bridge_reused] pid=11408 elapsed_ms=15
+[2026-05-22 09:12:59][20260522-091259-2208359][activation][runtime_hole_ready] elapsed_ms=62
+[2026-05-22 09:13:00][20260522-091259-2208359][activation][native_drop_bridge_started] pid=7612 elapsed_ms=47
+[2026-05-22 09:13:04][20260522-091259-2208359][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:13:04][20260522-091259-2208359][activation][apply_mode_hole] ok=1
+[2026-05-22 09:13:04][20260522-091259-2208359][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:13:06][20260522-091259-2208359][activation][native_drop_bridge_stopped] elapsed_ms=1735
+[2026-05-22 09:13:06][20260522-091259-2208359][activation][native_drop_bridge_started] pid=19108 elapsed_ms=46
+[2026-05-22 09:13:06][20260522-091259-2208359][activation][runtime_hole_ready] elapsed_ms=1781
+[2026-05-22 09:17:13][20260522-091259-2208359][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:17:14][20260522-091714-2462921][startup][boot] gdip=ok
+[2026-05-22 09:17:14][20260522-091714-2462921][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:17:14][20260522-091714-2462921][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:17:14][20260522-091714-2462921][activation][apply_mode_hole] ok=1
+[2026-05-22 09:17:14][20260522-091714-2462921][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:17:14][20260522-091714-2462921][activation][native_drop_bridge_started] pid=6092 elapsed_ms=47
+[2026-05-22 09:17:14][20260522-091714-2462921][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:17:14][20260522-091714-2462921][activation][native_drop_bridge_reused] pid=6092 elapsed_ms=0
+[2026-05-22 09:17:14][20260522-091714-2462921][activation][runtime_hole_ready] elapsed_ms=63
+[2026-05-22 09:17:19][20260522-091714-2462921][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:17:19][20260522-091714-2462921][activation][apply_mode_hole] ok=1
+[2026-05-22 09:17:19][20260522-091714-2462921][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:17:19][20260522-091714-2462921][activation][native_drop_bridge_started] pid=10684 elapsed_ms=63
+[2026-05-22 09:17:19][20260522-091714-2462921][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:17:19][20260522-091714-2462921][activation][native_drop_bridge_started] pid=20408 elapsed_ms=31
+[2026-05-22 09:17:19][20260522-091714-2462921][activation][runtime_hole_ready] elapsed_ms=94
+[2026-05-22 09:25:30][20260522-091714-2462921][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:25:30][20260522-092530-2959421][startup][boot] gdip=ok
+[2026-05-22 09:25:30][20260522-092530-2959421][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:25:30][20260522-092530-2959421][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:25:30][20260522-092530-2959421][activation][apply_mode_hole] ok=1
+[2026-05-22 09:25:30][20260522-092530-2959421][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:25:30][20260522-092530-2959421][activation][native_drop_bridge_started] pid=20424 elapsed_ms=62
+[2026-05-22 09:25:30][20260522-092530-2959421][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:25:30][20260522-092530-2959421][activation][native_drop_bridge_started] pid=19520 elapsed_ms=31
+[2026-05-22 09:25:30][20260522-092530-2959421][activation][runtime_hole_ready] elapsed_ms=93
+[2026-05-22 09:25:36][20260522-092530-2959421][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:25:36][20260522-092530-2959421][activation][apply_mode_hole] ok=1
+[2026-05-22 09:25:36][20260522-092530-2959421][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:25:36][20260522-092530-2959421][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:25:36][20260522-092530-2959421][activation][native_drop_bridge_reused] pid=19520 elapsed_ms=0
+[2026-05-22 09:25:36][20260522-092530-2959421][activation][runtime_hole_ready] elapsed_ms=15
+[2026-05-22 09:26:03][20260522-092530-2959421][activation][native_drop_bridge_started] pid=3520 elapsed_ms=47
+[2026-05-22 09:26:51][20260522-092530-2959421][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:26:51][20260522-092651-3040453][startup][boot] gdip=ok
+[2026-05-22 09:26:51][20260522-092651-3040453][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:26:51][20260522-092651-3040453][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:26:51][20260522-092651-3040453][activation][apply_mode_hole] ok=1
+[2026-05-22 09:26:51][20260522-092651-3040453][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:26:51][20260522-092651-3040453][activation][native_drop_bridge_started] pid=5432 elapsed_ms=31
+[2026-05-22 09:26:51][20260522-092651-3040453][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:26:51][20260522-092651-3040453][activation][native_drop_bridge_reused] pid=5432 elapsed_ms=15
+[2026-05-22 09:26:51][20260522-092651-3040453][activation][runtime_hole_ready] elapsed_ms=62
+[2026-05-22 09:26:57][20260522-092651-3040453][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:26:57][20260522-092651-3040453][activation][apply_mode_hole] ok=1
+[2026-05-22 09:26:57][20260522-092651-3040453][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:26:57][20260522-092651-3040453][activation][native_drop_bridge_started] pid=19648 elapsed_ms=62
+[2026-05-22 09:26:57][20260522-092651-3040453][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:26:57][20260522-092651-3040453][activation][native_drop_bridge_started] pid=7120 elapsed_ms=63
+[2026-05-22 09:26:57][20260522-092651-3040453][activation][runtime_hole_ready] elapsed_ms=141
+[2026-05-22 09:28:46][20260522-092651-3040453][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:28:46][20260522-092846-3155593][startup][boot] gdip=ok
+[2026-05-22 09:28:46][20260522-092846-3155593][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:28:46][20260522-092846-3155593][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:28:46][20260522-092846-3155593][activation][apply_mode_hole] ok=1
+[2026-05-22 09:28:46][20260522-092846-3155593][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:28:46][20260522-092846-3155593][activation][native_drop_bridge_started] pid=1976 elapsed_ms=62
+[2026-05-22 09:28:46][20260522-092846-3155593][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:28:46][20260522-092846-3155593][activation][native_drop_bridge_started] pid=13716 elapsed_ms=32
+[2026-05-22 09:28:46][20260522-092846-3155593][activation][runtime_hole_ready] elapsed_ms=94
+[2026-05-22 09:28:52][20260522-092846-3155593][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:28:52][20260522-092846-3155593][activation][apply_mode_hole] ok=1
+[2026-05-22 09:28:53][20260522-092846-3155593][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:28:53][20260522-092846-3155593][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:28:53][20260522-092846-3155593][activation][native_drop_bridge_reused] pid=13716 elapsed_ms=0
+[2026-05-22 09:28:53][20260522-092846-3155593][activation][runtime_hole_ready] elapsed_ms=16
+[2026-05-22 09:29:06][20260522-092846-3155593][activation][native_drop_bridge_started] pid=9308 elapsed_ms=47
+[2026-05-22 09:31:52][20260522-092846-3155593][activation][native_drop_bridge_stopped] elapsed_ms=2750
+[2026-05-22 09:33:36][20260522-093336-3445015][startup][boot] gdip=ok
+[2026-05-22 09:33:36][20260522-093336-3445015][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:33:36][20260522-093336-3445015][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:33:36][20260522-093336-3445015][activation][apply_mode_hole] ok=1
+[2026-05-22 09:33:36][20260522-093336-3445015][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:33:36][20260522-093336-3445015][activation][native_drop_bridge_started] pid=10988 elapsed_ms=63
+[2026-05-22 09:33:36][20260522-093336-3445015][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:33:36][20260522-093336-3445015][activation][native_drop_bridge_started] pid=17300 elapsed_ms=31
+[2026-05-22 09:33:36][20260522-093336-3445015][activation][runtime_hole_ready] elapsed_ms=110
+[2026-05-22 09:33:41][20260522-093336-3445015][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:33:41][20260522-093336-3445015][activation][apply_mode_hole] ok=1
+[2026-05-22 09:33:41][20260522-093336-3445015][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:33:41][20260522-093336-3445015][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:33:41][20260522-093336-3445015][activation][native_drop_bridge_reused] pid=17300 elapsed_ms=0
+[2026-05-22 09:33:41][20260522-093336-3445015][activation][runtime_hole_ready] elapsed_ms=16
+[2026-05-22 09:33:54][20260522-093336-3445015][activation][native_drop_bridge_started] pid=148 elapsed_ms=47
+[2026-05-22 09:37:26][20260522-093336-3445015][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:37:26][20260522-093726-3675734][startup][boot] gdip=ok
+[2026-05-22 09:37:26][20260522-093726-3675734][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:37:26][20260522-093726-3675734][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:37:26][20260522-093726-3675734][activation][apply_mode_hole] ok=1
+[2026-05-22 09:37:26][20260522-093726-3675734][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:37:27][20260522-093726-3675734][activation][native_drop_bridge_started] pid=16892 elapsed_ms=46
+[2026-05-22 09:37:27][20260522-093726-3675734][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:37:27][20260522-093726-3675734][activation][native_drop_bridge_reused] pid=16892 elapsed_ms=0
+[2026-05-22 09:37:27][20260522-093726-3675734][activation][runtime_hole_ready] elapsed_ms=62
+[2026-05-22 09:37:31][20260522-093726-3675734][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:37:31][20260522-093726-3675734][activation][apply_mode_hole] ok=1
+[2026-05-22 09:37:31][20260522-093726-3675734][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:37:32][20260522-093726-3675734][activation][native_drop_bridge_started] pid=4724 elapsed_ms=31
+[2026-05-22 09:37:32][20260522-093726-3675734][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:37:32][20260522-093726-3675734][activation][native_drop_bridge_started] pid=18784 elapsed_ms=32
+[2026-05-22 09:37:32][20260522-093726-3675734][activation][runtime_hole_ready] elapsed_ms=78
+[2026-05-22 09:37:52][20260522-093726-3675734][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:37:52][20260522-093752-3701750][startup][boot] gdip=ok
+[2026-05-22 09:37:52][20260522-093752-3701750][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:37:52][20260522-093752-3701750][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:37:52][20260522-093752-3701750][activation][apply_mode_hole] ok=1
+[2026-05-22 09:37:52][20260522-093752-3701750][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:37:53][20260522-093752-3701750][activation][native_drop_bridge_started] pid=7240 elapsed_ms=31
+[2026-05-22 09:37:53][20260522-093752-3701750][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:37:53][20260522-093752-3701750][activation][native_drop_bridge_reused] pid=7240 elapsed_ms=16
+[2026-05-22 09:37:53][20260522-093752-3701750][activation][runtime_hole_ready] elapsed_ms=63
+[2026-05-22 09:37:57][20260522-093752-3701750][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:37:57][20260522-093752-3701750][activation][apply_mode_hole] ok=1
+[2026-05-22 09:37:57][20260522-093752-3701750][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:37:58][20260522-093752-3701750][activation][native_drop_bridge_started] pid=12472 elapsed_ms=46
+[2026-05-22 09:37:58][20260522-093752-3701750][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:37:58][20260522-093752-3701750][activation][native_drop_bridge_started] pid=2016 elapsed_ms=47
+[2026-05-22 09:37:58][20260522-093752-3701750][activation][runtime_hole_ready] elapsed_ms=93
+[2026-05-22 09:40:36][20260522-093752-3701750][activation][native_drop_bridge_stopped] elapsed_ms=2922
+[2026-05-22 09:40:48][20260522-094048-3877000][startup][boot] gdip=ok
+[2026-05-22 09:40:48][20260522-094048-3877000][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:40:48][20260522-094048-3877000][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:40:48][20260522-094048-3877000][activation][apply_mode_hole] ok=1
+[2026-05-22 09:40:48][20260522-094048-3877000][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:40:48][20260522-094048-3877000][activation][native_drop_bridge_started] pid=19248 elapsed_ms=62
+[2026-05-22 09:40:48][20260522-094048-3877000][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:40:48][20260522-094048-3877000][activation][native_drop_bridge_started] pid=14764 elapsed_ms=32
+[2026-05-22 09:40:48][20260522-094048-3877000][activation][runtime_hole_ready] elapsed_ms=94
+[2026-05-22 09:40:53][20260522-094048-3877000][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:40:53][20260522-094048-3877000][activation][apply_mode_hole] ok=1
+[2026-05-22 09:40:53][20260522-094048-3877000][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:40:54][20260522-094048-3877000][activation][native_drop_bridge_stopped] elapsed_ms=953
+[2026-05-22 09:40:56][20260522-094048-3877000][activation][native_drop_bridge_started] pid=20200 elapsed_ms=1891
+[2026-05-22 09:40:56][20260522-094048-3877000][activation][runtime_hole_ready] elapsed_ms=2844
+[2026-05-22 09:45:21][20260522-094048-3877000][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:45:22][20260522-094522-4151234][startup][boot] gdip=ok
+[2026-05-22 09:45:22][20260522-094522-4151234][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:45:22][20260522-094522-4151234][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:45:22][20260522-094522-4151234][activation][apply_mode_hole] ok=1
+[2026-05-22 09:45:22][20260522-094522-4151234][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:45:22][20260522-094522-4151234][activation][native_drop_bridge_started] pid=8612 elapsed_ms=47
+[2026-05-22 09:45:22][20260522-094522-4151234][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:45:22][20260522-094522-4151234][activation][native_drop_bridge_started] pid=12004 elapsed_ms=47
+[2026-05-22 09:45:22][20260522-094522-4151234][activation][runtime_hole_ready] elapsed_ms=110
+[2026-05-22 09:45:28][20260522-094522-4151234][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:45:28][20260522-094522-4151234][activation][apply_mode_hole] ok=1
+[2026-05-22 09:45:28][20260522-094522-4151234][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:45:28][20260522-094522-4151234][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:45:28][20260522-094522-4151234][activation][native_drop_bridge_reused] pid=12004 elapsed_ms=0
+[2026-05-22 09:45:28][20260522-094522-4151234][activation][runtime_hole_ready] elapsed_ms=0
+[2026-05-22 09:46:03][20260522-094522-4151234][activation][native_drop_bridge_started] pid=19028 elapsed_ms=32
+[2026-05-22 09:46:15][20260522-094522-4151234][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:46:15][20260522-094615-4204546][startup][boot] gdip=ok
+[2026-05-22 09:46:15][20260522-094615-4204546][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:46:15][20260522-094615-4204546][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:46:15][20260522-094615-4204546][activation][apply_mode_hole] ok=1
+[2026-05-22 09:46:15][20260522-094615-4204546][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:46:15][20260522-094615-4204546][activation][native_drop_bridge_started] pid=1364 elapsed_ms=47
+[2026-05-22 09:46:15][20260522-094615-4204546][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:46:15][20260522-094615-4204546][activation][native_drop_bridge_reused] pid=1364 elapsed_ms=0
+[2026-05-22 09:46:15][20260522-094615-4204546][activation][runtime_hole_ready] elapsed_ms=63
+[2026-05-22 09:46:21][20260522-094615-4204546][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:46:21][20260522-094615-4204546][activation][apply_mode_hole] ok=1
+[2026-05-22 09:46:21][20260522-094615-4204546][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:46:21][20260522-094615-4204546][activation][native_drop_bridge_started] pid=7596 elapsed_ms=47
+[2026-05-22 09:46:21][20260522-094615-4204546][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:46:22][20260522-094615-4204546][activation][native_drop_bridge_started] pid=16684 elapsed_ms=47
+[2026-05-22 09:46:22][20260522-094615-4204546][activation][runtime_hole_ready] elapsed_ms=109
+[2026-05-22 09:46:41][20260522-094615-4204546][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:46:42][20260522-094642-4230906][startup][boot] gdip=ok
+[2026-05-22 09:46:42][20260522-094642-4230906][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:46:42][20260522-094642-4230906][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:46:42][20260522-094642-4230906][activation][apply_mode_hole] ok=1
+[2026-05-22 09:46:42][20260522-094642-4230906][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:46:42][20260522-094642-4230906][activation][native_drop_bridge_started] pid=9756 elapsed_ms=47
+[2026-05-22 09:46:42][20260522-094642-4230906][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:46:42][20260522-094642-4230906][activation][native_drop_bridge_started] pid=16228 elapsed_ms=46
+[2026-05-22 09:46:42][20260522-094642-4230906][activation][runtime_hole_ready] elapsed_ms=109
+[2026-05-22 09:46:47][20260522-094642-4230906][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:46:47][20260522-094642-4230906][activation][apply_mode_hole] ok=1
+[2026-05-22 09:46:47][20260522-094642-4230906][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:46:47][20260522-094642-4230906][activation][native_drop_bridge_stopped] elapsed_ms=547
+[2026-05-22 09:46:47][20260522-094642-4230906][activation][native_drop_bridge_started] pid=20124 elapsed_ms=47
+[2026-05-22 09:46:47][20260522-094642-4230906][activation][runtime_hole_ready] elapsed_ms=594
+[2026-05-22 09:48:39][20260522-094642-4230906][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:48:39][20260522-094839-4348687][startup][boot] gdip=ok
+[2026-05-22 09:48:39][20260522-094839-4348687][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:48:39][20260522-094839-4348687][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:48:39][20260522-094839-4348687][activation][apply_mode_hole] ok=1
+[2026-05-22 09:48:39][20260522-094839-4348687][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:48:39][20260522-094839-4348687][activation][native_drop_bridge_started] pid=14060 elapsed_ms=47
+[2026-05-22 09:48:39][20260522-094839-4348687][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:48:40][20260522-094839-4348687][activation][native_drop_bridge_started] pid=11476 elapsed_ms=47
+[2026-05-22 09:48:40][20260522-094839-4348687][activation][runtime_hole_ready] elapsed_ms=109
+[2026-05-22 09:48:44][20260522-094839-4348687][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:48:44][20260522-094839-4348687][activation][apply_mode_hole] ok=1
+[2026-05-22 09:48:44][20260522-094839-4348687][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:48:45][20260522-094839-4348687][activation][native_drop_bridge_stopped] elapsed_ms=516
+[2026-05-22 09:48:45][20260522-094839-4348687][activation][native_drop_bridge_started] pid=9400 elapsed_ms=62
+[2026-05-22 09:48:45][20260522-094839-4348687][activation][runtime_hole_ready] elapsed_ms=578
+[2026-05-22 09:49:29][20260522-094839-4348687][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:49:29][20260522-094929-4398609][startup][boot] gdip=ok
+[2026-05-22 09:49:29][20260522-094929-4398609][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:49:29][20260522-094929-4398609][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:49:29][20260522-094929-4398609][activation][apply_mode_hole] ok=1
+[2026-05-22 09:49:29][20260522-094929-4398609][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:49:29][20260522-094929-4398609][activation][native_drop_bridge_started] pid=16592 elapsed_ms=47
+[2026-05-22 09:49:29][20260522-094929-4398609][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:49:29][20260522-094929-4398609][activation][native_drop_bridge_reused] pid=16592 elapsed_ms=0
+[2026-05-22 09:49:29][20260522-094929-4398609][activation][runtime_hole_ready] elapsed_ms=47
+[2026-05-22 09:49:34][20260522-094929-4398609][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:49:34][20260522-094929-4398609][activation][apply_mode_hole] ok=1
+[2026-05-22 09:49:34][20260522-094929-4398609][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:49:34][20260522-094929-4398609][activation][native_drop_bridge_started] pid=13644 elapsed_ms=46
+[2026-05-22 09:49:34][20260522-094929-4398609][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:49:34][20260522-094929-4398609][activation][native_drop_bridge_started] pid=18068 elapsed_ms=47
+[2026-05-22 09:49:34][20260522-094929-4398609][activation][runtime_hole_ready] elapsed_ms=93
+[2026-05-22 09:50:03][20260522-094929-4398609][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:50:04][20260522-095004-4433171][startup][boot] gdip=ok
+[2026-05-22 09:50:04][20260522-095004-4433171][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:50:04][20260522-095004-4433171][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:50:04][20260522-095004-4433171][activation][apply_mode_hole] ok=1
+[2026-05-22 09:50:04][20260522-095004-4433171][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 09:50:04][20260522-095004-4433171][activation][native_drop_bridge_started] pid=19244 elapsed_ms=31
+[2026-05-22 09:50:04][20260522-095004-4433171][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:50:04][20260522-095004-4433171][activation][native_drop_bridge_started] pid=6168 elapsed_ms=47
+[2026-05-22 09:50:04][20260522-095004-4433171][activation][runtime_hole_ready] elapsed_ms=110
+[2026-05-22 09:50:09][20260522-095004-4433171][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:50:09][20260522-095004-4433171][activation][apply_mode_hole] ok=1
+[2026-05-22 09:50:09][20260522-095004-4433171][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 09:50:09][20260522-095004-4433171][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:50:09][20260522-095004-4433171][activation][native_drop_bridge_reused] pid=6168 elapsed_ms=0
+[2026-05-22 09:50:09][20260522-095004-4433171][activation][runtime_hole_ready] elapsed_ms=0
+[2026-05-22 09:50:11][20260522-095004-4433171][activation][native_drop_bridge_started] pid=4780 elapsed_ms=47
+[2026-05-22 09:59:26][20260522-095004-4433171][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:59:27][20260522-095927-4996468][startup][boot] gdip=ok
+[2026-05-22 09:59:27][20260522-095927-4996468][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 09:59:27][20260522-095927-4996468][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 09:59:27][20260522-095927-4996468][activation][apply_mode_toolbar] ok=1
+[2026-05-22 09:59:27][20260522-095927-4996468][activation][runtime_deferred] mode=toolbar token=2
+[2026-05-22 09:59:27][20260522-095927-4996468][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 09:59:27][20260522-095927-4996468][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:59:32][20260522-095927-4996468][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 09:59:32][20260522-095927-4996468][activation][apply_mode_toolbar] ok=1
+[2026-05-22 09:59:32][20260522-095927-4996468][activation][runtime_deferred] mode=toolbar token=3
+[2026-05-22 09:59:32][20260522-095927-4996468][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=15
+[2026-05-22 09:59:45][20260522-095927-4996468][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:59:45][20260522-095927-4996468][activation][runtime_deferred] mode=toolbar token=4
+[2026-05-22 09:59:45][20260522-095927-4996468][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 09:59:47][20260522-095927-4996468][ui][open_config_safe_begin] 
+[2026-05-22 09:59:47][20260522-095927-4996468][ui][open_config_recover_stale_host] 
+[2026-05-22 09:59:47][20260522-095927-4996468][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:59:47][20260522-095927-4996468][ui][open_config_safe_scheduled] 
+[2026-05-22 09:59:47][20260522-095927-4996468][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:59:50][20260522-095927-4996468][ui][open_config_force_release] vis=1
+[2026-05-22 09:59:52][20260522-095927-4996468][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:59:52][20260522-095927-4996468][activation][apply_mode_hole] ok=1
+[2026-05-22 09:59:52][20260522-095927-4996468][activation][runtime_deferred] mode=hole token=5
+[2026-05-22 09:59:52][20260522-095927-4996468][activation][native_drop_bridge_started] pid=7948 elapsed_ms=47
+[2026-05-22 09:59:52][20260522-095927-4996468][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:59:52][20260522-095927-4996468][activation][native_drop_bridge_started] pid=13936 elapsed_ms=94
+[2026-05-22 09:59:52][20260522-095927-4996468][activation][runtime_hole_ready] elapsed_ms=156
+[2026-05-22 09:59:57][20260522-095927-4996468][activation][apply_mode_begin] mode=hole
+[2026-05-22 09:59:57][20260522-095927-4996468][activation][apply_mode_hole] ok=1
+[2026-05-22 09:59:57][20260522-095927-4996468][activation][runtime_deferred] mode=hole token=7
+[2026-05-22 09:59:57][20260522-095927-4996468][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 09:59:57][20260522-095927-4996468][activation][native_drop_bridge_reused] pid=13936 elapsed_ms=0
+[2026-05-22 09:59:57][20260522-095927-4996468][activation][runtime_hole_ready] elapsed_ms=0
+[2026-05-22 10:00:00][20260522-095927-4996468][activation][native_drop_bridge_started] pid=20008 elapsed_ms=47
+[2026-05-22 10:02:39][20260522-095927-4996468][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:02:40][20260522-100240-5189156][startup][boot] gdip=ok
+[2026-05-22 10:02:40][20260522-100240-5189156][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 10:02:40][20260522-100240-5189156][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:02:40][20260522-100240-5189156][activation][apply_mode_hole] ok=1
+[2026-05-22 10:02:40][20260522-100240-5189156][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 10:02:40][20260522-100240-5189156][activation][native_drop_bridge_started] pid=11656 elapsed_ms=78
+[2026-05-22 10:02:40][20260522-100240-5189156][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:02:40][20260522-100240-5189156][activation][native_drop_bridge_reused] pid=11656 elapsed_ms=0
+[2026-05-22 10:02:40][20260522-100240-5189156][activation][runtime_hole_ready] elapsed_ms=109
+[2026-05-22 10:02:45][20260522-100240-5189156][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:02:45][20260522-100240-5189156][activation][apply_mode_hole] ok=1
+[2026-05-22 10:02:45][20260522-100240-5189156][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 10:02:45][20260522-100240-5189156][activation][native_drop_bridge_started] pid=11392 elapsed_ms=47
+[2026-05-22 10:02:45][20260522-100240-5189156][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:02:45][20260522-100240-5189156][activation][native_drop_bridge_started] pid=12172 elapsed_ms=47
+[2026-05-22 10:02:45][20260522-100240-5189156][activation][runtime_hole_ready] elapsed_ms=94
+[2026-05-22 10:05:23][20260522-100240-5189156][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:05:24][20260522-100524-5353140][startup][boot] gdip=ok
+[2026-05-22 10:05:24][20260522-100524-5353140][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 10:05:24][20260522-100524-5353140][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 10:05:24][20260522-100524-5353140][activation][apply_mode_toolbar] ok=1
+[2026-05-22 10:05:24][20260522-100524-5353140][activation][runtime_deferred] mode=toolbar token=2
+[2026-05-22 10:05:24][20260522-100524-5353140][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 10:05:24][20260522-100524-5353140][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:05:25][20260522-100524-5353140][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:05:29][20260522-100524-5353140][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 10:05:29][20260522-100524-5353140][activation][runtime_deferred] mode=toolbar token=3
+[2026-05-22 10:05:29][20260522-100524-5353140][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 10:05:29][20260522-100524-5353140][activation][apply_mode_toolbar] ok=1
+[2026-05-22 10:05:38][20260522-100524-5353140][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:05:42][20260522-100524-5353140][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 10:05:42][20260522-100524-5353140][activation][runtime_deferred] mode=toolbar token=4
+[2026-05-22 10:05:42][20260522-100524-5353140][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=15
+[2026-05-22 10:05:42][20260522-100524-5353140][activation][apply_mode_toolbar] ok=1
+[2026-05-22 10:05:49][20260522-100524-5353140][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:05:49][20260522-100524-5353140][activation][apply_mode_hole] ok=1
+[2026-05-22 10:05:49][20260522-100524-5353140][activation][runtime_deferred] mode=hole token=5
+[2026-05-22 10:05:49][20260522-100524-5353140][activation][native_drop_bridge_started] pid=3156 elapsed_ms=78
+[2026-05-22 10:05:49][20260522-100524-5353140][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:05:49][20260522-100524-5353140][activation][native_drop_bridge_started] pid=9832 elapsed_ms=47
+[2026-05-22 10:05:49][20260522-100524-5353140][activation][runtime_hole_ready] elapsed_ms=125
+[2026-05-22 10:05:50][20260522-100524-5353140][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:05:50][20260522-100524-5353140][activation][apply_mode_hole] ok=1
+[2026-05-22 10:05:50][20260522-100524-5353140][activation][runtime_deferred] mode=hole token=7
+[2026-05-22 10:05:52][20260522-100524-5353140][activation][native_drop_bridge_stopped] elapsed_ms=1609
+[2026-05-22 10:05:52][20260522-100524-5353140][activation][native_drop_bridge_started] pid=4040 elapsed_ms=63
+[2026-05-22 10:05:52][20260522-100524-5353140][activation][runtime_hole_ready] elapsed_ms=1672
+[2026-05-22 10:09:42][20260522-100524-5353140][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:09:42][20260522-100942-5611828][startup][boot] gdip=ok
+[2026-05-22 10:09:43][20260522-100942-5611828][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 10:09:43][20260522-100942-5611828][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:09:43][20260522-100942-5611828][activation][apply_mode_hole] ok=1
+[2026-05-22 10:09:43][20260522-100942-5611828][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 10:09:43][20260522-100942-5611828][activation][native_drop_bridge_started] pid=20172 elapsed_ms=46
+[2026-05-22 10:09:43][20260522-100942-5611828][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:09:43][20260522-100942-5611828][activation][native_drop_bridge_started] pid=19940 elapsed_ms=63
+[2026-05-22 10:09:43][20260522-100942-5611828][activation][runtime_hole_ready] elapsed_ms=125
+[2026-05-22 10:09:48][20260522-100942-5611828][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:09:48][20260522-100942-5611828][activation][apply_mode_hole] ok=1
+[2026-05-22 10:09:48][20260522-100942-5611828][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 10:09:49][20260522-100942-5611828][activation][native_drop_bridge_stopped] elapsed_ms=1437
+[2026-05-22 10:09:49][20260522-100942-5611828][activation][native_drop_bridge_started] pid=2348 elapsed_ms=47
+[2026-05-22 10:09:49][20260522-100942-5611828][activation][runtime_hole_ready] elapsed_ms=1484
+[2026-05-22 10:12:52][20260522-100942-5611828][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:12:52][20260522-101252-5801328][startup][boot] gdip=ok
+[2026-05-22 10:12:52][20260522-101252-5801328][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 10:12:52][20260522-101252-5801328][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:12:52][20260522-101252-5801328][activation][apply_mode_hole] ok=1
+[2026-05-22 10:12:52][20260522-101252-5801328][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 10:12:52][20260522-101252-5801328][activation][native_drop_bridge_started] pid=16248 elapsed_ms=47
+[2026-05-22 10:12:52][20260522-101252-5801328][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:12:52][20260522-101252-5801328][activation][native_drop_bridge_started] pid=16892 elapsed_ms=47
+[2026-05-22 10:12:52][20260522-101252-5801328][activation][runtime_hole_ready] elapsed_ms=94
+[2026-05-22 10:12:57][20260522-101252-5801328][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:12:57][20260522-101252-5801328][activation][apply_mode_hole] ok=1
+[2026-05-22 10:12:57][20260522-101252-5801328][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 10:12:59][20260522-101252-5801328][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:12:59][20260522-101259-5808375][startup][boot] gdip=ok
+[2026-05-22 10:12:59][20260522-101259-5808375][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 10:12:59][20260522-101259-5808375][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:12:59][20260522-101259-5808375][activation][apply_mode_hole] ok=1
+[2026-05-22 10:12:59][20260522-101259-5808375][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 10:12:59][20260522-101259-5808375][activation][native_drop_bridge_started] pid=10376 elapsed_ms=47
+[2026-05-22 10:12:59][20260522-101259-5808375][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:12:59][20260522-101259-5808375][activation][native_drop_bridge_started] pid=8312 elapsed_ms=47
+[2026-05-22 10:12:59][20260522-101259-5808375][activation][runtime_hole_ready] elapsed_ms=109
+[2026-05-22 10:13:04][20260522-101259-5808375][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:13:04][20260522-101259-5808375][activation][apply_mode_hole] ok=1
+[2026-05-22 10:13:04][20260522-101259-5808375][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 10:13:04][20260522-101259-5808375][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:13:04][20260522-101259-5808375][activation][native_drop_bridge_reused] pid=8312 elapsed_ms=0
+[2026-05-22 10:13:04][20260522-101259-5808375][activation][runtime_hole_ready] elapsed_ms=0
+[2026-05-22 10:13:06][20260522-101259-5808375][activation][native_drop_bridge_started] pid=4548 elapsed_ms=47
+[2026-05-22 10:16:49][20260522-101259-5808375][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:17:22][20260522-101722-6071687][startup][boot] gdip=ok
+[2026-05-22 10:17:22][20260522-101722-6071687][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 10:17:22][20260522-101722-6071687][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:17:22][20260522-101722-6071687][activation][apply_mode_hole] ok=1
+[2026-05-22 10:17:22][20260522-101722-6071687][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 10:17:23][20260522-101722-6071687][activation][native_drop_bridge_started] pid=7776 elapsed_ms=47
+[2026-05-22 10:17:23][20260522-101722-6071687][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:17:23][20260522-101722-6071687][activation][native_drop_bridge_reused] pid=7776 elapsed_ms=0
+[2026-05-22 10:17:23][20260522-101722-6071687][activation][runtime_hole_ready] elapsed_ms=63
+[2026-05-22 10:17:27][20260522-101722-6071687][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:17:27][20260522-101722-6071687][activation][apply_mode_hole] ok=1
+[2026-05-22 10:17:27][20260522-101722-6071687][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 10:17:28][20260522-101722-6071687][activation][native_drop_bridge_started] pid=11204 elapsed_ms=31
+[2026-05-22 10:17:28][20260522-101722-6071687][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:17:28][20260522-101722-6071687][activation][native_drop_bridge_reused] pid=11204 elapsed_ms=16
+[2026-05-22 10:17:28][20260522-101722-6071687][activation][runtime_hole_ready] elapsed_ms=63
+[2026-05-22 10:17:54][20260522-101722-6071687][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:17:54][20260522-101754-6103265][startup][boot] gdip=ok
+[2026-05-22 10:17:54][20260522-101754-6103265][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 10:17:54][20260522-101754-6103265][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:17:54][20260522-101754-6103265][activation][apply_mode_hole] ok=1
+[2026-05-22 10:17:54][20260522-101754-6103265][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 10:17:54][20260522-101754-6103265][activation][native_drop_bridge_started] pid=16740 elapsed_ms=47
+[2026-05-22 10:17:54][20260522-101754-6103265][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:17:54][20260522-101754-6103265][activation][native_drop_bridge_started] pid=9224 elapsed_ms=62
+[2026-05-22 10:17:54][20260522-101754-6103265][activation][runtime_hole_ready] elapsed_ms=125
+[2026-05-22 10:17:59][20260522-101754-6103265][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:17:59][20260522-101754-6103265][activation][apply_mode_hole] ok=1
+[2026-05-22 10:17:59][20260522-101754-6103265][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 10:18:00][20260522-101754-6103265][activation][native_drop_bridge_stopped] elapsed_ms=984
+[2026-05-22 10:18:00][20260522-101754-6103265][activation][native_drop_bridge_started] pid=20336 elapsed_ms=47
+[2026-05-22 10:18:00][20260522-101754-6103265][activation][runtime_hole_ready] elapsed_ms=1031
+[2026-05-22 10:22:21][20260522-101754-6103265][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:22:22][20260522-102222-6371109][startup][boot] gdip=ok
+[2026-05-22 10:22:22][20260522-102222-6371109][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 10:22:22][20260522-102222-6371109][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:22:22][20260522-102222-6371109][activation][apply_mode_hole] ok=1
+[2026-05-22 10:22:22][20260522-102222-6371109][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 10:22:22][20260522-102222-6371109][activation][native_drop_bridge_started] pid=1476 elapsed_ms=47
+[2026-05-22 10:22:22][20260522-102222-6371109][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:22:22][20260522-102222-6371109][activation][native_drop_bridge_started] pid=18748 elapsed_ms=47
+[2026-05-22 10:22:22][20260522-102222-6371109][activation][runtime_hole_ready] elapsed_ms=110
+[2026-05-22 10:22:27][20260522-102222-6371109][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:22:27][20260522-102222-6371109][activation][apply_mode_hole] ok=1
+[2026-05-22 10:22:27][20260522-102222-6371109][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 10:22:28][20260522-102222-6371109][activation][native_drop_bridge_stopped] elapsed_ms=1406
+[2026-05-22 10:22:28][20260522-102222-6371109][activation][native_drop_bridge_started] pid=11016 elapsed_ms=47
+[2026-05-22 10:22:28][20260522-102222-6371109][activation][runtime_hole_ready] elapsed_ms=1469
+[2026-05-22 10:25:03][20260522-102503-6532453][startup][boot] gdip=ok
+[2026-05-22 10:25:03][20260522-102503-6532453][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 10:25:03][20260522-102503-6532453][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:25:03][20260522-102503-6532453][activation][apply_mode_hole] ok=1
+[2026-05-22 10:25:03][20260522-102503-6532453][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 10:25:03][20260522-102503-6532453][activation][native_drop_bridge_started] pid=16240 elapsed_ms=47
+[2026-05-22 10:25:03][20260522-102503-6532453][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:25:03][20260522-102503-6532453][activation][native_drop_bridge_started] pid=2072 elapsed_ms=63
+[2026-05-22 10:25:03][20260522-102503-6532453][activation][runtime_hole_ready] elapsed_ms=125
+[2026-05-22 10:25:08][20260522-102503-6532453][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:25:08][20260522-102503-6532453][activation][apply_mode_hole] ok=1
+[2026-05-22 10:25:08][20260522-102503-6532453][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 10:25:08][20260522-102503-6532453][activation][native_drop_bridge_stopped] elapsed_ms=250
+[2026-05-22 10:25:09][20260522-102503-6532453][activation][native_drop_bridge_started] pid=15728 elapsed_ms=46
+[2026-05-22 10:25:09][20260522-102503-6532453][activation][runtime_hole_ready] elapsed_ms=296
+[2026-05-22 10:30:40][20260522-102503-6532453][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:30:41][20260522-103041-6869968][startup][boot] gdip=ok
+[2026-05-22 10:30:41][20260522-103041-6869968][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 10:30:41][20260522-103041-6869968][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:30:41][20260522-103041-6869968][activation][apply_mode_hole] ok=1
+[2026-05-22 10:30:41][20260522-103041-6869968][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 10:30:41][20260522-103041-6869968][activation][native_drop_bridge_started] pid=7572 elapsed_ms=46
+[2026-05-22 10:30:41][20260522-103041-6869968][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:30:41][20260522-103041-6869968][activation][native_drop_bridge_started] pid=16596 elapsed_ms=47
+[2026-05-22 10:30:41][20260522-103041-6869968][activation][runtime_hole_ready] elapsed_ms=109
+[2026-05-22 10:30:46][20260522-103041-6869968][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:30:46][20260522-103041-6869968][activation][apply_mode_hole] ok=1
+[2026-05-22 10:30:46][20260522-103041-6869968][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 10:30:47][20260522-103041-6869968][activation][native_drop_bridge_stopped] elapsed_ms=1297
+[2026-05-22 10:30:47][20260522-103041-6869968][activation][native_drop_bridge_started] pid=9916 elapsed_ms=47
+[2026-05-22 10:30:47][20260522-103041-6869968][activation][runtime_hole_ready] elapsed_ms=1344
+[2026-05-22 10:30:55][20260522-103041-6869968][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:30:55][20260522-103055-6884250][startup][boot] gdip=ok
+[2026-05-22 10:30:55][20260522-103055-6884250][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 10:30:55][20260522-103055-6884250][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:30:55][20260522-103055-6884250][activation][apply_mode_hole] ok=1
+[2026-05-22 10:30:55][20260522-103055-6884250][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 10:30:55][20260522-103055-6884250][activation][native_drop_bridge_started] pid=15684 elapsed_ms=47
+[2026-05-22 10:30:55][20260522-103055-6884250][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:30:55][20260522-103055-6884250][activation][native_drop_bridge_started] pid=19956 elapsed_ms=47
+[2026-05-22 10:30:55][20260522-103055-6884250][activation][runtime_hole_ready] elapsed_ms=109
+[2026-05-22 10:31:00][20260522-103055-6884250][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:31:00][20260522-103055-6884250][activation][apply_mode_hole] ok=1
+[2026-05-22 10:31:00][20260522-103055-6884250][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 10:31:04][20260522-103055-6884250][activation][native_drop_bridge_stopped] elapsed_ms=3718
+[2026-05-22 10:31:04][20260522-103055-6884250][activation][native_drop_bridge_started] pid=18864 elapsed_ms=47
+[2026-05-22 10:31:04][20260522-103055-6884250][activation][runtime_hole_ready] elapsed_ms=3765
+[2026-05-22 10:34:38][20260522-103055-6884250][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:34:38][20260522-103438-7107562][startup][boot] gdip=ok
+[2026-05-22 10:34:38][20260522-103438-7107562][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 10:34:38][20260522-103438-7107562][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:34:38][20260522-103438-7107562][activation][apply_mode_hole] ok=1
+[2026-05-22 10:34:38][20260522-103438-7107562][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 10:34:38][20260522-103438-7107562][activation][native_drop_bridge_started] pid=9460 elapsed_ms=63
+[2026-05-22 10:34:38][20260522-103438-7107562][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:34:38][20260522-103438-7107562][activation][native_drop_bridge_started] pid=8376 elapsed_ms=46
+[2026-05-22 10:34:38][20260522-103438-7107562][activation][runtime_hole_ready] elapsed_ms=109
+[2026-05-22 10:34:43][20260522-103438-7107562][activation][apply_mode_begin] mode=hole
+[2026-05-22 10:34:43][20260522-103438-7107562][activation][apply_mode_hole] ok=1
+[2026-05-22 10:34:43][20260522-103438-7107562][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 10:34:43][20260522-103438-7107562][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 10:34:43][20260522-103438-7107562][activation][native_drop_bridge_reused] pid=8376 elapsed_ms=16
+[2026-05-22 10:34:43][20260522-103438-7107562][activation][runtime_hole_ready] elapsed_ms=63
+[2026-05-22 10:34:51][20260522-103438-7107562][activation][native_drop_bridge_started] pid=4552 elapsed_ms=47
+[2026-05-22 11:36:52][20260522-103438-7107562][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 11:36:52][20260522-113652-10841578][startup][boot] gdip=ok
+[2026-05-22 11:36:52][20260522-113652-10841578][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 11:36:52][20260522-113652-10841578][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 11:36:52][20260522-113652-10841578][activation][apply_mode_toolbar] ok=1
+[2026-05-22 11:36:52][20260522-113652-10841578][activation][runtime_deferred] mode=toolbar token=2
+[2026-05-22 11:36:52][20260522-113652-10841578][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 11:36:52][20260522-113652-10841578][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 11:36:53][20260522-113652-10841578][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 11:36:57][20260522-113652-10841578][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 11:36:57][20260522-113652-10841578][activation][runtime_deferred] mode=toolbar token=3
+[2026-05-22 11:36:57][20260522-113652-10841578][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 11:36:57][20260522-113652-10841578][activation][apply_mode_toolbar] ok=1
+[2026-05-22 11:39:57][20260522-113652-10841578][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 11:40:04][20260522-113652-10841578][activation][apply_mode_begin] mode=hole
+[2026-05-22 11:40:04][20260522-113652-10841578][activation][apply_mode_hole] ok=1
+[2026-05-22 11:40:04][20260522-113652-10841578][activation][runtime_deferred] mode=hole token=4
+[2026-05-22 11:40:04][20260522-113652-10841578][activation][native_drop_bridge_started] pid=14620 elapsed_ms=78
+[2026-05-22 11:40:04][20260522-113652-10841578][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 11:40:04][20260522-113652-10841578][activation][native_drop_bridge_started] pid=13388 elapsed_ms=78
+[2026-05-22 11:40:04][20260522-113652-10841578][activation][runtime_hole_ready] elapsed_ms=172
+[2026-05-22 11:40:05][20260522-113652-10841578][activation][apply_mode_begin] mode=hole
+[2026-05-22 11:40:05][20260522-113652-10841578][activation][apply_mode_hole] ok=1
+[2026-05-22 11:40:05][20260522-113652-10841578][activation][runtime_deferred] mode=hole token=6
+[2026-05-22 11:40:06][20260522-113652-10841578][activation][native_drop_bridge_stopped] elapsed_ms=891
+[2026-05-22 11:40:06][20260522-113652-10841578][activation][native_drop_bridge_started] pid=8676 elapsed_ms=47
+[2026-05-22 11:40:06][20260522-113652-10841578][activation][runtime_hole_ready] elapsed_ms=938
+[2026-05-22 11:46:30][20260522-113652-10841578][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 11:46:30][20260522-114630-11419687][startup][boot] gdip=ok
+[2026-05-22 11:46:42][20260522-114630-11419687][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 11:46:42][20260522-114630-11419687][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 11:46:42][20260522-114630-11419687][activation][apply_mode_toolbar] ok=1
+[2026-05-22 11:46:42][20260522-114630-11419687][activation][runtime_deferred] mode=toolbar token=2
+[2026-05-22 11:46:42][20260522-114630-11419687][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 11:46:42][20260522-114630-11419687][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 11:46:47][20260522-114630-11419687][activation][apply_mode_begin] mode=toolbar
+[2026-05-22 11:46:47][20260522-114630-11419687][activation][apply_mode_toolbar] ok=1
+[2026-05-22 11:46:47][20260522-114630-11419687][activation][runtime_deferred] mode=toolbar token=3
+[2026-05-22 11:46:47][20260522-114630-11419687][activation][runtime_non_hole_ready] mode=toolbar elapsed_ms=0
+[2026-05-22 11:53:29][20260522-114630-11419687][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 11:53:33][20260522-114630-11419687][activation][apply_mode_begin] mode=hole
+[2026-05-22 11:53:33][20260522-114630-11419687][activation][apply_mode_hole] ok=1
+[2026-05-22 11:53:33][20260522-114630-11419687][activation][runtime_deferred] mode=hole token=4
+[2026-05-22 11:53:33][20260522-114630-11419687][activation][native_drop_bridge_started] pid=18748 elapsed_ms=78
+[2026-05-22 11:53:33][20260522-114630-11419687][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 11:53:33][20260522-114630-11419687][activation][native_drop_bridge_started] pid=3576 elapsed_ms=47
+[2026-05-22 11:53:33][20260522-114630-11419687][activation][runtime_hole_ready] elapsed_ms=141
+[2026-05-22 11:53:34][20260522-114630-11419687][activation][apply_mode_begin] mode=hole
+[2026-05-22 11:53:34][20260522-114630-11419687][activation][apply_mode_hole] ok=1
+[2026-05-22 11:53:34][20260522-114630-11419687][activation][runtime_deferred] mode=hole token=6
+[2026-05-22 11:53:36][20260522-114630-11419687][activation][native_drop_bridge_stopped] elapsed_ms=1516
+[2026-05-22 11:53:36][20260522-114630-11419687][activation][native_drop_bridge_started] pid=11568 elapsed_ms=47
+[2026-05-22 11:53:36][20260522-114630-11419687][activation][runtime_hole_ready] elapsed_ms=1563
+[2026-05-22 12:02:00][20260522-114630-11419687][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 12:02:03][20260522-120203-12352546][startup][boot] gdip=ok
+[2026-05-22 12:02:04][20260522-120203-12352546][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 12:02:05][20260522-120203-12352546][activation][apply_mode_begin] mode=hole
+[2026-05-22 12:02:05][20260522-120203-12352546][activation][apply_mode_hole] ok=1
+[2026-05-22 12:02:05][20260522-120203-12352546][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 12:02:05][20260522-120203-12352546][activation][native_drop_bridge_started] pid=17532 elapsed_ms=47
+[2026-05-22 12:02:05][20260522-120203-12352546][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 12:02:05][20260522-120203-12352546][activation][native_drop_bridge_reused] pid=17532 elapsed_ms=0
+[2026-05-22 12:02:05][20260522-120203-12352546][activation][runtime_hole_ready] elapsed_ms=79
+[2026-05-22 12:02:10][20260522-120203-12352546][activation][apply_mode_begin] mode=hole
+[2026-05-22 12:02:10][20260522-120203-12352546][activation][apply_mode_hole] ok=1
+[2026-05-22 12:02:10][20260522-120203-12352546][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 12:02:10][20260522-120203-12352546][activation][native_drop_bridge_started] pid=15764 elapsed_ms=47
+[2026-05-22 12:02:10][20260522-120203-12352546][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 12:02:10][20260522-120203-12352546][activation][native_drop_bridge_started] pid=17448 elapsed_ms=47
+[2026-05-22 12:02:10][20260522-120203-12352546][activation][runtime_hole_ready] elapsed_ms=94
+[2026-05-22 12:03:31][20260522-120203-12352546][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 12:03:31][20260522-120331-12440296][startup][boot] gdip=ok
+[2026-05-22 12:03:31][20260522-120331-12440296][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 12:03:31][20260522-120331-12440296][activation][apply_mode_begin] mode=hole
+[2026-05-22 12:03:31][20260522-120331-12440296][activation][apply_mode_hole] ok=1
+[2026-05-22 12:03:31][20260522-120331-12440296][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 12:03:31][20260522-120331-12440296][activation][native_drop_bridge_started] pid=8056 elapsed_ms=47
+[2026-05-22 12:03:31][20260522-120331-12440296][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 12:03:31][20260522-120331-12440296][activation][native_drop_bridge_reused] pid=8056 elapsed_ms=16
+[2026-05-22 12:03:31][20260522-120331-12440296][activation][runtime_hole_ready] elapsed_ms=63
+[2026-05-22 12:03:36][20260522-120331-12440296][activation][apply_mode_begin] mode=hole
+[2026-05-22 12:03:36][20260522-120331-12440296][activation][apply_mode_hole] ok=1
+[2026-05-22 12:03:36][20260522-120331-12440296][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 12:03:36][20260522-120331-12440296][activation][native_drop_bridge_started] pid=15956 elapsed_ms=47
+[2026-05-22 12:03:36][20260522-120331-12440296][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 12:03:36][20260522-120331-12440296][activation][native_drop_bridge_started] pid=20412 elapsed_ms=47
+[2026-05-22 12:03:36][20260522-120331-12440296][activation][runtime_hole_ready] elapsed_ms=94
+[2026-05-22 12:04:25][20260522-120331-12440296][activation][native_drop_bridge_stopped] elapsed_ms=1859
+[2026-05-22 12:04:28][20260522-120428-12497359][startup][boot] gdip=ok
+[2026-05-22 12:04:28][20260522-120428-12497359][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 12:04:28][20260522-120428-12497359][activation][apply_mode_begin] mode=hole
+[2026-05-22 12:04:28][20260522-120428-12497359][activation][apply_mode_hole] ok=1
+[2026-05-22 12:04:28][20260522-120428-12497359][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 12:04:28][20260522-120428-12497359][activation][native_drop_bridge_started] pid=872 elapsed_ms=47
+[2026-05-22 12:04:28][20260522-120428-12497359][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 12:04:28][20260522-120428-12497359][activation][native_drop_bridge_started] pid=7704 elapsed_ms=47
+[2026-05-22 12:04:28][20260522-120428-12497359][activation][runtime_hole_ready] elapsed_ms=110
+[2026-05-22 12:04:33][20260522-120428-12497359][activation][apply_mode_begin] mode=hole
+[2026-05-22 12:04:33][20260522-120428-12497359][activation][apply_mode_hole] ok=1
+[2026-05-22 12:04:33][20260522-120428-12497359][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 12:04:35][20260522-120428-12497359][activation][native_drop_bridge_stopped] elapsed_ms=1640
+[2026-05-22 12:04:35][20260522-120428-12497359][activation][native_drop_bridge_started] pid=15132 elapsed_ms=63
+[2026-05-22 12:04:35][20260522-120428-12497359][activation][runtime_hole_ready] elapsed_ms=1703
+[2026-05-22 12:15:35][20260522-120428-12497359][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 12:15:35][20260522-121535-13164656][startup][boot] gdip=ok
+[2026-05-22 12:15:35][20260522-121535-13164656][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 12:15:35][20260522-121535-13164656][activation][apply_mode_begin] mode=hole
+[2026-05-22 12:15:35][20260522-121535-13164656][activation][apply_mode_hole] ok=1
+[2026-05-22 12:15:35][20260522-121535-13164656][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 12:15:36][20260522-121535-13164656][activation][native_drop_bridge_started] pid=2448 elapsed_ms=94
+[2026-05-22 12:15:36][20260522-121535-13164656][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 12:15:36][20260522-121535-13164656][activation][native_drop_bridge_reused] pid=2448 elapsed_ms=0
+[2026-05-22 12:15:36][20260522-121535-13164656][activation][runtime_hole_ready] elapsed_ms=141
+[2026-05-22 12:15:40][20260522-121535-13164656][activation][apply_mode_begin] mode=hole
+[2026-05-22 12:15:40][20260522-121535-13164656][activation][apply_mode_hole] ok=1
+[2026-05-22 12:15:40][20260522-121535-13164656][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 12:15:40][20260522-121535-13164656][activation][native_drop_bridge_started] pid=16888 elapsed_ms=47
+[2026-05-22 12:15:40][20260522-121535-13164656][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 12:15:40][20260522-121535-13164656][activation][native_drop_bridge_started] pid=16788 elapsed_ms=47
+[2026-05-22 12:15:40][20260522-121535-13164656][activation][runtime_hole_ready] elapsed_ms=94
+[2026-05-22 14:01:56][20260522-121535-13164656][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:02:27][20260522-140227-19576812][startup][boot] gdip=ok
+[2026-05-22 14:02:28][20260522-140227-19576812][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 14:02:28][20260522-140227-19576812][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:02:28][20260522-140227-19576812][activation][apply_mode_hole] ok=1
+[2026-05-22 14:02:28][20260522-140227-19576812][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 14:02:28][20260522-140227-19576812][activation][native_drop_bridge_started] pid=3928 elapsed_ms=47
+[2026-05-22 14:02:28][20260522-140227-19576812][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:02:28][20260522-140227-19576812][activation][native_drop_bridge_reused] pid=3928 elapsed_ms=0
+[2026-05-22 14:02:28][20260522-140227-19576812][activation][runtime_hole_ready] elapsed_ms=78
+[2026-05-22 14:02:33][20260522-140227-19576812][activation][native_drop_bridge_started] pid=3420 elapsed_ms=31
+[2026-05-22 14:02:33][20260522-140227-19576812][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:02:33][20260522-140227-19576812][activation][apply_mode_hole] ok=1
+[2026-05-22 14:02:33][20260522-140227-19576812][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 14:02:33][20260522-140227-19576812][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:02:33][20260522-140227-19576812][activation][native_drop_bridge_reused] pid=3420 elapsed_ms=16
+[2026-05-22 14:02:33][20260522-140227-19576812][activation][runtime_hole_ready] elapsed_ms=16
+[2026-05-22 14:02:44][20260522-140227-19576812][activation][native_drop_bridge_started] pid=1476 elapsed_ms=47
+[2026-05-22 14:07:02][20260522-140227-19576812][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:09:43][20260522-140943-20012531][startup][boot] gdip=ok
+[2026-05-22 14:09:43][20260522-140943-20012531][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 14:09:43][20260522-140943-20012531][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:09:43][20260522-140943-20012531][activation][apply_mode_hole] ok=1
+[2026-05-22 14:09:43][20260522-140943-20012531][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 14:09:43][20260522-140943-20012531][activation][native_drop_bridge_started] pid=8340 elapsed_ms=47
+[2026-05-22 14:09:43][20260522-140943-20012531][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:09:43][20260522-140943-20012531][activation][native_drop_bridge_started] pid=14688 elapsed_ms=63
+[2026-05-22 14:09:43][20260522-140943-20012531][activation][runtime_hole_ready] elapsed_ms=125
+[2026-05-22 14:09:48][20260522-140943-20012531][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:09:48][20260522-140943-20012531][activation][apply_mode_hole] ok=1
+[2026-05-22 14:09:48][20260522-140943-20012531][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 14:09:49][20260522-140943-20012531][activation][native_drop_bridge_stopped] elapsed_ms=516
+[2026-05-22 14:09:49][20260522-140943-20012531][activation][native_drop_bridge_started] pid=17572 elapsed_ms=62
+[2026-05-22 14:09:49][20260522-140943-20012531][activation][runtime_hole_ready] elapsed_ms=578
+[2026-05-22 14:09:50][20260522-140943-20012531][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:09:50][20260522-140950-20019281][startup][boot] gdip=ok
+[2026-05-22 14:09:50][20260522-140950-20019281][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 14:09:50][20260522-140950-20019281][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:09:50][20260522-140950-20019281][activation][apply_mode_hole] ok=1
+[2026-05-22 14:09:50][20260522-140950-20019281][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 14:09:50][20260522-140950-20019281][activation][native_drop_bridge_started] pid=8840 elapsed_ms=47
+[2026-05-22 14:09:50][20260522-140950-20019281][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:09:50][20260522-140950-20019281][activation][native_drop_bridge_started] pid=19920 elapsed_ms=78
+[2026-05-22 14:09:50][20260522-140950-20019281][activation][runtime_hole_ready] elapsed_ms=140
+[2026-05-22 14:09:55][20260522-140950-20019281][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:09:55][20260522-140950-20019281][activation][apply_mode_hole] ok=1
+[2026-05-22 14:09:55][20260522-140950-20019281][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 14:09:55][20260522-140950-20019281][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:09:55][20260522-140950-20019281][activation][native_drop_bridge_reused] pid=19920 elapsed_ms=0
+[2026-05-22 14:09:55][20260522-140950-20019281][activation][runtime_hole_ready] elapsed_ms=0
+[2026-05-22 14:10:03][20260522-140950-20019281][activation][native_drop_bridge_started] pid=14092 elapsed_ms=47
+[2026-05-22 14:14:58][20260522-140950-20019281][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:17:59][20260522-141759-20508687][startup][boot] gdip=ok
+[2026-05-22 14:17:59][20260522-141759-20508687][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 14:17:59][20260522-141759-20508687][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:17:59][20260522-141759-20508687][activation][apply_mode_hole] ok=1
+[2026-05-22 14:17:59][20260522-141759-20508687][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 14:18:00][20260522-141759-20508687][activation][native_drop_bridge_started] pid=17472 elapsed_ms=47
+[2026-05-22 14:18:00][20260522-141759-20508687][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:18:00][20260522-141759-20508687][activation][native_drop_bridge_started] pid=7612 elapsed_ms=47
+[2026-05-22 14:18:00][20260522-141759-20508687][activation][runtime_hole_ready] elapsed_ms=125
+[2026-05-22 14:18:04][20260522-141759-20508687][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:18:04][20260522-141759-20508687][activation][apply_mode_hole] ok=1
+[2026-05-22 14:18:04][20260522-141759-20508687][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 14:18:04][20260522-141759-20508687][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:18:04][20260522-141759-20508687][activation][native_drop_bridge_reused] pid=7612 elapsed_ms=0
+[2026-05-22 14:18:04][20260522-141759-20508687][activation][runtime_hole_ready] elapsed_ms=16
+[2026-05-22 14:18:06][20260522-141759-20508687][activation][native_drop_bridge_started] pid=11620 elapsed_ms=47
+[2026-05-22 14:24:23][20260522-141759-20508687][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:25:44][20260522-142544-20973125][startup][boot] gdip=ok
+[2026-05-22 14:25:44][20260522-142544-20973125][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 14:25:44][20260522-142544-20973125][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:25:44][20260522-142544-20973125][activation][apply_mode_hole] ok=1
+[2026-05-22 14:25:44][20260522-142544-20973125][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 14:25:44][20260522-142544-20973125][activation][native_drop_bridge_started] pid=19884 elapsed_ms=47
+[2026-05-22 14:25:44][20260522-142544-20973125][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:25:44][20260522-142544-20973125][activation][native_drop_bridge_reused] pid=19884 elapsed_ms=16
+[2026-05-22 14:25:44][20260522-142544-20973125][activation][runtime_hole_ready] elapsed_ms=63
+[2026-05-22 14:25:47][20260522-142544-20973125][activation][native_drop_bridge_started] pid=13848 elapsed_ms=47
+[2026-05-22 14:25:49][20260522-142544-20973125][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:25:49][20260522-142544-20973125][activation][apply_mode_hole] ok=1
+[2026-05-22 14:25:49][20260522-142544-20973125][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 14:25:50][20260522-142544-20973125][activation][native_drop_bridge_stopped] elapsed_ms=719
+[2026-05-22 14:25:50][20260522-142544-20973125][activation][native_drop_bridge_started] pid=15924 elapsed_ms=47
+[2026-05-22 14:25:50][20260522-142544-20973125][activation][runtime_hole_ready] elapsed_ms=781
+[2026-05-22 14:30:03][20260522-142544-20973125][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:30:03][20260522-143003-21232781][startup][boot] gdip=ok
+[2026-05-22 14:30:03][20260522-143003-21232781][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 14:30:04][20260522-143003-21232781][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:30:04][20260522-143003-21232781][activation][apply_mode_hole] ok=1
+[2026-05-22 14:30:04][20260522-143003-21232781][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 14:30:04][20260522-143003-21232781][activation][native_drop_bridge_started] pid=2644 elapsed_ms=47
+[2026-05-22 14:30:04][20260522-143003-21232781][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:30:04][20260522-143003-21232781][activation][native_drop_bridge_started] pid=19552 elapsed_ms=63
+[2026-05-22 14:30:04][20260522-143003-21232781][activation][runtime_hole_ready] elapsed_ms=125
+[2026-05-22 14:30:08][20260522-143003-21232781][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:30:08][20260522-143003-21232781][activation][apply_mode_hole] ok=1
+[2026-05-22 14:30:09][20260522-143003-21232781][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 14:30:09][20260522-143003-21232781][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:30:09][20260522-143003-21232781][activation][native_drop_bridge_reused] pid=19552 elapsed_ms=0
+[2026-05-22 14:30:09][20260522-143003-21232781][activation][runtime_hole_ready] elapsed_ms=0
+[2026-05-22 14:30:11][20260522-143003-21232781][activation][native_drop_bridge_started] pid=2204 elapsed_ms=63
+[2026-05-22 14:33:30][20260522-143003-21232781][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:33:30][20260522-143330-21439468][startup][boot] gdip=ok
+[2026-05-22 14:33:30][20260522-143330-21439468][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 14:33:30][20260522-143330-21439468][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:33:30][20260522-143330-21439468][activation][apply_mode_hole] ok=1
+[2026-05-22 14:33:30][20260522-143330-21439468][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 14:33:30][20260522-143330-21439468][activation][native_drop_bridge_started] pid=3144 elapsed_ms=62
+[2026-05-22 14:33:30][20260522-143330-21439468][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:33:30][20260522-143330-21439468][activation][native_drop_bridge_started] pid=12848 elapsed_ms=47
+[2026-05-22 14:33:30][20260522-143330-21439468][activation][runtime_hole_ready] elapsed_ms=109
+[2026-05-22 14:33:35][20260522-143330-21439468][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:33:35][20260522-143330-21439468][activation][apply_mode_hole] ok=1
+[2026-05-22 14:33:35][20260522-143330-21439468][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 14:33:35][20260522-143330-21439468][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:33:35][20260522-143330-21439468][activation][native_drop_bridge_reused] pid=12848 elapsed_ms=0
+[2026-05-22 14:33:35][20260522-143330-21439468][activation][runtime_hole_ready] elapsed_ms=15
+[2026-05-22 14:33:44][20260522-143330-21439468][activation][native_drop_bridge_started] pid=8472 elapsed_ms=47
+[2026-05-22 14:36:55][20260522-143330-21439468][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:36:56][20260522-143656-21645046][startup][boot] gdip=ok
+[2026-05-22 14:36:56][20260522-143656-21645046][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 14:36:56][20260522-143656-21645046][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:36:56][20260522-143656-21645046][activation][apply_mode_hole] ok=1
+[2026-05-22 14:36:56][20260522-143656-21645046][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 14:36:56][20260522-143656-21645046][activation][native_drop_bridge_started] pid=4000 elapsed_ms=47
+[2026-05-22 14:36:56][20260522-143656-21645046][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:36:56][20260522-143656-21645046][activation][native_drop_bridge_started] pid=3528 elapsed_ms=46
+[2026-05-22 14:36:56][20260522-143656-21645046][activation][runtime_hole_ready] elapsed_ms=109
+[2026-05-22 14:37:01][20260522-143656-21645046][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:37:01][20260522-143656-21645046][activation][apply_mode_hole] ok=1
+[2026-05-22 14:37:01][20260522-143656-21645046][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 14:37:01][20260522-143656-21645046][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:37:01][20260522-143656-21645046][activation][native_drop_bridge_reused] pid=3528 elapsed_ms=16
+[2026-05-22 14:37:01][20260522-143656-21645046][activation][runtime_hole_ready] elapsed_ms=16
+[2026-05-22 14:37:11][20260522-143656-21645046][activation][native_drop_bridge_reused] pid=1060 elapsed_ms=0
+[2026-05-22 14:37:11][20260522-143656-21645046][activation][native_drop_bridge_started] pid=1060 elapsed_ms=78
+[2026-05-22 14:40:12][20260522-143656-21645046][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:40:12][20260522-144012-21841734][startup][boot] gdip=ok
+[2026-05-22 14:40:12][20260522-144012-21841734][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 14:40:12][20260522-144012-21841734][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:40:12][20260522-144012-21841734][activation][apply_mode_hole] ok=1
+[2026-05-22 14:40:12][20260522-144012-21841734][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 14:40:13][20260522-144012-21841734][activation][native_drop_bridge_started] pid=12404 elapsed_ms=47
+[2026-05-22 14:40:13][20260522-144012-21841734][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:40:13][20260522-144012-21841734][activation][native_drop_bridge_reused] pid=12404 elapsed_ms=15
+[2026-05-22 14:40:13][20260522-144012-21841734][activation][runtime_hole_ready] elapsed_ms=78
+[2026-05-22 14:40:17][20260522-144012-21841734][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:40:17][20260522-144012-21841734][activation][apply_mode_hole] ok=1
+[2026-05-22 14:40:17][20260522-144012-21841734][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 14:40:18][20260522-144012-21841734][activation][native_drop_bridge_started] pid=10400 elapsed_ms=46
+[2026-05-22 14:40:18][20260522-144012-21841734][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:40:18][20260522-144012-21841734][activation][native_drop_bridge_started] pid=11860 elapsed_ms=47
+[2026-05-22 14:40:18][20260522-144012-21841734][activation][runtime_hole_ready] elapsed_ms=93
+[2026-05-22 14:40:53][20260522-144012-21841734][ui][open_config_safe_begin] 
+[2026-05-22 14:40:53][20260522-144012-21841734][ui][open_config_recover_stale_host] 
+[2026-05-22 14:40:53][20260522-144012-21841734][ui][open_config_safe_scheduled] 
+[2026-05-22 14:40:56][20260522-144012-21841734][ui][open_config_force_release] vis=1
+[2026-05-22 14:40:57][20260522-144012-21841734][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:40:57][20260522-144012-21841734][activation][apply_mode_hole] ok=1
+[2026-05-22 14:40:57][20260522-144012-21841734][activation][runtime_deferred] mode=hole token=5
+[2026-05-22 14:40:57][20260522-144012-21841734][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:40:57][20260522-144012-21841734][activation][native_drop_bridge_reused] pid=11860 elapsed_ms=16
+[2026-05-22 14:40:57][20260522-144012-21841734][activation][runtime_hole_ready] elapsed_ms=16
+[2026-05-22 14:41:01][20260522-144012-21841734][activation][native_drop_bridge_started] pid=9868 elapsed_ms=47
+[2026-05-22 14:46:14][20260522-144012-21841734][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:46:14][20260522-144614-22203562][startup][boot] gdip=ok
+[2026-05-22 14:46:14][20260522-144614-22203562][startup][sql_batch_done] label=clipboard_startup_schema batches=1 total=13
+[2026-05-22 14:46:14][20260522-144614-22203562][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:46:14][20260522-144614-22203562][activation][apply_mode_hole] ok=1
+[2026-05-22 14:46:14][20260522-144614-22203562][activation][runtime_deferred] mode=hole token=2
+[2026-05-22 14:46:14][20260522-144614-22203562][activation][native_drop_bridge_started] pid=4500 elapsed_ms=46
+[2026-05-22 14:46:14][20260522-144614-22203562][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:46:14][20260522-144614-22203562][activation][native_drop_bridge_started] pid=13784 elapsed_ms=47
+[2026-05-22 14:46:14][20260522-144614-22203562][activation][runtime_hole_ready] elapsed_ms=109
+[2026-05-22 14:46:19][20260522-144614-22203562][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:46:19][20260522-144614-22203562][activation][apply_mode_hole] ok=1
+[2026-05-22 14:46:19][20260522-144614-22203562][activation][runtime_deferred] mode=hole token=3
+[2026-05-22 14:46:19][20260522-144614-22203562][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:46:19][20260522-144614-22203562][activation][native_drop_bridge_reused] pid=13784 elapsed_ms=0
+[2026-05-22 14:46:19][20260522-144614-22203562][activation][runtime_hole_ready] elapsed_ms=63
+[2026-05-22 14:46:21][20260522-144614-22203562][activation][native_drop_bridge_started] pid=18588 elapsed_ms=47
+[2026-05-22 14:46:49][20260522-144614-22203562][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:46:49][20260522-144614-22203562][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:47:02][20260522-144614-22203562][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:47:13][20260522-144614-22203562][activation][apply_mode_begin] mode=hole
+[2026-05-22 14:47:13][20260522-144614-22203562][activation][apply_mode_hole] ok=1
+[2026-05-22 14:47:13][20260522-144614-22203562][activation][runtime_deferred] mode=hole token=4
+[2026-05-22 14:47:13][20260522-144614-22203562][activation][native_drop_bridge_started] pid=3420 elapsed_ms=63
+[2026-05-22 14:47:13][20260522-144614-22203562][activation][native_drop_bridge_stopped] elapsed_ms=0
+[2026-05-22 14:47:13][20260522-144614-22203562][activation][native_drop_bridge_started] pid=13104 elapsed_ms=140
+[2026-05-22 14:47:13][20260522-144614-22203562][activation][runtime_hole_ready] elapsed_ms=203

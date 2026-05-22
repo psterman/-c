@@ -73,8 +73,20 @@ AHK **禁止**：`Gui.Move`、`Hide`、`DllCall("SetWindowPos")`、`WinSetTransp
 |------|------|
 | P0 | AHK 发 WS；Go IM 广播；AHK 侧 feature flag 关闭 GDHO 窗口操作 |
 | P1 | 删除 `postHost(panel_moved)`；HTML 订阅 `interaction_state` |
-| P2 | Wails 注入 `WindowController`；退役 AHK WebView 双窗 |
+| P2 | `AhkBridgeController` → WS `window_policy`；AHK `GDHO_ApplyWindowPolicyFromGo`；starry 模式 `resulting` 仅 `ShowLauncher` |
 | P3 | 删除 `GDHO_GetInteractionPhase` 等重复守卫 |
+
+## P2 window_policy（starry 启动层）
+
+| 状态 | starry | launcher | panel |
+|------|--------|----------|-------|
+| idle | hide | hide | hide |
+| weak_preview / analyzing | show_passthrough | hide | hide |
+| resulting (starry) | show_passthrough | show_topmost | hide |
+
+- Go：`POST /hole/event` → `HandleWSInbound`；`hubEmit("window_policy")`。
+- 前端：`hole_starry.html` 收 WS 后 `postMessage` → `GDHO_ApplyWindowPolicyFromGo`。
+- AHK 开关：`GDHO_P2_WINDOW_POLICY`（[`GDHO_P0Messenger.ahk`](../modules/GDHO_P0Messenger.ahk)）。
 
 ## P1 full_defer（现网）
 

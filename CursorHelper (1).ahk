@@ -2616,6 +2616,10 @@ ApplyActivationRuntimeDeferred(mode, token) {
                     GDHO_SetPanelPageUrl(localPanel)
                     GDHO_SetPanelFallbackUrl(localPanel)
                 }
+                if FileExist(A_ScriptDir . "\hole_launcher_layer.html") {
+                    if FuncExists("GDHO_SetLauncherFallbackUrl")
+                        try GDHO_SetLauncherFallbackUrl("https://app.local/hole_launcher_layer.html")
+                }
             }
         } catch {
         }
@@ -2877,8 +2881,8 @@ GDHO_LoadSettingsFromIni() {
     dd := Integer(IniRead(ConfigFile, "Appearance", "HoleDismissDistance", "320"))
     fx := Integer(IniRead(ConfigFile, "Appearance", "HoleFixedX", "360"))
     fy := Integer(IniRead(ConfigFile, "Appearance", "HoleFixedY", "260"))
-    ss := Float(IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0"))
-    al := Float(IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0"))
+    ss := CfgParseFloat(IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0"), 1.0)
+    al := CfgParseFloat(IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0"), 1.0)
     vs := StrLower(Trim(String(IniRead(ConfigFile, "Appearance", "HoleVisualStyle", "ring"))))
     if (vs != "ring" && vs != "starry")
         vs := "ring"

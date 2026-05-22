@@ -54,10 +54,12 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
+      gap: 6px;
       margin-bottom: 6px;
       cursor: move;
+      flex-wrap: nowrap;
     }
+    #manualPanelTitle { flex: 1; min-width: 0; text-align: center; }
     #manualPanelTitle { font-weight: 700; letter-spacing: 0.02em; }
     #manualCloseBtn {
       width: 28px;
@@ -170,17 +172,192 @@
       pointer-events: auto;
     }
     #panelPassthroughWrap { display: none !important; }
+    #panelRoot[data-view="manual"] #holeLauncher { display: none !important; }
+    #panelRoot[data-view="launcher"] #manualPanel { display: none !important; }
+    #holeLauncher {
+      position: relative;
+      width: min(520px, 100%);
+      max-height: calc(100vh - 24px);
+      overflow: hidden;
+      display: none;
+      flex-direction: column;
+      pointer-events: auto !important;
+      background: rgba(8, 12, 18, 0.42);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 18px;
+      padding: 14px 14px 12px;
+      backdrop-filter: blur(28px) saturate(1.35);
+      -webkit-backdrop-filter: blur(28px) saturate(1.35);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    #panelRoot[data-view="launcher"] #holeLauncher { display: flex; }
+    #launcherHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      cursor: move;
+      user-select: none;
+    }
+    #launcherTitle {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: rgba(255, 255, 255, 0.92);
+    }
+    #launcherSubtitle {
+      font-size: 11px;
+      color: rgba(200, 230, 220, 0.62);
+      margin-top: 2px;
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #launcherCloseBtn {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 120, 120, 0.5);
+      background: rgba(255, 70, 70, 0.15);
+      color: #ffd7d7;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0;
+    }
+    #launcherGrid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px 12px;
+      padding: 6px 4px 8px;
+      overflow-y: auto;
+      max-height: calc(100vh - 120px);
+    }
+    .launcher-tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: inherit;
+      outline: none;
+      transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .launcher-tile:hover { transform: scale(1.06); }
+    .launcher-tile:active { transform: scale(0.94); }
+    .launcher-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      line-height: 1;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .launcher-icon img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      pointer-events: none;
+    }
+    .launcher-icon svg {
+      width: 26px;
+      height: 26px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .launcher-label {
+      font-size: 11px;
+      line-height: 1.25;
+      text-align: center;
+      color: rgba(240, 255, 250, 0.88);
+      max-width: 72px;
+      word-break: break-all;
+    }
+    #manualBackBtn {
+      margin-right: 6px;
+      padding: 4px 8px;
+      border-radius: 7px;
+      border: 1px solid rgba(160, 255, 220, 0.35);
+      background: rgba(0, 60, 45, 0.35);
+      color: #9df7cc;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    /* 方案 B：透明窗居中叠在黑洞圆心 */
+    body.overlay-hole-mode,
+    body.overlay-hole-mode #panelRoot {
+      background: transparent !important;
+    }
+    body.overlay-hole-mode #panelRoot {
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      pointer-events: none;
+    }
+    body.overlay-hole-mode #panelBootPlaceholder { display: none !important; }
+    body.overlay-hole-mode #holeLauncher {
+      width: 420px;
+      max-height: 420px;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      padding: 6px 8px 4px;
+      pointer-events: auto !important;
+    }
+    body.overlay-hole-mode #launcherHeader {
+      margin-bottom: 4px;
+      cursor: default;
+    }
+    body.overlay-hole-mode #launcherTitle::after {
+      content: ' · B·面板';
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(120, 255, 200, 0.78);
+      letter-spacing: 0.05em;
+    }
+    body.overlay-hole-mode #launcherSubtitle {
+      font-size: 10px;
+      color: rgba(210, 240, 230, 0.55);
+    }
+    body.overlay-hole-mode .launcher-icon {
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    }
   </style>
 </head>
 <body>
   <div id="panelBootPlaceholder" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#9df7cc;font:14px/1.5 'Segoe UI','Microsoft YaHei',sans-serif;background:rgba(5,10,16,0.94);z-index:0;">
     正在加载 AI 面板…
   </div>
-  <div id="panelRoot">
+  <div id="panelRoot" data-view="launcher">
+    <section id="holeLauncher" aria-label="黑洞启动器">
+      <div id="launcherHeader">
+        <div>
+          <div id="launcherTitle">启动器</div>
+          <div id="launcherSubtitle">选择场景 · 与快捷键绑定器悬浮栏同步</div>
+        </div>
+        <button id="launcherCloseBtn" type="button" title="关闭" aria-label="关闭">×</button>
+      </div>
+      <div id="launcherGrid" role="grid"></div>
+    </section>
     <div id="manualPanel">
       <div id="manualPanelHeader">
+        <button id="manualBackBtn" type="button" title="返回启动器">‹ 启动器</button>
         <div id="manualPanelTitle">AI 黑洞手动激活</div>
-        <button id="manualCloseBtn" type="button" title="隐藏输入面板">×</button>
+        <button id="manualCloseBtn" type="button" title="关闭面板">×</button>
       </div>
       <details id="apiConfigDetails">
         <summary>API 设置</summary>
@@ -274,6 +451,29 @@
       let hostPresented = false;
       let panelLoaded = false;
       let lastInteractionVersion = 0;
+      let panelView = 'launcher';
+      let capturedPreview = '';
+
+      const LAUNCHER_ITEMS = [
+        { id: 'hole_manual', title: '黑洞手动', sceneId: 'hole_manual', cmdId: '', internal: true, emoji: '◎', gradient: 'linear-gradient(145deg,#0b4d3f,#1f8a6b)' },
+        { id: 'niuma', title: '牛马 Chat', sceneId: 'ai', cmdId: 'ch_r', emoji: '🤖', gradient: 'linear-gradient(145deg,#1a3a5c,#2d6cdf)' },
+        { id: 'search', title: '搜索中心', sceneId: 'search', cmdId: 'sc_activate_search', emoji: '🔍', gradient: 'linear-gradient(145deg,#12352a,#2d8f6a)' },
+        { id: 'clipboard', title: '剪贴板', sceneId: 'clipboard', cmdId: 'qa_clipboard', emoji: '📋', gradient: 'linear-gradient(145deg,#1e3d2f,#3cb878)' },
+        { id: 'prompts', title: '提示词', sceneId: 'prompts', cmdId: 'ch_b', emoji: '💡', gradient: 'linear-gradient(145deg,#4a3a12,#c98a1a)' },
+        { id: 'scratchpad', title: '草稿本', sceneId: 'scratchpad', cmdId: 'hub_capsule', emoji: '📝', gradient: 'linear-gradient(145deg,#3d2e14,#b86b22)' },
+        { id: 'screenshot', title: '截图', sceneId: 'screenshot', cmdId: 'ch_t', emoji: '📸', gradient: 'linear-gradient(145deg,#12384a,#2aa8c9)' },
+        { id: 'settings', title: '设置', sceneId: 'settings', cmdId: 'qa_config', emoji: '⚙️', gradient: 'linear-gradient(145deg,#2a2f38,#5c6778)' },
+        { id: 'hotkeys', title: '快捷键', sceneId: 'hotkeys', cmdId: 'sys_show_vk', emoji: '⌨️', gradient: 'linear-gradient(145deg,#4a2f14,#d97706)' },
+        { id: 'cursor', title: 'Cursor', sceneId: 'cursor', cmdId: 'cursor_open', img: 'lib/images/cursor.png', gradient: 'linear-gradient(145deg,#1a3350,#3b82f6)' },
+        { id: 'cloud', title: '牛马云', sceneId: 'cloudplayer', cmdId: 'open_cloudplayer', always: true, emoji: '☁️', gradient: 'linear-gradient(145deg,#1a2f45,#38bdf8)' }
+      ];
+
+      const launcherGrid = document.getElementById('launcherGrid');
+      const launcherHeader = document.getElementById('launcherHeader');
+      const launcherCloseBtn = document.getElementById('launcherCloseBtn');
+      const launcherSubtitle = document.getElementById('launcherSubtitle');
+      const manualBackBtn = document.getElementById('manualBackBtn');
+      const panelRootEl = document.getElementById('panelRoot');
 
       const PANEL_WS_ALLOW = {
         idle: new Set(['interaction_state', 'bridge_ready']),
@@ -307,21 +507,147 @@
         } catch (_) {}
       }
 
-      function setManualPanelVisible(visible) {
-        manualPanelVisible = !!visible;
-        if (!manualPanel) return;
-        if (!visible) {
-          manualPanel.style.display = 'none';
-          return;
+      function normalizeSceneId(v) {
+        const s = String(v || '').trim().toLowerCase();
+        return s === 'notepad' ? 'scratchpad' : s;
+      }
+
+      function setPanelView(view) {
+        panelView = view === 'manual' ? 'manual' : 'launcher';
+        if (panelRootEl) panelRootEl.dataset.view = panelView;
+        if (panelView === 'launcher') {
+          if (manualPanel) manualPanel.style.display = 'none';
+          if (holeLauncher) holeLauncher.style.display = 'flex';
+          manualPanelVisible = false;
+        } else {
+          if (holeLauncher) holeLauncher.style.display = 'none';
+          if (manualPanel) manualPanel.style.display = 'block';
+          manualPanelVisible = true;
         }
-        if (interactionState === 'idle' && !hostPresented) {
-          manualPanel.style.display = 'none';
-          return;
-        }
-        manualPanel.style.display = 'block';
         if (manualPanelMiniBtn) {
-          manualPanelMiniBtn.style.display = manualPanelVisible ? 'none' : 'block';
+          manualPanelMiniBtn.style.display = (hostPresented && panelView === 'manual' && manualPanelVisible) ? 'none' : (hostPresented ? 'block' : 'none');
         }
+      }
+
+      const holeLauncher = document.getElementById('holeLauncher');
+
+      function updateLauncherSubtitle() {
+        if (!launcherSubtitle) return;
+        const t = String(capturedPreview || '').trim();
+        launcherSubtitle.textContent = t
+          ? ('已捕获 ' + (t.length > 36 ? t.slice(0, 36) + '…' : t))
+          : '选择场景 · 与快捷键绑定器悬浮栏同步';
+      }
+
+      function buildLauncherGrid(sceneToolbarLayout) {
+        if (!launcherGrid) return;
+        launcherGrid.innerHTML = '';
+        const layout = Array.isArray(sceneToolbarLayout) ? sceneToolbarLayout : [];
+        const byScene = {};
+        layout.forEach((row) => {
+          const sid = normalizeSceneId(row && row.sceneId);
+          if (!sid) return;
+          byScene[sid] = row;
+        });
+        const tiles = [];
+        LAUNCHER_ITEMS.forEach((it, idx) => {
+          const sid = normalizeSceneId(it.sceneId);
+          const row = byScene[sid];
+          const visible = it.internal || it.always || !row || row.visible_in_bar !== false;
+          if (!visible) return;
+          const ord = row && Number.isFinite(Number(row.order_bar)) ? Number(row.order_bar) : (it.internal ? -2 : 100 + idx);
+          tiles.push({ it, ord, idx });
+        });
+        tiles.sort((a, b) => (a.ord !== b.ord ? a.ord - b.ord : a.idx - b.idx));
+        if (!tiles.length) {
+          const empty = document.createElement('div');
+          empty.style.cssText = 'grid-column:1/-1;padding:16px;text-align:center;color:rgba(200,230,220,.65);font-size:12px;';
+          empty.textContent = '请在快捷键绑定器勾选「进悬浮栏」的场景';
+          launcherGrid.appendChild(empty);
+          return;
+        }
+        tiles.forEach(({ it }) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'launcher-tile';
+          btn.setAttribute('role', 'gridcell');
+          btn.title = it.title;
+          const icon = document.createElement('div');
+          icon.className = 'launcher-icon';
+          icon.style.background = it.gradient || 'linear-gradient(145deg,#333,#555)';
+          if (it.img) {
+            const im = document.createElement('img');
+            im.src = it.img;
+            im.alt = '';
+            icon.appendChild(im);
+          } else if (it.emoji) {
+            icon.textContent = it.emoji;
+          }
+          const lab = document.createElement('span');
+          lab.className = 'launcher-label';
+          lab.textContent = it.title;
+          btn.appendChild(icon);
+          btn.appendChild(lab);
+          btn.addEventListener('click', () => {
+            if (it.internal || it.sceneId === 'hole_manual') {
+              openManualWithText(capturedPreview);
+              return;
+            }
+            postHost({
+              type: 'panel_scene_pick',
+              sceneId: it.sceneId,
+              cmdId: it.cmdId || '',
+              internal: false
+            });
+          });
+          launcherGrid.appendChild(btn);
+        });
+      }
+
+      function applyDockConfig(cfg) {
+        const layout = cfg && Array.isArray(cfg.sceneToolbarLayout) ? cfg.sceneToolbarLayout : (Array.isArray(cfg) ? cfg : []);
+        buildLauncherGrid(layout);
+      }
+
+      function showLauncher(previewText) {
+        if (previewText != null) capturedPreview = String(previewText || '');
+        ensurePanelLoaded();
+        hostPresented = true;
+        setPanelView('launcher');
+        updateLauncherSubtitle();
+        const boot = document.getElementById('panelBootPlaceholder');
+        if (boot) boot.style.display = 'none';
+        if (panelRootEl) {
+          panelRootEl.style.opacity = '';
+          panelRootEl.style.pointerEvents = '';
+        }
+        resetPanelLayout();
+      }
+
+      function openManualWithText(text) {
+        const t = String(text != null ? text : capturedPreview || '').trim();
+        ensurePanelLoaded();
+        hostPresented = true;
+        interactionState = interactionState === 'idle' ? 'resulting' : interactionState;
+        if (panelRootEl) {
+          panelRootEl.dataset.interactionState = interactionState;
+          panelRootEl.style.opacity = '';
+          panelRootEl.style.pointerEvents = '';
+        }
+        setPanelView('manual');
+        if (resultHead) resultHead.textContent = t ? '已捕获文本' : '手动激活';
+        if (resultBody) resultBody.textContent = t || '等待输入后发送...';
+        if (manualPromptInput) manualPromptInput.value = t;
+        setTimeout(() => focusPromptInput(false), 0);
+      }
+
+      function setManualPanelVisible(visible) {
+        if (visible) {
+          setPanelView('manual');
+          return;
+        }
+        if (panelView === 'manual') setPanelView('launcher');
+        else manualPanelVisible = false;
       }
 
       function applyInteractionState(msg) {
@@ -363,8 +689,9 @@
         if (st === 'resulting' || st === 'dragging') {
           ensurePanelLoaded();
           hostPresented = true;
-          setManualPanelVisible(true);
-          try { window.HolePanel?.onHostShow?.(); } catch (_) {}
+          try { window.HolePanel?.onHostShowLauncher?.(capturedPreview); } catch (_) {
+            setPanelView('launcher');
+          }
         }
       }
 
@@ -564,35 +891,46 @@
 
       window.HolePanel = {
         ensurePanelLoaded: () => ensurePanelLoaded(),
-        onHostShow: () => {
-          ensurePanelLoaded();
-          hostPresented = true;
+        showLauncher: (preview) => showLauncher(preview),
+        onHostShowLauncher: (preview) => {
+          document.body.classList.remove('overlay-hole-mode');
+          capturedPreview = String(preview != null ? preview : capturedPreview || '');
           interactionState = 'resulting';
-          const boot = document.getElementById('panelBootPlaceholder');
-          if (boot) boot.style.display = 'none';
-          const root = document.getElementById('panelRoot');
-          if (root) {
-            root.dataset.interactionState = 'resulting';
-            root.style.opacity = '';
-            root.style.pointerEvents = '';
-          }
-          setManualPanelVisible(true);
-          resetPanelLayout();
-          setTimeout(() => focusPromptInput(false), 0);
+          if (panelRootEl) panelRootEl.dataset.interactionState = 'resulting';
+          showLauncher(capturedPreview);
         },
+        onHostShowLauncherOverlay: (preview) => {
+          capturedPreview = String(preview != null ? preview : capturedPreview || '');
+          interactionState = 'resulting';
+          if (panelRootEl) panelRootEl.dataset.interactionState = 'resulting';
+          document.body.classList.add('overlay-hole-mode');
+          if (panelRootEl) {
+            panelRootEl.style.alignItems = 'center';
+            panelRootEl.style.justifyContent = 'center';
+            panelRootEl.style.padding = '0';
+          }
+          showLauncher(capturedPreview);
+        },
+        onHostShowCurrent: () => {
+          if (panelView === 'manual') openManualWithText(capturedPreview);
+          else showLauncher(capturedPreview);
+        },
+        onHostShow: () => showLauncher(capturedPreview),
+        openManualWithText: (text) => openManualWithText(text),
+        applyDockConfig: (cfg) => applyDockConfig(cfg),
         onHostHide: () => {
           hostPresented = false;
-          const root = document.getElementById('panelRoot');
-          if (root) {
-            root.dataset.interactionState = 'idle';
-            root.style.opacity = '0';
-            root.style.pointerEvents = 'none';
+          if (panelRootEl) {
+            panelRootEl.dataset.interactionState = 'idle';
+            panelRootEl.style.opacity = '0';
+            panelRootEl.style.pointerEvents = 'none';
           }
-          setManualPanelVisible(false);
+          setPanelView('launcher');
         },
         resetPanelLayout: () => resetPanelLayout(),
         syncDragHostAnchor: (x, y) => syncDragHostAnchorFromHost(x, y),
         setManualPanelVisible: (v) => setManualPanelVisible(v),
+        getView: () => panelView,
         focusPrompt: (selectAll) => focusPromptInput(!!selectAll),
         setStreamHud: (text, show) => {
           if (!streamHud) return;
@@ -605,21 +943,8 @@
           if (manualPromptInput && body != null) manualPromptInput.value = String(body);
         },
         setCapturedText: (text) => {
-          ensurePanelLoaded();
-          const t = String(text || '');
-          hostPresented = true;
-          interactionState = 'resulting';
-          const root = document.getElementById('panelRoot');
-          if (root) {
-            root.dataset.interactionState = 'resulting';
-            root.style.opacity = '';
-            root.style.pointerEvents = '';
-          }
-          if (resultHead) resultHead.textContent = '已捕获文本';
-          if (resultBody) resultBody.textContent = t;
-          if (manualPromptInput) manualPromptInput.value = t;
-          setManualPanelVisible(true);
-          setTimeout(() => focusPromptInput(false), 0);
+          capturedPreview = String(text || '');
+          openManualWithText(capturedPreview);
         },
         notifyStreamStart: () => {
           postHost({ type: 'panel_stream_start' });
@@ -771,6 +1096,27 @@
         if (Number.isFinite(oy)) dragHostOriginY = oy;
       }
 
+      if (launcherHeader && holeLauncher) {
+        launcherHeader.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+          const t = e.target;
+          if (t && t.closest && t.closest('button, input, select, textarea, label, a')) return;
+          const rect = holeLauncher.getBoundingClientRect();
+          manualPanelDragging = true;
+          manualPanelDragMoved = false;
+          manualDragOffsetX = e.clientX - rect.left;
+          manualDragOffsetY = e.clientY - rect.top;
+          dragPointerScreenX = e.screenX;
+          dragPointerScreenY = e.screenY;
+          const winX = (window.screenLeft != null) ? window.screenLeft : (window.screenX || 0);
+          const winY = (window.screenTop != null) ? window.screenTop : (window.screenY || 0);
+          dragHostOriginX = winX;
+          dragHostOriginY = winY;
+          try { postHost({ type: 'panel_drag_start', screenX: dragHostOriginX, screenY: dragHostOriginY }); } catch (_) {}
+          e.preventDefault();
+        });
+      }
+
       if (manualPanelHeader && manualPanel) {
         manualPanelHeader.addEventListener('mousedown', (e) => {
           if (e.button !== 0) return;
@@ -829,6 +1175,12 @@
         });
       }
 
+      if (manualBackBtn) {
+        manualBackBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          showLauncher(capturedPreview);
+        });
+      }
       if (manualCloseBtn) {
         manualCloseBtn.addEventListener('click', (e) => {
           if (manualPanelDragMoved) {
@@ -837,21 +1189,32 @@
             return;
           }
           e.preventDefault();
-          setManualPanelVisible(false);
+          if (panelView === 'manual') {
+            showLauncher(capturedPreview);
+            return;
+          }
           postHost({ type: 'hole_close', reason: 'panel_close_btn' });
         });
       }
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && manualPanelVisible) {
+      if (launcherCloseBtn) {
+        launcherCloseBtn.addEventListener('click', (e) => {
           e.preventDefault();
-          e.stopPropagation();
-          setManualPanelVisible(false);
-          postHost({ type: 'hole_close', reason: 'panel_escape' });
+          postHost({ type: 'hole_close', reason: 'launcher_close_btn' });
+        });
+      }
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || !hostPresented) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (panelView === 'manual') {
+          showLauncher(capturedPreview);
+          return;
         }
+        postHost({ type: 'hole_close', reason: 'panel_escape' });
       });
       if (manualPanelMiniBtn) {
         manualPanelMiniBtn.addEventListener('click', () => {
-          setManualPanelVisible(true);
+          showLauncher(capturedPreview);
           postHost({ type: 'panel_show_request' });
         });
       }
@@ -897,23 +1260,28 @@
         el.addEventListener('blur', saveManualConfig);
       });
 
-      setManualPanelVisible(false);
-      const panelRootEl = document.getElementById('panelRoot');
+      setPanelView('launcher');
       if (panelRootEl) {
         panelRootEl.dataset.interactionState = 'idle';
         panelRootEl.style.opacity = '0';
         panelRootEl.style.pointerEvents = 'none';
       }
+      buildLauncherGrid([]);
       try {
         window.chrome?.webview?.addEventListener?.('message', (ev) => {
           const raw = ev?.data;
           if (!raw) return;
           let msg;
           try { msg = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (_) { return; }
-          if (String(msg?.type || '') === 'host_present') {
+          const typ = String(msg?.type || '');
+          if (typ === 'host_present') {
+            const preview = msg.text != null ? String(msg.text) : '';
             window.HolePanel?.ensurePanelLoaded?.();
-            window.HolePanel?.onHostShow?.();
-            if (msg.text != null) window.HolePanel?.setCapturedText?.(String(msg.text));
+            window.HolePanel?.onHostShowLauncher?.(preview);
+            return;
+          }
+          if (typ === 'nmDockConfig' && Array.isArray(msg.sceneToolbarLayout)) {
+            window.HolePanel?.applyDockConfig?.(msg);
           }
         });
       } catch (_) {}

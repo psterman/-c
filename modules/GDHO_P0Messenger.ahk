@@ -4,8 +4,15 @@
 ; 见 docs/INTERACTION_MANAGER.md
 
 global GDHO_P0_READONLY := true
+global GDHO_P2_WINDOW_POLICY := true
 global GDHO_P0_WS_EVENT_URL := "http://127.0.0.1:18790/hole/event"
 global g_GDHO_P0_LastHttpFailTick := 0
+global g_GDHO_P2_LastPolicyTick := 0
+
+GDHO_P2_IsEnabled() {
+    global GDHO_P2_WINDOW_POLICY
+    return !!GDHO_P2_WINDOW_POLICY
+}
 
 GDHO_P0_IsReadonly() {
     global GDHO_P0_READONLY

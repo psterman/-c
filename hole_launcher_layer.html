@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hole Launcher Layer</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      user-select: none;
+      pointer-events: auto;
+    }
+    #holeSceneLauncher {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      opacity: 1;
+      transform: scale(1);
+      transition: none;
+    }
+    #holeSceneLauncher.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .hole-scene-badge {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font: 600 10px/1 "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: rgba(120, 255, 200, 0.8);
+      letter-spacing: 0.06em;
+      pointer-events: none;
+    }
+    .hole-scene-sub {
+      text-align: center;
+      font: 500 11px/1.3 "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: rgba(220, 245, 255, 0.72);
+      margin-bottom: 8px;
+      min-height: 14px;
+      pointer-events: none;
+    }
+    .hole-scene-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px 8px;
+      padding: 6px 12px 10px;
+      max-width: 360px;
+      width: 100%;
+      margin: 0 auto;
+      justify-items: center;
+      pointer-events: auto;
+    }
+    .hole-scene-tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      padding: 0;
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto !important;
+      touch-action: manipulation;
+      animation: sceneTilePop 0.14s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes sceneTilePop {
+      from { opacity: 0.35; transform: scale(0.88); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .hole-scene-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      pointer-events: auto;
+    }
+    .hole-scene-icon img { width: 26px; height: 26px; object-fit: contain; }
+    .hole-scene-label {
+      font: 500 10px/1.2 "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: rgba(245, 255, 252, 0.9);
+      text-align: center;
+      max-width: 72px;
+      pointer-events: none;
+    }
+    .hole-scene-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: rgba(200, 230, 220, 0.65);
+      font-size: 12px;
+      padding: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="holeSceneLauncher" aria-label="场景启动器">
+    <div class="hole-scene-sub">选择场景</div>
+  </div>
+  <script src="https://app.local/assets/hole-scene-launcher.js"></script>
+  <script>
+    (function () {
+      var sceneLauncherApi = null;
+      function postHost(payload) {
+        try {
+          var wv = window.chrome && window.chrome.webview;
+          if (!wv || !wv.postMessage) return;
+          var body = typeof payload === 'string' ? payload : JSON.stringify(Object.assign({ windowRole: 'launcher' }, payload));
+          wv.postMessage(body);
+        } catch (_) {}
+      }
+      function ensureApi() {
+        if (sceneLauncherApi) return sceneLauncherApi;
+        var host = document.getElementById('holeSceneLauncher');
+        if (!host || !window.HoleSceneLauncher) return null;
+        sceneLauncherApi = window.HoleSceneLauncher.mount({
+          host: host,
+          post: postHost,
+          badge: 'A·启动层'
+        });
+        return sceneLauncherApi;
+      }
+      window.HoleLauncherLayer = {
+        applyConfig: function (cfg) {
+          var api = ensureApi();
+          if (!api) return;
+          var layout = cfg && cfg.sceneToolbarLayout ? cfg.sceneToolbarLayout : cfg;
+          api.buildGrid(layout);
+        },
+        show: function (preview) {
+          var api = ensureApi();
+          if (!api) return;
+          if (!document.querySelector('#holeSceneLauncher .hole-scene-grid') ||
+              !document.querySelector('#holeSceneLauncher .hole-scene-grid').children.length) {
+            api.buildGrid([]);
+          }
+          if (preview != null) api.setPreview(preview);
+          api.show();
+        },
+        hide: function () {
+          if (sceneLauncherApi) sceneLauncherApi.hide();
+          var host = document.getElementById('holeSceneLauncher');
+          if (host) host.classList.remove('visible');
+        }
+      };
+      try {
+        var wv = window.chrome && window.chrome.webview;
+        if (wv && wv.addEventListener) {
+          wv.addEventListener('message', function (ev) {
+            try {
+              var raw = ev && (ev.data != null ? ev.data : ev);
+              var msg = typeof raw === 'string' ? JSON.parse(raw) : raw;
+              if (msg && msg.type === 'launcher_show') {
+                window.HoleLauncherLayer.show();
+              } else if (msg && msg.type === 'launcher_hide') {
+                window.HoleLauncherLayer.hide();
+              }
+            } catch (_) {}
+          });
+        }
+      } catch (_) {}
+    })();
+  </script>
+</body>
+</html>

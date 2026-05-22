@@ -4,6 +4,8 @@ package main
 
 import (
 	"encoding/json"
+	"io"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -39,9 +41,32 @@ func (h *wsHub) start(addr string) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/hole", h.handleWS)
+	mux.HandleFunc("/hole/event", handleHoleEventHTTP)
 	go func() {
 		_ = http.ListenAndServe(addr, mux)
 	}()
+}
+
+func handleHoleEventHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if globalInteraction == nil {
+		initInteractionManager(readLauncherModeFromINI())
+	}
+	if err := globalInteraction.HandleWSInbound(body); err != nil {
+		log.Printf("[FSM] hole/event error: %v body=%s", err, string(body))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`{"ok":true}`))
 }
 
 func (h *wsHub) handleWS(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +87,9 @@ func (h *wsHub) handleWS(w http.ResponseWriter, r *http.Request) {
 		"type": "bridge_ready",
 		"at":   time.Now().Format(time.RFC3339),
 	})
+	if globalInteraction != nil {
+		globalInteraction.ReplayState()
+	}
 	for {
 		_, body, err := conn.ReadMessage()
 		if err != nil {

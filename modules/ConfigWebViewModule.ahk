@@ -780,8 +780,8 @@ ConfigWebView_BuildInitData() {
         "holeDismissDistance", Integer(IniRead(ConfigFile, "Appearance", "HoleDismissDistance", "320")),
         "holeFixedX", Integer(IniRead(ConfigFile, "Appearance", "HoleFixedX", "360")),
         "holeFixedY", Integer(IniRead(ConfigFile, "Appearance", "HoleFixedY", "260")),
-        "holeSizeScale", Float(IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0")),
-        "holeAnimLevel", Float(IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0")),
+        "holeSizeScale", CfgParseFloat(IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0"), 1.0),
+        "holeAnimLevel", CfgParseFloat(IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0"), 1.0),
         "holeVisualStyle", IniRead(ConfigFile, "Appearance", "HoleVisualStyle", "ring"),
         "holeHideDockEnabled", (IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1"),
         "holeHideDockEdge", IniRead(ConfigFile, "Appearance", "HoleHideDockEdge", "right"),
@@ -969,7 +969,7 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
             errorMsg := "Cursor Path 涓嶈兘涓虹┖"
             return false
         }
-        NewHold := Float(payload.Get("capslockHoldTimeSeconds", 0.5))
+        NewHold := CfgParseFloat(payload.Get("capslockHoldTimeSeconds", 0.5), 0.5)
         if (NewHold < 0.1 || NewHold > 5.0) {
             errorMsg := "CapsLock Hold Time 瓒呭嚭鑼冨洿"
             return false
@@ -1031,7 +1031,7 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         NewAiSleepTime := Integer(payload.Get("aiSleepTime", 200))
         if (NewAiSleepTime < 50)
             NewAiSleepTime := 50
-        NewLaunchDelay := Float(payload.Get("launchDelaySeconds", 3.0))
+        NewLaunchDelay := CfgParseFloat(payload.Get("launchDelaySeconds", 3.0), 3.0)
         if (NewLaunchDelay < 0.5)
             NewLaunchDelay := 0.5
         if (NewLaunchDelay > 10.0)
@@ -1175,12 +1175,12 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
             NewHoleDismissDistance := 1600
         NewHoleFixedX := Integer(payload.Get("holeFixedX", IniRead(ConfigFile, "Appearance", "HoleFixedX", "360")))
         NewHoleFixedY := Integer(payload.Get("holeFixedY", IniRead(ConfigFile, "Appearance", "HoleFixedY", "260")))
-        NewHoleSizeScale := Float(payload.Get("holeSizeScale", IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0")))
+        NewHoleSizeScale := CfgParseFloat(payload.Get("holeSizeScale", IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0")), 1.0)
         if (NewHoleSizeScale < 0.6)
             NewHoleSizeScale := 0.6
         if (NewHoleSizeScale > 1.8)
             NewHoleSizeScale := 1.8
-        NewHoleAnimLevel := Float(payload.Get("holeAnimLevel", IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0")))
+        NewHoleAnimLevel := CfgParseFloat(payload.Get("holeAnimLevel", IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0")), 1.0)
         if (NewHoleAnimLevel < 0.4)
             NewHoleAnimLevel := 0.4
         if (NewHoleAnimLevel > 2.2)
@@ -1439,12 +1439,12 @@ ConfigWebView_SaveHoleOnly(payload, &errorMsg := "") {
             NewHoleDismissDistance := 1600
         NewHoleFixedX := Integer(payload.Get("holeFixedX", IniRead(ConfigFile, "Appearance", "HoleFixedX", "360")))
         NewHoleFixedY := Integer(payload.Get("holeFixedY", IniRead(ConfigFile, "Appearance", "HoleFixedY", "260")))
-        NewHoleSizeScale := Float(payload.Get("holeSizeScale", IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0")))
+        NewHoleSizeScale := CfgParseFloat(payload.Get("holeSizeScale", IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0")), 1.0)
         if (NewHoleSizeScale < 0.6)
             NewHoleSizeScale := 0.6
         if (NewHoleSizeScale > 1.8)
             NewHoleSizeScale := 1.8
-        NewHoleAnimLevel := Float(payload.Get("holeAnimLevel", IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0")))
+        NewHoleAnimLevel := CfgParseFloat(payload.Get("holeAnimLevel", IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0")), 1.0)
         if (NewHoleAnimLevel < 0.4)
             NewHoleAnimLevel := 0.4
         if (NewHoleAnimLevel > 2.2)

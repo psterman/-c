@@ -1,4 +1,4 @@
-﻿; ======================================================================================================================
+; ======================================================================================================================
 ; 閹剚璇炲銉ュ徔閺?- WebView2 閸忋劑鍣洪柌宥嗙€悧?; 閻楀牊婀? 2.0.0
 ; 閸旂喕鍏?
 ;   - 閺佸瓨娼銉ュ徔閺嶅繒鏁遍崡鏇氶嚋 WebView2 濞撳弶鐓嬮敍宀€绮烘稉鈧挧娑樺触缂?濮楁瑩鍘ら懝?;   - 瀹革箓鏁幏鏍уЗ閺佸鐛ラ妴浣圭泊鏉烆喚缂夐弨淇扁偓浣稿礁闁款喛褰嶉崡?;   - 7 娑擃亜濮涢懗鑺ュ瘻闁筋噯绱伴幖婊呭偍閵嗕浇顔囪ぐ鏇樷偓浣瑰絹缁€楦跨槤閵嗕焦鏌婇幓鎰仛鐠囧秲鈧焦鍩呴崶淇扁偓浣筋啎缂冾喓鈧線鏁惄?;   - 閹兼粎鍌ㄩ幐澶愭尦閺€顖涘瘮闁灏幇鐔风安閸涚厧鎯涢崝銊ф暰閸滃本瀚嬮弨鐐偝缁?; ======================================================================================================================
@@ -3092,7 +3092,7 @@ FloatingToolbarLoadScale() {
         ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
         savedScale := IniRead(ConfigFile, "FloatingToolbar", "Scale", "1.0")
         if (savedScale != "" && savedScale != "ERROR") {
-            scaleValue := Float(savedScale)
+            scaleValue := IsSet(CfgParseFloat) ? CfgParseFloat(savedScale, 1.0) : Number(savedScale)
             if (scaleValue >= FloatingToolbarMinScale && scaleValue <= FloatingToolbarMaxScale)
                 FloatingToolbarScale := scaleValue
         }

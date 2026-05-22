@@ -225,6 +225,13 @@ NativeDrop_PointInRect(x, y, rx, ry, rw, rh, pad := 0) {
 
 NativeDrop_SetHoleSolid(isSolid := false, requestFocus := false) {
     global GDHO_GUI, g_HoleIsSolidState, GDHO_MANUAL_PANEL_MODE
+    if FuncExists("GDHO_IsLauncherLayerActive") {
+        try {
+            if GDHO_IsLauncherLayerActive()
+                return
+        } catch {
+        }
+    }
     if (FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled()) {
         if isSolid {
             if FuncExists("GDHO_ShowPanel") {

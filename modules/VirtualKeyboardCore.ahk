@@ -3701,6 +3701,66 @@ _VK_SendDockConfig() {
     try WebView_QueuePayload(g_VK_WV2, Map("type", "nmDockConfig", "sceneToolbarLayout", arr))
 }
 
+VK_GetSceneToolbarLayoutArray() {
+    arr := []
+    try {
+        if IsSet(_LoadCommands)
+            _LoadCommands()
+        global g_Commands
+        if (g_Commands is Map && g_Commands.Has("SceneToolbarLayout") && g_Commands["SceneToolbarLayout"] is Array) {
+            for row in g_Commands["SceneToolbarLayout"] {
+                if !(row is Map) || !row.Has("sceneId")
+                    continue
+                sid := Trim(String(row["sceneId"]))
+                if (sid = "")
+                    continue
+                arr.Push(Map(
+                    "sceneId", sid,
+                    "visible_in_bar", row.Has("visible_in_bar") ? (row["visible_in_bar"] ? true : false) : true,
+                    "order_bar", row.Has("order_bar") ? Integer(row["order_bar"]) : -1
+                ))
+            }
+        }
+    } catch {
+    }
+    return arr
+}
+
+VK_ExecuteDockCmd(cmdId) {
+    cmdId := Trim(String(cmdId))
+    if (cmdId = "")
+        return false
+    if (cmdId = "open_cloudplayer") {
+        try ShowCloudPlayer()
+        return true
+    }
+    if FuncExists("VK_Execute") {
+        try {
+            if VK_Execute(cmdId)
+                return true
+        } catch {
+        }
+    }
+    if FuncExists("SC_ExecuteContextCommand") {
+        m0 := Map(
+            "Title", "hole_panel",
+            "Content", "",
+            "DataType", "text",
+            "OriginalDataType", "text",
+            "Source", "hole_launcher",
+            "ClipboardId", 0,
+            "PromptMergedIndex", 0,
+            "HubSegIndex", -1
+        )
+        try {
+            SC_ExecuteContextCommand(cmdId, 0, m0)
+            return true
+        } catch {
+        }
+    }
+    return false
+}
+
 _OnWebMessage(sender, args) {
     global g_VK_Ready, g_PendingConflict, g_UseScanCode, g_Commands
 

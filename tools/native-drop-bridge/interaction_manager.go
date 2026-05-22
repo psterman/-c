@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 )
@@ -21,14 +22,20 @@ const (
 	StateDragging    InteractionState = "dragging"
 )
 
-// WindowController is injected by Wails (runtime.Window*) on the main thread.
-// AHK phase: leave nil and only consume WS interaction_state until P2 migration.
+// WindowController drives physical HWND policy (P2: AhkBridgeController → window_policy WS).
 type WindowController interface {
 	ShowHole()
 	HideHole()
+	ShowLauncher()
+	HideLauncher()
 	ShowPanel()
 	HidePanel()
 	MoveTo(x, y int)
+}
+
+type policyContext interface {
+	WindowController
+	SetContextState(InteractionState)
 }
 
 // InteractionManager serializes all hole/panel transitions and broadcasts to WS clients.
@@ -43,20 +50,26 @@ type InteractionManager struct {
 	anchorX      int
 	anchorY      int
 
-	controller WindowController
+	controller   WindowController
+	launcherMode   string
 
 	onAnalyzing func(text string) error
 }
 
-func NewInteractionManager(ctx context.Context, controller WindowController) *InteractionManager {
+func NewInteractionManager(ctx context.Context, controller WindowController, launcherMode string) *InteractionManager {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	return &InteractionManager{
 		ctx:          ctx,
-		state: StateIdle,
+		state:        StateIdle,
 		controller:   controller,
+		launcherMode: normalizeLauncherMode(launcherMode),
 	}
+}
+
+func (im *InteractionManager) isStarryLauncherMode() bool {
+	return im.launcherMode == "starry" || im.launcherMode == "both"
 }
 
 func (im *InteractionManager) SetAnalyzingHandler(fn func(text string) error) {
@@ -133,25 +146,50 @@ func (im *InteractionManager) applyWindowPolicy(prev, next InteractionState) {
 	if c == nil {
 		return
 	}
+	if pc, ok := c.(policyContext); ok {
+		pc.SetContextState(next)
+	}
+	starryMode := im.isStarryLauncherMode()
 	switch next {
 	case StateIdle:
+		c.HideLauncher()
 		c.HidePanel()
 		c.HideHole()
 	case StateWeakPreview:
 		c.HidePanel()
+		c.HideLauncher()
 		c.ShowHole()
 		if im.anchorX != 0 || im.anchorY != 0 {
 			c.MoveTo(im.anchorX, im.anchorY)
 		}
 	case StateAnalyzing:
+		c.HidePanel()
+		c.HideLauncher()
 		c.ShowHole()
-		// panel after stream / expand_complete → Resulting
 	case StateResulting:
-		c.HideHole()
-		c.ShowPanel()
+		if starryMode {
+			if bc, ok := c.(*AhkBridgeController); ok {
+				bc.emitResultingStarry(im.anchorX, im.anchorY)
+			} else {
+				c.ShowHole()
+				c.ShowLauncher()
+				c.HidePanel()
+			}
+		} else {
+			c.HideLauncher()
+			c.HideHole()
+			c.ShowPanel()
+		}
 	case StateDragging:
-		c.HideHole()
-		c.ShowPanel()
+		if starryMode {
+			c.ShowHole()
+			c.HideLauncher()
+			c.ShowPanel()
+		} else {
+			c.HideHole()
+			c.HideLauncher()
+			c.ShowPanel()
+		}
 	default:
 		_ = prev
 	}
@@ -177,10 +215,17 @@ func (im *InteractionManager) ReplayState() {
 		"anchorX": ax,
 		"anchorY": ay,
 	})
+	if globalInteraction != nil && globalInteraction.controller != nil {
+		if bc, ok := globalInteraction.controller.(*AhkBridgeController); ok {
+			bc.SetContextState(st)
+			bc.ReplayLastPolicy()
+		}
+	}
 }
 
 // BroadcastState pushes interaction_state to all WS clients (panel.html / hole_starry passive UI).
 func (im *InteractionManager) BroadcastState(prev InteractionState, reason string) {
+	log.Printf("[FSM] BroadcastState: state=%s prev=%s reason=%s ver=%d", im.state, prev, reason, im.version)
 	hubEmit("interaction_state", map[string]any{
 		"prev":    string(prev),
 		"state":   string(im.state),
@@ -352,11 +397,12 @@ func (im *InteractionManager) getState() InteractionState {
 
 var globalInteraction *InteractionManager
 
-func initInteractionManager() {
+func initInteractionManager(launcherMode string) {
 	if globalInteraction != nil {
 		return
 	}
-	globalInteraction = NewInteractionManager(context.Background(), nil)
+	ctrl := NewAhkBridgeController(launcherMode)
+	globalInteraction = NewInteractionManager(context.Background(), ctrl, launcherMode)
 	globalInteraction.SetAnalyzingHandler(func(text string) error {
 		reqID := globalPipeline.beginManual(text, llmConfig{})
 		if reqID == 0 {
@@ -364,4 +410,11 @@ func initInteractionManager() {
 		}
 		return nil
 	})
+}
+
+func notifyStreamDone() {
+	if globalInteraction == nil {
+		return
+	}
+	_ = globalInteraction.OnAnalyzeComplete()
 }
