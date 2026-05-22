@@ -13,6 +13,11 @@ HoleActivation_IsGestureGraceActive() {
     return (g_HoleAct_GestureGraceUntil > A_TickCount)
 }
 
+HoleActivation_ClearGestureGrace() {
+    global g_HoleAct_GestureGraceUntil
+    g_HoleAct_GestureGraceUntil := 0
+}
+
 HoleActivation_NormalizeSource(source, reason := "") {
     s := StrLower(Trim(String(source)))
     r := StrLower(Trim(String(reason)))

@@ -31,8 +31,9 @@ global g_HoleTrig_FreePts := []
 global g_HoleTrig_FreeLastMoveTick := 0
 global g_HoleTrig_FreeCooldownUntil := 0
 global g_HoleTrig_FreePendingMove := false
-global g_HoleTrig_FreeIdleMs := 300
-global g_HoleTrig_FreeCooldownMs := 900
+global g_HoleTrig_FreeIdleMs := 130
+global g_HoleTrig_FreeCooldownMs := 420
+global g_HoleTrig_RButtonWatch := false
 
 HoleTriggers_DiagLog(msg) {
     global g_HoleTrig_DiagPath
@@ -145,6 +146,18 @@ HoleTriggers_AnyGestureEnabled() {
 HoleTriggers_AnyMouseButtonPressed() {
     return GetKeyState("LButton", "P") || GetKeyState("RButton", "P") || GetKeyState("MButton", "P")
         || GetKeyState("XButton1", "P") || GetKeyState("XButton2", "P")
+}
+
+; 空手画圈：仅左键按下视为「在拖拽/点击」；已画出一截轨迹时不因瞬时左键态误清空
+HoleTriggers_FreeCircleMouseBlocked() {
+    if !GetKeyState("LButton", "P")
+        return false
+    global g_HoleTrig_FreePts
+    if !(g_HoleTrig_FreePts is Array) || g_HoleTrig_FreePts.Length < 10
+        return true
+    pathLen := HoleTriggers_ComputePathLength(g_HoleTrig_FreePts)
+    minR := HoleTriggers_GetScaledCircleMinRadius()
+    return (pathLen < minR * 1.2)
 }
 
 HoleTriggers_IniBool(iniPath, section, key, default := "0") {
@@ -300,6 +313,40 @@ HoleTriggers_DeferredFreeCircleMove(*) {
     HoleTriggers_FreeCircle_OnMove(mx, my)
 }
 
+HoleTriggers_IsFreeCircleReason(reason := "") {
+    r := StrLower(Trim(String(reason)))
+    return (InStr(r, "free_circle") || r = "circle_cw" || r = "circle_ccw")
+}
+
+HoleTriggers_IsHoldReason(reason := "") {
+    r := StrLower(Trim(String(reason)))
+    return (InStr(r, "rbutton_hold") || InStr(r, "hold_early"))
+}
+
+HoleTriggers_FreeCircleInProgress() {
+    global g_HoleTrig_FreePts
+    return (g_HoleTrig_FreePts is Array && g_HoleTrig_FreePts.Length >= 3)
+}
+
+HoleTriggers_FreeCircle_ScheduleFinalize() {
+    global g_HoleTrig_FreePts, g_HoleTrig_FreeIdleMs
+    idle := Integer(g_HoleTrig_FreeIdleMs)
+    if (g_HoleTrig_FreePts is Array && g_HoleTrig_FreePts.Length >= 10) {
+        pathLen := HoleTriggers_ComputePathLength(g_HoleTrig_FreePts)
+        minR := HoleTriggers_GetScaledCircleMinRadius()
+        if (pathLen >= minR * 3.0) {
+            first := g_HoleTrig_FreePts[1]
+            last := g_HoleTrig_FreePts[g_HoleTrig_FreePts.Length]
+            closure := Sqrt((last.x - first.x) ** 2 + (last.y - first.y) ** 2)
+            if (closure <= Max(minR * 1.6, pathLen * 0.16))
+                idle := Max(85, Floor(idle * 0.55))
+        }
+    }
+    try SetTimer(HoleTriggers_FreeCircleFinalize, -idle)
+    catch {
+    }
+}
+
 HoleTriggers_FreeCircle_Reset(reason := "") {
     global g_HoleTrig_FreePts, g_HoleTrig_FreeLastMoveTick
     g_HoleTrig_FreePts := []
@@ -317,8 +364,8 @@ HoleTriggers_FreeCircle_OnMove(mx, my) {
         return
     if (A_TickCount < g_HoleTrig_FreeCooldownUntil)
         return
-    if g_HoleTrig_GestureActive || HoleTriggers_AnyMouseButtonPressed() {
-        HoleTriggers_FreeCircle_Reset("button_or_rdrag")
+    if HoleTriggers_FreeCircleMouseBlocked() {
+        HoleTriggers_FreeCircle_Reset("button_or_ldrag")
         return
     }
     if HoleTriggers_ShouldIgnoreGestureAtPoint(mx, my) {
@@ -329,19 +376,21 @@ HoleTriggers_FreeCircle_OnMove(mx, my) {
     if (g_HoleTrig_FreePts.Length = 0) {
         g_HoleTrig_FreePts.Push({ x: ix, y: iy })
         g_HoleTrig_FreeLastMoveTick := A_TickCount
-        try SetTimer(HoleTriggers_FreeCircleFinalize, -Integer(g_HoleTrig_FreeIdleMs))
+        HoleTriggers_FreeCircle_ScheduleFinalize()
         return
     }
-    if HoleTriggers_AppendPointTo(g_HoleTrig_FreePts, ix, iy, 2)
+    if HoleTriggers_AppendPointTo(g_HoleTrig_FreePts, ix, iy, 1)
         g_HoleTrig_FreeLastMoveTick := A_TickCount
-    try SetTimer(HoleTriggers_FreeCircleFinalize, -Integer(g_HoleTrig_FreeIdleMs))
+    if (g_HoleTrig_FreePts.Length > 240)
+        g_HoleTrig_FreePts := HoleTriggers_SubsamplePts(g_HoleTrig_FreePts, 120)
+    HoleTriggers_FreeCircle_ScheduleFinalize()
 }
 
 HoleTriggers_FreeCircleFinalize(*) {
     global g_HoleTrig_FreePts, g_HoleTrig_FreeCooldownUntil, g_HoleTrig_FreeCooldownMs, g_HoleTrig_GestureActive
     if !HoleTriggers_AnyCircleEnabled() || !HoleTriggers_IsHoleModeActive()
         return HoleTriggers_FreeCircle_Reset("inactive")
-    if HoleTriggers_AnyMouseButtonPressed() || g_HoleTrig_GestureActive
+    if HoleTriggers_FreeCircleMouseBlocked()
         return HoleTriggers_FreeCircle_Reset("button_down")
     pts := g_HoleTrig_FreePts
     n := pts is Array ? pts.Length : 0
@@ -353,9 +402,11 @@ HoleTriggers_FreeCircleFinalize(*) {
     pathLen := HoleTriggers_ComputePathLength(pts)
     dir := ""
     reject := ""
-    circleOk := HoleTriggers_AnalyzeCircle(&dir, &reject, pts)
+    diag := ""
+    circleOk := HoleTriggers_AnalyzeCircle(&dir, &reject, pts, &diag)
     HoleTriggers_DiagLog("[HoleTrigger] free_circle_done pts=" . n . " path=" . Round(pathLen)
-        . " circle=" . (circleOk ? dir : "0") . " reject=" . reject)
+        . " circle=" . (circleOk ? dir : "0") . " reject=" . reject
+        . (diag != "" ? " " . diag : ""))
     g_HoleTrig_FreePts := []
     g_HoleTrig_FreeLastMoveTick := 0
     if !circleOk
@@ -371,7 +422,13 @@ HoleTriggers_FreeCircleFinalize(*) {
     HoleTriggers_ActivateAtScreen(mx, my, reason)
 }
 
-HoleTriggers_OnMouseButtonDown_Hook(*) {
+HoleTriggers_OnMouseButtonDown_Hook(btnMsg := 0) {
+    global g_HoleTrig_FreePts
+    n := (g_HoleTrig_FreePts is Array) ? g_HoleTrig_FreePts.Length : 0
+    if (btnMsg = 0x204 && !HoleTriggers_IsRButtonHoldEnabled())
+        return
+    if (n >= 8 && btnMsg != 0x201)
+        return
     HoleTriggers_FreeCircle_Reset("hook_button_down")
 }
 
@@ -383,9 +440,10 @@ HoleTriggers_MouseHookProc(nCode, wParam, lParam) {
         return DllCall("CallNextHookEx", "Ptr", hhk, "Int", nCode, "UInt", wParam, "Ptr", lParam, "Ptr")
     if HoleTriggers_ShouldCaptureGestures() {
         if (wParam = 0x201 || wParam = 0x204 || wParam = 0x207 || wParam = 0x20B || wParam = 0x20C) {
-            HoleTriggers_OnMouseButtonDown_Hook()
+            HoleTriggers_OnMouseButtonDown_Hook(wParam)
         }
-        if (wParam = 0x204) && !g_HoleTrig_PendingDown {  ; WM_RBUTTONDOWN
+        if (wParam = 0x204) && !g_HoleTrig_PendingDown && HoleTriggers_IsRButtonHoldEnabled()
+            && !HoleTriggers_FreeCircleInProgress() {  ; WM_RBUTTONDOWN
             g_HoleTrig_PendingDown := true
             SetTimer(HoleTriggers_DeferredRButtonDown, -1)
         } else if (wParam = 0x205) && !g_HoleTrig_PendingUp {  ; WM_RBUTTONUP
@@ -519,7 +577,7 @@ HoleTriggers_ShouldIgnoreGestureAtPoint(x, y) {
         hwnd := WinGetID("A")
         if hwnd {
             title := WinGetTitle("ahk_id " hwnd)
-            if (InStr(title, "Global Drag Hole") || InStr(title, "Floating Toolbar"))
+            if InStr(title, "Floating Toolbar")
                 return true
         }
     } catch {
@@ -527,14 +585,16 @@ HoleTriggers_ShouldIgnoreGestureAtPoint(x, y) {
     return false
 }
 
+HoleTriggers_OnLauncherDismissed(reason := "") {
+    HoleTriggers_FreeCircle_Reset("launcher_dismiss:" . String(reason))
+}
+
 HoleTriggers_GestureToastMessage(reason := "", ok := true) {
     r := StrLower(Trim(String(reason)))
     if !ok {
-        if (InStr(r, "circle"))
-            return "画圈已识别 · 未能唤起黑洞"
         if (InStr(r, "hold"))
             return "长按已识别 · 未能唤起黑洞"
-        return "手势已识别 · 未能唤起黑洞"
+        return ""
     }
     if (InStr(r, "free_circle_cw") || InStr(r, "circle_cw") || r = "cw")
         return "顺时针画圈 · 黑洞已唤起"
@@ -567,22 +627,32 @@ HoleTriggers_PresentHoleUi(ax, ay, reason := "gesture") {
     rsn := String(reason)
     ix := Integer(ax), iy := Integer(ay)
     HoleTriggers_DiagLog("[HoleTrigger] present_begin reason=" . rsn . " x=" . ix . " y=" . iy)
+    isFreeCircle := HoleTriggers_IsFreeCircleReason(rsn)
+    isHold := HoleTriggers_IsHoldReason(rsn)
+    lightPresent := isFreeCircle || isHold
     try {
         if GDHO_IsDecoupled() {
-            if !GDHO_CanOpenGestureHole(rsn)
-                GDHO_PrepareDecoupledHoleForTextSelection("gesture:" . rsn)
-            else
-                GDHO_PrepareDecoupledHoleForTextSelection("gesture:" . rsn)
+            if !GDHO_IsLauncherLayerActive() && FuncExists("GDHO_ClearGestureHolePresentation") {
+                try GDHO_ClearGestureHolePresentation("gesture_present:" . rsn)
+                catch {
+                }
+            }
+            if !lightPresent {
+                try GDHO_PrepareDecoupledHoleForTextSelection("gesture:" . rsn)
+                catch {
+                }
+            }
         }
     } catch as e0 {
         HoleTriggers_DiagLog("[HoleTrigger] present_prepare_fail msg=" . e0.Message)
     }
-    try GDHO_BeginGestureHoleSession(ix, iy, rsn)
-    catch as e1 {
+    try {
+        if lightPresent && FuncExists("GDHO_BeginGestureLauncherSession")
+            GDHO_BeginGestureLauncherSession(ix, iy, rsn)
+        else
+            GDHO_BeginGestureHoleSession(ix, iy, rsn)
+    } catch as e1 {
         HoleTriggers_DiagLog("[HoleTrigger] present_session_fail msg=" . e1.Message)
-    }
-    try SelectionSense_ArmHoleGesturePreview(ix, iy)
-    catch {
     }
     try GDHO_UpdateHoleCenterFromPolicy(ix, iy)
     catch {
@@ -686,6 +756,8 @@ HoleTriggers_ShowGestureToast(x, y, reason := "gesture", ok := true) {
     }
     HoleTriggers_HideGestureToast("replace")
     msg := HoleTriggers_GestureToastMessage(reason, ok)
+    if (Trim(msg) = "")
+        return
     HoleTriggers_EnsureGestureToastGui()
     global g_HoleTrig_ToastGui, g_HoleTrig_ToastTextCtrl
     try g_HoleTrig_ToastTextCtrl.Value := msg
@@ -735,6 +807,8 @@ HoleTriggers_ShowGestureSuccessToast(x, y, reason := "gesture") {
 }
 
 HoleTriggers_NotifyGestureResult(ok, x, y, reason := "gesture") {
+    if !ok && (HoleTriggers_IsFreeCircleReason(reason) || HoleTriggers_IsHoldReason(reason))
+        return
     try HoleTriggers_ShowGestureToast(x, y, reason, !!ok)
     catch {
     }
@@ -815,13 +889,35 @@ HoleTriggers_ResetGesture() {
     }
 }
 
+HoleTriggers_RButtonWatchTick(*) {
+    global g_HoleTrig_RButtonWatch, g_HoleTrig_Points
+    if !g_HoleTrig_RButtonWatch {
+        try SetTimer(HoleTriggers_RButtonWatchTick, 0)
+        catch {
+        }
+        return
+    }
+    if !GetKeyState("RButton", "P") {
+        HoleTriggers_OnRButtonUp()
+        return
+    }
+    if HoleTriggers_FreeCircleInProgress()
+        return
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&mx, &my)
+    HoleTriggers_AppendPoint(mx, my)
+}
+
 HoleTriggers_OnRButtonDown(*) {
     global g_HoleTrig_GestureActive, g_HoleTrig_Points, g_HoleTrig_StartTick, g_HoleTrig_StartX, g_HoleTrig_StartY
-    if g_HoleTrig_GestureActive
+    global g_HoleTrig_RButtonWatch, g_HoleTrig_LastMoveTick
+    if g_HoleTrig_GestureActive || g_HoleTrig_RButtonWatch
+        return
+    if HoleTriggers_FreeCircleInProgress()
         return
     if !HoleTriggers_IsHoleModeActive()
         return
-    if !HoleTriggers_AnyGestureEnabled()
+    if !HoleTriggers_IsRButtonHoldEnabled()
         return
     if HoleTriggers_ShouldIgnoreGestureAtPoint(0, 0)
         return
@@ -833,14 +929,22 @@ HoleTriggers_OnRButtonDown(*) {
     MouseGetPos(&mx, &my)
     HoleTriggers_DiagLog("[HoleTrigger] rbutton_down x=" . mx . " y=" . my . " cw=" . (HoleTriggers_IsCircleCwEnabled() ? "1" : "0")
         . " ccw=" . (HoleTriggers_IsCircleCcwEnabled() ? "1" : "0") . " hold=" . (HoleTriggers_IsRButtonHoldEnabled() ? "1" : "0"))
-    g_HoleTrig_GestureActive := true
     g_HoleTrig_StartTick := A_TickCount
     g_HoleTrig_LastMoveTick := g_HoleTrig_StartTick
     g_HoleTrig_StartX := mx
     g_HoleTrig_StartY := my
     g_HoleTrig_Points := [{ x: mx, y: my }]
     global g_HoleTrig_TrackIntervalMs
-    SetTimer(HoleTriggers_TrackPointer, g_HoleTrig_TrackIntervalMs)
+    circleOn := HoleTriggers_AnyCircleEnabled()
+    if circleOn {
+        g_HoleTrig_GestureActive := false
+        g_HoleTrig_RButtonWatch := true
+        SetTimer(HoleTriggers_RButtonWatchTick, g_HoleTrig_TrackIntervalMs)
+    } else {
+        g_HoleTrig_RButtonWatch := false
+        g_HoleTrig_GestureActive := true
+        SetTimer(HoleTriggers_TrackPointer, g_HoleTrig_TrackIntervalMs)
+    }
     if HoleTriggers_UseEarlyRButtonHold()
         SetTimer(HoleTriggers_OnRButtonHoldTick, 40)
 }
@@ -886,7 +990,7 @@ HoleTriggers_GetScaledCircleMinRadius() {
     global g_HoleTrig_CircleMinRadius
     dpi := 96
     try dpi := DllCall("GetDpiForSystem", "UInt")
-    return Max(22, Floor(g_HoleTrig_CircleMinRadius * dpi / 96.0 * 0.52))
+    return Max(24, Floor(g_HoleTrig_CircleMinRadius * dpi / 96.0 * 0.58))
 }
 
 HoleTriggers_ComputePathLength(pts) {
@@ -901,6 +1005,42 @@ HoleTriggers_ComputePathLength(pts) {
     return pathLen
 }
 
+HoleTriggers_PointCloudBounds(pts) {
+    minX := pts[1].x, maxX := minX, minY := pts[1].y, maxY := minY
+    for p in pts {
+        if (p.x < minX)
+            minX := p.x
+        if (p.x > maxX)
+            maxX := p.x
+        if (p.y < minY)
+            minY := p.y
+        if (p.y > maxY)
+            maxY := p.y
+    }
+    w := maxX - minX
+    h := maxY - minY
+    return { minX: minX, minY: minY, maxX: maxX, maxY: maxY, w: w, h: h
+        , cx: (minX + maxX) / 2.0, cy: (minY + maxY) / 2.0
+        , aspect: (w >= 1 && h >= 1) ? ((w >= h) ? (w / h) : (h / w)) : 1.0 }
+}
+
+HoleTriggers_SubsamplePts(pts, maxN := 80) {
+    if !(pts is Array) || pts.Length <= maxN
+        return pts
+    out := []
+    n := pts.Length
+    step := n / maxN
+    f := 1.0
+    while (out.Length < maxN && Floor(f) <= n) {
+        i := Max(1, Floor(f))
+        out.Push(pts[i])
+        f += step
+    }
+    if (out.Length > 0 && (out[out.Length].x != pts[n].x || out[out.Length].y != pts[n].y))
+        out.Push(pts[n])
+    return out
+}
+
 HoleTriggers_ShoeLaceArea(pts) {
     area := 0.0
     n := pts.Length
@@ -913,9 +1053,10 @@ HoleTriggers_ShoeLaceArea(pts) {
     return area * 0.5
 }
 
-HoleTriggers_AnalyzeCircle(&outDir := "", &reject := "", pts := "") {
+HoleTriggers_AnalyzeCircle(&outDir := "", &reject := "", pts := "", &diag := "") {
     outDir := ""
     reject := "init"
+    diag := ""
     minR := HoleTriggers_GetScaledCircleMinRadius()
     if !(pts is Array) || pts.Length = 0 {
         global g_HoleTrig_Points
@@ -925,61 +1066,64 @@ HoleTriggers_AnalyzeCircle(&outDir := "", &reject := "", pts := "") {
         reject := "few_pts"
         return false
     }
+    pts := HoleTriggers_SubsamplePts(pts, 88)
     pathLen := HoleTriggers_ComputePathLength(pts)
-    if (pathLen < minR * 2.8) {
+    if (pathLen < minR * 2.0) {
         reject := "short_path"
+        diag := "minR=" . minR
         return false
     }
-    cx := 0.0, cy := 0.0
-    for p in pts {
-        cx += p.x
-        cy += p.y
+    bb := HoleTriggers_PointCloudBounds(pts)
+    cx := bb.cx
+    cy := bb.cy
+    radius := Min(bb.w, bb.h) * 0.5
+    if (radius < minR * 0.72) {
+        reject := "small_r"
+        diag := "r=" . Round(radius) . " minR=" . minR
+        return false
     }
-    cx /= pts.Length
-    cy /= pts.Length
+    if (bb.aspect > 3.8) {
+        reject := "flat_line"
+        diag := "asp=" . Round(bb.aspect, 2)
+        return false
+    }
     ring := []
     rSum := 0.0
-    rMin := 1.0e9
-    rMax := 0.0
     for p in pts {
         r := Sqrt((p.x - cx) ** 2 + (p.y - cy) ** 2)
-        if (r < 3)
+        if (r < radius * 0.18)
             continue
         ring.Push({ x: p.x, y: p.y, r: r })
         rSum += r
-        if (r < rMin)
-            rMin := r
-        if (r > rMax)
-            rMax := r
     }
     if (ring.Length < 6) {
         reject := "ring_pts"
+        diag := "ring=" . ring.Length
         return false
     }
     radius := rSum / ring.Length
-    if (radius < minR) {
-        reject := "small_r"
-        return false
-    }
-    if (rMax > 0 && (rMin / rMax) < 0.14) {
-        reject := "flat_ring"
-        return false
-    }
     first := pts[1]
     last := pts[pts.Length]
     closure := Sqrt((last.x - first.x) ** 2 + (last.y - first.y) ** 2)
-    if (closure > Max(radius * 1.65, minR * 2.0, pathLen * 0.22)) {
+    if (closure > Max(radius * 2.0, minR * 2.4, pathLen * 0.32)) {
         reject := "open_loop"
+        diag := "cls=" . Round(closure) . " r=" . Round(radius)
         return false
     }
     circum := 6.2831853 * radius
     arcRatio := pathLen / Max(circum, 1.0)
-    if (arcRatio < 0.52) {
+    if (arcRatio < 0.42) {
         reject := "arc_short"
+        diag := "arc=" . Round(arcRatio, 2)
+        return false
+    }
+    if (arcRatio > 1.85) {
+        reject := "too_wiggly"
+        diag := "arc=" . Round(arcRatio, 2)
         return false
     }
     nRing := ring.Length
-    step := Max(1, Floor(nRing / 56))
+    step := Max(1, Floor(nRing / 28))
     angle := 0.0
     prev := 0.0
     got := false
@@ -1000,14 +1144,19 @@ HoleTriggers_AnalyzeCircle(&outDir := "", &reject := "", pts := "") {
         prev := ang
         i += step
     }
+    diag := "asp=" . Round(bb.aspect, 2) . " ang=" . Round(angle, 2) . " arc=" . Round(arcRatio, 2)
     area := HoleTriggers_ShoeLaceArea(pts)
-    if (Abs(angle) >= 0.72) {
+    if (Abs(angle) >= 0.55) {
         outDir := (angle > 0) ? "cw" : "ccw"
         reject := ""
         return true
     }
-    if (Abs(area) < (radius * radius * 0.35)) {
+    if (Abs(area) < (radius * radius * 0.18)) {
         reject := "area_small"
+        return false
+    }
+    if (Abs(angle) < 0.42) {
+        reject := "weak_turn"
         return false
     }
     outDir := (area < 0) ? "cw" : "ccw"
@@ -1017,12 +1166,16 @@ HoleTriggers_AnalyzeCircle(&outDir := "", &reject := "", pts := "") {
 
 HoleTriggers_OnRButtonUp(*) {
     global g_HoleTrig_GestureActive, g_HoleTrig_Points, g_HoleTrig_StartTick, g_HoleTrig_StartX, g_HoleTrig_StartY
-    global g_HoleTrig_RButtonHoldMs, g_HoleTrig_RButtonMaxMovePx
+    global g_HoleTrig_RButtonHoldMs, g_HoleTrig_RButtonMaxMovePx, g_HoleTrig_RButtonWatch
+    wasWatch := g_HoleTrig_RButtonWatch
+    wasActive := g_HoleTrig_GestureActive
     try SetTimer(HoleTriggers_OnRButtonHoldTick, 0)
-    if !g_HoleTrig_GestureActive
-        return
-    SetTimer(HoleTriggers_TrackPointer, 0)
+    try SetTimer(HoleTriggers_RButtonWatchTick, 0)
+    try SetTimer(HoleTriggers_TrackPointer, 0)
+    g_HoleTrig_RButtonWatch := false
     g_HoleTrig_GestureActive := false
+    if !wasActive && !wasWatch
+        return
     CoordMode("Mouse", "Screen")
     MouseGetPos(&mx, &my)
     HoleTriggers_AppendPoint(mx, my)
@@ -1030,7 +1183,7 @@ HoleTriggers_OnRButtonUp(*) {
     pts := g_HoleTrig_Points
     pathLen := HoleTriggers_ComputePathLength(pts)
     HoleTriggers_DiagLog("[HoleTrigger] rbutton_up pts=" . (pts is Array ? pts.Length : 0) . " ms=" . elapsed
-        . " path=" . Round(pathLen) . " hold_only=1")
+        . " path=" . Round(pathLen) . " hold_only=1 watch=" . (wasWatch ? "1" : "0"))
     if HoleTriggers_IsRButtonHoldEnabled() {
         dx := mx - g_HoleTrig_StartX
         dy := my - g_HoleTrig_StartY
@@ -1043,11 +1196,14 @@ HoleTriggers_OnRButtonUp(*) {
 
 ; 长按右键：按住达到时长且几乎不移动时提前触发（不必等抬起）
 HoleTriggers_OnRButtonHoldTick(*) {
-    global g_HoleTrig_GestureActive, g_HoleTrig_StartTick, g_HoleTrig_StartX, g_HoleTrig_StartY
+    global g_HoleTrig_GestureActive, g_HoleTrig_RButtonWatch, g_HoleTrig_Points
+    global g_HoleTrig_StartTick, g_HoleTrig_StartX, g_HoleTrig_StartY
     global g_HoleTrig_RButtonHoldMs, g_HoleTrig_RButtonMaxMovePx
     if !HoleTriggers_UseEarlyRButtonHold()
         return
-    if !g_HoleTrig_GestureActive || !HoleTriggers_IsRButtonHoldEnabled()
+    if !(g_HoleTrig_GestureActive || g_HoleTrig_RButtonWatch) || !HoleTriggers_IsRButtonHoldEnabled()
+        return
+    if HoleTriggers_FreeCircleInProgress()
         return
     if !GetKeyState("RButton", "P") {
         SetTimer(HoleTriggers_OnRButtonHoldTick, 0)
@@ -1066,16 +1222,16 @@ HoleTriggers_OnRButtonHoldTick(*) {
     pathLen := HoleTriggers_ComputePathLength(pts)
     circleOn := HoleTriggers_IsCircleCwEnabled() || HoleTriggers_IsCircleCcwEnabled()
     holdPathMax := g_HoleTrig_RButtonMaxMovePx * (circleOn ? 2.2 : 1.6)
-    ; 画圈与长按同时开启时：轨迹已在增长则不要提前长按触发，避免打断采点
-    if (circleOn && pathLen > g_HoleTrig_RButtonMaxMovePx * 0.28)
-        return
-    if (circleOn && ((pts is Array) && pts.Length > 4) && pathLen > g_HoleTrig_RButtonMaxMovePx * 0.42)
+    ; 画圈与长按同时开：仅当空手画圈采点进行中时不抢长按；静止按住仍应提前唤起
+    if circleOn && HoleTriggers_FreeCircleInProgress()
         return
     if (pathLen > holdPathMax)
         return
     SetTimer(HoleTriggers_OnRButtonHoldTick, 0)
     g_HoleTrig_GestureActive := false
+    g_HoleTrig_RButtonWatch := false
     SetTimer(HoleTriggers_TrackPointer, 0)
+    SetTimer(HoleTriggers_RButtonWatchTick, 0)
     HoleTriggers_ActivateAtScreen(mx, my, "rbutton_hold_early")
 }
 

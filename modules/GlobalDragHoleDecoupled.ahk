@@ -203,6 +203,37 @@ GDHO_IsGestureOpenGraceActive() {
     return false
 }
 
+; 画圈/长按唤起 A 启动层：不占划选弱预览会话，关闭后可立即再次手势唤起
+GDHO_BeginGestureLauncherSession(ax, ay, reason := "gesture") {
+    global GDHO_CURSOR_X, GDHO_CURSOR_Y, GDHO_EXPANDED_HOLD, GDHO_IS_SUCKING
+    global g_GDHO_GestureOpenGraceUntil, g_GDHO_SuppressSelectionAutoHide
+    ix := Integer(ax), iy := Integer(ay)
+    g_GDHO_GestureOpenGraceUntil := A_TickCount + 700
+    g_GDHO_SuppressSelectionAutoHide := false
+    if FuncExists("HoleActivation_ClearGestureGrace") {
+        try HoleActivation_ClearGestureGrace()
+        catch {
+        }
+    }
+    GDHO_CURSOR_X := ix
+    GDHO_CURSOR_Y := iy
+    GDHO_EXPANDED_HOLD := false
+    GDHO_IS_SUCKING := false
+    try GDHO_UpdateHoleCenterFromPolicy(ix, iy)
+    catch {
+    }
+    if (GDHO_CX > 50 && GDHO_CY > 50) {
+        try GDHO_RememberOnScreenHoleCenter(GDHO_CX, GDHO_CY)
+        catch {
+        }
+    }
+    try GDHO_SetInteractionPhase(GDHO_PHASE_IDLE, "gesture_launcher:" . String(reason))
+    catch {
+    }
+    try NativeDropDiag_Log("[TextHole] gesture_launcher_session x=" . ix . " y=" . iy . " cx=" . GDHO_CX . " cy=" . GDHO_CY . " reason=" . String(reason))
+    return true
+}
+
 GDHO_BeginGestureHoleSession(ax, ay, reason := "gesture") {
     global GDHO_CURSOR_X, GDHO_CURSOR_Y, g_GDHO_SuppressSelectionAutoHide
     global GDHO_EXPANDED_HOLD, GDHO_IS_SUCKING
@@ -899,6 +930,61 @@ GDHO_PrepareDecoupledHoleForTextSelection(reason := "activation_hole") {
     return true
 }
 
+; 启动层关闭后回收手势会话，避免星空残留 + SelectionSense 仍占 preview 导致无法再次画圈唤起。
+GDHO_ClearGestureHolePresentation(reason := "gesture_clear") {
+    global g_GDHO_GestureOpenGraceUntil, g_GDHO_SuppressSelectionAutoHide, GDHO_VISIBLE
+    global g_SelSense_TextCaptured, g_SelSense_AllowTextHoleGesture, g_SelSense_HoleDragPhase
+    r := StrLower(Trim(String(reason)))
+    g_GDHO_GestureOpenGraceUntil := 0
+    g_GDHO_SuppressSelectionAutoHide := false
+    if FuncExists("HoleActivation_ClearGestureGrace") {
+        try HoleActivation_ClearGestureGrace()
+        catch {
+        }
+    }
+    try GDHO_DisarmTextHoleProximityPoll()
+    catch {
+    }
+    try GDHO_EndSelectionPreviewForPanel()
+    catch {
+    }
+    g_SelSense_TextCaptured := false
+    g_SelSense_AllowTextHoleGesture := false
+    g_SelSense_HoleDragPhase := "idle"
+    try SetTimer(SelectionSense_HideHoleAfterSelection, 0)
+    catch {
+    }
+    if FuncExists("GDHO_SetInteractionPhase") {
+        try GDHO_SetInteractionPhase(GDHO_PHASE_IDLE, r)
+        catch {
+        }
+    }
+    if FuncExists("GDHO_IsStarryLauncherMode") && GDHO_IsStarryLauncherMode() && GDHO_UseLauncherLayer() {
+        try GDHO_RunStarryJS("window.HoleOverlay?.hideSilent?.()")
+        catch {
+        }
+        if (GDHO_VISIBLE || (FuncExists("GDHO_IsStarryHostVisible") && GDHO_IsStarryHostVisible())) {
+            if FuncExists("GDHO_HideStarryAfterPanel")
+                try GDHO_HideStarryAfterPanel("clear_gesture:" . r)
+            catch {
+            }
+            if FuncExists("GDHO_HideStarryHost")
+                try GDHO_HideStarryHost("clear_gesture:" . r)
+            catch {
+            }
+        }
+        try GDHO_SetStarryClickThrough(true, "clear_gesture:" . r)
+        catch {
+        }
+    }
+    if FuncExists("HoleTriggers_OnLauncherDismissed") {
+        try HoleTriggers_OnLauncherDismissed(r)
+        catch {
+        }
+    }
+    try NativeDropDiag_Log("[TextHole] clear_gesture_presentation reason=" . r . " vis=" . (GDHO_VISIBLE ? "1" : "0"))
+}
+
 ; 画圈/长按等无划选手势：在光标处弹出启动层（starry 拓扑），与划选弱预览同会话标记
 GDHO_PresentGestureHoleAt(mx, my, reason := "gesture") {
     global GDHO_CX, GDHO_CY, GDHO_LAUNCHER_VISIBLE, g_GDHO_StarryLauncherOpen, GDHO_STAR_GUI
@@ -956,7 +1042,9 @@ GDHO_PresentGestureHoleAt(mx, my, reason := "gesture") {
         try GDHO_SetStarryClickThrough(false, "gesture_interactive")
         catch {
         }
-        if FuncExists("GDHO_ArmTextHoleProximityPoll") {
+        rGesture := StrLower(Trim(String(reason)))
+        armProx := !(InStr(rGesture, "free_circle") || InStr(rGesture, "circle_cw") || InStr(rGesture, "circle_ccw"))
+        if armProx && FuncExists("GDHO_ArmTextHoleProximityPoll") {
             try GDHO_ArmTextHoleProximityPoll()
             catch {
             }
@@ -1100,7 +1188,8 @@ GDHO_HideStarryAfterPanel(reason := "") {
         try GDHO_SuppressEmbeddedStarryLauncher()
         if (InStr(r, "hole_close") || InStr(r, "frontend_hole") || InStr(r, "starry_hole_close")
             || InStr(r, "dismiss") || InStr(r, "hide_overlay") || InStr(r, "internal_close")
-            || InStr(r, "reset_session") || InStr(r, "abort_") || InStr(r, "request_close") || InStr(r, "idle")) {
+            || InStr(r, "reset_session") || InStr(r, "abort_") || InStr(r, "request_close") || InStr(r, "idle")
+            || InStr(r, "clear_gesture") || InStr(r, "gesture_clear") || InStr(r, "hide_launcher")) {
             try GDHO_DismissLauncherUI("hide_starry_after_panel:" . reason)
             try GDHO_RunStarryJS("window.HoleOverlay?.hideSilent?.()")
             if !GDHO_P0_BlockHostMoveHide("hide_starry_after_panel")
@@ -1218,8 +1307,21 @@ GDHO_ShouldStarryWindowReceiveClicks(reason := "") {
 }
 
 GDHO_IsLauncherLayerActive() {
-    global GDHO_LAUNCHER_VISIBLE
-    return !!(GDHO_UseLauncherLayer() && GDHO_LAUNCHER_VISIBLE)
+    global GDHO_LAUNCHER_VISIBLE, GDHO_LAUNCHER_GUI
+    if !GDHO_UseLauncherLayer() || !GDHO_LAUNCHER_VISIBLE
+        return false
+    if IsObject(GDHO_LAUNCHER_GUI) && GDHO_LAUNCHER_GUI.Hwnd {
+        vis := false
+        try vis := DllCall("IsWindowVisible", "Ptr", GDHO_LAUNCHER_GUI.Hwnd, "Int")
+        catch {
+            vis := true
+        }
+        if !vis {
+            GDHO_LAUNCHER_VISIBLE := false
+            return false
+        }
+    }
+    return true
 }
 
 GDHO_ApplyStarryLauncherInteractive(reason := "") {
@@ -2096,8 +2198,16 @@ GDHO_DismissLauncherUI(reason := "") {
     g_GDHO_PendingLauncherShow := false
     g_GDHO_LauncherGridSent := false
     try GDHO_SuppressEmbeddedStarryLauncher()
-    if GDHO_UseLauncherLayer()
+    if GDHO_UseLauncherLayer() {
         try GDHO_HideLauncherLayer("dismiss_ui:" . String(reason))
+        catch {
+        }
+    }
+    if FuncExists("GDHO_ClearGestureHolePresentation") {
+        try GDHO_ClearGestureHolePresentation("dismiss_launcher:" . String(reason))
+        catch {
+        }
+    }
 }
 
 GDHO_SuppressEmbeddedStarryLauncher() {
@@ -2429,12 +2539,21 @@ GDHO_ShowLauncherLayerForced(reason := "") {
     if !GDHO_UseLauncherLayer()
         return false
     now := A_TickCount
-    if (GDHO_LAUNCHER_VISIBLE && g_GDHO_LauncherLastShowTick > 0 && (now - g_GDHO_LauncherLastShowTick) < 300) {
+    launcherShown := false
+    if IsObject(GDHO_LAUNCHER_GUI) && GDHO_LAUNCHER_GUI.Hwnd {
+        try launcherShown := DllCall("IsWindowVisible", "Ptr", GDHO_LAUNCHER_GUI.Hwnd, "Int")
+        catch {
+            launcherShown := false
+        }
+    }
+    if (GDHO_LAUNCHER_VISIBLE && launcherShown && g_GDHO_LauncherLastShowTick > 0 && (now - g_GDHO_LauncherLastShowTick) < 300) {
         try GDHO_MarkTextHoleExpandedHold()
         try GDHO_SuppressEmbeddedStarryLauncher()
         try GDHO_SyncLauncherLayerPosition()
         return true
     }
+    if (GDHO_LAUNCHER_VISIBLE && !launcherShown)
+        GDHO_LAUNCHER_VISIBLE := false
     g_GDHO_LauncherLastShowTick := now
     g_GDHO_StarryLauncherOpen := true
     try GDHO_MarkTextHoleExpandedHold()
@@ -2483,8 +2602,17 @@ GDHO_HideLauncherLayer(reason := "") {
     try SetTimer(GDHO_P2_PolicyPresentFallback, 0)
     try SetTimer(GDHO_P2_ExpandLauncherEnsure, 0)
     try SetTimer(GDHO_CommitEarlyLauncherPump, 0)
-    if !GDHO_LAUNCHER_VISIBLE && !IsObject(GDHO_LAUNCHER_GUI)
+    rs := StrLower(Trim(String(reason)))
+    shouldClearSession := !(InStr(rs, "reset_session") || InStr(rs, "prepare_hole") || InStr(rs, "show_launcher_layer")
+        || InStr(rs, "force_policy") || InStr(rs, "force_show"))
+    if !GDHO_LAUNCHER_VISIBLE && !IsObject(GDHO_LAUNCHER_GUI) {
+        if shouldClearSession && FuncExists("GDHO_ClearGestureHolePresentation") {
+            try GDHO_ClearGestureHolePresentation("hide_launcher_early:" . rs)
+            catch {
+            }
+        }
         return
+    }
     GDHO_LAUNCHER_VISIBLE := false
     try GDHO_RunLauncherJS("try{window.HoleLauncherLayer?.hide?.();}catch(_e){}")
     if (GDHO_WV2_LAUNCHER) {
@@ -2496,6 +2624,11 @@ GDHO_HideLauncherLayer(reason := "") {
     }
     if FuncExists("GDHO_IsStarryHostVisible") && GDHO_IsStarryHostVisible()
         try GDHO_ApplyStarryHostChildPassthrough(false, "hide_launcher_layer")
+    if shouldClearSession && FuncExists("GDHO_ClearGestureHolePresentation") {
+        try GDHO_ClearGestureHolePresentation("hide_launcher:" . rs)
+        catch {
+        }
+    }
     try NativeDropDiag_Log("[TextHole] hide_launcher_layer reason=" . String(reason))
 }
 

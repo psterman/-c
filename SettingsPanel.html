@@ -2033,7 +2033,7 @@
 <label class="hole-trigger-item"><input id="holeTriggerRButtonHold" type="checkbox" ${checked(!!d.holeTriggerRButtonHold)}>长按鼠标右键</label>
 </div>
 <div class="row"><div class="label">长按右键时长（ms）</div><input id="holeRButtonHoldMs" type="number" min="200" max="2000" step="20" value="${esc(d.holeRButtonHoldMs ?? 480)}"></div>
-<div class="hint">画圈：无需按键，移动鼠标画出闭合圆环（停顿约 0.3 秒后识别）；长按：按住右键达到时长且几乎不移动。</div>
+<div class="hint">画圈：无需按键，画一圈闭合圆（不必很圆，半径适中）后短暂停住；未达标不会提示。与长按右键勿同时进行。长按：按住右键达到时长且几乎不移动。</div>
 </div>
 <div class="card"><div class="title">黑洞 · 外观与位置</div>
 <div class="row"><div class="label">接近灵敏度</div><select id="holeSensitivityPreset">${optionsKV([{value:"compact",label:"紧凑"},{value:"standard",label:"标准"},{value:"relaxed",label:"宽松"}], String(d.holeSensitivityPreset || "standard"))}</select></div>
