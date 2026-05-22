@@ -23,6 +23,16 @@ PromptTemplates.ini
 # 调试日志（根目录）
 clipboard_debug.log
 
+# 运行时 Cache（AHK/桥接进程常占用，勿提交）
+Cache/*.log
+Cache/*.jsonl
+Cache/ahk_stderr.txt
+Cache/validate_out.txt
+Cache/validate_out.txt.err
+Cache/bisect_mini.log
+Cache/probe_empty.log
+Cache/hole-vite.log
+
 cache/dict_install/
 
 # Prototype: generated artifacts and local deps
