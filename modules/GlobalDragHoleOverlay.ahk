@@ -3412,6 +3412,11 @@ GDHO_Start() {
     try GDHO_PrewarmOffscreen()
     catch {
     }
+    if FuncExists("GDHO_UseLauncherLayer") && GDHO_UseLauncherLayer() {
+        try SetTimer(GDHO_PrewarmLauncherLayerHost, -180)
+        catch {
+        }
+    }
     GDHO_ArmPolling()
     try NativeDropDiag_Log("gdho start poll_armed")
 }

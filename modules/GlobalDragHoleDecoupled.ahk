@@ -92,6 +92,8 @@ global GDHO_LAUNCHER_READY := false
 global GDHO_LAUNCHER_VISIBLE := false
 global GDHO_LAUNCHER_W := 450
 global GDHO_LAUNCHER_H := 450
+; 启动层内嵌星空+彩环；显示时隐藏独立星空窗，避免 WebView 穿透失败出现纯黑圆
+global GDHO_LAUNCHER_EMBED_STARFIELD := true
 global g_GDHO_LauncherLastShowTick := 0
 global g_GDHO_LauncherGridSent := false
 global GDHO_LAUNCHER_PAGE_URL := ""
@@ -1013,22 +1015,25 @@ GDHO_PresentGestureHoleAt(mx, my, reason := "gesture") {
     }
     ok := false
     if GDHO_UseLauncherLayer() {
-        try GDHO_ShowStarryPassthroughOnly("gesture:" . String(reason))
-        catch {
-        }
+        global GDHO_LAUNCHER_EMBED_STARFIELD
         try GDHO_UpdateHoleCenterFromPolicy(ax, ay)
         catch {
         }
-        if !GDHO_EnsureStarryOnScreenForLauncher() {
-            try {
-                if !IsObject(GDHO_STAR_GUI) && FuncExists("GDHO_CreateStarryGui")
-                    GDHO_CreateStarryGui()
-                if IsObject(GDHO_STAR_GUI)
-                    GDHO_STAR_GUI.Show("NA")
-            } catch {
-            }
-            try GDHO_EnsureStarryOnScreenForLauncher()
+        if !GDHO_LAUNCHER_EMBED_STARFIELD {
+            try GDHO_ShowStarryPassthroughOnly("gesture:" . String(reason))
             catch {
+            }
+            if !GDHO_EnsureStarryOnScreenForLauncher() {
+                try {
+                    if !IsObject(GDHO_STAR_GUI) && FuncExists("GDHO_CreateStarryGui")
+                        GDHO_CreateStarryGui()
+                    if IsObject(GDHO_STAR_GUI)
+                        GDHO_STAR_GUI.Show("NA")
+                } catch {
+                }
+                try GDHO_EnsureStarryOnScreenForLauncher()
+                catch {
+                }
             }
         }
         try ok := GDHO_ShowLauncherLayerForced("gesture:" . String(reason))
@@ -1039,8 +1044,10 @@ GDHO_PresentGestureHoleAt(mx, my, reason := "gesture") {
             catch {
             }
         }
-        try GDHO_SetStarryClickThrough(false, "gesture_interactive")
-        catch {
+        if !GDHO_LAUNCHER_EMBED_STARFIELD {
+            try GDHO_SetStarryClickThrough(false, "gesture_interactive")
+            catch {
+            }
         }
         rGesture := StrLower(Trim(String(reason)))
         armProx := !(InStr(rGesture, "free_circle") || InStr(rGesture, "circle_cw") || InStr(rGesture, "circle_ccw"))
@@ -2173,20 +2180,77 @@ GDHO_ApplyLauncherNoActivateStyle() {
     }
 }
 
-GDHO_ApplyLauncherLayerInteractive(reason := "") {
+GDHO_ApplyLauncherCircularRegion(w := 0, h := 0) {
+    global GDHO_LAUNCHER_GUI
+    if !IsObject(GDHO_LAUNCHER_GUI) || !GDHO_LAUNCHER_GUI.Hwnd
+        return false
+    hwnd := GDHO_LAUNCHER_GUI.Hwnd
+    iw := Integer(w), ih := Integer(h)
+    if (iw <= 0 || ih <= 0) {
+        try WinGetClientPos(, , &iw, &ih, "ahk_id " hwnd)
+        catch {
+            iw := 0
+            ih := 0
+        }
+    }
+    if (iw < 80 || ih < 80) {
+        global GDHO_LAUNCHER_W, GDHO_LAUNCHER_H
+        iw := Max(80, Integer(GDHO_LAUNCHER_W))
+        ih := Max(80, Integer(GDHO_LAUNCHER_H))
+    }
+    return GDHO_ApplyCircularRegionOnHwnd(hwnd, iw, ih)
+}
+
+GDHO_ClearLauncherCircularRegion() {
     global GDHO_LAUNCHER_GUI
     if !IsObject(GDHO_LAUNCHER_GUI) || !GDHO_LAUNCHER_GUI.Hwnd
         return
+    try GDHO_ClearCircularRegionOnHwnd(GDHO_LAUNCHER_GUI.Hwnd)
+}
+
+GDHO_ApplyLauncherHostChildPassthrough(enable := false, reason := "") {
+    global GDHO_LAUNCHER_GUI
+    if !IsObject(GDHO_LAUNCHER_GUI) || !GDHO_LAUNCHER_GUI.Hwnd
+        return
+    want := !!enable
+    hwnd := DllCall("GetWindow", "Ptr", GDHO_LAUNCHER_GUI.Hwnd, "UInt", 5, "Ptr")
+    while hwnd {
+        try {
+            ex := DllCall("GetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr")
+            if want
+                ex |= 0x20
+            else
+                ex &= ~0x20
+            DllCall("SetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr", ex, "Ptr")
+        } catch {
+        }
+        hwnd := DllCall("GetWindow", "Ptr", hwnd, "UInt", 2, "Ptr")
+    }
+    try GDHO_HitTestDbgLog("ApplyLauncherHostChildPassthrough enable=" . (want ? "1" : "0") . " reason=" . Trim(String(reason)))
+}
+
+GDHO_ApplyLauncherLayerInteractive(reason := "") {
+    global GDHO_LAUNCHER_GUI, GDHO_LAUNCHER_EMBED_STARFIELD
+    if !IsObject(GDHO_LAUNCHER_GUI) || !GDHO_LAUNCHER_GUI.Hwnd
+        return
     hwnd := GDHO_LAUNCHER_GUI.Hwnd
+    ; 切勿对启动层 WinSetTransColor：色键像素会鼠标穿透，图标无法点击
+    try GDHO_LAUNCHER_GUI.BackColor := "000000"
     try WinSetTransColor("Off", "ahk_id " hwnd)
     try WinSetTransparent(255, "ahk_id " hwnd)
+    if IsObject(GDHO_WV2_CTRL_LAUNCHER) {
+        try GDHO_WV2_CTRL_LAUNCHER.DefaultBackgroundColor := 0xFF000000
+        try GDHO_WV2_CTRL_LAUNCHER.IsVisible := true
+    }
+    try GDHO_ApplyLauncherCircularRegion()
     try GDHO_ApplyLauncherNoActivateStyle()
     try {
         ex := DllCall("GetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr")
-        ex := ex & ~0x20
+        ex := (ex & ~0x20) | 0x08000000
         DllCall("SetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr", ex, "Ptr")
     } catch {
     }
+    try GDHO_ApplyLauncherHostChildPassthrough(false, "launcher_interactive:" . Trim(String(reason)))
     if FuncExists("GDHO_SetWebOlePassthrough")
         try GDHO_SetWebOlePassthrough(false)
     try GDHO_HitTestDbgLog("ApplyLauncherLayerInteractive reason=" . Trim(String(reason)))
@@ -2244,6 +2308,65 @@ GDHO_ComputeLauncherRectFromHole(diameter := 440) {
     return GDHO_ComputePanelRectCenteredOnHole(diameter)
 }
 
+GDHO_GetLauncherLayerRect() {
+    global GDHO_LAUNCHER_W, GDHO_LAUNCHER_H
+    diam := Max(360, Integer(GDHO_LAUNCHER_W))
+    if (Integer(GDHO_LAUNCHER_H) > diam)
+        diam := Integer(GDHO_LAUNCHER_H)
+    return GDHO_ComputeLauncherRectFromHole(diam)
+}
+
+; 方案 A：星空宿主与启动层 HWND 同位置、同尺寸，洞心固定在客户区正中（450 圆）
+GDHO_AlignStarryHostToLauncherLayer(reason := "") {
+    global GDHO_STAR_GUI, GDHO_LAST_HOST_X, GDHO_LAST_HOST_Y, GDHO_HOST_W, GDHO_HOST_H
+    global GDHO_CX, GDHO_CY, GDHO_VISIBLE, GDHO_ACTIVE
+    if !GDHO_UseLauncherLayer()
+        return false
+    gui := GDHO_GetStarryGui()
+    if !IsObject(gui) || !gui.Hwnd
+        return false
+    rect := GDHO_GetLauncherLayerRect()
+    if !(FuncExists("GDHO_P0_BlockHostMoveHide") && GDHO_P0_BlockHostMoveHide("align_starry_launcher")) {
+        try gui.Move(rect.x, rect.y, rect.w, rect.h)
+    }
+    GDHO_LAST_HOST_X := rect.x
+    GDHO_LAST_HOST_Y := rect.y
+    GDHO_HOST_W := rect.w
+    GDHO_HOST_H := rect.h
+    GDHO_CX := rect.x + (rect.w // 2)
+    GDHO_CY := rect.y + (rect.h // 2)
+    try GDHO_RememberOnScreenHoleCenter(GDHO_CX, GDHO_CY)
+    GDHO_VISIBLE := true
+    GDHO_ACTIVE := true
+    try gui.Show("NA")
+    try GDHO_ResizeStarryHost()
+    try GDHO_ApplyCircularRegionOnHwnd(gui.Hwnd, rect.w, rect.h)
+    try NativeDropDiag_Log("[TextHole] align_starry_launcher x=" . rect.x . " y=" . rect.y
+        . " w=" . rect.w . " h=" . rect.h . " reason=" . String(reason))
+    return true
+}
+
+GDHO_ApplyCircularRegionOnHwnd(hwnd, w := 0, h := 0) {
+    if !hwnd
+        return false
+    iw := Max(80, Integer(w)), ih := Max(80, Integer(h))
+    try {
+        rgn := DllCall("gdi32\CreateEllipticRgn", "Int", 0, "Int", 0, "Int", iw + 1, "Int", ih + 1, "Ptr")
+        if rgn
+            return !!DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", rgn, "Int", 1)
+    } catch {
+    }
+    return false
+}
+
+GDHO_ClearCircularRegionOnHwnd(hwnd) {
+    if !hwnd
+        return
+    try DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", 0, "Int", 1)
+    catch {
+    }
+}
+
 GDHO_CreateLauncherGui() {
     global GDHO_LAUNCHER_GUI, GDHO_LAUNCHER_W, GDHO_LAUNCHER_H, GDHO_STAR_GUI
     if IsObject(GDHO_LAUNCHER_GUI) && GDHO_LAUNCHER_GUI.Hwnd
@@ -2255,7 +2378,7 @@ GDHO_CreateLauncherGui() {
         lh := 360
     rect := GDHO_ComputeLauncherRectFromHole(lw)
     GDHO_LAUNCHER_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x08000000 -DPIScale", "Global Drag Hole Launcher")
-    GDHO_LAUNCHER_GUI.BackColor := "010101"
+    GDHO_LAUNCHER_GUI.BackColor := "000000"
     GDHO_LAUNCHER_GUI.Show("x" rect.x " y" rect.y " w" rect.w " h" rect.h . " Hide NA")
     try GDHO_ApplyLauncherLayerInteractive("create_launcher_gui")
     GDHO_LAUNCHER_VISIBLE := false
@@ -2273,15 +2396,62 @@ GDHO_ResizeLauncherHost() {
     rc := WebView2.RECT()
     rc.left := 0, rc.top := 0, rc.right := pw, rc.bottom := ph
     try GDHO_WV2_CTRL_LAUNCHER.Bounds := rc
+    try GDHO_ApplyLauncherCircularRegion(pw, ph)
+}
+
+GDHO_ParkStarryForEmbeddedLauncher(reason := "") {
+    global GDHO_STAR_GUI, GDHO_VISIBLE
+    if IsObject(GDHO_STAR_GUI) && GDHO_STAR_GUI.Hwnd {
+        try GDHO_ClearCircularRegionOnHwnd(GDHO_STAR_GUI.Hwnd)
+        try GDHO_STAR_GUI.Hide()
+    }
+    try GDHO_RunStarryJS("try{var r=document.getElementById('root');if(r){r.classList.remove('show','drop','expanded');}window.HoleOverlay?.hideSceneLauncher?.();}catch(_e){}")
+    try NativeDropDiag_Log("[TextHole] park_starry_embedded reason=" . String(reason))
+}
+
+GDHO_SyncStarryBackdropForLauncher(reason := "") {
+    global GDHO_CX, GDHO_CY, GDHO_LAUNCHER_EMBED_STARFIELD
+    if !GDHO_UseLauncherLayer()
+        return false
+    rect := GDHO_GetLauncherLayerRect()
+    if GDHO_LAUNCHER_EMBED_STARFIELD {
+        try GDHO_ParkStarryForEmbeddedLauncher("backdrop:" . String(reason))
+        try GDHO_RunLauncherJS("try{window.HoleLauncherLayer?.startBackdrop?.();}catch(_e){}")
+        try NativeDropDiag_Log("[TextHole] sync_launcher_embed_backdrop reason=" . String(reason)
+            . " cx=" . GDHO_CX . " cy=" . GDHO_CY . " w=" . rect.w . " h=" . rect.h)
+        return true
+    }
+    try GDHO_AlignStarryHostToLauncherLayer("backdrop:" . String(reason))
+    catch {
+    }
+    hx := rect.w // 2
+    hy := rect.h // 2
+    js := "try{var r=document.getElementById('root');if(!r)return;"
+        . "document.documentElement.style.setProperty('--hx'," . hx . "+'px');"
+        . "document.documentElement.style.setProperty('--hy'," . hy . "+'px');"
+        . "document.documentElement.style.setProperty('--hole-alpha','1');"
+        . "document.documentElement.style.setProperty('--p','1');"
+        . "r.classList.add('show','drop','expanded','use-external-launcher');"
+        . "r.classList.remove('ole-passthrough','sleep','expanding');"
+        . "window.__gdhoUseLauncherLayer=true;"
+        . "if(window.HoleOverlay){window.HoleOverlay.setSleepMode&&window.HoleOverlay.setSleepMode(false);"
+        . "window.HoleOverlay.hideSceneLauncher&&window.HoleOverlay.hideSceneLauncher();}"
+        . "var gc=document.getElementById('galaxyCanvas');if(gc)gc.style.opacity='1';"
+        . "}catch(_e){}"
+    try GDHO_RunStarryJS(js)
+    try NativeDropDiag_Log("[TextHole] sync_starry_backdrop reason=" . String(reason)
+        . " cx=" . GDHO_CX . " cy=" . GDHO_CY . " cli=" . hx . "," . hy . " w=" . rect.w . " h=" . rect.h)
+    return true
 }
 
 GDHO_SyncLauncherLayerPosition() {
     global GDHO_LAUNCHER_GUI, GDHO_LAUNCHER_VISIBLE
     if !GDHO_LAUNCHER_VISIBLE || !IsObject(GDHO_LAUNCHER_GUI)
         return
-    rect := GDHO_ComputeLauncherRectFromHole(Integer(GDHO_LAUNCHER_W))
+    rect := GDHO_GetLauncherLayerRect()
     try GDHO_LAUNCHER_GUI.Move(rect.x, rect.y, rect.w, rect.h)
     try GDHO_ResizeLauncherHost()
+    try GDHO_SyncStarryBackdropForLauncher("sync_launcher_pos")
 }
 
 GDHO_ApplyStarryHostChildPassthrough(enable := true, reason := "") {
@@ -2308,27 +2478,38 @@ GDHO_ApplyStarryHostChildPassthrough(enable := true, reason := "") {
 
 GDHO_RaiseLauncherAboveStarry() {
     global GDHO_STAR_GUI, GDHO_LAUNCHER_GUI, GDHO_LAUNCHER_VISIBLE
-    if !(IsObject(GDHO_STAR_GUI) && IsObject(GDHO_LAUNCHER_GUI) && GDHO_LAUNCHER_VISIBLE)
+    if !(IsObject(GDHO_LAUNCHER_GUI) && GDHO_LAUNCHER_VISIBLE)
         return
     try {
-        ; HWND_TOPMOST：启动层必须在全屏星空之上，否则穿透星空会吃掉点击
-        DllCall("SetWindowPos", "Ptr", GDHO_LAUNCHER_GUI.Hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
+        ; HWND_TOPMOST：启动层必须在星空之上接收点击（hWndInsertAfter=星空会把启动层压到下面）
+        DllCall("SetWindowPos", "Ptr", GDHO_LAUNCHER_GUI.Hwnd, "Ptr", -1
+            , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
     } catch {
     }
     try GDHO_SetStarryClickThrough(true, "raise_launcher_above_starry")
     try GDHO_ApplyStarryHostChildPassthrough(true, "raise_launcher_above_starry")
+    try GDHO_ApplyLauncherHostChildPassthrough(false, "raise_launcher_above_starry")
+}
+
+GDHO_DeferStarryLauncherSuppress(*) {
+    try GDHO_SuppressEmbeddedStarryLauncher()
+    catch {
+    }
 }
 
 GDHO_EnsureLauncherLayerOnTop(*) {
-    global GDHO_LAUNCHER_VISIBLE
+    global GDHO_LAUNCHER_VISIBLE, GDHO_LAUNCHER_EMBED_STARFIELD
     if !GDHO_LAUNCHER_VISIBLE || !GDHO_IsLauncherLayerActive()
         return
-    if FuncExists("GDHO_IsStarryHostVisible") && !GDHO_IsStarryHostVisible() {
-        try GDHO_HideLauncherLayer("ensure_on_top_starry_gone")
-        return
+    if !GDHO_LAUNCHER_EMBED_STARFIELD {
+        if FuncExists("GDHO_IsStarryHostVisible") && !GDHO_IsStarryHostVisible() {
+            try GDHO_HideLauncherLayer("ensure_on_top_starry_gone")
+            return
+        }
     }
     try GDHO_SyncLauncherLayerPosition()
-    try GDHO_RaiseLauncherAboveStarry()
+    if !GDHO_LAUNCHER_EMBED_STARFIELD
+        try GDHO_RaiseLauncherAboveStarry()
 }
 
 GDHO_ShowStarryPassthroughOnly(reason := "p2_starry_passthrough") {
@@ -2357,7 +2538,9 @@ GDHO_HideStarryHost(reason := "p2_hide_starry") {
 GDHO_ForceShowLauncherLayerByPolicy(ax := 0, ay := 0, reason := "policy") {
     if !GDHO_UseLauncherLayer()
         return false
-    try GDHO_ShowStarryPassthroughOnly("before_force_launcher:" . reason)
+    global GDHO_LAUNCHER_EMBED_STARFIELD
+    if !GDHO_LAUNCHER_EMBED_STARFIELD
+        try GDHO_ShowStarryPassthroughOnly("before_force_launcher:" . reason)
     try GDHO_UpdateHoleCenterFromPolicy(Integer(ax), Integer(ay))
     ok := GDHO_ShowLauncherLayerForced("force_policy:" . reason)
     if FuncExists("NMER_Log")
@@ -2521,11 +2704,29 @@ GDHO_RunLauncherJS(js) {
     }
 }
 
+GDHO_PrewarmLauncherGridHidden() {
+    global g_GDHO_LauncherGridSent
+    if g_GDHO_LauncherGridSent
+        return true
+    layoutJson := GDHO_GetSceneToolbarLayoutJson()
+    js := "try{window.HoleLauncherLayer?.applyConfig?.({sceneToolbarLayout:" . layoutJson . "});}catch(_e){}"
+    if GDHO_RunLauncherJS(js) {
+        g_GDHO_LauncherGridSent := true
+        return true
+    }
+    return false
+}
+
 GDHO_SendLauncherLayerConfig() {
     global g_GDHO_PendingPanelText, g_GDHO_LauncherGridSent
+    if !g_GDHO_LauncherGridSent
+        try GDHO_PrewarmLauncherGridHidden()
     layoutJson := GDHO_GetSceneToolbarLayoutJson()
     previewJs := GDHO_QuoteJsString(Trim(String(g_GDHO_PendingPanelText)))
-    js := "try{window.HoleLauncherLayer?.applyConfig?.({sceneToolbarLayout:" . layoutJson . "});window.HoleLauncherLayer?.show?.(" . previewJs . ");}catch(_e){}"
+    js := "try{window.HoleLauncherLayer?.show?.(" . previewJs . ");}catch(_e){}"
+    if !g_GDHO_LauncherGridSent {
+        js := "try{window.HoleLauncherLayer?.applyConfig?.({sceneToolbarLayout:" . layoutJson . "});window.HoleLauncherLayer?.show?.(" . previewJs . ");}catch(_e){}"
+    }
     if GDHO_RunLauncherJS(js) {
         g_GDHO_LauncherGridSent := true
         return true
@@ -2535,7 +2736,7 @@ GDHO_SendLauncherLayerConfig() {
 
 GDHO_ShowLauncherLayerForced(reason := "") {
     global GDHO_LAUNCHER_GUI, GDHO_LAUNCHER_VISIBLE, GDHO_LAUNCHER_READY
-    global g_GDHO_PendingLauncherShow, g_GDHO_StarryLauncherOpen, g_GDHO_LauncherLastShowTick
+    global g_GDHO_PendingLauncherShow, g_GDHO_StarryLauncherOpen, g_GDHO_LauncherLastShowTick, g_GDHO_LauncherGridSent
     if !GDHO_UseLauncherLayer()
         return false
     now := A_TickCount
@@ -2548,8 +2749,12 @@ GDHO_ShowLauncherLayerForced(reason := "") {
     }
     if (GDHO_LAUNCHER_VISIBLE && launcherShown && g_GDHO_LauncherLastShowTick > 0 && (now - g_GDHO_LauncherLastShowTick) < 300) {
         try GDHO_MarkTextHoleExpandedHold()
-        try GDHO_SuppressEmbeddedStarryLauncher()
         try GDHO_SyncLauncherLayerPosition()
+        try GDHO_ApplyLauncherLayerInteractive("show_launcher_layer_quick")
+        global GDHO_LAUNCHER_EMBED_STARFIELD
+        if !GDHO_LAUNCHER_EMBED_STARFIELD
+            try GDHO_RaiseLauncherAboveStarry()
+        try SetTimer(GDHO_DeferStarryLauncherSuppress, -8)
         return true
     }
     if (GDHO_LAUNCHER_VISIBLE && !launcherShown)
@@ -2557,36 +2762,48 @@ GDHO_ShowLauncherLayerForced(reason := "") {
     g_GDHO_LauncherLastShowTick := now
     g_GDHO_StarryLauncherOpen := true
     try GDHO_MarkTextHoleExpandedHold()
-    try GDHO_EnsureStarryOnScreenForLauncher()
-    try GDHO_SyncHoleCenterFromStarryWindow()
-    try GDHO_SuppressEmbeddedStarryLauncher()
+    rect := GDHO_GetLauncherLayerRect()
+    try GDHO_SyncStarryBackdropForLauncher("show_launcher_layer:" . reason)
     try GDHO_EnsureLauncherLayerHost()
-    try GDHO_SetStarryClickThrough(true, "show_launcher_layer_starry_pass")
+    global GDHO_LAUNCHER_EMBED_STARFIELD
+    if !GDHO_LAUNCHER_EMBED_STARFIELD
+        try GDHO_SetStarryClickThrough(true, "show_launcher_layer_starry_pass")
     if FuncExists("GDHO_SetWebOlePassthrough")
         try GDHO_SetWebOlePassthrough(false)
-    try GDHO_RunStarryJS("try{window.__gdhoOlePassthrough=false;var r=document.getElementById('root');if(r){r.classList.add('use-external-launcher');r.classList.remove('ole-passthrough');}window.HoleOverlay?.hideSceneLauncher?.();window.HoleOverlay?.setOlePassthrough?.(false);}catch(_e){}")
-    rect := GDHO_ComputeLauncherRectFromHole(Integer(GDHO_LAUNCHER_W))
+    try SetTimer(GDHO_DeferStarryLauncherSuppress, -8)
     if !IsObject(GDHO_LAUNCHER_GUI)
         try GDHO_CreateLauncherGui()
     try GDHO_LAUNCHER_GUI.Move(rect.x, rect.y, rect.w, rect.h)
     try GDHO_LAUNCHER_GUI.Show("NA x" rect.x " y" rect.y " w" rect.w " h" rect.h)
     GDHO_LAUNCHER_VISIBLE := true
     try GDHO_ApplyLauncherLayerInteractive("show_launcher_layer:" . reason)
-    try GDHO_ApplyStarryHostChildPassthrough(true, "show_launcher_layer")
+    if !GDHO_LAUNCHER_EMBED_STARFIELD {
+        try GDHO_ApplyStarryHostChildPassthrough(true, "show_launcher_layer")
+        try GDHO_RaiseLauncherAboveStarry()
+    } else {
+        try GDHO_ApplyLauncherHostChildPassthrough(false, "show_launcher_layer_embed")
+        try WinSetAlwaysOnTop(1, "ahk_id " GDHO_LAUNCHER_GUI.Hwnd)
+    }
     try GDHO_ResizeLauncherHost()
-    try GDHO_RaiseLauncherAboveStarry()
+    try GDHO_ApplyLauncherLayerInteractive("show_launcher_layer_after_resize:" . reason)
     try WinSetAlwaysOnTop(1, "ahk_id " GDHO_LAUNCHER_GUI.Hwnd)
     g_GDHO_PendingLauncherShow := false
     if (GDHO_WV2_LAUNCHER) {
         try GDHO_WV2_LAUNCHER.PostWebMessageAsString('{"type":"launcher_show"}')
     }
     if GDHO_LAUNCHER_READY {
-        try GDHO_SendLauncherLayerConfig()
+        if g_GDHO_LauncherGridSent {
+            global g_GDHO_PendingPanelText
+            previewJs := GDHO_QuoteJsString(Trim(String(g_GDHO_PendingPanelText)))
+            try GDHO_RunLauncherJS("try{window.HoleLauncherLayer?.show?.(" . previewJs . ");}catch(_e){}")
+        } else
+            try GDHO_SendLauncherLayerConfig()
     } else {
         g_GDHO_PendingLauncherShow := true
         try SetTimer(GDHO_LauncherShowPump, -15)
     }
-    try NativeDropDiag_Log("[TextHole] show_launcher_layer reason=" . String(reason) . " x=" . rect.x . " y=" . rect.y . " cx=" . GDHO_CX . " cy=" . GDHO_CY)
+    try SetTimer(GDHO_EnsureLauncherLayerOnTop, -40)
+    try NativeDropDiag_Log("[TextHole] show_launcher_layer reason=" . String(reason) . " x=" . rect.x . " y=" . rect.y . " cx=" . GDHO_CX . " cy=" . GDHO_CY . " warm=" . (GDHO_LAUNCHER_READY ? "1" : "0"))
     return true
 }
 
@@ -2614,13 +2831,17 @@ GDHO_HideLauncherLayer(reason := "") {
         return
     }
     GDHO_LAUNCHER_VISIBLE := false
-    try GDHO_RunLauncherJS("try{window.HoleLauncherLayer?.hide?.();}catch(_e){}")
+    try GDHO_RunLauncherJS("try{window.HoleLauncherLayer?.hide?.();window.HoleLauncherLayer?.stopBackdrop?.();}catch(_e){}")
     if (GDHO_WV2_LAUNCHER) {
         try GDHO_WV2_LAUNCHER.PostWebMessageAsString('{"type":"launcher_hide"}')
     }
     try GDHO_RunStarryJS("try{window.__gdhoUseLauncherLayer=false;var r=document.getElementById('root');if(r)r.classList.remove('use-external-launcher');window.HoleOverlay?.hideSceneLauncher?.();}catch(_e){}")
     if IsObject(GDHO_LAUNCHER_GUI) {
+        try GDHO_ClearLauncherCircularRegion()
         try GDHO_LAUNCHER_GUI.Hide()
+    }
+    if IsObject(GDHO_STAR_GUI) && GDHO_STAR_GUI.Hwnd {
+        try GDHO_ClearCircularRegionOnHwnd(GDHO_STAR_GUI.Hwnd)
     }
     if FuncExists("GDHO_IsStarryHostVisible") && GDHO_IsStarryHostVisible()
         try GDHO_ApplyStarryHostChildPassthrough(false, "hide_launcher_layer")
@@ -2642,18 +2863,21 @@ GDHO_IsStarryHostVisible() {
 }
 
 GDHO_LauncherShowPump(*) {
-    global g_GDHO_PendingLauncherShow, GDHO_LAUNCHER_READY, g_GDHO_StarryLauncherOpen
+    global g_GDHO_PendingLauncherShow, GDHO_LAUNCHER_READY, g_GDHO_StarryLauncherOpen, GDHO_LAUNCHER_EMBED_STARFIELD
     if !(g_GDHO_PendingLauncherShow || g_GDHO_StarryLauncherOpen)
         return
-    if FuncExists("GDHO_IsStarryHostVisible") && !GDHO_IsStarryHostVisible() {
-        g_GDHO_PendingLauncherShow := false
-        g_GDHO_StarryLauncherOpen := false
-        try GDHO_HideLauncherLayer("launcher_pump_starry_gone")
-        return
+    if !GDHO_LAUNCHER_EMBED_STARFIELD {
+        if FuncExists("GDHO_IsStarryHostVisible") && !GDHO_IsStarryHostVisible() {
+            g_GDHO_PendingLauncherShow := false
+            g_GDHO_StarryLauncherOpen := false
+            try GDHO_HideLauncherLayer("launcher_pump_starry_gone")
+            return
+        }
     }
     if GDHO_LAUNCHER_READY {
         g_GDHO_PendingLauncherShow := false
-        try GDHO_EnsureStarryOnScreenForLauncher()
+        if !GDHO_LAUNCHER_EMBED_STARFIELD
+            try GDHO_EnsureStarryOnScreenForLauncher()
         GDHO_ShowLauncherLayerForced("launcher_show_pump")
         return
     }
@@ -3776,7 +4000,9 @@ GDHO_CommitTextHoleToPanel(reason := "commit", mx := "", my := "") {
         g_GDHO_PendingPanelText := t
         try GDHO_MarkTextHoleExpandedHold()
         try GDHO_EnsureLauncherLayerHost()
-        try GDHO_ShowStarryPassthroughOnly("commit_drop")
+        global GDHO_LAUNCHER_EMBED_STARFIELD
+        if !GDHO_LAUNCHER_EMBED_STARFIELD
+            try GDHO_ShowStarryPassthroughOnly("commit_drop")
         try GDHO_ShowLauncherLayerForced("commit_drop")
     }
     try GDHO_RunStarryJS("window.HoleOverlay?.drop?.({payload:'text',force:true});")
@@ -3825,7 +4051,9 @@ GDHO_OnLauncherExpandStart(msg := 0) {
     if (t != "")
         g_GDHO_PendingPanelText := t
     try GDHO_MarkTextHoleExpandedHold()
-    try GDHO_ShowStarryPassthroughOnly("launcher_expand_start")
+    global GDHO_LAUNCHER_EMBED_STARFIELD
+    if !GDHO_LAUNCHER_EMBED_STARFIELD
+        try GDHO_ShowStarryPassthroughOnly("launcher_expand_start")
     if !(GDHO_LAUNCHER_VISIBLE) {
         try GDHO_ShowLauncherLayerForced("launcher_expand_start")
     } else {
@@ -3978,6 +4206,8 @@ GDHO_PrewarmLauncherLayerHost(*) {
         return
     try GDHO_CreateLauncherGui()
     try GDHO_EnsureLauncherLayerHost()
+    if GDHO_LAUNCHER_READY
+        try GDHO_PrewarmLauncherGridHidden()
 }
 
 GDHO_OnPanelWebViewCreated(ctrl) {
@@ -4061,7 +4291,7 @@ GDHO_OnLauncherWebViewCreated(ctrl) {
     GDHO_WV2_LAUNCHER := ctrl.CoreWebView2
     GDHO_LAUNCHER_READY := false
     try ctrl.IsVisible := true
-    try ctrl.DefaultBackgroundColor := 0x00000000
+    try ctrl.DefaultBackgroundColor := 0xFF000000
     try ctrl.AllowExternalDrop := false
     GDHO_ResizeLauncherHost()
     try GDHO_ApplyLauncherLayerInteractive("launcher_webview_created")
@@ -4088,8 +4318,9 @@ GDHO_OnLauncherNavigationCompleted(sender, args) {
     GDHO_LAUNCHER_READY := !!ok
     try NativeDropDiag_Log("[TextHole] launcher_nav_completed ok=" . (ok ? "1" : "0"))
     if GDHO_LAUNCHER_READY {
-        try GDHO_WV2_CTRL_LAUNCHER.DefaultBackgroundColor := 0x00000000
+        try GDHO_WV2_CTRL_LAUNCHER.DefaultBackgroundColor := 0xFF000000
         try GDHO_ApplyLauncherLayerInteractive("launcher_nav_completed")
+        try GDHO_PrewarmLauncherGridHidden()
         if g_GDHO_PendingLauncherShow || g_GDHO_StarryLauncherOpen {
             if FuncExists("NMER_Log")
                 try NMER_Log("P2_NAV", "nav_completed_trigger_pump", "pending=" . (g_GDHO_PendingLauncherShow ? "1" : "0") . " open=" . (g_GDHO_StarryLauncherOpen ? "1" : "0"))

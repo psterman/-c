@@ -5,36 +5,124 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hole Launcher Layer</title>
   <style>
+    @property --ring-angle {
+      syntax: '<angle>';
+      initial-value: 0deg;
+      inherits: false;
+    }
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: transparent;
+      background: #000000;
       user-select: none;
       pointer-events: auto;
     }
-    #holeSceneLauncher {
+    #launcherRoot {
       position: absolute;
       inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+    /* 内嵌星空 + 彩环（单窗合成，不依赖下层 WebView 穿透） */
+    .launcher-hole-backdrop {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 450px;
+      height: 450px;
+      margin-left: -225px;
+      margin-top: -225px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .launcher-hole-backdrop .ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 4;
+    }
+    .launcher-hole-backdrop .ring::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 50%;
+      padding: 2.5px;
+      background: conic-gradient(from var(--ring-angle), #4285f4, #34a853, #fbbc05, #ea4335, #4285f4);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      animation: launcherRingSpin 4s linear infinite;
+    }
+    @keyframes launcherRingSpin {
+      to { --ring-angle: 360deg; }
+    }
+    .launcher-hole-backdrop .well {
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: #000;
+      z-index: 2;
+    }
+    #launcherGalaxyCanvas {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 520px;
+      height: 520px;
+      background: #000;
+    }
+    #holeSceneLauncher {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 380px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       pointer-events: auto;
-      opacity: 1;
-      transform: scale(1);
-      transition: none;
+      opacity: 0;
+      transform: scale(0.88);
+      transform-origin: center center;
+      background: transparent;
+      transition: opacity 380ms ease, transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     #holeSceneLauncher.visible {
       opacity: 1;
       transform: scale(1);
     }
+    .launcher-scene-front {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 360px;
+      padding: 0 12px;
+      pointer-events: none;
+    }
+    .launcher-scene-front .hole-scene-grid,
+    .launcher-scene-front .hole-scene-tile {
+      pointer-events: auto;
+    }
     .hole-scene-badge {
       position: absolute;
-      top: 6px;
-      right: 8px;
+      top: 8px;
+      right: 10px;
+      z-index: 3;
       font: 600 10px/1 "Segoe UI", "Microsoft YaHei", sans-serif;
       color: rgba(120, 255, 200, 0.8);
       letter-spacing: 0.06em;
@@ -44,7 +132,7 @@
       text-align: center;
       font: 500 11px/1.3 "Segoe UI", "Microsoft YaHei", sans-serif;
       color: rgba(220, 245, 255, 0.72);
-      margin-bottom: 8px;
+      margin: 0 0 8px;
       min-height: 14px;
       pointer-events: none;
     }
@@ -52,12 +140,8 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 10px 8px;
-      padding: 6px 12px 10px;
-      max-width: 360px;
       width: 100%;
-      margin: 0 auto;
       justify-items: center;
-      pointer-events: auto;
     }
     .hole-scene-tile {
       display: flex;
@@ -68,10 +152,6 @@
       background: transparent;
       cursor: pointer;
       padding: 0;
-      opacity: 1;
-      transform: scale(1);
-      pointer-events: auto !important;
-      touch-action: manipulation;
       animation: sceneTilePop 0.14s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     @keyframes sceneTilePop {
@@ -81,14 +161,13 @@
     .hole-scene-icon {
       width: 50px;
       height: 50px;
-      border-radius: 13px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 22px;
-      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      pointer-events: auto;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.12);
     }
     .hole-scene-icon img { width: 26px; height: 26px; object-fit: contain; }
     .hole-scene-label {
@@ -108,9 +187,20 @@
   </style>
 </head>
 <body>
-  <div id="holeSceneLauncher" aria-label="场景启动器">
-    <div class="hole-scene-sub">选择场景</div>
+  <div id="launcherRoot">
+    <div class="launcher-hole-backdrop" aria-hidden="true">
+      <div class="ring"></div>
+      <div class="well">
+        <canvas id="launcherGalaxyCanvas" width="520" height="520"></canvas>
+      </div>
+    </div>
+    <div id="holeSceneLauncher" aria-label="场景启动器">
+      <div class="launcher-scene-front">
+        <div class="hole-scene-sub">选择场景</div>
+      </div>
+    </div>
   </div>
+  <script src="https://app.local/assets/hole-launcher-backdrop.js"></script>
   <script src="https://app.local/assets/hole-scene-launcher.js"></script>
   <script>
     (function () {
@@ -129,12 +219,29 @@
         if (!host || !window.HoleSceneLauncher) return null;
         sceneLauncherApi = window.HoleSceneLauncher.mount({
           host: host,
+          mountTarget: host.querySelector('.launcher-scene-front') || host,
           post: postHost,
           badge: 'A·启动层'
         });
         return sceneLauncherApi;
       }
+      function startBackdrop() {
+        try {
+          if (window.HoleLauncherBackdrop && window.HoleLauncherBackdrop.start) {
+            window.HoleLauncherBackdrop.start();
+          }
+        } catch (_) {}
+      }
+      function stopBackdrop() {
+        try {
+          if (window.HoleLauncherBackdrop && window.HoleLauncherBackdrop.stop) {
+            window.HoleLauncherBackdrop.stop();
+          }
+        } catch (_) {}
+      }
       window.HoleLauncherLayer = {
+        startBackdrop: startBackdrop,
+        stopBackdrop: stopBackdrop,
         applyConfig: function (cfg) {
           var api = ensureApi();
           if (!api) return;
@@ -142,10 +249,12 @@
           api.buildGrid(layout);
         },
         show: function (preview) {
+          startBackdrop();
           var api = ensureApi();
           if (!api) return;
-          if (!document.querySelector('#holeSceneLauncher .hole-scene-grid') ||
-              !document.querySelector('#holeSceneLauncher .hole-scene-grid').children.length) {
+          var front = document.querySelector('.launcher-scene-front');
+          if (!front || !front.querySelector('.hole-scene-grid') ||
+              !front.querySelector('.hole-scene-grid').children.length) {
             api.buildGrid([]);
           }
           if (preview != null) api.setPreview(preview);
@@ -155,6 +264,7 @@
           if (sceneLauncherApi) sceneLauncherApi.hide();
           var host = document.getElementById('holeSceneLauncher');
           if (host) host.classList.remove('visible');
+          stopBackdrop();
         }
       };
       try {

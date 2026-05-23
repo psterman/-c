@@ -31,9 +31,13 @@ global g_HoleTrig_FreePts := []
 global g_HoleTrig_FreeLastMoveTick := 0
 global g_HoleTrig_FreeCooldownUntil := 0
 global g_HoleTrig_FreePendingMove := false
-global g_HoleTrig_FreeIdleMs := 130
-global g_HoleTrig_FreeCooldownMs := 420
+global g_HoleTrig_FreeIdleMs := 160
+global g_HoleTrig_FreeCooldownMs := 720
 global g_HoleTrig_RButtonWatch := false
+global g_HoleTrig_LastActivateTick := 0
+global g_HoleTrig_ActivateCooldownMs := 900
+global g_HoleTrig_TrailLastTick := 0
+global g_HoleTrig_TrailThrottleMs := 72
 
 HoleTriggers_DiagLog(msg) {
     global g_HoleTrig_DiagPath
@@ -354,6 +358,9 @@ HoleTriggers_FreeCircle_Reset(reason := "") {
     try SetTimer(HoleTriggers_FreeCircleFinalize, 0)
     catch {
     }
+    try HoleTriggers_ClearGestureTrail()
+    catch {
+    }
     if (reason != "")
         HoleTriggers_DiagLog("[HoleTrigger] free_circle_reset reason=" . String(reason))
 }
@@ -383,6 +390,8 @@ HoleTriggers_FreeCircle_OnMove(mx, my) {
         g_HoleTrig_FreeLastMoveTick := A_TickCount
     if (g_HoleTrig_FreePts.Length > 240)
         g_HoleTrig_FreePts := HoleTriggers_SubsamplePts(g_HoleTrig_FreePts, 120)
+    if (g_HoleTrig_FreePts.Length >= 8)
+        try HoleTriggers_GestureTrailPoint(ix, iy)
     HoleTriggers_FreeCircle_ScheduleFinalize()
 }
 
@@ -394,8 +403,12 @@ HoleTriggers_FreeCircleFinalize(*) {
         return HoleTriggers_FreeCircle_Reset("button_down")
     pts := g_HoleTrig_FreePts
     n := pts is Array ? pts.Length : 0
-    if (n < 6) {
+    if (n < 10) {
         HoleTriggers_FreeCircle_Reset("few_pts")
+        return
+    }
+    if !HoleTriggers_CanActivateNow() {
+        HoleTriggers_FreeCircle_Reset("activate_cooldown")
         return
     }
     mx := pts[n].x, my := pts[n].y
@@ -418,7 +431,8 @@ HoleTriggers_FreeCircleFinalize(*) {
         reason := "free_circle_ccw"
     if (reason = "")
         return
-    g_HoleTrig_FreeCooldownUntil := A_TickCount + Integer(g_HoleTrig_FreeCooldownMs)
+    strict := HoleTriggers_GetGestureStrictness()
+    g_HoleTrig_FreeCooldownUntil := A_TickCount + Floor(Integer(g_HoleTrig_FreeCooldownMs) * strict)
     HoleTriggers_ActivateAtScreen(mx, my, reason)
 }
 
@@ -515,7 +529,10 @@ HoleTriggers_LoadFromIni(iniPath := "") {
     iniRadius := Integer(IniRead(cf, "Appearance", "HoleCircleMinRadius", "0"))
     circleR := (iniRadius > 0) ? iniRadius : presetRadius
     hmRaw := Trim(IniRead(cf, "Appearance", "HoleRButtonHoldMs", "480"))
-    hm := Integer(hmRaw != "" ? hmRaw : "480")
+    hm := Integer(hmRaw != "" ? hmRaw : "520")
+    acRaw := Trim(IniRead(cf, "Appearance", "HoleGestureActivateCooldownMs", "900"))
+    global g_HoleTrig_ActivateCooldownMs
+    g_HoleTrig_ActivateCooldownMs := Max(500, Integer(acRaw != "" ? acRaw : "900"))
     HoleTriggers_ApplyConfig(Map(
         "textSelect", HoleTriggers_IniBool(cf, "Appearance", "HoleTriggerTextSelect", "1"),
         "circleCw", HoleTriggers_IniBool(cf, "Appearance", "HoleTriggerCircleCw", "0"),
@@ -565,6 +582,25 @@ HoleTriggers_InferSensitivityPreset(triggerDist, dismissDist) {
     return "standard"
 }
 
+HoleTriggers_GetGestureStrictness() {
+    try {
+        hwnd := WinGetID("A")
+        if !hwnd
+            return 1.0
+        cls := WinGetClass("ahk_id " hwnd)
+        proc := WinGetProcessName("ahk_id " hwnd)
+        title := WinGetTitle("ahk_id " hwnd)
+        if (cls = "UnityWndClass" || cls = "UnrealWindow" || InStr(proc, "League") || InStr(proc, "GTA"))
+            return 1.55
+        if (InStr(proc, "devenv") || InStr(proc, "Code") || InStr(proc, "Cursor") || InStr(title, "Visual Studio"))
+            return 1.28
+        if (InStr(title, "Floating Toolbar"))
+            return 1.2
+    } catch {
+    }
+    return 1.0
+}
+
 HoleTriggers_ShouldIgnoreGestureAtPoint(x, y) {
     if FuncExists("GDHO_IsLauncherLayerActive") {
         try {
@@ -579,10 +615,53 @@ HoleTriggers_ShouldIgnoreGestureAtPoint(x, y) {
             title := WinGetTitle("ahk_id " hwnd)
             if InStr(title, "Floating Toolbar")
                 return true
+            cls := WinGetClass("ahk_id " hwnd)
+            if (cls = "UnityWndClass" || cls = "UnrealWindow")
+                return true
         }
     } catch {
     }
     return false
+}
+
+HoleTriggers_CanActivateNow() {
+    global g_HoleTrig_LastActivateTick, g_HoleTrig_ActivateCooldownMs
+    strict := HoleTriggers_GetGestureStrictness()
+    cd := Floor(Integer(g_HoleTrig_ActivateCooldownMs) * strict)
+    if (cd < 500)
+        cd := 500
+    return (A_TickCount - Integer(g_HoleTrig_LastActivateTick) >= cd)
+}
+
+HoleTriggers_MarkActivated() {
+    global g_HoleTrig_LastActivateTick
+    g_HoleTrig_LastActivateTick := A_TickCount
+}
+
+HoleTriggers_GestureTrailPoint(screenX, screenY) {
+    global g_HoleTrig_TrailLastTick, g_HoleTrig_TrailThrottleMs
+    if !(FuncExists("GDHO_RunStarryJS") && FuncExists("GDHO_PolicyScreenToStarryClient"))
+        return
+    now := A_TickCount
+    if (g_HoleTrig_TrailLastTick = 0) {
+        if FuncExists("GDHO_ShowStarryPassthroughOnly")
+            try GDHO_ShowStarryPassthroughOnly("gesture_trail")
+        catch {
+        }
+    }
+    if (g_HoleTrig_TrailLastTick > 0 && (now - g_HoleTrig_TrailLastTick) < Integer(g_HoleTrig_TrailThrottleMs))
+        return
+    g_HoleTrig_TrailLastTick := now
+    try {
+        cli := GDHO_PolicyScreenToStarryClient(Integer(screenX), Integer(screenY))
+        GDHO_RunStarryJS("try{window.HoleOverlay?.gestureTrailPoint?.(" . Integer(cli.x) . "," . Integer(cli.y) . ");}catch(_e){}")
+    } catch {
+    }
+}
+
+HoleTriggers_ClearGestureTrail() {
+    if FuncExists("GDHO_RunStarryJS")
+        try GDHO_RunStarryJS("try{window.HoleOverlay?.clearGestureTrail?.();}catch(_e){}")
 }
 
 HoleTriggers_OnLauncherDismissed(reason := "") {
@@ -831,6 +910,8 @@ HoleTriggers_IsGestureHotkeyContext() {
 HoleTriggers_ActivateAtScreen(x, y, reason := "gesture") {
     if !HoleTriggers_IsHoleModeActive()
         return false
+    if !HoleTriggers_CanActivateNow()
+        return false
     if HoleTriggers_ShouldIgnoreGestureAtPoint(x, y)
         return false
     ax := Integer(x), ay := Integer(y)
@@ -871,6 +952,11 @@ HoleTriggers_ActivateAtScreen(x, y, reason := "gesture") {
     }
     if !ok
         ok := HoleTriggers_HoleUiIsVisible()
+    if ok
+        HoleTriggers_MarkActivated()
+    try HoleTriggers_ClearGestureTrail()
+    catch {
+    }
     HoleTriggers_DiagLog("[HoleTrigger] activate_result ok=" . (ok ? "1" : "0") . " reason=" . String(reason)
         . " launcher=" . (HoleTriggers_HoleUiIsVisible() ? "1" : "0"))
     try HoleTriggers_NotifyGestureResult(ok, ax, ay, reason)
@@ -990,7 +1076,8 @@ HoleTriggers_GetScaledCircleMinRadius() {
     global g_HoleTrig_CircleMinRadius
     dpi := 96
     try dpi := DllCall("GetDpiForSystem", "UInt")
-    return Max(24, Floor(g_HoleTrig_CircleMinRadius * dpi / 96.0 * 0.58))
+    base := Max(24, Floor(g_HoleTrig_CircleMinRadius * dpi / 96.0 * 0.58))
+    return Max(base, Floor(base * HoleTriggers_GetGestureStrictness()))
 }
 
 HoleTriggers_ComputePathLength(pts) {
@@ -1068,7 +1155,7 @@ HoleTriggers_AnalyzeCircle(&outDir := "", &reject := "", pts := "", &diag := "")
     }
     pts := HoleTriggers_SubsamplePts(pts, 88)
     pathLen := HoleTriggers_ComputePathLength(pts)
-    if (pathLen < minR * 2.0) {
+    if (pathLen < minR * 2.35) {
         reject := "short_path"
         diag := "minR=" . minR
         return false
@@ -1105,14 +1192,14 @@ HoleTriggers_AnalyzeCircle(&outDir := "", &reject := "", pts := "", &diag := "")
     first := pts[1]
     last := pts[pts.Length]
     closure := Sqrt((last.x - first.x) ** 2 + (last.y - first.y) ** 2)
-    if (closure > Max(radius * 2.0, minR * 2.4, pathLen * 0.32)) {
+    if (closure > Max(radius * 1.75, minR * 2.0, pathLen * 0.22)) {
         reject := "open_loop"
         diag := "cls=" . Round(closure) . " r=" . Round(radius)
         return false
     }
     circum := 6.2831853 * radius
     arcRatio := pathLen / Max(circum, 1.0)
-    if (arcRatio < 0.42) {
+    if (arcRatio < 0.52) {
         reject := "arc_short"
         diag := "arc=" . Round(arcRatio, 2)
         return false
@@ -1146,7 +1233,7 @@ HoleTriggers_AnalyzeCircle(&outDir := "", &reject := "", pts := "", &diag := "")
     }
     diag := "asp=" . Round(bb.aspect, 2) . " ang=" . Round(angle, 2) . " arc=" . Round(arcRatio, 2)
     area := HoleTriggers_ShoeLaceArea(pts)
-    if (Abs(angle) >= 0.55) {
+    if (Abs(angle) >= 0.72) {
         outDir := (angle > 0) ? "cw" : "ccw"
         reject := ""
         return true
@@ -1155,7 +1242,7 @@ HoleTriggers_AnalyzeCircle(&outDir := "", &reject := "", pts := "", &diag := "")
         reject := "area_small"
         return false
     }
-    if (Abs(angle) < 0.42) {
+    if (Abs(angle) < 0.55) {
         reject := "weak_turn"
         return false
     }
@@ -1189,7 +1276,8 @@ HoleTriggers_OnRButtonUp(*) {
         dy := my - g_HoleTrig_StartY
         dist := Sqrt(dx * dx + dy * dy)
         holdPathMax := g_HoleTrig_RButtonMaxMovePx * (HoleTriggers_IsCircleCwEnabled() || HoleTriggers_IsCircleCcwEnabled() ? 3.5 : 2.5)
-        if (elapsed >= g_HoleTrig_RButtonHoldMs && dist <= g_HoleTrig_RButtonMaxMovePx && pathLen <= holdPathMax)
+        holdNeed := Floor(Integer(g_HoleTrig_RButtonHoldMs) * HoleTriggers_GetGestureStrictness())
+        if (elapsed >= holdNeed && dist <= g_HoleTrig_RButtonMaxMovePx && pathLen <= holdPathMax)
             HoleTriggers_ActivateAtScreen(mx, my, "rbutton_hold")
     }
 }
@@ -1209,7 +1297,9 @@ HoleTriggers_OnRButtonHoldTick(*) {
         SetTimer(HoleTriggers_OnRButtonHoldTick, 0)
         return
     }
-    if (A_TickCount - g_HoleTrig_StartTick) < g_HoleTrig_RButtonHoldMs
+    strict := HoleTriggers_GetGestureStrictness()
+    holdNeed := Floor(Integer(g_HoleTrig_RButtonHoldMs) * strict)
+    if (A_TickCount - g_HoleTrig_StartTick) < holdNeed
         return
     CoordMode("Mouse", "Screen")
     MouseGetPos(&mx, &my)

@@ -143,6 +143,16 @@
       opacity: 0 !important;
       pointer-events: none !important;
     }
+    /* 方案 A：星空铺底（450 圆环 + 星系），启动层透明叠在正上方 */
+    #root.use-external-launcher.show.drop.expanded .hole-wrap {
+      opacity: 1 !important;
+    }
+    #root.use-external-launcher.show.drop.expanded #galaxyCanvas {
+      opacity: 1 !important;
+    }
+    #root.use-external-launcher.show.drop.expanded .ring {
+      opacity: 1 !important;
+    }
 
     /* 方案 A：透明场景启动器，叠在黑洞正圆上（挂 #root 避免被星环层遮挡） */
     #holeSceneLauncher {
@@ -219,13 +229,13 @@
     .hole-scene-icon {
       width: 50px;
       height: 50px;
-      border-radius: 13px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 22px;
-      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.12);
     }
     .hole-scene-icon img { width: 26px; height: 26px; object-fit: contain; }
     .hole-scene-label {
@@ -300,10 +310,23 @@
     }
 
     @keyframes spin { to { --ring-angle: 360deg; } }
+
+    #gestureTrailCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 85;
+      opacity: 0;
+      transition: opacity 220ms ease;
+    }
+    #gestureTrailCanvas.active { opacity: 1; }
   </style>
 </head>
 <body>
   <div id="root">
+    <canvas id="gestureTrailCanvas" aria-hidden="true"></canvas>
     <div class="hole-wrap" id="holeBody">
       <div class="aura"></div>
       <div class="ring">
@@ -332,6 +355,9 @@
   <script>
     (function () {
       const root = document.getElementById('root');
+      const gestureTrailCanvas = document.getElementById('gestureTrailCanvas');
+      const gestureTrailCtx = gestureTrailCanvas ? gestureTrailCanvas.getContext('2d') : null;
+      let gestureTrailActive = false;
       const canvas = document.getElementById('galaxyCanvas');
       const ctx = canvas.getContext('2d', { alpha: false });
       const holeBody = document.getElementById('holeBody');
@@ -546,7 +572,46 @@
         }
       }
 
+      function resizeGestureTrailCanvas() {
+        if (!gestureTrailCanvas || !gestureTrailCtx) return;
+        const dpr = window.devicePixelRatio || 1;
+        const w = window.innerWidth || 800;
+        const h = window.innerHeight || 800;
+        gestureTrailCanvas.width = Math.floor(w * dpr);
+        gestureTrailCanvas.height = Math.floor(h * dpr);
+        gestureTrailCanvas.style.width = w + 'px';
+        gestureTrailCanvas.style.height = h + 'px';
+        gestureTrailCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      resizeGestureTrailCanvas();
+      window.addEventListener('resize', resizeGestureTrailCanvas);
+
       window.HoleOverlay = {
+        clearGestureTrail: () => {
+          if (!gestureTrailCtx || !gestureTrailCanvas) return;
+          gestureTrailActive = false;
+          gestureTrailCanvas.classList.remove('active');
+          gestureTrailCtx.clearRect(0, 0, gestureTrailCanvas.width, gestureTrailCanvas.height);
+        },
+        gestureTrailPoint: (cx, cy) => {
+          if (!gestureTrailCtx || !gestureTrailCanvas) return;
+          const x = Number(cx) || 0;
+          const y = Number(cy) || 0;
+          if (!gestureTrailActive) {
+            gestureTrailActive = true;
+            gestureTrailCanvas.classList.add('active');
+            gestureTrailCtx.clearRect(0, 0, gestureTrailCanvas.width, gestureTrailCanvas.height);
+            gestureTrailCtx.strokeStyle = 'rgba(120, 255, 200, 0.55)';
+            gestureTrailCtx.lineWidth = 2.2;
+            gestureTrailCtx.lineJoin = 'round';
+            gestureTrailCtx.lineCap = 'round';
+            gestureTrailCtx.beginPath();
+            gestureTrailCtx.moveTo(x, y);
+          } else {
+            gestureTrailCtx.lineTo(x, y);
+            gestureTrailCtx.stroke();
+          }
+        },
         show: (_payload, opts) => {
           if(!(opts && opts.prewarm)) window.__gdhoUserInteracting = true;
           if (_payload === 'text' || _payload === 'file') payloadType = _payload;
@@ -566,6 +631,7 @@
           isGalaxyOpen = false;
           setP(0);
           window.HoleOverlay.hideSceneLauncher();
+          window.HoleOverlay.clearGestureTrail();
         },
         showSceneLauncher: (preview) => {
           if (useExternalLauncherLayer()) return;

@@ -24,21 +24,23 @@
     opts = opts || {};
     var host = opts.host;
     if (!host) return null;
+    var mountRoot = opts.mountTarget || host;
     var post = typeof opts.post === 'function' ? opts.post : function () {};
     var badge = String(opts.badge || '').trim();
-    var grid = host.querySelector('.hole-scene-grid');
+    var grid = mountRoot.querySelector('.hole-scene-grid');
     if (!grid) {
       grid = document.createElement('div');
       grid.className = 'hole-scene-grid';
       grid.setAttribute('role', 'grid');
-      host.appendChild(grid);
+      mountRoot.appendChild(grid);
     }
     if (badge) {
-      var tag = host.querySelector('.hole-scene-badge');
+      var badgeHost = host;
+      var tag = badgeHost.querySelector('.hole-scene-badge');
       if (!tag) {
         tag = document.createElement('div');
         tag.className = 'hole-scene-badge';
-        host.appendChild(tag);
+        badgeHost.appendChild(tag);
       }
       tag.textContent = badge;
     }
@@ -116,7 +118,7 @@
       show: function () { host.classList.add('visible'); },
       hide: function () { host.classList.remove('visible'); },
       setPreview: function (text) {
-        var sub = host.querySelector('.hole-scene-sub');
+        var sub = mountRoot.querySelector('.hole-scene-sub');
         if (!sub) return;
         var t = String(text || '').trim();
         sub.textContent = t

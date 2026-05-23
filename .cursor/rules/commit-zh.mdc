@@ -1,0 +1,34 @@
+---
+description: Git 提交说明一律使用简体中文（Agent 代写 commit 时生效）
+alwaysApply: true
+---
+
+# 中文 Commit Message
+
+本仓库的 Git 提交说明**必须使用简体中文**。生成、改写或执行 `git commit` 时遵守以下约定。
+
+## 语言与格式
+
+- 使用**简体中文**，自然、简洁，避免英文句子或中英混杂（`fix`/`feat` 等 type 前缀可保留）。
+- 优先 **一行 subject**（约 50 字内）；需要补充细节时再加空行与 body，body 也用中文。
+- 推荐前缀：`feat:`、`fix:`、`refactor:`、`docs:`、`chore:`、`perf:`（后接中文描述）。
+- 描述**做了什么、为什么**，不要罗列文件名，不要写 "Update xxx" / "Enhance xxx" 式英文套话。
+
+## 示例
+
+```
+fix: 修复 A 启动层色键导致鼠标穿透无法点图标
+feat: 启动层内嵌星空与彩环，显示时隐藏独立星空窗
+refactor: 星空宿主与启动层 HWND 对齐为同尺寸 450 圆
+docs: 补充黑洞划选与手势激活流程说明
+```
+
+## 禁止
+
+- 不要用英文写 subject/body（除 conventional commit 的 type 前缀）。
+- 不要生成过长段落；不要把 diff 里每个文件都抄进 message。
+- 未经用户明确要求，不要 `--amend`、不要 `push --force`。
+
+## 说明
+
+Cursor 源代码管理里的 **Generate Commit Message** 按钮**不保证**读取本规则；若仍为英文，请让 Agent 根据 staged 变更代写 commit，或先手动提交若干条中文 commit 以影响该功能的风格学习。
