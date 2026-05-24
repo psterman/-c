@@ -100,6 +100,7 @@ global GDHO_LAUNCHER_PAGE_URL := ""
 global GDHO_LAUNCHER_FALLBACK_URL := ""
 global g_GDHO_LauncherCreateInFlight := false
 global g_GDHO_PendingLauncherShow := false
+global g_GDHO_LauncherEscHotkey := 0
 global g_GDHO_LauncherCmdInFlightUntil := 0
 global g_GDHO_P2_LastPolicyTick := 0
 global g_GDHO_P2_ExpandEnsureReason := ""
@@ -2229,6 +2230,7 @@ GDHO_ApplyLauncherCircularRegion(w := 0, h := 0) {
 GDHO_ParkLauncherGui(reason := "") {
     global GDHO_LAUNCHER_GUI, GDHO_LAUNCHER_W, GDHO_LAUNCHER_H, GDHO_PARK_X, GDHO_PARK_Y
     global GDHO_WV2_CTRL_LAUNCHER, GDHO_LAUNCHER_VISIBLE
+    try GDHO_UnregisterLauncherEscHotkey()
     if !IsObject(GDHO_LAUNCHER_GUI) || !GDHO_LAUNCHER_GUI.Hwnd
         return
     lw := Max(360, Integer(GDHO_LAUNCHER_W))
@@ -2313,6 +2315,7 @@ GDHO_ApplyLauncherLayerInteractive(reason := "") {
 
 GDHO_DismissLauncherUI(reason := "") {
     global g_GDHO_StarryLauncherOpen, g_GDHO_PendingLauncherShow, g_GDHO_LauncherGridSent
+    try GDHO_UnregisterLauncherEscHotkey()
     g_GDHO_StarryLauncherOpen := false
     g_GDHO_PendingLauncherShow := false
     g_GDHO_LauncherGridSent := false
@@ -2327,6 +2330,50 @@ GDHO_DismissLauncherUI(reason := "") {
         catch {
         }
     }
+}
+
+; Esc 关闭 A 启动层（WebView 常无键盘焦点，需 AHK 热键兜底）
+GDHO_DismissLauncherOnEsc(reason := "launcher_escape") {
+    if !(FuncExists("GDHO_IsLauncherLayerActive") && GDHO_IsLauncherLayerActive())
+        return false
+    try GDHO_DismissLauncherUI("esc:" . String(reason))
+    catch {
+        return false
+    }
+    return true
+}
+
+GDHO_OnLauncherEscPressed(*) {
+    if GDHO_DismissLauncherOnEsc("esc_hotkey")
+        return
+}
+
+GDHO_RegisterLauncherEscHotkey() {
+    global g_GDHO_LauncherEscHotkey
+    if !GDHO_UseLauncherLayer()
+        return
+    try {
+        if IsObject(g_GDHO_LauncherEscHotkey)
+            g_GDHO_LauncherEscHotkey.Delete()
+    } catch {
+    }
+    g_GDHO_LauncherEscHotkey := 0
+    try {
+        g_GDHO_LauncherEscHotkey := Hotkey("$Esc", GDHO_OnLauncherEscPressed, "On")
+        try NativeDropDiag_Log("[TextHole] launcher_esc_hotkey_on")
+    } catch as e {
+        try NativeDropDiag_Log("[TextHole] launcher_esc_hotkey_fail msg=" . e.Message)
+    }
+}
+
+GDHO_UnregisterLauncherEscHotkey() {
+    global g_GDHO_LauncherEscHotkey
+    if !IsObject(g_GDHO_LauncherEscHotkey)
+        return
+    try g_GDHO_LauncherEscHotkey.Delete()
+    catch {
+    }
+    g_GDHO_LauncherEscHotkey := 0
 }
 
 GDHO_SuppressEmbeddedStarryLauncher() {
@@ -2860,6 +2907,8 @@ GDHO_ShowLauncherLayerForced(reason := "") {
         try SetTimer(GDHO_LauncherShowPump, -15)
     }
     try SetTimer(GDHO_EnsureLauncherLayerOnTop, -40)
+    try GDHO_RunLauncherJS("try{document.body&&document.body.focus&&document.body.focus();}catch(_e){}")
+    try GDHO_RegisterLauncherEscHotkey()
     try NativeDropDiag_Log("[TextHole] show_launcher_layer reason=" . String(reason) . " x=" . rect.x . " y=" . rect.y . " cx=" . GDHO_CX . " cy=" . GDHO_CY . " warm=" . (GDHO_LAUNCHER_READY ? "1" : "0"))
     return true
 }
@@ -2888,6 +2937,7 @@ GDHO_HideLauncherLayer(reason := "") {
         return
     }
     GDHO_LAUNCHER_VISIBLE := false
+    try GDHO_UnregisterLauncherEscHotkey()
     try GDHO_RunLauncherJS("try{window.HoleLauncherLayer?.hide?.();window.HoleLauncherLayer?.stopBackdrop?.();}catch(_e){}")
     if (GDHO_WV2_LAUNCHER) {
         try GDHO_WV2_LAUNCHER.PostWebMessageAsString('{"type":"launcher_hide"}')
@@ -4438,8 +4488,12 @@ GDHO_OnLauncherWebMessage(sender, args) {
         try GDHO_WS_RelayPanelMessage(msg)
     if (typ = "hole_close") {
         rs := msg.Has("reason") ? StrLower(Trim(String(msg["reason"]))) : ""
+        if (rs = "launcher_escape" || rs = "launcher_close_btn") {
+            try GDHO_DismissLauncherUI("launcher_wm:" . rs)
+            return
+        }
         try GDHO_DismissLauncherUI("launcher_wm_hole_close:" . rs)
-        if (rs = "launcher_close_btn" || rs = "panel_close_btn" || rs = "panel_escape") {
+        if (rs = "panel_close_btn" || rs = "panel_escape") {
             if FuncExists("GDHO_DismissTextHolePanel")
                 GDHO_DismissTextHolePanel(rs)
             else if FuncExists("GDHO_HidePanel")

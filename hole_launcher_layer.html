@@ -27,10 +27,6 @@
       align-items: center;
       justify-content: center;
       pointer-events: auto;
-      clip-path: circle(225.5px at 50% 50%);
-      -webkit-clip-path: circle(225.5px at 50% 50%);
-      mask-image: radial-gradient(circle 225.5px at 50% 50%, #000 0 100%, transparent 100%);
-      -webkit-mask-image: radial-gradient(circle 225.5px at 50% 50%, #000 0 100%, transparent 100%);
     }
     /* 内嵌星空 + 彩环（单窗合成，不依赖下层 WebView 穿透） */
     .launcher-hole-backdrop {
@@ -43,6 +39,8 @@
       margin-top: -225px;
       pointer-events: none;
       z-index: 0;
+      clip-path: circle(225.5px at 50% 50%);
+      -webkit-clip-path: circle(225.5px at 50% 50%);
     }
     /* 彩环改由 hole-launcher-backdrop.js 在 canvas 上抗锯齿绘制 */
     .launcher-hole-backdrop .ring {
@@ -167,10 +165,42 @@
       font-size: 12px;
       padding: 12px;
     }
+    #launcherCloseBtn {
+      position: absolute;
+      left: 50%;
+      top: calc(50% - 198px);
+      transform: translate(-50%, -50%);
+      width: 36px;
+      height: 36px;
+      z-index: 100;
+      border: 1px solid rgba(255, 140, 140, 0.75);
+      border-radius: 50%;
+      background: rgba(120, 28, 28, 0.88);
+      color: #fff;
+      font: 700 20px/1 "Segoe UI", "Microsoft YaHei", sans-serif;
+      cursor: pointer;
+      padding: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms ease, transform 160ms ease, background 160ms ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    }
+    #launcherCloseBtn:hover {
+      background: rgba(220, 55, 55, 0.95);
+      transform: translate(-50%, -50%) scale(1.08);
+    }
+    #launcherCloseBtn:active {
+      transform: translate(-50%, -50%) scale(0.92);
+    }
+    #launcherRoot:has(#holeSceneLauncher.visible) #launcherCloseBtn {
+      opacity: 1;
+      pointer-events: auto;
+    }
   </style>
 </head>
 <body>
   <div id="launcherRoot">
+    <button id="launcherCloseBtn" type="button" title="关闭 (Esc)" aria-label="关闭">×</button>
     <div class="launcher-hole-backdrop" aria-hidden="true">
       <div class="ring"></div>
       <div class="well">
@@ -222,6 +252,11 @@
           }
         } catch (_) {}
       }
+      function dismissLauncher(reason) {
+        var host = document.getElementById('holeSceneLauncher');
+        if (!host || !host.classList.contains('visible')) return;
+        postHost({ type: 'hole_close', reason: reason || 'launcher_close_btn' });
+      }
       window.HoleLauncherLayer = {
         startBackdrop: startBackdrop,
         stopBackdrop: stopBackdrop,
@@ -248,8 +283,29 @@
           var host = document.getElementById('holeSceneLauncher');
           if (host) host.classList.remove('visible');
           stopBackdrop();
-        }
+        },
+        dismiss: dismissLauncher
       };
+      var closeBtn = document.getElementById('launcherCloseBtn');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function (ev) {
+          try {
+            ev.preventDefault();
+            ev.stopPropagation();
+          } catch (_) {}
+          dismissLauncher('launcher_close_btn');
+        });
+      }
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Escape' && ev.keyCode !== 27) return;
+        var host = document.getElementById('holeSceneLauncher');
+        if (!host || !host.classList.contains('visible')) return;
+        try {
+          ev.preventDefault();
+          ev.stopPropagation();
+        } catch (_) {}
+        dismissLauncher('launcher_escape');
+      }, true);
       try {
         var wv = window.chrome && window.chrome.webview;
         if (wv && wv.addEventListener) {

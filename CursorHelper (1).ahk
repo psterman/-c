@@ -6231,6 +6231,13 @@ OnScreenshotEditorContextMenu(Ctrl, Info := 0, *) {
 Esc:: {
     global IsCountdownActive, GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
     try NativeDropDiag_Log("route esc key=Esc path=search_center_visible")
+    if FuncExists("GDHO_DismissLauncherOnEsc") {
+        try {
+            if GDHO_DismissLauncherOnEsc("esc_search_center")
+                return
+        } catch {
+        }
+    }
     if (IsCountdownActive) {
         try NativeDropDiag_Log("route esc key=Esc path=countdown_cancel")
         CancelCountdown()
@@ -6287,6 +6294,13 @@ RestoreActivationRuntimeAfterConfigClose(*) {
 Esc:: {
     ; 搜索中心优先：避免 WebView 激活态瞬时判定失败时，Esc 误落到全局动态热键（如关闭工具栏）
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
+    if FuncExists("GDHO_DismissLauncherOnEsc") {
+        try {
+            if GDHO_DismissLauncherOnEsc("esc_caps")
+                return
+        } catch {
+        }
+    }
     try {
         if FuncExists("GDHO_IsTextHoleUserPanelActive") {
             try {
@@ -7085,6 +7099,15 @@ RButton:: {
 #HotIf
 
 ; 黑洞手势由 HoleActivationTriggers 内 WH_MOUSE_LL 钩子捕获（HoleTriggers_SyncInputCapture）
+
+; A 启动层可见时 Esc 关闭（无需 CapsLock；WebView 无焦点时由宿主兜底）
+#HotIf IsHoleRuntimeEnabledByActivationMode() && FuncExists("GDHO_IsLauncherLayerActive") && GDHO_IsLauncherLayerActive()
+Esc:: {
+    if FuncExists("GDHO_DismissLauncherOnEsc") && GDHO_DismissLauncherOnEsc("esc_hole_launcher")
+        return
+    Send("{Esc}")
+}
+#HotIf
 
 ; 保底全局热键：重启脚本（避免 Ctrl+Shift 组合被输入法/系统层抢占时 VK 动态绑定失效）
 $^+q:: {

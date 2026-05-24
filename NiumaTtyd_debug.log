@@ -881,3 +881,9 @@
 2026-05-23 09:21:56 ttyd started port 7682 pid 19804 cmd=cmd.exe /k gemini
 2026-05-23 09:22:41 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
 2026-05-23 09:22:41 ttyd started port 7682 pid 15928 cmd=cmd.exe /k gemini
+2026-05-25 00:17:54 ttyd shell [codex_cli] ttyd_auto_cli: cmd.exe /k codex
+2026-05-25 00:17:55 ttyd started port 7681 pid 10728 cmd=cmd.exe /k codex
+2026-05-25 00:18:20 ttyd shell [codex_cli] ttyd_auto_cli: cmd.exe /k codex
+2026-05-25 00:18:20 ttyd started port 7681 pid 18880 cmd=cmd.exe /k codex
+2026-05-25 00:19:01 ttyd shell [codex_cli] ttyd_auto_cli: cmd.exe /k codex
+2026-05-25 00:19:01 ttyd started port 7681 pid 8824 cmd=cmd.exe /k codex
