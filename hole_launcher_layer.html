@@ -16,7 +16,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #000000;
+      background: transparent;
       user-select: none;
       pointer-events: auto;
     }
@@ -27,6 +27,10 @@
       align-items: center;
       justify-content: center;
       pointer-events: auto;
+      clip-path: circle(225.5px at 50% 50%);
+      -webkit-clip-path: circle(225.5px at 50% 50%);
+      mask-image: radial-gradient(circle 225.5px at 50% 50%, #000 0 100%, transparent 100%);
+      -webkit-mask-image: radial-gradient(circle 225.5px at 50% 50%, #000 0 100%, transparent 100%);
     }
     /* 内嵌星空 + 彩环（单窗合成，不依赖下层 WebView 穿透） */
     .launcher-hole-backdrop {
@@ -40,37 +44,16 @@
       pointer-events: none;
       z-index: 0;
     }
+    /* 彩环改由 hole-launcher-backdrop.js 在 canvas 上抗锯齿绘制 */
     .launcher-hole-backdrop .ring {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 4;
-    }
-    .launcher-hole-backdrop .ring::before {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      border-radius: 50%;
-      padding: 2.5px;
-      background: conic-gradient(from var(--ring-angle), #4285f4, #34a853, #fbbc05, #ea4335, #4285f4);
-      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      animation: launcherRingSpin 4s linear infinite;
-    }
-    @keyframes launcherRingSpin {
-      to { --ring-angle: 360deg; }
+      display: none;
     }
     .launcher-hole-backdrop .well {
       position: absolute;
-      inset: 8px;
+      inset: 0;
       border-radius: 50%;
-      overflow: hidden;
-      background: #000;
+      overflow: visible;
+      background: transparent;
       z-index: 2;
     }
     #launcherGalaxyCanvas {
@@ -78,13 +61,13 @@
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      width: 520px;
-      height: 520px;
-      background: #000;
+      width: 450px;
+      height: 450px;
+      background: transparent;
     }
     #holeSceneLauncher {
       position: relative;
-      z-index: 2;
+      z-index: 10;
       width: 100%;
       max-width: 380px;
       display: flex;
@@ -191,7 +174,7 @@
     <div class="launcher-hole-backdrop" aria-hidden="true">
       <div class="ring"></div>
       <div class="well">
-        <canvas id="launcherGalaxyCanvas" width="520" height="520"></canvas>
+        <canvas id="launcherGalaxyCanvas" width="450" height="450"></canvas>
       </div>
     </div>
     <div id="holeSceneLauncher" aria-label="场景启动器">

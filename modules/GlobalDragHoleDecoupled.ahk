@@ -2180,6 +2180,30 @@ GDHO_ApplyLauncherNoActivateStyle() {
     }
 }
 
+GDHO_ApplyCircularRegionTree(hwnd, w := 0, h := 0) {
+    if !hwnd
+        return false
+    ok := GDHO_ApplyCircularRegionOnHwnd(hwnd, w, h)
+    child := DllCall("GetWindow", "Ptr", hwnd, "UInt", 5, "Ptr")
+    while child {
+        if GDHO_ApplyCircularRegionTree(child, w, h)
+            ok := true
+        child := DllCall("GetWindow", "Ptr", child, "UInt", 2, "Ptr")
+    }
+    return ok
+}
+
+GDHO_ClearCircularRegionTree(hwnd) {
+    if !hwnd
+        return
+    try GDHO_ClearCircularRegionOnHwnd(hwnd)
+    child := DllCall("GetWindow", "Ptr", hwnd, "UInt", 5, "Ptr")
+    while child {
+        GDHO_ClearCircularRegionTree(child)
+        child := DllCall("GetWindow", "Ptr", child, "UInt", 2, "Ptr")
+    }
+}
+
 GDHO_ApplyLauncherCircularRegion(w := 0, h := 0) {
     global GDHO_LAUNCHER_GUI
     if !IsObject(GDHO_LAUNCHER_GUI) || !GDHO_LAUNCHER_GUI.Hwnd
@@ -2198,7 +2222,38 @@ GDHO_ApplyLauncherCircularRegion(w := 0, h := 0) {
         iw := Max(80, Integer(GDHO_LAUNCHER_W))
         ih := Max(80, Integer(GDHO_LAUNCHER_H))
     }
+    ; 仅裁宿主 HWND；子 WebView 套 Region 会在彩环外露出实心黑圆/黑边
     return GDHO_ApplyCircularRegionOnHwnd(hwnd, iw, ih)
+}
+
+GDHO_ParkLauncherGui(reason := "") {
+    global GDHO_LAUNCHER_GUI, GDHO_LAUNCHER_W, GDHO_LAUNCHER_H, GDHO_PARK_X, GDHO_PARK_Y
+    global GDHO_WV2_CTRL_LAUNCHER, GDHO_LAUNCHER_VISIBLE
+    if !IsObject(GDHO_LAUNCHER_GUI) || !GDHO_LAUNCHER_GUI.Hwnd
+        return
+    lw := Max(360, Integer(GDHO_LAUNCHER_W))
+    lh := Max(360, Integer(GDHO_LAUNCHER_H))
+    try GDHO_LAUNCHER_GUI.Move(Integer(GDHO_PARK_X), Integer(GDHO_PARK_Y), lw, lh)
+    try GDHO_ClearLauncherCircularRegion()
+    if IsObject(GDHO_WV2_CTRL_LAUNCHER) {
+        try GDHO_WV2_CTRL_LAUNCHER.IsVisible := false
+    }
+    try GDHO_LAUNCHER_GUI.Hide()
+    GDHO_LAUNCHER_VISIBLE := false
+    try NativeDropDiag_Log("[TextHole] park_launcher reason=" . Trim(String(reason)))
+}
+
+GDHO_ApplyLauncherLayerPrewarmState(reason := "") {
+    global GDHO_LAUNCHER_GUI, GDHO_WV2_CTRL_LAUNCHER
+    if !IsObject(GDHO_LAUNCHER_GUI) || !GDHO_LAUNCHER_GUI.Hwnd
+        return
+    try GDHO_LAUNCHER_GUI.BackColor := "010101"
+    try WinSetTransColor("010101", "ahk_id " GDHO_LAUNCHER_GUI.Hwnd)
+    if IsObject(GDHO_WV2_CTRL_LAUNCHER) {
+        try GDHO_WV2_CTRL_LAUNCHER.DefaultBackgroundColor := 0x00000000
+        try GDHO_WV2_CTRL_LAUNCHER.IsVisible := false
+    }
+    try GDHO_ParkLauncherGui("prewarm:" . Trim(String(reason)))
 }
 
 GDHO_ClearLauncherCircularRegion() {
@@ -2234,12 +2289,12 @@ GDHO_ApplyLauncherLayerInteractive(reason := "") {
     if !IsObject(GDHO_LAUNCHER_GUI) || !GDHO_LAUNCHER_GUI.Hwnd
         return
     hwnd := GDHO_LAUNCHER_GUI.Hwnd
-    ; 切勿对启动层 WinSetTransColor：色键像素会鼠标穿透，图标无法点击
-    try GDHO_LAUNCHER_GUI.BackColor := "000000"
-    try WinSetTransColor("Off", "ahk_id " hwnd)
+    ; 010101 色键 + WebView 透明底：圆外区域不挡桌面；图标区用实色/渐变，勿用 #010101
+    try GDHO_LAUNCHER_GUI.BackColor := "010101"
+    try WinSetTransColor("010101", "ahk_id " hwnd)
     try WinSetTransparent(255, "ahk_id " hwnd)
     if IsObject(GDHO_WV2_CTRL_LAUNCHER) {
-        try GDHO_WV2_CTRL_LAUNCHER.DefaultBackgroundColor := 0xFF000000
+        try GDHO_WV2_CTRL_LAUNCHER.DefaultBackgroundColor := 0x00000000
         try GDHO_WV2_CTRL_LAUNCHER.IsVisible := true
     }
     try GDHO_ApplyLauncherCircularRegion()
@@ -2351,7 +2406,8 @@ GDHO_ApplyCircularRegionOnHwnd(hwnd, w := 0, h := 0) {
         return false
     iw := Max(80, Integer(w)), ih := Max(80, Integer(h))
     try {
-        rgn := DllCall("gdi32\CreateEllipticRgn", "Int", 0, "Int", 0, "Int", iw + 1, "Int", ih + 1, "Ptr")
+        ; +2：GDI 椭圆右/下边为开区间，略放大避免彩环外缘剩 1px 黑边
+        rgn := DllCall("gdi32\CreateEllipticRgn", "Int", -1, "Int", -1, "Int", iw + 2, "Int", ih + 2, "Ptr")
         if rgn
             return !!DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", rgn, "Int", 1)
     } catch {
@@ -2376,11 +2432,11 @@ GDHO_CreateLauncherGui() {
         lw := 360
     if (lh < 360)
         lh := 360
-    rect := GDHO_ComputeLauncherRectFromHole(lw)
+    global GDHO_PARK_X, GDHO_PARK_Y
     GDHO_LAUNCHER_GUI := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x08000000 -DPIScale", "Global Drag Hole Launcher")
-    GDHO_LAUNCHER_GUI.BackColor := "000000"
-    GDHO_LAUNCHER_GUI.Show("x" rect.x " y" rect.y " w" rect.w " h" rect.h . " Hide NA")
-    try GDHO_ApplyLauncherLayerInteractive("create_launcher_gui")
+    GDHO_LAUNCHER_GUI.BackColor := "010101"
+    GDHO_LAUNCHER_GUI.Show("x" Integer(GDHO_PARK_X) " y" Integer(GDHO_PARK_Y) " w" lw " h" lh . " Hide NA")
+    try GDHO_ApplyLauncherLayerPrewarmState("create_launcher_gui")
     GDHO_LAUNCHER_VISIBLE := false
     try GDHO_TraceTopology("create_launcher_layer")
     return GDHO_LAUNCHER_GUI
@@ -2396,7 +2452,8 @@ GDHO_ResizeLauncherHost() {
     rc := WebView2.RECT()
     rc.left := 0, rc.top := 0, rc.right := pw, rc.bottom := ph
     try GDHO_WV2_CTRL_LAUNCHER.Bounds := rc
-    try GDHO_ApplyLauncherCircularRegion(pw, ph)
+    if GDHO_LAUNCHER_VISIBLE
+        try GDHO_ApplyLauncherCircularRegion(pw, ph)
 }
 
 GDHO_ParkStarryForEmbeddedLauncher(reason := "") {
@@ -2676,8 +2733,6 @@ GDHO_EnsureLauncherLayerHost() {
     global GDHO_WV2_LAUNCHER, GDHO_LAUNCHER_READY, g_GDHO_LauncherCreateInFlight, GDHO_LAUNCHER_GUI
     if !GDHO_UseLauncherLayer()
         return GDHO_LAUNCHER_READY
-    if !IsObject(GDHO_STAR_GUI)
-        return false
     if !IsObject(GDHO_LAUNCHER_GUI)
         try GDHO_CreateLauncherGui()
     if IsObject(GDHO_WV2_LAUNCHER)
@@ -2776,6 +2831,8 @@ GDHO_ShowLauncherLayerForced(reason := "") {
     try GDHO_LAUNCHER_GUI.Move(rect.x, rect.y, rect.w, rect.h)
     try GDHO_LAUNCHER_GUI.Show("NA x" rect.x " y" rect.y " w" rect.w " h" rect.h)
     GDHO_LAUNCHER_VISIBLE := true
+    if IsObject(GDHO_WV2_CTRL_LAUNCHER)
+        try GDHO_WV2_CTRL_LAUNCHER.IsVisible := true
     try GDHO_ApplyLauncherLayerInteractive("show_launcher_layer:" . reason)
     if !GDHO_LAUNCHER_EMBED_STARFIELD {
         try GDHO_ApplyStarryHostChildPassthrough(true, "show_launcher_layer")
@@ -2837,8 +2894,7 @@ GDHO_HideLauncherLayer(reason := "") {
     }
     try GDHO_RunStarryJS("try{window.__gdhoUseLauncherLayer=false;var r=document.getElementById('root');if(r)r.classList.remove('use-external-launcher');window.HoleOverlay?.hideSceneLauncher?.();}catch(_e){}")
     if IsObject(GDHO_LAUNCHER_GUI) {
-        try GDHO_ClearLauncherCircularRegion()
-        try GDHO_LAUNCHER_GUI.Hide()
+        try GDHO_ParkLauncherGui("hide_launcher:" . rs)
     }
     if IsObject(GDHO_STAR_GUI) && GDHO_STAR_GUI.Hwnd {
         try GDHO_ClearCircularRegionOnHwnd(GDHO_STAR_GUI.Hwnd)
@@ -4290,11 +4346,11 @@ GDHO_OnLauncherWebViewCreated(ctrl) {
     GDHO_WV2_CTRL_LAUNCHER := ctrl
     GDHO_WV2_LAUNCHER := ctrl.CoreWebView2
     GDHO_LAUNCHER_READY := false
-    try ctrl.IsVisible := true
-    try ctrl.DefaultBackgroundColor := 0xFF000000
+    try ctrl.DefaultBackgroundColor := 0x00000000
     try ctrl.AllowExternalDrop := false
+    try ctrl.IsVisible := false
     GDHO_ResizeLauncherHost()
-    try GDHO_ApplyLauncherLayerInteractive("launcher_webview_created")
+    try GDHO_ApplyLauncherLayerPrewarmState("launcher_webview_created")
     try {
         s := GDHO_WV2_LAUNCHER.Settings
         s.AreDefaultContextMenusEnabled := false
@@ -4318,8 +4374,12 @@ GDHO_OnLauncherNavigationCompleted(sender, args) {
     GDHO_LAUNCHER_READY := !!ok
     try NativeDropDiag_Log("[TextHole] launcher_nav_completed ok=" . (ok ? "1" : "0"))
     if GDHO_LAUNCHER_READY {
-        try GDHO_WV2_CTRL_LAUNCHER.DefaultBackgroundColor := 0xFF000000
-        try GDHO_ApplyLauncherLayerInteractive("launcher_nav_completed")
+        try GDHO_WV2_CTRL_LAUNCHER.DefaultBackgroundColor := 0x00000000
+        try GDHO_RunLauncherJS("try{document.documentElement.style.background='transparent';document.body.style.background='transparent';}catch(_e){}")
+        if GDHO_LAUNCHER_VISIBLE {
+            try GDHO_ApplyLauncherLayerInteractive("launcher_nav_completed")
+        } else
+            try GDHO_ApplyLauncherLayerPrewarmState("launcher_nav_completed")
         try GDHO_PrewarmLauncherGridHidden()
         if g_GDHO_PendingLauncherShow || g_GDHO_StarryLauncherOpen {
             if FuncExists("NMER_Log")

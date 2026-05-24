@@ -2630,6 +2630,11 @@ GDHO_ResizeToVirtualScreen() {
 
 GDHO_PrewarmOffscreen(*) {
     global GDHO_ACTIVE, NativeDropSessionActive, g_GDHO_WaitingReadyReveal, g_GDHO_OpenPayload, GDHO_VISIBLE
+    if FuncExists("GDHO_UseLauncherLayer") && GDHO_UseLauncherLayer() {
+        global GDHO_LAUNCHER_EMBED_STARFIELD
+        if GDHO_LAUNCHER_EMBED_STARFIELD
+            return
+    }
     if (g_GDHO_WaitingReadyReveal && GDHO_VISIBLE)
         return
     if (g_GDHO_OpenPayload is Map) {
