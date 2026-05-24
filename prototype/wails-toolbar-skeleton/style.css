@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg-0: #0b0b0b;
   --bg-1: rgba(20, 20, 20, 0.72);
   --bg-2: rgba(255, 122, 0, 0.08);
@@ -169,6 +169,26 @@ body {
   margin: 10px 2px 2px;
   font-size: 12px;
   color: rgba(255, 232, 212, 0.82);
+}
+
+.voice-hint {
+  display: none;
+  margin: 6px 2px 0;
+  font-size: 12px;
+  color: rgba(255, 200, 140, 0.9);
+}
+
+.voice-hint.show {
+  display: block;
+}
+
+.voice-hint.listening,
+.voice-hint.loading {
+  color: #ffb347;
+}
+
+.voice-hint.error {
+  color: #ff6b6b;
 }
 
 @media (max-width: 760px) {

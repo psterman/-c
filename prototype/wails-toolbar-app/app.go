@@ -67,7 +67,10 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.emitLifecycle("starting", "startup")
-	go a.enableWindowResidentMode()
+	go func() {
+		a.enableWindowResidentMode()
+		a.FocusWindow()
+	}()
 
 	// Safety gate: native OLE drop listener is opt-in for now.
 	// Set NMER_NATIVE_DROP=1 to enable after UI stability is confirmed.
@@ -227,13 +230,31 @@ func (a *App) FocusWindow() {
 	}
 }
 
-func (a *App) SetPaletteExpanded(expanded bool, itemCount int) {
+func (a *App) SetWindowContentHeight(height int) {
+	if a.ctx == nil {
+		return
+	}
+	width := 760
+	if height < 76 {
+		height = 76
+	}
+	if height > 480 {
+		height = 480
+	}
+	runtime.WindowSetSize(a.ctx, width, height)
+}
+
+func (a *App) SetPaletteExpanded(expanded bool, itemCount int, voiceExtra ...int) {
 	if a.ctx == nil {
 		return
 	}
 
 	width := 900
-	height := 64
+	height := 96
+	voiceRows := 0
+	if len(voiceExtra) > 0 && voiceExtra[0] > 0 {
+		voiceRows = 1
+	}
 	if expanded {
 		a.emitLifecycle("expanded", "palette")
 		if itemCount < 1 {
@@ -242,11 +263,12 @@ func (a *App) SetPaletteExpanded(expanded bool, itemCount int) {
 		if itemCount > 8 {
 			itemCount = 8
 		}
-		// Input area + result list rows + vertical paddings.
-		height = 64 + itemCount*44 + 14
-		if height > 420 {
-			height = 420
+		height = 96 + voiceRows*22 + itemCount*44 + 14
+		if height > 460 {
+			height = 460
 		}
+	} else if voiceRows > 0 {
+		height = 118
 	}
 
 	runtime.WindowSetSize(a.ctx, width, height)

@@ -515,18 +515,184 @@ ClearCapsLockTimer(*) {
 
 ; ===================== Wails 输入框激活 =====================
 ; 可选全局配置（可在主脚本或 ini 加载后覆盖）：
-;   WailsInputWindowTitle := "NMER COMMAND BAR"
-;   WailsInputWindowExe   := "your-wails-app.exe"
-;   WailsInputLaunchPath  := "C:\path\to\your-wails-app.exe"
+;   WailsInputWindowTitle := "NMER Wails Input"
+;   WailsInputWindowExe   := "nmer-wails-input.exe"
+;   WailsInputLaunchPath  := "完整路径\nmer-wails-input.exe"
+;   WailsInputAllowHtmlFallback := false  ; true 时才用浏览器打开 html 原型（非悬浮窗）
 global WailsInputWindowTitle := "NMER Wails Input"
-global WailsInputWindowExe := "nmer-wails-input-dev.exe"
+global WailsInputWindowExe := "nmer-wails-input.exe"
 global WailsInputLaunchPath := ""
-global WailsInputTitleKeywords := "NMER Wails Input|nmer-wails-input"
+global WailsInputTitleKeywords := "NMER Wails Input|nmer-wails-input|wails-toolbar"
 global WailsInputHtmlPath := A_ScriptDir . "\prototype\wails-toolbar-skeleton\index.html"
+global WailsInputAllowHtmlFallback := false
+; true：每次双击 CapsLock 先结束旧进程再启动 build\bin 下最新 exe（避免一直激活内存里的老透明版）
+global WailsInputRestartOnActivate := true
+
+WailsInput_GetAppRoot() {
+    return A_ScriptDir . "\prototype\wails-toolbar-app"
+}
+
+WailsInput_GetCanonicalExePath() {
+    return WailsInput_GetAppRoot() . "\build\bin\nmer-wails-input.exe"
+}
+
+WailsInput_GetDeployExePath() {
+    return A_ScriptDir . "\bin\nmer-wails-input.exe"
+}
+
+WailsInput_InitLaunchPath() {
+    global WailsInputLaunchPath
+    for p in [WailsInput_GetCanonicalExePath(), WailsInput_GetDeployExePath()] {
+        if FileExist(p) {
+            WailsInputLaunchPath := p
+            return p
+        }
+    }
+    WailsInputLaunchPath := WailsInput_GetCanonicalExePath()
+    return WailsInputLaunchPath
+}
+
+WailsInput_ResolveLaunchPath() {
+    global WailsInputLaunchPath
+    if (Trim(WailsInputLaunchPath) != "" && FileExist(WailsInputLaunchPath))
+        return WailsInputLaunchPath
+    return WailsInput_InitLaunchPath()
+}
+
+WailsInput_KillAllInstances() {
+    loop 24 {
+        pid := ProcessExist("nmer-wails-input.exe")
+        if !pid
+            break
+        try ProcessClose(pid)
+        catch {
+        }
+        Sleep(120)
+    }
+}
+
+WailsInput_GetRunningExePath() {
+    pid := ProcessExist("nmer-wails-input.exe")
+    if !pid
+        return ""
+    try return ProcessGetPath(pid)
+    catch {
+        return ""
+    }
+}
+
+WailsInput_IsRunningCanonicalExe() {
+    running := WailsInput_GetRunningExePath()
+    if (running = "")
+        return false
+    canonical := WailsInput_ResolveLaunchPath()
+    if (canonical = "" || !FileExist(canonical))
+        return false
+    return (StrLower(running) = StrLower(canonical))
+}
+
+WailsInput_LaunchCanonicalExe() {
+    launchPath := WailsInput_ResolveLaunchPath()
+    if (launchPath = "" || !FileExist(launchPath)) {
+        TrayTip("命令栏", "未找到命令栏程序，请执行：`nprototype\wails-toolbar-app 目录下 wails build", "Icon!")
+        return false
+    }
+    global WailsInputLaunchPath
+    WailsInputLaunchPath := launchPath
+    try {
+        try EnvSet("NMER_SCRIPT_DIR", A_ScriptDir)
+        Run('"' . launchPath . '"')
+        return true
+    } catch as e {
+        TrayTip("命令栏", "无法启动：`n" . launchPath . "`n" . e.Message, "Icon!")
+        return false
+    }
+}
+
+WailsInput_BuildWinCandidates() {
+    global WailsInputWindowTitle, WailsInputWindowExe
+    out := []
+    if (Trim(WailsInputWindowTitle) != "")
+        out.Push(Trim(WailsInputWindowTitle))
+    for exeName in [WailsInputWindowExe, "nmer-wails-input.exe", "wails-toolbar-app.exe", "nmer-wails-input-dev.exe"] {
+        n := Trim(String(exeName))
+        if (n = "")
+            continue
+        q := "ahk_exe " . n
+        dup := false
+        for _, existing in out {
+            if (existing = q) {
+                dup := true
+                break
+            }
+        }
+        if !dup
+            out.Push(q)
+    }
+    return out
+}
+
+WailsInput_TryActivateByKeywords(kwList, prevMatch) {
+    winIds := WinGetList()
+    for _, hwnd in winIds {
+        t := ""
+        try t := WinGetTitle("ahk_id " . hwnd)
+        if (Trim(t) = "")
+            continue
+        titleLower := StrLower(t)
+        for _, k in kwList {
+            if (InStr(titleLower, StrLower(k))) {
+                WailsInput_ForceVisible("ahk_id " . hwnd)
+                if (TryActivateWindow("ahk_id " . hwnd)) {
+                    SetTitleMatchMode(prevMatch)
+                    return true
+                }
+                SetTitleMatchMode(prevMatch)
+                return false
+            }
+        }
+    }
+    return false
+}
+
+WailsInput_WaitActivateAfterLaunch(candidates, kwList, prevMatch, timeoutMs := 8000) {
+    deadline := A_TickCount + timeoutMs
+    while (A_TickCount < deadline) {
+        for _, winQuery in candidates {
+            if (WinExist(winQuery) && TryActivateWindow(winQuery)) {
+                SetTitleMatchMode(prevMatch)
+                return true
+            }
+        }
+        if WailsInput_TryActivateByKeywords(kwList, prevMatch)
+            return true
+        Sleep(120)
+    }
+    SetTitleMatchMode(prevMatch)
+    return false
+}
+
+WailsInput_ForceVisible(winQuery) {
+    hwnd := 0
+    try hwnd := WinExist(winQuery)
+    if !hwnd
+        return false
+    ; 勿设置 WS_EX_LAYERED / SetLayeredWindowAttributes，否则 WebView2 中文 IME 候选窗会失效
+    WS_EX_TRANSPARENT := 0x20
+    try WinShow("ahk_id " . hwnd)
+    try WinRestore("ahk_id " . hwnd)
+    try {
+        ex := DllCall("GetWindowLongPtr", "ptr", hwnd, "int", -20, "ptr")
+        if (ex & WS_EX_TRANSPARENT)
+            DllCall("SetWindowLongPtr", "ptr", hwnd, "int", -20, "ptr", ex & ~WS_EX_TRANSPARENT, "ptr")
+    }
+    return true
+}
 
 TryActivateWindow(winQuery) {
     if !WinExist(winQuery)
         return false
+    WailsInput_ForceVisible(winQuery)
     try WinShow(winQuery)
     try WinRestore(winQuery)
     try LegacyGuard_RequestFocus("CursorPanelController", winQuery, 50, "ensure_target_visible")
@@ -570,110 +736,108 @@ LaunchHtmlInNewWindow(htmlPath) {
     return false
 }
 
+WailsInput_FocusWebInput() {
+    js := "document.body.classList.remove('native-input-mode');"
+        . "var i=document.getElementById('command-input');"
+        . "if(i){i.focus();var n=i.value.length;i.setSelectionRange(n,n);}"
+        . "try{window.go.main.App.SetInputImeReady()}catch(e){}"
+    if FuncExists("WailsWhisper_RunJsInInputHost")
+        WailsWhisper_RunJsInInputHost(js)
+    hwnd := 0
+    for q in ["ahk_exe nmer-wails-input.exe", "NMER Wails Input"] {
+        if WinExist(q) {
+            hwnd := WinExist(q)
+            break
+        }
+    }
+    if hwnd {
+        try WinActivate("ahk_id " . hwnd)
+        if FuncExists("ApplyChineseIMEConversionToHwnd") {
+            try ApplyChineseIMEConversionToHwnd(hwnd)
+            SetTimer(() => ApplyChineseIMEConversionToHwnd(hwnd), -220)
+        }
+    }
+}
+
+WailsInput_AfterActivated() {
+    hwnd := 0
+    for q in ["ahk_exe nmer-wails-input.exe", "NMER Wails Input"] {
+        if WinExist(q) {
+            hwnd := WinExist(q)
+            break
+        }
+    }
+    if hwnd && FuncExists("ApplyChineseIMEConversionToHwnd") {
+        try ApplyChineseIMEConversionToHwnd(hwnd)
+        SetTimer(() => ApplyChineseIMEConversionToHwnd(hwnd), -200)
+    }
+    if FuncExists("WailsNative_OnWailsActivated")
+        WailsNative_OnWailsActivated()
+    else if FuncExists("WailsInput_FocusWebInput")
+        SetTimer(WailsInput_FocusWebInput, -150)
+}
+
 ActivateWailsInputBox() {
-    global WailsInputWindowTitle, WailsInputWindowExe, WailsInputLaunchPath, WailsInputTitleKeywords, WailsInputHtmlPath
+    global WailsInputTitleKeywords, WailsInputHtmlPath, WailsInputAllowHtmlFallback, WailsInputRestartOnActivate
     local prevMatch := A_TitleMatchMode
     SetTitleMatchMode(2)
 
-    candidates := []
-    if (Trim(WailsInputWindowTitle) != "")
-        candidates.Push(Trim(WailsInputWindowTitle))
-    if (Trim(WailsInputWindowExe) != "")
-        candidates.Push("ahk_exe " . Trim(WailsInputWindowExe))
-
-    ; 常见兜底：如果你后续改了标题或 exe，可通过上面的全局变量覆盖
-    candidates.Push("ahk_exe nmer.exe")
-    candidates.Push("ahk_exe niuma.exe")
-    candidates.Push("ahk_exe wails.exe")
-
-    for _, winQuery in candidates {
-        if (WinExist(winQuery)) {
-            if (TryActivateWindow(winQuery)) {
-                SetTitleMatchMode(prevMatch)
-                return true
-            }
-            SetTitleMatchMode(prevMatch)
-            return false
-        }
-    }
-
-    ; 枚举所有顶层窗口做模糊匹配（对 Wails 开发期标题不稳定更友好）
+    WailsInput_InitLaunchPath()
+    candidates := WailsInput_BuildWinCandidates()
     kwList := []
     for kw in StrSplit(String(WailsInputTitleKeywords), "|") {
         k := Trim(kw)
         if (k != "")
-            kwList.Push(StrLower(k))
-    }
-    winIds := WinGetList()
-    for _, hwnd in winIds {
-        t := ""
-        try t := WinGetTitle("ahk_id " . hwnd)
-        if (Trim(t) = "")
-            continue
-        titleLower := StrLower(t)
-        for _, k in kwList {
-            if (InStr(titleLower, k)) {
-                if (TryActivateWindow("ahk_id " . hwnd)) {
-                    SetTitleMatchMode(prevMatch)
-                    return true
-                }
-                SetTitleMatchMode(prevMatch)
-                return false
-            }
-        }
+            kwList.Push(k)
     }
 
-    if (Trim(WailsInputLaunchPath) != "") {
-        try Run(WailsInputLaunchPath)
-        Sleep(350)
+    needRestart := WailsInputRestartOnActivate || !WailsInput_IsRunningCanonicalExe()
+    if needRestart {
+        WailsInput_KillAllInstances()
+        Sleep(280)
+        if WailsInput_LaunchCanonicalExe() {
+            if WailsInput_WaitActivateAfterLaunch(candidates, kwList, prevMatch) {
+                WailsInput_AfterActivated()
+                SetTitleMatchMode(prevMatch)
+                return true
+            }
+        }
+    } else {
         for _, winQuery in candidates {
             if (WinExist(winQuery)) {
                 if (TryActivateWindow(winQuery)) {
+                    WailsInput_AfterActivated()
                     SetTitleMatchMode(prevMatch)
                     return true
                 }
+            }
+        }
+        if WailsInput_TryActivateByKeywords(kwList, prevMatch) {
+            WailsInput_AfterActivated()
+            SetTitleMatchMode(prevMatch)
+            return true
+        }
+        if WailsInput_LaunchCanonicalExe() {
+            if WailsInput_WaitActivateAfterLaunch(candidates, kwList, prevMatch) {
+                WailsInput_AfterActivated()
                 SetTitleMatchMode(prevMatch)
-                return false
+                return true
             }
         }
     }
 
-    ; 开发态兜底：强制新建独立窗口打开本地 html 原型
-    if (Trim(WailsInputHtmlPath) != "" && FileExist(WailsInputHtmlPath)) {
+    if (WailsInputAllowHtmlFallback && Trim(WailsInputHtmlPath) != "" && FileExist(WailsInputHtmlPath)) {
         LaunchHtmlInNewWindow(WailsInputHtmlPath)
         Sleep(900)
-        for _, winQuery in candidates {
-            if (WinExist(winQuery)) {
-                if (TryActivateWindow(winQuery)) {
-                    SetTitleMatchMode(prevMatch)
-                    return true
-                }
-                SetTitleMatchMode(prevMatch)
-                return false
-            }
-        }
-        winIds2 := WinGetList()
-        for _, hwnd2 in winIds2 {
-            t2 := ""
-            try t2 := WinGetTitle("ahk_id " . hwnd2)
-            if (Trim(t2) = "")
-                continue
-            titleLower2 := StrLower(t2)
-            for _, k2 in kwList {
-                if (InStr(titleLower2, k2)) {
-                    if (TryActivateWindow("ahk_id " . hwnd2)) {
-                        SetTitleMatchMode(prevMatch)
-                        return true
-                    }
-                    SetTitleMatchMode(prevMatch)
-                    return false
-                }
-            }
+        if WailsInput_WaitActivateAfterLaunch(candidates, kwList, prevMatch, 2500) {
+            WailsInput_AfterActivated()
+            return true
         }
     }
 
     SetTitleMatchMode(prevMatch)
-    TrayTip("提示", "未找到/未拉起输入框。请确认窗口标题关键词或 html 路径。", "Iconi")
+    buildHint := WailsInput_GetAppRoot() . "`n在目录执行: wails build"
+    TrayTip("命令栏", "未找到悬浮输入框程序。请先构建 Wails 应用：`n" . buildHint, "Icon!")
     return false
 }
 
@@ -766,6 +930,17 @@ CapsLock:: {
     ; 记录按下时间
     CapsLockPressTime := A_TickCount
     
+    ; Wails 输入框 Whisper 录音：录音中短按 CapsLock 结束并识别
+    if (FuncExists("WailsWhisper_TryStopOnCapsRelease") && WailsWhisper_TryStopOnCapsRelease()) {
+        KeyWait("CapsLock")
+        SetTimer(SearchCenter_CapsHintOnTimer, 0)
+        SearchCenter_SetCapsHintActive(false)
+        CapsLock_ApplyLogicalState(InitialCapsLockState)
+        CapsLock := false
+        CapsLock2 := false
+        return
+    }
+
     ; 如果正在语音输入或语音搜索，处理暂停/恢复逻辑
     global VoiceInputActive, VoiceSearchActive
     if (VoiceInputActive || VoiceSearchActive) {
@@ -861,13 +1036,17 @@ CapsLock:: {
         VKHoldVisible := false
     }
     
-    ; 双击 CapsLock：激活/拉起 Wails 输入框，并撤销第一次单击对大小写状态的切换
+    ; 双击 CapsLock：激活/拉起 Wails 输入框；再次双击可结束 Whisper 录音并识别
     if (CapsLock2 && IsCapsDoubleClick) {
-        ; 调试确认：看到该提示表示“双击判定已命中”
-        TrayTip("CapsLock", "双击已触发，正在激活 Wails 输入框…", "Iconi")
-        ActivateWailsInputBox()
-        ; 双击时保持系统原生 CapsLock 状态流转，不额外改写大小写状态
-        ; 延迟清除 CapsLock 变量，给快捷键处理函数足够的时间
+        if (FuncExists("WailsWhisper_IsRecording") && WailsWhisper_IsRecording()) {
+            if FuncExists("WailsWhisper_StopAndTranscribe")
+                SetTimer(WailsWhisper_StopAndTranscribe, -30)
+        } else {
+            if ActivateWailsInputBox() {
+                if FuncExists("WailsWhisper_OnInputActivated")
+                    WailsWhisper_OnInputActivated()
+            }
+        }
         SetTimer(ClearCapsLockTimer, -100)
         CapsLock2 := false
         return

@@ -1,4 +1,4 @@
-﻿const QUICK_ACTIONS = [
+const QUICK_ACTIONS = [
   { id: "ocr", label: "文字识别", keywords: ["ocr", "识别", "提取"] },
   { id: "summarize", label: "归类总结", keywords: ["总结", "归类", "摘要"] },
   { id: "ask-ai", label: "发送给AI", keywords: ["ai", "问", "提问"] },
@@ -12,6 +12,25 @@ const state = {
   isDragActive: false,
   selectedDrop: "",
   isInputFocused: false,
+  voiceStatus: "idle",
+  voiceHint: "",
+};
+
+window.nmerVoice = {
+  setInputText(text) {
+    state.input = String(text || "");
+    render();
+    const input = document.getElementById("command-input");
+    if (input) {
+      input.focus();
+      input.setSelectionRange(state.input.length, state.input.length);
+    }
+  },
+  setStatus(text, status = "ready") {
+    state.voiceHint = String(text || "");
+    state.voiceStatus = String(status || "ready");
+    render();
+  },
 };
 
 let dragCounter = 0;
@@ -66,6 +85,7 @@ function render() {
         </button>
       </div>
 
+      <p class="hint voice-hint ${state.voiceStatus !== "idle" ? "show" : ""}">${escapeHTML(state.voiceHint || "双击 CapsLock 打开；录音中再按 CapsLock 或再次双击结束识别")}</p>
       <p class="hint">拖拽文件到窗口可展开投递区（当前为前端演示）</p>
     </section>
   `;

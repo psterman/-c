@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg-0: #0b0b0b;
   --bg-1: rgba(20, 20, 20, 0.72);
   --bg-2: rgba(255, 122, 0, 0.08);
@@ -20,24 +20,196 @@
 }
 
 * { box-sizing: border-box; }
-html, body, #root { width: 100%; height: 100%; background: transparent !important; }
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
 
 body {
   margin: 0;
   overflow: hidden;
-  display: grid;
-  place-items: center;
-  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
   color: var(--text-main);
   background: transparent;
 }
 
 .toolbar-shell {
-  width: min(860px, 92vw);
+  width: 100%;
+  max-width: 760px;
   margin: 0 auto;
+  padding: 4px 6px 6px;
   position: relative;
   z-index: 5;
-  padding-top: 0;
+  background: transparent;
+}
+
+/* Raycast 风格命令面板：单卡片、向下展开、无窗体滚动条 */
+.raycast-palette {
+  width: 100%;
+  background: rgba(32, 32, 34, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 12px 40px rgba(0, 0, 0, 0.55),
+    0 2px 8px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  -webkit-app-region: drag;
+}
+
+.palette-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 4px;
+  -webkit-app-region: drag;
+}
+
+.palette-search {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  border: none;
+  border-radius: 8px;
+  background: transparent !important;
+  color: #f5f5f7 !important;
+  -webkit-text-fill-color: #f5f5f7;
+  caret-color: #ff9f43;
+  font-size: 20px;
+  line-height: 28px;
+  padding: 10px 14px;
+  outline: none;
+  box-shadow: none;
+  ime-mode: active;
+  -webkit-app-region: no-drag;
+}
+
+.palette-search::placeholder {
+  color: rgba(245, 245, 247, 0.38);
+}
+
+.palette-voice {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  margin-right: 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(245, 245, 247, 0.55);
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  -webkit-app-region: no-drag;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.palette-voice:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffb347;
+}
+
+.palette-voice.recording {
+  background: rgba(255, 90, 50, 0.22);
+  color: #ff7a45;
+  animation: voice-pulse 1.2s ease-in-out infinite;
+}
+
+.palette-status {
+  display: none;
+  margin: 0;
+  padding: 0 16px 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(255, 180, 120, 0.9);
+  -webkit-app-region: no-drag;
+}
+
+.palette-status.show {
+  display: block;
+}
+
+.palette-status.listening,
+.palette-status.loading {
+  color: #ffb347;
+}
+
+.palette-status.error {
+  color: #ff6b6b;
+}
+
+.palette-results {
+  display: none;
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 6px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  scrollbar-width: none;
+  -webkit-app-region: no-drag;
+}
+
+.palette-results::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.palette-results.show {
+  display: block;
+}
+
+.result-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #f5f5f7;
+  text-align: left;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.result-item:hover,
+.result-item.active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.result-title {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.result-desc {
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(245, 245, 247, 0.45);
+  line-height: 1.3;
+}
+
+.result-item.matched .result-title {
+  color: #ffb347;
+}
+
+.command-bar-panel,
+.input-row,
+.results,
+.voice-hint,
+.voice-btn {
+  -webkit-app-region: no-drag;
 }
 
 .panel {
@@ -60,36 +232,9 @@ body {
   backdrop-filter: none;
 }
 
-.input-wrap {
-  margin-top: 8px;
-}
-
-.input-wrap.only-input {
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none !important;
-  backdrop-filter: none;
-}
-
-.input-wrap input {
-  width: 100%;
-  height: 52px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 153, 51, 0.75);
-  background: transparent !important;
-  color: var(--text-main);
-  font-size: 18px;
-  padding: 0 16px;
-  outline: none;
-  box-shadow: none !important;
-  transition: border-color 160ms ease;
-}
-
-.input-wrap input:focus {
-  border-color: var(--line-strong);
-  box-shadow: none !important;
+@keyframes voice-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
 }
 
 .float-hole-shell {
@@ -246,4 +391,14 @@ body {
   .drop-text span {
     margin-top: 7px;
   }
+}
+
+/* 原生 AHK 输入条启用时隐藏 WebView 内输入框（避免无法组中文） */
+body.native-input-mode .palette-header,
+body.native-input-mode .palette-status {
+  display: none !important;
+}
+
+body.native-input-mode .raycast-palette {
+  padding-top: 4px;
 }

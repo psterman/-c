@@ -188,6 +188,8 @@ global MainScriptDir := A_ScriptDir
 
 ; ===================== 包含悬浮工具栏模块 =====================
 #Include modules\HoleWhisperStt.ahk
+#Include modules\WailsWhisperVoice.ahk
+#Include modules\WailsNativeInput.ahk
 #Include modules\GlobalDragHoleOverlay.ahk
 #Include modules\NativeDropCursorSync.ahk
 #Include modules\FloatingToolbar.ahk

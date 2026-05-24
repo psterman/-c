@@ -5,7 +5,14 @@
 global g_HoleWhisper_Job := 0
 
 HoleWhisper_GetRootDir() {
-    return A_ScriptDir . "\tools\whisper-stt"
+    base := (IsSet(MainScriptDir) && MainScriptDir != "") ? MainScriptDir : A_ScriptDir
+    return base . "\tools\whisper-stt"
+}
+
+HoleWhisper_HasLocalModel() {
+    dir := HoleWhisper_GetModelDir()
+    return FileExist(dir . "\model.bin")
+        || FileExist(dir . "\model.safetensors")
 }
 
 HoleWhisper_GetPythonExe() {
@@ -23,7 +30,6 @@ HoleWhisper_GetTranscribeCli() {
 HoleWhisper_IsReady() {
     return FileExist(HoleWhisper_GetPythonExe())
         && FileExist(HoleWhisper_GetTranscribeCli())
-        && FileExist(HoleWhisper_GetModelDir() . "\model.bin")
 }
 
 HoleWhisper_IsAudioPath(path) {
@@ -110,9 +116,12 @@ HoleWhisper_StartJob(audioPaths) {
     if !(audioPaths is Array) || (audioPaths.Length = 0)
         return
     if !HoleWhisper_IsReady() {
-        HoleWhisper_UpdateHoleUI("未找到 Whisper 环境或模型。请检查 tools\whisper-stt\models\small", "error")
-        try TrayTip("语音转文本", "Whisper 未就绪，请先完成 tools\whisper-stt 安装", "Icon!")
+        HoleWhisper_UpdateHoleUI("未找到 Whisper Python 环境，请检查 tools\whisper-stt\.venv", "error")
+        try TrayTip("语音转文本", "Whisper 未就绪：缺少 .venv 或 transcribe_cli.py", "Icon!")
         return
+    }
+    if !HoleWhisper_HasLocalModel() {
+        HoleWhisper_UpdateHoleUI("本地模型未下载，首次识别将自动拉取 small（需联网）", "loading")
     }
     g_HoleWhisper_Job := Map(
         "paths", audioPaths.Clone(),
@@ -180,15 +189,22 @@ HoleWhisper_FinishJob() {
 HoleWhisper_TranscribeSync(audioPath) {
     py := HoleWhisper_GetPythonExe()
     cli := HoleWhisper_GetTranscribeCli()
-    modelDir := HoleWhisper_GetModelDir()
-    if (!FileExist(py) || !FileExist(cli) || !FileExist(modelDir . "\model.bin"))
+    if (!FileExist(py) || !FileExist(cli))
         return ""
     outFile := A_Temp . "\nmer_hole_stt_" . A_TickCount . "_" . Random(10000, 99999) . ".txt"
     try FileDelete(outFile)
-    cmd := Format(
-        '"{1}" "{2}" --input "{3}" --model-dir "{4}" --language zh --output "{5}"',
-        py, cli, audioPath, modelDir, outFile
-    )
+    if HoleWhisper_HasLocalModel() {
+        modelDir := HoleWhisper_GetModelDir()
+        cmd := Format(
+            '"{1}" "{2}" --input "{3}" --model-dir "{4}" --language zh --output "{5}"',
+            py, cli, audioPath, modelDir, outFile
+        )
+    } else {
+        cmd := Format(
+            '"{1}" "{2}" --input "{3}" --model small --language zh --output "{4}"',
+            py, cli, audioPath, outFile
+        )
+    }
     try {
         sh := ComObject("WScript.Shell")
         exitCode := sh.Run(cmd, 0, true)

@@ -1,4 +1,4 @@
-﻿//go:build windows
+//go:build windows
 
 package main
 
@@ -27,17 +27,51 @@ var (
 	procGetWindowLongPtrW            = modUser32Fx.NewProc("GetWindowLongPtrW")
 	procSetWindowLongPtrW            = modUser32Fx.NewProc("SetWindowLongPtrW")
 	procSetLayeredWindowAttributesFx = modUser32Fx.NewProc("SetLayeredWindowAttributes")
+	modDwmapiFx                      = syscall.NewLazyDLL("dwmapi.dll")
+	procDwmSetWindowAttributeFx      = modDwmapiFx.NewProc("DwmSetWindowAttribute")
 )
 
+const dwmwaSystemBackdropType = 38
+
 func (a *App) enableWindowResidentMode() {
-	for i := 0; i < 80; i++ {
+	for i := 0; i < 120; i++ {
 		hwnd := findMainWindowHwnd()
 		if hwnd != 0 {
-			_ = setWindowAlphaTransparent(hwnd, 0, true)
+			_ = ensureWindowInteractive(hwnd)
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
+}
+
+// ensureWindowInteractive — 透明 WebView 悬浮窗：仅取消穿透，保留透明底
+func ensureWindowInteractive(hwnd uintptr) error {
+	if hwnd == 0 {
+		return errors.New("window not found")
+	}
+	gwlExstyle := uintptr(^uintptr(19)) // -20
+	ex, _, _ := procGetWindowLongPtrW.Call(hwnd, gwlExstyle)
+	exStyle := uintptr(ex) &^ wsExTransparent
+	procSetWindowLongPtrW.Call(hwnd, gwlExstyle, exStyle)
+	backdropNone := uint32(3)
+	procDwmSetWindowAttributeFx.Call(hwnd, dwmwaSystemBackdropType, uintptr(unsafe.Pointer(&backdropNone)), 4)
+	return nil
+}
+
+func forceOpaqueWindow(hwnd uintptr) error {
+	return ensureWindowInteractive(hwnd)
+}
+
+// SetInputImeReady — 聚焦时保证可点击、可输入（不恢复整窗不透明黑底）
+func (a *App) SetInputImeReady() ProcessResult {
+	hwnd := findMainWindowHwnd()
+	if hwnd == 0 {
+		return ProcessResult{OK: false, Message: "window not found"}
+	}
+	if err := ensureWindowInteractive(hwnd); err != nil {
+		return ProcessResult{OK: false, Message: err.Error()}
+	}
+	return ProcessResult{OK: true, Message: "ok"}
 }
 
 func findMainWindowHwnd() uintptr {
@@ -83,14 +117,18 @@ func fadeInWailsWindow(durationMs int) error {
 		durationMs = 60
 	}
 	interval := time.Duration(durationMs/steps) * time.Millisecond
+	clickThrough := true
 	for i := 0; i <= steps; i++ {
 		alpha := byte((255 * i) / steps)
-		if err := setWindowAlphaTransparent(hwnd, alpha, true); err != nil {
+		if i == steps {
+			clickThrough = false
+		}
+		if err := setWindowAlphaTransparent(hwnd, alpha, clickThrough); err != nil {
 			return err
 		}
 		time.Sleep(interval)
 	}
-	return nil
+	return ensureWindowInteractive(hwnd)
 }
 
 func captureAreaBase64(x, y, w, h int) SnapshotResult {
