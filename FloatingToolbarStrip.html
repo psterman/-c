@@ -719,7 +719,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       qwen: { keyLabel: 'DashScope API Key', keyPlaceholder: '阿里云百炼 / DashScope', keyHint: '通义千问兼容 OpenAI 接口；密钥仅存「Qwen」槽位。' },
       deepseek: { keyLabel: 'DeepSeek API Key', keyPlaceholder: 'DeepSeek 密钥', keyHint: '单独保存在「DeepSeek」槽位。' },
       claude: { keyLabel: 'Anthropic API Key', keyPlaceholder: 'sk-ant-...', keyHint: '请求头 x-api-key；单独保存在「Claude」槽位（与 OpenAI 密钥不同）。' },
-      gemini: { keyLabel: 'Google AI API Key', keyPlaceholder: 'AIza...', keyHint: '密钥以 query 参数 key= 传递；单独保存在「Gemini」槽位。' },
+      gemini: {
+        keyLabel: 'Google AI Studio API Key',
+        keyPlaceholder: 'AIzaSy…（从 aistudio.google.com 复制）',
+        keyHint:
+          '在 Google AI Studio（aistudio.google.com）→ Get API key 复制，通常以 AIza 开头，不是 OpenAI 的 sk-。本程序用 ?key= 传参，单独保存在「Gemini」槽位。'
+      },
       glm: { keyLabel: '智谱 BigModel API Key', keyPlaceholder: 'BigModel 密钥', keyHint: '与「智谱」槽位分离保存；均为 OpenAI 兼容但密钥不同。' },
       siliconflow: { keyLabel: '硅基流动 API Key', keyPlaceholder: '硅基流动密钥', keyHint: '单独保存在「硅基流动」槽位。' },
       minimax: { keyLabel: 'MiniMax Token Plan Key', keyPlaceholder: 'Coding Plan / Token Plan 密钥', keyHint: 'Billing→Token Plan 密钥（≠接口密钥按量付费）；须与下方节点一致：国内 api.minimaxi.com，国际 api.minimax.io。' },
@@ -2334,12 +2339,23 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     img.src = urls[0];
   }
 
+  function applyKeyMetaToInput(pid, keyEl, labelEl, hintEl) {
+    var km = KEYMETA[pid] || {};
+    if (labelEl) labelEl.textContent = km.keyLabel || 'API Key';
+    if (keyEl) keyEl.placeholder = km.keyPlaceholder || '粘贴 API Key';
+    if (hintEl) {
+      if (km.keyHint) {
+        hintEl.textContent = km.keyHint;
+        hintEl.style.display = '';
+      } else {
+        hintEl.textContent = '';
+        hintEl.style.display = 'none';
+      }
+    }
+  }
+
   function refreshApiKeyField(pid) {
-    var km = KEYMETA[pid] || {},
-      lab = apiKeyLabel,
-      kh = apiKeyKeyHint;
-    if (lab) lab.textContent = km.keyLabel || 'API Key';
-    apiKey.placeholder = km.keyPlaceholder || '填写密钥';
+    applyKeyMetaToInput(pid, apiKey, apiKeyLabel, apiKeyKeyHint);
     try {
       var p = P[pid] || {};
       var isCli = p && (p.transport === 'cli');
@@ -2349,15 +2365,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       apiKey.setAttribute('aria-disabled', isCli ? 'true' : 'false');
       apiKey.style.opacity = isCli ? '0.6' : '';
     } catch (e) {}
-    if (kh) {
-      if (km.keyHint) {
-        kh.textContent = km.keyHint;
-        kh.style.display = '';
-      } else {
-        kh.textContent = '';
-        kh.style.display = 'none';
-      }
-    }
+    applyKeyMetaToInput(pid, inlineLlmApiKey, null, null);
+    applyKeyMetaToInput(pid, ttydLlmApiKey, null, null);
   }
 
   function updateProviderFormLayout(pid) {
@@ -2441,7 +2450,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function onApiSetupProviderChange(sel, keyEl, baseEl, modelEl) {
     var pid = resolveApiSetupProviderId(sel);
     var p = P[pid] || P.openai;
-    if (keyEl) keyEl.value = getApiKeyForProvider(pid);
+    if (keyEl) {
+      keyEl.value = getApiKeyForProvider(pid);
+      applyKeyMetaToInput(pid, keyEl, null, null);
+    }
     if (modelEl && !modelEl.value.trim()) modelEl.value = p.model;
     refreshBaseUrlAutoLabel(pid, $('inlineBaseUrlAutoText'));
     refreshBaseUrlAutoLabel(pid, $('ttydBaseUrlAutoText'));
@@ -3287,6 +3299,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       ph.textContent =
         p.label +
         '：Anthropic 兼容接口。密钥来自 Billing→Token Plan，且须与节点区域一致（国内 minimaxi.com / 国际 minimax.io）。OpenClaw 已用国内节点时，此处也选「国内」。';
+      return;
+    }
+    if (pid === 'gemini') {
+      ph.textContent =
+        p.label +
+        '：使用 Google AI Studio（aistudio.google.com）申请的 API Key，通常以 AIza 开头，不是 sk-。Base URL 已默认 generativelanguage.googleapis.com/v1beta。';
       return;
     }
     ph.textContent =
@@ -4182,6 +4200,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       sstat('无法读取当前配置。', 'error');
       return;
     }
+    var shapeErr = apiKeyShapeHint(cfg.provider, cfg.apiKey);
+    if (shapeErr) {
+      sstat(shapeErr, 'error');
+      return;
+    }
     var p = P[cfg.provider] || P.openai;
     sstat('正在测试 API 连通性...', '');
     try {
@@ -4288,6 +4311,22 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function trimApiKey(k) {
     return String(k || '').replace(/^\s+|\s+$/g, '').replace(/\s+/g, '');
+  }
+
+  function apiKeyShapeHint(pid, key) {
+    pid = normalizeProviderId(pid);
+    key = trimApiKey(key);
+    if (!key) return '';
+    if (pid === 'gemini') {
+      if (/^sk-/i.test(key))
+        return '当前为 Gemini：请粘贴 Google AI Studio 的 Key（通常 AIzaSy…），不要用 OpenAI 的 sk- 密钥。';
+      return '';
+    }
+    if (pid === 'openai' || pid === 'deepseek' || pid === 'kimi') {
+      if (/^AIza/i.test(key))
+        return '密钥形如 Google AI Studio（AIza…），请将服务商改为 Gemini 后保存。';
+    }
+    return '';
   }
 
   function minimaxAnthropicHeaders(key) {
