@@ -921,3 +921,5 @@
 2026-05-25 10:24:46 ttyd started port 7681 pid 9324 cmd=cmd.exe /k codex
 2026-05-25 11:58:52 ttyd started port 7691 pid 21520 cmd=cmd.exe /k
 2026-05-25 12:07:17 ttyd started port 7691 pid 12360 cmd=cmd.exe /k
+2026-05-25 12:09:47 ttyd shell [kimi_cli] ttyd_auto_cli: cmd.exe /k kimi
+2026-05-25 12:09:47 ttyd started port 7688 pid 22788 cmd=cmd.exe /k kimi

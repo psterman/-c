@@ -1668,9 +1668,27 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return h;
   }
 
+  /** 修复 UTF-8 被当成 Latin-1/ANSI 解码后的典型乱码（DeepSeek 等经 AHK WinHttp 代理时偶发） */
+  function fixUtf8Mojibake(s) {
+    s = String(s || '');
+    if (!s) return s;
+    if (!/[\u00C0-\u00FF]|æ|å|ä|ç|è|é|ê|ë|ï|ð|ñ|ø|ù|ú|û|ü|ý|ÿ|Ã|Â|â|ã|ô|õ|ö/.test(s)) return s;
+    try {
+      var u8 = new Uint8Array(s.length);
+      for (var i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i) & 0xff;
+      var fixed = new TextDecoder('utf-8').decode(u8);
+      if (/[\u4e00-\u9fff]/.test(fixed) && fixed.length >= s.length * 0.35) return fixed;
+    } catch (_) {}
+    return s;
+  }
+
+  function decodeApiText(s) {
+    return fixUtf8Mojibake(String(s != null ? s : ''));
+  }
+
   /** API 常返回 <br> / 已转义的换行，先换成 \n 再走 Markdown，避免屏上显示字面量 <br> */
   function preMarkdownForChat(s) {
-    s = String(s || '').replace(/\r\n/g, '\n');
+    s = decodeApiText(s).replace(/\r\n/g, '\n');
     s = s.replace(/<br\s*\/?>/gi, '\n');
     s = s.replace(/&lt;\s*br\s*\/?\s*&gt;/gi, '\n');
     return s;
@@ -4495,7 +4513,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           done = true;
           clearTimeout(timer);
           cleanup();
-          if (d.ok) resolve({ ok: true, status: Number(d.status || 200), text: String(d.text || '') });
+          if (d.ok) resolve({ ok: true, status: Number(d.status || 200), text: decodeApiText(String(d.text || '')) });
           else reject(new Error(formatHostHttpError(Number(d.status || 0), String(d.text || ''), String(d.error || ''))));
         }
         try {
@@ -4612,16 +4630,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function norm(c) {
-    if (typeof c === 'string') return c;
+    if (typeof c === 'string') return decodeApiText(c);
     if (Array.isArray(c))
-      return c
-        .map(function (p) {
-          if (typeof p === 'string') return p;
-          if (p && typeof p.text === 'string') return p.text;
-          return '';
-        })
-        .join('\n')
-        .trim();
+      return decodeApiText(
+        c
+          .map(function (p) {
+            if (typeof p === 'string') return p;
+            if (p && typeof p.text === 'string') return p.text;
+            return '';
+          })
+          .join('\n')
+          .trim()
+      );
     return '';
   }
 
@@ -4679,6 +4699,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   async function reqOpenAI(cfg) {
     var h = { 'Content-Type': 'application/json' };
     if (cfg.apiKey) h.Authorization = 'Bearer ' + cfg.apiKey;
+    h['Accept-Encoding'] = 'identity';
     var r = await hostHttpRequest(oaUrl(cfg.baseUrl), {
       method: 'POST',
       headers: h,

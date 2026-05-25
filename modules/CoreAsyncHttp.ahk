@@ -92,23 +92,38 @@ CoreAsyncHttp_HasHeader(headers, keyName) {
 }
 
 CoreAsyncHttp_ReadUtf8Text(whr) {
+    if !IsObject(whr)
+        return ""
+    ; ADODB.Stream 按 UTF-8 解码二进制响应，避免 ResponseText/StrGet 在中文环境下乱码
     try {
         body := whr.ResponseBody
-        if !body
-            return ""
-        size := body.Size
-        if (size <= 0)
-            return ""
-        pData := 0
-        try pData := body.pData
-        if !pData
-            return ""
-        return StrGet(pData, size, "UTF-8")
-    } catch {
-        try return String(whr.ResponseText)
-        catch {
-            return ""
+        if body && body.Size > 0 {
+            ado := ComObject("ADODB.Stream")
+            ado.Type := 1
+            ado.Open()
+            ado.Write(body)
+            ado.Position := 0
+            ado.Type := 2
+            ado.Charset := "utf-8"
+            txt := ado.ReadText(-1)
+            ado.Close()
+            if (Trim(txt) != "")
+                return txt
         }
+    } catch {
+    }
+    try {
+        body := whr.ResponseBody
+        if body && body.Size > 0 {
+            buf := Buffer(body.Size)
+            DllCall("RtlMoveMemory", "Ptr", buf, "Ptr", body, "UPtr", body.Size)
+            return StrGet(buf, "UTF-8")
+        }
+    } catch {
+    }
+    try return String(whr.ResponseText)
+    catch {
+        return ""
     }
 }
 
@@ -269,6 +284,8 @@ CoreAsyncHttp_SendAttempt(id) {
         whr.Open(String(req["method"]), String(req["url"]), true)
         whr.SetTimeouts(Integer(opts["resolveTimeoutMs"]), Integer(opts["connectTimeoutMs"]), Integer(opts["sendTimeoutMs"]), Integer(opts["receiveTimeoutMs"]))
         CoreAsyncHttp_ApplyHeaders(whr, opts["headers"])
+        if !CoreAsyncHttp_HasHeader(opts["headers"], "Accept-Encoding")
+            try whr.SetRequestHeader("Accept-Encoding", "identity")
         m := String(req["method"])
         if (m = "POST" || m = "PUT" || m = "PATCH") {
             if !CoreAsyncHttp_HasHeader(opts["headers"], "Content-Type")
