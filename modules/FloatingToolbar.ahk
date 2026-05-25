@@ -1176,6 +1176,7 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
         SetTimer(FloatingToolbar_PushLayoutDeferred, -180)
         SetTimer(FloatingToolbar_PushLayoutDeferred, -520)
+        SetTimer(FloatingToolbar_PushStudioLlmOnReady, -450)
         FloatingToolbar_FlushPendingSelectionIfReady()
         FloatingToolbar_FlushPendingNiumaComposeIfReady()
         try FloatingToolbar_RequestWebReveal()
@@ -1435,6 +1436,86 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(NiumaTtyd_DeferredExternalOpenJob.Bind(reqId, expectedBaseUrl, engine), -10)
         return
     }
+    if (typ = "niuma_request_ttyd_studio") {
+        SetTimer(FloatingToolbar_PushTtydStudioConfig, -10)
+        return
+    }
+    if (typ = "niuma_request_studio_llm") {
+        llm := FloatingToolbar_GetStudioLlm()
+        ok := false
+        err := ""
+        if Trim(String(llm.Get("apiKey", ""))) != "" {
+            try FloatingToolbar_PushStudioLlmToChat(llm, "", false)
+            ok := true
+        } else
+            err := "智能定制中未保存 API Key（请在设置中心「智能定制」填写并点「保存 API」）"
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "studio_llm_sync_result", "ok", ok, "error", err))
+        catch {
+        }
+        return
+    }
+    if (typ = "niuma_sync_studio_llm") {
+        llm := Map()
+        if msg.Has("llm") && msg["llm"] is Map
+            llm := msg["llm"]
+        else {
+            if msg.Has("provider")
+                llm["provider"] := msg["provider"]
+            if msg.Has("apiKey")
+                llm["apiKey"] := msg["apiKey"]
+            if msg.Has("baseUrl")
+                llm["baseUrl"] := msg["baseUrl"]
+            if msg.Has("model")
+                llm["model"] := msg["model"]
+        }
+        if FuncExists("UserStudio_ApplyFromWebPayload") && Trim(String(llm.Get("apiKey", ""))) != "" {
+            try UserStudio_ApplyFromWebPayload(Map("llm", llm))
+            catch {
+            }
+            try ConfigWebView_NotifyStudioLlmSynced()
+            catch {
+            }
+        }
+        return
+    }
+    if (typ = "niuma_save_ttyd_studio") {
+        sh := msg.Has("shell") ? Trim(String(msg["shell"])) : ""
+        wd := msg.Has("workDir") ? Trim(String(msg["workDir"])) : ""
+        ok := false
+        err := ""
+        try {
+            if FuncExists("UserStudio_ApplyFromWebPayload") {
+                UserStudio_ApplyFromWebPayload(Map("ttyd", Map("shell", sh, "workDir", wd)))
+                ok := true
+            } else
+                err := "UserStudio 未加载"
+        } catch as e {
+            err := e.Message
+        }
+        if ok {
+            try SetTimer(NiumaTtyd_DeferredRestartJob.Bind("", "studio_cli", g_FTB_WV2), -400)
+            catch {
+            }
+        }
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_save_ttyd_studio_result", "ok", ok, "error", err))
+        catch {
+        }
+        return
+    }
+    if (typ = "niuma_browse_ttyd_workdir") {
+        start := A_ScriptDir
+        if msg.Has("start") && Trim(String(msg["start"])) != ""
+            start := Trim(String(msg["start"]))
+        selected := ""
+        try selected := FileSelect("D", start, "选择终端工作目录")
+        catch {
+            selected := ""
+        }
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_browse_ttyd_workdir_result", "path", selected))
+        catch {
+        }
+        return
+    }
     if (typ = "niuma_save_ttyd_shell") {
         sh := msg.Has("shell") ? Trim(String(msg["shell"])) : ""
         engine := msg.Has("engine") ? Trim(String(msg["engine"])) : ""
@@ -1465,6 +1546,30 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
     if (typ = "niuma_debug_pull_go") {
         SetTimer(FloatingToolbar_DeferredDebugPullGo, -10)
+        return
+    }
+    if (typ = "niuma_llm_http") {
+        reqId := String(msg.Get("reqId", ""))
+        method := Trim(String(msg.Get("method", "POST")))
+        if (method = "")
+            method := "POST"
+        url := Trim(String(msg.Get("url", "")))
+        body := msg.Has("body") ? String(msg["body"]) : ""
+        timeoutMs := Integer(msg.Get("timeoutMs", 45000))
+        if (timeoutMs < 5000)
+            timeoutMs := 45000
+        if (timeoutMs > 120000)
+            timeoutMs := 120000
+        headers := Map()
+        if (msg.Has("headers") && msg["headers"] is Map)
+            headers := msg["headers"]
+        if (url = "") {
+            try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_llm_http_result", "reqId", reqId, "ok", false, "status", 0, "text", "", "error", "empty url"))
+            catch {
+            }
+            return
+        }
+        HttpJsonAsync(method, url, body, FloatingToolbar_OnLlmHttpDone.Bind(reqId), Map("headers", headers, "timeoutMs", timeoutMs, "receiveTimeoutMs", timeoutMs, "tag", "niuma_llm_http"))
         return
     }
     if (typ = "niuma_upload_file") {
@@ -1988,6 +2093,222 @@ FloatingToolbar_NotifyWebDrawerState(open := false) {
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_set_drawer", "open", !!open))
     catch as _e {
     }
+}
+
+FloatingToolbar_OnLlmHttpDone(reqId, ret) {
+    global g_FTB_WV2
+    ok := false
+    status := 0
+    text := ""
+    err := ""
+    if (ret is Map) {
+        ok := !!ret.Get("ok", false)
+        status := Integer(ret.Get("status", 0))
+        text := String(ret.Get("text", ""))
+        err := String(ret.Get("error", ""))
+        if (!ok) {
+            if (text != "")
+                err := (err != "" ? err . "`n" : "") . SubStr(text, 1, 600)
+            else if (err = "" && status >= 400)
+                err := "HTTP " . status
+        }
+    } else
+        err := "invalid response"
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_llm_http_result", "reqId", String(reqId), "ok", ok, "status", status, "text", text, "error", err))
+    catch {
+    }
+}
+
+FloatingToolbar_PushTtydStudioConfig(*) {
+    global g_FTB_WV2
+    if !g_FTB_WV2
+        return
+    ttyd := Map()
+    try {
+        if FuncExists("UserStudio_TtydPayloadForWeb")
+            ttyd := UserStudio_TtydPayloadForWeb()
+    } catch {
+    }
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "ttyd_studio_config", "ttyd", ttyd))
+    catch {
+    }
+}
+
+; 从设置中心「智能定制」跳转：打开 Niuma Chat 并显示终端定制面板（startChat=1 时自动进入 AI 对话）
+FloatingToolbar_OpenNiumaChatTtydCustomize(startChat := false) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, FloatingToolbarIsVisible, g_FTB_TtydOpenStartChat
+    g_FTB_TtydOpenStartChat := !!startChat
+    try FloatingToolbar_ClearOverlaySuppression()
+    catch {
+    }
+    try ShowFloatingToolbar()
+    catch {
+    }
+    if !FloatingToolbarIsVisible {
+        SetTimer(FloatingToolbar_OpenNiumaChatTtydCustomize, -280)
+        return
+    }
+    try FloatingToolbarSetChatDrawerState(true, true)
+    catch {
+    }
+    try FloatingToolbar_NotifyWebDrawerState(true)
+    catch {
+    }
+    SetTimer(FloatingToolbar_NiumaDrawerHandoffRetry, -520)
+    SetTimer(FloatingToolbar_DeferredOpenTtydCustomize, -360)
+    SetTimer(FloatingToolbar_DeferredOpenTtydCustomize, -900)
+}
+
+FloatingToolbar_GetStudioLlm() {
+    llm := Map("provider", "openai", "apiKey", "", "baseUrl", "https://api.openai.com/v1", "model", "gpt-4o-mini")
+    if FuncExists("UserStudio_Load")
+        try UserStudio_Load()
+        catch {
+        }
+    if FuncExists("UserStudio_Get") {
+        try {
+            doc := UserStudio_Get()
+            if (doc.Has("llm") && doc["llm"] is Map)
+                llm := doc["llm"]
+        } catch {
+        }
+    }
+    return llm
+}
+
+FloatingToolbar_PushStudioLlmOnReady(*) {
+    global g_FTB_WV2_Ready
+    if !g_FTB_WV2_Ready
+        return
+    llm := FloatingToolbar_GetStudioLlm()
+    if Trim(String(llm.Get("apiKey", ""))) != "" {
+        try FloatingToolbar_PushStudioLlmToChat(llm, "", false)
+        catch {
+        }
+    }
+}
+
+FloatingToolbar_DeferredOpenTtydCustomize(*) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_TtydOpenStartChat
+    if !g_FTB_WV2_Ready || !g_FTB_WV2
+        return
+    llm := FloatingToolbar_GetStudioLlm()
+    startChat := false
+    if IsSet(g_FTB_TtydOpenStartChat)
+        startChat := !!g_FTB_TtydOpenStartChat
+    g_FTB_TtydOpenStartChat := false
+    msg := Map("type", "host_open_ttyd_customize")
+    if Trim(String(llm.Get("apiKey", ""))) != ""
+        msg["llm"] := llm
+    else
+        msg["requestLlmExport"] := true
+    if startChat
+        msg["startChat"] := true
+    try WebView_QueuePayload(g_FTB_WV2, msg)
+    catch {
+    }
+    try FloatingToolbar_PushTtydStudioConfig()
+    catch {
+    }
+    if Trim(String(llm.Get("apiKey", ""))) != "" {
+        try FloatingToolbar_PushStudioLlmToChat(llm, "", false)
+        catch {
+        }
+    } else {
+        try SetTimer(FloatingToolbar_RequestNiumaLlmExport, -250)
+        catch {
+        }
+    }
+}
+
+FloatingToolbar_PushStudioLlmToChat(llm, prompt := "", autoSend := false) {
+    global g_FTB_WV2
+    if !g_FTB_WV2 || !(llm is Map)
+        return
+    try WebView_QueuePayload(g_FTB_WV2, Map(
+        "type", "host_apply_studio_llm",
+        "llm", Map(
+            "provider", llm.Get("provider", "openai"),
+            "apiKey", llm.Get("apiKey", ""),
+            "baseUrl", llm.Get("baseUrl", ""),
+            "model", llm.Get("model", "")
+        ),
+        "prompt", Trim(String(prompt)),
+        "autoSend", !!autoSend
+    ))
+    catch {
+    }
+}
+
+; 从设置中心「智能定制」进入提问：拉起 Niuma Chat 并注入已保存的 API
+FloatingToolbar_OpenNiumaChatAsk(prompt := "", autoSend := false) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, FloatingToolbarIsVisible
+    if FuncExists("UserStudio_Load")
+        try UserStudio_Load()
+    llm := Map("provider", "openai", "apiKey", "", "baseUrl", "https://api.openai.com/v1", "model", "gpt-4o-mini")
+    if FuncExists("UserStudio_Get") {
+        try {
+            doc := UserStudio_Get()
+            if (doc.Has("llm") && doc["llm"] is Map)
+                llm := doc["llm"]
+        } catch {
+        }
+    }
+    try FloatingToolbar_ClearOverlaySuppression()
+    catch {
+    }
+    try ShowFloatingToolbar()
+    catch {
+    }
+    if !FloatingToolbarIsVisible {
+        SetTimer(FloatingToolbar_OpenNiumaChatAsk.Bind(prompt, autoSend), -320)
+        return
+    }
+    try FloatingToolbarSetChatDrawerState(true, true)
+    catch {
+    }
+    try FloatingToolbar_NotifyWebDrawerState(true)
+    catch {
+    }
+    SetTimer(FloatingToolbar_NiumaDrawerHandoffRetry, -520)
+    SetTimer(FloatingToolbar_DeferredPushStudioAsk.Bind(llm, prompt, autoSend), -450)
+    SetTimer(FloatingToolbar_DeferredPushStudioAsk.Bind(llm, prompt, autoSend), -950)
+}
+
+; 设置中心「同步 API」：从 Niuma Chat localStorage 导出到 user_studio.json
+FloatingToolbar_RequestNiumaLlmExport() {
+    global g_FTB_WV2, g_FTB_WV2_Ready, FloatingToolbarIsVisible
+    try ShowFloatingToolbar()
+    catch {
+    }
+    if !FloatingToolbarIsVisible {
+        SetTimer(FloatingToolbar_RequestNiumaLlmExport, -350)
+        return
+    }
+    if !g_FTB_WV2_Ready || !g_FTB_WV2 {
+        SetTimer(FloatingToolbar_RequestNiumaLlmExport, -350)
+        return
+    }
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_request_llm_export"))
+    catch {
+    }
+    SetTimer(FloatingToolbar_DeferredRequestLlmExport, -500)
+}
+
+FloatingToolbar_DeferredRequestLlmExport(*) {
+    global g_FTB_WV2, g_FTB_WV2_Ready
+    if !g_FTB_WV2_Ready || !g_FTB_WV2
+        return
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_request_llm_export"))
+    catch {
+    }
+}
+
+FloatingToolbar_DeferredPushStudioAsk(llm, prompt, autoSend) {
+    global g_FTB_WV2_Ready
+    if !g_FTB_WV2_Ready
+        return
+    FloatingToolbar_PushStudioLlmToChat(llm, prompt, autoSend)
 }
 
 FloatingToolbar_OpenNiumaChatDrawer(open := true) {

@@ -97,6 +97,12 @@ body.cli-mode #cliPane{display:flex!important;flex-direction:column}
 .btn1:disabled{opacity:.45;cursor:not-allowed}
 .btn2,.btn3{height:calc(38px * var(--ui));padding:0 calc(14px * var(--ui));border-radius:calc(10px * var(--ui));font-size:calc(13px * var(--ui));border:1px solid rgba(255,102,0,.22);cursor:pointer;background:rgba(255,255,255,.04);color:var(--text)}
 #chatStatusRow{margin-top:calc(8px * var(--ui))}
+#chatStatusRow,#chat-status,#config-status{user-select:text;-webkit-user-select:text;cursor:text}
+#chat-status.error{cursor:text}
+#chatStatusCopy{flex-shrink:0;height:calc(28px * var(--ui));padding:0 calc(10px * var(--ui));font-size:calc(11px * var(--ui));border-radius:calc(8px * var(--ui));border:1px solid rgba(255,102,0,.28);background:rgba(255,255,255,.05);color:var(--orange);cursor:pointer;display:none}
+#chatStatusCopy.show{display:inline-flex;align-items:center}
+#chatStatusRow.status-has-copy{display:flex;align-items:flex-start;gap:calc(8px * var(--ui))}
+#chatStatusRow.status-has-copy #chat-status{flex:1;min-width:0}
 .hud-toggle{width:calc(34px * var(--ui));height:calc(34px * var(--ui));display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,102,0,.22);border-radius:calc(8px * var(--ui));background:rgba(255,255,255,.04);color:var(--orange);cursor:pointer;flex-shrink:0}
 .hud-toggle:hover{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.4)}
 .hud-toggle.active{background:rgba(255,102,0,.16);border-color:rgba(255,102,0,.55)}
@@ -322,8 +328,11 @@ button.tb{font:inherit;font-family:inherit}
 0%,100%{box-shadow:inset 0 0 14px rgba(255,102,0,.04),inset 0 0 6px rgba(255,140,60,.03)}
 50%{box-shadow:inset 0 0 18px rgba(255,102,0,.08),inset 0 0 10px rgba(255,140,60,.05)}
 }
-#settings{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity var(--de);z-index:40}
+#settings,#ttydCustomize{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity var(--de);z-index:40}
 body.settings-open #settings{opacity:1;pointer-events:auto}
+body.ttyd-customize-open #ttydCustomize{opacity:1;pointer-events:auto}
+#settings,#settings *,#ttydCustomize,#ttydCustomize *{user-select:text;-webkit-user-select:text}
+#settings .ib,#settings .btn2,#settings .btn3,#settings .dd-btn,#settings .dd-item,#ttydCustomize .ib,#ttydCustomize .btn2,#ttydCustomize .btn3{user-select:none;-webkit-user-select:none}
 .sbg{position:absolute;inset:0;background:rgba(0,0,0,.45)}
 .sd{position:absolute;top:calc(14px * var(--ui));right:calc(14px * var(--ui));bottom:calc(14px * var(--ui));left:calc(14px * var(--ui));max-width:min(560px,100%);margin-left:auto;background:var(--panel2);border:1px solid rgba(255,102,0,.28);border-radius:calc(18px * var(--ui));display:flex;flex-direction:column}
 .sh{padding:calc(14px * var(--ui)) calc(16px * var(--ui)) calc(12px * var(--ui));border-bottom:1px solid rgba(255,102,0,.15);display:flex;justify-content:space-between;align-items:center}
@@ -339,6 +348,11 @@ select.ctl option,select.ctl optgroup{background-color:#1b2d45;color:var(--text)
 textarea.ctl{min-height:calc(100px * var(--ui));resize:vertical}
 .hint{padding:calc(10px * var(--ui)) calc(12px * var(--ui));border:1px solid rgba(255,102,0,.14);border-radius:calc(12px * var(--ui));background:rgba(255,255,255,.03);color:var(--muted);font-size:calc(11px * var(--ui));line-height:1.55}
 .hint.mini{padding:calc(6px * var(--ui)) calc(8px * var(--ui));font-size:calc(10px * var(--ui));margin-top:calc(4px * var(--ui))}
+.api-setup-box{padding:calc(12px * var(--ui));border:1px solid rgba(255,102,0,.28);border-radius:calc(12px * var(--ui));background:rgba(255,102,0,.06);display:grid;gap:calc(10px * var(--ui))}
+.api-setup-title{font-size:calc(13px * var(--ui));font-weight:700;color:var(--text)}
+.api-setup-actions{display:flex;flex-wrap:wrap;gap:calc(8px * var(--ui));align-items:center}
+#inlineApiSetup[hidden]{display:none!important}
+body[data-theme="light"] .api-setup-box{background:#FFF8F0;border-color:#E9B889}
 .prompt-tools{display:flex;flex-wrap:wrap;gap:calc(8px * var(--ui));align-items:center;margin-bottom:calc(8px * var(--ui))}
 .prompt-tools .ctl{max-width:min(100%,calc(220px * var(--ui)))}
 .prompt-tools .btn3{flex-shrink:0}
@@ -477,6 +491,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <div><div class="t1">NiuMa Chat</div><div class="t2">Markdown · AHK v2 高亮</div></div>
 <div class="icons">
 <button class="ib" id="chat-search" type="button" title="搜索聊天记录" aria-label="搜索聊天记录"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
+<button class="ib" id="chat-api-quick" type="button" title="配置 API Key" aria-label="配置 API">API</button>
 <button class="ib" id="chat-settings" type="button" title="打开设置" aria-label="打开设置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.82-.33 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.82.33l-.06.06A2 2 0 1 1 4.37 17l.06-.06a1.7 1.7 0 0 0 .33-1.82 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.03 4.4l.06.06a1.7 1.7 0 0 0 1.82.33h.01a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.5h.01a1.7 1.7 0 0 0 1.82-.33l.06-.06A2 2 0 1 1 19.63 7l-.06.06a1.7 1.7 0 0 0-.33 1.82v.01a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 <button class="ib" id="drawer-close" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 </div>
@@ -499,6 +514,20 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   </div>
 </section>
 <section id="cmp">
+<div id="inlineApiSetup" class="api-setup-box" hidden>
+<div class="api-setup-title">大模型 API 配置（首页）</div>
+<div class="fld"><label for="inlineLlmProvider">服务商</label><select id="inlineLlmProvider" class="ctl"></select></div>
+<div class="fld"><label for="inlineLlmApiKey">API Key</label><input id="inlineLlmApiKey" class="ctl" type="password" autocomplete="off" placeholder="sk-…" /></div>
+<div class="row">
+<div class="fld" id="inlineBaseUrlAutoRow"><label>接口地址</label><span class="hint mini" id="inlineBaseUrlAutoText">按服务商自动配置</span></div>
+<div class="fld"><label for="inlineLlmModel">模型</label><input id="inlineLlmModel" class="ctl" type="text" autocomplete="off" /></div>
+</div>
+<div class="api-setup-actions">
+<button type="button" class="btn3" id="inlineLlmSave">保存并开始对话</button>
+<button type="button" class="btn2" id="inlineLlmOpenFull">更多选项…</button>
+</div>
+<div class="hint mini">填写后点保存；也可点右上角齿轮或工具条「设」进入完整 API 设置。</div>
+</div>
 <textarea id="input" placeholder="输入消息，Ctrl+Enter 发送"></textarea>
 <div id="composerFooter">
 <div class="attach-wrap">
@@ -519,7 +548,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </div>
 </div>
 <div id="attachList"></div>
-<div id="chatStatusRow"><div class="st" id="chat-status">就绪</div></div>
+<div id="chatStatusRow"><div class="st" id="chat-status" title="可选中后 Ctrl+C，或点右侧「复制」">就绪</div><button type="button" id="chatStatusCopy" title="复制状态/错误全文">复制</button></div>
 </section>
 </div>
 <div id="settings" aria-hidden="true">
@@ -527,21 +556,50 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <section class="sd">
 <header class="sh"><div><div class="sbt">API 设置</div><div class="sbt2">保存在本机 localStorage</div></div><button class="ib" id="settings-close" type="button" title="关闭设置" aria-label="关闭设置"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
 <div class="sbody">
+<div id="settingsAiHint" class="hint" style="display:none;margin-bottom:10px;padding:10px 12px;border:1px solid rgba(255,102,0,.45);border-radius:10px;background:rgba(255,102,0,.1);line-height:1.5">
+<span id="settingsAiHintText">当前对话标签为「终端」模式，此处请切换到 MiniMax 等 AI 服务商填写 API Key。</span>
+</div>
 <div class="row" id="fldModelPresetRow"><div class="fld fld-dd"><label for="providerDdBtn">服务商</label><div class="dd" id="providerDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="providerDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="providerDdMenu"><img id="providerDdIcon" class="dd-icon" alt="" /><span id="providerDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="providerDdMenu" role="listbox" hidden></div></div><select id="provider" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div><div class="fld fld-dd" id="fldModelDdCol"><label for="modelDdBtn">模型预设</label><div class="dd" id="modelDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="modelDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="modelDdMenu"><img id="modelDdIcon" class="dd-icon" alt="" /><span id="modelDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="modelDdMenu" role="listbox" hidden></div></div><select id="modelPreset" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div></div>
 <div class="fld"><label for="apiKey" id="apiKeyLabel">API Key</label><input id="apiKey" class="ctl" type="password" autocomplete="off" placeholder="API Key"><div class="hint mini" id="apiKeyKeyHint" style="display:none"></div></div>
 <div class="fld" id="fldTtydShellRow" style="display:none"><label for="ttydShellCommand">终端启动命令（Shell）</label><input id="ttydShellCommand" class="ctl" type="text" spellcheck="false" autocomplete="off" placeholder="cmd.exe" /><div class="hint mini">传给本机 ttyd 的 Shell（如 <code>cmd.exe</code>、<code>powershell</code> 完整路径等）。点「完成」后写入配置并建议重启 ttyd。若被拦截请允许主目录下 <code>ttyd.exe</code> 或检查本机安全软件。</div></div>
+<div class="fld" id="fldMinimaxRegionRow" style="display:none"><label>MiniMax 节点（须与 Token Plan 密钥区域一致）</label><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn2" id="minimaxRegionCn">国内 · api.minimaxi.com</button><button type="button" class="btn2" id="minimaxRegionIntl">国际 · api.minimax.io</button></div><div class="hint mini">与 OpenClaw 一致请选<strong>国内</strong>；勿混用国际地址 + 国内密钥（会 invalid api key）。</div></div>
 <div class="fld" id="fldBaseUrlRow"><label for="baseUrl">Base URL</label><input id="baseUrl" class="ctl" type="text" autocomplete="off"></div>
 <div class="fld" id="fldOpenClawSessionRow" style="display:none"><label for="openclawSessionKey">Gateway Session Key</label><input id="openclawSessionKey" class="ctl" type="text" autocomplete="off" list="openclawSessionOptions" placeholder="agent:main:... / main"><datalist id="openclawSessionOptions"></datalist><div class="hint mini" id="openclawSessionHint">留空时该标签自动使用独立 `niuma-*` 会话；如需对齐 OpenClaw Control，请填写完整 session key。</div></div>
 <div class="fld" id="fldModelRow"><label for="model">Model</label><input id="model" class="ctl" type="text" autocomplete="off"></div>
 <div class="fld"><label for="systemPrompt">System Prompt</label><div class="prompt-tools"><select id="promptBuiltin" class="ctl"></select><button type="button" class="btn3" id="promptTplApply">应用到上方</button><button type="button" class="btn3" id="promptImportBtn">从文件导入</button><input type="file" id="promptImportFile" accept=".txt,.md,.json,text/plain" style="display:none" /></div><textarea id="systemPrompt" class="ctl"></textarea></div>
 <div class="hint" id="providerHint"></div>
-<div class="hint">各服务商 API Key 分槽保存、互不覆盖；多标签对话在本地长期保存。记录很多时可在下方导出备份。</div>
+<a href="#" id="linkManualBaseUrl" class="hint mini" style="display:none;cursor:pointer;color:#ff9a4d;text-decoration:underline;margin-top:2px">使用中转 / 私有网关？手动指定 Base URL</a>
+<div class="hint">各服务商 API Key 分槽保存；Base URL 默认自动，无需手填。记录很多时可在下方导出备份。</div>
 <div class="row" style="display:flex;gap:8px;align-items:center;justify-content:flex-start;">
   <button class="btn2" id="chat-export-md" type="button" title="导出当前对话 Markdown">导出 Markdown</button>
   <button class="btn2" id="chat-export-json" type="button" title="导出当前对话 JSON">导出 JSON</button>
 </div>
 </div>
-<footer class="sf"><div class="st" id="config-status"></div><div style="display:flex;gap:8px;"><button class="btn2" id="resetCfg" type="button">重置</button><button class="btn2" id="testCfg" type="button">测试 API</button><button class="btn3" id="saveCfg" type="button">完成</button></div></footer>
+<footer class="sf"><div class="st" id="config-status"></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn2" id="syncStudioLlm" type="button" title="从 config/user_studio.json 读取">从智能定制同步</button><button class="btn2" id="resetCfg" type="button">重置</button><button class="btn2" id="testCfg" type="button">测试 API</button><button class="btn3" id="saveCfg" type="button">完成</button></div></footer>
+</section>
+</div>
+<div id="ttydCustomize" aria-hidden="true">
+<div class="sbg" id="ttydCustomizeBg"></div>
+<section class="sd">
+<header class="sh"><div><div class="sbt">终端定制（ttyd）</div><div class="sbt2">与设置中心「智能定制」共用 config/user_studio.json</div></div><button class="ib" id="ttydCustomizeClose" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+<div class="sbody">
+<div class="fld"><label for="ttydStudioShell">Shell 命令</label><input id="ttydStudioShell" class="ctl" type="text" spellcheck="false" autocomplete="off" placeholder="cmd.exe" /><div class="hint mini">例如 <code>cmd.exe</code>、<code>powershell.exe</code>、<code>cmd.exe /k cd /d D:\项目</code></div></div>
+<div class="fld"><label for="ttydStudioWorkDir">工作目录</label><div style="display:flex;gap:8px;align-items:center"><input id="ttydStudioWorkDir" class="ctl" type="text" style="flex:1" spellcheck="false" placeholder="留空使用脚本目录" /><button type="button" class="btn3" id="ttydStudioBrowseWd">浏览</button></div></div>
+<div class="api-setup-box ttyd-api-box">
+<div class="api-setup-title">大模型 API（智能对话）</div>
+<div class="fld"><label for="ttydLlmProvider">服务商</label><select id="ttydLlmProvider" class="ctl"></select></div>
+<div class="fld"><label for="ttydLlmApiKey">API Key</label><input id="ttydLlmApiKey" class="ctl" type="password" autocomplete="off" placeholder="sk-…" /></div>
+<div class="fld" id="ttydBaseUrlAutoRow"><label>接口地址</label><span class="hint mini" id="ttydBaseUrlAutoText">按服务商自动配置</span></div>
+<div class="fld"><label for="ttydLlmModel">模型</label><input id="ttydLlmModel" class="ctl" type="text" autocomplete="off" placeholder="gpt-4o-mini" /></div>
+<div class="hint mini" id="ttydStudioApiHint">填写 API 后点「保存 API」，再点「开始智能对话」。</div>
+<div class="api-setup-actions">
+<button type="button" class="btn3" id="ttydLlmSave">保存 API</button>
+<button type="button" class="btn3" id="ttydStudioStartChat">开始智能对话</button>
+</div>
+</div>
+<div class="fld"><label>终端地址</label><input id="ttydStudioBaseUrl" class="ctl" type="text" readonly tabindex="-1" value="http://127.0.0.1:7691/" /><div class="hint mini" id="ttydStudioExeHint"></div></div>
+</div>
+<footer class="sf"><div class="st" id="ttydCustomizeStatus">就绪</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn2" id="ttydStudioPreview" type="button">打开终端预览</button><button class="btn2" id="ttydStudioRestart" type="button">重启 ttyd</button><button class="btn2" id="ttydStudioExt" type="button">浏览器打开</button><button class="btn3" id="ttydStudioSave" type="button">保存</button></div></footer>
 </section>
 </div>
 <div id="newSessionPick" aria-hidden="true">
@@ -578,7 +636,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       kimi_cli: { label: 'Kimi CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7688/', model: '', models: [] },
       zhipu_cli: { label: '智谱 CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7689/', model: '', models: [] },
       copilot_cli: { label: 'Copilot CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7690/', model: '', models: [] },
-      kimi: { label: 'Kimi', transport: 'openai', baseUrl: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k', models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'kimi-k2-0711-preview'] },
+      studio_cli: { label: '定制终端', transport: 'cli', baseUrl: 'http://127.0.0.1:7691/', model: '', models: [] },
+      kimi: { label: 'Kimi', transport: 'openai', baseUrl: 'https://api.moonshot.cn/v1', model: 'kimi-k2.6', models: ['kimi-k2.6', 'kimi-k2-thinking', 'kimi-k2.5', 'kimi-k2-turbo-preview'] },
       qwen: { label: 'Qwen', transport: 'openai', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus', models: ['qwen-plus', 'qwen-turbo', 'qwen-max', 'qwen3-coder-plus'] },
       deepseek: { label: 'DeepSeek', transport: 'openai', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', models: ['deepseek-chat', 'deepseek-reasoner'] },
       claude: { label: 'Claude', transport: 'anthropic', baseUrl: 'https://api.anthropic.com', model: 'claude-3-5-sonnet-latest', models: ['claude-3-5-sonnet-latest', 'claude-3-7-sonnet-latest', 'claude-3-5-haiku-latest'] },
@@ -588,7 +647,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       minimax: {
         label: 'MiniMax',
         transport: 'openai',
-        baseUrl: 'https://api.minimax.io/v1',
+        baseUrl: 'https://api.minimaxi.com/anthropic',
         model: 'MiniMax-M2.7',
         models: [
           'MiniMax-M2.7',
@@ -650,6 +709,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       kimi_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7688，自动启动 kimi。' },
       zhipu_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7689，自动启动 chelper（@z_ai/coding-helper）。' },
       copilot_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7690，自动启动 copilot CLI。' },
+      studio_cli: { keyLabel: '无需 API Key', keyPlaceholder: '智能定制 ttyd', keyHint: '端口 7691，与设置中心「智能定制」同步；Shell/工作目录在「终端定制」面板配置。' },
       kimi: { keyLabel: 'Kimi（Moonshot）API Key', keyPlaceholder: 'Moonshot 密钥', keyHint: 'Authorization: Bearer；单独保存在「Kimi」槽位。' },
       qwen: { keyLabel: 'DashScope API Key', keyPlaceholder: '阿里云百炼 / DashScope', keyHint: '通义千问兼容 OpenAI 接口；密钥仅存「Qwen」槽位。' },
       deepseek: { keyLabel: 'DeepSeek API Key', keyPlaceholder: 'DeepSeek 密钥', keyHint: '单独保存在「DeepSeek」槽位。' },
@@ -657,7 +717,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       gemini: { keyLabel: 'Google AI API Key', keyPlaceholder: 'AIza...', keyHint: '密钥以 query 参数 key= 传递；单独保存在「Gemini」槽位。' },
       glm: { keyLabel: '智谱 BigModel API Key', keyPlaceholder: 'BigModel 密钥', keyHint: '与「智谱」槽位分离保存；均为 OpenAI 兼容但密钥不同。' },
       siliconflow: { keyLabel: '硅基流动 API Key', keyPlaceholder: '硅基流动密钥', keyHint: '单独保存在「硅基流动」槽位。' },
-      minimax: { keyLabel: 'MiniMax API Key', keyPlaceholder: 'MiniMax 密钥', keyHint: 'OpenAI：https://api.minimax.io/v1 或中国区 https://api.minimaxi.com/v1；Anthropic 兼容：https://api.minimax.io/anthropic 或 https://api.minimaxi.com/anthropic（需 Bearer，勿用 api.minimax.com）。' },
+      minimax: { keyLabel: 'MiniMax Token Plan Key', keyPlaceholder: 'Coding Plan / Token Plan 密钥', keyHint: 'Billing→Token Plan 密钥（≠接口密钥按量付费）；须与下方节点一致：国内 api.minimaxi.com，国际 api.minimax.io。' },
       zhipu: { keyLabel: '智谱 API Key', keyPlaceholder: '智谱开放平台密钥', keyHint: '单独保存在「智谱」槽位（与 GLM BigModel 可填不同密钥）。' },
       ollama: { keyLabel: 'Ollama API Key（可选）', keyPlaceholder: '本地默认可留空', keyHint: '本地 Ollama 默认无需 API Key；如启用鉴权可在此填写。' },
       openclaw: {
@@ -684,6 +744,34 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (pid === 'codex') return 'openai';
     return pid;
   }
+
+  /** 非「自定义」时始终用内置官方地址，避免用户填错 Base URL */
+  function effectiveBaseUrl(pid, sessionUrl, formUrl) {
+    pid = normalizeProviderId(pid);
+    var p = P[pid] || P.openai;
+    var form = String(formUrl || '').trim();
+    var sess = String(sessionUrl || '').trim();
+    if (p.transport === 'cli') return form || sess || String(p.baseUrl || '').trim();
+    if (pid === 'custom') return form || sess;
+    if (state.manualBaseUrl) return form || sess || String(p.baseUrl || '').trim();
+    return String(p.baseUrl || '').trim();
+  }
+
+  function shouldShowManualBaseUrl(pid) {
+    pid = normalizeProviderId(pid);
+    if (pid === 'custom' || pid === 'openclaw') return true;
+    return !!state.manualBaseUrl;
+  }
+
+  function refreshBaseUrlAutoLabel(pid, el) {
+    if (!el) return;
+    var u = effectiveBaseUrl(pid, '', '');
+    el.textContent = u ? '自动：' + u : '按服务商自动配置';
+  }
+
+  var AI_SETUP_PROVIDERS = [
+    'openai', 'minimax', 'gemini', 'deepseek', 'kimi', 'claude', 'qwen', 'glm', 'zhipu', 'siliconflow', 'ollama', 'openclaw'
+  ];
 
   var _tpl = $('ftb-toolbar-tpl');
   var _th = _tpl ? _tpl.innerHTML : '';
@@ -972,6 +1060,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     attachFolderBtn = $('attachFolderBtn'),
     attachList = $('attachList'),
     chatStatus = $('chat-status'),
+    chatStatusCopy = $('chatStatusCopy'),
     settings = $('settings'),
     sbg = document.querySelector('.sbg'),
     sclose = $('settings-close'),
@@ -1006,6 +1095,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     fldModelDdCol = $('fldModelDdCol'),
     fldTtydShellRow = $('fldTtydShellRow'),
     fldBaseUrlRow = $('fldBaseUrlRow'),
+    fldMinimaxRegionRow = $('fldMinimaxRegionRow'),
+    minimaxRegionCn = $('minimaxRegionCn'),
+    minimaxRegionIntl = $('minimaxRegionIntl'),
     fldOpenClawSessionRow = $('fldOpenClawSessionRow'),
     fldModelRow = $('fldModelRow'),
     resetCfg = $('resetCfg'),
@@ -1014,7 +1106,35 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     newSessionPick = $('newSessionPick'),
     newSessionPickBg = $('newSessionPickBg'),
     newSessionPickClose = $('newSessionPickClose'),
-    newSessionGrid = $('newSessionGrid');
+    newSessionGrid = $('newSessionGrid'),
+    ttydCustomize = $('ttydCustomize'),
+    ttydCustomizeBg = $('ttydCustomizeBg'),
+    ttydCustomizeClose = $('ttydCustomizeClose'),
+    ttydStudioShell = $('ttydStudioShell'),
+    ttydStudioWorkDir = $('ttydStudioWorkDir'),
+    ttydStudioBaseUrl = $('ttydStudioBaseUrl'),
+    ttydStudioExeHint = $('ttydStudioExeHint'),
+    ttydCustomizeStatus = $('ttydCustomizeStatus'),
+    ttydStudioSave = $('ttydStudioSave'),
+    ttydStudioRestart = $('ttydStudioRestart'),
+    ttydStudioPreview = $('ttydStudioPreview'),
+    ttydStudioExt = $('ttydStudioExt'),
+    ttydStudioBrowseWd = $('ttydStudioBrowseWd'),
+    ttydStudioApiHint = $('ttydStudioApiHint'),
+    ttydStudioStartChat = $('ttydStudioStartChat'),
+    ttydLlmProvider = $('ttydLlmProvider'),
+    ttydLlmApiKey = $('ttydLlmApiKey'),
+    ttydLlmBaseUrl = $('ttydLlmBaseUrl'),
+    ttydLlmModel = $('ttydLlmModel'),
+    ttydLlmSave = $('ttydLlmSave'),
+    inlineApiSetup = $('inlineApiSetup'),
+    inlineLlmProvider = $('inlineLlmProvider'),
+    inlineLlmApiKey = $('inlineLlmApiKey'),
+    inlineLlmBaseUrl = $('inlineLlmBaseUrl'),
+    inlineLlmModel = $('inlineLlmModel'),
+    inlineLlmSave = $('inlineLlmSave'),
+    inlineLlmOpenFull = $('inlineLlmOpenFull'),
+    chatApiQuick = $('chat-api-quick');
 
   function tbEls() {
     return document.querySelectorAll('.tb[data-action], .tb[data-cmd-id]');
@@ -1041,6 +1161,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     themeMode: getCachedThemeMode(),
     sendingBySession: {},
     needSetup: false,
+    manualBaseUrl: false,
     nspick: false,
     activeAction: '',
     apiKeys: {},
@@ -1056,8 +1177,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     openclawMetaCache: {},
     openclawSessionRows: [],
     openclawSessionRowsFetchedAt: 0,
-    openclawSessionRowsLoading: false
-    ,
+    openclawSessionRowsLoading: false,
+    pendingStudioLlm: null,
     pendingAttach: { items: [], fileIds: [], files: [] }
   };
   var toolbarVisibleSynced = false;
@@ -1350,10 +1471,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return;
     }
     scrollMsgsToLatest();
-    if (state.needSetup) {
+    if (state.needSetup || !hasAnyApiConfigured()) {
       var sd = activeSession();
       var pp = sd && P[normalizeProviderId(sd.provider)];
-      if (!pp || pp.transport !== 'cli') setSettings(true);
+      if (!pp || pp.transport !== 'cli') refreshInlineApiSetupVisibility();
     }
   }
 
@@ -1382,16 +1503,139 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     } catch (_) {}
   }
 
+  function providerKeysForSettingsUi() {
+    return AI_SETUP_PROVIDERS.filter(function (k) {
+      return P[k] && providerTransport(k) !== 'cli';
+    });
+  }
+
+  function pickSettingsEditProvider() {
+    var pending = state.pendingStudioLlm;
+    if (pending && String(pending.apiKey || '').trim()) {
+      return mapStudioProviderToChat(pending).pid;
+    }
+    var found = findAnyStoredApiKey();
+    if (found && found.provider) return normalizeProviderId(found.provider);
+    var keys = state.apiKeys || {};
+    var i;
+    for (i = 0; i < AI_SETUP_PROVIDERS.length; i++) {
+      var k = AI_SETUP_PROVIDERS[i];
+      if (keys[k] && String(keys[k]).trim()) return k;
+    }
+    return 'minimax';
+  }
+
+  function refreshSettingsAiHint() {
+    var box = $('settingsAiHint');
+    var txt = $('settingsAiHintText');
+    if (!box) return;
+    var sess = activeSession();
+    var sessPid = sess ? normalizeProviderId(sess.provider) : '';
+    var editPid = normalizeProviderId(provider.value);
+    var sessCli = sessPid && providerTransport(sessPid) === 'cli';
+    box.style.display = '';
+    if (txt) {
+      if (sessCli) {
+        txt.textContent =
+          '当前对话标签为「' +
+          (P[sessPid] ? P[sessPid].label : sessPid) +
+          '」（终端模式，不需要 API）。请在下方服务商中选择 MiniMax、OpenAI 等填写 API Key，并点「完成」或「从智能定制同步」。';
+      } else {
+        txt.textContent = '请选择 AI 服务商并填写 API Key；配置会按服务商分槽保存，并同步到智能定制。';
+      }
+    }
+  }
+
   function setSettings(v) {
     state.settings = !!v;
-    if (state.settings) setNspick(false);
+    if (state.settings) {
+      setNspick(false);
+      setTtydCustomize(false);
+    }
     document.body.classList.toggle('settings-open', state.settings);
     settings.setAttribute('aria-hidden', state.settings ? 'false' : 'true');
     if (state.settings) {
+      var editPid = pickSettingsEditProvider();
+      provider.value = editPid;
+      applyProvider(editPid, false);
+      apiKey.value = getApiKeyForProvider(editPid);
+      refreshApiKeyField(editPid);
+      fillModels(editPid, model.value.trim());
+      buildProviderDdMenu();
       syncProviderDdUi();
       syncModelDdUi();
-      updateProviderFormLayout(normalizeProviderId(provider.value));
+      updateProviderFormLayout(editPid);
+      refreshSettingsAiHint();
+      try {
+        post({ type: 'niuma_request_studio_llm' });
+      } catch (e) {}
     }
+  }
+
+  function applyTtydStudioConfig(ttyd) {
+    ttyd = ttyd && typeof ttyd === 'object' ? ttyd : {};
+    if (ttydStudioShell) ttydStudioShell.value = ttyd.shell != null ? String(ttyd.shell) : 'cmd.exe';
+    if (ttydStudioWorkDir) ttydStudioWorkDir.value = ttyd.workDir != null ? String(ttyd.workDir) : '';
+    if (ttydStudioBaseUrl) {
+      var u = ttyd.baseUrl != null ? String(ttyd.baseUrl) : 'http://127.0.0.1:7691/';
+      ttydStudioBaseUrl.value = u;
+    }
+    if (ttydStudioExeHint) {
+      ttydStudioExeHint.textContent = ttyd.exeExists === false
+        ? '未找到主目录 ttyd.exe，请放置后重启脚本。'
+        : '端口 ' + (ttyd.port || 7691) + (ttyd.httpReady ? ' · 终端已就绪' : ' · 未连接');
+    }
+    if (ttydCustomizeStatus) ttydCustomizeStatus.textContent = '已加载定制配置';
+  }
+
+  function setTtydCustomize(v) {
+    state.ttydCustomize = !!v;
+    if (state.ttydCustomize) {
+      setNspick(false);
+      setSettings(false);
+    }
+    document.body.classList.toggle('ttyd-customize-open', state.ttydCustomize);
+    if (ttydCustomize) ttydCustomize.setAttribute('aria-hidden', state.ttydCustomize ? 'false' : 'true');
+    if (state.ttydCustomize) {
+      try {
+        post({ type: 'niuma_request_ttyd_studio' });
+      } catch (e) {}
+      refreshTtydApiStatus();
+      if (!buildLlmSyncPayload()) syncApiSetupFieldsFromMain(ttydLlmProvider, ttydLlmApiKey, ttydLlmBaseUrl, ttydLlmModel);
+      var _ttydLlm = buildLlmSyncPayload();
+      if (_ttydLlm) {
+        try {
+          post({ type: 'niuma_sync_studio_llm', llm: _ttydLlm });
+        } catch (e2) {}
+      }
+    }
+  }
+
+  function collectTtydStudioPayload() {
+    return {
+      shell: ttydStudioShell ? String(ttydStudioShell.value || '').trim() : 'cmd.exe',
+      workDir: ttydStudioWorkDir ? String(ttydStudioWorkDir.value || '').trim() : ''
+    };
+  }
+
+  function openStudioCliPreview() {
+    var url = ttydStudioBaseUrl ? String(ttydStudioBaseUrl.value || '').trim() : 'http://127.0.0.1:7691/';
+    state._studioPreview = true;
+    setTtydCustomize(false);
+    setDrawer(true);
+    document.body.classList.add('cli-mode');
+    var fr = $('cliFrame');
+    if (fr) {
+      try {
+        fr.src = 'about:blank';
+      } catch (e) {}
+    }
+    var titleEl = $('cliTitle');
+    if (titleEl) titleEl.textContent = '定制终端 · ttyd';
+    try {
+      post({ type: 'niuma_cli_open', engine: 'studio_cli', reqId: String(Date.now()) });
+    } catch (e) {}
+    if (ttydCustomizeStatus) ttydCustomizeStatus.textContent = '正在连接定制终端…';
   }
 
   function esc(s) {
@@ -1988,7 +2232,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       fillModels(pid, s.model);
       model.value = s.model || p.model;
     }
-    baseUrl.value = (s.baseUrl || '').trim() || p.baseUrl;
+    baseUrl.value =
+      (s.baseUrl || '').trim() ||
+      (shouldShowManualBaseUrl(pid) ? p.baseUrl : effectiveBaseUrl(pid, s.baseUrl, ''));
     if (openclawSessionKey) openclawSessionKey.value = pid === 'openclaw' ? getOpenClawSessionKey(s) : '';
     hint(pid);
     apiKey.value = (state.apiKeys && state.apiKeys[pid]) || '';
@@ -2005,7 +2251,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var p = P[pid] || P.openai;
     s.provider = pid;
     s.model = (p.transport === 'cli') ? '' : model.value.trim() || p.model;
-    s.baseUrl = baseUrl.value.trim();
+    var spid = normalizeProviderId(s.provider);
+    s.baseUrl =
+      spid === 'custom' || state.manualBaseUrl ? baseUrl.value.trim() : '';
     if (pid !== 'openclaw') s.gatewaySessionKey = '';
     else {
       var wanted = openclawSessionKey ? String(openclawSessionKey.value || '').trim() : '';
@@ -2094,9 +2342,21 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (fldTtydShellRow) fldTtydShellRow.style.display = isTtyd ? '' : 'none';
     if (fldOpenClawSessionRow) fldOpenClawSessionRow.style.display = !isCli && isOpenClaw ? '' : 'none';
     if (!isCli && isOpenClaw) refreshOpenClawSessionRows(false);
+    if (fldMinimaxRegionRow) fldMinimaxRegionRow.style.display = !isCli && pid === 'minimax' && state.settings ? '' : 'none';
     if (fldBaseUrlRow) {
+      var showMinimaxUrl = !isCli && pid === 'minimax' && state.settings;
+      var show = isCli || shouldShowManualBaseUrl(pid) || showMinimaxUrl;
+      fldBaseUrlRow.style.display = show ? '' : 'none';
       var bl = fldBaseUrlRow.querySelector('label[for="baseUrl"]');
-      if (bl) bl.textContent = isCli ? 'ttyd 地址（Base URL）' : 'Base URL';
+      if (bl) bl.textContent = isCli ? 'ttyd 地址（Base URL）' : showMinimaxUrl ? 'Base URL（MiniMax）' : 'Base URL（手动）';
+      if (!show && !isCli) baseUrl.value = p.baseUrl || '';
+    }
+    var link = document.getElementById('linkManualBaseUrl');
+    if (link) link.style.display = isCli || pid === 'custom' ? 'none' : '';
+    if (state.settings) {
+      var apiWrap = apiKey && apiKey.parentElement;
+      if (apiWrap) apiWrap.style.display = isCli ? 'none' : '';
+      refreshSettingsAiHint();
     }
   }
 
@@ -2118,6 +2378,85 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var lk = dp && P[dp] ? dp : 'openai';
       state.apiKeys[lk] = String(d.apiKey);
     }
+  }
+
+  function fillApiSetupSelect(sel) {
+    if (!sel) return;
+    sel.innerHTML = AI_SETUP_PROVIDERS.filter(function (k) {
+      return P[k] && providerTransport(k) !== 'cli';
+    })
+      .map(function (k) {
+        return '<option value="' + k + '">' + esc(P[k].label) + '</option>';
+      })
+      .join('');
+  }
+
+  function resolveApiSetupProviderId(sel) {
+    var pid = sel ? normalizeProviderId(sel.value) : 'openai';
+    if (!pid || !P[pid] || providerTransport(pid) === 'cli') pid = 'openai';
+    return pid;
+  }
+
+  function syncApiSetupFieldsFromMain(sel, keyEl, baseEl, modelEl) {
+    var pid = normalizeProviderId(provider.value);
+    if (providerTransport(pid) === 'cli') pid = 'openai';
+    if (sel) sel.value = pid;
+    var p = P[pid] || P.openai;
+    if (keyEl) keyEl.value = getApiKeyForProvider(pid);
+    if (modelEl) modelEl.value = (model && model.value.trim()) || p.model;
+    refreshBaseUrlAutoLabel(pid, $('inlineBaseUrlAutoText'));
+    refreshBaseUrlAutoLabel(pid, $('ttydBaseUrlAutoText'));
+  }
+
+  function onApiSetupProviderChange(sel, keyEl, baseEl, modelEl) {
+    var pid = resolveApiSetupProviderId(sel);
+    var p = P[pid] || P.openai;
+    if (keyEl) keyEl.value = getApiKeyForProvider(pid);
+    if (modelEl && !modelEl.value.trim()) modelEl.value = p.model;
+    refreshBaseUrlAutoLabel(pid, $('inlineBaseUrlAutoText'));
+    refreshBaseUrlAutoLabel(pid, $('ttydBaseUrlAutoText'));
+  }
+
+  function applyApiSetupFromFields(sel, keyEl, baseEl, modelEl, opts) {
+    opts = opts || {};
+    var pid = resolveApiSetupProviderId(sel);
+    var key = keyEl ? trimApiKey(keyEl.value) : '';
+    if (!key) {
+      sstat('请填写 API Key。', 'error');
+      if (ttydCustomizeStatus) ttydCustomizeStatus.textContent = '请填写 API Key';
+      return false;
+    }
+    if (!state.apiKeys) state.apiKeys = {};
+    state.apiKeys[pid] = key;
+    if (provider) provider.value = pid;
+    applyProvider(pid, false);
+    if (modelEl && modelEl.value.trim()) model.value = modelEl.value.trim();
+    baseUrl.value = effectiveBaseUrl(pid, '', '');
+    apiKey.value = key;
+    refreshApiKeyField(pid);
+    saveCfg(true);
+    syncLlmToStudioHost();
+    refreshInlineApiSetupVisibility();
+    refreshTtydApiStatus();
+    if (opts.startChat) {
+      setTtydCustomize(false);
+      applyStudioLlmFromPayload(buildLlmSyncPayload(), '', false);
+      cstat('API 已保存，可直接提问。', 'success');
+    }
+    if (ttydCustomizeStatus) ttydCustomizeStatus.textContent = 'API 已保存';
+    return true;
+  }
+
+  function hasAnyApiConfigured() {
+    return !!buildLlmSyncPayload();
+  }
+
+  function refreshInlineApiSetupVisibility() {
+    var need = state.needSetup || !hasAnyApiConfigured();
+    if (inlineApiSetup) inlineApiSetup.hidden = !need;
+    if (need) syncApiSetupFieldsFromMain(inlineLlmProvider, inlineLlmApiKey, null, inlineLlmModel);
+    if (state.ttydCustomize) syncApiSetupFieldsFromMain(ttydLlmProvider, ttydLlmApiKey, null, ttydLlmModel);
+    emptyState();
   }
 
   function fillPromptBuiltinSelect() {
@@ -2214,8 +2553,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     if (isCliSession(s)) {
       empty.textContent = 'ttyd 命令行：点「+」选择 CLI（Codex / Claude / 智谱等），每标签独立端口；发送将连接对应 ttyd 终端页。';
-    } else if (state.needSetup) {
-      empty.textContent = '首次使用请点「设」完成 API。展开后工具条在输入框下方、发送按钮左侧。';
+    } else if (state.needSetup || !hasAnyApiConfigured()) {
+      empty.textContent = '请在下方填写 API Key，或点输入框上方的「保存并开始对话」。';
     } else {
       empty.textContent = '开始对话，或点「+」选择服务商新建标签。';
     }
@@ -2604,9 +2943,35 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     cstat('已导出 JSON。', 'success');
   }
 
+  function copyTextToClipboard(text) {
+    var s = String(text || '');
+    if (!s) return false;
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = s;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, s.length);
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e2) {
+      return false;
+    }
+  }
+
   function cstat(t, m) {
     chatStatus.textContent = t;
     chatStatus.className = 'st' + (m === 'error' ? ' error' : m === 'success' ? ' success' : '');
+    var row = document.getElementById('chatStatusRow');
+    var showCopy = String(t || '').length > 0;
+    if (chatStatusCopy) {
+      chatStatusCopy.classList.toggle('show', showCopy);
+      chatStatusCopy.textContent = '复制';
+    }
+    if (row) row.classList.toggle('status-has-copy', showCopy);
   }
 
   function isSessionSending(id) {
@@ -2657,7 +3022,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function buildProviderDdMenu() {
     if (!providerDdMenu) return;
     providerDdMenu.innerHTML = '';
-    Object.keys(P).forEach(function (k) {
+    var keys = state.settings ? providerKeysForSettingsUi() : Object.keys(P);
+    keys.forEach(function (k) {
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'dd-item';
@@ -2887,11 +3253,28 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         openclaw: 'OpenClaw Gateway WebSocket（connect + chat.send）'
       },
       transportLabel = pid === 'ollama' ? '本地 Ollama（OpenAI 兼容 chat/completions）' : (m[p.transport] || p.transport);
+    if (pid === 'minimax') {
+      ph.textContent =
+        p.label +
+        '：Anthropic 兼容接口。密钥来自 Billing→Token Plan，且须与节点区域一致（国内 minimaxi.com / 国际 minimax.io）。OpenClaw 已用国内节点时，此处也选「国内」。';
+      return;
+    }
     ph.textContent =
       p.label +
       ' 默认走 ' +
       transportLabel +
-      '。如你使用中转站、反向代理或私有网关，也可以直接覆盖 Base URL 和 Model。';
+      '。官方 Base URL 已自动配置；仅中转/私有网关需点下方「手动指定 Base URL」。';
+  }
+
+  var MINIMAX_BASE_CN = 'https://api.minimaxi.com/anthropic';
+  var MINIMAX_BASE_INTL = 'https://api.minimax.io/anthropic';
+
+  function setMinimaxRegionBase(url) {
+    if (!baseUrl) return;
+    baseUrl.value = url;
+    state.manualBaseUrl = false;
+    saveCfg(false);
+    sstat('已切换 MiniMax 节点：' + url, 'success');
   }
 
   function applyProvider(pid, keep) {
@@ -2901,7 +3284,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     provider.value = pid;
     fillModels(pid, (p.transport === 'cli') ? '' : model.value.trim());
     hint(pid);
-    if (!keep || !baseUrl.value.trim()) baseUrl.value = p.baseUrl;
+    if (pid === 'custom' || state.manualBaseUrl) {
+      if (!keep || !baseUrl.value.trim()) baseUrl.value = p.baseUrl;
+    } else baseUrl.value = p.baseUrl;
     if (!keep || !model.value.trim()) model.value = (p.transport === 'cli') ? '' : p.model;
     if (!systemPrompt.value.trim()) systemPrompt.value = SP;
     syncProviderDdUi();
@@ -3234,26 +3619,31 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var s = activeSession();
     if (!s) {
       state.needSetup = true;
+      refreshInlineApiSetupVisibility();
       return;
     }
     var sp = normalizeProviderId(s.provider);
     var p = P[sp] || P.openai;
     if ((p.transport === 'cli')) {
       state.needSetup = false;
+      refreshInlineApiSetupVisibility();
       return;
     }
-    var url = (s.baseUrl || '').trim() || baseUrl.value.trim() || p.baseUrl;
+    var url = effectiveBaseUrl(sp, s.baseUrl, baseUrl.value);
     var m = (s.model || '').trim() || model.value.trim();
     var k = getApiKeyForProvider(sp);
     if (p.transport === 'openclaw') {
       state.needSetup = !openClawEndpointFromCfg({ baseUrl: url, apiKey: k, provider: sp }).ok;
+      refreshInlineApiSetupVisibility();
       return;
     }
     if (sp === 'ollama') {
       state.needSetup = !url || !m;
+      refreshInlineApiSetupVisibility();
       return;
     }
     state.needSetup = !k || !url || !m;
+    refreshInlineApiSetupVisibility();
   }
 
   function loadCfg() {
@@ -3320,17 +3710,248 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     ensureDynamicModelsForActiveProvider();
   }
 
+  function mapStudioProviderToChat(llm) {
+    var prov = String((llm && llm.provider) || 'openai').toLowerCase();
+    var bu = String((llm && llm.baseUrl) || '').trim();
+    var mod = String((llm && llm.model) || '').trim();
+    var pid = normalizeProviderId(prov);
+    if (pid && P[pid] && providerTransport(pid) !== 'cli') {
+      var p0 = P[pid];
+      return { pid: pid, baseUrl: bu || p0.baseUrl, model: mod || p0.model };
+    }
+    if (prov === 'anthropic') return { pid: 'claude', baseUrl: bu || P.claude.baseUrl, model: mod || P.claude.model };
+    if (prov === 'deepseek') return { pid: 'deepseek', baseUrl: bu || P.deepseek.baseUrl, model: mod || P.deepseek.model };
+    if (prov === 'minimax' || /minimax|minimaxi/i.test(bu)) {
+      return { pid: 'minimax', baseUrl: bu || P.minimax.baseUrl, model: mod || P.minimax.model };
+    }
+    if (prov === 'gemini' || /generativelanguage\.googleapis/i.test(bu)) {
+      return { pid: 'gemini', baseUrl: bu || P.gemini.baseUrl, model: mod || P.gemini.model };
+    }
+    if (prov === 'custom' && bu) {
+      if (/deepseek/i.test(bu)) return { pid: 'deepseek', baseUrl: bu, model: mod || P.deepseek.model };
+      if (/moonshot|kimi/i.test(bu)) return { pid: 'kimi', baseUrl: bu, model: mod || P.kimi.model };
+      if (/anthropic|claude/i.test(bu)) return { pid: 'claude', baseUrl: bu, model: mod || P.claude.model };
+      if (/bigmodel|glm|zhipu/i.test(bu)) return { pid: 'glm', baseUrl: bu, model: mod || P.glm.model };
+      if (/dashscope|qwen/i.test(bu)) return { pid: 'qwen', baseUrl: bu, model: mod || P.qwen.model };
+      if (/minimax|minimaxi/i.test(bu)) return { pid: 'minimax', baseUrl: bu, model: mod || P.minimax.model };
+      if (/siliconflow/i.test(bu)) return { pid: 'siliconflow', baseUrl: bu, model: mod || P.siliconflow.model };
+      if (/ollama/i.test(bu)) return { pid: 'ollama', baseUrl: bu, model: mod || P.ollama.model };
+      return { pid: 'openai', baseUrl: bu, model: mod || P.openai.model };
+    }
+    return { pid: 'openai', baseUrl: bu || P.openai.baseUrl, model: mod || P.openai.model };
+  }
+
+  function applyStudioLlmToTtydForm(llm) {
+    if (!llm || !ttydLlmProvider) return;
+    var mapped = mapStudioProviderToChat(llm);
+    var pid = mapped.pid;
+    ttydLlmProvider.value = pid;
+    if (ttydLlmApiKey) ttydLlmApiKey.value = String(llm.apiKey || '').trim();
+    if (ttydLlmModel) ttydLlmModel.value = mapped.model || '';
+    onApiSetupProviderChange(ttydLlmProvider, ttydLlmApiKey, ttydLlmBaseUrl, ttydLlmModel);
+  }
+
+  function findAnyStoredApiKey() {
+    var d = {};
+    try {
+      d = JSON.parse(localStorage.getItem(LS) || localStorage.getItem(LEGACY_LS) || '{}') || {};
+    } catch (e) {
+      d = {};
+    }
+    migrateApiKeysFromStorage(d);
+    var keys = state.apiKeys || {};
+    var order = [];
+    var seen = {};
+    function pushPid(pid) {
+      pid = normalizeProviderId(pid);
+      if (!pid || !P[pid] || providerTransport(pid) === 'cli' || seen[pid]) return;
+      seen[pid] = 1;
+      order.push(pid);
+    }
+    pushPid(d.provider);
+    ['openai', 'deepseek', 'kimi', 'claude', 'qwen', 'gemini', 'glm', 'zhipu', 'ollama', 'minimax', 'siliconflow'].forEach(pushPid);
+    Object.keys(keys).forEach(pushPid);
+    for (var i = 0; i < order.length; i++) {
+      var pid = order[i];
+      var k = String(keys[pid] || '').trim();
+      if (!k) continue;
+      var p = P[pid] || P.openai;
+      var bu = String(d.baseUrl || '').trim() || p.baseUrl;
+      var mod = String(d.model || '').trim() || p.model;
+      if (pid === normalizeProviderId(d.provider)) {
+        bu = String(d.baseUrl || '').trim() || bu;
+        mod = String(d.model || '').trim() || mod;
+      }
+      return { provider: pid, apiKey: k, baseUrl: bu, model: mod };
+    }
+    return null;
+  }
+
+  function findOrCreateLlmSession(pid) {
+    pid = normalizeProviderId(pid);
+    if (!pid || !P[pid] || providerTransport(pid) === 'cli') pid = 'openai';
+    var list = state.sessions || [];
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (list[i] && !isCliSession(list[i]) && normalizeProviderId(list[i].provider) === pid) return list[i].id;
+    }
+    var cur = activeSession();
+    if (cur) syncSessionFromForm(cur);
+    var p = P[pid];
+    var sid = genId();
+    var s = {
+      id: sid,
+      provider: pid,
+      model: p.model,
+      baseUrl: p.baseUrl,
+      gatewaySessionKey: '',
+      history: []
+    };
+    state.sessions.push(s);
+    state.activeSessionId = sid;
+    pullStoreHistoryToSession(s);
+    persistSessions();
+    return sid;
+  }
+
+  function applyStudioLlmFromPayload(llm, prompt, autoSend) {
+    llm = llm || {};
+    var key = String(llm.apiKey || '').trim();
+    if (!key) {
+      var found = findAnyStoredApiKey();
+      if (found) llm = found;
+      key = String(llm.apiKey || '').trim();
+    }
+    if (!key) return false;
+    var mapped = mapStudioProviderToChat(llm);
+    var pid = mapped.pid;
+    if (!state.apiKeys) state.apiKeys = {};
+    state.apiKeys[pid] = key;
+    var sid = findOrCreateLlmSession(pid);
+    switchSession(sid);
+    applyProvider(pid, true);
+    if (mapped.baseUrl) baseUrl.value = mapped.baseUrl;
+    if (mapped.model) model.value = mapped.model;
+    if (llm.baseUrl) baseUrl.value = String(llm.baseUrl);
+    if (llm.model) model.value = String(llm.model);
+    apiKey.value = getApiKeyForProvider(pid);
+    refreshApiKeyField(pid);
+    var cur = activeSession();
+    if (cur) {
+      cur.provider = pid;
+      cur.baseUrl = baseUrl.value.trim();
+      cur.model = model.value.trim();
+      persistSessions();
+    }
+    saveCfg(false);
+    syncChatViewMode();
+    updateNeedSetup();
+    refreshSendUi();
+    refreshTtydApiStatus();
+    var pr = String(prompt || '').trim();
+    if (pr) {
+      input.value = pr;
+      try {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      } catch (_) {}
+    }
+    requestAnimationFrame(function () {
+      try {
+        input.focus();
+        var end = input.value.length;
+        input.setSelectionRange(end, end);
+      } catch (_) {}
+      if (autoSend && pr) sendChat();
+    });
+    return true;
+  }
+
+  function refreshTtydApiStatus(llmOverride) {
+    if (!ttydStudioApiHint) return;
+    var llm = llmOverride || buildLlmSyncPayload();
+    if (llm && llm.apiKey) {
+      var lab = (P[llm.provider] && P[llm.provider].label) || llm.provider;
+      ttydStudioApiHint.textContent = '已匹配 ' + lab + ' API（' + String(llm.apiKey).slice(0, 4) + '…），可开始对话。';
+      ttydStudioApiHint.style.color = '#6bcf8a';
+    } else {
+      ttydStudioApiHint.textContent = '未填写 API：请在上方选择服务商并填写 Key，点「保存 API」。';
+      ttydStudioApiHint.style.color = '';
+    }
+  }
+
+  function startStudioChatFromTtyd() {
+    if (!buildLlmSyncPayload()) {
+      if (ttydLlmApiKey && !String(ttydLlmApiKey.value || '').trim()) {
+        if (ttydCustomizeStatus) ttydCustomizeStatus.textContent = '请先填写上方 API Key 并点「保存 API」';
+        try {
+          ttydLlmApiKey.focus();
+        } catch (_) {}
+        return;
+      }
+      if (!applyApiSetupFromFields(ttydLlmProvider, ttydLlmApiKey, null, ttydLlmModel, { startChat: true })) return;
+      return;
+    }
+    setTtydCustomize(false);
+    if (!applyStudioLlmFromPayload(buildLlmSyncPayload(), '', false)) {
+      sstat('未能应用 API 配置。', 'error');
+      return;
+    }
+    cstat('已切换到 AI 对话模式，可直接输入问题。', 'success');
+  }
+
+  function buildLlmSyncPayload() {
+    if (state.ttydCustomize && ttydLlmProvider) {
+      var tpid = resolveApiSetupProviderId(ttydLlmProvider);
+      var tkey = ttydLlmApiKey ? String(ttydLlmApiKey.value || '').trim() : '';
+      if (tkey) {
+        var tp = P[tpid] || P.openai;
+        return {
+          provider: tpid,
+          apiKey: tkey,
+          baseUrl: effectiveBaseUrl(tpid, '', ''),
+          model: (ttydLlmModel && ttydLlmModel.value.trim()) || tp.model
+        };
+      }
+    }
+    var d = {};
+    try {
+      d = JSON.parse(localStorage.getItem(LS) || localStorage.getItem(LEGACY_LS) || '{}') || {};
+    } catch (e) {
+      d = {};
+    }
+    migrateApiKeysFromStorage(d);
+    var pid = normalizeProviderId((provider && provider.value) || d.provider);
+    pid = pid && P[pid] ? pid : 'openai';
+    var key = getApiKeyForProvider(pid);
+    if (!key && d.apiKey) key = String(d.apiKey).trim();
+    if (!key) return findAnyStoredApiKey();
+    var p = P[pid] || P.openai;
+    var bu = effectiveBaseUrl(pid, d.baseUrl, (baseUrl && baseUrl.value) || '');
+    var mod = ((model && model.value) || '').trim() || d.model || p.model;
+    return { provider: pid, apiKey: key, baseUrl: bu, model: mod };
+  }
+
+  function syncLlmToStudioHost() {
+    var llm = buildLlmSyncPayload();
+    if (!llm) return false;
+    try {
+      post({ type: 'niuma_sync_studio_llm', llm: llm });
+    } catch (e) {}
+    return true;
+  }
+
   function saveCfg(ok) {
     var cur = activeSession();
     syncSessionFromForm(cur);
     var pv = normalizeProviderId(provider.value);
     var pid = pv && P[pv] ? pv : 'openai';
     if (!state.apiKeys) state.apiKeys = {};
-    state.apiKeys[pid] = apiKey.value.trim();
+    state.apiKeys[pid] = trimApiKey(apiKey.value);
     var d = {
       provider: pid,
       apiKeys: state.apiKeys,
-      baseUrl: baseUrl.value.trim(),
+      baseUrl:
+        pid === 'custom' || state.manualBaseUrl ? baseUrl.value.trim() : '',
       model: model.value.trim(),
       systemPrompt: systemPrompt.value.trim(),
       ttydShell: ttydShellCommand ? ttydShellCommand.value.trim() : ''
@@ -3340,6 +3961,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     updateNeedSetup();
     sstat(ok ? '设置已保存到本地。' : '配置会自动保存到本地。', ok ? 'success' : '');
     renderSessionTabs();
+    try {
+      syncLlmToStudioHost();
+    } catch (e) {}
     return d;
   }
 
@@ -3368,7 +3992,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var sp = normalizeProviderId(s.provider);
     var pid = sp && P[sp] ? sp : 'openai';
     var p = P[pid] || P.openai;
-    var bu = (s.baseUrl || '').trim() || p.baseUrl;
+    var bu = effectiveBaseUrl(pid, s.baseUrl, baseUrl.value);
     return {
       provider: pid,
       model: (p.transport === 'cli') ? '' : (s.model || '').trim() || p.model,
@@ -3382,9 +4006,25 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     };
   }
 
+  function buildTestCfg() {
+    var pid = normalizeProviderId(provider.value);
+    pid = pid && P[pid] ? pid : 'openai';
+    var p = P[pid] || P.openai;
+    var key = trimApiKey(apiKey.value) || getApiKeyForProvider(pid);
+    var bu = effectiveBaseUrl(pid, '', baseUrl.value);
+    var mod = (model.value || '').trim() || p.model;
+    return {
+      provider: pid,
+      model: (p.transport === 'cli') ? '' : mod,
+      baseUrl: bu,
+      apiKey: key,
+      systemPrompt: systemPrompt.value.trim()
+    };
+  }
+
   async function testApiConfig() {
     saveCfg(false);
-    var cfg = buildSendCfg();
+    var cfg = buildTestCfg();
     if (!cfg) {
       sstat('无法读取当前配置。', 'error');
       return;
@@ -3405,38 +4045,257 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
       if (p.transport === 'anthropic') {
         if (!cfg.apiKey) throw new Error('缺少 API Key');
-        var rA = await fetch(claudeUrl(cfg.baseUrl), {
+        var rA = await hostHttpRequest(claudeUrl(cfg.baseUrl), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': cfg.apiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: cfg.model, max_tokens: 1, messages: [{ role: 'user', content: 'ping' }] })
+          body: JSON.stringify({ model: cfg.model, max_tokens: 1, messages: [{ role: 'user', content: 'ping' }] }),
+          timeoutMs: 45000
         });
-        if (!rA.ok) throw new Error('HTTP ' + rA.status + ': ' + (await rA.text()));
+        if (!rA.ok) throw new Error('HTTP ' + rA.status + ': ' + rA.text);
         sstat('API 测试通过。', 'success');
         return;
       }
       if (p.transport === 'gemini') {
         if (!cfg.apiKey) throw new Error('缺少 API Key');
-        var rG = await fetch(geminiUrl(cfg.baseUrl, cfg.model, cfg.apiKey), {
+        var rG = await hostHttpRequest(geminiUrl(cfg.baseUrl, cfg.model, cfg.apiKey), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'ping' }] }], generationConfig: { maxOutputTokens: 1 } })
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'ping' }] }], generationConfig: { maxOutputTokens: 1 } }),
+          timeoutMs: 45000
         });
-        if (!rG.ok) throw new Error('HTTP ' + rG.status + ': ' + (await rG.text()));
+        if (!rG.ok) throw new Error('HTTP ' + rG.status + ': ' + rG.text);
+        sstat('API 测试通过。', 'success');
+        return;
+      }
+      if (cfg.provider === 'minimax') {
+        cfg.apiKey = trimApiKey(cfg.apiKey);
+        if (!cfg.apiKey) throw new Error('缺少 API Key');
+        if (minimaxUsesAnthropic(cfg.baseUrl)) {
+          await minimaxAnthropicRequest(cfg, JSON.stringify({ model: cfg.model, max_tokens: 8, messages: [{ role: 'user', content: 'ping' }] }), 45000);
+        } else {
+          var rMo = await minimaxOpenAIRequest(cfg, JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 8, temperature: 0.1 }), 45000);
+          if (!rMo.ok) throw new Error(formatMinimaxApiError(rMo.status, rMo.text));
+        }
         sstat('API 测试通过。', 'success');
         return;
       }
       if (!cfg.apiKey && cfg.provider !== 'ollama') throw new Error('缺少 API Key');
       var h = { 'Content-Type': 'application/json' };
       if (cfg.apiKey) h.Authorization = 'Bearer ' + cfg.apiKey;
-      var rO = await fetch(oaUrl(cfg.baseUrl), {
+      var rO = await hostHttpRequest(oaUrl(cfg.baseUrl), {
         method: 'POST',
         headers: h,
-        body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, temperature: 0.1 })
+        body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, temperature: 0.1 }),
+        timeoutMs: 45000
       });
-      if (!rO.ok) throw new Error('HTTP ' + rO.status + ': ' + (await rO.text()));
+      if (!rO.ok) throw new Error('HTTP ' + rO.status + ': ' + rO.text);
       sstat('API 测试通过。', 'success');
     } catch (e) {
       sstat('API 测试失败: ' + (e && e.message ? e.message : String(e)), 'error');
+    }
+  }
+
+  function normalizeMiniMaxBaseURL(base) {
+    var u = String(base || '').trim();
+    if (!u) return u;
+    try {
+      var parsed = new URL(u);
+      if (parsed.hostname.toLowerCase() === 'api.minimax.com') parsed.hostname = 'api.minimaxi.com';
+      if (parsed.pathname.endsWith('/anthrop')) parsed.pathname = parsed.pathname.slice(0, -8) + '/anthropic';
+      return parsed.toString();
+    } catch (e) {
+      if (u.endsWith('/anthrop')) u = u.slice(0, -8) + '/anthropic';
+      return u;
+    }
+  }
+
+  function minimaxUsesAnthropic(baseUrl) {
+    return /\/anthropic/i.test(String(baseUrl || ''));
+  }
+
+  function minimaxAnthropicUrl(base) {
+    var u = normalizeMiniMaxBaseURL(String(base || '').trim()).replace(/\/+$/, '');
+    if (!u) u = MINIMAX_BASE_CN;
+    var lu = u.toLowerCase();
+    if (lu.endsWith('/v1/messages') || lu.endsWith('/messages')) return u;
+    if (lu.endsWith('/anthropic')) return u + '/v1/messages';
+    if (lu.endsWith('/v1')) return u + '/messages';
+    return u + '/v1/messages';
+  }
+
+  function minimaxOpenAIUrl(base) {
+    var u0 = normalizeMiniMaxBaseURL(String(base || '').trim()).replace(/\/+$/, '');
+    if (!u0) return 'https://api.minimax.io/v1/chat/completions';
+    var u = u0.toLowerCase();
+    if (u.endsWith('/chat/completions')) return u0;
+    if (u.endsWith('/v1') || u.endsWith('/v1beta')) return u0 + '/chat/completions';
+    if (u.endsWith('/anthropic')) return u0.replace(/\/anthropic$/i, '/v1') + '/chat/completions';
+    return u0 + '/v1/chat/completions';
+  }
+
+  function trimApiKey(k) {
+    return String(k || '').replace(/^\s+|\s+$/g, '').replace(/\s+/g, '');
+  }
+
+  function minimaxAnthropicHeaders(key) {
+    return {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01'
+    };
+  }
+
+  function minimaxBearerHeaders(key) {
+    return {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + key,
+      'anthropic-version': '2023-06-01'
+    };
+  }
+
+  function minimaxResolvedBaseUrl(base) {
+    var u = normalizeMiniMaxBaseURL(String(base || '').trim());
+    if (!u) return MINIMAX_BASE_CN;
+    return u;
+  }
+
+  function minimaxBaseUrlCandidates(base) {
+    return [minimaxResolvedBaseUrl(base)];
+  }
+
+  function minimaxAuthHeaderVariants(key) {
+    return [minimaxAnthropicHeaders(key)];
+  }
+
+  function parseHttpErrDetail(raw) {
+    var t = String(raw || '').trim();
+    if (!t) return '';
+    try {
+      var j = JSON.parse(t);
+      if (j && j.base_resp) {
+        var sc = Number(j.base_resp.status_code || 0);
+        var sm = String(j.base_resp.status_msg || '').trim();
+        if (sm) return (sc ? '[' + sc + '] ' : '') + sm;
+      }
+      if (j && j.error) {
+        if (typeof j.error === 'string') return j.error;
+        if (j.error.message) return String(j.error.message);
+      }
+      if (j && j.message) return String(j.message);
+    } catch (e) {}
+    return t.length > 240 ? t.slice(0, 240) + '…' : t;
+  }
+
+  function formatMinimaxApiError(status, raw, endpointUrl, baseUrlCfg, authMode) {
+    var detail = parseHttpErrDetail(raw);
+    var rawS = String(raw || '');
+    var ep =
+      endpointUrl || baseUrlCfg
+        ? ' 实际请求：' +
+          (endpointUrl || '') +
+          (baseUrlCfg ? ' | 表单 Base URL：' + baseUrlCfg : '') +
+          (authMode ? ' | 鉴权：' + authMode : '')
+        : '';
+    if (status === 401 || /invalid api key|authorized_error|authentication|"status_code"\s*:\s*1004/i.test(detail + rawS)) {
+      return (
+        'HTTP 401：密钥被拒绝。请确认：① 控制台 Billing→Token Plan 复制密钥（不是「接口密钥」按量付费 Key）；' +
+        '② 已购买并分配 Token Plan 席位（仅有 Key 无席位也会 invalid api key）；' +
+        '③ Base URL 须与密钥区域一致：国内 ' +
+        MINIMAX_BASE_CN +
+        ' ，国际 ' +
+        MINIMAX_BASE_INTL +
+        '（勿混用节点，否则会 invalid api key）。' +
+        (detail ? ' 详情：' + detail : '') +
+        ep
+      );
+    }
+    if (/1008|insufficient balance|余额/i.test(detail + rawS)) {
+      return 'HTTP 余额不足或配额用尽：' + (detail || rawS.slice(0, 200)) + ep;
+    }
+    return 'HTTP ' + status + (detail ? '：' + detail : rawS ? '：' + rawS.slice(0, 200) : '') + ep;
+  }
+
+  async function minimaxAnthropicRequest(cfg, body, timeoutMs) {
+    var key = trimApiKey(cfg.apiKey);
+    if (!key) throw new Error('缺少 MiniMax API Key');
+    var bases = minimaxBaseUrlCandidates(cfg.baseUrl);
+    var url = minimaxAnthropicUrl(bases[0]);
+    var r = await hostHttpRequest(url, {
+      method: 'POST',
+      headers: minimaxAnthropicHeaders(key),
+      body: body,
+      timeoutMs: timeoutMs || 45000
+    });
+    if (r.ok) return r;
+    throw new Error(formatMinimaxApiError(r.status, r.text, url, bases[0], 'x-api-key'));
+  }
+
+  async function minimaxOpenAIRequest(cfg, body, timeoutMs) {
+    var key = trimApiKey(cfg.apiKey);
+    var bases = minimaxBaseUrlCandidates(cfg.baseUrl);
+    var last = { status: 401, text: '' };
+    for (var bi = 0; bi < bases.length; bi++) {
+      var r = await hostHttpRequest(minimaxOpenAIUrl(bases[bi]), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+        body: body,
+        timeoutMs: timeoutMs || 45000
+      });
+      if (r.ok) return r;
+      last = r;
+      if (r.status !== 401) break;
+    }
+    return last;
+  }
+
+  function formatHostHttpError(status, raw, fallback) {
+    var fb = String(fallback || '');
+    if (/^http_status_/i.test(fb) && (raw || status)) return formatMinimaxApiError(status || 0, raw);
+    if (status >= 400 && raw) return formatMinimaxApiError(status, raw);
+    return fb || ('HTTP ' + status);
+  }
+
+  async function reqMinimax(cfg) {
+    var key = trimApiKey(cfg.apiKey);
+    if (!key) throw new Error('缺少 MiniMax API Key');
+    cfg.apiKey = key;
+    if (minimaxUsesAnthropic(cfg.baseUrl)) {
+      var r = await minimaxAnthropicRequest(
+        cfg,
+        JSON.stringify({
+          model: cfg.model,
+          system: cfg.systemPrompt || '',
+          max_tokens: 2048,
+          messages: claudeMsgs(cfg)
+        }),
+        120000
+      );
+      var d = JSON.parse(r.text || '{}'),
+        c = '';
+      try {
+        c = (d.content || [])
+          .map(function (p) {
+            return p && p.type === 'text' ? p.text || '' : '';
+          })
+          .join('\n')
+          .trim();
+      } catch (e) {
+        c = '';
+      }
+      if (!c) throw new Error('响应中没有可显示的内容。');
+      return c;
+    }
+    var r2 = await minimaxOpenAIRequest(
+      cfg,
+      JSON.stringify({ model: cfg.model, messages: oaMsgs(cfg), temperature: 0.7 }),
+      120000
+    );
+    if (!r2.ok) throw new Error(formatMinimaxApiError(r2.status, r2.text));
+    var d2 = JSON.parse(r2.text || '{}');
+    try {
+      return norm(d2.choices[0].message.content);
+    } catch (e2) {
+      throw new Error('响应中没有可显示的内容。');
     }
   }
 
@@ -3463,6 +4322,69 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function hostBridgeAvailable() {
     return !!(window.chrome && window.chrome.webview && window.chrome.webview.postMessage);
+  }
+
+  function hostHttpRequest(url, opts) {
+    opts = opts || {};
+    var method = String(opts.method || 'GET').toUpperCase();
+    var headers = opts.headers || {};
+    var body = opts.body != null ? String(opts.body) : '';
+    var timeoutMs = Math.max(5000, Number(opts.timeoutMs || 45000));
+    if (hostBridgeAvailable()) {
+      return new Promise(function (resolve, reject) {
+        var reqId = 'llmhttp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        var done = false;
+        function cleanup() {
+          try {
+            window.chrome.webview.removeEventListener('message', onMsg);
+          } catch (_) {}
+        }
+        var timer = setTimeout(function () {
+          if (done) return;
+          done = true;
+          cleanup();
+          reject(new Error('请求超时（' + timeoutMs + 'ms），请检查网络或代理'));
+        }, timeoutMs + 500);
+        function onMsg(ev) {
+          var d = ev && ev.data;
+          if (typeof d === 'string') {
+            try {
+              d = JSON.parse(d);
+            } catch (_) {
+              return;
+            }
+          }
+          if (!d || d.type !== 'niuma_llm_http_result' || String(d.reqId || '') !== reqId) return;
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          cleanup();
+          if (d.ok) resolve({ ok: true, status: Number(d.status || 200), text: String(d.text || '') });
+          else reject(new Error(formatHostHttpError(Number(d.status || 0), String(d.text || ''), String(d.error || ''))));
+        }
+        try {
+          window.chrome.webview.addEventListener('message', onMsg);
+          post({ type: 'niuma_llm_http', reqId: reqId, method: method, url: String(url), headers: headers, body: body, timeoutMs: timeoutMs });
+        } catch (e) {
+          if (!done) {
+            done = true;
+            clearTimeout(timer);
+            cleanup();
+            reject(e);
+          }
+        }
+      });
+    }
+    return fetch(url, opts).then(async function (r) {
+      var t = await r.text();
+      if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + t);
+      return { ok: true, status: r.status, text: t };
+    }).catch(function (e) {
+      var msg = e && e.message ? e.message : String(e);
+      if (/failed to fetch/i.test(msg))
+        throw new Error('浏览器无法直连外网（CORS/网络）。请重载牛马脚本后重试；本机应走 AHK 代理请求。');
+      throw e;
+    });
   }
 
   function hostBridgeRequest(type, payload, timeoutMs) {
@@ -3605,13 +4527,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   async function reqOpenAI(cfg) {
     var h = { 'Content-Type': 'application/json' };
     if (cfg.apiKey) h.Authorization = 'Bearer ' + cfg.apiKey;
-    var r = await fetch(oaUrl(cfg.baseUrl), {
+    var r = await hostHttpRequest(oaUrl(cfg.baseUrl), {
       method: 'POST',
       headers: h,
-      body: JSON.stringify({ model: cfg.model, messages: oaMsgs(cfg), temperature: 0.7 })
+      body: JSON.stringify({ model: cfg.model, messages: oaMsgs(cfg), temperature: 0.7 }),
+      timeoutMs: 120000
     });
-    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()));
-    var d = await r.json(),
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + r.text);
+    var d = JSON.parse(r.text || '{}'),
       c = '';
     try {
       c = norm(d.choices[0].message.content);
@@ -3623,7 +4546,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   async function reqClaude(cfg) {
-    var r = await fetch(claudeUrl(cfg.baseUrl), {
+    var r = await hostHttpRequest(claudeUrl(cfg.baseUrl), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': cfg.apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -3631,10 +4554,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         system: cfg.systemPrompt || '',
         max_tokens: 2048,
         messages: claudeMsgs(cfg)
-      })
+      }),
+      timeoutMs: 120000
     });
-    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()));
-    var d = await r.json(),
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + r.text);
+    var d = JSON.parse(r.text || '{}'),
       c = '';
     try {
       c = (d.content || [])
@@ -3653,13 +4577,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   async function reqGemini(cfg) {
     var body = { contents: geminiMsgs(cfg), generationConfig: { temperature: 0.7 } };
     if (cfg.systemPrompt) body.systemInstruction = { parts: [{ text: cfg.systemPrompt }] };
-    var r = await fetch(geminiUrl(cfg.baseUrl, cfg.model, cfg.apiKey), {
+    var r = await hostHttpRequest(geminiUrl(cfg.baseUrl, cfg.model, cfg.apiKey), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      timeoutMs: 120000
     });
-    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()));
-    var d = await r.json(),
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + r.text);
+    var d = JSON.parse(r.text || '{}'),
       c = '';
     try {
       var parts = (((d.candidates || [])[0] || {}).content || {}).parts || [];
@@ -4929,7 +5854,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var p = P[cfg.provider] || P.openai,
         content = '';
       cfg.userContentForModel = composedForModel;
-      if (p.transport === 'anthropic') content = await reqClaude(cfg);
+      if (cfg.provider === 'minimax') content = await reqMinimax(cfg);
+      else if (p.transport === 'anthropic') content = await reqClaude(cfg);
       else if (p.transport === 'gemini') content = await reqGemini(cfg);
       else if (p.transport === 'openclaw')
         content = await reqOpenClaw(cfg, {
@@ -5048,6 +5974,38 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     provider.dataset.prevProv = provider.value;
     setSettings(true);
   });
+  if (chatApiQuick) {
+    chatApiQuick.addEventListener('click', function () {
+      setDrawer(true);
+      refreshInlineApiSetupVisibility();
+      if (!hasAnyApiConfigured() && inlineApiSetup) {
+        try {
+          inlineLlmApiKey.focus();
+        } catch (_) {}
+      } else setSettings(true);
+    });
+  }
+  if (inlineLlmSave) {
+    inlineLlmSave.addEventListener('click', function () {
+      applyApiSetupFromFields(inlineLlmProvider, inlineLlmApiKey, null, inlineLlmModel, { startChat: true });
+    });
+  }
+  if (inlineLlmOpenFull) inlineLlmOpenFull.addEventListener('click', function () { setSettings(true); });
+  if (inlineLlmProvider) {
+    inlineLlmProvider.addEventListener('change', function () {
+      onApiSetupProviderChange(inlineLlmProvider, inlineLlmApiKey, inlineLlmBaseUrl, inlineLlmModel);
+    });
+  }
+  if (ttydLlmSave) {
+    ttydLlmSave.addEventListener('click', function () {
+      applyApiSetupFromFields(ttydLlmProvider, ttydLlmApiKey, null, ttydLlmModel, { startChat: false });
+    });
+  }
+  if (ttydLlmProvider) {
+    ttydLlmProvider.addEventListener('change', function () {
+      onApiSetupProviderChange(ttydLlmProvider, ttydLlmApiKey, ttydLlmBaseUrl, ttydLlmModel);
+    });
+  }
 
   if (chatSearch) {
     chatSearch.addEventListener('click', function () {
@@ -5138,6 +6096,55 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     setSettings(false);
   });
+  if (ttydCustomizeClose) ttydCustomizeClose.addEventListener('click', function () { setTtydCustomize(false); });
+  if (ttydCustomizeBg) ttydCustomizeBg.addEventListener('click', function () { setTtydCustomize(false); });
+  if (ttydStudioBrowseWd) {
+    ttydStudioBrowseWd.addEventListener('click', function () {
+      try {
+        post({
+          type: 'niuma_browse_ttyd_workdir',
+          start: ttydStudioWorkDir ? String(ttydStudioWorkDir.value || '').trim() : ''
+        });
+      } catch (e) {}
+    });
+  }
+  if (ttydStudioSave) {
+    ttydStudioSave.addEventListener('click', function () {
+      var pl = collectTtydStudioPayload();
+      if (ttydCustomizeStatus) ttydCustomizeStatus.textContent = '正在保存…';
+      try {
+        post({ type: 'niuma_save_ttyd_studio', shell: pl.shell, workDir: pl.workDir });
+      } catch (e) {}
+    });
+  }
+  if (ttydStudioRestart) {
+    ttydStudioRestart.addEventListener('click', function () {
+      var pl = collectTtydStudioPayload();
+      if (ttydCustomizeStatus) ttydCustomizeStatus.textContent = '正在重启 ttyd…';
+      try {
+        post({ type: 'niuma_save_ttyd_studio', shell: pl.shell, workDir: pl.workDir });
+        setTimeout(function () {
+          try {
+            post({ type: 'niuma_cli_restart', engine: 'studio_cli', reqId: String(Date.now()) });
+          } catch (e) {}
+        }, 280);
+      } catch (e) {}
+    });
+  }
+  if (ttydStudioPreview) ttydStudioPreview.addEventListener('click', openStudioCliPreview);
+  if (ttydStudioStartChat) ttydStudioStartChat.addEventListener('click', startStudioChatFromTtyd);
+  if (ttydStudioExt) {
+    ttydStudioExt.addEventListener('click', function () {
+      var u = ttydStudioBaseUrl ? String(ttydStudioBaseUrl.value || '').trim() : 'http://127.0.0.1:7691/';
+      try {
+        post({ type: 'niuma_cli_open_external', baseUrl: u, engine: 'studio_cli', reqId: String(Date.now()) });
+      } catch (e) {
+        try {
+          window.open(u, '_blank');
+        } catch (e2) {}
+      }
+    });
+  }
   if (stest) {
     stest.addEventListener('click', function () {
       testApiConfig();
@@ -5505,6 +6512,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     this.dataset.prevProv = this.value;
   });
 
+  var linkManualBaseUrl = $('linkManualBaseUrl');
+  if (linkManualBaseUrl) {
+    linkManualBaseUrl.addEventListener('click', function (e) {
+      e.preventDefault();
+      state.manualBaseUrl = true;
+      updateProviderFormLayout(normalizeProviderId(provider.value));
+      try {
+        baseUrl.focus();
+      } catch (_) {}
+    });
+  }
+
   provider.addEventListener('change', function () {
     var prev = normalizeProviderId(this.dataset.prevProv);
     if (prev && P[prev]) {
@@ -5512,6 +6531,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       state.apiKeys[prev] = apiKey.value.trim();
     }
     var nextPid = normalizeProviderId(provider.value);
+    if (nextPid !== 'custom') state.manualBaseUrl = false;
     applyProvider(nextPid, false);
     apiKey.value = (state.apiKeys && state.apiKeys[nextPid]) || '';
     refreshApiKeyField(nextPid);
@@ -5634,6 +6654,60 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
   document.addEventListener('keydown', handleGlobalEscape, true);
 
+  function inCopyFriendlyPanel(el) {
+    return !!(
+      el &&
+      el.closest &&
+      (el.closest('#settings') || el.closest('#ttydCustomize') || el.closest('#chatStatusRow'))
+    );
+  }
+
+  function handleCopyFriendlyClipboardHotkeys(e) {
+    if (!e.ctrlKey || e.altKey || e.metaKey) return;
+    var k = String(e.key || '').toLowerCase();
+    if (k !== 'c' && k !== 'v' && k !== 'x' && k !== 'a') return;
+    var t = e.target;
+    var inPanel = inCopyFriendlyPanel(t) || (state.settings && k === 'c') || (state.settings && k === 'a');
+    if (!inPanel && !(k === 'c' && t && (t.id === 'chat-status' || t.closest('#chatStatusRow')))) return;
+    var isField = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
+    if (!isField && k !== 'c' && k !== 'a') return;
+    var cmd = k === 'c' ? 'copy' : k === 'x' ? 'cut' : k === 'v' ? 'paste' : 'selectAll';
+    try {
+      if (document.execCommand(cmd)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    } catch (_) {}
+  }
+  document.addEventListener('keydown', handleCopyFriendlyClipboardHotkeys, true);
+
+  if (chatStatusCopy) {
+    chatStatusCopy.addEventListener('click', function () {
+      var txt = chatStatus ? String(chatStatus.textContent || '') : '';
+      if (!txt) return;
+      if (copyTextToClipboard(txt)) {
+        var prev = chatStatusCopy.textContent;
+        chatStatusCopy.textContent = '已复制';
+        setTimeout(function () {
+          chatStatusCopy.textContent = prev || '复制';
+        }, 1200);
+      }
+    });
+  }
+  if (chatStatus) {
+    chatStatus.addEventListener('dblclick', function () {
+      var txt = String(chatStatus.textContent || '');
+      if (txt && copyTextToClipboard(txt) && chatStatusCopy) {
+        var prev = chatStatusCopy.textContent;
+        chatStatusCopy.textContent = '已复制';
+        chatStatusCopy.classList.add('show');
+        setTimeout(function () {
+          chatStatusCopy.textContent = prev || '复制';
+        }, 1200);
+      }
+    });
+  }
+
   [apiKey, baseUrl, openclawSessionKey, model, systemPrompt, ttydShellCommand].forEach(function (el) {
     if (!el) return;
     el.addEventListener('input', function () {
@@ -5642,6 +6716,19 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   });
 
   resetCfg.addEventListener('click', reset);
+
+  if (minimaxRegionCn) {
+    minimaxRegionCn.addEventListener('click', function () {
+      setMinimaxRegionBase(MINIMAX_BASE_CN);
+      applyProvider('minimax', true);
+    });
+  }
+  if (minimaxRegionIntl) {
+    minimaxRegionIntl.addEventListener('click', function () {
+      setMinimaxRegionBase(MINIMAX_BASE_INTL);
+      applyProvider('minimax', true);
+    });
+  }
 
   var dragT = 0;
   var DRAG_POST_INTERVAL_MS = 24;
@@ -6258,8 +7345,81 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         return;
       }
       if (d.type === 'set_selected') sel(d.action || '');
+      if (d.type === 'host_apply_studio_llm') {
+        if (d.llm) state.pendingStudioLlm = d.llm;
+        setDrawer(true);
+        setTtydCustomize(false);
+        applyStudioLlmFromPayload(d.llm || {}, d.prompt || '', !!d.autoSend);
+        if (state.settings) {
+          var ep = pickSettingsEditProvider();
+          provider.value = ep;
+          applyProvider(ep, false);
+          apiKey.value = getApiKeyForProvider(ep);
+          refreshApiKeyField(ep);
+          buildProviderDdMenu();
+          syncProviderDdUi();
+          updateProviderFormLayout(ep);
+          refreshSettingsAiHint();
+        }
+        return;
+      }
+      if (d.type === 'studio_llm_sync_result') {
+        if (d.ok) {
+          sstat('已从智能定制同步 API', 'success');
+          if (state.settings) refreshSettingsAiHint();
+        } else {
+          sstat(d.error || '同步失败', 'error');
+        }
+        return;
+      }
+      if (d.type === 'host_request_llm_export') {
+        syncLlmToStudioHost();
+        refreshTtydApiStatus();
+        return;
+      }
+      if (d.type === 'host_open_ttyd_customize') {
+        setDrawer(true);
+        if (d.llm && String(d.llm.apiKey || '').trim()) {
+          applyStudioLlmToTtydForm(d.llm);
+          applyStudioLlmFromPayload(d.llm, '', false);
+        } else if (d.requestLlmExport) syncLlmToStudioHost();
+        setTtydCustomize(true);
+        if (d.ttyd) applyTtydStudioConfig(d.ttyd);
+        refreshTtydApiStatus(d.llm);
+        if (d.startChat && d.llm && String(d.llm.apiKey || '').trim()) {
+          setTimeout(function () { startStudioChatFromTtyd(); }, 80);
+        }
+        return;
+      }
+      if (d.type === 'ttyd_studio_config') {
+        applyTtydStudioConfig(d.ttyd || {});
+        return;
+      }
+      if (d.type === 'niuma_save_ttyd_studio_result') {
+        if (ttydCustomizeStatus) {
+          ttydCustomizeStatus.textContent = d.ok ? '已保存并同步智能定制' : (d.error || '保存失败');
+        }
+        if (d.ok) {
+          try {
+            post({ type: 'niuma_request_ttyd_studio' });
+          } catch (e) {}
+        }
+        return;
+      }
+      if (d.type === 'niuma_browse_ttyd_workdir_result') {
+        var wd = String(d.path || '').trim();
+        if (wd && ttydStudioWorkDir) ttydStudioWorkDir.value = wd;
+        return;
+      }
       if (d.type === 'ttyd_ready') {
         var turl = String(d.baseUrl || '').trim();
+        if (state._studioPreview || String(d.engine || '') === 'studio_cli') {
+          if (turl) applyCliFrameUrl(turl);
+          var ts0 = activeSession();
+          cstatForSession(ts0 && ts0.id, '定制终端已就绪。', 'success');
+          state._studioPreview = false;
+          return;
+        }
         var ts = activeSession();
         if (!ts || !isCliSession(ts)) return;
         if (String(d.engine || '') && normalizeProviderId(ts.provider) !== normalizeProviderId(d.engine)) return;
@@ -6414,8 +7574,27 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   fillProviders();
+  fillApiSetupSelect(inlineLlmProvider);
+  fillApiSetupSelect(ttydLlmProvider);
   fillPromptBuiltinSelect();
   loadCfg();
+  refreshInlineApiSetupVisibility();
+  setTimeout(function () {
+    try {
+      post({ type: 'niuma_request_studio_llm' });
+    } catch (e) {}
+  }, 600);
+  var syncStudioBtn = $('syncStudioLlm');
+  if (syncStudioBtn) {
+    syncStudioBtn.addEventListener('click', function () {
+      sstat('正在从智能定制读取…', '');
+      try {
+        post({ type: 'niuma_request_studio_llm' });
+      } catch (e) {
+        sstat('同步请求失败', 'error');
+      }
+    });
+  }
   applyTheme(state.themeMode);
   scale(1);
   setCompact(false);

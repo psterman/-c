@@ -820,6 +820,125 @@
       background: var(--surface);
       color: var(--text);
     }
+    .studio-overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px 12px;
+      margin-top: 8px;
+    }
+    .studio-kv {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.45;
+    }
+    .studio-kv strong { color: var(--text); font-weight: 600; }
+    .studio-module-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .studio-module-tag {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: rgba(255,255,255,.04);
+      color: var(--text-dim);
+    }
+    .studio-module-tag.on { color: var(--accent); border-color: rgba(255,179,71,.35); }
+    .studio-path-status { font-size: 11px; margin-left: 8px; color: var(--text-dim); }
+    .studio-path-status.ok { color: #6bcf8a; }
+    .studio-path-status.warn { color: #e8a060; }
+    .studio-hint-block {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px dashed var(--border2);
+      background: rgba(255,255,255,.03);
+      margin-top: 8px;
+    }
+    .studio-api-card { margin-bottom: 12px; }
+    .studio-api-card .row { margin-bottom: 8px; }
+    .studio-url-auto {
+      font-size: 12px;
+      color: #6bcf8a;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px dashed rgba(107,207,138,.35);
+      background: rgba(107,207,138,.06);
+      word-break: break-all;
+    }
+    .studio-url-manual-link {
+      font-size: 11px;
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 4px;
+      display: inline-block;
+    }
+    .studio-ask-card .studio-ask-input {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      border-radius: 12px;
+      border: 1px solid var(--border2);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      padding: 12px 14px;
+      font: 500 14px/1.5 "Segoe UI", "Microsoft YaHei", sans-serif;
+      box-sizing: border-box;
+    }
+    .studio-ask-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .studio-key-badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border2);
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+    .studio-key-badge.ok { color: #6bcf8a; border-color: rgba(107,207,138,.35); }
+    details.studio-more { margin-top: 10px; }
+    details.studio-more summary { cursor: pointer; color: var(--text-dim); font-size: 12px; margin-bottom: 8px; }
+    #sidebar { position: relative; }
+    .app-update-pill {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin: 2px 4px 8px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 102, 0, 0.45);
+      background: rgba(255, 102, 0, 0.12);
+      color: var(--text);
+      font-size: 12px;
+      cursor: pointer;
+      text-align: left;
+      width: calc(100% - 8px);
+    }
+    .app-update-pill.visible { display: flex; }
+    .app-update-pill .update-dot {
+      flex-shrink: 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff6600;
+      box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.35);
+    }
+    .app-update-pill:hover { background: rgba(255, 102, 0, 0.2); }
+    .app-update-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 102, 0, 0.4);
+      background: rgba(255, 102, 0, 0.1);
+      font-size: 13px;
+    }
+    .app-update-banner.visible { display: flex; }
+    .app-update-banner button { flex-shrink: 0; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   <script src="https://app.local/assets/js/BasePanel.js"></script>
@@ -828,6 +947,7 @@
 <body>
   <div id="app">
     <aside id="sidebar">
+      <button type="button" id="appUpdatePill" class="app-update-pill" title="前往 GitHub 查看更新"><span class="update-dot" aria-hidden="true"></span><span id="appUpdatePillText">有新版本</span></button>
       <button class="tab-btn active" data-tab="general">通用设置</button>
       <button class="tab-btn" data-tab="appearance">外观设置</button>
       <button class="tab-btn" data-tab="prompts">提示词设置</button>
@@ -835,9 +955,10 @@
       <button class="tab-btn" data-tab="advanced">高级设置</button>
       <button class="tab-btn" data-tab="screenshot">截图设置</button>
       <button class="tab-btn" data-tab="search">搜索设置</button>
+      <button class="tab-btn" data-tab="customize">智能定制</button>
     </aside>
     <section id="content">
-      <div id="header"><div>[ 设置中心 ]</div><div class="inline"><details class="legacy-tools"><summary class="btn legacy-compact">兼容入口</summary><div class="legacy-tools-menu"><button id="btn-open-legacy" class="btn legacy-compact">打开原版完整设置</button><button id="btn-open-compare" class="btn legacy-compact">对比模式</button></div></details><div id="status">等待连接...</div></div></div>
+      <div id="header"><div class="inline">[ 设置中心 ]<span id="headerUpdateDot" class="update-dot" style="display:none;margin-left:8px;vertical-align:middle;width:8px;height:8px;border-radius:50%;background:#ff6600" title="有新版本"></span></div><div class="inline"><details class="legacy-tools"><summary class="btn legacy-compact">兼容入口</summary><div class="legacy-tools-menu"><button id="btn-open-legacy" class="btn legacy-compact">打开原版完整设置</button><button id="btn-open-compare" class="btn legacy-compact">对比模式</button></div></details><div id="status">等待连接...</div></div></div>
       <div id="panel"></div>
       <div id="footer"><button id="btn-cancel" class="btn">取消</button><button id="btn-save" class="btn primary">保存</button></div>
     </section>
@@ -912,6 +1033,7 @@
       screenshotSubTab: "capture",
       cursorRulesTab: "general",
       appearanceActivationMode: "toolbar",
+      appUpdate: null,
       fullText: {
         running: false,
         ready: false,
@@ -1758,6 +1880,297 @@
       }
       return d;
     }
+    /** 与 Niuma Chat 服务商一致，便于用户按熟悉的名字填写 Key */
+    const STUDIO_LLM_PRESETS = {
+      openai: {
+        label: "OpenAI",
+        baseUrl: "https://api.openai.com/v1",
+        model: "gpt-4o-mini",
+        models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1"],
+        keyPh: "sk-…",
+        hint: "OpenAI 官方 API；Codex 兼容接口也可选此项并填同一类 Key。"
+      },
+      minimax: {
+        label: "MiniMax",
+        baseUrl: "https://api.minimaxi.com/anthropic",
+        model: "MiniMax-M2.7",
+        models: ["MiniMax-M2.7", "MiniMax-M2.7-highspeed", "MiniMax-M2.5", "MiniMax-M2.5-highspeed", "MiniMax-M2.1", "MiniMax-M2"],
+        keyPh: "Token Plan / Coding Plan Key",
+        hint: "Billing → Token Plan 密钥（≠接口密钥按量付费）。国内节点 https://api.minimaxi.com/anthropic ，国际 https://api.minimax.io/anthropic ，须与密钥区域一致。"
+      },
+      gemini: {
+        label: "Google Gemini",
+        baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+        model: "gemini-2.5-flash",
+        models: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"],
+        keyPh: "AIza…",
+        hint: "Google AI Studio 申请的 API Key"
+      },
+      deepseek: {
+        label: "DeepSeek",
+        baseUrl: "https://api.deepseek.com/v1",
+        model: "deepseek-chat",
+        models: ["deepseek-chat", "deepseek-reasoner"],
+        keyPh: "DeepSeek API Key",
+        hint: "DeepSeek 开放平台密钥"
+      },
+      kimi: {
+        label: "Kimi（月之暗面）",
+        baseUrl: "https://api.moonshot.cn/v1",
+        model: "kimi-k2.6",
+        models: ["kimi-k2.6", "kimi-k2-thinking", "kimi-k2.5", "kimi-k2-turbo-preview"],
+        keyPh: "Moonshot API Key",
+        hint: "Kimi 开放平台；默认 kimi-k2.6（2026）。深度推理可选 kimi-k2-thinking。"
+      },
+      claude: {
+        label: "Claude（Anthropic）",
+        baseUrl: "https://api.anthropic.com",
+        model: "claude-3-5-sonnet-latest",
+        models: ["claude-3-5-sonnet-latest", "claude-3-7-sonnet-latest", "claude-3-5-haiku-latest"],
+        keyPh: "sk-ant-…",
+        hint: "Anthropic 控制台 API Key"
+      },
+      qwen: {
+        label: "通义千问 Qwen",
+        baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        model: "qwen-plus",
+        models: ["qwen-plus", "qwen-turbo", "qwen-max", "qwen3-coder-plus"],
+        keyPh: "DashScope API Key",
+        hint: "阿里云百炼 / DashScope"
+      },
+      glm: {
+        label: "智谱 GLM",
+        baseUrl: "https://open.bigmodel.cn/api/paas/v4",
+        model: "glm-4-plus",
+        models: ["glm-4-plus", "glm-4-air", "glm-4-flash"],
+        keyPh: "BigModel API Key",
+        hint: "智谱 BigModel 开放平台"
+      },
+      zhipu: {
+        label: "智谱（Zhipu）",
+        baseUrl: "https://open.bigmodel.cn/api/paas/v4",
+        model: "glm-4-plus",
+        models: ["glm-4-plus", "glm-4-air", "glm-4-flash"],
+        keyPh: "智谱 API Key",
+        hint: "可与 GLM 使用不同密钥，分槽保存"
+      },
+      siliconflow: {
+        label: "硅基流动",
+        baseUrl: "https://api.siliconflow.cn/v1",
+        model: "Qwen/Qwen2.5-7B-Instruct",
+        models: ["Qwen/Qwen2.5-7B-Instruct", "deepseek-ai/DeepSeek-V3", "THUDM/glm-4-9b-chat"],
+        keyPh: "硅基流动 API Key",
+        hint: "SiliconFlow 控制台"
+      },
+      ollama: {
+        label: "Ollama（本地）",
+        baseUrl: "http://127.0.0.1:11434/v1",
+        model: "llama3.1:8b",
+        models: ["llama3.1:8b", "qwen2.5:7b", "deepseek-r1:7b"],
+        keyPh: "可选，本地一般留空",
+        hint: "本机需已运行 ollama serve"
+      },
+      openclaw: {
+        label: "OpenClaw Gateway",
+        baseUrl: "http://127.0.0.1:18789",
+        model: "gateway",
+        models: ["gateway"],
+        keyPh: "Gateway Token",
+        hint: "OpenClaw 本地网关 Token"
+      },
+      custom: {
+        label: "自定义（中转 / 私有网关）",
+        baseUrl: "",
+        model: "",
+        models: [],
+        keyPh: "Bearer Token",
+        hint: "自行填写 Base URL 与模型名（OpenAI 兼容中转等）"
+      }
+    };
+
+    function normalizeStudioLlmProvider(pid) {
+      pid = String(pid || "").trim();
+      if (pid === "anthropic") return "claude";
+      if (pid === "codex") return "openai";
+      return STUDIO_LLM_PRESETS[pid] ? pid : "openai";
+    }
+
+    function studioLlmPreset(pid) {
+      return STUDIO_LLM_PRESETS[normalizeStudioLlmProvider(pid)] || STUDIO_LLM_PRESETS.openai;
+    }
+
+    function studioLlmProviderOptions(selected) {
+      return Object.keys(STUDIO_LLM_PRESETS)
+        .map((k) => {
+          const p = STUDIO_LLM_PRESETS[k];
+          return { value: k, label: p.label };
+        })
+        .map((it) => `<option value="${esc(it.value)}"${it.value === selected ? " selected" : ""}>${esc(it.label)}</option>`)
+        .join("");
+    }
+
+    function fillStudioLlmModelSelect(pid, currentModel) {
+      const sel = document.getElementById("usLlmModel");
+      if (!sel) return;
+      const pre = studioLlmPreset(pid);
+      const models = (pre.models && pre.models.length ? pre.models : [pre.model]).filter(Boolean);
+      const cur = String(currentModel || "").trim();
+      const opts = models.slice();
+      if (cur && opts.indexOf(cur) < 0) opts.unshift(cur);
+      if (pid === "custom") {
+        sel.outerHTML = `<input id="usLlmModel" class="ctl" type="text" data-nosave="1" value="${esc(cur)}" placeholder="模型名称" autocomplete="off">`;
+        return;
+      }
+      if (sel.tagName !== "SELECT") {
+        const wrap = sel.parentElement;
+        const nu = document.createElement("select");
+        nu.id = "usLlmModel";
+        nu.className = "ctl";
+        nu.setAttribute("data-nosave", "1");
+        if (wrap) wrap.replaceChild(nu, sel);
+      }
+      const sel2 = document.getElementById("usLlmModel");
+      sel2.innerHTML =
+        opts.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join("") +
+        `<option value="__custom__">其他（手动输入）…</option>`;
+      if (cur && opts.indexOf(cur) >= 0) sel2.value = cur;
+      else if (cur) {
+        const o = document.createElement("option");
+        o.value = cur;
+        o.textContent = cur + "（当前）";
+        o.selected = true;
+        sel2.insertBefore(o, sel2.lastElementChild);
+      } else sel2.value = opts[0] || "";
+    }
+
+    function resolveStudioBaseUrl(pid, raw) {
+      pid = normalizeStudioLlmProvider(pid);
+      const manual = !!state._studioManualBaseUrl;
+      const r = String(raw || "").trim();
+      if (pid === "custom" || manual) return r || studioLlmPreset(pid).baseUrl || "";
+      return studioLlmPreset(pid).baseUrl || "";
+    }
+
+    function resolveStudioModel(pid, raw) {
+      let m = String(raw || "").trim();
+      if (m === "__custom__") m = "";
+      pid = normalizeStudioLlmProvider(pid);
+      if (m) return m;
+      return studioLlmPreset(pid).model || "";
+    }
+
+    function updateStudioBaseUrlUi(pid) {
+      const autoRow = document.getElementById("usLlmBaseUrlAutoRow");
+      const manualRow = document.getElementById("usLlmBaseUrlManualRow");
+      const autoEl = document.getElementById("usLlmBaseUrlAuto");
+      const baseEl = document.getElementById("usLlmBaseUrl");
+      const link = document.getElementById("usLlmBaseUrlManualLink");
+      const pre = studioLlmPreset(pid);
+      const isCustom = pid === "custom";
+      const showManual = isCustom || !!state._studioManualBaseUrl;
+      if (autoRow) autoRow.style.display = showManual ? "none" : "";
+      if (manualRow) manualRow.style.display = showManual ? "" : "none";
+      if (!showManual && baseEl) baseEl.value = pre.baseUrl || "";
+      const manualInp = document.getElementById("usLlmBaseUrlManual");
+      if (showManual && manualInp && !manualInp.value.trim()) manualInp.value = pre.baseUrl || "";
+      if (autoEl && !showManual) {
+        autoEl.textContent = "自动使用官方接口：" + (pre.baseUrl || "（按服务商）") + "，无需填写。";
+      }
+      if (link) link.style.display = isCustom ? "none" : "";
+    }
+
+    function applyStudioLlmPresetUi(onlyIfEmpty) {
+      const provEl = document.getElementById("usLlmProvider");
+      if (!provEl) return;
+      const pid = normalizeStudioLlmProvider(provEl.value);
+      const pre = studioLlmPreset(pid);
+      const keyEl = document.getElementById("usLlmApiKey");
+      const baseEl = document.getElementById("usLlmBaseUrl");
+      const hintEl = document.getElementById("usLlmProviderHint");
+      const mod0 = document.getElementById("usLlmModel");
+      const curModel =
+        mod0?.tagName === "SELECT" ? mod0.value || "" : String(mod0?.value || "").trim();
+      fillStudioLlmModelSelect(pid, onlyIfEmpty ? curModel || pre.model : pre.model || curModel);
+      const modEl = document.getElementById("usLlmModel");
+      if (keyEl) keyEl.placeholder = pre.keyPh || "API Key";
+      if (baseEl && pid !== "custom" && !state._studioManualBaseUrl) baseEl.value = pre.baseUrl || "";
+      else if (baseEl && (!onlyIfEmpty || !baseEl.value.trim())) baseEl.value = pre.baseUrl || "";
+      if (modEl && modEl.tagName === "SELECT" && (!onlyIfEmpty || !modEl.value)) {
+        if (pre.model && modEl.querySelector(`option[value="${pre.model}"]`)) modEl.value = pre.model;
+      } else if (modEl && modEl.tagName !== "SELECT" && (!onlyIfEmpty || !modEl.value.trim())) {
+        modEl.value = pre.model || "";
+      }
+      if (hintEl) {
+        hintEl.textContent =
+          (pre.hint || "") +
+          (pid === "custom" ? "" : " Base URL 已自动配置，一般无需手填。");
+      }
+      updateStudioBaseUrlUi(pid);
+    }
+
+    function bindStudioLlmUi(llm, opts) {
+      const provEl = document.getElementById("usLlmProvider");
+      if (!provEl) return;
+      state._studioManualBaseUrl = !!(opts && opts.manualBaseUrl);
+      provEl.value = normalizeStudioLlmProvider(llm?.provider);
+      applyStudioLlmPresetUi(true);
+      const savedModel = String(llm?.model || "").trim();
+      if (savedModel) fillStudioLlmModelSelect(provEl.value, savedModel);
+      provEl.addEventListener("change", () => {
+        if (normalizeStudioLlmProvider(provEl.value) !== "custom") state._studioManualBaseUrl = false;
+        applyStudioLlmPresetUi(false);
+      });
+      const manualLink = document.getElementById("usLlmBaseUrlManualLink");
+      if (manualLink) {
+        manualLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          state._studioManualBaseUrl = true;
+          applyStudioLlmPresetUi(true);
+        });
+      }
+      const modEl = document.getElementById("usLlmModel");
+      if (modEl && modEl.tagName === "SELECT") {
+        modEl.addEventListener("change", () => {
+          if (modEl.value === "__custom__") {
+            const pid = normalizeStudioLlmProvider(provEl.value);
+            const inp = document.createElement("input");
+            inp.id = "usLlmModel";
+            inp.className = "ctl";
+            inp.type = "text";
+            inp.setAttribute("data-nosave", "1");
+            inp.placeholder = "输入模型名称";
+            inp.value = studioLlmPreset(pid).model || "";
+            modEl.replaceWith(inp);
+          }
+        });
+      }
+    }
+
+    function collectUserStudioPayload() {
+      const g = (id) => document.getElementById(id);
+      const prov = normalizeStudioLlmProvider(g("usLlmProvider")?.value || "openai");
+      let modelVal = (g("usLlmModel")?.value || "").trim();
+      if (modelVal === "__custom__") modelVal = "";
+      return {
+        llm: {
+          provider: prov,
+          apiKey: g("usLlmApiKey")?.value || "",
+          baseUrl: resolveStudioBaseUrl(
+            prov,
+            state._studioManualBaseUrl ? g("usLlmBaseUrlManual")?.value : ""
+          ),
+          model: resolveStudioModel(prov, modelVal)
+        },
+        paths: {
+          cursor: (g("usPath_cursor")?.value || "").trim(),
+          autohotkey: (g("usPath_autohotkey")?.value || "").trim(),
+          everything: (g("usPath_everything")?.value || "").trim(),
+          python: (g("usPath_python")?.value || "").trim(),
+          notes: (g("usPathNotes")?.value || "").trim()
+        },
+        options: { ...(state.data.userStudio?.options || {}), manualBaseUrl: !!state._studioManualBaseUrl }
+      };
+    }
     function csvToArr(v){ return String(v || "").split(",").map(s => s.trim()).filter(Boolean); }
     function arrToCsv(arr){ return (arr || []).join(","); }
     function readSearch(d){
@@ -1992,6 +2405,41 @@
         root.style.setProperty("--glow-hot", "0 0 0 1px rgba(255,179,71,.24), 0 14px 34px rgba(0,0,0,.28)");
       }
     }
+    function normalizeAppUpdate(raw) {
+      const u = raw && typeof raw === "object" ? raw : {};
+      return {
+        currentVersion: String(u.currentVersion || ""),
+        latestVersion: String(u.latestVersion || ""),
+        hasUpdate: !!u.hasUpdate,
+        releaseUrl: String(u.releaseUrl || u.releasesPage || ""),
+        releasesPage: String(u.releasesPage || "https://github.com/psterman/nmer/releases")
+      };
+    }
+    function applyAppUpdateUi() {
+      const u = normalizeAppUpdate(state.appUpdate);
+      const pill = document.getElementById("appUpdatePill");
+      const pillText = document.getElementById("appUpdatePillText");
+      const headerDot = document.getElementById("headerUpdateDot");
+      if (pill) pill.classList.toggle("visible", u.hasUpdate);
+      if (pillText) pillText.textContent = u.hasUpdate ? (u.latestVersion ? `新版本 ${u.latestVersion}` : "有新版本") : "有新版本";
+      if (headerDot) headerDot.style.display = u.hasUpdate ? "inline-block" : "none";
+    }
+    function renderAppUpdateGeneralBlock(u) {
+      const cur = esc(u.currentVersion || "—");
+      const latest = esc(u.latestVersion || "—");
+      const banner = u.hasUpdate
+        ? `<div class="app-update-banner visible"><div><strong>发现新版本</strong>：${latest}（当前 ${cur}）</div><button type="button" class="btn primary" id="btnOpenAppRelease">前往 GitHub 下载</button></div>`
+        : "";
+      const checkBtn = `<button type="button" class="btn" id="btnCheckAppUpdate">检查更新</button>`;
+      return `${banner}<div class="row"><div class="label">软件版本</div><div class="inline"><span class="hint">${cur}</span>${checkBtn}</div></div>`;
+    }
+    function bindAppUpdateGeneralHandlers() {
+      document.getElementById("btnOpenAppRelease")?.addEventListener("click", () => post({ type: "openAppRelease" }));
+      document.getElementById("btnCheckAppUpdate")?.addEventListener("click", () => {
+        setStatus("正在检查更新…", "");
+        post({ type: "checkAppUpdate" });
+      });
+    }
     function render() {
       destroyFtbWorkbenchSortable();
       destroyMenuWorkbenchSortable();
@@ -2004,7 +2452,8 @@
         { value:"hotkeys", label:"快捷键设置" },
         { value:"advanced", label:"高级设置" },
         { value:"screenshot", label:"截图设置" },
-        { value:"search", label:"搜索设置" }
+        { value:"search", label:"搜索设置" },
+        { value:"customize", label:"智能定制" }
       ];
       const monitorCount = Math.max(1, Number(d.monitorCount || 1));
       const screenOpts = Array.from({ length: monitorCount }, (_, i) => ({ value: String(i + 1), label: `显示器${i + 1}` }));
@@ -2018,7 +2467,9 @@
       const hotkeyRows = HOTKEY_KEYS.map(k => `<div class="row"><div class="label">快捷键 ${k}</div><input id="hk_${k}" type="text" value="${esc(d.hotkeys[k] || "")}"></div>`).join("");
       const catRows = ALL_CATEGORIES.map(c => `<label class="tag"><input id="cat_${c}" type="checkbox" ${checked((d.voiceSearchEnabledCategories||[]).includes(c))}> ${esc(c)}</label>`).join("");
       if (state.activeTab === "general") {
-        panel.innerHTML = `<div class="card"><div class="title">通用设置</div><div class="row"><div class="label">Cursor 路径</div><div class="inline"><input id="cursorPath" type="text" value="${esc(d.cursorPath)}"><button class="btn" id="browsePath">浏览</button></div></div><div class="row"><div class="label">CapsLock 长按时间 (0.1 - 5.0)</div><input id="holdTime" type="number" min="0.1" max="5.0" step="0.1" value="${esc(d.capslockHoldTimeSeconds)}"></div><div class="row"><div class="label">开机自启动</div><div><input id="autoStart" type="checkbox" ${checked(d.autoStart)}></div></div><div class="row"><div class="label">默认启动页</div><select id="defaultStartTab">${optionsKV(defaultTabOpts,d.defaultStartTab)}</select></div><div class="row"><div class="label">安装中文 Cursor</div><div><button class="btn" id="btnInstallChinese">安装 Cursor 中文版</button></div></div></div>`;
+        const upd = normalizeAppUpdate(state.appUpdate);
+        panel.innerHTML = `<div class="card"><div class="title">通用设置</div>${renderAppUpdateGeneralBlock(upd)}<div class="row"><div class="label">Cursor 路径</div><div class="inline"><input id="cursorPath" type="text" value="${esc(d.cursorPath)}"><button class="btn" id="browsePath">浏览</button></div></div><div class="row"><div class="label">CapsLock 长按时间 (0.1 - 5.0)</div><input id="holdTime" type="number" min="0.1" max="5.0" step="0.1" value="${esc(d.capslockHoldTimeSeconds)}"></div><div class="row"><div class="label">开机自启动</div><div><input id="autoStart" type="checkbox" ${checked(d.autoStart)}></div></div><div class="row"><div class="label">默认启动页</div><select id="defaultStartTab">${optionsKV(defaultTabOpts,d.defaultStartTab)}</select></div><div class="row"><div class="label">安装中文 Cursor</div><div><button class="btn" id="btnInstallChinese">安装 Cursor 中文版</button></div></div></div>`;
+        bindAppUpdateGeneralHandlers();
         document.getElementById("browsePath").addEventListener("click", () => post({ type: "browseCursorPath" }));
         document.getElementById("btnInstallChinese").addEventListener("click", () => post({ type: "invokeAction", op: "installCursorChinese" }));
       } else if (state.activeTab === "appearance") {
@@ -2239,6 +2690,109 @@
       } else if (state.activeTab === "hotkeys") {
         panel.innerHTML = `<div class="card"><div class="title">快捷键设置</div><div class="row"><div class="label">长按 CapsLock 打开 VK 快捷键面板</div><div><input id="capsLockHoldVkEnabled" type="checkbox" ${checked(d.capsLockHoldVkEnabled !== false && d.capsLockHoldVkEnabled !== 0)}></div></div><div class="hint" style="margin:-4px 0 10px 0;">开启后，按住 CapsLock 达到「通用设置」中的长按时间即弹出 KeyBinder，松开 CapsLock 后关闭；关闭本项后仍可从托盘菜单打开虚拟键盘。</div>${hotkeyRows}<div class="row"><div class="label">Prompt 快速采集热键</div><input id="promptQuickCaptureHotkey" type="text" value="${esc(d.promptQuickCaptureHotkey)}"></div></div><div class="card"><div class="title">快速操作按钮 (5)</div>${qaRows}<div class="inline"><button class="btn legacy-compact" id="btnOpenLegacyHotkeys">打开原版快捷键设置</button></div></div>`;
         document.getElementById("btnOpenLegacyHotkeys").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacyTab", tab: "hotkeys" }));
+      } else if (state.activeTab === "customize") {
+        const us = d.userStudio || {};
+        const llm = us.llm || {};
+        const paths = us.paths || {};
+        const ov = us.overview || {};
+        const hasKey = !!(String(llm.apiKey || "").trim());
+        const keyBadge = hasKey
+          ? `<span class="studio-key-badge ok">已读取 API：${esc(ov.llmKeyMasked || "已配置")} · ${esc(llm.model || llm.provider || "")}</span>`
+          : `<span class="studio-key-badge">尚未配置 API Key（可在下方填写，或在 Niuma Chat 设置里保存后点「同步」）</span>`;
+        const pathRow = (id, label, val) =>
+          `<div class="row"><div class="label">${label}</div><div class="inline" style="flex:1"><input id="usPath_${id}" type="text" data-nosave="1" value="${esc(val || "")}" placeholder="留空则使用系统默认"><button class="btn us-browse" data-us-field="${id}">浏览</button></div></div>`;
+        const provId = normalizeStudioLlmProvider(llm.provider);
+        const provPre = studioLlmPreset(provId);
+        panel.innerHTML = `
+<div class="card studio-api-card"><div class="title">大模型 API</div>
+${keyBadge}
+<div class="row"><div class="label">服务商</div><select id="usLlmProvider" data-nosave="1">${studioLlmProviderOptions(provId)}</select></div>
+<div class="row"><div class="label">API Key</div><input id="usLlmApiKey" type="password" data-nosave="1" value="${esc(llm.apiKey || "")}" placeholder="${esc(provPre.keyPh || "API Key")}" autocomplete="off"></div>
+<div class="row" id="usLlmBaseUrlAutoRow"><div class="label">接口地址</div><div class="studio-url-auto" id="usLlmBaseUrlAuto">自动使用官方接口，无需填写</div><input id="usLlmBaseUrl" type="hidden" data-nosave="1" value="${esc(resolveStudioBaseUrl(provId, llm.baseUrl))}"><a href="#" class="studio-url-manual-link" id="usLlmBaseUrlManualLink">使用中转 / 私有网关？手动指定地址</a></div>
+<div class="row" id="usLlmBaseUrlManualRow" style="display:none"><div class="label">Base URL（手动）</div><input id="usLlmBaseUrlManual" type="text" class="ctl" data-nosave="1" value="${esc(llm.baseUrl || "")}" placeholder="https://你的中转地址/v1"></div>
+<div class="row"><div class="label">模型</div><select id="usLlmModel" class="ctl" data-nosave="1"></select></div>
+<div class="hint mini" id="usLlmProviderHint">${esc(provPre.hint || "")}</div>
+<div class="inline" style="margin-top:10px;flex-wrap:wrap">
+  <button class="btn primary" type="button" id="btnSaveUserStudio">保存 API</button>
+  <button class="btn" type="button" id="btnStudioSyncNiuma">从 Niuma Chat 同步</button>
+</div>
+<div class="hint">选服务商后 <strong>Base URL 自动配置</strong>，只需填 API Key 与模型；仅中转/私有网关需选手动指定地址或「自定义」。</div>
+</div>
+<div class="card studio-ask-card"><div class="title">智能提问（Niuma Chat）</div>
+<textarea id="studioAskInput" class="studio-ask-input" data-nosave="1" placeholder="输入你想问的问题，例如：帮我优化当前项目的启动速度…"></textarea>
+<div class="studio-ask-actions">
+  <button class="btn primary" type="button" id="btnStudioAskSend">开始提问</button>
+  <button class="btn" type="button" id="btnStudioOpenChat">打开 Niuma Chat</button>
+</div>
+</div>
+<details class="studio-more"><summary>本机路径与其它（高级）</summary>
+<div class="card" style="margin-top:8px"><div class="title">本机路径</div>
+${pathRow("cursor", "Cursor.exe", paths.cursor || d.cursorPath || "")}
+${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
+<div class="row"><div class="label">备注</div><input id="usPathNotes" type="text" data-nosave="1" value="${esc(paths.notes || "")}"></div>
+<div class="inline" style="margin-top:8px">
+  <button class="btn" id="btnOpenNiumaChatTtyd">终端定制 (ttyd)</button>
+  <button class="btn" id="btnRestoreUserStudio">还原默认定制</button>
+</div>
+</details>`;
+        bindStudioLlmUi(llm, us.options || {});
+        const openAsk = (sendNow) => {
+          const prompt = (document.getElementById("studioAskInput")?.value || "").trim();
+          post({
+            type: "openNiumaChatAsk",
+            prompt,
+            autoSend: !!sendNow,
+            payload: collectUserStudioPayload()
+          });
+          setStatus(sendNow ? "正在打开对话并发送…" : "正在打开 Niuma Chat…", "ok");
+        };
+        document.getElementById("btnStudioAskSend").addEventListener("click", () => openAsk(true));
+        document.getElementById("btnStudioOpenChat").addEventListener("click", () => openAsk(false));
+        document.getElementById("btnStudioSyncNiuma").addEventListener("click", () => {
+          post({ type: "invokeAction", op: "syncNiumaChatLlmToStudio" });
+          setStatus("正在从 Niuma Chat 同步…", "ok");
+        });
+        document.querySelectorAll(".us-browse").forEach(btn => btn.addEventListener("click", () => {
+          post({ type: "browseUserStudioPath", field: btn.getAttribute("data-us-field") });
+        }));
+        document.getElementById("btnSaveUserStudio")?.addEventListener("click", () => {
+          post({ type: "saveUserStudio", payload: collectUserStudioPayload() });
+          setStatus("保存中…", "ok");
+        });
+        document.getElementById("btnRestoreUserStudio")?.addEventListener("click", () => {
+          if (!confirm("确定恢复默认定制配置？")) return;
+          post({ type: "restoreUserStudio" });
+        });
+        document.getElementById("btnOpenNiumaChatTtyd")?.addEventListener("click", () => {
+          const pl = collectUserStudioPayload();
+          const hasKey = !!(String(pl.llm?.apiKey || "").trim());
+          if (!hasKey) {
+            setStatus("请先填写并保存 API Key", "err");
+            return;
+          }
+          state._ttydAfterStudioSave = { startChat: true };
+          post({ type: "saveUserStudio", payload: pl });
+          setStatus("正在保存并打开终端定制…", "ok");
+        });
+        const askEl = document.getElementById("studioAskInput");
+        if (!hasKey && !state._studioSyncTried) {
+          state._studioSyncTried = true;
+          setTimeout(() => post({ type: "invokeAction", op: "syncNiumaChatLlmToStudio" }), 120);
+        }
+        if (askEl) {
+          askEl.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+              e.preventDefault();
+              openAsk(true);
+            }
+          });
+          if (hasKey && !state._studioAutoOpenedChat) {
+            state._studioAutoOpenedChat = true;
+            setTimeout(() => openAsk(false), 500);
+          } else {
+            try { askEl.focus(); } catch (_) {}
+          }
+        }
       } else if (state.activeTab === "advanced") {
         const aiSec = (Number(d.aiSleepTime || 200) / 1000).toFixed(2).replace(/\.?0+$/, "");
         panel.innerHTML = `<div class="advanced-split">
@@ -2477,8 +3031,11 @@
         if (Array.isArray(p.keybinderToolbarLayout)) state.data.keybinderToolbarLayout = normalizeToolbarLayoutRows(p.keybinderToolbarLayout);
         if (Array.isArray(p.keybinderCommands)) state.data.keybinderCommands = p.keybinderCommands;
         if (Array.isArray(p.keybinderContextMenuLayout)) state.data.keybinderContextMenuLayout = p.keybinderContextMenuLayout;
+        if (p.userStudio && typeof p.userStudio === "object") state.data.userStudio = p.userStudio;
+        if (p.appUpdate && typeof p.appUpdate === "object") state.appUpdate = p.appUpdate;
+        applyAppUpdateUi();
         const startTab = (msg.payload || {}).defaultStartTab;
-        const validStartTabs = new Set(["general","appearance","prompts","hotkeys","advanced","screenshot","search"]);
+        const validStartTabs = new Set(["general","appearance","prompts","hotkeys","advanced","screenshot","search","customize"]);
         if (startTab && validStartTabs.has(startTab)) {
           state.activeTab = startTab;
           document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === startTab));
@@ -2499,6 +3056,71 @@
         return;
       }
       if (msg.type === "browseCursorPathResult" && msg.path) { state.data.cursorPath = msg.path; render(); return; }
+      if (msg.type === "browseUserStudioPathResult" && msg.path) {
+        const field = String(msg.field || "");
+        const el = document.getElementById("usPath_" + field);
+        if (el) el.value = msg.path;
+        return;
+      }
+      if (msg.type === "saveUserStudioResult") {
+        setStatus(msg.ok ? "智能定制已保存" : (msg.error || "保存失败"), msg.ok ? "ok" : "err");
+        if (msg.ok && state._ttydAfterStudioSave) {
+          const opts = state._ttydAfterStudioSave;
+          state._ttydAfterStudioSave = null;
+          post({
+            type: "invokeAction",
+            op: "openNiumaChatTtyd",
+            startChat: !!opts.startChat,
+            payload: collectUserStudioPayload()
+          });
+        }
+        return;
+      }
+      if (msg.type === "restoreUserStudioResult") {
+        setStatus(msg.ok ? "已恢复默认定制配置" : (msg.error || "还原失败"), msg.ok ? "ok" : "err");
+        return;
+      }
+      if (msg.type === "appUpdateStatus") {
+        if (msg.payload && typeof msg.payload === "object") state.appUpdate = msg.payload;
+        applyAppUpdateUi();
+        const u = normalizeAppUpdate(state.appUpdate);
+        if (u.hasUpdate) setStatus(`发现新版本 ${u.latestVersion || ""}，点击侧栏或「前往 GitHub」下载`, "ok");
+        else setStatus("当前已是最新版本", "ok");
+        if (state.activeTab === "general") render();
+        return;
+      }
+      if (msg.type === "openAppReleaseResult" && !msg.ok) {
+        setStatus(msg.error || "无法打开 GitHub", "err");
+        return;
+      }
+      if (msg.type === "openNiumaChatTtydResult" && !msg.ok) {
+        setStatus(msg.error || "无法打开 Niuma Chat", "err");
+        return;
+      }
+      if (msg.type === "openNiumaChatAskResult" && !msg.ok) {
+        setStatus(msg.error || "无法打开 Niuma Chat", "err");
+        return;
+      }
+      if (msg.type === "syncNiumaChatLlmResult") {
+        if (msg.ok && msg.userStudio) state.data.userStudio = msg.userStudio;
+        setStatus(msg.ok ? "已从 Niuma Chat 同步 API" : (msg.error || "同步失败"), msg.ok ? "ok" : "err");
+        if (msg.ok && msg.userStudio && state.activeTab === "customize") {
+          const syncedKey = !!(String((msg.userStudio.llm || {}).apiKey || "").trim());
+          if (syncedKey && !state._studioAutoOpenedChat) {
+            state._studioAutoOpenedChat = true;
+            setTimeout(() => {
+              post({
+                type: "openNiumaChatAsk",
+                prompt: (document.getElementById("studioAskInput")?.value || "").trim(),
+                autoSend: false,
+                payload: collectUserStudioPayload()
+              });
+            }, 350);
+          }
+        }
+        if (state.activeTab === "customize") render();
+        return;
+      }
       if (msg.type === "fulltextStatus") {
         state.fullText = normalizeFullTextPayload(msg.payload || {});
         refreshFullTextConsoleDom();
@@ -2570,7 +3192,10 @@
         setStatus(msg.ok ? "黑洞设置已保存" : (msg.error || "黑洞设置保存失败"), msg.ok ? "ok" : "err");
         return;
       }
-      if (msg.type === "actionResult") { setStatus(msg.ok ? "操作成功" : (msg.error || "操作失败"), msg.ok ? "ok" : "err"); }
+      if (msg.type === "actionResult") {
+        setStatus(msg.ok ? "操作成功" : (msg.error || "操作失败"), msg.ok ? "ok" : "err");
+        if (msg.ok && state.activeTab === "customize") render();
+      }
     }
     loadCustomCategories();
     loadAppearanceActivationMode();
@@ -2588,6 +3213,7 @@
         }
       } catch (_) {}
     })();
+    document.getElementById("appUpdatePill")?.addEventListener("click", () => post({ type: "openAppRelease" }));
     if (window.chrome && window.chrome.webview) {
       window.chrome.webview.addEventListener("message", e => {
         const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;

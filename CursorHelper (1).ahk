@@ -4473,7 +4473,11 @@ StartWebViewWarmup(*) {
 }
 
 #Include modules\ConfigManager.ahk
+#Include modules\UserStudio.ahk
+#Include modules\AppUpdateCheck.ahk
 InitConfig() ; 启动初始化
+try UserStudio_Load()
+try SetTimer(AppUpdateCheck_ScheduleStartup, -8000)
 try GDHO_LoadSettingsFromIni()
 if FuncExists("HoleTriggers_EnsureInputAlive")
     try HoleTriggers_EnsureInputAlive()

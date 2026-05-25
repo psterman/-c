@@ -29,12 +29,13 @@ global g_NiumaTtydEngineStartTick := Map()    ; engine -> tick
 NiumaTtyd_CliEngineList() {
     return [
         "codex_cli", "gemini_cli", "openclaw_cli", "qwen_cli", "ollama_cli",
-        "claude_cli", "deepseek_cli", "kimi_cli", "zhipu_cli", "copilot_cli"
+        "claude_cli", "deepseek_cli", "kimi_cli", "zhipu_cli", "copilot_cli",
+        "studio_cli"
     ]
 }
 
 NiumaTtyd_IsCliEngine(engine) {
-    e := "|codex_cli|gemini_cli|openclaw_cli|qwen_cli|ollama_cli|claude_cli|deepseek_cli|kimi_cli|zhipu_cli|copilot_cli|"
+    e := "|codex_cli|gemini_cli|openclaw_cli|qwen_cli|ollama_cli|claude_cli|deepseek_cli|kimi_cli|zhipu_cli|copilot_cli|studio_cli|"
     return InStr(e, "|" . Trim(String(engine)) . "|")
 }
 
@@ -42,6 +43,8 @@ NiumaTtyd_NormalizeEngine(engine) {
     eng := Trim(String(engine))
     if (eng = "")
         return "codex_cli"
+    if (eng = "studio" || eng = "studio_ttyd")
+        return "studio_cli"
     if NiumaTtyd_IsCliEngine(eng)
         return eng
     static WebToCli := 0
@@ -79,7 +82,8 @@ NiumaTtyd_PortForEngine(engine) {
             "deepseek_cli", 7687,
             "kimi_cli", 7688,
             "zhipu_cli", 7689,
-            "copilot_cli", 7690
+            "copilot_cli", 7690,
+            "studio_cli", 7691
         )
     }
     eng := NiumaTtyd_NormalizeEngine(engine)
@@ -271,6 +275,16 @@ NiumaTtyd_SaveShellIni(shell) {
         IniWrite(sh, cf, "NiumaTtyd", "Shell")
     } catch {
     }
+}
+
+NiumaTtyd_GetWorkDirForEngine(engine) {
+    eng := NiumaTtyd_NormalizeEngine(engine)
+    if (eng = "studio_cli" && FuncExists("UserStudio_GetTtydWorkDir")) {
+        wd := UserStudio_GetTtydWorkDir()
+        if (wd != "")
+            return wd
+    }
+    return NiumaTtyd_WorkDir()
 }
 
 NiumaTtyd_WorkDir() {
@@ -553,6 +567,13 @@ NiumaTtyd_LogShell(engine, shell, note := "") {
 ; ttyd 启动命令：默认与各 CLI 一致自动拉起（cmd /k gemini 等）；可用 CursorShortcut.ini 的 <engine>_ttyd_shell 覆盖
 NiumaTtyd_GetTtydShellForEngine(engine) {
     eng := NiumaTtyd_NormalizeEngine(engine)
+    if (eng = "studio_cli" && FuncExists("UserStudio_GetTtydShell")) {
+        sh := UserStudio_GetTtydShell()
+        if (sh != "") {
+            NiumaTtyd_LogShell(eng, sh, "user_studio")
+            return sh
+        }
+    }
     try {
         cf := A_ScriptDir . "\CursorShortcut.ini"
         r := Trim(IniRead(cf, "NiumaTtyd", eng . "_ttyd_shell", ""))
@@ -788,7 +809,7 @@ NiumaTtyd_OnPortProbeDone(port, ok) {
 
 ; 异步探活成功后主动通知 WebView（否则仅依赖 open 回调，切标签易卡在 loading）
 NiumaTtyd_NotifyWebOnPortReady(port) {
-    global g_SCWV_WV2, g_FTB_WV2
+    global g_SCWV_WV2, g_FTB_WV2, ConfigWV2
     port := Integer(port)
     if (port <= 0)
         return
@@ -796,6 +817,8 @@ NiumaTtyd_NotifyWebOnPortReady(port) {
     wv2 := g_SCWV_WV2
     if !wv2
         wv2 := g_FTB_WV2
+    if !wv2
+        wv2 := ConfigWV2
     if !wv2
         return
     try {
@@ -815,7 +838,8 @@ NiumaTtyd_StartProcessOnPort(port, shellCommand) {
         shell := "cmd.exe /k"
     if (StrLen(shell) > 1200)
         shell := "cmd.exe /k"
-    workDir := NiumaTtyd_WorkDir()
+    eng := NiumaTtyd_EngineFromPort(p)
+    workDir := NiumaTtyd_GetWorkDirForEngine(eng)
     cmdLine := '"' . ttydExe . '" -W -i 127.0.0.1 -p ' . p . ' -t rendererType=dom -t fontSize=14 -w "' . workDir . '" ' . shell
     try {
         Run(cmdLine, workDir, "Hide", &pid)
@@ -1074,7 +1098,9 @@ NiumaTtyd_OpenExternal(url := "") {
 
 ; WebMessage 里同步长逻辑会卡 UI：延期到独立定时器
 NiumaTtyd_DeferredOpenJob(reqId := "", engine := "codex_cli", wv2 := 0) {
-    global g_FTB_WV2, g_SCWV_WV2, g_NiumaTtydOpenRetryOnce
+    global g_FTB_WV2, g_SCWV_WV2, ConfigWV2, g_NiumaTtydOpenRetryOnce
+    if !wv2
+        wv2 := ConfigWV2
     if !wv2
         wv2 := g_FTB_WV2
     if !wv2
@@ -1114,7 +1140,9 @@ NiumaTtyd_DeferredOpenJob(reqId := "", engine := "codex_cli", wv2 := 0) {
 }
 
 NiumaTtyd_DeferredRestartJob(reqId := "", engine := "codex_cli", wv2 := 0) {
-    global g_FTB_WV2, g_SCWV_WV2
+    global g_FTB_WV2, g_SCWV_WV2, ConfigWV2
+    if !wv2
+        wv2 := ConfigWV2
     if !wv2
         wv2 := g_FTB_WV2
     if !wv2
@@ -1141,7 +1169,9 @@ NiumaTtyd_DeferredRestartJob(reqId := "", engine := "codex_cli", wv2 := 0) {
 }
 
 NiumaTtyd_DeferredExternalOpenJob(reqId := "", expectedBaseUrl := "", engine := "codex_cli", wv2 := 0) {
-    global g_FTB_WV2, g_SCWV_WV2
+    global g_FTB_WV2, g_SCWV_WV2, ConfigWV2
+    if !wv2
+        wv2 := ConfigWV2
     if !wv2
         wv2 := g_FTB_WV2
     if !wv2

@@ -4,6 +4,7 @@
 global ConfigWebViewNavFallbackTried := false
 ; 由搜索中心等单次打开设置时覆盖首屏标签，不写入 INI
 global g_ConfigWebView_OneShotDefaultTab := ""
+global g_ConfigWebView_PendingStudioSync := false
 
 ConfigWebView_StaleDomain(pathKey) {
     return "config:" . Trim(String(pathKey))
@@ -331,6 +332,17 @@ ConfigWebView_Send(msgMap) {
     if !ConfigWV2 || !ConfigWV2Ready
         return
     WebView_QueuePayload(ConfigWV2, msgMap)
+}
+
+ConfigWebView_NotifyStudioLlmSynced(*) {
+    global g_ConfigWebView_PendingStudioSync
+    if !IsSet(g_ConfigWebView_PendingStudioSync) || !g_ConfigWebView_PendingStudioSync
+        return
+    g_ConfigWebView_PendingStudioSync := false
+    studio := Map()
+    if FuncExists("UserStudio_PayloadForWeb")
+        studio := UserStudio_PayloadForWeb()
+    ConfigWebView_Send(Map("type", "syncNiumaChatLlmResult", "ok", true, "error", "", "userStudio", studio))
 }
 
 ConfigWebView_EnsureSearchCoreRunning() {
@@ -801,6 +813,10 @@ ConfigWebView_BuildInitData() {
     cfgPayload["keybinderToolbarLayout"] := kbSnap["toolbarLayout"]
     cfgPayload["keybinderCommands"] := kbSnap["commands"]
     cfgPayload["keybinderContextMenuLayout"] := kbSnap.Has("contextMenuLayout") ? kbSnap["contextMenuLayout"] : []
+    if FuncExists("UserStudio_PayloadForWeb")
+        cfgPayload["userStudio"] := UserStudio_PayloadForWeb()
+    if FuncExists("AppUpdateCheck_PayloadForWeb")
+        cfgPayload["appUpdate"] := AppUpdateCheck_PayloadForWeb()
     return cfgPayload
 }
 
@@ -1763,6 +1779,111 @@ ConfigWebView_OnMessage(sender, args) {
             if (selected = "")
                 selected := ""
             ConfigWebView_Send(Map("type", "browseCursorPathResult", "path", selected))
+        case "browseUserStudioPath":
+            field := Trim(String(msg.Get("field", "")))
+            selected := ""
+            if FuncExists("UserStudio_BrowsePath")
+                selected := UserStudio_BrowsePath(field)
+            ConfigWebView_Send(Map("type", "browseUserStudioPathResult", "field", field, "path", selected))
+        case "saveUserStudio":
+            payload := msg.Get("payload", Map())
+            if (payload is String && payload != "") {
+                try payload := Jxon_Load(payload)
+                catch {
+                    payload := Map()
+                }
+            }
+            if !(payload is Map)
+                payload := Map()
+            ok := false
+            err := ""
+            try {
+                if FuncExists("UserStudio_ApplyFromWebPayload")
+                    UserStudio_ApplyFromWebPayload(payload)
+                ok := true
+            } catch as e {
+                err := e.Message
+            }
+            if ok {
+                try ConfigWebView_Send(Map("type", "initData", "payload", ConfigWebView_BuildInitDataSafe()))
+                catch {
+                }
+            }
+            ConfigWebView_Send(Map("type", "saveUserStudioResult", "ok", ok, "error", err))
+        case "restoreUserStudio":
+            ok := false
+            err := ""
+            try {
+                if FuncExists("UserStudio_RestoreDefaults") {
+                    r := UserStudio_RestoreDefaults()
+                    ok := r.Get("ok", false)
+                    err := r.Get("error", "")
+                } else
+                    err := "UserStudio 未加载"
+            } catch as e {
+                err := e.Message
+            }
+            if ok {
+                try ConfigWebView_Send(Map("type", "initData", "payload", ConfigWebView_BuildInitDataSafe()))
+                catch {
+                }
+            }
+            ConfigWebView_Send(Map("type", "restoreUserStudioResult", "ok", ok, "error", err))
+        case "openNiumaChatTtyd":
+            try CloseConfigGUI()
+            catch {
+            }
+            ok := false
+            err := ""
+            startChat := msg.Has("startChat") ? !!msg["startChat"] : false
+            pl := msg.Get("payload", Map())
+            if (pl is String && pl != "") {
+                try pl := Jxon_Load(pl)
+                catch {
+                    pl := Map()
+                }
+            }
+            if !(pl is Map)
+                pl := Map()
+            try {
+                if FuncExists("UserStudio_ApplyFromWebPayload") && pl.Has("llm")
+                    UserStudio_ApplyFromWebPayload(pl)
+                if FuncExists("UserStudio_Load")
+                    UserStudio_Load()
+                if FuncExists("FloatingToolbar_OpenNiumaChatTtydCustomize") {
+                    FloatingToolbar_OpenNiumaChatTtydCustomize(startChat)
+                    ok := true
+                } else
+                    err := "悬浮栏未加载，无法打开 Niuma Chat"
+            } catch as e {
+                err := e.Message
+            }
+            if !ok
+                ConfigWebView_Send(Map("type", "openNiumaChatTtydResult", "ok", false, "error", err))
+        case "openNiumaChatAsk":
+            prompt := Trim(String(msg.Get("prompt", "")))
+            autoSend := msg.Has("autoSend") ? !!msg["autoSend"] : (prompt != "")
+            try CloseConfigGUI()
+            catch {
+            }
+            ok := false
+            err := ""
+            try {
+                if FuncExists("UserStudio_ApplyFromWebPayload") && msg.Has("payload") && msg["payload"] is Map {
+                    pl := msg["payload"]
+                    if pl.Has("llm")
+                        UserStudio_ApplyFromWebPayload(pl)
+                }
+                if FuncExists("FloatingToolbar_OpenNiumaChatAsk") {
+                    FloatingToolbar_OpenNiumaChatAsk(prompt, autoSend)
+                    ok := true
+                } else
+                    err := "悬浮栏未加载，无法打开 Niuma Chat"
+            } catch as e {
+                err := e.Message
+            }
+            if !ok
+                ConfigWebView_Send(Map("type", "openNiumaChatAskResult", "ok", false, "error", err))
         case "saveSettings":
             payload := msg.Get("payload", Map())
             if (payload is String && payload != "") {
@@ -1844,6 +1965,79 @@ ConfigWebView_OnMessage(sender, args) {
                         ImportConfig()
                     case "resetToDefaults":
                         ResetToDefaults()
+                    case "exportUserStudio":
+                        if FuncExists("UserStudio_ExportTo") {
+                            dest := FileSelect("S", A_ScriptDir . "\user_studio_backup.json", "导出智能定制配置", "JSON (*.json)")
+                            if (dest != "") {
+                                r := UserStudio_ExportTo(dest)
+                                if !r.Get("ok", false)
+                                    throw Error(r.Get("error", "导出失败"))
+                            }
+                        }
+                    case "importUserStudio":
+                        if FuncExists("UserStudio_ImportFrom") {
+                            src := FileSelect(1, A_ScriptDir, "导入智能定制配置", "JSON (*.json)")
+                            if (src != "") {
+                                r := UserStudio_ImportFrom(src)
+                                if !r.Get("ok", false)
+                                    throw Error(r.Get("error", "导入失败"))
+                            }
+                        }
+                    case "restoreUserStudio":
+                        if FuncExists("UserStudio_RestoreDefaults") {
+                            r := UserStudio_RestoreDefaults()
+                            if !r.Get("ok", false)
+                                throw Error(r.Get("error", "还原失败"))
+                        }
+                    case "openNiumaChatTtyd":
+                        if FuncExists("UserStudio_ApplyFromWebPayload") && (payload is Map) && payload.Has("llm") {
+                            try UserStudio_ApplyFromWebPayload(payload)
+                            catch {
+                            }
+                        }
+                        if FuncExists("UserStudio_Load")
+                            try UserStudio_Load()
+                            catch {
+                            }
+                        sc := msg.Has("startChat") ? !!msg["startChat"] : false
+                        if FuncExists("FloatingToolbar_OpenNiumaChatTtydCustomize") {
+                            try CloseConfigGUI()
+                            catch {
+                            }
+                            FloatingToolbar_OpenNiumaChatTtydCustomize(sc)
+                        } else
+                            throw Error("无法打开 Niuma Chat")
+                    case "openNiumaChatAsk":
+                        if FuncExists("FloatingToolbar_OpenNiumaChatAsk") {
+                            try CloseConfigGUI()
+                            catch {
+                            }
+                            FloatingToolbar_OpenNiumaChatAsk("", false)
+                        } else
+                            throw Error("无法打开 Niuma Chat")
+                    case "syncNiumaChatLlmToStudio":
+                        ok := false
+                        err := ""
+                        studio := Map()
+                        try {
+                            if FuncExists("UserStudio_SyncFromNiumaFile") {
+                                r := UserStudio_SyncFromNiumaFile()
+                                ok := r.Get("ok", false)
+                                err := r.Get("error", "")
+                                if r.Has("studio")
+                                    studio := r["studio"]
+                            }
+                            if !ok && FuncExists("FloatingToolbar_RequestNiumaLlmExport") {
+                                global g_ConfigWebView_PendingStudioSync := true
+                                FloatingToolbar_RequestNiumaLlmExport()
+                                return
+                            }
+                        } catch as e {
+                            err := e.Message
+                        }
+                        if ok && FuncExists("UserStudio_PayloadForWeb")
+                            studio := UserStudio_PayloadForWeb()
+                        ConfigWebView_Send(Map("type", "syncNiumaChatLlmResult", "ok", ok, "error", err, "userStudio", studio))
                     case "importPromptTemplates":
                         ImportPromptTemplates()
                     case "exportPromptTemplates":
@@ -1883,6 +2077,25 @@ ConfigWebView_OnMessage(sender, args) {
             ConfigWebView_Send(Map("type", "actionResult", "ok", ok, "error", err, "op", op))
             if ok
                 ConfigWebView_Send(Map("type", "initData", "payload", ConfigWebView_BuildInitDataSafe()))
+        case "openAppRelease":
+            ok := false
+            err := ""
+            try {
+                if FuncExists("AppUpdateCheck_OpenReleasePage")
+                    ok := AppUpdateCheck_OpenReleasePage()
+                if !ok
+                    err := "无法打开浏览器"
+            } catch as e {
+                err := e.Message
+            }
+            if !ok && err != ""
+                ConfigWebView_Send(Map("type", "openAppReleaseResult", "ok", false, "error", err))
+        case "checkAppUpdate":
+            try {
+                if FuncExists("AppUpdateCheck_CheckNow")
+                    AppUpdateCheck_CheckNow(true)
+            } catch {
+            }
         case "cancel":
             CloseConfigGUI()
     }

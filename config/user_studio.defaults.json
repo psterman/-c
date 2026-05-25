@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "llm": {
+    "provider": "openai",
+    "apiKey": "",
+    "baseUrl": "https://api.openai.com/v1",
+    "model": "gpt-4o-mini"
+  },
+  "paths": {
+    "cursor": "",
+    "autohotkey": "",
+    "everything": "",
+    "python": "",
+    "notes": ""
+  },
+  "ttyd": {
+    "shell": "cmd.exe",
+    "workDir": "",
+    "port": 7691
+  },
+  "options": {},
+  "updatedAt": ""
+}
