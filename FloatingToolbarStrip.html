@@ -74,6 +74,21 @@ body.drawer-open .drawer-toolbar .logo-btn,body.drawer-open #panel > header.hdr 
 .cli-frame{display:block;flex:1 1 auto;min-height:0;height:100%;border:none;width:100%;background:#132033}
 body.cli-mode #msgs,body.cli-mode #cmp{display:none!important}
 body.cli-mode #cliPane{display:flex!important;flex-direction:column}
+:root{--mobile-browser-w:400px}
+#mobileBrowserChrome{display:none;flex-shrink:0;flex-direction:column;align-items:stretch;gap:calc(6px * var(--ui));padding:calc(8px * var(--ui)) calc(12px * var(--ui));border-bottom:1px solid rgba(255,102,0,.18);background:rgba(0,0,0,.18)}
+#mobileBrowserChrome .mobile-chrome-row{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--ui));min-width:0}
+#mobileBrowserChrome .mobile-chrome-label{font-size:calc(11px * var(--ui));color:var(--muted);font-weight:600;letter-spacing:.04em;flex-shrink:0}
+#mobileBrowserChrome .mobile-chrome-hint{font-size:calc(10px * var(--ui));color:var(--muted);opacity:.85}
+#mobileBrowserChrome .mobile-chrome-urlrow{display:flex;align-items:center;gap:calc(6px * var(--ui));min-width:0}
+#mobileBrowserChrome .mobile-chrome-url{flex:1;min-width:0;height:calc(32px * var(--ui));padding:0 calc(10px * var(--ui));border:1px solid rgba(255,102,0,.28);border-radius:calc(8px * var(--ui));background:rgba(8,8,8,.72);color:var(--text);outline:none;user-select:text;-webkit-user-select:text}
+#mobileBrowserChrome .mobile-chrome-go{flex-shrink:0;height:calc(32px * var(--ui));padding:0 calc(12px * var(--ui));border-radius:calc(8px * var(--ui));border:1px solid rgba(255,102,0,.35);background:rgba(255,102,0,.14);color:var(--orange);font-weight:700;cursor:pointer}
+#mobileBrowserChrome .mobile-chrome-btns{display:flex;gap:calc(6px * var(--ui));flex-shrink:0}
+body.mobile-browser-open #mobileBrowserChrome{display:flex}
+body.mobile-browser-open.cli-mode #mobileBrowserChrome{display:none!important}
+body.mobile-browser-open #chat-mobile-browser{background:rgba(255,102,0,.22);border-color:rgba(255,102,0,.75);box-shadow:0 0 0 2px rgba(255,102,0,.25)}
+#mobileBrowserChrome .mobile-chrome-hint.active{color:#ffb380}
+body.mobile-browser-open #panel{transition:margin-right var(--ease),transform var(--ease)}
+body.mobile-browser-open #stage{transition:transform var(--ease)}
 #empty{padding:calc(14px * var(--ui));border:1px dashed rgba(255,102,0,.25);border-radius:calc(14px * var(--ui));color:var(--muted);background:rgba(255,255,255,.03);line-height:1.6;font-size:calc(13px * var(--ui))}
 .m{width:fit-content;max-width:min(92%,100%);border-radius:calc(14px * var(--ui));border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.04);overflow:hidden;align-self:flex-start;flex-shrink:0;min-height:min-content}
 .m.user{align-self:flex-end;background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.22)}
@@ -490,12 +505,29 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <header class="hdr">
 <div><div class="t1">NiuMa Chat</div><div class="t2">Markdown · AHK v2 高亮</div></div>
 <div class="icons">
+<button class="ib" id="chat-mobile-browser" type="button" title="手机浏览器" aria-label="手机浏览器">🌐</button>
 <button class="ib" id="chat-search" type="button" title="搜索聊天记录" aria-label="搜索聊天记录"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
 <button class="ib" id="chat-api-quick" type="button" title="配置 API Key" aria-label="配置 API">API</button>
 <button class="ib" id="chat-settings" type="button" title="打开设置" aria-label="打开设置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.82-.33 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.82.33l-.06.06A2 2 0 1 1 4.37 17l.06-.06a1.7 1.7 0 0 0 .33-1.82 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.03 4.4l.06.06a1.7 1.7 0 0 0 1.82.33h.01a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.5h.01a1.7 1.7 0 0 0 1.82-.33l.06-.06A2 2 0 1 1 19.63 7l-.06.06a1.7 1.7 0 0 0-.33 1.82v.01a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 <button class="ib" id="drawer-close" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 </div>
 </header>
+<div id="mobileBrowserChrome" aria-hidden="true">
+  <div class="mobile-chrome-row">
+    <span class="mobile-chrome-label">手机浏览</span>
+    <span class="mobile-chrome-hint">网页在窗口右侧显示 →</span>
+    <div class="mobile-chrome-btns">
+      <button class="ib" id="mb-back" type="button" title="后退" aria-label="后退">←</button>
+      <button class="ib" id="mb-reload" type="button" title="刷新" aria-label="刷新">↻</button>
+      <button class="ib" id="mb-extract" type="button" title="提取页面文本到输入框" aria-label="提取文本">✂</button>
+      <button class="ib" id="mb-close" type="button" title="关闭手机浏览器" aria-label="关闭">✕</button>
+    </div>
+  </div>
+  <div class="mobile-chrome-urlrow">
+    <input type="text" class="mobile-chrome-url" id="mb-url" placeholder="输入网址，如 https://example.com" spellcheck="false" autocomplete="off" />
+    <button type="button" class="mobile-chrome-go" id="mb-go" title="打开网址">前往</button>
+  </div>
+</div>
 <div id="sessionTabs" class="session-tabs" role="tablist" aria-label="对话标签"></div>
 <div id="main">
 <section id="msgs"><div id="empty">首次使用请点「设」完成 API。展开后工具条在输入框下方、发送按钮左侧。</div></section>
@@ -1144,7 +1176,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     inlineLlmModel = $('inlineLlmModel'),
     inlineLlmSave = $('inlineLlmSave'),
     inlineLlmOpenFull = $('inlineLlmOpenFull'),
-    chatApiQuick = $('chat-api-quick');
+    chatApiQuick = $('chat-api-quick'),
+    chatMobileBrowser = $('chat-mobile-browser'),
+    mobileBrowserChrome = $('mobileBrowserChrome'),
+    mbBack = $('mb-back'),
+    mbReload = $('mb-reload'),
+    mbExtract = $('mb-extract'),
+    mbClose = $('mb-close'),
+    mbUrl = $('mb-url'),
+    mbGo = $('mb-go');
 
   function tbEls() {
     return document.querySelectorAll('.tb[data-action], .tb[data-cmd-id]');
@@ -1190,7 +1230,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     openclawSessionRowsLoading: false,
     pendingStudioLlm: null,
     pendingStudioContext: null,
-    pendingAttach: { items: [], fileIds: [], files: [] }
+    pendingAttach: { items: [], fileIds: [], files: [] },
+    mobileBrowserOpen: false,
+    mobileBrowserLastUrl: ''
   };
   var toolbarVisibleSynced = false;
   var toolbarRevealTimer = 0;
@@ -1470,6 +1512,82 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     } catch (e) {}
   }
 
+  function isSafeHttpUrl(u) {
+    var s = String(u || '').trim();
+    if (!s) return false;
+    var low = s.toLowerCase();
+    if (low.indexOf('http://') !== 0 && low.indexOf('https://') !== 0) return false;
+    if (low.indexOf('javascript:') >= 0 || low.indexOf('data:') >= 0 || low.indexOf('vbscript:') >= 0) return false;
+    return true;
+  }
+
+  function applyMobileBrowserUi(open) {
+    state.mobileBrowserOpen = !!open;
+    document.body.classList.toggle('mobile-browser-open', state.mobileBrowserOpen);
+    if (mobileBrowserChrome) mobileBrowserChrome.setAttribute('aria-hidden', state.mobileBrowserOpen ? 'false' : 'true');
+    var hint = document.querySelector('#mobileBrowserChrome .mobile-chrome-hint');
+    if (hint) {
+      hint.textContent = state.mobileBrowserOpen ? '网页在窗口右侧（约 400px）' : '网页在窗口右侧显示 →';
+      hint.classList.toggle('active', state.mobileBrowserOpen);
+    }
+    if (chatMobileBrowser) chatMobileBrowser.classList.toggle('active', state.mobileBrowserOpen);
+  }
+
+  function normalizeMobileUrlInput(raw) {
+    var u = String(raw || '').trim();
+    if (!u) return '';
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    return isSafeHttpUrl(u) ? u : '';
+  }
+
+  function syncMobileUrlField(url) {
+    if (!mbUrl) return;
+    var u = String(url || '').trim();
+    if (u && isSafeHttpUrl(u)) mbUrl.value = u;
+  }
+
+  function navigateMobileBrowserFromInput() {
+    if (!mbUrl) return;
+    var u = normalizeMobileUrlInput(mbUrl.value);
+    if (!u) {
+      cstat('请输入有效网址（http:// 或 https://）', 'error');
+      return;
+    }
+    try {
+      localStorage.setItem('niumaMobileBrowserLastUrl', u);
+    } catch (_) {}
+    state.mobileBrowserLastUrl = u;
+    if (!state.drawer) setDrawer(true);
+    applyMobileBrowserUi(true);
+    if (state.mobileBrowserOpen) post({ type: 'niuma_mobile_browser_navigate', url: u });
+    else post({ type: 'niuma_mobile_browser_open', url: u });
+  }
+
+  function openMobileBrowser(url) {
+    var u = String(url || '').trim();
+    if (!u) {
+      try {
+        u = String(localStorage.getItem('niumaMobileBrowserLastUrl') || '').trim();
+      } catch (_) {}
+    }
+    if (!u) u = 'https://www.baidu.com';
+    if (u && !isSafeHttpUrl(u)) u = 'https://www.baidu.com';
+    if (!state.drawer) setDrawer(true);
+    try {
+      localStorage.setItem('niumaMobileBrowserLastUrl', u);
+    } catch (_) {}
+    state.mobileBrowserLastUrl = u;
+    syncMobileUrlField(u);
+    applyMobileBrowserUi(true);
+    cstat('正在打开右侧手机浏览区…', '');
+    post({ type: 'niuma_mobile_browser_open', url: u });
+  }
+
+  function closeMobileBrowser() {
+    applyMobileBrowserUi(false);
+    post({ type: 'niuma_mobile_browser_close' });
+  }
+
   function setDrawer(v) {
     state.drawer = !!v;
     document.body.classList.toggle('drawer-open', state.drawer);
@@ -1477,6 +1595,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     panel.setAttribute('aria-hidden', state.drawer ? 'false' : 'true');
     post({ type: 'drawer_state', open: state.drawer });
     if (!state.drawer) {
+      closeMobileBrowser();
       setSettings(false);
       setNspick(false);
       return;
@@ -1503,6 +1622,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function resetToolbarHomeUi() {
     setSettings(false);
     setNspick(false);
+    closeMobileBrowser();
     if (state.drawer) setDrawer(false);
     else {
       state.drawer = false;
@@ -1704,7 +1824,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     h = h.replace(/`([^`]+)`/g, '<code class="inline">$1</code>')
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
       .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, function (_m, label, href) {
+        var u = String(href || '').trim();
+        if (isSafeHttpUrl(u))
+          return '<a href="' + esc(u) + '" class="niuma-ext-link" rel="noreferrer">' + label + '</a>';
+        return '<a href="' + esc(u) + '" rel="noreferrer">' + label + '</a>';
+      });
     return h;
   }
 
@@ -6188,6 +6313,36 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     provider.dataset.prevProv = provider.value;
     setSettings(true);
   });
+  if (chatMobileBrowser) {
+    chatMobileBrowser.addEventListener('click', function () {
+      if (state.mobileBrowserOpen) closeMobileBrowser();
+      else openMobileBrowser('');
+    });
+  }
+  if (mbBack) mbBack.addEventListener('click', function () { post({ type: 'niuma_mobile_browser_back' }); });
+  if (mbReload) mbReload.addEventListener('click', function () { post({ type: 'niuma_mobile_browser_reload' }); });
+  if (mbExtract) mbExtract.addEventListener('click', function () { post({ type: 'niuma_mobile_browser_extract' }); });
+  if (mbClose) mbClose.addEventListener('click', function () { closeMobileBrowser(); });
+  if (mbGo) mbGo.addEventListener('click', function () { navigateMobileBrowserFromInput(); });
+  if (mbUrl) {
+    mbUrl.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        navigateMobileBrowserFromInput();
+      }
+    });
+  }
+  if (msgs) {
+    msgs.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a.niuma-ext-link') : null;
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      if (!isSafeHttpUrl(href)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      openMobileBrowser(href);
+    });
+  }
   if (chatApiQuick) {
     chatApiQuick.addEventListener('click', function () {
       setDrawer(true);
@@ -7750,6 +7905,36 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         state.pendingAttach = pa;
         refreshAttachUi();
         cstat('Attachments added: ' + arr.length, 'success');
+        return;
+      }
+      if (d.type === 'host_mobile_browser_state') {
+        applyMobileBrowserUi(!!d.open);
+        if (d.open) cstat('手机浏览器已打开：右侧约 400px 显示网页', 'success');
+        if (d.url && isSafeHttpUrl(d.url)) {
+          state.mobileBrowserLastUrl = String(d.url);
+          syncMobileUrlField(state.mobileBrowserLastUrl);
+          try {
+            localStorage.setItem('niumaMobileBrowserLastUrl', state.mobileBrowserLastUrl);
+          } catch (_) {}
+        }
+        return;
+      }
+      if (d.type === 'niuma_mobile_browser_error') {
+        applyMobileBrowserUi(false);
+        cstat(String(d.error || '手机浏览器打开失败'), 'error');
+        return;
+      }
+      if (d.type === 'niuma_mobile_extract_result') {
+        var txt = decodeApiText(d.text || '');
+        if (input && txt) {
+          if (input.value && !/\n$/.test(input.value)) input.value += '\n';
+          input.value += txt;
+          try {
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+          } catch (_) {}
+          input.focus();
+          cstat('已提取页面文本到输入框', 'success');
+        } else cstat('未能提取页面文本', 'error');
         return;
       }
       if (d.type === 'host_set_drawer') {

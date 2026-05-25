@@ -4,6 +4,7 @@
 ;   - 閺佸瓨娼銉ュ徔閺嶅繒鏁遍崡鏇氶嚋 WebView2 濞撳弶鐓嬮敍宀€绮烘稉鈧挧娑樺触缂?濮楁瑩鍘ら懝?;   - 瀹革箓鏁幏鏍уЗ閺佸鐛ラ妴浣圭泊鏉烆喚缂夐弨淇扁偓浣稿礁闁款喛褰嶉崡?;   - 7 娑擃亜濮涢懗鑺ュ瘻闁筋噯绱伴幖婊呭偍閵嗕浇顔囪ぐ鏇樷偓浣瑰絹缁€楦跨槤閵嗕焦鏌婇幓鎰仛鐠囧秲鈧焦鍩呴崶淇扁偓浣筋啎缂冾喓鈧線鏁惄?;   - 閹兼粎鍌ㄩ幐澶愭尦閺€顖涘瘮闁灏幇鐔风安閸涚厧鎯涢崝銊ф暰閸滃本瀚嬮弨鐐偝缁?; ======================================================================================================================
 
 #Requires AutoHotkey v2.0
+#Include NiumaMobileBrowser.ahk
 
 ; 婢舵碍妯夌粈鍝勬珤閾忔碍瀚欏宀勬桨閸栧懎娲块惄鎺炵礄SM_XVIRTUALSCREEN 76閳?9閿?
 ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
@@ -35,6 +36,34 @@ FloatingToolbar_EffectiveScaleFromUser(userScale) {
 FloatingToolbar_EffectiveScale() {
     global FloatingToolbarScale
     return FloatingToolbar_EffectiveScaleFromUser(FloatingToolbarScale)
+}
+
+; 宿主脚本 CursorHelper 中定义；经 Func 转发，避免本文件单独分析时误报未赋值局部变量
+FloatingToolbar_NormalizeAppearanceMode(v) {
+    try
+        return Func("NormalizeAppearanceActivationMode").Call(v)
+    catch {
+        s := Trim(String(v))
+        if (s = "bubble" || s = "hole" || s = "tray" || s = "toolbar")
+            return s
+        return "toolbar"
+    }
+}
+
+FloatingToolbar_NotifyWebViewShown(wv2) {
+    if !wv2
+        return
+    try Func("WebView2_NotifyShown").Call(wv2)
+    catch {
+    }
+}
+
+FloatingToolbar_NotifyWebViewHidden(wv2) {
+    if !wv2
+        return
+    try Func("WebView2_NotifyHidden").Call(wv2)
+    catch {
+    }
 }
 
 ; 无 INI 时默认抽屉「逻辑宽」，随高 DPI 略增、并限制在 400–1000
@@ -138,7 +167,7 @@ FloatingToolbar_PageDockLeave(tag := "") {
 
 FloatingToolbar_RestoreAfterPageDock() {
     global AppearanceActivationMode
-    mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    mode := FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode)
     if (mode != "toolbar")
         return
     try FloatingToolbar_ClearOverlaySuppression()
@@ -158,7 +187,7 @@ FloatingToolbar_ShowAfterPageDock() {
     }
     if !(g_FTB_WV2_Ready && g_FTB_WV2)
         return
-    try WebView2_NotifyShown(g_FTB_WV2)
+    try FloatingToolbar_NotifyWebViewShown(g_FTB_WV2)
     catch {
     }
     try FloatingToolbar_ResetWebToToolbarHome()
@@ -175,7 +204,7 @@ FloatingToolbar_ShowAfterPageDock() {
 ; 设置页/托盘切换为「悬浮栏」时统一走此入口：清 dock 抑制、显示并兜底恢复可见性。
 FloatingToolbar_ShowForActivationMode() {
     global AppearanceActivationMode
-    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar")
         return
     try FloatingToolbar_ClearOverlaySuppression()
     catch {
@@ -205,7 +234,7 @@ FloatingToolbar_SoftRecoverVisible(*) {
             catch {
             }
         }
-        try WebView2_NotifyShown(g_FTB_WV2)
+        try FloatingToolbar_NotifyWebViewShown(g_FTB_WV2)
         catch {
         }
         if !FloatingToolbar_ShouldSuppressToolbarHomeReset() {
@@ -309,7 +338,7 @@ FloatingToolbar_TryReturnToHoleAfterNiuma(*) {
 
 FloatingToolbar_EnsureVisibleAfterActivation(*) {
     global AppearanceActivationMode, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal
-    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar")
         return
     if FloatingToolbarIsVisible && !g_FTB_WaitingUiFinishedReveal
         return
@@ -625,7 +654,7 @@ FloatingToolbar_FinishReveal() {
     try FloatingToolbar_ClearHandoffWeb()
     catch {
     }
-    try WebView2_NotifyShown(g_FTB_WV2)
+    try FloatingToolbar_NotifyWebViewShown(g_FTB_WV2)
     FloatingToolbarApplyRoundedCorners()
     FloatingToolbar_ApplyWebViewBounds()
     SetTimer(FloatingToolbarCheckWindowPosition, 100)
@@ -671,7 +700,7 @@ ShowFloatingToolbar() {
         FloatingToolbarChatDrawerOpen := false
 
     if !FloatingToolbar_CanShowOverlay() {
-        if (NormalizeAppearanceActivationMode(AppearanceActivationMode) = "toolbar")
+        if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) = "toolbar")
             FloatingToolbar_ClearOverlaySuppression()
     }
     if !FloatingToolbar_CanShowOverlay() {
@@ -743,6 +772,9 @@ ShowFloatingToolbar() {
 HideFloatingToolbar() {
     global FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2
 
+    try NiumaMobileBrowser_Close()
+    catch {
+    }
     if (FloatingToolbarGUI != 0) {
         try FloatingToolbar_ExitHoleCompactRuntime()
         SaveFloatingToolbarPosition()
@@ -751,7 +783,7 @@ HideFloatingToolbar() {
         try WinSetTransparent(255, "ahk_id " . FloatingToolbarGUI.Hwnd)
         catch {
         }
-        try WebView2_NotifyHidden(g_FTB_WV2)
+        try FloatingToolbar_NotifyWebViewHidden(g_FTB_WV2)
         try FloatingToolbarGUI.Hide()
         FloatingToolbarIsVisible := false
         SetTimer(FloatingToolbarCheckWindowPosition, 0)
@@ -766,7 +798,7 @@ ToggleFloatingToolbar() {
         return
     }
 
-    mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    mode := FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode)
     if (mode = "hole" || mode = "bubble") {
         return
     }
@@ -914,6 +946,8 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
         FloatingToolbar_RetryCreateWebView()
         return
     }
+    global g_NiumaMobile_Wv2Class
+    g_NiumaMobile_Wv2Class := WebView2
     g_FTB_WV2_Ready := false
     g_FTB_WV2_FrameReady := false
 
@@ -980,25 +1014,107 @@ FloatingToolbar_SyncCompactWindowSquare() {
     }
 }
 
+FloatingToolbar_GetGuiHwnd() {
+    global FloatingToolbarGUI
+    if !IsObject(FloatingToolbarGUI)
+        return 0
+    return FloatingToolbarGUI.Hwnd
+}
+
 FloatingToolbar_ApplyWebViewBounds() {
     global FloatingToolbarGUI, g_FTB_WV2_Ctrl
 
     if !(FloatingToolbarGUI && g_FTB_WV2_Ctrl)
         return
-    if FloatingToolbarIsCompactMode()
+    if FloatingToolbarIsCompactMode() && !NiumaMobileBrowser_IsActive()
         FloatingToolbar_SyncCompactWindowSquare()
 
     WinGetClientPos(, , &cw, &ch, FloatingToolbarGUI.Hwnd)
+    mobileW := 0
+    if NiumaMobileBrowser_IsActive()
+        mobileW := NiumaMobileBrowser_WidthPx()
     rc := WebView2.RECT()
     rc.left := 0
     rc.top := 0
-    rc.right := cw
+    rc.right := Max(1, cw - mobileW)
     rc.bottom := ch
     try {
         g_FTB_WV2_Ctrl.Bounds := rc
         g_FTB_WV2_Ctrl.NotifyParentWindowPositionChanged()
     } catch {
     }
+    if mobileW > 0 {
+        try NiumaMobileBrowser_ApplyBounds(FloatingToolbarGUI.Hwnd)
+        catch {
+        }
+    }
+}
+
+FloatingToolbar_ActivateMobileBrowser(url := "") {
+    global FloatingToolbarGUI, FloatingToolbarChatDrawerOpen
+
+    if !FloatingToolbarGUI
+        return false
+    if !FloatingToolbarChatDrawerOpen
+        FloatingToolbarSetChatDrawerState(true, true)
+
+    NiumaMobileBrowser_SetPendingOpen(true)
+    FloatingToolbar_ResizeForMobileBrowser()
+    FloatingToolbar_ApplyWebViewBounds()
+    SetTimer(FloatingToolbar_ResizeForMobileBrowser, -60)
+    SetTimer(FloatingToolbar_ResizeForMobileBrowser, -220)
+
+    ok := NiumaMobileBrowser_Open(FloatingToolbarGUI.Hwnd, url)
+    if !ok {
+        NiumaMobileBrowser_SetPendingOpen(false)
+        FloatingToolbar_ResizeForMobileBrowser()
+        FloatingToolbar_ApplyWebViewBounds()
+    }
+    return ok
+}
+
+FloatingToolbar_AfterMobileBrowserOpen() {
+    FloatingToolbar_ResizeForMobileBrowser()
+    FloatingToolbar_ApplyWebViewBounds()
+    try NiumaMobileBrowser_ApplyBounds(FloatingToolbar_GetGuiHwnd())
+    catch {
+    }
+}
+
+FloatingToolbar_AfterMobileBrowserClose() {
+    NiumaMobileBrowser_SetPendingOpen(false)
+    FloatingToolbar_ResizeForMobileBrowser()
+    FloatingToolbar_ApplyWebViewBounds()
+}
+
+FloatingToolbar_ResizeForMobileBrowser() {
+    global FloatingToolbarGUI, FloatingToolbarChatDrawerOpen, FloatingToolbarWindowX, FloatingToolbarWindowY
+
+    if (!FloatingToolbarGUI || !FloatingToolbarChatDrawerOpen)
+        return
+    newW := FloatingToolbarCalculateWidth()
+    newH := FloatingToolbarCalculateHeight()
+    try FloatingToolbarGUI.GetPos(&gx, &gy, &gw, &gh)
+    catch {
+        gx := FloatingToolbarWindowX
+        gy := FloatingToolbarWindowY
+        gw := newW
+        gh := newH
+    }
+    rightEdge := gx + gw
+    newX := rightEdge - newW
+    ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+    vr := vl + vw
+    if (newX < vl)
+        newX := vl
+    if (newX + newW > vr)
+        newX := vr - newW
+    FloatingToolbarWindowX := newX
+    try FloatingToolbarGUI.Move(newX, gy, newW, newH)
+    catch {
+    }
+    FloatingToolbarApplyRoundedCorners()
+    FloatingToolbar_ApplyWebViewBounds()
 }
 
 FloatingToolbar_RetryCreateWebView() {
@@ -1391,6 +1507,37 @@ FloatingToolbar_OnWebMessage(sender, args) {
         y := msg.Has("y") ? Integer(msg["y"]) : 0
         FTB_Debug("toolbar_cmd_context x=" . x . " y=" . y)
         SetTimer(FloatingToolbar_ShowContextMenuDeferred.Bind(x, y), -10)
+        return
+    }
+
+    if (typ = "niuma_mobile_browser_open") {
+        url := msg.Has("url") ? String(msg["url"]) : ""
+        FloatingToolbar_ActivateMobileBrowser(url)
+        return
+    }
+    if (typ = "niuma_mobile_browser_navigate") {
+        url := msg.Has("url") ? String(msg["url"]) : ""
+        global FloatingToolbarChatDrawerOpen
+        if !FloatingToolbarChatDrawerOpen || !NiumaMobileBrowser_IsOpen()
+            FloatingToolbar_ActivateMobileBrowser(url)
+        else
+            NiumaMobileBrowser_Navigate(url)
+        return
+    }
+    if (typ = "niuma_mobile_browser_close") {
+        NiumaMobileBrowser_Close()
+        return
+    }
+    if (typ = "niuma_mobile_browser_back") {
+        NiumaMobileBrowser_Back()
+        return
+    }
+    if (typ = "niuma_mobile_browser_reload") {
+        NiumaMobileBrowser_Reload()
+        return
+    }
+    if (typ = "niuma_mobile_browser_extract") {
+        NiumaMobileBrowser_ExtractText()
         return
     }
 
@@ -2048,7 +2195,7 @@ FloatingToolbarSetChatDrawerState(open, force := false) {
     global FloatingToolbarLastClosedX, FloatingToolbarLastClosedY
 
     open := !!open
-    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar")
         open := false
     if (!FloatingToolbarGUI)
         return
@@ -2076,6 +2223,9 @@ FloatingToolbarSetChatDrawerState(open, force := false) {
         FloatingToolbarLastClosedX := oldX
         FloatingToolbarLastClosedY := oldY
     }
+
+    if !open
+        NiumaMobileBrowser_Close()
 
     FloatingToolbarChatDrawerOpen := open
     newW := FloatingToolbarCalculateWidth()
@@ -2409,7 +2559,7 @@ FloatingToolbar_OpenNiumaChatDrawer(open := true) {
     global FloatingToolbarChatDrawerOpen, g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
     global g_FTB_WV2_Ready
     open := !!open
-    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar")
         return false
     if open {
         g_FTB_NiumaHandoffOpening := true
@@ -2445,7 +2595,7 @@ FloatingToolbar_OpenNiumaChatDrawer(open := true) {
 
 FloatingToolbar_NiumaDrawerHandoffRetry(*) {
     global FloatingToolbarChatDrawerOpen, FloatingToolbarIsVisible, g_FTB_WV2_Ready, AppearanceActivationMode
-    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar")
         return
     if !FloatingToolbarIsVisible || !g_FTB_WV2_Ready
         return
@@ -2596,11 +2746,11 @@ FloatingToolbar_VerifySearchCenterOpen(*) {
     if scVisible
         return
 
-    try SCWV_Log("ftb_verify_search_center_miss", "tb_visible=" . (FloatingToolbarIsVisible ? "1" : "0") . " mode=" . NormalizeAppearanceActivationMode(AppearanceActivationMode))
+    try SCWV_Log("ftb_verify_search_center_miss", "tb_visible=" . (FloatingToolbarIsVisible ? "1" : "0") . " mode=" . FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode))
 
     ; 搜索中心未真正拉起：释放 search dock 抑制并恢复工具栏可见性
     try FloatingToolbar_PageDockLeave("search")
-    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) = "toolbar" && !FloatingToolbarIsVisible) {
+    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) = "toolbar" && !FloatingToolbarIsVisible) {
         try ShowFloatingToolbar()
     }
 }
@@ -2643,7 +2793,7 @@ FloatingToolbar_DeferredOpenSearchByKeyword(keyword, *) {
 
     ; 打开失败时立刻回滚 dock 抑制，确保工具栏不会残留在隐藏态
     try FloatingToolbar_PageDockLeave("search")
-    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) = "toolbar" && !FloatingToolbarIsVisible) {
+    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) = "toolbar" && !FloatingToolbarIsVisible) {
         try ShowFloatingToolbar()
     }
 }
@@ -2667,7 +2817,7 @@ FloatingToolbar_ActivateSearchCenter() {
     ; handoff that tray opening uses. This clears stale overlay / native drag state before we
     ; try to wake SearchCenter again.
     try {
-        if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole" && !SCWV_IsVisible())
+        if (FloatingToolbar_NormalizeAppearanceMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole" && !SCWV_IsVisible())
             TrayMenu_HardenHoleUiTransition("caps_f_search", 1800)
     } catch {
     }
@@ -2986,7 +3136,7 @@ FloatingToolbarWM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
         wheelDelta := wheelDelta - 0x10000
 
     delta := wheelDelta > 0 ? 1 : -1
-    mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    mode := FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode)
 
     mouseInToolbar := false
     if (FloatingToolbarIsVisible && IsSet(FloatingToolbarGUI) && IsObject(FloatingToolbarGUI) && (FloatingToolbarGUI is Gui)) {
@@ -3294,7 +3444,7 @@ FloatingToolbar_AnimatedSwitchToToolbar_Reveal(newX, newY, tw, th, *) {
     try FloatingToolbarApplyRoundedCorners()
     try FloatingToolbarGUI.Show("x" . newX . " y" . newY . " w" . tw . " h" . th . " NoActivate")
     FloatingToolbarIsVisible := true
-    try WebView2_NotifyShown(g_FTB_WV2)
+    try FloatingToolbar_NotifyWebViewShown(g_FTB_WV2)
     FloatingToolbar_FadeGui(hwnd, 0, 255, g_FTB_ModeFadeMs + 60, FloatingToolbar_FinishToolbarExpandSwitch)
 }
 
@@ -3302,10 +3452,10 @@ FloatingToolbar_SetActivationMode(mode) {
     global AppearanceActivationMode, g_FTB_ModeTransitionBusy, FloatingToolbarIsVisible, FloatingBubbleIsVisible
     if g_FTB_ModeTransitionBusy
         return
-    m := NormalizeAppearanceActivationMode(mode)
+    m := FloatingToolbar_NormalizeAppearanceMode(mode)
     if (m != "toolbar" && m != "bubble" && m != "hole" && m != "tray")
         return
-    cur := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    cur := FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode)
     if (m = "bubble" && cur = "toolbar" && FloatingToolbarIsVisible) {
         FloatingToolbar_AnimatedSwitchToBubble()
         return
@@ -3331,7 +3481,7 @@ FloatingToolbar_SwitchActivationByWheel(delta) {
     global AppearanceActivationMode, g_FTB_ModeTransitionBusy
     if g_FTB_ModeTransitionBusy
         return
-    mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    mode := FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode)
     if (delta > 0) {
         if (mode = "bubble")
             FloatingToolbar_AnimatedSwitchToToolbar()
@@ -3445,7 +3595,7 @@ FloatingToolbar_EnterHoleCompactRuntime() {
 FloatingToolbar_ExitHoleCompactRuntime() {
     global AppearanceActivationMode
     try GDHO_UnpinFromDesktop()
-    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "hole") {
+    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "hole") {
         try GDHO_Stop()
         try NativeDropBridge_Stop()
     }
@@ -3627,7 +3777,7 @@ FloatingToolbar_ShowContextMenuDeferred(anchorX := 0, anchorY := 0) {
         MouseGetPos(&anchorX, &anchorY)
     }
     try {
-        mode := NormalizeAppearanceActivationMode(AppearanceActivationMode)
+        mode := FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode)
         FTB_Debug("show menu @" . anchorX . "," . anchorY . " mode=" . mode . " search_active=" . (IsSearchCenterActive() ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
     } catch {
         FTB_Debug("show menu @" . anchorX . "," . anchorY)
@@ -3640,6 +3790,9 @@ FloatingToolbar_ShowContextMenuDeferred(anchorX := 0, anchorY := 0) {
 
 ; ===================== 缁愭褰涢崗鎶芥４娴滃娆?=====================
 OnFloatingToolbarClose(*) {
+    try NiumaMobileBrowser_Close()
+    catch {
+    }
     HideFloatingToolbar()
 }
 
@@ -3822,7 +3975,7 @@ FloatingToolbar_SwitchToToolbarFromMenu(*) {
 
 FloatingToolbar_SwitchToHoleMode(*) {
     global AppearanceActivationMode
-    cur := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+    cur := FloatingToolbar_NormalizeAppearanceMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
     if (cur = "hole") {
         try FloatingBubbleShowFromMenu()
         catch {
@@ -3841,7 +3994,7 @@ FloatingToolbar_AppendActivationModeMenuItems(&MenuItems, mode := "", seenSlots 
     global AppearanceActivationMode, GDHO_VISIBLE, g_GDHO_CurrentPhase, GDHO_PHASE_OPEN, GDHO_PHASE_OPENING
     if (IsObject(seenSlots) && seenSlots.Has("slot:switch_hole"))
         return
-    m := (mode != "") ? NormalizeAppearanceActivationMode(mode) : NormalizeAppearanceActivationMode(AppearanceActivationMode)
+    m := (mode != "") ? FloatingToolbar_NormalizeAppearanceMode(mode) : FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode)
     if (m = "hole") {
         holeVisible := false
         try holeVisible := (g_GDHO_CurrentPhase = GDHO_PHASE_OPEN || g_GDHO_CurrentPhase = GDHO_PHASE_OPENING || GDHO_VISIBLE)
@@ -4111,8 +4264,12 @@ FloatingToolbarCalculateWidth() {
     ; 按「Logo + 图标数量」自适应宽度，并在最终像素向上取整避免右侧 1~2px 截断。
     ; CSS 对应：左右 padding(16) + logo(42) + 间距(8) + 图标区(40*n + 5*(n-1))
     BaseWidth := Max(190, 61 + iconCount * 45)
-    if (FloatingToolbarChatDrawerOpen)
-        return Ceil(Max(BaseWidth, FloatingToolbarChatDrawerWidth) * eff + 6)
+    if (FloatingToolbarChatDrawerOpen) {
+        w := Ceil(Max(BaseWidth, FloatingToolbarChatDrawerWidth) * eff + 6)
+        if NiumaMobileBrowser_IsActive()
+            w += NiumaMobileBrowser_WidthPx()
+        return w
+    }
     if FloatingToolbarIsCompactMode()
         ; 紧凑态使用固定像素直径，避免高 DPI 下过小。
         return Round(FloatingToolbarCompactDiameter)
@@ -4303,7 +4460,7 @@ InitFloatingToolbar() {
 
 FloatingToolbar_InitShowFallback(*) {
     global AppearanceActivationMode, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal
-    if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
+    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar")
         return
     if (FloatingToolbarIsVisible && !g_FTB_WaitingUiFinishedReveal)
         return

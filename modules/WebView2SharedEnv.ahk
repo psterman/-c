@@ -123,6 +123,11 @@ WebView2_CreateWithSharedEnvAsync(hwnd, callback, reason := "") {
 WebView2_PrepareForScriptReload() {
     global g_WV2SharedEnv, g_WV2EnvCreatePromise, g_WV2EnvReadyCallbacks
     global g_WV2EnvCreateFailed, g_WV2EnvCreateError
+    try {
+        if FuncExists("NiumaMobileBrowser_PrepareForScriptReload")
+            NiumaMobileBrowser_PrepareForScriptReload()
+    } catch {
+    }
     g_WV2SharedEnv := 0
     g_WV2EnvCreatePromise := 0
     g_WV2EnvReadyCallbacks := []
