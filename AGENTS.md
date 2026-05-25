@@ -32,6 +32,11 @@
 - 保存 `user_studio.json` 前会自动备份到 `config/user_studio.backup.json`。
 - 「还原默认定制」仅重置 `user_studio.json`，不重置整个 `CursorShortcut.ini`。
 
+## Niuma Chat 项目背景
+
+- 默认说明：`docs/niuma-project-brief.md`（打开牛马 Chat 时自动注入 System Prompt）
+- 智能定制 →「Niuma Chat 项目背景」可覆盖或关闭自动注入
+
 ## 更多文档
 
 - `docs/TEXT_HOLE_FLOW.md` — 文本黑洞交互

@@ -2015,6 +2015,14 @@ ConfigWebView_OnMessage(sender, args) {
                             FloatingToolbar_OpenNiumaChatAsk("", false)
                         } else
                             throw Error("无法打开 Niuma Chat")
+                    case "loadNiumaProjectBrief":
+                        txt := ""
+                        if FuncExists("UserStudio_BuildDefaultNiumaSystemPrompt") {
+                            try txt := UserStudio_BuildDefaultNiumaSystemPrompt()
+                            catch {
+                            }
+                        }
+                        ConfigWebView_Send(Map("type", "loadNiumaProjectBriefResult", "ok", true, "text", txt))
                     case "syncNiumaChatLlmToStudio":
                         ok := false
                         err := ""

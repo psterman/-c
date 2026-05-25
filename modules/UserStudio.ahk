@@ -23,6 +23,128 @@ UserStudio_NiumaLlmSyncPath() {
     return UserStudio_ConfigDir() . "\niuma_chat_llm.json"
 }
 
+UserStudio_NiumaBriefPath() {
+    return A_ScriptDir . "\docs\niuma-project-brief.md"
+}
+
+UserStudio_ReadTextFileMax(path, maxChars := 12000) {
+    path := Trim(String(path))
+    if (path = "" || !FileExist(path))
+        return ""
+    try {
+        raw := FileRead(path, "UTF-8")
+        if (StrLen(raw) > maxChars)
+            return SubStr(raw, 1, maxChars) . "`n…（已截断）"
+        return raw
+    } catch {
+        return ""
+    }
+}
+
+UserStudio_ResolveInstallRoot(doc) {
+    if !(doc is Map)
+        doc := UserStudio_Get()
+    opt := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
+    root := Trim(String(opt.Get("niumaInstallRoot", "")))
+    if (root != "") {
+        try root := NormalizeWindowsPath(root)
+        catch {
+        }
+        if DirExist(root)
+            return root
+    }
+    return A_ScriptDir
+}
+
+UserStudio_BuildNiumaRuntimeBlock(doc) {
+    if !(doc is Map)
+        doc := UserStudio_Get()
+    root := UserStudio_ResolveInstallRoot(doc)
+    paths := doc.Has("paths") && doc["paths"] is Map ? doc["paths"] : Map()
+    llm := doc.Has("llm") && doc["llm"] is Map ? doc["llm"] : Map()
+    lines := []
+    lines.Push("## 本机即时信息（自动识别，每次打开 Niuma Chat 更新）")
+    lines.Push("- 软件安装根目录：" . root)
+    lines.Push("- 主脚本目录（A_ScriptDir）：" . A_ScriptDir)
+    lines.Push("- 用户定制配置：" . UserStudio_Path())
+    lines.Push("- 当前默认 LLM：" . Trim(String(llm.Get("provider", ""))) . " / " . Trim(String(llm.Get("model", ""))))
+    cp := Trim(String(paths.Get("cursor", "")))
+    if (cp != "")
+        lines.Push("- Cursor：" . cp)
+    ah := Trim(String(paths.Get("autohotkey", "")))
+    if (ah != "")
+        lines.Push("- AutoHotkey：" . ah)
+    py := Trim(String(paths.Get("python", "")))
+    if (py != "")
+        lines.Push("- Python：" . py)
+    note := Trim(String(paths.Get("notes", "")))
+    if (note != "")
+        lines.Push("- 备注路径：" . note)
+    lines.Push("")
+    lines.Push("用户问「这个软件能干什么」时，指上述牛马 nmer 项目本身，不要回答泛化的 AHK 教程。")
+    return Trim(lines.Join("`n"), "`n")
+}
+
+UserStudio_BuildDefaultNiumaSystemPrompt() {
+    doc := UserStudio_Get()
+    brief := UserStudio_ReadTextFileMax(UserStudio_NiumaBriefPath(), 9000)
+    if (brief = "") {
+        agents := UserStudio_ReadTextFileMax(A_ScriptDir . "\AGENTS.md", 3500)
+        intro := UserStudio_ReadTextFileMax(A_ScriptDir . "\软件介绍.md", 4500)
+        brief := "你是牛马 nmer（Windows 桌面效率工具）的维护与定制助手。用户通过 Niuma Chat 修改本仓库代码与配置。`n`n"
+        if (agents != "")
+            brief .= "--- AGENTS.md ---`n" . agents . "`n`n"
+        if (intro != "")
+            brief .= "--- 软件介绍 ---`n" . intro
+    }
+    rt := UserStudio_BuildNiumaRuntimeBlock(doc)
+    if (rt != "")
+        return Trim(brief . "`n`n" . rt, "`n")
+    return Trim(brief)
+}
+
+UserStudio_NormalizeNiumaOptions(optIn) {
+    if !(optIn is Map)
+        optIn := Map()
+    if !optIn.Has("niumaAutoInjectContext")
+        optIn["niumaAutoInjectContext"] := true
+    else
+        optIn["niumaAutoInjectContext"] := !!optIn["niumaAutoInjectContext"]
+    if !optIn.Has("niumaSystemPrompt")
+        optIn["niumaSystemPrompt"] := ""
+    else
+        optIn["niumaSystemPrompt"] := Trim(String(optIn["niumaSystemPrompt"]))
+    if !optIn.Has("niumaInstallRoot")
+        optIn["niumaInstallRoot"] := ""
+    else
+        optIn["niumaInstallRoot"] := Trim(String(optIn["niumaInstallRoot"]))
+    return optIn
+}
+
+UserStudio_LoadNiumaSystemPrompt(*) {
+    doc := UserStudio_Get()
+    opt := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
+    opt := UserStudio_NormalizeNiumaOptions(opt)
+    custom := Trim(String(opt.Get("niumaSystemPrompt", "")))
+    if (custom != "")
+        return custom
+    return UserStudio_BuildDefaultNiumaSystemPrompt()
+}
+
+UserStudio_GetNiumaContext() {
+    doc := UserStudio_Get()
+    opt := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
+    opt := UserStudio_NormalizeNiumaOptions(opt)
+    root := UserStudio_ResolveInstallRoot(doc)
+    return Map(
+        "autoInject", opt["niumaAutoInjectContext"],
+        "systemPrompt", UserStudio_LoadNiumaSystemPrompt(),
+        "briefPath", UserStudio_NiumaBriefPath(),
+        "scriptDir", A_ScriptDir,
+        "installRoot", root
+    )
+}
+
 UserStudio_EnsureConfigDir() {
     dir := UserStudio_ConfigDir()
     if !DirExist(dir)
@@ -45,7 +167,7 @@ UserStudio_DefaultDocument() {
         "llm", Map("provider", "openai", "apiKey", "", "baseUrl", "https://api.openai.com/v1", "model", "gpt-4o-mini"),
         "paths", Map("cursor", "", "autohotkey", "", "everything", "", "python", "", "notes", ""),
         "ttyd", Map("shell", "cmd.exe", "workDir", "", "port", 7691),
-        "options", Map(),
+        "options", Map("niumaAutoInjectContext", true, "niumaSystemPrompt", "", "niumaInstallRoot", ""),
         "updatedAt", ""
     ))
 }
@@ -145,6 +267,7 @@ UserStudio_NormalizeDoc(doc) {
     if (tp < 1024 || tp > 65535)
         tp := 7691
     ttyd := Map("shell", sh, "workDir", wd, "port", tp)
+    optIn := UserStudio_NormalizeNiumaOptions(optIn)
     return UserStudio_ApplyLlmAutoDefaults(Map(
         "version", Integer(doc.Get("version", 1)),
         "llm", llm,
@@ -373,8 +496,12 @@ UserStudio_ApplyFromWebPayload(payload) {
         for k, v in payload["paths"]
             cur["paths"][k] := Trim(String(v))
     }
-    if payload.Has("options") && payload["options"] is Map
-        cur["options"] := payload["options"]
+    if payload.Has("options") && payload["options"] is Map {
+        merged := cur.Has("options") && cur["options"] is Map ? cur["options"] : Map()
+        for k, v in payload["options"]
+            merged[k] := v
+        cur["options"] := UserStudio_NormalizeNiumaOptions(merged)
+    }
     if payload.Has("ttyd") && payload["ttyd"] is Map {
         for k, v in payload["ttyd"]
             cur["ttyd"][k] := v
@@ -541,6 +668,7 @@ UserStudio_PayloadForWeb() {
         "paths", doc["paths"],
         "ttyd", UserStudio_TtydPayloadForWeb(),
         "options", doc["options"],
+        "niumaContext", UserStudio_GetNiumaContext(),
         "overview", UserStudio_BuildOverview()
     )
 }

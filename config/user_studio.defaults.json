@@ -18,6 +18,10 @@
     "workDir": "",
     "port": 7691
   },
-  "options": {},
+  "options": {
+    "niumaAutoInjectContext": true,
+    "niumaSystemPrompt": "",
+    "niumaInstallRoot": ""
+  },
   "updatedAt": ""
 }

@@ -624,6 +624,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     NIUMA_UPLOAD_API = '/api/niuma/upload',
     NIUMA_ATTACH_CTX_API = '/api/niuma/attachments/context',
     SP = '你是一个擅长 AHK v2、自动化脚本和桌面工作流的助手。',
+    NIUMA_SP_FALLBACK =
+      '你是牛马 nmer（Windows 桌面效率工具）的维护与定制助手。用户通过 Niuma Chat 修改本仓库代码与配置。' +
+      '用户问「这个软件能干什么」「能干嘛」「干嘛的」时，指牛马 nmer 本身，绝不是让用户学习 AutoHotkey 通用教程。' +
+      '牛马 nmer 核心：CapsLock 工作流中枢、剪贴板、SearchCenter 搜索、截图、Prompt、悬浮工具栏、Niuma Chat 多模型对话、智能定制(user_studio.json)、可选 ttyd/OpenClaw。' +
+      '主入口 CursorHelper (1).ahk，模块 modules/*.ahk，对话 UI 为本页 FloatingToolbarStrip.html。',
     P = {
       openai: { label: 'OpenAI', transport: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini', models: ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini', 'gpt-4o'] },
       codex_cli: { label: 'Codex CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7681/', model: '', models: [] },
@@ -1179,6 +1184,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     openclawSessionRowsFetchedAt: 0,
     openclawSessionRowsLoading: false,
     pendingStudioLlm: null,
+    pendingStudioContext: null,
     pendingAttach: { items: [], fileIds: [], files: [] }
   };
   var toolbarVisibleSynced = false;
@@ -1470,6 +1476,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       setNspick(false);
       return;
     }
+    ensureStudioContextApplied(isWeakNiumaSystemPrompt(systemPrompt ? systemPrompt.value : ''));
+    try {
+      post({ type: 'niuma_request_studio_context' });
+      post({ type: 'niuma_request_studio_llm' });
+    } catch (_) {}
     scrollMsgsToLatest();
     if (state.needSetup || !hasAnyApiConfigured()) {
       var sd = activeSession();
@@ -1643,6 +1654,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function ahk(code) {
+    if (/<span\s+class=/i.test(String(code || ''))) return esc(code);
     var h = esc(code);
     h = h.replace(/(^|\n)(\s*;.*)/g, function (m, p1, p2) {
       return p1 + '<span class="hl-comment">' + p2 + '</span>';
@@ -3814,8 +3826,131 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return sid;
   }
 
-  function applyStudioLlmFromPayload(llm, prompt, autoSend) {
+  function hasNiumaProjectMarkers(sp) {
+    return /牛马\s*nmer|niuma-project-brief|本机即时信息|软件安装根目录|FloatingToolbarStrip|user_studio\.json/i.test(
+      String(sp || '')
+    );
+  }
+
+  function isWeakNiumaSystemPrompt(sp) {
+    return !hasNiumaProjectMarkers(sp);
+  }
+
+  function isNiumaSoftwareQuestion(text) {
+    return /这个软件|本软件|牛马|niuma|nmer|干嘛|干什么|什么用|能做什么|有啥功能|软件是做什么/i.test(String(text || ''));
+  }
+
+  function mergeNiumaSystemPrompt(sp) {
+    sp = String(sp || '').trim();
+    if (hasNiumaProjectMarkers(sp)) return sp;
+    return (NIUMA_SP_FALLBACK + (sp ? '\n\n---\n' + sp : '')).trim();
+  }
+
+  function cacheNiumaStudioContext(ctx) {
+    if (!ctx || typeof ctx !== 'object') return;
+    state.niumaContextCache = {
+      autoInject: ctx.autoInject !== false && ctx.autoInjectContext !== false,
+      systemPrompt: String(ctx.systemPrompt || ''),
+      installRoot: String(ctx.installRoot || ''),
+      scriptDir: String(ctx.scriptDir || '')
+    };
+    state.pendingStudioContext = state.niumaContextCache;
+  }
+
+  function stashStudioContext(ctx) {
+    cacheNiumaStudioContext(ctx);
+  }
+
+  function buildNiumaUserPrefix(cfg) {
+    var root = '';
+    try {
+      var c = state.niumaContextCache || state.pendingStudioContext;
+      if (c && c.installRoot) root = String(c.installRoot).trim();
+    } catch (_) {}
+    return (
+      '【必读·项目上下文】用户正在使用「牛马 nmer」Windows 效率工具，通过 Niuma Chat 修改/定制该软件本身。' +
+      (root ? '安装目录：' + root + '。' : '') +
+      '禁止把「这个软件」理解成 AutoHotkey 语言或通用 AHK 教程；应介绍牛马 nmer 的功能与模块。\n用户问题：\n'
+    );
+  }
+
+  function studioContextAutoInject(ctx) {
+    if (!ctx || typeof ctx !== 'object') return true;
+    if (ctx.autoInject === false || ctx.autoInjectContext === false) return false;
+    return true;
+  }
+
+  function applyStudioContextFromHost(autoInject, systemPromptText, force) {
+    if (autoInject === false) return false;
+    var sp = String(systemPromptText || '').trim();
+    if (!sp || !systemPrompt) return false;
+    if (!force && !isWeakNiumaSystemPrompt(systemPrompt.value)) return false;
+    systemPrompt.value = sp;
+    saveCfg(false);
+    if (state.drawer) {
+      var rootHint = '';
+      try {
+        if (state.pendingStudioContext && state.pendingStudioContext.installRoot)
+          rootHint = ' · ' + String(state.pendingStudioContext.installRoot);
+      } catch (_) {}
+      cstat('已注入牛马 nmer 项目说明' + rootHint + '，可直接问「这个软件能干什么」。', 'success');
+    }
+    return true;
+  }
+
+  function ensureStudioContextApplied(force) {
+    var p = state.pendingStudioContext;
+    if (p && String(p.systemPrompt || '').trim()) {
+      return applyStudioContextFromHost(studioContextAutoInject(p), p.systemPrompt, !!force);
+    }
+    try {
+      post({ type: 'niuma_request_studio_context' });
+    } catch (_) {}
+    return false;
+  }
+
+  function getEffectiveSystemPromptForSend() {
+    var cached = state.niumaContextCache;
+    if (cached && String(cached.systemPrompt || '').trim())
+      return mergeNiumaSystemPrompt(String(cached.systemPrompt).trim());
+    ensureStudioContextApplied(true);
+    cached = state.niumaContextCache || state.pendingStudioContext;
+    if (cached && String(cached.systemPrompt || '').trim())
+      return mergeNiumaSystemPrompt(String(cached.systemPrompt).trim());
+    var sp = systemPrompt ? String(systemPrompt.value || '').trim() : '';
+    return mergeNiumaSystemPrompt(sp || NIUMA_SP_FALLBACK);
+  }
+
+  function composeUserTextForModel(text, cfg) {
+    var base = String(text != null ? text : '').trim();
+    if (!base) return base;
+    if (/^【必读·项目上下文】/i.test(base)) return base;
+    if (isNiumaSoftwareQuestion(base) || isWeakNiumaSystemPrompt((cfg && cfg.systemPrompt) || ''))
+      return buildNiumaUserPrefix(cfg) + base;
+    return base;
+  }
+
+  async function fetchStudioContextBlocking() {
+    if (state.niumaContextCache && String(state.niumaContextCache.systemPrompt || '').trim())
+      return state.niumaContextCache;
+    try {
+      var ctx = await hostBridgeFetchStudioContext(5000);
+      if (ctx && String(ctx.systemPrompt || '').trim()) {
+        cacheNiumaStudioContext(ctx);
+        applyStudioContextFromHost(studioContextAutoInject(ctx), ctx.systemPrompt, true);
+        return state.niumaContextCache;
+      }
+    } catch (_) {}
+    try {
+      post({ type: 'niuma_request_studio_context' });
+    } catch (e2) {}
+    return state.niumaContextCache || null;
+  }
+
+  function applyStudioLlmFromPayload(llm, prompt, autoSend, hostOpts) {
+    hostOpts = hostOpts || {};
     llm = llm || {};
+    applyStudioContextFromHost(hostOpts.autoInjectContext !== false, hostOpts.systemPrompt, true);
     var key = String(llm.apiKey || '').trim();
     if (!key) {
       var found = findAnyStoredApiKey();
@@ -4002,7 +4137,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           ? String(s.gatewaySessionKey || '').trim() || openClawSessionKeyHintFromBaseUrl(bu) || getOpenClawSessionKey(s)
           : '',
       apiKey: getApiKeyForProvider(pid),
-      systemPrompt: systemPrompt.value.trim()
+      systemPrompt: getEffectiveSystemPromptForSend()
     };
   }
 
@@ -4018,7 +4153,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       model: (p.transport === 'cli') ? '' : mod,
       baseUrl: bu,
       apiKey: key,
-      systemPrompt: systemPrompt.value.trim()
+      systemPrompt: getEffectiveSystemPromptForSend()
     };
   }
 
@@ -4259,12 +4394,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var key = trimApiKey(cfg.apiKey);
     if (!key) throw new Error('缺少 MiniMax API Key');
     cfg.apiKey = key;
+    cfg.systemPrompt = mergeNiumaSystemPrompt(cfg.systemPrompt || '');
     if (minimaxUsesAnthropic(cfg.baseUrl)) {
       var r = await minimaxAnthropicRequest(
         cfg,
         JSON.stringify({
           model: cfg.model,
-          system: cfg.systemPrompt || '',
+          system: cfg.systemPrompt,
           max_tokens: 2048,
           messages: claudeMsgs(cfg)
         }),
@@ -4430,6 +4566,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         if (String(d.type || '') === 'niuma_attach_context_result') {
           if (d.ok) finishOk(Array.isArray(d.files) ? d.files : []);
           else finishErr(new Error(String(d.error || 'context failed')));
+          return;
+        }
+        if (String(d.type || '') === 'niuma_studio_context_result') {
+          if (d.ok !== false && String(d.systemPrompt || '').trim()) {
+            finishOk({
+              autoInject: d.autoInjectContext !== false,
+              autoInjectContext: d.autoInjectContext !== false,
+              systemPrompt: String(d.systemPrompt || ''),
+              installRoot: String(d.installRoot || ''),
+              scriptDir: String(d.scriptDir || '')
+            });
+          } else finishErr(new Error(String(d.error || 'studio context failed')));
         }
       }
       try { window.chrome.webview.addEventListener('message', onMsg); } catch (e) { finishErr(e); return; }
@@ -4443,6 +4591,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         finishErr(e);
       }
     });
+  }
+
+  function hostBridgeFetchStudioContext(timeoutMs) {
+    return hostBridgeRequest('niuma_fetch_studio_context', {}, timeoutMs || 5000);
   }
 
   function niumaApiUrl(p) {
@@ -5817,8 +5969,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     var displayText = text || ('[attachments] ' + Number((pa.items && pa.items.length) || 0) + ' file(s)');
     saveCfg(false);
+    await fetchStudioContextBlocking();
+    ensureStudioContextApplied(true);
     var cfg = buildSendCfg();
     if (!cfg) return;
+    cfg.userContentForModel = composeUserTextForModel(composedForModel, cfg);
     var p0 = P[cfg.provider] || P.openai;
     if (p0.transport === 'cli') {
       add('user', displayText);
@@ -5853,7 +6008,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     try {
       var p = P[cfg.provider] || P.openai,
         content = '';
-      cfg.userContentForModel = composedForModel;
       if (cfg.provider === 'minimax') content = await reqMinimax(cfg);
       else if (p.transport === 'anthropic') content = await reqClaude(cfg);
       else if (p.transport === 'gemini') content = await reqGemini(cfg);
@@ -7345,11 +7499,25 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         return;
       }
       if (d.type === 'set_selected') sel(d.action || '');
+      if (d.type === 'host_push_studio_context') {
+        cacheNiumaStudioContext({
+          autoInject: d.autoInjectContext,
+          autoInjectContext: d.autoInjectContext,
+          systemPrompt: d.systemPrompt,
+          installRoot: d.installRoot,
+          scriptDir: d.scriptDir
+        });
+        applyStudioContextFromHost(d.autoInjectContext !== false, d.systemPrompt, true);
+        return;
+      }
       if (d.type === 'host_apply_studio_llm') {
         if (d.llm) state.pendingStudioLlm = d.llm;
         setDrawer(true);
         setTtydCustomize(false);
-        applyStudioLlmFromPayload(d.llm || {}, d.prompt || '', !!d.autoSend);
+        applyStudioLlmFromPayload(d.llm || {}, d.prompt || '', !!d.autoSend, {
+          autoInjectContext: d.autoInjectContext,
+          systemPrompt: d.systemPrompt
+        });
         if (state.settings) {
           var ep = pickSettingsEditProvider();
           provider.value = ep;
@@ -7364,9 +7532,24 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         return;
       }
       if (d.type === 'studio_llm_sync_result') {
+        if (d.niumaContext) {
+          stashStudioContext({
+            autoInject: d.niumaContext.autoInject,
+            autoInjectContext: d.niumaContext.autoInject,
+            systemPrompt: d.niumaContext.systemPrompt,
+            installRoot: d.niumaContext.installRoot,
+            scriptDir: d.niumaContext.scriptDir
+          });
+          if (String(d.niumaContext.systemPrompt || '').trim())
+            applyStudioContextFromHost(studioContextAutoInject(d.niumaContext), d.niumaContext.systemPrompt, true);
+        } else {
+          ensureStudioContextApplied(true);
+        }
         if (d.ok) {
           sstat('已从智能定制同步 API', 'success');
           if (state.settings) refreshSettingsAiHint();
+        } else if (d.niumaContext && d.niumaContext.systemPrompt) {
+          sstat('已注入项目说明；' + (d.error || '请先在智能定制保存 API Key'), '');
         } else {
           sstat(d.error || '同步失败', 'error');
         }
@@ -7511,7 +7694,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
       if (d.type === 'host_set_drawer') {
         var wantOpen = !!d.open;
-        if (wantOpen === !!state.drawer) return;
+        if (wantOpen === !!state.drawer) {
+          if (wantOpen) {
+            ensureStudioContextApplied(true);
+            try {
+              post({ type: 'niuma_request_studio_context' });
+            } catch (_) {}
+          }
+          return;
+        }
         document.documentElement.classList.add('ftb-handoff-no-anim');
         setDrawer(wantOpen);
         requestAnimationFrame(function () {
@@ -7581,6 +7772,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   refreshInlineApiSetupVisibility();
   setTimeout(function () {
     try {
+      post({ type: 'niuma_request_studio_context' });
       post({ type: 'niuma_request_studio_llm' });
     } catch (e) {}
   }, 600);

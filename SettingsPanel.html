@@ -2168,7 +2168,13 @@
           python: (g("usPath_python")?.value || "").trim(),
           notes: (g("usPathNotes")?.value || "").trim()
         },
-        options: { ...(state.data.userStudio?.options || {}), manualBaseUrl: !!state._studioManualBaseUrl }
+        options: {
+          ...(state.data.userStudio?.options || {}),
+          manualBaseUrl: !!state._studioManualBaseUrl,
+          niumaAutoInjectContext: !!document.getElementById("niumaAutoInjectContext")?.checked,
+          niumaSystemPrompt: String(document.getElementById("studioNiumaSystemPrompt")?.value || "").trim(),
+          niumaInstallRoot: String(document.getElementById("niumaInstallRoot")?.value || "").trim()
+        }
       };
     }
     function csvToArr(v){ return String(v || "").split(",").map(s => s.trim()).filter(Boolean); }
@@ -2718,8 +2724,16 @@ ${keyBadge}
 </div>
 <div class="hint">选服务商后 <strong>Base URL 自动配置</strong>，只需填 API Key 与模型；仅中转/私有网关需选手动指定地址或「自定义」。</div>
 </div>
+<div class="card studio-context-card"><div class="title">Niuma Chat 项目背景（自动注入）</div>
+<div class="row"><div class="label">打开对话时注入</div><div><input id="niumaAutoInjectContext" type="checkbox" data-nosave="1" ${checked((us.options || {}).niumaAutoInjectContext !== false)}></div></div>
+<div class="row"><div class="label">安装根目录（可选）</div><input id="niumaInstallRoot" type="text" data-nosave="1" class="ctl" value="${esc((us.options || {}).niumaInstallRoot || "")}" placeholder="留空则自动识别为当前脚本所在文件夹"></div>
+<div class="hint mini">点击悬浮栏<strong>牛马图标</strong>打开 Niuma Chat 时，自动写入 System Prompt，并附带<strong>本机即时信息</strong>（安装路径、A_ScriptDir、config 路径）。留空下方说明则用 <code>docs/niuma-project-brief.md</code>。</div>
+<textarea id="studioNiumaSystemPrompt" class="studio-ask-input" data-nosave="1" style="min-height:100px" placeholder="可选：覆盖默认项目说明（留空则用内置 Brief）">${esc((us.options || {}).niumaSystemPrompt || "")}</textarea>
+<div class="inline" style="margin-top:8px"><button class="btn" type="button" id="btnReloadNiumaBrief">载入内置 Brief 预览</button></div>
+<div class="hint mini" id="niumaBriefPreviewHint"></div>
+</div>
 <div class="card studio-ask-card"><div class="title">智能提问（Niuma Chat）</div>
-<textarea id="studioAskInput" class="studio-ask-input" data-nosave="1" placeholder="输入你想问的问题，例如：帮我优化当前项目的启动速度…"></textarea>
+<textarea id="studioAskInput" class="studio-ask-input" data-nosave="1" placeholder="输入你想问的问题，例如：帮我改 MiniMax 默认节点 / 优化启动速度…（项目背景已自动注入）"></textarea>
 <div class="studio-ask-actions">
   <button class="btn primary" type="button" id="btnStudioAskSend">开始提问</button>
   <button class="btn" type="button" id="btnStudioOpenChat">打开 Niuma Chat</button>
@@ -2748,6 +2762,9 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         };
         document.getElementById("btnStudioAskSend").addEventListener("click", () => openAsk(true));
         document.getElementById("btnStudioOpenChat").addEventListener("click", () => openAsk(false));
+        document.getElementById("btnReloadNiumaBrief")?.addEventListener("click", () => {
+          post({ type: "invokeAction", op: "loadNiumaProjectBrief" });
+        });
         document.getElementById("btnStudioSyncNiuma").addEventListener("click", () => {
           post({ type: "invokeAction", op: "syncNiumaChatLlmToStudio" });
           setStatus("正在从 Niuma Chat 同步…", "ok");
@@ -3099,6 +3116,14 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       }
       if (msg.type === "openNiumaChatAskResult" && !msg.ok) {
         setStatus(msg.error || "无法打开 Niuma Chat", "err");
+        return;
+      }
+      if (msg.type === "loadNiumaProjectBriefResult") {
+        const el = document.getElementById("studioNiumaSystemPrompt");
+        const hint = document.getElementById("niumaBriefPreviewHint");
+        if (msg.ok && el) el.value = String(msg.text || "");
+        if (hint) hint.textContent = msg.ok ? "已载入内置 Brief，保存 API 后生效。" : (msg.error || "载入失败");
+        setStatus(msg.ok ? "已载入项目 Brief" : (msg.error || "载入失败"), msg.ok ? "ok" : "err");
         return;
       }
       if (msg.type === "syncNiumaChatLlmResult") {

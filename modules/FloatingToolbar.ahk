@@ -1397,10 +1397,28 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ = "drawer_state") {
         open := msg.Has("open") && !!msg["open"]
         global FloatingToolbarChatDrawerOpen, g_FTB_NiumaHandoffOpening
-        if (open = !!FloatingToolbarChatDrawerOpen && !g_FTB_NiumaHandoffOpening)
+        wasOpen := !!FloatingToolbarChatDrawerOpen
+        if (open = wasOpen && !g_FTB_NiumaHandoffOpening) {
+            if open {
+                try FloatingToolbar_PushStudioContextToChat()
+                catch {
+                }
+            }
             return
+        }
         FTB_Debug("drawer_state open=" . open)
         FloatingToolbarSetChatDrawerState(open, g_FTB_NiumaHandoffOpening && open)
+        if open {
+            try FloatingToolbar_PushStudioContextToChat()
+            catch {
+            }
+            llm := FloatingToolbar_GetStudioLlm()
+            if Trim(String(llm.Get("apiKey", ""))) != "" {
+                try FloatingToolbar_PushStudioLlmToChat(llm, "", false)
+                catch {
+                }
+            }
+        }
         return
     }
 
@@ -1440,16 +1458,47 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(FloatingToolbar_PushTtydStudioConfig, -10)
         return
     }
+    if (typ = "niuma_request_studio_context") {
+        try FloatingToolbar_PushStudioContextToChat()
+        catch {
+        }
+        return
+    }
+    if (typ = "niuma_fetch_studio_context") {
+        reqId := Trim(String(msg.Get("reqId", "")))
+        payload := FloatingToolbar_StudioContextPayload()
+        try WebView_QueuePayload(g_FTB_WV2, Map(
+            "type", "niuma_studio_context_result",
+            "reqId", reqId,
+            "ok", true,
+            "autoInjectContext", payload.Get("autoInjectContext", true),
+            "systemPrompt", payload.Get("systemPrompt", ""),
+            "installRoot", payload.Get("installRoot", A_ScriptDir),
+            "scriptDir", payload.Get("scriptDir", A_ScriptDir)
+        ))
+        catch {
+        }
+        return
+    }
     if (typ = "niuma_request_studio_llm") {
         llm := FloatingToolbar_GetStudioLlm()
         ok := false
         err := ""
+        try FloatingToolbar_PushStudioContextToChat()
+        catch {
+        }
         if Trim(String(llm.Get("apiKey", ""))) != "" {
             try FloatingToolbar_PushStudioLlmToChat(llm, "", false)
             ok := true
         } else
             err := "智能定制中未保存 API Key（请在设置中心「智能定制」填写并点「保存 API」）"
-        try WebView_QueuePayload(g_FTB_WV2, Map("type", "studio_llm_sync_result", "ok", ok, "error", err))
+        ctx := Map()
+        if FuncExists("UserStudio_GetNiumaContext") {
+            try ctx := UserStudio_GetNiumaContext()
+            catch {
+            }
+        }
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "studio_llm_sync_result", "ok", ok, "error", err, "niumaContext", ctx))
         catch {
         }
         return
@@ -2221,10 +2270,52 @@ FloatingToolbar_DeferredOpenTtydCustomize(*) {
     }
 }
 
+FloatingToolbar_StudioContextPayload() {
+    if FuncExists("UserStudio_Load")
+        try UserStudio_Load()
+    ctx := Map("autoInject", true, "systemPrompt", "", "installRoot", A_ScriptDir, "scriptDir", A_ScriptDir)
+    if FuncExists("UserStudio_GetNiumaContext") {
+        try ctx := UserStudio_GetNiumaContext()
+        catch {
+        }
+    }
+    return Map(
+        "autoInjectContext", ctx.Get("autoInject", true),
+        "systemPrompt", Trim(String(ctx.Get("systemPrompt", ""))),
+        "installRoot", Trim(String(ctx.Get("installRoot", A_ScriptDir))),
+        "scriptDir", Trim(String(ctx.Get("scriptDir", A_ScriptDir)))
+    )
+}
+
+FloatingToolbar_PushStudioContextToChat() {
+    global g_FTB_WV2
+    if !g_FTB_WV2
+        return
+    payload := FloatingToolbar_StudioContextPayload()
+    try WebView_QueuePayload(g_FTB_WV2, Map(
+        "type", "host_push_studio_context",
+        "autoInjectContext", payload.Get("autoInjectContext", true),
+        "systemPrompt", payload.Get("systemPrompt", ""),
+        "installRoot", payload.Get("installRoot", A_ScriptDir),
+        "scriptDir", payload.Get("scriptDir", A_ScriptDir)
+    ))
+    catch {
+    }
+}
+
 FloatingToolbar_PushStudioLlmToChat(llm, prompt := "", autoSend := false) {
     global g_FTB_WV2
     if !g_FTB_WV2 || !(llm is Map)
         return
+    try FloatingToolbar_PushStudioContextToChat()
+    catch {
+    }
+    ctx := Map("autoInject", true, "systemPrompt", "")
+    if FuncExists("UserStudio_GetNiumaContext") {
+        try ctx := UserStudio_GetNiumaContext()
+        catch {
+        }
+    }
     try WebView_QueuePayload(g_FTB_WV2, Map(
         "type", "host_apply_studio_llm",
         "llm", Map(
@@ -2234,7 +2325,9 @@ FloatingToolbar_PushStudioLlmToChat(llm, prompt := "", autoSend := false) {
             "model", llm.Get("model", "")
         ),
         "prompt", Trim(String(prompt)),
-        "autoSend", !!autoSend
+        "autoSend", !!autoSend,
+        "autoInjectContext", ctx.Get("autoInject", true),
+        "systemPrompt", Trim(String(ctx.Get("systemPrompt", "")))
     ))
     catch {
     }
