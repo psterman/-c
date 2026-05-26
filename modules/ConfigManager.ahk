@@ -580,9 +580,9 @@ InitConfig() {
             }
             TrySetTrayIconHighQuality()
             ; 验证值是否有效，如果无效则使用默认值
-            if (DefaultStartTab != "general" && DefaultStartTab != "appearance" && DefaultStartTab != "prompts" && DefaultStartTab != "hotkeys" && DefaultStartTab != "advanced" && DefaultStartTab != "search") {
+            validStartTabs := Map("general", true, "appearance", true, "prompts", true, "hotkeys", true, "advanced", true, "search", true, "screenshot", true, "customize", true)
+            if !validStartTabs.Has(DefaultStartTab)
                 DefaultStartTab := "general"
-            }
             
             ; 加载启用的搜索标签
             global VoiceSearchEnabledCategories

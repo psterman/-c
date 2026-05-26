@@ -1442,7 +1442,6 @@
     const setStatus = (text, cls = "") => { const el = document.getElementById("status"); el.textContent = text; el.className = cls; };
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[ch]));
     const checked = (v) => v ? "checked" : "";
-    let autoSaveTimer = 0;
     let suppressAutoSave = true;
     let initDataReceived = false;
     let saveInFlight = false;
@@ -1463,10 +1462,13 @@
       };
       try { return JSON.stringify(sortObj(v)); } catch { return ""; }
     }
-    function tryAutoSaveNow(){
+    function tryAutoSaveNow(silent = false){
       const d = readFromUI();
       const err = validate(d);
-      if (err) return setStatus(err, "err");
+      if (err) {
+        if (!silent) setStatus(err, "err");
+        return;
+      }
       const hash = stableStringify(d);
       if (!hash) return;
       if (hash === lastSavedHash || hash === lastSentHash) return;
@@ -1477,14 +1479,26 @@
       saveInFlight = true;
       lastSentHash = hash;
       pendingSaveHash = "";
-      setStatus("自动保存中...");
+      if (!silent) setStatus("自动保存中...");
       post({ type: "saveSettings", payload: d });
     }
-    function scheduleAutoSave(delay = 250){
+    let settingsPersistTimer = 0;
+    function scheduleSettingsPersist(silent = true) {
       if (suppressAutoSave || !initDataReceived) return;
-      if (autoSaveTimer) clearTimeout(autoSaveTimer);
-      autoSaveTimer = setTimeout(() => { tryAutoSaveNow(); }, delay);
+      if (settingsPersistTimer) clearTimeout(settingsPersistTimer);
+      settingsPersistTimer = setTimeout(() => {
+        settingsPersistTimer = 0;
+        tryAutoSaveNow(silent);
+      }, 500);
     }
+    function flushSettingsTab() {
+      if (settingsPersistTimer) {
+        clearTimeout(settingsPersistTimer);
+        settingsPersistTimer = 0;
+      }
+      tryAutoSaveNow(true);
+    }
+    window.__nmerFlushSettingsTab = flushSettingsTab;
     function scheduleSaveAppearanceActivationMode(delay = 120) {
       if (activationModeSaveTimer) clearTimeout(activationModeSaveTimer);
       activationModeSaveTimer = setTimeout(() => {
@@ -1886,9 +1900,9 @@
         label: "OpenAI",
         baseUrl: "https://api.openai.com/v1",
         model: "gpt-4o-mini",
-        models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1"],
+        models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "gpt-5.4-mini", "gpt-5.4", "gpt-5.4-nano", "gpt-5-chat-latest"],
         keyPh: "sk-…",
-        hint: "OpenAI 官方 API；Codex 兼容接口也可选此项并填同一类 Key。"
+        hint: "OpenAI 官方 API；默认推荐 gpt-4o-mini（配额较稳）。若测试报 HTTP 429 多为限流，请间隔 30～60 秒再测，勿连续切换模型后连点「测试 API」。"
       },
       minimax: {
         label: "MiniMax",
@@ -1920,7 +1934,7 @@
         model: "kimi-k2.6",
         models: ["kimi-k2.6", "moonshot-v1-8k", "kimi-k2-thinking", "kimi-k2.5", "kimi-k2-turbo-preview"],
         keyPh: "Moonshot API Key（sk-…）",
-        hint: "官方文档：国内 Base URL https://api.moonshot.cn/v1（密钥在 platform.moonshot.cn）；国际 https://api.moonshot.ai/v1（platform.kimi.ai）。端点 POST …/v1/chat/completions。测试连通建议先用 kimi-k2.6 或 moonshot-v1-8k。"
+        hint: "官方文档：国内 Base URL https://api.moonshot.cn/v1（密钥在 platform.moonshot.cn）；国际 https://api.moonshot.ai/v1（platform.kimi.ai）。端点 POST …/v1/chat/completions。默认优先使用最新 kimi-k2.6。"
       },
       claude: {
         label: "Claude（Anthropic）",
@@ -2071,7 +2085,8 @@
       const keys = getStudioLlmApiKeys();
       if (keys[pid]) return keys[pid];
       const llm = state.data.userStudio?.llm || {};
-      if (normalizeStudioLlmProvider(llm.provider) === pid && llm.apiKey)
+      const llmProv = normalizeStudioLlmProvider(llm.provider);
+      if (llmProv === pid && llm.apiKey)
         return normalizeStudioApiKey(llm.apiKey);
       return "";
     }
@@ -2438,8 +2453,19 @@
       }
       const mergedLlm = { ...(prev.llm || {}), ...(pl.llm || {}) };
       const prov = normalizeStudioLlmProvider(mergedLlm.provider || "openai");
-      if (!normalizeStudioApiKey(mergedLlm.apiKey || "") && mergedKeys[prov])
-        mergedLlm.apiKey = mergedKeys[prov];
+      const prevProv = normalizeStudioLlmProvider(prev.llm?.provider || prov);
+      const slotKey = mergedKeys[prov] || "";
+      if (slotKey) {
+        mergedLlm.apiKey = slotKey;
+      } else {
+        const rawKey = normalizeStudioApiKey(mergedLlm.apiKey || "");
+        if (rawKey && prevProv === prov) {
+          mergedKeys[prov] = rawKey;
+          mergedLlm.apiKey = rawKey;
+        } else {
+          mergedLlm.apiKey = "";
+        }
+      }
       state.data.userStudio = {
         ...prev,
         ...pl,
@@ -2468,9 +2494,122 @@
       const nextPid = normalizeStudioLlmProvider(provEl.value);
       state._studioManualBaseUrl = isStudioManualBaseUrlFor(nextPid);
       state._studioLastProv = nextPid;
-      mergeUserStudioState({ llm: { provider: nextPid } });
+      mergeUserStudioState({ llm: { provider: nextPid, apiKey: getStudioApiKeyForProvider(nextPid) } });
       applyStudioLlmPresetUi(false);
     }
+
+    let studioLlmPersistTimer = 0;
+    let studioLlmPersistInFlight = false;
+    let studioLlmPersistQueued = false;
+
+    function buildStudioLlmSavePayloadFromState() {
+      const us = state.data.userStudio || {};
+      const llm = { ...(us.llm || {}) };
+      const keys = { ...getStudioLlmApiKeys() };
+      const prov = normalizeStudioLlmProvider(llm.provider || "openai");
+      const keyEl = document.getElementById("usLlmApiKey");
+      if (keyEl) {
+        const cur = normalizeStudioApiKey(keyEl.value || "");
+        if (cur) keys[prov] = cur;
+      }
+      if (keys[prov]) llm.apiKey = keys[prov];
+      else llm.apiKey = normalizeStudioApiKey(llm.apiKey || "");
+      llm.provider = prov;
+      return {
+        llm,
+        paths: { ...(us.paths || {}) },
+        options: {
+          ...(us.options || {}),
+          llmApiKeys: keys,
+          llmBaseUrls: getStudioLlmBaseUrls(),
+          llmManualBaseUrl: getStudioLlmManualFlags()
+        }
+      };
+    }
+
+    function buildStudioLlmSavePayload() {
+      if (document.getElementById("usLlmApiKey")) {
+        stashStudioApiKeyFromDom();
+        stashStudioBaseUrlFromDom();
+        return collectUserStudioPayload();
+      }
+      return buildStudioLlmSavePayloadFromState();
+    }
+
+    function shouldPersistStudioLlmPayload(pl) {
+      const prov = normalizeStudioLlmProvider(pl?.llm?.provider);
+      const keys = pl?.options?.llmApiKeys || {};
+      const hasAnyKey = Object.keys(keys).some((k) => normalizeStudioApiKey(keys[k]));
+      const curKey = normalizeStudioApiKey(pl?.llm?.apiKey || "");
+      return prov === "ollama" || !!curKey || hasAnyKey;
+    }
+
+    function postStudioLlmSave(pl, silent) {
+      if (!shouldPersistStudioLlmPayload(pl)) return false;
+      mergeUserStudioState(pl);
+      state._studioLlmPersistSilent = !!silent;
+      studioLlmPersistInFlight = true;
+      post({ type: "saveUserStudio", payload: pl });
+      return true;
+    }
+
+    function flushStudioLlmPending() {
+      if (studioLlmPersistTimer) {
+        clearTimeout(studioLlmPersistTimer);
+        studioLlmPersistTimer = 0;
+      }
+      const pl = buildStudioLlmSavePayload();
+      if (!shouldPersistStudioLlmPayload(pl)) return;
+      if (studioLlmPersistInFlight) {
+        studioLlmPersistQueued = true;
+        return;
+      }
+      postStudioLlmSave(pl, true);
+    }
+
+    function persistStudioLlmToDisk(options = {}) {
+      const { silent = true, immediate = false } = options;
+      const run = () => {
+        studioLlmPersistTimer = 0;
+        const pl = buildStudioLlmSavePayload();
+        if (!shouldPersistStudioLlmPayload(pl)) return;
+        if (studioLlmPersistInFlight) {
+          studioLlmPersistQueued = true;
+          return;
+        }
+        if (postStudioLlmSave(pl, silent) && !silent) setStatus("正在保存 API 配置…", "ok");
+      };
+      if (immediate) {
+        if (studioLlmPersistTimer) {
+          clearTimeout(studioLlmPersistTimer);
+          studioLlmPersistTimer = 0;
+        }
+        run();
+        return;
+      }
+      if (studioLlmPersistTimer) clearTimeout(studioLlmPersistTimer);
+      studioLlmPersistTimer = setTimeout(run, 400);
+    }
+
+    function leaveActiveTab(tabId) {
+      if (tabId === "appearance") {
+        captureAppearanceTabState();
+        flushHoleSettingsSaveNow();
+        return;
+      }
+      if (tabId === "customize") {
+        captureCustomizeTabState();
+        flushStudioLlmPending();
+        return;
+      }
+      try {
+        state.data = readFromUI();
+      } catch (_) {}
+      scheduleSettingsPersist(true);
+    }
+
+    window.flushStudioLlmPending = flushStudioLlmPending;
+    window.__nmerFlushStudioLlm = flushStudioLlmPending;
 
     function ensureStudioLlmDelegatedEvents() {
       if (state._studioLlmDelegated) return;
@@ -2485,9 +2624,14 @@
         const provEl = document.getElementById("usLlmProvider");
         if (provEl) stashStudioApiKeyForProvider(provEl.value, e.target.value);
       });
+      panel.addEventListener("focusout", (e) => {
+        if (e.target?.id !== "usLlmApiKey") return;
+        captureCustomizeTabState();
+        flushStudioLlmPending();
+      });
     }
 
-    /** 离开智能定制标签前：把表单（含 API Key）写入内存，避免 render 重建后丢失 */
+    /** 离开智能定制标签前：先把表单写入内存（落盘由 leaveActiveTab / blur / 关闭时触发） */
     function captureCustomizeTabState() {
       if (!document.getElementById("usLlmApiKey")) return;
       stashStudioApiKeyFromDom();
@@ -3042,10 +3186,10 @@
         const ov = us.overview || {};
         const provId = normalizeStudioLlmProvider(llm.provider);
         const slotKey = getStudioApiKeyForProvider(provId);
-        const hasKey = !!(slotKey || String(llm.apiKey || "").trim());
+        const hasKey = !!slotKey;
         const keyBadge = hasKey
-          ? `<span class="studio-key-badge ok">已读取 API：${esc(ov.llmKeyMasked || (slotKey ? "已配置（分槽）" : "已配置"))} · ${esc(llm.model || provId || "")}</span>`
-          : `<span class="studio-key-badge">尚未配置 API Key（填写后请先点「保存 API」，再点「测试 API」）</span>`;
+          ? `<span class="studio-key-badge ok">已读取 API：${esc(ov.llmKeyMasked || "已配置（分槽）")} · ${esc(llm.model || provId || "")}</span>`
+          : `<span class="studio-key-badge">尚未配置 API Key（填写后会自动保存，再点「测试 API」验证）</span>`;
         const pathRow = (id, label, val) =>
           `<div class="row"><div class="label">${label}</div><div class="inline" style="flex:1"><input id="usPath_${id}" type="text" data-nosave="1" value="${esc(val || "")}" placeholder="留空则使用系统默认"><button class="btn us-browse" data-us-field="${id}">浏览</button></div></div>`;
         const provPre = studioLlmPreset(provId);
@@ -3053,7 +3197,7 @@
 <div class="card studio-api-card"><div class="title">大模型 API</div>
 ${keyBadge}
 <div class="row"><div class="label">服务商</div><select id="usLlmProvider" data-nosave="1">${studioLlmProviderOptions(provId)}</select></div>
-<div class="row"><div class="label">API Key</div><input id="usLlmApiKey" type="password" data-nosave="1" value="${esc(slotKey || llm.apiKey || "")}" placeholder="${esc(provPre.keyPh || "API Key")}" autocomplete="off"></div>
+<div class="row"><div class="label">API Key</div><input id="usLlmApiKey" type="password" data-nosave="1" value="${esc(slotKey)}" placeholder="${esc(provPre.keyPh || "API Key")}" autocomplete="off"></div>
 <div class="row" id="usLlmBaseUrlAutoRow"><div class="label">接口地址</div><div class="studio-url-auto" id="usLlmBaseUrlAuto">自动使用官方接口，无需填写</div><input id="usLlmBaseUrl" type="hidden" data-nosave="1" value="${esc(resolveStudioBaseUrl(provId, llm.baseUrl))}"><a href="#" class="studio-url-manual-link" id="usLlmBaseUrlManualLink">使用中转 / 私有网关？手动指定地址</a></div>
 <div class="row" id="usLlmBaseUrlManualRow" style="display:none"><div class="label">Base URL（手动）</div><input id="usLlmBaseUrlManual" type="text" class="ctl" data-nosave="1" value="${esc(llm.baseUrl || "")}" placeholder="https://你的中转地址/v1"></div>
 <div class="row"><div class="label">模型</div><select id="usLlmModel" class="ctl" data-nosave="1"></select></div>
@@ -3064,7 +3208,7 @@ ${keyBadge}
   <button class="btn" type="button" id="btnTestUserStudio">测试 API</button>
   <button class="btn" type="button" id="btnStudioSyncNiuma">从 Niuma Chat 同步</button>
 </div>
-<div class="hint">各服务商 <strong>API Key 分槽保存</strong>，切换下拉框只显示该服务商的密钥，不会互相覆盖；切换前会自动记住当前框内的 Key。填好后请点「保存 API」。</div>
+<div class="hint">各服务商 <strong>API Key 分槽保存</strong>（<code>options.llmApiKeys</code>），切换下拉只显示对应密钥，互不覆盖；填写后会写入 <code>config/user_studio.json</code>，重启后仍保留。</div>
 </div>
 <div class="card studio-context-card"><div class="title">Niuma Chat 项目背景（自动注入）</div>
 <div class="row"><div class="label">打开对话时注入</div><div><input id="niumaAutoInjectContext" type="checkbox" data-nosave="1" ${checked((us.options || {}).niumaAutoInjectContext !== false)}></div></div>
@@ -3108,6 +3252,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           post({ type: "invokeAction", op: "loadNiumaProjectBrief" });
         });
         document.getElementById("btnStudioSyncNiuma").addEventListener("click", () => {
+          state._studioSyncManual = true;
           post({ type: "invokeAction", op: "syncNiumaChatLlmToStudio" });
           setStatus("正在从 Niuma Chat 同步…", "ok");
         });
@@ -3115,16 +3260,29 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           post({ type: "browseUserStudioPath", field: btn.getAttribute("data-us-field") });
         }));
         document.getElementById("btnSaveUserStudio")?.addEventListener("click", () => {
+          captureCustomizeTabState();
           const pl = collectUserStudioPayload();
           const prov = normalizeStudioLlmProvider(pl.llm?.provider);
           if (prov !== "ollama" && !String(pl.llm?.apiKey || "").trim()) {
             setStatus("请填写 API Key 后再保存", "err");
             return;
           }
-          post({ type: "saveUserStudio", payload: pl });
+          postStudioLlmSave(pl, false);
           setStatus("保存中…", "ok");
         });
         document.getElementById("btnTestUserStudio")?.addEventListener("click", () => {
+          const now = Date.now();
+          if (state._studioTestInFlight) {
+            setStatus("API 测试进行中，请稍候…", "ok");
+            return;
+          }
+          if (state._studioTestLastAt && now - state._studioTestLastAt < 12000) {
+            const waitSec = Math.ceil((12000 - (now - state._studioTestLastAt)) / 1000);
+            setStatus(`测试过于频繁，请 ${waitSec} 秒后再试（避免 OpenAI 429 限流）`, "err");
+            return;
+          }
+          state._studioTestInFlight = true;
+          state._studioTestLastAt = now;
           stashStudioApiKeyFromDom();
           stashStudioBaseUrlFromDom();
           mergeUserStudioState(collectUserStudioPayload());
@@ -3168,10 +3326,6 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           setStatus("正在保存并打开终端定制…", "ok");
         });
         const askEl = document.getElementById("studioAskInput");
-        if (!hasKey && !slotKey && !state._studioSyncTried) {
-          state._studioSyncTried = true;
-          setTimeout(() => post({ type: "invokeAction", op: "syncNiumaChatLlmToStudio" }), 800);
-        }
         if (askEl) {
           askEl.addEventListener("keydown", (e) => {
             if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
@@ -3179,12 +3333,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
               openAsk(true);
             }
           });
-          if (hasKey && !state._studioAutoOpenedChat) {
-            state._studioAutoOpenedChat = true;
-            setTimeout(() => openAsk(false), 500);
-          } else {
-            try { askEl.focus(); } catch (_) {}
-          }
+          try { askEl.focus(); } catch (_) {}
         }
       } else if (state.activeTab === "advanced") {
         const aiSec = (Number(d.aiSleepTime || 200) / 1000).toFixed(2).replace(/\.?0+$/, "");
@@ -3354,13 +3503,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
     }
     document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => {
       const nextTab = btn.dataset.tab;
-      if (state.activeTab === "appearance" && nextTab !== "appearance") {
-        captureAppearanceTabState();
-        flushHoleSettingsSaveNow();
-      }
-      if (state.activeTab === "customize" && nextTab !== "customize") {
-        captureCustomizeTabState();
-      }
+      if (nextTab !== state.activeTab) leaveActiveTab(state.activeTab);
       state.activeTab = nextTab;
       state.data = readFromUI();
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -3375,7 +3518,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       if (!t || !(t.matches?.("input,textarea,select"))) return;
       if (t.name === "activationMode") return;
       if (t.dataset?.nosave === "1") return;
-      scheduleAutoSave();
+      scheduleSettingsPersist(true);
     });
     panelRoot.addEventListener("change", (e) => {
       const t = e.target;
@@ -3394,13 +3537,28 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         applyWebTheme(t.value);
         try { localStorage.setItem("settings_themeMode", t.value); } catch (_) {}
       }
+      if (t.id === "defaultStartTab") {
+        state.data.defaultStartTab = t.value;
+      }
       if (t.dataset?.nosave === "1") return;
-      scheduleAutoSave(50);
+      scheduleSettingsPersist(true);
     });
     document.getElementById("btn-open-legacy").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacySettings" }));
     document.getElementById("btn-open-compare").addEventListener("click", () => post({ type: "invokeAction", op: "openCompareSettings" }));
-    document.getElementById("btn-cancel").addEventListener("click", () => post({ type: "cancel" }));
-    document.getElementById("btn-save").addEventListener("click", () => { const d = readFromUI(); const err = validate(d); if (err) return setStatus(err, "err"); post({ type: "saveSettings", payload: d }); });
+    document.getElementById("btn-cancel").addEventListener("click", () => {
+      leaveActiveTab(state.activeTab);
+      flushStudioLlmPending();
+      flushSettingsTab();
+      post({ type: "cancel" });
+    });
+    document.getElementById("btn-save").addEventListener("click", () => {
+      leaveActiveTab(state.activeTab);
+      flushStudioLlmPending();
+      const d = readFromUI();
+      const err = validate(d);
+      if (err) return setStatus(err, "err");
+      post({ type: "saveSettings", payload: d });
+    });
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       e.preventDefault();
@@ -3459,17 +3617,26 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         return;
       }
       if (msg.type === "testUserStudioLlmResult") {
+        state._studioTestInFlight = false;
         const ms = msg.elapsedMs ? `（${msg.elapsedMs}ms）` : "";
         setStatus(msg.ok ? `API 测试通过${ms}` : (msg.error || "API 测试失败"), msg.ok ? "ok" : "err");
         if (msg.ok) captureCustomizeTabState();
         return;
       }
       if (msg.type === "saveUserStudioResult") {
-        setStatus(msg.ok ? "智能定制已保存" : (msg.error || "保存失败"), msg.ok ? "ok" : "err");
-        if (msg.ok) {
-          if (msg.userStudio && typeof msg.userStudio === "object") mergeUserStudioState(msg.userStudio);
-          else captureCustomizeTabState();
-          if (state.activeTab === "customize") render();
+        studioLlmPersistInFlight = false;
+        const silent = !!state._studioLlmPersistSilent;
+        state._studioLlmPersistSilent = false;
+        if (!silent) {
+          setStatus(msg.ok ? "智能定制已保存" : (msg.error || "保存失败"), msg.ok ? "ok" : "err");
+          if (msg.ok && state.activeTab === "customize") render();
+        } else if (!msg.ok) {
+          setStatus(msg.error || "API 配置保存失败", "err");
+        }
+        if (msg.ok && msg.userStudio && typeof msg.userStudio === "object") mergeUserStudioState(msg.userStudio);
+        if (studioLlmPersistQueued) {
+          studioLlmPersistQueued = false;
+          setTimeout(() => flushStudioLlmPending(), 50);
         }
         if (msg.ok && state._ttydAfterStudioSave) {
           const opts = state._ttydAfterStudioSave;
@@ -3525,22 +3692,13 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       }
       if (msg.type === "syncNiumaChatLlmResult") {
         if (msg.ok && msg.userStudio) mergeUserStudioState(msg.userStudio);
-        setStatus(msg.ok ? "已从 Niuma Chat 同步 API" : (msg.error || "同步失败"), msg.ok ? "ok" : "err");
-        if (msg.ok && msg.userStudio && state.activeTab === "customize") {
-          const syncedKey = !!(String((msg.userStudio.llm || {}).apiKey || "").trim());
-          if (syncedKey && !state._studioAutoOpenedChat) {
-            state._studioAutoOpenedChat = true;
-            setTimeout(() => {
-              post({
-                type: "openNiumaChatAsk",
-                prompt: (document.getElementById("studioAskInput")?.value || "").trim(),
-                autoSend: false,
-                payload: collectUserStudioPayload()
-              });
-            }, 350);
-          }
+        if (msg.ok) {
+          setStatus("已从 Niuma Chat 同步 API", "ok");
+          if (state.activeTab === "customize") render();
+        } else if (state._studioSyncManual) {
+          setStatus(msg.error || "同步失败", "err");
         }
-        if (state.activeTab === "customize") render();
+        state._studioSyncManual = false;
         return;
       }
       if (msg.type === "fulltextStatus") {
@@ -3587,12 +3745,11 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         saveInFlight = false;
         if (msg.ok) {
           lastSavedHash = lastSentHash || stableStringify(readFromUI());
-          setStatus("保存成功", "ok");
           if (pendingSaveHash && pendingSaveHash !== lastSavedHash) {
-            scheduleAutoSave(10);
+            scheduleSettingsPersist(true);
           }
-        } else {
-          setStatus(msg.error || "保存失败", "err");
+        } else if (msg.error) {
+          setStatus(msg.error, "err");
         }
         return;
       }
@@ -3615,8 +3772,14 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         return;
       }
       if (msg.type === "actionResult") {
-        setStatus(msg.ok ? "操作成功" : (msg.error || "操作失败"), msg.ok ? "ok" : "err");
-        if (msg.ok && state.activeTab === "customize") render();
+        const op = String(msg.op || "");
+        if (op === "syncNiumaChatLlmToStudio" || op === "loadNiumaProjectBrief") return;
+        if (msg.ok) {
+          setStatus("操作成功", "ok");
+          if (state.activeTab === "customize") render();
+        } else if (msg.error) {
+          setStatus(msg.error, "err");
+        }
       }
     }
     loadCustomCategories();

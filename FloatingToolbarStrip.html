@@ -682,7 +682,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       '牛马 nmer 核心：CapsLock 工作流中枢、剪贴板、SearchCenter 搜索、截图、Prompt、悬浮工具栏、Niuma Chat 多模型对话、智能定制(user_studio.json)、可选 ttyd/OpenClaw。' +
       '主入口 CursorHelper (1).ahk，模块 modules/*.ahk，对话 UI 为本页 FloatingToolbarStrip.html。',
     P = {
-      openai: { label: 'OpenAI', transport: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini', models: ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini', 'gpt-4o'] },
+      openai: { label: 'OpenAI', transport: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1', 'gpt-5.4-mini', 'gpt-5.4', 'gpt-5.4-nano', 'gpt-5-chat-latest'] },
       codex_cli: { label: 'Codex CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7681/', model: '', models: [] },
       gemini_cli: { label: 'Gemini CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7682/', model: '', models: [] },
       openclaw_cli: { label: 'OpenClaw CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7683/', model: '', models: [] },
@@ -3953,6 +3953,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       applyProvider(pid, true);
       if (d.baseUrl) baseUrl.value = d.baseUrl;
       if (d.model) model.value = d.model;
+      if (pid === 'kimi' && /^moonshot-v1-8k$/i.test(String(model.value || '').trim())) {
+        model.value = 'kimi-k2.6';
+      }
       fillModels(pid, model.value.trim());
       var s0 = createSessionFromForm();
       state.sessions = [s0];
@@ -4225,6 +4228,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     hostOpts = hostOpts || {};
     llm = llm || {};
     applyStudioContextFromHost(hostOpts.autoInjectContext !== false, hostOpts.systemPrompt, true);
+    if (hostOpts.apiKeys && typeof hostOpts.apiKeys === 'object') {
+      if (!state.apiKeys) state.apiKeys = {};
+      Object.keys(hostOpts.apiKeys).forEach(function (k) {
+        var nk = normalizeProviderId(k);
+        var vv = trimApiKey(hostOpts.apiKeys[k]);
+        if (vv) state.apiKeys[nk] = vv;
+      });
+    }
     var key = String(llm.apiKey || '').trim();
     if (!key) {
       var found = findAnyStoredApiKey();
@@ -9015,7 +9026,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         setTtydCustomize(false);
         applyStudioLlmFromPayload(d.llm || {}, d.prompt || '', !!d.autoSend, {
           autoInjectContext: d.autoInjectContext,
-          systemPrompt: d.systemPrompt
+          systemPrompt: d.systemPrompt,
+          apiKeys: d.apiKeys || {}
         });
         if (state.settings) {
           var ep = pickSettingsEditProvider();

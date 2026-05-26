@@ -3520,7 +3520,7 @@ SCWV_OnWebMessage(sender, args) {
                 g_ConfigWebView_OneShotDefaultTab := ""
                 if (msg.Has("defaultStartTab")) {
                     tab := Trim(String(msg["defaultStartTab"]))
-                    validTabs := Map("general", true, "appearance", true, "prompts", true, "hotkeys", true, "advanced", true, "screenshot", true, "search", true)
+                    validTabs := Map("general", true, "appearance", true, "prompts", true, "hotkeys", true, "advanced", true, "screenshot", true, "search", true, "customize", true)
                     if (tab != "" && validTabs.Has(tab))
                         g_ConfigWebView_OneShotDefaultTab := tab
                 }

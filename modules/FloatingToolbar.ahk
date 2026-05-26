@@ -2529,10 +2529,52 @@ FloatingToolbar_GetStudioLlm() {
             doc := UserStudio_Get()
             if (doc.Has("llm") && doc["llm"] is Map)
                 llm := doc["llm"]
+            if (Trim(String(llm.Get("apiKey", ""))) = "") {
+                opt := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
+                if (opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map) {
+                    for k, v in opt["llmApiKeys"] {
+                        vk := UserStudio_NormalizeApiKey(v)
+                        if (vk = "")
+                            continue
+                        llm["provider"] := UserStudio_NormalizeLlmProvider(k)
+                        llm["apiKey"] := vk
+                        pre := UserStudio_LlmPresetFor(llm["provider"])
+                        if (Trim(String(llm.Get("baseUrl", ""))) = "")
+                            llm["baseUrl"] := pre.Get("baseUrl", "")
+                        if (Trim(String(llm.Get("model", ""))) = "")
+                            llm["model"] := pre.Get("model", "")
+                        break
+                    }
+                }
+            }
         } catch {
         }
     }
     return llm
+}
+
+FloatingToolbar_GetStudioApiKeys() {
+    keys := Map()
+    if FuncExists("UserStudio_Load")
+        try UserStudio_Load()
+        catch {
+        }
+    if FuncExists("UserStudio_Get") {
+        try {
+            doc := UserStudio_Get()
+            opt := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
+            if (opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map) {
+                for k, v in opt["llmApiKeys"] {
+                    pk := UserStudio_NormalizeLlmProvider(k)
+                    vk := UserStudio_NormalizeApiKey(v)
+                    if (vk != "")
+                        keys[pk] := vk
+                }
+            }
+        } catch {
+        }
+    }
+    return keys
 }
 
 FloatingToolbar_PushStudioLlmOnReady(*) {
@@ -2626,6 +2668,7 @@ FloatingToolbar_PushStudioLlmToChat(llm, prompt := "", autoSend := false) {
         catch {
         }
     }
+    syncKeys := FloatingToolbar_GetStudioApiKeys()
     try WebView_QueuePayload(g_FTB_WV2, Map(
         "type", "host_apply_studio_llm",
         "llm", Map(
@@ -2634,6 +2677,7 @@ FloatingToolbar_PushStudioLlmToChat(llm, prompt := "", autoSend := false) {
             "baseUrl", llm.Get("baseUrl", ""),
             "model", llm.Get("model", "")
         ),
+        "apiKeys", syncKeys,
         "prompt", Trim(String(prompt)),
         "autoSend", !!autoSend,
         "autoInjectContext", ctx.Get("autoInject", true),

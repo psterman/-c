@@ -139,7 +139,9 @@ UserStudio_BaseUrlMatchesProvider(prov, url) {
         case "deepseek":
             return InStr(low, "deepseek")
         case "openai":
-            return InStr(low, "api.openai.com")
+            return InStr(low, "api.openai.com") || InStr(low, "openai.azure.com")
+                || (InStr(low, "azure.com") && InStr(low, "openai"))
+                || InStr(low, "cognitiveservices.azure.com")
         case "minimax":
             return InStr(low, "minimax")
         case "gemini":
@@ -442,18 +444,37 @@ UserStudio_MergeLlmFromNiumaSync(doc) {
         sync := Jxon_Load(raw)
         if !(sync is Map)
             return doc
-        llmIn := sync.Has("llm") && sync["llm"] is Map ? sync["llm"] : sync
-        key := Trim(String(llmIn.Get("apiKey", "")))
-        if (key = "")
-            return doc
         if !doc.Has("llm") || !(doc["llm"] is Map)
             doc["llm"] := Map()
-        doc["llm"]["apiKey"] := key
-        if Trim(String(llmIn.Get("provider", ""))) != ""
-            doc["llm"]["provider"] := Trim(String(llmIn["provider"]))
-        if Trim(String(llmIn.Get("baseUrl", ""))) != ""
+        if !doc.Has("options") || !(doc["options"] is Map)
+            doc["options"] := Map()
+        doc["options"] := UserStudio_NormalizeNiumaOptions(doc["options"])
+        llmIn := sync.Has("llm") && sync["llm"] is Map ? sync["llm"] : sync
+        syncProv := UserStudio_NormalizeLlmProvider(llmIn.Get("provider", doc["llm"].Get("provider", "openai")))
+        keys := doc["options"].Has("llmApiKeys") && doc["options"]["llmApiKeys"] is Map ? doc["options"]["llmApiKeys"] : Map()
+        if (sync.Has("apiKeys") && sync["apiKeys"] is Map) {
+            for k, v in sync["apiKeys"] {
+                pk := UserStudio_NormalizeLlmProvider(k)
+                vk := UserStudio_NormalizeApiKey(v)
+                if (vk != "")
+                    keys[pk] := vk
+            }
+        }
+        key := UserStudio_NormalizeApiKey(llmIn.Get("apiKey", ""))
+        if (key != "")
+            keys[syncProv] := key
+        doc["options"]["llmApiKeys"] := keys
+        curProv := UserStudio_NormalizeLlmProvider(doc["llm"].Get("provider", "openai"))
+        curKey := UserStudio_NormalizeApiKey(doc["llm"].Get("apiKey", ""))
+        if (curKey = "" && keys.Has(curProv))
+            doc["llm"]["apiKey"] := keys[curProv]
+        else if (curKey = "" && keys.Has(syncProv))
+            doc["llm"]["apiKey"] := keys[syncProv]
+        if (doc["llm"].Get("provider", "") = "")
+            doc["llm"]["provider"] := syncProv
+        if (Trim(String(doc["llm"].Get("baseUrl", ""))) = "" && Trim(String(llmIn.Get("baseUrl", ""))) != "")
             doc["llm"]["baseUrl"] := Trim(String(llmIn["baseUrl"]))
-        if Trim(String(llmIn.Get("model", ""))) != ""
+        if (Trim(String(doc["llm"].Get("model", ""))) = "" && Trim(String(llmIn.Get("model", ""))) != "")
             doc["llm"]["model"] := Trim(String(llmIn["model"]))
         doc := UserStudio_NormalizeDoc(doc)
     } catch {
@@ -461,11 +482,33 @@ UserStudio_MergeLlmFromNiumaSync(doc) {
     return doc
 }
 
-UserStudio_WriteNiumaLlmSync(llm) {
-    if !(llm is Map)
+UserStudio_WriteNiumaLlmSync(docOrLlm) {
+    if !(docOrLlm is Map)
         return
+    llm := docOrLlm
+    apiKeys := Map()
+    if (docOrLlm.Has("llm") && docOrLlm["llm"] is Map)
+        llm := docOrLlm["llm"]
+    if (docOrLlm.Has("options") && docOrLlm["options"] is Map) {
+        opt := UserStudio_NormalizeNiumaOptions(docOrLlm["options"])
+        if (opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map) {
+            for k, v in opt["llmApiKeys"] {
+                pk := UserStudio_NormalizeLlmProvider(k)
+                vk := UserStudio_NormalizeApiKey(v)
+                if (vk != "")
+                    apiKeys[pk] := vk
+            }
+        }
+    }
     UserStudio_EnsureConfigDir()
     key := Trim(String(llm.Get("apiKey", "")))
+    if (key = "" && apiKeys.Count = 0)
+        return
+    if (key = "") {
+        prov := UserStudio_NormalizeLlmProvider(llm.Get("provider", "openai"))
+        if apiKeys.Has(prov)
+            key := apiKeys[prov]
+    }
     if (key = "")
         return
     try {
@@ -479,6 +522,7 @@ UserStudio_WriteNiumaLlmSync(llm) {
                 "baseUrl", llm.Get("baseUrl", ""),
                 "model", llm.Get("model", "")
             ),
+            "apiKeys", apiKeys,
             "updatedAt", FormatTime(, "yyyy-MM-dd HH:mm:ss")
         )))
         f.Close()
@@ -579,12 +623,64 @@ UserStudio_ApplyPathsToGlobals(doc) {
     }
 }
 
+UserStudio_EnsureDocStructure(&doc) {
+    if !(doc is Map)
+        doc := Map()
+    if !doc.Has("llm") || !(doc["llm"] is Map)
+        doc["llm"] := Map("provider", "openai", "apiKey", "", "baseUrl", "", "model", "")
+    if !doc.Has("paths") || !(doc["paths"] is Map)
+        doc["paths"] := Map("cursor", "", "autohotkey", "", "everything", "", "python", "", "notes", "")
+    if !doc.Has("options") || !(doc["options"] is Map)
+        doc["options"] := Map()
+    if !doc.Has("ttyd") || !(doc["ttyd"] is Map)
+        doc["ttyd"] := Map("shell", "cmd.exe", "workDir", "", "port", 7691)
+    doc["options"] := UserStudio_NormalizeNiumaOptions(doc["options"])
+}
+
+UserStudio_MergePayloadLlmApiKeys(mergedOpt, optPayload, llmPayload) {
+    if !(mergedOpt is Map)
+        mergedOpt := Map()
+    keys := mergedOpt.Has("llmApiKeys") && mergedOpt["llmApiKeys"] is Map ? mergedOpt["llmApiKeys"].Clone() : Map()
+    if (optPayload is Map) && optPayload.Has("llmApiKeys") && optPayload["llmApiKeys"] is Map {
+        for k, v in optPayload["llmApiKeys"] {
+            pk := UserStudio_NormalizeLlmProvider(k)
+            vk := UserStudio_NormalizeApiKey(v)
+            if (vk != "")
+                keys[pk] := vk
+        }
+    }
+    if (llmPayload is Map) {
+        prov := UserStudio_NormalizeLlmProvider(llmPayload.Get("provider", mergedOpt.Get("provider", "openai")))
+        ak := UserStudio_NormalizeApiKey(llmPayload.Get("apiKey", ""))
+        if (ak != "")
+            keys[prov] := ak
+    }
+    mergedOpt["llmApiKeys"] := keys
+    return mergedOpt
+}
+
+UserStudio_PickDisplayApiKey(doc) {
+    if !(doc is Map)
+        return ""
+    llm := doc.Has("llm") && doc["llm"] is Map ? doc["llm"] : Map()
+    prov := UserStudio_NormalizeLlmProvider(llm.Get("provider", "openai"))
+    ak := UserStudio_NormalizeApiKey(llm.Get("apiKey", ""))
+    if (ak != "")
+        return ak
+    opt := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
+    if opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map && opt["llmApiKeys"].Has(prov)
+        return UserStudio_NormalizeApiKey(opt["llmApiKeys"][prov])
+    return ""
+}
+
 UserStudio_ApplyFromWebPayload(payload) {
     if !(payload is Map)
         throw Error("定制数据无效")
     cur := UserStudio_Get()
-    if payload.Has("llm") && payload["llm"] is Map {
-        for k, v in payload["llm"]
+    UserStudio_EnsureDocStructure(&cur)
+    llmPayload := payload.Has("llm") && payload["llm"] is Map ? payload["llm"] : Map()
+    if (llmPayload.Count > 0) {
+        for k, v in llmPayload
             cur["llm"][k] := v
     }
     if payload.Has("paths") && payload["paths"] is Map {
@@ -592,18 +688,9 @@ UserStudio_ApplyFromWebPayload(payload) {
             cur["paths"][k] := Trim(String(v))
     }
     if payload.Has("options") && payload["options"] is Map {
-        merged := cur.Has("options") && cur["options"] is Map ? cur["options"].Clone() : Map()
+        merged := cur["options"].Clone()
         optPayload := payload["options"]
-        if optPayload.Has("llmApiKeys") && optPayload["llmApiKeys"] is Map {
-            keys := merged.Has("llmApiKeys") && merged["llmApiKeys"] is Map ? merged["llmApiKeys"].Clone() : Map()
-            for k, v in optPayload["llmApiKeys"] {
-                pk := UserStudio_NormalizeLlmProvider(k)
-                vk := UserStudio_NormalizeApiKey(v)
-                if (vk != "")
-                    keys[pk] := vk
-            }
-            merged["llmApiKeys"] := keys
-        }
+        merged := UserStudio_MergePayloadLlmApiKeys(merged, optPayload, llmPayload)
         if optPayload.Has("llmBaseUrls") && optPayload["llmBaseUrls"] is Map {
             urls := merged.Has("llmBaseUrls") && merged["llmBaseUrls"] is Map ? merged["llmBaseUrls"].Clone() : Map()
             for k, v in optPayload["llmBaseUrls"] {
@@ -620,26 +707,22 @@ UserStudio_ApplyFromWebPayload(payload) {
             merged[k] := v
         }
         cur["options"] := UserStudio_NormalizeNiumaOptions(merged)
+    } else if (llmPayload.Count > 0) {
+        merged := cur["options"].Clone()
+        cur["options"] := UserStudio_MergePayloadLlmApiKeys(merged, Map(), llmPayload)
     }
     if payload.Has("llmApiKeys") && payload["llmApiKeys"] is Map {
-        merged := cur.Has("options") && cur["options"] is Map ? cur["options"].Clone() : Map()
-        keys := merged.Has("llmApiKeys") && merged["llmApiKeys"] is Map ? merged["llmApiKeys"].Clone() : Map()
-        for k, v in payload["llmApiKeys"] {
-            pk := UserStudio_NormalizeLlmProvider(k)
-            vk := UserStudio_NormalizeApiKey(v)
-            if (vk != "")
-                keys[pk] := vk
-        }
-        merged["llmApiKeys"] := keys
-        cur["options"] := UserStudio_NormalizeNiumaOptions(merged)
+        merged := cur["options"].Clone()
+        cur["options"] := UserStudio_MergePayloadLlmApiKeys(merged, Map("llmApiKeys", payload["llmApiKeys"]), llmPayload)
     }
     if payload.Has("ttyd") && payload["ttyd"] is Map {
         for k, v in payload["ttyd"]
             cur["ttyd"][k] := v
     }
+    cur["options"] := UserStudio_MergeLlmApiKeys(cur["options"], cur["llm"])
     cur := UserStudio_NormalizeDoc(cur)
     UserStudio_Save(cur)
-    try UserStudio_WriteNiumaLlmSync(cur["llm"])
+    try UserStudio_WriteNiumaLlmSync(cur)
     catch {
     }
     UserStudio_ApplyPathsToGlobals(cur)
@@ -778,8 +861,8 @@ UserStudio_BuildOverview() {
         ),
         "llmProvider", llm.Get("provider", ""),
         "llmModel", llm.Get("model", ""),
-        "llmKeyMasked", UserStudio_MaskApiKey(llm.Get("apiKey", "")),
-        "llmConfigured", Trim(String(llm.Get("apiKey", ""))) != "",
+        "llmKeyMasked", UserStudio_MaskApiKey(UserStudio_PickDisplayApiKey(doc)),
+        "llmConfigured", Trim(String(UserStudio_PickDisplayApiKey(doc))) != "",
         "modules", modules
     )
 }
@@ -787,18 +870,34 @@ UserStudio_BuildOverview() {
 UserStudio_PayloadForWeb() {
     doc := UserStudio_Get()
     llm := doc["llm"]
+    opt := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
+    keysOut := Map()
+    if opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map {
+        for k, v in opt["llmApiKeys"] {
+            pk := UserStudio_NormalizeLlmProvider(k)
+            vk := UserStudio_NormalizeApiKey(v)
+            if (vk != "")
+                keysOut[pk] := vk
+        }
+    }
+    prov := UserStudio_NormalizeLlmProvider(llm.Get("provider", "openai"))
+    ak := UserStudio_NormalizeApiKey(llm.Get("apiKey", ""))
+    if (ak = "" && keysOut.Has(prov))
+        ak := keysOut[prov]
+    optOut := opt.Clone()
+    optOut["llmApiKeys"] := keysOut
     return Map(
         "version", doc["version"],
         "updatedAt", doc["updatedAt"],
         "llm", Map(
             "provider", llm["provider"],
-            "apiKey", llm["apiKey"],
+            "apiKey", ak,
             "baseUrl", llm["baseUrl"],
             "model", llm["model"]
         ),
         "paths", doc["paths"],
         "ttyd", UserStudio_TtydPayloadForWeb(),
-        "options", doc["options"],
+        "options", optOut,
         "niumaContext", UserStudio_GetNiumaContext(),
         "overview", UserStudio_BuildOverview()
     )

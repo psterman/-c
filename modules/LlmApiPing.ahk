@@ -63,7 +63,9 @@ LlmApiPing_BaseUrlMatchesProvider(prov, url) {
         case "deepseek":
             return InStr(low, "deepseek")
         case "openai":
-            return InStr(low, "api.openai.com")
+            return InStr(low, "api.openai.com") || InStr(low, "openai.azure.com")
+                || (InStr(low, "azure.com") && InStr(low, "openai"))
+                || InStr(low, "cognitiveservices.azure.com")
         case "minimax":
             return InStr(low, "minimax")
         case "gemini":
@@ -187,7 +189,14 @@ LlmApiPing_FormatHttpError(r, prov := "") {
         else if RegExMatch(err, "i)authentication|api[_ ]?key|unauthorized|401")
             err := "Kimi 鉴权失败：国内密钥→api.moonshot.cn/v1（platform.moonshot.cn）；国际密钥→api.moonshot.ai/v1（platform.kimi.ai），二者不可混用"
         else if RegExMatch(err, "i)model|invalid_request|400")
-            err .= "。可先换 kimi-k2.6 或 moonshot-v1-8k 测试；kimi-k2-thinking 勿带 thinking=disabled"
+            err .= "。当前建议优先使用 kimi-k2.6；如使用 kimi-k2-thinking，请勿附带 thinking=disabled"
+    } else if (prov = "openai") {
+        if RegExMatch(err, "i)429|too many requests|rate.?limit|请求过于频繁")
+            err := "HTTP 429（限流）：通常不是密钥错误，而是短时间内请求过多（RPM/TPM）。请等待 30～60 秒后再测；避免连续切换模型后立刻连点「测试 API」。每次测试最多向官方发 2 次请求，易触发免费档或低配额账号的限流。可到 platform.openai.com 查看 Usage / Billing。"
+        else if RegExMatch(err, "i)401|invalid.*api|incorrect.*api|authentication")
+            err := "OpenAI 鉴权失败：请确认 sk- 密钥有效、账户有余额；官方地址 https://api.openai.com/v1。Azure OpenAI 请用手动 Base URL 并勾选对应选项。"
+        else if RegExMatch(err, "i)model_not_found|model.*not exist|does not exist|invalid_model")
+            err .= "。模型名可能不可用或账号未开通该模型，请换 gpt-4o-mini / gpt-4.1-mini 等后重试。"
     }
     return err
 }
@@ -302,11 +311,15 @@ LlmApiPing_TestKimi(key, base, model, timeoutMs) {
     m0 := Trim(String(model))
     if (m0 = "")
         m0 := "kimi-k2.6"
+    modelExplicit := Trim(String(model)) != ""
     models := [m0]
-    if !ArrayHasValue(models, "kimi-k2.6")
-        models.Push("kimi-k2.6")
-    if !ArrayHasValue(models, "moonshot-v1-8k")
-        models.Push("moonshot-v1-8k")
+    ; 仅在未显式指定模型时才尝试备用模型，避免“自动切到 moonshot-v1-8k”
+    if !modelExplicit {
+        if !ArrayHasValue(models, "kimi-k2.6")
+            models.Push("kimi-k2.6")
+        if !ArrayHasValue(models, "moonshot-v1-8k")
+            models.Push("moonshot-v1-8k")
+    }
     lastErr := "测试失败"
     for _, bu in bases {
         bu := LlmApiPing_NormalizeMoonshotBase(bu)
@@ -347,6 +360,7 @@ LlmApiPing_Test(llm, timeoutMs := 18000) {
         return Map("ok", false, "error", "请先填写 API Key", "elapsedMs", 0)
     pingAnth := Jxon_Dump(Map("model", model, "max_tokens", 8, "messages", [Map("role", "user", "content", "ping")]))
     pingOpenAI := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_tokens", 8, "temperature", 0.1))
+    pingOpenAINew := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_completion_tokens", 16, "temperature", 0.1))
     t0 := A_TickCount
     if (prov = "minimax") {
         r := LlmApiPing_HttpSync("POST", LlmApiPing_MinimaxAnthropicUrl(base), Map(
@@ -386,7 +400,19 @@ LlmApiPing_Test(llm, timeoutMs := 18000) {
     headers := Map("Content-Type", "application/json")
     if (key != "")
         headers["Authorization"] := "Bearer " . key
-    r := LlmApiPing_HttpSync("POST", LlmApiPing_OpenAIChatUrl(base), headers, pingOpenAI, timeoutMs)
-    err := r["ok"] ? "" : LlmApiPing_FormatHttpError(r, prov)
-    return Map("ok", !!r["ok"], "error", err, "elapsedMs", A_TickCount - t0)
+    bodies := [pingOpenAI]
+    if (prov = "openai")
+        bodies.InsertAt(1, pingOpenAINew)
+    lastErr := ""
+    for _, body in bodies {
+        r := LlmApiPing_HttpSync("POST", LlmApiPing_OpenAIChatUrl(base), headers, body, timeoutMs)
+        if r["ok"]
+            return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+        lastErr := LlmApiPing_FormatHttpError(r, prov = "openai" ? "openai" : prov)
+        ; 429/401 等再发第二种请求体会加倍消耗配额，易连续 429；仅对可能「参数不兼容」的 400 再尝试
+        st := r.Has("status") ? Integer(r["status"]) : 0
+        if (prov = "openai" && (st = 429 || st = 401 || st = 402 || st = 403))
+            break
+    }
+    return Map("ok", false, "error", lastErr, "elapsedMs", A_TickCount - t0)
 }

@@ -1002,7 +1002,7 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         if (payload.Has("capsLockHoldVkEnabled"))
             NewCapsLockHoldVk := payload["capsLockHoldVkEnabled"] ? true : false
         NewDefaultTab := payload.Get("defaultStartTab", "general")
-        validTabs := Map("general",1, "appearance",1, "prompts",1, "hotkeys",1, "advanced",1, "screenshot",1, "search",1)
+        validTabs := Map("general",1, "appearance",1, "prompts",1, "hotkeys",1, "advanced",1, "screenshot",1, "search",1, "customize",1)
         if !validTabs.Has(NewDefaultTab)
             NewDefaultTab := "general"
         NewTheme := ThemeMode
@@ -1441,6 +1441,24 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         try GDHO_ApplyHideDockSettings(NewHoleHideDockEnabled, NewHoleHideDockEdge, NewHoleHideDockMargin)
         try ConfigWebView_WriteHolePresetIni(payload)
         try ConfigWebView_MergeHoleTriggerPayload(payload)
+        if (payload.Has("userStudio") && payload["userStudio"] is Map) {
+            us := payload["userStudio"]
+            usPl := Map()
+            if us.Has("llm") && us["llm"] is Map
+                usPl["llm"] := us["llm"]
+            if us.Has("paths") && us["paths"] is Map
+                usPl["paths"] := us["paths"]
+            if us.Has("options") && us["options"] is Map
+                usPl["options"] := us["options"]
+            if us.Has("ttyd") && us["ttyd"] is Map
+                usPl["ttyd"] := us["ttyd"]
+            if (usPl.Count > 0 && FuncExists("UserStudio_ApplyFromWebPayload")) {
+                try UserStudio_ApplyFromWebPayload(usPl)
+                catch as e {
+                    OutputDebug("[ConfigWebView] userStudio from saveSettings: " . e.Message)
+                }
+            }
+        }
         ; Apply mode asynchronously to avoid blocking settings WebView thread.
         try SetTimer((*) => ApplyAppearanceActivationMode(), -20)
         catch {
@@ -1804,16 +1822,21 @@ ConfigWebView_OnMessage(sender, args) {
             } catch as e {
                 err := e.Message
             }
+            if ok {
+                try {
+                    if FuncExists("FloatingToolbar_GetStudioLlm") && FuncExists("FloatingToolbar_PushStudioLlmToChat") {
+                        llmPush := FloatingToolbar_GetStudioLlm()
+                        if (llmPush is Map && Trim(String(llmPush.Get("apiKey", ""))) != "")
+                            FloatingToolbar_PushStudioLlmToChat(llmPush, "", false)
+                    }
+                } catch {
+                }
+            }
             studio := Map()
             if ok && FuncExists("UserStudio_PayloadForWeb") {
                 try studio := UserStudio_PayloadForWeb()
                 catch {
                     studio := Map()
-                }
-            }
-            if ok {
-                try ConfigWebView_Send(Map("type", "initData", "payload", ConfigWebView_BuildInitDataSafe()))
-                catch {
                 }
             }
             ConfigWebView_Send(Map("type", "saveUserStudioResult", "ok", ok, "error", err, "userStudio", studio))
@@ -2066,6 +2089,7 @@ ConfigWebView_OnMessage(sender, args) {
                             }
                         }
                         ConfigWebView_Send(Map("type", "loadNiumaProjectBriefResult", "ok", true, "text", txt))
+                        return
                     case "syncNiumaChatLlmToStudio":
                         ok := false
                         err := ""
@@ -2089,6 +2113,7 @@ ConfigWebView_OnMessage(sender, args) {
                         if ok && FuncExists("UserStudio_PayloadForWeb")
                             studio := UserStudio_PayloadForWeb()
                         ConfigWebView_Send(Map("type", "syncNiumaChatLlmResult", "ok", ok, "error", err, "userStudio", studio))
+                        return
                     case "importPromptTemplates":
                         ImportPromptTemplates()
                     case "exportPromptTemplates":
@@ -2240,9 +2265,15 @@ SaveConfigGUIPosition(ConfigGUI) {
     }
 }
 
-; WebView 璁剧疆椤靛叧闂紙鐢?CloseConfigGUI 鍦?ConfigWebViewMode 涓嬭皟鐢級
+; WebView 设置页关闭（由 CloseConfigGUI 在 ConfigWebViewMode 下调用）
 ConfigWebView_Close() {
     global GuiID_ConfigGUI, ConfigWV2Ctrl, ConfigWV2
+    try {
+        if IsSet(ConfigWV2) && ConfigWV2
+            ConfigWV2.ExecuteScriptAsync("(function(){try{if(window.__nmerFlushStudioLlm)window.__nmerFlushStudioLlm();if(window.__nmerFlushSettingsTab)window.__nmerFlushSettingsTab();}catch(e){}})()")
+    } catch {
+    }
+    Sleep 220
     try FloatingToolbar_PageDockLeave("settings")
     try {
         WMActivateChain_Unregister(ConfigWebView_WM_ACTIVATE)
