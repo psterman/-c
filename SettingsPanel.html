@@ -1918,9 +1918,9 @@
         label: "Kimi（月之暗面）",
         baseUrl: "https://api.moonshot.cn/v1",
         model: "kimi-k2.6",
-        models: ["kimi-k2.6", "kimi-k2-thinking", "kimi-k2.5", "kimi-k2-turbo-preview"],
-        keyPh: "Moonshot API Key",
-        hint: "Kimi 开放平台；默认 kimi-k2.6（2026）。深度推理可选 kimi-k2-thinking。"
+        models: ["kimi-k2.6", "moonshot-v1-8k", "kimi-k2-thinking", "kimi-k2.5", "kimi-k2-turbo-preview"],
+        keyPh: "Moonshot API Key（sk-…）",
+        hint: "官方文档：国内 Base URL https://api.moonshot.cn/v1（密钥在 platform.moonshot.cn）；国际 https://api.moonshot.ai/v1（platform.kimi.ai）。端点 POST …/v1/chat/completions。测试连通建议先用 kimi-k2.6 或 moonshot-v1-8k。"
       },
       claude: {
         label: "Claude（Anthropic）",
@@ -2043,12 +2043,179 @@
       } else sel2.value = opts[0] || "";
     }
 
+    const STUDIO_MINIMAX_BASE_CN = "https://api.minimaxi.com/anthropic";
+    const STUDIO_MINIMAX_BASE_INTL = "https://api.minimax.io/anthropic";
+
+    function normalizeStudioApiKey(raw) {
+      let k = String(raw || "").trim();
+      k = k.replace(/^\s*Bearer\s+/i, "").replace(/^['"]|['"]$/g, "").replace(/\s+/g, "");
+      return k;
+    }
+
+    /** 各服务商分槽保存的 API Key（与 Niuma Chat 的 state.apiKeys 一致） */
+    function getStudioLlmApiKeys() {
+      const o = state.data.userStudio?.options || {};
+      const m = o.llmApiKeys;
+      if (!m || typeof m !== "object" || Array.isArray(m)) return {};
+      const out = {};
+      Object.keys(m).forEach((k) => {
+        const nk = normalizeStudioLlmProvider(k);
+        const v = normalizeStudioApiKey(m[k]);
+        if (v) out[nk] = v;
+      });
+      return out;
+    }
+
+    function getStudioApiKeyForProvider(pid) {
+      pid = normalizeStudioLlmProvider(pid);
+      const keys = getStudioLlmApiKeys();
+      if (keys[pid]) return keys[pid];
+      const llm = state.data.userStudio?.llm || {};
+      if (normalizeStudioLlmProvider(llm.provider) === pid && llm.apiKey)
+        return normalizeStudioApiKey(llm.apiKey);
+      return "";
+    }
+
+    function stashStudioApiKeyForProvider(pid, key) {
+      pid = normalizeStudioLlmProvider(pid);
+      key = normalizeStudioApiKey(key);
+      if (!state.data.userStudio) state.data.userStudio = { options: {} };
+      if (!state.data.userStudio.options) state.data.userStudio.options = {};
+      const keys = getStudioLlmApiKeys();
+      if (key) keys[pid] = key;
+      else delete keys[pid];
+      state.data.userStudio.options.llmApiKeys = keys;
+    }
+
+    function stashStudioApiKeyFromDom() {
+      const provEl = document.getElementById("usLlmProvider");
+      const keyEl = document.getElementById("usLlmApiKey");
+      if (!provEl || !keyEl) return;
+      stashStudioApiKeyForProvider(provEl.value, keyEl.value);
+    }
+
+    const STUDIO_PROVIDER_HOST_HINTS = {
+      kimi: ["moonshot.cn", "moonshot.ai"],
+      deepseek: ["deepseek.com"],
+      openai: ["api.openai.com"],
+      minimax: ["minimax"],
+      gemini: ["generativelanguage.googleapis.com"],
+      claude: ["anthropic.com"],
+      qwen: ["dashscope.aliyuncs.com"],
+      glm: ["bigmodel.cn"],
+      zhipu: ["bigmodel.cn"],
+      siliconflow: ["siliconflow.cn"],
+      ollama: ["11434", "ollama"]
+    };
+
+    function studioBaseUrlMatchesProvider(pid, url) {
+      pid = normalizeStudioLlmProvider(pid);
+      const u = String(url || "").trim().toLowerCase();
+      if (!u || pid === "custom" || pid === "openclaw") return true;
+      const hints = STUDIO_PROVIDER_HOST_HINTS[pid];
+      if (!hints || !hints.length) return true;
+      return hints.some((h) => u.includes(h));
+    }
+
+    function getStudioLlmBaseUrls() {
+      const o = state.data.userStudio?.options || {};
+      const m = o.llmBaseUrls;
+      if (!m || typeof m !== "object" || Array.isArray(m)) return {};
+      const out = {};
+      Object.keys(m).forEach((k) => {
+        const nk = normalizeStudioLlmProvider(k);
+        const v = String(m[k] || "").trim();
+        if (v && studioBaseUrlMatchesProvider(nk, v)) out[nk] = v;
+      });
+      return out;
+    }
+
+    function getStudioLlmManualFlags() {
+      const o = state.data.userStudio?.options || {};
+      const m = o.llmManualBaseUrl;
+      if (!m || typeof m !== "object" || Array.isArray(m)) return {};
+      const out = {};
+      Object.keys(m).forEach((k) => {
+        out[normalizeStudioLlmProvider(k)] = !!m[k];
+      });
+      return out;
+    }
+
+    function isStudioManualBaseUrlFor(pid) {
+      pid = normalizeStudioLlmProvider(pid);
+      if (pid === "custom") return true;
+      const flags = getStudioLlmManualFlags();
+      if (flags[pid]) return true;
+      return false;
+    }
+
+    function getStudioBaseUrlForProvider(pid) {
+      pid = normalizeStudioLlmProvider(pid);
+      const map = getStudioLlmBaseUrls();
+      if (map[pid]) return map[pid];
+      const llm = state.data.userStudio?.llm || {};
+      if (normalizeStudioLlmProvider(llm.provider) === pid) {
+        const u = String(llm.baseUrl || "").trim();
+        if (u && studioBaseUrlMatchesProvider(pid, u)) return u;
+      }
+      return studioLlmPreset(pid).baseUrl || "";
+    }
+
+    function stashStudioBaseUrlForProvider(pid, url, manual) {
+      pid = normalizeStudioLlmProvider(pid);
+      url = String(url || "").trim();
+      if (!state.data.userStudio) state.data.userStudio = { options: {} };
+      if (!state.data.userStudio.options) state.data.userStudio.options = {};
+      const urls = getStudioLlmBaseUrls();
+      const flags = getStudioLlmManualFlags();
+      if (url && studioBaseUrlMatchesProvider(pid, url)) urls[pid] = url;
+      else delete urls[pid];
+      if (manual) flags[pid] = true;
+      else delete flags[pid];
+      state.data.userStudio.options.llmBaseUrls = urls;
+      state.data.userStudio.options.llmManualBaseUrl = flags;
+    }
+
+    function stashStudioBaseUrlFromDom() {
+      const provEl = document.getElementById("usLlmProvider");
+      if (!provEl) return;
+      const pid = normalizeStudioLlmProvider(provEl.value);
+      const manualInp = document.getElementById("usLlmBaseUrlManual");
+      const baseEl = document.getElementById("usLlmBaseUrl");
+      const url =
+        state._studioManualBaseUrl && manualInp
+          ? manualInp.value
+          : baseEl?.value || getStudioBaseUrlForProvider(pid);
+      stashStudioBaseUrlForProvider(pid, url, !!state._studioManualBaseUrl);
+    }
+
+    function setStudioMinimaxRegion(url) {
+      const baseEl = document.getElementById("usLlmBaseUrl");
+      const manual = document.getElementById("usLlmBaseUrlManual");
+      state._studioManualBaseUrl = false;
+      if (baseEl) baseEl.value = url;
+      if (manual) manual.value = "";
+      updateStudioBaseUrlUi("minimax");
+      setStatus("已切换 MiniMax 节点：" + url, "ok");
+    }
+
+    function normalizeMoonshotBaseUrl(url) {
+      let u = String(url || "").trim().replace(/\/+$/, "");
+      if (/^https?:\/\/api\.moonshot\.(cn|ai)$/i.test(u)) u += "/v1";
+      return u;
+    }
+
     function resolveStudioBaseUrl(pid, raw) {
       pid = normalizeStudioLlmProvider(pid);
-      const manual = !!state._studioManualBaseUrl;
-      const r = String(raw || "").trim();
-      if (pid === "custom" || manual) return r || studioLlmPreset(pid).baseUrl || "";
-      return studioLlmPreset(pid).baseUrl || "";
+      const manual = pid === "custom" || !!state._studioManualBaseUrl;
+      let r = normalizeMoonshotBaseUrl(raw);
+      if (manual) {
+        if (r && studioBaseUrlMatchesProvider(pid, r)) return r;
+        if (pid !== "custom" && r && !studioBaseUrlMatchesProvider(pid, r))
+          return getStudioBaseUrlForProvider(pid);
+        return r || getStudioBaseUrlForProvider(pid);
+      }
+      return getStudioBaseUrlForProvider(pid);
     }
 
     function resolveStudioModel(pid, raw) {
@@ -2092,9 +2259,19 @@
         mod0?.tagName === "SELECT" ? mod0.value || "" : String(mod0?.value || "").trim();
       fillStudioLlmModelSelect(pid, onlyIfEmpty ? curModel || pre.model : pre.model || curModel);
       const modEl = document.getElementById("usLlmModel");
-      if (keyEl) keyEl.placeholder = pre.keyPh || "API Key";
-      if (baseEl && pid !== "custom" && !state._studioManualBaseUrl) baseEl.value = pre.baseUrl || "";
-      else if (baseEl && (!onlyIfEmpty || !baseEl.value.trim())) baseEl.value = pre.baseUrl || "";
+      if (keyEl) {
+        keyEl.placeholder = pre.keyPh || "API Key";
+        keyEl.value = getStudioApiKeyForProvider(pid);
+      }
+      const bu = getStudioBaseUrlForProvider(pid);
+      if (baseEl && pid !== "custom" && !state._studioManualBaseUrl) baseEl.value = bu || pre.baseUrl || "";
+      else if (baseEl && (!onlyIfEmpty || !baseEl.value.trim())) baseEl.value = bu || pre.baseUrl || "";
+      const manualInp = document.getElementById("usLlmBaseUrlManual");
+      if (manualInp && state._studioManualBaseUrl) {
+        const mu = getStudioBaseUrlForProvider(pid);
+        if (!onlyIfEmpty || !manualInp.value.trim() || !studioBaseUrlMatchesProvider(pid, manualInp.value))
+          manualInp.value = mu || pre.baseUrl || "";
+      }
       if (modEl && modEl.tagName === "SELECT" && (!onlyIfEmpty || !modEl.value)) {
         if (pre.model && modEl.querySelector(`option[value="${pre.model}"]`)) modEl.value = pre.model;
       } else if (modEl && modEl.tagName !== "SELECT" && (!onlyIfEmpty || !modEl.value.trim())) {
@@ -2105,29 +2282,53 @@
           (pre.hint || "") +
           (pid === "custom" ? "" : " Base URL 已自动配置，一般无需手填。");
       }
+      const mmRow = document.getElementById("usMinimaxRegionRow");
+      if (mmRow) mmRow.style.display = pid === "minimax" ? "" : "none";
       updateStudioBaseUrlUi(pid);
     }
 
     function bindStudioLlmUi(llm, opts) {
       const provEl = document.getElementById("usLlmProvider");
       if (!provEl) return;
-      state._studioManualBaseUrl = !!(opts && opts.manualBaseUrl);
       provEl.value = normalizeStudioLlmProvider(llm?.provider);
+      const initPid = provEl.value;
+      state._studioManualBaseUrl = isStudioManualBaseUrlFor(initPid);
+      const initUrls = getStudioLlmBaseUrls();
+      const legacyBu = String(llm?.baseUrl || "").trim();
+      if (legacyBu && studioBaseUrlMatchesProvider(initPid, legacyBu) && !initUrls[initPid]) {
+        initUrls[initPid] = legacyBu;
+        if (!state.data.userStudio) state.data.userStudio = { options: {} };
+        if (!state.data.userStudio.options) state.data.userStudio.options = {};
+        state.data.userStudio.options.llmBaseUrls = initUrls;
+      }
+      const initKeys = getStudioLlmApiKeys();
+      const legacyKey = normalizeStudioApiKey(llm?.apiKey || "");
+      const legacyProv = normalizeStudioLlmProvider(llm?.provider || initPid);
+      if (legacyKey && !initKeys[legacyProv]) {
+        initKeys[legacyProv] = legacyKey;
+        if (!state.data.userStudio) state.data.userStudio = { options: {} };
+        if (!state.data.userStudio.options) state.data.userStudio.options = {};
+        state.data.userStudio.options.llmApiKeys = initKeys;
+      }
+      state._studioLastProv = normalizeStudioLlmProvider(provEl.value);
+      ensureStudioLlmDelegatedEvents();
       applyStudioLlmPresetUi(true);
       const savedModel = String(llm?.model || "").trim();
       if (savedModel) fillStudioLlmModelSelect(provEl.value, savedModel);
-      provEl.addEventListener("change", () => {
-        if (normalizeStudioLlmProvider(provEl.value) !== "custom") state._studioManualBaseUrl = false;
-        applyStudioLlmPresetUi(false);
-      });
       const manualLink = document.getElementById("usLlmBaseUrlManualLink");
       if (manualLink) {
         manualLink.addEventListener("click", (e) => {
           e.preventDefault();
+          const pid = normalizeStudioLlmProvider(provEl.value);
           state._studioManualBaseUrl = true;
+          const manualInp = document.getElementById("usLlmBaseUrlManual");
+          if (manualInp && !manualInp.value.trim())
+            manualInp.value = getStudioBaseUrlForProvider(pid) || studioLlmPreset(pid).baseUrl || "";
           applyStudioLlmPresetUi(true);
         });
       }
+      document.getElementById("usMinimaxRegionCn")?.addEventListener("click", () => setStudioMinimaxRegion(STUDIO_MINIMAX_BASE_CN));
+      document.getElementById("usMinimaxRegionIntl")?.addEventListener("click", () => setStudioMinimaxRegion(STUDIO_MINIMAX_BASE_INTL));
       const modEl = document.getElementById("usLlmModel");
       if (modEl && modEl.tagName === "SELECT") {
         modEl.addEventListener("change", () => {
@@ -2147,18 +2348,29 @@
     }
 
     function collectUserStudioPayload() {
+      stashStudioApiKeyFromDom();
+      stashStudioBaseUrlFromDom();
       const g = (id) => document.getElementById(id);
       const prov = normalizeStudioLlmProvider(g("usLlmProvider")?.value || "openai");
       let modelVal = (g("usLlmModel")?.value || "").trim();
       if (modelVal === "__custom__") modelVal = "";
+      const keys = getStudioLlmApiKeys();
+      const curKey = normalizeStudioApiKey(g("usLlmApiKey")?.value || "") || keys[prov] || "";
+      if (curKey) keys[prov] = curKey;
+      const baseUrls = getStudioLlmBaseUrls();
+      const manualFlags = getStudioLlmManualFlags();
+      const curBase = resolveStudioBaseUrl(
+        prov,
+        state._studioManualBaseUrl ? g("usLlmBaseUrlManual")?.value : ""
+      );
+      if (curBase && studioBaseUrlMatchesProvider(prov, curBase)) baseUrls[prov] = curBase;
+      if (state._studioManualBaseUrl) manualFlags[prov] = true;
+      else delete manualFlags[prov];
       return {
         llm: {
           provider: prov,
-          apiKey: g("usLlmApiKey")?.value || "",
-          baseUrl: resolveStudioBaseUrl(
-            prov,
-            state._studioManualBaseUrl ? g("usLlmBaseUrlManual")?.value : ""
-          ),
+          apiKey: curKey,
+          baseUrl: curBase,
           model: resolveStudioModel(prov, modelVal)
         },
         paths: {
@@ -2170,12 +2382,138 @@
         },
         options: {
           ...(state.data.userStudio?.options || {}),
+          llmApiKeys: keys,
+          llmBaseUrls: baseUrls,
+          llmManualBaseUrl: manualFlags,
           manualBaseUrl: !!state._studioManualBaseUrl,
           niumaAutoInjectContext: !!document.getElementById("niumaAutoInjectContext")?.checked,
           niumaSystemPrompt: String(document.getElementById("studioNiumaSystemPrompt")?.value || "").trim(),
           niumaInstallRoot: String(document.getElementById("niumaInstallRoot")?.value || "").trim()
         }
       };
+    }
+
+    function mergeStudioSlotObject(prevObj, nextObj, normalizeKey, normalizeVal) {
+      const out = {};
+      const ingest = (src) => {
+        if (!src || typeof src !== "object" || Array.isArray(src)) return;
+        Object.keys(src).forEach((k) => {
+          const nk = normalizeKey(k);
+          const v = normalizeVal(src[k], nk);
+          if (v !== "" && v != null) out[nk] = v;
+        });
+      };
+      ingest(prevObj);
+      ingest(nextObj);
+      return out;
+    }
+
+    function mergeUserStudioState(pl) {
+      if (!pl || typeof pl !== "object") return;
+      const prev = state.data.userStudio || {};
+      const prevOpt = prev.options || {};
+      const plOpt = pl.options || {};
+      const mergedKeys = mergeStudioSlotObject(
+        prevOpt.llmApiKeys,
+        plOpt.llmApiKeys,
+        normalizeStudioLlmProvider,
+        (v) => normalizeStudioApiKey(v)
+      );
+      const mergedBaseUrls = mergeStudioSlotObject(
+        prevOpt.llmBaseUrls,
+        plOpt.llmBaseUrls,
+        normalizeStudioLlmProvider,
+        (v, nk) => {
+          const u = String(v || "").trim();
+          return u && studioBaseUrlMatchesProvider(nk, u) ? u : "";
+        }
+      );
+      const mergedManual = { ...getStudioLlmManualFlags() };
+      if (plOpt.llmManualBaseUrl && typeof plOpt.llmManualBaseUrl === "object") {
+        Object.keys(plOpt.llmManualBaseUrl).forEach((k) => {
+          const nk = normalizeStudioLlmProvider(k);
+          if (plOpt.llmManualBaseUrl[k]) mergedManual[nk] = true;
+          else delete mergedManual[nk];
+        });
+      }
+      const mergedLlm = { ...(prev.llm || {}), ...(pl.llm || {}) };
+      const prov = normalizeStudioLlmProvider(mergedLlm.provider || "openai");
+      if (!normalizeStudioApiKey(mergedLlm.apiKey || "") && mergedKeys[prov])
+        mergedLlm.apiKey = mergedKeys[prov];
+      state.data.userStudio = {
+        ...prev,
+        ...pl,
+        llm: mergedLlm,
+        paths: { ...(prev.paths || {}), ...(pl.paths || {}) },
+        options: {
+          ...prevOpt,
+          ...plOpt,
+          llmApiKeys: mergedKeys,
+          llmBaseUrls: mergedBaseUrls,
+          llmManualBaseUrl: mergedManual
+        }
+      };
+      try {
+        sessionStorage.setItem("niuma_studio_llm_draft", JSON.stringify(state.data.userStudio));
+      } catch (_) {}
+    }
+
+    function onStudioLlmProviderChange() {
+      const provEl = document.getElementById("usLlmProvider");
+      const keyEl = document.getElementById("usLlmApiKey");
+      if (!provEl) return;
+      if (keyEl && state._studioLastProv)
+        stashStudioApiKeyForProvider(state._studioLastProv, keyEl.value);
+      stashStudioBaseUrlFromDom();
+      const nextPid = normalizeStudioLlmProvider(provEl.value);
+      state._studioManualBaseUrl = isStudioManualBaseUrlFor(nextPid);
+      state._studioLastProv = nextPid;
+      mergeUserStudioState({ llm: { provider: nextPid } });
+      applyStudioLlmPresetUi(false);
+    }
+
+    function ensureStudioLlmDelegatedEvents() {
+      if (state._studioLlmDelegated) return;
+      const panel = document.getElementById("panel");
+      if (!panel) return;
+      state._studioLlmDelegated = true;
+      panel.addEventListener("change", (e) => {
+        if (e.target?.id === "usLlmProvider") onStudioLlmProviderChange();
+      });
+      panel.addEventListener("input", (e) => {
+        if (e.target?.id !== "usLlmApiKey") return;
+        const provEl = document.getElementById("usLlmProvider");
+        if (provEl) stashStudioApiKeyForProvider(provEl.value, e.target.value);
+      });
+    }
+
+    /** 离开智能定制标签前：把表单（含 API Key）写入内存，避免 render 重建后丢失 */
+    function captureCustomizeTabState() {
+      if (!document.getElementById("usLlmApiKey")) return;
+      stashStudioApiKeyFromDom();
+      stashStudioBaseUrlFromDom();
+      mergeUserStudioState(collectUserStudioPayload());
+    }
+
+    function readCustomize(d) {
+      if (!document.getElementById("usLlmApiKey")) return d;
+      const pl = collectUserStudioPayload();
+      mergeUserStudioState(pl);
+      d.userStudio = state.data.userStudio;
+      return d;
+    }
+
+    function restoreStudioLlmDraftIfNeeded() {
+      const keys = getStudioLlmApiKeys();
+      const hasSlots = Object.keys(keys).length > 0;
+      const cur = state.data.userStudio?.llm || {};
+      if (hasSlots || String(cur.apiKey || "").trim()) return;
+      try {
+        const raw = sessionStorage.getItem("niuma_studio_llm_draft");
+        if (!raw) return;
+        const draft = JSON.parse(raw);
+        if (draft && typeof draft === "object") mergeUserStudioState(draft);
+      } catch (_) {}
     }
     function csvToArr(v){ return String(v || "").split(",").map(s => s.trim()).filter(Boolean); }
     function arrToCsv(arr){ return (arr || []).join(","); }
@@ -2244,7 +2582,7 @@
       syncActivationModeFromDom();
       syncThemeAndPopupFromDom();
       let d = { ...state.data, hotkeys: { ...state.data.hotkeys }, quickActions: [...state.data.quickActions], voiceSearchEnabledCategories: [...state.data.voiceSearchEnabledCategories], floatingToolbarButtons: [...(state.data.floatingToolbarButtons||[])], floatingToolbarMenuItems: [...(state.data.floatingToolbarMenuItems||[])] };
-      d = readGeneral(d); d = readAppearance(d); d = syncHoleDerivedFields(d); d = readPrompts(d); d = readHotkeys(d); d = readAdvanced(d); d = readScreenshot(d); d = readSearch(d);
+      d = readGeneral(d); d = readAppearance(d); d = syncHoleDerivedFields(d); d = readPrompts(d); d = readHotkeys(d); d = readAdvanced(d); d = readScreenshot(d); d = readSearch(d); d = readCustomize(d);
       d.appearanceActivationMode = normalizeActivationMode(state.appearanceActivationMode);
       state.data.appearanceActivationMode = d.appearanceActivationMode;
       return d;
@@ -2697,32 +3035,36 @@
         panel.innerHTML = `<div class="card"><div class="title">快捷键设置</div><div class="row"><div class="label">长按 CapsLock 打开 VK 快捷键面板</div><div><input id="capsLockHoldVkEnabled" type="checkbox" ${checked(d.capsLockHoldVkEnabled !== false && d.capsLockHoldVkEnabled !== 0)}></div></div><div class="hint" style="margin:-4px 0 10px 0;">开启后，按住 CapsLock 达到「通用设置」中的长按时间即弹出 KeyBinder，松开 CapsLock 后关闭；关闭本项后仍可从托盘菜单打开虚拟键盘。</div>${hotkeyRows}<div class="row"><div class="label">Prompt 快速采集热键</div><input id="promptQuickCaptureHotkey" type="text" value="${esc(d.promptQuickCaptureHotkey)}"></div></div><div class="card"><div class="title">快速操作按钮 (5)</div>${qaRows}<div class="inline"><button class="btn legacy-compact" id="btnOpenLegacyHotkeys">打开原版快捷键设置</button></div></div>`;
         document.getElementById("btnOpenLegacyHotkeys").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacyTab", tab: "hotkeys" }));
       } else if (state.activeTab === "customize") {
-        const us = d.userStudio || {};
+        restoreStudioLlmDraftIfNeeded();
+        const us = state.data.userStudio || d.userStudio || {};
         const llm = us.llm || {};
         const paths = us.paths || {};
         const ov = us.overview || {};
-        const hasKey = !!(String(llm.apiKey || "").trim());
+        const provId = normalizeStudioLlmProvider(llm.provider);
+        const slotKey = getStudioApiKeyForProvider(provId);
+        const hasKey = !!(slotKey || String(llm.apiKey || "").trim());
         const keyBadge = hasKey
-          ? `<span class="studio-key-badge ok">已读取 API：${esc(ov.llmKeyMasked || "已配置")} · ${esc(llm.model || llm.provider || "")}</span>`
-          : `<span class="studio-key-badge">尚未配置 API Key（可在下方填写，或在 Niuma Chat 设置里保存后点「同步」）</span>`;
+          ? `<span class="studio-key-badge ok">已读取 API：${esc(ov.llmKeyMasked || (slotKey ? "已配置（分槽）" : "已配置"))} · ${esc(llm.model || provId || "")}</span>`
+          : `<span class="studio-key-badge">尚未配置 API Key（填写后请先点「保存 API」，再点「测试 API」）</span>`;
         const pathRow = (id, label, val) =>
           `<div class="row"><div class="label">${label}</div><div class="inline" style="flex:1"><input id="usPath_${id}" type="text" data-nosave="1" value="${esc(val || "")}" placeholder="留空则使用系统默认"><button class="btn us-browse" data-us-field="${id}">浏览</button></div></div>`;
-        const provId = normalizeStudioLlmProvider(llm.provider);
         const provPre = studioLlmPreset(provId);
         panel.innerHTML = `
 <div class="card studio-api-card"><div class="title">大模型 API</div>
 ${keyBadge}
 <div class="row"><div class="label">服务商</div><select id="usLlmProvider" data-nosave="1">${studioLlmProviderOptions(provId)}</select></div>
-<div class="row"><div class="label">API Key</div><input id="usLlmApiKey" type="password" data-nosave="1" value="${esc(llm.apiKey || "")}" placeholder="${esc(provPre.keyPh || "API Key")}" autocomplete="off"></div>
+<div class="row"><div class="label">API Key</div><input id="usLlmApiKey" type="password" data-nosave="1" value="${esc(slotKey || llm.apiKey || "")}" placeholder="${esc(provPre.keyPh || "API Key")}" autocomplete="off"></div>
 <div class="row" id="usLlmBaseUrlAutoRow"><div class="label">接口地址</div><div class="studio-url-auto" id="usLlmBaseUrlAuto">自动使用官方接口，无需填写</div><input id="usLlmBaseUrl" type="hidden" data-nosave="1" value="${esc(resolveStudioBaseUrl(provId, llm.baseUrl))}"><a href="#" class="studio-url-manual-link" id="usLlmBaseUrlManualLink">使用中转 / 私有网关？手动指定地址</a></div>
 <div class="row" id="usLlmBaseUrlManualRow" style="display:none"><div class="label">Base URL（手动）</div><input id="usLlmBaseUrlManual" type="text" class="ctl" data-nosave="1" value="${esc(llm.baseUrl || "")}" placeholder="https://你的中转地址/v1"></div>
 <div class="row"><div class="label">模型</div><select id="usLlmModel" class="ctl" data-nosave="1"></select></div>
+<div class="row" id="usMinimaxRegionRow" style="display:${provId === "minimax" ? "" : "none"}"><div class="label">MiniMax 节点</div><div class="inline" style="flex-wrap:wrap;gap:8px"><button type="button" class="btn" id="usMinimaxRegionCn">国内 · minimaxi.com</button><button type="button" class="btn" id="usMinimaxRegionIntl">国际 · minimax.io</button></div></div>
 <div class="hint mini" id="usLlmProviderHint">${esc(provPre.hint || "")}</div>
 <div class="inline" style="margin-top:10px;flex-wrap:wrap">
   <button class="btn primary" type="button" id="btnSaveUserStudio">保存 API</button>
+  <button class="btn" type="button" id="btnTestUserStudio">测试 API</button>
   <button class="btn" type="button" id="btnStudioSyncNiuma">从 Niuma Chat 同步</button>
 </div>
-<div class="hint">选服务商后 <strong>Base URL 自动配置</strong>，只需填 API Key 与模型；仅中转/私有网关需选手动指定地址或「自定义」。</div>
+<div class="hint">各服务商 <strong>API Key 分槽保存</strong>，切换下拉框只显示该服务商的密钥，不会互相覆盖；切换前会自动记住当前框内的 Key。填好后请点「保存 API」。</div>
 </div>
 <div class="card studio-context-card"><div class="title">Niuma Chat 项目背景（自动注入）</div>
 <div class="row"><div class="label">打开对话时注入</div><div><input id="niumaAutoInjectContext" type="checkbox" data-nosave="1" ${checked((us.options || {}).niumaAutoInjectContext !== false)}></div></div>
@@ -2773,8 +3115,42 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           post({ type: "browseUserStudioPath", field: btn.getAttribute("data-us-field") });
         }));
         document.getElementById("btnSaveUserStudio")?.addEventListener("click", () => {
-          post({ type: "saveUserStudio", payload: collectUserStudioPayload() });
+          const pl = collectUserStudioPayload();
+          const prov = normalizeStudioLlmProvider(pl.llm?.provider);
+          if (prov !== "ollama" && !String(pl.llm?.apiKey || "").trim()) {
+            setStatus("请填写 API Key 后再保存", "err");
+            return;
+          }
+          post({ type: "saveUserStudio", payload: pl });
           setStatus("保存中…", "ok");
+        });
+        document.getElementById("btnTestUserStudio")?.addEventListener("click", () => {
+          stashStudioApiKeyFromDom();
+          stashStudioBaseUrlFromDom();
+          mergeUserStudioState(collectUserStudioPayload());
+          const pl = collectUserStudioPayload();
+          const prov = normalizeStudioLlmProvider(pl.llm?.provider);
+          const testKey = String(pl.llm?.apiKey || "").trim();
+          if (prov !== "ollama" && !testKey) {
+            setStatus("请先填写 API Key（Moonshot 开放平台密钥），并建议先点「保存 API」", "err");
+            return;
+          }
+          const manualRaw = document.getElementById("usLlmBaseUrlManual")?.value || "";
+          if (
+            state._studioManualBaseUrl &&
+            manualRaw.trim() &&
+            !studioBaseUrlMatchesProvider(prov, manualRaw)
+          ) {
+            setStatus(
+              "Base URL 与「" +
+                studioLlmPreset(prov).label +
+                "」不匹配（例如 Kimi 勿填 api.deepseek.com），已改用官方地址测试",
+              "ok"
+            );
+          } else {
+            setStatus("正在测试 API（约 18 秒内）…", "ok");
+          }
+          post({ type: "testUserStudioLlm", payload: pl });
         });
         document.getElementById("btnRestoreUserStudio")?.addEventListener("click", () => {
           if (!confirm("确定恢复默认定制配置？")) return;
@@ -2792,9 +3168,9 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           setStatus("正在保存并打开终端定制…", "ok");
         });
         const askEl = document.getElementById("studioAskInput");
-        if (!hasKey && !state._studioSyncTried) {
+        if (!hasKey && !slotKey && !state._studioSyncTried) {
           state._studioSyncTried = true;
-          setTimeout(() => post({ type: "invokeAction", op: "syncNiumaChatLlmToStudio" }), 120);
+          setTimeout(() => post({ type: "invokeAction", op: "syncNiumaChatLlmToStudio" }), 800);
         }
         if (askEl) {
           askEl.addEventListener("keydown", (e) => {
@@ -2982,6 +3358,9 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         captureAppearanceTabState();
         flushHoleSettingsSaveNow();
       }
+      if (state.activeTab === "customize" && nextTab !== "customize") {
+        captureCustomizeTabState();
+      }
       state.activeTab = nextTab;
       state.data = readFromUI();
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -3048,7 +3427,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (Array.isArray(p.keybinderToolbarLayout)) state.data.keybinderToolbarLayout = normalizeToolbarLayoutRows(p.keybinderToolbarLayout);
         if (Array.isArray(p.keybinderCommands)) state.data.keybinderCommands = p.keybinderCommands;
         if (Array.isArray(p.keybinderContextMenuLayout)) state.data.keybinderContextMenuLayout = p.keybinderContextMenuLayout;
-        if (p.userStudio && typeof p.userStudio === "object") state.data.userStudio = p.userStudio;
+        if (p.userStudio && typeof p.userStudio === "object") mergeUserStudioState(p.userStudio);
         if (p.appUpdate && typeof p.appUpdate === "object") state.appUpdate = p.appUpdate;
         applyAppUpdateUi();
         const startTab = (msg.payload || {}).defaultStartTab;
@@ -3079,8 +3458,19 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (el) el.value = msg.path;
         return;
       }
+      if (msg.type === "testUserStudioLlmResult") {
+        const ms = msg.elapsedMs ? `（${msg.elapsedMs}ms）` : "";
+        setStatus(msg.ok ? `API 测试通过${ms}` : (msg.error || "API 测试失败"), msg.ok ? "ok" : "err");
+        if (msg.ok) captureCustomizeTabState();
+        return;
+      }
       if (msg.type === "saveUserStudioResult") {
         setStatus(msg.ok ? "智能定制已保存" : (msg.error || "保存失败"), msg.ok ? "ok" : "err");
+        if (msg.ok) {
+          if (msg.userStudio && typeof msg.userStudio === "object") mergeUserStudioState(msg.userStudio);
+          else captureCustomizeTabState();
+          if (state.activeTab === "customize") render();
+        }
         if (msg.ok && state._ttydAfterStudioSave) {
           const opts = state._ttydAfterStudioSave;
           state._ttydAfterStudioSave = null;
@@ -3095,6 +3485,13 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       }
       if (msg.type === "restoreUserStudioResult") {
         setStatus(msg.ok ? "已恢复默认定制配置" : (msg.error || "还原失败"), msg.ok ? "ok" : "err");
+        if (msg.ok) {
+          try {
+            sessionStorage.removeItem("niuma_studio_llm_draft");
+          } catch (_) {}
+          if (msg.userStudio && typeof msg.userStudio === "object") mergeUserStudioState(msg.userStudio);
+          if (state.activeTab === "customize") render();
+        }
         return;
       }
       if (msg.type === "appUpdateStatus") {
@@ -3127,7 +3524,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         return;
       }
       if (msg.type === "syncNiumaChatLlmResult") {
-        if (msg.ok && msg.userStudio) state.data.userStudio = msg.userStudio;
+        if (msg.ok && msg.userStudio) mergeUserStudioState(msg.userStudio);
         setStatus(msg.ok ? "已从 Niuma Chat 同步 API" : (msg.error || "同步失败"), msg.ok ? "ok" : "err");
         if (msg.ok && msg.userStudio && state.activeTab === "customize") {
           const syncedKey = !!(String((msg.userStudio.llm || {}).apiKey || "").trim());

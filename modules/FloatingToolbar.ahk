@@ -116,6 +116,11 @@ global g_FTB_AllowedCmdIds := Map(
 global g_FTB_WV2_Ctrl := 0
 global g_FTB_WV2 := 0
 global g_FTB_WV2_Ready := false
+
+FloatingToolbar_GetChatWv2() {
+    global g_FTB_WV2
+    return IsObject(g_FTB_WV2) ? g_FTB_WV2 : 0
+}
 global g_FTB_WV2_FrameReady := false
 global g_FTB_PendingSelection := ""
 global g_FTB_PendingNiumaCompose := []
@@ -1021,6 +1026,44 @@ FloatingToolbar_GetGuiHwnd() {
     return FloatingToolbarGUI.Hwnd
 }
 
+; 打开手机浏览时保证总宽不超过屏幕，优先压缩 Chat 抽屉宽度，保留右侧手机区完整可见
+FloatingToolbar_FitWindowWidthForMobile(&newW, &newX, rightEdge) {
+    global FloatingToolbarChatDrawerWidth
+
+    ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+    vr := vl + vw
+    if (newW <= vw)
+        return
+    if !NiumaMobileBrowser_IsActive()
+        return
+    mobilePx := NiumaMobileBrowser_WidthPx()
+    maxChatPx := Max(Round(380 * FloatingToolbar_EffectiveScale()), vw - mobilePx)
+    eff := FloatingToolbar_EffectiveScale()
+    if (eff < 0.01)
+        eff := 1.0
+    logicalMax := Round(maxChatPx / eff)
+    if (logicalMax < 380)
+        logicalMax := 380
+    if (FloatingToolbarChatDrawerWidth > logicalMax)
+        FloatingToolbarChatDrawerWidth := logicalMax
+    newW := FloatingToolbarCalculateWidth()
+    newX := rightEdge - newW
+    if (newX < vl)
+        newX := vl
+    if (newX + newW > vr)
+        newX := Max(vl, vr - newW)
+}
+
+FloatingToolbar_RefreshMobileLayout(*) {
+    global FloatingToolbarGUI, FloatingToolbarChatDrawerOpen
+    if !FloatingToolbarGUI || !FloatingToolbarChatDrawerOpen
+        return
+    if !NiumaMobileBrowser_IsActive()
+        return
+    FloatingToolbar_ResizeForMobileBrowser()
+    FloatingToolbar_ApplyWebViewBounds()
+}
+
 FloatingToolbar_ApplyWebViewBounds() {
     global FloatingToolbarGUI, g_FTB_WV2_Ctrl
 
@@ -1061,8 +1104,9 @@ FloatingToolbar_ActivateMobileBrowser(url := "") {
     NiumaMobileBrowser_SetPendingOpen(true)
     FloatingToolbar_ResizeForMobileBrowser()
     FloatingToolbar_ApplyWebViewBounds()
-    SetTimer(FloatingToolbar_ResizeForMobileBrowser, -60)
-    SetTimer(FloatingToolbar_ResizeForMobileBrowser, -220)
+    SetTimer(FloatingToolbar_RefreshMobileLayout, -60)
+    SetTimer(FloatingToolbar_RefreshMobileLayout, -220)
+    SetTimer(FloatingToolbar_RefreshMobileLayout, -520)
 
     ok := NiumaMobileBrowser_Open(FloatingToolbarGUI.Hwnd, url)
     if !ok {
@@ -1074,11 +1118,9 @@ FloatingToolbar_ActivateMobileBrowser(url := "") {
 }
 
 FloatingToolbar_AfterMobileBrowserOpen() {
-    FloatingToolbar_ResizeForMobileBrowser()
-    FloatingToolbar_ApplyWebViewBounds()
-    try NiumaMobileBrowser_ApplyBounds(FloatingToolbar_GetGuiHwnd())
-    catch {
-    }
+    FloatingToolbar_RefreshMobileLayout()
+    SetTimer(FloatingToolbar_RefreshMobileLayout, -80)
+    SetTimer(FloatingToolbar_RefreshMobileLayout, -350)
 }
 
 FloatingToolbar_AfterMobileBrowserClose() {
@@ -1103,12 +1145,16 @@ FloatingToolbar_ResizeForMobileBrowser() {
     }
     rightEdge := gx + gw
     newX := rightEdge - newW
-    ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
-    vr := vl + vw
-    if (newX < vl)
-        newX := vl
-    if (newX + newW > vr)
-        newX := vr - newW
+    if NiumaMobileBrowser_IsActive()
+        FloatingToolbar_FitWindowWidthForMobile(&newW, &newX, rightEdge)
+    else {
+        ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
+        vr := vl + vw
+        if (newX < vl)
+            newX := vl
+        if (newX + newW > vr)
+            newX := Max(vl, vr - newW)
+    }
     FloatingToolbarWindowX := newX
     try FloatingToolbarGUI.Move(newX, gy, newW, newH)
     catch {
@@ -1512,16 +1558,30 @@ FloatingToolbar_OnWebMessage(sender, args) {
 
     if (typ = "niuma_mobile_browser_open") {
         url := msg.Has("url") ? String(msg["url"]) : ""
-        FloatingToolbar_ActivateMobileBrowser(url)
+        SetTimer(FloatingToolbar_ActivateMobileBrowser.Bind(url), -1)
+        SetTimer(NiumaMobileBrowser_NotifyState.Bind(NiumaMobileBrowser_IsOpen(), url), -800)
+        SetTimer(NiumaMobileBrowser_NotifyState.Bind(NiumaMobileBrowser_IsOpen(), url), -2000)
+        SetTimer(NiumaMobileBrowser_NotifyState.Bind(NiumaMobileBrowser_IsOpen(), url), -4500)
+        return
+    }
+    if (typ = "niuma_browser_sync_state") {
+        u := ""
+        global g_NiumaMobile_WV2
+        if NiumaMobileBrowser_IsOpen() && g_NiumaMobile_WV2 {
+            try u := g_NiumaMobile_WV2.SourceUri
+            catch {
+            }
+        }
+        NiumaMobileBrowser_NotifyState(NiumaMobileBrowser_IsOpen(), u)
         return
     }
     if (typ = "niuma_mobile_browser_navigate") {
         url := msg.Has("url") ? String(msg["url"]) : ""
         global FloatingToolbarChatDrawerOpen
         if !FloatingToolbarChatDrawerOpen || !NiumaMobileBrowser_IsOpen()
-            FloatingToolbar_ActivateMobileBrowser(url)
+            SetTimer(FloatingToolbar_ActivateMobileBrowser.Bind(url), -1)
         else
-            NiumaMobileBrowser_Navigate(url)
+            SetTimer(NiumaMobileBrowser_Navigate.Bind(url), -1)
         return
     }
     if (typ = "niuma_mobile_browser_close") {
@@ -1538,6 +1598,77 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
     if (typ = "niuma_mobile_browser_extract") {
         NiumaMobileBrowser_ExtractText()
+        return
+    }
+    if (typ = "niuma_browser_observe") {
+        reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        SetTimer(NiumaMobileBrowser_ObserveForChatDeferred.Bind(reqId), -1)
+        return
+    }
+    if (typ = "niuma_browser_get_snapshot") {
+        reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        NiumaMobileBrowser_PushCachedSnapshot(reqId)
+        return
+    }
+    if (typ = "niuma_browser_act") {
+        action := msg.Has("action") ? String(msg["action"]) : ""
+        eid := msg.Has("elementId") ? Integer(msg["elementId"]) : (msg.Has("id") ? Integer(msg["id"]) : 0)
+        val := msg.Has("text") ? String(msg["text"]) : (msg.Has("value") ? String(msg["value"]) : "")
+        actReqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        if (actReqId != "") {
+            global g_NiumaMobile_ObserveReqId, g_NiumaMobile_SettleReqId, g_NiumaMobile_ActReqId
+            g_NiumaMobile_ActReqId := actReqId
+            g_NiumaMobile_ObserveReqId := actReqId
+            g_NiumaMobile_SettleReqId := actReqId
+        }
+        SetTimer(NiumaMobileBrowser_ActFromChatDeferred.Bind(action, eid, val), -1)
+        return
+    }
+    if (typ = "niuma_browser_pause_ai") {
+        NiumaMobileBrowser_PauseAiControl()
+        return
+    }
+    if (typ = "niuma_browser_resume_ai") {
+        NiumaMobileBrowser_ResumeAiControl()
+        return
+    }
+    if (typ = "niuma_browser_toggle_labels") {
+        NiumaMobileBrowser_ToggleLabelDebug()
+        return
+    }
+    if (typ = "niuma_browser_show_labels") {
+        NiumaMobileBrowser_ShowLabels()
+        return
+    }
+    if (typ = "niuma_get_hole_context") {
+        holeTxt := ""
+        if FuncExists("GDHO_GetTextHoleCapturedText") {
+            try holeTxt := Trim(String(GDHO_GetTextHoleCapturedText()))
+            catch {
+                holeTxt := ""
+            }
+        }
+        if (holeTxt = "") && FuncExists("SelectionSense_GetLastSelectedText") {
+            try holeTxt := Trim(String(SelectionSense_GetLastSelectedText()))
+            catch {
+            }
+        }
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_hole_context", "text", holeTxt))
+        catch {
+        }
+        return
+    }
+    if (typ = "niuma_browser_cmd") {
+        cmd := msg.Has("cmd") ? String(msg["cmd"]) : ""
+        ret := NiumaMobileBrowser_RunUserCommand(cmd)
+        try WebView_QueuePayload(g_FTB_WV2, Map(
+            "type", "host_browser_cmd_result",
+            "ok", ret.Has("ok") && ret["ok"],
+            "error", ret.Has("error") ? String(ret["error"]) : "",
+            "action", ret.Has("action") ? String(ret["action"]) : ""
+        ))
+        catch {
+        }
         return
     }
 
@@ -1664,8 +1795,11 @@ FloatingToolbar_OnWebMessage(sender, args) {
             if msg.Has("model")
                 llm["model"] := msg["model"]
         }
+        pl := Map("llm", llm)
+        if msg.Has("apiKeys") && msg["apiKeys"] is Map
+            pl["options"] := Map("llmApiKeys", msg["apiKeys"])
         if FuncExists("UserStudio_ApplyFromWebPayload") && Trim(String(llm.Get("apiKey", ""))) != "" {
-            try UserStudio_ApplyFromWebPayload(Map("llm", llm))
+            try UserStudio_ApplyFromWebPayload(pl)
             catch {
             }
             try ConfigWebView_NotifyStudioLlmSynced()
@@ -1754,8 +1888,8 @@ FloatingToolbar_OnWebMessage(sender, args) {
         timeoutMs := Integer(msg.Get("timeoutMs", 45000))
         if (timeoutMs < 5000)
             timeoutMs := 45000
-        if (timeoutMs > 120000)
-            timeoutMs := 120000
+        if (timeoutMs > 300000)
+            timeoutMs := 300000
         headers := Map()
         if (msg.Has("headers") && msg["headers"] is Map)
             headers := msg["headers"]
@@ -1764,6 +1898,9 @@ FloatingToolbar_OnWebMessage(sender, args) {
             catch {
             }
             return
+        }
+        try OutputDebug("[FTB] niuma_llm_http start reqId=" . reqId . " timeoutMs=" . timeoutMs . " bodyLen=" . StrLen(body) . " url=" . SubStr(url, 1, 96))
+        catch {
         }
         HttpJsonAsync(method, url, body, FloatingToolbar_OnLlmHttpDone.Bind(reqId), Map("headers", headers, "timeoutMs", timeoutMs, "receiveTimeoutMs", timeoutMs, "tag", "niuma_llm_http"))
         return
@@ -2313,7 +2450,30 @@ FloatingToolbar_OnLlmHttpDone(reqId, ret) {
         }
     } else
         err := "invalid response"
-    try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_llm_http_result", "reqId", String(reqId), "ok", ok, "status", status, "text", text, "error", err))
+    try OutputDebug("[FTB] niuma_llm_http done reqId=" . reqId . " ok=" . (ok ? 1 : 0) . " status=" . status . " textLen=" . StrLen(text))
+    catch {
+    }
+    if !g_FTB_WV2
+        return
+    payload := Map(
+        "type", "niuma_llm_http_result",
+        "reqId", String(reqId),
+        "ok", ok,
+        "status", status,
+        "text", SubStr(text, 1, 400000),
+        "error", SubStr(err, 1, 4000)
+    )
+    try {
+        if FuncExists("WebView_DumpJson") && FuncExists("WebView_QueueJson") {
+            json := WebView_DumpJson(payload)
+            if (json != "") {
+                WebView_QueueJson(g_FTB_WV2, json)
+                return
+            }
+        }
+    } catch {
+    }
+    try WebView_QueuePayload(g_FTB_WV2, payload)
     catch {
     }
 }

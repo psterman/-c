@@ -79,10 +79,22 @@ body.cli-mode #cliPane{display:flex!important;flex-direction:column}
 #mobileBrowserChrome .mobile-chrome-row{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--ui));min-width:0}
 #mobileBrowserChrome .mobile-chrome-label{font-size:calc(11px * var(--ui));color:var(--muted);font-weight:600;letter-spacing:.04em;flex-shrink:0}
 #mobileBrowserChrome .mobile-chrome-hint{font-size:calc(10px * var(--ui));color:var(--muted);opacity:.85}
+#mobileBrowserChrome .mobile-chrome-cmdrow{display:flex;align-items:center;gap:calc(6px * var(--ui));min-width:0}
+#mobileBrowserChrome .mobile-chrome-cmd{flex:1;min-width:0;height:calc(30px * var(--ui));padding:0 calc(10px * var(--ui));border:1px solid rgba(34,197,94,.35);border-radius:calc(8px * var(--ui));background:rgba(8,8,8,.72);color:var(--text);outline:none;font-size:calc(12px * var(--ui))}
+#mobileBrowserChrome .mobile-chrome-cmd-go{flex-shrink:0;height:calc(30px * var(--ui));padding:0 calc(10px * var(--ui));border-radius:calc(8px * var(--ui));border:1px solid rgba(34,197,94,.45);background:rgba(34,197,94,.12);color:#86efac;font-weight:700;cursor:pointer;font-size:calc(11px * var(--ui))}
 #mobileBrowserChrome .mobile-chrome-urlrow{display:flex;align-items:center;gap:calc(6px * var(--ui));min-width:0}
 #mobileBrowserChrome .mobile-chrome-url{flex:1;min-width:0;height:calc(32px * var(--ui));padding:0 calc(10px * var(--ui));border:1px solid rgba(255,102,0,.28);border-radius:calc(8px * var(--ui));background:rgba(8,8,8,.72);color:var(--text);outline:none;user-select:text;-webkit-user-select:text}
 #mobileBrowserChrome .mobile-chrome-go{flex-shrink:0;height:calc(32px * var(--ui));padding:0 calc(12px * var(--ui));border-radius:calc(8px * var(--ui));border:1px solid rgba(255,102,0,.35);background:rgba(255,102,0,.14);color:var(--orange);font-weight:700;cursor:pointer}
 #mobileBrowserChrome .mobile-chrome-btns{display:flex;gap:calc(6px * var(--ui));flex-shrink:0}
+#mobileBrowserChrome .mobile-chrome-btns .ib.active{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.55);color:#86efac}
+#mobileBrowserChrome .ib.ai-pause{color:#fca5a5;border-color:rgba(248,113,113,.45)}
+#mobileBrowserGhostMask{display:none;position:relative;margin:0 calc(-12px * var(--ui));padding:calc(6px * var(--ui)) calc(12px * var(--ui));border-top:1px solid rgba(34,197,94,.25);background:linear-gradient(90deg,rgba(34,197,94,.08),rgba(255,102,0,.06),rgba(34,197,94,.08))}
+#mobileBrowserGhostMask.show{display:block}
+#mobileBrowserGhostMask .ghost-bar{height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#22c55e,#4ade80,#22c55e,transparent);animation:mbGhostPulse 1.2s ease-in-out infinite}
+#mobileBrowserGhostMask .ghost-txt{font-size:calc(10px * var(--ui));color:#86efac;margin-top:calc(4px * var(--ui));letter-spacing:.03em}
+article.m.browser-agent-progress .mb .ba-live{color:#86efac;font-size:calc(11px * var(--ui));padding:calc(6px * var(--ui)) calc(8px * var(--ui));border-radius:calc(8px * var(--ui));background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.22);margin-bottom:calc(8px * var(--ui))}
+article.m.browser-agent-progress .mb table{font-size:calc(12px * var(--ui))}
+@keyframes mbGhostPulse{0%,100%{opacity:.45;transform:scaleX(.85)}50%{opacity:1;transform:scaleX(1)}}
 body.mobile-browser-open #mobileBrowserChrome{display:flex}
 body.mobile-browser-open.cli-mode #mobileBrowserChrome{display:none!important}
 body.mobile-browser-open #chat-mobile-browser{background:rgba(255,102,0,.22);border-color:rgba(255,102,0,.75);box-shadow:0 0 0 2px rgba(255,102,0,.25)}
@@ -519,9 +531,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     <div class="mobile-chrome-btns">
       <button class="ib" id="mb-back" type="button" title="后退" aria-label="后退">←</button>
       <button class="ib" id="mb-reload" type="button" title="刷新" aria-label="刷新">↻</button>
+      <button class="ib" id="mb-label-debug" type="button" title="打标并显示绿色标签" aria-label="打标显示">👁️</button>
       <button class="ib" id="mb-extract" type="button" title="提取页面文本到输入框" aria-label="提取文本">✂</button>
+      <button class="ib ai-pause" id="mb-ai-pause" type="button" title="暂停 AI 操控" aria-label="暂停 AI">⏸️</button>
       <button class="ib" id="mb-close" type="button" title="关闭手机浏览器" aria-label="关闭">✕</button>
     </div>
+  </div>
+  <div id="mobileBrowserGhostMask" aria-hidden="true"><div class="ghost-bar"></div><div class="ghost-txt">AI 正在操作右侧网页…</div></div>
+  <div class="mobile-chrome-cmdrow">
+    <input type="text" class="mobile-chrome-cmd" id="mb-cmd" placeholder="网页指令：观察 / 点击 3 / 输入 5 关键词" spellcheck="false" autocomplete="off" />
+    <button type="button" class="mobile-chrome-cmd-go" id="mb-cmd-go" title="执行网页指令">执行</button>
   </div>
   <div class="mobile-chrome-urlrow">
     <input type="text" class="mobile-chrome-url" id="mb-url" placeholder="输入网址，如 https://example.com" spellcheck="false" autocomplete="off" />
@@ -530,7 +549,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </div>
 <div id="sessionTabs" class="session-tabs" role="tablist" aria-label="对话标签"></div>
 <div id="main">
-<section id="msgs"><div id="empty">首次使用请点「设」完成 API。展开后工具条在输入框下方、发送按钮左侧。</div></section>
+<section id="msgs"><div id="empty">首次使用请点「设」完成 API。展开后工具条在输入框下方、发送按钮左侧。操控右侧手机浏览器：先点 🌐，或在对话里输入「@网页 帮我在页面点搜索」。</div></section>
 <section id="cliPane" aria-label="CLI 终端">
   <div class="cli-shell">
     <div class="cli-bar">
@@ -555,12 +574,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <div class="fld"><label for="inlineLlmModel">模型</label><input id="inlineLlmModel" class="ctl" type="text" autocomplete="off" /></div>
 </div>
 <div class="api-setup-actions">
+<button type="button" class="btn2" id="inlineLlmTest">测试 API</button>
 <button type="button" class="btn3" id="inlineLlmSave">保存并开始对话</button>
 <button type="button" class="btn2" id="inlineLlmOpenFull">更多选项…</button>
 </div>
 <div class="hint mini">填写后点保存；也可点右上角齿轮或工具条「设」进入完整 API 设置。</div>
 </div>
-<textarea id="input" placeholder="输入消息，Ctrl+Enter 发送"></textarea>
+<textarea id="input" placeholder="输入消息，Ctrl+Enter 发送；操控网页可用 @网页 帮我在百度搜索…（自动打开手机浏览器）"></textarea>
 <div id="composerFooter">
 <div class="attach-wrap">
 <input id="attachFileInput" type="file" multiple style="display:none" />
@@ -674,7 +694,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       zhipu_cli: { label: '智谱 CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7689/', model: '', models: [] },
       copilot_cli: { label: 'Copilot CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7690/', model: '', models: [] },
       studio_cli: { label: '定制终端', transport: 'cli', baseUrl: 'http://127.0.0.1:7691/', model: '', models: [] },
-      kimi: { label: 'Kimi', transport: 'openai', baseUrl: 'https://api.moonshot.cn/v1', model: 'kimi-k2.6', models: ['kimi-k2.6', 'kimi-k2-thinking', 'kimi-k2.5', 'kimi-k2-turbo-preview'] },
+      kimi: { label: 'Kimi', transport: 'openai', baseUrl: 'https://api.moonshot.cn/v1', model: 'kimi-k2.6', models: ['kimi-k2.6', 'moonshot-v1-8k', 'kimi-k2-thinking', 'kimi-k2.5', 'kimi-k2-turbo-preview'] },
       qwen: { label: 'Qwen', transport: 'openai', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus', models: ['qwen-plus', 'qwen-turbo', 'qwen-max', 'qwen3-coder-plus'] },
       deepseek: { label: 'DeepSeek', transport: 'openai', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', models: ['deepseek-chat', 'deepseek-reasoner'] },
       claude: { label: 'Claude', transport: 'anthropic', baseUrl: 'https://api.anthropic.com', model: 'claude-3-5-sonnet-latest', models: ['claude-3-5-sonnet-latest', 'claude-3-7-sonnet-latest', 'claude-3-5-haiku-latest'] },
@@ -759,7 +779,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       },
       glm: { keyLabel: '智谱 BigModel API Key', keyPlaceholder: 'BigModel 密钥', keyHint: '与「智谱」槽位分离保存；均为 OpenAI 兼容但密钥不同。' },
       siliconflow: { keyLabel: '硅基流动 API Key', keyPlaceholder: '硅基流动密钥', keyHint: '单独保存在「硅基流动」槽位。' },
-      minimax: { keyLabel: 'MiniMax Token Plan Key', keyPlaceholder: 'Coding Plan / Token Plan 密钥', keyHint: 'Billing→Token Plan 密钥（≠接口密钥按量付费）；须与下方节点一致：国内 api.minimaxi.com，国际 api.minimax.io。' },
+      minimax: { keyLabel: 'MiniMax Token Plan Key', keyPlaceholder: 'Coding Plan / Token Plan 密钥', keyHint: 'Billing→Token Plan 密钥（≠按量付费接口密钥）；鉴权为 Authorization: Bearer；节点须一致：国内 api.minimaxi.com，国际 api.minimax.io。' },
       zhipu: { keyLabel: '智谱 API Key', keyPlaceholder: '智谱开放平台密钥', keyHint: '单独保存在「智谱」槽位（与 GLM BigModel 可填不同密钥）。' },
       ollama: { keyLabel: 'Ollama API Key（可选）', keyPlaceholder: '本地默认可留空', keyHint: '本地 Ollama 默认无需 API Key；如启用鉴权可在此填写。' },
       openclaw: {
@@ -787,6 +807,29 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return pid;
   }
 
+  var PROVIDER_HOST_HINTS = {
+    kimi: ['moonshot.cn', 'moonshot.ai'],
+    deepseek: ['deepseek.com'],
+    openai: ['api.openai.com'],
+    minimax: ['minimax'],
+    gemini: ['generativelanguage.googleapis.com'],
+    claude: ['anthropic.com'],
+    qwen: ['dashscope.aliyuncs.com'],
+    glm: ['bigmodel.cn'],
+    zhipu: ['bigmodel.cn'],
+    siliconflow: ['siliconflow.cn'],
+    ollama: ['11434', 'ollama']
+  };
+
+  function baseUrlMatchesProvider(pid, url) {
+    pid = normalizeProviderId(pid);
+    var u = String(url || '').trim().toLowerCase();
+    if (!u || pid === 'custom' || pid === 'openclaw') return true;
+    var hints = PROVIDER_HOST_HINTS[pid];
+    if (!hints || !hints.length) return true;
+    return hints.some(function (h) { return u.indexOf(h) >= 0; });
+  }
+
   /** 非「自定义」时始终用内置官方地址，避免用户填错 Base URL */
   function effectiveBaseUrl(pid, sessionUrl, formUrl) {
     pid = normalizeProviderId(pid);
@@ -795,7 +838,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var sess = String(sessionUrl || '').trim();
     if (p.transport === 'cli') return form || sess || String(p.baseUrl || '').trim();
     if (pid === 'custom') return form || sess;
-    if (state.manualBaseUrl) return form || sess || String(p.baseUrl || '').trim();
+    if (state.manualBaseUrl) {
+      var u = form || sess || String(p.baseUrl || '').trim();
+      if (u && !baseUrlMatchesProvider(pid, u)) return String(p.baseUrl || '').trim();
+      return u;
+    }
     return String(p.baseUrl || '').trim();
   }
 
@@ -1175,16 +1222,22 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     inlineLlmBaseUrl = $('inlineLlmBaseUrl'),
     inlineLlmModel = $('inlineLlmModel'),
     inlineLlmSave = $('inlineLlmSave'),
+    inlineLlmTest = $('inlineLlmTest'),
     inlineLlmOpenFull = $('inlineLlmOpenFull'),
     chatApiQuick = $('chat-api-quick'),
     chatMobileBrowser = $('chat-mobile-browser'),
     mobileBrowserChrome = $('mobileBrowserChrome'),
     mbBack = $('mb-back'),
     mbReload = $('mb-reload'),
+    mbLabelDebug = $('mb-label-debug'),
     mbExtract = $('mb-extract'),
+    mbAiPause = $('mb-ai-pause'),
     mbClose = $('mb-close'),
+    mobileBrowserGhostMask = $('mobileBrowserGhostMask'),
     mbUrl = $('mb-url'),
-    mbGo = $('mb-go');
+    mbGo = $('mb-go'),
+    mbCmd = $('mb-cmd'),
+    mbCmdGo = $('mb-cmd-go');
 
   function tbEls() {
     return document.querySelectorAll('.tb[data-action], .tb[data-cmd-id]');
@@ -1232,7 +1285,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     pendingStudioContext: null,
     pendingAttach: { items: [], fileIds: [], files: [] },
     mobileBrowserOpen: false,
-    mobileBrowserLastUrl: ''
+    mobileBrowserLastUrl: '',
+    mobileBrowserAiBusy: false,
+    mobileBrowserLabelDebug: true,
+    mobileBrowserAiPaused: false,
+    browserHostWaiter: null,
+    browserHostLastEvent: null,
+    browserAgentSnapReqId: '',
+    browserAgentRunning: false,
+    browserAgentHoleContext: '',
+    browserAgentHoleContextHash: '',
+    browserAgentHoleInjected: false
   };
   var toolbarVisibleSynced = false;
   var toolbarRevealTimer = 0;
@@ -1521,7 +1584,29 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return true;
   }
 
+  function applyMobileBrowserAiBusy(busy) {
+    state.mobileBrowserAiBusy = !!busy;
+    if (mobileBrowserGhostMask) {
+      mobileBrowserGhostMask.classList.toggle('show', state.mobileBrowserAiBusy && state.mobileBrowserOpen);
+      mobileBrowserGhostMask.setAttribute('aria-hidden', state.mobileBrowserAiBusy ? 'false' : 'true');
+    }
+    if (mbAiPause) mbAiPause.style.display = (state.mobileBrowserOpen && (state.mobileBrowserAiBusy || state.mobileBrowserAiPaused)) ? '' : 'none';
+  }
+
+  function syncMobileBrowserChromeState() {
+    if (mbLabelDebug) mbLabelDebug.classList.toggle('active', !!state.mobileBrowserLabelDebug);
+    if (mbAiPause) {
+      mbAiPause.textContent = state.mobileBrowserAiPaused ? '▶️' : '⏸️';
+      mbAiPause.title = state.mobileBrowserAiPaused ? '恢复 AI 操控' : '暂停 AI 操控';
+    }
+    applyMobileBrowserAiBusy(state.mobileBrowserAiBusy);
+  }
+
   function applyMobileBrowserUi(open) {
+    if (!open && state.mobileBrowserOpening && Date.now() - (state.mobileBrowserOpeningAt || 0) < 5000) {
+      return;
+    }
+    if (open) state.mobileBrowserOpening = false;
     state.mobileBrowserOpen = !!open;
     document.body.classList.toggle('mobile-browser-open', state.mobileBrowserOpen);
     if (mobileBrowserChrome) mobileBrowserChrome.setAttribute('aria-hidden', state.mobileBrowserOpen ? 'false' : 'true');
@@ -1531,6 +1616,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       hint.classList.toggle('active', state.mobileBrowserOpen);
     }
     if (chatMobileBrowser) chatMobileBrowser.classList.toggle('active', state.mobileBrowserOpen);
+    if (!state.mobileBrowserOpen) {
+      state.mobileBrowserAiBusy = false;
+      state.mobileBrowserAiPaused = false;
+    }
+    syncMobileBrowserChromeState();
   }
 
   function normalizeMobileUrlInput(raw) {
@@ -1578,6 +1668,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     } catch (_) {}
     state.mobileBrowserLastUrl = u;
     syncMobileUrlField(u);
+    state.mobileBrowserOpening = true;
+    state.mobileBrowserOpeningAt = Date.now();
     applyMobileBrowserUi(true);
     cstat('正在打开右侧手机浏览区…', '');
     post({ type: 'niuma_mobile_browser_open', url: u });
@@ -3176,6 +3268,27 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     cfgStatus.className = 'st' + (m === 'error' ? ' error' : m === 'success' ? ' success' : '');
   }
 
+  var API_TEST_TIMEOUT_MS = 18000;
+
+  function apiTestStat(t, m) {
+    var cls = m === 'error' ? ' error' : m === 'success' ? ' success' : '';
+    if (cfgStatus) {
+      cfgStatus.textContent = t;
+      cfgStatus.className = 'st' + cls;
+    }
+    if (chatStatus) {
+      chatStatus.textContent = t;
+      chatStatus.className = 'st' + cls;
+      var row = document.getElementById('chatStatusRow');
+      var showCopy = String(t || '').length > 0;
+      if (chatStatusCopy) {
+        chatStatusCopy.classList.toggle('show', showCopy);
+        chatStatusCopy.textContent = '复制';
+      }
+      if (row) row.classList.toggle('status-has-copy', showCopy);
+    }
+  }
+
   function fillProviders() {
     provider.innerHTML = Object.keys(P)
       .map(function (k) {
@@ -4231,7 +4344,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var llm = buildLlmSyncPayload();
     if (!llm) return false;
     try {
-      post({ type: 'niuma_sync_studio_llm', llm: llm });
+      post({ type: 'niuma_sync_studio_llm', llm: llm, apiKeys: state.apiKeys || {} });
     } catch (e) {}
     return true;
   }
@@ -4318,30 +4431,30 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     };
   }
 
-  async function testApiConfig() {
-    saveCfg(false);
-    var cfg = buildTestCfg();
+  async function testApiConfig(overrideCfg) {
+    if (!overrideCfg) saveCfg(false);
+    var cfg = overrideCfg || buildTestCfg();
     if (!cfg) {
-      sstat('无法读取当前配置。', 'error');
+      apiTestStat('无法读取当前配置。', 'error');
       return;
     }
     var shapeErr = apiKeyShapeHint(cfg.provider, cfg.apiKey);
     if (shapeErr) {
-      sstat(shapeErr, 'error');
+      apiTestStat(shapeErr, 'error');
       return;
     }
     var p = P[cfg.provider] || P.openai;
-    sstat('正在测试 API 连通性...', '');
+    apiTestStat('正在测试 API（约 ' + Math.round(API_TEST_TIMEOUT_MS / 1000) + ' 秒）…', '');
     try {
       if (p.transport === 'cli') {
         post({ type: 'niuma_cli_open', engine: cfg.provider, reqId: 'test_' + Date.now() });
-        sstat('已请求连接 ttyd，请查看嵌入终端。', 'success');
+        apiTestStat('已请求连接 ttyd，请查看嵌入终端。', 'success');
         return;
       }
       if (p.transport === 'openclaw') {
         if (!openClawEndpointFromCfg(cfg).ok) throw new Error('缺少 Gateway Token 或 Base URL 无效');
         await openClawRpc(cfg, 'sessions.list', {}, 5000);
-        sstat('OpenClaw 连接正常。', 'success');
+        apiTestStat('OpenClaw 连接正常。', 'success');
         return;
       }
       if (p.transport === 'anthropic') {
@@ -4349,11 +4462,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         var rA = await hostHttpRequest(claudeUrl(cfg.baseUrl), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': cfg.apiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: cfg.model, max_tokens: 1, messages: [{ role: 'user', content: 'ping' }] }),
-          timeoutMs: 45000
+          body: JSON.stringify({ model: cfg.model, max_tokens: 8, messages: [{ role: 'user', content: 'ping' }] }),
+          timeoutMs: API_TEST_TIMEOUT_MS
         });
         if (!rA.ok) throw new Error('HTTP ' + rA.status + ': ' + rA.text);
-        sstat('API 测试通过。', 'success');
+        apiTestStat('API 测试通过。', 'success');
         return;
       }
       if (p.transport === 'gemini') {
@@ -4361,38 +4474,78 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         var rG = await hostHttpRequest(geminiUrl(cfg.baseUrl, cfg.model, cfg.apiKey), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'ping' }] }], generationConfig: { maxOutputTokens: 1 } }),
-          timeoutMs: 45000
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'ping' }] }], generationConfig: { maxOutputTokens: 8 } }),
+          timeoutMs: API_TEST_TIMEOUT_MS
         });
         if (!rG.ok) throw new Error('HTTP ' + rG.status + ': ' + rG.text);
-        sstat('API 测试通过。', 'success');
+        apiTestStat('API 测试通过。', 'success');
         return;
       }
       if (cfg.provider === 'minimax') {
         cfg.apiKey = trimApiKey(cfg.apiKey);
-        if (!cfg.apiKey) throw new Error('缺少 API Key');
+        if (!cfg.apiKey) throw new Error('缺少 MiniMax Token Plan Key');
+        var pingAnthropic = JSON.stringify({ model: cfg.model, max_tokens: 8, messages: [{ role: 'user', content: 'ping' }] });
+        var pingOpenAI = JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 8, temperature: 0.1 });
         if (minimaxUsesAnthropic(cfg.baseUrl)) {
-          await minimaxAnthropicRequest(cfg, JSON.stringify({ model: cfg.model, max_tokens: 8, messages: [{ role: 'user', content: 'ping' }] }), 45000);
+          try {
+            await minimaxAnthropicRequest(cfg, pingAnthropic, API_TEST_TIMEOUT_MS);
+          } catch (eAnth) {
+            var rFb = await minimaxOpenAIRequest(cfg, pingOpenAI, API_TEST_TIMEOUT_MS);
+            if (!rFb.ok) throw eAnth;
+          }
         } else {
-          var rMo = await minimaxOpenAIRequest(cfg, JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 8, temperature: 0.1 }), 45000);
+          var rMo = await minimaxOpenAIRequest(cfg, pingOpenAI, API_TEST_TIMEOUT_MS);
           if (!rMo.ok) throw new Error(formatMinimaxApiError(rMo.status, rMo.text));
         }
-        sstat('API 测试通过。', 'success');
+        apiTestStat('API 测试通过。', 'success');
         return;
       }
       if (!cfg.apiKey && cfg.provider !== 'ollama') throw new Error('缺少 API Key');
       var h = { 'Content-Type': 'application/json' };
       if (cfg.apiKey) h.Authorization = 'Bearer ' + cfg.apiKey;
+      var pingBody;
+      if (cfg.provider === 'kimi') {
+        var km = String(cfg.model || 'kimi-k2.6');
+        if (/^kimi-k2\.6/i.test(km)) {
+          pingBody = JSON.stringify({
+            model: km,
+            messages: [{ role: 'user', content: 'ping' }],
+            max_completion_tokens: 16,
+            thinking: { type: 'disabled' }
+          });
+        } else if (/thinking/i.test(km)) {
+          pingBody = JSON.stringify({
+            model: km,
+            messages: [{ role: 'user', content: 'ping' }],
+            max_tokens: 16
+          });
+        } else {
+          pingBody = JSON.stringify({
+            model: km,
+            messages: [{ role: 'user', content: 'ping' }],
+            max_completion_tokens: 16
+          });
+        }
+      } else {
+        pingBody = JSON.stringify({
+              model: cfg.model,
+              messages: [{ role: 'user', content: 'ping' }],
+              max_tokens: 8,
+              temperature: 0.1
+            });
+      }
       var rO = await hostHttpRequest(oaUrl(cfg.baseUrl), {
         method: 'POST',
         headers: h,
-        body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, temperature: 0.1 }),
-        timeoutMs: 45000
+        body: pingBody,
+        timeoutMs: API_TEST_TIMEOUT_MS
       });
       if (!rO.ok) throw new Error('HTTP ' + rO.status + ': ' + rO.text);
-      sstat('API 测试通过。', 'success');
+      apiTestStat('API 测试通过。', 'success');
     } catch (e) {
-      sstat('API 测试失败: ' + (e && e.message ? e.message : String(e)), 'error');
+      var em = e && e.message ? e.message : String(e);
+      if (/timeout|超时/i.test(em)) em = em + '（已限制 ' + Math.round(API_TEST_TIMEOUT_MS / 1000) + ' 秒，可检查网络或节点是否与密钥区域一致）';
+      apiTestStat('API 测试失败: ' + em, 'error');
     }
   }
 
@@ -4454,20 +4607,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return '';
   }
 
+  /** MiniMax Anthropic 兼容端点要求 Bearer，不接受标准 Claude 的 x-api-key */
   function minimaxAnthropicHeaders(key) {
-    return {
-      'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01'
-    };
-  }
-
-  function minimaxBearerHeaders(key) {
     return {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + key,
       'anthropic-version': '2023-06-01'
     };
+  }
+
+  function minimaxBearerHeaders(key) {
+    return minimaxAnthropicHeaders(key);
   }
 
   function minimaxResolvedBaseUrl(base) {
@@ -4513,15 +4663,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           (baseUrlCfg ? ' | 表单 Base URL：' + baseUrlCfg : '') +
           (authMode ? ' | 鉴权：' + authMode : '')
         : '';
-    if (status === 401 || /invalid api key|authorized_error|authentication|"status_code"\s*:\s*1004/i.test(detail + rawS)) {
+    if (status === 401 || /invalid api key|authorized_error|authentication|"status_code"\s*:\s*1004|login fail.*authorization/i.test(detail + rawS)) {
       return (
-        'HTTP 401：密钥被拒绝。请确认：① 控制台 Billing→Token Plan 复制密钥（不是「接口密钥」按量付费 Key）；' +
-        '② 已购买并分配 Token Plan 席位（仅有 Key 无席位也会 invalid api key）；' +
-        '③ Base URL 须与密钥区域一致：国内 ' +
+        'HTTP 401：密钥被拒绝。请确认：① Billing→Token Plan 密钥（不是按量付费「接口密钥」）；' +
+        '② 已分配 Token Plan 席位；③ 节点与密钥区域一致：国内 ' +
         MINIMAX_BASE_CN +
         ' ，国际 ' +
         MINIMAX_BASE_INTL +
-        '（勿混用节点，否则会 invalid api key）。' +
+        '；④ Anthropic 兼容接口须 Authorization: Bearer（本程序已自动使用）。' +
         (detail ? ' 详情：' + detail : '') +
         ep
       );
@@ -4541,10 +4690,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       method: 'POST',
       headers: minimaxAnthropicHeaders(key),
       body: body,
-      timeoutMs: timeoutMs || 45000
+      timeoutMs: timeoutMs || API_TEST_TIMEOUT_MS
     });
     if (r.ok) return r;
-    throw new Error(formatMinimaxApiError(r.status, r.text, url, bases[0], 'x-api-key'));
+    throw new Error(formatMinimaxApiError(r.status, r.text, url, bases[0], 'Authorization Bearer'));
   }
 
   async function minimaxOpenAIRequest(cfg, body, timeoutMs) {
@@ -4556,7 +4705,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
         body: body,
-        timeoutMs: timeoutMs || 45000
+        timeoutMs: timeoutMs || API_TEST_TIMEOUT_MS
       });
       if (r.ok) return r;
       last = r;
@@ -4622,6 +4771,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (/\/chat\/completions$/i.test(u)) return u;
     if (/\/v\d+(?:\.\d+)?$/i.test(u)) return u + '/chat/completions';
     return u + '/chat/completions';
+  }
+
+  /** OpenAI 兼容 chat/completions 实际 URL（MiniMax /anthropic Base 须走 v1，勿拼成 /anthropic/chat/completions） */
+  function openAICompletionsUrl(cfg) {
+    var u = String((cfg && cfg.baseUrl) || '').trim();
+    if (cfg && cfg.provider === 'minimax') return minimaxOpenAIUrl(u);
+    if (/\/anthropic/i.test(u)) return minimaxOpenAIUrl(u);
+    return oaUrl(u);
   }
 
   function claudeUrl(u) {
@@ -4860,19 +5017,42 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     });
   }
 
-  async function reqOpenAI(cfg) {
+  async function reqOpenAIMessages(cfg, messages, opts) {
+    opts = opts || {};
+    var key = trimApiKey(cfg.apiKey);
+    if (key) cfg.apiKey = key;
     var h = { 'Content-Type': 'application/json' };
     if (cfg.apiKey) h.Authorization = 'Bearer ' + cfg.apiKey;
     h['Accept-Encoding'] = 'identity';
-    var r = await hostHttpRequest(oaUrl(cfg.baseUrl), {
-      method: 'POST',
-      headers: h,
-      body: JSON.stringify({ model: cfg.model, messages: oaMsgs(cfg), temperature: 0.7 }),
-      timeoutMs: 120000
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + r.text);
-    var d = JSON.parse(r.text || '{}'),
-      c = '';
+    var body = { model: cfg.model, messages: messages, temperature: opts.temperature != null ? opts.temperature : 0.7 };
+    if (opts.jsonMode) {
+      try {
+        body.response_format = { type: 'json_object' };
+      } catch (_) {}
+    }
+    if (opts.maxTokens != null) body.max_tokens = opts.maxTokens;
+    var endpoint = openAICompletionsUrl(cfg);
+    var tmo = opts.timeoutMs || 120000;
+    var bodyStr = JSON.stringify(body);
+    var r;
+    if (cfg.provider === 'minimax') {
+      if (!cfg.apiKey) throw new Error('缺少 MiniMax API Key');
+      r = await minimaxOpenAIRequest(cfg, bodyStr, tmo);
+      if (!r.ok) throw new Error(formatMinimaxApiError(r.status, r.text, endpoint, cfg.baseUrl, 'Bearer'));
+    } else {
+      r = await hostHttpRequest(endpoint, {
+        method: 'POST',
+        headers: h,
+        body: bodyStr,
+        timeoutMs: tmo
+      });
+      if (!r.ok) {
+        var detail = parseHttpErrDetail(r.text) || String(r.text || '').slice(0, 200);
+        throw new Error('HTTP ' + r.status + (detail ? '：' + detail : '') + ' 请求：' + endpoint);
+      }
+    }
+    var d = JSON.parse(r.text || '{}');
+    var c = '';
     try {
       c = norm(d.choices[0].message.content);
     } catch (e) {
@@ -4880,6 +5060,1023 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     if (!c) throw new Error('响应中没有可显示的内容。');
     return c;
+  }
+
+  async function reqOpenAI(cfg) {
+    return reqOpenAIMessages(cfg, oaMsgs(cfg), { temperature: 0.7 });
+  }
+
+  var BROWSER_AGENT_MAX_TURNS = 12;
+  /** 对齐 browser-use：小 prompt + 单条 state 消息，避免多轮快照堆叠拖慢推理 */
+  var BROWSER_AGENT_LLM_TIMEOUT_MS = 45000;
+  var BROWSER_AGENT_ACT_TIMEOUT_MS = 55000;
+  /** 每轮发给模型的可交互元素上限（browser-use 仅索引可见可点项） */
+  var BROWSER_AGENT_LLM_MAX_ELEMENTS = 14;
+  var BROWSER_AGENT_LLM_MAX_TOKENS = 384;
+
+  var BROWSER_AGENT_SYS =
+    '你是牛马网页 Agent，操控右侧手机浏览器。' +
+    '\n每轮仅输出一个 JSON（无 markdown）：{"thought":"1句","tool":"browser_click|browser_input|browser_finish","elementId":6,"text":""}' +
+    '\nelementId 必须来自下方 [id] 列表；禁止 browser_observe（动作后宿主自动推送新快照）；browser_input 须 text（搜索框填词后宿主会自动回车提交）；验证码或无进展则 browser_finish。' +
+    '\n列表格式参考 browser-use：[index] tag type "text" hint。';
+
+  function parseJsonObjectFromLlm(text) {
+    var s = String(text || '').trim();
+    var m = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (m) s = m[1].trim();
+    try {
+      return JSON.parse(s);
+    } catch (e1) {
+      var i = s.indexOf('{'),
+        j = s.lastIndexOf('}');
+      if (i >= 0 && j > i) {
+        try {
+          return JSON.parse(s.slice(i, j + 1));
+        } catch (e2) {}
+      }
+    }
+    return null;
+  }
+
+  function normalizeBrowserToolName(raw) {
+    var t = String(raw || '')
+      .toLowerCase()
+      .replace(/^browser_/, '');
+    if (t === 'observe' || t === 'snapshot' || t === 'refresh') return 'browser_observe';
+    if (t === 'click' || t === 'tap') return 'browser_click';
+    if (t === 'input' || t === 'fill' || t === 'type') return 'browser_input';
+    if (t === 'finish' || t === 'done' || t === 'stop' || t === 'halt') return 'browser_finish';
+    if (raw && String(raw).indexOf('browser_') === 0) return String(raw).toLowerCase();
+    return '';
+  }
+
+  function parseBrowserToolTurn(text) {
+    var parsed = parseJsonObjectFromLlm(text);
+    if (!parsed || typeof parsed !== 'object') {
+      return { tool: 'browser_finish', elementId: 0, text: '', thought: String(text || '').slice(0, 200) };
+    }
+    var tool = normalizeBrowserToolName(parsed.tool || parsed.action || parsed.name);
+    if (!tool && Array.isArray(parsed.steps) && parsed.steps[0]) {
+      tool = normalizeBrowserToolName(parsed.steps[0].action || parsed.steps[0].tool);
+      parsed.elementId = parsed.steps[0].elementId;
+      parsed.text = parsed.steps[0].text;
+    }
+    if (!tool) tool = 'browser_finish';
+    if (tool === 'browser_observe') tool = '__observe_rejected__';
+    return {
+      tool: tool,
+      elementId: parseInt(parsed.elementId, 10) || 0,
+      text: String(parsed.text != null ? parsed.text : ''),
+      thought: String(parsed.thought || parsed.analysis || parsed.reasoning || '').trim()
+    };
+  }
+
+  function simpleTextHash(s) {
+    var h = 0,
+      i,
+      c;
+    s = String(s || '');
+    for (i = 0; i < s.length; i++) {
+      c = s.charCodeAt(i);
+      h = (h << 5) - h + c;
+      h |= 0;
+    }
+    return String(h);
+  }
+
+  function buildBrowserHoleContextBlock(text, label) {
+    label = label || '【文本黑洞上下文 · 仅首轮有效】';
+    var t = String(text || '').trim();
+    if (!t) return '';
+    return label + '\n' + t.slice(0, 2000);
+  }
+
+  async function fetchHoleContextForAgent() {
+    state.browserHostLastEvent = null;
+    var p = waitBrowserHostEvent('host_hole_context', 4000);
+    post({ type: 'niuma_get_hole_context' });
+    try {
+      var d = await p;
+      return String((d && d.text) || '').trim();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /** browser-use 风格：[id] tag type "text" hint */
+  function formatBrowserElementsIndexedList(elements, maxN) {
+    maxN = maxN || BROWSER_AGENT_LLM_MAX_ELEMENTS;
+    var arr = pickElementsForBrowserLlm(elements, maxN);
+    if (!arr.length) return '(无可交互元素)';
+    return arr
+      .map(function (el) {
+        var tag = String(el.tag || 'node');
+        var typ = el.type ? ' ' + String(el.type) : '';
+        var txt = String(el.text || '')
+          .slice(0, 48)
+          .replace(/[\r\n"]+/g, ' ')
+          .trim();
+        var hint = el.hint ? ' hint=' + String(el.hint).slice(0, 28) : '';
+        return '[' + el.id + '] ' + tag + typ + (txt ? ' "' + txt + '"' : '') + hint;
+      })
+      .join('\n');
+  }
+
+  function formatSnapshotForAgent(snap) {
+    var n = (snap && snap.elements && snap.elements.length) || parseInt(snap && snap.count, 10) || 0;
+    var maxN = BROWSER_AGENT_LLM_MAX_ELEMENTS;
+    var picked = pickElementsForBrowserLlm(snap && snap.elements, maxN);
+    var lines = [
+      '【页面状态】',
+      'URL: ' + String((snap && snap.url) || ''),
+      '可点元素: ' + n + (picked.length < n ? '（模型见 Top ' + picked.length + '）' : '')
+    ];
+    if (snap && snap.truncated) lines.push('（宿主截断）');
+    lines.push('', '交互列表（elementId = 方括号内数字）：', formatBrowserElementsIndexedList(snap && snap.elements, maxN));
+    return lines.join('\n');
+  }
+
+  /** browser-use MessageManager：system + goal + 上一步摘要 + 当前 state，不堆叠历史快照 */
+  function buildBrowserAgentLlmMessages(opts) {
+    opts = opts || {};
+    var goal = String(opts.goal || '').trim();
+    var snap = opts.snap;
+    var holeBlock = opts.holeBlock || '';
+    var turn = opts.turn || 1;
+    var userGoal = '【用户目标】\n' + goal;
+    if (holeBlock && turn <= 1) userGoal += '\n\n' + holeBlock;
+    var msgs = [
+      { role: 'system', content: BROWSER_AGENT_SYS },
+      { role: 'user', content: userGoal }
+    ];
+    if (opts.lastAssistant) {
+      msgs.push({ role: 'assistant', content: opts.lastAssistant });
+      if (opts.lastExecNote) msgs.push({ role: 'user', content: '【上一步】' + opts.lastExecNote });
+    }
+    msgs.push({ role: 'user', content: formatSnapshotForAgent(snap) });
+    return msgs;
+  }
+
+  function formatSnapshotToolResult(snap, label, forAgent) {
+    label = label || 'host_browser_snapshot';
+    var n = (snap && snap.elements && snap.elements.length) || parseInt(snap && snap.count, 10) || 0;
+    var picked = pickElementsForBrowserLlm(snap && snap.elements, BROWSER_AGENT_LLM_MAX_ELEMENTS);
+    var head =
+      '【' +
+      label +
+      '】\nURL: ' +
+      String((snap && snap.url) || '') +
+      '\n可交互元素数: ' +
+      n +
+      (picked.length < n ? '（已向模型发送最相关 ' + picked.length + ' 项）' : '') +
+      ((snap && snap.truncated) ? '（宿主截断）' : '');
+    if (forAgent) {
+      return formatSnapshotForAgent(snap);
+    }
+    return head + '\n元素列表 JSON:\n' + formatBrowserElementsForModel(snap && snap.elements);
+  }
+
+  function snapshotFingerprint(snap) {
+    if (!snap) return '';
+    var url = String(snap.url || '');
+    var els = snap.elements || [];
+    var n = els.length;
+    var firstTxt = els[0] ? String(els[0].text || '').slice(0, 40) : '';
+    var chunk = els.slice(0, 15).map(function (e) {
+      return String(e.id) + ':' + String(e.tag || '') + ':' + String(e.text || '').slice(0, 24);
+    });
+    return url + '|n=' + n + '|h0=' + firstTxt + '|' + chunk.join(';');
+  }
+
+  async function waitSettleSnapshotAfterAct() {
+    state.browserHostLastEvent = null;
+    try {
+      return normalizeBrowserSnapshot(await waitBrowserHostEvent('host_browser_snapshot', 35000));
+    } catch (e1) {
+      return normalizeBrowserSnapshot(await fetchBrowserSnapshotForAgent());
+    }
+  }
+
+  function formatBrowserHostActError(ar) {
+    if (!ar) return '宿主操控失败';
+    var stage = String((ar.stage || '')).toLowerCase();
+    var err = String(ar.error || 'unknown');
+    var req = ar.reqId ? ' · reqId=' + ar.reqId : '';
+    if (stage === 'inject' || err.indexOf('settle_script_missing') >= 0 || err.indexOf('script_missing') >= 0) {
+      return '【Inject 阶段断开】底层脚本未加载或 UTF-8/长度校验失败' + req + ' — ' + err;
+    }
+    if (stage === 'action_click' || stage === 'click') {
+      return '【Action · 点击】物理点击未成功' + req + ' — ' + err;
+    }
+    if (stage === 'action_input' || stage === 'input') {
+      return '【Action · 输入】填表未成功' + req + ' — ' + err;
+    }
+    if (stage.indexOf('settle') >= 0 || stage === 'settle') {
+      return '【Settle 阶段断开】页面未在超时内稳定（网络/AJAX/反爬）' + req + ' — ' + err;
+    }
+    if (stage === 'label' || stage === 'analyze') {
+      return '【Label 阶段断开】打标测绘失败' + req + ' — ' + err;
+    }
+    return '【宿主异常 · ' + (stage || 'unknown') + '】' + err + req;
+  }
+
+  async function executeBrowserToolTurn(turn, sid) {
+    var tool = turn.tool;
+    if (tool === 'browser_observe') {
+      var snapObs = await fetchBrowserSnapshotForAgent();
+      return { ok: true, snap: snapObs };
+    }
+    if (tool === 'browser_click' || tool === 'browser_input') {
+      var eid = parseInt(turn.elementId, 10) || 0;
+      if (eid < 1) return { ok: false, error: 'invalid_element_id' };
+      var act = tool === 'browser_input' ? 'input' : 'click';
+      cstatForSession(sid, '⚡ ' + act + ' #' + eid, '');
+      state.browserHostLastEvent = null;
+      var actReqId = 'snap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+      state.browserAgentSnapReqId = actReqId;
+      var actP = waitBrowserHostEvent(['host_browser_act_result', 'host_browser_act_error'], BROWSER_AGENT_ACT_TIMEOUT_MS);
+      post({
+        type: 'niuma_browser_act',
+        action: act,
+        elementId: eid,
+        text: String(turn.text != null ? turn.text : ''),
+        reqId: actReqId
+      });
+      var ar;
+      try {
+        ar = await actP;
+      } catch (eAct) {
+        return { ok: false, error: eAct.message || 'act_timeout' };
+      }
+      if (ar && ar.type === 'host_browser_act_error') {
+        var actErrMsg = formatBrowserHostActError(ar);
+        cstatForSession(sid, actErrMsg, 'error');
+        return { ok: false, error: actErrMsg, stage: ar.stage, hostError: ar };
+      }
+      if (!ar || !ar.ok || ar.cancelled) {
+        var actFail = ar && ar.error
+          ? formatBrowserHostActError({ stage: 'action_' + act, error: ar.error, reqId: actReqId })
+          : 'act_failed';
+        return { ok: false, error: actFail, actResult: ar };
+      }
+      var snapAct = await waitSettleSnapshotAfterAct();
+      return { ok: true, snap: snapAct, actResult: ar };
+    }
+    return { ok: false, error: 'unknown_tool:' + tool };
+  }
+
+  function browserHostEventMatches(d, typeOrTypes) {
+    if (!d) return false;
+    var typ = String(d.type || '');
+    var types = Array.isArray(typeOrTypes) ? typeOrTypes : [typeOrTypes];
+    return types.indexOf(typ) >= 0;
+  }
+
+  function stashBrowserHostEvent(d) {
+    if (!d || !d.type) return;
+    state.browserHostLastEvent = { type: String(d.type), data: d, at: Date.now() };
+  }
+
+  function browserSnapshotUsable(d) {
+    if (!d || d.type !== 'host_browser_snapshot') return false;
+    var snap = normalizeBrowserSnapshot(d);
+    if (state.browserAgentRunning && snap.error === 'ai_paused') return false;
+    if (snap.error && snap.error !== 'json_parse_failed') return true;
+    var nEl = (snap.elements && snap.elements.length) || 0;
+    var cnt = parseInt(snap.count, 10) || 0;
+    return nEl > 0 || cnt > 0;
+  }
+
+  function browserSnapshotReqIdMatches(d) {
+    var expected = state.browserAgentSnapReqId;
+    if (!expected) return true;
+    if (!d) return false;
+    if (!d.reqId) return !!state.browserAgentRunning;
+    return String(d.reqId) === String(expected);
+  }
+
+  function tryFulfillBrowserSnapshotWaiter(d) {
+    if (!d || d.type !== 'host_browser_snapshot') return false;
+    var snap = normalizeBrowserSnapshot(d);
+    if (!browserSnapshotReqIdMatches(snap)) return false;
+    var n = (snap.elements && snap.elements.length) || parseInt(snap.count, 10) || 0;
+    if (n < 1 && !(snap.error && snap.error !== 'json_parse_failed')) return false;
+    var w = state.browserHostWaiter;
+    if (!w || !w.types || w.types.indexOf('host_browser_snapshot') < 0) return false;
+    stashBrowserHostEvent(snap);
+    try {
+      w.resolve(snap);
+    } catch (_) {}
+    state.browserHostWaiter = null;
+    return true;
+  }
+
+  function resolveBrowserHostEvent(d) {
+    if (!d) return false;
+    var typ = String(d.type || '');
+    if (typ === 'host_browser_snapshot') {
+      d = normalizeBrowserSnapshot(d);
+      if (state.browserAgentSnapReqId && !browserSnapshotReqIdMatches(d)) {
+        stashBrowserHostEvent(d);
+        return false;
+      }
+      if (!browserSnapshotUsable(d)) {
+        stashBrowserHostEvent(d);
+        return false;
+      }
+    }
+    if (typ === 'host_browser_act_error' || typ === 'host_browser_act_result') {
+      var actExpected = state.browserAgentSnapReqId;
+      if (actExpected && d.reqId && String(d.reqId) !== String(actExpected)) {
+        stashBrowserHostEvent(d);
+        return false;
+      }
+      if (actExpected && !d.reqId) d.reqId = actExpected;
+    }
+    stashBrowserHostEvent(d);
+    if (!state.browserHostWaiter) return false;
+    var w = state.browserHostWaiter;
+    if (w.type && w.type !== typ) return false;
+    if (w.types && w.types.indexOf(typ) < 0) return false;
+    try {
+      w.resolve(d);
+    } catch (_) {}
+    state.browserHostWaiter = null;
+    return true;
+  }
+
+  function waitBrowserHostEvent(typeOrTypes, timeoutMs) {
+    var types = Array.isArray(typeOrTypes) ? typeOrTypes : [typeOrTypes];
+    var last = state.browserHostLastEvent;
+    if (
+      last &&
+      browserHostEventMatches(last.data, types) &&
+      Date.now() - last.at < 60000 &&
+      (types.indexOf('host_browser_snapshot') < 0 || browserSnapshotUsable(last.data))
+    ) {
+      return Promise.resolve(last.data);
+    }
+    return new Promise(function (resolve, reject) {
+      if (state.browserHostWaiter) {
+        try {
+          state.browserHostWaiter.reject(new Error('browser_waiter_replaced'));
+        } catch (_) {}
+      }
+      var timer = setTimeout(function () {
+        state.browserHostWaiter = null;
+        reject(new Error('等待宿主响应超时（' + types.join('/') + '）'));
+      }, timeoutMs || 45000);
+      state.browserHostWaiter = {
+        types: types,
+        resolve: function (d) {
+          clearTimeout(timer);
+          state.browserHostWaiter = null;
+          resolve(d);
+        },
+        reject: function (e) {
+          clearTimeout(timer);
+          state.browserHostWaiter = null;
+          reject(e);
+        }
+      };
+      var buffered = state.browserHostLastEvent;
+      if (
+        buffered &&
+        browserHostEventMatches(buffered.data, types) &&
+        Date.now() - buffered.at < 60000 &&
+        (types.indexOf('host_browser_snapshot') < 0 || browserSnapshotUsable(buffered.data))
+      ) {
+        clearTimeout(timer);
+        state.browserHostWaiter = null;
+        resolve(buffered.data);
+      }
+    });
+  }
+
+  function extractUrlFromBrowserGoal(text) {
+    var t = String(text || '');
+    var m = t.match(/https?:\/\/[^\s\u4e00-\u9fff，。；、]+/i);
+    if (m && isSafeHttpUrl(m[0])) return m[0];
+    m = t.match(/(?:打开|访问|浏览|去|跳转|打开网址)\s*[:：]?\s*(www\.[^\s\u4e00-\u9fff，。；、]+)/i);
+    if (m) {
+      var u = 'https://' + m[1].replace(/[,.，。]+$/, '');
+      if (isSafeHttpUrl(u)) return u;
+    }
+    if (/百度|baidu/i.test(t) && /(搜索|打开|查|看)/.test(t)) return 'https://www.baidu.com';
+    if (/google|谷歌/i.test(t) && /(搜索|打开|查)/i.test(t)) return 'https://www.google.com';
+    return '';
+  }
+
+  function extractSearchQueryFromBrowserGoal(goal) {
+    var t = String(goal || '').trim().replace(/^@网页\s*/i, '').trim();
+    if (!t) return '';
+    var patterns = [
+      /(?:谷歌|google)\s*(?:上\s*)?(?:搜索|搜|查|找)\s*[:：]?\s*(.+)$/i,
+      /(?:百度|baidu)\s*(?:上\s*)?(?:搜索|搜|查|找)\s*[:：]?\s*(.+)$/i,
+      /(?:在\s*)?(?:谷歌|google|百度|baidu)[^\n]{0,28}(?:搜索|搜|查|找)\s*[:：]?\s*(.+)$/i,
+      /(?:搜索|搜一下|查一下)\s*[:：]?\s*(.+)$/i
+    ];
+    var i, m, q;
+    for (i = 0; i < patterns.length; i++) {
+      m = t.match(patterns[i]);
+      if (m && m[1]) {
+        q = String(m[1]).trim().replace(/[。；;，,！!？?]+$/g, '');
+        if (q && q.length > 0 && q.length < 120) return q;
+      }
+    }
+    return '';
+  }
+
+  function isBrowserSearchHomeUrl(url) {
+    var u = String(url || '').toLowerCase();
+    if (!u) return false;
+    if (/\.google\./.test(u) && u.indexOf('/search') < 0) return true;
+    if (/\.baidu\./.test(u) && !/\/s(\?|$)/.test(u)) return true;
+    return false;
+  }
+
+  function findSearchInputElementId(snap) {
+    var els = snap && snap.elements;
+    if (!Array.isArray(els) || !els.length) return 0;
+    var bestId = 0;
+    var bestScore = -1;
+    els.forEach(function (el) {
+      var score = 0;
+      var tag = String((el && el.tag) || '').toLowerCase();
+      var typ = String((el && el.type) || '').toLowerCase();
+      var role = String((el && el.role) || '').toLowerCase();
+      var hint = String((el && el.hint) || '').toLowerCase();
+      if (tag === 'textarea') score += 50;
+      if (tag === 'input') score += 35;
+      if (typ === 'search' || typ === 'text') score += 20;
+      if (role === 'searchbox') score += 45;
+      if (/search|icon-search/.test(hint)) score += 12;
+      if (score > bestScore) {
+        bestScore = score;
+        bestId = parseInt(el.id, 10) || 0;
+      }
+    });
+    return bestId;
+  }
+
+  /** 搜索首页 + 目标含关键词时，首轮跳过大模型，直接 browser_input */
+  function planBrowserAgentLocalSearchTurn(goal, snap) {
+    var q = extractSearchQueryFromBrowserGoal(goal);
+    if (!q) return null;
+    if (!isBrowserSearchHomeUrl(snap && snap.url)) return null;
+    var eid = findSearchInputElementId(snap);
+    if (eid < 1) return null;
+    return {
+      thought: '本地规划：在搜索框输入「' + q.slice(0, 40) + '」',
+      tool: 'browser_input',
+      elementId: eid,
+      text: q
+    };
+  }
+
+  function detectBrowserControlIntent(text) {
+    var t = String(text || '').trim();
+    if (!t) return { hit: false, query: '', url: '' };
+    var url = extractUrlFromBrowserGoal(t);
+    if (state.mobileBrowserOpen && /^(继续|接着|往下|continue|resume)$/i.test(t))
+      return { hit: true, query: '观察当前页面并继续之前的网页任务', url: url, auto: true, resume: true };
+    if (/^@网页\s*/i.test(t))
+      return { hit: true, query: t.replace(/^@网页\s*/i, '').trim() || '观察当前页面', url: url, auto: true };
+    if (/^@browser\s*/i.test(t))
+      return { hit: true, query: t.replace(/^@browser\s*/i, '').trim() || 'observe page', url: url, auto: true };
+    if (url && /(打开|访问|浏览|去|跳转|导航)/.test(t)) return { hit: true, query: t, url: url, auto: true };
+    if (state.mobileBrowserOpen && /网页|浏览器|右侧|手机浏览|打标|元素\s*#?\d/i.test(t))
+      return { hit: true, query: t, url: url, auto: true };
+    if (
+      /(帮我|请|麻烦|能不能|可以).{0,16}(点击|打开|输入|填写|搜索|登录|提交|访问|操作|操控).{0,32}(网页|页面|浏览器|网站|右侧|手机|百度|表单|按钮|链接)/i.test(t) ||
+      /(在|到|用).{0,10}(网页|页面|浏览器|网站|右侧手机浏览).{0,24}(点击|输入|搜索|登录|操作)/i.test(t) ||
+      /(自动|智能).{0,8}(打开|操控|操作).{0,12}(浏览器|网页)/i.test(t)
+    )
+      return { hit: true, query: t, url: url, auto: true };
+    return { hit: false, query: t, url: '', auto: false };
+  }
+
+  function supportsBrowserAgent(cfg) {
+    var p = P[cfg.provider] || P.openai;
+    return p.transport === 'openai';
+  }
+
+  function pickElementsForBrowserLlm(elements, maxN) {
+    maxN = maxN || 24;
+    if (!Array.isArray(elements) || !elements.length) return [];
+    function score(el) {
+      var tag = String((el && el.tag) || '').toLowerCase();
+      var typ = String((el && el.type) || '').toLowerCase();
+      var txt = String((el && el.text) || '').toLowerCase();
+      var s = 0;
+      if (tag === 'input' || tag === 'textarea') s += 50;
+      if (typ === 'search' || /搜索|关键词|query|search/.test(txt)) s += 40;
+      if (tag === 'button' || typ === 'submit') s += 35;
+      if (tag === 'a' && txt) s += 18;
+      if (el && el.hint) s += 8;
+      return s;
+    }
+    return elements
+      .slice()
+      .sort(function (a, b) {
+        return score(b) - score(a);
+      })
+      .slice(0, maxN);
+  }
+
+  function formatBrowserElementsForModel(elements, maxN) {
+    maxN = maxN || 32;
+    var arr = pickElementsForBrowserLlm(elements, maxN);
+    return JSON.stringify(
+      arr.map(function (el) {
+        return {
+          id: el.id,
+          tag: el.tag,
+          type: el.type || '',
+          text: String(el.text || '').slice(0, 72),
+          hint: String(el.hint || '').slice(0, 40)
+        };
+      })
+    );
+  }
+
+  function formatBrowserElementsCompactTable(elements, maxN) {
+    maxN = maxN || 24;
+    var arr = pickElementsForBrowserLlm(elements, maxN);
+    var lines = ['id\ttag\ttype\ttext\thint'];
+    arr.forEach(function (el) {
+      lines.push(
+        [
+          el.id,
+          el.tag || '',
+          el.type || '',
+          String(el.text || '')
+            .slice(0, 56)
+            .replace(/[\t\r\n]+/g, ' '),
+          String(el.hint || '')
+            .slice(0, 32)
+            .replace(/[\t\r\n]+/g, ' ')
+        ].join('\t')
+      );
+    });
+    return lines.join('\n');
+  }
+
+  function browserAgentPreferJsonMode(cfg) {
+    return false;
+  }
+
+  async function reqBrowserAgentLlm(cfg, messages, opts) {
+    opts = opts || {};
+    opts.timeoutMs = opts.timeoutMs || BROWSER_AGENT_LLM_TIMEOUT_MS;
+    opts.maxTokens = opts.maxTokens != null ? opts.maxTokens : BROWSER_AGENT_LLM_MAX_TOKENS;
+    opts.jsonMode = false;
+    opts.temperature = opts.temperature != null ? opts.temperature : 0.1;
+    var bodyPreview = JSON.stringify({ model: cfg.model, messages: messages });
+    var kb = Math.round(bodyPreview.length / 1024);
+    try {
+      console.log('[browser_agent] llm POST ~' + kb + 'KB jsonMode=' + opts.jsonMode + ' model=' + cfg.model);
+    } catch (_) {}
+    return reqOpenAIMessages(cfg, messages, opts);
+  }
+
+  function parseBrowserPlanFromLlm(text) {
+    var s = String(text || '').trim();
+    var m = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (m) s = m[1].trim();
+    var parsed = null;
+    try {
+      parsed = JSON.parse(s);
+    } catch (e1) {
+      var i = s.indexOf('{'),
+        j = s.lastIndexOf('}');
+      if (i >= 0 && j > i) {
+        try {
+          parsed = JSON.parse(s.slice(i, j + 1));
+        } catch (e2) {}
+      }
+    }
+    if (!parsed || typeof parsed !== 'object') return { analysis: s || '（模型未返回结构化计划）', steps: [] };
+    var steps = Array.isArray(parsed.steps) ? parsed.steps : [];
+    return {
+      analysis: String(parsed.analysis || parsed.thought || parsed.reasoning || '').trim(),
+      steps: steps
+    };
+  }
+
+  function buildBrowserAgentProgressMd(title, rows, analysis, footer, liveLine) {
+    var lines = ['## 🌐 ' + (title || '网页智能操控')];
+    if (liveLine) lines.push('', '> **当前进度：** ' + String(liveLine));
+    lines.push('', '| 步骤 | 状态 |', '| --- | --- |');
+    (rows || []).forEach(function (r) {
+      lines.push('| ' + r.label + ' | ' + r.status + ' |');
+    });
+    if (analysis) {
+      lines.push('', '### 分析思路', '', String(analysis));
+    }
+    if (footer) lines.push('', String(footer));
+    return lines.join('\n');
+  }
+
+  function markBrowserAgentDraftMessage(s, draft) {
+    if (!draft || !draft._id || !s || s.id !== state.activeSessionId) return;
+    var node = msgs.querySelector('article.m[data-msg-id="' + draft._id + '"]');
+    if (node) node.classList.add('browser-agent-progress');
+  }
+
+  async function ensureMobileBrowserForAgent(sid, intent, rows, refreshDraftFn) {
+    var url = (intent && intent.url) || extractUrlFromBrowserGoal(intent && intent.query) || state.mobileBrowserLastUrl || 'https://www.baidu.com';
+    if (!state.drawer) setDrawer(true);
+
+    if (state.mobileBrowserOpen) {
+      applyMobileBrowserUi(true);
+      if (url && isSafeHttpUrl(url) && url !== state.mobileBrowserLastUrl) {
+        rows.push({ label: '导航到目标网址', status: '⏳ 进行中' });
+        refreshDraftFn('', '正在打开：' + url, '导航中');
+        cstatForSession(sid, '🌐 正在导航：' + url, '');
+        post({ type: 'niuma_mobile_browser_navigate', url: url });
+        await browserAgentDelay(1400);
+        rows[rows.length - 1].status = '✅ 完成';
+      }
+      return true;
+    }
+
+    rows.push({ label: '自动打开手机浏览器', status: '⏳ 进行中' });
+    refreshDraftFn('', '正在右侧打开手机浏览区并加载页面…', '打开浏览器');
+    cstatForSession(sid, '🌐 正在自动打开手机浏览器（窗口右侧）…', '');
+
+    var openWait = waitBrowserHostEvent('host_mobile_browser_state', 6000);
+    post({ type: 'niuma_mobile_browser_open', url: url });
+    post({ type: 'niuma_browser_sync_state' });
+    try {
+      await openWait;
+    } catch (_) {
+      await browserAgentDelay(2200);
+    }
+    applyMobileBrowserUi(true);
+    rows[rows.length - 1].status = '✅ 已打开（继续打标与操控）';
+    await browserAgentDelay(800);
+    return true;
+  }
+
+  function browserAgentDelay(ms) {
+    return new Promise(function (r) {
+      setTimeout(r, ms);
+    });
+  }
+
+  function parseSnapshotElements(d) {
+    if (!d) return [];
+    if (Array.isArray(d.snapshot)) return d.snapshot;
+    if (Array.isArray(d.elements)) return d.elements;
+    var ej = d.elementsJson;
+    if (ej) {
+      try {
+        var parsed = typeof ej === 'string' ? JSON.parse(ej) : ej;
+        if (Array.isArray(parsed)) return parsed;
+        if (typeof parsed === 'string') {
+          var parsed2 = JSON.parse(parsed);
+          if (Array.isArray(parsed2)) return parsed2;
+        }
+        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) return parsed.items;
+      } catch (e1) {}
+      try {
+        if (typeof ej === 'string' && ej.indexOf('[{') >= 0) {
+          var slice = ej.slice(ej.indexOf('[{'));
+          var end = slice.lastIndexOf('}]');
+          if (end > 0) {
+            var arr = JSON.parse(slice.slice(0, end + 2));
+            if (Array.isArray(arr)) return arr;
+          }
+        }
+      } catch (e2) {}
+    }
+    var cnt = parseInt(d.count, 10) || 0;
+    if (cnt > 0 && state.browserHostLastEvent && state.browserHostLastEvent.data) {
+      var prev = parseSnapshotElements(state.browserHostLastEvent.data);
+      if (prev.length) return prev;
+    }
+    return [];
+  }
+
+  function normalizeBrowserSnapshot(d) {
+    if (!d) return d;
+    var core = d.data && typeof d.data === 'object' ? d.data : null;
+    if (core) {
+      var flat = {};
+      for (var k in d) {
+        if (Object.prototype.hasOwnProperty.call(d, k) && k !== 'data') flat[k] = d[k];
+      }
+      for (var k2 in core) {
+        if (Object.prototype.hasOwnProperty.call(core, k2)) flat[k2] = core[k2];
+      }
+      d = flat;
+    }
+    d.elements = parseSnapshotElements(d);
+    return d;
+  }
+
+  async function fetchBrowserSnapshotForAgent() {
+    var reqId = 'snap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    state.browserAgentSnapReqId = reqId;
+    state.browserHostLastEvent = null;
+    var snapPromise = waitBrowserHostEvent('host_browser_snapshot', 90000);
+    var pollTimer = setInterval(function () {
+      if (!state.browserHostWaiter) {
+        clearInterval(pollTimer);
+        return;
+      }
+      post({ type: 'niuma_browser_get_snapshot', reqId: reqId });
+    }, 3000);
+    post({ type: 'niuma_browser_sync_state' });
+    await browserAgentDelay(200);
+    post({ type: 'niuma_browser_observe', reqId: reqId });
+    try {
+      var snap = normalizeBrowserSnapshot(await snapPromise);
+      var nEl = (snap.elements && snap.elements.length) || 0;
+      var cnt = parseInt(snap.count, 10) || 0;
+      if (nEl > 0 || cnt > 0) return snap;
+      if (snap.error) throw new Error(String(snap.error));
+      throw new Error('label_parse_empty');
+    } catch (e1) {
+      var buf = state.browserHostLastEvent;
+      if (
+        buf &&
+        buf.data &&
+        browserSnapshotReqIdMatches(buf.data) &&
+        browserSnapshotUsable(buf.data) &&
+        Date.now() - buf.at < 120000
+      ) {
+        return normalizeBrowserSnapshot(buf.data);
+      }
+      if (String(e1.message || '').indexOf('host_browser_snapshot') < 0) throw e1;
+      post({ type: 'niuma_browser_get_snapshot', reqId: reqId });
+      try {
+        var snap3 = normalizeBrowserSnapshot(await waitBrowserHostEvent('host_browser_snapshot', 30000));
+        var n3 = (snap3.elements && snap3.elements.length) || parseInt(snap3.count, 10) || 0;
+        if (n3 > 0) return snap3;
+        throw new Error(snap3.error || e1.message || 'snapshot_failed');
+      } catch (e2) {
+        throw new Error(e2.message || e1.message || '等待宿主响应超时（host_browser_snapshot）');
+      }
+    } finally {
+      clearInterval(pollTimer);
+      if (state.browserAgentSnapReqId === reqId) state.browserAgentSnapReqId = '';
+    }
+  }
+
+  async function reqBrowserAgentPlan(cfg, goal, snap) {
+    var userMsg =
+      '【用户目标】\n' +
+      String(goal || '').trim() +
+      '\n\n【当前页面】\nURL: ' +
+      String((snap && snap.url) || '') +
+      '\n可交互元素数: ' +
+      ((snap && snap.elements && snap.elements.length) || 0) +
+      (snap && snap.truncated ? '（列表已截断）' : '') +
+      '\n\n【元素列表 JSON】\n' +
+      formatBrowserElementsForModel(snap && snap.elements);
+    return reqBrowserAgentLlm(cfg, [
+      { role: 'system', content: BROWSER_AGENT_SYS },
+      { role: 'user', content: userMsg }
+    ], {});
+  }
+
+  async function runBrowserAgentChat(sid, goal, cfg, intent) {
+    var s = sessionById(sid);
+    if (!s) throw new Error('会话不存在');
+    state.browserAgentRunning = true;
+    var rows = [];
+    var liveLine = '准备中…';
+    var analysisThoughts = [];
+    function row(label, status) {
+      rows.push({ label: label, status: status });
+    }
+    function refreshDraft(analysis, footer, live) {
+      if (live != null) liveLine = live;
+      var md = buildBrowserAgentProgressMd('网页智能操控', rows, analysis, footer, liveLine);
+      if (draft && draft._id) {
+        updateHistoryMessageById(s, draft._id, md, true);
+        markBrowserAgentDraftMessage(s, draft);
+      } else if (state.activeSessionId === sid) scrollMsgsToLatest();
+    }
+
+    var draft = ensureAssistantDraft(
+      s,
+      buildBrowserAgentProgressMd('网页智能操控', [{ label: '连接大模型与浏览器', status: '⏳ 进行中' }], '', '', '正在启动…')
+    );
+    markBrowserAgentDraftMessage(s, draft);
+    row('连接大模型与浏览器', '✅ 完成');
+    refreshDraft('', '单步 Grounding 循环：每轮仅执行一个 browser_* 工具。', '初始化完成');
+
+    try {
+      state.mobileBrowserAiPaused = false;
+      post({ type: 'niuma_browser_resume_ai' });
+      if (intent && intent.resume) {
+        await browserAgentDelay(400);
+        row('恢复操控', '✅ 已解除暂停');
+      }
+
+      await ensureMobileBrowserForAgent(sid, intent || { query: goal, url: '' }, rows, refreshDraft);
+
+      row('首轮 observe', '⏳ 进行中');
+      refreshDraft('', '正在打标并获取首轮快照…', '首轮 observe');
+      cstatForSession(sid, '🔍 首轮 browser_observe…', '');
+      var snap = await fetchBrowserSnapshotForAgent();
+      if (snap && snap.error === 'ai_paused') {
+        state.mobileBrowserAiPaused = false;
+        post({ type: 'niuma_browser_resume_ai' });
+        cstatForSession(sid, '检测到历史暂停，已自动恢复并重新 observe…', '');
+        snap = await fetchBrowserSnapshotForAgent();
+      }
+      var nEl = (snap.elements && snap.elements.length) || parseInt(snap.count, 10) || 0;
+      if (nEl < 1) {
+        if (snap.error === 'ai_paused') {
+          throw new Error('AI 网页操控处于暂停状态。请发送「继续」或重新发起 @网页 任务。');
+        }
+        if (snap.error) throw new Error(String(snap.error));
+        throw new Error('未发现可交互元素，请滚动页面或换网址后重试');
+      }
+      row('首轮 observe', '✅ ' + nEl + ' 个元素');
+
+      var holeText = await fetchHoleContextForAgent();
+      state.browserAgentHoleContext = holeText;
+      state.browserAgentHoleContextHash = simpleTextHash(holeText);
+      state.browserAgentHoleInjected = false;
+      var holeBlock = buildBrowserHoleContextBlock(holeText);
+      if (holeBlock) state.browserAgentHoleInjected = true;
+
+      var agentTurnCtx = { lastAssistant: '', lastExecNote: '' };
+      var lastFp = snapshotFingerprint(snap);
+      var staleCount = 0;
+      var finishThought = '';
+      var turn;
+
+      for (turn = 1; turn <= BROWSER_AGENT_MAX_TURNS; turn++) {
+        if (state.mobileBrowserAiPaused) {
+          throw new Error('AI 网页操控已暂停。请在右侧手动处理完成后发送「继续」。');
+        }
+
+        row('第 ' + turn + ' 轮 · 模型决策', '⏳ 思考中…');
+        refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 等待模型');
+        var llmStart = Date.now();
+        var llmHb = setInterval(function () {
+          var sec = Math.round((Date.now() - llmStart) / 1000);
+          var cap = Math.round(BROWSER_AGENT_LLM_TIMEOUT_MS / 1000);
+          cstatForSession(sid, '🧠 第 ' + turn + ' 轮：模型推理中… 已等待 ' + sec + 's / ' + cap + 's', '');
+        }, 8000);
+
+        var rawTurn = '';
+        var toolTurn = null;
+        var localPlan = !agentTurnCtx.lastAssistant ? planBrowserAgentLocalSearchTurn(goal, snap) : null;
+        if (localPlan) {
+          clearInterval(llmHb);
+          row('第 ' + turn + ' 轮 · 模型决策', '⚡ 本地搜索规划（跳过大模型）');
+          refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 本地规划');
+          cstatForSession(sid, '⚡ 搜索任务本地规划：input #' + localPlan.elementId, '');
+          rawTurn = JSON.stringify({
+            thought: localPlan.thought,
+            tool: 'browser_input',
+            elementId: localPlan.elementId,
+            text: localPlan.text
+          });
+          toolTurn = localPlan;
+        } else {
+          var messages = buildBrowserAgentLlmMessages({
+            goal: goal,
+            snap: snap,
+            holeBlock: holeBlock,
+            turn: turn,
+            lastAssistant: agentTurnCtx.lastAssistant,
+            lastExecNote: agentTurnCtx.lastExecNote
+          });
+          try {
+            cstatForSession(
+              sid,
+              '🧠 第 ' + turn + ' 轮：请求大模型选工具（最多 ' + Math.round(BROWSER_AGENT_LLM_TIMEOUT_MS / 1000) + 's）…',
+              ''
+            );
+            rawTurn = await reqBrowserAgentLlm(cfg, messages, {});
+          } catch (llmErr) {
+            var fallback = planBrowserAgentLocalSearchTurn(goal, snap);
+            if (fallback) {
+              clearInterval(llmHb);
+              row('第 ' + turn + ' 轮 · 模型决策', '⚠️ 大模型超时，改用本地搜索规划');
+              cstatForSession(sid, '⚠️ API 超时，已改用本地 input #' + fallback.elementId, '');
+              rawTurn = JSON.stringify({
+                thought: fallback.thought,
+                tool: 'browser_input',
+                elementId: fallback.elementId,
+                text: fallback.text
+              });
+              toolTurn = fallback;
+            } else {
+              var llmMsg = llmErr && llmErr.message ? llmErr.message : String(llmErr);
+              throw new Error(
+                llmMsg + '。请在设置中测试 API，或换更快模型（如 deepseek-chat、MiniMax-M2.1-highspeed）。'
+              );
+            }
+          } finally {
+            clearInterval(llmHb);
+          }
+          if (!toolTurn) toolTurn = parseBrowserToolTurn(rawTurn);
+        }
+        agentTurnCtx.lastAssistant = rawTurn;
+        if (!toolTurn) toolTurn = parseBrowserToolTurn(rawTurn);
+        if (toolTurn.thought) analysisThoughts.push('**第' + turn + '轮：** ' + toolTurn.thought);
+
+        if (toolTurn.tool === 'browser_finish') {
+          finishThought = toolTurn.thought || '任务结束或需用户介入。';
+          row('第 ' + turn + ' 轮 · browser_finish', '✅ ' + finishThought.slice(0, 40));
+          break;
+        }
+
+        if (toolTurn.tool === '__observe_rejected__') {
+          row('第 ' + turn + ' 轮 · 无效 observe', '⚠️ 已跳过');
+          agentTurnCtx.lastExecNote =
+            '禁止 browser_observe；请根据当前快照选择 browser_click、browser_input 或 browser_finish。';
+          continue;
+        }
+
+        var toolLabel =
+          toolTurn.tool +
+          (toolTurn.elementId ? ' #' + toolTurn.elementId : '') +
+          (toolTurn.text ? ' "' + String(toolTurn.text).slice(0, 20) + '"' : '');
+        row('第 ' + turn + ' 轮 · ' + toolLabel, '⏳ 执行中…');
+        refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · ' + toolTurn.tool);
+        cstatForSession(sid, '⚡ 第 ' + turn + ' 轮：' + toolLabel, '');
+
+        var exec = await executeBrowserToolTurn(toolTurn, sid);
+        if (!exec.ok) {
+          var failLabel = exec.stage ? ' [' + exec.stage + ']' : '';
+          row('第 ' + turn + ' 轮 · ' + toolLabel, '❌ ' + (exec.error || '失败') + failLabel);
+          if (
+            /invalid_element|unknown_tool|act_timeout|act_failed|not_input|element_not_found|job_timeout|script_exec_failed/i.test(
+              String(exec.error || '')
+            )
+          ) {
+            agentTurnCtx.lastExecNote =
+              '执行失败：' +
+              String(exec.error) +
+              '。请重选 elementId 或 browser_finish。';
+            continue;
+          }
+          post({ type: 'niuma_browser_pause_ai' });
+          state.mobileBrowserAiPaused = true;
+          throw new Error(String(exec.error || '工具执行失败') + '。已暂停，请手动处理后发送「继续」。');
+        }
+
+        snap = exec.snap;
+        nEl = (snap.elements && snap.elements.length) || 0;
+        row('第 ' + turn + ' 轮 · ' + toolLabel, '✅ 完成' + (nEl ? '（' + nEl + ' 元素）' : ''));
+
+        var fp = snapshotFingerprint(snap);
+        if (fp && fp === lastFp) {
+          staleCount += 1;
+          agentTurnCtx.lastExecNote = toolLabel + ' 完成，但页面与上轮相同';
+          if (staleCount >= 3) {
+            post({ type: 'niuma_browser_pause_ai' });
+            state.mobileBrowserAiPaused = true;
+            finishThought =
+              '检测到页面停滞或风控，AI 已安全挂起。请在右侧手动处理后发送「继续」。';
+            row('停滞检测 · Kill Switch', '⏸️ 已暂停');
+            break;
+          }
+          agentTurnCtx.lastExecNote += '；若遇验证码请 browser_finish。';
+        } else {
+          staleCount = 0;
+          lastFp = fp;
+          agentTurnCtx.lastExecNote = toolLabel + ' 完成，已更新快照';
+        }
+      }
+
+      if (turn > BROWSER_AGENT_MAX_TURNS && !finishThought) {
+        finishThought = '已达最大轮次（' + BROWSER_AGENT_MAX_TURNS + '），请检查右侧页面或重新发起任务。';
+        row('轮次上限', '⚠️ 已达 ' + BROWSER_AGENT_MAX_TURNS + ' 轮');
+      }
+
+      var finalMd = buildBrowserAgentProgressMd(
+        '网页智能操控 · 完成',
+        rows,
+        analysisThoughts.join('\n'),
+        '### 结果说明\n\n' + (finishThought || '单步循环已结束。'),
+        '全部完成'
+      );
+      if (draft && draft._id) {
+        updateHistoryMessageById(s, draft._id, finalMd, true);
+        for (var di = s.history.length - 1; di >= 0; di--) {
+          if (s.history[di] && s.history[di]._id === draft._id) {
+            s.history[di]._draft = false;
+            break;
+          }
+        }
+        persistSessions();
+        pushSessionHistoryToStore(s);
+        renderSessionTabs();
+      }
+    } finally {
+      state.browserAgentRunning = false;
+    }
   }
 
   async function reqClaude(cfg) {
@@ -6186,6 +7383,43 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     add('user', displayText);
     input.value = '';
     clearPendingAttach();
+
+    var browserIntent = detectBrowserControlIntent(text);
+    if (browserIntent.hit) {
+      if (!supportsBrowserAgent(cfg)) {
+        cstatForSession(
+          sid,
+          '网页智能操控需要 OpenAI 兼容 API（如 OpenAI / DeepSeek / Ollama 等）。当前提供商请切换 transport=openai，或使用 @网页 前先换模型。',
+          'error'
+        );
+        setSessionSending(sid, false);
+        return;
+      }
+      setSessionSending(sid, true);
+      try {
+        await runBrowserAgentChat(sid, browserIntent.query, cfg, browserIntent);
+        cstatForSession(sid, '网页智能操控流程结束。', 'success');
+      } catch (errBr) {
+        cstatForSession(sid, '网页智能操控失败：' + (errBr && errBr.message ? errBr.message : String(errBr)), 'error');
+        var sBr = sessionById(sid);
+        if (sBr) {
+          var dBr = ensureAssistantDraft(sBr, '**网页操控失败**\n\n' + (errBr && errBr.message ? errBr.message : '未知错误'));
+          if (dBr && dBr._id) {
+            for (var bi = sBr.history.length - 1; bi >= 0; bi--) {
+              if (sBr.history[bi] && sBr.history[bi]._id === dBr._id) {
+                sBr.history[bi]._draft = false;
+                break;
+              }
+            }
+            persistSessions();
+          }
+        }
+      } finally {
+        setSessionSending(sid, false);
+      }
+      return;
+    }
+
     setSessionSending(sid, true);
     cstatForSession(sid, '正在请求模型响应...');
     var streamDraftId = '';
@@ -6321,7 +7555,45 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
   if (mbBack) mbBack.addEventListener('click', function () { post({ type: 'niuma_mobile_browser_back' }); });
   if (mbReload) mbReload.addEventListener('click', function () { post({ type: 'niuma_mobile_browser_reload' }); });
+  function runMobileBrowserCmd() {
+    if (!mbCmd) return;
+    var cmd = String(mbCmd.value || '').trim();
+    if (!cmd) {
+      cstat('请输入网页指令，例如：观察、点击 3、输入 5 你好', 'error');
+      return;
+    }
+    if (!state.mobileBrowserOpen) {
+      cstat('请先打开手机浏览器（🌐）', 'error');
+      return;
+    }
+    post({ type: 'niuma_browser_cmd', cmd: cmd });
+  }
+  if (mbLabelDebug) {
+    mbLabelDebug.addEventListener('click', function () {
+      if (!state.mobileBrowserOpen) {
+        cstat('请先打开手机浏览器（🌐）', 'error');
+        return;
+      }
+      post({ type: 'niuma_browser_toggle_labels' });
+    });
+  }
+  if (mbCmdGo) mbCmdGo.addEventListener('click', runMobileBrowserCmd);
+  if (mbCmd) {
+    mbCmd.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        runMobileBrowserCmd();
+      }
+    });
+  }
   if (mbExtract) mbExtract.addEventListener('click', function () { post({ type: 'niuma_mobile_browser_extract' }); });
+  if (mbAiPause) {
+    mbAiPause.style.display = 'none';
+    mbAiPause.addEventListener('click', function () {
+      if (state.mobileBrowserAiPaused) post({ type: 'niuma_browser_resume_ai' });
+      else post({ type: 'niuma_browser_pause_ai' });
+    });
+  }
   if (mbClose) mbClose.addEventListener('click', function () { closeMobileBrowser(); });
   if (mbGo) mbGo.addEventListener('click', function () { navigateMobileBrowserFromInput(); });
   if (mbUrl) {
@@ -6357,6 +7629,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   if (inlineLlmSave) {
     inlineLlmSave.addEventListener('click', function () {
       applyApiSetupFromFields(inlineLlmProvider, inlineLlmApiKey, null, inlineLlmModel, { startChat: true });
+    });
+  }
+  if (inlineLlmTest) {
+    inlineLlmTest.addEventListener('click', function () {
+      var pid = resolveApiSetupProviderId(inlineLlmProvider);
+      var p = P[pid] || P.openai;
+      testApiConfig({
+        provider: pid,
+        model: (inlineLlmModel && inlineLlmModel.value.trim()) || p.model,
+        baseUrl: effectiveBaseUrl(pid, '', ''),
+        apiKey: trimApiKey(inlineLlmApiKey ? inlineLlmApiKey.value : '')
+      });
     });
   }
   if (inlineLlmOpenFull) inlineLlmOpenFull.addEventListener('click', function () { setSettings(true); });
@@ -7908,8 +9192,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         return;
       }
       if (d.type === 'host_mobile_browser_state') {
+        resolveBrowserHostEvent(d);
         applyMobileBrowserUi(!!d.open);
-        if (d.open) cstat('手机浏览器已打开：右侧约 400px 显示网页', 'success');
+        if (d.labelDebugVisible !== undefined) state.mobileBrowserLabelDebug = !!d.labelDebugVisible;
+        if (d.aiPaused !== undefined) state.mobileBrowserAiPaused = !!d.aiPaused;
+        syncMobileBrowserChromeState();
+        if (d.open) {
+          var mpw = parseInt(d.widthPx, 10) || 0;
+          if (mpw > 0) document.documentElement.style.setProperty('--mobile-browser-w', mpw + 'px');
+          cstat('手机浏览器已打开：右侧约 ' + (mpw > 0 ? mpw : 400) + 'px 显示网页', 'success');
+        }
         if (d.url && isSafeHttpUrl(d.url)) {
           state.mobileBrowserLastUrl = String(d.url);
           syncMobileUrlField(state.mobileBrowserLastUrl);
@@ -7919,7 +9211,57 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         }
         return;
       }
+      if (d.type === 'host_browser_ai_busy') {
+        applyMobileBrowserAiBusy(!!d.busy);
+        return;
+      }
+      if (d.type === 'host_browser_snapshot') {
+        if (!tryFulfillBrowserSnapshotWaiter(d)) resolveBrowserHostEvent(d);
+        d = normalizeBrowserSnapshot(d);
+        applyMobileBrowserAiBusy(false);
+        var n = (d.elements && d.elements.length) || parseInt(d.count, 10) || 0;
+        if (!d.error && n > 0) {
+          state.mobileBrowserLabelDebug = true;
+          syncMobileBrowserChromeState();
+        }
+        if (!state.browserAgentRunning) {
+          if (d.error) cstat('页面分析失败: ' + String(d.error), 'error');
+          else if (n < 1) cstat('页面打标完成，但未发现可交互元素（请稍候再试或滚动页面）', 'error');
+          else cstat('页面已打标：' + n + ' 个可交互元素' + (d.truncated ? '（已截断）' : ''), 'success');
+        }
+        return;
+      }
+      if (d.type === 'host_browser_act_error') {
+        resolveBrowserHostEvent(d);
+        applyMobileBrowserAiBusy(false);
+        var actErrCstat = formatBrowserHostActError(d);
+        if (!state.browserAgentRunning) cstat(actErrCstat, 'error');
+        return;
+      }
+      if (d.type === 'host_browser_act_result') {
+        resolveBrowserHostEvent(d);
+        applyMobileBrowserAiBusy(false);
+        if (d.cancelled) {
+          if (!state.browserAgentRunning) {
+            state.mobileBrowserAiPaused = true;
+            syncMobileBrowserChromeState();
+            cstat('已暂停 AI 网页操控，可手动操作右侧浏览器', 'success');
+          }
+          return;
+        }
+        if (!state.browserAgentRunning) {
+          if (d.ok) cstat('网页操作成功: ' + String(d.action || '') + ' #' + String(d.elementId || ''), 'success');
+          else cstat('网页操作失败: ' + String(d.error || 'unknown'), 'error');
+        }
+        return;
+      }
+      if (d.type === 'host_browser_cmd_result') {
+        if (d.ok) cstat('网页指令已发送: ' + String(d.action || ''), 'success');
+        else cstat('网页指令失败: ' + String(d.error || 'unknown'), 'error');
+        return;
+      }
       if (d.type === 'niuma_mobile_browser_error') {
+        state.mobileBrowserOpening = false;
         applyMobileBrowserUi(false);
         cstat(String(d.error || '手机浏览器打开失败'), 'error');
         return;

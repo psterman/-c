@@ -1804,12 +1804,48 @@ ConfigWebView_OnMessage(sender, args) {
             } catch as e {
                 err := e.Message
             }
+            studio := Map()
+            if ok && FuncExists("UserStudio_PayloadForWeb") {
+                try studio := UserStudio_PayloadForWeb()
+                catch {
+                    studio := Map()
+                }
+            }
             if ok {
                 try ConfigWebView_Send(Map("type", "initData", "payload", ConfigWebView_BuildInitDataSafe()))
                 catch {
                 }
             }
-            ConfigWebView_Send(Map("type", "saveUserStudioResult", "ok", ok, "error", err))
+            ConfigWebView_Send(Map("type", "saveUserStudioResult", "ok", ok, "error", err, "userStudio", studio))
+        case "testUserStudioLlm":
+            payload := msg.Get("payload", Map())
+            if (payload is String && payload != "") {
+                try payload := Jxon_Load(payload)
+                catch {
+                    payload := Map()
+                }
+            }
+            if !(payload is Map)
+                payload := Map()
+            llm := payload
+            if FuncExists("LlmApiPing_ResolveFromPayload")
+                llm := LlmApiPing_ResolveFromPayload(payload)
+            else if (payload.Has("llm") && payload["llm"] is Map)
+                llm := payload["llm"]
+            if !(llm is Map)
+                llm := Map()
+            ok := false
+            err := ""
+            elapsed := 0
+            try {
+                r := ConfigWebView_TestLlmPing(llm, 18000)
+                ok := r.Get("ok", false)
+                err := r.Get("error", "")
+                elapsed := Integer(r.Get("elapsedMs", 0))
+            } catch as e {
+                err := e.Message
+            }
+            ConfigWebView_Send(Map("type", "testUserStudioLlmResult", "ok", ok, "error", err, "elapsedMs", elapsed))
         case "restoreUserStudio":
             ok := false
             err := ""
@@ -1823,12 +1859,19 @@ ConfigWebView_OnMessage(sender, args) {
             } catch as e {
                 err := e.Message
             }
+            studio := Map()
+            if ok && FuncExists("UserStudio_PayloadForWeb") {
+                try studio := UserStudio_PayloadForWeb()
+                catch {
+                    studio := Map()
+                }
+            }
             if ok {
                 try ConfigWebView_Send(Map("type", "initData", "payload", ConfigWebView_BuildInitDataSafe()))
                 catch {
                 }
             }
-            ConfigWebView_Send(Map("type", "restoreUserStudioResult", "ok", ok, "error", err))
+            ConfigWebView_Send(Map("type", "restoreUserStudioResult", "ok", ok, "error", err, "userStudio", studio))
         case "openNiumaChatTtyd":
             try CloseConfigGUI()
             catch {
@@ -2207,4 +2250,289 @@ ConfigWebView_Close() {
         GuiID_ConfigGUI.Hide()
     } catch {
     }
+}
+
+; ===================== 智能定制 API 连通性测试（内置于设置中心，不依赖 FuncExists / 外部模块） =====================
+
+global ConfigWebView_MINIMAX_BASE_CN := "https://api.minimaxi.com/anthropic"
+global ConfigWebView_MINIMAX_BASE_INTL := "https://api.minimax.io/anthropic"
+
+ConfigWebView_NormalizeApiKey(key) {
+    if FuncExists("LlmApiPing_NormalizeApiKey")
+        return LlmApiPing_NormalizeApiKey(key)
+    key := Trim(String(key))
+    if (key = "")
+        return ""
+    key := RegExReplace(key, "i)^\s*Bearer\s+", "")
+    if FuncExists("LlmApiPing_StripSurroundingQuotes")
+        key := LlmApiPing_StripSurroundingQuotes(key)
+    key := RegExReplace(key, "\s+", "")
+    return key
+}
+
+ConfigWebView_ParseLlmErrDetail(raw) {
+    raw := Trim(String(raw))
+    if (raw = "")
+        return ""
+    try {
+        j := Jxon_Load(raw)
+        if (j is Map) {
+            if j.Has("error") {
+                er := j["error"]
+                if (er is Map) && er.Has("message")
+                    return Trim(String(er["message"]))
+                if (er is Map) && er.Has("type")
+                    return Trim(String(er["type"]))
+            }
+            if j.Has("base_resp") && j["base_resp"] is Map {
+                br := j["base_resp"]
+                sm := Trim(String(br.Get("status_msg", "")))
+                sc := Integer(br.Get("status_code", 0))
+                if (sm != "")
+                    return (sc ? "[" . sc . "] " : "") . sm
+            }
+            if j.Has("message")
+                return Trim(String(j["message"]))
+        }
+    } catch {
+    }
+    return SubStr(raw, 1, 200)
+}
+
+ConfigWebView_FormatMinimaxErr(status, raw, endpointUrl, baseUrl) {
+    detail := ConfigWebView_ParseLlmErrDetail(raw)
+    ep := (endpointUrl != "") ? (" 请求：" . endpointUrl) : ""
+    bu := (baseUrl != "") ? (" Base：" . baseUrl) : ""
+    if (status = 401 || RegExMatch(detail . raw, "i)authorized_error|login fail|1004|invalid api key|authentication")) {
+        return "MiniMax 鉴权失败 (401)：请确认 ① 使用 Billing→Token Plan 密钥（不是开放平台「接口密钥」按量付费）；"
+            . " ② 已分配 Token Plan 席位； ③ 节点与密钥区域一致（国内 "
+            . ConfigWebView_MINIMAX_BASE_CN . " / 国际 " . ConfigWebView_MINIMAX_BASE_INTL . "）。"
+            . (detail ? " 详情：" . detail : "") . ep . bu
+    }
+    return "HTTP " . status . (detail ? ("：" . detail) : (raw ? ("：" . SubStr(raw, 1, 120)) : "")) . ep
+}
+
+ConfigWebView_MinimaxPingOnce(key, base, model, timeoutMs) {
+    pingAnth := Jxon_Dump(Map("model", model, "max_tokens", 8, "messages", [Map("role", "user", "content", "ping")]))
+    pingOpenAI := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_tokens", 8, "temperature", 0.1))
+    hdr := Map(
+        "Content-Type", "application/json",
+        "Authorization", "Bearer " . key,
+        "anthropic-version", "2023-06-01"
+    )
+    urlA := ConfigWebView_MinimaxAnthropicUrl(base)
+    r := ConfigWebView_LlmHttpSync("POST", urlA, hdr, pingAnth, timeoutMs)
+    if r["ok"]
+        return Map("ok", true, "error", "", "elapsedMs", r["elapsedMs"], "endpoint", urlA)
+    urlO := ConfigWebView_MinimaxOpenAIUrl(base)
+    r2 := ConfigWebView_LlmHttpSync("POST", urlO, Map("Content-Type", "application/json", "Authorization", "Bearer " . key), pingOpenAI, timeoutMs)
+    if r2["ok"]
+        return Map("ok", true, "error", "", "elapsedMs", r2["elapsedMs"], "endpoint", urlO)
+    err := ConfigWebView_FormatMinimaxErr(Integer(r2.Has("status") ? r2["status"] : 401), r2.Has("text") ? r2["text"] : r["text"], urlA, base)
+    return Map("ok", false, "error", err, "elapsedMs", Integer(r2.Has("elapsedMs") ? r2["elapsedMs"] : r["elapsedMs"]), "endpoint", urlA)
+}
+
+ConfigWebView_TestMinimaxPing(key, base, model, timeoutMs := 18000) {
+    key := ConfigWebView_NormalizeApiKey(key)
+    if (key = "")
+        return Map("ok", false, "error", "请先填写 API Key", "elapsedMs", 0)
+    model := Trim(String(model))
+    if (model = "")
+        model := "MiniMax-M2.7"
+    base := Trim(String(base))
+    if (base = "")
+        base := ConfigWebView_MINIMAX_BASE_CN
+    bases := []
+    bases.Push(base)
+    lb := StrLower(base)
+    if InStr(lb, "minimaxi.com") && !InStr(lb, "minimax.io")
+        bases.Push(ConfigWebView_MINIMAX_BASE_INTL)
+    else if InStr(lb, "minimax.io") && !InStr(lb, "minimaxi.com")
+        bases.Push(ConfigWebView_MINIMAX_BASE_CN)
+    last := Map("ok", false, "error", "测试失败", "elapsedMs", 0)
+    for b in bases {
+        r := ConfigWebView_MinimaxPingOnce(key, b, model, timeoutMs)
+        if r.Get("ok", false)
+            return r
+        last := r
+        if (bases.Length = 1)
+            break
+        last["error"] := r.Get("error", "") . "（已自动尝试另一节点仍失败，请手动切换国内/国际）"
+    }
+    return last
+}
+
+ConfigWebView_LlmNormProv(prov) {
+    if FuncExists("UserStudio_NormalizeLlmProvider")
+        return UserStudio_NormalizeLlmProvider(prov)
+    prov := Trim(String(prov))
+    if (prov = "anthropic")
+        return "claude"
+    if (prov = "codex")
+        return "openai"
+    return prov
+}
+
+ConfigWebView_LlmPreset(prov) {
+    if FuncExists("UserStudio_LlmPresetFor")
+        return UserStudio_LlmPresetFor(prov)
+    prov := ConfigWebView_LlmNormProv(prov)
+    switch prov {
+        case "minimax":
+            return Map("baseUrl", "https://api.minimaxi.com/anthropic", "model", "MiniMax-M2.7")
+        case "gemini":
+            return Map("baseUrl", "https://generativelanguage.googleapis.com/v1beta", "model", "gemini-2.5-flash")
+        case "deepseek":
+            return Map("baseUrl", "https://api.deepseek.com/v1", "model", "deepseek-chat")
+        case "kimi":
+            return Map("baseUrl", "https://api.moonshot.cn/v1", "model", "kimi-k2.6")
+        case "claude":
+            return Map("baseUrl", "https://api.anthropic.com", "model", "claude-3-5-sonnet-latest")
+        case "ollama":
+            return Map("baseUrl", "http://127.0.0.1:11434/v1", "model", "llama3.1:8b")
+        default:
+            return Map("baseUrl", "https://api.openai.com/v1", "model", "gpt-4o-mini")
+    }
+}
+
+ConfigWebView_LlmUriEnc(s) {
+    if FuncExists("UriEncode")
+        return UriEncode(s)
+    return s
+}
+
+ConfigWebView_LlmHttpSync(method, url, headers, body, timeoutMs := 18000) {
+    start := A_TickCount
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        whr.Open(method, url, false)
+        t := Max(3000, Integer(timeoutMs))
+        whr.SetTimeouts(t, t, t, t)
+        if (headers is Map) {
+            for k, v in headers
+                whr.SetRequestHeader(String(k), String(v))
+        }
+        whr.Send(String(body))
+        status := Integer(whr.Status)
+        text := ""
+        try text := String(whr.ResponseText)
+        ok := (status >= 200 && status < 300)
+        return Map(
+            "ok", ok,
+            "status", status,
+            "text", text,
+            "error", ok ? "" : ("HTTP " . status),
+            "elapsedMs", A_TickCount - start
+        )
+    } catch as e {
+        errMsg := e.Message
+        if RegExMatch(errMsg, "i)timeout|timed\s*out|超时")
+            errMsg := "连接超时（约 " . Round(Max(3000, Integer(timeoutMs)) / 1000) . " 秒），请检查网络或 Base URL 是否与密钥区域一致"
+        return Map("ok", false, "status", 0, "text", "", "error", errMsg, "elapsedMs", A_TickCount - start)
+    }
+}
+
+ConfigWebView_MinimaxAnthropicUrl(base) {
+    u := Trim(String(base))
+    if (u = "")
+        u := "https://api.minimaxi.com/anthropic"
+    u := RegExReplace(u, "/+$", "")
+    lu := StrLower(u)
+    if InStr(lu, "/v1/messages") || InStr(lu, "/messages")
+        return u
+    if RegExMatch(lu, "/anthropic$")
+        return u . "/v1/messages"
+    if RegExMatch(lu, "/v1$")
+        return u . "/messages"
+    return u . "/v1/messages"
+}
+
+ConfigWebView_MinimaxOpenAIUrl(base) {
+    u := Trim(String(base))
+    if (u = "")
+        return "https://api.minimax.io/v1/chat/completions"
+    u := RegExReplace(u, "/+$", "")
+    lu := StrLower(u)
+    if InStr(lu, "/chat/completions")
+        return u
+    if RegExMatch(lu, "/anthropic$")
+        return RegExReplace(u, "/anthropic$", "") . "/v1/chat/completions"
+    if RegExMatch(lu, "/v1$") || RegExMatch(lu, "/v1beta$")
+        return u . "/chat/completions"
+    return u . "/v1/chat/completions"
+}
+
+ConfigWebView_OpenAIChatUrl(base) {
+    u := Trim(String(base))
+    if (u = "")
+        u := "https://api.openai.com/v1"
+    u := RegExReplace(u, "/+$", "")
+    if InStr(StrLower(u), "/chat/completions")
+        return u
+    return u . "/chat/completions"
+}
+
+ConfigWebView_ClaudeMessagesUrl(base) {
+    u := Trim(String(base))
+    if (u = "")
+        u := "https://api.anthropic.com"
+    u := RegExReplace(u, "/+$", "")
+    if InStr(StrLower(u), "/v1/messages")
+        return u
+    return u . "/v1/messages"
+}
+
+ConfigWebView_GeminiGenerateUrl(base, model, apiKey) {
+    u := Trim(String(base))
+    if (u = "")
+        u := "https://generativelanguage.googleapis.com/v1beta"
+    u := RegExReplace(u, "/+$", "")
+    m := Trim(String(model))
+    if (m = "")
+        m := "gemini-2.5-flash"
+    encKey := ConfigWebView_LlmUriEnc(apiKey)
+    if InStr(StrLower(u), ":generatecontent")
+        return u . "?key=" . encKey
+    return u . "/models/" . m . ":generateContent?key=" . encKey
+}
+
+ConfigWebView_TestLlmPing(llm, timeoutMs := 18000) {
+    if FuncExists("LlmApiPing_Test")
+        return LlmApiPing_Test(llm, timeoutMs)
+    if !(llm is Map)
+        return Map("ok", false, "error", "配置无效", "elapsedMs", 0)
+    prov := ConfigWebView_LlmNormProv(llm.Get("provider", "openai"))
+    key := ConfigWebView_NormalizeApiKey(llm.Get("apiKey", ""))
+    base := Trim(String(llm.Get("baseUrl", "")))
+    model := Trim(String(llm.Get("model", "")))
+    pre := ConfigWebView_LlmPreset(prov)
+    if (base = "")
+        base := pre.Get("baseUrl", "")
+    if (model = "")
+        model := pre.Get("model", "")
+    if (prov != "ollama" && key = "")
+        return Map("ok", false, "error", "请先填写 API Key", "elapsedMs", 0)
+    pingAnth := Jxon_Dump(Map("model", model, "max_tokens", 8, "messages", [Map("role", "user", "content", "ping")]))
+    pingOpenAI := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_tokens", 8, "temperature", 0.1))
+    t0 := A_TickCount
+    if (prov = "minimax")
+        return ConfigWebView_TestMinimaxPing(key, base, model, timeoutMs)
+    if (prov = "claude") {
+        r := ConfigWebView_LlmHttpSync("POST", ConfigWebView_ClaudeMessagesUrl(base), Map(
+            "Content-Type", "application/json",
+            "x-api-key", key,
+            "anthropic-version", "2023-06-01"
+        ), pingAnth, timeoutMs)
+        return Map("ok", !!r["ok"], "error", r["ok"] ? "" : r["error"], "elapsedMs", A_TickCount - t0)
+    }
+    if (prov = "gemini") {
+        r := ConfigWebView_LlmHttpSync("POST", ConfigWebView_GeminiGenerateUrl(base, model, key), Map("Content-Type", "application/json"),
+            Jxon_Dump(Map("contents", [Map("role", "user", "parts", [Map("text", "ping")])], "generationConfig", Map("maxOutputTokens", 8))), timeoutMs)
+        return Map("ok", !!r["ok"], "error", r["ok"] ? "" : r["error"], "elapsedMs", A_TickCount - t0)
+    }
+    headers := Map("Content-Type", "application/json")
+    if (key != "")
+        headers["Authorization"] := "Bearer " . key
+    r := ConfigWebView_LlmHttpSync("POST", ConfigWebView_OpenAIChatUrl(base), headers, pingOpenAI, timeoutMs)
+    return Map("ok", !!r["ok"], "error", r["ok"] ? "" : r["error"], "elapsedMs", A_TickCount - t0)
 }

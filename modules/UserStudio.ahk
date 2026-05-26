@@ -118,6 +118,94 @@ UserStudio_NormalizeNiumaOptions(optIn) {
         optIn["niumaInstallRoot"] := ""
     else
         optIn["niumaInstallRoot"] := Trim(String(optIn["niumaInstallRoot"]))
+    if !(optIn.Has("llmApiKeys") && optIn["llmApiKeys"] is Map)
+        optIn["llmApiKeys"] := Map()
+    if !(optIn.Has("llmBaseUrls") && optIn["llmBaseUrls"] is Map)
+        optIn["llmBaseUrls"] := Map()
+    if !(optIn.Has("llmManualBaseUrl") && optIn["llmManualBaseUrl"] is Map)
+        optIn["llmManualBaseUrl"] := Map()
+    return optIn
+}
+
+UserStudio_BaseUrlMatchesProvider(prov, url) {
+    prov := UserStudio_NormalizeLlmProvider(prov)
+    url := Trim(String(url))
+    if (url = "" || prov = "custom")
+        return true
+    low := StrLower(url)
+    switch prov {
+        case "kimi":
+            return RegExMatch(low, "moonshot\.(cn|ai)")
+        case "deepseek":
+            return InStr(low, "deepseek")
+        case "openai":
+            return InStr(low, "api.openai.com")
+        case "minimax":
+            return InStr(low, "minimax")
+        case "gemini":
+            return InStr(low, "generativelanguage.googleapis.com")
+        case "claude":
+            return InStr(low, "anthropic")
+        case "qwen":
+            return InStr(low, "dashscope")
+        case "glm", "zhipu":
+            return InStr(low, "bigmodel")
+        case "siliconflow":
+            return InStr(low, "siliconflow")
+        case "ollama":
+            return InStr(low, "11434") || InStr(low, "ollama")
+        case "openclaw":
+            return true
+        default:
+            return true
+    }
+}
+
+UserStudio_MergeLlmBaseUrls(optIn, llm) {
+    if !(optIn is Map)
+        optIn := Map()
+    if !(llm is Map)
+        return optIn
+    urls := Map()
+    if optIn.Has("llmBaseUrls") && optIn["llmBaseUrls"] is Map {
+        for k, v in optIn["llmBaseUrls"] {
+            pk := UserStudio_NormalizeLlmProvider(k)
+            vu := Trim(String(v))
+            if (vu != "" && UserStudio_BaseUrlMatchesProvider(pk, vu))
+                urls[pk] := vu
+        }
+    }
+    prov := UserStudio_NormalizeLlmProvider(llm.Get("provider", "openai"))
+    bu := Trim(String(llm.Get("baseUrl", "")))
+    if (bu != "" && UserStudio_BaseUrlMatchesProvider(prov, bu))
+        urls[prov] := bu
+    else if urls.Has(prov)
+        llm["baseUrl"] := urls[prov]
+    optIn["llmBaseUrls"] := urls
+    return optIn
+}
+
+UserStudio_MergeLlmApiKeys(optIn, llm) {
+    if !(optIn is Map)
+        optIn := Map()
+    if !(llm is Map)
+        return optIn
+    keys := Map()
+    if optIn.Has("llmApiKeys") && optIn["llmApiKeys"] is Map {
+        for k, v in optIn["llmApiKeys"] {
+            pk := UserStudio_NormalizeLlmProvider(k)
+            vk := UserStudio_NormalizeApiKey(v)
+            if (vk != "")
+                keys[pk] := vk
+        }
+    }
+    prov := UserStudio_NormalizeLlmProvider(llm.Get("provider", "openai"))
+    ak := UserStudio_NormalizeApiKey(llm.Get("apiKey", ""))
+    if (ak != "")
+        keys[prov] := ak
+    else if keys.Has(prov)
+        llm["apiKey"] := keys[prov]
+    optIn["llmApiKeys"] := keys
     return optIn
 }
 
@@ -223,10 +311,15 @@ UserStudio_ApplyLlmAutoDefaults(doc) {
     if (prov = "custom")
         return doc
     optIn := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
-    if optIn.Get("manualBaseUrl", false)
-        return doc
+    optIn := UserStudio_NormalizeNiumaOptions(optIn)
+    manualMap := optIn.Has("llmManualBaseUrl") && optIn["llmManualBaseUrl"] is Map ? optIn["llmManualBaseUrl"] : Map()
+    manualThis := !!manualMap.Get(prov, optIn.Get("manualBaseUrl", false))
     pre := UserStudio_LlmPresetFor(prov)
-    llm["baseUrl"] := pre.Get("baseUrl", "")
+    bu := Trim(String(llm["baseUrl"]))
+    if manualThis && bu != "" && UserStudio_BaseUrlMatchesProvider(prov, bu) {
+        ; 保留该服务商手动指定的合法地址
+    } else if !UserStudio_BaseUrlMatchesProvider(prov, bu) || !manualThis
+        llm["baseUrl"] := pre.Get("baseUrl", "")
     m := Trim(String(llm["model"]))
     if (m = "")
         llm["model"] := pre.Get("model", "")
@@ -247,7 +340,7 @@ UserStudio_NormalizeDoc(doc) {
         prov := "openai"
     llm := Map(
         "provider", prov,
-        "apiKey", Trim(String(llmIn.Get("apiKey", ""))),
+        "apiKey", UserStudio_NormalizeApiKey(llmIn.Get("apiKey", "")),
         "baseUrl", Trim(String(llmIn.Get("baseUrl", ""))),
         "model", Trim(String(llmIn.Get("model", "")))
     )
@@ -268,6 +361,8 @@ UserStudio_NormalizeDoc(doc) {
         tp := 7691
     ttyd := Map("shell", sh, "workDir", wd, "port", tp)
     optIn := UserStudio_NormalizeNiumaOptions(optIn)
+    optIn := UserStudio_MergeLlmApiKeys(optIn, llm)
+    optIn := UserStudio_MergeLlmBaseUrls(optIn, llm)
     return UserStudio_ApplyLlmAutoDefaults(Map(
         "version", Integer(doc.Get("version", 1)),
         "llm", llm,
@@ -497,9 +592,45 @@ UserStudio_ApplyFromWebPayload(payload) {
             cur["paths"][k] := Trim(String(v))
     }
     if payload.Has("options") && payload["options"] is Map {
-        merged := cur.Has("options") && cur["options"] is Map ? cur["options"] : Map()
-        for k, v in payload["options"]
+        merged := cur.Has("options") && cur["options"] is Map ? cur["options"].Clone() : Map()
+        optPayload := payload["options"]
+        if optPayload.Has("llmApiKeys") && optPayload["llmApiKeys"] is Map {
+            keys := merged.Has("llmApiKeys") && merged["llmApiKeys"] is Map ? merged["llmApiKeys"].Clone() : Map()
+            for k, v in optPayload["llmApiKeys"] {
+                pk := UserStudio_NormalizeLlmProvider(k)
+                vk := UserStudio_NormalizeApiKey(v)
+                if (vk != "")
+                    keys[pk] := vk
+            }
+            merged["llmApiKeys"] := keys
+        }
+        if optPayload.Has("llmBaseUrls") && optPayload["llmBaseUrls"] is Map {
+            urls := merged.Has("llmBaseUrls") && merged["llmBaseUrls"] is Map ? merged["llmBaseUrls"].Clone() : Map()
+            for k, v in optPayload["llmBaseUrls"] {
+                pk := UserStudio_NormalizeLlmProvider(k)
+                vu := Trim(String(v))
+                if (vu != "" && UserStudio_BaseUrlMatchesProvider(pk, vu))
+                    urls[pk] := vu
+            }
+            merged["llmBaseUrls"] := urls
+        }
+        for k, v in optPayload {
+            if (k = "llmApiKeys" || k = "llmBaseUrls")
+                continue
             merged[k] := v
+        }
+        cur["options"] := UserStudio_NormalizeNiumaOptions(merged)
+    }
+    if payload.Has("llmApiKeys") && payload["llmApiKeys"] is Map {
+        merged := cur.Has("options") && cur["options"] is Map ? cur["options"].Clone() : Map()
+        keys := merged.Has("llmApiKeys") && merged["llmApiKeys"] is Map ? merged["llmApiKeys"].Clone() : Map()
+        for k, v in payload["llmApiKeys"] {
+            pk := UserStudio_NormalizeLlmProvider(k)
+            vk := UserStudio_NormalizeApiKey(v)
+            if (vk != "")
+                keys[pk] := vk
+        }
+        merged["llmApiKeys"] := keys
         cur["options"] := UserStudio_NormalizeNiumaOptions(merged)
     }
     if payload.Has("ttyd") && payload["ttyd"] is Map {
@@ -705,4 +836,23 @@ UserStudio_BrowsePath(field, filterDesc := "可执行文件 (*.exe)") {
     catch {
     }
     return selected
+}
+
+UserStudio_NormalizeApiKey(key) {
+    if FuncExists("LlmApiPing_NormalizeApiKey")
+        return LlmApiPing_NormalizeApiKey(key)
+    if FuncExists("ConfigWebView_NormalizeApiKey")
+        return ConfigWebView_NormalizeApiKey(key)
+    return Trim(String(key))
+}
+
+UserStudio_TestLlmPing(llm, timeoutMs := 18000) {
+    if FuncExists("ConfigWebView_TestMinimaxPing") && (llm is Map) {
+        prov := UserStudio_NormalizeLlmProvider(llm.Get("provider", "openai"))
+        if (prov = "minimax")
+            return ConfigWebView_TestMinimaxPing(UserStudio_NormalizeApiKey(llm.Get("apiKey", "")), llm.Get("baseUrl", ""), llm.Get("model", ""), timeoutMs)
+    }
+    if FuncExists("LlmApiPing_Test")
+        return LlmApiPing_Test(llm, timeoutMs)
+    return Map("ok", false, "error", "LlmApiPing 模块未加载，请重载牛马主程序", "elapsedMs", 0)
 }

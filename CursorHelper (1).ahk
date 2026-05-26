@@ -3017,7 +3017,13 @@ _WebView_QueueFlush(*) {
         try {
             if IsObject(item["wv2"])
                 item["wv2"].PostWebMessageAsJson(jsonStr)
-        } catch {
+        } catch as e {
+            try {
+                ; 这里是宿主->WebView 的关键通道；失败必须可见，否则前端只能超时
+                snippet := SubStr(String(jsonStr), 1, 260)
+                OutputDebug("[WebView] PostWebMessageAsJson failed: " . e.Message . " | json_head=" . snippet)
+            } catch {
+            }
         }
     }
     SetTimer(_WebView_QueueFlush, -10)
@@ -4473,6 +4479,7 @@ StartWebViewWarmup(*) {
 }
 
 #Include modules\ConfigManager.ahk
+#Include modules\LlmApiPing.ahk
 #Include modules\UserStudio.ahk
 #Include modules\AppUpdateCheck.ahk
 InitConfig() ; 启动初始化
