@@ -897,6 +897,90 @@
       margin-bottom: 8px;
     }
     .studio-key-badge.ok { color: #6bcf8a; border-color: rgba(107,207,138,.35); }
+    .studio-llm-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+    .studio-llm-card {
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,.03);
+    }
+    .studio-llm-card.is-default { border-color: rgba(255,102,0,.45); box-shadow: 0 0 0 1px rgba(255,102,0,.12) inset; }
+    .studio-llm-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .studio-llm-card-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .studio-llm-card-title-row strong { font-size: 14px; }
+    .studio-llm-card-status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border2);
+      color: var(--text-dim);
+    }
+    .studio-llm-card-status.ok { color: #6bcf8a; border-color: rgba(107,207,138,.35); }
+    .studio-llm-card-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .studio-llm-default { font-size: 12px; color: var(--text-dim); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+    .studio-llm-add-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed var(--border2);
+    }
+    .studio-llm-add-bar select { min-width: 180px; }
+    .studio-llm-card .row:last-of-type { margin-bottom: 0; }
+    .studio-llm-empty {
+      padding: 20px 14px;
+      text-align: center;
+      color: var(--text-dim);
+      border: 1px dashed var(--border2);
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .studio-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .studio-modal.open { display: flex; }
+    .studio-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+    }
+    .studio-modal-panel {
+      position: relative;
+      z-index: 1;
+      width: min(440px, 100%);
+      max-height: min(90vh, 640px);
+      overflow: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    }
+    .studio-modal-panel .title { margin-bottom: 12px; }
+    .studio-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .studio-modal-row { margin-bottom: 10px; }
+    .studio-modal-row .label { margin-bottom: 4px; font-size: 12px; color: var(--text-dim); }
     details.studio-more { margin-top: 10px; }
     details.studio-more summary { cursor: pointer; color: var(--text-dim); font-size: 12px; margin-bottom: 8px; }
     #sidebar { position: relative; }
@@ -962,6 +1046,39 @@
       <div id="panel"></div>
       <div id="footer"><button id="btn-cancel" class="btn">取消</button><button id="btn-save" class="btn primary">保存</button></div>
     </section>
+  </div>
+  <div id="studioLlmAddModal" class="studio-modal" aria-hidden="true">
+    <div class="studio-modal-backdrop" data-studio-modal-close="1"></div>
+    <div class="studio-modal-panel" role="dialog" aria-labelledby="studioLlmAddModalTitle">
+      <div class="title" id="studioLlmAddModalTitle">添加大模型</div>
+      <div class="studio-modal-row">
+        <div class="label">服务商</div>
+        <select id="studioModalProvider" class="ctl" data-nosave="1"></select>
+      </div>
+      <div class="studio-modal-row">
+        <div class="label">API Key</div>
+        <input id="studioModalApiKey" class="ctl" type="password" data-nosave="1" autocomplete="off" placeholder="填写该平台密钥">
+      </div>
+      <div class="studio-modal-row">
+        <div class="label">模型</div>
+        <select id="studioModalModel" class="ctl" data-nosave="1"></select>
+      </div>
+      <div class="studio-modal-row" id="studioModalMinimaxRow" style="display:none">
+        <div class="label">MiniMax 节点</div>
+        <div class="inline" style="flex-wrap:wrap;gap:8px">
+          <button type="button" class="btn" id="studioModalMinimaxCn">国内 · minimaxi.com</button>
+          <button type="button" class="btn" id="studioModalMinimaxIntl">国际 · minimax.io</button>
+        </div>
+      </div>
+      <div class="hint mini" id="studioModalHint"></div>
+      <label class="studio-llm-default" style="margin-top:8px;display:inline-flex">
+        <input type="checkbox" id="studioModalSetDefault" data-nosave="1"> 设为默认使用
+      </label>
+      <div class="studio-modal-actions">
+        <button type="button" class="btn" id="studioModalCancel">取消</button>
+        <button type="button" class="btn primary" id="studioModalConfirm">添加并保存</button>
+      </div>
+    </div>
   </div>
   <script>
     if (typeof BasePanel === 'undefined') {
@@ -2023,8 +2140,8 @@
         .join("");
     }
 
-    function fillStudioLlmModelSelect(pid, currentModel) {
-      const sel = document.getElementById("usLlmModel");
+    function fillStudioLlmModelSelect(pid, currentModel, targetEl) {
+      const sel = targetEl || document.getElementById("usLlmModel");
       if (!sel) return;
       const pre = studioLlmPreset(pid);
       const models = (pre.models && pre.models.length ? pre.models : [pre.model]).filter(Boolean);
@@ -2032,18 +2149,33 @@
       const opts = models.slice();
       if (cur && opts.indexOf(cur) < 0) opts.unshift(cur);
       if (pid === "custom") {
-        sel.outerHTML = `<input id="usLlmModel" class="ctl" type="text" data-nosave="1" value="${esc(cur)}" placeholder="模型名称" autocomplete="off">`;
+        if (sel.tagName === "SELECT") {
+          const inp = document.createElement("input");
+          inp.className = sel.className || "ctl us-card-model";
+          inp.type = "text";
+          inp.setAttribute("data-nosave", "1");
+          inp.dataset.prov = pid;
+          inp.value = cur;
+          inp.placeholder = "模型名称";
+          inp.autocomplete = "off";
+          if (sel.id) inp.id = sel.id;
+          sel.replaceWith(inp);
+        } else {
+          sel.value = cur;
+        }
         return;
       }
+      let sel2 = sel;
       if (sel.tagName !== "SELECT") {
         const wrap = sel.parentElement;
         const nu = document.createElement("select");
-        nu.id = "usLlmModel";
-        nu.className = "ctl";
+        nu.className = sel.className || "ctl us-card-model";
         nu.setAttribute("data-nosave", "1");
+        nu.dataset.prov = pid;
+        if (sel.id) nu.id = sel.id;
         if (wrap) wrap.replaceChild(nu, sel);
+        sel2 = nu;
       }
-      const sel2 = document.getElementById("usLlmModel");
       sel2.innerHTML =
         opts.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join("") +
         `<option value="__custom__">其他（手动输入）…</option>`;
@@ -2103,10 +2235,163 @@
     }
 
     function stashStudioApiKeyFromDom() {
+      if (document.getElementById("studioLlmCards")) return stashAllStudioCardsFromDom();
       const provEl = document.getElementById("usLlmProvider");
       const keyEl = document.getElementById("usLlmApiKey");
-      if (!provEl || !keyEl) return;
+      if (!provEl || !keyEl) return false;
       stashStudioApiKeyForProvider(provEl.value, keyEl.value);
+      return true;
+    }
+
+    function getStudioLlmModels() {
+      const o = state.data.userStudio?.options || {};
+      const m = o.llmModels;
+      if (!m || typeof m !== "object" || Array.isArray(m)) return {};
+      const out = {};
+      Object.keys(m).forEach((k) => {
+        const nk = normalizeStudioLlmProvider(k);
+        const v = String(m[k] || "").trim();
+        if (v) out[nk] = v;
+      });
+      return out;
+    }
+
+    function getStudioModelForProvider(pid) {
+      pid = normalizeStudioLlmProvider(pid);
+      const models = getStudioLlmModels();
+      if (models[pid]) return models[pid];
+      const llm = state.data.userStudio?.llm || {};
+      if (normalizeStudioLlmProvider(llm.provider) === pid && llm.model) return String(llm.model).trim();
+      return studioLlmPreset(pid).model || "";
+    }
+
+    function stashStudioModelForProvider(pid, model) {
+      pid = normalizeStudioLlmProvider(pid);
+      model = String(model || "").trim();
+      if (!state.data.userStudio) state.data.userStudio = { options: {} };
+      if (!state.data.userStudio.options) state.data.userStudio.options = {};
+      const models = getStudioLlmModels();
+      if (model) models[pid] = model;
+      else delete models[pid];
+      state.data.userStudio.options.llmModels = models;
+    }
+
+    const STUDIO_LLM_LS_KEY = "niuma_studio_llm_cards_v1";
+
+    function saveStudioLlmCardsToLocalStorage(pl) {
+      try {
+        const src = pl || buildStudioLlmPersistPayload();
+        localStorage.setItem(STUDIO_LLM_LS_KEY, JSON.stringify({
+          explicit: true,
+          cards: src?.options?.llmCardProviders || [],
+          keys: src?.options?.llmApiKeys || {},
+          models: src?.options?.llmModels || {},
+          llm: src?.llm || {},
+          ts: Date.now()
+        }));
+      } catch (_) {}
+    }
+
+    function loadStudioLlmCardsFromLocalStorage() {
+      if (Array.isArray(state.data.userStudio?.options?.llmCardProviders)) return;
+      try {
+        const raw = localStorage.getItem(STUDIO_LLM_LS_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (!data?.explicit) return;
+        mergeUserStudioState({
+          llm: data.llm || {},
+          options: {
+            llmCardProviders: Array.isArray(data.cards) ? data.cards : [],
+            llmApiKeys: data.keys || {},
+            llmModels: data.models || {}
+          }
+        });
+        state._studioCardsExplicit = true;
+      } catch (_) {}
+    }
+
+    function getStudioLlmCardProviders() {
+      const opt = state.data.userStudio?.options || {};
+      if (state._studioCardsExplicit || Array.isArray(opt.llmCardProviders)) {
+        return (opt.llmCardProviders || [])
+          .map((p) => normalizeStudioLlmProvider(p))
+          .filter((p, i, arr) => STUDIO_LLM_PRESETS[p] && arr.indexOf(p) === i);
+      }
+      const keys = Object.keys(getStudioLlmApiKeys());
+      const prov = normalizeStudioLlmProvider(state.data.userStudio?.llm?.provider || "openai");
+      const ordered = [];
+      const seen = new Set();
+      [prov, ...keys].forEach((p) => {
+        p = normalizeStudioLlmProvider(p);
+        if (!seen.has(p) && STUDIO_LLM_PRESETS[p]) {
+          seen.add(p);
+          ordered.push(p);
+        }
+      });
+      return ordered.length ? ordered : ["openai"];
+    }
+
+    function markStudioCardsExplicit() {
+      state._studioCardsExplicit = true;
+    }
+
+    function setStudioLlmCardProviders(list) {
+      if (!state.data.userStudio) state.data.userStudio = { options: {} };
+      if (!state.data.userStudio.options) state.data.userStudio.options = {};
+      const out = [];
+      const seen = new Set();
+      (list || []).forEach((p) => {
+        p = normalizeStudioLlmProvider(p);
+        if (!STUDIO_LLM_PRESETS[p] || seen.has(p)) return;
+        seen.add(p);
+        out.push(p);
+      });
+      state.data.userStudio.options.llmCardProviders = out;
+      markStudioCardsExplicit();
+    }
+
+    function getActiveStudioLlmProvider() {
+      const radio = document.querySelector('input[name="usLlmActiveProvider"]:checked');
+      if (radio) return normalizeStudioLlmProvider(radio.value);
+      return normalizeStudioLlmProvider(state.data.userStudio?.llm?.provider || "openai");
+    }
+
+    function maskStudioApiKey(key) {
+      const k = normalizeStudioApiKey(key);
+      if (!k) return "";
+      if (k.length <= 8) return "••••";
+      return k.slice(0, 4) + "…" + k.slice(-4);
+    }
+
+    function stashAllStudioCardsFromDom() {
+      const cards = document.querySelectorAll(".studio-llm-card[data-prov]");
+      if (!cards.length) return false;
+      const providers = [];
+      cards.forEach((card) => {
+        const pid = normalizeStudioLlmProvider(card.dataset.prov || "");
+        if (!pid) return;
+        providers.push(pid);
+        const keyEl = card.querySelector(".us-card-key");
+        if (keyEl) stashStudioApiKeyForProvider(pid, keyEl.value);
+        const manualFlag = card.dataset.manualBase === "1" || isStudioManualBaseUrlFor(pid);
+        const manualInp = card.querySelector(".us-card-base-manual-input");
+        const hiddenBase = card.querySelector(".us-card-base-hidden");
+        const url =
+          manualFlag && manualInp
+            ? manualInp.value
+            : hiddenBase?.value || getStudioBaseUrlForProvider(pid);
+        stashStudioBaseUrlForProvider(pid, url, manualFlag);
+        const modEl = card.querySelector(".us-card-model");
+        if (modEl) {
+          let mv = String(modEl.value || "").trim();
+          if (mv === "__custom__") mv = "";
+          if (modEl.tagName !== "SELECT") mv = String(modEl.value || "").trim();
+          stashStudioModelForProvider(pid, resolveStudioModel(pid, mv));
+        }
+      });
+      if (providers.length) setStudioLlmCardProviders(providers);
+      return true;
     }
 
     const STUDIO_PROVIDER_HOST_HINTS = {
@@ -2192,8 +2477,9 @@
     }
 
     function stashStudioBaseUrlFromDom() {
+      if (document.getElementById("studioLlmCards")) return stashAllStudioCardsFromDom();
       const provEl = document.getElementById("usLlmProvider");
-      if (!provEl) return;
+      if (!provEl) return false;
       const pid = normalizeStudioLlmProvider(provEl.value);
       const manualInp = document.getElementById("usLlmBaseUrlManual");
       const baseEl = document.getElementById("usLlmBaseUrl");
@@ -2202,16 +2488,33 @@
           ? manualInp.value
           : baseEl?.value || getStudioBaseUrlForProvider(pid);
       stashStudioBaseUrlForProvider(pid, url, !!state._studioManualBaseUrl);
+      return true;
     }
 
-    function setStudioMinimaxRegion(url) {
-      const baseEl = document.getElementById("usLlmBaseUrl");
-      const manual = document.getElementById("usLlmBaseUrlManual");
-      state._studioManualBaseUrl = false;
-      if (baseEl) baseEl.value = url;
-      if (manual) manual.value = "";
-      updateStudioBaseUrlUi("minimax");
+    function setStudioMinimaxRegion(url, pid) {
+      pid = normalizeStudioLlmProvider(pid || getActiveStudioLlmProvider());
+      stashStudioBaseUrlForProvider(pid, url, false);
+      const card = document.querySelector(`.studio-llm-card[data-prov="${pid}"]`);
+      if (card) {
+        card.dataset.manualBase = "0";
+        const hidden = card.querySelector(".us-card-base-hidden");
+        const manualInp = card.querySelector(".us-card-base-manual-input");
+        const autoRow = card.querySelector(".us-card-base-auto");
+        const manualRow = card.querySelector(".us-card-base-manual");
+        if (hidden) hidden.value = url;
+        if (manualInp) manualInp.value = "";
+        if (autoRow) autoRow.style.display = "";
+        if (manualRow) manualRow.style.display = "none";
+      } else {
+        const baseEl = document.getElementById("usLlmBaseUrl");
+        const manual = document.getElementById("usLlmBaseUrlManual");
+        state._studioManualBaseUrl = false;
+        if (baseEl) baseEl.value = url;
+        if (manual) manual.value = "";
+        updateStudioBaseUrlUi("minimax");
+      }
       setStatus("已切换 MiniMax 节点：" + url, "ok");
+      persistStudioLlmToDisk({ silent: true, immediate: true });
     }
 
     function normalizeMoonshotBaseUrl(url) {
@@ -2220,9 +2523,9 @@
       return u;
     }
 
-    function resolveStudioBaseUrl(pid, raw) {
+    function resolveStudioBaseUrl(pid, raw, manualFlag) {
       pid = normalizeStudioLlmProvider(pid);
-      const manual = pid === "custom" || !!state._studioManualBaseUrl;
+      const manual = pid === "custom" || !!manualFlag || isStudioManualBaseUrlFor(pid);
       let r = normalizeMoonshotBaseUrl(raw);
       if (manual) {
         if (r && studioBaseUrlMatchesProvider(pid, r)) return r;
@@ -2302,6 +2605,435 @@
       updateStudioBaseUrlUi(pid);
     }
 
+    function renderStudioLlmCardHtml(pid, activeProv) {
+      pid = normalizeStudioLlmProvider(pid);
+      const pre = studioLlmPreset(pid);
+      const slotKey = getStudioApiKeyForProvider(pid);
+      const hasKey = !!slotKey || pid === "ollama";
+      const isDefault = normalizeStudioLlmProvider(activeProv) === pid;
+      const manualFlag = isStudioManualBaseUrlFor(pid);
+      const baseUrl = getStudioBaseUrlForProvider(pid);
+      const model = getStudioModelForProvider(pid);
+      const statusCls = hasKey ? "ok" : "";
+      const statusText = hasKey
+        ? (pid === "ollama" ? "本地模型" : `已配置 ${maskStudioApiKey(slotKey)}`)
+        : "未填写 Key";
+      const showManual = pid === "custom" || manualFlag;
+      const autoText = pre.baseUrl
+        ? `自动使用官方接口：${pre.baseUrl}`
+        : "按服务商自动配置，一般无需手填";
+      return `<div class="studio-llm-card${isDefault ? " is-default" : ""}" data-prov="${esc(pid)}" data-manual-base="${showManual ? "1" : "0"}">
+  <div class="studio-llm-card-head">
+    <div class="studio-llm-card-title-row">
+      <strong>${esc(pre.label)}</strong>
+      <span class="studio-llm-card-status ${statusCls}">${esc(statusText)}</span>
+    </div>
+    <div class="studio-llm-card-actions">
+      <label class="studio-llm-default"><input type="radio" name="usLlmActiveProvider" value="${esc(pid)}" data-nosave="1"${isDefault ? " checked" : ""}> 默认使用</label>
+      <button type="button" class="btn studio-llm-remove" data-prov="${esc(pid)}">移除</button>
+    </div>
+  </div>
+  <div class="row"><div class="label">API Key</div><input class="us-card-key" data-prov="${esc(pid)}" type="password" data-nosave="1" value="${esc(slotKey)}" placeholder="${esc(pre.keyPh || "API Key")}" autocomplete="off"></div>
+  <div class="row us-card-base-auto" data-prov="${esc(pid)}" style="display:${showManual ? "none" : ""}">
+    <div class="label">接口地址</div>
+    <div class="studio-url-auto">${esc(autoText)}</div>
+    <input class="us-card-base-hidden" type="hidden" data-nosave="1" value="${esc(baseUrl)}">
+    <a href="#" class="studio-url-manual-link us-card-manual-link" data-prov="${esc(pid)}"${pid === "custom" ? ' style="display:none"' : ""}>使用中转 / 私有网关？手动指定</a>
+  </div>
+  <div class="row us-card-base-manual" data-prov="${esc(pid)}" style="display:${showManual ? "" : "none"}">
+    <div class="label">Base URL${pid === "custom" ? "" : "（手动）"}</div>
+    <input class="us-card-base-manual-input ctl" type="text" data-nosave="1" value="${esc(showManual ? baseUrl : "")}" placeholder="https://你的中转地址/v1">
+  </div>
+  <div class="row"><div class="label">模型</div><select id="usLlmModel_${esc(pid)}" class="ctl us-card-model" data-prov="${esc(pid)}" data-nosave="1"></select></div>
+  <div class="row us-card-minimax" data-prov="${esc(pid)}" style="display:${pid === "minimax" ? "" : "none"}">
+    <div class="label">MiniMax 节点</div>
+    <div class="inline" style="flex-wrap:wrap;gap:8px">
+      <button type="button" class="btn us-minimax-cn" data-prov="${esc(pid)}">国内 · minimaxi.com</button>
+      <button type="button" class="btn us-minimax-intl" data-prov="${esc(pid)}">国际 · minimax.io</button>
+    </div>
+  </div>
+  <div class="hint mini us-card-hint">${esc(pre.hint || "")}</div>
+  <div class="inline" style="margin-top:8px;flex-wrap:wrap">
+    <button type="button" class="btn primary studio-llm-save-card" data-prov="${esc(pid)}">保存此卡片</button>
+    <button type="button" class="btn studio-llm-test-card" data-prov="${esc(pid)}">测试</button>
+  </div>
+</div>`;
+    }
+
+    function buildStudioLlmCardsHtml(activeProv) {
+      const providers = getStudioLlmCardProviders();
+      const cardsHtml = providers.length
+        ? providers.map((pid) => renderStudioLlmCardHtml(pid, activeProv)).join("")
+        : `<div class="studio-llm-empty">尚未添加大模型卡片，点击上方「添加大模型」填写密钥并选择模型。</div>`;
+      return `<div class="studio-llm-add-bar"><button type="button" class="btn primary" id="btnAddStudioLlmCard">添加大模型</button></div>
+<div id="studioLlmCards" class="studio-llm-cards">${cardsHtml}</div>`;
+    }
+
+    let studioModalMinimaxUrl = STUDIO_MINIMAX_BASE_CN;
+    let studioModalBound = false;
+
+    function updateStudioModalMinimaxRow(pid) {
+      const row = document.getElementById("studioModalMinimaxRow");
+      const hint = document.getElementById("studioModalHint");
+      pid = normalizeStudioLlmProvider(pid);
+      const pre = studioLlmPreset(pid);
+      if (row) row.style.display = pid === "minimax" ? "" : "none";
+      if (hint) hint.textContent = pre.hint || "";
+      const keyEl = document.getElementById("studioModalApiKey");
+      if (keyEl) keyEl.placeholder = pre.keyPh || "API Key";
+      if (pid === "minimax") studioModalMinimaxUrl = STUDIO_MINIMAX_BASE_CN;
+    }
+
+    function bindStudioLlmAddModalOnce() {
+      if (studioModalBound) return;
+      studioModalBound = true;
+      const modal = document.getElementById("studioLlmAddModal");
+      const close = () => {
+        if (!modal) return;
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+      };
+      modal?.querySelectorAll("[data-studio-modal-close]").forEach((el) => el.addEventListener("click", close));
+      document.getElementById("studioModalCancel")?.addEventListener("click", close);
+      document.getElementById("studioModalProvider")?.addEventListener("change", (e) => {
+        const pid = normalizeStudioLlmProvider(e.target.value);
+        fillStudioLlmModelSelect(pid, studioLlmPreset(pid).model || "", document.getElementById("studioModalModel"));
+        updateStudioModalMinimaxRow(pid);
+      });
+      document.getElementById("studioModalModel")?.addEventListener("change", (e) => {
+        if (e.target.value !== "__custom__") return;
+        const pid = normalizeStudioLlmProvider(document.getElementById("studioModalProvider")?.value || "openai");
+        const inp = document.createElement("input");
+        inp.id = "studioModalModel";
+        inp.className = "ctl";
+        inp.type = "text";
+        inp.setAttribute("data-nosave", "1");
+        inp.placeholder = "输入模型名称";
+        inp.value = studioLlmPreset(pid).model || "";
+        e.target.replaceWith(inp);
+      });
+      document.getElementById("studioModalMinimaxCn")?.addEventListener("click", () => {
+        studioModalMinimaxUrl = STUDIO_MINIMAX_BASE_CN;
+        setStatus("弹窗内已选国内节点", "ok");
+      });
+      document.getElementById("studioModalMinimaxIntl")?.addEventListener("click", () => {
+        studioModalMinimaxUrl = STUDIO_MINIMAX_BASE_INTL;
+        setStatus("弹窗内已选国际节点", "ok");
+      });
+      document.getElementById("studioModalConfirm")?.addEventListener("click", () => confirmStudioLlmAddModal());
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && modal?.classList.contains("open")) close();
+      });
+    }
+
+    function openStudioLlmAddModal() {
+      bindStudioLlmAddModalOnce();
+      const modal = document.getElementById("studioLlmAddModal");
+      if (!modal) return;
+      const existing = new Set(getStudioLlmCardProviders());
+      const available = Object.keys(STUDIO_LLM_PRESETS).filter((k) => !existing.has(k));
+      if (!available.length) {
+        setStatus("已添加全部服务商", "err");
+        return;
+      }
+      const sel = document.getElementById("studioModalProvider");
+      if (sel) {
+        sel.innerHTML = available.map((k) => `<option value="${esc(k)}">${esc(STUDIO_LLM_PRESETS[k].label)}</option>`).join("");
+      }
+      const pid = normalizeStudioLlmProvider(available[0]);
+      const keyEl = document.getElementById("studioModalApiKey");
+      if (keyEl) keyEl.value = getStudioApiKeyForProvider(pid) || "";
+      let modelEl = document.getElementById("studioModalModel");
+      if (modelEl && modelEl.tagName !== "SELECT") {
+        const nu = document.createElement("select");
+        nu.id = "studioModalModel";
+        nu.className = "ctl";
+        nu.setAttribute("data-nosave", "1");
+        modelEl.replaceWith(nu);
+        modelEl = nu;
+      }
+      fillStudioLlmModelSelect(pid, getStudioModelForProvider(pid) || studioLlmPreset(pid).model, modelEl);
+      updateStudioModalMinimaxRow(pid);
+      const defEl = document.getElementById("studioModalSetDefault");
+      if (defEl) defEl.checked = getStudioLlmCardProviders().length === 0;
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+      keyEl?.focus();
+    }
+
+    function confirmStudioLlmAddModal() {
+      const pid = normalizeStudioLlmProvider(document.getElementById("studioModalProvider")?.value || "");
+      if (!pid || !STUDIO_LLM_PRESETS[pid]) return;
+      const key = normalizeStudioApiKey(document.getElementById("studioModalApiKey")?.value || "");
+      if (pid !== "ollama" && !key) {
+        setStatus("请填写 API Key", "err");
+        return;
+      }
+      const modelEl = document.getElementById("studioModalModel");
+      let modelVal = String(modelEl?.value || "").trim();
+      if (modelVal === "__custom__") modelVal = "";
+      const model = resolveStudioModel(pid, modelVal);
+      if (pid === "minimax") stashStudioBaseUrlForProvider(pid, studioModalMinimaxUrl, false);
+      stashStudioApiKeyForProvider(pid, key);
+      stashStudioModelForProvider(pid, model);
+      const list = [...getStudioLlmCardProviders()];
+      if (!list.includes(pid)) list.push(pid);
+      setStudioLlmCardProviders(list);
+      const setDefault = !!document.getElementById("studioModalSetDefault")?.checked || list.length === 1;
+      const llmPatch = setDefault
+        ? {
+            provider: pid,
+            apiKey: key,
+            baseUrl: pid === "minimax" ? studioModalMinimaxUrl : getStudioBaseUrlForProvider(pid),
+            model
+          }
+        : { provider: getActiveStudioLlmProvider() };
+      mergeUserStudioState({
+        llm: llmPatch,
+        options: {
+          llmCardProviders: list,
+          llmApiKeys: { ...getStudioLlmApiKeys(), ...(key ? { [pid]: key } : {}) },
+          llmModels: { ...getStudioLlmModels(), ...(model ? { [pid]: model } : {}) }
+        }
+      });
+      document.getElementById("studioLlmAddModal")?.classList.remove("open");
+      document.getElementById("studioLlmAddModal")?.setAttribute("aria-hidden", "true");
+      render();
+      persistStudioCardsNow(true);
+    }
+
+    function buildStudioLlmPersistPayload() {
+      if (document.getElementById("studioLlmCards")) stashAllStudioCardsFromDom();
+      const keys = { ...getStudioLlmApiKeys() };
+      const models = { ...getStudioLlmModels() };
+      const cards = [...getStudioLlmCardProviders()];
+      const prov = getActiveStudioLlmProvider();
+      if (document.getElementById("studioLlmCards")) {
+        document.querySelectorAll(".studio-llm-card[data-prov]").forEach((card) => {
+          const pid = normalizeStudioLlmProvider(card.dataset.prov || "");
+          const keyEl = card.querySelector(".us-card-key");
+          if (keyEl) {
+            const cur = normalizeStudioApiKey(keyEl.value || "");
+            if (cur) keys[pid] = cur;
+          }
+        });
+      }
+      return {
+        llm: {
+          provider: prov,
+          apiKey: keys[prov] || "",
+          baseUrl: getStudioBaseUrlForProvider(prov),
+          model: getStudioModelForProvider(prov)
+        },
+        paths: { ...(state.data.userStudio?.paths || {}) },
+        options: {
+          llmApiKeys: keys,
+          llmModels: models,
+          llmBaseUrls: getStudioLlmBaseUrls(),
+          llmManualBaseUrl: getStudioLlmManualFlags(),
+          llmCardProviders: cards
+        }
+      };
+    }
+
+    function persistStudioCardsNow(showStatus) {
+      const pl = buildStudioLlmPersistPayload();
+      markStudioCardsExplicit();
+      saveStudioLlmCardsToLocalStorage(pl);
+      mergeUserStudioState(pl);
+      if (!postStudioLlmSave(pl, !showStatus)) {
+        if (showStatus) setStatus("无 API 配置可保存", "err");
+        return;
+      }
+      if (showStatus) setStatus("正在保存大模型配置…", "ok");
+    }
+
+    function mergeUserStudioStateFromServer(incoming) {
+      if (!incoming || typeof incoming !== "object") return;
+      const localCards = getStudioLlmCardProviders();
+      const localExplicit = !!state._studioCardsExplicit;
+      const incOpt = incoming.options || {};
+      const patch = { ...incoming };
+      if (localExplicit && !Array.isArray(incOpt.llmCardProviders)) {
+        patch.options = { ...incOpt, llmCardProviders: localCards };
+      }
+      if (Array.isArray(incOpt.llmCardProviders)) {
+        state._studioCardsExplicit = true;
+      }
+      mergeUserStudioState(patch);
+    }
+
+    function removeStudioLlmCard(pid) {
+      pid = normalizeStudioLlmProvider(pid);
+      stashAllStudioCardsFromDom();
+      const list = getStudioLlmCardProviders().filter((p) => p !== pid);
+      setStudioLlmCardProviders(list);
+      const active = getActiveStudioLlmProvider();
+      const nextActive = active === pid ? (list[0] || "openai") : active;
+      const llmPatch = list.length
+        ? {
+            provider: list.includes(nextActive) ? nextActive : list[0],
+            apiKey: getStudioApiKeyForProvider(list.includes(nextActive) ? nextActive : list[0]),
+            baseUrl: getStudioBaseUrlForProvider(list.includes(nextActive) ? nextActive : list[0]),
+            model: getStudioModelForProvider(list.includes(nextActive) ? nextActive : list[0])
+          }
+        : { provider: "openai", apiKey: "", baseUrl: studioLlmPreset("openai").baseUrl, model: studioLlmPreset("openai").model };
+      mergeUserStudioState({
+        llm: llmPatch,
+        options: { llmCardProviders: list }
+      });
+      render();
+      persistStudioCardsNow(true);
+    }
+
+    function bindStudioLlmCardsUi(activeProv) {
+      const cardsRoot = document.getElementById("studioLlmCards");
+      if (!cardsRoot) return;
+      getStudioLlmCardProviders().forEach((pid) => {
+        const modEl = document.getElementById("usLlmModel_" + pid);
+        fillStudioLlmModelSelect(pid, getStudioModelForProvider(pid), modEl);
+      });
+      ensureStudioLlmDelegatedEvents();
+      document.getElementById("btnAddStudioLlmCard")?.addEventListener("click", () => openStudioLlmAddModal());
+      cardsRoot.querySelectorAll(".studio-llm-remove").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const pid = normalizeStudioLlmProvider(btn.dataset.prov || "");
+          if (!confirm("确定移除「" + studioLlmPreset(pid).label + "」卡片？密钥分槽仍保留，可再次添加。")) return;
+          removeStudioLlmCard(pid);
+        });
+      });
+      cardsRoot.querySelectorAll(".studio-llm-save-card").forEach((btn) => {
+        btn.addEventListener("click", () => saveStudioLlmCard(btn.dataset.prov, true));
+      });
+      cardsRoot.querySelectorAll(".studio-llm-test-card").forEach((btn) => {
+        btn.addEventListener("click", () => testStudioLlmCard(btn.dataset.prov));
+      });
+      cardsRoot.querySelectorAll(".us-card-manual-link").forEach((link) => {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          const pid = normalizeStudioLlmProvider(link.dataset.prov || "");
+          const card = link.closest(".studio-llm-card");
+          if (!card) return;
+          card.dataset.manualBase = "1";
+          const autoRow = card.querySelector(".us-card-base-auto");
+          const manualRow = card.querySelector(".us-card-base-manual");
+          const manualInp = card.querySelector(".us-card-base-manual-input");
+          if (autoRow) autoRow.style.display = "none";
+          if (manualRow) manualRow.style.display = "";
+          if (manualInp && !manualInp.value.trim())
+            manualInp.value = getStudioBaseUrlForProvider(pid) || studioLlmPreset(pid).baseUrl || "";
+          stashStudioBaseUrlForProvider(pid, manualInp?.value || "", true);
+        });
+      });
+      cardsRoot.querySelectorAll(".us-minimax-cn").forEach((btn) => {
+        btn.addEventListener("click", () => setStudioMinimaxRegion(STUDIO_MINIMAX_BASE_CN, btn.dataset.prov));
+      });
+      cardsRoot.querySelectorAll(".us-minimax-intl").forEach((btn) => {
+        btn.addEventListener("click", () => setStudioMinimaxRegion(STUDIO_MINIMAX_BASE_INTL, btn.dataset.prov));
+      });
+      cardsRoot.querySelectorAll(".us-card-model").forEach((modEl) => {
+        if (modEl.tagName !== "SELECT") return;
+        modEl.addEventListener("change", () => {
+          if (modEl.value !== "__custom__") return;
+          const pid = normalizeStudioLlmProvider(modEl.dataset.prov || "");
+          const inp = document.createElement("input");
+          inp.id = modEl.id;
+          inp.className = modEl.className;
+          inp.type = "text";
+          inp.dataset.prov = pid;
+          inp.setAttribute("data-nosave", "1");
+          inp.placeholder = "输入模型名称";
+          inp.value = studioLlmPreset(pid).model || "";
+          modEl.replaceWith(inp);
+        });
+      });
+      document.querySelectorAll('input[name="usLlmActiveProvider"]').forEach((radio) => {
+        radio.addEventListener("change", () => {
+          if (!radio.checked) return;
+          const pid = normalizeStudioLlmProvider(radio.value);
+          stashAllStudioCardsFromDom();
+          mergeUserStudioState({
+            llm: {
+              provider: pid,
+              apiKey: getStudioApiKeyForProvider(pid),
+              baseUrl: getStudioBaseUrlForProvider(pid),
+              model: getStudioModelForProvider(pid)
+            }
+          });
+          document.querySelectorAll(".studio-llm-card").forEach((c) => {
+            c.classList.toggle("is-default", normalizeStudioLlmProvider(c.dataset.prov) === pid);
+          });
+          persistStudioCardsNow(false);
+        });
+      });
+    }
+
+    function buildStudioLlmPayloadForProvider(pid) {
+      pid = normalizeStudioLlmProvider(pid);
+      stashAllStudioCardsFromDom();
+      const pl = collectUserStudioPayload();
+      const keys = { ...getStudioLlmApiKeys() };
+      return {
+        ...pl,
+        llm: {
+          provider: pid,
+          apiKey: keys[pid] || "",
+          baseUrl: getStudioBaseUrlForProvider(pid),
+          model: getStudioModelForProvider(pid)
+        }
+      };
+    }
+
+    function saveStudioLlmCard(pid, showStatus) {
+      pid = normalizeStudioLlmProvider(pid);
+      stashAllStudioCardsFromDom();
+      const keys = { ...getStudioLlmApiKeys() };
+      const card = document.querySelector(`.studio-llm-card[data-prov="${pid}"]`);
+      const keyEl = card?.querySelector(".us-card-key");
+      if (keyEl) {
+        const cur = normalizeStudioApiKey(keyEl.value || "");
+        if (cur) keys[pid] = cur;
+      }
+      if (pid !== "ollama" && !keys[pid]) {
+        setStatus("请填写 API Key 后再保存", "err");
+        return;
+      }
+      mergeUserStudioState({
+        llm: {
+          provider: getActiveStudioLlmProvider(),
+          apiKey: keys[pid] || "",
+          baseUrl: getStudioBaseUrlForProvider(pid),
+          model: getStudioModelForProvider(pid)
+        },
+        options: { llmApiKeys: keys, llmCardProviders: getStudioLlmCardProviders() }
+      });
+      persistStudioCardsNow(showStatus);
+    }
+
+    function testStudioLlmCard(pid) {
+      const now = Date.now();
+      if (state._studioTestInFlight) {
+        setStatus("API 测试进行中，请稍候…", "ok");
+        return;
+      }
+      if (state._studioTestLastAt && now - state._studioTestLastAt < 12000) {
+        const waitSec = Math.ceil((12000 - (now - state._studioTestLastAt)) / 1000);
+        setStatus(`测试过于频繁，请 ${waitSec} 秒后再试`, "err");
+        return;
+      }
+      pid = normalizeStudioLlmProvider(pid);
+      const pl = buildStudioLlmPayloadForProvider(pid);
+      const testKey = String(pl.llm?.apiKey || "").trim();
+      if (pid !== "ollama" && !testKey) {
+        setStatus("请先填写 API Key", "err");
+        return;
+      }
+      state._studioTestInFlight = true;
+      state._studioTestLastAt = now;
+      setStatus("正在测试 " + studioLlmPreset(pid).label + "…", "ok");
+      post({ type: "testUserStudioLlm", payload: pl });
+    }
+
     function bindStudioLlmUi(llm, opts) {
       const provEl = document.getElementById("usLlmProvider");
       if (!provEl) return;
@@ -2363,30 +3095,72 @@
     }
 
     function collectUserStudioPayload() {
-      stashStudioApiKeyFromDom();
-      stashStudioBaseUrlFromDom();
+      if (document.getElementById("studioLlmCards")) stashAllStudioCardsFromDom();
+      else {
+        stashStudioApiKeyFromDom();
+        stashStudioBaseUrlFromDom();
+      }
       const g = (id) => document.getElementById(id);
-      const prov = normalizeStudioLlmProvider(g("usLlmProvider")?.value || "openai");
-      let modelVal = (g("usLlmModel")?.value || "").trim();
-      if (modelVal === "__custom__") modelVal = "";
-      const keys = getStudioLlmApiKeys();
-      const curKey = normalizeStudioApiKey(g("usLlmApiKey")?.value || "") || keys[prov] || "";
-      if (curKey) keys[prov] = curKey;
-      const baseUrls = getStudioLlmBaseUrls();
-      const manualFlags = getStudioLlmManualFlags();
-      const curBase = resolveStudioBaseUrl(
-        prov,
-        state._studioManualBaseUrl ? g("usLlmBaseUrlManual")?.value : ""
-      );
-      if (curBase && studioBaseUrlMatchesProvider(prov, curBase)) baseUrls[prov] = curBase;
-      if (state._studioManualBaseUrl) manualFlags[prov] = true;
-      else delete manualFlags[prov];
+      let prov = getActiveStudioLlmProvider();
+      if (!document.getElementById("studioLlmCards")) {
+        prov = normalizeStudioLlmProvider(g("usLlmProvider")?.value || prov);
+      }
+      const keys = { ...getStudioLlmApiKeys() };
+      if (!document.getElementById("studioLlmCards")) {
+        let modelVal = (g("usLlmModel")?.value || "").trim();
+        if (modelVal === "__custom__") modelVal = "";
+        const curKey = normalizeStudioApiKey(g("usLlmApiKey")?.value || "") || keys[prov] || "";
+        if (curKey) keys[prov] = curKey;
+        const baseUrls = getStudioLlmBaseUrls();
+        const manualFlags = getStudioLlmManualFlags();
+        const curBase = resolveStudioBaseUrl(
+          prov,
+          state._studioManualBaseUrl ? g("usLlmBaseUrlManual")?.value : "",
+          !!state._studioManualBaseUrl
+        );
+        if (curBase && studioBaseUrlMatchesProvider(prov, curBase)) baseUrls[prov] = curBase;
+        if (state._studioManualBaseUrl) manualFlags[prov] = true;
+        else delete manualFlags[prov];
+        return {
+          llm: {
+            provider: prov,
+            apiKey: curKey,
+            baseUrl: curBase,
+            model: resolveStudioModel(prov, modelVal)
+          },
+          paths: {
+            cursor: (g("usPath_cursor")?.value || "").trim(),
+            autohotkey: (g("usPath_autohotkey")?.value || "").trim(),
+            everything: (g("usPath_everything")?.value || "").trim(),
+            python: (g("usPath_python")?.value || "").trim(),
+            notes: (g("usPathNotes")?.value || "").trim()
+          },
+          options: {
+            ...(state.data.userStudio?.options || {}),
+            llmApiKeys: keys,
+            llmBaseUrls: baseUrls,
+            llmManualBaseUrl: manualFlags,
+            llmModels: getStudioLlmModels(),
+            llmCardProviders: getStudioLlmCardProviders(),
+            manualBaseUrl: !!state._studioManualBaseUrl,
+            niumaAutoInjectContext: !!document.getElementById("niumaAutoInjectContext")?.checked,
+            niumaSystemPrompt: String(document.getElementById("studioNiumaSystemPrompt")?.value || "").trim(),
+            niumaInstallRoot: String(document.getElementById("niumaInstallRoot")?.value || "").trim()
+          }
+        };
+      }
+      const models = { ...getStudioLlmModels() };
+      const baseUrls = { ...getStudioLlmBaseUrls() };
+      const manualFlags = { ...getStudioLlmManualFlags() };
+      const curKey = keys[prov] || "";
+      const curBase = getStudioBaseUrlForProvider(prov);
+      const curModel = getStudioModelForProvider(prov);
       return {
         llm: {
           provider: prov,
           apiKey: curKey,
           baseUrl: curBase,
-          model: resolveStudioModel(prov, modelVal)
+          model: curModel
         },
         paths: {
           cursor: (g("usPath_cursor")?.value || "").trim(),
@@ -2400,7 +3174,8 @@
           llmApiKeys: keys,
           llmBaseUrls: baseUrls,
           llmManualBaseUrl: manualFlags,
-          manualBaseUrl: !!state._studioManualBaseUrl,
+          llmModels: models,
+          llmCardProviders: getStudioLlmCardProviders(),
           niumaAutoInjectContext: !!document.getElementById("niumaAutoInjectContext")?.checked,
           niumaSystemPrompt: String(document.getElementById("studioNiumaSystemPrompt")?.value || "").trim(),
           niumaInstallRoot: String(document.getElementById("niumaInstallRoot")?.value || "").trim()
@@ -2443,6 +3218,17 @@
           return u && studioBaseUrlMatchesProvider(nk, u) ? u : "";
         }
       );
+      const mergedModels = mergeStudioSlotObject(
+        prevOpt.llmModels,
+        plOpt.llmModels,
+        normalizeStudioLlmProvider,
+        (v) => String(v || "").trim()
+      );
+      let cardProviders = null;
+      if (Array.isArray(prevOpt.llmCardProviders))
+        cardProviders = prevOpt.llmCardProviders.map(normalizeStudioLlmProvider).filter((p, i, arr) => STUDIO_LLM_PRESETS[p] && arr.indexOf(p) === i);
+      if (Array.isArray(plOpt.llmCardProviders))
+        cardProviders = plOpt.llmCardProviders.map(normalizeStudioLlmProvider).filter((p, i, arr) => STUDIO_LLM_PRESETS[p] && arr.indexOf(p) === i);
       const mergedManual = { ...getStudioLlmManualFlags() };
       if (plOpt.llmManualBaseUrl && typeof plOpt.llmManualBaseUrl === "object") {
         Object.keys(plOpt.llmManualBaseUrl).forEach((k) => {
@@ -2466,18 +3252,24 @@
           mergedLlm.apiKey = "";
         }
       }
+      if (Array.isArray(plOpt.llmCardProviders) || state._studioCardsExplicit)
+        markStudioCardsExplicit();
+      const mergedOptions = {
+        ...prevOpt,
+        ...plOpt,
+        llmApiKeys: mergedKeys,
+        llmBaseUrls: mergedBaseUrls,
+        llmManualBaseUrl: mergedManual,
+        llmModels: mergedModels
+      };
+      if (cardProviders !== null)
+        mergedOptions.llmCardProviders = cardProviders;
       state.data.userStudio = {
         ...prev,
         ...pl,
         llm: mergedLlm,
         paths: { ...(prev.paths || {}), ...(pl.paths || {}) },
-        options: {
-          ...prevOpt,
-          ...plOpt,
-          llmApiKeys: mergedKeys,
-          llmBaseUrls: mergedBaseUrls,
-          llmManualBaseUrl: mergedManual
-        }
+        options: mergedOptions
       };
       try {
         sessionStorage.setItem("niuma_studio_llm_draft", JSON.stringify(state.data.userStudio));
@@ -2507,14 +3299,11 @@
       const llm = { ...(us.llm || {}) };
       const keys = { ...getStudioLlmApiKeys() };
       const prov = normalizeStudioLlmProvider(llm.provider || "openai");
-      const keyEl = document.getElementById("usLlmApiKey");
-      if (keyEl) {
-        const cur = normalizeStudioApiKey(keyEl.value || "");
-        if (cur) keys[prov] = cur;
-      }
       if (keys[prov]) llm.apiKey = keys[prov];
       else llm.apiKey = normalizeStudioApiKey(llm.apiKey || "");
       llm.provider = prov;
+      llm.baseUrl = getStudioBaseUrlForProvider(prov);
+      llm.model = getStudioModelForProvider(prov);
       return {
         llm,
         paths: { ...(us.paths || {}) },
@@ -2522,15 +3311,20 @@
           ...(us.options || {}),
           llmApiKeys: keys,
           llmBaseUrls: getStudioLlmBaseUrls(),
-          llmManualBaseUrl: getStudioLlmManualFlags()
+          llmManualBaseUrl: getStudioLlmManualFlags(),
+          llmModels: getStudioLlmModels(),
+          llmCardProviders: getStudioLlmCardProviders()
         }
       };
     }
 
     function buildStudioLlmSavePayload() {
-      if (document.getElementById("usLlmApiKey")) {
-        stashStudioApiKeyFromDom();
-        stashStudioBaseUrlFromDom();
+      if (document.getElementById("studioLlmCards") || document.getElementById("usLlmApiKey")) {
+        if (document.getElementById("studioLlmCards")) stashAllStudioCardsFromDom();
+        else {
+          stashStudioApiKeyFromDom();
+          stashStudioBaseUrlFromDom();
+        }
         return collectUserStudioPayload();
       }
       return buildStudioLlmSavePayloadFromState();
@@ -2541,15 +3335,18 @@
       const keys = pl?.options?.llmApiKeys || {};
       const hasAnyKey = Object.keys(keys).some((k) => normalizeStudioApiKey(keys[k]));
       const curKey = normalizeStudioApiKey(pl?.llm?.apiKey || "");
-      return prov === "ollama" || !!curKey || hasAnyKey;
+      return prov === "ollama" || !!curKey || hasAnyKey || Array.isArray(pl?.options?.llmCardProviders);
     }
 
     function postStudioLlmSave(pl, silent) {
       if (!shouldPersistStudioLlmPayload(pl)) return false;
+      markStudioCardsExplicit();
       mergeUserStudioState(pl);
       state._studioLlmPersistSilent = !!silent;
       studioLlmPersistInFlight = true;
-      post({ type: "saveUserStudio", payload: pl });
+      let payloadJson = "";
+      try { payloadJson = JSON.stringify(pl); } catch (_) {}
+      post({ type: "saveUserStudio", payload: pl, payloadJson });
       return true;
     }
 
@@ -2620,12 +3417,23 @@
         if (e.target?.id === "usLlmProvider") onStudioLlmProviderChange();
       });
       panel.addEventListener("input", (e) => {
-        if (e.target?.id !== "usLlmApiKey") return;
+        const t = e.target;
+        if (t?.classList?.contains("us-card-key")) {
+          stashStudioApiKeyForProvider(t.dataset.prov || "", t.value);
+          return;
+        }
+        if (t?.id !== "usLlmApiKey") return;
         const provEl = document.getElementById("usLlmProvider");
-        if (provEl) stashStudioApiKeyForProvider(provEl.value, e.target.value);
+        if (provEl) stashStudioApiKeyForProvider(provEl.value, t.value);
       });
       panel.addEventListener("focusout", (e) => {
-        if (e.target?.id !== "usLlmApiKey") return;
+        const t = e.target;
+        if (t?.classList?.contains("us-card-key") || t?.classList?.contains("us-card-base-manual-input") || t?.classList?.contains("us-card-model")) {
+          captureCustomizeTabState();
+          persistStudioLlmToDisk({ silent: true, immediate: true });
+          return;
+        }
+        if (t?.id !== "usLlmApiKey") return;
         captureCustomizeTabState();
         flushStudioLlmPending();
       });
@@ -2633,6 +3441,11 @@
 
     /** 离开智能定制标签前：先把表单写入内存（落盘由 leaveActiveTab / blur / 关闭时触发） */
     function captureCustomizeTabState() {
+      if (document.getElementById("studioLlmCards")) {
+        stashAllStudioCardsFromDom();
+        mergeUserStudioState(collectUserStudioPayload());
+        return;
+      }
       if (!document.getElementById("usLlmApiKey")) return;
       stashStudioApiKeyFromDom();
       stashStudioBaseUrlFromDom();
@@ -2640,7 +3453,7 @@
     }
 
     function readCustomize(d) {
-      if (!document.getElementById("usLlmApiKey")) return d;
+      if (!document.getElementById("studioLlmCards") && !document.getElementById("usLlmApiKey")) return d;
       const pl = collectUserStudioPayload();
       mergeUserStudioState(pl);
       d.userStudio = state.data.userStudio;
@@ -2648,6 +3461,9 @@
     }
 
     function restoreStudioLlmDraftIfNeeded() {
+      if (state._studioCardsExplicit) return;
+      const opt = state.data.userStudio?.options || {};
+      if (Array.isArray(opt.llmCardProviders)) return;
       const keys = getStudioLlmApiKeys();
       const hasSlots = Object.keys(keys).length > 0;
       const cur = state.data.userStudio?.llm || {};
@@ -3180,35 +3996,23 @@
         document.getElementById("btnOpenLegacyHotkeys").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacyTab", tab: "hotkeys" }));
       } else if (state.activeTab === "customize") {
         restoreStudioLlmDraftIfNeeded();
+        loadStudioLlmCardsFromLocalStorage();
         const us = state.data.userStudio || d.userStudio || {};
         const llm = us.llm || {};
         const paths = us.paths || {};
-        const ov = us.overview || {};
-        const provId = normalizeStudioLlmProvider(llm.provider);
-        const slotKey = getStudioApiKeyForProvider(provId);
-        const hasKey = !!slotKey;
-        const keyBadge = hasKey
-          ? `<span class="studio-key-badge ok">已读取 API：${esc(ov.llmKeyMasked || "已配置（分槽）")} · ${esc(llm.model || provId || "")}</span>`
-          : `<span class="studio-key-badge">尚未配置 API Key（填写后会自动保存，再点「测试 API」验证）</span>`;
+        const activeProv = normalizeStudioLlmProvider(llm.provider || "openai");
+        const configuredCount = Object.keys(getStudioLlmApiKeys()).length;
         const pathRow = (id, label, val) =>
           `<div class="row"><div class="label">${label}</div><div class="inline" style="flex:1"><input id="usPath_${id}" type="text" data-nosave="1" value="${esc(val || "")}" placeholder="留空则使用系统默认"><button class="btn us-browse" data-us-field="${id}">浏览</button></div></div>`;
-        const provPre = studioLlmPreset(provId);
         panel.innerHTML = `
 <div class="card studio-api-card"><div class="title">大模型 API</div>
-${keyBadge}
-<div class="row"><div class="label">服务商</div><select id="usLlmProvider" data-nosave="1">${studioLlmProviderOptions(provId)}</select></div>
-<div class="row"><div class="label">API Key</div><input id="usLlmApiKey" type="password" data-nosave="1" value="${esc(slotKey)}" placeholder="${esc(provPre.keyPh || "API Key")}" autocomplete="off"></div>
-<div class="row" id="usLlmBaseUrlAutoRow"><div class="label">接口地址</div><div class="studio-url-auto" id="usLlmBaseUrlAuto">自动使用官方接口，无需填写</div><input id="usLlmBaseUrl" type="hidden" data-nosave="1" value="${esc(resolveStudioBaseUrl(provId, llm.baseUrl))}"><a href="#" class="studio-url-manual-link" id="usLlmBaseUrlManualLink">使用中转 / 私有网关？手动指定地址</a></div>
-<div class="row" id="usLlmBaseUrlManualRow" style="display:none"><div class="label">Base URL（手动）</div><input id="usLlmBaseUrlManual" type="text" class="ctl" data-nosave="1" value="${esc(llm.baseUrl || "")}" placeholder="https://你的中转地址/v1"></div>
-<div class="row"><div class="label">模型</div><select id="usLlmModel" class="ctl" data-nosave="1"></select></div>
-<div class="row" id="usMinimaxRegionRow" style="display:${provId === "minimax" ? "" : "none"}"><div class="label">MiniMax 节点</div><div class="inline" style="flex-wrap:wrap;gap:8px"><button type="button" class="btn" id="usMinimaxRegionCn">国内 · minimaxi.com</button><button type="button" class="btn" id="usMinimaxRegionIntl">国际 · minimax.io</button></div></div>
-<div class="hint mini" id="usLlmProviderHint">${esc(provPre.hint || "")}</div>
-<div class="inline" style="margin-top:10px;flex-wrap:wrap">
-  <button class="btn primary" type="button" id="btnSaveUserStudio">保存 API</button>
-  <button class="btn" type="button" id="btnTestUserStudio">测试 API</button>
+<div class="hint mini" style="margin-bottom:8px">点击「添加大模型」在弹窗中填写密钥并选择模型；各卡片独立保存，可移除任意卡片（含默认 OpenAI）。</div>
+<div class="hint mini">已配置 ${configuredCount} 个密钥槽 · 当前默认：<strong>${esc(studioLlmPreset(activeProv).label)}</strong></div>
+${buildStudioLlmCardsHtml(activeProv)}
+<div class="inline" style="margin-top:12px;flex-wrap:wrap">
   <button class="btn" type="button" id="btnStudioSyncNiuma">从 Niuma Chat 同步</button>
+  <button class="btn" type="button" id="btnSaveAllStudioLlm">保存全部</button>
 </div>
-<div class="hint">各服务商 <strong>API Key 分槽保存</strong>（<code>options.llmApiKeys</code>），切换下拉只显示对应密钥，互不覆盖；填写后会写入 <code>config/user_studio.json</code>，重启后仍保留。</div>
 </div>
 <div class="card studio-context-card"><div class="title">Niuma Chat 项目背景（自动注入）</div>
 <div class="row"><div class="label">打开对话时注入</div><div><input id="niumaAutoInjectContext" type="checkbox" data-nosave="1" ${checked((us.options || {}).niumaAutoInjectContext !== false)}></div></div>
@@ -3235,7 +4039,8 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
   <button class="btn" id="btnRestoreUserStudio">还原默认定制</button>
 </div>
 </details>`;
-        bindStudioLlmUi(llm, us.options || {});
+        bindStudioLlmCardsUi(activeProv);
+        document.getElementById("btnSaveAllStudioLlm")?.addEventListener("click", () => persistStudioCardsNow(true));
         const openAsk = (sendNow) => {
           const prompt = (document.getElementById("studioAskInput")?.value || "").trim();
           post({
@@ -3259,57 +4064,6 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         document.querySelectorAll(".us-browse").forEach(btn => btn.addEventListener("click", () => {
           post({ type: "browseUserStudioPath", field: btn.getAttribute("data-us-field") });
         }));
-        document.getElementById("btnSaveUserStudio")?.addEventListener("click", () => {
-          captureCustomizeTabState();
-          const pl = collectUserStudioPayload();
-          const prov = normalizeStudioLlmProvider(pl.llm?.provider);
-          if (prov !== "ollama" && !String(pl.llm?.apiKey || "").trim()) {
-            setStatus("请填写 API Key 后再保存", "err");
-            return;
-          }
-          postStudioLlmSave(pl, false);
-          setStatus("保存中…", "ok");
-        });
-        document.getElementById("btnTestUserStudio")?.addEventListener("click", () => {
-          const now = Date.now();
-          if (state._studioTestInFlight) {
-            setStatus("API 测试进行中，请稍候…", "ok");
-            return;
-          }
-          if (state._studioTestLastAt && now - state._studioTestLastAt < 12000) {
-            const waitSec = Math.ceil((12000 - (now - state._studioTestLastAt)) / 1000);
-            setStatus(`测试过于频繁，请 ${waitSec} 秒后再试（避免 OpenAI 429 限流）`, "err");
-            return;
-          }
-          state._studioTestInFlight = true;
-          state._studioTestLastAt = now;
-          stashStudioApiKeyFromDom();
-          stashStudioBaseUrlFromDom();
-          mergeUserStudioState(collectUserStudioPayload());
-          const pl = collectUserStudioPayload();
-          const prov = normalizeStudioLlmProvider(pl.llm?.provider);
-          const testKey = String(pl.llm?.apiKey || "").trim();
-          if (prov !== "ollama" && !testKey) {
-            setStatus("请先填写 API Key（Moonshot 开放平台密钥），并建议先点「保存 API」", "err");
-            return;
-          }
-          const manualRaw = document.getElementById("usLlmBaseUrlManual")?.value || "";
-          if (
-            state._studioManualBaseUrl &&
-            manualRaw.trim() &&
-            !studioBaseUrlMatchesProvider(prov, manualRaw)
-          ) {
-            setStatus(
-              "Base URL 与「" +
-                studioLlmPreset(prov).label +
-                "」不匹配（例如 Kimi 勿填 api.deepseek.com），已改用官方地址测试",
-              "ok"
-            );
-          } else {
-            setStatus("正在测试 API（约 18 秒内）…", "ok");
-          }
-          post({ type: "testUserStudioLlm", payload: pl });
-        });
         document.getElementById("btnRestoreUserStudio")?.addEventListener("click", () => {
           if (!confirm("确定恢复默认定制配置？")) return;
           post({ type: "restoreUserStudio" });
@@ -3585,7 +4339,13 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (Array.isArray(p.keybinderToolbarLayout)) state.data.keybinderToolbarLayout = normalizeToolbarLayoutRows(p.keybinderToolbarLayout);
         if (Array.isArray(p.keybinderCommands)) state.data.keybinderCommands = p.keybinderCommands;
         if (Array.isArray(p.keybinderContextMenuLayout)) state.data.keybinderContextMenuLayout = p.keybinderContextMenuLayout;
-        if (p.userStudio && typeof p.userStudio === "object") mergeUserStudioState(p.userStudio);
+        if (p.userStudio && typeof p.userStudio === "object") {
+          if (Array.isArray(p.userStudio.options?.llmCardProviders))
+            state._studioCardsExplicit = true;
+          mergeUserStudioStateFromServer(p.userStudio);
+        }
+        if (!Array.isArray(state.data.userStudio?.options?.llmCardProviders))
+          loadStudioLlmCardsFromLocalStorage();
         if (p.appUpdate && typeof p.appUpdate === "object") state.appUpdate = p.appUpdate;
         applyAppUpdateUi();
         const startTab = (msg.payload || {}).defaultStartTab;
@@ -3619,8 +4379,19 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       if (msg.type === "testUserStudioLlmResult") {
         state._studioTestInFlight = false;
         const ms = msg.elapsedMs ? `（${msg.elapsedMs}ms）` : "";
-        setStatus(msg.ok ? `API 测试通过${ms}` : (msg.error || "API 测试失败"), msg.ok ? "ok" : "err");
-        if (msg.ok) captureCustomizeTabState();
+        if (msg.ok) {
+          setStatus(`API 测试通过${ms}`, "ok");
+        } else {
+          const rawErr = String(msg.error || "").trim() || "API 测试失败";
+          const err = /HTTP\s*429\b/i.test(rawErr)
+            ? "HTTP 429（限流/额度不足）。若用 OpenAI 官方：检查 API Billing/额度；若用中转：检查中转限流/共享池；并避免短时间多次测试。"
+            : rawErr;
+          setStatus(err, "err");
+        }
+        if (msg.ok) {
+          captureCustomizeTabState();
+          if (state.activeTab === "customize") render();
+        }
         return;
       }
       if (msg.type === "saveUserStudioResult") {
@@ -3633,7 +4404,10 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         } else if (!msg.ok) {
           setStatus(msg.error || "API 配置保存失败", "err");
         }
-        if (msg.ok && msg.userStudio && typeof msg.userStudio === "object") mergeUserStudioState(msg.userStudio);
+        if (msg.ok && msg.userStudio && typeof msg.userStudio === "object") {
+          mergeUserStudioStateFromServer(msg.userStudio);
+          saveStudioLlmCardsToLocalStorage(buildStudioLlmPersistPayload());
+        }
         if (studioLlmPersistQueued) {
           studioLlmPersistQueued = false;
           setTimeout(() => flushStudioLlmPending(), 50);
@@ -3656,7 +4430,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           try {
             sessionStorage.removeItem("niuma_studio_llm_draft");
           } catch (_) {}
-          if (msg.userStudio && typeof msg.userStudio === "object") mergeUserStudioState(msg.userStudio);
+          if (msg.userStudio && typeof msg.userStudio === "object") mergeUserStudioStateFromServer(msg.userStudio);
           if (state.activeTab === "customize") render();
         }
         return;
@@ -3691,7 +4465,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         return;
       }
       if (msg.type === "syncNiumaChatLlmResult") {
-        if (msg.ok && msg.userStudio) mergeUserStudioState(msg.userStudio);
+        if (msg.ok && msg.userStudio) mergeUserStudioStateFromServer(msg.userStudio);
         if (msg.ok) {
           setStatus("已从 Niuma Chat 同步 API", "ok");
           if (state.activeTab === "customize") render();

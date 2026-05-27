@@ -124,6 +124,10 @@ UserStudio_NormalizeNiumaOptions(optIn) {
         optIn["llmBaseUrls"] := Map()
     if !(optIn.Has("llmManualBaseUrl") && optIn["llmManualBaseUrl"] is Map)
         optIn["llmManualBaseUrl"] := Map()
+    if !(optIn.Has("llmModels") && optIn["llmModels"] is Map)
+        optIn["llmModels"] := Map()
+    if optIn.Has("llmCardProviders") && !(optIn["llmCardProviders"] is Array)
+        optIn["llmCardProviders"] := []
     return optIn
 }
 
@@ -337,6 +341,12 @@ UserStudio_NormalizeDoc(doc) {
     llmIn := doc.Has("llm") && doc["llm"] is Map ? doc["llm"] : Map()
     pathsIn := doc.Has("paths") && doc["paths"] is Map ? doc["paths"] : Map()
     optIn := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
+    cardProvidersIn := []
+    hasCardProviders := false
+    if optIn.Has("llmCardProviders") {
+        hasCardProviders := true
+        cardProvidersIn := UserStudio_NormalizeCardProviders(optIn["llmCardProviders"])
+    }
     prov := UserStudio_NormalizeLlmProvider(llmIn.Get("provider", "openai"))
     if (prov = "")
         prov := "openai"
@@ -365,6 +375,8 @@ UserStudio_NormalizeDoc(doc) {
     optIn := UserStudio_NormalizeNiumaOptions(optIn)
     optIn := UserStudio_MergeLlmApiKeys(optIn, llm)
     optIn := UserStudio_MergeLlmBaseUrls(optIn, llm)
+    if hasCardProviders
+        optIn["llmCardProviders"] := cardProvidersIn
     return UserStudio_ApplyLlmAutoDefaults(Map(
         "version", Integer(doc.Get("version", 1)),
         "llm", llm,
@@ -637,6 +649,79 @@ UserStudio_EnsureDocStructure(&doc) {
     doc["options"] := UserStudio_NormalizeNiumaOptions(doc["options"])
 }
 
+UserStudio_CoerceWebMap(val) {
+    if (val is String) {
+        s := Trim(String(val))
+        if (s != "") {
+            try {
+                parsed := Jxon_Load(s)
+                if (parsed is Map)
+                    return parsed
+            } catch {
+            }
+        }
+        return Map()
+    }
+    if (val is Map)
+        return val
+    return Map()
+}
+
+UserStudio_CoerceWebPayload(&payload) {
+    if !(payload is Map) {
+        if (payload is String) {
+            s := Trim(String(payload))
+            if (s != "")
+                try payload := Jxon_Load(s)
+        }
+        if !(payload is Map)
+            payload := Map()
+    }
+    if payload.Has("llm")
+        payload["llm"] := UserStudio_CoerceWebMap(payload["llm"])
+    if payload.Has("options")
+        payload["options"] := UserStudio_CoerceWebMap(payload["options"])
+    if payload.Has("paths")
+        payload["paths"] := UserStudio_CoerceWebMap(payload["paths"])
+    opt := payload.Has("options") && payload["options"] is Map ? payload["options"] : Map()
+    if opt.Has("llmApiKeys") && !(opt["llmApiKeys"] is Map)
+        opt["llmApiKeys"] := UserStudio_CoerceWebMap(opt["llmApiKeys"])
+    if opt.Has("llmBaseUrls") && !(opt["llmBaseUrls"] is Map)
+        opt["llmBaseUrls"] := UserStudio_CoerceWebMap(opt["llmBaseUrls"])
+    if opt.Has("llmModels") && !(opt["llmModels"] is Map)
+        opt["llmModels"] := UserStudio_CoerceWebMap(opt["llmModels"])
+    payload["options"] := opt
+}
+
+UserStudio_NormalizeCardProviders(raw) {
+    cards := []
+    if (raw is Array) {
+        for _, p in raw {
+            pv := UserStudio_NormalizeLlmProvider(p)
+            if (pv != "")
+                cards.Push(pv)
+        }
+        return cards
+    }
+    if (raw is String) {
+        s := Trim(String(raw))
+        if (s != "") {
+            try {
+                parsed := Jxon_Load(s)
+                if (parsed is Array) {
+                    for _, p in parsed {
+                        pv := UserStudio_NormalizeLlmProvider(p)
+                        if (pv != "")
+                            cards.Push(pv)
+                    }
+                }
+            } catch {
+            }
+        }
+    }
+    return cards
+}
+
 UserStudio_MergePayloadLlmApiKeys(mergedOpt, optPayload, llmPayload) {
     if !(mergedOpt is Map)
         mergedOpt := Map()
@@ -673,9 +758,80 @@ UserStudio_PickDisplayApiKey(doc) {
     return ""
 }
 
+UserStudio_ApplyLlmCardsFlat(msg) {
+    if !(msg is Map)
+        throw Error("无效的大模型卡片数据")
+    doc := UserStudio_Get()
+    UserStudio_EnsureDocStructure(&doc)
+    cards := []
+    cardsRaw := Trim(String(msg.Get("cards", "")))
+    if (cardsRaw = "__empty__") {
+        cards := []
+    } else if (cardsRaw != "") {
+        for _, part in StrSplit(cardsRaw, ",") {
+            p := UserStudio_NormalizeLlmProvider(Trim(part))
+            if (p != "")
+                cards.Push(p)
+        }
+    }
+    doc["options"]["llmCardProviders"] := cards
+    keysJson := Trim(String(msg.Get("keysJson", "")))
+    if (keysJson != "") {
+        try {
+            keysParsed := Jxon_Load(keysJson)
+            if (keysParsed is Map) {
+                keys := Map()
+                for k, v in keysParsed {
+                    pk := UserStudio_NormalizeLlmProvider(k)
+                    vk := UserStudio_NormalizeApiKey(v)
+                    if (vk != "")
+                        keys[pk] := vk
+                }
+                doc["options"]["llmApiKeys"] := keys
+            }
+        } catch {
+        }
+    }
+    modelsJson := Trim(String(msg.Get("modelsJson", "")))
+    if (modelsJson != "") {
+        try {
+            modelsParsed := Jxon_Load(modelsJson)
+            if (modelsParsed is Map) {
+                models := Map()
+                for k, v in modelsParsed {
+                    pk := UserStudio_NormalizeLlmProvider(k)
+                    mv := Trim(String(v))
+                    if (mv != "")
+                        models[pk] := mv
+                }
+                doc["options"]["llmModels"] := models
+            }
+        } catch {
+        }
+    }
+    prov := UserStudio_NormalizeLlmProvider(msg.Get("llmProvider", doc["llm"].Get("provider", "openai")))
+    doc["llm"]["provider"] := prov
+    ak := UserStudio_NormalizeApiKey(msg.Get("llmApiKey", ""))
+    doc["llm"]["apiKey"] := ak
+    bu := Trim(String(msg.Get("llmBaseUrl", "")))
+    if (bu != "")
+        doc["llm"]["baseUrl"] := bu
+    mo := Trim(String(msg.Get("llmModel", "")))
+    if (mo != "")
+        doc["llm"]["model"] := mo
+    doc["options"] := UserStudio_MergeLlmApiKeys(doc["options"], doc["llm"])
+    doc := UserStudio_NormalizeDoc(doc)
+    UserStudio_Save(doc)
+    try UserStudio_WriteNiumaLlmSync(doc)
+    catch {
+    }
+    return doc
+}
+
 UserStudio_ApplyFromWebPayload(payload) {
     if !(payload is Map)
         throw Error("定制数据无效")
+    UserStudio_CoerceWebPayload(&payload)
     cur := UserStudio_Get()
     UserStudio_EnsureDocStructure(&cur)
     llmPayload := payload.Has("llm") && payload["llm"] is Map ? payload["llm"] : Map()
@@ -701,8 +857,20 @@ UserStudio_ApplyFromWebPayload(payload) {
             }
             merged["llmBaseUrls"] := urls
         }
+        if optPayload.Has("llmModels") && optPayload["llmModels"] is Map {
+            models := merged.Has("llmModels") && merged["llmModels"] is Map ? merged["llmModels"].Clone() : Map()
+            for k, v in optPayload["llmModels"] {
+                pk := UserStudio_NormalizeLlmProvider(k)
+                mv := Trim(String(v))
+                if (mv != "")
+                    models[pk] := mv
+            }
+            merged["llmModels"] := models
+        }
+        if optPayload.Has("llmCardProviders")
+            merged["llmCardProviders"] := UserStudio_NormalizeCardProviders(optPayload["llmCardProviders"])
         for k, v in optPayload {
-            if (k = "llmApiKeys" || k = "llmBaseUrls")
+            if (k = "llmApiKeys" || k = "llmBaseUrls" || k = "llmModels" || k = "llmCardProviders")
                 continue
             merged[k] := v
         }
@@ -886,6 +1054,28 @@ UserStudio_PayloadForWeb() {
         ak := keysOut[prov]
     optOut := opt.Clone()
     optOut["llmApiKeys"] := keysOut
+    modelsOut := Map()
+    if opt.Has("llmModels") && opt["llmModels"] is Map {
+        for k, v in opt["llmModels"] {
+            pk := UserStudio_NormalizeLlmProvider(k)
+            mv := Trim(String(v))
+            if (mv != "")
+                modelsOut[pk] := mv
+        }
+    }
+    optOut["llmModels"] := modelsOut
+    if opt.Has("llmCardProviders") && opt["llmCardProviders"] is Array {
+        cardProviders := []
+        seen := Map()
+        for _, p in opt["llmCardProviders"] {
+            pv := UserStudio_NormalizeLlmProvider(p)
+            if (pv != "" && !seen.Has(pv)) {
+                seen[pv] := true
+                cardProviders.Push(pv)
+            }
+        }
+        optOut["llmCardProviders"] := cardProviders
+    }
     return Map(
         "version", doc["version"],
         "updatedAt", doc["updatedAt"],

@@ -1805,7 +1805,15 @@ ConfigWebView_OnMessage(sender, args) {
             ConfigWebView_Send(Map("type", "browseUserStudioPathResult", "field", field, "path", selected))
         case "saveUserStudio":
             payload := msg.Get("payload", Map())
-            if (payload is String && payload != "") {
+            jsonPl := Trim(String(msg.Get("payloadJson", "")))
+            if (jsonPl != "") {
+                try {
+                    parsed := Jxon_Load(jsonPl)
+                    if (parsed is Map)
+                        payload := parsed
+                } catch {
+                }
+            } else if (payload is String && payload != "") {
                 try payload := Jxon_Load(payload)
                 catch {
                     payload := Map()
@@ -1813,14 +1821,21 @@ ConfigWebView_OnMessage(sender, args) {
             }
             if !(payload is Map)
                 payload := Map()
+            if FuncExists("UserStudio_CoerceWebPayload")
+                UserStudio_CoerceWebPayload(&payload)
             ok := false
             err := ""
             try {
                 if FuncExists("UserStudio_ApplyFromWebPayload")
                     UserStudio_ApplyFromWebPayload(payload)
+                else
+                    throw Error("UserStudio 未加载，请从托盘完全退出牛马 nmer 后重新启动")
                 ok := true
             } catch as e {
                 err := e.Message
+                try OutputDebug("[ConfigWebView] saveUserStudio failed: " . err)
+                catch {
+                }
             }
             if ok {
                 try {
@@ -1830,6 +1845,84 @@ ConfigWebView_OnMessage(sender, args) {
                             FloatingToolbar_PushStudioLlmToChat(llmPush, "", false)
                     }
                 } catch {
+                }
+            }
+            studio := Map()
+            if ok && FuncExists("UserStudio_PayloadForWeb") {
+                try studio := UserStudio_PayloadForWeb()
+                catch {
+                    studio := Map()
+                }
+            }
+            ConfigWebView_Send(Map("type", "saveUserStudioResult", "ok", ok, "error", err, "userStudio", studio))
+        case "saveStudioLlmCards":
+            ok := false
+            err := ""
+            try {
+                if FuncExists("UserStudio_ApplyLlmCardsFlat") {
+                    UserStudio_ApplyLlmCardsFlat(msg)
+                } else if FuncExists("UserStudio_ApplyFromWebPayload") {
+                    payload := Map()
+                    jsonPl := Trim(String(msg.Get("payloadJson", "")))
+                    if (jsonPl != "") {
+                        try {
+                            parsed := Jxon_Load(jsonPl)
+                            if (parsed is Map)
+                                payload := parsed
+                        } catch {
+                        }
+                    }
+                    if (payload.Count = 0) {
+                        cards := []
+                        cardsRaw := Trim(String(msg.Get("cards", "")))
+                        if (cardsRaw = "__empty__") {
+                            cards := []
+                        } else if (cardsRaw != "") {
+                            for _, part in StrSplit(cardsRaw, ",") {
+                                p := Trim(part)
+                                if (p != "")
+                                    cards.Push(p)
+                            }
+                        }
+                        opt := Map("llmCardProviders", cards)
+                        keysJson := Trim(String(msg.Get("keysJson", "")))
+                        if (keysJson != "") {
+                            try {
+                                keysParsed := Jxon_Load(keysJson)
+                                if (keysParsed is Map)
+                                    opt["llmApiKeys"] := keysParsed
+                            } catch {
+                            }
+                        }
+                        modelsJson := Trim(String(msg.Get("modelsJson", "")))
+                        if (modelsJson != "") {
+                            try {
+                                modelsParsed := Jxon_Load(modelsJson)
+                                if (modelsParsed is Map)
+                                    opt["llmModels"] := modelsParsed
+                            } catch {
+                            }
+                        }
+                        payload := Map(
+                            "llm", Map(
+                                "provider", msg.Get("llmProvider", "openai"),
+                                "apiKey", msg.Get("llmApiKey", ""),
+                                "baseUrl", msg.Get("llmBaseUrl", ""),
+                                "model", msg.Get("llmModel", "")
+                            ),
+                            "options", opt
+                        )
+                    }
+                    if FuncExists("UserStudio_CoerceWebPayload")
+                        UserStudio_CoerceWebPayload(&payload)
+                    UserStudio_ApplyFromWebPayload(payload)
+                } else
+                    throw Error("UserStudio 未加载，请从托盘完全退出牛马 nmer 后重新启动")
+                ok := true
+            } catch as e {
+                err := e.Message
+                try OutputDebug("[ConfigWebView] saveStudioLlmCards failed: " . err)
+                catch {
                 }
             }
             studio := Map()
