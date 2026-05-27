@@ -1910,7 +1910,14 @@ FloatingToolbar_OnWebMessage(sender, args) {
         try OutputDebug("[FTB] niuma_llm_http start reqId=" . reqId . " timeoutMs=" . timeoutMs . " bodyLen=" . StrLen(body) . " url=" . SubStr(url, 1, 96))
         catch {
         }
-        HttpJsonAsync(method, url, body, FloatingToolbar_OnLlmHttpDone.Bind(reqId), Map("headers", headers, "timeoutMs", timeoutMs, "receiveTimeoutMs", timeoutMs, "tag", "niuma_llm_http"))
+        HttpJsonAsync(method, url, body, FloatingToolbar_OnLlmHttpDone.Bind(reqId), Map("headers", headers, "timeoutMs", timeoutMs, "receiveTimeoutMs", timeoutMs, "tag", "niuma_llm_http", "reqId", reqId))
+        return
+    }
+    if (typ = "niuma_llm_http_cancel") {
+        reqId := String(msg.Get("reqId", ""))
+        if (reqId != "") {
+            try CoreAsyncHttp_Cancel(reqId)
+        }
         return
     }
     if (typ = "niuma_upload_file") {

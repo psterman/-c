@@ -476,11 +476,19 @@
       if (root) drawBadge(root, el, id, r, pos);
       iconHint = iconHintForLabelTarget(el);
       txt = extractText(el, id, iconHint);
+      var tagLower = (el.tagName || '').toLowerCase();
+      var inputVal = '';
+      if (tagLower === 'input' || tagLower === 'textarea') {
+        try {
+          inputVal = trimT(String(el.value || ''));
+        } catch (ev) {}
+      }
       items.push({
         id: id,
-        tag: (el.tagName || '').toLowerCase(),
+        tag: tagLower,
         type: (el.getAttribute('type') || '').toLowerCase(),
         text: txt,
+        value: inputVal.slice(0, 120),
         role: (el.getAttribute('role') || '').toLowerCase(),
         fixed: pos === 'fixed' || pos === 'sticky',
         hint: hintOf(el),

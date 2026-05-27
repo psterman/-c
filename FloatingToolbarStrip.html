@@ -4632,8 +4632,36 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return u;
   }
 
+  function minimaxSwapRegionBase(baseUrl) {
+    var u = normalizeMiniMaxBaseURL(String(baseUrl || '').trim());
+    if (!u) return MINIMAX_BASE_INTL;
+    try {
+      var p = new URL(u);
+      var h = String(p.hostname || '').toLowerCase();
+      if (h === 'api.minimaxi.com') p.hostname = 'api.minimax.io';
+      else if (h === 'api.minimax.io') p.hostname = 'api.minimaxi.com';
+      else return '';
+      return p.toString();
+    } catch (_) {
+      if (/api\.minimaxi\.com/i.test(u)) return u.replace(/api\.minimaxi\.com/i, 'api.minimax.io');
+      if (/api\.minimax\.io/i.test(u)) return u.replace(/api\.minimax\.io/i, 'api.minimaxi.com');
+      return '';
+    }
+  }
+
   function minimaxBaseUrlCandidates(base) {
-    return [minimaxResolvedBaseUrl(base)];
+    var primary = minimaxResolvedBaseUrl(base);
+    var candidates = [primary];
+    var swapped = minimaxSwapRegionBase(primary);
+    if (swapped) candidates.push(swapped);
+    if (!base) candidates.push(MINIMAX_BASE_CN, MINIMAX_BASE_INTL);
+    var seen = {};
+    return candidates.filter(function (u) {
+      var k = String(u || '').replace(/\/+$/, '').toLowerCase();
+      if (!k || seen[k]) return false;
+      seen[k] = true;
+      return true;
+    });
   }
 
   function minimaxAuthHeaderVariants(key) {
@@ -4691,32 +4719,59 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var key = trimApiKey(cfg.apiKey);
     if (!key) throw new Error('缺少 MiniMax API Key');
     var bases = minimaxBaseUrlCandidates(cfg.baseUrl);
-    var url = minimaxAnthropicUrl(bases[0]);
-    var r = await hostHttpRequest(url, {
-      method: 'POST',
-      headers: minimaxAnthropicHeaders(key),
-      body: body,
-      timeoutMs: timeoutMs || API_TEST_TIMEOUT_MS
-    });
-    if (r.ok) return r;
-    throw new Error(formatMinimaxApiError(r.status, r.text, url, bases[0], 'Authorization Bearer'));
+    var lastResp = null;
+    var lastErr = null;
+    for (var i = 0; i < bases.length; i++) {
+      var base = bases[i];
+      var url = minimaxAnthropicUrl(base);
+      try {
+        var r = await hostHttpRequest(url, {
+          method: 'POST',
+          headers: minimaxAnthropicHeaders(key),
+          body: body,
+          timeoutMs: timeoutMs || API_TEST_TIMEOUT_MS
+        });
+        if (r.ok) return r;
+        lastResp = { status: Number(r.status || 0), text: String(r.text || ''), url: url, base: base };
+        if (Number(r.status || 0) === 401) continue;
+        throw new Error(formatMinimaxApiError(r.status, r.text, url, base, 'Authorization Bearer'));
+      } catch (e) {
+        lastErr = e;
+        var msg = String((e && e.message) || e || '');
+        if (/请求超时|failed to fetch|网络|timeout/i.test(msg) && i < bases.length - 1) continue;
+        throw e;
+      }
+    }
+    if (lastResp)
+      throw new Error(formatMinimaxApiError(lastResp.status, lastResp.text, lastResp.url, lastResp.base, 'Authorization Bearer'));
+    throw (lastErr || new Error('MiniMax 请求失败'));
   }
 
   async function minimaxOpenAIRequest(cfg, body, timeoutMs) {
     var key = trimApiKey(cfg.apiKey);
     var bases = minimaxBaseUrlCandidates(cfg.baseUrl);
     var last = { status: 401, text: '' };
+    var lastErr = null;
     for (var bi = 0; bi < bases.length; bi++) {
-      var r = await hostHttpRequest(minimaxOpenAIUrl(bases[bi]), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-        body: body,
-        timeoutMs: timeoutMs || API_TEST_TIMEOUT_MS
-      });
-      if (r.ok) return r;
-      last = r;
-      if (r.status !== 401) break;
+      var url = minimaxOpenAIUrl(bases[bi]);
+      try {
+        var r = await hostHttpRequest(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+          body: body,
+          timeoutMs: timeoutMs || API_TEST_TIMEOUT_MS
+        });
+        if (r.ok) return r;
+        last = r;
+        if (r.status !== 401) break;
+      } catch (e) {
+        lastErr = e;
+        var em = String((e && e.message) || e || '');
+        if (/请求超时|failed to fetch|网络|timeout/i.test(em) && bi < bases.length - 1) continue;
+        throw e;
+      }
     }
+    if (lastErr && (!last || !last.status)) throw lastErr;
     return last;
   }
 
@@ -4732,7 +4787,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!key) throw new Error('缺少 MiniMax API Key');
     cfg.apiKey = key;
     cfg.systemPrompt = mergeNiumaSystemPrompt(cfg.systemPrompt || '');
-    if (minimaxUsesAnthropic(cfg.baseUrl)) {
+    try {
+      if (minimaxUsesAnthropic(cfg.baseUrl)) {
       var r = await minimaxAnthropicRequest(
         cfg,
         JSON.stringify({
@@ -4757,18 +4813,32 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
       if (!c) throw new Error('响应中没有可显示的内容。');
       return c;
-    }
-    var r2 = await minimaxOpenAIRequest(
-      cfg,
-      JSON.stringify({ model: cfg.model, messages: oaMsgs(cfg), temperature: 0.7 }),
-      120000
-    );
-    if (!r2.ok) throw new Error(formatMinimaxApiError(r2.status, r2.text));
-    var d2 = JSON.parse(r2.text || '{}');
-    try {
-      return norm(d2.choices[0].message.content);
-    } catch (e2) {
-      throw new Error('响应中没有可显示的内容。');
+      }
+      var r2 = await minimaxOpenAIRequest(
+        cfg,
+        JSON.stringify({ model: cfg.model, messages: oaMsgs(cfg), temperature: 0.7 }),
+        120000
+      );
+      if (!r2.ok) throw new Error(formatMinimaxApiError(r2.status, r2.text));
+      var d2 = JSON.parse(r2.text || '{}');
+      try {
+        return norm(d2.choices[0].message.content);
+      } catch (e2) {
+        throw new Error('响应中没有可显示的内容。');
+      }
+    } catch (e) {
+      var msg = String((e && e.message) || e || '');
+      if (/请求超时|failed to fetch|网络|timeout/i.test(msg)) {
+        throw new Error(
+          msg +
+            '。MiniMax 已自动尝试国内/国际节点；请在设置中将 Base URL 切到 ' +
+            MINIMAX_BASE_CN +
+            ' 或 ' +
+            MINIMAX_BASE_INTL +
+            ' 再试。'
+        );
+      }
+      throw e;
     }
   }
 
@@ -4824,6 +4894,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           if (done) return;
           done = true;
           cleanup();
+          try {
+            post({ type: 'niuma_llm_http_cancel', reqId: reqId });
+          } catch (_) {}
           reject(new Error('请求超时（' + timeoutMs + 'ms），请检查网络或代理'));
         }, timeoutMs + 500);
         function onMsg(ev) {
@@ -5084,7 +5157,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     '你是牛马网页 Agent，操控右侧手机浏览器。' +
     '\n每轮仅输出一个 JSON（无 markdown）：{"thought":"1句","tool":"browser_click|browser_input|browser_finish","elementId":6,"text":""}' +
     '\nelementId 必须来自下方 [id] 列表；禁止 browser_observe（动作后宿主自动推送新快照）；browser_input 须 text（搜索框填词后宿主会自动回车提交）；验证码或无进展则 browser_finish。' +
-    '\n列表格式参考 browser-use：[index] tag type "text" hint。';
+    '\n重要：每轮只能执行一个 tool；thought 里不要写「先 A 再 B」——若需两步请拆成两轮（先 browser_input 关键词，下一轮视快照再 browser_click 提交或 browser_finish）。' +
+    '\n百度/谷歌首页：填词后宿主会异步提交或跳转，一般无需再点「百度一下」；若快照显示仍在首页且搜索框已有词，再点提交按钮。' +
+    '\n列表格式参考 browser-use：[index] tag type "text" hint（input/textarea 可能带 value=已填内容）。';
 
   function parseJsonObjectFromLlm(text) {
     var s = String(text || '').trim();
@@ -5169,6 +5244,23 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
   }
 
+  /** 用于停滞检测：含 input/textarea 的当前 value，避免「已填词但 DOM 列表仍像首页」误判 */
+  function snapshotInputValuesDigest(snap) {
+    var els = snap && snap.elements;
+    if (!Array.isArray(els) || !els.length) return '';
+    var chunks = [];
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      var tag = String((el && el.tag) || '').toLowerCase();
+      if (tag !== 'input' && tag !== 'textarea') continue;
+      var v = String((el && el.value) != null ? el.value : '').trim();
+      if (!v) continue;
+      chunks.push(String(el.id) + ':' + v.slice(0, 48));
+      if (chunks.length >= 8) break;
+    }
+    return chunks.join(';');
+  }
+
   /** browser-use 风格：[id] tag type "text" hint */
   function formatBrowserElementsIndexedList(elements, maxN) {
     maxN = maxN || BROWSER_AGENT_LLM_MAX_ELEMENTS;
@@ -5182,8 +5274,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           .slice(0, 48)
           .replace(/[\r\n"]+/g, ' ')
           .trim();
+        var val = String((el && el.value) != null ? el.value : '')
+          .trim()
+          .slice(0, 40);
+        var valPart = '';
+        if (val && val !== txt.slice(0, val.length)) valPart = ' value="' + val.replace(/"/g, "'") + '"';
         var hint = el.hint ? ' hint=' + String(el.hint).slice(0, 28) : '';
-        return '[' + el.id + '] ' + tag + typ + (txt ? ' "' + txt + '"' : '') + hint;
+        return '[' + el.id + '] ' + tag + typ + (txt ? ' "' + txt + '"' : '') + valPart + hint;
       })
       .join('\n');
   }
@@ -5251,7 +5348,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var chunk = els.slice(0, 15).map(function (e) {
       return String(e.id) + ':' + String(e.tag || '') + ':' + String(e.text || '').slice(0, 24);
     });
-    return url + '|n=' + n + '|h0=' + firstTxt + '|' + chunk.join(';');
+    var iv = snapshotInputValuesDigest(snap);
+    return url + '|n=' + n + '|h0=' + firstTxt + '|' + chunk.join(';') + (iv ? '|iv=' + iv : '');
   }
 
   async function waitSettleSnapshotAfterAct() {
@@ -5525,6 +5623,54 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return bestId;
   }
 
+  function findSearchSubmitElementId(snap) {
+    var els = snap && snap.elements;
+    if (!Array.isArray(els) || !els.length) return 0;
+    var bestId = 0;
+    var bestScore = -1;
+    els.forEach(function (el) {
+      var score = 0;
+      var tag = String((el && el.tag) || '').toLowerCase();
+      var typ = String((el && el.type) || '').toLowerCase();
+      var txt = String((el && el.text) || '').toLowerCase();
+      var hint = String((el && el.hint) || '').toLowerCase();
+      if (tag === 'button') score += 42;
+      if (tag === 'a') score += 8;
+      if (typ === 'submit' || typ === 'button') score += 35;
+      if (/百度一下|搜索|search|提交/.test(txt)) score += 45;
+      if (/btn-search|icon-search|submit/.test(hint)) score += 18;
+      if (tag === 'input' && (typ === 'text' || typ === 'search')) score -= 20;
+      if (score > bestScore) {
+        bestScore = score;
+        bestId = parseInt(el.id, 10) || 0;
+      }
+    });
+    return bestScore >= 40 ? bestId : 0;
+  }
+
+  function normalizeSearchText(s) {
+    return String(s || '')
+      .toLowerCase()
+      .replace(/\s+/g, '')
+      .trim();
+  }
+
+  function hasSearchQueryInInputs(snap, query) {
+    var nq = normalizeSearchText(query);
+    if (!nq) return false;
+    var els = snap && snap.elements;
+    if (!Array.isArray(els) || !els.length) return false;
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      var tag = String((el && el.tag) || '').toLowerCase();
+      if (tag !== 'input' && tag !== 'textarea') continue;
+      var vv = normalizeSearchText((el && el.value) != null ? el.value : '');
+      if (!vv) continue;
+      if (vv === nq || vv.indexOf(nq) >= 0 || nq.indexOf(vv) >= 0) return true;
+    }
+    return false;
+  }
+
   /** 搜索首页 + 目标含关键词时，首轮跳过大模型，直接 browser_input */
   function planBrowserAgentLocalSearchTurn(goal, snap) {
     var q = extractSearchQueryFromBrowserGoal(goal);
@@ -5537,6 +5683,25 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       tool: 'browser_input',
       elementId: eid,
       text: q
+    };
+  }
+
+  /** 搜索首页 follow-up：检测到关键词已填入但仍停留首页时，补一轮提交点击 */
+  function planBrowserAgentLocalSearchFollowupTurn(goal, snap, lastExecNote, turn) {
+    if (turn <= 1) return null;
+    if (!isBrowserSearchHomeUrl(snap && snap.url)) return null;
+    var q = extractSearchQueryFromBrowserGoal(goal);
+    if (!q) return null;
+    var prev = String(lastExecNote || '');
+    if (prev.indexOf('browser_input') < 0 && prev.indexOf('输入') < 0) return null;
+    if (!hasSearchQueryInInputs(snap, q)) return null;
+    var submitId = findSearchSubmitElementId(snap);
+    if (submitId < 1) return null;
+    return {
+      thought: '本地 follow-up：关键词已填入，点击搜索提交按钮',
+      tool: 'browser_click',
+      elementId: submitId,
+      text: ''
     };
   }
 
@@ -5595,13 +5760,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var arr = pickElementsForBrowserLlm(elements, maxN);
     return JSON.stringify(
       arr.map(function (el) {
-        return {
+        var o = {
           id: el.id,
           tag: el.tag,
           type: el.type || '',
           text: String(el.text || '').slice(0, 72),
           hint: String(el.hint || '').slice(0, 40)
         };
+        var vv = String((el && el.value) != null ? el.value : '').trim();
+        if (vv) o.value = vv.slice(0, 80);
+        return o;
       })
     );
   }
@@ -5934,15 +6102,23 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
         var rawTurn = '';
         var toolTurn = null;
-        var localPlan = !agentTurnCtx.lastAssistant ? planBrowserAgentLocalSearchTurn(goal, snap) : null;
+        var localPlan =
+          planBrowserAgentLocalSearchFollowupTurn(goal, snap, agentTurnCtx.lastExecNote, turn) ||
+          (!agentTurnCtx.lastAssistant ? planBrowserAgentLocalSearchTurn(goal, snap) : null);
         if (localPlan) {
           clearInterval(llmHb);
           row('第 ' + turn + ' 轮 · 模型决策', '⚡ 本地搜索规划（跳过大模型）');
           refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 本地规划');
-          cstatForSession(sid, '⚡ 搜索任务本地规划：input #' + localPlan.elementId, '');
+          cstatForSession(
+            sid,
+            '⚡ 搜索任务本地规划：' +
+              (localPlan.tool === 'browser_click' ? 'click #' : 'input #') +
+              localPlan.elementId,
+            ''
+          );
           rawTurn = JSON.stringify({
             thought: localPlan.thought,
-            tool: 'browser_input',
+            tool: localPlan.tool,
             elementId: localPlan.elementId,
             text: localPlan.text
           });
@@ -5964,14 +6140,22 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             );
             rawTurn = await reqBrowserAgentLlm(cfg, messages, {});
           } catch (llmErr) {
-            var fallback = planBrowserAgentLocalSearchTurn(goal, snap);
+            var fallback =
+              planBrowserAgentLocalSearchFollowupTurn(goal, snap, agentTurnCtx.lastExecNote, turn) ||
+              planBrowserAgentLocalSearchTurn(goal, snap);
             if (fallback) {
               clearInterval(llmHb);
               row('第 ' + turn + ' 轮 · 模型决策', '⚠️ 大模型超时，改用本地搜索规划');
-              cstatForSession(sid, '⚠️ API 超时，已改用本地 input #' + fallback.elementId, '');
+              cstatForSession(
+                sid,
+                '⚠️ API 超时，已改用本地 ' +
+                  (fallback.tool === 'browser_click' ? 'click #' : 'input #') +
+                  fallback.elementId,
+                ''
+              );
               rawTurn = JSON.stringify({
                 thought: fallback.thought,
-                tool: 'browser_input',
+                tool: fallback.tool,
                 elementId: fallback.elementId,
                 text: fallback.text
               });
@@ -6037,9 +6221,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         row('第 ' + turn + ' 轮 · ' + toolLabel, '✅ 完成' + (nEl ? '（' + nEl + ' 元素）' : ''));
 
         var fp = snapshotFingerprint(snap);
+        var ivDigest = snapshotInputValuesDigest(snap);
+        if (toolTurn.tool === 'browser_input' && exec.ok && ivDigest) staleCount = 0;
+
         if (fp && fp === lastFp) {
           staleCount += 1;
-          agentTurnCtx.lastExecNote = toolLabel + ' 完成，但页面与上轮相同';
+          agentTurnCtx.lastExecNote =
+            toolLabel +
+            ' 完成，但页面指纹与上轮仍相同。' +
+            (ivDigest ? '输入摘要: ' + ivDigest + '。' : '') +
+            '若应已跳转仍停留，可试 browser_click 提交、browser_finish，或发「继续」后重试。';
           if (staleCount >= 3) {
             post({ type: 'niuma_browser_pause_ai' });
             state.mobileBrowserAiPaused = true;
@@ -6048,11 +6239,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             row('停滞检测 · Kill Switch', '⏸️ 已暂停');
             break;
           }
-          agentTurnCtx.lastExecNote += '；若遇验证码请 browser_finish。';
         } else {
           staleCount = 0;
           lastFp = fp;
-          agentTurnCtx.lastExecNote = toolLabel + ' 完成，已更新快照';
+          agentTurnCtx.lastExecNote =
+            '【复盘·已观察新快照】' +
+            toolLabel +
+            ' 成功。URL: ' +
+            String((snap && snap.url) || '').slice(0, 180) +
+            (nEl ? '；元素 ' + nEl + ' 项' : '') +
+            (ivDigest ? '；输入值: ' + ivDigest : '') +
+            '。下轮请只输出一个 tool 的 JSON。';
         }
       }
 
