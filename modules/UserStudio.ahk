@@ -329,8 +329,6 @@ UserStudio_ApplyLlmAutoDefaults(doc) {
     m := Trim(String(llm["model"]))
     if (m = "")
         llm["model"] := pre.Get("model", "")
-    else if (prov = "kimi" && RegExMatch(m, "i)^moonshot-v1"))
-        llm["model"] := pre.Get("model", "kimi-k2.6")
     doc["llm"] := llm
     return doc
 }

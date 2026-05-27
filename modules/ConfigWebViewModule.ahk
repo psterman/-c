@@ -1443,19 +1443,15 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         try ConfigWebView_MergeHoleTriggerPayload(payload)
         if (payload.Has("userStudio") && payload["userStudio"] is Map) {
             us := payload["userStudio"]
-            usPl := Map()
-            if us.Has("llm") && us["llm"] is Map
-                usPl["llm"] := us["llm"]
-            if us.Has("paths") && us["paths"] is Map
-                usPl["paths"] := us["paths"]
-            if us.Has("options") && us["options"] is Map
-                usPl["options"] := us["options"]
-            if us.Has("ttyd") && us["ttyd"] is Map
-                usPl["ttyd"] := us["ttyd"]
-            if (usPl.Count > 0 && FuncExists("UserStudio_ApplyFromWebPayload")) {
-                try UserStudio_ApplyFromWebPayload(usPl)
-                catch as e {
-                    OutputDebug("[ConfigWebView] userStudio from saveSettings: " . e.Message)
+            try {
+                usMsg := Map("payload", us)
+                try usMsg["payloadJson"] := Jxon_Dump(us)
+                catch {
+                }
+                ConfigWebView_ApplyUserStudioSave(usMsg)
+            } catch as e {
+                try OutputDebug("[ConfigWebView] userStudio from saveSettings: " . e.Message)
+                catch {
                 }
             }
         }
@@ -1747,6 +1743,185 @@ ConfigWebView_RunSaveSettings(payload) {
         SetTimer(ConfigWebView_FlushQueuedSaveSettings, -380)
 }
 
+ConfigWebView_UserStudioPath() {
+    return A_ScriptDir . "\config\user_studio.json"
+}
+
+ConfigWebView_ParseUserStudioSavePayload(msg) {
+    payload := msg.Has("payload") ? msg["payload"] : Map()
+    jsonPl := Trim(String(msg.Get("payloadJson", "")))
+    if (jsonPl != "") {
+        try {
+            parsed := Jxon_Load(jsonPl)
+            if (parsed is Map)
+                payload := parsed
+        } catch {
+        }
+    } else if (payload is String && payload != "") {
+        try payload := Jxon_Load(payload)
+        catch {
+            payload := Map()
+        }
+    }
+    if !(payload is Map)
+        payload := Map()
+    return payload
+}
+
+ConfigWebView_BuildUserStudioPayloadFromFlat(msg) {
+    if !(msg is Map)
+        return Map()
+    cards := []
+    cardsRaw := Trim(String(msg.Get("cards", "")))
+    if (cardsRaw = "__empty__") {
+        cards := []
+    } else if (cardsRaw != "") {
+        for _, part in StrSplit(cardsRaw, ",") {
+            p := Trim(part)
+            if (p != "")
+                cards.Push(p)
+        }
+    }
+    opt := Map("llmCardProviders", cards)
+    keysJson := Trim(String(msg.Get("keysJson", "")))
+    if (keysJson != "") {
+        try {
+            keysParsed := Jxon_Load(keysJson)
+            if (keysParsed is Map)
+                opt["llmApiKeys"] := keysParsed
+        } catch {
+        }
+    }
+    modelsJson := Trim(String(msg.Get("modelsJson", "")))
+    if (modelsJson != "") {
+        try {
+            modelsParsed := Jxon_Load(modelsJson)
+            if (modelsParsed is Map)
+                opt["llmModels"] := modelsParsed
+        } catch {
+        }
+    }
+    return Map(
+        "llm", Map(
+            "provider", msg.Get("llmProvider", "openai"),
+            "apiKey", msg.Get("llmApiKey", ""),
+            "baseUrl", msg.Get("llmBaseUrl", ""),
+            "model", msg.Get("llmModel", "")
+        ),
+        "options", opt
+    )
+}
+
+ConfigWebView_FallbackWriteUserStudioJson(payload) {
+    if !(payload is Map)
+        payload := Map()
+    dir := A_ScriptDir . "\config"
+    if !DirExist(dir)
+        DirCreate(dir)
+    path := ConfigWebView_UserStudioPath()
+    doc := Map(
+        "version", 1,
+        "llm", Map("provider", "openai", "apiKey", "", "baseUrl", "https://api.openai.com/v1", "model", "gpt-4o-mini"),
+        "paths", Map("cursor", "", "autohotkey", "", "everything", "", "python", "", "notes", ""),
+        "options", Map(),
+        "updatedAt", ""
+    )
+    if FileExist(path) {
+        try {
+            parsed := Jxon_Load(FileRead(path, "UTF-8"))
+            if (parsed is Map)
+                doc := parsed
+        } catch {
+        }
+    }
+    if !(doc.Has("llm") && doc["llm"] is Map)
+        doc["llm"] := Map("provider", "openai", "apiKey", "", "baseUrl", "", "model", "")
+    if !(doc.Has("paths") && doc["paths"] is Map)
+        doc["paths"] := Map("cursor", "", "autohotkey", "", "everything", "", "python", "", "notes", "")
+    if !(doc.Has("options") && doc["options"] is Map)
+        doc["options"] := Map()
+    if payload.Has("llm") && payload["llm"] is Map {
+        for k, v in payload["llm"]
+            doc["llm"][k] := v
+    }
+    if payload.Has("paths") && payload["paths"] is Map {
+        for k, v in payload["paths"]
+            doc["paths"][k] := Trim(String(v))
+    }
+    if payload.Has("options") && payload["options"] is Map {
+        optIn := payload["options"]
+        opt := doc["options"] is Map ? doc["options"].Clone() : Map()
+        for slot in ["llmApiKeys", "llmModels", "llmBaseUrls", "llmManualBaseUrl"] {
+            if optIn.Has(slot) && optIn[slot] is Map
+                opt[slot] := optIn[slot].Clone()
+        }
+        if optIn.Has("llmCardProviders") && optIn["llmCardProviders"] is Array
+            opt["llmCardProviders"] := optIn["llmCardProviders"].Clone()
+        for k, v in optIn {
+            if (k = "llmApiKeys" || k = "llmModels" || k = "llmBaseUrls" || k = "llmManualBaseUrl" || k = "llmCardProviders")
+                continue
+            opt[k] := v
+        }
+        doc["options"] := opt
+    }
+    doc["updatedAt"] := FormatTime(, "yyyy-MM-dd HH:mm:ss")
+    try {
+        if FileExist(path)
+            FileCopy(path, dir . "\user_studio.backup.json", 1)
+    } catch {
+    }
+    f := FileOpen(path, "w", "UTF-8")
+    if !f
+        throw Error("无法写入 " . path)
+    f.Write(Jxon_Dump(doc))
+    f.Close()
+    global g_UserStudioLoaded
+    if IsSet(g_UserStudioLoaded)
+        g_UserStudioLoaded := false
+}
+
+ConfigWebView_ApplyUserStudioSave(msg) {
+    payload := ConfigWebView_ParseUserStudioSavePayload(msg)
+    if (payload.Count = 0)
+        payload := ConfigWebView_BuildUserStudioPayloadFromFlat(msg)
+    errPrimary := ""
+    try {
+        UserStudio_CoerceWebPayload(&payload)
+        UserStudio_ApplyFromWebPayload(payload)
+        return
+    } catch as e {
+        errPrimary := e.Message
+        try OutputDebug("[ConfigWebView] UserStudio save primary failed: " . errPrimary)
+        catch {
+        }
+    }
+    try {
+        ConfigWebView_FallbackWriteUserStudioJson(payload)
+    } catch as e2 {
+        if (errPrimary != "")
+            throw Error(errPrimary)
+        throw e2
+    }
+}
+
+ConfigWebView_UserStudioPayloadForWebAfterSave() {
+    if FuncExists("UserStudio_PayloadForWeb") {
+        try return UserStudio_PayloadForWeb()
+        catch {
+        }
+    }
+    path := ConfigWebView_UserStudioPath()
+    if FileExist(path) {
+        try {
+            parsed := Jxon_Load(FileRead(path, "UTF-8"))
+            if (parsed is Map)
+                return parsed
+        } catch {
+        }
+    }
+    return Map()
+}
+
 ConfigWebView_OnMessage(sender, args) {
     global ConfigWV2Ready, UseWebViewSettings
     jsonStr := args.WebMessageAsJson
@@ -1804,32 +1979,10 @@ ConfigWebView_OnMessage(sender, args) {
                 selected := UserStudio_BrowsePath(field)
             ConfigWebView_Send(Map("type", "browseUserStudioPathResult", "field", field, "path", selected))
         case "saveUserStudio":
-            payload := msg.Get("payload", Map())
-            jsonPl := Trim(String(msg.Get("payloadJson", "")))
-            if (jsonPl != "") {
-                try {
-                    parsed := Jxon_Load(jsonPl)
-                    if (parsed is Map)
-                        payload := parsed
-                } catch {
-                }
-            } else if (payload is String && payload != "") {
-                try payload := Jxon_Load(payload)
-                catch {
-                    payload := Map()
-                }
-            }
-            if !(payload is Map)
-                payload := Map()
-            if FuncExists("UserStudio_CoerceWebPayload")
-                UserStudio_CoerceWebPayload(&payload)
             ok := false
             err := ""
             try {
-                if FuncExists("UserStudio_ApplyFromWebPayload")
-                    UserStudio_ApplyFromWebPayload(payload)
-                else
-                    throw Error("UserStudio 未加载，请从托盘完全退出牛马 nmer 后重新启动")
+                ConfigWebView_ApplyUserStudioSave(msg)
                 ok := true
             } catch as e {
                 err := e.Message
@@ -1847,77 +2000,13 @@ ConfigWebView_OnMessage(sender, args) {
                 } catch {
                 }
             }
-            studio := Map()
-            if ok && FuncExists("UserStudio_PayloadForWeb") {
-                try studio := UserStudio_PayloadForWeb()
-                catch {
-                    studio := Map()
-                }
-            }
+            studio := ok ? ConfigWebView_UserStudioPayloadForWebAfterSave() : Map()
             ConfigWebView_Send(Map("type", "saveUserStudioResult", "ok", ok, "error", err, "userStudio", studio))
         case "saveStudioLlmCards":
             ok := false
             err := ""
             try {
-                if FuncExists("UserStudio_ApplyLlmCardsFlat") {
-                    UserStudio_ApplyLlmCardsFlat(msg)
-                } else if FuncExists("UserStudio_ApplyFromWebPayload") {
-                    payload := Map()
-                    jsonPl := Trim(String(msg.Get("payloadJson", "")))
-                    if (jsonPl != "") {
-                        try {
-                            parsed := Jxon_Load(jsonPl)
-                            if (parsed is Map)
-                                payload := parsed
-                        } catch {
-                        }
-                    }
-                    if (payload.Count = 0) {
-                        cards := []
-                        cardsRaw := Trim(String(msg.Get("cards", "")))
-                        if (cardsRaw = "__empty__") {
-                            cards := []
-                        } else if (cardsRaw != "") {
-                            for _, part in StrSplit(cardsRaw, ",") {
-                                p := Trim(part)
-                                if (p != "")
-                                    cards.Push(p)
-                            }
-                        }
-                        opt := Map("llmCardProviders", cards)
-                        keysJson := Trim(String(msg.Get("keysJson", "")))
-                        if (keysJson != "") {
-                            try {
-                                keysParsed := Jxon_Load(keysJson)
-                                if (keysParsed is Map)
-                                    opt["llmApiKeys"] := keysParsed
-                            } catch {
-                            }
-                        }
-                        modelsJson := Trim(String(msg.Get("modelsJson", "")))
-                        if (modelsJson != "") {
-                            try {
-                                modelsParsed := Jxon_Load(modelsJson)
-                                if (modelsParsed is Map)
-                                    opt["llmModels"] := modelsParsed
-                            } catch {
-                            }
-                        }
-                        payload := Map(
-                            "llm", Map(
-                                "provider", msg.Get("llmProvider", "openai"),
-                                "apiKey", msg.Get("llmApiKey", ""),
-                                "baseUrl", msg.Get("llmBaseUrl", ""),
-                                "model", msg.Get("llmModel", "")
-                            ),
-                            "options", opt
-                        )
-                    }
-                    if FuncExists("UserStudio_CoerceWebPayload")
-                        UserStudio_CoerceWebPayload(&payload)
-                    UserStudio_ApplyFromWebPayload(payload)
-                } else
-                    throw Error("UserStudio 未加载，请从托盘完全退出牛马 nmer 后重新启动")
+                ConfigWebView_ApplyUserStudioSave(msg)
                 ok := true
             } catch as e {
                 err := e.Message
@@ -1925,22 +2014,10 @@ ConfigWebView_OnMessage(sender, args) {
                 catch {
                 }
             }
-            studio := Map()
-            if ok && FuncExists("UserStudio_PayloadForWeb") {
-                try studio := UserStudio_PayloadForWeb()
-                catch {
-                    studio := Map()
-                }
-            }
+            studio := ok ? ConfigWebView_UserStudioPayloadForWebAfterSave() : Map()
             ConfigWebView_Send(Map("type", "saveUserStudioResult", "ok", ok, "error", err, "userStudio", studio))
         case "testUserStudioLlm":
-            payload := msg.Get("payload", Map())
-            if (payload is String && payload != "") {
-                try payload := Jxon_Load(payload)
-                catch {
-                    payload := Map()
-                }
-            }
+            payload := ConfigWebView_ParseUserStudioSavePayload(msg)
             if !(payload is Map)
                 payload := Map()
             llm := payload
@@ -2621,8 +2698,13 @@ ConfigWebView_GeminiGenerateUrl(base, model, apiKey) {
 }
 
 ConfigWebView_TestLlmPing(llm, timeoutMs := 18000) {
-    if FuncExists("LlmApiPing_Test")
+    try {
         return LlmApiPing_Test(llm, timeoutMs)
+    } catch as e {
+        try OutputDebug("[ConfigWebView] LlmApiPing_Test failed: " . e.Message)
+        catch {
+        }
+    }
     if !(llm is Map)
         return Map("ok", false, "error", "配置无效", "elapsedMs", 0)
     prov := ConfigWebView_LlmNormProv(llm.Get("provider", "openai"))
@@ -2636,11 +2718,25 @@ ConfigWebView_TestLlmPing(llm, timeoutMs := 18000) {
         model := pre.Get("model", "")
     if (prov != "ollama" && key = "")
         return Map("ok", false, "error", "请先填写 API Key", "elapsedMs", 0)
-    pingAnth := Jxon_Dump(Map("model", model, "max_tokens", 8, "messages", [Map("role", "user", "content", "ping")]))
-    pingOpenAI := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_tokens", 8, "temperature", 0.1))
     t0 := A_TickCount
     if (prov = "minimax")
         return ConfigWebView_TestMinimaxPing(key, base, model, timeoutMs)
+    if (prov = "kimi") {
+        try {
+            return LlmApiPing_TestKimi(key, base, model, timeoutMs)
+        } catch {
+            headers := Map("Content-Type", "application/json", "Authorization", "Bearer " . key)
+            bu := LlmApiPing_NormalizeMoonshotBase(base)
+            if (bu = "")
+                bu := "https://api.moonshot.cn/v1"
+            body := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_completion_tokens", 64))
+            r := ConfigWebView_LlmHttpSync("POST", ConfigWebView_OpenAIChatUrl(bu), headers, body, timeoutMs)
+            err := r["ok"] ? "" : (FuncExists("LlmApiPing_FormatHttpError") ? LlmApiPing_FormatHttpError(r, "kimi") : r["error"])
+            return Map("ok", !!r["ok"], "error", err, "elapsedMs", A_TickCount - t0)
+        }
+    }
+    pingAnth := Jxon_Dump(Map("model", model, "max_tokens", 8, "messages", [Map("role", "user", "content", "ping")]))
+    pingOpenAI := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_tokens", 8))
     if (prov = "claude") {
         r := ConfigWebView_LlmHttpSync("POST", ConfigWebView_ClaudeMessagesUrl(base), Map(
             "Content-Type", "application/json",

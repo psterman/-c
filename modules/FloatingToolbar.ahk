@@ -1798,9 +1798,17 @@ FloatingToolbar_OnWebMessage(sender, args) {
         pl := Map("llm", llm)
         if msg.Has("apiKeys") && msg["apiKeys"] is Map
             pl["options"] := Map("llmApiKeys", msg["apiKeys"])
-        if FuncExists("UserStudio_ApplyFromWebPayload") && Trim(String(llm.Get("apiKey", ""))) != "" {
-            try UserStudio_ApplyFromWebPayload(pl)
-            catch {
+        if Trim(String(llm.Get("apiKey", ""))) != "" {
+            try {
+                if FuncExists("ConfigWebView_ApplyUserStudioSave") {
+                    saveMsg := Map("payload", pl)
+                    try saveMsg["payloadJson"] := Jxon_Dump(pl)
+                    catch {
+                    }
+                    ConfigWebView_ApplyUserStudioSave(saveMsg)
+                } else if FuncExists("UserStudio_ApplyFromWebPayload")
+                    UserStudio_ApplyFromWebPayload(pl)
+            } catch {
             }
             try ConfigWebView_NotifyStudioLlmSynced()
             catch {

@@ -2051,7 +2051,7 @@
         model: "kimi-k2.6",
         models: ["kimi-k2.6", "moonshot-v1-8k", "kimi-k2-thinking", "kimi-k2.5", "kimi-k2-turbo-preview"],
         keyPh: "Moonshot API Key（sk-…）",
-        hint: "官方文档：国内 Base URL https://api.moonshot.cn/v1（密钥在 platform.moonshot.cn）；国际 https://api.moonshot.ai/v1（platform.kimi.ai）。端点 POST …/v1/chat/completions。默认优先使用最新 kimi-k2.6。"
+        hint: "国内 Key → https://api.moonshot.cn/v1（platform.moonshot.cn）；国际 Key → https://api.moonshot.ai/v1。kimi-k2.6 需账号已开通 K2 系列且有余额；若测试失败可先用 moonshot-v1-8k。"
       },
       claude: {
         label: "Claude（Anthropic）",
@@ -2258,6 +2258,12 @@
 
     function getStudioModelForProvider(pid) {
       pid = normalizeStudioLlmProvider(pid);
+      const card = document.querySelector(`.studio-llm-card[data-prov="${pid}"]`);
+      const modEl = card?.querySelector(".us-card-model");
+      if (modEl) {
+        let mv = String(modEl.value || "").trim();
+        if (mv && mv !== "__custom__") return resolveStudioModel(pid, mv);
+      }
       const models = getStudioLlmModels();
       if (models[pid]) return models[pid];
       const llm = state.data.userStudio?.llm || {};
@@ -2654,7 +2660,6 @@
   </div>
   <div class="hint mini us-card-hint">${esc(pre.hint || "")}</div>
   <div class="inline" style="margin-top:8px;flex-wrap:wrap">
-    <button type="button" class="btn primary studio-llm-save-card" data-prov="${esc(pid)}">保存此卡片</button>
     <button type="button" class="btn studio-llm-test-card" data-prov="${esc(pid)}">测试</button>
   </div>
 </div>`;
@@ -2799,7 +2804,7 @@
       document.getElementById("studioLlmAddModal")?.classList.remove("open");
       document.getElementById("studioLlmAddModal")?.setAttribute("aria-hidden", "true");
       render();
-      persistStudioCardsNow(true);
+      persistStudioCardsNow(false);
     }
 
     function buildStudioLlmPersistPayload() {
@@ -2883,7 +2888,7 @@
         options: { llmCardProviders: list }
       });
       render();
-      persistStudioCardsNow(true);
+      persistStudioCardsNow(false);
     }
 
     function bindStudioLlmCardsUi(activeProv) {
@@ -2901,9 +2906,6 @@
           if (!confirm("确定移除「" + studioLlmPreset(pid).label + "」卡片？密钥分槽仍保留，可再次添加。")) return;
           removeStudioLlmCard(pid);
         });
-      });
-      cardsRoot.querySelectorAll(".studio-llm-save-card").forEach((btn) => {
-        btn.addEventListener("click", () => saveStudioLlmCard(btn.dataset.prov, true));
       });
       cardsRoot.querySelectorAll(".studio-llm-test-card").forEach((btn) => {
         btn.addEventListener("click", () => testStudioLlmCard(btn.dataset.prov));
@@ -2984,32 +2986,6 @@
       };
     }
 
-    function saveStudioLlmCard(pid, showStatus) {
-      pid = normalizeStudioLlmProvider(pid);
-      stashAllStudioCardsFromDom();
-      const keys = { ...getStudioLlmApiKeys() };
-      const card = document.querySelector(`.studio-llm-card[data-prov="${pid}"]`);
-      const keyEl = card?.querySelector(".us-card-key");
-      if (keyEl) {
-        const cur = normalizeStudioApiKey(keyEl.value || "");
-        if (cur) keys[pid] = cur;
-      }
-      if (pid !== "ollama" && !keys[pid]) {
-        setStatus("请填写 API Key 后再保存", "err");
-        return;
-      }
-      mergeUserStudioState({
-        llm: {
-          provider: getActiveStudioLlmProvider(),
-          apiKey: keys[pid] || "",
-          baseUrl: getStudioBaseUrlForProvider(pid),
-          model: getStudioModelForProvider(pid)
-        },
-        options: { llmApiKeys: keys, llmCardProviders: getStudioLlmCardProviders() }
-      });
-      persistStudioCardsNow(showStatus);
-    }
-
     function testStudioLlmCard(pid) {
       const now = Date.now();
       if (state._studioTestInFlight) {
@@ -3031,7 +3007,9 @@
       state._studioTestInFlight = true;
       state._studioTestLastAt = now;
       setStatus("正在测试 " + studioLlmPreset(pid).label + "…", "ok");
-      post({ type: "testUserStudioLlm", payload: pl });
+      let payloadJson = "";
+      try { payloadJson = JSON.stringify(pl); } catch (_) {}
+      post({ type: "testUserStudioLlm", payloadJson });
     }
 
     function bindStudioLlmUi(llm, opts) {
@@ -3331,6 +3309,7 @@
     }
 
     function shouldPersistStudioLlmPayload(pl) {
+      if (state._studioCardsExplicit) return true;
       const prov = normalizeStudioLlmProvider(pl?.llm?.provider);
       const keys = pl?.options?.llmApiKeys || {};
       const hasAnyKey = Object.keys(keys).some((k) => normalizeStudioApiKey(keys[k]));
@@ -3342,11 +3321,12 @@
       if (!shouldPersistStudioLlmPayload(pl)) return false;
       markStudioCardsExplicit();
       mergeUserStudioState(pl);
+      saveStudioLlmCardsToLocalStorage(pl);
       state._studioLlmPersistSilent = !!silent;
       studioLlmPersistInFlight = true;
       let payloadJson = "";
       try { payloadJson = JSON.stringify(pl); } catch (_) {}
-      post({ type: "saveUserStudio", payload: pl, payloadJson });
+      post({ type: "saveUserStudio", payloadJson });
       return true;
     }
 
@@ -4006,12 +3986,11 @@
           `<div class="row"><div class="label">${label}</div><div class="inline" style="flex:1"><input id="usPath_${id}" type="text" data-nosave="1" value="${esc(val || "")}" placeholder="留空则使用系统默认"><button class="btn us-browse" data-us-field="${id}">浏览</button></div></div>`;
         panel.innerHTML = `
 <div class="card studio-api-card"><div class="title">大模型 API</div>
-<div class="hint mini" style="margin-bottom:8px">点击「添加大模型」在弹窗中填写密钥并选择模型；各卡片独立保存，可移除任意卡片（含默认 OpenAI）。</div>
+<div class="hint mini" style="margin-bottom:8px">点击「添加大模型」填写密钥；修改后离开本页或切换标签时会自动保存，也可在 Niuma Chat 悬浮窗中保存。</div>
 <div class="hint mini">已配置 ${configuredCount} 个密钥槽 · 当前默认：<strong>${esc(studioLlmPreset(activeProv).label)}</strong></div>
 ${buildStudioLlmCardsHtml(activeProv)}
 <div class="inline" style="margin-top:12px;flex-wrap:wrap">
   <button class="btn" type="button" id="btnStudioSyncNiuma">从 Niuma Chat 同步</button>
-  <button class="btn" type="button" id="btnSaveAllStudioLlm">保存全部</button>
 </div>
 </div>
 <div class="card studio-context-card"><div class="title">Niuma Chat 项目背景（自动注入）</div>
@@ -4040,7 +4019,6 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
 </div>
 </details>`;
         bindStudioLlmCardsUi(activeProv);
-        document.getElementById("btnSaveAllStudioLlm")?.addEventListener("click", () => persistStudioCardsNow(true));
         const openAsk = (sendNow) => {
           const prompt = (document.getElementById("studioAskInput")?.value || "").trim();
           post({
@@ -4401,11 +4379,10 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (!silent) {
           setStatus(msg.ok ? "智能定制已保存" : (msg.error || "保存失败"), msg.ok ? "ok" : "err");
           if (msg.ok && state.activeTab === "customize") render();
-        } else if (!msg.ok) {
-          setStatus(msg.error || "API 配置保存失败", "err");
         }
         if (msg.ok && msg.userStudio && typeof msg.userStudio === "object") {
           mergeUserStudioStateFromServer(msg.userStudio);
+        } else if (msg.ok) {
           saveStudioLlmCardsToLocalStorage(buildStudioLlmPersistPayload());
         }
         if (studioLlmPersistQueued) {

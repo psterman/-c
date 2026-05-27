@@ -767,7 +767,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       zhipu_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7689，自动启动 chelper（@z_ai/coding-helper）。' },
       copilot_cli: { keyLabel: '无需 API Key', keyPlaceholder: 'ttyd 本机终端', keyHint: 'ttyd 端口 7690，自动启动 copilot CLI。' },
       studio_cli: { keyLabel: '无需 API Key', keyPlaceholder: '智能定制 ttyd', keyHint: '端口 7691，与设置中心「智能定制」同步；Shell/工作目录在「终端定制」面板配置。' },
-      kimi: { keyLabel: 'Kimi（Moonshot）API Key', keyPlaceholder: 'Moonshot 密钥', keyHint: 'Authorization: Bearer；单独保存在「Kimi」槽位。' },
+      kimi: { keyLabel: 'Kimi（Moonshot）API Key', keyPlaceholder: 'Moonshot 密钥', keyHint: '国内 Key 配 api.moonshot.cn/v1；kimi-k2.6 需账号已开通 K2 系列，否则请选 moonshot-v1-8k。' },
       qwen: { keyLabel: 'DashScope API Key', keyPlaceholder: '阿里云百炼 / DashScope', keyHint: '通义千问兼容 OpenAI 接口；密钥仅存「Qwen」槽位。' },
       deepseek: { keyLabel: 'DeepSeek API Key', keyPlaceholder: 'DeepSeek 密钥', keyHint: '单独保存在「DeepSeek」槽位。' },
       claude: { keyLabel: 'Anthropic API Key', keyPlaceholder: 'sk-ant-...', keyHint: '请求头 x-api-key；单独保存在「Claude」槽位（与 OpenAI 密钥不同）。' },
@@ -3953,9 +3953,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       applyProvider(pid, true);
       if (d.baseUrl) baseUrl.value = d.baseUrl;
       if (d.model) model.value = d.model;
-      if (pid === 'kimi' && /^moonshot-v1-8k$/i.test(String(model.value || '').trim())) {
-        model.value = 'kimi-k2.6';
-      }
       fillModels(pid, model.value.trim());
       var s0 = createSessionFromForm();
       state.sessions = [s0];
@@ -4517,34 +4514,32 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var pingBody;
       if (cfg.provider === 'kimi') {
         var km = String(cfg.model || 'kimi-k2.6');
+        var kimiBodies = [];
         if (/^kimi-k2\.6/i.test(km)) {
-          pingBody = JSON.stringify({
-            model: km,
-            messages: [{ role: 'user', content: 'ping' }],
-            max_completion_tokens: 16,
-            thinking: { type: 'disabled' }
-          });
+          kimiBodies.push(JSON.stringify({ model: km, messages: [{ role: 'user', content: 'ping' }], max_completion_tokens: 16 }));
+          kimiBodies.push(JSON.stringify({ model: km, messages: [{ role: 'user', content: 'ping' }], max_completion_tokens: 16, thinking: { type: 'enabled' } }));
+          kimiBodies.push(JSON.stringify({ model: km, messages: [{ role: 'user', content: 'ping' }], max_completion_tokens: 16, thinking: { type: 'disabled' } }));
+          kimiBodies.push(JSON.stringify({ model: km, messages: [{ role: 'user', content: 'ping' }], max_tokens: 16 }));
         } else if (/thinking/i.test(km)) {
-          pingBody = JSON.stringify({
-            model: km,
-            messages: [{ role: 'user', content: 'ping' }],
-            max_tokens: 16
-          });
+          kimiBodies.push(JSON.stringify({ model: km, messages: [{ role: 'user', content: 'ping' }], max_tokens: 16 }));
         } else {
-          pingBody = JSON.stringify({
-            model: km,
-            messages: [{ role: 'user', content: 'ping' }],
-            max_completion_tokens: 16
-          });
+          kimiBodies.push(JSON.stringify({ model: km, messages: [{ role: 'user', content: 'ping' }], max_tokens: 16 }));
         }
-      } else {
-        pingBody = JSON.stringify({
+        var kimiOk = false;
+        for (var ki = 0; ki < kimiBodies.length; ki++) {
+          var rK = await hostHttpRequest(oaUrl(cfg.baseUrl), { method: 'POST', headers: h, body: kimiBodies[ki] });
+          if (rK && rK.ok) { kimiOk = true; break; }
+        }
+        if (!kimiOk) throw new Error('Kimi 测试失败：kimi-k2.6 需账号已开通 K2 系列且有余额，可改选 moonshot-v1-8k 或到 platform.moonshot.cn 查看可用模型');
+        apiTestStat('API 测试通过。', 'success');
+        return;
+      }
+      pingBody = JSON.stringify({
               model: cfg.model,
               messages: [{ role: 'user', content: 'ping' }],
               max_tokens: 8,
               temperature: 0.1
             });
-      }
       var rO = await hostHttpRequest(oaUrl(cfg.baseUrl), {
         method: 'POST',
         headers: h,

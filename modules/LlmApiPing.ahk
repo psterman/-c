@@ -188,8 +188,10 @@ LlmApiPing_FormatHttpError(r, prov := "") {
             err := "接口 404：Base URL 须为 https://api.moonshot.cn/v1（国内）或 https://api.moonshot.ai/v1（国际），完整路径为 …/v1/chat/completions；勿漏 /v1"
         else if RegExMatch(err, "i)authentication|api[_ ]?key|unauthorized|401")
             err := "Kimi 鉴权失败：国内密钥→api.moonshot.cn/v1（platform.moonshot.cn）；国际密钥→api.moonshot.ai/v1（platform.kimi.ai），二者不可混用"
-        else if RegExMatch(err, "i)model|invalid_request|400")
-            err .= "。当前建议优先使用 kimi-k2.6；如使用 kimi-k2-thinking，请勿附带 thinking=disabled"
+        else if RegExMatch(err, "i)temperature")
+            err := "Kimi K2.6 模型要求 temperature=1（或不传 temperature），测试请求已去掉 0.1。请重载主程序后再测。"
+        else if RegExMatch(err, "i)model|invalid_request|400|403|permission|not\s*found|不存在|未开通|无权限")
+            err .= "。kimi-k2.6 需账号在 platform.moonshot.cn（国内）或 platform.kimi.ai（国际）已开通且有余额；若仅 moonshot-v1-8k 可用，请在卡片里改选 v1 模型。可用 GET …/v1/models 查看本 Key 实际可用模型列表。"
     } else if (prov = "openai") {
         if RegExMatch(err, "i)429|too many requests|rate.?limit|请求过于频繁")
             err := "HTTP 429（限流）：通常不是密钥错误，而是短时间内请求过多（RPM/TPM）。请等待 30～60 秒后再测；避免连续切换模型后立刻连点「测试 API」。每次测试最多向官方发 2 次请求，易触发免费档或低配额账号的限流。可到 platform.openai.com 查看 Usage / Billing。"
@@ -225,29 +227,36 @@ LlmApiPing_OpenAIChatUrl(base) {
 
 LlmApiPing_KimiPingBodies(mod) {
     mod := Trim(String(mod))
-    pingK26 := Jxon_Dump(Map(
-        "model", mod,
-        "messages", [Map("role", "user", "content", "ping")],
-        "max_completion_tokens", 16,
-        "thinking", Map("type", "disabled")
-    ))
+    tok := 64
     pingK26Lite := Jxon_Dump(Map(
         "model", mod,
         "messages", [Map("role", "user", "content", "ping")],
-        "max_completion_tokens", 16
+        "max_completion_tokens", tok
+    ))
+    pingK26Enabled := Jxon_Dump(Map(
+        "model", mod,
+        "messages", [Map("role", "user", "content", "ping")],
+        "max_completion_tokens", tok,
+        "thinking", Map("type", "enabled")
+    ))
+    pingK26 := Jxon_Dump(Map(
+        "model", mod,
+        "messages", [Map("role", "user", "content", "ping")],
+        "max_completion_tokens", tok,
+        "thinking", Map("type", "disabled")
     ))
     pingV1 := Jxon_Dump(Map(
         "model", mod,
         "messages", [Map("role", "user", "content", "ping")],
-        "max_tokens", 16
+        "max_tokens", tok
     ))
     if RegExMatch(mod, "i)^kimi-k2\.6")
-        return [pingK26, pingK26Lite, pingV1]
+        return [pingK26Lite, pingK26Enabled, pingK26, pingV1]
     if RegExMatch(mod, "i)thinking")
         return [pingV1, pingK26Lite]
     if RegExMatch(mod, "i)^moonshot-v1")
         return [pingV1]
-    return [pingK26Lite, pingV1, pingK26]
+    return [pingK26Lite, pingV1, pingK26Enabled, pingK26]
 }
 
 LlmApiPing_ClaudeMessagesUrl(base) {
@@ -304,10 +313,16 @@ LlmApiPing_TestKimi(key, base, model, timeoutMs) {
     b0 := LlmApiPing_NormalizeMoonshotBase(Trim(String(base)))
     if (b0 != "")
         bases.Push(b0)
-    if !ArrayHasValue(bases, "https://api.moonshot.cn/v1")
+    if !bases.Length {
         bases.Push("https://api.moonshot.cn/v1")
-    if !ArrayHasValue(bases, "https://api.moonshot.ai/v1")
         bases.Push("https://api.moonshot.ai/v1")
+    } else if RegExMatch(b0, "i)moonshot\.cn") {
+        if !ArrayHasValue(bases, "https://api.moonshot.cn/v1")
+            bases.Push("https://api.moonshot.cn/v1")
+    } else if RegExMatch(b0, "i)moonshot\.ai") {
+        if !ArrayHasValue(bases, "https://api.moonshot.ai/v1")
+            bases.Push("https://api.moonshot.ai/v1")
+    }
     m0 := Trim(String(model))
     if (m0 = "")
         m0 := "kimi-k2.6"
