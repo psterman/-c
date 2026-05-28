@@ -109,11 +109,27 @@
       var tag = (node.tagName || '').toLowerCase();
       var ty = String(node.getAttribute('type') || '').toLowerCase();
       var nm = String(node.getAttribute('name') || '').toLowerCase();
+      var id = String(node.getAttribute('id') || '').toLowerCase();
+      var cls = String(node.getAttribute('class') || '').toLowerCase();
       var role = String(node.getAttribute('role') || '').toLowerCase();
       var al = String(node.getAttribute('aria-label') || '').toLowerCase();
       var ph = String(node.getAttribute('placeholder') || '').toLowerCase();
-      if (nm === 'q' || nm === 'query' || ty === 'search' || role === 'searchbox') return true;
-      if (/search|搜索|query|百度/.test(al + ' ' + ph)) return true;
+      var t = String(node.textContent || '').toLowerCase();
+      if (nm === 'q' || nm === 'query' || nm === 'wd' || nm === 'word' || ty === 'search' || role === 'searchbox')
+        return true;
+      if (id === 'kw' || id === 'index-kw' || /s_ipt|search.*input|input.*search|searchbox|index-kw|wd/.test(cls))
+        return true;
+      if (/search|搜索|query|百度|关键词|keyword|搜一下/i.test(al + ' ' + ph + ' ' + t))
+        return true;
+      try {
+        var form = node.form || node.closest('form');
+        var action = String((form && form.getAttribute && form.getAttribute('action')) || '').toLowerCase();
+        if (/\/s(\?|$)|baidu|search/.test(action)) return true;
+      } catch (_) {}
+      try {
+        var host = String((location && location.hostname) || '').toLowerCase();
+        if (/\.baidu\./.test(host) && tag === 'input' && (nm === 'wd' || id === 'kw')) return true;
+      } catch (_) {}
       return false;
     }
 

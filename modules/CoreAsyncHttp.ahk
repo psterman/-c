@@ -398,6 +398,14 @@ CoreAsyncHttp_Cancel(idOrReqId) {
         return 0
     cancelled := 0
     for id, req in g_CoreAsyncHttpReqs {
+        if (target = "*" || target = "all") {
+            req["cancelled"] := true
+            req["phase"] := "cancelled"
+            g_CoreAsyncHttpReqs[id] := req
+            try req["whr"].Abort()
+            cancelled += 1
+            continue
+        }
         matchId := (String(id) = target)
         reqId := req["opts"].Has("reqId") ? String(req["opts"]["reqId"]) : ""
         matchReqId := (target != "" && reqId != "" && reqId = target)

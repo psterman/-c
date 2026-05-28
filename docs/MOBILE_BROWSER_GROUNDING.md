@@ -91,6 +91,40 @@ sequenceDiagram
 - **由大模型**根据首轮快照选择 `browser_click` / `browser_input` / `browser_finish`，无宿主侧百度/谷歌 URL 规则直达。
 - 打开浏览器时仅根据用户话术解析**站点首页**（如 `google.com`、`baidu.com`），不代替模型构造搜索结果 URL。
 
+## GroundingCache L1（SQLite，面向搜索 follow-up）
+
+- `niuma_mobile_labeling.js` 在打标时为候选元素计算 `roleHint`（`search_input`/`search_submit`/`generic`）以及高权重 selector（透传到快照字段 `sel`）。
+- `modules/GroundingCache.ahk` 以 `host + intent_template + page_fingerprint + tool + target_roleHint` 为键，把 `selectorTop1(sel)` 与 `textTemplate`（如按钮文字）缓存下来。
+- `FloatingToolbarStrip.html` 在本地规划缺失时会先查缓存：通常用于「输入成功后，点击搜索提交按钮」的 elementId 回填，从而跳过多余的大模型决策。
+
+### resolve-id 动态自愈桥（L1 命中后的最后一步校验）
+
+- 新增 `modules/niuma_mobile_resolve.js`：给定 `selector + roleHint`，直接在**真实 DOM**中定位目标元素，并分配/复用 `data-niuma-label-id`。
+- 新增宿主桥：`niuma_browser_resolve` → `host_browser_resolve_result`（由 `NiumaMobileBrowser_ResolveElement` 处理）。
+- 触发时机：仅用于 **L1 缓存命中后且快照定位失败** 的补救，不替换现有快照解析主路径。
+- 收益：
+  - 快照 Top-N 裁剪漏元素时，仍可跨越快照限制执行（减少“断层挂掉”）。
+  - 若命中 roleHint 但 selector 失效，resolve 会回传 `selectorUsed/repaired`，前端会自动回写缓存实现动态自愈。
+
+## L2 旁路底座（sqlite-vec）
+
+本阶段仅验证 **扩展载入 + vec0 向量读写**，不接入 Embedding、FloatingToolbar 决策链，也不与 L1 联合查询。L2 初始化失败时只写日志，**L1 `GroundingCache_Get/Set` 仍可用**。
+
+| 项 | 说明 |
+|----|------|
+| 扩展文件 | [`lib/vec0.dll`](lib/vec0.dll)（[sqlite-vec v0.1.9 loadable-windows-x86_64](https://github.com/asg017/sqlite-vec/releases/tag/v0.1.9)，官方包内模块名即为 `vec0.dll`，非 `sqlite-vec.dll`） |
+| 运行时 SQLite | 项目根 [`sqlite3.dll`](../sqlite3.dll)（须支持 `load_extension`；烟测脚本通过 `sqlite3_enable_load_extension` 兜底） |
+| 旁路 API | `modules/GroundingCache.ahk`：`GroundingCache_TryEnableL2` / `GroundingCache_RunL2SmokeTest` |
+| 烟测表 | 虚拟表 `vec_l2_smoke`（`float[8]`，与官方 README 示例一致；生产 `float[384]` 留到 Embedding 里程碑） |
+| 日志 | [`Cache/grounding_l2.log`](../Cache/grounding_l2.log) |
+
+### 烟测
+
+1. 将 `vec0.dll` 放入 `lib/`（与根目录 `sqlite3.dll` 同为 **x64**）。
+2. 运行 [`tools/grounding_l2_smoke.ahk`](../tools/grounding_l2_smoke.ahk)（脚本在 `tools/` 下，会写入 `tools/SQLiteDB.ini` 指向 `..\sqlite3.dll`；**勿在 ini 中写含中文的绝对路径**，否则 `IniRead` 可能失败）。
+3. **成功判据**：弹窗或日志含 `vec_version`（如 `v0.1.9`），且 KNN 返回 1 行有限 `distance`（烟测期望 `sample_id=2`、`distance≈2.39`）。
+4. **失败降级**：删除或移走 `lib/vec0.dll` 后烟测应明确失败；`Data/GroundingCache.db` 内 L1 表 `grounding_cache` 仍可正常读写。
+
 ## LLM 提速（对齐 browser-use）
 
 参考 [browser-use references](https://github.com/browser-use/browser-use/tree/main/skills/browser-use/references) 与 DomService 思路：

@@ -194,6 +194,41 @@ class AhkInterface {
             "error", payload.Has("error") ? payload["error"] : ""
         )
     }
+    /**
+     * 返回最新浏览器快照 JSON（供 Chat 通过 HostObject 同步拉取，绕过 Native→JS 断连）。
+     */
+    GetBrowserSnapshot() {
+        try {
+            global g_NiumaMobile_LastSnapshotJson
+            static _callCount := 0
+            _callCount += 1
+            s := String(g_NiumaMobile_LastSnapshotJson)
+            if (s != "" && StrLen(s) >= 40) {
+                reqLogged := ""
+                if RegExMatch(s, '"reqId"\s*:\s*"([^"]*)"', &mR)
+                    reqLogged := mR[1]
+                if (Mod(_callCount, 3) = 1) {
+                    head := SubStr(s, 1, 160)
+                    tail := SubStr(s, Max(1, StrLen(s) - 120))
+                    ; 避免日志被换行打断
+                    head := StrReplace(StrReplace(StrReplace(head, "`r", " "), "`n", " "), "`t", " ")
+                    tail := StrReplace(StrReplace(StrReplace(tail, "`r", " "), "`n", " "), "`t", " ")
+                    FileAppend("[" . A_Now . "] [HOSTOBJ] GetBrowserSnapshot #" . _callCount . " OK len=" . StrLen(s) . " reqId=" . reqLogged . " head=" . head . " tail=" . tail . "`r`n", A_ScriptDir . "\Cache\niuma_mobile_snapshot_debug.log", "UTF-8")
+                }
+                return s
+            }
+            FileAppend("[" . A_Now . "] [HOSTOBJ] GetBrowserSnapshot #" . _callCount . " EMPTY`r`n", A_ScriptDir . "\Cache\niuma_mobile_snapshot_debug.log", "UTF-8")
+            return '{"type":"host_browser_snapshot","reqId":"","count":0,"arrLen":0,"url":"","error":"no_cache","truncated":false,"totalCandidates":0,"snapshot":[]}'
+        } catch as e {
+            FileAppend("[" . A_Now . "] [HOSTOBJ] GetBrowserSnapshot ERROR: " . e.Message . "`r`n", A_ScriptDir . "\Cache\niuma_mobile_snapshot_debug.log", "UTF-8")
+            return '{"type":"host_browser_snapshot","reqId":"","count":0,"arrLen":0,"url":"","error":"bridge_error","truncated":false,"totalCandidates":0,"snapshot":[]}'
+        }
+    }
+
+    /** 与 GetBrowserSnapshot 相同，供前端 pull 自愈通道按行业命名调用。 */
+    GetLatestSnapshotCache() {
+        return this.GetBrowserSnapshot()
+    }
 }
 
 WebView2_RegisterHostBridge(wv2) {

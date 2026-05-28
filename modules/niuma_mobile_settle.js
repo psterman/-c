@@ -1,9 +1,23 @@
 (function () {
   'use strict';
-  var networkQuietMs = 350;
-  var domQuietMs = 900;
-  var maxMs = 9000;
-  var pollMs = 60;
+
+  function getSettleParams() {
+    var host = '';
+    try { host = (window.__NIUMA_SETTLE_HOST__ || location.hostname || '').toLowerCase(); } catch (_) {}
+    var defaults = { networkQuietMs: 350, domQuietMs: 900, maxMs: 9000, pollMs: 60 };
+    if (/\.(twitter|x)\./.test(host)) return { networkQuietMs: 450, domQuietMs: 1500, maxMs: 12000, pollMs: 60 };
+    if (/\.(facebook|instagram|threads)\./.test(host)) return { networkQuietMs: 400, domQuietMs: 1400, maxMs: 11000, pollMs: 60 };
+    if (/\.(youtube|tiktok|bilibili)\./.test(host)) return { networkQuietMs: 400, domQuietMs: 1200, maxMs: 10000, pollMs: 60 };
+    if (/\.(github|stackoverflow|reddit)\./.test(host)) return { networkQuietMs: 350, domQuietMs: 1000, maxMs: 9000, pollMs: 60 };
+    if (/\.(taobao|tmall|jd|pdd)\./.test(host)) return { networkQuietMs: 350, domQuietMs: 1100, maxMs: 10000, pollMs: 60 };
+    return defaults;
+  }
+
+  var params = getSettleParams();
+  var networkQuietMs = params.networkQuietMs;
+  var domQuietMs = params.domQuietMs;
+  var maxMs = params.maxMs;
+  var pollMs = params.pollMs;
 
   function installNetHooks() {
     if (window.__NIUMA_ACTIVE_REQUESTS__ !== undefined) return;

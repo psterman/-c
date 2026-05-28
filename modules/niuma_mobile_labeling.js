@@ -221,6 +221,103 @@
     return h;
   }
 
+  function cssEscapeAttrValue(v) {
+    // CSS attr selector 内的值：尽量保持安全，避免因为引号/反斜杠导致 selector 失效
+    return String(v || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  }
+
+  function looksRandomId(s) {
+    s = String(s || '');
+    if (!s) return true;
+    if (/_react[-_]/i.test(s)) return true;
+    if (/^sc[-_]/i.test(s)) return true;
+    if (/^btn[-_]\d+/i.test(s)) return true;
+    if (/[a-f0-9]{6,}/i.test(s)) return true;
+    if (/-\d{3,}/.test(s)) return true;
+    return false;
+  }
+
+  function roleHintOf(el) {
+    if (!el) return 'generic';
+    var tagLower = (el.tagName || '').toLowerCase();
+    var ty = String((el.getAttribute('type') || '')).toLowerCase();
+    var role = String((el.getAttribute('role') || '')).toLowerCase();
+    var name = String((el.getAttribute('name') || '')).toLowerCase();
+    var aria = String((el.getAttribute('aria-label') || '')).toLowerCase();
+    var ph = String((el.getAttribute('placeholder') || '')).toLowerCase();
+    var hint = String((el.getAttribute('title') || '')).toLowerCase();
+
+    var searchableText = aria + ' ' + ph + ' ' + hint + ' ' + role + ' ' + name;
+    if (tagLower === 'input' || tagLower === 'textarea') {
+      if (
+        name === 'q' ||
+        name === 'query' ||
+        name === 'wd' ||
+        name === 'word' ||
+        role === 'searchbox' ||
+        ty === 'search' ||
+        /搜索|关键词|关键字|百度|查找|搜(索)?/i.test(searchableText)
+      )
+        return 'search_input';
+    }
+
+    // submit：优先看按钮/链接的文本/aria-label
+    var txt = '';
+    try {
+      txt = String((el.innerText || el.textContent || '')).trim().toLowerCase();
+    } catch (_) {}
+    var searchableBtn = aria + ' ' + txt + ' ' + ph;
+    if (/(百度一下|搜索|搜一下|查找|提交|submit)/i.test(searchableBtn) || role === 'button') {
+      if (tagLower === 'button' || tagLower === 'input' || tagLower === 'a') return 'search_submit';
+    }
+
+    return 'generic';
+  }
+
+  function selectorTop1Of(el) {
+    var cands = selectorCandidatesOf(el);
+    return cands && cands.length ? cands[0].selector : '';
+  }
+
+  function selectorCandidatesOf(el) {
+    if (!el) return [];
+    var tagLower = (el.tagName || '').toLowerCase();
+    var ty = String((el.getAttribute('type') || '')).toLowerCase();
+    var role = String((el.getAttribute('role') || '')).toLowerCase();
+    var name = String((el.getAttribute('name') || '')).toLowerCase();
+    var aria = String((el.getAttribute('aria-label') || '')).toLowerCase();
+    var ph = String((el.getAttribute('placeholder') || '')).toLowerCase();
+    var id = String((el.getAttribute('id') || '')).toLowerCase();
+
+    var candidates = [];
+    var seenSel = new Set();
+    function add(sel, weight, why) {
+      if (!sel) return;
+      sel = String(sel);
+      if (!sel || sel.length > 140) return;
+      if (seenSel.has(sel)) return;
+      seenSel.add(sel);
+      candidates.push({ selector: sel, weight: Number(weight) || 0, why: String(why || '').slice(0, 36) });
+    }
+
+    // 高权重：name / role
+    if (name) add(tagLower + '[name="' + cssEscapeAttrValue(name) + '"]', 100, 'name');
+    if (role === 'searchbox') add('[role="searchbox"]', 92, 'role=searchbox');
+    if (ty && tagLower === 'input' && (ty === 'search' || ty === 'submit')) add('input[type="' + ty + '"]', 86, 'input[type]');
+
+    // 次高权重：aria-label/placeholder（比随机 class 稳）
+    if (aria && (/(搜索|关键词|关键字|百度)/i.test(aria) || aria.length < 48)) add(tagLower + '[aria-label="' + cssEscapeAttrValue(aria) + '"]', 64, 'aria-label');
+    if (ph && (/(搜索|关键词|关键字)/i.test(ph) || ph.length < 48)) add(tagLower + '[placeholder="' + cssEscapeAttrValue(ph) + '"]', 58, 'placeholder');
+
+    // 低权重：id（需过滤随机/编译型 id）
+    if (id && id.length <= 32 && !looksRandomId(id) && !id.match(/^[0-9]+$/)) add('#' + id, 16, 'id');
+
+    candidates.sort(function (a, b) {
+      return (b.weight - a.weight) || (String(b.selector).length - String(a.selector).length);
+    });
+    return candidates.slice(0, 4);
+  }
+
   function isCand(el) {
     if (!el || el === document.body || el === document.documentElement) return false;
     if (!vis(el)) return false;
@@ -483,6 +580,10 @@
           inputVal = trimT(String(el.value || ''));
         } catch (ev) {}
       }
+      var roleHint = roleHintOf(el);
+      var selectorCandidates = selectorCandidatesOf(el);
+      var selectorTop1 = selectorCandidates && selectorCandidates.length ? selectorCandidates[0].selector : '';
+      if (selectorTop1 && selectorTop1.length > 160) selectorTop1 = selectorTop1.slice(0, 160);
       items.push({
         id: id,
         tag: tagLower,
@@ -490,6 +591,9 @@
         text: txt,
         value: inputVal.slice(0, 120),
         role: (el.getAttribute('role') || '').toLowerCase(),
+        roleHint: roleHint,
+        selectorCandidates: selectorCandidates,
+        selectorTop1: selectorTop1,
         fixed: pos === 'fixed' || pos === 'sticky',
         hint: hintOf(el),
         hasOutline: true

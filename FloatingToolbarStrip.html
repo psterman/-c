@@ -618,6 +618,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <div class="fld" id="fldBaseUrlRow"><label for="baseUrl">Base URL</label><input id="baseUrl" class="ctl" type="text" autocomplete="off"></div>
 <div class="fld" id="fldOpenClawSessionRow" style="display:none"><label for="openclawSessionKey">Gateway Session Key</label><input id="openclawSessionKey" class="ctl" type="text" autocomplete="off" list="openclawSessionOptions" placeholder="agent:main:... / main"><datalist id="openclawSessionOptions"></datalist><div class="hint mini" id="openclawSessionHint">留空时该标签自动使用独立 `niuma-*` 会话；如需对齐 OpenClaw Control，请填写完整 session key。</div></div>
 <div class="fld" id="fldModelRow"><label for="model">Model</label><input id="model" class="ctl" type="text" autocomplete="off"></div>
+<div class="fld" id="fldChatModeRow">
+  <label for="freeChatMode">对话模式</label>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;user-select:none">
+      <input id="freeChatMode" type="checkbox" />
+      <span>开放式提问（不注入牛马项目提示词）</span>
+    </label>
+    <span class="hint mini">关闭：更适合问「这个软件怎么用」；开启：更像通用聊天模型。</span>
+  </div>
+</div>
 <div class="fld"><label for="systemPrompt">System Prompt</label><div class="prompt-tools"><select id="promptBuiltin" class="ctl"></select><button type="button" class="btn3" id="promptTplApply">应用到上方</button><button type="button" class="btn3" id="promptImportBtn">从文件导入</button><input type="file" id="promptImportFile" accept=".txt,.md,.json,text/plain" style="display:none" /></div><textarea id="systemPrompt" class="ctl"></textarea></div>
 <div class="hint" id="providerHint"></div>
 <a href="#" id="linkManualBaseUrl" class="hint mini" style="display:none;cursor:pointer;color:#ff9a4d;text-decoration:underline;margin-top:2px">使用中转 / 私有网关？手动指定 Base URL</a>
@@ -677,10 +687,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     NIUMA_ATTACH_CTX_API = '/api/niuma/attachments/context',
     SP = '你是一个擅长 AHK v2、自动化脚本和桌面工作流的助手。',
     NIUMA_SP_FALLBACK =
-      '你是牛马 nmer（Windows 桌面效率工具）的维护与定制助手。用户通过 Niuma Chat 修改本仓库代码与配置。' +
-      '用户问「这个软件能干什么」「能干嘛」「干嘛的」时，指牛马 nmer 本身，绝不是让用户学习 AutoHotkey 通用教程。' +
-      '牛马 nmer 核心：CapsLock 工作流中枢、剪贴板、SearchCenter 搜索、截图、Prompt、悬浮工具栏、Niuma Chat 多模型对话、智能定制(user_studio.json)、可选 ttyd/OpenClaw。' +
-      '主入口 CursorHelper (1).ahk，模块 modules/*.ahk，对话 UI 为本页 FloatingToolbarStrip.html。',
+      '你是一个通用 AI 助手，同时熟悉「牛马 nmer」（Windows 桌面效率工具）的基本结构与能力。' +
+      '当用户问题与牛马 nmer 的代码/配置/功能有关时，优先结合本仓库与软件模块回答；当问题是通用知识/写作/思辨/创作时，按通用助手方式开放回答，不要强行扯回软件介绍。' +
+      '牛马 nmer 主要能力：CapsLock 工作流中枢、剪贴板、SearchCenter 搜索、截图、Prompt、悬浮工具栏、Niuma Chat 多模型对话、智能定制（user_studio.json）、可选 ttyd/OpenClaw。' +
+      '仓库入口：CursorHelper (1).ahk；模块：modules/*.ahk；对话 UI：FloatingToolbarStrip.html。' +
+      '联网/网页检索不是模型固有能力：当用户明确要求“联网/搜索/查资料/帮我搜”时，可调用内置网页搜索流程协助获取结果。',
     P = {
       openai: { label: 'OpenAI', transport: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1', 'gpt-5.4-mini', 'gpt-5.4', 'gpt-5.4-nano', 'gpt-5-chat-latest'] },
       codex_cli: { label: 'Codex CLI', transport: 'cli', baseUrl: 'http://127.0.0.1:7681/', model: '', models: [] },
@@ -1165,6 +1176,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     openclawSessionHint = $('openclawSessionHint'),
     model = $('model'),
     modelPreset = $('modelPreset'),
+    freeChatMode = $('freeChatMode'),
     systemPrompt = $('systemPrompt'),
     apiKeyLabel = $('apiKeyLabel'),
     apiKeyKeyHint = $('apiKeyKeyHint'),
@@ -1281,6 +1293,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     openclawSessionRows: [],
     openclawSessionRowsFetchedAt: 0,
     openclawSessionRowsLoading: false,
+    freeChatMode: false,
     pendingStudioLlm: null,
     pendingStudioContext: null,
     pendingAttach: { items: [], fileIds: [], files: [] },
@@ -1289,14 +1302,19 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     mobileBrowserAiBusy: false,
     mobileBrowserLabelDebug: true,
     mobileBrowserAiPaused: false,
-    browserHostWaiter: null,
+    browserHostWaiters: [],
+    browserHostEventRing: [],
     browserHostLastEvent: null,
     browserAgentSnapReqId: '',
+    chatBridgeReady: false,
+    chatBridgeEpoch: 0,
     browserAgentRunning: false,
     browserAgentHoleContext: '',
     browserAgentHoleContextHash: '',
     browserAgentHoleInjected: false
   };
+  window.g_NiumaLastElementsCount = 0;
+  window.g_NiumaLastElementsCache = {};
   var toolbarVisibleSynced = false;
   var toolbarRevealTimer = 0;
   var ftbBootStartAt = Date.now();
@@ -1680,6 +1698,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     post({ type: 'niuma_mobile_browser_close' });
   }
 
+  function requestBrowserCurrentStateSync() {
+    try {
+      post({ type: 'chat_request_browser_current_state' });
+    } catch (_) {}
+  }
+
   function setDrawer(v) {
     state.drawer = !!v;
     document.body.classList.toggle('drawer-open', state.drawer);
@@ -1687,6 +1711,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     panel.setAttribute('aria-hidden', state.drawer ? 'false' : 'true');
     post({ type: 'drawer_state', open: state.drawer });
     if (!state.drawer) {
+      state.chatBridgeReady = false;
       closeMobileBrowser();
       setSettings(false);
       setNspick(false);
@@ -1696,6 +1721,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     try {
       post({ type: 'niuma_request_studio_context' });
       post({ type: 'niuma_request_studio_llm' });
+      requestBrowserCurrentStateSync();
+    } catch (_) {}
+    try {
+      declareChatBridgeReady();
     } catch (_) {}
     scrollMsgsToLatest();
     if (state.needSetup || !hasAnyApiConfigured()) {
@@ -3940,6 +3969,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       d = {};
     }
     migrateApiKeysFromStorage(d);
+    state.freeChatMode = !!d.freeChatMode;
+    try {
+      if (freeChatMode) freeChatMode.checked = !!d.freeChatMode;
+    } catch (_) {}
     systemPrompt.value = Object.prototype.hasOwnProperty.call(d, 'systemPrompt') ? String(d.systemPrompt) : SP;
     if (ttydShellCommand) ttydShellCommand.value = d.ttydShell != null ? String(d.ttydShell) : '';
     loadNiumaHistoryStore();
@@ -4144,7 +4177,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return (
       '【必读·项目上下文】用户正在使用「牛马 nmer」Windows 效率工具，通过 Niuma Chat 修改/定制该软件本身。' +
       (root ? '安装目录：' + root + '。' : '') +
-      '禁止把「这个软件」理解成 AutoHotkey 语言或通用 AHK 教程；应介绍牛马 nmer 的功能与模块。\n用户问题：\n'
+      '若问题涉及“这个软件/本软件”，默认指牛马 nmer 本身；否则按通用问题正常回答。\n用户问题：\n'
     );
   }
 
@@ -4173,6 +4206,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function ensureStudioContextApplied(force) {
+    if (state.freeChatMode) return false;
     var p = state.pendingStudioContext;
     if (p && String(p.systemPrompt || '').trim()) {
       return applyStudioContextFromHost(studioContextAutoInject(p), p.systemPrompt, !!force);
@@ -4184,6 +4218,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function getEffectiveSystemPromptForSend() {
+    if (state.freeChatMode) {
+      var sp0 = systemPrompt ? String(systemPrompt.value || '').trim() : '';
+      return sp0;
+    }
     var cached = state.niumaContextCache;
     if (cached && String(cached.systemPrompt || '').trim())
       return mergeNiumaSystemPrompt(String(cached.systemPrompt).trim());
@@ -4199,12 +4237,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var base = String(text != null ? text : '').trim();
     if (!base) return base;
     if (/^【必读·项目上下文】/i.test(base)) return base;
-    if (isNiumaSoftwareQuestion(base) || isWeakNiumaSystemPrompt((cfg && cfg.systemPrompt) || ''))
+    if (state.freeChatMode) return base;
+    if (isNiumaSoftwareQuestion(base))
       return buildNiumaUserPrefix(cfg) + base;
     return base;
   }
 
   async function fetchStudioContextBlocking() {
+    if (state.freeChatMode) return state.niumaContextCache || null;
     if (state.niumaContextCache && String(state.niumaContextCache.systemPrompt || '').trim())
       return state.niumaContextCache;
     try {
@@ -4370,9 +4410,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       baseUrl:
         pid === 'custom' || state.manualBaseUrl ? baseUrl.value.trim() : '',
       model: model.value.trim(),
+      freeChatMode: !!(freeChatMode && freeChatMode.checked),
       systemPrompt: systemPrompt.value.trim(),
       ttydShell: ttydShellCommand ? ttydShellCommand.value.trim() : ''
     };
+    state.freeChatMode = !!d.freeChatMode;
     localStorage.setItem(LS, JSON.stringify(d));
     persistSessions();
     updateNeedSetup();
@@ -4389,8 +4431,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     localStorage.removeItem(LEGACY_LS);
     localStorage.removeItem(SESSIONS_LS);
     state.apiKeys = {};
+    state.freeChatMode = false;
     apiKey.value = '';
     systemPrompt.value = SP;
+    try {
+      if (freeChatMode) freeChatMode.checked = false;
+    } catch (_) {}
     applyProvider('openai', false);
     fillModels('openai', model.value.trim());
     refreshApiKeyField('openai');
@@ -4747,9 +4793,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     throw (lastErr || new Error('MiniMax 请求失败'));
   }
 
-  async function minimaxOpenAIRequest(cfg, body, timeoutMs) {
+  async function minimaxOpenAIRequest(cfg, body, timeoutMs, reqOpts) {
+    reqOpts = reqOpts || {};
     var key = trimApiKey(cfg.apiKey);
     var bases = minimaxBaseUrlCandidates(cfg.baseUrl);
+    if (reqOpts.singleBaseOnly && bases.length) bases = [bases[0]];
     var last = { status: 401, text: '' };
     var lastErr = null;
     for (var bi = 0; bi < bases.length; bi++) {
@@ -5015,6 +5063,177 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return hostBridgeRequest('niuma_fetch_studio_context', {}, timeoutMs || 5000);
   }
 
+  async function groundingCacheHostGet(payload, timeoutMs) {
+    payload = payload || {};
+    timeoutMs = Math.max(800, Number(timeoutMs || 2500));
+    if (!hostBridgeAvailable()) return null;
+    return new Promise(function (resolve, reject) {
+      var reqId =
+        'gcache_get_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      var done = false;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        try {
+          window.chrome.webview.removeEventListener('message', onMsg);
+        } catch (_) {}
+        reject(new Error('GroundingCache L1 get timeout'));
+      }, timeoutMs + 300);
+
+      function cleanup() {
+        try {
+          window.chrome.webview.removeEventListener('message', onMsg);
+        } catch (_) {}
+      }
+
+      function onMsg(ev) {
+        var d = ev && ev.data;
+        if (typeof d === 'string') {
+          try {
+            d = JSON.parse(d);
+          } catch (_) {
+            return;
+          }
+        }
+        if (!d || String(d.reqId || '') !== String(reqId)) return;
+        if (d.type !== 'host_grounding_cache_get_result') return;
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        cleanup();
+        if (!d.ok) return resolve(null);
+        if (!d.found) return resolve(null);
+        resolve({
+          selector: String(d.selector || ''),
+          textTemplate: String(d.textTemplate || ''),
+          successCount: Number(d.successCount || 0)
+        });
+      }
+
+      try {
+        window.chrome.webview.addEventListener('message', onMsg);
+      } catch (e) {
+        done = true;
+        cleanup();
+        reject(e);
+        return;
+      }
+      try {
+        post({
+          type: 'niuma_grounding_cache_get',
+          reqId: reqId,
+          host: String(payload.host || ''),
+          intentTemplate: String(payload.intentTemplate || ''),
+          pageFingerprint: String(payload.pageFingerprint || ''),
+          tool: String(payload.tool || ''),
+          targetRoleHint: String(payload.targetRoleHint || '')
+        });
+      } catch (e2) {
+        done = true;
+        cleanup();
+        reject(e2);
+      }
+    }).catch(function () {
+      return null;
+    });
+  }
+
+  function groundingCacheHostSet(payload, timeoutMs) {
+    payload = payload || {};
+    timeoutMs = Math.max(600, Number(timeoutMs || 1500));
+    if (!hostBridgeAvailable()) return;
+    try {
+      var reqId = 'gcache_set_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      var timer = setTimeout(function () {
+        try {
+          window.chrome.webview.removeEventListener('message', onMsg);
+        } catch (_) {}
+      }, timeoutMs + 200);
+      var done = false;
+      function onMsg(ev) {
+        var d = ev && ev.data;
+        if (typeof d === 'string') {
+          try {
+            d = JSON.parse(d);
+          } catch (_) {
+            return;
+          }
+        }
+        if (!d || String(d.reqId || '') !== String(reqId)) return;
+        if (d.type !== 'host_grounding_cache_set_result') return;
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        try {
+          window.chrome.webview.removeEventListener('message', onMsg);
+        } catch (_) {}
+      }
+      window.chrome.webview.addEventListener('message', onMsg);
+      post({
+        type: 'niuma_grounding_cache_set',
+        reqId: reqId,
+        host: String(payload.host || ''),
+        intentTemplate: String(payload.intentTemplate || ''),
+        pageFingerprint: String(payload.pageFingerprint || ''),
+        tool: String(payload.tool || ''),
+        targetRoleHint: String(payload.targetRoleHint || ''),
+        selector: String(payload.selector || ''),
+        textTemplate: String(payload.textTemplate || ''),
+        inc: Number(payload.inc || 1)
+      });
+    } catch (_) {}
+  }
+
+  async function browserResolveBySelectorRole(selector, roleHint, timeoutMs) {
+    timeoutMs = Math.max(1200, Number(timeoutMs || 6000));
+    if (!hostBridgeAvailable()) return null;
+    return new Promise(function (resolve) {
+      var reqId = 'resolve_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      var done = false;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        try { window.chrome.webview.removeEventListener('message', onMsg); } catch (_) {}
+        resolve(null);
+      }, timeoutMs + 400);
+      function onMsg(ev) {
+        var d = ev && ev.data;
+        if (typeof d === 'string') {
+          try { d = JSON.parse(d); } catch (_) { return; }
+        }
+        if (!d || d.type !== 'host_browser_resolve_result') return;
+        if (String(d.reqId || '') !== reqId) return;
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        try { window.chrome.webview.removeEventListener('message', onMsg); } catch (_) {}
+        if (!d.ok) return resolve(null);
+        resolve({
+          elementId: parseInt(d.elementId, 10) || 0,
+          selectorUsed: String(d.selectorUsed || ''),
+          roleHint: String(d.roleHint || roleHint || ''),
+          repaired: !!d.repaired
+        });
+      }
+      try {
+        window.chrome.webview.addEventListener('message', onMsg);
+        post({
+          type: 'niuma_browser_resolve',
+          reqId: reqId,
+          selector: String(selector || ''),
+          roleHint: String(roleHint || '')
+        });
+      } catch (_) {
+        if (!done) {
+          done = true;
+          clearTimeout(timer);
+          try { window.chrome.webview.removeEventListener('message', onMsg); } catch (_) {}
+          resolve(null);
+        }
+      }
+    });
+  }
+
   function niumaApiUrl(p) {
     var pathOnly = String(p || '');
     if (!pathOnly) return '';
@@ -5116,7 +5335,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var r;
     if (cfg.provider === 'minimax') {
       if (!cfg.apiKey) throw new Error('缺少 MiniMax API Key');
-      r = await minimaxOpenAIRequest(cfg, bodyStr, tmo);
+      r = await minimaxOpenAIRequest(cfg, bodyStr, tmo, opts.minimaxReqOpts || null);
       if (!r.ok) throw new Error(formatMinimaxApiError(r.status, r.text, endpoint, cfg.baseUrl, 'Bearer'));
     } else {
       r = await hostHttpRequest(endpoint, {
@@ -5147,17 +5366,24 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   var BROWSER_AGENT_MAX_TURNS = 12;
   /** 对齐 browser-use：小 prompt + 单条 state 消息，避免多轮快照堆叠拖慢推理 */
-  var BROWSER_AGENT_LLM_TIMEOUT_MS = 45000;
-  var BROWSER_AGENT_ACT_TIMEOUT_MS = 55000;
+  // 大模型请求在部分网络/代理下经常超过 60s；放宽到 120s 以减少误判中止。
+  var BROWSER_AGENT_LLM_TIMEOUT_MS = 120000;
+  var BROWSER_AGENT_ACT_TIMEOUT_MS = 20000;
   /** 每轮发给模型的可交互元素上限（browser-use 仅索引可见可点项） */
   var BROWSER_AGENT_LLM_MAX_ELEMENTS = 14;
   var BROWSER_AGENT_LLM_MAX_TOKENS = 384;
 
   var BROWSER_AGENT_SYS =
     '你是牛马网页 Agent，操控右侧手机浏览器。' +
-    '\n每轮仅输出一个 JSON（无 markdown）：{"thought":"1句","tool":"browser_click|browser_input|browser_finish","elementId":6,"text":""}' +
-    '\nelementId 必须来自下方 [id] 列表；禁止 browser_observe（动作后宿主自动推送新快照）；browser_input 须 text（搜索框填词后宿主会自动回车提交）；验证码或无进展则 browser_finish。' +
+    '\n每轮仅输出一个 JSON（无 markdown）。你可以输出两种动作格式：' +
+    '\nA) 直接动作：{"thought":"1句","tool":"browser_click|browser_input|browser_scroll|browser_back|browser_refresh|browser_finish","elementId":6,"text":""}' +
+    '\nB) 目标动作（推荐）：{"thought":"1句","tool":"browser_click|browser_input","targetRoleHint":"search_input|search_submit","elementId":0,"text":""}' +
+    '\n说明：当 elementId=0 且提供 targetRoleHint 时，由本地执行器根据当前快照自动解析 elementId 再执行。' +
+    '\n禁止 browser_observe（动作后宿主自动推送新快照）；browser_input 须 text（搜索框填词后宿主会自动回车提交）；验证码或无进展则 browser_finish。' +
+    '\n重要：如果本地提示「目标解析失败 / 未能定位 search_input」，你必须在下一轮选择一种可执行的替代策略（例如 browser_scroll / browser_refresh / browser_search_navigate）。不要继续输出 elementId=0。' +
     '\n重要：每轮只能执行一个 tool；thought 里不要写「先 A 再 B」——若需两步请拆成两轮（先 browser_input 关键词，下一轮视快照再 browser_click 提交或 browser_finish）。' +
+    '\nbrowser_scroll：若需滚动到某元素使其可见，用该元素 elementId 且 text 为空；若需整页滚动（如下拉看更多内容），elementId 填 0，text 填 up/down/top/bottom（默认 down）。' +
+    '\nbrowser_back：返回上一页，无需 elementId 和 text。browser_refresh：刷新当前页，无需 elementId 和 text。' +
     '\n百度/谷歌首页：填词后宿主会异步提交或跳转，一般无需再点「百度一下」；若快照显示仍在首页且搜索框已有词，再点提交按钮。' +
     '\n列表格式参考 browser-use：[index] tag type "text" hint（input/textarea 可能带 value=已填内容）。';
 
@@ -5183,10 +5409,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var t = String(raw || '')
       .toLowerCase()
       .replace(/^browser_/, '');
-    if (t === 'observe' || t === 'snapshot' || t === 'refresh') return 'browser_observe';
+    if (t === 'observe' || t === 'snapshot') return 'browser_observe';
     if (t === 'click' || t === 'tap') return 'browser_click';
     if (t === 'input' || t === 'fill' || t === 'type') return 'browser_input';
+    if (t === 'scroll' || t === 'swipe') return 'browser_scroll';
+    if (t === 'back' || t === 'return') return 'browser_back';
+    if (t === 'refresh' || t === 'reload') return 'browser_refresh';
     if (t === 'finish' || t === 'done' || t === 'stop' || t === 'halt') return 'browser_finish';
+    if (t === 'search_navigate' || t === 'searchnavigate') return 'browser_search_navigate';
     if (raw && String(raw).indexOf('browser_') === 0) return String(raw).toLowerCase();
     return '';
   }
@@ -5208,7 +5438,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       tool: tool,
       elementId: parseInt(parsed.elementId, 10) || 0,
       text: String(parsed.text != null ? parsed.text : ''),
-      thought: String(parsed.thought || parsed.analysis || parsed.reasoning || '').trim()
+      thought: String(parsed.thought || parsed.analysis || parsed.reasoning || '').trim(),
+      targetRoleHint: String(parsed.targetRoleHint || parsed.target_role_hint || parsed.target || '').trim()
     };
   }
 
@@ -5352,12 +5583,57 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return url + '|n=' + n + '|h0=' + firstTxt + '|' + chunk.join(';') + (iv ? '|iv=' + iv : '');
   }
 
-  async function waitSettleSnapshotAfterAct() {
-    state.browserHostLastEvent = null;
+  function snapHostFromUrl(url) {
     try {
-      return normalizeBrowserSnapshot(await waitBrowserHostEvent('host_browser_snapshot', 35000));
+      var u = new URL(String(url || '').trim());
+      return u.hostname || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  // 用于 GroundingCache 的低敏指纹：只依赖搜索控件的 roleHint/sel/hint/text
+  function searchFormFingerprint(snap) {
+    if (!snap) return '';
+    var els = snap.elements || [];
+    var feats = [];
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (!el) continue;
+      var rh = String(el.roleHint || '');
+      if (rh !== 'search_input' && rh !== 'search_submit') continue;
+      var sel = String(el.sel || '');
+      var hint = String(el.hint || '').slice(0, 32);
+      var txt = String(el.text || '').slice(0, 32);
+      var tag = String(el.tag || '');
+      var typ = String(el.type || '');
+      feats.push(rh + '#' + tag + '#' + typ + '#' + sel.slice(0, 96) + '#' + hint + '#' + txt);
+    }
+    feats.sort();
+    return simpleTextHash(String(snapHostFromUrl(snap.url)) + '|f=' + feats.join('||'));
+  }
+
+  async function recoverAgentSnapshotAfterAct(priorSnap) {
+    var n =
+      (priorSnap && priorSnap.elements && priorSnap.elements.length) ||
+      parseInt(priorSnap && priorSnap.count, 10) ||
+      parseInt(priorSnap && priorSnap.arrLen, 10) ||
+      0;
+    var err = String((priorSnap && priorSnap.error) || '');
+    if (n > 0 && err !== 'label_parse_empty') return priorSnap;
+    await browserAgentDelay(700);
+    try {
+      return await fetchBrowserSnapshotForAgent();
+    } catch (e) {
+      return priorSnap;
+    }
+  }
+
+  async function waitSettleSnapshotAfterAct() {
+    try {
+      return await recoverAgentSnapshotAfterAct(await fetchBrowserSnapshotForAgent());
     } catch (e1) {
-      return normalizeBrowserSnapshot(await fetchBrowserSnapshotForAgent());
+      return await recoverAgentSnapshotAfterAct(null);
     }
   }
 
@@ -5375,6 +5651,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (stage === 'action_input' || stage === 'input') {
       return '【Action · 输入】填表未成功' + req + ' — ' + err;
     }
+    if (stage === 'action_scroll' || stage === 'scroll') {
+      return '【Action · 滚动】滚动未成功' + req + ' — ' + err;
+    }
     if (stage.indexOf('settle') >= 0 || stage === 'settle') {
       return '【Settle 阶段断开】页面未在超时内稳定（网络/AJAX/反爬）' + req + ' — ' + err;
     }
@@ -5386,40 +5665,70 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   async function executeBrowserToolTurn(turn, sid) {
     var tool = turn.tool;
+    if (tool === 'browser_search_navigate') {
+      var qNav = String(turn.text != null ? turn.text : '').trim();
+      if (!qNav) return { ok: false, error: 'empty_search_query' };
+      var engine = turn.engine || browserAgentPickSearchEngine('', null);
+      var navUrl = browserAgentSearchResultsUrl(qNav, engine);
+      if (!navUrl) return { ok: false, error: 'invalid_search_url' };
+      cstatForSession(sid, '🌐 本地跳转搜索结果：' + navUrl.slice(0, 96), '');
+      post({ type: 'niuma_mobile_browser_navigate', url: navUrl });
+      await browserAgentDelay(2800);
+      try {
+        var snapNav = await fetchBrowserSnapshotForAgent();
+        return { ok: true, snap: snapNav };
+      } catch (navErr) {
+        return {
+          ok: true,
+          snap: { url: navUrl, elements: [], count: 0, error: String(navErr.message || navErr) }
+        };
+      }
+    }
     if (tool === 'browser_observe') {
       var snapObs = await fetchBrowserSnapshotForAgent();
       return { ok: true, snap: snapObs };
     }
-    if (tool === 'browser_click' || tool === 'browser_input') {
-      var eid = parseInt(turn.elementId, 10) || 0;
-      if (eid < 1) return { ok: false, error: 'invalid_element_id' };
-      var act = tool === 'browser_input' ? 'input' : 'click';
-      cstatForSession(sid, '⚡ ' + act + ' #' + eid, '');
-      state.browserHostLastEvent = null;
-      var actReqId = 'snap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-      state.browserAgentSnapReqId = actReqId;
-      var actP = waitBrowserHostEvent(['host_browser_act_result', 'host_browser_act_error'], BROWSER_AGENT_ACT_TIMEOUT_MS);
-      post({
-        type: 'niuma_browser_act',
-        action: act,
-        elementId: eid,
-        text: String(turn.text != null ? turn.text : ''),
-        reqId: actReqId
-      });
-      var ar;
-      try {
-        ar = await actP;
-      } catch (eAct) {
-        return { ok: false, error: eAct.message || 'act_timeout' };
+    if (tool === 'browser_back' || tool === 'browser_refresh') {
+      var act2 = tool === 'browser_back' ? 'back' : 'refresh';
+      cstatForSession(sid, '⚡ ' + act2, '');
+      var ar2 = await callHostActionWithWait(act2, '', {});
+      if (ar2 && ar2.type === 'host_browser_act_error') {
+        var actErrMsg2 = formatBrowserHostActError(ar2);
+        cstatForSession(sid, actErrMsg2, 'error');
+        return { ok: false, error: actErrMsg2, stage: ar2.stage, hostError: ar2 };
       }
+      if (ar2 && ar2.forced) {
+        return { ok: true, forced: true, snap: getFallbackSnapshotForForced(), actResult: ar2 };
+      }
+      // back/refresh Promise 解开后第一帧同步清洗，避免新文档与旧标号缓存混叠。
+      window.g_NiumaLastElementsCount = 0;
+      window.g_NiumaLastElementsCache = {};
+      clearAllStaleWaitersExcept(ar2 && ar2.reqId ? String(ar2.reqId) : '');
+      var snapAct2 = await waitSettleSnapshotAfterAct();
+      return { ok: true, snap: snapAct2, actResult: ar2 };
+    }
+    if (tool === 'browser_click' || tool === 'browser_input' || tool === 'browser_scroll') {
+      var eidRaw = turn.elementId;
+      var eid = parseInt(eidRaw, 10) || 0;
+      if (tool !== 'browser_scroll' && eid < 1) return { ok: false, error: 'invalid_element_id' };
+      var act = tool === 'browser_input' ? 'input' : (tool === 'browser_scroll' ? 'scroll' : 'click');
+      cstatForSession(sid, '⚡ ' + act + ' #' + eid, '');
+      var ar = await callHostActionWithWait(act, eidRaw, {
+        text: String(turn.text != null ? turn.text : ''),
+        scrollDirection: String(turn.direction != null ? turn.direction : ''),
+        scrollDistance: parseInt(turn.distance, 10) || 0
+      });
       if (ar && ar.type === 'host_browser_act_error') {
         var actErrMsg = formatBrowserHostActError(ar);
         cstatForSession(sid, actErrMsg, 'error');
         return { ok: false, error: actErrMsg, stage: ar.stage, hostError: ar };
       }
+      if (ar && ar.forced) {
+        return { ok: true, forced: true, snap: getFallbackSnapshotForForced(), actResult: ar };
+      }
       if (!ar || !ar.ok || ar.cancelled) {
         var actFail = ar && ar.error
-          ? formatBrowserHostActError({ stage: 'action_' + act, error: ar.error, reqId: actReqId })
+          ? formatBrowserHostActError({ stage: 'action_' + act, error: ar.error, reqId: ar.reqId || '' })
           : 'act_failed';
         return { ok: false, error: actFail, actResult: ar };
       }
@@ -5429,6 +5738,103 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return { ok: false, error: 'unknown_tool:' + tool };
   }
 
+  function isStringPureNumber(str) {
+    return /^\d+$/.test(String(str || ''));
+  }
+
+  function refreshLastElementsCacheFromSnapshot(snap) {
+    var map = {};
+    var arr = (snap && snap.elements) || [];
+    for (var i = 0; i < arr.length; i++) {
+      var el = arr[i] || {};
+      var sid = String(el.id != null ? el.id : '');
+      if (!sid) continue;
+      map[sid] = true;
+    }
+    window.g_NiumaLastElementsCache = map;
+    window.g_NiumaLastElementsCount = arr.length;
+  }
+
+  function isElementIdValidInCache(idStr) {
+    return !!(window.g_NiumaLastElementsCache && window.g_NiumaLastElementsCache[String(idStr)]);
+  }
+
+  function clearAllStaleWaitersExcept(reqId) {
+    var keepReq = String(reqId || '');
+    var arr = state.browserHostWaiters || [];
+    var kept = [];
+    for (var i = 0; i < arr.length; i++) {
+      var w = arr[i];
+      if (keepReq && String((w && w.reqId) || '') === keepReq) {
+        kept.push(w);
+        continue;
+      }
+      if (w && w.timer) clearTimeout(w.timer);
+    }
+    state.browserHostWaiters = kept;
+  }
+
+  function getFallbackSnapshotForForced() {
+    var ring = state.browserHostEventRing || [];
+    for (var i = ring.length - 1; i >= 0; i--) {
+      var e = ring[i];
+      if (!e || !e.data || e.data.type !== 'host_browser_snapshot') continue;
+      return normalizeBrowserSnapshot(e.data);
+    }
+    return {
+      url: state.mobileBrowserLastUrl || '',
+      elements: [],
+      count: parseInt(window.g_NiumaLastElementsCount, 10) || 0,
+      error: 'forced_fallback_no_recent_snapshot'
+    };
+  }
+
+  function callHostActionWithWait(actionType, targetId, extraOptions) {
+    var actReqId = 'act-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    var safeTargetId = targetId !== undefined && targetId !== null ? String(targetId).trim() : '';
+    var opt = extraOptions || {};
+
+    if (['click', 'input'].indexOf(actionType) !== -1 && safeTargetId !== '' && isStringPureNumber(safeTargetId)) {
+      if (window.g_NiumaLastElementsCount > 0 && !isElementIdValidInCache(safeTargetId)) {
+        return Promise.resolve({ ok: true, skipped: true, illusion: true, reqId: actReqId });
+      }
+    }
+
+    post({
+      type: 'niuma_browser_action',
+      action: actionType,
+      id: safeTargetId,
+      reqId: actReqId,
+      value: opt.text || opt.value || '',
+      scrollDirection: opt.scrollDirection || '',
+      scrollDistance: opt.scrollDistance || 0
+    });
+    return waitBrowserHostEvent(['host_browser_act_result', 'host_browser_act_error'], BROWSER_AGENT_ACT_TIMEOUT_MS, {
+      reqId: actReqId
+    })
+      .then(function (res) {
+        if (res.type === 'host_browser_act_error' || res.error || res.ok === false) {
+          throw new Error(res.error || 'AHK backend execution failed');
+        }
+        var delay = actionType === 'refresh' || actionType === 'back' ? 800 : 350;
+        return new Promise(function (resolve) {
+          setTimeout(function () {
+            resolve(res);
+          }, delay);
+        });
+      })
+      .catch(function (err) {
+        return {
+          ok: true,
+          forced: true,
+          error: String((err && err.message) || err || 'act_timeout'),
+          reqId: actReqId,
+          inject_agent_prompt:
+            'NOTICE: The previous browser action timed out at infrastructure layer. DO NOT retry the exact same click/input without scrolling or refreshing first.'
+        };
+      });
+  }
+
   function browserHostEventMatches(d, typeOrTypes) {
     if (!d) return false;
     var typ = String(d.type || '');
@@ -5436,123 +5842,236 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return types.indexOf(typ) >= 0;
   }
 
+  var BROWSER_HOST_EVENT_RING_MAX = 32;
+
   function stashBrowserHostEvent(d) {
     if (!d || !d.type) return;
-    state.browserHostLastEvent = { type: String(d.type), data: d, at: Date.now() };
+    var entry = { type: String(d.type), data: d, at: Date.now() };
+    if (!state.browserHostEventRing) state.browserHostEventRing = [];
+    state.browserHostEventRing.push(entry);
+    if (state.browserHostEventRing.length > BROWSER_HOST_EVENT_RING_MAX) {
+      state.browserHostEventRing = state.browserHostEventRing.slice(-BROWSER_HOST_EVENT_RING_MAX);
+    }
+    state.browserHostLastEvent = entry;
   }
 
-  function browserSnapshotUsable(d) {
+  function removeBrowserHostWaiter(id) {
+    var arr = state.browserHostWaiters || [];
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].id === id) {
+        if (arr[i].timer) clearTimeout(arr[i].timer);
+        arr.splice(i, 1);
+        return;
+      }
+    }
+  }
+
+  function rejectAllBrowserHostWaiters(reason) {
+    var arr = state.browserHostWaiters || [];
+    while (arr.length) {
+      var w = arr.shift();
+      if (w.timer) clearTimeout(w.timer);
+      try {
+        w.reject(new Error(reason || 'waiter_cancelled'));
+      } catch (_) {}
+    }
+  }
+
+  function hasBrowserHostWaiterReqId(reqId) {
+    if (!reqId) return false;
+    return (state.browserHostWaiters || []).some(function (w) {
+      return String(w.reqId || '') === String(reqId);
+    });
+  }
+
+  function browserEventReqIdMatches(d, waiterReqId) {
+    if (!waiterReqId) return true;
+    var evReq = d && (d.reqId != null ? d.reqId : '');
+    if (!evReq) return false;
+    return String(evReq) === String(waiterReqId);
+  }
+
+  function browserSnapshotUsable(d, waiterOpts) {
+    waiterOpts = waiterOpts || {};
     if (!d || d.type !== 'host_browser_snapshot') return false;
     var snap = normalizeBrowserSnapshot(d);
     if (state.browserAgentRunning && snap.error === 'ai_paused') return false;
-    if (snap.error && snap.error !== 'json_parse_failed') return true;
+    if (snap.error === 'browser_not_open' && !waiterOpts.allowNotOpenError) return false;
+    if (snap.error && snap.error !== 'json_parse_failed' && snap.error !== 'label_parse_empty') return true;
     var nEl = (snap.elements && snap.elements.length) || 0;
-    var cnt = parseInt(snap.count, 10) || 0;
+    var cnt = parseInt(snap.count, 10) || parseInt(snap.arrLen, 10) || 0;
     return nEl > 0 || cnt > 0;
   }
 
-  function browserSnapshotReqIdMatches(d) {
-    var expected = state.browserAgentSnapReqId;
-    if (!expected) return true;
-    if (!d) return false;
-    if (!d.reqId) return !!state.browserAgentRunning;
-    return String(d.reqId) === String(expected);
+  function findRingBrowserHostEvent(types, opts) {
+    opts = opts || {};
+    var reqId = opts.reqId || '';
+    var maxAge = opts.maxAgeMs != null ? opts.maxAgeMs : 60000;
+    var ring = state.browserHostEventRing || [];
+    var i, e, d, snap;
+    for (i = ring.length - 1; i >= 0; i--) {
+      e = ring[i];
+      if (!e || Date.now() - e.at > maxAge) continue;
+      if (!browserHostEventMatches(e.data, types)) continue;
+      d = e.data;
+      if (types.indexOf('host_browser_snapshot') >= 0) {
+        snap = normalizeBrowserSnapshot(d);
+        if (reqId && !browserEventReqIdMatches(snap, reqId)) continue;
+        // 带 reqId 的显式等待：先回包再由上层判错，避免把 label_parse_empty 等回包误判成超时
+        if (!reqId && !browserSnapshotUsable(snap, opts)) continue;
+        return snap;
+      }
+      if (types.indexOf('host_browser_act_result') >= 0 || types.indexOf('host_browser_act_error') >= 0) {
+        if (reqId && d.reqId && String(d.reqId) !== String(reqId)) continue;
+        return d;
+      }
+      if (types.indexOf('host_mobile_browser_state') >= 0) return d;
+      if (types.indexOf('host_hole_context') >= 0) return d;
+      return d;
+    }
+    return null;
+  }
+
+  function findRecentUsableSnapshotInRing(maxAgeMs) {
+    return findRingBrowserHostEvent(['host_browser_snapshot'], {
+      maxAgeMs: maxAgeMs || 20000,
+      allowNotOpenError: false
+    });
+  }
+
+  function findBrowserHostWaitersForEvent(d) {
+    var typ = String(d.type || '');
+    var payload = d;
+    if (typ === 'host_browser_snapshot') payload = normalizeBrowserSnapshot(d);
+    var out = [];
+    var arr = state.browserHostWaiters || [];
+    var i, w, n, cnt;
+    for (i = 0; i < arr.length; i++) {
+      w = arr[i];
+      if (!w.types || w.types.indexOf(typ) < 0) continue;
+      if (typ === 'host_browser_snapshot') {
+        if (w.reqId && !browserEventReqIdMatches(payload, w.reqId)) continue;
+        if (!w.reqId && payload.reqId) continue;
+        // 带 reqId 的 waiter 允许“不可用快照”通过，交由调用方决定重试/报错，防止出现假超时。
+        if (!w.reqId && !browserSnapshotUsable(payload, w.opts || {})) continue;
+      } else if (typ === 'host_browser_act_error' || typ === 'host_browser_act_result') {
+        if (w.reqId && payload.reqId && String(payload.reqId) !== String(w.reqId)) continue;
+      }
+      out.push(w);
+    }
+    return out;
+  }
+
+  function dispatchBrowserHostEvent(d) {
+    if (!d || !d.type) return 0;
+    var typ = String(d.type || '');
+    var payload = d;
+    if (typ === 'host_browser_snapshot') payload = normalizeBrowserSnapshot(d);
+    if (typ === 'host_browser_snapshot' && state.browserAgentRunning) {
+      var _n =
+        (payload.elements && payload.elements.length) ||
+        parseInt(payload.count, 10) ||
+        parseInt(payload.arrLen, 10) ||
+        0;
+      cstat(
+        '快照已入队 reqId=' + String(payload.reqId || '') + ' 元素=' + _n,
+        _n > 0 ? 'success' : 'error'
+      );
+    }
+    if (
+      (typ === 'host_browser_act_error' || typ === 'host_browser_act_result') &&
+      payload &&
+      payload.reqId &&
+      !hasBrowserHostWaiterReqId(payload.reqId)
+    ) {
+      try {
+        console.warn('[ORPHAN_CLEAN] stale_orphan reqId=' + String(payload.reqId));
+      } catch (_) {}
+      return 0;
+    }
+    if (typ === 'host_browser_snapshot' && browserSnapshotUsable(payload, {})) {
+      if (!state.mobileBrowserOpen) applyMobileBrowserUi(true);
+      if (payload.url && isSafeHttpUrl(payload.url)) {
+        state.mobileBrowserLastUrl = String(payload.url);
+        syncMobileUrlField(state.mobileBrowserLastUrl);
+      }
+      refreshLastElementsCacheFromSnapshot(payload);
+    }
+    stashBrowserHostEvent(payload);
+    var waiters = findBrowserHostWaitersForEvent(payload);
+    var resolved = 0;
+    var i, w, out;
+    for (i = 0; i < waiters.length; i++) {
+      w = waiters[i];
+      out = payload;
+      if (
+        (typ === 'host_browser_act_error' || typ === 'host_browser_act_result') &&
+        w.reqId &&
+        !out.reqId
+      ) {
+        out = Object.assign({}, out, { reqId: w.reqId });
+      }
+      try {
+        w.resolve(out);
+        resolved++;
+      } catch (_) {}
+      removeBrowserHostWaiter(w.id);
+    }
+    return resolved;
   }
 
   function tryFulfillBrowserSnapshotWaiter(d) {
-    if (!d || d.type !== 'host_browser_snapshot') return false;
-    var snap = normalizeBrowserSnapshot(d);
-    if (!browserSnapshotReqIdMatches(snap)) return false;
-    var n = (snap.elements && snap.elements.length) || parseInt(snap.count, 10) || 0;
-    if (n < 1 && !(snap.error && snap.error !== 'json_parse_failed')) return false;
-    var w = state.browserHostWaiter;
-    if (!w || !w.types || w.types.indexOf('host_browser_snapshot') < 0) return false;
-    stashBrowserHostEvent(snap);
-    try {
-      w.resolve(snap);
-    } catch (_) {}
-    state.browserHostWaiter = null;
-    return true;
+    return dispatchBrowserHostEvent(d) > 0;
   }
 
   function resolveBrowserHostEvent(d) {
-    if (!d) return false;
-    var typ = String(d.type || '');
-    if (typ === 'host_browser_snapshot') {
-      d = normalizeBrowserSnapshot(d);
-      if (state.browserAgentSnapReqId && !browserSnapshotReqIdMatches(d)) {
-        stashBrowserHostEvent(d);
-        return false;
-      }
-      if (!browserSnapshotUsable(d)) {
-        stashBrowserHostEvent(d);
-        return false;
-      }
-    }
-    if (typ === 'host_browser_act_error' || typ === 'host_browser_act_result') {
-      var actExpected = state.browserAgentSnapReqId;
-      if (actExpected && d.reqId && String(d.reqId) !== String(actExpected)) {
-        stashBrowserHostEvent(d);
-        return false;
-      }
-      if (actExpected && !d.reqId) d.reqId = actExpected;
-    }
-    stashBrowserHostEvent(d);
-    if (!state.browserHostWaiter) return false;
-    var w = state.browserHostWaiter;
-    if (w.type && w.type !== typ) return false;
-    if (w.types && w.types.indexOf(typ) < 0) return false;
-    try {
-      w.resolve(d);
-    } catch (_) {}
-    state.browserHostWaiter = null;
-    return true;
+    return dispatchBrowserHostEvent(d) > 0;
   }
 
-  function waitBrowserHostEvent(typeOrTypes, timeoutMs) {
+  function waitBrowserHostEvent(typeOrTypes, timeoutMs, opts) {
+    opts = opts || {};
     var types = Array.isArray(typeOrTypes) ? typeOrTypes : [typeOrTypes];
-    var last = state.browserHostLastEvent;
-    if (
-      last &&
-      browserHostEventMatches(last.data, types) &&
-      Date.now() - last.at < 60000 &&
-      (types.indexOf('host_browser_snapshot') < 0 || browserSnapshotUsable(last.data))
-    ) {
-      return Promise.resolve(last.data);
-    }
+    var fromRing = findRingBrowserHostEvent(types, {
+      reqId: opts.reqId || '',
+      maxAgeMs: 60000,
+      allowNotOpenError: opts.allowNotOpenError
+    });
+    if (fromRing) return Promise.resolve(fromRing);
     return new Promise(function (resolve, reject) {
-      if (state.browserHostWaiter) {
-        try {
-          state.browserHostWaiter.reject(new Error('browser_waiter_replaced'));
-        } catch (_) {}
-      }
+      var id = 'w-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
       var timer = setTimeout(function () {
-        state.browserHostWaiter = null;
+        removeBrowserHostWaiter(id);
         reject(new Error('等待宿主响应超时（' + types.join('/') + '）'));
       }, timeoutMs || 45000);
-      state.browserHostWaiter = {
+      if (!state.browserHostWaiters) state.browserHostWaiters = [];
+      var waiter = {
+        id: id,
         types: types,
-        resolve: function (d) {
+        reqId: opts.reqId || '',
+        opts: opts,
+        timer: timer,
+        createdAt: Date.now(),
+        resolve: function (val) {
           clearTimeout(timer);
-          state.browserHostWaiter = null;
-          resolve(d);
+          removeBrowserHostWaiter(id);
+          resolve(val);
         },
-        reject: function (e) {
+        reject: function (err) {
           clearTimeout(timer);
-          state.browserHostWaiter = null;
-          reject(e);
+          removeBrowserHostWaiter(id);
+          reject(err);
         }
       };
-      var buffered = state.browserHostLastEvent;
-      if (
-        buffered &&
-        browserHostEventMatches(buffered.data, types) &&
-        Date.now() - buffered.at < 60000 &&
-        (types.indexOf('host_browser_snapshot') < 0 || browserSnapshotUsable(buffered.data))
-      ) {
+      state.browserHostWaiters.push(waiter);
+      var buffered = findRingBrowserHostEvent(types, {
+        reqId: opts.reqId || '',
+        maxAgeMs: 60000,
+        allowNotOpenError: opts.allowNotOpenError
+      });
+      if (buffered) {
         clearTimeout(timer);
-        state.browserHostWaiter = null;
-        resolve(buffered.data);
+        removeBrowserHostWaiter(id);
+        resolve(buffered);
       }
     });
   }
@@ -5575,9 +6094,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var t = String(goal || '').trim().replace(/^@网页\s*/i, '').trim();
     if (!t) return '';
     var patterns = [
+      /(?:在\s*)?(?:百度|baidu|谷歌|google)?\s*搜索框(?:中|里)?\s*(?:输入|填写|键入)\s*(?:关键词\s*)?[:：]?\s*(.+)$/i,
+      /(?:在\s*)?搜索框(?:中|里)?\s*(?:输入|填写|键入)\s*(?:关键词\s*)?[:：]?\s*(.+)$/i,
+      /(?:输入|填写|键入)\s*(?:关键词\s*)?[:：]?\s*(.+)$/i,
       /(?:谷歌|google)\s*(?:上\s*)?(?:搜索|搜|查|找)\s*[:：]?\s*(.+)$/i,
       /(?:百度|baidu)\s*(?:上\s*)?(?:搜索|搜|查|找)\s*[:：]?\s*(.+)$/i,
       /(?:在\s*)?(?:谷歌|google|百度|baidu)[^\n]{0,28}(?:搜索|搜|查|找)\s*[:：]?\s*(.+)$/i,
+      /(?:在\s*)?(?:百度|baidu)\s*搜索\s*[:：]?\s*(.+)$/i,
+      /(?:百度|baidu)\s*搜索\s*(\S+)/i,
       /(?:搜索|搜一下|查一下)\s*[:：]?\s*(.+)$/i
     ];
     var i, m, q;
@@ -5585,6 +6109,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       m = t.match(patterns[i]);
       if (m && m[1]) {
         q = String(m[1]).trim().replace(/[。；;，,！!？?]+$/g, '');
+        q = q.replace(/(?:然后|并|再)?(?:进行|完成)?(?:一次)?搜索$/i, '').trim();
         if (q && q.length > 0 && q.length < 120) return q;
       }
     }
@@ -5599,9 +6124,42 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return false;
   }
 
+  function isBrowserSearchResultsUrl(url) {
+    var u = String(url || '').toLowerCase();
+    if (!u) return false;
+    if (/\.google\./.test(u) && /\/search(\?|$)/.test(u)) return true;
+    if (/\.baidu\./.test(u) && /\/s(\?|$)/.test(u)) return true;
+    return false;
+  }
+
+  function browserAgentPickSearchEngine(goal, snap) {
+    var g = String(goal || '');
+    var u = String((snap && snap.url) || state.mobileBrowserLastUrl || '').toLowerCase();
+    if (/google|谷歌/i.test(g) || /\.google\./.test(u)) return 'google';
+    return 'baidu';
+  }
+
+  function browserAgentSearchResultsUrl(query, engine) {
+    var q = String(query || '').trim();
+    if (!q) return '';
+    if (engine === 'google') {
+      return 'https://www.google.com/search?q=' + encodeURIComponent(q) + '&oq=' + encodeURIComponent(q);
+    }
+    return 'https://www.baidu.com/s?wd=' + encodeURIComponent(q);
+  }
+
   function findSearchInputElementId(snap) {
     var els = snap && snap.elements;
     if (!Array.isArray(els) || !els.length) return 0;
+    // 先走 roleHint 强匹配，避免被泛化输入框抢分。
+    for (var ri = 0; ri < els.length; ri++) {
+      var rel = els[ri];
+      if (!rel) continue;
+      if (String(rel.roleHint || '').toLowerCase() === 'search_input') {
+        var rid = parseInt(rel.id, 10) || 0;
+        if (rid > 0) return rid;
+      }
+    }
     var bestId = 0;
     var bestScore = -1;
     els.forEach(function (el) {
@@ -5609,12 +6167,23 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var tag = String((el && el.tag) || '').toLowerCase();
       var typ = String((el && el.type) || '').toLowerCase();
       var role = String((el && el.role) || '').toLowerCase();
+      var text = String((el && el.text) || '').toLowerCase();
       var hint = String((el && el.hint) || '').toLowerCase();
+      var roleHint = String((el && el.roleHint) || '').toLowerCase();
+      var val = String((el && el.value) || '').toLowerCase();
+      var sel = String((el && (el.sel || el.selectorTop1)) || '').toLowerCase();
       if (tag === 'textarea') score += 50;
       if (tag === 'input') score += 35;
+      // 百度移动端常见占位：输入关键词（有时 tag=div/contenteditable 或 type 为空）
+      if (/输入关键词|输入要搜索的内容|请输入|search|keyword|query/.test(text + ' ' + hint)) score += 90;
+      // “百度一下/搜索”按钮旁的输入框也常带这些词
+      if (/百度|baidu/.test(text + ' ' + hint)) score += 18;
       if (typ === 'search' || typ === 'text') score += 20;
       if (role === 'searchbox') score += 45;
+      if (roleHint === 'search_input') score += 120;
       if (/search|icon-search/.test(hint)) score += 12;
+      if (/搜索|keyword|query|百度|搜/.test(text + ' ' + hint + ' ' + val)) score += 18;
+      if (/name="?q|name="?wd|name="?word|name="?query|#kw|#index-kw|s_ipt|searchbox/.test(sel)) score += 36;
       if (score > bestScore) {
         bestScore = score;
         bestId = parseInt(el.id, 10) || 0;
@@ -5675,9 +6244,27 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function planBrowserAgentLocalSearchTurn(goal, snap) {
     var q = extractSearchQueryFromBrowserGoal(goal);
     if (!q) return null;
-    if (!isBrowserSearchHomeUrl(snap && snap.url)) return null;
     var eid = findSearchInputElementId(snap);
-    if (eid < 1) return null;
+    // 某些宿主回包在 label_parse_empty 场景下可能不带 url（url=""），但 elements 仍然完整可用。
+    // 此时若能定位到搜索框，就直接视为“搜索首页”，跳过大模型以保证可用性。
+    var u = String((snap && snap.url) || '');
+    if (!isBrowserSearchHomeUrl(u)) {
+      if (!u) {
+        // url 为空：允许继续（已通过 findSearchInputElementId 命中输入框）。
+      } else {
+        return null;
+      }
+    }
+    // 如果未能可靠定位搜索框，也不要把首轮交给大模型：直接打开搜索结果页更稳。
+    if (eid < 1) {
+      return {
+        thought: '本地兜底：未识别搜索框，直接打开「' + q.slice(0, 40) + '」搜索结果页',
+        tool: 'browser_search_navigate',
+        elementId: 0,
+        text: q,
+        engine: browserAgentPickSearchEngine(goal, snap)
+      };
+    }
     return {
       thought: '本地规划：在搜索框输入「' + q.slice(0, 40) + '」',
       tool: 'browser_input',
@@ -5686,22 +6273,165 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     };
   }
 
+  /** 输入成功后快照为空/仍首页：直接跳转搜索结果，避免第 2 轮再等大模型 */
+  function planBrowserAgentSearchNavigateAfterInput(goal, snap, ctx, turn) {
+    if (turn <= 1 || !ctx) return null;
+    var q = extractSearchQueryFromBrowserGoal(goal);
+    if (!q) return null;
+    var prev = String(ctx.lastExecNote || '');
+    var lastTool = ctx.lastTool;
+    var hadInput =
+      (lastTool && lastTool.tool === 'browser_input') ||
+      prev.indexOf('browser_input') >= 0 ||
+      prev.indexOf('输入') >= 0;
+    if (!hadInput) return null;
+    var u = String((snap && snap.url) || '');
+    if (isBrowserSearchResultsUrl(u) && u.indexOf(encodeURIComponent(q).slice(0, 8)) >= 0) {
+      return {
+        thought: '本地：已在「' + q + '」搜索结果页',
+        tool: 'browser_finish',
+        elementId: 0,
+        text: ''
+      };
+    }
+    var nEl = (snap && snap.elements && snap.elements.length) || parseInt(snap && snap.count, 10) || 0;
+    var onHome = isBrowserSearchHomeUrl(u) || !u;
+    var snapBroken = nEl < 1 || String((snap && snap.error) || '') === 'label_parse_empty';
+    if (onHome || snapBroken) {
+      return {
+        thought: '本地：输入已完成，直接打开搜索结果（跳过大模型，避免 settle 空快照）',
+        tool: 'browser_search_navigate',
+        elementId: 0,
+        text: q,
+        engine: browserAgentPickSearchEngine(goal, snap)
+      };
+    }
+    return null;
+  }
+
   /** 搜索首页 follow-up：检测到关键词已填入但仍停留首页时，补一轮提交点击 */
-  function planBrowserAgentLocalSearchFollowupTurn(goal, snap, lastExecNote, turn) {
+  function planBrowserAgentLocalSearchFollowupTurn(goal, snap, lastExecNote, turn, ctx) {
     if (turn <= 1) return null;
-    if (!isBrowserSearchHomeUrl(snap && snap.url)) return null;
     var q = extractSearchQueryFromBrowserGoal(goal);
     if (!q) return null;
     var prev = String(lastExecNote || '');
-    if (prev.indexOf('browser_input') < 0 && prev.indexOf('输入') < 0) return null;
-    if (!hasSearchQueryInInputs(snap, q)) return null;
-    var submitId = findSearchSubmitElementId(snap);
+    var hadInput =
+      prev.indexOf('browser_input') >= 0 ||
+      prev.indexOf('输入') >= 0 ||
+      (ctx && ctx.lastTool && ctx.lastTool.tool === 'browser_input');
+    if (!hadInput) return null;
+    var snapUse = snap;
+    var nEl = (snap && snap.elements && snap.elements.length) || 0;
+    if (nEl < 1 && ctx && ctx.lastGoodSnap) snapUse = ctx.lastGoodSnap;
+    var u = String((snap && snap.url) || (snapUse && snapUse.url) || '');
+    if (!isBrowserSearchHomeUrl(u) && u) return null;
+    if (!hasSearchQueryInInputs(snap, q) && !hasSearchQueryInInputs(snapUse, q)) {
+      if (prev.indexOf('成功') < 0 && prev.indexOf('browser_input') < 0) return null;
+    }
+    var submitId = findSearchSubmitElementId(snapUse);
     if (submitId < 1) return null;
     return {
-      thought: '本地 follow-up：关键词已填入，点击搜索提交按钮',
+      thought: '本地 follow-up：关键词已填入，点击搜索提交按钮 #' + submitId,
       tool: 'browser_click',
       elementId: submitId,
       text: ''
+    };
+  }
+
+  // L1 缓存：用于搜索任务“输入成功后”的提交点击定位（跳过大模型）
+  async function planBrowserAgentGroundingCacheSearchSubmitTurn(goal, snap, ctx, turn) {
+    if (turn <= 1) return null;
+    if (!ctx || !ctx.lastTool || ctx.lastTool.tool !== 'browser_input') return null;
+    var q = extractSearchQueryFromBrowserGoal(goal);
+    if (!q) return null;
+    var els = snap && snap.elements;
+    if (!Array.isArray(els) || !els.length) return null;
+
+    var host = snapHostFromUrl(snap && snap.url);
+    var fp = searchFormFingerprint(snap);
+    if (!host || !fp) return null;
+
+    var engine = browserAgentPickSearchEngine(goal, snap);
+    var intentTemplate = engine + '_search_action';
+
+    var cached = await groundingCacheHostGet({
+      host: host,
+      intentTemplate: intentTemplate,
+      pageFingerprint: fp,
+      tool: 'browser_click',
+      targetRoleHint: 'search_submit'
+    }, 2400);
+
+    if (!cached || !cached.selector) return null;
+
+    var cachedSel = String(cached.selector || '');
+    var cachedTT = String(cached.textTemplate || '');
+
+    // 先用 selectorTop1 精确定位
+    var match = null;
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (!el) continue;
+      if (String(el.roleHint || '') !== 'search_submit') continue;
+      if (String(el.sel || '') === cachedSel) {
+        match = el;
+        break;
+      }
+    }
+
+    // selector 失效/缺省：弱模糊补救（同 roleHint + textTemplate 相似）
+    if (!match) {
+      var best = null;
+      var bestScore = -1e9;
+      var ttNeed = cachedTT ? cachedTT.toLowerCase().slice(0, 18) : '';
+      for (var j = 0; j < els.length; j++) {
+        var el2 = els[j];
+        if (!el2) continue;
+        if (String(el2.roleHint || '') !== 'search_submit') continue;
+        var score = 0;
+        var sel2 = String(el2.sel || '');
+        if (sel2 && cachedSel) {
+          if (sel2 === cachedSel) score += 10000;
+          else if (cachedSel.length > 10 && sel2.indexOf(cachedSel.slice(0, 24)) >= 0) score += 320;
+        }
+        var txt2 = String(el2.text || el2.hint || '').toLowerCase();
+        if (ttNeed && txt2 && txt2.indexOf(ttNeed) >= 0) score += 220;
+        if (score > bestScore) {
+          bestScore = score;
+          best = el2;
+        }
+      }
+      match = best;
+    }
+
+    var submitId = match && match.id ? parseInt(match.id, 10) : 0;
+    var repaired = false;
+    var selectorUsed = cachedSel;
+
+    // 兜底桥：快照没抓到时，直接让宿主在真实 DOM 里 resolve（不依赖快照裁剪）
+    if (submitId < 1) {
+      var rv = await browserResolveBySelectorRole(cachedSel, 'search_submit', 6500);
+      if (rv && rv.elementId > 0) {
+        submitId = parseInt(rv.elementId, 10) || 0;
+        selectorUsed = String(rv.selectorUsed || cachedSel || '');
+        repaired = !!rv.repaired || (selectorUsed && selectorUsed !== cachedSel);
+      }
+    }
+    if (submitId < 1) return null;
+
+    return {
+      thought:
+        'GroundingCache 命中：用 selector/roleHint' +
+        (repaired ? '（含动态自愈）' : '') +
+        '定位搜索提交按钮 #' +
+        submitId,
+      tool: 'browser_click',
+      elementId: submitId,
+      text: '',
+      _resolveBridge: true,
+      _resolvedSelector: selectorUsed || '',
+      _resolvedRoleHint: 'search_submit',
+      _resolvedRepaired: repaired
     };
   }
 
@@ -5709,6 +6439,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var t = String(text || '').trim();
     if (!t) return { hit: false, query: '', url: '' };
     var url = extractUrlFromBrowserGoal(t);
+    // 用户明确要求联网/搜索/查资料：无需 @网页，也自动走网页搜索流程
+    if (
+      /(联网|上网|网络|web|internet)/i.test(t) &&
+      /(搜索|查|检索|搜一下|查一下|查资料|查信息|查询)/.test(t)
+    ) {
+      if (!url) url = /百度|baidu/i.test(t) ? 'https://www.baidu.com' : '';
+      return { hit: true, query: t, url: url, auto: true };
+    }
+    if (/^(搜一下|查一下|帮我搜|帮我查|搜索网络|联网搜索)\s*[:：]?\s*/i.test(t)) {
+      if (!url) url = /百度|baidu/i.test(t) ? 'https://www.baidu.com' : '';
+      return { hit: true, query: t, url: url, auto: true };
+    }
     if (state.mobileBrowserOpen && /^(继续|接着|往下|continue|resume)$/i.test(t))
       return { hit: true, query: '观察当前页面并继续之前的网页任务', url: url, auto: true, resume: true };
     if (/^@网页\s*/i.test(t))
@@ -5800,12 +6542,24 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return false;
   }
 
+  function resetBrowserAgentHostState() {
+    rejectAllBrowserHostWaiters('agent_reset');
+    state.browserAgentSnapReqId = '';
+    state.browserAgentRunning = false;
+    try {
+      post({ type: 'niuma_llm_http_cancel', reqId: '*' });
+    } catch (_) {}
+  }
+
   async function reqBrowserAgentLlm(cfg, messages, opts) {
     opts = opts || {};
     opts.timeoutMs = opts.timeoutMs || BROWSER_AGENT_LLM_TIMEOUT_MS;
     opts.maxTokens = opts.maxTokens != null ? opts.maxTokens : BROWSER_AGENT_LLM_MAX_TOKENS;
     opts.jsonMode = false;
     opts.temperature = opts.temperature != null ? opts.temperature : 0.1;
+    if (cfg && cfg.provider === 'minimax') {
+      opts.minimaxReqOpts = { singleBaseOnly: true };
+    }
     var bodyPreview = JSON.stringify({ model: cfg.model, messages: messages });
     var kb = Math.round(bodyPreview.length / 1024);
     try {
@@ -5838,15 +6592,84 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     };
   }
 
-  function buildBrowserAgentProgressMd(title, rows, analysis, footer, liveLine) {
+  function browserAgentElapsedTag(runStarted) {
+    var sec = Math.max(0, (Date.now() - runStarted) / 1000);
+    return '+' + (sec < 10 ? sec.toFixed(1) : Math.round(sec)) + 's';
+  }
+
+  function browserAgentTracePush(trace, runStarted, turn, text, detail) {
+    if (!trace) return;
+    var entry = {
+      t: browserAgentElapsedTag(runStarted),
+      turn: turn || 0,
+      text: String(text || ''),
+      detail: detail ? String(detail) : ''
+    };
+    trace.push(entry);
+    try {
+      // 仅转发“动作/阶段摘要”，不要依赖模型长推理文本；右侧悬浮窗用于定位卡点。
+      if (state && state.mobileBrowserOpen) {
+        post({
+          type: 'niuma_browser_trace',
+          t: entry.t,
+          turn: entry.turn,
+          text: entry.text,
+          detail: entry.detail,
+          level: ''
+        });
+      }
+    } catch (_) {}
+  }
+
+  function browserAgentSnapshotBrief(snap) {
+    if (!snap) return '(无快照)';
+    var url = String(snap.url || '').slice(0, 120);
+    var n = (snap.elements && snap.elements.length) || parseInt(snap.count, 10) || 0;
+    var err = snap.error ? ' · 错误=' + String(snap.error) : '';
+    return (url || '(无 URL)') + ' · ' + n + ' 个可交互元素' + err;
+  }
+
+  function buildBrowserAgentProgressMd(title, rows, analysis, footer, liveLine, opts) {
+    opts = opts || {};
+    var trace = opts.trace || [];
+    var adjustments = opts.adjustments || [];
+    var goal = String(opts.goal || '').trim();
+    var model = String(opts.model || '').trim();
+    var provider = String(opts.provider || '').trim();
     var lines = ['## 🌐 ' + (title || '网页智能操控')];
-    if (liveLine) lines.push('', '> **当前进度：** ' + String(liveLine));
+    if (goal) lines.push('', '**任务目标：** ' + goal.slice(0, 240));
+    if (model || provider) {
+      lines.push(
+        '',
+        '**模型：** ' + (model || '—') + (provider ? ' · 提供商 `' + provider + '`' : '')
+      );
+    }
+    if (liveLine) lines.push('', '> **当前卡点 / 正在执行：** ' + String(liveLine));
     lines.push('', '| 步骤 | 状态 |', '| --- | --- |');
     (rows || []).forEach(function (r) {
       lines.push('| ' + r.label + ' | ' + r.status + ' |');
     });
+    if (trace.length) {
+      lines.push('', '### 执行时间线（思考链 · 动作）', '');
+      trace.forEach(function (e) {
+        var head =
+          '- `[' +
+          e.t +
+          ']`' +
+          (e.turn ? ' **第' + e.turn + '轮** · ' : ' ') +
+          String(e.text || '');
+        lines.push(head);
+        if (e.detail) lines.push('  - ' + String(e.detail).replace(/\n/g, ' '));
+      });
+    }
+    if (adjustments.length) {
+      lines.push('', '### 策略调整（已写入下一轮上下文）', '');
+      adjustments.forEach(function (a, i) {
+        lines.push(i + 1 + '. ' + a);
+      });
+    }
     if (analysis) {
-      lines.push('', '### 分析思路', '', String(analysis));
+      lines.push('', '### 各轮思路摘要', '', String(analysis));
     }
     if (footer) lines.push('', String(footer));
     return lines.join('\n');
@@ -5858,38 +6681,173 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (node) node.classList.add('browser-agent-progress');
   }
 
+  function hostMobileBrowserStateIsOpen(d) {
+    return !!(d && (d.open === true || d.open === 1 || String(d.open) === 'true'));
+  }
+
+  /** 仅当宿主确认 g_NiumaMobile_Open 为真时才返回；忽略 open:false 的中间态通知 */
+  async function waitMobileBrowserHostOpen(timeoutMs) {
+    var deadline = Date.now() + Math.max(8000, Number(timeoutMs) || 28000);
+    // 快路径：host_mobile_browser_state 处理器已通过 applyMobileBrowserUi 同步过 state
+    if (state.mobileBrowserOpen) return { open: true, url: state.mobileBrowserLastUrl || '' };
+    var buffered = state.browserHostLastEvent;
+    if (
+      buffered &&
+      buffered.data &&
+      hostMobileBrowserStateIsOpen(buffered.data) &&
+      Date.now() - buffered.at < 15000
+    ) {
+      return buffered.data;
+    }
+    // 兜底0：即使 open-state 未及时上报，只要近期能拿到可用快照，也视为宿主已就绪
+    // 目的：避免长时间等待 host_mobile_browser_state 导致 28s+14s 级联超时误报。
+    var snapRingEarly = findRecentUsableSnapshotInRing(20000);
+    if (snapRingEarly) {
+      var nRingEarly =
+        (snapRingEarly.elements && snapRingEarly.elements.length) ||
+        parseInt(snapRingEarly.count, 10) ||
+        parseInt(snapRingEarly.arrLen, 10) ||
+        0;
+      var errRingEarly = String(snapRingEarly.error || '');
+      if (
+        nRingEarly > 0 ||
+        (errRingEarly && errRingEarly !== 'browser_not_open') ||
+        isSafeHttpUrl(snapRingEarly.url)
+      ) {
+        applyMobileBrowserUi(true);
+        if (snapRingEarly.url && isSafeHttpUrl(snapRingEarly.url)) {
+          state.mobileBrowserLastUrl = String(snapRingEarly.url);
+          syncMobileUrlField(state.mobileBrowserLastUrl);
+        }
+        return { open: true, url: state.mobileBrowserLastUrl || '' };
+      }
+    }
+    while (Date.now() < deadline) {
+      var remain = deadline - Date.now();
+      if (remain < 300) break;
+      // 短路径：host_mobile_browser_state 处理器已更新 state（绕过事件环）
+      if (state.mobileBrowserOpen) return { open: true, url: state.mobileBrowserLastUrl || '' };
+      try {
+        var ev = await waitBrowserHostEvent('host_mobile_browser_state', Math.min(4000, remain));
+        if (hostMobileBrowserStateIsOpen(ev)) return ev;
+      } catch (_) {}
+      post({ type: 'niuma_browser_sync_state' });
+      await browserAgentDelay(650);
+    }
+    if (await probeBrowserHostReadyViaSnapshot(14000)) {
+      return { open: true, url: state.mobileBrowserLastUrl || '' };
+    }
+    var snapRing = findRecentUsableSnapshotInRing(20000);
+    if (snapRing) {
+      var nRing =
+        (snapRing.elements && snapRing.elements.length) ||
+        parseInt(snapRing.count, 10) ||
+        parseInt(snapRing.arrLen, 10) ||
+        0;
+      var errRing = String(snapRing.error || '');
+      if (nRing > 0 || (errRing && errRing !== 'browser_not_open') || isSafeHttpUrl(snapRing.url)) {
+        applyMobileBrowserUi(true);
+        if (snapRing.url && isSafeHttpUrl(snapRing.url)) {
+          state.mobileBrowserLastUrl = String(snapRing.url);
+          syncMobileUrlField(state.mobileBrowserLastUrl);
+        }
+        return { open: true, url: state.mobileBrowserLastUrl || '' };
+      }
+    }
+    // 兜底2：UI 已处于打开态时，不再误判为 browser_not_open
+    if (state.mobileBrowserOpen) {
+      return { open: true, url: state.mobileBrowserLastUrl || '' };
+    }
+    throw new Error('browser_not_open');
+  }
+
+  /** 右侧已打标但 state 未同步时：用 observe 探测宿主是否实际可用 */
+  async function probeBrowserHostReadyViaSnapshot(timeoutMs) {
+    var reqId = 'probe-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    var p = waitBrowserHostEvent('host_browser_snapshot', timeoutMs || 14000, { reqId: reqId });
+    post({ type: 'niuma_browser_resume_ai' });
+    post({ type: 'niuma_browser_observe', reqId: reqId });
+    try {
+      var snap = normalizeBrowserSnapshot(await p);
+      var n = (snap.elements && snap.elements.length) || parseInt(snap.count, 10) || parseInt(snap.arrLen, 10) || 0;
+      var err = String((snap && snap.error) || '');
+      // 只要 observe 能回包且不是 browser_not_open，就说明宿主浏览器已可用；
+      // label_parse_empty 经常是快照解析层噪声，不应误判成“浏览器未打开”。
+      if (n > 0 || (err && err !== 'browser_not_open') || isSafeHttpUrl(snap.url)) {
+        applyMobileBrowserUi(true);
+        if (snap.url && isSafeHttpUrl(snap.url)) {
+          state.mobileBrowserLastUrl = String(snap.url);
+          syncMobileUrlField(state.mobileBrowserLastUrl);
+        }
+        return true;
+      }
+    } catch (_) {
+      var snap2 = findRingBrowserHostEvent(['host_browser_snapshot'], {
+        reqId: reqId,
+        maxAgeMs: 20000,
+        allowNotOpenError: false
+      });
+      if (snap2) {
+        var n2 = (snap2.elements && snap2.elements.length) || parseInt(snap2.count, 10) || parseInt(snap2.arrLen, 10) || 0;
+        var err2 = String(snap2.error || '');
+        if (n2 > 0 || (err2 && err2 !== 'browser_not_open') || isSafeHttpUrl(snap2.url)) {
+          applyMobileBrowserUi(true);
+          if (snap2.url && isSafeHttpUrl(snap2.url)) {
+            state.mobileBrowserLastUrl = String(snap2.url);
+            syncMobileUrlField(state.mobileBrowserLastUrl);
+          }
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   async function ensureMobileBrowserForAgent(sid, intent, rows, refreshDraftFn) {
     var url = (intent && intent.url) || extractUrlFromBrowserGoal(intent && intent.query) || state.mobileBrowserLastUrl || 'https://www.baidu.com';
     if (!state.drawer) setDrawer(true);
 
-    if (state.mobileBrowserOpen) {
+    async function afterHostOpen(hostState) {
       applyMobileBrowserUi(true);
+      if (hostState && hostState.url && isSafeHttpUrl(hostState.url)) {
+        state.mobileBrowserLastUrl = String(hostState.url);
+        syncMobileUrlField(state.mobileBrowserLastUrl);
+      }
       if (url && isSafeHttpUrl(url) && url !== state.mobileBrowserLastUrl) {
         rows.push({ label: '导航到目标网址', status: '⏳ 进行中' });
         refreshDraftFn('', '正在打开：' + url, '导航中');
         cstatForSession(sid, '🌐 正在导航：' + url, '');
         post({ type: 'niuma_mobile_browser_navigate', url: url });
-        await browserAgentDelay(1400);
-        rows[rows.length - 1].status = '✅ 完成';
+        await browserAgentDelay(1600);
+        if (rows.length) rows[rows.length - 1].status = '✅ 完成';
+        await waitMobileBrowserHostOpen(12000);
       }
-      return true;
+      await browserAgentDelay(500);
+    }
+
+    if (state.mobileBrowserOpen) {
+      refreshDraftFn('', '同步宿主浏览器状态…', '校验浏览器是否已就绪');
+      post({ type: 'niuma_browser_sync_state' });
+      try {
+        var synced = await waitMobileBrowserHostOpen(10000);
+        await afterHostOpen(synced);
+        return true;
+      } catch (syncErr) {
+        state.mobileBrowserOpen = false;
+        applyMobileBrowserUi(false);
+        cstatForSession(sid, '界面显示已开但宿主未就绪，正在重新打开手机浏览器…', '');
+      }
     }
 
     rows.push({ label: '自动打开手机浏览器', status: '⏳ 进行中' });
-    refreshDraftFn('', '正在右侧打开手机浏览区并加载页面…', '打开浏览器');
-    cstatForSession(sid, '🌐 正在自动打开手机浏览器（窗口右侧）…', '');
+    refreshDraftFn('', '正在右侧打开手机浏览区（等待 WebView2 就绪）…', '打开浏览器');
+    cstatForSession(sid, '🌐 正在自动打开手机浏览器（最多约 28s）…', '');
 
-    var openWait = waitBrowserHostEvent('host_mobile_browser_state', 6000);
     post({ type: 'niuma_mobile_browser_open', url: url });
     post({ type: 'niuma_browser_sync_state' });
-    try {
-      await openWait;
-    } catch (_) {
-      await browserAgentDelay(2200);
-    }
-    applyMobileBrowserUi(true);
-    rows[rows.length - 1].status = '✅ 已打开（继续打标与操控）';
-    await browserAgentDelay(800);
+    var hostState = await waitMobileBrowserHostOpen(28000);
+    rows[rows.length - 1].status = '✅ 宿主已就绪';
+    await afterHostOpen(hostState);
     return true;
   }
 
@@ -5925,10 +6883,21 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         }
       } catch (e2) {}
     }
-    var cnt = parseInt(d.count, 10) || 0;
-    if (cnt > 0 && state.browserHostLastEvent && state.browserHostLastEvent.data) {
-      var prev = parseSnapshotElements(state.browserHostLastEvent.data);
-      if (prev.length) return prev;
+    var cnt = parseInt(d.count, 10) || parseInt(d.arrLen, 10) || 0;
+    if (typeof d.snapshot === 'string' && d.snapshot.indexOf('[') >= 0) {
+      try {
+        var snapArr = JSON.parse(d.snapshot);
+        if (Array.isArray(snapArr) && snapArr.length) return snapArr;
+      } catch (snapErr) {}
+    }
+    if (cnt > 0 && state.browserHostEventRing && state.browserHostEventRing.length) {
+      var ri, re, prev;
+      for (ri = state.browserHostEventRing.length - 1; ri >= 0; ri--) {
+        re = state.browserHostEventRing[ri];
+        if (!re || re.type !== 'host_browser_snapshot') continue;
+        prev = parseSnapshotElements(re.data);
+        if (prev.length) return prev;
+      }
     }
     return [];
   }
@@ -5950,51 +6919,697 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return d;
   }
 
+  function readHostSnapshotFromBridge(ahk) {
+    if (!ahk) return null;
+    if (typeof ahk.GetLatestSnapshotCache === 'function') {
+      try {
+        return ahk.GetLatestSnapshotCache();
+      } catch (_) {
+        try {
+          return ahk.GetLatestSnapshotCache('');
+        } catch (_2) {}
+      }
+    }
+    if (typeof ahk.GetBrowserSnapshot === 'function') {
+      try {
+        return ahk.GetBrowserSnapshot();
+      } catch (_) {
+        try {
+          return ahk.GetBrowserSnapshot('');
+        } catch (_2) {}
+      }
+    }
+    return null;
+  }
+
+  function waitForChatBridgeReady(timeoutMs) {
+    timeoutMs = timeoutMs || 2000;
+    if (state.chatBridgeReady) return Promise.resolve(true);
+    return new Promise(function (resolve) {
+      var done = false;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        resolve(false);
+      }, timeoutMs);
+      var poll = setInterval(function () {
+        if (state.chatBridgeReady) {
+          if (!done) {
+            done = true;
+            clearTimeout(timer);
+            clearInterval(poll);
+            resolve(true);
+          }
+        }
+      }, 50);
+    });
+  }
+
+  function declareChatBridgeReady() {
+    if (!window.chrome || !window.chrome.webview) return;
+    state.chatBridgeReady = false;
+    var ep = Date.now();
+    var ok = true;
+    try {
+      post({ type: 'chat_ready', epoch: ep });
+    } catch (_) {
+      ok = false;
+    }
+    try {
+      post({
+        type: 'niuma_browser_trace',
+        t: '+' + ((Date.now() - ftbBootStartAt) / 1000).toFixed(1) + 's',
+        turn: 0,
+        text: ok ? 'HANDSHAKE 发射 chat_ready: OK' : 'HANDSHAKE 发射 chat_ready: ERROR',
+        detail: 'epoch=' + ep,
+        level: ok ? 'warn' : 'err'
+      });
+    } catch (_) {}
+  }
+
+  async function pullBrowserSnapshotViaHostObject() {
+    var hostObj = window.chrome && window.chrome.webview && window.chrome.webview.hostObjects;
+    if (!hostObj) {
+      try {
+        post({
+          type: 'niuma_browser_trace',
+          t: '+' + ((Date.now() - ftbBootStartAt) / 1000).toFixed(1) + 's',
+          turn: 0,
+          text: 'HOSTOBJ 拉取: hostObjects 不可用',
+          detail: '',
+          level: 'err'
+        });
+      } catch (_) {}
+      return null;
+    }
+    var raw = null;
+    var started = Date.now();
+    var bridgeKind = '';
+    try {
+      if (hostObj.sync && hostObj.sync.ahk) {
+        bridgeKind = 'sync.ahk';
+        raw = readHostSnapshotFromBridge(hostObj.sync.ahk);
+      } else if (hostObj.ahk) {
+        bridgeKind = 'ahk(async)';
+        raw = readHostSnapshotFromBridge(hostObj.ahk);
+        if (raw && typeof raw.then === 'function') raw = await raw;
+      }
+    } catch (_) {
+      try {
+        post({
+          type: 'niuma_browser_trace',
+          t: '+' + ((Date.now() - ftbBootStartAt) / 1000).toFixed(1) + 's',
+          turn: 0,
+          text: 'HOSTOBJ 拉取: ERROR',
+          detail: 'bridge=' + bridgeKind,
+          level: 'err'
+        });
+      } catch (_) {}
+      return null;
+    }
+    if (raw && typeof raw.then === 'function') {
+      try {
+        raw = await raw;
+      } catch (_) {
+        return null;
+      }
+    }
+    if (!raw) {
+      try {
+        post({
+          type: 'niuma_browser_trace',
+          t: '+' + ((Date.now() - ftbBootStartAt) / 1000).toFixed(1) + 's',
+          turn: 0,
+          text: 'HOSTOBJ 拉取: EMPTY',
+          detail: 'bridge=' + bridgeKind + ' ms=' + (Date.now() - started),
+          level: 'warn'
+        });
+      } catch (_) {}
+      return null;
+    }
+    // 某些 WebView2 HostObject 桥会把 JSON 字符串“再转义一层”返回（如 {\"k\":\"v\"} 或整体再包一层引号）。
+    // 这里做最小反转义，尽量把可修复的内容还原成可 JSON.parse 的字符串。
+    var rawLen = typeof raw === 'string' ? raw.length : 0;
+    if (typeof raw === 'string') {
+      var s2 = String(raw);
+      // 去掉可能的整体引号包裹（" {...} "），以及脚本返回的 JSON-stringified 字符串。
+      if (s2.length >= 2 && s2[0] === '"' && s2[s2.length - 1] === '"') {
+        try {
+          s2 = JSON.parse(s2);
+        } catch (_) {}
+      }
+      // 某些桥会在前后混入不可见字符/调试前缀，强制截取中间 JSON 对象部分。
+      try {
+        var i0 = s2.indexOf('{');
+        var i1 = s2.lastIndexOf('}');
+        if (i0 >= 0 && i1 > i0) s2 = s2.slice(i0, i1 + 1);
+      } catch (_) {}
+      // 清理可能混入的控制字符（0x00-0x1F），避免 JSON.parse 直接失败。
+      try {
+        s2 = s2.replace(/[\u0000-\u001F]/g, function (ch) {
+          var c = ch.charCodeAt(0);
+          // 保留常见空白
+          if (c === 9 || c === 10 || c === 13) return ch;
+          return '';
+        });
+      } catch (_) {}
+      // 典型形态：{\"type\":\"host_browser_snapshot\",...}
+      if (s2.indexOf('{\\"') >= 0 || s2.indexOf('\\"type\\"') >= 0 || s2.indexOf('{\\"type\\"') >= 0) {
+        try {
+          s2 = s2.replace(/\\\\/g, '\\').replace(/\\"/g, '"');
+        } catch (_) {}
+        // 反转义后再截一次 JSON，防止残留前后垃圾
+        try {
+          var j0 = s2.indexOf('{');
+          var j1 = s2.lastIndexOf('}');
+          if (j0 >= 0 && j1 > j0) s2 = s2.slice(j0, j1 + 1);
+        } catch (_) {}
+      }
+      raw = s2;
+      rawLen = s2.length;
+    }
+    var d = null;
+    try {
+      d = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch (eParse) {
+      // 兜底：某些机器上 HostObject 返回字符串含“不可见脏字符/桥层拼接”，导致 JSON.parse 失败；
+      // 这里做一次容错提取，把关键字段与 snapshot 数组尽量恢复出来。
+      try {
+        if (typeof raw === 'string') {
+          var s = String(raw);
+          var iObj0 = s.indexOf('{');
+          var iObj1 = s.lastIndexOf('}');
+          if (iObj0 >= 0 && iObj1 > iObj0) s = s.slice(iObj0, iObj1 + 1);
+          // 抽取基础字段
+          var mReq = /"reqId"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(s);
+          var mCnt = /"count"\s*:\s*(\d+)/.exec(s);
+          var mArr = /"arrLen"\s*:\s*(\d+)/.exec(s);
+          var mUrl = /"url"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(s);
+          var mErr = /"error"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(s);
+          // 抽取 snapshot 数组（括号/引号敏感扫描）
+          var snapArr = [];
+          var k = s.indexOf('"snapshot"');
+          if (k >= 0) {
+            var b0 = s.indexOf('[', k);
+            if (b0 > 0) {
+              var i = b0,
+                depth = 0,
+                inQ = false,
+                esc = false,
+                end = -1;
+              for (; i < s.length; i++) {
+                var ch = s[i];
+                if (inQ) {
+                  if (esc) esc = false;
+                  else if (ch === '\\\\') esc = true;
+                  else if (ch === '"') inQ = false;
+                  continue;
+                }
+                if (ch === '"') {
+                  inQ = true;
+                  continue;
+                }
+                if (ch === '[') depth++;
+                else if (ch === ']') {
+                  depth--;
+                  if (depth === 0) {
+                    end = i;
+                    break;
+                  }
+                }
+              }
+              if (end > b0) {
+                var arrText = s.slice(b0, end + 1);
+                try {
+                  var parsed = JSON.parse(arrText);
+                  if (Array.isArray(parsed)) snapArr = parsed;
+                } catch (_) {}
+              }
+            }
+          }
+          d = {
+            type: 'host_browser_snapshot',
+            reqId: mReq ? mReq[1] : '',
+            count: mCnt ? parseInt(mCnt[1], 10) : 0,
+            arrLen: mArr ? parseInt(mArr[1], 10) : 0,
+            url: mUrl ? mUrl[1] : '',
+            error: mErr ? mErr[1] : '',
+            snapshot: snapArr
+          };
+        }
+      } catch (_) {}
+      if (d && d.type === 'host_browser_snapshot') {
+        try {
+          post({
+            type: 'niuma_browser_trace',
+            t: '+' + ((Date.now() - ftbBootStartAt) / 1000).toFixed(1) + 's',
+            turn: 0,
+            text: 'HOSTOBJ 拉取: JSON 容错解析',
+            detail: 'len=' + rawLen,
+            level: 'warn'
+          });
+        } catch (_) {}
+      } else {
+      try {
+        post({
+          type: 'niuma_browser_trace',
+          t: '+' + ((Date.now() - ftbBootStartAt) / 1000).toFixed(1) + 's',
+          turn: 0,
+          text: 'HOSTOBJ 拉取: JSON 解析失败',
+          detail: 'len=' + rawLen + ' ms=' + (Date.now() - started),
+          level: 'err'
+        });
+      } catch (_) {}
+        return null;
+      }
+    }
+    if (!d || d.type !== 'host_browser_snapshot') {
+      try {
+        post({
+          type: 'niuma_browser_trace',
+          t: '+' + ((Date.now() - ftbBootStartAt) / 1000).toFixed(1) + 's',
+          turn: 0,
+          text: 'HOSTOBJ 拉取: 非快照',
+          detail: 'type=' + String((d && d.type) || '') + ' len=' + rawLen,
+          level: 'warn'
+        });
+      } catch (_) {}
+      return null;
+    }
+    try {
+      var rid = d.reqId != null ? String(d.reqId) : '';
+      var n =
+        (d.snapshot && d.snapshot.length) ||
+        (d.elements && d.elements.length) ||
+        parseInt(d.count, 10) ||
+        parseInt(d.arrLen, 10) ||
+        0;
+      post({
+        type: 'niuma_browser_trace',
+        t: '+' + ((Date.now() - ftbBootStartAt) / 1000).toFixed(1) + 's',
+        turn: 0,
+        text: 'HOSTOBJ 拉取: OK',
+        detail: 'bridge=' + bridgeKind + ' rid=' + rid + ' n=' + n + ' len=' + rawLen + ' ms=' + (Date.now() - started),
+        level: 'success'
+      });
+    } catch (_) {}
+    return d;
+  }
+
+  function ingestHostBrowserSnapshot(raw, expectedReqId) {
+    if (!raw) return false;
+    var snap = normalizeBrowserSnapshot(raw);
+    if (!snap.type) snap.type = 'host_browser_snapshot';
+    if (expectedReqId) {
+      if (snap.reqId && String(snap.reqId) !== String(expectedReqId)) return false;
+      if (!snap.reqId) snap.reqId = String(expectedReqId);
+    }
+    if (!expectedReqId && snap.reqId && state.browserAgentSnapReqId) {
+      if (String(snap.reqId) !== String(state.browserAgentSnapReqId)) return false;
+    }
+    var cnt =
+      (snap.elements && snap.elements.length) ||
+      parseInt(snap.count, 10) ||
+      parseInt(snap.arrLen, 10) ||
+      0;
+    if (cnt < 1 && snap.error && snap.error !== 'label_parse_empty') return false;
+    // 注意：dispatchBrowserHostEvent 返回值是“本次 resolve 的 waiter 数”，不是“是否成功入队/缓存”。
+    // 对于宿主兜底拉取（无 waiter 的场景），resolved=0 也应视为 ingest 成功（事件已 stash）。
+    var resolved = dispatchBrowserHostEvent(snap);
+    if (resolved > 0) return true;
+    // 若快照本身可用（尤其 cnt>0），即使没有 waiter，也应返回 true，避免被上层误判失败。
+    if (cnt > 0) return true;
+    if (snap.error === 'label_parse_empty') return true;
+    return false;
+  }
+
+  async function pullAndIngestHostBrowserSnapshot(expectedReqId) {
+    var full = await pullBrowserSnapshotViaHostObject();
+    if (!full) return false;
+    return ingestHostBrowserSnapshot(full, expectedReqId || '');
+  }
+
+  // 供宿主侧 ExecuteScriptAsync 兜底注入使用：
+  // 让宿主只需要 await 一个 Promise<boolean>，避免直接处理 hostObjects 返回值的类型兼容问题。
+  window.__niumaHostobjPullSnapshot = async function (expectedReqId) {
+    try {
+      return await pullAndIngestHostBrowserSnapshot(String(expectedReqId || ''));
+    } catch (_) {
+      return false;
+    }
+  };
+
+  // 诊断版：返回 {ok, reason, detail}，供宿主写入 status.err 便于定位失败点。
+  window.__niumaHostobjPullSnapshotDiag = async function (expectedReqId) {
+    var rid = String(expectedReqId || '');
+    try {
+      var hostObj = window.chrome && window.chrome.webview && window.chrome.webview.hostObjects;
+      if (!hostObj) return { ok: false, reason: 'no_hostObjects', detail: '' };
+      var bridgeKind = '';
+      var raw = null;
+      try {
+        if (hostObj.sync && hostObj.sync.ahk) {
+          bridgeKind = 'sync.ahk';
+          raw = readHostSnapshotFromBridge(hostObj.sync.ahk);
+        } else if (hostObj.ahk) {
+          bridgeKind = 'ahk(async)';
+          raw = readHostSnapshotFromBridge(hostObj.ahk);
+          if (raw && typeof raw.then === 'function') raw = await raw;
+        } else {
+          return { ok: false, reason: 'no_ahk_bridge', detail: '' };
+        }
+      } catch (eCall) {
+        return { ok: false, reason: 'bridge_call_throw', detail: 'bridge=' + bridgeKind + ' ' + String((eCall && eCall.message) || eCall) };
+      }
+      if (raw && typeof raw.then === 'function') {
+        try {
+          raw = await raw;
+        } catch (eAwait) {
+          return { ok: false, reason: 'bridge_await_throw', detail: 'bridge=' + bridgeKind + ' ' + String((eAwait && eAwait.message) || eAwait) };
+        }
+      }
+      if (!raw) return { ok: false, reason: 'empty_raw', detail: 'bridge=' + bridgeKind };
+      var rawLen = typeof raw === 'string' ? raw.length : 0;
+      var d = null;
+      try {
+        if (typeof raw === 'string') {
+          // 与 pullBrowserSnapshotViaHostObject 保持一致：对 hostObject 返回的字符串做最小净化后再 parse。
+          var s2 = String(raw);
+          if (s2.length >= 2 && s2[0] === '"' && s2[s2.length - 1] === '"') {
+            try {
+              s2 = JSON.parse(s2);
+            } catch (_) {}
+          }
+          try {
+            var i0 = s2.indexOf('{');
+            var i1 = s2.lastIndexOf('}');
+            if (i0 >= 0 && i1 > i0) s2 = s2.slice(i0, i1 + 1);
+          } catch (_) {}
+          try {
+            s2 = s2.replace(/[\u0000-\u001F]/g, function (ch) {
+              var c = ch.charCodeAt(0);
+              if (c === 9 || c === 10 || c === 13) return ch;
+              return '';
+            });
+          } catch (_) {}
+          if (s2.indexOf('{\\"') >= 0 || s2.indexOf('\\"type\\"') >= 0 || s2.indexOf('{\\"type\\"') >= 0) {
+            try {
+              s2 = s2.replace(/\\\\/g, '\\').replace(/\\"/g, '"');
+            } catch (_) {}
+            try {
+              var j0 = s2.indexOf('{');
+              var j1 = s2.lastIndexOf('}');
+              if (j0 >= 0 && j1 > j0) s2 = s2.slice(j0, j1 + 1);
+            } catch (_) {}
+          }
+          raw = s2;
+          rawLen = s2.length;
+          d = JSON.parse(s2);
+        } else {
+          d = raw;
+        }
+      } catch (eParse) {
+        // 容错恢复：尽量从字符串里提取 host_browser_snapshot 的关键字段与 snapshot 数组。
+        var recovered = null;
+        try {
+          if (typeof raw === 'string') {
+            var s = String(raw);
+            var iObj0 = s.indexOf('{');
+            var iObj1 = s.lastIndexOf('}');
+            if (iObj0 >= 0 && iObj1 > iObj0) s = s.slice(iObj0, iObj1 + 1);
+            var mReq = /"reqId"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(s);
+            var mCnt = /"count"\s*:\s*(\d+)/.exec(s);
+            var mArr = /"arrLen"\s*:\s*(\d+)/.exec(s);
+            var mUrl = /"url"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(s);
+            var mErr = /"error"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(s);
+            var snapArr = [];
+            var k = s.indexOf('"snapshot"');
+            if (k >= 0) {
+              var b0 = s.indexOf('[', k);
+              if (b0 > 0) {
+                var i = b0,
+                  depth = 0,
+                  inQ = false,
+                  esc = false,
+                  end = -1;
+                for (; i < s.length; i++) {
+                  var ch = s[i];
+                  if (inQ) {
+                    if (esc) esc = false;
+                    else if (ch === '\\\\') esc = true;
+                    else if (ch === '"') inQ = false;
+                    continue;
+                  }
+                  if (ch === '"') {
+                    inQ = true;
+                    continue;
+                  }
+                  if (ch === '[') depth++;
+                  else if (ch === ']') {
+                    depth--;
+                    if (depth === 0) {
+                      end = i;
+                      break;
+                    }
+                  }
+                }
+                if (end > b0) {
+                  var arrText = s.slice(b0, end + 1);
+                  try {
+                    var parsed = JSON.parse(arrText);
+                    if (Array.isArray(parsed)) snapArr = parsed;
+                  } catch (_) {}
+                }
+              }
+            }
+            recovered = {
+              type: 'host_browser_snapshot',
+              reqId: mReq ? mReq[1] : '',
+              count: mCnt ? parseInt(mCnt[1], 10) : 0,
+              arrLen: mArr ? parseInt(mArr[1], 10) : 0,
+              url: mUrl ? mUrl[1] : '',
+              error: mErr ? mErr[1] : '',
+              snapshot: snapArr
+            };
+          }
+        } catch (_) {}
+        if (recovered && recovered.type === 'host_browser_snapshot') {
+          d = recovered;
+        } else {
+          var head = '';
+          var tail = '';
+          try {
+            if (typeof raw === 'string') {
+              head = raw.slice(0, 160);
+              tail = raw.slice(Math.max(0, raw.length - 120));
+              head = head.replace(/[\r\n\t]/g, ' ');
+              tail = tail.replace(/[\r\n\t]/g, ' ');
+            }
+          } catch (_) {}
+          return {
+            ok: false,
+            reason: 'json_parse_failed',
+            detail:
+              'bridge=' +
+              bridgeKind +
+              ' len=' +
+              rawLen +
+              (head ? ' head=' + head : '') +
+              (tail ? ' tail=' + tail : '')
+          };
+        }
+      }
+      if (!d || d.type !== 'host_browser_snapshot') {
+        return { ok: false, reason: 'not_snapshot', detail: 'bridge=' + bridgeKind + ' type=' + String((d && d.type) || '') };
+      }
+      var ok = false;
+      try {
+        ok = ingestHostBrowserSnapshot(d, rid);
+      } catch (eIngest) {
+        return { ok: false, reason: 'ingest_throw', detail: String((eIngest && eIngest.message) || eIngest) };
+      }
+      if (!ok) {
+        var cnt =
+          (d.elements && d.elements.length) ||
+          (d.snapshot && d.snapshot.length) ||
+          parseInt(d.count, 10) ||
+          parseInt(d.arrLen, 10) ||
+          0;
+        return {
+          ok: false,
+          reason: 'ingest_rejected',
+          detail: 'bridge=' + bridgeKind + ' rid=' + String(d.reqId || '') + ' n=' + cnt + ' err=' + String(d.error || '')
+        };
+      }
+      return { ok: true, reason: 'ok', detail: 'bridge=' + bridgeKind };
+    } catch (e0) {
+      return { ok: false, reason: 'diag_throw', detail: String((e0 && e0.message) || e0) };
+    }
+  };
+
   async function fetchBrowserSnapshotForAgent() {
     var reqId = 'snap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     state.browserAgentSnapReqId = reqId;
-    state.browserHostLastEvent = null;
-    var snapPromise = waitBrowserHostEvent('host_browser_snapshot', 90000);
-    var pollTimer = setInterval(function () {
-      if (!state.browserHostWaiter) {
-        clearInterval(pollTimer);
-        return;
+    if (!state.chatBridgeReady) {
+      declareChatBridgeReady();
+      var bridged = await waitForChatBridgeReady(2000);
+      if (!bridged) {
+        cstat('Chat 通信桥未就绪，请关闭并重开 Niuma Chat 抽屉', 'error');
+        try {
+          post({
+            type: 'niuma_browser_trace',
+            t: '+' + ((Date.now() - ftbBootStartAt) / 1000).toFixed(1) + 's',
+            turn: 0,
+            text: 'HANDSHAKE 等待超时',
+            detail: '未收到 host_chat_bridge_ready',
+            level: 'err'
+          });
+        } catch (_) {}
+        throw new Error('chat_bridge_not_ready');
       }
-      post({ type: 'niuma_browser_get_snapshot', reqId: reqId });
-    }, 3000);
+    }
+    var snapPromise = waitBrowserHostEvent('host_browser_snapshot', 90000, { reqId: reqId });
+    var pollTimer = null;
+    var hostObjPoll = null;
+    var hostFastPoll = null;
+    var bridgeWatchdog = null;
+    var startAt = Date.now();
+    var hostObjDiagDone = false;
+
+    function clearSnapshotPollers() {
+      if (pollTimer) clearInterval(pollTimer);
+      if (hostObjPoll) clearInterval(hostObjPoll);
+      if (hostFastPoll) clearInterval(hostFastPoll);
+      if (bridgeWatchdog) clearTimeout(bridgeWatchdog);
+      pollTimer = hostObjPoll = hostFastPoll = bridgeWatchdog = null;
+    }
+
+    function startSnapshotPollers() {
+      pollTimer = setInterval(function () {
+        if (!hasBrowserHostWaiterReqId(reqId)) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+          return;
+        }
+        if (state.chatBridgeReady) post({ type: 'niuma_browser_get_snapshot', reqId: reqId });
+      }, 3000);
+      hostObjPoll = setInterval(function () {
+        if (!hasBrowserHostWaiterReqId(reqId)) {
+          clearInterval(hostObjPoll);
+          hostObjPoll = null;
+          return;
+        }
+        pullAndIngestHostBrowserSnapshot(reqId)
+          .then(function (ok) {
+            if (!ok) return;
+            if (!hostObjDiagDone) {
+              hostObjDiagDone = true;
+              cstat('HOSTOBJ 桥已连通', 'success');
+            }
+          })
+          .catch(function (e) {
+            if (!hostObjDiagDone) {
+              hostObjDiagDone = true;
+              cstat('HOSTOBJ 异常: ' + (e && (e.message || e)) || 'unknown', 'error');
+            }
+          });
+      }, 800);
+      hostFastPoll = setInterval(function () {
+        if (!hasBrowserHostWaiterReqId(reqId)) {
+          clearInterval(hostFastPoll);
+          hostFastPoll = null;
+          return;
+        }
+        pullAndIngestHostBrowserSnapshot(reqId);
+      }, 500);
+    }
+
+    bridgeWatchdog = setTimeout(function () {
+      if (!hasBrowserHostWaiterReqId(reqId)) return;
+      if (state.chatBridgeReady) return;
+      cstat('Chat 通信桥未就绪（打标已完成但无法投递），请重开抽屉', 'error');
+      rejectAllBrowserHostWaiters('chat_bridge_not_ready');
+    }, 6000);
+
+    startSnapshotPollers();
+
     post({ type: 'niuma_browser_sync_state' });
     await browserAgentDelay(200);
     post({ type: 'niuma_browser_observe', reqId: reqId });
+    await browserAgentDelay(350);
+    await pullAndIngestHostBrowserSnapshot(reqId);
+
     try {
-      var snap = normalizeBrowserSnapshot(await snapPromise);
-      var nEl = (snap.elements && snap.elements.length) || 0;
-      var cnt = parseInt(snap.count, 10) || 0;
-      if (nEl > 0 || cnt > 0) return snap;
-      if (snap.error) throw new Error(String(snap.error));
-      throw new Error('label_parse_empty');
-    } catch (e1) {
-      var buf = state.browserHostLastEvent;
-      if (
-        buf &&
-        buf.data &&
-        browserSnapshotReqIdMatches(buf.data) &&
-        browserSnapshotUsable(buf.data) &&
-        Date.now() - buf.at < 120000
-      ) {
-        return normalizeBrowserSnapshot(buf.data);
+      // 强一致：label_parse_empty 视为畸形快照，不喂给模型；最多强刷 3 次。
+      async function forceRelabelOnce(reason) {
+        try {
+          post({ type: 'niuma_browser_force_relabel', reqId: reqId, reason: String(reason || '') });
+        } catch (_) {}
+        await browserAgentDelay(260);
+        await pullAndIngestHostBrowserSnapshot(reqId);
+        return normalizeBrowserSnapshot(
+          await waitBrowserHostEvent('host_browser_snapshot', 12000, { reqId: reqId, allowNotOpenError: false })
+        );
       }
-      if (String(e1.message || '').indexOf('host_browser_snapshot') < 0) throw e1;
+      var snap = normalizeBrowserSnapshot(await snapPromise);
+      var tries = 0;
+      while (tries < 3) {
+        var nEl = (snap.elements && snap.elements.length) || 0;
+        var cnt = parseInt(snap.count, 10) || parseInt(snap.arrLen, 10) || 0;
+        var err = String((snap && snap.error) || '');
+        if (err === 'label_parse_empty') {
+          tries += 1;
+          snap = await forceRelabelOnce('label_parse_empty');
+          continue;
+        }
+        // prefer_input：必须能定位到搜索输入框（至少在搜索/查询类目标中）
+        // 若不能定位，则先强刷再返回，避免 resolver=0 导致 invalid_element_id。
+        var q = extractSearchQueryFromBrowserGoal(state && state.browserAgentGoal ? state.browserAgentGoal : '');
+        if (!q) q = extractSearchQueryFromBrowserGoal(reqId) || '';
+        // 无法可靠拿到 goal 时，仍按通用规则：若 elements>0 则返回
+        if (q) {
+          if (findSearchInputElementId(snap) < 1) {
+            tries += 1;
+            snap = await forceRelabelOnce('missing_search_input');
+            continue;
+          }
+        }
+        if (nEl > 0 || cnt > 0) return snap;
+        if (snap.error) throw new Error(String(snap.error));
+        tries += 1;
+        snap = await forceRelabelOnce('empty_snapshot');
+      }
+      return snap;
+    } catch (e1) {
+      var msg1 = String(e1.message || e1);
+      if (msg1.indexOf('chat_bridge_not_ready') >= 0) throw e1;
+      if (Date.now() - startAt > 3000) await pullAndIngestHostBrowserSnapshot(reqId);
+      var bufSnap = findRingBrowserHostEvent(['host_browser_snapshot'], {
+        reqId: reqId,
+        maxAgeMs: 120000,
+        allowNotOpenError: false
+      });
+      if (bufSnap) return bufSnap;
+      if (!state.chatBridgeReady && Date.now() - startAt >= 6000) {
+        cstat('Chat 通信桥未就绪，请关闭并重开 Niuma Chat 抽屉', 'error');
+        throw new Error('chat_bridge_not_ready');
+      }
+      if (msg1.indexOf('host_browser_snapshot') < 0) throw e1;
       post({ type: 'niuma_browser_get_snapshot', reqId: reqId });
       try {
-        var snap3 = normalizeBrowserSnapshot(await waitBrowserHostEvent('host_browser_snapshot', 30000));
+        var snap3 = normalizeBrowserSnapshot(
+          await waitBrowserHostEvent('host_browser_snapshot', 30000, { reqId: reqId })
+        );
         var n3 = (snap3.elements && snap3.elements.length) || parseInt(snap3.count, 10) || 0;
         if (n3 > 0) return snap3;
-        throw new Error(snap3.error || e1.message || 'snapshot_failed');
+        throw new Error(snap3.error || msg1 || 'snapshot_failed');
       } catch (e2) {
-        throw new Error(e2.message || e1.message || '等待宿主响应超时（host_browser_snapshot）');
+        var msg2 = String(e2.message || e2);
+        if (msg2.indexOf('chat_bridge_not_ready') >= 0) throw new Error(msg2);
+        throw new Error(msg2 || msg1 || '等待宿主响应超时（host_browser_snapshot）');
       }
     } finally {
-      clearInterval(pollTimer);
+      clearSnapshotPollers();
       if (state.browserAgentSnapReqId === reqId) state.browserAgentSnapReqId = '';
     }
   }
@@ -6023,25 +7638,66 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var rows = [];
     var liveLine = '准备中…';
     var analysisThoughts = [];
+    var agentTrace = [];
+    var adjustNotes = [];
+    var runStarted = Date.now();
+    var draft = null;
+
     function row(label, status) {
       rows.push({ label: label, status: status });
     }
+    function rowUpdate(labelPrefix, status) {
+      var i;
+      for (i = rows.length - 1; i >= 0; i--) {
+        if (String(rows[i].label || '').indexOf(labelPrefix) === 0) {
+          rows[i].status = status;
+          return;
+        }
+      }
+      row(labelPrefix, status);
+    }
+    function pushAdjust(turn, note) {
+      var line = '[' + browserAgentElapsedTag(runStarted) + '] ' + String(note || '');
+      adjustNotes.push(line);
+      browserAgentTracePush(agentTrace, runStarted, turn, '策略调整', line);
+    }
     function refreshDraft(analysis, footer, live) {
       if (live != null) liveLine = live;
-      var md = buildBrowserAgentProgressMd('网页智能操控', rows, analysis, footer, liveLine);
+      var md = buildBrowserAgentProgressMd('网页智能操控', rows, analysis, footer, liveLine, {
+        trace: agentTrace,
+        adjustments: adjustNotes,
+        goal: goal,
+        model: (cfg && cfg.model) || '',
+        provider: (cfg && cfg.provider) || ''
+      });
       if (draft && draft._id) {
         updateHistoryMessageById(s, draft._id, md, true);
         markBrowserAgentDraftMessage(s, draft);
       } else if (state.activeSessionId === sid) scrollMsgsToLatest();
     }
 
-    var draft = ensureAssistantDraft(
+    draft = ensureAssistantDraft(
       s,
-      buildBrowserAgentProgressMd('网页智能操控', [{ label: '连接大模型与浏览器', status: '⏳ 进行中' }], '', '', '正在启动…')
+      buildBrowserAgentProgressMd(
+        '网页智能操控',
+        [{ label: '连接大模型与浏览器', status: '⏳ 进行中' }],
+        '',
+        '',
+        '正在启动…',
+        { trace: agentTrace, goal: goal }
+      )
     );
     markBrowserAgentDraftMessage(s, draft);
+    browserAgentTracePush(agentTrace, runStarted, 0, '任务启动', '目标已接收，准备连接浏览器与模型');
     row('连接大模型与浏览器', '✅ 完成');
-    refreshDraft('', '单步 Grounding 循环：每轮仅执行一个 browser_* 工具。', '初始化完成');
+    browserAgentTracePush(
+      agentTrace,
+      runStarted,
+      0,
+      '运行模式',
+      '单步 Grounding：每轮仅一个 browser_* 工具；动作后宿主自动 observe'
+    );
+    refreshDraft('', '下方时间线会实时更新卡点与策略调整。', '初始化完成');
 
     try {
       state.mobileBrowserAiPaused = false;
@@ -6053,25 +7709,55 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
       await ensureMobileBrowserForAgent(sid, intent || { query: goal, url: '' }, rows, refreshDraft);
 
+      var agentTurnCtx = { lastAssistant: '', lastExecNote: '', lastGoodSnap: null, lastTool: null };
+      var lastFp = '';
+      var staleCount = 0;
+      var finishThought = '';
+      var turn;
+
       row('首轮 observe', '⏳ 进行中');
-      refreshDraft('', '正在打标并获取首轮快照…', '首轮 observe');
+      refreshDraft('', '正在打标并获取首轮快照…', '首轮 observe · 打标中');
+      browserAgentTracePush(agentTrace, runStarted, 0, '首轮 observe', '请求宿主打标并推送元素列表');
       cstatForSession(sid, '🔍 首轮 browser_observe…', '');
-      var snap = await fetchBrowserSnapshotForAgent();
+      var snap = null;
+      try {
+        snap = await fetchBrowserSnapshotForAgent();
+      } catch (obsErr) {
+        if (String(obsErr.message || obsErr).indexOf('browser_not_open') >= 0) {
+          browserAgentTracePush(agentTrace, runStarted, 0, 'observe 重试', '收到 browser_not_open，重新等待宿主打开');
+          row('首轮 observe', '⏳ 重试（重新打开浏览器）');
+          refreshDraft('', '', 'browser_not_open · 重新打开浏览器');
+          state.mobileBrowserOpen = false;
+          await ensureMobileBrowserForAgent(sid, intent || { query: goal, url: '' }, rows, refreshDraft);
+          snap = await fetchBrowserSnapshotForAgent();
+        } else {
+          throw obsErr;
+        }
+      }
       if (snap && snap.error === 'ai_paused') {
         state.mobileBrowserAiPaused = false;
         post({ type: 'niuma_browser_resume_ai' });
         cstatForSession(sid, '检测到历史暂停，已自动恢复并重新 observe…', '');
         snap = await fetchBrowserSnapshotForAgent();
       }
+      if (snap && snap.error === 'browser_not_open') {
+        throw new Error(
+          '手机浏览器宿主未就绪（browser_not_open）。请确认 NiuMa Chat 主窗口已显示，或手动打开右侧手机浏览器后再发 @网页。'
+        );
+      }
       var nEl = (snap.elements && snap.elements.length) || parseInt(snap.count, 10) || 0;
       if (nEl < 1) {
         if (snap.error === 'ai_paused') {
           throw new Error('AI 网页操控处于暂停状态。请发送「继续」或重新发起 @网页 任务。');
         }
-        if (snap.error) throw new Error(String(snap.error));
-        throw new Error('未发现可交互元素，请滚动页面或换网址后重试');
+        if (snap.error === 'label_parse_empty' && (parseInt(snap.count, 10) || parseInt(snap.arrLen, 10) || 0) > 0) {
+          nEl = parseInt(snap.count, 10) || parseInt(snap.arrLen, 10);
+        } else if (snap.error) throw new Error(String(snap.error));
+        if (nEl < 1) throw new Error('未发现可交互元素，请滚动页面或换网址后重试');
       }
       row('首轮 observe', '✅ ' + nEl + ' 个元素');
+      browserAgentTracePush(agentTrace, runStarted, 0, 'observe 完成', browserAgentSnapshotBrief(snap));
+      agentTurnCtx.lastGoodSnap = snap;
 
       var holeText = await fetchHoleContextForAgent();
       state.browserAgentHoleContext = holeText;
@@ -6080,11 +7766,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var holeBlock = buildBrowserHoleContextBlock(holeText);
       if (holeBlock) state.browserAgentHoleInjected = true;
 
-      var agentTurnCtx = { lastAssistant: '', lastExecNote: '' };
-      var lastFp = snapshotFingerprint(snap);
-      var staleCount = 0;
-      var finishThought = '';
-      var turn;
+      lastFp = snapshotFingerprint(snap);
 
       for (turn = 1; turn <= BROWSER_AGENT_MAX_TURNS; turn++) {
         if (state.mobileBrowserAiPaused) {
@@ -6092,38 +7774,26 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         }
 
         row('第 ' + turn + ' 轮 · 模型决策', '⏳ 思考中…');
-        refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 等待模型');
+        refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 决策中（见时间线）');
         var llmStart = Date.now();
         var llmHb = setInterval(function () {
           var sec = Math.round((Date.now() - llmStart) / 1000);
           var cap = Math.round(BROWSER_AGENT_LLM_TIMEOUT_MS / 1000);
+          var waitLabel = '⏳ 等待 API ' + sec + 's / ' + cap + 's';
+          rowUpdate('第 ' + turn + ' 轮 · 模型决策', waitLabel);
+          refreshDraft(
+            analysisThoughts.join('\n'),
+            '若长时间停在此步，多为 **大模型 API 慢或网络/代理**；可换 highspeed 模型或在设置中测试 API。',
+            '第 ' + turn + ' 轮 · 等待大模型（已 ' + sec + 's）'
+          );
           cstatForSession(sid, '🧠 第 ' + turn + ' 轮：模型推理中… 已等待 ' + sec + 's / ' + cap + 's', '');
-        }, 8000);
+        }, 3000);
 
         var rawTurn = '';
         var toolTurn = null;
-        var localPlan =
-          planBrowserAgentLocalSearchFollowupTurn(goal, snap, agentTurnCtx.lastExecNote, turn) ||
-          (!agentTurnCtx.lastAssistant ? planBrowserAgentLocalSearchTurn(goal, snap) : null);
-        if (localPlan) {
-          clearInterval(llmHb);
-          row('第 ' + turn + ' 轮 · 模型决策', '⚡ 本地搜索规划（跳过大模型）');
-          refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 本地规划');
-          cstatForSession(
-            sid,
-            '⚡ 搜索任务本地规划：' +
-              (localPlan.tool === 'browser_click' ? 'click #' : 'input #') +
-              localPlan.elementId,
-            ''
-          );
-          rawTurn = JSON.stringify({
-            thought: localPlan.thought,
-            tool: localPlan.tool,
-            elementId: localPlan.elementId,
-            text: localPlan.text
-          });
-          toolTurn = localPlan;
-        } else {
+        // 决策优先交给大模型；本地规划仅作为“API 超时/失败”降级方案。
+        var localPlan = null;
+        {
           var messages = buildBrowserAgentLlmMessages({
             goal: goal,
             snap: snap,
@@ -6141,10 +7811,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             rawTurn = await reqBrowserAgentLlm(cfg, messages, {});
           } catch (llmErr) {
             var fallback =
-              planBrowserAgentLocalSearchFollowupTurn(goal, snap, agentTurnCtx.lastExecNote, turn) ||
+              planBrowserAgentSearchNavigateAfterInput(goal, snap, agentTurnCtx, turn) ||
+              planBrowserAgentLocalSearchFollowupTurn(goal, snap, agentTurnCtx.lastExecNote, turn, agentTurnCtx) ||
               planBrowserAgentLocalSearchTurn(goal, snap);
             if (fallback) {
               clearInterval(llmHb);
+              browserAgentTracePush(
+                agentTrace,
+                runStarted,
+                turn,
+                '决策 · API 超时后降级',
+                '大模型未在时限内返回，改用本地搜索规划'
+              );
               row('第 ' + turn + ' 轮 · 模型决策', '⚠️ 大模型超时，改用本地搜索规划');
               cstatForSession(
                 sid,
@@ -6160,6 +7838,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                 text: fallback.text
               });
               toolTurn = fallback;
+              localPlan = fallback;
             } else {
               var llmMsg = llmErr && llmErr.message ? llmErr.message : String(llmErr);
               throw new Error(
@@ -6173,6 +7852,31 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         }
         agentTurnCtx.lastAssistant = rawTurn;
         if (!toolTurn) toolTurn = parseBrowserToolTurn(rawTurn);
+        if (!localPlan && rawTurn) {
+          var llmMs = Date.now() - llmStart;
+          browserAgentTracePush(
+            agentTrace,
+            runStarted,
+            turn,
+            '决策 · 大模型返回（' + Math.round(llmMs / 1000) + 's）',
+            '解析工具 `' +
+              toolTurn.tool +
+              '` #' +
+              toolTurn.elementId +
+              (toolTurn.text ? ' · 文本「' + String(toolTurn.text).slice(0, 40) + '」' : '')
+          );
+          if (String(rawTurn).length < 800) {
+            browserAgentTracePush(agentTrace, runStarted, turn, '模型原始输出', String(rawTurn).replace(/\n/g, ' '));
+          } else {
+            browserAgentTracePush(
+              agentTrace,
+              runStarted,
+              turn,
+              '模型原始输出（截断）',
+              String(rawTurn).slice(0, 400) + '…'
+            );
+          }
+        }
         if (toolTurn.thought) analysisThoughts.push('**第' + turn + '轮：** ' + toolTurn.thought);
 
         if (toolTurn.tool === 'browser_finish') {
@@ -6185,21 +7889,78 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           row('第 ' + turn + ' 轮 · 无效 observe', '⚠️ 已跳过');
           agentTurnCtx.lastExecNote =
             '禁止 browser_observe；请根据当前快照选择 browser_click、browser_input 或 browser_finish。';
+          pushAdjust(turn, agentTurnCtx.lastExecNote);
+          refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 已跳过无效 observe');
           continue;
         }
 
         var toolLabel =
-          toolTurn.tool +
-          (toolTurn.elementId ? ' #' + toolTurn.elementId : '') +
-          (toolTurn.text ? ' "' + String(toolTurn.text).slice(0, 20) + '"' : '');
+          toolTurn.tool === 'browser_search_navigate'
+            ? 'browser_search_navigate "' + String(toolTurn.text || '').slice(0, 24) + '"'
+            : toolTurn.tool +
+              (toolTurn.elementId ? ' #' + toolTurn.elementId : '') +
+              (toolTurn.text && toolTurn.tool !== 'browser_search_navigate'
+                ? ' "' + String(toolTurn.text).slice(0, 20) + '"'
+                : '');
         row('第 ' + turn + ' 轮 · ' + toolLabel, '⏳ 执行中…');
-        refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · ' + toolTurn.tool);
+        browserAgentTracePush(
+          agentTrace,
+          runStarted,
+          turn,
+          '动作 · 下发宿主',
+          toolLabel + '（等待 host_browser_act_result + settle 快照，最长约 ' + Math.round(BROWSER_AGENT_ACT_TIMEOUT_MS / 1000) + 's）'
+        );
+        refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 宿主执行 ' + toolTurn.tool);
         cstatForSession(sid, '⚡ 第 ' + turn + ' 轮：' + toolLabel, '');
 
+        var execStart = Date.now();
+        var snapBeforeAct = snap;
+        // LLM 优先输出“目标动作”，本地把 targetRoleHint 解析成 elementId，再走单步 Grounding 执行。
+        if (
+          (!toolTurn.elementId || toolTurn.elementId < 1) &&
+          (toolTurn.tool === 'browser_input' || toolTurn.tool === 'browser_click') &&
+          toolTurn.targetRoleHint
+        ) {
+          var trh = String(toolTurn.targetRoleHint || '').toLowerCase();
+          if (trh === 'search_input') toolTurn.elementId = findSearchInputElementId(snapBeforeAct);
+          else if (trh === 'search_submit') toolTurn.elementId = findSearchSubmitElementId(snapBeforeAct);
+          if (toolTurn.elementId > 0) {
+            toolLabel =
+              toolTurn.tool +
+              (toolTurn.elementId ? ' #' + toolTurn.elementId : '') +
+              (toolTurn.text && toolTurn.tool !== 'browser_search_navigate'
+                ? ' "' + String(toolTurn.text).slice(0, 20) + '"'
+                : '');
+            row('第 ' + turn + ' 轮 · ' + toolLabel, '⏳ 执行中…');
+          } else {
+            // 解析失败：不做本地硬编码动作；按你选的 A 策略，触发强刷（最多 3 次在 fetchBrowserSnapshotForAgent 内兜底）
+            // 并把失败原因写入上下文，让下一轮由大模型决定 scroll/refresh/navigate 等替代策略。
+            agentTurnCtx.lastExecNote =
+              '目标解析失败：未能从当前快照定位 ' +
+              trh +
+              '（targetRoleHint + elementId=0 无法落地）。建议下一轮选择 browser_scroll / browser_refresh / browser_search_navigate。';
+            pushAdjust(turn, agentTurnCtx.lastExecNote);
+            try {
+              post({ type: 'niuma_browser_force_relabel', reqId: state.browserAgentSnapReqId || '' , reason: 'resolve_failed:' + trh });
+            } catch (_) {}
+            row('第 ' + turn + ' 轮 · 目标解析失败', '⚠️ 已强刷重标，等待下一轮决策');
+            refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 目标解析失败（等待下一轮）');
+            browserAgentTracePush(agentTrace, runStarted, turn, '策略调整 · 目标解析失败', agentTurnCtx.lastExecNote);
+            continue;
+          }
+        }
         var exec = await executeBrowserToolTurn(toolTurn, sid);
+        var execMs = Date.now() - execStart;
         if (!exec.ok) {
           var failLabel = exec.stage ? ' [' + exec.stage + ']' : '';
           row('第 ' + turn + ' 轮 · ' + toolLabel, '❌ ' + (exec.error || '失败') + failLabel);
+          browserAgentTracePush(
+            agentTrace,
+            runStarted,
+            turn,
+            '动作 · 失败（' + Math.round(execMs / 1000) + 's）',
+            String(exec.error || 'unknown') + failLabel
+          );
           if (
             /invalid_element|unknown_tool|act_timeout|act_failed|not_input|element_not_found|job_timeout|script_exec_failed/i.test(
               String(exec.error || '')
@@ -6209,6 +7970,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
               '执行失败：' +
               String(exec.error) +
               '。请重选 elementId 或 browser_finish。';
+            pushAdjust(turn, agentTurnCtx.lastExecNote);
+            refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 动作失败，将重试决策');
             continue;
           }
           post({ type: 'niuma_browser_pause_ai' });
@@ -6217,8 +7980,79 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         }
 
         snap = exec.snap;
-        nEl = (snap.elements && snap.elements.length) || 0;
+        var actedEl = null;
+        try {
+          if (snapBeforeAct && Array.isArray(snapBeforeAct.elements) && toolTurn && toolTurn.elementId) {
+            var actedId = parseInt(toolTurn.elementId, 10);
+            for (var ai = 0; ai < snapBeforeAct.elements.length; ai++) {
+              var elA = snapBeforeAct.elements[ai];
+              if (!elA) continue;
+              if (parseInt(elA.id, 10) === actedId) {
+                actedEl = elA;
+                break;
+              }
+            }
+          }
+        } catch (_) {}
+
+        nEl = (snap.elements && snap.elements.length) || parseInt(snap.count, 10) || 0;
+        if (nEl > 0) agentTurnCtx.lastGoodSnap = snap;
+        agentTurnCtx.lastTool = {
+          tool: toolTurn.tool,
+          elementId: toolTurn.elementId,
+          text: toolTurn.text,
+          ok: true,
+          roleHint: actedEl ? actedEl.roleHint : '',
+          sel: actedEl ? actedEl.sel : ''
+        };
+
+        ;(function () {
+          try {
+            var roleHint = String((actedEl && actedEl.roleHint) || toolTurn._resolvedRoleHint || '');
+            if (roleHint !== 'search_input' && roleHint !== 'search_submit') return;
+            if (toolTurn.tool !== 'browser_input' && toolTurn.tool !== 'browser_click') return;
+            if (toolTurn.tool === 'browser_input' && roleHint !== 'search_input') return;
+            if (toolTurn.tool === 'browser_click' && roleHint !== 'search_submit') return;
+
+            var host = snapHostFromUrl(snapBeforeAct && snapBeforeAct.url);
+            var fp = searchFormFingerprint(snapBeforeAct);
+            if (!host || !fp) return;
+            var engine = browserAgentPickSearchEngine(goal, snapBeforeAct);
+            var intentTemplate = engine + '_search_action';
+            var selectorForStore = String((toolTurn && toolTurn._resolvedSelector) || (actedEl && actedEl.sel) || '');
+            if (!selectorForStore) return;
+
+            var textTemplate = '';
+            if (roleHint === 'search_input') textTemplate = '{query}';
+            else textTemplate = String((actedEl && (actedEl.text || actedEl.hint)) || '').slice(0, 80);
+
+            groundingCacheHostSet({
+              host: host,
+              intentTemplate: intentTemplate,
+              pageFingerprint: fp,
+              tool: toolTurn.tool,
+              targetRoleHint: roleHint,
+              selector: selectorForStore,
+              textTemplate: textTemplate,
+              inc: 1
+            }, 1300);
+          } catch (_) {}
+        })();
+
+        if (toolTurn.tool === 'browser_search_navigate' && isBrowserSearchResultsUrl(snap && snap.url)) {
+          finishThought = '已通过本地跳转打开「' + String(toolTurn.text || '') + '」的搜索结果。';
+          row('第 ' + turn + ' 轮 · ' + toolLabel, '✅ 已跳转结果页');
+          browserAgentTracePush(agentTrace, runStarted, turn, '搜索完成', browserAgentSnapshotBrief(snap));
+          break;
+        }
         row('第 ' + turn + ' 轮 · ' + toolLabel, '✅ 完成' + (nEl ? '（' + nEl + ' 元素）' : ''));
+        browserAgentTracePush(
+          agentTrace,
+          runStarted,
+          turn,
+          '动作 · 完成（' + Math.round(execMs / 1000) + 's）',
+          browserAgentSnapshotBrief(snap)
+        );
 
         var fp = snapshotFingerprint(snap);
         var ivDigest = snapshotInputValuesDigest(snap);
@@ -6231,6 +8065,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             ' 完成，但页面指纹与上轮仍相同。' +
             (ivDigest ? '输入摘要: ' + ivDigest + '。' : '') +
             '若应已跳转仍停留，可试 browser_click 提交、browser_finish，或发「继续」后重试。';
+          pushAdjust(turn, agentTurnCtx.lastExecNote);
           if (staleCount >= 3) {
             post({ type: 'niuma_browser_pause_ai' });
             state.mobileBrowserAiPaused = true;
@@ -6250,7 +8085,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             (nEl ? '；元素 ' + nEl + ' 项' : '') +
             (ivDigest ? '；输入值: ' + ivDigest : '') +
             '。下轮请只输出一个 tool 的 JSON。';
+          pushAdjust(turn, agentTurnCtx.lastExecNote);
         }
+        refreshDraft(
+          analysisThoughts.join('\n'),
+          '**下一轮上下文：** ' + agentTurnCtx.lastExecNote.slice(0, 280) + (agentTurnCtx.lastExecNote.length > 280 ? '…' : ''),
+          '第 ' + turn + ' 轮结束，准备下一轮决策'
+        );
       }
 
       if (turn > BROWSER_AGENT_MAX_TURNS && !finishThought) {
@@ -6258,12 +8099,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         row('轮次上限', '⚠️ 已达 ' + BROWSER_AGENT_MAX_TURNS + ' 轮');
       }
 
+      browserAgentTracePush(agentTrace, runStarted, turn || 0, '流程结束', finishThought || '单步循环已结束');
       var finalMd = buildBrowserAgentProgressMd(
         '网页智能操控 · 完成',
         rows,
         analysisThoughts.join('\n'),
-        '### 结果说明\n\n' + (finishThought || '单步循环已结束。'),
-        '全部完成'
+        '### 结果说明\n\n' +
+          (finishThought || '单步循环已结束。') +
+          '\n\n总耗时约 **' +
+          browserAgentElapsedTag(runStarted).replace('+', '') +
+          '**。',
+        '全部完成',
+        { trace: agentTrace, adjustments: adjustNotes, goal: goal }
       );
       if (draft && draft._id) {
         updateHistoryMessageById(s, draft._id, finalMd, true);
@@ -6277,8 +8124,38 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         pushSessionHistoryToStore(s);
         renderSessionTabs();
       }
+    } catch (runErr) {
+      var errMsg = runErr && runErr.message ? runErr.message : String(runErr);
+      browserAgentTracePush(agentTrace, runStarted, 0, '流程中止', errMsg);
+      row('异常中止', '❌ ' + errMsg.slice(0, 80));
+      var errMd = buildBrowserAgentProgressMd(
+        '网页智能操控 · 失败',
+        rows,
+        analysisThoughts.join('\n'),
+        '### 失败原因\n\n' +
+          errMsg +
+          '\n\n请对照上方 **执行时间线** 定位卡点：\n' +
+          '- 停在「等待 API」→ 换 faster 模型 / 查网络代理\n' +
+          '- 停在「动作 · 下发宿主」→ 右侧浏览器 / 暂停 AI / 元素 id\n' +
+          '- 「策略调整」→ 下一轮模型将如何改策略',
+        '已中止',
+        { trace: agentTrace, adjustments: adjustNotes, goal: goal }
+      );
+      if (draft && draft._id) {
+        updateHistoryMessageById(s, draft._id, errMd, true);
+        for (var ei = s.history.length - 1; ei >= 0; ei--) {
+          if (s.history[ei] && s.history[ei]._id === draft._id) {
+            s.history[ei]._draft = false;
+            break;
+          }
+        }
+        persistSessions();
+        pushSessionHistoryToStore(s);
+        renderSessionTabs();
+      }
+      throw runErr;
     } finally {
-      state.browserAgentRunning = false;
+      resetBrowserAgentHostState();
     }
   }
 
@@ -7554,12 +9431,26 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     var displayText = text || ('[attachments] ' + Number((pa.items && pa.items.length) || 0) + ' file(s)');
     saveCfg(false);
-    await fetchStudioContextBlocking();
-    ensureStudioContextApplied(true);
+    if (!state.freeChatMode) {
+      await fetchStudioContextBlocking();
+      ensureStudioContextApplied(true);
+    }
     var cfg = buildSendCfg();
     if (!cfg) return;
     cfg.userContentForModel = composeUserTextForModel(composedForModel, cfg);
     var p0 = P[cfg.provider] || P.openai;
+
+    function cancelAllPendingHttpOnTimeout(err) {
+      var msg = String((err && err.message) || err || '');
+      if (!/请求超时/i.test(msg)) return false;
+      try {
+        post({ type: 'niuma_llm_http_cancel', reqId: '*' });
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
     if (p0.transport === 'cli') {
       add('user', displayText);
       input.value = '';
@@ -7603,18 +9494,32 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         await runBrowserAgentChat(sid, browserIntent.query, cfg, browserIntent);
         cstatForSession(sid, '网页智能操控流程结束。', 'success');
       } catch (errBr) {
+        cancelAllPendingHttpOnTimeout(errBr);
         cstatForSession(sid, '网页智能操控失败：' + (errBr && errBr.message ? errBr.message : String(errBr)), 'error');
         var sBr = sessionById(sid);
         if (sBr) {
-          var dBr = ensureAssistantDraft(sBr, '**网页操控失败**\n\n' + (errBr && errBr.message ? errBr.message : '未知错误'));
-          if (dBr && dBr._id) {
-            for (var bi = sBr.history.length - 1; bi >= 0; bi--) {
-              if (sBr.history[bi] && sBr.history[bi]._id === dBr._id) {
-                sBr.history[bi]._draft = false;
-                break;
-              }
+          var alreadyTraced = false;
+          for (var bti = sBr.history.length - 1; bti >= 0; bti--) {
+            var hmBr = sBr.history[bti];
+            if (hmBr && hmBr.role === 'assistant' && String(hmBr.content || '').indexOf('执行时间线') >= 0) {
+              alreadyTraced = true;
+              break;
             }
-            persistSessions();
+          }
+          if (!alreadyTraced) {
+            var dBr = ensureAssistantDraft(
+              sBr,
+              '**网页操控失败**\n\n' + (errBr && errBr.message ? errBr.message : '未知错误')
+            );
+            if (dBr && dBr._id) {
+              for (var bi = sBr.history.length - 1; bi >= 0; bi--) {
+                if (sBr.history[bi] && sBr.history[bi]._id === dBr._id) {
+                  sBr.history[bi]._draft = false;
+                  break;
+                }
+              }
+              persistSessions();
+            }
           }
         }
       } finally {
@@ -7668,6 +9573,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       } else add('assistant', content);
       cstatForSession(sid, '响应完成。', 'success');
     } catch (err) {
+      cancelAllPendingHttpOnTimeout(err);
       if (streamDraftId) {
         var sErr = sessionById(sid);
         if (sErr && !streamHasText) removeHistoryMessageById(sErr, streamDraftId, true);
@@ -9100,6 +11006,87 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
   });
 
+  // ExecuteScriptAsync 兜底注入点：绕过 PostWebMessageAsJson，直接接收宿主消息
+  window.__niumaHostInject = function (jsonStr) {
+    try {
+      // 宿主可能通过字符串字面量注入大 JSON。极端情况下会带入 U+2028/U+2029 或控制字符导致 JSON.parse 直接失败。
+      // 这里先做最小净化，尽量把“可修复的非法 JSON”变成可 parse。
+      var s0 = String(jsonStr || '');
+      // Replace U+2028/U+2029 (line/paragraph separators) to escaped form.
+      if (s0.indexOf('\u2028') >= 0) s0 = s0.replace(/\u2028/g, '\\u2028');
+      if (s0.indexOf('\u2029') >= 0) s0 = s0.replace(/\u2029/g, '\\u2029');
+      // Escape control characters (0x00-0x1F) if any slipped in.
+      s0 = s0.replace(/[\u0000-\u001F]/g, function (ch) {
+        var code = ch.charCodeAt(0).toString(16).toUpperCase();
+        return '\\u' + ('0000' + code).slice(-4);
+      });
+      var d = JSON.parse(s0);
+      if (!d || !d.type) return;
+      if (d.type === 'host_mobile_browser_state') {
+        dispatchBrowserHostEvent(d);
+        if (d.open && state.browserAgentRunning && state.browserAgentSnapReqId) {
+          pullAndIngestHostBrowserSnapshot(state.browserAgentSnapReqId);
+        }
+        applyMobileBrowserUi(!!d.open);
+        if (d.labelDebugVisible !== undefined) state.mobileBrowserLabelDebug = !!d.labelDebugVisible;
+        state.mobileBrowserAiPaused = !!d.aiPaused;
+        applyMobileBrowserAiPausedUi();
+        return;
+      }
+      if (d.type === 'host_browser_snapshot_ready') {
+        var pokeReq = d.reqId != null ? String(d.reqId) : '';
+        try {
+          window.__NIUMA_LAST_HOSTINJECT__ = {
+            type: 'host_browser_snapshot_ready',
+            reqId: pokeReq,
+            at: Date.now()
+          };
+        } catch (_) {}
+        pullAndIngestHostBrowserSnapshot(pokeReq || state.browserAgentSnapReqId || '');
+        return;
+      }
+      if (d.type === 'host_browser_snapshot') {
+        try {
+          window.__NIUMA_LAST_HOSTINJECT__ = {
+            type: 'host_browser_snapshot',
+            reqId: d.reqId != null ? String(d.reqId) : '',
+            at: Date.now()
+          };
+        } catch (_) {}
+        ingestHostBrowserSnapshot(d, state.browserAgentSnapReqId || d.reqId || '');
+        d = normalizeBrowserSnapshot(d);
+        applyMobileBrowserAiBusy(false);
+        var n = (d.elements && d.elements.length) || parseInt(d.count, 10) || parseInt(d.arrLen, 10) || 0;
+        if (d.url && isSafeHttpUrl(d.url)) {
+          state.mobileBrowserLastUrl = String(d.url);
+          syncMobileUrlField(state.mobileBrowserLastUrl);
+        }
+        if (!state.mobileBrowserOpen) applyMobileBrowserUi(true);
+        return;
+      }
+      dispatchBrowserHostEvent(d);
+    } catch (e0) {
+      try {
+        window.__NIUMA_LAST_HOSTINJECT__ = {
+          type: 'host_inject_parse_error',
+          err: String((e0 && e0.message) || e0),
+          head: String(jsonStr || '').slice(0, 180),
+          at: Date.now()
+        };
+      } catch (_) {}
+      try {
+        post({
+          type: 'niuma_browser_trace',
+          t: '+' + ((Date.now() - ftbBootStartAt) / 1000).toFixed(1) + 's',
+          turn: 0,
+          text: 'CHAT JSON.parse 失败',
+          detail: String((e0 && e0.message) || e0),
+          level: 'err'
+        });
+      } catch (_) {}
+    }
+  };
+
   if (window.chrome && window.chrome.webview) {
     window.chrome.webview.addEventListener('message', function (ev) {
       var d = ev.data;
@@ -9396,7 +11383,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         return;
       }
       if (d.type === 'host_mobile_browser_state') {
-        resolveBrowserHostEvent(d);
+        dispatchBrowserHostEvent(d);
+        if (d.open && state.browserAgentRunning && state.browserAgentSnapReqId) {
+          pullAndIngestHostBrowserSnapshot(state.browserAgentSnapReqId);
+        }
         applyMobileBrowserUi(!!d.open);
         if (d.labelDebugVisible !== undefined) state.mobileBrowserLabelDebug = !!d.labelDebugVisible;
         if (d.aiPaused !== undefined) state.mobileBrowserAiPaused = !!d.aiPaused;
@@ -9419,8 +11409,20 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         applyMobileBrowserAiBusy(!!d.busy);
         return;
       }
+      if (d.type === 'host_chat_bridge_ready') {
+        state.chatBridgeReady = true;
+        if (d.epoch != null) state.chatBridgeEpoch = parseInt(d.epoch, 10) || 0;
+        cstat('通信桥已连通', 'success');
+        return;
+      }
+      if (d.type === 'host_browser_snapshot_ready') {
+        pullAndIngestHostBrowserSnapshot(
+          (d.reqId != null ? String(d.reqId) : '') || state.browserAgentSnapReqId || ''
+        );
+        return;
+      }
       if (d.type === 'host_browser_snapshot') {
-        if (!tryFulfillBrowserSnapshotWaiter(d)) resolveBrowserHostEvent(d);
+        ingestHostBrowserSnapshot(d, state.browserAgentSnapReqId || d.reqId || '');
         d = normalizeBrowserSnapshot(d);
         applyMobileBrowserAiBusy(false);
         var n = (d.elements && d.elements.length) || parseInt(d.count, 10) || 0;
@@ -9436,14 +11438,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         return;
       }
       if (d.type === 'host_browser_act_error') {
-        resolveBrowserHostEvent(d);
+        dispatchBrowserHostEvent(d);
         applyMobileBrowserAiBusy(false);
         var actErrCstat = formatBrowserHostActError(d);
         if (!state.browserAgentRunning) cstat(actErrCstat, 'error');
         return;
       }
       if (d.type === 'host_browser_act_result') {
-        resolveBrowserHostEvent(d);
+        dispatchBrowserHostEvent(d);
         applyMobileBrowserAiBusy(false);
         if (d.cancelled) {
           if (!state.browserAgentRunning) {
@@ -9565,8 +11567,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     try {
       post({ type: 'niuma_request_studio_context' });
       post({ type: 'niuma_request_studio_llm' });
+      requestBrowserCurrentStateSync();
     } catch (e) {}
   }, 600);
+  setTimeout(requestBrowserCurrentStateSync, 1200);
+  setTimeout(requestBrowserCurrentStateSync, 2400);
   var syncStudioBtn = $('syncStudioLlm');
   if (syncStudioBtn) {
     syncStudioBtn.addEventListener('click', function () {
@@ -9582,6 +11587,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   scale(1);
   setCompact(false);
   post({ type: 'toolbar_ready' });
+  if (document.readyState === 'complete') {
+    declareChatBridgeReady();
+  } else {
+    window.addEventListener('load', declareChatBridgeReady, { once: true });
+  }
   setTimeout(function () {
     post({ type: 'UI_FINISHED' });
   }, 180);

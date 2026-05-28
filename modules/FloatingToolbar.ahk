@@ -5,6 +5,7 @@
 
 #Requires AutoHotkey v2.0
 #Include NiumaMobileBrowser.ahk
+#Include GroundingCache.ahk
 
 ; 婢舵碍妯夌粈鍝勬珤閾忔碍瀚欏宀勬桨閸栧懎娲块惄鎺炵礄SM_XVIRTUALSCREEN 76閳?9閿?
 ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
@@ -116,10 +117,86 @@ global g_FTB_AllowedCmdIds := Map(
 global g_FTB_WV2_Ctrl := 0
 global g_FTB_WV2 := 0
 global g_FTB_WV2_Ready := false
+global g_FTB_CompatLock := false
+global g_FTB_CompatQueue := []
+global g_FTB_CompatLockTimestamp := 0
+global g_FTB_CompatCurrentReqId := ""
+global g_NiumaChatFrontReady := false
+global g_NiumaChatBridgeEpoch := 0
 
 FloatingToolbar_GetChatWv2() {
     global g_FTB_WV2
     return IsObject(g_FTB_WV2) ? g_FTB_WV2 : 0
+}
+
+FloatingToolbar_ResetChatBridge() {
+    global g_NiumaChatFrontReady, g_NiumaChatBridgeEpoch
+    g_NiumaChatFrontReady := false
+    g_NiumaChatBridgeEpoch += 1
+    try {
+        if FuncExists("NiumaMobileBrowser_Log")
+            NiumaMobileBrowser_Log("HANDSHAKE", "", "reset epoch=" . g_NiumaChatBridgeEpoch)
+    } catch {
+    }
+    try {
+        if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+            NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE reset epoch=" . g_NiumaChatBridgeEpoch, "warn")
+    } catch {
+    }
+}
+
+FloatingToolbar_IsChatBridgeReady() {
+    global g_NiumaChatFrontReady
+    if !g_NiumaChatFrontReady
+        return false
+    return IsObject(FloatingToolbar_GetChatWv2())
+}
+
+FloatingToolbar_OnChatReady(msg) {
+    global g_NiumaChatFrontReady, g_NiumaChatBridgeEpoch
+    g_NiumaChatFrontReady := true
+    epoch := msg.Has("epoch") ? String(msg["epoch"]) : ""
+    try {
+        if FuncExists("NiumaMobileBrowser_Log")
+            NiumaMobileBrowser_Log("HANDSHAKE", "", "chat_ready received epoch=" . epoch . " bridge_epoch=" . g_NiumaChatBridgeEpoch)
+    } catch {
+    }
+    try {
+        if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+            NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE chat_ready epoch=" . epoch . " bridge_epoch=" . g_NiumaChatBridgeEpoch, "success")
+    } catch {
+    }
+    try {
+        if FuncExists("NiumaMobileBrowser_FlushDeferredSnapshotToChat")
+            NiumaMobileBrowser_FlushDeferredSnapshotToChat()
+    } catch {
+    }
+    wv2 := FloatingToolbar_GetChatWv2()
+    if !wv2
+        return
+    ack := '{"type":"host_chat_bridge_ready","ok":true,"epoch":' . g_NiumaChatBridgeEpoch . '}'
+    try {
+        if FuncExists("NiumaMobileBrowser_PostJsonToChatDirect")
+            NiumaMobileBrowser_PostJsonToChatDirect(wv2, ack, "", "host_chat_bridge_ready")
+        else
+            wv2.PostWebMessageAsJson(ack)
+        try {
+            if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+                NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE host_chat_bridge_ready sent epoch=" . g_NiumaChatBridgeEpoch, "success")
+        } catch {
+        }
+    } catch as e {
+        try {
+            if FuncExists("NiumaMobileBrowser_Log")
+                NiumaMobileBrowser_Log("HANDSHAKE", "", "host_chat_bridge_ready failed err=" . e.Message)
+        } catch {
+        }
+        try {
+            if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+                NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE host_chat_bridge_ready failed: " . e.Message, "err")
+        } catch {
+        }
+    }
 }
 global g_FTB_WV2_FrameReady := false
 global g_FTB_PendingSelection := ""
@@ -830,12 +907,18 @@ CreateFloatingToolbarGUI() {
         g_FTB_WV2 := 0
         g_FTB_WV2_Ready := false
         g_FTB_WV2_FrameReady := false
+        FloatingToolbar_ResetChatBridge()
         g_FTB_PendingSelection := ""
         g_FTB_UI_Ready := false
         g_FTB_WaitingUiFinishedReveal := false
         g_FTB_WV2_CreateRetry := 0
         try FloatingToolbarGUI.Destroy()
         catch as _e {
+        }
+        try {
+            if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+                NiumaMobileBrowser_TraceOverlayPush("FTB WebView 重建: Destroy 旧实例", "warn")
+        } catch {
         }
     }
 
@@ -853,6 +936,11 @@ CreateFloatingToolbarGUI() {
         WebView2_CreateWithSharedEnvAsync(FloatingToolbarGUI.Hwnd, FloatingToolbar_OnWebViewCreated, "floating_toolbar")
     } catch as e {
         OutputDebug("[FTB] WebView2.create failed: " . e.Message)
+        try {
+            if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+                NiumaMobileBrowser_TraceOverlayPush("FTB WebView 创建失败: " . e.Message, "err")
+        } catch {
+        }
         try TrayTip("悬浮工具栏", "WebView2 创建失败，请确认已安装 Edge WebView2 运行时。", "Iconx 2")
         catch {
         }
@@ -932,6 +1020,11 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
 
     if !IsObject(ctrl) {
         OutputDebug("[FTB] WebView2 create failed: invalid controller")
+        try {
+            if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+                NiumaMobileBrowser_TraceOverlayPush("FTB WebView 创建失败: invalid controller", "err")
+        } catch {
+        }
         FloatingToolbar_RetryCreateWebView()
         return
     }
@@ -944,13 +1037,20 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
     }
     if !IsObject(g_FTB_WV2) {
         OutputDebug("[FTB] WebView2 create failed: CoreWebView2 unavailable")
+        try {
+            if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+                NiumaMobileBrowser_TraceOverlayPush("FTB WebView 创建失败: CoreWebView2 unavailable", "err")
+        } catch {
+        }
         g_FTB_WV2_Ctrl := 0
         g_FTB_WV2 := 0
         g_FTB_WV2_Ready := false
         g_FTB_WV2_FrameReady := false
+        FloatingToolbar_ResetChatBridge()
         FloatingToolbar_RetryCreateWebView()
         return
     }
+    FloatingToolbar_ResetChatBridge()
     global g_NiumaMobile_Wv2Class
     g_NiumaMobile_Wv2Class := WebView2
     g_FTB_WV2_Ready := false
@@ -1323,6 +1423,36 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ != "")
         FTB_Debug("recv " . typ)
 
+    if (typ = "chat_ready") {
+        FloatingToolbar_OnChatReady(msg)
+        return
+    }
+    if (typ = "niuma_browser_trace") {
+        try {
+            if FuncExists("NiumaMobileBrowser_TraceFromChat")
+                NiumaMobileBrowser_TraceFromChat(msg)
+        } catch {
+        }
+        return
+    }
+    if (typ = "niuma_inject_ack") {
+        rid := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        ok := msg.Has("ok") ? !!msg["ok"] : false
+        why := msg.Has("why") ? String(msg["why"]) : ""
+        err := msg.Has("err") ? String(msg["err"]) : ""
+        try {
+            if FuncExists("NiumaMobileBrowser_Log")
+                NiumaMobileBrowser_Log("HANDSHAKE", rid, "inject_ack ok=" . (ok ? 1 : 0) . " why=" . why . (err != "" ? (" err=" . err) : ""))
+        } catch {
+        }
+        try {
+            if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+                NiumaMobileBrowser_TraceOverlayPush("INJECT ack rid=" . rid . " ok=" . (ok ? 1 : 0) . " why=" . why . (err != "" ? (" err=" . SubStr(err, 1, 120)) : ""), ok ? "success" : "err")
+        } catch {
+        }
+        return
+    }
+
     if (typ = "toolbar_ready") {
         g_FTB_WV2_Ready := true
         FloatingToolbar_ApplyWebViewBounds()
@@ -1348,6 +1478,12 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
 
     if (typ = "ftb_soft_reset") {
+        FloatingToolbar_ResetChatBridge()
+        try {
+            if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+                NiumaMobileBrowser_TraceOverlayPush("DRAWER ftb_soft_reset", "warn")
+        } catch {
+        }
         try FloatingToolbar_EnsureCommandsLoaded()
         catch {
         }
@@ -1559,12 +1695,16 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ = "niuma_mobile_browser_open") {
         url := msg.Has("url") ? String(msg["url"]) : ""
         SetTimer(FloatingToolbar_ActivateMobileBrowser.Bind(url), -1)
-        SetTimer(NiumaMobileBrowser_NotifyState.Bind(NiumaMobileBrowser_IsOpen(), url), -800)
-        SetTimer(NiumaMobileBrowser_NotifyState.Bind(NiumaMobileBrowser_IsOpen(), url), -2000)
-        SetTimer(NiumaMobileBrowser_NotifyState.Bind(NiumaMobileBrowser_IsOpen(), url), -4500)
+        SetTimer(NiumaMobileBrowser_NotifyStateLive.Bind(url), -800)
+        SetTimer(NiumaMobileBrowser_NotifyStateLive.Bind(url), -2000)
+        SetTimer(NiumaMobileBrowser_NotifyStateLive.Bind(url), -4500)
+        SetTimer(NiumaMobileBrowser_NotifyStateLive.Bind(url), -9000)
+        SetTimer(NiumaMobileBrowser_NotifyStateLive.Bind(url), -14000)
+        SetTimer(NiumaMobileBrowser_NotifyStateLive.Bind(url), -20000)
+        SetTimer(NiumaMobileBrowser_NotifyStateLive.Bind(url), -26000)
         return
     }
-    if (typ = "niuma_browser_sync_state") {
+    if (typ = "niuma_browser_sync_state" || typ = "chat_request_browser_current_state") {
         u := ""
         global g_NiumaMobile_WV2
         if NiumaMobileBrowser_IsOpen() && g_NiumaMobile_WV2 {
@@ -1572,7 +1712,9 @@ FloatingToolbar_OnWebMessage(sender, args) {
             catch {
             }
         }
-        NiumaMobileBrowser_NotifyState(NiumaMobileBrowser_IsOpen(), u)
+        isOpen := NiumaMobileBrowser_IsOpen()
+        NiumaMobileBrowser_Log("STATE", "", typ . " 收到, IsOpen=" . (isOpen ? 1 : 0) . " url=" . u)
+        NiumaMobileBrowser_NotifyStateVia(sender, isOpen, u)
         return
     }
     if (typ = "niuma_mobile_browser_navigate") {
@@ -1605,23 +1747,42 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(NiumaMobileBrowser_ObserveForChatDeferred.Bind(reqId), -1)
         return
     }
+    if (typ = "niuma_browser_force_relabel") {
+        reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        ; 强刷：重新打标并推送带 reqId 的快照，避免 label_parse_empty 导致模型盲视
+        SetTimer(NiumaMobileBrowser_ObserveForChatDeferred.Bind(reqId), -1)
+        return
+    }
     if (typ = "niuma_browser_get_snapshot") {
         reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
         NiumaMobileBrowser_PushCachedSnapshot(reqId)
         return
     }
-    if (typ = "niuma_browser_act") {
+    if (typ = "niuma_browser_action") {
         action := msg.Has("action") ? String(msg["action"]) : ""
-        eid := msg.Has("elementId") ? Integer(msg["elementId"]) : (msg.Has("id") ? Integer(msg["id"]) : 0)
-        val := msg.Has("text") ? String(msg["text"]) : (msg.Has("value") ? String(msg["value"]) : "")
-        actReqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
-        if (actReqId != "") {
-            global g_NiumaMobile_ObserveReqId, g_NiumaMobile_SettleReqId, g_NiumaMobile_ActReqId
-            g_NiumaMobile_ActReqId := actReqId
-            g_NiumaMobile_ObserveReqId := actReqId
-            g_NiumaMobile_SettleReqId := actReqId
+        eid := msg.Has("id") ? Integer(msg["id"]) : (msg.Has("elementId") ? Integer(msg["elementId"]) : 0)
+        val := msg.Has("value") ? String(msg["value"]) : (msg.Has("text") ? String(msg["text"]) : "")
+        if (action = "scroll" && val = "") {
+            dir := msg.Has("scrollDirection") ? String(msg["scrollDirection"]) : ""
+            dist := msg.Has("scrollDistance") ? Integer(msg["scrollDistance"]) : 0
+            if (dir != "")
+                val := dir
+            else if (dist != 0)
+                val := String(dist)
         }
-        SetTimer(NiumaMobileBrowser_ActFromChatDeferred.Bind(action, eid, val), -1)
+        actReqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        FloatingToolbar_DispatchBrowserAction(action, eid, val, actReqId)
+        return
+    }
+    if (typ = "niuma_browser_act") {
+        FloatingToolbar_CompatEnqueue(msg)
+        return
+    }
+    if (typ = "niuma_browser_resolve") {
+        reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        selector := msg.Has("selector") ? String(msg["selector"]) : ""
+        roleHint := msg.Has("roleHint") ? String(msg["roleHint"]) : ""
+        SetTimer(NiumaMobileBrowser_ResolveElement.Bind(reqId, selector, roleHint), -1)
         return
     }
     if (typ = "niuma_browser_pause_ai") {
@@ -1658,6 +1819,82 @@ FloatingToolbar_OnWebMessage(sender, args) {
         }
         return
     }
+
+    if (typ = "niuma_grounding_cache_get") {
+        reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        host := msg.Has("host") ? String(msg["host"]) : ""
+        intentTemplate := msg.Has("intentTemplate") ? String(msg["intentTemplate"]) : ""
+        pageFingerprint := msg.Has("pageFingerprint") ? String(msg["pageFingerprint"]) : ""
+        tool := msg.Has("tool") ? String(msg["tool"]) : ""
+        targetRoleHint := msg.Has("targetRoleHint") ? String(msg["targetRoleHint"]) : ""
+
+        ok := GroundingCache_Init()
+        if !ok {
+            try WebView_QueuePayload(g_FTB_WV2, Map(
+                "type", "host_grounding_cache_get_result",
+                "reqId", reqId,
+                "ok", false,
+                "error", "GroundingCache db init failed"
+            ))
+            catch {
+            }
+            return
+        }
+
+        outSel := ""
+        outTT := ""
+        outCnt := 0
+        found := GroundingCache_Get(host, intentTemplate, pageFingerprint, tool, targetRoleHint, &outSel, &outTT, &outCnt)
+        try WebView_QueuePayload(g_FTB_WV2, Map(
+            "type", "host_grounding_cache_get_result",
+            "reqId", reqId,
+            "ok", true,
+            "found", !!found,
+            "selector", outSel,
+            "textTemplate", outTT,
+            "successCount", outCnt
+        ))
+        catch {
+        }
+        return
+    }
+
+    if (typ = "niuma_grounding_cache_set") {
+        reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        host := msg.Has("host") ? String(msg["host"]) : ""
+        intentTemplate := msg.Has("intentTemplate") ? String(msg["intentTemplate"]) : ""
+        pageFingerprint := msg.Has("pageFingerprint") ? String(msg["pageFingerprint"]) : ""
+        tool := msg.Has("tool") ? String(msg["tool"]) : ""
+        targetRoleHint := msg.Has("targetRoleHint") ? String(msg["targetRoleHint"]) : ""
+        selector := msg.Has("selector") ? String(msg["selector"]) : ""
+        textTemplate := msg.Has("textTemplate") ? String(msg["textTemplate"]) : ""
+        inc := msg.Has("inc") ? Integer(msg["inc"]) : 1
+
+        ok := GroundingCache_Init()
+        if !ok {
+            try WebView_QueuePayload(g_FTB_WV2, Map(
+                "type", "host_grounding_cache_set_result",
+                "reqId", reqId,
+                "ok", false,
+                "error", "GroundingCache db init failed"
+            ))
+            catch {
+            }
+            return
+        }
+
+        stored := GroundingCache_Set(host, intentTemplate, pageFingerprint, tool, targetRoleHint, selector, textTemplate, inc)
+        try WebView_QueuePayload(g_FTB_WV2, Map(
+            "type", "host_grounding_cache_set_result",
+            "reqId", reqId,
+            "ok", true,
+            "stored", !!stored
+        ))
+        catch {
+        }
+        return
+    }
+
     if (typ = "niuma_browser_cmd") {
         cmd := msg.Has("cmd") ? String(msg["cmd"]) : ""
         ret := NiumaMobileBrowser_RunUserCommand(cmd)
@@ -1675,6 +1912,13 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ = "drawer_state") {
         open := msg.Has("open") && !!msg["open"]
         global FloatingToolbarChatDrawerOpen, g_FTB_NiumaHandoffOpening
+        if !open
+            FloatingToolbar_ResetChatBridge()
+        try {
+            if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+                NiumaMobileBrowser_TraceOverlayPush("DRAWER state open=" . (open ? 1 : 0), open ? "success" : "warn")
+        } catch {
+        }
         wasOpen := !!FloatingToolbarChatDrawerOpen
         if (open = wasOpen && !g_FTB_NiumaHandoffOpening) {
             if open {
@@ -4140,6 +4384,7 @@ FloatingToolbar_ForceRecoverVisible() {
         g_FTB_WaitingUiFinishedReveal := false
         g_FTB_UI_Ready := false
         g_FTB_WV2_Ready := false
+        FloatingToolbar_ResetChatBridge()
         CreateFloatingToolbarGUI()
     } catch {
     }
@@ -4794,4 +5039,74 @@ GetButtonTip(action) {
         default:
             return ""
     }
+}
+
+FloatingToolbar_DispatchBrowserAction(action, eid, val, actReqId := "") {
+    action := String(action)
+    rid := String(actReqId)
+    if (rid = "")
+        rid := "act-" . A_TickCount . "-" . Random(1000, 9999)
+    global g_NiumaMobile_ObserveReqId, g_NiumaMobile_SettleReqId, g_NiumaMobile_ActReqId
+    g_NiumaMobile_ActReqId := rid
+    g_NiumaMobile_ObserveReqId := rid
+    g_NiumaMobile_SettleReqId := rid
+    SetTimer(NiumaMobileBrowser_ActFromChatDeferred.Bind(action, Integer(eid), String(val)), -1)
+    return rid
+}
+
+FloatingToolbar_CompatEnqueue(msgObj) {
+    global g_FTB_CompatQueue
+    g_FTB_CompatQueue.Push(msgObj)
+    SetTimer(FloatingToolbar_ProcessCompatQueue, -1)
+}
+
+FloatingToolbar_ProcessCompatQueue(*) {
+    global g_FTB_CompatLock, g_FTB_CompatQueue, g_FTB_CompatLockTimestamp, g_FTB_CompatCurrentReqId
+    if (g_FTB_CompatLock) {
+        FloatingToolbar_CheckCompatLockTimeout()
+        return
+    }
+    if (g_FTB_CompatQueue.Length = 0)
+        return
+    g_FTB_CompatLock := true
+    g_FTB_CompatLockTimestamp := A_TickCount
+    msg := g_FTB_CompatQueue.RemoveAt(1)
+    action := msg.Has("action") ? String(msg["action"]) : ""
+    eid := msg.Has("elementId") ? Integer(msg["elementId"]) : (msg.Has("id") ? Integer(msg["id"]) : 0)
+    val := msg.Has("text") ? String(msg["text"]) : (msg.Has("value") ? String(msg["value"]) : "")
+    rid := "compat-" . A_TickCount . "-" . Random(1000, 9999)
+    g_FTB_CompatCurrentReqId := rid
+    FloatingToolbar_DispatchBrowserAction(action, eid, val, rid)
+    SetTimer(FloatingToolbar_CheckCompatLockTimeout, -8100)
+}
+
+FloatingToolbar_CheckCompatLockTimeout(*) {
+    global g_FTB_CompatLock, g_FTB_CompatLockTimestamp, g_FTB_CompatCurrentReqId, g_FTB_WV2
+    if !g_FTB_CompatLock
+        return
+    if (A_TickCount - g_FTB_CompatLockTimestamp <= 8000)
+        return
+    rid := String(g_FTB_CompatCurrentReqId)
+    try OutputDebug("[LOCK_BREAK] compat lock timeout >8s rid=" . rid)
+    if g_FTB_WV2 {
+        try WebView_QueueJson(g_FTB_WV2, '{"type":"host_browser_act_error","reqId":"' . rid . '","ok":false,"error":"compat_lock_timeout"}')
+        try WebView_QueueJson(g_FTB_WV2, '{"type":"host_browser_act_error","ok":false,"error":"compat_lock_timeout"}')
+    }
+    SetTimer(FloatingToolbar_ReleaseCompatLock, -1)
+}
+
+FloatingToolbar_CompatOnActAck(reqId := "") {
+    global g_FTB_CompatLock, g_FTB_CompatCurrentReqId
+    if !g_FTB_CompatLock
+        return
+    if (String(reqId) = "" || String(reqId) != String(g_FTB_CompatCurrentReqId))
+        return
+    SetTimer(FloatingToolbar_ReleaseCompatLock, -1)
+}
+
+FloatingToolbar_ReleaseCompatLock(*) {
+    global g_FTB_CompatLock, g_FTB_CompatCurrentReqId
+    g_FTB_CompatLock := false
+    g_FTB_CompatCurrentReqId := ""
+    SetTimer(FloatingToolbar_ProcessCompatQueue, -1)
 }
