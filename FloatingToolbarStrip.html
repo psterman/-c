@@ -1311,7 +1311,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     browserAgentRunning: false,
     browserAgentHoleContext: '',
     browserAgentHoleContextHash: '',
-    browserAgentHoleInjected: false
+    browserAgentHoleInjected: false,
+    browserAgentPlanMode: ''
   };
   window.g_NiumaLastElementsCount = 0;
   window.g_NiumaLastElementsCache = {};
@@ -1620,8 +1621,30 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     applyMobileBrowserAiBusy(state.mobileBrowserAiBusy);
   }
 
-  function applyMobileBrowserUi(open) {
-    if (!open && state.mobileBrowserOpening && Date.now() - (state.mobileBrowserOpeningAt || 0) < 5000) {
+  function postHideBrowserLabelsAuto() {
+    try {
+      post({ type: 'niuma_browser_hide_labels' });
+      state.mobileBrowserLabelDebug = false;
+      syncMobileBrowserChromeState();
+    } catch (_) {}
+  }
+
+  function postShowBrowserLabelsForAgent() {
+    try {
+      post({ type: 'niuma_browser_show_labels' });
+      state.mobileBrowserLabelDebug = true;
+      syncMobileBrowserChromeState();
+    } catch (_) {}
+  }
+
+  function applyMobileBrowserUi(open, opts) {
+    opts = opts || {};
+    if (
+      !open &&
+      !opts.force &&
+      state.mobileBrowserOpening &&
+      Date.now() - (state.mobileBrowserOpeningAt || 0) < 5000
+    ) {
       return;
     }
     if (open) state.mobileBrowserOpening = false;
@@ -1694,7 +1717,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function closeMobileBrowser() {
-    applyMobileBrowserUi(false);
+    state.mobileBrowserOpening = false;
+    resetBrowserAgentHostState();
+    applyMobileBrowserUi(false, { force: true });
     post({ type: 'niuma_mobile_browser_close' });
   }
 
@@ -1712,6 +1737,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     post({ type: 'drawer_state', open: state.drawer });
     if (!state.drawer) {
       state.chatBridgeReady = false;
+      resetBrowserAgentHostState();
       closeMobileBrowser();
       setSettings(false);
       setNspick(false);
@@ -5365,7 +5391,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   var BROWSER_AGENT_MAX_TURNS = 12;
-  var BROWSER_AGENT_BUILD = '20260529-deepseek-reply-stop';
+  var BROWSER_AGENT_BUILD = '20260530-chat-host-plan-r3';
+  /** Chat-Host Plan：对话站提问走宿主原子管道，默认开启；设 window.BROWSER_AGENT_CHAT_PLAN_ENABLED = false 可关闭 */
+  var BROWSER_AGENT_CHAT_PLAN_ENABLED = window.BROWSER_AGENT_CHAT_PLAN_ENABLED !== false;
   /** 对齐 browser-use：小 prompt + 单条 state 消息，避免多轮快照堆叠拖慢推理 */
   // 大模型请求在部分网络/代理下经常超过 60s；豆包对话本地可跳过首轮 LLM。
   var BROWSER_AGENT_LLM_TIMEOUT_MS = 120000;
@@ -5841,7 +5869,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         scrollDistance: parseInt(turn.distance, 10) || 0,
         forceDoubaoInput: !!(turn._forceHostInput && isChatHostInputAct),
         chatJsSendOnly: !!turn._chatJsSendOnly,
-        deepseekJsFillOnly: !!turn._deepseekJsFillOnly
+        deepseekJsFillOnly: !!turn._deepseekJsFillOnly,
+        geminiJsFillOnly: !!turn._geminiJsFillOnly
       });
       if (ar && ar.type === 'host_browser_act_error') {
         var actErrMsg = formatBrowserHostActError(ar);
@@ -5981,7 +6010,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       scrollDistance: opt.scrollDistance || 0,
       forceDoubaoInput: !!opt.forceDoubaoInput,
       chatJsSendOnly: !!opt.chatJsSendOnly,
-      deepseekJsFillOnly: !!opt.deepseekJsFillOnly
+      deepseekJsFillOnly: !!opt.deepseekJsFillOnly,
+      geminiJsFillOnly: !!opt.geminiJsFillOnly
     });
     var actWaitMs = isDoubaoHostInput ? BROWSER_AGENT_ACT_TIMEOUT_DOUBAO_MS : BROWSER_AGENT_ACT_TIMEOUT_MS;
     return waitBrowserHostEvent(['host_browser_act_result', 'host_browser_act_error'], actWaitMs, {
@@ -6119,7 +6149,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         if (!reqId && !browserSnapshotUsable(snap, opts)) continue;
         return snap;
       }
-      if (types.indexOf('host_browser_act_result') >= 0 || types.indexOf('host_browser_act_error') >= 0) {
+      if (
+        types.indexOf('host_browser_act_result') >= 0 ||
+        types.indexOf('host_browser_act_error') >= 0 ||
+        types.indexOf('host_browser_chat_plan_result') >= 0
+      ) {
         if (reqId && String(d.reqId || '') !== String(reqId)) continue;
         return d;
       }
@@ -6152,7 +6186,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         if (!w.reqId && payload.reqId) continue;
         // 带 reqId 的 waiter 允许“不可用快照”通过，交由调用方决定重试/报错，防止出现假超时。
         if (!w.reqId && !browserSnapshotUsable(payload, w.opts || {})) continue;
-      } else if (typ === 'host_browser_act_error' || typ === 'host_browser_act_result') {
+      } else if (
+        typ === 'host_browser_act_error' ||
+        typ === 'host_browser_act_result' ||
+        typ === 'host_browser_chat_plan_result'
+      ) {
         if (w.reqId && String(payload.reqId || '') !== String(w.reqId)) continue;
       }
       out.push(w);
@@ -6177,7 +6215,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       );
     }
     if (
-      (typ === 'host_browser_act_error' || typ === 'host_browser_act_result') &&
+      (typ === 'host_browser_act_error' ||
+        typ === 'host_browser_act_result' ||
+        typ === 'host_browser_chat_plan_result') &&
       payload &&
       payload.reqId &&
       !hasBrowserHostWaiterReqId(payload.reqId)
@@ -6203,7 +6243,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       w = waiters[i];
       out = payload;
       if (
-        (typ === 'host_browser_act_error' || typ === 'host_browser_act_result') &&
+        (typ === 'host_browser_act_error' ||
+          typ === 'host_browser_act_result' ||
+          typ === 'host_browser_chat_plan_result') &&
         w.reqId &&
         !out.reqId
       ) {
@@ -6320,6 +6362,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var g = String(goal || '').trim();
     if (/在\s*豆包|豆包\s*(问|提问|输入|说|聊)|向\s*豆包/i.test(g)) return 'chat_doubao';
     if (/(deepseek)/i.test(g) && /(问|输入|聊|对话|提问|导航|打开|去)/.test(g)) return 'chat_deepseek';
+    if (/(gemini)/i.test(g) && /(问|输入|聊|对话|提问|画图|如何|怎么|怎样|发送|导航|打开|去|有哪些|什么|哪些|适合|行业|机会)/i.test(g))
+      return 'chat_gemini';
+    if (/^@?网页\s*gemini\b/i.test(g) || /^gemini[\s:：提问]/i.test(g)) return 'chat_gemini';
     if (/(kimi|通义|文心|元宝|chatgpt|claude)/i.test(g) && /(问|输入|聊|对话|提问)/.test(g)) return 'chat_other';
     if (/(?:百度|baidu)\s*(?:搜索|搜|查)|在\s*(?:百度|baidu)\s*搜|@?\s*网页\s*百度\s*搜/i.test(g)) return 'search_baidu';
     if (/(?:谷歌|google)\s*(?:搜索|搜|查)/i.test(g)) return 'search_google';
@@ -6340,13 +6385,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function isChatHostBrowserAgentGoal(goal) {
     var kind = inferBrowserGoalTaskKind(goal);
-    if (kind === 'chat_doubao' || kind === 'chat_deepseek') return true;
+    if (kind === 'chat_doubao' || kind === 'chat_deepseek' || kind === 'chat_gemini') return true;
     var u = String((state && state.mobileBrowserLastUrl) || '').toLowerCase();
-    return u.indexOf('doubao.com') >= 0 || u.indexOf('deepseek.com') >= 0;
+    return u.indexOf('doubao.com') >= 0 || u.indexOf('deepseek.com') >= 0 || u.indexOf('gemini.google') >= 0;
   }
 
   function isChatHostTaskKind(kind) {
-    return kind === 'chat_doubao' || kind === 'chat_deepseek';
+    return kind === 'chat_doubao' || kind === 'chat_deepseek' || kind === 'chat_gemini';
   }
 
   function chatHostMetaFromKind(kind) {
@@ -6370,6 +6415,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         sendAttempted: 'deepseekSendAttempted'
       };
     }
+    if (kind === 'chat_gemini') {
+      return {
+        site: 'gemini',
+        label: 'Gemini',
+        submitDone: 'geminiSubmitDone',
+        failCount: 'geminiInputFailCount',
+        focusAttempted: 'geminiFocusAttempted',
+        sendAttempted: 'geminiSendAttempted',
+        sendFailCount: 'geminiSendFailCount',
+        postInstruction: 'geminiPostInstruction'
+      };
+    }
     return null;
   }
 
@@ -6383,6 +6440,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       blob = String(el.text || '') + String(el.value != null ? el.value : '') + String(el.hint || '');
       if (siteKey === 'deepseek' && /给\s*DeepSeek|DeepSeek\s*发送|使用快速模式|chat\.deepseek/i.test(blob)) return true;
       if (siteKey === 'doubao' && /发消息|豆包/i.test(blob)) return true;
+      if (siteKey === 'gemini' && /Ask\s*Gemini|Enter\s*a\s*prompt|问问\s*Gemini|与\s*Gemini|gemini\.google/i.test(blob)) return true;
     }
     return false;
   }
@@ -6405,8 +6463,32 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return shouldSkipLlmForChatHostTurn1(goal, snap, 'chat_deepseek', 'deepseek');
   }
 
+  function shouldSkipLlmForGeminiTurn1(goal, snap) {
+    return shouldSkipLlmForChatHostTurn1(goal, snap, 'chat_gemini', 'gemini');
+  }
+
   function browserAgentLlmTimeoutMs(goal) {
     return isChatHostBrowserAgentGoal(goal) ? BROWSER_AGENT_LLM_TIMEOUT_DOUBAO_MS : BROWSER_AGENT_LLM_TIMEOUT_MS;
+  }
+
+  function planBrowserAgentChatHostNavigateTurn(goal, snap) {
+    var kind = inferBrowserGoalTaskKind(goal);
+    if (!isChatHostTaskKind(kind)) return null;
+    var hint = inferGoalTargetSiteHint(goal);
+    if (!hint || !hint.homeUrl) return null;
+    var chatQ = extractChatMessageFromGoal(goal) || '';
+    if (!chatQ || chatQ.length < 2) return null;
+    var curUrl = String((snap && snap.url) || state.mobileBrowserLastUrl || '');
+    if (siteHostMatchesSiteKey(hint.site, snapHostFromUrl(curUrl)) || snapIndicatesChatHost(snap, hint.site))
+      return null;
+    return {
+      thought: '本地：当前不在 ' + hint.label + '，先打开 ' + hint.homeUrl,
+      tool: 'browser_navigate',
+      url: hint.homeUrl,
+      elementId: 0,
+      text: '',
+      _source: 'chat_host_navigate_local'
+    };
   }
 
   function inferGoalTargetSiteHint(goal) {
@@ -6416,6 +6498,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     if (kind === 'chat_deepseek') {
       return { site: 'deepseek', homeUrl: 'https://chat.deepseek.com/', label: 'DeepSeek 对话' };
+    }
+    if (kind === 'chat_gemini') {
+      return { site: 'gemini', homeUrl: 'https://gemini.google.com/', label: 'Gemini 对话' };
     }
     if (kind === 'search_baidu') {
       return { site: 'baidu', homeUrl: 'https://www.baidu.com', label: '百度搜索' };
@@ -6431,6 +6516,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!host) return false;
     if (siteKey === 'doubao') return host.indexOf('doubao.com') >= 0;
     if (siteKey === 'deepseek') return host.indexOf('deepseek.com') >= 0;
+    if (siteKey === 'gemini') return host.indexOf('gemini.google') >= 0;
     if (siteKey === 'baidu') return host.indexOf('baidu.com') >= 0;
     if (siteKey === 'google') return host.indexOf('google.') >= 0;
     return false;
@@ -6438,7 +6524,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function ensureBrowserInputTextFromGoalString(goal) {
     var kind = inferBrowserGoalTaskKind(goal);
-    if (kind === 'chat_doubao' || kind === 'chat_deepseek') {
+    if (kind === 'chat_doubao' || kind === 'chat_deepseek' || kind === 'chat_gemini') {
       var cq = extractChatMessageFromGoal(goal);
       if (cq) return cq;
     }
@@ -6454,7 +6540,168 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return Object.assign({}, turn, { text: t, _textFromGoal: true });
   }
 
+  /** 从目标中拆出「发给对话站的问题」与「拿到回复后的后处理」（如总结五句话） */
+  function splitBrowserGoalQuestionAndPost(goal) {
+    var g = String(goal || '')
+      .trim()
+      .replace(/^@网页\s*/i, '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .trim();
+    var post = '';
+    var q = g;
+    var postM =
+      g.match(/(?:\n|。)\s*((?:将|把|请).*(?:回复|回答).*(?:总结|归纳|提炼|概括).*)$/i) ||
+      g.match(/\s+((?:将|把|请).*(?:回复|回答).*(?:总结|归纳|提炼|概括).*)$/i);
+    if (postM && postM[1]) {
+      post = String(postM[1]).trim();
+      q = g.slice(0, g.length - postM[0].length).replace(/[。\n]\s*$/, '').trim();
+    }
+    q = q.replace(/^gemini\s+/i, '').replace(/^deepseek\s+/i, '').replace(/^豆包\s+/i, '').trim();
+    return { question: q, postInstruction: post };
+  }
+
+  function shouldRouteChatHostPlan(goal, snap) {
+    if (BROWSER_AGENT_CHAT_PLAN_ENABLED === false) return false;
+    var kind = inferBrowserGoalTaskKind(goal);
+    if (kind !== 'chat_doubao' && kind !== 'chat_deepseek' && kind !== 'chat_gemini') return false;
+    var msg = extractChatMessageFromGoal(goal);
+    if (!msg || msg.length < 2) return false;
+    var meta = chatHostMetaFromKind(kind);
+    if (!meta) return false;
+    var url = String((snap && snap.url) || state.mobileBrowserLastUrl || '').toLowerCase();
+    return (
+      /doubao\.com|deepseek\.com|gemini\.google/.test(url) ||
+      snapIndicatesChatHost(snap, meta.site)
+    );
+  }
+
+  function callHostChatPlanExecute(text, platform, elementId) {
+    var actReqId = 'plan-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    post({
+      type: 'niuma_browser_chat_plan_execute',
+      reqId: actReqId,
+      text: String(text != null ? text : ''),
+      platform: String(platform || ''),
+      elementId: parseInt(elementId, 10) || 0
+    });
+    return waitBrowserHostEvent(
+      ['host_browser_chat_plan_result', 'host_browser_act_error'],
+      BROWSER_AGENT_ACT_TIMEOUT_DOUBAO_MS,
+      { reqId: actReqId }
+    )
+      .then(function (res) {
+        if (res.type === 'host_browser_act_error') {
+          return {
+            ok: false,
+            error: res.error || 'host_browser_act_error',
+            type: res.type,
+            reqId: actReqId,
+            stage: res.stage,
+            actPayload: res
+          };
+        }
+        if (res.ok === false) {
+          return {
+            ok: false,
+            error: res.error || 'chat_plan_failed',
+            reqId: actReqId,
+            actPayload: res
+          };
+        }
+        return new Promise(function (resolve) {
+          setTimeout(function () {
+            resolve(Object.assign({ ok: true, reqId: actReqId, actPayload: res }, res));
+          }, 650);
+        });
+      })
+      .catch(function (err) {
+        return {
+          ok: false,
+          error: String((err && err.message) || err || 'chat_plan_timeout'),
+          reqId: actReqId,
+          timedOut: true
+        };
+      });
+  }
+
+  function shouldSkipLocalChatHostInputPlan(goal, snap, agentTurnCtx) {
+    if (BROWSER_AGENT_CHAT_PLAN_ENABLED === false) return false;
+    if (agentTurnCtx && agentTurnCtx.chatPlanAllowLocalFallback) return false;
+    return shouldRouteChatHostPlan(goal, snap);
+  }
+
+  function browserAgentPushRow(rows, label, status) {
+    if (Array.isArray(rows)) rows.push({ label: String(label || ''), status: String(status || '') });
+  }
+
+  async function tryExecuteChatHostPlan(sid, goal, snap, agentTurnCtx, rows, agentTrace, runStarted, refreshDraft, planOpts) {
+    planOpts = planOpts || {};
+    var stopOnFailure = planOpts.stopOnFailure !== false;
+    var traceTurn = planOpts.turn != null ? planOpts.turn : 0;
+    if (!shouldRouteChatHostPlan(goal, snap)) return { done: false };
+    var meta = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+    if (!meta) return { done: false };
+    var chatQ = extractChatMessageFromGoal(goal) || '';
+    var inputId = resolveTargetElementId('chat_input', snap) || 0;
+    state.browserAgentPlanMode = 'chat_host_pipe';
+    browserAgentPushRow(rows, 'Chat-Plan 管道', '⏳ 执行中…');
+    browserAgentTracePush(
+      agentTrace,
+      runStarted,
+      traceTurn,
+      'ROUTE_GUARD',
+      (traceTurn > 0 ? '第' + traceTurn + '轮后 ' : '') + '命中 Chat-Plan · build=' + BROWSER_AGENT_BUILD + ' · ' + meta.label
+    );
+    refreshDraft('', '', 'Chat-Plan：幂等 → JS 填词 → JS 发送 → DOM 断言…');
+    var planRes;
+    try {
+      planRes = await callHostChatPlanExecute(chatQ, meta.site, inputId);
+    } catch (planErr) {
+      planRes = { ok: false, error: String(planErr.message || planErr), actPayload: {} };
+    }
+    var act = planRes.actPayload && typeof planRes.actPayload === 'object' ? planRes.actPayload : planRes;
+    var chatSendOk =
+      act.idempotentSkip === true || act.sendOk === true || act.sentInThread === true;
+    if (chatSendOk) {
+      agentTurnCtx[meta.submitDone] = true;
+      agentTurnCtx[meta.sendAttempted] = true;
+      agentTurnCtx[meta.failCount] = 0;
+      if (meta.sendFailCount) agentTurnCtx[meta.sendFailCount] = 0;
+      var finishOk = act.idempotentSkip
+        ? '「' + chatQ + '」已在 ' + meta.label + ' 对话区（Chat-Plan 幂等，未重复填词）。'
+        : '已向' + meta.label + '发送：「' + chatQ + '」。请在右侧查看 AI 回复。';
+      if (agentTurnCtx.geminiPostInstruction) {
+        finishOk += ' 后处理请在 Chat 中继续：「' + agentTurnCtx.geminiPostInstruction + '」。';
+      }
+      browserAgentPushRow(rows, 'Chat-Plan 管道', act.idempotentSkip ? '✅ 幂等跳过' : '✅ 发送已确认');
+      browserAgentTracePush(agentTrace, runStarted, traceTurn, meta.label + ' · Chat-Plan 完成', finishOk);
+      agentTurnCtx.lastGoodSnap = snap;
+      if (chatHostReplyVisibleInSnapshot(snap, chatQ)) postHideBrowserLabelsAuto();
+      state.browserAgentPlanMode = '';
+      agentTurnCtx.chatPlanAllowLocalFallback = false;
+      return { done: true, ok: true, finishThought: finishOk, snap: snap };
+    }
+    var failThought =
+      meta.label +
+      ' Chat-Plan 未确认发送（build=' +
+      BROWSER_AGENT_BUILD +
+      '）。请检查右侧输入框或手动点发送箭头。' +
+      (act.error ? '（' + String(act.error) + '）' : '');
+    browserAgentPushRow(rows, 'Chat-Plan 管道', '⚠️ 发送未确认');
+    browserAgentTracePush(agentTrace, runStarted, traceTurn, meta.label + ' · Chat-Plan 未确认', failThought);
+    agentTurnCtx[meta.sendAttempted] = true;
+    if (meta.sendFailCount) agentTurnCtx[meta.sendFailCount] = (agentTurnCtx[meta.sendFailCount] || 0) + 1;
+    state.browserAgentPlanMode = '';
+    agentTurnCtx.chatPlanAllowLocalFallback = true;
+    if (!stopOnFailure) {
+      return { done: false, ok: false, finishThought: failThought, snap: snap };
+    }
+    return { done: true, ok: false, finishThought: failThought, snap: snap };
+  }
+
   function extractChatMessageFromGoal(goal) {
+    var split = splitBrowserGoalQuestionAndPost(goal);
+    if (split.question && split.question.length >= 2) return split.question;
     var g = String(goal || '').trim().replace(/^@网页\s*/i, '').trim();
     var patterns = [
       /在\s*豆包\s*(?:问|提问|输入|说|聊)[:：]?\s*(.+)$/i,
@@ -6466,7 +6713,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       /向\s*DeepSeek\s*(?:问|提问|输入)[:：]?\s*(.+)$/i,
       /DeepSeek\s*(?:问|提问|输入)[:：]?\s*(.+)$/i,
       /DeepSeek[^。！？?]{0,12}[:：]\s*(.+)$/i,
-      /DeepSeek.{0,24}?(AutoHotkey|AHK|怎么写).+$/i
+      /DeepSeek.{0,24}?(AutoHotkey|AHK|怎么写).+$/i,
+      /在\s*Gemini\s*(?:问|提问|输入|说|聊)[:：]?\s*(.+)$/i,
+      /向\s*Gemini\s*(?:问|提问|输入)[:：]?\s*(.+)$/i,
+      /Gemini\s*提问\s*(.+)$/i,
+      /Gemini\s*(?:问|提问|输入)[:：]?\s*(.+)$/i,
+      /gemini提问\s*(.+)$/i,
+      /^gemini\s+(.+)$/i,
+      /^Gemini\s+(.+)$/i
     ];
     var i, m;
     for (i = 0; i < patterns.length; i++) {
@@ -6475,9 +6729,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         return String(m[1]).trim().replace(/[。；;，,！!？?]+$/g, '');
       }
     }
-    if (/(deepseek|豆包)/i.test(g)) {
+    if (/(deepseek|豆包|gemini)/i.test(g)) {
       m = g.match(/(?:AutoHotkey|AHK)[^。！？?]{0,48}|怎么写热键[^。！？?]{0,24}/i);
       if (m && m[0]) return String(m[0]).trim().replace(/[。；;，,！!？?]+$/g, '');
+    }
+    if (/gemini/i.test(g)) {
+      var tail = g.replace(/^gemini\s*/i, '').trim();
+      if (tail.length >= 2 && !/^(?:官网|首页|网站|网页)$/i.test(tail)) return tail;
     }
     return '';
   }
@@ -6509,6 +6767,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var kind = inferBrowserGoalTaskKind(goal);
     if (shouldSkipLlmForDoubaoTurn1(goal, snap)) return false;
     if (shouldSkipLlmForDeepSeekTurn1(goal, snap)) return false;
+    if (shouldSkipLlmForGeminiTurn1(goal, snap)) return false;
     if (kind.indexOf('chat_') === 0 || kind === 'general') return true;
     if (kind === 'search_baidu' || kind === 'search_google') {
       return window.BROWSER_AGENT_FAST_BAIDU_SEARCH === false;
@@ -6847,7 +7106,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return -1e9;
     if (srh === 'chat_send') return 140;
     if (/^发送$|^send$|submit|提交/.test(stxt)) return 130;
-    if (/发送|send|submit|提交/.test(blob)) return 110;
+    if (/发送|send|submit|提交|send message|发送消息/.test(blob)) return 110;
+    var snapUrl = String(state && state.mobileBrowserLastUrl ? state.mobileBrowserLastUrl : '').toLowerCase();
+    if (snapUrl.indexOf('gemini.google') >= 0 && (stag === 'button' || stag === 'a') && stxt.length < 3 && /send|submit|发送|arrow|向上|message/i.test(blob))
+      return 95;
     if ((stag === 'button' || stag === 'a') && el.fixed) return 8;
     return 0;
   }
@@ -6895,6 +7157,21 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       _source: 'chat_js_send',
       _forceHostInput: true,
       _chatJsSendOnly: true
+    };
+  }
+
+  function planBrowserAgentGeminiClickSendTurn(goal, snap, ctx) {
+    if (inferBrowserGoalTaskKind(goal) !== 'chat_gemini') return null;
+    var snapUse = snap && getSnapshotElementsArray(snap).length ? snap : ctx && ctx.lastGoodSnap;
+    var sendId = findChatSendElementId(snapUse);
+    if (sendId < 1) return null;
+    return {
+      thought: '本地：Gemini 点击发送钮 #' + sendId + '（JS 发送未确认后的兜底）',
+      tool: 'browser_click',
+      elementId: sendId,
+      text: '',
+      _source: 'gemini_click_send',
+      _forceHostInput: false
     };
   }
 
@@ -6971,6 +7248,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var q = String(expectedText || '').trim();
     if (!q || !snap) return false;
     if (chatHostReplyVisibleInSnapshot(snap, q)) return true;
+    if (snapUrlIsGemini(snap) && doubaoInputConfirmedInSnapshot(snap, q) && !chatHostReplyVisibleInSnapshot(snap, q)) {
+      return false;
+    }
     var needle = q.length >= 6 ? q.slice(0, 6) : q.length >= 4 ? q.slice(0, 4) : q;
     var els = getSnapshotElementsArray(snap);
     var i, el, rh, blob;
@@ -6989,9 +7269,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   /** 对话区已出现 AI 长回复（DeepSeek 等：发送成功但输入框仍可能残留占位/草稿） */
+  function snapUrlIsGemini(snap) {
+    var u = String((snap && snap.url) || state.mobileBrowserLastUrl || '').toLowerCase();
+    return u.indexOf('gemini.google') >= 0;
+  }
+
   function chatHostReplyVisibleInSnapshot(snap, expectedText) {
     if (!snap) return false;
     var q = String(expectedText || '').trim();
+    var onGemini = snapUrlIsGemini(snap);
     var titleBlob = String(snap.title || snap.pageTitle || '').trim();
     if (titleBlob.length >= 6 && q && titleBlob.indexOf(q.slice(0, Math.min(6, q.length))) >= 0 && titleBlob.length > q.length + 2)
       return true;
@@ -7009,7 +7295,27 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         return true;
       if (q && blob.indexOf(q.slice(0, Math.min(8, q.length))) >= 0 && blob.length > q.length + 48) return true;
       if (/AutoHotkey/i.test(blob) && blob.length > 80) return true;
-      if (blob.length > 120 && !/发消息|给\s*DeepSeek|使用快速模式|DeepThink|联网搜索/.test(blob)) longCount++;
+      if (
+        blob.length > 120 &&
+        !/发消息|给\s*DeepSeek|使用快速模式|DeepThink|联网搜索|需要我为你|想聊点什么|问问\s*Gemini|Ask\s*Gemini|Enter\s*a\s*prompt/i.test(
+          blob
+        )
+      )
+        longCount++;
+    }
+    if (onGemini) {
+      if (q && q.length >= 4) {
+        var qNeedle = q.slice(0, Math.min(8, q.length));
+        for (i = 0; i < els.length; i++) {
+          el = els[i];
+          if (!el) continue;
+          rh = String(el.roleHint || '').toLowerCase();
+          if (rh === 'chat_input') continue;
+          blob = String(el.text || '') + String(el.value != null ? el.value : '');
+          if (blob.indexOf(qNeedle) >= 0 && blob.length > q.length + 80) return true;
+        }
+      }
+      return false;
     }
     return longCount >= 2;
   }
@@ -7021,7 +7327,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function doubaoActIndicatesSent(actRes, snap, expectedText) {
     var ar = actRes && typeof actRes === 'object' ? actRes : {};
-    if (ar.sendOk === true || ar.sentInThread === true) return true;
+    if (ar.idempotentSkip === true || ar.sentInThread === true || ar.sendOk === true) return true;
+    if (ar.domAssertOk === true && (ar.sendOk === true || ar.sentInThread === true)) return true;
     return doubaoMessageSentInSnapshot(snap, expectedText);
   }
 
@@ -7048,12 +7355,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (attachDismiss) return attachDismiss;
     var snapUse = snap && getSnapshotElementsArray(snap).length ? snap : ctx && ctx.lastGoodSnap;
     var sendId = findChatSendElementId(snapUse);
-    if (meta.site === 'deepseek') {
-      var inIdDs = resolveTargetElementId('chat_input', snapUse) || 0;
+    if (meta.site === 'deepseek' || meta.site === 'gemini') {
+      var inIdChat = resolveTargetElementId('chat_input', snapUse) || 0;
       return {
-        thought: '本地：DeepSeek 已填词，JS 点击发送（避免误点 #' + sendId + '）',
+        thought: '本地：' + meta.label + ' 已填词，JS 点击发送（避免误点 #' + sendId + '）',
         tool: 'browser_input',
-        elementId: inIdDs || 0,
+        elementId: inIdChat || 0,
         text: chatQ,
         _source: 'chat_submit_after_input',
         _forceHostInput: true,
@@ -7127,7 +7434,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         var chint = String(cel.hint || '').toLowerCase();
         if (crh === 'chat_input' || crole === 'textbox') return parseInt(cel.id, 10) || 0;
         if (ctag === 'textarea' || cel.isContentEditable) {
-          if (/问|输入|消息|chat|prompt|说点什么|有问题|DeepSeek|发送消息/.test(ctxt + ' ' + chint)) return parseInt(cel.id, 10) || 0;
+          if (/问|输入|消息|chat|prompt|说点什么|有问题|DeepSeek|Gemini|发送消息/.test(ctxt + ' ' + chint)) return parseInt(cel.id, 10) || 0;
         }
       }
     }
@@ -7227,7 +7534,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var meta = chatHostMetaFromKind(kind);
     if (!meta || meta.site !== siteKey) return null;
     var chatQ = extractChatMessageFromGoal(goal) || '';
-    if (!chatQ) return null;
+    if (!chatQ && siteKey === 'gemini') {
+      chatQ = String(goal || '')
+        .replace(/^@?网页\s*/i, '')
+        .replace(/^gemini\s*/i, '')
+        .trim();
+    }
+    if (!chatQ || chatQ.length < 2) return null;
     ctx = ctx || {};
     if (
       ctx[meta.submitDone] ||
@@ -7270,6 +7583,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         _deepseekJsFillOnly: true
       };
     }
+    if (siteKey === 'gemini') {
+      return {
+        thought: '本地：' + label + ' JS 填词+点发送「' + chatQ.slice(0, 32) + '」（跳过物理粘贴）',
+        tool: 'browser_input',
+        targetRoleHint: 'chat_input',
+        elementId: inputId || 0,
+        text: chatQ,
+        _source: src,
+        _forceHostInput: true,
+        _geminiJsFillOnly: true
+      };
+    }
     if (fails >= 3 && fails % 3 === 0) {
       return {
         thought: '本地：' + label + ' 粘贴后 AHK Enter 发送「' + chatQ.slice(0, 32) + '」',
@@ -7304,6 +7629,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return planBrowserAgentChatHostLocalTurn(goal, snap, ctx, reason, 'deepseek');
   }
 
+  function planBrowserAgentGeminiLocalTurn(goal, snap, ctx, reason) {
+    if (inferBrowserGoalTaskKind(goal) !== 'chat_gemini') return null;
+    return planBrowserAgentChatHostLocalTurn(goal, snap, ctx, reason, 'gemini');
+  }
+
   function planBrowserAgentChatHostLocalTurnAny(goal, snap, ctx, reason) {
     var kind = inferBrowserGoalTaskKind(goal);
     var meta = chatHostMetaFromKind(kind);
@@ -7320,6 +7650,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return planBrowserAgentDeepSeekLocalTurn(goal, snap, ctx, 'deepseek_fallback');
   }
 
+  function planBrowserAgentGeminiTimeoutFallback(goal, snap, ctx) {
+    return planBrowserAgentGeminiLocalTurn(goal, snap, ctx, 'gemini_fallback');
+  }
+
   function planBrowserAgentApiTimeoutFallback(goal, snap, ctx) {
     var kind = inferBrowserGoalTaskKind(goal);
     if (kind === 'chat_doubao') {
@@ -7327,6 +7661,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     if (kind === 'chat_deepseek') {
       return planBrowserAgentDeepSeekLocalTurn(goal, snap, ctx || {}, 'api_timeout');
+    }
+    if (kind === 'chat_gemini') {
+      return planBrowserAgentGeminiLocalTurn(goal, snap, ctx || {}, 'api_timeout');
     }
     var local = planBrowserAgentLocalSearchTurn(goal, snap);
     if (local) return local;
@@ -7709,6 +8046,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     rejectAllBrowserHostWaiters('agent_reset');
     state.browserAgentSnapReqId = '';
     state.browserAgentRunning = false;
+    state.browserAgentPlanMode = '';
     try {
       post({ type: 'niuma_llm_http_cancel', reqId: '*' });
     } catch (_) {}
@@ -8860,6 +9198,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var s = sessionById(sid);
     if (!s) throw new Error('会话不存在');
     state.browserAgentRunning = true;
+    if (state.mobileBrowserOpen) postShowBrowserLabelsForAgent();
     var rows = [];
     var liveLine = '准备中…';
     var analysisThoughts = [];
@@ -8936,6 +9275,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       await ensureMobileBrowserForAgent(sid, intent || { query: goal, url: '' }, rows, refreshDraft, goal);
 
       var agentTurnCtx = { lastAssistant: '', lastExecNote: '', lastGoodSnap: null, lastTool: null };
+      if (inferBrowserGoalTaskKind(goal) === 'chat_gemini') {
+        var gmGoalSplit = splitBrowserGoalQuestionAndPost(goal);
+        if (gmGoalSplit.postInstruction) agentTurnCtx.geminiPostInstruction = gmGoalSplit.postInstruction;
+      }
       var lastFp = '';
       var staleCount = 0;
       var finishThought = '';
@@ -9010,6 +9353,27 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         finishThought = '快速路径：已在「' + extractSearchQueryFromBrowserGoal(goal) + '」百度搜索结果页';
       }
 
+      if (!fastDone && shouldRouteChatHostPlan(goal, snap)) {
+        var planRun = await tryExecuteChatHostPlan(
+          sid,
+          goal,
+          snap,
+          agentTurnCtx,
+          rows,
+          agentTrace,
+          runStarted,
+          refreshDraft
+        );
+        if (planRun.done) {
+          fastDone = true;
+          finishThought = planRun.finishThought || finishThought;
+          if (planRun.snap) snap = planRun.snap;
+          if (chatHostReplyVisibleInSnapshot(planRun.snap || snap, extractChatMessageFromGoal(goal) || '')) {
+            postHideBrowserLabelsAuto();
+          }
+        }
+      }
+
       if (!fastDone) for (turn = 1; turn <= BROWSER_AGENT_MAX_TURNS; turn++) {
         if (state.mobileBrowserAiPaused) {
           throw new Error('AI 网页操控已暂停。请在右侧手动处理完成后发送「继续」。');
@@ -9030,6 +9394,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           browserAgentTracePush(agentTrace, runStarted, turn, 'DeepSeek 已发送', finishThought);
           break;
         }
+        if (inferBrowserGoalTaskKind(goal) === 'chat_gemini' && agentTurnCtx.geminiSubmitDone) {
+          var chatQDoneGm = extractChatMessageFromGoal(goal) || '';
+          finishThought =
+            '已向 Gemini 发送：「' + chatQDoneGm + '」。请勿重复输入（宿主与前端已达成共识）。';
+          row('第 ' + turn + ' 轮 · Gemini', '✅ 已发送，跳过重复轮次');
+          browserAgentTracePush(agentTrace, runStarted, turn, 'Gemini 已发送', finishThought);
+          break;
+        }
         var chatQEarly = extractChatMessageFromGoal(goal) || '';
         if (isChatHostTaskKind(inferBrowserGoalTaskKind(goal)) && chatHostTurnCompleteInSnapshot(snap, chatQEarly)) {
           var chMetaEarly = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
@@ -9044,6 +9416,34 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           browserAgentTracePush(agentTrace, runStarted, turn, chMetaEarly.label + '提问完成', finishThought);
           break;
         }
+
+        if (isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) {
+          var chMetaPlanLoop = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+          if (
+            chMetaPlanLoop &&
+            !agentTurnCtx[chMetaPlanLoop.submitDone] &&
+            shouldRouteChatHostPlan(goal, snap)
+          ) {
+            var planLoopRun = await tryExecuteChatHostPlan(
+              sid,
+              goal,
+              snap,
+              agentTurnCtx,
+              rows,
+              agentTrace,
+              runStarted,
+              refreshDraft,
+              { stopOnFailure: false, turn: turn }
+            );
+            if (planLoopRun.done) {
+              finishThought = planLoopRun.finishThought || finishThought;
+              if (planLoopRun.snap) snap = planLoopRun.snap;
+              break;
+            }
+          }
+        }
+
+        var skipLocalChatInput = shouldSkipLocalChatHostInputPlan(goal, snap, agentTurnCtx);
 
         row('第 ' + turn + ' 轮 · 模型决策', '⏳ 思考中…');
         refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 决策中（见时间线）');
@@ -9069,11 +9469,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         var preferLlmSearch =
           shouldPreferLlmBrowserPlan(goal, snap) ||
           (window.BROWSER_AGENT_PREFER_LLM_SEARCH !== false && snapHasUsableElements(snap));
-        if (turn === 1 && !preferLlmSearch) {
+        if (turn === 1 && isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) {
+          localPlan = planBrowserAgentChatHostNavigateTurn(goal, snap);
+        }
+        if (turn === 1 && !localPlan && !preferLlmSearch && !skipLocalChatInput) {
           if (inferBrowserGoalTaskKind(goal) === 'chat_doubao') {
             localPlan = planBrowserAgentDoubaoLocalTurn(goal, snap, agentTurnCtx, 'turn1_ready');
           } else if (inferBrowserGoalTaskKind(goal) === 'chat_deepseek') {
             localPlan = planBrowserAgentDeepSeekLocalTurn(goal, snap, agentTurnCtx, 'turn1_ready');
+          } else if (inferBrowserGoalTaskKind(goal) === 'chat_gemini') {
+            localPlan = planBrowserAgentGeminiLocalTurn(goal, snap, agentTurnCtx, 'turn1_ready');
           } else {
             localPlan = planBrowserAgentLocalSearchTurn(goal, snap);
             if (!localPlan && qSearchGoal) {
@@ -9081,17 +9486,21 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             }
           }
         }
-        if (!localPlan && turn === 1 && shouldSkipLlmForDoubaoTurn1(goal, snap)) {
+        if (!localPlan && !skipLocalChatInput && turn === 1 && shouldSkipLlmForDoubaoTurn1(goal, snap)) {
           localPlan = planBrowserAgentDoubaoLocalTurn(goal, snap, agentTurnCtx, 'turn1_ready');
         }
-        if (!localPlan && turn === 1 && shouldSkipLlmForDeepSeekTurn1(goal, snap)) {
+        if (!localPlan && !skipLocalChatInput && turn === 1 && shouldSkipLlmForDeepSeekTurn1(goal, snap)) {
           localPlan = planBrowserAgentDeepSeekLocalTurn(goal, snap, agentTurnCtx, 'turn1_ready');
+        }
+        if (!localPlan && !skipLocalChatInput && turn === 1 && shouldSkipLlmForGeminiTurn1(goal, snap)) {
+          localPlan = planBrowserAgentGeminiLocalTurn(goal, snap, agentTurnCtx, 'turn1_ready');
         }
         if (!localPlan && !shouldPreferLlmBrowserPlan(goal, snap)) {
           localPlan = planBrowserAgentSearchNavigateAfterInput(goal, snap, agentTurnCtx, turn);
         }
         if (
           !localPlan &&
+          !skipLocalChatInput &&
           isChatHostTaskKind(inferBrowserGoalTaskKind(goal)) &&
           !agentTurnCtx[chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).submitDone] &&
           !agentTurnCtx[chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).sendAttempted] &&
@@ -9101,7 +9510,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             planBrowserAgentChatHostLocalTurnAny(goal, snap, agentTurnCtx, 'fail_retry_' + turn) ||
             planBrowserAgentChatSubmitAfterInput(goal, snap, agentTurnCtx, turn);
         }
-        if (!localPlan && turn > 1 && isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) {
+        if (!localPlan && !skipLocalChatInput && turn > 1 && isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) {
           var chMetaRetry = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
           if (!agentTurnCtx[chMetaRetry.submitDone] && !agentTurnCtx[chMetaRetry.sendAttempted]) {
             var noteChatHost = String(agentTurnCtx.lastExecNote || '');
@@ -9114,19 +9523,51 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
               localPlan =
                 chMetaRetry.site === 'doubao'
                   ? planBrowserAgentDoubaoTimeoutFallback(goal, snap, agentTurnCtx)
-                  : planBrowserAgentDeepSeekTimeoutFallback(goal, snap, agentTurnCtx);
+                  : chMetaRetry.site === 'deepseek'
+                    ? planBrowserAgentDeepSeekTimeoutFallback(goal, snap, agentTurnCtx)
+                    : planBrowserAgentGeminiTimeoutFallback(goal, snap, agentTurnCtx);
             }
           }
         }
         if (
           !localPlan &&
+          !skipLocalChatInput &&
           turn > 1 &&
-          isChatHostTaskKind(inferBrowserGoalTaskKind(goal)) &&
-          !agentTurnCtx[chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).submitDone] &&
-          !agentTurnCtx[chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).sendAttempted] &&
-          snapIndicatesChatHost(snap, chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).site)
+          isChatHostTaskKind(inferBrowserGoalTaskKind(goal))
         ) {
-          localPlan = planBrowserAgentChatHostLocalTurnAny(goal, snap, agentTurnCtx, 'post_nav_' + turn);
+          var chMetaPost = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+          var postUrl = String((snap && snap.url) || (state && state.mobileBrowserLastUrl) || '');
+          var onChatHost =
+            siteHostMatchesSiteKey(chMetaPost.site, snapHostFromUrl(postUrl)) ||
+            snapIndicatesChatHost(snap, chMetaPost.site);
+          if (
+            !agentTurnCtx[chMetaPost.submitDone] &&
+            !agentTurnCtx[chMetaPost.sendAttempted] &&
+            onChatHost
+          ) {
+            localPlan = planBrowserAgentChatHostLocalTurnAny(goal, snap, agentTurnCtx, 'post_nav_' + turn);
+          }
+        }
+        if (
+          !localPlan &&
+          !skipLocalChatInput &&
+          inferBrowserGoalTaskKind(goal) === 'chat_gemini' &&
+          extractChatMessageFromGoal(goal) &&
+          siteHostMatchesSiteKey('gemini', snapHostFromUrl(String((snap && snap.url) || (state && state.mobileBrowserLastUrl) || ''))) &&
+          snapHasUsableElements(snap) &&
+          !agentTurnCtx.geminiSubmitDone
+        ) {
+          var chGmSkip = chatHostMetaFromKind('chat_gemini');
+          if (
+            agentTurnCtx[chGmSkip.sendAttempted] &&
+            (agentTurnCtx[chGmSkip.sendFailCount] || 0) >= 2
+          ) {
+            localPlan =
+              planBrowserAgentGeminiClickSendTurn(goal, snap, agentTurnCtx) ||
+              planBrowserAgentChatJsSendTurn(goal, snap, agentTurnCtx);
+          } else {
+            localPlan = planBrowserAgentGeminiLocalTurn(goal, snap, agentTurnCtx, 'on_host_skip_llm');
+          }
         }
         if (!localPlan && isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) {
           var chMetaSend = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
@@ -9140,6 +9581,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
               localPlan =
                 planBrowserAgentChatAttachmentDismiss(goal, snap, agentTurnCtx) ||
                 planBrowserAgentChatSubmitAfterInput(goal, snap, agentTurnCtx, turn);
+            } else if (
+              chMetaSend.site === 'gemini' &&
+              (agentTurnCtx[chMetaSend.sendFailCount] || 0) >= 2
+            ) {
+              localPlan =
+                planBrowserAgentGeminiClickSendTurn(goal, snap, agentTurnCtx) ||
+                planBrowserAgentChatJsSendTurn(goal, snap, agentTurnCtx);
             } else {
               localPlan = planBrowserAgentChatJsSendTurn(goal, snap, agentTurnCtx);
             }
@@ -9247,11 +9695,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
               '决策 · API 超时',
               '大模型未在时限内返回；尝试豆包/本地降级'
             );
+            var goalKindTmo = inferBrowserGoalTaskKind(goal);
             localPlan =
               planBrowserAgentChatHostLocalTurnAny(goal, snap, agentTurnCtx, 'llm_timeout') ||
               planBrowserAgentChatSubmitAfterInput(goal, snap, agentTurnCtx, turn) ||
-              (inferBrowserGoalTaskKind(goal) !== 'chat_doubao' &&
-              inferBrowserGoalTaskKind(goal) !== 'chat_deepseek' &&
+              (goalKindTmo === 'chat_doubao' ||
+              goalKindTmo === 'chat_deepseek' ||
+              goalKindTmo === 'chat_gemini' ||
               !shouldPreferLlmBrowserPlan(goal, snap)
                 ? planBrowserAgentApiTimeoutFallback(goal, snap, agentTurnCtx)
                 : null);
@@ -9280,6 +9730,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
               toolTurn = localPlan;
               var isDoubaoLocalSrc = String(localPlan._source || '').indexOf('doubao_local_') === 0;
               var isDeepSeekLocalSrc = String(localPlan._source || '').indexOf('deepseek_local_') === 0;
+              var isGeminiLocalSrc = String(localPlan._source || '').indexOf('gemini_local_') === 0;
               row(
                 '第 ' + turn + ' 轮 · 模型决策',
                 localPlan._source === 'chat_submit_after_input'
@@ -9288,6 +9739,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                     ? '⚠️ API 超时 · 本地重试豆包填词'
                     : isDeepSeekLocalSrc
                       ? '⚠️ API 超时 · 本地重试 DeepSeek 填词'
+                      : isGeminiLocalSrc
+                        ? '⚠️ API 超时 · 本地重试 Gemini 填词'
                     : '⚠️ API 超时 · 已切换本地搜索'
               );
               cstatForSession(
@@ -9298,6 +9751,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                     ? '⚠️ API 超时，已本地重试豆包填词（无需再等模型）'
                     : isDeepSeekLocalSrc
                       ? '⚠️ API 超时，已本地重试 DeepSeek 填词（无需再等模型）'
+                      : isGeminiLocalSrc
+                        ? '⚠️ API 超时，已本地重试 Gemini 填词（无需再等模型）'
                     : '⚠️ API 超时，已本地执行搜索（无需再等模型）',
                 ''
               );
@@ -9521,6 +9976,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             var chMetaFail = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
             var chatQFail = extractChatMessageFromGoal(goal) || String(toolTurn.text || '');
             var actPartial = exec.actResult && typeof exec.actResult === 'object' ? exec.actResult : {};
+            if (/unsafe_click_attach|unsafe_paste_attach/i.test(String(exec.error || actPartial.error || ''))) {
+              pushAdjust(turn, '点击/粘贴落在附件区，下一轮改 JS 发送（勿 browser_click 低编号）');
+              agentTurnCtx[chMetaFail.sendAttempted] = false;
+            }
             if (doubaoActIndicatesSent(actPartial, exec.snap || snapBeforeAct, chatQFail)) {
               agentTurnCtx[chMetaFail.submitDone] = true;
               agentTurnCtx[chMetaFail.failCount] = 0;
@@ -9750,19 +10209,54 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           var chatInputOk =
             actRes.inputOk === true || doubaoInputConfirmedInSnapshot(exec.snap || snap, chatQ);
           var chatSendOk =
+            actRes.idempotentSkip === true ||
             actRes.sendOk === true ||
             actRes.sentInThread === true ||
-            doubaoMessageSentInSnapshot(exec.snap || snap, chatQ) ||
-            chatHostReplyVisibleInSnapshot(exec.snap || snap, chatQ);
+            actRes.planPipe === true && (actRes.sendOk === true || actRes.sentInThread === true);
+          if (chMetaAct.site === 'gemini') {
+            chatSendOk =
+              actRes.idempotentSkip === true ||
+              actRes.sendOk === true ||
+              actRes.sentInThread === true ||
+              (doubaoMessageSentInSnapshot(exec.snap || snap, chatQ) &&
+                !doubaoInputConfirmedInSnapshot(exec.snap || snap, chatQ));
+          } else {
+            chatSendOk =
+              chatSendOk ||
+              (doubaoMessageSentInSnapshot(exec.snap || snap, chatQ) &&
+                !doubaoInputConfirmedInSnapshot(exec.snap || snap, chatQ)) ||
+              chatHostReplyVisibleInSnapshot(exec.snap || snap, chatQ);
+          }
 
-          if (chatSendOk || chatHostReplyVisibleInSnapshot(snap, chatQ)) {
+          if (chatSendOk) {
             agentTurnCtx[chMetaAct.submitDone] = true;
             agentTurnCtx[chMetaAct.failCount] = 0;
             agentTurnCtx[chMetaAct.focusAttempted] = false;
-            finishThought = '已向' + chMetaAct.label + '发送：「' + chatQ + '」。请在右侧查看 AI 回复。';
-            row('第 ' + turn + ' 轮 · ' + chMetaAct.label + '发送', chatHostReplyVisibleInSnapshot(snap, chatQ) ? '✅ 已见 AI 回复' : '✅ 已确认输入并发送');
+            agentTurnCtx[chMetaAct.sendAttempted] = true;
+            finishThought = actRes.idempotentSkip
+              ? '「' + chatQ + '」已在 ' + chMetaAct.label + ' 对话区（幂等检测），已停止重试。'
+              : '已向' + chMetaAct.label + '发送：「' + chatQ + '」。请在右侧查看 AI 回复。';
+            if (agentTurnCtx.geminiPostInstruction && chatHostReplyVisibleInSnapshot(exec.snap || snap, chatQ)) {
+              finishThought +=
+                ' 后处理指令（需你在 Chat 中让模型根据右侧回复执行）：「' +
+                agentTurnCtx.geminiPostInstruction +
+                '」。';
+            } else if (agentTurnCtx.geminiPostInstruction) {
+              finishThought += ' 待 Gemini 回复出现后，请在 Chat 中说「继续」并附上后处理：「' + agentTurnCtx.geminiPostInstruction + '」。';
+            }
+            var sendRowLabel = actRes.idempotentSkip
+              ? '✅ 对话区已有提问（幂等）'
+              : actRes.sendOk || actRes.sentInThread
+                ? '✅ 发送已确认'
+                : chatHostReplyVisibleInSnapshot(snap, chatQ)
+                  ? '✅ 已见 AI 回复'
+                  : '⚠️ 输入已写入，发送未确认';
+            row('第 ' + turn + ' 轮 · ' + chMetaAct.label + '发送', sendRowLabel);
             browserAgentTracePush(agentTrace, runStarted, turn, chMetaAct.label + '提问完成', finishThought);
             agentTurnCtx.lastGoodSnap = snap;
+            if (chatHostReplyVisibleInSnapshot(exec.snap || snap, chatQ) || chatHostReplyVisibleInSnapshot(snap, chatQ)) {
+              postHideBrowserLabelsAuto();
+            }
             break;
           }
 
@@ -9775,6 +10269,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
               row('第 ' + turn + ' 轮 · ' + chMetaAct.label + '发送', '✅ 已见 AI 回复');
               browserAgentTracePush(agentTrace, runStarted, turn, chMetaAct.label + '提问完成', finishThought);
               agentTurnCtx.lastGoodSnap = snap;
+              postHideBrowserLabelsAuto();
               break;
             }
             if (!agentTurnCtx[chMetaAct.sendAttempted]) {
@@ -9816,12 +10311,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                     row('第 ' + turn + ' 轮 · ' + chMetaAct.label + '发送', '✅ 已见 AI 回复');
                     browserAgentTracePush(agentTrace, runStarted, turn, chMetaAct.label + '提问完成', finishThought);
                     agentTurnCtx.lastGoodSnap = snap;
+                    postHideBrowserLabelsAuto();
                     break;
                   }
                   var sentConfirmed =
-                    (sendExec.actResult && (sendExec.actResult.sendOk === true || sendExec.actResult.sentInThread === true)) ||
+                    (sendExec.actResult &&
+                      (sendExec.actResult.sendOk === true ||
+                        sendExec.actResult.sentInThread === true ||
+                        sendExec.actResult.idempotentSkip === true)) ||
                     chatHostReplyVisibleInSnapshot(snap, chatQ) ||
-                    doubaoMessageSentInSnapshot(snap, chatQ);
+                    (doubaoMessageSentInSnapshot(snap, chatQ) &&
+                      !doubaoInputConfirmedInSnapshot(snap, chatQ));
                   if (sentConfirmed) {
                     agentTurnCtx[chMetaAct.submitDone] = true;
                     finishThought = '已向' + chMetaAct.label + '发送：「' + chatQ + '」。请在右侧查看回复。';
@@ -9862,6 +10362,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             agentTurnCtx[chMetaAct.failCount] = (agentTurnCtx[chMetaAct.failCount] || 0) + 1;
           } else {
             agentTurnCtx[chMetaAct.failCount] = 0;
+          }
+          if (chatInputOk && !chatSendOk && chMetaAct.sendFailCount) {
+            agentTurnCtx[chMetaAct.sendFailCount] = (agentTurnCtx[chMetaAct.sendFailCount] || 0) + 1;
+          } else if (chatSendOk && chMetaAct.sendFailCount) {
+            agentTurnCtx[chMetaAct.sendFailCount] = 0;
           }
           if ((agentTurnCtx[chMetaAct.failCount] || 0) >= 3) {
             finishThought =
@@ -9988,7 +10493,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
 
       var agentSucceeded =
-        /已向(豆包|DeepSeek)发送|已确认输入并发送|已见 AI 回复|已在.*结果页|得到回复/.test(String(finishThought || '')) ||
+        /已向(豆包|DeepSeek|Gemini)发送|Chat-Plan|已确认输入并发送|已见 AI 回复|已在.*结果页|得到回复|幂等/.test(
+          String(finishThought || '')
+        ) ||
         (isChatHostTaskKind(inferBrowserGoalTaskKind(goal)) &&
           chatHostTurnCompleteInSnapshot(snap, extractChatMessageFromGoal(goal) || ''));
       var agentTitle =
@@ -10003,9 +10510,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
       browserAgentTracePush(agentTrace, runStarted, turn || 0, '流程结束', finishThought || '单步循环已结束');
       if (agentSucceeded) {
-        try {
-          post({ type: 'niuma_browser_hide_labels' });
-        } catch (_) {}
+        postHideBrowserLabelsAuto();
       }
       var finalMd = buildBrowserAgentProgressMd(
         agentTitle,
@@ -13349,7 +13854,22 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         dispatchBrowserHostEvent(d);
         applyMobileBrowserAiBusy(false);
         var actErrCstat = formatBrowserHostActError(d);
-        if (!state.browserAgentRunning) cstat(actErrCstat, 'error');
+        var actErrReq = String(d.reqId || '');
+        var actErrStage = String(d.stage || '').toLowerCase();
+        var suppressPlanLabelErr =
+          /^plan-/.test(actErrReq) &&
+          (actErrStage === 'label' || actErrStage === 'analyze') &&
+          /TimeoutError|analyze_timeout|script_exec_failed/i.test(String(d.error || ''));
+        if (!state.browserAgentRunning && !suppressPlanLabelErr) cstat(actErrCstat, 'error');
+        return;
+      }
+      if (d.type === 'host_browser_chat_plan_result') {
+        dispatchBrowserHostEvent(d);
+        applyMobileBrowserAiBusy(false);
+        if (!state.browserAgentRunning) {
+          if (d.ok) cstat('Chat-Plan 完成', 'success');
+          else cstat('Chat-Plan 失败: ' + String(d.error || 'unknown'), 'error');
+        }
         return;
       }
       if (d.type === 'host_browser_act_result') {
@@ -13391,6 +13911,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           input.focus();
           cstat('已提取页面文本到输入框', 'success');
         } else cstat('未能提取页面文本', 'error');
+        return;
+      }
+      if (d.type === 'host_browser_agent_reset') {
+        resetBrowserAgentHostState();
         return;
       }
       if (d.type === 'host_set_drawer') {

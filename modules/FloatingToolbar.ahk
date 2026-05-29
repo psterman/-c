@@ -1777,7 +1777,16 @@ FloatingToolbar_OnWebMessage(sender, args) {
         forceDoubao := msg.Has("forceDoubaoInput") && !!msg["forceDoubaoInput"]
         chatJsSend := msg.Has("chatJsSendOnly") && !!msg["chatJsSendOnly"]
         deepseekJsFill := msg.Has("deepseekJsFillOnly") && !!msg["deepseekJsFillOnly"]
-        FloatingToolbar_DispatchBrowserAction(action, eid, val, actReqId, forceDoubao, chatJsSend, deepseekJsFill)
+        geminiJsFill := msg.Has("geminiJsFillOnly") && !!msg["geminiJsFillOnly"]
+        FloatingToolbar_DispatchBrowserAction(action, eid, val, actReqId, forceDoubao, chatJsSend, deepseekJsFill, geminiJsFill)
+        return
+    }
+    if (typ = "niuma_browser_chat_plan_execute") {
+        planText := msg.Has("text") ? String(msg["text"]) : (msg.Has("value") ? String(msg["value"]) : "")
+        planPlatform := msg.Has("platform") ? String(msg["platform"]) : ""
+        planEid := msg.Has("elementId") ? Integer(msg["elementId"]) : (msg.Has("id") ? Integer(msg["id"]) : 0)
+        planReqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        FloatingToolbar_DispatchChatPlanExecute(planText, planEid, planPlatform, planReqId)
         return
     }
     if (typ = "niuma_browser_act") {
@@ -2630,8 +2639,21 @@ FloatingToolbarSetChatDrawerState(open, force := false) {
         FloatingToolbarLastClosedY := oldY
     }
 
-    if !open
+    if !open {
+        try {
+            global g_FTB_WV2, g_FTB_WV2_Ready
+            if (g_FTB_WV2 && g_FTB_WV2_Ready)
+                WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_llm_http_cancel", "reqId", "*"))
+        } catch {
+        }
+        try {
+            global g_FTB_WV2, g_FTB_WV2_Ready
+            if (g_FTB_WV2 && g_FTB_WV2_Ready)
+                WebView_QueuePayload(g_FTB_WV2, Map("type", "host_browser_agent_reset"))
+        } catch {
+        }
         NiumaMobileBrowser_Close()
+    }
 
     if open {
         try FloatingToolbarExitCompactMode()
@@ -5061,15 +5083,28 @@ GetButtonTip(action) {
     }
 }
 
-FloatingToolbar_DispatchBrowserAction(action, eid, val, actReqId := "", forceDoubao := false, chatJsSend := false, deepseekJsFill := false) {
+FloatingToolbar_DispatchChatPlanExecute(text, eid, platform, actReqId := "") {
+    rid := String(actReqId)
+    if (rid = "")
+        rid := "plan-" . A_TickCount . "-" . Random(1000, 9999)
+    global g_NiumaMobile_ObserveReqId, g_NiumaMobile_SettleReqId, g_NiumaMobile_ActReqId
+    g_NiumaMobile_ActReqId := rid
+    g_NiumaMobile_ObserveReqId := rid
+    g_NiumaMobile_SettleReqId := rid
+    NiumaMobileBrowser_LaunchChatPlanPipe(Integer(eid), String(text), String(platform), rid)
+    return rid
+}
+
+FloatingToolbar_DispatchBrowserAction(action, eid, val, actReqId := "", forceDoubao := false, chatJsSend := false, deepseekJsFill := false, geminiJsFill := false) {
     action := String(action)
     rid := String(actReqId)
     if (rid = "")
         rid := "act-" . A_TickCount . "-" . Random(1000, 9999)
-    global g_NiumaMobile_ObserveReqId, g_NiumaMobile_SettleReqId, g_NiumaMobile_ActReqId, g_NiumaMobile_ForceDoubaoInput, g_NiumaMobile_ChatSendOnly, g_NiumaMobile_DeepseekJsFillOnly
+    global g_NiumaMobile_ObserveReqId, g_NiumaMobile_SettleReqId, g_NiumaMobile_ActReqId, g_NiumaMobile_ForceDoubaoInput, g_NiumaMobile_ChatSendOnly, g_NiumaMobile_DeepseekJsFillOnly, g_NiumaMobile_GeminiJsFillOnly
     g_NiumaMobile_ForceDoubaoInput := !!forceDoubao
     g_NiumaMobile_ChatSendOnly := !!chatJsSend
     g_NiumaMobile_DeepseekJsFillOnly := !!deepseekJsFill
+    g_NiumaMobile_GeminiJsFillOnly := !!geminiJsFill
     g_NiumaMobile_ActReqId := rid
     g_NiumaMobile_ObserveReqId := rid
     g_NiumaMobile_SettleReqId := rid

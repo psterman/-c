@@ -135,10 +135,16 @@
       var sels = [
         '[aria-placeholder*="发消息"]',
         '[aria-placeholder*="DeepSeek"]',
+        '[aria-placeholder*="Gemini"]',
+        '[aria-placeholder*="Ask Gemini"]',
+        '[aria-placeholder*="问问 Gemini"]',
         '[data-placeholder*="发消息"]',
         '[data-placeholder*="DeepSeek"]',
+        '[data-placeholder*="Gemini"]',
         '[placeholder*="发消息"]',
         '[placeholder*="DeepSeek"]',
+        '[placeholder*="问 Gemini"]',
+        '[placeholder*="Ask Gemini"]',
         '[placeholder*="发送消息"]',
         '[data-slate-editor="true"]',
         '[data-lexical-editor="true"]',
@@ -397,7 +403,14 @@
     }
 
     function findSendButton(editor) {
-      var sels = ['[aria-label*="发送"]', '[aria-label*="send"]', '[data-testid*="send"]'];
+      var sels = [
+        '[aria-label*="发送"]',
+        '[aria-label*="send"]',
+        '[aria-label*="Send"]',
+        '[data-testid*="send"]',
+        'button[aria-label*="Send message"]',
+        'button[aria-label*="发送消息"]'
+      ];
       var si, nodes, ni, btn, best, bestScore, sc;
       best = null;
       bestScore = 0;
@@ -462,7 +475,7 @@
             inputOk: true,
             sendOk: sendOkId,
             sendClicked: sendClickedId,
-            chatSubmit: true,
+            chatSubmit: !!(sendOkId || sendClickedId),
             editorText: gotId.slice(0, 120),
             methods: (byId.methods || []).join(','),
             error: sendOkId || sendClickedId ? '' : 'send_button_not_found'
@@ -486,7 +499,7 @@
           inputOk: true,
           sendOk: false,
           sendClicked: false,
-          chatSubmit: true,
+          chatSubmit: false,
           methods: 'send_only'
         });
       }
@@ -501,7 +514,7 @@
         inputOk: true,
         sendOk: sendOkOnly,
         sendClicked: true,
-        chatSubmit: true,
+        chatSubmit: !!sendOkOnly,
         editorText: gotAfter.slice(0, 120),
         methods: 'send_only',
         error: sendOkOnly ? '' : 'send_not_cleared'
@@ -549,7 +562,7 @@
       inputOk: inputOk,
       sendOk: sendOk,
       sendClicked: sendClicked,
-      chatSubmit: true,
+      chatSubmit: !!(sendOk || sendClicked),
       deferred: false,
       editorText: got.slice(0, 120),
       methods: (fill.methods || []).join(','),

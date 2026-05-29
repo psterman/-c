@@ -172,34 +172,8 @@
     }
 
     function findSentInChat(exp) {
-      if (!exp) return false;
-      var needle = exp.length >= 6 ? exp.slice(0, 6) : exp.length >= 4 ? exp.slice(0, 4) : exp;
-      var roots = [];
-      try {
-        var main = document.querySelector('main,[role="main"],[class*="chat-layout"],[class*="conversation"]');
-        if (main) roots.push(main);
-      } catch (eM) {}
-      if (!roots.length) roots.push(document.body);
-      var ri, root, nodes, i, blob;
-      for (ri = 0; ri < roots.length; ri++) {
-        root = roots[ri];
-        if (!root) continue;
-        try {
-          nodes = root.querySelectorAll(
-            '[class*="message"],[class*="bubble"],[class*="chat-item"],[data-testid*="message"],p,span,div'
-          );
-        } catch (eQ) {
-          nodes = [];
-        }
-        for (i = 0; i < nodes.length; i++) {
-          if (nodes[i] && editor && editor.contains(nodes[i])) continue;
-          blob = String(nodes[i].innerText || nodes[i].textContent || '').trim();
-          if (!blob || blob.length < needle.length) continue;
-          if (/^发消息|豆包\s*新对话|AI\s*创作|手机版/.test(blob) && blob.indexOf(needle) < 0) continue;
-          if (blob.indexOf(needle) >= 0) return true;
-          if (exp.length >= 8 && blob.indexOf(exp.slice(0, 8)) >= 0) return true;
-        }
-      }
+      if (window.__NIUMA_THREAD_CHECK__ && window.__NIUMA_THREAD_CHECK__.findSentInChat)
+        return window.__NIUMA_THREAD_CHECK__.findSentInChat(exp);
       return false;
     }
 

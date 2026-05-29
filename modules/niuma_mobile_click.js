@@ -16,6 +16,59 @@
       }
     }
 
+    function isAttachOrFileTarget(n) {
+      if (!n || n.nodeType !== 1) return false;
+      var tag = (n.tagName || '').toLowerCase();
+      var typ = String((n.getAttribute('type') || '')).toLowerCase();
+      if (tag === 'input' && typ === 'file') return true;
+      var blob =
+        String(n.getAttribute('aria-label') || '') +
+        ' ' +
+        String(n.getAttribute('title') || '') +
+        ' ' +
+        String(n.innerText || n.textContent || '') +
+        ' ' +
+        String(n.getAttribute('accept') || '');
+      if (/附件|上传|attach|paperclip|clip|image|photo|gallery|file|打开文件/i.test(blob)) return true;
+      return false;
+    }
+
+    function validateClickTarget(target, labeledEl, cx, cy) {
+      if (!target) return { ok: false, error: 'no_target' };
+      if (isAttachOrFileTarget(target)) return { ok: false, error: 'unsafe_click_attach_zone' };
+      var host = '';
+      try {
+        host = String((location.hostname || '')).toLowerCase();
+      } catch (_) {}
+      var vw = window.innerWidth || 400;
+      var sendLike = false;
+      var blob =
+        String(target.getAttribute('aria-label') || '') +
+        ' ' +
+        String(target.getAttribute('title') || '') +
+        ' ' +
+        String(target.innerText || target.textContent || '');
+      if (/发送|send|submit|提交/i.test(blob)) sendLike = true;
+      var vh = window.innerHeight || 600;
+      if (
+        (/deepseek\.com|doubao\.com|gemini\.google/.test(host) &&
+          cx < vw * 0.28 &&
+          cy > vh * 0.7 &&
+          !sendLike)
+      ) {
+        try {
+          console.error('[SECURITY_GUARD] blocked attach-zone click at (' + cx + ',' + cy + ')');
+        } catch (_) {}
+        return { ok: false, error: 'unsafe_click_attach_zone' };
+      }
+      try {
+        var hit = document.elementFromPoint(cx, cy);
+        if (hit && isAttachOrFileTarget(hit) && !target.contains(hit))
+          return { ok: false, error: 'unsafe_click_attach_zone' };
+      } catch (eH) {}
+      return { ok: true };
+    }
+
     function resolveClickTarget(root) {
       if (!root) return root;
       var tag = (root.tagName || '').toLowerCase();
@@ -82,6 +135,8 @@
     r = target.getBoundingClientRect();
     cx = r.left + r.width / 2;
     cy = r.top + r.height / 2;
+    var vClick = validateClickTarget(target, el, cx, cy);
+    if (!vClick.ok) return JSON.stringify({ ok: false, error: vClick.error || 'unsafe_click' });
     var o = { bubbles: true, cancelable: true, view: window, clientX: cx, clientY: cy };
 
     try {

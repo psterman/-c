@@ -12,12 +12,24 @@
         return false;
       }
     }
-    function findDoubaoEditorGlobal() {
+    function isUnsafePastePoint(cx, cy) {
+      var vw = window.innerWidth || 400;
       var host = '';
       try {
         host = String((location.hostname || '')).toLowerCase();
       } catch (_) {}
-      if (!/doubao\.com/.test(host)) return null;
+      if (/deepseek\.com|doubao\.com/.test(host) && cx < vw * 0.28) return true;
+      return false;
+    }
+
+    function findChatEditorGlobal() {
+      var host = '';
+      try {
+        host = String((location.hostname || '')).toLowerCase();
+      } catch (_) {}
+      var isDs = /deepseek\.com/.test(host);
+      var isDb = /doubao\.com/.test(host);
+      if (!isDs && !isDb) return null;
       function resolveTa(ta) {
         if (!ta) return null;
         var p = ta.parentElement;
@@ -33,7 +45,7 @@
         return null;
       }
       var nodes = document.querySelectorAll(
-        'textarea[placeholder*="发消息"],[aria-placeholder*="发消息"],[data-slate-editor="true"],[contenteditable="true"],[contenteditable=""]'
+        'textarea[placeholder*="发消息"],[aria-placeholder*="发消息"],[aria-placeholder*="DeepSeek"],[placeholder*="DeepSeek"],[placeholder*="发送消息"],[data-slate-editor="true"],[contenteditable="true"],[contenteditable=""]'
       );
       var best = null;
       var bestY = -1;
@@ -53,8 +65,8 @@
 
     function resolveTarget(root) {
       if (!root) return null;
-      var doubaoEd = findDoubaoEditorGlobal();
-      if (doubaoEd) return doubaoEd;
+      var chatEd = findChatEditorGlobal();
+      if (chatEd) return chatEd;
       if (root.isContentEditable || root.getAttribute('role') === 'textbox') return root;
       var tag = (root.tagName || '').toLowerCase();
       if (tag === 'textarea' || tag === 'input') {
@@ -103,6 +115,8 @@
     var r = target.getBoundingClientRect();
     var cx = r.left + r.width / 2;
     var cy = r.top + r.height / 2;
+    if (isUnsafePastePoint(cx, cy))
+      return JSON.stringify({ ok: false, error: 'unsafe_paste_attach_zone' });
     return JSON.stringify({
       ok: true,
       cx: Math.round(cx),

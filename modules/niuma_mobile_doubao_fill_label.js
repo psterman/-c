@@ -53,7 +53,29 @@
       }
     }
 
+    function clearEditor(el) {
+      if (!el) return;
+      try {
+        el.focus && el.focus();
+        if (document.execCommand) {
+          document.execCommand('selectAll', false, null);
+          document.execCommand('delete', false, null);
+        }
+      } catch (eClr) {}
+      var tag = (el.tagName || '').toLowerCase();
+      if (tag === 'textarea' || tag === 'input') {
+        try {
+          el.value = '';
+        } catch (eV0) {}
+      } else if (el.isContentEditable) {
+        try {
+          el.textContent = '';
+        } catch (eC0) {}
+      }
+    }
+
     function setNativeValue(el, text) {
+      clearEditor(el);
       var tag = (el.tagName || '').toLowerCase();
       if (tag === 'textarea' || tag === 'input') {
         try {
@@ -70,7 +92,6 @@
       if (el.isContentEditable) {
         try {
           el.focus && el.focus();
-          document.execCommand && document.execCommand('selectAll', false, null);
           document.execCommand && document.execCommand('insertText', false, text);
           fireInput(el, text);
         } catch (eC) {
@@ -106,7 +127,7 @@
         } catch (e0) {}
       }
       var nodes = document.querySelectorAll(
-        'textarea[placeholder*="发消息"],textarea[placeholder*="DeepSeek"],textarea[placeholder*="发送消息"],[aria-placeholder*="发消息"],[aria-placeholder*="DeepSeek"],[data-slate-editor="true"],[contenteditable="true"],[contenteditable=""]'
+        'textarea[placeholder*="发消息"],textarea[placeholder*="DeepSeek"],textarea[placeholder*="问 Gemini"],textarea[placeholder*="Ask Gemini"],textarea[placeholder*="发送消息"],[aria-placeholder*="发消息"],[aria-placeholder*="DeepSeek"],[aria-placeholder*="Gemini"],[data-slate-editor="true"],[contenteditable="true"],[contenteditable=""]'
       );
       var best = null;
       var bestY = -1;
@@ -168,7 +189,8 @@
     var inputOk = textOk(value, got);
     var sendOk = false;
     var sendClicked = false;
-    if (inputOk) {
+    var isGemini = /gemini\.google/i.test(String(location.hostname || ''));
+    if (inputOk && !isGemini) {
       dispatchEnter(editor);
       methods.push('enter_key');
       sendClicked = true;
@@ -180,7 +202,7 @@
       inputOk: inputOk,
       sendOk: sendOk,
       sendClicked: sendClicked,
-      chatSubmit: true,
+      chatSubmit: !!(sendOk || sendClicked),
       methods: methods.join(','),
       editorText: (got || readNode(editor)).slice(0, 120),
       editorTag: (editor.tagName || '').toLowerCase(),

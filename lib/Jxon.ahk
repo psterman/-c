@@ -281,8 +281,11 @@ _dumpValue(v) {
         esc := StrReplace(esc, "`r", "\r")
         esc := StrReplace(esc, "`t", "\t")
         return '"' . esc . '"'
-    } else if (t == "Integer" || t == "Float") {
-        ; AHK v2 中 true/false 也是 Integer，这里直接输出数字以保证数据严谨
+    } else if (v = true)
+        return "true"
+    else if (v = false)
+        return "false"
+    else if (t == "Integer" || t == "Float") {
         return String(v)
     } else if (IsObject(v)) {
         parts := []
