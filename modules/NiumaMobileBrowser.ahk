@@ -32,6 +32,13 @@ global g_NiumaMobile_Wv2Class := 0
 global JS_MOBILE_LABELING := ""
 global JS_MOBILE_CLICK_BY_ID := ""
 global JS_MOBILE_INPUT_BY_ID := ""
+global JS_MOBILE_DOUBAO_CHAT := ""
+global JS_MOBILE_DOUBAO_FOCUS := ""
+global JS_MOBILE_DOUBAO_VERIFY_SEND := ""
+global JS_MOBILE_DOUBAO_FILL_LABEL := ""
+global JS_MOBILE_DOUBAO_ACTIVATE := ""
+global JS_MOBILE_REACT_INPUT := ""
+global JS_MOBILE_ELEMENT_CENTER := ""
 global JS_MOBILE_SCROLL := ""
 global JS_MOBILE_RESOLVE := ""
 global JS_MOBILE_TRACE_OVERLAY := ""
@@ -49,6 +56,9 @@ global g_NiumaMobile_PendingActCb := 0
 global g_NiumaMobile_SilentRefresh := false
 global g_NiumaMobile_ObserveReqId := ""
 global g_NiumaMobile_ActReqId := ""
+global g_NiumaMobile_ForceDoubaoInput := false
+global g_NiumaMobile_ChatSendOnly := false
+global g_NiumaMobile_DeepseekJsFillOnly := false
 global g_NiumaMobile_NavigateAckReqId := ""
 global g_NiumaMobile_NavigateAckAction := ""
 global g_NiumaMobile_NavigateWatchdogActive := false
@@ -96,7 +106,7 @@ NIUMA_MOBILE_INJECT_JS := "(function(){try{var s=document.createElement('style')
 
 JS_MOBILE_TOGGLE_DEBUG := "(function(){try{window.__NIUMA_LABEL_DEBUG__=!window.__NIUMA_LABEL_DEBUG__;if(!window.__NIUMA_LABEL_DEBUG__){var r=document.getElementById('niuma-mobile-label-root');if(r)r.remove();var els=document.querySelectorAll('.niuma-label-badge');for(var i=0;i<els.length;i++)els[i].remove();}return JSON.stringify({ok:true,debug:!!window.__NIUMA_LABEL_DEBUG__});}catch(e){return JSON.stringify({ok:false,error:String(e)});}})();"
 
-JS_MOBILE_SET_INPUT_BLOCK := "(function(){try{document.documentElement.style.pointerEvents=__NIUMA_BLOCK__?'none':'';return JSON.stringify({ok:true});}catch(e){return JSON.stringify({ok:false});}})();"
+JS_MOBILE_SET_INPUT_BLOCK := "(function(){try{document.documentElement.style.pointerEvents='';var r=document.getElementById('niuma-mobile-label-root');if(r)r.style.pointerEvents=__NIUMA_BLOCK__?'none':'';return JSON.stringify({ok:true});}catch(e){return JSON.stringify({ok:false});}})();"
 
 class NiumaMobile_RECT extends Buffer {
     __New() => super.__New(16)
@@ -153,7 +163,7 @@ NiumaMobileBrowser_LoadScriptFile(name, &out) {
 }
 
 NiumaMobileBrowser_EnsureLabelScripts() {
-    global JS_MOBILE_LABELING, JS_MOBILE_CLICK_BY_ID, JS_MOBILE_INPUT_BY_ID, JS_MOBILE_SETTLE, JS_MOBILE_SCROLL, JS_MOBILE_RESOLVE, JS_MOBILE_TRACE_OVERLAY
+    global JS_MOBILE_LABELING, JS_MOBILE_CLICK_BY_ID, JS_MOBILE_INPUT_BY_ID, JS_MOBILE_DOUBAO_CHAT, JS_MOBILE_DOUBAO_FOCUS, JS_MOBILE_DOUBAO_VERIFY_SEND, JS_MOBILE_DOUBAO_FILL_LABEL, JS_MOBILE_DOUBAO_ACTIVATE, JS_MOBILE_REACT_INPUT, JS_MOBILE_ELEMENT_CENTER, JS_MOBILE_SETTLE, JS_MOBILE_SCROLL, JS_MOBILE_RESOLVE, JS_MOBILE_TRACE_OVERLAY
     ok := true
     NiumaMobileBrowser_Log("GUARD", "", "脚本自检开始 dir=" . NiumaMobileBrowser_ModuleDir())
     if (JS_MOBILE_LABELING = "")
@@ -162,6 +172,20 @@ NiumaMobileBrowser_EnsureLabelScripts() {
         ok := NiumaMobileBrowser_LoadScriptFile("niuma_mobile_click.js", &JS_MOBILE_CLICK_BY_ID) && ok
     if (JS_MOBILE_INPUT_BY_ID = "")
         ok := NiumaMobileBrowser_LoadScriptFile("niuma_mobile_input.js", &JS_MOBILE_INPUT_BY_ID) && ok
+    if (JS_MOBILE_REACT_INPUT = "")
+        ok := NiumaMobileBrowser_LoadScriptFile("niuma_mobile_react_input.js", &JS_MOBILE_REACT_INPUT) && ok
+    if (JS_MOBILE_ELEMENT_CENTER = "")
+        ok := NiumaMobileBrowser_LoadScriptFile("niuma_mobile_element_center.js", &JS_MOBILE_ELEMENT_CENTER) && ok
+    if (JS_MOBILE_DOUBAO_CHAT = "")
+        ok := NiumaMobileBrowser_LoadScriptFile("niuma_mobile_doubao_chat.js", &JS_MOBILE_DOUBAO_CHAT) && ok
+    if (JS_MOBILE_DOUBAO_FOCUS = "")
+        ok := NiumaMobileBrowser_LoadScriptFile("niuma_mobile_doubao_focus.js", &JS_MOBILE_DOUBAO_FOCUS) && ok
+    if (JS_MOBILE_DOUBAO_VERIFY_SEND = "")
+        ok := NiumaMobileBrowser_LoadScriptFile("niuma_mobile_doubao_verify_send.js", &JS_MOBILE_DOUBAO_VERIFY_SEND) && ok
+    if (JS_MOBILE_DOUBAO_FILL_LABEL = "")
+        ok := NiumaMobileBrowser_LoadScriptFile("niuma_mobile_doubao_fill_label.js", &JS_MOBILE_DOUBAO_FILL_LABEL) && ok
+    if (JS_MOBILE_DOUBAO_ACTIVATE = "")
+        ok := NiumaMobileBrowser_LoadScriptFile("niuma_mobile_doubao_activate.js", &JS_MOBILE_DOUBAO_ACTIVATE) && ok
     if (JS_MOBILE_SETTLE = "")
         ok := NiumaMobileBrowser_LoadScriptFile("niuma_mobile_settle.js", &JS_MOBILE_SETTLE) && ok
     if (JS_MOBILE_SCROLL = "")
@@ -173,11 +197,12 @@ NiumaMobileBrowser_EnsureLabelScripts() {
     lenLabel := StrLen(JS_MOBILE_LABELING)
     lenClick := StrLen(JS_MOBILE_CLICK_BY_ID)
     lenInput := StrLen(JS_MOBILE_INPUT_BY_ID)
+    lenReact := StrLen(JS_MOBILE_REACT_INPUT)
     lenSettle := StrLen(JS_MOBILE_SETTLE)
     lenScroll := StrLen(JS_MOBILE_SCROLL)
     lenResolve := StrLen(JS_MOBILE_RESOLVE)
     lenTrace := StrLen(JS_MOBILE_TRACE_OVERLAY)
-    NiumaMobileBrowser_Log("GUARD", "", "LabelLen=" . lenLabel . " ClickLen=" . lenClick . " InputLen=" . lenInput . " SettleLen=" . lenSettle)
+    NiumaMobileBrowser_Log("GUARD", "", "LabelLen=" . lenLabel . " ClickLen=" . lenClick . " InputLen=" . lenInput . " ReactInputLen=" . lenReact . " SettleLen=" . lenSettle)
     if !ok {
         NiumaMobileBrowser_Log("GUARD", "", "脚本自检失败：文件缺失")
         return false
@@ -211,6 +236,15 @@ NiumaMobileBrowser_CallFunc(fnName, params*) {
 NiumaMobileBrowser_TryCallFunc(fnName, params*) {
     try {
         Func(fnName).Call(params*)
+        return true
+    } catch {
+        return false
+    }
+}
+
+NiumaMobileBrowser_FuncExists(fnName) {
+    try {
+        Func(fnName)
         return true
     } catch {
         return false
@@ -420,13 +454,40 @@ NiumaMobileBrowser_OnEnvReady(hwndParent, env) {
 }
 
 NiumaMobileBrowser_InjectSettleOnDocumentCreated(*) {
-    global g_NiumaMobile_WV2, JS_MOBILE_SETTLE
-    if !IsObject(g_NiumaMobile_WV2) || JS_MOBILE_SETTLE = ""
+    global g_NiumaMobile_WV2, JS_MOBILE_SETTLE, JS_MOBILE_REACT_INPUT
+    if !IsObject(g_NiumaMobile_WV2)
+        return
+    if (JS_MOBILE_REACT_INPUT != "") {
+        try g_NiumaMobile_WV2.AddScriptToExecuteOnDocumentCreatedAsync(JS_MOBILE_REACT_INPUT)
+        catch as eReact {
+            NiumaMobileBrowser_Log("GUARD", "", "ReactInput 文档注入失败(非阻塞): " . eReact.Message)
+        }
+    }
+    if (JS_MOBILE_SETTLE = "")
         return
     try g_NiumaMobile_WV2.AddScriptToExecuteOnDocumentCreatedAsync(JS_MOBILE_SETTLE)
     catch as eAdd {
         NiumaMobileBrowser_Log("GUARD", "", "Settle 文档注入失败(非阻塞): " . eAdd.Message)
     }
+}
+
+NiumaMobileBrowser_EnsureReactInputInjected() {
+    global g_NiumaMobile_WV2, JS_MOBILE_REACT_INPUT
+    if !g_NiumaMobile_WV2 || JS_MOBILE_REACT_INPUT = ""
+        return false
+    try {
+        raw := g_NiumaMobile_WV2.ExecuteScriptAsync(
+            "!!(window.__NIUMA_REACT_INPUT__&&window.__NIUMA_REACT_INPUT__.fillByLabelId)"
+        ).await(2000)
+        if (InStr(String(raw), "true"))
+            return true
+    } catch {
+    }
+    try g_NiumaMobile_WV2.ExecuteScriptAsync(JS_MOBILE_REACT_INPUT).await(3000)
+    catch {
+        return false
+    }
+    return true
 }
 
 NiumaMobileBrowser_OnControllerReady(ctrl) {
@@ -536,7 +597,7 @@ NiumaMobileBrowser_OnNavigationStarting(sender, args) {
 }
 
 NiumaMobileBrowser_OnNavigationCompleted(sender, args) {
-    global g_NiumaMobile_WV2, NIUMA_MOBILE_INJECT_JS, JS_MOBILE_SETTLE, g_NiumaMobile_SettleNavPending, g_NiumaMobile_SettleReqId
+    global g_NiumaMobile_WV2, NIUMA_MOBILE_INJECT_JS, JS_MOBILE_SETTLE, JS_MOBILE_REACT_INPUT, g_NiumaMobile_SettleNavPending, g_NiumaMobile_SettleReqId
         , g_NiumaMobile_AiPaused, g_NiumaMobile_PendingAnalyzeCb, g_NiumaMobile_AiBusy, g_NiumaMobile_ObserveReqId
         , g_NiumaMobile_NavigateWatchdogActive, g_NiumaMobile_NavigateAckReqId
     if !g_NiumaMobile_WV2
@@ -547,6 +608,12 @@ NiumaMobileBrowser_OnNavigationCompleted(sender, args) {
             navOk := false
     } catch {
     }
+    try {
+        uNav := g_NiumaMobile_WV2.SourceUri
+        if (uNav != "")
+            g_NiumaMobile_LastKnownUrl := String(uNav)
+    } catch {
+    }
     if (g_NiumaMobile_NavigateWatchdogActive && String(g_NiumaMobile_NavigateAckReqId) != "") {
         ; 导航完成优先关闭 watchdog，避免出现伪超时日志。
         SetTimer(NiumaMobileBrowser_NavigateWatchdogTimeout, 0)
@@ -554,6 +621,10 @@ NiumaMobileBrowser_OnNavigationCompleted(sender, args) {
     }
     try g_NiumaMobile_WV2.ExecuteScriptAsync(NIUMA_MOBILE_INJECT_JS)
     catch {
+    }
+    if (JS_MOBILE_REACT_INPUT != "") {
+        if NiumaMobileBrowser_EnsureLabelScripts()
+            NiumaMobileBrowser_EnsureReactInputInjected()
     }
     ; 注入调试悬浮窗（右侧浏览器）
     try NiumaMobileBrowser_EnsureTraceOverlayInjected()
@@ -607,7 +678,7 @@ NiumaMobileBrowser_TraceOverlayPush(line, level := "") {
     }
     s := NiumaMobileBrowser_EscapeJsSingle(String(line))
     lv := NiumaMobileBrowser_EscapeJsSingle(String(level))
-    js := "(function(){try{if(window.__NIUMA_TRACE_OVERLAY__&&window.__NIUMA_TRACE_OVERLAY__.push){window.__NIUMA_TRACE_OVERLAY__.show&&window.__NIUMA_TRACE_OVERLAY__.show();window.__NIUMA_TRACE_OVERLAY__.push('" . s . "','" . lv . "');return 'ok';}return 'no';}catch(e){return 'err';}})();"
+    js := "(function(){try{if(window.__NIUMA_TRACE_OVERLAY__&&window.__NIUMA_TRACE_OVERLAY__.push){window.__NIUMA_TRACE_OVERLAY__.push('" . s . "','" . lv . "');return 'ok';}return 'no';}catch(e){return 'err';}})();"
     try g_NiumaMobile_WV2.ExecuteScriptAsync(js)
     catch {
         return false
@@ -892,12 +963,47 @@ NiumaMobileBrowser_EscapeJsSingle(s) {
     return t
 }
 
+NiumaMobileBrowser_EmbedJsTextLiteral(text) {
+    t := Trim(String(text))
+    if (t = "")
+        return "''"
+    return "'" . NiumaMobileBrowser_EscapeJsSingle(t) . "'"
+}
+
 NiumaMobileBrowser_IsCompatReqId(reqId) {
     rid := String(reqId)
     return (SubStr(rid, 1, 7) = "compat-")
 }
 
-NiumaMobileBrowser_QueueActToChat(typ, reqId, ok := false, err := "", action := "", elementId := 0, cancelled := false, stage := "") {
+NiumaMobileBrowser_BuildActExtraJson(parsed) {
+    if !(parsed is Map)
+        return ""
+    out := ""
+    for key in ["inputOk", "sendOk", "sentInThread", "sendClicked", "submitted", "deferred", "chatSubmit"] {
+        if !parsed.Has(key)
+            continue
+        val := parsed[key]
+        if (val is String)
+            out .= ',"' . key . '":"' . NiumaMobileBrowser_EscapeJsonStr(String(val)) . '"'
+        else
+            out .= ',"' . key . '":' . (val ? "true" : "false")
+    }
+    if parsed.Has("editorText") {
+        et := String(parsed["editorText"])
+        if (StrLen(et) > 160)
+            et := SubStr(et, 1, 160)
+        out .= ',"editorText":"' . NiumaMobileBrowser_EscapeJsonStr(et) . '"'
+    }
+    if parsed.Has("methods") {
+        mt := String(parsed["methods"])
+        if (StrLen(mt) > 80)
+            mt := SubStr(mt, 1, 80)
+        out .= ',"methods":"' . NiumaMobileBrowser_EscapeJsonStr(mt) . '"'
+    }
+    return out
+}
+
+NiumaMobileBrowser_QueueActToChat(typ, reqId, ok := false, err := "", action := "", elementId := 0, cancelled := false, stage := "", parsed := 0) {
     wv2 := NiumaMobileBrowser_ChatWv2()
     rid := String(reqId)
     st := NiumaMobileBrowser_NormalizeStage(stage)
@@ -918,7 +1024,8 @@ NiumaMobileBrowser_QueueActToChat(typ, reqId, ok := false, err := "", action := 
         . ',"action":"' . NiumaMobileBrowser_EscapeJsonStr(String(action)) . '"'
         . ',"elementId":' . Integer(elementId)
         . ',"cancelled":' . (cancelled ? "true" : "false")
-        . ',"stage":"' . NiumaMobileBrowser_EscapeJsonStr(st) . '"}'
+        . ',"stage":"' . NiumaMobileBrowser_EscapeJsonStr(st) . '"'
+        . NiumaMobileBrowser_BuildActExtraJson(parsed) . '}'
     sent := false
     try {
         if NiumaMobileBrowser_TryCallFunc("WebView_QueueJson", wv2, json) {
@@ -937,7 +1044,8 @@ NiumaMobileBrowser_QueueActToChat(typ, reqId, ok := false, err := "", action := 
             . ',"action":"' . NiumaMobileBrowser_EscapeJsonStr(String(action)) . '"'
             . ',"elementId":' . Integer(elementId)
             . ',"cancelled":' . (cancelled ? "true" : "false")
-            . ',"stage":"' . NiumaMobileBrowser_EscapeJsonStr(st) . '"}'
+            . ',"stage":"' . NiumaMobileBrowser_EscapeJsonStr(st) . '"'
+            . NiumaMobileBrowser_BuildActExtraJson(parsed) . '}'
         try {
             if !NiumaMobileBrowser_TryCallFunc("WebView_QueueJson", wv2, legacy)
                 wv2.PostWebMessageAsJson(legacy)
@@ -1169,22 +1277,27 @@ NiumaMobileBrowser_NotifyStateLive(url := "") {
     NiumaMobileBrowser_NotifyState(NiumaMobileBrowser_IsOpen(), u)
 }
 
-NiumaMobileBrowser_SetAiBusy(busy) {
+NiumaMobileBrowser_SetAiBusy(busy, blockPage := true) {
     global g_NiumaMobile_AiBusy
     g_NiumaMobile_AiBusy := !!busy
     wv2 := NiumaMobileBrowser_ChatWv2()
     if wv2
         NiumaMobileBrowser_TryCallFunc("WebView_QueuePayload", wv2, Map("type", "host_browser_ai_busy", "busy", !!busy))
-    NiumaMobileBrowser_SetInputBlocked(!!busy)
+    if blockPage
+        NiumaMobileBrowser_SetInputBlocked(!!busy, true)
 }
 
-NiumaMobileBrowser_SetInputBlocked(block) {
+NiumaMobileBrowser_SetInputBlocked(block, waitDone := false) {
     global g_NiumaMobile_WV2, JS_MOBILE_SET_INPUT_BLOCK
     if !g_NiumaMobile_WV2
         return
     script := StrReplace(JS_MOBILE_SET_INPUT_BLOCK, "__NIUMA_BLOCK__", block ? "true" : "false")
-    try g_NiumaMobile_WV2.ExecuteScriptAsync(script)
-    catch {
+    try {
+        if waitDone
+            g_NiumaMobile_WV2.ExecuteScriptAsync(script).await(1500)
+        else
+            g_NiumaMobile_WV2.ExecuteScriptAsync(script)
+    } catch {
     }
 }
 
@@ -1226,7 +1339,7 @@ NiumaMobileBrowser_NotifySnapshotReady(wv2, reqId, arrLen, url := "", err := "")
 
 NiumaMobileBrowser_IsChatBridgeReady() {
     try {
-        if FuncExists("FloatingToolbar_IsChatBridgeReady")
+        if NiumaMobileBrowser_FuncExists("FloatingToolbar_IsChatBridgeReady")
             return !!Func("FloatingToolbar_IsChatBridgeReady").Call()
     } catch as e {
         ; 极少数情况下 Func().Call 可能抛异常（加载时序/函数未就绪）。退回到全局标志位+句柄检查，避免假 not_ready。
@@ -1370,6 +1483,8 @@ NiumaMobileBrowser_QueueSnapshotToChat(items, url := "", err := "", truncated :=
         NiumaMobileBrowser_Log("CHAT_OUT", rid, "host_browser_snapshot snapshot 非数组，回退 []")
         rawElementsJson := "[]"
     }
+    if (arrLen > 0)
+        err := ""
     finalSafePayload := '{"type":"host_browser_snapshot"'
         . ',"reqId":"' . NiumaMobileBrowser_EscapeJsonStr(rid) . '"'
         . ',"count":' . arrLen . ',"arrLen":' . arrLen
@@ -1390,6 +1505,42 @@ NiumaMobileBrowser_QueueSnapshotToChat(items, url := "", err := "", truncated :=
     return true
 }
 
+NiumaMobileBrowser_ParseCompactItemsJson(itemsJson) {
+    items := []
+    j := Trim(String(itemsJson))
+    if (j = "" || j = "[]")
+        return items
+    pos := 1
+    while RegExMatch(j, '"id"\s*:\s*(\d+)', &mId, pos) {
+        id := Integer(mId[1])
+        chunkStart := mId.Pos
+        nextPos := StrLen(j) + 1
+        if RegExMatch(j, '"id"\s*:\s*\d+', &mNext, chunkStart + 4)
+            nextPos := mNext.Pos
+        chunk := SubStr(j, chunkStart, nextPos - chunkStart)
+        el := Map("id", id)
+        if RegExMatch(chunk, '"tag"\s*:\s*"([^"]*)"', &mt)
+            el["tag"] := mt[1]
+        if RegExMatch(chunk, '"type"\s*:\s*"([^"]*)"', &mty)
+            el["type"] := mty[1]
+        if RegExMatch(chunk, '"text"\s*:\s*"((?:\\.|[^"\\])*)"', &mtx)
+            el["text"] := StrReplace(StrReplace(mtx[1], '\"', '"'), '\\', '\')
+        if RegExMatch(chunk, '"hint"\s*:\s*"([^"]*)"', &mh)
+            el["hint"] := mh[1]
+        if RegExMatch(chunk, '"role"\s*:\s*"([^"]*)"', &mr)
+            el["role"] := mr[1]
+        if RegExMatch(chunk, '"roleHint"\s*:\s*"([^"]*)"', &mrh)
+            el["roleHint"] := mrh[1]
+        if RegExMatch(chunk, '"sel"\s*:\s*"([^"]*)"', &ms)
+            el["sel"] := ms[1]
+        items.Push(el)
+        pos := chunkStart + StrLen(chunk)
+        if (pos <= chunkStart)
+            pos += 4
+    }
+    return items
+}
+
 NiumaMobileBrowser_ParseItemsArrayJson(itemsJson) {
     items := []
     j := Trim(String(itemsJson))
@@ -1397,15 +1548,17 @@ NiumaMobileBrowser_ParseItemsArrayJson(itemsJson) {
         return items
     try {
         arr := NiumaMobileBrowser_CallFunc("Jxon_Load", j)
-        if !(arr is Array)
-            return items
-        for , el in arr {
-            if (el is Map)
-                items.Push(el)
+        if (arr is Array) {
+            for , el in arr {
+                if (el is Map)
+                    items.Push(el)
+            }
+            if (items.Length > 0)
+                return items
         }
     } catch {
     }
-    return items
+    return NiumaMobileBrowser_ParseCompactItemsJson(j)
 }
 
 NiumaMobileBrowser_ExtractItemsJson(s, &outItemsJson, &outCount) {
@@ -1839,11 +1992,37 @@ NiumaMobileBrowser_InferActMapFromRaw(raw) {
         return 0
     if RegExMatch(s, 'i)"ok"\s*:\s*false\b') {
         err := NiumaMobileBrowser_ScriptJsonExtractStringField(s, "error")
-        return Map("ok", false, "error", err != "" ? err : "script_failed", "inferred", true)
+        m := Map("ok", false, "error", err != "" ? err : "script_failed", "inferred", true)
+        if RegExMatch(s, 'i)"inputOk"\s*:\s*false\b')
+            m["inputOk"] := false
+        if RegExMatch(s, 'i)"sendOk"\s*:\s*false\b')
+            m["sendOk"] := false
+        if RegExMatch(s, 'i)"inputOk"\s*:\s*true\b')
+            m["inputOk"] := true
+        if RegExMatch(s, 'i)"sendOk"\s*:\s*true\b')
+            m["sendOk"] := true
+        et := NiumaMobileBrowser_ScriptJsonExtractStringField(s, "editorText")
+        if (et != "")
+            m["editorText"] := et
+        mt := NiumaMobileBrowser_ScriptJsonExtractStringField(s, "methods")
+        if (mt != "")
+            m["methods"] := mt
+        return m
     }
     if !NiumaMobileBrowser_ScriptJsonHasOkTrue(s)
         return 0
     m := Map("ok", true, "inferred", true)
+    if RegExMatch(s, 'i)"inputOk"\s*:\s*false\b') {
+        m["ok"] := false
+        m["inputOk"] := false
+    } else if RegExMatch(s, 'i)"inputOk"\s*:\s*true\b')
+        m["inputOk"] := true
+    if RegExMatch(s, 'i)"sendOk"\s*:\s*false\b')
+        m["sendOk"] := false
+    else if RegExMatch(s, 'i)"sendOk"\s*:\s*true\b')
+        m["sendOk"] := true
+    if (m.Has("inputOk") && !m["inputOk"])
+        m["ok"] := false
     if RegExMatch(s, 'i)"submitted"\s*:\s*true')
         m["submitted"] := true
     if RegExMatch(s, 'i)"deferred"\s*:\s*true')
@@ -1851,6 +2030,12 @@ NiumaMobileBrowser_InferActMapFromRaw(raw) {
     tag := NiumaMobileBrowser_ScriptJsonExtractStringField(s, "tag")
     if (tag != "")
         m["tag"] := tag
+    et := NiumaMobileBrowser_ScriptJsonExtractStringField(s, "editorText")
+    if (et != "")
+        m["editorText"] := et
+    mt := NiumaMobileBrowser_ScriptJsonExtractStringField(s, "methods")
+    if (mt != "")
+        m["methods"] := mt
     return m
 }
 
@@ -2011,16 +2196,19 @@ NiumaMobileBrowser_OnAnalyzeDone(result) {
     }
     if (err = "" && RegExMatch(s, 'i)"skipped"\s*:\s*true\b'))
         err := "viewport_throttle"
-    if (g_NiumaMobile_LastElementsCount > 0 && g_NiumaMobile_LastElementsJson != "[]") {
-        ; 只在必要时降级解析，避免常态下再次解析整个 items JSON。
-        if IsObject(cb)
-            items := NiumaMobileBrowser_ParseItemsArrayJson(g_NiumaMobile_LastElementsJson)
-        if ((items.Length > 0 || g_NiumaMobile_LastElementsCount > 0) && (err = "json_parse_failed" || err = "label_parse_empty"))
+    if (g_NiumaMobile_LastElementsCount > 0 && g_NiumaMobile_LastElementsJson != "" && g_NiumaMobile_LastElementsJson != "[]") {
+        items := NiumaMobileBrowser_ParseItemsArrayJson(g_NiumaMobile_LastElementsJson)
+    }
+    if (items.Length < 1 && g_NiumaMobile_LastElementsCount > 0 && g_NiumaMobile_LastElementsJson != "" && g_NiumaMobile_LastElementsJson != "[]") {
+        items := NiumaMobileBrowser_ParseCompactItemsJson(g_NiumaMobile_LastElementsJson)
+    }
+    if (g_NiumaMobile_LastElementsCount > 0) {
+        if (err = "json_parse_failed" || err = "label_parse_empty")
             err := ""
     }
     global g_NiumaMobile_ObserveReqId
     obsReqId := g_NiumaMobile_ObserveReqId
-    if (err = "" && items.Length = 0)
+    if (err = "" && items.Length = 0 && g_NiumaMobile_LastElementsCount < 1)
         err := "label_parse_empty"
     g_NiumaMobile_LastSnapshot := items
     rawHead := SubStr(String(result), 1, 220)
@@ -2110,6 +2298,609 @@ NiumaMobileBrowser_BuildInputScript(elementId, text) {
         esc := '""'
     s := StrReplace(JS_MOBILE_INPUT_BY_ID, "__NIUMA_ID__", id)
     return StrReplace(s, "__NIUMA_TEXT__", esc)
+}
+
+NiumaMobileBrowser_BuildDoubaoChatScript(elementId, text, sendOnly := false) {
+    global JS_MOBILE_DOUBAO_CHAT
+    if (JS_MOBILE_DOUBAO_CHAT = "" && !NiumaMobileBrowser_EnsureLabelScripts())
+        return ""
+    id := Integer(elementId)
+    if (id < 1)
+        id := 0
+    esc := NiumaMobileBrowser_EmbedJsTextLiteral(text)
+    s := StrReplace(JS_MOBILE_DOUBAO_CHAT, "__NIUMA_ID__", id)
+    s := StrReplace(s, "__NIUMA_TEXT__", esc)
+    return StrReplace(s, "__NIUMA_SEND_ONLY__", sendOnly ? "true" : "false")
+}
+
+NiumaMobileBrowser_BuildDoubaoFocusScript(elementId, text) {
+    global JS_MOBILE_DOUBAO_FOCUS
+    if (JS_MOBILE_DOUBAO_FOCUS = "" && !NiumaMobileBrowser_EnsureLabelScripts())
+        return ""
+    id := Integer(elementId)
+    if (id < 1)
+        id := 0
+    esc := NiumaMobileBrowser_EmbedJsTextLiteral(text)
+    s := StrReplace(JS_MOBILE_DOUBAO_FOCUS, "__NIUMA_ID__", id)
+    return StrReplace(s, "__NIUMA_TEXT__", esc)
+}
+
+NiumaMobileBrowser_BuildDoubaoActivateScript(elementId) {
+    global JS_MOBILE_DOUBAO_ACTIVATE
+    if (JS_MOBILE_DOUBAO_ACTIVATE = "" && !NiumaMobileBrowser_EnsureLabelScripts())
+        return ""
+    id := Integer(elementId)
+    if (id < 1)
+        id := 0
+    return StrReplace(JS_MOBILE_DOUBAO_ACTIVATE, "__NIUMA_ID__", id)
+}
+
+NiumaMobileBrowser_BuildDoubaoFillLabelScript(elementId, text) {
+    global JS_MOBILE_DOUBAO_FILL_LABEL
+    if (JS_MOBILE_DOUBAO_FILL_LABEL = "" && !NiumaMobileBrowser_EnsureLabelScripts())
+        return ""
+    id := Integer(elementId)
+    if (id < 1)
+        id := 0
+    esc := NiumaMobileBrowser_EmbedJsTextLiteral(text)
+    s := StrReplace(JS_MOBILE_DOUBAO_FILL_LABEL, "__NIUMA_ID__", id)
+    return StrReplace(s, "__NIUMA_TEXT__", esc)
+}
+
+NiumaMobileBrowser_DismissOpenFileDialog() {
+    try {
+        if WinExist("ahk_class #32770") {
+            winTitle := WinGetTitle("ahk_class #32770")
+            if InStr(winTitle, "打开") || InStr(winTitle, "Open") {
+                WinClose("ahk_class #32770")
+                Sleep(80)
+                return true
+            }
+        }
+    } catch {
+    }
+    return false
+}
+
+NiumaMobileBrowser_IsDeepSeekPage(url := "") {
+    u := url != "" ? String(url) : NiumaMobileBrowser_GetPageUrl()
+    return InStr(u, "deepseek.com") > 0
+}
+
+NiumaMobileBrowser_PhysicalSendEnter() {
+    global g_NiumaMobile_ParentHwnd, g_NiumaMobile_Ctrl
+    if g_NiumaMobile_ParentHwnd {
+        try DllCall("SetForegroundWindow", "Ptr", g_NiumaMobile_ParentHwnd)
+        Sleep(80)
+    }
+    if g_NiumaMobile_Ctrl {
+        try g_NiumaMobile_Ctrl.Focus()
+        catch {
+        }
+        Sleep(60)
+    }
+    try SendInput("{Enter}")
+    Sleep(120)
+    try SendInput("^{Enter}")
+    Sleep(120)
+    return true
+}
+
+NiumaMobileBrowser_BuildDoubaoVerifySendScript(text, elementId := 0) {
+    global JS_MOBILE_DOUBAO_VERIFY_SEND
+    if (JS_MOBILE_DOUBAO_VERIFY_SEND = "" && !NiumaMobileBrowser_EnsureLabelScripts())
+        return ""
+    esc := NiumaMobileBrowser_EmbedJsTextLiteral(text)
+    s := StrReplace(JS_MOBILE_DOUBAO_VERIFY_SEND, "__NIUMA_TEXT__", esc)
+    return StrReplace(s, "__NIUMA_ID__", Integer(elementId))
+}
+
+NiumaMobileBrowser_BuildElementCenterScript(elementId) {
+    global JS_MOBILE_ELEMENT_CENTER
+    if (JS_MOBILE_ELEMENT_CENTER = "" && !NiumaMobileBrowser_EnsureLabelScripts())
+        return ""
+    id := Integer(elementId)
+    if (id < 1)
+        id := 0
+    return StrReplace(JS_MOBILE_ELEMENT_CENTER, "__NIUMA_ID__", id)
+}
+
+NiumaMobileBrowser_ClientCoordsToScreen(cx, cy) {
+    global g_NiumaMobile_ParentHwnd, g_NiumaMobile_Ctrl
+    cx := Integer(cx)
+    cy := Integer(cy)
+    ctrlHwnd := 0
+    if IsObject(g_NiumaMobile_Ctrl) {
+        try ctrlHwnd := g_NiumaMobile_Ctrl.Hwnd
+        catch {
+        }
+    }
+    if (ctrlHwnd) {
+        pt := Buffer(8, 0)
+        NumPut("Int", cx, pt, 0)
+        NumPut("Int", cy, pt, 4)
+        if !DllCall("ClientToScreen", "Ptr", ctrlHwnd, "Ptr", pt)
+            return Map("ok", false, "error", "ctrl_client_to_screen_failed")
+        return Map("ok", true, "x", NumGet(pt, 0, "Int"), "y", NumGet(pt, 4, "Int"), "cx", cx, "cy", cy, "source", "webview_ctrl")
+    }
+    hwnd := g_NiumaMobile_ParentHwnd
+    if !hwnd
+        return Map("ok", false, "error", "browser_not_ready")
+    try NiumaMobileBrowser_ApplyBounds(hwnd)
+    catch {
+    }
+    try WinGetClientPos(, , &cw, &ch, hwnd)
+    catch {
+        return Map("ok", false, "error", "client_pos_failed")
+    }
+    mobileW := NiumaMobileBrowser_WidthPx()
+    if (mobileW > cw)
+        mobileW := cw
+    offLeft := Max(0, cw - mobileW)
+    pt := Buffer(8, 0)
+    NumPut("Int", offLeft + cx, pt, 0)
+    NumPut("Int", cy, pt, 4)
+    if !DllCall("ClientToScreen", "Ptr", hwnd, "Ptr", pt)
+        return Map("ok", false, "error", "client_to_screen_failed")
+    return Map("ok", true, "x", NumGet(pt, 0, "Int"), "y", NumGet(pt, 4, "Int"), "cx", cx, "cy", cy, "source", "parent_client")
+}
+
+NiumaMobileBrowser_GetElementScreenPoint(elementId) {
+    global g_NiumaMobile_WV2, g_NiumaMobile_Ctrl, g_NiumaMobile_ParentHwnd
+    if !g_NiumaMobile_WV2 || !g_NiumaMobile_Ctrl || !g_NiumaMobile_ParentHwnd
+        return Map("ok", false, "error", "browser_not_ready")
+    script := NiumaMobileBrowser_BuildElementCenterScript(elementId)
+    if (script = "")
+        return Map("ok", false, "error", "center_script_missing")
+    try {
+        raw := g_NiumaMobile_WV2.ExecuteScriptAsync(script).await(5000)
+        norm := NiumaMobileBrowser_NormalizeScriptRaw(String(raw))
+        parsed := NiumaMobileBrowser_ParseScriptJson(norm)
+        if !(parsed is Map) || !parsed.Has("ok") || !parsed["ok"]
+            return Map("ok", false, "error", parsed.Has("error") ? String(parsed["error"]) : "center_failed")
+        return NiumaMobileBrowser_ClientCoordsToScreen(
+            Integer(parsed.Has("cx") ? parsed["cx"] : 0),
+            Integer(parsed.Has("cy") ? parsed["cy"] : 0)
+        )
+    } catch as e {
+        return Map("ok", false, "error", e.Message)
+    }
+}
+
+NiumaMobileBrowser_IsValidPasteClientPoint(cx, cy) {
+    return Integer(cy) >= 40 && Integer(cx) >= 0
+}
+
+NiumaMobileBrowser_IsValidPasteScreenPoint(pt) {
+    if !(pt is Map) || !pt.Has("ok") || !pt["ok"]
+        return false
+    if pt.Has("cy") && NiumaMobileBrowser_IsValidPasteClientPoint(pt["cx"], pt["cy"])
+        return true
+    y := Integer(pt.Has("y") ? pt["y"] : 0)
+    x := Integer(pt.Has("x") ? pt["x"] : 0)
+    return (y >= 60 && x >= 40)
+}
+
+NiumaMobileBrowser_PointFromActivateJson(activateJson) {
+    if (activateJson = "")
+        return Map("ok", false, "error", "no_activate_json")
+    parsed := NiumaMobileBrowser_ParseScriptJson(activateJson)
+    if !(parsed is Map) || !parsed.Has("ok") || !parsed["ok"]
+        return Map("ok", false, "error", "activate_not_ok")
+    if !parsed.Has("cx") || !parsed.Has("cy")
+        return Map("ok", false, "error", "activate_no_coords")
+    cy := Integer(parsed["cy"])
+    cx := Integer(parsed["cx"])
+    if !NiumaMobileBrowser_IsValidPasteClientPoint(cx, cy)
+        return Map("ok", false, "error", "activate_bad_client_xy")
+    pt := NiumaMobileBrowser_ClientCoordsToScreen(cx, cy)
+    if (pt is Map) && pt.Has("ok") && pt["ok"]
+        pt["source"] := "doubao_activate"
+    return pt
+}
+
+NiumaMobileBrowser_GetDoubaoEditorScreenPoint(elementId, activateJson := "") {
+    global g_NiumaMobile_WV2
+    if (activateJson != "") {
+        ptAct := NiumaMobileBrowser_PointFromActivateJson(activateJson)
+        if NiumaMobileBrowser_IsValidPasteScreenPoint(ptAct)
+            return ptAct
+    }
+    if !g_NiumaMobile_WV2
+        return Map("ok", false, "error", "browser_not_ready")
+    script := NiumaMobileBrowser_BuildDoubaoActivateScript(elementId)
+    if (script != "") {
+        try {
+            raw := g_NiumaMobile_WV2.ExecuteScriptAsync(script).await(8000)
+            norm := NiumaMobileBrowser_NormalizeScriptRaw(String(raw))
+            ptAct2 := NiumaMobileBrowser_PointFromActivateJson(norm)
+            if NiumaMobileBrowser_IsValidPasteScreenPoint(ptAct2)
+                return ptAct2
+        } catch {
+        }
+    }
+    ptEl := NiumaMobileBrowser_GetElementScreenPoint(elementId)
+    if NiumaMobileBrowser_IsValidPasteScreenPoint(ptEl) {
+        ptEl["source"] := "element_center"
+        return ptEl
+    }
+    return Map("ok", false, "error", "invalid_paste_point")
+}
+
+NiumaMobileBrowser_FocusBrowserForPhysical() {
+    global g_NiumaMobile_ParentHwnd, g_NiumaMobile_Ctrl
+    if g_NiumaMobile_ParentHwnd {
+        try DllCall("SetForegroundWindow", "Ptr", g_NiumaMobile_ParentHwnd)
+        Sleep(150)
+    }
+    if g_NiumaMobile_Ctrl {
+        try g_NiumaMobile_Ctrl.Focus()
+        catch {
+        }
+        Sleep(100)
+    }
+}
+
+NiumaMobileBrowser_PhysicalClickScreenPoint(x, y) {
+    CoordMode("Mouse", "Screen")
+    try {
+        Click(Integer(x), Integer(y), 1)
+        Sleep(100)
+        Click(Integer(x), Integer(y), 1)
+        Sleep(120)
+        return true
+    } catch {
+        return false
+    }
+}
+
+; Slate：剪贴板 + ^v（OS 级输入，不依赖 DOM value）
+NiumaMobileBrowser_PhysicalPasteAtScreenPoint(x, y, text) {
+    txt := String(text)
+    if (txt = "")
+        return false
+    NiumaMobileBrowser_FocusBrowserForPhysical()
+    if !NiumaMobileBrowser_PhysicalClickScreenPoint(x, y)
+        return false
+    Sleep(220)
+    clipSaved := ClipboardAll()
+    pasted := false
+    try {
+        A_Clipboard := ""
+        A_Clipboard := txt
+        if ClipWait(2) {
+            SendInput("^v")
+            Sleep(450)
+            pasted := true
+        }
+    } catch {
+    }
+    try A_Clipboard := clipSaved
+    catch {
+        A_Clipboard := ""
+    }
+    return pasted
+}
+
+; Slate 兜底：SendText 模拟真实键盘逐字输入
+NiumaMobileBrowser_PhysicalTypeInput(elementId, text, activateJson := "") {
+    txt := String(text)
+    if (txt = "")
+        return false
+    pt := NiumaMobileBrowser_GetDoubaoEditorScreenPoint(elementId, activateJson)
+    if !(pt is Map) || !pt.Has("ok") || !pt["ok"]
+        return false
+    NiumaMobileBrowser_FocusBrowserForPhysical()
+    if !NiumaMobileBrowser_PhysicalClickScreenPoint(pt["x"], pt["y"])
+        return false
+    Sleep(280)
+    try {
+        SendText(txt)
+        Sleep(500)
+        return true
+    } catch {
+        return false
+    }
+}
+
+NiumaMobileBrowser_PhysicalPasteInput(elementId, text, activateJson := "") {
+    global g_NiumaMobile_ActReqId, g_NiumaMobile_ObserveReqId
+    ridPt := g_NiumaMobile_ActReqId != "" ? g_NiumaMobile_ActReqId : g_NiumaMobile_ObserveReqId
+    pt := NiumaMobileBrowser_GetDoubaoEditorScreenPoint(elementId, activateJson)
+    if !(pt is Map) || !pt.Has("ok") || !pt["ok"] {
+        errPt := (pt is Map) && pt.Has("error") ? String(pt["error"]) : "center_failed"
+        NiumaMobileBrowser_Log("JOB_STEP", ridPt, "physical_paste_skip " . errPt . " id=" . elementId)
+        return false
+    }
+    src := pt.Has("source") ? String(pt["source"]) : "element_center"
+    ok := NiumaMobileBrowser_PhysicalPasteAtScreenPoint(pt["x"], pt["y"], text)
+    NiumaMobileBrowser_Log("JOB_STEP", ridPt, "physical_paste " . (ok ? "ok" : "fail") . " src=" . src . " x=" . pt["x"] . " y=" . pt["y"])
+    return ok
+}
+
+NiumaMobileBrowser_RunDoubaoVerifySend(text, methodsPrefix := "", elementId := 0) {
+    global g_NiumaMobile_WV2
+    if !g_NiumaMobile_WV2
+        return ""
+    verifyScript := NiumaMobileBrowser_BuildDoubaoVerifySendScript(text, elementId)
+    if (verifyScript = "")
+        return ""
+    best := ""
+    loop 4 {
+        try {
+            raw := g_NiumaMobile_WV2.ExecuteScriptAsync(verifyScript).await(6000)
+            norm := NiumaMobileBrowser_NormalizeScriptRaw(String(raw))
+            if (norm = "")
+                continue
+            parsed := Map()
+            try {
+                loaded := NiumaMobileBrowser_CallFunc("Jxon_Load", norm)
+                if (loaded is Map)
+                    parsed := loaded
+            } catch {
+            }
+            if (parsed is Map) && parsed.Has("inputOk") && parsed["inputOk"] {
+                if (methodsPrefix != "") {
+                    m0 := parsed.Has("methods") ? String(parsed["methods"]) : ""
+                    parsed["methods"] := methodsPrefix . (m0 != "" ? "," . m0 : "")
+                }
+                return NiumaMobileBrowser_CallFunc("Jxon_Dump", parsed)
+            }
+            best := norm
+        } catch {
+        }
+        Sleep(280)
+    }
+    if (best != "" && methodsPrefix != "") {
+        try {
+            parsed := NiumaMobileBrowser_CallFunc("Jxon_Load", best)
+            if (parsed is Map) {
+                m1 := parsed.Has("methods") ? String(parsed["methods"]) : ""
+                parsed["methods"] := methodsPrefix . (m1 != "" ? "," . m1 : "")
+                return NiumaMobileBrowser_CallFunc("Jxon_Dump", parsed)
+            }
+        } catch {
+        }
+    }
+    return best
+}
+
+NiumaMobileBrowser_GetPageUrl() {
+    global g_NiumaMobile_WV2, g_NiumaMobile_LastKnownUrl
+    url := ""
+    if IsObject(g_NiumaMobile_WV2) {
+        try {
+            url := g_NiumaMobile_WV2.SourceUri
+            if (url = "")
+                url := g_NiumaMobile_WV2.Source
+        } catch {
+        }
+    }
+    if (url = "" && g_NiumaMobile_LastKnownUrl != "")
+        url := String(g_NiumaMobile_LastKnownUrl)
+    if (url != "")
+        global g_NiumaMobile_LastKnownUrl := String(url)
+    return String(url)
+}
+
+NiumaMobileBrowser_IsDoubaoPage(url := "") {
+    u := url != "" ? String(url) : NiumaMobileBrowser_GetPageUrl()
+    return InStr(u, "doubao.com") > 0
+}
+
+NiumaMobileBrowser_IsChatSlatePage(url := "") {
+    u := url != "" ? String(url) : NiumaMobileBrowser_GetPageUrl()
+    return InStr(u, "doubao.com") > 0 || InStr(u, "deepseek.com") > 0
+}
+
+NiumaMobileBrowser_ClearVpThrottle(*) {
+    global g_NiumaMobile_WV2
+    if !g_NiumaMobile_WV2
+        return
+    try g_NiumaMobile_WV2.ExecuteScriptAsync("try{window.__NIUMA_VP_THROTTLE__=false;}catch(e){}").await(1500)
+    catch {
+    }
+}
+
+NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag) {
+    try {
+        loaded := NiumaMobileBrowser_CallFunc("Jxon_Load", result)
+        if (loaded is Map)
+            parsed := loaded
+    } catch {
+    }
+    if (parsed is Map) && parsed.Has("methods")
+        methodsTag := String(parsed["methods"])
+}
+
+NiumaMobileBrowser_InputDoubaoHybrid(elementId, text, callback := 0) {
+    global g_NiumaMobile_WV2, g_NiumaMobile_PendingActCb, g_NiumaMobile_AiPaused, g_NiumaMobile_ObserveReqId, g_NiumaMobile_ActReqId
+    rid := g_NiumaMobile_ActReqId != "" ? g_NiumaMobile_ActReqId : g_NiumaMobile_ObserveReqId
+    if g_NiumaMobile_AiPaused {
+        if IsObject(callback)
+            try callback.Call(Map("ok", false, "error", "ai_paused"))
+        catch {
+        }
+        return false
+    }
+    if !g_NiumaMobile_WV2
+        return false
+    if !NiumaMobileBrowser_EnsureLabelScripts() {
+        NiumaMobileBrowser_DeliverErrorToChat("doubao_scripts_missing", rid, "action_input")
+        return false
+    }
+    g_NiumaMobile_PendingActCb := callback
+    NiumaMobileBrowser_SetAiBusy(true, false)
+    NiumaMobileBrowser_SetInputBlocked(false, true)
+    NiumaMobileBrowser_Log("JOB_LAUNCH", rid, "action_input doubao_clipboard id=" . elementId . " textLen=" . StrLen(Trim(String(text))))
+    SetTimer(NiumaMobileBrowser_InputDoubaoWorker.Bind(Integer(elementId), String(text), rid), -1)
+    return true
+}
+
+NiumaMobileBrowser_InputDoubaoWorker(elementId, text, rid, *) {
+    global g_NiumaMobile_WV2, g_NiumaMobile_ParentHwnd, g_NiumaMobile_Ctrl, g_NiumaMobile_ChatSendOnly, g_NiumaMobile_DeepseekJsFillOnly
+    result := '{"ok":false,"error":"doubao_worker_failed","inputOk":false,"sendOk":false,"methods":"slate_physical"}'
+    elementId := Integer(elementId)
+    txt := Trim(String(text))
+    global g_NiumaMobile_LastActInputText
+    if (txt = "" && g_NiumaMobile_LastActInputText != "")
+        txt := Trim(String(g_NiumaMobile_LastActInputText))
+    methodsTag := "slate_physical"
+    normAct := ""
+    try {
+        if (txt = "")
+            throw Error("empty_text_host")
+        if !NiumaMobileBrowser_EnsureLabelScripts()
+            throw Error("doubao_scripts_missing")
+        NiumaMobileBrowser_EnsureReactInputInjected()
+        NiumaMobileBrowser_ClearVpThrottle()
+        NiumaMobileBrowser_SetInputBlocked(false, true)
+
+        NiumaMobileBrowser_DismissOpenFileDialog()
+
+        if g_NiumaMobile_ChatSendOnly {
+            g_NiumaMobile_ChatSendOnly := false
+            g_NiumaMobile_DeepseekJsFillOnly := false
+            methodsTag := "js_send_only"
+            parsed := Map()
+            chatScript := NiumaMobileBrowser_BuildDoubaoChatScript(elementId, txt, true)
+            if (chatScript != "") {
+                try {
+                    rawJs := g_NiumaMobile_WV2.ExecuteScriptAsync(chatScript).await(14000)
+                    normJs := NiumaMobileBrowser_NormalizeScriptRaw(String(rawJs))
+                    if (normJs != "")
+                        result := normJs
+                } catch {
+                }
+                NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
+            }
+            NiumaMobileBrowser_Log("JOB_CALLBACK", rid, "action_input js_send_only id=" . elementId)
+            NiumaMobileBrowser_OnInputDone(elementId, result)
+            return
+        }
+
+        activateScript := NiumaMobileBrowser_BuildDoubaoActivateScript(elementId)
+        if (activateScript != "") {
+            try {
+                rawAct := g_NiumaMobile_WV2.ExecuteScriptAsync(activateScript).await(8000)
+                normAct := NiumaMobileBrowser_NormalizeScriptRaw(String(rawAct))
+                NiumaMobileBrowser_Log("JOB_STEP", rid, "doubao_activate " . SubStr(normAct, 1, 120))
+            } catch {
+            }
+        }
+        Sleep(200)
+        parsed := Map()
+        inputOk := false
+        sendOk := false
+        sentThread := false
+        didPhysical := false
+
+        NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
+
+        ; 1) 物理：剪贴板 + ^v（DeepSeek 跳过，避免误触附件/文件对话框）
+        if !g_NiumaMobile_DeepseekJsFillOnly && !NiumaMobileBrowser_IsDeepSeekPage() && NiumaMobileBrowser_PhysicalPasteInput(elementId, txt, normAct) {
+            didPhysical := true
+            methodsTag := "slate_clipboard_paste"
+            Sleep(450)
+            normPhys0 := NiumaMobileBrowser_RunDoubaoVerifySend(txt, methodsTag, elementId)
+            if (normPhys0 != "")
+                result := normPhys0
+            NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
+            inputOk := (parsed is Map) && parsed.Has("inputOk") && parsed["inputOk"]
+            sendOk := (parsed is Map) && parsed.Has("sendOk") && parsed["sendOk"]
+            sentThread := (parsed is Map) && parsed.Has("sentInThread") && parsed["sentInThread"]
+        }
+
+        ; 2) JS 填词（不重复物理粘贴）
+        if !sendOk && !sentThread && !inputOk {
+            fillLabelScript := NiumaMobileBrowser_BuildDoubaoFillLabelScript(elementId, txt)
+            if (fillLabelScript != "") {
+                try {
+                    rawFill := g_NiumaMobile_WV2.ExecuteScriptAsync(fillLabelScript).await(12000)
+                    normFill := NiumaMobileBrowser_NormalizeScriptRaw(String(rawFill))
+                    if (normFill != "") {
+                        NiumaMobileBrowser_Log("JOB_STEP", rid, "doubao_fill_label " . SubStr(normFill, 1, 120))
+                        result := normFill
+                    }
+                } catch {
+                }
+                NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
+                inputOk := (parsed is Map) && parsed.Has("inputOk") && parsed["inputOk"]
+                sendOk := (parsed is Map) && parsed.Has("sendOk") && parsed["sendOk"]
+                sentThread := (parsed is Map) && parsed.Has("sentInThread") && parsed["sentInThread"]
+            }
+        }
+
+        ; 3) 已填词未发送：DeepSeek 用 JS 点发送（勿 Enter，易误触附件）；其它站可 Enter
+        if !sendOk && !sentThread && inputOk {
+            if didPhysical && !NiumaMobileBrowser_IsDeepSeekPage() {
+                NiumaMobileBrowser_PhysicalSendEnter()
+            } else {
+                chatScript := NiumaMobileBrowser_BuildDoubaoChatScript(elementId, txt)
+                if (chatScript != "") {
+                    try {
+                        raw0 := g_NiumaMobile_WV2.ExecuteScriptAsync(chatScript).await(14000)
+                        norm0 := NiumaMobileBrowser_NormalizeScriptRaw(String(raw0))
+                        if (norm0 != "")
+                            result := norm0
+                    } catch {
+                    }
+                    NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
+                    sendOk := (parsed is Map) && parsed.Has("sendOk") && parsed["sendOk"]
+                    sentThread := (parsed is Map) && parsed.Has("sentInThread") && parsed["sentInThread"]
+                }
+            }
+            if !sendOk && !sentThread && didPhysical && !NiumaMobileBrowser_IsDeepSeekPage() {
+                Sleep(500)
+                normSend := NiumaMobileBrowser_RunDoubaoVerifySend(txt, methodsTag . ",enter_send", elementId)
+                if (normSend != "")
+                    result := normSend
+                NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
+                sendOk := (parsed is Map) && parsed.Has("sendOk") && parsed["sendOk"]
+                sentThread := (parsed is Map) && parsed.Has("sentInThread") && parsed["sentInThread"]
+            } else if !sendOk && !sentThread {
+                Sleep(500)
+                normSend := NiumaMobileBrowser_RunDoubaoVerifySend(txt, methodsTag . ",js_send", elementId)
+                if (normSend != "")
+                    result := normSend
+                NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
+                sendOk := (parsed is Map) && parsed.Has("sendOk") && parsed["sendOk"]
+                sentThread := (parsed is Map) && parsed.Has("sentInThread") && parsed["sentInThread"]
+            }
+        }
+
+        if !sendOk && !sentThread && !inputOk && !didPhysical {
+            chatScript2 := NiumaMobileBrowser_BuildDoubaoChatScript(elementId, txt)
+            if (chatScript2 != "") {
+                try {
+                    raw1 := g_NiumaMobile_WV2.ExecuteScriptAsync(chatScript2).await(14000)
+                    norm1 := NiumaMobileBrowser_NormalizeScriptRaw(String(raw1))
+                    if (norm1 != "")
+                        result := norm1
+                } catch {
+                }
+                NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
+                inputOk := (parsed is Map) && parsed.Has("inputOk") && parsed["inputOk"]
+                sendOk := (parsed is Map) && parsed.Has("sendOk") && parsed["sendOk"]
+                sentThread := (parsed is Map) && parsed.Has("sentInThread") && parsed["sentInThread"]
+            }
+        }
+
+        if (parsed is Map) && (sendOk || sentThread) {
+            parsed["ok"] := true
+            parsed["sendOk"] := true
+            if !parsed.Has("inputOk")
+                parsed["inputOk"] := true
+            result := NiumaMobileBrowser_CallFunc("Jxon_Dump", parsed)
+        }
+    } catch as e {
+        result := '{"ok":false,"error":"' . NiumaMobileBrowser_EscapeJsonStr(e.Message) . '","inputOk":false,"sendOk":false,"methods":"' . NiumaMobileBrowser_EscapeJsonStr(methodsTag) . '"}'
+    }
+    g_NiumaMobile_ChatSendOnly := false
+    g_NiumaMobile_DeepseekJsFillOnly := false
+    NiumaMobileBrowser_ClearVpThrottle()
+    NiumaMobileBrowser_Log("JOB_CALLBACK", rid, "action_input doubao_clipboard id=" . elementId . " raw=" . SubStr(result, 1, 160))
+    NiumaMobileBrowser_OnInputDone(elementId, result)
 }
 
 NiumaMobileBrowser_BuildScrollScript(elementId, direction) {
@@ -2286,6 +3077,7 @@ NiumaMobileBrowser_ClickLabeledElement(elementId, callback := 0) {
     }
     if !g_NiumaMobile_WV2
         return false
+    NiumaMobileBrowser_DismissOpenFileDialog()
     script := NiumaMobileBrowser_BuildClickScript(elementId)
     if (script = "") {
         NiumaMobileBrowser_DeliverErrorToChat("click_script_missing", rid, "action_click")
@@ -2418,7 +3210,7 @@ NiumaMobileBrowser_ScheduleSearchNavigateFallback(*) {
 
 NiumaMobileBrowser_InputLabeledElement(elementId, text, callback := 0) {
     global g_NiumaMobile_WV2, g_NiumaMobile_PendingActCb, g_NiumaMobile_AiPaused, g_NiumaMobile_ObserveReqId, g_NiumaMobile_ActReqId
-        , g_NiumaMobile_LastActInputText
+        , g_NiumaMobile_LastActInputText, g_NiumaMobile_ForceDoubaoInput
     g_NiumaMobile_LastActInputText := String(text)
     rid := g_NiumaMobile_ActReqId != "" ? g_NiumaMobile_ActReqId : g_NiumaMobile_ObserveReqId
     if g_NiumaMobile_AiPaused {
@@ -2430,6 +3222,8 @@ NiumaMobileBrowser_InputLabeledElement(elementId, text, callback := 0) {
     }
     if !g_NiumaMobile_WV2
         return false
+    if (g_NiumaMobile_ForceDoubaoInput || NiumaMobileBrowser_IsChatSlatePage())
+        return NiumaMobileBrowser_InputDoubaoHybrid(elementId, text, callback)
     script := NiumaMobileBrowser_BuildInputScript(elementId, text)
     if (script = "") {
         NiumaMobileBrowser_DeliverErrorToChat("input_script_missing", rid, "action_input")
@@ -2437,7 +3231,7 @@ NiumaMobileBrowser_InputLabeledElement(elementId, text, callback := 0) {
     }
     g_NiumaMobile_PendingActCb := callback
     NiumaMobileBrowser_SetAiBusy(true)
-    NiumaMobileBrowser_Log("JOB_LAUNCH", rid, "action_input id=" . elementId)
+    NiumaMobileBrowser_Log("JOB_LAUNCH", rid, "action_input id=" . elementId . " textLen=" . StrLen(Trim(String(text))))
     if NiumaMobileBrowser_ExecScript("input", script, rid, Map("elementId", Integer(elementId)))
         return true
     NiumaMobileBrowser_DeliverErrorToChat("script_exec_failed", rid, "action_input")
@@ -2455,6 +3249,7 @@ NiumaMobileBrowser_OnInputDone(elementId, result) {
     inf := (parsed is Map) && parsed.Has("inferred") && parsed["inferred"] ? " inferred=1" : ""
     NiumaMobileBrowser_Log("JOB_CALLBACK", g_NiumaMobile_ObserveReqId, "action_input id=" . elementId . " ok=" . (okAct ? 1 : 0) . inf)
     NiumaMobileBrowser_SetAiBusy(false)
+    SetTimer(NiumaMobileBrowser_ClearVpThrottle.Bind(), -200)
     NiumaMobileBrowser_NotifyActResult(parsed, "input", elementId)
     if IsObject(cb) {
         try cb.Call(parsed)
@@ -2477,11 +3272,18 @@ NiumaMobileBrowser_NotifyActResult(parsed, action, elementId) {
     ok := false
     err := ""
     if (parsed is Map) {
-        ok := parsed.Has("ok") && !!parsed["ok"]
+        sendOk := parsed.Has("sendOk") && parsed["sendOk"]
+        sentThread := parsed.Has("sentInThread") && parsed["sentInThread"]
+        inputOk := parsed.Has("inputOk") && parsed["inputOk"]
+        ok := sendOk || sentThread || ((parsed.Has("ok") && parsed["ok"]) && inputOk)
+        if parsed.Has("inputOk") && !inputOk && !sendOk && !sentThread
+            ok := false
         if parsed.Has("error")
             err := String(parsed["error"])
+        if (sendOk || sentThread)
+            err := ""
     }
-    NiumaMobileBrowser_QueueActToChat("host_browser_act_result", reqId, ok, err, String(action), Integer(elementId), false, "")
+    NiumaMobileBrowser_QueueActToChat("host_browser_act_result", reqId, ok, err, String(action), Integer(elementId), false, "", parsed)
 }
 
 NiumaMobileBrowser_PauseAiControl() {
@@ -2652,7 +3454,7 @@ NiumaMobileBrowser_ActFromChatDeferred(action, elementId, value, *) {
 }
 
 NiumaMobileBrowser_ActFromChat(action, elementId := 0, value := "") {
-    global g_NiumaMobile_AiPaused, g_NiumaMobile_ObserveReqId, g_NiumaMobile_ActReqId
+    global g_NiumaMobile_AiPaused, g_NiumaMobile_ObserveReqId, g_NiumaMobile_ActReqId, g_NiumaMobile_ForceDoubaoInput, g_NiumaMobile_ChatSendOnly
     if g_NiumaMobile_AiPaused
         return false
     act := StrLower(Trim(String(action)))
@@ -2675,10 +3477,18 @@ NiumaMobileBrowser_ActFromChat(action, elementId := 0, value := "") {
     }
     if (act = "click")
         return NiumaMobileBrowser_ClickLabeledElement(elementId)
-    if (act = "input" || act = "fill")
-        return NiumaMobileBrowser_InputLabeledElement(elementId, value)
+    if (act = "input" || act = "fill") {
+        ok := NiumaMobileBrowser_InputLabeledElement(elementId, value)
+        g_NiumaMobile_ForceDoubaoInput := false
+        g_NiumaMobile_ChatSendOnly := false
+        g_NiumaMobile_DeepseekJsFillOnly := false
+        return ok
+    }
     if (act = "scroll")
         return NiumaMobileBrowser_ScrollLabeledElement(elementId, value)
+    g_NiumaMobile_ForceDoubaoInput := false
+    g_NiumaMobile_ChatSendOnly := false
+    g_NiumaMobile_DeepseekJsFillOnly := false
     return false
 }
 

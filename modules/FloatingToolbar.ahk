@@ -1658,6 +1658,9 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
 
     if (typ = "wheel") {
+        global FloatingToolbarChatDrawerOpen
+        if FloatingToolbarChatDrawerOpen
+            return
         delta := msg.Has("delta") ? Integer(msg["delta"]) : 0
         if (delta != 0)
             FloatingToolbarApplyWheelDelta(delta)
@@ -1771,7 +1774,10 @@ FloatingToolbar_OnWebMessage(sender, args) {
                 val := String(dist)
         }
         actReqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
-        FloatingToolbar_DispatchBrowserAction(action, eid, val, actReqId)
+        forceDoubao := msg.Has("forceDoubaoInput") && !!msg["forceDoubaoInput"]
+        chatJsSend := msg.Has("chatJsSendOnly") && !!msg["chatJsSendOnly"]
+        deepseekJsFill := msg.Has("deepseekJsFillOnly") && !!msg["deepseekJsFillOnly"]
+        FloatingToolbar_DispatchBrowserAction(action, eid, val, actReqId, forceDoubao, chatJsSend, deepseekJsFill)
         return
     }
     if (typ = "niuma_browser_act") {
@@ -1791,6 +1797,10 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
     if (typ = "niuma_browser_resume_ai") {
         NiumaMobileBrowser_ResumeAiControl()
+        return
+    }
+    if (typ = "niuma_browser_hide_labels") {
+        NiumaMobileBrowser_HideLabels()
         return
     }
     if (typ = "niuma_browser_toggle_labels") {
@@ -2623,6 +2633,11 @@ FloatingToolbarSetChatDrawerState(open, force := false) {
     if !open
         NiumaMobileBrowser_Close()
 
+    if open {
+        try FloatingToolbarExitCompactMode()
+        catch {
+        }
+    }
     FloatingToolbarChatDrawerOpen := open
     newW := FloatingToolbarCalculateWidth()
     newH := FloatingToolbarCalculateHeight()
@@ -3623,6 +3638,10 @@ FloatingToolbarWM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
             mouseInBubble := true
     }
 
+  ; Niuma Chat 抽屉展开时：不拦截滚轮（交给对话区滚动），也不缩放/切圆球
+    if FloatingToolbarChatDrawerOpen
+        return
+
     if (mouseInToolbar || mouseInBubble) {
         FloatingToolbar_SwitchActivationByWheel(delta)
         return 0
@@ -3633,9 +3652,6 @@ FloatingToolbarWM_MOUSEWHEEL(wParam, lParam, msg, hwnd) {
     if (!mouseInToolbar)
         return
     if (mode != "toolbar")
-        return
-    ; 抽屉展开时由页面内滚动，不在此处用滚轮缩放整窗
-    if (FloatingToolbarChatDrawerOpen)
         return
 
     FloatingToolbarApplyWheelDelta(delta)
@@ -3941,7 +3957,9 @@ FloatingToolbar_SetActivationMode(mode) {
 }
 
 FloatingToolbar_SwitchActivationByWheel(delta) {
-    global AppearanceActivationMode, g_FTB_ModeTransitionBusy
+    global AppearanceActivationMode, g_FTB_ModeTransitionBusy, FloatingToolbarChatDrawerOpen
+    if FloatingToolbarChatDrawerOpen
+        return
     if g_FTB_ModeTransitionBusy
         return
     mode := FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode)
@@ -3960,8 +3978,10 @@ FloatingToolbar_SwitchActivationByWheel(delta) {
 
 FloatingToolbarApplyWheelDelta(delta) {
     global FloatingToolbarGUI, FloatingToolbarScale, FloatingToolbarMinScale, FloatingToolbarMaxScale
-    global FloatingToolbarWindowX, FloatingToolbarWindowY, g_FTB_WV2
+    global FloatingToolbarWindowX, FloatingToolbarWindowY, g_FTB_WV2, FloatingToolbarChatDrawerOpen
 
+    if FloatingToolbarChatDrawerOpen
+        return
     ; 必须与 CreateFloatingToolbarGUI 创建的 Gui 一致；勿与他处同名全局混用，否则此处可能得到 Integer 而非 Gui
     if !IsObject(FloatingToolbarGUI) || !(FloatingToolbarGUI is Gui)
         return
@@ -5041,12 +5061,15 @@ GetButtonTip(action) {
     }
 }
 
-FloatingToolbar_DispatchBrowserAction(action, eid, val, actReqId := "") {
+FloatingToolbar_DispatchBrowserAction(action, eid, val, actReqId := "", forceDoubao := false, chatJsSend := false, deepseekJsFill := false) {
     action := String(action)
     rid := String(actReqId)
     if (rid = "")
         rid := "act-" . A_TickCount . "-" . Random(1000, 9999)
-    global g_NiumaMobile_ObserveReqId, g_NiumaMobile_SettleReqId, g_NiumaMobile_ActReqId
+    global g_NiumaMobile_ObserveReqId, g_NiumaMobile_SettleReqId, g_NiumaMobile_ActReqId, g_NiumaMobile_ForceDoubaoInput, g_NiumaMobile_ChatSendOnly, g_NiumaMobile_DeepseekJsFillOnly
+    g_NiumaMobile_ForceDoubaoInput := !!forceDoubao
+    g_NiumaMobile_ChatSendOnly := !!chatJsSend
+    g_NiumaMobile_DeepseekJsFillOnly := !!deepseekJsFill
     g_NiumaMobile_ActReqId := rid
     g_NiumaMobile_ObserveReqId := rid
     g_NiumaMobile_SettleReqId := rid

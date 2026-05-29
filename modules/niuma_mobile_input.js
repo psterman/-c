@@ -104,8 +104,62 @@
       } catch (e5) {}
     }
 
+    function setContentEditableText(node, value) {
+      try {
+        if (node.focus) node.focus({ preventScroll: true });
+      } catch (eF) {
+        try {
+          node.focus && node.focus();
+        } catch (eF2) {}
+      }
+      try {
+        var sel = window.getSelection && window.getSelection();
+        var range = document.createRange && document.createRange();
+        if (sel && range) {
+          range.selectNodeContents(node);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      } catch (eR) {}
+      try {
+        if (document.execCommand) {
+          document.execCommand('insertText', false, value);
+          fireInput(node, value);
+          return;
+        }
+      } catch (eExec) {}
+      try {
+        node.textContent = value;
+      } catch (e14) {
+        node.innerText = value;
+      }
+      fireInput(node, value);
+    }
+
+    function isChatHost() {
+      try {
+        var host = String((location.hostname || '')).toLowerCase();
+        return /doubao\.com|chat\.deepseek|kimi\.moonshot|tongyi\.aliyun|yuanbao\.tencent|chatgpt\.com|claude\.ai/i.test(host);
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function deferChatSubmit(node) {
+      setTimeout(function () {
+        try {
+          submitSearch(node);
+        } catch (eKey) {}
+      }, 160);
+    }
+
     function isSearchField(node) {
       if (!node) return false;
+      try {
+        var host = String((location && location.hostname) || '').toLowerCase();
+        if (/doubao\.com|chat\.deepseek|kimi\.moonshot|tongyi\.aliyun|yuanbao\.tencent|chatgpt\.com|claude\.ai/i.test(host))
+          return false;
+      } catch (_) {}
       var tag = (node.tagName || '').toLowerCase();
       var ty = String(node.getAttribute('type') || '').toLowerCase();
       var nm = String(node.getAttribute('name') || '').toLowerCase();
@@ -179,7 +233,7 @@
     try {
       el.scrollIntoView({ block: 'center', inline: 'nearest' });
     } catch (e9) {}
-    window.__NIUMA_VP_THROTTLE__ = true;
+    if (!isChatHost()) window.__NIUMA_VP_THROTTLE__ = true;
 
     var target = resolveEditable(el);
     if (!target) return JSON.stringify({ ok: false, error: 'not_input' });
@@ -206,28 +260,69 @@
     }
 
     var ttag = (target.tagName || '').toLowerCase();
+    var qtxt = String(txt || '').trim();
+    if (isChatHost() && qtxt && window.__NIUMA_REACT_INPUT__) {
+      var riChat = window.__NIUMA_REACT_INPUT__.fillElement(target, qtxt);
+      var gotReact = (riChat && riChat.editorText) || readTargetText(target).trim();
+      var inputOkReact = !!(riChat && riChat.inputOk);
+      deferChatSubmit(target);
+      return JSON.stringify({
+        ok: inputOkReact,
+        inputOk: inputOkReact,
+        submitted: false,
+        deferred: true,
+        chatSubmit: true,
+        editorText: gotReact.slice(0, 120),
+        methods: (riChat && riChat.methods ? riChat.methods.join(',') : 'react') || 'react',
+        tag: ttag,
+        error: inputOkReact ? '' : 'input_not_verified'
+      });
+    }
     if (ttag === 'input' || ttag === 'textarea' || ttag === 'select') {
       setNativeValue(target, txt);
       fireInput(target, txt);
     } else if (target.isContentEditable) {
-      try {
-        target.textContent = txt;
-      } catch (e14) {
-        target.innerText = txt;
-      }
-      fireInput(target, txt);
+      setContentEditableText(target, txt);
     } else {
       return JSON.stringify({ ok: false, error: 'not_input' });
     }
 
-    var qtxt = String(txt || '').trim();
-    if (isSearchField(target) && qtxt) {
-      deferSearchSubmit(target, qtxt);
+    var qtxt2 = String(txt || '').trim();
+    function readTargetText(node) {
+      if (!node) return '';
+      var tg = (node.tagName || '').toLowerCase();
+      if (tg === 'input' || tg === 'textarea') return String(node.value || '');
+      return String(node.innerText || node.textContent || '');
+    }
+    function chatTextOk(expected, got) {
+      var a = String(expected || '').trim();
+      var b = String(got || '').trim();
+      if (!a || !b) return false;
+      if (b.indexOf(a) >= 0) return true;
+      return a.length >= 4 && b.indexOf(a.slice(0, 4)) >= 0;
+    }
+    if (isChatHost() && qtxt2) {
+      var gotTxt = readTargetText(target).trim();
+      var inputOk = chatTextOk(qtxt2, gotTxt);
+      deferChatSubmit(target);
+      return JSON.stringify({
+        ok: inputOk,
+        inputOk: inputOk,
+        submitted: false,
+        deferred: true,
+        chatSubmit: true,
+        editorText: gotTxt.slice(0, 120),
+        tag: ttag,
+        error: inputOk ? '' : 'input_not_verified'
+      });
+    }
+    if (isSearchField(target) && qtxt2) {
+      deferSearchSubmit(target, qtxt2);
     }
 
     return JSON.stringify({
       ok: true,
-      submitted: !!(isSearchField(target) && qtxt),
+      submitted: !!(isSearchField(target) && qtxt2),
       deferred: true,
       tag: ttag
     });

@@ -5365,27 +5365,30 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   var BROWSER_AGENT_MAX_TURNS = 12;
+  var BROWSER_AGENT_BUILD = '20260529-deepseek-reply-stop';
   /** 对齐 browser-use：小 prompt + 单条 state 消息，避免多轮快照堆叠拖慢推理 */
-  // 大模型请求在部分网络/代理下经常超过 60s；放宽到 120s 以减少误判中止。
+  // 大模型请求在部分网络/代理下经常超过 60s；豆包对话本地可跳过首轮 LLM。
   var BROWSER_AGENT_LLM_TIMEOUT_MS = 120000;
+  var BROWSER_AGENT_LLM_TIMEOUT_DOUBAO_MS = 55000;
   var BROWSER_AGENT_ACT_TIMEOUT_MS = 20000;
+  var BROWSER_AGENT_ACT_TIMEOUT_DOUBAO_MS = 45000;
   /** 每轮发给模型的可交互元素上限（browser-use 仅索引可见可点项） */
   var BROWSER_AGENT_LLM_MAX_ELEMENTS = 14;
   var BROWSER_AGENT_LLM_MAX_TOKENS = 384;
 
   var BROWSER_AGENT_SYS =
     '你是牛马网页 Agent，操控右侧手机浏览器。' +
-    '\n每轮仅输出一个 JSON（无 markdown）。你可以输出两种动作格式：' +
-    '\nA) 直接动作：{"thought":"1句","tool":"browser_click|browser_input|browser_scroll|browser_back|browser_refresh|browser_finish","elementId":6,"text":""}' +
-    '\nB) 目标动作（推荐）：{"thought":"1句","tool":"browser_click|browser_input","targetRoleHint":"search_input|search_submit","elementId":0,"text":""}' +
-    '\n说明：当 elementId=0 且提供 targetRoleHint 时，由本地执行器根据当前快照自动解析 elementId 再执行。' +
-    '\n禁止 browser_observe（动作后宿主自动推送新快照）；browser_input 须 text（搜索框填词后宿主会自动回车提交）；验证码或无进展则 browser_finish。' +
-    '\n重要：如果本地提示「目标解析失败 / 未能定位 search_input」，你必须在下一轮选择一种可执行的替代策略（例如 browser_scroll / browser_refresh / browser_search_navigate）。不要继续输出 elementId=0。' +
-    '\n重要：每轮只能执行一个 tool；thought 里不要写「先 A 再 B」——若需两步请拆成两轮（先 browser_input 关键词，下一轮视快照再 browser_click 提交或 browser_finish）。' +
-    '\nbrowser_scroll：若需滚动到某元素使其可见，用该元素 elementId 且 text 为空；若需整页滚动（如下拉看更多内容），elementId 填 0，text 填 up/down/top/bottom（默认 down）。' +
-    '\nbrowser_back：返回上一页，无需 elementId 和 text。browser_refresh：刷新当前页，无需 elementId 和 text。' +
-    '\n百度/谷歌首页：填词后宿主会异步提交或跳转，一般无需再点「百度一下」；若快照显示仍在首页且搜索框已有词，再点提交按钮。' +
-    '\n列表格式参考 browser-use：[index] tag type "text" hint（input/textarea 可能带 value=已填内容）。';
+    '\n每轮仅输出一个 JSON（无 markdown）。' +
+    '\nA) 直接动作：{"thought":"1句","tool":"browser_navigate|browser_click|browser_input|browser_scroll|browser_back|browser_refresh|browser_finish|browser_search_navigate","elementId":6,"text":"","url":""}' +
+    '\nB) 目标动作：{"thought":"1句","tool":"browser_click|browser_input","targetRoleHint":"search_input|search_submit|chat_input|chat_send","elementId":0,"text":""}' +
+    '\nbrowser_navigate：打开指定网址（由你判断目标站），必填 url，elementId=0，text 留空。例：{"tool":"browser_navigate","url":"https://www.doubao.com/chat/","elementId":0,"text":""}' +
+    '\n站点决策（重要）：先读【用户目标】与快照 URL。若用户要在豆包/DeepSeek/Kimi 等对话站提问，而当前页是百度/谷歌或其他无关站点，第一轮应 browser_navigate 到目标站首页，勿在当前页 search_input 输入站点名（如「豆包」）。' +
+    '\n豆包对话：首页 https://www.doubao.com/chat/ ；DeepSeek：https://chat.deepseek.com/ ；到达后在对话框 browser_input 用户问题的完整正文（不是站点名）。' +
+    '\n百度搜索：仅在用户明确要「百度搜索」且当前已在百度时使用 search_input；也可用 browser_search_navigate。' +
+    '\n当 elementId=0 且 targetRoleHint 时，宿主会尝试解析 elementId；若提示「当前不在目标站」，下一轮请 browser_navigate。' +
+    '\n禁止 browser_observe；验证码或无进展则 browser_finish。每轮仅一个 tool。' +
+    '\nbrowser_scroll：elementId=0 时 text 填 up/down/top/bottom。browser_back / browser_refresh 无需 elementId。' +
+    '\n列表格式：[index] tag type "text" hint。';
 
   function parseJsonObjectFromLlm(text) {
     var s = String(text || '').trim();
@@ -5417,6 +5420,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (t === 'refresh' || t === 'reload') return 'browser_refresh';
     if (t === 'finish' || t === 'done' || t === 'stop' || t === 'halt') return 'browser_finish';
     if (t === 'search_navigate' || t === 'searchnavigate') return 'browser_search_navigate';
+    if (t === 'navigate' || t === 'goto' || t === 'open' || t === 'open_url') return 'browser_navigate';
     if (raw && String(raw).indexOf('browser_') === 0) return String(raw).toLowerCase();
     return '';
   }
@@ -5438,6 +5442,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       tool: tool,
       elementId: parseInt(parsed.elementId, 10) || 0,
       text: String(parsed.text != null ? parsed.text : ''),
+      url: String(parsed.url || parsed.href || parsed.navigateUrl || '').trim(),
       thought: String(parsed.thought || parsed.analysis || parsed.reasoning || '').trim(),
       targetRoleHint: String(parsed.targetRoleHint || parsed.target_role_hint || parsed.target || '').trim()
     };
@@ -5483,7 +5488,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
       var tag = String((el && el.tag) || '').toLowerCase();
-      if (tag !== 'input' && tag !== 'textarea') continue;
+      if (tag !== 'input' && tag !== 'textarea') {
+        var rh0 = String((el && el.roleHint) || '').toLowerCase();
+        if (rh0 === 'chat_input') {
+          var ct0 = String((el && el.text) || '').trim();
+          if (ct0) chunks.push(String(el.id) + ':' + ct0.slice(0, 48));
+        }
+        continue;
+      }
       var v = String((el && el.value) != null ? el.value : '').trim();
       if (!v) continue;
       chunks.push(String(el.id) + ':' + v.slice(0, 48));
@@ -5496,7 +5508,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function formatBrowserElementsIndexedList(elements, maxN) {
     maxN = maxN || BROWSER_AGENT_LLM_MAX_ELEMENTS;
     var arr = pickElementsForBrowserLlm(elements, maxN);
-    if (!arr.length) return '(无可交互元素)';
+    if (!arr.length) return '(列表为空)';
     return arr
       .map(function (el) {
         var tag = String(el.tag || 'node');
@@ -5517,16 +5529,29 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function formatSnapshotForAgent(snap) {
-    var n = (snap && snap.elements && snap.elements.length) || parseInt(snap && snap.count, 10) || 0;
+    var n =
+      (snap && snap.totalCandidates) ||
+      (snap && snap.snapshot && snap.snapshot.length) ||
+      (snap && snap.elements && snap.elements.length) ||
+      parseInt(snap && snap.arrLen, 10) ||
+      parseInt(snap && snap.count, 10) ||
+      0;
     var maxN = BROWSER_AGENT_LLM_MAX_ELEMENTS;
-    var picked = pickElementsForBrowserLlm(snap && snap.elements, maxN);
+    var elsForModel = (snap && snap.snapshot) || (snap && snap.elements) || [];
+    var picked = pickElementsForBrowserLlm(elsForModel, maxN);
     var lines = [
       '【页面状态】',
       'URL: ' + String((snap && snap.url) || ''),
       '可点元素: ' + n + (picked.length < n ? '（模型见 Top ' + picked.length + '）' : '')
     ];
     if (snap && snap.truncated) lines.push('（宿主截断）');
-    lines.push('', '交互列表（elementId = 方括号内数字）：', formatBrowserElementsIndexedList(snap && snap.elements, maxN));
+    if (snap && snap.error === 'label_parse_empty' && n > 0) lines.push('噪声: label_parse_empty（元素已检测到，继续执行）');
+    var inId = findSearchInputElementId(snap);
+    var sbId = findSearchSubmitElementId(snap);
+    if (inId > 0) lines.push('ResolverHint: search_input_id=' + inId);
+    if (sbId > 0) lines.push('ResolverHint: search_submit_id=' + sbId);
+    if (inId < 1 && sbId < 1) lines.push('ResolverHint: search_input_not_found_in_snapshot');
+    lines.push('', '交互列表（elementId = 方括号内数字）：', formatBrowserElementsIndexedList(elsForModel, maxN));
     return lines.join('\n');
   }
 
@@ -5538,6 +5563,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var holeBlock = opts.holeBlock || '';
     var turn = opts.turn || 1;
     var userGoal = '【用户目标】\n' + goal;
+    var taskHint = opts.taskHintBlock;
+    if (taskHint == null) taskHint = buildBrowserTaskHintBlock(goal, snap);
+    if (taskHint) userGoal += '\n\n' + taskHint;
     if (holeBlock && turn <= 1) userGoal += '\n\n' + holeBlock;
     var msgs = [
       { role: 'system', content: BROWSER_AGENT_SYS },
@@ -5553,8 +5581,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function formatSnapshotToolResult(snap, label, forAgent) {
     label = label || 'host_browser_snapshot';
-    var n = (snap && snap.elements && snap.elements.length) || parseInt(snap && snap.count, 10) || 0;
-    var picked = pickElementsForBrowserLlm(snap && snap.elements, BROWSER_AGENT_LLM_MAX_ELEMENTS);
+    var n =
+      (snap && snap.totalCandidates) ||
+      (snap && snap.snapshot && snap.snapshot.length) ||
+      (snap && snap.elements && snap.elements.length) ||
+      parseInt(snap && snap.arrLen, 10) ||
+      parseInt(snap && snap.count, 10) ||
+      0;
+    var elsForModel = (snap && snap.snapshot) || (snap && snap.elements) || [];
+    var picked = pickElementsForBrowserLlm(elsForModel, BROWSER_AGENT_LLM_MAX_ELEMENTS);
     var head =
       '【' +
       label +
@@ -5567,7 +5602,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (forAgent) {
       return formatSnapshotForAgent(snap);
     }
-    return head + '\n元素列表 JSON:\n' + formatBrowserElementsForModel(snap && snap.elements);
+    return head + '\n元素列表 JSON:\n' + formatBrowserElementsForModel(elsForModel);
   }
 
   function snapshotFingerprint(snap) {
@@ -5613,6 +5648,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return simpleTextHash(String(snapHostFromUrl(snap.url)) + '|f=' + feats.join('||'));
   }
 
+  function coerceBrowserAgentSnapshot(snap, fallbackUrl) {
+    if (snap && typeof snap === 'object') return normalizeBrowserSnapshot(snap);
+    var fb = getFallbackSnapshotForForced();
+    if (fb && typeof fb === 'object') return normalizeBrowserSnapshot(fb);
+    return {
+      url: fallbackUrl || state.mobileBrowserLastUrl || '',
+      elements: [],
+      count: parseInt(window.g_NiumaLastElementsCount, 10) || 0,
+      error: 'snapshot_unavailable'
+    };
+  }
+
   async function recoverAgentSnapshotAfterAct(priorSnap) {
     var n =
       (priorSnap && priorSnap.elements && priorSnap.elements.length) ||
@@ -5620,21 +5667,23 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       parseInt(priorSnap && priorSnap.arrLen, 10) ||
       0;
     var err = String((priorSnap && priorSnap.error) || '');
-    if (n > 0 && err !== 'label_parse_empty') return priorSnap;
+    if (n > 0 && err !== 'label_parse_empty') return coerceBrowserAgentSnapshot(priorSnap);
     await browserAgentDelay(700);
     try {
-      return await fetchBrowserSnapshotForAgent();
+      return coerceBrowserAgentSnapshot(await fetchBrowserSnapshotForAgent(), priorSnap && priorSnap.url);
     } catch (e) {
-      return priorSnap;
+      return coerceBrowserAgentSnapshot(priorSnap);
     }
   }
 
   async function waitSettleSnapshotAfterAct() {
+    var prior = null;
     try {
-      return await recoverAgentSnapshotAfterAct(await fetchBrowserSnapshotForAgent());
-    } catch (e1) {
-      return await recoverAgentSnapshotAfterAct(null);
+      prior = await fetchBrowserSnapshotForAgent();
+    } catch (e0) {
+      prior = null;
     }
+    return await recoverAgentSnapshotAfterAct(prior);
   }
 
   function formatBrowserHostActError(ar) {
@@ -5663,8 +5712,39 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return '【宿主异常 · ' + (stage || 'unknown') + '】' + err + req;
   }
 
-  async function executeBrowserToolTurn(turn, sid) {
+  function patchAgentSnapshotUrl(snap, url) {
+    if (!snap || typeof snap !== 'object') return snap;
+    var u = String(url || '').trim();
+    if (!u || !isSafeHttpUrl(u)) return snap;
+    var cur = String(snap.url || '').toLowerCase();
+    if (!cur || cur === 'about:blank') {
+      snap.url = u;
+      state.mobileBrowserLastUrl = u;
+      syncMobileUrlField(u);
+    }
+    return snap;
+  }
+
+  async function executeBrowserToolTurn(turn, sid, snapBeforeAct) {
     var tool = turn.tool;
+    if (tool === 'browser_navigate') {
+      var navTo = String(turn.url || '').trim();
+      if (!navTo) return { ok: false, error: 'empty_navigate_url' };
+      if (!/^https?:\/\//i.test(navTo)) navTo = 'https://' + navTo.replace(/^\/+/, '');
+      if (!isSafeHttpUrl(navTo)) return { ok: false, error: 'unsafe_navigate_url' };
+      cstatForSession(sid, '🌐 导航：' + navTo.slice(0, 96), '');
+      post({ type: 'niuma_mobile_browser_navigate', url: navTo });
+      await browserAgentDelay(3200);
+      try {
+        var snapNav2 = patchAgentSnapshotUrl(await fetchBrowserSnapshotForAgent(), navTo);
+        return { ok: true, snap: snapNav2 };
+      } catch (navErr2) {
+        return {
+          ok: true,
+          snap: patchAgentSnapshotUrl({ url: navTo, elements: [], count: 0, error: String(navErr2.message || navErr2) }, navTo)
+        };
+      }
+    }
     if (tool === 'browser_search_navigate') {
       var qNav = String(turn.text != null ? turn.text : '').trim();
       if (!qNav) return { ok: false, error: 'empty_search_query' };
@@ -5708,31 +5788,112 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return { ok: true, snap: snapAct2, actResult: ar2 };
     }
     if (tool === 'browser_click' || tool === 'browser_input' || tool === 'browser_scroll') {
+      turn = patchBrowserInputTurnText(turn, state.browserAgentGoal || '');
+      if (
+        tool === 'browser_click' &&
+        inferBrowserGoalTaskKind(state.browserAgentGoal || '') === 'chat_deepseek'
+      ) {
+        var clickEidGuard = parseInt(turn.elementId, 10) || 0;
+        var chatInEidGuard = resolveTargetElementId('chat_input', snapBeforeAct || {}) || 0;
+        if (clickEidGuard > 0 && chatInEidGuard > 0 && clickEidGuard === chatInEidGuard) {
+          var jsSendGuard = planBrowserAgentChatJsSendTurn(state.browserAgentGoal, snapBeforeAct, {});
+          if (jsSendGuard) {
+            turn = jsSendGuard;
+            tool = turn.tool;
+          }
+        }
+      }
+      var isDoubaoInputAct =
+        tool === 'browser_input' &&
+        (turn._forceHostInput ||
+          isDoubaoBrowserAgentGoal(state.browserAgentGoal || '') ||
+          /doubao\.com/i.test(state.mobileBrowserLastUrl || ''));
+      var isChatHostInputAct =
+        tool === 'browser_input' &&
+        (turn._forceHostInput ||
+          isChatHostBrowserAgentGoal(state.browserAgentGoal || '') ||
+          /doubao\.com|deepseek\.com/i.test(state.mobileBrowserLastUrl || ''));
       var eidRaw = turn.elementId;
       var eid = parseInt(eidRaw, 10) || 0;
+      if (tool === 'browser_input' && eid < 1 && turn.text && String(turn.text).trim()) {
+        var agentGoal = state.browserAgentGoal || '';
+        if (!shouldPreferLlmBrowserPlan(agentGoal, snapBeforeAct)) {
+          var sidScan = findSearchInputElementId(snapBeforeAct || {});
+          if (sidScan > 0) {
+            eid = sidScan;
+            eidRaw = String(sidScan);
+          }
+        }
+        if (isChatHostInputAct && eid < 1 && turn.targetRoleHint) {
+          var chatEid = resolveTargetElementId(String(turn.targetRoleHint), snapBeforeAct || {});
+          if (chatEid > 0) {
+            eid = chatEid;
+            eidRaw = String(chatEid);
+          }
+        }
+      }
       if (tool !== 'browser_scroll' && eid < 1) return { ok: false, error: 'invalid_element_id' };
       var act = tool === 'browser_input' ? 'input' : (tool === 'browser_scroll' ? 'scroll' : 'click');
       cstatForSession(sid, '⚡ ' + act + ' #' + eid, '');
       var ar = await callHostActionWithWait(act, eidRaw, {
         text: String(turn.text != null ? turn.text : ''),
         scrollDirection: String(turn.direction != null ? turn.direction : ''),
-        scrollDistance: parseInt(turn.distance, 10) || 0
+        scrollDistance: parseInt(turn.distance, 10) || 0,
+        forceDoubaoInput: !!(turn._forceHostInput && isChatHostInputAct),
+        chatJsSendOnly: !!turn._chatJsSendOnly,
+        deepseekJsFillOnly: !!turn._deepseekJsFillOnly
       });
       if (ar && ar.type === 'host_browser_act_error') {
         var actErrMsg = formatBrowserHostActError(ar);
         cstatForSession(sid, actErrMsg, 'error');
         return { ok: false, error: actErrMsg, stage: ar.stage, hostError: ar };
       }
+      if (isChatHostInputAct && ar && (ar.illusion || ar.skipped)) {
+        return {
+          ok: false,
+          error: 'host_skipped_illusion',
+          actResult: ar
+        };
+      }
       if (ar && ar.forced) {
         return { ok: true, forced: true, snap: getFallbackSnapshotForForced(), actResult: ar };
       }
       if (!ar || !ar.ok || ar.cancelled) {
+        var actPayload = ar && ar.actPayload ? ar.actPayload : ar;
         var actFail = ar && ar.error
           ? formatBrowserHostActError({ stage: 'action_' + act, error: ar.error, reqId: ar.reqId || '' })
           : 'act_failed';
-        return { ok: false, error: actFail, actResult: ar };
+        return { ok: false, error: actFail, actResult: actPayload };
       }
-      var snapAct = await waitSettleSnapshotAfterAct();
+      var snapAct = safeBrowserSnapshot(await waitSettleSnapshotAfterAct());
+      if (
+        tool === 'browser_input' &&
+        turn.text &&
+        String(turn.text).trim() &&
+        shouldAutoSearchNavigateAfterInput(state.browserAgentGoal || '', String(turn.text).trim())
+      ) {
+        var qIn = String(turn.text).trim();
+        var uAct = String((snapAct && snapAct.url) || '').toLowerCase();
+        if (!isBrowserSearchResultsUrl(uAct) && (isBrowserSearchHomeUrl(uAct) || !uAct)) {
+          var eng = browserAgentPickSearchEngine('', snapBeforeAct || snapAct);
+          var navUrl = browserAgentSearchResultsUrl(qIn, eng);
+          if (navUrl) {
+            cstatForSession(sid, '🌐 直达搜索结果：' + qIn, '');
+            post({ type: 'niuma_mobile_browser_navigate', url: navUrl });
+            await browserAgentDelay(2200);
+            try {
+              snapAct = safeBrowserSnapshot(await fetchBrowserSnapshotForAgent());
+            } catch (navErr) {
+              snapAct = safeBrowserSnapshot({
+                url: navUrl,
+                elements: [],
+                count: 0,
+                error: String(navErr.message || navErr)
+              });
+            }
+          }
+        }
+      }
       return { ok: true, snap: snapAct, actResult: ar };
     }
     return { ok: false, error: 'unknown_tool:' + tool };
@@ -5793,8 +5954,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var actReqId = 'act-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
     var safeTargetId = targetId !== undefined && targetId !== null ? String(targetId).trim() : '';
     var opt = extraOptions || {};
+    var isDoubaoHostInput =
+      actionType === 'input' &&
+      (opt.forceDoubaoInput ||
+        isDoubaoBrowserAgentGoal(state.browserAgentGoal || '') ||
+        /doubao\.com/i.test(state.mobileBrowserLastUrl || ''));
 
-    if (['click', 'input'].indexOf(actionType) !== -1 && safeTargetId !== '' && isStringPureNumber(safeTargetId)) {
+    if (
+      !isDoubaoHostInput &&
+      ['click', 'input'].indexOf(actionType) !== -1 &&
+      safeTargetId !== '' &&
+      isStringPureNumber(safeTargetId)
+    ) {
       if (window.g_NiumaLastElementsCount > 0 && !isElementIdValidInCache(safeTargetId)) {
         return Promise.resolve({ ok: true, skipped: true, illusion: true, reqId: actReqId });
       }
@@ -5807,14 +5978,33 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       reqId: actReqId,
       value: opt.text || opt.value || '',
       scrollDirection: opt.scrollDirection || '',
-      scrollDistance: opt.scrollDistance || 0
+      scrollDistance: opt.scrollDistance || 0,
+      forceDoubaoInput: !!opt.forceDoubaoInput,
+      chatJsSendOnly: !!opt.chatJsSendOnly,
+      deepseekJsFillOnly: !!opt.deepseekJsFillOnly
     });
-    return waitBrowserHostEvent(['host_browser_act_result', 'host_browser_act_error'], BROWSER_AGENT_ACT_TIMEOUT_MS, {
+    var actWaitMs = isDoubaoHostInput ? BROWSER_AGENT_ACT_TIMEOUT_DOUBAO_MS : BROWSER_AGENT_ACT_TIMEOUT_MS;
+    return waitBrowserHostEvent(['host_browser_act_result', 'host_browser_act_error'], actWaitMs, {
       reqId: actReqId
     })
       .then(function (res) {
-        if (res.type === 'host_browser_act_error' || res.error || res.ok === false) {
-          throw new Error(res.error || 'AHK backend execution failed');
+        if (res.type === 'host_browser_act_error') {
+          return {
+            ok: false,
+            error: res.error || 'host_browser_act_error',
+            type: res.type,
+            reqId: actReqId,
+            stage: res.stage,
+            actPayload: res
+          };
+        }
+        if (res.ok === false) {
+          return {
+            ok: false,
+            error: res.error || 'host_act_failed',
+            reqId: actReqId,
+            actPayload: res
+          };
         }
         var delay = actionType === 'refresh' || actionType === 'back' ? 800 : 350;
         return new Promise(function (resolve) {
@@ -5824,6 +6014,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         });
       })
       .catch(function (err) {
+        if (isDoubaoHostInput) {
+          return {
+            ok: false,
+            error: String((err && err.message) || err || 'act_timeout'),
+            reqId: actReqId,
+            timedOut: true
+          };
+        }
         return {
           ok: true,
           forced: true,
@@ -5922,7 +6120,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         return snap;
       }
       if (types.indexOf('host_browser_act_result') >= 0 || types.indexOf('host_browser_act_error') >= 0) {
-        if (reqId && d.reqId && String(d.reqId) !== String(reqId)) continue;
+        if (reqId && String(d.reqId || '') !== String(reqId)) continue;
         return d;
       }
       if (types.indexOf('host_mobile_browser_state') >= 0) return d;
@@ -5955,7 +6153,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         // 带 reqId 的 waiter 允许“不可用快照”通过，交由调用方决定重试/报错，防止出现假超时。
         if (!w.reqId && !browserSnapshotUsable(payload, w.opts || {})) continue;
       } else if (typ === 'host_browser_act_error' || typ === 'host_browser_act_result') {
-        if (w.reqId && payload.reqId && String(payload.reqId) !== String(w.reqId)) continue;
+        if (w.reqId && String(payload.reqId || '') !== String(w.reqId)) continue;
       }
       out.push(w);
     }
@@ -6087,6 +6285,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     if (/百度|baidu/i.test(t) && /(搜索|打开|查|看)/.test(t)) return 'https://www.baidu.com';
     if (/google|谷歌/i.test(t) && /(搜索|打开|查)/i.test(t)) return 'https://www.google.com';
+    if (/豆包|doubao/i.test(t) && /(打开|访问|浏览|去|进入|问|输入)/.test(t)) return 'https://www.doubao.com/chat/';
+    if (/deepseek/i.test(t) && /(打开|访问|浏览|去|进入|问|输入|导航|提问)/.test(t)) return 'https://chat.deepseek.com/';
     return '';
   }
 
@@ -6114,6 +6314,244 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
     }
     return '';
+  }
+
+  function inferBrowserGoalTaskKind(goal) {
+    var g = String(goal || '').trim();
+    if (/在\s*豆包|豆包\s*(问|提问|输入|说|聊)|向\s*豆包/i.test(g)) return 'chat_doubao';
+    if (/(deepseek)/i.test(g) && /(问|输入|聊|对话|提问|导航|打开|去)/.test(g)) return 'chat_deepseek';
+    if (/(kimi|通义|文心|元宝|chatgpt|claude)/i.test(g) && /(问|输入|聊|对话|提问)/.test(g)) return 'chat_other';
+    if (/(?:百度|baidu)\s*(?:搜索|搜|查)|在\s*(?:百度|baidu)\s*搜|@?\s*网页\s*百度\s*搜/i.test(g)) return 'search_baidu';
+    if (/(?:谷歌|google)\s*(?:搜索|搜|查)/i.test(g)) return 'search_google';
+    return 'general';
+  }
+
+  function isDoubaoBrowserAgentGoal(goal) {
+    if (inferBrowserGoalTaskKind(goal) === 'chat_doubao') return true;
+    var u = String((state && state.mobileBrowserLastUrl) || '').toLowerCase();
+    return u.indexOf('doubao.com') >= 0;
+  }
+
+  function isDeepSeekBrowserAgentGoal(goal) {
+    if (inferBrowserGoalTaskKind(goal) === 'chat_deepseek') return true;
+    var u = String((state && state.mobileBrowserLastUrl) || '').toLowerCase();
+    return u.indexOf('deepseek.com') >= 0;
+  }
+
+  function isChatHostBrowserAgentGoal(goal) {
+    var kind = inferBrowserGoalTaskKind(goal);
+    if (kind === 'chat_doubao' || kind === 'chat_deepseek') return true;
+    var u = String((state && state.mobileBrowserLastUrl) || '').toLowerCase();
+    return u.indexOf('doubao.com') >= 0 || u.indexOf('deepseek.com') >= 0;
+  }
+
+  function isChatHostTaskKind(kind) {
+    return kind === 'chat_doubao' || kind === 'chat_deepseek';
+  }
+
+  function chatHostMetaFromKind(kind) {
+    if (kind === 'chat_doubao') {
+      return {
+        site: 'doubao',
+        label: '豆包',
+        submitDone: 'doubaoSubmitDone',
+        failCount: 'doubaoInputFailCount',
+        focusAttempted: 'doubaoFocusAttempted',
+        sendAttempted: 'doubaoSendAttempted'
+      };
+    }
+    if (kind === 'chat_deepseek') {
+      return {
+        site: 'deepseek',
+        label: 'DeepSeek',
+        submitDone: 'deepseekSubmitDone',
+        failCount: 'deepseekInputFailCount',
+        focusAttempted: 'deepseekFocusAttempted',
+        sendAttempted: 'deepseekSendAttempted'
+      };
+    }
+    return null;
+  }
+
+  function snapIndicatesChatHost(snap, siteKey) {
+    if (!snap || !siteKey) return false;
+    var els = getSnapshotElementsArray(snap);
+    var i, el, blob;
+    for (i = 0; i < els.length; i++) {
+      el = els[i];
+      if (!el) continue;
+      blob = String(el.text || '') + String(el.value != null ? el.value : '') + String(el.hint || '');
+      if (siteKey === 'deepseek' && /给\s*DeepSeek|DeepSeek\s*发送|使用快速模式|chat\.deepseek/i.test(blob)) return true;
+      if (siteKey === 'doubao' && /发消息|豆包/i.test(blob)) return true;
+    }
+    return false;
+  }
+
+  function shouldSkipLlmForDoubaoTurn1(goal, snap) {
+    return shouldSkipLlmForChatHostTurn1(goal, snap, 'chat_doubao', 'doubao');
+  }
+
+  function shouldSkipLlmForChatHostTurn1(goal, snap, taskKind, siteKey) {
+    if (inferBrowserGoalTaskKind(goal) !== taskKind) return false;
+    var u = String((snap && snap.url) || (state && state.mobileBrowserLastUrl) || '').toLowerCase();
+    var onHost =
+      siteHostMatchesSiteKey(siteKey, snapHostFromUrl(u)) ||
+      snapIndicatesChatHost(snap, siteKey) ||
+      (siteKey === 'deepseek' && u.indexOf('deepseek.com') >= 0);
+    return onHost && snapHasUsableElements(snap);
+  }
+
+  function shouldSkipLlmForDeepSeekTurn1(goal, snap) {
+    return shouldSkipLlmForChatHostTurn1(goal, snap, 'chat_deepseek', 'deepseek');
+  }
+
+  function browserAgentLlmTimeoutMs(goal) {
+    return isChatHostBrowserAgentGoal(goal) ? BROWSER_AGENT_LLM_TIMEOUT_DOUBAO_MS : BROWSER_AGENT_LLM_TIMEOUT_MS;
+  }
+
+  function inferGoalTargetSiteHint(goal) {
+    var kind = inferBrowserGoalTaskKind(goal);
+    if (kind === 'chat_doubao') {
+      return { site: 'doubao', homeUrl: 'https://www.doubao.com/chat/', label: '豆包对话' };
+    }
+    if (kind === 'chat_deepseek') {
+      return { site: 'deepseek', homeUrl: 'https://chat.deepseek.com/', label: 'DeepSeek 对话' };
+    }
+    if (kind === 'search_baidu') {
+      return { site: 'baidu', homeUrl: 'https://www.baidu.com', label: '百度搜索' };
+    }
+    if (kind === 'search_google') {
+      return { site: 'google', homeUrl: 'https://www.google.com', label: 'Google 搜索' };
+    }
+    return null;
+  }
+
+  function siteHostMatchesSiteKey(siteKey, host) {
+    host = String(host || '').toLowerCase();
+    if (!host) return false;
+    if (siteKey === 'doubao') return host.indexOf('doubao.com') >= 0;
+    if (siteKey === 'deepseek') return host.indexOf('deepseek.com') >= 0;
+    if (siteKey === 'baidu') return host.indexOf('baidu.com') >= 0;
+    if (siteKey === 'google') return host.indexOf('google.') >= 0;
+    return false;
+  }
+
+  function ensureBrowserInputTextFromGoalString(goal) {
+    var kind = inferBrowserGoalTaskKind(goal);
+    if (kind === 'chat_doubao' || kind === 'chat_deepseek') {
+      var cq = extractChatMessageFromGoal(goal);
+      if (cq) return cq;
+    }
+    var sq = extractSearchQueryFromBrowserGoal(goal);
+    return sq ? String(sq).trim() : '';
+  }
+
+  function patchBrowserInputTurnText(turn, goal) {
+    if (!turn || turn.tool !== 'browser_input') return turn;
+    if (String(turn.text || '').trim()) return turn;
+    var t = ensureBrowserInputTextFromGoalString(goal);
+    if (!t) return turn;
+    return Object.assign({}, turn, { text: t, _textFromGoal: true });
+  }
+
+  function extractChatMessageFromGoal(goal) {
+    var g = String(goal || '').trim().replace(/^@网页\s*/i, '').trim();
+    var patterns = [
+      /在\s*豆包\s*(?:问|提问|输入|说|聊)[:：]?\s*(.+)$/i,
+      /向\s*豆包\s*(?:问|提问|输入)[:：]?\s*(.+)$/i,
+      /豆包\s*(?:问|提问|输入)[:：]?\s*(.+)$/i,
+      /豆包[^。！？?]{0,12}[:：]\s*(.+)$/i,
+      /豆包.{0,24}?(AutoHotkey|AHK|怎么写).+$/i,
+      /在\s*DeepSeek\s*(?:问|提问|输入|说|聊)[:：]?\s*(.+)$/i,
+      /向\s*DeepSeek\s*(?:问|提问|输入)[:：]?\s*(.+)$/i,
+      /DeepSeek\s*(?:问|提问|输入)[:：]?\s*(.+)$/i,
+      /DeepSeek[^。！？?]{0,12}[:：]\s*(.+)$/i,
+      /DeepSeek.{0,24}?(AutoHotkey|AHK|怎么写).+$/i
+    ];
+    var i, m;
+    for (i = 0; i < patterns.length; i++) {
+      m = g.match(patterns[i]);
+      if (m && m[1]) {
+        return String(m[1]).trim().replace(/[。；;，,！!？?]+$/g, '');
+      }
+    }
+    if (/(deepseek|豆包)/i.test(g)) {
+      m = g.match(/(?:AutoHotkey|AHK)[^。！？?]{0,48}|怎么写热键[^。！？?]{0,24}/i);
+      if (m && m[0]) return String(m[0]).trim().replace(/[。；;，,！!？?]+$/g, '');
+    }
+    return '';
+  }
+
+  function buildBrowserTaskHintBlock(goal, snap) {
+    var kind = inferBrowserGoalTaskKind(goal);
+    var siteHint = inferGoalTargetSiteHint(goal);
+    if (!siteHint && kind === 'general') return '';
+    var lines = ['【任务解读 · 供你决策，请自行选择 tool（非宿主强制）】'];
+    if (siteHint) {
+      lines.push('目标站点：' + siteHint.label + '（常见入口 ' + siteHint.homeUrl + '）');
+      var chatMsg = extractChatMessageFromGoal(goal);
+      if (chatMsg) {
+        lines.push('用户要在目标站发送的正文（完整问题，不是站点名）：「' + chatMsg + '」');
+      }
+      var curUrl = String((snap && snap.url) || '');
+      var curHost = snapHostFromUrl(curUrl);
+      if (!siteHostMatchesSiteKey(siteHint.site, curHost)) {
+        lines.push('当前页面：' + (curUrl || 'about:blank / 未知') + ' — 与目标站不一致。');
+        lines.push('建议：先用 browser_navigate 打开目标站，再 browser_input 上述正文；勿在无关站点 search_input 里输入「豆包」等站点名。');
+      }
+    } else if (kind === 'search_baidu') {
+      lines.push('任务类型：百度搜索；当前页若已是百度，可用 search_input / browser_search_navigate。');
+    }
+    return lines.length > 1 ? lines.join('\n') : '';
+  }
+
+  function shouldPreferLlmBrowserPlan(goal, snap) {
+    var kind = inferBrowserGoalTaskKind(goal);
+    if (shouldSkipLlmForDoubaoTurn1(goal, snap)) return false;
+    if (shouldSkipLlmForDeepSeekTurn1(goal, snap)) return false;
+    if (kind.indexOf('chat_') === 0 || kind === 'general') return true;
+    if (kind === 'search_baidu' || kind === 'search_google') {
+      return window.BROWSER_AGENT_FAST_BAIDU_SEARCH === false;
+    }
+    return true;
+  }
+
+  function shouldRunFastBaiduPath(goal) {
+    if (window.BROWSER_AGENT_FAST_BAIDU_SEARCH === false) return false;
+    if (shouldPreferLlmBrowserPlan(goal, null)) return false;
+    return inferBrowserGoalTaskKind(goal) === 'search_baidu' && !!extractSearchQueryFromBrowserGoal(goal);
+  }
+
+  function shouldAutoSearchNavigateAfterInput(goal, inputText) {
+    if (shouldPreferLlmBrowserPlan(goal, null)) return false;
+    var kind = inferBrowserGoalTaskKind(goal);
+    if (kind.indexOf('chat_') === 0) return false;
+    var q = extractSearchQueryFromBrowserGoal(goal);
+    if (!q) return false;
+    if (inputText && String(inputText).trim() !== q) return false;
+    return kind === 'search_baidu' || kind === 'search_google';
+  }
+
+  function resolveBrowserAgentStartupUrl(intent, goal) {
+    var q = String((intent && intent.query) || goal || '').trim();
+    if (intent && intent.url && isSafeHttpUrl(String(intent.url))) return String(intent.url);
+    if (/https?:\/\//i.test(q)) {
+      var m = q.match(/https?:\/\/[^\s\u4e00-\u9fff，。；、]+/i);
+      if (m && isSafeHttpUrl(m[0])) return m[0];
+    }
+    var siteHint = inferGoalTargetSiteHint(q);
+    var last = String(state.mobileBrowserLastUrl || '').trim();
+    if (siteHint) {
+      if (last && isSafeHttpUrl(last) && siteHostMatchesSiteKey(siteHint.site, snapHostFromUrl(last))) {
+        return last;
+      }
+      return 'about:blank';
+    }
+    var extracted = extractUrlFromBrowserGoal(q);
+    if (extracted && /(?:打开|访问|浏览|去|跳转|导航)/.test(q)) return extracted;
+    if (extracted && inferBrowserGoalTaskKind(q).indexOf('search_') === 0) return extracted;
+    if (last && isSafeHttpUrl(last)) return last;
+    return 'about:blank';
   }
 
   function isBrowserSearchHomeUrl(url) {
@@ -6148,8 +6586,77 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return 'https://www.baidu.com/s?wd=' + encodeURIComponent(q);
   }
 
+  /** 与 AHK NiumaMobileBrowser_ParseCompactItemsJson 对齐：按 id 分块，字段顺序无关 */
+  function parseCompactSnapshotElements(raw) {
+    var s = String(raw || '');
+    if (s.indexOf('"id"') < 0) return [];
+    var out = [];
+    var reId = /"id"\s*:\s*(\d+)/g;
+    var m;
+    var blocks = [];
+    while ((m = reId.exec(s))) {
+      blocks.push({ id: parseInt(m[1], 10) || 0, pos: m.index });
+    }
+    function compactQuotedField(chunk, key) {
+      var rx = new RegExp('"' + key + '"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"');
+      var fm = rx.exec(chunk);
+      if (!fm) return '';
+      return fm[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    }
+    for (var i = 0; i < blocks.length; i++) {
+      var bid = blocks[i].id;
+      if (bid < 1) continue;
+      var chunkEnd = i + 1 < blocks.length ? blocks[i + 1].pos : s.length;
+      var chunk = s.slice(blocks[i].pos, chunkEnd);
+      out.push({
+        id: bid,
+        tag: compactQuotedField(chunk, 'tag'),
+        type: compactQuotedField(chunk, 'type'),
+        text: compactQuotedField(chunk, 'text'),
+        hint: compactQuotedField(chunk, 'hint'),
+        role: compactQuotedField(chunk, 'role'),
+        roleHint: compactQuotedField(chunk, 'roleHint'),
+        sel: compactQuotedField(chunk, 'sel')
+      });
+    }
+    return out;
+  }
+
+  function findSnapshotElementById(snap, id) {
+    var eid = parseInt(id, 10) || 0;
+    if (eid < 1) return null;
+    var els = getSnapshotElementsArray(snap);
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (!el) continue;
+      if ((parseInt(el.id, 10) || 0) === eid) return el;
+    }
+    return null;
+  }
+
+  function isLikelySearchInputEl(el) {
+    if (!el) return false;
+    var tag = String(el.tag || '').toLowerCase();
+    if (tag === 'a' || tag === 'img' || tag === 'svg' || tag === 'button') return false;
+    var rh = String(el.roleHint || '').toLowerCase();
+    if (rh === 'search_input') return true;
+    var role = String(el.role || '').toLowerCase();
+    if (role === 'searchbox') return true;
+    var typ = String(el.type || '').toLowerCase();
+    if (tag !== 'input' && tag !== 'textarea' && tag !== 'div' && tag !== 'span') return false;
+    var text = String(el.text || '').toLowerCase();
+    var hint = String(el.hint || '').toLowerCase();
+    var val = String(el.value != null ? el.value : '').toLowerCase();
+    var sel = String((el.sel || el.selectorTop1) || '').toLowerCase();
+    var blob = text + ' ' + hint + ' ' + val + ' ' + sel;
+    if (/输入关键词|输入要搜索|请输入|keyword|searchbox|s_ipt|#kw|name="?wd|name="?word|name="?q/.test(blob)) return true;
+    if ((typ === 'search' || typ === 'text') && /输入|搜索|keyword|query/.test(blob)) return true;
+    if (/icon-search/.test(hint) && tag !== 'a') return true;
+    return false;
+  }
+
   function findSearchInputElementId(snap) {
-    var els = snap && snap.elements;
+    var els = getSnapshotElementsArray(snap);
     if (!Array.isArray(els) || !els.length) return 0;
     // 先走 roleHint 强匹配，避免被泛化输入框抢分。
     for (var ri = 0; ri < els.length; ri++) {
@@ -6157,7 +6664,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       if (!rel) continue;
       if (String(rel.roleHint || '').toLowerCase() === 'search_input') {
         var rid = parseInt(rel.id, 10) || 0;
-        if (rid > 0) return rid;
+        if (rid > 0 && isLikelySearchInputEl(rel)) return rid;
       }
     }
     var bestId = 0;
@@ -6172,8 +6679,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var roleHint = String((el && el.roleHint) || '').toLowerCase();
       var val = String((el && el.value) || '').toLowerCase();
       var sel = String((el && (el.sel || el.selectorTop1)) || '').toLowerCase();
+      if (tag === 'a' || tag === 'img' || tag === 'svg') return;
       if (tag === 'textarea') score += 50;
       if (tag === 'input') score += 35;
+      if (tag === 'div' || tag === 'span') score += 8;
       // 百度移动端常见占位：输入关键词（有时 tag=div/contenteditable 或 type 为空）
       if (/输入关键词|输入要搜索的内容|请输入|search|keyword|query/.test(text + ' ' + hint)) score += 90;
       // “百度一下/搜索”按钮旁的输入框也常带这些词
@@ -6184,16 +6693,122 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       if (/search|icon-search/.test(hint)) score += 12;
       if (/搜索|keyword|query|百度|搜/.test(text + ' ' + hint + ' ' + val)) score += 18;
       if (/name="?q|name="?wd|name="?word|name="?query|#kw|#index-kw|s_ipt|searchbox/.test(sel)) score += 36;
+      if (score < 55) return;
       if (score > bestScore) {
         bestScore = score;
         bestId = parseInt(el.id, 10) || 0;
       }
     });
-    return bestId;
+    if (bestId > 0 && isLikelySearchInputEl(findSnapshotElementById(snap, bestId))) return bestId;
+    return 0;
+  }
+
+  function snapHasUsableElements(snap) {
+    if (!snap) return false;
+    var arr = getSnapshotElementsArray(snap);
+    if (arr.length > 0) return true;
+    var c = parseInt(snap && (snap.count || snap.Count || snap.elementCount), 10) || 0;
+    if (c > 0) return true;
+    if (snap.error === 'label_parse_empty' && snap.elementsJson) return true;
+    return false;
+  }
+
+  function findSearchInputFromSnapshotElements(snap) {
+    var els = getSnapshotElementsArray(snap);
+    if (!Array.isArray(els) || !els.length) return 0;
+    var bestId = 0;
+    var bestScore = -1;
+    els.forEach(function (el) {
+      var score = 0;
+      var tag = String((el && el.tag) || '').toLowerCase();
+      var typ = String((el && el.type) || '').toLowerCase();
+      var hint = String((el && el.hint) || '').toLowerCase();
+      var sel = String((el && el.sel) || '').toLowerCase();
+      if (typ === 'text' || typ === 'search') score += 50;
+      if (tag === 'input' || tag === 'textarea') score += 40;
+      if (hint.indexOf('search_input') >= 0 || sel.indexOf('search_input') >= 0) score += 30;
+      if (tag === 'input' && (sel.indexOf('kw') >= 0 || sel.indexOf('index-kw') >= 0)) score += 25;
+      if (score > bestScore) {
+        bestScore = score;
+        bestId = parseInt(el.id, 10) || 0;
+      }
+    });
+    return bestId > 0 ? bestId : 0;
+  }
+
+  /** 从快照 原始 elementsJson 解析搜索框 id（label_parse_empty 时 elements 数组常为空） */
+  function kwIdFromSnapshotElementsJson(snap) {
+    var raw = String((snap && snap.elementsJson) || '').trim();
+    if (!raw) return 0;
+    var els = parseCompactSnapshotElements(raw);
+    if (!els.length) return 0;
+    var inId = findSearchInputElementId({ elements: els });
+    if (inId > 0) return inId;
+    return findSearchInputFromSnapshotElements({ elements: els });
+  }
+
+  /** 百度搜索：首轮有搜索框时直输关键词并跳转，不依赖大模型选 elementId（可关） */
+  async function tryFastBaiduSearchPath(sid, goal, snap, agentTrace, runStarted, rows, refreshDraft) {
+    if (window.BROWSER_AGENT_FAST_BAIDU_SEARCH === false) return false;
+    var q = extractSearchQueryFromBrowserGoal(goal);
+    if (!q) return false;
+    var host = snapHostFromUrl((snap && snap.url) || '');
+    if (host && host.indexOf('baidu.com') >= 0 && String(host).indexOf('baidu.com/s') >= 0) {
+      return false;
+    }
+    var inId = findSearchInputElementId(snap);
+    if (inId <= 0) inId = findSearchInputFromSnapshotElements(snap);
+    if (inId <= 0) inId = kwIdFromSnapshotElementsJson(snap);
+    if (inId <= 0) return false;
+
+    browserAgentTracePush(
+      agentTrace,
+      runStarted,
+      0,
+      '百度搜索快速路径',
+      '检测到搜索框 id=' + inId + '，直接输入「' + q + '」并提交（不调用大模型选工具）'
+    );
+    rows.push({ label: '百度搜索快速路径', status: '⏳ 输入并跳转结果页' });
+    refreshDraft('', '', '百度搜索快速路径 · 不等待大模型选 elementId');
+
+    var snapBefore = snap;
+    var toolTurn = {
+      tool: 'browser_input',
+      elementId: inId,
+      text: q,
+      thought: '快速路径：在百度首页搜索「' + q + '」'
+    };
+    var exec = await executeBrowserToolTurn(toolTurn, sid, snapBefore);
+    if (!exec.ok) {
+      rows.push({ label: '百度搜索快速路径', status: '❌ ' + (exec.error || '失败') });
+      return false;
+    }
+    var snapAfter = exec.snap || snapBefore;
+    var urlAfter = String((snapAfter && snapAfter.url) || '').toLowerCase();
+    if (urlAfter.indexOf('baidu.com/s') < 0) {
+      var eng = browserAgentPickSearchEngine(goal, snapAfter);
+      var navUrl = browserAgentSearchResultsUrl(q, eng);
+      browserAgentTracePush(agentTrace, runStarted, 0, '直达结果页', '输入后仍停留首页，跳转 ' + navUrl);
+      rows.push({ label: '百度搜索快速路径', status: '⏳ 直达结果页' });
+      refreshDraft('', '', '正在跳转搜索结果…');
+      var navTurn = { tool: 'browser_navigate', url: navUrl, thought: '快速路径：直达「' + q + '」搜索结果' };
+      var navExec = await executeBrowserToolTurn(navTurn, sid, snapAfter);
+      if (navExec.ok) {
+        rows.push({ label: '百度搜索快速路径', status: '✅ 已打开结果页' });
+        refreshDraft('', '', '已在「' + q + '」搜索结果页');
+        return true;
+      }
+      rows.push({ label: '百度搜索快速路径', status: '⚠️ 直达失败，改用常规流程' });
+    } else {
+      rows.push({ label: '百度搜索快速路径', status: '✅ 已在结果页' });
+      refreshDraft('', '', '已在「' + q + '」搜索结果页');
+      return true;
+    }
+    return true;
   }
 
   function findSearchSubmitElementId(snap) {
-    var els = snap && snap.elements;
+    var els = getSnapshotElementsArray(snap);
     if (!Array.isArray(els) || !els.length) return 0;
     var bestId = 0;
     var bestScore = -1;
@@ -6214,7 +6829,320 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         bestId = parseInt(el.id, 10) || 0;
       }
     });
-    return bestScore >= 40 ? bestId : 0;
+    return bestId;
+  }
+
+  function scoreDoubaoSendElement(el) {
+    if (!el) return -1e9;
+    var stag = String(el.tag || '').toLowerCase();
+    var styp = String(el.type || '').toLowerCase();
+    var stxt = String(el.text || '').toLowerCase().trim();
+    var shint = String(el.hint || '').toLowerCase();
+    var srh = String(el.roleHint || '').toLowerCase();
+    var blob = stxt + ' ' + shint;
+    if (styp === 'file') return -1e9;
+    if (srh === 'chat_input') return -1e9;
+    if (stag === 'textarea' || stag === 'input' || stag === 'select') return -1e9;
+    if (/搜索|写作|更多|发现|语音|麦克风|mic|voice|附件|上传|添加|发消息|plus|attach|paperclip|clip|image|photo|gallery|compass|file|取到文字|异常|思考|联网|深度|集成|快速模式|AutoHotkey|热键/.test(blob))
+      return -1e9;
+    if (srh === 'chat_send') return 140;
+    if (/^发送$|^send$|submit|提交/.test(stxt)) return 130;
+    if (/发送|send|submit|提交/.test(blob)) return 110;
+    if ((stag === 'button' || stag === 'a') && el.fixed) return 8;
+    return 0;
+  }
+
+  function findChatSendElementId(snap) {
+    var els = getSnapshotElementsArray(snap);
+    if (!Array.isArray(els) || !els.length) return 0;
+    var inputId = resolveTargetElementId('chat_input', snap) || 0;
+    var url = String((snap && snap.url) || state.mobileBrowserLastUrl || '').toLowerCase();
+    var preferMaxId = url.indexOf('deepseek.com') >= 0;
+    var roleSendId = resolveTargetElementId('chat_send', snap) || 0;
+    if (roleSendId > 0 && roleSendId !== inputId) return roleSendId;
+    var bestId = 0;
+    var bestScore = -1e9;
+    var maxIdQualified = 0;
+    var i, sc, id;
+    for (i = 0; i < els.length; i++) {
+      id = parseInt(els[i].id, 10) || 0;
+      if (id < 1 || id === inputId) continue;
+      sc = scoreDoubaoSendElement(els[i]);
+      if (sc >= 20 && id > maxIdQualified) maxIdQualified = id;
+      if (sc > bestScore) {
+        bestScore = sc;
+        bestId = id;
+      }
+    }
+    if (preferMaxId && maxIdQualified > 0) return maxIdQualified;
+    return bestScore >= 20 ? bestId : 0;
+  }
+
+  function planBrowserAgentChatJsSendTurn(goal, snap, ctx) {
+    var kind = inferBrowserGoalTaskKind(goal);
+    var meta = chatHostMetaFromKind(kind);
+    if (!meta) return null;
+    var chatQ = extractChatMessageFromGoal(goal) || '';
+    if (!chatQ) return null;
+    var snapUse = snap && getSnapshotElementsArray(snap).length ? snap : ctx && ctx.lastGoodSnap;
+    var inputId = resolveTargetElementId('chat_input', snapUse) || 0;
+    return {
+      thought: '本地：' + meta.label + ' JS 发送（不重复填词）',
+      tool: 'browser_input',
+      targetRoleHint: 'chat_input',
+      elementId: inputId || 0,
+      text: chatQ,
+      _source: 'chat_js_send',
+      _forceHostInput: true,
+      _chatJsSendOnly: true
+    };
+  }
+
+  function snapHasAttachmentBlock(snap) {
+    if (!snap) return false;
+    var els = getSnapshotElementsArray(snap);
+    var i, el, blob;
+    for (i = 0; i < els.length; i++) {
+      el = els[i];
+      if (!el) continue;
+      blob = String(el.text || '') + String(el.hint || '') + String(el.value != null ? el.value : '');
+      if (/异常文件|请删除|取到文字|无法读取|\.in\b|ser\.in/i.test(blob)) return true;
+    }
+    return false;
+  }
+
+  function findAttachmentDismissElementId(snap) {
+    var els = getSnapshotElementsArray(snap);
+    if (!Array.isArray(els) || !els.length) return 0;
+    var i, el, blob, tag, bestId = 0, bestScore = -1;
+    for (i = 0; i < els.length; i++) {
+      el = els[i];
+      if (!el) continue;
+      tag = String(el.tag || '').toLowerCase();
+      blob = String(el.text || '') + String(el.hint || '');
+      var score = 0;
+      if (/删除|移除|关闭|remove|close|clear|×|✕/.test(blob)) score += 80;
+      if (/异常|取到文字|\.in\b|ser\.in/.test(blob) && (tag === 'button' || tag === 'a')) score += 40;
+      if (tag === 'button' || tag === 'a') score += 10;
+      if (/附件|上传|attach|file/i.test(blob)) score -= 50;
+      if (score > bestScore) {
+        bestScore = score;
+        bestId = parseInt(el.id, 10) || 0;
+      }
+    }
+    return bestScore >= 35 ? bestId : 0;
+  }
+
+  function planBrowserAgentChatAttachmentDismiss(goal, snap, ctx) {
+    if (!isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) return null;
+    if (!snapHasAttachmentBlock(snap)) return null;
+    var dismissId = findAttachmentDismissElementId(snap);
+    if (dismissId < 1) return null;
+    var meta = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+    return {
+      thought: '本地：' + meta.label + ' 检测到异常附件，先删除 #' + dismissId,
+      tool: 'browser_click',
+      elementId: dismissId,
+      text: '',
+      _source: 'chat_dismiss_attachment'
+    };
+  }
+
+  function doubaoInputConfirmedInSnapshot(snap, expectedText) {
+    var q = String(expectedText || '').trim();
+    if (!q || !snap) return false;
+    var needle = q.slice(0, Math.min(10, q.length));
+    var els = getSnapshotElementsArray(snap);
+    var i, el, rh, blob;
+    for (i = 0; i < els.length; i++) {
+      el = els[i];
+      if (!el) continue;
+      rh = String(el.roleHint || '').toLowerCase();
+      blob = String(el.text || '') + String(el.value != null ? el.value : '');
+      if (rh === 'chat_input' && blob.indexOf(needle) >= 0) return true;
+      if (/发消息|给\s*DeepSeek|发送消息/.test(blob) && blob.indexOf(needle) >= 0) return true;
+    }
+    var dig = snapshotInputValuesDigest(snap);
+    return dig.indexOf(needle) >= 0;
+  }
+
+  /** 豆包：对话区已出现用户提问（发送成功），输入框不必再含全文 */
+  function doubaoMessageSentInSnapshot(snap, expectedText) {
+    var q = String(expectedText || '').trim();
+    if (!q || !snap) return false;
+    if (chatHostReplyVisibleInSnapshot(snap, q)) return true;
+    var needle = q.length >= 6 ? q.slice(0, 6) : q.length >= 4 ? q.slice(0, 4) : q;
+    var els = getSnapshotElementsArray(snap);
+    var i, el, rh, blob;
+    for (i = 0; i < els.length; i++) {
+      el = els[i];
+      if (!el) continue;
+      rh = String(el.roleHint || '').toLowerCase();
+      if (rh === 'chat_input') continue;
+      blob = String(el.text || '') + String(el.value != null ? el.value : '');
+      if (!blob || blob.length < needle.length) continue;
+      if (/^发消息|豆包\s*新对话|AI\s*创作|手机版|给\s*DeepSeek|使用快速模式/.test(blob) && blob.indexOf(needle) < 0) continue;
+      if (blob.indexOf(needle) >= 0) return true;
+      if (q.length >= 8 && blob.indexOf(q.slice(0, 8)) >= 0) return true;
+    }
+    return false;
+  }
+
+  /** 对话区已出现 AI 长回复（DeepSeek 等：发送成功但输入框仍可能残留占位/草稿） */
+  function chatHostReplyVisibleInSnapshot(snap, expectedText) {
+    if (!snap) return false;
+    var q = String(expectedText || '').trim();
+    var titleBlob = String(snap.title || snap.pageTitle || '').trim();
+    if (titleBlob.length >= 6 && q && titleBlob.indexOf(q.slice(0, Math.min(6, q.length))) >= 0 && titleBlob.length > q.length + 2)
+      return true;
+    if (/热键编写|编写方法|快速上手|AutoHotkey/i.test(titleBlob) && titleBlob.length > 8) return true;
+    var els = getSnapshotElementsArray(snap);
+    var i, el, rh, blob, longCount = 0;
+    for (i = 0; i < els.length; i++) {
+      el = els[i];
+      if (!el) continue;
+      rh = String(el.roleHint || '').toLowerCase();
+      if (rh === 'chat_input') continue;
+      blob = String(el.text || '') + String(el.value != null ? el.value : '');
+      if (blob.length < 24) continue;
+      if (/热键编写|编写方法|完整示例|小提醒|快速上手|键名对照|Volume_Up|\.ahk|by the way|Backspace|Numpad|LButton|编码|UTF-8|快速模式|Fast Mode/.test(blob))
+        return true;
+      if (q && blob.indexOf(q.slice(0, Math.min(8, q.length))) >= 0 && blob.length > q.length + 48) return true;
+      if (/AutoHotkey/i.test(blob) && blob.length > 80) return true;
+      if (blob.length > 120 && !/发消息|给\s*DeepSeek|使用快速模式|DeepThink|联网搜索/.test(blob)) longCount++;
+    }
+    return longCount >= 2;
+  }
+
+  function chatHostTurnCompleteInSnapshot(snap, expectedText) {
+    if (!snap) return false;
+    return doubaoMessageSentInSnapshot(snap, expectedText) || chatHostReplyVisibleInSnapshot(snap, expectedText);
+  }
+
+  function doubaoActIndicatesSent(actRes, snap, expectedText) {
+    var ar = actRes && typeof actRes === 'object' ? actRes : {};
+    if (ar.sendOk === true || ar.sentInThread === true) return true;
+    return doubaoMessageSentInSnapshot(snap, expectedText);
+  }
+
+  function planBrowserAgentChatSubmitAfterInput(goal, snap, ctx, turn) {
+    var kind = inferBrowserGoalTaskKind(goal);
+    var meta = chatHostMetaFromKind(kind);
+    if (!meta) return null;
+    var u = String((snap && snap.url) || (ctx && ctx.lastGoodSnap && ctx.lastGoodSnap.url) || '');
+    if (!siteHostMatchesSiteKey(meta.site, snapHostFromUrl(u)) && !snapIndicatesChatHost(snap, meta.site)) return null;
+    var hadInput =
+      (ctx && ctx.lastTool && ctx.lastTool.tool === 'browser_input') ||
+      (ctx && ctx.lastInputAct && ctx.lastInputAct.inputOk === true) ||
+      String((ctx && ctx.lastExecNote) || '').indexOf('browser_input') >= 0 ||
+      String((ctx && ctx.lastExecNote) || '').indexOf('填词') >= 0;
+    if (!hadInput) return null;
+    var chatQ = extractChatMessageFromGoal(goal) || String((ctx && ctx.lastTool && ctx.lastTool.text) || '');
+    var actIn = ctx && ctx.lastInputAct ? ctx.lastInputAct : {};
+    var inputOk =
+      actIn.inputOk === true ||
+      doubaoInputConfirmedInSnapshot(snap, chatQ) ||
+      doubaoInputConfirmedInSnapshot(ctx && ctx.lastGoodSnap, chatQ);
+    if (!inputOk) return null;
+    var attachDismiss = planBrowserAgentChatAttachmentDismiss(goal, snap, ctx);
+    if (attachDismiss) return attachDismiss;
+    var snapUse = snap && getSnapshotElementsArray(snap).length ? snap : ctx && ctx.lastGoodSnap;
+    var sendId = findChatSendElementId(snapUse);
+    if (meta.site === 'deepseek') {
+      var inIdDs = resolveTargetElementId('chat_input', snapUse) || 0;
+      return {
+        thought: '本地：DeepSeek 已填词，JS 点击发送（避免误点 #' + sendId + '）',
+        tool: 'browser_input',
+        elementId: inIdDs || 0,
+        text: chatQ,
+        _source: 'chat_submit_after_input',
+        _forceHostInput: true,
+        _chatJsSendOnly: true
+      };
+    }
+    if (sendId > 0) {
+      return {
+        thought: '本地：' + meta.label + ' 已填词，点击发送 #' + sendId,
+        tool: 'browser_click',
+        elementId: sendId,
+        text: '',
+        _source: 'chat_submit_after_input'
+      };
+    }
+    return null;
+  }
+
+  function findHeuristicSearchInputId(els) {
+    if (!Array.isArray(els) || !els.length) return 0;
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (!el) continue;
+      var tag = String(el.tag || '').toLowerCase();
+      var role = String(el.role || '').toLowerCase();
+      var rh = String(el.roleHint || '').toLowerCase();
+      var txt = String(el.text || '').toLowerCase();
+      var hint = String(el.hint || '').toLowerCase();
+      var sel = String(el.sel || el.selectorTop1 || '').toLowerCase();
+      if (rh === 'search_input' || role === 'searchbox') return parseInt(el.id, 10) || 0;
+      if (tag === 'input' || tag === 'textarea' || el.isContentEditable) {
+        if (/输入关键词|请输入|search|keyword|query|搜索|百度/.test(txt + ' ' + hint)) return parseInt(el.id, 10) || 0;
+        if (/name="?wd|name="?word|name="?q|#kw|s_ipt|searchbox/.test(sel)) return parseInt(el.id, 10) || 0;
+      }
+    }
+    return 0;
+  }
+
+  function resolveTargetElementId(targetRoleHint, snap) {
+    var rh = String(targetRoleHint || '').toLowerCase();
+    if (!rh) return 0;
+    var els = getSnapshotElementsArray(snap);
+    if (rh === 'search_input') {
+      var id = findSearchInputElementId(snap);
+      if (id > 0) return id;
+      return findHeuristicSearchInputId(els);
+    }
+    if (rh === 'search_submit') {
+      var id = findSearchSubmitElementId(snap);
+      if (id > 0) return id;
+      var j;
+      for (j = 0; j < els.length; j++) {
+        var el = els[j];
+        if (!el) continue;
+        var tag = String(el.tag || '').toLowerCase();
+        var txt = String(el.text || '').toLowerCase();
+        if ((tag === 'button' || tag === 'a' || tag === 'input') && /百度一下|搜索|提交/.test(txt)) {
+          return parseInt(el.id, 10) || 0;
+        }
+      }
+    }
+    if (rh === 'chat_input') {
+      var k;
+      for (k = 0; k < els.length; k++) {
+        var cel = els[k];
+        if (!cel) continue;
+        var ctag = String(cel.tag || '').toLowerCase();
+        var crh = String(cel.roleHint || '').toLowerCase();
+        var crole = String(cel.role || '').toLowerCase();
+        var ctxt = String(cel.text || '').toLowerCase();
+        var chint = String(cel.hint || '').toLowerCase();
+        if (crh === 'chat_input' || crole === 'textbox') return parseInt(cel.id, 10) || 0;
+        if (ctag === 'textarea' || cel.isContentEditable) {
+          if (/问|输入|消息|chat|prompt|说点什么|有问题|DeepSeek|发送消息/.test(ctxt + ' ' + chint)) return parseInt(cel.id, 10) || 0;
+        }
+      }
+    }
+    if (rh === 'chat_send') {
+      var s, bestSend = 0, bestSendScore = -1e9, sendSc;
+      for (s = 0; s < els.length; s++) {
+        sendSc = scoreDoubaoSendElement(els[s]);
+        if (sendSc > bestSendScore) {
+          bestSendScore = sendSc;
+          bestSend = parseInt(els[s].id, 10) || 0;
+        }
+      }
+      if (bestSendScore >= 50) return bestSend;
+    }
+    return 0;
   }
 
   function normalizeSearchText(s) {
@@ -6222,6 +7150,25 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       .toLowerCase()
       .replace(/\s+/g, '')
       .trim();
+  }
+
+  /** 统一元素数组来源：避免 count/arrLen 有值但 elements 为空导致模型误判 */
+  function getSnapshotElementsArray(snap) {
+    if (!snap) return [];
+    if (Array.isArray(snap.snapshot) && snap.snapshot.length) return snap.snapshot;
+    if (Array.isArray(snap.elements) && snap.elements.length) return snap.elements;
+    var parsed = parseSnapshotElements(snap);
+    if (parsed.length) return parsed;
+    if (typeof snap.snapshot === 'string' && snap.snapshot.indexOf('[') >= 0) {
+      try {
+        var arr = JSON.parse(snap.snapshot);
+        if (Array.isArray(arr)) return arr;
+      } catch (_) {
+        var compactArr = parseCompactSnapshotElements(snap.snapshot);
+        if (compactArr.length) return compactArr;
+      }
+    }
+    return [];
   }
 
   function hasSearchQueryInInputs(snap, query) {
@@ -6240,41 +7187,167 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return false;
   }
 
-  /** 搜索首页 + 目标含关键词时，首轮跳过大模型，直接 browser_input */
+  /** 搜索任务本地兜底：有搜索框则 input，否则点「百度一下」或直达结果页 */
   function planBrowserAgentLocalSearchTurn(goal, snap) {
+    if (isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) return null;
     var q = extractSearchQueryFromBrowserGoal(goal);
     if (!q) return null;
     var eid = findSearchInputElementId(snap);
-    // 某些宿主回包在 label_parse_empty 场景下可能不带 url（url=""），但 elements 仍然完整可用。
-    // 此时若能定位到搜索框，就直接视为“搜索首页”，跳过大模型以保证可用性。
-    var u = String((snap && snap.url) || '');
-    if (!isBrowserSearchHomeUrl(u)) {
-      if (!u) {
-        // url 为空：允许继续（已通过 findSearchInputElementId 命中输入框）。
-      } else {
+    if (eid > 0) {
+    return {
+      thought: '本地规划：在搜索框 #' + eid + ' 输入「' + q.slice(0, 40) + '」',
+      tool: 'browser_input',
+      elementId: eid,
+      text: q,
+      _source: 'fast_baidu_search'
+    };
+    }
+    var submitId = findSearchSubmitElementId(snap);
+    if (submitId > 0) {
+    return {
+      thought: '本地规划：点击「百度一下」提交',
+      tool: 'browser_click',
+      elementId: submitId,
+      text: '',
+      _source: 'fast_baidu_search'
+    };
+    }
+    return {
+      thought: '本地规划：未识别搜索框，直达「' + q.slice(0, 40) + '」搜索结果',
+      tool: 'browser_search_navigate',
+      elementId: 0,
+      text: q,
+      engine: browserAgentPickSearchEngine(goal, snap),
+      _source: 'fast_baidu_search'
+    };
+  }
+
+  function planBrowserAgentChatHostLocalTurn(goal, snap, ctx, reason, siteKey) {
+    var kind = inferBrowserGoalTaskKind(goal);
+    var meta = chatHostMetaFromKind(kind);
+    if (!meta || meta.site !== siteKey) return null;
+    var chatQ = extractChatMessageFromGoal(goal) || '';
+    if (!chatQ) return null;
+    ctx = ctx || {};
+    if (
+      ctx[meta.submitDone] ||
+      chatHostTurnCompleteInSnapshot(snap, chatQ) ||
+      chatHostTurnCompleteInSnapshot(ctx.lastGoodSnap, chatQ)
+    ) {
+      ctx[meta.submitDone] = true;
+      return null;
+    }
+    if (ctx[meta.sendAttempted]) {
+      if (chatHostTurnCompleteInSnapshot(snap, chatQ) || chatHostTurnCompleteInSnapshot(ctx.lastGoodSnap, chatQ)) {
+        ctx[meta.submitDone] = true;
         return null;
       }
+      return planBrowserAgentChatJsSendTurn(goal, snap, ctx);
     }
-    // 如果未能可靠定位搜索框，也不要把首轮交给大模型：直接打开搜索结果页更稳。
-    if (eid < 1) {
+    var inputId = resolveTargetElementId('chat_input', snap) || resolveTargetElementId('chat_input', ctx.lastGoodSnap) || 0;
+    var inputAlready =
+      doubaoInputConfirmedInSnapshot(snap, chatQ) || doubaoInputConfirmedInSnapshot(ctx.lastGoodSnap, chatQ);
+    if (inputAlready) {
+      if (chatHostReplyVisibleInSnapshot(snap, chatQ) || chatHostReplyVisibleInSnapshot(ctx.lastGoodSnap, chatQ)) {
+        ctx[meta.submitDone] = true;
+        return null;
+      }
+      ctx[meta.sendAttempted] = true;
+      return planBrowserAgentChatJsSendTurn(goal, snap, ctx);
+    }
+    var fails = ctx[meta.failCount] || 0;
+    var src = siteKey + '_local_' + String(reason || 'fallback');
+    var label = meta.label;
+    if (siteKey === 'deepseek') {
       return {
-        thought: '本地兜底：未识别搜索框，直接打开「' + q.slice(0, 40) + '」搜索结果页',
+        thought: '本地：' + label + ' JS 填词+发送「' + chatQ.slice(0, 32) + '」（跳过物理粘贴）',
+        tool: 'browser_input',
+        targetRoleHint: 'chat_input',
+        elementId: inputId || 0,
+        text: chatQ,
+        _source: src,
+        _forceHostInput: true,
+        _deepseekJsFillOnly: true
+      };
+    }
+    if (fails >= 3 && fails % 3 === 0) {
+      return {
+        thought: '本地：' + label + ' 粘贴后 AHK Enter 发送「' + chatQ.slice(0, 32) + '」',
+        tool: 'browser_input',
+        targetRoleHint: 'chat_input',
+        elementId: inputId || 0,
+        text: chatQ,
+        _source: src,
+        _forceHostInput: true,
+        _doubaoPasteEnter: true
+      };
+    }
+    return {
+      thought: '本地：' + label + ' AHK 剪贴板^v 填词「' + chatQ.slice(0, 32) + '」',
+      tool: 'browser_input',
+      targetRoleHint: 'chat_input',
+      elementId: inputId || 0,
+      text: chatQ,
+      _source: src,
+      _forceHostInput: true
+    };
+  }
+
+  /** 豆包对话：统一本地规划（chat_input + 强制宿主输入） */
+  function planBrowserAgentDoubaoLocalTurn(goal, snap, ctx, reason) {
+    if (inferBrowserGoalTaskKind(goal) !== 'chat_doubao') return null;
+    return planBrowserAgentChatHostLocalTurn(goal, snap, ctx, reason, 'doubao');
+  }
+
+  function planBrowserAgentDeepSeekLocalTurn(goal, snap, ctx, reason) {
+    if (inferBrowserGoalTaskKind(goal) !== 'chat_deepseek') return null;
+    return planBrowserAgentChatHostLocalTurn(goal, snap, ctx, reason, 'deepseek');
+  }
+
+  function planBrowserAgentChatHostLocalTurnAny(goal, snap, ctx, reason) {
+    var kind = inferBrowserGoalTaskKind(goal);
+    var meta = chatHostMetaFromKind(kind);
+    if (!meta) return null;
+    return planBrowserAgentChatHostLocalTurn(goal, snap, ctx, reason, meta.site);
+  }
+
+  /** API 超时/失败：豆包本地降级 */
+  function planBrowserAgentDoubaoTimeoutFallback(goal, snap, ctx) {
+    return planBrowserAgentDoubaoLocalTurn(goal, snap, ctx, 'doubao_fallback');
+  }
+
+  function planBrowserAgentDeepSeekTimeoutFallback(goal, snap, ctx) {
+    return planBrowserAgentDeepSeekLocalTurn(goal, snap, ctx, 'deepseek_fallback');
+  }
+
+  function planBrowserAgentApiTimeoutFallback(goal, snap, ctx) {
+    var kind = inferBrowserGoalTaskKind(goal);
+    if (kind === 'chat_doubao') {
+      return planBrowserAgentDoubaoLocalTurn(goal, snap, ctx || {}, 'api_timeout');
+    }
+    if (kind === 'chat_deepseek') {
+      return planBrowserAgentDeepSeekLocalTurn(goal, snap, ctx || {}, 'api_timeout');
+    }
+    var local = planBrowserAgentLocalSearchTurn(goal, snap);
+    if (local) return local;
+    var q = extractSearchQueryFromBrowserGoal(goal);
+    if (!q) return null;
+    var u = String((snap && snap.url) || '');
+    if (isBrowserSearchHomeUrl(u) || !u || /\.baidu\.|\.google\./i.test(u)) {
+      return {
+        thought: '本地降级：大模型 API 超时，直接打开「' + q.slice(0, 40) + '」搜索结果',
         tool: 'browser_search_navigate',
         elementId: 0,
         text: q,
         engine: browserAgentPickSearchEngine(goal, snap)
       };
     }
-    return {
-      thought: '本地规划：在搜索框输入「' + q.slice(0, 40) + '」',
-      tool: 'browser_input',
-      elementId: eid,
-      text: q
-    };
+    return null;
   }
 
   /** 输入成功后快照为空/仍首页：直接跳转搜索结果，避免第 2 轮再等大模型 */
   function planBrowserAgentSearchNavigateAfterInput(goal, snap, ctx, turn) {
+    if (isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) return null;
     if (turn <= 1 || !ctx) return null;
     var q = extractSearchQueryFromBrowserGoal(goal);
     if (!q) return null;
@@ -6294,9 +7367,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         text: ''
       };
     }
-    var nEl = (snap && snap.elements && snap.elements.length) || parseInt(snap && snap.count, 10) || 0;
+    var elsSnap = snap ? getSnapshotElementsArray(snap) : [];
+    var nEl = elsSnap.length || (snap && snap.elements && snap.elements.length) || parseInt(snap && snap.count, 10) || 0;
     var onHome = isBrowserSearchHomeUrl(u) || !u;
-    var snapBroken = nEl < 1 || String((snap && snap.error) || '') === 'label_parse_empty';
+    var snapBroken = nEl < 1;
     if (onHome || snapBroken) {
       return {
         thought: '本地：输入已完成，直接打开搜索结果（跳过大模型，避免 settle 空快照）',
@@ -6311,6 +7385,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   /** 搜索首页 follow-up：检测到关键词已填入但仍停留首页时，补一轮提交点击 */
   function planBrowserAgentLocalSearchFollowupTurn(goal, snap, lastExecNote, turn, ctx) {
+    if (isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) return null;
     if (turn <= 1) return null;
     var q = extractSearchQueryFromBrowserGoal(goal);
     if (!q) return null;
@@ -6477,6 +7552,88 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function pickElementsForBrowserLlm(elements, maxN) {
     maxN = maxN || 24;
     if (!Array.isArray(elements) || !elements.length) return [];
+    // 方案B：破格录取关键元素（搜索框/搜索按钮）置顶，避免 TopK 截断后模型“看不见”关键控件。
+    function getById(id) {
+      id = parseInt(id, 10) || 0;
+      if (id < 1) return null;
+      for (var i = 0; i < elements.length; i++) {
+        var e = elements[i];
+        if (!e) continue;
+        if ((parseInt(e.id, 10) || 0) === id) return e;
+      }
+      return null;
+    }
+    function isLikelySearchInput(el) {
+      if (!el) return false;
+      var tag = String(el.tag || '').toLowerCase();
+      var role = String(el.role || '').toLowerCase();
+      var rh = String(el.roleHint || '').toLowerCase();
+      var txt = String(el.text || '').toLowerCase();
+      var hint = String(el.hint || '').toLowerCase();
+      var sel = String(el.sel || el.selectorTop1 || '').toLowerCase();
+      if (rh === 'search_input') return true;
+      if (role === 'searchbox') return true;
+      if (tag === 'input' || tag === 'textarea') {
+        if (/输入关键词|请输入|search|keyword|query|搜索|百度/.test(txt + ' ' + hint)) return true;
+        if (/name="?wd|name="?word|name="?q|#kw|#index-kw|s_ipt|searchbox/.test(sel)) return true;
+      }
+      return false;
+    }
+    function isLikelySearchSubmit(el) {
+      if (!el) return false;
+      var tag = String(el.tag || '').toLowerCase();
+      var typ = String(el.type || '').toLowerCase();
+      var rh = String(el.roleHint || '').toLowerCase();
+      var txt = String(el.text || '').toLowerCase();
+      var hint = String(el.hint || '').toLowerCase();
+      if (rh === 'search_submit') return true;
+      if (tag === 'button' || tag === 'a' || (tag === 'input' && (typ === 'submit' || typ === 'button'))) {
+        if (/百度一下|搜索|搜一下|提交|search/.test(txt + ' ' + hint)) return true;
+      }
+      return false;
+    }
+    var forced = [];
+    try {
+      if (typeof findSearchInputElementId === 'function') {
+        var inId = findSearchInputElementId({ elements: elements }) || 0;
+        var elIn = getById(inId);
+        if (elIn) forced.push(elIn);
+      }
+      if (typeof findSearchSubmitElementId === 'function') {
+        var sbId = findSearchSubmitElementId({ elements: elements }) || 0;
+        var elSb = getById(sbId);
+        if (elSb && (!forced.length || String(elSb.id) !== String(forced[0].id))) forced.push(elSb);
+      }
+    } catch (_) {}
+    if (!forced.length) {
+      for (var fi = 0; fi < elements.length; fi++) {
+        var el0 = elements[fi];
+        if (isLikelySearchInput(el0)) {
+          forced.push(el0);
+          break;
+        }
+      }
+    }
+    if (forced.length < 2) {
+      for (var fj = 0; fj < elements.length; fj++) {
+        var el1 = elements[fj];
+        if (forced.length && String(el1 && el1.id) === String(forced[0].id)) continue;
+        if (isLikelySearchSubmit(el1)) {
+          forced.push(el1);
+          break;
+        }
+      }
+    }
+    if (forced.length) {
+      var seenForced = {};
+      forced = forced.filter(function (e) {
+        var k = String(e && e.id);
+        if (!k || seenForced[k]) return false;
+        seenForced[k] = true;
+        return true;
+      });
+      if (forced.length > 2) forced = forced.slice(0, 2);
+    }
     function score(el) {
       var tag = String((el && el.tag) || '').toLowerCase();
       var typ = String((el && el.type) || '').toLowerCase();
@@ -6489,12 +7646,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       if (el && el.hint) s += 8;
       return s;
     }
-    return elements
+    var remaining = elements
       .slice()
+      .filter(function (e) {
+        if (!forced.length) return true;
+        for (var i = 0; i < forced.length; i++) if (String(forced[i].id) === String(e && e.id)) return false;
+        return true;
+      })
       .sort(function (a, b) {
         return score(b) - score(a);
       })
-      .slice(0, maxN);
+      .slice(0, Math.max(0, maxN - forced.length));
+    return forced.concat(remaining);
   }
 
   function formatBrowserElementsForModel(elements, maxN) {
@@ -6624,7 +7787,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function browserAgentSnapshotBrief(snap) {
     if (!snap) return '(无快照)';
     var url = String(snap.url || '').slice(0, 120);
-    var n = (snap.elements && snap.elements.length) || parseInt(snap.count, 10) || 0;
+    var n =
+      (snap && snap.totalCandidates) ||
+      (snap && snap.snapshot && snap.snapshot.length) ||
+      (snap && snap.elements && snap.elements.length) ||
+      parseInt(snap && snap.arrLen, 10) ||
+      parseInt(snap && snap.count, 10) ||
+      0;
     var err = snap.error ? ' · 错误=' + String(snap.error) : '';
     return (url || '(无 URL)') + ' · ' + n + ' 个可交互元素' + err;
   }
@@ -6803,8 +7972,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return false;
   }
 
-  async function ensureMobileBrowserForAgent(sid, intent, rows, refreshDraftFn) {
-    var url = (intent && intent.url) || extractUrlFromBrowserGoal(intent && intent.query) || state.mobileBrowserLastUrl || 'https://www.baidu.com';
+  async function ensureMobileBrowserForAgent(sid, intent, rows, refreshDraftFn, goal) {
+    var url = resolveBrowserAgentStartupUrl(intent, goal || (intent && intent.query) || '');
     if (!state.drawer) setDrawer(true);
 
     async function afterHostOpen(hostState) {
@@ -6881,14 +8050,22 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             if (Array.isArray(arr)) return arr;
           }
         }
-      } catch (e2) {}
+      } catch (e2) {
+        if (typeof ej === 'string') {
+          var compactEj = parseCompactSnapshotElements(ej);
+          if (compactEj.length) return compactEj;
+        }
+      }
     }
     var cnt = parseInt(d.count, 10) || parseInt(d.arrLen, 10) || 0;
     if (typeof d.snapshot === 'string' && d.snapshot.indexOf('[') >= 0) {
       try {
         var snapArr = JSON.parse(d.snapshot);
         if (Array.isArray(snapArr) && snapArr.length) return snapArr;
-      } catch (snapErr) {}
+      } catch (snapErr) {
+        var compactSnap = parseCompactSnapshotElements(d.snapshot);
+        if (compactSnap.length) return compactSnap;
+      }
     }
     if (cnt > 0 && state.browserHostEventRing && state.browserHostEventRing.length) {
       var ri, re, prev;
@@ -6916,7 +8093,43 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       d = flat;
     }
     d.elements = parseSnapshotElements(d);
+    if (d.elements.length) {
+      d.snapshot = d.elements;
+      if (d.error === 'label_parse_empty' || d.error === 'json_parse_failed' || d.error === 'viewport_throttle') d.error = '';
+    } else if (d.error === 'label_parse_empty' || d.error === 'json_parse_failed' || d.error === 'viewport_throttle') {
+      d.error = '';
+    } else {
+      var cntHint = parseInt(d.count, 10) || parseInt(d.arrLen, 10) || 0;
+      if (cntHint > 0 && (d.error === 'label_parse_empty' || d.error === 'json_parse_failed' || d.error === 'viewport_throttle')) d.error = '';
+    }
+    var snapUrl = String(d.url || '').toLowerCase();
+    if ((!snapUrl || snapUrl === 'about:blank') && state.mobileBrowserLastUrl && isSafeHttpUrl(state.mobileBrowserLastUrl)) {
+      d.url = state.mobileBrowserLastUrl;
+    }
     return d;
+  }
+
+  /** 保证下游永远有 elements 数组，避免 null.elements */
+  function safeBrowserSnapshot(snap) {
+    var s = coerceBrowserAgentSnapshot(snap, state.mobileBrowserLastUrl || '');
+    if (!s || typeof s !== 'object') {
+      return { url: state.mobileBrowserLastUrl || '', elements: [], count: 0, error: 'snapshot_unavailable' };
+    }
+    if (!Array.isArray(s.elements)) s.elements = getSnapshotElementsArray(s);
+    if (typeof s.count !== 'number') s.count = s.elements.length;
+    return s;
+  }
+
+  function isBrowserSearchResultsUrl(url) {
+    var u = String(url || '').toLowerCase();
+    return u.indexOf('baidu.com/s?') >= 0 || u.indexOf('m.baidu.com/s?') >= 0 || /\?wd=/.test(u) || /[?&]word=/.test(u);
+  }
+
+  function isBrowserSearchHomeUrl(url) {
+    var u = String(url || '').toLowerCase();
+    if (!u) return true;
+    if (isBrowserSearchResultsUrl(u)) return false;
+    return u.indexOf('baidu.com') >= 0 && (u.indexOf('/s?') < 0 || u.indexOf('s?') < 0);
   }
 
   function readHostSnapshotFromBridge(ahk) {
@@ -7143,7 +8356,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                 try {
                   var parsed = JSON.parse(arrText);
                   if (Array.isArray(parsed)) snapArr = parsed;
-                } catch (_) {}
+                } catch (_) {
+                  snapArr = parseCompactSnapshotElements(arrText);
+                }
+                if (!snapArr.length) snapArr = parseCompactSnapshotElements(arrText);
               }
             }
           }
@@ -7218,7 +8434,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function ingestHostBrowserSnapshot(raw, expectedReqId) {
     if (!raw) return false;
-    var snap = normalizeBrowserSnapshot(raw);
+    var snap = coerceBrowserAgentSnapshot(normalizeBrowserSnapshot(raw));
+    if (!snap.elements || !snap.elements.length) {
+      var parsed = parseSnapshotElements(snap);
+      if (parsed.length) snap.elements = parsed;
+    }
     if (!snap.type) snap.type = 'host_browser_snapshot';
     if (expectedReqId) {
       if (snap.reqId && String(snap.reqId) !== String(expectedReqId)) return false;
@@ -7378,7 +8598,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                   try {
                     var parsed = JSON.parse(arrText);
                     if (Array.isArray(parsed)) snapArr = parsed;
-                  } catch (_) {}
+                  } catch (_) {
+                    snapArr = parseCompactSnapshotElements(arrText);
+                  }
+                  if (!snapArr.length) snapArr = parseCompactSnapshotElements(arrText);
                 }
               }
             }
@@ -7554,14 +8777,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var snap = normalizeBrowserSnapshot(await snapPromise);
       var tries = 0;
       while (tries < 3) {
+        snap = normalizeBrowserSnapshot(snap);
         var nEl = (snap.elements && snap.elements.length) || 0;
         var cnt = parseInt(snap.count, 10) || parseInt(snap.arrLen, 10) || 0;
         var err = String((snap && snap.error) || '');
-        if (err === 'label_parse_empty') {
+        if (err === 'label_parse_empty' && nEl < 1 && cnt > 0) {
           tries += 1;
           snap = await forceRelabelOnce('label_parse_empty');
           continue;
         }
+        if (err === 'label_parse_empty' && nEl > 0) err = '';
         // prefer_input：必须能定位到搜索输入框（至少在搜索/查询类目标中）
         // 若不能定位，则先强刷再返回，避免 resolver=0 导致 invalid_element_id。
         var q = extractSearchQueryFromBrowserGoal(state && state.browserAgentGoal ? state.browserAgentGoal : '');
@@ -7695,11 +8920,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       runStarted,
       0,
       '运行模式',
-      '单步 Grounding：每轮仅一个 browser_* 工具；动作后宿主自动 observe'
+      '单步 Grounding：每轮仅一个 browser_* 工具；动作后宿主自动 observe · build=' + BROWSER_AGENT_BUILD
     );
     refreshDraft('', '下方时间线会实时更新卡点与策略调整。', '初始化完成');
 
     try {
+      state.browserAgentGoal = goal;
       state.mobileBrowserAiPaused = false;
       post({ type: 'niuma_browser_resume_ai' });
       if (intent && intent.resume) {
@@ -7707,7 +8933,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         row('恢复操控', '✅ 已解除暂停');
       }
 
-      await ensureMobileBrowserForAgent(sid, intent || { query: goal, url: '' }, rows, refreshDraft);
+      await ensureMobileBrowserForAgent(sid, intent || { query: goal, url: '' }, rows, refreshDraft, goal);
 
       var agentTurnCtx = { lastAssistant: '', lastExecNote: '', lastGoodSnap: null, lastTool: null };
       var lastFp = '';
@@ -7728,7 +8954,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           row('首轮 observe', '⏳ 重试（重新打开浏览器）');
           refreshDraft('', '', 'browser_not_open · 重新打开浏览器');
           state.mobileBrowserOpen = false;
-          await ensureMobileBrowserForAgent(sid, intent || { query: goal, url: '' }, rows, refreshDraft);
+          await ensureMobileBrowserForAgent(sid, intent || { query: goal, url: '' }, rows, refreshDraft, goal);
           snap = await fetchBrowserSnapshotForAgent();
         } else {
           throw obsErr;
@@ -7768,17 +8994,64 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
       lastFp = snapshotFingerprint(snap);
 
-      for (turn = 1; turn <= BROWSER_AGENT_MAX_TURNS; turn++) {
+      var fastDone = false;
+      if (shouldRunFastBaiduPath(goal)) {
+        fastDone = await tryFastBaiduSearchPath(
+          sid,
+          goal,
+          snap,
+          agentTrace,
+          runStarted,
+          rows,
+          refreshDraft
+        );
+      }
+      if (fastDone) {
+        finishThought = '快速路径：已在「' + extractSearchQueryFromBrowserGoal(goal) + '」百度搜索结果页';
+      }
+
+      if (!fastDone) for (turn = 1; turn <= BROWSER_AGENT_MAX_TURNS; turn++) {
         if (state.mobileBrowserAiPaused) {
           throw new Error('AI 网页操控已暂停。请在右侧手动处理完成后发送「继续」。');
+        }
+        if (inferBrowserGoalTaskKind(goal) === 'chat_doubao' && agentTurnCtx.doubaoSubmitDone) {
+          var chatQDone = extractChatMessageFromGoal(goal) || '';
+          finishThought =
+            '已向豆包发送：「' + chatQDone + '」。请勿重复输入（宿主与前端已达成共识）。';
+          row('第 ' + turn + ' 轮 · 豆包', '✅ 已发送，跳过重复轮次');
+          browserAgentTracePush(agentTrace, runStarted, turn, '豆包已发送', finishThought);
+          break;
+        }
+        if (inferBrowserGoalTaskKind(goal) === 'chat_deepseek' && agentTurnCtx.deepseekSubmitDone) {
+          var chatQDoneDs = extractChatMessageFromGoal(goal) || '';
+          finishThought =
+            '已向 DeepSeek 发送：「' + chatQDoneDs + '」。请勿重复输入（宿主与前端已达成共识）。';
+          row('第 ' + turn + ' 轮 · DeepSeek', '✅ 已发送，跳过重复轮次');
+          browserAgentTracePush(agentTrace, runStarted, turn, 'DeepSeek 已发送', finishThought);
+          break;
+        }
+        var chatQEarly = extractChatMessageFromGoal(goal) || '';
+        if (isChatHostTaskKind(inferBrowserGoalTaskKind(goal)) && chatHostTurnCompleteInSnapshot(snap, chatQEarly)) {
+          var chMetaEarly = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+          agentTurnCtx[chMetaEarly.submitDone] = true;
+          finishThought =
+            '「' +
+            chatQEarly +
+            '」已在 ' +
+            chMetaEarly.label +
+            ' 对话区得到回复（检测到 AI 长文），停止重复填词/点击。';
+          row('第 ' + turn + ' 轮 · ' + chMetaEarly.label, '✅ 已见 AI 回复');
+          browserAgentTracePush(agentTrace, runStarted, turn, chMetaEarly.label + '提问完成', finishThought);
+          break;
         }
 
         row('第 ' + turn + ' 轮 · 模型决策', '⏳ 思考中…');
         refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 决策中（见时间线）');
         var llmStart = Date.now();
+        var llmCapMs = browserAgentLlmTimeoutMs(goal);
         var llmHb = setInterval(function () {
           var sec = Math.round((Date.now() - llmStart) / 1000);
-          var cap = Math.round(BROWSER_AGENT_LLM_TIMEOUT_MS / 1000);
+          var cap = Math.round(llmCapMs / 1000);
           var waitLabel = '⏳ 等待 API ' + sec + 's / ' + cap + 's';
           rowUpdate('第 ' + turn + ' 轮 · 模型决策', waitLabel);
           refreshDraft(
@@ -7791,9 +9064,165 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
         var rawTurn = '';
         var toolTurn = null;
-        // 决策优先交给大模型；本地规划仅作为“API 超时/失败”降级方案。
         var localPlan = null;
-        {
+        var qSearchGoal = extractSearchQueryFromBrowserGoal(goal);
+        var preferLlmSearch =
+          shouldPreferLlmBrowserPlan(goal, snap) ||
+          (window.BROWSER_AGENT_PREFER_LLM_SEARCH !== false && snapHasUsableElements(snap));
+        if (turn === 1 && !preferLlmSearch) {
+          if (inferBrowserGoalTaskKind(goal) === 'chat_doubao') {
+            localPlan = planBrowserAgentDoubaoLocalTurn(goal, snap, agentTurnCtx, 'turn1_ready');
+          } else if (inferBrowserGoalTaskKind(goal) === 'chat_deepseek') {
+            localPlan = planBrowserAgentDeepSeekLocalTurn(goal, snap, agentTurnCtx, 'turn1_ready');
+          } else {
+            localPlan = planBrowserAgentLocalSearchTurn(goal, snap);
+            if (!localPlan && qSearchGoal) {
+              localPlan = planBrowserAgentApiTimeoutFallback(goal, snap, agentTurnCtx);
+            }
+          }
+        }
+        if (!localPlan && turn === 1 && shouldSkipLlmForDoubaoTurn1(goal, snap)) {
+          localPlan = planBrowserAgentDoubaoLocalTurn(goal, snap, agentTurnCtx, 'turn1_ready');
+        }
+        if (!localPlan && turn === 1 && shouldSkipLlmForDeepSeekTurn1(goal, snap)) {
+          localPlan = planBrowserAgentDeepSeekLocalTurn(goal, snap, agentTurnCtx, 'turn1_ready');
+        }
+        if (!localPlan && !shouldPreferLlmBrowserPlan(goal, snap)) {
+          localPlan = planBrowserAgentSearchNavigateAfterInput(goal, snap, agentTurnCtx, turn);
+        }
+        if (
+          !localPlan &&
+          isChatHostTaskKind(inferBrowserGoalTaskKind(goal)) &&
+          !agentTurnCtx[chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).submitDone] &&
+          !agentTurnCtx[chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).sendAttempted] &&
+          (agentTurnCtx[chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).failCount] || 0) > 0
+        ) {
+          localPlan =
+            planBrowserAgentChatHostLocalTurnAny(goal, snap, agentTurnCtx, 'fail_retry_' + turn) ||
+            planBrowserAgentChatSubmitAfterInput(goal, snap, agentTurnCtx, turn);
+        }
+        if (!localPlan && turn > 1 && isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) {
+          var chMetaRetry = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+          if (!agentTurnCtx[chMetaRetry.submitDone] && !agentTurnCtx[chMetaRetry.sendAttempted]) {
+            var noteChatHost = String(agentTurnCtx.lastExecNote || '');
+            var chatHostNeedsLocal =
+              (agentTurnCtx[chMetaRetry.failCount] || 0) > 0 ||
+              agentTurnCtx[chMetaRetry.focusAttempted] ||
+              /未确认|填词|browser_input|豆包|DeepSeek/i.test(noteChatHost) ||
+              snapIndicatesChatHost(snap, chMetaRetry.site);
+            if (chatHostNeedsLocal) {
+              localPlan =
+                chMetaRetry.site === 'doubao'
+                  ? planBrowserAgentDoubaoTimeoutFallback(goal, snap, agentTurnCtx)
+                  : planBrowserAgentDeepSeekTimeoutFallback(goal, snap, agentTurnCtx);
+            }
+          }
+        }
+        if (
+          !localPlan &&
+          turn > 1 &&
+          isChatHostTaskKind(inferBrowserGoalTaskKind(goal)) &&
+          !agentTurnCtx[chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).submitDone] &&
+          !agentTurnCtx[chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).sendAttempted] &&
+          snapIndicatesChatHost(snap, chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).site)
+        ) {
+          localPlan = planBrowserAgentChatHostLocalTurnAny(goal, snap, agentTurnCtx, 'post_nav_' + turn);
+        }
+        if (!localPlan && isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) {
+          var chMetaSend = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+          var chatQSendPlan = extractChatMessageFromGoal(goal) || '';
+          if (
+            !agentTurnCtx[chMetaSend.submitDone] &&
+            !chatHostTurnCompleteInSnapshot(snap, chatQSendPlan) &&
+            (agentTurnCtx[chMetaSend.sendPending] || agentTurnCtx.lastInputAct)
+          ) {
+            if (!agentTurnCtx[chMetaSend.sendAttempted]) {
+              localPlan =
+                planBrowserAgentChatAttachmentDismiss(goal, snap, agentTurnCtx) ||
+                planBrowserAgentChatSubmitAfterInput(goal, snap, agentTurnCtx, turn);
+            } else {
+              localPlan = planBrowserAgentChatJsSendTurn(goal, snap, agentTurnCtx);
+            }
+          }
+        }
+        if (!localPlan && turn > 1) {
+          localPlan = planBrowserAgentLocalSearchFollowupTurn(
+            goal,
+            snap,
+            agentTurnCtx.lastExecNote,
+            turn,
+            agentTurnCtx
+          );
+        }
+        if (!localPlan && turn > 1) {
+          localPlan = await planBrowserAgentGroundingCacheSearchSubmitTurn(goal, snap, agentTurnCtx, turn);
+        }
+        if (!localPlan && toolTurn && toolTurn.tool === 'browser_input' && !isStringPureNumber(String(toolTurn.elementId || ''))) {
+          var sidFix = findSearchInputElementId(snap || agentTurnCtx.lastGoodSnap);
+          if (sidFix > 0) {
+            toolTurn = Object.assign({}, toolTurn, { elementId: sidFix });
+            pushAdjust(turn, '已从快照解析搜索框 id=' + sidFix + '，将执行 browser_input');
+          }
+        }
+        if (localPlan) {
+          clearInterval(llmHb);
+          toolTurn = localPlan;
+          var localRowLabel =
+            String(localPlan._source || '').indexOf('doubao_local_') === 0
+              ? localPlan.tool === 'browser_click'
+                ? '✅ 本地：激活豆包输入框'
+                : '✅ 本地：豆包填词（强制宿主）'
+              : String(localPlan._source || '').indexOf('deepseek_local_') === 0
+                ? localPlan.tool === 'browser_click'
+                  ? '✅ 本地：激活 DeepSeek 输入框'
+                  : '✅ 本地：DeepSeek 填词（强制宿主）'
+              : localPlan._source === 'doubao_timeout_input'
+                ? '✅ 本地：豆包填词重试'
+                : localPlan._source === 'doubao_focus_input'
+                  ? '✅ 本地：激活豆包输入框'
+                  : localPlan._source === 'api_timeout'
+                    ? '⚠️ API 超时 · 本地搜索兜底'
+                    : localPlan._source === 'search_navigate_after_input'
+                      ? '✅ 本地：输入后直达结果页'
+                      : localPlan._source === 'chat_submit_after_input'
+                        ? '✅ 本地：对话站点发送'
+                        : '✅ 本地规划（未调用大模型）';
+          row('第 ' + turn + ' 轮 · 模型决策', '✅ ' + localRowLabel);
+          browserAgentTracePush(
+            agentTrace,
+            runStarted,
+            turn,
+            '决策 · 本地规划',
+            toolTurn.tool +
+              (toolTurn.elementId ? ' #' + toolTurn.elementId : '') +
+              (toolTurn.text ? ' · 「' + String(toolTurn.text).slice(0, 40) + '」' : '')
+          );
+          if (toolTurn.thought) analysisThoughts.push('**第' + turn + '轮（本地）：** ' + toolTurn.thought);
+          if (toolTurn._forceHostInput) {
+            browserAgentTracePush(
+              agentTrace,
+              runStarted,
+              turn,
+              'LOCAL_PLAN_GUARD',
+              'chat_host → chat_input, forceHostInput'
+            );
+          }
+        } else if (
+          isChatHostTaskKind(inferBrowserGoalTaskKind(goal)) &&
+          !agentTurnCtx[chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).submitDone] &&
+          (agentTurnCtx[chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).failCount] || 0) >= 3
+        ) {
+          clearInterval(llmHb);
+          var chGiveUp = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+          finishThought =
+            chGiveUp.label +
+            '填词多次未确认（build=' +
+            BROWSER_AGENT_BUILD +
+            '），已停止自动调用大模型。若右侧已发送成功请勿重复；可发「继续」。';
+          row('第 ' + turn + ' 轮 · ' + chGiveUp.label, '❌ 本地规划不可用');
+          browserAgentTracePush(agentTrace, runStarted, turn, chGiveUp.label + '放弃', finishThought);
+          break;
+        } else {
           var messages = buildBrowserAgentLlmMessages({
             goal: goal,
             snap: snap,
@@ -7805,53 +9234,104 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           try {
             cstatForSession(
               sid,
-              '🧠 第 ' + turn + ' 轮：请求大模型选工具（最多 ' + Math.round(BROWSER_AGENT_LLM_TIMEOUT_MS / 1000) + 's）…',
+              '🧠 第 ' + turn + ' 轮：请求大模型选工具（最多 ' + Math.round(llmCapMs / 1000) + 's）…',
               ''
             );
-            rawTurn = await reqBrowserAgentLlm(cfg, messages, {});
+            rawTurn = await reqBrowserAgentLlm(cfg, messages, { timeoutMs: llmCapMs });
           } catch (llmErr) {
-            var fallback =
-              planBrowserAgentSearchNavigateAfterInput(goal, snap, agentTurnCtx, turn) ||
-              planBrowserAgentLocalSearchFollowupTurn(goal, snap, agentTurnCtx.lastExecNote, turn, agentTurnCtx) ||
-              planBrowserAgentLocalSearchTurn(goal, snap);
-            if (fallback) {
-              clearInterval(llmHb);
-              browserAgentTracePush(
-                agentTrace,
-                runStarted,
-                turn,
-                '决策 · API 超时后降级',
-                '大模型未在时限内返回，改用本地搜索规划'
+            clearInterval(llmHb);
+            browserAgentTracePush(
+              agentTrace,
+              runStarted,
+              turn,
+              '决策 · API 超时',
+              '大模型未在时限内返回；尝试豆包/本地降级'
+            );
+            localPlan =
+              planBrowserAgentChatHostLocalTurnAny(goal, snap, agentTurnCtx, 'llm_timeout') ||
+              planBrowserAgentChatSubmitAfterInput(goal, snap, agentTurnCtx, turn) ||
+              (inferBrowserGoalTaskKind(goal) !== 'chat_doubao' &&
+              inferBrowserGoalTaskKind(goal) !== 'chat_deepseek' &&
+              !shouldPreferLlmBrowserPlan(goal, snap)
+                ? planBrowserAgentApiTimeoutFallback(goal, snap, agentTurnCtx)
+                : null);
+            if (localPlan) {
+              if (localPlan._forceHostInput) {
+                try {
+                  var snapApiRef = await fetchBrowserSnapshotForAgent();
+                  if (snapApiRef) {
+                    snap = safeBrowserSnapshot(snapApiRef);
+                    refreshLastElementsCacheFromSnapshot(snap);
+                    agentTurnCtx.lastGoodSnap = snap;
+                    if ((parseInt(localPlan.elementId, 10) || 0) < 1 && localPlan.targetRoleHint) {
+                      var eidApi = resolveTargetElementId(String(localPlan.targetRoleHint), snap);
+                      if (eidApi > 0) localPlan = Object.assign({}, localPlan, { elementId: eidApi });
+                    }
+                  }
+                } catch (_) {}
+                browserAgentTracePush(
+                  agentTrace,
+                  runStarted,
+                  turn,
+                  'LOCAL_PLAN_GUARD',
+                  'chat_host → chat_input, forceHostInput'
+                );
+              }
+              toolTurn = localPlan;
+              var isDoubaoLocalSrc = String(localPlan._source || '').indexOf('doubao_local_') === 0;
+              var isDeepSeekLocalSrc = String(localPlan._source || '').indexOf('deepseek_local_') === 0;
+              row(
+                '第 ' + turn + ' 轮 · 模型决策',
+                localPlan._source === 'chat_submit_after_input'
+                  ? '⚠️ API 超时 · 本地点发送'
+                  : isDoubaoLocalSrc
+                    ? '⚠️ API 超时 · 本地重试豆包填词'
+                    : isDeepSeekLocalSrc
+                      ? '⚠️ API 超时 · 本地重试 DeepSeek 填词'
+                    : '⚠️ API 超时 · 已切换本地搜索'
               );
-              row('第 ' + turn + ' 轮 · 模型决策', '⚠️ 大模型超时，改用本地搜索规划');
               cstatForSession(
                 sid,
-                '⚠️ API 超时，已改用本地 ' +
-                  (fallback.tool === 'browser_click' ? 'click #' : 'input #') +
-                  fallback.elementId,
+                localPlan._source === 'chat_submit_after_input'
+                  ? '⚠️ API 超时，已本地点发送'
+                  : isDoubaoLocalSrc
+                    ? '⚠️ API 超时，已本地重试豆包填词（无需再等模型）'
+                    : isDeepSeekLocalSrc
+                      ? '⚠️ API 超时，已本地重试 DeepSeek 填词（无需再等模型）'
+                    : '⚠️ API 超时，已本地执行搜索（无需再等模型）',
                 ''
               );
-              rawTurn = JSON.stringify({
-                thought: fallback.thought,
-                tool: fallback.tool,
-                elementId: fallback.elementId,
-                text: fallback.text
-              });
-              toolTurn = fallback;
-              localPlan = fallback;
+              agentTurnCtx.lastExecNote =
+                '大模型 API 超时（' +
+                Math.round(llmCapMs / 1000) +
+                's），已自动切换本地：' +
+                toolTurn.tool +
+                (toolTurn.text ? '「' + String(toolTurn.text).slice(0, 24) + '」' : '');
+              pushAdjust(turn, agentTurnCtx.lastExecNote);
+              browserAgentTracePush(agentTrace, runStarted, turn, '策略调整 · API 超时本地执行', agentTurnCtx.lastExecNote);
+              if (toolTurn.thought) analysisThoughts.push('**第' + turn + '轮（降级）：** ' + toolTurn.thought);
             } else {
-              var llmMsg = llmErr && llmErr.message ? llmErr.message : String(llmErr);
+              row('第 ' + turn + ' 轮 · 模型决策', '⚠️ 大模型 API 超时');
+              cstatForSession(sid, '⚠️ 大模型 API 超时，请检查网络/代理或换更快模型', '');
+              agentTurnCtx.lastExecNote =
+                (agentTurnCtx.lastExecNote ? agentTurnCtx.lastExecNote + ' ' : '') +
+                '大模型 API 超时（' +
+                Math.round(llmCapMs / 1000) +
+                's）。建议下一轮选择 browser_scroll / browser_refresh / browser_search_navigate，或检查 API 设置。';
+              pushAdjust(turn, agentTurnCtx.lastExecNote);
+              refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 等待大模型重试');
               throw new Error(
-                llmMsg + '。请在设置中测试 API，或换更快模型（如 deepseek-chat、MiniMax-M2.1-highspeed）。'
+                (llmErr && llmErr.message ? llmErr.message : String(llmErr)) +
+                  '。请在设置中测试 API，或换更快模型。'
               );
             }
           } finally {
             clearInterval(llmHb);
           }
           if (!toolTurn) toolTurn = parseBrowserToolTurn(rawTurn);
+          agentTurnCtx.lastAssistant = rawTurn;
+          if (!toolTurn) toolTurn = parseBrowserToolTurn(rawTurn);
         }
-        agentTurnCtx.lastAssistant = rawTurn;
-        if (!toolTurn) toolTurn = parseBrowserToolTurn(rawTurn);
         if (!localPlan && rawTurn) {
           var llmMs = Date.now() - llmStart;
           browserAgentTracePush(
@@ -7877,7 +9357,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             );
           }
         }
-        if (toolTurn.thought) analysisThoughts.push('**第' + turn + '轮：** ' + toolTurn.thought);
+        if (toolTurn.thought && !localPlan) analysisThoughts.push('**第' + turn + '轮：** ' + toolTurn.thought);
 
         if (toolTurn.tool === 'browser_finish') {
           finishThought = toolTurn.thought || '任务结束或需用户介入。';
@@ -7895,20 +9375,29 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         }
 
         var toolLabel =
-          toolTurn.tool === 'browser_search_navigate'
+          toolTurn.tool === 'browser_navigate'
+            ? 'browser_navigate → ' + String(toolTurn.url || '').slice(0, 48)
+            : toolTurn.tool === 'browser_search_navigate'
             ? 'browser_search_navigate "' + String(toolTurn.text || '').slice(0, 24) + '"'
             : toolTurn.tool +
               (toolTurn.elementId ? ' #' + toolTurn.elementId : '') +
               (toolTurn.text && toolTurn.tool !== 'browser_search_navigate'
                 ? ' "' + String(toolTurn.text).slice(0, 20) + '"'
                 : '');
+        var actWaitCapMs =
+          toolTurn.tool === 'browser_input' && isDoubaoBrowserAgentGoal(goal)
+            ? BROWSER_AGENT_ACT_TIMEOUT_DOUBAO_MS
+            : BROWSER_AGENT_ACT_TIMEOUT_MS;
         row('第 ' + turn + ' 轮 · ' + toolLabel, '⏳ 执行中…');
         browserAgentTracePush(
           agentTrace,
           runStarted,
           turn,
           '动作 · 下发宿主',
-          toolLabel + '（等待 host_browser_act_result + settle 快照，最长约 ' + Math.round(BROWSER_AGENT_ACT_TIMEOUT_MS / 1000) + 's）'
+          toolLabel +
+            '（等待 host_browser_act_result + settle 快照，最长约 ' +
+            Math.round(actWaitCapMs / 1000) +
+            's）'
         );
         refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 宿主执行 ' + toolTurn.tool);
         cstatForSession(sid, '⚡ 第 ' + turn + ' 轮：' + toolLabel, '');
@@ -7922,8 +9411,29 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           toolTurn.targetRoleHint
         ) {
           var trh = String(toolTurn.targetRoleHint || '').toLowerCase();
-          if (trh === 'search_input') toolTurn.elementId = findSearchInputElementId(snapBeforeAct);
-          else if (trh === 'search_submit') toolTurn.elementId = findSearchSubmitElementId(snapBeforeAct);
+          var siteHintAct = inferGoalTargetSiteHint(goal);
+          var curHostAct = snapHostFromUrl((snapBeforeAct && snapBeforeAct.url) || '');
+          if (
+            siteHintAct &&
+            !siteHostMatchesSiteKey(siteHintAct.site, curHostAct) &&
+            (trh === 'search_input' || trh === 'search_submit')
+          ) {
+            agentTurnCtx.lastExecNote =
+              '当前不在目标站（' +
+              (curHostAct || '未知') +
+              '），请用 browser_navigate 打开 ' +
+              siteHintAct.homeUrl +
+              '，勿在无关页面使用 search_input。';
+            pushAdjust(turn, agentTurnCtx.lastExecNote);
+            row('第 ' + turn + ' 轮 · 站点不符', '⚠️ 请先 browser_navigate');
+            refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 等待模型导航到目标站');
+            continue;
+          }
+          toolTurn.elementId = resolveTargetElementId(trh, snapBeforeAct);
+          if (toolTurn.elementId < 1 && trh === 'search_input') {
+            var heurId = findHeuristicSearchInputId(snapBeforeAct);
+            if (heurId > 0) toolTurn.elementId = heurId;
+          }
           if (toolTurn.elementId > 0) {
             toolLabel =
               toolTurn.tool +
@@ -7933,23 +9443,66 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                 : '');
             row('第 ' + turn + ' 轮 · ' + toolLabel, '⏳ 执行中…');
           } else {
-            // 解析失败：不做本地硬编码动作；按你选的 A 策略，触发强刷（最多 3 次在 fetchBrowserSnapshotForAgent 内兜底）
-            // 并把失败原因写入上下文，让下一轮由大模型决定 scroll/refresh/navigate 等替代策略。
-            agentTurnCtx.lastExecNote =
-              '目标解析失败：未能从当前快照定位 ' +
-              trh +
-              '（targetRoleHint + elementId=0 无法落地）。建议下一轮选择 browser_scroll / browser_refresh / browser_search_navigate。';
-            pushAdjust(turn, agentTurnCtx.lastExecNote);
-            try {
-              post({ type: 'niuma_browser_force_relabel', reqId: state.browserAgentSnapReqId || '' , reason: 'resolve_failed:' + trh });
-            } catch (_) {}
-            row('第 ' + turn + ' 轮 · 目标解析失败', '⚠️ 已强刷重标，等待下一轮决策');
-            refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 目标解析失败（等待下一轮）');
-            browserAgentTracePush(agentTrace, runStarted, turn, '策略调整 · 目标解析失败', agentTurnCtx.lastExecNote);
-            continue;
+            var searchQ = extractSearchQueryFromBrowserGoal(goal);
+            if (
+              trh === 'search_input' &&
+              searchQ &&
+              toolTurn.tool === 'browser_input' &&
+              !shouldPreferLlmBrowserPlan(goal, snap)
+            ) {
+              toolTurn = {
+                thought: '本地：快照未解析出搜索框，直接打开「' + searchQ + '」搜索结果',
+                tool: 'browser_search_navigate',
+                elementId: 0,
+                text: searchQ,
+                engine: browserAgentPickSearchEngine(goal, snapBeforeAct)
+              };
+              toolLabel = 'browser_search_navigate "' + String(searchQ).slice(0, 24) + '"';
+              row('第 ' + turn + ' 轮 · 策略调整 · 本地搜索', '未识别 search_input，改用直达结果页');
+              browserAgentTracePush(agentTrace, runStarted, turn, '策略调整 · 本地搜索', toolLabel);
+              pushAdjust(turn, '未能定位 search_input，已本地跳转「' + searchQ + '」搜索结果页');
+            } else {
+              agentTurnCtx.lastExecNote =
+                '目标解析失败：未能从当前快照定位 ' +
+                trh +
+                '（targetRoleHint + elementId=0 无法落地）。建议下一轮选择 browser_scroll / browser_refresh / browser_search_navigate。';
+              pushAdjust(turn, agentTurnCtx.lastExecNote);
+              try {
+                post({ type: 'niuma_browser_force_relabel', reqId: state.browserAgentSnapReqId || '' , reason: 'resolve_failed:' + trh });
+              } catch (_) {}
+              row('第 ' + turn + ' 轮 · 目标解析失败', '⚠️ 已强刷重标，等待下一轮决策');
+              refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 目标解析失败（等待下一轮）');
+              browserAgentTracePush(agentTrace, runStarted, turn, '策略调整 · 目标解析失败', agentTurnCtx.lastExecNote);
+              continue;
+            }
           }
         }
-        var exec = await executeBrowserToolTurn(toolTurn, sid);
+        snapBeforeAct = agentTurnCtx.lastGoodSnap || snapBeforeAct;
+        if (!snapBeforeAct || !snapBeforeAct.url) {
+          try {
+            snapBeforeAct = await fetchBrowserSnapshotForAgent();
+          } catch (_) {}
+        }
+        toolTurn = patchBrowserInputTurnText(toolTurn, goal);
+        if (toolTurn && toolTurn._textFromGoal) {
+          pushAdjust(turn, 'browser_input 文本为空，已从任务目标补全：「' + String(toolTurn.text || '').slice(0, 48) + '」');
+        }
+        if (toolTurn && toolTurn._forceHostInput) {
+          try {
+            var snapForce = await fetchBrowserSnapshotForAgent();
+            if (snapForce) {
+              snapBeforeAct = safeBrowserSnapshot(snapForce);
+              snap = snapBeforeAct;
+              refreshLastElementsCacheFromSnapshot(snapBeforeAct);
+              agentTurnCtx.lastGoodSnap = snapBeforeAct;
+              if ((parseInt(toolTurn.elementId, 10) || 0) < 1 && toolTurn.targetRoleHint) {
+                var eidForce = resolveTargetElementId(String(toolTurn.targetRoleHint), snapBeforeAct);
+                if (eidForce > 0) toolTurn = Object.assign({}, toolTurn, { elementId: eidForce });
+              }
+            }
+          } catch (_) {}
+        }
+        var exec = await executeBrowserToolTurn(toolTurn, sid, snapBeforeAct);
         var execMs = Date.now() - execStart;
         if (!exec.ok) {
           var failLabel = exec.stage ? ' [' + exec.stage + ']' : '';
@@ -7962,15 +9515,86 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             String(exec.error || 'unknown') + failLabel
           );
           if (
-            /invalid_element|unknown_tool|act_timeout|act_failed|not_input|element_not_found|job_timeout|script_exec_failed/i.test(
+            isChatHostTaskKind(inferBrowserGoalTaskKind(goal)) &&
+            (toolTurn.tool === 'browser_input' || toolTurn.tool === 'browser_click')
+          ) {
+            var chMetaFail = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+            var chatQFail = extractChatMessageFromGoal(goal) || String(toolTurn.text || '');
+            var actPartial = exec.actResult && typeof exec.actResult === 'object' ? exec.actResult : {};
+            if (doubaoActIndicatesSent(actPartial, exec.snap || snapBeforeAct, chatQFail)) {
+              agentTurnCtx[chMetaFail.submitDone] = true;
+              agentTurnCtx[chMetaFail.failCount] = 0;
+              finishThought = '已向' + chMetaFail.label + '发送：「' + chatQFail + '」（宿主已发，快照/线程确认）。';
+              row('第 ' + turn + ' 轮 · ' + chMetaFail.label + '发送', '✅ 已识别发送成功（迟到的宿主确认）');
+              browserAgentTracePush(agentTrace, runStarted, turn, chMetaFail.label + '提问完成', finishThought);
+              break;
+            }
+            agentTurnCtx[chMetaFail.failCount] = (agentTurnCtx[chMetaFail.failCount] || 0) + 1;
+            agentTurnCtx.lastExecNote =
+              exec.error === 'host_skipped_illusion'
+                ? chMetaFail.label + '：宿主未执行填词（illusion 缓存截胡），下轮强制真实下发'
+                : chMetaFail.label + '执行失败：' + String(exec.error || 'unknown') + '，将本地重试';
+            pushAdjust(turn, agentTurnCtx.lastExecNote);
+            refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · ' + chMetaFail.label + '动作失败，将重试');
+            continue;
+          }
+          if (
+            /invalid_element|unknown_tool|act_timeout|act_failed|host_act_failed|not_input|element_not_found|job_timeout|script_exec_failed/i.test(
               String(exec.error || '')
             )
           ) {
+            if (
+              (toolTurn.tool === 'browser_input' || toolTurn.tool === 'browser_click') &&
+              snapBeforeAct
+            ) {
+              var sidRetry = findSearchInputElementId(snapBeforeAct);
+              if (sidRetry > 0) {
+                toolTurn.elementId = sidRetry;
+                row('第 ' + turn + ' 轮 · 策略调整 · 宿主解析', 'invalid_element_id → 改用搜索框 #' + sidRetry);
+                browserAgentTracePush(
+                  agentTrace,
+                  runStarted,
+                  turn,
+                  '策略调整',
+                  '模型 elementId 无效，宿主按搜索框 id=' + sidRetry + ' 重试'
+                );
+                exec = await executeBrowserToolTurn(toolTurn, sidRetry, snapBeforeAct);
+                execMs = Date.now() - execStart;
+                if (exec.ok) {
+                  row('第 ' + turn + ' 轮 · ' + toolLabel, '✅ 完成（' + Math.round(execMs / 1000) + 's）');
+                  continue;
+                }
+              }
+              var subRetry = findSearchSubmitElementId(snapBeforeAct);
+              if (subRetry > 0 && toolTurn.tool === 'browser_click') {
+                toolTurn.elementId = subRetry;
+                row('第 ' + turn + ' 轮 · 策略调整 · 宿主解析', '改用提交按钮 #' + subRetry);
+                browserAgentTracePush(
+                  agentTrace,
+                  runStarted,
+                  turn,
+                  '策略调整',
+                  '点击 解析失败，改用提交按钮 id=' + subRetry
+                );
+                exec = await executeBrowserToolTurn(toolTurn, subRetry, snapBeforeAct);
+                execMs = Date.now() - execStart;
+                if (exec.ok) {
+                  row('第 ' + turn + ' 轮 · ' + toolLabel, '✅ 完成（' + Math.round(execMs / 1000) + 's）');
+                  continue;
+                }
+              }
+            }
             agentTurnCtx.lastExecNote =
-              '执行失败：' +
-              String(exec.error) +
-              '。请重选 elementId 或 browser_finish。';
+              exec.error === 'host_skipped_illusion' && isChatHostTaskKind(inferBrowserGoalTaskKind(goal))
+                ? chatHostMetaFromKind(inferBrowserGoalTaskKind(goal)).label + '：宿主未执行填词（illusion 缓存截胡），下轮强制真实下发'
+                : '执行失败：' +
+                  String(exec.error) +
+                  '。请重选 elementId 或 browser_finish。';
             pushAdjust(turn, agentTurnCtx.lastExecNote);
+            if (exec.error === 'host_skipped_illusion' && isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) {
+              var chMetaIll = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+              agentTurnCtx[chMetaIll.failCount] = (agentTurnCtx[chMetaIll.failCount] || 0) + 1;
+            }
             refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 动作失败，将重试决策');
             continue;
           }
@@ -7979,23 +9603,94 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           throw new Error(String(exec.error || '工具执行失败') + '。已暂停，请手动处理后发送「继续」。');
         }
 
-        snap = exec.snap;
+        snap = exec.snap || snapBeforeAct || agentTurnCtx.lastGoodSnap;
+        snap = coerceBrowserAgentSnapshot(snap, (snapBeforeAct && snapBeforeAct.url) || state.mobileBrowserLastUrl);
+        if (!snap || snap.error) {
+          var qNav = extractSearchQueryFromBrowserGoal(goal);
+          if (toolTurn.tool === 'browser_input' && qNav) {
+            row('第 ' + turn + ' 轮 · 策略调整 · 直达结果', '输入后快照 无效，改用搜索结果 URL');
+            var navExec = await executeBrowserToolTurn(
+              {
+                thought: '本地：动作后快照 无效，直达搜索结果',
+                tool: 'browser_search_navigate',
+                elementId: 0,
+                text: qNav,
+                engine: browserAgentPickSearchEngine(goal, agentTurnCtx.lastGoodSnap || snapBeforeAct)
+              },
+              sid
+            );
+            if (navExec && navExec.ok && navExec.snap) {
+              snap = coerceBrowserAgentSnapshot(navExec.snap, navExec.snap.url);
+            } else {
+              agentTurnCtx.lastExecNote = '动作后未收到有效快照，已尝试直达搜索_navigate';
+              pushAdjust(turn, agentTurnCtx.lastExecNote);
+              refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 动作完成，snapshot 异常');
+              continue;
+            }
+          }
+        }
         var actedEl = null;
         try {
-          if (snapBeforeAct && Array.isArray(snapBeforeAct.elements) && toolTurn && toolTurn.elementId) {
-            var actedId = parseInt(toolTurn.elementId, 10);
-            for (var ai = 0; ai < snapBeforeAct.elements.length; ai++) {
-              var elA = snapBeforeAct.elements[ai];
-              if (!elA) continue;
-              if (parseInt(elA.id, 10) === actedId) {
-                actedEl = elA;
-                break;
-              }
-            }
+          var actedSrc = snapBeforeAct || agentTurnCtx.lastGoodSnap;
+          if (actedSrc && toolTurn && toolTurn.elementId) {
+            actedEl = findSnapshotElementById(actedSrc, toolTurn.elementId);
           }
         } catch (_) {}
 
-        nEl = (snap.elements && snap.elements.length) || parseInt(snap.count, 10) || 0;
+        nEl =
+          (snap.elements && snap.elements.length) ||
+          getSnapshotElementsArray(snap).length ||
+          parseInt(snap.count, 10) ||
+          0;
+        var searchQAfterAct = extractSearchQueryFromBrowserGoal(goal);
+        if (
+          toolTurn.tool === 'browser_input' &&
+          searchQAfterAct &&
+          !isBrowserSearchResultsUrl(snap && snap.url) &&
+          (isBrowserSearchHomeUrl(snap && snap.url) || !String((snap && snap.url) || ''))
+        ) {
+          var submitId = 0;
+          if (actedEl && isLikelySearchInputEl(actedEl)) {
+            submitId = findSearchSubmitElementId(snapBeforeAct || snap);
+          }
+          if (submitId > 0) {
+            row('第 ' + turn + ' 轮 · 策略调整 · 提交搜索', '点击 #' + submitId + '（百度一下）');
+            browserAgentTracePush(agentTrace, runStarted, turn, '策略调整 · 提交搜索', 'browser_click #' + submitId);
+            var clickExec = await executeBrowserToolTurn(
+              { thought: '本地：输入后点击搜索提交', tool: 'browser_click', elementId: submitId, text: '' },
+              sid
+            );
+            if (clickExec && clickExec.ok) {
+              snap = coerceBrowserAgentSnapshot(clickExec.snap || snap, snap.url);
+              nEl =
+                (snap.elements && snap.elements.length) ||
+                getSnapshotElementsArray(snap).length ||
+                parseInt(snap.count, 10) ||
+                0;
+            }
+          }
+          if (!isBrowserSearchResultsUrl(snap && snap.url) && !isBrowserSearchHomeUrl(snap && snap.url)) {
+            row('第 ' + turn + ' 轮 · 策略调整 · 直达结果', '输入后仍停留首页，改用搜索结果 URL');
+            var navExec = await executeBrowserToolTurn(
+              {
+                thought: '本地：输入未跳转，直达搜索结果',
+                tool: 'browser_search_navigate',
+                elementId: 0,
+                text: searchQAfterAct,
+                engine: browserAgentPickSearchEngine(goal, snap)
+              },
+              sid
+            );
+            if (navExec && navExec.ok) {
+              snap = coerceBrowserAgentSnapshot(navExec.snap || snap, browserAgentSearchResultsUrl(searchQAfterAct, browserAgentPickSearchEngine(goal, snap)));
+              nEl =
+                (snap.elements && snap.elements.length) ||
+                getSnapshotElementsArray(snap).length ||
+                parseInt(snap.count, 10) ||
+                0;
+            }
+          }
+        }
         if (nEl > 0) agentTurnCtx.lastGoodSnap = snap;
         agentTurnCtx.lastTool = {
           tool: toolTurn.tool,
@@ -8045,6 +9740,188 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           browserAgentTracePush(agentTrace, runStarted, turn, '搜索完成', browserAgentSnapshotBrief(snap));
           break;
         }
+
+        if (toolTurn.tool === 'browser_input' && isChatHostTaskKind(inferBrowserGoalTaskKind(goal))) {
+          var chMetaAct = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+          agentTurnCtx.lastTool = toolTurn;
+          var chatQ = extractChatMessageFromGoal(goal) || String(toolTurn.text || '');
+          var actRes = exec.actResult && typeof exec.actResult === 'object' ? exec.actResult : {};
+          agentTurnCtx.lastInputAct = actRes;
+          var chatInputOk =
+            actRes.inputOk === true || doubaoInputConfirmedInSnapshot(exec.snap || snap, chatQ);
+          var chatSendOk =
+            actRes.sendOk === true ||
+            actRes.sentInThread === true ||
+            doubaoMessageSentInSnapshot(exec.snap || snap, chatQ) ||
+            chatHostReplyVisibleInSnapshot(exec.snap || snap, chatQ);
+
+          if (chatSendOk || chatHostReplyVisibleInSnapshot(snap, chatQ)) {
+            agentTurnCtx[chMetaAct.submitDone] = true;
+            agentTurnCtx[chMetaAct.failCount] = 0;
+            agentTurnCtx[chMetaAct.focusAttempted] = false;
+            finishThought = '已向' + chMetaAct.label + '发送：「' + chatQ + '」。请在右侧查看 AI 回复。';
+            row('第 ' + turn + ' 轮 · ' + chMetaAct.label + '发送', chatHostReplyVisibleInSnapshot(snap, chatQ) ? '✅ 已见 AI 回复' : '✅ 已确认输入并发送');
+            browserAgentTracePush(agentTrace, runStarted, turn, chMetaAct.label + '提问完成', finishThought);
+            agentTurnCtx.lastGoodSnap = snap;
+            break;
+          }
+
+          if (chatInputOk && !chatSendOk && !agentTurnCtx[chMetaAct.submitDone]) {
+            if (chatHostReplyVisibleInSnapshot(exec.snap || snap, chatQ) || chatHostReplyVisibleInSnapshot(snap, chatQ)) {
+              agentTurnCtx[chMetaAct.submitDone] = true;
+              agentTurnCtx[chMetaAct.failCount] = 0;
+              finishThought =
+                '「' + chatQ + '」已在 ' + chMetaAct.label + ' 得到 AI 回复（输入框可能仍显示草稿，已停止重试）。';
+              row('第 ' + turn + ' 轮 · ' + chMetaAct.label + '发送', '✅ 已见 AI 回复');
+              browserAgentTracePush(agentTrace, runStarted, turn, chMetaAct.label + '提问完成', finishThought);
+              agentTurnCtx.lastGoodSnap = snap;
+              break;
+            }
+            if (!agentTurnCtx[chMetaAct.sendAttempted]) {
+              var chatSendPlan =
+                planBrowserAgentChatAttachmentDismiss(goal, exec.snap || snap, agentTurnCtx) ||
+                planBrowserAgentChatJsSendTurn(goal, exec.snap || snap, agentTurnCtx);
+              if (chatSendPlan) {
+                agentTurnCtx[chMetaAct.sendAttempted] = true;
+                var sendActLabel =
+                  chatSendPlan.tool === 'browser_input'
+                    ? '⏳ JS 发送'
+                    : '⏳ 点击 #' + chatSendPlan.elementId;
+                row('第 ' + turn + ' 轮 · 策略调整 · ' + chMetaAct.label + '发送', sendActLabel);
+                pushAdjust(
+                  turn,
+                  chatSendPlan.tool === 'browser_input'
+                    ? '输入已确认，JS 点发送（不重复填词）'
+                    : '输入已确认，尝试点击发送 #' + chatSendPlan.elementId
+                );
+                browserAgentTracePush(
+                  agentTrace,
+                  runStarted,
+                  turn,
+                  '策略调整 · ' + chMetaAct.label + '发送',
+                  chatSendPlan.tool + ' #' + chatSendPlan.elementId
+                );
+                var sendExec = await executeBrowserToolTurn(chatSendPlan, sid, snap);
+                if (sendExec && sendExec.ok) {
+                  snap = sendExec.snap || snap;
+                  nEl =
+                    (snap.elements && snap.elements.length) ||
+                    getSnapshotElementsArray(snap).length ||
+                    parseInt(snap.count, 10) ||
+                    0;
+                  if (chatHostReplyVisibleInSnapshot(snap, chatQ)) {
+                    agentTurnCtx[chMetaAct.submitDone] = true;
+                    finishThought =
+                      '「' + chatQ + '」已在 ' + chMetaAct.label + ' 得到 AI 回复，已停止重试。';
+                    row('第 ' + turn + ' 轮 · ' + chMetaAct.label + '发送', '✅ 已见 AI 回复');
+                    browserAgentTracePush(agentTrace, runStarted, turn, chMetaAct.label + '提问完成', finishThought);
+                    agentTurnCtx.lastGoodSnap = snap;
+                    break;
+                  }
+                  var sentConfirmed =
+                    (sendExec.actResult && (sendExec.actResult.sendOk === true || sendExec.actResult.sentInThread === true)) ||
+                    chatHostReplyVisibleInSnapshot(snap, chatQ) ||
+                    doubaoMessageSentInSnapshot(snap, chatQ);
+                  if (sentConfirmed) {
+                    agentTurnCtx[chMetaAct.submitDone] = true;
+                    finishThought = '已向' + chMetaAct.label + '发送：「' + chatQ + '」。请在右侧查看回复。';
+                    row('第 ' + turn + ' 轮 · ' + chMetaAct.label + '发送', '✅ 已确认发送');
+                    browserAgentTracePush(agentTrace, runStarted, turn, chMetaAct.label + '提问完成', finishThought);
+                    agentTurnCtx.lastGoodSnap = snap;
+                    break;
+                  }
+                  if (chatHostReplyVisibleInSnapshot(snap, chatQ)) {
+                    agentTurnCtx[chMetaAct.submitDone] = true;
+                    finishThought =
+                      '「' + chatQ + '」已在 ' + chMetaAct.label + ' 得到 AI 回复（输入框可能仍显示草稿，已停止重试）。';
+                    row('第 ' + turn + ' 轮 · ' + chMetaAct.label + '发送', '✅ 已见 AI 回复');
+                    browserAgentTracePush(agentTrace, runStarted, turn, chMetaAct.label + '提问完成', finishThought);
+                    agentTurnCtx.lastGoodSnap = snap;
+                    break;
+                  }
+                  pushAdjust(
+                    turn,
+                    chatSendPlan.tool === 'browser_input'
+                      ? 'JS 发送未确认，将重试（不重复填词）'
+                      : '已点击 #' + chatSendPlan.elementId + '，但输入框仍有内容，发送未确认'
+                  );
+                }
+              }
+            }
+          }
+
+          if (agentTurnCtx[chMetaAct.submitDone] || doubaoMessageSentInSnapshot(snap, chatQ)) {
+            agentTurnCtx[chMetaAct.submitDone] = true;
+            finishThought = '已向' + chMetaAct.label + '发送：「' + chatQ + '」（对话区已出现提问，停止重试）。';
+            row('第 ' + turn + ' 轮 · ' + chMetaAct.label + '发送', '✅ 快照已见用户消息');
+            browserAgentTracePush(agentTrace, runStarted, turn, chMetaAct.label + '提问完成', finishThought);
+            break;
+          }
+          agentTurnCtx[chMetaAct.sendPending] = !chatSendOk && chatInputOk;
+          if (!chatInputOk) {
+            agentTurnCtx[chMetaAct.failCount] = (agentTurnCtx[chMetaAct.failCount] || 0) + 1;
+          } else {
+            agentTurnCtx[chMetaAct.failCount] = 0;
+          }
+          if ((agentTurnCtx[chMetaAct.failCount] || 0) >= 3) {
+            finishThought =
+              chMetaAct.label +
+              '输入连续失败（build=' +
+              BROWSER_AGENT_BUILD +
+              '）。请勿重复发送；若右侧已有提问可发「继续」。build=' +
+              BROWSER_AGENT_BUILD;
+            row(chMetaAct.label + '输入失败', '❌ 已停止自动重试');
+            browserAgentTracePush(agentTrace, runStarted, turn, chMetaAct.label + '输入放弃', finishThought);
+            break;
+          }
+          var failDetail = actRes.methods ? '尝试: ' + String(actRes.methods) : '';
+          if (actRes.editorText) failDetail += (failDetail ? '；' : '') + '框内: ' + String(actRes.editorText).slice(0, 32);
+          agentTurnCtx.lastExecNote =
+            chMetaAct.label +
+            '：填词' +
+            (chatInputOk ? '已写入' : '未确认') +
+            '，发送' +
+            (chatSendOk ? '已成功' : '未确认') +
+            '。' +
+            (chatInputOk
+              ? '请 browser_click 输入框右侧的发送箭头。'
+              : '宿主将自动聚焦 contenteditable 并填词（勿再单独 click #1）。' + (failDetail ? '（' + failDetail + '）' : ''));
+          pushAdjust(turn, agentTurnCtx.lastExecNote);
+          row('第 ' + turn + ' 轮 · ' + chMetaAct.label + '发送', chatInputOk ? '⚠️ 发送未确认，继续…' : '❌ 输入未确认，继续…');
+          browserAgentTracePush(
+            agentTrace,
+            runStarted,
+            turn,
+            chatInputOk ? chMetaAct.label + '发送未确认' : chMetaAct.label + '输入未确认',
+            actRes.editorText ? '输入框: ' + String(actRes.editorText).slice(0, 40) : agentTurnCtx.lastExecNote
+          );
+          staleCount = 0;
+          continue;
+        }
+
+        if (
+          toolTurn.tool === 'browser_click' &&
+          isChatHostTaskKind(inferBrowserGoalTaskKind(goal)) &&
+          (toolTurn._doubaoFocusPrep ||
+            toolTurn._source === 'doubao_focus_input' ||
+            String(toolTurn.targetRoleHint || '').toLowerCase() === 'chat_input')
+        ) {
+          var chMetaFocus = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+          agentTurnCtx[chMetaFocus.focusAttempted] = true;
+          agentTurnCtx.lastExecNote =
+            chMetaFocus.label +
+            '：已点击 #' +
+            (toolTurn.elementId || 1) +
+            ' 激活输入框，下轮需 browser_input 粘贴「' +
+            String(extractChatMessageFromGoal(goal) || '').slice(0, 32) +
+            '」。';
+          pushAdjust(turn, agentTurnCtx.lastExecNote);
+          row('第 ' + turn + ' 轮 · ' + chMetaFocus.label + '激活', '✅ 已点击输入框，下轮粘贴');
+          browserAgentTracePush(agentTrace, runStarted, turn, chMetaFocus.label + '焦点已激活', agentTurnCtx.lastExecNote);
+          staleCount = 0;
+          continue;
+        }
+
         row('第 ' + turn + ' 轮 · ' + toolLabel, '✅ 完成' + (nEl ? '（' + nEl + ' 元素）' : ''));
         browserAgentTracePush(
           agentTrace,
@@ -8095,13 +9972,43 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
 
       if (turn > BROWSER_AGENT_MAX_TURNS && !finishThought) {
-        finishThought = '已达最大轮次（' + BROWSER_AGENT_MAX_TURNS + '），请检查右侧页面或重新发起任务。';
+        var chEnd = chatHostMetaFromKind(inferBrowserGoalTaskKind(goal));
+        var qEnd = extractChatMessageFromGoal(goal) || '';
+        if (chEnd && chatHostTurnCompleteInSnapshot(snap, qEnd)) {
+          finishThought = '「' + qEnd + '」已在 ' + chEnd.label + ' 得到回复（轮次用尽但任务实际已完成）。';
+        } else {
+          finishThought =
+            '已达最大轮次（' +
+            BROWSER_AGENT_MAX_TURNS +
+            '），' +
+            (chEnd ? chEnd.label : '对话站') +
+            ' 输入/发送仍未确认，请检查右侧页面或重载脚本后再试。';
+        }
         row('轮次上限', '⚠️ 已达 ' + BROWSER_AGENT_MAX_TURNS + ' 轮');
       }
 
+      var agentSucceeded =
+        /已向(豆包|DeepSeek)发送|已确认输入并发送|已见 AI 回复|已在.*结果页|得到回复/.test(String(finishThought || '')) ||
+        (isChatHostTaskKind(inferBrowserGoalTaskKind(goal)) &&
+          chatHostTurnCompleteInSnapshot(snap, extractChatMessageFromGoal(goal) || ''));
+      var agentTitle =
+        agentSucceeded
+          ? '网页智能操控 · 完成'
+          : agentTurnCtx.doubaoInputFailCount > 0 ||
+              agentTurnCtx.deepseekInputFailCount > 0 ||
+              /未确认|已达最大轮次/.test(String(finishThought || ''))
+            ? '网页智能操控 · 未完成'
+            : '网页智能操控 · 完成';
+      var agentStatus = agentTitle.indexOf('未完成') >= 0 ? '任务未完成' : '全部完成';
+
       browserAgentTracePush(agentTrace, runStarted, turn || 0, '流程结束', finishThought || '单步循环已结束');
+      if (agentSucceeded) {
+        try {
+          post({ type: 'niuma_browser_hide_labels' });
+        } catch (_) {}
+      }
       var finalMd = buildBrowserAgentProgressMd(
-        '网页智能操控 · 完成',
+        agentTitle,
         rows,
         analysisThoughts.join('\n'),
         '### 结果说明\n\n' +
@@ -8109,7 +10016,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           '\n\n总耗时约 **' +
           browserAgentElapsedTag(runStarted).replace('+', '') +
           '**。',
-        '全部完成',
+        agentStatus,
         { trace: agentTrace, adjustments: adjustNotes, goal: goal }
       );
       if (draft && draft._id) {
@@ -10673,6 +12580,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   collapsedRoot.addEventListener(
     'wheel',
     function (e) {
+      if (state.drawer) return;
       e.preventDefault();
       post({ type: 'wheel', delta: e.deltaY > 0 ? -1 : 1 });
     },

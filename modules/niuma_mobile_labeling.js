@@ -2,7 +2,7 @@
   'use strict';
   var MAX = 56, PRE = 80, MAXTXT = 72;
   var SEL =
-    'a[href],button,input,textarea,select,summary,[contenteditable="true"],[contenteditable=""],' +
+    'a[href],button,input,textarea,select,summary,[contenteditable],[contenteditable="true"],[contenteditable=""],' +
     '[role="button"],[role="link"],[role="tab"],[role="menuitem"],[role="searchbox"],[onclick],[ontouchstart],[data-action]';
   var ICON_WORDS = {
     search: 'icon-search',
@@ -248,17 +248,59 @@
     var hint = String((el.getAttribute('title') || '')).toLowerCase();
 
     var searchableText = aria + ' ' + ph + ' ' + hint + ' ' + role + ' ' + name;
-    if (tagLower === 'input' || tagLower === 'textarea') {
+    var host = '';
+    try {
+      host = String((location.hostname || '')).toLowerCase();
+    } catch (_) {}
+    var onChatHost = /doubao\.com|chat\.deepseek|kimi\.moonshot|tongyi\.aliyun|yuanbao\.tencent|chatgpt\.com|claude\.ai/i.test(host);
+
+    // 对话类产品：优先 chat_input / chat_send，避免「请输入」被当成搜索框
+    if (onChatHost && (tagLower === 'textarea' || el.isContentEditable || role === 'textbox')) {
+      return 'chat_input';
+    }
+    if (onChatHost && (tagLower === 'button' || tagLower === 'a' || tagLower === 'input' || role === 'button')) {
+      var btnTxt = '';
+      try {
+        btnTxt = String((el.innerText || el.textContent || '')).trim().toLowerCase();
+      } catch (_) {}
+      var dt = String((el.getAttribute('data-testid') || '')).toLowerCase();
+      var cls = String((el.getAttribute('class') || '')).toLowerCase();
+      var btnBlob = aria + ' ' + btnTxt + ' ' + ph + ' ' + dt + ' ' + cls;
+      if (/搜索|写作|更多|发现|语音|麦克风|mic|voice|附件|上传|添加|发消息|plus|attach|paperclip|clip|image|photo|gallery|file/.test(btnBlob))
+        return 'generic';
+      if (/(发送|submit|send|提交|post)/i.test(btnBlob)) return 'chat_send';
+      if (!btnTxt && el.querySelector && el.querySelector('svg')) {
+        try {
+          var br = el.getBoundingClientRect();
+          var cx = br.left + br.width / 2;
+          // 豆包发送钮在输入框右侧；底部左下角工具栏图标（+、附件等）不是发送
+          if (
+            br.top > window.innerHeight * 0.55 &&
+            cx > window.innerWidth * 0.74 &&
+            br.width >= 24 &&
+            br.width <= 72 &&
+            br.height >= 24 &&
+            br.height <= 72
+          )
+            return 'chat_send';
+        } catch (_) {}
+      }
+    }
+
+    // input/textarea 或 contenteditable 的搜索框
+    if (tagLower === 'input' || tagLower === 'textarea' || el.isContentEditable) {
       if (
-        name === 'q' ||
+        !onChatHost &&
+        (name === 'q' ||
         name === 'query' ||
         name === 'wd' ||
         name === 'word' ||
         role === 'searchbox' ||
         ty === 'search' ||
-        /搜索|关键词|关键字|百度|查找|搜(索)?/i.test(searchableText)
+        /搜索|关键词|关键字|百度|查找|搜(索)?|输入关键词/i.test(searchableText))
       )
         return 'search_input';
+      if (onChatHost && (tagLower === 'textarea' || el.isContentEditable)) return 'chat_input';
     }
 
     // submit：优先看按钮/链接的文本/aria-label
@@ -267,6 +309,7 @@
       txt = String((el.innerText || el.textContent || '')).trim().toLowerCase();
     } catch (_) {}
     var searchableBtn = aria + ' ' + txt + ' ' + ph;
+    if (/(发送|send)/i.test(searchableBtn) && (tagLower === 'button' || tagLower === 'a')) return 'chat_send';
     if (/(百度一下|搜索|搜一下|查找|提交|submit)/i.test(searchableBtn) || role === 'button') {
       if (tagLower === 'button' || tagLower === 'input' || tagLower === 'a') return 'search_submit';
     }
@@ -355,7 +398,8 @@
     '#kw,#index-kw,#index-form input,#form input[name="word"],input[name="word"],input[name="q"],textarea[name="q"],' +
     'input[name="query"],textarea[name="query"],input[type="search"],textarea[type="search"],' +
     'input[type="text"][class*="search"],input[class*="s_ipt"],textarea[name="word"],[role="searchbox"],' +
-    '[aria-label*="搜索"],[aria-label*="Search"],[placeholder*="搜索"],[placeholder*="Search"]';
+    '[aria-label*="搜索"],[aria-label*="Search"],[placeholder*="搜索"],[placeholder*="Search"],' +
+    '[placeholder*="输入关键词"],[placeholder*="关键词"],[contenteditable="true"],[contenteditable=""]';
 
   function isSearchControl(el) {
     if (!el || el.nodeType !== 1) return false;
@@ -363,17 +407,34 @@
       if (el.matches && el.matches(SEARCH_SEL)) return true;
     } catch (e0) {}
     var tag = (el.tagName || '').toLowerCase();
-    if (tag !== 'input' && tag !== 'textarea') return false;
+    if (tag !== 'input' && tag !== 'textarea' && !el.isContentEditable) return false;
     var ph = String(el.getAttribute('placeholder') || '');
     var al = String(el.getAttribute('aria-label') || '');
     var nm = String(el.getAttribute('name') || '').toLowerCase();
-    if (/搜索|百度|query|word|kw/i.test(ph + al + nm)) return true;
+    if (/搜索|百度|query|word|kw|输入关键词|关键词/i.test(ph + al + nm)) return true;
+    if (el.isContentEditable && /输入|搜索|keyword/i.test(ph + al)) return true;
     return false;
   }
 
   function preferActElement(el) {
     if (!el || el.nodeType !== 1) return el;
     var tag = (el.tagName || '').toLowerCase();
+    var host = '';
+    try {
+      host = String((location.hostname || '')).toLowerCase();
+    } catch (_) {}
+    var onChatHost = /doubao\.com|chat\.deepseek|kimi\.moonshot/i.test(host);
+    if (onChatHost && tag === 'textarea') {
+      var p = el.parentElement;
+      if (p) {
+        var ce = p.querySelector(
+          '[data-slate-editor="true"],[data-lexical-editor="true"],[contenteditable="true"],[contenteditable=""]'
+        );
+        if (ce && vis(ce)) return ce;
+      }
+      var sib = el.nextElementSibling;
+      if (sib && (sib.isContentEditable || sib.getAttribute('contenteditable') != null) && vis(sib)) return sib;
+    }
     if (tag === 'input' || tag === 'textarea' || tag === 'select' || el.getAttribute('role') === 'searchbox')
       return el;
     var sel =

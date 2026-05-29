@@ -19,6 +19,19 @@
     function resolveClickTarget(root) {
       if (!root) return root;
       var tag = (root.tagName || '').toLowerCase();
+      var host = '';
+      try {
+        host = String((location.hostname || '')).toLowerCase();
+      } catch (_) {}
+      if (/doubao\.com/.test(host) && tag === 'textarea') {
+        var p = root.parentElement;
+        if (p) {
+          var ce = p.querySelector(
+            '[data-slate-editor="true"],[data-lexical-editor="true"],[contenteditable="true"],[contenteditable=""]'
+          );
+          if (ce && vis(ce)) return ce;
+        }
+      }
       if (tag === 'button' || tag === 'a' || tag === 'summary') return root;
       if (root.getAttribute && root.getAttribute('role') === 'button') return root;
       var sel =
