@@ -517,6 +517,13 @@ NiumaTtyd_NotifyWeb(wv2, ok, errMsg, baseUrl, reqId := "", engine := "") {
             if (boot != "")
                 payload["autoBootCmd"] := boot
             WebView_QueuePayload(wv2, payload)
+            try {
+                if FuncExists("FloatingToolbar_PushNodeStatus")
+                    FloatingToolbar_PushNodeStatus(eng, "ready", payload.Has("baseUrl") ? String(payload["baseUrl"]) : "", 0)
+                if FuncExists("FloatingToolbar_PushAudit")
+                    FloatingToolbar_PushAudit(eng, "终端已就绪", "success", payload.Has("baseUrl") ? String(payload["baseUrl"]) : "")
+            } catch {
+            }
         } else {
             WebView_QueuePayload(wv2, Map(
                 "type", "ttyd_error",
@@ -525,6 +532,13 @@ NiumaTtyd_NotifyWeb(wv2, ok, errMsg, baseUrl, reqId := "", engine := "") {
                 "port", port,
                 "engine", eng
             ))
+            try {
+                if FuncExists("FloatingToolbar_PushNodeStatus")
+                    FloatingToolbar_PushNodeStatus(eng, "error", errMsg, 0)
+                if FuncExists("FloatingToolbar_PushAudit")
+                    FloatingToolbar_PushAudit(eng, "终端错误: " . (errMsg = "" ? "终端未就绪" : errMsg), "error")
+            } catch {
+            }
         }
     } catch {
     }

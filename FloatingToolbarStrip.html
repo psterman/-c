@@ -60,7 +60,7 @@ body.drawer-open .drawer-toolbar .logo-btn,body.drawer-open #panel > header.hdr 
 .ib{width:calc(34px * var(--ui));height:calc(34px * var(--ui));border:1px solid rgba(255,102,0,.28);border-radius:calc(10px * var(--ui));background:rgba(255,255,255,.04);color:var(--orange);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--ease)}
 .ib:hover{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.6)}
 .ib svg{width:calc(16px * var(--ui));height:calc(16px * var(--ui));stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-#main{flex:1;min-height:0;display:flex;flex-direction:column;min-width:0}
+#main{flex:1;min-height:0;display:flex;flex-direction:column;min-width:0;position:relative}
 #msgs{flex:1;min-height:0;min-width:0;overflow:auto;padding:calc(12px * var(--ui)) calc(16px * var(--ui));display:flex;flex-direction:column;gap:calc(10px * var(--ui));align-items:stretch}
 #msgs > #empty{flex-shrink:0}
 /* 旧行已由下方赛博风滚动条块覆盖，避免双定义 */
@@ -89,7 +89,7 @@ body.mobile-browser-open #stage{transition:transform var(--ease)}
 .mb pre{margin-top:calc(10px * var(--ui));border:1px solid rgba(255,102,0,.14);border-radius:calc(12px * var(--ui));background:rgba(8,8,8,.95);overflow:auto}
 .mb pre code{display:block;padding:calc(12px * var(--ui));font-size:calc(12px * var(--ui));line-height:1.65;font-family:"AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif}
 .hl-comment{color:#6a9955}.hl-string{color:#ce9178}.hl-number{color:#b5cea8}.hl-keyword{color:#ff9b52}.hl-builtins{color:#4fc1ff}.hl-var{color:#dcdcaa}
-#cmp{flex-shrink:0;padding:calc(14px * var(--ui)) calc(16px * var(--ui)) calc(18px * var(--ui));border-top:1px solid rgba(255,102,0,.15);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
+#cmp{flex-shrink:0;padding:calc(14px * var(--ui)) calc(16px * var(--ui)) calc(18px * var(--ui));border-top:1px solid rgba(255,102,0,.15);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);position:relative}
 #input{width:100%;min-height:calc(96px * var(--ui));resize:vertical;border:1px solid rgba(255,102,0,.2);border-radius:calc(14px * var(--ui));background:rgba(8,8,8,.72);color:var(--text);padding:calc(10px * var(--ui)) calc(12px * var(--ui));outline:none;user-select:text;-webkit-user-select:text}
 #composerFooter{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:calc(10px * var(--ui));margin-top:calc(12px * var(--ui))}
 .drawer-toolbar{display:flex;flex-direction:row;align-items:center;gap:calc(6px * var(--ui));min-width:0;background:transparent;padding:0}
@@ -385,8 +385,99 @@ body[data-theme="light"] .api-setup-box{background:#FFF8F0;border-color:#E9B889}
 .stab-x:hover{color:#ff7a59;background:rgba(255,255,255,.08)}
 .stab-add{flex-shrink:0;width:calc(32px * var(--ui));height:calc(32px * var(--ui));padding:0;border-radius:calc(10px * var(--ui));border:1px dashed rgba(255,102,0,.35);background:transparent;color:var(--orange);cursor:pointer;font-size:calc(18px * var(--ui));font-weight:600;line-height:1;display:flex;align-items:center;justify-content:center}
 .stab-add:hover{background:rgba(255,102,0,.08)}
-#newSessionPick{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity var(--de);z-index:42}
+.agent-nav-wrap{flex-shrink:0;border-bottom:1px solid rgba(255,102,0,.12);background:rgba(0,0,0,.12)}
+.agent-strip{display:flex;flex-wrap:nowrap;align-items:center;gap:calc(8px * var(--ui));padding:calc(8px * var(--ui)) calc(10px * var(--ui));overflow-x:auto;flex-shrink:0}
+.agent-strip::-webkit-scrollbar{height:calc(4px * var(--ui))}
+.agent-avatar{position:relative;flex-shrink:0;width:calc(36px * var(--ui));height:calc(36px * var(--ui));padding:calc(2px * var(--ui));border-radius:50%;border:2px solid transparent;background:transparent;cursor:pointer;transition:border-color var(--de),transform var(--de)}
+.agent-avatar:hover{border-color:rgba(255,102,0,.35);transform:scale(1.04)}
+.agent-avatar.active{border-color:rgba(255,102,0,.65);box-shadow:0 0 0 1px rgba(255,102,0,.25)}
+.agent-avatar-ico{display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:rgba(0,0,0,.28);overflow:hidden}
+.agent-avatar-ico img{width:calc(22px * var(--ui));height:calc(22px * var(--ui));object-fit:contain;display:block}
+.agent-status-dot{position:absolute;bottom:0;right:0;width:calc(10px * var(--ui));height:calc(10px * var(--ui));border-radius:50%;border:2px solid rgba(8,8,10,.95);pointer-events:none}
+.agent-status-dot.ready{background:#22c55e}
+.agent-status-dot.thinking{background:#a855f7;animation:agent-pulse 1.2s ease-in-out infinite}
+.agent-status-dot.needSetup{background:#94a3b8}
+.agent-status-dot.cli{background:#64748b}
+.agent-thread-badge{position:absolute;top:-2px;right:-2px;min-width:calc(14px * var(--ui));height:calc(14px * var(--ui));padding:0 calc(3px * var(--ui));border-radius:99px;background:var(--orange);color:#111;font-size:calc(9px * var(--ui));font-weight:700;line-height:calc(14px * var(--ui));text-align:center;pointer-events:none}
+.agent-add{flex-shrink:0;width:calc(34px * var(--ui));height:calc(34px * var(--ui));border-radius:50%;border:1px dashed rgba(255,102,0,.4);background:transparent;color:var(--orange);cursor:pointer;font-size:calc(18px * var(--ui));font-weight:600;line-height:1;display:flex;align-items:center;justify-content:center}
+.agent-add:hover{background:rgba(255,102,0,.1)}
+.agent-context-bar{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--ui));padding:calc(4px * var(--ui)) calc(10px * var(--ui)) calc(8px * var(--ui));font-size:calc(11px * var(--ui));color:var(--muted)}
+.agent-context-label{font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.agent-context-new{flex-shrink:0;padding:calc(3px * var(--ui)) calc(8px * var(--ui));font-size:calc(10px * var(--ui))}
+.agent-context-left{display:flex;align-items:center;gap:calc(8px * var(--ui));min-width:0;flex:1}
+.view-mode-toggle{display:flex;flex-shrink:0;border:1px solid rgba(255,102,0,.22);border-radius:calc(8px * var(--ui));overflow:hidden}
+.view-mode-toggle button{border:none;background:transparent;color:var(--muted);padding:calc(3px * var(--ui)) calc(10px * var(--ui));font-size:calc(10px * var(--ui));cursor:pointer;line-height:1.4}
+.view-mode-toggle button.active{background:rgba(255,102,0,.18);color:var(--orange);font-weight:600}
+.view-mode-toggle button:hover:not(.active){background:rgba(255,255,255,.05)}
+#viewportChat{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+#viewportControl{display:none;flex:1;min-height:0;min-width:0;overflow:auto;padding:calc(12px * var(--ui)) calc(16px * var(--ui));flex-direction:column;gap:calc(10px * var(--ui))}
+body.view-control #viewportControl{display:flex}
+body.view-control:not(.cli-mode) #viewportChat{display:none!important}
+body.view-control.cli-mode #viewportControl{display:none!important}
+body.view-control.cli-mode #cliPane{display:flex!important;flex-direction:column}
+body.view-control.cli-mode #msgs,body.view-control.cli-mode #cmp{display:none!important}
+.control-card{padding:calc(12px * var(--ui));border:1px solid rgba(255,102,0,.18);border-radius:calc(12px * var(--ui));background:rgba(255,255,255,.03);display:flex;flex-direction:column;gap:calc(6px * var(--ui))}
+.control-card-title{font-size:calc(12px * var(--ui));font-weight:700;color:var(--text)}
+.control-card-desc{font-size:calc(10px * var(--ui));color:var(--muted);line-height:1.45}
+.control-card-run{align-self:flex-start;margin-top:calc(4px * var(--ui))}
+.audit-panel{width:100%;flex-shrink:0;border:1px solid rgba(255,102,0,.14);border-radius:calc(8px * var(--ui));background:rgba(0,0,0,.18);overflow:hidden}
+.audit-panel.collapsed .audit-timeline{display:none}
+.audit-head{display:flex;align-items:center;gap:calc(6px * var(--ui));padding:calc(4px * var(--ui)) calc(8px * var(--ui));border-bottom:1px solid rgba(255,102,0,.1);font-size:calc(10px * var(--ui));color:var(--muted)}
+.audit-head span:first-child{flex:1;font-weight:600;color:var(--text)}
+.audit-head button{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:calc(10px * var(--ui));padding:calc(2px * var(--ui)) calc(6px * var(--ui));border-radius:calc(4px * var(--ui))}
+.audit-head button:hover{color:var(--orange);background:rgba(255,102,0,.08)}
+.audit-timeline{max-height:calc(96px * var(--ui));overflow:auto;padding:calc(4px * var(--ui)) calc(8px * var(--ui));font-size:calc(10px * var(--ui));line-height:1.45}
+.audit-item{display:flex;gap:calc(6px * var(--ui));padding:calc(3px * var(--ui)) 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.audit-item:last-child{border-bottom:none}
+.audit-item-time{flex-shrink:0;color:var(--muted);font-variant-numeric:tabular-nums}
+.audit-item-msg{min-width:0;color:var(--text);word-break:break-word}
+.audit-item.info .audit-item-msg{color:var(--text)}
+.audit-item.success .audit-item-msg{color:#22c55e}
+.audit-item.warn .audit-item-msg{color:#fbbf24}
+.audit-item.error .audit-item-msg{color:#ff7a59}
+.agent-status-dot.suspended{background:#f59e0b;animation:agent-pulse 1.2s ease-in-out infinite}
+.agent-status-dot.error{background:#ef4444}
+.thread-popover{position:fixed;z-index:55;min-width:calc(200px * var(--ui));max-width:calc(280px * var(--ui));background:var(--panel2);border:1px solid rgba(255,102,0,.28);border-radius:calc(12px * var(--ui));box-shadow:0 12px 36px rgba(0,0,0,.45);padding:calc(6px * var(--ui));display:none}
+.thread-popover.open{display:block}
+.thread-popover-title{font-size:calc(10px * var(--ui));color:var(--muted);padding:calc(4px * var(--ui)) calc(8px * var(--ui));border-bottom:1px solid rgba(255,102,0,.12);margin-bottom:calc(4px * var(--ui))}
+.agent-context-thread{font-size:calc(10px * var(--ui));color:var(--muted);display:inline-flex;align-items:center;gap:calc(4px * var(--ui));max-width:42%;overflow:hidden}
+.agent-context-thread-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agent-context-thread-close{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:calc(12px * var(--ui));line-height:1;padding:0 calc(2px * var(--ui));border-radius:calc(4px * var(--ui))}
+.agent-context-thread-close:hover{color:#ff7a59;background:rgba(255,102,0,.12)}
+.agent-avatar-wrap{position:relative;flex-shrink:0}
+.agent-avatar-remove{position:absolute;top:-4px;left:-4px;width:calc(16px * var(--ui));height:calc(16px * var(--ui));border-radius:50%;border:1px solid rgba(255,102,0,.35);background:rgba(8,8,10,.92);color:var(--muted);font-size:calc(11px * var(--ui));line-height:1;padding:0;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:2}
+.agent-avatar-wrap:hover .agent-avatar-remove{display:flex}
+.agent-avatar-remove:hover{color:#ff7a59;border-color:rgba(255,102,0,.55)}
+.thread-popover-item{display:flex;flex-direction:row;align-items:center;gap:calc(6px * var(--ui));width:100%;text-align:left;padding:calc(8px * var(--ui));border:none;border-radius:calc(8px * var(--ui));background:transparent;color:var(--text);cursor:pointer;font-size:calc(11px * var(--ui))}
+.thread-popover-item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:calc(2px * var(--ui))}
+.thread-popover-item-close{flex-shrink:0;width:calc(22px * var(--ui));height:calc(22px * var(--ui));border:none;border-radius:calc(6px * var(--ui));background:transparent;color:var(--muted);cursor:pointer;font-size:calc(14px * var(--ui));line-height:1}
+.thread-popover-foot{padding:calc(4px * var(--ui)) calc(8px * var(--ui)) 0;border-top:1px solid rgba(255,102,0,.1);margin-top:calc(4px * var(--ui))}
+.composer-hint{font-size:calc(10px * var(--ui));color:var(--muted);padding:calc(2px * var(--ui)) calc(2px * var(--ui)) calc(6px * var(--ui));line-height:1.45}
+body.view-control #input,body.view-control #composerFooter,body.view-control #attachList{display:none!important}
+body.view-control #composerHint{color:color-mix(in srgb,var(--orange) 70%,var(--muted) 30%)}
+.setup-banner{margin:calc(8px * var(--ui)) calc(10px * var(--ui)) 0;padding:calc(10px * var(--ui)) calc(12px * var(--ui));border:1px solid rgba(255,102,0,.28);border-radius:calc(10px * var(--ui));background:rgba(255,102,0,.08);font-size:calc(11px * var(--ui));line-height:1.5}
+.setup-banner-title{font-weight:700;color:var(--text);margin-bottom:calc(4px * var(--ui))}
+.setup-banner-actions{display:flex;flex-wrap:wrap;gap:calc(6px * var(--ui));margin-top:calc(8px * var(--ui))}
+.settings-advanced-toggle{width:100%;margin:calc(6px * var(--ui)) 0 calc(4px * var(--ui));justify-content:center}
+.settings-advanced{border-top:1px solid rgba(255,102,0,.12);padding-top:calc(10px * var(--ui));margin-top:calc(4px * var(--ui))}
+.settings-advanced[hidden]{display:none!important}
+.settings-quick-note{font-size:calc(11px * var(--ui));color:var(--muted);line-height:1.5;margin-bottom:calc(8px * var(--ui))}
+#controlModeHint{padding:calc(10px * var(--ui)) calc(14px * var(--ui));font-size:calc(11px * var(--ui));color:var(--muted);line-height:1.5;border-bottom:1px solid rgba(255,102,0,.1)}
+.thread-popover-item:hover,.thread-popover-item.active{background:rgba(255,102,0,.12)}
+.thread-popover-item-sub{font-size:calc(10px * var(--ui));color:var(--muted)}
+.node-config-disk{position:absolute;inset:auto 0 0 0;z-index:44;background:var(--panel2);border-top:1px solid rgba(255,102,0,.22);box-shadow:0 -8px 32px rgba(0,0,0,.35);padding:calc(12px * var(--ui)) calc(14px * var(--ui)) calc(14px * var(--ui));transform:translateY(100%);transition:transform var(--de);max-height:min(62vh,calc(360px * var(--ui)));overflow:auto;display:flex;flex-direction:column;gap:calc(10px * var(--ui))}
+body.node-config-open #nodeConfigDisk{transform:translateY(0)}
+.node-config-head{display:flex;justify-content:space-between;align-items:flex-start;gap:calc(8px * var(--ui));border-bottom:1px solid rgba(255,102,0,.12);padding-bottom:calc(8px * var(--ui))}
+.node-config-title{font-size:calc(13px * var(--ui));font-weight:700}
+.node-config-sub{font-size:calc(10px * var(--ui));color:var(--muted);margin-top:calc(2px * var(--ui))}
+.node-config-actions{display:flex;gap:calc(8px * var(--ui));flex-wrap:wrap;margin-top:calc(4px * var(--ui))}
+.node-config-actions .btn2,.node-config-actions .btn3{flex:1;min-width:calc(100px * var(--ui))}
+@keyframes agent-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(1.15)}}
+#newSessionPick{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity var(--de);z-index:42;overflow:hidden}
 body.nspick-open #newSessionPick{opacity:1;pointer-events:auto}
+#newSessionPick .nsbg{display:none}
+#newSessionPick .ns-panel.ns-slide-panel{position:absolute;top:0;right:0;bottom:0;left:auto;width:min(calc(290px * var(--ui)),88%);max-height:none;transform:translateX(100%);transition:transform var(--de);border-radius:0;border-top:none;border-bottom:none;border-right:none;box-shadow:-8px 0 28px rgba(0,0,0,.35)}
+body.nspick-open #newSessionPick .ns-slide-panel{transform:translateX(0)}
 .debug-hud{display:none;width:100%;flex-shrink:0;max-height:calc(52px * var(--ui));overflow:auto;box-sizing:border-box;padding:calc(4px * var(--ui)) calc(8px * var(--ui));border:1px solid rgba(255,102,0,.14);border-radius:calc(8px * var(--ui));background:rgba(0,0,0,.2);font:calc(10px * var(--ui))/1.4 "AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;color:var(--muted);pointer-events:none}
 .debug-hud .row{display:block;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .debug-hud .row.err{color:#ff7a59}
@@ -435,8 +526,13 @@ body[data-theme="light"]{--toolbar-bg:#F7F7F7;--panel:rgba(255,255,255,.96);--pa
 body[data-theme="light"] #panel,body[data-theme="light"] .sd,body[data-theme="light"] .ns-panel{border-color:#E5E5E5;box-shadow:-10px 0 24px rgba(0,0,0,.08)}
 body[data-theme="light"] #collapsedRoot{border:1px solid #D6D6D6;box-shadow:0 4px 14px rgba(0,0,0,.12),0 0 0 1px rgba(255,255,255,.9) inset}
 body[data-theme="light"] #resizeGrip{background:linear-gradient(90deg,rgba(230,126,34,.2),transparent)}
-body[data-theme="light"] .hdr,body[data-theme="light"] .sh,body[data-theme="light"] .sf,body[data-theme="light"] .session-tabs,body[data-theme="light"] #cmp{border-color:#E5E5E5;background:rgba(255,255,255,.9)}
-body[data-theme="light"] .ib,body[data-theme="light"] .btn2,body[data-theme="light"] .btn3,body[data-theme="light"] .stab,body[data-theme="light"] .ns-item{border-color:#E5E5E5;background:#FFFFFF;color:var(--text)}
+body[data-theme="light"] .hdr,body[data-theme="light"] .sh,body[data-theme="light"] .sf,body[data-theme="light"] .session-tabs,body[data-theme="light"] .agent-nav-wrap,body[data-theme="light"] #cmp{border-color:#E5E5E5;background:rgba(255,255,255,.9)}
+body[data-theme="light"] .ib,body[data-theme="light"] .btn2,body[data-theme="light"] .btn3,body[data-theme="light"] .stab,body[data-theme="light"] .ns-item,body[data-theme="light"] .thread-popover-item{border-color:#E5E5E5;background:#FFFFFF;color:var(--text)}
+body[data-theme="light"] .agent-avatar-ico{background:#F5F5F5}
+body[data-theme="light"] .agent-avatar:hover,body[data-theme="light"] .agent-avatar.active{border-color:#D35400}
+body[data-theme="light"] .thread-popover,body[data-theme="light"] .node-config-disk{background:#FFFFFF;border-color:#E5E5E5;box-shadow:0 8px 24px rgba(0,0,0,.1)}
+body[data-theme="light"] .thread-popover-item:hover,body[data-theme="light"] .thread-popover-item.active{background:#FFF1E3;color:#D35400}
+body[data-theme="light"] .agent-status-dot{border-color:#FFFFFF}
 body[data-theme="light"] .tb,body[data-theme="light"] .logo-btn{border-color:#D8D8D8;background:#FCFCFC;color:#C85D00}
 body[data-theme="light"] .tb:hover,body[data-theme="light"] .logo-btn:hover{border-color:#D35400;background:#FFF3E8;color:#D35400}
 body[data-theme="light"] .tb.selected{color:#E67E22}
@@ -491,14 +587,33 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <div class="icons">
 <button class="ib" id="chat-mobile-browser" type="button" title="手机浏览器（右侧顶栏）" aria-label="手机浏览器">🌐</button>
 <button class="ib" id="chat-search" type="button" title="搜索聊天记录" aria-label="搜索聊天记录"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
-<button class="ib" id="chat-api-quick" type="button" title="配置 API Key" aria-label="配置 API">API</button>
+<button class="ib" id="chat-api-quick" type="button" title="节点配置（API Key）" aria-label="节点配置">API</button>
 <button class="ib" id="chat-settings" type="button" title="打开设置" aria-label="打开设置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.82-.33 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.82.33l-.06.06A2 2 0 1 1 4.37 17l.06-.06a1.7 1.7 0 0 0 .33-1.82 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.03 4.4l.06.06a1.7 1.7 0 0 0 1.82.33h.01a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.5h.01a1.7 1.7 0 0 0 1.82-.33l.06-.06A2 2 0 1 1 19.63 7l-.06.06a1.7 1.7 0 0 0-.33 1.82v.01a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 <button class="ib" id="drawer-close" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 </div>
 </header>
-<div id="sessionTabs" class="session-tabs" role="tablist" aria-label="对话标签"></div>
+<div class="agent-nav-wrap">
+<div id="agentStrip" class="agent-strip" role="tablist" aria-label="AI 联系人"></div>
+<div id="agentContextBar" class="agent-context-bar">
+<div class="agent-context-left">
+<span id="agentContextLabel" class="agent-context-label"></span>
+<span id="agentContextThread" class="agent-context-thread" hidden></span>
+<button type="button" class="btn3 agent-context-new" id="agentContextNewThread" title="在该联系人下新建话题（空话题不重复创建）">新话题</button>
+</div>
+<div id="viewModeToggle" class="view-mode-toggle" role="group" aria-label="对话或控制">
+<button type="button" id="viewModeChat" class="active" title="对话模式">对话</button>
+<button type="button" id="viewModeControl" title="控制模式 · Tab 切换">控制</button>
+</div>
+</div>
+</div>
+<div id="sessionTabs" class="session-tabs" role="tablist" aria-label="对话标签" hidden aria-hidden="true"></div>
 <div id="main">
+<section id="viewportChat" class="viewport-chat">
 <section id="msgs"><div id="empty">首次使用请点「设」完成 API。点 🌐 打开右侧手机浏览器（顶栏在网页上方）；或在对话输入「@网页 …」自动操控。</div></section>
+</section>
+<section id="viewportControl" class="viewport-control" hidden aria-hidden="true" aria-label="节点控制">
+<div id="controlModeHint" class="control-mode-hint">控制模式：点击下方卡片执行操作，不会写入聊天记录。按 Tab 返回对话。</div>
+</section>
 <section id="cliPane" aria-label="CLI 终端">
   <div class="cli-shell">
     <div class="cli-bar">
@@ -515,7 +630,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </section>
 <section id="cmp">
 <div id="inlineApiSetup" class="api-setup-box" hidden>
-<div class="api-setup-title">大模型 API 配置（首页）</div>
+<div class="api-setup-title">快速连接 AI</div>
+<div class="hint mini" style="margin-bottom:4px">选服务商 → 粘贴 Key → 保存。与 ChatGPT / Claude 设置页相同的三步流程。</div>
 <div class="fld"><label for="inlineLlmProvider">服务商</label><select id="inlineLlmProvider" class="ctl"></select></div>
 <div class="fld"><label for="inlineLlmApiKey">API Key</label><input id="inlineLlmApiKey" class="ctl" type="password" autocomplete="off" placeholder="sk-…" /></div>
 <div class="row">
@@ -527,9 +643,19 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <button type="button" class="btn3" id="inlineLlmSave">保存并开始对话</button>
 <button type="button" class="btn2" id="inlineLlmOpenFull">更多选项…</button>
 </div>
-<div class="hint mini">填写后点保存；也可点右上角齿轮或工具条「设」进入完整 API 设置。</div>
+<div class="hint mini">保存后即可对话；高级项（System Prompt 等）点右上角齿轮。</div>
 </div>
-<textarea id="input" placeholder="输入消息，Ctrl+Enter 发送；操控网页可用 @网页 帮我在百度搜索…（自动打开手机浏览器）"></textarea>
+<div id="ollamaSetupBanner" class="setup-banner" hidden>
+<div class="setup-banner-title" id="ollamaSetupTitle">Ollama 未检测到本地服务</div>
+<div id="ollamaSetupBody">请先安装 Ollama 并启动服务，再拉取模型。安装后点击「检测服务」刷新状态。</div>
+<div class="setup-banner-actions">
+<button type="button" class="btn3" id="ollamaInstallBtn">打开下载页</button>
+<button type="button" class="btn2" id="ollamaCheckBtn">检测服务</button>
+<button type="button" class="btn2" id="ollamaPullBtn">拉取推荐模型</button>
+</div>
+</div>
+<textarea id="input" placeholder="输入消息…"></textarea>
+<div id="composerHint" class="composer-hint">Ctrl+Enter 发送 · Tab 切换控制 · Ctrl+1~8 切换联系人 · @网页 可操控手机浏览器</div>
 <div id="composerFooter">
 <div class="attach-wrap">
 <input id="attachFileInput" type="file" multiple style="display:none" />
@@ -547,27 +673,62 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   <svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/></svg>
 </button>
 </div>
+<div id="auditPanel" class="audit-panel">
+<header class="audit-head">
+<span>执行记录</span>
+<button type="button" id="auditCollapseBtn">折叠</button>
+<button type="button" id="auditClearBtn">清空</button>
+</header>
+<div id="auditTimeline" class="audit-timeline"></div>
+</div>
 <div id="debugHud" class="debug-hud" aria-live="polite"></div>
 </div>
 <div id="attachList"></div>
 <div id="chatStatusRow"><div class="st" id="chat-status" title="可选中后 Ctrl+C 复制">就绪</div></div>
+<div id="threadPopover" class="thread-popover" aria-hidden="true" role="menu"></div>
+<div id="nodeConfigDisk" class="node-config-disk" aria-hidden="true">
+<div class="node-config-head">
+<div><div class="node-config-title" id="nodeConfigTitle">节点配置</div><div class="node-config-sub" id="nodeConfigSub"></div></div>
+<button class="ib" id="nodeConfigClose" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</div>
+<div class="fld" id="nodeConfigKeyRow"><label for="nodeConfigApiKey" id="nodeConfigKeyLabel">API Key</label><input id="nodeConfigApiKey" class="ctl" type="password" autocomplete="off" placeholder="API Key" /></div>
+<div class="fld" id="nodeConfigLabelRow"><label for="nodeConfigCustomLabel">显示名称</label><input id="nodeConfigCustomLabel" class="ctl" type="text" autocomplete="off" placeholder="可选，覆盖默认联系人名" /></div>
+<div class="fld" id="nodeConfigModelRow"><label for="nodeConfigModel">模型</label><input id="nodeConfigModel" class="ctl" type="text" autocomplete="off" placeholder="当前话题模型" /></div>
+<div class="fld" id="nodeConfigBaseUrlRow"><label for="nodeConfigBaseUrl">Base URL</label><input id="nodeConfigBaseUrl" class="ctl" type="text" autocomplete="off" placeholder="留空则按服务商默认" /></div>
+<div class="fld" id="nodeConfigOpenClawRow"><label for="nodeConfigOpenClawKey">OpenClaw Gateway Key</label><input id="nodeConfigOpenClawKey" class="ctl" type="text" autocomplete="off" placeholder="agent:main:main" /></div>
+<div class="node-config-actions">
+<button type="button" class="btn2" id="nodeConfigTest">测试 API</button>
+<button type="button" class="btn3" id="nodeConfigSave">保存节点配置</button>
+</div>
+<div class="node-config-actions">
+<button type="button" class="btn2" id="nodeConfigClear">清空会话记忆</button>
+<button type="button" class="btn2" id="nodeConfigRemove">移除此联系人</button>
+</div>
+<div class="hint mini" id="nodeConfigHint">右键联系人头像打开此面板；完整设置请点右上角齿轮。</div>
+</div>
 </section>
 </div>
 <div id="settings" aria-hidden="true">
 <div class="sbg"></div>
 <section class="sd">
-<header class="sh"><div><div class="sbt">API 设置</div><div class="sbt2">保存在本机 localStorage</div></div><button class="ib" id="settings-close" type="button" title="关闭设置" aria-label="关闭设置"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+<header class="sh"><div><div class="sbt">连接 AI</div><div class="sbt2">选择服务商 · 填写 Key · 选模型 · 完成</div></div><button class="ib" id="settings-close" type="button" title="关闭设置" aria-label="关闭设置"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
 <div class="sbody">
 <div id="settingsAiHint" class="hint" style="display:none;margin-bottom:10px;padding:10px 12px;border:1px solid rgba(255,102,0,.45);border-radius:10px;background:rgba(255,102,0,.1);line-height:1.5">
 <span id="settingsAiHintText">当前对话标签为「终端」模式，此处请切换到 MiniMax 等 AI 服务商填写 API Key。</span>
 </div>
-<div class="row" id="fldModelPresetRow"><div class="fld fld-dd"><label for="providerDdBtn">服务商</label><div class="dd" id="providerDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="providerDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="providerDdMenu"><img id="providerDdIcon" class="dd-icon" alt="" /><span id="providerDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="providerDdMenu" role="listbox" hidden></div></div><select id="provider" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div><div class="fld fld-dd" id="fldModelDdCol"><label for="modelDdBtn">模型预设</label><div class="dd" id="modelDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="modelDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="modelDdMenu"><img id="modelDdIcon" class="dd-icon" alt="" /><span id="modelDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="modelDdMenu" role="listbox" hidden></div></div><select id="modelPreset" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div></div>
-<div class="fld"><label for="apiKey" id="apiKeyLabel">API Key</label><input id="apiKey" class="ctl" type="password" autocomplete="off" placeholder="API Key"><div class="hint mini" id="apiKeyKeyHint" style="display:none"></div></div>
+<div id="settingsQuick">
+<div class="settings-quick-note">主流用法：选服务商 → 粘贴 API Key → 选模型 → 点「完成」。高级选项（System Prompt、导出等）在下方展开。</div>
+<div class="row" id="fldModelPresetRow"><div class="fld fld-dd"><label for="providerDdBtn">服务商</label><div class="dd" id="providerDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="providerDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="providerDdMenu"><img id="providerDdIcon" class="dd-icon" alt="" /><span id="providerDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="providerDdMenu" role="listbox" hidden></div></div><select id="provider" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div><div class="fld fld-dd" id="fldModelDdCol"><label for="modelDdBtn">模型</label><div class="dd" id="modelDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="modelDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="modelDdMenu"><img id="modelDdIcon" class="dd-icon" alt="" /><span id="modelDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="modelDdMenu" role="listbox" hidden></div></div><select id="modelPreset" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div></div>
+<div class="fld"><label for="apiKey" id="apiKeyLabel">API Key</label><input id="apiKey" class="ctl" type="password" autocomplete="off" placeholder="粘贴 API Key"><div class="hint mini" id="apiKeyKeyHint" style="display:none"></div></div>
+<div class="fld" id="fldModelRow"><label for="model">Model</label><input id="model" class="ctl" type="text" autocomplete="off" placeholder="与上方预设一致或手填"></div>
+<div id="settingsProviderStatus" class="hint mini" style="margin-bottom:8px"></div>
+</div>
+<button type="button" class="btn2 settings-advanced-toggle" id="settingsAdvancedToggle">高级选项 ▾</button>
+<div id="settingsAdvanced" class="settings-advanced" hidden>
 <div class="fld" id="fldTtydShellRow" style="display:none"><label for="ttydShellCommand">终端启动命令（Shell）</label><input id="ttydShellCommand" class="ctl" type="text" spellcheck="false" autocomplete="off" placeholder="cmd.exe" /><div class="hint mini">传给本机 ttyd 的 Shell（如 <code>cmd.exe</code>、<code>powershell</code> 完整路径等）。点「完成」后写入配置并建议重启 ttyd。若被拦截请允许主目录下 <code>ttyd.exe</code> 或检查本机安全软件。</div></div>
 <div class="fld" id="fldMinimaxRegionRow" style="display:none"><label>MiniMax 节点（须与 Token Plan 密钥区域一致）</label><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn2" id="minimaxRegionCn">国内 · api.minimaxi.com</button><button type="button" class="btn2" id="minimaxRegionIntl">国际 · api.minimax.io</button></div><div class="hint mini">与 OpenClaw 一致请选<strong>国内</strong>；勿混用国际地址 + 国内密钥（会 invalid api key）。</div></div>
 <div class="fld" id="fldBaseUrlRow"><label for="baseUrl">Base URL</label><input id="baseUrl" class="ctl" type="text" autocomplete="off"></div>
 <div class="fld" id="fldOpenClawSessionRow" style="display:none"><label for="openclawSessionKey">Gateway Session Key</label><input id="openclawSessionKey" class="ctl" type="text" autocomplete="off" list="openclawSessionOptions" placeholder="agent:main:... / main"><datalist id="openclawSessionOptions"></datalist><div class="hint mini" id="openclawSessionHint">留空时该标签自动使用独立 `niuma-*` 会话；如需对齐 OpenClaw Control，请填写完整 session key。</div></div>
-<div class="fld" id="fldModelRow"><label for="model">Model</label><input id="model" class="ctl" type="text" autocomplete="off"></div>
 <div class="fld" id="fldChatModeRow">
   <label for="freeChatMode">对话模式</label>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -615,9 +776,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </section>
 </div>
 <div id="newSessionPick" aria-hidden="true">
-<div class="nsbg" id="newSessionPickBg"></div>
-<section class="ns-panel">
-<header class="nsh"><div><div class="nst">新对话</div><div class="nst2">选择要使用的 AI（各标签独立上下文）</div></div><button class="ib" id="newSessionPickClose" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+<section class="ns-panel ns-slide-panel">
+<header class="nsh"><div><div class="nst">添加联系人</div><div class="nst2">选择 AI / CLI · 新建独立会话</div></div><button class="ib" id="newSessionPickClose" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
 <div id="newSessionGrid" class="ns-grid"></div>
 </section>
 </div>
@@ -627,12 +787,32 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </div>
 <script>
 (function () {
+  /*
+   * FTB Backend Contract (Phase1) — NiuMa Chat 数据与宿主接口边界
+   *
+   * Layer A localStorage（生产主路径，app.local 始终可用）
+   *   niuma_chat_sessions_v1  v2: { v, activeSessionId, sessions[{nodeKey}], nodeMeta }
+   *   niuma_chat_history_v1   { version, sessions:{key:msg[]}, updatedAt }
+   *   niuma_chat_audit_v1     { version, entries[], updatedAt }
+   *   niuma_chat_drawer_config_v2  全局：apiKeys, systemPrompt, freeChatMode…
+   *   History key: local:{sessionId}；OpenClaw openclaw:{gatewaySessionKey}
+   *
+   * Layer B HTTP（仅 dev serve3000.js）
+   *   GET/POST /api/niuma/history | /api/niuma/audit
+   *   POST /api/niuma/upload | /api/niuma/attachments/context
+   *
+   * Layer C WebView postMessage（FloatingToolbar.ahk）
+   *   Web→Host: niuma_llm_http, niuma_cli_*, niuma_browser_*, chat_ready, …
+   *   Host→Web: niuma_node_status, niuma_audit_event, ttyd_ready, ttyd_error, …
+   */
   var LS = 'niuma_chat_drawer_config_v2',
     LEGACY_LS = 'niuma_chat_drawer_config_v1',
     SESSIONS_LS = 'niuma_chat_sessions_v1',
     NIUMA_HISTORY_LS = 'niuma_chat_history_v1',
+    AUDIT_LS = 'niuma_chat_audit_v1',
     DEBUG_HUD_LS = 'niuma_chat_debug_hud_v1',
     NIUMA_HISTORY_API = '/api/niuma/history',
+    NIUMA_AUDIT_API = '/api/niuma/audit',
     NIUMA_UPLOAD_API = '/api/niuma/upload',
     NIUMA_ATTACH_CTX_API = '/api/niuma/attachments/context',
     SP = '你是一个擅长 AHK v2、自动化脚本和桌面工作流的助手。',
@@ -678,7 +858,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         ]
       },
       zhipu: { label: '智谱', transport: 'openai', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-plus', models: ['glm-4-plus', 'glm-4-air', 'glm-4-flash'] },
-      ollama: { label: 'Ollama', transport: 'openai', baseUrl: 'http://127.0.0.1:11434/v1', model: 'llama3.1:8b', models: ['llama3.1:8b', 'qwen2.5:7b', 'deepseek-r1:7b', 'gemma3:4b'] },
+      ollama: { label: 'Ollama', transport: 'openai', baseUrl: 'http://127.0.0.1:11434/v1', model: 'qwen3:8b', models: ['qwen3:8b', 'qwen3:14b', 'llama3.3:70b', 'deepseek-r1:8b', 'gemma3:12b', 'mistral-small3.1:24b'] },
       openclaw: { label: 'OpenClaw', transport: 'openclaw', baseUrl: 'http://127.0.0.1:18789', model: 'gateway', models: ['gateway'] }
     },
     PROVIDER_PICK_ORDER = [
@@ -742,7 +922,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       siliconflow: { keyLabel: '硅基流动 API Key', keyPlaceholder: '硅基流动密钥', keyHint: '单独保存在「硅基流动」槽位。' },
       minimax: { keyLabel: 'MiniMax Token Plan Key', keyPlaceholder: 'Coding Plan / Token Plan 密钥', keyHint: 'Billing→Token Plan 密钥（≠按量付费接口密钥）；鉴权为 Authorization: Bearer；节点须一致：国内 api.minimaxi.com，国际 api.minimax.io。' },
       zhipu: { keyLabel: '智谱 API Key', keyPlaceholder: '智谱开放平台密钥', keyHint: '单独保存在「智谱」槽位（与 GLM BigModel 可填不同密钥）。' },
-      ollama: { keyLabel: 'Ollama API Key（可选）', keyPlaceholder: '本地默认可留空', keyHint: '本地 Ollama 默认无需 API Key；如启用鉴权可在此填写。' },
+      ollama: { keyLabel: 'Ollama（本地）', keyPlaceholder: '通常留空', keyHint: '需本机安装 Ollama 并启动；保存后在对话区可检测服务、拉取模型。' },
       openclaw: {
         keyLabel: 'Gateway Token',
         keyPlaceholder: '与 openclaw dashboard 中 token 一致',
@@ -1100,9 +1280,50 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     chatExportJson = $('chat-export-json'),
     hudToggleBtn = $('hudToggleBtn'),
     sessionTabsEl = $('sessionTabs'),
+    agentStripEl = $('agentStrip'),
+    agentContextBar = $('agentContextBar'),
+    agentContextLabel = $('agentContextLabel'),
+    agentContextThread = $('agentContextThread'),
+    agentContextNewThread = $('agentContextNewThread'),
+    viewModeChatBtn = $('viewModeChat'),
+    viewModeControlBtn = $('viewModeControl'),
+    viewportControlEl = $('viewportControl'),
+    auditPanelEl = $('auditPanel'),
+    auditTimelineEl = $('auditTimeline'),
+    auditCollapseBtn = $('auditCollapseBtn'),
+    auditClearBtn = $('auditClearBtn'),
+    threadPopoverEl = $('threadPopover'),
+    nodeConfigDisk = $('nodeConfigDisk'),
+    nodeConfigTitle = $('nodeConfigTitle'),
+    nodeConfigSub = $('nodeConfigSub'),
+    nodeConfigApiKey = $('nodeConfigApiKey'),
+    nodeConfigKeyRow = $('nodeConfigKeyRow'),
+    nodeConfigKeyLabel = $('nodeConfigKeyLabel'),
+    nodeConfigCustomLabel = $('nodeConfigCustomLabel'),
+    nodeConfigModel = $('nodeConfigModel'),
+    nodeConfigBaseUrl = $('nodeConfigBaseUrl'),
+    nodeConfigOpenClawKey = $('nodeConfigOpenClawKey'),
+    nodeConfigLabelRow = $('nodeConfigLabelRow'),
+    nodeConfigModelRow = $('nodeConfigModelRow'),
+    nodeConfigBaseUrlRow = $('nodeConfigBaseUrlRow'),
+    nodeConfigOpenClawRow = $('nodeConfigOpenClawRow'),
+    nodeConfigClose = $('nodeConfigClose'),
+    nodeConfigTest = $('nodeConfigTest'),
+    nodeConfigSave = $('nodeConfigSave'),
+    nodeConfigClear = $('nodeConfigClear'),
+    nodeConfigRemove = $('nodeConfigRemove'),
+    nodeConfigHint = $('nodeConfigHint'),
     msgs = $('msgs'),
     empty = $('empty'),
     input = $('input'),
+    composerHint = $('composerHint'),
+    ollamaSetupBanner = $('ollamaSetupBanner'),
+    ollamaInstallBtn = $('ollamaInstallBtn'),
+    ollamaCheckBtn = $('ollamaCheckBtn'),
+    ollamaPullBtn = $('ollamaPullBtn'),
+    settingsAdvancedToggle = $('settingsAdvancedToggle'),
+    settingsAdvanced = $('settingsAdvanced'),
+    settingsProviderStatus = $('settingsProviderStatus'),
     send = $('send'),
     attachFileInput = $('attachFileInput'),
     attachFolderInput = $('attachFolderInput'),
@@ -1154,7 +1375,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     collapsedRoot = $('collapsedRoot'),
     resizeGrip = $('resizeGrip'),
     newSessionPick = $('newSessionPick'),
-    newSessionPickBg = $('newSessionPickBg'),
     newSessionPickClose = $('newSessionPickClose'),
     newSessionGrid = $('newSessionGrid'),
     ttydCustomize = $('ttydCustomize'),
@@ -1249,7 +1469,20 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     browserAgentHoleContext: '',
     browserAgentHoleContextHash: '',
     browserAgentHoleInjected: false,
-    browserAgentPlanMode: ''
+    browserAgentPlanMode: '',
+    useLegacyTabs: false,
+    featurePhase1: true,
+    contactPopoverNodeKey: '',
+    nodeConfigDiskKey: '',
+    nodeLastActiveByKey: {},
+    nodeMeta: { lastThreadByNode: {}, labels: {}, defaultModel: {} },
+    nodeRuntime: {},
+    viewModeByNode: {},
+    auditLog: [],
+    auditCollapsed: false,
+    ollamaReachable: null,
+    ollamaModels: [],
+    settingsAdvancedOpen: false
   };
   window.g_NiumaLastElementsCount = 0;
   window.g_NiumaLastElementsCache = {};
@@ -1753,9 +1986,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       syncModelDdUi();
       updateProviderFormLayout(editPid);
       refreshSettingsAiHint();
+      refreshSettingsProviderStatus();
       try {
         post({ type: 'niuma_request_studio_llm' });
       } catch (e) {}
+      if (normalizeProviderId(provider.value) === 'ollama') checkOllamaHealth();
     }
   }
 
@@ -2047,7 +2282,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var s = activeSession();
     var on = isCliSession(s);
     var fr = $('cliFrame');
-    document.body.classList.toggle('cli-mode', !!on);
+    var mode = activeViewMode();
+    var cliAsMain = on && (mode === 'chat' || mode === 'control');
+    document.body.classList.toggle('cli-mode', !!cliAsMain);
     try {
       var titleEl = $('cliTitle');
       if (titleEl) {
@@ -2079,6 +2316,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       s.id,
       needSpawn ? '正在连接 ttyd（' + (P[s.provider] ? P[s.provider].label : s.provider) + '）…' : 'ttyd 已加载，切换标签将切换对应端口终端。'
     );
+    syncViewModeUi();
   }
 
   function normalizeRole(role) {
@@ -2347,15 +2585,249 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       .catch(function () {});
   }
 
+  function loadAuditFromLocal() {
+    var raw = null;
+    try {
+      raw = localStorage.getItem(AUDIT_LS);
+    } catch (e) {}
+    if (!raw) return [];
+    try {
+      var obj = JSON.parse(raw);
+      return Array.isArray(obj.entries) ? obj.entries : Array.isArray(obj) ? obj : [];
+    } catch (e2) {
+      return [];
+    }
+  }
+
+  function saveAuditToLocal() {
+    try {
+      localStorage.setItem(
+        AUDIT_LS,
+        JSON.stringify({ version: 1, entries: state.auditLog || [], updatedAt: new Date().toISOString() })
+      );
+    } catch (e) {}
+  }
+
+  function persistAudit() {
+    saveAuditToLocal();
+    fetch(NIUMA_AUDIT_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: { version: 1, entries: state.auditLog || [], updatedAt: new Date().toISOString() } })
+    }).catch(function () {});
+  }
+
+  function loadAudit() {
+    state.auditLog = loadAuditFromLocal().slice(-200);
+    fetch(NIUMA_AUDIT_API)
+      .then(function (r) {
+        return r.ok ? r.json() : null;
+      })
+      .then(function (j) {
+        if (!j || !j.ok || !j.data) return;
+        var remote = Array.isArray(j.data.entries) ? j.data.entries : [];
+        if (remote.length > state.auditLog.length) {
+          state.auditLog = remote.slice(-200);
+          saveAuditToLocal();
+          renderAuditTimeline();
+        }
+      })
+      .catch(function () {});
+    try {
+      var collapsed = localStorage.getItem(AUDIT_LS + '_collapsed');
+      state.auditCollapsed = collapsed === '1';
+      if (auditPanelEl) auditPanelEl.classList.toggle('collapsed', !!state.auditCollapsed);
+      if (auditCollapseBtn) auditCollapseBtn.textContent = state.auditCollapsed ? '展开' : '折叠';
+    } catch (e) {}
+  }
+
+  function appendAudit(entry) {
+    if (!state.featurePhase1) return;
+    entry = entry || {};
+    var nk = entry.nodeKey || activeNodeKey() || '';
+    state.auditLog = state.auditLog || [];
+    state.auditLog.push({
+      at: entry.at || new Date().toISOString(),
+      nodeKey: nk,
+      nodeLabel: entry.nodeLabel || (nk ? nodeLabel(nk) : ''),
+      level: entry.level || 'info',
+      message: String(entry.message || ''),
+      meta: entry.meta || null
+    });
+    if (state.auditLog.length > 200) state.auditLog = state.auditLog.slice(-200);
+    persistAudit();
+    renderAuditTimeline();
+  }
+
+  function renderAuditTimeline() {
+    if (!auditTimelineEl) return;
+    var rows = state.auditLog || [];
+    if (!rows.length) {
+      auditTimelineEl.innerHTML = '<div class="audit-item info"><span class="audit-item-msg">暂无执行记录</span></div>';
+      return;
+    }
+    var html = '';
+    for (var i = rows.length - 1; i >= 0; i--) {
+      var it = rows[i];
+      var t = '';
+      try {
+        t = new Date(it.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      } catch (e) {
+        t = '';
+      }
+      html +=
+        '<div class="audit-item ' +
+        esc(it.level || 'info') +
+        '"><span class="audit-item-time">' +
+        esc(t) +
+        '</span><span class="audit-item-msg">' +
+        esc((it.nodeLabel ? '[' + it.nodeLabel + '] ' : '') + (it.message || '')) +
+        '</span></div>';
+    }
+    auditTimelineEl.innerHTML = html;
+  }
+
+  function mergeNodeRuntime(d) {
+    if (!d || !d.nodeKey) return;
+    var nk = String(d.nodeKey);
+    var tick = Number(d.tick || d.updatedAt || Date.now());
+    var prev = state.nodeRuntime[nk];
+    if (prev && prev.updatedAt && tick && tick < prev.updatedAt) return;
+    state.nodeRuntime[nk] = {
+      status: String(d.status || 'ready'),
+      detail: String(d.detail || ''),
+      pingMs: Number(d.pingMs || 0),
+      updatedAt: tick || Date.now()
+    };
+  }
+
+  function ingestAuditEvent(d) {
+    appendAudit({
+      at: new Date().toISOString(),
+      nodeKey: d.nodeKey,
+      nodeLabel: d.nodeKey ? nodeLabel(String(d.nodeKey)) : '',
+      level: d.level || 'info',
+      message: d.message || '',
+      meta: d.meta || null
+    });
+  }
+
   function persistSessions() {
+    ensureNodeMeta();
+    state.sessions.forEach(function (s) {
+      if (s && !s.nodeKey) s.nodeKey = nodeKeyForSession(s);
+    });
     try {
       localStorage.setItem(
         SESSIONS_LS,
-        JSON.stringify({ v: 1, activeSessionId: state.activeSessionId, sessions: state.sessions })
+        JSON.stringify({
+          v: 2,
+          activeSessionId: state.activeSessionId,
+          sessions: state.sessions,
+          nodeMeta: state.nodeMeta
+        })
       );
     } catch (e) {
       cstat('本地存储可能已满，请导出后删除部分对话标签。', 'error');
     }
+  }
+
+  function ensureNodeMeta() {
+    if (!state.nodeMeta || typeof state.nodeMeta !== 'object') {
+      state.nodeMeta = { lastThreadByNode: {}, labels: {}, defaultModel: {} };
+    }
+    if (!state.nodeMeta.lastThreadByNode || typeof state.nodeMeta.lastThreadByNode !== 'object') {
+      state.nodeMeta.lastThreadByNode = {};
+    }
+    if (!state.nodeMeta.labels || typeof state.nodeMeta.labels !== 'object') {
+      state.nodeMeta.labels = {};
+    }
+    if (!state.nodeMeta.defaultModel || typeof state.nodeMeta.defaultModel !== 'object') {
+      state.nodeMeta.defaultModel = {};
+    }
+  }
+
+  function syncNodeLastActiveAlias() {
+    ensureNodeMeta();
+    state.nodeLastActiveByKey = state.nodeLastActiveByKey || {};
+    Object.keys(state.nodeMeta.lastThreadByNode).forEach(function (k) {
+      state.nodeLastActiveByKey[k] = state.nodeMeta.lastThreadByNode[k];
+    });
+  }
+
+  function getNodeLastThread(nodeKey) {
+    ensureNodeMeta();
+    if (state.nodeMeta.lastThreadByNode[nodeKey]) return state.nodeMeta.lastThreadByNode[nodeKey];
+    return state.nodeLastActiveByKey && state.nodeLastActiveByKey[nodeKey] ? state.nodeLastActiveByKey[nodeKey] : '';
+  }
+
+  function setNodeLastThread(nodeKey, sessionId) {
+    ensureNodeMeta();
+    if (!nodeKey || !sessionId) return;
+    state.nodeMeta.lastThreadByNode[nodeKey] = sessionId;
+    state.nodeLastActiveByKey = state.nodeLastActiveByKey || {};
+    state.nodeLastActiveByKey[nodeKey] = sessionId;
+  }
+
+  function deleteNodeLastThread(nodeKey) {
+    ensureNodeMeta();
+    delete state.nodeMeta.lastThreadByNode[nodeKey];
+    if (state.nodeLastActiveByKey) delete state.nodeLastActiveByKey[nodeKey];
+  }
+
+  function migrateSessionsPayloadToV2(data) {
+    ensureNodeMeta();
+    var lastByNode = {};
+    (data.sessions || []).forEach(function (s) {
+      if (!s) return;
+      var nk = s.nodeKey || nodeKeyForSession(s);
+      if (!lastByNode[nk]) lastByNode[nk] = s.id;
+      if (s.id === data.activeSessionId) lastByNode[nk] = s.id;
+    });
+    state.nodeMeta.lastThreadByNode = lastByNode;
+    if (data.nodeMeta && typeof data.nodeMeta === 'object') {
+      if (data.nodeMeta.labels) state.nodeMeta.labels = data.nodeMeta.labels;
+      if (data.nodeMeta.defaultModel) state.nodeMeta.defaultModel = data.nodeMeta.defaultModel;
+      if (data.nodeMeta.lastThreadByNode) {
+        Object.keys(data.nodeMeta.lastThreadByNode).forEach(function (k) {
+          state.nodeMeta.lastThreadByNode[k] = data.nodeMeta.lastThreadByNode[k];
+        });
+      }
+    }
+    syncNodeLastActiveAlias();
+  }
+
+  function mapLoadedSession(s) {
+    var sp = normalizeProviderId(s.provider);
+    var pid = sp && P[sp] ? sp : 'openai';
+    var gk = String(s.gatewaySessionKey || '').trim();
+    var mModel = s.model || '';
+    if (pid === 'codex_cli') mModel = '';
+    var row = {
+      id: s.id || genId(),
+      provider: pid,
+      model: mModel,
+      baseUrl: s.baseUrl || '',
+      gatewaySessionKey:
+        pid === 'openclaw' ? (gk ? (gk === 'main' ? 'agent:main:main' : gk) : buildOpenClawSessionKey(s.id || '')) : '',
+      openclawMeta: pid === 'openclaw' && s.openclawMeta && typeof s.openclawMeta === 'object' ? s.openclawMeta : null,
+      nodeKey: String(s.nodeKey || '').trim(),
+      history: Array.isArray(s.history)
+        ? s.history
+            .map(function (m) {
+              var n = normalizeHistoryItem(m);
+              if (!n) return null;
+              return {
+                role: n.role,
+                content: n.content,
+                ts: n.ts
+              };
+            })
+            .filter(Boolean)
+        : []
+    };
+    if (!row.nodeKey) row.nodeKey = nodeKeyForSession(row);
+    return row;
   }
 
   function loadSessions() {
@@ -2373,33 +2845,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return;
     }
     if (!data || !Array.isArray(data.sessions)) return;
-    state.sessions = data.sessions.map(function (s) {
-      var sp = normalizeProviderId(s.provider);
-      var pid = sp && P[sp] ? sp : 'openai';
-      var gk = String(s.gatewaySessionKey || '').trim();
-      var mModel = s.model || '';
-      if (pid === 'codex_cli') mModel = '';
-      return {
-        id: s.id || genId(),
-        provider: pid,
-        model: mModel,
-        baseUrl: s.baseUrl || '',
-        gatewaySessionKey: pid === 'openclaw' ? (gk ? (gk === 'main' ? 'agent:main:main' : gk) : buildOpenClawSessionKey(s.id || '')) : '',
-        openclawMeta: pid === 'openclaw' && s.openclawMeta && typeof s.openclawMeta === 'object' ? s.openclawMeta : null,
-        history: Array.isArray(s.history)
-          ? s.history.map(function (m) {
-              var n = normalizeHistoryItem(m);
-              if (!n) return null;
-              return {
-                role: n.role,
-                content: n.content,
-                ts: n.ts
-              };
-            }).filter(Boolean)
-          : []
-      };
-    });
+    var ver = data.v || 1;
+    state.sessions = data.sessions.map(mapLoadedSession);
+    if (ver >= 2) migrateSessionsPayloadToV2(data);
+    else migrateSessionsPayloadToV2({ sessions: state.sessions, activeSessionId: data.activeSessionId });
     state.activeSessionId = data.activeSessionId || (state.sessions[0] && state.sessions[0].id) || '';
+    if (state.activeSessionId) {
+      var act = activeSession();
+      if (act) setNodeLastThread(nodeKeyForSession(act), act.id);
+    }
   }
 
   function createSessionFromForm() {
@@ -2415,6 +2869,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       model: (p.transport === 'cli') ? '' : model.value.trim() || p.model,
       baseUrl: baseUrl.value.trim(),
       gatewaySessionKey: pid === 'openclaw' ? wantedOpenClawKey || hintedOpenClawKey || buildOpenClawSessionKey(sid) : '',
+      nodeKey: pid === 'openclaw' ? 'openclaw:' + (wantedOpenClawKey || hintedOpenClawKey || buildOpenClawSessionKey(sid)) : pid,
       history: []
     };
   }
@@ -2722,7 +3177,756 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return pl + ' · ' + shortModel(s.model);
   }
 
-  function renderSessionTabs() {
+  function nodeKeyForSession(s) {
+    if (!s) return '';
+    var pid = normalizeProviderId(s.provider);
+    if (pid === 'openclaw') return 'openclaw:' + getOpenClawSessionKey(s);
+    return pid;
+  }
+
+  function providerIdFromNodeKey(nodeKey) {
+    var k = String(nodeKey || '');
+    if (k.indexOf('openclaw:') === 0) return 'openclaw';
+    return k;
+  }
+
+  function nodeLabel(nodeKey) {
+    ensureNodeMeta();
+    var custom = String(state.nodeMeta.labels[nodeKey] || '').trim();
+    if (custom) return custom;
+    var pid = providerIdFromNodeKey(nodeKey);
+    var p = P[pid] || {};
+    var lab = p.label || pid || '联系人';
+    if (pid === 'openclaw') {
+      var sk = String(nodeKey || '').slice('openclaw:'.length);
+      if (sk.length > 14) sk = sk.slice(0, 12) + '…';
+      if (sk) lab += ' · ' + sk;
+    }
+    return lab;
+  }
+
+  function findNodeGroup(nodeKey) {
+    var groups = groupSessionsByNode();
+    for (var i = 0; i < groups.length; i++) {
+      if (groups[i].nodeKey === nodeKey) return groups[i];
+    }
+    return null;
+  }
+
+  function activeNodeKey() {
+    var s = activeSession();
+    return s ? nodeKeyForSession(s) : '';
+  }
+
+  function groupSessionsByNode() {
+    var map = {};
+    var order = [];
+    var pickIdx = {};
+    PROVIDER_PICK_ORDER.forEach(function (k, i) {
+      pickIdx[k] = i;
+    });
+    state.sessions.forEach(function (s) {
+      if (!s) return;
+      var k = nodeKeyForSession(s);
+      if (!map[k]) {
+        map[k] = { nodeKey: k, sessions: [], lastActiveId: '' };
+        order.push(k);
+      }
+      map[k].sessions.push(s);
+      if (s.id === state.activeSessionId) map[k].lastActiveId = s.id;
+    });
+    order.forEach(function (k) {
+      var g = map[k];
+      var lastId = getNodeLastThread(k);
+      if (lastId) {
+        for (var j = 0; j < g.sessions.length; j++) {
+          if (g.sessions[j].id === lastId) {
+            g.lastActiveId = lastId;
+            break;
+          }
+        }
+      }
+      if (!g.lastActiveId && g.sessions.length) g.lastActiveId = g.sessions[0].id;
+    });
+    order.sort(function (a, b) {
+      var pa = pickIdx[providerIdFromNodeKey(a)];
+      var pb = pickIdx[providerIdFromNodeKey(b)];
+      if (pa == null && pb == null) return 0;
+      if (pa == null) return 1;
+      if (pb == null) return -1;
+      return pa - pb;
+    });
+    return order.map(function (k) {
+      return map[k];
+    });
+  }
+
+  function hasKeyForProvider(pid) {
+    pid = normalizeProviderId(pid);
+    if (!pid || providerTransport(pid) === 'cli') return true;
+    if (pid === 'openclaw') return !!trimApiKey(state.apiKeys && state.apiKeys.openclaw);
+    return !!trimApiKey(state.apiKeys && state.apiKeys[pid]);
+  }
+
+  function nodeStatusForKey(nodeKey) {
+    var grp = findNodeGroup(nodeKey);
+    if (!grp) return 'ready';
+    var pid = providerIdFromNodeKey(nodeKey);
+    var rt = state.nodeRuntime[nodeKey];
+    if (rt && rt.status) {
+      var age = Date.now() - (rt.updatedAt || 0);
+      if (age < 300000) return rt.status;
+    }
+    var i;
+    for (i = 0; i < grp.sessions.length; i++) {
+      if (isSessionSending(grp.sessions[i].id)) return 'thinking';
+    }
+    if (providerTransport(pid) === 'cli') return 'cli';
+    if (!hasKeyForProvider(pid)) return 'needSetup';
+    return 'ready';
+  }
+
+  function threadTitleForSession(s) {
+    if (!s) return '话题';
+    if (isCliSession(s)) return 'CLI 终端';
+    var cnt = Array.isArray(s.history) ? s.history.length : 0;
+    var sub = shortModel(s.model);
+    if (cnt > 0) {
+      var last = s.history[cnt - 1];
+      var preview = last && last.content ? String(last.content).replace(/\s+/g, ' ').trim() : '';
+      if (preview.length > 28) preview = preview.slice(0, 26) + '…';
+      if (preview) sub = preview;
+    } else sub = sub + ' · 空对话';
+    return sub;
+  }
+
+  function threadSubForSession(s) {
+    if (!s) return '';
+    var cnt = Array.isArray(s.history) ? s.history.length : 0;
+    return (isCliSession(s) ? 'ttyd' : shortModel(s.model)) + ' · ' + cnt + ' 条消息';
+  }
+
+  function confirmNiuma(message, detail) {
+    try {
+      return window.confirm(detail ? String(message) + '\n\n' + String(detail) : String(message));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function findEmptyThreadInNode(nodeKey) {
+    var grp = findNodeGroup(nodeKey);
+    if (!grp) return null;
+    for (var i = 0; i < grp.sessions.length; i++) {
+      var s = grp.sessions[i];
+      if (s && (!s.history || !s.history.length)) return s;
+    }
+    return null;
+  }
+
+  function requestRemoveThread(sessionId) {
+    var s = sessionById(sessionId);
+    if (!s) return;
+    var nk = nodeKeyForSession(s);
+    var grp = findNodeGroup(nk);
+    if (!grp || grp.sessions.length <= 1) {
+      cstat('每个联系人至少保留一个话题。', 'error');
+      return;
+    }
+    var cnt = Array.isArray(s.history) ? s.history.length : 0;
+    if (
+      !confirmNiuma(
+        '确定关闭话题「' + threadTitleForSession(s) + '」？',
+        cnt > 0 ? '将删除 ' + cnt + ' 条聊天记录，且不可恢复。' : '该话题为空，关闭后不可恢复。'
+      )
+    )
+      return;
+    removeSession(sessionId);
+    appendAudit({ nodeKey: nk, level: 'warn', message: '已关闭话题' });
+  }
+
+  function requestRemoveNode(nodeKey) {
+    var grp = findNodeGroup(nodeKey);
+    if (!grp || !grp.sessions.length) return;
+    if (grp.sessions.length >= state.sessions.length) {
+      cstat('至少保留一个联系人。', 'error');
+      return;
+    }
+    var totalMsgs = 0;
+    grp.sessions.forEach(function (s) {
+      totalMsgs += Array.isArray(s.history) ? s.history.length : 0;
+    });
+    var detail = '将删除 ' + grp.sessions.length + ' 个话题';
+    if (totalMsgs > 0) detail += '与 ' + totalMsgs + ' 条聊天记录';
+    detail += '，且不可恢复。';
+    if (!confirmNiuma('确定移除联系人「' + nodeLabel(nodeKey) + '」？', detail)) return;
+    removeNode(nodeKey);
+  }
+
+  function shouldShowOllamaBanner() {
+    var s = activeSession();
+    if (!s) return false;
+    var pid = normalizeProviderId(s.provider);
+    return pid === 'ollama' || pid === 'ollama_cli';
+  }
+
+  function refreshOllamaSetupBanner() {
+    if (!ollamaSetupBanner) return;
+    if (!shouldShowOllamaBanner()) {
+      ollamaSetupBanner.hidden = true;
+      return;
+    }
+    ollamaSetupBanner.hidden = false;
+    var titleEl = $('ollamaSetupTitle');
+    var bodyEl = $('ollamaSetupBody');
+    if (state.ollamaReachable === true) {
+      if (titleEl) titleEl.textContent = 'Ollama 已连接';
+      var names = (state.ollamaModels || []).slice(0, 6);
+      if (bodyEl) {
+        bodyEl.textContent = names.length
+          ? '已安装模型：' + names.join('、') + ((state.ollamaModels || []).length > 6 ? '…' : '')
+          : '服务已就绪，尚未拉取模型。可点「拉取推荐模型」。';
+      }
+      return;
+    }
+    if (titleEl) titleEl.textContent = 'Ollama 未检测到本地服务';
+    if (bodyEl) {
+      bodyEl.textContent =
+        '1) 打开 ollama.com 下载安装并启动；2) 终端执行 ollama pull ' +
+        (P.ollama.model || 'qwen3:8b') +
+        '；3) 点「检测服务」。';
+    }
+  }
+
+  function checkOllamaHealth() {
+    return fetch('http://127.0.0.1:11434/api/tags', { method: 'GET', cache: 'no-store' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('bad status');
+        return r.json();
+      })
+      .then(function (j) {
+        state.ollamaReachable = !!(j && Array.isArray(j.models));
+        state.ollamaModels = (j.models || []).map(function (m) {
+          return String((m && m.name) || '');
+        }).filter(Boolean);
+        refreshOllamaSetupBanner();
+        updateNeedSetup();
+        return state.ollamaReachable;
+      })
+      .catch(function () {
+        state.ollamaReachable = false;
+        state.ollamaModels = [];
+        refreshOllamaSetupBanner();
+        updateNeedSetup();
+        return false;
+      });
+  }
+
+  function pullOllamaRecommendedModel() {
+    var modelName = (P.ollama && P.ollama.model) || 'qwen3:8b';
+    cstat('正在拉取 ' + modelName + '…');
+    return fetch('http://127.0.0.1:11434/api/pull', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: modelName, stream: false })
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error('pull failed');
+        return r.json();
+      })
+      .then(function () {
+        cstat('模型拉取完成：' + modelName, 'success');
+        appendAudit({ level: 'success', message: 'Ollama 已拉取模型 ' + modelName });
+        return checkOllamaHealth();
+      })
+      .catch(function (e) {
+        cstat('拉取失败：请先安装并启动 Ollama（' + (e && e.message ? e.message : '无法连接') + '）', 'error');
+      });
+  }
+
+  function syncComposerForViewMode() {
+    if (!composerHint || !input) return;
+    var mode = activeViewMode();
+    if (mode === 'control') {
+      composerHint.textContent = '控制模式 · Tab 返回对话 · Ctrl+1~8 切换联系人 · 下方操作不会写入聊天记录';
+      input.placeholder = '控制模式下输入框已隐藏';
+      return;
+    }
+    var s = activeSession();
+    if (s && isCliSession(s)) {
+      composerHint.textContent = 'CLI 模式 · Ctrl+Enter 发送到终端 · Tab 切换控制 · Ctrl+1~8 切换联系人';
+      input.placeholder = '输入 CLI 指令，Ctrl+Enter 执行';
+      return;
+    }
+    composerHint.textContent = 'Ctrl+Enter 发送 · Tab 切换控制 · Ctrl+1~8 切换联系人 · @网页 可操控手机浏览器';
+    input.placeholder = '输入消息…';
+  }
+
+  function syncControlModeHint() {
+    var el = $('controlModeHint');
+    if (!el) return;
+    var nk = activeNodeKey();
+    var pid = providerIdFromNodeKey(nk);
+    if (providerTransport(pid) === 'cli') {
+      el.textContent = 'CLI 控制：使用终端工具栏打开 / 重启 / 外部打开。Tab 返回对话。';
+    } else if (pid === 'openclaw') {
+      el.textContent = 'OpenClaw 控制：抓取 DOM、同步标签、暂停/恢复 AI。Tab 返回对话。';
+    } else {
+      el.textContent = '控制模式：测试 API、导出 Markdown 等。Tab 返回对话。';
+    }
+  }
+
+  function refreshSettingsProviderStatus() {
+    if (!settingsProviderStatus) return;
+    var pid = normalizeProviderId(provider.value);
+    var p = P[pid] || P.openai;
+    if (providerTransport(pid) === 'cli') {
+      settingsProviderStatus.textContent = '当前为 CLI 终端联系人，无需 API Key。请切换到 OpenAI / MiniMax 等 AI 服务商。';
+      return;
+    }
+    if (pid === 'ollama') {
+      settingsProviderStatus.textContent =
+        state.ollamaReachable === true
+          ? 'Ollama 本地服务已连接。'
+          : 'Ollama 需本机安装并启动；保存后可在对话区检测 / 拉取模型。';
+      return;
+    }
+    var k = trimApiKey(getApiKeyForProvider(pid));
+    settingsProviderStatus.textContent = k
+      ? '已填写 ' + (p.label || pid) + ' Key · 接口 ' + (p.baseUrl || '')
+      : '请粘贴 ' + (p.label || pid) + ' API Key，然后点「完成」。';
+  }
+
+  function setSettingsAdvancedOpen(open) {
+    state.settingsAdvancedOpen = !!open;
+    if (settingsAdvanced) settingsAdvanced.hidden = !state.settingsAdvancedOpen;
+    if (settingsAdvancedToggle)
+      settingsAdvancedToggle.textContent = state.settingsAdvancedOpen ? '收起高级选项 ▴' : '高级选项 ▾';
+  }
+
+  function closeThreadPopover() {
+    state.contactPopoverNodeKey = '';
+    if (threadPopoverEl) {
+      threadPopoverEl.classList.remove('open');
+      threadPopoverEl.setAttribute('aria-hidden', 'true');
+      threadPopoverEl.innerHTML = '';
+    }
+  }
+
+  function renderThreadPopover(nodeKey, anchorEl) {
+    if (!threadPopoverEl) return;
+    var grp = findNodeGroup(nodeKey);
+    if (!grp || grp.sessions.length <= 1) {
+      closeThreadPopover();
+      return;
+    }
+    state.contactPopoverNodeKey = nodeKey;
+    var html = '<div class="thread-popover-title">' + esc(nodeLabel(nodeKey)) + ' · 选择话题</div>';
+    grp.sessions.forEach(function (s) {
+      var active = s.id === state.activeSessionId;
+      html +=
+        '<button type="button" class="thread-popover-item' +
+        (active ? ' active' : '') +
+        '" data-thread-session="' +
+        esc(s.id) +
+        '" role="menuitem"><span class="thread-popover-item-main"><span>' +
+        esc(threadTitleForSession(s)) +
+        '</span><span class="thread-popover-item-sub">' +
+        esc(threadSubForSession(s)) +
+        '</span></span></button>';
+    });
+    html +=
+      '<div class="thread-popover-foot"><span class="hint mini">点击话题切换 · 右侧 × 关闭（需确认）</span></div>';
+    threadPopoverEl.innerHTML = html;
+    grp.sessions.forEach(function (s) {
+      var row = threadPopoverEl.querySelector('[data-thread-session="' + s.id + '"]');
+      if (!row) return;
+      var x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'thread-popover-item-close';
+      x.setAttribute('aria-label', '关闭话题');
+      x.setAttribute('data-close-thread', s.id);
+      x.textContent = '×';
+      row.appendChild(x);
+    });
+    threadPopoverEl.classList.add('open');
+    threadPopoverEl.setAttribute('aria-hidden', 'false');
+    if (anchorEl && anchorEl.getBoundingClientRect) {
+      var r = anchorEl.getBoundingClientRect();
+      var top = r.bottom + 6;
+      var left = Math.max(8, Math.min(r.left, window.innerWidth - 240));
+      if (top + 200 > window.innerHeight) top = Math.max(8, r.top - 8);
+      threadPopoverEl.style.top = top + 'px';
+      threadPopoverEl.style.left = left + 'px';
+    }
+  }
+
+  function switchToNode(nodeKey, sessionId) {
+    var grp = findNodeGroup(nodeKey);
+    if (!grp || !grp.sessions.length) return;
+    closeThreadPopover();
+    closeNodeConfigDisk();
+    var targetId = sessionId || grp.lastActiveId || grp.sessions[0].id;
+    var found = null;
+    grp.sessions.forEach(function (s) {
+      if (s.id === targetId) found = s;
+    });
+    if (!found) found = grp.sessions[0];
+    setNodeLastThread(nodeKey, found.id);
+    if (found.id !== state.activeSessionId) switchSession(found.id);
+    else {
+      renderContactNav();
+      syncViewModeUi();
+    }
+  }
+
+  function onAgentAvatarClick(nodeKey, anchorEl) {
+    var grp = findNodeGroup(nodeKey);
+    if (!grp) return;
+    if (grp.sessions.length === 1) {
+      switchToNode(nodeKey, grp.sessions[0].id);
+      return;
+    }
+    if (state.contactPopoverNodeKey === nodeKey && threadPopoverEl && threadPopoverEl.classList.contains('open')) {
+      closeThreadPopover();
+      return;
+    }
+    if (nodeKey === activeNodeKey() && state.activeSessionId) {
+      renderThreadPopover(nodeKey, anchorEl);
+      return;
+    }
+    switchToNode(nodeKey, grp.lastActiveId || grp.sessions[0].id);
+    if (grp.sessions.length > 1) {
+      setTimeout(function () {
+        var av = agentStripEl && agentStripEl.querySelector('.agent-avatar[data-node-key="' + nodeKey + '"]');
+        renderThreadPopover(nodeKey, av || anchorEl);
+      }, 0);
+    }
+  }
+
+  function activeViewMode(nodeKey) {
+    if (!state.featurePhase1) return 'chat';
+    nodeKey = nodeKey || activeNodeKey();
+    return state.viewModeByNode[nodeKey] || 'chat';
+  }
+
+  function syncViewModeToggleUi() {
+    var mode = activeViewMode();
+    if (viewModeChatBtn) viewModeChatBtn.classList.toggle('active', mode === 'chat');
+    if (viewModeControlBtn) viewModeControlBtn.classList.toggle('active', mode === 'control');
+    var vmt = $('viewModeToggle');
+    if (vmt) vmt.style.display = state.featurePhase1 ? '' : 'none';
+  }
+
+  function switchViewMode(mode, nodeKey) {
+    if (!state.featurePhase1) return;
+    nodeKey = nodeKey || activeNodeKey();
+    if (!nodeKey) return;
+    mode = mode === 'control' ? 'control' : 'chat';
+    var prev = state.viewModeByNode[nodeKey] || 'chat';
+    if (prev === mode) {
+      syncViewModeUi();
+      return;
+    }
+    state.viewModeByNode[nodeKey] = mode;
+    syncViewModeUi();
+    appendAudit({ nodeKey: nodeKey, level: 'info', message: mode === 'control' ? '切换到控制视口' : '切换到对话视口' });
+  }
+
+  function toggleViewMode() {
+    var nk = activeNodeKey();
+    if (!nk) return;
+    switchViewMode(activeViewMode(nk) === 'control' ? 'chat' : 'control', nk);
+  }
+
+  function runControlAction(card) {
+    if (!card || typeof card.run !== 'function') return;
+    var nk = activeNodeKey();
+    try {
+      card.run();
+      appendAudit({ nodeKey: nk, level: 'success', message: '控制：' + (card.label || card.id || '操作') });
+    } catch (err) {
+      appendAudit({
+        nodeKey: nk,
+        level: 'error',
+        message: '控制失败：' + (err && err.message ? err.message : String(err))
+      });
+    }
+  }
+
+  var NODE_CONTROLS = {
+    _cli: [
+      { id: 'cli_open', label: '打开终端', desc: '启动或连接 ttyd 本机终端', run: function () { if (cliOpenBtn) cliOpenBtn.click(); } },
+      { id: 'cli_restart', label: '重启 ttyd', desc: '强制重启当前引擎的 ttyd 服务', run: function () { if (cliRestartBtn) cliRestartBtn.click(); } },
+      { id: 'cli_pop', label: '外部浏览器打开', desc: '在系统默认浏览器中打开终端页', run: function () { if (cliPopBtn) cliPopBtn.click(); } }
+    ],
+    openclaw: [
+      {
+        id: 'oc_snap',
+        label: '抓取页面 DOM',
+        desc: '向手机浏览器请求当前页面快照',
+        run: function () {
+          post({ type: 'niuma_browser_get_snapshot', reqId: genId() });
+        }
+      },
+      {
+        id: 'oc_sync',
+        label: '刷新标签状态',
+        desc: '同步手机浏览器标签与 URL 状态',
+        run: function () {
+          post({ type: 'niuma_browser_sync_state' });
+        }
+      },
+      {
+        id: 'oc_pause',
+        label: '暂停 AI 操控',
+        desc: '暂停浏览器自动 AI 循环',
+        run: function () {
+          post({ type: 'niuma_browser_pause_ai' });
+        }
+      },
+      {
+        id: 'oc_resume',
+        label: '恢复 AI 操控',
+        desc: '恢复浏览器 AI 自动循环',
+        run: function () {
+          post({ type: 'niuma_browser_resume_ai' });
+        }
+      }
+    ],
+    _api: [
+      {
+        id: 'api_test',
+        label: '测试 API',
+        desc: '使用当前节点配置测试连通性',
+        run: function () {
+          var s = activeSession();
+          if (!s) return;
+          var pid = normalizeProviderId(s.provider);
+          var p = P[pid] || P.openai;
+          testApiConfig({
+            provider: pid,
+            model: s.model || p.model,
+            baseUrl: effectiveBaseUrl(pid, s.baseUrl, baseUrl ? baseUrl.value : ''),
+            apiKey: trimApiKey(state.apiKeys && state.apiKeys[pid])
+          });
+        }
+      },
+      {
+        id: 'api_export_md',
+        label: '导出当前话题 Markdown',
+        desc: '导出活跃 Thread 聊天记录为 .md 文件',
+        run: function () {
+          exportMarkdown();
+        }
+      }
+    ],
+    ollama: [
+      {
+        id: 'ollama_check',
+        label: '检测 Ollama 服务',
+        desc: '检查本机 11434 端口是否可用',
+        run: function () {
+          checkOllamaHealth().then(function (ok) {
+            cstat(ok ? 'Ollama 已连接' : '未检测到 Ollama', ok ? 'success' : 'error');
+          });
+        }
+      },
+      {
+        id: 'ollama_pull',
+        label: '拉取推荐模型',
+        desc: '执行 ollama pull ' + ((P.ollama && P.ollama.model) || 'qwen3:8b'),
+        run: function () {
+          pullOllamaRecommendedModel();
+        }
+      },
+      {
+        id: 'ollama_install',
+        label: '打开 Ollama 下载页',
+        desc: '在浏览器中打开 ollama.com/download',
+        run: function () {
+          try {
+            window.open('https://ollama.com/download', '_blank');
+          } catch (e) {}
+        }
+      }
+    ]
+  };
+
+  function controlsForNodeKey(nodeKey) {
+    var pid = providerIdFromNodeKey(nodeKey);
+    if (providerTransport(pid) === 'cli') return NODE_CONTROLS._cli;
+    if (pid === 'openclaw') return NODE_CONTROLS.openclaw;
+    if (pid === 'ollama') return NODE_CONTROLS.ollama;
+    return NODE_CONTROLS._api;
+  }
+
+  function renderControlMode() {
+    if (!viewportControlEl || !state.featurePhase1) return;
+    var nk = activeNodeKey();
+    if (!nk || activeViewMode(nk) !== 'control') {
+      viewportControlEl.setAttribute('hidden', '');
+      viewportControlEl.setAttribute('aria-hidden', 'true');
+      return;
+    }
+    if (providerTransport(providerIdFromNodeKey(nk)) === 'cli') {
+      viewportControlEl.setAttribute('hidden', '');
+      viewportControlEl.setAttribute('aria-hidden', 'true');
+      return;
+    }
+    viewportControlEl.removeAttribute('hidden');
+    viewportControlEl.setAttribute('aria-hidden', 'false');
+    var hintEl = $('controlModeHint');
+    if (!hintEl) {
+      hintEl = document.createElement('div');
+      hintEl.id = 'controlModeHint';
+      hintEl.className = 'control-mode-hint';
+      viewportControlEl.appendChild(hintEl);
+    }
+    syncControlModeHint();
+    var cards = controlsForNodeKey(nk);
+    viewportControlEl.querySelectorAll('.control-card').forEach(function (n) {
+      n.remove();
+    });
+    cards.forEach(function (card) {
+      var el = document.createElement('div');
+      el.className = 'control-card';
+      el.innerHTML =
+        '<div class="control-card-title">' +
+        esc(card.label || '') +
+        '</div><div class="control-card-desc">' +
+        esc(card.desc || '') +
+        '</div>';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn3 control-card-run';
+      btn.textContent = '执行';
+      btn.addEventListener('click', function () {
+        runControlAction(card);
+      });
+      el.appendChild(btn);
+      viewportControlEl.appendChild(el);
+    });
+  }
+
+  function syncViewModeUi() {
+    if (!state.featurePhase1) {
+      document.body.classList.remove('view-control', 'view-chat');
+      if (viewportControlEl) {
+        viewportControlEl.setAttribute('hidden', '');
+        viewportControlEl.setAttribute('aria-hidden', 'true');
+      }
+      return;
+    }
+    var mode = activeViewMode();
+    document.body.classList.toggle('view-control', mode === 'control');
+    document.body.classList.toggle('view-chat', mode !== 'control');
+    syncViewModeToggleUi();
+    renderControlMode();
+    syncComposerForViewMode();
+    syncControlModeHint();
+    refreshOllamaSetupBanner();
+  }
+
+  function renderAgentContextBar() {
+    if (!agentContextLabel) return;
+    var nk = activeNodeKey();
+    if (!nk) {
+      agentContextLabel.textContent = '未选择联系人';
+      if (agentContextNewThread) agentContextNewThread.style.display = 'none';
+      return;
+    }
+    agentContextLabel.textContent = nodeLabel(nk);
+    if (agentContextNewThread) agentContextNewThread.style.display = '';
+    syncViewModeToggleUi();
+    renderAgentContextThread();
+  }
+
+  function renderAgentContextThread() {
+    if (!agentContextThread) return;
+    var nk = activeNodeKey();
+    var grp = nk ? findNodeGroup(nk) : null;
+    if (!grp || grp.sessions.length <= 1) {
+      agentContextThread.hidden = true;
+      agentContextThread.innerHTML = '';
+      return;
+    }
+    var s = activeSession();
+    if (!s) {
+      agentContextThread.hidden = true;
+      return;
+    }
+    agentContextThread.hidden = false;
+    agentContextThread.innerHTML =
+      '<span class="agent-context-thread-label" title="' +
+      esc(threadTitleForSession(s)) +
+      '">' +
+      esc(threadTitleForSession(s)) +
+      '</span><button type="button" class="agent-context-thread-close" data-close-thread="' +
+      esc(s.id) +
+      '" title="关闭当前话题" aria-label="关闭当前话题">×</button>';
+  }
+
+  function renderAgentStrip() {
+    if (!agentStripEl) return;
+    agentStripEl.innerHTML = '';
+    var groups = groupSessionsByNode();
+    var activeNk = activeNodeKey();
+    groups.forEach(function (grp) {
+      var nk = grp.nodeKey;
+      var pid = providerIdFromNodeKey(nk);
+      var wrap = document.createElement('div');
+      wrap.className = 'agent-avatar-wrap';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'agent-avatar' + (nk === activeNk ? ' active' : '');
+      btn.dataset.nodeKey = nk;
+      btn.setAttribute('role', 'tab');
+      var tip = nodeLabel(nk);
+      var rt = state.nodeRuntime[nk];
+      if (rt && rt.detail) tip += ' · ' + rt.detail;
+      if (rt && rt.pingMs > 0) tip += ' · ' + rt.pingMs + 'ms';
+      btn.setAttribute('title', tip);
+      btn.setAttribute('aria-label', nodeLabel(nk));
+      var ico = document.createElement('span');
+      ico.className = 'agent-avatar-ico';
+      var im = document.createElement('img');
+      bindProviderIconImg(im, pid);
+      ico.appendChild(im);
+      var dot = document.createElement('span');
+      dot.className = 'agent-status-dot ' + nodeStatusForKey(nk);
+      dot.setAttribute('aria-hidden', 'true');
+      btn.appendChild(ico);
+      btn.appendChild(dot);
+      if (grp.sessions.length > 1) {
+        var badge = document.createElement('span');
+        badge.className = 'agent-thread-badge';
+        badge.textContent = String(grp.sessions.length);
+        badge.setAttribute('aria-hidden', 'true');
+        btn.appendChild(badge);
+      }
+      var rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'agent-avatar-remove';
+      rm.setAttribute('data-remove-node', nk);
+      rm.setAttribute('title', '移除联系人');
+      rm.setAttribute('aria-label', '移除联系人');
+      rm.textContent = '×';
+      wrap.appendChild(btn);
+      wrap.appendChild(rm);
+      agentStripEl.appendChild(wrap);
+    });
+    var addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'agent-add';
+    addBtn.id = 'agentStripAdd';
+    addBtn.textContent = '+';
+    addBtn.setAttribute('title', '添加 AI / CLI 联系人');
+    addBtn.setAttribute('aria-label', '添加 AI / CLI 联系人');
+    agentStripEl.appendChild(addBtn);
+  }
+
+  function renderSessionTabsLegacy() {
     if (!sessionTabsEl) return;
     sessionTabsEl.innerHTML = '';
     state.sessions.forEach(function (s) {
@@ -2756,27 +3960,246 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     addBtn.className = 'stab-add';
     addBtn.id = 'sessionTabAdd';
     addBtn.textContent = '+';
-    addBtn.setAttribute('title', '选择 AI / 本机 CLI 新建对话');
-    addBtn.setAttribute('aria-label', '选择 AI / 本机 CLI 新建对话');
     sessionTabsEl.appendChild(addBtn);
+  }
+
+  function renderContactNav() {
+    if (state.useLegacyTabs) {
+      renderSessionTabsLegacy();
+      refreshSendUi();
+      syncChatViewMode();
+      return;
+    }
+    renderAgentStrip();
+    renderAgentContextBar();
+    if (state.contactPopoverNodeKey) {
+      var av = agentStripEl && agentStripEl.querySelector('.agent-avatar[data-node-key="' + state.contactPopoverNodeKey + '"]');
+      if (av) renderThreadPopover(state.contactPopoverNodeKey, av);
+      else closeThreadPopover();
+    }
     refreshSendUi();
     syncChatViewMode();
+    syncViewModeUi();
+  }
+
+  function renderSessionTabs() {
+    renderContactNav();
+  }
+
+  function openNodeConfigDisk(nodeKey) {
+    if (!nodeKey) nodeKey = activeNodeKey();
+    if (!nodeKey || !nodeConfigDisk) return;
+    closeThreadPopover();
+    var grp = findNodeGroup(nodeKey);
+    if (!grp || !grp.sessions.length) return;
+    var ref = null;
+    grp.sessions.forEach(function (s) {
+      if (s.id === state.activeSessionId) ref = s;
+    });
+    if (!ref) ref = grp.sessions[0];
+    if (ref.id !== state.activeSessionId) switchSession(ref.id);
+    syncFormFromSession(ref);
+    state.nodeConfigDiskKey = nodeKey;
+    document.body.classList.add('node-config-open');
+    nodeConfigDisk.setAttribute('aria-hidden', 'false');
+    var pid = providerIdFromNodeKey(nodeKey);
+    var p = P[pid] || P.openai;
+    if (nodeConfigTitle) nodeConfigTitle.textContent = nodeLabel(nodeKey);
+    if (nodeConfigSub) nodeConfigSub.textContent = isCliSession(ref) ? '本机 ttyd 终端 · 无需 API Key' : (p.label || pid) + ' · 节点配置';
+    if (nodeConfigKeyRow) nodeConfigKeyRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
+    if (nodeConfigApiKey) {
+      nodeConfigApiKey.type = pid === 'openclaw' ? 'text' : 'password';
+      nodeConfigApiKey.value = apiKey ? apiKey.value : '';
+    }
+    if (nodeConfigKeyLabel && KEYMETA[pid]) nodeConfigKeyLabel.textContent = KEYMETA[pid].keyLabel || 'API Key';
+    ensureNodeMeta();
+    if (nodeConfigCustomLabel) nodeConfigCustomLabel.value = String(state.nodeMeta.labels[nodeKey] || '');
+    if (nodeConfigModel) nodeConfigModel.value = ref.model || '';
+    if (nodeConfigBaseUrl) {
+      nodeConfigBaseUrl.value =
+        (ref.baseUrl || '').trim() ||
+        (shouldShowManualBaseUrl(pid) ? (P[pid] || {}).baseUrl || '' : effectiveBaseUrl(pid, ref.baseUrl, ''));
+    }
+    if (nodeConfigOpenClawRow) nodeConfigOpenClawRow.style.display = pid === 'openclaw' ? '' : 'none';
+    if (nodeConfigOpenClawKey) nodeConfigOpenClawKey.value = pid === 'openclaw' ? getOpenClawSessionKey(ref) : '';
+    if (nodeConfigModelRow) nodeConfigModelRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
+    if (nodeConfigBaseUrlRow) nodeConfigBaseUrlRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
+  }
+
+  function closeNodeConfigDisk() {
+    state.nodeConfigDiskKey = '';
+    document.body.classList.remove('node-config-open');
+    if (nodeConfigDisk) nodeConfigDisk.setAttribute('aria-hidden', 'true');
+  }
+
+  function saveNodeConfigDisk() {
+    var nodeKey = state.nodeConfigDiskKey || activeNodeKey();
+    if (!nodeKey) return;
+    var grp = findNodeGroup(nodeKey);
+    if (!grp || !grp.sessions.length) return;
+    var pid = providerIdFromNodeKey(nodeKey);
+    var ref = activeSession();
+    grp.sessions.forEach(function (s) {
+      if (s.id === state.activeSessionId) ref = s;
+    });
+    if (!ref) ref = grp.sessions[0];
+    if (nodeConfigApiKey && apiKey && providerTransport(pid) !== 'cli') {
+      apiKey.value = nodeConfigApiKey.value;
+      if (!state.apiKeys) state.apiKeys = {};
+      state.apiKeys[pid] = trimApiKey(nodeConfigApiKey.value);
+    }
+    ensureNodeMeta();
+    var customLabel = nodeConfigCustomLabel ? String(nodeConfigCustomLabel.value || '').trim() : '';
+    if (customLabel) state.nodeMeta.labels[nodeKey] = customLabel;
+    else delete state.nodeMeta.labels[nodeKey];
+    if (providerTransport(pid) !== 'cli') {
+      var mVal = nodeConfigModel ? String(nodeConfigModel.value || '').trim() : '';
+      var bVal = nodeConfigBaseUrl ? String(nodeConfigBaseUrl.value || '').trim() : '';
+      if (ref) {
+        ref.model = mVal || ref.model;
+        ref.baseUrl = bVal;
+      }
+      if (mVal) state.nodeMeta.defaultModel[nodeKey] = mVal;
+    }
+    var gk = nodeConfigOpenClawKey ? String(nodeConfigOpenClawKey.value || '').trim() : '';
+    if (pid === 'openclaw' && gk) {
+      grp.sessions.forEach(function (s) {
+        s.gatewaySessionKey = gk;
+        s.nodeKey = 'openclaw:' + gk;
+      });
+      nodeKey = 'openclaw:' + gk;
+      state.nodeConfigDiskKey = nodeKey;
+    } else {
+      grp.sessions.forEach(function (s) {
+        if (providerTransport(pid) !== 'cli' && ref && s.id === ref.id) {
+          if (nodeConfigModel) s.model = ref.model;
+          if (nodeConfigBaseUrl) s.baseUrl = ref.baseUrl;
+        }
+      });
+    }
+    syncFormFromSession(ref);
+    saveCfg(true);
+    persistSessions();
+    renderContactNav();
+    appendAudit({ nodeKey: nodeKey, level: 'success', message: '已保存节点配置' });
+  }
+
+  function clearNodeHistory(nodeKey) {
+    var grp = findNodeGroup(nodeKey);
+    if (!grp) return;
+    grp.sessions.forEach(function (s) {
+      s.history = [];
+      var hk = historyStoreKeyForSession(s);
+      if (state.niumaHistoryStore && state.niumaHistoryStore.sessions && hk) delete state.niumaHistoryStore.sessions[hk];
+      pushSessionHistoryToStore(s);
+    });
+    state.niumaHistoryStore.updatedAt = new Date().toISOString();
+    saveNiumaHistoryStoreToLocal();
+    persistSessions();
+    if (grp.sessions.some(function (x) { return x.id === state.activeSessionId; })) rebuildMsgList();
+    emptyState();
+    appendAudit({ nodeKey: nodeKey, level: 'info', message: '已清空该联系人的会话记忆' });
+    cstat('已清空该联系人的会话记忆。', 'success');
+  }
+
+  function removeNode(nodeKey) {
+    var grp = findNodeGroup(nodeKey);
+    if (!grp || !grp.sessions.length) return;
+    if (grp.sessions.length >= state.sessions.length) {
+      cstat('至少保留一个联系人。', 'error');
+      return;
+    }
+    var cur = activeSession();
+    syncSessionFromForm(cur);
+    var ids = grp.sessions.map(function (s) { return s.id; });
+    ids.forEach(function (id) {
+      for (var i = state.sessions.length - 1; i >= 0; i--) {
+        if (state.sessions[i] && state.sessions[i].id === id) {
+          state.sessions.splice(i, 1);
+          break;
+        }
+      }
+    });
+    deleteNodeLastThread(nodeKey);
+    if (!activeSession()) {
+      state.activeSessionId = state.sessions[0] ? state.sessions[0].id : '';
+    }
+    closeNodeConfigDisk();
+    persistSessions();
+    syncFormFromSession(activeSession());
+    rebuildMsgList();
+    renderContactNav();
+    updateNeedSetup();
+    appendAudit({ nodeKey: nodeKey, level: 'warn', message: '已移除联系人' });
+    cstat('已移除联系人。', 'success');
+  }
+
+  function createThreadInNode(nodeKey) {
+    var grp = findNodeGroup(nodeKey);
+    if (!grp || !grp.sessions.length) {
+      openNewSessionPick();
+      return;
+    }
+    var existingEmpty = findEmptyThreadInNode(nodeKey);
+    if (existingEmpty) {
+      switchSession(existingEmpty.id);
+      if (grp.sessions.length > 1) {
+        var av0 = agentStripEl && agentStripEl.querySelector('.agent-avatar[data-node-key="' + nodeKey + '"]');
+        renderThreadPopover(nodeKey, av0);
+      }
+      cstat('已有空话题，已切换到该话题（不重复创建）。', 'success');
+      return;
+    }
+    var ref = grp.sessions[0];
+    var pid = normalizeProviderId(ref.provider);
+    if (!pid || !P[pid]) return;
+    var cur = activeSession();
+    syncSessionFromForm(cur);
+    saveCfg(false);
+    var p = P[pid];
+    var sid = genId();
+    var s = {
+      id: sid,
+      provider: pid,
+      model: (p.transport === 'cli') ? '' : ref.model || p.model,
+      baseUrl: ref.baseUrl || p.baseUrl,
+      gatewaySessionKey: pid === 'openclaw' ? getOpenClawSessionKey(ref) : '',
+      nodeKey: nodeKey,
+      history: []
+    };
+    state.sessions.push(s);
+    state.activeSessionId = s.id;
+    setNodeLastThread(nodeKey, s.id);
+    pullStoreHistoryToSession(s);
+    persistSessions();
+    syncFormFromSession(s);
+    rebuildMsgList();
+    renderContactNav();
+    updateNeedSetup();
+    if (pid === 'openclaw') hydrateOpenClawHistoryForSession(s, true);
+    syncChatViewMode();
+    cstat('已在「' + nodeLabel(nodeKey) + '」下新建话题。', 'success');
   }
 
   function emptyState() {
     var s = activeSession();
     if (!s || s.history.length) {
       if (empty) empty.style.display = 'none';
+      refreshOllamaSetupBanner();
       return;
     }
-    if (isCliSession(s)) {
-      empty.textContent = 'ttyd 命令行：点「+」选择 CLI（Codex / Claude / 智谱等），每标签独立端口；发送将连接对应 ttyd 终端页。';
+    var mode = activeViewMode();
+    if (mode === 'control') {
+      empty.textContent = '控制模式：使用下方卡片执行操作。按 Tab 返回对话输入。';
+    } else if (isCliSession(s)) {
+      empty.textContent = 'ttyd 命令行：点「+」添加 CLI 联系人，或 Tab 切换到控制打开终端。';
     } else if (state.needSetup || !hasAnyApiConfigured()) {
-      empty.textContent = '请在下方填写 API Key，或点输入框上方的「保存并开始对话」。';
+      empty.textContent = '请先完成 API 配置：点右上角齿轮，或下方快速配置区。';
     } else {
-      empty.textContent = '开始对话，或点「+」选择服务商新建标签。';
+      empty.textContent = '开始对话，或点「新话题」在同联系人下开分支（空话题不会重复创建）。';
     }
     if (empty) empty.style.display = '';
+    refreshOllamaSetupBanner();
   }
 
   function appendMessageDom(role, content, ts, msgId) {
@@ -2993,6 +4416,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     persistSessions();
     state.activeSessionId = id;
     var target = activeSession();
+    if (target) setNodeLastThread(nodeKeyForSession(target), id);
     pullStoreHistoryToSession(target);
     syncFormFromSession(target);
     rebuildMsgList();
@@ -3001,6 +4425,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     refreshSendUi();
     if (target && target.provider === 'openclaw') hydrateOpenClawHistoryForSession(target, false);
     syncChatViewMode();
+    syncViewModeUi();
   }
 
   function pickProviderGridKeys() {
@@ -3065,10 +4490,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       model: (p.transport === 'cli') ? '' : p.model,
       baseUrl: p.baseUrl,
       gatewaySessionKey: pid === 'openclaw' ? wantedOpenClawKey || buildOpenClawSessionKey(sid) : '',
+      nodeKey: nodeKeyForSession({ provider: pid, gatewaySessionKey: pid === 'openclaw' ? wantedOpenClawKey || buildOpenClawSessionKey(sid) : '' }),
       history: []
     };
     state.sessions.push(s);
     state.activeSessionId = s.id;
+    setNodeLastThread(nodeKeyForSession(s), s.id);
     pullStoreHistoryToSession(s);
     persistSessions();
     syncFormFromSession(s);
@@ -3089,21 +4516,40 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var cur = activeSession();
     if (cur && cur.id === id) syncSessionFromForm(cur);
     var idx = -1;
+    var removed = null;
     for (var i = 0; i < state.sessions.length; i++) {
       if (state.sessions[i].id === id) {
         idx = i;
+        removed = state.sessions[i];
         break;
       }
     }
-    if (idx < 0) return;
+    if (idx < 0 || !removed) return;
+    var nk = nodeKeyForSession(removed);
     state.sessions.splice(idx, 1);
     if (state.activeSessionId === id) {
-      state.activeSessionId = state.sessions[Math.max(0, idx - 1)].id;
+      var fallback = null;
+      for (var j = 0; j < state.sessions.length; j++) {
+        if (nodeKeyForSession(state.sessions[j]) === nk) {
+          fallback = state.sessions[j];
+          break;
+        }
+      }
+      if (!fallback) fallback = state.sessions[Math.max(0, idx - 1)];
+      state.activeSessionId = fallback ? fallback.id : '';
       syncFormFromSession(activeSession());
       rebuildMsgList();
     }
+    if (nk) {
+      var left = state.sessions.filter(function (s) {
+        return nodeKeyForSession(s) === nk;
+      });
+      if (left.length) setNodeLastThread(nk, state.activeSessionId);
+      else deleteNodeLastThread(nk);
+    }
     persistSessions();
     renderSessionTabs();
+    cstat('话题已关闭。', 'success');
   }
 
   function downloadBlob(filename, text, mime) {
@@ -3209,6 +4655,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (v) state.sendingBySession[id] = true;
     else delete state.sendingBySession[id];
     refreshSendUi();
+    if (!state.useLegacyTabs && agentStripEl) renderAgentStrip();
   }
 
   function cstatForSession(sid, t, m) {
@@ -3869,7 +5316,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return;
     }
     if (sp === 'ollama') {
-      state.needSetup = !url || !m;
+      state.needSetup = state.ollamaReachable === false || !url || !m;
       refreshInlineApiSetupVisibility();
       return;
     }
@@ -3894,6 +5341,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     loadNiumaHistoryStore();
 
     loadSessions();
+    loadAudit();
 
     if (state.sessions.length === 0) {
       var dp = normalizeProviderId(d.provider);
@@ -3938,8 +5386,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       );
     }
     renderSessionTabs();
+    renderAuditTimeline();
     rebuildMsgList();
     refreshSendUi();
+    if (state.sessions.some(function (sx) {
+      var p = normalizeProviderId(sx.provider);
+      return p === 'ollama' || p === 'ollama_cli';
+    })) {
+      checkOllamaHealth();
+    } else {
+      refreshOllamaSetupBanner();
+    }
     var sAct = activeSession();
     if (sAct && normalizeProviderId(sAct.provider) === 'openclaw') hydrateOpenClawHistoryForSession(sAct, false);
     ensureDynamicModelsForActiveProvider();
@@ -11758,6 +13215,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       input.value = '';
       clearPendingAttach();
       cstatForSession(sid, '正在连接 ttyd 终端…');
+      appendAudit({ nodeKey: nodeKeyForSession(s), level: 'info', message: '发送消息 → 连接 ttyd' });
       throttledNiumaCliOpen(true);
       return;
     }
@@ -11873,6 +13331,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           renderSessionTabs();
         }
       } else add('assistant', content);
+      appendAudit({ nodeKey: nodeKeyForSession(sessionById(sid)), level: 'success', message: '模型响应完成' });
       cstatForSession(sid, '响应完成。', 'success');
     } catch (err) {
       cancelAllPendingHttpOnTimeout(err);
@@ -11891,6 +13350,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           renderSessionTabs();
         }
       }
+      appendAudit({
+        nodeKey: nodeKeyForSession(sessionById(sid)),
+        level: 'error',
+        message: '请求失败：' + (err && err.message ? err.message : '未知错误')
+      });
       cstatForSession(sid, '请求失败：' + (err && err.message ? err.message : '未知错误'), 'error');
     } finally {
       setSessionSending(sid, false);
@@ -11983,7 +13447,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         try {
           inlineLlmApiKey.focus();
         } catch (_) {}
-      } else setSettings(true);
+      } else openNodeConfigDisk(activeNodeKey());
     });
   }
   if (inlineLlmSave) {
@@ -12053,7 +13517,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     });
   }
 
-  if (newSessionPickBg) newSessionPickBg.addEventListener('click', closeNewSessionPick);
   if (newSessionPickClose) newSessionPickClose.addEventListener('click', closeNewSessionPick);
   if (newSessionPick) {
     newSessionPick.addEventListener('click', function (e) {
@@ -12062,7 +13525,177 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     });
   }
 
-  if (sessionTabsEl) {
+  var agentLongPressTimer = null;
+  if (agentStripEl) {
+    agentStripEl.addEventListener('touchstart', function (e) {
+      var av = e.target.closest('.agent-avatar');
+      if (!av || !av.dataset.nodeKey) return;
+      if (agentLongPressTimer) clearTimeout(agentLongPressTimer);
+      var nk = av.dataset.nodeKey;
+      agentLongPressTimer = setTimeout(function () {
+        agentLongPressTimer = null;
+        openNodeConfigDisk(nk);
+      }, 500);
+    }, { passive: true });
+    agentStripEl.addEventListener('touchend', function () {
+      if (agentLongPressTimer) {
+        clearTimeout(agentLongPressTimer);
+        agentLongPressTimer = null;
+      }
+    });
+    agentStripEl.addEventListener('contextmenu', function (e) {
+      var av = e.target.closest('.agent-avatar');
+      if (!av || !av.dataset.nodeKey) return;
+      e.preventDefault();
+      openNodeConfigDisk(av.dataset.nodeKey);
+    });
+    agentStripEl.addEventListener('click', function (e) {
+      if (e.target.id === 'agentStripAdd' || e.target.closest('#agentStripAdd')) {
+        openNewSessionPick();
+        return;
+      }
+      var rm = e.target.closest('.agent-avatar-remove');
+      if (rm && rm.dataset.removeNode) {
+        e.preventDefault();
+        e.stopPropagation();
+        requestRemoveNode(rm.dataset.removeNode);
+        return;
+      }
+      var av = e.target.closest('.agent-avatar');
+      if (av && av.dataset.nodeKey) onAgentAvatarClick(av.dataset.nodeKey, av);
+    });
+  }
+
+  if (agentContextBar) {
+    agentContextBar.addEventListener('click', function (e) {
+      var closeBtn = e.target.closest('[data-close-thread]');
+      if (closeBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        requestRemoveThread(closeBtn.getAttribute('data-close-thread'));
+      }
+    });
+  }
+
+  if (threadPopoverEl) {
+    threadPopoverEl.addEventListener('click', function (e) {
+      var closeBtn = e.target.closest('[data-close-thread]');
+      if (closeBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        requestRemoveThread(closeBtn.getAttribute('data-close-thread'));
+        return;
+      }
+      var item = e.target.closest('[data-thread-session]');
+      if (!item) return;
+      var sid = item.getAttribute('data-thread-session');
+      if (sid) switchSession(sid);
+      closeThreadPopover();
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    if (threadPopoverEl && threadPopoverEl.classList.contains('open')) {
+      if (!e.target.closest('#threadPopover') && !e.target.closest('.agent-avatar')) closeThreadPopover();
+    }
+  });
+
+  if (agentContextNewThread) {
+    agentContextNewThread.addEventListener('click', function () {
+      var nk = activeNodeKey();
+      if (nk) createThreadInNode(nk);
+      else openNewSessionPick();
+    });
+  }
+
+  if (viewModeChatBtn) {
+    viewModeChatBtn.addEventListener('click', function () {
+      switchViewMode('chat');
+    });
+  }
+  if (viewModeControlBtn) {
+    viewModeControlBtn.addEventListener('click', function () {
+      switchViewMode('control');
+    });
+  }
+  if (auditCollapseBtn && auditPanelEl) {
+    auditCollapseBtn.addEventListener('click', function () {
+      state.auditCollapsed = !state.auditCollapsed;
+      auditPanelEl.classList.toggle('collapsed', !!state.auditCollapsed);
+      auditCollapseBtn.textContent = state.auditCollapsed ? '展开' : '折叠';
+      try {
+        localStorage.setItem(AUDIT_LS + '_collapsed', state.auditCollapsed ? '1' : '0');
+      } catch (e) {}
+    });
+  }
+  if (auditClearBtn) {
+    auditClearBtn.addEventListener('click', function () {
+      state.auditLog = [];
+      persistAudit();
+      renderAuditTimeline();
+    });
+  }
+
+  if (nodeConfigClose) nodeConfigClose.addEventListener('click', closeNodeConfigDisk);
+  if (nodeConfigSave) {
+    nodeConfigSave.addEventListener('click', function () {
+      saveNodeConfigDisk();
+      closeNodeConfigDisk();
+    });
+  }
+  if (nodeConfigTest) {
+    nodeConfigTest.addEventListener('click', function () {
+      if (nodeConfigApiKey && apiKey) apiKey.value = nodeConfigApiKey.value;
+      var s = activeSession();
+      if (!s) return;
+      var pid = normalizeProviderId(s.provider);
+      var p = P[pid] || P.openai;
+      testApiConfig({
+        provider: pid,
+        model: s.model || p.model,
+        baseUrl: effectiveBaseUrl(pid, s.baseUrl, baseUrl ? baseUrl.value : ''),
+        apiKey: trimApiKey(nodeConfigApiKey ? nodeConfigApiKey.value : '')
+      });
+    });
+  }
+  if (nodeConfigClear) {
+    nodeConfigClear.addEventListener('click', function () {
+      if (state.nodeConfigDiskKey) clearNodeHistory(state.nodeConfigDiskKey);
+    });
+  }
+  if (nodeConfigRemove) {
+    nodeConfigRemove.addEventListener('click', function () {
+      if (state.nodeConfigDiskKey) requestRemoveNode(state.nodeConfigDiskKey);
+    });
+  }
+
+  if (settingsAdvancedToggle) {
+    settingsAdvancedToggle.addEventListener('click', function () {
+      setSettingsAdvancedOpen(!state.settingsAdvancedOpen);
+    });
+  }
+  if (ollamaInstallBtn) {
+    ollamaInstallBtn.addEventListener('click', function () {
+      try {
+        window.open('https://ollama.com/download', '_blank');
+      } catch (e) {}
+      cstat('已在浏览器打开 Ollama 下载页。', 'success');
+    });
+  }
+  if (ollamaCheckBtn) {
+    ollamaCheckBtn.addEventListener('click', function () {
+      checkOllamaHealth().then(function (ok) {
+        cstat(ok ? 'Ollama 服务已连接。' : '未检测到 Ollama，请先安装并启动。', ok ? 'success' : 'error');
+      });
+    });
+  }
+  if (ollamaPullBtn) {
+    ollamaPullBtn.addEventListener('click', function () {
+      pullOllamaRecommendedModel();
+    });
+  }
+
+  if (sessionTabsEl && state.useLegacyTabs) {
     sessionTabsEl.addEventListener('click', function (e) {
       var xbtn = e.target.closest('[data-close-session]');
       if (xbtn) {
@@ -12555,6 +14188,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     saveCfg(false);
     closeProviderDd();
     ensureDynamicModelsForActiveProvider();
+    refreshSettingsProviderStatus();
   });
 
   modelPreset.addEventListener('change', function () {
@@ -12589,6 +14223,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function handleGlobalEscape(e) {
     var k = e.key || '';
     if (k !== 'Escape' && k !== 'Esc' && String(k).toLowerCase() !== 'escape') return;
+    if (document.body.classList.contains('node-config-open')) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeNodeConfigDisk();
+      return;
+    }
+    if (threadPopoverEl && threadPopoverEl.classList.contains('open')) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeThreadPopover();
+      return;
+    }
     if (state.nspick) {
       e.preventDefault();
       e.stopPropagation();
@@ -12623,13 +14269,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return;
     }
 
-    // Ctrl+W 关闭当前标签（至少保留一个）
+    // Ctrl+W 关闭当前话题（至少保留一个）
     if (key === 'w') {
       var sid = state.activeSessionId || '';
       if (sid) {
         e.preventDefault();
         e.stopPropagation();
-        removeSession(sid);
+        if (!state.useLegacyTabs) requestRemoveThread(sid);
+        else removeSession(sid);
       }
       return;
     }
@@ -12655,17 +14302,36 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       idx = parseInt(key, 10) - 1;
     }
     if (idx >= 0) {
-      var tabs = Array.prototype.slice.call(document.querySelectorAll('#sessionTabs .stab[data-session-id]'));
-      var target = tabs[idx];
-      if (target && target.dataset && target.dataset.sessionId) {
+      var nodes = Array.prototype.slice.call(document.querySelectorAll('#agentStrip .agent-avatar[data-node-key]'));
+      var nodeEl = nodes[idx];
+      if (nodeEl && nodeEl.dataset && nodeEl.dataset.nodeKey) {
         e.preventDefault();
         e.stopPropagation();
-        switchSession(target.dataset.sessionId);
+        switchToNode(nodeEl.dataset.nodeKey);
       }
       return;
     }
   }
+
+  function handleViewModeTab(e) {
+    if (!state.drawer || !state.featurePhase1) return;
+    if (e.key !== 'Tab' || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+    var t = e.target;
+    if (
+      t &&
+      (t.tagName === 'INPUT' ||
+        t.tagName === 'TEXTAREA' ||
+        t.tagName === 'SELECT' ||
+        t.isContentEditable)
+    )
+      return;
+    e.preventDefault();
+    e.stopPropagation();
+    toggleViewMode();
+  }
   document.addEventListener('keydown', handleGlobalEscape, true);
+  document.addEventListener('keydown', handleGlobalNiumaHotkeys, true);
+  document.addEventListener('keydown', handleViewModeTab, true);
 
   function inCopyFriendlyPanel(el) {
     return !!(
@@ -13558,6 +15224,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         if (wd && ttydStudioWorkDir) ttydStudioWorkDir.value = wd;
         return;
       }
+      if (d.type === 'niuma_node_status') {
+        mergeNodeRuntime(d);
+        if (!state.useLegacyTabs) renderAgentStrip();
+        return;
+      }
+      if (d.type === 'niuma_audit_event') {
+        ingestAuditEvent(d);
+        return;
+      }
       if (d.type === 'ttyd_ready') {
         var turl = String(d.baseUrl || '').trim();
         if (state._studioPreview || String(d.engine || '') === 'studio_cli') {
@@ -13585,15 +15260,20 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         turl = turl || cliUrlForSession(ts);
         if (turl) applyCliFrameUrl(turl);
         cstatForSession(ts.id, '本机终端已就绪。', 'success');
+        mergeNodeRuntime({ nodeKey: normalizeProviderId(ts.provider), status: 'ready', detail: turl, tick: Date.now() });
+        appendAudit({ nodeKey: normalizeProviderId(ts.provider), level: 'success', message: 'ttyd 终端已就绪' });
         return;
       }
       if (d.type === 'ttyd_error') {
         var ts2 = activeSession();
+        var eng = normalizeProviderId(d.engine || (ts2 && ts2.provider) || '');
         cstatForSession(
           ts2 && ts2.id,
           'ttyd：' + (d.message || '启动失败，请检查同目录下是否有 ttyd.exe 或点「重试/重启」'),
           'error'
         );
+        if (eng) mergeNodeRuntime({ nodeKey: eng, status: 'error', detail: d.message || '', tick: Date.now() });
+        appendAudit({ nodeKey: eng, level: 'error', message: 'ttyd 错误：' + (d.message || '启动失败') });
         return;
       }
       if (d.type === 'niuma_compose_send') {
@@ -13681,6 +15361,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
       if (d.type === 'host_browser_ai_busy') {
         applyMobileBrowserAiBusy(!!d.busy);
+        var sBusy = activeSession();
+        if (sBusy && state.featurePhase1 && normalizeProviderId(sBusy.provider) === 'openclaw') {
+          var nkBusy = nodeKeyForSession(sBusy);
+          mergeNodeRuntime({
+            nodeKey: nkBusy,
+            status: d.busy ? 'suspended' : 'ready',
+            detail: d.busy ? '浏览器 AI 执行中' : '',
+            tick: Date.now()
+          });
+          if (!state.useLegacyTabs) renderAgentStrip();
+        }
         return;
       }
       if (d.type === 'host_chat_bridge_ready') {

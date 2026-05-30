@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niumachat Floating Toolbar Core</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hud: {
+                            black: '#07080e',
+                            dark: '#0d0e15',
+                            card: '#161824',
+                            border: '#24293f',
+                            neonBlue: '#00e5ff',
+                            neonPurple: '#a855f7',
+                            neonGreen: '#22c55e',
+                            neonRed: '#ef4444'
+                        }
+                    },
+                    boxShadow: {
+                        'neon-blue': '0 0 15px rgba(0, 229, 255, 0.4)',
+                        'neon-purple': '0 0 15px rgba(168, 85, 247, 0.4)',
+                        'neon-green': '0 0 15px rgba(34, 197, 94, 0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide 图标库 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .font-code {
+            font-family: 'Fira Code', monospace;
+        }
+        
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* 赛博朋克扫描网格背景 */
+        .hud-grid {
+            background-size: 30px 30px;
+            background-image: 
+                linear-gradient(to right, rgba(36, 41, 63, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(36, 41, 63, 0.3) 1px, transparent 1px);
+        }
+
+        /* 呼气/吸气发光效果 */
+        @keyframes subtle-breath {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+        .neon-breath {
+            animation: subtle-breath 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-hud-black text-slate-100 min-h-screen overflow-hidden flex flex-col relative select-none hud-grid">
+
+    <!-- 顶层 HUD 模糊背景 -->
+    <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-hud-neonBlue/5 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
+    <div class="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-hud-neonPurple/5 rounded-full blur-[150px] -z-10 pointer-events-none"></div>
+
+    <!-- 顶部虚拟导航：模拟系统运行大背景 -->
+    <header class="px-6 py-3 border-b border-hud-border/80 bg-hud-dark/90 backdrop-blur-md flex justify-between items-center z-10">
+        <div class="flex items-center space-x-3">
+            <div class="w-2.5 h-2.5 rounded-full bg-hud-neonBlue animate-ping shadow-neon-blue"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-hud-neonBlue absolute shadow-neon-blue"></div>
+            <div>
+                <h1 class="text-xs font-bold tracking-[0.15em] text-transparent bg-clip-text bg-gradient-to-r from-hud-neonBlue to-hud-neonPurple font-code">
+                    NIUMACHAT // FLOATING STRIP CONCEPT
+                </h1>
+                <p class="text-[9px] text-slate-500 font-code mt-0.5">MATRIX ASYNC AGENT PIPELINE</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4 text-[10px] font-code text-slate-400">
+            <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full bg-hud-neonGreen"></span> 主机系统: WINDOWS 11 (AHK_V2)</span>
+            <span class="border-l border-hud-border pl-4 text-hud-neonBlue">当前信道: LOCAL_SOCKET_9091</span>
+        </div>
+    </header>
+
+    <!-- 主展示区 -->
+    <main class="flex-1 w-full max-w-[1600px] mx-auto p-6 flex gap-6 overflow-hidden">
+        
+        <!-- 左侧：模拟的“宿主工作区（User Workspace）”——用于实时展现控制结果 -->
+        <div class="flex-1 bg-hud-dark/40 border border-hud-border/60 rounded-2xl p-5 flex flex-col overflow-hidden relative backdrop-blur-sm">
+            <div class="flex items-center justify-between mb-4 border-b border-hud-border/40 pb-3">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-hud-neonRed"></span>
+                    <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                    <span class="w-2 h-2 rounded-full bg-hud-neonGreen"></span>
+                    <span class="text-xs text-slate-400 font-code pl-2">niumachat_workspace_runtime.ahk</span>
+                </div>
+                <div class="flex items-center space-x-2 text-[10px] font-code text-slate-500">
+                    <span class="animate-pulse">● 已监听 (MONITORED)</span>
+                    <span class="bg-hud-border px-1.5 py-0.5 rounded text-slate-400">V2.0.11</span>
+                </div>
+            </div>
+
+            <!-- 宿主 AHK 容器：实时接收并反馈右侧悬浮条指令的变更 -->
+            <div class="flex-1 bg-black/40 rounded-xl p-4 font-code text-xs text-slate-300 overflow-y-auto space-y-4 border border-hud-border/20">
+                <div class="text-slate-500">; 此控制台代表您本地系统的 AHK 拦截缓冲区。</div>
+                <div class="text-slate-500">; 当您在右侧 AI 联系人下达部署控制指令时，这里将会被实时更新！</div>
+                
+                <div class="text-slate-400 font-semibold mt-4">#HotIf WinActive("ahk_exe chrome.exe")</div>
+                
+                <!-- 动态代码部署区 -->
+                <div id="runtime-code-sandbox" class="p-4 bg-hud-card/20 rounded-xl border border-dashed border-hud-border hover:border-hud-neonBlue/40 transition-all duration-500 relative group min-h-[160px] flex flex-col justify-center items-center text-center">
+                    <div class="absolute top-2 right-2 text-[8px] font-code text-slate-600 group-hover:text-hud-neonBlue transition">SANDBOX_BUFFER_0</div>
+                    <i data-lucide="terminal" class="w-8 h-8 text-slate-600 mb-2 group-hover:text-hud-neonBlue/60 transition group-hover:scale-110 duration-300"></i>
+                    <p class="text-[11px] text-slate-500 font-sans max-w-sm">
+                        等待接收右侧 AI 联系人的控制指令...<br>
+                        点击右侧代码块中的 <span class="text-hud-neonGreen font-semibold">“⚡ 投递并运行”</span>，或在控制模式下点击原子指令，此沙盒将瞬秒捕获并模拟本地 AHK 注入响应。
+                    </p>
+                </div>
+
+                <div class="text-slate-400 font-semibold">#HotIf</div>
+
+                <!-- 宿主提示 -->
+                <div class="mt-8 pt-4 border-t border-hud-border/30 font-sans">
+                    <h4 class="text-xs font-bold text-slate-400 mb-2 font-code">💡 交互测试引导路线：</h4>
+                    <div class="grid grid-cols-2 gap-3 text-[11px] text-slate-500">
+                        <div class="bg-hud-card/30 p-2.5 rounded-lg border border-hud-border/30">
+                            <span class="text-hud-neonBlue font-semibold block mb-1">1. 右键/长按头像 ⚙️</span>
+                            在右侧悬浮条顶部，右键或长按任何联系人头像，即可直接滑入对应节点的密钥装配和延迟监控盘。
+                        </div>
+                        <div class="bg-hud-card/30 p-2.5 rounded-lg border border-hud-border/30">
+                            <span class="text-hud-neonPurple font-semibold block mb-1">2. 切换 “控制” 模式 ⚡</span>
+                            点击右侧 AI 顶部的 Toggle 开关，切换到 “控制” 模式，体验完全脱离对话、专注于单兵控制脚本的极简形态。
+                        </div>
+                        <div class="bg-hud-card/30 p-2.5 rounded-lg border border-hud-border/30">
+                            <span class="text-hud-neonGreen font-semibold block mb-1">3. 微信式 “挂起胶囊” 🟢</span>
+                            点击右下角的 “OpenClaw 挂起胶囊”，可以体验自动化 Agent 在后台高耗时任务时的非阻塞状态恢复。
+                        </div>
+                        <div class="bg-hud-card/30 p-2.5 rounded-lg border border-hud-border/30">
+                            <span class="text-hud-neonRed font-semibold block mb-1">4. 朋友圈式 “审计时间轴” 🕒</span>
+                            观察右下角，所有 AI 的执行记录都会在 “AI朋友圈” 默默流转，互不干扰、极其干净。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：FloatingToolbarStrip 悬浮条的核心呈现（等比例高精还原悬浮窗形态） -->
+        <div class="w-[430px] flex flex-col gap-4 overflow-hidden relative">
+            
+            <!-- ================= 主悬浮面板 ================= -->
+            <div class="bg-hud-dark/95 border border-hud-neonBlue/30 rounded-2xl shadow-neon-blue flex flex-col overflow-hidden h-[540px] relative backdrop-blur-xl">
+                
+                <!-- AHK 悬浮置顶标志物装饰 -->
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-hud-neonBlue via-hud-neonPurple to-hud-neonBlue/20"></div>
+
+                <!-- 1. 顶部：极简联系人列表条 (Avatar Strip) -->
+                <div class="px-3.5 py-3 border-b border-hud-border/80 bg-hud-black/60 flex items-center justify-between">
+                    <!-- 联系人头像序列（Telegram & QQ 式结合） -->
+                    <div class="flex items-center space-x-3 overflow-x-auto no-scrollbar py-0.5 pr-2" id="toolbar-avatar-strip">
+                        
+                        <!-- Claude (在线状态) -->
+                        <div onclick="changeActiveAgent('claude')" oncontextmenu="openNodeConfig(event, 'claude')" id="avatar-claude" class="relative group cursor-pointer p-0.5 rounded-full border-2 border-hud-neonBlue transition-all duration-300 scale-110">
+                            <div class="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 hover:bg-amber-500/20 transition">
+                                <i data-lucide="brain-circuit" class="w-4 h-4"></i>
+                            </div>
+                            <!-- QQ式状态标志：绿色在线 -->
+                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-hud-neonGreen rounded-full border-2 border-hud-black"></span>
+                            
+                            <!-- Hover 极简名片 -->
+                            <div class="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-hud-dark border border-hud-neonBlue text-[10px] p-2.5 rounded-lg shadow-2xl hidden group-hover:block w-40 z-50 pointer-events-none font-code">
+                                <p class="font-bold text-amber-500 mb-1 flex items-center gap-1">
+                                    <i data-lucide="brain-circuit" class="w-3 h-3"></i> Claude 3.5
+                                </p>
+                                <p class="text-slate-400">状态: <span class="text-hud-neonGreen">🟢 已就绪</span></p>
+                                <p class="text-slate-400">延迟: <span class="text-hud-neonBlue">12ms</span></p>
+                                <p class="text-slate-500 text-[9px] mt-1 border-t border-hud-border/40 pt-1">右键/长按调出配置盘</p>
+                            </div>
+                        </div>
+
+                        <!-- DeepSeek (思考/响应状态) -->
+                        <div onclick="changeActiveAgent('deepseek')" oncontextmenu="openNodeConfig(event, 'deepseek')" id="avatar-deepseek" class="relative group cursor-pointer p-0.5 rounded-full border-2 border-transparent transition-all duration-300">
+                            <div class="w-8 h-8 rounded-full bg-hud-neonBlue/10 border border-hud-neonBlue/20 flex items-center justify-center text-hud-neonBlue hover:bg-hud-neonBlue/20 transition">
+                                <i data-lucide="cpu" class="w-4 h-4"></i>
+                            </div>
+                            <!-- 思考中：呼吸灯动画 -->
+                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-hud-neonPurple rounded-full border-2 border-hud-black animate-ping"></span>
+                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-hud-neonPurple rounded-full border-2 border-hud-black"></span>
+                            
+                            <div class="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-hud-dark border border-hud-neonPurple text-[10px] p-2.5 rounded-lg shadow-2xl hidden group-hover:block w-40 z-50 pointer-events-none font-code">
+                                <p class="font-bold text-hud-neonBlue mb-1 flex items-center gap-1">
+                                    <i data-lucide="cpu" class="w-3 h-3"></i> DeepSeek V3
+                                </p>
+                                <p class="text-slate-400">状态: <span class="text-hud-neonPurple animate-pulse">🟪 思考中</span></p>
+                                <p class="text-slate-400">延迟: <span class="text-hud-neonPurple">38ms</span></p>
+                                <p class="text-slate-500 text-[9px] mt-1 border-t border-hud-border/40 pt-1">右键/长按调出配置盘</p>
+                            </div>
+                        </div>
+
+                        <!-- OpenClaw (自动化挂起/阻塞状态) -->
+                        <div onclick="changeActiveAgent('openclaw')" oncontextmenu="openNodeConfig(event, 'openclaw')" id="avatar-openclaw" class="relative group cursor-pointer p-0.5 rounded-full border-2 border-transparent transition-all duration-300">
+                            <div class="w-8 h-8 rounded-full bg-hud-neonGreen/10 border border-hud-neonGreen/20 flex items-center justify-center text-hud-neonGreen hover:bg-hud-neonGreen/20 transition">
+                                <i data-lucide="chrome" class="w-4 h-4"></i>
+                            </div>
+                            <!-- 挂起任务中：黄色呼吸 -->
+                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-yellow-500 rounded-full border-2 border-hud-black animate-pulse"></span>
+                            
+                            <div class="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-hud-dark border border-hud-neonGreen text-[10px] p-2.5 rounded-lg shadow-2xl hidden group-hover:block w-40 z-50 pointer-events-none font-code">
+                                <p class="font-bold text-hud-neonGreen mb-1 flex items-center gap-1">
+                                    <i data-lucide="chrome" class="w-3 h-3"></i> OpenClaw
+                                </p>
+                                <p class="text-slate-400">状态: <span class="text-yellow-500">🟡 挂起运行中</span></p>
+                                <p class="text-slate-400">DOM树: <span class="text-hud-neonGreen">已映射</span></p>
+                                <p class="text-slate-500 text-[9px] mt-1 border-t border-hud-border/40 pt-1">右键/长按调出配置盘</p>
+                            </div>
+                        </div>
+
+                        <!-- CLI 本地命令控制端 (免密待命) -->
+                        <div onclick="changeActiveAgent('cli')" oncontextmenu="openNodeConfig(event, 'cli')" id="avatar-cli" class="relative group cursor-pointer p-0.5 rounded-full border-2 border-transparent transition-all duration-300">
+                            <div class="w-8 h-8 rounded-full bg-hud-neonRed/10 border border-hud-neonRed/20 flex items-center justify-center text-hud-neonRed hover:bg-hud-neonRed/20 transition">
+                                <i data-lucide="terminal" class="w-4 h-4"></i>
+                            </div>
+                            <!-- 灰色待命 -->
+                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-slate-500 rounded-full border-2 border-hud-black"></span>
+                            
+                            <div class="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-hud-dark border border-hud-neonRed text-[10px] p-2.5 rounded-lg shadow-2xl hidden group-hover:block w-40 z-50 pointer-events-none font-code">
+                                <p class="font-bold text-hud-neonRed mb-1 flex items-center gap-1">
+                                    <i data-lucide="terminal" class="w-3 h-3"></i> Local CLI
+                                </p>
+                                <p class="text-slate-400">状态: <span class="text-slate-400">⚪ 待命</span></p>
+                                <p class="text-slate-400">特权: <span class="text-hud-neonRed">最高</span></p>
+                                <p class="text-slate-500 text-[9px] mt-1 border-t border-hud-border/40 pt-1">右键/长按调出配置盘</p>
+                            </div>
+                        </div>
+
+                        <!-- 极简一键增加联系人按钮 -->
+                        <button onclick="toggleSlidePanel(true)" class="w-8 h-8 rounded-full border border-dashed border-hud-border hover:border-hud-neonBlue hover:bg-hud-neonBlue/10 flex items-center justify-center text-slate-500 hover:text-hud-neonBlue transition-all duration-200" title="增加 AI 路由节点">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <!-- 快速全局节点大盘查看 -->
+                    <div class="pl-2.5 border-l border-hud-border">
+                        <button onclick="toggleNodeOverview(true)" class="p-1.5 text-slate-500 hover:text-hud-neonBlue hover:bg-hud-border/50 rounded-lg transition" title="联系人节点大盘">
+                            <i data-lucide="network" class="w-4.5 h-4.5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. 中间：内容与会话交互区 (支持双模滑切) -->
+                <div class="flex-1 flex flex-col overflow-hidden relative">
+                    
+                    <!-- 顶部分栏指示器：双态模式切换 -->
+                    <div class="px-4 py-2 bg-hud-black/40 border-b border-hud-border/50 flex justify-between items-center text-[10px] font-code">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-hud-neonBlue" id="mode-led"></span>
+                            <span class="font-semibold text-slate-400" id="current-agent-header">Claude 3.5 Sonnet</span>
+                        </div>
+                        
+                        <!-- 极简模式快切：👁️ 对话 vs ⚡ 控制 -->
+                        <div class="flex items-center bg-hud-black p-0.5 rounded-lg border border-hud-border/80">
+                            <button onclick="switchMode('chat')" id="tab-mode-chat" class="px-2.5 py-0.5 rounded-md text-[9px] font-sans font-bold transition duration-200 bg-hud-neonBlue text-hud-black shadow-neon-blue">
+                                👁️ 对话模式
+                            </button>
+                            <button onclick="switchMode('control')" id="tab-mode-control" class="px-2.5 py-0.5 rounded-md text-[9px] font-sans font-bold text-slate-400 hover:text-white transition duration-200">
+                                ⚡ 控制模式
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 【A面：👁️ 对话模式视图】 -->
+                    <div id="viewport-chat" class="flex-1 overflow-y-auto p-4 space-y-4">
+                        <!-- 动态载入的聊天记录 -->
+                    </div>
+
+                    <!-- 【B面：⚡ 控制模式视图】 (过滤唠叨、直面原子控制) -->
+                    <div id="viewport-control" class="flex-1 overflow-y-auto p-4 space-y-3 bg-hud-black/60 hidden">
+                        <!-- 动态载入的纯控制面板卡片 -->
+                    </div>
+
+                    <!-- ================= 侧滑面板：增加联系人 & 装配 Key (免弹窗) ================= -->
+                    <div id="slide-panel-add-agent" class="absolute inset-y-0 right-0 w-[290px] bg-hud-dark border-l border-hud-border/90 transform translate-x-full transition-transform duration-300 z-30 flex flex-col shadow-2xl">
+                        <div class="p-4 border-b border-hud-border flex justify-between items-center bg-hud-black/40">
+                            <span class="text-xs font-bold text-hud-neonBlue flex items-center gap-1.5 font-code">
+                                <i data-lucide="user-plus" class="w-4 h-4 text-hud-neonBlue"></i> ADD AGENT
+                            </span>
+                            <button onclick="toggleSlidePanel(false)" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        </div>
+                        
+                        <div class="flex-1 p-4 space-y-4 overflow-y-auto">
+                            <!-- 极简模型协议选择 -->
+                            <div class="space-y-1.5">
+                                <label class="block text-[10px] text-slate-400 font-code">1. SELECT CORE MODEL</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div onclick="selectModelInPanel('openai')" id="btn-p-openai" class="border border-hud-neonBlue bg-hud-neonBlue/5 p-2 rounded-lg text-center cursor-pointer transition">
+                                        <i data-lucide="brain" class="w-4 h-4 mx-auto text-hud-neonBlue mb-1"></i>
+                                        <span class="text-[9px] font-code block">OpenAI</span>
+                                    </div>
+                                    <div onclick="selectModelInPanel('deepseek')" id="btn-p-deepseek" class="border border-hud-border p-2 rounded-lg text-center cursor-pointer hover:border-hud-neonPurple transition">
+                                        <i data-lucide="flame" class="w-4 h-4 mx-auto text-hud-neonPurple mb-1"></i>
+                                        <span class="text-[9px] font-code block">DeepSeek</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 节点名称 -->
+                            <div class="space-y-1">
+                                <label class="block text-[10px] text-slate-400 font-code">2. NODE IDENTIFIER</label>
+                                <input type="text" id="input-p-name" placeholder="e.g. MyLocal-Agent" class="w-full bg-hud-black border border-hud-border rounded-lg p-2 text-xs focus:border-hud-neonBlue outline-none text-white font-code">
+                            </div>
+
+                            <!-- 密钥注入 -->
+                            <div class="space-y-1">
+                                <label class="block text-[10px] text-slate-400 font-code">3. AUTHORIZATION KEY (API)</label>
+                                <input type="password" id="input-p-key" placeholder="sk-........................" class="w-full bg-hud-black border border-hud-border rounded-lg p-2 text-xs focus:border-hud-neonBlue outline-none text-white font-code">
+                                <p class="text-[8px] text-slate-500 font-sans mt-1">本地 AHK 引擎将对该 Key 执行高强度二次哈希隔离。</p>
+                            </div>
+
+                            <!-- 暗箱拖拽注入盲区 -->
+                            <div class="border-2 border-dashed border-hud-border hover:border-hud-neonBlue/50 transition rounded-xl p-4 text-center cursor-pointer bg-hud-black/30 group">
+                                <i data-lucide="upload-cloud" class="w-5 h-5 mx-auto text-slate-600 group-hover:text-hud-neonBlue transition mb-1.5"></i>
+                                <span class="text-[10px] text-slate-400 block font-semibold">拖入本地 .env 配置文件</span>
+                                <span class="text-[8px] text-slate-500 block mt-0.5">自解析并一键提取装填 Key</span>
+                            </div>
+                        </div>
+
+                        <div class="p-4 border-t border-hud-border bg-hud-black/60">
+                            <button onclick="commitNewAgent()" class="w-full bg-gradient-to-r from-hud-neonBlue to-hud-neonPurple text-hud-black font-bold text-xs py-2 rounded-lg shadow-neon-blue transition transform active:scale-95">
+                                建立安全信道，注入
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ================= 快捷右键节点微型配置控制盘 (关键UI优化) ================= -->
+                    <div id="quick-node-config" class="absolute inset-x-0 bottom-0 bg-hud-dark/95 border-t border-hud-border transform translate-y-full transition-transform duration-300 z-40 p-4 flex flex-col justify-between shadow-2xl">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center border-b border-hud-border/60 pb-2">
+                                <h3 class="text-xs font-bold text-hud-neonBlue font-code flex items-center gap-1.5">
+                                    <i data-lucide="sliders" class="w-4 h-4 text-hud-neonBlue"></i> NODE CONFIG DISK
+                                </h3>
+                                <button onclick="closeNodeConfig()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-[9px] text-slate-500 font-code mb-1">SELECTED AGENT NODE</label>
+                                    <div class="flex items-center justify-between bg-hud-black p-2 rounded-lg border border-hud-border">
+                                        <div class="flex items-center space-x-2">
+                                            <span id="config-node-icon" class="p-1 rounded bg-hud-neonBlue/10 text-hud-neonBlue"><i data-lucide="cpu" class="w-4.5 h-4.5"></i></span>
+                                            <span id="config-node-name" class="text-xs font-bold text-slate-200">DeepSeek V3</span>
+                                        </div>
+                                        <span id="config-node-ping" class="text-[9px] text-hud-neonGreen font-code bg-hud-neonGreen/10 px-2 py-0.5 rounded">PING: 12ms</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] text-slate-500 font-code">OVERWRITE SECRET KEY</label>
+                                    <div class="flex gap-2">
+                                        <input type="password" id="config-node-key-input" placeholder="••••••••••••••••••••••••" class="flex-1 bg-hud-black border border-hud-border rounded-lg px-2.5 py-1.5 text-xs focus:border-hud-neonBlue outline-none text-white font-code">
+                                        <button onclick="saveSingleNodeKey()" class="bg-hud-neonBlue text-hud-black font-bold text-[10px] px-3 py-1.5 rounded-lg transition hover:bg-cyan-400">
+                                            修改 Key
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 border-t border-hud-border/40 mt-4 pt-3">
+                            <button onclick="triggerClearAgentMemory()" class="flex-1 bg-hud-card border border-hud-border text-slate-300 hover:text-white text-[10px] py-2 rounded-lg transition flex items-center justify-center gap-1">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5 text-slate-400"></i> 清空会话记忆
+                            </button>
+                            <button onclick="triggerRemoveAgent()" class="flex-1 bg-hud-neonRed/10 border border-hud-neonRed/30 text-hud-neonRed hover:bg-hud-neonRed/20 text-[10px] py-2 rounded-lg transition flex items-center justify-center gap-1">
+                                <i data-lucide="user-x" class="w-3.5 h-3.5"></i> 移除此联系人
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ================= 节点大盘总揽层 ================= -->
+                    <div id="node-overview-overlay" class="absolute inset-0 bg-hud-black/90 z-40 p-4 flex flex-col justify-between hidden transition-opacity duration-300">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center border-b border-hud-border pb-2">
+                                <h3 class="text-xs font-bold text-hud-neonBlue font-code flex items-center gap-1.5">
+                                    <i data-lucide="network" class="w-4 h-4"></i> LOCAL AGENTS NET-MATRIX
+                                </h3>
+                                <button onclick="toggleNodeOverview(false)" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+                            </div>
+                            <div class="space-y-2 max-h-[360px] overflow-y-auto" id="node-matrix-list">
+                                <!-- 动态注入 -->
+                            </div>
+                        </div>
+                        <div class="text-[9px] text-slate-600 font-code text-center pb-2 border-t border-hud-border/40 pt-2">
+                            DATA-FLOW SECURED BY SNAPSHOT PROTOCOL
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 3. 底部：输入控制盒 -->
+                <div class="p-3 border-t border-hud-border bg-hud-black flex flex-col gap-2">
+                    <div class="flex items-center justify-between text-[9px] text-slate-500 font-code">
+                        <span id="system-action-hint">等待发送指令...</span>
+                        <span>Shift + Enter 换行 | Tab 键秒切换模式</span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-hud-card/60 rounded-xl border border-hud-border focus-within:border-hud-neonBlue/80 px-3 py-2 transition duration-200">
+                        <input type="text" id="main-input" placeholder="向 Claude 发送 AHK 架构指令..." class="bg-transparent flex-1 text-xs outline-none text-white placeholder-slate-500" onkeydown="handleInputKey(event)">
+                        <button onclick="handleSendMessage()" class="p-1.5 rounded-lg bg-hud-neonBlue hover:bg-cyan-400 text-hud-black transition shadow-neon-blue">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ================= 下方辅助控制层：挂起胶囊 & AI朋友圈 ================= -->
+            <div class="flex gap-3 h-[130px]">
+                
+                <!-- 【微信式 挂起浮窗胶囊】 -->
+                <div onclick="recoverSuspendedTask()" class="w-[120px] bg-hud-dark/80 border border-hud-neonGreen/30 hover:border-hud-neonGreen/80 rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition group relative overflow-hidden backdrop-blur-md">
+                    <!-- 边框发光呼吸 -->
+                    <div class="absolute inset-0 bg-hud-neonGreen/5 opacity-0 group-hover:opacity-100 transition duration-300"></div>
+                    
+                    <div class="flex justify-between items-start z-10">
+                        <span class="text-[8px] font-bold text-hud-neonGreen tracking-[0.15em] font-code bg-hud-neonGreen/10 px-1 rounded">SUSPENDED</span>
+                        <div class="w-2 h-2 rounded-full bg-hud-neonGreen animate-ping"></div>
+                    </div>
+                    
+                    <div class="space-y-1.5 z-10">
+                        <div class="flex items-center space-x-1.5 text-slate-300">
+                            <i data-lucide="chrome" class="w-4 h-4 text-hud-neonGreen"></i>
+                            <span class="text-[10px] font-code font-bold">OpenClaw</span>
+                        </div>
+                        <!-- 简易进度条 -->
+                        <div class="w-full bg-hud-border h-1 rounded-full overflow-hidden">
+                            <div class="bg-hud-neonGreen h-full w-[70%] animate-pulse"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-[8px] text-slate-500 font-code truncate z-10">
+                        Twitter Grab 70%...
+                    </div>
+                </div>
+
+                <!-- 【朋友圈式 审计日志动态流】 -->
+                <div class="flex-1 bg-hud-dark/80 border border-hud-border/80 rounded-2xl p-3 flex flex-col overflow-hidden backdrop-blur-md">
+                    <div class="flex justify-between items-center border-b border-hud-border/40 pb-1.5 mb-2">
+                        <span class="text-[9px] font-bold text-hud-neonPurple tracking-widest font-code flex items-center gap-1">
+                            <i data-lucide="clock" class="w-3.5 h-3.5 text-hud-neonPurple"></i> CONTROLLER TIME-LINE (朋友圈)
+                        </span>
+                        <button onclick="clearAllLogs()" class="text-[8px] text-slate-500 hover:text-hud-neonRed font-code transition">CLEAR</button>
+                    </div>
+                    <!-- 动态墙滚动区 -->
+                    <div class="flex-1 overflow-y-auto space-y-2 text-[9px] font-code text-slate-400 no-scrollbar" id="logs-timeline-stream">
+                        <div class="flex justify-between items-start gap-1 border-b border-hud-border/10 pb-1.5">
+                            <span class="text-hud-neonPurple shrink-0">[15:12:30]</span>
+                            <span class="flex-1 text-slate-300">CLI: 执行 <code class="text-hud-neonBlue">ahk_reload_main</code> - <span class="text-hud-neonGreen">🟢 热重启成功 (0.8s)</span></span>
+                        </div>
+                        <div class="flex justify-between items-start gap-1 border-b border-hud-border/10 pb-1.5">
+                            <span class="text-hud-neonPurple shrink-0">[15:10:15]</span>
+                            <span class="flex-1 text-slate-300">OpenClaw: Twitter DOM 抓取结束 - <span class="text-hud-neonBlue">📦 吐出 42KB JSON</span></span>
+                        </div>
+                        <div class="flex justify-between items-start gap-1 border-b border-hud-border/10 pb-1.5">
+                            <span class="text-hud-neonPurple shrink-0">[15:08:00]</span>
+                            <span class="flex-1 text-slate-300">Claude: 向沙盒部署了异步 HTTP 脚本块</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- 底部状态栏 -->
+    <footer class="p-2.5 border-t border-hud-border/80 bg-hud-dark text-[9px] font-code text-slate-500 text-center flex justify-between items-center px-6 z-10">
+        <span>DEVICE: SYSTEM_WINDOWS_DESKTOP_V2</span>
+        <span class="text-hud-neonBlue animate-pulse">SHAPSHOT IRONSIDE HIGH_SPEED TUNNEL ACTIVE</span>
+    </footer>
+
+    <!-- =================================== CONTROL SCRIPT =================================== -->
+    <script>
+        // 初始化 Lucide 矢量图标
+        lucide.createIcons();
+
+        // 核心 AI 数据库，维护其独立上下文与控制行为
+        const runtimeAgents = {
+            claude: {
+                name: 'Claude 3.5 Sonnet',
+                color: 'amber-500',
+                placeholder: '向 Claude 发送 AHK 架构指令...',
+                chatHistory: [
+                    { sender: 'system', text: '已通过加密通道连至 Claude 3.5。本地 Workspace 已映射。' },
+                    { sender: 'ai', text: '你好！我是你的 AHK 与复杂系统架构专家。我已经挂载了你左侧的宿主沙盒。发送需求，我会自动生成一键投递的代码。' }
+                ],
+                controls: [
+                    { label: '注入 AHK 异步请求类', cmd: 'ahk_inject_template_lib --async' },
+                    { label: '验证 Localhost 挂钩状态', cmd: 'ahk_check_hooks_all' },
+                    { label: '拉取 Workspace 文件树', cmd: 'file_tree_dump' }
+                ]
+            },
+            deepseek: {
+                name: 'DeepSeek-Coder',
+                color: 'hud-neonBlue',
+                placeholder: '向 DeepSeek 咨询日常代码与分析...',
+                chatHistory: [
+                    { sender: 'system', text: '深度加速网关已建立。API-Endpoint: ds_coder_fast' },
+                    { sender: 'ai', text: '我是 DeepSeek 高性能主力模型。正在为您分析本地运行时状态。' },
+                    { sender: 'user', text: '写个 AHK 的异步 HTTP 请求 demo。' },
+                    { 
+                        sender: 'ai', 
+                        text: '好的，为你生成一个符合 Windows 11 AHK v2 规范的异步 HTTP 请求：',
+                        codeBlock: `; [AHK v2 异步网络请求模板]
+HttpReq := ComObject("WinHttp.WinHttpRequest.5.1")
+HttpReq.Open("GET", "https://api.github.com", true) ; 异步
+HttpReq.Send()
+if HttpReq.WaitForResponse(5) {
+    MsgBox("连接成功! 状态码: " HttpReq.Status)
+} else {
+    MsgBox("请求超时")
+}`,
+                        language: 'ahk'
+                    }
+                ],
+                controls: [
+                    { label: '格式化当前活跃 Workspace', cmd: 'formatter_autofix' },
+                    { label: '清理 AHK 缓存并重启脚本', cmd: 'ahk_cache_flush_restart' }
+                ]
+            },
+            openclaw: {
+                name: 'OpenClaw Browser',
+                color: 'hud-neonGreen',
+                placeholder: '让 OpenClaw 接管当前浏览器执行自动化...',
+                chatHistory: [
+                    { sender: 'system', text: 'OpenClaw 浏览器自动化引擎（免 Key 已就绪）。' },
+                    { sender: 'ai', text: '我是 OpenClaw。我能接管你的 WebView2 页面、自动定位元素、贴标签、截取 DOM 树并清洗返回 JSON。' }
+                ],
+                controls: [
+                    { label: '一键抓取活动页面 (DOM 树)', cmd: 'claw_grab_active_dom' },
+                    { label: '执行注入标签操作 (Labeling)', cmd: 'claw_inject_element_labels' },
+                    { label: '截取当前 WebView 视图并分析', cmd: 'claw_screenshot_vision' }
+                ]
+            },
+            cli: {
+                name: 'Local CLI Engine',
+                color: 'hud-neonRed',
+                placeholder: '向本地执行引擎直接发送 Shell 特权命令...',
+                chatHistory: [
+                    { sender: 'system', text: '特权 CLI 进程就绪。端口 9091 正在侦听。' },
+                    { sender: 'ai', text: '我是 CLI 引擎联系人。你可以无需对话，随时在这里，或者直接切入“控制模式”向我下发原生编译、杀进程等特权级命令。' }
+                ],
+                controls: [
+                    { label: '热重载 AHK 主程序', cmd: 'ahk_reload_main' },
+                    { label: '杀死 8080 端口进程', cmd: 'kill_port_8080' },
+                    { label: '一键测试本地路由延时', cmd: 'ping_hosts_all' }
+                ]
+            }
+        };
+
+        let currentAgentId = 'claude';
+        let currentMode = 'chat'; // 'chat' or 'control'
+        let currentPanelModel = 'openai'; // for new agent sliding drawer
+
+        // 渲染对话列表 (A面)
+        function renderChatMode() {
+            const container = document.getElementById('viewport-chat');
+            container.innerHTML = '';
+            
+            const agent = runtimeAgents[currentAgentId];
+            agent.chatHistory.forEach(msg => {
+                const wrapper = document.createElement('div');
+                wrapper.className = `flex flex-col space-y-1.5 ${msg.sender === 'user' ? 'items-end' : 'items-start'}`;
+                
+                if (msg.sender === 'system') {
+                    wrapper.innerHTML = `
+                        <div class="text-[9px] font-code text-slate-500 bg-hud-card/40 border border-hud-border/40 px-3 py-1 rounded-md w-full text-center">
+                            [SYSTEM] ${msg.text}
+                        </div>
+                    `;
+                } else {
+                    const isAi = msg.sender === 'ai';
+                    const avatarColor = isAi ? `bg-${agent.color}/10 text-${agent.color}` : 'bg-hud-neonBlue/10 text-hud-neonBlue';
+                    const bubbleStyle = isAi ? 'bg-hud-card/40 text-slate-200 border-hud-border/60' : 'bg-hud-neonBlue/10 text-slate-100 border-hud-neonBlue/20';
+                    const icon = isAi ? 
+                        (currentAgentId === 'claude' ? 'brain-circuit' : currentAgentId === 'deepseek' ? 'cpu' : currentAgentId === 'openclaw' ? 'chrome' : 'terminal') 
+                        : 'user';
+
+                    let messageBody = `<p class="text-[11px] leading-relaxed">${msg.text}</p>`;
+                    
+                    // 如果消息带有 AHK / 控制代码块 (控制动作锚点)
+                    if (msg.codeBlock) {
+                        messageBody += `
+                            <div class="mt-2.5 rounded-lg bg-black/60 border border-hud-border overflow-hidden font-code text-[10px] w-full text-slate-300">
+                                <div class="bg-hud-card/50 px-3 py-1 flex justify-between items-center text-[8px] text-slate-500">
+                                    <span>${msg.language ? msg.language.toUpperCase() : 'AHK'}</span>
+                                    <span class="text-hud-neonGreen flex items-center gap-1">● READY FOR PIPELINE</span>
+                                </div>
+                                <pre class="p-3 overflow-x-auto text-slate-300"><code>${msg.codeBlock}</code></pre>
+                                <div class="bg-black/30 p-1.5 border-t border-hud-border/40 flex justify-end gap-1.5">
+                                    <button onclick="dispatchCodeToSandbox('${currentAgentId}')" class="bg-hud-neonGreen/10 hover:bg-hud-neonGreen/20 text-hud-neonGreen border border-hud-neonGreen/30 text-[8px] font-bold px-2.5 py-1 rounded transition flex items-center gap-1">
+                                        <i data-lucide="zap" class="w-2.5 h-2.5"></i> ⚡ 投递并运行 (CLI)
+                                    </button>
+                                    <button onclick="copyCode(this)" class="bg-hud-card hover:bg-hud-border text-slate-400 hover:text-white text-[8px] px-2.5 py-1 rounded transition">
+                                        复制
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    wrapper.innerHTML = `
+                        <div class="flex items-center space-x-1.5 text-[9px] text-slate-400">
+                            <span class="w-4 h-4 rounded-full ${avatarColor} flex items-center justify-center border border-hud-border/20">
+                                <i data-lucide="${icon}" class="w-3 h-3"></i>
+                            </span>
+                            <span class="font-bold">${isAi ? agent.name : 'User'}</span>
+                        </div>
+                        <div class="max-w-[90%] border rounded-xl p-2.5 mt-1 shadow-md ${bubbleStyle}">
+                            ${messageBody}
+                        </div>
+                    `;
+                }
+                container.appendChild(wrapper);
+            });
+            container.scrollTop = container.scrollHeight;
+            lucide.createIcons();
+        }
+
+        // 渲染纯控制面板 (B面)
+        function renderControlMode() {
+            const container = document.getElementById('viewport-control');
+            container.innerHTML = '';
+            
+            const agent = runtimeAgents[currentAgentId];
+            
+            const info = document.createElement('div');
+            info.className = "text-[9px] text-slate-500 font-sans border-b border-hud-border/40 pb-2 mb-2 font-code";
+            info.innerText = `⚡ ${agent.name} ATOMIC COMMAND PIPELINE: 点击直接投递特权控制通道：`;
+            container.appendChild(info);
+
+            agent.controls.forEach(control => {
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center p-2.5 bg-hud-card/30 border border-hud-border/50 hover:border-hud-neonBlue hover:bg-hud-neonBlue/5 rounded-xl transition group cursor-pointer";
+                item.onclick = () => executeDirectCommand(control.cmd, control.label);
+
+                item.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-sans font-bold text-slate-200 group-hover:text-hud-neonBlue transition">${control.label}</span>
+                        <code class="text-[8px] text-slate-500 font-code mt-0.5">${control.cmd}</code>
+                    </div>
+                    <div class="bg-hud-black text-slate-500 group-hover:bg-hud-neonBlue group-hover:text-hud-black p-1 rounded-lg transition">
+                        <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        // 切换活跃联系人节点
+        function changeActiveAgent(agentId) {
+            currentAgentId = agentId;
+            const agent = runtimeAgents[agentId];
+
+            // 1. 头像选中变焦
+            document.querySelectorAll('#toolbar-avatar-strip > div').forEach(el => {
+                el.classList.remove('border-hud-neonBlue', 'scale-110');
+                el.classList.add('border-transparent');
+            });
+            const selectedAvatar = document.getElementById(`avatar-${agentId}`);
+            if (selectedAvatar) {
+                selectedAvatar.classList.remove('border-transparent');
+                selectedAvatar.classList.add('border-hud-neonBlue', 'scale-110');
+            }
+
+            // 2. 更换头部名称和输入框 placeholder
+            document.getElementById('current-agent-header').innerText = agent.name;
+            const input = document.getElementById('main-input');
+            input.placeholder = agent.placeholder;
+
+            // 3. 换颜色 LED 指示灯
+            const led = document.getElementById('mode-led');
+            led.className = `w-1.5 h-1.5 rounded-full bg-${agent.color}`;
+
+            // 4. 重渲染视图
+            if (currentMode === 'chat') {
+                renderChatMode();
+            } else {
+                renderControlMode();
+            }
+        }
+
+        // 切换视图模式 (Chat vs Control)
+        function switchMode(mode) {
+            currentMode = mode;
+            const chatView = document.getElementById('viewport-chat');
+            const controlView = document.getElementById('viewport-control');
+            const tabChat = document.getElementById('tab-mode-chat');
+            const tabControl = document.getElementById('tab-mode-control');
+
+            if (mode === 'chat') {
+                chatView.classList.remove('hidden');
+                controlView.classList.add('hidden');
+                tabChat.className = "px-2.5 py-0.5 rounded-md text-[9px] font-sans font-bold transition duration-200 bg-hud-neonBlue text-hud-black shadow-neon-blue";
+                tabControl.className = "px-2.5 py-0.5 rounded-md text-[9px] font-sans font-bold text-slate-400 hover:text-white transition duration-200";
+                renderChatMode();
+            } else {
+                chatView.classList.add('hidden');
+                controlView.classList.remove('hidden');
+                tabControl.className = "px-2.5 py-0.5 rounded-md text-[9px] font-sans font-bold transition duration-200 bg-hud-neonBlue text-hud-black shadow-neon-blue";
+                tabChat.className = "px-2.5 py-0.5 rounded-md text-[9px] font-sans font-bold text-slate-400 hover:text-white transition duration-200";
+                renderControlMode();
+            }
+        }
+
+        // 处理键盘按键 (Tab 快切模式，Enter 发送)
+        function handleInputKey(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                switchMode(currentMode === 'chat' ? 'control' : 'chat');
+            } else if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+            }
+        }
+
+        // 发送消息
+        function handleSendMessage() {
+            const input = document.getElementById('main-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const agent = runtimeAgents[currentAgentId];
+            agent.chatHistory.push({
+                sender: 'user',
+                text: text
+            });
+
+            input.value = '';
+            renderChatMode();
+
+            // 提示栏修改状态
+            const hint = document.getElementById('system-action-hint');
+            hint.innerText = `${agent.name} 正在思考架构中...`;
+            hint.className = `text-[9px] font-code text-${agent.color} animate-pulse`;
+
+            // 模拟异步 AHK 代码吐出
+            setTimeout(() => {
+                let aiResponse = `收到，关于 "${text}" 的系统级设计已经完成。`;
+                let block = null;
+                
+                if (text.toLowerCase().includes('ahk') || text.includes('请求') || text.includes('代码') || text.includes('注入')) {
+                    aiResponse = "针对您的本地挂接请求，已重新整合 AHK 异步沙盒拦截方案：";
+                    block = `; [由 Niumachat 安全管道注入的动态拦截]\n#HotIf WinActive("ahk_class Notepad")\n^j::{\n    SendInput("Hello Niumachat! 注入成功。")\n}\n#HotIf`;
+                }
+
+                agent.chatHistory.push({
+                    sender: 'ai',
+                    text: aiResponse,
+                    codeBlock: block,
+                    language: block ? 'ahk' : null
+                });
+
+                hint.innerText = "等待发送指令...";
+                hint.className = "text-[9px] font-code text-slate-500";
+                
+                renderChatMode();
+
+                // 朋友圈朋友圈写入动态
+                addPipelineLog(currentAgentId, `给出方案: "${text.substring(0, 15)}..."`);
+            }, 1000);
+        }
+
+        // 朋友圈日志增加机制
+        function addPipelineLog(agentId, logMsg) {
+            const timeline = document.getElementById('logs-timeline-stream');
+            const now = new Date();
+            const timeStr = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
+            
+            const logItem = document.createElement('div');
+            logItem.className = 'flex justify-between items-start gap-1 border-b border-hud-border/10 pb-1.5 animate-pulse';
+            logItem.innerHTML = `
+                <span class="text-hud-neonPurple shrink-0">${timeStr}</span>
+                <span class="flex-1 text-slate-300">${runtimeAgents[agentId].name}: ${logMsg}</span>
+            `;
+            timeline.insertBefore(logItem, timeline.firstChild);
+        }
+
+        function clearAllLogs() {
+            document.getElementById('logs-timeline-stream').innerHTML = '';
+        }
+
+        // 模拟执行代码投递至宿主 Sandbox (左侧)
+        function dispatchCodeToSandbox(agentId) {
+            const agent = runtimeAgents[agentId];
+            const targetBlock = agent.chatHistory.find(msg => msg.codeBlock);
+            if (!targetBlock) return;
+
+            const targetBox = document.getElementById('runtime-code-sandbox');
+            targetBox.innerHTML = `
+                <div class="text-hud-neonGreen font-semibold mb-1 flex items-center gap-1.5">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-hud-neonGreen animate-pulse shadow-neon-green"></span>
+                    // [NIUMACHAT_PIPELINE] 拦截注入并装配完成
+                </div>
+                <pre class="text-slate-200 bg-black/40 p-3 rounded-lg border border-hud-neonGreen/30 w-full text-left overflow-x-auto text-[11px]">${targetBlock.codeBlock}</pre>
+            `;
+            targetBox.className = "p-4 bg-hud-neonGreen/5 rounded-xl border border-hud-neonGreen shadow-neon-green transition-all duration-500 text-slate-300";
+
+            addPipelineLog(agentId, `向宿主沙盒成功投递了 AHK 脚本块`);
+        }
+
+        // 模拟直接命令执行 (Control 模式下)
+        function executeDirectCommand(cmd, label) {
+            const targetBox = document.getElementById('runtime-code-sandbox');
+            targetBox.innerHTML = `
+                <div class="text-hud-neonBlue font-semibold mb-1 flex items-center gap-1.5">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-hud-neonBlue animate-pulse shadow-neon-blue"></span>
+                    // [DIRECT CMD DISPATCHED]
+                </div>
+                <div class="text-[11px] text-slate-400 font-code text-left w-full bg-black/40 p-3 rounded-lg border border-hud-neonBlue/20">
+                    > ${cmd}<br>
+                    <span class="text-hud-neonGreen font-semibold">CMD_STATUS: 0 (EXECUTION_OK)</span><br>
+                    <span class="text-slate-500">已直接在宿主 Windows (AHK 外部进程) 触发了 "${label}" 原子指令。</span>
+                </div>
+            `;
+            targetBox.className = "p-4 bg-hud-neonBlue/5 rounded-xl border border-hud-neonBlue shadow-neon-blue transition-all duration-500 text-slate-300";
+
+            addPipelineLog(currentAgentId, `特权直通命令: "${label}" (${cmd})`);
+        }
+
+        // 打开/关闭 添加联系人侧滑栏
+        function toggleSlidePanel(open) {
+            const panel = document.getElementById('slide-panel-add-agent');
+            if (open) {
+                panel.classList.remove('translate-x-full');
+            } else {
+                panel.classList.add('translate-x-full');
+            }
+        }
+
+        // 侧滑面板中的模型单选
+        function selectModelInPanel(model) {
+            currentPanelModel = model;
+            const btnOpenAI = document.getElementById('btn-p-openai');
+            const btnDeepseek = document.getElementById('btn-p-deepseek');
+            
+            if (model === 'openai') {
+                btnOpenAI.className = "border border-hud-neonBlue bg-hud-neonBlue/5 p-2 rounded-lg text-center cursor-pointer transition";
+                btnDeepseek.className = "border border-hud-border p-2 rounded-lg text-center cursor-pointer hover:border-hud-neonPurple transition";
+            } else {
+                btnDeepseek.className = "border border-hud-neonPurple bg-hud-neonPurple/5 p-2 rounded-lg text-center cursor-pointer transition";
+                btnOpenAI.className = "border border-hud-border p-2 rounded-lg text-center cursor-pointer hover:border-hud-neonBlue transition";
+            }
+        }
+
+        // 提交添加新的 Agent 联系人
+        function commitNewAgent() {
+            const nameInput = document.getElementById('input-p-name');
+            const keyInput = document.getElementById('input-p-key');
+            
+            const name = nameInput.value.trim() || 'Custom-Agent';
+            const key = keyInput.value.trim() || 'sk-custom-dummy';
+
+            // 动态加入 runtime 数据库
+            const newId = 'agent_' + Date.now();
+            runtimeAgents[newId] = {
+                name: name,
+                color: currentPanelModel === 'openai' ? 'hud-neonBlue' : 'hud-neonPurple',
+                placeholder: `向 ${name} 发送指令...`,
+                chatHistory: [
+                    { sender: 'system', text: `外部 Agent 联系人已添加成功。Key: ${key.substring(0, 8)}...` },
+                    { sender: 'ai', text: `你好，我是自定义联系人 ${name}。密钥已安全绑定！` }
+                ],
+                controls: [
+                    { label: '执行本地心跳包同步', cmd: `${name.toLowerCase()}_sync_pulse` },
+                    { label: '销毁该路由信道', cmd: `${name.toLowerCase()}_destroy` }
+                ]
+            };
+
+            // 动态添加头像到列表
+            const avatarStrip = document.getElementById('toolbar-avatar-strip');
+            const newAvatar = document.createElement('div');
+            newAvatar.id = `avatar-${newId}`;
+            newAvatar.setAttribute('onclick', `changeActiveAgent('${newId}')`);
+            newAvatar.setAttribute('oncontextmenu', `openNodeConfig(event, '${newId}')`);
+            newAvatar.className = "relative group cursor-pointer p-0.5 rounded-full border-2 border-transparent transition-all duration-300";
+            
+            const brandColor = currentPanelModel === 'openai' ? 'text-hud-neonBlue bg-hud-neonBlue/10' : 'text-hud-neonPurple bg-hud-neonPurple/10';
+            const iconName = currentPanelModel === 'openai' ? 'brain' : 'flame';
+
+            newAvatar.innerHTML = `
+                <div class="w-8 h-8 rounded-full ${brandColor} border border-current/20 flex items-center justify-center hover:bg-current/10 transition">
+                    <i data-lucide="${iconName}" class="w-4 h-4"></i>
+                </div>
+                <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-hud-neonGreen rounded-full border-2 border-hud-black"></span>
+                <div class="absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-hud-dark border border-hud-neonBlue text-[10px] p-2.5 rounded-lg shadow-2xl hidden group-hover:block w-40 z-50 pointer-events-none font-code">
+                    <p class="font-bold mb-1 flex items-center gap-1"><i data-lucide="${iconName}" class="w-3 h-3"></i> ${name}</p>
+                    <p class="text-slate-400">状态: <span class="text-hud-neonGreen">🟢 Active</span></p>
+                    <p class="text-slate-500 text-[9px] mt-1 border-t border-hud-border/40 pt-1">右键/长按调出配置盘</p>
+                </div>
+            `;
+            
+            // 在加号之前插入
+            avatarStrip.insertBefore(newAvatar, avatarStrip.lastElementChild);
+            
+            // 清空输入并收起
+            nameInput.value = '';
+            keyInput.value = '';
+            toggleSlidePanel(false);
+            lucide.createIcons();
+
+            // 切换到新加的 Agent
+            changeActiveAgent(newId);
+            addPipelineLog('cli', `新路由节点 [${name}] 已加入矩阵`);
+        }
+
+        // 右键或长按头像触发微型配置控制盘
+        let activeConfigAgentId = 'claude';
+        function openNodeConfig(e, agentId) {
+            e.preventDefault(); // 阻止默认右键菜单
+            activeConfigAgentId = agentId;
+            const agent = runtimeAgents[agentId];
+
+            document.getElementById('config-node-name').innerText = agent.name;
+            document.getElementById('config-node-key-input').value = '';
+            
+            const pingLabel = document.getElementById('config-node-ping');
+            const mockPing = Math.floor(Math.random() * 40) + 5;
+            pingLabel.innerText = `PING: ${mockPing}ms`;
+
+            const iconSpan = document.getElementById('config-node-icon');
+            iconSpan.className = `p-1 rounded bg-${agent.color}/10 text-${agent.color}`;
+            
+            const configDisk = document.getElementById('quick-node-config');
+            configDisk.classList.remove('translate-y-full');
+        }
+
+        function closeNodeConfig() {
+            document.getElementById('quick-node-config').classList.add('translate-y-full');
+        }
+
+        // 保存单个节点的 Key
+        function saveSingleNodeKey() {
+            const input = document.getElementById('config-node-key-input');
+            const newKey = input.value.trim();
+            if (newKey) {
+                addPipelineLog(activeConfigAgentId, `安全密钥已覆盖更新。`);
+                closeNodeConfig();
+            }
+        }
+
+        // 清空会话记忆
+        function triggerClearAgentMemory() {
+            runtimeAgents[activeConfigAgentId].chatHistory = [
+                { sender: 'system', text: '该联系人历史对话已全部擦除，上下文还原至初始状态。' }
+            ];
+            if (activeConfigAgentId === currentAgentId) {
+                renderChatMode();
+            }
+            addPipelineLog(activeConfigAgentId, `清空会话记忆。`);
+            closeNodeConfig();
+        }
+
+        // 移除此联系人
+        function triggerRemoveAgent() {
+            if (activeConfigAgentId === 'claude' || activeConfigAgentId === 'cli') {
+                alert('核心主干联系人不支持移除，建议对其执行密钥清空或隐身。');
+                closeNodeConfig();
+                return;
+            }
+            
+            // 从 UI 中删除头像
+            const avatar = document.getElementById(`avatar-${activeConfigAgentId}`);
+            if (avatar) avatar.remove();
+
+            addPipelineLog('cli', `已销毁节点 [${runtimeAgents[activeConfigAgentId].name}] 的信道。`);
+            closeNodeConfig();
+            
+            // 切换到 Claude
+            changeActiveAgent('claude');
+        }
+
+        // 微信式：一键从后台胶囊中恢复 OpenClaw 会话到前台
+        function recoverSuspendedTask() {
+            changeActiveAgent('openclaw');
+            addPipelineLog('openclaw', `从微信挂起胶囊恢复会话。当前自动化进度：100% (解析成功)`);
+            
+            // 改变沙盒，展示爬取成果
+            const targetBox = document.getElementById('runtime-code-sandbox');
+            targetBox.innerHTML = `
+                <div class="text-hud-neonGreen font-semibold mb-1 flex items-center gap-1.5">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-hud-neonGreen animate-pulse shadow-neon-green"></span>
+                    // [OPENCLAW WEB-GRABBER SUCCESS]
+                </div>
+                <div class="text-[11px] text-slate-400 font-code text-left w-full bg-black/40 p-3 rounded-lg border border-hud-neonGreen/20">
+                    <span class="text-slate-500">; 自动化 Agent 从当前 Twitter 获取的 JSON 结构体：</span><br>
+                    {<br>
+                    &nbsp;&nbsp;"author": "@Niumachat_Official",<br>
+                    &nbsp;&nbsp;"timestamp": "2026-05-30",<br>
+                    &nbsp;&nbsp;"payload": "Niumachat 2.0 正式内置了轻量化 OpenClaw 浏览器！"<br>
+                    }
+                </div>
+            `;
+            targetBox.className = "p-4 bg-hud-neonGreen/5 rounded-xl border border-hud-neonGreen shadow-neon-green transition-all duration-500 text-slate-300";
+        }
+
+        // 节点大盘矩阵显示/隐藏
+        function toggleNodeOverview(show) {
+            const overlay = document.getElementById('node-overview-overlay');
+            if (show) {
+                // 动态渲染矩阵
+                const list = document.getElementById('node-matrix-list');
+                list.innerHTML = '';
+                
+                Object.keys(runtimeAgents).forEach(id => {
+                    const agent = runtimeAgents[id];
+                    const item = document.createElement('div');
+                    item.className = "flex items-center justify-between p-3 bg-hud-card/30 rounded-xl border border-hud-border";
+                    item.innerHTML = `
+                        <div class="flex items-center space-x-2.5">
+                            <span class="p-1.5 rounded-full bg-${agent.color}/10 text-${agent.color}"><i data-lucide="cpu" class="w-4 h-4"></i></span>
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-slate-200">${agent.name}</span>
+                                <span class="text-[8px] text-slate-500 font-code">ROUTE_ID: ${id.toUpperCase()}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[9px] font-code text-hud-neonGreen bg-hud-neonGreen/10 px-2 py-0.5 rounded">CONNECTIVITY_100%</span>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+                overlay.classList.remove('hidden');
+                lucide.createIcons();
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // 复制到剪切板逻辑
+        function copyCode(btn) {
+            const pre = btn.closest('.rounded-lg').querySelector('pre');
+            const range = document.createRange();
+            range.selectNode(pre);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            try {
+                document.execCommand('copy');
+                const oldText = btn.innerText;
+                btn.innerText = '已复制!';
+                btn.className = "bg-hud-neonGreen/20 text-hud-neonGreen text-[8px] px-2.5 py-1 rounded transition";
+                setTimeout(() => {
+                    btn.innerText = oldText;
+                    btn.className = "bg-hud-card hover:bg-hud-border text-slate-400 hover:text-white text-[8px] px-2.5 py-1 rounded transition";
+                }, 1500);
+            } catch (err) {
+                console.error(err);
+            }
+            window.getSelection().removeAllRanges();
+        }
+
+        // 初始化加载
+        window.onload = function() {
+            changeActiveAgent('claude');
+            
+            // 给用户一个默认提示
+            addPipelineLog('cli', '右键点击联系人头像可管理各个 AI 节点的安全密钥。');
+        }
+    </script>
+</body>
+</html>

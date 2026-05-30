@@ -6,6 +6,7 @@ const root = process.cwd();
 const port = 3000;
 const niumaHistoryDir = path.join(root, "Data", "niuma-chat");
 const niumaHistoryFile = path.join(niumaHistoryDir, "history.json");
+const niumaAuditFile = path.join(niumaHistoryDir, "niuma_audit.json");
 const niumaUploadDir = path.join(niumaHistoryDir, "uploads");
 const niumaAttachMetaFile = path.join(niumaHistoryDir, "attachments.json");
 
@@ -69,6 +70,42 @@ function writeNiumaHistory(payload, cb) {
       return;
     }
     fs.writeFile(niumaHistoryFile, JSON.stringify(doc, null, 2), "utf8", cb);
+  });
+}
+
+function readNiumaAudit(cb) {
+  fs.readFile(niumaAuditFile, "utf8", (err, text) => {
+    if (err) {
+      if (err.code === "ENOENT") {
+        cb(null, { version: 1, entries: [], updatedAt: null });
+        return;
+      }
+      cb(err);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(text);
+      if (!parsed || typeof parsed !== "object") throw new Error("Invalid audit payload");
+      cb(null, parsed);
+    } catch (parseErr) {
+      cb(parseErr);
+    }
+  });
+}
+
+function writeNiumaAudit(payload, cb) {
+  const normalized = payload && typeof payload === "object" ? payload : {};
+  const doc = {
+    version: 1,
+    entries: Array.isArray(normalized.entries) ? normalized.entries.slice(-200) : [],
+    updatedAt: new Date().toISOString()
+  };
+  fs.mkdir(niumaHistoryDir, { recursive: true }, (mkErr) => {
+    if (mkErr) {
+      cb(mkErr);
+      return;
+    }
+    fs.writeFile(niumaAuditFile, JSON.stringify(doc, null, 2), "utf8", cb);
   });
 }
 
@@ -394,6 +431,39 @@ const server = http.createServer((req, res) => {
             return;
           }
           sendJson(res, 200, { ok: true, path: niumaHistoryFile });
+        });
+      });
+      return;
+    }
+    sendJson(res, 405, { ok: false, error: "Method not allowed" });
+    return;
+  }
+  if (reqPath === "/api/niuma/audit") {
+    if (req.method === "GET") {
+      readNiumaAudit((err, data) => {
+        if (err) {
+          sendJson(res, 500, { ok: false, error: err.message || String(err) });
+          return;
+        }
+        sendJson(res, 200, { ok: true, data });
+      });
+      return;
+    }
+    if (req.method === "POST") {
+      parseJsonBody(req, (bodyErr, body) => {
+        if (bodyErr) {
+          sendJson(res, 400, { ok: false, error: "Invalid JSON body" });
+          return;
+        }
+        const payload = body && typeof body === "object" && body.data && typeof body.data === "object"
+          ? body.data
+          : body;
+        writeNiumaAudit(payload, (writeErr) => {
+          if (writeErr) {
+            sendJson(res, 500, { ok: false, error: writeErr.message || String(writeErr) });
+            return;
+          }
+          sendJson(res, 200, { ok: true, path: niumaAuditFile });
         });
       });
       return;

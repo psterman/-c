@@ -935,3 +935,11 @@
 2026-05-27 09:52:04 ttyd started port 7681 pid 18624 cmd=cmd.exe /k codex
 2026-05-28 09:36:40 ttyd shell [codex_cli] ttyd_auto_cli: cmd.exe /k codex
 2026-05-28 09:36:41 ttyd started port 7681 pid 21980 cmd=cmd.exe /k codex
+2026-05-31 06:45:25 ttyd shell [kimi_cli] ttyd_auto_cli: cmd.exe /k kimi
+2026-05-31 06:45:25 ttyd started port 7688 pid 1560 cmd=cmd.exe /k kimi
+2026-05-31 07:09:17 ttyd shell [ollama_cli] ttyd_auto_cli: cmd.exe /k ollama
+2026-05-31 07:09:17 ttyd started port 7685 pid 22600 cmd=cmd.exe /k ollama
+2026-05-31 07:16:55 ttyd shell [ollama_cli] ttyd_auto_cli: cmd.exe /k ollama
+2026-05-31 07:16:55 ttyd started port 7685 pid 18784 cmd=cmd.exe /k ollama
+2026-05-31 07:17:31 ttyd shell [ollama_cli] ttyd_auto_cli: cmd.exe /k ollama
+2026-05-31 07:17:32 ttyd started port 7685 pid 6148 cmd=cmd.exe /k ollama

@@ -129,6 +129,36 @@ FloatingToolbar_GetChatWv2() {
     return IsObject(g_FTB_WV2) ? g_FTB_WV2 : 0
 }
 
+FloatingToolbar_PushNodeStatus(nodeKey, status, detail := "", pingMs := 0) {
+    wv2 := FloatingToolbar_GetChatWv2()
+    if !wv2
+        return
+    try WebView_QueuePayload(wv2, Map(
+        "type", "niuma_node_status",
+        "nodeKey", String(nodeKey),
+        "status", String(status),
+        "detail", String(detail),
+        "pingMs", pingMs,
+        "tick", A_TickCount))
+    catch {
+    }
+}
+
+FloatingToolbar_PushAudit(nodeKey, message, level := "info", meta := "") {
+    wv2 := FloatingToolbar_GetChatWv2()
+    if !wv2
+        return
+    try WebView_QueuePayload(wv2, Map(
+        "type", "niuma_audit_event",
+        "nodeKey", String(nodeKey),
+        "message", String(message),
+        "level", String(level),
+        "meta", String(meta),
+        "tick", A_TickCount))
+    catch {
+    }
+}
+
 FloatingToolbar_ResetChatBridge() {
     global g_NiumaChatFrontReady, g_NiumaChatBridgeEpoch
     g_NiumaChatFrontReady := false
@@ -1992,12 +2022,22 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ = "niuma_cli_open") {
         reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
         engine := msg.Has("engine") ? Trim(String(msg["engine"])) : "codex_cli"
+        try {
+            FloatingToolbar_PushNodeStatus(engine, "thinking", "正在连接 ttyd")
+            FloatingToolbar_PushAudit(engine, "正在打开 CLI 终端", "info")
+        } catch {
+        }
         SetTimer(NiumaTtyd_DeferredOpenJob.Bind(reqId, engine), -10)
         return
     }
     if (typ = "niuma_cli_restart") {
         reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
         engine := msg.Has("engine") ? Trim(String(msg["engine"])) : "codex_cli"
+        try {
+            FloatingToolbar_PushNodeStatus(engine, "thinking", "正在重启 ttyd")
+            FloatingToolbar_PushAudit(engine, "正在重启 CLI 终端", "info")
+        } catch {
+        }
         SetTimer(NiumaTtyd_DeferredRestartJob.Bind(reqId, engine), -10)
         return
     }
