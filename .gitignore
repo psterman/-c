@@ -35,6 +35,12 @@ Cache/hole-vite.log
 
 cache/dict_install/
 
+# Whisper STT：本地 venv 与模型（运行 tools/whisper-stt/setup-whisper.ps1 生成，勿提交）
+tools/whisper-stt/.venv/
+tools/whisper-stt/models/
+tools/whisper-stt/output.txt
+tools/whisper-stt/__pycache__/
+
 # Prototype: generated artifacts and local deps
 prototype/**/frontend/node_modules/
 prototype/**/frontend/dist/
