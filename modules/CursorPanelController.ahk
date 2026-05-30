@@ -278,6 +278,11 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
 GetCapsLockState() {
     global CapsLock
     try {
+        if FuncExists("CommandPalette_IsVisible") && CommandPalette_IsVisible()
+            return false
+    } catch {
+    }
+    try {
         if VK_IsVkRecordingHotkey()
             return false
     } catch as e {
@@ -473,6 +478,16 @@ ClearCapsLock2Timer(*) {
     global CapsLock2 := false
 }
 
+global CapsLock_DeferredSingleTapInitial := false
+CapsLock_DeferredSingleTapToggle(*) {
+    global CapsLock, CapsLock2, CapsLock_DeferredSingleTapInitial
+    if !CapsLock2
+        return
+    CapsLock_ApplyLogicalState(!CapsLock_DeferredSingleTapInitial)
+    CapsLock := false
+    CapsLock2 := false
+}
+
 ; 将“切换态”布尔值统一写成 SetCapsLockState 接受的字面量，避免与 v1/v2 对 0/1 的兼容差异
 CapsLock_ApplyLogicalState(isOn) {
     try SetCapsLockState(isOn ? "On" : "Off")
@@ -513,8 +528,9 @@ ClearCapsLockTimer(*) {
     global CapsLock := false
 }
 
-; ===================== Wails 输入框激活 =====================
-; 可选全局配置（可在主脚本或 ini 加载后覆盖）：
+; ===================== Wails 输入框激活（已迁移至 CommandPalette WebView2） =====================
+; CommandPaletteUseWebView=true 时 ActivateWailsInputBox 仅转发 CommandPalette_Show。
+; 以下 Wails exe 配置仅在 CommandPaletteUseWebView=false 时生效。
 ;   WailsInputWindowTitle := "NMER Wails Input"
 ;   WailsInputWindowExe   := "nmer-wails-input.exe"
 ;   WailsInputLaunchPath  := "完整路径\nmer-wails-input.exe"
@@ -778,6 +794,13 @@ WailsInput_AfterActivated() {
 }
 
 ActivateWailsInputBox() {
+    global CommandPaletteUseWebView
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_Show")) {
+        if CommandPalette_Show() {
+            SetTimer(CommandPalette_DeferredFocus, -150)
+            return true
+        }
+    }
     global WailsInputTitleKeywords, WailsInputHtmlPath, WailsInputAllowHtmlFallback, WailsInputRestartOnActivate
     local prevMatch := A_TitleMatchMode
     SetTitleMatchMode(2)
@@ -1020,15 +1043,17 @@ CapsLock:: {
     SearchCenter_SetCapsHintActive(false)
     ; 稳定双击判定：以“释放时刻”计算两次短按间隔，避免 A_PriorHotkey 被其它热键污染
     PressDuration := A_TickCount - CapsLockPressTime
-    IsShortTap := (PressDuration <= 260)
+    IsShortTap := (PressDuration <= 300)
     IsCapsDoubleClick := false
-    if (IsShortTap && LastCapsLockTapTick > 0 && (A_TickCount - LastCapsLockTapTick <= 320)) {
+    if (IsShortTap && LastCapsLockTapTick > 0 && (A_TickCount - LastCapsLockTapTick <= 450)) {
         IsCapsDoubleClick := true
         LastCapsLockTapTick := 0
+        SetTimer(CapsLock_DeferredSingleTapToggle, 0)
     } else if (IsShortTap) {
         LastCapsLockTapTick := A_TickCount
     } else {
         LastCapsLockTapTick := 0
+        SetTimer(CapsLock_DeferredSingleTapToggle, 0)
     }
 
     if (VKHoldVisible) {
@@ -1036,13 +1061,25 @@ CapsLock:: {
         VKHoldVisible := false
     }
     
-    ; 双击 CapsLock：激活/拉起 Wails 输入框；再次双击可结束 Whisper 录音并识别
-    if (CapsLock2 && IsCapsDoubleClick) {
+    ; 双击 CapsLock：拉起 Raycast 命令面板（WebView2）；再次双击可结束 Whisper 录音并识别
+    if (IsCapsDoubleClick) {
+        SetTimer(CapsLock_DeferredSingleTapToggle, 0)
         if (FuncExists("WailsWhisper_IsRecording") && WailsWhisper_IsRecording()) {
             if FuncExists("WailsWhisper_StopAndTranscribe")
                 SetTimer(WailsWhisper_StopAndTranscribe, -30)
         } else {
-            if ActivateWailsInputBox() {
+            ok := false
+            try {
+                if (CommandPaletteUseWebView)
+                    ok := CommandPalette_Show()
+                else if FuncExists("ActivateWailsInputBox")
+                    ok := ActivateWailsInputBox()
+            } catch as e {
+                try TrayTip("命令面板", "打开失败: " . e.Message, "Icon!")
+                catch {
+                }
+            }
+            if ok {
                 if FuncExists("WailsWhisper_OnInputActivated")
                     WailsWhisper_OnInputActivated()
             }
@@ -1060,6 +1097,12 @@ CapsLock:: {
         CapsLock_ApplyLogicalState(InitialCapsLockState)
         ; 延迟清除 CapsLock 变量，给快捷键处理函数足够的时间
         SetTimer(ClearCapsLockTimer, -100)
+    } else if (IsShortTap) {
+        ; 第一次短按：延迟切换大写，给双击留出窗口
+        global CapsLock_DeferredSingleTapInitial
+        CapsLock_DeferredSingleTapInitial := InitialCapsLockState
+        SetTimer(CapsLock_DeferredSingleTapToggle, -480)
+        CapsLock := false
     } else {
         ; 没有使用功能：手动执行一次 CapsLock 单击切换（当前热键已拦截原生行为）
         CapsLock_ApplyLogicalState(!InitialCapsLockState)

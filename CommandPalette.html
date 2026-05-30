@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMER Command Palette</title>
+<style>
+@font-face {
+  font-family: "AppUi";
+  src: local("Segoe UI");
+  unicode-range: U+0000-024F, U+1E00-1EFF, U+2000-206F, U+20A0-20CF, U+2100-214F;
+}
+@font-face {
+  font-family: "AppUi";
+  src: local("DengXian"), local("Microsoft YaHei UI"), local("Microsoft YaHei");
+  unicode-range: U+2E80-2EFF, U+2F00-2FDF, U+3000-303F, U+3040-30FF, U+3100-312F,
+    U+31A0-31BF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF;
+}
+:root {
+  --panel-top: #1a2738;
+  --panel-bottom: #121a28;
+  --glass-edge: rgba(255, 255, 255, 0.22);
+  --glass-edge-soft: rgba(255, 255, 255, 0.07);
+  --glass-warm: rgba(255, 141, 42, 0.34);
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --text: #e8edf2;
+  --text-soft: #9db0c6;
+  --text-main: #fff9f2;
+  --accent: #ff6600;
+  --accent-2: #ff8d2a;
+  --radius-lg: 12px;
+  --ease: 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  --font-ui: "AppUi", "Segoe UI", "DengXian", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body, #root, .palette-root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+body {
+  font-family: var(--font-ui);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.palette-root {
+  display: block;
+  width: 100%;
+  min-height: 100%;
+}
+.palette-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  overflow: visible;
+  background: linear-gradient(180deg, var(--panel-top) 0%, var(--panel-bottom) 100%);
+  animation: palette-in 0.22s var(--ease) both;
+}
+.palette-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0) 26%);
+  z-index: 0;
+}
+.palette-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--glass-edge), var(--glass-edge-soft) 44%, var(--glass-warm));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.72;
+  z-index: 2;
+}
+.palette-header {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 14px;
+}
+.palette-panel.has-results .palette-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.palette-search-icon {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  color: var(--accent-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.palette-search-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+.palette-search {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: transparent !important;
+  color: var(--text-main) !important;
+  -webkit-text-fill-color: var(--text-main);
+  caret-color: var(--accent-2);
+  font: 500 20px/1.35 var(--font-ui);
+  letter-spacing: 0.01em;
+  padding: 8px 4px 8px 0;
+  outline: none;
+  ime-mode: active;
+}
+.palette-search::placeholder {
+  color: #7f92a8;
+  font-weight: 400;
+}
+.palette-voice {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  margin-right: 2px;
+  border: 1px solid rgba(255, 102, 0, 0.22);
+  border-radius: 11px;
+  background: #1e2a3c;
+  color: #ffb347;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: background var(--ease), border-color var(--ease), box-shadow var(--ease);
+}
+.palette-voice:hover {
+  background: #263246;
+  border-color: rgba(255, 141, 42, 0.48);
+  box-shadow: 0 0 16px rgba(255, 102, 0, 0.14);
+}
+.palette-voice.recording {
+  background: #3a2418;
+  border-color: rgba(255, 102, 0, 0.58);
+  color: #ff8d2a;
+  animation: voice-pulse 1.2s ease-in-out infinite;
+}
+.palette-status {
+  display: none;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0 16px 8px 46px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #ffc896;
+}
+.palette-status.show { display: block; }
+.palette-status.listening,
+.palette-status.loading { color: #ffb347; }
+.palette-status.error { color: #ff7a59; }
+.palette-results {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  max-height: 0;
+  overflow: hidden;
+  padding: 0 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.palette-panel.has-results .palette-results {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px 8px 8px;
+}
+.palette-panel.has-results .palette-results.is-scrolling {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 102, 0, 0.35) transparent;
+}
+.palette-results::-webkit-scrollbar { width: 0; height: 0; }
+.palette-panel.has-results .palette-results.is-scrolling::-webkit-scrollbar { width: 5px; }
+.palette-panel.has-results .palette-results.is-scrolling::-webkit-scrollbar-thumb {
+  background: rgba(255, 102, 0, 0.32);
+  border-radius: 999px;
+}
+.result-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  margin: 2px 0;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--ease), border-color var(--ease);
+}
+.result-item:hover {
+  background: #1f2d40;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+.result-item.active {
+  background: linear-gradient(90deg, #3a2818 0%, #252018 100%);
+  border-color: rgba(255, 141, 42, 0.38);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.result-icon {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  background: #1a2535;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--accent-2);
+}
+.result-item.kind-history .result-icon {
+  color: #8ec5ff;
+  background: #172638;
+  border-color: rgba(100, 160, 255, 0.18);
+}
+.result-item.kind-exec .result-icon {
+  color: #8ee4a8;
+  background: #152a22;
+  border-color: rgba(80, 200, 120, 0.18);
+}
+.result-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.result-row {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  gap: 8px;
+}
+.result-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.result-binding {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: #8ea0b4;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  white-space: nowrap;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0f1622;
+}
+.result-desc {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.result-item.matched .result-title { color: #ffb347; }
+.result-item.kind-history .result-title { color: #b8daff; }
+.result-item.kind-exec .result-title { color: #b8f0c8; }
+.result-item.active .result-title { color: var(--text-main); }
+body.native-input-mode .palette-header,
+body.native-input-mode .palette-status { display: none !important; }
+@keyframes palette-in {
+  from { transform: translateY(-6px); }
+  to { transform: translateY(0); }
+}
+@keyframes voice-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  var state = {
+    input: "",
+    actions: [],
+    selected: 0,
+    voiceStatus: "idle",
+    voiceHint: "",
+    showResults: false
+  };
+  var composing = false;
+  var fetchTimer = null;
+  var sizeTimer = null;
+  var scrollHideTimer = null;
+  var root = document.getElementById("root");
+  var searchIconSvg =
+    '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+    '<circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"></circle>' +
+    '<path d="M16.2 16.2L20 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>' +
+    "</svg>";
+
+  function post(o) {
+    try {
+      if (window.chrome && window.chrome.webview && typeof window.chrome.webview.postMessage === "function") {
+        window.chrome.webview.postMessage(JSON.stringify(o));
+      }
+    } catch (_) {}
+  }
+
+  function esc(t) {
+    return String(t || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function kindIcon(kind) {
+    if (kind === "history") return "🕘";
+    if (kind === "exec") return "↩";
+    return "⌘";
+  }
+
+  window.nmerVoice = window.nmerPalette = {
+    setInputText: function (text) {
+      state.input = String(text || "");
+      var input = document.getElementById("command-input");
+      if (input) {
+        input.value = state.input;
+        input.focus();
+        input.setSelectionRange(state.input.length, state.input.length);
+      }
+      state.selected = 0;
+      scheduleFetch();
+      syncWindowSize();
+    },
+    setStatus: function (text, status) {
+      state.voiceHint = String(text || "");
+      state.voiceStatus = String(status || "idle");
+      updateVoiceHint();
+      syncWindowSize();
+    }
+  };
+
+  function ensureShell() {
+    if (root.dataset.ready) return;
+    root.innerHTML =
+      '<main class="palette-root">' +
+      '<section class="palette-panel" id="palette-panel" aria-label="命令面板">' +
+      '<header class="palette-header">' +
+      '<span class="palette-search-icon">' + searchIconSvg + "</span>" +
+      '<input id="command-input" class="palette-search" type="text" lang="zh-CN" autocomplete="off" spellcheck="false" placeholder="搜索命令、历史或动作…" />' +
+      '<button type="button" id="voice-btn" class="palette-voice" title="语音输入" aria-label="语音输入">🎤</button>' +
+      "</header>" +
+      '<p id="voice-hint" class="palette-status"></p>' +
+      '<div id="results" class="palette-results"></div>' +
+      "</section></main>";
+    root.dataset.ready = "1";
+    bindUI();
+    post({ type: "palette_ready" });
+  }
+
+  function bindResultsScrollHide(box) {
+    if (!box || box.dataset.scrollBound) return;
+    box.dataset.scrollBound = "1";
+    box.addEventListener(
+      "scroll",
+      function () {
+        box.classList.add("is-scrolling");
+        clearTimeout(scrollHideTimer);
+        scrollHideTimer = setTimeout(function () {
+          box.classList.remove("is-scrolling");
+        }, 750);
+      },
+      { passive: true }
+    );
+  }
+
+  function updateVoiceHint() {
+    var el = document.getElementById("voice-hint");
+    if (!el) return;
+    var show = state.voiceStatus !== "idle";
+    el.className = "palette-status" + (show ? " show " + esc(state.voiceStatus) : "");
+    el.textContent = show ? state.voiceHint : "";
+    var btn = document.getElementById("voice-btn");
+    if (btn) {
+      var rec = state.voiceStatus === "listening" || state.voiceStatus === "recording";
+      btn.classList.toggle("recording", rec);
+    }
+    document.getElementById("palette-panel")?.classList.toggle("has-status", show);
+    syncWindowSize();
+  }
+
+  function updateResults() {
+    var box = document.getElementById("results");
+    var panel = document.getElementById("palette-panel");
+    if (!box || !panel) return;
+    var rows = state.actions || [];
+    state.showResults = rows.length > 0;
+    panel.classList.toggle("has-results", state.showResults);
+    box.className = "palette-results";
+    box.innerHTML = rows
+      .map(function (item, idx) {
+        var active = idx === state.selected ? " active" : "";
+        var matched = item.matched ? " matched" : "";
+        var kind = item.kind ? " kind-" + esc(item.kind) : "";
+        var binding = item.binding ? '<span class="result-binding">' + esc(item.binding) + "</span>" : "";
+        var icon = kindIcon(item.kind || "command");
+        return (
+          '<button class="result-item' + active + matched + kind + '" type="button" data-idx="' + idx + '">' +
+          '<span class="result-icon" aria-hidden="true">' + icon + "</span>" +
+          '<span class="result-body">' +
+          '<div class="result-row"><span class="result-title">' + esc(item.label || item.name || "") + "</span>" + binding + "</div>" +
+          '<span class="result-desc">' + esc(item.desc || "") + "</span></span></button>"
+        );
+      })
+      .join("");
+    bindResultsScrollHide(box);
+    box.querySelectorAll("[data-idx]").forEach(function (node) {
+      node.addEventListener("click", function (e) {
+        var idx = Number(e.currentTarget.getAttribute("data-idx"));
+        if (idx >= 0) {
+          state.selected = idx;
+          updateResults();
+          executeSelected();
+        }
+      });
+    });
+    var activeNode = box.querySelector(".result-item.active");
+    if (activeNode) activeNode.scrollIntoView({ block: "nearest" });
+    syncWindowSize();
+  }
+
+  function scheduleFetch() {
+    if (composing) return;
+    if (fetchTimer) clearTimeout(fetchTimer);
+    fetchTimer = setTimeout(function () {
+      post({ type: "palette_query", input: state.input });
+    }, 100);
+  }
+
+  function executeSelected() {
+    var item = state.actions[state.selected];
+    if (!item) return;
+    post({
+      type: "palette_execute",
+      cmdId: String(item.id || item.cmdId || ""),
+      query: state.input,
+      kind: String(item.kind || "command"),
+      label: String(item.label || item.name || "")
+    });
+  }
+
+  function measureContentHeight() {
+    var panel = document.getElementById("palette-panel");
+    var header = panel?.querySelector(".palette-header");
+    var status = document.getElementById("voice-hint");
+    var results = document.getElementById("results");
+    if (!panel || !header) return 72;
+    var h = header.offsetHeight || 64;
+    if (status && status.classList.contains("show")) {
+      h += status.offsetHeight || 24;
+    }
+    if (state.showResults && results) {
+      var rowH = 54;
+      var rows = Math.max(1, state.actions.length);
+      var listH = Math.min(320, rows * rowH + 14);
+      if (results.scrollHeight > 0) {
+        listH = Math.min(320, results.scrollHeight + 14);
+      }
+      h += listH;
+    }
+    return Math.min(520, Math.max(72, Math.ceil(h)));
+  }
+
+  function syncWindowSize() {
+    if (composing) return;
+    if (sizeTimer) clearTimeout(sizeTimer);
+    sizeTimer = setTimeout(function () {
+      var h = measureContentHeight();
+      post({ type: "palette_resize", height: h });
+      requestAnimationFrame(function () {
+        var h2 = measureContentHeight();
+        if (h2 !== h) post({ type: "palette_resize", height: h2 });
+      });
+    }, 50);
+  }
+
+  function bindUI() {
+    var input = document.getElementById("command-input");
+    var voiceBtn = document.getElementById("voice-btn");
+    var results = document.getElementById("results");
+    if (!input) return;
+    bindResultsScrollHide(results);
+    input.addEventListener("compositionstart", function () { composing = true; });
+    input.addEventListener("compositionend", function (e) {
+      composing = false;
+      state.input = e.target.value;
+      state.selected = 0;
+      scheduleFetch();
+    });
+    input.addEventListener("input", function (e) {
+      state.input = e.target.value;
+      state.selected = 0;
+      scheduleFetch();
+    });
+    input.addEventListener("keydown", function (e) {
+      if (composing) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (state.actions.length) {
+          state.selected = (state.selected + 1) % state.actions.length;
+          updateResults();
+        }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (state.actions.length) {
+          state.selected = (state.selected - 1 + state.actions.length) % state.actions.length;
+          updateResults();
+        }
+      } else if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        executeSelected();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        post({ type: "palette_hide" });
+      }
+    });
+    voiceBtn?.addEventListener("click", function () {
+      post({ type: "palette_voice_toggle" });
+    });
+    input.focus();
+  }
+
+  function onHostMessage(ev) {
+    var d = ev.data;
+    if (typeof d === "string") {
+      try { d = JSON.parse(d); } catch (_) { return; }
+    }
+    if (!d || !d.type) return;
+    if (d.type === "palette_results") {
+      state.actions = Array.isArray(d.items) ? d.items : [];
+      if (state.selected >= state.actions.length) state.selected = 0;
+      updateResults();
+    } else if (d.type === "palette_status") {
+      window.nmerPalette.setStatus(d.message || "", d.status || "idle");
+    } else if (d.type === "palette_set_input") {
+      window.nmerPalette.setInputText(d.text || "");
+    } else if (d.type === "palette_focus") {
+      document.getElementById("command-input")?.focus();
+    }
+  }
+
+  if (window.chrome && window.chrome.webview) {
+    window.chrome.webview.addEventListener("message", onHostMessage);
+  }
+
+  ensureShell();
+  scheduleFetch();
+  syncWindowSize();
+})();
+</script>
+</body>
+</html>

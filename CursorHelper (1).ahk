@@ -187,6 +187,7 @@ global MainScriptDir := A_ScriptDir
 #Include modules\CloudPlayer.ahk
 
 ; ===================== 包含悬浮工具栏模块 =====================
+global CommandPaletteUseWebView := true
 #Include modules\HoleWhisperStt.ahk
 #Include modules\WailsWhisperVoice.ahk
 #Include modules\WailsNativeInput.ahk
@@ -7101,6 +7102,7 @@ ExitFunc(ExitReason, ExitCode) {
 #Include modules\VirtualKeyboardExecCmd.ahk
 #Include modules\VirtualKeyboardCore.ahk
 #Include modules\VirtualKeyboardInterop.ahk
+#Include modules\CommandPaletteCore.ahk
 
 ; Cursor + CapsLock：动态右键菜单（须在 VirtualKeyboardCore 之后注册）
 #HotIf WinActive("ahk_exe Cursor.exe") && GetCapsLockState() && VK_ToolbarLayoutHasContextMenuItems()

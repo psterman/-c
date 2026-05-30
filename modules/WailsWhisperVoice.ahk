@@ -196,7 +196,9 @@ WailsWhisper_HasLocalModel() {
 }
 
 WailsWhisper_EnsureInputVisible() {
-    if FuncExists("ActivateWailsInputBox")
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_Show"))
+        SetTimer(() => CommandPalette_Show(), -50)
+    else if FuncExists("ActivateWailsInputBox")
         SetTimer(() => ActivateWailsInputBox(), -50)
     else if FuncExists("WailsInput_FocusWebInput")
         SetTimer(WailsInput_FocusWebInput, -80)
@@ -246,6 +248,10 @@ WailsWhisper_PublishStatus(text, status := "ready") {
 
 WailsWhisper_ShowStatus(text, status := "ready") {
     WailsWhisper_PublishStatus(text, status)
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_PushStatus")) {
+        if FuncExists("CommandPalette_IsVisible") && CommandPalette_IsVisible()
+            CommandPalette_PushStatus(text, status)
+    }
     WailsWhisper_EnsureInputVisible()
     t := WailsWhisper_JsonStr(text)
     st := WailsWhisper_JsonStr(status)
@@ -258,6 +264,8 @@ WailsWhisper_ShowStatus(text, status := "ready") {
 
 WailsWhisper_EnsureCmdWatcher() {
     global g_WailsWhisper_CmdWatchStarted
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView)
+        return
     if g_WailsWhisper_CmdWatchStarted
         return
     g_WailsWhisper_CmdWatchStarted := true
@@ -290,6 +298,12 @@ WailsWhisper_PollVoiceCmd(*) {
 }
 
 WailsWhisper_RunJsInInputHost(js) {
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_ExecScript")) {
+        if FuncExists("CommandPalette_IsVisible") && CommandPalette_IsVisible() {
+            if CommandPalette_ExecScript(js)
+                return true
+        }
+    }
     global WailsInputWindowTitle, WailsInputWindowExe, WailsInputTitleKeywords
     queries := []
     if (Trim(WailsInputWindowTitle) != "")
@@ -320,6 +334,11 @@ WailsWhisper_RunJsInInputHost(js) {
 }
 
 WailsWhisper_GetActiveInputHwnd() {
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_GetGuiHwnd")) {
+        h := CommandPalette_GetGuiHwnd()
+        if h
+            return h
+    }
     global WailsInputWindowTitle, WailsInputWindowExe, WailsInputTitleKeywords
     fg := WinGetID("A")
     if !fg
@@ -362,6 +381,12 @@ WailsWhisper_FillInputText(text) {
     t := Trim(String(text))
     if (t = "")
         return false
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_SetInputText")) {
+        if FuncExists("CommandPalette_Show")
+            CommandPalette_Show()
+        CommandPalette_SetInputText(t)
+        return true
+    }
     js := "window.nmerVoice?.setInputText?.(" . WailsWhisper_JsonStr(t) . ")"
     if WailsWhisper_RunJsInInputHost(js)
         return true
@@ -566,7 +591,9 @@ WailsWhisper_OnInputActivated() {
         SetTimer(WailsWhisper_StopAndTranscribe, -30)
         return
     }
-    if FuncExists("WailsInput_FocusWebInput")
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_DeferredFocus"))
+        SetTimer(CommandPalette_DeferredFocus, -120)
+    else if FuncExists("WailsInput_FocusWebInput")
         SetTimer(WailsInput_FocusWebInput, -120)
 }
 
@@ -578,4 +605,5 @@ WailsWhisper_TryStopOnCapsRelease() {
     return true
 }
 
-WailsWhisper_EnsureCmdWatcher()
+if !(IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView)
+    WailsWhisper_EnsureCmdWatcher()

@@ -3326,6 +3326,13 @@ VK_SearchCenterResolveCapsChordCmd(physKey) {
 ; 嵌入 CursorHelper：若当前物理键在 g_Bindings 中有命令则执行并返回 true（截断宿主默认）
 VirtualKeyboard_HandleKey(physKey) {
     global g_VK_Embedded
+    if FuncExists("CommandPalette_IsVisible") {
+        try {
+            if CommandPalette_IsVisible()
+                return false
+        } catch {
+        }
+    }
     if !IsSet(g_VK_Embedded)
         g_VK_Embedded := false
     if !g_VK_Embedded || physKey = ""

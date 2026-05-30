@@ -8,6 +8,11 @@ global g_WailsNative_Edit := 0
 global g_WailsNative_SyncTimer := 0
 
 WailsNative_GetWailsHwnd() {
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_GetGuiHwnd")) {
+        h := CommandPalette_GetGuiHwnd()
+        if h
+            return h
+    }
     for q in ["ahk_exe nmer-wails-input.exe", "NMER Wails Input"] {
         if WinExist(q)
             return WinExist(q)
@@ -27,6 +32,10 @@ WailsNative_SyncToWeb(*) {
     if !IsObject(g_WailsNative_Edit)
         return
     text := g_WailsNative_Edit.Value
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_SetInputText")) {
+        CommandPalette_SetInputText(text)
+        return
+    }
     if !FuncExists("WailsWhisper_JsonStr")
         return
     js := "window.nmerVoice?.setInputText?.(" . WailsWhisper_JsonStr(text) . ")"
@@ -121,6 +130,11 @@ WailsNative_VoiceClick(*) {
 }
 
 WailsNative_OnWailsActivated() {
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_Show")) {
+        if WailsInputUseNativeEdit
+            SetTimer(WailsNative_ShowInputBar, -120)
+        return
+    }
     if WailsInputUseNativeEdit {
         SetTimer(WailsNative_ShowInputBar, -120)
         return
