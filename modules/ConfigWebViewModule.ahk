@@ -1693,6 +1693,24 @@ ConfigWebView_SaveAppearanceActivationMode(mode, &errorMsg := "") {
     }
 }
 
+ConfigWebView_SaveThemeMode(mode, &errorMsg := "") {
+    global ThemeMode, ConfigFile
+    try {
+        newMode := NormalizeIniThemeMode(mode, NormalizeIniThemeMode(IsSet(ThemeMode) ? ThemeMode : "dark", "dark"))
+        ThemeMode := newMode
+        IniWrite(newMode, ConfigFile, "Settings", "ThemeMode")
+        IniWrite(newMode, ConfigFile, "Appearance", "ThemeMode")
+        ApplyTheme(newMode)
+        try SetTimer(ConfigWebView_RefocusAfterThemeChange, -60)
+        catch {
+        }
+        return true
+    } catch as err {
+        errorMsg := err.Message
+        return false
+    }
+}
+
 ConfigWebView_SaveSettingsSingleFlight(payload) {
     global g_ConfigSaveInFlight, g_ConfigSaveQueuedPayload, g_ConfigSaveFlushTimerArmed, g_ConfigSaveLastTick
     nowTick := A_TickCount
@@ -2136,6 +2154,14 @@ ConfigWebView_OnMessage(sender, args) {
             err := ""
             ok := ConfigWebView_SaveAppearanceActivationMode(mode, &err)
             ConfigWebView_Send(Map("type", "saveAppearanceActivationModeResult", "ok", ok, "error", err, "mode", NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")))
+        case "saveThemeMode":
+            tm := msg.Has("themeMode") ? msg["themeMode"] : (msg.Has("ThemeMode") ? msg["ThemeMode"] : "")
+            err := ""
+            ok := ConfigWebView_SaveThemeMode(tm, &err)
+            saved := ""
+            if ok
+                saved := NormalizeIniThemeMode(IsSet(ThemeMode) ? ThemeMode : "dark", "dark")
+            ConfigWebView_Send(Map("type", "saveThemeModeResult", "ok", ok, "error", err, "themeMode", saved))
         case "saveHoleSettings":
             payload := msg.Get("payload", Map())
             if (payload is String && payload != "") {

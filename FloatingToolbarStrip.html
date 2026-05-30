@@ -242,15 +242,15 @@ body[data-theme="light"].ftb-compact #collapsedRoot .logo-btn:focus-visible{
   background:#FFF3E8!important;
   border-color:#D8D8D8!important;
 }
-/* Final override: compact mode must look like a pure black-hole, independent from light/dark theme blocks above. */
-html.ftb-compact body #collapsedRoot{
+/* 折叠态默认保留黑洞视觉；浅色主题时改用上方 light.ftb-compact 样式，不再强制深色 */
+html.ftb-compact body:not([data-theme="light"]) #collapsedRoot{
   background:radial-gradient(circle at 40% 34%,rgba(54,88,138,.82) 0%,rgba(11,21,36,.98) 44%,#02050b 72%,#000 100%)!important;
   border:1px solid rgba(88,150,246,.68)!important;
   border-radius:999px!important;
   box-shadow:0 0 0 1px rgba(88,150,246,.28),0 10px 24px rgba(0,0,0,.54),inset 0 0 30px rgba(31,61,98,.56)!important;
   overflow:visible!important;
 }
-html.ftb-compact body #collapsedRoot::before{
+html.ftb-compact body:not([data-theme="light"]) #collapsedRoot::before{
   content:"";
   position:absolute;
   inset:-7px;
@@ -261,14 +261,14 @@ html.ftb-compact body #collapsedRoot::before{
   opacity:.86;
   animation:ftbHoleAura 3.4s linear infinite;
 }
-html.ftb-compact body #collapsedRoot::after{
+html.ftb-compact body:not([data-theme="light"]) #collapsedRoot::after{
   opacity:1!important;
   inset:2px!important;
   border-radius:999px!important;
   box-shadow:inset 0 0 0 1px rgba(140,188,255,.22)!important;
   animation:none!important;
 }
-html.ftb-compact body #collapsedRoot .logo-btn{
+html.ftb-compact body:not([data-theme="light"]) #collapsedRoot .logo-btn{
   width:100%!important;
   height:100%!important;
   padding:0!important;
@@ -278,8 +278,8 @@ html.ftb-compact body #collapsedRoot .logo-btn{
   box-shadow:none!important;
   cursor:grab!important;
 }
-html.ftb-compact body #collapsedRoot .logo-btn:active{cursor:grabbing!important}
-html.ftb-compact body #collapsedRoot .logo-btn .logo-img{
+html.ftb-compact body:not([data-theme="light"]) #collapsedRoot .logo-btn:active{cursor:grabbing!important}
+html.ftb-compact body:not([data-theme="light"]) #collapsedRoot .logo-btn .logo-img{
   width:calc(20px * var(--ui))!important;
   height:calc(20px * var(--ui))!important;
   min-width:0!important;

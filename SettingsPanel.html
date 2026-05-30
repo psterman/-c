@@ -4268,6 +4268,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         state.data.themeMode = t.value;
         applyWebTheme(t.value);
         try { localStorage.setItem("settings_themeMode", t.value); } catch (_) {}
+        post({ type: "saveThemeMode", themeMode: t.value });
       }
       if (t.id === "defaultStartTab") {
         state.data.defaultStartTab = t.value;
@@ -4506,6 +4507,15 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       }
       if (msg.type === "saveAppearanceActivationModeResult") {
         setStatus(msg.ok ? ("激活方式已生效：" + (ACTIVATION_MODE_OPTIONS.find(o => o.value === msg.mode)?.label || msg.mode || "悬浮栏")) : (msg.error || "激活方式切换失败"), msg.ok ? "ok" : "err");
+        return;
+      }
+      if (msg.type === "saveThemeModeResult") {
+        if (msg.ok && msg.themeMode) {
+          state.data.themeMode = msg.themeMode;
+          applyWebTheme(msg.themeMode);
+          try { localStorage.setItem("settings_themeMode", msg.themeMode); } catch (_) {}
+        }
+        setStatus(msg.ok ? (msg.themeMode === "light" ? "已切换为浅色主题" : "已切换为深色主题") : (msg.error || "主题保存失败"), msg.ok ? "ok" : "err");
         return;
       }
       if (msg.type === "saveKeybinderToolbarLayoutResult") {
