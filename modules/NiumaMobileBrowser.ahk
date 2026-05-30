@@ -38,6 +38,16 @@ global g_NiumaMobile_ChromePeekLogical := 10
 global g_NiumaMobile_ChromeBottomHeightLogical := 88
 global g_NiumaMobile_ChromeExpanded := false
 global g_NiumaMobile_ChromePinCount := 0
+global g_NiumaMobile_ZoneContent := false
+global g_NiumaMobile_ZoneChromeTop := false
+global g_NiumaMobile_ZoneChromeBottom := false
+global g_NiumaMobile_ZoneDocScriptRegistered := false
+global g_NiumaMobile_ChromeCollapseAnimating := false
+global g_NiumaMobile_TokenCtxMenu := 0
+global g_NiumaMobile_ChromeTokenCtxMenu := 0
+global g_NiumaMobile_ChromeBottomTokenCtxMenu := 0
+global g_NiumaMobile_CtxTarget := Map()
+global g_NiumaMobile_CtxDocScriptRegistered := false
 global g_NiumaMobile_Open := false
 global g_NiumaMobile_PendingOpen := false
 global g_NiumaMobile_OpenInProgress := false
@@ -631,10 +641,31 @@ NiumaMobileBrowser_OnChromeWebMessageRawFallback(raw) {
         NiumaMobileBrowser_PushChromeState(true)
         return
     }
+    if InStr(r, "niuma_browser_mobile_zone_enter") {
+        zone := "content"
+        if RegExMatch(r, '"zone"\s*:\s*"([^"]+)"', &zm)
+            zone := zm[1]
+        NiumaMobileBrowser_OnMobileZoneEnter(zone)
+        return
+    }
+    if InStr(r, "niuma_browser_mobile_zone_leave") {
+        zone := "content"
+        if RegExMatch(r, '"zone"\s*:\s*"([^"]+)"', &zm2)
+            zone := zm2[1]
+        NiumaMobileBrowser_OnMobileZoneLeave(zone)
+        return
+    }
+    if InStr(r, "niuma_browser_context_menu") {
+        try {
+            msg := Jxon_Load(r)
+            if (msg is Map)
+                NiumaMobileBrowser_HandleContextMenuWebMessage(msg)
+        } catch {
+        }
+        return
+    }
     if InStr(r, "niuma_browser_chrome_hover") {
-        global g_NiumaMobile_ChromeExpanded
-        if NiumaMobileBrowser_IsMouseInMobileArea() && !g_NiumaMobile_ChromeExpanded
-            NiumaMobileBrowser_SetChromeExpanded(true)
+        NiumaMobileBrowser_OnMobileZoneEnter("content")
         return
     }
     if InStr(r, "niuma_browser_chrome_pin") {
@@ -738,14 +769,20 @@ NiumaMobileBrowser_OnControllerReady(ctrl) {
             s.AreDefaultContextMenusEnabled := false
             s.AreDevToolsEnabled := false
             s.IsStatusBarEnabled := false
+            s.IsWebMessageEnabled := true
+            s.AreHostObjectsAllowed := true
         }
     } catch {
+    }
+    try NiumaMobileBrowser_TryCallFunc("WebView2_RegisterHostBridge", g_NiumaMobile_WV2)
+    catch {
     }
     NiumaMobileBrowser_PushChromeState()
     if NiumaMobileBrowser_EnsureLabelScripts()
         SetTimer(NiumaMobileBrowser_InjectSettleOnDocumentCreated, -1)
     else
         NiumaMobileBrowser_Log("GUARD", "", "打开时脚本未就绪，Settle 将延后注入")
+    NiumaMobileBrowser_RegisterMobileZoneDocumentScript()
 
     try g_NiumaMobile_TokenNav := g_NiumaMobile_WV2.add_NavigationCompleted(NiumaMobileBrowser_OnNavigationCompleted)
     catch {
@@ -763,6 +800,13 @@ NiumaMobileBrowser_OnControllerReady(ctrl) {
     catch {
         g_NiumaMobile_TokenMsg := 0
     }
+    try g_NiumaMobile_TokenCtxMenu := g_NiumaMobile_WV2.add_ContextMenuRequested(NiumaMobileBrowser_OnContextMenuRequested)
+    catch {
+        g_NiumaMobile_TokenCtxMenu := 0
+    }
+    if !g_NiumaMobile_TokenCtxMenu
+        NiumaMobileBrowser_Log("CTX", "", "ContextMenuRequested 未注册，依赖 JS contextmenu 回退")
+    NiumaMobileBrowser_RegisterContextMenuDocumentScript()
 
     NiumaMobileBrowser_SetPendingOpen(false)
     url := g_NiumaMobile_PendingUrl
@@ -778,7 +822,7 @@ NiumaMobileBrowser_OnControllerReady(ctrl) {
     NiumaMobileBrowser_TryCallFunc("FloatingToolbar_RefreshMobileLayout")
     NiumaMobileBrowser_SetChromeExpanded(false, true)
     NiumaMobileBrowser_StartChromeHoverWatch()
-    SetTimer(NiumaMobileBrowser_InjectChromeHoverHook, -900)
+    SetTimer(NiumaMobileBrowser_InjectMobileZoneTracker, -900)
     hwnd := g_NiumaMobile_ParentHwnd
     SetTimer(NiumaMobileBrowser_DeferredLayout.Bind(hwnd), -80)
     SetTimer(NiumaMobileBrowser_DeferredLayout.Bind(hwnd), -280)
@@ -797,7 +841,7 @@ NiumaMobileBrowser_DeferredLayout(hwnd, *) {
     catch {
     }
     if !NiumaMobileBrowser_IsMouseInMobileArea()
-        NiumaMobileBrowser_SetChromeExpanded(false, true)
+        NiumaMobileBrowser_RequestChromeCollapseAnimated()
 }
 
 NiumaMobileBrowser_OnNavigationStarting(sender, args) {
@@ -837,6 +881,9 @@ NiumaMobileBrowser_OnNavigationCompleted(sender, args) {
     try g_NiumaMobile_WV2.ExecuteScriptAsync(NIUMA_MOBILE_INJECT_JS)
     catch {
     }
+    try g_NiumaMobile_WV2.ExecuteScriptAsync(NiumaMobileBrowser_BuildContextMenuScript())
+    catch {
+    }
     if (JS_MOBILE_REACT_INPUT != "") {
         if NiumaMobileBrowser_EnsureLabelScripts()
             NiumaMobileBrowser_EnsureReactInputInjected()
@@ -871,19 +918,157 @@ NiumaMobileBrowser_OnNavigationCompleted(sender, args) {
             NiumaMobileBrowser_EnsureLabelDebugOnPage(false)
         }
     }
-    try NiumaMobileBrowser_InjectChromeHoverHook()
+    try NiumaMobileBrowser_InjectMobileZoneTracker()
+    catch {
+    }
+    try NiumaMobileBrowser_InjectContextMenuScript()
     catch {
     }
 }
 
-NiumaMobileBrowser_InjectChromeHoverHook() {
+NiumaMobileBrowser_BuildMobileZoneTrackerScript(zone := "content") {
+    z := NiumaMobileBrowser_EscapeJsSingle(String(zone))
+    return "(function(){var z='" . z . "';if(window.__NIUMA_ZONE__&&window.__NIUMA_ZONE__===z)return;window.__NIUMA_ZONE__=z;"
+        . "function post(t){try{if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(JSON.stringify({type:t,zone:z}));}catch(e){}}"
+        . "function onEnter(){post('niuma_browser_mobile_zone_enter');}"
+        . "function onLeave(e){var rt=e&&e.relatedTarget;if(rt&&document.documentElement.contains(rt))return;post('niuma_browser_mobile_zone_leave');}"
+        . "document.documentElement.addEventListener('pointerenter',onEnter,{passive:true});"
+        . "document.documentElement.addEventListener('pointerleave',onLeave,{passive:true});"
+        . "document.addEventListener('pointerout',function(e){if(!e.relatedTarget||!document.documentElement.contains(e.relatedTarget))onLeave(e);},true);"
+        . "})();"
+}
+
+NiumaMobileBrowser_RegisterMobileZoneDocumentScript() {
+    global g_NiumaMobile_WV2, g_NiumaMobile_ZoneDocScriptRegistered
+    if g_NiumaMobile_ZoneDocScriptRegistered || !IsObject(g_NiumaMobile_WV2)
+        return
+    try {
+        g_NiumaMobile_WV2.AddScriptToExecuteOnDocumentCreatedAsync(NiumaMobileBrowser_BuildMobileZoneTrackerScript("content"))
+        g_NiumaMobile_ZoneDocScriptRegistered := true
+    } catch {
+    }
+}
+
+NiumaMobileBrowser_InjectMobileZoneTracker() {
     global g_NiumaMobile_WV2
     if !g_NiumaMobile_WV2
         return
-    script := "(function(){if(window.__NIUMA_CHROME_HOVER_HOOK__)return;window.__NIUMA_CHROME_HOVER_HOOK__=1;var t=0,f=function(){var n=Date.now();if(n-t<160)return;t=n;try{if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(JSON.stringify({type:'niuma_browser_chrome_hover'}));}catch(e){}};document.documentElement.addEventListener('pointerenter',f,{passive:true});})();"
-    try g_NiumaMobile_WV2.ExecuteScriptAsync(script)
+    try g_NiumaMobile_WV2.ExecuteScriptAsync(NiumaMobileBrowser_BuildMobileZoneTrackerScript("content"))
     catch {
     }
+    try g_NiumaMobile_WV2.ExecuteScriptAsync(NiumaMobileBrowser_BuildContextMenuScript())
+    catch {
+    }
+}
+
+NiumaMobileBrowser_BuildContextMenuScript() {
+    return "(function(){if(window.__NIUMA_CTX_MENU_V__>=2)return;window.__NIUMA_CTX_MENU_V__=2;window.__NIUMA_CTX_MENU__=1;"
+        . "function post(o){try{if(window.ahk&&typeof window.ahk.MobileBrowserContextMenu==='function'){window.ahk.MobileBrowserContextMenu(JSON.stringify(o));return;}}catch(e1){}"
+        . "try{if(window.chrome&&window.chrome.webview&&typeof window.chrome.webview.postMessage==='function')window.chrome.webview.postMessage(JSON.stringify(o));}catch(e2){}}"
+        . "function selText(){try{var s=window.getSelection?String(window.getSelection()):'';return s?s.trim():'';}catch(e){return '';}}"
+        . "function markFocus(el){if(!el||el===document.body)return '';try{var id=el.getAttribute('data-niuma-ctx-focus');"
+        . "if(!id){id='nf'+Date.now()+'_'+Math.random().toString(36).slice(2,8);el.setAttribute('data-niuma-ctx-focus',id);}return id;}catch(e){return '';}}"
+        . "function pickMedia(el){if(!el)return null;var t=String(el.tagName||'').toUpperCase();"
+        . "if(t==='IMG')return{kind:'image',uri:el.currentSrc||el.src||'',alt:el.alt||''};"
+        . "if(t==='VIDEO')return{kind:'video',uri:el.currentSrc||el.src||''};"
+        . "if(t==='AUDIO')return{kind:'audio',uri:el.currentSrc||el.src||''};"
+        . "if(t==='SOURCE'&&el.src){var p=el.parentElement;var pt=p?String(p.tagName||'').toUpperCase():'';"
+        . "if(pt==='VIDEO')return{kind:'video',uri:el.src||''};if(pt==='AUDIO')return{kind:'audio',uri:el.src||''};}"
+        . "return null;}"
+        . "document.addEventListener('contextmenu',function(e){try{"
+        . "var t=e.target;var info={type:'niuma_browser_context_menu',screenX:e.screenX,screenY:e.screenY,"
+        . "pageUri:location.href||'',kind:'page',hasLink:false,linkUri:'',linkText:'',hasMedia:false,mediaUri:'',mediaAlt:'',"
+        . "hasSelection:false,selection:'',isEditable:false,focusId:''};"
+        . "var st=selText();if(st){info.hasSelection=true;info.selection=st;}"
+        . "if(t&&(t.isContentEditable||t.tagName==='INPUT'||t.tagName==='TEXTAREA')){info.isEditable=true;info.focusId=markFocus(t);}"
+        . "var ae=document.activeElement;if(ae&&ae!==document.body&&(ae.isContentEditable||ae.tagName==='INPUT'||ae.tagName==='TEXTAREA')){info.isEditable=true;if(!info.focusId)info.focusId=markFocus(ae);}"
+        . "var el=t,lnk=null,med=null;while(el&&el!==document.documentElement){"
+        . "if(!med){var m=pickMedia(el);if(m)med=m;}"
+        . "if(!lnk&&el.tagName==='A'&&el.href)lnk=el;"
+        . "el=el.parentElement;}"
+        . "if(med){info.kind=med.kind;info.hasMedia=true;info.mediaUri=med.uri||'';info.mediaAlt=med.alt||'';}"
+        . "else if(lnk){info.kind='link';info.hasLink=true;info.linkUri=lnk.href||'';info.linkText=(lnk.innerText||lnk.textContent||'').trim();}"
+        . "e.preventDefault();e.stopPropagation();post(info);}catch(err){}},true);})();"
+}
+
+NiumaMobileBrowser_RegisterContextMenuDocumentScript() {
+    global g_NiumaMobile_WV2, g_NiumaMobile_CtxDocScriptRegistered
+    if g_NiumaMobile_CtxDocScriptRegistered || !IsObject(g_NiumaMobile_WV2)
+        return
+    try {
+        g_NiumaMobile_WV2.AddScriptToExecuteOnDocumentCreatedAsync(NiumaMobileBrowser_BuildContextMenuScript())
+        g_NiumaMobile_CtxDocScriptRegistered := true
+    } catch {
+    }
+}
+
+NiumaMobileBrowser_InjectContextMenuScript() {
+    global g_NiumaMobile_WV2
+    if !g_NiumaMobile_WV2
+        return
+    try g_NiumaMobile_WV2.ExecuteScriptAsync(NiumaMobileBrowser_BuildContextMenuScript())
+    catch {
+    }
+}
+
+NiumaMobileBrowser_ResetMobileZones() {
+    global g_NiumaMobile_ZoneContent, g_NiumaMobile_ZoneChromeTop, g_NiumaMobile_ZoneChromeBottom
+    g_NiumaMobile_ZoneContent := false
+    g_NiumaMobile_ZoneChromeTop := false
+    g_NiumaMobile_ZoneChromeBottom := false
+}
+
+NiumaMobileBrowser_IsMobileZoneActive() {
+    global g_NiumaMobile_ZoneContent, g_NiumaMobile_ZoneChromeTop, g_NiumaMobile_ZoneChromeBottom
+    return g_NiumaMobile_ZoneContent || g_NiumaMobile_ZoneChromeTop || g_NiumaMobile_ZoneChromeBottom
+}
+
+NiumaMobileBrowser_OnMobileZoneEnter(zone := "") {
+    global g_NiumaMobile_ZoneContent, g_NiumaMobile_ZoneChromeTop, g_NiumaMobile_ZoneChromeBottom
+        , g_NiumaMobile_ChromeCollapseAnimating
+    z := StrLower(Trim(String(zone)))
+    if (z = "content")
+        g_NiumaMobile_ZoneContent := true
+    else if (z = "top")
+        g_NiumaMobile_ZoneChromeTop := true
+    else if (z = "bottom")
+        g_NiumaMobile_ZoneChromeBottom := true
+    g_NiumaMobile_ChromeCollapseAnimating := false
+    SetTimer(NiumaMobileBrowser_ChromeCollapseAnimFallback, 0)
+    SetTimer(NiumaMobileBrowser_ChromeCollapseDeferred, 0)
+    NiumaMobileBrowser_SetChromeExpanded(true)
+}
+
+NiumaMobileBrowser_OnMobileZoneLeave(zone := "") {
+    global g_NiumaMobile_ZoneContent, g_NiumaMobile_ZoneChromeTop, g_NiumaMobile_ZoneChromeBottom
+        , g_NiumaMobile_ChromePinCount
+    z := StrLower(Trim(String(zone)))
+    if (z = "content")
+        g_NiumaMobile_ZoneContent := false
+    else if (z = "top")
+        g_NiumaMobile_ZoneChromeTop := false
+    else if (z = "bottom")
+        g_NiumaMobile_ZoneChromeBottom := false
+    if !NiumaMobileBrowser_IsMouseInMobileArea() {
+        g_NiumaMobile_ChromePinCount := 0
+        SetTimer(NiumaMobileBrowser_ChromeCollapseDeferred, -60)
+    }
+}
+
+NiumaMobileBrowser_HandleMobileZoneMessage(msg) {
+    if !(msg is Map) || !msg.Has("type")
+        return false
+    typ := String(msg["type"])
+    zone := msg.Has("zone") ? String(msg["zone"]) : ""
+    if (typ = "niuma_browser_mobile_zone_enter") {
+        NiumaMobileBrowser_OnMobileZoneEnter(zone)
+        return true
+    }
+    if (typ = "niuma_browser_mobile_zone_leave") {
+        NiumaMobileBrowser_OnMobileZoneLeave(zone)
+        return true
+    }
+    return false
 }
 
 NiumaMobileBrowser_EnsureTraceOverlayInjected() {
@@ -1087,8 +1272,15 @@ NiumaMobileBrowser_ApplyBounds(parentHwnd := 0) {
     if (mobileW > cw)
         mobileW := cw
     expanded := !!g_NiumaMobile_ChromeExpanded
-    topH := expanded ? NiumaMobileBrowser_ChromeToolbarHeightPx() : 0
-    bottomH := expanded ? NiumaMobileBrowser_ChromeBottomHeightPx() : 0
+    topH := 0
+    bottomH := 0
+    ; 仅在实际 chrome WebView 就绪且展开时才预留条带；否则空宿主会露出 #0d1016 黑边
+    if expanded {
+        if IsObject(g_NiumaMobile_ChromeWV2)
+            topH := NiumaMobileBrowser_ChromeToolbarHeightPx()
+        if IsObject(g_NiumaMobile_ChromeBottomWV2)
+            bottomH := NiumaMobileBrowser_ChromeBottomHeightPx()
+    }
     chromeTopReady := IsObject(g_NiumaMobile_ChromeCtrl) ? 1 : 0
     chromeBotReady := IsObject(g_NiumaMobile_ChromeBottomCtrl) ? 1 : 0
     boundsKey := hwnd . "|" . cw . "|" . ch . "|" . mobileW . "|" . topH . "|" . bottomH . "|" . (expanded ? 1 : 0)
@@ -1097,8 +1289,8 @@ NiumaMobileBrowser_ApplyBounds(parentHwnd := 0) {
         return
     g_NiumaMobile_LastBoundsKey := boundsKey
     left := Max(0, cw - mobileW)
-    contentTop := expanded ? topH : 0
-    contentH := Max(1, ch - contentTop - bottomH)
+    contentTop := topH
+    contentH := Max(1, ch - topH - bottomH)
     hostHwnd := NiumaMobileBrowser_EnsureChromeHostGui(hwnd)
     if hostHwnd {
         if (topH > 0)
@@ -1210,11 +1402,17 @@ NiumaMobileBrowser_SetChromeSheetOpen(open) {
 }
 
 NiumaMobileBrowser_SetChromeExpanded(expanded, force := false) {
-    global g_NiumaMobile_ChromeExpanded, g_NiumaMobile_ParentHwnd
+    global g_NiumaMobile_ChromeExpanded, g_NiumaMobile_ParentHwnd, g_NiumaMobile_ChromeCollapseAnimating
     next := !!expanded
     if !force && (next = g_NiumaMobile_ChromeExpanded)
         return
     g_NiumaMobile_ChromeExpanded := next
+    if next {
+        g_NiumaMobile_ChromeCollapseAnimating := false
+        SetTimer(NiumaMobileBrowser_ChromeCollapseAnimFallback, 0)
+    } else {
+        NiumaMobileBrowser_ResetMobileZones()
+    }
     NiumaMobileBrowser_ResetChromeLayoutCache()
     try NiumaMobileBrowser_ApplyBounds(g_NiumaMobile_ParentHwnd)
     catch {
@@ -1239,33 +1437,134 @@ NiumaMobileBrowser_GetThemeMode() {
     return (String(tm) = "light") ? "light" : "dark"
 }
 
-NiumaMobileBrowser_IsPointInHwndRect(mx, my, hwnd) {
+NiumaMobileBrowser_IsPointInHostClientRect(mx, my, hwnd) {
     if !hwnd
         return false
     if !DllCall("IsWindowVisible", "Ptr", hwnd)
         return false
-    rect := Buffer(16, 0)
-    if !DllCall("GetWindowRect", "Ptr", hwnd, "Ptr", rect)
+    cr := Buffer(16, 0)
+    if !DllCall("GetClientRect", "Ptr", hwnd, "Ptr", cr)
         return false
-    left := NumGet(rect, 0, "Int")
-    top := NumGet(rect, 4, "Int")
-    right := NumGet(rect, 8, "Int")
-    bottom := NumGet(rect, 12, "Int")
-    if (right <= left || bottom <= top)
+    cw := NumGet(cr, 8, "Int")
+    ch := NumGet(cr, 12, "Int")
+    if (cw < 1 || ch < 1)
         return false
-    return (mx >= left && mx < right && my >= top && my < bottom)
+    pt := Buffer(8, 0)
+    NumPut("Int", 0, pt, 0)
+    NumPut("Int", 0, pt, 4)
+    if !DllCall("ClientToScreen", "Ptr", hwnd, "Ptr", pt)
+        return false
+    sx := NumGet(pt, 0, "Int")
+    sy := NumGet(pt, 4, "Int")
+    return (mx >= sx && mx < sx + cw && my >= sy && my < sy + ch)
+}
+
+NiumaMobileBrowser_IsPointInFtbWebView(mx, my) {
+    global g_FTB_WV2_Ctrl
+    if !IsObject(g_FTB_WV2_Ctrl)
+        return false
+    ftbHwnd := 0
+    try ftbHwnd := g_FTB_WV2_Ctrl.Hwnd
+    catch {
+        return false
+    }
+    return NiumaMobileBrowser_IsPointInHostClientRect(mx, my, ftbHwnd)
 }
 
 NiumaMobileBrowser_IsMouseInMobileArea() {
-    global g_NiumaMobile_ContentHostHwnd, g_NiumaMobile_ChromeHostHwnd, g_NiumaMobile_ChromeBottomHostHwnd
-    if !NiumaMobileBrowser_IsOpen()
+    global g_NiumaMobile_ParentHwnd
+    if !NiumaMobileBrowser_IsOpen() || !g_NiumaMobile_ParentHwnd
         return false
     MouseGetPos(&mx, &my)
-    for hwnd in [g_NiumaMobile_ContentHostHwnd, g_NiumaMobile_ChromeHostHwnd, g_NiumaMobile_ChromeBottomHostHwnd] {
-        if NiumaMobileBrowser_IsPointInHwndRect(mx, my, hwnd)
-            return true
+    if NiumaMobileBrowser_IsPointInFtbWebView(mx, my)
+        return false
+    if !NiumaMobileBrowser_GetMobileClientRect(&left, &top, &w, &h)
+        return false
+    pt := Buffer(8, 0)
+    NumPut("Int", mx, pt, 0)
+    NumPut("Int", my, pt, 4)
+    if !DllCall("ScreenToClient", "Ptr", g_NiumaMobile_ParentHwnd, "Ptr", pt)
+        return false
+    cx := NumGet(pt, 0, "Int")
+    cy := NumGet(pt, 4, "Int")
+    try WinGetClientPos(, , &cw, &ch, g_NiumaMobile_ParentHwnd)
+    catch {
+        return false
     }
-    return false
+    if (cx < 0 || cy < 0 || cx >= cw || cy >= ch)
+        return false
+    return (cx >= left && cx < left + w && cy >= top && cy < top + h)
+}
+
+NiumaMobileBrowser_PushChromeMenuState(expanded) {
+    global g_NiumaMobile_ChromeWV2, g_NiumaMobile_ChromeBottomWV2
+    payload := Map("type", "host_mobile_browser_chrome_state", "expanded", !!expanded)
+    try {
+        json := Jxon_Dump(payload)
+        if (json = "")
+            return
+        for wv2 in [g_NiumaMobile_ChromeWV2, g_NiumaMobile_ChromeBottomWV2] {
+            if !IsObject(wv2)
+                continue
+            try wv2.PostWebMessageAsJson(json)
+            catch {
+            }
+        }
+    } catch {
+    }
+}
+
+NiumaMobileBrowser_InvokeChromeHideScript() {
+    global g_NiumaMobile_ChromeWV2, g_NiumaMobile_ChromeBottomWV2
+    js := "(function(){try{if(window.__niumaChromeHideMenu)window.__niumaChromeHideMenu();}catch(e){}})();"
+    for wv2 in [g_NiumaMobile_ChromeWV2, g_NiumaMobile_ChromeBottomWV2] {
+        if !IsObject(wv2)
+            continue
+        try wv2.ExecuteScriptAsync(js)
+        catch {
+        }
+    }
+}
+
+NiumaMobileBrowser_TriggerChromeHideAnimation() {
+    global g_NiumaMobile_ChromePinCount
+    if !NiumaMobileBrowser_IsMouseInMobileArea()
+        g_NiumaMobile_ChromePinCount := 0
+    NiumaMobileBrowser_RaiseChromeHosts()
+    NiumaMobileBrowser_PushChromeMenuState(false)
+    NiumaMobileBrowser_InvokeChromeHideScript()
+}
+
+NiumaMobileBrowser_RequestChromeCollapseAnimated() {
+    global g_NiumaMobile_ChromeExpanded, g_NiumaMobile_ChromeCollapseAnimating, g_NiumaMobile_ChromePinCount
+    if !g_NiumaMobile_ChromeExpanded
+        return
+    if !NiumaMobileBrowser_IsMouseInMobileArea()
+        g_NiumaMobile_ChromePinCount := 0
+    if g_NiumaMobile_ChromeCollapseAnimating
+        return
+    g_NiumaMobile_ChromeCollapseAnimating := true
+    NiumaMobileBrowser_TriggerChromeHideAnimation()
+    SetTimer(NiumaMobileBrowser_ChromeCollapseAnimFallback, -480)
+}
+
+NiumaMobileBrowser_ChromeCollapseAnimFallback(*) {
+    global g_NiumaMobile_ChromeCollapseAnimating
+    g_NiumaMobile_ChromeCollapseAnimating := false
+    if NiumaMobileBrowser_IsMouseInMobileArea()
+        return
+    NiumaMobileBrowser_SetChromeExpanded(false, true)
+}
+
+NiumaMobileBrowser_RequestChromeExpandAnimated() {
+    global g_NiumaMobile_ChromeExpanded, g_NiumaMobile_ChromeCollapseAnimating
+    g_NiumaMobile_ChromeCollapseAnimating := false
+    SetTimer(NiumaMobileBrowser_ChromeCollapseAnimFallback, 0)
+    if g_NiumaMobile_ChromeExpanded {
+        NiumaMobileBrowser_PushChromeMenuState(true)
+        return
+    }
+    NiumaMobileBrowser_SetChromeExpanded(true)
 }
 
 NiumaMobileBrowser_ChromePin(*) {
@@ -1311,22 +1610,28 @@ NiumaMobileBrowser_StartChromeHoverWatch() {
 NiumaMobileBrowser_StopChromeHoverWatch() {
     SetTimer(NiumaMobileBrowser_ChromeHoverTick, 0)
     SetTimer(NiumaMobileBrowser_ChromeCollapseDeferred, 0)
+    NiumaMobileBrowser_ResetMobileZones()
 }
 
 NiumaMobileBrowser_ChromeHoverTick(*) {
-    global g_NiumaMobile_ChromeExpanded
+    global g_NiumaMobile_ChromeExpanded, g_NiumaMobile_ChromePinCount
     if !NiumaMobileBrowser_IsOpen()
         return
     inside := NiumaMobileBrowser_IsMouseInMobileArea()
     if inside {
         SetTimer(NiumaMobileBrowser_ChromeCollapseDeferred, 0)
         if !g_NiumaMobile_ChromeExpanded
-            NiumaMobileBrowser_SetChromeExpanded(true)
+            NiumaMobileBrowser_RequestChromeExpandAnimated()
+        else if !g_NiumaMobile_ChromeCollapseAnimating
+            NiumaMobileBrowser_PushChromeMenuState(true)
         return
     }
+    NiumaMobileBrowser_ResetMobileZones()
+    if (g_NiumaMobile_ChromePinCount > 0)
+        return
     SetTimer(NiumaMobileBrowser_ChromeCollapseDeferred, 0)
     if g_NiumaMobile_ChromeExpanded
-        SetTimer(NiumaMobileBrowser_ChromeCollapseDeferred, -60)
+        SetTimer(NiumaMobileBrowser_ChromeCollapseDeferred, -50)
 }
 
 NiumaMobileBrowser_ChromeCollapseDeferred(*) {
@@ -1335,8 +1640,11 @@ NiumaMobileBrowser_ChromeCollapseDeferred(*) {
     if NiumaMobileBrowser_IsMouseInMobileArea()
         return
     global g_NiumaMobile_ChromePinCount
+    if (g_NiumaMobile_ChromePinCount > 0)
+        return
     g_NiumaMobile_ChromePinCount := 0
-    NiumaMobileBrowser_SetChromeExpanded(false)
+    NiumaMobileBrowser_ResetMobileZones()
+    NiumaMobileBrowser_RequestChromeCollapseAnimated()
 }
 
 NiumaMobileBrowser_RaiseChromeHost() {
@@ -1572,7 +1880,7 @@ NiumaMobileBrowser_ShowChromeMenu(*) {
 }
 
 NiumaMobileBrowser_DisposeLegacyChromeWebView() {
-    global g_NiumaMobile_ChromeCtrl, g_NiumaMobile_ChromeWV2, g_NiumaMobile_ChromeTokenMsg
+    global g_NiumaMobile_ChromeCtrl, g_NiumaMobile_ChromeWV2, g_NiumaMobile_ChromeTokenMsg, g_NiumaMobile_ChromeTokenCtxMenu
         , g_NiumaMobile_ChromeCreatePending
     g_NiumaMobile_ChromeCreatePending := false
     if IsObject(g_NiumaMobile_ChromeWV2) && g_NiumaMobile_ChromeTokenMsg {
@@ -1580,7 +1888,13 @@ NiumaMobileBrowser_DisposeLegacyChromeWebView() {
         catch {
         }
     }
+    if IsObject(g_NiumaMobile_ChromeWV2) && g_NiumaMobile_ChromeTokenCtxMenu {
+        try g_NiumaMobile_ChromeWV2.remove_ContextMenuRequested(g_NiumaMobile_ChromeTokenCtxMenu)
+        catch {
+        }
+    }
     g_NiumaMobile_ChromeTokenMsg := 0
+    g_NiumaMobile_ChromeTokenCtxMenu := 0
     if g_NiumaMobile_ChromeCtrl {
         try g_NiumaMobile_ChromeCtrl.IsVisible := false
         catch {
@@ -1776,14 +2090,20 @@ NiumaMobileBrowser_EnsureChromeBottomHostGui(parentHwnd := 0) {
 
 NiumaMobileBrowser_DisposeChromeBottomWebView() {
     global g_NiumaMobile_ChromeBottomCtrl, g_NiumaMobile_ChromeBottomWV2, g_NiumaMobile_ChromeBottomTokenMsg
-        , g_NiumaMobile_ChromeBottomCreatePending
+        , g_NiumaMobile_ChromeBottomTokenCtxMenu, g_NiumaMobile_ChromeBottomCreatePending
     g_NiumaMobile_ChromeBottomCreatePending := false
     if IsObject(g_NiumaMobile_ChromeBottomWV2) && g_NiumaMobile_ChromeBottomTokenMsg {
         try g_NiumaMobile_ChromeBottomWV2.remove_WebMessageReceived(g_NiumaMobile_ChromeBottomTokenMsg)
         catch {
         }
     }
+    if IsObject(g_NiumaMobile_ChromeBottomWV2) && g_NiumaMobile_ChromeBottomTokenCtxMenu {
+        try g_NiumaMobile_ChromeBottomWV2.remove_ContextMenuRequested(g_NiumaMobile_ChromeBottomTokenCtxMenu)
+        catch {
+        }
+    }
     g_NiumaMobile_ChromeBottomTokenMsg := 0
+    g_NiumaMobile_ChromeBottomTokenCtxMenu := 0
     if g_NiumaMobile_ChromeBottomCtrl {
         try g_NiumaMobile_ChromeBottomCtrl.IsVisible := false
         catch {
@@ -1867,9 +2187,7 @@ NiumaMobileBrowser_SetupChromeController(ctrl, pane := "top") {
         g_NiumaMobile_ChromeCtrl := ctrl
         g_NiumaMobile_ChromeWV2 := wv2
     }
-    tm := NiumaMobileBrowser_GetThemeMode()
-    bgArgb := (tm = "light") ? 0xFFF7F7F7 : 0xFF0D1016
-    try ctrl.DefaultBackgroundColor := bgArgb
+    try ctrl.DefaultBackgroundColor := 0x00000000
     try ctrl.ZoomFactor := 1.0
     catch {
     }
@@ -1883,6 +2201,13 @@ NiumaMobileBrowser_SetupChromeController(ctrl, pane := "top") {
     }
     try wv2.add_NavigationCompleted(NiumaMobileBrowser_OnChromeNavigationCompleted)
     catch {
+    }
+    try {
+        if isBottom
+            g_NiumaMobile_ChromeBottomTokenCtxMenu := wv2.add_ContextMenuRequested(NiumaMobileBrowser_OnContextMenuRequested)
+        else
+            g_NiumaMobile_ChromeTokenCtxMenu := wv2.add_ContextMenuRequested(NiumaMobileBrowser_OnContextMenuRequested)
+    } catch {
     }
     try {
         s := wv2.Settings
@@ -1902,7 +2227,7 @@ NiumaMobileBrowser_SetupChromeController(ctrl, pane := "top") {
     catch {
     }
     if isBottom && !NiumaMobileBrowser_IsMouseInMobileArea()
-        NiumaMobileBrowser_SetChromeExpanded(false, true)
+        NiumaMobileBrowser_RequestChromeCollapseAnimated()
     NiumaMobileBrowser_PushChromeState(true)
     host := isBottom ? g_NiumaMobile_ChromeBottomHostHwnd : g_NiumaMobile_ChromeHostHwnd
     NiumaMobileBrowser_Log("CHROME", "", "SetupChromeController pane=" . pane . " host=" . host)
@@ -1943,7 +2268,13 @@ NiumaMobileBrowser_OnChromeWebMessage(sender, args) {
 NiumaMobileBrowser_DispatchChromeBrowserMessage(msg) {
     if !(msg is Map) || !msg.Has("type")
         return
+    if NiumaMobileBrowser_HandleMobileZoneMessage(msg)
+        return
     typ := String(msg["type"])
+    if (typ = "niuma_browser_context_menu") {
+        NiumaMobileBrowser_HandleContextMenuWebMessage(msg)
+        return
+    }
     if (typ = "niuma_browser_sync_state") {
         NiumaMobileBrowser_PushChromeState()
         return
@@ -2001,10 +2332,27 @@ NiumaMobileBrowser_DispatchChromeBrowserMessage(msg) {
         NiumaMobileBrowser_ChromeUnpin()
         return
     }
-    if (typ = "niuma_browser_chrome_hover") {
-        global g_NiumaMobile_ChromeExpanded
-        if NiumaMobileBrowser_IsMouseInMobileArea() && !g_NiumaMobile_ChromeExpanded
+    if (typ = "niuma_browser_chrome_menu_show") {
+        global g_NiumaMobile_ChromeCollapseAnimating
+        g_NiumaMobile_ChromeCollapseAnimating := false
+        SetTimer(NiumaMobileBrowser_ChromeCollapseAnimFallback, 0)
+        if !g_NiumaMobile_ChromeExpanded
             NiumaMobileBrowser_SetChromeExpanded(true)
+        return
+    }
+    if (typ = "niuma_browser_chrome_menu_hide") {
+        global g_NiumaMobile_ChromeCollapseAnimating
+        g_NiumaMobile_ChromeCollapseAnimating := false
+        SetTimer(NiumaMobileBrowser_ChromeCollapseAnimFallback, 0)
+        if !NiumaMobileBrowser_IsMouseInMobileArea()
+            NiumaMobileBrowser_SetChromeExpanded(false)
+        return
+    }
+    if (typ = "niuma_browser_chrome_hover") {
+        zone := "top"
+        if msg.Has("zone")
+            zone := String(msg["zone"])
+        NiumaMobileBrowser_OnMobileZoneEnter(zone)
         return
     }
     if (typ = "niuma_browser_cmd") {
@@ -2074,9 +2422,12 @@ NiumaMobileBrowser_PushChromeState(force := false) {
 
 NiumaMobileBrowser_CloseChromeWebView() {
     global g_NiumaMobile_ChromeExpanded, g_NiumaMobile_ChromePinCount, g_NiumaMobile_ChromeSheetOpen
+        , g_NiumaMobile_ChromeCollapseAnimating
     g_NiumaMobile_ChromeSheetOpen := false
     g_NiumaMobile_ChromeExpanded := false
     g_NiumaMobile_ChromePinCount := 0
+    g_NiumaMobile_ChromeCollapseAnimating := false
+    SetTimer(NiumaMobileBrowser_ChromeCollapseAnimFallback, 0)
     NiumaMobileBrowser_StopChromeHoverWatch()
     NiumaMobileBrowser_DisposeLegacyChromeWebView()
     NiumaMobileBrowser_DisposeChromeBottomWebView()
@@ -2108,6 +2459,646 @@ NiumaMobileBrowser_Reload() {
     } catch {
     }
     return false
+}
+
+NiumaMobileBrowser_CanGoBack() {
+    global g_NiumaMobile_WV2
+    if !g_NiumaMobile_WV2
+        return false
+    try return !!g_NiumaMobile_WV2.CanGoBack
+    catch {
+    }
+    return false
+}
+
+NiumaMobileBrowser_CanGoForward() {
+    global g_NiumaMobile_WV2
+    if !g_NiumaMobile_WV2
+        return false
+    try return !!g_NiumaMobile_WV2.CanGoForward
+    catch {
+    }
+    return false
+}
+
+NiumaMobileBrowser_Forward() {
+    global g_NiumaMobile_WV2
+    if !g_NiumaMobile_WV2
+        return false
+    try {
+        if g_NiumaMobile_WV2.CanGoForward {
+            g_NiumaMobile_WV2.GoForward()
+            return true
+        }
+    } catch {
+    }
+    return false
+}
+
+NiumaMobileBrowser_CtxIconForCmd(cmdId) {
+    switch String(cmdId) {
+        case "nmb_back": return "◂"
+        case "nmb_forward": return "▸"
+        case "nmb_reload": return "↻"
+        case "nmb_copy_link", "nmb_copy_text", "nmb_copy_url", "nmb_share", "nmb_copy_image", "nmb_copy_media", "nmb_save_image": return "⎘"
+        case "nmb_paste": return "📋"
+        case "nmb_select_all": return "☰"
+        case "nmb_open_external", "nmb_open_image", "nmb_open_media": return "↗"
+        case "nmb_extract": return "📄"
+        case "nmb_labels": return "👁"
+        case "nmb_pause_ai": return "⏸"
+        case "nmb_close": return "✕"
+        default: return "·"
+    }
+}
+
+NiumaMobileBrowser_CtxKindOf(target := "") {
+    tgt := (target is Map) ? target : Map()
+    if (tgt.Has("hasLink") && tgt["hasLink"])
+        return "link"
+    k := tgt.Has("kind") ? StrLower(Trim(String(tgt["kind"]))) : "page"
+    if (k = "selection")
+        k := "page"
+    return k != "" ? k : "page"
+}
+
+NiumaMobileBrowser_CtxCmdApplicable(cmdId, target := "") {
+    c := Trim(String(cmdId))
+    tgt := (target is Map) ? target : Map()
+    kind := NiumaMobileBrowser_CtxKindOf(tgt)
+    if (c = "nmb_back")
+        return NiumaMobileBrowser_CanGoBack()
+    if (c = "nmb_forward")
+        return NiumaMobileBrowser_CanGoForward()
+    if (c = "nmb_copy_link")
+        return !!(tgt.Has("hasLink") && tgt["hasLink"])
+    if (c = "nmb_copy_text")
+        return !!(tgt.Has("hasSelection") && tgt["hasSelection"])
+    if (c = "nmb_paste")
+        return !!(tgt.Has("isEditable") && tgt["isEditable"])
+    if (c = "nmb_copy_image" || c = "nmb_open_image" || c = "nmb_save_image") {
+        u := tgt.Has("mediaUri") ? Trim(String(tgt["mediaUri"])) : ""
+        return (kind = "image") && (u != "")
+    }
+    if (c = "nmb_copy_media" || c = "nmb_open_media") {
+        u := tgt.Has("mediaUri") ? Trim(String(tgt["mediaUri"])) : ""
+        return (kind = "video" || kind = "audio") && (u != "")
+    }
+    if (c = "nmb_open_external") {
+        u := ""
+        if (kind = "link" && tgt.Has("linkUri"))
+            u := Trim(String(tgt["linkUri"]))
+        else if ((kind = "image" || kind = "video" || kind = "audio") && tgt.Has("mediaUri"))
+            u := Trim(String(tgt["mediaUri"]))
+        else if tgt.Has("pageUri")
+            u := Trim(String(tgt["pageUri"]))
+        return (u != "")
+    }
+    if (c = "nmb_share") {
+        u := NiumaMobileBrowser_CtxPrimaryUri(tgt)
+        return (u != "")
+    }
+    return true
+}
+
+NiumaMobileBrowser_CtxPrimaryUri(tgt := "") {
+    if !(tgt is Map)
+        return ""
+    kind := NiumaMobileBrowser_CtxKindOf(tgt)
+    if (kind = "link" && tgt.Has("linkUri"))
+        return Trim(String(tgt["linkUri"]))
+    if ((kind = "image" || kind = "video" || kind = "audio") && tgt.Has("mediaUri"))
+        return Trim(String(tgt["mediaUri"]))
+    if tgt.Has("pageUri")
+        return Trim(String(tgt["pageUri"]))
+    return ""
+}
+
+NiumaMobileBrowser_CtxIdsForTarget(target := "") {
+    tgt := (target is Map) ? target : Map()
+    kind := NiumaMobileBrowser_CtxKindOf(tgt)
+    nav := ["nmb_back", "nmb_forward", "nmb_reload"]
+    if (kind = "link")
+        return nav . ["nmb_copy_link", "nmb_open_external", "nmb_share", "nmb_copy_text", "nmb_copy_url", "nmb_extract", "nmb_labels", "nmb_pause_ai", "nmb_close"]
+    if (kind = "image")
+        return nav . ["nmb_copy_image", "nmb_open_image", "nmb_save_image", "nmb_share", "nmb_copy_url", "nmb_extract", "nmb_close"]
+    if (kind = "video" || kind = "audio")
+        return nav . ["nmb_copy_media", "nmb_open_media", "nmb_share", "nmb_copy_url", "nmb_close"]
+    out := nav . ["nmb_copy_url", "nmb_select_all", "nmb_open_external", "nmb_share"]
+    if (tgt.Has("isEditable") && tgt["isEditable"])
+        out.InsertAt(4, "nmb_paste")
+    if (tgt.Has("hasSelection") && tgt["hasSelection"])
+        out.InsertAt(4, "nmb_copy_text")
+    out.Push("nmb_extract", "nmb_labels", "nmb_pause_ai", "nmb_close")
+    return out
+}
+
+NiumaMobileBrowser_DefaultContextMenuCmdIds() {
+    return NiumaMobileBrowser_CtxIdsForTarget(Map("kind", "page"))
+}
+
+NiumaMobileBrowser_CtxTargetFromWebMessage(msg) {
+    tgt := Map(
+        "kind", "page", "hasLink", false, "linkUri", "", "linkText", "",
+        "hasMedia", false, "mediaUri", "", "mediaAlt", "",
+        "hasSelection", false, "selection", "",
+        "isEditable", false, "pageUri", "", "focusId", ""
+    )
+    if !(msg is Map)
+        return tgt
+    if msg.Has("kind")
+        tgt["kind"] := StrLower(Trim(String(msg["kind"])))
+    if msg.Has("hasLink")
+        tgt["hasLink"] := !!msg["hasLink"]
+    if msg.Has("linkUri")
+        tgt["linkUri"] := String(msg["linkUri"])
+    if msg.Has("linkText")
+        tgt["linkText"] := String(msg["linkText"])
+    if msg.Has("hasMedia")
+        tgt["hasMedia"] := !!msg["hasMedia"]
+    if msg.Has("mediaUri")
+        tgt["mediaUri"] := String(msg["mediaUri"])
+    if msg.Has("mediaAlt")
+        tgt["mediaAlt"] := String(msg["mediaAlt"])
+    if msg.Has("hasSelection")
+        tgt["hasSelection"] := !!msg["hasSelection"]
+    if msg.Has("selection")
+        tgt["selection"] := String(msg["selection"])
+    if msg.Has("isEditable")
+        tgt["isEditable"] := !!msg["isEditable"]
+    if msg.Has("pageUri")
+        tgt["pageUri"] := String(msg["pageUri"])
+    if msg.Has("focusId")
+        tgt["focusId"] := String(msg["focusId"])
+    if (tgt["hasLink"])
+        tgt["kind"] := "link"
+    else if (tgt["hasMedia"] && tgt["kind"] = "page")
+        tgt["kind"] := "image"
+    return tgt
+}
+
+NiumaMobileBrowser_ParseContextMenuTarget(args) {
+    tgt := Map(
+        "kind", "page", "hasLink", false, "linkUri", "", "linkText", "",
+        "hasMedia", false, "mediaUri", "", "mediaAlt", "",
+        "hasSelection", false, "selection", "",
+        "isEditable", false, "pageUri", "", "focusId", ""
+    )
+    try {
+        t := args.ContextMenuTarget
+        if IsObject(t) {
+            kindNum := 0
+            try kindNum := Integer(t.Kind)
+            catch {
+            }
+            kindMap := Map(0, "page", 1, "image", 2, "selection", 3, "audio", 4, "video")
+            tgt["kind"] := kindMap.Has(kindNum) ? kindMap[kindNum] : "page"
+            try tgt["hasLink"] := !!t.HasLinkUri
+            catch {
+            }
+            try tgt["linkUri"] := String(t.LinkUri)
+            catch {
+            }
+            try tgt["linkText"] := String(t.LinkText)
+            catch {
+            }
+            try tgt["hasSelection"] := !!t.HasSelection
+            catch {
+            }
+            try tgt["selection"] := String(t.Selection)
+            catch {
+            }
+            try tgt["isEditable"] := !!t.IsEditable
+            catch {
+            }
+            try tgt["pageUri"] := String(t.PageUri)
+            catch {
+            }
+            try {
+                if t.HasSourceUri {
+                    tgt["hasMedia"] := true
+                    tgt["mediaUri"] := String(t.SourceUri)
+                }
+            } catch {
+            }
+            if (tgt["hasLink"])
+                tgt["kind"] := "link"
+            else if (tgt["hasMedia"] && tgt["kind"] = "page")
+                tgt["kind"] := "image"
+        }
+    } catch {
+    }
+    return tgt
+}
+
+NiumaMobileBrowser_OpenContextMenuFromTarget(tgt, posX, posY) {
+    global g_NiumaMobile_CtxTarget
+    g_NiumaMobile_CtxTarget := (tgt is Map) ? tgt : Map()
+    sx := Integer(posX)
+    sy := Integer(posY)
+    if (sx < 1 || sy < 1)
+        MouseGetPos(&sx, &sy)
+    SetTimer(NiumaMobileBrowser_ShowContextMenuAt.Bind(sx, sy), -1)
+}
+
+NiumaMobileBrowser_HandleContextMenuWebMessage(msg) {
+    if !(msg is Map)
+        return
+    tgt := NiumaMobileBrowser_CtxTargetFromWebMessage(msg)
+    sx := msg.Has("screenX") ? Integer(msg["screenX"]) : 0
+    sy := msg.Has("screenY") ? Integer(msg["screenY"]) : 0
+    try NiumaMobileBrowser_Log("CTX", "", "context_menu kind=" . NiumaMobileBrowser_CtxKindOf(tgt) . " xy=" . sx . "," . sy)
+    catch {
+    }
+    NiumaMobileBrowser_OpenContextMenuFromTarget(tgt, sx, sy)
+}
+
+NiumaMobileBrowser_ResolveContextMenuIds(tgt := "") {
+    global g_Commands
+    target := (tgt is Map) ? tgt : Map()
+    custom := []
+    vm := Map()
+    if IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("SceneMenus") && g_Commands["SceneMenus"] is Map {
+        sm := g_Commands["SceneMenus"]
+        if sm.Has("mobile_browser") && sm["mobile_browser"] is Array {
+            for cid in sm["mobile_browser"] {
+                c := Trim(String(cid))
+                if (c != "")
+                    custom.Push(c)
+            }
+        }
+    }
+    if IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("SceneMenuVisibility") && g_Commands["SceneMenuVisibility"] is Map {
+        visAll := g_Commands["SceneMenuVisibility"]
+        if visAll.Has("mobile_browser") && visAll["mobile_browser"] is Map
+            vm := visAll["mobile_browser"]
+    }
+    if (custom.Length > 0) {
+        out := []
+        for c in custom {
+            visOn := vm.Has(c) ? !!vm[c] : true
+            if !visOn || !NiumaMobileBrowser_CtxCmdApplicable(c, target)
+                continue
+            out.Push(c)
+        }
+        if (out.Length > 0)
+            return out
+    }
+    out2 := []
+    for c in NiumaMobileBrowser_CtxIdsForTarget(target) {
+        if NiumaMobileBrowser_CtxCmdApplicable(c, target)
+            out2.Push(c)
+    }
+    if (out2.Length > 0)
+        return out2
+    return ["nmb_reload", "nmb_copy_url", "nmb_extract", "nmb_close"]
+}
+
+NiumaMobileBrowser_OnContextMenuRequested(sender, args) {
+    deferral := 0
+    try args.Handled := true
+    catch {
+    }
+    try deferral := args.GetDeferral()
+    catch {
+    }
+    tgt := NiumaMobileBrowser_ParseContextMenuTarget(args)
+    sx := 0
+    sy := 0
+    MouseGetPos(&sx, &sy)
+    try {
+        loc := args.Location
+        if IsNumber(loc) {
+            cx := loc & 0xFFFFFFFF
+            cy := (loc >> 32) & 0xFFFFFFFF
+            if (cx >= 0x80000000)
+                cx -= 0x100000000
+            if (cy >= 0x80000000)
+                cy -= 0x100000000
+            global g_NiumaMobile_ContentHostHwnd, g_NiumaMobile_ChromeHostHwnd, g_NiumaMobile_ChromeBottomHostHwnd
+            hostHwnd := g_NiumaMobile_ContentHostHwnd
+            if !hostHwnd
+                hostHwnd := g_NiumaMobile_ChromeHostHwnd
+            if !hostHwnd
+                hostHwnd := g_NiumaMobile_ChromeBottomHostHwnd
+            if hostHwnd {
+                pt := Buffer(8, 0)
+                NumPut("Int", cx, pt, 0)
+                NumPut("Int", cy, pt, 4)
+                if DllCall("ClientToScreen", "Ptr", hostHwnd, "Ptr", pt) {
+                    sx := NumGet(pt, 0, "Int")
+                    sy := NumGet(pt, 4, "Int")
+                }
+            }
+        }
+    } catch {
+    }
+    try {
+        if IsObject(deferral)
+            deferral.Complete()
+    } catch {
+    }
+    NiumaMobileBrowser_OpenContextMenuFromTarget(tgt, sx, sy)
+}
+
+NiumaMobileBrowser_MakeContextMenuAction(cmdId) {
+    c := String(cmdId)
+    return (*) => SetTimer(NiumaMobileBrowser_ExecuteCtxCmd.Bind(c), -10)
+}
+
+NiumaMobileBrowser_CopyTextToClipboard(text) {
+    txt := String(text)
+    if (txt = "")
+        return false
+    try {
+        A_Clipboard := ""
+        A_Clipboard := txt
+        return ClipWait(1)
+    } catch {
+    }
+    return false
+}
+
+NiumaMobileBrowser_CtxFocusElementJs(tgt := "") {
+    target := (tgt is Map) ? tgt : Map()
+    fid := target.Has("focusId") ? Trim(String(target["focusId"])) : ""
+    if (fid = "")
+        return "document.activeElement"
+    fidEsc := NiumaMobileBrowser_EscapeJsSingle(fid)
+    q := Chr(34)
+    return "document.querySelector('[data-niuma-ctx-focus=" . q . fidEsc . q . "]')||document.activeElement"
+}
+
+NiumaMobileBrowser_ExecuteCtxCmd(cmdId) {
+    global g_NiumaMobile_CtxTarget, g_NiumaMobile_WV2, g_NiumaMobile_AiPaused, g_NiumaMobile_LabelDebug
+    c := Trim(String(cmdId))
+    tgt := (g_NiumaMobile_CtxTarget is Map) ? g_NiumaMobile_CtxTarget : Map()
+    if (c = "nmb_back") {
+        NiumaMobileBrowser_Back()
+        return
+    }
+    if (c = "nmb_forward") {
+        NiumaMobileBrowser_Forward()
+        return
+    }
+    if (c = "nmb_reload") {
+        NiumaMobileBrowser_Reload()
+        return
+    }
+    if (c = "nmb_copy_link") {
+        u := tgt.Has("linkUri") ? String(tgt["linkUri"]) : ""
+        if (u != "")
+            NiumaMobileBrowser_CopyTextToClipboard(u)
+        return
+    }
+    if (c = "nmb_copy_text") {
+        s := tgt.Has("selection") ? String(tgt["selection"]) : ""
+        if (s != "") {
+            NiumaMobileBrowser_CopyTextToClipboard(s)
+            return
+        }
+        lt := tgt.Has("linkText") ? String(tgt["linkText"]) : ""
+        if (lt != "") {
+            NiumaMobileBrowser_CopyTextToClipboard(lt)
+            return
+        }
+        if g_NiumaMobile_WV2 {
+            elJs := NiumaMobileBrowser_CtxFocusElementJs(tgt)
+            js := "(function(){try{var s=window.getSelection?String(window.getSelection()):'';"
+                . "if(s&&s.trim())return s.trim();var el=" . elJs . ";"
+                . "if(el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA')){var a=el.selectionStart,b=el.selectionEnd;"
+                . "if(a!=null&&b!=null&&a!==b)return el.value.substring(a,b);}"
+                . "return '';}catch(e){return '';}})()"
+            try {
+                raw := g_NiumaMobile_WV2.ExecuteScriptAsync(js).await(3000)
+                s2 := NiumaMobileBrowser_UnquoteScriptResult(raw)
+                if (s2 != "")
+                    NiumaMobileBrowser_CopyTextToClipboard(s2)
+            } catch {
+            }
+        }
+        return
+    }
+    if (c = "nmb_copy_url") {
+        u := tgt.Has("pageUri") ? String(tgt["pageUri"]) : ""
+        if (u = "" && g_NiumaMobile_WV2) {
+            try u := g_NiumaMobile_WV2.SourceUri
+            catch {
+            }
+        }
+        if (u != "")
+            NiumaMobileBrowser_CopyTextToClipboard(u)
+        return
+    }
+    if (c = "nmb_paste") {
+        if !g_NiumaMobile_WV2
+            return
+        clip := A_Clipboard
+        clipEsc := NiumaMobileBrowser_EscapeJsSingle(String(clip))
+        elJs := NiumaMobileBrowser_CtxFocusElementJs(tgt)
+        js := "(function(){try{var t='" . clipEsc . "';var el=" . elJs . ";"
+            . "if(!el||!(el.isContentEditable||el.tagName==='INPUT'||el.tagName==='TEXTAREA'))return false;"
+            . "try{el.focus();}catch(e0){}"
+            . "if(el.isContentEditable){document.execCommand('insertText',false,t);return true;}"
+            . "var a=el.selectionStart,b=el.selectionEnd;"
+            . "if(a!=null&&b!=null){el.value=el.value.slice(0,a)+t+el.value.slice(b);el.selectionStart=el.selectionEnd=a+t.length;}"
+            . "else{el.value=(el.value||'')+t;}"
+            . "el.dispatchEvent(new Event('input',{bubbles:true}));return true;}catch(e){return false;}})();"
+        try g_NiumaMobile_WV2.ExecuteScriptAsync(js)
+        catch {
+        }
+        return
+    }
+    if (c = "nmb_select_all") {
+        if g_NiumaMobile_WV2 {
+            elJs := NiumaMobileBrowser_CtxFocusElementJs(tgt)
+            js := "(function(){try{var el=" . elJs . ";"
+                . "if(el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA')){el.focus();el.select();return true;}"
+                . "if(el&&el.isContentEditable){el.focus();document.execCommand('selectAll',false,null);return true;}"
+                . "document.execCommand('selectAll',false,null);return true;}catch(e){return false;}})();"
+            try g_NiumaMobile_WV2.ExecuteScriptAsync(js)
+            catch {
+            }
+        }
+        return
+    }
+    if (c = "nmb_open_external") {
+        u := NiumaMobileBrowser_CtxPrimaryUri(tgt)
+        if (u = "" && g_NiumaMobile_WV2) {
+            try u := g_NiumaMobile_WV2.SourceUri
+            catch {
+            }
+        }
+        if (u != "")
+            try Run(u)
+            catch {
+            }
+        return
+    }
+    if (c = "nmb_copy_image" || c = "nmb_save_image") {
+        u := tgt.Has("mediaUri") ? Trim(String(tgt["mediaUri"])) : ""
+        if (u != "")
+            NiumaMobileBrowser_CopyTextToClipboard(u)
+        return
+    }
+    if (c = "nmb_open_image") {
+        u := tgt.Has("mediaUri") ? Trim(String(tgt["mediaUri"])) : ""
+        if (u != "")
+            NiumaMobileBrowser_Navigate(u)
+        return
+    }
+    if (c = "nmb_copy_media") {
+        u := tgt.Has("mediaUri") ? Trim(String(tgt["mediaUri"])) : ""
+        if (u != "")
+            NiumaMobileBrowser_CopyTextToClipboard(u)
+        return
+    }
+    if (c = "nmb_open_media") {
+        u := tgt.Has("mediaUri") ? Trim(String(tgt["mediaUri"])) : ""
+        if (u != "")
+            try Run(u)
+            catch {
+            }
+        return
+    }
+    if (c = "nmb_share") {
+        u := NiumaMobileBrowser_CtxPrimaryUri(tgt)
+        if (u = "" && g_NiumaMobile_WV2) {
+            try u := g_NiumaMobile_WV2.SourceUri
+            catch {
+            }
+        }
+        if (u != "")
+            NiumaMobileBrowser_CopyTextToClipboard(u)
+        return
+    }
+    if (c = "nmb_extract") {
+        NiumaMobileBrowser_ExtractText()
+        return
+    }
+    if (c = "nmb_labels") {
+        NiumaMobileBrowser_ToggleLabelDebug()
+        NiumaMobileBrowser_PushChromeState(true)
+        return
+    }
+    if (c = "nmb_pause_ai") {
+        if g_NiumaMobile_AiPaused
+            NiumaMobileBrowser_ResumeAiControl()
+        else
+            NiumaMobileBrowser_PauseAiControl()
+        NiumaMobileBrowser_PushChromeState(true)
+        NiumaMobileBrowser_NotifyState(NiumaMobileBrowser_IsOpen())
+        try NiumaMobileBrowser_TraceOverlayPush(g_NiumaMobile_AiPaused ? "AI 操控已暂停" : "AI 操控已恢复", "success")
+        catch {
+        }
+        return
+    }
+    if (c = "nmb_close") {
+        NiumaMobileBrowser_Close()
+        return
+    }
+    try {
+        if IsSet(_ExecuteCommand)
+            _ExecuteCommand(c)
+    } catch {
+    }
+}
+
+NiumaMobileBrowser_CtxCmdDisplayName(cmdId, cmdList := "") {
+    c := Trim(String(cmdId))
+    if (IsObject(cmdList) && cmdList is Map && cmdList.Has(c)) {
+        nm := cmdList[c]["name"]
+        if (nm != "")
+            return nm
+    }
+    static names := Map(
+        "nmb_back", "后退",
+        "nmb_forward", "前进",
+        "nmb_reload", "刷新",
+        "nmb_copy_link", "复制链接",
+        "nmb_copy_text", "复制",
+        "nmb_copy_url", "复制页面链接",
+        "nmb_paste", "粘贴",
+        "nmb_select_all", "全选",
+        "nmb_open_external", "在浏览器打开",
+        "nmb_share", "分享链接",
+        "nmb_copy_image", "复制图片地址",
+        "nmb_open_image", "打开图片",
+        "nmb_save_image", "保存图片地址",
+        "nmb_copy_media", "复制媒体地址",
+        "nmb_open_media", "用系统播放器打开",
+        "nmb_extract", "提取文本",
+        "nmb_labels", "元素打标",
+        "nmb_pause_ai", "暂停 AI",
+        "nmb_close", "关闭浏览器"
+    )
+    return names.Has(c) ? names[c] : c
+}
+
+NiumaMobileBrowser_ShowContextMenuAt(posX, posY) {
+    global g_Commands, g_NiumaMobile_CtxTarget, g_NiumaMobile_AiPaused, g_NiumaMobile_LabelDebug
+    try {
+        if IsSet(_VK_EnsureSceneMenus)
+            _VK_EnsureSceneMenus()
+    } catch {
+    }
+    MenuItems := []
+    cmdList := Map()
+    if IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map
+        cmdList := g_Commands["CommandList"]
+    tgt := (g_NiumaMobile_CtxTarget is Map) ? g_NiumaMobile_CtxTarget : Map()
+    ids := NiumaMobileBrowser_ResolveContextMenuIds(tgt)
+    seen := Map()
+    for cid in ids {
+        c := Trim(String(cid))
+        if (c = "" || seen.Has(c))
+            continue
+        if cmdList.Count && !cmdList.Has(c) && SubStr(c, 1, 4) != "nmb_"
+            continue
+        seen[c] := true
+        nm := NiumaMobileBrowser_CtxCmdDisplayName(c, cmdList)
+        if (c = "nmb_pause_ai")
+            nm := g_NiumaMobile_AiPaused ? "恢复 AI 操控" : "暂停 AI 操控"
+        else if (c = "nmb_labels")
+            nm := g_NiumaMobile_LabelDebug ? "关闭元素打标" : "元素打标"
+        MenuItems.Push({ Text: nm, Icon: NiumaMobileBrowser_CtxIconForCmd(c), Action: NiumaMobileBrowser_MakeContextMenuAction(c) })
+    }
+    if (MenuItems.Length = 0)
+        MenuItems.Push({ Text: "（右键菜单暂无命令）", Icon: "·", Action: (*) => 0 })
+    px := Integer(posX)
+    py := Integer(posY)
+    if (px < 1 || py < 1)
+        MouseGetPos(&px, &py)
+    try {
+        if IsSet(ShowDarkStylePopupMenuAt)
+            ShowDarkStylePopupMenuAt(MenuItems, px + 2, py + 2)
+        else
+            NiumaMobileBrowser_ShowContextMenuFallback(MenuItems, px + 2, py + 2)
+    } catch as e {
+        try NiumaMobileBrowser_Log("CTX", "", "ShowContextMenu: " . e.Message)
+        catch {
+        }
+        try NiumaMobileBrowser_ShowContextMenuFallback(MenuItems, px + 2, py + 2)
+        catch {
+        }
+    }
+}
+
+NiumaMobileBrowser_ShowContextMenuFallback(MenuItems, posX, posY) {
+    m := Menu()
+    for item in MenuItems {
+        act := item.HasProp("Action") ? item.Action : 0
+        lbl := item.HasProp("Text") ? String(item.Text) : ""
+        if (lbl = "")
+            continue
+        if act
+            m.Add(lbl, act)
+        else
+            m.Add(lbl)
+    }
+    try m.Show(posX, posY)
+    catch {
+    }
 }
 
 NiumaMobileBrowser_StartNavigateAction(actionType, reqId := "") {
@@ -2187,17 +3178,21 @@ NiumaMobileBrowser_FireNavigateAckOnce(reqId, ok := true, reason := "") {
 }
 
 NiumaMobileBrowser_ExtractText() {
+    SetTimer(NiumaMobileBrowser_ExtractTextWorker, -1)
+    return true
+}
+
+NiumaMobileBrowser_ExtractTextWorker(*) {
     global g_NiumaMobile_WV2
     if !g_NiumaMobile_WV2
-        return false
+        return
     script := "(function(){try{var t=(document.body&&document.body.innerText)||'';return String(t).substring(0,120000);}catch(e){return '';}})()"
     try {
         raw := g_NiumaMobile_WV2.ExecuteScriptAsync(script).await(12000)
         NiumaMobileBrowser_OnExtractDone(raw)
-        return true
     } catch {
+        NiumaMobileBrowser_OnExtractDone('""')
     }
-    return false
 }
 
 NiumaMobileBrowser_EscapeJsSingle(s) {
@@ -2395,20 +3390,16 @@ NiumaMobileBrowser_HandleJobError(jobCard, errorMsg) {
 }
 
 NiumaMobileBrowser_OnWebMessageReceived(sender, args) {
-    raw := ""
-    try raw := args.WebMessageAsJson
-    catch {
-        return
-    }
-    if (raw = "")
-        return
-    try msg := NiumaMobileBrowser_CallFunc("Jxon_Load", raw)
-    catch {
-        return
-    }
+    msg := NiumaMobileBrowser_ParseChromeWebMessage(args)
     if !(msg is Map) || !msg.Has("type")
         return
     typ := String(msg["type"])
+    if (typ = "niuma_browser_context_menu") {
+        NiumaMobileBrowser_HandleContextMenuWebMessage(msg)
+        return
+    }
+    if NiumaMobileBrowser_HandleMobileZoneMessage(msg)
+        return
     if (typ = "niuma_job_completed") {
         jid := msg.Has("jobId") ? String(msg["jobId"]) : ""
         ok := msg.Has("ok") ? !!msg["ok"] : false
@@ -2464,7 +3455,8 @@ NiumaMobileBrowser_OnExtractDone(result) {
     text := NiumaMobileBrowser_UnquoteScriptResult(result)
     if !wv2
         return
-    NiumaMobileBrowser_TryCallFunc("WebView_QueuePayload", wv2, Map("type", "niuma_mobile_extract_result", "text", text))
+    json := '{"type":"niuma_mobile_extract_result","text":"' . NiumaMobileBrowser_EscapeJsonStr(text) . '"}'
+    NiumaMobileBrowser_PostJsonToChatDirect(wv2, json, "", "extract_result")
 }
 
 NiumaMobileBrowser_NotifyStateVia(wv2, open, url := "") {
@@ -5373,10 +6365,11 @@ NiumaMobileBrowser_PreCloseCleanup() {
 
 NiumaMobileBrowser_Close() {
     global g_NiumaMobile_Env, g_NiumaMobile_Ctrl, g_NiumaMobile_WV2, g_NiumaMobile_Open
-    global g_NiumaMobile_TokenNav, g_NiumaMobile_TokenNavStart, g_NiumaMobile_TokenNewWin, g_NiumaMobile_TokenMsg, g_NiumaMobile_ParentHwnd
+    global g_NiumaMobile_TokenNav, g_NiumaMobile_TokenNavStart, g_NiumaMobile_TokenNewWin, g_NiumaMobile_TokenMsg, g_NiumaMobile_TokenCtxMenu, g_NiumaMobile_ParentHwnd
     global g_NiumaMobile_LabelRefreshTimer, g_NiumaMobile_AiBusy, g_NiumaMobile_AiPaused
     global g_NiumaMobile_SettlePending, g_NiumaMobile_SettleNavPending, g_NiumaMobile_SettleReqId
         , g_NiumaMobile_NavigateAckReqId, g_NiumaMobile_NavigateAckAction, g_NiumaMobile_NavigateWatchdogActive
+        , g_NiumaMobile_ZoneDocScriptRegistered
 
     NiumaMobileBrowser_PreCloseCleanup()
     NiumaMobileBrowser_SetPendingOpen(false)
@@ -5419,11 +6412,17 @@ NiumaMobileBrowser_Close() {
                 g_NiumaMobile_WV2.remove_WebMessageReceived(g_NiumaMobile_TokenMsg)
         } catch {
         }
+        try {
+            if g_NiumaMobile_TokenCtxMenu
+                g_NiumaMobile_WV2.remove_ContextMenuRequested(g_NiumaMobile_TokenCtxMenu)
+        } catch {
+        }
     }
     g_NiumaMobile_TokenNav := 0
     g_NiumaMobile_TokenNavStart := 0
     g_NiumaMobile_TokenNewWin := 0
     g_NiumaMobile_TokenMsg := 0
+    g_NiumaMobile_TokenCtxMenu := 0
 
     NiumaMobileBrowser_CloseChromeWebView()
 
@@ -5441,6 +6440,8 @@ NiumaMobileBrowser_Close() {
     g_NiumaMobile_Env := 0
     g_NiumaMobile_Open := false
     g_NiumaMobile_ParentHwnd := 0
+    g_NiumaMobile_ZoneDocScriptRegistered := false
+    g_NiumaMobile_CtxDocScriptRegistered := false
     NiumaMobileBrowser_DestroyContentHostGui()
 
     NiumaMobileBrowser_NotifyState(false)

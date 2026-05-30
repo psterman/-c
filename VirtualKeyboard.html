@@ -3370,7 +3370,7 @@ function escapeHtml(s) {
 }
 
 const SCENARIO_ORDER = ['ai', 'search', 'clipboard', 'prompts', 'scratchpad', 'screenshot', 'settings', 'hotkeys', 'floating_bar', 'tray_menu', 'cursor', 'cloudplayer'];
-const SCENE_MENU_KEYS = ['search', 'scratchpad', 'clipboard', 'prompts', 'screenshot', 'settings', 'cursor', 'cloudplayer', 'global_hotkeys', 'tray_menu', 'floating_bar'];
+const SCENE_MENU_KEYS = ['search', 'scratchpad', 'clipboard', 'prompts', 'screenshot', 'settings', 'cursor', 'cloudplayer', 'global_hotkeys', 'tray_menu', 'floating_bar', 'mobile_browser'];
 const SCENE_MENU_LABELS = {
   search: '搜索中心',
   scratchpad: '草稿本',
@@ -3383,6 +3383,7 @@ const SCENE_MENU_LABELS = {
   global_hotkeys: '全局快捷键',
   tray_menu: '托盘右键',
   floating_bar: '悬浮条',
+  mobile_browser: '手机浏览器',
 };
 const SCENARIO_TO_SCENE_MENU_TAB = {
   search: 'search',
@@ -5689,6 +5690,7 @@ function sceneMenuTabIconHtml(key) {
     global_hotkeys: TOOLBAR_SVG_PARTS.keyboard,
     tray_menu: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8"></path><path d="M12 16v4"></path></svg>',
     floating_bar: '<svg viewBox="0 0 24 24"><rect x="3" y="10" width="18" height="4" rx="2"></rect><circle cx="7" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="17" cy="12" r="1"></circle></svg>',
+    mobile_browser: '<svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"></rect><circle cx="12" cy="18" r="1"></circle></svg>',
   };
   const svg = iconMap[key] || TOOLBAR_SVG_PARTS.bolt;
   return `<span class="scene-menu-tab-ico" aria-hidden="true">${svg}</span>`;

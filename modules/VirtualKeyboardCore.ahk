@@ -471,6 +471,27 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "ftb_screenshot", "name", "截图", "desc", "悬浮条按钮：截图智能菜单", "fn", "CH_RUN", "iconClass", "fa-camera"),
             Map("id", "ftb_cloud_player", "name", "云盘", "desc", "悬浮条按钮：打开牛马云", "fn", "CH_RUN", "iconClass", "fa-cloud"),
             Map("id", "ftb_cursor_menu", "name", "Cursor", "desc", "悬浮条按钮：Cursor 快捷入口", "fn", "CH_RUN", "iconClass", "fa-compass", "iconPath", A_ScriptDir "\lib\images\cursor.png")
+        ]),
+        Map("id", "mobile_browser", "name", "📱 手机浏览器", "commands", [
+            Map("id", "nmb_back", "name", "后退", "desc", "手机浏览器右键：后退", "fn", "NMB_RUN"),
+            Map("id", "nmb_forward", "name", "前进", "desc", "手机浏览器右键：前进", "fn", "NMB_RUN"),
+            Map("id", "nmb_reload", "name", "刷新", "desc", "手机浏览器右键：刷新页面", "fn", "NMB_RUN"),
+            Map("id", "nmb_copy_link", "name", "复制链接", "desc", "手机浏览器右键：复制链接地址", "fn", "NMB_RUN"),
+            Map("id", "nmb_copy_text", "name", "复制", "desc", "手机浏览器右键：复制选中文本", "fn", "NMB_RUN"),
+            Map("id", "nmb_copy_url", "name", "复制页面链接", "desc", "手机浏览器右键：复制当前页 URL", "fn", "NMB_RUN"),
+            Map("id", "nmb_paste", "name", "粘贴", "desc", "手机浏览器右键：粘贴到输入框", "fn", "NMB_RUN"),
+            Map("id", "nmb_select_all", "name", "全选", "desc", "手机浏览器右键：全选", "fn", "NMB_RUN"),
+            Map("id", "nmb_open_external", "name", "在浏览器打开", "desc", "手机浏览器右键：系统浏览器打开", "fn", "NMB_RUN"),
+            Map("id", "nmb_copy_image", "name", "复制图片地址", "desc", "手机浏览器右键：复制图片 URL", "fn", "NMB_RUN"),
+            Map("id", "nmb_open_image", "name", "打开图片", "desc", "手机浏览器右键：在当前浏览器打开图片", "fn", "NMB_RUN"),
+            Map("id", "nmb_save_image", "name", "保存图片地址", "desc", "手机浏览器右键：复制图片地址以便保存", "fn", "NMB_RUN"),
+            Map("id", "nmb_copy_media", "name", "复制媒体地址", "desc", "手机浏览器右键：复制视频/音频 URL", "fn", "NMB_RUN"),
+            Map("id", "nmb_open_media", "name", "用系统播放器打开", "desc", "手机浏览器右键：系统默认程序打开媒体", "fn", "NMB_RUN"),
+            Map("id", "nmb_share", "name", "分享链接", "desc", "手机浏览器右键：复制链接以便分享", "fn", "NMB_RUN"),
+            Map("id", "nmb_extract", "name", "提取文本", "desc", "手机浏览器右键：提取页面文本到 Chat", "fn", "NMB_RUN"),
+            Map("id", "nmb_labels", "name", "元素打标", "desc", "手机浏览器右键：切换元素打标", "fn", "NMB_RUN"),
+            Map("id", "nmb_pause_ai", "name", "暂停 AI", "desc", "手机浏览器右键：暂停/恢复 AI 操控", "fn", "NMB_RUN"),
+            Map("id", "nmb_close", "name", "关闭浏览器", "desc", "手机浏览器右键：关闭手机浏览器", "fn", "NMB_RUN")
         ])
     ]
 }
@@ -1375,11 +1396,11 @@ _VK_SceneToolbarLayoutToJson() {
 
 ; ── SceneMenus：五套场景右键菜单 cmdId 序列（Commands.json 顶层 SceneMenus） ──
 _VK_SceneMenuCanonicalKeys() {
-    return ["search", "scratchpad", "clipboard", "prompts", "screenshot", "settings", "cursor", "cloudplayer", "global_hotkeys", "tray_menu", "floating_bar"]
+    return ["search", "scratchpad", "clipboard", "prompts", "screenshot", "settings", "cursor", "cloudplayer", "global_hotkeys", "tray_menu", "floating_bar", "mobile_browser"]
 }
 
 _VK_SceneMenuKeysWithDefaultCommands() {
-    return ["clipboard", "scratchpad", "prompts", "screenshot", "settings", "cursor", "cloudplayer", "global_hotkeys", "tray_menu"]
+    return ["clipboard", "scratchpad", "prompts", "screenshot", "settings", "cursor", "cloudplayer", "global_hotkeys", "tray_menu", "mobile_browser"]
 }
 
 ; 与搜索中心结果行右键一致的扁平命令（复制到 / 发送到 子项已展开）
@@ -1464,6 +1485,16 @@ _VK_DefaultSceneMenuFloatingToolbarMenuCmds() {
 
 _VK_DefaultSceneMenuTrayMenuCmds() {
     return ["tray_show_search", "tray_show_clipboard", "tray_show_screenshot", "tray_show_config", "tray_toggle_toolbar", "tray_hide_toolbar", "tray_reload_script", "tray_exit_app"]
+}
+
+_VK_DefaultSceneMenuMobileBrowserCmds() {
+    return [
+        "nmb_back", "nmb_forward", "nmb_reload",
+        "nmb_copy_link", "nmb_copy_text", "nmb_copy_url", "nmb_paste", "nmb_select_all",
+        "nmb_copy_image", "nmb_open_image", "nmb_save_image", "nmb_copy_media", "nmb_open_media",
+        "nmb_open_external", "nmb_share",
+        "nmb_extract", "nmb_labels", "nmb_pause_ai", "nmb_close"
+    ]
 }
 
 ; 供 Web 端「系统锁定」提示（若槽位中出现这些 cmdId 则不可拖删）
@@ -1621,6 +1652,8 @@ _VK_DefaultSceneMenuForKey(key) {
         return _VK_DefaultSceneMenuGlobalHotkeysCmds()
     if (k = "tray_menu")
         return _VK_DefaultSceneMenuTrayMenuCmds()
+    if (k = "mobile_browser")
+        return _VK_DefaultSceneMenuMobileBrowserCmds()
     return []
 }
 
@@ -1859,6 +1892,12 @@ _VK_SceneCtxActMap(sceneKey) {
     if (sk = "floating_bar") {
         m := Map()
         for c in ["ftm_reset_scale", "ftm_search_center", "ftm_switch_hole", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script", "ftb_scratchpad", "ftb_screenshot", "ftb_cursor_menu", "ftb_cloud_player", "hub_capsule", "pqp_capture", "qa_clipboard", "sc_activate_search", "sys_show_vk"]
+            m[c] := c
+        return m
+    }
+    if (sk = "mobile_browser") {
+        m := Map()
+        for c in _VK_DefaultSceneMenuMobileBrowserCmds()
             m[c] := c
         return m
     }
@@ -3179,6 +3218,14 @@ _ExecuteCommand(cmdId) {
         case "PT_RUN":
             _VkRunPromptTemplate(cmdId)
             executed := true
+        case "NMB_RUN":
+            try {
+                if IsSet(NiumaMobileBrowser_ExecuteCtxCmd)
+                    NiumaMobileBrowser_ExecuteCtxCmd(cmdId)
+                executed := true
+            } catch as e {
+                OutputDebug("[VK] NMB_RUN failed: " . e.Message)
+            }
         default:
             OutputDebug("[VK] Unhandled fn: " . fn)
     }

@@ -47,6 +47,23 @@ class AhkInterface {
         }
     }
 
+    /** 内容区 WebView 右键：同步派发 contextmenu 目标信息 */
+    MobileBrowserContextMenu(jsonStr) {
+        try {
+            if !FuncExists("NiumaMobileBrowser_HandleContextMenuWebMessage")
+                return "err"
+            root := Jxon_Load(String(jsonStr))
+            if !(root is Map)
+                return "err"
+            if !root.Has("type")
+                root["type"] := "niuma_browser_context_menu"
+            NiumaMobileBrowser_HandleContextMenuWebMessage(root)
+            return "ok"
+        } catch {
+            return "err"
+        }
+    }
+
     /**
      * 返回纯文本剪贴板内容。
      */

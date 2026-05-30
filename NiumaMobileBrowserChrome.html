@@ -40,13 +40,14 @@ body[data-theme="light"]{
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{
-  height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  position:fixed;inset:0;margin:0;padding:0;border:0;
+  overflow:hidden;background:var(--bg);color:var(--text);
   font:13px/1.5 "Segoe UI","Microsoft YaHei UI",system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;user-select:none;
 }
 button,input{font:inherit;color:inherit}
 
-body.pane-top .top-shell{height:100%;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+body.pane-top .top-shell{height:100%;display:flex;flex-direction:column;min-width:0;overflow:visible}
 body.pane-top .toolbar{
   flex-shrink:0;display:flex;align-items:center;gap:6px;
   padding:6px 8px 7px;
@@ -116,6 +117,35 @@ body.pane-bottom .bottom-shell{
   background:linear-gradient(180deg,var(--orange2),var(--orange));color:#111;font-weight:700;cursor:pointer;font-size:12px;
 }
 body[data-theme="light"] .cmd-row button{color:#fff;border-color:var(--orange)}
+
+/* 自动隐藏菜单 */
+body.pane-top .toolbar{
+  transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .26s ease;
+  will-change: transform, opacity;
+}
+body.pane-top.menu-hidden .toolbar{
+  transform: translateY(calc(-100% - 8px));
+  opacity: 0;
+  pointer-events: none;
+}
+body.pane-top .ai-strip{
+  transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .26s ease;
+  will-change: transform, opacity;
+}
+body.pane-top.menu-hidden .ai-strip{
+  transform: translateY(calc(-100% - 4px));
+  opacity: 0;
+  pointer-events: none;
+}
+body.pane-bottom .bottom-shell{
+  transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .26s ease;
+  will-change: transform, opacity;
+}
+body.pane-bottom.menu-hidden .bottom-shell{
+  transform: translateY(calc(100% + 8px));
+  opacity: 0;
+  pointer-events: none;
+}
 </style>
 </head>
 <body class="pane-top" data-theme="dark">
@@ -127,7 +157,7 @@ body[data-theme="light"] .cmd-row button{color:#fff;border-color:var(--orange)}
   var params = new URLSearchParams(location.search || '');
   var pane = (window.__NIUMA_CHROME_PANE || params.get('pane') || 'top').toLowerCase();
   if (pane !== 'bottom') pane = 'top';
-  document.body.className = 'pane-' + pane;
+  document.body.className = 'pane-' + pane + ' menu-hidden';
 
   var TOP_HTML = ''
     + '<div class="top-shell">'
@@ -157,7 +187,44 @@ body[data-theme="light"] .cmd-row button{color:#fff;border-color:var(--orange)}
 
   document.getElementById('root').innerHTML = pane === 'bottom' ? BOTTOM_HTML : TOP_HTML;
 
-  var state = { open: false, url: '', labelDebug: false, aiPaused: false, aiBusy: false, themeMode: 'dark' };
+  var state = { open: false, url: '', labelDebug: false, aiPaused: false, aiBusy: false, themeMode: 'dark', pinned: false };
+  var hideTimer = null;
+  var collapseTimer = null;
+  var HIDE_DELAY = 50;
+  var COLLAPSE_MS = 300;
+
+  function fireCollapseDone() {
+    dispatch({ type: 'niuma_browser_chrome_menu_hide' });
+  }
+
+  function showMenu() {
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null; }
+    if (document.body.classList.contains('menu-hidden')) {
+      document.body.classList.remove('menu-hidden');
+      dispatch({ type: 'niuma_browser_chrome_menu_show' });
+    }
+  }
+
+  function scheduleHideMenu() {
+    if (state.pinned) {
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+        try { document.activeElement.blur(); } catch (_) {}
+      }
+      if (state.pinned) return;
+    }
+    if (hideTimer) clearTimeout(hideTimer);
+    if (collapseTimer) clearTimeout(collapseTimer);
+    hideTimer = setTimeout(function () {
+      if (state.pinned) return;
+      if (!document.body.classList.contains('menu-hidden')) {
+        document.body.classList.add('menu-hidden');
+        collapseTimer = setTimeout(fireCollapseDone, COLLAPSE_MS);
+      } else {
+        fireCollapseDone();
+      }
+    }, HIDE_DELAY);
+  }
 
   function post(obj) {
     var payload = JSON.stringify(obj);
@@ -220,14 +287,24 @@ body[data-theme="light"] .cmd-row button{color:#fff;border-color:var(--orange)}
     if (d.aiPaused !== undefined) state.aiPaused = !!d.aiPaused;
     if (d.aiBusy !== undefined) state.aiBusy = !!d.aiBusy;
     if (d.themeMode !== undefined) applyTheme(d.themeMode);
+    if (d.expanded !== undefined) {
+      if (d.expanded) showMenu();
+      else if (!state.pinned) scheduleHideMenu();
+    }
     syncUi();
   }
 
   function bindPinInput(el) {
     if (!el) return;
-    el.addEventListener('focus', function () { dispatch({ type: 'niuma_browser_chrome_pin' }); });
+    el.addEventListener('focus', function () {
+      state.pinned = true;
+      showMenu();
+      dispatch({ type: 'niuma_browser_chrome_pin' });
+    });
     el.addEventListener('blur', function () {
+      state.pinned = false;
       setTimeout(function () { dispatch({ type: 'niuma_browser_chrome_unpin' }); }, 180);
+      scheduleHideMenu();
     });
   }
 
@@ -273,15 +350,55 @@ body[data-theme="light"] .cmd-row button{color:#fff;border-color:var(--orange)}
     }
   } catch (_) {}
 
-  (function bindChromePaneHover() {
-    document.body.addEventListener('pointerenter', function () {
-      dispatch({ type: 'niuma_browser_chrome_hover' });
-    }, { passive: true });
+  (function bindChromePaneZone() {
+    var zone = pane === 'bottom' ? 'bottom' : 'top';
+
+    function releaseFocus() {
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+        try { document.activeElement.blur(); } catch (_) {}
+      }
+    }
+
+    function onEnter() {
+      showMenu();
+      dispatch({ type: 'niuma_browser_mobile_zone_enter', zone: zone });
+    }
+    function onLeave(e) {
+      var rt = e && e.relatedTarget;
+      if (rt && document.body.contains(rt)) return;
+      releaseFocus();
+      scheduleHideMenu();
+      dispatch({ type: 'niuma_browser_mobile_zone_leave', zone: zone });
+    }
+    document.body.addEventListener('pointerenter', onEnter, { passive: true });
+    document.body.addEventListener('mouseenter', onEnter, { passive: true });
+    document.body.addEventListener('pointerleave', onLeave, { passive: true });
+    document.body.addEventListener('mouseleave', onLeave, { passive: true });
+    document.addEventListener('pointerout', function (e) {
+      if (!e.relatedTarget || !document.body.contains(e.relatedTarget)) {
+        releaseFocus();
+        scheduleHideMenu();
+        dispatch({ type: 'niuma_browser_mobile_zone_leave', zone: zone });
+      }
+    }, true);
+    document.addEventListener('mouseout', function (e) {
+      if (!e.relatedTarget || !document.body.contains(e.relatedTarget)) {
+        releaseFocus();
+        scheduleHideMenu();
+        dispatch({ type: 'niuma_browser_mobile_zone_leave', zone: zone });
+      }
+    }, true);
+    window.addEventListener('blur', function () {
+      releaseFocus();
+      scheduleHideMenu();
+    });
   })();
 
   dispatch({ type: 'niuma_browser_sync_state' });
   syncUi();
   window.syncUi = syncUi;
+  window.__niumaChromeShowMenu = showMenu;
+  window.__niumaChromeHideMenu = scheduleHideMenu;
 })();
 </script>
 </body>

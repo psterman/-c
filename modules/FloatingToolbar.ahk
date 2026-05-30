@@ -1682,6 +1682,17 @@ FloatingToolbar_OnWebMessage(sender, args) {
         return
     }
 
+    if (typ = "chat_input_context_menu") {
+        x := msg.Has("x") ? Integer(msg["x"]) : 0
+        y := msg.Has("y") ? Integer(msg["y"]) : 0
+        field := msg.Has("field") ? Trim(String(msg["field"])) : "input"
+        hasSel := msg.Has("hasSelection") ? !!msg["hasSelection"] : false
+        sel := msg.Has("selection") ? String(msg["selection"]) : ""
+        FTB_Debug("chat_input_context_menu x=" . x . " y=" . y . " field=" . field)
+        SetTimer(FloatingToolbar_ShowChatInputContextMenuDeferred.Bind(x, y, field, hasSel, sel), -10)
+        return
+    }
+
     if (typ = "toolbar_cmd_context") {
         cid := msg.Has("cmdId") ? Trim(String(msg["cmdId"])) : ""
         if (cid = "ftb_cursor_menu") {
@@ -4292,6 +4303,122 @@ FloatingToolbar_ShowContextMenuDeferred(anchorX := 0, anchorY := 0) {
     try ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY)
     catch as err {
         FTB_Debug("show menu failed: " . err.Message, "err")
+    }
+}
+
+FloatingToolbar_EscapeJsSingle(s) {
+    if FuncExists("NiumaMobileBrowser_EscapeJsSingle")
+        return NiumaMobileBrowser_EscapeJsSingle(s)
+    t := StrReplace(String(s), "\", "\\")
+    t := StrReplace(t, "'", "\'")
+    t := StrReplace(t, "`r", "\r")
+    t := StrReplace(t, "`n", "\n")
+    return t
+}
+
+FloatingToolbar_ChatInputFieldJs(fieldId := "input") {
+    fid := Trim(String(fieldId))
+    if (fid = "")
+        fid := "input"
+    return "document.getElementById('" . FloatingToolbar_EscapeJsSingle(fid) . "')"
+}
+
+FloatingToolbar_ChatInputCtxRunJs(js) {
+    wv2 := FloatingToolbar_GetChatWv2()
+    if !wv2
+        return false
+    try {
+        wv2.ExecuteScriptAsync(js)
+        return true
+    } catch {
+        return false
+    }
+}
+
+FloatingToolbar_ChatInputCtxCopy(hasSel, selection, *) {
+    if hasSel && Trim(String(selection)) != "" {
+        try {
+            A_Clipboard := ""
+            A_Clipboard := String(selection)
+            ClipWait(1)
+        } catch {
+        }
+        return
+    }
+    elJs := FloatingToolbar_ChatInputFieldJs("input")
+    FloatingToolbar_ChatInputCtxRunJs("(function(){try{var el=" . elJs . ";if(!el)return false;el.focus();"
+        . "if(el.selectionStart!=null&&el.selectionEnd!=null&&el.selectionStart!==el.selectionEnd)return document.execCommand('copy');"
+        . "return document.execCommand('copy');}catch(e){return false;}})();")
+}
+
+FloatingToolbar_ChatInputCtxCut(selection, fieldId := "input", *) {
+    sel := String(selection)
+    if (sel != "") {
+        try {
+            A_Clipboard := ""
+            A_Clipboard := sel
+            ClipWait(1)
+        } catch {
+        }
+    }
+    elJs := FloatingToolbar_ChatInputFieldJs(fieldId)
+    js := "(function(){try{var el=" . elJs . ";if(!el)return;var a=el.selectionStart,b=el.selectionEnd;"
+        . "if(a==null||a===b)return;el.value=el.value.slice(0,a)+el.value.slice(b);el.selectionStart=el.selectionEnd=a;"
+        . "el.dispatchEvent(new Event('input',{bubbles:true}));el.focus();}catch(e){}})();"
+    FloatingToolbar_ChatInputCtxRunJs(js)
+}
+
+FloatingToolbar_ChatInputCtxPaste(fieldId := "input", *) {
+    clip := A_Clipboard
+    clipEsc := FloatingToolbar_EscapeJsSingle(String(clip))
+    elJs := FloatingToolbar_ChatInputFieldJs(fieldId)
+    js := "(function(){try{var el=" . elJs . ";if(!el)return;var t='" . clipEsc . "';"
+        . "el.focus();var a=el.selectionStart,b=el.selectionEnd;"
+        . "if(a!=null&&b!=null){el.value=el.value.slice(0,a)+t+el.value.slice(b);el.selectionStart=el.selectionEnd=a+t.length;}"
+        . "else{el.value=(el.value||'')+t;}"
+        . "el.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){}})();"
+    FloatingToolbar_ChatInputCtxRunJs(js)
+}
+
+FloatingToolbar_ChatInputCtxSelectAll(fieldId := "input", *) {
+    elJs := FloatingToolbar_ChatInputFieldJs(fieldId)
+    FloatingToolbar_ChatInputCtxRunJs("(function(){try{var el=" . elJs . ";if(!el)return;el.focus();el.select();}catch(e){}})();")
+}
+
+FloatingToolbar_ShowChatInputContextMenuDeferred(anchorX := 0, anchorY := 0, fieldId := "input", hasSel := false, selection := "") {
+    if (anchorX <= 0 || anchorY <= 0) {
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&anchorX, &anchorY)
+    }
+    fid := Trim(String(fieldId))
+    if (fid = "")
+        fid := "input"
+    sel := String(selection)
+    menuItems := []
+    menuItems.Push({ Text: "复制", Icon: "📋", Action: FloatingToolbar_ChatInputCtxCopy.Bind(hasSel, sel) })
+    if hasSel && Trim(sel) != ""
+        menuItems.Push({ Text: "剪切", Icon: "✂", Action: FloatingToolbar_ChatInputCtxCut.Bind(sel, fid) })
+    menuItems.Push({ Text: "粘贴", Icon: "📥", Action: FloatingToolbar_ChatInputCtxPaste.Bind(fid) })
+    menuItems.Push({ Text: "全选", Icon: "▦", Action: FloatingToolbar_ChatInputCtxSelectAll.Bind(fid) })
+    try {
+        if IsSet(ShowDarkStylePopupMenuAt)
+            ShowDarkStylePopupMenuAt(menuItems, anchorX + 2, anchorY + 2)
+        else {
+            m := Menu()
+            for item in menuItems {
+                act := item.HasProp("Action") ? item.Action : 0
+                lbl := item.HasProp("Text") ? String(item.Text) : ""
+                if (lbl = "")
+                    continue
+                if act
+                    m.Add(lbl, act)
+                else
+                    m.Add(lbl)
+            }
+            m.Show(anchorX + 2, anchorY + 2)
+        }
+    } catch as err {
+        FTB_Debug("chat input menu failed: " . err.Message, "err")
     }
 }
 
