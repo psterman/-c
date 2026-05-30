@@ -299,6 +299,106 @@ body.native-input-mode .palette-status { display: none !important; }
   0%, 100% { opacity: 1; }
   50% { opacity: 0.72; }
 }
+
+/* ===== 浅色主题（对齐 FloatingToolbar / 设置页 light） ===== */
+body[data-theme="light"] {
+  color-scheme: light;
+  --panel-top: #ffffff;
+  --panel-bottom: #f5f7fa;
+  --glass-edge: rgba(255, 255, 255, 0.95);
+  --glass-edge-soft: rgba(230, 126, 34, 0.14);
+  --glass-warm: rgba(230, 126, 34, 0.28);
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --text: #2d2d2d;
+  --text-soft: #555555;
+  --text-main: #1a1a1a;
+  --accent: #e67e22;
+  --accent-2: #d35400;
+}
+body[data-theme="light"] .palette-panel::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0) 30%);
+}
+body[data-theme="light"] .palette-panel::after {
+  opacity: 0.95;
+}
+body[data-theme="light"] .palette-panel.has-results .palette-header {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+body[data-theme="light"] .palette-search::placeholder {
+  color: #8a8a8a;
+}
+body[data-theme="light"] .palette-voice {
+  background: #ffffff;
+  border-color: rgba(230, 126, 34, 0.28);
+  color: #c85d00;
+}
+body[data-theme="light"] .palette-voice:hover {
+  background: #fff3e8;
+  border-color: rgba(211, 84, 0, 0.42);
+  box-shadow: 0 0 12px rgba(230, 126, 34, 0.12);
+}
+body[data-theme="light"] .palette-voice.recording {
+  background: #fff1e3;
+  border-color: rgba(211, 84, 0, 0.5);
+  color: #d35400;
+}
+body[data-theme="light"] .palette-status {
+  color: #a65a12;
+}
+body[data-theme="light"] .palette-status.listening,
+body[data-theme="light"] .palette-status.loading {
+  color: #c85d00;
+}
+body[data-theme="light"] .palette-status.error {
+  color: #c0392b;
+}
+body[data-theme="light"] .palette-panel.has-results .palette-results.is-scrolling {
+  scrollbar-color: rgba(230, 126, 34, 0.45) transparent;
+}
+body[data-theme="light"] .palette-panel.has-results .palette-results.is-scrolling::-webkit-scrollbar-thumb {
+  background: rgba(230, 126, 34, 0.38);
+}
+body[data-theme="light"] .result-item:hover {
+  background: #fff3e8;
+  border-color: rgba(0, 0, 0, 0.04);
+}
+body[data-theme="light"] .result-item.active {
+  background: linear-gradient(90deg, #fff1e3 0%, #fff8f0 100%);
+  border-color: rgba(230, 126, 34, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+body[data-theme="light"] .result-icon {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #d35400;
+}
+body[data-theme="light"] .result-item.kind-history .result-icon {
+  color: #2563eb;
+  background: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.16);
+}
+body[data-theme="light"] .result-item.kind-exec .result-icon {
+  color: #15803d;
+  background: #ecfdf3;
+  border-color: rgba(21, 128, 61, 0.16);
+}
+body[data-theme="light"] .result-binding {
+  color: #666666;
+  border-color: rgba(0, 0, 0, 0.08);
+  background: #fafafa;
+}
+body[data-theme="light"] .result-item.matched .result-title {
+  color: #c85d00;
+}
+body[data-theme="light"] .result-item.kind-history .result-title {
+  color: #1d4ed8;
+}
+body[data-theme="light"] .result-item.kind-exec .result-title {
+  color: #166534;
+}
+body[data-theme="light"] .result-item.active .result-title {
+  color: #1a1a1a;
+}
 </style>
 </head>
 <body>
@@ -318,6 +418,7 @@ body.native-input-mode .palette-status { display: none !important; }
   var sizeTimer = null;
   var scrollHideTimer = null;
   var root = document.getElementById("root");
+  var themeMode = "dark";
   var searchIconSvg =
     '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
     '<circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"></circle>' +
@@ -330,6 +431,18 @@ body.native-input-mode .palette-status { display: none !important; }
         window.chrome.webview.postMessage(JSON.stringify(o));
       }
     } catch (_) {}
+  }
+
+  function applyTheme(mode) {
+    themeMode = String(mode || "").toLowerCase() === "light" ? "light" : "dark";
+    document.body.setAttribute("data-theme", themeMode);
+    try {
+      document.documentElement.style.colorScheme = themeMode;
+    } catch (_) {}
+  }
+
+  function hidePalette() {
+    post({ type: "palette_hide" });
   }
 
   function esc(t) {
@@ -548,7 +661,7 @@ body.native-input-mode .palette-status { display: none !important; }
         executeSelected();
       } else if (e.key === "Escape") {
         e.preventDefault();
-        post({ type: "palette_hide" });
+        hidePalette();
       }
     });
     voiceBtn?.addEventListener("click", function () {
@@ -573,8 +686,22 @@ body.native-input-mode .palette-status { display: none !important; }
       window.nmerPalette.setInputText(d.text || "");
     } else if (d.type === "palette_focus") {
       document.getElementById("command-input")?.focus();
+    } else if (d.type === "set_theme") {
+      applyTheme(d.themeMode || d.theme || "dark");
     }
   }
+
+  document.addEventListener(
+    "keydown",
+    function (e) {
+      if (e.key !== "Escape" || composing) return;
+      e.preventDefault();
+      hidePalette();
+    },
+    true
+  );
+
+  applyTheme("dark");
 
   if (window.chrome && window.chrome.webview) {
     window.chrome.webview.addEventListener("message", onHostMessage);

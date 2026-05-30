@@ -623,6 +623,9 @@ ApplyTheme(Mode) {
     try VK_PushThemeToWeb()
     catch {
     }
+    try CommandPalette_PushThemeToWeb(Mode)
+    catch {
+    }
     try SCWV_PushThemeToWeb()
     catch {
     }

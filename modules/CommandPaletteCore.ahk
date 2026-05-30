@@ -114,6 +114,7 @@ CommandPalette_Init() {
     g_CmdPal_Gui := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale", "NMER Command Palette")
     g_CmdPal_Gui.BackColor := "010101"
     g_CmdPal_Gui.OnEvent("Close", (*) => CommandPalette_Hide())
+    g_CmdPal_Gui.OnEvent("Escape", (*) => CommandPalette_Hide())
     g_CmdPal_Gui.Show("w" . g_CmdPal_Width . " h" . g_CmdPal_CurrentHeight . " Hide")
     CommandPalette_SyncHostShape()
     WV2 := _CmdPal_GetWebView2Class()
@@ -166,8 +167,11 @@ CommandPalette_OnNavigationCompleted(sender, args) {
     }
     if !ok
         return
-    if g_CmdPal_Visible && !g_CmdPal_Revealed
-        SetTimer(CommandPalette_Reveal, -1)
+    if g_CmdPal_Visible {
+        CommandPalette_PushThemeToWeb()
+        if !g_CmdPal_Revealed
+            SetTimer(CommandPalette_Reveal, -1)
+    }
     CommandPalette_SyncHostShape()
     SetTimer(CommandPalette_PushEmptyQuery, -80)
 }
@@ -226,6 +230,7 @@ CommandPalette_CenterAndShow() {
     }
     g_CmdPal_Visible := true
     g_CmdPal_Revealed := true
+    CommandPalette_PushThemeToWeb()
     try WebView2_MoveFocusProgrammatic(g_CmdPal_Ctrl)
     catch {
     }
@@ -404,6 +409,7 @@ CommandPalette_OnWebMessage(sender, args) {
         return
     typ := msg.Has("type") ? String(msg["type"]) : ""
     if (typ = "palette_ready") {
+        CommandPalette_PushThemeToWeb()
         SetTimer(CommandPalette_Reveal, -1)
         SetTimer(CommandPalette_DeferredFocus, -80)
         SetTimer(CommandPalette_SyncHostShape, -1)
@@ -813,3 +819,40 @@ CommandPalette_OnInputActivated() {
     else
         SetTimer(CommandPalette_DeferredFocus, -150)
 }
+
+CommandPalette_NormalizeThemeToken(raw, fallback := "dark") {
+    s := StrLower(Trim(String(raw)))
+    if (s = "light" || s = "lite" || s = "浅色")
+        return "light"
+    if (s = "dark")
+        return "dark"
+    return (fallback = "light") ? "light" : "dark"
+}
+
+CommandPalette_GetThemeMode() {
+    if FuncExists("FloatingToolbar_GetThemeMode")
+        return CommandPalette_NormalizeThemeToken(FloatingToolbar_GetThemeMode())
+    if FuncExists("_VK_GetThemeMode")
+        return CommandPalette_NormalizeThemeToken(_VK_GetThemeMode())
+    try {
+        global ThemeMode
+        if IsSet(ThemeMode)
+            return CommandPalette_NormalizeThemeToken(ThemeMode)
+    } catch {
+    }
+    return "dark"
+}
+
+CommandPalette_PushThemeToWeb(override := "") {
+    tm := (Trim(String(override)) != "")
+        ? CommandPalette_NormalizeThemeToken(override)
+        : CommandPalette_GetThemeMode()
+    CommandPalette_PushToWeb(Map("type", "set_theme", "themeMode", tm))
+}
+
+; 命令面板可见时 Esc 关闭（WebView 未收到按键时由宿主兜底）
+#HotIf CommandPalette_IsVisible()
+Esc:: {
+    CommandPalette_Hide()
+}
+#HotIf
