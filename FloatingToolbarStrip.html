@@ -75,30 +75,8 @@ body.drawer-open .drawer-toolbar .logo-btn,body.drawer-open #panel > header.hdr 
 body.cli-mode #msgs,body.cli-mode #cmp{display:none!important}
 body.cli-mode #cliPane{display:flex!important;flex-direction:column}
 :root{--mobile-browser-w:400px}
-#mobileBrowserChrome{display:none;flex-shrink:0;flex-direction:column;align-items:stretch;gap:calc(6px * var(--ui));padding:calc(8px * var(--ui)) calc(12px * var(--ui));border-bottom:1px solid rgba(255,102,0,.18);background:rgba(0,0,0,.18)}
-#mobileBrowserChrome .mobile-chrome-row{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--ui));min-width:0}
-#mobileBrowserChrome .mobile-chrome-label{font-size:calc(11px * var(--ui));color:var(--muted);font-weight:600;letter-spacing:.04em;flex-shrink:0}
-#mobileBrowserChrome .mobile-chrome-hint{font-size:calc(10px * var(--ui));color:var(--muted);opacity:.85}
-#mobileBrowserChrome .mobile-chrome-cmdrow{display:flex;align-items:center;gap:calc(6px * var(--ui));min-width:0}
-#mobileBrowserChrome .mobile-chrome-cmd{flex:1;min-width:0;height:calc(30px * var(--ui));padding:0 calc(10px * var(--ui));border:1px solid rgba(34,197,94,.35);border-radius:calc(8px * var(--ui));background:rgba(8,8,8,.72);color:var(--text);outline:none;font-size:calc(12px * var(--ui))}
-#mobileBrowserChrome .mobile-chrome-cmd-go{flex-shrink:0;height:calc(30px * var(--ui));padding:0 calc(10px * var(--ui));border-radius:calc(8px * var(--ui));border:1px solid rgba(34,197,94,.45);background:rgba(34,197,94,.12);color:#86efac;font-weight:700;cursor:pointer;font-size:calc(11px * var(--ui))}
-#mobileBrowserChrome .mobile-chrome-urlrow{display:flex;align-items:center;gap:calc(6px * var(--ui));min-width:0}
-#mobileBrowserChrome .mobile-chrome-url{flex:1;min-width:0;height:calc(32px * var(--ui));padding:0 calc(10px * var(--ui));border:1px solid rgba(255,102,0,.28);border-radius:calc(8px * var(--ui));background:rgba(8,8,8,.72);color:var(--text);outline:none;user-select:text;-webkit-user-select:text}
-#mobileBrowserChrome .mobile-chrome-go{flex-shrink:0;height:calc(32px * var(--ui));padding:0 calc(12px * var(--ui));border-radius:calc(8px * var(--ui));border:1px solid rgba(255,102,0,.35);background:rgba(255,102,0,.14);color:var(--orange);font-weight:700;cursor:pointer}
-#mobileBrowserChrome .mobile-chrome-btns{display:flex;gap:calc(6px * var(--ui));flex-shrink:0}
-#mobileBrowserChrome .mobile-chrome-btns .ib.active{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.55);color:#86efac}
-#mobileBrowserChrome .ib.ai-pause{color:#fca5a5;border-color:rgba(248,113,113,.45)}
-#mobileBrowserGhostMask{display:none;position:relative;margin:0 calc(-12px * var(--ui));padding:calc(6px * var(--ui)) calc(12px * var(--ui));border-top:1px solid rgba(34,197,94,.25);background:linear-gradient(90deg,rgba(34,197,94,.08),rgba(255,102,0,.06),rgba(34,197,94,.08))}
-#mobileBrowserGhostMask.show{display:block}
-#mobileBrowserGhostMask .ghost-bar{height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#22c55e,#4ade80,#22c55e,transparent);animation:mbGhostPulse 1.2s ease-in-out infinite}
-#mobileBrowserGhostMask .ghost-txt{font-size:calc(10px * var(--ui));color:#86efac;margin-top:calc(4px * var(--ui));letter-spacing:.03em}
-article.m.browser-agent-progress .mb .ba-live{color:#86efac;font-size:calc(11px * var(--ui));padding:calc(6px * var(--ui)) calc(8px * var(--ui));border-radius:calc(8px * var(--ui));background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.22);margin-bottom:calc(8px * var(--ui))}
-article.m.browser-agent-progress .mb table{font-size:calc(12px * var(--ui))}
-@keyframes mbGhostPulse{0%,100%{opacity:.45;transform:scaleX(.85)}50%{opacity:1;transform:scaleX(1)}}
-body.mobile-browser-open #mobileBrowserChrome{display:flex}
-body.mobile-browser-open.cli-mode #mobileBrowserChrome{display:none!important}
+#mobileBrowserChrome{display:none!important}
 body.mobile-browser-open #chat-mobile-browser{background:rgba(255,102,0,.22);border-color:rgba(255,102,0,.75);box-shadow:0 0 0 2px rgba(255,102,0,.25)}
-#mobileBrowserChrome .mobile-chrome-hint.active{color:#ffb380}
 body.mobile-browser-open #panel{transition:margin-right var(--ease),transform var(--ease)}
 body.mobile-browser-open #stage{transition:transform var(--ease)}
 #empty{padding:calc(14px * var(--ui));border:1px dashed rgba(255,102,0,.25);border-radius:calc(14px * var(--ui));color:var(--muted);background:rgba(255,255,255,.03);line-height:1.6;font-size:calc(13px * var(--ui))}
@@ -117,19 +95,15 @@ body.mobile-browser-open #stage{transition:transform var(--ease)}
 .drawer-toolbar{display:flex;flex-direction:row;align-items:center;gap:calc(6px * var(--ui));min-width:0;background:transparent;padding:0}
 #sendWrap{flex-shrink:0;display:flex;align-items:center}
 .attach-wrap{display:flex;align-items:center;gap:calc(6px * var(--ui));flex-wrap:wrap;flex:1;min-width:0}
-.utility-row{display:flex;align-items:center;gap:calc(8px * var(--ui));margin-top:calc(10px * var(--ui));min-height:calc(40px * var(--ui))}
-.utility-row .drawer-toolbar{flex:1;min-width:0}
+.utility-row{display:flex;flex-direction:column;align-items:stretch;gap:calc(6px * var(--ui));margin-top:calc(10px * var(--ui));min-height:calc(40px * var(--ui))}
+.utility-row .drawer-toolbar{display:flex;flex-direction:row;align-items:center;gap:calc(6px * var(--ui));min-width:0;flex:1}
 .st{font-size:calc(12px * var(--ui));color:var(--muted)}.st.error{color:#ff7a59}.st.success{color:#4ed08b}
 .btn1{min-height:calc(36px * var(--ui));padding:0 calc(14px * var(--ui));border-radius:calc(10px * var(--ui));border:1px solid rgba(255,102,0,.3);cursor:pointer;font-weight:700;font-size:calc(13px * var(--ui));background:linear-gradient(180deg,#ff7d26,#ff6600);color:#111;transition:all var(--ease)}
 .btn1:disabled{opacity:.45;cursor:not-allowed}
 .btn2,.btn3{height:calc(38px * var(--ui));padding:0 calc(14px * var(--ui));border-radius:calc(10px * var(--ui));font-size:calc(13px * var(--ui));border:1px solid rgba(255,102,0,.22);cursor:pointer;background:rgba(255,255,255,.04);color:var(--text)}
-#chatStatusRow{margin-top:calc(8px * var(--ui))}
+#chatStatusRow{margin-top:calc(6px * var(--ui));min-height:0}
 #chatStatusRow,#chat-status,#config-status{user-select:text;-webkit-user-select:text;cursor:text}
 #chat-status.error{cursor:text}
-#chatStatusCopy{flex-shrink:0;height:calc(28px * var(--ui));padding:0 calc(10px * var(--ui));font-size:calc(11px * var(--ui));border-radius:calc(8px * var(--ui));border:1px solid rgba(255,102,0,.28);background:rgba(255,255,255,.05);color:var(--orange);cursor:pointer;display:none}
-#chatStatusCopy.show{display:inline-flex;align-items:center}
-#chatStatusRow.status-has-copy{display:flex;align-items:flex-start;gap:calc(8px * var(--ui))}
-#chatStatusRow.status-has-copy #chat-status{flex:1;min-width:0}
 .hud-toggle{width:calc(34px * var(--ui));height:calc(34px * var(--ui));display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,102,0,.22);border-radius:calc(8px * var(--ui));background:rgba(255,255,255,.04);color:var(--orange);cursor:pointer;flex-shrink:0}
 .hud-toggle:hover{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.4)}
 .hud-toggle.active{background:rgba(255,102,0,.16);border-color:rgba(255,102,0,.55)}
@@ -413,13 +387,12 @@ body[data-theme="light"] .api-setup-box{background:#FFF8F0;border-color:#E9B889}
 .stab-add:hover{background:rgba(255,102,0,.08)}
 #newSessionPick{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity var(--de);z-index:42}
 body.nspick-open #newSessionPick{opacity:1;pointer-events:auto}
-.debug-hud{display:none;position:relative;width:100%;min-height:calc(18px * var(--ui));max-height:calc(40px * var(--ui));overflow:hidden;background:linear-gradient(180deg,rgba(255,102,0,.08),rgba(255,102,0,.03));border:1px solid rgba(255,102,0,.26);border-radius:calc(8px * var(--ui));padding:calc(1px * var(--ui)) calc(8px * var(--ui));font:calc(10px * var(--ui))/1.45 "AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;color:var(--muted);pointer-events:none;box-sizing:border-box}
+.debug-hud{display:none;width:100%;flex-shrink:0;max-height:calc(52px * var(--ui));overflow:auto;box-sizing:border-box;padding:calc(4px * var(--ui)) calc(8px * var(--ui));border:1px solid rgba(255,102,0,.14);border-radius:calc(8px * var(--ui));background:rgba(0,0,0,.2);font:calc(10px * var(--ui))/1.4 "AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;color:var(--muted);pointer-events:none}
 .debug-hud .row{display:block;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .debug-hud .row.err{color:#ff7a59}
 .debug-hud .row.ok{color:color-mix(in srgb, var(--orange) 78%, #fff 22%)}
-#chatStatusRow{display:grid;gap:calc(6px * var(--ui))}
-body.drawer-open #chatStatusRow .debug-hud{display:block}
-body[data-theme="light"] .debug-hud{background:linear-gradient(180deg,rgba(230,126,34,.10),rgba(230,126,34,.04));border-color:rgba(214,100,20,.28);color:#7a644f}
+body.debug-hud-on .debug-hud{display:block}
+body[data-theme="light"] .debug-hud{background:rgba(255,255,255,.55);border-color:rgba(214,100,20,.2);color:#7a644f}
 .nsbg{position:absolute;inset:0;background:rgba(0,0,0,.5)}
 .ns-panel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(calc(380px * var(--ui)),calc(100% - 28px));max-height:min(calc(440px * var(--ui)),72vh);background:var(--panel2);border:1px solid rgba(255,102,0,.28);border-radius:calc(18px * var(--ui));display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.45)}
 .nsh{padding:calc(12px * var(--ui)) calc(14px * var(--ui));border-bottom:1px solid rgba(255,102,0,.15);display:flex;justify-content:space-between;align-items:flex-start;gap:calc(10px * var(--ui))}
@@ -495,7 +468,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </div>
 </div>
 <div id="app">
-<div id="debugHud" class="debug-hud"></div>
 <template id="ftb-toolbar-tpl">
 <div class="tb" data-action="Search" title="搜索"><svg viewBox="0 0 24 24" fill="none" stroke="#ff6600" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><div class="bubble">Selection Ready</div><span class="dot"></span></div>
 <div class="tb" data-action="Record" title="剪贴板"><svg viewBox="0 0 24 24" fill="none" stroke="#ff6600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg><span class="dot"></span></div>
@@ -517,39 +489,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <header class="hdr">
 <div><div class="t1">NiuMa Chat</div><div class="t2">Markdown · AHK v2 高亮</div></div>
 <div class="icons">
-<button class="ib" id="chat-mobile-browser" type="button" title="手机浏览器" aria-label="手机浏览器">🌐</button>
+<button class="ib" id="chat-mobile-browser" type="button" title="手机浏览器（右侧顶栏）" aria-label="手机浏览器">🌐</button>
 <button class="ib" id="chat-search" type="button" title="搜索聊天记录" aria-label="搜索聊天记录"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
 <button class="ib" id="chat-api-quick" type="button" title="配置 API Key" aria-label="配置 API">API</button>
 <button class="ib" id="chat-settings" type="button" title="打开设置" aria-label="打开设置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.82-.33 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.82.33l-.06.06A2 2 0 1 1 4.37 17l.06-.06a1.7 1.7 0 0 0 .33-1.82 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.03 4.4l.06.06a1.7 1.7 0 0 0 1.82.33h.01a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.5h.01a1.7 1.7 0 0 0 1.82-.33l.06-.06A2 2 0 1 1 19.63 7l-.06.06a1.7 1.7 0 0 0-.33 1.82v.01a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 <button class="ib" id="drawer-close" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 </div>
 </header>
-<div id="mobileBrowserChrome" aria-hidden="true">
-  <div class="mobile-chrome-row">
-    <span class="mobile-chrome-label">手机浏览</span>
-    <span class="mobile-chrome-hint">网页在窗口右侧显示 →</span>
-    <div class="mobile-chrome-btns">
-      <button class="ib" id="mb-back" type="button" title="后退" aria-label="后退">←</button>
-      <button class="ib" id="mb-reload" type="button" title="刷新" aria-label="刷新">↻</button>
-      <button class="ib" id="mb-label-debug" type="button" title="打标并显示绿色标签" aria-label="打标显示">👁️</button>
-      <button class="ib" id="mb-extract" type="button" title="提取页面文本到输入框" aria-label="提取文本">✂</button>
-      <button class="ib ai-pause" id="mb-ai-pause" type="button" title="暂停 AI 操控" aria-label="暂停 AI">⏸️</button>
-      <button class="ib" id="mb-close" type="button" title="关闭手机浏览器" aria-label="关闭">✕</button>
-    </div>
-  </div>
-  <div id="mobileBrowserGhostMask" aria-hidden="true"><div class="ghost-bar"></div><div class="ghost-txt">AI 正在操作右侧网页…</div></div>
-  <div class="mobile-chrome-cmdrow">
-    <input type="text" class="mobile-chrome-cmd" id="mb-cmd" placeholder="网页指令：观察 / 点击 3 / 输入 5 关键词" spellcheck="false" autocomplete="off" />
-    <button type="button" class="mobile-chrome-cmd-go" id="mb-cmd-go" title="执行网页指令">执行</button>
-  </div>
-  <div class="mobile-chrome-urlrow">
-    <input type="text" class="mobile-chrome-url" id="mb-url" placeholder="输入网址，如 https://example.com" spellcheck="false" autocomplete="off" />
-    <button type="button" class="mobile-chrome-go" id="mb-go" title="打开网址">前往</button>
-  </div>
-</div>
 <div id="sessionTabs" class="session-tabs" role="tablist" aria-label="对话标签"></div>
 <div id="main">
-<section id="msgs"><div id="empty">首次使用请点「设」完成 API。展开后工具条在输入框下方、发送按钮左侧。操控右侧手机浏览器：先点 🌐，或在对话里输入「@网页 帮我在页面点搜索」。</div></section>
+<section id="msgs"><div id="empty">首次使用请点「设」完成 API。点 🌐 打开右侧手机浏览器（顶栏在网页上方）；或在对话输入「@网页 …」自动操控。</div></section>
 <section id="cliPane" aria-label="CLI 终端">
   <div class="cli-shell">
     <div class="cli-bar">
@@ -598,9 +547,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   <svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/></svg>
 </button>
 </div>
+<div id="debugHud" class="debug-hud" aria-live="polite"></div>
 </div>
 <div id="attachList"></div>
-<div id="chatStatusRow"><div class="st" id="chat-status" title="可选中后 Ctrl+C，或点右侧「复制」">就绪</div><button type="button" id="chatStatusCopy" title="复制状态/错误全文">复制</button></div>
+<div id="chatStatusRow"><div class="st" id="chat-status" title="可选中后 Ctrl+C 复制">就绪</div></div>
 </section>
 </div>
 <div id="settings" aria-hidden="true">
@@ -1160,7 +1110,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     attachFolderBtn = $('attachFolderBtn'),
     attachList = $('attachList'),
     chatStatus = $('chat-status'),
-    chatStatusCopy = $('chatStatusCopy'),
     settings = $('settings'),
     sbg = document.querySelector('.sbg'),
     sclose = $('settings-close'),
@@ -1237,19 +1186,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     inlineLlmTest = $('inlineLlmTest'),
     inlineLlmOpenFull = $('inlineLlmOpenFull'),
     chatApiQuick = $('chat-api-quick'),
-    chatMobileBrowser = $('chat-mobile-browser'),
-    mobileBrowserChrome = $('mobileBrowserChrome'),
-    mbBack = $('mb-back'),
-    mbReload = $('mb-reload'),
-    mbLabelDebug = $('mb-label-debug'),
-    mbExtract = $('mb-extract'),
-    mbAiPause = $('mb-ai-pause'),
-    mbClose = $('mb-close'),
-    mobileBrowserGhostMask = $('mobileBrowserGhostMask'),
-    mbUrl = $('mb-url'),
-    mbGo = $('mb-go'),
-    mbCmd = $('mb-cmd'),
-    mbCmdGo = $('mb-cmd-go');
+    chatMobileBrowser = $('chat-mobile-browser');
 
   function tbEls() {
     return document.querySelectorAll('.tb[data-action], .tb[data-cmd-id]');
@@ -1371,6 +1308,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function applyDebugHudState() {
     var hud = document.getElementById('debugHud');
+    document.body.classList.toggle('debug-hud-on', !!DEBUG_HUD);
     if (hud) hud.style.display = DEBUG_HUD ? '' : 'none';
     if (hudToggleBtn) hudToggleBtn.classList.toggle('active', !!DEBUG_HUD);
   }
@@ -1472,8 +1410,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var hud = document.getElementById('debugHud');
     if (!hud) return;
     DEBUG_HUD = loadDebugHudPref();
-    var statusRow = document.getElementById('chatStatusRow');
-    if (statusRow && hud.parentElement !== statusRow) statusRow.appendChild(hud);
+    var utilityRow = document.querySelector('#cmp .utility-row');
+    if (utilityRow && hud.parentElement !== utilityRow) utilityRow.appendChild(hud);
     applyDebugHudState();
     if (DEBUG_HUD) dbg('HUD', 'debug enabled', 'ok');
   })();
@@ -1605,19 +1543,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function applyMobileBrowserAiBusy(busy) {
     state.mobileBrowserAiBusy = !!busy;
-    if (mobileBrowserGhostMask) {
-      mobileBrowserGhostMask.classList.toggle('show', state.mobileBrowserAiBusy && state.mobileBrowserOpen);
-      mobileBrowserGhostMask.setAttribute('aria-hidden', state.mobileBrowserAiBusy ? 'false' : 'true');
-    }
-    if (mbAiPause) mbAiPause.style.display = (state.mobileBrowserOpen && (state.mobileBrowserAiBusy || state.mobileBrowserAiPaused)) ? '' : 'none';
   }
 
   function syncMobileBrowserChromeState() {
-    if (mbLabelDebug) mbLabelDebug.classList.toggle('active', !!state.mobileBrowserLabelDebug);
-    if (mbAiPause) {
-      mbAiPause.textContent = state.mobileBrowserAiPaused ? '▶️' : '⏸️';
-      mbAiPause.title = state.mobileBrowserAiPaused ? '恢复 AI 操控' : '暂停 AI 操控';
-    }
     applyMobileBrowserAiBusy(state.mobileBrowserAiBusy);
   }
 
@@ -1650,12 +1578,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (open) state.mobileBrowserOpening = false;
     state.mobileBrowserOpen = !!open;
     document.body.classList.toggle('mobile-browser-open', state.mobileBrowserOpen);
-    if (mobileBrowserChrome) mobileBrowserChrome.setAttribute('aria-hidden', state.mobileBrowserOpen ? 'false' : 'true');
-    var hint = document.querySelector('#mobileBrowserChrome .mobile-chrome-hint');
-    if (hint) {
-      hint.textContent = state.mobileBrowserOpen ? '网页在窗口右侧（约 400px）' : '网页在窗口右侧显示 →';
-      hint.classList.toggle('active', state.mobileBrowserOpen);
-    }
     if (chatMobileBrowser) chatMobileBrowser.classList.toggle('active', state.mobileBrowserOpen);
     if (!state.mobileBrowserOpen) {
       state.mobileBrowserAiBusy = false;
@@ -1672,26 +1594,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function syncMobileUrlField(url) {
-    if (!mbUrl) return;
     var u = String(url || '').trim();
-    if (u && isSafeHttpUrl(u)) mbUrl.value = u;
-  }
-
-  function navigateMobileBrowserFromInput() {
-    if (!mbUrl) return;
-    var u = normalizeMobileUrlInput(mbUrl.value);
-    if (!u) {
-      cstat('请输入有效网址（http:// 或 https://）', 'error');
-      return;
-    }
-    try {
-      localStorage.setItem('niumaMobileBrowserLastUrl', u);
-    } catch (_) {}
-    state.mobileBrowserLastUrl = u;
-    if (!state.drawer) setDrawer(true);
-    applyMobileBrowserUi(true);
-    if (state.mobileBrowserOpen) post({ type: 'niuma_mobile_browser_navigate', url: u });
-    else post({ type: 'niuma_mobile_browser_open', url: u });
+    if (u && isSafeHttpUrl(u)) state.mobileBrowserLastUrl = u;
   }
 
   function openMobileBrowser(url) {
@@ -1712,7 +1616,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     state.mobileBrowserOpening = true;
     state.mobileBrowserOpeningAt = Date.now();
     applyMobileBrowserUi(true);
-    cstat('正在打开右侧手机浏览区…', '');
+    cstat('正在打开右侧手机浏览区（顶栏在网页上方）…', '');
     post({ type: 'niuma_mobile_browser_open', url: u });
   }
 
@@ -3279,13 +3183,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function cstat(t, m) {
     chatStatus.textContent = t;
     chatStatus.className = 'st' + (m === 'error' ? ' error' : m === 'success' ? ' success' : '');
-    var row = document.getElementById('chatStatusRow');
-    var showCopy = String(t || '').length > 0;
-    if (chatStatusCopy) {
-      chatStatusCopy.classList.toggle('show', showCopy);
-      chatStatusCopy.textContent = '复制';
-    }
-    if (row) row.classList.toggle('status-has-copy', showCopy);
   }
 
   function isSessionSending(id) {
@@ -3334,13 +3231,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (chatStatus) {
       chatStatus.textContent = t;
       chatStatus.className = 'st' + cls;
-      var row = document.getElementById('chatStatusRow');
-      var showCopy = String(t || '').length > 0;
-      if (chatStatusCopy) {
-        chatStatusCopy.classList.toggle('show', showCopy);
-        chatStatusCopy.textContent = '复制';
-      }
-      if (row) row.classList.toggle('status-has-copy', showCopy);
     }
   }
 
@@ -12074,57 +11964,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       else openMobileBrowser('');
     });
   }
-  if (mbBack) mbBack.addEventListener('click', function () { post({ type: 'niuma_mobile_browser_back' }); });
-  if (mbReload) mbReload.addEventListener('click', function () { post({ type: 'niuma_mobile_browser_reload' }); });
-  function runMobileBrowserCmd() {
-    if (!mbCmd) return;
-    var cmd = String(mbCmd.value || '').trim();
-    if (!cmd) {
-      cstat('请输入网页指令，例如：观察、点击 3、输入 5 你好', 'error');
-      return;
-    }
-    if (!state.mobileBrowserOpen) {
-      cstat('请先打开手机浏览器（🌐）', 'error');
-      return;
-    }
-    post({ type: 'niuma_browser_cmd', cmd: cmd });
-  }
-  if (mbLabelDebug) {
-    mbLabelDebug.addEventListener('click', function () {
-      if (!state.mobileBrowserOpen) {
-        cstat('请先打开手机浏览器（🌐）', 'error');
-        return;
-      }
-      post({ type: 'niuma_browser_toggle_labels' });
-    });
-  }
-  if (mbCmdGo) mbCmdGo.addEventListener('click', runMobileBrowserCmd);
-  if (mbCmd) {
-    mbCmd.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        runMobileBrowserCmd();
-      }
-    });
-  }
-  if (mbExtract) mbExtract.addEventListener('click', function () { post({ type: 'niuma_mobile_browser_extract' }); });
-  if (mbAiPause) {
-    mbAiPause.style.display = 'none';
-    mbAiPause.addEventListener('click', function () {
-      if (state.mobileBrowserAiPaused) post({ type: 'niuma_browser_resume_ai' });
-      else post({ type: 'niuma_browser_pause_ai' });
-    });
-  }
-  if (mbClose) mbClose.addEventListener('click', function () { closeMobileBrowser(); });
-  if (mbGo) mbGo.addEventListener('click', function () { navigateMobileBrowserFromInput(); });
-  if (mbUrl) {
-    mbUrl.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        navigateMobileBrowserFromInput();
-      }
-    });
-  }
   if (msgs) {
     msgs.addEventListener('click', function (e) {
       var a = e.target && e.target.closest ? e.target.closest('a.niuma-ext-link') : null;
@@ -12855,30 +12694,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
   document.addEventListener('keydown', handleCopyFriendlyClipboardHotkeys, true);
 
-  if (chatStatusCopy) {
-    chatStatusCopy.addEventListener('click', function () {
-      var txt = chatStatus ? String(chatStatus.textContent || '') : '';
-      if (!txt) return;
-      if (copyTextToClipboard(txt)) {
-        var prev = chatStatusCopy.textContent;
-        chatStatusCopy.textContent = '已复制';
-        setTimeout(function () {
-          chatStatusCopy.textContent = prev || '复制';
-        }, 1200);
-      }
-    });
-  }
   if (chatStatus) {
     chatStatus.addEventListener('dblclick', function () {
       var txt = String(chatStatus.textContent || '');
-      if (txt && copyTextToClipboard(txt) && chatStatusCopy) {
-        var prev = chatStatusCopy.textContent;
-        chatStatusCopy.textContent = '已复制';
-        chatStatusCopy.classList.add('show');
-        setTimeout(function () {
-          chatStatusCopy.textContent = prev || '复制';
-        }, 1200);
-      }
+      if (txt) copyTextToClipboard(txt);
     });
   }
 
@@ -13807,7 +13626,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         if (d.open) {
           var mpw = parseInt(d.widthPx, 10) || 0;
           if (mpw > 0) document.documentElement.style.setProperty('--mobile-browser-w', mpw + 'px');
-          cstat('手机浏览器已打开：右侧约 ' + (mpw > 0 ? mpw : 400) + 'px 显示网页', 'success');
+          cstat('手机浏览器已打开：右侧网页 + 顶栏统一控制（约 ' + (mpw > 0 ? mpw : 400) + 'px）', 'success');
         }
         if (d.url && isSafeHttpUrl(d.url)) {
           state.mobileBrowserLastUrl = String(d.url);

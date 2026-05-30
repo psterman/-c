@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Browser Chrome</title>
+<style>
+:root{
+  --bg:#0d1016;
+  --panel:rgba(20,34,54,.92);
+  --panel2:rgba(27,45,69,.96);
+  --orange:#ff6600;
+  --orange2:#ff7d26;
+  --text:#e8e8e8;
+  --muted:#9db0c6;
+  --line:rgba(255,102,0,.18);
+  --line2:rgba(255,255,255,.06);
+  --omni:rgba(8,8,8,.72);
+  --btn-bg:rgba(255,255,255,.04);
+  --btn-hover:rgba(255,102,0,.12);
+  --success:#4ed08b;
+  --h:44px;
+  --icon:34px;
+  --ease:.2s cubic-bezier(.22,1,.36,1);
+}
+body[data-theme="light"]{
+  --bg:#f7f7f7;
+  --panel:rgba(255,255,255,.96);
+  --panel2:rgba(255,255,255,.98);
+  --orange:#e67e22;
+  --orange2:#d35400;
+  --text:#2d2d2d;
+  --muted:#555555;
+  --line:rgba(214,90,20,.22);
+  --line2:#e5e5e5;
+  --omni:#ffffff;
+  --btn-bg:#ffffff;
+  --btn-hover:#fff3e8;
+  --success:#2e9b6a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font:13px/1.5 "Segoe UI","Microsoft YaHei UI",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;user-select:none;
+}
+button,input{font:inherit;color:inherit}
+
+body.pane-top .top-shell{height:100%;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+body.pane-top .toolbar{
+  flex-shrink:0;display:flex;align-items:center;gap:6px;
+  padding:6px 8px 7px;
+  background:linear-gradient(180deg,var(--panel),var(--panel2));
+  border-bottom:1px solid var(--line);
+  backdrop-filter:blur(12px);
+}
+.navgrp{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.iconbtn{
+  width:var(--icon);height:var(--icon);border:1px solid var(--line);border-radius:10px;
+  background:var(--btn-bg);color:var(--orange);cursor:pointer;
+  display:grid;place-items:center;transition:background var(--ease),border-color var(--ease);
+}
+.iconbtn:hover{background:var(--btn-hover);border-color:rgba(255,102,0,.45)}
+.iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.omnibox{
+  flex:1;min-width:0;height:var(--h);display:flex;align-items:center;gap:8px;
+  padding:0 12px;border-radius:999px;background:var(--omni);border:1px solid var(--line);
+  transition:border-color var(--ease),box-shadow var(--ease);
+}
+.omnibox:focus-within{border-color:rgba(255,102,0,.45);box-shadow:0 0 0 2px rgba(255,102,0,.12)}
+.omnibox .site{width:14px;height:14px;flex-shrink:0;opacity:.65;color:var(--muted)}
+.omnibox input{
+  flex:1;min-width:0;border:none;background:transparent;outline:none;
+  font-size:13px;color:var(--text);user-select:text;-webkit-user-select:text;
+}
+.omnibox input::placeholder{color:var(--muted)}
+.ai-strip{
+  flex-shrink:0;display:none;align-items:center;gap:8px;
+  padding:0 10px 6px;background:var(--panel2);border-bottom:1px solid var(--line);
+}
+.ai-strip.show{display:flex}
+.ai-strip .pulse{flex:1;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--orange),#ffb347,var(--orange),transparent);animation:pulse 1.2s ease-in-out infinite}
+.ai-strip .txt{font-size:11px;color:#ffb380;white-space:nowrap}
+@keyframes pulse{0%,100%{opacity:.45;transform:scaleX(.86)}50%{opacity:1;transform:scaleX(1)}}
+
+body.pane-bottom{background:var(--bg)}
+body.pane-bottom .bottom-shell{
+  height:100%;display:flex;flex-direction:column;justify-content:flex-end;
+  padding:6px 8px 8px;gap:6px;
+  background:linear-gradient(0deg,var(--panel2),var(--panel));
+  border-top:1px solid var(--line);
+  backdrop-filter:blur(12px);
+}
+.dock-row{display:flex;align-items:center;gap:6px;min-width:0}
+.dock-btn{
+  flex:1;min-width:0;height:38px;border:1px solid var(--line);border-radius:10px;
+  background:var(--btn-bg);color:var(--text);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:5px;padding:0 6px;
+  font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:background var(--ease),border-color var(--ease),color var(--ease);
+}
+.dock-btn:hover{background:var(--btn-hover);border-color:rgba(255,102,0,.4);color:var(--orange)}
+.dock-btn.active{color:var(--orange);background:rgba(255,102,0,.14);border-color:rgba(255,102,0,.45)}
+.dock-btn.danger{color:#ff7a59}
+.dock-btn.danger:hover{background:rgba(255,90,70,.1);border-color:rgba(255,90,70,.35);color:#ff7a59}
+.dock-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
+.cmd-row{display:flex;gap:6px;min-width:0}
+.cmd-row input{
+  flex:1;min-width:0;height:36px;padding:0 10px;border-radius:10px;
+  border:1px solid var(--line);background:var(--omni);outline:none;
+  user-select:text;-webkit-user-select:text;font-size:12px;color:var(--text);
+}
+.cmd-row input:focus{border-color:rgba(255,102,0,.4);box-shadow:0 0 0 2px rgba(255,102,0,.1)}
+.cmd-row button{
+  flex-shrink:0;height:36px;padding:0 14px;border-radius:10px;border:1px solid rgba(255,102,0,.3);
+  background:linear-gradient(180deg,var(--orange2),var(--orange));color:#111;font-weight:700;cursor:pointer;font-size:12px;
+}
+body[data-theme="light"] .cmd-row button{color:#fff;border-color:var(--orange)}
+</style>
+</head>
+<body class="pane-top" data-theme="dark">
+<div id="root"></div>
+<script>
+(function () {
+  'use strict';
+
+  var params = new URLSearchParams(location.search || '');
+  var pane = (window.__NIUMA_CHROME_PANE || params.get('pane') || 'top').toLowerCase();
+  if (pane !== 'bottom') pane = 'top';
+  document.body.className = 'pane-' + pane;
+
+  var TOP_HTML = ''
+    + '<div class="top-shell">'
+    + '<div class="toolbar" role="toolbar">'
+    + '<div class="navgrp">'
+    + '<button type="button" class="iconbtn" id="btnBack" title="后退"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>'
+    + '<button type="button" class="iconbtn" id="btnReload" title="刷新"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>'
+    + '</div>'
+    + '<form class="omnibox" id="omniForm" autocomplete="off">'
+    + '<svg class="site" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>'
+    + '<input type="text" id="urlInput" placeholder="搜索或输入网址" spellcheck="false" />'
+    + '</form></div>'
+    + '<div class="ai-strip" id="aiStrip"><div class="pulse"></div><div class="txt">AI 正在操作网页…</div></div>'
+    + '</div>';
+
+  var BOTTOM_HTML = ''
+    + '<div class="bottom-shell">'
+    + '<div class="dock-row">'
+    + '<button type="button" class="dock-btn" id="btnLabels" title="元素打标"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><span>打标</span></button>'
+    + '<button type="button" class="dock-btn" id="btnExtract" title="提取文本"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>提取</span></button>'
+    + '<button type="button" class="dock-btn" id="btnAiPause" title="暂停 AI"><svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg><span id="aiPauseTxt">暂停</span></button>'
+    + '<button type="button" class="dock-btn danger" id="btnClose" title="关闭"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg><span>关闭</span></button>'
+    + '</div>'
+    + '<div class="cmd-row"><input type="text" id="cmdInput" placeholder="观察 / 点击 3 / 输入 5 文本" spellcheck="false" />'
+    + '<button type="button" id="cmdRun">执行</button></div>'
+    + '</div>';
+
+  document.getElementById('root').innerHTML = pane === 'bottom' ? BOTTOM_HTML : TOP_HTML;
+
+  var state = { open: false, url: '', labelDebug: false, aiPaused: false, aiBusy: false, themeMode: 'dark' };
+
+  function post(obj) {
+    var payload = JSON.stringify(obj);
+    try {
+      if (window.chrome && window.chrome.webview && typeof window.chrome.webview.postMessage === 'function') {
+        window.chrome.webview.postMessage(payload);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  function dispatch(obj) {
+    try {
+      if (window.ahk && typeof window.ahk.MobileChromePost === 'function') {
+        if (window.ahk.MobileChromePost(JSON.stringify(obj)) === 'ok') return true;
+      }
+    } catch (_) {}
+    return post(obj);
+  }
+
+  function $(id) { return document.getElementById(id); }
+
+  function applyTheme(mode) {
+    var tm = String(mode || 'dark').toLowerCase() === 'light' ? 'light' : 'dark';
+    state.themeMode = tm;
+    document.body.setAttribute('data-theme', tm);
+  }
+
+  function normalizeUrl(raw) {
+    var u = String(raw || '').trim();
+    if (!u) return '';
+    if (!/^https?:\/\//i.test(u)) {
+      if (/^[a-z0-9.-]+\.[a-z]{2,}/i.test(u) || u.indexOf('localhost') === 0) u = 'https://' + u;
+      else return 'https://www.baidu.com/s?wd=' + encodeURIComponent(u);
+    }
+    if (/javascript:|data:|vbscript:/i.test(u)) return '';
+    return u;
+  }
+
+  function syncUi() {
+    if (pane === 'top') {
+      var urlInput = $('urlInput');
+      if (urlInput && document.activeElement !== urlInput) urlInput.value = state.url || '';
+      var aiStrip = $('aiStrip');
+      if (aiStrip) aiStrip.classList.toggle('show', !!(state.aiBusy && state.open));
+    } else {
+      var btnLabels = $('btnLabels');
+      if (btnLabels) btnLabels.classList.toggle('active', !!state.labelDebug);
+      var aiPauseTxt = $('aiPauseTxt');
+      if (aiPauseTxt) aiPauseTxt.textContent = state.aiPaused ? '恢复' : '暂停';
+    }
+  }
+
+  function applyHostState(d) {
+    if (!d || typeof d !== 'object') return;
+    if (d.open !== undefined) state.open = !!d.open;
+    if (d.url !== undefined) state.url = String(d.url || '');
+    if (d.labelDebugVisible !== undefined) state.labelDebug = !!d.labelDebugVisible;
+    if (d.aiPaused !== undefined) state.aiPaused = !!d.aiPaused;
+    if (d.aiBusy !== undefined) state.aiBusy = !!d.aiBusy;
+    if (d.themeMode !== undefined) applyTheme(d.themeMode);
+    syncUi();
+  }
+
+  function bindPinInput(el) {
+    if (!el) return;
+    el.addEventListener('focus', function () { dispatch({ type: 'niuma_browser_chrome_pin' }); });
+    el.addEventListener('blur', function () {
+      setTimeout(function () { dispatch({ type: 'niuma_browser_chrome_unpin' }); }, 180);
+    });
+  }
+
+  if (pane === 'top') {
+    bindPinInput($('urlInput'));
+    $('btnBack').addEventListener('click', function () { dispatch({ type: 'niuma_mobile_browser_back' }); });
+    $('btnReload').addEventListener('click', function () { dispatch({ type: 'niuma_mobile_browser_reload' }); });
+    $('omniForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var u = normalizeUrl($('urlInput').value);
+      if (!u) return;
+      state.url = u;
+      syncUi();
+      dispatch({ type: 'niuma_mobile_browser_navigate', url: u });
+    });
+  } else {
+    bindPinInput($('cmdInput'));
+    $('btnLabels').addEventListener('click', function () { dispatch({ type: 'niuma_browser_toggle_labels' }); });
+    $('btnExtract').addEventListener('click', function () { dispatch({ type: 'niuma_mobile_browser_extract' }); });
+    $('btnAiPause').addEventListener('click', function () {
+      dispatch({ type: state.aiPaused ? 'niuma_browser_resume_ai' : 'niuma_browser_pause_ai' });
+    });
+    $('btnClose').addEventListener('click', function () { dispatch({ type: 'niuma_mobile_browser_close' }); });
+    $('cmdRun').addEventListener('click', function () {
+      var cmd = String($('cmdInput').value || '').trim();
+      if (!cmd) return;
+      dispatch({ type: 'niuma_browser_cmd', cmd: cmd });
+    });
+    $('cmdInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); $('cmdRun').click(); }
+    });
+  }
+
+  try {
+    if (window.chrome && window.chrome.webview && window.chrome.webview.addEventListener) {
+      window.chrome.webview.addEventListener('message', function (ev) {
+        var d = ev && ev.data;
+        if (typeof d === 'string') {
+          try { d = JSON.parse(d); } catch (_) { return; }
+        }
+        if (d && d.type === 'host_mobile_browser_chrome_state') applyHostState(d);
+      });
+    }
+  } catch (_) {}
+
+  (function bindChromePaneHover() {
+    document.body.addEventListener('pointerenter', function () {
+      dispatch({ type: 'niuma_browser_chrome_hover' });
+    }, { passive: true });
+  })();
+
+  dispatch({ type: 'niuma_browser_sync_state' });
+  syncUi();
+  window.syncUi = syncUi;
+})();
+</script>
+</body>
+</html>

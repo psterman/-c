@@ -16,6 +16,37 @@ class AhkInterface {
      */
     Ping() => "ok"
 
+    /** 手机浏览器顶栏菜单：撑满 overlay 以便底部 Sheet 完整显示。open: 1/0 */
+    SetMobileChromeSheet(open := 0) {
+        try {
+            if FuncExists("NiumaMobileBrowser_SetChromeSheetOpen")
+                NiumaMobileBrowser_SetChromeSheetOpen(!!Integer(open))
+        } catch {
+        }
+        return "ok"
+    }
+
+    /** 顶栏 WebView → 宿主：同步派发 postMessage（后退/刷新/导航/菜单等） */
+    MobileChromePost(jsonStr) {
+        try {
+            if !FuncExists("NiumaMobileBrowser_DispatchChromeBrowserMessage")
+                return "err"
+            root := Jxon_Load(String(jsonStr))
+            if !(root is Map) || !root.Has("type")
+                return "err"
+            typ := String(root["type"])
+            if (typ = "niuma_browser_sync_state") {
+                if FuncExists("NiumaMobileBrowser_PushChromeState")
+                    NiumaMobileBrowser_PushChromeState()
+                return "ok"
+            }
+            NiumaMobileBrowser_DispatchChromeBrowserMessage(root)
+            return "ok"
+        } catch {
+            return "err"
+        }
+    }
+
     /**
      * 返回纯文本剪贴板内容。
      */

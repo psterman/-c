@@ -1330,11 +1330,13 @@ FloatingToolbar_PushThemeToWeb(override := "") {
         ? FloatingToolbar_NormalizeThemeToken(override, "dark")
         : FloatingToolbar_GetThemeMode()
     FloatingToolbar_ApplyHostThemeColorsForMode(tm)
-    if !g_FTB_WV2
-        return
-    try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_theme", "themeMode", tm))
-    catch as _e {
+    if g_FTB_WV2 {
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_theme", "themeMode", tm))
+        catch as _e {
+        }
     }
+    if FuncExists("NiumaMobileBrowser_IsOpen") && NiumaMobileBrowser_IsOpen() && FuncExists("NiumaMobileBrowser_PushChromeState")
+        NiumaMobileBrowser_PushChromeState(true)
 }
 
 FloatingToolbar_GetBootBackColorHex() {
