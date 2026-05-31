@@ -68,5 +68,11 @@ archive/prototype/**/temp/
 tools/drop-diagnostics/results/
 tools/search-diagnostics/results/
 
+# openlist 运行时数据
+tools/openlist/data/
+
 # IDE
 .cursor/
+
+# 发布打包输出
+dist/
