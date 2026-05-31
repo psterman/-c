@@ -1,7 +1,7 @@
 ; ===================== SearchCenter 调试面板模块 =====================
 ; 用于调试 SearchCenter 中 SQLite 和 Everything 搜索结果融合的问题
 ;
-; 注意：此模块使用主文件（CursorHelper (1).ahk）中定义的以下函数和变量：
+; 注意：此模块使用主文件（牛马.ahk）中定义的以下函数和变量：
 ;   - GetEverythingResults() : 在主文件第56行定义
 ;   - SearchAllDataSources() : 在主文件第11494行定义
 ;   - ClipboardDB : 在主文件第233行定义为全局变量

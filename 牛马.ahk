@@ -2898,7 +2898,7 @@ GDHO_IsHoleUrlReachable(url, timeoutMs := 800) {
 
 GDHO_TryStartHoleDevServer() {
     try {
-        workDir := A_ScriptDir . "\prototype\wails-toolbar-app\frontend"
+        workDir := A_ScriptDir . "\archive\prototype\wails-toolbar-app\frontend"
         if !DirExist(workDir)
             return false
         logDir := A_ScriptDir . "\Cache"

@@ -1,7 +1,7 @@
 ; =============================================================================
 ; CursorHelper 拆分模块 — 全局 / #Include 顺序依赖（仅供维护参考，可不 Include）
 ; =============================================================================
-; 加载顺序要点（主脚本 CursorHelper (1).ahk）：
+; 加载顺序要点（主脚本 牛马.ahk）：
 ; 1. Gdip / TrayMenu 之前：ScreenshotColorPickerActive, AppearanceActivationMode,
 ;    FloatingToolbarIsVisible, FloatingBubbleIsVisible, Language（须早于 GetText）
 ; 2. MainScriptDir := A_ScriptDir 之后：EverythingClient（DLL 路径）、ClipboardFTS5

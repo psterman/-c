@@ -57,7 +57,7 @@ AHK **禁止**：`Gui.Move`、`Hide`、`DllCall("SetWindowPos")`、`WinSetTransp
 ## 实现位置
 
 - [`tools/native-drop-bridge/interaction_manager.go`](../tools/native-drop-bridge/interaction_manager.go) — 五状态 + `WindowController`
-- [`prototype/wails-toolbar-app/interaction_manager.go`](../prototype/wails-toolbar-app/interaction_manager.go) — Wails 适配器示例
+- [`archive/prototype/wails-toolbar-app/interaction_manager.go`](../archive/prototype/wails-toolbar-app/interaction_manager.go) — Wails 适配器示例
 
 ## 面板宿主生命周期（AHK，现网）
 

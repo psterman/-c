@@ -539,13 +539,13 @@ global WailsInputWindowTitle := "NMER Wails Input"
 global WailsInputWindowExe := "nmer-wails-input.exe"
 global WailsInputLaunchPath := ""
 global WailsInputTitleKeywords := "NMER Wails Input|nmer-wails-input|wails-toolbar"
-global WailsInputHtmlPath := A_ScriptDir . "\prototype\wails-toolbar-skeleton\index.html"
+global WailsInputHtmlPath := A_ScriptDir . "\archive\prototype\wails-toolbar-skeleton\index.html"
 global WailsInputAllowHtmlFallback := false
 ; true：每次双击 CapsLock 先结束旧进程再启动 build\bin 下最新 exe（避免一直激活内存里的老透明版）
 global WailsInputRestartOnActivate := true
 
 WailsInput_GetAppRoot() {
-    return A_ScriptDir . "\prototype\wails-toolbar-app"
+    return A_ScriptDir . "\archive\prototype\wails-toolbar-app"
 }
 
 WailsInput_GetCanonicalExePath() {
@@ -610,7 +610,7 @@ WailsInput_IsRunningCanonicalExe() {
 WailsInput_LaunchCanonicalExe() {
     launchPath := WailsInput_ResolveLaunchPath()
     if (launchPath = "" || !FileExist(launchPath)) {
-        TrayTip("命令栏", "未找到命令栏程序，请执行：`nprototype\wails-toolbar-app 目录下 wails build", "Icon!")
+        TrayTip("命令栏", "未找到命令栏程序，请执行：`narchive\prototype\wails-toolbar-app 目录下 wails build", "Icon!")
         return false
     }
     global WailsInputLaunchPath

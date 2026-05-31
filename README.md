@@ -44,19 +44,46 @@
 - 🖥️ 多屏幕支持，自定义面板显示位置
 
 ## 📥 召唤牛马方式
-### 方式一：直接召唤
+### 方式一：便携包（推荐）
 1. 访问 [Releases](https://github.com/psterman/nmer/releases) 页面
-2. 务必安装[autohotkey2.0](https://www.autohotkey.com/download/ahk-v2.exe)
-3. 下载最新版本的 `牛马.ahk` 文件
+2. 下载最新版 `牛马-nmer-*-portable.zip`，解压到固定目录（建议：`D:\Tools\牛马\`）
+3. 安装 [AutoHotkey v2](https://www.autohotkey.com/download/ahk-v2.exe) 与 [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)（Win10/11 通常已自带）
+4. 双击解压目录中的 **`牛马.ahk`** 启动
 
-### 方式二：安装exe懒人包版本
+便携包已包含 Everything、ttyd、SearchCenterCore、WebView2Loader 等运行时依赖，无需单独下载。
 
+### 方式二：仅下载主脚本
+若已有完整目录结构，可只更新 `牛马.ahk` 与 `modules/` 等变更文件。
+
+### 方式三：安装 exe 懒人包版本
+（见 Releases 中的 exe 构建，如有提供）
+
+## 📁 目录说明
+
+| 目录/文件 | 用途 |
+|----------|------|
+| `牛马.ahk` | **主入口**，双击启动 |
+| `modules/` | 功能模块（AHK + 注入 JS），一般无需修改 |
+| `assets/`、根目录 `*.html` | WebView2 界面资源 |
+| `lib/` | 第三方 AHK 库与运行时 DLL |
+| `searchcore/` | Go 搜索内核（含 `SearchCenterCore.exe`） |
+| `tools/` | 桥接工具、诊断脚本、rg/openlist 等 |
+| `config/user_studio.defaults.json` | 智能定制模板；首次打开设置页会生成本地 `user_studio.json` |
+| `Data/` | 运行时数据（截图、Chat 附件等），可备份 |
+| `Cache/` | 日志与缓存，可定期清空 |
+| `tools/whisper-stt/` | 本地语音：运行 `setup-whisper.ps1` 安装模型 |
+| `docs/` | 开发者/高级用户技术说明 |
+| `archive/` | 历史原型代码，与当前版本无关 |
+
+更完整的架构说明见 [软件介绍.md](软件介绍.md)。
 
 ## 🔧 牛马上岗准备
 ### 基础要求
 - **操作系统**：Windows 10/11（牛马只认 Windows 老家）
 - **AutoHotkey**：v2.0 或更高版本（牛马的口粮，必须安排）
+- **WebView2 Runtime**：界面渲染依赖（多数 Win10/11 已预装）
 - **Cursor 编辑器**：已安装并能正常运行（余粮也不能缺席）
+- **Everything**（可选）：全局文件搜索加速；便携包已内置 `Everything.exe`
 
 ### 安装牛马口粮（AutoHotkey v2）
 1. **下载口粮**：访问 [AutoHotkey 官网](https://www.autohotkey.com/)，[下载并安装 v2 版本](https://www.autohotkey.com/download/ahk-v2.exe)
@@ -66,12 +93,13 @@
 
 ## 📦 调教牛马步骤
 ### 步骤 1：安置牛马
-将 `牛马.ahk` 文件保存到固定目录（建议：`D:\Tools\牛马\`，方便找得到）
+将便携包解压到固定目录（建议：`D:\Tools\牛马\`），或把 `牛马.ahk` 与 `modules/`、`lib/` 等目录放在同一文件夹下。
 
 ### 步骤 2：首次唤醒
 1. 双击 `牛马.ahk` 文件
 2. 提示获取管理员权限时，点击「是」（牛马需要权限才能监听指令）
 3. 自动生成配置文件 `CursorShortcut.ini`，记录你的调教偏好
+4. 首次使用「智能定制」（CapsLock + Q）时，会基于 `config/user_studio.defaults.json` 生成本地 `config/user_studio.json`
 
 ### 步骤 3：指定主人（Cursor 路径）
 1. 右键系统托盘中的牛马图标

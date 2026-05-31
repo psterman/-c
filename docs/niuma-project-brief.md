@@ -7,7 +7,7 @@
 （下方「本机即时信息」段落在每次打开对话时由程序自动填入真实路径，无需手改。）
 
 - 根目录：见自动识别的「软件安装根目录」
-- 主入口：`CursorHelper (1).ahk`
+- 主入口：`牛马.ahk`
 - 模块：`modules/*.ahk`
 - WebView 界面：`FloatingToolbarStrip.html`（Niuma Chat）、`SettingsPanel.html`（设置/智能定制）、`SearchCenter.html` 等
 - 用户定制：`config/user_studio.json`（API、路径、ttyd、options）
@@ -36,7 +36,7 @@
 
 ## 禁忌（除非用户明确要求）
 
-- 不要改 `CursorHelper (1).ahk` 里无关的热键主流程
+- 不要改 `牛马.ahk` 里无关的热键主流程
 - 不要 `git push --force`；commit message 使用**简体中文**
 - 不要删除 `config/user_studio.defaults.json`
 - 不要把按量付费 API Key 当成 Token Plan Key

@@ -28,7 +28,7 @@
 
 ## 约束
 
-- 不要修改 `CursorHelper (1).ahk` 或 `modules/*.ahk`，除非用户明确要求高级钩子。
+- 不要修改 `牛马.ahk` 或 `modules/*.ahk`，除非用户明确要求高级钩子。
 - 保存 `user_studio.json` 前会自动备份到 `config/user_studio.backup.json`。
 - 「还原默认定制」仅重置 `user_studio.json`，不重置整个 `CursorShortcut.ini`。
 
