@@ -1851,6 +1851,14 @@ FloatingToolbar_OnWebMessage(sender, args) {
         NiumaMobileBrowser_ResumeAiControl()
         return
     }
+    if (typ = "niuma_cdp_execute") {
+        SetTimer(FloatingToolbar_DeferredCdpExecute.Bind(msg), -10)
+        return
+    }
+    if (typ = "niuma_scratchpad_run") {
+        SetTimer(FloatingToolbar_DeferredScratchpadRun.Bind(msg), -10)
+        return
+    }
     if (typ = "niuma_browser_hide_labels") {
         NiumaMobileBrowser_HideLabels()
         return
@@ -2272,6 +2280,121 @@ FloatingToolbar_DeferredNiumaAttachContext(msg) {
         WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_attach_context_result", "reqId", reqId, "ok", true, "files", files))
     } catch as e {
         WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_attach_context_result", "reqId", reqId, "ok", false, "error", e.Message))
+    }
+}
+
+FloatingToolbar_BuildCdpExecuteScript(selector, action, value := "") {
+    sel := FloatingToolbar_EscapeJsSingle(String(selector))
+    act := StrLower(Trim(String(action)))
+    val := FloatingToolbar_EscapeJsSingle(String(value))
+    base := "(function(){try{var el=document.querySelector('" . sel . "');if(!el)return JSON.stringify({ok:false,error:'element_not_found'});"
+    if (act = "click") {
+        return base . "el.click();return JSON.stringify({ok:true,action:'click'});}catch(e){return JSON.stringify({ok:false,error:String(e.message||e)});}})();"
+    }
+    if (act = "input" || act = "fill" || act = "type") {
+        return base . "el.focus();if('value' in el)el.value='" . val . "';else el.textContent='" . val . "';el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));return JSON.stringify({ok:true,action:'input'});}catch(e){return JSON.stringify({ok:false,error:String(e.message||e)});}})();"
+    }
+    if (act = "focus") {
+        return base . "el.focus();return JSON.stringify({ok:true,action:'focus'});}catch(e){return JSON.stringify({ok:false,error:String(e.message||e)});}})();"
+    }
+    if (act = "scroll") {
+        return base . "el.scrollIntoView({block:'center',behavior:'instant'});return JSON.stringify({ok:true,action:'scroll'});}catch(e){return JSON.stringify({ok:false,error:String(e.message||e)});}})();"
+    }
+    return base . "return JSON.stringify({ok:false,error:'unknown_action'});}catch(e){return JSON.stringify({ok:false,error:String(e.message||e)});}})();"
+}
+
+FloatingToolbar_WrapScratchpadJs(code) {
+    inner := String(code)
+    if StrLen(inner) > 8000
+        inner := SubStr(inner, 1, 8000)
+    return "(function(){try{var __r=(function(){" . inner . "})();return JSON.stringify({ok:true,result:typeof __r==='undefined'?null:String(__r)});}catch(e){return JSON.stringify({ok:false,error:String(e.message||e)});}})();"
+}
+
+FloatingToolbar_DeferredCdpExecute(msg) {
+    global g_FTB_WV2, g_NiumaMobile_WV2
+    if !g_FTB_WV2
+        return
+    reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    payload := msg.Has("payload") && (msg["payload"] is Map) ? msg["payload"] : msg
+    txId := payload.Has("txId") ? String(payload["txId"]) : ""
+    selector := payload.Has("selector") ? String(payload["selector"]) : ""
+    action := payload.Has("action") ? String(payload["action"]) : "click"
+    value := payload.Has("value") ? String(payload["value"]) : ""
+    ok := false
+    err := ""
+    result := ""
+    if !NiumaMobileBrowser_IsOpen() || !g_NiumaMobile_WV2 {
+        err := "browser_not_open"
+    } else if Trim(selector) = "" {
+        err := "empty_selector"
+    } else {
+        js := FloatingToolbar_BuildCdpExecuteScript(selector, action, value)
+        try {
+            raw := g_NiumaMobile_WV2.ExecuteScriptAsync(js).await(12000)
+            result := Trim(String(raw))
+            ok := true
+            if InStr(result, '"ok":false') || InStr(result, "element_not_found")
+                ok := false
+        } catch as e {
+            err := e.Message
+            ok := false
+        }
+    }
+    try WebView_QueuePayload(g_FTB_WV2, Map(
+        "type", "niuma_cdp_execute_result",
+        "reqId", reqId,
+        "ok", ok,
+        "txId", txId,
+        "error", err,
+        "result", result
+    ))
+    catch {
+    }
+}
+
+FloatingToolbar_DeferredScratchpadRun(msg) {
+    global g_FTB_WV2, g_NiumaMobile_WV2
+    if !g_FTB_WV2
+        return
+    reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    payload := msg.Has("payload") && (msg["payload"] is Map) ? msg["payload"] : msg
+    code := payload.Has("code") ? String(payload["code"]) : ""
+    ok := false
+    err := ""
+    result := ""
+    if !NiumaMobileBrowser_IsOpen() || !g_NiumaMobile_WV2 {
+        err := "browser_not_open"
+    } else if Trim(code) = "" {
+        err := "empty_code"
+    } else {
+        js := FloatingToolbar_WrapScratchpadJs(code)
+        try {
+            raw := g_NiumaMobile_WV2.ExecuteScriptAsync(js).await(15000)
+            result := Trim(String(raw))
+            ok := true
+            try {
+                if SubStr(result, 1, 1) = "{"
+                    parsed := Jxon_Load(result)
+                    if parsed is Map {
+                        if parsed.Has("ok") && !parsed["ok"] {
+                            ok := false
+                            err := parsed.Has("error") ? String(parsed["error"]) : "scratchpad_err"
+                        } else if parsed.Has("result")
+                            result := String(parsed["result"])
+                    }
+            } catch {
+            }
+        } catch as e {
+            err := e.Message
+            ok := false
+        }
+    }
+    try {
+        if ok
+            WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_scratchpad_run_result", "reqId", reqId, "ok", true, "result", result))
+        else
+            WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_scratchpad_run_result", "reqId", reqId, "ok", false, "error", err ? err : "scratchpad_failed", "result", result))
+    } catch {
     }
 }
 

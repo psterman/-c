@@ -420,6 +420,90 @@ body.view-control.cli-mode #msgs,body.view-control.cli-mode #cmp{display:none!im
 .control-card-title{font-size:calc(12px * var(--ui));font-weight:700;color:var(--text)}
 .control-card-desc{font-size:calc(10px * var(--ui));color:var(--muted);line-height:1.45}
 .control-card-run{align-self:flex-start;margin-top:calc(4px * var(--ui))}
+.control-legacy-cards{display:none}
+.agent-sandbox{flex:1;min-height:0;display:flex;flex-direction:column;gap:calc(8px * var(--ui));background:var(--panel2);border:1px solid rgba(255,102,0,.18);border-radius:calc(12px * var(--ui));padding:calc(10px * var(--ui));box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.sandbox-guide{padding:calc(12px * var(--ui)) calc(14px * var(--ui));border:1px solid rgba(255,102,0,.22);border-radius:calc(10px * var(--ui));background:rgba(255,102,0,.06);display:flex;flex-direction:column;gap:calc(10px * var(--ui))}
+.sandbox-guide-compact{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--ui));padding:calc(5px * var(--ui)) calc(10px * var(--ui));border:1px solid rgba(255,102,0,.16);border-radius:calc(8px * var(--ui));background:rgba(255,102,0,.04);flex-shrink:0}
+.sandbox-guide-compact .sandbox-guide-text{flex:1;min-width:0;margin:0}
+.sandbox-back-link{flex-shrink:0;border:none;background:transparent;color:var(--orange);font-size:calc(10px * var(--ui));font-weight:600;cursor:pointer;padding:calc(2px * var(--ui)) calc(6px * var(--ui));border-radius:calc(6px * var(--ui));line-height:1.3}
+.sandbox-back-link:hover{background:rgba(255,102,0,.12)}
+.sandbox-task-panel{flex-shrink:0}
+.sandbox-task-body{display:flex;flex-direction:column;gap:calc(6px * var(--ui))}
+.sandbox-task-main{min-width:0}
+.sandbox-task-toolbar{border-top:1px solid rgba(255,102,0,.1);padding-top:calc(8px * var(--ui));margin-top:calc(2px * var(--ui))}
+.sandbox-task-actions{display:flex;flex-wrap:wrap;gap:calc(6px * var(--ui));align-items:center}
+.sandbox-task-actions-secondary{padding-top:calc(2px * var(--ui))}
+.sandbox-action-chip{display:inline-flex;align-items:center;gap:calc(4px * var(--ui));border:1px solid rgba(255,102,0,.22);background:rgba(255,255,255,.04);color:var(--text);border-radius:calc(8px * var(--ui));padding:calc(4px * var(--ui)) calc(8px * var(--ui));font-size:calc(10px * var(--ui));cursor:pointer;line-height:1.2;white-space:nowrap}
+.sandbox-action-chip:hover:not(:disabled){background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.4);color:var(--orange)}
+.sandbox-action-chip:disabled{opacity:.35;cursor:not-allowed}
+.sandbox-action-chip.primary{background:rgba(255,102,0,.15);border-color:rgba(255,102,0,.35);color:var(--orange);font-weight:600}
+.sandbox-action-chip.active{background:rgba(255,102,0,.2);border-color:rgba(255,102,0,.45);color:var(--orange)}
+.sandbox-action-chip-ico{font-size:calc(11px * var(--ui));line-height:1;flex-shrink:0}
+.sandbox-action-chip-label{font-size:calc(10px * var(--ui));line-height:1.2}
+.sandbox-guide-text{font-size:calc(11px * var(--ui));line-height:1.55;color:var(--text);margin:0}
+.sandbox-guide-text strong{color:var(--orange);font-weight:600}
+.sandbox-guide-actions{display:flex;flex-wrap:wrap;gap:calc(8px * var(--ui))}
+.sandbox-zone{border:1px solid rgba(255,102,0,.14);border-radius:calc(10px * var(--ui));background:rgba(255,255,255,.03);overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.sandbox-zone-head{display:flex;align-items:center;justify-content:space-between;gap:calc(6px * var(--ui));padding:calc(6px * var(--ui)) calc(10px * var(--ui));border-bottom:1px solid rgba(255,102,0,.1);font-size:calc(11px * var(--ui));color:var(--text);font-weight:600}
+.sandbox-zone-head-meta{font-size:calc(10px * var(--ui));color:var(--muted);font-weight:500}
+.sandbox-zone-head-meta.status-running{color:var(--orange)}
+.sandbox-zone-head-meta.status-paused{color:#fbbf24}
+.sandbox-zone-body{padding:calc(8px * var(--ui)) calc(10px * var(--ui));font-size:calc(11px * var(--ui));line-height:1.5;color:var(--text);min-height:0;overflow:auto;flex:1}
+.sandbox-mid{display:grid;grid-template-columns:1fr 1fr;gap:calc(8px * var(--ui));min-height:0}
+@media (max-width:520px){.sandbox-mid{grid-template-columns:1fr}}
+.sandbox-intent{flex-shrink:0}
+.sandbox-intent .intent-step{display:inline-block;padding:calc(2px * var(--ui)) calc(8px * var(--ui));border-radius:calc(6px * var(--ui));background:rgba(255,102,0,.12);border:1px solid rgba(255,102,0,.28);color:var(--orange);font-size:calc(10px * var(--ui));font-weight:600;margin-bottom:calc(6px * var(--ui))}
+.sandbox-intent .intent-thought{color:var(--text);white-space:pre-wrap;word-break:break-word;margin-bottom:calc(6px * var(--ui))}
+.sandbox-intent .intent-action{color:var(--muted);font-size:calc(11px * var(--ui))}
+.sandbox-intent .intent-action.has-action{color:color-mix(in srgb,var(--orange) 75%,var(--text) 25%)}
+.sandbox-intent .intent-progress-wrap{height:calc(3px * var(--ui));background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden;margin-top:calc(8px * var(--ui))}
+.sandbox-intent .intent-progress-bar{height:100%;width:30%;background:linear-gradient(90deg,rgba(255,102,0,.35),rgba(255,102,0,.85),rgba(255,102,0,.35));border-radius:99px;opacity:0;transition:opacity .2s}
+.sandbox-intent.thinking .intent-progress-bar,.sandbox-task-panel.thinking .intent-progress-bar{opacity:1;animation:sandbox-pulse 1.4s ease-in-out infinite}
+.sandbox-paused-banner{padding:calc(10px * var(--ui)) calc(12px * var(--ui));border:1px solid rgba(251,191,36,.35);border-radius:calc(10px * var(--ui));background:rgba(251,191,36,.08);font-size:calc(11px * var(--ui));line-height:1.45;color:var(--text)}
+.sandbox-advanced{border:1px solid rgba(255,102,0,.12);border-radius:calc(10px * var(--ui));background:rgba(0,0,0,.12);overflow:hidden}
+.sandbox-advanced-toggle{width:100%;border:none;background:transparent;color:var(--muted);padding:calc(8px * var(--ui)) calc(10px * var(--ui));font-size:calc(11px * var(--ui));cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--ui))}
+.sandbox-advanced-toggle:hover{color:var(--orange);background:rgba(255,102,0,.06)}
+.sandbox-advanced-toggle .sandbox-badge{font-size:calc(9px * var(--ui));padding:calc(2px * var(--ui)) calc(6px * var(--ui));border-radius:99px;background:rgba(255,102,0,.15);color:var(--orange);font-weight:600}
+.sandbox-advanced-body{padding:calc(4px * var(--ui)) calc(8px * var(--ui)) calc(8px * var(--ui));display:flex;flex-direction:column;gap:calc(8px * var(--ui))}
+.sandbox-advanced.collapsed .sandbox-advanced-body{display:none}
+.sandbox-fold{border:1px solid rgba(255,102,0,.1);border-radius:calc(8px * var(--ui));overflow:hidden;background:rgba(0,0,0,.15)}
+.sandbox-fold-head{display:flex;align-items:center;justify-content:space-between;gap:calc(6px * var(--ui));padding:calc(5px * var(--ui)) calc(8px * var(--ui));cursor:pointer;font-size:calc(10px * var(--ui));color:var(--muted);user-select:none}
+.sandbox-fold-head:hover{color:var(--text);background:rgba(255,102,0,.05)}
+.sandbox-fold-head-title{font-weight:600;color:var(--text)}
+.sandbox-fold.collapsed .sandbox-fold-body{display:none}
+.sandbox-fold-body{max-height:calc(120px * var(--ui));overflow:auto;padding:calc(4px * var(--ui)) calc(8px * var(--ui))}
+.sandbox-cdp-line,.sandbox-history-line{padding:calc(3px * var(--ui)) 0;border-bottom:1px solid rgba(255,255,255,.04);word-break:break-word;font-size:calc(10px * var(--ui));line-height:1.45}
+.sandbox-cdp-line.success,.sandbox-history-line.success{color:#22c55e}
+.sandbox-cdp-line.error,.sandbox-history-line.error{color:#ff7a59}
+.sandbox-cdp-line.warn,.sandbox-history-line.warn{color:#fbbf24}
+.sandbox-cdp-line.info,.sandbox-history-line.info{color:var(--muted)}
+.sandbox-dom-item{padding:calc(4px * var(--ui)) calc(6px * var(--ui));border-radius:calc(6px * var(--ui));margin-bottom:calc(3px * var(--ui));border:1px solid transparent;font-size:calc(10px * var(--ui))}
+.sandbox-dom-item.highlight{border-color:rgba(255,102,0,.4);background:rgba(255,102,0,.1);animation:sandbox-blink 1s ease-in-out infinite}
+.sandbox-dom-tag{color:var(--orange);font-weight:700;margin-right:calc(6px * var(--ui))}
+.sandbox-bus{flex-shrink:0}
+.sandbox-bus-primary,.sandbox-bus-controls,.sandbox-bus-extra{display:flex;flex-wrap:wrap;gap:calc(6px * var(--ui));padding:calc(6px * var(--ui)) calc(10px * var(--ui))}
+.sandbox-bus-primary{padding-bottom:0}
+.sandbox-bus-extra{padding-top:calc(4px * var(--ui))}
+.sandbox-bus-btn{border:1px solid rgba(255,102,0,.22);background:rgba(255,255,255,.04);color:var(--text);border-radius:calc(8px * var(--ui));padding:calc(5px * var(--ui)) calc(10px * var(--ui));font-size:calc(10px * var(--ui));cursor:pointer;line-height:1.3}
+.sandbox-bus-btn:hover:not(:disabled){background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.4);color:var(--orange)}
+.sandbox-bus-btn:disabled{opacity:.35;cursor:not-allowed}
+.sandbox-bus-btn.primary{background:rgba(255,102,0,.15);border-color:rgba(255,102,0,.35);color:var(--orange);font-weight:600}
+.sandbox-bus-btn.active{background:rgba(255,102,0,.2);border-color:rgba(255,102,0,.45);color:var(--orange)}
+.sandbox-pending{padding:calc(4px * var(--ui)) calc(10px * var(--ui)) calc(8px * var(--ui));font-size:calc(10px * var(--ui))}
+.sandbox-pending-list{display:flex;flex-direction:column;gap:calc(6px * var(--ui))}
+.sandbox-pending-item{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--ui));padding:calc(6px * var(--ui)) calc(8px * var(--ui));border:1px solid rgba(255,102,0,.28);border-radius:calc(8px * var(--ui));background:rgba(255,102,0,.08);animation:sandbox-blink 1.2s ease-in-out infinite}
+.sandbox-pending-item-text{flex:1;min-width:0;word-break:break-word;color:var(--text)}
+.sandbox-scratchpad{display:flex;gap:calc(6px * var(--ui));padding:calc(4px * var(--ui)) 0}
+.sandbox-scratchpad input{flex:1;min-width:0;border:1px solid rgba(255,102,0,.18);background:rgba(0,0,0,.2);color:var(--text);border-radius:calc(8px * var(--ui));padding:calc(6px * var(--ui)) calc(10px * var(--ui));font-size:calc(10px * var(--ui))}
+.sandbox-scratchpad input::placeholder{color:var(--muted)}
+.sandbox-placeholder{color:var(--muted);font-size:calc(10px * var(--ui));line-height:1.45}
+@keyframes sandbox-pulse{0%,100%{transform:translateX(-60%);opacity:.4}50%{transform:translateX(220%);opacity:1}}
+@keyframes sandbox-blink{0%,100%{opacity:1}50%{opacity:.55}}
+body[data-theme="light"] .agent-sandbox{background:var(--panel2);border-color:rgba(214,100,20,.2);box-shadow:0 4px 14px rgba(0,0,0,.06)}
+body[data-theme="light"] .sandbox-zone{background:rgba(255,255,255,.6);border-color:rgba(214,100,20,.15)}
+body[data-theme="light"] .sandbox-guide{background:#FFF1E3;border-color:rgba(214,100,20,.25)}
+body[data-theme="light"] .sandbox-advanced{background:rgba(255,250,245,.8)}
+body[data-theme="light"] .sandbox-fold{background:rgba(255,255,255,.5)}
 .audit-panel{width:100%;flex-shrink:0;border:1px solid rgba(255,102,0,.14);border-radius:calc(8px * var(--ui));background:rgba(0,0,0,.18);overflow:hidden}
 .audit-panel.collapsed .audit-timeline{display:none}
 .audit-head{display:flex;align-items:center;gap:calc(6px * var(--ui));padding:calc(4px * var(--ui)) calc(8px * var(--ui));border-bottom:1px solid rgba(255,102,0,.1);font-size:calc(10px * var(--ui));color:var(--muted)}
@@ -600,9 +684,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <span id="agentContextThread" class="agent-context-thread" hidden></span>
 <button type="button" class="btn3 agent-context-new" id="agentContextNewThread" title="在该联系人下新建话题（空话题不重复创建）">新话题</button>
 </div>
-<div id="viewModeToggle" class="view-mode-toggle" role="group" aria-label="对话或控制">
-<button type="button" id="viewModeChat" class="active" title="对话模式">对话</button>
-<button type="button" id="viewModeControl" title="控制模式 · Tab 切换">控制</button>
+<div id="viewModeToggle" class="view-mode-toggle" role="group" aria-label="对话或后台" hidden>
+<button type="button" id="viewModeChat" class="active" title="对话 · 发消息与 @网页 任务">对话</button>
+<button type="button" id="viewModeControl" title="OpenClaw · 后台进度 · Tab 切换">后台</button>
 </div>
 </div>
 </div>
@@ -611,8 +695,66 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <section id="viewportChat" class="viewport-chat">
 <section id="msgs"><div id="empty">首次使用请点「设」完成 API。点 🌐 打开右侧手机浏览器（顶栏在网页上方）；或在对话输入「@网页 …」自动操控。</div></section>
 </section>
-<section id="viewportControl" class="viewport-control" hidden aria-hidden="true" aria-label="节点控制">
-<div id="controlModeHint" class="control-mode-hint">控制模式：点击下方卡片执行操作，不会写入聊天记录。按 Tab 返回对话。</div>
+<section id="viewportControl" class="viewport-control" hidden aria-hidden="true" aria-label="后台 · OpenClaw 与浏览器任务">
+<div id="controlModeHint" class="control-mode-hint">后台 · 查看 OpenClaw / 浏览器任务进度 · 发消息请在对话 Tab · Tab 返回对话</div>
+<div id="agentSandbox" class="agent-sandbox" hidden>
+<div id="controlGuideBar" class="sandbox-guide-compact">
+<p id="controlGuideText" class="sandbox-guide-text">在 <strong>对话</strong> 发消息或 @网页；此处查看后台进度。</p>
+<button type="button" class="sandbox-back-link" id="controlBackToChatBtn" title="返回对话 Tab">← 对话</button>
+</div>
+<div id="controlPausedBanner" class="sandbox-paused-banner" hidden>AI 已暂停，请确认下方待执行动作，或点「继续」/「单步」。</div>
+<section id="controlTaskPanel" class="sandbox-zone sandbox-task-panel" hidden aria-label="后台任务">
+<div class="sandbox-zone-head"><span>后台任务</span><span id="controlIntentStatus" class="sandbox-zone-head-meta">待命</span></div>
+<div class="sandbox-zone-body sandbox-task-body">
+<div id="controlIntent" class="sandbox-task-main">
+<div id="controlIntentTx" class="intent-step">第 0 步</div>
+<div id="controlIntentThought" class="intent-thought sandbox-placeholder">—</div>
+<div id="controlIntentAction" class="intent-action sandbox-placeholder">下一步：—</div>
+<div class="intent-progress-wrap"><div class="intent-progress-bar"></div></div>
+</div>
+<div id="controlActionBus" class="sandbox-task-toolbar" aria-label="任务操作">
+<div id="controlActionBusPrimary" class="sandbox-task-actions"></div>
+<div id="controlActionBusControls" class="sandbox-task-actions" hidden>
+<button type="button" class="sandbox-action-chip" id="agentLoopPauseBtn" title="暂停 AI 自动操作"><span class="sandbox-action-chip-ico" aria-hidden="true">⏸</span><span class="sandbox-action-chip-label">暂停</span></button>
+<button type="button" class="sandbox-action-chip primary" id="agentLoopResumeBtn" title="继续执行全部待办"><span class="sandbox-action-chip-ico" aria-hidden="true">▶</span><span class="sandbox-action-chip-label">继续</span></button>
+<button type="button" class="sandbox-action-chip primary" id="agentLoopStepBtn" title="只执行下一条"><span class="sandbox-action-chip-ico" aria-hidden="true">⏭</span><span class="sandbox-action-chip-label">单步</span></button>
+<button type="button" class="sandbox-action-chip" id="agentLoopResetBtn" title="刷新页面可点元素"><span class="sandbox-action-chip-ico" aria-hidden="true">🔄</span><span class="sandbox-action-chip-label">刷新元素</span></button>
+</div>
+<div id="controlActionBusExtra" class="sandbox-task-actions sandbox-task-actions-secondary"></div>
+<div id="controlActionBusPending" class="sandbox-pending" hidden></div>
+<span id="controlActionBusStatus" hidden aria-hidden="true"></span>
+</div>
+</div>
+</section>
+<div id="controlAdvanced" class="sandbox-advanced collapsed" aria-label="高级详情">
+<button type="button" class="sandbox-advanced-toggle" id="controlAdvancedToggle" aria-expanded="false">
+<span>高级详情</span><span id="controlAdvancedBadge" class="sandbox-badge" hidden></span>
+</button>
+<div id="controlAdvancedBody" class="sandbox-advanced-body">
+<div id="controlFoldCdp" class="sandbox-fold collapsed">
+<div class="sandbox-fold-head" data-fold="cdp"><span class="sandbox-fold-head-title">操作记录</span><span id="controlCdpBadge" class="sandbox-zone-head-meta"></span></div>
+<div class="sandbox-fold-body"><div id="controlCdpPipeBody"><div class="sandbox-placeholder">暂无操作记录</div></div></div>
+</div>
+<div id="controlFoldDom" class="sandbox-fold collapsed">
+<div class="sandbox-fold-head" data-fold="dom"><span class="sandbox-fold-head-title">页面可点元素</span><span id="controlDomMirrorCount" class="sandbox-zone-head-meta"></span></div>
+<div class="sandbox-fold-body"><div id="controlDomMirrorBody"><div class="sandbox-placeholder">暂无页面快照</div></div></div>
+</div>
+<div id="controlFoldHistory" class="sandbox-fold collapsed">
+<div class="sandbox-fold-head" data-fold="history"><span class="sandbox-fold-head-title">本任务步骤</span><span id="controlTaskHistoryCount" class="sandbox-zone-head-meta"></span></div>
+<div class="sandbox-fold-body"><div id="controlTaskHistoryBody"><div class="sandbox-placeholder">暂无步骤记录</div></div></div>
+</div>
+<div id="controlFoldScratch" class="sandbox-fold collapsed">
+<div class="sandbox-fold-head" data-fold="scratch"><span class="sandbox-fold-head-title">临时指令（高级）</span></div>
+<div class="sandbox-fold-body">
+<div id="controlScratchpad" class="sandbox-scratchpad">
+<input type="text" id="controlScratchpadInput" autocomplete="off" spellcheck="false" placeholder="仅本地受控页 · 回车执行 · 不进 Chat 历史" aria-label="临时指令" />
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="controlLegacyCards" class="control-legacy-cards" hidden aria-hidden="true"></div>
 </section>
 <section id="cliPane" aria-label="CLI 终端">
   <div class="cli-shell">
@@ -655,7 +797,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </div>
 </div>
 <textarea id="input" placeholder="输入消息…"></textarea>
-<div id="composerHint" class="composer-hint">Ctrl+Enter 发送 · Tab 切换控制 · Ctrl+1~8 切换联系人 · @网页 可操控手机浏览器</div>
+<div id="composerHint" class="composer-hint">Ctrl+Enter 发送 · Ctrl+1~8 切换联系人 · @网页 或 OpenClaw 可用 Tab 切换后台</div>
 <div id="composerFooter">
 <div class="attach-wrap">
 <input id="attachFileInput" type="file" multiple style="display:none" />
@@ -1466,6 +1608,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     chatBridgeReady: false,
     chatBridgeEpoch: 0,
     browserAgentRunning: false,
+    browserAgentGoal: '',
+    openclawChatRunning: false,
+    browserControlByNode: {},
     browserAgentHoleContext: '',
     browserAgentHoleContextHash: '',
     browserAgentHoleInjected: false,
@@ -1482,7 +1627,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     auditCollapsed: false,
     ollamaReachable: null,
     ollamaModels: [],
-    settingsAdvancedOpen: false
+    settingsAdvancedOpen: false,
+    agentLoop: {
+      status: 'idle',
+      currentTx: 0,
+      pendingBuffer: { thought: '', action: null },
+      committed: { thought: '', action: null, domSnapshot: null, cdpLog: [] },
+      pendingActions: [],
+      thinking: false,
+      taskHistory: [],
+      uiCollapse: { advanced: true, cdp: true, dom: true, history: true, scratch: true }
+    }
   };
   window.g_NiumaLastElementsCount = 0;
   window.g_NiumaLastElementsCache = {};
@@ -2387,13 +2542,27 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!m || typeof m !== 'object') return '';
     if (Array.isArray(m.content)) {
       var textParts = [];
+      var toolResultParts = [];
       for (var ci = 0; ci < m.content.length; ci++) {
         var cp = m.content[ci];
-        if (cp && cp.type === 'text' && typeof cp.text === 'string' && cp.text.trim()) {
+        if (!cp || typeof cp !== 'object') continue;
+        var typ = String(cp.type || '').toLowerCase();
+        if (
+          (typ === 'text' || typ === 'output_text' || typ === 'assistant' || typ === 'markdown') &&
+          typeof cp.text === 'string' &&
+          cp.text.trim()
+        ) {
           textParts.push(cp.text.trim());
+          continue;
         }
+        if ((typ === 'tool_result' || typ === 'toolresult' || typ === 'tool_output') && typeof cp.text === 'string' && cp.text.trim()) {
+          toolResultParts.push(cp.text.trim().slice(0, 4000));
+          continue;
+        }
+        if (typeof cp.output === 'string' && cp.output.trim()) toolResultParts.push(cp.output.trim().slice(0, 4000));
       }
-      if (textParts.length) return textParts.join('\n').trim();
+      if (textParts.length) return textParts.join('\n\n').trim();
+      if (toolResultParts.length) return toolResultParts[toolResultParts.length - 1];
     }
     /* 勿在 content==="" 时提前返回：网关常把正文放在 text / parts，content 仅占位空串 */
     var strFields = [
@@ -3446,33 +3615,918 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function syncComposerForViewMode() {
     if (!composerHint || !input) return;
+    var nk = activeNodeKey();
+    var browserCtrl = controlTabEnabledForNode(nk);
     var mode = activeViewMode();
-    if (mode === 'control') {
-      composerHint.textContent = '控制模式 · Tab 返回对话 · Ctrl+1~8 切换联系人 · 下方操作不会写入聊天记录';
-      input.placeholder = '控制模式下输入框已隐藏';
+    if (mode === 'control' && browserCtrl) {
+      composerHint.textContent = '任务请在对话 Tab 输入 · Tab 切回对话 · 后台 Tab 查看 OpenClaw / 浏览器进度';
+      input.placeholder = '请 Tab 切回「对话」输入 @网页 或任务';
       return;
     }
     var s = activeSession();
     if (s && isCliSession(s)) {
-      composerHint.textContent = 'CLI 模式 · Ctrl+Enter 发送到终端 · Tab 切换控制 · Ctrl+1~8 切换联系人';
+      composerHint.textContent = 'CLI 模式 · Ctrl+Enter 发送到终端 · Ctrl+1~8 切换联系人';
       input.placeholder = '输入 CLI 指令，Ctrl+Enter 执行';
       return;
     }
-    composerHint.textContent = 'Ctrl+Enter 发送 · Tab 切换控制 · Ctrl+1~8 切换联系人 · @网页 可操控手机浏览器';
+    if (browserCtrl) {
+      composerHint.textContent =
+        'Ctrl+Enter 发送 · Tab 切换后台 · @网页 或 OpenClaw 进度在后台 Tab 查看 · Ctrl+1~8 切换联系人';
+    } else {
+      composerHint.textContent = 'Ctrl+Enter 发送 · Ctrl+1~8 切换联系人';
+    }
     input.placeholder = '输入消息…';
   }
 
   function syncControlModeHint() {
     var el = $('controlModeHint');
     if (!el) return;
-    var nk = activeNodeKey();
-    var pid = providerIdFromNodeKey(nk);
-    if (providerTransport(pid) === 'cli') {
-      el.textContent = 'CLI 控制：使用终端工具栏打开 / 重启 / 外部打开。Tab 返回对话。';
-    } else if (pid === 'openclaw') {
-      el.textContent = 'OpenClaw 控制：抓取 DOM、同步标签、暂停/恢复 AI。Tab 返回对话。';
+    el.textContent =
+      '后台 · OpenClaw / 浏览器任务进度 · 发消息请在对话 Tab · Tab 返回对话';
+  }
+
+  function sandboxActionIconForItem(item) {
+    var id = item && item.id ? String(item.id) : '';
+    if (id === 'oc_sync') return '🔗';
+    if (id === 'oc_snap') return '🔄';
+    if (id === 'oc_pause') return '⏸';
+    if (id === 'oc_resume') return '▶';
+    return '⚙';
+  }
+
+  function createSandboxActionChip(label, icon, opts) {
+    opts = opts || {};
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sandbox-action-chip' + (opts.primary ? ' primary' : '') + (opts.active ? ' active' : '');
+    if (opts.title) b.title = opts.title;
+    if (opts.id) b.id = opts.id;
+    if (opts.disabled) b.disabled = true;
+    var ico = document.createElement('span');
+    ico.className = 'sandbox-action-chip-ico';
+    ico.setAttribute('aria-hidden', 'true');
+    ico.textContent = icon || '⚙';
+    var lab = document.createElement('span');
+    lab.className = 'sandbox-action-chip-label';
+    lab.textContent = label || '';
+    b.appendChild(ico);
+    b.appendChild(lab);
+    if (typeof opts.onClick === 'function') b.addEventListener('click', opts.onClick);
+    return b;
+  }
+
+  function syncSandboxTaskStatusLabel(al) {
+    var statusEl = $('controlIntentStatus');
+    var busStatusEl = $('controlActionBusStatus');
+    if (!statusEl) return;
+    var ocRun = !!state.openclawChatRunning;
+    var label = ocRun ? formatAgentStatusLabel('running', true) : formatAgentStatusLabel(al.status, al.thinking);
+    statusEl.textContent = label;
+    statusEl.className =
+      'sandbox-zone-head-meta' +
+      (al.status === 'running' || al.thinking || ocRun
+        ? ' status-running'
+        : al.status === 'paused'
+          ? ' status-paused'
+          : '');
+    if (busStatusEl) busStatusEl.textContent = label;
+  }
+
+  /* ===== Agent Sandbox（三流对齐自动化沙盘） ===== */
+  var agentSandboxBound = false;
+  var agentSandboxMockTimer = 0;
+
+  function ensureAgentLoop() {
+    if (!state.agentLoop || typeof state.agentLoop !== 'object') {
+      state.agentLoop = {
+        status: 'idle',
+        currentTx: 0,
+        pendingBuffer: { thought: '', action: null },
+        committed: { thought: '', action: null, domSnapshot: null, cdpLog: [] },
+        pendingActions: [],
+        thinking: false,
+        taskHistory: [],
+        uiCollapse: { advanced: true, cdp: true, dom: true, history: true, scratch: true }
+      };
+    }
+    if (!state.agentLoop.committed) {
+      state.agentLoop.committed = { thought: '', action: null, domSnapshot: null, cdpLog: [] };
+    }
+    if (!Array.isArray(state.agentLoop.committed.cdpLog)) state.agentLoop.committed.cdpLog = [];
+    if (!Array.isArray(state.agentLoop.pendingActions)) state.agentLoop.pendingActions = [];
+    if (!Array.isArray(state.agentLoop.taskHistory)) state.agentLoop.taskHistory = [];
+    if (!state.agentLoop.uiCollapse || typeof state.agentLoop.uiCollapse !== 'object') {
+      state.agentLoop.uiCollapse = { advanced: true, cdp: true, dom: true, history: true, scratch: true };
+    }
+    return state.agentLoop;
+  }
+
+  function formatAgentTxLabel(n) {
+    n = Math.max(0, parseInt(n, 10) || 0);
+    var s = String(n);
+    while (s.length < 3) s = '0' + s;
+    return '[Tx-' + s + ']';
+  }
+
+  function formatAgentStepLabel(n) {
+    n = Math.max(0, parseInt(n, 10) || 0);
+    return '第 ' + n + ' 步';
+  }
+
+  function formatAgentStatusLabel(status, thinking) {
+    if (thinking) return '思考中';
+    if (status === 'running') return '运行中';
+    if (status === 'paused') return '已暂停';
+    if (status === 'stepping') return '单步确认中';
+    return '待命';
+  }
+
+  function agentSandboxPhase(al) {
+    al = al || ensureAgentLoop();
+    if (state.openclawChatRunning || state.browserAgentRunning) return 'running';
+    if (al.status === 'paused') return 'paused';
+    if (al.status === 'running' || al.status === 'stepping') return 'running';
+    return 'idle';
+  }
+
+  function isAgentSandboxOpenClaw() {
+    return providerIdFromNodeKey(activeNodeKey()) === 'openclaw';
+  }
+
+  function activeSessionOnNode(nodeKey) {
+    var s = activeSession();
+    if (!s || nodeKeyForSession(s) !== nodeKey) return null;
+    return s;
+  }
+
+  function sessionHasBrowserControlHistory(s) {
+    if (!s || !Array.isArray(s.history)) return false;
+    for (var i = 0; i < s.history.length; i++) {
+      var h = s.history[i];
+      if (!h || h.content == null) continue;
+      var c = String(h.content);
+      if (h.role === 'user' && detectBrowserControlIntent(c).hit) return true;
+      if (h.role === 'assistant' && /网页智能操控|执行时间线/.test(c)) return true;
+    }
+    return false;
+  }
+
+  function nodeHasBrowserControlHistory(nodeKey) {
+    var grp = findNodeGroup(nodeKey);
+    if (!grp || !grp.sessions.length) return false;
+    for (var i = 0; i < grp.sessions.length; i++) {
+      if (sessionHasBrowserControlHistory(grp.sessions[i])) return true;
+    }
+    return false;
+  }
+
+  function browserControlRelevantForNode(nodeKey) {
+    nodeKey = nodeKey || activeNodeKey();
+    if (!nodeKey) return false;
+    if (providerTransport(providerIdFromNodeKey(nodeKey)) === 'cli') return false;
+    if (state.browserControlByNode && state.browserControlByNode[nodeKey]) return true;
+    if (state.browserAgentRunning && activeSessionOnNode(nodeKey)) return true;
+    if (nodeHasBrowserControlHistory(nodeKey)) return true;
+    if (activeSessionOnNode(nodeKey)) {
+      if (String(state.browserAgentGoal || '').trim()) return true;
+      var al = state.agentLoop;
+      if (al) {
+        if (al.status !== 'idle' || al.thinking) return true;
+        if ((al.taskHistory && al.taskHistory.length) || (al.committed && al.committed.domSnapshot)) return true;
+      }
+    }
+    return false;
+  }
+
+  function markBrowserControlNode(nodeKey) {
+    nodeKey = nodeKey || activeNodeKey();
+    if (!nodeKey) return;
+    if (!state.browserControlByNode) state.browserControlByNode = {};
+    state.browserControlByNode[nodeKey] = true;
+    syncViewModeUi();
+  }
+
+  function controlTabEnabledForNode(nodeKey) {
+    nodeKey = nodeKey || activeNodeKey();
+    if (!nodeKey) return false;
+    if (providerTransport(providerIdFromNodeKey(nodeKey)) === 'cli') return false;
+    if (providerIdFromNodeKey(nodeKey) === 'openclaw') return true;
+    return browserControlRelevantForNode(nodeKey);
+  }
+
+  function agentSandboxAutomationEnabled() {
+    return controlTabEnabledForNode(activeNodeKey());
+  }
+
+  function enforceViewModeForNode(nodeKey) {
+    nodeKey = nodeKey || activeNodeKey();
+    if (!nodeKey) return;
+    if (!controlTabEnabledForNode(nodeKey) && activeViewMode(nodeKey) === 'control') {
+      state.viewModeByNode[nodeKey] = 'chat';
+    }
+  }
+
+  function getActionBusItems(nodeKey) {
+    var pid = providerIdFromNodeKey(nodeKey);
+    if (providerTransport(pid) === 'cli') return [];
+    if (pid === 'openclaw') {
+      return (NODE_CONTROLS.openclaw || []).map(function (c) {
+        return { id: c.id, label: c.label, desc: c.desc, run: c.run, kind: 'openclaw' };
+      });
+    }
+    if (pid === 'ollama') {
+      return (NODE_CONTROLS.ollama || []).map(function (c) {
+        return { id: c.id, label: c.label, desc: c.desc, run: c.run, kind: 'api' };
+      });
+    }
+    return (NODE_CONTROLS._api || []).map(function (c) {
+      return { id: c.id, label: c.label, desc: c.desc, run: c.run, kind: 'api' };
+    });
+  }
+
+  function getOpenClawSecondaryItems() {
+    return getBrowserControlSecondaryItems();
+  }
+
+  function getBrowserControlSecondaryItems() {
+    return (NODE_CONTROLS.openclaw || [])
+      .filter(function (c) {
+        return ['oc_sync'].indexOf(c.id) >= 0;
+      })
+      .map(function (c) {
+        return { id: c.id, label: c.label, desc: c.desc, run: c.run, kind: 'browser' };
+      });
+  }
+
+  function syncSandboxFoldUi() {
+    var al = ensureAgentLoop();
+    var uc = al.uiCollapse;
+    var adv = $('controlAdvanced');
+    var advToggle = $('controlAdvancedToggle');
+    if (adv) adv.classList.toggle('collapsed', !!uc.advanced);
+    if (advToggle) advToggle.setAttribute('aria-expanded', uc.advanced ? 'false' : 'true');
+    ['cdp', 'dom', 'history', 'scratch'].forEach(function (key) {
+      var foldId = key === 'cdp' ? 'controlFoldCdp' : key === 'dom' ? 'controlFoldDom' : key === 'history' ? 'controlFoldHistory' : 'controlFoldScratch';
+      var foldEl = $(foldId);
+      if (foldEl) foldEl.classList.toggle('collapsed', !!uc[key]);
+    });
+  }
+
+  function toggleSandboxAdvanced() {
+    var al = ensureAgentLoop();
+    al.uiCollapse.advanced = !al.uiCollapse.advanced;
+    syncSandboxFoldUi();
+  }
+
+  function toggleSandboxFold(key) {
+    var al = ensureAgentLoop();
+    if (!al.uiCollapse[key]) al.uiCollapse[key] = true;
+    al.uiCollapse[key] = !al.uiCollapse[key];
+    syncSandboxFoldUi();
+  }
+
+  function appendCdpLog(entry) {
+    var al = ensureAgentLoop();
+    entry = entry || {};
+    al.committed.cdpLog.push({
+      tx: entry.tx != null ? entry.tx : al.currentTx,
+      at: entry.at || new Date().toISOString(),
+      level: entry.level || 'info',
+      msg: String(entry.msg || entry.message || ''),
+      phase: entry.phase || ''
+    });
+    if (al.committed.cdpLog.length > 120) al.committed.cdpLog = al.committed.cdpLog.slice(-120);
+    if (activeViewMode() === 'control') renderAgentSandbox();
+  }
+
+  function formatAgentActionPreview(action) {
+    if (!action) return '—';
+    if (typeof action === 'string') return action;
+    if (action.selector) {
+      return String(action.action || 'click') + ' ' + String(action.selector);
+    }
+    if (action.tool) {
+      var line = String(action.tool);
+      if (action.elementId) line += ' #' + action.elementId;
+      if (action.text) line += ' "' + String(action.text).slice(0, 40) + '"';
+      if (action.url) line += ' → ' + String(action.url).slice(0, 60);
+      return line;
+    }
+    if (action.action) {
+      var a2 = String(action.action);
+      if (action.elementId != null && action.elementId !== '') a2 += ' #' + action.elementId;
+      return a2;
+    }
+    try {
+      return JSON.stringify(action).slice(0, 120);
+    } catch (_) {
+      return '—';
+    }
+  }
+
+  function renderControlIntent() {
+    var al = ensureAgentLoop();
+    var panelEl = $('controlTaskPanel');
+    var intentEl = $('controlIntent');
+    var txEl = $('controlIntentTx');
+    var thoughtEl = $('controlIntentThought');
+    var actionEl = $('controlIntentAction');
+    if (!intentEl || !txEl || !thoughtEl || !actionEl) return;
+    if (panelEl) panelEl.classList.toggle('thinking', !!al.thinking || !!state.openclawChatRunning);
+    intentEl.classList.toggle('thinking', !!al.thinking || !!state.openclawChatRunning);
+    syncSandboxTaskStatusLabel(al);
+    txEl.textContent = state.openclawChatRunning && !al.currentTx
+      ? '进行中'
+      : formatAgentStepLabel(al.currentTx);
+    var thought = al.thinking && al.pendingBuffer.thought
+      ? al.pendingBuffer.thought + (al.pendingBuffer.thought.slice(-3) === '…' ? '' : '…')
+      : al.committed.thought || al.pendingBuffer.thought || '';
+    if (!thought) {
+      thoughtEl.textContent = al.thinking ? 'AI 正在思考…' : '—';
+      thoughtEl.classList.add('sandbox-placeholder');
     } else {
-      el.textContent = '控制模式：测试 API、导出 Markdown 等。Tab 返回对话。';
+      thoughtEl.textContent = thought;
+      thoughtEl.classList.remove('sandbox-placeholder');
+    }
+    var act = al.committed.action || al.pendingBuffer.action;
+    if (act) {
+      actionEl.textContent = '下一步：' + formatAgentActionPreview(act);
+      actionEl.classList.add('has-action');
+      actionEl.classList.remove('sandbox-placeholder');
+    } else {
+      actionEl.textContent = '下一步：—';
+      actionEl.classList.remove('has-action');
+      actionEl.classList.add('sandbox-placeholder');
+    }
+  }
+
+  function renderControlCdpPipe() {
+    var body = $('controlCdpPipeBody');
+    var badge = $('controlCdpBadge');
+    var foldCdp = $('controlFoldCdp');
+    if (!body) return;
+    if (!agentSandboxAutomationEnabled()) {
+      if (foldCdp) foldCdp.hidden = true;
+      return;
+    }
+    if (foldCdp) foldCdp.hidden = false;
+    var al = ensureAgentLoop();
+    var logs = al.committed.cdpLog || [];
+    var errCount = logs.filter(function (lg) { return lg.level === 'error'; }).length;
+    if (badge) badge.textContent = logs.length ? logs.length + ' 条' + (errCount ? ' · ' + errCount + ' 失败' : '') : '';
+    if (!logs.length) {
+      body.innerHTML = '<div class="sandbox-placeholder">暂无操作记录</div>';
+      return;
+    }
+    if (errCount && al.uiCollapse.cdp) {
+      al.uiCollapse.cdp = false;
+      syncSandboxFoldUi();
+    }
+    var html = '';
+    for (var i = logs.length - 1; i >= 0; i--) {
+      var lg = logs[i];
+      var t = '';
+      try {
+        t = new Date(lg.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      } catch (_) {}
+      html +=
+        '<div class="sandbox-cdp-line ' +
+        esc(lg.level || 'info') +
+        '"><span style="opacity:.65">' +
+        esc(formatAgentStepLabel(lg.tx) + ' ' + t) +
+        '</span> ' +
+        esc(lg.msg || '') +
+        '</div>';
+    }
+    body.innerHTML = html;
+  }
+
+  function renderControlDomMirror() {
+    var body = $('controlDomMirrorBody');
+    var countEl = $('controlDomMirrorCount');
+    var foldDom = $('controlFoldDom');
+    if (!body) return;
+    if (!agentSandboxAutomationEnabled()) {
+      if (foldDom) foldDom.hidden = true;
+      return;
+    }
+    if (foldDom) foldDom.hidden = false;
+    var al = ensureAgentLoop();
+    var snap = al.committed.domSnapshot;
+    var els = (snap && (snap.elements || snap.snapshot)) || [];
+    if (countEl) countEl.textContent = els.length ? els.length + ' 个' : '';
+    if (!els.length) {
+      body.innerHTML = '<div class="sandbox-placeholder">' + (snap && snap.url ? esc(String(snap.url).slice(0, 80)) + '<br>' : '') + '暂无页面快照，可点「刷新页面元素」</div>';
+      return;
+    }
+    if (al.status === 'running' && al.uiCollapse.dom) {
+      al.uiCollapse.dom = false;
+      syncSandboxFoldUi();
+    }
+    var hiId = null;
+    var act = al.committed.action || al.pendingBuffer.action;
+    if (act && act.elementId != null) hiId = parseInt(act.elementId, 10);
+    var html = '';
+    if (snap && snap.url) {
+      html += '<div class="sandbox-cdp-line info" style="margin-bottom:4px">' + esc(String(snap.url).slice(0, 100)) + '</div>';
+    }
+    for (var i = 0; i < Math.min(els.length, 60); i++) {
+      var el = els[i];
+      if (!el) continue;
+      var eid = el.id != null ? el.id : el.elementId != null ? el.elementId : i + 1;
+      var role = el.role || el.tag || el.type || '元素';
+      var label = el.label || el.text || el.name || el.ariaLabel || '';
+      var hi = hiId > 0 && parseInt(eid, 10) === hiId;
+      html +=
+        '<div class="sandbox-dom-item' +
+        (hi ? ' highlight' : '') +
+        '"><span class="sandbox-dom-tag">[' +
+        esc(String(eid)) +
+        ']</span><span>' +
+        esc(String(role)) +
+        (label ? ' · ' + esc(String(label).slice(0, 48)) : '') +
+        '</span></div>';
+    }
+    if (els.length > 60) html += '<div class="sandbox-placeholder">… 还有 ' + (els.length - 60) + ' 项</div>';
+    body.innerHTML = html;
+  }
+
+  function renderControlTaskHistory() {
+    var body = $('controlTaskHistoryBody');
+    var countEl = $('controlTaskHistoryCount');
+    var foldHist = $('controlFoldHistory');
+    if (!body) return;
+    var al = ensureAgentLoop();
+    var rows = al.taskHistory || [];
+    if (countEl) countEl.textContent = rows.length ? rows.length + ' 步' : '';
+    if (!rows.length) {
+      body.innerHTML = '<div class="sandbox-placeholder">暂无步骤记录</div>';
+      if (foldHist && agentSandboxPhase(al) === 'idle' && !agentSandboxAutomationEnabled()) foldHist.hidden = true;
+      return;
+    }
+    if (foldHist) foldHist.hidden = false;
+    var html = '';
+    for (var i = rows.length - 1; i >= 0; i--) {
+      var row = rows[i];
+      var t = '';
+      try {
+        t = new Date(row.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch (_) {}
+      html +=
+        '<div class="sandbox-history-line info"><span style="opacity:.65">' +
+        esc(formatAgentStepLabel(row.step) + ' ' + t) +
+        '</span> ' +
+        esc(String(row.thought || '').slice(0, 80)) +
+        (row.actionPreview ? ' → ' + esc(row.actionPreview) : '') +
+        '</div>';
+    }
+    body.innerHTML = html;
+  }
+
+  function renderControlActionBus() {
+    var al = ensureAgentLoop();
+    var phase = agentSandboxPhase(al);
+    var autoOn = agentSandboxAutomationEnabled();
+    var pendingEl = $('controlActionBusPending');
+    var extraEl = $('controlActionBusExtra');
+    var primaryEl = $('controlActionBusPrimary');
+    var controlsEl = $('controlActionBusControls');
+    var pauseBtn = $('agentLoopPauseBtn');
+    var resumeBtn = $('agentLoopResumeBtn');
+    var stepBtn = $('agentLoopStepBtn');
+    var resetBtn = $('agentLoopResetBtn');
+    syncSandboxTaskStatusLabel(al);
+    if (controlsEl) {
+      var domN = ((al.committed.domSnapshot && al.committed.domSnapshot.elements) || []).length;
+      controlsEl.hidden = !autoOn || (!state.browserAgentRunning && !domN);
+    }
+    if (pauseBtn) pauseBtn.hidden = phase !== 'running';
+    if (resumeBtn) resumeBtn.hidden = phase !== 'paused';
+    if (stepBtn) stepBtn.hidden = phase !== 'paused';
+    if (resetBtn) resetBtn.hidden = !autoOn || phase === 'idle';
+    if (pauseBtn) pauseBtn.disabled = !autoOn || phase !== 'running';
+    if (resumeBtn) resumeBtn.disabled = !autoOn || phase !== 'paused';
+    if (stepBtn) stepBtn.disabled = !autoOn || phase !== 'paused' || !al.pendingActions.length;
+    if (resetBtn) resetBtn.disabled = !autoOn;
+    if (pauseBtn) pauseBtn.classList.toggle('active', al.status === 'paused');
+    if (resumeBtn) resumeBtn.classList.toggle('active', al.status === 'running');
+    if (primaryEl) {
+      primaryEl.innerHTML = '';
+      if (phase === 'paused') {
+        primaryEl.appendChild(
+          createSandboxActionChip('改目标', '←', {
+            title: '返回对话修改任务目标',
+            onClick: function () {
+              switchViewMode('chat');
+            }
+          })
+        );
+      }
+    }
+    if (extraEl) {
+      extraEl.innerHTML = '';
+      getBrowserControlSecondaryItems().forEach(function (item) {
+        if (['oc_pause', 'oc_resume', 'oc_snap'].indexOf(item.id) >= 0) return;
+        extraEl.appendChild(
+          createSandboxActionChip(item.label || item.id, sandboxActionIconForItem(item), {
+            title: item.desc || item.label || '',
+            onClick: function () {
+              runControlAction(item);
+            }
+          })
+        );
+      });
+    }
+    if (pendingEl) {
+      if (phase !== 'paused' || !al.pendingActions.length) {
+        pendingEl.hidden = true;
+        pendingEl.innerHTML = '';
+      } else {
+        pendingEl.hidden = false;
+        var ph = '<div class="sandbox-pending-list">';
+        al.pendingActions.forEach(function (cmd, idx) {
+          ph +=
+            '<div class="sandbox-pending-item"><span class="sandbox-pending-item-text">' +
+            esc(formatAgentActionPreview(cmd)) +
+            '</span></div>';
+        });
+        ph += '</div>';
+        pendingEl.innerHTML = ph;
+      }
+    }
+  }
+
+  function renderAgentSandboxPhase() {
+    var al = ensureAgentLoop();
+    var phase = agentSandboxPhase(al);
+    var autoOn = agentSandboxAutomationEnabled();
+    var guideEl = $('controlGuideBar');
+    var guideText = $('controlGuideText');
+    var pausedBanner = $('controlPausedBanner');
+    var taskPanel = $('controlTaskPanel');
+    var advBadge = $('controlAdvancedBadge');
+    var advEl = $('controlAdvanced');
+    var hasTaskContent = !!(al.committed.thought || al.committed.action || al.thinking || al.currentTx > 0);
+    if (guideEl) {
+      guideEl.hidden =
+        phase !== 'idle' || !!state.openclawChatRunning || !!state.browserAgentRunning || hasTaskContent;
+      if (guideText && phase === 'idle' && !state.openclawChatRunning && !state.browserAgentRunning) {
+        if (isAgentSandboxOpenClaw()) {
+          guideText.innerHTML =
+            '在 <strong>对话</strong> 向 OpenClaw 发消息；<strong>后台</strong> 查看 Gateway 进度与工具调用。';
+        } else {
+          guideText.innerHTML =
+            '在 <strong>对话</strong> 输入 @网页 …；<strong>后台</strong> 查看浏览器任务进度，可暂停或单步。';
+        }
+      }
+    }
+    if (pausedBanner) pausedBanner.hidden = phase !== 'paused';
+    if (taskPanel) {
+      taskPanel.hidden =
+        !autoOn && phase === 'idle' && !hasTaskContent && !state.browserAgentRunning && !state.openclawChatRunning;
+    }
+    var logCount = (al.committed.cdpLog || []).length;
+    var histCount = (al.taskHistory || []).length;
+    var domCount = ((al.committed.domSnapshot && al.committed.domSnapshot.elements) || []).length;
+    var advCount = logCount + histCount + (domCount ? 1 : 0);
+    if (advBadge) {
+      if (advCount > 0 && al.uiCollapse.advanced) {
+        advBadge.hidden = false;
+        advBadge.textContent = advCount + ' 项';
+      } else {
+        advBadge.hidden = true;
+      }
+    }
+    if (advEl) {
+      advEl.hidden = !(phase !== 'idle' || logCount || domCount || histCount);
+    }
+    syncSandboxFoldUi();
+  }
+
+  function renderAgentSandbox() {
+    ensureAgentLoop();
+    renderAgentSandboxPhase();
+    renderControlIntent();
+    renderControlCdpPipe();
+    renderControlDomMirror();
+    renderControlTaskHistory();
+    renderControlActionBus();
+  }
+
+  function commitAgentLoopBuffer() {
+    var al = ensureAgentLoop();
+    al.currentTx += 1;
+    if (al.pendingBuffer.thought) al.committed.thought = al.pendingBuffer.thought;
+    if (al.pendingBuffer.action) al.committed.action = al.pendingBuffer.action;
+    al.taskHistory.push({
+      step: al.currentTx,
+      at: new Date().toISOString(),
+      thought: al.committed.thought || '',
+      actionPreview: al.committed.action ? formatAgentActionPreview(al.committed.action) : ''
+    });
+    if (al.taskHistory.length > 80) al.taskHistory = al.taskHistory.slice(-80);
+    al.pendingBuffer = { thought: '', action: null };
+    al.thinking = false;
+    renderAgentSandbox();
+  }
+
+  function feedAgentLoopThoughtDelta(text, done) {
+    var al = ensureAgentLoop();
+    if (done) {
+      al.pendingBuffer.thought = String(text || al.pendingBuffer.thought || '');
+      al.thinking = false;
+    } else {
+      al.thinking = true;
+      al.pendingBuffer.thought = String(text || '');
+    }
+    if (activeViewMode() === 'control') renderAgentSandbox();
+  }
+
+  function feedAgentLoopFromToolTurn(turn) {
+    if (!turn) return;
+    var al = ensureAgentLoop();
+    if (turn.thought) al.pendingBuffer.thought = String(turn.thought);
+    al.pendingBuffer.action = {
+      tool: turn.tool,
+      elementId: turn.elementId,
+      text: turn.text,
+      url: turn.url,
+      selector: turn.selector,
+      action: turn.action
+    };
+    commitAgentLoopBuffer();
+  }
+
+  function ingestDomMirrorFromSnapshot(d) {
+    if (!d) return;
+    var al = ensureAgentLoop();
+    d = normalizeBrowserSnapshot(d);
+    var els = (d.elements && d.elements.length && d.elements) || (d.snapshot && d.snapshot.length && d.snapshot) || [];
+    al.committed.domSnapshot = {
+      tx: al.currentTx,
+      url: d.url || state.mobileBrowserLastUrl || '',
+      elements: els,
+      count: els.length || parseInt(d.count, 10) || 0,
+      error: d.error || ''
+    };
+    if (activeViewMode() === 'control') renderAgentSandbox();
+  }
+
+  var AGENT_LOOP_TRANSITIONS = {
+    idle: { running: 1, paused: 1 },
+    running: { paused: 1, idle: 1, stepping: 1 },
+    paused: { running: 1, idle: 1, stepping: 1 },
+    stepping: { paused: 1, running: 1, idle: 1 }
+  };
+
+  function setAgentLoopStatus(next) {
+    var al = ensureAgentLoop();
+    next = String(next || 'idle');
+    if (al.status === next) return true;
+    var allowed = AGENT_LOOP_TRANSITIONS[al.status] || {};
+    if (!allowed[next]) return false;
+    al.status = next;
+    if (activeViewMode() === 'control') renderAgentSandbox();
+    return true;
+  }
+
+  function agentLoopPause() {
+    if (!agentSandboxAutomationEnabled()) return;
+    setAgentLoopStatus('paused');
+    state.mobileBrowserAiPaused = true;
+    post({ type: 'niuma_browser_pause_ai' });
+    appendCdpLog({ level: 'warn', msg: '用户暂停 · 动作将挂起在待执行队列' });
+    appendAudit({ level: 'info', message: '控制：已暂停 AI 自动化' });
+  }
+
+  function agentLoopResume() {
+    if (!agentSandboxAutomationEnabled()) return;
+    var al = ensureAgentLoop();
+    setAgentLoopStatus('running');
+    state.mobileBrowserAiPaused = false;
+    post({ type: 'niuma_browser_resume_ai' });
+    appendCdpLog({ level: 'info', msg: '用户恢复 ·  flush 待执行队列' });
+    appendAudit({ level: 'info', message: '控制：已恢复 AI 自动化' });
+    var queue = al.pendingActions.slice();
+    al.pendingActions = [];
+    renderAgentSandbox();
+    queue.forEach(function (cmd) {
+      dispatchCdpCommand(cmd, { force: true });
+    });
+  }
+
+  async function agentLoopStep() {
+    if (!agentSandboxAutomationEnabled()) return;
+    var al = ensureAgentLoop();
+    if (al.status !== 'paused' || !al.pendingActions.length) return;
+    setAgentLoopStatus('stepping');
+    var cmd = al.pendingActions.shift();
+    renderAgentSandbox();
+    appendCdpLog({ level: 'info', msg: '单步执行 · ' + formatAgentActionPreview(cmd) });
+    try {
+      await dispatchCdpCommand(cmd, { force: true, forceStep: true });
+    } catch (_) {}
+    setAgentLoopStatus('paused');
+  }
+
+  function agentLoopResetDom() {
+    if (!agentSandboxAutomationEnabled()) return;
+    var al = ensureAgentLoop();
+    al.currentTx += 1;
+    appendCdpLog({ level: 'info', msg: '正在刷新页面元素快照…' });
+    renderAgentSandbox();
+    var reqId = genId();
+    post({ type: 'niuma_browser_get_snapshot', reqId: reqId });
+    appendAudit({ level: 'info', message: '控制：已刷新页面元素快照' });
+  }
+
+  function normalizeCdpCommand(cmd) {
+    cmd = cmd || {};
+    var al = ensureAgentLoop();
+    return {
+      txId: cmd.txId || 'tx_' + formatAgentTxLabel(al.currentTx).replace(/[\[\]-]/g, ''),
+      selector: cmd.selector ? String(cmd.selector) : '',
+      action: String(cmd.action || cmd.tool || 'click')
+        .replace(/^browser_/, ''),
+      elementId: cmd.elementId != null ? cmd.elementId : cmd.id,
+      value: cmd.value != null ? cmd.value : cmd.text != null ? cmd.text : '',
+      scrollDirection: cmd.scrollDirection || cmd.direction || '',
+      scrollDistance: cmd.scrollDistance || cmd.distance || 0,
+      forceDoubaoInput: !!cmd.forceDoubaoInput,
+      chatJsSendOnly: !!cmd.chatJsSendOnly,
+      deepseekJsFillOnly: !!cmd.deepseekJsFillOnly,
+      geminiJsFillOnly: !!cmd.geminiJsFillOnly
+    };
+  }
+
+  function shouldRouteActionViaAgentLoop() {
+    if (!agentSandboxAutomationEnabled()) return false;
+    var al = ensureAgentLoop();
+    if (state.browserAgentRunning) return true;
+    if (al.status !== 'idle') return true;
+    return activeViewMode() === 'control';
+  }
+
+  async function dispatchCdpCommandReal(cmd) {
+    cmd = normalizeCdpCommand(cmd);
+    if (cmd.selector) {
+      try {
+        var r = await hostBridgeRequest(
+          'niuma_cdp_execute',
+          { txId: cmd.txId, selector: cmd.selector, action: cmd.action, value: cmd.value || '' },
+          15000
+        );
+        appendCdpLog({
+          level: r && r.ok ? 'success' : 'error',
+          msg:
+            (r && r.ok ? 'CDP OK ' : 'CDP FAIL ') +
+            cmd.action +
+            ' ' +
+            cmd.selector +
+            (r && r.error ? ' · ' + r.error : '')
+        });
+        appendAudit({
+          level: r && r.ok ? 'success' : 'error',
+          message: 'CDP：' + cmd.action + ' ' + cmd.selector
+        });
+        return r || { ok: false };
+      } catch (e) {
+        appendCdpLog({ level: 'error', msg: 'CDP 异常 · ' + String(e.message || e) });
+        throw e;
+      }
+    }
+    var act = cmd.action;
+    if (act.indexOf('browser_') === 0) act = act.slice(8);
+    return callHostActionWithWaitDirect(act, cmd.elementId != null ? String(cmd.elementId) : '', {
+      text: cmd.value,
+      scrollDirection: cmd.scrollDirection,
+      scrollDistance: cmd.scrollDistance,
+      forceDoubaoInput: cmd.forceDoubaoInput,
+      chatJsSendOnly: cmd.chatJsSendOnly,
+      deepseekJsFillOnly: cmd.deepseekJsFillOnly,
+      geminiJsFillOnly: cmd.geminiJsFillOnly
+    });
+  }
+
+  async function dispatchCdpCommand(cmd, options) {
+    options = options || {};
+    cmd = normalizeCdpCommand(cmd);
+    var al = ensureAgentLoop();
+    if (!options.force && al.status === 'paused') {
+      al.pendingActions.push(cmd);
+      renderAgentSandbox();
+      appendCdpLog({ level: 'warn', msg: '已暂停，动作等待确认 · ' + formatAgentActionPreview(cmd) });
+      return { ok: false, held: true };
+    }
+    if (al.status === 'stepping' && !options.forceStep && !options.force) {
+      al.pendingActions.push(cmd);
+      renderAgentSandbox();
+      return { ok: false, held: true };
+    }
+    appendCdpLog({ level: 'info', msg: '执行 · ' + formatAgentActionPreview(cmd), phase: 'dispatch' });
+    return dispatchCdpCommandReal(cmd);
+  }
+
+  async function dispatchScratchpadOverrule(code) {
+    code = String(code || '').trim();
+    if (!code) return;
+    appendCdpLog({ level: 'warn', msg: 'Overrule · ' + code.slice(0, 80) });
+    appendAudit({ level: 'info', message: '临时指令：' + code.slice(0, 60) });
+    try {
+      var r = await hostBridgeRequest('niuma_scratchpad_run', { code: code }, 20000);
+      appendCdpLog({
+        level: r && r.ok ? 'success' : 'error',
+        msg: 'Scratchpad ' + (r && r.ok ? 'OK' : 'FAIL') + (r && r.result ? ' · ' + String(r.result).slice(0, 120) : '')
+      });
+      return r;
+    } catch (e) {
+      appendCdpLog({ level: 'error', msg: 'Scratchpad 异常 · ' + String(e.message || e) });
+      throw e;
+    }
+  }
+
+  function bindAgentSandboxEvents() {
+    if (agentSandboxBound) return;
+    agentSandboxBound = true;
+    var pauseBtn = $('agentLoopPauseBtn');
+    var resumeBtn = $('agentLoopResumeBtn');
+    var stepBtn = $('agentLoopStepBtn');
+    var resetBtn = $('agentLoopResetBtn');
+    var scratchInput = $('controlScratchpadInput');
+    var backBtn = $('controlBackToChatBtn');
+    var advToggle = $('controlAdvancedToggle');
+    var sandboxEl = $('agentSandbox');
+    if (pauseBtn) pauseBtn.addEventListener('click', agentLoopPause);
+    if (resumeBtn) resumeBtn.addEventListener('click', agentLoopResume);
+    if (stepBtn) stepBtn.addEventListener('click', function () { agentLoopStep(); });
+    if (resetBtn) resetBtn.addEventListener('click', agentLoopResetDom);
+    if (backBtn) backBtn.addEventListener('click', function () { switchViewMode('chat'); });
+    if (advToggle) advToggle.addEventListener('click', toggleSandboxAdvanced);
+    if (sandboxEl) {
+      sandboxEl.addEventListener('click', function (e) {
+        var head = e.target && e.target.closest ? e.target.closest('.sandbox-fold-head[data-fold]') : null;
+        if (!head) return;
+        toggleSandboxFold(String(head.getAttribute('data-fold') || ''));
+      });
+    }
+    if (scratchInput) {
+      scratchInput.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' || e.shiftKey) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var v = scratchInput.value;
+        scratchInput.value = '';
+        dispatchScratchpadOverrule(v);
+      });
+    }
+  }
+
+  function sandboxMockEnabled() {
+    try {
+      if (/sandboxMock=1/.test(String(location.search || ''))) return true;
+      if (localStorage.getItem('niuma_sandbox_mock') === '1') return true;
+    } catch (_) {}
+    return false;
+  }
+
+  function runAgentSandboxMockDemo() {
+    if (!sandboxMockEnabled() || state.browserAgentRunning) return;
+    if (agentSandboxMockTimer) return;
+    var al = ensureAgentLoop();
+    setAgentLoopStatus('running');
+    var step = 0;
+    agentSandboxMockTimer = setInterval(function () {
+      if (activeViewMode() !== 'control' || !agentSandboxAutomationEnabled()) return;
+      step += 1;
+      if (step === 1) {
+        feedAgentLoopThoughtDelta('分析页面结构', false);
+        setTimeout(function () {
+          feedAgentLoopThoughtDelta('分析页面结构：发现搜索框与提交按钮', true);
+        }, 600);
+      } else if (step === 2) {
+        commitAgentLoopBuffer();
+        al.pendingBuffer.action = { selector: '#id_4', action: 'click' };
+        commitAgentLoopBuffer();
+        al.committed.domSnapshot = {
+          tx: al.currentTx,
+          url: 'https://example.com/mock',
+          elements: [
+            { id: 1, role: 'input', label: 'Search' },
+            { id: 4, role: 'button', label: 'Submit' }
+          ]
+        };
+        renderAgentSandbox();
+      } else if (step === 3) {
+        appendCdpLog({ level: 'success', msg: 'Mock ExecuteScriptAsync click #id_4 OK' });
+        clearInterval(agentSandboxMockTimer);
+        agentSandboxMockTimer = 0;
+      }
+    }, 1200);
+  }
+
+  function maybeRunAgentSandboxMock() {
+    if (sandboxMockEnabled() && agentSandboxAutomationEnabled() && activeViewMode() === 'control') {
+      runAgentSandboxMockDemo();
     }
   }
 
@@ -3611,11 +4665,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function syncViewModeToggleUi() {
+    var nk = activeNodeKey();
+    var ctrlOn = controlTabEnabledForNode(nk);
     var mode = activeViewMode();
-    if (viewModeChatBtn) viewModeChatBtn.classList.toggle('active', mode === 'chat');
-    if (viewModeControlBtn) viewModeControlBtn.classList.toggle('active', mode === 'control');
+    if (viewModeChatBtn) viewModeChatBtn.classList.toggle('active', mode === 'chat' || !ctrlOn);
+    if (viewModeControlBtn) viewModeControlBtn.classList.toggle('active', mode === 'control' && ctrlOn);
     var vmt = $('viewModeToggle');
-    if (vmt) vmt.style.display = state.featurePhase1 ? '' : 'none';
+    if (vmt) {
+      var show = !!(state.featurePhase1 && ctrlOn);
+      vmt.style.display = show ? '' : 'none';
+      if (show) vmt.removeAttribute('hidden');
+      else vmt.setAttribute('hidden', '');
+    }
   }
 
   function switchViewMode(mode, nodeKey) {
@@ -3623,6 +4684,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     nodeKey = nodeKey || activeNodeKey();
     if (!nodeKey) return;
     mode = mode === 'control' ? 'control' : 'chat';
+    if (mode === 'control' && !controlTabEnabledForNode(nodeKey)) mode = 'chat';
     var prev = state.viewModeByNode[nodeKey] || 'chat';
     if (prev === mode) {
       syncViewModeUi();
@@ -3630,12 +4692,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     state.viewModeByNode[nodeKey] = mode;
     syncViewModeUi();
-    appendAudit({ nodeKey: nodeKey, level: 'info', message: mode === 'control' ? '切换到控制视口' : '切换到对话视口' });
+    appendAudit({ nodeKey: nodeKey, level: 'info', message: mode === 'control' ? '切换到后台' : '切换到对话' });
   }
 
   function toggleViewMode() {
     var nk = activeNodeKey();
-    if (!nk) return;
+    if (!nk || !controlTabEnabledForNode(nk)) return;
     switchViewMode(activeViewMode(nk) === 'control' ? 'chat' : 'control', nk);
   }
 
@@ -3663,10 +4725,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     openclaw: [
       {
         id: 'oc_snap',
-        label: '抓取页面 DOM',
-        desc: '向手机浏览器请求当前页面快照',
+        label: '刷新页面元素',
+        desc: '重新获取当前网页可点击元素列表',
         run: function () {
-          post({ type: 'niuma_browser_get_snapshot', reqId: genId() });
+          agentLoopResetDom();
         }
       },
       {
@@ -3682,7 +4744,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         label: '暂停 AI 操控',
         desc: '暂停浏览器自动 AI 循环',
         run: function () {
-          post({ type: 'niuma_browser_pause_ai' });
+          agentLoopPause();
         }
       },
       {
@@ -3690,7 +4752,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         label: '恢复 AI 操控',
         desc: '恢复浏览器 AI 自动循环',
         run: function () {
-          post({ type: 'niuma_browser_resume_ai' });
+          agentLoopResume();
         }
       }
     ],
@@ -3769,44 +4831,28 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       viewportControlEl.setAttribute('aria-hidden', 'true');
       return;
     }
-    if (providerTransport(providerIdFromNodeKey(nk)) === 'cli') {
+    if (providerTransport(providerIdFromNodeKey(nk)) === 'cli' || !controlTabEnabledForNode(nk)) {
       viewportControlEl.setAttribute('hidden', '');
       viewportControlEl.setAttribute('aria-hidden', 'true');
       return;
     }
     viewportControlEl.removeAttribute('hidden');
     viewportControlEl.setAttribute('aria-hidden', 'false');
-    var hintEl = $('controlModeHint');
-    if (!hintEl) {
-      hintEl = document.createElement('div');
-      hintEl.id = 'controlModeHint';
-      hintEl.className = 'control-mode-hint';
-      viewportControlEl.appendChild(hintEl);
-    }
     syncControlModeHint();
-    var cards = controlsForNodeKey(nk);
-    viewportControlEl.querySelectorAll('.control-card').forEach(function (n) {
-      n.remove();
-    });
-    cards.forEach(function (card) {
-      var el = document.createElement('div');
-      el.className = 'control-card';
-      el.innerHTML =
-        '<div class="control-card-title">' +
-        esc(card.label || '') +
-        '</div><div class="control-card-desc">' +
-        esc(card.desc || '') +
-        '</div>';
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'btn3 control-card-run';
-      btn.textContent = '执行';
-      btn.addEventListener('click', function () {
-        runControlAction(card);
-      });
-      el.appendChild(btn);
-      viewportControlEl.appendChild(el);
-    });
+    bindAgentSandboxEvents();
+    var sandboxEl = $('agentSandbox');
+    var legacyEl = $('controlLegacyCards');
+    if (sandboxEl) {
+      sandboxEl.hidden = false;
+      sandboxEl.removeAttribute('hidden');
+    }
+    if (legacyEl) {
+      legacyEl.hidden = true;
+      legacyEl.setAttribute('hidden', '');
+      legacyEl.setAttribute('aria-hidden', 'true');
+    }
+    renderAgentSandbox();
+    maybeRunAgentSandboxMock();
   }
 
   function syncViewModeUi() {
@@ -3818,6 +4864,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
       return;
     }
+    enforceViewModeForNode(activeNodeKey());
     var mode = activeViewMode();
     document.body.classList.toggle('view-control', mode === 'control');
     document.body.classList.toggle('view-chat', mode !== 'control');
@@ -4975,6 +6022,37 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     pid = normalizeProviderId(pid);
     pid = pid && P[pid] ? pid : 'openai';
     return ((state.apiKeys && state.apiKeys[pid]) || '').trim();
+  }
+
+  /** OpenClaw Gateway connect 协商：须覆盖网关当前 PROTOCOL_VERSION（2026 起多为 4/5） */
+  var OPENCLAW_GATEWAY_MIN_PROTOCOL = 3;
+  var OPENCLAW_GATEWAY_MAX_PROTOCOL = 5;
+  /** OpenClaw 对话：工具型任务需更长 WS 等待与 history 轮询 */
+  var OPENCLAW_CHAT_WS_TIMEOUT_MS = 180000;
+  var OPENCLAW_CHAT_LATE_POLL_ROUNDS = 10;
+  var OPENCLAW_CHAT_LATE_POLL_MS = 2500;
+
+  function openClawConnectProtocolRange() {
+    return { minProtocol: OPENCLAW_GATEWAY_MIN_PROTOCOL, maxProtocol: OPENCLAW_GATEWAY_MAX_PROTOCOL };
+  }
+
+  function formatOpenClawConnectError(err) {
+    if (!err || typeof err !== 'object') return String(err && err.message ? err.message : err || 'connect failed');
+    var em = String((err.message != null ? err.message : err) || 'connect failed');
+    if (!/protocol mismatch/i.test(em)) return em;
+    var det = err.details && typeof err.details === 'object' ? err.details : null;
+    if (det && det.expectedProtocol != null) {
+      return (
+        'OpenClaw 协议不匹配：网关需要 protocol ' +
+        det.expectedProtocol +
+        '（客户端 ' +
+        (det.clientMinProtocol != null ? det.clientMinProtocol : OPENCLAW_GATEWAY_MIN_PROTOCOL) +
+        '–' +
+        (det.clientMaxProtocol != null ? det.clientMaxProtocol : OPENCLAW_GATEWAY_MAX_PROTOCOL) +
+        '）。请更新牛马 Chat，或升级 OpenClaw Gateway 使版本一致。'
+      );
+    }
+    return 'OpenClaw 协议不匹配：请更新牛马 Chat 到最新版，并确认 Gateway Token 与 OpenClaw 控制台一致。';
   }
 
   function openClawEndpointFromCfg(cfg) {
@@ -6417,6 +7495,21 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
               scriptDir: String(d.scriptDir || '')
             });
           } else finishErr(new Error(String(d.error || 'studio context failed')));
+          return;
+        }
+        if (String(d.type || '') === 'niuma_cdp_execute_result') {
+          finishOk({
+            ok: !!d.ok,
+            txId: String(d.txId || ''),
+            error: String(d.error || ''),
+            result: d.result != null ? String(d.result) : ''
+          });
+          return;
+        }
+        if (String(d.type || '') === 'niuma_scratchpad_run_result') {
+          if (d.ok) finishOk({ ok: true, result: d.result != null ? String(d.result) : '' });
+          else finishErr(new Error(String(d.error || 'scratchpad failed')));
+          return;
         }
       }
       try { window.chrome.webview.addEventListener('message', onMsg); } catch (e) { finishErr(e); return; }
@@ -7326,7 +8419,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     };
   }
 
-  function callHostActionWithWait(actionType, targetId, extraOptions) {
+  function callHostActionWithWaitDirect(actionType, targetId, extraOptions) {
     var actReqId = 'act-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
     var safeTargetId = targetId !== undefined && targetId !== null ? String(targetId).trim() : '';
     var opt = extraOptions || {};
@@ -7360,12 +8453,20 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       deepseekJsFillOnly: !!opt.deepseekJsFillOnly,
       geminiJsFillOnly: !!opt.geminiJsFillOnly
     });
+    appendCdpLog({
+      level: 'info',
+      msg: 'niuma_browser_action · ' + actionType + (safeTargetId ? ' #' + safeTargetId : '')
+    });
     var actWaitMs = isDoubaoHostInput ? BROWSER_AGENT_ACT_TIMEOUT_DOUBAO_MS : BROWSER_AGENT_ACT_TIMEOUT_MS;
     return waitBrowserHostEvent(['host_browser_act_result', 'host_browser_act_error'], actWaitMs, {
       reqId: actReqId
     })
       .then(function (res) {
         if (res.type === 'host_browser_act_error') {
+          appendCdpLog({
+            level: 'error',
+            msg: 'act_error · ' + String(res.error || 'host_browser_act_error')
+          });
           return {
             ok: false,
             error: res.error || 'host_browser_act_error',
@@ -7376,6 +8477,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           };
         }
         if (res.ok === false) {
+          appendCdpLog({ level: 'error', msg: 'act_fail · ' + String(res.error || 'host_act_failed') });
           return {
             ok: false,
             error: res.error || 'host_act_failed',
@@ -7383,6 +8485,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             actPayload: res
           };
         }
+        appendCdpLog({
+          level: 'success',
+          msg: 'act_ok · ' + actionType + (safeTargetId ? ' #' + safeTargetId : '')
+        });
         var delay = actionType === 'refresh' || actionType === 'back' ? 800 : 350;
         return new Promise(function (resolve) {
           setTimeout(function () {
@@ -7408,6 +8514,29 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             'NOTICE: The previous browser action timed out at infrastructure layer. DO NOT retry the exact same click/input without scrolling or refreshing first.'
         };
       });
+  }
+
+  function callHostActionWithWait(actionType, targetId, extraOptions) {
+    if (shouldRouteActionViaAgentLoop()) {
+      return dispatchCdpCommand(
+        {
+          action: actionType,
+          elementId: targetId,
+          value: (extraOptions && (extraOptions.text || extraOptions.value)) || '',
+          scrollDirection: extraOptions && extraOptions.scrollDirection,
+          scrollDistance: extraOptions && extraOptions.scrollDistance,
+          forceDoubaoInput: extraOptions && extraOptions.forceDoubaoInput,
+          chatJsSendOnly: extraOptions && extraOptions.chatJsSendOnly,
+          deepseekJsFillOnly: extraOptions && extraOptions.deepseekJsFillOnly,
+          geminiJsFillOnly: extraOptions && extraOptions.geminiJsFillOnly
+        },
+        { force: ensureAgentLoop().status === 'running' || ensureAgentLoop().status === 'stepping', forceStep: ensureAgentLoop().status === 'stepping' }
+      ).then(function (res) {
+        if (res && res.held) return { ok: false, held: true, error: 'held_by_sandbox_pause' };
+        return res;
+      });
+    }
+    return callHostActionWithWaitDirect(actionType, targetId, extraOptions);
   }
 
   function browserHostEventMatches(d, typeOrTypes) {
@@ -9395,6 +10524,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     state.browserAgentRunning = false;
     state.browserAgentPlanMode = '';
     try {
+      ensureAgentLoop().thinking = false;
+      if (ensureAgentLoop().status !== 'paused') setAgentLoopStatus('idle');
+    } catch (_) {}
+    try {
       post({ type: 'niuma_llm_http_cancel', reqId: '*' });
     } catch (_) {}
   }
@@ -10545,6 +11678,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var s = sessionById(sid);
     if (!s) throw new Error('会话不存在');
     state.browserAgentRunning = true;
+    setAgentLoopStatus('running');
+    feedAgentLoopThoughtDelta('浏览器自动化任务启动…', true);
     if (state.mobileBrowserOpen) postShowBrowserLabelsForAgent();
     var rows = [];
     var liveLine = '准备中…';
@@ -10793,6 +11928,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         var skipLocalChatInput = shouldSkipLocalChatHostInputPlan(goal, snap, agentTurnCtx);
 
         row('第 ' + turn + ' 轮 · 模型决策', '⏳ 思考中…');
+        feedAgentLoopThoughtDelta('第 ' + turn + ' 轮 · 模型推理中…', false);
         refreshDraft(analysisThoughts.join('\n'), '', '第 ' + turn + ' 轮 · 决策中（见时间线）');
         var llmStart = Date.now();
         var llmCapMs = browserAgentLlmTimeoutMs(goal);
@@ -11160,6 +12296,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           }
         }
         if (toolTurn.thought && !localPlan) analysisThoughts.push('**第' + turn + '轮：** ' + toolTurn.thought);
+        try {
+          feedAgentLoopFromToolTurn(toolTurn);
+        } catch (_) {}
 
         if (toolTurn.tool === 'browser_finish') {
           finishThought = toolTurn.thought || '任务结束或需用户介入。';
@@ -12020,7 +13159,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (typeof v === 'object') {
       if (v.functionCall && v.functionCall.name) out.push('[调用工具: ' + v.functionCall.name + ']');
       if (v.function && v.function.name) out.push('[调用工具: ' + v.function.name + ']');
-      if ((v.type === 'tool_call' || v.type === 'function_call') && v.name) out.push('[调用工具: ' + v.name + ']');
+      if ((v.type === 'tool_call' || v.type === 'function_call' || v.type === 'toolcall') && v.name)
+        out.push('[调用工具: ' + v.name + ']');
+      if (v.type === 'thinking' && typeof v.thinking === 'string' && v.thinking.trim()) out.push(v.thinking.trim());
+      if ((v.type === 'tool_result' || v.type === 'toolResult' || v.type === 'toolresult') && typeof v.text === 'string' && v.text.trim())
+        out.push(v.text.trim());
 
       if (typeof v.text === 'string' && v.text.trim()) out.push(v.text.trim());
       if (typeof v.message === 'string' && v.message.trim()) out.push(v.message.trim());
@@ -12063,6 +13206,79 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         }
       }
     }
+  }
+
+  /** OpenClaw 对话流 → 后台 Tab agentLoop（与 @网页 browserAgent 并行） */
+  function ocExtractToolActionFromPayload(pl) {
+    if (!pl || typeof pl !== 'object') return null;
+    var msg = pl.message || pl.assistant || pl.data || pl;
+    var parts = [];
+    if (msg && Array.isArray(msg.content)) parts = msg.content;
+    else if (Array.isArray(pl.content)) parts = pl.content;
+    for (var j = 0; j < parts.length; j++) {
+      var p = parts[j];
+      if (!p || typeof p !== 'object') continue;
+      var tn =
+        p.name ||
+        (p.function && p.function.name) ||
+        (p.toolCall && p.toolCall.name) ||
+        (p.tool && p.tool.name) ||
+        '';
+      if ((p.type === 'toolCall' || p.type === 'tool_call' || p.type === 'function_call') && tn) {
+        return { tool: tn, action: tn };
+      }
+    }
+    return null;
+  }
+
+  function ocBeginAgentLoopFromChat(userText) {
+    state.openclawChatRunning = true;
+    setAgentLoopStatus('running');
+    feedAgentLoopThoughtDelta('已发送 · ' + String(userText || '').slice(0, 160), false);
+    appendCdpLog({ level: 'info', msg: 'OpenClaw · 连接 Gateway 并排队消息' });
+  }
+
+  function ocFeedAgentLoopFromOpenClawStream(text, payload, stateHint) {
+    if (!state.openclawChatRunning) return;
+    var t = String(text || '').trim();
+    if (t) feedAgentLoopThoughtDelta(t, false);
+    else if (stateHint) feedAgentLoopThoughtDelta(stateHint, false);
+    var tool = payload ? ocExtractToolActionFromPayload(payload) : null;
+    if (tool) {
+      ensureAgentLoop().pendingBuffer.action = tool;
+      appendCdpLog({ level: 'info', msg: 'OpenClaw · 调用工具 ' + tool.tool });
+      if (activeViewMode() === 'control') renderAgentSandbox();
+    }
+    if (stateHint) appendCdpLog({ level: 'info', msg: 'OpenClaw · ' + stateHint });
+  }
+
+  function ocEndAgentLoopFromChat(ok, text, errMsg) {
+    state.openclawChatRunning = false;
+    var al = ensureAgentLoop();
+    if (ok) {
+      var finalText = String(text || al.pendingBuffer.thought || '').trim();
+      if (finalText) {
+        al.committed.thought = finalText;
+        al.pendingBuffer.thought = finalText;
+        al.thinking = false;
+        al.currentTx += 1;
+        al.taskHistory.push({
+          step: al.currentTx,
+          at: new Date().toISOString(),
+          thought: finalText.slice(0, 200),
+          actionPreview: al.committed.action ? formatAgentActionPreview(al.committed.action) : ''
+        });
+        if (al.taskHistory.length > 80) al.taskHistory = al.taskHistory.slice(-80);
+        appendCdpLog({ level: 'success', msg: 'OpenClaw · 响应完成' });
+      }
+    } else {
+      var em = String(errMsg || '请求失败').trim();
+      al.thinking = false;
+      al.pendingBuffer.thought = em;
+      appendCdpLog({ level: 'error', msg: 'OpenClaw · ' + em.slice(0, 120) });
+    }
+    setAgentLoopStatus('idle');
+    if (activeViewMode() === 'control') renderAgentSandbox();
   }
 
   /** OpenClaw broadcast("chat", payload)：正文在 message.content[].text，而非旧版 response.text */
@@ -12222,6 +13438,123 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return an === bn || an.indexOf(bn) >= 0 || bn.indexOf(an) >= 0;
   }
 
+  function ocHistoryAssistantHasToolOrThinking(historyRes) {
+    var arr = extractGatewayHistoryMessages(historyRes);
+    for (var mi = arr.length - 1; mi >= 0; mi--) {
+      var hm = arr[mi];
+      if (!hm || typeof hm !== 'object') continue;
+      var role = ocRoleFromHistoryItem(hm);
+      if (role !== 'assistant') continue;
+      var content = hm.content;
+      if (!Array.isArray(content)) {
+        if (ocExtractMessageContentForHistory(hm)) return false;
+        continue;
+      }
+      for (var ci = 0; ci < content.length; ci++) {
+        var cp = content[ci];
+        if (!cp || typeof cp !== 'object') continue;
+        var typ = String(cp.type || '').toLowerCase();
+        if (typ === 'thinking' && cp.thinking) return true;
+        if (typ === 'toolcall' || typ === 'tool_call' || typ === 'function_call') return true;
+        if (typ === 'tool_result' || typ === 'toolresult') return true;
+      }
+      return false;
+    }
+    if (historyRes && Array.isArray(historyRes.messages)) return ocHistoryAssistantHasToolOrThinking({ messages: historyRes.messages });
+    return false;
+  }
+
+  function ocExtractInProgressSummary(historyRes, sentText, sentAtMs) {
+    var arr = extractGatewayHistoryMessages(historyRes);
+    if (!arr.length) return '';
+    var sentNorm = ocNormForMatch(sentText);
+    var lines = [];
+    var foundUser = !sentNorm;
+    for (var i = arr.length - 1; i >= 0; i--) {
+      var hm = arr[i];
+      if (!hm || typeof hm !== 'object') continue;
+      var role = ocRoleFromHistoryItem(hm);
+      if (!foundUser) {
+        if (role === 'user' && ocLooksLikeSentTextMatch(ocExtractMessageContentForHistory(hm), sentText)) foundUser = true;
+        continue;
+      }
+      if (role !== 'assistant') continue;
+      var content = hm.content;
+      if (!Array.isArray(content)) break;
+      for (var ci = 0; ci < content.length; ci++) {
+        var cp = content[ci];
+        if (!cp || typeof cp !== 'object') continue;
+        var typ = String(cp.type || '').toLowerCase();
+        if ((typ === 'toolcall' || typ === 'tool_call' || typ === 'function_call') && cp.name) {
+          lines.push('· 正在调用工具 `' + String(cp.name) + '`');
+        }
+        if (typ === 'thinking' && typeof cp.thinking === 'string' && cp.thinking.trim()) {
+          lines.push('· 思考中：' + cp.thinking.trim().slice(0, 120) + (cp.thinking.length > 120 ? '…' : ''));
+        }
+      }
+      break;
+    }
+    return lines.slice(0, 4).join('\n');
+  }
+
+  function ocBuildOpenClawStillRunningMessage(historyRes, sentText, sentAtMs) {
+    var elapsed = Math.max(1, Math.round((Date.now() - (Number(sentAtMs) || Date.now())) / 1000));
+    var summary = ocExtractInProgressSummary(historyRes, sentText, sentAtMs);
+    return (
+      '⏳ **OpenClaw 仍在处理中**（已等待约 ' +
+      elapsed +
+      ' 秒）\n\n' +
+      (summary ? summary + '\n\n' : '') +
+      '完整回复可能仍在生成。可切到 **后台** Tab 查看工具进度，或在对话发送 **「继续」** 拉取结果；也可在 OpenClaw 控制台查看同一会话。'
+    );
+  }
+
+  async function ocLatePollHistoryForReply(cfg, histKey, sentText, sentAtMs, options) {
+    options = options || {};
+    var rounds = Math.max(1, Number(options.rounds) || OPENCLAW_CHAT_LATE_POLL_ROUNDS);
+    var intervalMs = Math.max(400, Number(options.intervalMs) || OPENCLAW_CHAT_LATE_POLL_MS);
+    var lastRpcRes = null;
+    for (var w = 0; w < rounds; w++) {
+      if (w > 0) {
+        await new Promise(function (r) {
+          setTimeout(r, intervalMs);
+        });
+      }
+      try {
+        var lateRes = await openClawRpcWithRetry(
+          cfg,
+          'chat.history',
+          { sessionKey: histKey, limit: 200 },
+          {
+            attempts: 2,
+            timeoutMs: 8000,
+            timeoutStepMs: 2000,
+            backoffMs: [200, 600]
+          }
+        );
+        lastRpcRes = lateRes;
+        if (typeof dbgPush === 'function') {
+          dbgPush('stream', 'late_poll', { round: w + 1, rounds: rounds, key: histKey }, true);
+        }
+        var lateRaw = extractGatewayHistoryMessages(lateRes);
+        var latePicked = ocPickAssistantFromHistory(lateRaw, sentText, sentAtMs);
+        if (latePicked && String(latePicked).trim()) return { text: String(latePicked).trim(), res: lateRes };
+        var deepPicked = ocPickReadableTextDeep(lateRes, sentText);
+        if (deepPicked && String(deepPicked).trim()) return { text: String(deepPicked).trim(), res: lateRes };
+        if (typeof options.onProgressHint === 'function') {
+          try {
+            var hint = ocExtractInProgressSummary(lateRes, sentText, sentAtMs);
+            options.onProgressHint(hint ? '⏳ ' + hint.replace(/\n/g, ' · ') : '⏳ OpenClaw 仍在处理中…');
+          } catch (_) {}
+        }
+        ocFeedAgentLoopFromOpenClawStream('', null, '轮询 history · 第 ' + (w + 1) + '/' + rounds + ' 次');
+      } catch (eLate) {
+        lastRpcRes = { openclawHistoryError: eLate && eLate.message ? eLate.message : String(eLate) };
+      }
+    }
+    return { text: '', res: lastRpcRes };
+  }
+
   function ocPickAssistantFromHistory(rawMessages, sentText, sentAtMs) {
     var arr = Array.isArray(rawMessages) ? rawMessages : [];
     if (!arr.length) return '';
@@ -12357,15 +13690,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             type: 'req',
             id: cid,
             method: 'connect',
-            params: {
-              minProtocol: 3,
-              maxProtocol: 3,
+            params: Object.assign(openClawConnectProtocolRange(), {
               client: { id: 'openclaw-control-ui', version: 'niuma', platform: 'web', mode: 'webchat', instanceId: 'niuma-rpc-' + Date.now() },
               role: 'operator',
               scopes: ['operator.admin', 'operator.approvals', 'operator.pairing', 'operator.read', 'operator.write'],
               caps: [],
               auth: { token: ep.token }
-            }
+            })
           })
         );
       }
@@ -12409,7 +13740,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         }
         if (typeof msg.id === 'string' && msg.id.indexOf('connect-') === 0) {
           if (msg.error || msg.ok === false) {
-            var em = String((msg.error && msg.error.message) || 'connect failed');
+            var em = formatOpenClawConnectError(msg.error || { message: 'connect failed' });
             if (connected && /connect is only valid as the first request/i.test(em)) {
               dbg('WS', 'ignore duplicate connect error', 'err');
               return;
@@ -12549,6 +13880,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       renderSessionTabs();
     }
     var instanceId = 'niuma-' + Date.now() + '-' + Math.random().toString(36).slice(2, 11);
+    ocBeginAgentLoopFromChat(msgText);
 
     return new Promise(function (resolve, reject) {
       var ws;
@@ -12580,17 +13912,21 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           return;
         }
         recoverFinalFromHistory(true);
-      }, 75000);
+      }, OPENCLAW_CHAT_WS_TIMEOUT_MS);
       var lastEmitAt = 0;
       var lastEmitText = '';
 
-      function emitProgress(force) {
-        if (!hooks || typeof hooks.onProgress !== 'function') return;
+      function emitProgress(force, payload) {
         var textNow = String(pendingText || '');
         var now = Date.now();
-        if (!force && textNow === lastEmitText && now - lastEmitAt < 80) return;
+        if (!force && textNow === lastEmitText && now - lastEmitAt < 80) {
+          if (payload) ocFeedAgentLoopFromOpenClawStream(textNow, payload, '');
+          return;
+        }
         lastEmitAt = now;
         lastEmitText = textNow;
+        ocFeedAgentLoopFromOpenClawStream(textNow, payload || null, '');
+        if (!hooks || typeof hooks.onProgress !== 'function') return;
         try {
           hooks.onProgress(textNow);
         } catch (e0) {}
@@ -12608,6 +13944,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         try {
           ws.close();
         } catch (e) {}
+        ocEndAgentLoopFromChat(true, String(val != null ? val : pendingText || ''), null);
         resolve(val);
       }
 
@@ -12618,6 +13955,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         try {
           ws.close();
         } catch (e) {}
+        ocEndAgentLoopFromChat(false, '', err && err.message ? err.message : String(err));
         reject(err);
       }
 
@@ -12626,8 +13964,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         finalizeTimer = setTimeout(function () {
           var t = pendingText.trim();
           if (t) settleResolve(t);
-          else settleReject(new Error('响应中没有可显示的内容。'));
-        }, 320);
+          else recoverFinalFromHistory(false, null);
+        }, 480);
       }
 
       function fail(err) {
@@ -12637,7 +13975,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       function okDone() {
         var t = pendingText.trim();
         if (t) settleResolve(t);
-        else settleReject(new Error('响应中没有可显示的内容。'));
+        else recoverFinalFromHistory(false, null);
       }
 
       function recoverFinalFromHistory(fromTimeout, finalPayload) {
@@ -12645,9 +13983,20 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         recoveringFinal = true;
         fromTimeout = fromTimeout === true;
         (async function () {
-          var waitList = fromTimeout ? [400, 1500, 3500] : [120, 360];
+          var waitList = fromTimeout ? [600, 1800, 3500, 5500] : [120, 400, 900];
           var lastRpcRes = null;
           var histKey = canonicalSessionKey || sessionKey;
+          var pollOpts = {
+            rounds: fromTimeout ? OPENCLAW_CHAT_LATE_POLL_ROUNDS : Math.max(4, Math.floor(OPENCLAW_CHAT_LATE_POLL_ROUNDS / 2)),
+            intervalMs: OPENCLAW_CHAT_LATE_POLL_MS,
+            onProgressHint: function (hintText) {
+              if (hooks && typeof hooks.onProgress === 'function') {
+                try {
+                  hooks.onProgress(hintText);
+                } catch (_) {}
+              }
+            }
+          };
           for (var i = 0; i < waitList.length; i++) {
             try {
               await new Promise(function (r) {
@@ -12717,49 +14066,22 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             settleResolve(pendingText.trim());
             return;
           }
-          if (lastRpcRes && Array.isArray(lastRpcRes.messages) && lastRpcRes.messages.length) {
-            var hasAssistantThinking = false;
-            var hasAssistantToolCall = false;
-            for (var mi = 0; mi < lastRpcRes.messages.length; mi++) {
-              var hm = lastRpcRes.messages[mi];
-              if (!hm || hm.role !== 'assistant' || !Array.isArray(hm.content)) continue;
-              for (var ci = 0; ci < hm.content.length; ci++) {
-                var cp = hm.content[ci];
-                if (!cp || typeof cp !== 'object') continue;
-                if (cp.type === 'thinking' && cp.thinking) hasAssistantThinking = true;
-                if (cp.type === 'toolCall' || cp.type === 'tool_call') hasAssistantToolCall = true;
-              }
-            }
-            if (hasAssistantThinking || hasAssistantToolCall) {
-              if (!fromTimeout) {
-                for (var w = 0; w < 3; w++) {
-                  await new Promise(function(r){ setTimeout(r, 1800); });
-                  try {
-                    var lateRes = await openClawRpcWithRetry(
-                      cfg,
-                      'chat.history',
-                      { sessionKey: histKey, limit: 200 },
-                      { attempts: 1, timeoutMs: 6000, timeoutStepMs: 0, backoffMs: [0] }
-                    );
-                    var lateRaw = extractGatewayHistoryMessages(lateRes);
-                    var latePicked = ocPickAssistantFromHistory(lateRaw, msgText, chatSentAtMs);
-                    if (latePicked && String(latePicked).trim()) {
-                      pendingText = String(latePicked).trim();
-                      emitProgress(true);
-                      settleResolve(pendingText);
-                      return;
-                    }
-                    lastRpcRes = lateRes;
-                  } catch (eLate) {
-                  }
-                }
-              }
-              var tip = 'OpenClaw 已收到请求，但当前停留在工具调用/思考阶段，未产出最终可展示文本。请重试一次，或切换到无工具依赖模型。';
-              settleResolve(tip);
+          var shouldLatePoll =
+            fromTimeout || ocHistoryAssistantHasToolOrThinking(lastRpcRes);
+          if (shouldLatePoll) {
+            var late = await ocLatePollHistoryForReply(cfg, histKey, msgText, chatSentAtMs, pollOpts);
+            if (late.text) {
+              pendingText = late.text;
+              emitProgress(true);
+              settleResolve(pendingText);
               return;
             }
+            if (late.res) lastRpcRes = late.res;
           }
-          
+          if (ocHistoryAssistantHasToolOrThinking(lastRpcRes)) {
+            settleResolve(ocBuildOpenClawStillRunningMessage(lastRpcRes, msgText, chatSentAtMs));
+            return;
+          }
           var formatDbg = function(obj) {
             try { return obj ? '\n```json\n' + JSON.stringify(obj, null, 2).slice(0, 5000) + '\n```' : ''; } catch(e) { return ''; }
           };
@@ -12786,9 +14108,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         seq += 1;
         var cid = 'connect-' + seq;
         dbg('WS→', 'connect ' + cid, 'ok');
-        var params = {
-          minProtocol: 3,
-          maxProtocol: 3,
+        var params = Object.assign(openClawConnectProtocolRange(), {
           client: {
             /* 须与 Gateway 的 openclaw-control-ui 一致：webchat id 会在无设备身份时被 clearUnboundScopes 清空 scopes，导致 chat.send 报 missing scope: operator.write */
             id: 'openclaw-control-ui',
@@ -12803,7 +14123,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           userAgent: typeof navigator !== 'undefined' ? navigator.userAgent || '' : '',
           locale: typeof navigator !== 'undefined' ? navigator.language || 'zh-CN' : 'zh-CN',
           auth: { token: ep.token }
-        };
+        });
         var wsSendOriginal = ws.send;
         ws.send = function(data) {
           try {
@@ -12892,7 +14212,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
         if (typeof msg.id === 'string' && msg.id.indexOf('connect-') === 0) {
           if (msg.error || msg.ok === false) {
-            var em = (msg.error && msg.error.message) || 'Gateway 认证失败';
+            var em = formatOpenClawConnectError(msg.error || { message: 'Gateway 认证失败' });
             if ((authenticated || connectAcked) && /connect is only valid as the first request/i.test(String(em))) {
               dbg('WS', 'ignore duplicate connect error', 'err');
               return;
@@ -12948,6 +14268,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             fail(new Error(String(er0)));
             return;
           }
+          ocFeedAgentLoopFromOpenClawStream(pendingText, msg.result || msg.payload || null, 'Gateway 已接收，模型生成中…');
           return;
         }
 
@@ -12974,7 +14295,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           if (!sessionTxt) sessionTxt = ocExtractChatEventPayload(plSession);
           if (sessionTxt) {
             pendingText = String(sessionTxt).trim();
-            emitProgress(false);
+            emitProgress(false, plSession);
           }
           if (ocSessionMessageDone(plSession)) {
             if (pendingText.trim()) okDone();
@@ -12996,6 +14317,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             return;
           }
           var chatTxt = ocExtractChatEventPayload(pl);
+          var toolHint = ocExtractToolActionFromPayload(pl);
+          if (toolHint && !chatTxt) {
+            ocFeedAgentLoopFromOpenClawStream('', pl, '正在调用工具 ' + toolHint.tool);
+            if (hooks && typeof hooks.onProgress === 'function') {
+              try {
+                hooks.onProgress('⏳ OpenClaw 正在调用工具 `' + toolHint.tool + '`，请稍候…');
+              } catch (_) {}
+            }
+          }
           if (chatTxt) {
             /* delta：可能是增量片段（需拼接）或每帧全量快照（需整段替换） */
             if (pl.state === 'delta') {
@@ -13003,7 +14333,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                 pendingText = chatTxt;
               else pendingText += chatTxt;
             } else pendingText = chatTxt;
-            emitProgress(false);
+            emitProgress(false, pl);
           }
           if (ocIsChatFinalState(pl)) {
             if (!pendingText.trim()) {
@@ -13035,7 +14365,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           if (!st && side.btw && typeof side.btw.question === 'string') st = side.btw.question.trim();
           if (st) {
             pendingText = st;
-            emitProgress(false);
+            emitProgress(false, side);
             armFinalize();
           }
           return;
@@ -13058,7 +14388,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             ocExtractChatEventPayload(respPayload);
           if (piece) {
             pendingText += piece;
-            emitProgress(false);
+            emitProgress(false, respPayload);
           }
           if (respPayload.done || respPayload.finish_reason || respPayload.finished) {
             okDone();
@@ -13088,7 +14418,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           var restReqOk = ocPayloadMatchesRequest(msg, chatMsgId) || ocPayloadMatchesRequest(rest, chatMsgId);
           if (!restSessionOk || !restReqOk) return;
           pendingText += rt;
-          emitProgress(false);
+          emitProgress(false, rest);
           armFinalize();
         }
 
@@ -13119,7 +14449,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                   if (pendingText && gt.length >= pendingText.length && gt.indexOf(pendingText) === 0) pendingText = gt;
                   else pendingText += gt;
                 } else pendingText = gt;
-                emitProgress(false);
+                emitProgress(false, guess);
                 if (ocIsChatFinalState(guess)) okDone();
                 else armFinalize();
                 return;
@@ -13240,6 +14570,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
     var browserIntent = detectBrowserControlIntent(text);
     if (browserIntent.hit) {
+      markBrowserControlNode(nodeKeyForSession(s));
       if (!supportsBrowserAgent(cfg)) {
         cstatForSession(
           sid,
@@ -13615,7 +14946,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
   if (viewModeControlBtn) {
     viewModeControlBtn.addEventListener('click', function () {
-      switchViewMode('control');
+      if (controlTabEnabledForNode()) switchViewMode('control');
     });
   }
   if (auditCollapseBtn && auditPanelEl) {
@@ -15389,6 +16720,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       if (d.type === 'host_browser_snapshot') {
         ingestHostBrowserSnapshot(d, state.browserAgentSnapReqId || d.reqId || '');
         d = normalizeBrowserSnapshot(d);
+        try {
+          ingestDomMirrorFromSnapshot(d);
+        } catch (_) {}
         applyMobileBrowserAiBusy(false);
         var n = (d.elements && d.elements.length) || parseInt(d.count, 10) || 0;
         if (!d.error && n > 0) {
