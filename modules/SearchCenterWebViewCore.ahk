@@ -3780,6 +3780,10 @@ SCWV_OnWebMessage(sender, args) {
             mode := msg.Has("mode") ? Trim(String(msg["mode"])) : "seven_zip"
             _SCWV_BlockDeactivate(2500, "archive_preview")
             SCWV_Preview_OnArchiveList(p, sq, mode)
+        case "REQUEST_PREVIEW_META":
+            p := msg.Has("path") ? String(msg["path"]) : ""
+            sq := msg.Has("seq") ? Integer(msg["seq"]) : 0
+            SCWV_Preview_RequestMeta(p, sq)
         case "INSTALL_QUICKLOOK":
             global g_SCWV_QuickLookInstallBusy
             if g_SCWV_QuickLookInstallBusy {
@@ -4314,9 +4318,23 @@ SCWV_PushState(msgType := "state") {
         filePath := ""
         if (item.HasProp("OriginalDataType") && item.OriginalDataType = "file") || (item.HasProp("DataType") && (item.DataType = "File" || item.DataType = "Folder")) {
             cand := item.HasProp("Content") ? Trim(String(item.Content)) : ""
-            if (cand != "" && FileExist(cand))
+            if (cand != "" && (FileExist(cand) || DirExist(cand)))
                 filePath := cand
         }
+        if (filePath = "" && item.HasProp("Metadata") && item.Metadata is Map && item.Metadata.Has("FilePath")) {
+            cand := Trim(String(item.Metadata["FilePath"]))
+            if (cand != "" && (FileExist(cand) || DirExist(cand)))
+                filePath := cand
+        }
+        if (filePath = "") {
+            cand := item.HasProp("Content") ? Trim(String(item.Content)) : ""
+            ot := item.HasProp("OriginalDataType") ? item.OriginalDataType : ""
+            dt := item.HasProp("DataType") ? item.DataType : ""
+            if (cand != "" && (FileExist(cand) || DirExist(cand)) && (ot = "file" || ot = "fulltext" || dt = "File" || dt = "Folder"))
+                filePath := cand
+        }
+        sizeWeb := _SCWV_ResultSizeForWeb(item, filePath)
+        modLabel := _SCWV_ResultModifiedForWeb(item, filePath)
         rowMap := Map(
             "row", index,
             "itemUid", _SCWV_SanitizeForJson(_SCWV_ResultActionUid(item, index)),
@@ -4337,6 +4355,14 @@ SCWV_PushState(msgType := "state") {
             rowMap["metadata"] := metaWeb
         if (item.HasProp("OriginalDataType") && item.OriginalDataType != "")
             rowMap["originalDataType"] := _SCWV_SanitizeForJson(item.OriginalDataType)
+        if (sizeWeb is Map) {
+            if (sizeWeb.Has("sizeBytes") && Integer(sizeWeb["sizeBytes"]) > 0)
+                rowMap["sizeBytes"] := Integer(sizeWeb["sizeBytes"])
+            if (sizeWeb.Has("sizeLabel") && Trim(String(sizeWeb["sizeLabel"])) != "")
+                rowMap["sizeLabel"] := _SCWV_SanitizeForJson(sizeWeb["sizeLabel"])
+        }
+        if (modLabel != "")
+            rowMap["modifiedLabel"] := _SCWV_SanitizeForJson(modLabel)
         results.Push(rowMap)
     }
 
@@ -6606,6 +6632,12 @@ SCWV_Preview_OnArchiveList(path, seq, mode := "seven_zip") {
     }
 }
 
+SCWV_Preview_RequestMeta(path, seq) {
+    try SCWV_Preview_Get().PostDetailMeta(path, seq)
+    catch {
+    }
+}
+
 SCWV_Preview_OnNative(path, seq, boundsMap) {
     try SCWV_Preview_Get().ScheduleNative(path, seq, boundsMap)
     catch as err {
@@ -6863,6 +6895,99 @@ _SCWV_DecodeTextBuffer(buf, sizeBytes) {
     txt936 := StrGet(buf, sizeBytes, "CP936")
     bad936 := _SCWV_CountReplacementChar(txt936)
     return (bad936 < badUtf8) ? txt936 : txtUtf8
+}
+
+_SCWV_FormatFileSizeBytes(sz) {
+    if (!IsNumber(sz) || sz < 0)
+        return ""
+    if (sz > 1048576)
+        return Round(sz / 1048576, 2) . " MB"
+    if (sz > 1024)
+        return Round(sz / 1024, 1) . " KB"
+    return sz . " B"
+}
+
+_SCWV_ResultSizeForWeb(item, filePath := "") {
+    sizeBytes := 0
+    if IsObject(item) && item.HasProp("Metadata") && item.Metadata is Map {
+        m := item.Metadata
+        if m.Has("Size") {
+            try sizeBytes := Integer(m["Size"])
+            catch {
+            }
+        }
+        if (sizeBytes <= 0 && m.Has("IndexedSize")) {
+            try sizeBytes := Integer(m["IndexedSize"])
+            catch {
+            }
+        }
+    }
+    fp := Trim(String(filePath))
+    if (fp != "" && DirExist(fp))
+        return Map("sizeBytes", 0, "sizeLabel", "文件夹")
+    if (sizeBytes <= 0 && fp != "" && FileExist(fp) && !DirExist(fp)) {
+        try sizeBytes := FileGetSize(fp)
+        catch {
+        }
+    }
+    if (sizeBytes <= 0)
+        return Map("sizeBytes", 0, "sizeLabel", "")
+    return Map("sizeBytes", sizeBytes, "sizeLabel", _SCWV_FormatFileSizeBytes(sizeBytes))
+}
+
+_SCWV_UnixToLabel(secs) {
+    try {
+        if (!IsNumber(secs) || secs <= 0)
+            return ""
+        dt := DateAdd("19700101", Integer(secs), "Seconds")
+        return FormatTime(dt, "yyyy-MM-dd HH:mm")
+    } catch {
+        return ""
+    }
+}
+
+_SCWV_FileTimeToLabel(ft) {
+    try n := Integer(ft)
+    catch {
+        return ""
+    }
+    if (n <= 116444736000000000)
+        return ""
+    return _SCWV_UnixToLabel((n - 116444736000000000) // 10000000)
+}
+
+_SCWV_ResultModifiedForWeb(item, filePath := "") {
+    label := ""
+    if IsObject(item) && item.HasProp("Metadata") && item.Metadata is Map {
+        m := item.Metadata
+        if m.Has("Timestamp") {
+            ts := Trim(String(m["Timestamp"]))
+            if (ts != "")
+                label := ts
+        }
+        if (label = "" && m.Has("DateModified")) {
+            dm := m["DateModified"]
+            if (dm is Float || (IsNumber(dm) && Integer(dm) > 100000000000000000))
+                label := _SCWV_FileTimeToLabel(dm)
+            else {
+                dmText := Trim(String(dm))
+                if (dmText != "" && RegExMatch(dmText, "^\d{4}[-/]\d"))
+                    label := SubStr(RegExReplace(dmText, "/", "-"), 1, 16)
+            }
+        }
+    }
+    if (label = "" && item.HasProp("Time")) {
+        t := Trim(String(item.Time))
+        if (t != "" && RegExMatch(t, "^\d{4}[-/]\d"))
+            label := SubStr(RegExReplace(t, "/", "-"), 1, 16)
+    }
+    fp := Trim(String(filePath))
+    if (label = "" && fp != "" && (FileExist(fp) || DirExist(fp))) {
+        try label := FormatTime(FileGetTime(fp, "M"), "yyyy-MM-dd HH:mm")
+        catch {
+        }
+    }
+    return label
 }
 
 _SCWV_ReadFileTextSmart(path, maxBytes := 0) {
@@ -8308,35 +8433,40 @@ class PreviewManager {
         this.Unload()
         this.ScheduleNative(path, seq, boundsMap)
     }
+    PostDetailMeta(path, seq) {
+        this._PostDetailMeta(path, seq)
+    }
+
     _PostDetailMeta(path, seq) {
-        if (path = "" || !FileExist(path))
+        path := Trim(String(path))
+        if (path = "" || !(FileExist(path) || DirExist(path)))
             return
         try {
-            sz := FileGetSize(path)
-            if (sz > 1048576)
-                szStr := Round(sz / 1048576, 2) . " MB"
-            else if (sz > 1024)
-                szStr := Round(sz / 1024, 1) . " KB"
-            else
-                szStr := sz . " B"
-                
+            szStr := ""
+            if DirExist(path)
+                szStr := "文件夹"
+            else {
+                sz := FileGetSize(path)
+                szStr := _SCWV_FormatFileSizeBytes(sz)
+            }
+
             modTime := FileGetTime(path, "M")
             creTime := FileGetTime(path, "C")
             fmtMod := FormatTime(modTime, "yyyy-MM-dd HH:mm")
             fmtCre := FormatTime(creTime, "yyyy-MM-dd HH:mm")
-            
+
             SplitPath path, , , &ext
-            
+
             SCWV_PostJson(Map(
                 "type", "PREVIEW_META_UPDATE",
                 "seq", seq,
                 "path", path,
                 "meta", Map(
-                    "Size", szStr,
-                    "Modified", fmtMod,
-                    "Created", fmtCre,
-                    "Ext", StrUpper(ext),
-                    "Path", path
+                    "大小", szStr,
+                    "修改时间", fmtMod,
+                    "创建时间", fmtCre,
+                    "扩展名", StrUpper(ext),
+                    "路径", path
                 )
             ))
         } catch {

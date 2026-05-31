@@ -1166,7 +1166,7 @@ html[data-theme="light"] #startup-splash {
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
-  min-width: 92px;
+  min-width: 118px;
 }
 .pill {
   padding: 3px 7px;
@@ -1179,6 +1179,21 @@ html[data-theme="light"] #startup-splash {
   font-size: 10px;
   color: var(--muted);
   text-align: right;
+}
+.result-size {
+  font-size: 10px;
+  font-weight: 600;
+  color: #9ecbff;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.result-modified {
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 #preview-panel {
   flex: 1 1 auto;
@@ -1907,6 +1922,9 @@ html[data-theme="light"] #preview-web-scroll,
 html[data-theme="light"] .preview-plain,
 html[data-theme="light"] .ft-preview-hit-snippet {
   color: #3f5368;
+}
+html[data-theme="light"] .result-size {
+  color: #2a6b9e;
 }
 html[data-theme="light"] .pill {
   background: #e7edf4;
@@ -6404,6 +6422,82 @@ function clearResultList(list) {
   while (list.firstChild) list.removeChild(list.firstChild);
 }
 
+function formatFileSizeBytes(bytes) {
+  const n = Number(bytes);
+  if (!Number.isFinite(n) || n < 0) return "";
+  if (n >= 1048576) return (Math.round(n / 1048576 * 100) / 100) + " MB";
+  if (n >= 1024) return (Math.round(n / 1024 * 10) / 10) + " KB";
+  return n + " B";
+}
+
+function parseSizeFromSubtitle(subtitle) {
+  const s = String(subtitle || "");
+  if (!s) return "";
+  if (/文件夹/.test(s)) return "文件夹";
+  const m = s.match(/(\d+(?:\.\d+)?)\s*(KB|MB|GB|TB|B)\b/i);
+  if (!m) return "";
+  const unit = m[2].toUpperCase();
+  return unit === "B" ? m[1] + " B" : m[1] + " " + unit;
+}
+
+function resolveResultListSize(item) {
+  if (!item) return "";
+  if (item.sizeLabel) return String(item.sizeLabel);
+  if (item.sizeBytes != null && Number(item.sizeBytes) > 0) return formatFileSizeBytes(item.sizeBytes);
+  const meta = item.metadata && typeof item.metadata === "object" ? item.metadata : null;
+  if (meta && (meta.isDirectory || meta.IsDirectory)) return "文件夹";
+  const parsed = parseSizeFromSubtitle(item.subtitle);
+  if (parsed) return parsed;
+  const dt = String(item.dataType || item.type || "").toLowerCase();
+  if (dt === "folder" || dt === "文件夹") return "文件夹";
+  return "";
+}
+
+function isFileishResult(item) {
+  if (!item) return false;
+  const dt = String(item.dataType || item.originalDataType || "").toLowerCase();
+  const type = String(item.type || "");
+  if (dt === "file" || dt === "folder" || dt === "fulltext") return true;
+  if (/文件|文件夹/.test(type)) return true;
+  return !!getSelectedItemPath(item);
+}
+
+function normalizeModifiedLabel(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  const m = s.match(/^(\d{4}[-/]\d{1,2}[-/]\d{1,2})(?:[ T](\d{1,2}:\d{2})(?::\d{2})?)?/);
+  if (!m) return s.slice(0, 16);
+  return m[2] ? m[1].replace(/\//g, "-") + " " + m[2] : m[1].replace(/\//g, "-");
+}
+
+function parseModifiedFromSubtitle(subtitle) {
+  const s = String(subtitle || "");
+  if (!s) return "";
+  const parts = s.split(/\s*[·|]\s*/);
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i].trim();
+    if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(p)) return normalizeModifiedLabel(p);
+  }
+  const m = s.match(/(\d{4}[-/]\d{1,2}[-/]\d{1,2}(?:\s+\d{1,2}:\d{2})?)/);
+  return m ? normalizeModifiedLabel(m[1]) : "";
+}
+
+function resolveResultListModified(item) {
+  if (!item) return "";
+  if (item.modifiedLabel) return normalizeModifiedLabel(item.modifiedLabel);
+  const meta = item.metadata && typeof item.metadata === "object" ? item.metadata : null;
+  if (meta) {
+    if (meta.timestamp) return normalizeModifiedLabel(meta.timestamp);
+    if (meta.Timestamp) return normalizeModifiedLabel(meta.Timestamp);
+    if (meta.dateModified) return normalizeModifiedLabel(meta.dateModified);
+    if (meta.DateModified && typeof meta.DateModified === "string") return normalizeModifiedLabel(meta.DateModified);
+  }
+  const parsed = parseModifiedFromSubtitle(item.subtitle);
+  if (parsed) return parsed;
+  if (isFileishResult(item) && item.time) return normalizeModifiedLabel(item.time);
+  return "";
+}
+
 function renderResults() {
   const list = document.getElementById("result-list");
   if (!list) return;
@@ -6459,6 +6553,18 @@ function renderResults() {
     }
     const head = document.createElement("div");
     head.className = "result-item-head";
+    const sizeText = resolveResultListSize(item);
+    const sizeHtml = sizeText
+      ? "<span class=\"result-size\" title=\"文件大小\">" + escapeHtml(sizeText) + "</span>"
+      : "";
+    const modText = resolveResultListModified(item);
+    const modHtml = modText
+      ? "<span class=\"result-modified\" title=\"修改时间\">" + escapeHtml(modText) + "</span>"
+      : "";
+    const legacyTime = !isFileishResult(item) ? String(item.time || "") : "";
+    const timeHtml = legacyTime
+      ? "<span class=\"time\">" + escapeHtml(legacyTime) + "</span>"
+      : "";
     head.innerHTML =
       "<div>" +
         "<div class=\"result-title\">" + pinMark + highlight(item.title, state.keyword) + "</div>" +
@@ -6468,7 +6574,9 @@ function renderResults() {
       "</div>" +
       "<div class=\"result-meta\">" +
         "<span class=\"pill\">" + escapeHtml(item.type || "") + "</span>" +
-        "<span class=\"time\">" + escapeHtml(item.time || "") + "</span>" +
+        sizeHtml +
+        modHtml +
+        timeHtml +
       "</div>";
     if (hitCtx) {
       const btn = head.querySelector(".hit-ctx-btn");
@@ -6649,8 +6757,7 @@ function setPreviewLayoutMode(mode) {
   }
 }
 
-function renderFallbackTextPreview(item, pane, meta) {
-  meta.textContent = [item.source || item.subtitle || "", item.type || "", item.time || ""].filter(Boolean).join(" · ");
+function renderFallbackTextPreview(item, pane) {
   const hitHtml = buildFulltextHitPreviewHtml(item, state.keyword);
   const plain = escapeHtml(String(item.previewText || item.content || item.title || ""));
   pane.innerHTML = (hitHtml || "") + "<pre class=\"preview-plain\">" + plain + "</pre>";
@@ -7299,6 +7406,49 @@ function wireMediaPreview(kind, options = {}) {
   });
 }
 
+function resolveItemDataSize(item) {
+  if (!item) return "";
+  const listSize = resolveResultListSize(item);
+  if (listSize) return listSize;
+  const text = String(item.previewText || item.content || item.title || "");
+  if (text) {
+    try {
+      const bytes = new TextEncoder().encode(text).length;
+      if (bytes > 0) return formatFileSizeBytes(bytes) + "（文本）";
+    } catch (_) {}
+  }
+  return "";
+}
+
+function normalizePreviewMeta(meta) {
+  if (!meta || typeof meta !== "object") return {};
+  const keyMap = { Size: "大小", Modified: "修改时间", Created: "创建时间", Ext: "扩展名", Path: "路径" };
+  const out = {};
+  Object.keys(meta).forEach((k) => {
+    const val = meta[k];
+    if (val == null || val === "") return;
+    out[keyMap[k] || k] = val;
+  });
+  return out;
+}
+
+function requestPreviewFileMeta(path, seq) {
+  if (!path) return;
+  postToAhk({ type: "REQUEST_PREVIEW_META", path, seq });
+}
+
+function buildPreviewMetaBase(item, path) {
+  const sizeLabel = resolveItemDataSize(item);
+  const meta = {
+    "来源": item.source || "",
+    "类型": item.type || "",
+    "时间": item.time || ""
+  };
+  if (sizeLabel) meta["大小"] = sizeLabel;
+  else if (path) meta["大小"] = "读取中…";
+  return meta;
+}
+
 function runPreviewForSelection() {
   state.previewSeq += 1;
   state.pdfJsRx = null;
@@ -7325,11 +7475,8 @@ function runPreviewForSelection() {
   state.previewPath = path;
   setQuickLookHintVisible(!!path);
 
-  renderRichMeta({
-    "来源": item.source || item.subtitle || "",
-    "类型": item.type || "",
-    "时间": item.time || ""
-  });
+  renderRichMeta(buildPreviewMetaBase(item, path));
+  if (path) requestPreviewFileMeta(path, seq);
   const hitRows = normalizeHitContextRows(item);
   const hitCount = hitCountForItem(item, hitRows);
   if (hitCount > 0 || hitRows.length > 0) {
@@ -7342,7 +7489,7 @@ function runPreviewForSelection() {
   if (!path) {
     setPreviewLayoutMode("web");
     stopNativePreview();
-    renderFallbackTextPreview(item, pane, meta);
+    renderFallbackTextPreview(item, pane);
     return;
   }
 
@@ -7436,6 +7583,7 @@ function onWebPreviewTextResult(payload) {
     html += "<pre><code class=\"language-" + lang + "\">" + esc + "</code></pre>";
   }
   pane.innerHTML = html;
+  if (sizeBytes > 0) renderRichMeta({ "大小": formatFileSizeBytes(sizeBytes) }, true);
   if (hitHtml) bindFulltextHitPreviewPanel(pane);
   if (lang !== "plaintext") {
     const code = pane.querySelector("code");
@@ -7531,8 +7679,11 @@ function renderRichMeta(data, append = false) {
 
 function onPreviewMetaUpdate(payload) {
   if (Number(payload.seq) !== state.previewSeq) return;
+  const payloadPath = payload.path ? String(payload.path).trim() : "";
+  const currentPath = state.previewPath ? String(state.previewPath).trim() : "";
+  if (payloadPath && currentPath && payloadPath !== currentPath) return;
   if (payload.meta) {
-    renderRichMeta(payload.meta, true);
+    renderRichMeta(normalizePreviewMeta(payload.meta), true);
   }
 }
 

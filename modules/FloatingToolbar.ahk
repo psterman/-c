@@ -37,10 +37,14 @@ ScreenWorkArea_GetBounds(&outL, &outT, &outW, &outH, hwnd := 0) {
     outH := Max(0, b - t)
 }
 
-; NiuMa Chat 抽屉高度：工作区高度，底部留 8px 避免压住任务栏
+; NiuMa Chat 抽屉底部安全边距（工作区已排除任务栏，此处仅留视觉间隙）
+FloatingToolbar_ChatDrawerBottomMarginPx(hwnd := 0) {
+    return Max(12, Round(14 * FloatingToolbar_DpiFactor()))
+}
+
 FloatingToolbar_ChatDrawerHeightPx(hwnd := 0) {
     ScreenWorkArea_GetBounds(&wl, &wt, &ww, &wh, hwnd)
-    margin := 8
+    margin := FloatingToolbar_ChatDrawerBottomMarginPx(hwnd)
     h := wh - margin
     if (h < 320)
         h := 320
@@ -63,6 +67,39 @@ FloatingToolbar_ClampWindowToWorkArea(&x, &y, w, h, hwnd := 0) {
         x := wl
     if (y < wt)
         y := wt
+}
+
+FloatingToolbar_EnsureDrawerInWorkArea() {
+    global FloatingToolbarGUI, FloatingToolbarChatDrawerOpen, FloatingToolbarWindowX, FloatingToolbarWindowY
+    if (!FloatingToolbarGUI || !FloatingToolbarChatDrawerOpen)
+        return
+    ftHwnd := FloatingToolbarGUI.Hwnd
+    newW := FloatingToolbarCalculateWidth()
+    newH := FloatingToolbarCalculateHeight()
+    try FloatingToolbarGUI.GetPos(&x, &y, , )
+    catch {
+        x := FloatingToolbarWindowX
+        y := FloatingToolbarWindowY
+    }
+    FloatingToolbar_ClampWindowToWorkArea(&x, &y, newW, newH, ftHwnd)
+    FloatingToolbarWindowX := x
+    FloatingToolbarWindowY := y
+    try FloatingToolbarGUI.Move(x, y, newW, newH)
+    catch {
+    }
+    FloatingToolbarApplyRoundedCorners()
+    FloatingToolbar_ApplyWebViewBounds()
+    FloatingToolbar_PushWorkAreaInsetsToWeb()
+}
+
+FloatingToolbar_PushWorkAreaInsetsToWeb() {
+    global g_FTB_WV2, FloatingToolbarChatDrawerOpen
+    if !(g_FTB_WV2 && FloatingToolbarChatDrawerOpen)
+        return
+    cssPad := Max(4, Round(6 * FloatingToolbar_DpiFactor()))
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_work_area_insets", "bottom", cssPad))
+    catch {
+    }
 }
 
 ; 与系统显示缩放（100%=96DPI）对齐，配合 -DPIScale 的物理像素窗体
@@ -1339,8 +1376,7 @@ FloatingToolbar_ResizeForMobileBrowser() {
     try FloatingToolbarGUI.Move(newX, gy, newW, newH)
     catch {
     }
-    FloatingToolbarApplyRoundedCorners()
-    FloatingToolbar_ApplyWebViewBounds()
+    FloatingToolbar_EnsureDrawerInWorkArea()
 }
 
 FloatingToolbar_RetryCreateWebView() {
@@ -2811,8 +2847,12 @@ FloatingToolbar_ApplyDrawerClientWidth(clientW) {
     try FloatingToolbarGUI.Move(newX, gy, newW, newH)
     catch as _e2 {
     }
-    FloatingToolbarApplyRoundedCorners()
-    FloatingToolbar_ApplyWebViewBounds()
+    if FloatingToolbarChatDrawerOpen
+        FloatingToolbar_EnsureDrawerInWorkArea()
+    else {
+        FloatingToolbarApplyRoundedCorners()
+        FloatingToolbar_ApplyWebViewBounds()
+    }
 }
 
 FloatingToolbarSaveDrawerWidth() {
@@ -2930,6 +2970,8 @@ FloatingToolbarSetChatDrawerState(open, force := false) {
     FloatingToolbarPushScaleStateToWeb(FloatingToolbarScale)
     SaveFloatingToolbarPosition()
     FloatingToolbar_NotifyWebDrawerState(open)
+    if open
+        FloatingToolbar_PushWorkAreaInsetsToWeb()
     if !open
         SetTimer(FloatingToolbar_TryReturnToHoleAfterNiuma, -50)
 }
@@ -4366,14 +4408,20 @@ FloatingToolbar_DragRun(*) {
         MouseGetPos(&mx, &my)
         newX := FloatingToolbar_DragOriginWinX + (mx - FloatingToolbar_DragOriginScreenX)
         newY := FloatingToolbar_DragOriginWinY + (my - FloatingToolbar_DragOriginScreenY)
-        if (newX < vl)
-            newX := vl
-        if (newY < vt)
-            newY := vt
-        if (newX + ToolbarWidth > vr)
-            newX := vr - ToolbarWidth
-        if (newY + ToolbarHeight > vb)
-            newY := vb - ToolbarHeight
+        global FloatingToolbarChatDrawerOpen
+        if FloatingToolbarChatDrawerOpen {
+            ftHwnd := FloatingToolbarGUI.Hwnd
+            FloatingToolbar_ClampWindowToWorkArea(&newX, &newY, ToolbarWidth, ToolbarHeight, ftHwnd)
+        } else {
+            if (newX < vl)
+                newX := vl
+            if (newY < vt)
+                newY := vt
+            if (newX + ToolbarWidth > vr)
+                newX := vr - ToolbarWidth
+            if (newY + ToolbarHeight > vb)
+                newY := vb - ToolbarHeight
+        }
         if (newX != FloatingToolbarWindowX || newY != FloatingToolbarWindowY) {
             try FloatingToolbarGUI.Move(newX, newY)
             FloatingToolbarWindowX := newX
@@ -4397,12 +4445,19 @@ FloatingToolbar_EndDrag() {
 ; ===================== 缁愭褰涙担宥囩枂濡偓閺屻儰绗岀壕浣告儧 =====================
 FloatingToolbarCheckWindowPosition() {
     global FloatingToolbarGUI, FloatingToolbarWindowX, FloatingToolbarWindowY, FloatingToolbarDragging, FloatingToolbarIsVisible
+    global FloatingToolbarChatDrawerOpen
 
     if (!FloatingToolbarIsVisible || !IsSet(FloatingToolbarGUI) || FloatingToolbarGUI = 0)
         return
 
     if (FloatingToolbarDragging)
         return
+
+    if FloatingToolbarChatDrawerOpen {
+        FloatingToolbar_EnsureDrawerInWorkArea()
+        SaveFloatingToolbarPosition()
+        return
+    }
 
     if (!GetKeyState("LButton", "P")) {
         try {
