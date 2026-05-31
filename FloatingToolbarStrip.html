@@ -492,6 +492,8 @@ body.view-control.cli-mode #msgs,body.view-control.cli-mode #cmp{display:none!im
 .sandbox-cdp-line.error,.sandbox-history-line.error{color:#ff7a59}
 .sandbox-cdp-line.warn,.sandbox-history-line.warn{color:#fbbf24}
 .sandbox-cdp-line.info,.sandbox-history-line.info{color:var(--muted)}
+.sandbox-history-task-head{margin:calc(8px * var(--ui)) 0 calc(4px * var(--ui));padding:calc(4px * var(--ui)) calc(8px * var(--ui));border-radius:calc(6px * var(--ui));background:rgba(255,102,0,.08);font-size:calc(10px * var(--ui));font-weight:700;color:var(--orange);word-break:break-word}
+.sandbox-history-line.think{color:#c4b5fd}.sandbox-history-line.tool{color:#7dd3fc}.sandbox-history-line.reply{color:#4ade80}.sandbox-history-line.error{color:#ff7a59}
 .sandbox-dom-item{padding:calc(4px * var(--ui)) calc(6px * var(--ui));border-radius:calc(6px * var(--ui));margin-bottom:calc(3px * var(--ui));border:1px solid transparent;font-size:calc(10px * var(--ui))}
 .sandbox-dom-item.highlight{border-color:rgba(255,102,0,.4);background:rgba(255,102,0,.1);animation:sandbox-blink 1s ease-in-out infinite}
 .sandbox-dom-tag{color:var(--orange);font-weight:700;margin-right:calc(6px * var(--ui))}
@@ -3109,7 +3111,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
               };
             })
             .filter(Boolean)
-        : []
+        : [],
+      controlTrace:
+        s.controlTrace && typeof s.controlTrace === 'object'
+          ? {
+              tasks: Array.isArray(s.controlTrace.tasks) ? s.controlTrace.tasks : [],
+              activeTaskId: String(s.controlTrace.activeTaskId || '')
+            }
+          : { tasks: [], activeTaskId: '' }
     };
     if (!row.nodeKey) row.nodeKey = nodeKeyForSession(row);
     return row;
@@ -4001,17 +4010,193 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     syncSandboxFoldUi();
   }
 
+  function ensureSessionControlTrace(s) {
+    if (!s) return null;
+    if (!s.controlTrace || typeof s.controlTrace !== 'object') {
+      s.controlTrace = { tasks: [], activeTaskId: '' };
+    }
+    if (!Array.isArray(s.controlTrace.tasks)) s.controlTrace.tasks = [];
+    return s.controlTrace;
+  }
+
+  function formatControlTaskHead(task) {
+    if (!task) return '任务';
+    var st =
+      task.status === 'running' ? '进行中' : task.status === 'error' ? '失败' : task.status === 'done' ? '完成' : '任务';
+    var src = task.source === 'browser' ? '浏览器' : task.source === 'openclaw' ? 'OpenClaw' : '';
+    var prompt = String(task.userPrompt || task.goal || '未命名任务').replace(/\s+/g, ' ').trim();
+    return (src ? src + ' · ' : '') + st + ' · ' + prompt.slice(0, 56);
+  }
+
+  function ocGetActiveControlTask(s) {
+    s = s || activeSession();
+    if (!s) return null;
+    var trace = ensureSessionControlTrace(s);
+    var tid = trace.activeTaskId || state.agentLoopActiveTaskId;
+    if (!tid) return trace.tasks.length ? trace.tasks[trace.tasks.length - 1] : null;
+    for (var i = trace.tasks.length - 1; i >= 0; i--) {
+      if (trace.tasks[i] && trace.tasks[i].id === tid) return trace.tasks[i];
+    }
+    return trace.tasks.length ? trace.tasks[trace.tasks.length - 1] : null;
+  }
+
+  function syncAgentLoopFromSession(s) {
+    s = s || activeSession();
+    var al = ensureAgentLoop();
+    if (!s) {
+      al.taskHistory = [];
+      al.committed.cdpLog = [];
+      al.currentTx = 0;
+      return;
+    }
+    var trace = ensureSessionControlTrace(s);
+    var task = ocGetActiveControlTask(s);
+    al.taskHistory = task && Array.isArray(task.steps) ? task.steps.slice() : [];
+    al.currentTx = task && task.steps && task.steps.length ? task.steps[task.steps.length - 1].step : 0;
+    al.committed.cdpLog = [];
+    trace.tasks.forEach(function (t) {
+      (t.cdpLog || []).forEach(function (lg) {
+        al.committed.cdpLog.push(lg);
+      });
+    });
+    if (al.committed.cdpLog.length > 120) al.committed.cdpLog = al.committed.cdpLog.slice(-120);
+    if (task) {
+      al.pendingBuffer.thought = String(task.liveThought || '');
+      al.committed.thought = task.status === 'done' ? String(task.finalText || task.liveThought || '') : '';
+      al.thinking = task.status === 'running' && (!!state.openclawChatRunning || !!state.browserAgentRunning);
+    } else {
+      al.pendingBuffer.thought = '';
+      al.committed.thought = '';
+      al.thinking = false;
+    }
+  }
+
+  function ocStartControlTask(userText, source) {
+    var s = activeSession();
+    if (!s) return null;
+    var trace = ensureSessionControlTrace(s);
+    trace.tasks.forEach(function (prev) {
+      if (!prev || prev.status !== 'running') return;
+      prev.status = 'error';
+      prev.endedAt = new Date().toISOString();
+      prev.steps = prev.steps || [];
+      prev.steps.push({
+        step: prev.steps.length + 1,
+        at: new Date().toISOString(),
+        kind: 'error',
+        thought: '被新任务中断',
+        detail: '',
+        actionPreview: ''
+      });
+    });
+    var task = {
+      id: 'ctl-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      source: source || 'openclaw',
+      userPrompt: String(userText || '').replace(/\s+/g, ' ').trim().slice(0, 200),
+      startedAt: new Date().toISOString(),
+      endedAt: '',
+      status: 'running',
+      steps: [],
+      cdpLog: [],
+      liveThought: '',
+      finalText: ''
+    };
+    trace.tasks.push(task);
+    if (trace.tasks.length > 40) trace.tasks = trace.tasks.slice(-40);
+    trace.activeTaskId = task.id;
+    state.agentLoopActiveTaskId = task.id;
+    syncAgentLoopFromSession(s);
+    try {
+      persistSessions();
+    } catch (_) {}
+    return task;
+  }
+
+  function ocAppendControlTaskStep(kind, label, detail, actionPreview) {
+    var task = ocGetActiveControlTask();
+    if (!task || task.status !== 'running') return false;
+    var al = ensureAgentLoop();
+    var stepLabel = String(label || '').replace(/\s+/g, ' ').trim();
+    if (!stepLabel) return false;
+    var last = task.steps.length ? task.steps[task.steps.length - 1] : null;
+    if (last && last.kind === kind && last.thought === stepLabel && last.actionPreview === (actionPreview || '')) return false;
+    al.currentTx += 1;
+    var row = {
+      step: al.currentTx,
+      at: new Date().toISOString(),
+      kind: kind || 'status',
+      thought: stepLabel,
+      detail: String(detail || '').slice(0, 800),
+      actionPreview: actionPreview || ''
+    };
+    task.steps.push(row);
+    if (task.steps.length > 100) task.steps = task.steps.slice(-100);
+    al.taskHistory.push(row);
+    if (al.taskHistory.length > 100) al.taskHistory = al.taskHistory.slice(-100);
+    task.liveThought = stepLabel;
+    al.pendingBuffer.thought = stepLabel;
+    al.thinking = kind === 'think' || kind === 'status';
+    appendCdpLog({
+      tx: al.currentTx,
+      level: kind === 'error' ? 'error' : kind === 'tool' ? 'warn' : 'info',
+      msg: stepLabel + (actionPreview ? ' · ' + actionPreview : ''),
+      phase: kind
+    });
+    try {
+      persistSessions();
+    } catch (_) {}
+    return true;
+  }
+
+  function ocUpdateControlTaskStream(text) {
+    var task = ocGetActiveControlTask();
+    if (!task || task.status !== 'running') return;
+    var t = String(text || '').trim();
+    if (!t) return;
+    task.liveThought = t.slice(0, 600);
+    task.finalText = t;
+    var al = ensureAgentLoop();
+    al.pendingBuffer.thought = task.liveThought;
+    al.thinking = false;
+  }
+
+  function ocFinishControlTask(ok, text, errMsg) {
+    var s = activeSession();
+    var task = ocGetActiveControlTask(s);
+    if (!task || task.status !== 'running') return;
+    if (ok && String(text || '').trim()) {
+      task.finalText = String(text).trim();
+      ocAppendControlTaskStep('reply', '回复完成 · ' + String(text).slice(0, 120), String(text).trim());
+      ensureAgentLoop().committed.thought = task.finalText;
+    } else if (!ok) {
+      ocAppendControlTaskStep('error', String(errMsg || '请求失败').slice(0, 160));
+    }
+    task.endedAt = new Date().toISOString();
+    task.status = ok ? 'done' : 'error';
+    ensureAgentLoop().thinking = false;
+    try {
+      persistSessions();
+    } catch (_) {}
+  }
+
   function appendCdpLog(entry) {
     var al = ensureAgentLoop();
     entry = entry || {};
-    al.committed.cdpLog.push({
+    var lg = {
       tx: entry.tx != null ? entry.tx : al.currentTx,
       at: entry.at || new Date().toISOString(),
       level: entry.level || 'info',
       msg: String(entry.msg || entry.message || ''),
       phase: entry.phase || ''
-    });
+    };
+    al.committed.cdpLog.push(lg);
     if (al.committed.cdpLog.length > 120) al.committed.cdpLog = al.committed.cdpLog.slice(-120);
+    var task = ocGetActiveControlTask();
+    if (task) {
+      task.cdpLog = task.cdpLog || [];
+      task.cdpLog.push(lg);
+      if (task.cdpLog.length > 120) task.cdpLog = task.cdpLog.slice(-120);
+    }
     if (activeViewMode() === 'control') renderAgentSandbox();
   }
 
@@ -4172,31 +4357,69 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var countEl = $('controlTaskHistoryCount');
     var foldHist = $('controlFoldHistory');
     if (!body) return;
+    var s = activeSession();
+    var trace = s ? ensureSessionControlTrace(s) : null;
+    var tasks = trace && trace.tasks ? trace.tasks.slice() : [];
     var al = ensureAgentLoop();
-    var rows = al.taskHistory || [];
-    if (countEl) countEl.textContent = rows.length ? rows.length + ' 步' : '';
-    if (!rows.length) {
+    var totalSteps = 0;
+    tasks.forEach(function (t) {
+      totalSteps += (t.steps && t.steps.length) || 0;
+    });
+    if (!totalSteps && !(al.taskHistory && al.taskHistory.length)) {
       body.innerHTML = '<div class="sandbox-placeholder">暂无步骤记录</div>';
+      if (countEl) countEl.textContent = '';
       if (foldHist && agentSandboxPhase(al) === 'idle' && !agentSandboxAutomationEnabled()) foldHist.hidden = true;
       return;
     }
     if (foldHist) foldHist.hidden = false;
-    var html = '';
-    for (var i = rows.length - 1; i >= 0; i--) {
-      var row = rows[i];
-      var t = '';
-      try {
-        t = new Date(row.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      } catch (_) {}
-      html +=
-        '<div class="sandbox-history-line info"><span style="opacity:.65">' +
-        esc(formatAgentStepLabel(row.step) + ' ' + t) +
-        '</span> ' +
-        esc(String(row.thought || '').slice(0, 80)) +
-        (row.actionPreview ? ' → ' + esc(row.actionPreview) : '') +
-        '</div>';
+    if (countEl) {
+      countEl.textContent = tasks.length
+        ? tasks.length + ' 个任务 · ' + totalSteps + ' 步'
+        : (al.taskHistory || []).length
+          ? (al.taskHistory || []).length + ' 步'
+          : '';
     }
-    body.innerHTML = html;
+    var html = '';
+    for (var ti = tasks.length - 1; ti >= 0; ti--) {
+      var task = tasks[ti];
+      var steps = task.steps || [];
+      if (!steps.length) continue;
+      html += '<div class="sandbox-history-task-head">' + esc(formatControlTaskHead(task)) + '</div>';
+      for (var i = steps.length - 1; i >= 0; i--) {
+        var row = steps[i];
+        var t = '';
+        try {
+          t = new Date(row.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch (_) {}
+        var lineClass = row.kind || 'info';
+        html +=
+          '<div class="sandbox-history-line ' +
+          esc(lineClass) +
+          '"><span style="opacity:.65">' +
+          esc(formatAgentStepLabel(row.step) + ' ' + t) +
+          '</span> ' +
+          esc(String(row.thought || '').slice(0, 120)) +
+          (row.actionPreview ? ' → ' + esc(row.actionPreview) : '') +
+          '</div>';
+      }
+    }
+    if (!html && al.taskHistory && al.taskHistory.length) {
+      for (var j = al.taskHistory.length - 1; j >= 0; j--) {
+        var row2 = al.taskHistory[j];
+        var t2 = '';
+        try {
+          t2 = new Date(row2.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch (_) {}
+        html +=
+          '<div class="sandbox-history-line info"><span style="opacity:.65">' +
+          esc(formatAgentStepLabel(row2.step) + ' ' + t2) +
+          '</span> ' +
+          esc(String(row2.thought || '').slice(0, 80)) +
+          (row2.actionPreview ? ' → ' + esc(row2.actionPreview) : '') +
+          '</div>';
+      }
+    }
+    body.innerHTML = html || '<div class="sandbox-placeholder">暂无步骤记录</div>';
   }
 
   function renderControlActionBus() {
@@ -4302,7 +4525,15 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         !autoOn && phase === 'idle' && !hasTaskContent && !state.browserAgentRunning && !state.openclawChatRunning;
     }
     var logCount = (al.committed.cdpLog || []).length;
-    var histCount = (al.taskHistory || []).length;
+    var trace = activeSession() ? ensureSessionControlTrace(activeSession()) : null;
+    var histCount = 0;
+    if (trace && trace.tasks) {
+      trace.tasks.forEach(function (t) {
+        histCount += (t.steps && t.steps.length) || 0;
+      });
+    } else {
+      histCount = (al.taskHistory || []).length;
+    }
     var domCount = ((al.committed.domSnapshot && al.committed.domSnapshot.elements) || []).length;
     var advCount = logCount + histCount + (domCount ? 1 : 0);
     if (advBadge) {
@@ -4334,13 +4565,24 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     al.currentTx += 1;
     if (al.pendingBuffer.thought) al.committed.thought = al.pendingBuffer.thought;
     if (al.pendingBuffer.action) al.committed.action = al.pendingBuffer.action;
-    al.taskHistory.push({
+    var row = {
       step: al.currentTx,
       at: new Date().toISOString(),
+      kind: 'action',
       thought: al.committed.thought || '',
       actionPreview: al.committed.action ? formatAgentActionPreview(al.committed.action) : ''
-    });
+    };
+    al.taskHistory.push(row);
     if (al.taskHistory.length > 80) al.taskHistory = al.taskHistory.slice(-80);
+    var task = ocGetActiveControlTask();
+    if (task && task.status === 'running') {
+      task.steps.push(row);
+      if (task.steps.length > 100) task.steps = task.steps.slice(-100);
+      task.liveThought = row.thought;
+      try {
+        persistSessions();
+      } catch (_) {}
+    }
     al.pendingBuffer = { thought: '', action: null };
     al.thinking = false;
     renderAgentSandbox();
@@ -4967,6 +5209,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       legacyEl.setAttribute('hidden', '');
       legacyEl.setAttribute('aria-hidden', 'true');
     }
+    syncAgentLoopFromSession(activeSession());
     renderAgentSandbox();
     maybeRunAgentSandboxMock();
   }
@@ -5581,6 +5824,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     updateNeedSetup();
     refreshSendUi();
     if (target && target.provider === 'openclaw') hydrateOpenClawHistoryForSession(target, false);
+    syncAgentLoopFromSession(target);
     syncChatViewMode();
     syncViewModeUi();
   }
@@ -6576,6 +6820,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     renderSessionTabs();
     renderAuditTimeline();
     rebuildMsgList();
+    syncAgentLoopFromSession(activeSession());
     refreshSendUi();
     if (state.sessions.some(function (sx) {
       var p = normalizeProviderId(sx.provider);
@@ -11789,6 +12034,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!s) throw new Error('会话不存在');
     state.browserAgentRunning = true;
     setAgentLoopStatus('running');
+    ocStartControlTask(String(goal || '').slice(0, 200), 'browser');
+    ocAppendControlTaskStep('status', '浏览器自动化任务启动…');
     feedAgentLoopThoughtDelta('浏览器自动化任务启动…', true);
     if (state.mobileBrowserOpen) postShowBrowserLabelsForAgent();
     var rows = [];
@@ -11798,6 +12045,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var adjustNotes = [];
     var runStarted = Date.now();
     var draft = null;
+    var browserTaskOk = false;
+    var browserTaskNote = '';
 
     function row(label, status) {
       rows.push({ label: label, status: status });
@@ -13105,6 +13354,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var agentStatus = agentTitle.indexOf('未完成') >= 0 ? '任务未完成' : '全部完成';
 
       browserAgentTracePush(agentTrace, runStarted, turn || 0, '流程结束', finishThought || '单步循环已结束');
+      browserTaskOk = agentSucceeded;
+      browserTaskNote = finishThought || agentStatus;
       if (agentSucceeded) {
         postHideBrowserLabelsAuto();
       }
@@ -13134,6 +13385,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
     } catch (runErr) {
       var errMsg = runErr && runErr.message ? runErr.message : String(runErr);
+      browserTaskOk = false;
+      browserTaskNote = errMsg;
       browserAgentTracePush(agentTrace, runStarted, 0, '流程中止', errMsg);
       row('异常中止', '❌ ' + errMsg.slice(0, 80));
       var errMd = buildBrowserAgentProgressMd(
@@ -13163,6 +13416,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
       throw runErr;
     } finally {
+      ocFinishControlTask(browserTaskOk, browserTaskOk ? browserTaskNote : '', browserTaskOk ? '' : browserTaskNote);
       resetBrowserAgentHostState();
     }
   }
@@ -13344,49 +13598,31 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function ocBeginAgentLoopFromChat(userText) {
     state.openclawChatRunning = true;
     setAgentLoopStatus('running');
-    feedAgentLoopThoughtDelta('已发送 · ' + String(userText || '').slice(0, 160), false);
+    ocStartControlTask(userText, 'openclaw');
+    ocAppendControlTaskStep('status', '已发送 · ' + String(userText || '').slice(0, 160));
     appendCdpLog({ level: 'info', msg: 'OpenClaw · 连接 Gateway 并排队消息' });
   }
 
   function ocFeedAgentLoopFromOpenClawStream(text, payload, stateHint) {
     if (!state.openclawChatRunning) return;
-    var t = String(text || '').trim();
-    if (t) feedAgentLoopThoughtDelta(t, false);
-    else if (stateHint) feedAgentLoopThoughtDelta(stateHint, false);
+    var thinkSnip = payload ? ocExtractThinkingSnippet(payload) : '';
     var tool = payload ? ocExtractToolActionFromPayload(payload) : null;
-    if (tool) {
+    var t = String(text || '').trim();
+    if (thinkSnip) {
+      ocAppendControlTaskStep('think', '💭 ' + thinkSnip.slice(0, 160), thinkSnip);
+    } else if (tool) {
       ensureAgentLoop().pendingBuffer.action = tool;
-      appendCdpLog({ level: 'info', msg: 'OpenClaw · 调用工具 ' + tool.tool });
-      if (activeViewMode() === 'control') renderAgentSandbox();
+      ocAppendControlTaskStep('tool', '调用工具 ' + tool.tool, '', formatAgentActionPreview(tool));
+    } else if (stateHint) {
+      ocAppendControlTaskStep('status', stateHint);
     }
-    if (stateHint) appendCdpLog({ level: 'info', msg: 'OpenClaw · ' + stateHint });
+    if (t) ocUpdateControlTaskStream(t);
+    if (activeViewMode() === 'control') renderAgentSandbox();
   }
 
   function ocEndAgentLoopFromChat(ok, text, errMsg) {
     state.openclawChatRunning = false;
-    var al = ensureAgentLoop();
-    if (ok) {
-      var finalText = String(text || al.pendingBuffer.thought || '').trim();
-      if (finalText) {
-        al.committed.thought = finalText;
-        al.pendingBuffer.thought = finalText;
-        al.thinking = false;
-        al.currentTx += 1;
-        al.taskHistory.push({
-          step: al.currentTx,
-          at: new Date().toISOString(),
-          thought: finalText.slice(0, 200),
-          actionPreview: al.committed.action ? formatAgentActionPreview(al.committed.action) : ''
-        });
-        if (al.taskHistory.length > 80) al.taskHistory = al.taskHistory.slice(-80);
-        appendCdpLog({ level: 'success', msg: 'OpenClaw · 响应完成' });
-      }
-    } else {
-      var em = String(errMsg || '请求失败').trim();
-      al.thinking = false;
-      al.pendingBuffer.thought = em;
-      appendCdpLog({ level: 'error', msg: 'OpenClaw · ' + em.slice(0, 120) });
-    }
+    ocFinishControlTask(ok, text, errMsg);
     setAgentLoopStatus('idle');
     if (activeViewMode() === 'control') renderAgentSandbox();
   }
