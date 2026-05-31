@@ -88,6 +88,21 @@ body.mobile-browser-open #stage{transition:transform var(--ease)}
 .m.search-hit{box-shadow:0 0 0 1px rgba(255,132,64,.75),0 0 0 3px rgba(255,102,0,.16)}
 .mb pre{margin-top:calc(10px * var(--ui));border:1px solid rgba(255,102,0,.14);border-radius:calc(12px * var(--ui));background:rgba(8,8,8,.95);overflow:auto}
 .mb pre code{display:block;padding:calc(12px * var(--ui));font-size:calc(12px * var(--ui));line-height:1.65;font-family:"AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif}
+.mb p{margin:0 0 calc(8px * var(--ui))}
+.mb p:last-child{margin-bottom:0}
+.mb ul,.mb ol{margin:calc(6px * var(--ui)) 0 calc(10px * var(--ui));padding-left:calc(20px * var(--ui))}
+.mb li{margin:calc(3px * var(--ui)) 0}
+.mb li>p{margin:0}
+.mb h1,.mb h2,.mb h3,.mb h4{margin:calc(10px * var(--ui)) 0 calc(6px * var(--ui));font-weight:700;line-height:1.35;color:var(--text)}
+.mb h1{font-size:calc(15px * var(--ui))}.mb h2{font-size:calc(14px * var(--ui))}.mb h3{font-size:calc(13.5px * var(--ui))}.mb h4{font-size:calc(13px * var(--ui))}
+.mb blockquote{margin:calc(8px * var(--ui)) 0;padding:calc(6px * var(--ui)) calc(10px * var(--ui));border-left:3px solid rgba(255,102,0,.35);background:rgba(255,255,255,.03);color:var(--muted);border-radius:0 calc(8px * var(--ui)) calc(8px * var(--ui)) 0}
+.mb code.inline{padding:calc(1px * var(--ui)) calc(5px * var(--ui));border-radius:calc(4px * var(--ui));background:rgba(255,255,255,.07);font-size:calc(12px * var(--ui));font-family:Consolas,"Cascadia Mono","Segoe UI Mono",monospace}
+.mb strong{font-weight:700;color:var(--text)}.mb em{font-style:italic}
+.mb hr{border:none;border-top:1px solid rgba(255,255,255,.1);margin:calc(10px * var(--ui)) 0}
+.mb table{width:100%;border-collapse:collapse;margin:calc(8px * var(--ui)) 0;font-size:calc(12px * var(--ui))}
+.mb th,.mb td{border:1px solid rgba(255,255,255,.1);padding:calc(5px * var(--ui)) calc(8px * var(--ui));text-align:left;vertical-align:top}
+.mb th{background:rgba(255,102,0,.08);font-weight:700}
+.m .mb a:hover{text-decoration:underline}
 .hl-comment{color:#6a9955}.hl-string{color:#ce9178}.hl-number{color:#b5cea8}.hl-keyword{color:#ff9b52}.hl-builtins{color:#4fc1ff}.hl-var{color:#dcdcaa}
 #cmp{flex-shrink:0;padding:calc(14px * var(--ui)) calc(16px * var(--ui)) calc(18px * var(--ui));border-top:1px solid rgba(255,102,0,.15);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);position:relative}
 #input{width:100%;min-height:calc(96px * var(--ui));resize:vertical;border:1px solid rgba(255,102,0,.2);border-radius:calc(14px * var(--ui));background:rgba(8,8,8,.72);color:var(--text);padding:calc(10px * var(--ui)) calc(12px * var(--ui));outline:none;user-select:text;-webkit-user-select:text}
@@ -628,6 +643,11 @@ body[data-theme="light"] .m{border-color:#E5E5E5;background:#FFFFFF}
 body[data-theme="light"] .m.user{background:#FFF1E3;border-color:#E9B889}
 body[data-theme="light"] .mh{border-color:#EAEAEA}
 body[data-theme="light"] .mb pre{background:#FAFAFA;border-color:#E5E5E5}
+body[data-theme="light"] .mb blockquote{background:#FFF8F2;border-left-color:rgba(214,90,20,.35);color:#666}
+body[data-theme="light"] .mb code.inline{background:rgba(0,0,0,.05)}
+body[data-theme="light"] .mb hr{border-top-color:#E5E5E5}
+body[data-theme="light"] .mb th,body[data-theme="light"] .mb td{border-color:#E5E5E5}
+body[data-theme="light"] .mb th{background:#FFF1E3}
 body[data-theme="light"] #input,body[data-theme="light"] .ctl,body[data-theme="light"] .dd-btn{background:#FFFFFF;border-color:#E5E5E5;color:var(--text)}
 body[data-theme="light"] select.ctl,body[data-theme="light"] select.ctl option,body[data-theme="light"] select.ctl optgroup{background:#FFFFFF;color:var(--text)}
 body[data-theme="light"] .dd-menu{background:#FFFFFF;border-color:#E5E5E5;box-shadow:0 8px 22px rgba(0,0,0,.1)}
@@ -2252,19 +2272,70 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return fixUtf8Mojibake(String(s != null ? s : ''));
   }
 
-  /** API 常返回 <br> / 已转义的换行，先换成 \n 再走 Markdown，避免屏上显示字面量 <br> */
+  function decodeHtmlEntities(s) {
+    s = String(s != null ? s : '');
+    if (!s) return s;
+    for (var pass = 0; pass < 3; pass++) {
+      var prev = s;
+      s = s
+        .replace(/&nbsp;|&#160;|&#xA0;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;|&apos;/gi, "'")
+        .replace(/&#(\d+);/g, function (_m, n) {
+          var code = parseInt(n, 10);
+          return code >= 0 && code <= 0xffff ? String.fromCharCode(code) : _m;
+        })
+        .replace(/&#x([0-9a-f]+);/gi, function (_m, h) {
+          var code = parseInt(h, 16);
+          return code >= 0 && code <= 0xffff ? String.fromCharCode(code) : _m;
+        });
+      if (s === prev) break;
+    }
+    return s;
+  }
+
+  /** API / OpenClaw 常混用 HTML 与 Markdown，先归一化再渲染 */
   function preMarkdownForChat(s) {
     s = decodeApiText(s).replace(/\r\n/g, '\n');
-    s = s.replace(/<br\s*\/?>/gi, '\n');
-    s = s.replace(/&lt;\s*br\s*\/?\s*&gt;/gi, '\n');
-    return s;
+    s = decodeHtmlEntities(s);
+    s = s.replace(/<\s*br\s*\/?\s*>/gi, '\n');
+    s = s.replace(/<\s*\/\s*(p|div|section|article|header|footer|h[1-6]|tr|li|blockquote)\s*>/gi, '\n');
+    s = s.replace(/<\s*(p|div|section|article|header|footer|h[1-6]|tr|blockquote)[^>]*>/gi, '\n');
+    s = s.replace(/<\s*li[^>]*>/gi, '\n- ');
+    s = s.replace(/<\s*\/\s*[uo]l[^>]*>/gi, '\n');
+    s = s.replace(/<\s*[uo]l[^>]*>/gi, '\n');
+    s = s.replace(/<\s*strong[^>]*>([\s\S]*?)<\s*\/\s*strong\s*>/gi, '**$1**');
+    s = s.replace(/<\s*b[^>]*>([\s\S]*?)<\s*\/\s*b\s*>/gi, '**$1**');
+    s = s.replace(/<\s*em[^>]*>([\s\S]*?)<\s*\/\s*em\s*>/gi, '*$1*');
+    s = s.replace(/<\s*i[^>]*>([\s\S]*?)<\s*\/\s*i\s*>/gi, '*$1*');
+    s = s.replace(/<\s*code[^>]*>([\s\S]*?)<\s*\/\s*code\s*>/gi, '`$1`');
+    s = s.replace(
+      /<\s*a[^>]+href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\s*\/\s*a\s*>/gi,
+      function (_m, href, label) {
+        return '[' + String(label || '').replace(/\s+/g, ' ').trim() + '](' + String(href || '').trim() + ')';
+      }
+    );
+    s = s.replace(/<\s*hr\s*\/?\s*>/gi, '\n\n---\n\n');
+    s = s.replace(/<\s*pre[^>]*>([\s\S]*?)<\s*\/\s*pre\s*>/gi, function (_m, code) {
+      return '\n```\n' + String(code || '').replace(/<\s*code[^>]*>|<\s*\/\s*code\s*>/gi, '') + '\n```\n';
+    });
+    s = s.replace(/<[^>]+>/g, '');
+    s = s.replace(/[ \t]+\n/g, '\n');
+    s = s.replace(/\n{3,}/g, '\n\n');
+    return s.trim();
   }
 
   function inline(t) {
     var h = esc(t);
-    h = h.replace(/`([^`]+)`/g, '<code class="inline">$1</code>')
+    h = h
+      .replace(/`([^`]+)`/g, '<code class="inline">$1</code>')
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/__([^_]+)__/g, '<strong>$1</strong>')
       .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/~~([^~]+)~~/g, '<del>$1</del>')
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, function (_m, label, href) {
         var u = String(href || '').trim();
         if (isSafeHttpUrl(u))
@@ -2272,6 +2343,62 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         return '<a href="' + esc(u) + '" rel="noreferrer">' + label + '</a>';
       });
     return h;
+  }
+
+  function mdBlockChunk(chunk) {
+    var t = String(chunk || '').trim();
+    if (!t) return '';
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(t)) return '<hr>';
+    if (/^\s*>\s?/.test(t))
+      return '<blockquote>' + inline(t.replace(/^\s*>\s?/gm, '').replace(/\n/g, '<br>')) + '</blockquote>';
+    if (/^\s*[-*+]\s+/m.test(t)) {
+      var ulItems = t
+        .split('\n')
+        .map(function (line) {
+          return line.replace(/^\s*[-*+]\s+/, '').trim();
+        })
+        .filter(Boolean);
+      return '<ul>' + ulItems.map(function (i) { return '<li>' + inline(i) + '</li>'; }).join('') + '</ul>';
+    }
+    if (/^\s*\d+\.\s+/m.test(t)) {
+      var olItems = t
+        .split('\n')
+        .map(function (line) {
+          return line.replace(/^\s*\d+\.\s+/, '').trim();
+        })
+        .filter(Boolean);
+      return '<ol>' + olItems.map(function (i) { return '<li>' + inline(i) + '</li>'; }).join('') + '</ol>';
+    }
+    if (/^\|.+\|/.test(t) && /\|/.test(t.split('\n')[0] || '')) {
+      var rows = t.split('\n').filter(function (line) { return /^\|/.test(line.trim()); });
+      if (rows.length >= 1) {
+        var parseRow = function (line) {
+          return line
+            .replace(/^\|/, '')
+            .replace(/\|$/, '')
+            .split('|')
+            .map(function (cell) { return cell.trim(); });
+        };
+        var head = parseRow(rows[0]);
+        var bodyRows = rows.slice(1).filter(function (line) {
+          return !/^[\|\s:-]+$/.test(line);
+        });
+        var th = head.map(function (cell) { return '<th>' + inline(cell) + '</th>'; }).join('');
+        var tb = bodyRows
+          .map(function (line) {
+            var cells = parseRow(line);
+            return '<tr>' + cells.map(function (cell) { return '<td>' + inline(cell) + '</td>'; }).join('') + '</tr>';
+          })
+          .join('');
+        return '<table><thead><tr>' + th + '</tr></thead><tbody>' + tb + '</tbody></table>';
+      }
+    }
+    if (/^#{1,4}\s+/.test(t)) {
+      var lv = Math.min(4, (t.match(/^#+/)[0] || '#').length),
+        cl = t.replace(/^#{1,4}\s+/, '');
+      return '<h' + lv + '>' + inline(cl) + '</h' + lv + '>';
+    }
+    return '<p>' + inline(t.replace(/\n/g, '<br>')) + '</p>';
   }
 
   function md(src) {
@@ -2294,29 +2421,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         }
         return b.c
           .split(/\n{2,}/)
-          .map(function (chunk) {
-            var t = chunk.trim();
-            if (!t) return '';
-            if (/^\s*>\s?/.test(t)) return '<blockquote>' + inline(t.replace(/^\s*>\s?/gm, '').replace(/\n/g, '<br>')) + '</blockquote>';
-            if (/^\s*[-*]\s+/m.test(t)) {
-              var items = t
-                .split('\n')
-                .map(function (line) {
-                  return line.replace(/^\s*[-*]\s+/, '').trim();
-                })
-                .filter(Boolean);
-              return '<ul>' + items.map(function (i) { return '<li>' + inline(i) + '</li>'; }).join('') + '</ul>';
-            }
-            if (/^#{1,3}\s+/.test(t)) {
-              var lv = t.match(/^#+/)[0].length,
-                cl = t.replace(/^#{1,3}\s+/, '');
-              return '<h' + lv + '>' + inline(cl) + '</h' + lv + '>';
-            }
-            return '<p>' + inline(t.replace(/\n/g, '<br>')) + '</p>';
-          })
+          .map(mdBlockChunk)
           .join('');
       })
       .join('');
+  }
+
+  function chatMessageBodyHtml(content) {
+    var normalized = preMarkdownForChat(content);
+    var bodyHtml = md(normalized);
+    if (!String(bodyHtml || '').replace(/\s|<br\s*\/?>/gi, '') && String(normalized || '').trim())
+      bodyHtml = '<p>' + esc(normalized).replace(/\n/g, '<br>') + '</p>';
+    return bodyHtml;
   }
 
   function genId() {
@@ -5263,10 +5379,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           }
         })()
       : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    var normalized = preMarkdownForChat(content);
-    var bodyHtml = md(normalized);
-    if (!String(bodyHtml || '').replace(/\s/g, '') && String(normalized || '').trim())
-      bodyHtml = '<p>' + esc(normalized).replace(/\n/g, '<br>') + '</p>';
+    var bodyHtml = chatMessageBodyHtml(content);
     w.innerHTML =
       '<div class="mh"><span>' +
       title +
@@ -5290,10 +5403,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           }
         })()
       : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    var normalized = preMarkdownForChat(content);
-    var bodyHtml = md(normalized);
-    if (!String(bodyHtml || '').replace(/\s/g, '') && String(normalized || '').trim())
-      bodyHtml = '<p>' + esc(normalized).replace(/\n/g, '<br>') + '</p>';
+    var bodyHtml = chatMessageBodyHtml(content);
     node.className = 'm ' + role;
     node.innerHTML =
       '<div class="mh"><span>' +
@@ -13281,29 +13391,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (activeViewMode() === 'control') renderAgentSandbox();
   }
 
-  /** OpenClaw broadcast("chat", payload)：正文在 message.content[].text，而非旧版 response.text */
+  /** OpenClaw broadcast("chat", payload)：仅提取 assistant 正文，不含 thinking */
   function ocExtractChatEventPayload(pl) {
     if (!pl || typeof pl !== 'object') return '';
     if (pl.state === 'error') return '';
-    var msg =
-      pl.message ||
-      pl.assistant ||
-      pl.assistantMessage ||
-      pl.data ||
-      pl.response ||
-      pl.result ||
-      pl.output ||
-      pl.delta ||
-      pl.payload;
-    if (msg == null) msg = pl;
-    if (typeof msg === 'string') return String(msg).trim();
-    var acc = [];
-    ocCollectTextDeep(msg, acc);
-    if (acc.length) return acc.join('\n').trim();
-    acc = [];
-    ocCollectTextDeep(pl, acc);
-    if (acc.length) return acc.join('\n').trim();
-    return ocExtractText(msg) || ocExtractText(pl);
+    var t = ocExtractAssistantTextFromPayload(pl);
+    if (t) return t;
+    return ocExtractText(pl.text || pl.content || pl.message || pl.output || '');
   }
 
   /**
@@ -13358,6 +13452,92 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (s === 'final' || s === 'done' || s === 'completed' || s === 'finished') return true;
     if (pl.done === true || pl.finished === true) return true;
     return false;
+  }
+
+  function ocContentPartsFromPayload(pl) {
+    if (!pl || typeof pl !== 'object') return [];
+    var msg = pl.message || pl.assistant || pl.assistantMessage || pl.data || pl.response || pl.result || pl;
+    if (msg && Array.isArray(msg.content)) return msg.content;
+    if (Array.isArray(pl.content)) return pl.content;
+    return [];
+  }
+
+  function ocPayloadHasAssistantTextPart(pl) {
+    if (!pl || typeof pl !== 'object') return false;
+    var parts = ocContentPartsFromPayload(pl);
+    for (var i = 0; i < parts.length; i++) {
+      var cp = parts[i];
+      if (!cp || typeof cp !== 'object') continue;
+      var typ = String(cp.type || '').toLowerCase();
+      if ((typ === 'text' || typ === 'output_text' || typ === 'markdown' || typ === 'assistant') && typeof cp.text === 'string' && cp.text.trim())
+        return true;
+    }
+    var flat = ocExtractText(pl.text || pl.content || pl.message || pl.output || '');
+    return !!flat;
+  }
+
+  /** Gateway 常在 thinking/tool 阶段就发 final；此阶段不应关 WS */
+  function ocPayloadIsIntermediatePhase(pl) {
+    if (!pl || typeof pl !== 'object') return false;
+    if (ocPayloadHasAssistantTextPart(pl)) return false;
+    var parts = ocContentPartsFromPayload(pl);
+    if (!parts.length) return !!(ocExtractToolActionFromPayload(pl) || ocExtractThinkingSnippet(pl));
+    for (var i = 0; i < parts.length; i++) {
+      var cp = parts[i];
+      if (!cp || typeof cp !== 'object') continue;
+      var typ = String(cp.type || '').toLowerCase();
+      if (typ === 'thinking' || typ === 'toolcall' || typ === 'tool_call' || typ === 'function_call') return true;
+      if (typ === 'tool_result' || typ === 'toolresult' || typ === 'tool_output') return true;
+    }
+    return false;
+  }
+
+  function ocExtractThinkingSnippet(pl) {
+    var parts = ocContentPartsFromPayload(pl);
+    for (var i = 0; i < parts.length; i++) {
+      var cp = parts[i];
+      if (!cp || typeof cp !== 'object') continue;
+      if (String(cp.type || '').toLowerCase() === 'thinking' && typeof cp.thinking === 'string' && cp.thinking.trim())
+        return cp.thinking.trim();
+    }
+    return '';
+  }
+
+  function ocExtractAssistantTextFromPayload(pl) {
+    if (!pl || typeof pl !== 'object') return '';
+    if (pl.state === 'error') return '';
+    var parts = ocContentPartsFromPayload(pl);
+    if (parts.length) {
+      var textParts = [];
+      for (var ci = 0; ci < parts.length; ci++) {
+        var cp = parts[ci];
+        if (!cp || typeof cp !== 'object') continue;
+        var typ = String(cp.type || '').toLowerCase();
+        if (
+          (typ === 'text' || typ === 'output_text' || typ === 'markdown' || typ === 'assistant') &&
+          typeof cp.text === 'string' &&
+          cp.text.trim()
+        )
+          textParts.push(cp.text.trim());
+      }
+      if (textParts.length) return textParts.join('\n\n').trim();
+    }
+    var roots = [pl.message, pl.assistant, pl.assistantMessage, pl.data, pl.response, pl.result, pl.output, pl.delta, pl.payload];
+    for (var ri = 0; ri < roots.length; ri++) {
+      var r = roots[ri];
+      if (typeof r === 'string' && r.trim()) return r.trim();
+    }
+    return ocExtractText(pl.text || pl.content || pl.message || pl.output || pl.answer || '');
+  }
+
+  function ocShouldSettleOpenClawChat(pendingText, pl) {
+    var t = String(pendingText || '').trim();
+    if (!t && pl && ocPayloadHasAssistantTextPart(pl)) {
+      t = ocExtractAssistantTextFromPayload(pl);
+    }
+    if (!t) return false;
+    if (pl && ocPayloadIsIntermediatePhase(pl)) return false;
+    return true;
   }
 
   function ocIsSystemEventName(ev) {
@@ -13904,6 +14084,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var pendingText = '';
       var finalizeTimer = null;
       var recoveringFinal = false;
+      var bgHistTimer = 0;
       var _dbgFrames = [];
       var hardTimeout = setTimeout(function () {
         if (pendingText.trim()) {
@@ -13935,6 +14116,44 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       function cleanup() {
         clearTimeout(hardTimeout);
         if (finalizeTimer) clearTimeout(finalizeTimer);
+        if (bgHistTimer) {
+          clearInterval(bgHistTimer);
+          bgHistTimer = 0;
+        }
+      }
+
+      function ensureBackgroundHistoryPoll() {
+        if (bgHistTimer || settled) return;
+        bgHistTimer = setInterval(function () {
+          if (settled) {
+            if (bgHistTimer) {
+              clearInterval(bgHistTimer);
+              bgHistTimer = 0;
+            }
+            return;
+          }
+          if (pendingText.trim() && ocShouldSettleOpenClawChat(pendingText, null)) {
+            settleResolve(pendingText.trim());
+            return;
+          }
+          var histKey = canonicalSessionKey || sessionKey;
+          openClawRpcWithRetry(cfg, 'chat.history', { sessionKey: histKey, limit: 200 }, {
+            attempts: 1,
+            timeoutMs: 8000,
+            timeoutStepMs: 0,
+            backoffMs: [0]
+          })
+            .then(function (rpcRes) {
+              if (settled) return;
+              var picked = ocPickAssistantFromHistory(extractGatewayHistoryMessages(rpcRes), msgText, chatSentAtMs);
+              if (picked && String(picked).trim()) {
+                pendingText = String(picked).trim();
+                emitProgress(true);
+                settleResolve(pendingText);
+              }
+            })
+            .catch(function () {});
+        }, 4000);
       }
 
       function settleResolve(val) {
@@ -13962,20 +14181,50 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       function armFinalize() {
         if (finalizeTimer) clearTimeout(finalizeTimer);
         finalizeTimer = setTimeout(function () {
+          if (settled) return;
           var t = pendingText.trim();
-          if (t) settleResolve(t);
-          else recoverFinalFromHistory(false, null);
-        }, 480);
+          if (t && ocShouldSettleOpenClawChat(t, null)) settleResolve(t);
+        }, 900);
       }
 
       function fail(err) {
         settleReject(err);
       }
 
-      function okDone() {
+      function okDone(force) {
         var t = pendingText.trim();
+        if (!t && force !== true) return;
         if (t) settleResolve(t);
-        else recoverFinalFromHistory(false, null);
+      }
+
+      function handleOpenClawFinalState(pl) {
+        if (!ocIsChatFinalState(pl)) return false;
+        if (!pendingText.trim() && ocPayloadHasAssistantTextPart(pl)) {
+          pendingText = ocExtractAssistantTextFromPayload(pl);
+          emitProgress(true, pl);
+        }
+        if (ocShouldSettleOpenClawChat(pendingText, pl)) {
+          okDone(true);
+          return true;
+        }
+        var think = ocExtractThinkingSnippet(pl);
+        var tool = ocExtractToolActionFromPayload(pl);
+        var hint = think
+          ? '思考中，等待最终回复…'
+          : tool
+            ? '工具 `' + tool.tool + '` 已完成，等待最终回复…'
+            : '中间阶段结束，继续等待最终回复…';
+        ocFeedAgentLoopFromOpenClawStream(pendingText, pl, hint);
+        if (hooks && typeof hooks.onProgress === 'function') {
+          try {
+            hooks.onProgress(
+              think ? '💭 ' + think.slice(0, 100) + (think.length > 100 ? '…' : '') : '⏳ ' + hint
+            );
+          } catch (_) {}
+        }
+        dbg('WS', 'ignore intermediate final · ' + hint, 'ok');
+        ensureBackgroundHistoryPoll();
+        return true;
       }
 
       function recoverFinalFromHistory(fromTimeout, finalPayload) {
@@ -14291,15 +14540,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             if (ocSessionMessageDone(plSession) && pendingText.trim()) okDone();
             return;
           }
-          var sessionTxt = ocExtractMessageContentForHistory(plSession.message || plSession.item || plSession.entry || plSession);
-          if (!sessionTxt) sessionTxt = ocExtractChatEventPayload(plSession);
+          var sessionTxt =
+            ocExtractAssistantTextFromPayload(plSession.message || plSession.item || plSession.entry || plSession) ||
+            ocExtractChatEventPayload(plSession);
           if (sessionTxt) {
             pendingText = String(sessionTxt).trim();
             emitProgress(false, plSession);
           }
           if (ocSessionMessageDone(plSession)) {
-            if (pendingText.trim()) okDone();
-            else recoverFinalFromHistory(false, typeof plSession === 'object' ? plSession : msg);
+            if (ocShouldSettleOpenClawChat(pendingText, plSession)) okDone(true);
+            else ocFeedAgentLoopFromOpenClawStream(pendingText, plSession, '会话消息已更新，等待最终正文…');
             return;
           }
           if (sessionTxt) armFinalize();
@@ -14317,8 +14567,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             return;
           }
           var chatTxt = ocExtractChatEventPayload(pl);
+          var thinkSnip = ocExtractThinkingSnippet(pl);
           var toolHint = ocExtractToolActionFromPayload(pl);
-          if (toolHint && !chatTxt) {
+          if (thinkSnip && !chatTxt) {
+            ocFeedAgentLoopFromOpenClawStream('', pl, thinkSnip.slice(0, 160));
+            ensureBackgroundHistoryPoll();
+            if (hooks && typeof hooks.onProgress === 'function') {
+              try {
+                hooks.onProgress('💭 ' + thinkSnip.slice(0, 100) + (thinkSnip.length > 100 ? '…' : ''));
+              } catch (_) {}
+            }
+          } else if (toolHint && !chatTxt) {
             ocFeedAgentLoopFromOpenClawStream('', pl, '正在调用工具 ' + toolHint.tool);
             if (hooks && typeof hooks.onProgress === 'function') {
               try {
@@ -14335,20 +14594,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             } else pendingText = chatTxt;
             emitProgress(false, pl);
           }
-          if (ocIsChatFinalState(pl)) {
-            if (!pendingText.trim()) {
-              var fallback = ocExtractText(
-                pl.errorMessage || pl.stopReason || pl.reason || pl.status || pl.message || ''
-              );
-              if (fallback) pendingText = fallback;
-            }
-            if (!pendingText.trim()) {
-              recoverFinalFromHistory(false, pl);
-              return;
-            }
-            okDone();
-            return;
-          }
+          if (handleOpenClawFinalState(pl)) return;
           if (pl.state === 'delta' && chatTxt) armFinalize();
           /* 部分 Gateway 只推 text/content，无 state */
           if (pl.state == null && chatTxt) armFinalize();
@@ -14391,7 +14637,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             emitProgress(false, respPayload);
           }
           if (respPayload.done || respPayload.finish_reason || respPayload.finished) {
-            okDone();
+            if (handleOpenClawFinalState(respPayload) || ocShouldSettleOpenClawChat(pendingText, respPayload)) okDone(true);
             return;
           }
           if (piece) armFinalize();
@@ -14450,8 +14696,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
                   else pendingText += gt;
                 } else pendingText = gt;
                 emitProgress(false, guess);
-                if (ocIsChatFinalState(guess)) okDone();
-                else armFinalize();
+                if (handleOpenClawFinalState(guess)) return;
+                armFinalize();
                 return;
               }
             }
@@ -14492,8 +14738,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       ws.onclose = function (e) {
         dbg('WS', 'close chat stream code=' + e.code, authenticated ? 'ok' : 'err');
         if (settled) return;
-        if (authenticated && pendingText.trim()) {
+        if (authenticated && ocShouldSettleOpenClawChat(pendingText, null)) {
           settleResolve(pendingText.trim());
+          return;
+        }
+        if (authenticated) {
+          recoverFinalFromHistory(true, null);
           return;
         }
         settleReject(new Error('连接已关闭（code ' + e.code + '）。'));
