@@ -64,16 +64,35 @@ body.drawer-open .drawer-toolbar .logo-btn,body.drawer-open #panel > header.hdr 
 #msgs{flex:1;min-height:0;min-width:0;overflow:auto;padding:calc(12px * var(--ui)) calc(16px * var(--ui));display:flex;flex-direction:column;gap:calc(10px * var(--ui));align-items:stretch}
 #msgs > #empty{flex-shrink:0}
 /* 旧行已由下方赛博风滚动条块覆盖，避免双定义 */
-#cliPane{display:none;flex:1;min-height:0;min-width:0;overflow:hidden;padding:calc(12px * var(--ui)) calc(14px * var(--ui)) calc(14px * var(--ui));align-items:stretch}
+#cliPane{display:none;flex:1;min-height:0;min-width:0;overflow:hidden;padding:0;align-items:stretch}
 .cli-shell{flex:1 1 auto;width:100%;max-width:100%;height:100%;min-height:0;min-width:0;display:flex;flex-direction:column;border:1px solid rgba(255,102,0,.18);border-radius:calc(14px * var(--ui));background:rgba(255,255,255,.03);overflow:hidden}
-.cli-bar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:calc(10px * var(--ui));padding:calc(10px * var(--ui)) calc(12px * var(--ui));border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.12)}
+.cli-bar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:calc(10px * var(--ui));padding:calc(8px * var(--ui)) calc(12px * var(--ui));border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.12)}
 .cli-title{font-size:calc(12px * var(--ui));color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cli-btns{display:flex;gap:calc(8px * var(--ui));flex-shrink:0}
-.cli-btn{height:calc(30px * var(--ui));padding:0 calc(12px * var(--ui));border-radius:999px;border:1px solid rgba(255,179,71,.22);background:rgba(255,255,255,.04);color:#f7f7f7;font-size:calc(11px * var(--ui));cursor:pointer}
+.cli-btns{display:flex;gap:calc(6px * var(--ui));flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.cli-btn{height:calc(28px * var(--ui));padding:0 calc(10px * var(--ui));border-radius:999px;border:1px solid rgba(255,179,71,.22);background:rgba(255,255,255,.04);color:#f7f7f7;font-size:calc(10px * var(--ui));cursor:pointer;white-space:nowrap}
 .cli-btn:hover{background:rgba(255,255,255,.09)}
 .cli-frame{display:block;flex:1 1 auto;min-height:0;height:100%;border:none;width:100%;background:#132033}
-body.cli-mode #msgs,body.cli-mode #cmp{display:none!important}
-body.cli-mode #cliPane{display:flex!important;flex-direction:column}
+.cli-session-log{flex-shrink:0;max-height:calc(120px * var(--ui));display:flex;flex-direction:column;border-bottom:1px solid rgba(0,229,255,.12);background:rgba(0,0,0,.2)}
+.cli-session-log-head{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--ui));padding:calc(4px * var(--ui)) calc(10px * var(--ui));font-size:calc(10px * var(--ui));color:var(--muted);flex-shrink:0}
+.cli-session-log-body{overflow:auto;padding:calc(4px * var(--ui)) calc(10px * var(--ui));font-size:calc(10px * var(--ui));line-height:1.45;color:var(--text);max-height:calc(96px * var(--ui))}
+.cli-session-log-line{color:var(--muted);margin:calc(2px * var(--ui)) 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cli-session-log-line.user{color:#ffb380}
+.cli-session-log-line.assistant{color:#8fd4ff}
+.th-drawer-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.th-cli-host{display:none;flex:1;min-height:0;min-width:0;flex-direction:column;overflow:hidden}
+body.cli-mode .th-cli-host-main{display:flex}
+body.cli-mode.thread-panel-open .th-cli-host-main{display:none!important}
+body.cli-mode.thread-panel-open .th-cli-host-drawer{display:flex!important}
+body.cli-mode .th-tree{flex:0 1 auto;max-height:34%;min-height:calc(72px * var(--ui));overflow:auto}
+body.cli-mode #viewportChat,body.cli-mode #viewportControl{display:none!important}
+body.cli-mode #cliPane{display:flex!important;flex-direction:column;padding:0}
+body.cli-mode .cli-shell{border:none;border-radius:0;background:rgba(0,0,0,.15)}
+body.cli-mode .cli-bar{padding:calc(6px * var(--ui)) calc(10px * var(--ui));border-bottom:1px solid rgba(0,229,255,.12);background:rgba(0,0,0,.22)}
+body.cli-mode #msgs{display:none!important}
+body.cli-mode #cmp{display:flex!important;flex-shrink:0;padding:calc(8px * var(--ui)) calc(12px * var(--ui));border-top:1px solid rgba(0,229,255,.1)}
+body.cli-mode #input,body.cli-mode #composerFooter,body.cli-mode .utility-row,body.cli-mode #attachList{display:none!important}
+body.cli-mode #composerHint{font-size:calc(10px * var(--ui));margin-top:calc(4px * var(--ui))}
+body.cli-mode #chatStatusRow{margin-top:calc(4px * var(--ui))}
 :root{--mobile-browser-w:400px}
 #mobileBrowserChrome{display:none!important}
 body.mobile-browser-open #chat-mobile-browser{background:rgba(255,102,0,.22);border-color:rgba(255,102,0,.75);box-shadow:0 0 0 2px rgba(255,102,0,.25)}
@@ -106,7 +125,7 @@ body.mobile-browser-open #stage{transition:transform var(--ease)}
 .hl-comment{color:#6a9955}.hl-string{color:#ce9178}.hl-number{color:#b5cea8}.hl-keyword{color:#ff9b52}.hl-builtins{color:#4fc1ff}.hl-var{color:#dcdcaa}
 #cmp{flex-shrink:0;padding:calc(14px * var(--ui)) calc(16px * var(--ui)) calc(18px * var(--ui));border-top:1px solid rgba(255,102,0,.15);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);position:relative}
 #input{width:100%;min-height:calc(96px * var(--ui));resize:vertical;border:1px solid rgba(255,102,0,.2);border-radius:calc(14px * var(--ui));background:rgba(8,8,8,.72);color:var(--text);padding:calc(10px * var(--ui)) calc(12px * var(--ui));outline:none;user-select:text;-webkit-user-select:text}
-#composerFooter{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:calc(10px * var(--ui));margin-top:calc(12px * var(--ui))}
+#composerFooter{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:calc(10px * var(--ui));margin-top:calc(12px * var(--ui))}
 .drawer-toolbar{display:flex;flex-direction:row;align-items:center;gap:calc(6px * var(--ui));min-width:0;background:transparent;padding:0}
 #sendWrap{flex-shrink:0;display:flex;align-items:center}
 .attach-wrap{display:flex;align-items:center;gap:calc(6px * var(--ui));flex-wrap:wrap;flex:1;min-width:0}
@@ -344,11 +363,12 @@ button.tb{font:inherit;font-family:inherit}
 0%,100%{box-shadow:inset 0 0 14px rgba(255,102,0,.04),inset 0 0 6px rgba(255,140,60,.03)}
 50%{box-shadow:inset 0 0 18px rgba(255,102,0,.08),inset 0 0 10px rgba(255,140,60,.05)}
 }
-#settings,#ttydCustomize{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity var(--de);z-index:40}
-body.settings-open #settings{opacity:1;pointer-events:auto}
+#ttydCustomize{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity var(--de);z-index:40}
 body.ttyd-customize-open #ttydCustomize{opacity:1;pointer-events:auto}
-#settings,#settings *,#ttydCustomize,#ttydCustomize *{user-select:text;-webkit-user-select:text}
-#settings .ib,#settings .btn2,#settings .btn3,#settings .dd-btn,#settings .dd-item,#ttydCustomize .ib,#ttydCustomize .btn2,#ttydCustomize .btn3{user-select:none;-webkit-user-select:none}
+#ttydCustomize,#ttydCustomize *{user-select:text;-webkit-user-select:text}
+#ttydCustomize .ib,#ttydCustomize .btn2,#ttydCustomize .btn3{user-select:none;-webkit-user-select:none}
+.connections-panel,#connectionsPanel *,#ttydCustomize,#ttydCustomize *{user-select:text;-webkit-user-select:text}
+.connections-panel .ib,.connections-panel .btn2,.connections-panel .btn3,.connections-panel .dd-btn,.connections-panel .dd-item{user-select:none;-webkit-user-select:none}
 .sbg{position:absolute;inset:0;background:rgba(0,0,0,.45)}
 .sd{position:absolute;top:calc(14px * var(--ui));right:calc(14px * var(--ui));bottom:calc(14px * var(--ui));left:calc(14px * var(--ui));max-width:min(560px,100%);margin-left:auto;background:var(--panel2);border:1px solid rgba(255,102,0,.28);border-radius:calc(18px * var(--ui));display:flex;flex-direction:column}
 .sh{padding:calc(14px * var(--ui)) calc(16px * var(--ui)) calc(12px * var(--ui));border-bottom:1px solid rgba(255,102,0,.15);display:flex;justify-content:space-between;align-items:center}
@@ -356,6 +376,7 @@ body.ttyd-customize-open #ttydCustomize{opacity:1;pointer-events:auto}
 .sbt2{margin-top:calc(3px * var(--ui));font-size:calc(11px * var(--ui));color:var(--muted)}
 .sbody{flex:1;overflow:auto;padding:calc(14px * var(--ui)) calc(16px * var(--ui));display:grid;gap:calc(12px * var(--ui))}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:calc(10px * var(--ui))}
+#inlineApiSetup .row{grid-template-columns:1fr}
 .fld{display:grid;gap:calc(6px * var(--ui))}
 .fld label{font-size:calc(11px * var(--ui));color:var(--muted)}
 .ctl{width:100%;min-height:calc(40px * var(--ui));border:1px solid rgba(255,102,0,.22);border-radius:calc(10px * var(--ui));background:#1b2d45;color:var(--text);font-size:calc(13px * var(--ui));padding:calc(8px * var(--ui)) calc(10px * var(--ui));outline:none}
@@ -400,26 +421,153 @@ body[data-theme="light"] .api-setup-box{background:#FFF8F0;border-color:#E9B889}
 .stab-x:hover{color:#ff7a59;background:rgba(255,255,255,.08)}
 .stab-add{flex-shrink:0;width:calc(32px * var(--ui));height:calc(32px * var(--ui));padding:0;border-radius:calc(10px * var(--ui));border:1px dashed rgba(255,102,0,.35);background:transparent;color:var(--orange);cursor:pointer;font-size:calc(18px * var(--ui));font-weight:600;line-height:1;display:flex;align-items:center;justify-content:center}
 .stab-add:hover{background:rgba(255,102,0,.08)}
-.agent-nav-wrap{flex-shrink:0;border-bottom:1px solid rgba(255,102,0,.12);background:rgba(0,0,0,.12)}
-.agent-strip{display:flex;flex-wrap:nowrap;align-items:center;gap:calc(8px * var(--ui));padding:calc(8px * var(--ui)) calc(10px * var(--ui));overflow-x:auto;flex-shrink:0}
-.agent-strip::-webkit-scrollbar{height:calc(4px * var(--ui))}
-.agent-avatar{position:relative;flex-shrink:0;width:calc(36px * var(--ui));height:calc(36px * var(--ui));padding:calc(2px * var(--ui));border-radius:50%;border:2px solid transparent;background:transparent;cursor:pointer;transition:border-color var(--de),transform var(--de)}
-.agent-avatar:hover{border-color:rgba(255,102,0,.35);transform:scale(1.04)}
-.agent-avatar.active{border-color:rgba(255,102,0,.65);box-shadow:0 0 0 1px rgba(255,102,0,.25)}
+/* ── Discord 式三栏：节点总线 / 任务栏 / 主视口 ── */
+.chat-shell{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
+.node-rail{flex-shrink:0;width:calc(52px * var(--ui));display:flex;flex-direction:column;align-items:center;border-right:1px solid rgba(255,102,0,.14);background:rgba(0,0,0,.18);position:relative;z-index:30}
+.node-rail-list,.agent-strip{display:flex;flex-direction:column;align-items:center;gap:calc(6px * var(--ui));padding:calc(8px * var(--ui)) calc(4px * var(--ui));flex:1;min-height:0;width:100%;overflow-y:auto;overflow-x:hidden}
+.node-rail-list::-webkit-scrollbar,.thread-list::-webkit-scrollbar{width:0;height:0}
+.node-rail-gear{flex-shrink:0;width:calc(40px * var(--ui));height:calc(40px * var(--ui));margin:calc(4px * var(--ui)) calc(6px * var(--ui)) calc(8px * var(--ui));border-radius:calc(12px * var(--ui));border:1px solid rgba(255,102,0,.22);background:rgba(255,255,255,.04);color:var(--orange);cursor:pointer;font-size:calc(18px * var(--ui));line-height:1;display:flex;align-items:center;justify-content:center;transition:box-shadow var(--de),border-color var(--de),background var(--de);position:relative;z-index:2}
+.node-rail-gear:hover{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.45)}
+body.connections-open .node-rail-gear{border-color:rgba(255,102,0,.65);box-shadow:0 0 12px rgba(255,102,0,.35);background:rgba(255,102,0,.14)}
+.agent-avatar-wrap{position:relative;display:flex;flex-direction:column;align-items:center;gap:calc(2px * var(--ui))}
+.agent-avatar{position:relative;flex-shrink:0;width:calc(40px * var(--ui));height:calc(40px * var(--ui));padding:calc(2px * var(--ui));border-radius:50%;border:2px solid transparent;background:transparent;cursor:pointer;transition:border-color var(--de),transform var(--de),box-shadow var(--de)}
+.agent-avatar:hover{border-color:rgba(255,102,0,.35);transform:scale(1.05)}
+.agent-avatar.active{border-color:rgba(255,102,0,.65);box-shadow:0 0 10px rgba(255,102,0,.28)}
+.agent-avatar.node-fade-in{animation:node-fade-in .32s ease-out}
 .agent-avatar-ico{display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:rgba(0,0,0,.28);overflow:hidden}
 .agent-avatar-ico img{width:calc(22px * var(--ui));height:calc(22px * var(--ui));object-fit:contain;display:block}
 .agent-status-dot{position:absolute;bottom:0;right:0;width:calc(10px * var(--ui));height:calc(10px * var(--ui));border-radius:50%;border:2px solid rgba(8,8,10,.95);pointer-events:none}
 .agent-status-dot.ready{background:#22c55e}
-.agent-status-dot.thinking{background:#a855f7;animation:agent-pulse 1.2s ease-in-out infinite}
+.agent-status-dot.running{background:#22c55e;animation:node-pulse-green 1.4s ease-in-out infinite}
+.agent-status-dot.thinking{background:#a855f7;animation:node-spin-breathe 1.2s linear infinite}
 .agent-status-dot.needSetup{background:#94a3b8}
 .agent-status-dot.cli{background:#64748b}
-.agent-thread-badge{position:absolute;top:-2px;right:-2px;min-width:calc(14px * var(--ui));height:calc(14px * var(--ui));padding:0 calc(3px * var(--ui));border-radius:99px;background:var(--orange);color:#111;font-size:calc(9px * var(--ui));font-weight:700;line-height:calc(14px * var(--ui));text-align:center;pointer-events:none}
-.agent-add{flex-shrink:0;width:calc(34px * var(--ui));height:calc(34px * var(--ui));border-radius:50%;border:1px dashed rgba(255,102,0,.4);background:transparent;color:var(--orange);cursor:pointer;font-size:calc(18px * var(--ui));font-weight:600;line-height:1;display:flex;align-items:center;justify-content:center}
+.agent-avatar-remove{position:absolute;top:-4px;right:-4px;width:calc(14px * var(--ui));height:calc(14px * var(--ui));border:none;border-radius:50%;background:rgba(0,0,0,.75);color:var(--muted);font-size:calc(10px * var(--ui));line-height:1;cursor:pointer;opacity:0;transition:opacity var(--de);padding:0}
+.agent-avatar-wrap:hover .agent-avatar-remove{opacity:1}
+.agent-add{flex-shrink:0;width:calc(36px * var(--ui));height:calc(36px * var(--ui));border-radius:50%;border:1px dashed rgba(255,102,0,.4);background:transparent;color:var(--orange);cursor:pointer;font-size:calc(16px * var(--ui));font-weight:600;line-height:1;display:flex;align-items:center;justify-content:center}
 .agent-add:hover{background:rgba(255,102,0,.1)}
-.agent-context-bar{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--ui));padding:calc(4px * var(--ui)) calc(10px * var(--ui)) calc(8px * var(--ui));font-size:calc(11px * var(--ui));color:var(--muted)}
-.agent-context-label{font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.agent-context-new{flex-shrink:0;padding:calc(3px * var(--ui)) calc(8px * var(--ui));font-size:calc(10px * var(--ui))}
-.agent-context-left{display:flex;align-items:center;gap:calc(8px * var(--ui));min-width:0;flex:1}
+/* ── Thread Panel Drawer：主视口内嵌神经中枢 ── */
+.main-viewport{flex:1;min-width:calc(360px * var(--ui));min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.th-viewport-head{flex-shrink:0;display:flex;flex-direction:column;gap:calc(6px * var(--ui));z-index:22;position:relative;padding-top:calc(8px * var(--ui))}
+.th-viewport-body{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.th-panel-trigger{flex-shrink:0;display:flex;align-items:center;gap:calc(8px * var(--ui));margin:0 calc(10px * var(--ui));padding:calc(10px * var(--ui)) calc(14px * var(--ui));border:1px solid rgba(0,229,255,.28);border-radius:calc(12px * var(--ui));background:rgba(13,13,17,.78);backdrop-filter:blur(12px);color:var(--text);cursor:pointer;text-align:left;transition:border-color .2s,box-shadow .2s,background .2s;z-index:12;position:relative;width:calc(100% - calc(20px * var(--ui)));box-sizing:border-box}
+.th-panel-trigger:hover{border-color:rgba(0,255,102,.45);box-shadow:0 0 16px rgba(0,255,102,.12)}
+.th-panel-trigger[aria-expanded="true"]{border-color:rgba(0,229,255,.55);box-shadow:0 0 20px rgba(0,229,255,.15);background:rgba(13,13,17,.92)}
+.th-panel-trigger-ico{font-size:calc(16px * var(--ui));color:#00E5FF;flex-shrink:0}
+.th-panel-status-dot{flex-shrink:0;width:calc(10px * var(--ui));height:calc(10px * var(--ui));border-radius:50%;border:2px solid rgba(8,8,10,.95);background:#22c55e}
+.th-panel-status-dot.running{background:#22c55e;animation:node-pulse-green 1.4s ease-in-out infinite}
+.th-panel-status-dot.thinking{background:#a855f7;animation:node-spin-breathe 1.2s linear infinite}
+.th-panel-status-dot.needSetup{background:#94a3b8}
+.th-panel-status-dot.cli{background:#64748b}
+.th-panel-trigger-label{font-size:calc(13px * var(--ui));font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.th-panel-trigger-status{font-size:calc(10px * var(--ui));font-weight:600;flex-shrink:0;padding:calc(2px * var(--ui)) calc(8px * var(--ui));border-radius:999px;background:rgba(255,255,255,.06);color:var(--muted)}
+.th-panel-trigger-status.status-running,.th-panel-trigger-status.status-thinking{color:#4ade80;background:rgba(34,197,94,.12)}
+.th-panel-trigger-status.status-needSetup{color:#94a3b8}
+.th-panel-trigger-meta{font-size:calc(11px * var(--ui));color:var(--muted);flex-shrink:0}
+.th-viewmode-bar{margin:0 calc(10px * var(--ui)) calc(4px * var(--ui));align-self:flex-start}
+.th-panel-backdrop{position:absolute;inset:0;z-index:18;background:rgba(0,0,0,.4);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .28s cubic-bezier(.16,1,.3,1)}
+.th-panel-backdrop:not([hidden]){opacity:1;pointer-events:auto}
+.th-panel-drawer{--th-bg:rgba(13,13,17,.94);--th-neon-green:#00FF66;--th-cyber-orange:#FF5500;--th-tech-blue:#00E5FF;position:absolute;top:0;left:0;bottom:0;width:85%;max-width:100%;z-index:20;display:flex;flex-direction:column;background:var(--th-bg);backdrop-filter:blur(12px);border-right:1px solid rgba(0,229,255,.22);box-shadow:calc(12px * var(--ui)) 0 calc(40px * var(--ui)) rgba(0,0,0,.5);transform:translateX(-100%);visibility:hidden;pointer-events:none;transition:transform .28s cubic-bezier(.16,1,.3,1),visibility .28s,box-shadow .28s}
+.th-panel-drawer[data-state="open"]{transform:translateX(0);visibility:visible;pointer-events:auto}
+.th-panel-drawer-head{display:flex;align-items:center;justify-content:space-between;gap:calc(10px * var(--ui));padding:calc(12px * var(--ui)) calc(14px * var(--ui));border-bottom:1px solid rgba(0,229,255,.12);flex-shrink:0}
+.th-panel-drawer-title{font-size:calc(14px * var(--ui));font-weight:700;color:var(--th-tech-blue)}
+.th-panel-close{width:calc(34px * var(--ui));height:calc(34px * var(--ui));border:1px solid rgba(255,85,0,.35);border-radius:calc(10px * var(--ui));background:rgba(255,85,0,.08);color:var(--th-cyber-orange);cursor:pointer;font-size:calc(18px * var(--ui));line-height:1;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.th-panel-close:hover{background:rgba(255,85,0,.18)}
+.th-commander{flex-shrink:0;border-bottom:1px solid rgba(0,229,255,.1);padding:calc(10px * var(--ui)) calc(14px * var(--ui))}
+.th-node-chip{display:flex;align-items:center;gap:calc(10px * var(--ui));min-width:0}
+.th-node-ico-wrap{flex-shrink:0;width:calc(36px * var(--ui));height:calc(36px * var(--ui));display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(0,0,0,.35);border:1px solid rgba(0,229,255,.25)}
+.th-node-ico{width:calc(22px * var(--ui));height:calc(22px * var(--ui));object-fit:contain;display:block}
+.th-node-label{font-size:calc(13px * var(--ui));font-weight:700;color:var(--text);flex:1;min-width:0}
+.th-gear{flex-shrink:0;width:calc(32px * var(--ui));height:calc(32px * var(--ui));border:1px solid rgba(255,85,0,.35);border-radius:calc(8px * var(--ui));background:rgba(255,85,0,.08);color:var(--th-cyber-orange);cursor:pointer;font-size:calc(14px * var(--ui));line-height:1;padding:0;display:flex;align-items:center;justify-content:center}
+.th-gear:hover,.th-gear[aria-expanded="true"]{background:rgba(255,85,0,.18);box-shadow:0 0 10px rgba(255,85,0,.25)}
+.th-accordion{display:grid;gap:calc(10px * var(--ui));padding:calc(8px * var(--ui)) calc(14px * var(--ui)) calc(12px * var(--ui));border-top:1px solid rgba(0,229,255,.08);animation:th-acc-in .22s ease-out}
+.th-accordion[hidden]{display:none!important}
+.th-acc-field{display:grid;gap:calc(6px * var(--ui))}
+.th-acc-field label{font-size:calc(11px * var(--ui));color:var(--muted)}
+.th-acc-field .ctl{min-height:calc(40px * var(--ui));font-size:calc(12px * var(--ui));padding:calc(8px * var(--ui)) calc(10px * var(--ui))}
+.th-range{width:100%;accent-color:var(--th-cyber-orange)}
+.th-tree{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:calc(10px * var(--ui)) calc(12px * var(--ui));display:flex;flex-direction:column;gap:calc(6px * var(--ui));outline:none}
+.th-tree:focus{box-shadow:inset 0 0 0 1px rgba(0,229,255,.35)}
+.th-group{display:flex;flex-direction:column;gap:calc(4px * var(--ui))}
+.th-group-head{display:flex;align-items:center;gap:calc(8px * var(--ui));width:100%;padding:calc(8px * var(--ui)) calc(10px * var(--ui));border:none;border-radius:calc(8px * var(--ui));background:transparent;color:var(--muted);cursor:pointer;font-size:calc(12px * var(--ui));text-align:left}
+.th-group-head:hover{background:rgba(0,229,255,.08)}
+.th-group-ico{flex-shrink:0;width:calc(26px * var(--ui));height:calc(26px * var(--ui));display:flex;align-items:center;justify-content:center;font-size:calc(14px * var(--ui))}
+.th-group-label{font-size:calc(12px * var(--ui));font-weight:600;flex:1;min-width:0}
+.th-group-chev{flex-shrink:0;font-size:calc(10px * var(--ui));transition:transform .2s ease;color:var(--th-tech-blue)}
+.th-group.is-collapsed .th-group-chev{transform:rotate(-90deg)}
+.th-group.is-collapsed .th-group-body{display:none}
+.th-group-body{display:flex;flex-direction:column;gap:calc(4px * var(--ui));padding-left:calc(8px * var(--ui))}
+.th-thread,.th-dr-thread{display:flex;align-items:center;gap:calc(10px * var(--ui));width:100%;text-align:left;padding:calc(10px * var(--ui)) calc(12px * var(--ui));border:none;border-left:3px solid transparent;border-radius:calc(8px * var(--ui));background:transparent;color:var(--text);cursor:pointer;font-size:calc(12px * var(--ui));line-height:1.4;transition:background .15s,border-color .15s,opacity .35s,transform .35s}
+.th-thread:hover,.th-dr-thread:hover{background:rgba(0,255,102,.08)}
+.th-thread.active,.th-dr-thread.active{border-left-color:var(--th-cyber-orange);background:linear-gradient(90deg,rgba(255,85,0,.16),rgba(255,85,0,.04));box-shadow:0 0 10px rgba(255,85,0,.12)}
+.th-thread.is-removing,.th-dr-thread.is-removing{animation:th-fade-particles .35s ease-out forwards;pointer-events:none}
+.th-thread-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:calc(3px * var(--ui))}
+.th-thread-title{font-weight:600;font-size:calc(13px * var(--ui));line-height:1.35;word-break:break-word}
+.th-thread-sub{font-size:calc(11px * var(--ui));color:var(--muted)}
+.th-thread-ico{flex-shrink:0;width:calc(28px * var(--ui));height:calc(28px * var(--ui));display:flex;align-items:center;justify-content:center;font-size:calc(14px * var(--ui))}
+.th-badge{flex-shrink:0;display:flex;align-items:center;gap:calc(6px * var(--ui));padding:calc(4px * var(--ui)) calc(10px * var(--ui));border-radius:calc(6px * var(--ui));font-size:calc(10px * var(--ui));font-weight:700;line-height:1.2;border:1px solid transparent}
+.th-badge-dot{width:calc(8px * var(--ui));height:calc(8px * var(--ui));border-radius:50%;flex-shrink:0}
+.badge-running .th-badge-dot{background:var(--th-neon-green);animation:th-pulse-green 1.4s ease-in-out infinite}
+.badge-running{border-color:rgba(0,255,102,.4);color:var(--th-neon-green);text-shadow:0 0 8px rgba(0,255,102,.35)}
+.badge-idle .th-badge-dot{background:#64748b}
+.badge-idle{border-color:rgba(100,116,139,.35);color:#94a3b8}
+.badge-error .th-badge-dot{background:#ff2244;animation:th-error-blink .8s ease-in-out infinite}
+.badge-error{border-color:rgba(255,34,68,.5);color:#ff4466;text-shadow:0 0 8px rgba(255,34,68,.35)}
+.badge-locked .th-badge-dot{background:var(--th-tech-blue)}
+.badge-locked{border-color:rgba(0,229,255,.4);color:var(--th-tech-blue);text-shadow:0 0 8px rgba(0,229,255,.3)}
+.badge-stashed .th-badge-dot{background:#a855f7}
+.badge-stashed{border-color:rgba(168,85,247,.4);color:#c084fc}
+.th-actions{display:flex;gap:calc(6px * var(--ui));flex-shrink:0}
+.th-act-btn{width:calc(32px * var(--ui));height:calc(32px * var(--ui));border:1px solid rgba(255,255,255,.08);border-radius:calc(8px * var(--ui));background:rgba(255,255,255,.04);color:var(--muted);cursor:pointer;font-size:calc(14px * var(--ui));line-height:1;padding:0;display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s,color .15s}
+.th-act-btn:hover{background:rgba(0,229,255,.14);border-color:rgba(0,229,255,.35);color:var(--th-tech-blue)}
+.th-foot{flex-shrink:0;display:flex;flex-direction:column;gap:calc(8px * var(--ui));padding:calc(10px * var(--ui)) calc(12px * var(--ui));border-top:1px solid rgba(0,229,255,.12)}
+.th-new-btn,.thread-rail-new{width:100%;text-align:center;padding:calc(10px * var(--ui));border-radius:calc(10px * var(--ui));border:1px solid rgba(255,85,0,.45);background:rgba(255,85,0,.12);color:var(--th-cyber-orange);font-size:calc(13px * var(--ui));font-weight:700;cursor:pointer;line-height:1.3}
+.th-new-btn:hover,.thread-rail-new:hover{background:rgba(255,85,0,.22);box-shadow:0 0 12px rgba(255,85,0,.25)}
+.th-preview{position:fixed;z-index:9050;width:calc(280px * var(--ui));padding:calc(14px * var(--ui));border:1px solid rgba(0,229,255,.4);border-radius:calc(12px * var(--ui));background:rgba(13,13,17,.94);backdrop-filter:blur(12px);box-shadow:0 12px 32px rgba(0,0,0,.55);pointer-events:none;font-size:calc(11px * var(--ui));line-height:1.5;color:var(--text)}
+.th-preview-title{font-weight:700;color:var(--th-tech-blue);margin-bottom:calc(8px * var(--ui));font-size:calc(13px * var(--ui))}
+.th-preview-line{color:var(--muted);margin:calc(4px * var(--ui)) 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.th-token-bar{margin-top:calc(10px * var(--ui));height:calc(6px * var(--ui));border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.th-token-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--th-tech-blue),var(--th-neon-green));transition:width .3s ease}
+.th-preview-meta{margin-top:calc(8px * var(--ui));font-size:calc(10px * var(--ui));color:var(--muted)}
+.th-trigger-preview{position:fixed;z-index:9060;max-width:calc(320px * var(--ui));max-height:calc(360px * var(--ui));overflow:auto;padding:calc(12px * var(--ui));border:1px solid rgba(0,229,255,.4);border-radius:calc(12px * var(--ui));background:rgba(13,13,17,.96);backdrop-filter:blur(12px);box-shadow:0 12px 32px rgba(0,0,0,.55);pointer-events:none;font-size:calc(11px * var(--ui));line-height:1.5;color:var(--text)}
+.th-trigger-preview-head{font-weight:700;color:var(--th-tech-blue);margin-bottom:calc(10px * var(--ui));font-size:calc(12px * var(--ui));padding-bottom:calc(8px * var(--ui));border-bottom:1px solid rgba(0,229,255,.15)}
+.th-trigger-preview-item{padding:calc(8px * var(--ui)) 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.th-trigger-preview-item:last-child{border-bottom:none;padding-bottom:0}
+.th-trigger-preview-item.active{background:rgba(0,229,255,.06);margin:0 calc(-8px * var(--ui));padding-left:calc(8px * var(--ui));padding-right:calc(8px * var(--ui));border-radius:calc(8px * var(--ui))}
+.th-trigger-preview-item-title{font-weight:600;color:var(--text);margin-bottom:calc(4px * var(--ui));display:flex;align-items:center;gap:calc(6px * var(--ui));flex-wrap:wrap}
+.th-mini-badge{font-size:calc(9px * var(--ui));font-weight:600;padding:calc(1px * var(--ui)) calc(6px * var(--ui));border-radius:999px;background:rgba(255,255,255,.08);color:var(--muted)}
+@keyframes th-pulse-green{0%,100%{opacity:1;box-shadow:0 0 4px var(--th-neon-green)}50%{opacity:.65;box-shadow:0 0 12px var(--th-neon-green)}}
+@keyframes th-error-blink{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes th-acc-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes th-fade-particles{0%{opacity:1;transform:scale(1) translateX(0);filter:blur(0)}100%{opacity:0;transform:scale(.9) translateX(24px);filter:blur(3px)}}
+body.connections-open .th-viewport-head,body.connections-open .th-panel-backdrop,body.connections-open .th-panel-drawer{display:none!important}
+body[data-theme="light"] .th-panel-drawer,body[data-theme="light"] .th-panel-trigger{background:rgba(13,13,17,.94)}
+.connections-panel{flex:1;min-height:0;display:none;grid-template-columns:calc(160px * var(--ui)) 1fr;overflow:hidden;background:var(--panel2);animation:conn-panel-in .28s ease-out}
+body.connections-open .connections-panel{display:grid}
+body.connections-open #main{display:none!important}
+.conn-nav{display:flex;flex-direction:column;min-height:0;border-right:1px solid rgba(255,102,0,.12);background:rgba(0,0,0,.12);padding:calc(8px * var(--ui))}
+.conn-nav-add{width:100%;margin-bottom:calc(8px * var(--ui));padding:calc(8px * var(--ui));border-radius:calc(8px * var(--ui));border:1px dashed rgba(255,102,0,.4);background:rgba(255,102,0,.06);color:var(--orange);font-size:calc(10px * var(--ui));font-weight:700;cursor:pointer;line-height:1.35;text-align:center}
+.conn-nav-add:hover{background:rgba(255,102,0,.14)}
+.conn-nav-list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:calc(4px * var(--ui))}
+.conn-nav-item{display:flex;align-items:center;gap:calc(6px * var(--ui));width:100%;padding:calc(6px * var(--ui)) calc(8px * var(--ui));border:none;border-radius:calc(8px * var(--ui));background:transparent;color:var(--text);cursor:pointer;font-size:calc(11px * var(--ui));text-align:left}
+.conn-nav-item:hover{background:rgba(255,102,0,.1)}
+.conn-nav-item.active{background:rgba(255,102,0,.16);color:var(--orange);font-weight:600}
+.conn-nav-item-ico{width:calc(22px * var(--ui));height:calc(22px * var(--ui));flex-shrink:0;object-fit:contain}
+.conn-form-wrap{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.conn-form-wrap .sbody{flex:1;overflow:auto}
+.conn-form-head{padding:calc(12px * var(--ui)) calc(14px * var(--ui));border-bottom:1px solid rgba(255,102,0,.12);display:flex;justify-content:space-between;align-items:flex-start;gap:calc(8px * var(--ui));flex-shrink:0}
+.conn-form-title{font-size:calc(14px * var(--ui));font-weight:700}
+.conn-form-sub{margin-top:calc(2px * var(--ui));font-size:calc(10px * var(--ui));color:var(--muted)}
+.conn-node-fields{display:grid;gap:calc(10px * var(--ui));padding-bottom:calc(4px * var(--ui));border-bottom:1px solid rgba(255,102,0,.1);margin-bottom:calc(4px * var(--ui))}
+.pwd-toggle-wrap{position:relative;display:flex;align-items:center}
+.pwd-toggle-wrap .ctl{padding-right:calc(36px * var(--ui))}
+.pwd-toggle-btn{position:absolute;right:calc(6px * var(--ui));top:50%;transform:translateY(-50%);border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:calc(14px * var(--ui));padding:calc(4px * var(--ui));line-height:1;border-radius:calc(4px * var(--ui))}
+.pwd-toggle-btn:hover{color:var(--orange)}
+@keyframes node-fade-in{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@keyframes node-pulse-green{0%,100%{box-shadow:0 0 4px rgba(34,197,94,.5)}50%{box-shadow:0 0 14px rgba(74,222,128,.85)}}
+@keyframes node-spin-breathe{0%{transform:scale(1) rotate(0deg);opacity:1}50%{transform:scale(1.15) rotate(180deg);opacity:.85}100%{transform:scale(1) rotate(360deg);opacity:1}}
+@keyframes conn-panel-in{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
+@keyframes agent-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.65;transform:scale(1.15)}}
 .view-mode-toggle{display:flex;flex-shrink:0;border:1px solid rgba(255,102,0,.22);border-radius:calc(8px * var(--ui));overflow:hidden}
 .view-mode-toggle button{border:none;background:transparent;color:var(--muted);padding:calc(3px * var(--ui)) calc(10px * var(--ui));font-size:calc(10px * var(--ui));cursor:pointer;line-height:1.4}
 .view-mode-toggle button.active{background:rgba(255,102,0,.18);color:var(--orange);font-weight:600}
@@ -429,8 +577,7 @@ body[data-theme="light"] .api-setup-box{background:#FFF8F0;border-color:#E9B889}
 body.view-control #viewportControl{display:flex}
 body.view-control:not(.cli-mode) #viewportChat{display:none!important}
 body.view-control.cli-mode #viewportControl{display:none!important}
-body.view-control.cli-mode #cliPane{display:flex!important;flex-direction:column}
-body.view-control.cli-mode #msgs,body.view-control.cli-mode #cmp{display:none!important}
+body.view-control.cli-mode #msgs{display:none!important}
 .control-card{padding:calc(12px * var(--ui));border:1px solid rgba(255,102,0,.18);border-radius:calc(12px * var(--ui));background:rgba(255,255,255,.03);display:flex;flex-direction:column;gap:calc(6px * var(--ui))}
 .control-card-title{font-size:calc(12px * var(--ui));font-weight:700;color:var(--text)}
 .control-card-desc{font-size:calc(10px * var(--ui));color:var(--muted);line-height:1.45}
@@ -577,7 +724,7 @@ body.node-config-open #nodeConfigDisk{transform:translateY(0)}
 #newSessionPick{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity var(--de);z-index:42;overflow:hidden}
 body.nspick-open #newSessionPick{opacity:1;pointer-events:auto}
 #newSessionPick .nsbg{display:none}
-#newSessionPick .ns-panel.ns-slide-panel{position:absolute;top:0;right:0;bottom:0;left:auto;width:min(calc(290px * var(--ui)),88%);max-height:none;transform:translateX(100%);transition:transform var(--de);border-radius:0;border-top:none;border-bottom:none;border-right:none;box-shadow:-8px 0 28px rgba(0,0,0,.35)}
+#newSessionPick .ns-panel.ns-slide-panel{position:absolute;top:0;right:0;bottom:0;left:auto;width:min(calc(320px * var(--ui)),92%);max-height:none;transform:translateX(100%);transition:transform var(--de);border-radius:0;border-top:none;border-bottom:none;border-right:none;box-shadow:-8px 0 28px rgba(0,0,0,.35)}
 body.nspick-open #newSessionPick .ns-slide-panel{transform:translateX(0)}
 .debug-hud{display:none;width:100%;flex-shrink:0;max-height:calc(52px * var(--ui));overflow:auto;box-sizing:border-box;padding:calc(4px * var(--ui)) calc(8px * var(--ui));border:1px solid rgba(255,102,0,.14);border-radius:calc(8px * var(--ui));background:rgba(0,0,0,.2);font:calc(10px * var(--ui))/1.4 "AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;color:var(--muted);pointer-events:none}
 .debug-hud .row{display:block;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -590,7 +737,18 @@ body[data-theme="light"] .debug-hud{background:rgba(255,255,255,.55);border-colo
 .nsh{padding:calc(12px * var(--ui)) calc(14px * var(--ui));border-bottom:1px solid rgba(255,102,0,.15);display:flex;justify-content:space-between;align-items:flex-start;gap:calc(10px * var(--ui))}
 .nst{font-size:calc(14px * var(--ui));font-weight:700}
 .nst2{font-size:calc(11px * var(--ui));color:var(--muted);margin-top:calc(3px * var(--ui))}
-.ns-grid{flex:1;overflow:auto;padding:calc(12px * var(--ui));display:grid;grid-template-columns:1fr 1fr;gap:calc(8px * var(--ui))}
+.ns-grid{flex:1;overflow:auto;padding:calc(12px * var(--ui));display:flex;flex-direction:column;gap:calc(8px * var(--ui))}
+.ns-group{border:1px solid rgba(255,102,0,.18);border-radius:calc(12px * var(--ui));background:rgba(255,255,255,.03);overflow:hidden}
+.ns-group-head{display:flex;align-items:center;gap:calc(10px * var(--ui));padding:calc(10px * var(--ui)) calc(12px * var(--ui));border-bottom:1px solid rgba(255,255,255,.06)}
+.ns-group-head .stab-ico{width:calc(32px * var(--ui));height:calc(32px * var(--ui));border-radius:calc(10px * var(--ui));padding:calc(3px * var(--ui));flex-shrink:0}
+.ns-group-head .stab-ico img{width:calc(22px * var(--ui));height:calc(22px * var(--ui))}
+.ns-group-label{font-size:calc(12px * var(--ui));font-weight:700;flex:1;min-width:0;line-height:1.3}
+.ns-group-hint{font-size:calc(10px * var(--ui));color:var(--muted);padding:0 calc(12px * var(--ui)) calc(8px * var(--ui));line-height:1.4}
+.ns-mode-row{display:flex;gap:calc(6px * var(--ui));padding:calc(8px * var(--ui)) calc(10px * var(--ui)) calc(10px * var(--ui))}
+.ns-mode-btn{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:calc(4px * var(--ui));padding:calc(8px * var(--ui)) calc(6px * var(--ui));border:1px solid rgba(255,102,0,.22);border-radius:calc(10px * var(--ui));background:rgba(255,255,255,.04);color:var(--text);font-size:calc(11px * var(--ui));font-weight:600;cursor:pointer;line-height:1.25}
+.ns-mode-btn:hover{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.45)}
+.ns-mode-btn.ns-mode-cli{border-color:rgba(0,229,255,.28);color:#b8f0ff}
+.ns-mode-btn.ns-mode-cli:hover{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.45)}
 .ns-item{display:flex;flex-direction:column;align-items:center;gap:calc(6px * var(--ui));padding:calc(10px * var(--ui)) calc(6px * var(--ui));border:1px solid rgba(255,102,0,.2);border-radius:calc(12px * var(--ui));background:rgba(255,255,255,.04);cursor:pointer;color:var(--text)}
 .ns-item:hover{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.45)}
 .ns-item .stab-ico{width:calc(40px * var(--ui));height:calc(40px * var(--ui));border-radius:calc(12px * var(--ui));padding:calc(4px * var(--ui))}
@@ -627,7 +785,7 @@ body[data-theme="light"]{--toolbar-bg:#F7F7F7;--panel:rgba(255,255,255,.96);--pa
 body[data-theme="light"] #panel,body[data-theme="light"] .sd,body[data-theme="light"] .ns-panel{border-color:#E5E5E5;box-shadow:-10px 0 24px rgba(0,0,0,.08)}
 body[data-theme="light"] #collapsedRoot{border:1px solid #D6D6D6;box-shadow:0 4px 14px rgba(0,0,0,.12),0 0 0 1px rgba(255,255,255,.9) inset}
 body[data-theme="light"] #resizeGrip{background:linear-gradient(90deg,rgba(230,126,34,.2),transparent)}
-body[data-theme="light"] .hdr,body[data-theme="light"] .sh,body[data-theme="light"] .sf,body[data-theme="light"] .session-tabs,body[data-theme="light"] .agent-nav-wrap,body[data-theme="light"] #cmp{border-color:#E5E5E5;background:rgba(255,255,255,.9)}
+body[data-theme="light"] .hdr,body[data-theme="light"] .sh,body[data-theme="light"] .sf,body[data-theme="light"] .session-tabs,body[data-theme="light"] .node-rail,body[data-theme="light"] #cmp{border-color:#E5E5E5;background:rgba(255,255,255,.9)}
 body[data-theme="light"] .ib,body[data-theme="light"] .btn2,body[data-theme="light"] .btn3,body[data-theme="light"] .stab,body[data-theme="light"] .ns-item,body[data-theme="light"] .thread-popover-item{border-color:#E5E5E5;background:#FFFFFF;color:var(--text)}
 body[data-theme="light"] .agent-avatar-ico{background:#F5F5F5}
 body[data-theme="light"] .agent-avatar:hover,body[data-theme="light"] .agent-avatar.active{border-color:#D35400}
@@ -693,29 +851,124 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <div class="icons">
 <button class="ib" id="chat-mobile-browser" type="button" title="手机浏览器（右侧顶栏）" aria-label="手机浏览器">🌐</button>
 <button class="ib" id="chat-search" type="button" title="搜索聊天记录" aria-label="搜索聊天记录"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
-<button class="ib" id="chat-api-quick" type="button" title="节点配置（API Key）" aria-label="节点配置">API</button>
-<button class="ib" id="chat-settings" type="button" title="打开设置" aria-label="打开设置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.82-.33 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.82.33l-.06.06A2 2 0 1 1 4.37 17l.06-.06a1.7 1.7 0 0 0 .33-1.82 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.03 4.4l.06.06a1.7 1.7 0 0 0 1.82.33h.01a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.5h.01a1.7 1.7 0 0 0 1.82-.33l.06-.06A2 2 0 1 1 19.63 7l-.06.06a1.7 1.7 0 0 0-.33 1.82v.01a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 <button class="ib" id="drawer-close" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 </div>
 </header>
-<div class="agent-nav-wrap">
-<div id="agentStrip" class="agent-strip" role="tablist" aria-label="AI 联系人"></div>
-<div id="agentContextBar" class="agent-context-bar">
-<div class="agent-context-left">
-<span id="agentContextLabel" class="agent-context-label"></span>
-<span id="agentContextThread" class="agent-context-thread" hidden></span>
-<button type="button" class="btn3 agent-context-new" id="agentContextNewThread" title="在该联系人下新建话题（空话题不重复创建）">新话题</button>
-</div>
-<div id="viewModeToggle" class="view-mode-toggle" role="group" aria-label="对话或后台" hidden>
+<div id="sessionTabs" class="session-tabs" role="tablist" aria-label="对话标签" hidden aria-hidden="true"></div>
+<div id="chatShell" class="chat-shell">
+<nav id="nodeRail" class="node-rail" aria-label="模型节点">
+<div id="agentStrip" class="node-rail-list" role="tablist" aria-label="AI 联系人"></div>
+<button type="button" id="nodeRailConnections" class="node-rail-gear" title="连接与节点管理" aria-label="连接管理">⚙️</button>
+</nav>
+<div id="mainViewport" class="main-viewport">
+<div class="th-viewport-head">
+<button type="button" id="threadPanelTrigger" class="th-panel-trigger" aria-expanded="false" title="任务神经中枢 · Ctrl+Tab · 悬停预览会话">
+<span class="th-panel-trigger-ico" aria-hidden="true">☰</span>
+<span id="threadPanelStatusDot" class="th-panel-status-dot ready" aria-hidden="true"></span>
+<span id="threadPanelTriggerLabel" class="th-panel-trigger-label">任务神经中枢</span>
+<span id="threadPanelTriggerStatus" class="th-panel-trigger-status status-ready">就绪</span>
+<span id="threadPanelTriggerMeta" class="th-panel-trigger-meta">Ctrl+Tab</span>
+</button>
+<div id="viewModeToggle" class="view-mode-toggle th-viewmode-bar" role="group" aria-label="对话或后台" hidden>
 <button type="button" id="viewModeChat" class="active" title="对话 · 发消息与 @网页 任务">对话</button>
 <button type="button" id="viewModeControl" title="OpenClaw · 后台进度 · Tab 切换">后台</button>
 </div>
 </div>
+<div class="th-viewport-body">
+<div id="threadPanelBackdrop" class="th-panel-backdrop" hidden aria-hidden="true"></div>
+<aside id="threadPanelDrawer" class="th-panel-drawer" data-state="closed" aria-label="任务神经中枢看板" aria-hidden="true">
+<div class="th-panel-drawer-head">
+<span class="th-panel-drawer-title">神经中枢 · 任务看板</span>
+<button type="button" class="th-panel-close" id="threadPanelClose" title="关闭" aria-label="关闭">×</button>
 </div>
-<div id="sessionTabs" class="session-tabs" role="tablist" aria-label="对话标签" hidden aria-hidden="true"></div>
+<header class="th-commander">
+<div class="th-node-chip">
+<span class="th-node-ico-wrap"><img id="thNodeIco" class="th-node-ico" alt="" /></span>
+<span id="threadRailNodeLabel" class="th-node-label">未选择节点</span>
+<button type="button" class="th-gear" id="thGearBtn" aria-expanded="false" title="节点密钥配置" aria-label="节点密钥">⚙</button>
+</div>
+<div class="th-accordion" id="thAccordion" hidden>
+<div class="th-acc-field"><label for="thApiKey">API Key</label><input id="thApiKey" class="ctl" type="password" autocomplete="off" placeholder="sk-…" /></div>
+<div class="th-acc-field"><label for="thBaseUrl">Base URL</label><input id="thBaseUrl" class="ctl" type="text" autocomplete="off" placeholder="留空则默认" /></div>
+<div class="th-acc-field"><label for="thTemperature">Temperature <span id="thTempVal">0.7</span></label><input id="thTemperature" class="th-range" type="range" min="0" max="2" step="0.1" value="0.7" /></div>
+</div>
+</header>
+<div class="th-drawer-body">
+<div id="threadTree" class="th-tree" role="tree" tabindex="0" aria-label="任务树"></div>
+<div id="cliPaneHostDrawer" class="th-cli-host th-cli-host-drawer" aria-hidden="true"></div>
+</div>
+<footer class="th-foot">
+<button type="button" class="th-new-btn thread-rail-new" id="threadRailNew" title="在该联系人下新建终端任务 / 会话">➕ 新建任务</button>
+</footer>
+</aside>
+<section id="connectionsPanel" class="connections-panel" hidden aria-hidden="true" aria-label="连接与节点管理">
+<nav class="conn-nav" id="connNav" aria-label="节点列表">
+<button type="button" class="conn-nav-add" id="connNavAdd">＋ 新建会话</button>
+<div id="connNavList" class="conn-nav-list"></div>
+</nav>
+<div class="conn-form-wrap">
+<header class="conn-form-head">
+<div><div class="conn-form-title" id="nodeConfigTitle">连接管理</div><div class="conn-form-sub" id="nodeConfigSub">选择左侧节点或添加新联系人</div></div>
+<div style="display:flex;gap:calc(6px * var(--ui));flex-shrink:0">
+<button type="button" class="btn2" id="connectionsBack" title="返回对话">← 返回</button>
+<button class="ib" id="settings-close" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</div>
+</header>
+<div class="sbody" id="connectionsFormBody">
+<div class="conn-node-fields">
+<div class="fld" id="nodeConfigLabelRow"><label for="nodeConfigCustomLabel">节点名称</label><input id="nodeConfigCustomLabel" class="ctl" type="text" autocomplete="off" placeholder="例如 Claude-3.5-Sonic" /></div>
+<div class="fld" id="nodeConfigKeyRow"><label for="nodeConfigApiKey" id="nodeConfigKeyLabel">API 密匙</label><div class="pwd-toggle-wrap"><input id="nodeConfigApiKey" class="ctl" type="password" autocomplete="off" placeholder="sk-…" /><button type="button" class="pwd-toggle-btn" id="nodeConfigKeyToggle" title="显示/隐藏密钥" aria-label="显示密钥">👁</button></div></div>
+<div class="fld" id="nodeConfigBaseUrlRow"><label for="nodeConfigBaseUrl">接口端点 (Base URL)</label><input id="nodeConfigBaseUrl" class="ctl" type="text" autocomplete="off" placeholder="留空则按服务商默认" /></div>
+<div class="fld" id="nodeConfigModelRow"><label for="nodeConfigModel">模型</label><input id="nodeConfigModel" class="ctl" type="text" autocomplete="off" placeholder="当前话题模型" /></div>
+<div class="fld" id="nodeConfigOpenClawRow"><label for="nodeConfigOpenClawKey">OpenClaw Gateway Key</label><input id="nodeConfigOpenClawKey" class="ctl" type="text" autocomplete="off" placeholder="agent:main:main" /></div>
+</div>
+<div id="settingsAiHint" class="hint" style="display:none;margin-bottom:10px;padding:10px 12px;border:1px solid rgba(255,102,0,.45);border-radius:10px;background:rgba(255,102,0,.1);line-height:1.5">
+<span id="settingsAiHintText">当前对话标签为「终端」模式，此处请切换到 MiniMax 等 AI 服务商填写 API Key。</span>
+</div>
+<div id="settingsQuick">
+<div class="settings-quick-note">选服务商 → 粘贴 API Key → 选模型 → 点「保存并连接」。高级选项在下方展开。</div>
+<div class="row" id="fldModelPresetRow"><div class="fld fld-dd"><label for="providerDdBtn">服务商</label><div class="dd" id="providerDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="providerDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="providerDdMenu"><img id="providerDdIcon" class="dd-icon" alt="" /><span id="providerDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="providerDdMenu" role="listbox" hidden></div></div><select id="provider" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div><div class="fld fld-dd" id="fldModelDdCol"><label for="modelDdBtn">模型</label><div class="dd" id="modelDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="modelDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="modelDdMenu"><img id="modelDdIcon" class="dd-icon" alt="" /><span id="modelDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="modelDdMenu" role="listbox" hidden></div></div><select id="modelPreset" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div></div>
+<div class="fld"><label for="apiKey" id="apiKeyLabel">API Key</label><div class="pwd-toggle-wrap"><input id="apiKey" class="ctl" type="password" autocomplete="off" placeholder="粘贴 API Key"><button type="button" class="pwd-toggle-btn" id="apiKeyToggle" title="显示/隐藏密钥" aria-label="显示密钥">👁</button></div><div class="hint mini" id="apiKeyKeyHint" style="display:none"></div></div>
+<div class="fld" id="fldModelRow"><label for="model">Model</label><input id="model" class="ctl" type="text" autocomplete="off" placeholder="与上方预设一致或手填"></div>
+<div id="settingsProviderStatus" class="hint mini" style="margin-bottom:8px"></div>
+</div>
+<button type="button" class="btn2 settings-advanced-toggle" id="settingsAdvancedToggle">高级选项 ▾</button>
+<div id="settingsAdvanced" class="settings-advanced" hidden>
+<div class="fld" id="fldTtydShellRow" style="display:none"><label for="ttydShellCommand">终端启动命令（Shell）</label><input id="ttydShellCommand" class="ctl" type="text" spellcheck="false" autocomplete="off" placeholder="cmd.exe" /><div class="hint mini">传给本机 ttyd 的 Shell（如 <code>cmd.exe</code>、<code>powershell</code> 完整路径等）。点「完成」后写入配置并建议重启 ttyd。若被拦截请允许主目录下 <code>ttyd.exe</code> 或检查本机安全软件。</div></div>
+<div class="fld" id="fldMinimaxRegionRow" style="display:none"><label>MiniMax 节点（须与 Token Plan 密钥区域一致）</label><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn2" id="minimaxRegionCn">国内 · api.minimaxi.com</button><button type="button" class="btn2" id="minimaxRegionIntl">国际 · api.minimax.io</button></div><div class="hint mini">与 OpenClaw 一致请选<strong>国内</strong>；勿混用国际地址 + 国内密钥（会 invalid api key）。</div></div>
+<div class="fld" id="fldBaseUrlRow"><label for="baseUrl">Base URL</label><input id="baseUrl" class="ctl" type="text" autocomplete="off"></div>
+<div class="fld" id="fldOpenClawSessionRow" style="display:none"><label for="openclawSessionKey">Gateway Session Key</label><input id="openclawSessionKey" class="ctl" type="text" autocomplete="off" list="openclawSessionOptions" placeholder="agent:main:... / main"><datalist id="openclawSessionOptions"></datalist><div class="hint mini" id="openclawSessionHint">留空时该标签自动使用独立 `niuma-*` 会话；如需对齐 OpenClaw Control，请填写完整 session key。</div></div>
+<div class="fld" id="fldChatModeRow">
+  <label for="freeChatMode">对话模式</label>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;user-select:none">
+      <input id="freeChatMode" type="checkbox" />
+      <span>开放式提问（不注入牛马项目提示词）</span>
+    </label>
+    <span class="hint mini">关闭：更适合问「这个软件怎么用」；开启：更像通用聊天模型。</span>
+  </div>
+</div>
+<div class="fld"><label for="systemPrompt">System Prompt</label><div class="prompt-tools"><select id="promptBuiltin" class="ctl"></select><button type="button" class="btn3" id="promptTplApply">应用到上方</button><button type="button" class="btn3" id="promptImportBtn">从文件导入</button><input type="file" id="promptImportFile" accept=".txt,.md,.json,text/plain" style="display:none" /></div><textarea id="systemPrompt" class="ctl"></textarea></div>
+<div class="hint" id="providerHint"></div>
+<a href="#" id="linkManualBaseUrl" class="hint mini" style="display:none;cursor:pointer;color:#ff9a4d;text-decoration:underline;margin-top:2px">使用中转 / 私有网关？手动指定 Base URL</a>
+<div class="hint">各服务商 API Key 分槽保存；Base URL 默认自动，无需手填。记录很多时可在下方导出备份。</div>
+<div class="row" style="display:flex;gap:8px;align-items:center;justify-content:flex-start;">
+  <button class="btn2" id="chat-export-md" type="button" title="导出当前对话 Markdown">导出 Markdown</button>
+  <button class="btn2" id="chat-export-json" type="button" title="导出当前对话 JSON">导出 JSON</button>
+</div>
+<div class="node-config-actions" style="margin-top:8px">
+<button type="button" class="btn2" id="nodeConfigClear">清空会话记忆</button>
+<button type="button" class="btn2" id="nodeConfigRemove">移除此联系人</button>
+</div>
+<div class="hint mini" id="nodeConfigHint">Ctrl+Enter 或点「保存并连接」完成配置；左侧 ⚙️ 随时打开此面板。</div>
+</div>
+</div>
+<footer class="sf"><div class="st" id="config-status"></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn2" id="syncStudioLlm" type="button" title="从 config/user_studio.json 读取">从智能定制同步</button><button class="btn2" id="resetCfg" type="button">重置</button><button class="btn2" id="nodeConfigTest" type="button">测试 API</button><button class="btn2" id="testCfg" type="button" hidden aria-hidden="true">测试</button><button class="btn3" id="nodeConfigSave" type="button">保存并连接</button><button class="btn3" id="saveCfg" type="button" hidden aria-hidden="true">完成</button></div></footer>
+</div>
+</section>
 <div id="main">
 <section id="viewportChat" class="viewport-chat">
-<section id="msgs"><div id="empty">首次使用请点「设」完成 API。点 🌐 打开右侧手机浏览器（顶栏在网页上方）；或在对话输入「@网页 …」自动操控。</div></section>
+<section id="msgs"><div id="empty">首次使用请点左侧 ⚙️ 完成 API 配置。点 🌐 打开右侧手机浏览器；或在对话输入「@网页 …」自动操控。</div></section>
 </section>
 <section id="viewportControl" class="viewport-control" hidden aria-hidden="true" aria-label="后台 · OpenClaw 与浏览器任务">
 <div id="controlModeHint" class="control-mode-hint">后台 · 查看 OpenClaw / 浏览器任务进度 · 发消息请在对话 Tab · Tab 返回对话</div>
@@ -778,20 +1031,27 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </div>
 <div id="controlLegacyCards" class="control-legacy-cards" hidden aria-hidden="true"></div>
 </section>
+<div id="cliPaneHostMain" class="th-cli-host th-cli-host-main">
 <section id="cliPane" aria-label="CLI 终端">
   <div class="cli-shell">
     <div class="cli-bar">
       <div class="cli-title" id="cliTitle">CLI 终端（ttyd）</div>
       <div class="cli-btns">
+        <button type="button" class="cli-btn" id="cliNewTaskBtn" title="新建终端任务 / 会话">＋ 任务</button>
         <button type="button" class="cli-btn" id="cliOpenBtn" title="启动/打开 CLI">打开</button>
         <button type="button" class="cli-btn" id="cliRestartBtn" title="强制重启 ttyd 服务">重启</button>
         <button type="button" class="cli-btn" id="cliReloadBtn" title="刷新终端页面">刷新</button>
         <button type="button" class="cli-btn" id="cliPopBtn" title="在外部浏览器打开">外部打开</button>
       </div>
     </div>
+    <div id="cliSessionLog" class="cli-session-log" hidden>
+      <div class="cli-session-log-head"><span id="cliSessionLogLabel">会话记录</span><button type="button" class="cli-btn" id="cliSessionLogToggle" title="折叠/展开">折叠</button></div>
+      <div id="cliSessionLogBody" class="cli-session-log-body"></div>
+    </div>
     <iframe id="cliFrame" class="cli-frame" src="about:blank"></iframe>
   </div>
 </section>
+</div>
 <section id="cmp">
 <div id="inlineApiSetup" class="api-setup-box" hidden>
 <div class="api-setup-title">快速连接 AI</div>
@@ -807,7 +1067,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <button type="button" class="btn3" id="inlineLlmSave">保存并开始对话</button>
 <button type="button" class="btn2" id="inlineLlmOpenFull">更多选项…</button>
 </div>
-<div class="hint mini">保存后即可对话；高级项（System Prompt 等）点右上角齿轮。</div>
+<div class="hint mini">保存后即可对话；高级项（System Prompt 等）点左侧 ⚙️ 打开连接管理。</div>
 </div>
 <div id="ollamaSetupBanner" class="setup-banner" hidden>
 <div class="setup-banner-title" id="ollamaSetupTitle">Ollama 未检测到本地服务</div>
@@ -819,7 +1079,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </div>
 </div>
 <textarea id="input" placeholder="输入消息…"></textarea>
-<div id="composerHint" class="composer-hint">Ctrl+Enter 发送 · Ctrl+1~8 切换联系人 · @网页 或 OpenClaw 可用 Tab 切换后台</div>
+<div id="composerHint" class="composer-hint">Ctrl+Enter 发送 · Ctrl+1~9 切换节点 · Ctrl+Tab 任务看板 · 顶部「对话/后台」切换视图</div>
 <div id="composerFooter">
 <div class="attach-wrap">
 <input id="attachFileInput" type="file" multiple style="display:none" />
@@ -849,71 +1109,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </div>
 <div id="attachList"></div>
 <div id="chatStatusRow"><div class="st" id="chat-status" title="可选中后 Ctrl+C 复制">就绪</div></div>
-<div id="threadPopover" class="thread-popover" aria-hidden="true" role="menu"></div>
-<div id="nodeConfigDisk" class="node-config-disk" aria-hidden="true">
-<div class="node-config-head">
-<div><div class="node-config-title" id="nodeConfigTitle">节点配置</div><div class="node-config-sub" id="nodeConfigSub"></div></div>
-<button class="ib" id="nodeConfigClose" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-</div>
-<div class="fld" id="nodeConfigKeyRow"><label for="nodeConfigApiKey" id="nodeConfigKeyLabel">API Key</label><input id="nodeConfigApiKey" class="ctl" type="password" autocomplete="off" placeholder="API Key" /></div>
-<div class="fld" id="nodeConfigLabelRow"><label for="nodeConfigCustomLabel">显示名称</label><input id="nodeConfigCustomLabel" class="ctl" type="text" autocomplete="off" placeholder="可选，覆盖默认联系人名" /></div>
-<div class="fld" id="nodeConfigModelRow"><label for="nodeConfigModel">模型</label><input id="nodeConfigModel" class="ctl" type="text" autocomplete="off" placeholder="当前话题模型" /></div>
-<div class="fld" id="nodeConfigBaseUrlRow"><label for="nodeConfigBaseUrl">Base URL</label><input id="nodeConfigBaseUrl" class="ctl" type="text" autocomplete="off" placeholder="留空则按服务商默认" /></div>
-<div class="fld" id="nodeConfigOpenClawRow"><label for="nodeConfigOpenClawKey">OpenClaw Gateway Key</label><input id="nodeConfigOpenClawKey" class="ctl" type="text" autocomplete="off" placeholder="agent:main:main" /></div>
-<div class="node-config-actions">
-<button type="button" class="btn2" id="nodeConfigTest">测试 API</button>
-<button type="button" class="btn3" id="nodeConfigSave">保存节点配置</button>
-</div>
-<div class="node-config-actions">
-<button type="button" class="btn2" id="nodeConfigClear">清空会话记忆</button>
-<button type="button" class="btn2" id="nodeConfigRemove">移除此联系人</button>
-</div>
-<div class="hint mini" id="nodeConfigHint">右键联系人头像打开此面板；完整设置请点右上角齿轮。</div>
-</div>
+<div id="threadPopover" class="thread-popover" aria-hidden="true" role="menu" hidden></div>
 </section>
 </div>
-<div id="settings" aria-hidden="true">
-<div class="sbg"></div>
-<section class="sd">
-<header class="sh"><div><div class="sbt">连接 AI</div><div class="sbt2">选择服务商 · 填写 Key · 选模型 · 完成</div></div><button class="ib" id="settings-close" type="button" title="关闭设置" aria-label="关闭设置"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
-<div class="sbody">
-<div id="settingsAiHint" class="hint" style="display:none;margin-bottom:10px;padding:10px 12px;border:1px solid rgba(255,102,0,.45);border-radius:10px;background:rgba(255,102,0,.1);line-height:1.5">
-<span id="settingsAiHintText">当前对话标签为「终端」模式，此处请切换到 MiniMax 等 AI 服务商填写 API Key。</span>
 </div>
-<div id="settingsQuick">
-<div class="settings-quick-note">主流用法：选服务商 → 粘贴 API Key → 选模型 → 点「完成」。高级选项（System Prompt、导出等）在下方展开。</div>
-<div class="row" id="fldModelPresetRow"><div class="fld fld-dd"><label for="providerDdBtn">服务商</label><div class="dd" id="providerDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="providerDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="providerDdMenu"><img id="providerDdIcon" class="dd-icon" alt="" /><span id="providerDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="providerDdMenu" role="listbox" hidden></div></div><select id="provider" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div><div class="fld fld-dd" id="fldModelDdCol"><label for="modelDdBtn">模型</label><div class="dd" id="modelDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="modelDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="modelDdMenu"><img id="modelDdIcon" class="dd-icon" alt="" /><span id="modelDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="modelDdMenu" role="listbox" hidden></div></div><select id="modelPreset" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div></div>
-<div class="fld"><label for="apiKey" id="apiKeyLabel">API Key</label><input id="apiKey" class="ctl" type="password" autocomplete="off" placeholder="粘贴 API Key"><div class="hint mini" id="apiKeyKeyHint" style="display:none"></div></div>
-<div class="fld" id="fldModelRow"><label for="model">Model</label><input id="model" class="ctl" type="text" autocomplete="off" placeholder="与上方预设一致或手填"></div>
-<div id="settingsProviderStatus" class="hint mini" style="margin-bottom:8px"></div>
-</div>
-<button type="button" class="btn2 settings-advanced-toggle" id="settingsAdvancedToggle">高级选项 ▾</button>
-<div id="settingsAdvanced" class="settings-advanced" hidden>
-<div class="fld" id="fldTtydShellRow" style="display:none"><label for="ttydShellCommand">终端启动命令（Shell）</label><input id="ttydShellCommand" class="ctl" type="text" spellcheck="false" autocomplete="off" placeholder="cmd.exe" /><div class="hint mini">传给本机 ttyd 的 Shell（如 <code>cmd.exe</code>、<code>powershell</code> 完整路径等）。点「完成」后写入配置并建议重启 ttyd。若被拦截请允许主目录下 <code>ttyd.exe</code> 或检查本机安全软件。</div></div>
-<div class="fld" id="fldMinimaxRegionRow" style="display:none"><label>MiniMax 节点（须与 Token Plan 密钥区域一致）</label><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn2" id="minimaxRegionCn">国内 · api.minimaxi.com</button><button type="button" class="btn2" id="minimaxRegionIntl">国际 · api.minimax.io</button></div><div class="hint mini">与 OpenClaw 一致请选<strong>国内</strong>；勿混用国际地址 + 国内密钥（会 invalid api key）。</div></div>
-<div class="fld" id="fldBaseUrlRow"><label for="baseUrl">Base URL</label><input id="baseUrl" class="ctl" type="text" autocomplete="off"></div>
-<div class="fld" id="fldOpenClawSessionRow" style="display:none"><label for="openclawSessionKey">Gateway Session Key</label><input id="openclawSessionKey" class="ctl" type="text" autocomplete="off" list="openclawSessionOptions" placeholder="agent:main:... / main"><datalist id="openclawSessionOptions"></datalist><div class="hint mini" id="openclawSessionHint">留空时该标签自动使用独立 `niuma-*` 会话；如需对齐 OpenClaw Control，请填写完整 session key。</div></div>
-<div class="fld" id="fldChatModeRow">
-  <label for="freeChatMode">对话模式</label>
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;user-select:none">
-      <input id="freeChatMode" type="checkbox" />
-      <span>开放式提问（不注入牛马项目提示词）</span>
-    </label>
-    <span class="hint mini">关闭：更适合问「这个软件怎么用」；开启：更像通用聊天模型。</span>
-  </div>
-</div>
-<div class="fld"><label for="systemPrompt">System Prompt</label><div class="prompt-tools"><select id="promptBuiltin" class="ctl"></select><button type="button" class="btn3" id="promptTplApply">应用到上方</button><button type="button" class="btn3" id="promptImportBtn">从文件导入</button><input type="file" id="promptImportFile" accept=".txt,.md,.json,text/plain" style="display:none" /></div><textarea id="systemPrompt" class="ctl"></textarea></div>
-<div class="hint" id="providerHint"></div>
-<a href="#" id="linkManualBaseUrl" class="hint mini" style="display:none;cursor:pointer;color:#ff9a4d;text-decoration:underline;margin-top:2px">使用中转 / 私有网关？手动指定 Base URL</a>
-<div class="hint">各服务商 API Key 分槽保存；Base URL 默认自动，无需手填。记录很多时可在下方导出备份。</div>
-<div class="row" style="display:flex;gap:8px;align-items:center;justify-content:flex-start;">
-  <button class="btn2" id="chat-export-md" type="button" title="导出当前对话 Markdown">导出 Markdown</button>
-  <button class="btn2" id="chat-export-json" type="button" title="导出当前对话 JSON">导出 JSON</button>
-</div>
-</div>
-<footer class="sf"><div class="st" id="config-status"></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn2" id="syncStudioLlm" type="button" title="从 config/user_studio.json 读取">从智能定制同步</button><button class="btn2" id="resetCfg" type="button">重置</button><button class="btn2" id="testCfg" type="button">测试 API</button><button class="btn3" id="saveCfg" type="button">完成</button></div></footer>
-</section>
+<div id="threadPreviewCard" class="th-preview" hidden aria-hidden="true"></div>
+<div id="threadTriggerPreview" class="th-trigger-preview" hidden aria-hidden="true"></div>
 </div>
 <div id="ttydCustomize" aria-hidden="true">
 <div class="sbg" id="ttydCustomizeBg"></div>
@@ -941,7 +1142,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </div>
 <div id="newSessionPick" aria-hidden="true">
 <section class="ns-panel ns-slide-panel">
-<header class="nsh"><div><div class="nst">添加联系人</div><div class="nst2">选择 AI / CLI · 新建独立会话</div></div><button class="ib" id="newSessionPickClose" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+<header class="nsh"><div><div class="nst">新建会话</div><div class="nst2">选择对话或 CLI 终端 · 有 ttyd 方案时可二选一</div></div><button class="ib" id="newSessionPickClose" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
 <div id="newSessionGrid" class="ns-grid"></div>
 </section>
 </div>
@@ -1027,9 +1228,25 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     },
     PROVIDER_PICK_ORDER = [
       'openai',
+      'kimi', 'qwen', 'deepseek', 'claude', 'gemini', 'glm', 'siliconflow', 'minimax', 'zhipu', 'ollama', 'openclaw',
       'codex_cli', 'gemini_cli', 'openclaw_cli', 'qwen_cli', 'ollama_cli',
-      'claude_cli', 'deepseek_cli', 'kimi_cli', 'zhipu_cli', 'copilot_cli',
-      'kimi', 'qwen', 'deepseek', 'claude', 'gemini', 'glm', 'siliconflow', 'minimax', 'zhipu', 'ollama', 'openclaw'
+      'claude_cli', 'deepseek_cli', 'kimi_cli', 'zhipu_cli', 'copilot_cli', 'studio_cli'
+    ],
+    NEW_SESSION_GROUP_DEFS = [
+      { label: 'OpenAI / ChatGPT', icon: 'openai', api: 'openai', cli: 'codex_cli' },
+      { label: 'Claude', icon: 'claude', api: 'claude', cli: 'claude_cli' },
+      { label: 'Gemini', icon: 'gemini', api: 'gemini', cli: 'gemini_cli' },
+      { label: 'DeepSeek', icon: 'deepseek', api: 'deepseek', cli: 'deepseek_cli' },
+      { label: 'Kimi', icon: 'kimi', api: 'kimi', cli: 'kimi_cli' },
+      { label: 'Qwen 通义', icon: 'qwen', api: 'qwen', cli: 'qwen_cli' },
+      { label: '智谱', icon: 'zhipu', api: 'zhipu', cli: 'zhipu_cli' },
+      { label: 'GLM BigModel', icon: 'glm', api: 'glm', cli: null },
+      { label: 'MiniMax', icon: 'minimax', api: 'minimax', cli: null },
+      { label: '硅基流动', icon: 'siliconflow', api: 'siliconflow', cli: null },
+      { label: 'Ollama 本地', icon: 'ollama', api: 'ollama', cli: 'ollama_cli' },
+      { label: 'OpenClaw', icon: 'openclaw', api: 'openclaw', cli: 'openclaw_cli' },
+      { label: 'Copilot CLI', icon: 'copilot_cli', api: null, cli: 'copilot_cli' },
+      { label: '定制终端', icon: 'studio_cli', api: null, cli: 'studio_cli', hint: '智能定制 ttyd · 端口 7691' }
     ],
     ICON_PRIMARY = 'aiicons/',
     ICON_SECOND = 'lib/images/',
@@ -1439,16 +1656,38 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     panel = $('panel'),
     dclose = $('drawer-close'),
     chatSearch = $('chat-search'),
-    chatSet = $('chat-settings'),
+    chatSet = null,
     chatExportMd = $('chat-export-md'),
     chatExportJson = $('chat-export-json'),
     hudToggleBtn = $('hudToggleBtn'),
     sessionTabsEl = $('sessionTabs'),
     agentStripEl = $('agentStrip'),
-    agentContextBar = $('agentContextBar'),
-    agentContextLabel = $('agentContextLabel'),
-    agentContextThread = $('agentContextThread'),
-    agentContextNewThread = $('agentContextNewThread'),
+    nodeRailConnections = $('nodeRailConnections'),
+    threadRailNodeLabel = $('threadRailNodeLabel'),
+    threadRailNew = $('threadRailNew'),
+    threadPanelDrawerEl = $('threadPanelDrawer'),
+    threadPanelTriggerEl = $('threadPanelTrigger'),
+    threadPanelTriggerLabel = $('threadPanelTriggerLabel'),
+    threadPanelTriggerMeta = $('threadPanelTriggerMeta'),
+    threadPanelStatusDot = $('threadPanelStatusDot'),
+    threadPanelTriggerStatus = $('threadPanelTriggerStatus'),
+    threadPanelBackdropEl = $('threadPanelBackdrop'),
+    threadPanelCloseBtn = $('threadPanelClose'),
+    threadTreeEl = $('threadTree'),
+    thGearBtn = $('thGearBtn'),
+    thAccordion = $('thAccordion'),
+    thApiKey = $('thApiKey'),
+    thBaseUrl = $('thBaseUrl'),
+    thTemperature = $('thTemperature'),
+    thTempVal = $('thTempVal'),
+    thNodeIco = $('thNodeIco'),
+    threadPreviewCard = $('threadPreviewCard'),
+    threadTriggerPreviewEl = $('threadTriggerPreview'),
+    threadListEl = $('threadTree'),
+    connectionsPanel = $('connectionsPanel'),
+    connNavList = $('connNavList'),
+    connNavAdd = $('connNavAdd'),
+    connectionsBack = $('connectionsBack'),
     viewModeChatBtn = $('viewModeChat'),
     viewModeControlBtn = $('viewModeControl'),
     viewportControlEl = $('viewportControl'),
@@ -1457,7 +1696,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     auditCollapseBtn = $('auditCollapseBtn'),
     auditClearBtn = $('auditClearBtn'),
     threadPopoverEl = $('threadPopover'),
-    nodeConfigDisk = $('nodeConfigDisk'),
+    nodeConfigDisk = null,
     nodeConfigTitle = $('nodeConfigTitle'),
     nodeConfigSub = $('nodeConfigSub'),
     nodeConfigApiKey = $('nodeConfigApiKey'),
@@ -1471,7 +1710,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     nodeConfigModelRow = $('nodeConfigModelRow'),
     nodeConfigBaseUrlRow = $('nodeConfigBaseUrlRow'),
     nodeConfigOpenClawRow = $('nodeConfigOpenClawRow'),
-    nodeConfigClose = $('nodeConfigClose'),
+    nodeConfigClose = null,
     nodeConfigTest = $('nodeConfigTest'),
     nodeConfigSave = $('nodeConfigSave'),
     nodeConfigClear = $('nodeConfigClear'),
@@ -1495,8 +1734,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     attachFolderBtn = $('attachFolderBtn'),
     attachList = $('attachList'),
     chatStatus = $('chat-status'),
-    settings = $('settings'),
-    sbg = document.querySelector('.sbg'),
+    settings = $('connectionsPanel'),
+    sbg = null,
     sclose = $('settings-close'),
     ssave = $('saveCfg'),
     stest = $('testCfg'),
@@ -1569,7 +1808,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     inlineLlmSave = $('inlineLlmSave'),
     inlineLlmTest = $('inlineLlmTest'),
     inlineLlmOpenFull = $('inlineLlmOpenFull'),
-    chatApiQuick = $('chat-api-quick'),
+    chatApiQuick = null,
     chatMobileBrowser = $('chat-mobile-browser');
 
   function tbEls() {
@@ -1591,6 +1830,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   var state = {
+    cliSessionLogCollapsed: false,
     drawer: false,
     compact: false,
     settings: false,
@@ -1642,9 +1882,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     contactPopoverNodeKey: '',
     nodeConfigDiskKey: '',
     nodeLastActiveByKey: {},
-    nodeMeta: { lastThreadByNode: {}, labels: {}, defaultModel: {} },
+    nodeMeta: { lastThreadByNode: {}, labels: {}, defaultModel: {}, nodeSecrets: {} },
+    threadHub: { expanded: false, collapsedGroups: [], accordionOpen: false },
     nodeRuntime: {},
     viewModeByNode: {},
+    mainViewportMode: 'chat',
+    connectionsPickNodeKey: '',
+    connectionsDraftKey: '',
+    threadRailFocused: false,
     auditLog: [],
     auditCollapsed: false,
     ollamaReachable: null,
@@ -1926,7 +2171,25 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function drawerResizeBoundsPx() {
     var u = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui').trim());
     if (!isFinite(u) || u <= 0) u = 1;
-    return { min: Math.max(1, Math.round(380 * u)), max: Math.max(1, Math.round(1200 * u)) };
+    return { min: Math.max(1, Math.round(560 * u)), max: Math.max(1, Math.round(1200 * u)) };
+  }
+
+  function chatShellMinWidthPx() {
+    var u = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui').trim());
+    if (!isFinite(u) || u <= 0) u = 1;
+    return Math.round(412 * u);
+  }
+
+  function ensureChatShellMinWidth() {
+    if (!state.drawer) return;
+    var b = drawerResizeBoundsPx();
+    var minW = Math.max(b.min, chatShellMinWidthPx());
+    var cw = document.documentElement.clientWidth;
+    if (cw >= minW - 2) return;
+    post({ type: 'drawer_resize', width: minW });
+    setTimeout(function () {
+      post({ type: 'drawer_resize_done' });
+    }, 0);
   }
 
   function applyTheme(mode) {
@@ -2072,6 +2335,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var pp = sd && P[normalizeProviderId(sd.provider)];
       if (!pp || pp.transport !== 'cli') refreshInlineApiSetupVisibility();
     }
+    setTimeout(ensureChatShellMinWidth, 60);
   }
 
   function setNspick(v) {
@@ -2144,31 +2408,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function setSettings(v) {
-    state.settings = !!v;
-    if (state.settings) {
-      setNspick(false);
-      setTtydCustomize(false);
-    }
-    document.body.classList.toggle('settings-open', state.settings);
-    settings.setAttribute('aria-hidden', state.settings ? 'false' : 'true');
-    if (state.settings) {
-      var editPid = pickSettingsEditProvider();
-      provider.value = editPid;
-      applyProvider(editPid, false);
-      apiKey.value = getApiKeyForProvider(editPid);
-      refreshApiKeyField(editPid);
-      fillModels(editPid, model.value.trim());
-      buildProviderDdMenu();
-      syncProviderDdUi();
-      syncModelDdUi();
-      updateProviderFormLayout(editPid);
-      refreshSettingsAiHint();
-      refreshSettingsProviderStatus();
-      try {
-        post({ type: 'niuma_request_studio_llm' });
-      } catch (e) {}
-      if (normalizeProviderId(provider.value) === 'ollama') checkOllamaHealth();
-    }
+    if (v) openConnectionsPanel(activeNodeKey());
+    else closeConnectionsPanel();
   }
 
   function applyTtydStudioConfig(ttyd) {
@@ -2551,6 +2792,67 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     } catch (e) {}
   }
 
+  function syncCliPanePlacement() {
+    var pane = $('cliPane');
+    var hostMain = $('cliPaneHostMain');
+    var hostDrawer = $('cliPaneHostDrawer');
+    if (!pane || !hostMain) return;
+    var s = activeSession();
+    var cli = isCliSession(s);
+    if (threadPanelDrawerEl) {
+      threadPanelDrawerEl.setAttribute('data-cli', cli ? '1' : '0');
+    }
+    if (!cli) {
+      if (pane.parentElement !== hostMain) hostMain.appendChild(pane);
+      hostMain.removeAttribute('aria-hidden');
+      if (hostDrawer) hostDrawer.setAttribute('aria-hidden', 'true');
+      return;
+    }
+    var open = ThreadPanelDrawer.isOpen();
+    var target = open && hostDrawer ? hostDrawer : hostMain;
+    if (pane.parentElement !== target) target.appendChild(pane);
+    hostMain.setAttribute('aria-hidden', open ? 'true' : 'false');
+    if (hostDrawer) hostDrawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+  }
+
+  function renderCliSessionLog() {
+    var panel = $('cliSessionLog');
+    var body = $('cliSessionLogBody');
+    var label = $('cliSessionLogLabel');
+    var s = activeSession();
+    if (!panel || !body) return;
+    if (!s || !isCliSession(s)) {
+      panel.hidden = true;
+      return;
+    }
+    var hist = Array.isArray(s.history) ? s.history : [];
+    if (!hist.length) {
+      panel.hidden = true;
+      return;
+    }
+    panel.hidden = !!state.cliSessionLogCollapsed;
+    if (label) label.textContent = '会话记录 · ' + hist.length + ' 条 · ' + threadTitleForSession(s);
+    body.innerHTML = hist
+      .slice(-10)
+      .map(function (m) {
+        var role = normalizeRole(m.role) || 'user';
+        var txt = String(m.content || '')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 140);
+        if (!txt) return '';
+        return (
+          '<div class="cli-session-log-line ' +
+          role +
+          '">' +
+          escHtml((role === 'user' ? '› ' : '‹ ') + txt) +
+          '</div>'
+        );
+      })
+      .filter(Boolean)
+      .join('');
+  }
+
   function syncChatViewMode() {
     var s = activeSession();
     var on = isCliSession(s);
@@ -2587,8 +2889,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (needSpawn) throttledNiumaCliOpen(false);
     cstatForSession(
       s.id,
-      needSpawn ? '正在连接 ttyd（' + (P[s.provider] ? P[s.provider].label : s.provider) + '）…' : 'ttyd 已加载，切换标签将切换对应端口终端。'
+      needSpawn ? '正在连接 ttyd（' + (P[s.provider] ? P[s.provider].label : s.provider) + '）…' : 'ttyd 已加载，切换任务将保留会话记录。'
     );
+    syncCliPanePlacement();
+    renderCliSessionLog();
     syncViewModeUi();
   }
 
@@ -3001,17 +3305,20 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function persistSessions() {
     ensureNodeMeta();
+    ensureThreadHub();
     state.sessions.forEach(function (s) {
       if (s && !s.nodeKey) s.nodeKey = nodeKeyForSession(s);
+      refreshSessionMeta(s);
     });
     try {
       localStorage.setItem(
         SESSIONS_LS,
         JSON.stringify({
-          v: 2,
+          v: 3,
           activeSessionId: state.activeSessionId,
           sessions: state.sessions,
-          nodeMeta: state.nodeMeta
+          nodeMeta: state.nodeMeta,
+          threadHub: state.threadHub
         })
       );
     } catch (e) {
@@ -3019,9 +3326,18 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
   }
 
+  function ensureThreadHub() {
+    if (!state.threadHub || typeof state.threadHub !== 'object') {
+      state.threadHub = { expanded: false, collapsedGroups: [], accordionOpen: false };
+    }
+    if (!Array.isArray(state.threadHub.collapsedGroups)) state.threadHub.collapsedGroups = [];
+    if (state.threadHub.expanded == null) state.threadHub.expanded = false;
+    if (state.threadHub.accordionOpen == null) state.threadHub.accordionOpen = false;
+  }
+
   function ensureNodeMeta() {
     if (!state.nodeMeta || typeof state.nodeMeta !== 'object') {
-      state.nodeMeta = { lastThreadByNode: {}, labels: {}, defaultModel: {} };
+      state.nodeMeta = { lastThreadByNode: {}, labels: {}, defaultModel: {}, nodeSecrets: {} };
     }
     if (!state.nodeMeta.lastThreadByNode || typeof state.nodeMeta.lastThreadByNode !== 'object') {
       state.nodeMeta.lastThreadByNode = {};
@@ -3031,6 +3347,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     if (!state.nodeMeta.defaultModel || typeof state.nodeMeta.defaultModel !== 'object') {
       state.nodeMeta.defaultModel = {};
+    }
+    if (!state.nodeMeta.nodeSecrets || typeof state.nodeMeta.nodeSecrets !== 'object') {
+      state.nodeMeta.nodeSecrets = {};
     }
   }
 
@@ -3075,6 +3394,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (data.nodeMeta && typeof data.nodeMeta === 'object') {
       if (data.nodeMeta.labels) state.nodeMeta.labels = data.nodeMeta.labels;
       if (data.nodeMeta.defaultModel) state.nodeMeta.defaultModel = data.nodeMeta.defaultModel;
+      if (data.nodeMeta.nodeSecrets) state.nodeMeta.nodeSecrets = data.nodeMeta.nodeSecrets;
       if (data.nodeMeta.lastThreadByNode) {
         Object.keys(data.nodeMeta.lastThreadByNode).forEach(function (k) {
           state.nodeMeta.lastThreadByNode[k] = data.nodeMeta.lastThreadByNode[k];
@@ -3082,6 +3402,231 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
     }
     syncNodeLastActiveAlias();
+  }
+
+  var CONTEXT_LIMIT_BY_MODEL = {
+    'gpt-4o': 128000,
+    'gpt-4o-mini': 128000,
+    'gpt-4': 128000,
+    'gpt-3.5-turbo': 16385,
+    claude: 200000,
+    gemini: 1000000
+  };
+
+  function getContextLimitForSession(s) {
+    if (!s) return 128000;
+    if (s.contextLimit && s.contextLimit > 0) return s.contextLimit;
+    var m = String(s.model || '').toLowerCase();
+    var keys = Object.keys(CONTEXT_LIMIT_BY_MODEL);
+    for (var i = 0; i < keys.length; i++) {
+      if (m.indexOf(keys[i]) >= 0) return CONTEXT_LIMIT_BY_MODEL[keys[i]];
+    }
+    return 128000;
+  }
+
+  function estimateContextTokens(s) {
+    if (!s) return 0;
+    var chars = 0;
+    var hist = Array.isArray(s.history) ? s.history : [];
+    hist.forEach(function (m) {
+      if (m && m.content) chars += String(m.content).length;
+    });
+    try {
+      if (systemPrompt && systemPrompt.value) chars += String(systemPrompt.value).length;
+    } catch (_) {}
+    if (s.stashedSummary) chars += String(s.stashedSummary).length;
+    return Math.round(chars / 3.5);
+  }
+
+  function inferProjectGroup(s) {
+    if (!s) return { groupKey: 'misc:default', groupLabel: '📁 未分类' };
+    if (String(s.groupKey || '').indexOf('manual:') === 0) {
+      return { groupKey: s.groupKey, groupLabel: s.groupLabel || '📁 自定义' };
+    }
+    if (isCliSession(s)) return { groupKey: 'cli:terminal', groupLabel: '🖥 终端' };
+    var pid = normalizeProviderId(s.provider);
+    if (pid === 'openclaw' && s.controlTrace && Array.isArray(s.controlTrace.tasks) && s.controlTrace.tasks.length) {
+      var tid = String(s.controlTrace.activeTaskId || s.controlTrace.tasks[0].id || 'task');
+      var tname = String((s.controlTrace.tasks[0] && s.controlTrace.tasks[0].name) || tid).slice(0, 24);
+      return { groupKey: 'oc:task:' + tid, groupLabel: '🦞 ' + tname };
+    }
+    var hist = Array.isArray(s.history) ? s.history : [];
+    for (var hi = 0; hi < hist.length; hi++) {
+      var c = hist[hi] && hist[hi].content ? String(hist[hi].content) : '';
+      if (/@网页|@web|browser control/i.test(c)) {
+        return { groupKey: 'web:browser', groupLabel: '🌐 网页操控' };
+      }
+    }
+    var root = '';
+    try {
+      var ctx = state.niumaContextCache || state.pendingStudioContext;
+      if (ctx && ctx.installRoot) root = String(ctx.installRoot).trim();
+    } catch (_) {}
+    if (!root && ttydStudioWorkDir) root = String(ttydStudioWorkDir.value || '').trim();
+    if (root) {
+      var folder = root.replace(/[/\\]+$/, '').split(/[/\\]/).pop() || root;
+      if (folder.length > 20) folder = folder.slice(0, 18) + '…';
+      return { groupKey: 'ws:' + folder, groupLabel: '📂 ' + folder };
+    }
+    return { groupKey: 'misc:default', groupLabel: '📁 未分类' };
+  }
+
+  function computeThreadState(s) {
+    if (!s) return 'idle';
+    if (s.stashedAt && (!s.history || !s.history.length)) return 'stashed';
+    var tokens = estimateContextTokens(s);
+    var limit = getContextLimitForSession(s);
+    if (tokens >= limit * 0.92) return 'locked';
+    if (isSessionSending(s.id)) return 'running';
+    if (state.openclawChatRunning && s.id === state.activeSessionId && normalizeProviderId(s.provider) === 'openclaw') {
+      return 'running';
+    }
+    if (s.lastError) {
+      var errAge = Date.now() - (s.lastErrorAt || 0);
+      if (errAge < 300000) return 'error';
+    }
+    var nk = nodeKeyForSession(s);
+    var rt = state.nodeRuntime[nk];
+    if (rt && rt.status === 'error' && s.id === state.activeSessionId) {
+      var age = Date.now() - (rt.updatedAt || 0);
+      if (age < 300000) return 'error';
+    }
+    return 'idle';
+  }
+
+  function refreshSessionMeta(s) {
+    if (!s) return;
+    if (!s.createdAt) s.createdAt = new Date().toISOString();
+    if (String(s.groupKey || '').indexOf('manual:') !== 0) {
+      var g = inferProjectGroup(s);
+      s.groupKey = g.groupKey;
+      s.groupLabel = g.groupLabel;
+    } else if (!s.groupLabel) s.groupLabel = '📁 自定义';
+    s.contextTokens = estimateContextTokens(s);
+    s.contextLimit = getContextLimitForSession(s);
+    s.threadState = computeThreadState(s);
+  }
+
+  function migrateSessionsPayloadToV3(data) {
+    ensureThreadHub();
+    if (data.threadHub && typeof data.threadHub === 'object') {
+      state.threadHub.expanded = !!data.threadHub.expanded;
+      state.threadHub.accordionOpen = !!data.threadHub.accordionOpen;
+      state.threadHub.collapsedGroups = Array.isArray(data.threadHub.collapsedGroups) ? data.threadHub.collapsedGroups.slice() : [];
+    }
+    if (data.nodeMeta && data.nodeMeta.nodeSecrets && typeof data.nodeMeta.nodeSecrets === 'object') {
+      state.nodeMeta.nodeSecrets = data.nodeMeta.nodeSecrets;
+    }
+    state.sessions.forEach(function (s) {
+      refreshSessionMeta(s);
+    });
+  }
+
+  function threadStateBadgeMeta(st) {
+    st = String(st || 'idle');
+    if (st === 'running') return { cls: 'badge-running', text: 'Running', dot: true };
+    if (st === 'error') return { cls: 'badge-error', text: 'Error', dot: true };
+    if (st === 'locked') return { cls: 'badge-locked', text: 'Locked', dot: true };
+    if (st === 'stashed') return { cls: 'badge-stashed', text: 'Stashed', dot: true };
+    return { cls: 'badge-idle', text: 'Idle', dot: true };
+  }
+
+  function formatRelativeTime(iso) {
+    if (!iso) return '—';
+    var t = Date.parse(iso);
+    if (!isFinite(t)) return '—';
+    var diff = Date.now() - t;
+    if (diff < 60000) return '刚刚';
+    if (diff < 3600000) return Math.floor(diff / 60000) + ' 分钟前';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + ' 小时前';
+    return Math.floor(diff / 86400000) + ' 天前';
+  }
+
+  function last3Summaries(history) {
+    var out = [];
+    var arr = Array.isArray(history) ? history : [];
+    for (var i = arr.length - 1; i >= 0 && out.length < 3; i--) {
+      var m = arr[i];
+      if (!m || !m.content) continue;
+      var txt = String(m.content).replace(/\s+/g, ' ').trim();
+      if (txt.length > 48) txt = txt.slice(0, 46) + '…';
+      var role = m.role === 'user' ? '你' : 'AI';
+      out.unshift(role + '：' + txt);
+    }
+    while (out.length < 3) out.unshift('—');
+    return out;
+  }
+
+  function groupSessionsTreeForNode(nodeKey) {
+    var grp = findNodeGroup(nodeKey);
+    if (!grp) return [];
+    var map = {};
+    var order = [];
+    grp.sessions.forEach(function (s) {
+      refreshSessionMeta(s);
+      var gk = s.groupKey || 'misc:default';
+      if (!map[gk]) {
+        map[gk] = { groupKey: gk, groupLabel: s.groupLabel || '📁 未分类', sessions: [] };
+        order.push(gk);
+      }
+      map[gk].sessions.push(s);
+    });
+    return order.map(function (k) {
+      return map[k];
+    });
+  }
+
+  function getNodeSecrets(nodeKey) {
+    ensureNodeMeta();
+    var sec = state.nodeMeta.nodeSecrets[nodeKey];
+    if (!sec || typeof sec !== 'object') return { apiKey: '', baseUrl: '', temperature: 0.7 };
+    return {
+      apiKey: String(sec.apiKey || ''),
+      baseUrl: String(sec.baseUrl || ''),
+      temperature: typeof sec.temperature === 'number' ? sec.temperature : parseFloat(sec.temperature) || 0.7
+    };
+  }
+
+  function setNodeSecrets(nodeKey, patch) {
+    ensureNodeMeta();
+    if (!nodeKey) return;
+    var cur = getNodeSecrets(nodeKey);
+    state.nodeMeta.nodeSecrets[nodeKey] = {
+      apiKey: patch.apiKey != null ? String(patch.apiKey) : cur.apiKey,
+      baseUrl: patch.baseUrl != null ? String(patch.baseUrl) : cur.baseUrl,
+      temperature: patch.temperature != null ? Number(patch.temperature) : cur.temperature
+    };
+  }
+
+  function getNodeSendCfg(nodeKey, session) {
+    var s = session || activeSession();
+    if (!s) return null;
+    var pid = providerIdFromNodeKey(nodeKey || nodeKeyForSession(s));
+    pid = normalizeProviderId(pid);
+    var sec = getNodeSecrets(nodeKey || nodeKeyForSession(s));
+    var p = P[pid] || P.openai;
+    var bu = sec.baseUrl || s.baseUrl || effectiveBaseUrl(pid, s.baseUrl, baseUrl ? baseUrl.value : '');
+    var key = trimApiKey(sec.apiKey) || getApiKeyForProvider(pid);
+    return {
+      provider: pid,
+      model: (p.transport === 'cli') ? '' : (s.model || '').trim() || p.model,
+      baseUrl: bu,
+      openclawSessionKey:
+        pid === 'openclaw'
+          ? String(s.gatewaySessionKey || '').trim() || openClawSessionKeyHintFromBaseUrl(bu) || getOpenClawSessionKey(s)
+          : '',
+      apiKey: key,
+      temperature: sec.temperature != null ? sec.temperature : 0.7,
+      systemPrompt: getEffectiveSystemPromptForSend()
+    };
+  }
+
+  function hasKeyForNode(nodeKey) {
+    var pid = providerIdFromNodeKey(nodeKey);
+    if (providerTransport(pid) === 'cli') return true;
+    var sec = getNodeSecrets(nodeKey);
+    if (trimApiKey(sec.apiKey)) return true;
+    return hasKeyForProvider(pid);
   }
 
   function mapLoadedSession(s) {
@@ -3118,9 +3663,20 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
               tasks: Array.isArray(s.controlTrace.tasks) ? s.controlTrace.tasks : [],
               activeTaskId: String(s.controlTrace.activeTaskId || '')
             }
-          : { tasks: [], activeTaskId: '' }
+          : { tasks: [], activeTaskId: '' },
+      groupKey: String(s.groupKey || ''),
+      groupLabel: String(s.groupLabel || ''),
+      createdAt: s.createdAt || new Date().toISOString(),
+      threadState: s.threadState || 'idle',
+      lastError: s.lastError != null ? String(s.lastError) : null,
+      lastErrorAt: s.lastErrorAt || 0,
+      contextTokens: typeof s.contextTokens === 'number' ? s.contextTokens : 0,
+      contextLimit: typeof s.contextLimit === 'number' ? s.contextLimit : 0,
+      stashedAt: s.stashedAt || null,
+      stashedSummary: s.stashedSummary != null ? String(s.stashedSummary) : null
     };
     if (!row.nodeKey) row.nodeKey = nodeKeyForSession(row);
+    refreshSessionMeta(row);
     return row;
   }
 
@@ -3143,6 +3699,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     state.sessions = data.sessions.map(mapLoadedSession);
     if (ver >= 2) migrateSessionsPayloadToV2(data);
     else migrateSessionsPayloadToV2({ sessions: state.sessions, activeSessionId: data.activeSessionId });
+    if (ver >= 3) migrateSessionsPayloadToV3(data);
+    else migrateSessionsPayloadToV3({ sessions: state.sessions, nodeMeta: state.nodeMeta });
     state.activeSessionId = data.activeSessionId || (state.sessions[0] && state.sessions[0].id) || '';
     if (state.activeSessionId) {
       var act = activeSession();
@@ -3164,7 +3722,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       baseUrl: baseUrl.value.trim(),
       gatewaySessionKey: pid === 'openclaw' ? wantedOpenClawKey || hintedOpenClawKey || buildOpenClawSessionKey(sid) : '',
       nodeKey: pid === 'openclaw' ? 'openclaw:' + (wantedOpenClawKey || hintedOpenClawKey || buildOpenClawSessionKey(sid)) : pid,
-      history: []
+      history: [],
+      createdAt: new Date().toISOString(),
+      groupKey: '',
+      groupLabel: '',
+      threadState: 'idle',
+      lastError: null,
+      lastErrorAt: 0,
+      contextTokens: 0,
+      contextLimit: 0,
+      stashedAt: null,
+      stashedSummary: null
     };
   }
 
@@ -3569,15 +4137,32 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var rt = state.nodeRuntime[nodeKey];
     if (rt && rt.status) {
       var age = Date.now() - (rt.updatedAt || 0);
-      if (age < 300000) return rt.status;
+      if (age < 300000) {
+        if (rt.status === 'running' || rt.status === 'busy') return 'running';
+        return rt.status;
+      }
+    }
+    if (state.browserAgentRunning || state.openclawChatRunning) {
+      var nk = activeNodeKey();
+      if (nk === nodeKey) return 'running';
     }
     var i;
     for (i = 0; i < grp.sessions.length; i++) {
       if (isSessionSending(grp.sessions[i].id)) return 'thinking';
     }
     if (providerTransport(pid) === 'cli') return 'cli';
-    if (!hasKeyForProvider(pid)) return 'needSetup';
+    if (!hasKeyForNode(nodeKey)) return 'needSetup';
     return 'ready';
+  }
+
+  function nodeStatusLabelForKey(nodeKey) {
+    var st = nodeStatusForKey(nodeKey);
+    if (st === 'running') return '运行中';
+    if (st === 'thinking') return '思考中';
+    if (st === 'needSetup') return '待配置';
+    if (st === 'cli') return 'CLI';
+    if (st === 'error') return '错误';
+    return '就绪';
   }
 
   function threadTitleForSession(s) {
@@ -3744,21 +4329,21 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var browserCtrl = controlTabEnabledForNode(nk);
     var mode = activeViewMode();
     if (mode === 'control' && browserCtrl) {
-      composerHint.textContent = '任务请在对话 Tab 输入 · Tab 切回对话 · 后台 Tab 查看 OpenClaw / 浏览器进度';
-      input.placeholder = '请 Tab 切回「对话」输入 @网页 或任务';
+      composerHint.textContent = '顶部「对话 / 后台」切换视图 · Tab 快捷切回对话 · Ctrl+Tab 打开任务看板';
+      input.placeholder = '请切回「对话」输入 @网页 或任务';
       return;
     }
     var s = activeSession();
     if (s && isCliSession(s)) {
-      composerHint.textContent = 'CLI 模式 · Ctrl+Enter 发送到终端 · Ctrl+1~8 切换联系人';
-      input.placeholder = '输入 CLI 指令，Ctrl+Enter 执行';
+      composerHint.textContent = 'Ctrl+Tab 打开终端任务看板 · 抽屉内切换/新建任务 · 会话记录已保留';
+      input.placeholder = 'CLI 模式：请在 ttyd 终端操作';
       return;
     }
     if (browserCtrl) {
       composerHint.textContent =
-        'Ctrl+Enter 发送 · Tab 切换后台 · @网页 或 OpenClaw 进度在后台 Tab 查看 · Ctrl+1~8 切换联系人';
+        'Ctrl+Enter 发送 · 顶部「对话/后台」或 Tab 切换 · Ctrl+Tab 任务看板 · Ctrl+1~9 切换节点';
     } else {
-      composerHint.textContent = 'Ctrl+Enter 发送 · Ctrl+1~8 切换联系人';
+      composerHint.textContent = 'Ctrl+Enter 发送 · Ctrl+1~9 切换节点 · Ctrl+Tab 任务看板 · Tab 看板→输入框';
     }
     input.placeholder = '输入消息…';
   }
@@ -4977,7 +5562,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var grp = findNodeGroup(nodeKey);
     if (!grp || !grp.sessions.length) return;
     closeThreadPopover();
-    closeNodeConfigDisk();
+    if (state.mainViewportMode === 'connections') closeConnectionsPanel();
     var targetId = sessionId || grp.lastActiveId || grp.sessions[0].id;
     var found = null;
     grp.sessions.forEach(function (s) {
@@ -4992,28 +5577,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
   }
 
-  function onAgentAvatarClick(nodeKey, anchorEl) {
-    var grp = findNodeGroup(nodeKey);
-    if (!grp) return;
-    if (grp.sessions.length === 1) {
-      switchToNode(nodeKey, grp.sessions[0].id);
+  function onAgentAvatarClick(nodeKey) {
+    var cur = activeNodeKey();
+    if (cur === nodeKey && nodeKey) {
+      ThreadPanelDrawer.toggle();
       return;
     }
-    if (state.contactPopoverNodeKey === nodeKey && threadPopoverEl && threadPopoverEl.classList.contains('open')) {
-      closeThreadPopover();
-      return;
-    }
-    if (nodeKey === activeNodeKey() && state.activeSessionId) {
-      renderThreadPopover(nodeKey, anchorEl);
-      return;
-    }
-    switchToNode(nodeKey, grp.lastActiveId || grp.sessions[0].id);
-    if (grp.sessions.length > 1) {
-      setTimeout(function () {
-        var av = agentStripEl && agentStripEl.querySelector('.agent-avatar[data-node-key="' + nodeKey + '"]');
-        renderThreadPopover(nodeKey, av || anchorEl);
-      }, 0);
-    }
+    switchToNode(nodeKey);
   }
 
   function activeViewMode(nodeKey) {
@@ -5235,45 +5805,132 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function renderAgentContextBar() {
-    if (!agentContextLabel) return;
-    var nk = activeNodeKey();
-    if (!nk) {
-      agentContextLabel.textContent = '未选择联系人';
-      if (agentContextNewThread) agentContextNewThread.style.display = 'none';
-      return;
-    }
-    agentContextLabel.textContent = nodeLabel(nk);
-    if (agentContextNewThread) agentContextNewThread.style.display = '';
     syncViewModeToggleUi();
-    renderAgentContextThread();
   }
 
-  function renderAgentContextThread() {
-    if (!agentContextThread) return;
-    var nk = activeNodeKey();
-    var grp = nk ? findNodeGroup(nk) : null;
-    if (!grp || grp.sessions.length <= 1) {
-      agentContextThread.hidden = true;
-      agentContextThread.innerHTML = '';
-      return;
+  function renderAgentContextThread() {}
+
+  function setMainViewportMode(mode) {
+    mode = mode === 'connections' ? 'connections' : 'chat';
+    state.mainViewportMode = mode;
+    state.settings = mode === 'connections';
+    var isConn = mode === 'connections';
+    document.body.classList.toggle('connections-open', isConn);
+    if (connectionsPanel) {
+      connectionsPanel.hidden = !isConn;
+      connectionsPanel.setAttribute('aria-hidden', isConn ? 'false' : 'true');
     }
-    var s = activeSession();
-    if (!s) {
-      agentContextThread.hidden = true;
-      return;
+    if (nodeRailConnections) nodeRailConnections.classList.toggle('active', isConn);
+    if (isConn) {
+      setNspick(false);
+      setTtydCustomize(false);
+      closeThreadPopover();
+      renderConnectionsPanel();
     }
-    agentContextThread.hidden = false;
-    agentContextThread.innerHTML =
-      '<span class="agent-context-thread-label" title="' +
-      esc(threadTitleForSession(s)) +
-      '">' +
-      esc(threadTitleForSession(s)) +
-      '</span><button type="button" class="agent-context-thread-close" data-close-thread="' +
-      esc(s.id) +
-      '" title="关闭当前话题" aria-label="关闭当前话题">×</button>';
   }
 
-  function renderAgentStrip() {
+  function openConnectionsPanel(nodeKey) {
+    if (!nodeKey) nodeKey = activeNodeKey();
+    state.connectionsPickNodeKey = nodeKey || '';
+    state.nodeConfigDiskKey = nodeKey || '';
+    setMainViewportMode('connections');
+    if (nodeKey) populateConnectionsForm(nodeKey);
+    else syncConnectionsProviderForm();
+  }
+
+  function closeConnectionsPanel() {
+    setMainViewportMode('chat');
+    state.connectionsPickNodeKey = '';
+  }
+
+  function populateConnectionsForm(nodeKey) {
+    if (!nodeKey) return;
+    var grp = findNodeGroup(nodeKey);
+    if (!grp || !grp.sessions.length) return;
+    var ref = null;
+    grp.sessions.forEach(function (s) {
+      if (s.id === state.activeSessionId) ref = s;
+    });
+    if (!ref) ref = grp.sessions[0];
+    if (ref.id !== state.activeSessionId) switchSession(ref.id);
+    syncFormFromSession(ref);
+    state.nodeConfigDiskKey = nodeKey;
+    state.connectionsPickNodeKey = nodeKey;
+    var pid = providerIdFromNodeKey(nodeKey);
+    var p = P[pid] || P.openai;
+    if (nodeConfigTitle) nodeConfigTitle.textContent = nodeLabel(nodeKey);
+    if (nodeConfigSub) nodeConfigSub.textContent = isCliSession(ref) ? '本机 ttyd 终端 · 无需 API Key' : (p.label || pid) + ' · 节点配置';
+    if (nodeConfigKeyRow) nodeConfigKeyRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
+    if (nodeConfigApiKey) {
+      nodeConfigApiKey.type = pid === 'openclaw' ? 'text' : 'password';
+      nodeConfigApiKey.value = apiKey ? apiKey.value : '';
+    }
+    if (nodeConfigKeyLabel && KEYMETA[pid]) nodeConfigKeyLabel.textContent = KEYMETA[pid].keyLabel || 'API 密匙';
+    ensureNodeMeta();
+    if (nodeConfigCustomLabel) nodeConfigCustomLabel.value = String(state.nodeMeta.labels[nodeKey] || '');
+    if (nodeConfigModel) nodeConfigModel.value = ref.model || '';
+    if (nodeConfigBaseUrl) {
+      nodeConfigBaseUrl.value =
+        (ref.baseUrl || '').trim() ||
+        (shouldShowManualBaseUrl(pid) ? (P[pid] || {}).baseUrl || '' : effectiveBaseUrl(pid, ref.baseUrl, ''));
+    }
+    if (nodeConfigOpenClawRow) nodeConfigOpenClawRow.style.display = pid === 'openclaw' ? '' : 'none';
+    if (nodeConfigOpenClawKey) nodeConfigOpenClawKey.value = pid === 'openclaw' ? getOpenClawSessionKey(ref) : '';
+    if (nodeConfigModelRow) nodeConfigModelRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
+    if (nodeConfigBaseUrlRow) nodeConfigBaseUrlRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
+    renderConnectionsNavList();
+  }
+
+  function syncConnectionsProviderForm() {
+    var editPid = pickSettingsEditProvider();
+    if (provider) provider.value = editPid;
+    applyProvider(editPid, false);
+    if (apiKey) apiKey.value = getApiKeyForProvider(editPid);
+    refreshApiKeyField(editPid);
+    fillModels(editPid, model ? model.value.trim() : '');
+    buildProviderDdMenu();
+    syncProviderDdUi();
+    syncModelDdUi();
+    updateProviderFormLayout(editPid);
+    refreshSettingsAiHint();
+    refreshSettingsProviderStatus();
+  }
+
+  function renderConnectionsNavList() {
+    if (!connNavList) return;
+    connNavList.innerHTML = '';
+    var groups = groupSessionsByNode();
+    var pick = state.connectionsPickNodeKey || activeNodeKey();
+    groups.forEach(function (grp) {
+      var nk = grp.nodeKey;
+      var pid = providerIdFromNodeKey(nk);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'conn-nav-item' + (nk === pick ? ' active' : '');
+      btn.dataset.connNodeKey = nk;
+      var im = document.createElement('img');
+      im.className = 'conn-nav-item-ico';
+      bindProviderIconImg(im, pid);
+      var span = document.createElement('span');
+      span.textContent = nodeLabel(nk);
+      btn.appendChild(im);
+      btn.appendChild(span);
+      connNavList.appendChild(btn);
+    });
+  }
+
+  function renderConnectionsPanel() {
+    renderConnectionsNavList();
+    var nk = state.connectionsPickNodeKey || activeNodeKey();
+    if (nk) populateConnectionsForm(nk);
+    else syncConnectionsProviderForm();
+    try {
+      post({ type: 'niuma_request_studio_llm' });
+    } catch (e) {}
+    if (provider && normalizeProviderId(provider.value) === 'ollama') checkOllamaHealth();
+  }
+
+  function renderNodeRail() {
     if (!agentStripEl) return;
     agentStripEl.innerHTML = '';
     var groups = groupSessionsByNode();
@@ -5288,6 +5945,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       btn.className = 'agent-avatar' + (nk === activeNk ? ' active' : '');
       btn.dataset.nodeKey = nk;
       btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', nk === activeNk ? 'true' : 'false');
       var tip = nodeLabel(nk);
       var rt = state.nodeRuntime[nk];
       if (rt && rt.detail) tip += ' · ' + rt.detail;
@@ -5304,13 +5962,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       dot.setAttribute('aria-hidden', 'true');
       btn.appendChild(ico);
       btn.appendChild(dot);
-      if (grp.sessions.length > 1) {
-        var badge = document.createElement('span');
-        badge.className = 'agent-thread-badge';
-        badge.textContent = String(grp.sessions.length);
-        badge.setAttribute('aria-hidden', 'true');
-        btn.appendChild(badge);
-      }
       var rm = document.createElement('button');
       rm.type = 'button';
       rm.className = 'agent-avatar-remove';
@@ -5327,9 +5978,609 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     addBtn.className = 'agent-add';
     addBtn.id = 'agentStripAdd';
     addBtn.textContent = '+';
-    addBtn.setAttribute('title', '添加 AI / CLI 联系人');
-    addBtn.setAttribute('aria-label', '添加 AI / CLI 联系人');
+    addBtn.setAttribute('title', '新建会话（对话 / CLI）');
+    addBtn.setAttribute('aria-label', '新建会话');
     agentStripEl.appendChild(addBtn);
+  }
+
+  var _threadPreviewTimer = 0;
+  var _threadPreviewTarget = null;
+  var _threadTriggerPreviewTimer = 0;
+
+  function positionFloatingPreview(cardEl, anchorEl, preferDrawerRight) {
+    if (!cardEl || !anchorEl) return;
+    var rect = anchorEl.getBoundingClientRect();
+    var cardW = cardEl.offsetWidth || 280;
+    var cardH = cardEl.offsetHeight || 120;
+    var left = rect.right + 8;
+    var top = rect.top;
+    if (
+      preferDrawerRight &&
+      threadPanelDrawerEl &&
+      threadPanelDrawerEl.getAttribute('data-state') === 'open'
+    ) {
+      var panelRect = threadPanelDrawerEl.getBoundingClientRect();
+      if (panelRect.right + 8 + cardW < window.innerWidth - 8) {
+        left = panelRect.right + 8;
+        top = Math.max(8, Math.min(rect.top, window.innerHeight - cardH - 8));
+      }
+    }
+    if (left + cardW > window.innerWidth - 8) {
+      left = Math.max(8, rect.left);
+      top = rect.bottom + 8;
+    }
+    if (top + cardH > window.innerHeight - 8) {
+      top = Math.max(8, window.innerHeight - cardH - 8);
+    }
+    cardEl.style.left = Math.round(left) + 'px';
+    cardEl.style.top = Math.round(top) + 'px';
+  }
+
+  function hideThreadTriggerPreview() {
+    if (_threadTriggerPreviewTimer) {
+      clearTimeout(_threadTriggerPreviewTimer);
+      _threadTriggerPreviewTimer = 0;
+    }
+    if (threadTriggerPreviewEl) {
+      threadTriggerPreviewEl.hidden = true;
+      threadTriggerPreviewEl.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function showThreadTriggerPreview(anchorEl) {
+    var nk = activeNodeKey();
+    if (!threadTriggerPreviewEl || !anchorEl || !nk) return;
+    var grp = findNodeGroup(nk);
+    if (!grp || !grp.sessions || !grp.sessions.length) return;
+    hideThreadPreview();
+    var html =
+      '<div class="th-trigger-preview-head">' + escHtml(nodeLabel(nk)) + ' · 全部会话</div>';
+    grp.sessions.forEach(function (s) {
+      refreshSessionMeta(s);
+      var st = computeThreadState(s);
+      var meta = threadStateBadgeMeta(st);
+      var lines = last3Summaries(s.history);
+      var tokens = s.contextTokens || estimateContextTokens(s);
+      var limit = s.contextLimit || getContextLimitForSession(s);
+      html +=
+        '<div class="th-trigger-preview-item' +
+        (s.id === state.activeSessionId ? ' active' : '') +
+        '">' +
+        '<div class="th-trigger-preview-item-title">' +
+        escHtml(threadTitleForSession(s)) +
+        ' <span class="th-mini-badge">' +
+        escHtml(meta.text) +
+        '</span></div>';
+      lines.forEach(function (ln) {
+        html += '<div class="th-preview-line">' + escHtml(ln) + '</div>';
+      });
+      html +=
+        '<div class="th-preview-meta">Token ~' +
+        tokens +
+        ' / ' +
+        limit +
+        ' · ' +
+        escHtml(formatRelativeTime(s.createdAt)) +
+        '</div></div>';
+    });
+    threadTriggerPreviewEl.innerHTML = html;
+    threadTriggerPreviewEl.hidden = false;
+    threadTriggerPreviewEl.setAttribute('aria-hidden', 'false');
+    positionFloatingPreview(threadTriggerPreviewEl, anchorEl, false);
+  }
+
+  function scheduleThreadTriggerPreview(anchorEl) {
+    hideThreadTriggerPreview();
+    _threadTriggerPreviewTimer = setTimeout(function () {
+      _threadTriggerPreviewTimer = 0;
+      showThreadTriggerPreview(anchorEl);
+    }, 500);
+  }
+
+  var ThreadPanelDrawer = (function () {
+    function isOpen() {
+      ensureThreadHub();
+      return !!state.threadHub.expanded;
+    }
+
+    function syncTriggerLabel() {
+      var nk = activeNodeKey();
+      if (threadPanelTriggerLabel) {
+        if (nk && providerTransport(providerIdFromNodeKey(nk)) === 'cli') {
+          threadPanelTriggerLabel.textContent = nodeLabel(nk) + ' · 终端任务看板';
+        } else {
+          threadPanelTriggerLabel.textContent = nk ? nodeLabel(nk) + ' · 任务看板' : '任务神经中枢';
+        }
+      }
+      if (threadPanelTriggerMeta) {
+        var grp = nk ? findNodeGroup(nk) : null;
+        var cnt = grp && grp.sessions ? grp.sessions.length : 0;
+        threadPanelTriggerMeta.textContent = cnt ? cnt + ' 个会话 · Ctrl+Tab' : 'Ctrl+Tab';
+      }
+      if (threadPanelStatusDot) {
+        var status = nk ? nodeStatusForKey(nk) : 'ready';
+        threadPanelStatusDot.className = 'th-panel-status-dot ' + status;
+      }
+      if (threadPanelTriggerStatus) {
+        var st = nk ? nodeStatusForKey(nk) : 'ready';
+        threadPanelTriggerStatus.textContent = nk ? nodeStatusLabelForKey(nk) : '—';
+        threadPanelTriggerStatus.className = 'th-panel-trigger-status status-' + st;
+      }
+    }
+
+    function applyUi() {
+      ensureThreadHub();
+      var open = isOpen();
+      if (threadPanelDrawerEl) {
+        threadPanelDrawerEl.setAttribute('data-state', open ? 'open' : 'closed');
+        threadPanelDrawerEl.setAttribute('aria-hidden', open ? 'false' : 'true');
+      }
+      if (threadPanelBackdropEl) {
+        threadPanelBackdropEl.hidden = !open;
+        threadPanelBackdropEl.setAttribute('aria-hidden', open ? 'false' : 'true');
+      }
+      if (threadPanelTriggerEl) threadPanelTriggerEl.setAttribute('aria-expanded', open ? 'true' : 'false');
+      document.body.classList.toggle('thread-panel-open', open);
+      syncTriggerLabel();
+      syncCliPanePlacement();
+    }
+
+    function setState(open) {
+      ensureThreadHub();
+      state.threadHub.expanded = !!open;
+      applyUi();
+      if (!open) {
+        hideThreadPreview();
+        hideThreadTriggerPreview();
+      }
+      persistSessions();
+    }
+
+    function toggle(force) {
+      if (force === true) setState(true);
+      else if (force === false) setState(false);
+      else setState(!isOpen());
+    }
+
+    function init() {
+      if (!threadPanelDrawerEl || threadPanelDrawerEl.dataset.thInit === '1') return;
+      threadPanelDrawerEl.dataset.thInit = '1';
+      ensureThreadHub();
+      applyUi();
+      if (threadPanelTriggerEl) {
+        threadPanelTriggerEl.addEventListener('click', function (e) {
+          e.preventDefault();
+          toggle();
+        });
+        threadPanelTriggerEl.addEventListener('mouseenter', function () {
+          scheduleThreadTriggerPreview(threadPanelTriggerEl);
+        });
+        threadPanelTriggerEl.addEventListener('mouseleave', function () {
+          hideThreadTriggerPreview();
+        });
+      }
+      if (threadPanelCloseBtn) {
+        threadPanelCloseBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          setState(false);
+        });
+      }
+      if (threadPanelBackdropEl) {
+        threadPanelBackdropEl.addEventListener('click', function () {
+          setState(false);
+        });
+      }
+      if (thGearBtn) {
+        thGearBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleThreadAccordion();
+        });
+      }
+      if (thApiKey) {
+        thApiKey.addEventListener('blur', function () {
+          saveThreadCommanderForm(activeNodeKey());
+        });
+      }
+      if (thBaseUrl) {
+        thBaseUrl.addEventListener('blur', function () {
+          saveThreadCommanderForm(activeNodeKey());
+        });
+      }
+      if (thTemperature) {
+        thTemperature.addEventListener('input', function () {
+          if (thTempVal) thTempVal.textContent = thTemperature.value;
+        });
+        thTemperature.addEventListener('change', function () {
+          saveThreadCommanderForm(activeNodeKey());
+        });
+      }
+    }
+
+    function render() {
+      if (!threadTreeEl) return;
+      var nk = activeNodeKey();
+      renderThreadCommander(nk);
+      renderThreadTree(nk);
+      applyUi();
+    }
+
+    return { init: init, render: render, toggle: toggle, setState: setState, isOpen: isOpen, applyUi: applyUi };
+  })();
+
+  function toggleThreadRailExpand(force) {
+    ThreadPanelDrawer.toggle(force);
+  }
+
+  function syncThreadCommanderForm(nodeKey) {
+    if (!nodeKey) return;
+    var sec = getNodeSecrets(nodeKey);
+    var ref = activeSession();
+    var grp = findNodeGroup(nodeKey);
+    if (grp && grp.sessions.length) {
+      grp.sessions.forEach(function (s) {
+        if (s.id === state.activeSessionId) ref = s;
+      });
+      if (!ref || nodeKeyForSession(ref) !== nodeKey) ref = grp.sessions[0];
+    }
+    if (thApiKey) thApiKey.value = sec.apiKey || getApiKeyForProvider(providerIdFromNodeKey(nodeKey));
+    if (thBaseUrl) thBaseUrl.value = sec.baseUrl || (ref && ref.baseUrl) || '';
+    var temp = sec.temperature != null ? sec.temperature : 0.7;
+    if (thTemperature) thTemperature.value = String(temp);
+    if (thTempVal) thTempVal.textContent = String(temp);
+  }
+
+  function saveThreadCommanderForm(nodeKey) {
+    if (!nodeKey) nodeKey = activeNodeKey();
+    if (!nodeKey) return;
+    var temp = thTemperature ? parseFloat(thTemperature.value) : 0.7;
+    if (!isFinite(temp)) temp = 0.7;
+    setNodeSecrets(nodeKey, {
+      apiKey: thApiKey ? trimApiKey(thApiKey.value) : '',
+      baseUrl: thBaseUrl ? String(thBaseUrl.value || '').trim() : '',
+      temperature: temp
+    });
+    var pid = providerIdFromNodeKey(nodeKey);
+    if (thApiKey && providerTransport(pid) !== 'cli') {
+      if (!state.apiKeys) state.apiKeys = {};
+      var k = trimApiKey(thApiKey.value);
+      if (k) state.apiKeys[pid] = k;
+    }
+    persistSessions();
+    renderAgentStrip();
+  }
+
+  function toggleThreadAccordion(open) {
+    ensureThreadHub();
+    if (!thAccordion || !thGearBtn) return;
+    var next = open != null ? !!open : !!thAccordion.hidden;
+    thAccordion.hidden = !next;
+    thGearBtn.setAttribute('aria-expanded', next ? 'true' : 'false');
+    state.threadHub.accordionOpen = next;
+    if (next) syncThreadCommanderForm(activeNodeKey());
+    persistSessions();
+  }
+
+  function hideThreadPreview() {
+    if (_threadPreviewTimer) {
+      clearTimeout(_threadPreviewTimer);
+      _threadPreviewTimer = 0;
+    }
+    _threadPreviewTarget = null;
+    if (threadPreviewCard) {
+      threadPreviewCard.hidden = true;
+      threadPreviewCard.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function showThreadPreview(s, anchorEl) {
+    if (!threadPreviewCard || !s || !anchorEl) return;
+    hideThreadTriggerPreview();
+    refreshSessionMeta(s);
+    var lines = last3Summaries(s.history);
+    var tokens = s.contextTokens || estimateContextTokens(s);
+    var limit = s.contextLimit || getContextLimitForSession(s);
+    var pct = limit > 0 ? Math.min(100, Math.round((tokens / limit) * 100)) : 0;
+    var st = computeThreadState(s);
+    var badge = threadStateBadgeMeta(st);
+    threadPreviewCard.innerHTML =
+      '<div class="th-preview-title">' +
+      escHtml(threadTitleForSession(s)) +
+      ' <span class="th-mini-badge">' +
+      escHtml(badge.text) +
+      '</span></div>' +
+      lines
+        .map(function (ln) {
+          return '<div class="th-preview-line">' + escHtml(ln) + '</div>';
+        })
+        .join('') +
+      '<div class="th-token-bar"><div class="th-token-fill" style="width:' +
+      pct +
+      '%"></div></div>' +
+      '<div class="th-preview-meta">Token ~' +
+      tokens +
+      ' / ' +
+      limit +
+      ' · ' +
+      escHtml(formatRelativeTime(s.createdAt)) +
+      '</div>';
+    threadPreviewCard.hidden = false;
+    threadPreviewCard.setAttribute('aria-hidden', 'false');
+    positionFloatingPreview(threadPreviewCard, anchorEl, true);
+  }
+
+  function scheduleThreadPreview(s, anchorEl) {
+    hideThreadPreview();
+    _threadPreviewTarget = anchorEl;
+    _threadPreviewTimer = setTimeout(function () {
+      _threadPreviewTimer = 0;
+      if (_threadPreviewTarget === anchorEl) showThreadPreview(s, anchorEl);
+    }, 500);
+  }
+
+  function escHtml(t) {
+    return String(t || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function stashThreadContext(sessionId) {
+    var s = sessionById(sessionId);
+    if (!s) return;
+    pushSessionHistoryToStore(s);
+    var summary = '';
+    if (s.history && s.history.length) {
+      var last = s.history[s.history.length - 1];
+      summary = last && last.content ? String(last.content).replace(/\s+/g, ' ').trim().slice(0, 120) : '';
+    }
+    s.stashedAt = new Date().toISOString();
+    s.stashedSummary = summary || '已暂存上下文';
+    s.history = [];
+    s.lastError = null;
+    s.lastErrorAt = 0;
+    refreshSessionMeta(s);
+    persistSessions();
+    pushSessionHistoryToStore(s);
+    if (s.id === state.activeSessionId) rebuildMsgList();
+    renderThreadHub();
+    cstat('已暂存上下文，会话记忆已写入本地存储。', 'success');
+  }
+
+  function releaseThreadMemory(sessionId) {
+    var s = sessionById(sessionId);
+    if (!s) return;
+    if (Array.isArray(s.history) && s.history.length > 10) s.history = s.history.slice(-10);
+    if (s.controlTrace) {
+      s.controlTrace.tasks = [];
+      s.controlTrace.activeTaskId = '';
+    }
+    s.stashedAt = null;
+    s.stashedSummary = null;
+    refreshSessionMeta(s);
+    persistSessions();
+    if (s.id === state.activeSessionId) rebuildMsgList();
+    renderThreadHub();
+    cstat('已释放内存，保留最近 10 条消息。', 'success');
+  }
+
+  function destroyThread(sessionId) {
+    var row =
+      threadTreeEl &&
+      threadTreeEl.querySelector('.th-dr-thread[data-thread-session="' + sessionId + '"], .th-thread[data-thread-session="' + sessionId + '"]');
+    if (row) {
+      row.classList.add('is-removing');
+      setTimeout(function () {
+        requestRemoveThread(sessionId);
+      }, 320);
+    } else requestRemoveThread(sessionId);
+  }
+
+  function renderThreadBadge(st) {
+    var meta = threadStateBadgeMeta(st);
+    var badge = document.createElement('span');
+    badge.className = 'th-badge ' + meta.cls;
+    badge.setAttribute('aria-label', meta.text);
+    var dot = document.createElement('span');
+    dot.className = 'th-badge-dot';
+    badge.appendChild(dot);
+    var txt = document.createElement('span');
+    txt.className = 'th-badge-text';
+    txt.textContent = meta.text;
+    badge.appendChild(txt);
+    return badge;
+  }
+
+  function showGroupThreadPreview(g, anchorEl) {
+    if (!threadPreviewCard || !g || !anchorEl || !g.sessions || !g.sessions.length) return;
+    hideThreadTriggerPreview();
+    var html =
+      '<div class="th-preview-title">' + escHtml(g.groupLabel || '分组') + ' · ' + g.sessions.length + ' 个会话</div>';
+    g.sessions.slice(0, 5).forEach(function (s) {
+      refreshSessionMeta(s);
+      var tokens = s.contextTokens || estimateContextTokens(s);
+      var limit = s.contextLimit || getContextLimitForSession(s);
+      var meta = threadStateBadgeMeta(computeThreadState(s));
+      html +=
+        '<div class="th-preview-line"><strong>' +
+        escHtml(threadTitleForSession(s)) +
+        '</strong> · ' +
+        escHtml(meta.text) +
+        ' · Token ~' +
+        tokens +
+        '/' +
+        limit +
+        '</div>';
+    });
+    if (g.sessions.length > 5) {
+      html += '<div class="th-preview-meta">另有 ' + (g.sessions.length - 5) + ' 个会话…</div>';
+    }
+    threadPreviewCard.innerHTML = html;
+    threadPreviewCard.hidden = false;
+    threadPreviewCard.setAttribute('aria-hidden', 'false');
+    positionFloatingPreview(threadPreviewCard, anchorEl, true);
+  }
+
+  function scheduleGroupThreadPreview(g, anchorEl) {
+    hideThreadPreview();
+    _threadPreviewTarget = anchorEl;
+    _threadPreviewTimer = setTimeout(function () {
+      _threadPreviewTimer = 0;
+      if (_threadPreviewTarget === anchorEl) showGroupThreadPreview(g, anchorEl);
+    }, 500);
+  }
+
+  function renderThreadRow(s) {
+    var active = s.id === state.activeSessionId;
+    var st = computeThreadState(s);
+    var row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'th-thread th-dr-thread' + (active ? ' active' : '');
+    row.dataset.threadSession = s.id;
+    row.setAttribute('role', 'treeitem');
+    row.setAttribute('aria-selected', active ? 'true' : 'false');
+    var ico = document.createElement('span');
+    ico.className = 'th-thread-ico';
+    ico.textContent = '💬';
+    row.appendChild(ico);
+    var main = document.createElement('span');
+    main.className = 'th-thread-main';
+    var title = document.createElement('span');
+    title.className = 'th-thread-title';
+    title.textContent = threadTitleForSession(s);
+    title.title = '';
+    var sub = document.createElement('span');
+    sub.className = 'th-thread-sub';
+    sub.textContent = threadSubForSession(s);
+    main.appendChild(title);
+    main.appendChild(sub);
+    row.appendChild(main);
+    row.appendChild(renderThreadBadge(st));
+    var actions = document.createElement('span');
+    actions.className = 'th-actions';
+    var btnStash = document.createElement('button');
+    btnStash.type = 'button';
+    btnStash.className = 'th-act-btn';
+    btnStash.setAttribute('data-stash-thread', s.id);
+    btnStash.title = '暂存上下文';
+    btnStash.textContent = '⏯';
+    var btnRelease = document.createElement('button');
+    btnRelease.type = 'button';
+    btnRelease.className = 'th-act-btn';
+    btnRelease.setAttribute('data-release-thread', s.id);
+    btnRelease.title = '释放内存';
+    btnRelease.textContent = '🧹';
+    var btnDestroy = document.createElement('button');
+    btnDestroy.type = 'button';
+    btnDestroy.className = 'th-act-btn';
+    btnDestroy.setAttribute('data-destroy-thread', s.id);
+    btnDestroy.title = '销毁线程';
+    btnDestroy.textContent = '❌';
+    actions.appendChild(btnStash);
+    actions.appendChild(btnRelease);
+    actions.appendChild(btnDestroy);
+    row.appendChild(actions);
+    row.addEventListener('mouseenter', function () {
+      scheduleThreadPreview(s, row);
+    });
+    row.addEventListener('mouseleave', function () {
+      hideThreadPreview();
+    });
+    title.addEventListener('mouseenter', function (e) {
+      e.stopPropagation();
+      scheduleThreadPreview(s, title);
+    });
+    return row;
+  }
+
+  function renderThreadTree(nodeKey) {
+    if (!threadTreeEl) return;
+    threadTreeEl.innerHTML = '';
+    if (!nodeKey) {
+      var emptyHint = document.createElement('div');
+      emptyHint.className = 'hint mini';
+      emptyHint.style.padding = '8px 4px';
+      emptyHint.textContent = '请从左侧选择节点。';
+      threadTreeEl.appendChild(emptyHint);
+      return;
+    }
+    var groups = groupSessionsTreeForNode(nodeKey);
+    if (!groups.length) return;
+    ensureThreadHub();
+    groups.forEach(function (g) {
+      var collapsed = state.threadHub.collapsedGroups.indexOf(g.groupKey) >= 0;
+      var wrap = document.createElement('div');
+      wrap.className = 'th-group' + (collapsed ? ' is-collapsed' : '');
+      wrap.dataset.groupKey = g.groupKey;
+      var head = document.createElement('button');
+      head.type = 'button';
+      head.className = 'th-group-head';
+      head.setAttribute('data-toggle-group', g.groupKey);
+      var gico = document.createElement('span');
+      gico.className = 'th-group-ico';
+      gico.textContent = '📂';
+      var glab = document.createElement('span');
+      glab.className = 'th-group-label';
+      glab.textContent = g.groupLabel;
+      var chev = document.createElement('span');
+      chev.className = 'th-group-chev';
+      chev.textContent = '▾';
+      head.appendChild(gico);
+      head.appendChild(glab);
+      head.appendChild(chev);
+      head.addEventListener('mouseenter', function () {
+        scheduleGroupThreadPreview(g, head);
+      });
+      head.addEventListener('mouseleave', function () {
+        hideThreadPreview();
+      });
+      wrap.appendChild(head);
+      var body = document.createElement('div');
+      body.className = 'th-group-body';
+      g.sessions.forEach(function (s) {
+        body.appendChild(renderThreadRow(s));
+      });
+      wrap.appendChild(body);
+      threadTreeEl.appendChild(wrap);
+    });
+  }
+
+  function renderThreadCommander(nodeKey) {
+    if (threadRailNodeLabel) threadRailNodeLabel.textContent = nodeKey ? nodeLabel(nodeKey) : '未选择节点';
+    if (thNodeIco && nodeKey) bindProviderIconImg(thNodeIco, providerIdFromNodeKey(nodeKey));
+    if (threadRailNew) {
+      var isCli = nodeKey && providerTransport(providerIdFromNodeKey(nodeKey)) === 'cli';
+      threadRailNew.style.display = nodeKey ? '' : 'none';
+      threadRailNew.textContent = isCli ? '➕ 新建任务' : '➕ 新建会话';
+      threadRailNew.title = isCli ? '在该终端节点下新建任务（保留独立会话记录）' : '在该联系人下新建话题';
+    }
+    ensureThreadHub();
+    var pid = nodeKey ? providerIdFromNodeKey(nodeKey) : '';
+    var cliNode = providerTransport(pid) === 'cli';
+    if (thGearBtn) thGearBtn.style.display = cliNode ? 'none' : '';
+    if (thAccordion && thGearBtn) {
+      var accOpen = !!state.threadHub.accordionOpen && !!nodeKey && !cliNode;
+      thAccordion.hidden = !accOpen;
+      thGearBtn.setAttribute('aria-expanded', accOpen ? 'true' : 'false');
+      if (accOpen) syncThreadCommanderForm(nodeKey);
+    }
+  }
+
+  function renderThreadHub() {
+    ThreadPanelDrawer.render();
+  }
+
+  function initThreadHub() {
+    ThreadPanelDrawer.init();
+  }
+
+  function renderThreadRail() {
+    renderThreadHub();
+  }
+
+  function renderAgentStrip() {
+    renderNodeRail();
   }
 
   function renderSessionTabsLegacy() {
@@ -5376,13 +6627,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       syncChatViewMode();
       return;
     }
-    renderAgentStrip();
+    renderNodeRail();
+    renderThreadHub();
+    initThreadHub();
     renderAgentContextBar();
-    if (state.contactPopoverNodeKey) {
-      var av = agentStripEl && agentStripEl.querySelector('.agent-avatar[data-node-key="' + state.contactPopoverNodeKey + '"]');
-      if (av) renderThreadPopover(state.contactPopoverNodeKey, av);
-      else closeThreadPopover();
-    }
     refreshSendUi();
     syncChatViewMode();
     syncViewModeUi();
@@ -5393,101 +6641,113 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function openNodeConfigDisk(nodeKey) {
-    if (!nodeKey) nodeKey = activeNodeKey();
-    if (!nodeKey || !nodeConfigDisk) return;
-    closeThreadPopover();
-    var grp = findNodeGroup(nodeKey);
-    if (!grp || !grp.sessions.length) return;
-    var ref = null;
-    grp.sessions.forEach(function (s) {
-      if (s.id === state.activeSessionId) ref = s;
-    });
-    if (!ref) ref = grp.sessions[0];
-    if (ref.id !== state.activeSessionId) switchSession(ref.id);
-    syncFormFromSession(ref);
-    state.nodeConfigDiskKey = nodeKey;
-    document.body.classList.add('node-config-open');
-    nodeConfigDisk.setAttribute('aria-hidden', 'false');
-    var pid = providerIdFromNodeKey(nodeKey);
-    var p = P[pid] || P.openai;
-    if (nodeConfigTitle) nodeConfigTitle.textContent = nodeLabel(nodeKey);
-    if (nodeConfigSub) nodeConfigSub.textContent = isCliSession(ref) ? '本机 ttyd 终端 · 无需 API Key' : (p.label || pid) + ' · 节点配置';
-    if (nodeConfigKeyRow) nodeConfigKeyRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
-    if (nodeConfigApiKey) {
-      nodeConfigApiKey.type = pid === 'openclaw' ? 'text' : 'password';
-      nodeConfigApiKey.value = apiKey ? apiKey.value : '';
-    }
-    if (nodeConfigKeyLabel && KEYMETA[pid]) nodeConfigKeyLabel.textContent = KEYMETA[pid].keyLabel || 'API Key';
-    ensureNodeMeta();
-    if (nodeConfigCustomLabel) nodeConfigCustomLabel.value = String(state.nodeMeta.labels[nodeKey] || '');
-    if (nodeConfigModel) nodeConfigModel.value = ref.model || '';
-    if (nodeConfigBaseUrl) {
-      nodeConfigBaseUrl.value =
-        (ref.baseUrl || '').trim() ||
-        (shouldShowManualBaseUrl(pid) ? (P[pid] || {}).baseUrl || '' : effectiveBaseUrl(pid, ref.baseUrl, ''));
-    }
-    if (nodeConfigOpenClawRow) nodeConfigOpenClawRow.style.display = pid === 'openclaw' ? '' : 'none';
-    if (nodeConfigOpenClawKey) nodeConfigOpenClawKey.value = pid === 'openclaw' ? getOpenClawSessionKey(ref) : '';
-    if (nodeConfigModelRow) nodeConfigModelRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
-    if (nodeConfigBaseUrlRow) nodeConfigBaseUrlRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
+    openConnectionsPanel(nodeKey);
   }
 
   function closeNodeConfigDisk() {
-    state.nodeConfigDiskKey = '';
-    document.body.classList.remove('node-config-open');
-    if (nodeConfigDisk) nodeConfigDisk.setAttribute('aria-hidden', 'true');
+    closeConnectionsPanel();
   }
 
   function saveNodeConfigDisk() {
-    var nodeKey = state.nodeConfigDiskKey || activeNodeKey();
-    if (!nodeKey) return;
-    var grp = findNodeGroup(nodeKey);
-    if (!grp || !grp.sessions.length) return;
-    var pid = providerIdFromNodeKey(nodeKey);
-    var ref = activeSession();
-    grp.sessions.forEach(function (s) {
-      if (s.id === state.activeSessionId) ref = s;
-    });
-    if (!ref) ref = grp.sessions[0];
-    if (nodeConfigApiKey && apiKey && providerTransport(pid) !== 'cli') {
-      apiKey.value = nodeConfigApiKey.value;
-      if (!state.apiKeys) state.apiKeys = {};
-      state.apiKeys[pid] = trimApiKey(nodeConfigApiKey.value);
-    }
-    ensureNodeMeta();
-    var customLabel = nodeConfigCustomLabel ? String(nodeConfigCustomLabel.value || '').trim() : '';
-    if (customLabel) state.nodeMeta.labels[nodeKey] = customLabel;
-    else delete state.nodeMeta.labels[nodeKey];
-    if (providerTransport(pid) !== 'cli') {
-      var mVal = nodeConfigModel ? String(nodeConfigModel.value || '').trim() : '';
-      var bVal = nodeConfigBaseUrl ? String(nodeConfigBaseUrl.value || '').trim() : '';
-      if (ref) {
-        ref.model = mVal || ref.model;
-        ref.baseUrl = bVal;
-      }
-      if (mVal) state.nodeMeta.defaultModel[nodeKey] = mVal;
-    }
-    var gk = nodeConfigOpenClawKey ? String(nodeConfigOpenClawKey.value || '').trim() : '';
-    if (pid === 'openclaw' && gk) {
-      grp.sessions.forEach(function (s) {
-        s.gatewaySessionKey = gk;
-        s.nodeKey = 'openclaw:' + gk;
-      });
-      nodeKey = 'openclaw:' + gk;
-      state.nodeConfigDiskKey = nodeKey;
-    } else {
-      grp.sessions.forEach(function (s) {
-        if (providerTransport(pid) !== 'cli' && ref && s.id === ref.id) {
-          if (nodeConfigModel) s.model = ref.model;
-          if (nodeConfigBaseUrl) s.baseUrl = ref.baseUrl;
+    saveConnectionsForm();
+  }
+
+  function saveConnectionsForm() {
+    var nodeKey = state.nodeConfigDiskKey || state.connectionsPickNodeKey || activeNodeKey();
+    if (nodeKey) {
+      var grp = findNodeGroup(nodeKey);
+      if (!grp || !grp.sessions.length) {
+        saveCfg(true);
+        if (ttydShellCommand) {
+          try {
+            var actCli0 = activeSession();
+            post({
+              type: 'niuma_save_ttyd_shell',
+              shell: String(ttydShellCommand.value || '').trim(),
+              engine: actCli0 && actCli0.provider ? actCli0.provider : ''
+            });
+          } catch (eShell0) {}
         }
+        requestAnimationFrame(function () {
+          closeConnectionsPanel();
+          renderContactNav();
+        });
+        return;
+      }
+      var pid = providerIdFromNodeKey(nodeKey);
+      var ref = activeSession();
+      grp.sessions.forEach(function (s) {
+        if (s.id === state.activeSessionId) ref = s;
       });
+      if (!ref) ref = grp.sessions[0];
+      if (nodeConfigApiKey && apiKey && providerTransport(pid) !== 'cli') {
+        apiKey.value = nodeConfigApiKey.value;
+        if (!state.apiKeys) state.apiKeys = {};
+        state.apiKeys[pid] = trimApiKey(nodeConfigApiKey.value);
+      }
+      ensureNodeMeta();
+      var customLabel = nodeConfigCustomLabel ? String(nodeConfigCustomLabel.value || '').trim() : '';
+      if (customLabel) state.nodeMeta.labels[nodeKey] = customLabel;
+      else delete state.nodeMeta.labels[nodeKey];
+      if (providerTransport(pid) !== 'cli') {
+        var mVal = nodeConfigModel ? String(nodeConfigModel.value || '').trim() : '';
+        var bVal = nodeConfigBaseUrl ? String(nodeConfigBaseUrl.value || '').trim() : '';
+        if (ref) {
+          ref.model = mVal || ref.model;
+          ref.baseUrl = bVal;
+        }
+        if (mVal) state.nodeMeta.defaultModel[nodeKey] = mVal;
+      }
+      var gk = nodeConfigOpenClawKey ? String(nodeConfigOpenClawKey.value || '').trim() : '';
+      if (pid === 'openclaw' && gk) {
+        grp.sessions.forEach(function (s) {
+          s.gatewaySessionKey = gk;
+          s.nodeKey = 'openclaw:' + gk;
+        });
+        nodeKey = 'openclaw:' + gk;
+        state.nodeConfigDiskKey = nodeKey;
+        state.connectionsPickNodeKey = nodeKey;
+      } else {
+        grp.sessions.forEach(function (s) {
+          if (providerTransport(pid) !== 'cli' && ref && s.id === ref.id) {
+            if (nodeConfigModel) s.model = ref.model;
+            if (nodeConfigBaseUrl) s.baseUrl = ref.baseUrl;
+          }
+        });
+      }
+      if (ref) syncFormFromSession(ref);
     }
-    syncFormFromSession(ref);
     saveCfg(true);
     persistSessions();
-    renderContactNav();
-    appendAudit({ nodeKey: nodeKey, level: 'success', message: '已保存节点配置' });
+    if (ttydShellCommand) {
+      try {
+        var actCli = activeSession();
+        post({
+          type: 'niuma_save_ttyd_shell',
+          shell: String(ttydShellCommand.value || '').trim(),
+          engine: actCli && actCli.provider ? actCli.provider : ''
+        });
+      } catch (eShell) {}
+    }
+    var savedKey = state.connectionsPickNodeKey || nodeKey || activeNodeKey();
+    mergeNodeRuntime({ nodeKey: savedKey, status: 'ready', detail: '已连接', updatedAt: Date.now() });
+    requestAnimationFrame(function () {
+      closeConnectionsPanel();
+      requestAnimationFrame(function () {
+        renderContactNav();
+        if (savedKey && agentStripEl) {
+          var av = agentStripEl.querySelector('.agent-avatar[data-node-key="' + savedKey + '"]');
+          if (av) {
+            av.classList.add('node-fade-in');
+            var dot = av.querySelector('.agent-status-dot');
+            if (dot) {
+              dot.className = 'agent-status-dot ready';
+            }
+          }
+        }
+      });
+    });
+    appendAudit({ nodeKey: savedKey, level: 'success', message: '已保存并连接' });
   }
 
   function clearNodeHistory(nodeKey) {
@@ -5571,8 +6831,19 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       baseUrl: ref.baseUrl || p.baseUrl,
       gatewaySessionKey: pid === 'openclaw' ? getOpenClawSessionKey(ref) : '',
       nodeKey: nodeKey,
-      history: []
+      history: [],
+      createdAt: new Date().toISOString(),
+      groupKey: '',
+      groupLabel: '',
+      threadState: 'idle',
+      lastError: null,
+      lastErrorAt: 0,
+      contextTokens: 0,
+      contextLimit: 0,
+      stashedAt: null,
+      stashedSummary: null
     };
+    refreshSessionMeta(s);
     state.sessions.push(s);
     state.activeSessionId = s.id;
     setNodeLastThread(nodeKey, s.id);
@@ -5598,7 +6869,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (mode === 'control') {
       empty.textContent = '控制模式：使用下方卡片执行操作。按 Tab 返回对话输入。';
     } else if (isCliSession(s)) {
-      empty.textContent = 'ttyd 命令行：点「+」添加 CLI 联系人，或 Tab 切换到控制打开终端。';
+      empty.textContent = 'ttyd 终端：Ctrl+Tab 打开任务看板，可新建任务并保留会话记录。';
     } else if (state.needSetup || !hasAnyApiConfigured()) {
       empty.textContent = '请先完成 API 配置：点右上角齿轮，或下方快速配置区。';
     } else {
@@ -5844,26 +7115,72 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return out;
   }
 
+  function newSessionGroupsAvailable() {
+    return NEW_SESSION_GROUP_DEFS.filter(function (g) {
+      return (g.api && P[g.api]) || (g.cli && P[g.cli]);
+    });
+  }
+
+  function appendNsModeBtn(row, pid, label, isCli) {
+    if (!pid || !P[pid]) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ns-mode-btn' + (isCli ? ' ns-mode-cli' : '');
+    btn.dataset.pickProvider = pid;
+    btn.textContent = label;
+    btn.title = (P[pid].label || pid) + (isCli ? ' · ttyd 终端' : ' · API 对话');
+    row.appendChild(btn);
+  }
+
   function fillNewSessionGrid() {
     if (!newSessionGrid) return;
     newSessionGrid.innerHTML = '';
-    pickProviderGridKeys().forEach(function (k) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'ns-item';
-      btn.dataset.pickProvider = k;
+    var groups = newSessionGroupsAvailable();
+    if (!groups.length) {
+      var empty = document.createElement('div');
+      empty.className = 'hint mini';
+      empty.style.padding = '12px 4px';
+      empty.textContent = '暂无可用服务商，请检查配置。';
+      newSessionGrid.appendChild(empty);
+      return;
+    }
+    groups.forEach(function (g) {
+      var wrap = document.createElement('div');
+      wrap.className = 'ns-group';
+      var head = document.createElement('div');
+      head.className = 'ns-group-head';
       var ico = document.createElement('span');
       ico.className = 'stab-ico';
       ico.setAttribute('aria-hidden', 'true');
       var im = document.createElement('img');
-      bindProviderIconImg(im, k);
+      bindProviderIconImg(im, g.icon || g.api || g.cli);
       ico.appendChild(im);
       var lab = document.createElement('span');
-      lab.className = 'ns-lab';
-      lab.textContent = P[k].label;
-      btn.appendChild(ico);
-      btn.appendChild(lab);
-      newSessionGrid.appendChild(btn);
+      lab.className = 'ns-group-label';
+      lab.textContent = g.label;
+      head.appendChild(ico);
+      head.appendChild(lab);
+      wrap.appendChild(head);
+      if (g.hint) {
+        var hint = document.createElement('div');
+        hint.className = 'ns-group-hint';
+        hint.textContent = g.hint;
+        wrap.appendChild(hint);
+      }
+      var row = document.createElement('div');
+      row.className = 'ns-mode-row';
+      var hasApi = g.api && P[g.api];
+      var hasCli = g.cli && P[g.cli];
+      if (hasApi && hasCli) {
+        appendNsModeBtn(row, g.api, '💬 对话', false);
+        appendNsModeBtn(row, g.cli, '🖥 CLI', true);
+      } else if (hasApi) {
+        appendNsModeBtn(row, g.api, '💬 对话', false);
+      } else if (hasCli) {
+        appendNsModeBtn(row, g.cli, '🖥 终端', true);
+      }
+      wrap.appendChild(row);
+      newSessionGrid.appendChild(wrap);
     });
   }
 
@@ -5892,8 +7209,19 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       baseUrl: p.baseUrl,
       gatewaySessionKey: pid === 'openclaw' ? wantedOpenClawKey || buildOpenClawSessionKey(sid) : '',
       nodeKey: nodeKeyForSession({ provider: pid, gatewaySessionKey: pid === 'openclaw' ? wantedOpenClawKey || buildOpenClawSessionKey(sid) : '' }),
-      history: []
+      history: [],
+      createdAt: new Date().toISOString(),
+      groupKey: '',
+      groupLabel: '',
+      threadState: 'idle',
+      lastError: null,
+      lastErrorAt: 0,
+      contextTokens: 0,
+      contextLimit: 0,
+      stashedAt: null,
+      stashedSummary: null
     };
+    refreshSessionMeta(s);
     state.sessions.push(s);
     state.activeSessionId = s.id;
     setNodeLastThread(nodeKeyForSession(s), s.id);
@@ -5904,7 +7232,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     renderSessionTabs();
     updateNeedSetup();
     closeNewSessionPick();
-    cstat('已打开「' + p.label + '」新对话', 'success');
+    var modeLabel = providerTransport(pid) === 'cli' ? '终端' : '对话';
+    cstat('已新建「' + p.label + '」' + modeLabel, 'success');
     if (pid === 'openclaw') hydrateOpenClawHistoryForSession(s, true);
     syncChatViewMode();
   }
@@ -6056,7 +7385,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (v) state.sendingBySession[id] = true;
     else delete state.sendingBySession[id];
     refreshSendUi();
-    if (!state.useLegacyTabs && agentStripEl) renderAgentStrip();
+    if (!state.useLegacyTabs) {
+      if (agentStripEl) renderAgentStrip();
+      renderThreadHub();
+    }
   }
 
   function cstatForSession(sid, t, m) {
@@ -7258,21 +8590,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var s = activeSession();
     if (!s) return null;
     syncSessionFromForm(s);
-    var sp = normalizeProviderId(s.provider);
-    var pid = sp && P[sp] ? sp : 'openai';
-    var p = P[pid] || P.openai;
-    var bu = effectiveBaseUrl(pid, s.baseUrl, baseUrl.value);
-    return {
-      provider: pid,
-      model: (p.transport === 'cli') ? '' : (s.model || '').trim() || p.model,
-      baseUrl: bu,
-      openclawSessionKey:
-        pid === 'openclaw'
-          ? String(s.gatewaySessionKey || '').trim() || openClawSessionKeyHintFromBaseUrl(bu) || getOpenClawSessionKey(s)
-          : '',
-      apiKey: getApiKeyForProvider(pid),
-      systemPrompt: getEffectiveSystemPromptForSend()
-    };
+    var nk = nodeKeyForSession(s);
+    return getNodeSendCfg(nk, s);
   }
 
   function buildTestCfg() {
@@ -8182,7 +9501,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   async function reqOpenAI(cfg) {
-    return reqOpenAIMessages(cfg, oaMsgs(cfg), { temperature: 0.7 });
+    var temp = cfg && cfg.temperature != null ? cfg.temperature : 0.7;
+    return reqOpenAIMessages(cfg, oaMsgs(cfg), { temperature: temp });
   }
 
   var BROWSER_AGENT_MAX_TURNS = 12;
@@ -15150,6 +16470,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       } else add('assistant', content);
       appendAudit({ nodeKey: nodeKeyForSession(sessionById(sid)), level: 'success', message: '模型响应完成' });
       cstatForSession(sid, '响应完成。', 'success');
+      var sOk = sessionById(sid);
+      if (sOk) {
+        sOk.lastError = null;
+        sOk.lastErrorAt = 0;
+        refreshSessionMeta(sOk);
+        renderThreadHub();
+      }
     } catch (err) {
       cancelAllPendingHttpOnTimeout(err);
       if (streamDraftId) {
@@ -15173,6 +16500,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         message: '请求失败：' + (err && err.message ? err.message : '未知错误')
       });
       cstatForSession(sid, '请求失败：' + (err && err.message ? err.message : '未知错误'), 'error');
+      var sFail = sessionById(sid);
+      if (sFail) {
+        sFail.lastError = err && err.message ? String(err.message) : '未知错误';
+        sFail.lastErrorAt = Date.now();
+        refreshSessionMeta(sFail);
+        renderThreadHub();
+      }
     } finally {
       setSessionSending(sid, false);
     }
@@ -15235,10 +16569,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     setDrawer(false);
   });
 
-  chatSet.addEventListener('click', function () {
-    provider.dataset.prevProv = provider.value;
-    setSettings(true);
-  });
+  if (chatSet) {
+    chatSet.addEventListener('click', function () {
+      if (provider) provider.dataset.prevProv = provider.value;
+      setSettings(true);
+    });
+  }
   if (chatMobileBrowser) {
     chatMobileBrowser.addEventListener('click', function () {
       if (state.mobileBrowserOpen) closeMobileBrowser();
@@ -15284,7 +16620,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       });
     });
   }
-  if (inlineLlmOpenFull) inlineLlmOpenFull.addEventListener('click', function () { setSettings(true); });
+  if (inlineLlmOpenFull) inlineLlmOpenFull.addEventListener('click', function () { openConnectionsPanel(activeNodeKey()); });
   if (inlineLlmProvider) {
     inlineLlmProvider.addEventListener('change', function () {
       onApiSetupProviderChange(inlineLlmProvider, inlineLlmApiKey, inlineLlmBaseUrl, inlineLlmModel);
@@ -15337,7 +16673,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   if (newSessionPickClose) newSessionPickClose.addEventListener('click', closeNewSessionPick);
   if (newSessionPick) {
     newSessionPick.addEventListener('click', function (e) {
-      var item = e.target.closest('.ns-item');
+      var item = e.target.closest('[data-pick-provider]');
       if (item && item.dataset.pickProvider) createSessionWithProvider(item.dataset.pickProvider);
     });
   }
@@ -15379,19 +16715,84 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         return;
       }
       var av = e.target.closest('.agent-avatar');
-      if (av && av.dataset.nodeKey) onAgentAvatarClick(av.dataset.nodeKey, av);
+      if (av && av.dataset.nodeKey) onAgentAvatarClick(av.dataset.nodeKey);
     });
   }
 
-  if (agentContextBar) {
-    agentContextBar.addEventListener('click', function (e) {
-      var closeBtn = e.target.closest('[data-close-thread]');
-      if (closeBtn) {
+  if (nodeRailConnections) {
+    nodeRailConnections.addEventListener('click', function () {
+      if (state.mainViewportMode === 'connections') closeConnectionsPanel();
+      else openConnectionsPanel(activeNodeKey());
+    });
+  }
+
+  if (threadTreeEl) {
+    threadTreeEl.addEventListener('click', function (e) {
+      var stashBtn = e.target.closest('[data-stash-thread]');
+      if (stashBtn) {
         e.preventDefault();
         e.stopPropagation();
-        requestRemoveThread(closeBtn.getAttribute('data-close-thread'));
+        stashThreadContext(stashBtn.getAttribute('data-stash-thread'));
+        return;
       }
+      var releaseBtn = e.target.closest('[data-release-thread]');
+      if (releaseBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        releaseThreadMemory(releaseBtn.getAttribute('data-release-thread'));
+        return;
+      }
+      var destroyBtn = e.target.closest('[data-destroy-thread]');
+      if (destroyBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        destroyThread(destroyBtn.getAttribute('data-destroy-thread'));
+        return;
+      }
+      var groupBtn = e.target.closest('[data-toggle-group]');
+      if (groupBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var gk = groupBtn.getAttribute('data-toggle-group');
+        ensureThreadHub();
+        var idx = state.threadHub.collapsedGroups.indexOf(gk);
+        if (idx >= 0) state.threadHub.collapsedGroups.splice(idx, 1);
+        else state.threadHub.collapsedGroups.push(gk);
+        persistSessions();
+        renderThreadTree(activeNodeKey());
+        return;
+      }
+      var item = e.target.closest('[data-thread-session]');
+      if (!item) return;
+      var sid = item.getAttribute('data-thread-session');
+      if (sid) switchSession(sid);
     });
+  }
+
+  if (threadRailNew) {
+    threadRailNew.addEventListener('click', function () {
+      var nk = activeNodeKey();
+      if (nk) createThreadInNode(nk);
+      else openNewSessionPick();
+    });
+  }
+
+  if (connNavAdd) {
+    connNavAdd.addEventListener('click', function () {
+      openNewSessionPick();
+    });
+  }
+
+  if (connNavList) {
+    connNavList.addEventListener('click', function (e) {
+      var item = e.target.closest('[data-conn-node-key]');
+      if (!item || !item.dataset.connNodeKey) return;
+      populateConnectionsForm(item.dataset.connNodeKey);
+    });
+  }
+
+  if (connectionsBack) {
+    connectionsBack.addEventListener('click', closeConnectionsPanel);
   }
 
   if (threadPopoverEl) {
@@ -15417,11 +16818,25 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
   });
 
-  if (agentContextNewThread) {
-    agentContextNewThread.addEventListener('click', function () {
-      var nk = activeNodeKey();
-      if (nk) createThreadInNode(nk);
-      else openNewSessionPick();
+  function bindPwdToggle(btn, inputEl) {
+    if (!btn || !inputEl) return;
+    btn.addEventListener('click', function () {
+      var isPwd = inputEl.type === 'password';
+      inputEl.type = isPwd ? 'text' : 'password';
+      btn.textContent = isPwd ? '🙈' : '👁';
+      btn.setAttribute('aria-label', isPwd ? '隐藏密钥' : '显示密钥');
+    });
+  }
+  bindPwdToggle($('nodeConfigKeyToggle'), nodeConfigApiKey);
+  bindPwdToggle($('apiKeyToggle'), apiKey);
+
+  if (connectionsPanel) {
+    connectionsPanel.addEventListener('keydown', function (e) {
+      if (!e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+      if (String(e.key || '').toLowerCase() !== 'enter') return;
+      e.preventDefault();
+      e.stopPropagation();
+      saveConnectionsForm();
     });
   }
 
@@ -15453,11 +16868,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     });
   }
 
-  if (nodeConfigClose) nodeConfigClose.addEventListener('click', closeNodeConfigDisk);
   if (nodeConfigSave) {
     nodeConfigSave.addEventListener('click', function () {
-      saveNodeConfigDisk();
-      closeNodeConfigDisk();
+      saveConnectionsForm();
+    });
+  }
+  if (ssave) {
+    ssave.addEventListener('click', function () {
+      saveConnectionsForm();
     });
   }
   if (nodeConfigTest) {
@@ -15537,28 +16955,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (e.target === stage) setDrawer(false);
   });
 
-  sbg.addEventListener('click', function () {
-    setSettings(false);
-  });
+  if (sbg) {
+    sbg.addEventListener('click', function () {
+      setSettings(false);
+    });
+  }
 
-  sclose.addEventListener('click', function () {
-    setSettings(false);
-  });
-
-  ssave.addEventListener('click', function () {
-    saveCfg(true);
-    if (ttydShellCommand) {
-      try {
-        var actCli = activeSession();
-        post({
-          type: 'niuma_save_ttyd_shell',
-          shell: String(ttydShellCommand.value || '').trim(),
-          engine: actCli && actCli.provider ? actCli.provider : ''
-        });
-      } catch (e) {}
-    }
-    setSettings(false);
-  });
+  if (sclose) {
+    sclose.addEventListener('click', function () {
+      setSettings(false);
+    });
+  }
   if (ttydCustomizeClose) ttydCustomizeClose.addEventListener('click', function () { setTtydCustomize(false); });
   if (ttydCustomizeBg) ttydCustomizeBg.addEventListener('click', function () { setTtydCustomize(false); });
   if (ttydStudioBrowseWd) {
@@ -15970,6 +17377,21 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       } catch (e) {}
     });
   }
+  var cliNewTaskBtn = $('cliNewTaskBtn');
+  if (cliNewTaskBtn) {
+    cliNewTaskBtn.addEventListener('click', function () {
+      var nk = activeNodeKey();
+      if (nk) createThreadInNode(nk);
+    });
+  }
+  var cliSessionLogToggle = $('cliSessionLogToggle');
+  if (cliSessionLogToggle) {
+    cliSessionLogToggle.addEventListener('click', function () {
+      state.cliSessionLogCollapsed = !state.cliSessionLogCollapsed;
+      renderCliSessionLog();
+      cliSessionLogToggle.textContent = state.cliSessionLogCollapsed ? '展开' : '折叠';
+    });
+  }
 
   provider.addEventListener('focus', function () {
     this.dataset.prevProv = this.value;
@@ -16040,10 +17462,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   function handleGlobalEscape(e) {
     var k = e.key || '';
     if (k !== 'Escape' && k !== 'Esc' && String(k).toLowerCase() !== 'escape') return;
-    if (document.body.classList.contains('node-config-open')) {
+    if (state.mainViewportMode === 'connections') {
       e.preventDefault();
       e.stopPropagation();
-      closeNodeConfigDisk();
+      closeProviderDd();
+      closeModelDd();
+      closeConnectionsPanel();
       return;
     }
     if (threadPopoverEl && threadPopoverEl.classList.contains('open')) {
@@ -16058,14 +17482,6 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       closeNewSessionPick();
       return;
     }
-    if (state.settings) {
-      e.preventDefault();
-      e.stopPropagation();
-      closeProviderDd();
-      closeModelDd();
-      setSettings(false);
-      return;
-    }
     if (state.drawer) {
       e.preventDefault();
       e.stopPropagation();
@@ -16075,9 +17491,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   // 捕获阶段：焦点在对话输入框等处时，冒泡阶段可能收不到 Esc，仍能关闭 NiuMa Chat 抽屉
   function handleGlobalNiumaHotkeys(e) {
     if (!state.drawer) return;
-    if (!e.ctrlKey || e.altKey || e.metaKey) return;
     var key = String(e.key || '').toLowerCase();
     var code = String(e.code || '');
+
+    if (e.ctrlKey && !e.altKey && !e.metaKey && key === 'tab') {
+      e.preventDefault();
+      e.stopPropagation();
+      ThreadPanelDrawer.toggle();
+      return;
+    }
+
+    if (!e.ctrlKey || e.altKey || e.metaKey) return;
 
     if (key === 'n') {
       e.preventDefault();
@@ -16111,20 +17535,24 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return;
     }
 
-    // Ctrl+1..8 切换标签：优先 code（Digit1..Digit8 / Numpad1..Numpad8）
+    // Ctrl+1..9 切换节点：优先 code（Digit1..Digit9 / Numpad1..Numpad9）
     var idx = -1;
-    if (/^Digit[1-8]$/.test(code) || /^Numpad[1-8]$/.test(code)) {
+    if (/^Digit[1-9]$/.test(code) || /^Numpad[1-9]$/.test(code)) {
       idx = parseInt(code.replace(/^\D+/, ''), 10) - 1;
-    } else if (/^[1-8]$/.test(key)) {
+    } else if (/^[1-9]$/.test(key)) {
       idx = parseInt(key, 10) - 1;
     }
     if (idx >= 0) {
-      var nodes = Array.prototype.slice.call(document.querySelectorAll('#agentStrip .agent-avatar[data-node-key]'));
+      var nodes = Array.prototype.slice.call(document.querySelectorAll('#nodeRail .agent-avatar[data-node-key]'));
       var nodeEl = nodes[idx];
       if (nodeEl && nodeEl.dataset && nodeEl.dataset.nodeKey) {
         e.preventDefault();
         e.stopPropagation();
         switchToNode(nodeEl.dataset.nodeKey);
+      } else if (idx === 8) {
+        e.preventDefault();
+        e.stopPropagation();
+        openConnectionsPanel();
       }
       return;
     }
@@ -16134,6 +17562,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!state.drawer || !state.featurePhase1) return;
     if (e.key !== 'Tab' || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
     var t = e.target;
+    if (threadTreeEl && t && (t === threadTreeEl || threadTreeEl.contains(t))) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (input) {
+        try {
+          input.focus();
+        } catch (_) {}
+      }
+      return;
+    }
     if (
       t &&
       (t.tagName === 'INPUT' ||
@@ -16154,7 +17592,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return !!(
       el &&
       el.closest &&
-      (el.closest('#settings') || el.closest('#ttydCustomize') || el.closest('#chatStatusRow'))
+      (el.closest('#connectionsPanel') || el.closest('#ttydCustomize') || el.closest('#chatStatusRow'))
     );
   }
 
@@ -16384,7 +17822,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     );
   }
 
-  collapsedRoot.addEventListener(
+  if (collapsedRoot) collapsedRoot.addEventListener(
     'wheel',
     function (e) {
       if (state.drawer) return;

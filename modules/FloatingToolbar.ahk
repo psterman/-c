@@ -7,12 +7,62 @@
 #Include NiumaMobileBrowser.ahk
 #Include GroundingCache.ahk
 
-; 婢舵碍妯夌粈鍝勬珤閾忔碍瀚欏宀勬桨閸栧懎娲块惄鎺炵礄SM_XVIRTUALSCREEN 76閳?9閿?
+; 虚拟屏幕边界（SysGet 76–79）
 ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH) {
     outL := SysGet(76)
     outT := SysGet(77)
     outW := SysGet(78)
     outH := SysGet(79)
+}
+
+; 工作区（排除任务栏）；可选 hwnd 以定位到窗口所在显示器
+ScreenWorkArea_GetBounds(&outL, &outT, &outW, &outH, hwnd := 0) {
+    mon := 1
+    if hwnd {
+        try {
+            WinGetPos(&wx, &wy, &ww, &wh, "ahk_id " hwnd)
+            mon := MonitorGet(wx + (ww // 2), wy + (wh // 2))
+        } catch {
+            mon := 1
+        }
+    }
+    try MonitorGetWorkArea(mon, &l, &t, &r, &b)
+    catch {
+        ScreenVirtual_GetBounds(&outL, &outT, &outW, &outH)
+        return
+    }
+    outL := l
+    outT := t
+    outW := Max(0, r - l)
+    outH := Max(0, b - t)
+}
+
+; NiuMa Chat 抽屉高度：工作区高度，底部留 8px 避免压住任务栏
+FloatingToolbar_ChatDrawerHeightPx(hwnd := 0) {
+    ScreenWorkArea_GetBounds(&wl, &wt, &ww, &wh, hwnd)
+    margin := 8
+    h := wh - margin
+    if (h < 320)
+        h := 320
+    return h
+}
+
+FloatingToolbar_ClampWindowToWorkArea(&x, &y, w, h, hwnd := 0) {
+    ScreenWorkArea_GetBounds(&wl, &wt, &ww, &wh, hwnd)
+    wr := wl + ww
+    wb := wt + wh
+    if (x < wl)
+        x := wl
+    if (y < wt)
+        y := wt
+    if (x + w > wr)
+        x := wr - w
+    if (y + h > wb)
+        y := wb - h
+    if (x < wl)
+        x := wl
+    if (y < wt)
+        y := wt
 }
 
 ; 与系统显示缩放（100%=96DPI）对齐，配合 -DPIScale 的物理像素窗体
@@ -67,9 +117,9 @@ FloatingToolbar_NotifyWebViewHidden(wv2) {
     }
 }
 
-; 无 INI 时默认抽屉「逻辑宽」，随高 DPI 略增、并限制在 400–1000
+; 无 INI 时默认抽屉「逻辑宽」（三栏：52+200+主区），随高 DPI 略增、并限制在 560–1000
 FloatingToolbar_ChatDrawerDefaultWidth() {
-    return Min(1000, Max(400, Round(620 * FloatingToolbar_DpiFactor())))
+    return Min(1000, Max(560, Round(780 * FloatingToolbar_DpiFactor())))
 }
 
 ; ===================== 閸忋劌鐪崣姗€鍣?=====================
@@ -94,7 +144,7 @@ global FloatingToolbar_DragStartTick := 0
 global FloatingToolbar_DragMaxMs := 8000
 global FloatingToolbarIsMinimized := false
 global FloatingToolbarChatDrawerOpen := false
-global FloatingToolbarChatDrawerWidth := 620
+global FloatingToolbarChatDrawerWidth := 780
 global FloatingToolbarChatDrawerHeight := 720
 global FloatingToolbarCmdVisibleCount := 7
 global FloatingToolbarMaxVisibleIcons := 9
@@ -2726,8 +2776,8 @@ FloatingToolbar_ApplyDrawerClientWidth(clientW) {
     if (eff < 0.01)
         eff := 1.0
     logical := Round(clientW / eff)
-    if (logical < 380)
-        logical := 380
+    if (logical < 560)
+        logical := 560
     if (logical > 1200)
         logical := 1200
     FloatingToolbarChatDrawerWidth := logical
@@ -2771,11 +2821,13 @@ FloatingToolbarLoadDrawerWidth() {
     try {
         if !IsSet(ConfigFile) || ConfigFile = ""
             ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
-        defW := String(FloatingToolbar_ChatDrawerDefaultWidth())
-        v := IniRead(ConfigFile, "FloatingToolbar", "ChatDrawerWidth", defW)
+        defW := FloatingToolbar_ChatDrawerDefaultWidth()
+        v := IniRead(ConfigFile, "FloatingToolbar", "ChatDrawerWidth", String(defW))
         iv := Integer(v)
-        if (iv >= 380 && iv <= 1200)
-            FloatingToolbarChatDrawerWidth := iv
+        if (iv >= 560 && iv <= 1200)
+            FloatingToolbarChatDrawerWidth := (iv <= 620) ? defW : iv
+        else if (iv >= 380 && iv < 560)
+            FloatingToolbarChatDrawerWidth := defW
     } catch as _e {
     }
 }
@@ -2840,32 +2892,26 @@ FloatingToolbarSetChatDrawerState(open, force := false) {
     newW := FloatingToolbarCalculateWidth()
     newH := FloatingToolbarCalculateHeight()
 
-    ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
-    vr := vl + vw
-    vb := vt + vh
+    ftHwnd := FloatingToolbarGUI.Hwnd
+    ScreenWorkArea_GetBounds(&wl, &wt, &ww, &wh, ftHwnd)
+    wr := wl + ww
+    wb := wt + wh
     rightEdge := oldX + oldW
 
     if (open) {
         newX := rightEdge - newW
-        newY := vt
+        newY := wt
     } else {
         if (FloatingToolbarLastClosedX != 0 || FloatingToolbarLastClosedY != 0) {
             newX := FloatingToolbarLastClosedX
             newY := FloatingToolbarLastClosedY
         } else {
             newX := rightEdge - newW
-            newY := vb - newH
+            newY := wb - newH
         }
     }
 
-    if (newX < vl)
-        newX := vl
-    if (newY < vt)
-        newY := vt
-    if (newX + newW > vr)
-        newX := vr - newW
-    if (newY + newH > vb)
-        newY := vb - newH
+    FloatingToolbar_ClampWindowToWorkArea(&newX, &newY, newW, newH, ftHwnd)
 
     FloatingToolbarWindowX := newX
     FloatingToolbarWindowY := newY
@@ -5153,8 +5199,9 @@ FloatingToolbarCalculateHeight() {
     ; 增加高度余量，避免放大后图标顶部/底部被裁。
     BaseHeight := 72
     if FloatingToolbarChatDrawerOpen {
-        ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
-        return vh
+        global FloatingToolbarGUI
+        hwnd := FloatingToolbarGUI ? FloatingToolbarGUI.Hwnd : 0
+        return FloatingToolbar_ChatDrawerHeightPx(hwnd)
     }
     if FloatingToolbarIsCompactMode()
         ; 紧凑态使用固定像素直径，避免高 DPI 下过小。

@@ -1056,6 +1056,7 @@ CapsLock:: {
         SetTimer(CapsLock_DeferredSingleTapToggle, 0)
     }
 
+    local vkShownThisPress := VKHoldVisible
     if (VKHoldVisible) {
         try VK_Hide()
         VKHoldVisible := false
@@ -1097,6 +1098,12 @@ CapsLock:: {
         CapsLock_ApplyLogicalState(InitialCapsLockState)
         ; 延迟清除 CapsLock 变量，给快捷键处理函数足够的时间
         SetTimer(ClearCapsLockTimer, -100)
+    } else if (vkShownThisPress) {
+        ; 长按唤起 VK KeyBinder：恢复按下前的大写状态，不做单击切换
+        SetTimer(CapsLock_DeferredSingleTapToggle, 0)
+        CapsLock_ApplyLogicalState(InitialCapsLockState)
+        CapsLock_ScheduleNormalizeAfterChord()
+        CapsLock := false
     } else if (IsShortTap) {
         ; 第一次短按：延迟切换大写，给双击留出窗口
         global CapsLock_DeferredSingleTapInitial

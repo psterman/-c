@@ -943,3 +943,11 @@
 2026-05-31 07:16:55 ttyd started port 7685 pid 18784 cmd=cmd.exe /k ollama
 2026-05-31 07:17:31 ttyd shell [ollama_cli] ttyd_auto_cli: cmd.exe /k ollama
 2026-05-31 07:17:32 ttyd started port 7685 pid 6148 cmd=cmd.exe /k ollama
+2026-05-31 12:21:46 ttyd shell [studio_cli] ini_ttyd: cmd.exe
+2026-05-31 12:21:47 ttyd started port 7691 pid 26256 cmd=cmd.exe
+2026-05-31 12:34:28 ttyd shell [studio_cli] ini_ttyd: cmd.exe
+2026-05-31 12:34:28 ttyd started port 7691 pid 20344 cmd=cmd.exe
+2026-05-31 12:36:50 ttyd shell [studio_cli] ini_ttyd: cmd.exe
+2026-05-31 12:36:50 ttyd started port 7691 pid 11520 cmd=cmd.exe
+2026-06-01 06:13:42 ttyd shell [studio_cli] ini_ttyd: cmd.exe
+2026-06-01 06:13:42 ttyd started port 7691 pid 28060 cmd=cmd.exe

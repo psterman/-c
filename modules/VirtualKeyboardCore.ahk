@@ -4966,6 +4966,7 @@ _KeyNameToAhkBase(keyName) {
         "Backspace", "Backspace", "CapsLock", "CapsLock",
         "Delete", "Delete", "Del", "Delete", "Insert", "Insert", "Ins", "Insert",
         "Home", "Home", "End", "End", "PgUp", "PgUp", "PgDn", "PgDn",
+        "PageUp", "PgUp", "PageDown", "PgDn", "Page Up", "PgUp", "Page Down", "PgDn",
         "Up", "Up", "Down", "Down", "Left", "Left", "Right", "Right",
         "PrintScreen", "PrintScreen", "ScrollLock", "ScrollLock", "Pause", "Pause",
         "AppsKey", "AppsKey", "LWin", "LWin", "RWin", "RWin",
@@ -5012,7 +5013,7 @@ _GetKeyFromSC(sc) {
 }
 
 _PushInit() {
-    global g_Commands, g_InverseBindings, g_LastExecutedCmdId, g_VK_QuickBindArmed, g_VK_QuickBindConsumed, g_VK_IsAdmin, g_VK_AdminWarning, g_VK_Embedded, ThemeMode
+    global g_Commands, g_InverseBindings, g_LastExecutedCmdId, g_VK_QuickBindArmed, g_VK_QuickBindConsumed, g_VK_IsAdmin, g_VK_AdminWarning, g_VK_Embedded, ThemeMode, g_UseScanCode
 
     if !g_Commands.Has("Categories") {
         OutputDebug("[VK] Commands not loaded")
@@ -5111,6 +5112,8 @@ _PushInit() {
     embeddedHost := g_VK_Embedded ? "true" : "false"
     themeMode := _JsonStr(_VK_GetThemeMode())
 
+    nativeLayout := g_UseScanCode ? "true" : "false"
+
     payload := '{"type":"init","categories":' . catJson
         . ',"commands":' . clJson
         . ',"bindings":' . bJson
@@ -5119,6 +5122,7 @@ _PushInit() {
         . ',"lastActionName":' . lastActionName
         . ',"lastActionCurrentKey":' . lastActionCurrentKey
         . ',"quickBindActive":' . quickBindActive
+        . ',"nativeLayout":' . nativeLayout
         . ',"themeMode":' . themeMode
         . ',"isAdmin":' . isAdmin
         . ',"adminWarning":' . adminWarning
