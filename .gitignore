@@ -14,24 +14,35 @@ CursorData.db
 CursorHelper.db
 
 # 用户数据目录（含 CursorData.db、截图缓存等）
-Data/
+Data/*
+!Data/.gitkeep
 
 # 本地配置（每人不同，不宜进仓库）
 CursorShortcut.ini
 PromptTemplates.ini
 
+# 用户定制（含 API Key）
+config/user_studio.json
+config/user_studio.backup.json
+config/niuma_chat_llm.json
+config/curser.ini
+
+# 备份与临时
+*.bak*
+temp_*
+_ftb_tmp_check.js
+*.lnk
+
 # 调试日志（根目录）
 clipboard_debug.log
+NiumaTtyd_debug.log
+Run History.csv
+ttyd_repair.log
 
-# 运行时 Cache（AHK/桥接进程常占用，勿提交）
-Cache/*.log
-Cache/*.jsonl
-Cache/ahk_stderr.txt
-Cache/validate_out.txt
-Cache/validate_out.txt.err
-Cache/bisect_mini.log
-Cache/probe_empty.log
-Cache/hole-vite.log
+# 运行时 Cache（保留 .gitkeep 占位）
+Cache/*
+!Cache/.gitkeep
+Cache/openclaw-state/
 
 cache/dict_install/
 
@@ -41,11 +52,21 @@ tools/whisper-stt/models/
 tools/whisper-stt/output.txt
 tools/whisper-stt/__pycache__/
 
-# Prototype: generated artifacts and local deps
-prototype/**/frontend/node_modules/
-prototype/**/frontend/dist/
-prototype/**/build/bin/
-prototype/**/.wails/
-prototype/**/*.log
-prototype/**/tmp/
-prototype/**/temp/
+# Prototype: generated artifacts and local deps（已迁至 archive/prototype/）
+archive/prototype/**/frontend/node_modules/
+archive/prototype/**/frontend/dist/
+archive/prototype/**/build/bin/
+archive/prototype/**/.wails/
+archive/prototype/**/*.log
+archive/prototype/**/tmp/
+archive/prototype/**/temp/
+
+# 根目录依赖
+/node_modules/
+
+# 诊断输出
+tools/drop-diagnostics/results/
+tools/search-diagnostics/results/
+
+# IDE
+.cursor/
