@@ -2150,7 +2150,16 @@ FloatingToolbar_OnWebMessage(sender, args) {
             catch {
             }
         }
-        try WebView_QueuePayload(g_FTB_WV2, Map("type", "studio_llm_sync_result", "ok", ok, "error", err, "niumaContext", ctx))
+        syncPayload := Map("type", "studio_llm_sync_result", "ok", ok, "error", err, "niumaContext", ctx, "llm", llm)
+        if FuncExists("UserStudio_PayloadForWeb") {
+            try {
+                pl := UserStudio_PayloadForWeb()
+                if (pl.Has("options") && pl["options"] is Map)
+                    syncPayload["options"] := pl["options"]
+            } catch {
+            }
+        }
+        try WebView_QueuePayload(g_FTB_WV2, syncPayload)
         catch {
         }
         return

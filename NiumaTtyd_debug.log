@@ -951,3 +951,5 @@
 2026-05-31 12:36:50 ttyd started port 7691 pid 11520 cmd=cmd.exe
 2026-06-01 06:13:42 ttyd shell [studio_cli] ini_ttyd: cmd.exe
 2026-06-01 06:13:42 ttyd started port 7691 pid 28060 cmd=cmd.exe
+2026-06-01 06:57:37 ttyd shell [gemini_cli] ttyd_auto_cli: cmd.exe /k gemini
+2026-06-01 06:57:37 ttyd started port 7682 pid 25244 cmd=cmd.exe /k gemini
