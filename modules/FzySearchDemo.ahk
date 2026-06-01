@@ -1,7 +1,7 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
-#Include modules\FileClassifier.ahk
+#Include FileClassifier.ahk
 
 ; 独立演示：150ms 防抖 → Everything 最多 100 条路径 → FileClassifier 打标 → FzyScore+类别加权 → Top 9
 ; 若 lib\everything64.dll 不可用或 IPC 失败，自动使用内置假路径仍可演示打分与排序。
@@ -67,7 +67,7 @@ FzyDemoStableCompare(a, b, *) {
 }
 
 DemoEverythingPaths(keyword, maxResults := 100) {
-    static evDll := A_ScriptDir "\lib\everything64.dll"
+    static evDll := A_ScriptDir . "\..\lib\everything64.dll"
     static loaded := false
     if (!FileExist(evDll))
         return []

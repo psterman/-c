@@ -11,7 +11,7 @@
 │   ├── niuma_mobile_click.js
 │   └── niuma_mobile_input.js
 ├── FloatingToolbarStrip.html       # Browser Agent + Chat UI
-└── docs/MOBILE_BROWSER_GROUNDING.md
+└── md/docs/MOBILE_BROWSER_GROUNDING.md
 ```
 
 ## 单步 Tool Loop

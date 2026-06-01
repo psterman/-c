@@ -4,7 +4,7 @@
 ; ======================================================================================================================
 
 #Requires AutoHotkey v2.0
-#Include lib\WebView2.ahk
+#Include ..\lib\WebView2.ahk
 
 ; 创建诊断窗口
 DiagGui := Gui("+Resize", "WebView2 诊断工具")

@@ -3996,7 +3996,7 @@ ${buildStudioLlmCardsHtml(activeProv)}
 <div class="card studio-context-card"><div class="title">Niuma Chat 项目背景（自动注入）</div>
 <div class="row"><div class="label">打开对话时注入</div><div><input id="niumaAutoInjectContext" type="checkbox" data-nosave="1" ${checked((us.options || {}).niumaAutoInjectContext !== false)}></div></div>
 <div class="row"><div class="label">安装根目录（可选）</div><input id="niumaInstallRoot" type="text" data-nosave="1" class="ctl" value="${esc((us.options || {}).niumaInstallRoot || "")}" placeholder="留空则自动识别为当前脚本所在文件夹"></div>
-<div class="hint mini">点击悬浮栏<strong>牛马图标</strong>打开 Niuma Chat 时，自动写入 System Prompt，并附带<strong>本机即时信息</strong>（安装路径、A_ScriptDir、config 路径）。留空下方说明则用 <code>docs/niuma-project-brief.md</code>。</div>
+<div class="hint mini">点击悬浮栏<strong>牛马图标</strong>打开 Niuma Chat 时，自动写入 System Prompt，并附带<strong>本机即时信息</strong>（安装路径、A_ScriptDir、config 路径）。留空下方说明则用 <code>md/docs/niuma-project-brief.md</code>。</div>
 <textarea id="studioNiumaSystemPrompt" class="studio-ask-input" data-nosave="1" style="min-height:100px" placeholder="可选：覆盖默认项目说明（留空则用内置 Brief）">${esc((us.options || {}).niumaSystemPrompt || "")}</textarea>
 <div class="inline" style="margin-top:8px"><button class="btn" type="button" id="btnReloadNiumaBrief">载入内置 Brief 预览</button></div>
 <div class="hint mini" id="niumaBriefPreviewHint"></div>

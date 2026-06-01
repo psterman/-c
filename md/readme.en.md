@@ -33,11 +33,11 @@ The portable package includes Everything, ttyd, SearchCenterCore, WebView2Loader
 | `config/user_studio.defaults.json` | LLM/settings template → local `user_studio.json` on first use |
 | `Data/` | Runtime user data (screenshots, chat attachments) |
 | `Cache/` | Logs and cache — safe to clear periodically |
-| `docs/` | Technical documentation |
+| `docs/` | Technical documentation (`md/docs/`) |
 | `archive/` | Deprecated prototypes — not used by the current app |
 
 See [软件介绍.md](软件介绍.md) (Chinese) for full architecture details.
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE).
+Apache License 2.0 — see [LICENSE](../LICENSE).

@@ -1,7 +1,7 @@
 #Requires AutoHotkey v2.0
 
 ; P0: AHK 仅作信使 — 禁止运行时 Move/Hide/Park；样式/透明/WebView 布局仍由 AHK 维护至 P2。
-; 见 docs/INTERACTION_MANAGER.md
+; 见 md/docs/INTERACTION_MANAGER.md
 
 global GDHO_P0_READONLY := true
 global GDHO_P2_WINDOW_POLICY := true

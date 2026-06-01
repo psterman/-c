@@ -1,5 +1,5 @@
 #Requires AutoHotkey v2.0
-; 选区感应：划选 → 弱预览黑洞 → 提交面板。用户动线见 docs/TEXT_HOLE_FLOW.md
+; 选区感应：划选 → 弱预览黑洞 → 提交面板。用户动线见 md/docs/TEXT_HOLE_FLOW.md
 global g_SelSense_Enabled := true
 global g_SelSense_CopyDelayMs := 55
 global g_SelSense_RequireIBeam := false

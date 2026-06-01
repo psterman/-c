@@ -11,8 +11,10 @@ class fuzz
             path := (A_PtrSize == 4) ? A_ScriptDir . "\lib\dll_32\" : A_ScriptDir . "\lib\dll_64\"
             lib_path := A_ScriptDir . "\lib"
         }
-        else
-            path := (A_PtrSize == 4) ? dir . "\dll_32\" : dir . "\dll_64\"
+        else {
+            lib_path := dir . "\..\lib"
+            path := (A_PtrSize == 4) ? lib_path . "\dll_32\" : lib_path . "\dll_64\"
+        }
         dllcall("SetDllDirectory", "Str", path)
         for k,v in this.all_dll_func
         {
@@ -20,7 +22,8 @@ class fuzz
                 this.all_dll_func[k][k1] := DllCall("GetProcAddress", "Ptr", DllCall("LoadLibrary", "Str", k, "Ptr"), "AStr", k1, "Ptr")
         }
         this.is_dll_load := true
-        DllCall("SetDllDirectory", "Str", A_ScriptDir)
+        installRoot := InStr(dir, "\modules") ? (dir . "\..") : dir
+        DllCall("SetDllDirectory", "Str", installRoot)
     }
     static __new() => this.load_all_dll_func()
     static __Call(Name, Params) => DllCall(this.all_dll_func["fuzz.dll"]["rapid_fuzz_cpp_" Name], "wstr", Params[1], "wstr", Params[2], "Cdecl Double")

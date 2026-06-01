@@ -24,7 +24,7 @@ UserStudio_NiumaLlmSyncPath() {
 }
 
 UserStudio_NiumaBriefPath() {
-    return A_ScriptDir . "\docs\niuma-project-brief.md"
+    return A_ScriptDir . "\md\docs\niuma-project-brief.md"
 }
 
 UserStudio_ReadTextFileMax(path, maxChars := 12000) {
@@ -89,8 +89,8 @@ UserStudio_BuildDefaultNiumaSystemPrompt() {
     doc := UserStudio_Get()
     brief := UserStudio_ReadTextFileMax(UserStudio_NiumaBriefPath(), 9000)
     if (brief = "") {
-        agents := UserStudio_ReadTextFileMax(A_ScriptDir . "\AGENTS.md", 3500)
-        intro := UserStudio_ReadTextFileMax(A_ScriptDir . "\软件介绍.md", 4500)
+        agents := UserStudio_ReadTextFileMax(A_ScriptDir . "\md\AGENTS.md", 3500)
+        intro := UserStudio_ReadTextFileMax(A_ScriptDir . "\md\软件介绍.md", 4500)
         brief := "你是牛马 nmer（Windows 桌面效率工具）的维护与定制助手。用户通过 Niuma Chat 修改本仓库代码与配置。`n`n"
         if (agents != "")
             brief .= "--- AGENTS.md ---`n" . agents . "`n`n"

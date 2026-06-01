@@ -34,10 +34,10 @@
 
 ## Niuma Chat 项目背景
 
-- 默认说明：`docs/niuma-project-brief.md`（打开牛马 Chat 时自动注入 System Prompt）
+- 默认说明：`md/docs/niuma-project-brief.md`（打开牛马 Chat 时自动注入 System Prompt）
 - 智能定制 →「Niuma Chat 项目背景」可覆盖或关闭自动注入
 
 ## 更多文档
 
-- `docs/TEXT_HOLE_FLOW.md` — 文本黑洞交互
-- `软件介绍.md` — 功能总览
+- `md/docs/TEXT_HOLE_FLOW.md` — 文本黑洞交互
+- `md/软件介绍.md` — 功能总览

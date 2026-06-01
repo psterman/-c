@@ -3,7 +3,7 @@
 #Include GDHO_P0Messenger.ahk
 
 ; De-coupled multi-window topology: starry ghost + interactive panel HUD.
-; User flow: docs/TEXT_HOLE_FLOW.md — selection → weak_preview → commit → panel_open → dismiss.
+; User flow: md/docs/TEXT_HOLE_FLOW.md — selection → weak_preview → commit → panel_open → dismiss.
 
 global GDHO_DECOUPLED_TOPOLOGY := true
 global GDHO_STAR_FULLSCREEN := false
@@ -111,7 +111,7 @@ global GDHO_PHASE_PANEL_OPEN := "panel_open"
 global GDHO_PHASE_CLOSING := "closing"
 global g_GDHO_InteractionPhase := GDHO_PHASE_IDLE
 
-; --- Central interaction phase (see docs/TEXT_HOLE_FLOW.md) ---
+; --- Central interaction phase (see md/docs/TEXT_HOLE_FLOW.md) ---
 GDHO_GetInteractionPhase() {
     global g_GDHO_TextHoleAwaitingExpand, g_GDHO_TextHoleState, g_GDHO_InteractionPhase
     global GDHO_TEXT_HOLE_STATE_PREVIEW, GDHO_TEXT_HOLE_STATE_ARMED, GDHO_TEXT_HOLE_STATE_COMMITTED
