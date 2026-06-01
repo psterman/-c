@@ -10,7 +10,7 @@
 │   ├── niuma_mobile_settle.js      # 网络空闲 + DOM 静默 Settle
 │   ├── niuma_mobile_click.js
 │   └── niuma_mobile_input.js
-├── FloatingToolbarStrip.html       # Browser Agent + Chat UI
+├── html/FloatingToolbarStrip.html  # Browser Agent + Chat UI
 └── md/docs/MOBILE_BROWSER_GROUNDING.md
 ```
 

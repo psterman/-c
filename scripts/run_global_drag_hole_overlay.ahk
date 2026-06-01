@@ -14,7 +14,7 @@ SetWorkingDir(A_ScriptDir "\..")
 GDHO_SetPageUrl("http://127.0.0.1:5173/hole_starry.html")
 if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
     GDHO_SetPanelPageUrl("http://127.0.0.1:5173/hole_panel.html")
-    panelPath := A_ScriptDir . "\..\hole_panel.html"
+    panelPath := A_ScriptDir . "\..\html\hole_panel.html"
     panelFb := "file:///" . StrReplace(panelPath, "\", "/")
     try GDHO_SetPanelFallbackUrl(panelFb)
     try GDHO_SetPanelPageUrl(panelFb)

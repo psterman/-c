@@ -9,7 +9,7 @@
 - 根目录：见自动识别的「软件安装根目录」
 - 主入口：`牛马.ahk`
 - 模块：`modules/*.ahk`
-- WebView 界面：`FloatingToolbarStrip.html`（Niuma Chat）、`SettingsPanel.html`（设置/智能定制）、`SearchCenter.html` 等
+- WebView 界面：`html/FloatingToolbarStrip.html`（Niuma Chat）、`html/SettingsPanel.html`（设置/智能定制）、`html/SearchCenter.html` 等
 - 用户定制：`config/user_studio.json`（API、路径、ttyd、options）
 
 ## 核心功能
@@ -23,8 +23,8 @@
 
 | 目的 | 文件 |
 |------|------|
-| Niuma Chat UI/对话/API 测试 | `FloatingToolbarStrip.html`、`modules/FloatingToolbar.ahk` |
-| 智能定制 / 打开 Chat | `SettingsPanel.html`、`modules/ConfigWebViewModule.ahk`、`modules/UserStudio.ahk` |
+| Niuma Chat UI/对话/API 测试 | `html/FloatingToolbarStrip.html`、`modules/FloatingToolbar.ahk` |
+| 智能定制 / 打开 Chat | `html/SettingsPanel.html`、`modules/ConfigWebViewModule.ahk`、`modules/UserStudio.ahk` |
 | 用户 API 与路径 | `config/user_studio.json` |
 | 版本更新检查等 | `modules/AppUpdateCheck.ahk`、`config/app_version.json` |
 

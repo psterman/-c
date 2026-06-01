@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -231,13 +231,13 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   </div>
   <div class="providers">
     <button id="btnRoot" class="pbtn"><span class="provider-dot" data-provider-dot></span><span id="providerLabelRoot" class="provider-label">主页</span></button>
-    <button id="btnAli" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="lib/images/aliyun.png" alt=""><span id="providerLabelAli" class="provider-label">阿里云盘</span></button>
-    <button id="btnBaidu" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="lib/images/baiduyun.png" alt=""><span id="providerLabelBaidu" class="provider-label">Baidu</span></button>
-    <button id="btnQuark" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="lib/images/kuake.png" alt=""><span id="providerLabelQuark" class="provider-label">Quark</span></button>
-    <button id="btn115" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="lib/images/115.png" alt=""><span id="providerLabel115" class="provider-label">115</span></button>
-    <button id="btn123" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="lib/images/123.png" alt=""><span id="providerLabel123" class="provider-label">123</span></button>
-    <button id="btnOneDrive" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="lib/images/OneDrive.png" alt=""><span id="providerLabelOneDrive" class="provider-label">OneDrive</span></button>
-    <button id="btnDropbox" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="lib/images/dropbox.png" alt=""><span id="providerLabelDropbox" class="provider-label">Dropbox</span></button>
+    <button id="btnAli" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="https://app.local/lib/images/aliyun.png" alt=""><span id="providerLabelAli" class="provider-label">阿里云盘</span></button>
+    <button id="btnBaidu" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="https://app.local/lib/images/baiduyun.png" alt=""><span id="providerLabelBaidu" class="provider-label">Baidu</span></button>
+    <button id="btnQuark" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="https://app.local/lib/images/kuake.png" alt=""><span id="providerLabelQuark" class="provider-label">Quark</span></button>
+    <button id="btn115" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="https://app.local/lib/images/115.png" alt=""><span id="providerLabel115" class="provider-label">115</span></button>
+    <button id="btn123" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="https://app.local/lib/images/123.png" alt=""><span id="providerLabel123" class="provider-label">123</span></button>
+    <button id="btnOneDrive" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="https://app.local/lib/images/OneDrive.png" alt=""><span id="providerLabelOneDrive" class="provider-label">OneDrive</span></button>
+    <button id="btnDropbox" class="pbtn"><span class="provider-dot" data-provider-dot></span><img class="provider-ico" src="https://app.local/lib/images/dropbox.png" alt=""><span id="providerLabelDropbox" class="provider-label">Dropbox</span></button>
   </div>
 
   <div class="quick-import">
@@ -326,7 +326,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   <div id="scanModal" class="modal">
     <div class="modal-card">
       <div class="modal-head">
-        <div class="modal-head-left"><img id="guideProviderIcon" class="modal-provider-ico" src="lib/images/aliyun.png" alt=""><div><div class="modal-title">智能登录指引</div><div class="modal-hint">在浏览器登录后，复制 refresh_token 再粘贴到下方。</div></div></div>
+        <div class="modal-head-left"><img id="guideProviderIcon" class="modal-provider-ico" src="https://app.local/lib/images/aliyun.png" alt=""><div><div class="modal-title">智能登录指引</div><div class="modal-hint">在浏览器登录后，复制 refresh_token 再粘贴到下方。</div></div></div>
         <div style="display:flex;gap:8px"><button id="btnCloseScan" class="primary">关闭</button></div>
       </div>
       <div class="modal-body">
@@ -389,7 +389,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
 <script src="https://unpkg.com/artplayer@5.2.3/dist/artplayer.js"></script>
 <script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
 <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="./assets/nm-bottom-dock.js"></script>
+<script src="https://app.local/assets/nm-bottom-dock.js"></script>
 <script>
 (function(){
   var $ = function(id){ return document.getElementById(id); };
@@ -506,13 +506,13 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
   var providerOnline = {};
   var providerButtonMap = { ali:"btnAli", baidu:"btnBaidu", quark:"btnQuark", pan115:"btn115", pan123:"btn123", onedrive:"btnOneDrive", dropbox:"btnDropbox", root:"btnRoot" };
   var providerMap = {
-    ali: { label:"Aliyun", icon:"lib/images/aliyun.png", driver:"AliyundriveOpen", mountId:"mountAli", defaultPath:"/aliyun", loginUrl:"https://api.oplist.org/#", tokenLabel:"refresh_token", mkdirSupported:false },
-    baidu: { label:"Baidu", icon:"lib/images/baiduyun.png", driver:"BaiduNetdisk", mountId:"mountBaidu", defaultPath:"/baidu", loginUrl:"https://api.oplist.org/#", tokenLabel:"refresh_token", mkdirSupported:false },
-    quark: { label:"Quark", icon:"lib/images/kuake.png", driver:"Quark", mountId:"mountQuark", defaultPath:"/quark", loginUrl:"https://api.oplist.org/quarkyun/callback", requestUrl:"https://api.oplist.org/quarkyun/requests", tokenLabel:"Cookie (__puus / __pus / ctoken)" },
-    pan115: { label:"115", icon:"lib/images/115.png", driver:"Pan115", mountId:"mount115", defaultPath:"/pan115", loginUrl:"https://api.oplist.org/#", tokenLabel:"refresh_token" },
-    pan123: { label:"123", icon:"lib/images/123.png", driver:"123Open", mountId:"mount123", defaultPath:"/pan123", loginUrl:"https://api.oplist.org/#", tokenLabel:"refresh_token" },
-    onedrive: { label:"OneDrive", icon:"lib/images/OneDrive.png", driver:"Onedrive", mountId:"mountOneDrive", defaultPath:"/onedrive", loginUrl:"https://api.oplist.org/#", tokenLabel:"refresh_token" },
-    dropbox: { label:"Dropbox", icon:"lib/images/dropbox.png", driver:"Dropbox", mountId:"mountDropbox", defaultPath:"/dropbox", loginUrl:"https://api.oplist.org/#", tokenLabel:"refresh_token" }
+    ali: { label:"Aliyun", icon:"https://app.local/lib/images/aliyun.png", driver:"AliyundriveOpen", mountId:"mountAli", defaultPath:"/aliyun", loginUrl:"https://api.oplist.org/#", tokenLabel:"refresh_token", mkdirSupported:false },
+    baidu: { label:"Baidu", icon:"https://app.local/lib/images/baiduyun.png", driver:"BaiduNetdisk", mountId:"mountBaidu", defaultPath:"/baidu", loginUrl:"https://api.oplist.org/#", tokenLabel:"refresh_token", mkdirSupported:false },
+    quark: { label:"Quark", icon:"https://app.local/lib/images/kuake.png", driver:"Quark", mountId:"mountQuark", defaultPath:"/quark", loginUrl:"https://api.oplist.org/quarkyun/callback", requestUrl:"https://api.oplist.org/quarkyun/requests", tokenLabel:"Cookie (__puus / __pus / ctoken)" },
+    pan115: { label:"115", icon:"https://app.local/lib/images/115.png", driver:"Pan115", mountId:"mount115", defaultPath:"/pan115", loginUrl:"https://api.oplist.org/#", tokenLabel:"refresh_token" },
+    pan123: { label:"123", icon:"https://app.local/lib/images/123.png", driver:"123Open", mountId:"mount123", defaultPath:"/pan123", loginUrl:"https://api.oplist.org/#", tokenLabel:"refresh_token" },
+    onedrive: { label:"OneDrive", icon:"https://app.local/lib/images/OneDrive.png", driver:"Onedrive", mountId:"mountOneDrive", defaultPath:"/onedrive", loginUrl:"https://api.oplist.org/#", tokenLabel:"refresh_token" },
+    dropbox: { label:"Dropbox", icon:"https://app.local/lib/images/dropbox.png", driver:"Dropbox", mountId:"mountDropbox", defaultPath:"/dropbox", loginUrl:"https://api.oplist.org/#", tokenLabel:"refresh_token" }
   };
     var i18n = {
     zh: {
@@ -3410,10 +3410,10 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
     return new Promise(function(resolve, reject){
       var s = document.createElement("script");
-      s.src = "assets/pdfjs/pdf.min.js";
+      s.src = "https://app.local/assets/pdfjs/pdf.min.js";
       s.onload = function(){
         if(!window.pdfjsLib){ reject(new Error("pdfjsLib missing")); return; }
-        try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc = "assets/pdfjs/pdf.worker.min.js"; }catch(_){}
+        try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://app.local/assets/pdfjs/pdf.worker.min.js"; }catch(_){}
         resolve(window.pdfjsLib);
       };
       s.onerror = function(){ reject(new Error("pdf.min.js load error")); };
@@ -3924,7 +3924,7 @@ video{width:100%;height:100%;min-height:320px;flex:1;background:#06090f;border:1
     var is123 = (state.provider === "pan123");
     var isEn = (uiLang === "en");
     if($("guideProviderIcon")){
-      $("guideProviderIcon").src = m.icon || "lib/images/aliyun.png";
+      $("guideProviderIcon").src = m.icon || "https://app.local/lib/images/aliyun.png";
       $("guideProviderIcon").alt = m.label || "";
     }
     try{

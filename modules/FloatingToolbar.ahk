@@ -1200,7 +1200,7 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
     ; 强制刷新 WebView 资源版本，避免命中旧缓存脚本导致前端变量未定义
     stripUrl := BuildAppLocalUrl("FloatingToolbarStrip.html")
     try {
-        ver := String(FileGetTime(A_ScriptDir . "\FloatingToolbarStrip.html", "M"))
+        ver := String(FileGetTime(HtmlPanelPath("FloatingToolbarStrip.html"), "M"))
         if (InStr(stripUrl, "?"))
             stripUrl := stripUrl . "&v=" . ver
         else

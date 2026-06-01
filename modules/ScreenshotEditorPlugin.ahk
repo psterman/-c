@@ -1073,7 +1073,7 @@ class ScreenshotEditorPlugin {
     try this.ScreenshotToolbarWV2Ctrl.IsVisible := true
     try this.ScreenshotToolbarWV2.add_WebMessageReceived(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnMessage"))
     try this.ScreenshotToolbarWV2.add_NavigationCompleted(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnNavigationCompleted"))
-    htmlPath := A_ScriptDir "\ScreenshotToolbarWebView.html"
+    htmlPath := HtmlPanelPath("ScreenshotToolbarWebView.html")
     try {
         if FileExist(htmlPath) {
             tm := this.ScreenshotToolbarGetThemeMode()
@@ -1477,7 +1477,7 @@ class ScreenshotEditorPlugin {
     this.ScreenshotPreviewWV2Ready := false
     try this.ScreenshotPreviewWV2Ctrl.DefaultBackgroundColor := this.ScreenshotToolbarThemeArgb()
     try this.ScreenshotPreviewWV2.add_WebMessageReceived(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnMessage"))
-    htmlPath := A_ScriptDir "\ScreenshotEditorWebView.html"
+    htmlPath := HtmlPanelPath("ScreenshotEditorWebView.html")
     try {
         if FileExist(htmlPath) {
             tm := this.ScreenshotToolbarGetThemeMode()

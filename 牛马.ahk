@@ -209,16 +209,16 @@ global CommandPaletteUseWebView := true
 
 ; 洞与工具栏同时启用：默认使用本地静态页，避免 dev server/端口探测阻塞导致启动假死
 if (EnableHoleOverlay || EnableHoleOverlayOnNativeDrop) {
-    holeFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\hole_starry.html")
+    holeFallbackUrl := GDHO_BuildFileUrl(HtmlPanelPath("hole_starry.html"))
     try GDHO_SetFallbackUrl(holeFallbackUrl)
     if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
-        panelFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\hole_panel.html")
+        panelFallbackUrl := GDHO_BuildFileUrl(HtmlPanelPath("hole_panel.html"))
         try GDHO_SetPanelFallbackUrl(panelFallbackUrl)
         try GDHO_SetPanelPageUrl(panelFallbackUrl)
     }
 }
 if (EnableHoleOverlayOnNativeDrop) {
-    holeFallbackUrl := GDHO_BuildFileUrl(A_ScriptDir . "\hole_starry.html")
+    holeFallbackUrl := GDHO_BuildFileUrl(HtmlPanelPath("hole_starry.html"))
     try GDHO_SetFallbackUrl(holeFallbackUrl)
 }
 
@@ -2617,20 +2617,20 @@ ApplyActivationRuntimeDeferred(mode, token) {
     if (m = "hole") {
         try SetHoleRuntimeEnabled(true)
         try {
-            localHole := GDHO_BuildFileUrl(A_ScriptDir . "\hole_starry.html")
-            if FileExist(A_ScriptDir . "\hole_starry.html") {
+            localHole := GDHO_BuildFileUrl(HtmlPanelPath("hole_starry.html"))
+            if FileExist(HtmlPanelPath("hole_starry.html")) {
                 GDHO_SetPageUrl(localHole)
                 GDHO_SetFallbackUrl(localHole)
             }
             if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY) {
-                localPanel := GDHO_BuildFileUrl(A_ScriptDir . "\hole_panel.html")
-                if FileExist(A_ScriptDir . "\hole_panel.html") {
+                localPanel := GDHO_BuildFileUrl(HtmlPanelPath("hole_panel.html"))
+                if FileExist(HtmlPanelPath("hole_panel.html")) {
                     GDHO_SetPanelPageUrl(localPanel)
                     GDHO_SetPanelFallbackUrl(localPanel)
                 }
-                if FileExist(A_ScriptDir . "\hole_launcher_layer.html") {
+                if FileExist(HtmlPanelPath("hole_launcher_layer.html")) {
                     if FuncExists("GDHO_SetLauncherFallbackUrl")
-                        try GDHO_SetLauncherFallbackUrl("https://app.local/hole_launcher_layer.html")
+                        try GDHO_SetLauncherFallbackUrl(BuildAppLocalUrl("hole_launcher_layer.html"))
                 }
             }
         } catch {
@@ -2842,6 +2842,13 @@ EnsureFloatingSurfaceVisible() {
 }
 
 ; 在InitConfig结束后加载模板
+HtmlPanelPath(fileName := "") {
+    base := A_ScriptDir . "\html"
+    if (Trim(String(fileName)) = "")
+        return base
+    return base . "\" . fileName
+}
+
 BuildAppLocalUrl(relativePath) {
     host := "app.local"
     try {
@@ -2855,7 +2862,14 @@ BuildAppLocalUrl(relativePath) {
     normalized := StrReplace(relativePath, "\", "/")
     if (SubStr(normalized, 1, 1) = "/")
         normalized := SubStr(normalized, 2)
-    return "https://" . host . "/" . normalized
+    qSuffix := ""
+    if (iq := InStr(normalized, "?")) {
+        qSuffix := SubStr(normalized, iq)
+        normalized := SubStr(normalized, 1, iq - 1)
+    }
+    if (RegExMatch(normalized, "\.html$") && !RegExMatch(normalized, "^(html/|assets/|archive/|tools/|lib/|modules/|aiicons/|searchcore/|config/|md/)"))
+        normalized := "html/" . normalized
+    return "https://" . host . "/" . normalized . qSuffix
 }
 
 BuildAppAssetUrl(relativePath) {

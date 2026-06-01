@@ -185,7 +185,7 @@ ConfigWebView_OnCreated(ctrl) {
     ConfigWebView_ApplyBounds()
     try ApplyUnifiedWebViewAssets(ConfigWV2)
     try ConfigWV2Ctrl.IsVisible := true
-    htmlPath := A_ScriptDir "\SettingsPanel.html"
+    htmlPath := HtmlPanelPath("SettingsPanel.html")
     try {
         ConfigWV2.Navigate(BuildAppLocalUrl("SettingsPanel.html"))
     } catch as e {
@@ -212,7 +212,7 @@ ConfigWebView_OnNavigationCompleted(sender, args) {
     }
     if !ConfigWebViewNavFallbackTried {
         ConfigWebViewNavFallbackTried := true
-        fileUrl := "file:///" . StrReplace(A_ScriptDir . "\SettingsPanel.html", "\", "/")
+        fileUrl := "file:///" . StrReplace(HtmlPanelPath("SettingsPanel.html"), "\", "/")
         try {
             sender.Navigate(fileUrl)
             return

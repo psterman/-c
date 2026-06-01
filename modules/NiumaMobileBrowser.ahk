@@ -2039,7 +2039,7 @@ NiumaMobileBrowser_NavigateChromeHtml(pane := "top") {
     chromeUrl := NiumaMobileBrowser_CallFunc("BuildAppLocalUrl", "NiumaMobileBrowserChrome.html")
     if (chromeUrl != "") {
         try {
-            ver := String(FileGetTime(A_ScriptDir . "\NiumaMobileBrowserChrome.html", "M"))
+            ver := String(FileGetTime(HtmlPanelPath("NiumaMobileBrowserChrome.html"), "M"))
             sep := InStr(chromeUrl, "?") ? "&" : "?"
             chromeUrl := chromeUrl . sep . "pane=" . paneQ . "&v=" . ver
         } catch {
@@ -2052,7 +2052,7 @@ NiumaMobileBrowser_NavigateChromeHtml(pane := "top") {
         } catch {
         }
     }
-    htmlPath := A_ScriptDir . "\NiumaMobileBrowserChrome.html"
+    htmlPath := HtmlPanelPath("NiumaMobileBrowserChrome.html")
     if !FileExist(htmlPath) {
         NiumaMobileBrowser_Log("CHROME", "", "chrome html 缺失: " . htmlPath)
         return false

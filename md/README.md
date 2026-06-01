@@ -64,7 +64,8 @@
 |----------|------|
 | `牛马.ahk` | **主入口**，双击启动 |
 | `modules/` | 功能模块（AHK + 注入 JS），一般无需修改 |
-| `assets/`、根目录 `*.html` | WebView2 界面资源 |
+| `html/` | WebView2 界面面板（SearchCenter、Settings、Niuma Chat 等） |
+| `assets/` | WebView 静态资源（JS、图标、图片） |
 | `lib/` | 第三方 AHK 库与运行时 DLL |
 | `searchcore/` | Go 搜索内核（含 `SearchCenterCore.exe`） |
 | `tools/` | 桥接工具、诊断脚本、rg/openlist 等 |

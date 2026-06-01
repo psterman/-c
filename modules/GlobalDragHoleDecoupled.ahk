@@ -312,11 +312,11 @@ GDHO_ResolvePanelPageUrl() {
     u := Trim(String(GDHO_PANEL_PAGE_URL))
     if (InStr(u, "127.0.0.1:5173") || InStr(u, "localhost:5173"))
         u := ""
-    if (u = "") && FileExist(A_ScriptDir . "\hole_panel.html") {
+    if (u = "") && FileExist(HtmlPanelPath("hole_panel.html")) {
         if FuncExists("GDHO_BuildFileUrl")
-            try u := GDHO_BuildFileUrl(A_ScriptDir . "\hole_panel.html")
+            try u := GDHO_BuildFileUrl(HtmlPanelPath("hole_panel.html"))
         if (u = "")
-            u := "file:///" . StrReplace(A_ScriptDir . "\hole_panel.html", "\", "/")
+            u := "file:///" . StrReplace(HtmlPanelPath("hole_panel.html"), "\", "/")
     }
     return u
 }
@@ -2394,14 +2394,14 @@ GDHO_ResolveLauncherPageUrl() {
     u := Trim(String(GDHO_LAUNCHER_PAGE_URL))
     if (InStr(u, "127.0.0.1:5173") || InStr(u, "localhost:5173"))
         u := ""
-    ; 优先 app.local（UnifiedAssetsRoot=A_ScriptDir，映射 hole_launcher_layer.html + assets/*）
-    if (u = "") && FileExist(A_ScriptDir . "\hole_launcher_layer.html")
-        u := "https://app.local/hole_launcher_layer.html"
-    if (u = "") && FileExist(A_ScriptDir . "\hole_launcher_layer.html") {
+    ; 优先 app.local（UnifiedAssetsRoot=A_ScriptDir，映射 html/hole_launcher_layer.html + assets/*）
+    if (u = "") && FileExist(HtmlPanelPath("hole_launcher_layer.html"))
+        u := BuildAppLocalUrl("hole_launcher_layer.html")
+    if (u = "") && FileExist(HtmlPanelPath("hole_launcher_layer.html")) {
         if FuncExists("GDHO_BuildFileUrl")
-            try u := GDHO_BuildFileUrl(A_ScriptDir . "\hole_launcher_layer.html")
+            try u := GDHO_BuildFileUrl(HtmlPanelPath("hole_launcher_layer.html"))
         if (u = "")
-            u := "file:///" . StrReplace(A_ScriptDir . "\hole_launcher_layer.html", "\", "/")
+            u := "file:///" . StrReplace(HtmlPanelPath("hole_launcher_layer.html"), "\", "/")
     }
     return u
 }
@@ -4447,11 +4447,11 @@ GDHO_OnLauncherNavigationCompleted(sender, args) {
     }
     ; app.local 导航失败时回退 file:// 交叉验证（映射由 ApplyUnifiedWebViewAssets / GDHO_ApplyHostMappingFor 提供）
     fb := ""
-    if FileExist(A_ScriptDir . "\hole_launcher_layer.html") {
+    if FileExist(HtmlPanelPath("hole_launcher_layer.html")) {
         if FuncExists("GDHO_BuildFileUrl")
-            try fb := GDHO_BuildFileUrl(A_ScriptDir . "\hole_launcher_layer.html")
+            try fb := GDHO_BuildFileUrl(HtmlPanelPath("hole_launcher_layer.html"))
         if (fb = "")
-            fb := "file:///" . StrReplace(A_ScriptDir . "\hole_launcher_layer.html", "\", "/")
+            fb := "file:///" . StrReplace(HtmlPanelPath("hole_launcher_layer.html"), "\", "/")
     }
     if (fb != "")
         try NativeDropDiag_Log("[TextHole] launcher_nav_fallback file=" . fb)

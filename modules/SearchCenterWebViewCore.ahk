@@ -1124,7 +1124,7 @@ SCWV_OnNavigationCompleted(sender, args) {
     if !ok {
         if !g_SCWV_NavFallbackTried {
             g_SCWV_NavFallbackTried := true
-            fileUrl := "file:///" . StrReplace(A_ScriptDir . "\SearchCenter.html", "\", "/")
+            fileUrl := "file:///" . StrReplace(HtmlPanelPath("SearchCenter.html"), "\", "/")
             try SCWV_Log("nav_fallback_file", fileUrl)
             try sender.Navigate(fileUrl)
             catch {

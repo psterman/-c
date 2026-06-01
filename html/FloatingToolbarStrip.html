@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -1222,7 +1222,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       '你是一个通用 AI 助手，同时熟悉「牛马 nmer」（Windows 桌面效率工具）的基本结构与能力。' +
       '当用户问题与牛马 nmer 的代码/配置/功能有关时，优先结合本仓库与软件模块回答；当问题是通用知识/写作/思辨/创作时，按通用助手方式开放回答，不要强行扯回软件介绍。' +
       '牛马 nmer 主要能力：CapsLock 工作流中枢、剪贴板、SearchCenter 搜索、截图、Prompt、悬浮工具栏、Niuma Chat 多模型对话、智能定制（user_studio.json）、可选 ttyd/OpenClaw。' +
-      '仓库入口：牛马.ahk；模块：modules/*.ahk；对话 UI：FloatingToolbarStrip.html。' +
+      '仓库入口：牛马.ahk；模块：modules/*.ahk；对话 UI：html/FloatingToolbarStrip.html。' +
       '联网/网页检索不是模型固有能力：当用户明确要求“联网/搜索/查资料/帮我搜”时，可调用内置网页搜索流程协助获取结果。',
     P = {
       openai: { label: 'OpenAI', transport: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1', 'gpt-5.4-mini', 'gpt-5.4', 'gpt-5.4-nano', 'gpt-5-chat-latest'] },
@@ -1285,9 +1285,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       { label: 'Copilot CLI', icon: 'copilot_cli', api: null, cli: 'copilot_cli' },
       { label: '定制终端', icon: 'studio_cli', api: null, cli: 'studio_cli', hint: '智能定制 ttyd · 端口 7691' }
     ],
-    ICON_PRIMARY = 'aiicons/',
-    ICON_SECOND = 'lib/images/',
-    ICON_FALLBACK = 'lib/images/chat-ai-fallback.svg',
+    ICON_PRIMARY = '/aiicons/',
+    ICON_SECOND = '/lib/images/',
+    ICON_FALLBACK = '/lib/images/chat-ai-fallback.svg',
     PROVIDER_ICON_EXTS = ['.png', '.jpg', '.jpeg', '.svg', '.webp'],
     PROVIDER_ICON_BASES = {
       openai: ['ChatGPT', 'chatgpt', 'openai', 'codex', 'Codex'],

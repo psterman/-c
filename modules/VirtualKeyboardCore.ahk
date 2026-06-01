@@ -185,7 +185,7 @@ _VK_OwnerGuiOpt() {
     return ownerOpt
 }
 
-; 嵌入：优先 https://app.local/VirtualKeyboard.html；独立进程：仅 FileRead / file://
+; 嵌入：优先 https://app.local/html/VirtualKeyboard.html；独立进程：仅 FileRead / file://
 _VK_NavigateMainHtml(htmlPath) {
     global g_VK_WV2, g_VK_Embedded, g_VK_ExpectAppLocalNavigationResult
     if !g_VK_WV2 || !FileExist(htmlPath)
@@ -3612,7 +3612,7 @@ _OnWV2Created(ctrl) {
     g_VK_WV2.add_WebMessageReceived(_OnWebMessage)
     try g_VK_WV2.add_NavigationCompleted(_VK_OnNavigationCompleted)
 
-    htmlPath := A_ScriptDir "\VirtualKeyboard.html"
+    htmlPath := HtmlPanelPath("VirtualKeyboard.html")
     try ApplyUnifiedWebViewAssets(g_VK_WV2)
     if FileExist(htmlPath)
         _VK_NavigateMainHtml(htmlPath)
@@ -3632,7 +3632,7 @@ _VK_OnNavigationCompleted(sender, args) {
             _VK_RefreshWebViewComposition()
         return
     }
-    htmlPath := A_ScriptDir "\VirtualKeyboard.html"
+    htmlPath := HtmlPanelPath("VirtualKeyboard.html")
     if g_VK_ExpectAppLocalNavigationResult && !g_VK_TriedDiskAfterAppLocalFail && FileExist(htmlPath) {
         g_VK_ExpectAppLocalNavigationResult := false
         g_VK_TriedDiskAfterAppLocalFail := true

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -2995,7 +2995,7 @@ body:not([data-theme="light"]) #hud-save {
 </style>
 <script src="https://app.local/assets/js/BasePanel.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-<script src="./assets/nm-bottom-dock.js"></script>
+<script src="https://app.local/assets/nm-bottom-dock.js"></script>
 </head>
 <body>
 <div id="root">
@@ -3350,7 +3350,7 @@ const state = {
   dashboardMenuContext: 'main',
   /** { sceneId, visible_in_bar, order_bar }[] 场景镜像悬浮栏布局 */
   sceneToolbarLayout: [],
-  toolbarLogoUrl: 'assets/牛马.png',
+  toolbarLogoUrl: 'https://app.local/assets/牛马.png',
   /** CursorHelper 同进程为 true；独立 VirtualKeyboard.ahk 为 false */
   embeddedHost: true,
   envFocus: 'global',
@@ -3422,8 +3422,8 @@ function applyVkTheme(mode) {
   document.body.setAttribute('data-theme', tm);
 }
 
-const LUCIDE_ICON_NODES_URL = 'assets/icon-nodes.json';
-const LUCIDE_TAGS_URL = 'assets/tags.json';
+const LUCIDE_ICON_NODES_URL = 'https://app.local/assets/icon-nodes.json';
+const LUCIDE_TAGS_URL = 'https://app.local/assets/tags.json';
 const LUCIDE_ICON_FALLBACK = 'zap';
 
 const lucideCatalog = {
@@ -4103,17 +4103,17 @@ function getToolbarCmdIdByScenarioId(scenarioId) {
 function toolbarIconSvgHtml(cmdId) {
   const key = TOOLBAR_CMD_TO_KEY[String(cmdId || '').trim()] || 'bolt';
   if (String(cmdId || '').trim() === 'hub_capsule') {
-    return '<img class="vk-toolbar-cursor-img" src="assets/牛马.png" alt="牛马">';
+    return '<img class="vk-toolbar-cursor-img" src="https://app.local/assets/牛马.png" alt="牛马">';
   }
   if (key === 'cursor_img') {
-    return '<img class="vk-toolbar-cursor-img" src="lib/images/cursor.png" alt="Cursor">';
+    return '<img class="vk-toolbar-cursor-img" src="https://app.local/lib/images/cursor.png" alt="Cursor">';
   }
   return TOOLBAR_SVG_PARTS[key] || TOOLBAR_SVG_PARTS.bolt;
 }
 
 function scenarioIconHtml(scenarioId) {
   const cmdId = getToolbarCmdIdByScenarioId(scenarioId);
-  if (scenarioId === 'ai') return '<img class="vk-toolbar-cursor-img" src="assets/牛马.png" alt="牛马">';
+  if (scenarioId === 'ai') return '<img class="vk-toolbar-cursor-img" src="https://app.local/assets/牛马.png" alt="牛马">';
   if (cmdId) return toolbarIconSvgHtml(cmdId);
   const meta = SCENARIO_META[scenarioId] || SCENARIO_META.other;
   return `<i class="fa-solid ${meta.icon}"></i>`;
@@ -5936,7 +5936,7 @@ function handleInit(msg) {
   state.lastActionName = msg.lastActionName || '';
   state.lastActionCurrentKey = msg.lastActionCurrentKey || '';
   state.quickBindActive = !!msg.quickBindActive;
-  state.toolbarLogoUrl = msg.logoUrl || state.toolbarLogoUrl || 'assets/牛马.png';
+  state.toolbarLogoUrl = msg.logoUrl || state.toolbarLogoUrl || 'https://app.local/assets/牛马.png';
   state.isAdmin = msg.isAdmin !== false;
   state.adminWarning = msg.adminWarning || '';
   state.embeddedHost = msg.embeddedHost !== false;

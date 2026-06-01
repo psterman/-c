@@ -26,7 +26,7 @@ The portable package includes Everything, ttyd, SearchCenterCore, WebView2Loader
 |------|---------|
 | `牛马.ahk` | Main entry — double-click to start |
 | `modules/` | Feature modules (AHK + injected JS) |
-| `assets/`, `*.html` | WebView2 UI |
+| `assets/`, `html/*.html` | WebView2 UI |
 | `lib/` | Third-party AHK libraries and DLLs |
 | `searchcore/` | Go search core + `SearchCenterCore.exe` |
 | `tools/` | Bridges, diagnostics, rg/openlist |

@@ -2609,7 +2609,7 @@ CursorPanelWebView_OnCreated(ctrl) {
     try ApplyUnifiedWebViewAssets(CursorPanelWV2)
     try CursorPanelWV2.Navigate(BuildAppLocalUrl("CursorQuickActionsPanel.html"))
     catch {
-        htmlPath := A_ScriptDir "\CursorQuickActionsPanel.html"
+        htmlPath := HtmlPanelPath("CursorQuickActionsPanel.html")
         try CursorPanelWV2.NavigateToString(FileRead(htmlPath, "UTF-8"))
     }
 }
