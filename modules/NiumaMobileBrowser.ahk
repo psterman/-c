@@ -121,7 +121,7 @@ global g_NiumaMobile_SnapshotRetryReqId := ""
 global g_NiumaMobile_SnapshotRetryCount := 0
 global g_NiumaMobile_ObserveOpenWaitPass := 0
 global NIUMA_MOBILE_MODULE_DIR := ""
-global NIUMA_MOBILE_SNAPSHOT_DEBUG_LOG := A_ScriptDir . "\Cache\niuma_mobile_snapshot_debug.log"
+global NIUMA_MOBILE_SNAPSHOT_DEBUG_LOG := Nmer_DebugPath("niuma_mobile_snapshot_debug.log")
 
 NiumaMobileBrowser_Log(prefix, reqId, msg) {
     global NIUMA_MOBILE_SNAPSHOT_DEBUG_LOG

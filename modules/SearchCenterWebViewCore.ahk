@@ -129,7 +129,7 @@ global g_SC_HistoryDirty := false   ; 内存比磁盘新，待防抖写回
 
 SCWV_Log(event, detail := "") {
     try {
-        logPath := A_ScriptDir . "\Cache\scwv_trace.log"
+        logPath := Nmer_DebugPath("scwv_trace.log")
         ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
         line := "[" . ts . "][" . event . "] " . String(detail) . "`r`n"
         if FuncExists("NMER_AsyncLog")
@@ -2179,7 +2179,7 @@ _SCWV_PickFullTextIndexDir() {
         return
     }
 
-    defaultDir := A_ScriptDir
+    defaultDir := Nmer_FullTextIndexDir()
     _SCWV_HttpSearchCoreJsonAsync("GET", "/v1/fulltext/config", "", (cfgResp) => _SCWV_PickFullTextIndexDir_AfterConfig(defaultDir, cfgResp))
 }
 

@@ -77,7 +77,7 @@ GroundingCache_GetVecDllPath() {
 
 GroundingCache_LogL2(msg) {
   try {
-    logPath := GroundingCache_GetProjectRoot() . "\Cache\grounding_l2.log"
+    logPath := Nmer_DebugPath("grounding_l2.log")
     dir := RegExReplace(logPath, "\\[^\\]+$", "")
     if !DirExist(dir)
       DirCreate(dir)

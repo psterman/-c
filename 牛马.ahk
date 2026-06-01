@@ -139,6 +139,9 @@ HoleDragHooks_Emit(eventName, data := 0) {
 #Include lib\ahk\Class_SQLiteDB.ahk
 #Include lib\ahk\Jxon.ahk
 #Include modules\LocalPaths.ahk
+Nmer_MigrateDebugFiles()
+global NativeDropBridgeOut := Nmer_DebugPath("native_drop_events.jsonl")
+global NativeDropDiagLogPath := Nmer_DebugPath("drop_diagnostics_runtime.log")
 #Include modules\ToolsPaths.ahk
 #Include lib\ahk\WebView2.ahk
 #Include modules\AhkWebViewBridge.ahk
@@ -186,6 +189,7 @@ global MainScriptDir := A_ScriptDir
 #Include modules\VoiceInputCliEffects.ahk
 ; ttyd 本机终端（Niuma Chat CLI）：须在 FloatingToolbar 之前包含，供 Web 消息与定时器引用
 #Include modules\NiumaTtyd.ahk
+#Include modules\NiumaOllama.ahk
 #Include modules\CloudPlayer.ahk
 
 ; ===================== 包含悬浮工具栏模块 =====================
@@ -4558,10 +4562,10 @@ OnClipboardChange(OnClipboardChangeHandler, 1)  ; 1 表示添加监听器
 
 ; ===================== 图片保存函数 =====================
 ; 图片持久化管理：使用 Gdip 将剪贴板位图保存，确保 DisposeImage 释放资源
-; 路径：A_ScriptDir "\Data\Images\IMG_" A_Now ".png"
+; 路径：Cache\images\IMG_<时间>.png（见 Nmer_CacheImagesDir）
 ; 返回：成功返回完整路径，失败返回空字符串
 SaveClipboardImage() {
-    ImgDir := A_ScriptDir "\Data\Images"
+    ImgDir := Nmer_CacheImagesDir()
     if !DirExist(ImgDir)
         DirCreate(ImgDir)
     
@@ -5223,7 +5227,7 @@ NMER_StartupOnError(err, mode) {
         msg .= "`n`n" . err.File . " (行 " . line . ")"
     try NMER_Log("startup", "unhandled_error", err.Message . " line=" . line)
     catch {
-        try FileAppend(Format("{} {}\n", A_Now, msg), A_ScriptDir "\Cache\startup_error.log")
+        try FileAppend(Format("{} {}\n", A_Now, msg), Nmer_DebugPath("startup_error.log"))
     }
     try MsgBox(msg, "CursorHelper", 0x10)
     return false
@@ -5232,7 +5236,7 @@ NMER_StartupOnError(err, mode) {
 NMER_Log(scope, event, detail := "") {
     global NMER_TraceSession
     try {
-        logPath := A_ScriptDir . "\Cache\nmer_trace.log"
+        logPath := Nmer_DebugPath("nmer_trace.log")
         dir := ""
         SplitPath(logPath, , &dir)
         if (dir != "" && !DirExist(dir))

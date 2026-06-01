@@ -26,9 +26,9 @@ LegacyGuard_Log(tag, detail := "") {
         ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
         line := "[" . ts . "][" . String(tag) . "] " . String(detail) . "`r`n"
         if FuncExists("NMER_AsyncLog")
-            NMER_AsyncLog(A_ScriptDir . "\Cache\legacy_guardrails.log", line)
+            NMER_AsyncLog(Nmer_DebugPath("legacy_guardrails.log"), line)
         else
-            FileAppend(line, A_ScriptDir . "\Cache\legacy_guardrails.log", "UTF-8")
+            FileAppend(line, Nmer_DebugPath("legacy_guardrails.log"), "UTF-8")
     } catch {
     }
 }

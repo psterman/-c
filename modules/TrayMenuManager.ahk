@@ -132,7 +132,7 @@ global g_TrayHolePanelPassthrough := false
 
 TrayMenu_Log(msg) {
     try {
-        logPath := A_ScriptDir . "\Cache\tray_menu_runtime.log"
+        logPath := Nmer_DebugPath("tray_menu_runtime.log")
         ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
         line := "[" . ts . "] " . String(msg) . "`r`n"
         if FuncExists("NMER_AsyncLog")

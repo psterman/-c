@@ -1037,6 +1037,7 @@
       <button class="tab-btn" data-tab="prompts">提示词设置</button>
       <button class="tab-btn" data-tab="hotkeys">快捷键设置</button>
       <button class="tab-btn" data-tab="advanced">高级设置</button>
+      <button class="tab-btn" data-tab="storage">存储与缓存</button>
       <button class="tab-btn" data-tab="screenshot">截图设置</button>
       <button class="tab-btn" data-tab="search">搜索设置</button>
       <button class="tab-btn" data-tab="customize">智能定制</button>
@@ -1151,6 +1152,7 @@
       cursorRulesTab: "general",
       appearanceActivationMode: "toolbar",
       appUpdate: null,
+      cacheInfo: null,
       fullText: {
         running: false,
         ready: false,
@@ -2094,12 +2096,12 @@
         hint: "SiliconFlow 控制台"
       },
       ollama: {
-        label: "Ollama（本地）",
+        label: "Ollama（云端）",
         baseUrl: "http://127.0.0.1:11434/v1",
-        model: "llama3.1:8b",
-        models: ["llama3.1:8b", "qwen2.5:7b", "deepseek-r1:7b"],
+        model: "nemotron-3-super:cloud",
+        models: ["nemotron-3-super:cloud"],
         keyPh: "可选，本地一般留空",
-        hint: "本机需已运行 ollama serve"
+        hint: "本机 Ollama 服务 + :cloud 云模型（不占大内存）"
       },
       openclaw: {
         label: "OpenClaw Gateway",
@@ -3724,6 +3726,33 @@
         post({ type: "checkAppUpdate" });
       });
     }
+    function requestCacheInfo() {
+      post({ type: "cacheInfoRequest" });
+    }
+    function collectCacheClearTargets() {
+      return Array.from(document.querySelectorAll(".cache-clear-chk:checked")).map(el => el.dataset.cacheId).filter(Boolean);
+    }
+    function bindStorageCacheHandlers() {
+      document.getElementById("btnCacheRefresh")?.addEventListener("click", () => {
+        setStatus("正在统计缓存…", "");
+        requestCacheInfo();
+      });
+      document.getElementById("btnCacheOpenRoot")?.addEventListener("click", () => post({ type: "cacheOpenFolder", target: "root" }));
+      document.querySelectorAll(".cache-open-btn").forEach(btn => btn.addEventListener("click", () => post({ type: "cacheOpenFolder", target: btn.dataset.cacheTarget || "root" })));
+      document.getElementById("btnCachePickRoot")?.addEventListener("click", () => post({ type: "cachePickRoot" }));
+      document.getElementById("btnCacheClearSelected")?.addEventListener("click", () => {
+        const targets = collectCacheClearTargets();
+        if (!targets.length) return setStatus("请至少选择一项要清空的缓存", "err");
+        if (!confirm("确定清空所选缓存？全文索引清空后将自动触发重建；图片清空可能导致历史剪贴板图片无法显示。")) return;
+        setStatus("正在清空缓存…", "");
+        post({ type: "cacheClear", targets });
+      });
+      document.getElementById("btnCacheClearAll")?.addEventListener("click", () => {
+        if (!confirm("确定清空全部缓存（含全文索引、图片、缩略图、临时文件、调试日志）？数据库记录不会删除，但部分图片/全文结果可能不可用。")) return;
+        setStatus("正在清空全部缓存…", "");
+        post({ type: "cacheClear", targets: ["fulltext", "images", "thumbs", "temp", "debug"] });
+      });
+    }
     function render() {
       destroyFtbWorkbenchSortable();
       destroyMenuWorkbenchSortable();
@@ -3735,6 +3764,7 @@
         { value:"prompts", label:"提示词设置" },
         { value:"hotkeys", label:"快捷键设置" },
         { value:"advanced", label:"高级设置" },
+        { value:"storage", label:"存储与缓存" },
         { value:"screenshot", label:"截图设置" },
         { value:"search", label:"搜索设置" },
         { value:"customize", label:"智能定制" }
@@ -4080,6 +4110,43 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         document.getElementById("btnExportCfg").addEventListener("click", () => post({ type: "invokeAction", op: "exportConfig" }));
         document.getElementById("btnImportCfg").addEventListener("click", () => post({ type: "invokeAction", op: "importConfig" }));
         document.getElementById("btnResetCfg").addEventListener("click", () => post({ type: "invokeAction", op: "resetToDefaults" }));
+      } else if (state.activeTab === "storage") {
+        const ci = state.cacheInfo || {};
+        const root = esc(ci.root || d.userCacheRoot || "");
+        const total = esc(ci.totalText || "计算中…");
+        const items = Array.isArray(ci.items) ? ci.items : [];
+        const rows = items.length ? items.map(it => `
+          <div class="row cache-row">
+            <div class="label">${esc(it.label || it.id)}<div class="hint">${esc(it.hint || "")}</div></div>
+            <div>
+              <div class="inline" style="flex-wrap:wrap;">
+                <span class="hint" style="min-width:72px;">${esc(it.sizeText || "0 B")}</span>
+                <label class="tag"><input type="checkbox" class="cache-clear-chk" data-cache-id="${esc(it.id)}" checked> 清空</label>
+                <button type="button" class="btn cache-open-btn" data-cache-target="${esc(it.id)}">打开</button>
+              </div>
+              <div class="hint" style="word-break:break-all;margin-top:4px;">${esc(it.path || "")}</div>
+            </div>
+          </div>`).join("") : `<div class="hint">正在统计缓存占用…</div>`;
+        panel.innerHTML = `<div class="card">
+  <div class="title">存储与缓存</div>
+  <div class="hint">可增长的索引、图片、缩略图与调试日志均在此目录。持久化数据库在 Data/db/，不受此处清空影响。</div>
+  <div class="row"><div class="label">缓存根目录</div>
+    <div class="inline" style="flex-wrap:wrap;align-items:flex-start;">
+      <input id="cacheRootPath" data-nosave="1" type="text" style="min-width:280px;flex:1;" value="${root}" placeholder="默认：项目目录下的 Cache">
+      <button type="button" class="btn" id="btnCachePickRoot">更改位置</button>
+      <button type="button" class="btn" id="btnCacheOpenRoot">打开文件夹</button>
+    </div>
+  </div>
+  <div class="row"><div class="label">合计占用</div><div><strong id="cacheTotalSize">${total}</strong></div></div>
+  ${rows}
+  <div class="inline" style="margin-top:12px;flex-wrap:wrap;gap:8px;">
+    <button type="button" class="btn" id="btnCacheRefresh">刷新统计</button>
+    <button type="button" class="btn primary" id="btnCacheClearSelected">清空所选</button>
+    <button type="button" class="btn" id="btnCacheClearAll">清空全部缓存</button>
+  </div>
+</div>`;
+        bindStorageCacheHandlers();
+        if (!items.length) requestCacheInfo();
       } else if (state.activeTab === "screenshot") {
         const ss = { ...(d.screenshotConfig || {}) };
         const capTabs = `<div class="subtabs">
@@ -4179,7 +4246,8 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
     <div id="ftProbeList" class="ft-probe-list"></div>
     <div class="row" style="margin-top:10px;">
       <div class="label">索引存储目录</div>
-      <div class="inline"><input id="ftIndexDir" data-nosave="1" type="text" value="${esc(ftCfg.indexDir || "")}" placeholder="例如：D:\\SearchCenterIndex"><button class="btn" id="btnFtPickDir" type="button">选择目录</button></div>
+      <div class="inline"><input id="ftIndexDir" data-nosave="1" type="text" value="${esc(ftCfg.indexDir || "")}" placeholder="默认：项目 Cache\\fulltext-index"><button class="btn" id="btnFtPickDir" type="button">选择目录</button></div>
+      <div class="hint">索引默认存放在「存储与缓存」中的全文索引目录；清空缓存后需重建索引。</div>
     </div>
     <div class="row"><div class="label">后台自启动索引</div><div><input id="ftAutoStart" data-nosave="1" type="checkbox" ${checked(ftCfg.autoStart !== false)}></div></div>
     <div class="row"><div class="label">多线程并发（Worker Pool）</div><div><input id="ftWorkers" data-nosave="1" type="number" min="1" max="32" step="1" value="${esc(ftCfg.workers || 2)}"></div></div>
@@ -4237,6 +4305,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       const nextTab = btn.dataset.tab;
       if (nextTab !== state.activeTab) leaveActiveTab(state.activeTab);
       state.activeTab = nextTab;
+      if (nextTab === "storage") state.cacheInfo = null;
       state.data = readFromUI();
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
@@ -4328,7 +4397,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (p.appUpdate && typeof p.appUpdate === "object") state.appUpdate = p.appUpdate;
         applyAppUpdateUi();
         const startTab = (msg.payload || {}).defaultStartTab;
-        const validStartTabs = new Set(["general","appearance","prompts","hotkeys","advanced","screenshot","search","customize"]);
+        const validStartTabs = new Set(["general","appearance","prompts","hotkeys","advanced","storage","screenshot","search","customize"]);
         if (startTab && validStartTabs.has(startTab)) {
           state.activeTab = startTab;
           document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === startTab));
@@ -4451,6 +4520,43 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           setStatus(msg.error || "同步失败", "err");
         }
         state._studioSyncManual = false;
+        return;
+      }
+      if (msg.type === "cacheInfo") {
+        state.cacheInfo = {
+          root: String(msg.root || ""),
+          totalBytes: Number(msg.totalBytes || 0),
+          totalText: String(msg.totalText || ""),
+          items: Array.isArray(msg.items) ? msg.items : []
+        };
+        if (state.activeTab === "storage") render();
+        else setStatus("缓存统计已更新", "ok");
+        return;
+      }
+      if (msg.type === "cacheClearResult") {
+        const cleared = Array.isArray(msg.cleared) ? msg.cleared : [];
+        setStatus(cleared.length ? ("已清空：" + cleared.join("、")) : "未清空任何项", cleared.length ? "ok" : "err");
+        if (state.activeTab === "storage") requestCacheInfo();
+        return;
+      }
+      if (msg.type === "cacheSaveRootResult") {
+        if (msg.ok) {
+          state.data.userCacheRoot = String(msg.path || "");
+          setStatus("缓存目录已更新", "ok");
+          state.cacheInfo = null;
+          if (state.activeTab === "storage") render();
+        } else {
+          setStatus(msg.error || "缓存目录保存失败", "err");
+        }
+        return;
+      }
+      if (msg.type === "cacheRootPicked") {
+        if (!msg.ok || !msg.path) return;
+        const el = document.getElementById("cacheRootPath");
+        if (el) el.value = String(msg.path);
+        if (!confirm("将缓存迁移到新目录并保存？迁移期间请勿关闭设置窗口。")) return;
+        setStatus("正在迁移缓存…", "");
+        post({ type: "cacheSaveRoot", path: String(msg.path) });
         return;
       }
       if (msg.type === "fulltextStatus") {

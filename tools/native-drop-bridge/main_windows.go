@@ -225,7 +225,7 @@ var (
 )
 
 func main() {
-	out := flag.String("out", "..\\..\\Cache\\native_drop_events.jsonl", "output jsonl path")
+	out := flag.String("out", "..\\..\\Cache\\debug\\native_drop_events.jsonl", "output jsonl path")
 	x := flag.Int("x", 300, "drop window x")
 	y := flag.Int("y", 300, "drop window y")
 	w := flag.Int("w", 170, "drop window width")

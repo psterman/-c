@@ -23,7 +23,7 @@ func handleNiumaDebug(w http.ResponseWriter, r *http.Request, absBase string) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	fp := filepath.Join(absBase, "Data", "NiuMaDebug", "openclaw_timeline.jsonl")
+	fp := filepath.Join(absBase, "Cache", "debug", "openclaw_timeline.jsonl")
 	resp := niumaDebugResponse{
 		FilePath: fp,
 		Exists:   false,

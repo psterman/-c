@@ -3,7 +3,7 @@
 ; - config/cursor_command_catalog.json
 ; - config/user_keymap.json
 ; Compiled artifact:
-; - Data/vk_cursor_keymap_compiled.json
+; - Data/state/vk_cursor_keymap_compiled.json
 ;
 ; Jxon_Load / Jxon_Dump 由主脚本 #Include lib\Jxon.ahk 提供；此处用 Func 包装避免单独打开本文件时静态分析误报「未赋值」。
 
@@ -12,7 +12,18 @@ _CSM_JxonDump(o) => Func("Jxon_Dump").Call(o)
 
 global g_CSM_CatalogPath := A_ScriptDir "\config\cursor_command_catalog.json"
 global g_CSM_UserKeymapPath := A_ScriptDir "\config\user_keymap.json"
-global g_CSM_CompiledPath := A_ScriptDir "\Data\vk_cursor_keymap_compiled.json"
+global g_CSM_CompiledPath := ""
+
+_CSM_GetCompiledPath() {
+    global g_CSM_CompiledPath
+    if (g_CSM_CompiledPath != "")
+        return g_CSM_CompiledPath
+    if FuncExists("Nmer_VkCursorKeymapCompiledPath")
+        g_CSM_CompiledPath := Nmer_VkCursorKeymapCompiledPath()
+    else
+        g_CSM_CompiledPath := A_ScriptDir . "\Data\state\vk_cursor_keymap_compiled.json"
+    return g_CSM_CompiledPath
+}
 
 CursorShortcutMapper_EnsureFiles() {
     global g_CSM_CatalogPath, g_CSM_UserKeymapPath
@@ -266,7 +277,7 @@ CursorShortcutMapper_ValidateUserKeymap(catalog, userMap) {
 }
 
 CursorShortcutMapper_CompileAndPersist() {
-    global g_CSM_CompiledPath
+    compiledPath := _CSM_GetCompiledPath()
     catalog := CursorShortcutMapper_LoadCatalog()
     userMap := CursorShortcutMapper_LoadUserKeymap()
     validation := CursorShortcutMapper_ValidateUserKeymap(catalog, userMap)
@@ -309,9 +320,9 @@ CursorShortcutMapper_CompileAndPersist() {
         "generatedAt", A_NowUTC,
         "rules", rules
     )
-    _CSM_EnsureParentDir(g_CSM_CompiledPath)
-    try FileDelete(g_CSM_CompiledPath)
-    FileAppend(_CSM_JxonDump(payload), g_CSM_CompiledPath, "UTF-8")
+    _CSM_EnsureParentDir(compiledPath)
+    try FileDelete(compiledPath)
+    FileAppend(_CSM_JxonDump(payload), compiledPath, "UTF-8")
     return Map("ok", true, "errors", [], "warnings", [], "ruleCount", rules.Length)
 }
 

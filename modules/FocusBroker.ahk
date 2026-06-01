@@ -14,9 +14,9 @@ FocusBroker_Log(event, detail := "") {
         ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
         line := "[" . ts . "][focus][" . event . "] " . String(detail) . "`r`n"
         if FuncExists("NMER_AsyncLog")
-            NMER_AsyncLog(A_ScriptDir . "\Cache\focus_broker.log", line)
+            NMER_AsyncLog(Nmer_DebugPath("focus_broker.log"), line)
         else
-            FileAppend(line, A_ScriptDir . "\Cache\focus_broker.log", "UTF-8")
+            FileAppend(line, Nmer_DebugPath("focus_broker.log"), "UTF-8")
     } catch {
     }
 }

@@ -49,9 +49,9 @@ _CP_LogAsync(event, detail := "") {
     try {
         line := "[" . A_Now . "][" . String(event) . "] " . String(detail) . "`r`n"
         if FuncExists("NMER_AsyncLog")
-            NMER_AsyncLog(A_ScriptDir . "\Cache\clipboard_panel_runtime.log", line)
+            NMER_AsyncLog(Nmer_DebugPath("clipboard_panel_runtime.log"), line)
         else
-            FileAppend(line, A_ScriptDir . "\Cache\clipboard_panel_runtime.log", "UTF-8")
+            FileAppend(line, Nmer_DebugPath("clipboard_panel_runtime.log"), "UTF-8")
     } catch {
     }
 }

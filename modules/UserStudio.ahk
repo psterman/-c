@@ -297,7 +297,7 @@ UserStudio_LlmPresetFor(prov) {
         case "siliconflow":
             return Map("baseUrl", "https://api.siliconflow.cn/v1", "model", "Qwen/Qwen2.5-7B-Instruct")
         case "ollama":
-            return Map("baseUrl", "http://127.0.0.1:11434/v1", "model", "llama3.1:8b")
+            return Map("baseUrl", "http://127.0.0.1:11434/v1", "model", "nemotron-3-super:cloud")
         case "openclaw":
             return Map("baseUrl", "http://127.0.0.1:18789", "model", "gateway")
         case "custom":

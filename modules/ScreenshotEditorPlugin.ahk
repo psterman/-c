@@ -197,7 +197,7 @@ class ScreenshotEditorPlugin {
             OutputDebug("[Screenshot] 妫€娴嬪埌鍙兘骞叉壈鐨勫壀璐存澘宸ュ叿: " . tool)
             ; 璁板綍鍒版棩蹇?
             try {
-                FileAppend("[" . A_Now . "] 妫€娴嬪埌鍓创鏉垮伐鍏? " . tool . "`n", A_ScriptDir . "\cache\screenshot_interference.log")
+                FileAppend("[" . A_Now . "] 妫€娴嬪埌鍓创鏉垮伐鍏? " . tool . "`n", Nmer_DebugPath("screenshot_interference.log"))
             } catch {
             }
         }
@@ -253,7 +253,7 @@ class ScreenshotEditorPlugin {
     static _SS_Trace(msg) {
     try {
         if (this.ScreenshotTraceFile = "")
-            this.ScreenshotTraceFile := A_ScriptDir . "\Cache\screenshot_editor_trace.log"
+            this.ScreenshotTraceFile := Nmer_DebugPath("screenshot_editor_trace.log")
         FileAppend("[" . A_Now . "] " . String(msg) . "`r`n", this.ScreenshotTraceFile, "UTF-8")
     } catch {
     }
@@ -6039,7 +6039,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             }
             
             ; 淇濆瓨鍒扮紦瀛樼洰褰?
-            CacheDir := A_ScriptDir "\Cache"
+            CacheDir := Nmer_CacheTempDir()
             if (!DirExist(CacheDir)) {
                 DirCreate(CacheDir)
             }

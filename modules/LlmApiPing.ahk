@@ -101,7 +101,7 @@ LlmApiPing_PresetFor(prov) {
         case "claude":
             return Map("baseUrl", "https://api.anthropic.com", "model", "claude-3-5-sonnet-latest")
         case "ollama":
-            return Map("baseUrl", "http://127.0.0.1:11434/v1", "model", "llama3.1:8b")
+            return Map("baseUrl", "http://127.0.0.1:11434/v1", "model", "nemotron-3-super:cloud")
         default:
             return Map("baseUrl", "https://api.openai.com/v1", "model", "gpt-4o-mini")
     }
@@ -357,6 +357,49 @@ ArrayHasValue(arr, val) {
     return false
 }
 
+LlmApiPing_OllamaRootUrl(base) {
+    root := Trim(String(base))
+    if (root = "")
+        root := "http://127.0.0.1:11434/v1"
+    root := RegExReplace(root, "/+$", "")
+    if RegExMatch(root, "i)/v1$")
+        root := SubStr(root, 1, -3)
+    return root
+}
+
+; Ollama 本地服务：先 GET /api/tags，再可选 POST /v1/chat/completions
+LlmApiPing_TestOllama(base, model, timeoutMs := 18000) {
+    t0 := A_TickCount
+    root := LlmApiPing_OllamaRootUrl(base)
+    r := LlmApiPing_HttpSync("GET", root . "/api/tags", Map(), "", timeoutMs)
+    if !r["ok"] {
+        err := Trim(String(r["error"]))
+        if (err = "")
+            err := "无法连接"
+        return Map(
+            "ok", false,
+            "error", "未检测到 Ollama 服务（" . err . "）。请从开始菜单或托盘启动 Ollama；或在终端执行 ollama serve",
+            "elapsedMs", A_TickCount - t0
+        )
+    }
+    mod := Trim(String(model))
+    if (mod = "" || !RegExMatch(mod, "i):cloud$"))
+        mod := "nemotron-3-super:cloud"
+    pingBody := Jxon_Dump(Map(
+        "model", mod,
+        "messages", [Map("role", "user", "content", "ping")],
+        "stream", false,
+        "max_tokens", 8
+    ))
+    r2 := LlmApiPing_HttpSync("POST", root . "/v1/chat/completions", Map("Content-Type", "application/json"), pingBody, timeoutMs)
+    if r2["ok"]
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    err2 := LlmApiPing_FormatHttpError(r2, "ollama")
+    if RegExMatch(err2, "i)model|not found|404")
+        err2 .= "。请在 Ollama 客户端添加云模型「" . mod . "」（:cloud 后缀，无需本机 pull 大文件）"
+    return Map("ok", false, "error", err2, "elapsedMs", A_TickCount - t0)
+}
+
 LlmApiPing_Test(llm, timeoutMs := 18000) {
     if !(llm is Map)
         return Map("ok", false, "error", "配置无效", "elapsedMs", 0)
@@ -373,6 +416,8 @@ LlmApiPing_Test(llm, timeoutMs := 18000) {
         model := pre.Get("model", "")
     if (prov != "ollama" && key = "")
         return Map("ok", false, "error", "请先填写 API Key", "elapsedMs", 0)
+    if (prov = "ollama")
+        return LlmApiPing_TestOllama(base, model, timeoutMs)
     pingAnth := Jxon_Dump(Map("model", model, "max_tokens", 8, "messages", [Map("role", "user", "content", "ping")]))
     pingOpenAI := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_tokens", 8, "temperature", 0.1))
     pingOpenAINew := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_completion_tokens", 16, "temperature", 0.1))

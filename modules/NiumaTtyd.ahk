@@ -548,6 +548,24 @@ NiumaTtyd_BaseUrl() {
     return NiumaTtyd_BaseUrlForEngine("codex_cli")
 }
 
+; Ollama 在 ttyd 下易触发 OpenBLAS 内存分配失败，用包装 cmd 限制线程并给出提示
+NiumaTtyd_OllamaWrapperCmd() {
+    wrap := A_ScriptDir . "\tools\ttyd\ollama-ttyd.cmd"
+    return FileExist(wrap) ? wrap : ""
+}
+
+NiumaTtyd_ShellForOllamaCli() {
+    wrap := NiumaTtyd_OllamaWrapperCmd()
+    if (wrap != "")
+        return 'cmd.exe /k "' . wrap . '"'
+    exe := ""
+    if FuncExists("GetPreferredCLIExecutable")
+        exe := GetPreferredCLIExecutable("ollama_cli")
+    if (exe != "" && (InStr(exe, "\") || InStr(exe, "/")))
+        return 'cmd.exe /k set OPENBLAS_NUM_THREADS=1^^& set OMP_NUM_THREADS=1^^& set OLLAMA_NUM_PARALLEL=1^^& "' . exe . '"'
+    return "cmd.exe /k set OPENBLAS_NUM_THREADS=1&& set OMP_NUM_THREADS=1&& set OLLAMA_NUM_PARALLEL=1&& ollama"
+}
+
 ; ttyd 需保持交互会话：用 cmd /k 或 PowerShell -NoExit（勿用 /c）
 NiumaTtyd_FormatShellForExe(exePath) {
     exe := Trim(String(exePath))
@@ -596,6 +614,11 @@ NiumaTtyd_GetTtydShellForEngine(engine) {
             return r
         }
     } catch {
+    }
+    if (eng = "ollama_cli") {
+        sh := NiumaTtyd_ShellForOllamaCli()
+        NiumaTtyd_LogShell(eng, sh, "ollama_ttyd_wrapper")
+        return sh
     }
     if FuncExists("GetPreferredCLIExecutable") {
         exe := GetPreferredCLIExecutable(eng)
@@ -649,6 +672,11 @@ NiumaTtyd_GetShellForEngine(engine) {
         }
     } catch {
     }
+    if (eng = "ollama_cli") {
+        sh := NiumaTtyd_ShellForOllamaCli()
+        NiumaTtyd_LogShell(eng, sh, "ollama_wrapper")
+        return sh
+    }
     if FuncExists("GetPreferredCLIExecutable") {
         exe := GetPreferredCLIExecutable(eng)
         if (exe != "") {
@@ -678,6 +706,11 @@ NiumaTtyd_GetShellForEngine(engine) {
         )
     }
     if BareCli.Has(eng) {
+        if (eng = "ollama_cli") {
+            sh := NiumaTtyd_ShellForOllamaCli()
+            NiumaTtyd_LogShell(eng, sh, "ollama_fallback")
+            return sh
+        }
         sh := "cmd.exe /k " . BareCli[eng]
         NiumaTtyd_LogShell(eng, sh, "fallback_bare_name")
         return sh

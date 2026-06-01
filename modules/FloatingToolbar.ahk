@@ -2306,6 +2306,10 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(FloatingToolbar_DeferredDebugPullGo, -10)
         return
     }
+    if (typ = "niuma_ollama_start") {
+        SetTimer(FloatingToolbar_DeferredOllamaStart.Bind(msg), -10)
+        return
+    }
     if (typ = "niuma_llm_http") {
         reqId := String(msg.Get("reqId", ""))
         method := Trim(String(msg.Get("method", "POST")))
@@ -2347,6 +2351,24 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ = "niuma_attach_context") {
         SetTimer(FloatingToolbar_DeferredNiumaAttachContext.Bind(msg), -10)
         return
+    }
+}
+
+FloatingToolbar_DeferredOllamaStart(msg) {
+    global g_FTB_WV2
+    reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    ret := Map("ok", false, "message", "NiumaOllama 模块未加载")
+    if FuncExists("NiumaOllama_StartService")
+        ret := NiumaOllama_StartService()
+    if !g_FTB_WV2
+        return
+    try WebView_QueuePayload(g_FTB_WV2, Map(
+        "type", "niuma_ollama_start_result",
+        "reqId", reqId,
+        "ok", !!ret.Get("ok", false),
+        "message", String(ret.Get("message", ""))
+    ))
+    catch {
     }
 }
 
@@ -2495,7 +2517,7 @@ FloatingToolbar_DeferredScratchpadRun(msg) {
 }
 
 FloatingToolbar_NiumaDataDir() {
-    return A_ScriptDir . "\Data\niuma-chat"
+    return Nmer_NiumaChatDataDir()
 }
 
 FloatingToolbar_NiumaUploadDir() {
@@ -2689,9 +2711,9 @@ FloatingToolbar_DebugWriteEvent(evt) {
         line := Trim(line)
         if (line = "")
             return
-        dir := A_ScriptDir . "\Data\NiuMaDebug"
+        dir := Nmer_DebugDir()
         try DirCreate(dir)
-        fp := dir . "\openclaw_timeline.jsonl"
+        fp := Nmer_OpenClawTimelinePath()
         FileAppend(line . "`n", fp, "UTF-8")
     } catch {
     }

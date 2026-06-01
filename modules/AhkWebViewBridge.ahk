@@ -261,14 +261,14 @@ class AhkInterface {
                     ; 避免日志被换行打断
                     head := StrReplace(StrReplace(StrReplace(head, "`r", " "), "`n", " "), "`t", " ")
                     tail := StrReplace(StrReplace(StrReplace(tail, "`r", " "), "`n", " "), "`t", " ")
-                    FileAppend("[" . A_Now . "] [HOSTOBJ] GetBrowserSnapshot #" . _callCount . " OK len=" . StrLen(s) . " reqId=" . reqLogged . " head=" . head . " tail=" . tail . "`r`n", A_ScriptDir . "\Cache\niuma_mobile_snapshot_debug.log", "UTF-8")
+                    FileAppend("[" . A_Now . "] [HOSTOBJ] GetBrowserSnapshot #" . _callCount . " OK len=" . StrLen(s) . " reqId=" . reqLogged . " head=" . head . " tail=" . tail . "`r`n", Nmer_DebugPath("niuma_mobile_snapshot_debug.log"), "UTF-8")
                 }
                 return s
             }
-            FileAppend("[" . A_Now . "] [HOSTOBJ] GetBrowserSnapshot #" . _callCount . " EMPTY`r`n", A_ScriptDir . "\Cache\niuma_mobile_snapshot_debug.log", "UTF-8")
+            FileAppend("[" . A_Now . "] [HOSTOBJ] GetBrowserSnapshot #" . _callCount . " EMPTY`r`n", Nmer_DebugPath("niuma_mobile_snapshot_debug.log"), "UTF-8")
             return '{"type":"host_browser_snapshot","reqId":"","count":0,"arrLen":0,"url":"","error":"no_cache","truncated":false,"totalCandidates":0,"snapshot":[]}'
         } catch as e {
-            FileAppend("[" . A_Now . "] [HOSTOBJ] GetBrowserSnapshot ERROR: " . e.Message . "`r`n", A_ScriptDir . "\Cache\niuma_mobile_snapshot_debug.log", "UTF-8")
+            FileAppend("[" . A_Now . "] [HOSTOBJ] GetBrowserSnapshot ERROR: " . e.Message . "`r`n", Nmer_DebugPath("niuma_mobile_snapshot_debug.log"), "UTF-8")
             return '{"type":"host_browser_snapshot","reqId":"","count":0,"arrLen":0,"url":"","error":"bridge_error","truncated":false,"totalCandidates":0,"snapshot":[]}'
         }
     }

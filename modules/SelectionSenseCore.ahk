@@ -704,10 +704,13 @@ SelectionSense_HubDictInstall_FindDb(rootDir) {
     if (root = "")
         return ""
     dataDir := root . "\Data"
+    dictDir := dataDir . "\dict"
     for name in ["ultimate.db", "ecdict.db", "stardict.db"] {
-        p := dataDir . "\" . name
-        if FileExist(p)
-            return p
+        for base in [dictDir, dataDir] {
+            p := base . "\" . name
+            if FileExist(p)
+                return p
+        }
     }
     direct := root . "\ultimate.db"
     if FileExist(direct)
@@ -2637,9 +2640,9 @@ HubCapsule_Log(event, detail := "") {
         ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
         line := "[" . ts . "][hub][" . event . "][" . intentHex . "/" . focusHex . "/" . stateHex . "] " . String(detail) . "`r`n"
         if FuncExists("NMER_AsyncLog")
-            NMER_AsyncLog(A_ScriptDir . "\Cache\hubcapsule_runtime.log", line)
+            NMER_AsyncLog(Nmer_DebugPath("hubcapsule_runtime.log"), line)
         else
-            FileAppend(line, A_ScriptDir . "\Cache\hubcapsule_runtime.log", "UTF-8")
+            FileAppend(line, Nmer_DebugPath("hubcapsule_runtime.log"), "UTF-8")
     } catch {
     }
 }

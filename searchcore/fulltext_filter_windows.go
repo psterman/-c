@@ -47,7 +47,7 @@ var (
 )
 
 func fullTextFilterConfigPath(baseDir string) string {
-	return filepath.Join(baseDir, "Data", fullTextFilterConfigFile)
+	return resolveDataFile(baseDir, "search", fullTextFilterConfigFile)
 }
 
 func defaultFullTextFilterConfig(baseDir string) fullTextFilterConfig {

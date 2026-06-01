@@ -39,7 +39,7 @@ WebView2_EnsureSharedEnvBlocking() {
         return g_WV2SharedEnv
     try {
         if CoreAsyncStrictMode
-            NMER_AsyncLog(A_ScriptDir . "\Cache\wv2_shared_env.log", "[" . A_Now . "][sync_blocked] WebView2_EnsureSharedEnvBlocking rejected`r`n")
+            NMER_AsyncLog(Nmer_DebugPath("wv2_shared_env.log"), "[" . A_Now . "][sync_blocked] WebView2_EnsureSharedEnvBlocking rejected`r`n")
     }
     catch {
     }

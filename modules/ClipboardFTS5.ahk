@@ -1501,8 +1501,7 @@ CaptureImageFileToFTS5(filePath, SourceApp) {
         return false
     
     try {
-        ScriptDir := (IsSet(MainScriptDir) ? MainScriptDir : A_ScriptDir)
-        ThumbsDir := ScriptDir "\Cache\Thumbs"
+        ThumbsDir := Nmer_ThumbsDir()
         if (!DirExist(ThumbsDir))
             DirCreate(ThumbsDir)
         

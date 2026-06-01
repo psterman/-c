@@ -160,10 +160,22 @@ func normalizeFullTextRuntimeConfig(baseDir string, cfg FullTextRuntimeConfig) F
 			idx = defaultIndexDirByBase(baseDir)
 		}
 	}
-	// 兼容旧版：索引曾在 %LOCALAPPDATA%\\SearchCenter\\bluge_index_<tag>，现统一迁入 Data\\fulltext-index\\
+	// 兼容旧版：索引曾在 %LOCALAPPDATA%\\SearchCenter\\bluge_index_<tag>，现统一迁入 Cache\\fulltext-index\\
 	if legacyPer := legacyPerWorkspaceIndexDir(baseDir); legacyPer != "" {
 		if strings.EqualFold(normalizePathKey(idx), normalizePathKey(legacyPer)) {
 			idx = defaultIndexDirByBase(baseDir)
+		}
+	}
+	// 兼容：索引曾在 Data\\fulltext-index 或 Data\\index\\fulltext-index
+	for _, legacyData := range []string{
+		filepath.Join(baseDir, "Data", "fulltext-index"),
+		filepath.Join(baseDir, "Data", "index", "fulltext-index"),
+	} {
+		lk := normalizePathKey(legacyData)
+		ik := normalizePathKey(idx)
+		if ik == lk || strings.HasPrefix(ik, lk+string(filepath.Separator)) {
+			idx = defaultIndexDirByBase(baseDir)
+			break
 		}
 	}
 	if !filepath.IsAbs(idx) {
@@ -177,7 +189,7 @@ func normalizeFullTextRuntimeConfig(baseDir string, cfg FullTextRuntimeConfig) F
 func defaultIndexDirByBase(baseDir string) string {
 	baseKey := strings.ToLower(filepath.Clean(baseDir))
 	tag := fmt.Sprintf("%08x", crc32.ChecksumIEEE([]byte(baseKey)))
-	return filepath.Join(baseDir, "Data", "fulltext-index", "bluge_index_"+tag)
+	return filepath.Join(baseDir, "Cache", "fulltext-index", "bluge_index_"+tag)
 }
 
 func legacyPerWorkspaceIndexDir(baseDir string) string {
@@ -267,7 +279,7 @@ func saveFullTextRuntimeConfig(baseDir string, cfg FullTextRuntimeConfig) error 
 }
 
 func fullTextRuntimeConfigPath(baseDir string) string {
-	return filepath.Join(baseDir, "Data", fullTextRuntimeConfigFile)
+	return resolveDataFile(baseDir, "search", fullTextRuntimeConfigFile)
 }
 
 func fullTextRuntimeConfig(baseDir string) FullTextRuntimeConfig {

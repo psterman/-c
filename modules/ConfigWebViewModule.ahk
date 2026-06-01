@@ -511,6 +511,92 @@ ConfigWebView_FullTextControl_After(resp, act) {
     ConfigWebView_PostFullTextStatus(true)
 }
 
+ConfigWebView_SendCacheInfo() {
+    info := Nmer_CollectCacheInfo()
+    webItems := []
+    for it in info["items"] {
+        webItems.Push(Map(
+            "id", it["id"],
+            "label", it["label"],
+            "path", it["path"],
+            "hint", it["hint"],
+            "bytes", it["bytes"],
+            "sizeText", it["sizeText"]
+        ))
+    }
+    ConfigWebView_Send(Map(
+        "type", "cacheInfo",
+        "root", info["root"],
+        "totalBytes", info["totalBytes"],
+        "totalText", info["totalText"],
+        "items", webItems
+    ))
+}
+
+ConfigWebView_OpenCacheFolder(target) {
+    t := StrLower(Trim(String(target)))
+    path := Nmer_UserCacheRoot()
+    switch t {
+        case "fulltext":
+            path := Nmer_FullTextIndexDir()
+        case "images":
+            path := Nmer_CacheImagesDir()
+        case "thumbs":
+            path := Nmer_ThumbsDir()
+        case "temp":
+            path := Nmer_CacheTempDir()
+        case "debug":
+            path := Nmer_DebugDir()
+        default:
+            path := Nmer_UserCacheRoot()
+    }
+    ok := Nmer_OpenPathInExplorer(path)
+    ConfigWebView_Send(Map("type", "cacheOpenFolderResult", "ok", ok, "path", path))
+}
+
+ConfigWebView_ClearCacheAsync(targets*) {
+    hasFt := false
+    for t in targets {
+        if (StrLower(Trim(String(t))) = "fulltext") {
+            hasFt := true
+            break
+        }
+    }
+    if hasFt {
+        ConfigWebView_EnsureSearchCoreRunningAsync((ok) => ConfigWebView_ClearCache_Continue(ok, targets*))
+        return
+    }
+    ConfigWebView_ClearCache_Finish(targets*)
+}
+
+ConfigWebView_ClearCache_Continue(searchCoreOk, targets*) {
+    if searchCoreOk {
+        ConfigWebView_HttpSearchCoreJsonAsync("POST", "/v1/fulltext/control", Jxon_Dump(Map("action", "stop")), (resp) => (
+            ConfigWebView_ClearCache_Finish(targets*)
+        ))
+        return
+    }
+    ConfigWebView_ClearCache_Finish(targets*)
+}
+
+ConfigWebView_ClearCache_Finish(targets*) {
+    cleared := Nmer_ClearCacheTargets(targets*)
+    needRebuild := false
+    for c in cleared {
+        if (c = "fulltext") {
+            needRebuild := true
+            break
+        }
+    }
+    if needRebuild {
+        ConfigWebView_EnsureSearchCoreRunningAsync((ok) => (
+            ok ? ConfigWebView_HttpSearchCoreJsonAsync("POST", "/v1/fulltext/control", Jxon_Dump(Map("action", "rebuild")), (*) => ConfigWebView_SendCacheInfo()) : ConfigWebView_SendCacheInfo()
+        ))
+    } else
+        ConfigWebView_SendCacheInfo()
+    ConfigWebView_Send(Map("type", "cacheClearResult", "ok", true, "cleared", cleared))
+}
+
 ConfigWebView_FullTextUpdateConfig(payload) {
     if !(payload is Map) {
         ConfigWebView_Send(Map("type", "fulltextConfigResult", "ok", false, "error", "invalid payload"))
@@ -811,6 +897,7 @@ ConfigWebView_BuildInitData() {
         cfgPayload["userStudio"] := UserStudio_PayloadForWeb()
     if FuncExists("AppUpdateCheck_PayloadForWeb")
         cfgPayload["appUpdate"] := AppUpdateCheck_PayloadForWeb()
+    cfgPayload["userCacheRoot"] := Nmer_UserCacheRoot()
     return cfgPayload
 }
 
@@ -1973,12 +2060,42 @@ ConfigWebView_OnMessage(sender, args) {
             ConfigWebView_FullTextUpdateConfig(pl)
         case "fulltextPickIndexDir":
             selectedDir := ""
-            try selectedDir := FileSelect("D", A_ScriptDir, "閫夋嫨绱㈠紩鐩綍")
+            try selectedDir := FileSelect("D", Nmer_FullTextIndexDir(), "选择全文索引目录")
             if (selectedDir = "")
                 selectedDir := ""
             ConfigWebView_Send(Map("type", "fulltextBrowseResult", "path", selectedDir))
         case "fulltextProbeRequest":
             ConfigWebView_FullTextProbe()
+        case "cacheInfoRequest":
+            ConfigWebView_SendCacheInfo()
+        case "cacheOpenFolder":
+            sub := msg.Has("target") ? String(msg["target"]) : "root"
+            ConfigWebView_OpenCacheFolder(sub)
+        case "cachePickRoot":
+            picked := ""
+            try picked := FileSelect("D", Nmer_UserCacheRoot(), "选择缓存根目录")
+            ConfigWebView_Send(Map("type", "cacheRootPicked", "ok", picked != "", "path", picked, "error", picked = "" ? "已取消" : ""))
+        case "cacheSaveRoot":
+            newRoot := msg.Has("path") ? Trim(String(msg["path"])) : ""
+            ok := false
+            err := ""
+            try {
+                if (newRoot = "")
+                    throw Error("路径为空")
+                Nmer_SetUserCacheRoot(newRoot)
+                ok := true
+            } catch as e {
+                err := e.Message
+            }
+            if ok
+                ConfigWebView_SendCacheInfo()
+            ConfigWebView_Send(Map("type", "cacheSaveRootResult", "ok", ok, "error", err, "path", ok ? Nmer_UserCacheRoot() : ""))
+        case "cacheClear":
+            targets := []
+            if msg.Has("targets") && (msg["targets"] is Array)
+                for t in msg["targets"]
+                    targets.Push(String(t))
+            ConfigWebView_ClearCacheAsync(targets*)
         case "browseCursorPath":
             selected := FileSelect("1", A_ScriptDir, "閫夋嫨 Cursor.exe", "Executable (*.exe)")
             if (selected = "")
@@ -2610,7 +2727,7 @@ ConfigWebView_LlmPreset(prov) {
         case "claude":
             return Map("baseUrl", "https://api.anthropic.com", "model", "claude-3-5-sonnet-latest")
         case "ollama":
-            return Map("baseUrl", "http://127.0.0.1:11434/v1", "model", "llama3.1:8b")
+            return Map("baseUrl", "http://127.0.0.1:11434/v1", "model", "nemotron-3-super:cloud")
         default:
             return Map("baseUrl", "https://api.openai.com/v1", "model", "gpt-4o-mini")
     }

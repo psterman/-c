@@ -19,9 +19,9 @@ PromptExecution_LogGuard(tag, detail := "") {
     try {
         line := "[" . A_Now . "][" . tag . "] " . String(detail) . "`r`n"
         if FuncExists("NMER_AsyncLog")
-            NMER_AsyncLog(A_ScriptDir . "\Cache\prompt_execution_guard.log", line)
+            NMER_AsyncLog(Nmer_DebugPath("prompt_execution_guard.log"), line)
         else
-            FileAppend(line, A_ScriptDir . "\Cache\prompt_execution_guard.log", "UTF-8")
+            FileAppend(line, Nmer_DebugPath("prompt_execution_guard.log"), "UTF-8")
     } catch {
     }
 }

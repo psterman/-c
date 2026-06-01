@@ -723,7 +723,7 @@ CommandPalette_HandleVoiceToggle() {
 }
 
 CommandPalette_ExecFilePath() {
-    return A_ScriptDir . "\Data\CommandPaletteExec.json"
+    return Nmer_CommandPaletteExecPath()
 }
 
 CommandPalette_ExecReadMtime() {

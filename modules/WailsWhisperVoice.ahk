@@ -110,7 +110,7 @@ WailsWhisper_SpawnRecordProcess(wavPath, stopPath) {
     }
     if !pid || !ProcessExist(pid) {
         err := "无法启动录音（中文路径下 Run 可能失败，已尝试 Shell 启动）"
-        logPath := (IsSet(MainScriptDir) ? MainScriptDir : A_ScriptDir) . "\Cache\wails_record_err.log"
+        logPath := Nmer_DebugPath("wails_record_err.log")
         if FileExist(logPath) {
             try err .= "`n" . Trim(FileRead(logPath, "UTF-8"))
         }
@@ -179,8 +179,10 @@ WailsWhisper_JsonStr(s) {
 }
 
 WailsWhisper_GetCacheDir() {
+    if FuncExists("Nmer_UserCacheRoot")
+        return Nmer_UserCacheRoot() . "\voice"
     base := (IsSet(MainScriptDir) && MainScriptDir != "") ? MainScriptDir : A_ScriptDir
-    return base . "\Cache"
+    return base . "\Cache\voice"
 }
 
 WailsWhisper_GetStatusFile() {

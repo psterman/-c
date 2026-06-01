@@ -10,9 +10,9 @@ CoreAsyncHttp_Log(event, detail := "") {
     try {
         line := "[" . A_Now . "][" . String(event) . "] " . String(detail) . "`r`n"
         if FuncExists("NMER_AsyncLog")
-            NMER_AsyncLog(A_ScriptDir . "\Cache\core_async_http.log", line)
+            NMER_AsyncLog(Nmer_DebugPath("core_async_http.log"), line)
         else
-            FileAppend(line, A_ScriptDir . "\Cache\core_async_http.log", "UTF-8")
+            FileAppend(line, Nmer_DebugPath("core_async_http.log"), "UTF-8")
     } catch {
     }
 }
@@ -281,7 +281,10 @@ CoreAsyncHttp_SendAttempt(id) {
     req["phase"] := "send"
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        whr.Open(String(req["method"]), String(req["url"]), true)
+        reqUrl := String(req["url"])
+        if (FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(reqUrl))
+            try whr.SetProxy(2)
+        whr.Open(String(req["method"]), reqUrl, true)
         whr.SetTimeouts(Integer(opts["resolveTimeoutMs"]), Integer(opts["connectTimeoutMs"]), Integer(opts["sendTimeoutMs"]), Integer(opts["receiveTimeoutMs"]))
         CoreAsyncHttp_ApplyHeaders(whr, opts["headers"])
         if !CoreAsyncHttp_HasHeader(opts["headers"], "Accept-Encoding")

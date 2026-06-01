@@ -474,7 +474,63 @@ body::after {
 }
 
 body.vk-kb-collapsed #keyboard-zone { display: none; }
-body.vk-kb-collapsed #bottom-zone { border-top: 1px solid var(--border); }
+
+/* ── 主 Tab：键盘与菜单 / 快捷键设置 ───────────────────────────────────── */
+#vk-main-tabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  padding: 0 10px 6px;
+  margin: 0 8px;
+}
+.vk-main-tab {
+  flex: 1;
+  padding: 7px 14px;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, box-shadow .15s, background .15s;
+  text-align: center;
+}
+.vk-main-tab:hover {
+  color: var(--text);
+  border-color: var(--orange-lt);
+}
+.vk-main-tab.active {
+  color: var(--orange-lt);
+  border-color: var(--orange);
+  background: linear-gradient(180deg, rgba(255,141,42,.14), rgba(255,141,42,.04)), var(--surface2);
+  box-shadow: 0 0 0 1px rgba(255,141,42,.16) inset, 0 8px 20px rgba(0,0,0,.22);
+}
+.vk-main-tab-panel {
+  display: none;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.vk-main-tab-panel.active {
+  display: flex;
+}
+#vk-tab-bind {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+#vk-tab-hotkeys {
+  flex: 1 1 0;
+  min-height: 0;
+}
+#vk-tab-hotkeys #bottom-zone {
+  flex: 1 1 0;
+  min-height: 0;
+  border-top: 1px solid var(--border);
+}
 
 /* ── Conflict Modal ────────────────────────────────────────────────────── */
 #conflict-overlay {
@@ -1420,87 +1476,6 @@ body.vk-kb-collapsed #bottom-zone { border-top: 1px solid var(--border); }
   text-shadow: 0 0 6px rgba(0, 255, 65, .8);
   pointer-events: none;
 }
-#dashboard-layout-switch {
-  display: inline-flex;
-  align-items: stretch;
-  border: 1px solid rgba(255, 102, 0, .22);
-  border-radius: 8px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, .28);
-  flex-shrink: 0;
-}
-.layout-view-label {
-  font-size: 9px;
-  letter-spacing: .4px;
-  color: var(--text-dim);
-  align-self: center;
-  flex-shrink: 0;
-  padding-right: 2px;
-  user-select: none;
-}
-.layout-view-btn {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  min-width: 42px;
-  padding: 4px 8px 5px;
-  border: none;
-  border-right: 1px solid rgba(255, 255, 255, .06);
-  border-radius: 0;
-  background: transparent;
-  color: var(--text-dim);
-  font-family: var(--font);
-  font-size: 9px;
-  line-height: 1.2;
-  cursor: pointer;
-  transition: background .12s ease, color .12s ease, box-shadow .12s ease;
-}
-.layout-view-btn:last-child {
-  border-right: none;
-}
-.layout-view-btn:hover {
-  background: rgba(255, 102, 0, .08);
-  color: var(--orange-lt);
-}
-.layout-view-btn.active {
-  background: rgba(255, 102, 0, .16);
-  color: var(--orange-lt);
-  box-shadow: inset 0 0 0 1px rgba(255, 102, 0, .35);
-}
-.layout-view-pict {
-  display: grid;
-  gap: 2px;
-  width: 22px;
-  height: 14px;
-}
-.layout-view-pict--1 {
-  grid-template-rows: 1fr;
-  grid-template-columns: repeat(5, 1fr);
-}
-.layout-view-pict--2 {
-  grid-template-rows: repeat(2, 1fr);
-  grid-template-columns: repeat(5, 1fr);
-}
-.layout-view-pict--multi {
-  grid-template-rows: repeat(3, 1fr);
-  grid-template-columns: repeat(5, 1fr);
-}
-.layout-view-pict span {
-  display: block;
-  border-radius: 1px;
-  background: currentColor;
-  opacity: .55;
-}
-.layout-view-btn.active .layout-view-pict span {
-  opacity: .95;
-}
-.layout-view-txt {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: .2px;
-}
 .dashboard-layout-btn {
   border: 1px solid var(--border2);
   border-radius: 6px;
@@ -1542,7 +1517,18 @@ body.vk-kb-collapsed #bottom-zone { border-top: 1px solid var(--border); }
 }
 #dashboard-grid.layout-1, #scene-menu-grid.layout-1 { --dashboard-cols: 10; }
 #dashboard-grid.layout-2, #scene-menu-grid.layout-2 { --dashboard-cols: 10; }
-#dashboard-grid.layout-multi, #scene-menu-grid.layout-multi { --dashboard-cols: 20; }
+#dashboard-grid.layout-multi, #scene-menu-grid.layout-multi { --dashboard-cols: 10; }
+#dashboard-grid.layout-multi, #scene-menu-grid.layout-multi {
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  justify-content: stretch;
+  gap: 5px;
+}
+#dashboard-grid.layout-multi .dashboard-slot, #scene-menu-grid.layout-multi .dashboard-slot {
+  aspect-ratio: auto;
+  height: clamp(32px, 3.6vh, 42px);
+  min-height: 32px;
+  border-radius: 8px;
+}
 #dashboard-grid.layout-1, #scene-menu-grid.layout-1 {
   grid-template-columns: repeat(10, minmax(0, 1fr));
   justify-content: stretch;
@@ -1824,18 +1810,47 @@ body.vk-kb-collapsed #bottom-zone { border-top: 1px solid var(--border); }
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
 }
-#dashboard-grid.layout-multi .dashboard-item, #scene-menu-grid.layout-multi .dashboard-item { padding: 4px; }
-#dashboard-grid.layout-multi .dashboard-item-main, #scene-menu-grid.layout-multi .dashboard-item-main { gap: 3px; }
+#dashboard-grid.layout-multi .dashboard-item, #scene-menu-grid.layout-multi .dashboard-item {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 2px 6px 2px 8px;
+  min-height: 100%;
+}
+#dashboard-grid.layout-multi .dashboard-item-main, #scene-menu-grid.layout-multi .dashboard-item-main {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
 #dashboard-grid.layout-multi .dashboard-item-icon, #scene-menu-grid.layout-multi .dashboard-item-icon {
-  min-width: 22px;
-  min-height: 22px;
-  padding: 0 5px;
-  font-size: 10px;
-  border-radius: 7px;
+  flex-shrink: 0;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0 4px;
+  font-size: 9px;
+  border-radius: 6px;
 }
 #dashboard-grid.layout-multi .dashboard-item-label, #scene-menu-grid.layout-multi .dashboard-item-label {
-  font-size: clamp(8px, 0.9vw, 10px);
-  line-height: 1.1;
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: left;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: clip;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+#dashboard-grid.layout-multi .scene-menu-slot .dashboard-item,
+#scene-menu-grid.layout-multi .scene-menu-slot .dashboard-item {
+  padding-right: 26px;
 }
 #dashboard-grid.layout-multi .dashboard-item-hint, #scene-menu-grid.layout-multi .dashboard-item-hint {
   font-size: 7px;
@@ -2443,22 +2458,10 @@ body[data-theme="light"] #vk-toolbar-preview-sandbox {
 body[data-theme="light"] .vk-toolbar-preview-item {
   background: #FFFFFF;
 }
-body[data-theme="light"] .layout-view-btn {
-  border-right-color: #E5E5E5;
-  color: #666;
-}
-body[data-theme="light"] .layout-view-btn:hover,
-body[data-theme="light"] .layout-view-btn.active {
-  background: #FFF3E8;
-  color: #D35400;
-}
-body[data-theme="light"] #dashboard-layout-switch {
-  background: #F5F5F5;
-  border-color: #E5E5E5;
-}
 body[data-theme="light"] .dashboard-layout-btn,
 body[data-theme="light"] .atom-tab,
-body[data-theme="light"] .pt-tab {
+body[data-theme="light"] .pt-tab,
+body[data-theme="light"] .vk-main-tab {
   background: #FFFFFF;
   border-color: #E5E5E5;
   color: #555555;
@@ -2466,9 +2469,11 @@ body[data-theme="light"] .pt-tab {
 body[data-theme="light"] .dashboard-layout-btn:hover,
 body[data-theme="light"] .atom-tab:hover,
 body[data-theme="light"] .pt-tab:hover,
+body[data-theme="light"] .vk-main-tab:hover,
 body[data-theme="light"] .dashboard-layout-btn.active,
 body[data-theme="light"] .atom-tab.active,
-body[data-theme="light"] .pt-tab.active {
+body[data-theme="light"] .pt-tab.active,
+body[data-theme="light"] .vk-main-tab.active {
   background: #FFF3E8;
   border-color: #E67E22;
   color: #D35400;
@@ -3016,7 +3021,7 @@ body:not([data-theme="light"]) #hud-save {
     <div id="admin-warning" role="alert"></div>
   </div>
 
-  <!-- ── Keyboard ─────────────────────────────────────────────────────── -->
+  <!-- ── Keyboard（两 Tab 共用）────────────────────────────────────────── -->
   <div id="keyboard-zone">
     <div id="keyboard">
 
@@ -3155,38 +3160,60 @@ body:not([data-theme="light"]) #hud-save {
     </div><!-- #keyboard -->
   </div><!-- #keyboard-zone -->
 
+  <div id="vk-main-tabs" role="tablist" aria-label="KeyBinder 主视图">
+    <button type="button" class="vk-main-tab active" data-vk-tab="bind" role="tab" aria-selected="true" title="虚拟键盘 + 场景右键菜单编辑">键盘与菜单</button>
+    <button type="button" class="vk-main-tab" data-vk-tab="hotkeys" role="tab" aria-selected="false" title="虚拟键盘 + 按场景浏览命令并设置快捷键">快捷键设置</button>
+  </div>
+
+  <div id="vk-tab-bind" class="vk-main-tab-panel active" role="tabpanel" aria-label="键盘与菜单">
+
   <!-- ── Dashboard Grid (Drag & Drop) ──────────────────────────────────── -->
   <div id="dashboard-container" class="layout-multi" aria-label="快捷动作面板">
     <div id="dashboard-toolbar">
       <div id="dashboard-title">右键菜单</div>
-      <div class="dashboard-toolbar-row" role="group" aria-label="场景右键菜单编辑宫格与主宫格">
-        <span class="layout-view-label">编辑样式</span>
-        <div id="dashboard-layout-switch" role="radiogroup" aria-label="场景菜单编辑区显示样式（仅影响本页可见行数）">
-          <button class="layout-view-btn" data-layout="1" type="button" role="radio" aria-checked="false" title="单行 10 槽 · 仅本页编辑视图">
-            <span class="layout-view-pict layout-view-pict--1" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></span>
-            <span class="layout-view-txt">1 行</span>
-          </button>
-          <button class="layout-view-btn" data-layout="2" type="button" role="radio" aria-checked="false" title="双行 20 槽 · 仅本页编辑视图">
-            <span class="layout-view-pict layout-view-pict--2" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span>
-            <span class="layout-view-txt">2 行</span>
-          </button>
-          <button class="layout-view-btn active" data-layout="multi" type="button" role="radio" aria-checked="true" title="密铺 60 槽 · 仅本页编辑视图">
-            <span class="layout-view-pict layout-view-pict--multi" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span>
-            <span class="layout-view-txt">密铺</span>
-          </button>
-        </div>
-        <span class="dashboard-toolbar-sep" aria-hidden="true"></span>
+      <div class="dashboard-toolbar-row" role="group" aria-label="场景右键菜单编辑宫格">
         <div id="scene-menu-tabs" class="scene-menu-tabs-inline" role="tablist" aria-label="场景右键菜单"></div>
       </div>
     </div>
     <div id="scene-menu-panel" class="scene-menu-panel" hidden aria-label="场景右键菜单宫格">
-      <div class="scene-menu-panel-hint">场景菜单 · 从键盘拖入槽位。每个场景（搜索中心 / 草稿本 / 剪贴板 / 提示词 / 悬浮条）共用同一份最多 60 槽数据；左侧「编辑样式」只切换本页<strong>可见</strong>行数（1 行 / 2 行 / 密铺），不会另存一套配置。与下方主快捷宫格无关，也不改变各窗口实际弹出的右键菜单外观。</div>
+      <div class="scene-menu-panel-hint">场景菜单 · 从键盘拖入槽位。每个场景（搜索中心 / 草稿本 / 剪贴板 / 提示词 / 悬浮条）共用同一份最多 60 槽数据，与下方主快捷宫格无关，也不改变各窗口实际弹出的右键菜单外观。</div>
       <div id="scene-menu-grid" class="dashboard-grid layout-multi"></div>
     </div>
     <div id="dashboard-main-panel" class="dashboard-main-panel">
       <div id="dashboard-grid" class="layout-multi"></div>
     </div>
   </div>
+
+  </div><!-- #vk-tab-bind -->
+
+  <!-- ── Bottom: Sidebar + Command Panel ─────────────────────────────── -->
+  <div id="vk-tab-hotkeys" class="vk-main-tab-panel" role="tabpanel" aria-label="快捷键设置">
+  <div id="bottom-zone">
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">场景</div>
+      </div>
+      <div id="vk-toolbar-preview-sandbox" aria-label="悬浮工具栏预览沙盒"></div>
+      <div id="sidebar-list"></div>
+    </div>
+
+    <!-- Command Panel -->
+    <div id="cmd-panel">
+      <div id="cmd-search-bar">
+        <input id="cmd-search" type="text" placeholder="搜索命令..." autocomplete="off" spellcheck="false">
+        <span id="cmd-count">0 个命令</span>
+      </div>
+      <div id="atom-tabs"></div>
+      <div id="cmd-list-wrapper">
+        <div id="cmd-list"></div>
+      </div>
+    </div>
+
+  </div><!-- #bottom-zone -->
+  </div><!-- #vk-tab-hotkeys -->
+
   <div id="dashboard-context-menu" role="menu" aria-label="宫格右键菜单">
     <button class="dashboard-menu-item" data-menu-action="paste" type="button">粘贴</button>
     <button class="dashboard-menu-item" data-menu-action="remove" type="button">删除</button>
@@ -3228,32 +3255,6 @@ body:not([data-theme="light"]) #hud-save {
       </div>
     </div>
   </div>
-
-  <!-- ── Bottom: Sidebar + Command Panel ─────────────────────────────── -->
-  <div id="bottom-zone">
-
-    <!-- Sidebar -->
-    <div id="sidebar">
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">场景</div>
-      </div>
-      <div id="vk-toolbar-preview-sandbox" aria-label="悬浮工具栏预览沙盒"></div>
-      <div id="sidebar-list"></div>
-    </div>
-
-    <!-- Command Panel -->
-    <div id="cmd-panel">
-      <div id="cmd-search-bar">
-        <input id="cmd-search" type="text" placeholder="搜索命令..." autocomplete="off" spellcheck="false">
-        <span id="cmd-count">0 个命令</span>
-      </div>
-      <div id="atom-tabs"></div>
-      <div id="cmd-list-wrapper">
-        <div id="cmd-list"></div>
-      </div>
-    </div>
-
-  </div><!-- #bottom-zone -->
 
   <!-- ── Conflict Modal ──────────────────────────────────────────────── -->
   <div id="conflict-overlay">
@@ -3316,6 +3317,7 @@ const state = {
   nativeLayout: false,      // ScanCode 物理键适配模式
   layoutModeNoticeUntil: 0,
   keyboardCollapsed: false,
+  mainTab: 'bind',
   lastActionId: '',
   lastActionName: '',
   lastActionCurrentKey: '',
@@ -3388,6 +3390,7 @@ const VK_UI_PREF_KEYS = {
   activeSceneMenuKey: 'vk_active_scene_menu_key',
   keyboardCollapsed: 'vk_keyboard_collapsed',
   nativeLayout: 'vk_native_layout',
+  mainTab: 'vk_main_tab',
 };
 
 function readVkUiPref(key, fallback = '') {
@@ -5926,6 +5929,8 @@ function handleInit(msg) {
   state.dashboardPanelMode = readVkUiPref(VK_UI_PREF_KEYS.dashboardPanelMode, 'scene') === 'scene' ? 'scene' : 'main';
   state.keyboardCollapsed = readVkUiPref(VK_UI_PREF_KEYS.keyboardCollapsed, '0') === '1';
   applyKeyboardCollapsedUI(state.keyboardCollapsed);
+  const savedMainTab = readVkUiPref(VK_UI_PREF_KEYS.mainTab, 'bind');
+  applyMainTabUI(savedMainTab === 'hotkeys' ? 'hotkeys' : 'bind', { persist: false });
   state.activeSceneMenuKey = (() => {
     const k = readVkUiPref(VK_UI_PREF_KEYS.activeSceneMenuKey, state.activeSceneMenuKey || 'floating_bar');
     return SCENE_MENU_KEYS.includes(k) ? k : 'floating_bar';
@@ -5946,10 +5951,7 @@ function handleInit(msg) {
   ensureActiveScenarioAndTab();
   rebuildIndexes();
 
-  const initLayout = (msg.dashboardLayout !== undefined && msg.dashboardLayout !== null && String(msg.dashboardLayout).trim() !== '')
-    ? msg.dashboardLayout
-    : readVkUiPref(VK_UI_PREF_KEYS.dashboardLayout, dashboardLayout);
-  applyDashboardConfig(msg.dashboardConfig || [], initLayout);
+  applyDashboardConfig(msg.dashboardConfig || [], 'multi');
 
   renderSidebar();
   renderToolbarPreviewSandbox();
@@ -6026,9 +6028,7 @@ let dashboardLayout = 'multi';
 // WebView2 下原生 HTML5 drag image 容易出现残影与拖影，统一走 Sortable fallback 更稳定。
 const SORTABLE_FORCE_FALLBACK = true;
 
-function resolveDashboardLayout(layout) {
-  if (String(layout) === '1' || Number(layout) === 1) return 1;
-  if (String(layout) === '2' || Number(layout) === 2) return 2;
+function resolveDashboardLayout(_layout) {
   return 'multi';
 }
 
@@ -6041,13 +6041,8 @@ function mainDashboardSlotCount() {
 /** 场景菜单在 Commands.json / 内存中统一按索引保存的最大槽位数（与三宫格一致） */
 const SCENE_MENU_MAX_SLOTS = MAIN_DASHBOARD_SLOT_COUNT;
 
-/** 仅影响本页场景菜单编辑区可见行数（一=10 / 二=20 / 三=60），不改变各场景已保存的完整槽位数据 */
-function sceneMenuSlotCap(layout) {
-  const resolved = resolveDashboardLayout(layout);
-  if (resolved === 'multi') return 60;
-  if (resolved === 1) return 10;
-  if (resolved === 2) return 20;
-  return 60;
+function sceneMenuSlotCap(_layout) {
+  return SCENE_MENU_MAX_SLOTS;
 }
 
 /** 非搜索类场景：固定长度 SCENE_MENU_MAX_SLOTS，空串表示空槽（与 AHK 侧按索引存盘一致） */
@@ -6147,28 +6142,17 @@ function syncDashboardLayoutUI() {
   const grid = document.getElementById('dashboard-grid');
   const sceneGrid = document.getElementById('scene-menu-grid');
   const container = document.getElementById('dashboard-container');
-  if (grid) {
-    grid.classList.remove('layout-1', 'layout-2', 'layout-multi');
-    grid.classList.add('layout-multi');
-  }
-  if (sceneGrid) {
-    sceneGrid.classList.remove('layout-1', 'layout-2', 'layout-multi');
-    sceneGrid.classList.add(`layout-${dashboardLayout}`);
-  }
-  if (container) {
-    container.classList.remove('layout-1', 'layout-2', 'layout-multi');
-    container.classList.add(`layout-${dashboardLayout}`);
-  }
-  document.querySelectorAll('#dashboard-layout-switch .layout-view-btn').forEach((btn) => {
-    const on = String(btn.dataset.layout) === String(dashboardLayout);
-    btn.classList.toggle('active', on);
-    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+  dashboardLayout = 'multi';
+  [grid, sceneGrid, container].forEach((el) => {
+    if (!el) return;
+    el.classList.remove('layout-1', 'layout-2', 'layout-multi');
+    el.classList.add('layout-multi');
   });
 }
 
-function applyDashboardLayout(layout) {
-  dashboardLayout = resolveDashboardLayout(layout);
-  writeVkUiPref(VK_UI_PREF_KEYS.dashboardLayout, dashboardLayout);
+function applyDashboardLayout(_layout) {
+  dashboardLayout = 'multi';
+  writeVkUiPref(VK_UI_PREF_KEYS.dashboardLayout, 'multi');
   ensureDashboardStateSize();
   syncDashboardLayoutUI();
   ensureDashboardSlots();
@@ -6810,17 +6794,7 @@ function initDashboardDrag() {
   const container = document.getElementById('dashboard-container');
   if (!keyboard || !grid || !sceneGrid || !container) return;
 
-  applyDashboardLayout(dashboardLayout);
-
-  document.querySelectorAll('#dashboard-layout-switch .layout-view-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      // 一/二/三仅控制「场景右键菜单」编辑区行数，不得切到下方主快捷 60 宫格
-      state.dashboardPanelMode = 'scene';
-      syncDashboardPanelVisibility();
-      renderSceneMenuTabs();
-      applyDashboardLayout(btn.dataset.layout);
-    });
-  });
+  applyDashboardLayout('multi');
 
   container.addEventListener('dragenter', () => {
     if (state.dashboardDragActive) syncDashboardDropCue(true);
@@ -8218,6 +8192,36 @@ function setKeyboardCollapsed(collapsed, persist = true) {
     writeVkUiPref(VK_UI_PREF_KEYS.keyboardCollapsed, collapsed ? '1' : '0');
 }
 
+function applyMainTabUI(tab, { persist = true } = {}) {
+  const next = tab === 'hotkeys' ? 'hotkeys' : 'bind';
+  state.mainTab = next;
+  document.body.classList.toggle('vk-main-tab-hotkeys', next === 'hotkeys');
+  document.body.classList.toggle('vk-main-tab-bind', next === 'bind');
+  document.querySelectorAll('#vk-main-tabs .vk-main-tab').forEach((btn) => {
+    const active = btn.dataset.vkTab === next;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  document.querySelectorAll('.vk-main-tab-panel').forEach((panel) => {
+    const active = (panel.id === 'vk-tab-bind' && next === 'bind')
+      || (panel.id === 'vk-tab-hotkeys' && next === 'hotkeys');
+    panel.classList.toggle('active', active);
+    panel.hidden = !active;
+  });
+  if (persist)
+    writeVkUiPref(VK_UI_PREF_KEYS.mainTab, next);
+}
+
+function setMainTab(tab) {
+  applyMainTabUI(tab, { persist: true });
+}
+
+document.getElementById('vk-main-tabs')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.vk-main-tab');
+  if (!btn) return;
+  setMainTab(btn.dataset.vkTab || 'bind');
+});
+
 document.getElementById('layout-mode-switch')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.layout-mode-btn');
   if (!btn) return;
@@ -8244,6 +8248,7 @@ document.getElementById('reset-all')?.addEventListener('click', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 function startRecording(cmdId) {
   if (state.recording) stopRecording();
+  if (state.keyboardCollapsed) setKeyboardCollapsed(false, true);
   state.recording = cmdId;
   renderCommandList();
   renderModifierKeys();
@@ -8412,6 +8417,7 @@ document.getElementById('sidebar-list').addEventListener('click', (e) => {
 // WebView2 bridge
 // ═══════════════════════════════════════════════════════════════════════════
 applyVkTheme(state.themeMode);
+applyMainTabUI(readVkUiPref(VK_UI_PREF_KEYS.mainTab, 'bind') === 'hotkeys' ? 'hotkeys' : 'bind', { persist: false });
 if (window.chrome && window.chrome.webview) {
   window.chrome.webview.addEventListener('message', (e) => {
     try {
@@ -8479,7 +8485,7 @@ if (window.chrome && window.chrome.webview) {
       ai_ref: '',
       ai_act: '',
     },
-    dashboardLayout: '1',
+    dashboardLayout: 'multi',
     dashboardConfig: [
       { commandId:'send', sourceAhkKey:'Enter', sourceDisplayKey:'Enter', customTitle:'发送消息', customNote:'直接发送', customShortcut:'' },
       { commandId:'clear_input', sourceAhkKey:'^Delete', sourceDisplayKey:'Ctrl+Del', customTitle:'清空并关闭', customNote:'先清空，再按 Esc 收起', customShortcut:'' },

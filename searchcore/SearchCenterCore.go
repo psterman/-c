@@ -105,8 +105,9 @@ func main() {
 // pickPrimaryClipboardPath 与 AHK 一致：主库 Data\Clipboard.db（FTS5）；
 // 兼容根目录 Clipboard.db；若均不可用则回退 Data\CursorData.db。
 func pickPrimaryClipboardPath(absBase string) (mainPath string, attachCurPath string, err error) {
-	curPath := filepath.Join(absBase, "Data", "CursorData.db")
+	curPath := resolveDataDb(absBase, "CursorData.db")
 	clipCandidates := []string{
+		resolveDataDb(absBase, "Clipboard.db"),
 		filepath.Join(absBase, "Data", "Clipboard.db"),
 		filepath.Join(absBase, "Clipboard.db"),
 	}

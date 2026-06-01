@@ -709,6 +709,14 @@ body.view-control #composerHint{color:color-mix(in srgb,var(--orange) 70%,var(--
 .setup-banner{margin:calc(8px * var(--ui)) calc(10px * var(--ui)) 0;padding:calc(10px * var(--ui)) calc(12px * var(--ui));border:1px solid rgba(255,102,0,.28);border-radius:calc(10px * var(--ui));background:rgba(255,102,0,.08);font-size:calc(11px * var(--ui));line-height:1.5}
 .setup-banner-title{font-weight:700;color:var(--text);margin-bottom:calc(4px * var(--ui))}
 .setup-banner-actions{display:flex;flex-wrap:wrap;gap:calc(6px * var(--ui));margin-top:calc(8px * var(--ui))}
+.chat-model-bar{display:flex;align-items:center;gap:calc(8px * var(--ui));margin:calc(8px * var(--ui)) calc(10px * var(--ui)) 0;padding:calc(8px * var(--ui)) calc(10px * var(--ui));border:1px solid rgba(0,229,255,.22);border-radius:calc(10px * var(--ui));background:rgba(13,13,17,.55);flex-wrap:wrap}
+.chat-model-bar[hidden]{display:none!important}
+.chat-model-bar-label{font-size:calc(11px * var(--ui));font-weight:700;color:var(--muted);flex-shrink:0}
+.chat-model-chips{display:flex;flex-wrap:wrap;gap:calc(6px * var(--ui));flex:1;min-width:0;max-height:calc(72px * var(--ui));overflow-y:auto}
+.chat-model-chip{font-size:calc(11px * var(--ui));padding:calc(4px * var(--ui)) calc(10px * var(--ui));border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-model-chip:hover{border-color:rgba(0,229,255,.45);background:rgba(0,229,255,.08)}
+.chat-model-chip.active{border-color:rgba(0,255,102,.55);background:rgba(34,197,94,.15);color:#4ade80;font-weight:600}
+.chat-model-bar-actions{display:flex;gap:calc(6px * var(--ui));flex-shrink:0}
 .settings-advanced-toggle{width:100%;margin:calc(6px * var(--ui)) 0 calc(4px * var(--ui));justify-content:center}
 .settings-advanced{border-top:1px solid rgba(255,102,0,.12);padding-top:calc(10px * var(--ui));margin-top:calc(4px * var(--ui))}
 .settings-advanced[hidden]{display:none!important}
@@ -1103,9 +1111,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <div class="setup-banner-title" id="ollamaSetupTitle">Ollama 未检测到本地服务</div>
 <div id="ollamaSetupBody">请先安装 Ollama 并启动服务，再拉取模型。安装后点击「检测服务」刷新状态。</div>
 <div class="setup-banner-actions">
-<button type="button" class="btn3" id="ollamaInstallBtn">打开下载页</button>
+<button type="button" class="btn1" id="ollamaStartBtn">启动服务</button>
 <button type="button" class="btn2" id="ollamaCheckBtn">检测服务</button>
-<button type="button" class="btn2" id="ollamaPullBtn">拉取推荐模型</button>
+<button type="button" class="btn2" id="ollamaSyncModelsBtn">同步已安装模型</button>
+</div>
+</div>
+<div id="chatModelBar" class="chat-model-bar" hidden aria-label="切换模型">
+<span class="chat-model-bar-label">模型</span>
+<div id="chatModelChips" class="chat-model-chips" role="listbox" aria-label="可选模型"></div>
+<div class="chat-model-bar-actions">
+<button type="button" class="btn3" id="chatModelSyncBtn" title="刷新本机已安装模型列表">同步</button>
+<button type="button" class="btn3" id="chatModelSettingsBtn" title="打开连接管理中的完整模型列表">更多</button>
 </div>
 </div>
 <textarea id="input" placeholder="输入消息…"></textarea>
@@ -1217,6 +1233,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     NIUMA_AUDIT_API = '/api/niuma/audit',
     NIUMA_UPLOAD_API = '/api/niuma/upload',
     NIUMA_ATTACH_CTX_API = '/api/niuma/attachments/context',
+    OLLAMA_DEFAULT_CLOUD_MODEL = 'nemotron-3-super:cloud',
+    OLLAMA_LOCAL_MODEL_BLOCK_RE = /^(qwen3:8b|qwen2\.5:7b|llama3\.1:8b|llama3\.3:70b)$/i,
     SP = '你是一个擅长 AHK v2、自动化脚本和桌面工作流的助手。',
     NIUMA_SP_FALLBACK =
       '你是一个通用 AI 助手，同时熟悉「牛马 nmer」（Windows 桌面效率工具）的基本结构与能力。' +
@@ -1260,7 +1278,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         ]
       },
       zhipu: { label: '智谱', transport: 'openai', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-plus', models: ['glm-4-plus', 'glm-4-air', 'glm-4-flash'] },
-      ollama: { label: 'Ollama', transport: 'openai', baseUrl: 'http://127.0.0.1:11434/v1', model: 'qwen3:8b', models: ['qwen3:8b', 'qwen3:14b', 'llama3.3:70b', 'deepseek-r1:8b', 'gemma3:12b', 'mistral-small3.1:24b'] },
+      ollama: {
+        label: 'Ollama 云',
+        transport: 'openai',
+        baseUrl: 'http://127.0.0.1:11434/v1',
+        model: 'nemotron-3-super:cloud',
+        models: ['nemotron-3-super:cloud']
+      },
       openclaw: { label: 'OpenClaw', transport: 'openclaw', baseUrl: 'http://127.0.0.1:18789', model: 'gateway', models: ['gateway'] }
     },
     PROVIDER_PICK_ORDER = [
@@ -1340,7 +1364,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       siliconflow: { keyLabel: '硅基流动 API Key', keyPlaceholder: '硅基流动密钥', keyHint: '单独保存在「硅基流动」槽位。' },
       minimax: { keyLabel: 'MiniMax Token Plan Key', keyPlaceholder: 'Coding Plan / Token Plan 密钥', keyHint: 'Billing→Token Plan 密钥（≠按量付费接口密钥）；鉴权为 Authorization: Bearer；节点须一致：国内 api.minimaxi.com，国际 api.minimax.io。' },
       zhipu: { keyLabel: '智谱 API Key', keyPlaceholder: '智谱开放平台密钥', keyHint: '单独保存在「智谱」槽位（与 GLM BigModel 可填不同密钥）。' },
-      ollama: { keyLabel: 'Ollama（本地）', keyPlaceholder: '通常留空', keyHint: '需本机安装 Ollama 并启动；保存后在对话区可检测服务、拉取模型。' },
+      ollama: { keyLabel: 'Ollama（云端）', keyPlaceholder: '通常留空', keyHint: '需本机 Ollama 服务；Model 请选带 :cloud 的云模型（默认 nemotron-3-super:cloud）。' },
       openclaw: {
         keyLabel: 'Gateway Token',
         keyPlaceholder: '与 openclaw dashboard 中 token 一致',
@@ -1758,9 +1782,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     input = $('input'),
     composerHint = $('composerHint'),
     ollamaSetupBanner = $('ollamaSetupBanner'),
-    ollamaInstallBtn = $('ollamaInstallBtn'),
+    ollamaStartBtn = $('ollamaStartBtn'),
     ollamaCheckBtn = $('ollamaCheckBtn'),
-    ollamaPullBtn = $('ollamaPullBtn'),
+    ollamaSyncModelsBtn = $('ollamaSyncModelsBtn'),
+    chatModelBar = $('chatModelBar'),
+    chatModelChips = $('chatModelChips'),
+    chatModelSyncBtn = $('chatModelSyncBtn'),
+    chatModelSettingsBtn = $('chatModelSettingsBtn'),
     settingsAdvancedToggle = $('settingsAdvancedToggle'),
     settingsAdvanced = $('settingsAdvanced'),
     settingsProviderStatus = $('settingsProviderStatus'),
@@ -1937,6 +1965,10 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     auditCollapsed: false,
     ollamaReachable: null,
     ollamaModels: [],
+    ollamaCloudCatalog: [],
+    ollamaCloudCatalogFetchedAt: 0,
+    ollamaAutoStartPending: false,
+    ollamaAutoStartTried: false,
     settingsAdvancedOpen: false,
     agentLoop: {
       status: 'idle',
@@ -3678,6 +3710,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var gk = String(s.gatewaySessionKey || '').trim();
     var mModel = s.model || '';
     if (pid === 'codex_cli') mModel = '';
+    if (pid === 'ollama' && shouldReplaceOllamaLocalModel(mModel)) mModel = OLLAMA_DEFAULT_CLOUD_MODEL;
     var row = {
       id: s.id || genId(),
       provider: pid,
@@ -3813,6 +3846,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     provider.dataset.prevProv = pid;
     syncProviderDdUi();
     updateProviderFormLayout(pid);
+    renderChatModelBar();
   }
 
   function syncSessionFromForm(s) {
@@ -4292,10 +4326,86 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return pid === 'ollama' || pid === 'ollama_cli';
   }
 
+  function setSessionModel(modelName, opts) {
+    opts = opts || {};
+    var s = activeSession();
+    if (!s) return false;
+    var pid = normalizeProviderId(s.provider);
+    if (providerTransport(pid) === 'cli') return false;
+    modelName = String(modelName || '').trim();
+    if (!modelName) return false;
+    s.model = modelName;
+    try {
+      if (model) model.value = modelName;
+      fillModels(pid, modelName);
+      if (modelPreset) modelPreset.value = modelName;
+      syncModelDdUi();
+    } catch (_) {}
+    syncSessionFromForm(s);
+    persistSessions();
+    saveCfg(false);
+    renderChatModelBar();
+    renderSessionTabs();
+    if (opts.silent !== true) cstat('已切换模型：' + modelName, 'success');
+    return true;
+  }
+
+  function getSwitchableModelsForSession(s) {
+    if (!s) return [];
+    var pid = normalizeProviderId(s.provider);
+    if (providerTransport(pid) === 'cli') return [];
+    var list = [];
+    if (pid === 'ollama') {
+      list = getOllamaCloudModelOptions();
+      if (!list.length) list = getPresetModels('ollama');
+    } else {
+      list = getPresetModels(pid);
+    }
+    var cur = String(s.model || '').trim();
+    if (cur && list.indexOf(cur) < 0) list.unshift(cur);
+    return uniqStrings(list.filter(Boolean));
+  }
+
+  function renderChatModelBar() {
+    if (!chatModelBar || !chatModelChips) return;
+    var s = activeSession();
+    if (!s || providerTransport(normalizeProviderId(s.provider)) === 'cli') {
+      chatModelBar.hidden = true;
+      return;
+    }
+    if (activeViewMode() === 'control' && controlTabEnabledForNode(activeNodeKey())) {
+      chatModelBar.hidden = true;
+      return;
+    }
+    var models = getSwitchableModelsForSession(s);
+    if (!models.length) {
+      chatModelBar.hidden = true;
+      return;
+    }
+    chatModelBar.hidden = false;
+    var cur = String(s.model || (model && model.value) || '').trim();
+    if (chatModelSyncBtn) chatModelSyncBtn.hidden = normalizeProviderId(s.provider) !== 'ollama';
+    chatModelChips.innerHTML = '';
+    models.forEach(function (m) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chat-model-chip' + (m === cur ? ' active' : '');
+      b.setAttribute('role', 'option');
+      b.setAttribute('aria-selected', m === cur ? 'true' : 'false');
+      b.textContent = m;
+      b.title = m;
+      b.addEventListener('click', function () {
+        setSessionModel(m);
+      });
+      chatModelChips.appendChild(b);
+    });
+  }
+
   function refreshOllamaSetupBanner() {
     if (!ollamaSetupBanner) return;
     if (!shouldShowOllamaBanner()) {
       ollamaSetupBanner.hidden = true;
+      renderChatModelBar();
       return;
     }
     ollamaSetupBanner.hidden = false;
@@ -4306,63 +4416,381 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var names = (state.ollamaModels || []).slice(0, 6);
       if (bodyEl) {
         bodyEl.textContent = names.length
-          ? '已安装模型：' + names.join('、') + ((state.ollamaModels || []).length > 6 ? '…' : '')
-          : '服务已就绪，尚未拉取模型。可点「拉取推荐模型」。';
+          ? '本机已登记 ' +
+            (state.ollamaModels || []).length +
+            ' 个；云端目录 ' +
+            (state.ollamaCloudCatalog || []).length +
+            ' 个。在下方切换条选模型即可，无需进 CLI。'
+          : '服务已就绪。正在加载云端模型目录…';
       }
+      renderChatModelBar();
       return;
     }
     if (titleEl) titleEl.textContent = 'Ollama 未检测到本地服务';
     if (bodyEl) {
-      bodyEl.textContent =
-        '1) 打开 ollama.com 下载安装并启动；2) 终端执行 ollama pull ' +
-        (P.ollama.model || 'qwen3:8b') +
-        '；3) 点「检测服务」。';
+      bodyEl.textContent = '将自动尝试启动本机服务；也可点「启动服务」，或从开始菜单打开 Ollama 后点「检测服务」。';
     }
+    ensureOllamaServiceDefault();
   }
 
-  function checkOllamaHealth() {
-    return fetch('http://127.0.0.1:11434/api/tags', { method: 'GET', cache: 'no-store' })
+  function isOllamaCloudModel(name) {
+    var n = String(name || '');
+    return /:cloud$/i.test(n) || /-cloud$/i.test(n);
+  }
+
+  /** 云端目录名（如 nemotron-3-super）→ 本地 API 请求名（nemotron-3-super:cloud） */
+  function normalizeOllamaCloudRequestName(name) {
+    var n = String(name || '').trim();
+    if (!n) return '';
+    if (isOllamaCloudModel(n)) return n;
+    return n + ':cloud';
+  }
+
+  function parseOllamaCloudCatalogPayload(text) {
+    var out = [];
+    try {
+      var j = JSON.parse(String(text || ''));
+      (j.models || []).forEach(function (m) {
+        var base = String((m && (m.name || m.model)) || '').trim();
+        if (!base) return;
+        out.push(normalizeOllamaCloudRequestName(base));
+      });
+    } catch (_) {}
+    return uniqStrings(out.filter(Boolean));
+  }
+
+  function getOllamaCloudModelOptions() {
+    var local = ollamaCloudModels(state.ollamaModels || []);
+    var catalog = (state.ollamaCloudCatalog || []).filter(Boolean);
+    return uniqStrings([].concat(local, catalog, [OLLAMA_DEFAULT_CLOUD_MODEL]));
+  }
+
+  function applyOllamaCloudModelsToUi() {
+    var options = getOllamaCloudModelOptions();
+    if (!state.dynamicModels) state.dynamicModels = {};
+    state.dynamicModels.ollama = options.length ? options : [OLLAMA_DEFAULT_CLOUD_MODEL];
+    migrateOllamaSessionsToCloud();
+    try {
+      if (normalizeProviderId(provider.value) === 'ollama') {
+        fillModels('ollama', model.value.trim());
+      }
+    } catch (_) {}
+    renderChatModelBar();
+  }
+
+  function refreshOllamaCloudCatalog(force) {
+    var now = Date.now();
+    if (!force && state.ollamaCloudCatalogFetchedAt && now - state.ollamaCloudCatalogFetchedAt < 6 * 60 * 60 * 1000) {
+      return Promise.resolve(state.ollamaCloudCatalog || []);
+    }
+    var fetcher = hostBridgeAvailable()
+      ? hostHttpRequest('https://ollama.com/api/tags', { method: 'GET', timeoutMs: 25000 })
+      : fetch('https://ollama.com/api/tags', { method: 'GET', cache: 'no-store' })
+          .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.text();
+          })
+          .then(function (t) {
+            return { ok: true, text: t };
+          });
+    return fetcher
       .then(function (r) {
-        if (!r.ok) throw new Error('bad status');
-        return r.json();
-      })
-      .then(function (j) {
-        state.ollamaReachable = !!(j && Array.isArray(j.models));
-        state.ollamaModels = (j.models || []).map(function (m) {
-          return String((m && m.name) || '');
-        }).filter(Boolean);
-        refreshOllamaSetupBanner();
-        updateNeedSetup();
-        return state.ollamaReachable;
+        if (!r || !r.ok) return [];
+        var list = parseOllamaCloudCatalogPayload(r.text);
+        state.ollamaCloudCatalog = list;
+        state.ollamaCloudCatalogFetchedAt = now;
+        applyOllamaCloudModelsToUi();
+        return list;
       })
       .catch(function () {
-        state.ollamaReachable = false;
-        state.ollamaModels = [];
-        refreshOllamaSetupBanner();
-        updateNeedSetup();
-        return false;
+        state.ollamaCloudCatalogFetchedAt = now;
+        applyOllamaCloudModelsToUi();
+        return state.ollamaCloudCatalog || [];
       });
   }
 
-  function pullOllamaRecommendedModel() {
-    var modelName = (P.ollama && P.ollama.model) || 'qwen3:8b';
-    cstat('正在拉取 ' + modelName + '…');
-    return fetch('http://127.0.0.1:11434/api/pull', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: modelName, stream: false })
-    })
-      .then(function (r) {
-        if (!r.ok) throw new Error('pull failed');
-        return r.json();
+  function shouldReplaceOllamaLocalModel(name) {
+    var n = String(name || '').trim();
+    if (!n) return true;
+    if (isOllamaCloudModel(n)) return false;
+    if (OLLAMA_LOCAL_MODEL_BLOCK_RE.test(n)) return true;
+    if (/^qwen3:/i.test(n) && !isOllamaCloudModel(n)) return true;
+    return !isOllamaCloudModel(n);
+  }
+
+  function ollamaCloudModels(installed) {
+    return (installed || []).filter(function (m) {
+      return isOllamaCloudModel(m);
+    });
+  }
+
+  function pickPreferredOllamaModel(options, want) {
+    options = uniqStrings((options || []).filter(Boolean));
+    want = String(want || '').trim();
+    var nw = want ? normalizeOllamaCloudRequestName(want) : '';
+    if (nw && options.indexOf(nw) >= 0) return nw;
+    if (want) {
+      for (var i = 0; i < options.length; i++) {
+        if (options[i] === want || options[i].indexOf(want + ':') === 0) return options[i];
+      }
+    }
+    if (options.indexOf(OLLAMA_DEFAULT_CLOUD_MODEL) >= 0) return OLLAMA_DEFAULT_CLOUD_MODEL;
+    return options[0] || OLLAMA_DEFAULT_CLOUD_MODEL;
+  }
+
+  function migrateOllamaSessionsToCloud() {
+    var pick = pickPreferredOllamaModel(getOllamaCloudModelOptions(), '');
+    var changed = false;
+    (state.sessions || []).forEach(function (s) {
+      if (!s || normalizeProviderId(s.provider) !== 'ollama') return;
+      if (shouldReplaceOllamaLocalModel(s.model)) {
+        s.model = pick;
+        changed = true;
+      }
+    });
+    try {
+      var d = JSON.parse(localStorage.getItem(LS) || '{}') || {};
+      if (normalizeProviderId(d.provider) === 'ollama' && shouldReplaceOllamaLocalModel(d.model)) {
+        d.model = pick;
+        localStorage.setItem(LS, JSON.stringify(d));
+      }
+    } catch (_) {}
+    if (changed) persistSessions();
+    try {
+      if (model && normalizeProviderId(provider.value) === 'ollama' && shouldReplaceOllamaLocalModel(model.value)) {
+        model.value = pick;
+        fillModels('ollama', pick);
+      }
+    } catch (_) {}
+    return pick;
+  }
+
+  function applyOllamaInstalledModelToForm() {
+    var options = getOllamaCloudModelOptions();
+    if (!options.length) return '';
+    var cur = '';
+    try {
+      cur = model && model.value ? String(model.value).trim() : '';
+    } catch (_) {}
+    var picked = pickPreferredOllamaModel(options, cur);
+    if (!picked) return '';
+    try {
+      if (model) model.value = picked;
+      fillModels('ollama', picked);
+    } catch (_) {}
+    var s = activeSession();
+    if (s && normalizeProviderId(s.provider) === 'ollama') {
+      s.model = picked;
+      persistSessions();
+    }
+    return picked;
+  }
+
+  function ensureOllamaServiceDefault(force) {
+    if (!shouldShowOllamaBanner()) return;
+    if (state.ollamaReachable === true) return;
+    if (state.ollamaAutoStartPending) return;
+    if (!force && state.ollamaAutoStartTried) return;
+    state.ollamaAutoStartTried = true;
+    state.ollamaAutoStartPending = true;
+    checkOllamaHealthWithStart({ tryStart: true })
+      .then(function (ok) {
+        if (ok) {
+          state.ollamaAutoStartTried = false;
+          applyOllamaInstalledModelToForm();
+        }
       })
-      .then(function () {
-        cstat('模型拉取完成：' + modelName, 'success');
-        appendAudit({ level: 'success', message: 'Ollama 已拉取模型 ' + modelName });
-        return checkOllamaHealth();
+      .finally(function () {
+        state.ollamaAutoStartPending = false;
+      });
+  }
+
+  function describeOllamaConnectError(err) {
+    var m = String((err && err.message) || err || '');
+    if (/80072efd|无法与服务器建立连接|connection refused|failed to fetch|ECONNREFUSED/i.test(m))
+      return '本机 11434 端口无响应（Ollama 未启动）。请先点「启动服务」或从开始菜单打开 Ollama。';
+    if (/timeout|超时/i.test(m)) return '连接 Ollama 超时，请确认服务已启动且未被防火墙拦截。';
+    return m || '无法连接 Ollama';
+  }
+
+  function startOllamaService() {
+    if (!hostBridgeAvailable()) return Promise.reject(new Error('需要宿主桥接才能启动 Ollama'));
+    return new Promise(function (resolve, reject) {
+      var reqId = 'ollama_start_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+      var done = false;
+      function cleanup() {
+        try {
+          window.chrome.webview.removeEventListener('message', onMsg);
+        } catch (_) {}
+      }
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        cleanup();
+        reject(new Error('启动 Ollama 超时，请从开始菜单手动打开 Ollama'));
+      }, 65000);
+      function onMsg(ev) {
+        var d = ev && ev.data;
+        if (typeof d === 'string') {
+          try {
+            d = JSON.parse(d);
+          } catch (_) {
+            return;
+          }
+        }
+        if (!d || d.type !== 'niuma_ollama_start_result' || String(d.reqId || '') !== reqId) return;
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        cleanup();
+        if (d.ok) resolve(String(d.message || 'Ollama 已启动'));
+        else reject(new Error(String(d.message || '启动失败')));
+      }
+      try {
+        window.chrome.webview.addEventListener('message', onMsg);
+        post({ type: 'niuma_ollama_start', reqId: reqId });
+      } catch (e) {
+        if (!done) {
+          done = true;
+          clearTimeout(timer);
+          cleanup();
+          reject(e);
+        }
+      }
+    });
+  }
+
+  function checkOllamaHealthWithStart(opts) {
+    opts = opts || {};
+    return checkOllamaHealth().then(function (ok) {
+      if (ok || !opts.tryStart) return ok;
+      return startOllamaService()
+        .then(function () {
+          return checkOllamaHealth();
+        })
+        .catch(function (e) {
+          state.ollamaLastError = describeOllamaConnectError(e);
+          return false;
+        });
+    });
+  }
+
+  function ollamaRootUrl(cfgBase) {
+    var bu = String(cfgBase || '').trim();
+    if (!bu && P.ollama) bu = String(P.ollama.baseUrl || '').trim();
+    if (!bu) bu = 'http://127.0.0.1:11434/v1';
+    bu = bu.replace(/\/+$/, '');
+    if (/\/v1$/i.test(bu)) bu = bu.slice(0, -3);
+    return bu;
+  }
+
+  function parseOllamaTagsPayload(text) {
+    try {
+      var j = JSON.parse(String(text || ''));
+      state.ollamaReachable = !!(j && Array.isArray(j.models));
+      state.ollamaModels = (j.models || []).map(function (m) {
+        return String((m && m.name) || '');
+      }).filter(Boolean);
+    } catch (_) {
+      state.ollamaReachable = false;
+      state.ollamaModels = [];
+    }
+    refreshOllamaSetupBanner();
+    updateNeedSetup();
+    return refreshOllamaCloudCatalog(false).then(function () {
+      applyOllamaInstalledModelToForm();
+      renderChatModelBar();
+      return state.ollamaReachable;
+    });
+  }
+
+  /** 发送时选用云模型（目录 + 本机已登记，无需 CLI 先 run） */
+  function resolveOllamaModelForSend(cfg) {
+    var want = String((cfg && cfg.model) || '').trim();
+    return pickPreferredOllamaModel(getOllamaCloudModelOptions(), want);
+  }
+
+  function formatOllamaApiError(status, raw, modelName) {
+    var detail = parseHttpErrDetail(raw);
+    var blob = detail + ' ' + String(raw || '');
+    if (/memory layout|memory allocation|out of memory|cannot be allocated|alloc/i.test(blob)) {
+      var cloud = getOllamaCloudModelOptions();
+      var hint = cloud.length
+        ? '请在上方的模型切换条选用云模型（如「' + cloud[0] + '」），勿用本机大模型。'
+        : '请换更小模型，或在 Ollama 客户端添加带 :cloud 的云模型；并关闭其它占内存程序。';
+      return 'HTTP ' + status + '：本机内存无法加载「' + (modelName || '当前模型') + '」。' + hint;
+    }
+    return 'HTTP ' + status + (detail ? '：' + detail : '');
+  }
+
+  function syncOllamaInstalledModels() {
+    cstat('正在同步本机服务与云端模型目录…');
+    return checkOllamaHealthWithStart({ tryStart: true })
+      .then(function (ok) {
+        if (!ok) {
+          cstat(state.ollamaLastError || '未检测到 Ollama 服务', 'error');
+          return '';
+        }
+        return refreshOllamaCloudCatalog(true).then(function () {
+          var picked = applyOllamaInstalledModelToForm();
+          var n = (state.ollamaCloudCatalog || []).length;
+          if (picked) {
+            cstat(
+              '已加载 ' +
+                n +
+                ' 个云模型，当前：' +
+                picked +
+                '。对话区点胶囊即可切换，无需 CLI。',
+              'success'
+            );
+            saveCfg(false);
+            renderChatModelBar();
+          } else if (n > 0) {
+            cstat('已加载 ' + n + ' 个云模型，请在下方切换条选择。', 'success');
+            renderChatModelBar();
+          } else {
+            cstat('服务已连接，但云端目录为空。请确认本机已 ollama signin 且能访问 ollama.com。', 'error');
+          }
+          return picked;
+        });
       })
       .catch(function (e) {
-        cstat('拉取失败：请先安装并启动 Ollama（' + (e && e.message ? e.message : '无法连接') + '）', 'error');
+        cstat('同步失败：' + (e && e.message ? e.message : String(e)), 'error');
+        return '';
+      });
+  }
+
+  function checkOllamaHealth() {
+    var cfgBase = '';
+    try {
+      if (baseUrl && baseUrl.value) cfgBase = String(baseUrl.value).trim();
+    } catch (_) {}
+    var tagsUrl = ollamaRootUrl(cfgBase) + '/api/tags';
+    var req = hostBridgeAvailable()
+      ? hostHttpRequest(tagsUrl, { method: 'GET', timeoutMs: 15000 })
+      : fetch(tagsUrl, { method: 'GET', cache: 'no-store' })
+          .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.text();
+          })
+          .then(function (t) {
+            return { ok: true, status: 200, text: t };
+          });
+    return req
+      .then(function (r) {
+        if (!r || !r.ok) throw new Error((r && r.text) || 'bad status');
+        return parseOllamaTagsPayload(r.text);
+      })
+      .then(function (ok) {
+        return ok;
+      })
+      .catch(function (err) {
+        state.ollamaReachable = false;
+        state.ollamaModels = [];
+        state.ollamaLastError = describeOllamaConnectError(err);
+        refreshOllamaSetupBanner();
+        updateNeedSetup();
+        return false;
       });
   }
 
@@ -5528,7 +5956,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       settingsProviderStatus.textContent =
         state.ollamaReachable === true
           ? 'Ollama 本地服务已连接。'
-          : 'Ollama 需本机安装并启动；保存后可在对话区检测 / 拉取模型。';
+          : 'Ollama 需本机安装；进入对话区将自动尝试启动服务，并可同步已安装模型。';
       return;
     }
     var k = trimApiKey(getApiKeyForProvider(pid));
@@ -5756,31 +6184,39 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     ],
     ollama: [
       {
-        id: 'ollama_check',
-        label: '检测 Ollama 服务',
-        desc: '检查本机 11434 端口是否可用',
+        id: 'ollama_start',
+        label: '启动 Ollama 服务',
+        desc: '启动本机 Ollama 并等待 11434 就绪',
         run: function () {
-          checkOllamaHealth().then(function (ok) {
-            cstat(ok ? 'Ollama 已连接' : '未检测到 Ollama', ok ? 'success' : 'error');
+          cstat('正在启动 Ollama…');
+          checkOllamaHealthWithStart({ tryStart: true }).then(function (ok) {
+            if (ok) applyOllamaInstalledModelToForm();
+            cstat(
+              ok ? 'Ollama 服务已连接。' : state.ollamaLastError || '未检测到 Ollama，请从开始菜单打开后再试。',
+              ok ? 'success' : 'error'
+            );
           });
         }
       },
       {
-        id: 'ollama_pull',
-        label: '拉取推荐模型',
-        desc: '执行 ollama pull ' + ((P.ollama && P.ollama.model) || 'qwen3:8b'),
+        id: 'ollama_check',
+        label: '检测 Ollama 服务',
+        desc: '仅检测 11434 是否可用（不自动启动）',
         run: function () {
-          pullOllamaRecommendedModel();
+          checkOllamaHealth().then(function (ok) {
+            cstat(
+              ok ? 'Ollama 已连接' : state.ollamaLastError || '未检测到 Ollama',
+              ok ? 'success' : 'error'
+            );
+          });
         }
       },
       {
-        id: 'ollama_install',
-        label: '打开 Ollama 下载页',
-        desc: '在浏览器中打开 ollama.com/download',
+        id: 'ollama_sync',
+        label: '同步已安装模型',
+        desc: '从本机读取模型列表并填入 Model（不下载）',
         run: function () {
-          try {
-            window.open('https://ollama.com/download', '_blank');
-          } catch (e) {}
+          syncOllamaInstalledModels();
         }
       }
     ]
@@ -5845,6 +6281,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     syncComposerForViewMode();
     syncControlModeHint();
     refreshOllamaSetupBanner();
+    renderChatModelBar();
   }
 
   function renderAgentContextBar() {
@@ -5970,7 +6407,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     try {
       post({ type: 'niuma_request_studio_llm' });
     } catch (e) {}
-    if (provider && normalizeProviderId(provider.value) === 'ollama') checkOllamaHealth();
+    if (provider && normalizeProviderId(provider.value) === 'ollama') ensureOllamaServiceDefault();
   }
 
   function renderNodeRail() {
@@ -7141,6 +7578,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     syncAgentLoopFromSession(target);
     syncChatViewMode();
     syncViewModeUi();
+    renderChatModelBar();
   }
 
   function pickProviderGridKeys() {
@@ -7787,7 +8225,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var p = P[pid] || P.openai;
     var staticModels = Array.isArray(p.models) ? p.models : [];
     var dynamicModels = (state.dynamicModels && state.dynamicModels[pid]) || [];
-    return uniqStrings([].concat(dynamicModels, staticModels));
+    var all = uniqStrings([].concat(dynamicModels, staticModels));
+    if (normalizeProviderId(pid) === 'ollama') {
+      var cloud = all.filter(isOllamaCloudModel);
+      if (cloud.length) return cloud;
+      return [OLLAMA_DEFAULT_CLOUD_MODEL];
+    }
+    return all;
   }
 
   function modelListUrl(base) {
@@ -7856,6 +8300,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       state.dynamicModelsFetchedAt[pid] = now;
       if (normalizeProviderId(provider.value) === pid) {
         fillModels(pid, model.value.trim());
+        renderChatModelBar();
       }
     } catch (e) {
       if (!state.dynamicModelsFetchedAt) state.dynamicModelsFetchedAt = {};
@@ -7874,6 +8319,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     modelPreset.value = sel && preset.indexOf(sel) >= 0 ? sel : '';
     buildModelDdMenu(pid);
     syncModelDdUi();
+    if (normalizeProviderId(pid) === normalizeProviderId(provider.value)) renderChatModelBar();
   }
 
   function buildModelDdMenu(pid) {
@@ -7936,7 +8382,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         gemini: 'Gemini generateContent 接口',
         openclaw: 'OpenClaw Gateway WebSocket（connect + chat.send）'
       },
-      transportLabel = pid === 'ollama' ? '本地 Ollama（OpenAI 兼容 chat/completions）' : (m[p.transport] || p.transport);
+      transportLabel = pid === 'ollama' ? 'Ollama 云模型（:cloud · OpenAI 兼容）' : (m[p.transport] || p.transport);
     if (pid === 'minimax') {
       ph.textContent =
         p.label +
@@ -7981,6 +8427,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!systemPrompt.value.trim()) systemPrompt.value = SP;
     syncProviderDdUi();
     updateProviderFormLayout(pid);
+    if (pid === 'ollama') ensureOllamaServiceDefault();
   }
 
   function getApiKeyForProvider(pid) {
@@ -8384,6 +8831,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     loadNiumaHistoryStore();
 
     loadSessions();
+    migrateOllamaSessionsToCloud();
     loadAudit();
 
     if (state.sessions.length === 0) {
@@ -8437,13 +8885,14 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       var p = normalizeProviderId(sx.provider);
       return p === 'ollama' || p === 'ollama_cli';
     })) {
-      checkOllamaHealth();
+      checkOllamaHealthWithStart({ tryStart: true });
     } else {
       refreshOllamaSetupBanner();
     }
     var sAct = activeSession();
     if (sAct && normalizeProviderId(sAct.provider) === 'openclaw') hydrateOpenClawHistoryForSession(sAct, false);
     ensureDynamicModelsForActiveProvider();
+    renderChatModelBar();
   }
 
   function mapStudioProviderToChat(llm) {
@@ -8915,6 +9364,40 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         apiTestStat('OpenClaw 连接正常。', 'success');
         return;
       }
+      if (cfg.provider === 'ollama') {
+        var root = ollamaRootUrl(cfg.baseUrl);
+        var rTags = await hostHttpRequest(root + '/api/tags', { method: 'GET', timeoutMs: 15000 });
+        if (!rTags.ok) throw new Error('未检测到 Ollama 服务。请托盘启动 Ollama 或终端执行 ollama serve');
+        parseOllamaTagsPayload(rTags.text);
+        cfg.model = resolveOllamaModelForSend(cfg);
+        var pingOllama = JSON.stringify({
+          model: cfg.model,
+          messages: [{ role: 'user', content: 'ping' }],
+          stream: false
+        });
+        var rChat = await hostHttpRequest(root + '/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: pingOllama,
+          timeoutMs: API_TEST_TIMEOUT_MS
+        });
+        if (!rChat.ok) throw new Error(formatOllamaApiError(rChat.status, rChat.text, cfg.model));
+        if (!cfg.model) throw new Error('请先点「同步已安装模型」或在 Model 中选择本机已有模型。');
+        var dO = {};
+        try {
+          dO = JSON.parse(rChat.text || '{}');
+        } catch (_) {}
+        var pingTxt = '';
+        try {
+          pingTxt = extractOpenAIAssistantText(dO.choices[0].message);
+        } catch (_) {}
+        if (!pingTxt)
+          throw new Error(
+            'Ollama 已响应但无可见正文（推理模型可能把输出放在 reasoning 字段）。请确认 Model 为已安装名称，或换本地模型后重试。'
+          );
+        apiTestStat('Ollama 已连接，API 测试通过。', 'success');
+        return;
+      }
       if (p.transport === 'anthropic') {
         if (!cfg.apiKey) throw new Error('缺少 API Key');
         var rA = await hostHttpRequest(claudeUrl(cfg.baseUrl), {
@@ -9274,7 +9757,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       if (!r2.ok) throw new Error(formatMinimaxApiError(r2.status, r2.text));
       var d2 = JSON.parse(r2.text || '{}');
       try {
-        return norm(d2.choices[0].message.content);
+        return extractOpenAIAssistantText(d2.choices[0].message);
       } catch (e2) {
         throw new Error('响应中没有可显示的内容。');
       }
@@ -9668,7 +10151,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   function norm(c) {
-    if (typeof c === 'string') return decodeApiText(c);
+    if (typeof c === 'string') return decodeApiText(c).trim();
     if (Array.isArray(c))
       return decodeApiText(
         c
@@ -9680,6 +10163,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
           .join('\n')
           .trim()
       );
+    return '';
+  }
+
+  /** OpenAI 兼容：content 为空时回退 reasoning/thinking（Ollama 推理/云模型常见） */
+  function extractOpenAIAssistantText(msg) {
+    if (!msg || typeof msg !== 'object') return '';
+    var main = norm(msg.content);
+    if (main) return main;
+    var alt = msg.reasoning != null ? msg.reasoning : msg.thinking;
+    if (typeof alt === 'string') return decodeApiText(alt).trim();
     return '';
   }
 
@@ -9738,6 +10231,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     opts = opts || {};
     var key = trimApiKey(cfg.apiKey);
     if (key) cfg.apiKey = key;
+    if (cfg.provider === 'ollama') cfg.model = resolveOllamaModelForSend(cfg);
     var h = { 'Content-Type': 'application/json' };
     if (cfg.apiKey) h.Authorization = 'Bearer ' + cfg.apiKey;
     h['Accept-Encoding'] = 'identity';
@@ -9748,6 +10242,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       } catch (_) {}
     }
     if (opts.maxTokens != null) body.max_tokens = opts.maxTokens;
+    if (cfg.provider === 'ollama') {
+      body.stream = false;
+      if (!isOllamaCloudModel(cfg.model))
+        cfg.model = pickPreferredOllamaModel(getOllamaCloudModelOptions(), cfg.model);
+    }
     var endpoint = openAICompletionsUrl(cfg);
     var tmo = opts.timeoutMs || 120000;
     var bodyStr = JSON.stringify(body);
@@ -9764,6 +10263,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         timeoutMs: tmo
       });
       if (!r.ok) {
+        if (cfg.provider === 'ollama') throw new Error(formatOllamaApiError(r.status, r.text, cfg.model));
         var detail = parseHttpErrDetail(r.text) || String(r.text || '').slice(0, 200);
         throw new Error('HTTP ' + r.status + (detail ? '：' + detail : '') + ' 请求：' + endpoint);
       }
@@ -9771,11 +10271,23 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var d = JSON.parse(r.text || '{}');
     var c = '';
     try {
-      c = norm(d.choices[0].message.content);
+      c = extractOpenAIAssistantText(d.choices[0].message);
     } catch (e) {
       c = '';
     }
-    if (!c) throw new Error('响应中没有可显示的内容。');
+    if (!c) {
+      var fr = '';
+      try {
+        fr = String(d.choices[0].finish_reason || '');
+      } catch (_) {}
+      if (fr === 'length')
+        throw new Error('模型输出被长度截断（推理占满 token）。请换本地模型或增大输出限制后重试。');
+      if (/model|not found/i.test(String(r.text || ''))) {
+        var hintM = pickPreferredOllamaModel(getOllamaCloudModelOptions(), cfg.model) || cfg.model;
+        throw new Error('模型未找到：请在 Model 中选择已安装名称（如 ' + hintM + '），或点「同步已安装模型」。');
+      }
+      throw new Error('响应中没有可显示的内容。');
+    }
     return c;
   }
 
@@ -16611,6 +17123,16 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     var cfg = buildSendCfg();
     if (!cfg) return;
+    if (cfg.provider === 'ollama') {
+      await checkOllamaHealthWithStart({ tryStart: true });
+      cfg.model = resolveOllamaModelForSend(cfg);
+      var sOll = sessionById(sid);
+      if (sOll && cfg.model && String(sOll.model || '').trim() !== cfg.model) {
+        sOll.model = cfg.model;
+        if (model) model.value = cfg.model;
+        persistSessions();
+      }
+    }
     cfg.userContentForModel = composeUserTextForModel(composedForModel, cfg);
     var p0 = P[cfg.provider] || P.openai;
 
@@ -17201,24 +17723,33 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       setSettingsAdvancedOpen(!state.settingsAdvancedOpen);
     });
   }
-  if (ollamaInstallBtn) {
-    ollamaInstallBtn.addEventListener('click', function () {
-      try {
-        window.open('https://ollama.com/download', '_blank');
-      } catch (e) {}
-      cstat('已在浏览器打开 Ollama 下载页。', 'success');
+  if (ollamaStartBtn) {
+    ollamaStartBtn.addEventListener('click', function () {
+      state.ollamaAutoStartTried = false;
+      cstat('正在启动 Ollama…');
+      checkOllamaHealthWithStart({ tryStart: true }).then(function (ok) {
+        if (ok) applyOllamaInstalledModelToForm();
+        cstat(
+          ok ? 'Ollama 服务已连接。' : state.ollamaLastError || '启动失败，请从开始菜单打开 Ollama。',
+          ok ? 'success' : 'error'
+        );
+      });
     });
   }
   if (ollamaCheckBtn) {
     ollamaCheckBtn.addEventListener('click', function () {
       checkOllamaHealth().then(function (ok) {
-        cstat(ok ? 'Ollama 服务已连接。' : '未检测到 Ollama，请先安装并启动。', ok ? 'success' : 'error');
+        if (ok) applyOllamaInstalledModelToForm();
+        cstat(
+          ok ? 'Ollama 服务已连接。' : state.ollamaLastError || '未检测到 Ollama（仅检测，未自动启动）。',
+          ok ? 'success' : 'error'
+        );
       });
     });
   }
-  if (ollamaPullBtn) {
-    ollamaPullBtn.addEventListener('click', function () {
-      pullOllamaRecommendedModel();
+  if (ollamaSyncModelsBtn) {
+    ollamaSyncModelsBtn.addEventListener('click', function () {
+      syncOllamaInstalledModels();
     });
   }
 
@@ -17731,7 +18262,27 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     persistSessions();
     renderSessionTabs();
     saveCfg(false);
+    renderChatModelBar();
   });
+  if (chatModelSyncBtn) {
+    chatModelSyncBtn.addEventListener('click', function () {
+      if (normalizeProviderId(provider.value) === 'ollama')
+        syncOllamaInstalledModels();
+      else ensureDynamicModelsForActiveProvider(true).then(function () {
+        renderChatModelBar();
+        cstat('模型列表已刷新。', 'success');
+      });
+    });
+  }
+  if (chatModelSettingsBtn) {
+    chatModelSettingsBtn.addEventListener('click', function () {
+      setSettings(true);
+      try {
+        if (fldModelDdCol) fldModelDdCol.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } catch (_) {}
+      toggleModelDd();
+    });
+  }
 
   if (providerDdBtn) {
     providerDdBtn.addEventListener('click', function (e) {

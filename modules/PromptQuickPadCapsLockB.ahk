@@ -73,7 +73,7 @@ PromptQuickPad_CapsB_CopySelection(&outText) {
     global CoreAsyncStrictMode
     try {
         if CoreAsyncStrictMode
-            NMER_AsyncLog(A_ScriptDir . "\Cache\core_async_guard.log", "[" . A_Now . "][legacy_sync_path_hit] PromptQuickPad_CapsB_CopySelection`r`n")
+            NMER_AsyncLog(Nmer_DebugPath("core_async_guard.log"), "[" . A_Now . "][legacy_sync_path_hit] PromptQuickPad_CapsB_CopySelection`r`n")
     } catch {
     }
     outText := ""
