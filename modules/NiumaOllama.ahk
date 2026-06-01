@@ -86,6 +86,6 @@ NiumaOllama_StartService(maxWaitMs := 50000) {
     }
     return Map(
         "ok", false,
-        "message", "已尝试启动 Ollama，但 " . NiumaOllama_DefaultPort() . " 端口仍未就绪。请从开始菜单打开「Ollama」等待托盘图标出现后再点「检测服务」。"
+        "message", "已尝试启动 Ollama，但 " . NiumaOllama_DefaultPort() . " 端口仍未就绪。请从开始菜单打开「Ollama」等待托盘图标出现后再点对话区「同步」。"
     )
 }
