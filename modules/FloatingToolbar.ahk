@@ -519,7 +519,7 @@ FloatingToolbar_TryReturnToHoleAfterNiuma(*) {
         try {
             global ConfigFile
             if !IsSet(ConfigFile) || (Trim(String(ConfigFile)) = "")
-                ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+                ConfigFile := Nmer_ResolveConfigFile()
             IniWrite("hole", ConfigFile, "Appearance", "ActivationMode")
         } catch {
         }
@@ -602,7 +602,7 @@ FloatingToolbar_ResetWebToToolbarHome() {
 FloatingToolbar_EnsureCommandsLoaded() {
     global g_JsonPath, g_Commands
     if !IsSet(g_JsonPath) || g_JsonPath = ""
-        g_JsonPath := A_ScriptDir "\Commands.json"
+        g_JsonPath := Nmer_CommandsJsonPath()
     if (!IsSet(g_Commands) || !(g_Commands is Map) || !g_Commands.Has("CommandList")
         || !(g_Commands["CommandList"] is Map) || g_Commands["CommandList"].Count = 0) {
         if IsSet(_LoadCommands)
@@ -1403,6 +1403,7 @@ FloatingToolbar_GetLogoAppUrl() {
         "assets\logo.png",
         "images\logo.png",
         "images\nimabu.png",
+        "assets\icons\app\logo.png",
         "lib\images\logo.png",
         "favicon.ico"
     ]
@@ -2278,7 +2279,7 @@ FloatingToolbar_OnWebMessage(sender, args) {
         engine := msg.Has("engine") ? Trim(String(msg["engine"])) : ""
         if (engine != "" && FuncExists("NiumaTtyd_IsCliEngine") && NiumaTtyd_IsCliEngine(engine)) {
             try {
-                cf := A_ScriptDir . "\CursorShortcut.ini"
+                cf := Nmer_ResolveConfigFile()
                 if (sh = "")
                     sh := "cmd.exe"
                 IniWrite(sh, cf, "NiumaTtyd", engine . "_shell")
@@ -2859,7 +2860,7 @@ FloatingToolbarSaveDrawerWidth() {
     global FloatingToolbarChatDrawerWidth, ConfigFile
     try {
         if !IsSet(ConfigFile) || ConfigFile = ""
-            ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+            ConfigFile := Nmer_ResolveConfigFile()
         IniWrite(String(FloatingToolbarChatDrawerWidth), ConfigFile, "FloatingToolbar", "ChatDrawerWidth")
     } catch as _e {
     }
@@ -2869,7 +2870,7 @@ FloatingToolbarLoadDrawerWidth() {
     global FloatingToolbarChatDrawerWidth, ConfigFile
     try {
         if !IsSet(ConfigFile) || ConfigFile = ""
-            ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+            ConfigFile := Nmer_ResolveConfigFile()
         defW := FloatingToolbar_ChatDrawerDefaultWidth()
         v := IniRead(ConfigFile, "FloatingToolbar", "ChatDrawerWidth", String(defW))
         iv := Integer(v)
@@ -4014,7 +4015,7 @@ FloatingToolbar_FadeGui(hwnd, fromAlpha, toAlpha, durationMs, onDone := "") {
 FloatingToolbar_PersistActivationBubble() {
     global AppearanceActivationMode
     AppearanceActivationMode := "bubble"
-    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    cfg := Nmer_ResolveConfigFile()
     try IniWrite("bubble", cfg, "Appearance", "ActivationMode")
     catch {
     }
@@ -4193,7 +4194,7 @@ FloatingToolbar_AnimatedSwitchToToolbar_Reveal(newX, newY, tw, th, *) {
     }
 
     AppearanceActivationMode := "toolbar"
-    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    cfg := Nmer_ResolveConfigFile()
     try IniWrite("toolbar", cfg, "Appearance", "ActivationMode")
     catch {
     }
@@ -4242,7 +4243,7 @@ FloatingToolbar_SetActivationMode(mode) {
     if (cur = m)
         return
     AppearanceActivationMode := m
-    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    cfg := Nmer_ResolveConfigFile()
     try IniWrite(AppearanceActivationMode, cfg, "Appearance", "ActivationMode")
     catch {
     }
@@ -4721,7 +4722,7 @@ SaveFloatingToolbarPosition() {
         FloatingToolbarWindowX := x
         FloatingToolbarWindowY := y
 
-        ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+        ConfigFile := Nmer_ResolveConfigFile()
         IniWrite(String(x), ConfigFile, "WindowPositions", "FloatingToolbar_X")
         IniWrite(String(y), ConfigFile, "WindowPositions", "FloatingToolbar_Y")
     } catch {
@@ -4732,7 +4733,7 @@ LoadFloatingToolbarPosition() {
     global FloatingToolbarWindowX, FloatingToolbarWindowY
 
     try {
-        ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+        ConfigFile := Nmer_ResolveConfigFile()
         savedX := IniRead(ConfigFile, "WindowPositions", "FloatingToolbar_X", "")
         savedY := IniRead(ConfigFile, "WindowPositions", "FloatingToolbar_Y", "")
 
@@ -4761,7 +4762,7 @@ LoadFloatingToolbarPosition() {
 FloatingToolbarSaveScale() {
     global FloatingToolbarScale
     try {
-        ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+        ConfigFile := Nmer_ResolveConfigFile()
         IniWrite(String(FloatingToolbarScale), ConfigFile, "FloatingToolbar", "Scale")
     } catch {
     }
@@ -4770,7 +4771,7 @@ FloatingToolbarSaveScale() {
 FloatingToolbarLoadScale() {
     global FloatingToolbarScale, FloatingToolbarMinScale, FloatingToolbarMaxScale
     try {
-        ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+        ConfigFile := Nmer_ResolveConfigFile()
         savedScale := IniRead(ConfigFile, "FloatingToolbar", "Scale", "1.0")
         if (savedScale != "" && savedScale != "ERROR") {
             scaleValue := IsSet(CfgParseFloat) ? CfgParseFloat(savedScale, 1.0) : Number(savedScale)
@@ -4805,7 +4806,7 @@ FloatingToolbar_ForceRecoverVisible() {
         ; Always recover to primary-screen visible area.
         FloatingToolbarWindowX := Max(16, A_ScreenWidth - tw - 36)
         FloatingToolbarWindowY := Max(16, A_ScreenHeight - th - 80)
-        ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+        ConfigFile := Nmer_ResolveConfigFile()
         IniWrite(String(FloatingToolbarWindowX), ConfigFile, "WindowPositions", "FloatingToolbar_X")
         IniWrite(String(FloatingToolbarWindowY), ConfigFile, "WindowPositions", "FloatingToolbar_Y")
     } catch {
@@ -5074,7 +5075,7 @@ FloatingToolbar_GetCursorIconPath() {
     global g_FTB_CursorIconDataUrl
     if (g_FTB_CursorIconDataUrl != "")
         return g_FTB_CursorIconDataUrl
-    iconFile := A_ScriptDir "\lib\images\cursor.png"
+    iconFile := Nmer_AssetsIconPath("app", "cursor.png")
     if !FileExist(iconFile) {
         iconFile2 := A_ScriptDir "\images\cursor.png"
         if FileExist(iconFile2)

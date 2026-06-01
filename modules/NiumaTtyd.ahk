@@ -108,7 +108,7 @@ NiumaTtyd_EngineFromPort(port) {
  * @returns {String}
  */
 NiumaTtyd_ExePath() {
-    return A_ScriptDir . "\ttyd.exe"
+    return Nmer_TtydExe()
 }
 
 /**
@@ -252,7 +252,7 @@ NiumaTtyd_EmitStatus(wv2, state, reqId := "", msg := "") {
 NiumaTtyd_GetShell() {
     s := "cmd.exe"
     try {
-        cf := A_ScriptDir . "\CursorShortcut.ini"
+        cf := Nmer_ResolveConfigFile()
         r := IniRead(cf, "NiumaTtyd", "Shell", "cmd.exe")
         r := Trim(String(r))
         if (r != "")
@@ -271,7 +271,7 @@ NiumaTtyd_SaveShellIni(shell) {
     if (StrLen(sh) > 800)
         sh := "cmd.exe"
     try {
-        cf := A_ScriptDir . "\CursorShortcut.ini"
+        cf := Nmer_ResolveConfigFile()
         IniWrite(sh, cf, "NiumaTtyd", "Shell")
     } catch {
     }
@@ -589,7 +589,7 @@ NiumaTtyd_GetTtydShellForEngine(engine) {
         }
     }
     try {
-        cf := A_ScriptDir . "\CursorShortcut.ini"
+        cf := Nmer_ResolveConfigFile()
         r := Trim(IniRead(cf, "NiumaTtyd", eng . "_ttyd_shell", ""))
         if (r != "") {
             NiumaTtyd_LogShell(eng, r, "ini_ttyd")
@@ -636,7 +636,7 @@ NiumaTtyd_GetTtydShellForEngine(engine) {
 NiumaTtyd_GetShellForEngine(engine) {
     eng := NiumaTtyd_NormalizeEngine(engine)
     try {
-        cf := A_ScriptDir . "\CursorShortcut.ini"
+        cf := Nmer_ResolveConfigFile()
         r := Trim(IniRead(cf, "NiumaTtyd", eng . "_shell", ""))
         if (r != "") {
             NiumaTtyd_LogShell(eng, r, "ini")

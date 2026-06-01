@@ -2898,18 +2898,7 @@ func resolveIndexDir(baseDir string) (string, bool) {
 		return abs, false
 	}
 
-	local := strings.TrimSpace(os.Getenv("LOCALAPPDATA"))
-	if local == "" {
-		local = strings.TrimSpace(os.Getenv("APPDATA"))
-	}
-	if local == "" {
-		local = os.TempDir()
-	}
-	// Use per-workspace index directory by default so multiple SearchCenterCore
-	// instances do not contend for one shared lock file under LOCALAPPDATA.
-	baseKey := strings.ToLower(filepath.Clean(baseDir))
-	tag := fmt.Sprintf("%08x", crc32.ChecksumIEEE([]byte(baseKey)))
-	return filepath.Join(local, "SearchCenter", "bluge_index_"+tag), true
+	return defaultIndexDirByBase(baseDir), true
 }
 
 func isUnderBase(path, base string) bool {

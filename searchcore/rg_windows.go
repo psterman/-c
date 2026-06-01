@@ -68,6 +68,7 @@ func terminateExistingRgProcesses() {
 
 func resolveRgExe(baseDir string) string {
 	candidates := []string{
+		filepath.Join(baseDir, "tools", "search", "rg.exe"),
 		filepath.Join(baseDir, "tools", "rg.exe"),
 		filepath.Join(baseDir, "lib", "rg.exe"),
 		filepath.Join(baseDir, "rg.exe"),
@@ -208,7 +209,7 @@ func streamFullTextWithRgContext(parent context.Context, baseDir, keyword string
 	}
 	rgExe := resolveRgExe(baseDir)
 	if rgExe == "" {
-		return fmt.Errorf("rg.exe not found; place it in tools\\rg.exe or install ripgrep")
+		return fmt.Errorf("rg.exe not found; place it in tools\\search\\rg.exe or install ripgrep")
 	}
 
 	filterCfg := loadFullTextFilterConfig(baseDir)
@@ -274,7 +275,7 @@ func streamFullTextWithRgFilesContext(parent context.Context, baseDir, keyword s
 
 	rgExe := resolveRgExe(baseDir)
 	if rgExe == "" {
-		return fmt.Errorf("rg.exe not found; place it in tools\\rg.exe or install ripgrep")
+		return fmt.Errorf("rg.exe not found; place it in tools\\search\\rg.exe or install ripgrep")
 	}
 	filterCfg := loadFullTextFilterConfig(baseDir)
 	targets := make([]string, 0, len(files))

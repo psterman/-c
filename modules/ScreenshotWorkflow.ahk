@@ -17,7 +17,7 @@ ScreenshotFlowRestoreFloatingToolbarIfNeeded() {
 }
 
 ScreenshotFlowReadOutputTarget() {
-    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    cfg := Nmer_ResolveConfigFile()
     out := "editor"
     try out := Trim(StrLower(IniRead(cfg, "Screenshot", "OutputTarget", "editor")))
     if (out != "editor" && out != "clipboard" && out != "both")
@@ -26,7 +26,7 @@ ScreenshotFlowReadOutputTarget() {
 }
 
 ScreenshotFlowReadCaptureMode() {
-    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    cfg := Nmer_ResolveConfigFile()
     mode := "selection"
     try mode := Trim(StrLower(IniRead(cfg, "Screenshot", "CaptureMode", "selection")))
     if (mode != "selection" && mode != "fullscreen" && mode != "active_window")
@@ -67,7 +67,7 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
         }
     } catch as e {
         ; 濡傛灉鍒涘缓璋冭瘯绐楀彛澶辫触锛岀户缁墽琛屼絾涓嶆樉绀鸿皟璇曚俊鎭?
-        TrayTip("璀﹀憡", "鏃犳硶鍒涘缓璋冭瘯绐楀彛: " . e.Message, "Icon! 1")
+        TrayTip("警告", "无法创建调试窗口: " . e.Message, "Icon! 1")
     }
     
     try {
@@ -392,7 +392,7 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
             }
             A_Clipboard := ScreenshotOldClipboard
             ScreenshotWaiting := false
-            TrayTip("鎻愮ず", "鎴浘宸插彇娑堟垨瓒呮椂", "Iconi 1")
+            TrayTip("提示", "截图已取消或超时", "Iconi 1")
             if (DebugGui) {
                 SetTimer(DestroyDebugGui.Bind(DebugGui), -2000)
             }
@@ -408,7 +408,7 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
         if (DebugGui) {
             UpdateDebugStep(DebugGui, 0, "鍙戠敓寮傚父: " . e.Message . "`n鏂囦欢: " . (e.File ? e.File : "鏈煡") . "`n琛屽彿: " . (e.Line ? e.Line : "鏈煡"), false)
         }
-        TrayTip("鎴浘澶辫触: " . e.Message, GetText("error"), "Iconx 2")
+        TrayTip("截图失败: " . e.Message, GetText("error"), "Iconx 2")
         try {
             A_Clipboard := ScreenshotOldClipboard
         }
@@ -1185,7 +1185,7 @@ OCR_FromFileBestEffort(filePath, lang := "zh-CN") {
 }
 
 OCR_ReadEnhanceConfig() {
-    cfgFile := A_ScriptDir "\CursorShortcut.ini"
+    cfgFile := Nmer_ResolveConfigFile()
     cfg := Map()
     cfg["enabled"] := IniRead(cfgFile, "Screenshot", "OcrEnhanceEnabled", "1") != "0"
     cfg["scalePrimary"] := Integer(IniRead(cfgFile, "Screenshot", "OcrScalePrimary", "150"))
@@ -1261,7 +1261,7 @@ ProcessOCR(Mode := "preserve_layout") {
     global UI_Colors, ScreenshotClipboard
     
     ; 鏄剧ず澶勭悊涓彁绀?
-    TrayTip("鈿欙笍 OCR 澶勭悊涓?..", "", "Iconi 1")
+    TrayTip("OCR 处理中...", "", "Iconi 1")
     
     try {
         ; 淇濆瓨褰撳墠鍓创鏉?

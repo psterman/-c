@@ -2041,7 +2041,7 @@ GDHO_GetTextHoleLauncherMode() {
         return mode
     mode := "starry"
     try {
-        cf := A_ScriptDir . "\CursorShortcut.ini"
+        cf := Nmer_ResolveConfigFile()
         if FileExist(cf) {
             v := StrLower(Trim(IniRead(cf, "TextHole", "launcher_mode", "starry")))
             if (v = "starry" || v = "panel" || v = "both" || v = "a" || v = "b")

@@ -5,10 +5,12 @@ if !FileExist(A_ScriptDir . "\sqlite3.dll") && FileExist(A_ScriptDir . "\..\sqli
   try FileDelete(iniPath)
   FileAppend("[Main]`nDllPath=..\sqlite3.dll`n", iniPath, "UTF-8")
 }
-#Include ..\lib\Class_SQLiteDB.ahk
+#Include ..\lib\ahk\Class_SQLiteDB.ahk
 out := A_ScriptDir . "\..\Cache\fo_fail3.txt"
 dbPath := A_ScriptDir . "\..\Data\GroundingCache.db"
-vecPath := A_ScriptDir . "\..\lib\vec0.dll"
+vecPath := A_ScriptDir . "\..\lib\runtime\vec0.dll"
+if !FileExist(vecPath)
+    vecPath := A_ScriptDir . "\..\lib\vec0.dll"
 bakPath := vecPath . ".bak_failopen"
 if FileExist(vecPath)
   FileMove(vecPath, bakPath, 1)

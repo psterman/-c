@@ -5,8 +5,10 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
-#Include lib\WebView2.ahk
-#Include lib\Jxon.ahk
+#Include lib\ahk\WebView2.ahk
+#Include lib\ahk\Jxon.ahk
+#Include modules\LocalPaths.ahk
+#Include modules\ToolsPaths.ahk
 ; 独立进程未 #Include VirtualKeyboardExecCmd；提供占位，供 Core 内直接调用（避免 Func("VK_ExecCursorHelperCmd") 在函数不存在时抛错）
 VK_ExecCursorHelperCmd(cmdId) {
     OutputDebug("[VK] 独立 VK 无 CursorHelper CH_RUN 实现: " . cmdId)
@@ -15,6 +17,9 @@ VK_ExecCursorHelperCmd(cmdId) {
 #Include modules\WMActivateChain.ahk
 #Include modules\VirtualKeyboardCore.ahk
 
+Nmer_MigrateLocalData()
+Nmer_MigrateToolsBinaries()
+Nmer_EnsureSqliteDbIni()
 VK_Init(false)
 
 OnExit (*) => VK_OnHostExit()

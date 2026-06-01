@@ -940,7 +940,7 @@ VoiceInput_ResolveCliIconInLibImages(EngineValue) {
     }
     if !CliIconFiles.Has(EngineValue)
         return ""
-    imgDir := A_ScriptDir . "\lib\images\"
+    imgDir := Nmer_AssetsIconsAppDir() . "\"
     for _, fileName in CliIconFiles[EngineValue] {
         full := imgDir . fileName
         if FileExist(full)
@@ -981,7 +981,7 @@ GetSearchEngineIcon(EngineValue) {
     if (IconName != "") {
         ; 返回完整的图标路径
         ScriptDir := A_ScriptDir
-        IconDirs := [ScriptDir . "\lib\images", ScriptDir . "\aiicons"]
+        IconDirs := [Nmer_AssetsIconsAppDir(), Nmer_AssetsIconsAiDir(), ScriptDir . "\lib\images", ScriptDir . "\aiicons"]
         for _, DirPath in IconDirs {
             IconPath := DirPath . "\" . IconName
             if (FileExist(IconPath)) {

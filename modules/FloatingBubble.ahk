@@ -121,7 +121,7 @@ FloatingBubble_ShowModeMenuDeferred(x := 0, y := 0, *) {
 FloatingBubble_PersistModeAndApply(mode) {
     global AppearanceActivationMode
     AppearanceActivationMode := NormalizeAppearanceActivationMode(mode)
-    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    cfg := Nmer_ResolveConfigFile()
     try IniWrite(AppearanceActivationMode, cfg, "Appearance", "ActivationMode")
     catch {
     }
@@ -379,7 +379,7 @@ SaveFloatingBubblePosition() {
         FloatingBubbleGUI.GetPos(&x, &y)
         FloatingBubbleWindowX := x
         FloatingBubbleWindowY := y
-        ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+        ConfigFile := Nmer_ResolveConfigFile()
         IniWrite(String(x), ConfigFile, "WindowPositions", "FloatingBubble_X")
         IniWrite(String(y), ConfigFile, "WindowPositions", "FloatingBubble_Y")
     } catch {
@@ -389,7 +389,7 @@ SaveFloatingBubblePosition() {
 LoadFloatingBubblePosition() {
     global FloatingBubbleWindowX, FloatingBubbleWindowY
     try {
-        ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+        ConfigFile := Nmer_ResolveConfigFile()
         savedX := IniRead(ConfigFile, "WindowPositions", "FloatingBubble_X", "")
         savedY := IniRead(ConfigFile, "WindowPositions", "FloatingBubble_Y", "")
         if (savedX != "" && savedY != "" && savedX != "ERROR" && savedY != "ERROR") {

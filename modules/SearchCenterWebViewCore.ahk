@@ -1362,9 +1362,15 @@ SCWV_ForceCloseHost(reason := "") {
     catch as err {
         try SCWV_Log("force_close_error", "reason=" . reason . " step=reset_bridge msg=" . err.Message)
     }
+    ; 关闭统一宿主时，unifiedMode 可能已被切回 search，导致仅按当前模式释放会漏掉 clipboard dock。
+    ; 为避免悬浮栏长期被抑制，统一兜底：同时释放 search/clipboard 两个 dock 标签。
+    try FloatingToolbar_PageDockLeave("clipboard")
+    catch as err {
+        try SCWV_Log("force_close_error", "reason=" . reason . " step=pagedock_leave_clipboard msg=" . err.Message)
+    }
     try FloatingToolbar_PageDockLeave("search")
     catch as err {
-        try SCWV_Log("force_close_error", "reason=" . reason . " step=pagedock_leave msg=" . err.Message)
+        try SCWV_Log("force_close_error", "reason=" . reason . " step=pagedock_leave_search msg=" . err.Message)
     }
     if g_SCWV_SearchTimer {
         try SetTimer(g_SCWV_SearchTimer, 0)
@@ -1523,14 +1529,7 @@ _SCWV_IsSearchCoreAlive() {
 }
 
 _SCWV_SearchCoreExePath() {
-    global A_ScriptDir
-    preferred := A_ScriptDir "\searchcore\SearchCenterCore.exe"
-    if FileExist(preferred)
-        return preferred
-    fallback := A_ScriptDir "\SearchCenterCore.exe"
-    if FileExist(fallback)
-        return fallback
-    return ""
+    return Nmer_SearchCenterCoreExe()
 }
 
 _SCWV_ApplySearchCoreDefaults() {
@@ -1622,7 +1621,7 @@ _SCWV_CheckSearchCoreStartup(gen, *) {
         SetTimer(_SCWV_RunDeferredSearchCoreEnsure, -10)
     }
     if !ProcessExist("SearchCenterCore.exe")
-        _SCWV_ShowSearchCoreError("SearchCenterCore 启动超时（请检查 searchcore\\SearchCenterCore.exe）")
+        _SCWV_ShowSearchCoreError("SearchCenterCore 启动超时（请检查 tools\\search\\SearchCenterCore.exe）")
     return false
 }
 
@@ -2677,7 +2676,7 @@ _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) 
             global SearchCenterSearchResults, SearchCenterHasMoreData
             SearchCenterSearchResults := []
             SearchCenterHasMoreData := false
-            _SCWV_ShowSearchCoreError("SearchCenterCore 未找到（请检查 searchcore\\SearchCenterCore.exe）")
+            _SCWV_ShowSearchCoreError("SearchCenterCore 未找到（请检查 tools\\search\\SearchCenterCore.exe）")
             SCWV_PushState("state")
             return
         }
@@ -3056,9 +3055,14 @@ SCWV_Hide(PersistSelection := true) {
     try SCWV_Log("hide_step", "reset_bridge_queued")
 
     try SCWV_Log("hide_step", "pagedock_leave_begin")
+    ; 退出统一宿主时统一兜底释放（见上面 force_close 分支原因说明）
+    try FloatingToolbar_PageDockLeave("clipboard")
+    catch as err {
+        try SCWV_Log("hide_error", "step=pagedock_leave_clipboard msg=" . err.Message)
+    }
     try FloatingToolbar_PageDockLeave("search")
     catch as err {
-        try SCWV_Log("hide_error", "step=pagedock_leave msg=" . err.Message)
+        try SCWV_Log("hide_error", "step=pagedock_leave_search msg=" . err.Message)
     }
     try SCWV_Log("hide_step", "pagedock_leave_done")
 
@@ -4774,7 +4778,7 @@ SCWV_QuickLookInstall_RunInner() {
     staging := workDir "\staging_" . A_TickCount
     finalDir := A_ScriptDir "\cache\addons\QuickLook-" . v
     reportPath := workDir "\install_report.txt"
-    sevenZip := A_ScriptDir "\lib\7z.exe"
+    sevenZip := Nmer_LibRuntimePath("7z.exe")
 
     if !DirExist(workDir)
         DirCreate(workDir)
@@ -4788,8 +4792,8 @@ SCWV_QuickLookInstall_RunInner() {
     _SCWV_QuickLookInstallReportLine(reportPath, "目标目录: " . finalDir)
 
     if !FileExist(sevenZip) {
-        SCWV_QuickLookInstall_PostProgress(0, "缺少 lib\\7z.exe，无法解压")
-        SCWV_PostJson(Map("type", "quicklook_install_state", "ok", false, "message", "缺少解压组件 lib\\7z.exe", "path", ""))
+        SCWV_QuickLookInstall_PostProgress(0, "缺少 lib\\runtime\\7z.exe，无法解压")
+        SCWV_PostJson(Map("type", "quicklook_install_state", "ok", false, "message", "缺少解压组件 lib\\runtime\\7z.exe", "path", ""))
         return
     }
 
@@ -5016,7 +5020,7 @@ _SCWV_PathToWebAssetUrl(path) {
         scriptRootWithSlash := scriptRoot . "/"
         if (SubStr(normalized, 1, StrLen(scriptRootWithSlash)) = scriptRootWithSlash) {
             relativePath := StrReplace(SubStr(normalized, StrLen(scriptRootWithSlash) + 1), "\", "/")
-            ; Virtual host 映射到 A_ScriptDir：lib/images、aiicons 等应直链，勿加 assets/ 前缀
+            ; Virtual host 映射到 A_ScriptDir：assets/icons、lib/runtime 等应直链，勿加 assets/ 前缀
             resUrl := BuildAppLocalUrl(relativePath)
         }
     }
@@ -7068,7 +7072,7 @@ _SCWV_SimpleHash(text) {
 }
 
 _SCWV_GetMediaDurationSeconds(path) {
-    ffprobe := A_ScriptDir "\lib\ffprobe.exe"
+    ffprobe := Nmer_LibRuntimePath("ffprobe.exe")
     if !FileExist(ffprobe)
         return ""
     cmd := '"' ffprobe '" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "' path '"'
@@ -7098,7 +7102,7 @@ _SCWV_GetPosterSeekSeconds(durationSec) {
 }
 
 _SCWV_BuildMediaPoster(path, durationSec := "") {
-    ffmpeg := A_ScriptDir "\lib\ffmpeg.exe"
+    ffmpeg := Nmer_LibRuntimePath("ffmpeg.exe")
     if !FileExist(ffmpeg)
         return ""
     if (path = "" || !FileExist(path))
@@ -7158,7 +7162,7 @@ _SCWV_FormatFps(raw) {
 }
 
 _SCWV_GetMediaInfo(path) {
-    ffprobe := A_ScriptDir "\lib\ffprobe.exe"
+    ffprobe := Nmer_LibRuntimePath("ffprobe.exe")
     if !FileExist(ffprobe)
         return Map()
     if (path = "" || !FileExist(path))
@@ -7422,7 +7426,7 @@ _SCWV_PdfiumCloseAll(st, dllPath) {
 
 ; 使用 lib\pdfium.dll（Chromium PDFium 构建）渲染首页为 JPEG Base64；需 64 位 DLL 与 64 位 AHK 匹配
 _SCWV_PdfiumTryRenderFirstPageJpeg(path, quality := 70) {
-    dllPath := A_ScriptDir "\lib\pdfium.dll"
+    dllPath := Nmer_LibRuntimePath("pdfium.dll")
     if !FileExist(dllPath)
         return { b64: "", err: "missing_dll", engine: "pdfium_native" }
 
@@ -7923,7 +7927,7 @@ class PreviewManager {
 
     SaveMediaFrame(path, timeSec := "", seq := 0) {
         path := Trim(String(path))
-        ffmpeg := A_ScriptDir "\lib\ffmpeg.exe"
+        ffmpeg := Nmer_LibRuntimePath("ffmpeg.exe")
         if (path = "" || !FileExist(path) || !FileExist(ffmpeg)) {
             SCWV_PostJson(Map("type", "MEDIA_FRAME_SAVE_RESULT", "seq", seq, "ok", false, "message", "保存截图失败"))
             return
@@ -7973,12 +7977,12 @@ class PreviewManager {
             return
         }
 
-        pdfiumDll := A_ScriptDir "\lib\pdfium.dll"
-        icuDat := A_ScriptDir "\lib\icudtl.dat"
+        pdfiumDll := Nmer_LibRuntimePath("pdfium.dll")
+        icuDat := Nmer_LibRuntimePath("icudtl.dat")
         diag := Map(
             "pdfiumDllPresent", !!FileExist(pdfiumDll),
             "icuDatPresent", !!FileExist(icuDat),
-            "hint", "优先 lib\\pdfium.dll + icudtl.dat（与 AHK 同位数）；失败则回退 Windows.Data.Pdf。"
+            "hint", "优先 lib\\runtime\\pdfium.dll + icudtl.dat（与 AHK 同位数）；失败则回退 Windows.Data.Pdf。"
         )
 
         ; 1) 原生 PDFium（lib\pdfium.dll）
@@ -8000,7 +8004,7 @@ class PreviewManager {
                 diag["pdfiumDetail"] := r.detail
         } else {
             diag["engine"] := "fallback_only"
-            diag["pdfiumSkipped"] := "lib\\pdfium.dll 不存在"
+            diag["pdfiumSkipped"] := "lib\\runtime\\pdfium.dll 不存在"
         }
 
         ; 2) 回退：ImagePut → Windows.Data.Pdf（WinRT）
@@ -8083,8 +8087,8 @@ class PreviewManager {
                 }
             }
 
-            sevenZip := A_ScriptDir "\lib\7z.exe"
-            sevenZipDll := A_ScriptDir "\lib\7z.dll"
+            sevenZip := Nmer_LibRuntimePath("7z.exe")
+            sevenZipDll := Nmer_LibRuntimePath("7z.dll")
             if !FileExist(sevenZip) {
                 SCWV_PostJson(Map("type", "WEB_PREVIEW_ARCHIVE_RESULT", "seq", seq, "entries", [], "error", "7z.exe not found in lib"))
                 return
@@ -8475,7 +8479,7 @@ class PreviewManager {
 }
 
 _SCWV_HistoryFilePath() {
-    return A_ScriptDir . "\Data\SearchCenterHistory.json"
+    return Nmer_SearchCenterHistoryPath()
 }
 
 _SCWV_HistoryReadFileMtime() {
@@ -8837,8 +8841,8 @@ _SCWV_FlushSearchHistory(*) {
         return
     if (Type(g_SC_HistoryCache) != "Array")
         return
-    if !DirExist(A_ScriptDir . "\Data")
-        DirCreate(A_ScriptDir . "\Data")
+    if !DirExist(Nmer_DataDir())
+        DirCreate(Nmer_DataDir())
     try {
         f := FileOpen(_SCWV_HistoryFilePath(), "w", "UTF-8")
         if (f) {

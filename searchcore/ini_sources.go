@@ -30,9 +30,17 @@ func defaultPromptTemplatesZH() []templateEntry {
 	}
 }
 
+func localDataPath(baseDir, name string) string {
+	p := filepath.Join(baseDir, "local", name)
+	if _, err := os.Stat(p); err == nil {
+		return p
+	}
+	return filepath.Join(baseDir, name)
+}
+
 func loadMergedTemplates(baseDir string) []templateEntry {
 	out := defaultPromptTemplatesZH()
-	iniPath := filepath.Join(baseDir, "PromptTemplates.ini")
+	iniPath := localDataPath(baseDir, "PromptTemplates.ini")
 	data, err := os.ReadFile(iniPath)
 	if err != nil {
 		return out
@@ -170,7 +178,7 @@ func searchTemplates(baseDir, keyword string, maxResults, offset int) []map[stri
 }
 
 func readCursorShortcutIni(baseDir string) map[string]map[string]string {
-	path := filepath.Join(baseDir, "CursorShortcut.ini")
+	path := localDataPath(baseDir, "CursorShortcut.ini")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil

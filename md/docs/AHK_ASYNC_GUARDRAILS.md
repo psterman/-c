@@ -109,7 +109,7 @@ This document codifies required guardrails for async/state-machine refactors.
 
 **Bridge rule ([`modules/AhkWebViewBridge.ahk`](modules/AhkWebViewBridge.ahk)):** bridge forwards IDs only; host module owns stale gates.
 
-Validate with: `scripts/ValidateRequestIdStaleContract.ps1`
+Validate with: `tools/ci/ValidateRequestIdStaleContract.ps1`
 
 ## Acceptance checks
 

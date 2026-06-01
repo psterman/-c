@@ -30,7 +30,8 @@ The portable package includes Everything, ttyd, SearchCenterCore, WebView2Loader
 | `lib/` | Third-party AHK libraries and DLLs |
 | `searchcore/` | Go search core + `SearchCenterCore.exe` |
 | `tools/` | Bridges, diagnostics, rg/openlist |
-| `config/user_studio.defaults.json` | LLM/settings template → local `user_studio.json` on first use |
+| `config/user_studio.defaults.json` | LLM/settings template → `local/user_studio.json` on first use |
+| `local/` | Private user data (API keys, main config, OpenClaw state) — not in Git |
 | `Data/` | Runtime user data (screenshots, chat attachments) |
 | `Cache/` | Logs and cache — safe to clear periodically |
 | `docs/` | Technical documentation (`md/docs/`) |

@@ -4,7 +4,7 @@
 OnError(NMER_StartupOnError)
 global pToken := Gdip_Startup()
 if (!pToken) {
-    MsgBox "GDI+ 启动失败，请检查 lib\Gdip_All.ahk"
+    MsgBox "GDI+ 启动失败，请检查 lib\ahk\Gdip_All.ahk"
 }
 global NMER_TraceSession := FormatTime(A_Now, "yyyyMMdd-HHmmss") . "-" . A_TickCount
 NMER_Log("startup", "boot", "gdip=" . (pToken ? "ok" : "fail"))
@@ -132,13 +132,15 @@ HoleDragHooks_Emit(eventName, data := 0) {
         try cb.Call(data)
     }
 }
-; 托盘图标与 0x0404 自定义菜单：在 #Include lib\ImagePut.ahk 之后调用 TrayMenu_Init()（依赖 Gdip_All）
+; 托盘图标与 0x0404 自定义菜单：在 #Include lib\ahk\ImagePut.ahk 之后调用 TrayMenu_Init()（依赖 Gdip_All）
 
 ; ===================== 包含 SQLite 数据库类 =====================
 ; 包含 lib 文件夹中的 Class_SQLiteDB.ahk（AHK v2 版本）
-#Include lib\Class_SQLiteDB.ahk
-#Include lib\Jxon.ahk
-#Include lib\WebView2.ahk
+#Include lib\ahk\Class_SQLiteDB.ahk
+#Include lib\ahk\Jxon.ahk
+#Include modules\LocalPaths.ahk
+#Include modules\ToolsPaths.ahk
+#Include lib\ahk\WebView2.ahk
 #Include modules\AhkWebViewBridge.ahk
 #Include modules\WebView2SharedEnv.ahk
 #Include modules\FocusBroker.ahk
@@ -150,18 +152,18 @@ HoleDragHooks_Emit(eventName, data := 0) {
 
 ; ===================== 包含 OCR 模块 =====================
 ; 包含 lib 文件夹中的 OCR.ahk（用于识图取词功能）
-#Include lib\OCR.ahk
+#Include lib\ahk\OCR.ahk
 
 ; ===================== 包含 GDI+ 和 WinClip 库 =====================
 ; 包含 lib 文件夹中的 Gdip_All.ahk 和 WinClip.ahk（用于截图助手预览窗）
 ; 注意：WinClip.ahk 依赖于 WinClipAPI.ahk，需要先包含 WinClipAPI.ahk
-#Include lib\Gdip_All.ahk
-#Include lib\WinClipAPI.ahk
-#Include lib\WinClip.ahk
+#Include lib\ahk\Gdip_All.ahk
+#Include lib\ahk\WinClipAPI.ahk
+#Include lib\ahk\WinClip.ahk
 
 ; ===================== 包含 ImagePut 库 =====================
 ; 包含 lib 文件夹中的 ImagePut.ahk（用于简化图片处理，提高性能和功能）
-#Include lib\ImagePut.ahk
+#Include lib\ahk\ImagePut.ahk
 
 #Include modules\TrayMenuManager.ahk
 TrayMenu_Init()
@@ -243,7 +245,10 @@ global CursorPanelResultLV := 0  ; 快捷操作面板搜索结果ListView
 global CursorPanelSearchResults := []  ; 快捷操作面板搜索结果数组
 global CursorPanelShowMoreBtn := 0  ; 快捷操作面板"更多"按钮
 global CursorPanelSearchDebounceTimer := 0  ; 快捷操作面板搜索防抖定时器
-global ConfigFile := A_ScriptDir "\CursorShortcut.ini"
+Nmer_MigrateLocalData()
+Nmer_MigrateToolsBinaries()
+Nmer_EnsureSqliteDbIni()
+global ConfigFile := Nmer_MainConfigFile()
 global TrayIconPath := A_ScriptDir "\cursor_helper.ico"
 ; CustomIconPath 由 modules\TrayMenuManager.ahk 初始化
 ; CapsLock+ 方案的核心变量
@@ -347,7 +352,7 @@ global Prompt_Optimize := ""
 ; 提示词模板系统
 global PromptTemplates := []  ; 模板数组 [{ID, Title, Content, Icon, FunctionCategory, Series, Category(兼容旧版本)}]
 global DefaultTemplateIDs := Map()  ; 默认模板映射 {"Explain" => TemplateID, "Refactor" => TemplateID, "Optimize" => TemplateID}
-global PromptTemplatesFile := A_ScriptDir "\PromptTemplates.ini"  ; 模板配置文件
+global PromptTemplatesFile := Nmer_PromptTemplatesFile()  ; 模板配置文件
 global ExpandedTemplateKey := ""  ; 当前展开的模板键（格式：FunctionCategory_Series_Index）
 global CategoryMap := Map()  ; 双层分类索引 CategoryMap[功能分类ID][模板系列ID] = 模板数组
 ; 性能优化索引（O(1)查找）
@@ -389,7 +394,7 @@ global CapsLockCCountTooltip := 0  ; 计数提示 Tooltip 句柄
 global CapsLockCItems := []  ; 存储当前阶段 CapsLock+C 复制的所有内容
 ; SQLite 数据库
 global ClipboardDB := 0  ; SQLite 数据库对象
-global ClipboardDBPath := A_ScriptDir "\Data\CursorData.db"  ; 数据库文件路径（存储在Data目录，使用CursorData.db确保物理保存）
+global ClipboardDBPath := Nmer_CursorDataDbPath()  ; 数据库文件路径（Data/CursorData.db）
 global ClipboardCurrentTab := "CtrlC"  ; 当前显示的版块："CtrlC" 或 "CapsLockC"
 global ClipboardCapsLockCTab := 0  ; CapsLock+C Tab 控件引用
 global LastSelectedIndex := 0  ; 最后选中的ListBox项索引，用于刷新后恢复
@@ -2289,17 +2294,16 @@ InitClipboardDB() {
     global ClipboardDB, ClipboardDBPath
     
     ; 1. 自动创建目录
-    if !DirExist(A_ScriptDir "\Data") {
-        DirCreate(A_ScriptDir "\Data")
+    if !DirExist(Nmer_DataDir()) {
+        DirCreate(Nmer_DataDir())
     }
-    
-    ; 设置数据库文件路径（使用 CursorData.db 确保物理保存）
-    ClipboardDBPath := A_ScriptDir "\Data\CursorData.db"
+
+    ClipboardDBPath := Nmer_CursorDataDbPath()
     
     ; 2. 检查 sqlite3.dll 是否存在
-    DllPath := A_ScriptDir "\sqlite3.dll"
+    DllPath := Nmer_Sqlite3DllPath()
     if (!FileExist(DllPath)) {
-        MsgBox("sqlite3.dll 未找到。`n请确保 sqlite3.dll 与脚本位于同一目录。", "数据库初始化错误", "IconX")
+        MsgBox("sqlite3.dll 未找到。`n请确保 lib\runtime\sqlite3.dll 存在。", "数据库初始化错误", "IconX")
         ClipboardDB := 0
         return
     }
@@ -2867,7 +2871,7 @@ BuildAppLocalUrl(relativePath) {
         qSuffix := SubStr(normalized, iq)
         normalized := SubStr(normalized, 1, iq - 1)
     }
-    if (RegExMatch(normalized, "\.html$") && !RegExMatch(normalized, "^(html/|assets/|archive/|tools/|lib/|modules/|aiicons/|searchcore/|config/|md/)"))
+    if (RegExMatch(normalized, "\.html$") && !RegExMatch(normalized, "^(html/|assets/|archive/|tools/|lib/|modules/|aiicons/|assets/icons/|searchcore/|config/|md/)"))
         normalized := "html/" . normalized
     return "https://" . host . "/" . normalized . qSuffix
 }

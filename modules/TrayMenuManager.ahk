@@ -66,8 +66,8 @@ TrySetTrayIconHighQuality() {
             }
         }
     }
-    icoNiu := A_ScriptDir "\牛马.ico"
-    pngNiu := A_ScriptDir "\牛马.png"
+    icoNiu := Nmer_AppIconIcoPath()
+    pngNiu := Nmer_AppIconPngPath()
     if FileExist(icoNiu) {
         try {
             TraySetIcon(icoNiu)
@@ -105,8 +105,8 @@ ResolveDefaultUiIconPath() {
     global CustomIconPath
     if (IsSet(CustomIconPath) && CustomIconPath != "" && FileExist(CustomIconPath))
         return CustomIconPath
-    if FileExist(A_ScriptDir "\牛马.png")
-        return A_ScriptDir "\牛马.png"
+    if FileExist(Nmer_AppIconPngPath())
+        return Nmer_AppIconPngPath()
     return A_ScriptDir "\favicon.ico"
 }
 

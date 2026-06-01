@@ -200,7 +200,7 @@ HoleTriggers_ApplyConfig(trigMap, syncCapture := true) {
 HoleTriggers_ConfigIniPath() {
     if IsSet(ConfigFile) && ConfigFile != ""
         return ConfigFile
-    return A_ScriptDir . "\CursorShortcut.ini"
+    return Nmer_ResolveConfigFile()
 }
 
 HoleTriggers_IniGestureFlags(cf := "") {
@@ -515,7 +515,7 @@ HoleTriggers_RemoveMouseHook() {
 }
 
 HoleTriggers_LoadFromIni(iniPath := "") {
-    cf := iniPath != "" ? iniPath : (IsSet(ConfigFile) ? ConfigFile : (A_ScriptDir . "\CursorShortcut.ini"))
+    cf := iniPath != "" ? iniPath : Nmer_ResolveConfigFile()
     if !FileExist(cf)
         return
     preset := StrLower(Trim(IniRead(cf, "Appearance", "HoleSensitivityPreset", "standard")))
@@ -549,7 +549,7 @@ HoleTriggers_LoadFromIni(iniPath := "") {
 }
 
 HoleTriggers_SaveToIni(trigMap, iniPath := "") {
-    cf := iniPath != "" ? iniPath : (IsSet(ConfigFile) ? ConfigFile : (A_ScriptDir . "\CursorShortcut.ini"))
+    cf := iniPath != "" ? iniPath : Nmer_ResolveConfigFile()
     if !(trigMap is Map)
         return
     HoleTriggers_ApplyConfig(trigMap)

@@ -89,9 +89,7 @@ _CP_EnsureSearchCoreRunning() {
         return true
     }
     base := IsSet(MainScriptDir) ? MainScriptDir : A_ScriptDir
-    preferred := base "\searchcore\SearchCenterCore.exe"
-    fallback := base "\SearchCenterCore.exe"
-    exe := FileExist(preferred) ? preferred : fallback
+    exe := Nmer_SearchCenterCoreExe()
     if !FileExist(exe)
         return false
     try {

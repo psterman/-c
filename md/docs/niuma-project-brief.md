@@ -10,7 +10,7 @@
 - 主入口：`牛马.ahk`
 - 模块：`modules/*.ahk`
 - WebView 界面：`html/FloatingToolbarStrip.html`（Niuma Chat）、`html/SettingsPanel.html`（设置/智能定制）、`html/SearchCenter.html` 等
-- 用户定制：`config/user_studio.json`（API、路径、ttyd、options）
+- 用户定制：`local/user_studio.json`（API、路径、ttyd、options）
 
 ## 核心功能
 
@@ -25,7 +25,7 @@
 |------|------|
 | Niuma Chat UI/对话/API 测试 | `html/FloatingToolbarStrip.html`、`modules/FloatingToolbar.ahk` |
 | 智能定制 / 打开 Chat | `html/SettingsPanel.html`、`modules/ConfigWebViewModule.ahk`、`modules/UserStudio.ahk` |
-| 用户 API 与路径 | `config/user_studio.json` |
+| 用户 API 与路径 | `local/user_studio.json` |
 | 版本更新检查等 | `modules/AppUpdateCheck.ahk`、`config/app_version.json` |
 
 ## 修改关联

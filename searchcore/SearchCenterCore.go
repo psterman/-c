@@ -31,7 +31,7 @@ func recoverHTTP(name string, h http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
-	baseDir := flag.String("base", "", "主脚本目录（含 Clipboard.db、Data/CursorData.db）")
+	baseDir := flag.String("base", "", "主脚本目录（含 Data/Clipboard.db、Data/CursorData.db）")
 	addr := flag.String("addr", defaultAddr, "监听地址")
 	flag.Parse()
 	b := strings.TrimSpace(*baseDir)
@@ -102,27 +102,36 @@ func main() {
 	}
 }
 
-// pickPrimaryClipboardPath 与 AHK 一致：ClipboardDB 实际使用 Data\CursorData.db；
-// 若根目录 Clipboard.db 缺失或 0 字节（曾被误建空库），必须以 CursorData.db 为主连接，否则会搜不到任何行。
+// pickPrimaryClipboardPath 与 AHK 一致：主库 Data\Clipboard.db（FTS5）；
+// 兼容根目录 Clipboard.db；若均不可用则回退 Data\CursorData.db。
 func pickPrimaryClipboardPath(absBase string) (mainPath string, attachCurPath string, err error) {
-	clipPath := filepath.Join(absBase, "Clipboard.db")
 	curPath := filepath.Join(absBase, "Data", "CursorData.db")
-	stClip, errClip := os.Stat(clipPath)
-	stCur, errCur := os.Stat(curPath)
-	clipOK := errClip == nil && !stClip.IsDir() && stClip.Size() > 0
-	curOK := errCur == nil && !stCur.IsDir() && stCur.Size() > 0
-	if !clipOK && !curOK {
-		return "", "", fmt.Errorf("未找到有效剪贴板库：需要非空 Clipboard.db 或 Data\\CursorData.db（base=%s）", absBase)
+	clipCandidates := []string{
+		filepath.Join(absBase, "Data", "Clipboard.db"),
+		filepath.Join(absBase, "Clipboard.db"),
 	}
-	if clipOK {
-		mainPath = clipPath
+	var clipOKPath string
+	for _, clipPath := range clipCandidates {
+		stClip, errClip := os.Stat(clipPath)
+		if errClip == nil && !stClip.IsDir() && stClip.Size() > 0 {
+			clipOKPath = clipPath
+			break
+		}
+	}
+	stCur, errCur := os.Stat(curPath)
+	curOK := errCur == nil && !stCur.IsDir() && stCur.Size() > 0
+	if clipOKPath == "" && !curOK {
+		return "", "", fmt.Errorf("未找到有效剪贴板库：需要非空 Data\\Clipboard.db、根目录 Clipboard.db 或 Data\\CursorData.db（base=%s）", absBase)
+	}
+	if clipOKPath != "" {
+		mainPath = clipOKPath
 		if curOK {
 			attachCurPath = curPath
 		}
 		return mainPath, attachCurPath, nil
 	}
 	mainPath = curPath
-	log.Printf("[db] Clipboard.db 不存在或为空文件，主库改为 Data\\CursorData.db（与 AHK ClipboardDB 路径一致）")
+	log.Printf("[db] Clipboard.db 不存在或为空，主库改为 Data\\CursorData.db")
 	return mainPath, "", nil
 }
 

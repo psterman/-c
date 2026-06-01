@@ -319,6 +319,7 @@ func resolvePDFToTextExe(baseDir string, cfg fullTextFilterResolved) string {
 		}
 	}
 	candidates := []string{
+		filepath.Join(baseDir, "tools", "search", "pdftotext.exe"),
 		filepath.Join(baseDir, "tools", "pdftotext.exe"),
 		filepath.Join(baseDir, "lib", "pdftotext.exe"),
 	}

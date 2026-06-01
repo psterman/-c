@@ -1,4 +1,4 @@
-; UserStudio.ahk — 智能定制：大模型 API、软件路径、总览与还原（config/user_studio.json）
+; UserStudio.ahk — 智能定制：大模型 API、软件路径、总览与还原（local/user_studio.json）
 
 global g_UserStudio := Map()
 global g_UserStudioLoaded := false
@@ -8,7 +8,7 @@ UserStudio_ConfigDir() {
 }
 
 UserStudio_Path() {
-    return UserStudio_ConfigDir() . "\user_studio.json"
+    return Nmer_UserStudioPath()
 }
 
 UserStudio_DefaultsPath() {
@@ -16,11 +16,11 @@ UserStudio_DefaultsPath() {
 }
 
 UserStudio_BackupPath() {
-    return UserStudio_ConfigDir() . "\user_studio.backup.json"
+    return Nmer_UserStudioBackupPath()
 }
 
 UserStudio_NiumaLlmSyncPath() {
-    return UserStudio_ConfigDir() . "\niuma_chat_llm.json"
+    return Nmer_NiumaChatLlmPath()
 }
 
 UserStudio_NiumaBriefPath() {
@@ -240,6 +240,7 @@ UserStudio_GetNiumaContext() {
 }
 
 UserStudio_EnsureConfigDir() {
+    Nmer_EnsureLocalDir()
     dir := UserStudio_ConfigDir()
     if !DirExist(dir)
         DirCreate(dir)
@@ -933,7 +934,7 @@ UserStudio_SyncTtydToIni(doc) {
     sh := Trim(String(ttyd.Get("shell", "cmd.exe")))
     if (sh = "")
         sh := "cmd.exe"
-    cf := A_ScriptDir . "\CursorShortcut.ini"
+    cf := Nmer_MainConfigFile()
     if (IsSet(ConfigFile) && ConfigFile != "")
         cf := ConfigFile
     try {

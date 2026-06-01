@@ -301,7 +301,7 @@ GetPreferredCLIExecutable(Engine) {
 }
 
 GetCLIAgentWindowTitle(Engine) {
-    ; 必须与 scripts/cli_window_bridge.py 中 AGENTS 的英文 name 一致，否则无法匹配队列终端窗口标题
+    ; 必须与 tools/voice-cli/cli_window_bridge.py 中 AGENTS 的英文 name 一致，否则无法匹配队列终端窗口标题
     switch Engine {
         case "codex_cli":
             return "CursorHelper AI - Codex"
@@ -818,7 +818,7 @@ OpenCLIAgentTerminal(Engine) {
     }
     ; Gemini：与 Qwen 一样走原生交互终端；启动前由 gemini_native_terminal.ps1 加载 .env / 注册表等（与队列 worker 共用 gemini_env.ps1）
     if (Engine = "gemini_cli") {
-        NativeScript := A_ScriptDir . "\scripts\gemini_native_terminal.ps1"
+        NativeScript := Nmer_VoiceCliScript("gemini_native_terminal.ps1")
         if (!FileExist(NativeScript)) {
             throw Error("找不到 Gemini 启动脚本: " . NativeScript)
         }
@@ -849,7 +849,7 @@ InvokePythonCLIBridge(Engines, PromptText := "", Action := "send") {
     if (Action = "send" && PromptText = "") {
         return 0
     }
-    WorkerScript := A_ScriptDir . "\scripts\cli_queue_worker.ps1"
+    WorkerScript := Nmer_VoiceCliScript("cli_queue_worker.ps1")
     if (!FileExist(WorkerScript)) {
         TrayTip("找不到 CLI 队列脚本: " . WorkerScript, "错误", "Iconx 2")
         return 0

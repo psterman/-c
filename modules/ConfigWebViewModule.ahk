@@ -360,13 +360,7 @@ ConfigWebView_EnsureSearchCoreRunning() {
 }
 
 ConfigWebView_SearchCoreExePath() {
-    preferred := A_ScriptDir "\searchcore\SearchCenterCore.exe"
-    if FileExist(preferred)
-        return preferred
-    fallback := A_ScriptDir "\SearchCenterCore.exe"
-    if FileExist(fallback)
-        return fallback
-    return ""
+    return Nmer_SearchCenterCoreExe()
 }
 
 ConfigWebView_HttpSearchCoreJsonRaw(method, path, body := "") {
@@ -1762,7 +1756,7 @@ ConfigWebView_RunSaveSettings(payload) {
 }
 
 ConfigWebView_UserStudioPath() {
-    return A_ScriptDir . "\config\user_studio.json"
+    return Nmer_UserStudioPath()
 }
 
 ConfigWebView_ParseUserStudioSavePayload(msg) {
@@ -1885,7 +1879,7 @@ ConfigWebView_FallbackWriteUserStudioJson(payload) {
     doc["updatedAt"] := FormatTime(, "yyyy-MM-dd HH:mm:ss")
     try {
         if FileExist(path)
-            FileCopy(path, dir . "\user_studio.backup.json", 1)
+            FileCopy(path, Nmer_UserStudioBackupPath(), 1)
     } catch {
     }
     f := FileOpen(path, "w", "UTF-8")

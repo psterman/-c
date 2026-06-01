@@ -69,9 +69,10 @@
 | `lib/` | 第三方 AHK 库与运行时 DLL |
 | `searchcore/` | Go 搜索内核（含 `SearchCenterCore.exe`） |
 | `tools/` | 桥接工具、诊断脚本、rg/openlist 等 |
-| `config/user_studio.defaults.json` | 智能定制模板；首次打开设置页会生成本地 `user_studio.json` |
+| `config/user_studio.defaults.json` | 智能定制模板；首次打开设置页会在 `local/` 生成本地 `user_studio.json` |
+| `local/` | 用户私有数据（API Key、主配置、OpenClaw 状态），勿提交 Git |
 | `Data/` | 运行时数据（截图、Chat 附件等），可备份 |
-| `Cache/` | 日志与缓存，可定期清空 |
+| `Cache/` | 日志与缓存，可定期清空（不含 OpenClaw 状态） |
 | `tools/whisper-stt/` | 本地语音：运行 `setup-whisper.ps1` 安装模型 |
 | `md/` | 项目文档（README、AGENTS、软件介绍、技术 docs） |
 | `md/docs/` | 开发者/高级用户技术说明 |
@@ -100,8 +101,8 @@
 ### 步骤 2：首次唤醒
 1. 双击 `牛马.ahk` 文件
 2. 提示获取管理员权限时，点击「是」（牛马需要权限才能监听指令）
-3. 自动生成配置文件 `CursorShortcut.ini`，记录你的调教偏好
-4. 首次使用「智能定制」（CapsLock + Q）时，会基于 `config/user_studio.defaults.json` 生成本地 `config/user_studio.json`
+3. 首次启动会在 `local/` 生成 `CursorShortcut.ini`，记录你的调教偏好（旧版根目录配置会自动迁入）
+4. 首次使用「智能定制」（CapsLock + Q）时，会基于 `config/user_studio.defaults.json` 在 `local/` 生成本地 `user_studio.json`
 
 ### 步骤 3：指定主人（Cursor 路径）
 1. 右键系统托盘中的牛马图标
@@ -178,8 +179,8 @@
 
 ### 深度调教（调试模式）
 1. **查看错误信息**：牛马出错会弹出消息框，记录错误内容方便排查
-2. **检查配置文件**：脚本目录下的 `CursorShortcut.ini`，可手动编辑（注意格式）
-3. **重置牛马**：删除 `CursorShortcut.ini` 文件，重新运行脚本，恢复默认设置
+2. **检查配置文件**：`local/CursorShortcut.ini`，可手动编辑（注意格式）
+3. **重置牛马**：删除 `local/CursorShortcut.ini`，重新运行脚本，恢复默认设置
 
 ## 🛠️ 高级调教技巧
 ### 自定义打工话术

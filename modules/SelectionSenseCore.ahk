@@ -703,7 +703,13 @@ SelectionSense_HubDictInstall_FindDb(rootDir) {
     root := Trim(String(rootDir))
     if (root = "")
         return ""
-    direct := root "\ultimate.db"
+    dataDir := root . "\Data"
+    for name in ["ultimate.db", "ecdict.db", "stardict.db"] {
+        p := dataDir . "\" . name
+        if FileExist(p)
+            return p
+    }
+    direct := root . "\ultimate.db"
     if FileExist(direct)
         return direct
     direct2 := root "\ecdict.db"
@@ -1185,7 +1191,7 @@ SelectionSense_HubDict_InstallEcdictOneClick(taskId := "") {
         workDir := A_ScriptDir "\cache\dict_install"
         zipPath := workDir "\ecdict-package.zip"
         extractDir := workDir "\dict-package_" . tid
-        finalDb := A_ScriptDir "\ultimate.db"
+        finalDb := Nmer_UltimateDictDbPath()
         reportPath := workDir "\install_report.txt"
 
         if !DirExist(workDir)
@@ -1244,7 +1250,7 @@ SelectionSense_HubDict_InstallEcdictOneClick(taskId := "") {
 
         SelectionSense_HubDictInstall_RunJs(72, "正在解压词典...")
         SelectionSense_HubDictInstall_EmitTaskState(tid, true, "正在解压词典...", "extracting", 72)
-        sevenZip := A_ScriptDir "\lib\7z.exe"
+        sevenZip := Nmer_LibRuntimePath("7z.exe")
         if !FileExist(sevenZip)
             return Map("ok", false, "message", "缺少解压组件，无法安装词典")
         if !FileExist(zipPath)
@@ -1428,7 +1434,7 @@ SelectionSense_HubDragApplyBoundsNotify() {
 }
 
 SelectionSense_HubCapsule_IniPath() {
-    return (IsSet(ConfigFile) && ConfigFile != "") ? ConfigFile : (A_ScriptDir "\CursorShortcut.ini")
+    return Nmer_ResolveConfigFile()
 }
 
 SelectionSense_GetHubCapsuleDefaultSize(&outW, &outH) {
@@ -1550,7 +1556,7 @@ SelectionSense_OnToolbarSearchClick() {
 SelectionSense_LoadIni() {
     global g_SelSense_Enabled, g_SelSense_CopyDelayMs, g_SelSense_RequireIBeam, g_SelSense_ClipWaitSec, g_SelSense_HubCopyTriggerMode
     global g_SelSense_DragHintEnabled
-    cfg := (IsSet(ConfigFile) && ConfigFile != "") ? ConfigFile : (A_ScriptDir "\CursorShortcut.ini")
+    cfg := Nmer_ResolveConfigFile()
     try {
         g_SelSense_Enabled := (IniRead(cfg, "SelectionSense", "Enable", "1") != "0")
         g_SelSense_CopyDelayMs := Integer(IniRead(cfg, "SelectionSense", "CopyDelayMs", "55"))
@@ -1582,7 +1588,7 @@ SelectionSense_SetHubCopyTriggerMode(mode) {
     global g_SelSense_HubCopyTriggerMode
     m := Trim(StrLower(String(mode)))
     g_SelSense_HubCopyTriggerMode := (m = "double") ? "double" : "capslock"
-    cfg := (IsSet(ConfigFile) && ConfigFile != "") ? ConfigFile : (A_ScriptDir "\CursorShortcut.ini")
+    cfg := Nmer_ResolveConfigFile()
     try IniWrite(g_SelSense_HubCopyTriggerMode, cfg, "SelectionSense", "HubCopyTriggerMode")
 }
 

@@ -127,7 +127,7 @@ VK_Init(embedded := false) {
         return
 
     g_VK_Embedded := embedded
-    g_JsonPath := A_ScriptDir "\Commands.json"
+    g_JsonPath := Nmer_CommandsJsonPath()
     g_VK_IsAdmin := !!A_IsAdmin
     g_VK_AdminWarning := g_VK_IsAdmin ? "" : "Warning: running without admin privileges. Hotkeys may not work in elevated windows (e.g. Task Manager)."
 
@@ -470,7 +470,7 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "ftb_scratchpad", "name", "草稿本", "desc", "悬浮条按钮：打开 HubCapsule", "fn", "CH_RUN", "iconClass", "fa-note-sticky"),
             Map("id", "ftb_screenshot", "name", "截图", "desc", "悬浮条按钮：截图智能菜单", "fn", "CH_RUN", "iconClass", "fa-camera"),
             Map("id", "ftb_cloud_player", "name", "云盘", "desc", "悬浮条按钮：打开牛马云", "fn", "CH_RUN", "iconClass", "fa-cloud"),
-            Map("id", "ftb_cursor_menu", "name", "Cursor", "desc", "悬浮条按钮：Cursor 快捷入口", "fn", "CH_RUN", "iconClass", "fa-compass", "iconPath", A_ScriptDir "\lib\images\cursor.png")
+            Map("id", "ftb_cursor_menu", "name", "Cursor", "desc", "悬浮条按钮：Cursor 快捷入口", "fn", "CH_RUN", "iconClass", "fa-compass", "iconPath", Nmer_AssetsIconPath("app", "cursor.png"))
         ]),
         Map("id", "mobile_browser", "name", "📱 手机浏览器", "commands", [
             Map("id", "nmb_back", "name", "后退", "desc", "手机浏览器右键：后退", "fn", "NMB_RUN"),
@@ -3418,7 +3418,7 @@ _VK_NormalizeThemeToken(tm) {
 
 ; 与设置页一致：优先读 CursorShortcut.ini，避免全局 ThemeMode 未同步时 VK 仍用深色
 _VK_GetThemeMode() {
-    cfgPath := A_ScriptDir "\CursorShortcut.ini"
+    cfgPath := Nmer_ResolveConfigFile()
     if FileExist(cfgPath) {
         try {
             raw := IniRead(cfgPath, "Settings", "ThemeMode", "")

@@ -163,7 +163,7 @@ CheckEverythingDLL(*) {
     AddSearchCenterDebugLog("========== 开始检测 Everything DLL ==========")
     
     ; 检查 64 位 DLL
-    DLL64Path := A_ScriptDir "\lib\everything64.dll"
+    DLL64Path := Nmer_EverythingDllPath()
     AddSearchCenterDebugLog("检查 64 位 DLL: " . DLL64Path)
     
     if (FileExist(DLL64Path)) {

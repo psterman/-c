@@ -3,29 +3,42 @@
 *.db-shm
 *.db-wal
 
-# 根目录 FTS5 剪贴板库（modules/ClipboardFTS5.ahk 使用）
+# 根目录运行时（应已迁入 lib/ / Data/ / tools/ / config/）
 /Clipboard.db
 /Clipboard.db-shm
 /Clipboard.db-wal
+/CursorShortcut.ini
+/Commands.json
+/Everything.db
+/Everything.ini
+/sqlite3.dll
+/WebView2Loader.dll
+/serve3000.js
+/enigma.enigma64
+/original.txt
 
 # 显式命名（与通配重复亦可，便于阅读）
 Clipboard.db
 CursorData.db
 CursorHelper.db
 
-# 用户数据目录（含 CursorData.db、截图缓存等）
+# 用户数据目录（剪贴板库、搜索中心、草稿、全文索引等）
 Data/*
 !Data/.gitkeep
 
-# 本地配置（每人不同，不宜进仓库）
+# 用户私有数据（API Key、主配置、OpenClaw 状态）
+local/*
+!local/.gitkeep
+!local/README.txt
+
+# 旧位置（迁移后可能残留，勿提交）
 CursorShortcut.ini
 PromptTemplates.ini
-
-# 用户定制（含 API Key）
 config/user_studio.json
 config/user_studio.backup.json
 config/niuma_chat_llm.json
 config/curser.ini
+Cache/openclaw-state/
 
 # 备份与临时
 *.bak*
@@ -42,7 +55,6 @@ ttyd_repair.log
 # 运行时 Cache（保留 .gitkeep 占位）
 Cache/*
 !Cache/.gitkeep
-Cache/openclaw-state/
 
 cache/dict_install/
 
@@ -63,6 +75,9 @@ archive/prototype/**/temp/
 
 # 根目录依赖
 /node_modules/
+
+# 旧 scripts/（已迁入 tools/voice-cli、tools/ci、tools/dev）
+/scripts/
 
 # 诊断输出
 tools/drop-diagnostics/results/

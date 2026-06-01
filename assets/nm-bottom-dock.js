@@ -13,7 +13,7 @@
     { id: 'screenshot', title: '截图', cmdId: 'ch_t', sceneId: 'screenshot', icon: '<path d="M4 7h4l2-2h4l2 2h4v12H4z"></path><circle cx="12" cy="13" r="3.5"></circle>' },
     { id: 'settings', title: '设置', cmdId: 'qa_config', sceneId: 'settings', icon: '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>' },
     { id: 'hotkeys', title: '快捷键', cmdId: 'sys_show_vk', sceneId: 'hotkeys', icon: '<rect x="2.5" y="5" width="19" height="14" rx="2.5"></rect><path d="M6 9h1M9 9h1M12 9h1M15 9h1M18 9h1M6 12h1M9 12h1M12 12h1M15 12h1M18 12h1M7 15h10"></path>' },
-    { id: 'cursor', title: 'Cursor', cmdId: 'cursor_open', sceneId: 'cursor', img: 'lib/images/cursor.png' },
+    { id: 'cursor', title: 'Cursor', cmdId: 'cursor_open', sceneId: 'cursor', img: 'assets/icons/app/cursor.png' },
     { id: 'cloud', title: '云盘', cmdId: 'open_cloudplayer', sceneId: 'cloudplayer', always: true, icon: '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>' }
   ];
 
@@ -87,7 +87,7 @@
 
     var post = typeof opts.post === 'function' ? opts.post : defaultPost;
     var sourceScene = normalizeSceneId(opts.sceneId || 'search');
-    var logoUrl = String(opts.logoUrl || './牛马.png');
+    var logoUrl = String(opts.logoUrl || './assets/牛马.png');
     var uiScale = Number(opts.uiScale);
     if (!Number.isFinite(uiScale) || uiScale <= 0) uiScale = 1;
 

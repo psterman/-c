@@ -30,10 +30,10 @@ func handleStatus(w http.ResponseWriter, r *http.Request, db *sql.DB, absBase st
 
 	st := serverStatus{
 		Base:                 absBase,
-		ClipboardDB:          filepath.Join(absBase, "Clipboard.db"),
+		ClipboardDB:          filepath.Join(absBase, "Data", "Clipboard.db"),
 		MainIsCursorData:     clipboardMainIsCursorData,
 		CursorDataAttached:   curDatabaseAttached,
-		EverythingDLLPresent: fileExists(filepath.Join(absBase, "lib", "everything64.dll")),
+		EverythingDLLPresent: fileExists(everythingDLLPath(absBase)),
 		EverythingExeFound:   resolveEverythingExe(absBase) != "",
 		FullText:             GetStatus(),
 	}

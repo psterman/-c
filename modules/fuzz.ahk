@@ -12,8 +12,12 @@ class fuzz
             lib_path := A_ScriptDir . "\lib"
         }
         else {
-            lib_path := dir . "\..\lib"
+            lib_path := dir . "\..\lib\runtime"
             path := (A_PtrSize == 4) ? lib_path . "\dll_32\" : lib_path . "\dll_64\"
+            if !FileExist(path . "fuzz.dll") {
+                lib_path := dir . "\..\lib"
+                path := (A_PtrSize == 4) ? lib_path . "\dll_32\" : lib_path . "\dll_64\"
+            }
         }
         dllcall("SetDllDirectory", "Str", path)
         for k,v in this.all_dll_func

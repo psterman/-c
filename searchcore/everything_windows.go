@@ -31,12 +31,32 @@ type everythingFileEntry struct {
 	ModNano int64
 }
 
+func toolFirstExisting(candidates ...string) string {
+	for _, p := range candidates {
+		if p == "" {
+			continue
+		}
+		if st, err := os.Stat(p); err == nil && !st.IsDir() {
+			return p
+		}
+	}
+	return ""
+}
+
 func everythingDLLPath(baseDir string) string {
-	return filepath.Join(baseDir, "lib", "everything64.dll")
+	if p := toolFirstExisting(
+		filepath.Join(baseDir, "tools", "everything", "everything64.dll"),
+		filepath.Join(baseDir, "lib", "everything64.dll"),
+	); p != "" {
+		return p
+	}
+	return filepath.Join(baseDir, "tools", "everything", "everything64.dll")
 }
 
 func resolveEverythingExe(baseDir string) string {
 	candidates := []string{
+		filepath.Join(baseDir, "tools", "everything", "Everything64.exe"),
+		filepath.Join(baseDir, "tools", "everything", "Everything.exe"),
 		filepath.Join(baseDir, "Everything64.exe"),
 		filepath.Join(baseDir, "Everything.exe"),
 		filepath.Join(os.Getenv("ProgramFiles"), "Everything", "Everything64.exe"),
@@ -125,7 +145,7 @@ func everythingKeywordVariants(keyword string) []string {
 func everythingQuery(baseDir, keyword string, maxResults int, includeFolders bool) ([]map[string]any, error) {
 	dllPath := everythingDLLPath(baseDir)
 	if _, err := os.Stat(dllPath); err != nil {
-		return nil, fmt.Errorf("未找到 lib\\everything64.dll: %w", err)
+		return nil, fmt.Errorf("未找到 everything64.dll（请放到 tools\\everything\\ 或 lib\\）: %w", err)
 	}
 	dll, err := syscall.LoadDLL(dllPath)
 	if err != nil {

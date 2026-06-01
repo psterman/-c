@@ -10,8 +10,8 @@
 
 #Requires AutoHotkey v2.0
 #Include modules\ClipboardFTS5.ahk
-#Include ..\lib\Gdip_All.ahk
-#Include ..\lib\WinClip.ahk
+#Include ..\lib\ahk\Gdip_All.ahk
+#Include ..\lib\ahk\WinClip.ahk
 
 ; ===================== 全局变量 =====================
 global GuiID_ClipboardFTS5 := 0  ; GUI 对象

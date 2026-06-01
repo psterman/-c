@@ -457,7 +457,7 @@ OnSelfCheckClick(*) {
     
     ; 1. 检查 sqlite3.dll
     ScriptDir := (IsSet(MainScriptDir) ? MainScriptDir : A_ScriptDir)
-    dllPath := ScriptDir "\sqlite3.dll"
+    dllPath := Nmer_Sqlite3DllPath()
     if (FileExist(dllPath)) {
         AddMonitorLog("✓ sqlite3.dll 存在: " . dllPath)
     } else {
@@ -465,7 +465,7 @@ OnSelfCheckClick(*) {
     }
     
     ; 2. 检查 Clipboard.db 写入权限
-    dbPath := ScriptDir "\Clipboard.db"
+    dbPath := Nmer_ClipboardFts5DbPath()
     if (FileExist(dbPath)) {
         ; 尝试打开文件进行写入测试
         try {

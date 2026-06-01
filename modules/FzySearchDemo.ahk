@@ -67,7 +67,7 @@ FzyDemoStableCompare(a, b, *) {
 }
 
 DemoEverythingPaths(keyword, maxResults := 100) {
-    static evDll := A_ScriptDir . "\..\lib\everything64.dll"
+    static evDll := Nmer_EverythingDllPath()
     static loaded := false
     if (!FileExist(evDll))
         return []

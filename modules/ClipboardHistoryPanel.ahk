@@ -10,10 +10,10 @@
 
 #Requires AutoHotkey v2.0
 #Include ClipboardFTS5.ahk
-#Include ..\lib\ImagePut.ahk
-#Include ..\lib\Gdip_All.ahk
-#Include ..\lib\WinClip.ahk
-#Include ..\lib\OCR.ahk
+#Include ..\lib\ahk\ImagePut.ahk
+#Include ..\lib\ahk\Gdip_All.ahk
+#Include ..\lib\ahk\WinClip.ahk
+#Include ..\lib\ahk\OCR.ahk
 
 ; ===================== 全局变量 =====================
 global GuiID_ClipboardHistory := 0
@@ -3817,7 +3817,7 @@ HistoryPasteToCursor(*) {
             CursorPath := ""
             try {
                 ; 尝试从配置文件读取
-                ConfigFile := A_ScriptDir "\CursorShortcut.ini"
+                ConfigFile := Nmer_ResolveConfigFile()
                 if (FileExist(ConfigFile)) {
                     CursorPath := IniRead(ConfigFile, "Settings", "CursorPath", "")
                     if (CursorPath = "") {

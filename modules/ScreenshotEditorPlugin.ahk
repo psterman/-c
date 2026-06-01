@@ -15,6 +15,10 @@ class ScreenshotEditorPlugin {
     static ScreenshotToolbarWV2PaintOk := false
     static ScreenshotToolbarNativeFallback := false
     static ScreenshotToolbarCreateCheckPass := 0
+    static ScreenshotToolbarEnsureUsablePass := 0
+    static ScreenshotToolbarNavStartTick := 0
+    static ScreenshotToolbarUsingSafeHtml := false
+    static ScreenshotTraceFile := ""
     static ScreenshotToolbarCurrentWidth := 520
     static ScreenshotToolbarCurrentHeight := 56
     static ScreenshotToolbarLayoutMeta := Map()
@@ -246,6 +250,36 @@ class ScreenshotEditorPlugin {
     }
 }
 
+    static _SS_Trace(msg) {
+    try {
+        if (this.ScreenshotTraceFile = "")
+            this.ScreenshotTraceFile := A_ScriptDir . "\Cache\screenshot_editor_trace.log"
+        FileAppend("[" . A_Now . "] " . String(msg) . "`r`n", this.ScreenshotTraceFile, "UTF-8")
+    } catch {
+    }
+}
+
+; 仅关闭系统截图工具残留窗口（不触碰本插件的 editor/toolbar）
+    static CloseSystemScreenshotWindows(*) {
+    winTargets := [
+        "ahk_exe SnippingTool.exe",
+        "ahk_exe ScreenClippingHost.exe",
+        "ahk_exe SnipAndSketch.exe",
+        "ahk_exe ScreenSketch.exe",
+        "ahk_class ScreenClippingHostWindow",
+        "ahk_class SnippingTool"
+    ]
+    for _, target in winTargets {
+        try {
+            if (WinExist(target)) {
+                this._SS_Trace("close_system_window hit=" . target)
+                WinClose(target)
+            }
+        } catch {
+        }
+    }
+}
+
 ; 鏄剧ず鎴浘鍔╂墜棰勮绐?
     static ShowScreenshotEditor(DebugGui := 0) {
     global ScreenshotClipboard, ScreenshotLastFilePath, UI_Colors, ThemeMode
@@ -253,6 +287,7 @@ class ScreenshotEditorPlugin {
     catch {
     }
     try FloatingToolbar_PageDockEnter("screenshot")
+    try this._SS_Trace("ShowScreenshotEditor begin unified=" . (this.ScreenshotUseUnifiedWebView ? "1" : "0"))
     
     ; 鍒濆鍖栧眬閮ㄥ彉閲?
     pToken := 0
@@ -666,6 +701,7 @@ class ScreenshotEditorPlugin {
             this.ScreenshotToolbarCreateCheckPass := 0
             this.GuiID_ScreenshotToolbar.OnEvent("Size", ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnSize"))
             try WebView2_CreateWithSharedEnvAsync(this.GuiID_ScreenshotToolbar.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnCreated"), "screenshot_toolbar")
+            try this._SS_Trace("toolbar_gui_created hwnd=" . this.GuiID_ScreenshotToolbar.Hwnd)
         } else {
             this.GuiID_ScreenshotToolbar := 0
         }
@@ -752,12 +788,14 @@ class ScreenshotEditorPlugin {
         ; 鏄剧ず鎮诞宸ュ叿鏍?
         if (IsObject(this.GuiID_ScreenshotToolbar) && this.GuiID_ScreenshotToolbar != 0) {
             this.GuiID_ScreenshotToolbar.Show("w" . ToolbarWidth . " h" . ToolbarHeight . " x" . ToolbarX . " y" . ToolbarY)
+            try this._SS_Trace("toolbar_show x=" . ToolbarX . " y=" . ToolbarY . " w=" . ToolbarWidth . " h=" . ToolbarHeight)
             this.ScreenshotToolbar_NotifyHostMemory(true)
             this.ScreenshotToolbar_ApplyWindowRegion()
             this.ScreenshotToolbar_ApplyBounds()
             SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_RefreshComposition"), -40)
             SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureCreated"), -900)
-            SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsable"), -1200)
+            this.ScreenshotToolbarEnsureUsablePass := 0
+            SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsable"), -2600)
         }
         
         ; 婵€娲诲伐鍏锋爮绐楀彛
@@ -795,9 +833,16 @@ class ScreenshotEditorPlugin {
             if (IsObject(this.GuiID_ScreenshotToolbar) && this.GuiID_ScreenshotToolbar != 0) {
                 toolbarHwnd := this.GuiID_ScreenshotToolbar.Hwnd
                 DllCall("SetWindowPos", "Ptr", toolbarHwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0001 | 0x0002 | 0x0004)
+                this._SS_Trace("toolbar_set_topmost hwnd=" . toolbarHwnd)
             }
         } catch as e {
         }
+
+        ; 系统截图工具可能会在我们展示编辑器后异步弹出，做一次延迟清理，避免遮挡/误认工具栏。
+        try this.CloseSystemScreenshotWindows()
+        catch {
+        }
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "CloseSystemScreenshotWindows"), -800)
         
         ; 鍒濆鍖栫紪杈戠姸鎬?
         
@@ -1062,6 +1107,7 @@ class ScreenshotEditorPlugin {
     this.ScreenshotToolbarWV2Ready := false
     this.ScreenshotToolbarWV2PaintOk := false
     this.ScreenshotToolbarCreateCheckPass := 0
+    this.ScreenshotToolbarUsingSafeHtml := false
     try this.ScreenshotToolbarWV2Ctrl.DefaultBackgroundColor := this.ScreenshotToolbarThemeArgb()
     try {
         s := this.ScreenshotToolbarWV2.Settings
@@ -1080,14 +1126,24 @@ class ScreenshotEditorPlugin {
             html := FileRead(htmlPath, "UTF-8")
             bodyTag := Format('<body data-theme="{1}" class="theme-ready">', tm)
             html := StrReplace(html, "<body>", bodyTag, , , 1)
+            this.ScreenshotToolbarNavStartTick := A_TickCount
             this.ScreenshotToolbarWV2.NavigateToString(html)
         } else {
             try ApplyUnifiedWebViewAssets(this.ScreenshotToolbarWV2)
+            this.ScreenshotToolbarNavStartTick := A_TickCount
             this.ScreenshotToolbarWV2.Navigate(BuildAppLocalUrl("ScreenshotToolbarWebView.html"))
         }
     } catch as e {
-        try this.ScreenshotToolbarWV2.NavigateToString("<!doctype html><html><body style='margin:0;background:#0a0a0a;color:#ff9d3a;font:12px Segoe UI;padding:10px'>鎴浘宸ュ叿鏍忓姞杞藉け璐? " . e.Message . "</body></html>")
+        ; 加载主工具栏失败时，不要把错误 HTML 直接暴露在工具栏上（容易出现乱码/残片）。
+        ; 回退到内置安全图示页，保证按钮可用。
+        try {
+            safeHtml := this.ScreenshotToolbar_BuildSafeInlineHtml()
+            safeHtml := StrReplace(safeHtml, "applyTheme('dark');", "applyTheme('" . this.ScreenshotToolbarGetThemeMode() . "');", , , 1)
+            this.ScreenshotToolbarUsingSafeHtml := true
+            this.ScreenshotToolbarWV2.NavigateToString(safeHtml)
+        }
     }
+    try this._SS_Trace("toolbar_wv2_created htmlPath=" . htmlPath . " exists=" . (FileExist(htmlPath) ? "1" : "0"))
     this.ScreenshotToolbar_ApplyBounds()
 }
 
@@ -1115,7 +1171,15 @@ class ScreenshotEditorPlugin {
         ok := true
     if ok
         return
-    try sender.NavigateToString("<!doctype html><html><body style='margin:0;background:#0a0a0a;color:#ff9d3a;font:12px Segoe UI;padding:10px'>鎴浘宸ュ叿鏍忛〉闈㈠姞杞藉け璐?/body></html>")
+    ; 某些环境下 NavigateToString 也可能回调 IsSuccess=false，但页面实际已运行并能发出 ready/paint_ok。
+    ; 若已收到 paint_ok/ready，则不再做任何“降级/重载”动作，避免把完整工具栏切成安全页。
+    if (this.ScreenshotToolbarWV2PaintOk || this.ScreenshotToolbarWV2Ready)
+        return
+    try this._SS_Trace("toolbar_nav_failed")
+    ; 导航失败时尝试自愈：重新走 ensure-created/usable；避免把失败页面渲染成“乱码提示条”
+    try SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureCreated"), -80)
+    ; 给主页面留出充足启动时间再检查可用性，避免误判导致过早降级
+    try SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsable"), -1200)
 }
 
     static ScreenshotToolbar_OnSize(*) {
@@ -1237,12 +1301,25 @@ class ScreenshotEditorPlugin {
     p := n["payload"]
     if (t = "event" && name = "ready") {
             this.ScreenshotToolbarWV2Ready := true
+            try this._SS_Trace("toolbar_event ready")
             this.ScreenshotToolbar_SendInit()
             this.ScreenshotToolbar_SendState()
             this.ScreenshotToolbar_SendDockConfig()
+            ; 若之前因为超时/误判降级到了安全页，但随后主页其实已经跑起来了（会发 ready/paint_ok），
+            ; 这里强制切回主工具栏页，避免用户一直看到“旧款按钮”。
+            if this.ScreenshotToolbarUsingSafeHtml {
+                try this._SS_Trace("toolbar_safe_detected_on_ready -> reload_main")
+                this.ScreenshotToolbarUsingSafeHtml := false
+                this.ScreenshotToolbarEnsureUsablePass := 0
+                SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsable"), 0)
+                SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsableSecondPass"), 0)
+                SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_RefreshComposition"), -60)
+                SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsable"), -120)
+            }
             return
     }
     if (t = "event" && name = "requestInit") {
+            try this._SS_Trace("toolbar_event requestInit")
             this.ScreenshotToolbar_SendInit()
             this.ScreenshotToolbar_SendState()
             return
@@ -1261,9 +1338,11 @@ class ScreenshotEditorPlugin {
     }
     if (t = "event" && name = "paint_ok") {
             this.ScreenshotToolbarWV2PaintOk := true
+            try this._SS_Trace("toolbar_event paint_ok")
             return
     }
     if (t = "event" && name = "layout") {
+            try this._SS_Trace("toolbar_event layout w=" . p.Get("width", 0) . " h=" . p.Get("height", 0) . " barW=" . p.Get("barW", 0))
             this.ScreenshotToolbar_ApplyLayout(p.Get("width", 0), p.Get("height", 0), p)
             return
     }
@@ -1287,10 +1366,16 @@ class ScreenshotEditorPlugin {
     static ScreenshotToolbar_SendInit() {
     if !this.ScreenshotToolbarWV2
         return
+    sc := this.ScreenshotToolbar_BuildSchema()
+    try {
+        c := (sc is Map && sc.Has("items") && sc["items"] is Array) ? sc["items"].Length : 0
+        this._SS_Trace("toolbar_send_init items=" . c)
+    } catch {
+    }
     payload := Map(
         "bridgeVersion", this.ScreenshotBridgeVersion,
         "themeMode", this.ScreenshotToolbarGetThemeMode(),
-        "schema", this.ScreenshotToolbar_BuildSchema()
+        "schema", sc
     )
     this._WV_Send(this.ScreenshotToolbarWV2, "init", payload)
 }
@@ -3375,16 +3460,58 @@ class ScreenshotEditorPlugin {
         SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureCreated"), -300)
         return
     }
-    ; 鑻ラ甯т粛鏈畬鎴愶紝鍒囨崲鍒版瀬绠€瀹夊叏鐗?HTML锛屼繚璇佹寜閽彲瑙?
-    if (!this.ScreenshotToolbarWV2PaintOk) {
-        try {
-            safeHtml := this.ScreenshotToolbar_BuildSafeInlineHtml()
-            safeHtml := StrReplace(safeHtml, "applyTheme('dark');", "applyTheme('" . this.ScreenshotToolbarGetThemeMode() . "');", , , 1)
-            this.ScreenshotToolbarWV2.NavigateToString(safeHtml)
-        }
-        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_RefreshComposition"), -60)
-        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsableSecondPass"), -700)
+    if (this.ScreenshotToolbarWV2PaintOk)
+        return
+    this.ScreenshotToolbarEnsureUsablePass += 1
+    ; 未收到 paint_ok 时不要立刻降级：以时间阈值兜底，给主页面足够时间初始化。
+    age := (this.ScreenshotToolbarNavStartTick > 0) ? (A_TickCount - this.ScreenshotToolbarNavStartTick) : 0
+    try this._SS_Trace("toolbar_ensure_usable pass=" . this.ScreenshotToolbarEnsureUsablePass . " age_ms=" . age . " ready=" . (this.ScreenshotToolbarWV2Ready ? "1" : "0") . " paint=" . (this.ScreenshotToolbarWV2PaintOk ? "1" : "0"))
+    catch {
     }
+    ; 某些机器上 WebView2 首帧 / webMessage 可能需要更久；4.2s 容易误判导致切安全页。
+    ; 这里放宽到 12s，并且只要收到 ready 就继续等待，不做降级。
+    if (this.ScreenshotToolbarWV2Ready)
+        return
+    if (age > 0 && age < 12000) {
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_RefreshComposition"), -80)
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsable"), -900)
+        return
+    }
+    ; 超过阈值仍无 paint_ok：先重载一次主工具栏页面（避免直接切安全页）
+    if (this.ScreenshotToolbarEnsureUsablePass <= 2) {
+        try this._SS_Trace("toolbar_reload_main_html pass=" . this.ScreenshotToolbarEnsureUsablePass)
+        try {
+            htmlPath := HtmlPanelPath("ScreenshotToolbarWebView.html")
+            if FileExist(htmlPath) {
+                tm := this.ScreenshotToolbarGetThemeMode()
+                html := FileRead(htmlPath, "UTF-8")
+                bodyTag := Format('<body data-theme="{1}" class="theme-ready">', tm)
+                html := StrReplace(html, "<body>", bodyTag, , , 1)
+                this.ScreenshotToolbarNavStartTick := A_TickCount
+                this.ScreenshotToolbarUsingSafeHtml := false
+                this.ScreenshotToolbarWV2.NavigateToString(html)
+            } else {
+                this.ScreenshotToolbarNavStartTick := A_TickCount
+                this.ScreenshotToolbarUsingSafeHtml := false
+                this.ScreenshotToolbarWV2.Navigate(BuildAppLocalUrl("ScreenshotToolbarWebView.html"))
+            }
+        } catch {
+        }
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_RefreshComposition"), -80)
+        SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsable"), -900)
+        return
+    }
+    ; 多次重载仍无 paint_ok：降级到安全图示页，保证可用性
+    try this._SS_Trace("toolbar_downgrade_to_safe_html")
+    try {
+        safeHtml := this.ScreenshotToolbar_BuildSafeInlineHtml()
+        safeHtml := StrReplace(safeHtml, "applyTheme('dark');", "applyTheme('" . this.ScreenshotToolbarGetThemeMode() . "');", , , 1)
+        this.ScreenshotToolbarUsingSafeHtml := true
+        this.ScreenshotToolbarWV2.NavigateToString(safeHtml)
+    } catch {
+    }
+    SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_RefreshComposition"), -60)
+    SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsableSecondPass"), -700)
 }
 
     static ScreenshotToolbar_EnsureUsableSecondPass(*) {
@@ -5272,7 +5399,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
 }
 
     static ScreenshotOCRReadEnhanceConfig() {
-    cfgFile := A_ScriptDir "\CursorShortcut.ini"
+    cfgFile := Nmer_ResolveConfigFile()
     cfg := Map()
     cfg["enabled"] := IniRead(cfgFile, "Screenshot", "OcrEnhanceEnabled", "1") != "0"
     cfg["scalePrimary"] := Integer(IniRead(cfgFile, "Screenshot", "OcrScalePrimary", "150"))
@@ -5854,7 +5981,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     global ClipboardDB
     
     try {
-        ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+        ConfigFile := Nmer_ResolveConfigFile()
         defFmt := StrLower(IniRead(ConfigFile, "Screenshot", "ImageFormat", "png"))
         if (defFmt != "png" && defFmt != "jpg" && defFmt != "bmp")
             defFmt := "png"

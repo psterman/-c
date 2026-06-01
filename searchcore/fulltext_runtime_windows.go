@@ -157,8 +157,13 @@ func normalizeFullTextRuntimeConfig(baseDir string, cfg FullTextRuntimeConfig) F
 	// 若检测到该旧路径，自动迁移到当前工作区的专属索引目录。
 	if legacy := legacySharedIndexDir(); legacy != "" {
 		if strings.EqualFold(normalizePathKey(idx), normalizePathKey(legacy)) {
-			def := defaultIndexDirByBase(baseDir)
-			idx = def
+			idx = defaultIndexDirByBase(baseDir)
+		}
+	}
+	// 兼容旧版：索引曾在 %LOCALAPPDATA%\\SearchCenter\\bluge_index_<tag>，现统一迁入 Data\\fulltext-index\\
+	if legacyPer := legacyPerWorkspaceIndexDir(baseDir); legacyPer != "" {
+		if strings.EqualFold(normalizePathKey(idx), normalizePathKey(legacyPer)) {
+			idx = defaultIndexDirByBase(baseDir)
 		}
 	}
 	if !filepath.IsAbs(idx) {
@@ -170,12 +175,18 @@ func normalizeFullTextRuntimeConfig(baseDir string, cfg FullTextRuntimeConfig) F
 }
 
 func defaultIndexDirByBase(baseDir string) string {
+	baseKey := strings.ToLower(filepath.Clean(baseDir))
+	tag := fmt.Sprintf("%08x", crc32.ChecksumIEEE([]byte(baseKey)))
+	return filepath.Join(baseDir, "Data", "fulltext-index", "bluge_index_"+tag)
+}
+
+func legacyPerWorkspaceIndexDir(baseDir string) string {
 	local := strings.TrimSpace(os.Getenv("LOCALAPPDATA"))
 	if local == "" {
 		local = strings.TrimSpace(os.Getenv("APPDATA"))
 	}
 	if local == "" {
-		local = os.TempDir()
+		return ""
 	}
 	baseKey := strings.ToLower(filepath.Clean(baseDir))
 	tag := fmt.Sprintf("%08x", crc32.ChecksumIEEE([]byte(baseKey)))

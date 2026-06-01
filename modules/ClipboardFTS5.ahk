@@ -11,16 +11,16 @@
 ; ======================================================================================================================
 
 #Requires AutoHotkey v2.0
-#Include ..\lib\Class_SQLiteDB.ahk
-#Include ..\lib\Gdip_All.ahk
-#Include ..\lib\WinClipAPI.ahk
-#Include ..\lib\WinClip.ahk
-#Include ..\lib\ImagePut.ahk
+#Include ..\lib\ahk\Class_SQLiteDB.ahk
+#Include ..\lib\ahk\Gdip_All.ahk
+#Include ..\lib\ahk\WinClipAPI.ahk
+#Include ..\lib\ahk\WinClip.ahk
+#Include ..\lib\ahk\ImagePut.ahk
 
 ; ===================== 全局变量 =====================
 global ClipboardFTS5DB := 0  ; SQLite FTS5 数据库对象
 ; 获取主脚本目录（主脚本会在包含此模块前定义 MainScriptDir）
-global ClipboardFTS5DBPath := (IsSet(MainScriptDir) ? MainScriptDir : A_ScriptDir) "\Clipboard.db"  ; 数据库文件路径
+global ClipboardFTS5DBPath := ""  ; 由 InitClipboardFTS5DB 设为 Data\Clipboard.db
 
 ; ===================== 启动 SQL 批处理（核心 DDL）=====================
 ClipboardFTS5_GetStartupSqlStatements() {
@@ -66,14 +66,16 @@ ClipboardFTS5_RegisterStartupSql()
 ; 创建 Clipboard.db 数据库，开启 WAL 模式，创建 FTS5 虚拟表
 InitClipboardFTS5DB() {
     global ClipboardFTS5DB, ClipboardFTS5DBPath, MainScriptDir
+    Nmer_EnsureDataDir()
+    ClipboardFTS5DBPath := Nmer_ClipboardFts5DbPath()
     
     ; 获取主脚本目录（主脚本会在包含此模块前定义 MainScriptDir）
     ScriptDir := (IsSet(MainScriptDir) ? MainScriptDir : A_ScriptDir)
     
     ; 1. 检查 sqlite3.dll 是否存在（指向主脚本所在目录）
-    DllPath := ScriptDir "\sqlite3.dll"
+    DllPath := Nmer_Sqlite3DllPath()
     if (!FileExist(DllPath)) {
-        MsgBox("sqlite3.dll 未找到。`n请确保 sqlite3.dll 与脚本位于同一目录。", "数据库初始化错误", "IconX")
+        MsgBox("sqlite3.dll 未找到。`n请确保 lib\runtime\sqlite3.dll 存在。", "数据库初始化错误", "IconX")
         ClipboardFTS5DB := 0
         return false
     }
@@ -296,31 +298,9 @@ _ClipboardFTS5_GetEverythingResults(keyword, maxResults := 10, includeFolders :=
     static evDll := ""
     static isInitialized := false
     
-    ; 初始化 DLL 路径（支持主脚本目录和当前脚本目录）
+    ; 初始化 DLL 路径（tools/everything 优先，兼容 lib/）
     if (evDll = "") {
-        ; 优先使用主脚本目录
-        if (IsSet(MainScriptDir) && MainScriptDir != "") {
-            evDll := MainScriptDir . "\lib\everything64.dll"
-        } else {
-            ; 尝试多个可能的路径
-            possiblePaths := [
-                A_ScriptDir . "\..\lib\everything64.dll",  ; 从 modules 目录向上
-                A_ScriptDir . "\lib\everything64.dll",      ; 当前目录
-                A_WorkingDir . "\lib\everything64.dll"       ; 工作目录
-            ]
-            
-            for index, path in possiblePaths {
-                if (FileExist(path)) {
-                    evDll := path
-                    break
-                }
-            }
-            
-            ; 如果仍未找到，使用默认路径
-            if (evDll = "") {
-                evDll := A_ScriptDir . "\..\lib\everything64.dll"
-            }
-        }
+        evDll := Nmer_EverythingDllPath()
     }
     
     ; 1. 基础防护

@@ -4,7 +4,7 @@
 ; ======================================================================================================================
 
 #Requires AutoHotkey v2.0
-#Include ..\lib\WebView2.ahk
+#Include ..\lib\ahk\WebView2.ahk
 
 ; 创建诊断窗口
 DiagGui := Gui("+Resize", "WebView2 诊断工具")
@@ -35,7 +35,7 @@ TestWebView2(*) {
     
     ; 1. 检查 WebView2.ahk 是否存在
     Log("`n[1/7] 检查 WebView2.ahk 文件...")
-    webview2Path := A_ScriptDir "\lib\WebView2.ahk"
+    webview2Path := A_ScriptDir "\lib\ahk\WebView2.ahk"
     if FileExist(webview2Path) {
         Log("✓ WebView2.ahk 存在: " . webview2Path)
     } else {

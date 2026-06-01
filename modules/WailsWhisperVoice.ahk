@@ -120,8 +120,8 @@ WailsWhisper_SpawnRecordProcess(wavPath, stopPath) {
 }
 
 WailsWhisper_FindFfmpeg() {
-    if FileExist(A_ScriptDir . "\lib\ffmpeg.exe")
-        return A_ScriptDir . "\lib\ffmpeg.exe"
+    if FileExist(Nmer_LibRuntimePath("ffmpeg.exe"))
+        return Nmer_LibRuntimePath("ffmpeg.exe")
     try {
         if (p := EnvGet("FFMPEG_PATH")) && FileExist(p)
             return p
@@ -159,7 +159,7 @@ WailsWhisper_GetNotReadyReason() {
     if !FileExist(root . "\transcribe_cli.py")
         return "缺少 tools\whisper-stt\transcribe_cli.py"
     if !WailsWhisper_HasFfmpeg()
-        return "未找到 ffmpeg，请放入 lib\ffmpeg.exe 或安装到 PATH"
+        return "未找到 ffmpeg，请放入 lib\\runtime\\ffmpeg.exe 或安装到 PATH"
     return ""
 }
 

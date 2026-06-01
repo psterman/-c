@@ -2,7 +2,7 @@
 ; Prompt Quick-Pad / CapsLock+B settings read-write and capture-draft sync.
 
 PSS_CursorShortcutIniPath() {
-    return A_ScriptDir . "\CursorShortcut.ini"
+    return Nmer_ResolveConfigFile()
 }
 
 PSS_IniWritePQP(Key, Value) {

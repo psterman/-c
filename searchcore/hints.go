@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 )
 
 // buildSearchResultHints gives actionable diagnostics when no result is returned.
@@ -16,9 +15,9 @@ func buildSearchResultHints(baseDir string, itemCount int, query string) []strin
 		h = append(h, "未挂载 Data/CursorData.db：无法查询 cur.ClipboardHistory")
 	}
 
-	dll := filepath.Join(baseDir, "lib", "everything64.dll")
+	dll := everythingDLLPath(baseDir)
 	if _, err := os.Stat(dll); err != nil {
-		h = append(h, "未找到 lib/everything64.dll，Everything 文件索引不可用")
+		h = append(h, "未找到 tools/everything/everything64.dll（或 lib/ 兼容路径），Everything 文件索引不可用")
 	} else if resolveEverythingExe(baseDir) == "" {
 		h = append(h, "未检测到 Everything.exe，请安装 voidtools Everything")
 	}

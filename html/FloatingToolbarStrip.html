@@ -964,7 +964,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </div>
 <button type="button" class="btn2 settings-advanced-toggle" id="settingsAdvancedToggle">高级选项 ▾</button>
 <div id="settingsAdvanced" class="settings-advanced" hidden>
-<div class="fld" id="fldTtydShellRow" style="display:none"><label for="ttydShellCommand">终端启动命令（Shell）</label><input id="ttydShellCommand" class="ctl" type="text" spellcheck="false" autocomplete="off" placeholder="cmd.exe" /><div class="hint mini">传给本机 ttyd 的 Shell（如 <code>cmd.exe</code>、<code>powershell</code> 完整路径等）。点「完成」后写入配置并建议重启 ttyd。若被拦截请允许主目录下 <code>ttyd.exe</code> 或检查本机安全软件。</div></div>
+<div class="fld" id="fldTtydShellRow" style="display:none"><label for="ttydShellCommand">终端启动命令（Shell）</label><input id="ttydShellCommand" class="ctl" type="text" spellcheck="false" autocomplete="off" placeholder="cmd.exe" /><div class="hint mini">传给本机 ttyd 的 Shell（如 <code>cmd.exe</code>、<code>powershell</code> 完整路径等）。点「完成」后写入配置并建议重启 ttyd。若被拦截请允许 <code>tools/ttyd/ttyd.exe</code> 或检查本机安全软件。</div></div>
 <div class="fld" id="fldMinimaxRegionRow" style="display:none"><label>MiniMax 节点（须与 Token Plan 密钥区域一致）</label><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn2" id="minimaxRegionCn">国内 · api.minimaxi.com</button><button type="button" class="btn2" id="minimaxRegionIntl">国际 · api.minimax.io</button></div><div class="hint mini">与 OpenClaw 一致请选<strong>国内</strong>；勿混用国际地址 + 国内密钥（会 invalid api key）。</div></div>
 <div class="fld" id="fldBaseUrlRow"><label for="baseUrl">Base URL</label><input id="baseUrl" class="ctl" type="text" autocomplete="off"></div>
 <div class="fld" id="fldOpenClawSessionRow" style="display:none"><label for="openclawSessionKey">Gateway Session Key</label><input id="openclawSessionKey" class="ctl" type="text" autocomplete="off" list="openclawSessionOptions" placeholder="agent:main:... / main"><datalist id="openclawSessionOptions"></datalist><div class="hint mini" id="openclawSessionHint">留空时该标签自动使用独立 `niuma-*` 会话；如需对齐 OpenClaw Control，请填写完整 session key。</div></div>
@@ -993,7 +993,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <div class="hint mini" id="nodeConfigHint">Ctrl+Enter 或点「保存并连接」完成配置；左侧 ⚙️ 随时打开此面板。</div>
 </div>
 </div>
-<footer class="sf"><div class="st" id="config-status"></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn2" id="syncStudioLlm" type="button" title="从 config/user_studio.json 读取">从智能定制同步</button><button class="btn2" id="resetCfg" type="button">重置</button><button class="btn2" id="nodeConfigTest" type="button">测试 API</button><button class="btn2" id="testCfg" type="button" hidden aria-hidden="true">测试</button><button class="btn3" id="nodeConfigSave" type="button">保存并连接</button><button class="btn3" id="saveCfg" type="button" hidden aria-hidden="true">完成</button></div></footer>
+<footer class="sf"><div class="st" id="config-status"></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn2" id="syncStudioLlm" type="button" title="从 local/user_studio.json 读取">从智能定制同步</button><button class="btn2" id="resetCfg" type="button">重置</button><button class="btn2" id="nodeConfigTest" type="button">测试 API</button><button class="btn2" id="testCfg" type="button" hidden aria-hidden="true">测试</button><button class="btn3" id="nodeConfigSave" type="button">保存并连接</button><button class="btn3" id="saveCfg" type="button" hidden aria-hidden="true">完成</button></div></footer>
 </div>
 </section>
 <div id="main">
@@ -1149,7 +1149,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 <div id="ttydCustomize" aria-hidden="true">
 <div class="sbg" id="ttydCustomizeBg"></div>
 <section class="sd">
-<header class="sh"><div><div class="sbt">终端定制（ttyd）</div><div class="sbt2">与设置中心「智能定制」共用 config/user_studio.json</div></div><button class="ib" id="ttydCustomizeClose" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+<header class="sh"><div><div class="sbt">终端定制（ttyd）</div><div class="sbt2">与设置中心「智能定制」共用 local/user_studio.json</div></div><button class="ib" id="ttydCustomizeClose" type="button" title="关闭" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
 <div class="sbody">
 <div class="fld"><label for="ttydStudioShell">Shell 命令</label><input id="ttydStudioShell" class="ctl" type="text" spellcheck="false" autocomplete="off" placeholder="cmd.exe" /><div class="hint mini">例如 <code>cmd.exe</code>、<code>powershell.exe</code>、<code>cmd.exe /k cd /d D:\项目</code></div></div>
 <div class="fld"><label for="ttydStudioWorkDir">工作目录</label><div style="display:flex;gap:8px;align-items:center"><input id="ttydStudioWorkDir" class="ctl" type="text" style="flex:1" spellcheck="false" placeholder="留空使用脚本目录" /><button type="button" class="btn3" id="ttydStudioBrowseWd">浏览</button></div></div>
@@ -1199,7 +1199,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
    *   niuma_chat_drawer_config_v2  全局：apiKeys, systemPrompt, freeChatMode…
    *   History key: local:{sessionId}；OpenClaw openclaw:{gatewaySessionKey}
    *
-   * Layer B HTTP（仅 dev serve3000.js）
+   * Layer B HTTP（仅 dev tools/dev/serve3000.js）
    *   GET/POST /api/niuma/history | /api/niuma/audit
    *   POST /api/niuma/upload | /api/niuma/attachments/context
    *
@@ -1285,9 +1285,9 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       { label: 'Copilot CLI', icon: 'copilot_cli', api: null, cli: 'copilot_cli' },
       { label: '定制终端', icon: 'studio_cli', api: null, cli: 'studio_cli', hint: '智能定制 ttyd · 端口 7691' }
     ],
-    ICON_PRIMARY = '/aiicons/',
-    ICON_SECOND = '/lib/images/',
-    ICON_FALLBACK = '/lib/images/chat-ai-fallback.svg',
+    ICON_PRIMARY = '/assets/icons/ai/',
+    ICON_SECOND = '/assets/icons/app/',
+    ICON_FALLBACK = '/assets/icons/app/chat-ai-fallback.svg',
     PROVIDER_ICON_EXTS = ['.png', '.jpg', '.jpeg', '.svg', '.webp'],
     PROVIDER_ICON_BASES = {
       openai: ['ChatGPT', 'chatgpt', 'openai', 'codex', 'Codex'],
@@ -2465,7 +2465,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     }
     if (ttydStudioExeHint) {
       ttydStudioExeHint.textContent = ttyd.exeExists === false
-        ? '未找到主目录 ttyd.exe，请放置后重启脚本。'
+        ? '未找到 tools/ttyd/ttyd.exe，请放置后重启脚本。'
         : '端口 ' + (ttyd.port || 7691) + (ttyd.httpReady ? ' · 终端已就绪' : ' · 未连接');
     }
     if (ttydCustomizeStatus) ttydCustomizeStatus.textContent = '已加载定制配置';
@@ -17522,7 +17522,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       } catch (e) {
         var em = e && e.message ? String(e.message) : String(e);
         if (/Failed to fetch|NetworkError|connect|Unable to connect|无法连接/i.test(em)) {
-          em = 'upload service offline (start serve3000.js)';
+          em = 'upload service offline (start tools/dev/serve3000.js)';
         }
         for (var k = pa.items.length - 1; k >= 0; k--) {
           if (pa.items[k] && pa.items[k].id === pendingId) {
@@ -18828,7 +18828,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         var eng = normalizeProviderId(d.engine || (ts2 && ts2.provider) || '');
         cstatForSession(
           ts2 && ts2.id,
-          'ttyd：' + (d.message || '启动失败，请检查同目录下是否有 ttyd.exe 或点「重试/重启」'),
+          'ttyd：' + (d.message || '启动失败，请检查 tools/ttyd/ttyd.exe 或点「重试/重启」'),
           'error'
         );
         if (eng) mergeNodeRuntime({ nodeKey: eng, status: 'error', detail: d.message || '', tick: Date.now() });

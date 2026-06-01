@@ -4,7 +4,8 @@
 
 #Requires AutoHotkey v2.0
 
-#Include ..\lib\Class_SQLiteDB.ahk
+#Include ..\lib\ahk\Class_SQLiteDB.ahk
+#Include LocalPaths.ahk
 
 global g_GroundingCacheDB := 0
 global g_GroundingCachePath := ""
@@ -31,11 +32,11 @@ GroundingCache_GetDbPath() {
   p := Trim(String(g_GroundingCachePath || ""))
   if p != ""
     return p
-  return GroundingCache_GetProjectRoot() . "\Data\GroundingCache.db"
+  return Nmer_GroundingCacheDbPath()
 }
 
 GroundingCache_GetL2DbPath() {
-  return GroundingCache_GetProjectRoot() . "\Data\GroundingCache_vec.db"
+  return Nmer_GroundingCacheVecDbPath()
 }
 
 GroundingCache_OpenL2Db() {
@@ -66,12 +67,12 @@ GroundingCache_DropLegacyVecOnMain() {
 
 GroundingCache_GetVecDllPath() {
   root := GroundingCache_GetProjectRoot()
-  for , rel in ["\lib\vec0.dll", "\lib\sqlite-vec.dll"] {
+    for , rel in ["\lib\runtime\vec0.dll", "\lib\vec0.dll", "\lib\sqlite-vec.dll"] {
     p := root . rel
     if FileExist(p)
       return p
   }
-  return root . "\lib\vec0.dll"
+  return Nmer_LibRuntimePath("vec0.dll")
 }
 
 GroundingCache_LogL2(msg) {

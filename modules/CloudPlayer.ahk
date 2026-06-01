@@ -4695,7 +4695,7 @@ CloudPlayer_DownloadFolderZipAfterWalk(walkOk, rid, zipCtx) {
                 zipErr := Trim(String(zipRes["error"]))
             msgZip := zipTimedOut ? "zip timeout" : ("zip failed, exit code " . zipExitCode . (zipErr != "" ? (" (" . SubStr(zipErr, 1, 120) . ")") : ""))
             errCode := zipTimedOut ? "zip_timeout" : "zip_failed"
-            if InStr(StrLower(zipErr), "missing lib\\7z.exe")
+            if InStr(StrLower(zipErr), "missing lib\\runtime\\7z.exe")
                 errCode := "missing_7z"
             CloudPlayer_PostDownloadResult(false, msgZip, "", name, rid, errCode)
             return
@@ -5613,9 +5613,9 @@ CloudPlayer_ZipStageToFile(stageRoot, zipPath, timeoutMs := 180000) {
         out["error"] := "stage folder missing"
         return out
     }
-    sevenZip := A_ScriptDir . "\lib\7z.exe"
+    sevenZip := Nmer_LibRuntimePath("7z.exe")
     if !FileExist(sevenZip) {
-        out["error"] := "missing lib\\7z.exe"
+        out["error"] := "missing lib\\runtime\\7z.exe"
         return out
     }
     try FileDelete(zipPath)
@@ -6133,9 +6133,9 @@ CloudPlayer_GetArchiveEntries(remotePath, token := "", reqId := "") {
         return out
     }
 
-    sevenZip := A_ScriptDir . "\lib\7z.exe"
+    sevenZip := Nmer_LibRuntimePath("7z.exe")
     if !FileExist(sevenZip) {
-        out["message"] := "missing lib\\7z.exe"
+        out["message"] := "missing lib\\runtime\\7z.exe"
         return out
     }
 
@@ -6229,9 +6229,9 @@ CloudPlayer_GetArchiveEntriesAsync_OnResolved(reqId, rp, tk, info, cb) {
 
 CloudPlayer_GetArchiveEntries_FromResolved(remotePath, token, info, reqId := "") {
     out := Map("ok", false, "message", "", "entries", [])
-    sevenZip := A_ScriptDir . "\lib\7z.exe"
+    sevenZip := Nmer_LibRuntimePath("7z.exe")
     if !FileExist(sevenZip) {
-        out["message"] := "missing lib\\7z.exe"
+        out["message"] := "missing lib\\runtime\\7z.exe"
         return out
     }
     stamp := FormatTime(, "yyyyMMdd_HHmmss")

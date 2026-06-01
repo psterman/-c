@@ -104,14 +104,14 @@ AIListPanelColors := {
     PopupEditText: "f0f0f0"
 }
 
-PromptQuickPad_JsonPath() => A_ScriptDir . "\prompts.json"
+PromptQuickPad_JsonPath() => Nmer_PromptsJsonPath()
 
 PromptQuickPad_ShouldUseWebView() {
     static ready := false
     static useWeb := true
     if !ready {
         ready := true
-        cfg := A_ScriptDir . "\CursorShortcut.ini"
+        cfg := Nmer_ResolveConfigFile()
         try {
             s := IniRead(cfg, "PromptQuickPad", "UseWebView", "1")
         } catch {
@@ -932,7 +932,7 @@ PromptQuickPad_ResetCaptureDraftRefs() {
 
 PromptQuickPad_LoadCaptureExpandedFromIni() {
     global PromptQuickPad_CaptureExpanded
-    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    cfg := Nmer_ResolveConfigFile()
     try
         PromptQuickPad_CaptureExpanded := (IniRead(cfg, "PromptQuickPad", "CapturePanelExpanded", "1") = "1")
     catch
@@ -941,7 +941,7 @@ PromptQuickPad_LoadCaptureExpandedFromIni() {
 
 PromptQuickPad_SaveCaptureExpandedToIni() {
     global PromptQuickPad_CaptureExpanded
-    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    cfg := Nmer_ResolveConfigFile()
     try IniWrite(PromptQuickPad_CaptureExpanded ? "1" : "0", cfg, "PromptQuickPad", "CapturePanelExpanded")
     catch {
     }
@@ -1642,7 +1642,7 @@ PromptQuickPad_OnWmNotify(wParam, lParam, msg, hwnd) {
 PromptQuickPad_LoadPinFromIni() {
     global PromptQuickPad_PinTop
     try {
-        v := IniRead(A_ScriptDir . "\CursorShortcut.ini", "PromptQuickPad", "AlwaysOnTop", "1")
+        v := IniRead(Nmer_ResolveConfigFile(), "PromptQuickPad", "AlwaysOnTop", "1")
         PromptQuickPad_PinTop := !(v = "0" || StrLower(v) = "false")
     } catch {
         PromptQuickPad_PinTop := true
@@ -1651,7 +1651,7 @@ PromptQuickPad_LoadPinFromIni() {
 
 PromptQuickPad_SavePinToIni() {
     global PromptQuickPad_PinTop
-    try IniWrite(PromptQuickPad_PinTop ? "1" : "0", A_ScriptDir . "\CursorShortcut.ini", "PromptQuickPad", "AlwaysOnTop")
+    try IniWrite(PromptQuickPad_PinTop ? "1" : "0", Nmer_ResolveConfigFile(), "PromptQuickPad", "AlwaysOnTop")
     catch {
     }
 }
@@ -2055,7 +2055,7 @@ PromptQuickPad_OpenEditWeb(shell, mergedIndex) {
 
 PromptQuickPad_SaveBuiltinPrompt(KeyName, NewContent) {
     global Prompt_Explain, Prompt_Refactor, Prompt_Optimize
-    cfg := A_ScriptDir . "\CursorShortcut.ini"
+    cfg := Nmer_ResolveConfigFile()
     if KeyName = "Explain" {
         Prompt_Explain := NewContent
         try IniWrite(NewContent, cfg, "Settings", "Prompt_Explain")
@@ -2542,7 +2542,7 @@ SaveAIListPanelPosition() {
         AIListPanelWindowY := y
         AIListPanelWindowW := w
         AIListPanelWindowH := h
-        ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+        ConfigFile := Nmer_ResolveConfigFile()
         IniWrite(String(x), ConfigFile, "WindowPositions", "AIListPanel_X")
         IniWrite(String(y), ConfigFile, "WindowPositions", "AIListPanel_Y")
         IniWrite(String(w), ConfigFile, "WindowPositions", "AIListPanel_W")
@@ -2554,7 +2554,7 @@ SaveAIListPanelPosition() {
 LoadAIListPanelPosition() {
     global AIListPanelWindowX, AIListPanelWindowY, AIListPanelWindowW, AIListPanelWindowH
     try {
-        ConfigFile := A_ScriptDir . "\CursorShortcut.ini"
+        ConfigFile := Nmer_ResolveConfigFile()
         ScreenWidth := SysGet(0)
         ScreenHeight := SysGet(1)
         savedX := IniRead(ConfigFile, "WindowPositions", "AIListPanel_X", "")

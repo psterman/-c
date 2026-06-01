@@ -15,30 +15,7 @@ EverythingUserTipOnce(Message, CooldownMs := 90000) {
 }
 
 ResolveEverythingExePath() {
-    root := Everything_GetScriptRoot()
-    candidates := []
-    candidates.Push(root "\Everything64.exe")
-    candidates.Push(root "\Everything.exe")
-    candidates.Push(A_ProgramFiles "\Everything\Everything64.exe")
-    candidates.Push(A_ProgramFiles "\Everything\Everything.exe")
-    candidates.Push(A_ProgramFiles "\voidtools\Everything\Everything64.exe")
-    candidates.Push(A_ProgramFiles "\voidtools\Everything\Everything.exe")
-
-    try {
-        pf86 := EnvGet("ProgramFiles(x86)")
-        if (pf86 != "") {
-            candidates.Push(pf86 "\Everything\Everything64.exe")
-            candidates.Push(pf86 "\Everything\Everything.exe")
-            candidates.Push(pf86 "\voidtools\Everything\Everything64.exe")
-            candidates.Push(pf86 "\voidtools\Everything\Everything.exe")
-        }
-    }
-
-    for _, p in candidates {
-        if (p != "" && FileExist(p))
-            return p
-    }
-    return ""
+    return Nmer_ResolveEverythingExePath()
 }
 
 GetEverythingPID(&ProcessName := "", Require64 := false) {
@@ -86,13 +63,13 @@ TryStartEverything(&StartedFrom := "") {
 }
 
 GetEverythingResults(keyword, maxResults := 30, includeFolders := true) {
-    evDll := Everything_GetScriptRoot() "\lib\everything64.dll"
+    evDll := Nmer_EverythingDllPath()
     static isInitialized := false
 
     ; 1. 基础防护
     if (!FileExist(evDll)) {
         OutputDebug("AHK_DEBUG: 致命错误 - 找不到 everything64.dll")
-        EverythingUserTipOnce("未找到 lib\everything64.dll。请从 Everything SDK 复制 Everything64.dll 到脚本 lib 目录并重命名为 everything64.dll。")
+        EverythingUserTipOnce("未找到 everything64.dll。请将 Everything64.dll 放到 tools\everything\ 或 lib\ 并重命名为 everything64.dll。")
         return []
     }
 
@@ -101,7 +78,7 @@ GetEverythingResults(keyword, maxResults := 30, includeFolders := true) {
         hModule := DllCall("LoadLibrary", "Str", evDll, "Ptr")
         if (!hModule) {
             OutputDebug("AHK_DEBUG: 无法加载 everything64.dll")
-            EverythingUserTipOnce("无法加载 lib\everything64.dll（位数或依赖是否与系统一致？）。")
+            EverythingUserTipOnce("无法加载 everything64.dll（位数或依赖是否与系统一致？）。")
             return []
         }
         isInitialized := true
@@ -119,7 +96,7 @@ GetEverythingResults(keyword, maxResults := 30, includeFolders := true) {
             startedFrom := ""
             if (!TryStartEverything(&startedFrom)) {
                 OutputDebug("AHK_DEBUG: 无法启动 Everything, 来源: " . startedFrom)
-                EverythingUserTipOnce("无法启动 Everything。请确认根目录存在 Everything64.exe（64位）并使用与脚本同等权限运行。")
+                EverythingUserTipOnce("无法启动 Everything。请确认 tools\everything\ 存在 Everything64.exe（64位）并使用与脚本同等权限运行。")
                 return []
             }
             majorVer := DllCall(evDll "\Everything_GetMajorVersion", "UInt")
@@ -222,7 +199,7 @@ InitEverythingService() {
         OutputDebug("AHK_DEBUG: Everything 服务已在运行: " . runningName . " (PID: " . EverythingPID . ")")
 
         root := Everything_GetScriptRoot()
-        evDll := root "\lib\everything64.dll"
+        evDll := Nmer_EverythingDllPath()
         if (FileExist(evDll)) {
             majorVer := DllCall(evDll "\Everything_GetMajorVersion", "UInt")
             if (majorVer = 0) {
@@ -236,7 +213,7 @@ InitEverythingService() {
 
 ; Everything API 初始化函数
 Everything_Init() {
-    evDll := Everything_GetScriptRoot() "\lib\everything64.dll"
+    evDll := Nmer_EverythingDllPath()
     static isInitialized := false
 
     if (!FileExist(evDll)) {

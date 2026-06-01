@@ -11,7 +11,7 @@
     { id: 'screenshot', title: '截图', sceneId: 'screenshot', cmdId: 'ch_t', emoji: '📸', gradient: 'linear-gradient(145deg,#12384a,#2aa8c9)' },
     { id: 'settings', title: '设置', sceneId: 'settings', cmdId: 'qa_config', emoji: '⚙️', gradient: 'linear-gradient(145deg,#2a2f38,#5c6778)' },
     { id: 'hotkeys', title: '快捷键', sceneId: 'hotkeys', cmdId: 'sys_show_vk', emoji: '⌨️', gradient: 'linear-gradient(145deg,#4a2f14,#d97706)' },
-    { id: 'cursor', title: 'Cursor', sceneId: 'cursor', cmdId: 'cursor_open', img: 'lib/images/cursor.png', gradient: 'linear-gradient(145deg,#1a3350,#3b82f6)' },
+    { id: 'cursor', title: 'Cursor', sceneId: 'cursor', cmdId: 'cursor_open', img: 'assets/icons/app/cursor.png', gradient: 'linear-gradient(145deg,#1a3350,#3b82f6)' },
     { id: 'cloud', title: '牛马云', sceneId: 'cloudplayer', cmdId: 'open_cloudplayer', always: true, emoji: '☁️', gradient: 'linear-gradient(145deg,#1a2f45,#38bdf8)' }
   ];
 

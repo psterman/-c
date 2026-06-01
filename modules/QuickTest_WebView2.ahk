@@ -1,6 +1,6 @@
 ; 快速测试 WebView2
 #Requires AutoHotkey v2.0
-#Include ..\lib\WebView2.ahk
+#Include ..\lib\ahk\WebView2.ahk
 
 MsgBox("正在创建 WebView2 测试窗口...`n`n如果看到绿色窗口，说明 WebView2 正常。`n如果黑屏或报错，说明 WebView2 有问题。", "WebView2 快速测试", "Iconi T3")
 
