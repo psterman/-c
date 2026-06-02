@@ -1,6 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const childProcess = require("child_process");
 
 const root = process.cwd();
 const port = 3000;
@@ -24,6 +25,15 @@ const mime = {
   ".txt": "text/plain; charset=utf-8"
 };
 
+function applyCorsHeaders(res) {
+  try {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Max-Age", "86400");
+  } catch (_) {}
+}
+
 function safePath(urlPath) {
   const raw = decodeURIComponent((urlPath || "/").split("?")[0].split("#")[0]);
   const normalized = raw === "/" ? "/openclaw2.html" : raw;
@@ -35,6 +45,24 @@ function safePath(urlPath) {
 function sendJson(res, status, body) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(body));
+}
+
+function appendNiumaTraceLog(line) {
+  try {
+    fs.mkdirSync(niumaHistoryDir, { recursive: true });
+    fs.appendFileSync(path.join(niumaHistoryDir, "niuma_trace.log"), String(line || "") + "\n", "utf8");
+  } catch (_) {}
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function truncStr(s, n) {
+  const t = String(s == null ? "" : s);
+  const lim = Math.max(20, Number(n) || 300);
+  if (t.length <= lim) return t;
+  return t.slice(0, lim) + `…(+${t.length - lim})`;
 }
 
 function readNiumaHistory(cb) {
@@ -246,7 +274,94 @@ function extOf(name) {
 function shouldExtractText(name, mimeType) {
   const mt = String(mimeType || "").toLowerCase();
   if (mt.startsWith("text/")) return true;
-  return /^(md|txt|json|csv|log|xml|yml|yaml|ini|cfg|js|ts|py|java|go|rs|html|css|sql|bat|cmd|ps1|psm1|sh|toml|env)$/i.test(extOf(name));
+  return /^(md|txt|json|csv|log|xml|yml|yaml|ini|cfg|js|ts|py|java|go|rs|html|css|sql|bat|cmd|ps1|psm1|sh|toml|env|pdf|docx|doc)$/i.test(extOf(name));
+}
+
+function isImageMimeOrExt(name, mimeType) {
+  const mt = String(mimeType || "").toLowerCase();
+  if (mt.startsWith("image/")) return true;
+  return /^(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(extOf(name));
+}
+
+function resolvePdfToTextExe() {
+  const candidates = [
+    path.join(root, "tools", "search", "pdftotext.exe"),
+    path.join(root, "tools", "pdftotext.exe"),
+    path.join(root, "lib", "pdftotext.exe")
+  ];
+  for (const p of candidates) {
+    try {
+      const st = fs.statSync(p);
+      if (st && st.isFile()) return p;
+    } catch (_) {}
+  }
+  return "";
+}
+
+function extractPdfText(absPath, maxLen) {
+  const exe = resolvePdfToTextExe();
+  if (!exe) return "";
+  try {
+    const res = childProcess.spawnSync(exe, ["-enc", "UTF-8", absPath, "-"], {
+      encoding: "utf8",
+      windowsHide: true,
+      timeout: 8000,
+      maxBuffer: 1024 * 1024
+    });
+    const txt = String((res && res.stdout) || "").replace(/\r\n/g, "\n").trim();
+    return txt ? txt.slice(0, maxLen) : "";
+  } catch (_) {
+    return "";
+  }
+}
+
+function extractDocxText(absPath, maxLen) {
+  const p = String(absPath || "").replace(/'/g, "''");
+  const script =
+    "$ErrorActionPreference='Stop';" +
+    "Add-Type -AssemblyName System.IO.Compression.FileSystem;" +
+    "$zip=[System.IO.Compression.ZipFile]::OpenRead('" + p + "');" +
+    "try{" +
+    "$want=@('word/document.xml');" +
+    "$want+=$zip.Entries | Where-Object { $_.FullName -like 'word/header*.xml' -or $_.FullName -like 'word/footer*.xml' } | ForEach-Object { $_.FullName };" +
+    "$parts=New-Object System.Collections.Generic.List[string];" +
+    "foreach($n in $want){$e=$zip.Entries | Where-Object { $_.FullName -eq $n } | Select-Object -First 1;" +
+    "if($e){$sr=New-Object IO.StreamReader($e.Open());try{$xml=$sr.ReadToEnd()}finally{$sr.Close()};" +
+    "$txt=[Regex]::Replace($xml,'<w:tab[^>]*/>','`t');" +
+    "$txt=[Regex]::Replace($txt,'</w:p>','`n');" +
+    "$txt=[Regex]::Replace($txt,'<[^>]+>',' ');" +
+    "$txt=[System.Net.WebUtility]::HtmlDecode($txt);" +
+    "$txt=[Regex]::Replace($txt,'\\s+',' ').Trim();" +
+    "if($txt){$parts.Add($txt)}}};" +
+    "$out=($parts -join \"`n\").Trim();Write-Output $out;" +
+    "}finally{$zip.Dispose()}";
+  try {
+    const res = childProcess.spawnSync("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script], {
+      encoding: "utf8",
+      windowsHide: true,
+      timeout: 8000,
+      maxBuffer: 1024 * 1024
+    });
+    const txt = String((res && res.stdout) || "").replace(/\r\n/g, "\n").trim();
+    return txt ? txt.slice(0, maxLen) : "";
+  } catch (_) {
+    return "";
+  }
+}
+
+function extractTextExcerpt(name, mimeType, buf, absPath) {
+  const maxLen = 12000;
+  const mt = String(mimeType || "").toLowerCase();
+  const ext = extOf(name);
+  if (mt.startsWith("text/")) {
+    return Buffer.from(buf || Buffer.alloc(0)).toString("utf8").slice(0, maxLen).trim();
+  }
+  if (/^(md|txt|json|csv|log|xml|yml|yaml|ini|cfg|js|ts|py|java|go|rs|html|css|sql|bat|cmd|ps1|psm1|sh|toml|env)$/i.test(ext)) {
+    return Buffer.from(buf || Buffer.alloc(0)).toString("utf8").slice(0, maxLen).trim();
+  }
+  if (ext === "pdf") return extractPdfText(absPath, maxLen);
+  if (ext === "docx") return extractDocxText(absPath, maxLen);
+  return "";
 }
 
 function persistUploadAndMeta(name, relativePath, mimeType, buf, cb) {
@@ -262,7 +377,7 @@ function persistUploadAndMeta(name, relativePath, mimeType, buf, cb) {
         const doc = metaDoc && typeof metaDoc === "object" ? metaDoc : { version: 1, files: {} };
         if (!doc.files || typeof doc.files !== "object") doc.files = {};
         let textExcerpt = "";
-        if (shouldExtractText(name, mimeType)) textExcerpt = buf.toString("utf8").slice(0, 12000).trim();
+        if (shouldExtractText(name, mimeType)) textExcerpt = extractTextExcerpt(name, mimeType, buf, absPath);
         doc.files[fileId] = {
           id: fileId,
           name,
@@ -291,6 +406,12 @@ function persistUploadAndMeta(name, relativePath, mimeType, buf, cb) {
 }
 
 const server = http.createServer((req, res) => {
+  applyCorsHeaders(res);
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
   const reqPath = decodeURIComponent((req.url || "/").split("?")[0].split("#")[0]);
   if (reqPath === "/api/niuma/upload") {
     if (req.method !== "POST") {
@@ -381,15 +502,28 @@ const server = http.createServer((req, res) => {
         sendJson(res, 400, { ok: false, error: "Invalid JSON body" });
         return;
       }
+      const traceIdRaw = body && typeof body.traceId === "string" ? body.traceId : "";
+      const traceId = traceIdRaw.trim() || ("ctx_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7));
+      const startedAt = Date.now();
       const ids = Array.isArray(body && body.fileIds) ? body.fileIds : [];
+      appendNiumaTraceLog(
+        `[${nowIso()}] [ATTACH_CTX] in traceId=${traceId} ids=${ids.length} head=${truncStr(JSON.stringify(ids.slice(0, 12)), 420)}`
+      );
       readAttachmentMeta((metaErr, metaDoc) => {
         if (metaErr) {
+          appendNiumaTraceLog(`[${nowIso()}] [ATTACH_CTX] err traceId=${traceId} meta=${truncStr(metaErr.message || String(metaErr), 420)}`);
           sendJson(res, 500, { ok: false, error: metaErr.message || String(metaErr) });
           return;
         }
         const filesMap = (metaDoc && metaDoc.files) || {};
+        const miss = [];
         const files = ids
-          .map((id) => filesMap[String(id)])
+          .map((id) => {
+            const key = String(id);
+            const hit = filesMap[key];
+            if (!hit) miss.push(key);
+            return hit;
+          })
           .filter(Boolean)
           .map((x) => ({
             id: x.id,
@@ -398,9 +532,28 @@ const server = http.createServer((req, res) => {
             type: x.type || "",
             size: Number(x.size || 0),
             uploadedAt: x.uploadedAt || null,
-            textExcerpt: String(x.textExcerpt || "").slice(0, 6000)
+            textExcerpt: String(x.textExcerpt || "").slice(0, 6000),
+            isImage: isImageMimeOrExt(x.name, x.type),
+            extractStatus: String(x.textExcerpt || "").trim() ? "ok" : "empty"
           }));
-        sendJson(res, 200, { ok: true, files });
+        let excerptNonEmpty = 0;
+        let excerptTotalChars = 0;
+        const emptyNames = [];
+        for (const f of files) {
+          const ex = String((f && f.textExcerpt) || "").trim();
+          if (ex) {
+            excerptNonEmpty += 1;
+            excerptTotalChars += ex.length;
+          } else {
+            emptyNames.push(String((f && (f.relativePath || f.name || f.id)) || ""));
+          }
+        }
+        appendNiumaTraceLog(
+          `[${nowIso()}] [ATTACH_CTX] out traceId=${traceId} ok=1 files=${files.length} miss=${miss.length}` +
+            ` excerptNonEmpty=${excerptNonEmpty} excerptTotalChars=${excerptTotalChars} emptyHead=${truncStr(JSON.stringify(emptyNames.slice(0, 24)), 520)}` +
+            ` missHead=${truncStr(JSON.stringify(miss.slice(0, 24)), 520)} ms=${Date.now() - startedAt}`
+        );
+        sendJson(res, 200, { ok: true, traceId, files });
       });
     });
     return;

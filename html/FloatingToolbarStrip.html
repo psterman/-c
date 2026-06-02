@@ -153,7 +153,13 @@ body.drawer-open #chatStatusRow{padding-bottom:calc(2px * var(--ui))}
 .hud-toggle:hover{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.4)}
 .hud-toggle.active{background:rgba(255,102,0,.16);border-color:rgba(255,102,0,.55)}
 .hud-toggle svg{width:calc(18px * var(--ui));height:calc(18px * var(--ui));stroke:currentColor;fill:none;stroke-width:2}
-#attachList{margin-top:calc(6px * var(--ui));max-height:calc(110px * var(--ui));overflow:auto;display:none;padding:calc(6px * var(--ui)) calc(8px * var(--ui));border:1px solid rgba(255,102,0,.22);border-radius:calc(8px * var(--ui));background:rgba(255,255,255,.03);color:var(--text)}
+#attachList{margin-top:calc(6px * var(--ui));max-height:calc(110px * var(--ui));overflow:auto;display:none;padding:calc(4px * var(--ui));border:1px solid rgba(255,102,0,.22);border-radius:calc(10px * var(--ui));background:rgba(255,255,255,.03);color:var(--text)}
+.attach-chip{display:flex;align-items:center;gap:calc(6px * var(--ui));padding:calc(5px * var(--ui)) calc(8px * var(--ui));border-radius:999px;border:1px solid rgba(255,102,0,.3);background:rgba(255,102,0,.08);margin:calc(4px * var(--ui));}
+.attach-chip.is-uploading{opacity:.62}
+.attach-chip.is-failed{border-color:rgba(255,122,89,.5);background:rgba(255,122,89,.12)}
+.attach-chip-name{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:calc(11px * var(--ui));}
+.attach-chip-remove{flex:0 0 auto;border:none;border-radius:999px;padding:0 calc(7px * var(--ui));height:calc(20px * var(--ui));background:#d64040;color:#fff;cursor:pointer;font-size:calc(12px * var(--ui));line-height:1}
+.attach-chip-remove:hover{background:#ea5757}
 .logo-btn{--dock-scale:1;flex-shrink:0;width:max(calc(42px * var(--ui)),34px);height:max(calc(42px * var(--ui)),34px);border:1px solid transparent;border-radius:calc(8px * var(--ui));background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:4px;transition:background-color var(--ease),border-color var(--ease),transform .24s cubic-bezier(.2,.9,.25,1),color var(--ease),box-shadow .24s ease;transform:translate3d(0,0,0) scale(var(--dock-scale));transform-origin:center center;color:#ff6600;outline:none;position:relative;will-change:transform;backface-visibility:hidden}
 .logo-btn:hover{background:rgba(255,102,0,.1);border-color:rgba(255,102,0,.32)}
 .logo-btn:focus-visible{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.5);box-shadow:none}
@@ -11046,9 +11052,45 @@ body.niuma-confirm-open{overflow:hidden}
     h.forEach(function (it, idx) {
       var c = it.content;
       if (idx === lastUserIdx && cfg && cfg.userContentForModel) c = cfg.userContentForModel;
+      if (idx === lastUserIdx && cfg && Array.isArray(cfg.userContentParts) && cfg.userContentParts.length) c = cfg.userContentParts;
       m.push({ role: it.role, content: c });
     });
     return m;
+  }
+
+  function dataUrlToClaudeImageBlock(dataUrl) {
+    var s = String(dataUrl || '').trim();
+    var m = s.match(/^data:([^;]+);base64,(.+)$/i);
+    if (!m) return null;
+    var mediaType = String(m[1] || 'image/png').toLowerCase();
+    var data = String(m[2] || '').trim();
+    if (!data) return null;
+    return {
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: mediaType,
+        data: data
+      }
+    };
+  }
+
+  function buildClaudeUserContentFromParts(parts) {
+    var arr = Array.isArray(parts) ? parts : [];
+    if (!arr.length) return null;
+    var out = [];
+    for (var i = 0; i < arr.length; i++) {
+      var p = arr[i] || {};
+      if (p.type === 'text') {
+        out.push({ type: 'text', text: String(p.text || '') });
+        continue;
+      }
+      if (p.type === 'image_url' && p.image_url && p.image_url.url) {
+        var ib = dataUrlToClaudeImageBlock(p.image_url.url);
+        if (ib) out.push(ib);
+      }
+    }
+    return out.length ? out : null;
   }
 
   function claudeMsgs(cfg) {
@@ -11063,6 +11105,10 @@ body.niuma-confirm-open{overflow:hidden}
     return h.map(function (it, idx) {
       var c = it.content;
       if (idx === lastUserIdx && cfg && cfg.userContentForModel) c = cfg.userContentForModel;
+      if (idx === lastUserIdx && cfg && Array.isArray(cfg.userContentParts) && cfg.userContentParts.length) {
+        var blocks = buildClaudeUserContentFromParts(cfg.userContentParts);
+        if (blocks) c = blocks;
+      }
       return { role: it.role === 'assistant' ? 'assistant' : 'user', content: c };
     });
   }
@@ -17235,7 +17281,9 @@ body.niuma-confirm-open{overflow:hidden}
     var h = activeSession() ? activeSession().history : [];
     var last = h[h.length - 1];
     if (!last || last.role !== 'user') throw new Error('内部错误：缺少用户消息。');
-    var msgText = String(last.content != null ? last.content : '');
+    // openclaw 分支也必须吃到 sendChat/executeModelRequest 预处理后的内容（含附件上下文）。
+    var msgText = String(cfg && cfg.userContentForModel != null ? cfg.userContentForModel : '');
+    if (!msgText.trim()) msgText = String(last.content != null ? last.content : '');
     if (!msgText.trim()) msgText = ocExtractMessageContentForHistory(last);
     cfg.systemPrompt = '';
     if (!String(msgText || '').trim()) throw new Error('上一条用户消息正文为空，请重新输入后发送。');
@@ -18137,35 +18185,82 @@ body.niuma-confirm-open{overflow:hidden}
     }
   }
 
-  async function sendChat() {
-    var s = activeSession();
-    if (!s || !s.id) return;
-    var sid = s.id;
-    if (isSessionSending(sid)) {
-      cstatForSession(sid, '该标签仍在等待上一次响应，请稍候。', 'error');
-      return;
+  function niumaTrace(eventName, traceId, data) {
+    try {
+      var payload = {
+        t: new Date().toISOString(),
+        event: String(eventName || ''),
+        traceId: String(traceId || ''),
+        data: data || {}
+      };
+      post({ type: 'niuma_debug_event', event: JSON.stringify(payload) });
+    } catch (_) {}
+  }
+
+  function truncStr(s, n) {
+    s = String(s == null ? '' : s);
+    n = Math.max(60, Number(n) || 400);
+    return s.length > n ? s.slice(0, n) + '…(+' + (s.length - n) + ')' : s;
+  }
+
+  function countNonEmptyExcerpts(files) {
+    var arr = Array.isArray(files) ? files : [];
+    var nonEmpty = 0;
+    var totalChars = 0;
+    var emptyNames = [];
+    for (var i = 0; i < arr.length; i++) {
+      var f = arr[i] || {};
+      var ex = String(f.textExcerpt || '').trim();
+      if (ex) {
+        nonEmpty++;
+        totalChars += ex.length;
+      } else {
+        emptyNames.push(String(f.relativePath || f.name || f.id || 'file'));
+      }
     }
-    var text = input.value.trim();
-    var pa = state.pendingAttach || { items: [], fileIds: [], files: [] };
+    return { nonEmpty: nonEmpty, totalChars: totalChars, emptyNames: emptyNames };
+  }
+
+  /**
+   * Payload Assembler / 发送拦截器：在发给模型前，把当前会话附件上下文捞出并注入到 user prompt。
+   * 行为保持与旧版 sendChat() 一致（含退化标记 [[ATTACH_CTX_*]] 与 file_ids 追加）。
+   */
+  async function assembleLlmPayload(rawText, pa, sid, traceId) {
+    pa = pa || { items: [], fileIds: [], files: [] };
+    var text = String(rawText || '').trim();
     var hasAttach = !!((pa.fileIds && pa.fileIds.length) || (pa.files && pa.files.length) || (pa.items && pa.items.length));
-    if (!text && !hasAttach) return;
-    var composedForModel = String(text || '').trim();
+    if (!text && !hasAttach) return null;
+
+    var composedForModel = text;
+    var shouldClearAttachAfterSend = false;
+
     if (hasAttach) {
       var idsForModel = (pa.fileIds || []).filter(Boolean).slice(0, 50);
       var attachNames = (Array.isArray(pa.items) ? pa.items : [])
-        .map(function (x) { return x && (x.relativePath || x.name) ? String(x.relativePath || x.name) : ''; })
+        .map(function (x) {
+          return x && (x.relativePath || x.name) ? String(x.relativePath || x.name) : '';
+        })
         .filter(Boolean)
         .slice(0, 30);
       try {
-        var attachCtx = await fetchAttachmentContext(pa);
+        niumaTrace('attach_ctx_fetch_start', traceId, { ids: idsForModel.length });
+        var t0 = performance && performance.now ? performance.now() : Date.now();
+        var attachCtxRes = await fetchAttachmentContext(pa, traceId);
+        var ms = Math.round(((performance && performance.now ? performance.now() : Date.now()) - t0) || 0);
+        var stats = countNonEmptyExcerpts(attachCtxRes && attachCtxRes.files);
+        niumaTrace('attach_ctx_fetch_done', traceId, {
+          ms: ms,
+          files: attachCtxRes && attachCtxRes.files ? attachCtxRes.files.length : 0,
+          excerptNonEmpty: stats.nonEmpty,
+          excerptTotalChars: stats.totalChars,
+          emptyHead: stats.emptyNames.slice(0, 12)
+        });
+        var attachCtx = formatAttachmentContextMarkdown(attachCtxRes && attachCtxRes.files);
         if (attachCtx) {
-          var marker = '[[ATTACH_CTX_PRESENT]]';
-          var fileList = attachNames.length ? '\n[Attached names]\n' + attachNames.join('\n') : '';
-          composedForModel = mergeUserTextWithAttachmentContext(composedForModel, marker + fileList + '\n' + attachCtx);
+          composedForModel = attachCtx + (composedForModel ? '\n\n' + composedForModel : '');
         } else {
-          var emptyMarker = '[[ATTACH_CTX_EMPTY]]';
           var emptyFileList = attachNames.length ? '\n[Attached names]\n' + attachNames.join('\n') : '';
-          composedForModel = (composedForModel ? composedForModel + '\n\n' : '') + emptyMarker + emptyFileList;
+          composedForModel = (composedForModel ? composedForModel + '\n\n' : '') + '[[ATTACH_CTX_EMPTY]]' + emptyFileList;
           cstatForSession(sid, '附件已上传，但未能生成上下文（Attachment Context 为空）。模型可能无法“看到”文件内容。', 'error');
         }
       } catch (eAttach) {
@@ -18174,21 +18269,68 @@ body.niuma-confirm-open{overflow:hidden}
         var failFileList = attachNames.length ? '\n[Attached names]\n' + attachNames.join('\n') : '';
         composedForModel =
           (composedForModel ? composedForModel + '\n\n' : '') +
-          failMarker + '\n[Attach error]\n' + failMsg + failFileList;
+          failMarker +
+          '\n[Attach error]\n' +
+          failMsg +
+          failFileList;
         cstatForSession(
           sid,
-          '附件上下文获取失败：' + (eAttach && eAttach.message ? eAttach.message : String(eAttach)) + '。将仅发送 file_ids，模型可能无法识别附件。',
+          '附件上下文获取失败：' +
+            (eAttach && eAttach.message ? eAttach.message : String(eAttach)) +
+            '。将仅发送 file_ids，模型可能无法识别附件。',
           'error'
         );
       }
       if (idsForModel.length) {
         composedForModel =
-          (composedForModel ? composedForModel + '\n\n' : '') +
-          '[Attached file_ids]\n' +
-          idsForModel.join('\n');
+          (composedForModel ? composedForModel + '\n\n' : '') + '[Attached file_ids]\n' + idsForModel.join('\n');
       }
+      shouldClearAttachAfterSend = true;
     }
+
     var displayText = text || ('[attachments] ' + Number((pa.items && pa.items.length) || 0) + ' file(s)');
+    return {
+      text: text,
+      composedForModel: composedForModel,
+      displayText: displayText,
+      hasAttach: hasAttach,
+      shouldClearAttachAfterSend: shouldClearAttachAfterSend
+    };
+  }
+
+  async function handleSendChat() {
+    var s = activeSession();
+    if (!s || !s.id) return;
+    var sid = s.id;
+    if (isSessionSending(sid)) {
+      cstatForSession(sid, '该标签仍在等待上一次响应，请稍候。', 'error');
+      return;
+    }
+    var pa = state.pendingAttach || { items: [], fileIds: [], files: [] };
+    var traceId = 'chat_' + String(sid) + '_' + Date.now().toString(36);
+    niumaTrace('send_enter', traceId, {
+      sid: sid,
+      rawLen: String(input && input.value ? input.value : '').length
+    });
+    niumaTrace('attach_snapshot', traceId, {
+      items: (pa.items || []).length,
+      fileIds: (pa.fileIds || []).length,
+      files: (pa.files || []).length,
+      firstNames: (pa.items || []).slice(0, 6).map(function (x) { return x && (x.relativePath || x.name) ? String(x.relativePath || x.name) : ''; })
+    });
+    niumaTrace('assemble_start', traceId, {});
+    var assembled = await assembleLlmPayload(input.value, pa, sid, traceId);
+    if (!assembled) return;
+    niumaTrace('assemble_done', traceId, {
+      hasAttach: assembled.hasAttach,
+      composedLen: String(assembled.composedForModel || '').length,
+      composedHead: truncStr(assembled.composedForModel || '', 520)
+    });
+    var text = assembled.text;
+    var composedForModel = assembled.composedForModel;
+    var displayText = assembled.displayText;
+    var hasAttach = assembled.hasAttach;
+    var shouldClearAttachAfterSend = assembled.shouldClearAttachAfterSend;
     saveCfg(false);
     if (!state.freeChatMode) {
       await fetchStudioContextBlocking();
@@ -18207,7 +18349,31 @@ body.niuma-confirm-open{overflow:hidden}
       }
     }
     cfg.userContentForModel = composeUserTextForModel(composedForModel, cfg);
+    if (hasAttach) {
+      try {
+        var visionPack = await buildVisionUserContentParts(pa, cfg, cfg.userContentForModel);
+        if (visionPack && Array.isArray(visionPack.parts) && visionPack.parts.length) {
+          cfg.userContentParts = visionPack.parts;
+        } else if (visionPack && visionPack.totalImages > 0) {
+          cstatForSession(sid, '当前模型不支持图片附件，已按文本模式发送。', 'error');
+        }
+      } catch (eVision) {
+        cstatForSession(sid, '图片附件处理失败：' + (eVision && eVision.message ? eVision.message : String(eVision)), 'error');
+      }
+    }
+    niumaTrace('cfg_ready', traceId, {
+      provider: cfg.provider,
+      model: cfg.model,
+      userContentLen: String(cfg.userContentForModel || '').length,
+      userContentHead: truncStr(cfg.userContentForModel || '', 420),
+      partsLen: cfg.userContentParts ? cfg.userContentParts.length : 0,
+      partsHead: cfg.userContentParts ? truncStr(JSON.stringify(cfg.userContentParts.slice(0, 3)), 820) : ''
+    });
     s._pendingUserContentForModel = cfg.userContentForModel;
+    niumaTrace('pending_user_content_set', traceId, {
+      pendingLen: String(s._pendingUserContentForModel || '').length,
+      pendingHead: truncStr(s._pendingUserContentForModel || '', 420)
+    });
     var p0 = P[cfg.provider] || P.openai;
 
     function cancelAllPendingHttpOnTimeout(err) {
@@ -18224,10 +18390,10 @@ body.niuma-confirm-open{overflow:hidden}
     if (p0.transport === 'cli') {
       add('user', displayText);
       input.value = '';
-      clearPendingAttach();
       cstatForSession(sid, '正在连接 ttyd 终端…');
       appendAudit({ nodeKey: nodeKeyForSession(s), level: 'info', message: '发送消息 → 连接 ttyd' });
       throttledNiumaCliOpen(true);
+      if (shouldClearAttachAfterSend) clearPendingAttach();
       return;
     }
     if (!cfg.baseUrl || !cfg.model) {
@@ -18247,7 +18413,6 @@ body.niuma-confirm-open{overflow:hidden}
     }
     add('user', displayText);
     input.value = '';
-    clearPendingAttach();
 
     var browserIntent = detectBrowserControlIntent(text);
     if (browserIntent.hit) {
@@ -18265,6 +18430,7 @@ body.niuma-confirm-open{overflow:hidden}
       try {
         await runBrowserAgentChat(sid, browserIntent.query, cfg, browserIntent);
         cstatForSession(sid, '网页智能操控流程结束。', 'success');
+        if (shouldClearAttachAfterSend) clearPendingAttach();
       } catch (errBr) {
         cancelAllPendingHttpOnTimeout(errBr);
         cstatForSession(sid, '网页智能操控失败：' + (errBr && errBr.message ? errBr.message : String(errBr)), 'error');
@@ -18300,7 +18466,15 @@ body.niuma-confirm-open{overflow:hidden}
       return;
     }
 
+    niumaTrace('executeModelRequest_start', traceId, {});
     await executeModelRequest(sid);
+    niumaTrace('executeModelRequest_done', traceId, {});
+    if (shouldClearAttachAfterSend) clearPendingAttach();
+  }
+
+  // Backward-compatible alias: many call sites expect sendChat().
+  async function sendChat() {
+    return handleSendChat();
   }
 
   var suppressClickUntil = 0;
@@ -18849,59 +19023,37 @@ body.niuma-confirm-open{overflow:hidden}
     if (!attachList) return;
     var pa = state.pendingAttach || { items: [], fileIds: [], files: [] };
     pa.items = Array.isArray(pa.items) ? pa.items : [];
-    var rows = [];
-    (pa.items || []).forEach(function (x) {
-      var n = x && x.relativePath ? x.relativePath : x && x.name ? x.name : 'file';
-      var sz = Number((x && x.size) || 0);
-      var status = x && x.pending ? ' [uploading]' : x && x.failed ? ' [failed]' : '';
-      rows.push(n + ' (' + sz + ' bytes)' + status);
-    });
-    if (!rows.length) {
+    if (!pa.items.length) {
       attachList.style.display = 'none';
       attachList.textContent = '';
       if (chatStatus) chatStatus.textContent = '就绪';
       return;
     }
     while (attachList.firstChild) attachList.removeChild(attachList.firstChild);
-    for (var i = 0; i < rows.length; i++) {
+    for (var i = 0; i < pa.items.length; i++) {
       var item = pa.items[i] || null;
       var line = document.createElement('div');
-      line.style.display = 'flex';
-      line.style.alignItems = 'center';
-      line.style.gap = '8px';
+      line.className = 'attach-chip' + (item && item.pending ? ' is-uploading' : '') + (item && item.failed ? ' is-failed' : '');
       var txt = document.createElement('div');
-      txt.style.flex = '1 1 auto';
-      txt.style.minWidth = '0';
-      txt.style.whiteSpace = 'nowrap';
-      txt.style.overflow = 'hidden';
-      txt.style.textOverflow = 'ellipsis';
-      txt.textContent = rows[i];
+      txt.className = 'attach-chip-name';
+      var n = item && (item.relativePath || item.name) ? String(item.relativePath || item.name) : 'file';
+      var sz = Number((item && item.size) || 0);
+      txt.textContent = n + ' (' + sz + ' bytes)' + (item && item.pending ? ' 上传中…' : item && item.failed ? ' 上传失败' : '');
       if (item && item.failed && item.error) {
         txt.title = String(item.error);
       }
       line.appendChild(txt);
       var rm = document.createElement('button');
       rm.type = 'button';
-      rm.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+      rm.textContent = '×';
       rm.setAttribute('data-remove-attach-id', item && item.id ? String(item.id) : '');
-      rm.style.flex = '0 0 auto';
-      rm.style.border = 'none';
-      rm.style.borderRadius = '6px';
-      rm.style.padding = '3px 7px';
-      rm.style.background = '#d64040';
-      rm.style.color = '#fff';
-      rm.style.cursor = 'pointer';
-      rm.style.fontSize = '12px';
-      rm.style.lineHeight = '1.2';
-      rm.style.display = 'inline-flex';
-      rm.style.alignItems = 'center';
-      rm.style.justifyContent = 'center';
+      rm.className = 'attach-chip-remove';
       rm.title = '删除附件';
       line.appendChild(rm);
       attachList.appendChild(line);
     }
     attachList.style.display = 'block';
-    if (chatStatus) chatStatus.textContent = '已添加附件: ' + rows.length;
+    if (chatStatus) chatStatus.textContent = '已添加附件: ' + pa.items.length;
   }
 
   function removePendingAttachmentById(id) {
@@ -18935,6 +19087,46 @@ body.niuma-confirm-open{overflow:hidden}
     return i >= 0 ? n.slice(i + 1).toLowerCase() : '';
   }
 
+  function codeFenceLangByName(name) {
+    var ext = extOf(name);
+    if (!ext) return 'text';
+    var map = {
+      js: 'javascript',
+      ts: 'typescript',
+      py: 'python',
+      md: 'markdown',
+      yml: 'yaml',
+      ps1: 'powershell',
+      psm1: 'powershell',
+      cmd: 'bat'
+    };
+    return map[ext] || ext;
+  }
+
+  function formatAttachmentContextMarkdown(files) {
+    var arr = Array.isArray(files) ? files : [];
+    if (!arr.length) return '';
+    var chunks = [];
+    var noExcerpt = [];
+    for (var i = 0; i < arr.length; i++) {
+      var f = arr[i] || {};
+      var name = String(f.relativePath || f.name || 'file');
+      var excerpt = String(f.textExcerpt || '').trim();
+      if (!excerpt) {
+        noExcerpt.push(name);
+        continue;
+      }
+      var lang = codeFenceLangByName(name);
+      chunks.push(
+        '【已附加本地文件上下文：' + name + '】\n```' + lang + '\n' + excerpt.slice(0, 6000) + '\n```'
+      );
+    }
+    for (var j = 0; j < noExcerpt.length; j++) {
+      chunks.push('【附件仅元数据，未能提取正文：' + noExcerpt[j] + '】');
+    }
+    return chunks.join('\n\n');
+  }
+
   function isTextFile(f) {
     var typ = String((f && f.type) || '').toLowerCase();
     if (typ.indexOf('text/') === 0) return true;
@@ -18945,6 +19137,58 @@ body.niuma-confirm-open{overflow:hidden}
     var typ = String((f && f.type) || '').toLowerCase();
     if (typ.indexOf('image/') === 0) return true;
     return /^(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(extOf(f && f.name));
+  }
+
+  function providerSupportsVision(cfg) {
+    cfg = cfg || {};
+    var transport = String((P[cfg.provider] && P[cfg.provider].transport) || '').toLowerCase();
+    var provider = String(cfg.provider || '').toLowerCase();
+    var modelName = String(cfg.model || '').toLowerCase();
+    if (transport === 'gemini' || provider === 'gemini') return true;
+    if (transport === 'anthropic' || provider === 'claude') return /claude-3|claude-sonnet|claude-opus|claude-haiku/.test(modelName);
+    if (transport === 'openai') {
+      if (/gpt-4o|gpt-4\.1|vision|qwen-vl|glm-4v|minimax|gemini/.test(modelName)) return true;
+      if (provider === 'openai' || provider === 'ollama') return /llava|bakllava|minicpm-v|qwen2\.5-vl|internvl/.test(modelName);
+    }
+    return false;
+  }
+
+  async function buildVisionUserContentParts(pa, cfg, composedText) {
+    pa = pa || { items: [] };
+    var items = Array.isArray(pa.items) ? pa.items : [];
+    var images = [];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i] || {};
+      if (it.pending || it.failed) continue;
+      var t = String(it.type || '').toLowerCase();
+      if (t.indexOf('image/') !== 0) continue;
+      images.push(it);
+    }
+    if (!images.length) return { parts: null, totalImages: 0, skippedImages: 0 };
+    if (!providerSupportsVision(cfg)) return { parts: null, totalImages: images.length, skippedImages: images.length };
+    var parts = [{ type: 'text', text: String(composedText || '') }];
+    var skipped = 0;
+    for (var j = 0; j < images.length; j++) {
+      var img = images[j] || {};
+      var src = img.localFile || null;
+      var type = String(img.type || 'image/png');
+      if (!src || Number(src.size || 0) > 4 * 1024 * 1024) {
+        skipped++;
+        continue;
+      }
+      try {
+        var b64 = await readAsBase64(src);
+        if (!b64) {
+          skipped++;
+          continue;
+        }
+        parts.push({ type: 'image_url', image_url: { url: 'data:' + type + ';base64,' + b64 } });
+      } catch (_) {
+        skipped++;
+      }
+    }
+    if (parts.length === 1) return { parts: null, totalImages: images.length, skippedImages: skipped || images.length };
+    return { parts: parts, totalImages: images.length, skippedImages: skipped };
   }
 
   function readAsBase64(file) {
@@ -19028,7 +19272,8 @@ body.niuma-confirm-open{overflow:hidden}
               name: uploaded.name || f.name || displayName,
               relativePath: uploaded.relativePath || displayName,
               size: Number(uploaded.size || f.size || 0),
-              type: uploaded.type || String(f.type || '')
+              type: uploaded.type || String(f.type || ''),
+              localFile: isImageFile(f) ? f : null
             };
             break;
           }
@@ -19084,14 +19329,22 @@ body.niuma-confirm-open{overflow:hidden}
     if (okCount > 0) cstat('Attachments added: ' + okCount, 'success');
   }
 
-  async function fetchAttachmentContext(pa) {
+  async function fetchAttachmentContext(pa, traceId) {
     pa = pa || { fileIds: [], items: [] };
     var ids = Array.isArray(pa.fileIds) ? pa.fileIds.filter(Boolean) : [];
-    if (!ids.length) return '';
+    if (!ids.length) return { files: [] };
+    function hasAnyExcerpt(files) {
+      if (!Array.isArray(files) || !files.length) return false;
+      for (var i = 0; i < files.length; i++) {
+        var ex = String((files[i] && files[i].textExcerpt) || '').trim();
+        if (ex) return true;
+      }
+      return false;
+    }
     var req = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileIds: ids })
+      body: JSON.stringify({ fileIds: ids, traceId: String(traceId || '') })
     };
     var r;
     try {
@@ -19100,34 +19353,29 @@ body.niuma-confirm-open{overflow:hidden}
       try {
         r = await fetch(niumaApiUrlLocalFallback(NIUMA_ATTACH_CTX_API), req);
       } catch (e1) {
+        niumaTrace('attach_ctx_host_fallback', traceId, { reason: 'fetch_failed', error: String((e1 && e1.message) || e1 || '') });
         var hostFiles = await hostBridgeRequest('niuma_attach_context', { fileIds: ids }, 12000);
-        var lines2 = ['Attachment Context'];
-        (hostFiles || []).forEach(function (f, idx) {
-          lines2.push('[' + (idx + 1) + '] ' + (f.relativePath || f.name || 'file') + ' (' + Number(f.size || 0) + ' bytes)');
-          var ex2 = String((f && f.textExcerpt) || '').trim();
-          if (ex2) lines2.push(ex2.slice(0, 3000));
-        });
-        return lines2.length > 1 ? lines2.join('\n') : '';
+        niumaTrace('attach_ctx_host_done', traceId, { files: Array.isArray(hostFiles) ? hostFiles.length : 0 });
+        return { files: Array.isArray(hostFiles) ? hostFiles : [] };
       }
     }
     if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()));
     var d = await r.json();
     var files = d && d.ok && Array.isArray(d.files) ? d.files : [];
-    if (!files.length) return '';
-    var lines = ['Attachment Context'];
-    files.forEach(function (f, idx) {
-      lines.push('[' + (idx + 1) + '] ' + (f.relativePath || f.name || 'file') + ' (' + Number(f.size || 0) + ' bytes)');
-      var ex = String((f && f.textExcerpt) || '').trim();
-      if (ex) lines.push(ex.slice(0, 3000));
-    });
-    return lines.join('\n');
-  }
-
-  function mergeUserTextWithAttachmentContext(userText, attachmentContext) {
-    var q = String(userText || '').trim();
-    var ctx = String(attachmentContext || '').trim();
-    if (!ctx) return q;
-    return (q ? q + '\n\n' : '') + '---\n' + ctx;
+    if (d && d.traceId && String(d.traceId).trim() && traceId && String(d.traceId).trim() !== String(traceId)) {
+      niumaTrace('attach_ctx_traceid_mismatch', traceId, { serverTraceId: String(d.traceId) });
+    }
+    if (!files.length) return { files: [] };
+    // API may return only metadata; force host fallback when excerpts are empty.
+    if (!hasAnyExcerpt(files) && hostBridgeAvailable()) {
+      try {
+        niumaTrace('attach_ctx_host_fallback', traceId, { reason: 'empty_excerpts' });
+        var hostFiles2 = await hostBridgeRequest('niuma_attach_context', { fileIds: ids }, 12000);
+        niumaTrace('attach_ctx_host_done', traceId, { files: Array.isArray(hostFiles2) ? hostFiles2.length : 0 });
+        if (hasAnyExcerpt(hostFiles2)) files = hostFiles2;
+      } catch (_) {}
+    }
+    return { files: files };
   }
 
   if (attachFileBtn && attachFileInput) {

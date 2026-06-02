@@ -97,7 +97,7 @@ FloatingToolbar_PushWorkAreaInsetsToWeb() {
     if !(g_FTB_WV2 && FloatingToolbarChatDrawerOpen)
         return
     cssPad := Max(4, Round(6 * FloatingToolbar_DpiFactor()))
-    try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_work_area_insets", "bottom", cssPad))
+    try (%"WebView_QueuePayload"%).Call(g_FTB_WV2, Map("type", "host_work_area_insets", "bottom", cssPad))
     catch {
     }
 }
@@ -222,7 +222,7 @@ FloatingToolbar_PushNodeStatus(nodeKey, status, detail := "", pingMs := 0) {
     wv2 := FloatingToolbar_GetChatWv2()
     if !wv2
         return
-    try WebView_QueuePayload(wv2, Map(
+    try (%"WebView_QueuePayload"%).Call(wv2, Map(
         "type", "niuma_node_status",
         "nodeKey", String(nodeKey),
         "status", String(status),
@@ -237,7 +237,7 @@ FloatingToolbar_PushAudit(nodeKey, message, level := "info", meta := "") {
     wv2 := FloatingToolbar_GetChatWv2()
     if !wv2
         return
-    try WebView_QueuePayload(wv2, Map(
+    try (%"WebView_QueuePayload"%).Call(wv2, Map(
         "type", "niuma_audit_event",
         "nodeKey", String(nodeKey),
         "message", String(message),
@@ -253,12 +253,12 @@ FloatingToolbar_ResetChatBridge() {
     g_NiumaChatFrontReady := false
     g_NiumaChatBridgeEpoch += 1
     try {
-        if FuncExists("NiumaMobileBrowser_Log")
+        if (%"FuncExists"%).Call("NiumaMobileBrowser_Log")
             NiumaMobileBrowser_Log("HANDSHAKE", "", "reset epoch=" . g_NiumaChatBridgeEpoch)
     } catch {
     }
     try {
-        if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+        if (%"FuncExists"%).Call("NiumaMobileBrowser_TraceOverlayPush")
             NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE reset epoch=" . g_NiumaChatBridgeEpoch, "warn")
     } catch {
     }
@@ -276,17 +276,17 @@ FloatingToolbar_OnChatReady(msg) {
     g_NiumaChatFrontReady := true
     epoch := msg.Has("epoch") ? String(msg["epoch"]) : ""
     try {
-        if FuncExists("NiumaMobileBrowser_Log")
+        if (%"FuncExists"%).Call("NiumaMobileBrowser_Log")
             NiumaMobileBrowser_Log("HANDSHAKE", "", "chat_ready received epoch=" . epoch . " bridge_epoch=" . g_NiumaChatBridgeEpoch)
     } catch {
     }
     try {
-        if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+        if (%"FuncExists"%).Call("NiumaMobileBrowser_TraceOverlayPush")
             NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE chat_ready epoch=" . epoch . " bridge_epoch=" . g_NiumaChatBridgeEpoch, "success")
     } catch {
     }
     try {
-        if FuncExists("NiumaMobileBrowser_FlushDeferredSnapshotToChat")
+        if (%"FuncExists"%).Call("NiumaMobileBrowser_FlushDeferredSnapshotToChat")
             NiumaMobileBrowser_FlushDeferredSnapshotToChat()
     } catch {
     }
@@ -295,23 +295,23 @@ FloatingToolbar_OnChatReady(msg) {
         return
     ack := '{"type":"host_chat_bridge_ready","ok":true,"epoch":' . g_NiumaChatBridgeEpoch . '}'
     try {
-        if FuncExists("NiumaMobileBrowser_PostJsonToChatDirect")
+        if (%"FuncExists"%).Call("NiumaMobileBrowser_PostJsonToChatDirect")
             NiumaMobileBrowser_PostJsonToChatDirect(wv2, ack, "", "host_chat_bridge_ready")
         else
             wv2.PostWebMessageAsJson(ack)
         try {
-            if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+            if (%"FuncExists"%).Call("NiumaMobileBrowser_TraceOverlayPush")
                 NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE host_chat_bridge_ready sent epoch=" . g_NiumaChatBridgeEpoch, "success")
         } catch {
         }
     } catch as e {
         try {
-            if FuncExists("NiumaMobileBrowser_Log")
+            if (%"FuncExists"%).Call("NiumaMobileBrowser_Log")
                 NiumaMobileBrowser_Log("HANDSHAKE", "", "host_chat_bridge_ready failed err=" . e.Message)
         } catch {
         }
         try {
-            if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
+            if (%"FuncExists"%).Call("NiumaMobileBrowser_TraceOverlayPush")
                 NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE host_chat_bridge_ready failed: " . e.Message, "err")
         } catch {
         }
@@ -2719,7 +2719,129 @@ FloatingToolbar_IsTextExt(name) {
     n := StrLower(String(name))
     p := InStr(n, ".",, -10)
     ext := (p > 0) ? SubStr(n, p + 1) : ""
-    return RegExMatch(ext, "i)^(md|txt|json|csv|log|xml|yml|yaml|ini|cfg|js|ts|py|java|go|rs|html|css|sql|bat|cmd|ps1|psm1|sh|toml|env)$")
+    return RegExMatch(ext, "i)^(md|txt|json|csv|log|xml|yml|yaml|ini|cfg|js|ts|py|java|go|rs|html|css|sql|bat|cmd|ps1|psm1|sh|toml|env|pdf|docx|doc)$")
+}
+
+FloatingToolbar_ReadTextExcerptFromFile(path, maxLen := 12000) {
+    p := Trim(String(path))
+    if (p = "" || !FileExist(p))
+        return ""
+    encs := ["UTF-8", "UTF-8-RAW", "CP936", "CP950", "UTF-16", "UTF-16-RAW", "CP1252"]
+    for _, enc in encs {
+        try {
+            t := FileRead(p, enc)
+            if (StrLen(t) <= 0)
+                continue
+            ; 某些日志文件混入 NUL 字节，直接丢弃会导致“仅元数据”。
+            ; 这里先清洗 NUL，再继续后续规范化流程。
+            if InStr(t, Chr(0))
+                t := StrReplace(t, Chr(0), "")
+            t := Trim(StrReplace(t, "`r`n", "`n"))
+            if (StrLen(t) <= 0)
+                continue
+            if (StrLen(t) > maxLen)
+                t := SubStr(t, 1, maxLen)
+            return t
+        } catch {
+        }
+    }
+    return ""
+}
+
+FloatingToolbar_ResolvePdfToTextExe() {
+    cands := [
+        A_ScriptDir . "\tools\search\pdftotext.exe",
+        A_ScriptDir . "\tools\pdftotext.exe",
+        A_ScriptDir . "\lib\pdftotext.exe"
+    ]
+    for _, p in cands {
+        if FileExist(p) && !InStr(FileExist(p), "D")
+            return p
+    }
+    return ""
+}
+
+FloatingToolbar_ReadPdfExcerpt(path, maxLen := 12000) {
+    p := Trim(String(path))
+    if (p = "" || !FileExist(p))
+        return ""
+    exe := FloatingToolbar_ResolvePdfToTextExe()
+    if (exe = "")
+        return ""
+    outFile := A_Temp . "\nmer_pdf_" . A_TickCount . ".txt"
+    q := Chr(34)
+    cmd := q . A_ComSpec . q . " /c " . q . q . exe . q . " -enc UTF-8 " . q . p . q . " " . q . outFile . q . q
+    try RunWait(cmd, , "Hide")
+    excerpt := FloatingToolbar_ReadTextExcerptFromFile(outFile, maxLen)
+    try FileDelete(outFile)
+    return excerpt
+}
+
+FloatingToolbar_RunPsScript(scriptBody) {
+    ps1 := A_Temp . "\nmer_docx_" . A_TickCount . ".ps1"
+    q := Chr(34)
+    try {
+        try FileDelete(ps1)
+        FileAppend(String(scriptBody), ps1, "UTF-8")
+        cmd := q . "powershell.exe" . q . " -NoProfile -ExecutionPolicy Bypass -File " . q . ps1 . q
+        RunWait(cmd, , "Hide")
+    } catch {
+    } finally {
+        try FileDelete(ps1)
+    }
+}
+
+FloatingToolbar_ReadDocxExcerpt(path, maxLen := 12000) {
+    p := Trim(String(path))
+    if (p = "" || !FileExist(p))
+        return ""
+    outFile := A_Temp . "\nmer_docx_" . A_TickCount . ".txt"
+    psPath := StrReplace(p, "'", "''")
+    psOut := StrReplace(outFile, "'", "''")
+    lines := []
+    lines.Push("$ErrorActionPreference='Stop'")
+    lines.Push("Add-Type -AssemblyName System.IO.Compression.FileSystem")
+    lines.Push(Format("$zip=[System.IO.Compression.ZipFile]::OpenRead('{1}')", psPath))
+    lines.Push("try{")
+    lines.Push("  $parts=@()")
+    lines.Push("  foreach($e in $zip.Entries){")
+    lines.Push("    if($e.FullName -eq 'word/document.xml' -or $e.FullName -like 'word/header*.xml' -or $e.FullName -like 'word/footer*.xml'){")
+    lines.Push("      $sr=New-Object IO.StreamReader($e.Open()); try{$xml=$sr.ReadToEnd()} finally{$sr.Close()}")
+    lines.Push("      $txt=[Regex]::Replace($xml,'</w:p>','`n')")
+    lines.Push("      $txt=[Regex]::Replace($txt,'<[^>]+>',' ')")
+    lines.Push("      $txt=[Regex]::Replace($txt,'\\s+',' ').Trim()")
+    lines.Push("      if($txt){$parts += $txt}")
+    lines.Push("    }")
+    lines.Push("  }")
+    lines.Push(Format("  ($parts -join [Environment]::NewLine) | Out-File -FilePath '{1}' -Encoding UTF8", psOut))
+    lines.Push("} finally { $zip.Dispose() }")
+    script := lines.Join("`r`n")
+    FloatingToolbar_RunPsScript(script)
+    excerpt := FloatingToolbar_ReadTextExcerptFromFile(outFile, maxLen)
+    try FileDelete(outFile)
+    return excerpt
+}
+
+FloatingToolbar_ExtractAttachmentExcerpt(path, name := "", mime := "", maxLen := 12000) {
+    p := Trim(String(path))
+    if (p = "" || !FileExist(p))
+        return ""
+    n := String(name)
+    if (n = "") {
+        try SplitPath p, &n
+    }
+    m := StrLower(String(mime))
+    ext := ""
+    np := InStr(StrLower(n), ".",, -10)
+    if (np > 0)
+        ext := SubStr(StrLower(n), np + 1)
+    if (InStr(m, "text/") = 1 || RegExMatch(ext, "i)^(md|txt|json|csv|log|xml|yml|yaml|ini|cfg|js|ts|py|java|go|rs|html|css|sql|bat|cmd|ps1|psm1|sh|toml|env)$"))
+        return FloatingToolbar_ReadTextExcerptFromFile(p, maxLen)
+    if (ext = "pdf")
+        return FloatingToolbar_ReadPdfExcerpt(p, maxLen)
+    if (ext = "docx")
+        return FloatingToolbar_ReadDocxExcerpt(p, maxLen)
+    return ""
 }
 
 FloatingToolbar_LoadNiumaAttachMeta() {
@@ -2767,12 +2889,7 @@ FloatingToolbar_SaveNiumaUpload(payload) {
         throw Error("open file failed")
     f.RawWrite(buf, buf.Size)
     f.Close()
-    excerpt := ""
-    if (InStr(StrLower(mime), "text/") = 1 || FloatingToolbar_IsTextExt(name)) {
-        try excerpt := Trim(StrGet(buf, "UTF-8"))
-        if (StrLen(excerpt) > 12000)
-            excerpt := SubStr(excerpt, 1, 12000)
-    }
+    excerpt := FloatingToolbar_ExtractAttachmentExcerpt(fp, name, mime, 12000)
     meta := FloatingToolbar_LoadNiumaAttachMeta()
     files := meta["files"]
     files[uid] := Map(
@@ -2816,12 +2933,7 @@ FloatingToolbar_SaveNiumaUploadFromLocalPath(path) {
     fp := upDir . "\" . stored
     FileCopy(p, fp, true)
 
-    excerpt := ""
-    if FloatingToolbar_IsTextExt(name) {
-        try excerpt := Trim(FileRead(p, "UTF-8"))
-        if (StrLen(excerpt) > 12000)
-            excerpt := SubStr(excerpt, 1, 12000)
-    }
+    excerpt := FloatingToolbar_ExtractAttachmentExcerpt(p, name, "", 12000)
 
     meta := FloatingToolbar_LoadNiumaAttachMeta()
     files := meta["files"]
@@ -2869,12 +2981,7 @@ FloatingToolbar_SaveNiumaUploadFromLocalPathWithRel(path, relPath) {
     fp := upDir . "\" . stored
     FileCopy(p, fp, true)
 
-    excerpt := ""
-    if FloatingToolbar_IsTextExt(name) {
-        try excerpt := Trim(FileRead(p, "UTF-8"))
-        if (StrLen(excerpt) > 12000)
-            excerpt := SubStr(excerpt, 1, 12000)
-    }
+    excerpt := FloatingToolbar_ExtractAttachmentExcerpt(p, name, "", 12000)
 
     meta := FloatingToolbar_LoadNiumaAttachMeta()
     files := meta["files"]
@@ -2897,6 +3004,7 @@ FloatingToolbar_LoadNiumaAttachContext(ids) {
     meta := FloatingToolbar_LoadNiumaAttachMeta()
     files := meta["files"]
     out := []
+    dirty := false
     if !(ids is Array)
         return out
     for _, id in ids {
@@ -2905,6 +3013,24 @@ FloatingToolbar_LoadNiumaAttachContext(ids) {
             continue
         x := files[sid]
         ex := x.Has("textExcerpt") ? String(x["textExcerpt"]) : ""
+        ; Backfill excerpt for old uploads that only stored metadata.
+        if (Trim(ex) = "") {
+            p := x.Has("storedPath") ? String(x["storedPath"]) : ""
+            if (p != "") {
+                xName := x.Has("name") ? String(x["name"]) : ""
+                xType := x.Has("type") ? String(x["type"]) : ""
+                ex2 := FloatingToolbar_ExtractAttachmentExcerpt(p, xName, xType, 12000)
+                if (Trim(ex2) != "") {
+                    ex := ex2
+                    try {
+                        x["textExcerpt"] := ex2
+                        files[sid] := x
+                        dirty := true
+                    } catch {
+                    }
+                }
+            }
+        }
         if (StrLen(ex) > 6000)
             ex := SubStr(ex, 1, 6000)
         out.Push(Map(
@@ -2917,6 +3043,8 @@ FloatingToolbar_LoadNiumaAttachContext(ids) {
             "textExcerpt", ex
         ))
     }
+    if (dirty)
+        FloatingToolbar_SaveNiumaAttachMeta(meta)
     return out
 }
 

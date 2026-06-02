@@ -588,9 +588,9 @@ NiumaMobileBrowser_OnChromeWebMessageRawFallback(raw) {
     if (r = "")
         return
     try {
-        msg := Jxon_Load(r)
+        msg := (%"Jxon_Load"%).Call(r)
         if (msg is String)
-            msg := Jxon_Load(msg)
+            msg := (%"Jxon_Load"%).Call(msg)
         if (msg is Map) && msg.Has("type") {
             typ := String(msg["type"])
             if (typ = "niuma_browser_sync_state") {
@@ -657,7 +657,7 @@ NiumaMobileBrowser_OnChromeWebMessageRawFallback(raw) {
     }
     if InStr(r, "niuma_browser_context_menu") {
         try {
-            msg := Jxon_Load(r)
+            msg := (%"Jxon_Load"%).Call(r)
             if (msg is Map)
                 NiumaMobileBrowser_HandleContextMenuWebMessage(msg)
         } catch {
@@ -698,7 +698,7 @@ NiumaMobileBrowser_ParseChromeWebMessage(args) {
         raw := args.TryGetWebMessageAsString()
         if (raw != "") {
             try {
-                m := Jxon_Load(raw)
+                m := (%"Jxon_Load"%).Call(raw)
                 if (m is Map)
                     return m
             } catch {
@@ -709,9 +709,9 @@ NiumaMobileBrowser_ParseChromeWebMessage(args) {
     try {
         jsonStr := args.WebMessageAsJson
         if (jsonStr != "") {
-            m := Jxon_Load(jsonStr)
+            m := (%"Jxon_Load"%).Call(jsonStr)
             if (m is String)
-                m := Jxon_Load(m)
+                m := (%"Jxon_Load"%).Call(m)
             if (m is Map)
                 return m
         }
@@ -1500,7 +1500,7 @@ NiumaMobileBrowser_PushChromeMenuState(expanded) {
     global g_NiumaMobile_ChromeWV2, g_NiumaMobile_ChromeBottomWV2
     payload := Map("type", "host_mobile_browser_chrome_state", "expanded", !!expanded)
     try {
-        json := Jxon_Dump(payload)
+        json := (%"Jxon_Dump"%).Call(payload)
         if (json = "")
             return
         for wv2 in [g_NiumaMobile_ChromeWV2, g_NiumaMobile_ChromeBottomWV2] {
@@ -2037,9 +2037,12 @@ NiumaMobileBrowser_NavigateChromeHtml(pane := "top") {
         return false
     paneQ := (String(pane) = "bottom") ? "bottom" : "top"
     chromeUrl := NiumaMobileBrowser_CallFunc("BuildAppLocalUrl", "NiumaMobileBrowserChrome.html")
+    htmlPath := NiumaMobileBrowser_CallFunc("HtmlPanelPath", "NiumaMobileBrowserChrome.html")
+    if (htmlPath = "")
+        htmlPath := A_ScriptDir . "\html\NiumaMobileBrowserChrome.html"
     if (chromeUrl != "") {
         try {
-            ver := String(FileGetTime(HtmlPanelPath("NiumaMobileBrowserChrome.html"), "M"))
+            ver := String(FileGetTime(htmlPath, "M"))
             sep := InStr(chromeUrl, "?") ? "&" : "?"
             chromeUrl := chromeUrl . sep . "pane=" . paneQ . "&v=" . ver
         } catch {
@@ -2052,7 +2055,6 @@ NiumaMobileBrowser_NavigateChromeHtml(pane := "top") {
         } catch {
         }
     }
-    htmlPath := HtmlPanelPath("NiumaMobileBrowserChrome.html")
     if !FileExist(htmlPath) {
         NiumaMobileBrowser_Log("CHROME", "", "chrome html 缺失: " . htmlPath)
         return false
@@ -2406,7 +2408,7 @@ NiumaMobileBrowser_PushChromeState(force := false) {
         "themeMode", tm
     )
     try {
-        json := Jxon_Dump(payload)
+        json := (%"Jxon_Dump"%).Call(payload)
         if (json = "")
             return
         for wv2 in [g_NiumaMobile_ChromeWV2, g_NiumaMobile_ChromeBottomWV2] {
@@ -4314,7 +4316,7 @@ NiumaMobileBrowser_ParseScriptJson(raw) {
         return Map("ok", false, "error", "empty_result")
     try {
         obj := ""
-        try obj := Jxon_Load(s)
+        try obj := (%"Jxon_Load"%).Call(s)
         catch {
             obj := NiumaMobileBrowser_CallFunc("Jxon_Load", s)
         }
@@ -4328,7 +4330,7 @@ NiumaMobileBrowser_ParseScriptJson(raw) {
             inner := Trim(String(obj))
             if (inner != "" && (SubStr(inner, 1, 1) = "{" || SubStr(inner, 1, 1) = "[")) {
                 try {
-                    obj2 := Jxon_Load(inner)
+                    obj2 := (%"Jxon_Load"%).Call(inner)
                     if (obj2 is Map)
                         return NiumaMobileBrowser_NormalizeActBoolMap(obj2)
                     if (obj2 is Array)
