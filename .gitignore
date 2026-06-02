@@ -54,10 +54,10 @@ NiumaTtyd_debug.log
 Run History.csv
 ttyd_repair.log
 
-# 运行时 Cache（保留 .gitkeep 占位；诊断日志统一在 Cache/debug/）
+# 运行时 Cache（勿提交；保留 .gitkeep 占位）
 Cache/*
 !Cache/.gitkeep
-!Cache/debug/
+Cache/debug/**
 !Cache/debug/.gitkeep
 
 cache/dict_install/

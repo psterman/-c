@@ -3287,6 +3287,16 @@ VK_LookupBindingCmdForPhys(physKey) {
     return ""
 }
 
+; 仅能在搜索中心已打开时生效的 sc_*（分类/引擎/筛选/撰写等）；未打开时不应拦截 CapsLock+键，交给宿主 ch_f 等默认逻辑。
+VK_ScPanelCmdRequiresSearchOpen(cmdId) {
+    cid := Trim(String(cmdId))
+    if (cid = "" || cid = "sc_activate_search")
+        return false
+    if (SubStr(cid, 1, 3) != "sc_")
+        return false
+    return RegExMatch(cid, "i)^(sc_cat_|sc_eng_|sc_filter_|sc_compose_)")
+}
+
 ; 搜索中心 CapsLock+第二键：g_Bindings 上 q/a/z 等往往指向 ch_*（如打开设置），与内置「搜索中心」说明不一致。
 ; 若用户已为该键绑定任意 sc_* 则优先；否则回退到与内置搜索类说明一致的 sc_*（def 表为宿主内建 CH_RUN，不依赖 CommandList 是否同步）。
 VK_SearchCenterResolveCapsChordCmd(physKey) {
@@ -3295,8 +3305,11 @@ VK_SearchCenterResolveCapsChordCmd(physKey) {
     if (k = "")
         return ""
     cmdId := VK_LookupBindingCmdForPhys(k)
-    if (cmdId != "" && SubStr(cmdId, 1, 3) = "sc_")
+    if (cmdId != "" && SubStr(cmdId, 1, 3) = "sc_") {
+        if VK_ScPanelCmdRequiresSearchOpen(cmdId) && !IsSearchCenterActive()
+            return ""
         return cmdId
+    }
     static def := Map(
         "q", "sc_cat_ai",
         "w", "sc_cat_cli",
@@ -3353,6 +3366,16 @@ VirtualKeyboard_HandleKey(physKey) {
             else
                 return false
         }
+    }
+    ; 误把「过滤/分类/引擎」绑到 CapsLock+F 等键时，搜索中心未打开会空吞按键；回退宿主默认（打开搜索中心等）
+    if VK_ScPanelCmdRequiresSearchOpen(cmdId) {
+        active := false
+        try active := IsSearchCenterActive()
+        catch {
+            active := false
+        }
+        if !active
+            return false
     }
     return _ExecuteCommand(cmdId)
 }

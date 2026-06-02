@@ -16,6 +16,33 @@ class AhkInterface {
      */
     Ping() => "ok"
 
+    /** 命令面板「诊」按钮 / 诊断入口：同步打开本地搜索诊断窗 */
+    OpenCommandPaletteSearchDebug() {
+        try {
+            if FuncExists("CommandPalette_HandleSearchDebug")
+                CommandPalette_HandleSearchDebug()
+            else if FuncExists("CommandPalette_ShowSearchDebug")
+                CommandPalette_ShowSearchDebug()
+            else
+                return "err:not_loaded"
+            return "ok"
+        } catch as e {
+            return "err:" . e.Message
+        }
+    }
+
+    /** 诊断面板「全部探测」 */
+    RunCommandPaletteSearchDebugProbes(keyword := "1") {
+        try {
+            if !FuncExists("CommandPaletteSearchDebug_RunAllProbes")
+                return "err:not_loaded"
+            CommandPaletteSearchDebug_RunAllProbes(String(keyword))
+            return "ok"
+        } catch as e {
+            return "err:" . e.Message
+        }
+    }
+
     /** 手机浏览器顶栏菜单：撑满 overlay 以便底部 Sheet 完整显示。open: 1/0 */
     SetMobileChromeSheet(open := 0) {
         try {

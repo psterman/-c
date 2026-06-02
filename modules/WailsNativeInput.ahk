@@ -21,6 +21,8 @@ WailsNative_GetWailsHwnd() {
 }
 
 WailsNative_HideWebInput() {
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView)
+        return
     js := "document.body.classList.add('native-input-mode')"
     if FuncExists("WailsWhisper_RunJsInInputHost")
         WailsWhisper_RunJsInInputHost(js)

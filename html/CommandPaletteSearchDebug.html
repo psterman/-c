@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CommandPalette 本地搜索诊断</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --card: #1a2332;
+    --border: #2d3a4f;
+    --text: #e8edf4;
+    --muted: #8b9cb3;
+    --ok: #3dd68c;
+    --warn: #f5a623;
+    --err: #ff6b6b;
+    --accent: #5b9cf5;
+    --sc: #7c6cf0;
+    --cp: #f59e42;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 13px/1.5 "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  h1 { margin: 0; font-size: 16px; font-weight: 600; }
+  .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  main { padding: 14px 18px 24px; display: grid; gap: 14px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .card h2 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  .badge.ok { background: rgba(61,214,140,.15); color: var(--ok); }
+  .badge.err { background: rgba(255,107,107,.15); color: var(--err); }
+  .badge.warn { background: rgba(245,166,35,.15); color: var(--warn); }
+  .badge.idle { background: rgba(139,156,179,.12); color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; width: 38%; }
+  td.mono { font-family: Consolas, monospace; font-size: 11px; word-break: break-all; }
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .flow-node {
+    flex: 1;
+    min-width: 120px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    text-align: center;
+    font-size: 11px;
+  }
+  .flow-node.sc { border-color: var(--sc); background: rgba(124,108,240,.08); }
+  .flow-node.cp { border-color: var(--cp); background: rgba(245,158,66,.08); }
+  .flow-node.core { border-color: var(--accent); background: rgba(91,156,245,.08); }
+  .arrow { color: var(--muted); align-self: center; font-size: 18px; }
+  .probe-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .probe-row:last-child { border-bottom: none; }
+  .probe-name { font-weight: 500; }
+  .probe-hint { color: var(--muted); font-size: 11px; }
+  .ms { font-family: Consolas, monospace; min-width: 56px; text-align: right; }
+  pre.log {
+    margin: 0;
+    max-height: 200px;
+    overflow: auto;
+    font: 11px/1.45 Consolas, monospace;
+    background: #0a0e14;
+    border-radius: 6px;
+    padding: 10px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: #b8c5d6;
+  }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  button.secondary { background: #2d3a4f; color: var(--text); }
+  button:hover { filter: brightness(1.08); }
+  input[type="text"] {
+    flex: 1;
+    min-width: 120px;
+    background: #0a0e14;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+  .diff-box {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(245,166,35,.08);
+    border: 1px solid rgba(245,166,35,.35);
+    font-size: 12px;
+  }
+  .diff-box strong { color: var(--warn); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>CommandPalette × SearchCenter 诊断</h1>
+    <div class="sub">对比两条 HTTP 链路，定位「搜索中心快 / 命令面板慢」卡点</div>
+  </div>
+  <div class="toolbar">
+    <input type="text" id="kw" value="1" placeholder="测试关键词" />
+    <button type="button" id="btnRunAll">全部探测</button>
+    <button type="button" id="btnRefresh" class="secondary">刷新状态</button>
+  </div>
+</header>
+<main>
+  <section class="card">
+    <h2>架构对比 <span class="badge idle" id="summaryBadge">待探测</span></h2>
+    <div class="flow">
+      <div class="flow-node sc">搜索中心 UI<br/><small>SCWV WinHttp<br/>recv 2.2s · 无 SetProxy</small></div>
+      <span class="arrow">→</span>
+      <div class="flow-node core">SearchCenterCore<br/><small>:8080 /search</small></div>
+      <span class="arrow">←</span>
+      <div class="flow-node cp">命令面板<br/><small>CoreAsyncHttp<br/>SetProxy(2) 直连</small></div>
+    </div>
+    <div class="diff-box" id="diffNote">
+      <strong>常见差异：</strong>命令面板曾用独立 WinHttp 且未绕过系统代理 → 请求挂起；搜索中心打开时核心已预热。本面板<strong>不上传、默认不展示</strong>本地 log。
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>运行时状态</h2>
+      <table id="statusTable">
+        <tbody></tbody>
+      </table>
+    </section>
+    <section class="card">
+      <h2>命令面板内部</h2>
+      <table id="paletteTable">
+        <tbody></tbody>
+      </table>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>HTTP 探测（同一关键词）</h2>
+    <div id="probes"></div>
+  </section>
+</main>
+<script>
+(function () {
+  var PROBES = [
+    { id: "health_sync", name: "Health · 同步 WinHttp（无代理绕过）", hint: "模拟旧命令面板 health 探针" },
+    { id: "health_proxy", name: "Health · WinHttp + SetProxy(2)", hint: "CoreAsyncHttp 同款" },
+    { id: "search_scwv", name: "Search · SCWV 路径", hint: "与搜索中心相同 WinHttp 参数" },
+    { id: "search_cmdpal", name: "Search · 命令面板 HttpGetAsync", hint: "tag=cmdpal_turbo_search" }
+  ];
+
+  function post(o) {
+    if (!o) return;
+    var typ = o.type ? String(o.type) : "";
+    if (typ === "cp_search_debug_run_all") {
+      try {
+        if (window.ahk && typeof window.ahk.RunCommandPaletteSearchDebugProbes === "function") {
+          var kw = o.keyword != null ? String(o.keyword) : "1";
+          if (String(window.ahk.RunCommandPaletteSearchDebugProbes(kw)) === "ok") return;
+        }
+      } catch (_) {}
+    }
+    var payload = "";
+    try {
+      payload = JSON.stringify(o);
+    } catch (_) {
+      return;
+    }
+    try {
+      if (window.chrome && window.chrome.webview && typeof window.chrome.webview.postMessage === "function") {
+        window.chrome.webview.postMessage(payload);
+        return;
+      }
+    } catch (_) {}
+    try {
+      window.chrome.webview.postMessage(o);
+    } catch (_2) {}
+  }
+
+  function setProbesRunning() {
+    var running = {};
+    PROBES.forEach(function (p) {
+      running[p.id] = { status: "run", ms: "...", detail: "探测中" };
+    });
+    renderProbes(running);
+    var b = document.getElementById("summaryBadge");
+    if (b) {
+      b.textContent = "探测中…";
+      b.className = "badge warn";
+    }
+  }
+
+  function esc(s) {
+    return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function renderTable(el, rows) {
+    el.innerHTML = rows.map(function (r) {
+      return "<tr><th>" + esc(r.k) + "</th><td class=\"mono\">" + esc(r.v) + "</td></tr>";
+    }).join("");
+  }
+
+  function renderProbes(list) {
+    var box = document.getElementById("probes");
+    box.innerHTML = PROBES.map(function (p) {
+      var st = list && list[p.id] ? list[p.id] : { status: "idle", ms: "-", detail: "未运行" };
+      var cls = st.status === "ok" ? "ok" : st.status === "err" ? "err" : st.status === "run" ? "warn" : "idle";
+      var msText = (typeof st.ms !== "number") ? "—" : String(st.ms);
+      return (
+        '<div class="probe-row" data-id="' + p.id + '">' +
+        '<div><div class="probe-name">' + esc(p.name) + '</div><div class="probe-hint">' + esc(p.hint) + "</div></div>" +
+        '<span class="badge ' + cls + '">' + esc(st.status) + "</span>" +
+        '<span class="ms">' + esc(msText) + " ms</span></div>"
+      );
+    }).join("");
+  }
+
+  function applySnapshot(d) {
+    if (!d) return;
+    if (d.statusRows) renderTable(document.querySelector("#statusTable tbody"), d.statusRows);
+    if (d.paletteRows) renderTable(document.querySelector("#paletteTable tbody"), d.paletteRows);
+    if (d.probes) renderProbes(d.probes);
+    if (d.summary) {
+      var b = document.getElementById("summaryBadge");
+      b.textContent = d.summary.text || "—";
+      b.className = "badge " + (d.summary.level || "idle");
+    }
+    if (d.diffNote) document.getElementById("diffNote").innerHTML = d.diffNote;
+  }
+
+  document.getElementById("btnRefresh").addEventListener("click", function () {
+    post({ type: "cp_search_debug_refresh" });
+  });
+  document.getElementById("btnRunAll").addEventListener("click", function () {
+    setProbesRunning();
+    post({ type: "cp_search_debug_run_all", keyword: document.getElementById("kw").value });
+  });
+
+  window.chrome && window.chrome.webview && window.chrome.webview.addEventListener("message", function (ev) {
+    var d = ev.data;
+    if (typeof d === "string") {
+      try { d = JSON.parse(d); } catch (_) { return; }
+    }
+    if (d && d.type === "cp_search_debug_snapshot") applySnapshot(d);
+  });
+
+  renderProbes({});
+  post({ type: "cp_search_debug_ready" });
+})();
+</script>
+</body>
+</html>

@@ -3682,15 +3682,74 @@ const HOTKEY_TAB_PRESET = [
   { id: 'hotkeys:system', name: '系统控制', commands: ['gk_open_config', 'gk_reload_script'] },
 ];
 
+/** 悬浮栏场景：同一功能的多个 cmdId 归并为同一别名，避免 KeyBinder 里重复占槽 */
+function floatingBarCmdAlias(cmdId) {
+  const c = String(cmdId || '').trim();
+  if (!c) return '';
+  if (c === 'ftm_search_center' || c === 'sc_activate_search' || c === 'ch_f') return 'search_center';
+  if (c === 'ftm_clipboard' || c === 'qa_clipboard' || c === 'ch_x') return 'clipboard';
+  if (c === 'hub_capsule' || c === 'ftb_scratchpad') return 'scratchpad';
+  if (c === 'ch_t' || c === 'ftb_screenshot') return 'screenshot';
+  if (c === 'ftm_open_config' || c === 'ch_q') return 'open_config';
+  if (c === 'sys_show_vk' || c === 'ch_g') return 'show_vk';
+  if (c === 'ftm_exit_app' || c === 'sys_exit') return 'exit_app';
+  if (c === 'ch_b') return 'prompts';
+  return c;
+}
+
+const FLOATING_BAR_ALIAS_PICK = {
+  search_center: ['ftm_search_center', 'sc_activate_search', 'ch_f'],
+  clipboard: ['ftm_clipboard', 'qa_clipboard', 'ch_x'],
+  scratchpad: ['hub_capsule', 'ftb_scratchpad'],
+  screenshot: ['ftb_screenshot', 'ch_t'],
+  open_config: ['ftm_open_config', 'ch_q'],
+  show_vk: ['sys_show_vk', 'ch_g'],
+  exit_app: ['ftm_exit_app', 'sys_exit'],
+};
+
+function dedupeFloatingBarCmdIdsPreserveOrder(cmdIds) {
+  const list = Array.isArray(cmdIds) ? cmdIds : [];
+  const groups = new Map();
+  for (const raw of list) {
+    const id = String(raw || '').trim();
+    if (!id) continue;
+    const ak = floatingBarCmdAlias(id) || id;
+    if (!groups.has(ak)) groups.set(ak, []);
+    const g = groups.get(ak);
+    if (!g.includes(id)) g.push(id);
+  }
+  const pickOne = (ak, ids) => {
+    const pref = FLOATING_BAR_ALIAS_PICK[ak];
+    if (pref) {
+      for (const p of pref) {
+        if (ids.includes(p)) return p;
+      }
+    }
+    return ids[0];
+  };
+  const out = [];
+  const seenAlias = new Set();
+  for (const raw of list) {
+    const id = String(raw || '').trim();
+    if (!id) continue;
+    const ak = floatingBarCmdAlias(id) || id;
+    if (seenAlias.has(ak)) continue;
+    seenAlias.add(ak);
+    out.push(pickOne(ak, groups.get(ak) || [id]));
+  }
+  return out;
+}
+
 const FLOATING_BAR_TAB_PRESET = [
   {
     id: 'floating_bar:shortcuts',
     name: '快捷键',
-    commands: [
-      'sys_exit', 'ch_f', 'ch_x', 'ch_q', 'hub_capsule', 'ch_t', 'ch_p', 'ch_r', 'ch_b', 'ch_g', 'sys_show_vk',
-      'ftm_reset_scale', 'ftm_search_center', 'ftm_clipboard', 'ftm_minimize_to_edge', 'ftm_exit_app',
-      'ftm_hide_toolbar', 'ftm_open_config', 'ftm_toggle_toolbar', 'ftm_reload_script',
-    ],
+    commands: dedupeFloatingBarCmdIdsPreserveOrder([
+      'ftm_search_center', 'ftm_clipboard', 'hub_capsule', 'ftb_screenshot', 'ch_p', 'ch_r', 'ch_b',
+      'ftb_cursor_menu', 'ftb_cloud_player', 'sys_show_vk',
+      'ftm_reset_scale', 'ftm_minimize_to_edge', 'ftm_open_config', 'ftm_toggle_toolbar', 'ftm_hide_toolbar',
+      'ftm_reload_script', 'ftm_exit_app',
+    ]),
   },
 ];
 
@@ -3706,7 +3765,7 @@ const TRAY_TAB_PRESET = [
 ];
 
 /** 与 Caps 和弦/Hub 入口重复，勿放入「快捷键」或「其它」标签（仍可作为未分类或悬浮条专用 cmd 存在） */
-const HOTKEY_CMD_MERGED_ELSEWHERE = new Set(['ftb_scratchpad', 'ftb_screenshot', 'ftb_cursor_menu']);
+const HOTKEY_CMD_MERGED_ELSEWHERE = new Set(['ftb_scratchpad', 'ftb_cursor_menu']);
 
 function dedupeCmdIdsPreserveOrder(cmdIds) {
   const seen = new Set();
@@ -4467,8 +4526,8 @@ function buildScenariosFromCategories() {
     const scenario = ensureScenario('floating_bar');
     scenario.tabs = [];
     for (const preset of FLOATING_BAR_TAB_PRESET) {
-      const cmdIds = dedupeCmdIdsPreserveOrder(
-        preset.commands.filter((cmdId) => !!state.commands[cmdId]),
+      const cmdIds = dedupeFloatingBarCmdIdsPreserveOrder(
+        dedupeCmdIdsPreserveOrder(preset.commands.filter((cmdId) => !!state.commands[cmdId])),
       );
       if (!cmdIds.length) continue;
       scenario.tabs.push({
@@ -5269,16 +5328,6 @@ function getSearchSceneMenuSlots() {
     slots[i] = normalizeDashboardItem(pool[i].cmdId);
   }
   return slots;
-}
-
-function floatingBarCmdAlias(cmdId) {
-  const c = String(cmdId || '').trim();
-  if (!c) return '';
-  if (c === 'ftm_search_center' || c === 'sc_activate_search') return 'search_center';
-  if (c === 'ftm_clipboard' || c === 'qa_clipboard') return 'clipboard';
-  if (c === 'hub_capsule' || c === 'ftb_scratchpad') return 'scratchpad';
-  if (c === 'ch_b') return 'prompts';
-  return c;
 }
 
 function normalizeFloatingBarSceneMenuIds(ids) {

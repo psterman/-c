@@ -174,6 +174,12 @@ TrayMenu_Init()
 ; ===================== 定义主脚本目录（供模块使用）=====================
 global MainScriptDir := A_ScriptDir
 
+; 尽早拉起 SearchCenterCore（不依赖 WebView 预热完成）
+if FuncExists("Nmer_AutoStartSearchCenterCore") {
+    SetTimer(Nmer_AutoStartSearchCenterCore, -1500)
+    SetTimer(Nmer_AutoStartSearchCenterCore, -6000)
+}
+
 ; ===================== WM_ACTIVATE 链（须在任意 OnMessage(0x0006) 模块之前）=====================
 #Include modules\WMActivateChain.ahk
 
@@ -290,6 +296,8 @@ global MoveFromTemplateListBoxHwnd := 0  ; 从模板移动弹窗ListBox句柄
 global MoveFromTemplateListBoxBrush := 0  ; 从模板移动弹窗ListBox画刷
 global CapsLock2 := false  ; 是否使用过 CapsLock+ 功能标记，使用过会清除这个变量
 global CapsLockInitialStateForChord := false  ; 记录按下 CapsLock 前状态，供组合键快速恢复
+global LastCapsLockTapTick := 0  ; CapsLock 双击判定（CursorPanelController CapsLock:: 松手逻辑）
+global CapsLockPressTime := 0
 global VKHoldVisible := false  ; 是否由长按 CapsLock 暂时显示 VK
 ; 动态快捷键映射（默认值）
 global SplitHotkey := "s"
@@ -3087,6 +3095,8 @@ _WV2_BeginWarmupAfterEnv(*) {
     WebViewWarmupQueue := [CP_Init, PQP_Init, SCWV_Init, VK_EnsureInit.Bind(true)]
     SetTimer(_RunWebViewWarmupStep, -10)
     SetTimer(_WarmupConfigWebView, -5000)
+    if FuncExists("Nmer_AutoStartSearchCenterCore")
+        SetTimer(Nmer_AutoStartSearchCenterCore, -1200)
 }
 
 NativeDropBridge_Start() {
@@ -7128,6 +7138,7 @@ ExitFunc(ExitReason, ExitCode) {
 #Include modules\VirtualKeyboardCore.ahk
 #Include modules\VirtualKeyboardInterop.ahk
 #Include modules\CommandPaletteCore.ahk
+#Include modules\CommandPaletteSearchDebug.ahk
 
 ; Cursor + CapsLock：动态右键菜单（须在 VirtualKeyboardCore 之后注册）
 #HotIf WinActive("ahk_exe Cursor.exe") && GetCapsLockState() && VK_ToolbarLayoutHasContextMenuItems()

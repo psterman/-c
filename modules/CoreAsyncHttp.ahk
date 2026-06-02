@@ -5,6 +5,7 @@ global g_CoreAsyncHttpReqs := Map()
 global g_CoreAsyncHttpPollArmed := false
 global g_CoreAsyncHttpRetrySeq := 0
 global g_CoreAsyncHttpRetryJobs := Map()
+global g_CoreAsyncHttp_Loaded := true
 
 CoreAsyncHttp_Log(event, detail := "") {
     try {

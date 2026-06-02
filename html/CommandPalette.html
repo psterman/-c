@@ -58,7 +58,8 @@ body {
   flex-direction: column;
   width: 100%;
   min-height: 100%;
-  overflow: visible;
+  height: 100%;
+  overflow: hidden;
   background: linear-gradient(180deg, var(--panel-top) 0%, var(--panel-bottom) 100%);
   animation: palette-in 0.22s var(--ease) both;
 }
@@ -85,12 +86,61 @@ body {
 }
 .palette-header {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px 10px 14px;
+  gap: 8px;
+  padding: 8px 12px 8px 10px;
+  min-height: 48px;
+  background: linear-gradient(180deg, var(--panel-top) 0%, var(--panel-top) 88%, rgba(26, 39, 56, 0.98) 100%);
+}
+#intent-tag {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  cursor: default;
+  user-select: none;
+  transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+#intent-tag[data-intent="local"] {
+  color: #8ec5ff;
+  background: rgba(37, 99, 235, 0.14);
+  border-color: rgba(100, 160, 255, 0.28);
+}
+#intent-tag[data-intent="ai"] {
+  color: #d4b8ff;
+  background: rgba(139, 92, 246, 0.16);
+  border-color: rgba(167, 139, 250, 0.32);
+}
+#intent-tag[data-intent="action"] {
+  color: #ffc896;
+  background: rgba(255, 102, 0, 0.14);
+  border-color: rgba(255, 141, 42, 0.32);
+}
+body[data-theme="light"] #intent-tag[data-intent="local"] {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.22);
+}
+body[data-theme="light"] #intent-tag[data-intent="ai"] {
+  color: #6d28d9;
+  background: #f5f3ff;
+  border-color: rgba(109, 40, 217, 0.22);
+}
+body[data-theme="light"] #intent-tag[data-intent="action"] {
+  color: #c85d00;
+  background: #fff3e8;
+  border-color: rgba(230, 126, 34, 0.28);
 }
 .palette-panel.has-results .palette-header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -112,16 +162,17 @@ body {
 .palette-search {
   flex: 1;
   min-width: 0;
-  height: 44px;
+  height: 48px;
+  min-height: 48px;
   border: none;
   border-radius: var(--radius-lg);
   background: transparent !important;
   color: var(--text-main) !important;
   -webkit-text-fill-color: var(--text-main);
   caret-color: var(--accent-2);
-  font: 500 20px/1.35 var(--font-ui);
+  font: 500 18px/48px var(--font-ui);
   letter-spacing: 0.01em;
-  padding: 8px 4px 8px 0;
+  padding: 0 4px 0 0;
   outline: none;
   ime-mode: active;
 }
@@ -129,31 +180,49 @@ body {
   color: #7f92a8;
   font-weight: 400;
 }
-.palette-voice {
+.palette-search-multiline {
+  height: auto;
+  min-height: 48px;
+  max-height: 168px;
+  line-height: 1.45;
+  padding: 10px 4px 10px 0;
+  resize: none;
+  overflow-y: auto;
+}
+.palette-panel.intent-ai-multiline .palette-header {
+  align-items: flex-start;
+}
+.palette-panel.intent-ai-multiline #intent-tag {
+  margin-top: 10px;
+}
+.palette-panel.intent-ai-multiline .palette-debug-btn {
+  margin-top: 6px;
+}
+.palette-debug-btn {
   flex: 0 0 auto;
   width: 36px;
   height: 36px;
   margin-right: 2px;
-  border: 1px solid rgba(255, 102, 0, 0.22);
+  border: 1px solid rgba(96, 165, 250, 0.28);
   border-radius: 11px;
-  background: #1e2a3c;
-  color: #ffb347;
-  font-size: 16px;
+  background: #1a2438;
+  color: #7dd3fc;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   cursor: pointer;
   line-height: 1;
   padding: 0;
-  transition: background var(--ease), border-color var(--ease), box-shadow var(--ease);
+  transition: background var(--ease), border-color var(--ease), box-shadow var(--ease), color var(--ease);
 }
-.palette-voice:hover {
-  background: #263246;
-  border-color: rgba(255, 141, 42, 0.48);
-  box-shadow: 0 0 16px rgba(255, 102, 0, 0.14);
+.palette-debug-btn:hover {
+  background: #22304a;
+  border-color: rgba(125, 211, 252, 0.55);
+  color: #bae6fd;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.16);
 }
-.palette-voice.recording {
-  background: #3a2418;
-  border-color: rgba(255, 102, 0, 0.58);
-  color: #ff8d2a;
-  animation: voice-pulse 1.2s ease-in-out infinite;
+.palette-debug-btn:active {
+  transform: scale(0.96);
 }
 .palette-status {
   display: none;
@@ -173,7 +242,8 @@ body {
 .palette-results {
   position: relative;
   z-index: 1;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: 0;
   overflow: hidden;
   padding: 0 8px;
@@ -289,17 +359,43 @@ body {
 .result-item.kind-history .result-title { color: #b8daff; }
 .result-item.kind-exec .result-title { color: #b8f0c8; }
 .result-item.active .result-title { color: var(--text-main); }
-body.native-input-mode .palette-header,
-body.native-input-mode .palette-status { display: none !important; }
+.result-item.kind-ai_provider .result-icon {
+  color: #c4b5fd;
+}
+.result-item.kind-ai_provider.active {
+  border-color: rgba(167, 139, 250, 0.45);
+  background: rgba(139, 92, 246, 0.12);
+}
+.result-item.kind-ai_provider .result-binding {
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.28);
+}
+.result-item.kind-file {
+  align-items: center;
+  padding: 7px 10px;
+  min-height: 38px;
+}
+.result-item.kind-file .result-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+.result-item.kind-file .result-body {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+}
+.result-item.kind-file .result-desc {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+/* 命令面板始终使用 Web 顶栏输入；勿隐藏 .palette-header（旧 native-input-mode 会导致输入框“消失”） */
 @keyframes palette-in {
   from { transform: translateY(-6px); }
   to { transform: translateY(0); }
 }
-@keyframes voice-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.72; }
-}
-
 /* ===== 浅色主题（对齐 FloatingToolbar / 设置页 light） ===== */
 body[data-theme="light"] {
   color-scheme: light;
@@ -321,26 +417,25 @@ body[data-theme="light"] .palette-panel::before {
 body[data-theme="light"] .palette-panel::after {
   opacity: 0.95;
 }
+body[data-theme="light"] .palette-header {
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 88%, rgba(255, 255, 255, 0.98) 100%);
+}
 body[data-theme="light"] .palette-panel.has-results .palette-header {
   border-bottom-color: rgba(0, 0, 0, 0.06);
 }
 body[data-theme="light"] .palette-search::placeholder {
   color: #8a8a8a;
 }
-body[data-theme="light"] .palette-voice {
-  background: #ffffff;
-  border-color: rgba(230, 126, 34, 0.28);
-  color: #c85d00;
+body[data-theme="light"] .palette-debug-btn {
+  background: #f0f7ff;
+  border-color: rgba(37, 99, 235, 0.28);
+  color: #2563eb;
 }
-body[data-theme="light"] .palette-voice:hover {
-  background: #fff3e8;
-  border-color: rgba(211, 84, 0, 0.42);
-  box-shadow: 0 0 12px rgba(230, 126, 34, 0.12);
-}
-body[data-theme="light"] .palette-voice.recording {
-  background: #fff1e3;
-  border-color: rgba(211, 84, 0, 0.5);
-  color: #d35400;
+body[data-theme="light"] .palette-debug-btn:hover {
+  background: #fff;
+  border-color: rgba(37, 99, 235, 0.45);
+  color: #1d4ed8;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.1);
 }
 body[data-theme="light"] .palette-status {
   color: #a65a12;
@@ -399,38 +494,513 @@ body[data-theme="light"] .result-item.kind-exec .result-title {
 body[data-theme="light"] .result-item.active .result-title {
   color: #1a1a1a;
 }
+.palette-panel.ai-streaming .palette-results {
+  max-height: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px 8px 8px;
+  display: flex;
+  flex-direction: column;
+}
+.ai-stream-container {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(139, 92, 246, 0.22);
+  background: rgba(12, 18, 28, 0.55);
+  overflow: hidden;
+}
+.ai-stream-header {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #c4b5fd;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ai-stream-header-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.ai-stream-header-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ai-stream-header-query {
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-stream-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.ai-stream-badge.streaming {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+}
+.ai-stream-badge.done {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+}
+.ai-stream-badge.handoff {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+}
+.ai-stream-badge.error {
+  color: #ff9b7a;
+  background: rgba(255, 90, 60, 0.12);
+  border: 1px solid rgba(255, 90, 60, 0.28);
+}
+.ai-stream-body {
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: calc(380px - 120px);
+  overflow-y: auto;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-main);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ai-stream-body.streaming::after {
+  content: "▍";
+  display: inline;
+  color: var(--accent-2);
+  animation: ai-cursor-blink 0.9s step-end infinite;
+  margin-left: 2px;
+}
+@keyframes ai-cursor-blink {
+  50% { opacity: 0; }
+}
+.ai-stream-footer {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--text-soft);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.ai-stream-footer kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  margin: 0 2px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 10px;
+  color: var(--text);
+}
+.ai-stream-error {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #ff9b7a;
+  background: rgba(255, 90, 60, 0.08);
+  border-top: 1px solid rgba(255, 90, 60, 0.2);
+}
+body[data-theme="light"] .ai-stream-container {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(139, 92, 246, 0.28);
+}
+.palette-results.has-ai-bg-card {
+  padding: 4px 8px 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.ai-results-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.palette-ai-provider-list {
+  overflow: visible;
+  padding-right: 0;
+}
+.palette-ai-provider-list .result-item {
+  min-height: 44px;
+}
+.palette-panel.has-ai-providers .palette-results {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.palette-panel.has-ai-providers .palette-results.is-scrolling {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 102, 0, 0.35) transparent;
+}
+.palette-panel.has-ai-providers .palette-results.is-scrolling::-webkit-scrollbar {
+  width: 5px;
+}
+.palette-panel.has-ai-providers .palette-results.is-scrolling::-webkit-scrollbar-thumb {
+  background: rgba(255, 102, 0, 0.32);
+  border-radius: 999px;
+}
+.result-icon-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  display: block;
+}
+.result-item.kind-ai_provider .result-icon {
+  padding: 3px;
+  background: #1a2535;
+}
+.palette-ai-provider-hint {
+  flex-shrink: 0;
+  padding: 2px 4px 4px;
+  font-size: 11px;
+  color: var(--text-soft);
+}
+.ai-bg-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.22), rgba(20, 28, 44, 0.85));
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ai-bg-card:hover {
+  border-color: rgba(167, 139, 250, 0.45);
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.32), rgba(24, 34, 52, 0.92));
+}
+.ai-bg-card-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  background: rgba(139, 92, 246, 0.2);
+}
+.ai-bg-card-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ai-bg-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #c4b5fd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-bg-card-preview {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-bg-card-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.ai-bg-card-badge.streaming { color: #fbbf24; background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.28); }
+.ai-bg-card-badge.done { color: #86efac; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.28); }
+.ai-bg-card-badge.handoff { color: #93c5fd; background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.28); }
+.ai-bg-card-badge.error { color: #ff9b7a; background: rgba(255, 90, 60, 0.12); border: 1px solid rgba(255, 90, 60, 0.28); }
+.ai-bg-card-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ai-bg-card-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.ai-bg-card-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+}
+.ai-bg-card-btn.close:hover {
+  background: rgba(255, 90, 60, 0.15);
+  color: #ff9b7a;
+}
+body[data-theme="light"] .ai-bg-card {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(255, 255, 255, 0.9));
+}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script>
 (function () {
+  var IntentRouter = (function () {
+    var ORDER = ["local", "ai", "action"];
+    var LABELS = { local: "本地", ai: "问 AI", action: "动作" };
+    var PLACEHOLDERS = {
+      local: "搜索文件、路径或剪贴板…",
+      ai: "选择模型，Enter 原地流式回答…",
+      action: "搜索命令、历史或快捷动作…"
+    };
+    function nextIntent(cur) {
+      var i = ORDER.indexOf(cur);
+      return ORDER[(i < 0 ? 0 : i + 1) % ORDER.length];
+    }
+    function applyTag(el, intent) {
+      if (!el) return;
+      el.setAttribute("data-intent", intent);
+      el.textContent = LABELS[intent] || intent;
+      el.title = "Tab 切换意图";
+    }
+    return { ORDER: ORDER, LABELS: LABELS, PLACEHOLDERS: PLACEHOLDERS, nextIntent: nextIntent, applyTag: applyTag };
+  })();
+
   var state = {
     input: "",
+    intent: "action",
     actions: [],
+    turboItems: [],
+    aiProviders: [],
+    selectedAiProvider: "",
+    resultMode: "command",
     selected: 0,
     voiceStatus: "idle",
     voiceHint: "",
-    showResults: false
+    showResults: false,
+    turboQuery: "",
+    querySeq: 0
   };
+  var MORPH_HEIGHT = 380;
+  var AI_LIST_MAX_HEIGHT = 520;
+  var AI_PROVIDER_ROW_H = 46;
+  var AI_ICON_FALLBACK = "https://app.local/assets/icons/app/chat-ai-fallback.svg";
+  var AI_ICON_EXTS = [".png", ".jpg", ".jpeg", ".svg", ".webp"];
+  var AI_ICON_ALIAS = {
+    kimi_cli: "kimi",
+    deepseek_cli: "deepseek",
+    claude_cli: "claude",
+    gemini_cli: "gemini",
+    qwen_cli: "qwen",
+    ollama_cli: "ollama",
+    zhipu_cli: "zhipu",
+    copilot_cli: "copilot",
+    openclaw_cli: "openclaw",
+    codex_cli: "codex",
+    studio_cli: "openclaw"
+  };
+  var PROVIDER_ICON_BASES = {
+    openai: ["ChatGPT", "chatgpt", "openai", "codex", "Codex"],
+    codex_cli: ["codex", "Codex", "codex1"],
+    gemini_cli: ["gemini", "Gemini"],
+    openclaw_cli: ["openclaw", "OpenClaw"],
+    qwen_cli: ["qwen", "Qwen"],
+    ollama_cli: ["ollama", "Ollama"],
+    claude_cli: ["claude", "Claude"],
+    deepseek_cli: ["DeepSeek", "deepseek"],
+    kimi_cli: ["kimi", "Kimi", "moonshot"],
+    zhipu_cli: ["zhipu", "Zhipu", "glm", "chelper"],
+    copilot_cli: ["copilot", "Copilot", "ChatGPT"],
+    kimi: ["kimi", "Kimi", "moonshot"],
+    qwen: ["qwen", "Qwen"],
+    deepseek: ["DeepSeek", "deepseek"],
+    claude: ["claude", "Claude"],
+    gemini: ["gemini", "Gemini"],
+    glm: ["glm", "GLM", "zhipu"],
+    zhipu: ["zhipu", "Zhipu", "glm"],
+    minimax: ["minimax", "MiniMax"],
+    siliconflow: ["siliconflow", "SiliconFlow"],
+    openclaw: ["openclaw", "OpenClaw"],
+    openrouter: ["openrouter", "OpenRouter"]
+  };
+
+  function aiProviderIconUrls(id, fromHost) {
+    if (Array.isArray(fromHost) && fromHost.length) return fromHost.slice();
+    var pid = String(id || "").trim();
+    var bases = PROVIDER_ICON_BASES[pid] ? PROVIDER_ICON_BASES[pid].slice() : [];
+    if (pid && bases.indexOf(pid) < 0) bases.unshift(pid);
+    if (AI_ICON_ALIAS[pid] && bases.indexOf(AI_ICON_ALIAS[pid]) < 0) bases.push(AI_ICON_ALIAS[pid]);
+    if (/_cli$/i.test(pid)) {
+      var stripped = pid.replace(/_cli$/i, "");
+      if (stripped && bases.indexOf(stripped) < 0) bases.push(stripped);
+    }
+    if (!bases.length) bases.push(pid || "openai");
+    var list = [];
+    bases.forEach(function (base) {
+      AI_ICON_EXTS.forEach(function (ext) {
+        list.push("https://app.local/assets/icons/app/" + base + ext);
+        list.push("https://app.local/assets/icons/ai/" + base + ext);
+      });
+    });
+    list.push(AI_ICON_FALLBACK);
+    var seen = {};
+    var out = [];
+    list.forEach(function (u) {
+      if (!seen[u]) {
+        seen[u] = 1;
+        out.push(u);
+      }
+    });
+    return out;
+  }
+
+  function bindResultIconImg(img, urls) {
+    if (!img) return;
+    var list = Array.isArray(urls) ? urls : [];
+    if (!list.length) list = [AI_ICON_FALLBACK];
+    var idx = 0;
+    img.alt = "";
+    img.className = "result-icon-img";
+    img.loading = "lazy";
+    img.onerror = function () {
+      idx += 1;
+      if (idx < list.length) this.src = list[idx];
+      else this.onerror = null;
+    };
+    img.src = list[0];
+  }
+
+  function renderProviderIconHtml(item) {
+    if (!item || item.kind !== "ai_provider") return kindIcon(item.kind || "command");
+    var urls = aiProviderIconUrls(item.id, item.iconUrls);
+    var src = esc(urls[0] || AI_ICON_FALLBACK);
+    return '<img class="result-icon-img" src="' + src + '" data-provider-id="' + esc(String(item.id || "")) + '" alt="" />';
+  }
+
+  function hydrateResultIcons(box) {
+    if (!box) return;
+    box.querySelectorAll("img.result-icon-img[data-provider-id]").forEach(function (img) {
+      var pid = img.getAttribute("data-provider-id") || "";
+      var item = null;
+      for (var i = 0; i < state.aiProviders.length; i++) {
+        if (String(state.aiProviders[i].id || "") === pid) {
+          item = state.aiProviders[i];
+          break;
+        }
+      }
+      bindResultIconImg(img, aiProviderIconUrls(pid, item && item.iconUrls));
+    });
+  }
+
+  function scrollResultItemIntoView(scroller, node) {
+    if (!scroller || !node) return;
+    if (scroller.scrollHeight <= scroller.clientHeight + 2) return;
+    try {
+      var boxRect = scroller.getBoundingClientRect();
+      var nodeRect = node.getBoundingClientRect();
+      if (nodeRect.top < boxRect.top) scroller.scrollTop -= boxRect.top - nodeRect.top;
+      else if (nodeRect.bottom > boxRect.bottom) scroller.scrollTop += nodeRect.bottom - boxRect.bottom;
+    } catch (_) {}
+  }
+
+  function ensureHeaderInputVisible() {
+    document.body.classList.remove("native-input-mode");
+    try {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    } catch (_) {}
+    if (!document.getElementById("palette-panel")) ensureShell();
+    if (state.intent === "ai") ensureInputForIntent();
+    syncIntentUI();
+    var inp = getInputEl();
+    if (!inp) {
+      var header = document.querySelector(".palette-header");
+      if (header) {
+        var el = document.createElement(state.intent === "ai" ? "textarea" : "input");
+        el.id = "command-input";
+        if (el.tagName === "TEXTAREA") {
+          el.className = "palette-search palette-search-multiline";
+          el.rows = 2;
+        } else {
+          el.type = "text";
+          el.className = "palette-search";
+        }
+        el.setAttribute("lang", "zh-CN");
+        el.setAttribute("autocomplete", "off");
+        el.setAttribute("spellcheck", "false");
+        el.placeholder = IntentRouter.PLACEHOLDERS[state.intent] || IntentRouter.PLACEHOLDERS.local;
+        var tag = document.getElementById("intent-tag");
+        var dbg = document.getElementById("debug-btn");
+        if (tag && tag.nextSibling) header.insertBefore(el, tag.nextSibling);
+        else if (dbg) header.insertBefore(el, dbg);
+        else header.appendChild(el);
+        bindInputEvents(el);
+      }
+    }
+    syncInputHeight();
+  }
+  var aiPhase = "idle";
+  var aiStreamText = "";
+  var aiStreamReqId = "";
+  var aiBgCardPayload = null;
+  var isBackgroundStreaming = false;
+  var pendingChunkBuf = "";
+  var scrollRaf = 0;
   var composing = false;
   var fetchTimer = null;
   var sizeTimer = null;
   var scrollHideTimer = null;
   var root = document.getElementById("root");
   var themeMode = "dark";
-  var searchIconSvg =
-    '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
-    '<circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"></circle>' +
-    '<path d="M16.2 16.2L20 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>' +
-    "</svg>";
 
   function post(o) {
+    if (!o) return;
+    var typ = o.type ? String(o.type) : "";
+    if (typ === "palette_search_debug") {
+      try {
+        if (window.ahk && typeof window.ahk.OpenCommandPaletteSearchDebug === "function") {
+          if (String(window.ahk.OpenCommandPaletteSearchDebug()) === "ok") return;
+        }
+      } catch (_) {}
+    }
+    var payload = "";
+    try {
+      payload = JSON.stringify(o);
+    } catch (_) {
+      return;
+    }
     try {
       if (window.chrome && window.chrome.webview && typeof window.chrome.webview.postMessage === "function") {
-        window.chrome.webview.postMessage(JSON.stringify(o));
+        window.chrome.webview.postMessage(payload);
+        return;
       }
     } catch (_) {}
+    try {
+      window.chrome.webview.postMessage(o);
+    } catch (_2) {}
   }
 
   function applyTheme(mode) {
@@ -454,22 +1024,223 @@ body[data-theme="light"] .result-item.active .result-title {
   }
 
   function kindIcon(kind) {
+    if (kind === "file" || kind === "folder") return "📄";
     if (kind === "history") return "🕘";
     if (kind === "exec") return "↩";
     return "⌘";
   }
 
+  function applyAiProviders(items, activeProvider) {
+    state.aiProviders = Array.isArray(items) ? items.slice() : [];
+    var active = String(activeProvider || "").trim();
+    if (!active) {
+      for (var i = 0; i < state.aiProviders.length; i++) {
+        var row = state.aiProviders[i];
+        if (!row) continue;
+        if (row.active === true || row.active === 1 || row.active === "1") {
+          active = String(row.id || "");
+          break;
+        }
+      }
+    }
+    if (!active && state.aiProviders[0]) active = String(state.aiProviders[0].id || "");
+    state.selectedAiProvider = active;
+    if (state.intent === "ai") {
+      state.actions = state.aiProviders.slice();
+      state.resultMode = "command";
+      if (state.selected >= state.actions.length) state.selected = 0;
+      for (var j = 0; j < state.actions.length; j++) {
+        if (String(state.actions[j].id || "") === state.selectedAiProvider) {
+          state.selected = j;
+          break;
+        }
+      }
+      if (aiPhase === "compact") refreshAiProvidersUnderCard();
+      else updateResults();
+      syncWindowSize();
+      requestAnimationFrame(function () {
+        syncWindowSize();
+        requestAnimationFrame(syncWindowSize);
+      });
+    }
+  }
+
+  function prepareAiIntentForNewQuestion(keepProviderId) {
+    state.intent = "ai";
+    state.input = "";
+    ensureHeaderInputVisible();
+    var inp = getInputEl();
+    if (inp) {
+      inp.value = "";
+      inp.focus();
+    }
+    if (keepProviderId) state.selectedAiProvider = String(keepProviderId);
+    syncAiListSelectionIndex();
+  }
+
+  function refreshAiProvidersUnderCard() {
+    var listWrap = document.querySelector(".palette-ai-provider-list");
+    if (!listWrap) return;
+    state.actions = state.aiProviders.slice();
+    state.resultMode = "command";
+    if (state.actions.length && state.selected >= state.actions.length) state.selected = state.actions.length - 1;
+    renderCommandResults(listWrap, state.actions);
+    bindResultClicks(listWrap);
+    var activeNode = listWrap.querySelector(".result-item.active");
+    var scroller = document.getElementById("results");
+    if (activeNode && scroller) scrollResultItemIntoView(scroller, activeNode);
+    var panel = document.getElementById("palette-panel");
+    if (panel) {
+      panel.classList.toggle("has-results", state.actions.length > 0 || !!document.querySelector(".ai-bg-card"));
+      panel.classList.toggle("has-ai-providers", state.actions.length > 0);
+    }
+    syncWindowSize();
+  }
+
+  function isAiConfigured(item) {
+    if (!item) return false;
+    var c = item.configured;
+    return c === true || c === 1 || c === "1" || c === "true";
+  }
+
+  function syncAiListSelectionIndex() {
+    if (state.intent !== "ai" && aiPhase !== "compact") {
+      state.selected = 0;
+      return;
+    }
+    var rows = state.aiProviders.length ? state.aiProviders : state.actions;
+    for (var j = 0; j < rows.length; j++) {
+      if (String(rows[j].id || "") === state.selectedAiProvider) {
+        state.selected = j;
+        return;
+      }
+    }
+    state.selected = 0;
+  }
+
+  function pickAiProvider(id) {
+    var pid = String(id || "").trim();
+    if (!pid) return;
+    state.selectedAiProvider = pid;
+    for (var i = 0; i < state.aiProviders.length; i++) {
+      if (String(state.aiProviders[i].id || "") === pid) {
+        state.selected = i;
+        break;
+      }
+    }
+    var label = pid;
+    for (var k = 0; k < state.aiProviders.length; k++) {
+      if (String(state.aiProviders[k].id || "") === pid) {
+        label = state.aiProviders[k].label || pid;
+        break;
+      }
+    }
+    window.nmerPalette.setStatus("已选 " + label + " · Enter 发送", "idle");
+    if (aiPhase === "compact") refreshAiProvidersUnderCard();
+    else updateResults();
+    syncWindowSize();
+    getInputEl()?.focus();
+  }
+
+  function currentRows() {
+    if (state.resultMode === "turbo") return state.turboItems;
+    return state.actions;
+  }
+
+  function getInputEl() {
+    return document.getElementById("command-input");
+  }
+
+  function readInputValue() {
+    var el = getInputEl();
+    return el ? String(el.value || "") : state.input;
+  }
+
+  function syncInputHeight() {
+    var el = getInputEl();
+    var panel = document.getElementById("palette-panel");
+    if (!el || !panel) return;
+    if (state.intent === "ai" && el.tagName === "TEXTAREA") {
+      el.style.height = "auto";
+      var lines = Math.min(6, Math.max(1, (el.value.match(/\n/g) || []).length + 1));
+      var nextH = Math.min(168, Math.max(48, lines * 26 + 22));
+      el.style.height = nextH + "px";
+      panel.classList.add("intent-ai-multiline");
+    } else {
+      panel.classList.remove("intent-ai-multiline");
+      if (el.tagName === "INPUT") {
+        el.style.height = "48px";
+      }
+    }
+  }
+
+  function ensureInputForIntent() {
+    var header = document.querySelector(".palette-header");
+    var old = getInputEl();
+    if (!header || !old) return old;
+    var wantTa = state.intent === "ai";
+    var isTa = old.tagName === "TEXTAREA";
+    if (wantTa === isTa) return old;
+    var val = String(old.value || "");
+    var next;
+    if (wantTa) {
+      next = document.createElement("textarea");
+      next.id = "command-input";
+      next.className = "palette-search palette-search-multiline";
+      next.rows = 2;
+      next.setAttribute("lang", "zh-CN");
+      next.setAttribute("autocomplete", "off");
+      next.setAttribute("spellcheck", "false");
+    } else {
+      next = document.createElement("input");
+      next.id = "command-input";
+      next.type = "text";
+      next.className = "palette-search";
+      next.setAttribute("lang", "zh-CN");
+      next.setAttribute("autocomplete", "off");
+      next.setAttribute("spellcheck", "false");
+    }
+    next.value = val;
+    next.placeholder = IntentRouter.PLACEHOLDERS[state.intent] || IntentRouter.PLACEHOLDERS.local;
+    old.replaceWith(next);
+    bindInputEvents(next);
+    return next;
+  }
+
+  function syncIntentUI() {
+    var tag = document.getElementById("intent-tag");
+    IntentRouter.applyTag(tag, state.intent);
+    ensureInputForIntent();
+    var input = getInputEl();
+    if (input) input.placeholder = IntentRouter.PLACEHOLDERS[state.intent] || IntentRouter.PLACEHOLDERS.local;
+    syncInputHeight();
+  }
+
+  function cycleIntent() {
+    state.intent = IntentRouter.nextIntent(state.intent);
+    state.selected = 0;
+    state.turboItems = [];
+    state.resultMode = "command";
+    syncIntentUI();
+    if (state.intent === "ai") post({ type: "palette_ai_refresh" });
+    runQuery(true);
+    getInputEl()?.focus();
+  }
+
   window.nmerVoice = window.nmerPalette = {
     setInputText: function (text) {
       state.input = String(text || "");
-      var input = document.getElementById("command-input");
+      var input = getInputEl();
       if (input) {
         input.value = state.input;
         input.focus();
+        try {
         input.setSelectionRange(state.input.length, state.input.length);
+        } catch (_) {}
+        syncInputHeight();
       }
       state.selected = 0;
-      scheduleFetch();
+      runQuery(true);
       syncWindowSize();
     },
     setStatus: function (text, status) {
@@ -486,14 +1257,15 @@ body[data-theme="light"] .result-item.active .result-title {
       '<main class="palette-root">' +
       '<section class="palette-panel" id="palette-panel" aria-label="命令面板">' +
       '<header class="palette-header">' +
-      '<span class="palette-search-icon">' + searchIconSvg + "</span>" +
-      '<input id="command-input" class="palette-search" type="text" lang="zh-CN" autocomplete="off" spellcheck="false" placeholder="搜索命令、历史或动作…" />' +
-      '<button type="button" id="voice-btn" class="palette-voice" title="语音输入" aria-label="语音输入">🎤</button>' +
+      '<span id="intent-tag" data-intent="action" title="Tab 切换意图">动作</span>' +
+      '<input id="command-input" class="palette-search" type="text" lang="zh-CN" autocomplete="off" spellcheck="false" placeholder="搜索文件、路径或剪贴板…" />' +
+      '<button type="button" id="debug-btn" class="palette-debug-btn" title="本地搜索诊断 (Ctrl+Shift+D)" aria-label="打开本地搜索诊断">诊</button>' +
       "</header>" +
       '<p id="voice-hint" class="palette-status"></p>' +
       '<div id="results" class="palette-results"></div>' +
       "</section></main>";
     root.dataset.ready = "1";
+    syncIntentUI();
     bindUI();
     post({ type: "palette_ready" });
   }
@@ -520,30 +1292,53 @@ body[data-theme="light"] .result-item.active .result-title {
     var show = state.voiceStatus !== "idle";
     el.className = "palette-status" + (show ? " show " + esc(state.voiceStatus) : "");
     el.textContent = show ? state.voiceHint : "";
-    var btn = document.getElementById("voice-btn");
-    if (btn) {
-      var rec = state.voiceStatus === "listening" || state.voiceStatus === "recording";
-      btn.classList.toggle("recording", rec);
-    }
     document.getElementById("palette-panel")?.classList.toggle("has-status", show);
     syncWindowSize();
   }
 
-  function updateResults() {
-    var box = document.getElementById("results");
-    var panel = document.getElementById("palette-panel");
-    if (!box || !panel) return;
-    var rows = state.actions || [];
-    state.showResults = rows.length > 0;
-    panel.classList.toggle("has-results", state.showResults);
-    box.className = "palette-results";
+  function renderTurboResults(box, rows) {
+    var frag = document.createDocumentFragment();
+    var cap = Math.min(20, rows.length);
+    for (var i = 0; i < cap; i++) {
+      var item = rows[i];
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "result-item kind-file" + (i === state.selected ? " active" : "");
+      btn.setAttribute("data-idx", String(i));
+      if (item.path) btn.setAttribute("data-path", item.path);
+      var icon = document.createElement("span");
+      icon.className = "result-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = kindIcon(item.kind || "file");
+      var body = document.createElement("span");
+      body.className = "result-body";
+      var title = document.createElement("span");
+      title.className = "result-title";
+      title.textContent = item.label || item.title || "";
+      var desc = document.createElement("span");
+      desc.className = "result-desc";
+      desc.textContent = item.desc || item.subtitle || item.path || "";
+      body.appendChild(title);
+      body.appendChild(desc);
+      btn.appendChild(icon);
+      btn.appendChild(body);
+      frag.appendChild(btn);
+    }
+    box.replaceChildren(frag);
+  }
+
+  function renderCommandResults(box, rows) {
     box.innerHTML = rows
       .map(function (item, idx) {
         var active = idx === state.selected ? " active" : "";
         var matched = item.matched ? " matched" : "";
         var kind = item.kind ? " kind-" + esc(item.kind) : "";
         var binding = item.binding ? '<span class="result-binding">' + esc(item.binding) + "</span>" : "";
-        var icon = kindIcon(item.kind || "command");
+        if (!binding && item.kind === "ai_provider") {
+          if (String(item.id || "") === state.selectedAiProvider) binding = '<span class="result-binding">已选</span>';
+          else if (isAiConfigured(item)) binding = '<span class="result-binding">已配置</span>';
+        }
+        var icon = item.kind === "ai_provider" ? renderProviderIconHtml(item) : kindIcon(item.kind || "command");
         return (
           '<button class="result-item' + active + matched + kind + '" type="button" data-idx="' + idx + '">' +
           '<span class="result-icon" aria-hidden="true">' + icon + "</span>" +
@@ -553,33 +1348,118 @@ body[data-theme="light"] .result-item.active .result-title {
         );
       })
       .join("");
-    bindResultsScrollHide(box);
+    hydrateResultIcons(box);
+  }
+
+  function bindResultClicks(box) {
     box.querySelectorAll("[data-idx]").forEach(function (node) {
       node.addEventListener("click", function (e) {
         var idx = Number(e.currentTarget.getAttribute("data-idx"));
-        if (idx >= 0) {
+        if (idx < 0) return;
           state.selected = idx;
+        var rows = currentRows();
+        var item = rows[idx];
+        if (item && item.kind === "ai_provider") {
+          pickAiProvider(item.id);
+          return;
+        }
           updateResults();
           executeSelected();
-        }
       });
     });
+  }
+
+  function updateResults() {
+    if (aiPhase === "compact") {
+      refreshAiProvidersUnderCard();
+      return;
+    }
+    var box = document.getElementById("results");
+    var panel = document.getElementById("palette-panel");
+    if (!box || !panel) return;
+    var rows = currentRows();
+    state.showResults = rows.length > 0;
+    panel.classList.toggle("has-results", state.showResults);
+    panel.classList.toggle("has-ai-providers", state.intent === "ai" && rows.length > 0);
+    box.className = "palette-results";
+    if (state.resultMode === "turbo") renderTurboResults(box, rows);
+    else renderCommandResults(box, rows);
+    bindResultsScrollHide(box);
+    bindResultClicks(box);
     var activeNode = box.querySelector(".result-item.active");
-    if (activeNode) activeNode.scrollIntoView({ block: "nearest" });
+    if (activeNode) scrollResultItemIntoView(box, activeNode);
     syncWindowSize();
   }
 
-  function scheduleFetch() {
+  function runQuery(immediate) {
     if (composing) return;
+    state.input = readInputValue();
+    if (state.intent === "ai") {
+      state.actions = state.aiProviders.slice();
+      state.resultMode = "command";
+      state.turboItems = [];
+      if (state.selected >= state.actions.length) state.selected = 0;
+      ensureHeaderInputVisible();
+      updateResults();
+      syncInputHeight();
+      syncWindowSize();
+      return;
+    }
     if (fetchTimer) clearTimeout(fetchTimer);
-    fetchTimer = setTimeout(function () {
-      post({ type: "palette_query", input: state.input });
-    }, 100);
+    var q = state.input.trim();
+    var delay = state.intent === "local" ? 50 : 100;
+    var run = function () {
+      state.querySeq += 1;
+      var seq = state.querySeq;
+      if (state.intent === "local" && q) {
+        state.turboQuery = q;
+        state.resultMode = "turbo";
+        post({ type: "palette_turbo_search", query: q, intent: "local", limit: 20, seq: seq });
+        return;
+      }
+      state.resultMode = "command";
+      state.turboItems = [];
+      post({ type: "palette_query", input: state.input, seq: seq });
+    };
+    if (immediate) run();
+    else fetchTimer = setTimeout(run, delay);
+  }
+
+  function sendAiQuery() {
+    if (aiPhase === "streaming") return;
+    if (aiPhase === "compact" || aiPhase === "done" || aiPhase === "error") {
+      if (aiPhase === "compact") post({ type: "palette_ai_dismiss" });
+      resetAiStreamState();
+    }
+    state.input = readInputValue();
+    startAiMorphing(state.input.trim(), state.selectedAiProvider || "");
   }
 
   function executeSelected() {
-    var item = state.actions[state.selected];
+    if (state.intent === "ai") {
+      var rows = currentRows();
+      var item = rows[state.selected];
+      if (item && item.kind === "ai_provider") {
+        pickAiProvider(item.id);
+        return;
+      }
+      sendAiQuery();
+      return;
+    }
+    var rows = currentRows();
+    var item = rows[state.selected];
     if (!item) return;
+    if (state.resultMode === "turbo") {
+      post({
+        type: "palette_turbo_execute",
+        path: String(item.path || ""),
+        title: String(item.label || item.title || ""),
+        kind: String(item.kind || "file"),
+        query: state.input
+      });
+      hidePalette();
+      return;
+    }
     post({
       type: "palette_execute",
       cmdId: String(item.id || item.cmdId || ""),
@@ -594,78 +1474,604 @@ body[data-theme="light"] .result-item.active .result-title {
     var header = panel?.querySelector(".palette-header");
     var status = document.getElementById("voice-hint");
     var results = document.getElementById("results");
-    if (!panel || !header) return 72;
-    var h = header.offsetHeight || 64;
+    if (!panel || !header) return 120;
+    var headerH = header.offsetHeight || 0;
+    if (headerH < 48) headerH = 48;
+    var h = headerH;
     if (status && status.classList.contains("show")) {
       h += status.offsetHeight || 24;
     }
+    var cap = state.intent === "ai" || aiPhase === "compact" ? AI_LIST_MAX_HEIGHT : 520;
+    var remain = cap - h - 8;
+    if (remain < 120) remain = 120;
     if (state.showResults && results) {
-      var rowH = 54;
-      var rows = Math.max(1, state.actions.length);
+      if (state.intent === "ai" || aiPhase === "compact") {
+        var card = document.querySelector(".ai-bg-card");
+        var hint = document.querySelector(".palette-ai-provider-hint");
+        var rowCount = Math.max(0, currentRows().length);
+        var need =
+          (card ? card.offsetHeight + 8 : 0) +
+          (hint ? hint.offsetHeight + 4 : 0) +
+          rowCount * AI_PROVIDER_ROW_H +
+          12;
+        h += Math.min(remain, need);
+      } else {
+        var rowH = state.resultMode === "turbo" ? 40 : 54;
+        var rows = Math.max(1, currentRows().length);
       var listH = Math.min(320, rows * rowH + 14);
-      if (results.scrollHeight > 0) {
-        listH = Math.min(320, results.scrollHeight + 14);
-      }
+        if (results.scrollHeight > 0) listH = Math.min(320, results.scrollHeight + 14);
       h += listH;
     }
-    return Math.min(520, Math.max(72, Math.ceil(h)));
+    }
+    return Math.min(cap, Math.max(120, Math.ceil(h)));
+  }
+
+  function resetAiStreamState() {
+    aiPhase = "idle";
+    aiStreamText = "";
+    aiStreamReqId = "";
+    aiBgCardPayload = null;
+    isBackgroundStreaming = false;
+    pendingChunkBuf = "";
+    if (scrollRaf) {
+      cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+    }
+    var panel = document.getElementById("palette-panel");
+    if (panel) {
+      panel.classList.remove("ai-streaming", "has-ai-bg-card");
+    }
+  }
+
+  function aiAnswerPreview(text, maxLen) {
+    var t = String(text || "").replace(/\s+/g, " ").trim();
+    if (!t) return "";
+    var n = maxLen || 56;
+    if (t.length <= n) return t;
+    return t.slice(0, n) + "…";
+  }
+
+  function aiBgCardBadge(phase, handoff) {
+    if (phase === "done") return { text: "已完成", cls: "done" };
+    if (phase === "error") return { text: "失败", cls: "error" };
+    if (handoff) return { text: "后台中", cls: "handoff" };
+    return { text: "回答中", cls: "streaming" };
+  }
+
+  function updateAiBackgroundCard() {
+    var card = document.querySelector(".ai-bg-card");
+    if (!card || !aiBgCardPayload) return;
+    var d = aiBgCardPayload;
+    var phase = String(d.phase || "streaming");
+    var q = String(d.query || "").trim();
+    var ans = String(aiStreamText || d.answer || "").trim();
+    var badge = aiBgCardBadge(phase, d.handoff);
+    var errMsg = String(d.message || d.error || "").trim();
+    var preview = phase === "error" ? (errMsg || "请求失败，请检查 API Key 与网络") : aiAnswerPreview(ans, 64);
+    var title = document.querySelector(".ai-bg-card-title");
+    var prev = document.querySelector(".ai-bg-card-preview");
+    var badgeEl = document.querySelector(".ai-bg-card-badge");
+    if (title) title.textContent = "问：" + (q || "AI 对话");
+    if (prev) prev.textContent = preview ? "答：" + preview : "点击展开查看";
+    if (badgeEl) {
+      badgeEl.className = "ai-bg-card-badge " + badge.cls;
+      badgeEl.textContent = badge.text;
+    }
+  }
+
+  function showAiBackgroundCard(d) {
+    aiBgCardPayload = d || {};
+    var phase = String(d.phase || "streaming");
+    var q = String(d.query || "").trim();
+    prepareAiIntentForNewQuestion(d.provider ? String(d.provider) : "");
+    aiStreamReqId = String(d.reqId || "");
+    aiStreamText = String(d.answer || "");
+    isBackgroundStreaming = false;
+    pendingChunkBuf = "";
+    aiPhase = "compact";
+
+    var box = document.getElementById("results");
+    var panel = document.getElementById("palette-panel");
+    if (!box || !panel) return;
+    box.innerHTML = "";
+    box.className = "palette-results has-ai-bg-card";
+    panel.classList.remove("ai-streaming");
+    panel.classList.add("has-ai-bg-card", "has-ai-providers");
+    state.showResults = true;
+
+    var stack = document.createElement("div");
+    stack.className = "ai-results-stack";
+
+    var badge = aiBgCardBadge(phase, d.handoff);
+    var errMsg0 = String(d.message || d.error || "").trim();
+    var preview = phase === "error" ? (errMsg0 || "请求失败，请检查 API Key 与网络") : aiAnswerPreview(aiStreamText, 64);
+    if (phase === "error" && errMsg0) aiBgCardPayload.message = errMsg0;
+    var card = document.createElement("div");
+    card.className = "ai-bg-card";
+    card.setAttribute("role", "button");
+    card.setAttribute("tabindex", "0");
+    card.innerHTML =
+      '<div class="ai-bg-card-icon">💬</div>' +
+      '<div class="ai-bg-card-body">' +
+      '<div class="ai-bg-card-title">问：' + esc(q || "AI 对话") + "</div>" +
+      '<div class="ai-bg-card-preview">' + esc(preview ? "答：" + preview : "点击展开查看") + "</div>" +
+      "</div>" +
+      '<span class="ai-bg-card-badge ' + badge.cls + '">' + badge.text + "</span>" +
+      '<div class="ai-bg-card-actions">' +
+      '<button type="button" class="ai-bg-card-btn expand" title="展开">↗</button>' +
+      '<button type="button" class="ai-bg-card-btn close" title="关闭">×</button>' +
+      "</div>";
+
+    card.addEventListener("click", function (e) {
+      if (e.target.closest(".ai-bg-card-btn.close")) return;
+      if (e.target.closest(".ai-bg-card-btn.expand") || !e.target.closest(".ai-bg-card-btn")) {
+        expandAiBackgroundCard();
+      }
+    });
+    card.querySelector(".ai-bg-card-btn.expand")?.addEventListener("click", function (e) {
+      e.stopPropagation();
+      expandAiBackgroundCard();
+    });
+    card.querySelector(".ai-bg-card-btn.close")?.addEventListener("click", function (e) {
+      e.stopPropagation();
+      dismissAiBackgroundCard();
+    });
+    card.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        expandAiBackgroundCard();
+      }
+    });
+    stack.appendChild(card);
+
+    var hint = document.createElement("div");
+    hint.className = "palette-ai-provider-hint";
+    hint.textContent = "选择模型，在上方输入新问题";
+    stack.appendChild(hint);
+
+    var listWrap = document.createElement("div");
+    listWrap.className = "palette-ai-provider-list";
+    stack.appendChild(listWrap);
+
+    box.appendChild(stack);
+    updateAiBackgroundCard();
+    refreshAiProvidersUnderCard();
+
+    if (phase === "done") {
+      window.nmerPalette.setStatus("输入新问题 · 选模型后 Enter 发送", "idle");
+    } else if (phase === "error") {
+      window.nmerPalette.setStatus("上次请求失败 · 可换模型后重试", "error");
+    } else if (d.handoff) {
+      window.nmerPalette.setStatus("后台生成中 · 点击卡片查看", "loading");
+    } else {
+      window.nmerPalette.setStatus("正在回答 · 点击卡片查看进度", "loading");
+    }
+    ensureHeaderInputVisible();
+    syncWindowSize();
+    requestAnimationFrame(function () {
+      ensureHeaderInputVisible();
+      syncWindowSize();
+    });
+  }
+
+  function expandAiBackgroundCard() {
+    if (!aiBgCardPayload) return;
+    var d = Object.assign({}, aiBgCardPayload, { compact: false });
+    var panel = document.getElementById("palette-panel");
+    if (panel) panel.classList.remove("has-ai-bg-card");
+    restoreAiSession(d);
+  }
+
+  function dismissAiBackgroundCard() {
+    post({ type: "palette_ai_dismiss" });
+    resetAiStreamState();
+    prepareAiIntentForNewQuestion(state.selectedAiProvider || "");
+    if (state.intent === "ai") {
+      state.actions = state.aiProviders.slice();
+      state.resultMode = "command";
+      updateResults();
+    } else updateResults();
+    window.nmerPalette.setStatus(state.selectedAiProvider ? "已选模型 · Enter 发送" : "请选择模型", "idle");
+    syncWindowSize();
+  }
+
+  function flushPendingChunks() {
+    scrollRaf = 0;
+    if (!pendingChunkBuf || isBackgroundStreaming) return;
+    var body = document.querySelector(".ai-stream-body");
+    if (!body) return;
+    aiStreamText += pendingChunkBuf;
+    pendingChunkBuf = "";
+    body.textContent = aiStreamText;
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function appendAiChunk(delta) {
+    if (isBackgroundStreaming || !delta) return;
+    if (aiPhase === "compact") {
+      aiStreamText += String(delta);
+      if (aiBgCardPayload) aiBgCardPayload.answer = aiStreamText;
+      updateAiBackgroundCard();
+      return;
+    }
+    pendingChunkBuf += String(delta);
+    if (aiPhase === "streaming") {
+      updateAiStreamHeader({ query: state.input, phase: "streaming" });
+    }
+    if (!scrollRaf) {
+      scrollRaf = requestAnimationFrame(flushPendingChunks);
+    }
+  }
+
+  function aiProviderLabel(id) {
+    var pid = String(id || "");
+    for (var i = 0; i < state.aiProviders.length; i++) {
+      if (String(state.aiProviders[i].id || "") === pid) return state.aiProviders[i].label || pid;
+    }
+    return pid || "AI";
+  }
+
+  function updateAiStreamHeader(meta) {
+    var header = document.querySelector(".ai-stream-header");
+    if (!header) return;
+    var q = String((meta && meta.query) || state.input || "").trim();
+    var phase = String((meta && meta.phase) || aiPhase || "streaming");
+    var handoff = !!(meta && meta.handoff);
+    var badgeText = "正在回答";
+    var badgeClass = "streaming";
+    if (phase === "done") {
+      badgeText = "已完成";
+      badgeClass = "done";
+    } else if (phase === "error") {
+      badgeText = "失败";
+      badgeClass = "error";
+    } else if (handoff) {
+      badgeText = "后台生成中";
+      badgeClass = "handoff";
+    }
+    header.innerHTML =
+      '<div class="ai-stream-header-main">' +
+      '<div class="ai-stream-header-title">AI 回答</div>' +
+      (q ? '<div class="ai-stream-header-query">' + esc(q) + "</div>" : "") +
+      "</div>" +
+      '<span class="ai-stream-badge ' + badgeClass + '">' + badgeText + "</span>";
+  }
+
+  function restoreAiSession(d) {
+    if (!d) return;
+    var phase = String(d.phase || "idle");
+    if (phase === "idle") {
+      resetAiStreamState();
+      return;
+    }
+    if (d.compact !== false) {
+      showAiBackgroundCard(d);
+      return;
+    }
+    var q = String(d.query || "").trim();
+    if (q) {
+      state.input = q;
+      state.intent = "ai";
+      var inp = getInputEl();
+      if (inp) inp.value = q;
+      if (d.provider) state.selectedAiProvider = String(d.provider);
+      ensureInputForIntent();
+      syncInputHeight();
+    }
+    ensureAiStreamDom();
+    updateAiStreamHeader({ query: q, phase: phase, handoff: d.handoff });
+    aiStreamReqId = String(d.reqId || "");
+    aiStreamText = String(d.answer || "");
+    isBackgroundStreaming = false;
+    pendingChunkBuf = "";
+    flushPendingChunks();
+    var body = document.querySelector(".ai-stream-body");
+    if (body) {
+      body.textContent = aiStreamText;
+      if (phase === "streaming") body.classList.add("streaming");
+      else body.classList.remove("streaming");
+    }
+    aiPhase = phase === "done" ? "done" : phase === "error" ? "error" : "streaming";
+    post({ type: "palette_morph_resize", height: MORPH_HEIGHT });
+    if (phase === "done") {
+      window.nmerPalette.setStatus("回答完成 · Tab 打开完整对话", "idle");
+    } else if (phase === "error") {
+      showAiStreamError(d.message || d.error || "请求失败");
+    } else if (d.handoff) {
+      window.nmerPalette.setStatus("后台继续生成中 · 可在此查看进度", "loading");
+    } else {
+      window.nmerPalette.setStatus("正在连接模型…", "loading");
+    }
+  }
+
+  function ensureAiStreamDom() {
+    var box = document.getElementById("results");
+    var panel = document.getElementById("palette-panel");
+    if (!box || !panel) return null;
+    box.innerHTML = "";
+    box.className = "palette-results";
+    var wrap = document.createElement("div");
+    wrap.className = "ai-stream-container";
+    wrap.innerHTML =
+      '<div class="ai-stream-header">AI 回答</div>' +
+      '<div class="ai-stream-body streaming"></div>' +
+      '<div class="ai-stream-footer">Esc 后台继续 · <kbd>Tab</kbd> 打开完整对话</div>';
+    box.appendChild(wrap);
+    panel.classList.add("ai-streaming", "has-results");
+    state.showResults = true;
+    updateAiStreamHeader({ query: state.input, phase: "streaming" });
+    return wrap.querySelector(".ai-stream-body");
+  }
+
+  function startAiMorphing(query, provider) {
+    state.input = readInputValue();
+    var q = String(query || state.input || "").trim();
+    if (!q) {
+      window.nmerPalette.setStatus("请输入要问 AI 的内容", "error");
+      return;
+    }
+    if (!provider && !state.selectedAiProvider && state.aiProviders[0]) {
+      state.selectedAiProvider = String(state.aiProviders[0].id || "");
+    }
+    var prov = String(provider || state.selectedAiProvider || "");
+    aiPhase = "morphing";
+    isBackgroundStreaming = false;
+    aiStreamText = "";
+    pendingChunkBuf = "";
+    ensureAiStreamDom();
+    window.nmerPalette.setStatus("正在连接模型…", "loading");
+    aiPhase = "streaming";
+    post({ type: "palette_morph_resize", height: MORPH_HEIGHT });
+    post({ type: "palette_ai_send", query: q, provider: prov, morph: 1 });
+  }
+
+  function clearAiStreamErrorUi() {
+    document.querySelectorAll(".ai-stream-error").forEach(function (el) {
+      el.remove();
+    });
+    if (aiBgCardPayload) {
+      aiBgCardPayload.message = "";
+      aiBgCardPayload.error = "";
+    }
+  }
+
+  function finishAiStream(endPayload) {
+    clearAiStreamErrorUi();
+    if (aiPhase === "compact") {
+      if (endPayload && endPayload.answer) aiStreamText = String(endPayload.answer);
+      if (aiBgCardPayload) {
+        aiBgCardPayload.phase = "done";
+        aiBgCardPayload.answer = aiStreamText;
+        aiBgCardPayload.message = "";
+      }
+      updateAiBackgroundCard();
+      window.nmerPalette.setStatus("回答完成 · 点击卡片展开", "idle");
+      return;
+    }
+    flushPendingChunks();
+    var body = document.querySelector(".ai-stream-body");
+    if (body) {
+      body.classList.remove("streaming");
+      if (endPayload && endPayload.answer) {
+        aiStreamText = String(endPayload.answer);
+        body.textContent = aiStreamText;
+      } else if (aiStreamText) {
+        body.textContent = aiStreamText;
+      }
+    }
+    aiPhase = "done";
+    if (aiBgCardPayload) {
+      aiBgCardPayload.phase = "done";
+      aiBgCardPayload.answer = aiStreamText;
+    }
+    updateAiStreamHeader({ query: state.input, phase: "done" });
+    window.nmerPalette.setStatus("回答完成 · Tab 打开完整对话", "idle");
+  }
+
+  function showAiStreamError(message) {
+    if (aiPhase === "compact") {
+      if (aiBgCardPayload) {
+        aiBgCardPayload.phase = "error";
+        aiBgCardPayload.message = String(message || "请求失败");
+      }
+      updateAiBackgroundCard();
+      window.nmerPalette.setStatus(String(message || "请求失败"), "error");
+      return;
+    }
+    flushPendingChunks();
+    aiPhase = "error";
+    var body = document.querySelector(".ai-stream-body");
+    if (body) body.classList.remove("streaming");
+    updateAiStreamHeader({ query: state.input, phase: "error" });
+    var wrap = document.querySelector(".ai-stream-container");
+    if (wrap && !wrap.querySelector(".ai-stream-error")) {
+      var err = document.createElement("div");
+      err.className = "ai-stream-error";
+      err.textContent = String(message || "请求失败");
+      wrap.appendChild(err);
+    }
+    window.nmerPalette.setStatus(String(message || "请求失败"), "error");
+  }
+
+  function canPromoteAi() {
+    if (aiPhase === "streaming" || aiPhase === "done") return true;
+    if (aiPhase === "compact" && aiBgCardPayload) {
+      var p = String(aiBgCardPayload.phase || "");
+      return p === "done" || p === "streaming";
+    }
+    return false;
+  }
+
+  function promoteAiToNiuma() {
+    post({
+      type: "palette_ai_promote",
+      query: state.input.trim() || aiStreamText,
+      provider: state.selectedAiProvider || "",
+      answer: aiStreamText
+    });
+    hidePalette();
+  }
+
+  function handoffAiStream() {
+    if (aiPhase !== "streaming") return false;
+    isBackgroundStreaming = true;
+    flushPendingChunks();
+    post({ type: "palette_ai_handoff", reqId: aiStreamReqId });
+    return true;
+  }
+
+  function collapseAiMorph() {
+    post({ type: "palette_morph_resize", height: 120 });
+    var panel = document.getElementById("palette-panel");
+    if (panel) panel.classList.remove("ai-streaming");
+    setTimeout(function () {
+      resetAiStreamState();
+      if (state.intent === "ai") runQuery(true);
+      else updateResults();
+      syncWindowSize();
+    }, 280);
+  }
+
+  function handlePaletteEsc() {
+    if (aiPhase === "streaming") {
+      handoffAiStream();
+      hidePalette();
+      return true;
+    }
+    if (aiPhase === "compact" || aiPhase === "done" || aiPhase === "error") {
+      hidePalette();
+      return true;
+    }
+    hidePalette();
+    return true;
   }
 
   function syncWindowSize() {
     if (composing) return;
+    if (aiPhase !== "idle" && aiPhase !== "compact") return;
     if (sizeTimer) clearTimeout(sizeTimer);
     sizeTimer = setTimeout(function () {
+      ensureHeaderInputVisible();
       var h = measureContentHeight();
       post({ type: "palette_resize", height: h });
       requestAnimationFrame(function () {
+        ensureHeaderInputVisible();
         var h2 = measureContentHeight();
         if (h2 !== h) post({ type: "palette_resize", height: h2 });
       });
     }, 50);
   }
 
-  function bindUI() {
-    var input = document.getElementById("command-input");
-    var voiceBtn = document.getElementById("voice-btn");
-    var results = document.getElementById("results");
-    if (!input) return;
-    bindResultsScrollHide(results);
+  function bindInputEvents(input) {
+    if (!input || input.dataset.bound) return;
+    input.dataset.bound = "1";
     input.addEventListener("compositionstart", function () { composing = true; });
     input.addEventListener("compositionend", function (e) {
       composing = false;
       state.input = e.target.value;
-      state.selected = 0;
-      scheduleFetch();
+      syncAiListSelectionIndex();
+      runQuery(false);
     });
     input.addEventListener("input", function (e) {
       state.input = e.target.value;
-      state.selected = 0;
-      scheduleFetch();
+      syncAiListSelectionIndex();
+      if (state.voiceStatus === "loading" && state.intent !== "ai") {
+        state.voiceStatus = "idle";
+        state.voiceHint = "";
+        updateVoiceHint();
+      }
+      runQuery(false);
     });
     input.addEventListener("keydown", function (e) {
       if (composing) return;
+      if (e.key === "Tab" && !e.shiftKey) {
+        if (canPromoteAi()) {
+          e.preventDefault();
+          promoteAiToNiuma();
+          return;
+        }
+        e.preventDefault();
+        cycleIntent();
+        return;
+      }
+      if (e.ctrlKey && e.shiftKey && String(e.key || "").toLowerCase() === "d") {
+        e.preventDefault();
+        post({ type: "palette_search_debug" });
+        return;
+      }
+      if (state.intent === "ai" && e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (canPromoteAi()) {
+          promoteAiToNiuma();
+          return;
+        }
+        sendAiQuery();
+        return;
+      }
+      if (state.intent === "ai" && e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        var aiRows = currentRows();
+        var aiItem = aiRows[state.selected];
+        if (aiItem && aiItem.kind === "ai_provider" && !readInputValue().trim()) {
+          pickAiProvider(aiItem.id);
+          return;
+        }
+        sendAiQuery();
+        return;
+      }
+      var rowCount = currentRows().length;
+      function moveAiProviderSelection(delta) {
+        if (!rowCount) return;
+        var rows = currentRows();
+        var next = (state.selected + delta + rowCount) % rowCount;
+        var item = rows[next];
+        if (item && item.kind === "ai_provider") {
+          pickAiProvider(item.id);
+          return;
+        }
+        state.selected = next;
+        if (aiPhase === "compact") refreshAiProvidersUnderCard();
+        else updateResults();
+      }
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        if (state.actions.length) {
-          state.selected = (state.selected + 1) % state.actions.length;
+        if (rowCount) {
+          if (state.intent === "ai" || aiPhase === "compact") moveAiProviderSelection(1);
+          else {
+            state.selected = (state.selected + 1) % rowCount;
           updateResults();
+          }
         }
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        if (state.actions.length) {
-          state.selected = (state.selected - 1 + state.actions.length) % state.actions.length;
+        if (rowCount) {
+          if (state.intent === "ai" || aiPhase === "compact") moveAiProviderSelection(-1);
+          else {
+            state.selected = (state.selected - 1 + rowCount) % rowCount;
           updateResults();
+          }
         }
       } else if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         executeSelected();
       } else if (e.key === "Escape") {
         e.preventDefault();
-        hidePalette();
+        handlePaletteEsc();
       }
     });
-    voiceBtn?.addEventListener("click", function () {
-      post({ type: "palette_voice_toggle" });
+  }
+
+  function bindUI() {
+    var input = getInputEl();
+    var debugBtn = document.getElementById("debug-btn");
+    var results = document.getElementById("results");
+    if (!input) return;
+    bindResultsScrollHide(results);
+    bindInputEvents(input);
+    debugBtn?.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      post({ type: "palette_search_debug" });
     });
     input.focus();
   }
@@ -677,15 +2083,72 @@ body[data-theme="light"] .result-item.active .result-title {
     }
     if (!d || !d.type) return;
     if (d.type === "palette_results") {
+      if (state.intent === "local" && state.input.trim()) return;
+      if (d.seq && Number(d.seq) !== state.querySeq) return;
       state.actions = Array.isArray(d.items) ? d.items : [];
+      state.resultMode = "command";
+      state.turboItems = [];
       if (state.selected >= state.actions.length) state.selected = 0;
+      state.voiceStatus = "idle";
+      state.voiceHint = "";
+      updateVoiceHint();
       updateResults();
+    } else if (d.type === "palette_turbo_results") {
+      if (state.intent !== "local") return;
+      if (d.seq && Number(d.seq) !== state.querySeq) return;
+      if (d.query && String(d.query) !== state.turboQuery && String(d.query) !== state.input.trim()) return;
+      state.turboItems = Array.isArray(d.items) ? d.items.slice(0, 20) : [];
+      state.resultMode = "turbo";
+      state.actions = [];
+      if (state.selected >= state.turboItems.length) state.selected = 0;
+      state.voiceStatus = "idle";
+      state.voiceHint = "";
+      if (!state.turboItems.length) {
+        state.voiceHint = "无本地匹配结果";
+        state.voiceStatus = "idle";
+      }
+      updateVoiceHint();
+      updateResults();
+    } else if (d.type === "palette_turbo_error") {
+      if (state.intent !== "local") return;
+      state.turboItems = [];
+      state.resultMode = "command";
+      window.nmerPalette.setStatus(d.message || "本地搜索不可用", "error");
+      updateResults();
+    } else if (d.type === "palette_ai_status") {
+      window.nmerPalette.setStatus(d.message || "", d.status || "idle");
+    } else if (d.type === "palette_ai_chunk") {
+      if (d.reqId) aiStreamReqId = String(d.reqId);
+      appendAiChunk(d.delta || d.text || "");
+    } else if (d.type === "palette_ai_end") {
+      if (d.reqId) aiStreamReqId = String(d.reqId);
+      if (d.answer && String(d.answer).trim()) aiStreamText = String(d.answer);
+      finishAiStream(d);
+    } else if (d.type === "palette_ai_error") {
+      if (d.reqId) aiStreamReqId = String(d.reqId);
+      showAiStreamError(d.message || d.error || "请求失败");
+    } else if (d.type === "palette_ai_reset") {
+      resetAiStreamState();
+      if (state.intent === "ai") {
+        runQuery(true);
+        syncWindowSize();
+      } else updateResults();
+    } else if (d.type === "palette_ai_restore") {
+      restoreAiSession(d);
+      ensureHeaderInputVisible();
+    } else if (d.type === "palette_ai_providers") {
+      applyAiProviders(d.items, d.activeProvider || "");
+      if (state.intent === "ai") {
+        var hint = state.selectedAiProvider ? "已选模型 · Enter 发送" : "请选择模型";
+        window.nmerPalette.setStatus(hint, "idle");
+      }
     } else if (d.type === "palette_status") {
       window.nmerPalette.setStatus(d.message || "", d.status || "idle");
     } else if (d.type === "palette_set_input") {
       window.nmerPalette.setInputText(d.text || "");
-    } else if (d.type === "palette_focus") {
-      document.getElementById("command-input")?.focus();
+    } else if (d.type === "palette_focus" || d.type === "palette_show") {
+      ensureHeaderInputVisible();
+      getInputEl()?.focus();
     } else if (d.type === "set_theme") {
       applyTheme(d.themeMode || d.theme || "dark");
     }
@@ -696,7 +2159,7 @@ body[data-theme="light"] .result-item.active .result-title {
     function (e) {
       if (e.key !== "Escape" || composing) return;
       e.preventDefault();
-      hidePalette();
+      handlePaletteEsc();
     },
     true
   );
@@ -708,7 +2171,7 @@ body[data-theme="light"] .result-item.active .result-title {
   }
 
   ensureShell();
-  scheduleFetch();
+  runQuery(true);
   syncWindowSize();
 })();
 </script>

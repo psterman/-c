@@ -225,6 +225,70 @@ LlmApiPing_OpenAIChatUrl(base) {
     return u . "/chat/completions"
 }
 
+; 命令面板 / 宿主直连：OpenAI 兼容 chat/completions 请求体（Kimi 勿传 temperature=0.7）
+LlmApiPing_BuildChatBody(prov, model, userText, maxTokens := 4096) {
+    prov := LlmApiPing_NormalizeProvider(prov)
+    model := Trim(String(model))
+    if (model = "") {
+        try {
+            pre := LlmApiPing_PresetFor(prov)
+            model := Trim(String(pre.Get("model", "")))
+        } catch {
+        }
+    }
+    tok := Max(64, Integer(maxTokens))
+    m := Map(
+        "model", model,
+        "messages", [Map("role", "user", "content", String(userText))]
+    )
+    if (prov = "kimi") {
+        if RegExMatch(model, "i)^kimi-k2")
+            m["max_completion_tokens"] := tok, m["temperature"] := 1
+        else
+            m["max_tokens"] := tok
+    } else {
+        m["max_tokens"] := tok
+        if (prov != "deepseek")
+            m["temperature"] := 0.7
+    }
+    return Jxon_Dump(m)
+}
+
+LlmApiPing_KimiChatBodies(model, userText, maxTokens := 4096) {
+    mod := Trim(String(model))
+    if (mod = "")
+        mod := "kimi-k2.6"
+    tok := Max(64, Integer(maxTokens))
+    q := String(userText)
+    pingK26Lite := Jxon_Dump(Map(
+        "model", mod,
+        "messages", [Map("role", "user", "content", q)],
+        "max_completion_tokens", tok
+    ))
+    pingK26Enabled := Jxon_Dump(Map(
+        "model", mod,
+        "messages", [Map("role", "user", "content", q)],
+        "max_completion_tokens", tok,
+        "thinking", Map("type", "enabled")
+    ))
+    pingK26 := Jxon_Dump(Map(
+        "model", mod,
+        "messages", [Map("role", "user", "content", q)],
+        "max_completion_tokens", tok,
+        "thinking", Map("type", "disabled")
+    ))
+    pingV1 := Jxon_Dump(Map(
+        "model", mod,
+        "messages", [Map("role", "user", "content", q)],
+        "max_tokens", tok
+    ))
+    if RegExMatch(mod, "i)^kimi-k2\.6")
+        return [pingK26Lite, pingK26Enabled, pingK26, pingV1]
+    if RegExMatch(mod, "i)^moonshot-v1")
+        return [pingV1]
+    return [pingK26Lite, pingV1, pingK26Enabled, pingK26]
+}
+
 LlmApiPing_KimiPingBodies(mod) {
     mod := Trim(String(mod))
     tok := 64

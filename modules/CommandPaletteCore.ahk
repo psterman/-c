@@ -11,8 +11,8 @@ global g_CmdPal_Ctrl := 0
 global g_CmdPal_Ready := false
 global g_CmdPal_Visible := false
 global g_CmdPal_Width := 760
-global g_CmdPal_MinHeight := 72
-global g_CmdPal_CurrentHeight := 72
+global g_CmdPal_MinHeight := 120
+global g_CmdPal_CurrentHeight := 120
 global g_CmdPal_CornerRadius := 20
 global g_CmdPal_Revealed := false
 
@@ -21,6 +21,124 @@ global g_CmdPal_ExecDirty := false
 global g_CmdPal_ExecFileMtime := ""
 global g_CmdPal_PendingShow := false
 global g_CmdPal_ShowRetryCount := 0
+global g_CmdPal_TurboReqGen := 0
+global g_CmdPal_TurboInFlight := false
+global g_CmdPal_TurboWhr := 0
+global g_CmdPal_TurboMeta := 0
+global g_CmdPal_TurboPollToken := 0
+global g_CmdPal_TurboPendingMeta := 0
+global g_CmdPal_EmptyCache := 0
+global g_CmdPal_EmptyCacheTick := 0
+global g_CmdPal_LiveAiKeys := 0
+global g_CmdPal_LiveLlmFromFtb := Map()
+global g_CmdPal_LiveActiveProvider := ""
+global g_CmdPal_PendingAiSend := 0
+global g_CmdPal_AiSession := 0
+global g_CmdPal_AiMorphHeight := 380
+global g_CmdPal_AiStreamGen := 0
+global g_CmdPal_AiMorphAnimToken := 0
+global g_CmdPal_AiWatchdogToken := 0
+global g_CmdPal_AiRetryToken := 0
+global g_CmdPal_AiPollToken := 0
+global g_CmdPal_AiLastCard := 0
+
+CommandPalette_AiLog(event, detail := "") {
+    ev := Trim(String(event))
+    if (ev = "")
+        ev := "event"
+    body := Trim(String(detail))
+    ts := ""
+    try ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss.fff")
+    catch {
+        ts := A_Now
+    }
+    line := "[" . ts . "][" . ev . "] " . body
+    try OutputDebug("[CmdPalAI] " . line . "`n")
+    catch {
+    }
+    if FuncExists("NMER_Log") {
+        try NMER_Log("cmdpal_ai", ev, body)
+        catch {
+        }
+    }
+    try {
+        path := FuncExists("Nmer_DebugPath") ? Nmer_DebugPath("command_palette_ai.log") : (A_ScriptDir . "\Cache\debug\command_palette_ai.log")
+        dir := ""
+        SplitPath(path, , &dir)
+        if (dir != "" && !DirExist(dir))
+            DirCreate(dir)
+        FileAppend(line . "`r`n", path, "UTF-8")
+    } catch {
+    }
+}
+
+CommandPalette_ResolveActivationMode() {
+    global AppearanceActivationMode
+    m := Trim(String(AppearanceActivationMode))
+    if (m = "")
+        m := "toolbar"
+    try {
+        if FuncExists("NormalizeAppearanceActivationMode")
+            m := Trim(String(NormalizeAppearanceActivationMode(m)))
+        else if FuncExists("FloatingToolbar_NormalizeAppearanceMode")
+            m := Trim(String(FloatingToolbar_NormalizeAppearanceMode(m)))
+    } catch {
+    }
+    m := Trim(String(m))
+    if (m != "toolbar" && m != "hole" && m != "bubble" && m != "tray")
+        m := "toolbar"
+    return m
+}
+
+CommandPalette_ForceOpenNiumaDrawer() {
+    global g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening, FloatingToolbarChatDrawerOpen, g_FTB_WV2, g_FTB_WV2_Ready
+    g_FTB_PendingOpenNiumaDrawer := true
+    g_FTB_NiumaHandoffOpening := true
+    try FloatingToolbarSetChatDrawerState(true, true)
+    catch as eSet {
+        CommandPalette_AiLog("force_drawer_set_err", eSet.Message)
+    }
+    if (g_FTB_WV2 && g_FTB_WV2_Ready) {
+        try FloatingToolbar_NotifyWebDrawerState(true)
+        catch {
+        }
+    }
+    try FloatingToolbar_OpenNiumaChatDrawer(true)
+    catch as eOpen {
+        CommandPalette_AiLog("force_drawer_open_err", eOpen.Message)
+    }
+    CommandPalette_AiLog("force_drawer_done", "drawerOpen=" . (FloatingToolbarChatDrawerOpen ? 1 : 0) . " | " . CommandPalette_AiStateSnapshot())
+}
+
+CommandPalette_AiStateSnapshot() {
+    global AppearanceActivationMode, FloatingToolbarGUI, FloatingToolbarIsVisible, FloatingToolbarChatDrawerOpen
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_WaitingUiFinishedReveal, g_FTB_UI_Ready
+    global g_FTB_PendingOpenNiumaDrawer, g_FTB_PendingNiumaCompose, g_FTB_OverlaySuppressedByPageDock, g_FTB_NiumaHandoffOpening
+    mode := CommandPalette_ResolveActivationMode()
+    pendN := 0
+    if (g_FTB_PendingNiumaCompose is Array)
+        pendN := g_FTB_PendingNiumaCompose.Length
+    guiHwnd := 0
+    if IsObject(FloatingToolbarGUI) {
+        try guiHwnd := FloatingToolbarGUI.Hwnd
+        catch {
+        }
+    }
+    return "actMode=" . String(AppearanceActivationMode)
+        . " normMode=" . mode
+        . " guiHwnd=" . guiHwnd
+        . " ftbVis=" . (FloatingToolbarIsVisible ? 1 : 0)
+        . " drawerOpen=" . (FloatingToolbarChatDrawerOpen ? 1 : 0)
+        . " wv2=" . (IsObject(g_FTB_WV2) ? 1 : 0)
+        . " wv2Ready=" . (g_FTB_WV2_Ready ? 1 : 0)
+        . " frameReady=" . (g_FTB_WV2_FrameReady ? 1 : 0)
+        . " waitUiFinished=" . (g_FTB_WaitingUiFinishedReveal ? 1 : 0)
+        . " uiFinished=" . (g_FTB_UI_Ready ? 1 : 0)
+        . " pendDrawer=" . (g_FTB_PendingOpenNiumaDrawer ? 1 : 0)
+        . " handoff=" . (g_FTB_NiumaHandoffOpening ? 1 : 0)
+        . " pendCompose=" . pendN
+        . " overlaySuppressed=" . (g_FTB_OverlaySuppressedByPageDock ? 1 : 0)
+}
 
 CommandPalette_GetWv2() {
     global g_CmdPal_WV2
@@ -153,7 +271,7 @@ CommandPalette_OnWV2Created(ctrl) {
     catch {
     }
     try ApplyUnifiedWebViewAssets(g_CmdPal_WV2)
-    g_CmdPal_WV2.Navigate(BuildAppLocalUrl("CommandPalette.html"))
+    g_CmdPal_WV2.Navigate(CommandPalette_BuildPageUrl("CommandPalette.html"))
     g_CmdPal_Ready := true
     if g_CmdPal_PendingShow
         SetTimer(CommandPalette_DoShow, -1)
@@ -241,6 +359,7 @@ CommandPalette_DeferredFocus(*) {
     global g_CmdPal_Visible, g_CmdPal_WV2, g_CmdPal_Ctrl
     if !g_CmdPal_Visible || !g_CmdPal_WV2
         return
+    CommandPalette_EnsureWebInputVisible()
     CommandPalette_PushToWeb(Map("type", "palette_focus"))
     try WebView2_MoveFocusProgrammatic(g_CmdPal_Ctrl)
     catch {
@@ -291,12 +410,20 @@ CommandPalette_RetryShow(*) {
     SetTimer(CommandPalette_RetryShow, -250)
 }
 
+CommandPalette_EnsureWebInputVisible() {
+    CommandPalette_ExecScript("try{document.body.classList.remove('native-input-mode')}catch(e){}")
+    CommandPalette_PushToWeb(Map("type", "palette_show"))
+}
+
 CommandPalette_DoShow(*) {
     global g_CmdPal_PendingShow, CapsLock
     g_CmdPal_PendingShow := false
     CapsLock := false
     CommandPalette_CenterAndShow()
+    SetTimer(CommandPalette_EnsureWebInputVisible, -60)
+    SetTimer(CommandPalette_SyncAiOnShow, -350)
     SetTimer(CommandPalette_PushEmptyQuery, -180)
+    SetTimer(CommandPalette_PushAiProviders, -220)
     SetTimer(CommandPalette_RevealFallback, -600)
 }
 
@@ -306,12 +433,78 @@ CommandPalette_RevealFallback(*) {
         CommandPalette_Reveal()
 }
 
+CommandPalette_SyncAiOnShow(*) {
+    global g_CmdPal_AiSession
+    if (g_CmdPal_AiSession is Map) && g_CmdPal_AiSession.Get("handoff", false) {
+        if !g_CmdPal_AiSession.Get("ended", false)
+            g_CmdPal_AiSession["handoff"] := false
+        else if g_CmdPal_Visible
+            g_CmdPal_AiSession["handoff"] := false
+    }
+    if !CommandPalette_PushAiSessionRestore()
+        CommandPalette_PushToWeb(Map("type", "palette_ai_reset"))
+}
+
+CommandPalette_PushAiSessionRestore() {
+    global g_CmdPal_AiSession, g_CmdPal_AiLastCard, g_CmdPal_AiMorphHeight
+    src := 0
+    if (g_CmdPal_AiSession is Map) {
+        ans := String(g_CmdPal_AiSession.Get("answer", ""))
+        q := Trim(String(g_CmdPal_AiSession.Get("query", "")))
+        if (q != "" && (!g_CmdPal_AiSession.Get("ended", false) || ans != ""))
+            src := g_CmdPal_AiSession
+    } else if (g_CmdPal_AiLastCard is Map) {
+        src := g_CmdPal_AiLastCard
+    }
+    if !(src is Map)
+        return false
+    ended := !!src.Get("ended", false)
+    err := src.Has("error") ? Trim(String(src["error"])) : ""
+    phase := ended ? (err != "" ? "error" : "done") : "streaming"
+    CommandPalette_PushToWeb(Map(
+        "type", "palette_ai_restore",
+        "phase", phase,
+        "reqId", String(src.Get("reqId", "")),
+        "query", String(src.Get("query", "")),
+        "provider", String(src.Get("provider", "")),
+        "answer", String(src.Get("answer", "")),
+        "message", err,
+        "handoff", !!src.Get("handoff", false),
+        "compact", true
+    ))
+    return true
+}
+
+CommandPalette_DismissAiCard() {
+    global g_CmdPal_AiSession, g_CmdPal_AiLastCard, g_CmdPal_AiStreamGen
+    oldReqId := (g_CmdPal_AiSession is Map) ? String(g_CmdPal_AiSession.Get("reqId", "")) : ""
+    CommandPalette_StopAiStreamSideEffects(oldReqId)
+    g_CmdPal_AiStreamGen++
+    g_CmdPal_AiLastCard := 0
+    g_CmdPal_AiSession := 0
+    CommandPalette_PushToWeb(Map("type", "palette_ai_reset"))
+    CommandPalette_ApplyHeight(g_CmdPal_MinHeight)
+}
+
 CommandPalette_PushEmptyQuery(*) {
+    global g_CmdPal_AiSession, g_CmdPal_AiLastCard
+    if (g_CmdPal_AiSession is Map) {
+        q := Trim(String(g_CmdPal_AiSession.Get("query", "")))
+        if (q != "")
+            return
+    }
+    if (g_CmdPal_AiLastCard is Map)
+        return
     CommandPalette_HandleQuery("")
 }
 
 CommandPalette_Hide(*) {
-    global g_CmdPal_Gui, g_CmdPal_Visible, g_CmdPal_Revealed
+    global g_CmdPal_Gui, g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_AiSession
+    if (g_CmdPal_AiSession is Map) && !g_CmdPal_AiSession.Get("handoff", false) && !g_CmdPal_AiSession.Get("ended", false) {
+        try CommandPalette_HandoffAiToToolbar(true)
+        catch {
+        }
+    }
     g_CmdPal_Visible := false
     g_CmdPal_Revealed := false
     if IsObject(g_CmdPal_Gui) {
@@ -327,8 +520,9 @@ CommandPalette_ApplyHeight(h) {
     nh := Integer(h)
     if (nh < g_CmdPal_MinHeight)
         nh := g_CmdPal_MinHeight
-    if (nh > 480)
-        nh := 480
+    maxH := 520
+    if (nh > maxH)
+        nh := maxH
     g_CmdPal_CurrentHeight := nh
     if !IsObject(g_CmdPal_Gui)
         return
@@ -339,6 +533,1429 @@ CommandPalette_ApplyHeight(h) {
     }
     CommandPalette_ApplyBounds()
     SetTimer(CommandPalette_SyncHostShape, -40)
+}
+
+CommandPalette_ApplyMorphHeightStep(token, targetH, step, totalSteps) {
+    global g_CmdPal_Gui, g_CmdPal_Width, g_CmdPal_CurrentHeight, g_CmdPal_AiMorphAnimToken, g_CmdPal_MinHeight
+    if (token != g_CmdPal_AiMorphAnimToken)
+        return
+    startH := g_CmdPal_CurrentHeight
+    if (step >= totalSteps) {
+        CommandPalette_ApplyHeight(targetH)
+        return
+    }
+    t := step / totalSteps
+    nh := Round(startH + (targetH - startH) * t)
+    if (nh < g_CmdPal_MinHeight)
+        nh := g_CmdPal_MinHeight
+    g_CmdPal_CurrentHeight := nh
+    if IsObject(g_CmdPal_Gui) {
+        try {
+            WinGetPos(&x, &y, , , g_CmdPal_Gui.Hwnd)
+            g_CmdPal_Gui.Move(x, y, g_CmdPal_Width, nh)
+        } catch {
+        }
+        CommandPalette_ApplyBounds()
+    }
+    SetTimer(CommandPalette_ApplyMorphHeightStep.Bind(token, targetH, step + 1, totalSteps), -28)
+}
+
+CommandPalette_ApplyMorphHeight(h, animate := true) {
+    global g_CmdPal_AiMorphHeight, g_CmdPal_AiMorphAnimToken, g_CmdPal_CurrentHeight
+    targetH := Integer(h)
+    if (targetH < g_CmdPal_MinHeight)
+        targetH := g_CmdPal_AiMorphHeight
+    if (targetH > 480)
+        targetH := 480
+    if !animate {
+        CommandPalette_ApplyHeight(targetH)
+        return
+    }
+    g_CmdPal_AiMorphAnimToken := A_TickCount
+    token := g_CmdPal_AiMorphAnimToken
+    SetTimer(CommandPalette_ApplyMorphHeightStep.Bind(token, targetH, 1, 8), -1)
+}
+
+CommandPalette_IsAiStreaming() {
+    global g_CmdPal_AiSession
+    if !(g_CmdPal_AiSession is Map)
+        return false
+    if g_CmdPal_AiSession.Get("ended", false)
+        return false
+    if g_CmdPal_AiSession.Get("handoff", false)
+        return false
+    return true
+}
+
+CommandPalette_AiSessionMatches(reqId, requireActiveGen := true) {
+    global g_CmdPal_AiSession, g_CmdPal_AiStreamGen
+    if !(g_CmdPal_AiSession is Map)
+        return false
+    sid := Trim(String(g_CmdPal_AiSession.Get("reqId", "")))
+    if (sid = "")
+        return false
+    if (reqId != "" && sid != Trim(String(reqId)))
+        return false
+    if requireActiveGen {
+        gen := Integer(g_CmdPal_AiSession.Get("gen", 0))
+        if (gen != g_CmdPal_AiStreamGen)
+            return false
+    }
+    return true
+}
+
+CommandPalette_EnsureFtbEngineForAi() {
+    CommandPalette_BootstrapNiumaChat("palette_ai_engine", false)
+}
+
+CommandPalette_JsEscapeForParse(s) {
+    s := String(s)
+    s := StrReplace(s, "\", "\\")
+    s := StrReplace(s, "'", "\'")
+    s := StrReplace(s, "`r", "\r")
+    s := StrReplace(s, "`n", "\n")
+    s := StrReplace(s, "`t", "\t")
+    return s
+}
+
+CommandPalette_InjectFtbHostPayload(payload) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return false
+    if !(payload is Map)
+        return false
+    jsonStr := ""
+    try jsonStr := Jxon_Dump(payload)
+    catch {
+        return false
+    }
+    if (jsonStr = "")
+        return false
+    escaped := CommandPalette_JsEscapeForParse(jsonStr)
+    js := "try{if(window.__niumaHostInject)window.__niumaHostInject('" . escaped . "');"
+        . "else if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(JSON.stringify({type:'niuma_palette_ai_trace',step:'inject_no_fn',detail:'missing'}));"
+        . "}catch(e){try{if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(JSON.stringify({type:'niuma_palette_ai_trace',step:'inject_err',detail:String(e&&e.message||e)}));}catch(_){}}"
+    try {
+        g_FTB_WV2.ExecuteScriptAsync(js)
+        return true
+    } catch {
+        return false
+    }
+}
+
+CommandPalette_DeliverFtbPayload(payload) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return false
+    if !(payload is Map)
+        return false
+    ok := false
+    try {
+        if FuncExists("WebView_QueuePayload")
+            WebView_QueuePayload(g_FTB_WV2, payload)
+        else
+            g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
+        ok := true
+    } catch {
+    }
+    if CommandPalette_InjectFtbHostPayload(payload)
+        ok := true
+    return ok
+}
+
+CommandPalette_InvokeFtbPaletteAiSyncScript(reqId, q) {
+    global g_FTB_WV2
+    if !IsObject(g_FTB_WV2)
+        return false
+    argsJson := "{}"
+    try argsJson := Jxon_Dump(Map("reqId", String(reqId), "query", String(q)))
+    catch {
+        return false
+    }
+    escaped := CommandPalette_JsEscapeForParse(argsJson)
+    js := "try{var o=JSON.parse('" . escaped . "');"
+        . "if(window.paletteSyncAnswerForReq)window.paletteSyncAnswerForReq(o.reqId,o.query);"
+        . "else if(window.__niumaHostInject)window.__niumaHostInject(JSON.stringify({type:'host_palette_ai_sync',reqId:o.reqId,query:o.query}));"
+        . "}catch(e){try{if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(JSON.stringify({type:'niuma_palette_ai_trace',step:'sync_script_err',detail:String(e&&e.message||e)}));}catch(_){}}"
+    try {
+        g_FTB_WV2.ExecuteScriptAsync(js)
+        return true
+    } catch {
+        return false
+    }
+}
+
+CommandPalette_ParseScriptJson(raw) {
+    raw := Trim(String(raw))
+    if (raw = "" || raw = "null" || raw = "undefined")
+        return Map()
+    try {
+        if (SubStr(raw, 1, 1) = '"') {
+            inner := Jxon_Load(raw)
+            if (inner is String)
+                return Jxon_Load(inner)
+            if (inner is Map)
+                return inner
+        }
+        parsed := Jxon_Load(raw)
+        if (parsed is Map)
+            return parsed
+    } catch {
+    }
+    return Map()
+}
+
+CommandPalette_SyncFtbContextForPalette(prov, reqId := "") {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return false
+    prov := CommandPalette_NormalizeAiProvider(prov)
+    provEsc := CommandPalette_JsEscapeForParse(prov)
+    js := "(function(){try{"
+        . "if(typeof exportPaletteLlmForProvider!=='function')return JSON.stringify({ok:0,err:'no_export_fn'});"
+        . "var llm=exportPaletteLlmForProvider('" . provEsc . "');"
+        . "var keys=(typeof __niumaPaletteExportApiKeys==='function')?__niumaPaletteExportApiKeys():{};"
+        . "return JSON.stringify({ok:1,llm:llm||{},apiKeys:keys||{}});"
+        . "}catch(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});}})();"
+    ok := false
+    try {
+        raw := g_FTB_WV2.ExecuteScriptAsync(js).await(5000)
+        data := CommandPalette_ParseScriptJson(raw)
+        if !(data is Map) || !data.Get("ok", false)
+            CommandPalette_AiLog("ai_ftb_pull_fail", SubStr(String(data.Get("err", raw)), 1, 120))
+        else {
+            if data.Has("apiKeys")
+                CommandPalette_ApplyLiveAiKeys(CommandPalette_CoerceToMap(data["apiKeys"]), prov)
+            llm := data.Has("llm") ? data["llm"] : Map()
+            if (llm is Map) {
+                msg := Map("llm", llm, "provider", prov, "reqId", String(reqId))
+                CommandPalette_OnNiumaPaletteAiLlm(msg)
+            }
+            ok := true
+        }
+    } catch as ePull {
+        CommandPalette_AiLog("ai_ftb_pull_err", ePull.Message)
+    }
+    CommandPalette_PullLiveKeysFromFtb()
+    CommandPalette_RequestFtbLlmExport(prov, reqId)
+    return ok
+}
+
+CommandPalette_PollFtbPaletteLastResult(reqId, gen) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_CmdPal_AiSession
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return false
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return false
+  js := "(function(){try{return JSON.stringify(window.__niumaPaletteLastResult||{});}catch(e){return '{}';}})();"
+    try {
+        raw := g_FTB_WV2.ExecuteScriptAsync(js).await(800)
+        data := CommandPalette_ParseScriptJson(raw)
+        if !(data is Map)
+            return false
+        rid := Trim(String(data.Get("reqId", "")))
+        if (rid != "" && rid != Trim(String(reqId)))
+            return false
+        ans := Trim(String(data.Get("answer", "")))
+        q := (g_CmdPal_AiSession is Map) ? Trim(String(g_CmdPal_AiSession.Get("query", ""))) : ""
+        if (ans = "" || (q != "" && ans = q))
+            return false
+        CommandPalette_AiLog("ai_poll_hit", "reqId=" . reqId . " len=" . StrLen(ans))
+        CommandPalette_PushAiStreamEnd(reqId, gen, ans)
+        return true
+    } catch {
+        return false
+    }
+}
+
+CommandPalette_InvokeFtbPaletteAiScript(reqId, q, prov) {
+    global g_FTB_WV2
+    if !IsObject(g_FTB_WV2)
+        return false
+    argsJson := "{}"
+    try argsJson := Jxon_Dump(Map("reqId", String(reqId), "query", String(q), "provider", String(prov)))
+    catch {
+        return false
+    }
+    escaped := CommandPalette_JsEscapeForParse(argsJson)
+    js := "try{if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(JSON.stringify({type:'niuma_palette_ai_trace',step:'exec_probe',detail:'reqId=" . CommandPalette_JsEscapeForParse(String(reqId)) . "'}));}catch(_){}"
+        . "try{var o=JSON.parse('" . escaped . "');if(window.__nmerPaletteAiStart)window.__nmerPaletteAiStart(o);"
+        . "else if(window.runPaletteAiStream)window.runPaletteAiStream(o.reqId,o.query,o.provider);"
+        . "else if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(JSON.stringify({type:'niuma_palette_ai_trace',step:'exec_no_fn',detail:'missing'}));"
+        . "}catch(e){try{if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(JSON.stringify({type:'niuma_palette_ai_trace',step:'exec_script_err',detail:String(e&&e.message||e)}));}catch(_){}}"
+    try {
+        g_FTB_WV2.ExecuteScriptAsync(js)
+        return true
+    } catch {
+        return false
+    }
+}
+
+CommandPalette_ResolveAiLlmForProvider(provider := "") {
+    global g_CmdPal_LiveAiKeys, g_CmdPal_LiveLlmFromFtb
+    prov := CommandPalette_NormalizeAiProvider(provider)
+    llm := Map("provider", prov, "apiKey", "", "baseUrl", "", "model", "")
+    if IsObject(g_CmdPal_LiveLlmFromFtb) && g_CmdPal_LiveLlmFromFtb.Has(prov) {
+        live := g_CmdPal_LiveLlmFromFtb[prov]
+        if (live is Map) && Trim(String(live.Get("apiKey", ""))) != "" {
+            llm["apiKey"] := Trim(String(live.Get("apiKey", "")))
+            llm["baseUrl"] := Trim(String(live.Get("baseUrl", "")))
+            llm["model"] := Trim(String(live.Get("model", "")))
+            if FuncExists("LlmApiPing_NormalizeApiKey")
+                try llm["apiKey"] := LlmApiPing_NormalizeApiKey(llm["apiKey"])
+                catch {
+                }
+            if (prov = "kimi") && FuncExists("LlmApiPing_NormalizeMoonshotBase")
+                llm["baseUrl"] := LlmApiPing_NormalizeMoonshotBase(llm["baseUrl"])
+            CommandPalette_EnsureLlmEndpoint(llm, prov)
+            return llm
+        }
+    }
+    bundle := CommandPalette_ReadNiumaLlmSyncMap()
+    sync := bundle.Has("sync") ? bundle["sync"] : 0
+    activeProv := ""
+    if (sync is Map) {
+        llmIn := sync.Has("llm") && sync["llm"] is Map ? sync["llm"] : sync
+        activeProv := CommandPalette_NormalizeAiProvider(llmIn.Get("provider", ""))
+        if (prov = "")
+            prov := activeProv
+        llm["provider"] := prov
+        key := ""
+        if sync.Has("apiKeys") && sync["apiKeys"] is Map && prov != ""
+            key := Trim(String(sync["apiKeys"].Get(prov, "")))
+        if (key = "" && prov = activeProv)
+            key := Trim(String(llmIn.Get("apiKey", "")))
+        if (key = "" && IsObject(g_CmdPal_LiveAiKeys) && prov != "")
+            key := Trim(String(g_CmdPal_LiveAiKeys.Get(prov, "")))
+        if FuncExists("LlmApiPing_NormalizeApiKey")
+            try key := LlmApiPing_NormalizeApiKey(key)
+            catch {
+            }
+        llm["apiKey"] := key
+        base := ""
+        model := ""
+        ; 仅当与 Niuma 当前活动 provider 一致时才继承 llm.baseUrl/model，避免选 Kimi 却打到 MiniMax 等地址
+        if (prov != "" && prov = activeProv) {
+            base := Trim(String(llmIn.Get("baseUrl", "")))
+            model := Trim(String(llmIn.Get("model", "")))
+        }
+        if (base = "" || model = "") && FuncExists("LlmApiPing_PresetFor") && prov != "" {
+            try {
+                pre := LlmApiPing_PresetFor(prov)
+                if (base = "")
+                    base := Trim(String(pre.Get("baseUrl", "")))
+                if (model = "")
+                    model := Trim(String(pre.Get("model", "")))
+            } catch {
+            }
+        }
+        if (prov = "kimi") && base != "" && FuncExists("LlmApiPing_BaseUrlMatchesProvider") {
+            try {
+                if !LlmApiPing_BaseUrlMatchesProvider("kimi", base) {
+                    preFix := LlmApiPing_PresetFor("kimi")
+                    base := Trim(String(preFix.Get("baseUrl", base)))
+                }
+            } catch {
+            }
+        }
+        llm["baseUrl"] := base
+        llm["model"] := model
+    } else {
+        if (prov = "")
+            prov := CommandPalette_NormalizeAiProvider("")
+        llm["provider"] := prov
+        if IsObject(g_CmdPal_LiveAiKeys) && prov != ""
+            llm["apiKey"] := Trim(String(g_CmdPal_LiveAiKeys.Get(prov, "")))
+        if FuncExists("LlmApiPing_PresetFor") && prov != "" {
+            try {
+                pre := LlmApiPing_PresetFor(prov)
+                llm["baseUrl"] := Trim(String(pre.Get("baseUrl", "")))
+                llm["model"] := Trim(String(pre.Get("model", "")))
+            } catch {
+            }
+        }
+    }
+    if (prov = "kimi") && FuncExists("LlmApiPing_NormalizeMoonshotBase")
+        llm["baseUrl"] := LlmApiPing_NormalizeMoonshotBase(llm["baseUrl"])
+    CommandPalette_EnsureLlmEndpoint(llm, prov)
+    return llm
+}
+
+CommandPalette_EnsureLlmEndpoint(llm, prov := "") {
+    if !(llm is Map)
+        return
+    prov := CommandPalette_NormalizeAiProvider(prov != "" ? prov : llm.Get("provider", ""))
+    llm["provider"] := prov
+    base := Trim(String(llm.Get("baseUrl", "")))
+    model := Trim(String(llm.Get("model", "")))
+    if ((base = "" || model = "") && FuncExists("LlmApiPing_PresetFor") && prov != "") {
+        try {
+            pre := LlmApiPing_PresetFor(prov)
+            if (base = "")
+                base := Trim(String(pre.Get("baseUrl", "")))
+            if (model = "")
+                model := Trim(String(pre.Get("model", "")))
+        } catch {
+        }
+    }
+    if (prov = "kimi") {
+        if (model = "")
+            model := "kimi-k2.6"
+        if FuncExists("LlmApiPing_NormalizeMoonshotBase")
+            base := LlmApiPing_NormalizeMoonshotBase(base)
+        if (base = "")
+            base := "https://api.moonshot.cn/v1"
+    } else if (prov = "minimax") {
+        if (model = "")
+            model := "MiniMax-M2.7"
+        if (base = "")
+            base := "https://api.minimaxi.com/anthropic"
+    }
+    llm["baseUrl"] := base
+    llm["model"] := model
+}
+
+CommandPalette_AiStreamAlreadyResponded() {
+    global g_CmdPal_AiSession
+    if !(g_CmdPal_AiSession is Map)
+        return false
+    if g_CmdPal_AiSession.Get("directStarted", false)
+        return true
+    if g_CmdPal_AiSession.Get("ended", false)
+        return true
+    if Integer(g_CmdPal_AiSession.Get("webAnswerChunks", 0)) > 0
+        return true
+    return false
+}
+
+CommandPalette_IsPaletteAiReq(reqId) {
+    return RegExMatch(Trim(String(reqId)), "i)^cpai_")
+}
+
+CommandPalette_ShouldMirrorAiToPalette() {
+    global g_CmdPal_AiSession, g_CmdPal_Visible
+    if !(g_CmdPal_AiSession is Map)
+        return false
+    if !g_CmdPal_Visible
+        return false
+    if g_CmdPal_AiSession.Get("handoff", false)
+        return false
+    return true
+}
+
+CommandPalette_StopAiStreamSideEffects(oldReqId := "") {
+    global g_CmdPal_AiRetryToken, g_CmdPal_AiWatchdogToken, g_FTB_WV2
+    g_CmdPal_AiRetryToken := A_TickCount
+    g_CmdPal_AiWatchdogToken := A_TickCount
+    CommandPalette_StopFtbAnswerPoll()
+    rid := Trim(String(oldReqId))
+    if (rid != "") && FuncExists("CoreAsyncHttp_Cancel") {
+        try CoreAsyncHttp_Cancel(rid)
+        catch {
+        }
+    }
+    ; 仅取消悬浮栏侧 palette 流，禁止广播 niuma_llm_http_cancel *（会误杀命令面板宿主直连）
+    if (rid != "") && IsObject(g_FTB_WV2) {
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_palette_ai_stream_cancel", "reqId", rid))
+        catch {
+        }
+    }
+}
+
+CommandPalette_FormatAiHttpError(status, err, text := "", prov := "") {
+    err := Trim(String(err))
+    st := Integer(status)
+    body := Trim(String(text))
+    pk := CommandPalette_NormalizeAiProvider(prov)
+    if FuncExists("LlmApiPing_FormatHttpError") {
+        try {
+            fe := LlmApiPing_FormatHttpError(Map("ok", false, "status", st, "text", body, "error", err), pk != "" ? pk : "openai")
+            if (fe != "")
+                return fe
+        } catch {
+        }
+    }
+    if (st = 429) || RegExMatch(err, "i)429|too\s*many|rate\s*limit")
+        return "请求过于频繁（429），请稍等几秒后再发"
+    if (st = 401) || RegExMatch(err, "i)401|http_status_401|unauthorized|invalid.*api|api[_ ]?key")
+        return (pk = "kimi")
+            ? "Kimi API Key 无效或未授权（401）。请在 Niuma Chat「API 设置」重新保存密钥并点「测试 API」；国内 Key→api.moonshot.cn/v1，国际 Key→api.moonshot.ai/v1（不可混用）"
+            : "API Key 无效或未授权，请检查 Niuma Chat 设置"
+    if (st = 403)
+        return "访问被拒绝（403），请检查 API Key 与 Base URL"
+    if (pk = "kimi") && RegExMatch(err, "i)temperature")
+        return "Kimi K2 系列仅允许 temperature=1，已自动修正；请重载脚本后再试"
+    if (pk = "kimi") && (st = 404 || RegExMatch(err, "i)404|not\s*found"))
+        return "Kimi 请求 404：请确认 Key 与区域一致（国内 api.moonshot.cn/v1 / 国际 api.moonshot.ai/v1），且模型已在平台开通；可改选 moonshot-v1-8k"
+    if RegExMatch(body, '"message"\s*:\s*"([^"]+)"', &m)
+        return m[1]
+    if (err != "" && err != "http_status_404")
+        return err
+    if (st = 404)
+        return "HTTP 404：请检查 Base URL 是否含 /v1 及模型名是否在账号内可用"
+    if (st >= 400)
+        return "HTTP " . st
+    if (st = 0) {
+        if (pk = "kimi")
+            return "无法连接 Kimi API（网络/TLS/代理）。请在 Niuma Chat 设置里点「测试 API」确认密钥与 Base URL"
+        return "无法连接 API（网络/TLS/代理）。请在 Niuma Chat 设置里点「测试 API」确认密钥可用"
+    }
+    return (pk = "kimi") ? ("Kimi 请求失败（HTTP " . st . "）") : "请求失败"
+}
+
+CommandPalette_ArmAiDirectOnce(reqId, q, prov, gen) {
+    global g_CmdPal_AiRetryToken
+    if !CommandPalette_IsPaletteAiReq(reqId)
+        return
+    g_CmdPal_AiRetryToken := A_TickCount
+    token := g_CmdPal_AiRetryToken
+    for delayMs in [3800, 7000, 14000] {
+        SetTimer(CommandPalette_TryDirectAiFallback.Bind(reqId, q, prov, gen, token), -delayMs)
+    }
+}
+
+CommandPalette_StopFtbAnswerPoll() {
+    global g_CmdPal_AiPollToken
+    g_CmdPal_AiPollToken := A_TickCount
+}
+
+CommandPalette_HasSubstantivePaletteAnswer() {
+    global g_CmdPal_AiSession
+    if !(g_CmdPal_AiSession is Map)
+        return false
+    if Integer(g_CmdPal_AiSession.Get("webAnswerChunks", 0)) > 0
+        return true
+    acc := Trim(String(g_CmdPal_AiSession.Get("answer", "")))
+    if (acc = "")
+        return false
+    stripped := RegExReplace(acc, "s)[\s⏳💭🔄…\r\n]+", "")
+    if (stripped = "")
+        return false
+    if RegExMatch(acc, "s)^[\s⏳💭🔄宿主直连「」']+$")
+        return false
+    return true
+}
+
+CommandPalette_RequestFtbAnswerSync(reqId) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_CmdPal_AiSession
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return false
+    q := ""
+    if (g_CmdPal_AiSession is Map)
+        q := String(g_CmdPal_AiSession.Get("query", ""))
+    payload := Map("type", "host_palette_ai_sync", "reqId", String(reqId), "query", q)
+    try {
+        ok := CommandPalette_DeliverFtbPayload(payload)
+        try CommandPalette_InvokeFtbPaletteAiSyncScript(reqId, q)
+        catch {
+        }
+        CommandPalette_AiLog("ai_ftb_sync_req", "reqId=" . reqId . " ok=" . (ok ? 1 : 0))
+        return ok
+    } catch as eSync {
+        CommandPalette_AiLog("ai_ftb_sync_req_err", eSync.Message)
+        return false
+    }
+}
+
+CommandPalette_TrySyncAnswerFromFtb(reqId, gen, token) {
+    global g_CmdPal_AiSession, g_CmdPal_AiPollToken
+    if (token != g_CmdPal_AiPollToken)
+        return
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    if !(g_CmdPal_AiSession is Map)
+        return
+    if g_CmdPal_AiSession.Get("ended", false) && CommandPalette_HasSubstantivePaletteAnswer()
+        return
+    if CommandPalette_HasSubstantivePaletteAnswer()
+        return
+    if CommandPalette_PollFtbPaletteLastResult(reqId, gen)
+        return
+    CommandPalette_RequestFtbAnswerSync(reqId)
+}
+
+CommandPalette_ArmFtbAnswerPoll(reqId, gen) {
+    global g_CmdPal_AiPollToken
+    g_CmdPal_AiPollToken := A_TickCount
+    token := g_CmdPal_AiPollToken
+    for delayMs in [800, 1500, 2500, 4000, 6000, 9000, 13000, 18000, 28000, 40000, 55000, 75000, 95000, 110000] {
+        SetTimer(CommandPalette_TrySyncAnswerFromFtb.Bind(reqId, gen, token), -delayMs)
+    }
+}
+
+CommandPalette_HasDirectHttp() {
+    global g_CoreAsyncHttp_Loaded
+    if IsSet(g_CoreAsyncHttp_Loaded) && g_CoreAsyncHttp_Loaded
+        return true
+    if IsSet(g_CoreAsyncHttpReqs) && (g_CoreAsyncHttpReqs is Map)
+        return true
+    return false
+}
+
+; 不依赖 FuncExists（v2 对部分全局函数会误报）；与 MiniMax 直连同走 CoreAsyncHttp
+CommandPalette_PostHttpJsonAsync(method, url, body, callback, opts := 0) {
+    try {
+        CoreAsyncHttp_SendAsync(method, url, body, callback, opts)
+        return true
+    } catch as e1 {
+        try {
+            HttpJsonAsync(method, url, body, callback, opts)
+            return true
+        } catch as e2 {
+            CommandPalette_AiLog("http_async_fail", SubStr(String(e2.Message), 1, 120))
+            return false
+        }
+    }
+}
+
+CommandPalette_LlmHttpSync(method, url, headers, body, timeoutMs := 90000) {
+    try
+        return LlmApiPing_HttpSync(method, url, headers, body, timeoutMs)
+    catch as e {
+        return Map("ok", false, "status", 0, "text", "", "error", e.Message)
+    }
+}
+
+CommandPalette_TryDirectAiFallback(reqId, q, prov, gen, token) {
+    global g_CmdPal_AiSession, g_CmdPal_AiRetryToken
+    if (token != g_CmdPal_AiRetryToken)
+        return
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    if CommandPalette_AiStreamAlreadyResponded()
+        return
+    if CommandPalette_PollFtbPaletteLastResult(reqId, gen)
+        return
+    if (g_CmdPal_AiSession is Map) && Integer(g_CmdPal_AiSession.Get("webAnswerChunks", 0)) > 0
+        return
+    provNorm := CommandPalette_NormalizeAiProvider(prov)
+    if (provNorm = "kimi")
+        CommandPalette_SyncFtbContextForPalette(provNorm, reqId)
+    g_CmdPal_AiSession["directStarted"] := true
+    CommandPalette_RequestFtbLlmExport(prov, reqId)
+    CommandPalette_AiLog("ai_direct_begin", "reqId=" . reqId . " provider=" . prov)
+    llmDbg := CommandPalette_ResolveAiLlmForProvider(prov)
+    CommandPalette_AiLog("ai_direct_llm", "base=" . SubStr(String(llmDbg.Get("baseUrl", "")), 1, 64)
+        . " model=" . String(llmDbg.Get("model", "")) . " keyLen=" . StrLen(String(llmDbg.Get("apiKey", ""))))
+    CommandPalette_RunDirectAiStream(reqId, q, prov, gen)
+}
+
+CommandPalette_RunDirectAiStream(reqId, q, prov, gen) {
+    global g_CmdPal_AiSession
+    llm := CommandPalette_ResolveAiLlmForProvider(prov)
+    p := CommandPalette_NormalizeAiProvider(llm.Get("provider", prov))
+    paletteReq := CommandPalette_IsPaletteAiReq(reqId)
+    if !paletteReq && (p = "kimi") {
+        CommandPalette_AiLog("ai_direct_skip", "provider=kimi non_palette")
+        return
+    }
+    if !paletteReq && (g_CmdPal_AiSession is Map) && g_CmdPal_AiSession.Get("ftbDispatched", false) {
+        CommandPalette_AiLog("ai_direct_skip", "provider=" . p . " ftb=1")
+        return
+    }
+    key := Trim(String(llm.Get("apiKey", "")))
+    if (key = "") {
+        CommandPalette_PushAiStreamError(reqId, gen, "未配置 API Key，请在 Niuma Chat 设置中填写")
+        return
+    }
+    if CommandPalette_HasDirectHttp() {
+        if (p = "minimax")
+            CommandPalette_DirectMinimaxStream(reqId, q, llm, gen)
+        else if (p = "claude")
+            CommandPalette_DirectClaudeStream(reqId, q, llm, gen)
+        else if (p = "kimi")
+            CommandPalette_RunDirectKimiStreamSync(reqId, q, llm, gen)
+        else
+            CommandPalette_DirectOpenAiStream(reqId, q, llm, gen)
+        return
+    }
+    if FuncExists("LlmApiPing_HttpSync") {
+        CommandPalette_AiLog("ai_direct_sync", "reqId=" . reqId . " provider=" . p)
+        if (p = "kimi")
+            SetTimer(CommandPalette_RunDirectKimiStreamSync.Bind(reqId, q, llm, gen), -15)
+        else
+            SetTimer(CommandPalette_RunDirectAiStreamSync.Bind(reqId, q, llm, gen, p), -15)
+        return
+    }
+    CommandPalette_PushAiStreamError(reqId, gen, "悬浮栏未响应且宿主 HTTP 模块未加载，请完全退出并重载 牛马.ahk")
+}
+
+CommandPalette_RunDirectAiStreamSync(reqId, q, llm, gen, provKind) {
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    pk := CommandPalette_NormalizeAiProvider(provKind)
+    if (pk = "kimi") {
+        CommandPalette_RunDirectKimiStreamSync(reqId, q, llm, gen)
+        return
+    }
+    CommandPalette_EnsureLlmEndpoint(llm, pk)
+    key := Trim(String(llm.Get("apiKey", "")))
+    base := Trim(String(llm.Get("baseUrl", "")))
+    model := Trim(String(llm.Get("model", "")))
+    if (model = "")
+        model := "MiniMax-M2.7"
+    url := ""
+    body := ""
+    headers := Map("Content-Type", "application/json")
+    if (pk = "minimax") {
+        url := FuncExists("LlmApiPing_MinimaxAnthropicUrl") ? LlmApiPing_MinimaxAnthropicUrl(base) : (base . "/v1/messages")
+        body := Jxon_Dump(Map("model", model, "max_tokens", 4096, "messages", [Map("role", "user", "content", String(q))], "stream", false))
+        headers["Authorization"] := "Bearer " . key
+        headers["anthropic-version"] := "2023-06-01"
+        CommandPalette_PushAiStreamChunk(reqId, gen, "🔄 宿主直连 MiniMax…`n")
+    } else if (pk = "claude") {
+        url := FuncExists("LlmApiPing_ClaudeMessagesUrl") ? LlmApiPing_ClaudeMessagesUrl(base) : (base . "/v1/messages")
+        body := Jxon_Dump(Map("model", model, "max_tokens", 4096, "messages", [Map("role", "user", "content", String(q))]))
+        headers["x-api-key"] := key
+        headers["anthropic-version"] := "2023-06-01"
+        CommandPalette_PushAiStreamChunk(reqId, gen, "🔄 宿主直连 Claude…`n")
+    } else {
+        url := FuncExists("LlmApiPing_OpenAIChatUrl") ? LlmApiPing_OpenAIChatUrl(base) : (base . "/chat/completions")
+        if FuncExists("LlmApiPing_BuildChatBody")
+            body := LlmApiPing_BuildChatBody(pk, model, q, 4096)
+        else
+            body := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", String(q))], "max_tokens", 4096))
+        headers["Authorization"] := "Bearer " . key
+        CommandPalette_PushAiStreamChunk(reqId, gen, "🔄 宿主直连模型…`n")
+    }
+    r := LlmApiPing_HttpSync("POST", url, headers, body, 90000)
+    if (pk = "kimi") && !(r.Get("ok", false)) && FuncExists("LlmApiPing_KimiChatBodies") && FuncExists("LlmApiPing_OpenAIChatUrl") {
+        st := r.Has("status") ? Integer(r["status"]) : 0
+        if (st = 404 || st = 400) {
+            for _, altBody in LlmApiPing_KimiChatBodies(model, q, 4096) {
+                if (altBody = body)
+                    continue
+                r2 := LlmApiPing_HttpSync("POST", url, headers, altBody, 90000)
+                if r2.Get("ok", false) {
+                    r := r2
+                    break
+                }
+                r := r2
+            }
+        }
+        if !(r.Get("ok", false)) && RegExMatch(model, "i)^kimi-k2") {
+            fb := Map("model", "moonshot-v1-8k", "messages", [Map("role", "user", "content", String(q))], "max_tokens", 4096, "temperature", 0.7)
+            r3 := LlmApiPing_HttpSync("POST", url, headers, Jxon_Dump(fb), 90000)
+            if r3.Get("ok", false)
+                r := r3
+        }
+    }
+    CommandPalette_OnDirectLlmDone(reqId, gen, pk, r)
+}
+
+CommandPalette_DirectMinimaxStream(reqId, q, llm, gen) {
+    key := Trim(String(llm.Get("apiKey", "")))
+    base := Trim(String(llm.Get("baseUrl", "")))
+    model := Trim(String(llm.Get("model", "")))
+    if (model = "")
+        model := "MiniMax-M2.7"
+    url := FuncExists("LlmApiPing_MinimaxAnthropicUrl") ? LlmApiPing_MinimaxAnthropicUrl(base) : (base . "/v1/messages")
+    body := Jxon_Dump(Map(
+        "model", model,
+        "max_tokens", 4096,
+        "messages", [Map("role", "user", "content", String(q))],
+        "stream", false
+    ))
+    headers := Map(
+        "Content-Type", "application/json",
+        "Authorization", "Bearer " . key,
+        "anthropic-version", "2023-06-01"
+    )
+    HttpJsonAsync("POST", url, body, CommandPalette_OnDirectLlmDone.Bind(reqId, gen, "minimax"), Map(
+        "headers", headers,
+        "timeoutMs", 90000,
+        "receiveTimeoutMs", 90000,
+        "tag", "cmdpal_ai_direct",
+        "reqId", reqId
+    ))
+}
+
+CommandPalette_DirectClaudeStream(reqId, q, llm, gen) {
+    key := Trim(String(llm.Get("apiKey", "")))
+    base := Trim(String(llm.Get("baseUrl", "")))
+    model := Trim(String(llm.Get("model", "")))
+    url := FuncExists("LlmApiPing_ClaudeMessagesUrl") ? LlmApiPing_ClaudeMessagesUrl(base) : (base . "/v1/messages")
+    body := Jxon_Dump(Map(
+        "model", model,
+        "max_tokens", 4096,
+        "messages", [Map("role", "user", "content", String(q))]
+    ))
+    headers := Map(
+        "Content-Type", "application/json",
+        "x-api-key", key,
+        "anthropic-version", "2023-06-01"
+    )
+    CommandPalette_PushAiStreamChunk(reqId, gen, "🔄 宿主直连 Claude…`n")
+    HttpJsonAsync("POST", url, body, CommandPalette_OnDirectLlmDone.Bind(reqId, gen, "claude"), Map(
+        "headers", headers,
+        "timeoutMs", 90000,
+        "receiveTimeoutMs", 90000,
+        "tag", "cmdpal_ai_direct",
+        "reqId", reqId
+    ))
+}
+
+CommandPalette_DirectOpenAiStream(reqId, q, llm, gen) {
+    pk := CommandPalette_NormalizeAiProvider(llm.Get("provider", ""))
+    if (pk = "kimi") {
+        CommandPalette_RunDirectKimiStreamSync(reqId, q, llm, gen)
+        return
+    }
+    CommandPalette_EnsureLlmEndpoint(llm, pk)
+    key := Trim(String(llm.Get("apiKey", "")))
+    base := Trim(String(llm.Get("baseUrl", "")))
+    model := Trim(String(llm.Get("model", "")))
+    url := FuncExists("LlmApiPing_OpenAIChatUrl") ? LlmApiPing_OpenAIChatUrl(base) : (base . "/chat/completions")
+    if !RegExMatch(url, "i)^https?://") {
+        CommandPalette_PushAiStreamError(reqId, gen, "模型 Base URL 无效，请在 Niuma Chat 设置中填写或重选 Kimi")
+        return
+    }
+    if FuncExists("LlmApiPing_BuildChatBody")
+        body := LlmApiPing_BuildChatBody(pk, model, q, 4096)
+    else
+        body := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", String(q))], "max_tokens", 4096))
+    headers := Map(
+        "Content-Type", "application/json",
+        "Authorization", "Bearer " . key
+    )
+    CommandPalette_PushAiStreamChunk(reqId, gen, "🔄 宿主直连模型…`n")
+    HttpJsonAsync("POST", url, body, CommandPalette_OnDirectLlmDone.Bind(reqId, gen, pk), Map(
+        "headers", headers,
+        "timeoutMs", 90000,
+        "receiveTimeoutMs", 90000,
+        "tag", "cmdpal_ai_direct",
+        "reqId", reqId
+    ))
+}
+
+CommandPalette_BuildKimiChatBody(mod, q, maxTokens := 2048) {
+    mod := Trim(String(mod))
+    if (mod = "")
+        mod := "kimi-k2.6"
+    tok := Max(64, Integer(maxTokens))
+    m := Map(
+        "model", mod,
+        "messages", [Map("role", "user", "content", String(q))]
+    )
+    if RegExMatch(mod, "i)^kimi-k2")
+        m["max_completion_tokens"] := tok, m["temperature"] := 1
+    else
+        m["max_tokens"] := tok
+    return Jxon_Dump(m)
+}
+
+CommandPalette_KimiChatUrl(base) {
+    bu := Trim(String(base))
+    if FuncExists("LlmApiPing_NormalizeMoonshotBase")
+        bu := LlmApiPing_NormalizeMoonshotBase(bu)
+    if (bu = "")
+        bu := "https://api.moonshot.cn/v1"
+    if FuncExists("LlmApiPing_OpenAIChatUrl")
+        return LlmApiPing_OpenAIChatUrl(bu)
+    bu := RegExReplace(bu, "/+$", "")
+    if RegExMatch(bu, "i)^https?://api\.moonshot\.(cn|ai)$")
+        bu .= "/v1"
+    return InStr(StrLower(bu), "/chat/completions") ? bu : (bu . "/chat/completions")
+}
+
+CommandPalette_BuildKimiDirectPlan(q, llm) {
+    key := Trim(String(llm.Get("apiKey", "")))
+    if (key = "")
+        return Map("error", "未配置 Kimi API Key", "plan", [], "planLen", 0, "headers", Map())
+    model := Trim(String(llm.Get("model", "")))
+    if (model = "")
+        model := "kimi-k2.6"
+    baseIn := Trim(String(llm.Get("baseUrl", "")))
+    if FuncExists("LlmApiPing_NormalizeMoonshotBase")
+        baseIn := LlmApiPing_NormalizeMoonshotBase(baseIn)
+    bases := []
+    if (baseIn != "")
+        bases.Push(baseIn)
+    for altBu in ["https://api.moonshot.cn/v1", "https://api.moonshot.ai/v1"] {
+        if !CommandPalette_ArrayHasValue(bases, altBu)
+            bases.Push(altBu)
+    }
+    models := [model]
+    if RegExMatch(model, "i)^kimi-k2") && !CommandPalette_ArrayHasValue(models, "moonshot-v1-8k")
+        models.Push("moonshot-v1-8k")
+    tok := 2048
+    plan := []
+    seen := Map()
+    headers := Map("Content-Type", "application/json", "Authorization", "Bearer " . key)
+    for _, bu in bases {
+        url := CommandPalette_KimiChatUrl(bu)
+        for _, mod in models {
+            bodies := [CommandPalette_BuildKimiChatBody(mod, q, tok)]
+            if FuncExists("LlmApiPing_KimiChatBodies") {
+                try {
+                    for alt in LlmApiPing_KimiChatBodies(mod, q, tok) {
+                        ab := String(alt)
+                        if (ab != "")
+                            bodies.Push(ab)
+                    }
+                } catch {
+                }
+            } else if FuncExists("LlmApiPing_BuildChatBody") {
+                try bodies.Push(LlmApiPing_BuildChatBody("kimi", mod, q, tok))
+                catch {
+                }
+            }
+            for _, body in bodies {
+                body := String(body)
+                if (body = "")
+                    continue
+                sig := url . "|" . mod . "|" . SubStr(body, 1, 120)
+                if seen.Has(sig)
+                    continue
+                seen[sig] := true
+                plan.Push(Map("url", url, "body", body, "model", mod, "base", bu))
+            }
+        }
+    }
+    return Map("error", "", "plan", plan, "planLen", plan.Length, "headers", headers)
+}
+
+CommandPalette_RunDirectKimiStreamSync(reqId, q, llm, gen) {
+    global g_CmdPal_AiSession
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    built := CommandPalette_BuildKimiDirectPlan(q, llm)
+    if (built.Get("error", "") != "") {
+        CommandPalette_PushAiStreamError(reqId, gen, String(built["error"]))
+        return
+    }
+    planLen := built.Has("planLen") ? Integer(built["planLen"]) : 0
+    plan := built.Has("plan") ? built["plan"] : []
+    if (planLen < 1) {
+        try planLen := plan.Length
+        catch {
+            planLen := 0
+        }
+    }
+    if (planLen < 1) {
+        CommandPalette_AiLog("ai_kimi_plan_empty", "keyLen=" . StrLen(String(llm.Get("apiKey", "")))
+            . " base=" . SubStr(String(llm.Get("baseUrl", "")), 1, 48) . " model=" . String(llm.Get("model", "")))
+        CommandPalette_PushAiStreamError(reqId, gen, "Kimi 请求计划为空，请检查 API Key 与 Base URL")
+        return
+    }
+    g_CmdPal_AiSession["kimiPlan"] := plan
+    g_CmdPal_AiSession["kimiPlanIdx"] := 1
+    g_CmdPal_AiSession["kimiHeaders"] := built.Get("headers", Map())
+    g_CmdPal_AiSession["kimiLastR"] := Map("ok", false, "status", 0, "text", "", "error", "请求失败")
+    CommandPalette_PushAiStreamChunk(reqId, gen, "🔄 宿主直连 Kimi…`n")
+    CommandPalette_AiLog("ai_kimi_plan", "reqId=" . reqId . " tries=" . plan.Length)
+    ; 与 MiniMax 一致：CoreAsyncHttp 已加载时走异步 HttpJsonAsync，避免 FuncExists 误判后误报「HTTP 不可用」
+    if CommandPalette_HasDirectHttp() {
+        CommandPalette_KimiDirectHttpStep(reqId, gen)
+        return
+    }
+    CommandPalette_KimiDirectHttpSyncAll(reqId, gen)
+}
+
+CommandPalette_KimiDirectHttpSyncAll(reqId, gen) {
+    global g_CmdPal_AiSession
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    plan := g_CmdPal_AiSession.Get("kimiPlan", [])
+    headers := g_CmdPal_AiSession.Get("kimiHeaders", Map())
+    lastR := Map("ok", false, "status", 0, "text", "", "error", "Kimi 请求失败")
+    for item in plan {
+        if !(item is Map)
+            continue
+        r := CommandPalette_LlmHttpSync("POST", String(item["url"]), headers, String(item["body"]), 90000)
+        lastR := r
+        if (r is Map) && r.Get("ok", false) {
+            CommandPalette_OnDirectLlmDone(reqId, gen, "kimi", r)
+            return
+        }
+        st := (r is Map) ? Integer(r.Get("status", 0)) : 0
+        CommandPalette_AiLog("ai_kimi_sync_try", "status=" . st . " base=" . SubStr(String(item.Get("base", "")), 1, 40))
+        if (st = 403)
+            break
+    }
+    CommandPalette_OnDirectLlmDone(reqId, gen, "kimi", lastR)
+}
+
+CommandPalette_KimiDirectHttpStep(reqId, gen) {
+    global g_CmdPal_AiSession
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    plan := g_CmdPal_AiSession.Get("kimiPlan", [])
+    idx := Integer(g_CmdPal_AiSession.Get("kimiPlanIdx", 1))
+    if !(plan is Array) || idx > plan.Length {
+        CommandPalette_OnDirectLlmDone(reqId, gen, "kimi", g_CmdPal_AiSession.Get("kimiLastR", Map("ok", false, "error", "请求失败")))
+        return
+    }
+    item := plan[idx]
+    g_CmdPal_AiSession["kimiPlanIdx"] := idx + 1
+    headers := g_CmdPal_AiSession.Get("kimiHeaders", Map())
+    url := String(item["url"])
+    body := String(item["body"])
+    if !RegExMatch(url, "i)^https?://") {
+        g_CmdPal_AiSession["kimiLastR"] := Map("ok", false, "status", 0, "text", "", "error", "Kimi URL 无效: " . SubStr(url, 1, 80))
+        CommandPalette_KimiDirectHttpStep(reqId, gen)
+        return
+    }
+    opts := Map(
+        "headers", headers,
+        "timeoutMs", 90000,
+        "receiveTimeoutMs", 90000,
+        "tag", "cmdpal_ai_kimi",
+        "reqId", reqId
+    )
+    if CommandPalette_PostHttpJsonAsync("POST", url, body, CommandPalette_OnKimiDirectHttp.Bind(reqId, gen), opts)
+        return
+    r := CommandPalette_LlmHttpSync("POST", url, headers, body, 90000)
+    if (r is Map) && r.Get("ok", false) {
+        CommandPalette_OnDirectLlmDone(reqId, gen, "kimi", r)
+        return
+    }
+    g_CmdPal_AiSession["kimiLastR"] := r
+    CommandPalette_KimiDirectHttpStep(reqId, gen)
+}
+
+CommandPalette_OnKimiDirectHttp(reqId, gen, ret) {
+    global g_CmdPal_AiSession
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    if (ret is Map) && ret.Get("ok", false) {
+        CommandPalette_AiLog("ai_kimi_ok", "reqId=" . reqId . " status=" . Integer(ret.Get("status", 0)))
+        CommandPalette_OnDirectLlmDone(reqId, gen, "kimi", ret)
+        return
+    }
+    if (ret is Map)
+        g_CmdPal_AiSession["kimiLastR"] := ret
+    st := (ret is Map) ? Integer(ret.Get("status", 0)) : 0
+    det := "status=" . st
+    if (g_CmdPal_AiSession is Map) {
+        pi := Integer(g_CmdPal_AiSession.Get("kimiPlanIdx", 1)) - 1
+        pl := g_CmdPal_AiSession.Get("kimiPlan", [])
+        if (pl is Array) && pi >= 1 && pi <= pl.Length {
+            item := pl[pi]
+            if (item is Map)
+                det .= " base=" . SubStr(String(item.Get("base", "")), 1, 48)
+        }
+    }
+    CommandPalette_AiLog("ai_kimi_try_fail", "reqId=" . reqId . " " . det . " err=" . SubStr((ret is Map) ? String(ret.Get("error", "")) : "", 1, 80))
+    CommandPalette_KimiDirectHttpStep(reqId, gen)
+}
+
+CommandPalette_ArrayHasValue(arr, val) {
+    for item in arr
+        if (item = val)
+            return true
+    return false
+}
+
+CommandPalette_OnDirectLlmDone(reqId, gen, kind, ret) {
+    global g_CmdPal_AiSession
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    ok := false
+    status := 0
+    text := ""
+    err := ""
+    if (ret is Map) {
+        ok := !!ret.Get("ok", false)
+        status := Integer(ret.Get("status", 0))
+        text := String(ret.Get("text", ""))
+        err := String(ret.Get("error", ""))
+    } else
+        err := "无效响应"
+    if !ok {
+        errLow := StrLower(err)
+        if (errLow = "cancelled" || errLow = "canceled")
+            return
+        err := CommandPalette_FormatAiHttpError(status, err, text, kind)
+        if (CommandPalette_NormalizeAiProvider(kind) = "kimi") && (status = 404 || status = 400)
+            && CommandPalette_AiSessionMatches(reqId, false) && (g_CmdPal_AiSession is Map)
+            && !g_CmdPal_AiSession.Get("kimiV1Retried", false) {
+            llmFb := CommandPalette_ResolveAiLlmForProvider("kimi")
+            mod0 := Trim(String(llmFb.Get("model", "")))
+            if RegExMatch(mod0, "i)^kimi-k2") {
+                g_CmdPal_AiSession["kimiV1Retried"] := true
+                llmFb["model"] := "moonshot-v1-8k"
+                CommandPalette_PushAiStreamChunk(reqId, gen, "`n⟳ 改用 moonshot-v1-8k 重试…`n")
+                SetTimer(CommandPalette_RunDirectKimiStreamSync.Bind(reqId, String(g_CmdPal_AiSession.Get("query", "")), llmFb, gen), -1)
+                return
+            }
+        }
+        CommandPalette_PushAiStreamError(reqId, gen, err)
+        return
+    }
+    ans := CommandPalette_ExtractLlmAnswer(text, kind)
+    if (ans = "") {
+        CommandPalette_PushAiStreamError(reqId, gen, "模型返回空内容")
+        return
+    }
+    chunkSize := 24
+    pos := 1
+    len := StrLen(ans)
+    while (pos <= len) {
+        part := SubStr(ans, pos, chunkSize)
+        pos += chunkSize
+        CommandPalette_PushAiStreamChunk(reqId, gen, part)
+    }
+    CommandPalette_PushAiStreamEnd(reqId, gen, ans)
+}
+
+CommandPalette_ExtractLlmAnswer(raw, kind := "") {
+    raw := Trim(String(raw))
+    if (raw = "")
+        return ""
+    try {
+        parsed := Jxon_Load(raw)
+        if (parsed is Map) {
+            if parsed.Has("content") && parsed["content"] is Array {
+                for item in parsed["content"] {
+                    if (item is Map) {
+                        t := Trim(String(item.Get("text", "")))
+                        if (t != "")
+                            return t
+                    }
+                }
+            }
+            if parsed.Has("choices") && parsed["choices"] is Array && parsed["choices"].Length > 0 {
+                ch := parsed["choices"][1]
+                if (ch is Map) {
+                    if ch.Has("message") && ch["message"] is Map
+                        return Trim(String(ch["message"].Get("content", "")))
+                    if ch.Has("text")
+                        return Trim(String(ch["text"]))
+                }
+            }
+        }
+    } catch {
+    }
+    return raw
+}
+
+CommandPalette_PostFtbPaletteAiStreamInner(reqId, q, prov, isRetry := false) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return false
+    ok := false
+    payload := Map(
+        "type", "host_palette_ai_stream",
+        "reqId", String(reqId),
+        "query", String(q),
+        "provider", String(prov),
+        "openDrawer", false
+    )
+    try {
+        ok := CommandPalette_DeliverFtbPayload(payload)
+        if !isRetry
+            CommandPalette_AiLog("ai_stream_posted_ftb", "reqId=" . reqId . " provider=" . prov . " ok=" . (ok ? 1 : 0))
+    } catch as ePost {
+        CommandPalette_AiLog("ai_stream_post_err", ePost.Message)
+    }
+    try CommandPalette_InvokeFtbPaletteAiScript(reqId, q, prov)
+    catch {
+    }
+    return ok
+}
+
+CommandPalette_ArmAiStreamWatchdog(reqId, gen) {
+    global g_CmdPal_AiWatchdogToken
+    g_CmdPal_AiWatchdogToken := A_TickCount
+    token := g_CmdPal_AiWatchdogToken
+    SetTimer(CommandPalette_AiStreamWatchdog.Bind(reqId, gen, token), -120000)
+}
+
+CommandPalette_AiStreamWatchdog(reqId, gen, token) {
+    global g_CmdPal_AiSession, g_CmdPal_AiWatchdogToken
+    if (token != g_CmdPal_AiWatchdogToken)
+        return
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    if (g_CmdPal_AiSession is Map) && g_CmdPal_AiSession.Get("ended", false)
+        return
+    if (g_CmdPal_AiSession is Map) && g_CmdPal_AiSession.Get("ftbDispatched", false) {
+        if CommandPalette_PollFtbPaletteLastResult(reqId, gen)
+            return
+        CommandPalette_RequestFtbAnswerSync(reqId)
+        SetTimer(CommandPalette_AiStreamWatchdogFinalize.Bind(reqId, gen, token), -4000)
+        return
+    }
+    CommandPalette_PushAiStreamError(reqId, gen, "请求超时（120s），请检查 API 或网络")
+}
+
+CommandPalette_AiStreamWatchdogFinalize(reqId, gen, token) {
+    global g_CmdPal_AiSession, g_CmdPal_AiWatchdogToken
+    if (token != g_CmdPal_AiWatchdogToken)
+        return
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    if (g_CmdPal_AiSession is Map) && g_CmdPal_AiSession.Get("ended", false)
+        return
+    CommandPalette_TrySyncAnswerFromFtb(reqId, gen, g_CmdPal_AiPollToken)
+    if (g_CmdPal_AiSession is Map) && g_CmdPal_AiSession.Get("ended", false)
+        return
+    if CommandPalette_PollFtbPaletteLastResult(reqId, gen)
+        return
+    if CommandPalette_HasSubstantivePaletteAnswer() {
+        ans := Trim(String(g_CmdPal_AiSession.Get("answer", "")))
+        CommandPalette_PushAiStreamEnd(reqId, gen, ans)
+        return
+    }
+    if CommandPalette_IsPaletteAiReq(reqId) && (g_CmdPal_AiSession is Map) && !g_CmdPal_AiSession.Get("directStarted", false) {
+        q := String(g_CmdPal_AiSession.Get("query", ""))
+        prov := String(g_CmdPal_AiSession.Get("provider", ""))
+        g_CmdPal_AiSession["directStarted"] := true
+        CommandPalette_AiLog("ai_watchdog_direct", "reqId=" . reqId)
+        CommandPalette_RunDirectAiStream(reqId, q, prov, gen)
+        return
+    }
+    CommandPalette_PushAiStreamError(reqId, gen, "未能获取模型回复：请检查 API Key，或 Tab 在 Niuma Chat 中查看")
+}
+
+CommandPalette_CollapsePaletteAfterAi() {
+    global g_CmdPal_MinHeight
+    CommandPalette_PushToWeb(Map("type", "palette_ai_reset"))
+    CommandPalette_ApplyMorphHeight(g_CmdPal_MinHeight, true)
+}
+
+; 命令面板 AI：悬浮栏可选投递一次，600ms 后宿主直连（单次 HTTP，避免 429）
+CommandPalette_PostFtbPaletteAiStream(reqId, q, prov) {
+    global g_CmdPal_AiSession
+    gen := (g_CmdPal_AiSession is Map) ? Integer(g_CmdPal_AiSession.Get("gen", 0)) : 0
+    try CommandPalette_PostFtbPaletteAiStreamInner(reqId, q, prov, false)
+    catch {
+    }
+    CommandPalette_AiLog("ai_stream_posted", "reqId=" . reqId . " provider=" . prov)
+    if (g_CmdPal_AiSession is Map) {
+        g_CmdPal_AiSession["webChunkCount"] := 0
+        g_CmdPal_AiSession["webAnswerChunks"] := 0
+        g_CmdPal_AiSession["ftbDispatched"] := true
+        g_CmdPal_AiSession["directStarted"] := false
+        g_CmdPal_AiSession["error"] := ""
+    }
+    CommandPalette_ArmAiStreamWatchdog(reqId, gen)
+    CommandPalette_ArmFtbAnswerPoll(reqId, gen)
+    CommandPalette_ArmAiDirectOnce(reqId, q, prov, gen)
+    pollTok := g_CmdPal_AiPollToken
+    SetTimer(CommandPalette_TrySyncAnswerFromFtb.Bind(reqId, gen, pollTok), -400)
+    return true
+}
+
+CommandPalette_DispatchPaletteAiStream(reqId, q, prov, gen, tryN := 0) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_UI_Ready, g_CmdPal_AiStreamGen, g_CmdPal_AiSession
+    if !(g_CmdPal_AiSession is Map) || Trim(String(g_CmdPal_AiSession.Get("reqId", ""))) != Trim(String(reqId))
+        return
+    if Integer(g_CmdPal_AiSession.Get("gen", 0)) != Integer(gen)
+        return
+    tryN := Integer(tryN)
+    if (IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady && g_FTB_UI_Ready) {
+        CommandPalette_PostFtbPaletteAiStream(reqId, q, prov)
+        return
+    }
+    if (tryN >= 40) {
+        CommandPalette_AiLog("ai_stream_wv2_timeout", "reqId=" . reqId . " ready=" . (g_FTB_WV2_Ready ? 1 : 0) . " frame=" . (g_FTB_WV2_FrameReady ? 1 : 0) . " ui=" . (g_FTB_UI_Ready ? 1 : 0))
+        if (g_CmdPal_AiSession is Map)
+            g_CmdPal_AiSession["directStarted"] := true
+        CommandPalette_RunDirectAiStream(reqId, q, prov, gen)
+        return
+    }
+    CommandPalette_EnsureFtbEngineForAi()
+    SetTimer(CommandPalette_DispatchPaletteAiStream.Bind(reqId, q, prov, gen, tryN + 1), -380)
+}
+
+CommandPalette_PushAiStreamChunk(reqId, gen, delta) {
+    global g_CmdPal_AiSession, g_CmdPal_AiWatchdogToken
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    g_CmdPal_AiWatchdogToken := A_TickCount
+    CommandPalette_ArmAiStreamWatchdog(reqId, gen)
+    d := String(delta)
+    if (d = "")
+        return
+    acc := String(g_CmdPal_AiSession.Get("answer", "")) . d
+    g_CmdPal_AiSession["answer"] := acc
+    g_CmdPal_AiSession["error"] := ""
+    if !CommandPalette_ShouldMirrorAiToPalette()
+        return
+    g_CmdPal_AiSession["chunkCount"] := Integer(g_CmdPal_AiSession.Get("chunkCount", 0)) + 1
+    cc := Integer(g_CmdPal_AiSession.Get("chunkCount", 0))
+    if (Mod(cc, 12) = 1)
+        CommandPalette_AiLog("ai_chunk", "reqId=" . reqId . " len=" . StrLen(acc))
+    CommandPalette_PushToWeb(Map("type", "palette_ai_chunk", "reqId", reqId, "delta", d))
+}
+
+CommandPalette_PushAiStreamEnd(reqId, gen, answer := "") {
+    global g_CmdPal_AiSession, g_CmdPal_AiWatchdogToken
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    g_CmdPal_AiWatchdogToken := A_TickCount
+    if (Trim(String(answer)) != "")
+        g_CmdPal_AiSession["answer"] := String(answer)
+    g_CmdPal_AiSession["ended"] := true
+    g_CmdPal_AiSession["error"] := ""
+    ans := String(g_CmdPal_AiSession.Get("answer", ""))
+    CommandPalette_StopFtbAnswerPoll()
+    CommandPalette_AiLog("ai_end", "reqId=" . reqId . " len=" . StrLen(ans))
+    global g_CmdPal_AiLastCard
+    g_CmdPal_AiLastCard := Map(
+        "reqId", reqId,
+        "query", String(g_CmdPal_AiSession.Get("query", "")),
+        "provider", String(g_CmdPal_AiSession.Get("provider", "")),
+        "answer", ans,
+        "ended", true,
+        "handoff", !!g_CmdPal_AiSession.Get("handoff", false),
+        "error", ""
+    )
+    if CommandPalette_ShouldMirrorAiToPalette()
+        CommandPalette_PushToWeb(Map("type", "palette_ai_end", "reqId", reqId, "answer", ans))
+    if g_CmdPal_AiSession.Get("handoff", false) && IsObject(g_FTB_WV2) {
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_palette_ai_handoff_end", "reqId", reqId))
+        catch {
+        }
+    }
+}
+
+CommandPalette_PushAiStreamError(reqId, gen, message) {
+    global g_CmdPal_AiSession
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    g_CmdPal_AiSession["ended"] := true
+    g_CmdPal_AiSession["error"] := String(message)
+    global g_CmdPal_AiLastCard
+    g_CmdPal_AiLastCard := Map(
+        "reqId", reqId,
+        "query", String(g_CmdPal_AiSession.Get("query", "")),
+        "provider", String(g_CmdPal_AiSession.Get("provider", "")),
+        "answer", String(g_CmdPal_AiSession.Get("answer", "")),
+        "ended", true,
+        "handoff", false,
+        "error", String(message)
+    )
+    CommandPalette_AiLog("ai_error", "reqId=" . reqId . " msg=" . String(message))
+    if CommandPalette_ShouldMirrorAiToPalette()
+        CommandPalette_PushToWeb(Map("type", "palette_ai_error", "reqId", reqId, "message", String(message)))
+}
+
+CommandPalette_OnNiumaPaletteAiChunk(msg) {
+    global g_CmdPal_AiSession, g_CmdPal_AiRetryToken
+    if !(msg is Map)
+        return
+    reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    gen := msg.Has("gen") ? Integer(msg["gen"]) : Integer(g_CmdPal_AiSession is Map ? g_CmdPal_AiSession.Get("gen", 0) : 0)
+    delta := msg.Has("delta") ? String(msg["delta"]) : (msg.Has("text") ? String(msg["text"]) : "")
+    if (g_CmdPal_AiSession is Map) && Trim(String(g_CmdPal_AiSession.Get("reqId", ""))) = Trim(String(reqId)) {
+        g_CmdPal_AiSession["webChunkCount"] := Integer(g_CmdPal_AiSession.Get("webChunkCount", 0)) + 1
+        if (delta != "" && !RegExMatch(delta, "s)^[\s⏳💭🔄宿主直连]+"))
+            g_CmdPal_AiSession["webAnswerChunks"] := Integer(g_CmdPal_AiSession.Get("webAnswerChunks", 0)) + 1
+    }
+    g_CmdPal_AiRetryToken := A_TickCount
+    CommandPalette_PushAiStreamChunk(reqId, gen, delta)
+}
+
+CommandPalette_OnNiumaPaletteAiEnd(msg) {
+    global g_CmdPal_AiSession
+    if !(msg is Map)
+        return
+    reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    gen := (g_CmdPal_AiSession is Map) ? Integer(g_CmdPal_AiSession.Get("gen", 0)) : 0
+    ans := msg.Has("answer") ? String(msg["answer"]) : ""
+    if (ans = "") && (g_CmdPal_AiSession is Map)
+        ans := String(g_CmdPal_AiSession.Get("answer", ""))
+    q := (g_CmdPal_AiSession is Map) ? Trim(String(g_CmdPal_AiSession.Get("query", ""))) : ""
+    webChunks := (g_CmdPal_AiSession is Map) ? Integer(g_CmdPal_AiSession.Get("webAnswerChunks", 0)) : 0
+    if (q != "" && Trim(ans) = q && webChunks < 1)
+        return
+    CommandPalette_AiLog("ai_web_end", "reqId=" . reqId . " ansLen=" . StrLen(ans))
+    CommandPalette_StopFtbAnswerPoll()
+    g_CmdPal_AiWatchdogToken := A_TickCount
+    if (g_CmdPal_AiSession is Map) {
+        g_CmdPal_AiSession["error"] := ""
+        g_CmdPal_AiSession["ended"] := false
+    }
+    if (Trim(ans) != "") && !CommandPalette_HasSubstantivePaletteAnswer()
+        CommandPalette_PushAiStreamChunk(reqId, gen, ans)
+    CommandPalette_PushAiStreamEnd(reqId, gen, ans)
+}
+
+CommandPalette_OnNiumaPaletteAiError(msg) {
+    if !(msg is Map)
+        return
+    reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    gen := msg.Has("gen") ? Integer(msg["gen"]) : 0
+    err := msg.Has("message") ? String(msg["message"]) : (msg.Has("error") ? String(msg["error"]) : "未知错误")
+    CommandPalette_StopFtbAnswerPoll()
+    CommandPalette_PushAiStreamError(reqId, gen, err)
+}
+
+CommandPalette_CancelAiStream() {
+    global g_CmdPal_AiSession, g_CmdPal_AiStreamGen, g_FTB_WV2
+    oldReqId := (g_CmdPal_AiSession is Map) ? String(g_CmdPal_AiSession.Get("reqId", "")) : ""
+    g_CmdPal_AiStreamGen++
+    CommandPalette_StopAiStreamSideEffects(oldReqId)
+    g_CmdPal_AiSession := 0
+}
+
+CommandPalette_HandoffAiToToolbar(fromHide := false) {
+    global g_CmdPal_AiSession, g_CmdPal_AiStreamGen, g_FTB_WV2
+    if !(g_CmdPal_AiSession is Map)
+        return
+    if g_CmdPal_AiSession.Get("handoff", false)
+        return
+    g_CmdPal_AiSession["handoff"] := true
+    g_CmdPal_AiStreamGen++
+    reqId := String(g_CmdPal_AiSession.Get("reqId", ""))
+    CommandPalette_AiLog("ai_handoff", "reqId=" . reqId . " fromHide=" . (fromHide ? 1 : 0))
+    if fromHide
+        CommandPalette_PushToWeb(Map("type", "palette_ai_status", "message", "后台继续生成 · 再次打开面板可查看", "status", "loading"))
+    else
+        CommandPalette_PushToWeb(Map("type", "palette_ai_status", "message", "已在后台继续生成（看悬浮栏图标）", "status", "idle"))
+    if !fromHide
+        CommandPalette_CollapsePaletteAfterAi()
+    if IsObject(g_FTB_WV2) {
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_palette_ai_handoff", "reqId", reqId, "showHud", true))
+        catch {
+        }
+    }
+}
+
+CommandPalette_PromoteAiToNiumaChat(msg := 0) {
+    global g_CmdPal_AiSession
+    q := ""
+    prov := ""
+    ans := ""
+    if (msg is Map) {
+        q := Trim(String(msg.Get("query", "")))
+        prov := CommandPalette_NormalizeAiProvider(msg.Get("provider", ""))
+        ans := String(msg.Get("answer", ""))
+    }
+    if (g_CmdPal_AiSession is Map) {
+        if (q = "")
+            q := Trim(String(g_CmdPal_AiSession.Get("query", "")))
+        if (prov = "")
+            prov := CommandPalette_NormalizeAiProvider(g_CmdPal_AiSession.Get("provider", ""))
+        if (ans = "")
+            ans := String(g_CmdPal_AiSession.Get("answer", ""))
+    }
+    CommandPalette_AiLog("ai_promote", "provider=" . prov . " qLen=" . StrLen(q))
+    CommandPalette_Hide()
+    CommandPalette_BootstrapNiumaChat("ai_promote", true)
+    if FuncExists("FloatingToolbar_OpenNiumaChatAsk") {
+        try FloatingToolbar_OpenNiumaChatAsk(q, false)
+        catch {
+        }
+    }
+    if (q != "" && FuncExists("FloatingToolbar_SendTextToNiumaChat")) {
+        try {
+            if (prov != "")
+                FloatingToolbar_SendTextToNiumaChat(q, false, false, true, prov)
+            else
+                FloatingToolbar_SendTextToNiumaChat(q, false, false, true)
+        } catch {
+        }
+    }
+    if (ans != "" && FuncExists("FloatingToolbar_SendTextToNiumaChat") && ans != q) {
+        ; 已有部分回答时仅打开抽屉展示会话，不重复发送用户问题
+    }
+    g_CmdPal_AiSession := 0
 }
 
 CommandPalette_PushToWeb(payload) {
@@ -376,8 +1993,11 @@ CommandPalette_PushStatus(message, status := "idle") {
     CommandPalette_PushToWeb(Map("type", "palette_status", "message", String(message), "status", String(status)))
 }
 
-CommandPalette_PushResults(items) {
-    CommandPalette_PushToWeb(Map("type", "palette_results", "items", items))
+CommandPalette_PushResults(items, seq := 0) {
+    payload := Map("type", "palette_results", "items", items)
+    if (Integer(seq) > 0)
+        payload["seq"] := Integer(seq)
+    CommandPalette_PushToWeb(payload)
 }
 
 CommandPalette_ParseWebMessage(args) {
@@ -410,6 +2030,7 @@ CommandPalette_OnWebMessage(sender, args) {
     typ := msg.Has("type") ? String(msg["type"]) : ""
     if (typ = "palette_ready") {
         CommandPalette_PushThemeToWeb()
+        SetTimer(CommandPalette_PushAiProviders, -40)
         SetTimer(CommandPalette_Reveal, -1)
         SetTimer(CommandPalette_DeferredFocus, -80)
         SetTimer(CommandPalette_SyncHostShape, -1)
@@ -420,13 +2041,31 @@ CommandPalette_OnWebMessage(sender, args) {
         CommandPalette_ApplyHeight(h)
         return
     }
+    if (typ = "palette_morph_resize") {
+        h := msg.Has("height") ? Integer(msg["height"]) : g_CmdPal_AiMorphHeight
+        CommandPalette_ApplyMorphHeight(h, true)
+        return
+    }
+    if (typ = "palette_ai_handoff") {
+        CommandPalette_HandoffAiToToolbar(false)
+        return
+    }
+    if (typ = "palette_ai_promote") {
+        CommandPalette_PromoteAiToNiumaChat(msg)
+        return
+    }
+    if (typ = "palette_ai_cancel") {
+        CommandPalette_CancelAiStream()
+        return
+    }
     if (typ = "palette_hide") {
         CommandPalette_Hide()
         return
     }
     if (typ = "palette_query") {
         q := msg.Has("input") ? String(msg["input"]) : ""
-        CommandPalette_HandleQuery(q)
+        seq := msg.Has("seq") ? Integer(msg["seq"]) : 0
+        CommandPalette_HandleQuery(q, seq)
         return
     }
     if (typ = "palette_execute") {
@@ -437,6 +2076,55 @@ CommandPalette_OnWebMessage(sender, args) {
         CommandPalette_HandleVoiceToggle()
         return
     }
+    if (typ = "palette_turbo_search") {
+        q := msg.Has("query") ? Trim(String(msg["query"])) : ""
+        lim := msg.Has("limit") ? Integer(msg["limit"]) : 20
+        seq := msg.Has("seq") ? Integer(msg["seq"]) : 0
+        if (lim <= 0)
+            lim := 20
+        if (lim > 20)
+            lim := 20
+        CommandPalette_HandleTurboSearch(q, lim, seq)
+        return
+    }
+    if (typ = "palette_turbo_execute") {
+        CommandPalette_HandleTurboExecute(msg)
+        return
+    }
+    if (typ = "palette_ai_stub") {
+        q := msg.Has("query") ? Trim(String(msg["query"])) : ""
+        CommandPalette_HandleAiStub(q)
+        return
+    }
+    if (typ = "palette_ai_refresh") {
+        CommandPalette_RefreshAiProviders()
+        return
+    }
+    if (typ = "palette_ai_send") {
+        q := msg.Has("query") ? Trim(String(msg["query"])) : ""
+        prov := msg.Has("provider") ? Trim(String(msg["provider"])) : ""
+        CommandPalette_HandleAiSend(q, prov)
+        return
+    }
+    if (typ = "palette_ai_dismiss") {
+        CommandPalette_DismissAiCard()
+        return
+    }
+    if (typ = "palette_search_debug") {
+        CommandPalette_HandleSearchDebug()
+        return
+    }
+}
+
+CommandPalette_BuildPageUrl(htmlFile) {
+    url := BuildAppLocalUrl(htmlFile)
+    try {
+        path := FuncExists("HtmlPanelPath") ? HtmlPanelPath(htmlFile) : (A_ScriptDir . "\html\" . htmlFile)
+        ver := String(FileGetTime(path, "M"))
+        url .= (InStr(url, "?") ? "&" : "?") . "v=" . ver
+    } catch {
+    }
+    return url
 }
 
 CommandPalette_EnsureCommandsLoaded() {
@@ -608,6 +2296,9 @@ CommandPalette_BuildActionList(query := "") {
 }
 
 CommandPalette_BuildEmptyStateList() {
+    global g_CmdPal_EmptyCache, g_CmdPal_EmptyCacheTick
+    if (IsSet(g_CmdPal_EmptyCache) && g_CmdPal_EmptyCache is Array && (A_TickCount - Integer(g_CmdPal_EmptyCacheTick)) < 4000)
+        return g_CmdPal_EmptyCache
     out := []
     if FuncExists("_SCWV_EnsureHistoryCacheLoaded")
         _SCWV_EnsureHistoryCacheLoaded()
@@ -660,17 +2351,24 @@ CommandPalette_BuildEmptyStateList() {
             ))
         }
     }
+    g_CmdPal_EmptyCache := out
+    g_CmdPal_EmptyCacheTick := A_TickCount
     return out
 }
 
-CommandPalette_HandleQuery(q) {
+CommandPalette_InvalidateEmptyCache() {
+    global g_CmdPal_EmptyCache
+    g_CmdPal_EmptyCache := 0
+}
+
+CommandPalette_HandleQuery(q, seq := 0) {
     try {
-        CommandPalette_PushResults(CommandPalette_BuildActionList(q))
+        CommandPalette_PushResults(CommandPalette_BuildActionList(q), seq)
     } catch as e {
         try TrayTip("命令面板", "搜索失败: " . e.Message, "Icon!")
         catch {
         }
-        CommandPalette_PushResults([])
+        CommandPalette_PushResults([], seq)
     }
 }
 
@@ -774,6 +2472,7 @@ CommandPalette_LoadExecHistory() {
 
 CommandPalette_RecordExec(cmdId, name, query := "") {
     global g_CmdPal_ExecCache, g_CmdPal_ExecDirty
+    CommandPalette_InvalidateEmptyCache()
     id := Trim(String(cmdId))
     if (id = "")
         return
@@ -850,9 +2549,1291 @@ CommandPalette_PushThemeToWeb(override := "") {
     CommandPalette_PushToWeb(Map("type", "set_theme", "themeMode", tm))
 }
 
+CommandPalette_PushTurboError(message) {
+    CommandPalette_ClearTurboPending()
+    CommandPalette_PushToWeb(Map("type", "palette_turbo_error", "message", String(message)))
+}
+
+CommandPalette_InstallRoot() {
+    if IsSet(MainScriptDir) {
+        try {
+            r := Trim(String(MainScriptDir))
+            if (r != "")
+                return r
+        } catch {
+        }
+    }
+    return A_ScriptDir
+}
+
+CommandPalette_ResolveSearchCoreExe() {
+    root := CommandPalette_InstallRoot()
+    for rel in ["\tools\search\SearchCenterCore.exe", "\searchcore\SearchCenterCore.exe", "\SearchCenterCore.exe"] {
+        p := root . rel
+        if FileExist(p)
+            return p
+    }
+    if FuncExists("Nmer_SearchCenterCoreExe") {
+        try {
+            p := Trim(String(Nmer_SearchCenterCoreExe()))
+            if (p != "" && FileExist(p))
+                return p
+        } catch {
+        }
+    }
+    return ""
+}
+
+CommandPalette_EnsureSearchCoreRunning() {
+    if ProcessExist("SearchCenterCore.exe")
+        return true
+    if FuncExists("Nmer_StartSearchCenterCore")
+        return Nmer_StartSearchCenterCore(false)
+    exe := CommandPalette_ResolveSearchCoreExe()
+    if (exe = "")
+        return false
+    root := CommandPalette_InstallRoot()
+    try {
+        if FuncExists("_SCWV_ApplySearchCoreDefaults")
+            _SCWV_ApplySearchCoreDefaults()
+        Run('"' exe '" -base "' root '"', root, "Hide")
+    } catch {
+        return false
+    }
+    return true
+}
+
+CommandPalette_IsSearchCoreReady() {
+    if FuncExists("Nmer_SearchCenterCoreHealthy") && Nmer_SearchCenterCoreHealthy()
+        return true
+    ; 进程在但 WinHttp /health 探针失败时仍允许发搜索（避免误等 45s 报 8080 超时）
+    return ProcessExist("SearchCenterCore.exe") ? true : false
+}
+
+CommandPalette_MapGoItemFromAny(it) {
+    if (it is Map)
+        return CommandPalette_MapGoItemToTurbo(it)
+    if !IsObject(it)
+        return 0
+    m := Map()
+    for key in ["Title", "SubTitle", "Content", "Source", "DataType", "ID", "Metadata", "ActionParams", "originalDataType"] {
+        try {
+            if it.HasProp(key)
+                m[key] := it.%key%
+        } catch {
+        }
+    }
+    return CommandPalette_MapGoItemToTurbo(m)
+}
+
+CommandPalette_MapGoItemToTurbo(it) {
+    if !(it is Map)
+        return 0
+    title := ""
+    if it.Has("Title")
+        title := String(it["Title"])
+    else if it.Has("title")
+        title := String(it["title"])
+    subtitle := ""
+    if it.Has("SubTitle")
+        subtitle := String(it["SubTitle"])
+    else if it.Has("subtitle")
+        subtitle := String(it["subtitle"])
+    else if it.Has("Source")
+        subtitle := String(it["Source"])
+    path := ""
+    if it.Has("Content") {
+        cand := Trim(String(it["Content"]))
+        if (cand != "" && (InStr(cand, ":\") || InStr(cand, "/") || InStr(cand, "\\")))
+            path := cand
+        else if (cand != "" && (FileExist(cand) || DirExist(cand)))
+            path := cand
+    }
+    if (path = "" && it.Has("Metadata") && it["Metadata"] is Map) {
+        meta := it["Metadata"]
+        if meta.Has("FilePath") {
+            cand := Trim(String(meta["FilePath"]))
+            if (cand != "")
+                path := cand
+        }
+    }
+    if (path = "" && it.Has("ActionParams") && it["ActionParams"] is Map) {
+        ap := it["ActionParams"]
+        if ap.Has("FilePath") {
+            cand := Trim(String(ap["FilePath"]))
+            if (cand != "")
+                path := cand
+        }
+    }
+    if (path = "" && it.Has("ID")) {
+        cand := Trim(String(it["ID"]))
+        if (cand != "" && (InStr(cand, ":\") || InStr(cand, "\\") || InStr(cand, "/")))
+            path := cand
+    }
+    if (title = "" && path != "")
+        title := RegExReplace(path, ".*\\", "")
+    kind := "file"
+    dt := ""
+    if it.Has("DataType")
+        dt := StrLower(String(it["DataType"]))
+    else if it.Has("dataType")
+        dt := StrLower(String(it["dataType"]))
+    if (dt = "folder")
+        kind := "folder"
+    return Map(
+        "label", title,
+        "desc", subtitle,
+        "path", path,
+        "kind", kind,
+        "title", title,
+        "subtitle", subtitle
+    )
+}
+
+CommandPalette_ParseTurboGoBody(body, kw, limit) {
+    items := []
+    try data := Jxon_Load(body)
+    catch {
+        return items
+    }
+    if !(data is Map)
+        return items
+    itemsRaw := data.Has("items") ? data["items"] : (data.Has("Items") ? data["Items"] : [])
+    if !(itemsRaw is Array)
+        return items
+    cap := limit > 0 ? limit : 20
+    for _, it in itemsRaw {
+        if (items.Length >= cap)
+            break
+        row := CommandPalette_MapGoItemFromAny(it)
+        if (row is Map && (row["path"] != "" || row["label"] != ""))
+            items.Push(row)
+    }
+    return items
+}
+
+CommandPalette_ClearTurboPending() {
+    global g_CmdPal_TurboPendingMeta
+    g_CmdPal_TurboPendingMeta := 0
+    SetTimer(CommandPalette_TurboPendingTimeout, 0)
+}
+
+CommandPalette_TurboPendingTimeout(*) {
+    global g_CmdPal_TurboPendingMeta
+    if !(g_CmdPal_TurboPendingMeta is Map)
+        return
+    meta := g_CmdPal_TurboPendingMeta
+    kw := meta.Has("kw") ? String(meta["kw"]) : ""
+    proc := ProcessExist("SearchCenterCore.exe") ? "1" : "0"
+    healthy := "0"
+    if FuncExists("Nmer_SearchCenterCoreHealthy")
+        try healthy := Nmer_SearchCenterCoreHealthy() ? "1" : "0"
+    if FuncExists("Nmer_SearchCoreLog")
+        Nmer_SearchCoreLog("palette_timeout kw=" . kw . " proc=" . proc . " health=" . healthy . " tries=" . (meta.Has("tries") ? meta["tries"] : 0))
+    g_CmdPal_TurboPendingMeta := 0
+    msg := "本地搜索超时，SearchCenterCore 未在 8080 就绪"
+    if (proc = "0")
+        msg .= "（任务管理器无进程，见 Cache\\debug\\searchcore_launch.log）"
+    else if (healthy = "0")
+        msg .= "（进程在但 8080 无响应，可能被占用或正在启动）"
+    CommandPalette_PushTurboError(msg)
+}
+
+CommandPalette_OnSharedGoSearchResponse(keyword, goItems, limit := 20) {
+    global g_CmdPal_TurboPendingMeta, g_CmdPal_Visible
+    if !g_CmdPal_Visible
+        return
+    if !(g_CmdPal_TurboPendingMeta is Map)
+        return
+    meta := g_CmdPal_TurboPendingMeta
+    kw := Trim(String(keyword))
+    if (Trim(String(meta.Has("kw") ? meta["kw"] : "")) != kw)
+        return
+    seq := meta.Has("seq") ? Integer(meta["seq"]) : 0
+    lim := Integer(limit) > 0 ? Integer(limit) : (meta.Has("lim") ? Integer(meta["lim"]) : 20)
+    items := []
+    if (goItems is Array) {
+        for _, it in goItems {
+            if (items.Length >= lim)
+                break
+            row := CommandPalette_MapGoItemFromAny(it)
+            if (row is Map && (row["path"] != "" || row["label"] != ""))
+                items.Push(row)
+        }
+    }
+    CommandPalette_ClearTurboPending()
+    payload := Map("type", "palette_turbo_results", "query", kw, "items", items, "elapsedMs", 0)
+    if (seq > 0)
+        payload["seq"] := seq
+    CommandPalette_PushToWeb(payload)
+}
+
+CommandPalette_OnSharedGoSearchFailed(keyword, message) {
+    global g_CmdPal_TurboPendingMeta
+    if !(g_CmdPal_TurboPendingMeta is Map)
+        return
+    meta := g_CmdPal_TurboPendingMeta
+    if (Trim(String(meta.Has("kw") ? meta["kw"] : "")) != Trim(String(keyword)))
+        return
+    CommandPalette_ClearTurboPending()
+    CommandPalette_PushTurboError(String(message))
+}
+
+CommandPalette_FireTurboGoSearch(keyword, limit := 20) {
+    global g_CmdPal_TurboPendingMeta, g_CmdPal_TurboReqGen
+    kw := Trim(String(keyword))
+    lim := Integer(limit)
+    if (lim <= 0)
+        lim := 20
+    if (lim > 20)
+        lim := 20
+    seq := 0
+    if (g_CmdPal_TurboPendingMeta is Map && g_CmdPal_TurboPendingMeta.Has("seq"))
+        seq := Integer(g_CmdPal_TurboPendingMeta["seq"])
+    CommandPalette_ExecuteGoSearch(kw, lim, g_CmdPal_TurboReqGen, seq)
+}
+
+CommandPalette_DeferredTurboViaScwv(*) {
+    global g_CmdPal_TurboPendingMeta
+    if !(g_CmdPal_TurboPendingMeta is Map)
+        return
+    meta := g_CmdPal_TurboPendingMeta
+    tries := meta.Has("tries") ? Integer(meta["tries"]) : 0
+    if (tries >= 80) {
+        if FuncExists("Nmer_SearchCoreLog")
+            Nmer_SearchCoreLog("palette_deferred_giveup kw=" . String(meta["kw"]) . " tries=" . tries)
+        CommandPalette_OnSharedGoSearchFailed(String(meta["kw"]), "SearchCenterCore 启动超时（8080 无响应）")
+        return
+    }
+    meta["tries"] := tries + 1
+    g_CmdPal_TurboPendingMeta := meta
+    if (Mod(tries, 10) = 0) && FuncExists("Nmer_SearchCoreLog")
+        Nmer_SearchCoreLog("palette_deferred_wait kw=" . String(meta["kw"]) . " try=" . tries . " proc=" . (ProcessExist("SearchCenterCore.exe") ? "1" : "0") . " health=" . (CommandPalette_IsSearchCoreReady() ? "1" : "0"))
+    if ProcessExist("SearchCenterCore.exe") || CommandPalette_IsSearchCoreReady() {
+        SetTimer(CommandPalette_TurboPendingTimeout, 0)
+        lim := meta.Has("lim") ? Integer(meta["lim"]) : 20
+        CommandPalette_FireTurboGoSearch(String(meta["kw"]), lim)
+        return
+    }
+    CommandPalette_EnsureSearchCoreRunning()
+    SetTimer(CommandPalette_DeferredTurboViaScwv, -300)
+}
+
+CommandPalette_HandleTurboSearch(keyword, limit := 20, seq := 0) {
+    kw := Trim(String(keyword))
+    if (kw = "") {
+        CommandPalette_HandleQuery("", seq)
+        return
+    }
+    global g_CmdPal_TurboReqGen, g_CmdPal_TurboPendingMeta
+    g_CmdPal_TurboReqGen++
+    lim := Integer(limit) > 0 ? Integer(limit) : 20
+    if (lim > 20)
+        lim := 20
+    g_CmdPal_TurboPendingMeta := Map("kw", kw, "lim", lim, "seq", Integer(seq), "tick", A_TickCount, "tries", 0)
+    SetTimer(CommandPalette_TurboPendingTimeout, -28000)
+    if FuncExists("Nmer_SearchCoreLog")
+        Nmer_SearchCoreLog("palette_turbo_begin kw=" . kw)
+    if (CommandPalette_ResolveSearchCoreExe() = "") {
+        CommandPalette_OnSharedGoSearchFailed(kw, "SearchCenterCore 未找到，请在 searchcore 编译后复制到 tools\\search\\SearchCenterCore.exe")
+        return
+    }
+    if ProcessExist("SearchCenterCore.exe") {
+        SetTimer(CommandPalette_TurboPendingTimeout, 0)
+        SetTimer((*) => CommandPalette_FireTurboGoSearch(kw, lim), -1)
+        return
+    }
+    CommandPalette_EnsureSearchCoreRunning()
+    if ProcessExist("SearchCenterCore.exe") {
+        SetTimer(CommandPalette_TurboPendingTimeout, 0)
+        SetTimer((*) => CommandPalette_FireTurboGoSearch(kw, lim), -1)
+        return
+    }
+    SetTimer(CommandPalette_DeferredTurboViaScwv, -150)
+}
+
+CommandPalette_OnTurboHttpAsync(ret, meta) {
+    global g_CmdPal_TurboPollToken, g_CmdPal_TurboReqGen, g_CmdPal_TurboInFlight
+    if !(meta is Map)
+        return
+    pollToken := meta.Has("pollToken") ? Integer(meta["pollToken"]) : 0
+    if (pollToken && pollToken != g_CmdPal_TurboPollToken)
+        return
+    gen := meta.Has("gen") ? Integer(meta["gen"]) : 0
+    if (gen != Integer(g_CmdPal_TurboReqGen))
+        return
+    g_CmdPal_TurboInFlight := false
+    kw := meta.Has("kw") ? String(meta["kw"]) : ""
+    lim := meta.Has("lim") ? Integer(meta["lim"]) : 20
+    seq := meta.Has("seq") ? Integer(meta["seq"]) : 0
+    ok := false
+    if (ret is Map) && ret.Has("ok")
+        ok := !!ret["ok"]
+    if !ok {
+        errMsg := "本地搜索失败"
+        if (ret is Map) {
+            if (ret.Has("errorCode") && String(ret["errorCode"]) = "timeout")
+                errMsg := "本地搜索超时（SearchCenterCore 响应过慢）"
+            else if (ret.Has("error") && String(ret["error"]) != "")
+                errMsg := "本地搜索失败: " . String(ret["error"])
+        }
+        if FuncExists("Nmer_SearchCoreLog")
+            Nmer_SearchCoreLog("palette_http_fail kw=" . kw . " err=" . errMsg)
+        CommandPalette_PushTurboError(errMsg)
+        return
+    }
+    st := ret.Has("status") ? Integer(ret["status"]) : 0
+    raw := ret.Has("text") ? String(ret["text"]) : ""
+    if (st != 200) {
+        CommandPalette_PushTurboError("SearchCenterCore 请求失败 HTTP " . st)
+        return
+    }
+    if (raw = "") {
+        CommandPalette_PushTurboError("SearchCenterCore 返回空响应")
+        return
+    }
+    items := CommandPalette_ParseTurboGoBody(raw, kw, lim)
+    CommandPalette_ClearTurboPending()
+    elapsed := meta.Has("startTick") ? (A_TickCount - Integer(meta["startTick"])) : 0
+    payload := Map("type", "palette_turbo_results", "query", kw, "items", items, "elapsedMs", elapsed)
+    if (seq > 0)
+        payload["seq"] := seq
+    if FuncExists("Nmer_SearchCoreLog")
+        Nmer_SearchCoreLog("palette_http_ok kw=" . kw . " items=" . items.Length . " ms=" . elapsed)
+    CommandPalette_PushToWeb(payload)
+}
+
+CommandPalette_ExecuteGoSearch(keyword, limit, gen, seq := 0) {
+    global g_CmdPal_TurboInFlight, g_CmdPal_TurboWhr, g_CmdPal_TurboMeta, g_CmdPal_TurboPollToken
+    kw := Trim(String(keyword))
+    lim := Integer(limit)
+    if (lim <= 0)
+        lim := 20
+    if (lim > 20)
+        lim := 20
+    if g_CmdPal_TurboInFlight {
+        global g_CmdPal_TurboReqGen
+        g_CmdPal_TurboReqGen++
+        gen := g_CmdPal_TurboReqGen
+    }
+    if (CommandPalette_ResolveSearchCoreExe() = "") {
+        CommandPalette_PushTurboError("SearchCenterCore 未找到，请在 searchcore 编译后复制到 tools\\search\\SearchCenterCore.exe")
+        return
+    }
+    if !ProcessExist("SearchCenterCore.exe") {
+        CommandPalette_EnsureSearchCoreRunning()
+        if !ProcessExist("SearchCenterCore.exe") {
+            CommandPalette_PushTurboError("SearchCenterCore 未启动，请稍候重试")
+            return
+        }
+    }
+    SetTimer(CommandPalette_TurboPendingTimeout, 0)
+    encQ := kw
+    try encQ := UriEncode(kw)
+    catch {
+    }
+    q := "q=" . encQ . "&type=all&limit=" . lim . "&offset=0"
+    url := "http://127.0.0.1:8080/search?" . q
+    g_CmdPal_TurboPollToken += 1
+    pollToken := g_CmdPal_TurboPollToken
+    meta := Map("kw", kw, "lim", lim, "gen", gen, "seq", Integer(seq), "startTick", A_TickCount, "pollToken", pollToken)
+    g_CmdPal_TurboMeta := meta
+    g_CmdPal_TurboInFlight := true
+    if (IsSet(g_CoreAsyncHttp_Loaded) && g_CoreAsyncHttp_Loaded) {
+        if FuncExists("Nmer_SearchCoreLog")
+            Nmer_SearchCoreLog("palette_http_send kw=" . kw . " url=" . url)
+        opts := Map(
+            "tag", "cmdpal_turbo_search",
+            "timeoutMs", 90000,
+            "resolveTimeoutMs", 3000,
+            "connectTimeoutMs", 3000,
+            "sendTimeoutMs", 30000,
+            "receiveTimeoutMs", 90000,
+            "maxRetries", 1,
+            "retryDelayMs", 200
+        )
+        try {
+            HttpGetAsync(url, (ret) => CommandPalette_OnTurboHttpAsync(ret, meta), opts)
+            return
+        } catch as err {
+            if FuncExists("Nmer_SearchCoreLog")
+                Nmer_SearchCoreLog("palette_http_async_fail kw=" . kw . " err=" . err.Message)
+        }
+    } else if FuncExists("Nmer_SearchCoreLog") {
+        Nmer_SearchCoreLog("palette_http_skip reason=core_async_not_loaded")
+    }
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(url)
+            try whr.SetProxy(2)
+        whr.Open("GET", url, true)
+        whr.SetTimeouts(3000, 3000, 90000, 90000)
+        whr.Send()
+        g_CmdPal_TurboWhr := whr
+        SetTimer((*) => CommandPalette_PollTurboHttp(pollToken), 20)
+    } catch as err {
+        g_CmdPal_TurboInFlight := false
+        CommandPalette_PushTurboError("本地搜索请求失败: " . err.Message)
+    }
+}
+
+CommandPalette_FinishTurboHttp() {
+    global g_CmdPal_TurboInFlight, g_CmdPal_TurboWhr, g_CmdPal_TurboMeta, g_CmdPal_TurboPollToken
+    g_CmdPal_TurboPollToken += 1
+    g_CmdPal_TurboWhr := 0
+    g_CmdPal_TurboMeta := 0
+    g_CmdPal_TurboInFlight := false
+}
+
+CommandPalette_PollTurboHttp(pollToken := 0, *) {
+    global g_CmdPal_TurboWhr, g_CmdPal_TurboMeta, g_CmdPal_TurboInFlight, g_CmdPal_TurboPollToken, g_CmdPal_TurboReqGen
+    if (pollToken && pollToken != g_CmdPal_TurboPollToken)
+        return
+    if !IsObject(g_CmdPal_TurboWhr) || !(g_CmdPal_TurboMeta is Map) {
+        CommandPalette_FinishTurboHttp()
+        return
+    }
+    whr := g_CmdPal_TurboWhr
+    meta := g_CmdPal_TurboMeta
+    startTick := meta.Has("startTick") ? Integer(meta["startTick"]) : A_TickCount
+    if (A_TickCount - startTick > 120000) {
+        try whr.Abort()
+        CommandPalette_FinishTurboHttp()
+        CommandPalette_PushTurboError("本地搜索超时（SearchCenterCore 响应过慢，可缩小关键词或稍后重试）")
+        return
+    }
+    pr := Map("ready", false, "fatal", false, "err", "")
+    if FuncExists("_SCWV_WinHttpAsyncPollResponseReady")
+        pr := _SCWV_WinHttpAsyncPollResponseReady(whr)
+    else {
+        try {
+            if (whr.readyState = 4)
+                pr["ready"] := true
+        } catch {
+        }
+    }
+    if pr["fatal"] {
+        CommandPalette_FinishTurboHttp()
+        CommandPalette_PushTurboError("本地搜索连接失败")
+        return
+    }
+    if !pr["ready"] {
+        SetTimer((*) => CommandPalette_PollTurboHttp(pollToken), -25)
+        return
+    }
+    gen := meta.Has("gen") ? Integer(meta["gen"]) : 0
+    if (gen != Integer(g_CmdPal_TurboReqGen)) {
+        CommandPalette_FinishTurboHttp()
+        return
+    }
+    kw := meta.Has("kw") ? String(meta["kw"]) : ""
+    lim := meta.Has("lim") ? Integer(meta["lim"]) : 20
+    elapsed := A_TickCount - startTick
+    try {
+        st := Integer(whr.Status)
+        raw := ""
+        if FuncExists("_SCWV_WinHttpReadUtf8Text")
+            raw := _SCWV_WinHttpReadUtf8Text(whr)
+        else
+            raw := whr.ResponseText
+        if (st != 200) {
+            CommandPalette_PushTurboError("SearchCenterCore 请求失败 HTTP " . st)
+        } else if (raw = "") {
+            CommandPalette_PushTurboError("SearchCenterCore 返回空响应")
+        } else {
+            items := CommandPalette_ParseTurboGoBody(raw, kw, lim)
+            CommandPalette_ClearTurboPending()
+            payload := Map(
+                "type", "palette_turbo_results",
+                "query", kw,
+                "items", items,
+                "elapsedMs", elapsed
+            )
+            if (meta.Has("seq") && Integer(meta["seq"]) > 0)
+                payload["seq"] := Integer(meta["seq"])
+            CommandPalette_PushToWeb(payload)
+        }
+    } catch as err {
+        CommandPalette_PushTurboError("解析搜索结果失败: " . err.Message)
+    }
+    CommandPalette_FinishTurboHttp()
+}
+
+CommandPalette_HandleTurboExecute(msg) {
+    path := msg.Has("path") ? Trim(String(msg["path"])) : ""
+    title := msg.Has("title") ? String(msg["title"]) : ""
+    query := msg.Has("query") ? Trim(String(msg["query"])) : ""
+    if (query != "" && FuncExists("_SCWV_RecordSearchHistory"))
+        _SCWV_RecordSearchHistory(query)
+    if (path = "") {
+        try TrayTip("命令面板", "无法打开：路径为空", "Icon!")
+        catch {
+        }
+        CommandPalette_Hide()
+        return
+    }
+    errMsg := ""
+    launched := false
+    if FuncExists("_SCWV_LaunchAppTarget")
+        launched := _SCWV_LaunchAppTarget(path, &errMsg)
+    if !launched {
+        try {
+            if DirExist(path)
+                Run('explorer.exe "' . path . '"')
+            else if FileExist(path)
+                Run(path)
+            else
+                Run('explorer.exe /select,"' . path . '"')
+            launched := true
+        } catch as err {
+            errMsg := err.Message
+        }
+    }
+    if !launched {
+        try TrayTip("打开失败", errMsg != "" ? errMsg : path, "Iconx 2")
+        catch {
+        }
+    }
+    CommandPalette_Hide()
+}
+
+CommandPalette_HandleAiStub(query) {
+    q := Trim(String(query))
+    try {
+        if (q != "")
+            OutputDebug("[CommandPalette] AI stub query=" . q . "`n")
+    } catch {
+    }
+    CommandPalette_PushToWeb(Map(
+        "type", "palette_ai_status",
+        "message", "选择模型后 Enter 发送",
+        "status", "idle"
+    ))
+}
+
+CommandPalette_AiProviderLabels() {
+    static labels := 0
+    if !IsObject(labels) {
+        labels := Map(
+            "openai", "OpenAI",
+            "deepseek", "DeepSeek",
+            "kimi", "Kimi",
+            "qwen", "Qwen",
+            "claude", "Claude",
+            "gemini", "Gemini",
+            "glm", "GLM",
+            "zhipu", "智谱",
+            "minimax", "MiniMax",
+            "siliconflow", "硅基流动",
+            "openclaw", "OpenClaw",
+            "codex_cli", "Codex CLI",
+            "gemini_cli", "Gemini CLI",
+            "qwen_cli", "Qwen CLI",
+            "ollama_cli", "Ollama CLI",
+            "claude_cli", "Claude CLI",
+            "deepseek_cli", "DeepSeek CLI",
+            "kimi_cli", "Kimi CLI",
+            "zhipu_cli", "智谱 CLI",
+            "copilot_cli", "Copilot CLI",
+            "openclaw_cli", "OpenClaw CLI",
+            "studio_cli", "定制终端"
+        )
+    }
+    return labels
+}
+
+CommandPalette_NormalizeAiProvider(id) {
+    p := Trim(StrLower(String(id)))
+    if (p = "")
+        return ""
+    if FuncExists("UserStudio_NormalizeLlmProvider")
+        try return UserStudio_NormalizeLlmProvider(p)
+        catch {
+        }
+    return p
+}
+
+CommandPalette_AiProviderIconBase(id) {
+    p := CommandPalette_NormalizeAiProvider(id)
+    if (p = "")
+        return ""
+    if RegExMatch(p, "_cli$")
+        p := SubStr(p, 1, StrLen(p) - 4)
+    aliases := Map(
+        "kimi_cli", "kimi", "deepseek_cli", "deepseek", "claude_cli", "claude",
+        "gemini_cli", "gemini", "qwen_cli", "qwen", "ollama_cli", "ollama",
+        "zhipu_cli", "zhipu", "copilot_cli", "copilot", "openclaw_cli", "openclaw",
+        "codex_cli", "codex", "studio_cli", "openclaw"
+    )
+    if aliases.Has(p)
+        return aliases[p]
+    return p
+}
+
+CommandPalette_AiProviderIconBases(id) {
+    p := CommandPalette_NormalizeAiProvider(id)
+    bases := []
+    nameMap := Map(
+        "openai", ["ChatGPT", "chatgpt", "openai", "codex", "Codex"],
+        "codex_cli", ["codex", "Codex", "codex1"],
+        "gemini_cli", ["gemini", "Gemini"],
+        "openclaw_cli", ["openclaw", "OpenClaw"],
+        "qwen_cli", ["qwen", "Qwen"],
+        "ollama_cli", ["ollama", "Ollama"],
+        "claude_cli", ["claude", "Claude"],
+        "deepseek_cli", ["DeepSeek", "deepseek"],
+        "kimi_cli", ["kimi", "Kimi", "moonshot"],
+        "zhipu_cli", ["zhipu", "Zhipu", "glm", "chelper"],
+        "copilot_cli", ["copilot", "Copilot", "ChatGPT"],
+        "kimi", ["kimi", "Kimi", "moonshot"],
+        "qwen", ["qwen", "Qwen"],
+        "deepseek", ["DeepSeek", "deepseek"],
+        "claude", ["claude", "Claude"],
+        "gemini", ["gemini", "Gemini"],
+        "glm", ["glm", "GLM", "zhipu"],
+        "zhipu", ["zhipu", "Zhipu", "glm"],
+        "minimax", ["minimax", "MiniMax"],
+        "siliconflow", ["siliconflow", "SiliconFlow"],
+        "openclaw", ["openclaw", "OpenClaw"],
+        "openrouter", ["openrouter", "OpenRouter"]
+    )
+    if nameMap.Has(p) {
+        for _, b in nameMap[p]
+            bases.Push(b)
+    }
+    if (p != "") {
+        found := false
+        for b in bases {
+            if (b = p) {
+                found := true
+                break
+            }
+        }
+        if !found {
+            if (bases.Length = 0)
+                bases.Push(p)
+            else
+                bases.InsertAt(1, p)
+        }
+    }
+    p1 := CommandPalette_AiProviderIconBase(id)
+    if (p1 != "") {
+        found := false
+        for b in bases {
+            if (b = p1) {
+                found := true
+                break
+            }
+        }
+        if !found
+            bases.Push(p1)
+    }
+    return bases
+}
+
+CommandPalette_AiProviderIconUrls(id) {
+    urls := []
+    bases := CommandPalette_AiProviderIconBases(id)
+    if (bases.Length = 0)
+        bases.Push("openai")
+    for _, base in bases {
+        for ext in [".png", ".jpg", ".jpeg", ".svg", ".webp"] {
+            if FuncExists("BuildAppAssetUrl") {
+                try urls.Push(BuildAppAssetUrl("icons/app/" . base . ext))
+                catch {
+                }
+                try urls.Push(BuildAppAssetUrl("icons/ai/" . base . ext))
+                catch {
+                }
+            }
+        }
+    }
+    if FuncExists("BuildAppAssetUrl") {
+        try urls.Push(BuildAppAssetUrl("icons/app/chat-ai-fallback.svg"))
+        catch {
+        }
+    }
+    if (urls.Length = 0)
+        urls.Push("https://app.local/assets/icons/app/chat-ai-fallback.svg")
+    return urls
+}
+
+CommandPalette_CoerceToMap(obj) {
+    if (obj is Map)
+        return obj
+    if !IsObject(obj)
+        return Map()
+    out := Map()
+    try {
+        for k, v in obj
+            out[String(k)] := v
+    } catch {
+    }
+    return out
+}
+
+CommandPalette_MarkKeyedFromApiKeys(keyed, apiKeys) {
+    if !(keyed is Map)
+        return
+    apiKeys := CommandPalette_CoerceToMap(apiKeys)
+    for k, v in apiKeys {
+        pk := CommandPalette_NormalizeAiProvider(k)
+        vk := Trim(String(v))
+        if FuncExists("UserStudio_NormalizeApiKey")
+            try vk := UserStudio_NormalizeApiKey(v)
+            catch {
+            }
+        if (pk != "" && vk != "")
+            keyed[pk] := true
+    }
+}
+
+CommandPalette_FillKeyedFromLlmRaw(keyed, raw) {
+    active := ""
+    if !(keyed is Map) || Trim(String(raw)) = ""
+        return active
+    if RegExMatch(raw, 'i)"apiKeys"\s*:\s*\{([^{}]*)\}', &blk) {
+        block := blk[1]
+        pos := 1
+        while RegExMatch(block, '"([a-zA-Z0-9_]+)"\s*:\s*"([^"]+)"', &m, pos) {
+            pk := CommandPalette_NormalizeAiProvider(m[1])
+            vk := Trim(String(m[2]))
+            if (pk != "" && vk != "")
+                keyed[pk] := true
+            pos := m.Pos + m.Len
+        }
+    }
+    if RegExMatch(raw, 'i)"provider"\s*:\s*"([a-zA-Z0-9_]+)"', &prov)
+        active := CommandPalette_NormalizeAiProvider(prov[1])
+    return active
+}
+
+CommandPalette_ReadNiumaLlmSyncMap() {
+    paths := []
+    if FuncExists("Nmer_NiumaChatLlmPath")
+        paths.Push(Nmer_NiumaChatLlmPath())
+    paths.Push(A_ScriptDir . "\local\niuma_chat_llm.json")
+    paths.Push(A_ScriptDir . "\config\niuma_chat_llm.json")
+    for _, path in paths {
+        if (path = "" || !FileExist(path))
+            continue
+        try {
+            raw := FileRead(path, "UTF-8")
+            if (SubStr(raw, 1, 1) = Chr(0xFEFF))
+                raw := SubStr(raw, 2)
+            parsed := Jxon_Load(raw)
+            if (parsed is Map) && (parsed.Has("apiKeys") || parsed.Has("llm") || parsed.Count > 0)
+                return Map("sync", parsed, "raw", raw)
+            keyedProbe := Map()
+            CommandPalette_FillKeyedFromLlmRaw(keyedProbe, raw)
+            if (keyedProbe.Count > 0)
+                return Map("sync", Map("apiKeys", keyedProbe, "llm", Map("provider", "")), "raw", raw)
+        } catch {
+        }
+    }
+    return Map("sync", 0, "raw", "")
+}
+
+CommandPalette_BootstrapNiumaChat(reason := "", openDrawer := false) {
+    global AppearanceActivationMode, ConfigFile, g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
+    global FloatingToolbarGUI, g_FTB_WV2, g_FTB_WaitingUiFinishedReveal, g_FTB_UI_Ready
+
+    openDrawer := !!openDrawer
+    CommandPalette_AiLog("bootstrap_begin", "reason=" . Trim(String(reason)) . " openDrawer=" . (openDrawer ? 1 : 0) . " | " . CommandPalette_AiStateSnapshot())
+
+    if openDrawer {
+        g_FTB_PendingOpenNiumaDrawer := true
+        g_FTB_NiumaHandoffOpening := true
+    }
+
+    mode := CommandPalette_ResolveActivationMode()
+
+    if (mode != "toolbar") {
+        CommandPalette_AiLog("bootstrap_switch_mode", "from=" . mode . " to=toolbar via=" . (FuncExists("GDHO_OpenNiumaChatFromLauncher") ? "GDHO" : "ApplyAppearance"))
+        if FuncExists("GDHO_OpenNiumaChatFromLauncher") {
+            try GDHO_OpenNiumaChatFromLauncher()
+            catch as eGdho {
+                CommandPalette_AiLog("bootstrap_gdho_err", eGdho.Message)
+            }
+        } else {
+            AppearanceActivationMode := "toolbar"
+            try IniWrite("toolbar", ConfigFile, "Appearance", "ActivationMode")
+            catch {
+            }
+            if FuncExists("GDHO_ForceApplyAppearanceMode") {
+                try GDHO_ForceApplyAppearanceMode("toolbar")
+                catch {
+                }
+            } else if FuncExists("ApplyAppearanceActivationMode") {
+                try ApplyAppearanceActivationMode()
+                catch {
+                }
+            }
+        }
+    }
+
+    if FuncExists("FloatingToolbar_ClearOverlaySuppression")
+        try FloatingToolbar_ClearOverlaySuppression()
+        catch {
+        }
+    if FuncExists("StartWebViewWarmup")
+        try StartWebViewWarmup()
+        catch {
+        }
+    if FuncExists("WebView2_InitSharedEnvAsync")
+        try WebView2_InitSharedEnvAsync()
+        catch {
+        }
+
+    if (FloatingToolbarGUI = 0) {
+        CommandPalette_AiLog("bootstrap_create_gui", "CreateFloatingToolbarGUI")
+        if FuncExists("CreateFloatingToolbarGUI")
+            try CreateFloatingToolbarGUI()
+            catch as eGui {
+                CommandPalette_AiLog("bootstrap_create_gui_err", eGui.Message)
+            }
+    } else if !IsObject(g_FTB_WV2) {
+        CommandPalette_AiLog("bootstrap_retry_wv2", "FloatingToolbar_RetryCreateWebView")
+        if FuncExists("FloatingToolbar_RetryCreateWebView")
+            try FloatingToolbar_RetryCreateWebView()
+            catch as eWv {
+                CommandPalette_AiLog("bootstrap_retry_wv2_err", eWv.Message)
+            }
+    }
+
+    if FuncExists("FloatingToolbar_ShowForActivationMode")
+        try FloatingToolbar_ShowForActivationMode()
+        catch {
+        }
+    if FuncExists("ShowFloatingToolbar")
+        try ShowFloatingToolbar()
+        catch {
+        }
+
+    if (g_FTB_WaitingUiFinishedReveal && g_FTB_UI_Ready) {
+        if FuncExists("FloatingToolbar_FinishReveal")
+            try FloatingToolbar_FinishReveal()
+            catch {
+            }
+    } else if (g_FTB_WaitingUiFinishedReveal && FuncExists("FloatingToolbar_ForceRevealIfStuck")) {
+        SetTimer(FloatingToolbar_ForceRevealIfStuck, -1)
+    }
+
+    if openDrawer {
+        if FuncExists("FloatingToolbar_ScheduleNiumaDrawerOpen")
+            try FloatingToolbar_ScheduleNiumaDrawerOpen(100)
+            catch {
+            }
+        if FuncExists("GDHO_NiumaDrawerOpenPump") {
+            SetTimer(GDHO_NiumaDrawerOpenPump, -120)
+            SetTimer(GDHO_NiumaDrawerOpenPump, -480)
+            SetTimer(GDHO_NiumaDrawerOpenPump, -1100)
+        }
+        CommandPalette_ForceOpenNiumaDrawer()
+    }
+    CommandPalette_AiLog("bootstrap_end", CommandPalette_AiStateSnapshot())
+}
+
+CommandPalette_BeginNiumaChatHandoff() {
+    CommandPalette_BootstrapNiumaChat("handoff", true)
+}
+
+CommandPalette_ApplyLiveAiKeys(apiKeys, activeProvider := "") {
+    global g_CmdPal_LiveAiKeys, g_CmdPal_LiveActiveProvider
+    if !(apiKeys is Map)
+        return
+    if !IsObject(g_CmdPal_LiveAiKeys)
+        g_CmdPal_LiveAiKeys := Map()
+    for k, v in apiKeys {
+        pk := CommandPalette_NormalizeAiProvider(k)
+        vk := Trim(String(v))
+        if (pk != "" && vk != "")
+            g_CmdPal_LiveAiKeys[pk] := vk
+    }
+    ap := CommandPalette_NormalizeAiProvider(activeProvider)
+    if (ap != "")
+        g_CmdPal_LiveActiveProvider := ap
+}
+
+CommandPalette_PullLiveKeysFromFtb() {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return false
+    try {
+        CommandPalette_DeliverFtbPayload(Map("type", "host_request_palette_ai_keys"))
+        return true
+    } catch as eReq {
+        CommandPalette_AiLog("ai_keys_post_err", eReq.Message)
+        return false
+    }
+}
+
+CommandPalette_RequestFtbLlmExport(prov, reqId := "") {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return false
+    prov := CommandPalette_NormalizeAiProvider(prov)
+    try {
+        CommandPalette_DeliverFtbPayload(Map(
+            "type", "host_request_palette_ai_llm",
+            "provider", prov,
+            "reqId", String(reqId)
+        ))
+        return true
+    } catch as eLlm {
+        CommandPalette_AiLog("ai_llm_export_err", eLlm.Message)
+        return false
+    }
+}
+
+; 仅刷新命令面板模型列表；并从 Niuma Chat 内存同步密钥（抽屉可关闭）。
+CommandPalette_RefreshAiProviders() {
+    CommandPalette_PushAiProviders()
+    CommandPalette_PullLiveKeysFromFtb()
+}
+
+CommandPalette_RequestLiveAiKeysFromNiumaChat(*) {
+    CommandPalette_RefreshAiProviders()
+}
+
+CommandPalette_OnNiumaPaletteAiKeys(msg) {
+    if !(msg is Map)
+        return
+    apiKeys := msg.Has("apiKeys") ? CommandPalette_CoerceToMap(msg["apiKeys"]) : Map()
+    active := msg.Has("activeProvider") ? msg["activeProvider"] : ""
+    keyN := 0
+    try keyN := apiKeys.Count
+    catch {
+    }
+    CommandPalette_AiLog("ai_keys_received", "active=" . String(active) . " keyCount=" . keyN)
+    CommandPalette_ApplyLiveAiKeys(apiKeys, active)
+    CommandPalette_PushAiProviders()
+}
+
+CommandPalette_OnNiumaPaletteAiLlm(msg) {
+    global g_CmdPal_LiveLlmFromFtb
+    if !(msg is Map)
+        return
+    llmIn := (msg.Has("llm") && msg["llm"] is Map) ? msg["llm"] : msg
+    prov := CommandPalette_NormalizeAiProvider(llmIn.Get("provider", msg.Get("provider", "")))
+    if (prov = "")
+        return
+    if !IsObject(g_CmdPal_LiveLlmFromFtb)
+        g_CmdPal_LiveLlmFromFtb := Map()
+    g_CmdPal_LiveLlmFromFtb[prov] := Map(
+        "provider", prov,
+        "apiKey", Trim(String(llmIn.Get("apiKey", ""))),
+        "baseUrl", Trim(String(llmIn.Get("baseUrl", ""))),
+        "model", Trim(String(llmIn.Get("model", "")))
+    )
+    CommandPalette_AiLog("ai_llm_from_ftb", "prov=" . prov
+        . " base=" . SubStr(String(llmIn.Get("baseUrl", "")), 1, 56)
+        . " model=" . String(llmIn.Get("model", ""))
+        . " keyLen=" . StrLen(Trim(String(llmIn.Get("apiKey", "")))))
+}
+
+CommandPalette_BuildAiProviderList() {
+    global g_CmdPal_LiveAiKeys, g_CmdPal_LiveActiveProvider
+    labels := CommandPalette_AiProviderLabels()
+    order := [
+        "minimax", "deepseek", "kimi", "openai", "gemini", "claude", "qwen", "glm", "zhipu",
+        "siliconflow", "openclaw",
+        "codex_cli", "gemini_cli", "qwen_cli", "ollama_cli", "claude_cli", "deepseek_cli",
+        "kimi_cli", "zhipu_cli", "copilot_cli", "openclaw_cli", "studio_cli"
+    ]
+    keyed := Map()
+    active := CommandPalette_NormalizeAiProvider(g_CmdPal_LiveActiveProvider)
+    bundle := CommandPalette_ReadNiumaLlmSyncMap()
+    rawLlm := bundle.Has("raw") ? String(bundle["raw"]) : ""
+    sync := bundle.Has("sync") ? bundle["sync"] : 0
+    if (sync is Map) {
+        try {
+            llmIn := sync.Has("llm") && sync["llm"] is Map ? sync["llm"] : sync
+            if (active = "")
+                active := CommandPalette_NormalizeAiProvider(llmIn.Get("provider", ""))
+            if sync.Has("apiKeys")
+                CommandPalette_MarkKeyedFromApiKeys(keyed, sync["apiKeys"])
+            key := Trim(String(llmIn.Get("apiKey", "")))
+            if FuncExists("UserStudio_NormalizeApiKey")
+                try key := UserStudio_NormalizeApiKey(key)
+                catch {
+                }
+            if (active != "" && key != "")
+                keyed[active] := true
+        } catch {
+        }
+    }
+    if (rawLlm != "") {
+        fromRaw := CommandPalette_FillKeyedFromLlmRaw(keyed, rawLlm)
+        if (active = "" && fromRaw != "")
+            active := fromRaw
+    }
+    if IsObject(g_CmdPal_LiveAiKeys) {
+        for pk, vk in g_CmdPal_LiveAiKeys {
+            if (Trim(String(vk)) != "")
+                keyed[pk] := true
+        }
+    }
+    if FuncExists("UserStudio_Load") {
+        try {
+            doc := UserStudio_Load()
+            if (doc.Has("llm") && doc["llm"] is Map) {
+                lp := CommandPalette_NormalizeAiProvider(doc["llm"].Get("provider", ""))
+                if (active = "" && lp != "")
+                    active := lp
+                lk := Trim(String(doc["llm"].Get("apiKey", "")))
+                if (lp != "" && lk != "")
+                    keyed[lp] := true
+            }
+            if (doc.Has("options") && doc["options"] is Map && doc["options"].Has("llmApiKeys") && doc["options"]["llmApiKeys"] is Map) {
+                for k, v in doc["options"]["llmApiKeys"] {
+                    pk := CommandPalette_NormalizeAiProvider(k)
+                    if (pk != "" && Trim(String(v)) != "")
+                        keyed[pk] := true
+                }
+            }
+        } catch {
+        }
+    }
+    items := []
+    seen := Map()
+    addIds := []
+    if (active != "")
+        addIds.Push(Map("id", active, "configured", keyed.Has(active)))
+    for _, id in order {
+        if keyed.Has(id)
+            addIds.Push(Map("id", id, "configured", true))
+    }
+    for id, _ in keyed
+        addIds.Push(Map("id", id, "configured", true))
+    for _, id in order
+        addIds.Push(Map("id", id, "configured", keyed.Has(id)))
+    if (addIds.Length = 0) {
+        for _, id in ["deepseek", "kimi", "openai", "gemini", "minimax"]
+            addIds.Push(Map("id", id, "configured", keyed.Has(id)))
+    }
+    for _, row in addIds {
+        id := CommandPalette_NormalizeAiProvider(row["id"])
+        if (id = "" || seen.Has(id))
+            continue
+        seen[id] := true
+        cfg := keyed.Has(id)
+        lbl := labels.Has(id) ? labels[id] : id
+        desc := cfg ? "已配置 API · Enter 发送" : "未配置 Key（可在 Niuma Chat 设置）"
+        items.Push(Map(
+            "id", id,
+            "kind", "ai_provider",
+            "label", lbl,
+            "desc", desc,
+            "configured", cfg ? 1 : 0,
+            "active", (id = active) ? 1 : 0,
+            "iconUrls", CommandPalette_AiProviderIconUrls(id)
+        ))
+    }
+    return Map("items", items, "activeProvider", active)
+}
+
+CommandPalette_PushAiProviders() {
+    data := CommandPalette_BuildAiProviderList()
+    CommandPalette_PushToWeb(Map(
+        "type", "palette_ai_providers",
+        "items", data["items"],
+        "activeProvider", data["activeProvider"]
+    ))
+}
+
+CommandPalette_EnsureFloatingToolbarForAi() {
+    CommandPalette_BootstrapNiumaChat("ensure_ftb", true)
+}
+
+CommandPalette_StageNiumaCompose(query, provider := "", sendNow := true) {
+    global g_FTB_PendingNiumaCompose, g_FTB_PendingOpenNiumaDrawer
+    q := Trim(String(query))
+    if (q = "")
+        return false
+    prov := CommandPalette_NormalizeAiProvider(provider)
+    g_FTB_PendingOpenNiumaDrawer := true
+    preview := SubStr(q, 1, 48)
+    if (StrLen(q) > 48)
+        preview .= "…"
+    payload := Map(
+        "type", "niuma_compose_send",
+        "text", q,
+        "send", !!sendNow,
+        "append", false,
+        "openDrawer", true
+    )
+    if (prov != "")
+        payload["provider"] := prov
+    if !(g_FTB_PendingNiumaCompose is Array)
+        g_FTB_PendingNiumaCompose := []
+    for _, existing in g_FTB_PendingNiumaCompose {
+        if !(existing is Map)
+            continue
+        exProv := existing.Has("provider") ? CommandPalette_NormalizeAiProvider(existing["provider"]) : ""
+        if (String(existing.Get("text", "")) = q && exProv = prov)
+            return true
+    }
+    g_FTB_PendingNiumaCompose.Push(payload)
+    pendN := g_FTB_PendingNiumaCompose.Length
+    CommandPalette_AiLog("compose_staged", "provider=" . prov . " send=" . (sendNow ? 1 : 0) . " text=" . preview . " queueLen=" . pendN . " | " . CommandPalette_AiStateSnapshot())
+    return true
+}
+
+CommandPalette_TrySendToNiumaChat(query, provider := "", sendNow := true) {
+    prov := CommandPalette_NormalizeAiProvider(provider)
+    global g_FTB_WV2
+    if !IsObject(g_FTB_WV2) {
+        CommandPalette_AiLog("compose_send_skip", "reason=no_wv2 provider=" . prov)
+        return false
+    }
+    if FuncExists("FloatingToolbar_SendTextToNiumaChat") {
+        try {
+            ok := false
+            if (prov != "")
+                ok := !!FloatingToolbar_SendTextToNiumaChat(query, sendNow, false, true, prov)
+            else
+                ok := !!FloatingToolbar_SendTextToNiumaChat(query, sendNow, false, true)
+            CommandPalette_AiLog("compose_send", "ok=" . (ok ? 1 : 0) . " provider=" . prov . " | " . CommandPalette_AiStateSnapshot())
+            return ok
+        } catch as eSend {
+            CommandPalette_AiLog("compose_send_err", eSend.Message)
+        }
+    }
+    return false
+}
+
+; 旧路径：托盘/外部仍可能调用；命令面板 palette_ai_send 已改走流式会话。
+CommandPalette_QueuePendingAiSend(query, provider := "") {
+    global g_CmdPal_PendingAiSend
+    g_CmdPal_PendingAiSend := Map(
+        "query", Trim(String(query)),
+        "provider", CommandPalette_NormalizeAiProvider(provider),
+        "tries", 0
+    )
+    SetTimer(CommandPalette_FlushPendingAiSend, -280)
+}
+
+CommandPalette_FlushPendingAiSend(*) {
+    global g_CmdPal_PendingAiSend, g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if !(g_CmdPal_PendingAiSend is Map)
+        return
+    q := Trim(String(g_CmdPal_PendingAiSend.Get("query", "")))
+    prov := CommandPalette_NormalizeAiProvider(g_CmdPal_PendingAiSend.Get("provider", ""))
+    if (q = "") {
+        g_CmdPal_PendingAiSend := 0
+        return
+    }
+    tries := Integer(g_CmdPal_PendingAiSend.Get("tries", 0))
+    preview := SubStr(q, 1, 40)
+    if (StrLen(q) > 40)
+        preview .= "…"
+    CommandPalette_AiLog("flush_tick", "try=" . tries . " provider=" . prov . " text=" . preview . " | " . CommandPalette_AiStateSnapshot())
+    CommandPalette_BootstrapNiumaChat("flush_try=" . tries, true)
+    global FloatingToolbarChatDrawerOpen
+    if IsObject(g_FTB_WV2) {
+        sent := false
+        if (g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
+            CommandPalette_ForceOpenNiumaDrawer()
+            sent := CommandPalette_TrySendToNiumaChat(q, prov, true)
+        } else {
+            CommandPalette_StageNiumaCompose(q, prov, true)
+        }
+        if (g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
+            if FuncExists("FloatingToolbar_FlushPendingNiumaComposeIfReady")
+                try FloatingToolbar_FlushPendingNiumaComposeIfReady()
+                catch as eFlush {
+                    CommandPalette_AiLog("compose_flush_err", eFlush.Message)
+                }
+            if (FloatingToolbarChatDrawerOpen || sent) {
+                CommandPalette_AiLog("flush_ok", "provider=" . prov . " sent=" . (sent ? 1 : 0) . " | " . CommandPalette_AiStateSnapshot())
+                g_CmdPal_PendingAiSend := 0
+                return
+            }
+            CommandPalette_AiLog("flush_incomplete", "drawer closed sent=" . (sent ? 1 : 0) . " | " . CommandPalette_AiStateSnapshot())
+        } else {
+            CommandPalette_AiLog("flush_wait_ready", "wv2=1 ready=" . (g_FTB_WV2_Ready ? 1 : 0) . " frame=" . (g_FTB_WV2_FrameReady ? 1 : 0))
+        }
+    } else {
+        CommandPalette_StageNiumaCompose(q, prov, true)
+        CommandPalette_AiLog("flush_wait_wv2", "staged compose until WebView2 exists")
+    }
+    if (tries >= 72) {
+        g_CmdPal_PendingAiSend := 0
+        CommandPalette_AiLog("flush_fail", "timeout after 72 tries | " . CommandPalette_AiStateSnapshot())
+        try TrayTip("命令面板", "无法自动打开 Niuma Chat：请查看 Cache\debug\command_palette_ai.log", "Icon!")
+        catch {
+        }
+        return
+    }
+    g_CmdPal_PendingAiSend["tries"] := tries + 1
+    delay := tries < 12 ? 320 : (tries < 30 ? 480 : 620)
+    SetTimer(CommandPalette_FlushPendingAiSend, -delay)
+}
+
+CommandPalette_HandleAiSend(query, provider := "") {
+    global g_CmdPal_AiSession, g_CmdPal_AiStreamGen
+    q := Trim(String(query))
+    prov := CommandPalette_NormalizeAiProvider(provider)
+    if (q = "")
+        return
+    if (prov = "") {
+        data := CommandPalette_BuildAiProviderList()
+        prov := CommandPalette_NormalizeAiProvider(data.Get("activeProvider", ""))
+    }
+    oldReqId := (g_CmdPal_AiSession is Map) ? String(g_CmdPal_AiSession.Get("reqId", "")) : ""
+    CommandPalette_StopAiStreamSideEffects(oldReqId)
+    if (g_CmdPal_AiSession is Map) && !g_CmdPal_AiSession.Get("ended", false)
+        g_CmdPal_AiSession := 0
+    g_CmdPal_AiStreamGen++
+    gen := g_CmdPal_AiStreamGen
+    reqId := "cpai_" . A_TickCount
+    g_CmdPal_AiSession := Map(
+        "reqId", reqId,
+        "query", q,
+        "provider", prov,
+        "gen", gen,
+        "handoff", false,
+        "ended", false,
+        "answer", "",
+        "chunkCount", 0,
+        "webChunkCount", 0,
+        "webAnswerChunks", 0,
+        "directStarted", false,
+        "ftbDispatched", false
+    )
+    preview := SubStr(q, 1, 60)
+    if (StrLen(q) > 60)
+        preview .= "…"
+    logPath := FuncExists("Nmer_DebugPath") ? Nmer_DebugPath("command_palette_ai.log") : (A_ScriptDir . "\Cache\debug\command_palette_ai.log")
+    CommandPalette_AiLog("ai_send_begin", "reqId=" . reqId . " provider=" . prov . " text=" . preview . " log=" . logPath)
+    CommandPalette_PushToWeb(Map("type", "palette_ai_status", "message", "正在同步 Niuma 配置…", "status", "loading", "reqId", reqId))
+    CommandPalette_EnsureFtbEngineForAi()
+    SetTimer(CommandPalette_AiSendAfterFtbSync.Bind(reqId, q, prov, gen), -80)
+}
+
+CommandPalette_AiSendAfterFtbSync(reqId, q, prov, gen) {
+    global g_CmdPal_AiSession, g_CmdPal_AiStreamGen
+    if !(g_CmdPal_AiSession is Map) || Trim(String(g_CmdPal_AiSession.Get("reqId", ""))) != Trim(String(reqId))
+        return
+    if Integer(g_CmdPal_AiSession.Get("gen", 0)) != Integer(gen)
+        return
+    CommandPalette_SyncFtbContextForPalette(prov, reqId)
+    CommandPalette_DispatchPaletteAiStream(reqId, q, prov, gen, 0)
+}
+
+CommandPalette_FlushPendingAiSendIfReady() {
+    global g_CmdPal_PendingAiSend
+    if !(g_CmdPal_PendingAiSend is Map)
+        return
+    SetTimer(CommandPalette_FlushPendingAiSend, -120)
+}
+
 ; 命令面板可见时 Esc 关闭（WebView 未收到按键时由宿主兜底）
 #HotIf CommandPalette_IsVisible()
 Esc:: {
+    if CommandPalette_IsAiStreaming()
+        CommandPalette_HandoffAiToToolbar(false)
     CommandPalette_Hide()
 }
 #HotIf

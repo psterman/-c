@@ -128,14 +128,16 @@ FloatingToolbar_EffectiveScale() {
 
 ; 宿主脚本 CursorHelper 中定义；经 Func 转发，避免本文件单独分析时误报未赋值局部变量
 FloatingToolbar_NormalizeAppearanceMode(v) {
-    try
-        return Func("NormalizeAppearanceActivationMode").Call(v)
-    catch {
-        s := Trim(String(v))
-        if (s = "bubble" || s = "hole" || s = "tray" || s = "toolbar")
-            return s
-        return "toolbar"
+    s := Trim(String(v))
+    try {
+        r := Trim(String(Func("NormalizeAppearanceActivationMode").Call(v)))
+        if (r = "bubble" || r = "hole" || r = "tray" || r = "toolbar")
+            return r
+    } catch {
     }
+    if (s = "bubble" || s = "hole" || s = "tray" || s = "toolbar")
+        return s
+    return "toolbar"
 }
 
 FloatingToolbar_NotifyWebViewShown(wv2) {
@@ -318,6 +320,7 @@ FloatingToolbar_OnChatReady(msg) {
 global g_FTB_WV2_FrameReady := false
 global g_FTB_PendingSelection := ""
 global g_FTB_PendingNiumaCompose := []
+global g_FTB_PendingStudioAsk := 0
 global g_FTB_PendingOpenNiumaDrawer := false
 global g_FTB_NiumaHandoffOpening := false
 global g_FTB_ReturnToHoleAfterNiuma := false
@@ -1079,17 +1082,32 @@ FloatingToolbar_FlushPendingSelectionIfReady() {
 }
 
 FloatingToolbar_FlushPendingNiumaComposeIfReady() {
-    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_PendingNiumaCompose
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_PendingNiumaCompose, g_FTB_PendingStudioAsk
+    if FuncExists("CommandPalette_FlushPendingAiSendIfReady")
+        try CommandPalette_FlushPendingAiSendIfReady()
+        catch {
+        }
     if !(g_FTB_WV2 && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
         return
+    if (g_FTB_PendingStudioAsk is Map)
+        SetTimer(FloatingToolbar_RetryPendingStudioAsk, -1)
     if !(g_FTB_PendingNiumaCompose is Array) || (g_FTB_PendingNiumaCompose.Length = 0)
         return
     try {
+        n := g_FTB_PendingNiumaCompose.Length
+        if FuncExists("CommandPalette_AiLog")
+            try CommandPalette_AiLog("ftb_flush_compose", "count=" . n)
+            catch {
+            }
         for _, payload in g_FTB_PendingNiumaCompose {
             WebView_QueuePayload(g_FTB_WV2, payload)
         }
         g_FTB_PendingNiumaCompose := []
     } catch as _e {
+        if FuncExists("CommandPalette_AiLog")
+            try CommandPalette_AiLog("ftb_flush_compose_err", _e.Message)
+            catch {
+            }
     }
 }
 
@@ -1172,6 +1190,14 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
     g_NiumaMobile_Wv2Class := WebView2
     g_FTB_WV2_Ready := false
     g_FTB_WV2_FrameReady := false
+    if FuncExists("CommandPalette_FlushPendingAiSendIfReady")
+        try CommandPalette_FlushPendingAiSendIfReady()
+        catch {
+        }
+    if FuncExists("CommandPalette_AiLog")
+        try CommandPalette_AiLog("ftb_wv2_created", "CoreWebView2 ready for navigation")
+        catch {
+        }
 
     ; Keep WebView2's first compositor frame dark; theme color is applied after UI_FINISHED.
     try ctrl.DefaultBackgroundColor := FloatingToolbar_GetBootBackColorArgb()
@@ -1590,6 +1616,10 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(FloatingToolbar_PushStudioLlmOnReady, -450)
         FloatingToolbar_FlushPendingSelectionIfReady()
         FloatingToolbar_FlushPendingNiumaComposeIfReady()
+        if FuncExists("CommandPalette_FlushPendingAiSendIfReady")
+            try CommandPalette_FlushPendingAiSendIfReady()
+            catch {
+            }
         try FloatingToolbar_RequestWebReveal()
         catch {
         }
@@ -1632,6 +1662,10 @@ FloatingToolbar_OnWebMessage(sender, args) {
         ; 涓嶅啀浣跨敤 AnimateWindow(AW_BLEND)锛岄伩鍏嶉粦鐧芥笎鍙橀棯灞忥紱鐢?FloatingToolbar_FinishReveal 涓€娆℃€т笉閫忔槑鏄剧ず
         FloatingToolbar_FinishReveal()
         FloatingToolbar_FlushPendingNiumaComposeIfReady()
+        if FuncExists("CommandPalette_AiLog")
+            try CommandPalette_AiLog("ftb_ui_finished", CommandPalette_AiStateSnapshot())
+            catch {
+            }
         return
     }
 
@@ -2197,6 +2231,81 @@ FloatingToolbar_OnWebMessage(sender, args) {
             }
         }
         try WebView_QueuePayload(g_FTB_WV2, syncPayload)
+        catch {
+        }
+        return
+    }
+    if (typ = "niuma_palette_ai_keys") {
+        if FuncExists("CommandPalette_OnNiumaPaletteAiKeys")
+            try CommandPalette_OnNiumaPaletteAiKeys(msg)
+            catch as ePalKeys {
+                if FuncExists("CommandPalette_AiLog")
+                    try CommandPalette_AiLog("ai_keys_handler_err", ePalKeys.Message)
+                    catch {
+                    }
+            }
+        return
+    }
+    if (typ = "niuma_palette_ai_llm") {
+        if FuncExists("CommandPalette_OnNiumaPaletteAiLlm")
+            try CommandPalette_OnNiumaPaletteAiLlm(msg)
+            catch as ePalLlm {
+                if FuncExists("CommandPalette_AiLog")
+                    try CommandPalette_AiLog("ai_llm_handler_err", ePalLlm.Message)
+                    catch {
+                    }
+            }
+        return
+    }
+    if (typ = "niuma_palette_ai_trace") {
+        if FuncExists("CommandPalette_AiLog") {
+            step := msg.Has("step") ? String(msg["step"]) : ""
+            det := msg.Has("detail") ? String(msg["detail"]) : ""
+            try CommandPalette_AiLog("web_" . step, det)
+            catch {
+            }
+        }
+        return
+    }
+    if (typ = "niuma_palette_ai_chunk") {
+        if FuncExists("CommandPalette_OnNiumaPaletteAiChunk")
+            try CommandPalette_OnNiumaPaletteAiChunk(msg)
+            catch {
+            }
+        return
+    }
+    if (typ = "niuma_palette_ai_end") {
+        if FuncExists("CommandPalette_OnNiumaPaletteAiEnd")
+            try CommandPalette_OnNiumaPaletteAiEnd(msg)
+            catch {
+            }
+        return
+    }
+    if (typ = "niuma_palette_ai_error") {
+        if FuncExists("CommandPalette_OnNiumaPaletteAiError")
+            try CommandPalette_OnNiumaPaletteAiError(msg)
+            catch {
+            }
+        return
+    }
+    if (typ = "host_palette_ai_stream") {
+        SetTimer(FloatingToolbar_StartPaletteAiStream.Bind(msg), -10)
+        return
+    }
+    if (typ = "host_palette_ai_handoff") {
+        try WebView_QueuePayload(g_FTB_WV2, msg)
+        catch {
+        }
+        return
+    }
+    if (typ = "host_palette_ai_handoff_end") {
+        try WebView_QueuePayload(g_FTB_WV2, msg)
+        catch {
+        }
+        return
+    }
+    if (typ = "host_palette_ai_stream_cancel") {
+        try WebView_QueuePayload(g_FTB_WV2, msg)
         catch {
         }
         return
@@ -2910,10 +3019,20 @@ FloatingToolbarSetChatDrawerState(open, force := false) {
     global FloatingToolbarLastClosedX, FloatingToolbarLastClosedY
 
     open := !!open
-    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar")
+    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar") {
+        if (open && FuncExists("CommandPalette_AiLog"))
+            try CommandPalette_AiLog("set_drawer_blocked", "reason=not_toolbar actMode=" . String(AppearanceActivationMode))
+            catch {
+            }
         open := false
-    if (!FloatingToolbarGUI)
+    }
+    if (!FloatingToolbarGUI) {
+        if (open && FuncExists("CommandPalette_AiLog"))
+            try CommandPalette_AiLog("set_drawer_blocked", "reason=no_FloatingToolbarGUI")
+            catch {
+            }
         return
+    }
     if (!force && open = !!FloatingToolbarChatDrawerOpen) {
         if (!open)
             return
@@ -3012,6 +3131,38 @@ FloatingToolbar_RunNiumaHandoffOpen(*) {
     if !g_FTB_PendingOpenNiumaDrawer
         return
     FloatingToolbar_OpenNiumaChatDrawer(true)
+}
+
+FloatingToolbar_StartPaletteAiStream(msg) {
+    if !(msg is Map)
+        return
+    reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    q := msg.Has("query") ? String(msg["query"]) : ""
+    prov := msg.Has("provider") ? String(msg["provider"]) : ""
+    if (reqId = "" || Trim(q) = "")
+        return
+    if FuncExists("CommandPalette_PostFtbPaletteAiStream") {
+        try CommandPalette_PostFtbPaletteAiStream(reqId, q, prov)
+        catch {
+        }
+        return
+    }
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if !(g_FTB_WV2 && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
+        if FuncExists("CommandPalette_AiLog")
+            try CommandPalette_AiLog("palette_stream_not_ready", "reqId=" . reqId)
+            catch {
+            }
+        return
+    }
+    payload := Map("type", "host_palette_ai_stream", "reqId", reqId, "query", q, "provider", prov, "openDrawer", false)
+    try WebView_QueuePayload(g_FTB_WV2, payload)
+    catch as eQ {
+        if FuncExists("CommandPalette_OnNiumaPaletteAiError")
+            try CommandPalette_OnNiumaPaletteAiError(Map("reqId", reqId, "message", eQ.Message))
+            catch {
+            }
+    }
 }
 
 FloatingToolbar_NotifyWebDrawerState(open := false) {
@@ -3344,10 +3495,49 @@ FloatingToolbar_DeferredRequestLlmExport(*) {
 }
 
 FloatingToolbar_DeferredPushStudioAsk(llm, prompt, autoSend) {
-    global g_FTB_WV2_Ready
-    if !g_FTB_WV2_Ready
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_PendingStudioAsk
+    pr := Trim(String(prompt))
+    if !g_FTB_WV2 {
+        g_FTB_PendingStudioAsk := Map("llm", llm, "prompt", pr, "autoSend", !!autoSend, "tries", 0)
+        SetTimer(FloatingToolbar_RetryPendingStudioAsk, -400)
         return
-    FloatingToolbar_PushStudioLlmToChat(llm, prompt, autoSend)
+    }
+    if !(g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
+        tries := 0
+        if (g_FTB_PendingStudioAsk is Map && g_FTB_PendingStudioAsk.Has("tries"))
+            tries := Integer(g_FTB_PendingStudioAsk["tries"])
+        g_FTB_PendingStudioAsk := Map("llm", llm, "prompt", pr, "autoSend", !!autoSend, "tries", tries)
+        SetTimer(FloatingToolbar_RetryPendingStudioAsk, -400)
+        if (pr != "")
+            try FloatingToolbar_SendTextToNiumaChat(pr, !!autoSend, false, true)
+            catch {
+            }
+        return
+    }
+    g_FTB_PendingStudioAsk := 0
+    FloatingToolbar_PushStudioLlmToChat(llm, pr, autoSend)
+    if (pr != "" && !autoSend)
+        try FloatingToolbar_SendTextToNiumaChat(pr, false, false, false)
+        catch {
+        }
+}
+
+FloatingToolbar_RetryPendingStudioAsk(*) {
+    global g_FTB_PendingStudioAsk
+    if !(g_FTB_PendingStudioAsk is Map)
+        return
+    pending := g_FTB_PendingStudioAsk
+    tries := pending.Has("tries") ? Integer(pending["tries"]) : 0
+    if (tries >= 24) {
+        g_FTB_PendingStudioAsk := 0
+        return
+    }
+    pending["tries"] := tries + 1
+    g_FTB_PendingStudioAsk := pending
+    llm := pending.Has("llm") ? pending["llm"] : Map()
+    pr := pending.Has("prompt") ? String(pending["prompt"]) : ""
+    autoSend := pending.Has("autoSend") ? !!pending["autoSend"] : false
+    FloatingToolbar_DeferredPushStudioAsk(llm, pr, autoSend)
 }
 
 FloatingToolbar_OpenNiumaChatDrawer(open := true) {
@@ -3355,8 +3545,13 @@ FloatingToolbar_OpenNiumaChatDrawer(open := true) {
     global FloatingToolbarChatDrawerOpen, g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
     global g_FTB_WV2_Ready
     open := !!open
-    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar")
+    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar") {
+        if FuncExists("CommandPalette_AiLog")
+            try CommandPalette_AiLog("open_drawer_blocked", "open=" . (open ? 1 : 0) . " actMode=" . String(AppearanceActivationMode))
+            catch {
+            }
         return false
+    }
     if open {
         g_FTB_NiumaHandoffOpening := true
         try FloatingToolbar_MarkNiumaHandoffActive(4000)
@@ -5343,14 +5538,41 @@ FloatingToolbar_NotifySelectionClear() {
     }
 }
 
-FloatingToolbar_SendTextToNiumaChat(text, sendNow := true, appendMode := true, openDrawer := true) {
-    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_PendingNiumaCompose
+FloatingToolbar_SendTextToNiumaChat(text, sendNow := true, appendMode := true, openDrawer := true, providerId := "") {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_PendingNiumaCompose, g_FTB_PendingOpenNiumaDrawer
 
     t := Trim(String(text), " `t`r`n")
+    prov := Trim(String(providerId))
+    if FuncExists("CommandPalette_AiLog") {
+        preview := SubStr(t, 1, 40)
+        if (StrLen(t) > 40)
+            preview .= "…"
+        try CommandPalette_AiLog("ftb_send_text", "provider=" . prov . " send=" . (sendNow ? 1 : 0) . " openDrawer=" . (openDrawer ? 1 : 0) . " text=" . preview)
+        catch {
+        }
+    }
     if (t = "")
         return false
-    if !g_FTB_WV2
-        return false
+    if openDrawer
+        g_FTB_PendingOpenNiumaDrawer := true
+    if !g_FTB_WV2 {
+        if FuncExists("CreateFloatingToolbarGUI") {
+            try CreateFloatingToolbarGUI()
+            catch as eGui {
+                if FuncExists("CommandPalette_AiLog")
+                    try CommandPalette_AiLog("ftb_send_no_wv2_create_err", eGui.Message)
+                    catch {
+                    }
+            }
+        }
+        if !g_FTB_WV2 {
+            if FuncExists("CommandPalette_AiLog")
+                try CommandPalette_AiLog("ftb_send_no_wv2", "CreateFloatingToolbarGUI did not yield CoreWebView2")
+                catch {
+                }
+            return false
+        }
+    }
 
     if openDrawer {
         try FloatingToolbarSetChatDrawerState(true)
@@ -5363,20 +5585,43 @@ FloatingToolbar_SendTextToNiumaChat(text, sendNow := true, appendMode := true, o
         "append", !!appendMode,
         "openDrawer", !!openDrawer
     )
+    prov := Trim(String(providerId))
+    if (prov != "")
+        payload["provider"] := prov
     if !(g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
         try {
             if !(g_FTB_PendingNiumaCompose is Array)
                 g_FTB_PendingNiumaCompose := []
             g_FTB_PendingNiumaCompose.Push(payload)
+            if FuncExists("CommandPalette_AiLog")
+                try CommandPalette_AiLog("ftb_send_queued", "reason=wv2_not_ready ready=" . (g_FTB_WV2_Ready ? 1 : 0) . " frame=" . (g_FTB_WV2_FrameReady ? 1 : 0) . " queueLen=" . g_FTB_PendingNiumaCompose.Length)
+                catch {
+                }
+            if openDrawer && FuncExists("FloatingToolbar_OpenNiumaChatDrawer")
+                try FloatingToolbar_OpenNiumaChatDrawer(true)
+                catch {
+                }
             return true
         } catch as _ePending {
+            if FuncExists("CommandPalette_AiLog")
+                try CommandPalette_AiLog("ftb_send_queue_err", _ePending.Message)
+                catch {
+                }
             return false
         }
     }
     try {
         WebView_QueuePayload(g_FTB_WV2, payload)
+        if FuncExists("CommandPalette_AiLog")
+            try CommandPalette_AiLog("ftb_send_posted", "niuma_compose_send provider=" . prov)
+            catch {
+            }
         return true
     } catch as _e {
+        if FuncExists("CommandPalette_AiLog")
+            try CommandPalette_AiLog("ftb_send_post_err", _e.Message)
+            catch {
+            }
         return false
     }
 }

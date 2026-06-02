@@ -1589,8 +1589,13 @@ _SCWV_StartSearchCoreLaunch(gen, exe, *) {
     if (Integer(gen) != Integer(g_SCWV_GoStartGen))
         return
     try {
-        _SCWV_ApplySearchCoreDefaults()
-        Run('"' exe '" -base "' A_ScriptDir '"', A_ScriptDir, "Hide")
+        if FuncExists("Nmer_StartSearchCenterCore") {
+            Nmer_StartSearchCenterCore(false)
+        } else {
+            _SCWV_ApplySearchCoreDefaults()
+            root := (IsSet(MainScriptDir) && MainScriptDir != "") ? MainScriptDir : A_ScriptDir
+            Run('"' exe '" -base "' root '"', root, "Hide")
+        }
     } catch {
     }
     SetTimer((*) => _SCWV_CheckSearchCoreStartup(gen), -80)
@@ -2545,12 +2550,23 @@ _SCWV_ProcessGoSearchResponse(resp, kw, off, gt, lim) {
             _SCWV_LogRuntime("SearchCore HTTP 0 fast-fail")
             _SCWV_EnsureSearchCoreRunning()
             _SCWV_ShowHttp0Notice()
+            if FuncExists("CommandPalette_OnSharedGoSearchFailed") {
+                try CommandPalette_OnSharedGoSearchFailed(kw, "SearchCenterCore 未响应，正在尝试启动…")
+                catch {
+                }
+            }
             return
         } else {
             global SearchCenterSearchResults, SearchCenterHasMoreData
             SearchCenterSearchResults := []
             SearchCenterHasMoreData := false
-            _SCWV_ShowSearchCoreError("SearchCenterCore 请求失败 HTTP " . st)
+            errMsg := "SearchCenterCore 请求失败 HTTP " . st
+            _SCWV_ShowSearchCoreError(errMsg)
+            if FuncExists("CommandPalette_OnSharedGoSearchFailed") {
+                try CommandPalette_OnSharedGoSearchFailed(kw, errMsg)
+                catch {
+                }
+            }
             SCWV_PushState("state")
             return
         }
@@ -2560,7 +2576,13 @@ _SCWV_ProcessGoSearchResponse(resp, kw, off, gt, lim) {
         global SearchCenterSearchResults, SearchCenterHasMoreData
         SearchCenterSearchResults := []
         SearchCenterHasMoreData := false
-        _SCWV_ShowSearchCoreError("SearchCenterCore 返回空响应")
+        errMsg := "SearchCenterCore 返回空响应"
+        _SCWV_ShowSearchCoreError(errMsg)
+        if FuncExists("CommandPalette_OnSharedGoSearchFailed") {
+            try CommandPalette_OnSharedGoSearchFailed(kw, errMsg)
+            catch {
+            }
+        }
         SCWV_PushState("state")
         return
     }
@@ -2579,7 +2601,13 @@ _SCWV_ProcessGoSearchResponse(resp, kw, off, gt, lim) {
         global SearchCenterSearchResults, SearchCenterHasMoreData
         SearchCenterSearchResults := []
         SearchCenterHasMoreData := false
-        _SCWV_ShowSearchCoreError("SearchCenterCore JSON 解析失败: " . e.Message)
+        errMsg := "SearchCenterCore JSON 解析失败: " . e.Message
+        _SCWV_ShowSearchCoreError(errMsg)
+        if FuncExists("CommandPalette_OnSharedGoSearchFailed") {
+            try CommandPalette_OnSharedGoSearchFailed(kw, errMsg)
+            catch {
+            }
+        }
         SCWV_PushState("state")
         return
     }
@@ -2587,7 +2615,13 @@ _SCWV_ProcessGoSearchResponse(resp, kw, off, gt, lim) {
         global SearchCenterSearchResults, SearchCenterHasMoreData
         SearchCenterSearchResults := []
         SearchCenterHasMoreData := false
-        _SCWV_ShowSearchCoreError("SearchCenterCore 响应格式无效")
+        errMsg := "SearchCenterCore 响应格式无效"
+        _SCWV_ShowSearchCoreError(errMsg)
+        if FuncExists("CommandPalette_OnSharedGoSearchFailed") {
+            try CommandPalette_OnSharedGoSearchFailed(kw, errMsg)
+            catch {
+            }
+        }
         SCWV_PushState("state")
         return
     }
@@ -2611,6 +2645,11 @@ _SCWV_ProcessGoSearchResponse(resp, kw, off, gt, lim) {
             return
     }
     _SCWV_ApplySearchResultSync(kw, off, hasMore, GoItems, gt)
+    if FuncExists("CommandPalette_OnSharedGoSearchResponse") {
+        try CommandPalette_OnSharedGoSearchResponse(kw, GoItems, lim)
+        catch {
+        }
+    }
     SCWV_PushState("state")
 }
 
@@ -2693,6 +2732,8 @@ _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) 
         q := "q=" . encQ . "&type=" . gt . "&limit=" . lim . "&offset=" . off
         url := "http://127.0.0.1:8080/search?" . q
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(url)
+            try whr.SetProxy(2)
         whr.Open("GET", url, true)
         whr.SetTimeouts(900, 900, 2200, 2200)
         whr.Send()
@@ -2755,6 +2796,12 @@ _SCWV_AsyncPollSearchHttp(pollToken := 0, *) {
         token := meta.Has("token") ? Integer(meta["token"]) : 0
         gen := meta.Has("gen") ? Integer(meta["gen"]) : 0
         if (gen != Integer(g_SCWV_GoStartGen)) {
+            kwDrop := meta.Has("kw") ? String(meta["kw"]) : ""
+            if (kwDrop != "" && FuncExists("CommandPalette_OnSharedGoSearchFailed")) {
+                try CommandPalette_OnSharedGoSearchFailed(kwDrop, "搜索已取消（内核重启）")
+                catch {
+                }
+            }
             _SCWV_AsyncPollSearchHttp_FinishInFlight()
             return
         }

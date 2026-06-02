@@ -181,6 +181,13 @@ body.ftb-compact #collapsedRoot .logo-btn{
   box-shadow:none;
   filter:none
 }
+body.ftb-compact #collapsedRoot .logo-btn.palette-ai-hud-running{
+  box-shadow:0 0 0 2px rgba(168,85,247,.45),0 0 18px rgba(168,85,247,.35);
+  animation:ftbInnerBreath 1.8s ease-in-out infinite;
+}
+body.ftb-compact #collapsedRoot .logo-btn.palette-ai-hud-done{
+  box-shadow:0 0 0 2px rgba(34,197,94,.35);
+}
 body.ftb-compact #collapsedRoot .logo-btn:hover{
   filter:none;
   background:rgba(255,102,0,.1);
@@ -2214,6 +2221,289 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       }
     } catch (e) {}
   }
+
+  var _paletteAiStreamCancelled = false;
+  var _paletteAiHudActive = false;
+
+  function paletteAiHudSet(mode) {
+    var btn = document.querySelector('#collapsedRoot .logo-btn');
+    if (!btn) return;
+    btn.classList.remove('palette-ai-hud-running', 'palette-ai-hud-done');
+    if (mode === 'running') {
+      btn.classList.add('palette-ai-hud-running');
+      _paletteAiHudActive = true;
+    } else if (mode === 'done') {
+      btn.classList.add('palette-ai-hud-done');
+      _paletteAiHudActive = false;
+    } else {
+      _paletteAiHudActive = false;
+    }
+  }
+
+  function paletteSimulateChunks(reqId, content) {
+    return new Promise(function (resolve) {
+      var text = String(content || '');
+      var i = 0;
+      var chunkSize = 56;
+      function tick() {
+        if (_paletteAiStreamCancelled) {
+          resolve();
+          return;
+        }
+        if (i >= text.length) {
+          resolve();
+          return;
+        }
+        var part = text.slice(i, i + chunkSize);
+        i += chunkSize;
+        try {
+          post({ type: 'niuma_palette_ai_chunk', reqId: reqId, delta: part });
+        } catch (_) {}
+        setTimeout(tick, 18);
+      }
+      tick();
+    });
+  }
+
+  function paletteFindSessionByReqId(reqId) {
+    var rid = String(reqId || '');
+    if (!rid) return typeof activeSession === 'function' ? activeSession() : null;
+    var list = state.sessions || [];
+    for (var i = list.length - 1; i >= 0; i--) {
+      if (list[i] && String(list[i]._paletteReqId || '') === rid) return list[i];
+    }
+    return typeof activeSession === 'function' ? activeSession() : null;
+  }
+
+  function palettePickAssistantAnswer(reqId, query) {
+    var q = String(query || '').trim();
+    var s = paletteFindSessionByReqId(reqId);
+    if (!s || !s.history || !s.history.length) return '';
+    for (var i = s.history.length - 1; i >= 0; i--) {
+      var m = s.history[i];
+      if (!m || m.role !== 'assistant') continue;
+      var c = m.content != null ? String(m.content).trim() : '';
+      if (!c) continue;
+      if (m._draft && c.length < 2) continue;
+      return c;
+    }
+    return '';
+  }
+
+  function paletteNotifyPaletteEnd(reqId, answer) {
+    if (_paletteAiStreamCancelled) return;
+    var a = String(answer || '');
+    try {
+      window.__niumaPaletteLastResult = {
+        reqId: String(reqId || ''),
+        answer: a,
+        at: Date.now()
+      };
+    } catch (_) {}
+    try {
+      post({ type: 'niuma_palette_ai_end', reqId: String(reqId || ''), answer: a });
+    } catch (_) {}
+  }
+
+  function paletteSyncAnswerForReq(reqId, query) {
+    var ans = palettePickAssistantAnswer(reqId, query);
+    if (!ans) return false;
+    paletteNotifyPaletteEnd(reqId, ans);
+    return true;
+  }
+
+  function exportPaletteLlmForProvider(provNode) {
+    var p = normalizeProviderId(provNode || '');
+    if (p) {
+      try {
+        var grp = findNodeGroup(p);
+        if (grp && grp.sessions && grp.sessions.length) switchToNode(p);
+        else if (typeof createSessionWithProvider === 'function' && P[p]) createSessionWithProvider(p);
+      } catch (eSw) {}
+    }
+    var cfg = buildSendCfg();
+    if (!cfg) {
+      return { provider: p, apiKey: '', baseUrl: '', model: '' };
+    }
+    return {
+      provider: normalizeProviderId(cfg.provider || p),
+      apiKey: cfg.apiKey != null ? String(cfg.apiKey) : '',
+      baseUrl: cfg.baseUrl != null ? String(cfg.baseUrl) : '',
+      model: cfg.model != null ? String(cfg.model) : ''
+    };
+  }
+
+  async function runPaletteAiStream(reqId, query, provider) {
+    _paletteAiStreamCancelled = false;
+    var q = String(query || '').trim();
+    if (!q) {
+      post({ type: 'niuma_palette_ai_error', reqId: reqId, message: '空问题' });
+      return;
+    }
+    var provNode = String(provider || '').trim();
+    function trace(step, detail) {
+      try {
+        post({ type: 'niuma_palette_ai_trace', step: step, detail: String(detail || '') });
+      } catch (_) {}
+    }
+    trace('palette_stream_begin', 'provider=' + provNode + ' len=' + q.length);
+    if (!state.chatBridgeReady) {
+      try {
+        declareChatBridgeReady();
+      } catch (_) {}
+      try {
+        await waitForChatBridgeReady(8000);
+      } catch (_) {}
+    }
+    post({ type: 'niuma_palette_ai_chunk', reqId: reqId, delta: '⏳ 正在准备 ' + (provNode || '模型') + '…\n' });
+    if (provNode) {
+      try {
+        var grp = findNodeGroup(provNode);
+        if (grp && grp.sessions && grp.sessions.length) switchToNode(provNode);
+        else if (typeof createSessionWithProvider === 'function' && P[provNode]) createSessionWithProvider(provNode);
+      } catch (eSw) {
+        trace('palette_switch_err', (eSw && eSw.message) ? eSw.message : String(eSw));
+      }
+    }
+    var s = activeSession();
+    if (!s || !s.id) {
+      post({ type: 'niuma_palette_ai_error', reqId: reqId, message: '无活动会话' });
+      return;
+    }
+    var sid = s.id;
+    s._paletteReqId = reqId;
+    s._paletteQuery = q;
+    if (input) {
+      input.value = q;
+      try {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      } catch (_) {}
+    }
+    saveCfg(false);
+    var cfg = buildSendCfg();
+    if (!cfg) {
+      post({ type: 'niuma_palette_ai_error', reqId: reqId, message: '无法构建模型配置' });
+      return;
+    }
+    if (cfg.provider === 'ollama') {
+      try {
+        await checkOllamaHealthWithStart({ tryStart: true });
+      } catch (eOl) {
+        post({ type: 'niuma_palette_ai_error', reqId: reqId, message: (eOl && eOl.message) ? eOl.message : String(eOl) });
+        return;
+      }
+      cfg.model = resolveOllamaModelForSend(cfg);
+    }
+    cfg.userContentForModel = composeUserTextForModel(q, cfg);
+    var p0 = P[cfg.provider] || P.openai;
+    if (p0.transport === 'cli') {
+      post({ type: 'niuma_palette_ai_error', reqId: reqId, message: 'CLI 模式请在大窗中使用' });
+      return;
+    }
+    if (!cfg.baseUrl || !cfg.model) {
+      post({ type: 'niuma_palette_ai_error', reqId: reqId, message: '请先配置 Base URL 与 Model' });
+      return;
+    }
+    if (p0.transport !== 'openclaw' && cfg.provider !== 'ollama' && !cfg.apiKey) {
+      post({ type: 'niuma_palette_ai_error', reqId: reqId, message: '请先配置 API Key' });
+      return;
+    }
+    post({ type: 'niuma_palette_ai_chunk', reqId: reqId, delta: '💭 正在请求模型…\n' });
+    add('user', q);
+    if (input) input.value = '';
+    clearPendingAttach();
+    setSessionSending(sid, true);
+    paletteAiHudSet('running');
+    var streamDraftId = '';
+    var lastPostedLen = 0;
+    function postProgressFull(fullText) {
+      if (_paletteAiStreamCancelled) return;
+      var t = String(fullText || '');
+      if (t.length <= lastPostedLen) return;
+      var delta = t.slice(lastPostedLen);
+      lastPostedLen = t.length;
+      post({ type: 'niuma_palette_ai_chunk', reqId: reqId, delta: delta });
+    }
+    try {
+      var content = '';
+      if (cfg.provider === 'minimax') {
+        content = await reqMinimax(cfg);
+        await paletteSimulateChunks(reqId, content);
+      } else if (p0.transport === 'anthropic') {
+        content = await reqClaude(cfg);
+        await paletteSimulateChunks(reqId, content);
+      } else if (p0.transport === 'gemini') {
+        content = await reqGemini(cfg);
+        await paletteSimulateChunks(reqId, content);
+      } else if (p0.transport === 'openclaw') {
+        content = await reqOpenClaw(cfg, {
+          onProgress: function (textNow) {
+            postProgressFull(textNow);
+            var sAct = sessionById(sid);
+            if (!sAct) return;
+            var draft = streamDraftId ? { _id: streamDraftId } : ensureAssistantDraft(sAct, String(textNow || '').trim() || '思考中...');
+            if (draft && draft._id) streamDraftId = draft._id;
+            if (streamDraftId) updateHistoryMessageById(sAct, streamDraftId, String(textNow || '').trim() || '思考中...', false);
+          }
+        });
+        if (content && lastPostedLen < String(content).length) {
+          post({ type: 'niuma_palette_ai_chunk', reqId: reqId, delta: String(content).slice(lastPostedLen) });
+        }
+      } else {
+        content = await reqOpenAI(cfg);
+        await paletteSimulateChunks(reqId, content);
+      }
+      if (_paletteAiStreamCancelled) return;
+      if (streamDraftId) {
+        var sAct2 = sessionById(sid);
+        if (sAct2) {
+          updateHistoryMessageById(sAct2, streamDraftId, content, true);
+          for (var di = sAct2.history.length - 1; di >= 0; di--) {
+            if (sAct2.history[di] && sAct2.history[di]._id === streamDraftId) {
+              sAct2.history[di]._draft = false;
+              break;
+            }
+          }
+          persistSessions();
+        }
+      } else if (content) add('assistant', content);
+      trace('palette_stream_done', 'reqId=' + reqId + ' len=' + String(content || '').length);
+      paletteNotifyPaletteEnd(reqId, String(content || ''));
+      setTimeout(function () {
+        if (!_paletteAiStreamCancelled) paletteSyncAnswerForReq(reqId, q);
+      }, 120);
+      paletteAiHudSet('done');
+      setTimeout(function () {
+        paletteAiHudSet('idle');
+      }, 5000);
+    } catch (err) {
+      if (!_paletteAiStreamCancelled) {
+        post({
+          type: 'niuma_palette_ai_error',
+          reqId: reqId,
+          message: err && err.message ? err.message : '未知错误'
+        });
+      }
+      paletteAiHudSet('idle');
+    } finally {
+      setSessionSending(sid, false);
+    }
+  }
+
+  window.__nmerPaletteAiStart = function (opts) {
+    opts = opts || {};
+    runPaletteAiStream(String(opts.reqId || ''), String(opts.query || ''), String(opts.provider || ''));
+  };
+  window.runPaletteAiStream = runPaletteAiStream;
+  window.paletteSyncAnswerForReq = paletteSyncAnswerForReq;
+  window.exportPaletteLlmForProvider = exportPaletteLlmForProvider;
+  window.__niumaPaletteExportApiKeys = function () {
+    try {
+      return state.apiKeys || {};
+    } catch (_) {
+      return {};
+    }
+  };
 
   function sel(a) {
     var s = String(a || '');
@@ -9878,8 +10168,28 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return last;
   }
 
+  function formatKimiApiError(status, raw, fallback) {
+    var detail = parseHttpErrDetail(raw) || String(raw || '').slice(0, 200);
+    if (status === 401 || /invalid.*api|unauthorized|authentication/i.test(detail + String(raw || ''))) {
+      return (
+        'Kimi API Key 无效或未授权（401）。请在设置中更新 Moonshot 密钥；' +
+        '国内 Key → api.moonshot.cn/v1（platform.moonshot.cn），国际 Key → api.moonshot.ai/v1。' +
+        (detail ? ' 详情：' + detail : '')
+      );
+    }
+    if (status === 403) return 'Kimi 访问被拒绝（403）：' + (detail || '请检查密钥与模型权限');
+    if (/temperature/i.test(detail)) return 'Kimi K2 系列仅允许 temperature=1，请重载脚本后再试';
+    if (status === 404 || /not\s*found/i.test(detail))
+      return 'Kimi 接口 404：请确认 Base URL 含 /v1，且模型已在平台开通（可改选 moonshot-v1-8k）';
+    return 'HTTP ' + (status || 0) + (detail ? '：' + detail : '') + (fallback ? ' [' + String(fallback).slice(0, 40) + ']' : '');
+  }
+
   function formatHostHttpError(status, raw, fallback) {
     var fb = String(fallback || '');
+    var rawS = String(raw || '');
+    if (/moonshot\.(cn|ai)|invalid_authentication_error|invalid_api_key/i.test(rawS + fb)) {
+      return formatKimiApiError(status || 0, rawS, fb);
+    }
     if (/^http_status_/i.test(fb) && (raw || status)) return formatMinimaxApiError(status || 0, raw);
     if (status >= 400 && raw) return formatMinimaxApiError(status, raw);
     return fb || ('HTTP ' + status);
@@ -9947,9 +10257,43 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 
   function oaUrl(u) {
     u = String(u || '').replace(/\/+$/, '');
+    if (/^https?:\/\/api\.moonshot\.(cn|ai)$/i.test(u)) u += '/v1';
     if (/\/chat\/completions$/i.test(u)) return u;
     if (/\/v\d+(?:\.\d+)?$/i.test(u)) return u + '/chat/completions';
     return u + '/chat/completions';
+  }
+
+  function isKimiK2Model(model) {
+    return /^kimi-k2/i.test(String(model || ''));
+  }
+
+  function applyOpenAiBodyForProvider(body, cfg, opts) {
+    opts = opts || {};
+    var prov = String((cfg && cfg.provider) || '');
+    var model = String((cfg && cfg.model) || '');
+    if (prov === 'kimi') {
+      if (isKimiK2Model(model)) {
+        body.temperature = 1;
+        var tok = opts.maxTokens != null ? opts.maxTokens : body.max_tokens;
+        if (tok != null) {
+          body.max_completion_tokens = tok;
+          delete body.max_tokens;
+        }
+      } else {
+        var tK =
+          opts.temperature != null
+            ? opts.temperature
+            : cfg && cfg.temperature != null
+              ? cfg.temperature
+              : null;
+        if (tK != null) body.temperature = tK;
+        if (opts.maxTokens != null) body.max_tokens = opts.maxTokens;
+      }
+      return body;
+    }
+    body.temperature = opts.temperature != null ? opts.temperature : 0.7;
+    if (opts.maxTokens != null) body.max_tokens = opts.maxTokens;
+    return body;
   }
 
   /** OpenAI 兼容 chat/completions 实际 URL（MiniMax /anthropic Base 须走 v1，勿拼成 /anthropic/chat/completions） */
@@ -10403,13 +10747,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var h = { 'Content-Type': 'application/json' };
     if (cfg.apiKey) h.Authorization = 'Bearer ' + cfg.apiKey;
     h['Accept-Encoding'] = 'identity';
-    var body = { model: cfg.model, messages: messages, temperature: opts.temperature != null ? opts.temperature : 0.7 };
+    var body = { model: cfg.model, messages: messages };
+    applyOpenAiBodyForProvider(body, cfg, opts);
     if (opts.jsonMode) {
       try {
         body.response_format = { type: 'json_object' };
       } catch (_) {}
     }
-    if (opts.maxTokens != null) body.max_tokens = opts.maxTokens;
     if (cfg.provider === 'ollama') {
       body.stream = false;
       if (!isOllamaCloudModel(cfg.model))
@@ -10432,6 +10776,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       });
       if (!r.ok) {
         if (cfg.provider === 'ollama') throw new Error(formatOllamaApiError(r.status, r.text, cfg.model));
+        if (cfg.provider === 'kimi') throw new Error(formatKimiApiError(r.status, r.text, endpoint));
         var detail = parseHttpErrDetail(r.text) || String(r.text || '').slice(0, 200);
         throw new Error('HTTP ' + r.status + (detail ? '：' + detail : '') + ' 请求：' + endpoint);
       }
@@ -10460,8 +10805,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
 
   async function reqOpenAI(cfg) {
-    var temp = cfg && cfg.temperature != null ? cfg.temperature : 0.7;
-    return reqOpenAIMessages(cfg, oaMsgs(cfg), { temperature: temp });
+    var opts = {};
+    if (!(cfg && cfg.provider === 'kimi' && isKimiK2Model(cfg.model))) {
+      opts.temperature = cfg && cfg.temperature != null ? cfg.temperature : 0.7;
+    }
+    return reqOpenAIMessages(cfg, oaMsgs(cfg), opts);
   }
 
   var BROWSER_AGENT_MAX_TURNS = 12;
@@ -13171,7 +13519,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     opts.timeoutMs = opts.timeoutMs || BROWSER_AGENT_LLM_TIMEOUT_MS;
     opts.maxTokens = opts.maxTokens != null ? opts.maxTokens : BROWSER_AGENT_LLM_MAX_TOKENS;
     opts.jsonMode = false;
-    opts.temperature = opts.temperature != null ? opts.temperature : 0.1;
+    if (cfg && cfg.provider === 'kimi' && isKimiK2Model(cfg.model)) opts.temperature = 1;
+    else opts.temperature = opts.temperature != null ? opts.temperature : 0.1;
     if (cfg && cfg.provider === 'minimax') {
       opts.minimaxReqOpts = { singleBaseOnly: true };
     }
@@ -19213,6 +19562,39 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       });
       var d = JSON.parse(s0);
       if (!d || !d.type) return;
+      if (d.type === 'host_palette_ai_stream') {
+        try {
+          post({ type: 'niuma_palette_ai_trace', step: 'palette_inject_stream', detail: 'reqId=' + String(d.reqId || '') });
+        } catch (_) {}
+        runPaletteAiStream(String(d.reqId || ''), String(d.query || ''), String(d.provider || ''));
+        return;
+      }
+      if (d.type === 'host_palette_ai_sync') {
+        var reqSyncInj = String(d.reqId || '');
+        var qSyncInj = String(d.query || '');
+        var pulledInj = palettePickAssistantAnswer(reqSyncInj, qSyncInj);
+        try {
+          post({
+            type: 'niuma_palette_ai_trace',
+            step: 'palette_inject_sync',
+            detail: 'reqId=' + reqSyncInj + ' len=' + String(pulledInj || '').length
+          });
+        } catch (_) {}
+        if (pulledInj) paletteNotifyPaletteEnd(reqSyncInj, pulledInj);
+        return;
+      }
+      if (d.type === 'host_request_palette_ai_llm') {
+        var outInj = exportPaletteLlmForProvider(String(d.provider || ''));
+        try {
+          post({
+            type: 'niuma_palette_ai_llm',
+            reqId: String(d.reqId || ''),
+            provider: outInj.provider || String(d.provider || ''),
+            llm: outInj
+          });
+        } catch (_) {}
+        return;
+      }
       if (d.type === 'host_mobile_browser_state') {
         dispatchBrowserHostEvent(d);
         if (d.open && state.browserAgentRunning && state.browserAgentSnapReqId) {
@@ -19449,6 +19831,56 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         refreshTtydApiStatus();
         return;
       }
+      if (d.type === 'host_request_palette_ai_keys') {
+        try {
+          syncLlmToStudioHost();
+        } catch (e1) {}
+        try {
+          var curSess = activeSession();
+          var actProv = curSess ? normalizeProviderId(curSess.provider) : normalizeProviderId(provider && provider.value);
+          var keyCount = state.apiKeys ? Object.keys(state.apiKeys).length : 0;
+          post({
+            type: 'niuma_palette_ai_keys',
+            apiKeys: state.apiKeys || {},
+            activeProvider: actProv || ''
+          });
+          post({ type: 'niuma_palette_ai_trace', step: 'keys_export', detail: 'active=' + actProv + ' keyCount=' + keyCount });
+        } catch (e2) {
+          try {
+            post({ type: 'niuma_palette_ai_trace', step: 'keys_export_err', detail: (e2 && e2.message) ? e2.message : String(e2) });
+          } catch (_) {}
+        }
+        return;
+      }
+      if (d.type === 'host_request_palette_ai_llm') {
+        var provLlm = String(d.provider || '');
+        var reqLlm = String(d.reqId || '');
+        var out = exportPaletteLlmForProvider(provLlm);
+        try {
+          post({
+            type: 'niuma_palette_ai_llm',
+            reqId: reqLlm,
+            provider: out.provider || provLlm,
+            llm: out
+          });
+          post({
+            type: 'niuma_palette_ai_trace',
+            step: 'llm_export',
+            detail: 'prov=' + (out.provider || provLlm) + ' base=' + String(out.baseUrl || '').slice(0, 48)
+          });
+        } catch (eLlmEx) {
+          try {
+            post({
+              type: 'niuma_palette_ai_llm',
+              reqId: reqLlm,
+              provider: provLlm,
+              llm: {},
+              error: (eLlmEx && eLlmEx.message) ? eLlmEx.message : String(eLlmEx)
+            });
+          } catch (_) {}
+        }
+        return;
+      }
       if (d.type === 'host_open_ttyd_customize') {
         setDrawer(true);
         if (d.llm && String(d.llm.apiKey || '').trim()) {
@@ -19535,13 +19967,83 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         appendAudit({ nodeKey: eng, level: 'error', message: 'ttyd 错误：' + (d.message || '启动失败') });
         return;
       }
+      if (d.type === 'host_palette_ai_stream') {
+        try {
+          post({ type: 'niuma_palette_ai_trace', step: 'palette_msg_recv', detail: 'host_palette_ai_stream reqId=' + String(d.reqId || '') });
+        } catch (_) {}
+        runPaletteAiStream(String(d.reqId || ''), String(d.query || ''), String(d.provider || ''));
+        return;
+      }
+      if (d.type === 'host_palette_ai_sync') {
+        var reqSync = String(d.reqId || '');
+        var qSync = String(d.query || '');
+        var pulled = palettePickAssistantAnswer(reqSync, qSync);
+        try {
+          post({
+            type: 'niuma_palette_ai_trace',
+            step: 'palette_sync_pull',
+            detail: 'reqId=' + reqSync + ' len=' + String(pulled || '').length
+          });
+        } catch (_) {}
+        if (pulled) paletteNotifyPaletteEnd(reqSync, pulled);
+        return;
+      }
+      if (d.type === 'host_palette_ai_handoff') {
+        paletteAiHudSet('running');
+        return;
+      }
+      if (d.type === 'host_palette_ai_handoff_end') {
+        paletteAiHudSet('done');
+        setTimeout(function () {
+          paletteAiHudSet('idle');
+        }, 5000);
+        return;
+      }
+      if (d.type === 'host_palette_ai_stream_cancel') {
+        _paletteAiStreamCancelled = true;
+        paletteAiHudSet('idle');
+        return;
+      }
       if (d.type === 'niuma_compose_send') {
+        if (d.paletteStream && d.reqId) {
+          try {
+            post({ type: 'niuma_palette_ai_trace', step: 'compose_palette_stream', detail: 'reqId=' + String(d.reqId || '') + ' provider=' + String(d.provider || '') });
+          } catch (_) {}
+          runPaletteAiStream(String(d.reqId || ''), String(d.text || ''), String(d.provider || ''));
+          return;
+        }
         var inText = String(d.text || '');
         if (!inText.trim()) return;
         var appendMode = d.append !== false;
         var shouldOpenDrawer = d.openDrawer !== false;
         var shouldSendNow = d.send !== false;
-        if (shouldOpenDrawer) setDrawer(true);
+        var provNode = String(d.provider || d.nodeKey || '').trim();
+        function paletteAiTrace(step, detail) {
+          try {
+            post({ type: 'niuma_palette_ai_trace', step: step, detail: String(detail || '') });
+          } catch (_) {}
+        }
+        paletteAiTrace('compose_recv', 'provider=' + provNode + ' send=' + (shouldSendNow ? 1 : 0) + ' openDrawer=' + (shouldOpenDrawer ? 1 : 0) + ' len=' + inText.trim().length);
+        if (provNode) {
+          try {
+            var grp = findNodeGroup(provNode);
+            if (grp && grp.sessions && grp.sessions.length) {
+              switchToNode(provNode);
+              paletteAiTrace('switch_node', provNode + ' sessions=' + grp.sessions.length);
+            } else if (typeof createSessionWithProvider === 'function' && P[provNode]) {
+              createSessionWithProvider(provNode);
+              paletteAiTrace('create_session', provNode);
+            } else {
+              paletteAiTrace('switch_skip', 'no group and no P[' + provNode + ']');
+            }
+          } catch (eSw) {
+            paletteAiTrace('switch_err', (eSw && eSw.message) ? eSw.message : String(eSw));
+          }
+        }
+        if (shouldOpenDrawer) {
+          setDrawer(true);
+          paletteAiTrace('set_drawer', 'true');
+        }
         var base = String(input.value || '');
         if (appendMode && base.trim()) input.value = base.replace(/\s+$/, '') + '\n\n' + inText;
         else input.value = inText;
@@ -19554,7 +20056,12 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
             var end = input.value.length;
             input.setSelectionRange(end, end);
           } catch (_) {}
-          if (shouldSendNow) sendChat();
+          if (shouldSendNow) {
+            paletteAiTrace('send_chat', 'invoke sendChat');
+            sendChat();
+          } else {
+            paletteAiTrace('send_chat', 'skipped sendNow=false');
+          }
         });
         return;
       }

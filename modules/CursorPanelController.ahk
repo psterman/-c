@@ -4,6 +4,8 @@
 global CursorPanelWV2Ctrl := 0
 global CursorPanelWV2 := 0
 global CursorPanelWV2Ready := false
+global CapsLockPressTime := 0
+global LastCapsLockTapTick := 0
 
 ; ===================== 切换工具栏和面板显示 =====================
 ToggleToolbarAndPanel(*) {
@@ -899,11 +901,6 @@ ShowPanelTimer(*) {
     VKHoldVisible := true
 }
 
-; 记录 CapsLock 按下时间
-global CapsLockPressTime := 0
-; 双击 CapsLock 专用时间戳（避免 A_PriorHotkey 在复杂热键场景下失真）
-global LastCapsLockTapTick := 0
-
 ; ===================== CapsLock+ 与原生单击共存（当前脚本采用的做法，请勿混用其它方案）=====================
 ; 1) 本热键为「无 ~ 的 CapsLock::」：拦截系统对 CapsLock 的默认处理，由下面 KeyWait 释放分支统一收尾。
 ; 2) 纯单击：未触发 CapsLock+ 功能（CapsLock2 仍为 true）时，在松手处用 InitialCapsLockState 手动翻转一次，等价于原生单击切换大写。
@@ -930,6 +927,10 @@ CapsLock:: {
     if (!IsSet(CapsLockHoldTimeSeconds) || CapsLockHoldTimeSeconds = "") {
         CapsLockHoldTimeSeconds := 0.5
     }
+    if !IsSet(CapsLockPressTime)
+        CapsLockPressTime := 0
+    if !IsSet(LastCapsLockTapTick)
+        LastCapsLockTapTick := 0
     ; 搜索中心热键提示：按住 CapsLock 一段时间后通知 WebView 进入提示高亮态
     SetTimer(SearchCenter_CapsHintOnTimer, 0)
     HintDelayMs := Round(CapsLockHoldTimeSeconds * 1000)

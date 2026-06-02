@@ -1,7 +1,19 @@
 ; ToolsPaths.ahk — 外援程序路径（SearchCenter、Everything、ttyd 等，统一 tools/）
 
+Nmer_InstallRoot(*) {
+    if IsSet(MainScriptDir) {
+        try {
+            r := Trim(String(MainScriptDir))
+            if (r != "")
+                return r
+        } catch {
+        }
+    }
+    return A_ScriptDir
+}
+
 Nmer_ToolsDir(*) {
-    return A_ScriptDir . "\tools"
+    return Nmer_InstallRoot() . "\tools"
 }
 
 Nmer_ToolFirstExisting(paths*) {
@@ -21,12 +33,96 @@ Nmer_EnsureToolsSubDir(sub) {
 }
 
 Nmer_SearchCenterCoreExe(*) {
-    root := A_ScriptDir
+    root := Nmer_InstallRoot()
     return Nmer_ToolFirstExisting(
         root . "\tools\search\SearchCenterCore.exe",
         root . "\searchcore\SearchCenterCore.exe",
         root . "\SearchCenterCore.exe"
     )
+}
+
+Nmer_SearchCoreLog(message) {
+    try {
+        dir := Nmer_InstallRoot() . "\Cache\debug"
+        if !DirExist(dir)
+            DirCreate(dir)
+        FileAppend("[" . FormatTime(, "yyyy-MM-dd HH:mm:ss") . "] " . String(message) . "`n", dir . "\searchcore_launch.log", "UTF-8")
+    } catch {
+    }
+}
+
+Nmer_SearchCenterCoreHealthy(*) {
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl("http://127.0.0.1:8080/health")
+            try whr.SetProxy(2)
+        whr.Open("GET", "http://127.0.0.1:8080/health", false)
+        whr.SetTimeouts(1500, 1500, 5000, 5000)
+        whr.Send()
+        if (Integer(whr.Status) != 200)
+            return false
+        return (InStr(whr.ResponseText, "ok") > 0)
+    } catch {
+        return false
+    }
+}
+
+Nmer_StartSearchCenterCore(forceRestart := false) {
+    global g_Nmer_SearchCoreLastLaunchTick
+    if !forceRestart && Nmer_SearchCenterCoreHealthy()
+        return true
+    exe := Nmer_SearchCenterCoreExe()
+    if (exe = "" || !FileExist(exe)) {
+        Nmer_SearchCoreLog("start_abort exe_missing path=" . exe)
+        return false
+    }
+    root := Nmer_InstallRoot()
+    if forceRestart && ProcessExist("SearchCenterCore.exe") {
+        Nmer_SearchCoreLog("start_force_kill")
+        try ProcessClose("SearchCenterCore.exe")
+        catch {
+        }
+        Sleep(400)
+    }
+    if ProcessExist("SearchCenterCore.exe") {
+        if Nmer_SearchCenterCoreHealthy() {
+            Nmer_SearchCoreLog("start_skip already_healthy pid=" . ProcessExist("SearchCenterCore.exe"))
+            return true
+        }
+        Nmer_SearchCoreLog("start_stale_process not_healthy, killing")
+        try ProcessClose("SearchCenterCore.exe")
+        catch {
+        }
+        Sleep(400)
+    }
+    now := A_TickCount
+    if IsSet(g_Nmer_SearchCoreLastLaunchTick) && (now - Integer(g_Nmer_SearchCoreLastLaunchTick) < 800)
+        return ProcessExist("SearchCenterCore.exe") ? true : false
+    g_Nmer_SearchCoreLastLaunchTick := now
+    if FuncExists("_SCWV_ApplySearchCoreDefaults") {
+        try _SCWV_ApplySearchCoreDefaults()
+        catch {
+        }
+    }
+    cmd := '"' . exe . '" -base "' . root . '"'
+    Nmer_SearchCoreLog("start_run cmd=" . cmd . " cwd=" . root)
+    try {
+        Run(cmd, root, "Hide", &pid)
+        Nmer_SearchCoreLog("start_run ok pid=" . (pid ? pid : "?"))
+    } catch as err {
+        Nmer_SearchCoreLog("start_run failed: " . err.Message)
+        return false
+    }
+    return true
+}
+
+Nmer_AutoStartSearchCenterCore(*) {
+    if Nmer_SearchCenterCoreHealthy() {
+        Nmer_SearchCoreLog("autostart_skip already_healthy")
+        return
+    }
+    Nmer_SearchCoreLog("autostart_begin")
+    Nmer_StartSearchCenterCore(false)
 }
 
 Nmer_TtydExe(*) {
