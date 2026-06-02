@@ -1161,6 +1161,32 @@ SCWV_ApplyBounds() {
     g_SCWV_Ctrl.Bounds := rc
 }
 
+SCWV_EnsureMaximized(*) {
+    global g_SCWV_Gui
+    if !g_SCWV_Gui
+        return
+    hwndExpr := "ahk_id " . g_SCWV_Gui.Hwnd
+    try {
+        mm := WinGetMinMax(hwndExpr)
+        if (mm != 1)
+            WinMaximize(hwndExpr)
+    } catch {
+    }
+}
+
+SCWV_ShowHostFullscreen(*) {
+    global g_SCWV_Gui
+    if !g_SCWV_Gui
+        return
+    try {
+        g_SCWV_Gui.Show("Maximize")
+    } catch {
+        try g_SCWV_Gui.Show()
+        catch {
+        }
+    }
+}
+
 SCWV_FinishReveal() {
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
@@ -2888,6 +2914,8 @@ SCWV_Show(reason := "", triggerSource := "") {
 
     if SCWV_IsRevealedToUser() {
         try SCWV_Log("show_already_visible", "reason=" . reason . " trigger=" . ts)
+        ; 已可见时仅在非最大化态补一次最大化，避免反复状态切换导致横跳。
+        SCWV_EnsureMaximized()
         if (ts = "clipboard_hotkey") {
             SearchCenterFilterType := "clipboard"
             SearchCenterWebKeyword := ""
@@ -2927,8 +2955,8 @@ SCWV_Show(reason := "", triggerSource := "") {
     }
 
     try {
-        g_SCWV_Gui.Show("w1180 h760 Center")
-        try WinMaximize("ahk_id " . g_SCWV_Gui.Hwnd)
+        ; 单入口全屏显示，避免 "固定尺寸 -> 最大化 -> 再最大化" 抖动链。
+        SCWV_ShowHostFullscreen()
         SCWV_SetHostTopMost(g_SCWV_HostTopMost)
         SCWV_ApplyBounds()
         SetTimer(SCWV_ApplyBounds, -80)
@@ -2947,8 +2975,7 @@ SCWV_Show(reason := "", triggerSource := "") {
             catch {
             }
         }
-        g_SCWV_Gui.Show("w1180 h760 Center")
-        try WinMaximize("ahk_id " . g_SCWV_Gui.Hwnd)
+        SCWV_ShowHostFullscreen()
         SCWV_SetHostTopMost(g_SCWV_HostTopMost)
         SCWV_ApplyBounds()
         SetTimer(SCWV_ApplyBounds, -80)
@@ -3225,8 +3252,9 @@ SCWV_WMDeactivateHideTick(*) {
         try SCWV_Log("hide_skip", "reason=cli_terminal_focus")
         return
     }
-    try SCWV_Log("hide_trigger", "reason=wm_deactivate_intent")
-    SCWV_SubmitIntent("close", 40, Map("reason", "wm_deactivate"))
+    ; 用户要求：搜索中心仅允许用户主动关闭（关闭按钮/ESC），失焦不再自动关闭。
+    try SCWV_Log("hide_skip", "reason=wm_deactivate_disabled")
+    return
 }
 
 SCWV_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
@@ -3291,8 +3319,9 @@ SCWV_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
             try SCWV_Log("wm_activate_skip", "reason=recent_show delta=" . Integer(A_TickCount - g_SCWV_LastShown))
             return
         }
-        try SCWV_Log("wm_activate_queue", "reason=wm_deactivate_intent count=" . WMActivateChain_Count())
-        SCWV_SubmitIntent("close", 40, Map("reason", "wm_deactivate"))
+        ; 用户要求：搜索中心仅允许用户主动关闭（关闭按钮/ESC），失焦不再自动关闭。
+        try SCWV_Log("wm_activate_skip", "reason=wm_deactivate_disabled count=" . WMActivateChain_Count())
+        return
     }
 }
 
@@ -5475,8 +5504,8 @@ SC_ActivateSearchResultItem(Item, doHide := true, smartTextSearch := false) {
     isFileLike := (DataType = "file" || DataType = "File" || DataType = "Folder" || origDt = "file")
 
     if doHide {
-        SCWV_SubmitIntent("close", 25, Map("reason", "activate_result", "persist", 1))
-        SetTimer((*) => _SCWV_ActivateSearchResultItemContinue(Item, smartTextSearch), -60)
+        ; 用户要求：执行结果后保留搜索中心，除非用户主动关闭或按 ESC。
+        SetTimer((*) => _SCWV_ActivateSearchResultItemContinue(Item, smartTextSearch), -30)
         return
     }
     _SCWV_ActivateSearchResultItemContinue(Item, smartTextSearch)
@@ -6121,7 +6150,6 @@ _SCWV_OnDarkSubMenuClick(idx, *) {
 _SCWV_OnDarkSubMenuClick_Continue(idx, c, row, *) {
     global g_SCWV_Gui
     _SCWV_DestroyDarkRowMenus()
-    SetTimer(SCWV_WMDeactivateHideTick, 0)
     if (c != "" && _SCWV_IsMenuTargetStillValid(row))
         SC_ExecuteContextCommand(c, row)
     if _SCWV_ShouldRefocusSearchAfterCmd(c) && g_SCWV_Gui {
@@ -6345,7 +6373,6 @@ _SCWV_OnDarkSearchMenuClick_ShowSub(idx, ch, *) {
 _SCWV_OnDarkSearchMenuClick_Continue(c, row, *) {
     global g_SCWV_Gui
     _SCWV_DestroyDarkRowMenus()
-    SetTimer(SCWV_WMDeactivateHideTick, 0)
     if (c != "" && _SCWV_IsMenuTargetStillValid(row))
         SC_ExecuteContextCommand(c, row)
     if _SCWV_ShouldRefocusSearchAfterCmd(c) && g_SCWV_Gui {

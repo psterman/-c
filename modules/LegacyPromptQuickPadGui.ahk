@@ -87,10 +87,9 @@ LegacyPromptQuickPad_ShowNative(openForCapture := false, forceCenterMaximize := 
     AIListPanelWindowH := panelH
 
     try {
-        AIListPanelGUI.Show("x" . panelX . " y" . panelY . " w" . panelW . " h" . panelH)
-        if forceCenterMaximize {
-            PromptQuickPad_CenterAndMaximizeOnActiveMonitor()
-        }
+        ; 提示词窗口默认最大化，便于长文本输入与编辑。
+        AIListPanelGUI.Show("Maximize")
+        try WinMaximize("ahk_id " . AIListPanelGUI.Hwnd)
         AIListPanelIsVisible := true
     } catch as err {
         TrayTip("显示失败: " . err.Message, "错误", "Iconx 2")

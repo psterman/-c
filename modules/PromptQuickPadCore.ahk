@@ -142,6 +142,17 @@ _PQP_OnGuiResize(GuiObj, MinMax, Width, Height) {
     _PQP_ApplyBounds()
 }
 
+_PQP_EnsureMaximized(*) {
+    global g_PQP_Gui
+    if !g_PQP_Gui
+        return
+    try {
+        if (WinGetMinMax("ahk_id " . g_PQP_Gui.Hwnd) != 1)
+            WinMaximize("ahk_id " . g_PQP_Gui.Hwnd)
+    } catch {
+    }
+}
+
 _PQP_OnNavigationCompleted(sender, args) {
     global g_PQP_Visible
     if !g_PQP_Visible
@@ -356,6 +367,7 @@ PQP_Show() {
         PQP_Init()
 
     if g_PQP_Visible {
+        _PQP_EnsureMaximized()
         try LegacyGuard_RequestFocus("PromptQuickPadCore", g_PQP_Gui.Hwnd, 50, "focus_pqp_visible")
         WebView2_MoveFocusProgrammatic(g_PQP_Ctrl)
         SetTimer(_PQP_DeferredMoveFocus100, -100)
@@ -373,7 +385,9 @@ PQP_Show() {
         panelY := (ScreenH - panelH) // 2
     }
 
-    try g_PQP_Gui.Show("x" . panelX . " y" . panelY . " w" . panelW . " h" . panelH . " NoActivate")
+    try g_PQP_Gui.Show("Maximize NoActivate")
+    SetTimer(_PQP_EnsureMaximized, -80)
+    SetTimer(_PQP_EnsureMaximized, -220)
     g_PQP_Visible := true
     g_PQP_LastShown := A_TickCount
     try WebView2_NotifyShown(g_PQP_WV2)

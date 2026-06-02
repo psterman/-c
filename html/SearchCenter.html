@@ -2527,23 +2527,51 @@ body.sc-cli-layout #app {
 .results-head-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
-.results-local-filters {
-  padding-top: 2px;
+.results-head-row #filters {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  overflow: auto hidden;
+  white-space: nowrap;
+}
+.results-head-row .head-sub {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+#btn-results-more-toggle {
+  flex: 0 0 auto;
+  min-width: 56px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 10px;
+}
+#btn-results-more-toggle .chev {
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: .9;
+}
+.results-more-panel {
+  max-height: 140px;
+  opacity: 1;
+  overflow: hidden;
+  transition: max-height .18s ease, opacity .16s ease;
+}
+.results-more-panel.collapsed {
+  max-height: 0;
+  opacity: 0;
 }
 .results-local-filters.hidden {
   display: none !important;
 }
-.results-local-filters #head-filters {
+.results-more-panel #head-filters {
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-.results-local-filters #filters {
-  padding: 0;
+  min-width: 0;
+  padding-top: 2px;
 }
 #preview-panel {
   border-radius: 0 0 16px 16px;
@@ -2552,34 +2580,70 @@ body.sc-cli-layout #app {
 #preview-web-scroll.sc-empty-hint {
   color: var(--muted);
 }
-.sc-footer-dock {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+.sc-status-bar {
+  display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 6px 10px;
   border-radius: 12px;
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
-  font-size: 12px;
-  color: var(--muted);
-  min-height: 40px;
+  min-height: 36px;
   width: 100%;
 }
-.sc-footer-dock .dock-left {
+.sc-status-bar .sc-status-spacer {
+  flex: 1 1 auto;
+  min-width: 8px;
+}
+.sc-status-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
 }
-.sc-footer-dock #status {
-  margin: 0;
-  padding: 0;
-  font-size: 12px;
-  color: var(--text);
+.sc-status-btn:hover {
+  border-color: rgba(255,179,71,.45);
+  background: rgba(255,141,42,.12);
+}
+.sc-status-btn.sc-status-btn-ft.running {
+  color: var(--accent-2);
+  border-color: rgba(255,179,71,.5);
+}
+.sc-status-metrics-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  clip: rect(0,0,0,0);
   white-space: nowrap;
+}
+.sc-status-btn .recycle-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 9px;
+  line-height: 14px;
+  background: var(--accent);
+  color: #111;
+  border: 1px solid rgba(0,0,0,.25);
+}
+.sc-status-btn .recycle-badge.muted {
+  opacity: 0.45;
 }
 .dock-status-dot {
   width: 8px;
@@ -2599,63 +2663,12 @@ body.sc-cli-layout #app {
 .dock-status-dot.warn {
   background: #f59e0b;
 }
-.sc-footer-dock .dock-center {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: center;
-}
-.sc-footer-dock .dock-right {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
 .sc-footer-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   width: 100%;
 }
 body.nm-dock-mounted #app.sc-container,
 body.nm-dock-mounted #app {
-  padding-bottom: 62px;
-}
-.footer-ft-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
-  font-size: 11px;
-  color: var(--muted);
-  min-height: 36px;
-}
-.footer-ft-bar .ft-control-btn {
-  flex-shrink: 0;
-}
-.footer-ft-bar .ft-metric-box.ft-verbose,
-.footer-ft-bar .ft-hint-box,
-.footer-ft-bar .ft-light-pack {
-  display: none !important;
-}
-.footer-ft-bar #ft-state-box,
-.footer-ft-bar #ft-progress-box {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 11px;
-  padding: 0;
-  border: none;
-  background: transparent;
-}
-.footer-actions-row {
-  min-height: 36px;
+  padding-bottom: 48px;
 }
 .cli-workspace {
   flex: 1 1 auto;
@@ -2849,7 +2862,7 @@ html[data-theme="light"] .filter-drawer,
 html[data-theme="light"] .ft-drawer,
 html[data-theme="light"] .results-column,
 html[data-theme="light"] .preview-column,
-html[data-theme="light"] .sc-footer-dock {
+html[data-theme="light"] .sc-status-bar {
   background: var(--bg-surface);
   border-color: var(--border-subtle);
 }
@@ -2888,14 +2901,9 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
   .filter-drawer.collapsed .filter-drawer-body {
     max-height: 0;
   }
-  .sc-footer-dock {
-    grid-template-columns: 1fr;
-    row-gap: 6px;
-  }
-  .sc-footer-dock .dock-center { text-align: left; }
-  .sc-footer-dock .dock-right {
+  .sc-status-bar {
     flex-wrap: wrap;
-    justify-content: flex-start;
+    row-gap: 6px;
   }
 }
 @media (max-width: 1320px) and (min-width: 961px) {
@@ -2996,17 +3004,19 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
   <div id="layout" class="sc-list-layout">
     <div id="results-card" class="card results-column">
       <div id="results-head" class="results-head-compact">
-        <div class="results-head-row">
-          <div class="head-title">本地结果</div>
-          <div class="head-sub" id="result-count">0 条</div>
-        </div>
         <div id="results-local-filters" class="results-local-filters">
-          <div id="head-filters">
-            <div id="filters"></div>
-            <div id="subtag-panel" class="hidden">
-              <div id="subtag-modes"></div>
-              <div id="subtags"></div>
-              <div id="subtag-desc"></div>
+          <div class="results-head-row">
+            <div id="filters" class="results-filter-chips"></div>
+            <div class="head-sub" id="result-count">0 条</div>
+            <button type="button" id="btn-results-more-toggle" class="btn ghost" aria-expanded="false" title="展开子标签与高级筛选">更多<span class="chev">▶</span></button>
+          </div>
+          <div id="results-more-panel" class="results-more-panel collapsed">
+            <div id="head-filters">
+              <div id="subtag-panel" class="hidden">
+                <div id="subtag-modes"></div>
+                <div id="subtags"></div>
+                <div id="subtag-desc"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -3068,37 +3078,32 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
   </main>
 
   <footer id="footer" class="sc-footer-stack sc-page-column">
-    <div id="footer-ft-bar" class="footer-ft-bar" aria-label="全文索引">
-      <button id="btn-ft-toggle" class="ft-control-btn" type="button" title="启动或停止全文索引">启动索引</button>
-      <span class="dock-status-dot" id="ft-summary-dot"></span>
-      <span id="ft-state-box" class="ft-metric-box ft-state-box" title="索引状态">状态: 准备中</span>
-      <span id="ft-progress-box" class="ft-metric-box" title="索引进度">进度: 0/0</span>
-      <span id="ft-queue-box" class="ft-metric-box ft-verbose">队列: 0/0</span>
-      <span id="ft-indexed-box" class="ft-metric-box ft-verbose">数量: 0</span>
-      <span id="ft-incremental-box" class="ft-metric-box ft-verbose ft-incremental-box">增量: -</span>
-      <span id="ft-speed-box" class="ft-metric-box ft-verbose">速度: -</span>
-      <span id="ft-current-box" class="ft-metric-box ft-verbose ft-current-box">当前: -</span>
-      <span id="ft-version-box" class="ft-metric-box ft-verbose">版本: -</span>
-      <span id="ft-quick-hint" class="ft-metric-box ft-hint-box">说明: -</span>
+    <div id="sc-status-bar" class="sc-status-bar" aria-label="状态栏">
+      <button id="btn-ft-toggle" class="sc-status-btn sc-status-btn-ft" type="button" title="启动全文索引" aria-label="全文索引">▶</button>
+      <span class="dock-status-dot" id="ft-summary-dot" title="全文索引状态"></span>
+      <button type="button" id="btn-ft-open-console" class="sc-status-btn" title="打开全文索引控制台" aria-label="索引控制台">⚙</button>
+      <span class="sc-status-spacer"></span>
+      <span class="dock-status-dot" id="dock-sync-dot" title="搜索状态"></span>
+      <button type="button" id="btn-sc-recycle" class="sc-status-btn" title="搜索中心回收站" aria-label="搜索回收站">🗑<span class="recycle-badge muted" id="recycle-badge">0</span></button>
+      <button type="button" id="btn-win-recycle-sc" class="sc-status-btn" title="打开系统回收站" aria-label="系统回收站">♻</button>
+    </div>
+    <div class="sc-status-metrics-hidden" aria-hidden="true">
+      <span id="ft-state-box" class="ft-state-box">状态: 准备中</span>
+      <span id="ft-progress-box">进度: 0/0</span>
+      <span id="ft-queue-box">队列: 0/0</span>
+      <span id="ft-indexed-box">数量: 0</span>
+      <span id="ft-incremental-box" class="ft-incremental-box">增量: -</span>
+      <span id="ft-speed-box">速度: -</span>
+      <span id="ft-current-box" class="ft-current-box">当前: -</span>
+      <span id="ft-version-box">版本: -</span>
+      <span id="ft-quick-hint">说明: -</span>
       <span class="ft-light-pack hidden">
         <span class="ft-mini-light" id="ftl1"></span>
         <span class="ft-mini-light" id="ftl2"></span>
         <span class="ft-mini-light" id="ftl3"></span>
         <span class="ft-mini-light" id="ftl4"></span>
       </span>
-      <button type="button" id="btn-ft-open-console" class="ft-control-btn secondary" title="打开全文索引控制台">控制台</button>
-    </div>
-    <div class="sc-footer-dock footer-actions-row">
-      <div class="dock-left">
-        <span class="dock-status-dot" id="dock-sync-dot"></span>
-        <span id="status">准备中...</span>
-      </div>
-      <div class="dock-right">
-        <div class="footer-inline-btns">
-          <button type="button" id="btn-sc-recycle" class="btn ghost">搜索回收站<span class="recycle-badge muted" id="recycle-badge">0</span></button>
-          <button type="button" id="btn-win-recycle-sc" class="btn ghost">系统回收站</button>
-        </div>
-      </div>
+      <span id="status">准备中...</span>
     </div>
   </footer>
 
@@ -3169,6 +3174,7 @@ const COMPOSE_ACTION_LABELS = Object.freeze({
 });
 const SC_FT_COLLAPSED_KEY = "sc_ft_collapsed_v1";
 const SC_FILTER_COLLAPSED_KEY = "sc_filter_collapsed_v2";
+const SC_RESULTS_MORE_COLLAPSED_KEY = "sc_results_more_collapsed_v1";
 const SC_UI_MODE_KEY = "sc_ui_mode_v1";
 const SC_ACTIVE_CLI_ENGINE_KEY = "sc_active_cli_engine_v1";
 const SC_NOVICE_SORT_PREF_KEY = "sc_novice_sort_pref_v1";
@@ -4995,16 +5001,101 @@ function initFilterDrawer() {
   });
 }
 
+function getResultsMoreCollapsedPref() {
+  try {
+    let v = localStorage.getItem(SC_RESULTS_MORE_COLLAPSED_KEY);
+    if (v == null) v = localStorage.getItem("sc_results_filters_collapsed_v1");
+    if (v === "1") return true;
+    if (v === "0") return false;
+  } catch (_) {}
+  return true;
+}
+
+function syncResultsMoreUi() {
+  const panel = document.getElementById("results-more-panel");
+  const btn = document.getElementById("btn-results-more-toggle");
+  if (!panel || !btn) return;
+  const collapsed = panel.classList.contains("collapsed");
+  const chev = btn.querySelector(".chev");
+  btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  btn.title = collapsed ? "展开子标签与高级筛选" : "收起子标签与高级筛选";
+  if (chev) chev.textContent = collapsed ? "▶" : "▼";
+}
+
+function setResultsMoreCollapsed(collapsed, persist) {
+  const panel = document.getElementById("results-more-panel");
+  if (!panel) return;
+  panel.classList.toggle("collapsed", !!collapsed);
+  if (persist) {
+    try { localStorage.setItem(SC_RESULTS_MORE_COLLAPSED_KEY, collapsed ? "1" : "0"); } catch (_) {}
+  }
+  syncResultsMoreUi();
+}
+
+function initResultsMoreCollapse() {
+  const btn = document.getElementById("btn-results-more-toggle");
+  const panel = document.getElementById("results-more-panel");
+  if (!btn || !panel) return;
+  setResultsMoreCollapsed(getResultsMoreCollapsedPref(), false);
+  btn.addEventListener("click", () => {
+    setResultsMoreCollapsed(!panel.classList.contains("collapsed"), true);
+  });
+}
+
+function buildDockStatusTooltip() {
+  if (state.statusLine) return String(state.statusLine);
+  const n = Array.isArray(state.results) ? state.results.length : 0;
+  if (state.clipboardHomeLock || String(state.filterType || "") === "clipboard") {
+    return n > 0 ? ("剪贴板时间线 · " + n + " 条") : "剪贴板时间线";
+  }
+  const eng = Array.isArray(state.selectedEngines) ? state.selectedEngines.length : 0;
+  const limit = state.limit || 30;
+  return "本地结果 " + n + " 条 · 已选引擎 " + eng + " 个 · 当前限制 " + limit;
+}
+
+function buildFtSummaryTooltip() {
+  const parts = [];
+  const stateBox = document.getElementById("ft-state-box");
+  const progressBox = document.getElementById("ft-progress-box");
+  const queueBox = document.getElementById("ft-queue-box");
+  const indexedBox = document.getElementById("ft-indexed-box");
+  const hintEl = document.getElementById("ft-quick-hint");
+  if (stateBox && stateBox.textContent) parts.push(String(stateBox.textContent).trim());
+  if (progressBox && progressBox.textContent) parts.push(String(progressBox.textContent).trim());
+  if (queueBox && queueBox.textContent) parts.push(String(queueBox.textContent).trim());
+  if (indexedBox && indexedBox.textContent) parts.push(String(indexedBox.textContent).trim());
+  if (hintEl && hintEl.title) parts.push(String(hintEl.title).trim());
+  else if (hintEl && hintEl.textContent) parts.push(String(hintEl.textContent).replace(/^说明:\s*/, "").trim());
+  return parts.filter(Boolean).join("\n") || "全文索引";
+}
+
+function syncStatusBarUi() {
+  const tip = buildDockStatusTooltip();
+  const dockDot = document.getElementById("dock-sync-dot");
+  if (dockDot) dockDot.title = tip;
+  const status = document.getElementById("status");
+  if (status) status.textContent = tip;
+  const ftDot = document.getElementById("ft-summary-dot");
+  if (ftDot) ftDot.title = buildFtSummaryTooltip();
+  const recycleBtn = document.getElementById("btn-sc-recycle");
+  if (recycleBtn) {
+    const n = Number(state.recycleCount) || 0;
+    recycleBtn.title = n > 0 ? ("搜索中心回收站（" + n + " 条）") : "搜索中心回收站";
+  }
+  const winRecycle = document.getElementById("btn-win-recycle-sc");
+  if (winRecycle) winRecycle.title = "打开 Windows 系统回收站";
+  syncFtDrawerSummary();
+}
+
 function syncFtDrawerSummary() {
   const dot = document.getElementById("ft-summary-dot");
-  const stateBox = document.getElementById("ft-state-box");
-  const raw = stateBox ? String(stateBox.textContent || "") : "";
   if (dot) {
     dot.classList.remove("active", "ready", "warn");
     const ft = state.fulltext || {};
     if (ft.running && !ft.ready) dot.classList.add("active");
     else if (ft.ready) dot.classList.add("ready");
     else if (ft.lastError) dot.classList.add("warn");
+    dot.title = buildFtSummaryTooltip();
   }
 }
 
@@ -5423,7 +5514,7 @@ function applyFulltextStatus(payload) {
   const phaseRaw = String(state.fulltext.scanPhase || "").toLowerCase();
   const hasCurrentIndexingFile = !!extractIndexerPath(state.fulltext.indexing_file || "");
   const indexingActive = !!state.fulltext.running && phaseRaw === "indexing" && hasCurrentIndexingFile;
-  const lightPackEl = document.querySelector("#footer-ft-bar .ft-light-pack");
+  const lightPackEl = document.querySelector(".sc-status-metrics-hidden .ft-light-pack");
   if (lightPackEl) {
     lightPackEl.classList.toggle("hidden", !indexingActive);
   }
@@ -5534,15 +5625,13 @@ function applyFulltextStatus(payload) {
   }
   const toggleBtn = document.getElementById("btn-ft-toggle");
   if (toggleBtn) {
-    if (state.fulltext.running) {
-      toggleBtn.textContent = "停止索引";
-      toggleBtn.title = "点击停止全文索引";
-    } else {
-      toggleBtn.textContent = "启动索引";
-      toggleBtn.title = "点击启动全文索引";
-    }
+    const running = !!state.fulltext.running;
+    toggleBtn.textContent = running ? "■" : "▶";
+    toggleBtn.classList.toggle("running", running);
+    toggleBtn.title = running ? "停止全文索引" : "启动全文索引";
+    toggleBtn.setAttribute("aria-label", toggleBtn.title);
   }
-  syncFtDrawerSummary();
+  syncStatusBarUi();
 }
 
 function requestFulltextStatus(withConfig = false) {
@@ -5766,14 +5855,7 @@ function queueCapsHotkeyTrigger(rawKey, modeScope = "search", targetChannel = "c
 }
 
 function syncDockStatusText() {
-  const status = document.getElementById("status");
-  if (!status) return;
-  if (state.clipboardHomeLock || String(state.filterType || "") === "clipboard") {
-    const n = Array.isArray(state.results) ? state.results.length : 0;
-    status.textContent = n > 0 ? ("剪贴板时间线 · " + n + " 条") : "剪贴板时间线";
-    return;
-  }
-  status.textContent = state.statusLine || "已同步";
+  syncStatusBarUi();
 }
 
 function applyUnifiedMode(mode) {
@@ -6370,6 +6452,7 @@ function renderSubtagPanel() {
   const modesWrap = document.getElementById("subtag-modes");
   const tagsWrap = document.getElementById("subtags");
   const descEl = document.getElementById("subtag-desc");
+  const moreBtn = document.getElementById("btn-results-more-toggle");
   if (!panel || !modesWrap || !tagsWrap || !descEl) return;
 
   const filterKey = resolveFilterKey();
@@ -6379,9 +6462,11 @@ function renderSubtagPanel() {
     modesWrap.innerHTML = "";
     tagsWrap.innerHTML = "";
     descEl.textContent = "";
+    if (moreBtn) moreBtn.classList.add("hidden");
     return;
   }
 
+  if (moreBtn) moreBtn.classList.remove("hidden");
   panel.classList.remove("hidden");
   const audience = state.subtagAudience === "geek" ? "geek" : "newbie";
   modesWrap.innerHTML = "";
@@ -8303,6 +8388,10 @@ function syncRecycleBadge() {
   const n = Number(state.recycleCount) || 0;
   badge.textContent = String(n);
   badge.classList.toggle("muted", n < 1);
+  const recycleBtn = document.getElementById("btn-sc-recycle");
+  if (recycleBtn) {
+    recycleBtn.title = n > 0 ? ("搜索中心回收站（" + n + " 条）") : "搜索中心回收站";
+  }
 }
 
 function renderRecycleModalList() {
@@ -8781,6 +8870,7 @@ if (chromeTopMostBtn) {
 updateChromeTopMostButton();
 syncFulltextSchemeUi();
 initFilterDrawer();
+initResultsMoreCollapse();
 initCliTerminalControls();
 initSearchWrapperFocus();
 document.querySelectorAll(".sc-compose-hint[data-compose-action]").forEach((el) => {
