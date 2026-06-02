@@ -102,7 +102,15 @@ body.mobile-browser-open #stage{transition:transform var(--ease)}
 .m{width:fit-content;max-width:min(92%,100%);border-radius:calc(14px * var(--ui));border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.04);overflow:hidden;align-self:flex-start;flex-shrink:0;min-height:min-content}
 .m.user{align-self:flex-end;background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.22)}
 .mh{display:flex;justify-content:space-between;gap:calc(12px * var(--ui));padding:calc(8px * var(--ui)) calc(12px * var(--ui)) calc(6px * var(--ui));font-size:calc(11px * var(--ui));color:var(--muted);border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
-.mb{padding:calc(10px * var(--ui)) calc(12px * var(--ui)) calc(12px * var(--ui));line-height:1.7;font-size:calc(13px * var(--ui));color:var(--text);user-select:text;-webkit-user-select:text;overflow-wrap:anywhere;word-break:break-word;min-width:0;min-height:min-content}
+.mb{padding:calc(10px * var(--ui)) calc(12px * var(--ui)) calc(8px * var(--ui));line-height:1.7;font-size:calc(13px * var(--ui));color:var(--text);user-select:text;-webkit-user-select:text;overflow-wrap:anywhere;word-break:break-word;min-width:0;min-height:min-content}
+.m-actions{display:flex;flex-wrap:wrap;align-items:center;gap:calc(4px * var(--ui));padding:0 calc(10px * var(--ui)) calc(10px * var(--ui))}
+.m.user .m-actions{display:none}
+.m-act-btn{height:calc(26px * var(--ui));padding:0 calc(9px * var(--ui));border-radius:calc(7px * var(--ui));border:1px solid rgba(255,102,0,.22);background:rgba(255,255,255,.04);color:var(--muted);font-size:calc(10px * var(--ui));font-weight:600;cursor:pointer;line-height:1;transition:background var(--ease),border-color var(--ease),color var(--ease)}
+.m-act-btn:hover{color:var(--text);border-color:rgba(255,102,0,.48);background:rgba(255,102,0,.12)}
+.m-act-btn.is-active{color:#ffb347;border-color:rgba(255,102,0,.55);background:rgba(255,102,0,.16)}
+.m-act-btn.m-act-danger:hover{border-color:rgba(255,90,60,.5);color:#ff9b7a;background:rgba(220,60,40,.12)}
+body[data-theme="light"] .m-act-btn{border-color:#E5E5E5;background:#FAFAFA;color:#666}
+body[data-theme="light"] .m-act-btn:hover{border-color:#D35400;color:#D35400;background:#FFF3E8}
 .m .mb a{color:#ffb380}
 .m.search-hit{box-shadow:0 0 0 1px rgba(255,132,64,.75),0 0 0 3px rgba(255,102,0,.16)}
 .mb pre{margin-top:calc(10px * var(--ui));border:1px solid rgba(255,102,0,.14);border-radius:calc(12px * var(--ui));background:rgba(8,8,8,.95);overflow:auto}
@@ -887,6 +895,22 @@ body[data-theme="light"] .cli-shell{border-color:#E5E5E5;background:#FFFFFF}
 body[data-theme="light"] .cli-bar{border-color:#E5E5E5;background:#FFFFFF}
 body[data-theme="light"] .cli-frame{background:#FFFFFF}
 body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0,0,.12)}
+.niuma-confirm{position:fixed;inset:0;z-index:10060;display:none;align-items:center;justify-content:center;padding:calc(16px * var(--ui))}
+.niuma-confirm.open{display:flex}
+.niuma-confirm-bg{position:absolute;inset:0;background:rgba(0,0,0,.52);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.niuma-confirm-panel{position:relative;z-index:1;width:min(420px,calc(100vw - 32px));background:var(--panel2);border:1px solid rgba(255,102,0,.32);border-radius:calc(16px * var(--ui));box-shadow:0 16px 48px rgba(0,0,0,.5),0 0 0 1px rgba(255,102,0,.08) inset;padding:calc(18px * var(--ui)) calc(18px * var(--ui)) calc(14px * var(--ui));display:flex;flex-direction:column;gap:calc(12px * var(--ui))}
+.niuma-confirm-title{font-size:calc(15px * var(--ui));font-weight:700;line-height:1.45;color:var(--text)}
+.niuma-confirm-body{font-size:calc(13px * var(--ui));line-height:1.6;color:var(--muted)}
+.niuma-confirm-body:empty,.niuma-confirm-body[hidden]{display:none}
+.niuma-confirm-foot{display:flex;justify-content:flex-end;gap:calc(8px * var(--ui));margin-top:calc(4px * var(--ui))}
+.niuma-confirm-foot .btn2,.niuma-confirm-foot .btn3{min-width:calc(88px * var(--ui));height:calc(36px * var(--ui))}
+.niuma-confirm-foot .btn3.niuma-confirm-primary{background:rgba(255,102,0,.16);border-color:rgba(255,102,0,.5);color:#ffb347}
+.niuma-confirm-foot .btn3.niuma-confirm-primary:hover{background:rgba(255,102,0,.26)}
+.niuma-confirm-foot .btn3.niuma-confirm-danger{background:rgba(220,60,40,.14);border-color:rgba(255,90,60,.45);color:#ff9b7a}
+.niuma-confirm-foot .btn3.niuma-confirm-danger:hover{background:rgba(220,60,40,.24)}
+body[data-theme="light"] .niuma-confirm-panel{background:#FFFFFF;border-color:#E5E5E5;box-shadow:0 12px 32px rgba(0,0,0,.12)}
+body[data-theme="light"] .niuma-confirm-foot .btn3.niuma-confirm-danger{color:#c0392b;border-color:rgba(192,57,43,.35);background:rgba(192,57,43,.08)}
+body.niuma-confirm-open{overflow:hidden}
 </style>
 </head>
 <body>
@@ -1029,7 +1053,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </div>
 <div class="node-config-actions" style="margin-top:8px">
 <button type="button" class="btn2" id="nodeConfigClear">清空会话记忆</button>
-<button type="button" class="btn2" id="nodeConfigRemove">移除此联系人</button>
+<button type="button" class="btn2" id="nodeConfigRemove">从侧栏移除</button>
 </div>
 <div class="hint mini" id="nodeConfigHint">Ctrl+Enter 或点「保存并连接」完成配置；左侧 ⚙️ 随时打开此面板。</div>
 </div>
@@ -1249,6 +1273,17 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
 </aside>
 </div>
 </div>
+</div>
+<div id="niumaConfirm" class="niuma-confirm" hidden aria-hidden="true">
+<div class="niuma-confirm-bg" id="niumaConfirmBg" tabindex="-1"></div>
+<section class="niuma-confirm-panel" role="alertdialog" aria-modal="true" aria-labelledby="niumaConfirmTitle" aria-describedby="niumaConfirmBody">
+<div class="niuma-confirm-title" id="niumaConfirmTitle"></div>
+<div class="niuma-confirm-body" id="niumaConfirmBody" hidden></div>
+<footer class="niuma-confirm-foot">
+<button type="button" class="btn2" id="niumaConfirmCancel">取消</button>
+<button type="button" class="btn3 niuma-confirm-primary" id="niumaConfirmOk">确定</button>
+</footer>
+</section>
 </div>
 <script>
 (function () {
@@ -2497,6 +2532,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   window.runPaletteAiStream = runPaletteAiStream;
   window.paletteSyncAnswerForReq = paletteSyncAnswerForReq;
   window.exportPaletteLlmForProvider = exportPaletteLlmForProvider;
+  window.niumaProviderIconUrlList = providerIconUrlList;
   window.__niumaPaletteExportApiKeys = function () {
     try {
       return state.apiKeys || {};
@@ -4599,12 +4635,113 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     return (isCliSession(s) ? 'ttyd' : shortModel(s.model)) + ' · ' + cnt + ' 条消息';
   }
 
-  function confirmNiuma(message, detail) {
-    try {
-      return window.confirm(detail ? String(message) + '\n\n' + String(detail) : String(message));
-    } catch (e) {
-      return false;
+  var niumaConfirmActive = null;
+
+  function confirmNiuma(message, detail, opts) {
+    opts = opts || {};
+    var root = $('niumaConfirm');
+    if (!root) {
+      try {
+        return Promise.resolve(
+          !!window.confirm(detail ? String(message) + '\n\n' + String(detail) : String(message))
+        );
+      } catch (e) {
+        return Promise.resolve(false);
+      }
     }
+    if (niumaConfirmActive) {
+      try {
+        niumaConfirmActive(false);
+      } catch (_) {}
+      niumaConfirmActive = null;
+    }
+    return new Promise(function (resolve) {
+      var titleEl = $('niumaConfirmTitle');
+      var bodyEl = $('niumaConfirmBody');
+      var okBtn = $('niumaConfirmOk');
+      var cancelBtn = $('niumaConfirmCancel');
+      var bg = $('niumaConfirmBg');
+      var panel = root.querySelector('.niuma-confirm-panel');
+      if (titleEl) titleEl.textContent = String(message || '');
+      if (bodyEl) {
+        var d = detail != null && String(detail).trim() !== '' ? String(detail) : '';
+        if (d) {
+          bodyEl.textContent = d;
+          bodyEl.hidden = false;
+        } else {
+          bodyEl.textContent = '';
+          bodyEl.hidden = true;
+        }
+      }
+      if (okBtn) {
+        okBtn.textContent = opts.okLabel || '确定';
+        okBtn.classList.remove('niuma-confirm-primary', 'niuma-confirm-danger');
+        okBtn.classList.add(opts.danger ? 'niuma-confirm-danger' : 'niuma-confirm-primary');
+      }
+      if (cancelBtn) cancelBtn.textContent = opts.cancelLabel || '取消';
+
+      function finish(val) {
+        if (niumaConfirmActive !== finish) return;
+        niumaConfirmActive = null;
+        root.classList.remove('open');
+        root.hidden = true;
+        root.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('niuma-confirm-open');
+        if (okBtn) okBtn.removeEventListener('click', onOk);
+        if (cancelBtn) cancelBtn.removeEventListener('click', onCancel);
+        if (bg) bg.removeEventListener('click', onCancel);
+        document.removeEventListener('keydown', onKey, true);
+        resolve(!!val);
+      }
+      function onOk(e) {
+        if (e) e.stopPropagation();
+        finish(true);
+      }
+      function onCancel(e) {
+        if (e) e.stopPropagation();
+        finish(false);
+      }
+      function onKey(e) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          onCancel();
+        } else if (e.key === 'Enter' && document.activeElement !== cancelBtn) {
+          e.preventDefault();
+          onOk();
+        }
+      }
+
+      niumaConfirmActive = finish;
+      root.hidden = false;
+      root.setAttribute('aria-hidden', 'false');
+      root.classList.add('open');
+      document.body.classList.add('niuma-confirm-open');
+      if (okBtn) okBtn.addEventListener('click', onOk);
+      if (cancelBtn) cancelBtn.addEventListener('click', onCancel);
+      if (bg) bg.addEventListener('click', onCancel);
+      document.addEventListener('keydown', onKey, true);
+      try {
+        (opts.danger ? okBtn : cancelBtn).focus();
+      } catch (_) {
+        if (panel) panel.focus();
+      }
+    });
+  }
+
+  function formatRemoveNodeDetail(grp) {
+    if (!grp || !grp.sessions || !grp.sessions.length) return '此操作不可恢复。';
+    var sessions = grp.sessions.length;
+    var totalMsgs = 0;
+    grp.sessions.forEach(function (s) {
+      totalMsgs += Array.isArray(s.history) ? s.history.length : 0;
+    });
+    if (sessions <= 1) {
+      if (totalMsgs <= 0) return '将删除该侧栏会话（无消息），且不可恢复。';
+      return '将删除 ' + totalMsgs + ' 条消息，且不可恢复。';
+    }
+    var tail = totalMsgs > 0 ? '与 ' + totalMsgs + ' 条消息' : '';
+    return '将删除 ' + sessions + ' 个话题' + tail + '，且不可恢复。';
   }
 
   function findEmptyThreadInNode(nodeKey) {
@@ -4623,37 +4760,36 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var nk = nodeKeyForSession(s);
     var grp = findNodeGroup(nk);
     if (!grp || grp.sessions.length <= 1) {
-      cstat('每个联系人至少保留一个话题。', 'error');
+      cstat('每个侧栏会话至少保留一个话题。', 'error');
       return;
     }
     var cnt = Array.isArray(s.history) ? s.history.length : 0;
-    if (
-      !confirmNiuma(
-        '确定关闭话题「' + threadTitleForSession(s) + '」？',
-        cnt > 0 ? '将删除 ' + cnt + ' 条聊天记录，且不可恢复。' : '该话题为空，关闭后不可恢复。'
-      )
-    )
-      return;
-    removeSession(sessionId);
-    appendAudit({ nodeKey: nk, level: 'warn', message: '已关闭话题' });
+    var detail =
+      cnt > 0 ? '将删除 ' + cnt + ' 条消息，且不可恢复。' : '该话题尚无消息，关闭后不可恢复。';
+    confirmNiuma('确定关闭话题「' + threadTitleForSession(s) + '」？', detail, {
+      danger: true,
+      okLabel: '关闭话题'
+    }).then(function (ok) {
+      if (!ok) return;
+      removeSession(sessionId);
+      appendAudit({ nodeKey: nk, level: 'warn', message: '已关闭话题' });
+    });
   }
 
   function requestRemoveNode(nodeKey) {
     var grp = findNodeGroup(nodeKey);
     if (!grp || !grp.sessions.length) return;
     if (grp.sessions.length >= state.sessions.length) {
-      cstat('至少保留一个联系人。', 'error');
+      cstat('侧栏至少保留一个会话。', 'error');
       return;
     }
-    var totalMsgs = 0;
-    grp.sessions.forEach(function (s) {
-      totalMsgs += Array.isArray(s.history) ? s.history.length : 0;
+    confirmNiuma('确定从侧栏移除「' + nodeLabel(nodeKey) + '」？', formatRemoveNodeDetail(grp), {
+      danger: true,
+      okLabel: '移除'
+    }).then(function (ok) {
+      if (!ok) return;
+      removeNode(nodeKey);
     });
-    var detail = '将删除 ' + grp.sessions.length + ' 个话题';
-    if (totalMsgs > 0) detail += '与 ' + totalMsgs + ' 条聊天记录';
-    detail += '，且不可恢复。';
-    if (!confirmNiuma('确定移除联系人「' + nodeLabel(nodeKey) + '」？', detail)) return;
-    removeNode(nodeKey);
   }
 
   function shouldShowOllamaBanner() {
@@ -6903,8 +7039,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       rm.type = 'button';
       rm.className = 'agent-avatar-remove';
       rm.setAttribute('data-remove-node', nk);
-      rm.setAttribute('title', '移除联系人');
-      rm.setAttribute('aria-label', '移除联系人');
+      rm.setAttribute('title', '从侧栏移除');
+      rm.setAttribute('aria-label', '从侧栏移除');
       rm.textContent = '×';
       wrap.appendChild(btn);
       wrap.appendChild(rm);
@@ -7709,7 +7845,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     var grp = findNodeGroup(nodeKey);
     if (!grp || !grp.sessions.length) return;
     if (grp.sessions.length >= state.sessions.length) {
-      cstat('至少保留一个联系人。', 'error');
+      cstat('侧栏至少保留一个会话。', 'error');
       return;
     }
     var cur = activeSession();
@@ -7733,8 +7869,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     rebuildMsgList();
     renderContactNav();
     updateNeedSetup();
-    appendAudit({ nodeKey: nodeKey, level: 'warn', message: '已移除联系人' });
-    cstat('已移除联系人。', 'success');
+    appendAudit({ nodeKey: nodeKey, level: 'warn', message: '已从侧栏移除会话' });
+    cstat('已从侧栏移除。', 'success');
   }
 
   function createThreadInNode(nodeKey) {
@@ -7816,34 +7952,236 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     refreshOllamaSetupBanner();
   }
 
-  function appendMessageDom(role, content, ts, msgId) {
+  var niumaTtsMsgId = '';
+
+  function buildMessageActionsHtml(msgId, opts) {
+    opts = opts || {};
+    if (!msgId || opts.isDraft) return '';
+    return (
+      '<div class="m-actions" role="toolbar" aria-label="消息操作">' +
+      '<button type="button" class="m-act-btn" data-m-act="copy" data-msg-id="' +
+      esc(msgId) +
+      '" title="复制正文">复制</button>' +
+      '<button type="button" class="m-act-btn m-act-danger" data-m-act="regen" data-msg-id="' +
+      esc(msgId) +
+      '" title="删除此回复并重新生成">重答</button>' +
+      '<button type="button" class="m-act-btn" data-m-act="tts" data-msg-id="' +
+      esc(msgId) +
+      '" title="语音朗读">朗读</button>' +
+      '<button type="button" class="m-act-btn" data-m-act="export-md" data-msg-id="' +
+      esc(msgId) +
+      '" title="导出为 Markdown">MD</button>' +
+      '<button type="button" class="m-act-btn" data-m-act="export-txt" data-msg-id="' +
+      esc(msgId) +
+      '" title="导出为纯文本">TXT</button>' +
+      '<button type="button" class="m-act-btn" data-m-act="share" data-msg-id="' +
+      esc(msgId) +
+      '" title="系统分享或复制">分享</button>' +
+      '</div>'
+    );
+  }
+
+  function historyItemByMsgId(msgId, sessionOpt) {
+    var s = sessionOpt || activeSession();
+    if (!s || !msgId || !Array.isArray(s.history)) return null;
+    for (var i = 0; i < s.history.length; i++) {
+      if (s.history[i] && s.history[i]._id === msgId) return s.history[i];
+    }
+    return null;
+  }
+
+  function messagePlainText(msgId, sessionOpt) {
+    var item = historyItemByMsgId(msgId, sessionOpt);
+    if (!item) return '';
+    var raw = item.content != null ? String(item.content) : '';
+    if (!raw.trim() && item.role === 'assistant') raw = ocExtractMessageContentForHistory(item);
+    return raw.trim();
+  }
+
+  function copyMessageById(msgId) {
+    var text = messagePlainText(msgId);
+    if (!text) {
+      cstat('没有可复制的内容。', 'error');
+      return;
+    }
+    if (copyTextToClipboard(text)) cstat('已复制到剪贴板。', 'success');
+    else cstat('复制失败，请手动选择正文复制。', 'error');
+  }
+
+  function stopNiumaTts() {
+    niumaTtsMsgId = '';
+    try {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    } catch (_) {}
+    msgs.querySelectorAll('.m-act-btn[data-m-act="tts"].is-active').forEach(function (b) {
+      b.classList.remove('is-active');
+      b.textContent = '朗读';
+    });
+  }
+
+  function toggleSpeakMessage(msgId) {
+    var text = messagePlainText(msgId);
+    if (!text) {
+      cstat('没有可朗读的内容。', 'error');
+      return;
+    }
+    if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+      cstat('当前环境不支持语音朗读。', 'error');
+      return;
+    }
+    var btn = msgs.querySelector('.m-act-btn[data-m-act="tts"][data-msg-id="' + msgId + '"]');
+    if (niumaTtsMsgId === msgId) {
+      stopNiumaTts();
+      cstat('已停止朗读。', '');
+      return;
+    }
+    stopNiumaTts();
+    niumaTtsMsgId = msgId;
+    if (btn) {
+      btn.classList.add('is-active');
+      btn.textContent = '停止';
+    }
+    var u = new SpeechSynthesisUtterance(text.slice(0, 12000));
+    u.lang = /^[\x00-\x7F]+$/.test(text.slice(0, 80)) ? 'en-US' : 'zh-CN';
+    u.onend = u.onerror = function () {
+      if (niumaTtsMsgId === msgId) stopNiumaTts();
+    };
+    try {
+      window.speechSynthesis.speak(u);
+      cstat('正在朗读…', '');
+    } catch (e) {
+      stopNiumaTts();
+      cstat('朗读失败。', 'error');
+    }
+  }
+
+  function exportSingleMessage(msgId, asMd) {
+    var item = historyItemByMsgId(msgId);
+    var s = activeSession();
+    if (!item || !s) return;
+    var text = messagePlainText(msgId, s);
+    if (!text) {
+      cstat('没有可导出的内容。', 'error');
+      return;
+    }
+    var stamp = '';
+    try {
+      stamp = item.ts ? new Date(item.ts).toISOString().slice(0, 19).replace(/[:T]/g, '-') : '';
+    } catch (_) {}
+    var base = 'niuma-' + (item.role === 'user' ? 'user' : 'assistant') + (stamp ? '-' + stamp : '');
+    if (asMd) {
+      var prov = (P[s.provider] || {}).label || s.provider;
+      var lines = [
+        '# Niuma Chat 单条导出',
+        '',
+        '- 角色: ' + (item.role === 'user' ? '用户' : '助手'),
+        '- 服务商: ' + prov,
+        '- 模型: ' + (s.model || ''),
+        '- 时间: ' + (item.ts || ''),
+        '',
+        '## ' + (item.role === 'user' ? '用户' : '助手'),
+        '',
+        text,
+        ''
+      ];
+      downloadBlob(base + '.md', lines.join('\n'), 'text/markdown;charset=utf-8');
+      cstat('已导出 Markdown。', 'success');
+    } else {
+      downloadBlob(base + '.txt', text, 'text/plain;charset=utf-8');
+      cstat('已导出 TXT。', 'success');
+    }
+  }
+
+  function shareMessageById(msgId) {
+    var item = historyItemByMsgId(msgId);
+    var text = messagePlainText(msgId);
+    if (!text) {
+      cstat('没有可分享的内容。', 'error');
+      return;
+    }
+    var title = 'Niuma Chat · ' + (item && item.role === 'user' ? '用户' : '助手');
+    if (navigator.share) {
+      navigator
+        .share({ title: title, text: text })
+        .then(function () {
+          cstat('已通过系统分享。', 'success');
+        })
+        .catch(function (e) {
+          if (e && e.name === 'AbortError') return;
+          if (copyTextToClipboard(text)) cstat('分享不可用，已复制到剪贴板。', 'success');
+          else cstat('分享失败。', 'error');
+        });
+      return;
+    }
+    if (copyTextToClipboard(text)) cstat('已复制到剪贴板，可粘贴分享。', 'success');
+    else cstat('分享失败，请使用「复制」。', 'error');
+  }
+
+  function regenerateAssistantReply(msgId) {
+    var s = activeSession();
+    if (!s || !msgId) return;
+    if (isCliSession(s)) {
+      cstat('终端模式不支持重答，请在新任务中重新输入。', 'error');
+      return;
+    }
+    if (isSessionSending(s.id)) {
+      cstat('正在生成回复，请稍候再试。', 'error');
+      return;
+    }
+    var idx = -1;
+    for (var i = 0; i < s.history.length; i++) {
+      if (s.history[i] && s.history[i]._id === msgId) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx < 0) return;
+    var item = s.history[idx];
+    if (!item || item.role !== 'assistant') {
+      cstat('仅可对助手回复使用重答。', 'error');
+      return;
+    }
+    if (item._draft) {
+      cstat('回复仍在生成中。', 'error');
+      return;
+    }
+    var userIdx = idx - 1;
+    while (userIdx >= 0 && s.history[userIdx] && s.history[userIdx].role !== 'user') userIdx--;
+    if (userIdx < 0) {
+      cstat('找不到对应的用户提问，无法重答。', 'error');
+      return;
+    }
+    stopNiumaTts();
+    s.history = s.history.slice(0, idx);
+    persistSessions();
+    pushSessionHistoryToStore(s);
+    rebuildMsgList();
+    cstat('正在重新生成回复…', '');
+    executeModelRequest(s.id);
+  }
+
+  function handleMessageActionClick(act, msgId) {
+    if (!act || !msgId) return;
+    if (act === 'copy') copyMessageById(msgId);
+    else if (act === 'regen') regenerateAssistantReply(msgId);
+    else if (act === 'tts') toggleSpeakMessage(msgId);
+    else if (act === 'export-md') exportSingleMessage(msgId, true);
+    else if (act === 'export-txt') exportSingleMessage(msgId, false);
+    else if (act === 'share') shareMessageById(msgId);
+  }
+
+  function appendMessageDom(role, content, ts, msgId, opts) {
+    opts = opts || {};
     var w = document.createElement('article');
     w.className = 'm ' + role;
     if (msgId) w.dataset.msgId = msgId;
-    var title = role === 'user' ? 'User' : 'Assistant';
-    var timeStr = ts
-      ? (function () {
-          try {
-            return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          } catch (e) {
-            return '';
-          }
-        })()
-      : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    var bodyHtml = chatMessageBodyHtml(content);
-    w.innerHTML =
-      '<div class="mh"><span>' +
-      title +
-      '</span><span>' +
-      timeStr +
-      '</span></div><div class="mb">' +
-      bodyHtml +
-      '</div>';
+    renderMessageNode(w, role, content, ts, { msgId: msgId, isDraft: !!opts.isDraft });
     msgs.appendChild(w);
   }
 
-  function renderMessageNode(node, role, content, ts) {
+  function renderMessageNode(node, role, content, ts, opts) {
     if (!node) return;
+    opts = opts || {};
     var title = role === 'user' ? 'User' : 'Assistant';
     var timeStr = ts
       ? (function () {
@@ -7855,6 +8193,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
         })()
       : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     var bodyHtml = chatMessageBodyHtml(content);
+    var msgId = opts.msgId || node.dataset.msgId || '';
+    var actionsHtml = role === 'assistant' ? buildMessageActionsHtml(msgId, { isDraft: !!opts.isDraft }) : '';
     node.className = 'm ' + role;
     node.innerHTML =
       '<div class="mh"><span>' +
@@ -7863,7 +8203,8 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       timeStr +
       '</span></div><div class="mb">' +
       bodyHtml +
-      '</div>';
+      '</div>' +
+      actionsHtml;
   }
 
   function genMsgId() {
@@ -7882,7 +8223,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       ts: new Date().toISOString()
     };
     s.history.push(n);
-    appendMessageDom(n.role, n.content, n.ts, n._id);
+    appendMessageDom(n.role, n.content, n.ts, n._id, { isDraft: true });
     emptyState();
     scrollMsgsToLatest();
     return n;
@@ -7901,7 +8242,11 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     if (!found) return false;
     found.content = String(content || '').trim() || found.content || '思考中...';
     var node = msgs.querySelector('article.m[data-msg-id="' + msgId + '"]');
-    if (node && s.id === state.activeSessionId) renderMessageNode(node, found.role, found.content, found.ts);
+    if (node && s.id === state.activeSessionId)
+      renderMessageNode(node, found.role, found.content, found.ts, {
+        msgId: msgId,
+        isDraft: !!found._draft
+      });
     if (persistNow) {
       persistSessions();
       pushSessionHistoryToStore(s);
@@ -17615,6 +17960,178 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
     });
   }
 
+  async function executeModelRequest(sid) {
+    var s = sessionById(sid);
+    if (!s || !s.id) return;
+    if (isSessionSending(sid)) {
+      cstatForSession(sid, '该标签仍在等待上一次响应，请稍候。', 'error');
+      return;
+    }
+    saveCfg(false);
+    if (!state.freeChatMode) {
+      await fetchStudioContextBlocking();
+      ensureStudioContextApplied(true);
+    }
+    var cfg = buildSendCfg();
+    if (!cfg) return;
+    var lastUserText = '';
+    for (var hui = s.history.length - 1; hui >= 0; hui--) {
+      if (s.history[hui] && s.history[hui].role === 'user') {
+        lastUserText = String(s.history[hui].content || '');
+        break;
+      }
+    }
+    if (lastUserText) cfg.userContentForModel = composeUserTextForModel(lastUserText, cfg);
+    if (cfg.provider === 'ollama') {
+      await checkOllamaHealthWithStart({ tryStart: true });
+      cfg.model = resolveOllamaModelForSend(cfg);
+      var sOll = sessionById(sid);
+      if (sOll && cfg.model && String(sOll.model || '').trim() !== cfg.model) {
+        sOll.model = cfg.model;
+        if (model) model.value = cfg.model;
+        persistSessions();
+      }
+    }
+    var p0 = P[cfg.provider] || P.openai;
+
+    function cancelAllPendingHttpOnTimeout(err) {
+      var msg = String((err && err.message) || err || '');
+      if (!/请求超时/i.test(msg)) return false;
+      try {
+        post({ type: 'niuma_llm_http_cancel', reqId: '*' });
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    if (p0.transport === 'cli') {
+      cstatForSession(sid, '终端模式请直接在下方向导输入。', 'error');
+      return;
+    }
+    if (!s.history.length) {
+      cstatForSession(sid, '请先发送一条消息。', 'error');
+      return;
+    }
+    if (!cfg.baseUrl || !cfg.model) {
+      cstatForSession(sid, '请先在设置里填写 Base URL 和 Model。', 'error');
+      setSettings(true);
+      return;
+    }
+    if (p0.transport !== 'openclaw' && cfg.provider !== 'ollama' && !cfg.apiKey) {
+      cstatForSession(sid, '请先在设置里填写 API Key、Base URL 和 Model。', 'error');
+      setSettings(true);
+      return;
+    }
+    if (p0.transport === 'openclaw' && !openClawEndpointFromCfg(cfg).ok) {
+      cstatForSession(sid, 'OpenClaw：请在「Gateway Token」填写 token，或将带 #token= 的完整控制台地址填入 Base URL。', 'error');
+      setSettings(true);
+      return;
+    }
+
+    setSessionSending(sid, true);
+    cstatForSession(sid, '正在请求模型响应...');
+    var streamDraftId = '';
+    var streamHasText = false;
+    try {
+      var p = P[cfg.provider] || P.openai,
+        content = '';
+      if (cfg.provider === 'minimax') content = await reqMinimax(cfg);
+      else if (p.transport === 'anthropic') content = await reqClaude(cfg);
+      else if (p.transport === 'gemini') content = await reqGemini(cfg);
+      else if (p.transport === 'openclaw')
+        content = await reqOpenClaw(cfg, {
+          onProgress: function (textNow) {
+            var sAct = sessionById(sid);
+            if (!sAct) return;
+            var draft = streamDraftId
+              ? { _id: streamDraftId }
+              : ensureAssistantDraft(sAct, String(textNow || '').trim() || '思考中...');
+            if (draft && draft._id) streamDraftId = draft._id;
+            if (streamDraftId) {
+              var shown = String(textNow || '').trim() || '思考中...';
+              streamHasText = !!String(textNow || '').trim();
+              updateHistoryMessageById(sAct, streamDraftId, shown, false);
+              if (state.activeSessionId === sid) scrollMsgsToLatest();
+            }
+          }
+        });
+      else content = await reqOpenAI(cfg);
+      if (streamDraftId) {
+        var sAct2 = sessionById(sid);
+        if (sAct2) {
+          updateHistoryMessageById(sAct2, streamDraftId, content, true);
+          for (var di = sAct2.history.length - 1; di >= 0; di--) {
+            if (sAct2.history[di] && sAct2.history[di]._id === streamDraftId) {
+              sAct2.history[di]._draft = false;
+              break;
+            }
+          }
+          persistSessions();
+          pushSessionHistoryToStore(sAct2);
+          renderSessionTabs();
+          var domNode = msgs.querySelector('article.m[data-msg-id="' + streamDraftId + '"]');
+          if (domNode && state.activeSessionId === sid) {
+            var fin = historyItemByMsgId(streamDraftId, sAct2);
+            renderMessageNode(domNode, 'assistant', fin ? fin.content : content, fin ? fin.ts : '', {
+              msgId: streamDraftId,
+              isDraft: false
+            });
+          }
+        }
+      } else add('assistant', content);
+      appendAudit({ nodeKey: nodeKeyForSession(sessionById(sid)), level: 'success', message: '模型响应完成' });
+      cstatForSession(sid, '响应完成。', 'success');
+      var sOk = sessionById(sid);
+      if (sOk) {
+        sOk.lastError = null;
+        sOk.lastErrorAt = 0;
+        refreshSessionMeta(sOk);
+        renderThreadHub();
+      }
+    } catch (err) {
+      cancelAllPendingHttpOnTimeout(err);
+      if (streamDraftId) {
+        var sErr = sessionById(sid);
+        if (sErr && !streamHasText) removeHistoryMessageById(sErr, streamDraftId, true);
+        else if (sErr && streamHasText) {
+          for (var ei = sErr.history.length - 1; ei >= 0; ei--) {
+            if (sErr.history[ei] && sErr.history[ei]._id === streamDraftId) {
+              sErr.history[ei]._draft = false;
+              break;
+            }
+          }
+          persistSessions();
+          pushSessionHistoryToStore(sErr);
+          renderSessionTabs();
+          var domErr = msgs.querySelector('article.m[data-msg-id="' + streamDraftId + '"]');
+          if (domErr && state.activeSessionId === sid) {
+            var finE = historyItemByMsgId(streamDraftId, sErr);
+            renderMessageNode(domErr, 'assistant', finE ? finE.content : '', finE ? finE.ts : '', {
+              msgId: streamDraftId,
+              isDraft: false
+            });
+          }
+        }
+      }
+      appendAudit({
+        nodeKey: nodeKeyForSession(sessionById(sid)),
+        level: 'error',
+        message: '请求失败：' + (err && err.message ? err.message : '未知错误')
+      });
+      cstatForSession(sid, '请求失败：' + (err && err.message ? err.message : '未知错误'), 'error');
+      var sFail = sessionById(sid);
+      if (sFail) {
+        sFail.lastError = err && err.message ? String(err.message) : '未知错误';
+        sFail.lastErrorAt = Date.now();
+        refreshSessionMeta(sFail);
+        renderThreadHub();
+      }
+    } finally {
+      setSessionSending(sid, false);
+    }
+  }
+
   async function sendChat() {
     var s = activeSession();
     if (!s || !s.id) return;
@@ -17743,91 +18260,7 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
       return;
     }
 
-    setSessionSending(sid, true);
-    cstatForSession(sid, '正在请求模型响应...');
-    var streamDraftId = '';
-    var streamHasText = false;
-    try {
-      var p = P[cfg.provider] || P.openai,
-        content = '';
-      if (cfg.provider === 'minimax') content = await reqMinimax(cfg);
-      else if (p.transport === 'anthropic') content = await reqClaude(cfg);
-      else if (p.transport === 'gemini') content = await reqGemini(cfg);
-      else if (p.transport === 'openclaw')
-        content = await reqOpenClaw(cfg, {
-          onProgress: function (textNow) {
-            var sAct = sessionById(sid);
-            if (!sAct) return;
-            var draft = streamDraftId
-              ? { _id: streamDraftId }
-              : ensureAssistantDraft(sAct, String(textNow || '').trim() || '思考中...');
-            if (draft && draft._id) streamDraftId = draft._id;
-            if (streamDraftId) {
-              var shown = String(textNow || '').trim() || '思考中...';
-              streamHasText = !!String(textNow || '').trim();
-              updateHistoryMessageById(sAct, streamDraftId, shown, false);
-              if (state.activeSessionId === sid) scrollMsgsToLatest();
-            }
-          }
-        });
-      else content = await reqOpenAI(cfg);
-      if (streamDraftId) {
-        var sAct2 = sessionById(sid);
-        if (sAct2) {
-          updateHistoryMessageById(sAct2, streamDraftId, content, true);
-          for (var di = sAct2.history.length - 1; di >= 0; di--) {
-            if (sAct2.history[di] && sAct2.history[di]._id === streamDraftId) {
-              sAct2.history[di]._draft = false;
-              break;
-            }
-          }
-          persistSessions();
-          pushSessionHistoryToStore(sAct2);
-          renderSessionTabs();
-        }
-      } else add('assistant', content);
-      appendAudit({ nodeKey: nodeKeyForSession(sessionById(sid)), level: 'success', message: '模型响应完成' });
-      cstatForSession(sid, '响应完成。', 'success');
-      var sOk = sessionById(sid);
-      if (sOk) {
-        sOk.lastError = null;
-        sOk.lastErrorAt = 0;
-        refreshSessionMeta(sOk);
-        renderThreadHub();
-      }
-    } catch (err) {
-      cancelAllPendingHttpOnTimeout(err);
-      if (streamDraftId) {
-        var sErr = sessionById(sid);
-        if (sErr && !streamHasText) removeHistoryMessageById(sErr, streamDraftId, true);
-        else if (sErr && streamHasText) {
-          for (var ei = sErr.history.length - 1; ei >= 0; ei--) {
-            if (sErr.history[ei] && sErr.history[ei]._id === streamDraftId) {
-              sErr.history[ei]._draft = false;
-              break;
-            }
-          }
-          persistSessions();
-          pushSessionHistoryToStore(sErr);
-          renderSessionTabs();
-        }
-      }
-      appendAudit({
-        nodeKey: nodeKeyForSession(sessionById(sid)),
-        level: 'error',
-        message: '请求失败：' + (err && err.message ? err.message : '未知错误')
-      });
-      cstatForSession(sid, '请求失败：' + (err && err.message ? err.message : '未知错误'), 'error');
-      var sFail = sessionById(sid);
-      if (sFail) {
-        sFail.lastError = err && err.message ? String(err.message) : '未知错误';
-        sFail.lastErrorAt = Date.now();
-        refreshSessionMeta(sFail);
-        renderThreadHub();
-      }
-    } finally {
-      setSessionSending(sid, false);
-    }
+    await executeModelRequest(sid);
   }
 
   var suppressClickUntil = 0;
@@ -17901,6 +18334,13 @@ body[data-theme="light"] .sbg,body[data-theme="light"] .nsbg{background:rgba(0,0
   }
   if (msgs) {
     msgs.addEventListener('click', function (e) {
+      var actBtn = e.target && e.target.closest ? e.target.closest('[data-m-act]') : null;
+      if (actBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleMessageActionClick(actBtn.getAttribute('data-m-act'), actBtn.getAttribute('data-msg-id'));
+        return;
+      }
       var a = e.target && e.target.closest ? e.target.closest('a.niuma-ext-link') : null;
       if (!a) return;
       var href = a.getAttribute('href') || '';

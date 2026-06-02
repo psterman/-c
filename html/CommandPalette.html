@@ -361,6 +361,15 @@ body[data-theme="light"] #intent-tag[data-intent="action"] {
 .result-item.active .result-title { color: var(--text-main); }
 .result-item.kind-ai_provider .result-icon {
   color: #c4b5fd;
+  background: rgba(0, 0, 0, 0.28);
+  border-color: rgba(255, 255, 255, 0.07);
+  padding: 3px;
+}
+.result-item.kind-ai_provider .result-icon-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  display: block;
 }
 .result-item.kind-ai_provider.active {
   border-color: rgba(167, 139, 250, 0.45);
@@ -666,10 +675,6 @@ body[data-theme="light"] .ai-stream-container {
   object-fit: contain;
   display: block;
 }
-.result-item.kind-ai_provider .result-icon {
-  padding: 3px;
-  background: #1a2535;
-}
 .palette-ai-provider-hint {
   flex-shrink: 0;
   padding: 2px 4px 4px;
@@ -807,24 +812,39 @@ body[data-theme="light"] .ai-bg-card {
   var MORPH_HEIGHT = 380;
   var AI_LIST_MAX_HEIGHT = 520;
   var AI_PROVIDER_ROW_H = 46;
-  var AI_ICON_FALLBACK = "https://app.local/assets/icons/app/chat-ai-fallback.svg";
-  var AI_ICON_EXTS = [".png", ".jpg", ".jpeg", ".svg", ".webp"];
-  var AI_ICON_ALIAS = {
-    kimi_cli: "kimi",
-    deepseek_cli: "deepseek",
-    claude_cli: "claude",
-    gemini_cli: "gemini",
-    qwen_cli: "qwen",
-    ollama_cli: "ollama",
-    zhipu_cli: "zhipu",
-    copilot_cli: "copilot",
-    openclaw_cli: "openclaw",
-    codex_cli: "codex",
-    studio_cli: "openclaw"
+  /* 与 FloatingToolbarStrip providerIconUrlList / bindProviderIconImg 同源（优先 app 目录 PNG/JPG） */
+  var ICON_PRIMARY = "/assets/icons/ai/";
+  var ICON_SECOND = "/assets/icons/app/";
+  var ICON_FALLBACK = "/assets/icons/app/chat-ai-fallback.svg";
+  var PROVIDER_ICON_EXTS = [".png", ".jpg", ".jpeg", ".svg", ".webp"];
+  var AI_PROVIDER_ICON_KEY = {
+    openai: "openai",
+    deepseek: "deepseek",
+    kimi: "kimi",
+    qwen: "qwen",
+    claude: "claude",
+    gemini: "gemini",
+    glm: "glm",
+    zhipu: "zhipu",
+    minimax: "minimax",
+    siliconflow: "siliconflow",
+    ollama: "ollama",
+    openclaw: "openclaw",
+    codex_cli: "codex_cli",
+    gemini_cli: "gemini_cli",
+    openclaw_cli: "openclaw_cli",
+    qwen_cli: "qwen_cli",
+    ollama_cli: "ollama_cli",
+    claude_cli: "claude_cli",
+    deepseek_cli: "deepseek_cli",
+    kimi_cli: "kimi_cli",
+    zhipu_cli: "zhipu_cli",
+    copilot_cli: "copilot_cli",
+    studio_cli: "studio_cli"
   };
   var PROVIDER_ICON_BASES = {
     openai: ["ChatGPT", "chatgpt", "openai", "codex", "Codex"],
-    codex_cli: ["codex", "Codex", "codex1"],
+    codex_cli: ["codex", "Codex", "codex1", "terminal", "cmd"],
     gemini_cli: ["gemini", "Gemini"],
     openclaw_cli: ["openclaw", "OpenClaw"],
     qwen_cli: ["qwen", "Qwen"],
@@ -837,35 +857,38 @@ body[data-theme="light"] .ai-bg-card {
     kimi: ["kimi", "Kimi", "moonshot"],
     qwen: ["qwen", "Qwen"],
     deepseek: ["DeepSeek", "deepseek"],
-    claude: ["claude", "Claude"],
+    claude: ["Claude", "claude"],
     gemini: ["gemini", "Gemini"],
-    glm: ["glm", "GLM", "zhipu"],
-    zhipu: ["zhipu", "Zhipu", "glm"],
+    glm: ["glm", "GLM"],
+    siliconflow: ["siliconflow", "硅基流动"],
     minimax: ["minimax", "MiniMax"],
-    siliconflow: ["siliconflow", "SiliconFlow"],
-    openclaw: ["openclaw", "OpenClaw"],
-    openrouter: ["openrouter", "OpenRouter"]
+    zhipu: ["zhipu", "Zhipu"],
+    ollama: ["ollama", "Ollama"],
+    openclaw: ["openclaw", "OpenClaw"]
   };
 
-  function aiProviderIconUrls(id, fromHost) {
-    if (Array.isArray(fromHost) && fromHost.length) return fromHost.slice();
-    var pid = String(id || "").trim();
-    var bases = PROVIDER_ICON_BASES[pid] ? PROVIDER_ICON_BASES[pid].slice() : [];
-    if (pid && bases.indexOf(pid) < 0) bases.unshift(pid);
-    if (AI_ICON_ALIAS[pid] && bases.indexOf(AI_ICON_ALIAS[pid]) < 0) bases.push(AI_ICON_ALIAS[pid]);
-    if (/_cli$/i.test(pid)) {
-      var stripped = pid.replace(/_cli$/i, "");
-      if (stripped && bases.indexOf(stripped) < 0) bases.push(stripped);
-    }
-    if (!bases.length) bases.push(pid || "openai");
+  function providerIconKeyForItem(item) {
+    if (!item) return "openai";
+    var k = String(item.icon || item.id || "").trim();
+    if (k && AI_PROVIDER_ICON_KEY[k]) return k;
+    if (k && PROVIDER_ICON_BASES[k]) return k;
+    return k || "openai";
+  }
+
+  function providerIconUrlList(pid) {
+    pid = String(pid || "").trim();
+    if (!PROVIDER_ICON_BASES[pid]) pid = "openai";
+    var bases = PROVIDER_ICON_BASES[pid];
+    if (!bases || !bases.length) bases = [pid];
     var list = [];
     bases.forEach(function (base) {
-      AI_ICON_EXTS.forEach(function (ext) {
-        list.push("https://app.local/assets/icons/app/" + base + ext);
-        list.push("https://app.local/assets/icons/ai/" + base + ext);
+      PROVIDER_ICON_EXTS.forEach(function (ext) {
+        list.push(ICON_SECOND + base + ext);
       });
     });
-    list.push(AI_ICON_FALLBACK);
+    list.push(ICON_PRIMARY + pid + ".svg");
+    list.push(ICON_SECOND + pid + ".svg");
+    list.push(ICON_FALLBACK);
     var seen = {};
     var out = [];
     list.forEach(function (u) {
@@ -877,41 +900,64 @@ body[data-theme="light"] .ai-bg-card {
     return out;
   }
 
+  function iconUrlListForItem(item) {
+    var list = [];
+    if (item && item.iconSrc) list.push(String(item.iconSrc));
+    if (item && Array.isArray(item.iconUrls)) {
+      item.iconUrls.forEach(function (u) {
+        if (u && list.indexOf(u) < 0) list.push(String(u));
+      });
+    }
+    providerIconUrlList(providerIconKeyForItem(item)).forEach(function (u) {
+      if (list.indexOf(u) < 0) list.push(u);
+    });
+    return list.length ? list : [ICON_FALLBACK];
+  }
+
+  function findAiProviderItem(pid) {
+    for (var i = 0; i < state.aiProviders.length; i++) {
+      if (String(state.aiProviders[i].id || "") === pid) return state.aiProviders[i];
+    }
+    return null;
+  }
+
   function bindResultIconImg(img, urls) {
     if (!img) return;
     var list = Array.isArray(urls) ? urls : [];
-    if (!list.length) list = [AI_ICON_FALLBACK];
+    if (!list.length) list = [ICON_FALLBACK];
     var idx = 0;
     img.alt = "";
     img.className = "result-icon-img";
     img.loading = "lazy";
     img.onerror = function () {
       idx += 1;
-      if (idx < list.length) this.src = list[idx];
-      else this.onerror = null;
+      if (idx < list.length) {
+        this.src = list[idx];
+      } else {
+        this.onerror = null;
+      }
     };
+    img.removeAttribute("src");
     img.src = list[0];
   }
 
   function renderProviderIconHtml(item) {
     if (!item || item.kind !== "ai_provider") return kindIcon(item.kind || "command");
-    var urls = aiProviderIconUrls(item.id, item.iconUrls);
-    var src = esc(urls[0] || AI_ICON_FALLBACK);
-    return '<img class="result-icon-img" src="' + src + '" data-provider-id="' + esc(String(item.id || "")) + '" alt="" />';
+    var iconKey = providerIconKeyForItem(item);
+    var html =
+      '<img class="result-icon-img" data-provider-id="' +
+      esc(String(item.id || "")) +
+      '" data-icon-key="' +
+      esc(iconKey) +
+      '" alt="" />';
+    return html;
   }
 
   function hydrateResultIcons(box) {
     if (!box) return;
     box.querySelectorAll("img.result-icon-img[data-provider-id]").forEach(function (img) {
       var pid = img.getAttribute("data-provider-id") || "";
-      var item = null;
-      for (var i = 0; i < state.aiProviders.length; i++) {
-        if (String(state.aiProviders[i].id || "") === pid) {
-          item = state.aiProviders[i];
-          break;
-        }
-      }
-      bindResultIconImg(img, aiProviderIconUrls(pid, item && item.iconUrls));
+      bindResultIconImg(img, iconUrlListForItem(findAiProviderItem(pid)));
     });
   }
 

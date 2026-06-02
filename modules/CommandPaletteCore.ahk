@@ -3175,7 +3175,7 @@ CommandPalette_AiProviderIconBases(id) {
     bases := []
     nameMap := Map(
         "openai", ["ChatGPT", "chatgpt", "openai", "codex", "Codex"],
-        "codex_cli", ["codex", "Codex", "codex1"],
+        "codex_cli", ["codex", "Codex", "codex1", "terminal", "cmd"],
         "gemini_cli", ["gemini", "Gemini"],
         "openclaw_cli", ["openclaw", "OpenClaw"],
         "qwen_cli", ["qwen", "Qwen"],
@@ -3188,12 +3188,13 @@ CommandPalette_AiProviderIconBases(id) {
         "kimi", ["kimi", "Kimi", "moonshot"],
         "qwen", ["qwen", "Qwen"],
         "deepseek", ["DeepSeek", "deepseek"],
-        "claude", ["claude", "Claude"],
+        "claude", ["Claude", "claude"],
         "gemini", ["gemini", "Gemini"],
         "glm", ["glm", "GLM", "zhipu"],
         "zhipu", ["zhipu", "Zhipu", "glm"],
         "minimax", ["minimax", "MiniMax"],
-        "siliconflow", ["siliconflow", "SiliconFlow"],
+        "siliconflow", ["siliconflow", "硅基流动"],
+        "ollama", ["ollama", "Ollama"],
         "openclaw", ["openclaw", "OpenClaw"],
         "openrouter", ["openrouter", "OpenRouter"]
     )
@@ -3231,31 +3232,114 @@ CommandPalette_AiProviderIconBases(id) {
     return bases
 }
 
-CommandPalette_AiProviderIconUrls(id) {
-    urls := []
-    bases := CommandPalette_AiProviderIconBases(id)
-    if (bases.Length = 0)
-        bases.Push("openai")
-    for _, base in bases {
-        for ext in [".png", ".jpg", ".jpeg", ".svg", ".webp"] {
-            if FuncExists("BuildAppAssetUrl") {
-                try urls.Push(BuildAppAssetUrl("icons/app/" . base . ext))
-                catch {
-                }
-                try urls.Push(BuildAppAssetUrl("icons/ai/" . base . ext))
-                catch {
-                }
-            }
-        }
-    }
+CommandPalette_AiProviderIconFile(relUnderAssets) {
+    p := A_ScriptDir . "\assets\" . StrReplace(relUnderAssets, "/", "\")
+    if FileExist(p)
+        return p
+    return ""
+}
+
+CommandPalette_AiProviderIconUrlForFile(relUnderAssets) {
+    if (CommandPalette_AiProviderIconFile(relUnderAssets) = "")
+        return ""
     if FuncExists("BuildAppAssetUrl") {
-        try urls.Push(BuildAppAssetUrl("icons/app/chat-ai-fallback.svg"))
+        try return BuildAppAssetUrl(relUnderAssets)
         catch {
         }
     }
+    return "https://app.local/assets/" . StrReplace(relUnderAssets, "\", "/")
+}
+
+CommandPalette_AiProviderIconKey(id) {
+    ; 与 FloatingToolbarStrip NEW_SESSION_GROUP_DEFS 的 icon 字段一致
+    p := CommandPalette_NormalizeAiProvider(id)
+    static pickIcon := 0
+    if !IsObject(pickIcon) {
+        pickIcon := Map(
+            "openai", "openai", "deepseek", "deepseek", "kimi", "kimi", "qwen", "qwen",
+            "claude", "claude", "gemini", "gemini", "glm", "glm", "zhipu", "zhipu",
+            "minimax", "minimax", "siliconflow", "siliconflow", "ollama", "ollama", "openclaw", "openclaw",
+            "codex_cli", "codex_cli", "gemini_cli", "gemini_cli", "openclaw_cli", "openclaw_cli",
+            "qwen_cli", "qwen_cli", "ollama_cli", "ollama_cli", "claude_cli", "claude_cli",
+            "deepseek_cli", "deepseek_cli", "kimi_cli", "kimi_cli", "zhipu_cli", "zhipu_cli",
+            "copilot_cli", "copilot_cli", "studio_cli", "studio_cli"
+        )
+    }
+    if pickIcon.Has(p)
+        return pickIcon[p]
+    if RegExMatch(p, "_cli$")
+        return p
+    return p != "" ? p : "openai"
+}
+
+CommandPalette_ResolveProviderIconSrc(id) {
+    ; 与 Niuma Chat providerIconUrlList 相同优先级，但在宿主按磁盘解析首个存在的图标（优先 PNG/JPG）
+    bases := CommandPalette_AiProviderIconBases(id)
+    pid := CommandPalette_NormalizeAiProvider(id)
+    if (pid = "")
+        pid := "openai"
+    if (bases.Length = 0)
+        bases.Push(pid)
+    for _, base in bases {
+        for ext in [".png", ".jpg", ".jpeg", ".svg", ".webp"] {
+            u := CommandPalette_AiProviderIconUrlForFile("icons/app/" . base . ext)
+            if (u != "")
+                return u
+        }
+    }
+    for ext in [".svg", ".webp", ".png", ".jpg", ".jpeg"] {
+        u := CommandPalette_AiProviderIconUrlForFile("icons/ai/" . pid . ext)
+        if (u != "")
+            return u
+        u := CommandPalette_AiProviderIconUrlForFile("icons/app/" . pid . ext)
+        if (u != "")
+            return u
+    }
+    fb := CommandPalette_AiProviderIconUrlForFile("icons/app/chat-ai-fallback.svg")
+    return fb != "" ? fb : "https://app.local/assets/icons/app/chat-ai-fallback.svg"
+}
+
+CommandPalette_AiProviderIconUrls(id) {
+    ; 回退链：与 FloatingToolbarStrip providerIconUrlList 一致（app 别名 → ai/app pid → 兜底）
+    urls := []
+    src := CommandPalette_ResolveProviderIconSrc(id)
+    if (src != "")
+        urls.Push(src)
+    bases := CommandPalette_AiProviderIconBases(id)
+    pid := CommandPalette_NormalizeAiProvider(id)
+    if (pid = "")
+        pid := "openai"
+    if (bases.Length = 0)
+        bases.Push(pid)
+    for _, base in bases {
+        for ext in [".png", ".jpg", ".jpeg", ".svg", ".webp"] {
+            u := CommandPalette_AiProviderIconUrlForFile("icons/app/" . base . ext)
+            if (u != "" && !CommandPalette_UrlInList(urls, u))
+                urls.Push(u)
+        }
+    }
+    for ext in [".svg", ".webp", ".png", ".jpg", ".jpeg"] {
+        u := CommandPalette_AiProviderIconUrlForFile("icons/ai/" . pid . ext)
+        if (u != "" && !CommandPalette_UrlInList(urls, u))
+            urls.Push(u)
+        u := CommandPalette_AiProviderIconUrlForFile("icons/app/" . pid . ext)
+        if (u != "" && !CommandPalette_UrlInList(urls, u))
+            urls.Push(u)
+    }
+    fb := CommandPalette_AiProviderIconUrlForFile("icons/app/chat-ai-fallback.svg")
+    if (fb != "" && !CommandPalette_UrlInList(urls, fb))
+        urls.Push(fb)
     if (urls.Length = 0)
         urls.Push("https://app.local/assets/icons/app/chat-ai-fallback.svg")
     return urls
+}
+
+CommandPalette_UrlInList(urls, u) {
+    for _, x in urls {
+        if (x = u)
+            return true
+    }
+    return false
 }
 
 CommandPalette_CoerceToMap(obj) {
@@ -3535,11 +3619,12 @@ CommandPalette_OnNiumaPaletteAiLlm(msg) {
 CommandPalette_BuildAiProviderList() {
     global g_CmdPal_LiveAiKeys, g_CmdPal_LiveActiveProvider
     labels := CommandPalette_AiProviderLabels()
+    ; 与 FloatingToolbarStrip PROVIDER_PICK_ORDER 一致
     order := [
-        "minimax", "deepseek", "kimi", "openai", "gemini", "claude", "qwen", "glm", "zhipu",
-        "siliconflow", "openclaw",
-        "codex_cli", "gemini_cli", "qwen_cli", "ollama_cli", "claude_cli", "deepseek_cli",
-        "kimi_cli", "zhipu_cli", "copilot_cli", "openclaw_cli", "studio_cli"
+        "openai", "kimi", "qwen", "deepseek", "claude", "gemini", "glm", "siliconflow", "minimax", "zhipu",
+        "ollama", "openclaw",
+        "codex_cli", "gemini_cli", "openclaw_cli", "qwen_cli", "ollama_cli",
+        "claude_cli", "deepseek_cli", "kimi_cli", "zhipu_cli", "copilot_cli", "studio_cli"
     ]
     keyed := Map()
     active := CommandPalette_NormalizeAiProvider(g_CmdPal_LiveActiveProvider)
@@ -3620,6 +3705,7 @@ CommandPalette_BuildAiProviderList() {
         cfg := keyed.Has(id)
         lbl := labels.Has(id) ? labels[id] : id
         desc := cfg ? "已配置 API · Enter 发送" : "未配置 Key（可在 Niuma Chat 设置）"
+        iconKey := CommandPalette_AiProviderIconKey(id)
         items.Push(Map(
             "id", id,
             "kind", "ai_provider",
@@ -3627,6 +3713,8 @@ CommandPalette_BuildAiProviderList() {
             "desc", desc,
             "configured", cfg ? 1 : 0,
             "active", (id = active) ? 1 : 0,
+            "icon", iconKey,
+            "iconSrc", CommandPalette_ResolveProviderIconSrc(id),
             "iconUrls", CommandPalette_AiProviderIconUrls(id)
         ))
     }
