@@ -937,13 +937,20 @@ html[data-theme="light"] #startup-splash {
   background: rgba(255,141,42,.24);
 }
 #layout,
-#layout.sc-split-layout,
-#layout.sc-list-layout {
+#layout.sc-split-layout {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
   gap: 0;
+}
+#layout.sc-list-layout {
+  display: grid;
+  grid-template-columns: minmax(460px, 1.2fr) minmax(420px, 1fr);
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 10px;
 }
 #results-card {
   min-height: 0;
@@ -1060,6 +1067,16 @@ html[data-theme="light"] #startup-splash {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+}
+.result-section-title {
+  margin: 8px 2px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--text) 72%, var(--muted));
+  letter-spacing: .3px;
+}
+.result-section-title + .result-item {
+  margin-top: 2px;
 }
 .result-item {
   display: flex;
@@ -2063,7 +2080,7 @@ mark {
 }
 .sc-page-column {
   width: 100%;
-  max-width: var(--sc-content-max);
+  max-width: none;
   margin-inline: auto;
   min-width: 0;
 }
@@ -2081,6 +2098,9 @@ body.sc-cli-layout #app {
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+}
+.sc-search-mid {
+  width: 100%;
 }
 .search-wrapper {
   width: 100%;
@@ -2232,6 +2252,40 @@ body.sc-cli-layout #app {
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
   overflow: hidden;
+}
+.sc-search-mid .search-wrapper {
+  border-radius: 16px;
+}
+.sc-search-mid .search-box-inner {
+  border-radius: 16px;
+  min-height: 54px;
+  border-color: rgba(255,141,42,.45);
+  box-shadow: 0 0 0 2px rgba(255,141,42,.12), 0 10px 28px rgba(4,10,20,.32);
+}
+.preview-column {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#local-preview-column #inline-preview {
+  flex: 1 1 auto;
+  min-height: 0;
+  border-top: none;
+  border-radius: 16px;
+  background: transparent;
+}
+#local-preview-column #inline-preview #preview-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  border-radius: 0 0 16px 16px;
+}
+#local-preview-column #inline-preview #preview-web-scroll,
+#local-preview-column #inline-preview #preview-host.mode-native {
+  min-height: 0;
+  max-height: none;
 }
 .filter-drawer-head {
   display: block;
@@ -2563,6 +2617,10 @@ body.sc-cli-layout #app {
   gap: 8px;
   width: 100%;
 }
+body.nm-dock-mounted #app.sc-container,
+body.nm-dock-mounted #app {
+  padding-bottom: 62px;
+}
 .footer-ft-bar {
   display: flex;
   flex-wrap: wrap;
@@ -2801,6 +2859,13 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
 }
 
 @media (max-width: 960px) {
+  #layout.sc-list-layout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  #local-preview-column {
+    min-height: 320px;
+  }
   .sc-mode-bar {
     grid-template-columns: 1fr;
   }
@@ -2857,15 +2922,33 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
   </div>
 </div>
 <div id="app" class="sc-container">
-    <header id="chrome-header" class="chrome-header window-titlebar">
-    <div class="chrome-drag" id="chrome-drag" title="拖动窗口">搜索中心</div>
-    <div class="chrome-controls">
-      <button type="button" id="btn-ft-settings-top" class="chrome-btn" title="搜索设置"><span class="icon">⚙</span><span>搜索设置</span></button>
-      <button type="button" id="chrome-topmost" class="chrome-btn" title="置顶窗口">置顶</button>
-    </div>
-  </header>
-
   <section class="sc-header sc-page-column">
+    <div class="filter-drawer" id="filter-drawer">
+      <div class="filter-drawer-head">
+        <button type="button" class="filter-drawer-toggle" id="btn-filter-drawer-toggle" aria-expanded="false">
+          <span class="filter-drawer-title">筛选</span>
+          <span class="filter-drawer-summary" id="filter-drawer-summary">本地搜索</span>
+          <span class="chevron" id="filter-drawer-chevron" aria-hidden="true">▶</span>
+        </button>
+      </div>
+      <div class="filter-drawer-body" id="filter-drawer-body">
+        <div class="sc-mode-bar" id="mode-bar" role="tablist" aria-label="搜索模式"></div>
+        <section class="sc-section sc-section-web-cats hidden" id="section-web-cats">
+          <h4 class="sc-section-label">联网分类</h4>
+          <div id="tag-card" class="sc-tag-card">
+            <div id="categories"></div>
+          </div>
+        </section>
+        <section class="sc-section sc-section-engines hidden" id="section-engines">
+          <h4 class="sc-section-label">搜索引擎</h4>
+          <div id="engines"></div>
+        </section>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="sc-search-mid sc-page-column">
     <div class="search-wrapper" id="searchWrapper">
       <div class="search-box-inner" id="searchBoxInner">
         <span class="search-icon-left" id="search-icon-inline">&#128269;</span>
@@ -2897,6 +2980,8 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
                 <option value="200">200 条</option>
                 <option value="500">全部搜索结果</option>
               </select></label>
+              <button type="button" id="chrome-topmost" class="btn">窗口置顶</button>
+              <button type="button" id="btn-ft-settings-top" class="btn">搜索设置</button>
               <button id="btn-hotkey-plus" class="btn btn-hotkey-plus" type="button" title="快捷键+：快速进入 Caps 热键提示与绑定">快捷键+</button>
               <button id="btn-web-search" class="btn" type="button">网页搜索</button>
               <button id="btn-open-cli" class="btn" type="button">打开所选终端</button>
@@ -2905,30 +2990,6 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
         </div>
       </div>
     </div>
-
-    <div class="filter-drawer" id="filter-drawer">
-      <div class="filter-drawer-head">
-        <button type="button" class="filter-drawer-toggle" id="btn-filter-drawer-toggle" aria-expanded="false">
-          <span class="filter-drawer-title">筛选</span>
-          <span class="filter-drawer-summary" id="filter-drawer-summary">本地搜索</span>
-          <span class="chevron" id="filter-drawer-chevron" aria-hidden="true">▶</span>
-        </button>
-      </div>
-      <div class="filter-drawer-body" id="filter-drawer-body">
-        <div class="sc-mode-bar" id="mode-bar" role="tablist" aria-label="搜索模式"></div>
-        <section class="sc-section sc-section-web-cats hidden" id="section-web-cats">
-          <h4 class="sc-section-label">联网分类</h4>
-          <div id="tag-card" class="sc-tag-card">
-            <div id="categories"></div>
-          </div>
-        </section>
-        <section class="sc-section sc-section-engines hidden" id="section-engines">
-          <h4 class="sc-section-label">搜索引擎</h4>
-          <div id="engines"></div>
-        </section>
-      </div>
-    </div>
-
   </section>
 
   <main class="sc-main-content sc-page-column">
@@ -2956,6 +3017,32 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
       </div>
       <div id="result-list"></div>
     </div>
+    <div id="local-preview-column" class="card preview-column" aria-label="预览面板">
+      <div id="inline-preview" class="inline-preview-shell">
+        <div class="inline-preview-meta">
+          <div id="preview-meta" class="preview-meta-grid">
+            <div class="preview-meta-item preview-empty-meta">点击列表项展开预览</div>
+          </div>
+        </div>
+        <div id="preview-panel">
+          <div id="preview-main">
+            <div id="preview-web-scroll" class="sc-empty-hint">点击左侧结果卡片可在此查看详细预览。</div>
+            <div id="preview-host" aria-hidden="true"></div>
+          </div>
+          <div id="preview-ql-hint" class="hidden">
+            <div class="ql-row">
+              <span class="ql-text">按 <kbd>Space</kbd> 重新加载预览 · 选项：</span>
+              <div class="ql-btns">
+                <button type="button" id="preview-pdf-mode-btn" class="preview-ctrl-btn" title="PDF 预览策略">PDF:auto</button>
+                <button type="button" id="preview-archive-mode-btn" class="preview-ctrl-btn" title="压缩包目录预览策略（本地文件）">归档:7z</button>
+                <button type="button" id="preview-native-btn" class="preview-ctrl-btn" title="调用系统原生 IPreviewHandler">IPreview</button>
+                <button type="button" id="preview-ql-btn" title="可选：调用便携版 QuickLook.exe">QuickLook</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div id="cli-workspace" class="cli-workspace hidden" aria-label="CLI 终端">
       <section id="cliPane" class="cli-pane">
         <div class="cli-shell">
@@ -2977,32 +3064,7 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
       </section>
     </div>
   </div>
-  <div id="preview-dock-stash" aria-hidden="true">
-    <div id="inline-preview" class="inline-preview-shell hidden">
-      <div class="inline-preview-meta">
-        <div id="preview-meta" class="preview-meta-grid">
-          <div class="preview-meta-item preview-empty-meta">点击列表项展开预览</div>
-        </div>
-      </div>
-      <div id="preview-panel">
-        <div id="preview-main">
-          <div id="preview-web-scroll" class="sc-empty-hint">点击上方结果卡片可在此查看详细预览。</div>
-          <div id="preview-host" aria-hidden="true"></div>
-        </div>
-        <div id="preview-ql-hint" class="hidden">
-          <div class="ql-row">
-            <span class="ql-text">按 <kbd>Space</kbd> 重新加载预览 · 选项：</span>
-            <div class="ql-btns">
-              <button type="button" id="preview-pdf-mode-btn" class="preview-ctrl-btn" title="PDF 预览策略">PDF:auto</button>
-              <button type="button" id="preview-archive-mode-btn" class="preview-ctrl-btn" title="压缩包目录预览策略（本地文件）">归档:7z</button>
-              <button type="button" id="preview-native-btn" class="preview-ctrl-btn" title="调用系统原生 IPreviewHandler">IPreview</button>
-              <button type="button" id="preview-ql-btn" title="可选：调用便携版 QuickLook.exe">QuickLook</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div id="preview-dock-stash" aria-hidden="true"></div>
   </main>
 
   <footer id="footer" class="sc-footer-stack sc-page-column">
@@ -3109,6 +3171,7 @@ const SC_FT_COLLAPSED_KEY = "sc_ft_collapsed_v1";
 const SC_FILTER_COLLAPSED_KEY = "sc_filter_collapsed_v2";
 const SC_UI_MODE_KEY = "sc_ui_mode_v1";
 const SC_ACTIVE_CLI_ENGINE_KEY = "sc_active_cli_engine_v1";
+const SC_NOVICE_SORT_PREF_KEY = "sc_novice_sort_pref_v1";
 const SC_WEB_SEARCH_HIDDEN = true;
 const SC_WEB_CATEGORY_KEYS = new Set([
   "ai", "academic", "baidu", "image", "audio", "video", "book", "price", "medical", "cloud"
@@ -3270,6 +3333,14 @@ const state = {
   filterType: "",
   resultsRaw: [],
   results: [],
+  resultBuckets: { priority: [], others: [] },
+  noviceSortPref: (function () {
+    try {
+      const v = String(localStorage.getItem(SC_NOVICE_SORT_PREF_KEY) || "").trim();
+      if (v === "name" || v === "content" || v === "recent") return v;
+    } catch (_) {}
+    return "name";
+  })(),
   subtagAudience: (typeof localStorage !== "undefined" && localStorage.getItem(SC_SUBTAG_AUDIENCE_KEY) === "geek") ? "geek" : "newbie",
   activeSubtags: {},
   hasMore: false,
@@ -4214,12 +4285,14 @@ function syncModeSections() {
   const secEng = document.getElementById("section-engines");
   const resultsFilters = document.getElementById("results-local-filters");
   const resultsCard = document.getElementById("results-card");
+  const previewColumn = document.getElementById("local-preview-column");
   const cliWorkspace = document.getElementById("cli-workspace");
   const layout = document.getElementById("layout");
   if (secCats) secCats.classList.add("hidden");
   if (secEng) secEng.classList.add("hidden");
   if (resultsFilters) resultsFilters.classList.toggle("hidden", mode !== "local");
   if (resultsCard) resultsCard.classList.toggle("hidden", mode === "cli");
+  if (previewColumn) previewColumn.classList.toggle("hidden", mode === "cli");
   if (cliWorkspace) cliWorkspace.classList.toggle("hidden", mode !== "cli");
   if (layout) layout.classList.toggle("sc-cli-active", mode === "cli");
   document.body.classList.toggle("sc-cli-layout", mode === "cli");
@@ -4230,6 +4303,8 @@ function syncModeSections() {
     drawer.classList.toggle("sc-mode-cli", mode === "cli");
   }
   if (mode === "cli") scheduleSyncCliWorkspace(true);
+  if (mode === "cli") unmountInlinePreview();
+  else mountInlinePreview();
 }
 
 function renderModeBar() {
@@ -6145,13 +6220,114 @@ function applySubtagResultView() {
   const raw = Array.isArray(state.resultsRaw) ? state.resultsRaw : [];
   const filterKey = resolveFilterKey();
   const group = getCurrentSubtagGroup();
+  state.resultBuckets = { priority: [], others: [] };
   if (!group || !group.length) {
     state.results = raw.slice();
     return;
   }
   const active = getActiveSubtagKey(filterKey, group);
   const rule = group.find((x) => x && x.key === active) || group[0];
-  state.results = raw.filter((item) => matchSubtagRule(item, rule));
+  const audience = state.subtagAudience === "geek" ? "geek" : "newbie";
+  // 极客：保持单列表精确过滤。
+  if (audience === "geek") {
+    state.results = raw.filter((item) => matchSubtagRule(item, rule));
+    return;
+  }
+  // 小白：不漏数，使用优先区+更多分段（只重排，不剔除）。
+  const priority = [];
+  const others = [];
+  for (let i = 0; i < raw.length; i++) {
+    const item = raw[i];
+    if (matchSubtagRule(item, rule)) priority.push(item);
+    else others.push(item);
+  }
+  rankNoviceBucket(priority, state.keyword || "", state.noviceSortPref || "name");
+  rankNoviceBucket(others, state.keyword || "", state.noviceSortPref || "name");
+  state.resultBuckets = { priority, others };
+  state.results = priority.concat(others);
+}
+
+function parseResultRecencyTs(item) {
+  if (!item || typeof item !== "object") return 0;
+  const candidates = [
+    item.modifiedLabel,
+    item.time,
+    item.timestamp,
+    item.dateModified,
+    item.updatedAt,
+    item.mtime
+  ];
+  const meta = item.metadata && typeof item.metadata === "object" ? item.metadata : null;
+  if (meta) {
+    candidates.push(meta.timestamp, meta.Timestamp, meta.dateModified, meta.DateModified, meta.updatedAt);
+  }
+  for (let i = 0; i < candidates.length; i++) {
+    const s = String(candidates[i] || "").trim();
+    if (!s) continue;
+    const t = Date.parse(s);
+    if (Number.isFinite(t) && t > 0) return t;
+  }
+  const sub = String(item.subtitle || "");
+  const m = sub.match(/(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/);
+  if (m && m[1]) {
+    const t2 = Date.parse(m[1].replace(/\//g, "-"));
+    if (Number.isFinite(t2) && t2 > 0) return t2;
+  }
+  return 0;
+}
+
+function systemPriorityScore(item, keyword, sortPref) {
+  const it = item && typeof item === "object" ? item : {};
+  const kw = String(keyword || "").trim().toLowerCase();
+  const title = String(it.title || "").toLowerCase();
+  const sub = String(it.subtitle || "").toLowerCase();
+  const prev = String(it.preview || "").toLowerCase();
+  const type = String(it.type || it.dataType || "").toLowerCase();
+  const dt = String(it.originalDataType || it.originaldatatype || "").toLowerCase();
+
+  let score = 0;
+  const pref = String(sortPref || "name");
+  const u = Number(it.UnifiedScore);
+  if (Number.isFinite(u)) score += Math.max(0, Math.min(400, u / 4));
+
+  const wName = pref === "name" ? 1.35 : 1.0;
+  const wContent = pref === "content" ? 1.45 : 1.0;
+  const wRecent = pref === "recent" ? 1.55 : 1.0;
+  if (kw) {
+    if (title === kw) score += 220 * wName;
+    else if (title.startsWith(kw)) score += 160 * wName;
+    else if (title.indexOf(kw) >= 0) score += 120 * wName;
+    if (sub.indexOf(kw) >= 0) score += 35 * wName;
+    if (prev.indexOf(kw) >= 0) score += 28 * wContent;
+  }
+
+  const hitCtx = getHitContextList(it);
+  if (hitCtx && hitCtx.length) score += Math.min(80, 18 + hitCtx.length * 7) * wContent;
+  if (it.pinned) score += 70;
+  if (dt === "clipboard_top") score += 40;
+  if (type === "file" || dt === "file") score += 20;
+  if (type === "fulltext" || dt === "fulltext") score += 16;
+
+  const recTs = parseResultRecencyTs(it);
+  if (recTs > 0) {
+    const ageH = Math.max(0, (Date.now() - recTs) / 3600000);
+    if (ageH <= 24) score += 60 * wRecent;
+    else if (ageH <= 24 * 7) score += 40 * wRecent;
+    else if (ageH <= 24 * 30) score += 20 * wRecent;
+  }
+  return score;
+}
+
+function rankNoviceBucket(arr, keyword, sortPref) {
+  if (!Array.isArray(arr) || arr.length <= 1) return arr;
+  const decorated = arr.map((item, idx) => ({
+    item,
+    idx,
+    score: systemPriorityScore(item, keyword, sortPref)
+  }));
+  decorated.sort((a, b) => (b.score - a.score) || (a.idx - b.idx));
+  for (let i = 0; i < decorated.length; i++) arr[i] = decorated[i].item;
+  return arr;
 }
 
 function buildSubtagDebugLine(rule) {
@@ -6244,6 +6420,30 @@ function renderSubtagPanel() {
     renderSubtagPanel();
   });
   modesWrap.appendChild(debugBtn);
+  if (audience === "newbie") {
+    const prefList = [
+      { key: "name", label: "名称优先" },
+      { key: "content", label: "正文优先" },
+      { key: "recent", label: "最近优先" }
+    ];
+    prefList.forEach((p) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "subtag-mode-chip" + ((state.noviceSortPref || "name") === p.key ? " active" : "");
+      btn.textContent = p.label;
+      btn.title = "小白排序偏好：" + p.label;
+      btn.addEventListener("click", () => {
+        if ((state.noviceSortPref || "name") === p.key) return;
+        state.noviceSortPref = p.key;
+        try { localStorage.setItem(SC_NOVICE_SORT_PREF_KEY, p.key); } catch (_) {}
+        applySubtagResultView();
+        syncResultCountLabel();
+        renderSubtagPanel();
+        renderResults();
+      });
+      modesWrap.appendChild(btn);
+    });
+  }
 
   const activeKey = getActiveSubtagKey(filterKey, group);
   tagsWrap.innerHTML = "";
@@ -6375,27 +6575,27 @@ function renderFilters() {
 
 function unmountInlinePreview() {
   const dock = document.getElementById("inline-preview");
-  const stash = document.getElementById("preview-dock-stash");
-  if (!dock || !stash) return;
-  if (dock.parentElement !== stash) stash.appendChild(dock);
-  dock.classList.add("hidden");
+  const host = document.getElementById("local-preview-column");
+  if (!dock || !host) return;
+  if (dock.parentElement !== host) host.appendChild(dock);
+  if (getUIMode() === "cli") dock.classList.add("hidden");
+  else dock.classList.remove("hidden");
   stopNativePreview();
   setQuickLookHintVisible(false);
 }
 
 function mountInlinePreview() {
-  const row = Number(state.expandedRow) || 0;
   const dock = document.getElementById("inline-preview");
-  if (!dock) return;
-  if (!row) {
-    unmountInlinePreview();
+  const host = document.getElementById("local-preview-column");
+  const row = Number(state.expandedRow) || 0;
+  if (!dock || !host) return;
+  if (dock.parentElement !== host) host.appendChild(dock);
+  if (getUIMode() === "cli") {
+    dock.classList.add("hidden");
     return;
   }
-  const itemEl = document.querySelector('.result-item[data-row="' + row + '"]');
-  const slot = itemEl ? itemEl.querySelector(".result-item-expand") : null;
-  if (!slot) return;
   dock.classList.remove("hidden");
-  slot.appendChild(dock);
+  if (!row) return;
   requestAnimationFrame(() => {
     requestAnimationFrame(() => scheduleRunPreview());
   });
@@ -6534,7 +6734,7 @@ function renderResults() {
     unmountInlinePreview();
   }
 
-  state.results.forEach((item) => {
+  const renderOneRow = (item) => {
     const expanded = item.row === state.expandedRow;
     const row = document.createElement("div");
     const origDt = String(item.originalDataType || item.originaldatatype || "").toLowerCase();
@@ -6622,7 +6822,30 @@ function renderResults() {
       });
     });
     list.appendChild(row);
-  });
+  };
+
+  const audience = state.subtagAudience === "geek" ? "geek" : "newbie";
+  const showBuckets = audience === "newbie"
+    && state.resultBuckets
+    && Array.isArray(state.resultBuckets.priority)
+    && Array.isArray(state.resultBuckets.others)
+    && state.resultBuckets.priority.length > 0
+    && state.resultBuckets.others.length > 0;
+  if (showBuckets) {
+    const h1 = document.createElement("div");
+    h1.className = "result-section-title";
+    h1.textContent = "优先区";
+    list.appendChild(h1);
+    state.resultBuckets.priority.forEach(renderOneRow);
+
+    const h2 = document.createElement("div");
+    h2.className = "result-section-title";
+    h2.textContent = "更多结果";
+    list.appendChild(h2);
+    state.resultBuckets.others.forEach(renderOneRow);
+  } else {
+    state.results.forEach(renderOneRow);
+  }
 
   if (state.results.length < 7) {
     list.insertAdjacentHTML("beforeend", buildSkeletonListHtml(7 - state.results.length));
@@ -7456,6 +7679,236 @@ function buildPreviewMetaBase(item, path) {
   return meta;
 }
 
+function pickFirstHttpUrl(text) {
+  const s = String(text || "");
+  const m = s.match(/https?:\/\/[^\s"'<>]+/i);
+  return m && m[0] ? m[0] : "";
+}
+
+function pickFirstVideoLikeUrl(text) {
+  const s = String(text || "");
+  if (!s) return "";
+  const m = s.match(/(?:https?:\/\/)?(?:www\.)?(?:bilibili\.com\/video\/[^\s"'<>]+|b23\.tv\/[^\s"'<>]+|youtube\.com\/watch\?[^\s"'<>]+|youtube\.com\/shorts\/[^\s"'<>]+|youtu\.be\/[^\s"'<>]+|douyin\.com\/[^\s"'<>]+|xiaohongshu\.com\/[^\s"'<>]+|xhslink\.com\/[^\s"'<>]+|douyu\.com\/[^\s"'<>]+|v\.qq\.com\/[^\s"'<>]+|youku\.com\/[^\s"'<>]+|iqiyi\.com\/[^\s"'<>]+|kuaishou\.com\/[^\s"'<>]+|ixigua\.com\/[^\s"'<>]+)/i);
+  if (!m || !m[0]) return "";
+  let out = String(m[0]).trim();
+  if (!/^https?:\/\//i.test(out)) out = "https://" + out.replace(/^\/+/, "");
+  return out;
+}
+
+function resolveVideoLinkCandidate(item) {
+  if (!item || typeof item !== "object") return "";
+  const candidates = [
+    item.url,
+    item.link,
+    item.path,
+    item.target,
+    item.preview,
+    item.title,
+    item.subtitle,
+    item.content
+  ];
+  for (let i = 0; i < candidates.length; i++) {
+    const raw = String(candidates[i] || "").trim();
+    if (!raw) continue;
+    const url = /^https?:\/\//i.test(raw)
+      ? raw
+      : (pickFirstHttpUrl(raw) || pickFirstVideoLikeUrl(raw));
+    if (!url) continue;
+    if (/youtu\.be|youtube\.com|bilibili\.com|b23\.tv|douyin\.com|xiaohongshu\.com|xhslink\.com|douyu\.com|v\.qq\.com|youku\.com|iqiyi\.com|kuaishou\.com|ixigua\.com/i.test(url)) return url;
+  }
+  return "";
+}
+
+function parseVideoProvider(urlRaw) {
+  const url = String(urlRaw || "").trim();
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    const full = u.href;
+    if (host.includes("youtu.be") || host.includes("youtube.com")) {
+      let vid = u.searchParams.get("v") || "";
+      if (!vid && host.includes("youtu.be")) vid = u.pathname.replace(/^\/+/, "").split("/")[0] || "";
+      if (!vid && /\/shorts\//i.test(u.pathname)) vid = u.pathname.split("/shorts/")[1].split(/[/?#]/)[0];
+      if (!vid) return { provider: "youtube", watchUrl: full };
+      return {
+        provider: "youtube",
+        id: vid,
+        watchUrl: full,
+        coverUrl: "https://i.ytimg.com/vi/" + encodeURIComponent(vid) + "/hqdefault.jpg",
+        embedUrl: "https://www.youtube.com/embed/" + encodeURIComponent(vid) + "?autoplay=0&rel=0"
+      };
+    }
+    if (host.includes("b23.tv") || host.includes("bilibili.com")) {
+      const bvMatch = full.match(/\/(BV[0-9A-Za-z]+)/);
+      const avMatch = full.match(/\/av(\d+)/i);
+      const key = bvMatch ? bvMatch[1] : (avMatch ? ("av" + avMatch[1]) : "");
+      const aid = avMatch ? avMatch[1] : "";
+      const p = u.searchParams.get("p");
+      const pageSeg = p ? "&page=" + encodeURIComponent(p) : "";
+      return {
+        provider: "bilibili",
+        id: key,
+        bvid: bvMatch ? bvMatch[1] : "",
+        aid,
+        watchUrl: full,
+        embedUrl: key ? ("https://player.bilibili.com/player.html?bvid=" + encodeURIComponent(key) + pageSeg) : full
+      };
+    }
+    if (host.includes("v.qq.com")) {
+      const vid = u.searchParams.get("vid")
+        || ((u.pathname.match(/\/([A-Za-z0-9]{8,})\.html?$/) || [])[1] || "");
+      return {
+        provider: "qq",
+        id: vid,
+        watchUrl: full,
+        embedUrl: vid ? ("https://v.qq.com/txp/iframe/player.html?vid=" + encodeURIComponent(vid)) : full
+      };
+    }
+    if (host.includes("youku.com")) {
+      const yk = (u.pathname.match(/id_([A-Za-z0-9=]+)/i) || [])[1] || "";
+      return {
+        provider: "youku",
+        id: yk,
+        watchUrl: full,
+        embedUrl: yk ? ("https://player.youku.com/embed/" + encodeURIComponent(yk)) : full
+      };
+    }
+    if (host.includes("douyin.com")) {
+      return { provider: "douyin", watchUrl: full, embedUrl: full };
+    }
+    if (host.includes("xiaohongshu.com") || host.includes("xhslink.com")) {
+      return { provider: "xiaohongshu", watchUrl: full, embedUrl: full };
+    }
+    if (host.includes("douyu.com")) {
+      return { provider: "douyu", watchUrl: full, embedUrl: full };
+    }
+    if (host.includes("iqiyi.com")) {
+      return { provider: "iqiyi", watchUrl: full, embedUrl: full };
+    }
+    if (host.includes("kuaishou.com")) {
+      return { provider: "kuaishou", watchUrl: full, embedUrl: full };
+    }
+    if (host.includes("ixigua.com")) {
+      return { provider: "ixigua", watchUrl: full, embedUrl: full };
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function fetchBilibiliCoverUrl(info) {
+  if (!info || info.provider !== "bilibili") return "";
+  const bvid = String(info.bvid || "");
+  const aid = String(info.aid || "");
+  let api = "";
+  if (bvid) api = "https://api.bilibili.com/x/web-interface/view?bvid=" + encodeURIComponent(bvid);
+  else if (aid) api = "https://api.bilibili.com/x/web-interface/view?aid=" + encodeURIComponent(aid);
+  if (!api) return "";
+  try {
+    const rsp = await fetch(api, { method: "GET" });
+    if (!rsp.ok) return "";
+    const data = await rsp.json();
+    const pic = data && data.data && data.data.pic ? String(data.data.pic) : "";
+    if (!pic) return "";
+    if (/^https?:\/\//i.test(pic)) return pic;
+    if (pic.startsWith("//")) return "https:" + pic;
+    return "";
+  } catch (_) {
+    return "";
+  }
+}
+
+function renderVideoLinkPreview(urlRaw, item, pane) {
+  const info = parseVideoProvider(urlRaw);
+  if (!info) return false;
+  const providerNames = {
+    youtube: "YouTube",
+    bilibili: "Bilibili",
+    douyin: "抖音",
+    xiaohongshu: "小红书",
+    douyu: "斗鱼",
+    qq: "腾讯视频",
+    youku: "优酷",
+    iqiyi: "爱奇艺",
+    kuaishou: "快手",
+    ixigua: "西瓜视频"
+  };
+  const providerLabel = providerNames[info.provider] || "视频平台";
+  const titleRaw = String(item && item.title || info.watchUrl || "").trim();
+  const title = (/^https?:\/\//i.test(titleRaw) || titleRaw.length > 120)
+    ? (providerLabel + " 视频预览")
+    : (titleRaw || (providerLabel + " 视频"));
+  const subtitle = String(item && item.subtitle || "").trim();
+  const coverSrc = String(info.coverUrl || "");
+  const basePlayerUrl = String(info.embedUrl || info.watchUrl || "");
+  const autoplayPlayerUrl = (function buildAutoplayUrl(raw, provider) {
+    if (!raw) return "";
+    try {
+      const u = new URL(raw);
+      u.searchParams.set("autoplay", "1");
+      if (provider === "youtube") u.searchParams.set("mute", "0");
+      return u.toString();
+    } catch (_) {
+      return raw;
+    }
+  })(basePlayerUrl, info.provider);
+  const coverOverlay =
+    "<button type=\"button\" id=\"video-link-cover-btn\" aria-label=\"点击播放视频\" style=\"position:absolute;inset:0;border:none;padding:0;background:rgba(0,0,0,.06);display:" + (coverSrc ? "block" : "none") + ";cursor:pointer;border-radius:10px;overflow:hidden;\">" +
+      "<img class=\"preview-img\" id=\"video-link-cover\" src=\"" + escapeHtml(coverSrc) + "\" alt=\"" + escapeHtml(providerLabel + " cover") + "\" style=\"width:100%;height:100%;object-fit:cover;\">" +
+      "<span style=\"position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 14px;border-radius:999px;background:rgba(10,14,20,.72);border:1px solid rgba(255,255,255,.26);color:#fff;font-weight:700;font-size:12px;\">点击播放</span>" +
+    "</button>";
+  pane.innerHTML =
+    "<div class=\"media-card\">" +
+      "<div class=\"media-player\">" +
+        "<div class=\"media-head\">" +
+          "<div class=\"media-title-wrap\"><div class=\"media-title\">" + escapeHtml(title) + "</div><div class=\"media-subtitle\">" + escapeHtml(subtitle || (providerLabel + " 链接预览")) + "</div></div>" +
+          "<div class=\"media-chips\"><span class=\"media-chip\">链接视频</span><span class=\"media-chip\">" + escapeHtml(providerLabel) + "</span></div>" +
+        "</div>" +
+        "<details style=\"margin:0 0 8px;\">" +
+          "<summary style=\"cursor:pointer;color:var(--muted);font-size:12px;user-select:none;\">查看原始链接</summary>" +
+          "<div style=\"margin-top:6px;padding:8px 10px;border:1px solid var(--border-subtle);border-radius:8px;background:rgba(255,255,255,.02);font-size:12px;line-height:1.45;color:var(--muted);word-break:break-all;max-height:72px;overflow:auto;\">" + escapeHtml(info.watchUrl) + "</div>" +
+        "</details>" +
+        "<div class=\"media-toolbar\"><div class=\"media-actions\">" +
+          "<button type=\"button\" class=\"media-btn\" id=\"btn-open-video-external\">浏览器打开</button>" +
+          "<span class=\"media-info-val\" style=\"margin-left:8px;opacity:.8;\">若平台限制内嵌，将自动回退外部打开</span>" +
+        "</div></div>" +
+        "<div style=\"position:relative;border-radius:10px;overflow:hidden;\">" +
+          "<iframe id=\"video-link-player\" class=\"preview-media preview-video\" src=\"" + escapeHtml(basePlayerUrl) + "\" allow=\"autoplay; encrypted-media; picture-in-picture; fullscreen\" referrerpolicy=\"no-referrer-when-downgrade\" allowfullscreen style=\"width:100%;min-height:360px;border:none;border-radius:10px;background:#000;\"></iframe>" +
+          coverOverlay +
+        "</div>" +
+      "</div>" +
+    "</div>";
+  const btn = document.getElementById("btn-open-video-external");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      try { window.open(info.watchUrl, "_blank"); } catch (_) {}
+    });
+  }
+  if (!coverSrc && info.provider === "bilibili") {
+    fetchBilibiliCoverUrl(info).then((nextCover) => {
+      if (!nextCover) return;
+      const img = document.getElementById("video-link-cover");
+      const coverBtn = document.getElementById("video-link-cover-btn");
+      if (!(img instanceof HTMLImageElement)) return;
+      img.src = nextCover;
+      if (coverBtn) coverBtn.style.display = "block";
+    });
+  }
+  const iframe = document.getElementById("video-link-player");
+  const coverBtn = document.getElementById("video-link-cover-btn");
+  if (iframe && coverBtn) {
+    coverBtn.addEventListener("click", () => {
+      coverBtn.style.display = "none";
+      if (autoplayPlayerUrl) iframe.src = autoplayPlayerUrl;
+    });
+  }
+  renderRichMeta({
+    "来源": providerLabel,
+    "链接": info.watchUrl
+  }, true);
+  return true;
+}
+
 function runPreviewForSelection() {
   state.previewSeq += 1;
   state.pdfJsRx = null;
@@ -7496,6 +7949,8 @@ function runPreviewForSelection() {
   if (!path) {
     setPreviewLayoutMode("web");
     stopNativePreview();
+    const videoUrl = resolveVideoLinkCandidate(item);
+    if (videoUrl && renderVideoLinkPreview(videoUrl, item, pane)) return;
     renderFallbackTextPreview(item, pane);
     return;
   }
@@ -8208,9 +8663,12 @@ const btnHotkeyPlus = document.getElementById("btn-hotkey-plus");
 if (btnHotkeyPlus) {
   btnHotkeyPlus.addEventListener("click", () => openQuickHotkeyEntry());
 }
-document.getElementById("btn-ft-settings-top").addEventListener("click", () => {
-  postToAhk({ type: "openSettingsPanel" });
-});
+const btnFtSettingsTop = document.getElementById("btn-ft-settings-top");
+if (btnFtSettingsTop) {
+  btnFtSettingsTop.addEventListener("click", () => {
+    postToAhk({ type: "openSettingsPanel" });
+  });
+}
 
 const btnScRecycle = document.getElementById("btn-sc-recycle");
 if (btnScRecycle) {
