@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 
 global g_CoreAsyncHttpReqSeq := 0
 global g_CoreAsyncHttpReqs := Map()
@@ -283,8 +283,14 @@ CoreAsyncHttp_SendAttempt(id) {
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         reqUrl := String(req["url"])
-        if (FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(reqUrl))
-            try whr.SetProxy(2)
+        ; Proxy strategy:
+        ; - Loopback (127.0.0.1/localhost): force DIRECT to avoid accidental system proxy interception.
+        ; - External: use PRECONFIG to respect WinHTTP proxy settings (can be imported from system proxy).
+        if (FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(reqUrl)) {
+            try whr.SetProxy(1)
+        } else {
+            try whr.SetProxy(0)
+        }
         whr.Open(String(req["method"]), reqUrl, true)
         whr.SetTimeouts(Integer(opts["resolveTimeoutMs"]), Integer(opts["connectTimeoutMs"]), Integer(opts["sendTimeoutMs"]), Integer(opts["receiveTimeoutMs"]))
         CoreAsyncHttp_ApplyHeaders(whr, opts["headers"])

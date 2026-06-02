@@ -3273,6 +3273,7 @@ body:not([data-theme="light"]) #hud-save {
 
 </div><!-- #root -->
 
+<script src="https://app.local/assets/js/NmModal.js"></script>
 <script>
 if (typeof BasePanel === 'undefined') {
   window.BasePanel = {
@@ -8286,8 +8287,12 @@ document.getElementById('vk-toggle-kb')?.addEventListener('click', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // Global Reset
 // ═══════════════════════════════════════════════════════════════════════════
-document.getElementById('reset-all')?.addEventListener('click', () => {
-  const ok = confirm('确定要恢复所有出厂设置吗？这将清空您所有的自定义快捷键且不可撤销。');
+document.getElementById('reset-all')?.addEventListener('click', async () => {
+  const ok = await (window.nmConfirm ? window.nmConfirm(
+    '恢复所有出厂设置？',
+    '确定要恢复所有出厂设置吗？这将清空您所有的自定义快捷键且不可撤销。',
+    { okLabel: '恢复', cancelLabel: '取消', danger: true }
+  ) : Promise.resolve(confirm('确定要恢复所有出厂设置吗？这将清空您所有的自定义快捷键且不可撤销。')));
   if (!ok) return;
   postToAhk({ type: 'reset_all' });
 });

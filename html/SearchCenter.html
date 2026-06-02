@@ -3076,6 +3076,7 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
 </div>
 
 <script src="https://app.local/assets/nm-bottom-dock.js"></script>
+<script src="https://app.local/assets/js/NmModal.js"></script>
 <script>
 if (typeof BasePanel === 'undefined') {
   window.BasePanel = {
@@ -3873,7 +3874,7 @@ function closeHotkeyBindDialog() {
   ov.setAttribute("aria-hidden", "true");
 }
 
-function applyHotkeyBindDialog() {
+async function applyHotkeyBindDialog() {
   const d = state.hotkeyBindDialog || {};
   if (d.mode === "compose") {
     const act = String(d.composeAction || "");
@@ -3896,11 +3897,17 @@ function applyHotkeyBindDialog() {
       const keyLabel = "Caps+" + key.toUpperCase();
       const conflictLabel = String(conflict.label || conflict.value || "未命名按钮");
       const targetLabel = String(d.label || value || "当前按钮");
-      const ok = window.confirm(
+      const ok = await (window.nmConfirm ? window.nmConfirm(
+        "检测到快捷键冲突",
         "检测到快捷键冲突：\n"
-        + keyLabel + " 已被「" + conflictLabel + "」占用。\n"
-        + "是否覆盖并改绑到「" + targetLabel + "」？"
-      );
+          + keyLabel + " 已被「" + conflictLabel + "」占用。\n"
+          + "是否覆盖并改绑到「" + targetLabel + "」？",
+        { okLabel: "覆盖", cancelLabel: "取消", danger: true }
+      ) : Promise.resolve(window.confirm(
+        "检测到快捷键冲突：\n"
+          + keyLabel + " 已被「" + conflictLabel + "」占用。\n"
+          + "是否覆盖并改绑到「" + targetLabel + "」？"
+      )));
       if (!ok) return;
       setHotkeyBinding(conflict.group, conflict.value, "");
       syncScHotkeyBindingToHost(conflict.group, conflict.value, "");
@@ -7745,7 +7752,7 @@ function invokeIPreviewHandler() {
   });
 }
 
-function invokeQuickLook(pathOverride = "") {
+async function invokeQuickLook(pathOverride = "") {
   const overridePath = pathOverride ? String(pathOverride).trim() : "";
   let targetPath = overridePath;
   const selectedRow = Number(state.selectedRow) || 0;
@@ -7762,7 +7769,11 @@ function invokeQuickLook(pathOverride = "") {
       if (pane) pane.innerHTML = "<div class=\"preview-loading\">正在安装 QuickLook…</div>";
       return;
     }
-    const ok = window.confirm("尚未安装 QuickLook。是否现在下载并启用 QuickLook 预览机制？");
+    const ok = await (window.nmConfirm ? window.nmConfirm(
+      "需要安装 QuickLook",
+      "尚未安装 QuickLook。是否现在下载并启用 QuickLook 预览机制？",
+      { okLabel: "下载并启用", cancelLabel: "取消" }
+    ) : Promise.resolve(window.confirm("尚未安装 QuickLook。是否现在下载并启用 QuickLook 预览机制？")));
     if (!ok) return;
     state.quickLook.lastInstallError = "";
     state.quickLook.pendingOpenPath = targetPath;
@@ -8215,9 +8226,14 @@ if (recycleClose) {
 }
 const recycleEmptyAll = document.getElementById("recycle-empty-all");
 if (recycleEmptyAll) {
-  recycleEmptyAll.addEventListener("click", () => {
+  recycleEmptyAll.addEventListener("click", async () => {
     if (!state.recycleCount) return;
-    if (!window.confirm("清空搜索中心回收站？已移除的条目将无法从此处还原。")) return;
+    const ok = await (window.nmConfirm ? window.nmConfirm(
+      "清空回收站？",
+      "清空搜索中心回收站？已移除的条目将无法从此处还原。",
+      { okLabel: "清空", cancelLabel: "取消", danger: true }
+    ) : Promise.resolve(window.confirm("清空搜索中心回收站？已移除的条目将无法从此处还原。")));
+    if (!ok) return;
     postToAhk({ type: "searchCenterEmptyRecycle" });
   });
 }

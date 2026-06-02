@@ -1081,6 +1081,7 @@
       </div>
     </div>
   </div>
+  <script src="https://app.local/assets/js/NmModal.js"></script>
   <script>
     if (typeof BasePanel === 'undefined') {
       window.BasePanel = {
@@ -1775,8 +1776,13 @@
       document.getElementById("btnFtPickDir")?.addEventListener("click", () => post({ type: "fulltextPickIndexDir" }));
       document.getElementById("btnFtProbe")?.addEventListener("click", () => requestFullTextProbe());
       document.getElementById("btnFtRecommend")?.addEventListener("click", () => applyRecommendedFullTextScheme());
-      document.getElementById("btnFtRebuild")?.addEventListener("click", () => {
-        if (!window.confirm("将清空并重建全文索引，用于验证单字检索。是否继续？")) return;
+      document.getElementById("btnFtRebuild")?.addEventListener("click", async () => {
+        const ok = await (window.nmConfirm ? window.nmConfirm(
+          "重建全文索引？",
+          "将清空并重建全文索引，用于验证单字检索。是否继续？",
+          { okLabel: "重建", cancelLabel: "取消", danger: true }
+        ) : Promise.resolve(window.confirm("将清空并重建全文索引，用于验证单字检索。是否继续？")));
+        if (!ok) return;
         setStatus("已触发强制重建索引，正在准备…", "ok");
         post({ type: "fulltextControl", control: "rebuild" });
       });
@@ -2903,9 +2909,14 @@
       ensureStudioLlmDelegatedEvents();
       document.getElementById("btnAddStudioLlmCard")?.addEventListener("click", () => openStudioLlmAddModal());
       cardsRoot.querySelectorAll(".studio-llm-remove").forEach((btn) => {
-        btn.addEventListener("click", () => {
+        btn.addEventListener("click", async () => {
           const pid = normalizeStudioLlmProvider(btn.dataset.prov || "");
-          if (!confirm("确定移除「" + studioLlmPreset(pid).label + "」卡片？密钥分槽仍保留，可再次添加。")) return;
+          const ok = await (window.nmConfirm ? window.nmConfirm(
+            "移除卡片？",
+            "确定移除「" + studioLlmPreset(pid).label + "」卡片？密钥分槽仍保留，可再次添加。",
+            { okLabel: "移除", cancelLabel: "取消", danger: true }
+          ) : Promise.resolve(confirm("确定移除「" + studioLlmPreset(pid).label + "」卡片？密钥分槽仍保留，可再次添加。")));
+          if (!ok) return;
           removeStudioLlmCard(pid);
         });
       });
@@ -3740,15 +3751,25 @@
       document.getElementById("btnCacheOpenRoot")?.addEventListener("click", () => post({ type: "cacheOpenFolder", target: "root" }));
       document.querySelectorAll(".cache-open-btn").forEach(btn => btn.addEventListener("click", () => post({ type: "cacheOpenFolder", target: btn.dataset.cacheTarget || "root" })));
       document.getElementById("btnCachePickRoot")?.addEventListener("click", () => post({ type: "cachePickRoot" }));
-      document.getElementById("btnCacheClearSelected")?.addEventListener("click", () => {
+      document.getElementById("btnCacheClearSelected")?.addEventListener("click", async () => {
         const targets = collectCacheClearTargets();
         if (!targets.length) return setStatus("请至少选择一项要清空的缓存", "err");
-        if (!confirm("确定清空所选缓存？全文索引清空后将自动触发重建；图片清空可能导致历史剪贴板图片无法显示。")) return;
+        const ok = await (window.nmConfirm ? window.nmConfirm(
+          "清空所选缓存？",
+          "确定清空所选缓存？全文索引清空后将自动触发重建；图片清空可能导致历史剪贴板图片无法显示。",
+          { okLabel: "清空", cancelLabel: "取消", danger: true }
+        ) : Promise.resolve(confirm("确定清空所选缓存？全文索引清空后将自动触发重建；图片清空可能导致历史剪贴板图片无法显示。")));
+        if (!ok) return;
         setStatus("正在清空缓存…", "");
         post({ type: "cacheClear", targets });
       });
-      document.getElementById("btnCacheClearAll")?.addEventListener("click", () => {
-        if (!confirm("确定清空全部缓存（含全文索引、图片、缩略图、临时文件、调试日志）？数据库记录不会删除，但部分图片/全文结果可能不可用。")) return;
+      document.getElementById("btnCacheClearAll")?.addEventListener("click", async () => {
+        const ok = await (window.nmConfirm ? window.nmConfirm(
+          "清空全部缓存？",
+          "确定清空全部缓存（含全文索引、图片、缩略图、临时文件、调试日志）？数据库记录不会删除，但部分图片/全文结果可能不可用。",
+          { okLabel: "清空全部", cancelLabel: "取消", danger: true }
+        ) : Promise.resolve(confirm("确定清空全部缓存（含全文索引、图片、缩略图、临时文件、调试日志）？数据库记录不会删除，但部分图片/全文结果可能不可用。")));
+        if (!ok) return;
         setStatus("正在清空全部缓存…", "");
         post({ type: "cacheClear", targets: ["fulltext", "images", "thumbs", "temp", "debug"] });
       });
@@ -3937,8 +3958,8 @@
             else if (action === "redo") document.execCommand("redo");
             else if (action === "clear") contentEl.value = "";
           }));
-          document.getElementById("btnAddCategory").addEventListener("click", () => {
-            const v = prompt("请输入新分类名称");
+          document.getElementById("btnAddCategory").addEventListener("click", async () => {
+            const v = await (window.nmPrompt ? window.nmPrompt("请输入新分类名称", "") : Promise.resolve(prompt("请输入新分类名称")));
             if (!v) return;
             const val = v.trim();
             if (!val) return;
@@ -4072,8 +4093,13 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         document.querySelectorAll(".us-browse").forEach(btn => btn.addEventListener("click", () => {
           post({ type: "browseUserStudioPath", field: btn.getAttribute("data-us-field") });
         }));
-        document.getElementById("btnRestoreUserStudio")?.addEventListener("click", () => {
-          if (!confirm("确定恢复默认定制配置？")) return;
+        document.getElementById("btnRestoreUserStudio")?.addEventListener("click", async () => {
+          const ok = await (window.nmConfirm ? window.nmConfirm(
+            "恢复默认配置？",
+            "确定恢复默认定制配置？",
+            { okLabel: "恢复", cancelLabel: "取消", danger: true }
+          ) : Promise.resolve(confirm("确定恢复默认定制配置？")));
+          if (!ok) return;
           post({ type: "restoreUserStudio" });
         });
         document.getElementById("btnOpenNiumaChatTtyd")?.addEventListener("click", () => {
@@ -4554,9 +4580,20 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (!msg.ok || !msg.path) return;
         const el = document.getElementById("cacheRootPath");
         if (el) el.value = String(msg.path);
+        const doMove = () => {
+          setStatus("正在迁移缓存…", "");
+          post({ type: "cacheSaveRoot", path: String(msg.path) });
+        };
+        if (window.nmConfirm) {
+          window.nmConfirm(
+            "迁移缓存目录？",
+            "将缓存迁移到新目录并保存？迁移期间请勿关闭设置窗口。",
+            { okLabel: "迁移并保存", cancelLabel: "取消" }
+          ).then((ok) => { if (ok) doMove(); });
+          return;
+        }
         if (!confirm("将缓存迁移到新目录并保存？迁移期间请勿关闭设置窗口。")) return;
-        setStatus("正在迁移缓存…", "");
-        post({ type: "cacheSaveRoot", path: String(msg.path) });
+        doMove();
         return;
       }
       if (msg.type === "fulltextStatus") {

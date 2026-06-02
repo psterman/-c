@@ -55,7 +55,7 @@ Nmer_SearchCenterCoreHealthy(*) {
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl("http://127.0.0.1:8080/health")
-            try whr.SetProxy(2)
+            try whr.SetProxy(1)
         whr.Open("GET", "http://127.0.0.1:8080/health", false)
         whr.SetTimeouts(1500, 1500, 5000, 5000)
         whr.Send()

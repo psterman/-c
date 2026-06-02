@@ -2965,7 +2965,7 @@ CommandPalette_ExecuteGoSearch(keyword, limit, gen, seq := 0) {
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(url)
-            try whr.SetProxy(2)
+            try whr.SetProxy(1)
         whr.Open("GET", url, true)
         whr.SetTimeouts(3000, 3000, 90000, 90000)
         whr.Send()

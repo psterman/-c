@@ -6,6 +6,7 @@
     <title>Niumachat Floating Toolbar Core</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://app.local/assets/js/NmModal.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -974,8 +975,11 @@ if HttpReq.WaitForResponse(5) {
         // 移除此联系人
         function triggerRemoveAgent() {
             if (activeConfigAgentId === 'claude' || activeConfigAgentId === 'cli') {
-                alert('核心主干联系人不支持移除，建议对其执行密钥清空或隐身。');
-                closeNodeConfig();
+                Promise.resolve(window.nmAlert ? window.nmAlert(
+                  '无法移除',
+                  '核心主干联系人不支持移除，建议对其执行密钥清空或隐身。'
+                ) : (alert('核心主干联系人不支持移除，建议对其执行密钥清空或隐身。'), true))
+                  .then(() => closeNodeConfig());
                 return;
             }
             

@@ -2378,6 +2378,7 @@ html[data-theme="light"] #tx-test-result {
 </div>
 
 <script src="https://app.local/assets/nm-bottom-dock.js"></script>
+<script src="https://app.local/assets/js/NmModal.js"></script>
 <script>
 (function () {
   'use strict';
@@ -4556,9 +4557,14 @@ html[data-theme="light"] #tx-test-result {
         .finally(() => setAdvBusy(false));
     };
     if (size > 1024 * 1024) {
-      const ok = confirm('当前处理文本超过 1MB，可能有短暂卡顿，是否继续？');
-      if (!ok) return;
-      setTimeout(runNow, 24);
+      Promise.resolve(window.nmConfirm ? window.nmConfirm(
+        '文本较大，是否继续？',
+        '当前处理文本超过 1MB，可能有短暂卡顿，是否继续？',
+        { okLabel: '继续', cancelLabel: '取消' }
+      ) : confirm('当前处理文本超过 1MB，可能有短暂卡顿，是否继续？')).then((ok) => {
+        if (!ok) return;
+        setTimeout(runNow, 24);
+      });
       return;
     }
     runNow();

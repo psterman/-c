@@ -2457,6 +2457,10 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(FloatingToolbar_DeferredNiumaUpload.Bind(msg), -10)
         return
     }
+    if (typ = "niuma_pick_folder_upload") {
+        SetTimer(FloatingToolbar_DeferredNiumaPickFolderUpload.Bind(msg), -10)
+        return
+    }
     if (typ = "niuma_attach_context") {
         SetTimer(FloatingToolbar_DeferredNiumaAttachContext.Bind(msg), -10)
         return
@@ -2492,6 +2496,65 @@ FloatingToolbar_DeferredNiumaUpload(msg) {
         WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_upload_result", "reqId", reqId, "ok", true, "file", ret))
     } catch as e {
         WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_upload_result", "reqId", reqId, "ok", false, "error", e.Message))
+    }
+}
+
+FloatingToolbar_DeferredNiumaPickFolderUpload(msg) {
+    global g_FTB_WV2
+    if !g_FTB_WV2
+        return
+    reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    payload := msg.Has("payload") && (msg["payload"] is Map) ? msg["payload"] : msg
+    start := payload.Has("startDir") ? String(payload["startDir"]) : ""
+    maxFiles := payload.Has("maxFiles") ? Integer(payload["maxFiles"]) : 300
+    if (maxFiles <= 0)
+        maxFiles := 300
+    if (maxFiles > 2000)
+        maxFiles := 2000
+
+    picked := ""
+    try picked := FileSelect("D", start, "选择要上传的文件夹")
+    catch as e {
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_pick_folder_upload_result", "reqId", reqId, "ok", false, "error", e.Message))
+        return
+    }
+    if (Trim(String(picked)) = "") {
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_pick_folder_upload_result", "reqId", reqId, "ok", false, "error", "cancelled"))
+        return
+    }
+
+    root := RegExReplace(String(picked), "[\\\/]+$", "")
+    SplitPath root, &folderName
+    if (folderName = "")
+        folderName := "folder"
+    uploaded := []
+    truncated := false
+
+    try {
+        baseLen := StrLen(root)
+        Loop Files, root . "\*.*", "FR" {
+            if (uploaded.Length >= maxFiles) {
+                truncated := true
+                break
+            }
+            p := A_LoopFilePath
+            rel := SubStr(p, baseLen + 2)
+            rel2 := folderName . "\" . rel
+            rel2 := StrReplace(rel2, "/", "\")
+            ret := FloatingToolbar_SaveNiumaUploadFromLocalPathWithRel(p, rel2)
+            uploaded.Push(ret)
+        }
+        WebView_QueuePayload(g_FTB_WV2, Map(
+            "type", "niuma_pick_folder_upload_result",
+            "reqId", reqId,
+            "ok", true,
+            "root", root,
+            "folderName", folderName,
+            "truncated", truncated,
+            "files", uploaded
+        ))
+    } catch as e2 {
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_pick_folder_upload_result", "reqId", reqId, "ok", false, "error", e2.Message))
     }
 }
 
@@ -2775,6 +2838,59 @@ FloatingToolbar_SaveNiumaUploadFromLocalPath(path) {
     )
     FloatingToolbar_SaveNiumaAttachMeta(meta)
     return Map("id", uid, "name", name, "relativePath", name, "type", "", "size", sz)
+}
+
+FloatingToolbar_SaveNiumaUploadFromLocalPathWithRel(path, relPath) {
+    p := Trim(String(path))
+    rel := Trim(String(relPath))
+    if (p = "")
+        throw Error("empty path")
+    if (rel = "")
+        rel := ""
+    if !FileExist(p)
+        throw Error("path not found: " . p)
+    attr := FileExist(p)
+    if (InStr(attr, "D"))
+        throw Error("folder not supported: " . p)
+    sz := FileGetSize(p)
+    if (sz <= 0)
+        throw Error("empty file: " . p)
+    if (sz > 20 * 1024 * 1024)
+        throw Error("file too large (>20MB): " . p)
+
+    SplitPath p, &name
+    if (name = "")
+        name := "file"
+    uid := "att_" . FormatTime(, "yyyyMMddHHmmss") . "_" . A_TickCount
+    safe := RegExReplace(name, "[^\w\.\-\(\) ]", "_")
+    upDir := FloatingToolbar_NiumaUploadDir()
+    try DirCreate(upDir)
+    stored := uid . "_" . safe
+    fp := upDir . "\" . stored
+    FileCopy(p, fp, true)
+
+    excerpt := ""
+    if FloatingToolbar_IsTextExt(name) {
+        try excerpt := Trim(FileRead(p, "UTF-8"))
+        if (StrLen(excerpt) > 12000)
+            excerpt := SubStr(excerpt, 1, 12000)
+    }
+
+    meta := FloatingToolbar_LoadNiumaAttachMeta()
+    files := meta["files"]
+    files[uid] := Map(
+        "id", uid,
+        "name", name,
+        "relativePath", rel != "" ? rel : name,
+        "type", "",
+        "size", sz,
+        "storedName", stored,
+        "storedPath", fp,
+        "uploadedAt", FormatTime(, "yyyy-MM-ddTHH:mm:ss"),
+        "textExcerpt", excerpt
+    )
+    FloatingToolbar_SaveNiumaAttachMeta(meta)
+    return Map("id", uid, "name", name, "relativePath", rel != "" ? rel : name, "type", "", "size", sz)
 }
 
 FloatingToolbar_LoadNiumaAttachContext(ids) {

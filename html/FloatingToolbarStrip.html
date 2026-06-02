@@ -10671,7 +10671,13 @@ body.niuma-confirm-open{overflow:hidden}
           try {
             post({ type: 'niuma_llm_http_cancel', reqId: reqId });
           } catch (_) {}
-          reject(new Error('请求超时（' + timeoutMs + 'ms），请检查网络或代理'));
+          reject(
+            new Error(
+              '请求超时（' +
+                timeoutMs +
+                'ms）。若你使用系统代理/Clash，可能 WinHTTP 未同步代理：可在命令行执行 `netsh winhttp import proxy source=ie` 后重试。'
+            )
+          );
         }, timeoutMs + 500);
         function onMsg(ev) {
           var d = ev && ev.data;
@@ -10753,6 +10759,17 @@ body.niuma-confirm-open{overflow:hidden}
         if (String(d.type || '') === 'niuma_upload_result') {
           if (d.ok && d.file) finishOk(d.file);
           else finishErr(new Error(String(d.error || 'upload failed')));
+          return;
+        }
+        if (String(d.type || '') === 'niuma_pick_folder_upload_result') {
+          if (d.ok) {
+            finishOk({
+              root: String(d.root || ''),
+              folderName: String(d.folderName || ''),
+              truncated: !!d.truncated,
+              files: Array.isArray(d.files) ? d.files : []
+            });
+          } else finishErr(new Error(String(d.error || 'pick folder upload failed')));
           return;
         }
         if (String(d.type || '') === 'niuma_attach_context_result') {
@@ -17956,6 +17973,8 @@ body.niuma-confirm-open{overflow:hidden}
     }
     var cfg = buildSendCfg();
     if (!cfg) return;
+    var preparedUserContent = s && s._pendingUserContentForModel != null ? String(s._pendingUserContentForModel) : '';
+    if (preparedUserContent) cfg.userContentForModel = preparedUserContent;
     var lastUserText = '';
     for (var hui = s.history.length - 1; hui >= 0; hui--) {
       if (s.history[hui] && s.history[hui].role === 'user') {
@@ -17963,7 +17982,9 @@ body.niuma-confirm-open{overflow:hidden}
         break;
       }
     }
-    if (lastUserText) cfg.userContentForModel = composeUserTextForModel(lastUserText, cfg);
+    // If sendChat() already prepared a richer payload (e.g. Attachment Context),
+    // don't overwrite it with the UI display text from history.
+    if (lastUserText && !cfg.userContentForModel) cfg.userContentForModel = composeUserTextForModel(lastUserText, cfg);
     if (cfg.provider === 'ollama') {
       await checkOllamaHealthWithStart({ tryStart: true });
       cfg.model = resolveOllamaModelForSend(cfg);
@@ -18110,6 +18131,8 @@ body.niuma-confirm-open{overflow:hidden}
         renderThreadHub();
       }
     } finally {
+      var sDone = sessionById(sid);
+      if (sDone && sDone._pendingUserContentForModel != null) delete sDone._pendingUserContentForModel;
       setSessionSending(sid, false);
     }
   }
@@ -18129,7 +18152,41 @@ body.niuma-confirm-open{overflow:hidden}
     var composedForModel = String(text || '').trim();
     if (hasAttach) {
       var idsForModel = (pa.fileIds || []).filter(Boolean).slice(0, 50);
-      composedForModel = (composedForModel ? composedForModel + '\n\n' : '') + '[Attached file_ids]\n' + idsForModel.join('\n');
+      var attachNames = (Array.isArray(pa.items) ? pa.items : [])
+        .map(function (x) { return x && (x.relativePath || x.name) ? String(x.relativePath || x.name) : ''; })
+        .filter(Boolean)
+        .slice(0, 30);
+      try {
+        var attachCtx = await fetchAttachmentContext(pa);
+        if (attachCtx) {
+          var marker = '[[ATTACH_CTX_PRESENT]]';
+          var fileList = attachNames.length ? '\n[Attached names]\n' + attachNames.join('\n') : '';
+          composedForModel = mergeUserTextWithAttachmentContext(composedForModel, marker + fileList + '\n' + attachCtx);
+        } else {
+          var emptyMarker = '[[ATTACH_CTX_EMPTY]]';
+          var emptyFileList = attachNames.length ? '\n[Attached names]\n' + attachNames.join('\n') : '';
+          composedForModel = (composedForModel ? composedForModel + '\n\n' : '') + emptyMarker + emptyFileList;
+          cstatForSession(sid, '附件已上传，但未能生成上下文（Attachment Context 为空）。模型可能无法“看到”文件内容。', 'error');
+        }
+      } catch (eAttach) {
+        var failMarker = '[[ATTACH_CTX_ERROR]]';
+        var failMsg = eAttach && eAttach.message ? String(eAttach.message) : String(eAttach);
+        var failFileList = attachNames.length ? '\n[Attached names]\n' + attachNames.join('\n') : '';
+        composedForModel =
+          (composedForModel ? composedForModel + '\n\n' : '') +
+          failMarker + '\n[Attach error]\n' + failMsg + failFileList;
+        cstatForSession(
+          sid,
+          '附件上下文获取失败：' + (eAttach && eAttach.message ? eAttach.message : String(eAttach)) + '。将仅发送 file_ids，模型可能无法识别附件。',
+          'error'
+        );
+      }
+      if (idsForModel.length) {
+        composedForModel =
+          (composedForModel ? composedForModel + '\n\n' : '') +
+          '[Attached file_ids]\n' +
+          idsForModel.join('\n');
+      }
     }
     var displayText = text || ('[attachments] ' + Number((pa.items && pa.items.length) || 0) + ' file(s)');
     saveCfg(false);
@@ -18150,6 +18207,7 @@ body.niuma-confirm-open{overflow:hidden}
       }
     }
     cfg.userContentForModel = composeUserTextForModel(composedForModel, cfg);
+    s._pendingUserContentForModel = cfg.userContentForModel;
     var p0 = P[cfg.provider] || P.openai;
 
     function cancelAllPendingHttpOnTimeout(err) {
@@ -19000,6 +19058,32 @@ body.niuma-confirm-open{overflow:hidden}
     if (okCount > 0) cstat('Attachments added: ' + okCount, 'success');
   }
 
+  function ingestHostUploadedFiles(files) {
+    if (!files || !files.length) return;
+    var pa = state.pendingAttach || { items: [], fileIds: [], files: [] };
+    pa.items = Array.isArray(pa.items) ? pa.items : [];
+    pa.fileIds = Array.isArray(pa.fileIds) ? pa.fileIds : [];
+    pa.files = Array.isArray(pa.files) ? pa.files : [];
+    var okCount = 0;
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (!f || !f.id) continue;
+      pa.items.push({
+        id: f.id,
+        name: f.name || (f.relativePath || 'file'),
+        relativePath: f.relativePath || f.name || 'file',
+        size: Number(f.size || 0),
+        type: f.type || ''
+      });
+      if (pa.fileIds.indexOf(f.id) < 0) pa.fileIds.push(f.id);
+      pa.files.push(f);
+      okCount++;
+    }
+    state.pendingAttach = pa;
+    refreshAttachUi();
+    if (okCount > 0) cstat('Attachments added: ' + okCount, 'success');
+  }
+
   async function fetchAttachmentContext(pa) {
     pa = pa || { fileIds: [], items: [] };
     var ids = Array.isArray(pa.fileIds) ? pa.fileIds.filter(Boolean) : [];
@@ -19056,7 +19140,28 @@ body.niuma-confirm-open{overflow:hidden}
   }
 
   if (attachFolderBtn && attachFolderInput) {
-    attachFolderBtn.addEventListener('click', function () { attachFolderInput.value = ''; attachFolderInput.click(); });
+    attachFolderBtn.addEventListener('click', async function () {
+      // Prefer host-side folder pick + upload to avoid browser security confirm dialog & theme mismatch.
+      if (hostBridgeAvailable()) {
+        try {
+          cstat('请选择要上传的文件夹…');
+          var r = await hostBridgeRequest('niuma_pick_folder_upload', { maxFiles: 300 }, 120000);
+          if (r && r.files && r.files.length) {
+            ingestHostUploadedFiles(r.files);
+            if (r.truncated) cstat('文件过多，仅上传前 300 个。', 'error');
+            else cstat('文件夹已添加：' + Number(r.files.length || 0), 'success');
+          } else {
+            cstat('未选择文件夹或文件为空。', 'error');
+          }
+          return;
+        } catch (e) {
+          cstat('添加文件夹失败：' + (e && e.message ? e.message : String(e)), 'error');
+          // fall back to browser picker below
+        }
+      }
+      attachFolderInput.value = '';
+      attachFolderInput.click();
+    });
     attachFolderInput.addEventListener('change', function () {
       var fs = Array.prototype.slice.call(attachFolderInput.files || []);
       attachFolderInput.value = '';

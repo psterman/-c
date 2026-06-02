@@ -41,7 +41,7 @@ NiumaOllama_PortOpen(port := 0) {
     url := "http://127.0.0.1:" . port . "/api/tags"
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        try whr.SetProxy(2)
+        try whr.SetProxy(1)
         whr.Open("GET", url, false)
         whr.SetTimeouts(1500, 2000, 2000, 5000)
         whr.Send()

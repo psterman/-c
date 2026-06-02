@@ -2733,7 +2733,7 @@ _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0) 
         url := "http://127.0.0.1:8080/search?" . q
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(url)
-            try whr.SetProxy(2)
+            try whr.SetProxy(1)
         whr.Open("GET", url, true)
         whr.SetTimeouts(900, 900, 2200, 2200)
         whr.Send()
