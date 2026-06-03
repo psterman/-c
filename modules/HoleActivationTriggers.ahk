@@ -1082,73 +1082,17 @@ HoleTriggers_GestureToastAutoHide(*) {
 }
 
 HoleTriggers_ShowGestureToast(x, y, reason := "gesture", ok := true) {
-    global g_HoleTrig_ToastHideSerial
-    ax := Integer(x), ay := Integer(y)
-    if (ax = 0 && ay = 0) {
-        CoordMode("Mouse", "Screen")
-        MouseGetPos(&ax, &ay)
-    }
-    try SelectionSense_HideDragHintToast("hole_gesture_toast")
-    catch {
-    }
-    HoleTriggers_HideGestureToast("replace")
-    msg := HoleTriggers_GestureToastMessage(reason, ok)
-    if (Trim(msg) = "")
-        return
-    HoleTriggers_EnsureGestureToastGui()
-    global g_HoleTrig_ToastGui, g_HoleTrig_ToastTextCtrl
-    try g_HoleTrig_ToastTextCtrl.Value := msg
-    catch {
-        return
-    }
-    try g_HoleTrig_ToastTextCtrl.Opt(ok ? "+c7DD3FC" : "+cFFB86C")
-    catch {
-    }
-    g_HoleTrig_ToastHideSerial += 1
-    hideSerial := g_HoleTrig_ToastHideSerial
-    tw := 236
-    th := 34
-    vl := 0, vt := 0, vw := A_ScreenWidth, vh := A_ScreenHeight
-    if FuncExists("ScreenVirtual_GetBounds") {
-        try ScreenVirtual_GetBounds(&vl, &vt, &vw, &vh)
-        catch {
-        }
-    }
-    tx := ax - (tw // 2)
-    ty := ay - th - 42
-    if (tx < vl + 6)
-        tx := vl + 6
-    if (tx + tw > vl + vw - 6)
-        tx := vl + vw - tw - 6
-    if (ty < vt + 6)
-        ty := ay + 24
-    if (ty + th > vt + vh - 6)
-        ty := vt + vh - th - 6
-    try {
-        g_HoleTrig_ToastGui.Show("NA x" . tx . " y" . ty . " w" . tw . " h" . th . " NoActivate")
-        try WinSetTransColor("010101", g_HoleTrig_ToastGui.Hwnd)
-        catch {
-        }
-        try WinSetAlwaysOnTop(1, "ahk_id " . g_HoleTrig_ToastGui.Hwnd)
-        catch {
-        }
-        SetTimer(HoleTriggers_GestureToastAutoHide, ok ? -1200 : -2200)
-        HoleTriggers_DiagLog("[HoleTrigger] toast_show ok=" . (ok ? "1" : "0") . " msg=" . msg . " x=" . tx . " y=" . ty . " serial=" . hideSerial)
-    } catch as e {
-        HoleTriggers_DiagLog("[HoleTrigger] toast_show_fail msg=" . e.Message)
-    }
+    ; 静默：不显示顺时针/逆时针/长按唤起提示
+    return
 }
 
 HoleTriggers_ShowGestureSuccessToast(x, y, reason := "gesture") {
-    HoleTriggers_ShowGestureToast(x, y, reason, true)
+    return
 }
 
 HoleTriggers_NotifyGestureResult(ok, x, y, reason := "gesture") {
-    if !ok && (HoleTriggers_IsFreeCircleReason(reason) || HoleTriggers_IsHoldReason(reason))
-        return
-    try HoleTriggers_ShowGestureToast(x, y, reason, !!ok)
-    catch {
-    }
+    ; 静默唤起：不弹出顺时针/逆时针/长按等手势提示
+    return
 }
 
 ; 供 #HotIf：黑洞模式 + 已启用手势；Cursor+CapsLock 右键菜单优先

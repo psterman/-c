@@ -219,13 +219,30 @@
       width: 28px;
       height: 28px;
       min-width: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       border-radius: 8px;
-      border: 1px solid rgba(255, 120, 120, 0.5);
-      background: rgba(255, 70, 70, 0.15);
-      color: #ffd7d7;
-      font-weight: 700;
+      border: 1px solid rgba(255, 102, 0, 0.28);
+      background: rgba(6, 10, 16, 0.45);
+      color: #ff8533;
       cursor: pointer;
       padding: 0;
+      transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+    #launcherCloseBtn svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      pointer-events: none;
+    }
+    #launcherCloseBtn:hover {
+      border-color: rgba(255, 140, 60, 0.5);
+      background: rgba(12, 16, 22, 0.62);
+      color: #ffaa66;
     }
     #launcherGrid {
       display: grid;
@@ -250,33 +267,7 @@
     }
     .launcher-tile:hover { transform: scale(1.06); }
     .launcher-tile:active { transform: scale(0.94); }
-    .launcher-icon {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      line-height: 1;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    .launcher-icon img {
-      width: 28px;
-      height: 28px;
-      object-fit: contain;
-      pointer-events: none;
-    }
-    .launcher-icon svg {
-      width: 26px;
-      height: 26px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
+    /* 启动器图标：hole-scene-launcher.js 注入玻璃拟态样式 */
     .launcher-label {
       font-size: 11px;
       line-height: 1.25;
@@ -319,24 +310,10 @@
       pointer-events: auto !important;
     }
     body.overlay-hole-mode #launcherHeader {
-      margin-bottom: 4px;
-      cursor: default;
-    }
-    body.overlay-hole-mode #launcherTitle::after {
-      content: ' · B·面板';
-      font-size: 10px;
-      font-weight: 600;
-      color: rgba(120, 255, 200, 0.78);
-      letter-spacing: 0.05em;
-    }
-    body.overlay-hole-mode #launcherSubtitle {
-      font-size: 10px;
-      color: rgba(210, 240, 230, 0.55);
-    }
-    body.overlay-hole-mode .launcher-icon {
-      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      display: none !important;
     }
   </style>
+  <script src="https://app.local/assets/hole-scene-launcher.js"></script>
 </head>
 <body>
   <div id="panelBootPlaceholder" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#9df7cc;font:14px/1.5 'Segoe UI','Microsoft YaHei',sans-serif;background:rgba(5,10,16,0.94);z-index:0;">
@@ -349,7 +326,9 @@
           <div id="launcherTitle">启动器</div>
           <div id="launcherSubtitle">选择场景 · 与快捷键绑定器悬浮栏同步</div>
         </div>
-        <button id="launcherCloseBtn" type="button" title="关闭" aria-label="关闭">×</button>
+        <button id="launcherCloseBtn" type="button" title="关闭" aria-label="关闭">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
       </div>
       <div id="launcherGrid" role="grid"></div>
     </section>
@@ -454,19 +433,10 @@
       let panelView = 'launcher';
       let capturedPreview = '';
 
-      const LAUNCHER_ITEMS = [
-        { id: 'hole_manual', title: '黑洞手动', sceneId: 'hole_manual', cmdId: '', internal: true, emoji: '◎', gradient: 'linear-gradient(145deg,#0b4d3f,#1f8a6b)' },
-        { id: 'niuma', title: '牛马 Chat', sceneId: 'ai', cmdId: 'ch_r', emoji: '🤖', gradient: 'linear-gradient(145deg,#1a3a5c,#2d6cdf)' },
-        { id: 'search', title: '搜索中心', sceneId: 'search', cmdId: 'sc_activate_search', emoji: '🔍', gradient: 'linear-gradient(145deg,#12352a,#2d8f6a)' },
-        { id: 'clipboard', title: '剪贴板', sceneId: 'clipboard', cmdId: 'qa_clipboard', emoji: '📋', gradient: 'linear-gradient(145deg,#1e3d2f,#3cb878)' },
-        { id: 'prompts', title: '提示词', sceneId: 'prompts', cmdId: 'ch_b', emoji: '💡', gradient: 'linear-gradient(145deg,#4a3a12,#c98a1a)' },
-        { id: 'scratchpad', title: '草稿本', sceneId: 'scratchpad', cmdId: 'hub_capsule', emoji: '📝', gradient: 'linear-gradient(145deg,#3d2e14,#b86b22)' },
-        { id: 'screenshot', title: '截图', sceneId: 'screenshot', cmdId: 'ch_t', emoji: '📸', gradient: 'linear-gradient(145deg,#12384a,#2aa8c9)' },
-        { id: 'settings', title: '设置', sceneId: 'settings', cmdId: 'qa_config', emoji: '⚙️', gradient: 'linear-gradient(145deg,#2a2f38,#5c6778)' },
-        { id: 'hotkeys', title: '快捷键', sceneId: 'hotkeys', cmdId: 'sys_show_vk', emoji: '⌨️', gradient: 'linear-gradient(145deg,#4a2f14,#d97706)' },
-        { id: 'cursor', title: 'Cursor', sceneId: 'cursor', cmdId: 'cursor_open', img: 'https://app.local/assets/icons/app/cursor.png', gradient: 'linear-gradient(145deg,#1a3350,#3b82f6)' },
-        { id: 'cloud', title: '牛马云', sceneId: 'cloudplayer', cmdId: 'open_cloudplayer', always: true, emoji: '☁️', gradient: 'linear-gradient(145deg,#1a2f45,#38bdf8)' }
-      ];
+      const LAUNCHER_ITEMS = (window.HoleSceneLauncher && window.HoleSceneLauncher.ITEMS) || [];
+      if (window.HoleSceneLauncher && window.HoleSceneLauncher.ensureStyle) {
+        window.HoleSceneLauncher.ensureStyle();
+      }
 
       const launcherGrid = document.getElementById('launcherGrid');
       const launcherHeader = document.getElementById('launcherHeader');
@@ -573,15 +543,9 @@
           btn.setAttribute('role', 'gridcell');
           btn.title = it.title;
           const icon = document.createElement('div');
-          icon.className = 'launcher-icon';
-          icon.style.background = it.gradient || 'linear-gradient(145deg,#333,#555)';
-          if (it.img) {
-            const im = document.createElement('img');
-            im.src = it.img;
-            im.alt = '';
-            icon.appendChild(im);
-          } else if (it.emoji) {
-            icon.textContent = it.emoji;
+          icon.className = 'launcher-icon hole-scene-icon';
+          if (window.HoleSceneLauncher && window.HoleSceneLauncher.renderIcon) {
+            window.HoleSceneLauncher.renderIcon(icon, it);
           }
           const lab = document.createElement('span');
           lab.className = 'launcher-label';
