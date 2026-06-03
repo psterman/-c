@@ -491,11 +491,36 @@ FloatingToolbar_CancelToolbarRecoveryTimers() {
     }
 }
 
+; 用户经托盘/设置离开黑洞后，取消「牛马抽屉关闭自动回黑洞」的待执行定时器。
+FloatingToolbar_CancelReturnToHoleAfterNiuma() {
+    global g_FTB_ReturnToHoleAfterNiuma, g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
+    g_FTB_ReturnToHoleAfterNiuma := false
+    g_FTB_PendingOpenNiumaDrawer := false
+    g_FTB_NiumaHandoffOpening := false
+    try SetTimer(FloatingToolbar_TryReturnToHoleAfterNiuma, 0)
+    catch {
+    }
+}
+
 FloatingToolbar_TryReturnToHoleAfterNiuma(*) {
     global g_FTB_ReturnToHoleAfterNiuma, g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
-    global AppearanceActivationMode, FloatingToolbarChatDrawerOpen, g_FTB_SuspendToolbarHomeResetUntil
+    global AppearanceActivationMode, FloatingToolbarChatDrawerOpen, g_FTB_SuspendToolbarHomeResetUntil, ConfigFile
     if !g_FTB_ReturnToHoleAfterNiuma
         return false
+    ; 托盘/设置已切到悬浮栏等：勿再写回 hole（否则覆盖 Nmer_PersistAndApplyActivationMode）
+    cur := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+    if (cur != "hole") {
+        FloatingToolbar_CancelReturnToHoleAfterNiuma()
+        return false
+    }
+    cfg := (IsSet(ConfigFile) && ConfigFile != "") ? ConfigFile : Nmer_ResolveConfigFile()
+    try {
+        if (NormalizeAppearanceActivationMode(IniRead(cfg, "Appearance", "ActivationMode", cur)) != "hole") {
+            FloatingToolbar_CancelReturnToHoleAfterNiuma()
+            return false
+        }
+    } catch {
+    }
     g_FTB_ReturnToHoleAfterNiuma := false
     g_FTB_PendingOpenNiumaDrawer := false
     g_FTB_NiumaHandoffOpening := false
@@ -4781,9 +4806,12 @@ FloatingToolbar_SetActivationMode(mode) {
         FloatingToolbar_AnimatedSwitchToToolbar()
         return
     }
-    ; Idempotent guard: wheel/UI can emit repeated same-mode toggles in a short burst.
-    if (cur = m)
+    ; 仅配置仍为 hole 时要切到 toolbar 时绕过幂等早退（勿再调 Nmer_Persist，避免与 Apply 互相嵌套）
+    force := (m = "toolbar" && cur = "hole")
+    if (cur = m && !force)
         return
+    if (m = "toolbar" && cur = "hole")
+        FloatingToolbar_CancelReturnToHoleAfterNiuma()
     AppearanceActivationMode := m
     cfg := Nmer_ResolveConfigFile()
     try IniWrite(AppearanceActivationMode, cfg, "Appearance", "ActivationMode")
@@ -5419,8 +5447,14 @@ FloatingToolbarPushScaleStateToWeb(userScale := "") {
 }
 
 FloatingToolbar_SwitchToToolbarFromMenu(*) {
-    try FloatingToolbar_SetActivationMode("toolbar")
-    catch {
+    try {
+        if FuncExists("FloatingToolbar_CancelReturnToHoleAfterNiuma")
+            FloatingToolbar_CancelReturnToHoleAfterNiuma()
+        if FuncExists("Nmer_PersistAndApplyActivationMode")
+            Nmer_PersistAndApplyActivationMode("toolbar")
+        else
+            FloatingToolbar_SetActivationMode("toolbar")
+    } catch {
     }
 }
 

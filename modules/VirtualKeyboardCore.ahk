@@ -381,11 +381,6 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "ch_x", "name", "草稿本 / 触发模式双击", "desc", "CapsLock+X：切到双击 Ctrl+C 触发模式", "fn", "CH_RUN", "suggested", "x"),
             Map("id", "ch_v", "name", "草稿本 / 复制图片预览", "desc", "CapsLock+V：复制当前图片预览", "fn", "CH_RUN", "suggested", "v"),
             Map("id", "qa_split", "name", "快捷动作 / 分割代码", "desc", "执行 Quick Action: Split", "fn", "CH_RUN"),
-            Map("id", "ch_1", "name", "快捷槽位 1", "desc", "CapsLock+1：选中草稿本第 1 条文本", "fn", "CH_RUN", "suggested", "1"),
-            Map("id", "ch_2", "name", "快捷槽位 2", "desc", "CapsLock+2：选中草稿本第 2 条文本", "fn", "CH_RUN", "suggested", "2"),
-            Map("id", "ch_3", "name", "快捷槽位 3", "desc", "CapsLock+3：选中草稿本第 3 条文本", "fn", "CH_RUN", "suggested", "3"),
-            Map("id", "ch_4", "name", "快捷槽位 4", "desc", "CapsLock+4：选中草稿本第 4 条文本", "fn", "CH_RUN", "suggested", "4"),
-            Map("id", "ch_5", "name", "快捷槽位 5", "desc", "CapsLock+5：选中草稿本第 5 条文本", "fn", "CH_RUN", "suggested", "5"),
             Map("id", "hub_ctx_copy", "name", "复制", "desc", "HubCapsule 堆叠卡片右键", "fn", "CH_RUN"),
             Map("id", "hub_ctx_remove", "name", "移除", "desc", "HubCapsule 堆叠卡片右键", "fn", "CH_RUN"),
             Map("id", "hub_ctx_clear", "name", "清空全部", "desc", "HubCapsule 堆叠卡片右键", "fn", "CH_RUN")
@@ -422,7 +417,7 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "qa_command_palette", "name", "命令面板", "desc", "Cursor: Ctrl+Shift+P", "fn", "CH_RUN"),
             Map("id", "qa_voice", "name", "快捷动作 / 语音输入", "desc", "执行 Quick Action: Voice", "fn", "CH_RUN"),
             Map("id", "ch_z", "name", "语音输入", "desc", "CapsLock+Z：开始或停止语音输入", "fn", "CH_RUN", "suggested", "z"),
-            Map("id", "cursor_open", "name", "打开光标面板", "desc", "显示光标助手面板", "fn", "CURSOR_OPEN"),
+            Map("id", "cursor_open", "name", "搜索中心", "desc", "打开全局搜索中心", "fn", "CURSOR_OPEN"),
             Map("id", "cursor_close", "name", "关闭光标面板", "desc", "隐藏光标助手面板", "fn", "CURSOR_CLOSE")
         ]),
         Map("id", "cloudplayer", "name", "☁️ 牛马云", "commands", [
@@ -3207,10 +3202,13 @@ _ExecuteCommand(cmdId) {
             try WinClose("A")
             executed := true
         case "CURSOR_OPEN":
-            OutputDebug("[VK] CURSOR_OPEN: hook here")
+            try _VK_H("ShowSearchCenterFromMenu")
+            catch {
+                try ShowSearchCenterFromMenu()
+            }
             executed := true
         case "CURSOR_CLOSE":
-            OutputDebug("[VK] CURSOR_CLOSE: hook here")
+            try HideCursorPanel()
             executed := true
         case "CH_RUN":
             ; 统一调度入口（热键/托盘/工具栏一致）
@@ -5315,6 +5313,10 @@ VK_SendToWeb(jsonStr) {
     global g_VK_WV2, g_VK_Ready
     if g_VK_WV2 && g_VK_Ready
         WebView_QueueJson(g_VK_WV2, jsonStr)
+    if FuncExists("ConfigWebView_RelayVkWebJson")
+        try ConfigWebView_RelayVkWebJson(jsonStr)
+        catch {
+        }
 }
 
 VK_PushThemeToWeb(*) {

@@ -1,9 +1,13 @@
+;@reference VirtualKeyboardExecCmd.d.ahk
 ; CursorHelper 命令执行（VirtualKeyboard CH_RUN / WM_COPYDATA vkExec 共用）
-; 须在 HandleDynamicHotkey、ExecuteQuickActionByType、ExecuteQuickActionSlot 等定义之后再 #Include
+; 须在 HandleDynamicHotkey 等定义之后再 #Include
 ;
-; 宿主函数由主脚本在 Include 本文件之前定义。此处用静态 Map 缓存 Func引用再 .Call：
-; - 单独打开本文件时 LSP 不会把裸名当成「未赋值局部变量」
-; - 与「每次 Func(字符串)」相比，首次进入时一次性绑定，减少异常时机问题
+; LSP：同名 VirtualKeyboardExecCmd.d.ahk 声明宿主全局/函数，消除「未赋值/未定义」警告。
+; _VK_H(name, args*) 用于可选宿主符号；已在 .d.ahk 中声明的优先直接调用（如 HandleDynamicHotkey）。
+;
+; 本文件先于 VirtualKeyboardCore #Include；与 Core 共享的全局在此占位（Core 内 _LoadCommands 会填充 CommandList）
+global g_Commands := Map()
+global g_VK_Embedded := false
 
 _VK_H(name, args*) {
     ; 用 %name%() 间接调用，避免 Func(长名).Call 在部分宿主上下文报 Invalid base
@@ -39,7 +43,7 @@ VK_Execute(cmdId) {
 
     fn := ""
     try {
-        if (g_Commands is Map) && g_Commands.Has("CommandList")
+        if IsSet(g_Commands) && (g_Commands is Map) && g_Commands.Has("CommandList")
             && (g_Commands["CommandList"] is Map) && g_Commands["CommandList"].Has(cid)
             fn := String(g_Commands["CommandList"][cid]["fn"])
     }
@@ -392,7 +396,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_SearchCenterSetFilter("template")
                     executed := true
                 } else {
-                    _VK_H("HandleDynamicHotkey",HotkeyC != "" ? HotkeyC : "c", "C")
+                    HandleDynamicHotkey(HotkeyC != "" ? HotkeyC : "c", "C")
                     executed := true
                 }
             case "ch_v":
@@ -430,7 +434,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_SearchCenterSetFilter("clipboard")
                     executed := true
                 } else {
-                    _VK_H("HandleDynamicHotkey",HotkeyX != "" ? HotkeyX : "x", "X")
+                    HandleDynamicHotkey(HotkeyX != "" ? HotkeyX : "x", "X")
                     executed := true
                 }
             case "ch_e":
@@ -444,7 +448,6 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_SearchCenterSetCategory("academic")
                     executed := true
                 } else {
-                    _VK_H("HandleDynamicHotkey",HotkeyE != "" ? HotkeyE : "e", "E")
                     executed := true
                 }
             case "ch_r":
@@ -462,7 +465,6 @@ VK_ExecCursorHelperCmd(cmdId) {
                     executed := true
                 }
             case "ch_o":
-                _VK_H("HandleDynamicHotkey",HotkeyO != "" ? HotkeyO : "o", "O")
                 executed := true
             case "ch_q":
                 if (VK_IsPromptQuickPadActive()) {
@@ -475,7 +477,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_SearchCenterSetCategory("ai")
                     executed := true
                 } else {
-                    _VK_H("HandleDynamicHotkey",HotkeyQ != "" ? HotkeyQ : "q", "Q")
+                    HandleDynamicHotkey(HotkeyQ != "" ? HotkeyQ : "q", "Q")
                     executed := true
                 }
             case "ch_z":
@@ -486,7 +488,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_SearchCenterSetFilter("File")
                     executed := true
                 } else {
-                    _VK_H("HandleDynamicHotkey",HotkeyZ != "" ? HotkeyZ : "z", "Z")
+                    HandleDynamicHotkey(HotkeyZ != "" ? HotkeyZ : "z", "Z")
                     executed := true
                 }
             case "ch_t":
@@ -494,7 +496,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_PromptQuickPadAction("import")
                     executed := true
                 } else {
-                    _VK_H("HandleDynamicHotkey",HotkeyT != "" ? HotkeyT : "t", "T")
+                    HandleDynamicHotkey(HotkeyT != "" ? HotkeyT : "t", "T")
                     executed := true
                 }
             case "ch_f":
@@ -525,12 +527,8 @@ VK_ExecCursorHelperCmd(cmdId) {
             case "ch_b":
                 if (VK_IsPromptQuickPadActive()) {
                     VK_PromptQuickPadAction("toggle_pin")
-                } else if (GetPanelVisibleState()) {
-                    CapsLock2 := false
-                    if StrLower(BatchHotkey) = "b"
-                        BatchOperation()
-                    else
-                        Send("b")
+                } else if (VK_IsHubCapsuleActive()) {
+                    VK_HubCapsuleAction("toggle_pin")
                 } else {
                     PromptQuickPad_HandleCapsLockB()
                 }
@@ -618,53 +616,35 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_PromptQuickPadAction("json_help")
                 else if (VK_IsHubCapsuleActive())
                     VK_HubCapsuleAction("select_slot_1")
-                else
-                    ExecuteQuickActionSlot(1)
                 executed := true
             case "ch_2":
                 if (VK_IsPromptQuickPadActive())
                     VK_PromptQuickPadAction("item_save")
                 else if (VK_IsHubCapsuleActive())
                     VK_HubCapsuleAction("select_slot_2")
-                else
-                    ExecuteQuickActionSlot(2)
                 executed := true
             case "ch_3":
                 if (VK_IsPromptQuickPadActive())
                     VK_PromptQuickPadAction("item_cancel")
                 else if (VK_IsHubCapsuleActive())
                     VK_HubCapsuleAction("select_slot_3")
-                else
-                    ExecuteQuickActionSlot(3)
                 executed := true
             case "ch_4":
                 if (VK_IsPromptQuickPadActive())
                     VK_PromptQuickPadAction("help_close")
                 else if (VK_IsHubCapsuleActive())
                     VK_HubCapsuleAction("select_slot_4")
-                else
-                    ExecuteQuickActionSlot(4)
                 executed := true
             case "ch_5":
                 if (VK_IsHubCapsuleActive())
                     VK_HubCapsuleAction("select_slot_5")
                 else
-                    ExecuteQuickActionSlot(5)
-                executed := true
+                    executed := true
             case "qa_split":
                 ExecuteQuickActionByType("Split")
                 executed := true
             case "qa_batch":
                 ExecuteQuickActionByType("Batch")
-                executed := true
-            case "qa_explain":
-                ExecuteQuickActionByType("Explain")
-                executed := true
-            case "qa_refactor":
-                ExecuteQuickActionByType("Refactor")
-                executed := true
-            case "qa_optimize":
-                ExecuteQuickActionByType("Optimize")
                 executed := true
             case "qa_config":
                 ExecuteQuickActionByType("Config")
@@ -771,11 +751,15 @@ VK_ExecCursorHelperCmd(cmdId) {
                 try FloatingToolbar_SetActivationMode("bubble")
                 executed := true
             case "gk_toolbar_mode":
-                try AppearanceActivationMode := "toolbar"
-                try IniWrite("toolbar", ConfigFile, "Appearance", "ActivationMode")
-                try HideFloatingBubble()
-                try ShowFloatingToolbar()
-                try ApplyAppearanceActivationMode()
+                if FuncExists("Nmer_PersistAndApplyActivationMode") {
+                    try Nmer_PersistAndApplyActivationMode("toolbar")
+                } else {
+                    try AppearanceActivationMode := "toolbar"
+                    try IniWrite("toolbar", ConfigFile, "Appearance", "ActivationMode")
+                    try HideFloatingBubble()
+                    try ShowFloatingToolbar()
+                    try ApplyAppearanceActivationMode()
+                }
                 executed := true
             case "gk_toolbar_recover":
                 try AppearanceActivationMode := "toolbar"
@@ -1119,7 +1103,6 @@ VK_NoteLastChFromCapsLockKey(keyLower) {
         "o", "ch_o", "q", "ch_q", "z", "ch_z", "t", "ch_t", "p", "ch_p",
         "w", "ch_w", "s", "ch_s", "a", "ch_a", "d", "ch_d",
         "f", "ch_f", "g", "ch_g", "b", "ch_b",
-        "1", "ch_1", "2", "ch_2", "3", "ch_3", "4", "ch_4", "5", "ch_5",
         "backspace", "ch_backspace"
     )
     kl := StrLower(keyLower)

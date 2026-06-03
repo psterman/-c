@@ -1087,11 +1087,20 @@ GDHO_OpenGestureHoleAt(mx, my, reason := "gesture") {
 }
 
 GDHO_ForceApplyAppearanceMode(mode := "hole") {
-    global AppearanceActivationMode, g_ActivationApplyLastMode, g_ActivationApplyLastTick
+    global AppearanceActivationMode, g_ActivationApplyLastMode, g_ActivationApplyLastTick, ConfigFile
     m := NormalizeAppearanceActivationMode(mode)
     AppearanceActivationMode := m
     g_ActivationApplyLastMode := ""
     g_ActivationApplyLastTick := 0
+    cfg := (IsSet(ConfigFile) && ConfigFile != "") ? ConfigFile : Nmer_ResolveConfigFile()
+    try IniWrite(m, cfg, "Appearance", "ActivationMode")
+    catch {
+    }
+    if (m != "hole" && FuncExists("FloatingToolbar_CancelReturnToHoleAfterNiuma")) {
+        try FloatingToolbar_CancelReturnToHoleAfterNiuma()
+        catch {
+        }
+    }
     if FuncExists("ApplyAppearanceActivationMode")
         return ApplyAppearanceActivationMode()
     return false
@@ -3639,8 +3648,8 @@ GDHO_ExecutePanelDockCmd(cmdId) {
                 return true
             }
         case "cursor_open":
-            if GDHO_TryCall("ShowCursorPanel") {
-                try NativeDropDiag_Log("[LauncherPick] exec_path=ShowCursorPanel")
+            if GDHO_TryCall("ShowSearchCenterFromMenu") {
+                try NativeDropDiag_Log("[LauncherPick] exec_path=ShowSearchCenterFromMenu")
                 return true
             }
     }

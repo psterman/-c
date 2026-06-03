@@ -861,22 +861,19 @@ TrayMenu_OpenConfigAction(*) {
 }
 
 TrayMenu_SwitchToToolbarFromHoleMenu(*) {
-    try TrayMenu_Log("switch_to_toolbar_from_hole_menu")
+    global AppearanceActivationMode
+    try TrayMenu_Log("switch_to_toolbar_from_hole_menu begin")
     try {
-        if FuncExists("TrayMenu_HardenHoleUiTransition")
-            TrayMenu_HardenHoleUiTransition("tray_switch_toolbar", 1200)
-    } catch {
-    }
-    try {
-        if FuncExists("FloatingToolbar_SetActivationMode")
-            FloatingToolbar_SetActivationMode("toolbar")
-        else if FuncExists("ApplyAppearanceActivationMode") {
-            global AppearanceActivationMode
-            AppearanceActivationMode := "toolbar"
-            ApplyAppearanceActivationMode()
-        }
+        if FuncExists("FloatingToolbar_CancelReturnToHoleAfterNiuma")
+            FloatingToolbar_CancelReturnToHoleAfterNiuma()
+        Nmer_PersistAndApplyActivationMode("toolbar")
+        try TrayMenu_Log("switch_to_toolbar_from_hole_menu done mode=" . NormalizeAppearanceActivationMode(AppearanceActivationMode))
     } catch as err {
         try TrayMenu_Log("switch_to_toolbar_failed msg=" . err.Message)
+        try FloatingToolbar_SetActivationMode("toolbar")
+        catch as err2 {
+            try TrayMenu_Log("switch_to_toolbar_fallback_failed msg=" . err2.Message)
+        }
     }
 }
 
@@ -893,10 +890,7 @@ TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis) {
         } else {
             MenuItems.Push({ Text: "显示黑洞", Action: FloatingBubbleShowFromMenu, Icon: "☰" })
         }
-        if FuncExists("FloatingToolbar_SwitchToToolbarFromMenu")
-            MenuItems.Push({ Text: "切换到悬浮栏", Action: FloatingToolbar_SwitchToToolbarFromMenu, Icon: "▤" })
-        else
-            MenuItems.Push({ Text: "切换到悬浮栏", Action: TrayMenu_SwitchToToolbarFromHoleMenu, Icon: "▤" })
+        MenuItems.Push({ Text: "切换到悬浮栏", Action: TrayMenu_SwitchToToolbarFromHoleMenu, Icon: "▤" })
         return
     }
     if (mode != "tray") {
@@ -1016,10 +1010,15 @@ CloseTrayMenuIfClickedOutside(*) {
 }
 
 ToggleFloatingToolbarFromMenu(*) {
-    global TrayMenuGUI
+    global TrayMenuGUI, AppearanceActivationMode
     amRaw := IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar"
     if (NormalizeAppearanceActivationMode(amRaw) = "hole") {
-        try FloatingToolbar_SetActivationMode("toolbar")
+        try {
+            if FuncExists("FloatingToolbar_CancelReturnToHoleAfterNiuma")
+                FloatingToolbar_CancelReturnToHoleAfterNiuma()
+            Nmer_PersistAndApplyActivationMode("toolbar")
+        } catch {
+        }
     } else {
         ToggleFloatingToolbar()
     }

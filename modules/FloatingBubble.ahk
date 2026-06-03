@@ -136,7 +136,13 @@ FloatingBubble_MenuClose(*) {
 }
 
 FloatingBubble_MenuToolbarMode(*) {
-    FloatingBubble_PersistModeAndApply("toolbar")
+    if FuncExists("Nmer_PersistAndApplyActivationMode") {
+        try Nmer_PersistAndApplyActivationMode("toolbar")
+        catch {
+            FloatingBubble_PersistModeAndApply("toolbar")
+        }
+    } else
+        FloatingBubble_PersistModeAndApply("toolbar")
 }
 
 FloatingBubble_MenuTrayOnly(*) {

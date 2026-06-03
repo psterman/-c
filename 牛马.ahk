@@ -525,15 +525,8 @@ global DraggingTimers := Map()  ; 存储拖动时需要暂停的定时器 {Timer
 ; 多语言支持
 global Language := "zh"  ; 语言设置：zh=中文, en=英文
 global DefaultStartTab := "general"  ; 默认启动页面：general=通用, appearance=外观, prompts=提示词, hotkeys=快捷键, advanced=高级
-; 快捷操作按钮（最多5个）
-; 每个按钮配置格式：{Type: "Explain|Refactor|Optimize|Config", Hotkey: "e|r|o|q"}
-global QuickActionButtons := [
-    {Type: "Explain", Hotkey: "e"},
-    {Type: "Refactor", Hotkey: "r"},
-    {Type: "Optimize", Hotkey: "o"},
-    {Type: "Config", Hotkey: "q"},
-    {Type: "Explain", Hotkey: "e"}
-]
+; 快捷操作按钮（历史产物，已移除 QuickActions 面板与槽位配置；保留空数组供旧版 GUI 残留引用）
+global QuickActionButtons := []
 global FloatingToolbarButtonItems := ["Search", "Record", "Prompt", "NewPrompt", "Screenshot", "Settings", "VirtualKeyboard"]
 global FloatingToolbarMenuItems := ["ToggleToolbar", "MinimizeToEdge", "ResetScale", "SearchCenter", "Clipboard", "OpenConfig", "HideToolbar", "ReloadScript", "ExitApp"]
 global FloatingToolbarButtonOptions := [
@@ -644,6 +637,9 @@ ApplyTheme(Mode) {
     catch {
     }
     try SCWV_PushThemeToWeb()
+    catch {
+    }
+    try SelectionSense_HubCapsule_PushThemeToWeb(Mode)
     catch {
     }
     try SetTimer(ThemeApply_RefreshVisibleUi, -120)
@@ -2846,6 +2842,77 @@ ActivationApply_IsInProgress() {
     return !!g_ActivationApplyInFlight
 }
 
+; 是否仍处于黑洞激活（勿用 GDHO_VISIBLE：切到 toolbar 后 overlay 可能短暂仍可见，会触发强制切换死循环）
+Nmer_IsHoleActivationRuntimeActive() {
+    global AppearanceActivationMode, g_HoleRuntimeEnabled
+    if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole")
+        return true
+    try {
+        return !!(IsSet(g_HoleRuntimeEnabled) && g_HoleRuntimeEnabled)
+    } catch {
+        return false
+    }
+}
+
+; 托盘/菜单切换激活方式：写 INI + 立即收敛黑洞运行态 + 应用 UI（避免 SetActivationMode 幂等早退）
+Nmer_PersistAndApplyActivationMode(mode) {
+    global AppearanceActivationMode, ConfigFile, g_ActivationApplyLastMode, g_ActivationApplyLastTick
+    static persistInFlight := false
+    if persistInFlight
+        return NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+    persistInFlight := true
+    try {
+    m := NormalizeAppearanceActivationMode(mode)
+    if (m != "hole" && FuncExists("FloatingToolbar_CancelReturnToHoleAfterNiuma")) {
+        try FloatingToolbar_CancelReturnToHoleAfterNiuma()
+        catch {
+        }
+    }
+    AppearanceActivationMode := m
+    cfg := (IsSet(ConfigFile) && ConfigFile != "") ? ConfigFile : (A_ScriptDir . "\local\CursorShortcut.ini")
+    try IniWrite(m, cfg, "Appearance", "ActivationMode")
+    catch {
+    }
+    g_ActivationApplyLastMode := ""
+    g_ActivationApplyLastTick := 0
+    if (m != "hole") {
+        try SetHoleRuntimeEnabled(false)
+        catch {
+        }
+        try ApplyActivationRuntimeAsync(m)
+        catch {
+        }
+    }
+    if (m = "toolbar") {
+        try FloatingToolbar_ClearOverlaySuppression()
+        catch {
+        }
+    }
+    try ApplyAppearanceActivationMode()
+    catch {
+    }
+    if (m = "toolbar") {
+        try SetTimer(FloatingToolbar_ShowForActivationMode, -40)
+        catch {
+        }
+        try SetTimer((*) => FloatingToolbar_ForceRecoverVisible(), -220)
+        catch {
+        }
+    }
+    try NMER_Log("activation", "persist_apply", "mode=" . m)
+    catch {
+    }
+    if FuncExists("TrayMenu_Log") {
+        try TrayMenu_Log("persist_activation_mode mode=" . m)
+        catch {
+        }
+    }
+    return m
+    } finally {
+        persistInFlight := false
+    }
+}
+
 ; 选区/牛马等需要宿主表面已显示时调用：按激活方式打开悬浮栏（黑洞/后台模式不弹出）
 EnsureFloatingSurfaceVisible() {
     global AppearanceActivationMode
@@ -5000,11 +5067,9 @@ ProcessClipboardChange() {
 #Include modules\CursorPanelController.ahk
 #Include modules\PromptExecution.ahk
 
-
-
 #Include "modules\LegacyConfigGui.ahk"
 #Include "modules\LegacyClipboardListView.ahk"
-#Include "modules\ConfigWebViewModule.ahk"
+; ConfigWebViewModule 须在 VirtualKeyboardCore 之后 #Include（见文件末尾）
 
 ShowConfigGUI_Core() {
     global UseWebViewSettings
@@ -5494,78 +5559,6 @@ SaveConfig(*) {
         NewClipboardPanelScreenIndex := 1
     }
     
-    ; 读取快捷操作按钮配置（从单选按钮读取类型，快捷键根据类型自动确定）
-    global QuickActionButtons
-    try {
-        ConfigGUI := GuiFromHwnd(GuiID_ConfigGUI)
-        if (ConfigGUI) {
-            QuickActionButtons := []
-            ; 定义所有功能类型（与CreateQuickActionConfigUI中的ActionTypes保持一致）
-            ActionTypes := [
-                {Type: "Explain", Hotkey: "e"},
-                {Type: "Refactor", Hotkey: "r"},
-                {Type: "Optimize", Hotkey: "o"},
-                {Type: "Config", Hotkey: "q"},
-                {Type: "Copy", Hotkey: "c"},
-                {Type: "Paste", Hotkey: "v"},
-                {Type: "Clipboard", Hotkey: "x"},
-                {Type: "Voice", Hotkey: "z"},
-                {Type: "Split", Hotkey: "s"},
-                {Type: "Batch", Hotkey: "b"}
-            ]
-            
-            Loop 5 {
-                Index := A_Index
-                ButtonType := ""
-                ButtonHotkey := ""
-                
-                ; 读取单选按钮的值（现在每个按钮都有唯一的变量名）
-                ; 遍历所有可能的单选按钮，找到选中的那个
-                RadioGroupName := "QuickActionType" . Index
-                for TypeIndex, ActionType in ActionTypes {
-                    RadioCtrlName := RadioGroupName . "_" . TypeIndex
-                    RadioCtrl := ConfigGUI[RadioCtrlName]
-                    if (RadioCtrl && RadioCtrl.HasProp("IsSelected") && RadioCtrl.IsSelected) {
-                        ButtonType := ActionType.Type
-                        ButtonHotkey := ActionType.Hotkey
-                        break
-                    }
-                }
-                
-                ; 如果没有选择类型，使用默认值
-                if (ButtonType = "") {
-                    ButtonType := "Explain"
-                    ButtonHotkey := "e"
-                }
-                
-                QuickActionButtons.Push({Type: ButtonType, Hotkey: ButtonHotkey})
-            }
-            
-            ; 确保有5个按钮
-            while (QuickActionButtons.Length < 5) {
-                QuickActionButtons.Push({Type: "Explain", Hotkey: "e"})
-            }
-        }
-    } catch as err {
-        ; 如果读取失败，使用默认配置
-        if (!QuickActionButtons || QuickActionButtons.Length = 0) {
-            QuickActionButtons := [
-                {Type: "Explain", Hotkey: "e"},
-                {Type: "Refactor", Hotkey: "r"},
-                {Type: "Optimize", Hotkey: "o"},
-                {Type: "Config", Hotkey: "q"},
-                {Type: "Copy", Hotkey: "c"}
-            ]
-        }
-        ; 确保有5个按钮
-        while (QuickActionButtons.Length < 5) {
-            QuickActionButtons.Push({Type: "Explain", Hotkey: "e"})
-        }
-        while (QuickActionButtons.Length > 5) {
-            QuickActionButtons.Pop()
-        }
-    }
-    
     ; 获取主题模式设置
     NewThemeMode := "dark"
     ; 如果外观标签页已创建，从单选按钮读取；否则使用当前主题模式
@@ -5673,6 +5666,8 @@ SaveConfig(*) {
     ; 保存默认启动页面设置
     global DefaultStartTab
     if (IsSet(DefaultStartTab) && DefaultStartTab != "") {
+        if FuncExists("NormalizeDefaultStartTab")
+            DefaultStartTab := NormalizeDefaultStartTab(DefaultStartTab)
         IniWrite(DefaultStartTab, ConfigFile, "Settings", "DefaultStartTab")
     } else {
         IniWrite("general", ConfigFile, "Settings", "DefaultStartTab")
@@ -5735,25 +5730,6 @@ SaveConfig(*) {
     IniWrite(CursorPanelScreenIndex, ConfigFile, "Advanced", "CursorPanelScreenIndex")
     IniWrite(ClipboardPanelScreenIndex, ConfigFile, "Advanced", "ClipboardPanelScreenIndex")
     
-    ; 保存快捷操作按钮配置
-    ButtonCount := QuickActionButtons.Length
-    IniWrite(ButtonCount, ConfigFile, "QuickActions", "ButtonCount")
-    for Index, Button in QuickActionButtons {
-        btnType := "Explain"
-        btnHotkey := "e"
-        if (Button is Map) {
-            btnType := Button.Get("Type", btnType)
-            btnHotkey := Button.Get("Hotkey", btnHotkey)
-        } else if (IsObject(Button)) {
-            if Button.HasProp("Type")
-                btnType := Button.Type
-            if Button.HasProp("Hotkey")
-                btnHotkey := Button.Hotkey
-        }
-        IniWrite(btnType, ConfigFile, "QuickActions", "Button" . Index . "Type")
-        IniWrite(btnHotkey, ConfigFile, "QuickActions", "Button" . Index . "Hotkey")
-    }
-    
     ; 保存自定义图标路径
     global CustomIconPath
     if (IsSet(CustomIconPath)) {
@@ -5776,12 +5752,6 @@ SaveConfig(*) {
             GuiID_CursorPanel.Destroy()
         }
         global GuiID_CursorPanel := 0
-    }
-    
-    ; 如果面板正在显示，重新创建面板以应用新配置
-    if (PanelVisible) {
-        HideCursorPanel()
-        ShowCursorPanel()
     }
     
     return true
@@ -6570,21 +6540,10 @@ g:: {
 
 ; B 键：面板显示且批量键为 B 时走 BatchOperation；面板显示且非批量键则透传 b；面板未显示时打开 Prompt 采集窗
 b:: {
-    global BatchHotkey, CapsLock2
+    global CapsLock2
     if (VirtualKeyboard_HandleKey("b"))
         return
     RestoreCapsLockAfterChord()
-    if GetPanelVisibleState() {
-        CapsLock2 := false
-        RestoreCapsLockAfterChord()
-        if StrLower(BatchHotkey) = "b" {
-            BatchOperation()
-            VK_NoteLastChFromCapsLockKey("b")
-            return
-        }
-        Send("b")
-        return
-    }
     PromptQuickPad_HandleCapsLockB()
     VK_NoteLastChFromCapsLockKey("b")
 }
@@ -6815,37 +6774,6 @@ p:: {
         Send("p")
 }
 
-; 1-5 键激活对应顺序的快捷操作按钮
-1:: {
-    if (VirtualKeyboard_HandleKey("1"))
-        return
-    ActivateQuickActionButton(1)
-}
-
-2:: {
-    if (VirtualKeyboard_HandleKey("2"))
-        return
-    ActivateQuickActionButton(2)
-}
-
-3:: {
-    if (VirtualKeyboard_HandleKey("3"))
-        return
-    ActivateQuickActionButton(3)
-}
-
-4:: {
-    if (VirtualKeyboard_HandleKey("4"))
-        return
-    ActivateQuickActionButton(4)
-}
-
-5:: {
-    if (VirtualKeyboard_HandleKey("5"))
-        return
-    ActivateQuickActionButton(5)
-}
-
 #HotIf
 
 ; ===================== SearchCenter 其他功能键 =====================
@@ -6894,22 +6822,14 @@ p:: {
     try ShowConfigGUI_Safe()
 }
 
-; ===================== 快捷操作（设置「快捷按钮」同款，可从任意上下文调用）=====================
+; VK qa_* 命令等仍可调用的动作路由（不再依赖 Cursor Quick Actions 面板）
 ExecuteQuickActionByType(Type) {
-    global CapsLock2, PanelVisible
+    global CapsLock2
 
     CapsLock2 := false
-    if (PanelVisible) {
-        HideCursorPanel()
-    }
+    try HideCursorPanel()
 
     switch Type {
-        case "Explain":
-            ExecutePrompt("Explain")
-        case "Refactor":
-            ExecutePrompt("Refactor")
-        case "Optimize":
-            ExecutePrompt("Optimize")
         case "Config":
             ShowConfigGUI_Safe()
         case "Copy":
@@ -6945,47 +6865,6 @@ ExecuteQuickActionByType(Type) {
     }
 }
 
-; 按槽位执行当前 ini 配置的快捷按钮（虚拟键盘 ch_1–ch_5 等，无需先打开面板）
-ExecuteQuickActionSlot(Index) {
-    global QuickActionButtons
-
-    if (Index < 1 || Index > QuickActionButtons.Length) {
-        return
-    }
-    Button := QuickActionButtons[Index]
-    btnType := ""
-    if (Button is Map)
-        btnType := Button.Get("Type", "")
-    else if (IsObject(Button) && Button.HasProp("Type"))
-        btnType := Button.Type
-    if (btnType = "")
-        return
-    ExecuteQuickActionByType(btnType)
-    VK_NoteLastExecutedId("ch_" . Index)
-}
-
-; ===================== 激活快捷操作按钮（仅面板显示时 CapsLock+1–5）=====================
-ActivateQuickActionButton(Index) {
-    global QuickActionButtons, PanelVisible
-
-    if (!PanelVisible) {
-        return
-    }
-    if (Index < 1 || Index > QuickActionButtons.Length) {
-        return
-    }
-    Button := QuickActionButtons[Index]
-    btnType := ""
-    if (Button is Map)
-        btnType := Button.Get("Type", "")
-    else if (IsObject(Button) && Button.HasProp("Type"))
-        btnType := Button.Type
-    if (btnType = "")
-        return
-    ExecuteQuickActionByType(btnType)
-    VK_NoteLastExecutedId("ch_" . Index)
-}
-
 ; ===================== 动态快捷键处理 =====================
 ; 启动动态快捷键监听（当面板显示时）
 StartDynamicHotkeys() {
@@ -7001,30 +6880,7 @@ StopDynamicHotkeys() {
 ; ===================== 面板显示时的动态快捷键 =====================
 ; 注：CapsLock+B 批量逻辑已合并到上方 #HotIf GetCapsLockState() 的 b:: 中
 
-; ===================== 自启动功能 =====================
-; 设置开机自启动（使用注册表）
-SetAutoStart(Enable) {
-    RegKey := "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run"
-    AppName := "CursorHelper"
-    ScriptPath := A_ScriptFullPath
-    
-    try {
-        if (Enable) {
-            ; 添加自启动项
-            RegWrite(ScriptPath, "REG_SZ", RegKey, AppName)
-        } else {
-            ; 删除自启动项
-            try {
-                RegDelete(RegKey, AppName)
-            } catch as err {
-                ; 如果注册表项不存在，忽略错误
-            }
-        }
-    } catch as e {
-        ; 如果操作失败，显示错误提示（可选）
-        ; TrayTip("设置自启动失败: " . e.Message, "错误", "Iconx 2")
-    }
-}
+; SetAutoStart → modules\ConfigManager.ahk（注册表 Run 写入 A_AhkPath + 主脚本）
 
 ; 搜索中心模块化：GlobalSearchEngine、OpenSearchGroupEngines/EncodeURIComponent、Legacy ListView GUI
 #Include modules\GlobalSearchEngine.ahk
@@ -7137,6 +6993,7 @@ ExitFunc(ExitReason, ExitCode) {
 #Include modules\VirtualKeyboardExecCmd.ahk
 #Include modules\VirtualKeyboardCore.ahk
 #Include modules\VirtualKeyboardInterop.ahk
+#Include "modules\ConfigWebViewModule.ahk"
 #Include modules\CommandPaletteCore.ahk
 #Include modules\CommandPaletteSearchDebug.ahk
 

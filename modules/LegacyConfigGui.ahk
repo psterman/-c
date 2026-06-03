@@ -326,13 +326,12 @@ SwitchTab(TabName) {
             ; 【架构修复】HotkeysTabControls 现在只包含真正的公共控件（主标签按钮、标题、面板背景等）
             ; TabBarBg 和快捷键子标签按钮已从 HotkeysTabControls 中移除，只属于 HotkeysMainTabControls["settings"]
             ShowControls(HotkeysTabControls)
-            ; 显示第一个主标签页（快捷操作按钮）
+            ; 显示第一个主标签页（快捷键设置）
             global HotkeysMainTabs
-            if (HotkeysMainTabs && HotkeysMainTabs.Has("quickaction")) {
-                SwitchHotkeysMainTab("quickaction")
+            if (HotkeysMainTabs && HotkeysMainTabs.Has("settings")) {
+                SwitchHotkeysMainTab("settings")
             } else {
-                ; 如果HotkeysMainTabs还未初始化，延迟切换
-                SetTimer(SwitchToQuickActionTab, -100)
+                SetTimer(SwitchToHotkeysSettingsTab, -100)
             }
         case "advanced":
             ShowControls(AdvancedTabControls)
@@ -734,16 +733,8 @@ CreateGeneralSubTab(ConfigGUI, X, Y, W, H, Item) {
     ; 根据子标签类型创建不同的内容
     switch Item.Key {
         case "quickaction":
-            ; 快捷操作按钮
-            YPos := Y + 10  ; 缩小间距（从20px改为10px）
-            QuickActionDesc := ConfigGUI.Add("Text", "x" . X . " y" . YPos . " w" . W . " h20 c" . UI_Colors.TextDim, GetText("quick_action_config_desc"))
-            QuickActionDesc.SetFont("s9", "Segoe UI")
-            GeneralSubTabControls[Item.Key].Push(QuickActionDesc)
-            
-            YPos += 25  ; 缩小间距（从30px改为25px）
-            global QuickActionConfigControls := []
-            CreateQuickActionConfigUI(ConfigGUI, X, YPos, W, GeneralSubTabControls[Item.Key])
-            
+            ; 已移除（历史产物）
+            return
         case "searchcategory":
             ; 搜索标签
             YPos := Y + 20
@@ -2485,11 +2476,15 @@ SwitchToManageTab(*) {
     }
 }
 
-SwitchToQuickActionTab(*) {
+SwitchToHotkeysSettingsTab(*) {
     global HotkeysMainTabs
-    if (HotkeysMainTabs && HotkeysMainTabs.Has("quickaction")) {
-        SwitchHotkeysMainTab("quickaction")
+    if (HotkeysMainTabs && HotkeysMainTabs.Has("settings")) {
+        SwitchHotkeysMainTab("settings")
     }
+}
+
+SwitchToQuickActionTab(*) {
+    SwitchToHotkeysSettingsTab()
 }
 
 ; ===================== 创建提示词主标签点击处理器 =====================
@@ -5195,9 +5190,8 @@ CreateHotkeysTab(ConfigGUI, X, Y, W, H) {
     MainTabBarBg := ConfigGUI.Add("Text", "x" . (X + 30) . " y" . MainTabBarY . " w" . (W - 60) . " h" . MainTabBarHeight . " Background" . UI_Colors.Sidebar, "")
     HotkeysTabControls.Push(MainTabBarBg)
     
-    ; 创建主标签列表（三个标签：快操作按钮、搜索标签、快捷键设置）
+    ; 创建主标签列表（搜索标签、快捷键设置）
     MainTabList := [
-        {Key: "quickaction", Name: GetText("quick_action_config")},
         {Key: "searchcategory", Name: GetText("search_category_config")},
         {Key: "settings", Name: GetText("hotkey_main_tab_settings")}
     ]
@@ -5323,30 +5317,6 @@ CreateHotkeysTab(ConfigGUI, X, Y, W, H) {
         HotkeysMainTabControls["settings"].Push(TabBtn)
     }
     
-    ; ========== 快操作按钮主标签页内容 ==========
-    QuickActionContentY := ContentAreaY
-    QuickActionContentHeight := ContentAreaHeight
-    HotkeysMainTabControls["quickaction"] := []
-    
-    ; 描述文字
-    QuickActionDesc := ConfigGUI.Add("Text", "x" . (X + 30) . " y" . (QuickActionContentY + 10) . " w" . (W - 60) . " h20 c" . UI_Colors.TextDim . " vHotkeysQuickActionDesc", GetText("quick_action_config_desc"))
-    QuickActionDesc.SetFont("s9", "Segoe UI")
-    QuickActionDesc.Visible := false
-    HotkeysMainTabControls["quickaction"].Push(QuickActionDesc)
-    ; 【架构修复】QuickActionDesc 只属于 "quickaction" 主标签页，不添加到 HotkeysTabControls
-    
-    ; 创建快操作按钮配置UI
-    global QuickActionConfigControls := []
-    CreateQuickActionConfigUI(ConfigGUI, X + 30, QuickActionContentY + 35, W - 60, HotkeysMainTabControls["quickaction"])
-    ; 【架构修复】快操作按钮配置控件只属于 "quickaction" 主标签页，不添加到 HotkeysTabControls
-    ; 这些控件由 SwitchHotkeysMainTab 统一管理显示/隐藏
-    for Index, Ctrl in QuickActionConfigControls {
-        try {
-            Ctrl.Visible := false
-        } catch as err {
-        }
-    }
-    
     ; ========== 搜索标签主标签页内容 ==========
     SearchCategoryContentY := ContentAreaY
     SearchCategoryContentHeight := ContentAreaHeight
@@ -5371,8 +5341,8 @@ CreateHotkeysTab(ConfigGUI, X, Y, W, H) {
         }
     }
     
-    ; 默认显示第一个主标签页（快捷操作按钮）
-    SwitchHotkeysMainTab("quickaction")
+    ; 默认显示快捷键设置主标签页
+    SwitchHotkeysMainTab("settings")
 }
 
 ; ===================== 创建快捷键子标签页 =====================

@@ -8,7 +8,6 @@
 HandleDynamicHotkey(PressedKey, ActionType) {
     global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ, HotkeyT, HotkeyF, HotkeyP
     global CapsLock2, PanelVisible, VoiceInputActive, CapsLock, VoiceSearchActive
-    global QuickActionButtons
     
     ; 如果使用了组合快捷键，清除显示面板的定时器（防止面板被激活）
     SetTimer(ShowPanelTimer, 0)  ; 停止ShowPanelTimer定时器
@@ -25,80 +24,12 @@ HandleDynamicHotkey(PressedKey, ActionType) {
         return true
     }
     
-    ; 首先检查是否匹配快捷操作按钮配置的快捷键
-    if (PanelVisible && QuickActionButtons.Length > 0) {
-        for Index, Button in QuickActionButtons {
-            btnType := ""
-            btnHotkey := ""
-            if (Button is Map) {
-                btnType := Button.Get("Type", "")
-                btnHotkey := Button.Get("Hotkey", "")
-            } else if (IsObject(Button)) {
-                if Button.HasProp("Type")
-                    btnType := Button.Type
-                if Button.HasProp("Hotkey")
-                    btnHotkey := Button.Hotkey
-            }
-            if (StrLower(btnHotkey) = KeyLower) {
-                ; 匹配到快捷操作按钮（CapsLock2已在上面清除）
-                ; 立即隐藏面板
-                if (PanelVisible) {
-                    HideCursorPanel()
-                }
-                switch btnType {
-                    case "Explain":
-                        ExecutePrompt("Explain")
-                    case "Refactor":
-                        ExecutePrompt("Refactor")
-                    case "Optimize":
-                        ExecutePrompt("Optimize")
-                    case "Config":
-                        ShowConfigGUI()
-                    case "Copy":
-                        CapsLockCopy()
-                    case "Paste":
-                        CapsLockPaste()
-                    case "Clipboard":
-                        CP_Show()
-                    case "Voice":
-                        StartVoiceInput()
-                    case "Split":
-                        SplitCode()
-                    case "Batch":
-                        BatchOperation()
-                    case "CommandPalette":
-                        ExecuteCursorShortcut(GetCursorActionShortcut("CommandPalette"))
-                    case "Terminal":
-                        ExecuteCursorShortcut(GetCursorActionShortcut("Terminal"))
-                    case "GlobalSearch":
-                        ExecuteCursorShortcut(GetCursorActionShortcut("GlobalSearch"))
-                    case "Explorer":
-                        ExecuteCursorShortcut(GetCursorActionShortcut("Explorer"))
-                    case "SourceControl":
-                        ExecuteCursorShortcut(GetCursorActionShortcut("SourceControl"))
-                    case "Extensions":
-                        ExecuteCursorShortcut(GetCursorActionShortcut("Extensions"))
-                    case "Browser":
-                        ExecuteCursorShortcut(GetCursorActionShortcut("Browser"))
-                    case "Settings":
-                        ExecuteCursorShortcut(GetCursorActionShortcut("Settings"))
-                    case "CursorSettings":
-                        ExecuteCursorShortcut(GetCursorActionShortcut("CursorSettings"))
-                }
-                return true  ; 已处理
-            }
-        }
-    }
-    
     ; 根据操作类型获取配置的快捷键
     switch ActionType {
         case "ESC": ConfigKey := StrLower(HotkeyESC)
         case "C": ConfigKey := StrLower(HotkeyC)
         case "V": ConfigKey := StrLower(HotkeyV)
         case "X": ConfigKey := StrLower(HotkeyX)
-        case "E": ConfigKey := StrLower(HotkeyE)
-        case "R": ConfigKey := StrLower(HotkeyR)
-        case "O": ConfigKey := StrLower(HotkeyO)
         case "Q": ConfigKey := StrLower(HotkeyQ)
         case "Z": ConfigKey := StrLower(HotkeyZ)
         case "F": ConfigKey := StrLower(HotkeyF)
@@ -167,15 +98,6 @@ HandleDynamicHotkey(PressedKey, ActionType) {
             case "X":
                 CapsLock2 := false
                 CP_Show()
-            case "E":
-                CapsLock2 := false
-                ExecutePrompt("Explain")
-            case "R":
-                CapsLock2 := false
-                ExecutePrompt("Refactor")
-            case "O":
-                CapsLock2 := false
-                ExecutePrompt("Optimize")
             case "Q":
                 CapsLock2 := false
                 ShowConfigGUI()

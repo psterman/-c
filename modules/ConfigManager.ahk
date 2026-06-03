@@ -5,6 +5,29 @@
 
 ; ===================== 初始化配置 =====================
 ; AHK 部分版本下 Float() 仅接受 Number；IniRead 恒为字符串，统一经此解析。
+; 将 INI / 旧版 GUI 的中文标签或别名归一为 Web 设置页 tab id
+NormalizeDefaultStartTab(tab) {
+    t := Trim(String(tab))
+    static zh := Map(
+        "通用", "general", "通用设置", "general",
+        "外观", "appearance", "外观设置", "appearance",
+        "提示词", "prompts", "提示词设置", "prompts",
+        "快捷键", "hotkeys", "快捷键设置", "hotkeys",
+        "高级", "advanced", "高级设置", "advanced",
+        "搜索", "search", "搜索设置", "search",
+        "截图", "screenshot", "截图设置", "screenshot",
+        "存储", "storage", "存储与缓存", "storage",
+        "智能定制", "customize", "定制", "customize"
+    )
+    if zh.Has(t)
+        return zh[t]
+    static valid := Map(
+        "general", 1, "appearance", 1, "prompts", 1, "hotkeys", 1, "advanced", 1,
+        "search", 1, "screenshot", 1, "storage", 1, "customize", 1
+    )
+    return valid.Has(t) ? t : "general"
+}
+
 CfgParseFloat(val, default := 0.0) {
     if IsNumber(val)
         return Number(val) + 0.0
@@ -238,6 +261,139 @@ NormalizeIniThemeMode(raw, defaultMode := "dark") {
     return (defaultMode = "light") ? "light" : "dark"
 }
 
+; 读取持久化弹窗显示器序号（Appearance PopupScreenIndex / ScreenIndex）
+ReadPersistedPopupScreenIndex() {
+    global ConfigFile
+    raw := Trim(String(IniRead(ConfigFile, "Appearance", "PopupScreenIndex", "")))
+    if (raw = "" || raw = "ERROR")
+        raw := Trim(String(IniRead(ConfigFile, "Appearance", "ScreenIndex", "1")))
+    idx := Integer(raw)
+    if (idx < 1)
+        idx := 1
+    monitorCount := 1
+    try monitorCount := MonitorGetCount()
+    catch
+        monitorCount := 1
+    if (idx > monitorCount)
+        idx := monitorCount
+    return idx
+}
+
+Nmer_ApplyUnifiedPopupScreenIndex(screenIndex) {
+    global PanelScreenIndex, ConfigPanelScreenIndex, MsgBoxScreenIndex, VoiceInputScreenIndex
+    global CursorPanelScreenIndex, ClipboardPanelScreenIndex, ConfigFile
+    idx := Integer(screenIndex)
+    if (idx < 1)
+        idx := 1
+    monitorCount := 1
+    try monitorCount := MonitorGetCount()
+    catch
+        monitorCount := 1
+    if (idx > monitorCount)
+        idx := monitorCount
+    PanelScreenIndex := idx
+    ConfigPanelScreenIndex := idx
+    MsgBoxScreenIndex := idx
+    VoiceInputScreenIndex := idx
+    CursorPanelScreenIndex := idx
+    ClipboardPanelScreenIndex := idx
+    IniWrite(idx, ConfigFile, "Appearance", "ScreenIndex")
+    IniWrite(idx, ConfigFile, "Appearance", "PopupScreenIndex")
+    IniWrite(idx, ConfigFile, "Advanced", "ConfigPanelScreenIndex")
+    IniWrite(idx, ConfigFile, "Advanced", "MsgBoxScreenIndex")
+    IniWrite(idx, ConfigFile, "Advanced", "VoiceInputScreenIndex")
+    IniWrite(idx, ConfigFile, "Advanced", "CursorPanelScreenIndex")
+    IniWrite(idx, ConfigFile, "Advanced", "ClipboardPanelScreenIndex")
+    return idx
+}
+
+; 当前弹窗显示器序号（内存全局优先，与设置页 PopupScreenIndex 一致）
+Nmer_GetPopupScreenIndex() {
+    global PanelScreenIndex
+    idx := Integer(PanelScreenIndex)
+    if (idx < 1)
+        idx := ReadPersistedPopupScreenIndex()
+    monitorCount := 1
+    try monitorCount := MonitorGetCount()
+    catch
+        monitorCount := 1
+    if (idx > monitorCount)
+        idx := monitorCount
+    return idx
+}
+
+; 将 GUI 移到弹窗显示器工作区（最大化前调用，确保 WinMaximize 落在目标屏）
+Nmer_MoveGuiToPopupScreen(gui) {
+    if !IsObject(gui) || !gui.HasProp("Hwnd")
+        return
+    idx := Nmer_GetPopupScreenIndex()
+    try MonitorGetWorkArea(idx, &l, &t, &r, &b)
+    catch {
+        try MonitorGetWorkArea(1, &l, &t, &r, &b)
+        catch
+            return
+    }
+    workW := r - l
+    workH := b - t
+    gw := 1180
+    gh := 760
+    try gui.GetPos(, , &gw, &gh)
+    catch {
+    }
+    if (gw < 200)
+        gw := 1180
+    if (gh < 160)
+        gh := 760
+    if (gw > workW - 8)
+        gw := Max(200, workW - 8)
+    if (gh > workH - 8)
+        gh := Max(160, workH - 8)
+    px := l + Max(0, (workW - gw) // 2)
+    py := t + Max(0, (workH - gh) // 2)
+    try gui.Move(px, py, gw, gh)
+}
+
+; 弹窗显示器上的默认窗口左上角（草稿本等，靠右居中）
+Nmer_DefaultPopupWindowXY(width, height, &outX, &outY) {
+    idx := Nmer_GetPopupScreenIndex()
+    try MonitorGetWorkArea(idx, &l, &t, &r, &b)
+    catch {
+        try MonitorGetWorkArea(1, &l, &t, &r, &b)
+        catch {
+            outX := 80
+            outY := 80
+            return
+        }
+    }
+    w := Max(200, Integer(width))
+    h := Max(160, Integer(height))
+    outX := r - w - 24
+    outY := t + Max(4, (b - t - h) // 2)
+}
+
+; 矩形中心是否落在指定显示器上
+Nmer_RectCenterOnScreen(sx, sy, ww, hh, screenIndex) {
+    if (ww < 1 || hh < 1)
+        return false
+    cx := sx + (ww // 2)
+    cy := sy + (hh // 2)
+    try {
+        MonitorGet(screenIndex, &l, &t, &r, &b)
+        return (cx >= l && cx < r && cy >= t && cy < b)
+    } catch {
+        return false
+    }
+}
+
+; 读取持久化开机自启动（与 ThemeMode 一样直接读 INI，避免全局变量未同步）
+ReadPersistedAutoStart() {
+    global ConfigFile
+    raw := Trim(String(IniRead(ConfigFile, "Settings", "AutoStart", "0")))
+    if (raw = "")
+        return false
+    return (raw = "1" || StrLower(raw) = "true")
+}
+
 ; 读取持久化主题：先 [Settings] 再 [Appearance]（与设置页双写一致，规避重复 [Settings] 段导致读不到的问题）
 ReadPersistedThemeMode() {
     global ConfigFile
@@ -274,9 +430,6 @@ InitConfig() {
     DefaultHotkeyC := "c"
     DefaultHotkeyV := "v"
     DefaultHotkeyX := "x"
-    DefaultHotkeyE := "e"
-    DefaultHotkeyR := "r"
-    DefaultHotkeyO := "o"
     DefaultHotkeyQ := "q"
     DefaultHotkeyZ := "z"
     DefaultCursorShortcut_CommandPalette := "^+p"
@@ -317,9 +470,6 @@ InitConfig() {
         IniWrite(DefaultHotkeyC, ConfigFile, "Hotkeys", "C")
         IniWrite(DefaultHotkeyV, ConfigFile, "Hotkeys", "V")
         IniWrite(DefaultHotkeyX, ConfigFile, "Hotkeys", "X")
-        IniWrite(DefaultHotkeyE, ConfigFile, "Hotkeys", "E")
-        IniWrite(DefaultHotkeyR, ConfigFile, "Hotkeys", "R")
-        IniWrite(DefaultHotkeyO, ConfigFile, "Hotkeys", "O")
         IniWrite(DefaultHotkeyQ, ConfigFile, "Hotkeys", "Q")
         IniWrite(DefaultHotkeyZ, ConfigFile, "Hotkeys", "Z")
         IniWrite("f", ConfigFile, "Hotkeys", "F")
@@ -355,27 +505,13 @@ InitConfig() {
         IniWrite(DefaultVoiceInputScreenIndex, ConfigFile, "Advanced", "VoiceInputScreenIndex")
         IniWrite(DefaultCursorPanelScreenIndex, ConfigFile, "Advanced", "CursorPanelScreenIndex")
         IniWrite(DefaultClipboardPanelScreenIndex, ConfigFile, "Advanced", "ClipboardPanelScreenIndex")
-        
-        ; 保存默认快捷操作按钮配置（固定5个按钮）
-        IniWrite(5, ConfigFile, "QuickActions", "ButtonCount")
-        IniWrite("Explain", ConfigFile, "QuickActions", "Button1Type")
-        IniWrite("e", ConfigFile, "QuickActions", "Button1Hotkey")
-        IniWrite("Refactor", ConfigFile, "QuickActions", "Button2Type")
-        IniWrite("r", ConfigFile, "QuickActions", "Button2Hotkey")
-        IniWrite("Optimize", ConfigFile, "QuickActions", "Button3Type")
-        IniWrite("o", ConfigFile, "QuickActions", "Button3Hotkey")
-        IniWrite("Config", ConfigFile, "QuickActions", "Button4Type")
-        IniWrite("q", ConfigFile, "QuickActions", "Button4Hotkey")
-        IniWrite("Explain", ConfigFile, "QuickActions", "Button5Type")
-        IniWrite("e", ConfigFile, "QuickActions", "Button5Hotkey")
     }
 
     ; 3. 加载配置（v2的IniRead返回值更直观）
-    global CursorPath, AISleepTime, CapsLockHoldTimeSeconds, CapsLockHoldVkEnabled, Prompt_Explain, Prompt_Refactor, Prompt_Optimize, SplitHotkey, BatchHotkey, PanelScreenIndex, Language
+    global CursorPath, AISleepTime, CapsLockHoldTimeSeconds, CapsLockHoldVkEnabled, AutoStart, Prompt_Explain, Prompt_Refactor, Prompt_Optimize, SplitHotkey, BatchHotkey, PanelScreenIndex, Language
     global FunctionPanelPos, ConfigPanelPos, ClipboardPanelPos
     global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ, HotkeyT
     global ConfigPanelScreenIndex, MsgBoxScreenIndex, VoiceInputScreenIndex, CursorPanelScreenIndex, ClipboardPanelScreenIndex
-    global QuickActionButtons
     
     ; 确保默认值变量已定义（如果InitConfig未调用）
     if (!IsSet(DefaultCursorPath)) {
@@ -560,12 +696,13 @@ InitConfig() {
             SearchEngine := IniRead(ConfigFile, "Settings", "SearchEngine", "deepseek")
             AutoLoadSelectedText := (IniRead(ConfigFile, "Settings", "AutoLoadSelectedText", "0") = "1")
             AutoUpdateVoiceInput := (IniRead(ConfigFile, "Settings", "AutoUpdateVoiceInput", "1") = "1")
-            AutoStart := (IniRead(ConfigFile, "Settings", "AutoStart", "0") = "1")
+            AutoStart := ReadPersistedAutoStart()
+            IniWrite(AutoStart ? "1" : "0", ConfigFile, "Settings", "AutoStart")
             global CapsLockHoldVkEnabled
             CapsLockHoldVkEnabled := (IniRead(ConfigFile, "Settings", "CapsLockHoldVkEnabled", "1") = "1")
             IniWrite(CapsLockHoldVkEnabled ? "1" : "0", ConfigFile, "Settings", "CapsLockHoldVkEnabled")
             global DefaultStartTab
-            DefaultStartTab := IniRead(ConfigFile, "Settings", "DefaultStartTab", "general")
+            DefaultStartTab := NormalizeDefaultStartTab(IniRead(ConfigFile, "Settings", "DefaultStartTab", "general"))
             global FloatingToolbarButtonItems
             FloatingToolbarButtonItems := FTB_SanitizeToolbarButtonItems(IniRead(ConfigFile, "Settings", "FloatingToolbarButtonItems", FTB_ItemsToCsv(FloatingToolbarButtonItems)))
             IniWrite(FTB_ItemsToCsv(FloatingToolbarButtonItems), ConfigFile, "Settings", "FloatingToolbarButtonItems")
@@ -580,9 +717,7 @@ InitConfig() {
             }
             TrySetTrayIconHighQuality()
             ; 验证值是否有效，如果无效则使用默认值
-            validStartTabs := Map("general", true, "appearance", true, "prompts", true, "hotkeys", true, "advanced", true, "search", true, "screenshot", true, "customize", true)
-            if !validStartTabs.Has(DefaultStartTab)
-                DefaultStartTab := "general"
+            DefaultStartTab := NormalizeDefaultStartTab(DefaultStartTab)
             
             ; 加载启用的搜索标签
             global VoiceSearchEnabledCategories
@@ -685,8 +820,8 @@ InitConfig() {
                 }
             }
             
-            UnifiedPopupScreenIndex := Integer(IniRead(ConfigFile, "Appearance", "PopupScreenIndex", IniRead(ConfigFile, "Appearance", "ScreenIndex", DefaultPanelScreenIndex)))
-            PanelScreenIndex := UnifiedPopupScreenIndex
+            UnifiedPopupScreenIndex := ReadPersistedPopupScreenIndex()
+            Nmer_ApplyUnifiedPopupScreenIndex(UnifiedPopupScreenIndex)
             FunctionPanelPos := IniRead(ConfigFile, "Appearance", "FunctionPanelPos", DefaultFunctionPanelPos)
             ConfigPanelPos := IniRead(ConfigFile, "Appearance", "ConfigPanelPos", DefaultConfigPanelPos)
             ClipboardPanelPos := IniRead(ConfigFile, "Appearance", "ClipboardPanelPos", DefaultClipboardPanelPos)
@@ -708,44 +843,6 @@ InitConfig() {
                 }
             }
             
-            ; 加载快捷操作按钮配置
-            QuickActionButtons := []
-            ButtonCount := Integer(IniRead(ConfigFile, "QuickActions", "ButtonCount", "5"))
-            if (ButtonCount < 1) {
-                ButtonCount := 5
-            }
-            if (ButtonCount > 5) {
-                ButtonCount := 5
-            }
-            Loop ButtonCount {
-                Index := A_Index
-                ButtonType := IniRead(ConfigFile, "QuickActions", "Button" . Index . "Type", "")
-                ButtonHotkey := IniRead(ConfigFile, "QuickActions", "Button" . Index . "Hotkey", "")
-                ; 修改：允许 Hotkey 为空（新增的 Cursor 快捷键选项没有 Hotkey）
-                if (ButtonType != "") {
-                    QuickActionButtons.Push({Type: ButtonType, Hotkey: ButtonHotkey})
-                } else {
-                    ; 如果某个按钮配置缺失，使用默认值
-                    QuickActionButtons.Push({Type: "Explain", Hotkey: "e"})
-                }
-            }
-            ; 确保有5个按钮
-            while (QuickActionButtons.Length < 5) {
-                QuickActionButtons.Push({Type: "Explain", Hotkey: "e"})
-            }
-            while (QuickActionButtons.Length > 5) {
-                QuickActionButtons.Pop()
-            }
-            ; 如果没有加载到任何按钮，使用默认配置
-            if (QuickActionButtons.Length = 0) {
-                QuickActionButtons := [
-                    {Type: "Explain", Hotkey: "e"},
-                    {Type: "Refactor", Hotkey: "r"},
-                    {Type: "Optimize", Hotkey: "o"},
-                    {Type: "Config", Hotkey: "q"},
-                    {Type: "Explain", Hotkey: "e"}
-                ]
-            }
         } else {
             ; If config file doesn't exist, use default values directly
             CursorPath := DefaultCursorPath
@@ -931,6 +1028,94 @@ ExportClipboard(*) {
         MsgBox(GetText("export_success"), GetText("tip"), "Iconi")
     } catch as e {
         MsgBox(GetText("import_failed") . ": " . e.Message, GetText("error"), "Iconx")
+    }
+}
+
+; ===================== 开机自启动（注册表 Run）=====================
+; HKCU\...\Run 须写入「AutoHotkey.exe + 主脚本」完整命令行；仅 .ahk 路径无法开机启动。
+Nmer_AutoStartRegistryNames() {
+    return ["Nmer", "CursorHelper"]
+}
+
+Nmer_ResolveAutoStartPaths(&ahkExe, &scriptPath) {
+    ahkExe := Trim(String(A_AhkPath))
+    scriptPath := Trim(String(A_ScriptFullPath))
+    if (scriptPath != "" && !FileExist(scriptPath)) {
+        cand := A_ScriptDir . "\牛马.ahk"
+        if FileExist(cand)
+            scriptPath := cand
+    }
+    if (ahkExe = "" || scriptPath = "")
+        return false
+    return true
+}
+
+Nmer_BuildAutoStartRunCommand() {
+    local ahkExe, scriptPath
+    if !Nmer_ResolveAutoStartPaths(&ahkExe, &scriptPath)
+        return ""
+    return '"' . ahkExe . '" "' . scriptPath . '"'
+}
+
+Nmer_ApplyAutoStartRegistry(Enable, &errorMsg := "") {
+    return SetAutoStart(Enable, &errorMsg)
+}
+
+SetAutoStart(Enable, &errorMsg := "") {
+    RegKey := "HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
+    names := Nmer_AutoStartRegistryNames()
+    appName := names[1]
+    try {
+        if (Enable) {
+            local ahkExe, scriptPath
+            if !Nmer_ResolveAutoStartPaths(&ahkExe, &scriptPath) {
+                errorMsg := "无法解析自启动路径（A_AhkPath 或主脚本为空）"
+                return false
+            }
+            runCmd := '"' . ahkExe . '" "' . scriptPath . '"'
+            if !FileExist(ahkExe) {
+                errorMsg := "找不到 AutoHotkey: " . ahkExe
+                return false
+            }
+            if !FileExist(scriptPath) {
+                errorMsg := "找不到主脚本: " . scriptPath
+                return false
+            }
+            RegWrite(runCmd, "REG_SZ", RegKey, appName)
+            readBack := ""
+            try readBack := Trim(String(RegRead(RegKey, appName)))
+            catch as readErr {
+                errorMsg := "注册表写入后读取失败: " . readErr.Message
+                return false
+            }
+            if (readBack = "" || !InStr(readBack, "AutoHotkey")) {
+                errorMsg := "注册表自启动项未生效（读取为空或格式异常）"
+                return false
+            }
+            Loop names.Length - 1 {
+                try RegDelete(RegKey, names[A_Index + 1])
+                catch {
+                }
+            }
+        } else {
+            for _, legacyName in names {
+                try RegDelete(RegKey, legacyName)
+                catch {
+                }
+            }
+        }
+        return true
+    } catch as e {
+        errorMsg := e.Message
+        if e.HasProp("Extra") {
+            try {
+                ex := Trim(String(e.Extra))
+                if (ex != "")
+                    errorMsg .= " (" . ex . ")"
+            } catch {
+            }
+        }
+        return false
     }
 }
 

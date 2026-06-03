@@ -2926,6 +2926,8 @@ SelectionSense_OnMenuWebMessage(sender, args) {
         g_SelSense_MenuReady := true
         if g_SelSense_MenuShowingHub
             HubCapsule_SetPhase(HUB_PHASE_OPEN, "selection_menu_ready")
+        if g_SelSense_MenuShowingHub
+            SelectionSense_HubCapsule_PushThemeToWeb()
         try WebView_QueuePayload(g_SelSense_MenuWV2, Map("type", "hub_preview_state", "copyTriggerMode", g_SelSense_HubCopyTriggerMode))
         SelectionSense_SendDockConfig()
         ; Both SelectionMenu and HubCapsule emit selection_menu_ready.
@@ -2945,6 +2947,7 @@ SelectionSense_OnMenuWebMessage(sender, args) {
     if (typ = "hub_ready") {
         ; HubCapsule 就绪后补发待推送片段
         HubCapsule_SetPhase(HUB_PHASE_OPEN, "hub_ready")
+        SelectionSense_HubCapsule_PushThemeToWeb()
         SelectionSense_HubCapsule_FlushPendingSegments()
         SelectionSense_PushHubCtxMenuSpec()
         SelectionSense_SendDockConfig()
@@ -3333,6 +3336,26 @@ SelectionSense_HubDragFlushLatest(*) {
     SelectionSense_HubDragApplyBoundsNotify()
 }
 
+SelectionSense_HubCapsule_PushThemeToWeb(overrideMode := "") {
+    global g_SelSense_MenuWV2, ThemeMode
+    if !g_SelSense_MenuWV2
+        return
+    tm := Trim(String(overrideMode))
+    if (tm = "") {
+        try {
+            if IsObject(Func("ReadPersistedThemeMode"))
+                tm := ReadPersistedThemeMode()
+        } catch {
+        }
+        if (tm = "")
+            tm := IsSet(ThemeMode) ? ThemeMode : "dark"
+    }
+    tm := (StrLower(tm) = "light") ? "light" : "dark"
+    try WebView_QueuePayload(g_SelSense_MenuWV2, Map("type", "set_theme", "themeMode", tm))
+    catch {
+    }
+}
+
 SelectionSense_SendDockConfig() {
     global g_SelSense_MenuWV2
     if !g_SelSense_MenuWV2
@@ -3717,9 +3740,24 @@ SelectionSense_ShowMenuNearCursor(internalIntent := false) {
         SelectionSense_HubCapsule_ReadSavedPos(&sx, &sy, &savedOk)
     if savedOk && !SelectionSense_HubSavedRectIsOnScreen(sx, sy, w, h)
         savedOk := false
+    if savedOk && g_SelSense_MenuShowingHub {
+        try {
+            if !Nmer_RectCenterOnScreen(sx, sy, w, h, Nmer_GetPopupScreenIndex())
+                savedOk := false
+        } catch {
+        }
+    }
     if savedOk {
         x := sx
         y := sy
+    } else if g_SelSense_MenuShowingHub {
+        try Nmer_DefaultPopupWindowXY(w, h, &x, &y)
+        catch {
+            mx := g_SelSense_MenuAnchorX
+            my := g_SelSense_MenuAnchorY
+            x := mx + 8
+            y := my + 8
+        }
     } else {
         mx := g_SelSense_MenuAnchorX
         my := g_SelSense_MenuAnchorY
@@ -3746,6 +3784,8 @@ SelectionSense_ShowMenuNearCursor(internalIntent := false) {
     try WebView2_NotifyShown(g_SelSense_MenuWV2)
     g_SelSense_MenuActivateOnShow := false
     SelectionSense_ApplyMenuBounds()
+    if g_SelSense_MenuShowingHub
+        SelectionSense_HubCapsule_PushThemeToWeb()
     try g_SelSense_MenuCtrl.NotifyParentWindowPositionChanged()
     if doActivate {
         try FocusBroker_Request("HubCapsule", g_SelSense_MenuGui.Hwnd, 30, "show_menu", 300, (*) => g_SelSense_MenuCtrl.MoveFocus(WebView2.MOVE_FOCUS_REASON.PROGRAMMATIC))

@@ -2501,19 +2501,14 @@ html[data-theme="light"] #tx-test-result {
     if (colorSchemeMeta) colorSchemeMeta.setAttribute('content', tm);
     if (persist) {
       try { localStorage.setItem('hub_themeMode', tm); } catch (_) {}
+      try { localStorage.setItem('settings_themeMode', tm); } catch (_) {}
     }
     return tm;
   }
 
   function bootstrapThemeMode() {
-    let tm = '';
-    try {
-      tm = String(localStorage.getItem('settings_themeMode') || localStorage.getItem('hub_themeMode') || '');
-    } catch (_) {}
-    if (!tm && typeof window.matchMedia === 'function') {
-      try { tm = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch (_) {}
-    }
-    applyHubTheme(tm || 'dark', false);
+    ; 首帧用深色占位，真实主题由宿主 set_theme 推送（与 INI/ApplyTheme 一致，避免 localStorage 陈旧浅色）
+    applyHubTheme('dark', false);
   }
 
   const HUB_CTX_FALLBACK = [

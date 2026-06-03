@@ -982,6 +982,9 @@ SCWV_Init(reason := "") {
     g_SCWV_Gui.OnEvent("Close", SCWV_OnGuiClose)
     g_SCWV_Gui.OnEvent("Size", SCWV_OnGuiResize)
     g_SCWV_Gui.Show("w1180 h760 Hide")
+    try Nmer_MoveGuiToPopupScreen(g_SCWV_Gui)
+    catch {
+    }
     g_SCWV_CreateInFlight := true
     g_SCWV_CreateStartTick := A_TickCount
     try SCWV_Log("init_create_begin", "reason=" . r . " hwnd=" . g_SCWV_Gui.Hwnd)
@@ -1178,6 +1181,9 @@ SCWV_ShowHostFullscreen(*) {
     global g_SCWV_Gui
     if !g_SCWV_Gui
         return
+    try Nmer_MoveGuiToPopupScreen(g_SCWV_Gui)
+    catch {
+    }
     try {
         g_SCWV_Gui.Show("Maximize")
     } catch {

@@ -94,7 +94,6 @@
     #footer { display: none; }
     .ok { color: var(--success); } .err { color: var(--danger); }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .qa-row { display: grid; grid-template-columns: 70px 1fr 130px; gap: 8px; margin-bottom: 8px; }
     .tag-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
     .tag { border: 1px solid var(--border2); border-radius: 14px; padding: 4px 10px; font-size: 12px; font-family: var(--font); font-weight: 400; }
     .subtabs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -136,6 +135,271 @@
     .ft-probe-item { border: 1px solid var(--border2); border-radius: 8px; padding: 6px 8px; font-size: 11px; color: var(--text-dim); background: rgba(255,255,255,.02); font-family: var(--font); font-weight: 400; }
     .ft-probe-ok { color: #4ade80; }
     .ft-probe-bad { color: #f97316; }
+    .hotkey-list { display: flex; flex-direction: column; gap: 0; margin-top: 4px; }
+    .hotkey-item { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 12px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .hotkey-item:last-child { border-bottom: none; }
+    .hotkey-item-name { font-size: 13px; color: var(--text); font-family: var(--font-strong); font-weight: 700; }
+    .hotkey-item-desc { font-size: 12px; color: var(--text-xs); margin-top: 4px; line-height: 1.45; }
+    .hotkey-item-tag { display: inline-block; margin-top: 6px; font-size: 10px; color: var(--text-dim); border: 1px solid var(--border2); border-radius: 4px; padding: 1px 6px; }
+    .hotkey-item input { max-width: 110px; }
+    .shortcut-ref-list { display: flex; flex-direction: column; gap: 0; }
+    .shortcut-ref-row { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); align-items: start; }
+    .shortcut-ref-row:last-child { border-bottom: none; }
+    .shortcut-ref-kbd { font-size: 12px; color: var(--orange); font-family: Consolas, "Segoe UI", monospace; white-space: nowrap; }
+    .shortcut-ref-label { font-size: 12px; color: var(--text); font-family: var(--font-strong); font-weight: 700; }
+    .shortcut-ref-desc { font-size: 11px; color: var(--text-xs); margin-top: 3px; line-height: 1.4; }
+  /* KeyBinder 快捷键子页（对齐 VirtualKeyboard.html cmd-panel） */
+    .hk-card {
+      padding: 0;
+      overflow: hidden;
+      background: var(--surface);
+      border-color: var(--border);
+    }
+    .hk-card-head {
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(86,136,205,.08), transparent), var(--surface2);
+    }
+    .hk-card-head .title { margin-bottom: 8px; }
+    .hk-record-hud {
+      display: none;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      color: var(--text-dim);
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(50,76,114,.85);
+      background: linear-gradient(180deg, rgba(86,136,205,.12), rgba(86,136,205,0)), var(--surface3);
+      line-height: 1.45;
+    }
+    .hk-record-hud.visible { display: block; }
+    .hk-record-hud.recording {
+      color: var(--orange-lt);
+      border-color: rgba(255,141,42,.45);
+      box-shadow: 0 0 0 1px rgba(255,141,42,.12) inset, 0 8px 22px rgba(0,0,0,.28);
+      animation: hk-hud-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes hk-hud-pulse {
+      0%, 100% { box-shadow: 0 0 0 1px rgba(255,141,42,.1) inset; }
+      50% { box-shadow: 0 0 0 1px rgba(255,141,42,.35) inset, 0 0 18px rgba(255,141,42,.12); }
+    }
+    .hk-note {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      margin: 0 0 10px;
+      padding: 0 14px;
+    }
+    .hk-sub-panel { display: none; padding: 10px 14px 14px; }
+    .hk-sub-panel.active { display: block; }
+    .vk-main-tabs.hk-sub-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px 14px 6px;
+      margin: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .vk-main-tab {
+      flex: 0 1 auto;
+      padding: 7px 14px;
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      background: var(--surface3);
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color .15s, border-color .15s, box-shadow .15s, background .15s;
+      text-align: center;
+    }
+    .vk-main-tab:hover { color: var(--text); border-color: var(--orange-lt); }
+    .vk-main-tab.active {
+      color: var(--orange-lt);
+      border-color: var(--orange);
+      background: linear-gradient(180deg, rgba(255,141,42,.14), rgba(255,141,42,.04)), var(--surface2);
+      box-shadow: 0 0 0 1px rgba(255,141,42,.16) inset, 0 8px 20px rgba(0,0,0,.22);
+    }
+    .hk-bind-zone {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--bg);
+      font-size: 12px;
+    }
+    .hk-cmd-search-bar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .hk-cmd-search-bar input {
+      flex: 1;
+      font-family: var(--font);
+      font-size: 12px;
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      color: var(--text);
+      padding: 3px 8px;
+      height: 28px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .hk-cmd-search-bar input:focus {
+      border-color: var(--orange-lt);
+      box-shadow: 0 0 0 1px rgba(243, 156, 18, 0.25);
+    }
+    .hk-cmd-search-bar input::placeholder { color: var(--text-xs); }
+    .hk-cmd-count {
+      font-size: 10px;
+      color: var(--text-xs);
+      flex-shrink: 0;
+      min-width: 52px;
+      text-align: right;
+    }
+    .hk-cmd-list-wrapper {
+      max-height: min(52vh, 480px);
+      overflow-y: auto;
+      background: var(--bg);
+    }
+    .hk-cmd-list-wrapper::-webkit-scrollbar { width: 6px; }
+    .hk-cmd-list-wrapper::-webkit-scrollbar-track { background: var(--bg); }
+    .hk-cmd-list-wrapper::-webkit-scrollbar-thumb { background: #1e3a22; border-radius: 3px; }
+    .hk-cmd-list-wrapper::-webkit-scrollbar-thumb:hover { background: rgba(0,255,65,.27); }
+    .hk-cmd-list { padding: 0; }
+    .hk-bind-zone .cmd-row {
+      --cmd-accent: var(--orange-lt);
+      display: flex;
+      align-items: center;
+      padding: 4px 10px;
+      min-height: 34px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      cursor: default;
+      transition: background .1s;
+    }
+    .hk-bind-zone .cmd-row:hover { background: #111; }
+    .hk-bind-zone .cmd-row.has-binding { background: #0e0c00; }
+    .hk-bind-zone .cmd-row.has-binding:hover { background: #161000; }
+    .hk-bind-zone .cmd-row.active-focus,
+    .hk-bind-zone .cmd-row.recording {
+      outline: 1px solid rgba(230,126,34,.53);
+      background: #1a0e00 !important;
+    }
+    .hk-bind-zone .cmd-row.recording .cmd-name,
+    .hk-bind-zone .cmd-row.recording .cmd-title { color: var(--orange); }
+    .hk-bind-zone .cmd-name {
+      flex: 1;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      padding-right: 6px;
+    }
+    .hk-bind-zone .cmd-icon {
+      width: 14px;
+      text-align: center;
+      color: var(--cmd-accent);
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hk-bind-zone .cmd-icon svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .hk-bind-zone .cmd-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 500;
+      font-size: 12px;
+    }
+    .hk-bind-zone .cmd-key {
+      min-width: 100px;
+      max-width: 42%;
+      font-family: var(--font);
+      font-size: 12px;
+      color: var(--text-dim);
+      text-align: right;
+      padding-right: 12px;
+      flex-shrink: 0;
+      line-height: 1.35;
+    }
+    .hk-bind-zone .cmd-row.binding-custom .cmd-key { color: var(--orange-lt); }
+    .hk-bind-zone .cmd-row.binding-suggested .cmd-key { color: #8b8b8b; }
+    .hk-bind-zone .cmd-row.binding-none .cmd-key { color: #666; }
+    .hk-bind-zone .cmd-row.recording .cmd-key { color: var(--orange-lt); }
+    .hk-rec-pulse { animation: hk-rec-blink 1s ease-in-out infinite; }
+    @keyframes hk-rec-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .55; }
+    }
+    .hk-bind-zone .cmd-actions {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .hk-bind-zone .btn-icon {
+      font-size: 12px;
+      color: var(--text-xs);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 3px;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      transition: color .1s, border-color .1s;
+    }
+    .hk-bind-zone .btn-icon:hover { color: var(--orange); border-color: var(--border2); }
+    .hk-bind-zone .btn-icon.danger:hover { color: #e74c3c; border-color: rgba(231,76,60,.4); }
+    .hk-bind-zone .btn-icon.active-rec {
+      color: var(--orange-lt);
+      border-color: rgba(243, 156, 18, 0.55);
+    }
+    .hk-bind-zone .btn-icon .fa-solid {
+      pointer-events: none;
+      font-size: 11px;
+      line-height: 1;
+    }
+    .hk-no-command {
+      padding: 16px 10px;
+      text-align: center;
+      color: var(--text-xs);
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+    .hk-open-vk-row {
+      margin-top: 10px;
+      padding: 0 14px 4px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .hk-vk-status {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .hk-vk-status.ok { color: var(--success); }
+    .hk-vk-status.err { color: var(--danger); }
     @keyframes ft-breath {
       0% { transform: scale(1); opacity: .55; }
       50% { transform: scale(1.25); opacity: 1; }
@@ -316,41 +580,6 @@
       border-color: var(--orange-dk);
       color: var(--on-accent);
       box-shadow: var(--glow-hot);
-    }
-    .btn.legacy-compact {
-      height: 30px;
-      padding: 0 10px;
-      border-radius: 8px;
-      font-size: 12px;
-    }
-    .legacy-tools {
-      position: relative;
-    }
-    .legacy-tools > summary {
-      list-style: none;
-    }
-    .legacy-tools > summary::-webkit-details-marker {
-      display: none;
-    }
-    .legacy-tools-menu {
-      position: absolute;
-      right: 0;
-      top: 42px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      min-width: 180px;
-      padding: 8px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: var(--surface);
-      box-shadow: var(--glow);
-      z-index: 30;
-    }
-    .legacy-tools-menu .btn {
-      width: 100%;
-      justify-content: flex-start;
-      text-align: left;
     }
     #header > div:first-child,
     .apple-group-title,
@@ -705,9 +934,9 @@
     }
     .activation-mode-option {
       display: grid;
-      grid-template-columns: 18px 1fr;
+      grid-template-columns: 18px 48px 1fr;
       gap: 10px;
-      align-items: start;
+      align-items: center;
       padding: 10px 12px;
       border-radius: 12px;
       border: 1px solid var(--border2);
@@ -725,7 +954,62 @@
       background: linear-gradient(180deg, rgba(255,179,71,.15), rgba(255,141,42,.1));
     }
     .activation-mode-radio {
-      margin-top: 2px;
+      margin-top: 0;
+      align-self: center;
+    }
+    .activation-mode-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      border: 1px solid var(--border2);
+      font-size: 20px;
+      line-height: 1;
+    }
+    .activation-mode-icon i {
+      pointer-events: none;
+    }
+    .activation-mode-icon-toolbar {
+      color: #ffb347;
+      border-color: rgba(255,179,71,.45);
+      background: linear-gradient(145deg, rgba(255,179,71,.18), rgba(255,141,42,.08));
+      box-shadow: 0 6px 14px rgba(255,141,42,.12);
+    }
+    .activation-mode-icon-hole {
+      color: #8ec5ff;
+      border-color: rgba(110,165,255,.45);
+      background: radial-gradient(circle at 35% 28%, #2c3f68 0%, #0b0f16 58%, #000 100%);
+      box-shadow: 0 8px 18px rgba(0,0,0,.28), inset 0 0 0 1px rgba(142,197,255,.12);
+    }
+    .activation-mode-icon-hole .hole-ring-mini {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid rgba(142,197,255,.75);
+      box-shadow: 0 0 10px rgba(110,165,255,.35), inset 0 0 8px rgba(0,0,0,.65);
+      background: radial-gradient(circle at 50% 50%, #05070c 0%, #000 72%);
+    }
+    .activation-mode-icon-tray {
+      color: var(--text-dim);
+      border-color: var(--border2);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 11px;
+    }
+    .activation-mode-icon-tray img {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+      border-radius: 5px;
+    }
+    .activation-mode-body {
+      min-width: 0;
     }
     .activation-mode-title {
       font-size: 13px;
@@ -771,11 +1055,33 @@
       background: linear-gradient(180deg, rgba(255,179,71,.12), rgba(255,141,42,.08));
     }
     .mode-toolbar-mock .dot {
-      width: 18px;
-      height: 18px;
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      color: rgba(255,200,120,.95);
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,179,71,.35);
+    }
+    .mode-hole-ring {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      border: 2px solid rgba(142,197,255,.7);
+      box-shadow: 0 0 14px rgba(110,165,255,.35), inset 0 0 12px rgba(0,0,0,.7);
+      background: radial-gradient(circle at 50% 45%, #1a2744 0%, #05070c 45%, #000 100%);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .mode-hole-ring img {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
       border-radius: 6px;
-      background: rgba(255,255,255,.24);
-      border: 1px solid rgba(255,255,255,.26);
+      opacity: .92;
     }
     .mode-icon-bubble {
       width: 54px;
@@ -1062,6 +1368,7 @@
     .app-update-banner.visible { display: flex; }
     .app-update-banner button { flex-shrink: 0; }
   </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   <script src="https://app.local/assets/js/BasePanel.js"></script>
   <script src="https://app.local/assets/nm-bottom-dock.js"></script>
@@ -1081,7 +1388,7 @@
       <button class="tab-btn" data-tab="customize">智能定制</button>
     </aside>
     <section id="content">
-      <div id="header"><div class="inline">[ 设置中心 ]<span id="headerUpdateDot" class="update-dot" style="display:none;margin-left:8px;vertical-align:middle;width:8px;height:8px;border-radius:50%;background:#ff6600" title="有新版本"></span></div><div class="inline"><details class="legacy-tools"><summary class="btn legacy-compact">兼容入口</summary><div class="legacy-tools-menu"><button id="btn-open-legacy" class="btn legacy-compact">打开原版完整设置</button><button id="btn-open-compare" class="btn legacy-compact">对比模式</button></div></details><div id="status">等待连接...</div></div></div>
+      <div id="header"><div class="inline">[ 设置中心 ]<span id="headerUpdateDot" class="update-dot" style="display:none;margin-left:8px;vertical-align:middle;width:8px;height:8px;border-radius:50%;background:#ff6600" title="有新版本"></span></div><div class="inline"><div id="status">等待连接...</div></div></div>
       <div id="panel"></div>
       <div id="footer"><button id="btn-cancel" class="btn">取消</button><button id="btn-save" class="btn primary">保存</button></div>
     </section>
@@ -1163,8 +1470,47 @@
       { id:"openclaw", icon:"https://app.local/assets/icons/app/Claude.png", label:"OpenClaw" },
       { id:"qwen", icon:"https://app.local/assets/icons/app/qwen.png", label:"Qwen" }
     ];
-    const ACTION_TYPES = ["Explain","Refactor","Optimize","Config","Copy","Paste","Clipboard","Voice","Split","Batch","CommandPalette","Terminal","GlobalSearch","Explorer","SourceControl","Extensions","Browser","Settings","CursorSettings"];
-    const HOTKEY_KEYS = ["ESC","C","V","X","E","R","O","Q","Z","S","B","T","F","P"];
+    const DEFAULT_CURSOR_SHORTCUTS = [
+      { label: "命令面板", shortcut: "^+p", desc: "Cursor 命令面板（悬浮栏可触发）" },
+      { label: "终端", shortcut: "^+``", desc: "打开集成终端" },
+      { label: "全局搜索", shortcut: "^+f", desc: "Cursor 工作区全局搜索" },
+      { label: "资源管理器", shortcut: "^+e", desc: "显示文件资源管理器侧栏" },
+      { label: "源代码管理", shortcut: "^+g", desc: "Git / 源代码管理视图" },
+      { label: "扩展", shortcut: "^+x", desc: "扩展市场侧栏" },
+      { label: "简单浏览器", shortcut: "^+b", desc: "内置 Simple Browser" },
+      { label: "编辑器设置", shortcut: "^+j", desc: "VS Code 设置" },
+      { label: "Cursor 设置", shortcut: "^,", desc: "Cursor 专属设置" }
+    ];
+    const HK_SUB_TABS = [
+      { id: "overview", label: "说明与手势" },
+      { id: "cursor", label: "Cursor 组合键" },
+      { id: "vk_nav", label: "全局导航" },
+      { id: "vk_tray", label: "托盘与工具栏" },
+      { id: "vk_dir", label: "方向键" },
+      { id: "toolbar", label: "悬浮栏布局" }
+    ];
+    const HK_VK_PRESETS = [
+      { id: "vk_nav", name: "全局导航", commands: ["ch_f", "ch_x", "ch_q", "ch_t", "ch_p", "ch_r", "ch_b", "ch_g", "sys_show_vk"] },
+      {
+        id: "vk_tray",
+        name: "托盘与工具栏",
+        commands: [
+          "ftm_reset_scale", "ftm_search_center", "ftm_clipboard", "ftm_minimize_to_edge",
+          "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script",
+          "tray_show_search", "tray_show_clipboard", "tray_show_screenshot", "tray_show_config",
+          "tray_toggle_toolbar", "tray_hide_toolbar", "tray_reload_script", "tray_exit_app"
+        ]
+      },
+      { id: "vk_dir", name: "方向", commands: ["ch_w", "ch_s", "ch_a", "ch_d"] }
+    ];
+    const APP_SHORTCUT_REFERENCE = [
+      { combo: "长按 CapsLock", label: "KeyBinder 快捷键面板", desc: "达到「通用设置」中的长按时间后弹出；可在下方关闭此行为，改从托盘打开虚拟键盘。" },
+      { combo: "悬浮栏 · 搜索", label: "搜索中心", desc: "打开全局搜索中心，检索文件、剪贴板与 AI 能力。" },
+      { combo: "悬浮栏 · 设置", label: "设置中心", desc: "打开本设置页面；与单键 Q 等效。" },
+      { combo: "黑洞 · 划选文本", label: "唤起 Hub 交互", desc: "在「外观设置」中启用；划选文字后弹出 Hub 胶囊等交互（与激活模式相关）。" },
+      { combo: "黑洞 · 顺时针画圈", label: "顺时针手势", desc: "在外观中启用后，于屏幕上顺时针画圈触发快捷操作。" },
+      { combo: "黑洞 · 逆时针画圈", label: "逆时针手势", desc: "在外观中启用后，于屏幕上逆时针画圈触发快捷操作。" }
+    ];
     const TOOLBAR_BUTTON_OPTIONS = [
       { id:"Search", name:"搜索" }, { id:"Record", name:"记录" }, { id:"Prompt", name:"提示词" },
       { id:"NewPrompt", name:"草稿本" }, { id:"Screenshot", name:"截图" }, { id:"Settings", name:"设置" }, { id:"VirtualKeyboard", name:"虚拟键盘" }
@@ -1177,12 +1523,12 @@
     const DEFAULT_TOOLBAR_BUTTONS = ["Search","Record","Prompt","NewPrompt","Screenshot","Settings","VirtualKeyboard"];
     const DEFAULT_TOOLBAR_MENUS = ["ToggleToolbar","MinimizeToEdge","ResetScale","SearchCenter","Clipboard","OpenConfig","HideToolbar","ReloadScript","ExitApp"];
     const ACTIVATION_MODE_OPTIONS = [
-      { value: "toolbar", label: "悬浮栏", desc: "显示完整悬浮条，适合重度高频操作。" },
-      { value: "hole", label: "黑洞模式", desc: "独立黑洞交互入口；与悬浮栏互斥，不同时显示。" },
-      { value: "tray", label: "后台", desc: "不显示任何悬浮窗，仅通过托盘图标使用功能。" }
+      { value: "toolbar", label: "悬浮栏", desc: "显示完整悬浮条，适合重度高频操作。", iconClass: "fa-grip-lines", iconKind: "toolbar" },
+      { value: "hole", label: "黑洞模式", desc: "独立黑洞交互入口；与悬浮栏互斥，不同时显示。", iconClass: "fa-circle-notch", iconKind: "hole" },
+      { value: "tray", label: "后台", desc: "不显示任何悬浮窗，仅通过托盘图标使用功能。", iconClass: "fa-tray-arrow-up", iconKind: "tray" }
     ];
     const ACTIVATION_MODE_LOCAL_KEY = "settings.appearance.activationMode";
-    const NIUMA_ICON_URL = "https://app.local/%E7%89%9B%E9%A9%AC.png";
+    const NIUMA_ICON_URL = "https://app.local/assets/%E7%89%9B%E9%A9%AC.png";
     const state = {
       activeTab: "general",
       selectedPromptTemplateId: "",
@@ -1195,6 +1541,10 @@
       screenshotSubTab: "capture",
       cursorRulesTab: "general",
       appearanceActivationMode: "toolbar",
+      hotkeysSubTab: "overview",
+      hkRecording: null,
+      hkRecordHudText: "",
+      hkCmdSearch: "",
       appUpdate: null,
       cacheInfo: null,
       fullText: {
@@ -1225,12 +1575,12 @@
       data: {
         cursorPath: "", capslockHoldTimeSeconds: 0.5, capsLockHoldVkEnabled: true, autoStart: false, defaultStartTab: "general",
         themeMode: "", popupScreenIndex: 1, monitorCount: 1,
-        promptExplain: "", promptRefactor: "", promptOptimize: "",
+        promptTemplateSummary: [],
         cursorRules: { general:"", web:"", miniprogram:"", android:"", ios:"", python:"" },
-        promptTemplateSummary: [], defaultTemplates: { Explain: "", Refactor: "", Optimize: "" },
-        hotkeys: { ESC:"Esc", C:"c", V:"v", X:"x", E:"e", R:"r", O:"o", Q:"q", Z:"z", S:"s", B:"b", T:"t", F:"f", P:"p" },
+        cursorShortcuts: [],
+        keybinderBindings: {},
+        keybinderSuggestedBindings: {},
         promptQuickCaptureHotkey: "",
-        quickActions: [{type:"Explain",hotkey:"e"},{type:"Refactor",hotkey:"r"},{type:"Optimize",hotkey:"o"},{type:"Config",hotkey:"q"},{type:"Explain",hotkey:"e"}],
         language: "zh", aiSleepTime: 200, launchDelaySeconds: 3.0,
         searchEngine: "deepseek", autoLoadSelectedText: false, autoUpdateVoiceInput: true,
         voiceSearchEnabledCategories: ["ai","cli","academic","baidu","image","audio","video","book","price","medical","cloud"],
@@ -1607,6 +1957,14 @@
     const checked = (v) => v ? "checked" : "";
     let suppressAutoSave = true;
     let initDataReceived = false;
+    /** 用户是否在「通用设置」改过默认启动页；未置位时自动保存不得带上 defaultStartTab */
+    let defaultStartTabDirty = false;
+    const HOLE_SAVE_KEYS = [
+      "holePositionMode", "holeTriggerDistance", "holeDismissDistance", "holeFixedX", "holeFixedY",
+      "holeSizeScale", "holeAnimLevel", "holeVisualStyle", "holeHideDockEnabled", "holeHideDockEdge",
+      "holeHideDockMargin", "holeTriggerTextSelect", "holeTriggerCircleCw", "holeTriggerCircleCcw",
+      "holeTriggerRButtonHold", "holeRButtonHoldMs", "holeSensitivityPreset", "holePlacementPreset"
+    ];
     let saveInFlight = false;
     let pendingSaveHash = "";
     let lastSentHash = "";
@@ -1625,9 +1983,100 @@
       };
       try { return JSON.stringify(sortObj(v)); } catch { return ""; }
     }
+    function captureGeneralTabState() {
+      if (!document.getElementById("cursorPath")) return;
+      state.data = readGeneral({ ...state.data });
+    }
+    function buildSavePayloadFromDom(d) {
+      const p = { monitorCount: d.monitorCount };
+      if (document.getElementById("cursorPath")) {
+        p.cursorPath = d.cursorPath;
+        p.capslockHoldTimeSeconds = d.capslockHoldTimeSeconds;
+        p.capsLockHoldVkEnabled = d.capsLockHoldVkEnabled;
+        p.autoStart = d.autoStart;
+        if (defaultStartTabDirty) p.defaultStartTab = d.defaultStartTab;
+      }
+      if (document.getElementById("themeMode")) p.themeMode = d.themeMode;
+      if (document.getElementById("popupScreenIndex")) p.popupScreenIndex = d.popupScreenIndex;
+      if (document.getElementById("holePlacementPreset")) {
+        for (const k of HOLE_SAVE_KEYS) if (k in d) p[k] = d[k];
+      }
+      if (document.querySelector('input[name="activationMode"]')) p.appearanceActivationMode = d.appearanceActivationMode;
+      if (document.getElementById("cursorRuleContent")) p.cursorRules = d.cursorRules;
+      if (document.getElementById("aiSleepTimeSeconds")) {
+        p.language = d.language;
+        p.aiSleepTime = d.aiSleepTime;
+        p.launchDelaySeconds = d.launchDelaySeconds;
+      }
+      if (document.getElementById("toolbarButtonsList")) p.floatingToolbarButtons = d.floatingToolbarButtons;
+      if (document.getElementById("toolbarMenusList")) p.floatingToolbarMenuItems = d.floatingToolbarMenuItems;
+      if (document.getElementById("promptQuickCaptureHotkey")) p.promptQuickCaptureHotkey = d.promptQuickCaptureHotkey;
+      const elVkHold = document.getElementById("capsLockHoldVkEnabled");
+      if (elVkHold) p.capsLockHoldVkEnabled = d.capsLockHoldVkEnabled;
+      if (document.getElementById("ssCaptureMode") && d.screenshotConfig) p.screenshotConfig = d.screenshotConfig;
+      if (document.getElementById("ddDefaultEngine") || document.getElementById("autoLoadSelectedText")) {
+        p.searchEngine = d.searchEngine;
+        p.autoLoadSelectedText = d.autoLoadSelectedText;
+        p.autoUpdateVoiceInput = d.autoUpdateVoiceInput;
+        p.voiceSearchEnabledCategories = d.voiceSearchEnabledCategories;
+        p.voiceSearchSelectedEnginesCsv = d.voiceSearchSelectedEnginesCsv;
+      }
+      if (document.getElementById("studioLlmCards") || document.getElementById("usLlmApiKey")) p.userStudio = d.userStudio;
+      return p;
+    }
+    function pruneSettingsPayload(d) {
+      return buildSavePayloadFromDom(d);
+    }
+    function validatePayload(d) {
+      if ("cursorPath" in d) {
+        if (!d.cursorPath) return "Cursor 路径不能为空";
+        if (!(d.capslockHoldTimeSeconds >= 0.1 && d.capslockHoldTimeSeconds <= 5.0)) return "CapsLock Hold Time 需要在 0.1 到 5.0 之间";
+      }
+      if ("popupScreenIndex" in d) {
+        if (!Number.isInteger(d.popupScreenIndex) || d.popupScreenIndex < 1) return "弹窗屏幕序号非法";
+        const maxMonitors = Math.max(1, Number(d.monitorCount || 1));
+        if (d.popupScreenIndex > maxMonitors) return "弹窗屏幕序号超出显示器范围";
+      }
+      const hasHole = HOLE_SAVE_KEYS.some((k) => k in d);
+      if (hasHole) {
+        if (!["cursor","fixed","edge"].includes(String(d.holePlacementPreset || "cursor"))) return "黑洞出现位置非法";
+        const trigErr = validateHoleTriggers(d);
+        if (trigErr) return trigErr;
+        if (!Number.isFinite(Number(d.holeRButtonHoldMs)) || Number(d.holeRButtonHoldMs) < 200 || Number(d.holeRButtonHoldMs) > 2000) return "长按右键时长非法";
+        if (!["anchor","fixed","relative"].includes(String(d.holePositionMode || "anchor"))) return "黑洞位置模式非法";
+        if (!Number.isFinite(Number(d.holeTriggerDistance)) || Number(d.holeTriggerDistance) < 80 || Number(d.holeTriggerDistance) > 1200) return "黑洞触发距离非法";
+        if (!Number.isFinite(Number(d.holeDismissDistance)) || Number(d.holeDismissDistance) < 120 || Number(d.holeDismissDistance) > 1600) return "黑洞消失距离非法";
+        if (!Number.isFinite(Number(d.holeSizeScale)) || Number(d.holeSizeScale) < 0.6 || Number(d.holeSizeScale) > 1.8) return "黑洞大小缩放非法";
+        if (!Number.isFinite(Number(d.holeAnimLevel)) || Number(d.holeAnimLevel) < 0.4 || Number(d.holeAnimLevel) > 2.2) return "黑洞动画强度非法";
+        if (!["ring","starry"].includes(String(d.holeVisualStyle || "ring"))) return "黑洞样式非法";
+        if (!["right","left","top","bottom"].includes(String(d.holeHideDockEdge || "right"))) return "黑洞隐藏吸附边缘非法";
+        if (!Number.isFinite(Number(d.holeHideDockMargin)) || Number(d.holeHideDockMargin) < 0 || Number(d.holeHideDockMargin) > 80) return "黑洞隐藏吸附边距非法";
+      }
+      if ("aiSleepTime" in d) {
+        if (!Number.isInteger(d.aiSleepTime) || d.aiSleepTime < 50) return "AI 等待时间非法";
+      }
+      if ("launchDelaySeconds" in d) {
+        if (!(d.launchDelaySeconds >= 0.5 && d.launchDelaySeconds <= 10)) return "启动延迟时间非法";
+      }
+      return "";
+    }
+    function postSaveGeneral(patch) {
+      captureGeneralTabState();
+      const payload = { ...patch };
+      if (payload.cursorPath === undefined && state.data.cursorPath) payload.cursorPath = state.data.cursorPath;
+      post({ type: "saveGeneralSettings", payload });
+    }
+    function patchSettingsControl(t) {
+      if (!t || !t.id) return;
+      if (t.id === "autoStart") state.data.autoStart = !!t.checked;
+      else if (t.id === "holdTime") state.data.capslockHoldTimeSeconds = Number(t.value);
+      else if (t.id === "cursorPath") state.data.cursorPath = t.value.trim();
+      else if (t.id === "capsLockHoldVkEnabled") state.data.capsLockHoldVkEnabled = !!t.checked;
+    }
     function tryAutoSaveNow(silent = false){
-      const d = readFromUI();
-      const err = validate(d);
+      const d = pruneSettingsPayload(readFromUI());
+      if (!Object.keys(d).length) return;
+      const err = validatePayload(d);
       if (err) {
         if (!silent) setStatus(err, "err");
         return;
@@ -1883,6 +2332,37 @@
         localStorage.setItem("settings.prompts.customCategories", JSON.stringify(state.customPromptCategories || []));
       } catch {}
     }
+    function normalizeDefaultStartTab(tab) {
+      const zh = {
+        "通用": "general", "通用设置": "general",
+        "外观": "appearance", "外观设置": "appearance",
+        "提示词": "prompts", "提示词设置": "prompts",
+        "快捷键": "hotkeys", "快捷键设置": "hotkeys",
+        "高级": "advanced", "高级设置": "advanced",
+        "搜索": "search", "搜索设置": "search",
+        "截图": "screenshot", "截图设置": "screenshot",
+        "存储": "storage", "存储与缓存": "storage",
+        "智能定制": "customize", "定制": "customize"
+      };
+      const t = String(tab || "").trim();
+      if (zh[t]) return zh[t];
+      const valid = new Set(["general","appearance","prompts","hotkeys","advanced","storage","screenshot","search","customize"]);
+      return valid.has(t) ? t : "general";
+    }
+    function updateHkVkStatusDom(available) {
+      const el = document.getElementById("hk-vk-status");
+      if (!el) return;
+      if (available === true) {
+        el.textContent = "VK KeyBinder 已就绪";
+        el.className = "hk-vk-status ok";
+      } else if (available === false) {
+        el.textContent = "VK KeyBinder 未加载";
+        el.className = "hk-vk-status err";
+      } else {
+        el.textContent = "";
+        el.className = "hk-vk-status";
+      }
+    }
     function readGeneral(d){
       const cp = document.getElementById("cursorPath");
       if (cp) d.cursorPath = cp.value.trim();
@@ -1891,7 +2371,7 @@
       const as = document.getElementById("autoStart");
       if (as) d.autoStart = !!as.checked;
       const dst = document.getElementById("defaultStartTab");
-      if (dst) d.defaultStartTab = dst.value;
+      if (dst && defaultStartTabDirty) d.defaultStartTab = dst.value;
       return d;
     }
     function readAppearance(d){
@@ -1922,8 +2402,16 @@
       return d;
     }
     function captureAppearanceTabState() {
-      state.data = syncHoleDerivedFields(readAppearance({ ...state.data }));
+      const d = syncHoleDerivedFields(readAppearance({ ...state.data }));
+      const ps = document.getElementById("popupScreenIndex");
+      if (ps) d.popupScreenIndex = Number(ps.value);
+      state.data = d;
       return state.data;
+    }
+    function postSavePopupScreen() {
+      captureAppearanceTabState();
+      const idx = Number(state.data.popupScreenIndex) || 1;
+      post({ type: "savePopupScreenIndex", popupScreenIndex: idx });
     }
     function validateHoleTriggers(d) {
       if (d.holeTriggerTextSelect || d.holeTriggerCircleCw || d.holeTriggerCircleCcw || d.holeTriggerRButtonHold) return "";
@@ -2013,29 +2501,494 @@
       };
     }
     function readPrompts(d){
-      d.promptExplain = document.getElementById("promptExplain")?.value ?? d.promptExplain;
-      d.promptRefactor = document.getElementById("promptRefactor")?.value ?? d.promptRefactor;
-      d.promptOptimize = document.getElementById("promptOptimize")?.value ?? d.promptOptimize;
       const cr = { ...(d.cursorRules || {}) };
       const ruleEl = document.getElementById("cursorRuleContent");
       if (ruleEl) cr[state.cursorRulesTab] = ruleEl.value ?? "";
       d.cursorRules = cr;
       return d;
     }
+    function formatAhkShortcut(raw) {
+      const s = String(raw || "").trim();
+      if (!s) return "—";
+      if (/[⌃⌥⇧]/.test(s)) {
+        return s
+          .replace(/⌃⇧\+?/gi, "Ctrl+Shift+")
+          .replace(/⌃⌥\+?/gi, "Ctrl+Alt+")
+          .replace(/⌃\+?/gi, "Ctrl+")
+          .replace(/⌥\+?/gi, "Alt+")
+          .replace(/⇧\+?/gi, "Shift+")
+          .replace(/\s+\+\s*$/g, "")
+          .trim() || "—";
+      }
+      if (s.startsWith("seq:")) {
+        const body = s.slice(4);
+        const sep = body.indexOf("||");
+        if (sep > 0) {
+          const k1 = body.slice(0, sep);
+          const k2 = body.slice(sep + 2);
+          const d1 = formatAhkShortcut(k1);
+          const d2 = formatAhkShortcut(k2);
+          if (k1 === k2) return d1 + " twice";
+          return d1 + " then " + d2;
+        }
+      }
+      if (s === "^^") return "Double Ctrl";
+      if (s === "++") return "Double Shift";
+      if (s === "!!") return "Double Alt";
+      if (/^(Ctrl|Alt|Shift|Win|CapsLock|Double )/i.test(s) && !/[\^!+#]/.test(s)) return s;
+      let display = "";
+      let key = s;
+      if (key.includes("^")) {
+        display += "Ctrl+";
+        key = key.replace(/\^/g, "");
+      }
+      if (key.includes("!")) {
+        display += "Alt+";
+        key = key.replace(/!/g, "");
+      }
+      if (key.includes("+")) {
+        display += "Shift+";
+        key = key.replace(/\+/g, "");
+      }
+      if (key.includes("#")) {
+        display += "Win+";
+        key = key.replace(/#/g, "");
+      }
+      if (key === "``") key = "`";
+      else if (key.length === 1 && /^[a-z]$/i.test(key)) key = key.toUpperCase();
+      const special = {
+        Escape: "Esc", Enter: "Enter", Space: "Space", Tab: "Tab",
+        Backspace: "Bks", Delete: "Del", Insert: "Ins",
+        Home: "Home", End: "End", PgUp: "PgUp", PgDn: "PgDn",
+        Up: "↑", Down: "↓", Left: "←", Right: "→",
+        LShift: "LShift", RShift: "RShift", LCtrl: "LCtrl", RCtrl: "RCtrl",
+        LAlt: "LAlt", RAlt: "RAlt", LWin: "Win", RWin: "Win", AppsKey: "Menu",
+        PrintScreen: "PrtSc", ScrollLock: "ScrLk", Pause: "Pause",
+        Comma: ",", Period: "."
+      };
+      if (special[key]) key = special[key];
+      return (display + key) || "—";
+    }
+    function renderCursorShortcutRefRows(list) {
+      const rows = Array.isArray(list) ? list : [];
+      if (!rows.length) {
+        return `<div class="hint">未加载 Cursor 快捷键，请重新打开设置页。</div>`;
+      }
+      return `<div class="shortcut-ref-list">${rows.map((row) => {
+        const label = esc(row.label || row.id || "—");
+        const combo = esc(formatAhkShortcut(row.shortcut || ""));
+        const desc = esc(row.desc || "");
+        return `<div class="shortcut-ref-row">
+  <div><div class="shortcut-ref-kbd">${combo}</div></div>
+  <div><div class="shortcut-ref-label">${label}</div>${desc ? `<div class="shortcut-ref-desc">${desc}</div>` : ""}</div>
+</div>`;
+      }).join("")}</div>`;
+    }
+    function renderAppShortcutRefRows() {
+      return `<div class="shortcut-ref-list">${APP_SHORTCUT_REFERENCE.map((row) => `
+<div class="shortcut-ref-row">
+  <div><div class="shortcut-ref-kbd">${esc(row.combo)}</div></div>
+  <div><div class="shortcut-ref-label">${esc(row.label)}</div><div class="shortcut-ref-desc">${esc(row.desc)}</div></div>
+</div>`).join("")}</div>`;
+    }
+    function mergeKeybinderBindingsFromHost(bindings, suggested) {
+      if (bindings && typeof bindings === "object" && !Array.isArray(bindings))
+        state.data.keybinderBindings = { ...bindings };
+      if (suggested && typeof suggested === "object" && !Array.isArray(suggested))
+        state.data.keybinderSuggestedBindings = { ...suggested };
+    }
+    function getVkBindingEntry(cmdId) {
+      const b = state.data.keybinderBindings || {};
+      return b[cmdId] || null;
+    }
+    function getVkSuggestedKey(cmdId) {
+      const s = state.data.keybinderSuggestedBindings || {};
+      const v = s[cmdId];
+      return v != null ? String(v) : "";
+    }
+    function hkIsUnmodifiedAhkKey(ahkKey) {
+      const s = String(ahkKey || "").trim();
+      if (!s || s === "^^" || s === "++" || s === "!!") return false;
+      return !(/[\^!+#+]/.test(s));
+    }
+    function hkShouldCapsChord(cmdId, ahkKey) {
+      const id = String(cmdId || "");
+      if (id.startsWith("ch_")) return hkIsUnmodifiedAhkKey(ahkKey);
+      if (id.startsWith("qa_") || id.startsWith("sc_") || id.startsWith("cp_")) return false;
+      return hkIsUnmodifiedAhkKey(ahkKey);
+    }
+    function displayKeyForSettingsCmd(cmdId) {
+      const ent = getVkBindingEntry(cmdId);
+      if (ent && ent.explicitNone) return "—";
+      if (ent && ent.ahkKey) {
+        const t = ent.displayKey || formatAhkShortcut(ent.ahkKey);
+        return t || "—";
+      }
+      const sug = getVkSuggestedKey(cmdId);
+      if (sug) {
+        const raw = formatAhkShortcut(sug);
+        return raw || "—";
+      }
+      return "—";
+    }
+    function renderVkCmdRowHtml(cmdId, cmd) {
+      const id = String(cmdId || "").trim();
+      if (!id) return "";
+      const c = cmd || buildKeybinderCommandMap()[id] || { name: id, desc: "" };
+      const ent = getVkBindingEntry(id);
+      const isNone = !!(ent && ent.explicitNone);
+      const hasReal = !!(ent && ent.ahkKey);
+      const hasSuggested = !!getVkSuggestedKey(id) && !hasReal && !isNone;
+      const isRec = state.hkRecording === id;
+      let rowCls = "cmd-row";
+      if (hasReal || hasSuggested) rowCls += " has-binding";
+      if (isRec) rowCls += " recording active-focus";
+      if (hasReal) rowCls += " binding-custom";
+      else if (hasSuggested) rowCls += " binding-suggested";
+      else if (isNone) rowCls += " binding-none";
+      const iconSvg = cfgToolbarIconSvg(id, c.iconClass || "");
+      const title = esc(c.name || id);
+      const desc = String(c.desc || "").trim();
+      const keyHtml = isRec
+        ? '<span class="hk-rec-pulse">录制中：按下快捷键（连按两次可录制序列）…</span>'
+        : esc(displayKeyForSettingsCmd(id));
+      const showClr = !isRec && (hasReal || hasSuggested);
+      const showRst = !isRec && hasReal;
+      return `<div class="${rowCls}" data-vk-cmd="${esc(id)}"${desc ? ` title="${esc(desc)}"` : ""}>
+  <div class="cmd-name">
+    <span class="cmd-icon">${iconSvg}</span>
+    <span class="cmd-title">${title}</span>
+  </div>
+  <div class="cmd-key">${keyHtml}</div>
+  <div class="cmd-actions">
+    <button type="button" class="btn-icon hk-vk-rec${isRec ? " active-rec" : ""}" data-vk-rec="${esc(id)}" title="${isRec ? "停止录制" : "录制快捷键"}">${isRec ? '<i class="fa-solid fa-stop" aria-hidden="true"></i>' : '<i class="fa-solid fa-play" aria-hidden="true"></i>'}</button>
+    <button type="button" class="btn-icon danger hk-vk-clr" data-vk-clr="${esc(id)}" title="清空按键（显式禁用）"${showClr ? "" : ' style="display:none"'}><i class="fa-solid fa-eraser" aria-hidden="true"></i></button>
+    <button type="button" class="btn-icon hk-vk-rst" data-vk-rst="${esc(id)}" title="重置为建议值"${showRst ? "" : ' style="display:none"'}><i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i></button>
+  </div>
+</div>`;
+    }
+    function renderVkCmdListHtml(cmdIds, searchKw) {
+      const kw = String(searchKw || "").trim().toLowerCase();
+      const cmdMap = buildKeybinderCommandMap();
+      const ids = (Array.isArray(cmdIds) ? cmdIds : []).filter((id) => {
+        const c = cmdMap[id];
+        if (!c) return false;
+        if (!kw) return true;
+        const blob = `${id} ${c.name || ""} ${c.desc || ""}`.toLowerCase();
+        return blob.includes(kw);
+      });
+      if (!ids.length) return `<div class="hk-no-command">[NO COMMAND FOUND]</div>`;
+      return ids.map((id) => renderVkCmdRowHtml(id, cmdMap[id])).join("");
+    }
+    function renderCursorVkCmdListHtml(list, searchKw) {
+      const rows = Array.isArray(list) ? list : [];
+      const kw = String(searchKw || "").trim().toLowerCase();
+      const filtered = rows.filter((row) => {
+        if (!kw) return true;
+        const blob = `${row.label || ""} ${row.desc || ""} ${row.vkCommandId || ""}`.toLowerCase();
+        return blob.includes(kw);
+      });
+      if (!filtered.length) return `<div class="hk-no-command">[NO COMMAND FOUND]</div>`;
+      return filtered.map((row) => {
+        const cmdId = String(row.vkCommandId || "").trim();
+        if (!cmdId) {
+          const combo = esc(formatAhkShortcut(row.shortcut || ""));
+          const desc = esc(row.desc || "");
+          return `<div class="cmd-row binding-suggested has-binding"${desc ? ` title="${desc}"` : ""}>
+  <div class="cmd-name"><span class="cmd-icon">${cfgToolbarIconSvg("", "fa-keyboard")}</span><span class="cmd-title">${esc(row.label || "—")}</span></div>
+  <div class="cmd-key">${combo}</div><div class="cmd-actions"></div></div>`;
+        }
+        const cmd = buildKeybinderCommandMap()[cmdId] || { name: row.label, desc: row.desc };
+        return renderVkCmdRowHtml(cmdId, cmd);
+      }).join("");
+    }
+    function renderHotkeysSubTabHtml(d, subId) {
+      const capsHold = Number(d.capslockHoldTimeSeconds);
+      const capsHoldHint = Number.isFinite(capsHold) ? capsHold.toFixed(1) : "0.5";
+      const cursorList = (Array.isArray(d.cursorShortcuts) && d.cursorShortcuts.length) ? d.cursorShortcuts : DEFAULT_CURSOR_SHORTCUTS;
+      const appShortcutRows = renderAppShortcutRefRows();
+      const bindListBlock = (listId, innerHtml) => `
+<div class="hk-bind-zone">
+  <div class="hk-cmd-search-bar">
+    <input type="text" class="hk-cmd-search" data-hk-search-for="${esc(listId)}" placeholder="搜索命令..." value="${esc(state.hkCmdSearch)}" autocomplete="off" spellcheck="false">
+    <span class="hk-cmd-count" id="${esc(listId)}-count">0 个命令</span>
+  </div>
+  <div class="hk-cmd-list-wrapper">
+    <div class="hk-cmd-list" id="${esc(listId)}">${innerHtml}</div>
+  </div>
+</div>`;
+      if (subId === "overview") {
+        return `<div class="hk-note" style="padding:0;margin-bottom:10px">长按 CapsLock 达到 <strong>${esc(capsHoldHint)}</strong> 秒可唤起 KeyBinder；下方可关闭「长按打开 VK」。CapsLock 组合键请在 <strong>全局导航</strong> / <strong>Cursor 组合键</strong> 中录制（显示为 Ctrl+Shift+… 等原文）。</div>
+<div class="row"><div class="label">长按 CapsLock 打开 VK</div><div><input id="capsLockHoldVkEnabled" type="checkbox" ${checked(d.capsLockHoldVkEnabled !== false && d.capsLockHoldVkEnabled !== 0)}></div></div>
+${appShortcutRows}
+<div class="row" style="margin-top:12px"><div class="label">Prompt 快速采集</div><input id="promptQuickCaptureHotkey" type="text" value="${esc(d.promptQuickCaptureHotkey)}" placeholder="如 ^!p，留空不注册"></div>
+<div class="hk-open-vk-row"><button type="button" class="btn primary" id="btnOpenVkKeybinder"><i class="fa-solid fa-keyboard" aria-hidden="true"></i> 打开 VK KeyBinder</button><span id="hk-vk-status" class="hk-vk-status"></span></div>`;
+      }
+      if (subId === "cursor") {
+        return `<div class="hk-note" style="padding:0;margin-bottom:8px">组合键同步至 KeyBinder 与 Cursor 映射；点 <i class="fa-solid fa-play"></i> 录制，Esc 取消。</div>
+${bindListBlock("hk-cursor-list", renderCursorVkCmdListHtml(cursorList, state.hkCmdSearch))}`;
+      }
+      const preset = HK_VK_PRESETS.find((p) => p.id === subId);
+      if (preset) {
+        return `<div class="hk-note" style="padding:0;margin-bottom:8px">${esc(preset.name)} · 与 VK「快捷键」场景一致；录制冲突时可选「改绑」覆盖原命令。</div>
+${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, state.hkCmdSearch))}`;
+      }
+      if (subId === "toolbar") {
+        return `<div class="hk-note">拖拽调整悬浮栏按钮顺序；松手后自动写入 Commands.json 并刷新工具栏。</div>
+<div class="advanced-workbench-row">
+  <div class="card ftb-workbench-card" style="margin:0">
+    <div class="title">悬浮栏按钮</div>
+    <div class="ftb-mock-strip">
+      <div class="ftb-mock-logo" aria-hidden="true"></div>
+      <div class="ftb-mock-btns" id="cfg-ftb-bar"></div>
+    </div>
+    <div class="ftb-pool-hint">未上栏的命令（拖到上方条带即可显示）</div>
+    <div class="ftb-mock-pool" id="cfg-shared-pool-ftb"></div>
+  </div>
+  <div class="card menu-workbench-card" style="margin:0">
+    <div class="title">工具栏右键菜单</div>
+    <div class="cfg-menu-mock-popup">
+      <div class="cfg-menu-bar" id="cfg-menu-bar-cmds"></div>
+    </div>
+    <div class="ftb-pool-hint">可用命令池（拖到菜单条）</div>
+    <div class="cfg-menu-pool" id="cfg-shared-pool-menu-cmds"></div>
+  </div>
+</div>`;
+      }
+      return "";
+    }
+    function renderHkRecordHudText() {
+      if (state.hkRecordHudText) return state.hkRecordHudText;
+      const rec = state.hkRecording;
+      if (!rec) return "";
+      const cmd = buildKeybinderCommandMap()[rec];
+      const name = (cmd && cmd.name) ? cmd.name : rec;
+      return "MODE: CONFIG | 正在录制: " + name + " | 请按键（支持连按组成序列）";
+    }
+    function updateHkRecordHudDom() {
+      const hud = document.getElementById("hk-record-hud");
+      if (!hud) return;
+      const text = renderHkRecordHudText();
+      const rec = !!state.hkRecording;
+      hud.textContent = text;
+      hud.classList.toggle("visible", !!text);
+      hud.classList.toggle("recording", rec);
+    }
+    function refreshHotkeyCmdRow(cmdId) {
+      const id = String(cmdId || "").trim();
+      if (!id) return;
+      const row = document.querySelector(`.hk-bind-zone .cmd-row[data-vk-cmd="${CSS.escape(id)}"]`);
+      if (!row) return;
+      const cmd = buildKeybinderCommandMap()[id];
+      row.outerHTML = renderVkCmdRowHtml(id, cmd);
+      bindHotkeysVkRowHandlers();
+      updateHotkeyCmdListCounts();
+    }
+    function renderHotkeysTabShell(d) {
+      const subTabs = HK_SUB_TABS.map((t) =>
+        `<button type="button" class="vk-main-tab${state.hotkeysSubTab === t.id ? " active" : ""}" data-hk-sub="${esc(t.id)}">${esc(t.label)}</button>`
+      ).join("");
+      const panels = HK_SUB_TABS.map((t) =>
+        `<div class="hk-sub-panel${state.hotkeysSubTab === t.id ? " active" : ""}" id="hk-panel-${esc(t.id)}">${renderHotkeysSubTabHtml(d, t.id)}</div>`
+      ).join("");
+      const hudText = renderHkRecordHudText();
+      return `<div class="card hk-card">
+  <div class="hk-card-head">
+    <div class="title">快捷键</div>
+    <div id="hk-record-hud" class="hk-record-hud${hudText ? " visible" : ""}${state.hkRecording ? " recording" : ""}">${esc(hudText)}</div>
+  </div>
+  <div class="vk-main-tabs hk-sub-tabs" role="tablist">${subTabs}</div>
+  ${panels}
+</div>`;
+    }
+    function updateHotkeyCmdListCounts() {
+      document.querySelectorAll(".hk-cmd-list").forEach((list) => {
+        const countEl = document.getElementById(list.id + "-count");
+        if (countEl) countEl.textContent = list.querySelectorAll(".cmd-row").length + " 个命令";
+      });
+    }
+    function stopHotkeyRecording() {
+      if (!state.hkRecording) return;
+      state.hkRecording = null;
+      state.hkRecordHudText = "";
+      post({ type: "vkCancelRecord" });
+      updateHkRecordHudDom();
+      document.querySelectorAll(".hk-bind-zone .cmd-row.recording").forEach((row) => {
+        const id = row.getAttribute("data-vk-cmd");
+        if (id) refreshHotkeyCmdRow(id);
+      });
+    }
+    function startHotkeyRecording(cmdId) {
+      const id = String(cmdId || "").trim();
+      if (!id) return;
+      if (state.hkRecording === id) {
+        stopHotkeyRecording();
+        return;
+      }
+      state.hkRecording = id;
+      state.hkRecordHudText = "";
+      post({ type: "vkStartRecord", commandId: id });
+      if (state.activeTab === "hotkeys") {
+        render();
+      }
+    }
+    function bindHotkeysTabHandlers() {
+      document.querySelectorAll("[data-hk-sub]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          stopHotkeyRecording();
+          state.hkCmdSearch = "";
+          state.hotkeysSubTab = btn.getAttribute("data-hk-sub");
+          render();
+        });
+      });
+      document.querySelectorAll(".hk-cmd-search").forEach((inp) => {
+        inp.addEventListener("input", () => {
+          state.hkCmdSearch = inp.value || "";
+          const forId = inp.getAttribute("data-hk-search-for");
+          const list = forId ? document.getElementById(forId) : null;
+          if (!list) return;
+          const preset = HK_VK_PRESETS.find((p) => list.id === "hk-vk-list-" + p.id);
+          if (state.hotkeysSubTab === "cursor") {
+            const cursorList = (Array.isArray(state.data.cursorShortcuts) && state.data.cursorShortcuts.length)
+              ? state.data.cursorShortcuts : DEFAULT_CURSOR_SHORTCUTS;
+            list.innerHTML = renderCursorVkCmdListHtml(cursorList, state.hkCmdSearch);
+          } else if (preset) {
+            list.innerHTML = renderVkCmdListHtml(preset.commands, state.hkCmdSearch);
+          }
+          bindHotkeysVkRowHandlers();
+          updateHotkeyCmdListCounts();
+        });
+      });
+      bindHotkeysVkRowHandlers();
+      const elVkHold = document.getElementById("capsLockHoldVkEnabled");
+      if (elVkHold) {
+        elVkHold.addEventListener("change", () => scheduleSettingsPersist(false));
+      }
+      const elPqc = document.getElementById("promptQuickCaptureHotkey");
+      if (elPqc) {
+        elPqc.addEventListener("input", () => scheduleSettingsPersist(false));
+        elPqc.addEventListener("change", () => scheduleSettingsPersist(false));
+      }
+      document.getElementById("btnOpenVkKeybinder")?.addEventListener("click", () => post({ type: "invokeAction", op: "showVk" }));
+      post({ type: "probeVk" });
+      if (state.hotkeysSubTab === "toolbar") {
+        mountFtbWorkbench();
+        mountMenuWorkbench();
+      }
+      updateHotkeyCmdListCounts();
+    }
+    function bindHotkeysVkRowHandlers() {
+      document.querySelectorAll("[data-vk-rec]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          startHotkeyRecording(btn.getAttribute("data-vk-rec"));
+        });
+      });
+      document.querySelectorAll("[data-vk-clr]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const id = btn.getAttribute("data-vk-clr");
+          stopHotkeyRecording();
+          post({ type: "vkClearBinding", commandId: id });
+        });
+      });
+      document.querySelectorAll("[data-vk-rst]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const id = btn.getAttribute("data-vk-rst");
+          stopHotkeyRecording();
+          post({ type: "vkResetBinding", commandId: id });
+        });
+      });
+    }
+    function handleVkWebEvent(evt) {
+      if (!evt || !evt.type) return;
+      if (evt.type === "recordHint") {
+        if (evt.active && evt.commandId) state.hkRecording = String(evt.commandId);
+        else state.hkRecording = null;
+        if (!evt.active) state.hkRecordHudText = "";
+        if (state.activeTab === "hotkeys") {
+          updateHkRecordHudDom();
+          if (!evt.active) {
+            document.querySelectorAll(".hk-bind-zone .cmd-row.recording").forEach((row) => {
+              const id = row.getAttribute("data-vk-cmd");
+              if (id) refreshHotkeyCmdRow(id);
+            });
+          } else {
+            render();
+          }
+        }
+        return;
+      }
+      if (evt.type === "recordPending") {
+        const d = (evt.displayKey != null && evt.displayKey !== "") ? String(evt.displayKey) : "（键）";
+        const w = typeof evt.waitMs === "number" ? evt.waitMs : 400;
+        const sec = (w / 1000).toFixed(1).replace(/\.0$/, "");
+        if (evt.kind === "dblMod")
+          state.hkRecordHudText = "录制：" + d + " · 正在保存绑定…";
+        else
+          state.hkRecordHudText = "录制：已收到 「" + d + "」 · 约 " + sec + " 秒内可再按一键组成序列，否则保存为单键";
+        if (state.activeTab === "hotkeys") updateHkRecordHudDom();
+        return;
+      }
+      if (evt.type === "bindingUpdated") {
+        const cmdId = String(evt.commandId || "");
+        const bindings = { ...(state.data.keybinderBindings || {}) };
+        if (evt.deleted) {
+          delete bindings[cmdId];
+        } else if (evt.explicitNone) {
+          bindings[cmdId] = { ahkKey: "", displayKey: "", explicitNone: true };
+        } else {
+          bindings[cmdId] = {
+            ahkKey: String(evt.ahkKey || ""),
+            displayKey: String(evt.displayKey || evt.ahkKey || "")
+          };
+        }
+        state.data.keybinderBindings = bindings;
+        state.hkRecording = null;
+        state.hkRecordHudText = "";
+        if (state.activeTab === "hotkeys") {
+          updateHkRecordHudDom();
+          if (cmdId) refreshHotkeyCmdRow(cmdId);
+          else render();
+        }
+        return;
+      }
+      if (evt.type === "confirmConflict") {
+        const dk = evt.displayKey || evt.ahkKey || "";
+        const other = evt.conflictCmdName || evt.conflictCmdId || "其他命令";
+        const ask = window.nmConfirm
+          ? window.nmConfirm(
+              "快捷键冲突",
+              `「${dk}」已被「${other}」占用（可在「全局导航」等子页查看）。是否改绑到当前命令？`,
+              { okLabel: "改绑", cancelLabel: "取消", danger: true }
+            )
+          : Promise.resolve(confirm(`「${dk}」已被「${other}」占用。是否改绑？`));
+        ask.then((ok) => {
+          post({
+            type: "vkResolveConflict",
+            confirm: !!ok,
+            commandId: evt.commandId,
+            ahkKey: evt.ahkKey,
+            displayKey: evt.displayKey
+          });
+        });
+        return;
+      }
+      if (evt.type === "bind_blocked") {
+        setStatus("该键已被占用，无法绑定", "err");
+        state.hkRecording = null;
+        state.hkRecordHudText = "";
+        if (state.activeTab === "hotkeys") {
+          updateHkRecordHudDom();
+          render();
+        }
+      }
+    }
     function readHotkeys(d){
-      const hk = { ...d.hotkeys };
-      HOTKEY_KEYS.forEach(k => { const el = document.getElementById("hk_" + k); if (el) hk[k] = el.value.trim(); });
-      d.hotkeys = hk;
       const elVkHold = document.getElementById("capsLockHoldVkEnabled");
       if (elVkHold) d.capsLockHoldVkEnabled = !!elVkHold.checked;
       d.promptQuickCaptureHotkey = document.getElementById("promptQuickCaptureHotkey")?.value.trim() ?? d.promptQuickCaptureHotkey;
-      const qa = [];
-      for (let i = 1; i <= 5; i++) {
-        const typeEl = document.getElementById("qaType" + i);
-        const hotkeyEl = document.getElementById("qaHotkey" + i);
-        qa.push({ type: typeEl?.value || "Explain", hotkey: hotkeyEl?.value || "" });
-      }
-      d.quickActions = qa;
       return d;
     }
     function readAdvanced(d){
@@ -3768,14 +4721,25 @@
     }
 
     function leaveActiveTab(tabId) {
+      if (tabId === "hotkeys") {
+        stopHotkeyRecording();
+        destroyFtbWorkbenchSortable();
+        destroyMenuWorkbenchSortable();
+      }
       if (tabId === "appearance") {
         captureAppearanceTabState();
         flushHoleSettingsSaveNow();
+        postSavePopupScreen();
         return;
       }
       if (tabId === "customize") {
         captureCustomizeTabState();
         flushStudioLlmPending();
+        return;
+      }
+      if (tabId === "general") {
+        captureGeneralTabState();
+        flushSettingsTab();
         return;
       }
       try {
@@ -3920,10 +4884,12 @@
     function readFromUI() {
       syncActivationModeFromDom();
       syncThemeAndPopupFromDom();
-      let d = { ...state.data, hotkeys: { ...state.data.hotkeys }, quickActions: [...state.data.quickActions], voiceSearchEnabledCategories: [...state.data.voiceSearchEnabledCategories], floatingToolbarButtons: [...(state.data.floatingToolbarButtons||[])], floatingToolbarMenuItems: [...(state.data.floatingToolbarMenuItems||[])] };
+      let d = { ...state.data, voiceSearchEnabledCategories: [...state.data.voiceSearchEnabledCategories], floatingToolbarButtons: [...(state.data.floatingToolbarButtons||[])], floatingToolbarMenuItems: [...(state.data.floatingToolbarMenuItems||[])] };
       d = readGeneral(d); d = readAppearance(d); d = syncHoleDerivedFields(d); d = readPrompts(d); d = readHotkeys(d); d = readAdvanced(d); d = readScreenshot(d); d = readSearch(d); d = readCustomize(d);
       d.appearanceActivationMode = normalizeActivationMode(state.appearanceActivationMode);
       state.data.appearanceActivationMode = d.appearanceActivationMode;
+      const dstEl = document.getElementById("defaultStartTab");
+      if (!defaultStartTabDirty && !dstEl) delete d.defaultStartTab;
       return d;
     }
     function selectOpt(id, val){ const el = document.getElementById(id); if (el) el.value = val; }
@@ -3954,12 +4920,25 @@
         localStorage.setItem(ACTIVATION_MODE_LOCAL_KEY, normalizeActivationMode(state.appearanceActivationMode));
       } catch {}
     }
+    function activationModeCardIconHtml(opt) {
+      const kind = String(opt.iconKind || opt.value || "toolbar");
+      const tone = `activation-mode-icon-${kind}`;
+      if (kind === "hole") {
+        return `<div class="activation-mode-icon ${tone}" aria-hidden="true"><div class="hole-ring-mini"></div></div>`;
+      }
+      if (kind === "tray") {
+        return `<div class="activation-mode-icon ${tone}" aria-hidden="true"><img src="${esc(NIUMA_ICON_URL)}" alt=""><i class="fa-solid fa-tray-arrow-up"></i></div>`;
+      }
+      const ic = String(opt.iconClass || "fa-grip-lines").replace(/[^a-z0-9-]/gi, "");
+      return `<div class="activation-mode-icon ${tone}" aria-hidden="true"><i class="fa-solid ${ic}"></i></div>`;
+    }
     function activationModeOptionsHtml(selected){
       return ACTIVATION_MODE_OPTIONS.map((opt) => {
         const active = selected === opt.value;
         return `<label class="activation-mode-option ${active ? "active" : ""}" data-activation-item="${esc(opt.value)}">
   <input class="activation-mode-radio" type="radio" name="activationMode" value="${esc(opt.value)}" ${active ? "checked" : ""}>
-  <div>
+  ${activationModeCardIconHtml(opt)}
+  <div class="activation-mode-body">
     <div class="activation-mode-title">${esc(opt.label)}</div>
     <div class="activation-mode-desc">${esc(opt.desc)}</div>
   </div>
@@ -3970,22 +4949,23 @@
       const m = normalizeActivationMode(mode);
       if (m === "hole") {
         return `<div class="mode-preview-scene">
-  <div class="mode-icon-bubble" style="background: radial-gradient(circle at 35% 30%, #2c3f68 0%, #0b0f16 55%, #000 100%); border-color: rgba(110,165,255,.45);">
-    <img src="${esc(NIUMA_ICON_URL)}" alt="黑洞模式">
-  </div>
+  <div class="mode-hole-ring"><img src="${esc(NIUMA_ICON_URL)}" alt="黑洞模式"></div>
   <div class="hint">黑洞模式与悬浮栏互斥，桌面仅保留黑洞交互入口。</div>
 </div>`;
       }
       if (m === "tray") {
         return `<div class="mode-preview-scene">
-  <div class="mode-tray-mock"><img src="${esc(NIUMA_ICON_URL)}" alt="牛马图标"><span>CursorHelper（托盘运行中）</span></div>
+  <div class="mode-tray-mock"><img src="${esc(NIUMA_ICON_URL)}" alt="牛马图标"><i class="fa-solid fa-tray-arrow-up" style="opacity:.7;"></i><span>CursorHelper（托盘运行中）</span></div>
   <div class="hint">不显示悬浮 UI，仅托盘可见。</div>
 </div>`;
       }
       return `<div class="mode-preview-scene">
   <div class="mode-toolbar-mock">
     <div class="mode-icon-bubble" style="width:28px;height:28px;border-radius:8px;box-shadow:none;"><img src="${esc(NIUMA_ICON_URL)}" alt="牛马图标" style="width:18px;height:18px;"></div>
-    <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="dot"><i class="fa-solid fa-magnifying-glass"></i></span>
+    <span class="dot"><i class="fa-solid fa-clipboard"></i></span>
+    <span class="dot"><i class="fa-solid fa-note-sticky"></i></span>
+    <span class="dot"><i class="fa-solid fa-gear"></i></span>
   </div>
   <div class="hint">显示完整悬浮栏，图标和功能入口始终在桌面层。</div>
 </div>`;
@@ -4184,20 +5164,32 @@
           return opts;
         return [{ value: curStr, label: `当前值（${curStr}）` }, ...opts];
       };
-      const qaRows = d.quickActions.map((q, i) => `<div class="qa-row"><div class="label">#${i+1}</div><select id="qaType${i+1}">${options(ACTION_TYPES,q.type)}</select><input id="qaHotkey${i+1}" type="text" value="${esc(q.hotkey)}"></div>`).join("");
-      const hotkeyRows = HOTKEY_KEYS.map(k => `<div class="row"><div class="label">快捷键 ${k}</div><input id="hk_${k}" type="text" value="${esc(d.hotkeys[k] || "")}"></div>`).join("");
+      const cursorList = (Array.isArray(d.cursorShortcuts) && d.cursorShortcuts.length) ? d.cursorShortcuts : DEFAULT_CURSOR_SHORTCUTS;
+      const cursorShortcutRows = renderCursorShortcutRefRows(cursorList);
+      const appShortcutRows = renderAppShortcutRefRows();
+      const capsHold = Number(d.capslockHoldTimeSeconds);
+      const capsHoldHint = Number.isFinite(capsHold) ? capsHold.toFixed(1) : "0.5";
       const catRows = ALL_CATEGORIES.map(c => `<label class="tag"><input id="cat_${c}" type="checkbox" ${checked((d.voiceSearchEnabledCategories||[]).includes(c))}> ${esc(c)}</label>`).join("");
       if (state.activeTab === "general") {
         const upd = normalizeAppUpdate(state.appUpdate);
-        panel.innerHTML = `<div class="card"><div class="title">通用设置</div>${renderAppUpdateGeneralBlock(upd)}<div class="row"><div class="label">Cursor 路径</div><div class="inline"><input id="cursorPath" type="text" value="${esc(d.cursorPath)}"><button class="btn" id="browsePath">浏览</button></div></div><div class="row"><div class="label">CapsLock 长按时间 (0.1 - 5.0)</div><input id="holdTime" type="number" min="0.1" max="5.0" step="0.1" value="${esc(d.capslockHoldTimeSeconds)}"></div><div class="row"><div class="label">开机自启动</div><div><input id="autoStart" type="checkbox" ${checked(d.autoStart)}></div></div><div class="row"><div class="label">默认启动页</div><select id="defaultStartTab">${optionsKV(defaultTabOpts,d.defaultStartTab)}</select></div><div class="row"><div class="label">安装中文 Cursor</div><div><button class="btn" id="btnInstallChinese">安装 Cursor 中文版</button></div></div></div>`;
+        panel.innerHTML = `<div class="card"><div class="title">通用设置</div>${renderAppUpdateGeneralBlock(upd)}<div class="row"><div class="label">Cursor 路径</div><div class="inline"><input id="cursorPath" type="text" value="${esc(d.cursorPath)}"><button class="btn" id="browsePath">浏览</button></div></div><div class="row"><div class="label">CapsLock 长按时间 (0.1 - 5.0)</div><input id="holdTime" type="number" min="0.1" max="5.0" step="0.1" value="${esc(d.capslockHoldTimeSeconds)}"></div><div class="row"><div class="label">开机自启动</div><div><input id="autoStart" type="checkbox" ${checked(d.autoStart)}></div></div><div class="row"><div class="label">默认启动页</div><select id="defaultStartTab">${optionsKV(defaultTabOpts, normalizeDefaultStartTab(d.defaultStartTab))}</select></div><div class="row"><div class="label">安装中文 Cursor</div><div><button class="btn" id="btnInstallChinese">安装 Cursor 中文版</button></div></div></div>`;
         bindAppUpdateGeneralHandlers();
         document.getElementById("browsePath").addEventListener("click", () => post({ type: "browseCursorPath" }));
         document.getElementById("btnInstallChinese").addEventListener("click", () => post({ type: "invokeAction", op: "installCursorChinese" }));
       } else if (state.activeTab === "appearance") {
         const activationMode = normalizeActivationMode(state.appearanceActivationMode);
-        panel.innerHTML = `<div class="card"><div class="title">外观设置</div><div class="row"><div class="label">主题模式</div><select id="themeMode">${optionsKV([{value:"dark",label:"深色"},{value:"light",label:"浅色"}],d.themeMode)}</select></div><div class="row"><div class="label">弹窗位置</div><select id="popupScreenIndex">${optionsKV(screenOpts, String(d.popupScreenIndex || 1))}</select></div><div class="hint">已自动识别显示器数量：${esc(monitorCount)}。此设置会应用到所有弹窗并固定保存。</div></div>
+        panel.innerHTML = `<div class="card activation-mode-card">
+  <div class="title">激活方式</div>
+  <div class="hint">选择悬浮栏、黑洞模式或仅托盘；修改后将写入配置并立即生效。</div>
+  <div class="activation-mode-group">${activationModeOptionsHtml(activationMode)}</div>
+  <div class="activation-mode-preview">
+    <div class="mode-preview-title">模式预览</div>
+    <div id="activationModePreview">${activationModePreviewHtml(activationMode)}</div>
+  </div>
+</div>
+<div class="card"><div class="title">外观设置</div><div class="row"><div class="label">主题模式</div><select id="themeMode">${optionsKV([{value:"dark",label:"深色"},{value:"light",label:"浅色"}],d.themeMode)}</select></div><div class="row"><div class="label">弹窗位置</div><select id="popupScreenIndex">${optionsKV(screenOpts, String(d.popupScreenIndex || 1))}</select></div><div class="hint">已自动识别显示器数量：${esc(monitorCount)}。此设置会应用到所有弹窗并固定保存。</div></div>
 <div class="card"><div class="title">黑洞 · 怎么唤起</div>
-<div class="hint">仅在下方「激活方式」选为<strong>黑洞模式</strong>时生效；可多选。</div>
+<div class="hint">仅当上方「激活方式」选为<strong>黑洞模式</strong>时生效；可多选。</div>
 <div class="hole-trigger-grid">
 <label class="hole-trigger-item"><input id="holeTriggerTextSelect" type="checkbox" ${checked(!!d.holeTriggerTextSelect)}>选中文本</label>
 <label class="hole-trigger-item"><input id="holeTriggerCircleCw" type="checkbox" ${checked(!!d.holeTriggerCircleCw)}>鼠标画圈（顺时针）</label>
@@ -4223,15 +5215,6 @@
 <div class="row"><div class="label">贴边边距（px）</div><input id="holeHideDockMargin" type="number" min="0" max="80" step="1" value="${esc(d.holeHideDockMargin ?? 10)}"></div>
 </details>
 <div class="inline" style="margin-top:8px;"><button class="btn" id="btnApplyHoleSettings">保存黑洞设置</button></div>
-</div>
-<div class="card">
-  <div class="title">激活方式</div>
-  <div class="hint">选择悬浮栏、黑洞模式或仅托盘；修改后将写入配置并立即生效。</div>
-  <div class="activation-mode-group">${activationModeOptionsHtml(activationMode)}</div>
-  <div class="activation-mode-preview">
-    <div class="mode-preview-title">模式预览</div>
-    <div id="activationModePreview">${activationModePreviewHtml(activationMode)}</div>
-  </div>
 </div>`;
         bindAppearanceActivationMode();
         bindHolePlacementPresetUi();
@@ -4290,7 +5273,7 @@
           : (filtered.find(t => t.id === state.selectedPromptTemplateId) || filtered[0] || null);
         const catTabs = allCats.map(c => `<button class="subtab-btn ${state.promptsCategoryTab === c ? "active" : ""}" data-prompt-cat="${esc(c)}">${esc(c)}</button>`).join("");
         const listRows = filtered.map(t => `<div class="list-row ${selected?.id === t.id ? "active" : ""}" data-prompt-id="${esc(t.id)}"><div>${esc(t.title || t.id)}</div><div>${esc((t.content || "").replace(/\s+/g, " ").slice(0, 96))}</div></div>`).join("");
-        panel.innerHTML = `<div class="card"><div class="subtabs"><button class="subtab-btn ${state.promptsMainTab === "templateManager" ? "active" : ""}" data-prompt-main="templateManager">模板管理</button><button class="subtab-btn ${state.promptsMainTab === "cursorRules" ? "active" : ""}" data-prompt-main="cursorRules">cursor规则</button></div>${state.promptsMainTab === "templateManager" ? `<div class="search-row"><div class="inline"><input id="promptSearchKeyword" data-nosave="1" type="text" placeholder="搜索模板关键词（自动匹配全部模板）" value="${esc(state.promptsSearchKeyword)}"><button class="btn" id="btnPromptSearchClear">清空</button></div></div><div class="subtabs">${catTabs}</div><div class="prompt-grid"><div class="list-panel"><div class="list-head"><div>名称</div><div>内容</div></div><div class="list-body">${listRows || `<div class="list-row"><div>-</div><div>未匹配到模板</div></div>`}</div></div><div><div class="compact-row"><div class="label">模板标题</div><input id="promptTplTitle" type="text" value="${esc(selected?.title || "")}"></div><div class="compact-row"><div class="label">模板分类</div><div class="inline"><select id="promptTplCategory">${options(allCats, (selected?.category || state.promptsCategoryTab))}</select><button class="btn" id="btnAddCategory">新建分类</button><button class="btn" id="btnDeleteCategory">删除分类</button></div></div><div class="label">模板内容</div><div class="editor-toolbar"><button class="btn" data-editor-action="bold">加粗</button><button class="btn" data-editor-action="code">代码</button><button class="btn" data-editor-action="quote">引用</button><button class="btn" data-editor-action="ul">列表</button><button class="btn" data-editor-action="undo">撤销</button><button class="btn" data-editor-action="redo">重做</button><button class="btn" data-editor-action="clear">清空</button></div><textarea id="promptTplContent" style="min-height:260px;">${esc(selected?.content || "")}</textarea><div class="inline" style="margin-top:8px;"><button class="btn" id="btnTplNew">新建模板</button><button class="btn" id="btnTplSave">保存模板</button><button class="btn" id="btnTplDelete">删除模板</button></div><div class="inline" style="margin-top:8px;"><button class="btn" id="btnImportTpl">导入模板</button><button class="btn" id="btnExportTpl">导出模板</button><button class="btn" id="btnReloadTpl">重载模板</button><button class="btn legacy-compact" id="btnOpenLegacyPrompts">原版模板管理</button></div></div></div>` : (() => { const ruleTabs = [{k:"general",n:"通用规则"},{k:"web",n:"网页开发"},{k:"miniprogram",n:"小程序"},{k:"android",n:"安卓App"},{k:"ios",n:"iOS App"},{k:"python",n:"Python"}]; const tabHtml = ruleTabs.map(t => `<button class="subtab-btn ${state.cursorRulesTab===t.k?"active":""}" data-rule-tab="${t.k}">${t.n}</button>`).join(""); const content = d.cursorRules?.[state.cursorRulesTab] || ""; return `<div class="title">Cursor规则配置</div><div class="hint">根据开发类型配置规则，让 AI 更精准理解项目上下文，减少无效对话与返工。</div><div class="title" style="margin-top:10px;">📋 复制位置</div><div class="hint">在 Cursor 中按 Ctrl+Shift+P 打开命令面板，输入 <code>rules</code> 或 <code>cursor rules</code>，选择 Open Cursor Rules，粘贴到 <code>.cursorrules</code> 文件。</div><div class="title" style="margin-top:10px;">💡 使用方法</div><div class="hint">1. 选择下方开发类型标签 2. 编辑或粘贴规则 3. 点击复制规则 4. 粘贴保存到 Cursor 规则文件 5. 重启 Cursor 生效。</div><div class="subtabs" style="margin-top:10px;">${tabHtml}</div><div class="label">规则内容</div><textarea id="cursorRuleContent" style="min-height:320px;">${esc(content)}</textarea><div class="inline" style="margin-top:8px;"><button class="btn" id="btnCursorRulesCopy">复制规则</button><button class="btn legacy-compact" id="btnOpenLegacyPrompts">打开原版规则设置</button></div>`; })()}</div>`;
+        panel.innerHTML = `<div class="card"><div class="subtabs"><button class="subtab-btn ${state.promptsMainTab === "templateManager" ? "active" : ""}" data-prompt-main="templateManager">模板管理</button><button class="subtab-btn ${state.promptsMainTab === "cursorRules" ? "active" : ""}" data-prompt-main="cursorRules">cursor规则</button></div>${state.promptsMainTab === "templateManager" ? `<div class="search-row"><div class="inline"><input id="promptSearchKeyword" data-nosave="1" type="text" placeholder="搜索模板关键词（自动匹配全部模板）" value="${esc(state.promptsSearchKeyword)}"><button class="btn" id="btnPromptSearchClear">清空</button></div></div><div class="subtabs">${catTabs}</div><div class="prompt-grid"><div class="list-panel"><div class="list-head"><div>名称</div><div>内容</div></div><div class="list-body">${listRows || `<div class="list-row"><div>-</div><div>未匹配到模板</div></div>`}</div></div><div><div class="compact-row"><div class="label">模板标题</div><input id="promptTplTitle" type="text" value="${esc(selected?.title || "")}"></div><div class="compact-row"><div class="label">模板分类</div><div class="inline"><select id="promptTplCategory">${options(allCats, (selected?.category || state.promptsCategoryTab))}</select><button class="btn" id="btnAddCategory">新建分类</button><button class="btn" id="btnDeleteCategory">删除分类</button></div></div><div class="label">模板内容</div><div class="editor-toolbar"><button class="btn" data-editor-action="bold">加粗</button><button class="btn" data-editor-action="code">代码</button><button class="btn" data-editor-action="quote">引用</button><button class="btn" data-editor-action="ul">列表</button><button class="btn" data-editor-action="undo">撤销</button><button class="btn" data-editor-action="redo">重做</button><button class="btn" data-editor-action="clear">清空</button></div><textarea id="promptTplContent" style="min-height:260px;">${esc(selected?.content || "")}</textarea><div class="inline" style="margin-top:8px;"><button class="btn" id="btnTplNew">新建模板</button><button class="btn" id="btnTplSave">保存模板</button><button class="btn" id="btnTplDelete">删除模板</button></div><div class="inline" style="margin-top:8px;"><button class="btn" id="btnImportTpl">导入模板</button><button class="btn" id="btnExportTpl">导出模板</button><button class="btn" id="btnReloadTpl">重载模板</button></div></div></div>` : (() => { const ruleTabs = [{k:"general",n:"通用规则"},{k:"web",n:"网页开发"},{k:"miniprogram",n:"小程序"},{k:"android",n:"安卓App"},{k:"ios",n:"iOS App"},{k:"python",n:"Python"}]; const tabHtml = ruleTabs.map(t => `<button class="subtab-btn ${state.cursorRulesTab===t.k?"active":""}" data-rule-tab="${t.k}">${t.n}</button>`).join(""); const content = d.cursorRules?.[state.cursorRulesTab] || ""; return `<div class="title">Cursor规则配置</div><div class="hint">根据开发类型配置规则，让 AI 更精准理解项目上下文，减少无效对话与返工。</div><div class="title" style="margin-top:10px;">📋 复制位置</div><div class="hint">在 Cursor 中按 Ctrl+Shift+P 打开命令面板，输入 <code>rules</code> 或 <code>cursor rules</code>，选择 Open Cursor Rules，粘贴到 <code>.cursorrules</code> 文件。</div><div class="title" style="margin-top:10px;">💡 使用方法</div><div class="hint">1. 选择下方开发类型标签 2. 编辑或粘贴规则 3. 点击复制规则 4. 粘贴保存到 Cursor 规则文件 5. 重启 Cursor 生效。</div><div class="subtabs" style="margin-top:10px;">${tabHtml}</div><div class="label">规则内容</div><textarea id="cursorRuleContent" style="min-height:320px;">${esc(content)}</textarea><div class="inline" style="margin-top:8px;"><button class="btn" id="btnCursorRulesCopy">复制规则</button></div>`; })()}</div>`;
         document.querySelectorAll("[data-prompt-main]").forEach(el => el.addEventListener("click", () => { state.promptsMainTab = el.getAttribute("data-prompt-main"); render(); }));
         if (state.promptsMainTab === "templateManager") {
           const searchEl = document.getElementById("promptSearchKeyword");
@@ -4390,7 +5373,6 @@
           document.getElementById("btnImportTpl").addEventListener("click", () => post({ type: "invokeAction", op: "importPromptTemplates" }));
           document.getElementById("btnExportTpl").addEventListener("click", () => post({ type: "invokeAction", op: "exportPromptTemplates" }));
           document.getElementById("btnReloadTpl").addEventListener("click", () => post({ type: "invokeAction", op: "reloadPromptTemplates" }));
-          document.getElementById("btnOpenLegacyPrompts").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacyTab", tab: "prompts" }));
         } else if (state.promptsMainTab === "cursorRules") {
           document.querySelectorAll("[data-rule-tab]").forEach(el => el.addEventListener("click", () => {
             state.data = readFromUI();
@@ -4406,11 +5388,11 @@
               setStatus("复制失败", "err");
             }
           });
-          document.getElementById("btnOpenLegacyPrompts").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacyTab", tab: "prompts" }));
         }
       } else if (state.activeTab === "hotkeys") {
-        panel.innerHTML = `<div class="card"><div class="title">快捷键设置</div><div class="row"><div class="label">长按 CapsLock 打开 VK 快捷键面板</div><div><input id="capsLockHoldVkEnabled" type="checkbox" ${checked(d.capsLockHoldVkEnabled !== false && d.capsLockHoldVkEnabled !== 0)}></div></div><div class="hint" style="margin:-4px 0 10px 0;">开启后，按住 CapsLock 达到「通用设置」中的长按时间即弹出 KeyBinder，松开 CapsLock 后关闭；关闭本项后仍可从托盘菜单打开虚拟键盘。</div>${hotkeyRows}<div class="row"><div class="label">Prompt 快速采集热键</div><input id="promptQuickCaptureHotkey" type="text" value="${esc(d.promptQuickCaptureHotkey)}"></div></div><div class="card"><div class="title">快速操作按钮 (5)</div>${qaRows}<div class="inline"><button class="btn legacy-compact" id="btnOpenLegacyHotkeys">打开原版快捷键设置</button></div></div>`;
-        document.getElementById("btnOpenLegacyHotkeys").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacyTab", tab: "hotkeys" }));
+        panel.innerHTML = renderHotkeysTabShell(d);
+        bindHotkeysTabHandlers();
+        updateHkVkStatusDom(state.data.vkAvailable);
       } else if (state.activeTab === "customize") {
         restoreStudioLlmDraftIfNeeded();
         loadStudioLlmCardsFromLocalStorage();
@@ -4620,13 +5602,12 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           <div class="row"><div class="label">二值阈值（高）</div><input id="ssOcrMonoHigh" type="number" min="0" max="255" step="1" value="${esc(ss.ocrMonochromeHigh || 175)}"></div>
           <div class="row"><div class="label">深色背景反色重试</div><div><input id="ssOcrUseInvert" type="checkbox" ${checked(ss.ocrUseInvert !== false)}></div></div>`;
         }
-        panel.innerHTML = `<div class="card"><div class="title">截图设置</div>${capTabs}${body}<div class="inline" style="margin-top:8px;"><button class="btn legacy-compact" id="btnOpenLegacyScreenshot">打开原版截图设置</button></div></div>`;
+        panel.innerHTML = `<div class="card"><div class="title">截图设置</div>${capTabs}${body}</div>`;
         document.querySelectorAll("[data-ss-subtab]").forEach(el => el.addEventListener("click", () => {
           state.data = readFromUI();
           state.screenshotSubTab = el.getAttribute("data-ss-subtab");
           render();
         }));
-        document.getElementById("btnOpenLegacyScreenshot").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacyTab", tab: "screenshot" }));
       } else {
         const selectedDefault = csvToArr(d.searchEngine || "deepseek");
         const selectedAiCli = csvToArr(d.voiceSearchSelectedEnginesCsv || "codex");
@@ -4639,7 +5620,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         const ftCfg = ft.config || {};
         const lightHtml = (ft.engine_lights || ["off","off","off","off"]).map((st, idx) => `<span class="ft-light ${esc(st)}" data-ft-light="${idx}"></span>`).join("");
         const progressNum = Math.max(0, Math.min(100, Number(ft.progress || 0)));
-        panel.innerHTML = `<div class="card"><div class="title">搜索设置</div><div class="row"><div class="label">默认搜索引擎（多选）</div><div class="multi-dd" id="ddDefaultEngine"><button type="button" class="multi-dd-btn" id="btnDefaultEngine">${esc(defaultSummary)}</button><div class="multi-dd-panel">${defaultOptions}</div></div></div><div class="row"><div class="label">AI/CLI 搜索引擎（多选）</div><div class="multi-dd" id="ddAiCliEngine"><button type="button" class="multi-dd-btn" id="btnAiCliEngine">${esc(aiCliSummary)}</button><div class="multi-dd-panel">${aiCliOptions}</div></div></div><div class="row"><div class="label">自动加载选中文本</div><div><input id="autoLoadSelectedText" type="checkbox" ${checked(d.autoLoadSelectedText)}></div></div><div class="row"><div class="label">自动更新语音输入</div><div><input id="autoUpdateVoiceInput" type="checkbox" ${checked(d.autoUpdateVoiceInput)}></div></div><div class="label">启用分类</div><div class="tag-wrap">${catRows}</div><div class="inline" style="margin-top:8px;"><button class="btn legacy-compact" id="btnOpenLegacySearch">打开原版搜索设置</button></div></div>
+        panel.innerHTML = `<div class="card"><div class="title">搜索设置</div><div class="row"><div class="label">默认搜索引擎（多选）</div><div class="multi-dd" id="ddDefaultEngine"><button type="button" class="multi-dd-btn" id="btnDefaultEngine">${esc(defaultSummary)}</button><div class="multi-dd-panel">${defaultOptions}</div></div></div><div class="row"><div class="label">AI/CLI 搜索引擎（多选）</div><div class="multi-dd" id="ddAiCliEngine"><button type="button" class="multi-dd-btn" id="btnAiCliEngine">${esc(aiCliSummary)}</button><div class="multi-dd-panel">${aiCliOptions}</div></div></div><div class="row"><div class="label">自动加载选中文本</div><div><input id="autoLoadSelectedText" type="checkbox" ${checked(d.autoLoadSelectedText)}></div></div><div class="row"><div class="label">自动更新语音输入</div><div><input id="autoUpdateVoiceInput" type="checkbox" ${checked(d.autoUpdateVoiceInput)}></div></div><div class="label">启用分类</div><div class="tag-wrap">${catRows}</div></div>
 <div class="card">
   <div class="title">全文索引控制台</div>
   <div class="ft-console">
@@ -4692,7 +5673,6 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         };
         bindDropdown("ddDefaultEngine", "btnDefaultEngine", "default");
         bindDropdown("ddAiCliEngine", "btnAiCliEngine", "ai-cli");
-        document.getElementById("btnOpenLegacySearch").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacyTab", tab: "search" }));
         bindFullTextConsoleControls();
         refreshFullTextConsoleDom();
       }
@@ -4718,16 +5698,15 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       if (!Number.isFinite(Number(d.holeHideDockMargin)) || Number(d.holeHideDockMargin) < 0 || Number(d.holeHideDockMargin) > 80) return "黑洞隐藏吸附边距非法";
       if (!Number.isInteger(d.aiSleepTime) || d.aiSleepTime < 50) return "AI 等待时间非法";
       if (!(d.launchDelaySeconds >= 0.5 && d.launchDelaySeconds <= 10)) return "启动延迟时间非法";
-      if (!d.hotkeys || typeof d.hotkeys !== "object") return "快捷键数据无效";
-      if (!Array.isArray(d.quickActions) || d.quickActions.length !== 5) return "快速操作必须为 5 项";
       return "";
     }
     document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => {
       const nextTab = btn.dataset.tab;
       if (nextTab !== state.activeTab) leaveActiveTab(state.activeTab);
+      try { state.data = readFromUI(); } catch (_) {}
       state.activeTab = nextTab;
+      try { sessionStorage.setItem("settings.activeTab", nextTab); } catch (_) {}
       if (nextTab === "storage") state.cacheInfo = null;
-      state.data = readFromUI();
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       render();
@@ -4740,6 +5719,16 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       if (!t || !(t.matches?.("input,textarea,select"))) return;
       if (t.name === "activationMode") return;
       if (t.dataset?.nosave === "1") return;
+      patchSettingsControl(t);
+      if (t.id === "popupScreenIndex") {
+        state.data.popupScreenIndex = Number(t.value);
+        postSavePopupScreen();
+        return;
+      }
+      if (t.id === "autoStart" || t.id === "holdTime" || t.id === "cursorPath") {
+        postSaveGeneral({ [t.id === "holdTime" ? "capslockHoldTimeSeconds" : t.id]: t.id === "autoStart" ? !!t.checked : (t.id === "holdTime" ? Number(t.value) : t.value.trim()) });
+        return;
+      }
       scheduleSettingsPersist(true);
     });
     panelRoot.addEventListener("change", (e) => {
@@ -4759,15 +5748,32 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         applyWebTheme(t.value);
         try { localStorage.setItem("settings_themeMode", t.value); } catch (_) {}
         post({ type: "saveThemeMode", themeMode: t.value });
+        return;
+      }
+      if (t.id === "popupScreenIndex") {
+        state.data.popupScreenIndex = Number(t.value);
+        postSavePopupScreen();
+        return;
       }
       if (t.id === "defaultStartTab") {
-        state.data.defaultStartTab = t.value;
+        const tab = normalizeDefaultStartTab(t.value);
+        state.data.defaultStartTab = tab;
+        defaultStartTabDirty = true;
+        post({ type: "saveDefaultStartTab", tab });
+        return;
+      }
+      patchSettingsControl(t);
+      if (t.id === "autoStart") {
+        postSaveGeneral({ autoStart: !!t.checked });
+        return;
+      }
+      if (t.id === "holdTime") {
+        postSaveGeneral({ capslockHoldTimeSeconds: Number(t.value) });
+        return;
       }
       if (t.dataset?.nosave === "1") return;
       scheduleSettingsPersist(true);
     });
-    document.getElementById("btn-open-legacy").addEventListener("click", () => post({ type: "invokeAction", op: "openLegacySettings" }));
-    document.getElementById("btn-open-compare").addEventListener("click", () => post({ type: "invokeAction", op: "openCompareSettings" }));
     document.getElementById("btn-cancel").addEventListener("click", () => {
       leaveActiveTab(state.activeTab);
       flushStudioLlmPending();
@@ -4777,13 +5783,20 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
     document.getElementById("btn-save").addEventListener("click", () => {
       leaveActiveTab(state.activeTab);
       flushStudioLlmPending();
-      const d = readFromUI();
-      const err = validate(d);
+      const d = pruneSettingsPayload(readFromUI());
+      const err = validatePayload(d);
       if (err) return setStatus(err, "err");
+      if (!Object.keys(d).length) return setStatus("当前页无可保存项", "err");
       post({ type: "saveSettings", payload: d });
     });
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
+      if (state.hkRecording && state.activeTab === "hotkeys") {
+        e.preventDefault();
+        stopHotkeyRecording();
+        render();
+        return;
+      }
       e.preventDefault();
       post({ type: "cancel" });
     });
@@ -4792,13 +5805,23 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       if (msg.type === "initData") {
         suppressAutoSave = true;
         const p = msg.payload || {};
+        const shouldNavigate = !!msg.navigateToStartTab;
+        const serverStartTab = normalizeDefaultStartTab(p.defaultStartTab);
+        const pForMerge = { ...p };
+        if (!shouldNavigate) delete pForMerge.defaultStartTab;
         let cachedTheme = "";
         try {
           const c = localStorage.getItem("settings_themeMode");
           if (c === "light" || c === "dark") cachedTheme = c;
         } catch (_) {}
         const incomingTheme = (typeof p.themeMode === "string" && p.themeMode) ? p.themeMode : "";
-        state.data = { ...state.data, ...p, hotkeys: { ...state.data.hotkeys, ...(p.hotkeys || {}) }, quickActions: (p.quickActions?.length ? p.quickActions : state.data.quickActions) };
+        state.data = {
+          ...state.data,
+          ...pForMerge,
+          cursorShortcuts: (Array.isArray(p.cursorShortcuts) && p.cursorShortcuts.length)
+            ? p.cursorShortcuts
+            : (state.data.cursorShortcuts || [])
+        };
         state.data.themeMode = incomingTheme || cachedTheme || state.data.themeMode || "dark";
         // 持久化到 localStorage，下次打开时立即应用，无需等 AHK 推送
         try { localStorage.setItem("settings_themeMode", state.data.themeMode); } catch (_) {}
@@ -4808,6 +5831,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (Array.isArray(p.keybinderToolbarLayout)) state.data.keybinderToolbarLayout = normalizeToolbarLayoutRows(p.keybinderToolbarLayout);
         if (Array.isArray(p.keybinderCommands)) state.data.keybinderCommands = p.keybinderCommands;
         if (Array.isArray(p.keybinderContextMenuLayout)) state.data.keybinderContextMenuLayout = p.keybinderContextMenuLayout;
+        mergeKeybinderBindingsFromHost(p.keybinderBindings, p.keybinderSuggestedBindings);
         if (p.userStudio && typeof p.userStudio === "object") {
           if (Array.isArray(p.userStudio.options?.llmCardProviders))
             state._studioCardsExplicit = true;
@@ -4817,18 +5841,32 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           loadStudioLlmCardsFromLocalStorage();
         if (p.appUpdate && typeof p.appUpdate === "object") state.appUpdate = p.appUpdate;
         applyAppUpdateUi();
-        const startTab = (msg.payload || {}).defaultStartTab;
-        const validStartTabs = new Set(["general","appearance","prompts","hotkeys","advanced","storage","screenshot","search","customize"]);
-        if (startTab && validStartTabs.has(startTab)) {
-          state.activeTab = startTab;
-          document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === startTab));
+        if (shouldNavigate) {
+          if (state.hotkeysSubTab === "niuma" || state.hotkeysSubTab === "qa") state.hotkeysSubTab = "overview";
+          state.activeTab = serverStartTab;
+          try { sessionStorage.setItem("settings.activeTab", serverStartTab); } catch (_) {}
+          document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === serverStartTab));
+        } else if (initDataReceived) {
+          /* 同一会话内后续 initData 仅刷新数据，恢复用户上次点的侧栏标签 */
+          try {
+            const lastTab = sessionStorage.getItem("settings.activeTab");
+            const valid = new Set(["general","appearance","prompts","hotkeys","advanced","storage","screenshot","search","customize"]);
+            if (lastTab && valid.has(lastTab)) {
+              state.activeTab = lastTab;
+              document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === lastTab));
+            }
+          } catch (_) {}
         }
+        if (typeof msg.payload?.vkAvailable === "boolean")
+          state.data.vkAvailable = msg.payload.vkAvailable;
+        post({ type: "probeVk" });
+        updateHkVkStatusDom(state.data.vkAvailable);
         const ids = (state.data.promptTemplateSummary || []).map(t => t.id);
         if (state.selectedPromptTemplateId && !ids.includes(state.selectedPromptTemplateId))
           state.selectedPromptTemplateId = "";
         render();
         setStatus("已连接", "ok");
-        lastSavedHash = stableStringify(state.data);
+        lastSavedHash = stableStringify(pruneSettingsPayload(readFromUI()));
         lastSentHash = lastSavedHash;
         pendingSaveHash = "";
         saveInFlight = false;
@@ -4836,6 +5874,20 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           requestFullTextStatus(true);
         initDataReceived = true;
         setTimeout(() => { suppressAutoSave = false; }, 0);
+        return;
+      }
+      if (msg.type === "vkStatus") {
+        state.data.vkAvailable = !!msg.available;
+        updateHkVkStatusDom(state.data.vkAvailable);
+        return;
+      }
+      if (msg.type === "vkWebEvent" && msg.event) {
+        handleVkWebEvent(msg.event);
+        return;
+      }
+      if (msg.type === "keybinderBindingsSnapshot") {
+        mergeKeybinderBindingsFromHost(msg.bindings, msg.suggestedBindings);
+        if (state.activeTab === "hotkeys") render();
         return;
       }
       if (msg.type === "browseCursorPathResult" && msg.path) { state.data.cursorPath = msg.path; render(); return; }
@@ -5106,6 +6158,38 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         setStatus(msg.ok ? (msg.themeMode === "light" ? "已切换为浅色主题" : "已切换为深色主题") : (msg.error || "主题保存失败"), msg.ok ? "ok" : "err");
         return;
       }
+      if (msg.type === "saveDefaultStartTabResult") {
+        if (msg.ok && msg.tab) {
+          state.data.defaultStartTab = normalizeDefaultStartTab(msg.tab);
+          defaultStartTabDirty = false;
+          lastSavedHash = stableStringify(pruneSettingsPayload(readFromUI()));
+          lastSentHash = lastSavedHash;
+        } else if (msg.error) {
+          setStatus(msg.error, "err");
+        }
+        return;
+      }
+      if (msg.type === "savePopupScreenIndexResult") {
+        if (msg.ok && msg.popupScreenIndex) {
+          state.data.popupScreenIndex = Number(msg.popupScreenIndex);
+          setStatus(`弹窗位置已保存（显示器 ${msg.popupScreenIndex}）`, "ok");
+        } else {
+          setStatus(msg.error || "弹窗位置保存失败", "err");
+        }
+        return;
+      }
+      if (msg.type === "saveGeneralSettingsResult") {
+        if (msg.ok) {
+          captureGeneralTabState();
+          lastSavedHash = stableStringify(pruneSettingsPayload(readFromUI()));
+          lastSentHash = lastSavedHash;
+          if (state.data.autoStart) setStatus("开机自启动已写入注册表", "ok");
+          else setStatus("已关闭开机自启动", "ok");
+        } else {
+          setStatus(msg.error || "注册表自启动写入失败", "err");
+        }
+        return;
+      }
       if (msg.type === "saveKeybinderToolbarLayoutResult") {
         setStatus(msg.ok ? "工具栏与右键菜单已写入配置" : (msg.error || "保存失败"), msg.ok ? "ok" : "err");
         return;
@@ -5125,9 +6209,14 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (op === "syncNiumaChatLlmToStudio" || op === "loadNiumaProjectBrief") return;
         if (msg.ok) {
           setStatus("操作成功", "ok");
+          if (op === "showVk") {
+            state.data.vkAvailable = true;
+            updateHkVkStatusDom(true);
+          }
           if (state.activeTab === "customize") render();
         } else if (msg.error) {
           setStatus(msg.error, "err");
+          if (op === "showVk") updateHkVkStatusDom(false);
         }
       }
     }

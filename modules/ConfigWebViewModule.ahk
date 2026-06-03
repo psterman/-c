@@ -5,6 +5,8 @@ global ConfigWebViewNavFallbackTried := false
 ; 由搜索中心等单次打开设置时覆盖首屏标签，不写入 INI
 global g_ConfigWebView_OneShotDefaultTab := ""
 global g_ConfigWebView_PendingStudioSync := false
+; 每次打开设置窗仅允许一次「跳到默认启动页」，避免 ready 与延迟 initData 重复抢导航
+global g_ConfigWebView_StartTabNavigated := false
 
 ConfigWebView_StaleDomain(pathKey) {
     return "config:" . Trim(String(pathKey))
@@ -31,6 +33,42 @@ ConfigWebView_ShouldDropReq(pathKey, reqId) {
     if FuncExists("AsyncGuardrails_ShouldDropStale")
         return AsyncGuardrails_ShouldDropStale(ConfigWebView_StaleDomain(k), rid)
     return false
+}
+
+ConfigWebView_IsVkAvailable() {
+    for name in ["VK_Show", "VK_EnsureInit", "VK_Execute", "_LoadCommands"] {
+        try {
+            if IsObject(Func(name))
+                return true
+        } catch {
+        }
+    }
+    return false
+}
+
+ConfigWebView_OpenVkKeybinder() {
+    if !ConfigWebView_IsVkAvailable()
+        throw Error("VK KeyBinder 未加载（请完全退出并重启牛马）")
+    try {
+        if IsObject(Func("VK_EnsureInit"))
+            VK_EnsureInit(true)
+    } catch as e {
+        OutputDebug("[ConfigWebView] VK_EnsureInit: " . e.Message)
+    }
+    try {
+        VK_Show()
+        return
+    } catch as e {
+        try {
+            if IsObject(Func("VK_Execute")) {
+                VK_Execute("sys_show_vk")
+                return
+            }
+        } catch as e2 {
+            throw Error("VK 打开失败: " . e.Message . " / " . e2.Message)
+        }
+        throw Error("VK 打开失败: " . e.Message)
+    }
 }
 
 ConfigWebView_HttpJsonAsync(method, url, body := "", callback := 0, reqId := 0) {
@@ -103,15 +141,22 @@ ConfigWebView_CreateHost() {
 
 ; 寤跺悗涓€甯ф帹閫?initData锛岄伩鍏嶄粠鎮诞宸ュ叿鏍忕瓑 WebView 鐨?WebMessageReceived 鍐呭悓姝ヨ皟鐢ㄦ椂閲嶅叆/闃熷垪椤哄簭寮傚父瀵艰嚧涓婚閿欎负娣辫壊
 ConfigWebView_SendInitDataIfReady(*) {
-    global ConfigWV2Ready
+    global ConfigWV2Ready, g_ConfigWebView_StartTabNavigated
     try {
-        if IsSet(ConfigWV2Ready) && ConfigWV2Ready
-            ConfigWebView_Send(Map("type", "initData", "payload", ConfigWebView_BuildInitDataSafe()))
+        if !(IsSet(ConfigWV2Ready) && ConfigWV2Ready)
+            return
+        navigate := false
+        if !g_ConfigWebView_StartTabNavigated {
+            navigate := true
+            g_ConfigWebView_StartTabNavigated := true
+        }
+        ConfigWebView_Send(Map("type", "initData", "payload", ConfigWebView_BuildInitDataSafe(), "navigateToStartTab", navigate))
     }
 }
 
 ShowConfigWebViewGUI() {
-    global GuiID_ConfigGUI, GuiID_ClipboardManager, ConfigPanelScreenIndex, g_ConfigWebView_LastShown
+    global GuiID_ConfigGUI, GuiID_ClipboardManager, ConfigPanelScreenIndex, g_ConfigWebView_LastShown, g_ConfigWebView_StartTabNavigated
+    g_ConfigWebView_StartTabNavigated := false
     try FloatingToolbar_PageDockEnter("settings")
     ; 鍗曚緥
     ConfigWebView_CreateHost()
@@ -708,48 +753,96 @@ ConfigWebView_GetKeybinderToolbarSnapshot() {
         for item in g_Commands["ContextMenuLayout"]
             cml.Push(String(item))
     }
-    return Map("toolbarLayout", tl, "commands", cmds, "contextMenuLayout", cml)
+    bindingsOut := Map()
+    suggestedOut := Map()
+    if g_Commands.Has("Bindings") && g_Commands["Bindings"] is Map {
+        for cmdId, v in g_Commands["Bindings"] {
+            cid := Trim(String(cmdId))
+            if (cid = "")
+                continue
+            if (v = "NONE") {
+                bindingsOut[cid] := Map("ahkKey", "", "displayKey", "", "explicitNone", true)
+                continue
+            }
+            key := Trim(String(v))
+            if (key = "")
+                continue
+            dk := key
+            if FuncExists("_AhkKeyToDisplay")
+                try dk := _AhkKeyToDisplay(key)
+            bindingsOut[cid] := Map("ahkKey", key, "displayKey", dk)
+        }
+    }
+    if g_Commands.Has("SuggestedBindings") && g_Commands["SuggestedBindings"] is Map {
+        for cmdId, skey in g_Commands["SuggestedBindings"] {
+            cid := Trim(String(cmdId))
+            sk := Trim(String(skey))
+            if (cid != "" && sk != "")
+                suggestedOut[cid] := sk
+        }
+    }
+    return Map(
+        "toolbarLayout", tl,
+        "commands", cmds,
+        "contextMenuLayout", cml,
+        "bindings", bindingsOut,
+        "suggestedBindings", suggestedOut
+    )
+}
+
+ConfigWebView_RelayVkWebJson(jsonStr) {
+    global ConfigWV2Ready
+    if !ConfigWV2Ready || (Trim(String(jsonStr)) = "")
+        return
+    try evt := Jxon_Load(jsonStr)
+    catch {
+        return
+    }
+    if !(evt is Map)
+        return
+    t := evt.Has("type") ? String(evt["type"]) : ""
+    if (t = "")
+        return
+    switch t {
+        case "bindingUpdated", "recordHint", "recordPending", "confirmConflict", "bind_blocked":
+            ConfigWebView_Send(Map("type", "vkWebEvent", "event", evt))
+        default:
+    }
+}
+
+ConfigWebView_VkEnsureCommandsLoaded() {
+    try {
+        if FuncExists("_LoadCommands")
+            _LoadCommands()
+    } catch {
+    }
+}
+
+ConfigWebView_VkPushBindingsSnapshot() {
+    snap := ConfigWebView_GetKeybinderToolbarSnapshot()
+    b := snap.Has("bindings") ? snap["bindings"] : Map()
+    s := snap.Has("suggestedBindings") ? snap["suggestedBindings"] : Map()
+    ConfigWebView_Send(Map("type", "keybinderBindingsSnapshot", "bindings", b, "suggestedBindings", s))
 }
 
 ConfigWebView_BuildInitData() {
     global CursorPath, CapsLockHoldTimeSeconds, CapsLockHoldVkEnabled, AutoStart, DefaultStartTab, g_ConfigWebView_OneShotDefaultTab
     global ThemeMode, FunctionPanelPos, ConfigPanelScreenIndex, ConfigPanelPos, ClipboardPanelPos, PanelScreenIndex
-    global Prompt_Explain, Prompt_Refactor, Prompt_Optimize
-    global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ, SplitHotkey, BatchHotkey, HotkeyT, HotkeyF, HotkeyP
-    global PromptQuickCaptureHotkey, QuickActionButtons
+    global PromptQuickCaptureHotkey
+    global CursorShortcut_CommandPalette, CursorShortcut_Terminal, CursorShortcut_GlobalSearch
+    global CursorShortcut_Explorer, CursorShortcut_SourceControl, CursorShortcut_Extensions
+    global CursorShortcut_Browser, CursorShortcut_Settings, CursorShortcut_CursorSettings
     global Language, AISleepTime, LaunchDelaySeconds, MsgBoxScreenIndex, VoiceInputScreenIndex, CursorPanelScreenIndex, ClipboardPanelScreenIndex
     global SearchEngine, AutoLoadSelectedText, AutoUpdateVoiceInput, VoiceSearchEnabledCategories, VoiceSearchSelectedEngines
-    global ConfigFile, DefaultTemplateIDs, PromptTemplates
+    global ConfigFile, PromptTemplates
     global FloatingToolbarButtonItems, FloatingToolbarMenuItems, FloatingToolbarButtonOptions, FloatingToolbarMenuOptions
     global AppearanceActivationMode
     monitorCount := 1
     try monitorCount := MonitorGetCount()
     catch
         monitorCount := 1
-    popupScreenIndex := PanelScreenIndex
-    if (popupScreenIndex < 1)
-        popupScreenIndex := 1
-    if (popupScreenIndex > monitorCount)
-        popupScreenIndex := monitorCount
-    hotkeys := Map(
-        "ESC", HotkeyESC, "C", HotkeyC, "V", HotkeyV, "X", HotkeyX, "E", HotkeyE, "R", HotkeyR, "O", HotkeyO,
-        "Q", HotkeyQ, "Z", HotkeyZ, "S", SplitHotkey, "B", BatchHotkey, "T", HotkeyT, "F", HotkeyF, "P", HotkeyP
-    )
-    qa := []
-    for item in QuickActionButtons {
-        qaType := "Explain"
-        qaHotkey := "e"
-        if (item is Map) {
-            qaType := item.Get("Type", qaType)
-            qaHotkey := item.Get("Hotkey", qaHotkey)
-        } else if (IsObject(item)) {
-            if item.HasProp("Type")
-                qaType := item.Type
-            if item.HasProp("Hotkey")
-                qaHotkey := item.Hotkey
-        }
-        qa.Push(Map("type", qaType, "hotkey", qaHotkey))
-    }
+    popupScreenIndex := ConfigWebView_ReadPersistedPopupScreenIndex()
+    ConfigWebView_ApplyPopupScreenIndex(popupScreenIndex)
     cats := []
     for c in VoiceSearchEnabledCategories
         cats.Push(c)
@@ -786,12 +879,6 @@ ConfigWebView_BuildInitData() {
             promptTemplateSummary.Push(Map("id", tid, "title", ttitle, "category", tcat, "content", tcontent))
         }
     }
-    templateIds := (IsSet(DefaultTemplateIDs) && DefaultTemplateIDs is Map) ? DefaultTemplateIDs : Map()
-    defaultTemplates := Map(
-        "Explain", templateIds.Has("Explain") ? templateIds["Explain"] : "",
-        "Refactor", templateIds.Has("Refactor") ? templateIds["Refactor"] : "",
-        "Optimize", templateIds.Has("Optimize") ? templateIds["Optimize"] : ""
-    )
     cursorRules := Map(
         "general", IniRead(ConfigFile, "CursorRules", "general", ""),
         "web", IniRead(ConfigFile, "CursorRules", "web", ""),
@@ -820,17 +907,22 @@ ConfigWebView_BuildInitData() {
         "ocrPunctuationMode", IniRead(ConfigFile, "Settings", "ScreenshotOCRPunctuationMode", "keep"),
         "ocrDirectCopyEnabled", IniRead(ConfigFile, "Settings", "ScreenshotOCRDirectCopyEnabled", "0") = "1"
     )
-    startTabForOpen := DefaultStartTab
+    startTabForOpen := FuncExists("NormalizeDefaultStartTab")
+        ? NormalizeDefaultStartTab(DefaultStartTab) : DefaultStartTab
     if (IsSet(g_ConfigWebView_OneShotDefaultTab) && g_ConfigWebView_OneShotDefaultTab != "") {
-        startTabForOpen := g_ConfigWebView_OneShotDefaultTab
+        startTabForOpen := FuncExists("NormalizeDefaultStartTab")
+            ? NormalizeDefaultStartTab(g_ConfigWebView_OneShotDefaultTab) : g_ConfigWebView_OneShotDefaultTab
         g_ConfigWebView_OneShotDefaultTab := ""
     }
+    autoStartForWeb := FuncExists("ReadPersistedAutoStart") ? ReadPersistedAutoStart() : AutoStart
+    AutoStart := autoStartForWeb
     cfgPayload := Map(
         "cursorPath", CursorPath,
         "capslockHoldTimeSeconds", CapsLockHoldTimeSeconds,
         "capsLockHoldVkEnabled", CapsLockHoldVkEnabled,
-        "autoStart", AutoStart,
+        "autoStart", autoStartForWeb,
         "defaultStartTab", startTabForOpen,
+        "vkAvailable", ConfigWebView_IsVkAvailable(),
         ; 蹇呴』浠?INI 涓哄噯锛氬唴瀛樹腑 ThemeMode 鍙兘涓庣鐩樹笉涓€鑷达紙渚嬪浠?WebView 鍥炶皟鎵撳紑璁剧疆鏃讹級
         "themeMode", ReadPersistedThemeMode(),
         "popupScreenIndex", popupScreenIndex,
@@ -840,15 +932,20 @@ ConfigWebView_BuildInitData() {
         "configPanelPos", ConfigPanelPos,
         "clipboardPanelPos", ClipboardPanelPos,
         "panelScreenIndex", PanelScreenIndex,
-        "promptExplain", Prompt_Explain,
-        "promptRefactor", Prompt_Refactor,
-        "promptOptimize", Prompt_Optimize,
         "cursorRules", cursorRules,
         "promptTemplateSummary", promptTemplateSummary,
-        "defaultTemplates", defaultTemplates,
-        "hotkeys", hotkeys,
+        "cursorShortcuts", [
+            Map("label", "命令面板", "shortcut", CursorShortcut_CommandPalette, "vkCommandId", "qa_command_palette", "catalogId", "showCommands", "desc", "Cursor 命令面板（悬浮栏可触发）"),
+            Map("label", "终端", "shortcut", CursorShortcut_Terminal, "vkCommandId", "qa_terminal", "catalogId", "toggleTerminal", "desc", "打开集成终端"),
+            Map("label", "全局搜索", "shortcut", CursorShortcut_GlobalSearch, "vkCommandId", "qa_global_search", "catalogId", "globalSearch", "desc", "Cursor 工作区全局搜索"),
+            Map("label", "资源管理器", "shortcut", CursorShortcut_Explorer, "vkCommandId", "qa_explorer", "catalogId", "explorer", "desc", "显示文件资源管理器侧栏"),
+            Map("label", "源代码管理", "shortcut", CursorShortcut_SourceControl, "vkCommandId", "qa_source_control", "catalogId", "sourceControl", "desc", "Git / 源代码管理视图"),
+            Map("label", "扩展", "shortcut", CursorShortcut_Extensions, "vkCommandId", "qa_extensions", "catalogId", "extensions", "desc", "扩展市场侧栏"),
+            Map("label", "简单浏览器", "shortcut", CursorShortcut_Browser, "vkCommandId", "qa_browser", "catalogId", "simpleBrowser", "desc", "内置 Simple Browser"),
+            Map("label", "编辑器设置", "shortcut", CursorShortcut_Settings, "vkCommandId", "qa_settings", "catalogId", "vscodeSettings", "desc", "VS Code 设置"),
+            Map("label", "Cursor 设置", "shortcut", CursorShortcut_CursorSettings, "vkCommandId", "qa_cursor_settings", "catalogId", "cursorSettings", "desc", "Cursor 专属设置")
+        ],
         "promptQuickCaptureHotkey", PromptQuickCaptureHotkey,
-        "quickActions", qa,
         "language", Language,
         "aiSleepTime", AISleepTime,
         "launchDelaySeconds", LaunchDelaySeconds,
@@ -893,6 +990,8 @@ ConfigWebView_BuildInitData() {
     cfgPayload["keybinderToolbarLayout"] := kbSnap["toolbarLayout"]
     cfgPayload["keybinderCommands"] := kbSnap["commands"]
     cfgPayload["keybinderContextMenuLayout"] := kbSnap.Has("contextMenuLayout") ? kbSnap["contextMenuLayout"] : []
+    cfgPayload["keybinderBindings"] := kbSnap.Has("bindings") ? kbSnap["bindings"] : Map()
+    cfgPayload["keybinderSuggestedBindings"] := kbSnap.Has("suggestedBindings") ? kbSnap["suggestedBindings"] : Map()
     if FuncExists("UserStudio_PayloadForWeb")
         cfgPayload["userStudio"] := UserStudio_PayloadForWeb()
     if FuncExists("AppUpdateCheck_PayloadForWeb")
@@ -922,15 +1021,9 @@ ConfigWebView_BuildInitDataSafe() {
             "configPanelPos", "center",
             "clipboardPanelPos", "center",
             "panelScreenIndex", 1,
-            "promptExplain", "",
-            "promptRefactor", "",
-            "promptOptimize", "",
             "cursorRules", Map("general","", "web","", "miniprogram","", "android","", "ios","", "python",""),
             "promptTemplateSummary", [],
-            "defaultTemplates", Map("Explain","", "Refactor","", "Optimize",""),
-            "hotkeys", Map("ESC","", "C","", "V","", "X","", "E","", "R","", "O","", "Q","", "Z","", "S","", "B","", "T","", "F","", "P",""),
             "promptQuickCaptureHotkey", "",
-            "quickActions", [Map("type","Explain","hotkey","e"), Map("type","Refactor","hotkey","r"), Map("type","Optimize","hotkey","o"), Map("type","Config","hotkey","q"), Map("type","Explain","hotkey","e")],
             "language", "zh",
             "aiSleepTime", 200,
             "launchDelaySeconds", 3.0,
@@ -981,7 +1074,8 @@ ConfigWebView_BuildInitDataSafe() {
             "appearanceActivationMode", "toolbar",
             "keybinderToolbarLayout", [],
             "keybinderCommands", [],
-            "keybinderContextMenuLayout", []
+            "keybinderContextMenuLayout", [],
+            "vkAvailable", ConfigWebView_IsVkAvailable()
         )
     }
 }
@@ -1054,9 +1148,7 @@ ConfigWebView_ExecuteDockCmd(msg) {
 ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
     global CursorPath, CapsLockHoldTimeSeconds, CapsLockHoldVkEnabled, AutoStart, DefaultStartTab
     global ThemeMode, FunctionPanelPos, ConfigPanelScreenIndex, ConfigPanelPos, ClipboardPanelPos, PanelScreenIndex
-    global Prompt_Explain, Prompt_Refactor, Prompt_Optimize
-    global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ, SplitHotkey, BatchHotkey, HotkeyT, HotkeyF, HotkeyP
-    global PromptQuickCaptureHotkey, QuickActionButtons
+    global PromptQuickCaptureHotkey
     global Language, AISleepTime, LaunchDelaySeconds, MsgBoxScreenIndex, VoiceInputScreenIndex, CursorPanelScreenIndex, ClipboardPanelScreenIndex
     global SearchEngine, AutoLoadSelectedText, AutoUpdateVoiceInput, VoiceSearchEnabledCategories, VoiceSearchSelectedEngines
     global FloatingToolbarButtonItems
@@ -1068,52 +1160,79 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
             errorMsg := "payload 鏃犳晥"
             return false
         }
-        NewCursorPath := NormalizeWindowsPath(payload.Get("cursorPath", ""))
-        if (NewCursorPath = "") {
-            errorMsg := "Cursor Path 涓嶈兘涓虹┖"
-            return false
-        }
-        NewHold := CfgParseFloat(payload.Get("capslockHoldTimeSeconds", 0.5), 0.5)
-        if (NewHold < 0.1 || NewHold > 5.0) {
-            errorMsg := "CapsLock Hold Time 瓒呭嚭鑼冨洿"
-            return false
-        }
-        NewAutoStart := payload.Get("autoStart", false) ? true : false
+        if (payload.Has("cursorPath")) {
+            NewCursorPath := NormalizeWindowsPath(payload.Get("cursorPath", ""))
+            if (NewCursorPath = "") {
+                errorMsg := "Cursor Path 不能为空"
+                return false
+            }
+        } else
+            NewCursorPath := CursorPath
+        if (payload.Has("capslockHoldTimeSeconds")) {
+            NewHold := CfgParseFloat(payload.Get("capslockHoldTimeSeconds", 0.5), CapsLockHoldTimeSeconds)
+            if (NewHold < 0.1 || NewHold > 5.0) {
+                errorMsg := "CapsLock Hold Time 超出范围"
+                return false
+            }
+        } else
+            NewHold := CapsLockHoldTimeSeconds
+        if (payload.Has("autoStart"))
+            NewAutoStart := ConfigWebView_CoerceBool(payload.Get("autoStart", false), AutoStart)
+        else
+            NewAutoStart := AutoStart
+        applyHoleSettings := ConfigWebView_PayloadHasHoleSettings(payload)
         NewCapsLockHoldVk := CapsLockHoldVkEnabled
         if (payload.Has("capsLockHoldVkEnabled"))
             NewCapsLockHoldVk := payload["capsLockHoldVkEnabled"] ? true : false
-        NewDefaultTab := payload.Get("defaultStartTab", "general")
-        validTabs := Map("general",1, "appearance",1, "prompts",1, "hotkeys",1, "advanced",1, "screenshot",1, "search",1, "customize",1)
-        if !validTabs.Has(NewDefaultTab)
-            NewDefaultTab := "general"
+        NewDefaultTab := DefaultStartTab
+        if (payload.Has("defaultStartTab")) {
+            NewDefaultTab := payload.Get("defaultStartTab", "general")
+            if FuncExists("NormalizeDefaultStartTab")
+                NewDefaultTab := NormalizeDefaultStartTab(NewDefaultTab)
+            else {
+                validTabs := Map("general",1, "appearance",1, "prompts",1, "hotkeys",1, "advanced",1, "screenshot",1, "search",1, "storage",1, "customize",1)
+                if !validTabs.Has(NewDefaultTab)
+                    NewDefaultTab := "general"
+            }
+        }
         NewTheme := ThemeMode
         if (payload.Has("themeMode"))
             NewTheme := payload["themeMode"]
         else if (payload.Has("ThemeMode"))
             NewTheme := payload["ThemeMode"]
         NewTheme := NormalizeIniThemeMode(NewTheme, NormalizeIniThemeMode(ThemeMode, "dark"))
-        NewPanelPos := payload.Get("functionPanelPos", "center")
         validPos := Map("center",1, "top-left",1, "top-right",1, "bottom-left",1, "bottom-right",1)
-        if !validPos.Has(NewPanelPos)
-            NewPanelPos := "center"
-        monitorCount := 1
-        try monitorCount := MonitorGetCount()
-        catch
+        NewPanelPos := FunctionPanelPos
+        if (payload.Has("functionPanelPos")) {
+            NewPanelPos := payload.Get("functionPanelPos", "center")
+            if !validPos.Has(NewPanelPos)
+                NewPanelPos := "center"
+        }
+        NewPopupScreen := PanelScreenIndex
+        hasPopupScreen := payload.Has("popupScreenIndex") || payload.Has("panelScreenIndex")
+        if (hasPopupScreen) {
             monitorCount := 1
-        NewPopupScreen := Integer(payload.Get("popupScreenIndex", payload.Get("panelScreenIndex", 1)))
-        if (NewPopupScreen < 1)
-            NewPopupScreen := 1
-        if (NewPopupScreen > monitorCount)
-            NewPopupScreen := monitorCount
-        NewConfigPanelPos := payload.Get("configPanelPos", "center")
-        if !validPos.Has(NewConfigPanelPos)
-            NewConfigPanelPos := "center"
-        NewClipboardPanelPos := payload.Get("clipboardPanelPos", "center")
-        if !validPos.Has(NewClipboardPanelPos)
-            NewClipboardPanelPos := "center"
-        NewPromptExplain := payload.Get("promptExplain", "")
-        NewPromptRefactor := payload.Get("promptRefactor", "")
-        NewPromptOptimize := payload.Get("promptOptimize", "")
+            try monitorCount := MonitorGetCount()
+            catch
+                monitorCount := 1
+            NewPopupScreen := Integer(payload.Has("popupScreenIndex") ? payload["popupScreenIndex"] : payload["panelScreenIndex"])
+            if (NewPopupScreen < 1)
+                NewPopupScreen := 1
+            if (NewPopupScreen > monitorCount)
+                NewPopupScreen := monitorCount
+        }
+        NewConfigPanelPos := ConfigPanelPos
+        if (payload.Has("configPanelPos")) {
+            NewConfigPanelPos := payload.Get("configPanelPos", "center")
+            if !validPos.Has(NewConfigPanelPos)
+                NewConfigPanelPos := "center"
+        }
+        NewClipboardPanelPos := ClipboardPanelPos
+        if (payload.Has("clipboardPanelPos")) {
+            NewClipboardPanelPos := payload.Get("clipboardPanelPos", "center")
+            if !validPos.Has(NewClipboardPanelPos)
+                NewClipboardPanelPos := "center"
+        }
         NewCursorRules := Map(
             "general", IniRead(ConfigFile, "CursorRules", "general", ""),
             "web", IniRead(ConfigFile, "CursorRules", "web", ""),
@@ -1264,125 +1383,79 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         NewFloatingToolbarButtons := FTB_SanitizeToolbarButtonItems(FloatingToolbarButtonItems)
         if (payload.Has("floatingToolbarButtons") && payload["floatingToolbarButtons"] is Array)
             NewFloatingToolbarButtons := FTB_SanitizeToolbarButtonItems(payload["floatingToolbarButtons"])
-        if payload.Has("holePlacementPreset") {
-            placeMap := ConfigWebView_ApplyHolePlacementPreset(payload["holePlacementPreset"])
-            for k, v in placeMap
-                payload[k] := v
-        }
-        if payload.Has("holeSensitivityPreset") && FuncExists("HoleTriggers_MapSensitivityPreset") {
-            dist := HoleTriggers_MapSensitivityPreset(payload["holeSensitivityPreset"])
-            payload["holeTriggerDistance"] := dist["trigger"]
-            payload["holeDismissDistance"] := dist["dismiss"]
-        }
-        NewHolePositionMode := Trim(String(payload.Get("holePositionMode", IniRead(ConfigFile, "Appearance", "HolePositionMode", "anchor"))))
-        if (NewHolePositionMode != "anchor" && NewHolePositionMode != "fixed" && NewHolePositionMode != "relative")
-            NewHolePositionMode := "anchor"
-        NewHoleTriggerDistance := Integer(payload.Get("holeTriggerDistance", IniRead(ConfigFile, "Appearance", "HoleTriggerDistance", "260")))
-        if (NewHoleTriggerDistance < 80)
-            NewHoleTriggerDistance := 80
-        if (NewHoleTriggerDistance > 1200)
-            NewHoleTriggerDistance := 1200
-        NewHoleDismissDistance := Integer(payload.Get("holeDismissDistance", IniRead(ConfigFile, "Appearance", "HoleDismissDistance", "320")))
-        if (NewHoleDismissDistance < NewHoleTriggerDistance + 20)
-            NewHoleDismissDistance := NewHoleTriggerDistance + 20
-        if (NewHoleDismissDistance > 1600)
-            NewHoleDismissDistance := 1600
-        NewHoleFixedX := Integer(payload.Get("holeFixedX", IniRead(ConfigFile, "Appearance", "HoleFixedX", "360")))
-        NewHoleFixedY := Integer(payload.Get("holeFixedY", IniRead(ConfigFile, "Appearance", "HoleFixedY", "260")))
-        NewHoleSizeScale := CfgParseFloat(payload.Get("holeSizeScale", IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0")), 1.0)
-        if (NewHoleSizeScale < 0.6)
-            NewHoleSizeScale := 0.6
-        if (NewHoleSizeScale > 1.8)
-            NewHoleSizeScale := 1.8
-        NewHoleAnimLevel := CfgParseFloat(payload.Get("holeAnimLevel", IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0")), 1.0)
-        if (NewHoleAnimLevel < 0.4)
-            NewHoleAnimLevel := 0.4
-        if (NewHoleAnimLevel > 2.2)
-            NewHoleAnimLevel := 2.2
-        NewHoleVisualStyle := StrLower(Trim(String(payload.Get("holeVisualStyle", IniRead(ConfigFile, "Appearance", "HoleVisualStyle", "ring")))))
-        if (NewHoleVisualStyle != "ring" && NewHoleVisualStyle != "starry")
-            NewHoleVisualStyle := "ring"
-        NewHoleHideDockEnabled := !!payload.Get("holeHideDockEnabled", IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1")
-        NewHoleHideDockEdge := StrLower(Trim(String(payload.Get("holeHideDockEdge", IniRead(ConfigFile, "Appearance", "HoleHideDockEdge", "right")))))
-        if (NewHoleHideDockEdge != "right" && NewHoleHideDockEdge != "left" && NewHoleHideDockEdge != "top" && NewHoleHideDockEdge != "bottom")
-            NewHoleHideDockEdge := "right"
-        NewHoleHideDockMargin := Integer(payload.Get("holeHideDockMargin", IniRead(ConfigFile, "Appearance", "HoleHideDockMargin", "10")))
-        if (NewHoleHideDockMargin < 0)
-            NewHoleHideDockMargin := 0
-        if (NewHoleHideDockMargin > 80)
-            NewHoleHideDockMargin := 80
-        NewQuickActions := []
-        if (payload.Has("quickActions") && payload["quickActions"] is Array) {
-            for item in payload["quickActions"] {
-                if (item is Map) {
-                    qaType := item.Get("type", "Explain")
-                    qaHotkey := item.Get("hotkey", "")
-                    NewQuickActions.Push(Map("Type", qaType, "Hotkey", qaHotkey))
-                }
+        if (applyHoleSettings) {
+            if payload.Has("holePlacementPreset") {
+                placeMap := ConfigWebView_ApplyHolePlacementPreset(payload["holePlacementPreset"])
+                for k, v in placeMap
+                    payload[k] := v
             }
+            if payload.Has("holeSensitivityPreset") && FuncExists("HoleTriggers_MapSensitivityPreset") {
+                dist := HoleTriggers_MapSensitivityPreset(payload["holeSensitivityPreset"])
+                payload["holeTriggerDistance"] := dist["trigger"]
+                payload["holeDismissDistance"] := dist["dismiss"]
+            }
+            NewHolePositionMode := Trim(String(payload.Get("holePositionMode", IniRead(ConfigFile, "Appearance", "HolePositionMode", "anchor"))))
+            if (NewHolePositionMode != "anchor" && NewHolePositionMode != "fixed" && NewHolePositionMode != "relative")
+                NewHolePositionMode := "anchor"
+            NewHoleTriggerDistance := Integer(payload.Get("holeTriggerDistance", IniRead(ConfigFile, "Appearance", "HoleTriggerDistance", "260")))
+            if (NewHoleTriggerDistance < 80)
+                NewHoleTriggerDistance := 80
+            if (NewHoleTriggerDistance > 1200)
+                NewHoleTriggerDistance := 1200
+            NewHoleDismissDistance := Integer(payload.Get("holeDismissDistance", IniRead(ConfigFile, "Appearance", "HoleDismissDistance", "320")))
+            if (NewHoleDismissDistance < NewHoleTriggerDistance + 20)
+                NewHoleDismissDistance := NewHoleTriggerDistance + 20
+            if (NewHoleDismissDistance > 1600)
+                NewHoleDismissDistance := 1600
+            NewHoleFixedX := Integer(payload.Get("holeFixedX", IniRead(ConfigFile, "Appearance", "HoleFixedX", "360")))
+            NewHoleFixedY := Integer(payload.Get("holeFixedY", IniRead(ConfigFile, "Appearance", "HoleFixedY", "260")))
+            NewHoleSizeScale := CfgParseFloat(payload.Get("holeSizeScale", IniRead(ConfigFile, "Appearance", "HoleSizeScale", "1.0")), 1.0)
+            if (NewHoleSizeScale < 0.6)
+                NewHoleSizeScale := 0.6
+            if (NewHoleSizeScale > 1.8)
+                NewHoleSizeScale := 1.8
+            NewHoleAnimLevel := CfgParseFloat(payload.Get("holeAnimLevel", IniRead(ConfigFile, "Appearance", "HoleAnimLevel", "1.0")), 1.0)
+            if (NewHoleAnimLevel < 0.4)
+                NewHoleAnimLevel := 0.4
+            if (NewHoleAnimLevel > 2.2)
+                NewHoleAnimLevel := 2.2
+            NewHoleVisualStyle := StrLower(Trim(String(payload.Get("holeVisualStyle", IniRead(ConfigFile, "Appearance", "HoleVisualStyle", "ring")))))
+            if (NewHoleVisualStyle != "ring" && NewHoleVisualStyle != "starry")
+                NewHoleVisualStyle := "ring"
+            NewHoleHideDockEnabled := !!payload.Get("holeHideDockEnabled", IniRead(ConfigFile, "Appearance", "HoleHideDockEnabled", "1") = "1")
+            NewHoleHideDockEdge := StrLower(Trim(String(payload.Get("holeHideDockEdge", IniRead(ConfigFile, "Appearance", "HoleHideDockEdge", "right")))))
+            if (NewHoleHideDockEdge != "right" && NewHoleHideDockEdge != "left" && NewHoleHideDockEdge != "top" && NewHoleHideDockEdge != "bottom")
+                NewHoleHideDockEdge := "right"
+            NewHoleHideDockMargin := Integer(payload.Get("holeHideDockMargin", IniRead(ConfigFile, "Appearance", "HoleHideDockMargin", "10")))
+            if (NewHoleHideDockMargin < 0)
+                NewHoleHideDockMargin := 0
+            if (NewHoleHideDockMargin > 80)
+                NewHoleHideDockMargin := 80
         }
-        while (NewQuickActions.Length < 5)
-            NewQuickActions.Push(Map("Type", "Explain", "Hotkey", "e"))
-        while (NewQuickActions.Length > 5)
-            NewQuickActions.Pop()
-        hkMap := payload.Get("hotkeys", Map())
-        hkGet(Key, Def) {
-            if (hkMap is Map && hkMap.Has(Key))
-                return Trim(hkMap[Key])
-            return Def
-        }
-        NewHotkeyESC := hkGet("ESC", HotkeyESC)
-        NewHotkeyC := hkGet("C", HotkeyC)
-        NewHotkeyV := hkGet("V", HotkeyV)
-        NewHotkeyX := hkGet("X", HotkeyX)
-        NewHotkeyE := hkGet("E", HotkeyE)
-        NewHotkeyR := hkGet("R", HotkeyR)
-        NewHotkeyO := hkGet("O", HotkeyO)
-        NewHotkeyQ := hkGet("Q", HotkeyQ)
-        NewHotkeyZ := hkGet("Z", HotkeyZ)
-        NewSplitHotkey := hkGet("S", SplitHotkey)
-        NewBatchHotkey := hkGet("B", BatchHotkey)
-        NewHotkeyT := hkGet("T", HotkeyT)
-        NewHotkeyF := hkGet("F", HotkeyF)
-        NewHotkeyP := hkGet("P", HotkeyP)
 
-        CursorPath := NewCursorPath
-        CapsLockHoldTimeSeconds := NewHold
-        CapsLockHoldVkEnabled := NewCapsLockHoldVk
-        AutoStart := NewAutoStart
-        DefaultStartTab := NewDefaultTab
+        if (payload.Has("cursorPath"))
+            CursorPath := NewCursorPath
+        if (payload.Has("capslockHoldTimeSeconds"))
+            CapsLockHoldTimeSeconds := NewHold
+        if (payload.Has("capsLockHoldVkEnabled"))
+            CapsLockHoldVkEnabled := NewCapsLockHoldVk
+        if (payload.Has("autoStart"))
+            AutoStart := NewAutoStart
+        if (payload.Has("defaultStartTab"))
+            DefaultStartTab := NewDefaultTab
         ThemeMode := NewTheme
-        FunctionPanelPos := NewPanelPos
-        ConfigPanelPos := NewConfigPanelPos
-        ClipboardPanelPos := NewClipboardPanelPos
-        PanelScreenIndex := NewPopupScreen
-        ConfigPanelScreenIndex := NewPopupScreen
-        Prompt_Explain := NewPromptExplain
-        Prompt_Refactor := NewPromptRefactor
-        Prompt_Optimize := NewPromptOptimize
-        HotkeyESC := NewHotkeyESC
-        HotkeyC := NewHotkeyC
-        HotkeyV := NewHotkeyV
-        HotkeyX := NewHotkeyX
-        HotkeyE := NewHotkeyE
-        HotkeyR := NewHotkeyR
-        HotkeyO := NewHotkeyO
-        HotkeyQ := NewHotkeyQ
-        HotkeyZ := NewHotkeyZ
-        SplitHotkey := NewSplitHotkey
-        BatchHotkey := NewBatchHotkey
-        HotkeyT := NewHotkeyT
-        HotkeyF := NewHotkeyF
-        HotkeyP := NewHotkeyP
+        if (payload.Has("functionPanelPos"))
+            FunctionPanelPos := NewPanelPos
+        if (payload.Has("configPanelPos"))
+            ConfigPanelPos := NewConfigPanelPos
+        if (payload.Has("clipboardPanelPos"))
+            ClipboardPanelPos := NewClipboardPanelPos
+        if (hasPopupScreen)
+            ConfigWebView_ApplyPopupScreenIndex(NewPopupScreen)
         PromptQuickCaptureHotkey := NewCaptureHotkey
-        QuickActionButtons := NewQuickActions
         Language := NewLanguage
         AISleepTime := NewAiSleepTime
         LaunchDelaySeconds := NewLaunchDelay
-        MsgBoxScreenIndex := NewPopupScreen
-        VoiceInputScreenIndex := NewPopupScreen
-        CursorPanelScreenIndex := NewPopupScreen
-        ClipboardPanelScreenIndex := NewPopupScreen
         SearchEngine := NewSearchEngine
         AutoLoadSelectedText := NewAutoLoad
         AutoUpdateVoiceInput := NewAutoUpdate
@@ -1407,17 +1480,17 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         catch {
         }
 
-        IniWrite(CursorPath, ConfigFile, "Settings", "CursorPath")
+        if (payload.Has("cursorPath"))
+            IniWrite(CursorPath, ConfigFile, "Settings", "CursorPath")
         IniWrite(String(AISleepTime), ConfigFile, "Settings", "AISleepTime")
-        IniWrite(String(CapsLockHoldTimeSeconds), ConfigFile, "Settings", "CapsLockHoldTimeSeconds")
-        IniWrite(CapsLockHoldVkEnabled ? "1" : "0", ConfigFile, "Settings", "CapsLockHoldVkEnabled")
+        if (payload.Has("capslockHoldTimeSeconds"))
+            IniWrite(String(CapsLockHoldTimeSeconds), ConfigFile, "Settings", "CapsLockHoldTimeSeconds")
+        if (payload.Has("capsLockHoldVkEnabled"))
+            IniWrite(CapsLockHoldVkEnabled ? "1" : "0", ConfigFile, "Settings", "CapsLockHoldVkEnabled")
         IniWrite(String(LaunchDelaySeconds), ConfigFile, "Settings", "LaunchDelaySeconds")
         IniWrite(Language, ConfigFile, "Settings", "Language")
-        IniWrite(Prompt_Explain, ConfigFile, "Settings", "Prompt_Explain")
-        IniWrite(Prompt_Refactor, ConfigFile, "Settings", "Prompt_Refactor")
-        IniWrite(Prompt_Optimize, ConfigFile, "Settings", "Prompt_Optimize")
-        IniWrite(AutoStart ? "1" : "0", ConfigFile, "Settings", "AutoStart")
-        IniWrite(DefaultStartTab, ConfigFile, "Settings", "DefaultStartTab")
+        if (payload.Has("defaultStartTab"))
+            IniWrite(DefaultStartTab, ConfigFile, "Settings", "DefaultStartTab")
         IniWrite(PromptQuickCaptureHotkey, ConfigFile, "Settings", "PromptQuickCaptureHotkey")
         IniWrite(SearchEngine, ConfigFile, "Settings", "SearchEngine")
         IniWrite(AutoLoadSelectedText ? "1" : "0", ConfigFile, "Settings", "AutoLoadSelectedText")
@@ -1449,79 +1522,51 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         IniWrite(NewCursorRules["android"], ConfigFile, "CursorRules", "android")
         IniWrite(NewCursorRules["ios"], ConfigFile, "CursorRules", "ios")
         IniWrite(NewCursorRules["python"], ConfigFile, "CursorRules", "python")
-        IniWrite(HotkeyESC, ConfigFile, "Hotkeys", "ESC")
-        IniWrite(HotkeyC, ConfigFile, "Hotkeys", "C")
-        IniWrite(HotkeyV, ConfigFile, "Hotkeys", "V")
-        IniWrite(HotkeyX, ConfigFile, "Hotkeys", "X")
-        IniWrite(HotkeyE, ConfigFile, "Hotkeys", "E")
-        IniWrite(HotkeyR, ConfigFile, "Hotkeys", "R")
-        IniWrite(HotkeyO, ConfigFile, "Hotkeys", "O")
-        IniWrite(HotkeyQ, ConfigFile, "Hotkeys", "Q")
-        IniWrite(HotkeyZ, ConfigFile, "Hotkeys", "Z")
-        IniWrite(SplitHotkey, ConfigFile, "Hotkeys", "Split")
-        IniWrite(BatchHotkey, ConfigFile, "Hotkeys", "Batch")
-        IniWrite(HotkeyT, ConfigFile, "Hotkeys", "T")
-        IniWrite(HotkeyF, ConfigFile, "Hotkeys", "F")
-        IniWrite(HotkeyP, ConfigFile, "Hotkeys", "P")
-        IniWrite("5", ConfigFile, "QuickActions", "ButtonCount")
-        Loop 5 {
-            idx := A_Index
-            btnType := "Explain"
-            btnHotkey := "e"
-            btn := QuickActionButtons[idx]
-            if (btn is Map) {
-                btnType := btn.Get("Type", btnType)
-                btnHotkey := btn.Get("Hotkey", btnHotkey)
-            } else if (IsObject(btn)) {
-                if btn.HasProp("Type")
-                    btnType := btn.Type
-                if btn.HasProp("Hotkey")
-                    btnHotkey := btn.Hotkey
-            }
-            IniWrite(btnType, ConfigFile, "QuickActions", "Button" . idx . "Type")
-            IniWrite(btnHotkey, ConfigFile, "QuickActions", "Button" . idx . "Hotkey")
+        if (payload.Has("appearanceActivationMode") || payload.Has("AppearanceActivationMode"))
+            IniWrite(AppearanceActivationMode, ConfigFile, "Appearance", "ActivationMode")
+        if (applyHoleSettings) {
+            IniWrite(NewHolePositionMode, ConfigFile, "Appearance", "HolePositionMode")
+            IniWrite(String(NewHoleTriggerDistance), ConfigFile, "Appearance", "HoleTriggerDistance")
+            IniWrite(String(NewHoleDismissDistance), ConfigFile, "Appearance", "HoleDismissDistance")
+            IniWrite(String(NewHoleFixedX), ConfigFile, "Appearance", "HoleFixedX")
+            IniWrite(String(NewHoleFixedY), ConfigFile, "Appearance", "HoleFixedY")
+            IniWrite(String(NewHoleSizeScale), ConfigFile, "Appearance", "HoleSizeScale")
+            IniWrite(String(NewHoleAnimLevel), ConfigFile, "Appearance", "HoleAnimLevel")
+            IniWrite(NewHoleVisualStyle, ConfigFile, "Appearance", "HoleVisualStyle")
+            IniWrite(NewHoleHideDockEnabled ? "1" : "0", ConfigFile, "Appearance", "HoleHideDockEnabled")
+            IniWrite(NewHoleHideDockEdge, ConfigFile, "Appearance", "HoleHideDockEdge")
+            IniWrite(String(NewHoleHideDockMargin), ConfigFile, "Appearance", "HoleHideDockMargin")
+            NewHoleDecoupled := payload.Has("holeDecoupledTopology") ? !!payload["holeDecoupledTopology"] : true
+            NewHoleStarFullscreen := payload.Has("holeStarFullscreen") ? !!payload["holeStarFullscreen"] : false
+            NewHolePanelPinned := payload.Has("holePanelPinned") ? !!payload["holePanelPinned"] : false
+            IniWrite(NewHoleDecoupled ? "1" : "0", ConfigFile, "Appearance", "HoleDecoupledTopology")
+            IniWrite(NewHoleStarFullscreen ? "1" : "0", ConfigFile, "Appearance", "HoleStarFullscreen")
+            IniWrite(NewHolePanelPinned ? "1" : "0", ConfigFile, "Appearance", "HolePanelPinned")
+            try GDHO_DECOUPLED_TOPOLOGY := NewHoleDecoupled
+            try GDHO_STAR_FULLSCREEN := NewHoleStarFullscreen
+            try GDHO_PANEL_PINNED := NewHolePanelPinned
+            if FuncExists("GDHO_SavePanelPositionToIni")
+                try GDHO_SavePanelPositionToIni()
         }
-        IniWrite(PanelScreenIndex, ConfigFile, "Appearance", "ScreenIndex")
-        IniWrite(PanelScreenIndex, ConfigFile, "Appearance", "PopupScreenIndex")
-        IniWrite(AppearanceActivationMode, ConfigFile, "Appearance", "ActivationMode")
-        IniWrite(NewHolePositionMode, ConfigFile, "Appearance", "HolePositionMode")
-        IniWrite(String(NewHoleTriggerDistance), ConfigFile, "Appearance", "HoleTriggerDistance")
-        IniWrite(String(NewHoleDismissDistance), ConfigFile, "Appearance", "HoleDismissDistance")
-        IniWrite(String(NewHoleFixedX), ConfigFile, "Appearance", "HoleFixedX")
-        IniWrite(String(NewHoleFixedY), ConfigFile, "Appearance", "HoleFixedY")
-        IniWrite(String(NewHoleSizeScale), ConfigFile, "Appearance", "HoleSizeScale")
-        IniWrite(String(NewHoleAnimLevel), ConfigFile, "Appearance", "HoleAnimLevel")
-        IniWrite(NewHoleVisualStyle, ConfigFile, "Appearance", "HoleVisualStyle")
-        IniWrite(NewHoleHideDockEnabled ? "1" : "0", ConfigFile, "Appearance", "HoleHideDockEnabled")
-        IniWrite(NewHoleHideDockEdge, ConfigFile, "Appearance", "HoleHideDockEdge")
-        IniWrite(String(NewHoleHideDockMargin), ConfigFile, "Appearance", "HoleHideDockMargin")
-        NewHoleDecoupled := payload.Has("holeDecoupledTopology") ? !!payload["holeDecoupledTopology"] : true
-        NewHoleStarFullscreen := payload.Has("holeStarFullscreen") ? !!payload["holeStarFullscreen"] : false
-        NewHolePanelPinned := payload.Has("holePanelPinned") ? !!payload["holePanelPinned"] : false
-        IniWrite(NewHoleDecoupled ? "1" : "0", ConfigFile, "Appearance", "HoleDecoupledTopology")
-        IniWrite(NewHoleStarFullscreen ? "1" : "0", ConfigFile, "Appearance", "HoleStarFullscreen")
-        IniWrite(NewHolePanelPinned ? "1" : "0", ConfigFile, "Appearance", "HolePanelPinned")
-        try GDHO_DECOUPLED_TOPOLOGY := NewHoleDecoupled
-        try GDHO_STAR_FULLSCREEN := NewHoleStarFullscreen
-        try GDHO_PANEL_PINNED := NewHolePanelPinned
-        if FuncExists("GDHO_SavePanelPositionToIni")
-            try GDHO_SavePanelPositionToIni()
-        IniWrite(FunctionPanelPos, ConfigFile, "Appearance", "FunctionPanelPos")
-        IniWrite(ConfigPanelPos, ConfigFile, "Appearance", "ConfigPanelPos")
-        IniWrite(ClipboardPanelPos, ConfigFile, "Appearance", "ClipboardPanelPos")
-        IniWrite(ConfigPanelScreenIndex, ConfigFile, "Advanced", "ConfigPanelScreenIndex")
-        IniWrite(MsgBoxScreenIndex, ConfigFile, "Advanced", "MsgBoxScreenIndex")
-        IniWrite(VoiceInputScreenIndex, ConfigFile, "Advanced", "VoiceInputScreenIndex")
-        IniWrite(CursorPanelScreenIndex, ConfigFile, "Advanced", "CursorPanelScreenIndex")
-        IniWrite(ClipboardPanelScreenIndex, ConfigFile, "Advanced", "ClipboardPanelScreenIndex")
-        SetAutoStart(AutoStart)
+        if (payload.Has("functionPanelPos"))
+            IniWrite(FunctionPanelPos, ConfigFile, "Appearance", "FunctionPanelPos")
+        if (payload.Has("configPanelPos"))
+            IniWrite(ConfigPanelPos, ConfigFile, "Appearance", "ConfigPanelPos")
+        if (payload.Has("clipboardPanelPos"))
+            IniWrite(ClipboardPanelPos, ConfigFile, "Appearance", "ClipboardPanelPos")
+        if (payload.Has("autoStart")) {
+            if !ConfigWebView_PersistAutoStartSetting(AutoStart, &errorMsg)
+                return false
+        }
         PromptQuickPad_RegisterCaptureHotkey()
         try FloatingToolbarPushButtonConfigToWeb()
-        try GDHO_SetScreenAnchor(NewHoleFixedX, NewHoleFixedY)
-        try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel, NewHoleVisualStyle)
-        try GDHO_ApplyHideDockSettings(NewHoleHideDockEnabled, NewHoleHideDockEdge, NewHoleHideDockMargin)
-        try ConfigWebView_WriteHolePresetIni(payload)
-        try ConfigWebView_MergeHoleTriggerPayload(payload)
+        if (applyHoleSettings) {
+            try GDHO_SetScreenAnchor(NewHoleFixedX, NewHoleFixedY)
+            try GDHO_ApplySettings(NewHolePositionMode, NewHoleTriggerDistance, NewHoleDismissDistance, NewHoleFixedX, NewHoleFixedY, NewHoleSizeScale, NewHoleAnimLevel, NewHoleVisualStyle)
+            try GDHO_ApplyHideDockSettings(NewHoleHideDockEnabled, NewHoleHideDockEdge, NewHoleHideDockMargin)
+            try ConfigWebView_WriteHolePresetIni(payload)
+            try ConfigWebView_MergeHoleTriggerPayload(payload)
+        }
         if (payload.Has("userStudio") && payload["userStudio"] is Map) {
             us := payload["userStudio"]
             try {
@@ -1536,13 +1581,14 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
                 }
             }
         }
-        ; Apply mode asynchronously to avoid blocking settings WebView thread.
-        try SetTimer((*) => ApplyAppearanceActivationMode(), -20)
-        catch {
+        if (payload.Has("appearanceActivationMode") || payload.Has("AppearanceActivationMode")) {
+            try SetTimer((*) => ApplyAppearanceActivationMode(), -20)
+            catch {
+            }
         }
         return true
     } catch as err {
-        errorMsg := "淇濆瓨澶辫触: " . err.Message
+        errorMsg := "保存失败: " . err.Message
         return false
     }
 }
@@ -1550,6 +1596,8 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
 ConfigWebView_CoerceBool(val, default := false) {
     if (val = true || val = false)
         return !!val
+    if IsNumber(val)
+        return (Integer(val) != 0)
     s := StrLower(Trim(String(val)))
     if (s = "1" || s = "true" || s = "yes" || s = "on")
         return true
@@ -1767,6 +1815,216 @@ ConfigWebView_SaveAppearanceActivationMode(mode, &errorMsg := "") {
             catch {
             }
         }
+        return true
+    } catch as err {
+        errorMsg := err.Message
+        return false
+    }
+}
+
+ConfigWebView_PayloadHasHoleSettings(payload) {
+    if !(payload is Map)
+        return false
+    for k in ["holePlacementPreset", "holeSensitivityPreset", "holeTriggerTextSelect", "holeTriggerCircleCw",
+        "holeTriggerCircleCcw", "holeTriggerRButtonHold", "holePositionMode", "holeVisualStyle", "holeSizeScale",
+        "holeAnimLevel", "holeHideDockEnabled"]
+        if payload.Has(k)
+            return true
+    return false
+}
+
+ConfigWebView_SaveGeneralSettings(payload, &errorMsg := "") {
+    global CursorPath, CapsLockHoldTimeSeconds, CapsLockHoldVkEnabled, AutoStart, ConfigFile
+    if !(payload is Map) {
+        errorMsg := "payload 无效"
+        return false
+    }
+    try {
+        if (payload.Has("cursorPath")) {
+            newPath := NormalizeWindowsPath(payload.Get("cursorPath", ""))
+            if (newPath = "") {
+                errorMsg := "Cursor Path 不能为空"
+                return false
+            }
+            CursorPath := newPath
+            IniWrite(CursorPath, ConfigFile, "Settings", "CursorPath")
+        }
+        if (payload.Has("capslockHoldTimeSeconds")) {
+            newHold := CfgParseFloat(payload.Get("capslockHoldTimeSeconds", 0.5), CapsLockHoldTimeSeconds)
+            if (newHold < 0.1 || newHold > 5.0) {
+                errorMsg := "CapsLock Hold Time 超出范围"
+                return false
+            }
+            CapsLockHoldTimeSeconds := newHold
+            IniWrite(String(CapsLockHoldTimeSeconds), ConfigFile, "Settings", "CapsLockHoldTimeSeconds")
+        }
+        if (payload.Has("capsLockHoldVkEnabled")) {
+            CapsLockHoldVkEnabled := payload["capsLockHoldVkEnabled"] ? true : false
+            IniWrite(CapsLockHoldVkEnabled ? "1" : "0", ConfigFile, "Settings", "CapsLockHoldVkEnabled")
+        }
+        if (payload.Has("autoStart")) {
+            AutoStart := ConfigWebView_CoerceBool(payload.Get("autoStart", false), AutoStart)
+            if !ConfigWebView_PersistAutoStartSetting(AutoStart, &errorMsg)
+                return false
+        }
+        return true
+    } catch as err {
+        errorMsg := err.Message
+        return false
+    }
+}
+
+ConfigWebView_PersistAutoStartSetting(enable, &errorMsg := "") {
+    global AutoStart, ConfigFile
+    AutoStart := enable ? true : false
+    IniWrite(AutoStart ? "1" : "0", ConfigFile, "Settings", "AutoStart")
+    regErr := ""
+    if !ConfigWebView_ApplyAutoStartRegistry(AutoStart, &regErr) {
+        errorMsg := regErr != "" ? regErr : "注册表自启动写入失败"
+        return false
+    }
+    return true
+}
+
+ConfigWebView_ApplyAutoStartRegistry(enable, &errorMsg := "") {
+    try {
+        return Nmer_ApplyAutoStartRegistry(enable, &errorMsg)
+    } catch as e {
+        errorMsg := e.Message
+        return false
+    }
+}
+
+ConfigWebView_RelocateSettingsGuiIfOpen() {
+    global GuiID_ConfigGUI, ConfigPanelScreenIndex
+    try {
+        if !IsObject(GuiID_ConfigGUI) || !GuiID_ConfigGUI.Hwnd
+            return
+        if !FuncExists("GetScreenInfo")
+            return
+        ScreenInfo := GetScreenInfo(ConfigPanelScreenIndex)
+        WinW := Max(980, Round(ScreenInfo.Width * 0.80))
+        WinH := Max(680, Round(ScreenInfo.Height * 0.80))
+        PosX := ScreenInfo.Left + Round((ScreenInfo.Width - WinW) / 2)
+        PosY := ScreenInfo.Top + Round((ScreenInfo.Height - WinH) / 2)
+        GuiID_ConfigGUI.Move(PosX, PosY, WinW, WinH)
+        try ConfigWebView_ApplyBounds()
+        catch {
+        }
+    } catch {
+    }
+}
+
+; 设置中心内置：不依赖 FuncExists / ConfigManager 加载时机
+ConfigWebView_ReadPersistedPopupScreenIndex() {
+    global ConfigFile, PanelScreenIndex
+    raw := Trim(String(IniRead(ConfigFile, "Appearance", "PopupScreenIndex", "")))
+    if (raw = "" || raw = "ERROR")
+        raw := Trim(String(IniRead(ConfigFile, "Appearance", "ScreenIndex", "1")))
+    idx := Integer(raw)
+    if (idx < 1)
+        idx := 1
+    monitorCount := 1
+    try monitorCount := MonitorGetCount()
+    catch
+        monitorCount := 1
+    if (idx > monitorCount)
+        idx := monitorCount
+    return idx
+}
+
+ConfigWebView_ApplyPopupScreenIndex(screenIndex) {
+    global PanelScreenIndex, ConfigPanelScreenIndex, MsgBoxScreenIndex, VoiceInputScreenIndex
+    global CursorPanelScreenIndex, ClipboardPanelScreenIndex, ConfigFile
+    idx := Integer(screenIndex)
+    if (idx < 1)
+        idx := 1
+    monitorCount := 1
+    try monitorCount := MonitorGetCount()
+    catch
+        monitorCount := 1
+    if (idx > monitorCount)
+        idx := monitorCount
+    PanelScreenIndex := idx
+    ConfigPanelScreenIndex := idx
+    MsgBoxScreenIndex := idx
+    VoiceInputScreenIndex := idx
+    CursorPanelScreenIndex := idx
+    ClipboardPanelScreenIndex := idx
+    IniWrite(idx, ConfigFile, "Appearance", "ScreenIndex")
+    IniWrite(idx, ConfigFile, "Appearance", "PopupScreenIndex")
+    IniWrite(idx, ConfigFile, "Advanced", "ConfigPanelScreenIndex")
+    IniWrite(idx, ConfigFile, "Advanced", "MsgBoxScreenIndex")
+    IniWrite(idx, ConfigFile, "Advanced", "VoiceInputScreenIndex")
+    IniWrite(idx, ConfigFile, "Advanced", "CursorPanelScreenIndex")
+    IniWrite(idx, ConfigFile, "Advanced", "ClipboardPanelScreenIndex")
+    return idx
+}
+
+ConfigWebView_RelocateSearchCenterIfOpen(*) {
+    global g_SCWV_Gui, g_SCWV_Visible
+    try {
+        if !IsObject(g_SCWV_Gui) || !g_SCWV_Gui.Hwnd
+            return
+        if !(IsSet(g_SCWV_Visible) && g_SCWV_Visible)
+            return
+        Nmer_MoveGuiToPopupScreen(g_SCWV_Gui)
+        try WinMaximize("ahk_id " . g_SCWV_Gui.Hwnd)
+        catch {
+        }
+        try SCWV_ApplyBounds()
+        catch {
+        }
+    } catch {
+    }
+}
+
+ConfigWebView_RelocateHubCapsuleIfOpen(*) {
+    global g_SelSense_MenuGui, g_SelSense_MenuVisible, g_SelSense_MenuShowingHub, g_SelSense_MenuW, g_SelSense_MenuH
+    try {
+        if !(IsSet(g_SelSense_MenuGui) && g_SelSense_MenuGui && IsSet(g_SelSense_MenuVisible) && g_SelSense_MenuVisible)
+            return
+        if !(IsSet(g_SelSense_MenuShowingHub) && g_SelSense_MenuShowingHub)
+            return
+        w := g_SelSense_MenuW
+        h := g_SelSense_MenuH
+        if (w < 200)
+            w := 420
+        if (h < 160)
+            h := 560
+        Nmer_DefaultPopupWindowXY(w, h, &x, &y)
+        try g_SelSense_MenuGui.Move(x, y, w, h)
+        catch {
+        }
+        try SelectionSense_ApplyMenuBounds()
+        catch {
+        }
+    } catch {
+    }
+}
+
+ConfigWebView_PersistPopupScreenIndex(screenIndex, &errorMsg := "") {
+    try {
+        ConfigWebView_ApplyPopupScreenIndex(screenIndex)
+        SetTimer(ConfigWebView_RelocateSettingsGuiIfOpen, -30)
+        SetTimer(ConfigWebView_RelocateSearchCenterIfOpen, -30)
+        SetTimer(ConfigWebView_RelocateHubCapsuleIfOpen, -30)
+        return true
+    } catch as e {
+        errorMsg := e.Message != "" ? e.Message : "弹窗位置保存失败"
+        return false
+    }
+}
+
+ConfigWebView_SaveDefaultStartTab(tab, &errorMsg := "") {
+    global DefaultStartTab, ConfigFile
+    try {
+        newTab := FuncExists("NormalizeDefaultStartTab")
+            ? NormalizeDefaultStartTab(tab) : Trim(String(tab))
+        if (newTab = "")
+            newTab := "general"
+        DefaultStartTab := newTab
+        IniWrite(DefaultStartTab, ConfigFile, "Settings", "DefaultStartTab")
         return true
     } catch as err {
         errorMsg := err.Message
@@ -2274,6 +2532,7 @@ ConfigWebView_OnMessage(sender, args) {
     switch action {
         case "ready":
             ConfigWV2Ready := true
+            ; 仅同步数据，不抢导航（默认页跳转由 ShowConfigWebViewGUI 延迟 initData 负责，且每窗仅一次）
             ConfigWebView_Send(Map("type", "initData", "payload", ConfigWebView_BuildInitDataSafe()))
             ConfigWebView_PostFullTextStatus(true)
             ConfigWebView_SendDockConfig()
@@ -2641,6 +2900,34 @@ ConfigWebView_OnMessage(sender, args) {
             if ok
                 saved := NormalizeIniThemeMode(IsSet(ThemeMode) ? ThemeMode : "dark", "dark")
             ConfigWebView_Send(Map("type", "saveThemeModeResult", "ok", ok, "error", err, "themeMode", saved))
+        case "saveDefaultStartTab":
+            tab := msg.Has("tab") ? msg["tab"] : (msg.Has("defaultStartTab") ? msg["defaultStartTab"] : "")
+            err := ""
+            ok := ConfigWebView_SaveDefaultStartTab(tab, &err)
+            savedTab := ""
+            if ok
+                savedTab := FuncExists("NormalizeDefaultStartTab")
+                    ? NormalizeDefaultStartTab(DefaultStartTab) : DefaultStartTab
+            ConfigWebView_Send(Map("type", "saveDefaultStartTabResult", "ok", ok, "error", err, "tab", savedTab))
+        case "savePopupScreenIndex":
+            idx := Integer(msg.Has("popupScreenIndex") ? msg["popupScreenIndex"] : (msg.Has("screenIndex") ? msg["screenIndex"] : 1))
+            err := ""
+            ok := ConfigWebView_PersistPopupScreenIndex(idx, &err)
+            savedIdx := ok ? ConfigWebView_ReadPersistedPopupScreenIndex() : idx
+            ConfigWebView_Send(Map("type", "savePopupScreenIndexResult", "ok", ok, "error", err, "popupScreenIndex", savedIdx))
+        case "saveGeneralSettings":
+            gPayload := msg.Get("payload", Map())
+            if (gPayload is String && gPayload != "") {
+                try gPayload := Jxon_Load(gPayload)
+                catch {
+                    gPayload := Map()
+                }
+            }
+            if !(gPayload is Map)
+                gPayload := Map()
+            err := ""
+            ok := ConfigWebView_SaveGeneralSettings(gPayload, &err)
+            ConfigWebView_Send(Map("type", "saveGeneralSettingsResult", "ok", ok, "error", err))
         case "saveHoleSettings":
             payload := msg.Get("payload", Map())
             if (payload is String && payload != "") {
@@ -2691,6 +2978,75 @@ ConfigWebView_OnMessage(sender, args) {
                 err := e.Message
             }
             ConfigWebView_Send(Map("type", "saveKeybinderToolbarLayoutResult", "ok", ok, "error", err))
+        case "vkStartRecord":
+            cmdId := Trim(String(msg.Get("commandId", "")))
+            if (cmdId != "" && FuncExists("_BeginRecord")) {
+                ConfigWebView_VkEnsureCommandsLoaded()
+                try _BeginRecord(cmdId, "replace_global", "")
+                catch as e {
+                    ConfigWebView_Send(Map("type", "vkWebEvent", "event", Map("type", "recordHint", "active", false)))
+                    OutputDebug("[ConfigWebView] vkStartRecord: " . e.Message)
+                }
+            }
+        case "vkCancelRecord":
+            if FuncExists("_EndRecord")
+                try _EndRecord()
+            catch {
+            }
+            ConfigWebView_Send(Map("type", "vkWebEvent", "event", Map("type", "recordHint", "active", false)))
+        case "vkBindKey":
+            cmdId := Trim(String(msg.Get("commandId", "")))
+            ahkKey := Trim(String(msg.Get("ahkKey", "")))
+            displayKey := msg.Has("displayKey") ? String(msg["displayKey"]) : ahkKey
+            if (cmdId != "" && ahkKey != "" && FuncExists("_DoBindKey")) {
+                ConfigWebView_VkEnsureCommandsLoaded()
+                try {
+                    if _DoBindKey(cmdId, ahkKey, displayKey, "replace_global")
+                        ConfigWebView_VkPushBindingsSnapshot()
+                } catch as e {
+                    OutputDebug("[ConfigWebView] vkBindKey: " . e.Message)
+                }
+            }
+        case "vkClearBinding":
+            cmdId := Trim(String(msg.Get("commandId", "")))
+            if (cmdId != "" && FuncExists("_DoClearBinding")) {
+                ConfigWebView_VkEnsureCommandsLoaded()
+                try {
+                    _DoClearBinding(cmdId)
+                    ConfigWebView_VkPushBindingsSnapshot()
+                } catch as e {
+                    OutputDebug("[ConfigWebView] vkClearBinding: " . e.Message)
+                }
+            }
+        case "vkResetBinding":
+            cmdId := Trim(String(msg.Get("commandId", "")))
+            if (cmdId != "" && FuncExists("_DoResetSingle")) {
+                ConfigWebView_VkEnsureCommandsLoaded()
+                try {
+                    _DoResetSingle(cmdId)
+                    ConfigWebView_VkPushBindingsSnapshot()
+                } catch as e {
+                    OutputDebug("[ConfigWebView] vkResetBinding: " . e.Message)
+                }
+            }
+        case "vkResolveConflict":
+            if FuncExists("_DoBindKey") && msg.Has("confirm") && msg["confirm"] {
+                cmdId := Trim(String(msg.Get("commandId", "")))
+                ahkKey := Trim(String(msg.Get("ahkKey", "")))
+                displayKey := msg.Has("displayKey") ? String(msg["displayKey"]) : ahkKey
+                if (cmdId != "" && ahkKey != "") {
+                    ConfigWebView_VkEnsureCommandsLoaded()
+                    try {
+                        if _DoBindKey(cmdId, ahkKey, displayKey, "replace_global")
+                            ConfigWebView_VkPushBindingsSnapshot()
+                    } catch as e {
+                        OutputDebug("[ConfigWebView] vkResolveConflict: " . e.Message)
+                    }
+                }
+            }
+            ConfigWebView_Send(Map("type", "vkWebEvent", "event", Map("type", "recordHint", "active", false)))
+        case "probeVk":
+            ConfigWebView_Send(Map("type", "vkStatus", "available", ConfigWebView_IsVkAvailable()))
         case "invokeAction":
             op := msg.Get("op", msg.Get("action", ""))
             payload := msg.Get("payload", Map())
@@ -2811,22 +3167,8 @@ ConfigWebView_OnMessage(sender, args) {
                         WebViewPromptTemplateDelete(payload)
                     case "promptTemplateSetDefault":
                         WebViewPromptTemplateSetDefault(payload)
-                    case "openLegacySettings":
-                        try {
-                            CloseConfigGUI()
-                        } catch {
-                        }
-                        OpenLegacyConfigGUI()
-                    case "openLegacyTab":
-                        targetTab := msg.Get("tab", "general")
-                        try {
-                            CloseConfigGUI()
-                        } catch {
-                        }
-                        OpenLegacyConfigGUI(targetTab)
-                    case "openCompareSettings":
-                        ; 淇濈暀褰撳墠 WebView锛屽悓鏃跺啀鎵撳紑涓€浠藉師鐗堣缃〉鐢ㄤ簬瀵圭収
-                        OpenLegacyConfigGUI()
+                    case "showVk":
+                        ConfigWebView_OpenVkKeybinder()
                     default:
                         ok := false
                         err := "鏈煡鎿嶄綔: " . op
@@ -2836,8 +3178,6 @@ ConfigWebView_OnMessage(sender, args) {
                 err := e.Message
             }
             ConfigWebView_Send(Map("type", "actionResult", "ok", ok, "error", err, "op", op))
-            if ok
-                ConfigWebView_Send(Map("type", "initData", "payload", ConfigWebView_BuildInitDataSafe()))
         case "openAppRelease":
             ok := false
             err := ""
@@ -2952,7 +3292,8 @@ SaveConfigGUIPosition(ConfigGUI) {
 
 ; WebView 设置页关闭（由 CloseConfigGUI 在 ConfigWebViewMode 下调用）
 ConfigWebView_Close() {
-    global GuiID_ConfigGUI, ConfigWV2Ctrl, ConfigWV2
+    global GuiID_ConfigGUI, ConfigWV2Ctrl, ConfigWV2, g_ConfigWebView_StartTabNavigated
+    g_ConfigWebView_StartTabNavigated := false
     try {
         if IsSet(ConfigWV2) && ConfigWV2
             ConfigWV2.ExecuteScriptAsync("(function(){try{if(window.__nmerFlushStudioLlm)window.__nmerFlushStudioLlm();if(window.__nmerFlushSettingsTab)window.__nmerFlushSettingsTab();}catch(e){}})()")
