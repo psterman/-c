@@ -103,7 +103,7 @@
       embedTarget = document.querySelector(opts.anchorSelector);
     }
     if (!embedTarget) {
-      var probes = ['#composerFooter', '#cmp', '.footer', '.panel-footer', '.bottom-bar', '.status-bar', '.composer-footer'];
+      var probes = ['#composerExtrasBody', '#composerToolbar', '#composerFooter', '#cmp', '.footer', '.panel-footer', '.bottom-bar', '.status-bar', '.composer-footer'];
       for (var p = 0; p < probes.length; p++) {
         var found = document.querySelector(probes[p]);
         if (found) {

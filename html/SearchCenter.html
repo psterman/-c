@@ -2582,18 +2582,54 @@ body.sc-cli-layout #app {
 }
 .sc-status-bar {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 8px 12px 6px;
   border-radius: 12px;
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
-  min-height: 36px;
+  min-height: 52px;
   width: 100%;
+}
+.sc-status-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.sc-status-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+.sc-status-cap {
+  font-size: 10px;
+  line-height: 1.25;
+  color: var(--muted);
+  text-align: center;
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sc-status-cap-live {
+  color: var(--text);
+  max-width: 92px;
+}
+.sc-status-dot-wrap {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 .sc-status-bar .sc-status-spacer {
   flex: 1 1 auto;
   min-width: 8px;
+  align-self: stretch;
 }
 .sc-status-btn {
   width: 32px;
@@ -2611,6 +2647,10 @@ body.sc-cli-layout #app {
   justify-content: center;
   cursor: pointer;
   position: relative;
+}
+.sc-status-icon {
+  font-size: 14px;
+  line-height: 1;
 }
 .sc-status-btn:hover {
   border-color: rgba(255,179,71,.45);
@@ -2668,7 +2708,7 @@ body.sc-cli-layout #app {
 }
 body.nm-dock-mounted #app.sc-container,
 body.nm-dock-mounted #app {
-  padding-bottom: 48px;
+  padding-bottom: 58px;
 }
 .cli-workspace {
   flex: 1 1 auto;
@@ -3079,13 +3119,48 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
 
   <footer id="footer" class="sc-footer-stack sc-page-column">
     <div id="sc-status-bar" class="sc-status-bar" aria-label="状态栏">
-      <button id="btn-ft-toggle" class="sc-status-btn sc-status-btn-ft" type="button" title="启动全文索引" aria-label="全文索引">▶</button>
-      <span class="dock-status-dot" id="ft-summary-dot" title="全文索引状态"></span>
-      <button type="button" id="btn-ft-open-console" class="sc-status-btn" title="打开全文索引控制台" aria-label="索引控制台">⚙</button>
+      <div class="sc-status-group sc-status-group-ft">
+        <div class="sc-status-item">
+          <button id="btn-ft-toggle" class="sc-status-btn sc-status-btn-ft" type="button" title="启动全文索引" aria-label="全文索引">
+            <span class="sc-status-icon" id="ft-toggle-icon">▶</span>
+          </button>
+          <span class="sc-status-cap" id="ft-toggle-cap">启动索引</span>
+        </div>
+        <div class="sc-status-item">
+          <span class="sc-status-dot-wrap" title="全文索引状态">
+            <span class="dock-status-dot" id="ft-summary-dot"></span>
+          </span>
+          <span class="sc-status-cap sc-status-cap-live" id="ft-status-cap">准备中</span>
+        </div>
+        <div class="sc-status-item">
+          <button type="button" id="btn-ft-open-console" class="sc-status-btn" title="打开全文索引控制台" aria-label="索引控制台">
+            <span class="sc-status-icon">⚙</span>
+          </button>
+          <span class="sc-status-cap">控制台</span>
+        </div>
+      </div>
       <span class="sc-status-spacer"></span>
-      <span class="dock-status-dot" id="dock-sync-dot" title="搜索状态"></span>
-      <button type="button" id="btn-sc-recycle" class="sc-status-btn" title="搜索中心回收站" aria-label="搜索回收站">🗑<span class="recycle-badge muted" id="recycle-badge">0</span></button>
-      <button type="button" id="btn-win-recycle-sc" class="sc-status-btn" title="打开系统回收站" aria-label="系统回收站">♻</button>
+      <div class="sc-status-group sc-status-group-dock">
+        <div class="sc-status-item">
+          <span class="sc-status-dot-wrap" title="搜索状态">
+            <span class="dock-status-dot" id="dock-sync-dot"></span>
+          </span>
+          <span class="sc-status-cap sc-status-cap-live" id="dock-status-cap">已同步</span>
+        </div>
+        <div class="sc-status-item">
+          <button type="button" id="btn-sc-recycle" class="sc-status-btn" title="搜索中心回收站" aria-label="搜索回收站">
+            <span class="sc-status-icon">🗑</span>
+            <span class="recycle-badge muted" id="recycle-badge">0</span>
+          </button>
+          <span class="sc-status-cap" id="sc-recycle-cap">搜索回收站</span>
+        </div>
+        <div class="sc-status-item">
+          <button type="button" id="btn-win-recycle-sc" class="sc-status-btn" title="打开系统回收站" aria-label="系统回收站">
+            <span class="sc-status-icon">♻</span>
+          </button>
+          <span class="sc-status-cap">系统回收站</span>
+        </div>
+      </div>
     </div>
     <div class="sc-status-metrics-hidden" aria-hidden="true">
       <span id="ft-state-box" class="ft-state-box">状态: 准备中</span>
@@ -5053,6 +5128,45 @@ function buildDockStatusTooltip() {
   return "本地结果 " + n + " 条 · 已选引擎 " + eng + " 个 · 当前限制 " + limit;
 }
 
+function buildDockStatusCaption() {
+  if (state.clipboardHomeLock || String(state.filterType || "") === "clipboard") {
+    const n = Array.isArray(state.results) ? state.results.length : 0;
+    return n > 0 ? ("剪贴板 " + n + " 条") : "剪贴板";
+  }
+  const n = Array.isArray(state.results) ? state.results.length : 0;
+  const eng = Array.isArray(state.selectedEngines) ? state.selectedEngines.length : 0;
+  if (state.statusLine) {
+    const m = String(state.statusLine).match(/本地结果\s*(\d+)\s*条/);
+    if (m) return "本地 " + m[1] + " 条";
+  }
+  if (eng > 0) return "本地 " + n + " 条 · " + eng + " 引擎";
+  return n > 0 ? ("本地 " + n + " 条") : "已同步";
+}
+
+function buildFtStatusCaption() {
+  const ft = state.fulltext || {};
+  const phaseMap = {
+    startup: "准备中",
+    walking: "扫描目录",
+    indexing: "建立索引",
+    idle_wait: "等待空闲",
+    ready: "索引就绪",
+    idle: "空闲"
+  };
+  const phaseRaw = String(ft.scanPhase || "").toLowerCase();
+  let phase = phaseMap[phaseRaw] || (ft.running ? "索引运行" : "空闲");
+  if (ft.running && ft.ready && phaseRaw === "indexing") phase = "建立索引";
+  else if (ft.running && ft.ready && phaseRaw !== "indexing") phase = phaseMap[phaseRaw] || "监控中";
+  const discovered = Number(ft.discoveredFiles) || 0;
+  const processed = Number(ft.processedFiles) || 0;
+  const pending = Number(ft.pendingTasks) || 0;
+  const total = Math.max(discovered, processed + pending);
+  if (ft.lastError && !ft.running) return "索引异常";
+  if (ft.running && total > 0) return phase + " " + processed + "/" + total;
+  if (ft.ready) return "索引就绪";
+  return phase;
+}
+
 function buildFtSummaryTooltip() {
   const parts = [];
   const stateBox = document.getElementById("ft-state-box");
@@ -5071,16 +5185,34 @@ function buildFtSummaryTooltip() {
 
 function syncStatusBarUi() {
   const tip = buildDockStatusTooltip();
+  const dockCap = document.getElementById("dock-status-cap");
+  if (dockCap) dockCap.textContent = buildDockStatusCaption();
   const dockDot = document.getElementById("dock-sync-dot");
-  if (dockDot) dockDot.title = tip;
+  if (dockDot) {
+    dockDot.title = tip;
+    dockDot.classList.remove("active", "ready", "warn");
+    const n = Array.isArray(state.results) ? state.results.length : 0;
+    if (n > 0) dockDot.classList.add("ready");
+    else dockDot.classList.add("active");
+  }
   const status = document.getElementById("status");
   if (status) status.textContent = tip;
+  const ftCap = document.getElementById("ft-status-cap");
+  if (ftCap) ftCap.textContent = buildFtStatusCaption();
   const ftDot = document.getElementById("ft-summary-dot");
   if (ftDot) ftDot.title = buildFtSummaryTooltip();
+  const toggleCap = document.getElementById("ft-toggle-cap");
+  const running = !!(state.fulltext && state.fulltext.running);
+  if (toggleCap) toggleCap.textContent = running ? "停止索引" : "启动索引";
   const recycleBtn = document.getElementById("btn-sc-recycle");
   if (recycleBtn) {
     const n = Number(state.recycleCount) || 0;
     recycleBtn.title = n > 0 ? ("搜索中心回收站（" + n + " 条）") : "搜索中心回收站";
+  }
+  const recycleCap = document.getElementById("sc-recycle-cap");
+  if (recycleCap) {
+    const n = Number(state.recycleCount) || 0;
+    recycleCap.textContent = n > 0 ? ("回收站 " + n + " 条") : "搜索回收站";
   }
   const winRecycle = document.getElementById("btn-win-recycle-sc");
   if (winRecycle) winRecycle.title = "打开 Windows 系统回收站";
@@ -5624,9 +5756,10 @@ function applyFulltextStatus(payload) {
     hintEl.title = hint;
   }
   const toggleBtn = document.getElementById("btn-ft-toggle");
+  const toggleIcon = document.getElementById("ft-toggle-icon");
   if (toggleBtn) {
     const running = !!state.fulltext.running;
-    toggleBtn.textContent = running ? "■" : "▶";
+    if (toggleIcon) toggleIcon.textContent = running ? "■" : "▶";
     toggleBtn.classList.toggle("running", running);
     toggleBtn.title = running ? "停止全文索引" : "启动全文索引";
     toggleBtn.setAttribute("aria-label", toggleBtn.title);
@@ -6445,6 +6578,7 @@ function syncResultCountLabel() {
   } else {
     el.textContent = `${n} 条`;
   }
+  syncStatusBarUi();
 }
 
 function renderSubtagPanel() {
@@ -8392,6 +8526,8 @@ function syncRecycleBadge() {
   if (recycleBtn) {
     recycleBtn.title = n > 0 ? ("搜索中心回收站（" + n + " 条）") : "搜索中心回收站";
   }
+  const recycleCap = document.getElementById("sc-recycle-cap");
+  if (recycleCap) recycleCap.textContent = n > 0 ? ("回收站 " + n + " 条") : "搜索回收站";
 }
 
 function renderRecycleModalList() {

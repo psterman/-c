@@ -90,7 +90,7 @@ body.cli-mode .cli-shell{border:none;border-radius:0;background:rgba(0,0,0,.15)}
 body.cli-mode .cli-bar{padding:calc(6px * var(--ui)) calc(10px * var(--ui));border-bottom:1px solid rgba(0,229,255,.12);background:rgba(0,0,0,.22)}
 body.cli-mode #msgs{display:none!important}
 body.cli-mode #cmp{display:flex!important;flex-shrink:0;padding:calc(8px * var(--ui)) calc(12px * var(--ui));border-top:1px solid rgba(0,229,255,.1)}
-body.cli-mode #input,body.cli-mode #composerFooter,body.cli-mode .utility-row,body.cli-mode #attachList{display:none!important}
+body.cli-mode #input,body.cli-mode #composerFooter,body.cli-mode #composerToolbar,body.cli-mode .utility-row,body.cli-mode #attachList{display:none!important}
 body.cli-mode #composerHint{font-size:calc(10px * var(--ui));margin-top:calc(4px * var(--ui))}
 body.cli-mode #chatStatusRow{margin-top:calc(4px * var(--ui))}
 :root{--mobile-browser-w:400px}
@@ -132,21 +132,33 @@ body[data-theme="light"] .m-act-btn:hover{border-color:#D35400;color:#D35400;bac
 .m .mb a:hover{text-decoration:underline}
 .hl-comment{color:#6a9955}.hl-string{color:#ce9178}.hl-number{color:#b5cea8}.hl-keyword{color:#ff9b52}.hl-builtins{color:#4fc1ff}.hl-var{color:#dcdcaa}
 :root{--ftb-safe-bottom:0px}
-#cmp{flex-shrink:0;padding:calc(14px * var(--ui)) calc(16px * var(--ui)) calc(18px * var(--ui));border-top:1px solid rgba(255,102,0,.15);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);position:relative}
-body.drawer-open #cmp{padding-bottom:calc(18px * var(--ui) + var(--ftb-safe-bottom))}
+#cmp{flex-shrink:0;padding:calc(10px * var(--ui)) calc(12px * var(--ui)) calc(10px * var(--ui));border-top:1px solid rgba(255,102,0,.15);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);position:relative}
+body.drawer-open #cmp{padding-bottom:calc(10px * var(--ui) + var(--ftb-safe-bottom))}
 body.drawer-open #chatStatusRow{padding-bottom:calc(2px * var(--ui))}
-#input{width:100%;min-height:calc(96px * var(--ui));resize:vertical;border:1px solid rgba(255,102,0,.2);border-radius:calc(14px * var(--ui));background:rgba(8,8,8,.72);color:var(--text);padding:calc(10px * var(--ui)) calc(12px * var(--ui));outline:none;user-select:text;-webkit-user-select:text}
-#composerFooter{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:calc(10px * var(--ui));margin-top:calc(12px * var(--ui))}
-.drawer-toolbar{display:flex;flex-direction:row;align-items:center;gap:calc(6px * var(--ui));min-width:0;background:transparent;padding:0}
+#input{width:100%;min-height:calc(72px * var(--ui));max-height:min(28vh,220px);resize:vertical;border:1px solid rgba(255,102,0,.2);border-radius:calc(12px * var(--ui));background:rgba(8,8,8,.72);color:var(--text);padding:calc(8px * var(--ui)) calc(10px * var(--ui));outline:none;user-select:text;-webkit-user-select:text}
+#composerFooter,#composerToolbar{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:calc(6px * var(--ui));margin-top:calc(8px * var(--ui));min-width:0}
+#composerToolbar #chatModelBar{flex:1 1 auto;min-width:0;margin:0}
+.drawer-toolbar{display:flex;flex-direction:row;align-items:center;gap:calc(4px * var(--ui));min-width:0;background:transparent;padding:0}
 #sendWrap{flex-shrink:0;display:flex;align-items:center}
-.attach-wrap{display:flex;align-items:center;gap:calc(6px * var(--ui));flex-wrap:wrap;flex:1;min-width:0}
-.utility-row{display:flex;flex-direction:column;align-items:stretch;gap:calc(6px * var(--ui));margin-top:calc(10px * var(--ui));min-height:calc(40px * var(--ui))}
-.utility-row .drawer-toolbar{display:flex;flex-direction:row;align-items:center;gap:calc(6px * var(--ui));min-width:0;flex:1}
+.attach-wrap{display:flex;align-items:center;gap:calc(4px * var(--ui));flex-wrap:nowrap;flex-shrink:0}
+.composer-ico-btn{width:calc(32px * var(--ui));height:calc(32px * var(--ui));min-width:calc(32px * var(--ui));padding:0;border-radius:calc(8px * var(--ui));border:1px solid rgba(255,102,0,.2);background:rgba(255,255,255,.04);color:var(--text);font-size:calc(14px * var(--ui));line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.composer-ico-btn:hover{border-color:rgba(255,102,0,.4);background:rgba(255,102,0,.1)}
+.composer-ico-btn[aria-expanded="true"]{border-color:rgba(255,102,0,.5);color:var(--orange)}
+.utility-row{display:flex;flex-direction:column;align-items:stretch;gap:calc(4px * var(--ui));margin-top:calc(6px * var(--ui));min-height:0}
+.utility-row .drawer-toolbar{display:flex;flex-direction:row;align-items:center;gap:calc(4px * var(--ui));min-width:0;width:100%}
+.utility-row .drawer-toolbar .icon-btns{flex:1 1 auto;min-width:0;overflow-x:auto}
+.drawer-toolbar-end{flex:0 0 auto;margin-left:auto;display:flex;align-items:center}
+.eye-space-panel{display:none;flex-direction:column;gap:calc(4px * var(--ui));width:100%;max-height:min(36vh,280px);overflow:auto;border:1px solid rgba(255,102,0,.14);border-radius:calc(8px * var(--ui));background:rgba(0,0,0,.22);padding:calc(4px * var(--ui)) calc(6px * var(--ui));box-sizing:border-box}
+.eye-space-panel.is-open{display:flex}
+.eye-space-panel #chatStatusRow{margin:0;padding:calc(2px * var(--ui)) 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.eye-space-panel #chatStatusRow:last-child{border-bottom:none}
+.eye-space-panel .audit-panel{border:none;background:transparent}
+.eye-space-panel .audit-timeline{max-height:calc(120px * var(--ui))}
 .st{font-size:calc(12px * var(--ui));color:var(--muted)}.st.error{color:#ff7a59}.st.success{color:#4ed08b}
-.btn1{min-height:calc(36px * var(--ui));padding:0 calc(14px * var(--ui));border-radius:calc(10px * var(--ui));border:1px solid rgba(255,102,0,.3);cursor:pointer;font-weight:700;font-size:calc(13px * var(--ui));background:linear-gradient(180deg,#ff7d26,#ff6600);color:#111;transition:all var(--ease)}
+.btn1{min-height:calc(32px * var(--ui));padding:0 calc(12px * var(--ui));border-radius:calc(10px * var(--ui));border:1px solid rgba(255,102,0,.3);cursor:pointer;font-weight:700;font-size:calc(12px * var(--ui));background:linear-gradient(180deg,#ff7d26,#ff6600);color:#111;transition:all var(--ease)}
 .btn1:disabled{opacity:.45;cursor:not-allowed}
 .btn2,.btn3{height:calc(38px * var(--ui));padding:0 calc(14px * var(--ui));border-radius:calc(10px * var(--ui));font-size:calc(13px * var(--ui));border:1px solid rgba(255,102,0,.22);cursor:pointer;background:rgba(255,255,255,.04);color:var(--text)}
-#chatStatusRow{margin-top:calc(6px * var(--ui));min-height:0}
+#chatStatusRow{margin-top:0;min-height:0}
 #chatStatusRow,#chat-status,#config-status{user-select:text;-webkit-user-select:text;cursor:text}
 #chat-status.error{cursor:text}
 .hud-toggle{width:calc(34px * var(--ui));height:calc(34px * var(--ui));display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,102,0,.22);border-radius:calc(8px * var(--ui));background:rgba(255,255,255,.04);color:var(--orange);cursor:pointer;flex-shrink:0}
@@ -694,6 +706,8 @@ body[data-theme="light"] .sandbox-advanced{background:rgba(255,250,245,.8)}
 body[data-theme="light"] .sandbox-fold{background:rgba(255,255,255,.5)}
 .audit-panel{width:100%;flex-shrink:0;border:1px solid rgba(255,102,0,.14);border-radius:calc(8px * var(--ui));background:rgba(0,0,0,.18);overflow:hidden}
 .audit-panel.collapsed .audit-timeline{display:none}
+.audit-panel.collapsed .audit-head{border-bottom:none}
+#chatStatusRow .st{font-size:calc(10px * var(--ui));line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .audit-head{display:flex;align-items:center;gap:calc(6px * var(--ui));padding:calc(4px * var(--ui)) calc(8px * var(--ui));border-bottom:1px solid rgba(255,102,0,.1);font-size:calc(10px * var(--ui));color:var(--muted)}
 .audit-head span:first-child{flex:1;font-weight:600;color:var(--text)}
 .audit-head button{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:calc(10px * var(--ui));padding:calc(2px * var(--ui)) calc(6px * var(--ui));border-radius:calc(4px * var(--ui))}
@@ -724,15 +738,16 @@ body[data-theme="light"] .sandbox-fold{background:rgba(255,255,255,.5)}
 .thread-popover-item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:calc(2px * var(--ui))}
 .thread-popover-item-close{flex-shrink:0;width:calc(22px * var(--ui));height:calc(22px * var(--ui));border:none;border-radius:calc(6px * var(--ui));background:transparent;color:var(--muted);cursor:pointer;font-size:calc(14px * var(--ui));line-height:1}
 .thread-popover-foot{padding:calc(4px * var(--ui)) calc(8px * var(--ui)) 0;border-top:1px solid rgba(255,102,0,.1);margin-top:calc(4px * var(--ui))}
-.composer-hint{font-size:calc(10px * var(--ui));color:var(--muted);padding:calc(2px * var(--ui)) calc(2px * var(--ui)) calc(6px * var(--ui));line-height:1.45}
-body.view-control #input,body.view-control #composerFooter,body.view-control #attachList{display:none!important}
+.composer-hint{font-size:calc(10px * var(--ui));color:var(--muted);padding:calc(4px * var(--ui)) calc(4px * var(--ui)) 0;line-height:1.4}
+.composer-hint.is-collapsed{display:none}
+body.view-control #input,body.view-control #composerFooter,body.view-control #composerToolbar,body.view-control #attachList{display:none!important}
 body.view-control #composerHint{color:color-mix(in srgb,var(--orange) 70%,var(--muted) 30%)}
 .setup-banner{margin:calc(8px * var(--ui)) calc(10px * var(--ui)) 0;padding:calc(10px * var(--ui)) calc(12px * var(--ui));border:1px solid rgba(255,102,0,.28);border-radius:calc(10px * var(--ui));background:rgba(255,102,0,.08);font-size:calc(11px * var(--ui));line-height:1.5}
 .setup-banner-title{font-weight:700;color:var(--text);margin-bottom:calc(4px * var(--ui))}
 .setup-banner-actions{display:none}
-.chat-model-bar{display:flex;flex-direction:column;gap:0;margin:calc(8px * var(--ui)) 0 0;padding:0;border:none;border-radius:0;background:transparent}
+.chat-model-bar{display:flex;flex-direction:column;gap:0;margin:0;padding:0;border:none;border-radius:0;background:transparent;flex:1 1 auto;min-width:0}
 .chat-model-bar[hidden]{display:none!important}
-.chat-model-bar-top{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--ui));min-height:calc(28px * var(--ui))}
+.chat-model-bar-top{display:flex;align-items:center;justify-content:space-between;gap:calc(4px * var(--ui));min-height:calc(28px * var(--ui))}
 .chat-model-bar-head{display:flex;align-items:center;gap:calc(6px * var(--ui));min-width:0;flex:1;padding:calc(4px * var(--ui)) calc(2px * var(--ui));border:none;background:transparent;color:var(--muted);cursor:pointer;text-align:left;border-radius:calc(6px * var(--ui));font-size:calc(11px * var(--ui))}
 .chat-model-bar-head:hover{color:var(--text);background:rgba(255,255,255,.04)}
 .chat-model-bar-head:focus-visible{outline:1px solid rgba(255,102,0,.4);outline-offset:2px}
@@ -781,11 +796,12 @@ body.nspick-open #newSessionPick{opacity:1;pointer-events:auto}
 #newSessionPick .nsbg{display:none}
 #newSessionPick .ns-panel.ns-slide-panel{position:absolute;top:0;right:0;bottom:0;left:auto;width:min(calc(320px * var(--ui)),92%);max-height:none;transform:translateX(100%);transition:transform var(--de);border-radius:0;border-top:none;border-bottom:none;border-right:none;box-shadow:-8px 0 28px rgba(0,0,0,.35)}
 body.nspick-open #newSessionPick .ns-slide-panel{transform:translateX(0)}
-.debug-hud{display:none;width:100%;flex-shrink:0;max-height:calc(52px * var(--ui));overflow:auto;box-sizing:border-box;padding:calc(4px * var(--ui)) calc(8px * var(--ui));border:1px solid rgba(255,102,0,.14);border-radius:calc(8px * var(--ui));background:rgba(0,0,0,.2);font:calc(10px * var(--ui))/1.4 "AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;color:var(--muted);pointer-events:none}
+.debug-hud{display:none;width:100%;flex-shrink:0;max-height:calc(72px * var(--ui));overflow:auto;box-sizing:border-box;padding:calc(4px * var(--ui)) calc(6px * var(--ui));border-top:1px solid rgba(255,255,255,.06);font:calc(10px * var(--ui))/1.4 "AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;color:var(--muted);pointer-events:none}
 .debug-hud .row{display:block;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .debug-hud .row.err{color:#ff7a59}
 .debug-hud .row.ok{color:color-mix(in srgb, var(--orange) 78%, #fff 22%)}
-body.debug-hud-on .debug-hud{display:block}
+.eye-space-panel.is-open .debug-hud{display:none}
+body.debug-hud-on .eye-space-panel.is-open .debug-hud{display:block}
 body[data-theme="light"] .debug-hud{background:rgba(255,255,255,.55);border-color:rgba(214,100,20,.2);color:#7a644f}
 .nsbg{position:absolute;inset:0;background:rgba(0,0,0,.5)}
 .ns-panel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(calc(380px * var(--ui)),calc(100% - 28px));max-height:min(calc(440px * var(--ui)),72vh);background:var(--panel2);border:1px solid rgba(255,102,0,.28);border-radius:calc(18px * var(--ui));display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.45)}
@@ -1172,15 +1188,12 @@ body.niuma-confirm-open{overflow:hidden}
 <div id="ollamaSetupBody" class="hint mini">请点下方「同步」：自动启动本机服务并加载云模型目录（需已 ollama signin）。</div>
 </div>
 <textarea id="input" placeholder="输入消息…"></textarea>
-<div id="composerHint" class="composer-hint">Ctrl+Enter 发送 · Ctrl+1~9 切换节点 · Ctrl+Tab 任务看板 · 顶部「对话/后台」切换视图</div>
-<div id="composerFooter">
+<div id="composerToolbar">
 <div class="attach-wrap">
 <input id="attachFileInput" type="file" multiple style="display:none" />
 <input id="attachFolderInput" type="file" multiple webkitdirectory directory style="display:none" />
-<button class="btn3" id="attachFileBtn" type="button">添加文件</button>
-<button class="btn3" id="attachFolderBtn" type="button">添加文件夹</button>
-</div>
-<div id="sendWrap"><button class="btn1" id="send" type="button">发送消息</button></div>
+<button class="composer-ico-btn" id="attachFileBtn" type="button" title="添加文件" aria-label="添加文件">📎</button>
+<button class="composer-ico-btn" id="attachFolderBtn" type="button" title="添加文件夹" aria-label="添加文件夹">📁</button>
 </div>
 <div id="chatModelBar" class="chat-model-bar is-collapsed" hidden aria-label="切换模型">
 <div class="chat-model-bar-top">
@@ -1204,26 +1217,35 @@ body.niuma-confirm-open{overflow:hidden}
 <div id="chatModelChips" class="chat-model-chips" role="listbox" aria-label="可选模型"></div>
 </div>
 </div>
+<button type="button" class="composer-ico-btn" id="composerHintBtn" title="快捷键说明" aria-expanded="false" aria-label="快捷键">⌨</button>
+<div id="sendWrap"><button class="btn1" id="send" type="button" title="Ctrl+Enter 发送">发送</button></div>
+</div>
+<div id="composerFooter" hidden aria-hidden="true"></div>
+<div id="composerHint" class="composer-hint is-collapsed">Ctrl+Enter 发送 · Ctrl+1~9 切换节点 · Ctrl+Tab 任务看板 · 顶部「对话/后台」切换视图</div>
 <div class="utility-row">
 <div class="drawer-toolbar">
 <button type="button" class="logo-btn" data-logo-toggle title="收起"><img class="logo-img" alt="" /></button>
 <div id="drawerBtns" class="icon-btns"></div>
-<button id="hudToggleBtn" class="hud-toggle" type="button" title="显示/隐藏实时日志" aria-label="显示/隐藏实时日志">
+<div class="drawer-toolbar-end">
+<button id="hudToggleBtn" class="hud-toggle" type="button" title="状态、执行记录与日志（Shift+点击开关调试日志）" aria-label="状态与记录" aria-expanded="false">
   <svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/></svg>
 </button>
 </div>
+</div>
+<div id="eyeSpacePanel" class="eye-space-panel" aria-label="状态与记录">
+<div id="chatStatusRow"><div class="st" id="chat-status" title="可选中后 Ctrl+C 复制">就绪</div></div>
 <div id="auditPanel" class="audit-panel">
 <header class="audit-head">
 <span>执行记录</span>
-<button type="button" id="auditCollapseBtn">折叠</button>
-<button type="button" id="auditClearBtn">清空</button>
+<button type="button" id="auditCollapseBtn" title="展开/折叠">折叠</button>
+<button type="button" id="auditClearBtn" title="清空记录">清空</button>
 </header>
 <div id="auditTimeline" class="audit-timeline"></div>
 </div>
 <div id="debugHud" class="debug-hud" aria-live="polite"></div>
 </div>
+</div>
 <div id="attachList"></div>
-<div id="chatStatusRow"><div class="st" id="chat-status" title="可选中后 Ctrl+C 复制">就绪</div></div>
 <div id="threadPopover" class="thread-popover" aria-hidden="true" role="menu" hidden></div>
 </section>
 </div>
@@ -1308,6 +1330,8 @@ body.niuma-confirm-open{overflow:hidden}
     SESSIONS_LS = 'niuma_chat_sessions_v1',
     NIUMA_HISTORY_LS = 'niuma_chat_history_v1',
     AUDIT_LS = 'niuma_chat_audit_v1',
+    COMPOSER_HINT_COLLAPSED_LS = 'niuma_composer_hint_collapsed_v1',
+    EYE_SPACE_LS = 'niuma_eye_space_open_v1',
     DEBUG_HUD_LS = 'niuma_chat_debug_hud_v1',
     NIUMA_HISTORY_API = '/api/niuma/history',
     NIUMA_AUDIT_API = '/api/niuma/audit',
@@ -1861,6 +1885,8 @@ body.niuma-confirm-open{overflow:hidden}
     empty = $('empty'),
     input = $('input'),
     composerHint = $('composerHint'),
+    composerHintBtn = $('composerHintBtn'),
+    eyeSpacePanel = $('eyeSpacePanel'),
     ollamaSetupBanner = $('ollamaSetupBanner'),
     chatModelBar = $('chatModelBar'),
     chatModelBarBody = $('chatModelBarBody'),
@@ -2046,6 +2072,7 @@ body.niuma-confirm-open{overflow:hidden}
     threadRailFocused: false,
     auditLog: [],
     auditCollapsed: false,
+    eyeSpaceOpen: false,
     ollamaReachable: null,
     ollamaModels: [],
     ollamaCloudCatalog: [],
@@ -2121,11 +2148,37 @@ body.niuma-confirm-open{overflow:hidden}
     } catch (_) {}
   }
 
-  function applyDebugHudState() {
-    var hud = document.getElementById('debugHud');
+  function loadEyeSpacePref() {
+    try {
+      var raw = localStorage.getItem(EYE_SPACE_LS);
+      if (raw === '1') return true;
+      if (raw === '0') return false;
+    } catch (_) {}
+    return false;
+  }
+
+  function saveEyeSpacePref(open) {
+    try {
+      localStorage.setItem(EYE_SPACE_LS, open ? '1' : '0');
+    } catch (_) {}
+  }
+
+  function applyEyeSpaceState() {
+    var panel = eyeSpacePanel || document.getElementById('eyeSpacePanel');
+    var open = !!state.eyeSpaceOpen;
+    document.body.classList.toggle('eye-space-open', open);
     document.body.classList.toggle('debug-hud-on', !!DEBUG_HUD);
-    if (hud) hud.style.display = DEBUG_HUD ? '' : 'none';
-    if (hudToggleBtn) hudToggleBtn.classList.toggle('active', !!DEBUG_HUD);
+    if (panel) panel.classList.toggle('is-open', open);
+    if (hudToggleBtn) {
+      hudToggleBtn.classList.toggle('active', open);
+      hudToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    var hud = document.getElementById('debugHud');
+    if (hud) hud.style.display = '';
+  }
+
+  function applyDebugHudState() {
+    applyEyeSpaceState();
   }
 
   function dismissBootSplash(forceNow) {
@@ -2223,11 +2276,12 @@ body.niuma-confirm-open{overflow:hidden}
 
   (function initDebugHudVisibility() {
     var hud = document.getElementById('debugHud');
-    if (!hud) return;
+    var panel = document.getElementById('eyeSpacePanel');
+    if (!hud || !panel) return;
     DEBUG_HUD = loadDebugHudPref();
-    var utilityRow = document.querySelector('#cmp .utility-row');
-    if (utilityRow && hud.parentElement !== utilityRow) utilityRow.appendChild(hud);
-    applyDebugHudState();
+    state.eyeSpaceOpen = loadEyeSpacePref();
+    if (hud.parentElement !== panel) panel.appendChild(hud);
+    applyEyeSpaceState();
     if (DEBUG_HUD) dbg('HUD', 'debug enabled', 'ok');
   })();
 
@@ -3674,6 +3728,36 @@ body.niuma-confirm-open{overflow:hidden}
       if (auditPanelEl) auditPanelEl.classList.toggle('collapsed', !!state.auditCollapsed);
       if (auditCollapseBtn) auditCollapseBtn.textContent = state.auditCollapsed ? '展开' : '折叠';
     } catch (e) {}
+    initComposerBottomCollapse();
+  }
+
+  function initComposerBottomCollapse() {
+    var hintCollapsed = true;
+    try {
+      var hc = localStorage.getItem(COMPOSER_HINT_COLLAPSED_LS);
+      if (hc === '0') hintCollapsed = false;
+      else if (hc === '1') hintCollapsed = true;
+    } catch (e) {}
+    if (composerHint) composerHint.classList.toggle('is-collapsed', !!hintCollapsed);
+    if (composerHintBtn) composerHintBtn.setAttribute('aria-expanded', hintCollapsed ? 'false' : 'true');
+    state.eyeSpaceOpen = loadEyeSpacePref();
+    applyEyeSpaceState();
+  }
+
+  function toggleComposerHint() {
+    if (!composerHint) return;
+    var collapsed = !composerHint.classList.contains('is-collapsed');
+    composerHint.classList.toggle('is-collapsed', collapsed);
+    if (composerHintBtn) composerHintBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    try {
+      localStorage.setItem(COMPOSER_HINT_COLLAPSED_LS, collapsed ? '1' : '0');
+    } catch (e) {}
+  }
+
+  function toggleEyeSpace() {
+    state.eyeSpaceOpen = !state.eyeSpaceOpen;
+    saveEyeSpacePref(state.eyeSpaceOpen);
+    applyEyeSpaceState();
   }
 
   function appendAudit(entry) {
@@ -8883,7 +8967,7 @@ body.niuma-confirm-open{overflow:hidden}
       return;
     }
     send.disabled = sending;
-    send.textContent = sending ? '发送中...' : '发送消息';
+    send.textContent = sending ? '发送中' : '发送';
   }
 
   function setSessionSending(id, v) {
@@ -18835,6 +18919,11 @@ body.niuma-confirm-open{overflow:hidden}
       if (controlTabEnabledForNode()) switchViewMode('control');
     });
   }
+  if (composerHintBtn) {
+    composerHintBtn.addEventListener('click', function () {
+      toggleComposerHint();
+    });
+  }
   if (auditCollapseBtn && auditPanelEl) {
     auditCollapseBtn.addEventListener('click', function () {
       state.auditCollapsed = !state.auditCollapsed;
@@ -19006,11 +19095,22 @@ body.niuma-confirm-open{overflow:hidden}
 
   send.addEventListener('click', sendChat);
   if (hudToggleBtn) {
-    hudToggleBtn.addEventListener('click', function () {
-      DEBUG_HUD = !DEBUG_HUD;
-      saveDebugHudPref(DEBUG_HUD);
-      applyDebugHudState();
-      if (DEBUG_HUD) dbg('HUD', 'debug enabled', 'ok');
+    hudToggleBtn.addEventListener('click', function (e) {
+      if (e.shiftKey) {
+        DEBUG_HUD = !DEBUG_HUD;
+        saveDebugHudPref(DEBUG_HUD);
+        applyEyeSpaceState();
+        if (DEBUG_HUD) {
+          if (!state.eyeSpaceOpen) {
+            state.eyeSpaceOpen = true;
+            saveEyeSpacePref(true);
+          }
+          applyEyeSpaceState();
+          dbg('HUD', '调试日志已开启', 'ok');
+        }
+        return;
+      }
+      toggleEyeSpace();
     });
   }
 
