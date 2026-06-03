@@ -982,7 +982,7 @@ ConfigWebView_BuildInitData() {
         "holeTriggerCircleCw", (IniRead(ConfigFile, "Appearance", "HoleTriggerCircleCw", "0") = "1"),
         "holeTriggerCircleCcw", (IniRead(ConfigFile, "Appearance", "HoleTriggerCircleCcw", "0") = "1"),
         "holeTriggerRButtonHold", (IniRead(ConfigFile, "Appearance", "HoleTriggerRButtonHold", "0") = "1"),
-        "holeRButtonHoldMs", Integer(IniRead(ConfigFile, "Appearance", "HoleRButtonHoldMs", "480")),
+        "holeRButtonHoldMs", (FuncExists("HoleTriggers_NormalizeHoldMs") ? HoleTriggers_NormalizeHoldMs(Integer(IniRead(ConfigFile, "Appearance", "HoleRButtonHoldMs", "3000"))) : Integer(IniRead(ConfigFile, "Appearance", "HoleRButtonHoldMs", "3000"))),
         "holeSensitivityPreset", ConfigWebView_ReadHoleSensitivityPreset(),
         "holePlacementPreset", ConfigWebView_ReadHolePlacementPreset()
     )
@@ -1670,13 +1670,19 @@ ConfigWebView_MergeHoleTriggerPayload(payload) {
         "circleCw", ConfigWebView_CoerceBool(payload.Get("holeTriggerCircleCw", false), false),
         "circleCcw", ConfigWebView_CoerceBool(payload.Get("holeTriggerCircleCcw", false), false),
         "rbuttonHold", ConfigWebView_CoerceBool(payload.Get("holeTriggerRButtonHold", false), false),
-        "rbuttonHoldMs", Integer(payload.Get("holeRButtonHoldMs", 480))
+        "rbuttonHoldMs", Integer(payload.Get("holeRButtonHoldMs", 3000))
     )
-    hm := trig["rbuttonHoldMs"]
-    if (hm < 200)
-        hm := 200
-    if (hm > 2000)
-        hm := 2000
+    hm := Integer(trig["rbuttonHoldMs"])
+    if FuncExists("HoleTriggers_NormalizeHoldMs")
+        hm := HoleTriggers_NormalizeHoldMs(hm)
+    else {
+        if (hm <= 1500)
+            hm := 1000
+        else if (hm <= 4000)
+            hm := 3000
+        else
+            hm := 5000
+    }
     trig["rbuttonHoldMs"] := hm
     IniWrite(trig["textSelect"] ? "1" : "0", ConfigFile, "Appearance", "HoleTriggerTextSelect")
     IniWrite(trig["circleCw"] ? "1" : "0", ConfigFile, "Appearance", "HoleTriggerCircleCw")
@@ -1699,6 +1705,69 @@ ConfigWebView_MergeHoleTriggerPayload(payload) {
         try HoleTriggers_SaveToIni(trig)
         catch {
         }
+    }
+}
+
+ConfigWebView_PreviewHoleOnScreen(payload, &errorMsg := "") {
+    if !(payload is Map) {
+        errorMsg := "payload 无效"
+        return false
+    }
+    try {
+        if payload.Has("holePlacementPreset") {
+            placeMap := ConfigWebView_ApplyHolePlacementPreset(payload["holePlacementPreset"])
+            for k, v in placeMap
+                payload[k] := v
+        }
+        if payload.Has("holeSensitivityPreset") && FuncExists("HoleTriggers_MapSensitivityPreset") {
+            dist := HoleTriggers_MapSensitivityPreset(payload["holeSensitivityPreset"])
+            payload["holeTriggerDistance"] := dist["trigger"]
+            payload["holeDismissDistance"] := dist["dismiss"]
+        }
+        posMode := Trim(String(payload.Get("holePositionMode", "anchor")))
+        trigDist := Integer(payload.Get("holeTriggerDistance", 260))
+        dismissDist := Integer(payload.Get("holeDismissDistance", 320))
+        fixX := Integer(payload.Get("holeFixedX", 360))
+        fixY := Integer(payload.Get("holeFixedY", 260))
+        sizeScale := CfgParseFloat(payload.Get("holeSizeScale", 1.0), 1.0)
+        animLevel := CfgParseFloat(payload.Get("holeAnimLevel", 1.0), 1.0)
+        visualStyle := StrLower(Trim(String(payload.Get("holeVisualStyle", "ring"))))
+        hideDock := !!payload.Get("holeHideDockEnabled", false)
+        dockEdge := StrLower(Trim(String(payload.Get("holeHideDockEdge", "right"))))
+        dockMargin := Integer(payload.Get("holeHideDockMargin", 10))
+        try GDHO_SetScreenAnchor(fixX, fixY)
+        try GDHO_ApplySettings(posMode, trigDist, dismissDist, fixX, fixY, sizeScale, animLevel, visualStyle)
+        try GDHO_ApplyHideDockSettings(hideDock, dockEdge, dockMargin)
+        mon := 1
+        if FuncExists("ReadPersistedPopupScreenIndex") {
+            try mon := ReadPersistedPopupScreenIndex()
+            catch {
+                mon := 1
+            }
+        }
+        try MonitorGetWorkArea(mon, &wl, &wt, &wr, &wb)
+        catch {
+            wl := 0, wt := 0, wr := A_ScreenWidth, wb := A_ScreenHeight
+        }
+        cx := (wl + wr) // 2
+        cy := (wt + wb) // 2
+        try SetTimer(ConfigWebView_CloseHolePreview, 0)
+        if FuncExists("GDHO_RequestOpen") {
+            try GDHO_RequestOpen(Map("reason", "settings_preview", "positionMode", "fixed", "screenX", cx, "screenY", cy, "payload", "text"))
+        }
+        SetTimer(ConfigWebView_CloseHolePreview, -3500)
+        return true
+    } catch as err {
+        errorMsg := "预览失败: " . err.Message
+        return false
+    }
+}
+
+ConfigWebView_CloseHolePreview(*) {
+    try SetTimer(ConfigWebView_CloseHolePreview, 0)
+    if FuncExists("GDHO_RequestClose")
+        try GDHO_RequestClose("settings_preview")
+    catch {
     }
 }
 
@@ -2947,12 +3016,25 @@ ConfigWebView_OnMessage(sender, args) {
                     "holeTriggerCircleCw", ConfigWebView_CoerceBool(payload.Get("holeTriggerCircleCw", false), false),
                     "holeTriggerCircleCcw", ConfigWebView_CoerceBool(payload.Get("holeTriggerCircleCcw", false), false),
                     "holeTriggerRButtonHold", ConfigWebView_CoerceBool(payload.Get("holeTriggerRButtonHold", false), false),
-                    "holeRButtonHoldMs", Integer(payload.Get("holeRButtonHoldMs", 480)),
+                    "holeRButtonHoldMs", Integer(payload.Get("holeRButtonHoldMs", 3000)),
                     "holeSensitivityPreset", Trim(String(payload.Get("holeSensitivityPreset", "standard"))),
                     "holePlacementPreset", Trim(String(payload.Get("holePlacementPreset", "cursor")))
                 )
             }
             ConfigWebView_Send(resp)
+        case "previewHoleOnScreen":
+            previewPayload := msg.Get("payload", Map())
+            if (previewPayload is String && previewPayload != "") {
+                try previewPayload := Jxon_Load(previewPayload)
+                catch {
+                    previewPayload := Map()
+                }
+            }
+            if !(previewPayload is Map)
+                previewPayload := Map()
+            previewErr := ""
+            previewOk := ConfigWebView_PreviewHoleOnScreen(previewPayload, &previewErr)
+            ConfigWebView_Send(Map("type", "previewHoleResult", "ok", previewOk, "error", previewErr))
         case "saveKeybinderToolbarLayout":
             tl := msg.Has("toolbarLayout") && msg["toolbarLayout"] is Array ? msg["toolbarLayout"] : []
             cml := msg.Has("contextMenuLayout") && msg["contextMenuLayout"] is Array ? msg["contextMenuLayout"] : []
@@ -3054,8 +3136,6 @@ ConfigWebView_OnMessage(sender, args) {
             err := ""
             try {
                 switch op {
-                    case "installCursorChinese":
-                        InstallCursorChinese()
                     case "exportConfig":
                         ExportConfig()
                     case "importConfig":

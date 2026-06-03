@@ -532,20 +532,88 @@
       cursor: pointer;
     }
     .hole-trigger-item input { flex-shrink: 0; }
-    details.hole-advanced {
+    .hole-preview-wrap {
+      margin: 12px 0 14px;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.12));
+    }
+    .hole-preview-stage {
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .hole-preview-ring {
+      border-radius: 50%;
+      border: 2px solid rgba(142,197,255,.75);
+      box-shadow: 0 0 18px rgba(110,165,255,.4), inset 0 0 16px rgba(0,0,0,.75);
+      background: radial-gradient(circle at 50% 42%, #1a2744 0%, #05070c 48%, #000 100%);
+      display: grid;
+      place-items: center;
+      transition: transform .2s ease, width .2s ease, height .2s ease;
+    }
+    .hole-preview-ring img { width: 42%; height: 42%; object-fit: contain; opacity: .9; }
+    .hole-preview-starry {
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 40%, #2a1f4e 0%, #0a0618 55%, #000 100%);
+      box-shadow: 0 0 22px rgba(180,120,255,.35), inset 0 0 20px rgba(0,0,0,.8);
+      position: relative;
+      overflow: hidden;
+      transition: transform .2s ease, width .2s ease, height .2s ease;
+    }
+    .hole-preview-starry::before {
+      content: "";
+      position: absolute;
+      inset: 8%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,.15) 1px, transparent 2px);
+      background-size: 14px 14px;
+      opacity: .7;
+    }
+    .hole-preview-meta {
       margin-top: 10px;
-      border-top: 1px solid var(--border);
-      padding-top: 10px;
-    }
-    details.hole-advanced summary {
-      cursor: pointer;
+      font-size: 12px;
       color: var(--text-dim);
-      font-size: 13px;
-      user-select: none;
+      text-align: center;
+      line-height: 1.5;
     }
-    details.hole-advanced[open] summary { margin-bottom: 10px; color: var(--text); }
-    .hole-fixed-row { display: none; }
-    .hole-fixed-row.visible { display: flex; }
+    .hole-style-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .hole-chip {
+      min-width: 72px;
+      height: 34px;
+      padding: 0 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+    .hole-chip.active {
+      border-color: var(--orange);
+      color: var(--orange-dk);
+      background: var(--btn-hover-bg);
+      box-shadow: var(--glow-hot);
+    }
+    .hole-size-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+    .hole-size-row input[type="range"] { flex: 1; min-width: 80px; }
+    .hole-size-label { min-width: 3.5em; font-size: 13px; color: var(--text-dim); text-align: right; }
+    .hole-fixed-row, .hole-edge-row, .hole-rbtn-row { display: none; }
+    .hole-fixed-row.visible, .hole-edge-row.visible, .hole-rbtn-row.visible { display: flex; }
     .title { color: var(--title-text); font-weight: 700; }
     input[type="text"], input[type="number"], textarea, select {
       background: var(--surface2);
@@ -1628,7 +1696,7 @@
         holeTriggerCircleCw: false,
         holeTriggerCircleCcw: false,
         holeTriggerRButtonHold: false,
-        holeRButtonHoldMs: 480,
+        holeRButtonHoldMs: 3000,
         holeSensitivityPreset: "standard",
         holePlacementPreset: "cursor"
       }
@@ -2042,12 +2110,11 @@
         if (!["cursor","fixed","edge"].includes(String(d.holePlacementPreset || "cursor"))) return "黑洞出现位置非法";
         const trigErr = validateHoleTriggers(d);
         if (trigErr) return trigErr;
-        if (!Number.isFinite(Number(d.holeRButtonHoldMs)) || Number(d.holeRButtonHoldMs) < 200 || Number(d.holeRButtonHoldMs) > 2000) return "长按右键时长非法";
+        if (![1000, 3000, 5000].includes(normalizeHoleRButtonHoldMs(d.holeRButtonHoldMs))) return "长按右键时长非法";
         if (!["anchor","fixed","relative"].includes(String(d.holePositionMode || "anchor"))) return "黑洞位置模式非法";
         if (!Number.isFinite(Number(d.holeTriggerDistance)) || Number(d.holeTriggerDistance) < 80 || Number(d.holeTriggerDistance) > 1200) return "黑洞触发距离非法";
         if (!Number.isFinite(Number(d.holeDismissDistance)) || Number(d.holeDismissDistance) < 120 || Number(d.holeDismissDistance) > 1600) return "黑洞消失距离非法";
-        if (!Number.isFinite(Number(d.holeSizeScale)) || Number(d.holeSizeScale) < 0.6 || Number(d.holeSizeScale) > 1.8) return "黑洞大小缩放非法";
-        if (!Number.isFinite(Number(d.holeAnimLevel)) || Number(d.holeAnimLevel) < 0.4 || Number(d.holeAnimLevel) > 2.2) return "黑洞动画强度非法";
+        if (!Number.isFinite(Number(d.holeSizeScale)) || Number(d.holeSizeScale) < 0.85 || Number(d.holeSizeScale) > 1.5) return "黑洞大小非法";
         if (!["ring","starry"].includes(String(d.holeVisualStyle || "ring"))) return "黑洞样式非法";
         if (!["right","left","top","bottom"].includes(String(d.holeHideDockEdge || "right"))) return "黑洞隐藏吸附边缘非法";
         if (!Number.isFinite(Number(d.holeHideDockMargin)) || Number(d.holeHideDockMargin) < 0 || Number(d.holeHideDockMargin) > 80) return "黑洞隐藏吸附边距非法";
@@ -2396,7 +2463,7 @@
       pick("holeTriggerCircleCw", (el) => { d.holeTriggerCircleCw = !!el.checked; });
       pick("holeTriggerCircleCcw", (el) => { d.holeTriggerCircleCcw = !!el.checked; });
       pick("holeTriggerRButtonHold", (el) => { d.holeTriggerRButtonHold = !!el.checked; });
-      pick("holeRButtonHoldMs", (el) => { d.holeRButtonHoldMs = Number(el.value); });
+      pick("holeRButtonHoldMs", (el) => { d.holeRButtonHoldMs = normalizeHoleRButtonHoldMs(el.value); });
       pick("holeSensitivityPreset", (el) => { d.holeSensitivityPreset = el.value; });
       pick("holePlacementPreset", (el) => { d.holePlacementPreset = el.value; });
       return d;
@@ -2420,15 +2487,26 @@
     function validateHoleSettingsOnly(d) {
       const trigErr = validateHoleTriggers(d);
       if (trigErr) return trigErr;
-      if (!Number.isFinite(Number(d.holeRButtonHoldMs)) || Number(d.holeRButtonHoldMs) < 200 || Number(d.holeRButtonHoldMs) > 2000) return "长按右键时长非法";
+      if (![1000, 3000, 5000].includes(normalizeHoleRButtonHoldMs(d.holeRButtonHoldMs))) return "长按右键时长非法";
       if (!["cursor","fixed","edge"].includes(String(d.holePlacementPreset || "cursor"))) return "黑洞出现位置非法";
       if (!["compact","standard","relaxed"].includes(String(d.holeSensitivityPreset || "standard"))) return "接近灵敏度非法";
       if (!["ring","starry"].includes(String(d.holeVisualStyle || "ring"))) return "黑洞样式非法";
       const ss = Number(d.holeSizeScale);
-      if (!Number.isFinite(ss) || ss < 0.6 || ss > 1.8) return "黑洞大小非法";
+      if (!Number.isFinite(ss) || ss < 0.85 || ss > 1.5) return "黑洞大小非法";
       return "";
     }
     const HOLE_SENSITIVITY_DIST = { compact: [200, 260], standard: [260, 320], relaxed: [340, 420] };
+    const HOLE_RBUTTON_HOLD_MS_OPTS = [
+      { value: "1000", label: "1 秒" },
+      { value: "3000", label: "3 秒（推荐）" },
+      { value: "5000", label: "5 秒" }
+    ];
+    function normalizeHoleRButtonHoldMs(ms) {
+      const n = Number(ms);
+      if (n <= 1500) return 1000;
+      if (n <= 4000) return 3000;
+      return 5000;
+    }
     function syncHoleDerivedFields(d) {
       const sens = HOLE_SENSITIVITY_DIST[d.holeSensitivityPreset] || HOLE_SENSITIVITY_DIST.standard;
       d.holeTriggerDistance = sens[0];
@@ -2445,7 +2523,53 @@
         d.holePositionMode = "anchor";
         d.holeHideDockEnabled = false;
       }
+      const ss = Number(d.holeSizeScale);
+      if (Number.isFinite(ss)) {
+        if (ss <= 0.92) d.holeAnimLevel = 0.85;
+        else if (ss >= 1.32) d.holeAnimLevel = 1.15;
+        else d.holeAnimLevel = 1.0;
+      } else {
+        d.holeAnimLevel = 1.0;
+      }
+      if (!Number.isFinite(Number(d.holeHideDockMargin))) d.holeHideDockMargin = 10;
       return d;
+    }
+    const HOLE_SIZE_SCALE_LABELS = [
+      [0.85, "小"], [0.95, "偏小"], [1.0, "标准"], [1.15, "偏大"], [1.25, "大"], [1.5, "超大"]
+    ];
+    function holeSizeScaleLabel(v) {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return "标准";
+      let best = HOLE_SIZE_SCALE_LABELS[2];
+      let bestD = Math.abs(n - best[0]);
+      for (const pair of HOLE_SIZE_SCALE_LABELS) {
+        const d = Math.abs(n - pair[0]);
+        if (d < bestD) { best = pair; bestD = d; }
+      }
+      return best[1];
+    }
+    function updateHoleStylePreview() {
+      const stage = document.getElementById("holeStylePreview");
+      const meta = document.getElementById("holePreviewMeta");
+      if (!stage) return;
+      const style = (document.getElementById("holeVisualStyle")?.value || "ring").toLowerCase();
+      const scale = Math.max(0.85, Math.min(1.5, Number(document.getElementById("holeSizeScale")?.value || 1) || 1));
+      const base = 72;
+      const px = Math.round(base * scale);
+      const sens = document.getElementById("holeSensitivityPreset")?.value || "standard";
+      const place = document.getElementById("holePlacementPreset")?.value || "cursor";
+      const sensMap = { compact: "紧凑", standard: "标准", relaxed: "宽松" };
+      const placeMap = { cursor: "跟随光标", fixed: "固定坐标", edge: "贴边隐藏" };
+      if (style === "starry") {
+        stage.innerHTML = `<div class="hole-preview-starry" style="width:${px}px;height:${px}px;"></div>`;
+      } else {
+        stage.innerHTML = `<div class="hole-preview-ring" style="width:${px}px;height:${px}px;"><img src="${esc(NIUMA_ICON_URL)}" alt=""></div>`;
+      }
+      if (meta) {
+        meta.textContent = `${style === "starry" ? "星空" : "彩环"} · ${holeSizeScaleLabel(scale)} · 接近${sensMap[sens] || "标准"} · ${placeMap[place] || ""}`;
+      }
+      const sizeLbl = document.getElementById("holeSizeScaleLabel");
+      if (sizeLbl) sizeLbl.textContent = holeSizeScaleLabel(scale);
     }
     let holeSettingsSaveTimer = 0;
     function flushHoleSettingsSaveNow() {
@@ -2468,14 +2592,70 @@
         flushHoleSettingsSaveNow();
       }, delay);
     }
-    function bindHolePlacementPresetUi() {
-      const sel = document.getElementById("holePlacementPreset");
-      const row = document.getElementById("holeFixedRow");
-      const sync = () => {
-        if (row) row.classList.toggle("visible", sel && sel.value === "fixed");
+    function bindHoleSettingsUi() {
+      const placeSel = document.getElementById("holePlacementPreset");
+      const fixedRow = document.getElementById("holeFixedRow");
+      const edgeRow = document.getElementById("holeEdgeRow");
+      const rbtnRow = document.getElementById("holeRbtnRow");
+      const rbtnChk = document.getElementById("holeTriggerRButtonHold");
+      const syncPlacementRows = () => {
+        const p = placeSel ? placeSel.value : "cursor";
+        if (fixedRow) fixedRow.classList.toggle("visible", p === "fixed");
+        if (edgeRow) edgeRow.classList.toggle("visible", p === "edge");
       };
-      if (sel) sel.addEventListener("change", sync);
-      sync();
+      const syncRbtnRow = () => {
+        if (rbtnRow) rbtnRow.classList.toggle("visible", !!(rbtnChk && rbtnChk.checked));
+      };
+      if (placeSel) placeSel.addEventListener("change", () => { syncPlacementRows(); updateHoleStylePreview(); });
+      if (rbtnChk) rbtnChk.addEventListener("change", syncRbtnRow);
+      syncPlacementRows();
+      syncRbtnRow();
+      document.querySelectorAll("#holeStyleChips .hole-chip").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const st = btn.getAttribute("data-hole-style") || "ring";
+          const hid = document.getElementById("holeVisualStyle");
+          if (hid) hid.value = st;
+          document.querySelectorAll("#holeStyleChips .hole-chip").forEach((b) => b.classList.toggle("active", b === btn));
+          updateHoleStylePreview();
+          captureAppearanceTabState();
+          scheduleHoleSettingsSave(500);
+        });
+      });
+      const sizeEl = document.getElementById("holeSizeScale");
+      if (sizeEl) {
+        sizeEl.addEventListener("input", () => { updateHoleStylePreview(); });
+      }
+      updateHoleStylePreview();
+      const holeSaveIds = ["holeTriggerTextSelect","holeTriggerCircleCw","holeTriggerCircleCcw","holeTriggerRButtonHold","holeRButtonHoldMs","holeSensitivityPreset","holePlacementPreset","holeFixedX","holeFixedY","holeHideDockEdge"];
+      holeSaveIds.forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const onHoleFieldChange = () => {
+          if (id === "holePlacementPreset") syncPlacementRows();
+          if (id === "holeTriggerRButtonHold") syncRbtnRow();
+          updateHoleStylePreview();
+          captureAppearanceTabState();
+          scheduleHoleSettingsSave(500);
+        };
+        el.addEventListener("change", onHoleFieldChange);
+        if (el.type === "number" || el.type === "range") el.addEventListener("input", onHoleFieldChange);
+      });
+      if (sizeEl) {
+        sizeEl.addEventListener("change", () => {
+          captureAppearanceTabState();
+          scheduleHoleSettingsSave(500);
+        });
+      }
+      const previewBtn = document.getElementById("btnPreviewHoleOnScreen");
+      if (previewBtn) {
+        previewBtn.addEventListener("click", () => {
+          const d = syncHoleDerivedFields(readFromUI());
+          const err = validateHoleSettingsOnly(d);
+          if (err) return setStatus(err, "err");
+          post({ type: "previewHoleOnScreen", payload: collectHoleSettingsPayload(d) });
+          setStatus("正在屏幕上预览黑洞…", "ok");
+        });
+      }
     }
     function collectHoleSettingsPayload(d) {
       d = syncHoleDerivedFields({ ...d });
@@ -5172,10 +5352,9 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       const catRows = ALL_CATEGORIES.map(c => `<label class="tag"><input id="cat_${c}" type="checkbox" ${checked((d.voiceSearchEnabledCategories||[]).includes(c))}> ${esc(c)}</label>`).join("");
       if (state.activeTab === "general") {
         const upd = normalizeAppUpdate(state.appUpdate);
-        panel.innerHTML = `<div class="card"><div class="title">通用设置</div>${renderAppUpdateGeneralBlock(upd)}<div class="row"><div class="label">Cursor 路径</div><div class="inline"><input id="cursorPath" type="text" value="${esc(d.cursorPath)}"><button class="btn" id="browsePath">浏览</button></div></div><div class="row"><div class="label">CapsLock 长按时间 (0.1 - 5.0)</div><input id="holdTime" type="number" min="0.1" max="5.0" step="0.1" value="${esc(d.capslockHoldTimeSeconds)}"></div><div class="row"><div class="label">开机自启动</div><div><input id="autoStart" type="checkbox" ${checked(d.autoStart)}></div></div><div class="row"><div class="label">默认启动页</div><select id="defaultStartTab">${optionsKV(defaultTabOpts, normalizeDefaultStartTab(d.defaultStartTab))}</select></div><div class="row"><div class="label">安装中文 Cursor</div><div><button class="btn" id="btnInstallChinese">安装 Cursor 中文版</button></div></div></div>`;
+        panel.innerHTML = `<div class="card"><div class="title">通用设置</div>${renderAppUpdateGeneralBlock(upd)}<div class="row"><div class="label">Cursor 路径</div><div class="inline"><input id="cursorPath" type="text" value="${esc(d.cursorPath)}"><button class="btn" id="browsePath">浏览</button></div></div><div class="row"><div class="label">CapsLock 长按时间 (0.1 - 5.0)</div><input id="holdTime" type="number" min="0.1" max="5.0" step="0.1" value="${esc(d.capslockHoldTimeSeconds)}"></div><div class="row"><div class="label">开机自启动</div><div><input id="autoStart" type="checkbox" ${checked(d.autoStart)}></div></div><div class="row"><div class="label">默认启动页</div><select id="defaultStartTab">${optionsKV(defaultTabOpts, normalizeDefaultStartTab(d.defaultStartTab))}</select></div></div>`;
         bindAppUpdateGeneralHandlers();
         document.getElementById("browsePath").addEventListener("click", () => post({ type: "browseCursorPath" }));
-        document.getElementById("btnInstallChinese").addEventListener("click", () => post({ type: "invokeAction", op: "installCursorChinese" }));
       } else if (state.activeTab === "appearance") {
         const activationMode = normalizeActivationMode(state.appearanceActivationMode);
         panel.innerHTML = `<div class="card activation-mode-card">
@@ -5188,58 +5367,40 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
   </div>
 </div>
 <div class="card"><div class="title">外观设置</div><div class="row"><div class="label">主题模式</div><select id="themeMode">${optionsKV([{value:"dark",label:"深色"},{value:"light",label:"浅色"}],d.themeMode)}</select></div><div class="row"><div class="label">弹窗位置</div><select id="popupScreenIndex">${optionsKV(screenOpts, String(d.popupScreenIndex || 1))}</select></div><div class="hint">已自动识别显示器数量：${esc(monitorCount)}。此设置会应用到所有弹窗并固定保存。</div></div>
-<div class="card"><div class="title">黑洞 · 怎么唤起</div>
-<div class="hint">仅当上方「激活方式」选为<strong>黑洞模式</strong>时生效；可多选。</div>
+<div class="card"><div class="title">黑洞</div>
+<div class="hint">仅当激活方式为<strong>黑洞模式</strong>时生效；下方修改会自动保存。</div>
+<div class="hole-preview-wrap">
+  <div class="mode-preview-title">外观预览</div>
+  <div class="hole-preview-stage" id="holeStylePreview"></div>
+  <div class="hole-preview-meta" id="holePreviewMeta"></div>
+  <div class="inline" style="margin-top:10px;justify-content:center;"><button type="button" class="btn" id="btnPreviewHoleOnScreen">在屏幕上预览 3 秒</button></div>
+</div>
+<input type="hidden" id="holePositionMode" value="${esc(d.holePositionMode || "anchor")}">
+<input type="hidden" id="holeVisualStyle" value="${esc(d.holeVisualStyle || "ring")}">
+<input type="hidden" id="holeAnimLevel" value="${esc(d.holeAnimLevel ?? 1.0)}">
+<input type="hidden" id="holeHideDockEnabled" value="${d.holeHideDockEnabled !== false ? "1" : "0"}">
+<input type="hidden" id="holeHideDockMargin" value="${esc(d.holeHideDockMargin ?? 10)}">
+<div class="row"><div class="label">样式</div><div class="hole-style-chips" id="holeStyleChips">
+<button type="button" class="hole-chip ${(d.holeVisualStyle || "ring") === "ring" ? "active" : ""}" data-hole-style="ring">彩环</button>
+<button type="button" class="hole-chip ${d.holeVisualStyle === "starry" ? "active" : ""}" data-hole-style="starry">星空</button>
+</div></div>
+<div class="row"><div class="label">大小</div><div class="hole-size-row"><input id="holeSizeScale" type="range" min="0.85" max="1.5" step="0.05" value="${esc(Number(d.holeSizeScale ?? 1) || 1)}"><span class="hole-size-label" id="holeSizeScaleLabel">标准</span></div></div>
+<div class="row"><div class="label">接近范围</div><select id="holeSensitivityPreset">${optionsKV([{value:"compact",label:"紧凑（更易收起）"},{value:"standard",label:"标准"},{value:"relaxed",label:"宽松（更易保持）"}], String(d.holeSensitivityPreset || "standard"))}</select></div>
+<div class="row"><div class="label">出现位置</div><select id="holePlacementPreset">${optionsKV([{value:"cursor",label:"跟随选区 / 光标"},{value:"fixed",label:"屏幕固定坐标"},{value:"edge",label:"隐藏时贴屏幕边缘"}], String(d.holePlacementPreset || "cursor"))}</select></div>
+<div class="row hole-fixed-row" id="holeFixedRow"><div class="label">固定坐标 X / Y</div><div class="inline"><input id="holeFixedX" type="number" step="1" value="${esc(d.holeFixedX ?? 360)}"><input id="holeFixedY" type="number" step="1" value="${esc(d.holeFixedY ?? 260)}"></div></div>
+<div class="row hole-edge-row" id="holeEdgeRow"><div class="label">贴边方向</div><select id="holeHideDockEdge">${optionsKV([{value:"right",label:"右侧"},{value:"left",label:"左侧"},{value:"top",label:"顶部"},{value:"bottom",label:"底部"}], String(d.holeHideDockEdge || "right"))}</select></div>
+<div class="title" style="margin-top:6px;font-size:13px;">唤起方式</div>
 <div class="hole-trigger-grid">
 <label class="hole-trigger-item"><input id="holeTriggerTextSelect" type="checkbox" ${checked(!!d.holeTriggerTextSelect)}>选中文本</label>
-<label class="hole-trigger-item"><input id="holeTriggerCircleCw" type="checkbox" ${checked(!!d.holeTriggerCircleCw)}>鼠标画圈（顺时针）</label>
-<label class="hole-trigger-item"><input id="holeTriggerCircleCcw" type="checkbox" ${checked(!!d.holeTriggerCircleCcw)}>鼠标画圈（逆时针）</label>
-<label class="hole-trigger-item"><input id="holeTriggerRButtonHold" type="checkbox" ${checked(!!d.holeTriggerRButtonHold)}>长按鼠标右键</label>
+<label class="hole-trigger-item"><input id="holeTriggerCircleCw" type="checkbox" ${checked(!!d.holeTriggerCircleCw)}>画圈（顺时针）</label>
+<label class="hole-trigger-item"><input id="holeTriggerCircleCcw" type="checkbox" ${checked(!!d.holeTriggerCircleCcw)}>画圈（逆时针）</label>
+<label class="hole-trigger-item"><input id="holeTriggerRButtonHold" type="checkbox" ${checked(!!d.holeTriggerRButtonHold)}>长按右键</label>
 </div>
-<div class="row"><div class="label">长按右键时长（ms）</div><input id="holeRButtonHoldMs" type="number" min="200" max="2000" step="20" value="${esc(d.holeRButtonHoldMs ?? 480)}"></div>
-<div class="hint">画圈：无需按键，画一圈闭合圆（不必很圆，半径适中）后短暂停住；未达标不会提示。与长按右键勿同时进行。长按：按住右键达到时长且几乎不移动。</div>
-</div>
-<div class="card"><div class="title">黑洞 · 外观与位置</div>
-<div class="row"><div class="label">接近灵敏度</div><select id="holeSensitivityPreset">${optionsKV([{value:"compact",label:"紧凑"},{value:"standard",label:"标准"},{value:"relaxed",label:"宽松"}], String(d.holeSensitivityPreset || "standard"))}</select></div>
-<div class="row"><div class="label">出现位置</div><select id="holePlacementPreset">${optionsKV([{value:"cursor",label:"跟随选区/光标"},{value:"fixed",label:"屏幕固定坐标"},{value:"edge",label:"隐藏时贴屏幕边缘"}], String(d.holePlacementPreset || "cursor"))}</select></div>
-<div class="row hole-fixed-row" id="holeFixedRow"><div class="label">固定坐标 X / Y</div><div class="inline"><input id="holeFixedX" type="number" step="1" value="${esc(d.holeFixedX ?? 360)}"><input id="holeFixedY" type="number" step="1" value="${esc(d.holeFixedY ?? 260)}"></div></div>
-<div class="row"><div class="label">视觉样式</div><select id="holeVisualStyle">${optionsKV([{value:"ring",label:"彩环黑洞"},{value:"starry",label:"星空黑洞"}], String(d.holeVisualStyle || "ring"))}</select></div>
-<div class="row"><div class="label">大小</div><select id="holeSizeScale">${optionsKV(withCurrentOption([{value:"0.85",label:"小"},{value:"1.0",label:"标准"},{value:"1.25",label:"大"},{value:"1.5",label:"超大"}], d.holeSizeScale ?? 1.0), String(d.holeSizeScale ?? 1.0))}</select></div>
-<details class="hole-advanced"><summary>高级选项（触发/消失距离、动画、边缘吸附细节）</summary>
-<input type="hidden" id="holePositionMode" value="${esc(d.holePositionMode || "anchor")}">
-<select id="holeTriggerDistance" style="display:none">${optionsKV(withCurrentOption([{value:"200",label:"200"},{value:"260",label:"260"},{value:"340",label:"340"},{value:"420",label:"420"}], d.holeTriggerDistance ?? 260), String(d.holeTriggerDistance ?? 260))}</select>
-<select id="holeDismissDistance" style="display:none">${optionsKV(withCurrentOption([{value:"260",label:"260"},{value:"320",label:"320"},{value:"420",label:"420"},{value:"560",label:"560"}], d.holeDismissDistance ?? 320), String(d.holeDismissDistance ?? 320))}</select>
-<div class="row"><div class="label">动画强度</div><select id="holeAnimLevel">${optionsKV(withCurrentOption([{value:"0.8",label:"柔和"},{value:"1.0",label:"标准"},{value:"1.4",label:"增强"},{value:"2.0",label:"强烈"}], d.holeAnimLevel ?? 1.0), String(d.holeAnimLevel ?? 1.0))}</select></div>
-<div class="row"><div class="label">隐藏时贴边</div><div><input id="holeHideDockEnabled" type="checkbox" ${checked(d.holeHideDockEnabled !== false)}></div></div>
-<div class="row"><div class="label">贴边方向</div><select id="holeHideDockEdge">${optionsKV([{value:"right",label:"右侧"},{value:"left",label:"左侧"},{value:"top",label:"顶部"},{value:"bottom",label:"底部"}], String(d.holeHideDockEdge || "right"))}</select></div>
-<div class="row"><div class="label">贴边边距（px）</div><input id="holeHideDockMargin" type="number" min="0" max="80" step="1" value="${esc(d.holeHideDockMargin ?? 10)}"></div>
-</details>
-<div class="inline" style="margin-top:8px;"><button class="btn" id="btnApplyHoleSettings">保存黑洞设置</button></div>
+<div class="row hole-rbtn-row" id="holeRbtnRow"><div class="label">长按右键时长</div><select id="holeRButtonHoldMs">${optionsKV(HOLE_RBUTTON_HOLD_MS_OPTS, String(normalizeHoleRButtonHoldMs(d.holeRButtonHoldMs ?? 3000)))}</select></div>
+<div class="hint">画圈：无需按键，闭合一圈后短暂停住即可。长按右键：按住<strong>不动</strong>达到所选时长后唤起（到时会提前弹出，无需等松手）；移动超过约 20 像素则视为普通右键/拖拽。至少勾选一种唤起方式。</div>
 </div>`;
         bindAppearanceActivationMode();
-        bindHolePlacementPresetUi();
-        const holeSaveIds = ["holeTriggerTextSelect","holeTriggerCircleCw","holeTriggerCircleCcw","holeTriggerRButtonHold","holeRButtonHoldMs","holeSensitivityPreset","holePlacementPreset","holeFixedX","holeFixedY","holeVisualStyle","holeSizeScale","holeAnimLevel","holeHideDockEnabled","holeHideDockEdge","holeHideDockMargin"];
-        holeSaveIds.forEach((id) => {
-          const el = document.getElementById(id);
-          if (!el) return;
-          const onHoleFieldChange = () => {
-            captureAppearanceTabState();
-            scheduleHoleSettingsSave(500);
-          };
-          el.addEventListener("change", onHoleFieldChange);
-          if (el.type === "number" || el.type === "text") el.addEventListener("input", onHoleFieldChange);
-        });
-        const holeBtn = document.getElementById("btnApplyHoleSettings");
-        if (holeBtn) {
-          holeBtn.addEventListener("click", () => {
-            if (holeSettingsSaveTimer) { clearTimeout(holeSettingsSaveTimer); holeSettingsSaveTimer = 0; }
-            const d = syncHoleDerivedFields(readFromUI());
-            const err = validateHoleSettingsOnly(d);
-            if (err) return setStatus(err, "err");
-            post({ type: "saveHoleSettings", payload: collectHoleSettingsPayload(d) });
-            setStatus("黑洞设置保存中...", "ok");
-          });
-        }
+        bindHoleSettingsUi();
       } else if (state.activeTab === "prompts") {
         const fixedCategories = ["基础","专业","改错","优化","解释","重构"];
         const tplAll = d.promptTemplateSummary || [];
@@ -5687,12 +5848,11 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       if (!["cursor","fixed","edge"].includes(String(d.holePlacementPreset || "cursor"))) return "黑洞出现位置非法";
       const trigErr = validateHoleTriggers(d);
       if (trigErr) return trigErr;
-      if (!Number.isFinite(Number(d.holeRButtonHoldMs)) || Number(d.holeRButtonHoldMs) < 200 || Number(d.holeRButtonHoldMs) > 2000) return "长按右键时长非法";
+      if (![1000, 3000, 5000].includes(normalizeHoleRButtonHoldMs(d.holeRButtonHoldMs))) return "长按右键时长非法";
       if (!["anchor","fixed","relative"].includes(String(d.holePositionMode || "anchor"))) return "黑洞位置模式非法";
       if (!Number.isFinite(Number(d.holeTriggerDistance)) || Number(d.holeTriggerDistance) < 80 || Number(d.holeTriggerDistance) > 1200) return "黑洞触发距离非法";
       if (!Number.isFinite(Number(d.holeDismissDistance)) || Number(d.holeDismissDistance) < 120 || Number(d.holeDismissDistance) > 1600) return "黑洞消失距离非法";
-      if (!Number.isFinite(Number(d.holeSizeScale)) || Number(d.holeSizeScale) < 0.6 || Number(d.holeSizeScale) > 1.8) return "黑洞大小缩放非法";
-      if (!Number.isFinite(Number(d.holeAnimLevel)) || Number(d.holeAnimLevel) < 0.4 || Number(d.holeAnimLevel) > 2.2) return "黑洞动画强度非法";
+      if (!Number.isFinite(Number(d.holeSizeScale)) || Number(d.holeSizeScale) < 0.85 || Number(d.holeSizeScale) > 1.5) return "黑洞大小非法";
       if (!["ring","starry"].includes(String(d.holeVisualStyle || "ring"))) return "黑洞样式非法";
       if (!["right","left","top","bottom"].includes(String(d.holeHideDockEdge || "right"))) return "黑洞隐藏吸附边缘非法";
       if (!Number.isFinite(Number(d.holeHideDockMargin)) || Number(d.holeHideDockMargin) < 0 || Number(d.holeHideDockMargin) > 80) return "黑洞隐藏吸附边距非法";
@@ -6192,6 +6352,10 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       }
       if (msg.type === "saveKeybinderToolbarLayoutResult") {
         setStatus(msg.ok ? "工具栏与右键菜单已写入配置" : (msg.error || "保存失败"), msg.ok ? "ok" : "err");
+        return;
+      }
+      if (msg.type === "previewHoleResult") {
+        setStatus(msg.ok ? "已在屏幕上预览黑洞（约 3 秒）" : (msg.error || "预览失败"), msg.ok ? "ok" : "err");
         return;
       }
       if (msg.type === "saveHoleResult") {

@@ -518,25 +518,6 @@ CreateGeneralTab(ConfigGUI, X, Y, W, H) {
         ; 如果设置失败，忽略错误
     }
     GeneralTabControls.Push(DefaultStartTabDDL)
-    
-    ; 安装 Cursor 中文版按钮（从高级设置移到这里）
-    YPos += 60
-    LabelInstallChinese := ConfigGUI.Add("Text", "x" . (X + 30) . " y" . YPos . " w200 h25 c" . UI_Colors.Text, GetText("install_cursor_chinese"))
-    LabelInstallChinese.SetFont("s11", "Segoe UI")
-    GeneralTabControls.Push(LabelInstallChinese)
-    
-    YPos += 30
-    TextColor := (ThemeMode = "light") ? UI_Colors.Text : UI_Colors.Text  ; html.to.design 风格文本
-    InstallChineseBtn := ConfigGUI.Add("Text", "x" . (X + 30) . " y" . YPos . " w" . (BtnWidth * 2 + 10) . " h" . BtnHeight . " Center 0x200 c" . TextColor . " Background" . UI_Colors.BtnBg . " vGeneralInstallChineseBtn", GetText("install_cursor_chinese"))
-    InstallChineseBtn.SetFont("s10", "Segoe UI")
-    InstallChineseBtn.OnEvent("Click", InstallCursorChinese)
-    HoverBtnWithAnimation(InstallChineseBtn, UI_Colors.BtnBg, UI_Colors.BtnHover)
-    GeneralTabControls.Push(InstallChineseBtn)
-    
-    YPos += 40
-    HintInstallChinese := ConfigGUI.Add("Text", "x" . (X + 30) . " y" . YPos . " w" . (W - 60) . " h40 c" . UI_Colors.TextDim, GetText("install_cursor_chinese_desc"))
-    HintInstallChinese.SetFont("s9", "Segoe UI")
-    GeneralTabControls.Push(HintInstallChinese)
 }
 
 ; ===================== 创建快捷操作按钮配置UI =====================
@@ -8948,78 +8929,6 @@ ResetToDefaults(*) {
     }
     
     MsgBox(GetText("reset_default_success"), GetText("tip"), "Iconi")
-}
-
-; ===================== 安装 Cursor 中文版 =====================
-InstallCursorChinese(*) {
-    global CursorPath, AISleepTime, GuiID_ConfigGUI
-    
-    ; 关闭配置面板
-    if (GuiID_ConfigGUI != 0) {
-        try {
-            CloseConfigGUI()
-        } catch as err {
-            ; 如果关闭失败，直接销毁
-            try {
-                GuiID_ConfigGUI.Destroy()
-                GuiID_ConfigGUI := 0
-            }
-        }
-    }
-    
-    ; 显示提示信息
-    MsgBox(GetText("install_cursor_chinese_guide"), GetText("install_cursor_chinese"), "Iconi")
-    
-    ; 检查 Cursor 是否运行
-    if (!WinExist("ahk_exe Cursor.exe")) {
-        if (CursorPath != "" && FileExist(CursorPath)) {
-            Run(CursorPath)
-            Sleep(AISleepTime * 2)  ; 等待 Cursor 启动
-        } else {
-            TrayTip(GetText("cursor_not_running_error"), GetText("error"), "Iconx 2")
-            return
-        }
-    }
-    
-    ; 激活 Cursor 窗口
-    try {
-        LegacyGuard_RequestCursorFocus("LegacyConfigGui", "return_cursor_focus")
-        WinWaitActive("ahk_exe Cursor.exe", , 3)
-        Sleep(500)  ; 等待窗口完全激活
-        
-        ; 确保窗口已激活
-        if (!WinActive("ahk_exe Cursor.exe")) {
-            LegacyGuard_RequestCursorFocus("LegacyConfigGui", "return_cursor_focus")
-            Sleep(300)
-        }
-        
-        ; 步骤 1: 打开命令面板（支持自定义快捷键）
-        Sleep(500)
-        Send(GetCursorActionShortcut("CommandPalette"))
-        Sleep(1000)  ; 等待命令面板打开
-        
-        ; 步骤 2: 直接粘贴 "Configure Display Language"
-        ; 先保存当前剪贴板内容
-        OldClipboard := A_Clipboard
-        A_Clipboard := "Configure Display Language"
-        ClipWait(1)  ; 等待剪贴板就绪
-        
-        ; 粘贴文本
-        Send("^v")  ; Ctrl + V
-        Sleep(500)  ; 等待粘贴完成和选项显示
-        
-        ; 恢复原剪贴板内容
-        A_Clipboard := OldClipboard
-        
-        ; 步骤 3: 按回车确认
-        Send("{Enter}")
-        
-        ; 显示详细的操作提示
-        TrayTip(GetText("install_cursor_chinese_complete"), GetText("install_cursor_chinese"), "Iconi 5")
-        
-    } catch as e {
-        TrayTip("安装流程执行失败: " . e.Message, GetText("error"), "Iconx 2")
-    }
 }
 
 ; ===================== UI 常量定义 =====================

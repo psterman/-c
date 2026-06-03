@@ -6,8 +6,18 @@ global g_HoleTrig_CircleCw := false
 global g_HoleTrig_CircleCcw := false
 global g_HoleTrig_RButtonHold := false
 global g_HoleTrig_CircleMinRadius := 72
-global g_HoleTrig_RButtonHoldMs := 480
-global g_HoleTrig_RButtonMaxMovePx := 14
+global g_HoleTrig_RButtonHoldMs := 3000
+global g_HoleTrig_RButtonMaxMovePx := 20
+global g_HoleTrig_HoldStillBroken := false
+global g_HoleTrig_HoldStillAccumMs := 0
+global g_HoleTrig_HoldPollLastTick := 0
+global g_HoleTrig_HoldActivatedThisPress := false
+global g_HoleTrig_RButtonPhysDown := false
+global g_HoleTrig_RButtonGraceUntil := 0
+global g_HoleTrig_RButtonLockUntilUp := false
+global g_HoleTrig_LastRButtonDownTick := 0
+global g_HoleTrig_RButtonMinPressMs := 180
+global g_HoleTrig_HoldPollMs := 50
 global g_HoleTrig_GestureActive := false
 global g_HoleTrig_Points := []
 global g_HoleTrig_StartTick := 0
@@ -89,9 +99,12 @@ HoleTriggers_EnsureInputAlive(*) {
             . " hold=" . (g_HoleTrig_RButtonHold ? "1" : "0"))
         lastDiagTick := A_TickCount
     }
-    if want
+    if want {
+        HoleTriggers_HealStuckRButtonLock()
+        HoleTriggers_HealStuckRButtonGesture()
+        HoleTriggers_HealPhantomRButtonDown()
         HoleTriggers_SyncInputCapture()
-    else {
+    } else {
         HoleTriggers_RemoveMouseHook()
         HoleTriggers_DisableGestureHotkeys()
     }
@@ -132,6 +145,186 @@ HoleTriggers_IsCircleCcwEnabled() {
 HoleTriggers_IsRButtonHoldEnabled() {
     global g_HoleTrig_RButtonHold
     return !!g_HoleTrig_RButtonHold
+}
+
+; 设置页仅提供 1 / 3 / 5 秒；旧 INI 毫秒值归并到最近档位
+HoleTriggers_NormalizeHoldMs(ms) {
+    m := Integer(ms)
+    if (m <= 1500)
+        return 1000
+    if (m <= 4000)
+        return 3000
+    return 5000
+}
+
+HoleTriggers_GetHoldDurationMs() {
+    global g_HoleTrig_RButtonHoldMs
+    return HoleTriggers_NormalizeHoldMs(g_HoleTrig_RButtonHoldMs)
+}
+
+; 长按「几乎不动」：相对按下点的位移容差（与画圈切换阈值分开）
+HoleTriggers_GetRButtonHoldMovePx() {
+    global g_HoleTrig_RButtonMaxMovePx
+    base := Max(20, Integer(g_HoleTrig_RButtonMaxMovePx))
+    return Max(32, base + 12)
+}
+
+; 明显拖移后才进入右键画圈 watch，避免微抖打断长按累计
+HoleTriggers_GetRButtonCircleBreakMovePx() {
+    return Max(72, HoleTriggers_GetRButtonHoldMovePx() + 28)
+}
+
+HoleTriggers_HoldStillDistOk(dist, holdMax := "") {
+    if (holdMax = "")
+        holdMax := HoleTriggers_GetRButtonHoldMovePx()
+    return (dist <= holdMax)
+}
+
+HoleTriggers_HoldStillDistSoft(dist, holdMax := "") {
+    if (holdMax = "")
+        holdMax := HoleTriggers_GetRButtonHoldMovePx()
+    return (dist <= holdMax * 1.65)
+}
+
+HoleTriggers_AccumulateHoldStill(dt, dist) {
+    global g_HoleTrig_HoldStillAccumMs
+    holdMax := HoleTriggers_GetRButtonHoldMovePx()
+    if HoleTriggers_HoldStillDistOk(dist, holdMax)
+        g_HoleTrig_HoldStillAccumMs += dt
+    else if HoleTriggers_HoldStillDistSoft(dist, holdMax) {
+        ; 略超出容差时缓慢衰减，避免手抖把 3 秒进度清零
+        g_HoleTrig_HoldStillAccumMs := Max(0, g_HoleTrig_HoldStillAccumMs - Floor(dt * 0.35))
+    } else
+        g_HoleTrig_HoldStillAccumMs := Max(0, g_HoleTrig_HoldStillAccumMs - dt)
+}
+
+HoleTriggers_HoldStillSatisfied(dist, elapsed := 0) {
+    global g_HoleTrig_HoldStillAccumMs, g_HoleTrig_StartTick
+    holdNeed := HoleTriggers_GetHoldDurationMs()
+    holdMax := HoleTriggers_GetRButtonHoldMovePx()
+    if !HoleTriggers_HoldStillDistOk(dist, holdMax)
+        return false
+    if (g_HoleTrig_HoldStillAccumMs >= holdNeed)
+        return true
+    if (elapsed < 1 && g_HoleTrig_StartTick > 0)
+        elapsed := A_TickCount - g_HoleTrig_StartTick
+    return (elapsed >= holdNeed)
+}
+
+HoleTriggers_ShouldTrustHookRButtonUp() {
+    global g_HoleTrig_GestureActive, g_HoleTrig_RButtonWatch, g_HoleTrig_RButtonLockUntilUp
+    if g_HoleTrig_RButtonLockUntilUp
+        return false
+    return g_HoleTrig_GestureActive || g_HoleTrig_RButtonWatch
+}
+
+HoleTriggers_OnRButtonDownReject(reason := "") {
+    if (reason != "")
+        HoleTriggers_DiagLog("[HoleTrigger] rbutton_down_skip reason=" . String(reason))
+}
+
+; 钩子已置 PhysDown 但手势未启动（常见于按下后被 skip）时补开长按计时
+HoleTriggers_HealPhantomRButtonDown() {
+    global g_HoleTrig_RButtonPhysDown, g_HoleTrig_GestureActive, g_HoleTrig_RButtonWatch
+    global g_HoleTrig_LastRButtonDownTick, g_HoleTrig_RButtonLockUntilUp
+    if g_HoleTrig_RButtonLockUntilUp || g_HoleTrig_GestureActive || g_HoleTrig_RButtonWatch
+        return
+    if !g_HoleTrig_RButtonPhysDown
+        return
+    if (g_HoleTrig_LastRButtonDownTick < 1 || (A_TickCount - g_HoleTrig_LastRButtonDownTick) > 8000)
+        return
+    if (A_TickCount - g_HoleTrig_LastRButtonDownTick) < 50
+        return
+    if !HoleTriggers_IsRButtonHoldEnabled() || !HoleTriggers_IsHoleModeActive()
+        return
+    if !HoleTriggers_IsRButtonPhysicallyDown()
+        return
+    HoleTriggers_DiagLog("[HoleTrigger] heal_phantom_rbutton_down age=" . (A_TickCount - g_HoleTrig_LastRButtonDownTick))
+    HoleTriggers_OnRButtonDown()
+}
+
+HoleTriggers_HealStuckRButtonGesture() {
+    global g_HoleTrig_GestureActive, g_HoleTrig_RButtonWatch, g_HoleTrig_RButtonLockUntilUp
+    global g_HoleTrig_LastRButtonDownTick, g_HoleTrig_RButtonPhysDown
+    if g_HoleTrig_RButtonLockUntilUp
+        return
+    if !(g_HoleTrig_GestureActive || g_HoleTrig_RButtonWatch)
+        return
+    if HoleTriggers_IsRButtonPhysicallyDown()
+        return
+    if (g_HoleTrig_LastRButtonDownTick > 0 && (A_TickCount - g_HoleTrig_LastRButtonDownTick) < 400)
+        return
+    HoleTriggers_DiagLog("[HoleTrigger] heal_stuck_rbutton_gesture")
+    g_HoleTrig_RButtonPhysDown := false
+    HoleTriggers_ClearRButtonCaptureState(false)
+    global g_HoleTrig_HoldActivatedThisPress
+    g_HoleTrig_HoldActivatedThisPress := false
+}
+
+HoleTriggers_IsRButtonPhysicallyDown() {
+    global g_HoleTrig_RButtonPhysDown, g_HoleTrig_RButtonGraceUntil
+    if g_HoleTrig_RButtonPhysDown
+        return true
+    if (A_TickCount < g_HoleTrig_RButtonGraceUntil)
+        return true
+    try return GetKeyState("RButton", "P")
+    return false
+}
+
+HoleTriggers_IsRButtonReallyUp() {
+    try {
+        if GetKeyState("RButton", "P")
+            return false
+    } catch {
+    }
+    return true
+}
+
+HoleTriggers_ArmRButtonLockUntilUp(reason := "") {
+    global g_HoleTrig_RButtonLockUntilUp
+    g_HoleTrig_RButtonLockUntilUp := true
+    HoleTriggers_DiagLog("[HoleTrigger] rbutton_lock_until_up reason=" . String(reason))
+}
+
+HoleTriggers_StartRButtonHoldPoll() {
+    global g_HoleTrig_HoldPollMs
+    try SetTimer(HoleTriggers_OnRButtonHoldTick, 0)
+    SetTimer(HoleTriggers_OnRButtonHoldTick, Max(35, Integer(g_HoleTrig_HoldPollMs)))
+}
+
+HoleTriggers_StopRButtonHoldPoll() {
+    try SetTimer(HoleTriggers_OnRButtonHoldTick, 0)
+    catch {
+    }
+}
+
+; 结束本轮右键轨迹/长按计时；keepLock=1 时保留「等真正松开」锁，便于连续两次长按
+HoleTriggers_ClearRButtonCaptureState(keepLock := false) {
+    global g_HoleTrig_GestureActive, g_HoleTrig_RButtonWatch, g_HoleTrig_HoldStillBroken
+    global g_HoleTrig_HoldStillAccumMs, g_HoleTrig_HoldPollLastTick, g_HoleTrig_RButtonLockUntilUp
+    HoleTriggers_StopRButtonHoldPoll()
+    try SetTimer(HoleTriggers_TrackPointer, 0)
+    try SetTimer(HoleTriggers_RButtonWatchTick, 0)
+    g_HoleTrig_GestureActive := false
+    g_HoleTrig_RButtonWatch := false
+    g_HoleTrig_HoldStillBroken := false
+    g_HoleTrig_HoldStillAccumMs := 0
+    g_HoleTrig_HoldPollLastTick := 0
+    if !keepLock
+        g_HoleTrig_RButtonLockUntilUp := false
+}
+
+HoleTriggers_HealStuckRButtonLock() {
+    global g_HoleTrig_RButtonLockUntilUp, g_HoleTrig_HoldActivatedThisPress
+    if !g_HoleTrig_RButtonLockUntilUp
+        return
+    if HoleTriggers_IsRButtonPhysicallyDown()
+        return
+    if !HoleTriggers_IsRButtonReallyUp()
+        return
+    HoleTriggers_DiagLog("[HoleTrigger] heal_lock_released")
+    HoleTriggers_ClearRButtonCaptureState(false)
+    g_HoleTrig_HoldActivatedThisPress := false
 }
 
 ; 画圈已改为空手进行，右键仅保留长按逻辑，可恢复提前长按
@@ -184,12 +377,7 @@ HoleTriggers_ApplyConfig(trigMap, syncCapture := true) {
     if (r > 240)
         r := 240
     g_HoleTrig_CircleMinRadius := r
-    hm := Integer(trigMap.Get("rbuttonHoldMs", 480))
-    if (hm < 200)
-        hm := 200
-    if (hm > 2000)
-        hm := 2000
-    g_HoleTrig_RButtonHoldMs := hm
+    g_HoleTrig_RButtonHoldMs := HoleTriggers_NormalizeHoldMs(trigMap.Get("rbuttonHoldMs", 3000))
     HoleTriggers_DiagLog("[HoleTrigger] apply_config cw=" . (g_HoleTrig_CircleCw ? "1" : "0")
         . " ccw=" . (g_HoleTrig_CircleCcw ? "1" : "0") . " hold=" . (g_HoleTrig_RButtonHold ? "1" : "0")
         . " holdMs=" . g_HoleTrig_RButtonHoldMs)
@@ -288,8 +476,14 @@ HoleTriggers_DisableGestureHotkeys() {
 HoleTriggers_DeferredRButtonDown(*) {
     global g_HoleTrig_PendingDown
     g_HoleTrig_PendingDown := false
-    if HoleTriggers_ShouldDeferToVkContextMenu()
+    if HoleTriggers_ShouldDeferToVkContextMenu() {
+        HoleTriggers_OnRButtonDownReject("vk_context_menu")
         return
+    }
+    if !HoleTriggers_IsRButtonPhysicallyDown() {
+        HoleTriggers_OnRButtonDownReject("not_down_on_defer")
+        return
+    }
     HoleTriggers_OnRButtonDown()
 }
 
@@ -438,12 +632,25 @@ HoleTriggers_FreeCircleFinalize(*) {
 
 HoleTriggers_OnMouseButtonDown_Hook(btnMsg := 0) {
     global g_HoleTrig_FreePts
-    n := (g_HoleTrig_FreePts is Array) ? g_HoleTrig_FreePts.Length : 0
-    if (btnMsg = 0x204 && !HoleTriggers_IsRButtonHoldEnabled())
+    if (btnMsg = 0x204) {
+        if HoleTriggers_IsRButtonHoldEnabled()
+            HoleTriggers_FreeCircle_Reset("hook_rbutton_down")
         return
+    }
+    n := (g_HoleTrig_FreePts is Array) ? g_HoleTrig_FreePts.Length : 0
     if (n >= 8 && btnMsg != 0x201)
         return
     HoleTriggers_FreeCircle_Reset("hook_button_down")
+}
+
+HoleTriggers_ShouldBreakHoldForCircle(dist) {
+    if !HoleTriggers_AnyCircleEnabled()
+        return false
+    if (dist <= HoleTriggers_GetRButtonCircleBreakMovePx())
+        return false
+    global g_HoleTrig_Points
+    pathLen := HoleTriggers_ComputePathLength(g_HoleTrig_Points)
+    return (pathLen >= 36)
 }
 
 HoleTriggers_MouseHookProc(nCode, wParam, lParam) {
@@ -456,11 +663,44 @@ HoleTriggers_MouseHookProc(nCode, wParam, lParam) {
         if (wParam = 0x201 || wParam = 0x204 || wParam = 0x207 || wParam = 0x20B || wParam = 0x20C) {
             HoleTriggers_OnMouseButtonDown_Hook(wParam)
         }
-        if (wParam = 0x204) && !g_HoleTrig_PendingDown && HoleTriggers_IsRButtonHoldEnabled()
-            && !HoleTriggers_FreeCircleInProgress() {  ; WM_RBUTTONDOWN
+        if (wParam = 0x204) && HoleTriggers_IsRButtonHoldEnabled() {  ; WM_RBUTTONDOWN
+            global g_HoleTrig_RButtonPhysDown, g_HoleTrig_RButtonGraceUntil, g_HoleTrig_LastRButtonDownTick, g_HoleTrig_PendingDown
+            global g_HoleTrig_RButtonLockUntilUp
+            if g_HoleTrig_RButtonLockUntilUp
+                return DllCall("CallNextHookEx", "Ptr", hhk, "Int", nCode, "UInt", wParam, "Ptr", lParam, "Ptr")
+            if g_HoleTrig_PendingDown {
+                if (g_HoleTrig_LastRButtonDownTick > 0 && (A_TickCount - g_HoleTrig_LastRButtonDownTick) > 450)
+                    g_HoleTrig_PendingDown := false
+                else
+                    return DllCall("CallNextHookEx", "Ptr", hhk, "Int", nCode, "UInt", wParam, "Ptr", lParam, "Ptr")
+            }
+            g_HoleTrig_RButtonPhysDown := true
+            g_HoleTrig_RButtonGraceUntil := A_TickCount + 320
+            g_HoleTrig_LastRButtonDownTick := A_TickCount
             g_HoleTrig_PendingDown := true
             SetTimer(HoleTriggers_DeferredRButtonDown, -1)
+            try SetTimer(HoleTriggers_HealPhantomRButtonDown, -80)
         } else if (wParam = 0x205) && !g_HoleTrig_PendingUp {  ; WM_RBUTTONUP
+            global g_HoleTrig_RButtonPhysDown, g_HoleTrig_LastRButtonDownTick, g_HoleTrig_RButtonMinPressMs
+            global g_HoleTrig_GestureActive, g_HoleTrig_RButtonWatch, g_HoleTrig_RButtonLockUntilUp
+            gestureBusy := g_HoleTrig_GestureActive || g_HoleTrig_RButtonWatch
+            if !HoleTriggers_IsRButtonReallyUp() {
+                if g_HoleTrig_RButtonLockUntilUp && !g_HoleTrig_RButtonPhysDown {
+                    HoleTriggers_DiagLog("[HoleTrigger] hook_rbutton_up_trusted lock_release")
+                } else if HoleTriggers_ShouldTrustHookRButtonUp() {
+                    HoleTriggers_DiagLog("[HoleTrigger] hook_rbutton_up_trusted still_down=1 gesture=1")
+                } else {
+                    HoleTriggers_DiagLog("[HoleTrigger] hook_rbutton_up_ignored still_down=1")
+                    return DllCall("CallNextHookEx", "Ptr", hhk, "Int", nCode, "UInt", wParam, "Ptr", lParam, "Ptr")
+                }
+            }
+            if !gestureBusy && g_HoleTrig_LastRButtonDownTick > 0
+                && (A_TickCount - g_HoleTrig_LastRButtonDownTick) < Integer(g_HoleTrig_RButtonMinPressMs) {
+                HoleTriggers_DiagLog("[HoleTrigger] hook_rbutton_up_ignored too_fast ms="
+                    . (A_TickCount - g_HoleTrig_LastRButtonDownTick))
+                return DllCall("CallNextHookEx", "Ptr", hhk, "Int", nCode, "UInt", wParam, "Ptr", lParam, "Ptr")
+            }
+            g_HoleTrig_RButtonPhysDown := false
             g_HoleTrig_PendingUp := true
             SetTimer(HoleTriggers_DeferredRButtonUp, -1)
         } else if (wParam = 0x200) {
@@ -528,8 +768,8 @@ HoleTriggers_LoadFromIni(iniPath := "") {
     }
     iniRadius := Integer(IniRead(cf, "Appearance", "HoleCircleMinRadius", "0"))
     circleR := (iniRadius > 0) ? iniRadius : presetRadius
-    hmRaw := Trim(IniRead(cf, "Appearance", "HoleRButtonHoldMs", "480"))
-    hm := Integer(hmRaw != "" ? hmRaw : "520")
+    hmRaw := Trim(IniRead(cf, "Appearance", "HoleRButtonHoldMs", "3000"))
+    hm := HoleTriggers_NormalizeHoldMs(Integer(hmRaw != "" ? hmRaw : "3000"))
     acRaw := Trim(IniRead(cf, "Appearance", "HoleGestureActivateCooldownMs", "900"))
     global g_HoleTrig_ActivateCooldownMs
     g_HoleTrig_ActivateCooldownMs := Max(500, Integer(acRaw != "" ? acRaw : "900"))
@@ -624,8 +864,18 @@ HoleTriggers_ShouldIgnoreGestureAtPoint(x, y) {
     return false
 }
 
-HoleTriggers_CanActivateNow() {
+HoleTriggers_IsHoldActivateReason(reason := "") {
+    r := StrLower(Trim(String(reason)))
+    return InStr(r, "rbutton_hold")
+}
+
+HoleTriggers_CanActivateNow(reason := "") {
     global g_HoleTrig_LastActivateTick, g_HoleTrig_ActivateCooldownMs
+    ; 长按右键：短防抖即可，关闭黑洞后可立即再次长按唤起（不再套用 0.9s+ 的全局冷却）
+    if HoleTriggers_IsHoldActivateReason(reason) {
+        cd := 80
+        return (A_TickCount - Integer(g_HoleTrig_LastActivateTick) >= cd)
+    }
     strict := HoleTriggers_GetGestureStrictness()
     cd := Floor(Integer(g_HoleTrig_ActivateCooldownMs) * strict)
     if (cd < 500)
@@ -665,6 +915,14 @@ HoleTriggers_ClearGestureTrail() {
 }
 
 HoleTriggers_OnLauncherDismissed(reason := "") {
+    global g_HoleTrig_LastActivateTick, g_HoleTrig_RButtonLockUntilUp
+    ; 黑洞已关闭：清零唤起冷却，便于立刻再次长按右键唤起
+    g_HoleTrig_LastActivateTick := 0
+    if g_HoleTrig_RButtonLockUntilUp && HoleTriggers_IsRButtonReallyUp() {
+        HoleTriggers_ClearRButtonCaptureState(false)
+        global g_HoleTrig_HoldActivatedThisPress
+        g_HoleTrig_HoldActivatedThisPress := false
+    }
     HoleTriggers_FreeCircle_Reset("launcher_dismiss:" . String(reason))
 }
 
@@ -910,8 +1168,10 @@ HoleTriggers_IsGestureHotkeyContext() {
 HoleTriggers_ActivateAtScreen(x, y, reason := "gesture") {
     if !HoleTriggers_IsHoleModeActive()
         return false
-    if !HoleTriggers_CanActivateNow()
+    if !HoleTriggers_CanActivateNow(reason) {
+        HoleTriggers_DiagLog("[HoleTrigger] activate_blocked cooldown reason=" . String(reason))
         return false
+    }
     if HoleTriggers_ShouldIgnoreGestureAtPoint(x, y)
         return false
     ax := Integer(x), ay := Integer(y)
@@ -952,8 +1212,15 @@ HoleTriggers_ActivateAtScreen(x, y, reason := "gesture") {
     }
     if !ok
         ok := HoleTriggers_HoleUiIsVisible()
-    if ok
+    if ok {
         HoleTriggers_MarkActivated()
+        if HoleTriggers_IsHoldActivateReason(reason) {
+            global g_HoleTrig_HoldActivatedThisPress
+            g_HoleTrig_HoldActivatedThisPress := true
+            HoleTriggers_ClearRButtonCaptureState(true)
+            HoleTriggers_ArmRButtonLockUntilUp(reason)
+        }
+    }
     try HoleTriggers_ClearGestureTrail()
     catch {
     }
@@ -983,7 +1250,7 @@ HoleTriggers_RButtonWatchTick(*) {
         }
         return
     }
-    if !GetKeyState("RButton", "P") {
+    if !HoleTriggers_IsRButtonPhysicallyDown() {
         HoleTriggers_OnRButtonUp()
         return
     }
@@ -996,43 +1263,63 @@ HoleTriggers_RButtonWatchTick(*) {
 
 HoleTriggers_OnRButtonDown(*) {
     global g_HoleTrig_GestureActive, g_HoleTrig_Points, g_HoleTrig_StartTick, g_HoleTrig_StartX, g_HoleTrig_StartY
-    global g_HoleTrig_RButtonWatch, g_HoleTrig_LastMoveTick
-    if g_HoleTrig_GestureActive || g_HoleTrig_RButtonWatch
+    global g_HoleTrig_RButtonWatch, g_HoleTrig_LastMoveTick, g_HoleTrig_HoldStillBroken, g_HoleTrig_RButtonLockUntilUp
+    global g_HoleTrig_LastRButtonDownTick, g_HoleTrig_HoldActivatedThisPress
+    HoleTriggers_HealStuckRButtonGesture()
+    if g_HoleTrig_RButtonLockUntilUp {
+        HoleTriggers_OnRButtonDownReject("lock_until_up")
         return
-    if HoleTriggers_FreeCircleInProgress()
+    }
+    if g_HoleTrig_GestureActive || g_HoleTrig_RButtonWatch {
+        HoleTriggers_OnRButtonDownReject("gesture_busy")
         return
-    if !HoleTriggers_IsHoleModeActive()
+    }
+    if !HoleTriggers_IsHoleModeActive() {
+        HoleTriggers_OnRButtonDownReject("hole_inactive")
         return
-    if !HoleTriggers_IsRButtonHoldEnabled()
+    }
+    if !HoleTriggers_IsRButtonHoldEnabled() {
+        HoleTriggers_OnRButtonDownReject("hold_off")
         return
-    if HoleTriggers_ShouldIgnoreGestureAtPoint(0, 0)
+    }
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&mx, &my)
+    if HoleTriggers_ShouldIgnoreGestureAtPoint(mx, my) {
+        HoleTriggers_OnRButtonDownReject("ignore_wnd")
         return
+    }
     try HoleTriggers_HideGestureToast("rbutton_down")
     catch {
     }
     HoleTriggers_FreeCircle_Reset("rbutton_down")
-    CoordMode("Mouse", "Screen")
-    MouseGetPos(&mx, &my)
+    g_HoleTrig_HoldActivatedThisPress := false
     HoleTriggers_DiagLog("[HoleTrigger] rbutton_down x=" . mx . " y=" . my . " cw=" . (HoleTriggers_IsCircleCwEnabled() ? "1" : "0")
         . " ccw=" . (HoleTriggers_IsCircleCcwEnabled() ? "1" : "0") . " hold=" . (HoleTriggers_IsRButtonHoldEnabled() ? "1" : "0"))
+    global g_HoleTrig_RButtonPhysDown, g_HoleTrig_RButtonGraceUntil
+    g_HoleTrig_RButtonPhysDown := true
+    g_HoleTrig_RButtonGraceUntil := A_TickCount + 320
+    global g_HoleTrig_LastRButtonDownTick
+    g_HoleTrig_LastRButtonDownTick := A_TickCount
+    g_HoleTrig_HoldStillBroken := false
+    global g_HoleTrig_HoldStillAccumMs, g_HoleTrig_HoldPollLastTick
+    g_HoleTrig_HoldStillAccumMs := 0
+    g_HoleTrig_HoldPollLastTick := A_TickCount
     g_HoleTrig_StartTick := A_TickCount
     g_HoleTrig_LastMoveTick := g_HoleTrig_StartTick
     g_HoleTrig_StartX := mx
     g_HoleTrig_StartY := my
     g_HoleTrig_Points := [{ x: mx, y: my }]
     global g_HoleTrig_TrackIntervalMs
-    circleOn := HoleTriggers_AnyCircleEnabled()
-    if circleOn {
+    g_HoleTrig_RButtonWatch := false
+    if HoleTriggers_IsRButtonHoldEnabled() {
+        g_HoleTrig_GestureActive := true
+        SetTimer(HoleTriggers_TrackPointer, g_HoleTrig_TrackIntervalMs)
+        HoleTriggers_StartRButtonHoldPoll()
+    } else if HoleTriggers_AnyCircleEnabled() {
         g_HoleTrig_GestureActive := false
         g_HoleTrig_RButtonWatch := true
         SetTimer(HoleTriggers_RButtonWatchTick, g_HoleTrig_TrackIntervalMs)
-    } else {
-        g_HoleTrig_RButtonWatch := false
-        g_HoleTrig_GestureActive := true
-        SetTimer(HoleTriggers_TrackPointer, g_HoleTrig_TrackIntervalMs)
     }
-    if HoleTriggers_UseEarlyRButtonHold()
-        SetTimer(HoleTriggers_OnRButtonHoldTick, 40)
 }
 
 ; 数组在 v2 中按对象引用传递，勿用 &pts（调用全局变量会报错）
@@ -1060,15 +1347,34 @@ HoleTriggers_AppendPoint(mx, my) {
 }
 
 HoleTriggers_TrackPointer(*) {
-    global g_HoleTrig_GestureActive, g_HoleTrig_Points
+    global g_HoleTrig_GestureActive, g_HoleTrig_Points, g_HoleTrig_StartX, g_HoleTrig_StartY
+    global g_HoleTrig_HoldStillBroken, g_HoleTrig_RButtonWatch, g_HoleTrig_RButtonMaxMovePx, g_HoleTrig_TrackIntervalMs
     if !g_HoleTrig_GestureActive
         return
-    if !GetKeyState("RButton", "P") {
+    if !HoleTriggers_IsRButtonPhysicallyDown() {
+        allowUp := HoleTriggers_IsRButtonReallyUp()
+        if !allowUp && (A_TickCount - g_HoleTrig_StartTick) >= Integer(g_HoleTrig_RButtonMinPressMs)
+            allowUp := true
+        if !allowUp
+            return
+        if (A_TickCount - g_HoleTrig_StartTick < Integer(g_HoleTrig_RButtonMinPressMs))
+            return
         HoleTriggers_OnRButtonUp()
         return
     }
     CoordMode("Mouse", "Screen")
     MouseGetPos(&mx, &my)
+    if HoleTriggers_IsRButtonHoldEnabled() && !g_HoleTrig_RButtonWatch {
+        dx := mx - g_HoleTrig_StartX
+        dy := my - g_HoleTrig_StartY
+        dist := Sqrt(dx * dx + dy * dy)
+        if HoleTriggers_ShouldBreakHoldForCircle(dist) {
+            g_HoleTrig_RButtonWatch := true
+            try SetTimer(HoleTriggers_RButtonWatchTick, g_HoleTrig_TrackIntervalMs)
+            catch {
+            }
+        }
+    }
     HoleTriggers_AppendPoint(mx, my)
 }
 
@@ -1253,10 +1559,50 @@ HoleTriggers_AnalyzeCircle(&outDir := "", &reject := "", pts := "", &diag := "")
 
 HoleTriggers_OnRButtonUp(*) {
     global g_HoleTrig_GestureActive, g_HoleTrig_Points, g_HoleTrig_StartTick, g_HoleTrig_StartX, g_HoleTrig_StartY
-    global g_HoleTrig_RButtonHoldMs, g_HoleTrig_RButtonMaxMovePx, g_HoleTrig_RButtonWatch
+    global g_HoleTrig_RButtonMaxMovePx, g_HoleTrig_RButtonWatch, g_HoleTrig_HoldStillBroken
+    global g_HoleTrig_RButtonPhysDown, g_HoleTrig_RButtonLockUntilUp, g_HoleTrig_RButtonMinPressMs
+    global g_HoleTrig_HoldActivatedThisPress, g_HoleTrig_LastRButtonDownTick
     wasWatch := g_HoleTrig_RButtonWatch
     wasActive := g_HoleTrig_GestureActive
-    try SetTimer(HoleTriggers_OnRButtonHoldTick, 0)
+    elapsed := wasActive ? (A_TickCount - g_HoleTrig_StartTick) : 0
+    if g_HoleTrig_RButtonLockUntilUp {
+        if !HoleTriggers_IsRButtonReallyUp() {
+            lockElapsed := (g_HoleTrig_LastRButtonDownTick > 0) ? (A_TickCount - g_HoleTrig_LastRButtonDownTick) : elapsed
+            if !(g_HoleTrig_HoldActivatedThisPress && !HoleTriggers_IsRButtonPhysicallyDown()
+                && lockElapsed >= Integer(g_HoleTrig_RButtonMinPressMs)) {
+                HoleTriggers_DiagLog("[HoleTrigger] rbutton_up_ignored lock_still_down")
+                return
+            }
+            HoleTriggers_DiagLog("[HoleTrigger] rbutton_lock_released trusted_up elapsed=" . lockElapsed)
+        } else
+            HoleTriggers_DiagLog("[HoleTrigger] rbutton_lock_released")
+        g_HoleTrig_RButtonLockUntilUp := false
+        g_HoleTrig_RButtonPhysDown := false
+        g_HoleTrig_HoldActivatedThisPress := false
+        HoleTriggers_ClearRButtonCaptureState(false)
+        return
+    }
+    if g_HoleTrig_HoldActivatedThisPress {
+        g_HoleTrig_HoldActivatedThisPress := false
+        g_HoleTrig_RButtonPhysDown := false
+        HoleTriggers_ClearRButtonCaptureState(false)
+        HoleTriggers_DiagLog("[HoleTrigger] rbutton_up_after_hold_fire ms=" . elapsed)
+        return
+    }
+    if wasActive && !HoleTriggers_IsRButtonReallyUp() {
+        if (elapsed >= Integer(g_HoleTrig_RButtonMinPressMs)) {
+            HoleTriggers_DiagLog("[HoleTrigger] rbutton_up_trusted still_down elapsed=" . elapsed)
+        } else {
+            HoleTriggers_DiagLog("[HoleTrigger] rbutton_up_ignored still_down elapsed=" . elapsed)
+            return
+        }
+    }
+    if wasActive && (elapsed < Integer(g_HoleTrig_RButtonMinPressMs)) {
+        HoleTriggers_DiagLog("[HoleTrigger] rbutton_up_ignored too_fast elapsed=" . elapsed)
+        return
+    }
+    g_HoleTrig_RButtonPhysDown := false
+    HoleTriggers_StopRButtonHoldPoll()
     try SetTimer(HoleTriggers_RButtonWatchTick, 0)
     try SetTimer(HoleTriggers_TrackPointer, 0)
     g_HoleTrig_RButtonWatch := false
@@ -1266,62 +1612,82 @@ HoleTriggers_OnRButtonUp(*) {
     CoordMode("Mouse", "Screen")
     MouseGetPos(&mx, &my)
     HoleTriggers_AppendPoint(mx, my)
-    elapsed := A_TickCount - g_HoleTrig_StartTick
     pts := g_HoleTrig_Points
     pathLen := HoleTriggers_ComputePathLength(pts)
-    HoleTriggers_DiagLog("[HoleTrigger] rbutton_up pts=" . (pts is Array ? pts.Length : 0) . " ms=" . elapsed
-        . " path=" . Round(pathLen) . " hold_only=1 watch=" . (wasWatch ? "1" : "0"))
+    holdNeed := HoleTriggers_GetHoldDurationMs()
+    global g_HoleTrig_HoldStillAccumMs
+    HoleTriggers_DiagLog("[HoleTrigger] rbutton_up pts=" . (pts is Array ? pts.Length : 0) . " ms=" . elapsed . " need=" . holdNeed
+        . " accum=" . g_HoleTrig_HoldStillAccumMs . " path=" . Round(pathLen)
+        . " hold_broken=" . (g_HoleTrig_HoldStillBroken ? "1" : "0") . " watch=" . (wasWatch ? "1" : "0"))
     if HoleTriggers_IsRButtonHoldEnabled() {
+        global g_HoleTrig_HoldStillAccumMs
+        holdMax := HoleTriggers_GetRButtonHoldMovePx()
         dx := mx - g_HoleTrig_StartX
         dy := my - g_HoleTrig_StartY
         dist := Sqrt(dx * dx + dy * dy)
-        holdPathMax := g_HoleTrig_RButtonMaxMovePx * (HoleTriggers_IsCircleCwEnabled() || HoleTriggers_IsCircleCcwEnabled() ? 3.5 : 2.5)
-        holdNeed := Floor(Integer(g_HoleTrig_RButtonHoldMs) * HoleTriggers_GetGestureStrictness())
-        if (elapsed >= holdNeed && dist <= g_HoleTrig_RButtonMaxMovePx && pathLen <= holdPathMax)
+        if HoleTriggers_HoldStillSatisfied(dist, elapsed)
             HoleTriggers_ActivateAtScreen(mx, my, "rbutton_hold")
+        else if HoleTriggers_HoldStillDistOk(dist, holdMax)
+            HoleTriggers_DiagLog("[HoleTrigger] rbutton_up_short elapsed=" . elapsed . " accum=" . g_HoleTrig_HoldStillAccumMs . " need=" . holdNeed)
     }
+    g_HoleTrig_HoldStillBroken := false
+    global g_HoleTrig_HoldStillAccumMs, g_HoleTrig_HoldPollLastTick, g_HoleTrig_HoldActivatedThisPress
+    g_HoleTrig_HoldStillAccumMs := 0
+    g_HoleTrig_HoldPollLastTick := 0
+    g_HoleTrig_HoldActivatedThisPress := false
 }
 
-; 长按右键：按住达到时长且几乎不移动时提前触发（不必等抬起）
+; 长按右键：周期性检测（每 50ms），达到设定时长且几乎不动则提前唤起
 HoleTriggers_OnRButtonHoldTick(*) {
-    global g_HoleTrig_GestureActive, g_HoleTrig_RButtonWatch, g_HoleTrig_Points
-    global g_HoleTrig_StartTick, g_HoleTrig_StartX, g_HoleTrig_StartY
-    global g_HoleTrig_RButtonHoldMs, g_HoleTrig_RButtonMaxMovePx
-    if !HoleTriggers_UseEarlyRButtonHold()
-        return
-    if !(g_HoleTrig_GestureActive || g_HoleTrig_RButtonWatch) || !HoleTriggers_IsRButtonHoldEnabled()
-        return
-    if HoleTriggers_FreeCircleInProgress()
-        return
-    if !GetKeyState("RButton", "P") {
-        SetTimer(HoleTriggers_OnRButtonHoldTick, 0)
+    global g_HoleTrig_GestureActive, g_HoleTrig_StartTick, g_HoleTrig_StartX, g_HoleTrig_StartY
+    global g_HoleTrig_HoldStillBroken, g_HoleTrig_HoldStillAccumMs, g_HoleTrig_HoldPollLastTick
+    if !HoleTriggers_IsRButtonHoldEnabled() || !g_HoleTrig_GestureActive {
+        HoleTriggers_StopRButtonHoldPoll()
         return
     }
-    strict := HoleTriggers_GetGestureStrictness()
-    holdNeed := Floor(Integer(g_HoleTrig_RButtonHoldMs) * strict)
-    if (A_TickCount - g_HoleTrig_StartTick) < holdNeed
+    if HoleTriggers_FreeCircleInProgress()
         return
+    if !HoleTriggers_IsRButtonPhysicallyDown() {
+        elapsed := A_TickCount - g_HoleTrig_StartTick
+        if !HoleTriggers_IsRButtonReallyUp() && elapsed < Integer(g_HoleTrig_RButtonMinPressMs)
+            return
+        HoleTriggers_StopRButtonHoldPoll()
+        HoleTriggers_OnRButtonUp()
+        return
+    }
+    now := A_TickCount
+    if (g_HoleTrig_HoldPollLastTick < 1)
+        g_HoleTrig_HoldPollLastTick := now
+    dt := now - g_HoleTrig_HoldPollLastTick
+    g_HoleTrig_HoldPollLastTick := now
+    holdNeed := HoleTriggers_GetHoldDurationMs()
+    holdMax := HoleTriggers_GetRButtonHoldMovePx()
+    circleBreak := HoleTriggers_GetRButtonCircleBreakMovePx()
     CoordMode("Mouse", "Screen")
     MouseGetPos(&mx, &my)
-    HoleTriggers_AppendPoint(mx, my)
     dx := mx - g_HoleTrig_StartX
     dy := my - g_HoleTrig_StartY
-    if (Sqrt(dx * dx + dy * dy) > g_HoleTrig_RButtonMaxMovePx)
+    dist := Sqrt(dx * dx + dy * dy)
+    if HoleTriggers_ShouldBreakHoldForCircle(dist) {
+        g_HoleTrig_HoldStillBroken := true
+        HoleTriggers_StopRButtonHoldPoll()
+        HoleTriggers_DiagLog("[HoleTrigger] hold_circle_break dist=" . Round(dist) . " break=" . circleBreak)
+        if !g_HoleTrig_RButtonWatch {
+            global g_HoleTrig_RButtonWatch, g_HoleTrig_TrackIntervalMs
+            g_HoleTrig_RButtonWatch := true
+            SetTimer(HoleTriggers_RButtonWatchTick, g_HoleTrig_TrackIntervalMs)
+        }
         return
-    pts := g_HoleTrig_Points
-    pathLen := HoleTriggers_ComputePathLength(pts)
-    circleOn := HoleTriggers_IsCircleCwEnabled() || HoleTriggers_IsCircleCcwEnabled()
-    holdPathMax := g_HoleTrig_RButtonMaxMovePx * (circleOn ? 2.2 : 1.6)
-    ; 画圈与长按同时开：仅当空手画圈采点进行中时不抢长按；静止按住仍应提前唤起
-    if circleOn && HoleTriggers_FreeCircleInProgress()
+    }
+    HoleTriggers_AccumulateHoldStill(dt, dist)
+    if !HoleTriggers_HoldStillSatisfied(dist)
         return
-    if (pathLen > holdPathMax)
-        return
-    SetTimer(HoleTriggers_OnRButtonHoldTick, 0)
-    g_HoleTrig_GestureActive := false
-    g_HoleTrig_RButtonWatch := false
-    SetTimer(HoleTriggers_TrackPointer, 0)
-    SetTimer(HoleTriggers_RButtonWatchTick, 0)
+    accum := g_HoleTrig_HoldStillAccumMs
+    global g_HoleTrig_HoldActivatedThisPress
+    g_HoleTrig_HoldActivatedThisPress := true
+    HoleTriggers_ClearRButtonCaptureState(true)
+    HoleTriggers_DiagLog("[HoleTrigger] hold_early_fire accum=" . accum . " need=" . holdNeed . " dist=" . Round(dist))
+    HoleTriggers_ArmRButtonLockUntilUp("hold_early_fire")
     HoleTriggers_ActivateAtScreen(mx, my, "rbutton_hold_early")
 }
 
@@ -1330,7 +1696,9 @@ HoleTriggers_OnRButtonDown_Wrapped(*) {
 }
 
 HoleTriggers_OnRButtonUp_Wrapped(*) {
-    try SetTimer(HoleTriggers_OnRButtonHoldTick, 0)
+    global g_HoleTrig_RButtonPhysDown
+    g_HoleTrig_RButtonPhysDown := false
+    HoleTriggers_StopRButtonHoldPoll()
     HoleTriggers_OnRButtonUp()
 }
 
