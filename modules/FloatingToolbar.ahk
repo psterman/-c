@@ -2325,9 +2325,19 @@ FloatingToolbar_OnWebMessage(sender, args) {
                 llm["model"] := msg["model"]
         }
         pl := Map("llm", llm)
-        if msg.Has("apiKeys") && msg["apiKeys"] is Map
-            pl["options"] := Map("llmApiKeys", msg["apiKeys"])
-        if Trim(String(llm.Get("apiKey", ""))) != "" {
+        apiKeys := msg.Has("apiKeys") && msg["apiKeys"] is Map ? msg["apiKeys"] : Map()
+        if (apiKeys.Count > 0)
+            pl["options"] := Map("llmApiKeys", apiKeys)
+        hasKey := (Trim(String(llm.Get("apiKey", ""))) != "")
+        if !hasKey {
+            for _, v in apiKeys {
+                if (Trim(String(v)) != "") {
+                    hasKey := true
+                    break
+                }
+            }
+        }
+        if hasKey {
             try {
                 if FuncExists("ConfigWebView_ApplyUserStudioSave") {
                     saveMsg := Map("payload", pl)
@@ -3093,6 +3103,12 @@ FloatingToolbar_ProbeOpenClawGatewayToken(force := false) {
 
     token := ""
     source := ""
+    host := "127.0.0.1"
+    port := 18789
+    niumaKey := ""
+    gwOk := false
+    gwErr := ""
+    info := Map()
 
     try {
         envTok := Trim(String(EnvGet("OPENCLAW_GATEWAY_TOKEN")))
@@ -3103,17 +3119,54 @@ FloatingToolbar_ProbeOpenClawGatewayToken(force := false) {
     } catch {
     }
 
-    if (token = "") {
+    if (token = "" && FuncExists("UserStudio_ProbeOpenClawGatewayToken")) {
+        info := UserStudio_ProbeOpenClawGatewayToken()
+    } else if (token = "") {
         info := FloatingToolbar_ReadOpenClawGatewayToken()
-        if (info is Map) {
-            try token := Trim(String(info.Has("token") ? info["token"] : ""))
-            catch {
-                token := ""
-            }
-            try source := String(info.Has("source") ? info["source"] : "")
-            catch {
-                source := ""
-            }
+    }
+    if (info is Map) {
+        try {
+            if (token = "")
+                token := Trim(String(info.Has("token") ? info["token"] : ""))
+        } catch {
+            token := ""
+        }
+        try source := String(info.Has("source") ? info["source"] : "")
+        catch {
+            source := ""
+        }
+        try host := Trim(String(info.Has("host") ? info["host"] : "127.0.0.1"))
+        catch {
+            host := "127.0.0.1"
+        }
+        try port := Integer(info.Has("port") ? info["port"] : 18789)
+        catch {
+            port := 18789
+        }
+    }
+    try {
+        if FuncExists("UserStudio_ReadNiumaOpenClawKey")
+            niumaKey := UserStudio_ReadNiumaOpenClawKey()
+    } catch {
+    }
+    if (token = "" && niumaKey != "") {
+        token := niumaKey
+        source := "niuma_chat_llm.json"
+    }
+    if (token != "") {
+        base := "http://" . host . ":" . port
+        try {
+            r := Map("ok", false, "error", "")
+            if FuncExists("ConfigWebView_ProbeOpenClawGateway")
+                r := ConfigWebView_ProbeOpenClawGateway(base, token, 8000)
+            else if FuncExists("UserStudio_ProbeOpenClawGateway")
+                r := UserStudio_ProbeOpenClawGateway(base, token, 8000)
+            else if FuncExists("LlmApiPing_TestOpenClaw")
+                r := LlmApiPing_TestOpenClaw(base, token, 8000)
+            gwOk := !!r.Get("ok", false)
+            gwErr := String(r.Get("error", ""))
+        } catch as eGw {
+            gwErr := eGw.Message
         }
     }
 
@@ -3121,11 +3174,27 @@ FloatingToolbar_ProbeOpenClawGatewayToken(force := false) {
         "type", "openclaw_host_token_probe",
         "token", token,
         "source", source,
+        "host", host,
+        "port", port,
+        "niumaToken", niumaKey,
+        "gatewayOk", gwOk,
+        "gatewayError", gwErr,
         "force", !!force
     ))
 }
 
 FloatingToolbar_ReadOpenClawGatewayToken() {
+    if FuncExists("UserStudio_ReadOpenClawGatewayToken") {
+        try {
+            info := UserStudio_ReadOpenClawGatewayToken()
+            if (info is Map) {
+                tok := Trim(String(info.Get("token", "")))
+                if (tok != "")
+                    return info
+            }
+        } catch {
+        }
+    }
     userProfile := ""
     try userProfile := Trim(String(EnvGet("USERPROFILE")))
     if (userProfile = "") {
@@ -3147,6 +3216,18 @@ FloatingToolbar_ReadOpenClawGatewayToken() {
             raw := FileRead(path, "UTF-8")
             if (Trim(raw) = "")
                 continue
+            tok := ""
+            if FuncExists("UserStudio_ExtractOpenClawGatewayFromRaw") {
+                meta := UserStudio_ExtractOpenClawGatewayFromRaw(raw)
+                tok := Trim(String(meta.Get("token", "")))
+                if (tok != "")
+                    return Map(
+                        "token", tok,
+                        "source", path,
+                        "host", meta.Get("host", "127.0.0.1"),
+                        "port", meta.Get("port", 18789)
+                    )
+            }
             cfg := Jxon_Load(raw)
             tok := FloatingToolbar_ExtractOpenClawGatewayToken(cfg)
             if (tok != "")

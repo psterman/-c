@@ -1035,12 +1035,13 @@ body.niuma-confirm-open{overflow:hidden}
 <div class="fld" id="nodeConfigBaseUrlRow"><label for="nodeConfigBaseUrl">接口端点 (Base URL)</label><input id="nodeConfigBaseUrl" class="ctl" type="text" autocomplete="off" placeholder="留空则按服务商默认" /></div>
 <div class="fld" id="nodeConfigModelRow"><label for="nodeConfigModel">模型</label><input id="nodeConfigModel" class="ctl" type="text" autocomplete="off" placeholder="当前话题模型" /></div>
 <div class="fld" id="nodeConfigOpenClawRow"><label for="nodeConfigOpenClawKey">OpenClaw Gateway Key</label><input id="nodeConfigOpenClawKey" class="ctl" type="text" autocomplete="off" placeholder="agent:main:main" /></div>
+<div class="fld" id="fldOpenClawImportRow" style="display:none"><label>本机 OpenClaw Gateway</label><button type="button" class="btn3" id="openClawImportConnectBtn" style="width:100%">一键连接本机 OpenClaw</button><div class="hint mini" id="openClawImportHint">自动读取 Token 并检测 127.0.0.1:18789；无需手填 sk- 类密钥。</div></div>
 </div>
 <div id="settingsAiHint" class="hint" style="display:none;margin-bottom:10px;padding:10px 12px;border:1px solid rgba(255,102,0,.45);border-radius:10px;background:rgba(255,102,0,.1);line-height:1.5">
 <span id="settingsAiHintText">当前对话标签为「终端」模式，此处请切换到 MiniMax 等 AI 服务商填写 API Key。</span>
 </div>
 <div id="settingsQuick">
-<div class="settings-quick-note">选服务商 → 粘贴 API Key → 选模型 → 点「保存并连接」。高级选项在下方展开。</div>
+<div class="settings-quick-note">云端 API：选服务商 → 粘贴 Key → 保存并连接。<strong>OpenClaw</strong>：选 OpenClaw 后点「一键导入并连接」，或见对话区上方橙色条。</div>
 <div class="row" id="fldModelPresetRow"><div class="fld fld-dd"><label for="providerDdBtn">服务商</label><div class="dd" id="providerDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="providerDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="providerDdMenu"><img id="providerDdIcon" class="dd-icon" alt="" /><span id="providerDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="providerDdMenu" role="listbox" hidden></div></div><select id="provider" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div><div class="fld fld-dd" id="fldModelDdCol"><label for="modelDdBtn">模型</label><div class="dd" id="modelDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="modelDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="modelDdMenu"><img id="modelDdIcon" class="dd-icon" alt="" /><span id="modelDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="modelDdMenu" role="listbox" hidden></div></div><select id="modelPreset" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div></div>
 <div class="fld"><label for="apiKey" id="apiKeyLabel">API Key</label><div class="pwd-toggle-wrap"><input id="apiKey" class="ctl" type="password" autocomplete="off" placeholder="粘贴 API Key"><button type="button" class="pwd-toggle-btn" id="apiKeyToggle" title="显示/隐藏密钥" aria-label="显示密钥">👁</button></div><div class="hint mini" id="apiKeyKeyHint" style="display:none"></div></div>
 <div class="fld" id="fldModelRow"><label for="model">Model</label><input id="model" class="ctl" type="text" autocomplete="off" placeholder="与上方预设一致或手填"></div>
@@ -1169,9 +1170,13 @@ body.niuma-confirm-open{overflow:hidden}
 <section id="cmp">
 <div id="inlineApiSetup" class="api-setup-box" hidden>
 <div class="api-setup-title">快速连接 AI</div>
-<div class="hint mini" style="margin-bottom:4px">选服务商 → 粘贴 Key → 保存。与 ChatGPT / Claude 设置页相同的三步流程。</div>
+<div class="hint mini" style="margin-bottom:4px">云端模型：选服务商 → 粘贴 API Key → 保存。本机 OpenClaw：点下方橙色一键连接。</div>
+<div id="inlineOpenClawQuick" class="fld" style="display:none;margin-bottom:8px;padding:10px 12px;border:1px solid rgba(255,102,0,.35);border-radius:10px;background:rgba(255,102,0,.08)">
+<button type="button" class="btn3" id="inlineOpenClawImport" style="width:100%">一键连接本机 OpenClaw</button>
+<div class="hint mini" style="margin-top:6px">自动读取 Gateway Token 并检测 <code>127.0.0.1:18789</code>（需已启动 OpenClaw）</div>
+</div>
 <div class="fld"><label for="inlineLlmProvider">服务商</label><select id="inlineLlmProvider" class="ctl"></select></div>
-<div class="fld"><label for="inlineLlmApiKey">API Key</label><input id="inlineLlmApiKey" class="ctl" type="password" autocomplete="off" placeholder="sk-…" /></div>
+<div class="fld"><label for="inlineLlmApiKey" id="inlineLlmApiKeyLabel">API Key</label><input id="inlineLlmApiKey" class="ctl" type="password" autocomplete="off" placeholder="sk-…" /></div>
 <div class="row">
 <div class="fld" id="inlineBaseUrlAutoRow"><label>接口地址</label><span class="hint mini" id="inlineBaseUrlAutoText">按服务商自动配置</span></div>
 <div class="fld"><label for="inlineLlmModel">模型</label><input id="inlineLlmModel" class="ctl" type="text" autocomplete="off" /></div>
@@ -1182,6 +1187,11 @@ body.niuma-confirm-open{overflow:hidden}
 <button type="button" class="btn2" id="inlineLlmOpenFull">更多选项…</button>
 </div>
 <div class="hint mini">保存后即可对话；高级项（System Prompt 等）点左侧 ⚙️ 打开连接管理。</div>
+</div>
+<div id="openclawSetupBanner" class="setup-banner" hidden>
+<div class="setup-banner-title" id="openclawSetupTitle">连接本机 OpenClaw</div>
+<div id="openclawSetupBody" class="hint mini">已安装 OpenClaw 时，点下方按钮自动读取 Gateway Token 并检测本机网关（127.0.0.1:18789）。</div>
+<button type="button" class="btn3" id="openclawSetupImportBtn" style="width:100%;margin-top:8px">一键连接 OpenClaw</button>
 </div>
 <div id="ollamaSetupBanner" class="setup-banner" hidden>
 <div class="setup-banner-title" id="ollamaSetupTitle">Ollama 未连接</div>
@@ -1875,6 +1885,8 @@ body.niuma-confirm-open{overflow:hidden}
     nodeConfigModelRow = $('nodeConfigModelRow'),
     nodeConfigBaseUrlRow = $('nodeConfigBaseUrlRow'),
     nodeConfigOpenClawRow = $('nodeConfigOpenClawRow'),
+    fldOpenClawImportRow = $('fldOpenClawImportRow'),
+    openClawImportConnectBtn = $('openClawImportConnectBtn'),
     nodeConfigClose = null,
     nodeConfigTest = $('nodeConfigTest'),
     nodeConfigSave = $('nodeConfigSave'),
@@ -1888,6 +1900,11 @@ body.niuma-confirm-open{overflow:hidden}
     composerHintBtn = $('composerHintBtn'),
     eyeSpacePanel = $('eyeSpacePanel'),
     ollamaSetupBanner = $('ollamaSetupBanner'),
+    openclawSetupBanner = $('openclawSetupBanner'),
+    openclawSetupImportBtn = $('openclawSetupImportBtn'),
+    inlineOpenClawQuick = $('inlineOpenClawQuick'),
+    inlineOpenClawImport = $('inlineOpenClawImport'),
+    inlineLlmApiKeyLabel = $('inlineLlmApiKeyLabel'),
     chatModelBar = $('chatModelBar'),
     chatModelBarBody = $('chatModelBarBody'),
     chatModelBarLabel = $('chatModelBarLabel'),
@@ -2032,6 +2049,7 @@ body.niuma-confirm-open{overflow:hidden}
     openclawSessionRows: [],
     openclawSessionRowsFetchedAt: 0,
     openclawSessionRowsLoading: false,
+    openClawImportRunning: false,
     freeChatMode: false,
     pendingStudioLlm: null,
     studioLlmOptions: null,
@@ -4403,6 +4421,7 @@ body.niuma-confirm-open{overflow:hidden}
     if (fldModelRow) fldModelRow.style.display = isCli ? 'none' : '';
     if (fldTtydShellRow) fldTtydShellRow.style.display = isTtyd ? '' : 'none';
     if (fldOpenClawSessionRow) fldOpenClawSessionRow.style.display = !isCli && isOpenClaw ? '' : 'none';
+    if (fldOpenClawImportRow) fldOpenClawImportRow.style.display = !isCli && isOpenClaw ? '' : 'none';
     if (!isCli && isOpenClaw) refreshOpenClawSessionRows(false);
     if (fldMinimaxRegionRow) fldMinimaxRegionRow.style.display = !isCli && pid === 'minimax' && state.settings ? '' : 'none';
     if (fldBaseUrlRow) {
@@ -4473,6 +4492,9 @@ body.niuma-confirm-open{overflow:hidden}
   function onApiSetupProviderChange(sel, keyEl, baseEl, modelEl) {
     var pid = resolveApiSetupProviderId(sel);
     var p = P[pid] || P.openai;
+    var isOc = pid === 'openclaw';
+    if (inlineOpenClawQuick) inlineOpenClawQuick.style.display = isOc ? '' : 'none';
+    if (inlineLlmApiKeyLabel) inlineLlmApiKeyLabel.textContent = isOc ? 'Gateway Token（可一键填入）' : 'API Key';
     if (keyEl) {
       keyEl.value = getApiKeyForProvider(pid);
       applyKeyMetaToInput(pid, keyEl, null, null);
@@ -4480,6 +4502,18 @@ body.niuma-confirm-open{overflow:hidden}
     if (modelEl && !modelEl.value.trim()) modelEl.value = p.model;
     refreshBaseUrlAutoLabel(pid, $('inlineBaseUrlAutoText'));
     refreshBaseUrlAutoLabel(pid, $('ttydBaseUrlAutoText'));
+  }
+
+  function shouldShowOpenClawSetupBanner() {
+    if (getApiKeyForProvider('openclaw')) return false;
+    return !!(state.needSetup || !hasAnyApiConfigured());
+  }
+
+  function refreshOpenClawSetupBanner() {
+    if (!openclawSetupBanner) return;
+    var show = shouldShowOpenClawSetupBanner();
+    openclawSetupBanner.hidden = !show;
+    if (ollamaSetupBanner && show) ollamaSetupBanner.hidden = true;
   }
 
   function applyApiSetupFromFields(sel, keyEl, baseEl, modelEl, opts) {
@@ -4519,8 +4553,12 @@ body.niuma-confirm-open{overflow:hidden}
   function refreshInlineApiSetupVisibility() {
     var need = state.needSetup || !hasAnyApiConfigured();
     if (inlineApiSetup) inlineApiSetup.hidden = !need;
-    if (need) syncApiSetupFieldsFromMain(inlineLlmProvider, inlineLlmApiKey, null, inlineLlmModel);
+    if (need) {
+      syncApiSetupFieldsFromMain(inlineLlmProvider, inlineLlmApiKey, null, inlineLlmModel);
+      onApiSetupProviderChange(inlineLlmProvider, inlineLlmApiKey, null, inlineLlmModel);
+    }
     if (state.ttydCustomize) syncApiSetupFieldsFromMain(ttydLlmProvider, ttydLlmApiKey, null, ttydLlmModel);
+    refreshOpenClawSetupBanner();
     emptyState();
   }
 
@@ -5069,9 +5107,17 @@ body.niuma-confirm-open{overflow:hidden}
     if (!ollamaSetupBanner) return;
     if (!shouldShowOllamaBanner()) {
       ollamaSetupBanner.hidden = true;
+      refreshOpenClawSetupBanner();
       renderChatModelBar();
       return;
     }
+    if (shouldShowOpenClawSetupBanner()) {
+      ollamaSetupBanner.hidden = true;
+      refreshOpenClawSetupBanner();
+      renderChatModelBar();
+      return;
+    }
+    if (openclawSetupBanner) openclawSetupBanner.hidden = true;
     ollamaSetupBanner.hidden = state.ollamaReachable === true;
     var titleEl = $('ollamaSetupTitle');
     var bodyEl = $('ollamaSetupBody');
@@ -7020,6 +7066,7 @@ body.niuma-confirm-open{overflow:hidden}
         (shouldShowManualBaseUrl(pid) ? (P[pid] || {}).baseUrl || '' : effectiveBaseUrl(pid, ref.baseUrl, ''));
     }
     if (nodeConfigOpenClawRow) nodeConfigOpenClawRow.style.display = pid === 'openclaw' ? '' : 'none';
+    if (fldOpenClawImportRow) fldOpenClawImportRow.style.display = pid === 'openclaw' ? '' : 'none';
     if (nodeConfigOpenClawKey) nodeConfigOpenClawKey.value = pid === 'openclaw' ? getOpenClawSessionKey(ref) : '';
     if (nodeConfigModelRow) nodeConfigModelRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
     if (nodeConfigBaseUrlRow) nodeConfigBaseUrlRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
@@ -8007,6 +8054,7 @@ body.niuma-confirm-open{overflow:hidden}
     var s = activeSession();
     if (!s || s.history.length) {
       if (empty) empty.style.display = 'none';
+      refreshOpenClawSetupBanner();
       refreshOllamaSetupBanner();
       return;
     }
@@ -8016,7 +8064,8 @@ body.niuma-confirm-open{overflow:hidden}
     } else if (isCliSession(s)) {
       empty.textContent = 'ttyd 终端：Ctrl+Tab 打开任务看板，可新建任务并保留会话记录。';
     } else if (state.needSetup || !hasAnyApiConfigured()) {
-      empty.textContent = '请先完成 API 配置：点右上角齿轮，或下方快速配置区。';
+      empty.textContent =
+        '请先连接 AI：本机 OpenClaw 点对话区橙色「一键连接」；云端模型点 ⚙️ 或下方快速配置。';
     } else {
       empty.textContent = '开始对话，或点「新话题」在同联系人下开分支（空话题不会重复创建）。';
     }
@@ -9377,6 +9426,179 @@ body.niuma-confirm-open{overflow:hidden}
     return '';
   }
 
+  var OPENCLAW_HOST_PROBE_TIMEOUT_MS = 8000;
+  var openClawImportPending = null;
+
+  function openClawDefaultBaseUrl() {
+    return (P.openclaw && P.openclaw.baseUrl) || 'http://127.0.0.1:18789';
+  }
+
+  function applyOpenClawHostToken(token, source, baseUrlOverride) {
+    token = trimApiKey(token);
+    if (!token) return false;
+    if (!state.apiKeys) state.apiKeys = {};
+    state.apiKeys.openclaw = token;
+    var bu = String(baseUrlOverride || '').trim() || openClawDefaultBaseUrl();
+    if (provider) provider.value = 'openclaw';
+    applyProvider('openclaw', true);
+    if (apiKey) apiKey.value = token;
+    if (nodeConfigApiKey) {
+      nodeConfigApiKey.type = 'text';
+      nodeConfigApiKey.value = token;
+    }
+    if (baseUrl) baseUrl.value = bu;
+    if (nodeConfigBaseUrl) nodeConfigBaseUrl.value = bu;
+    refreshApiKeyField('openclaw');
+    updateNeedSetup();
+    return true;
+  }
+
+  function ensureOpenClawSessionForImport() {
+    var found = null;
+    state.sessions.forEach(function (s) {
+      if (normalizeProviderId(s.provider) === 'openclaw') found = s;
+    });
+    if (found) {
+      if (found.id !== state.activeSessionId) switchSession(found.id);
+      syncFormFromSession(found);
+      return found;
+    }
+    if (provider) provider.value = 'openclaw';
+    applyProvider('openclaw', false);
+    var s = createSessionFromForm();
+    state.sessions.push(s);
+    state.activeSessionId = s.id;
+    persistSessions();
+    syncFormFromSession(s);
+    renderSessionTabs();
+    renderContactNav();
+    return s;
+  }
+
+  function buildOpenClawTestCfgFromForm() {
+    var bu = effectiveBaseUrl('openclaw', '', baseUrl ? baseUrl.value : '');
+    if (nodeConfigBaseUrl) {
+      var nb = String(nodeConfigBaseUrl.value || '').trim();
+      if (nb) bu = nb;
+    }
+    var key = getApiKeyForProvider('openclaw');
+    if (nodeConfigApiKey && String(nodeConfigApiKey.value || '').trim()) key = trimApiKey(nodeConfigApiKey.value);
+    return {
+      provider: 'openclaw',
+      model: (P.openclaw && P.openclaw.model) || 'gateway',
+      baseUrl: bu,
+      apiKey: key,
+      systemPrompt: getEffectiveSystemPromptForSend()
+    };
+  }
+
+  function requestOpenClawHostTokenProbe(force) {
+    return new Promise(function (resolve, reject) {
+      var reqId = 'oc_probe_' + Date.now();
+      var timer = setTimeout(function () {
+        if (openClawImportPending && openClawImportPending.reqId === reqId) {
+          openClawImportPending = null;
+          reject(new Error('读取本机 OpenClaw 配置超时'));
+        }
+      }, OPENCLAW_HOST_PROBE_TIMEOUT_MS);
+      openClawImportPending = {
+        reqId: reqId,
+        resolve: function (d) {
+          clearTimeout(timer);
+          openClawImportPending = null;
+          resolve(d || {});
+        },
+        reject: function (e) {
+          clearTimeout(timer);
+          openClawImportPending = null;
+          reject(e);
+        }
+      };
+      try {
+        post({ type: 'niuma_openclaw_probe_token', force: !!force, reqId: reqId });
+      } catch (e) {
+        clearTimeout(timer);
+        openClawImportPending = null;
+        reject(e);
+      }
+    });
+  }
+
+  async function runOpenClawImportConnect(opts) {
+    opts = opts || {};
+    if (state.openClawImportRunning) return;
+    state.openClawImportRunning = true;
+    if (openClawImportConnectBtn) openClawImportConnectBtn.disabled = true;
+    apiTestStat('正在从本机 OpenClaw 读取 Gateway Token…', '');
+    try {
+      var probe = await requestOpenClawHostTokenProbe(!!opts.force);
+      var token = trimApiKey(probe.token || probe.niumaToken || '');
+      var source = String(probe.source || '').trim();
+      if (!token) {
+        throw new Error(
+          '未找到 Gateway Token。可设置 OPENCLAW_GATEWAY_TOKEN，或执行 openclaw config set gateway.auth.token <值> 后重试一键连接。'
+        );
+      }
+      var ocHost = String(probe.host || '127.0.0.1').trim() || '127.0.0.1';
+      var ocPort = Number(probe.port) || 18789;
+      var ocBase = 'http://' + ocHost + ':' + ocPort;
+      applyOpenClawHostToken(token, source, ocBase);
+      var ocSess = ensureOpenClawSessionForImport();
+      if (ocSess) {
+        var ocNk = nodeKeyForSession(ocSess);
+        state.nodeConfigDiskKey = ocNk;
+        state.connectionsPickNodeKey = ocNk;
+      }
+      var srcHint = source ? source.replace(/^.*[\\/]/, '') : '本机配置';
+      apiTestStat('已导入 Token（' + srcHint + '），正在连接 Gateway…', '');
+      var cfg = buildOpenClawTestCfgFromForm();
+      if (!openClawEndpointFromCfg(cfg).ok) throw new Error('Token 或 Base URL 无效');
+      var gwOk = probe.gatewayOk === true;
+      if (!gwOk) {
+        try {
+          await openClawRpc(cfg, 'sessions.list', {}, 6000);
+          gwOk = true;
+        } catch (rpcErr) {
+          gwOk = false;
+        }
+      }
+      if (gwOk) await refreshOpenClawSessionRows(true);
+      var s = activeSession();
+      if (s && normalizeProviderId(s.provider) === 'openclaw') {
+        s.baseUrl = cfg.baseUrl;
+        syncSessionFromForm(s);
+      }
+      if (state.settings || state.connectionsPickNodeKey || state.nodeConfigDiskKey) {
+        saveConnectionsForm();
+      } else {
+        saveCfg(true);
+        try {
+          syncLlmToStudioHost();
+        } catch (syncErr) {}
+        updateNeedSetup();
+        refreshInlineApiSetupVisibility();
+        renderContactNav();
+        cstat(
+          gwOk ? 'OpenClaw 已从本机导入并连接。' : 'Token 已保存；Gateway 未响应，请启动本机 OpenClaw（端口 18789）。',
+          gwOk ? 'success' : 'error'
+        );
+      }
+      apiTestStat(
+        gwOk ? 'OpenClaw 一键连接成功。' : 'Token 已保存。Gateway 未响应，请启动 openclaw gateway。',
+        gwOk ? 'success' : 'error'
+      );
+      refreshOpenClawSetupBanner();
+      refreshInlineApiSetupVisibility();
+    } catch (e) {
+      var msg = e && e.message ? e.message : String(e || '连接失败');
+      apiTestStat(msg, 'error');
+      sstat(msg, 'error');
+    } finally {
+      state.openClawImportRunning = false;
+      if (openClawImportConnectBtn) openClawImportConnectBtn.disabled = false;
+    }
+  }
+
   function ocNormalizeModelForSend(m) {
     var t = String(m || '').trim();
     if (!t) return '';
@@ -9762,6 +9984,7 @@ body.niuma-confirm-open{overflow:hidden}
     })) {
       checkOllamaHealthWithStart({ tryStart: true });
     } else {
+      refreshOpenClawSetupBanner();
       refreshOllamaSetupBanner();
     }
     var sAct = activeSession();
@@ -18967,6 +19190,23 @@ body.niuma-confirm-open{overflow:hidden}
       });
     });
   }
+  if (openClawImportConnectBtn) {
+    openClawImportConnectBtn.addEventListener('click', function () {
+      runOpenClawImportConnect({ force: true });
+    });
+  }
+  if (openclawSetupImportBtn) {
+    openclawSetupImportBtn.addEventListener('click', function () {
+      runOpenClawImportConnect({ force: true });
+    });
+  }
+  if (inlineOpenClawImport) {
+    inlineOpenClawImport.addEventListener('click', function () {
+      if (inlineLlmProvider) inlineLlmProvider.value = 'openclaw';
+      onApiSetupProviderChange(inlineLlmProvider, inlineLlmApiKey, null, inlineLlmModel);
+      runOpenClawImportConnect({ force: true });
+    });
+  }
   if (nodeConfigClear) {
     nodeConfigClear.addEventListener('click', function () {
       if (state.nodeConfigDiskKey) clearNodeHistory(state.nodeConfigDiskKey);
@@ -20670,6 +20910,33 @@ body.niuma-confirm-open{overflow:hidden}
           syncProviderDdUi();
           updateProviderFormLayout(ep);
           refreshSettingsAiHint();
+        }
+        return;
+      }
+      if (d.type === 'openclaw_host_token_probe') {
+        var ocTok = String(d.token || d.niumaToken || '').trim();
+        var ocHostMsg = String(d.host || '127.0.0.1').trim() || '127.0.0.1';
+        var ocPortMsg = Number(d.port) || 18789;
+        var ocPayload = {
+          token: ocTok,
+          niumaToken: String(d.niumaToken || '').trim(),
+          source: String(d.source || '').trim(),
+          host: ocHostMsg,
+          port: ocPortMsg,
+          gatewayOk: d.gatewayOk,
+          gatewayError: String(d.gatewayError || '').trim(),
+          force: !!d.force
+        };
+        if (openClawImportPending) {
+          openClawImportPending.resolve(ocPayload);
+          return;
+        }
+        if (!getApiKeyForProvider('openclaw') && ocPayload.token) {
+          applyOpenClawHostToken(ocPayload.token, ocPayload.source, 'http://' + ocHostMsg + ':' + ocPortMsg);
+          var ocHint = ocPayload.gatewayOk === true
+            ? '已从本机填入 Token，Gateway 正常，可点「一键导入并连接」。'
+            : '已从本机填入 Token；Gateway 未响应时请启动 openclaw gateway。';
+          sstat(ocHint, ocPayload.gatewayOk === true ? 'success' : 'error');
         }
         return;
       }

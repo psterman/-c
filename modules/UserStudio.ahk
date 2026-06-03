@@ -307,6 +307,701 @@ UserStudio_LlmPresetFor(prov) {
     }
 }
 
+UserStudio_CoerceTokenFromSecretInput(value, defaults := "") {
+    if (value is Map) {
+        try {
+            src := Trim(String(value.Get("source", "")))
+            id := Trim(String(value.Get("id", "")))
+            if (src = "env" && id != "")
+                return Trim(String(EnvGet(id)))
+        } catch {
+        }
+        return ""
+    }
+    s := Trim(String(value))
+    if (s = "")
+        return ""
+    if RegExMatch(s, '^\$\{([A-Z][A-Z0-9_]{0,127})\}$', &m)
+        return Trim(String(EnvGet(m[1])))
+    if RegExMatch(s, '^\$([A-Z][A-Z0-9_]{0,127})$', &m2)
+        return Trim(String(EnvGet(m2[1])))
+    if RegExMatch(s, 'i)^secretref-env:([A-Z][A-Z0-9_]{0,127})$', &m3)
+        return Trim(String(EnvGet(m3[1])))
+    if RegExMatch(s, 'i)^__env__:([A-Z][A-Z0-9_]{0,127})$', &m4)
+        return Trim(String(EnvGet(m4[1])))
+    if !(s ~= '^\{')
+        return s
+    return ""
+}
+
+UserStudio_ExtractOpenClawGatewayToken(cfg) {
+    if !(cfg is Map)
+        return ""
+    defaults := ""
+    try {
+        if cfg.Has("secrets") && cfg["secrets"] is Map && cfg["secrets"].Has("defaults")
+            defaults := cfg["secrets"]["defaults"]
+    } catch {
+    }
+    try {
+        if cfg.Has("gateway") {
+            gw := cfg["gateway"]
+            if (gw is Map) {
+                if gw.Has("auth") {
+                    auth := gw["auth"]
+                    if (auth is Map) {
+                        if auth.Has("token") {
+                            tok := UserStudio_CoerceTokenFromSecretInput(auth["token"], defaults)
+                            if (tok != "")
+                                return tok
+                        }
+                    }
+                }
+                if gw.Has("remote") {
+                    rem := gw["remote"]
+                    if (rem is Map && rem.Has("token")) {
+                        tokR := UserStudio_CoerceTokenFromSecretInput(rem["token"], defaults)
+                        if (tokR != "")
+                            return tokR
+                    }
+                }
+                if gw.Has("token") {
+                    tok2 := UserStudio_CoerceTokenFromSecretInput(gw["token"], defaults)
+                    if (tok2 != "")
+                        return tok2
+                }
+            }
+        }
+    } catch {
+    }
+    return ""
+}
+
+UserStudio_FindOpenClawCliExe() {
+    candidates := []
+    try {
+        appData := Trim(String(EnvGet("APPDATA")))
+        if (appData != "")
+            candidates.Push(appData . "\npm\openclaw.cmd")
+    } catch {
+    }
+    if (A_AppData != "")
+        candidates.Push(A_AppData . "\npm\openclaw.cmd")
+    candidates.Push("C:\Program Files\nodejs\openclaw.cmd")
+    for _, p in candidates {
+        if FileExist(p)
+            return p
+    }
+    out := A_Temp . "\nmer_oc_where_" . A_TickCount . ".txt"
+    q := Chr(34)
+    try {
+        RunWait(q . A_ComSpec . q . " /c where openclaw > " . q . out . q . " 2>nul", , "Hide")
+        if FileExist(out) {
+            raw := FileRead(out, "UTF-8")
+            try FileDelete(out)
+            for _, line in StrSplit(raw, "`n", "`r") {
+                line := Trim(line)
+                if (line != "" && FileExist(line))
+                    return line
+            }
+        }
+    } catch {
+        try FileDelete(out)
+    }
+    return ""
+}
+
+UserStudio_OpenClawGatewayCliOk() {
+    exe := UserStudio_FindOpenClawCliExe()
+    if (exe = "")
+        return false
+    out := A_Temp . "\nmer_openclaw_gw_status.txt"
+    try FileDelete(out)
+    inner := '"' . exe . '" gateway status > "' . out . '" 2>&1'
+    try {
+        RunWait(A_ComSpec . ' /c "' . inner . '"', , "Hide")
+    } catch {
+        return false
+    }
+    if !FileExist(out)
+        return false
+    raw := ""
+    try raw := FileRead(out, "UTF-8")
+    catch {
+        return false
+    }
+    try FileDelete(out)
+    if InStr(raw, "Connectivity probe: ok")
+        return true
+    if InStr(raw, "Runtime: running") && InStr(raw, "Listening: 127.0.0.1")
+        return true
+    return false
+}
+
+UserStudio_TcpPortOpen(host, port, timeoutMs := 2500) {
+    if FuncExists("LlmApiPing_TcpPortOpen")
+        return LlmApiPing_TcpPortOpen(host, port, timeoutMs)
+    host := Trim(String(host))
+    if (host = "localhost")
+        host := "127.0.0.1"
+    port := Integer(port)
+    if (host = "" || port < 1 || port > 65535)
+        return false
+    if !RegExMatch(host, "^\d{1,3}(\.\d{1,3}){3}$")
+        return false
+    static wsaReady := false
+    if !wsaReady {
+        wsaData := Buffer(400, 0)
+        if DllCall("ws2_32\WSAStartup", "UShort", 0x0202, "Ptr", wsaData, "Int")
+            return false
+        wsaReady := true
+    }
+    ip := DllCall("ws2_32\inet_addr", "AStr", host, "UInt")
+    if (ip = 0xFFFFFFFF)
+        return false
+    sock := DllCall("ws2_32\socket", "Int", 2, "Int", 1, "Int", 6, "UPtr")
+    if (sock = -1 || sock = 0xFFFFFFFFFFFFFFFF)
+        return false
+    try {
+        sa := Buffer(16, 0)
+        NumPut("UShort", 2, sa, 0)
+        NumPut("UShort", DllCall("ws2_32\htons", "UShort", port, "UShort"), sa, 2)
+        NumPut("UInt", ip, sa, 4)
+        nb := 1
+        if (DllCall("ws2_32\ioctlsocket", "UPtr", sock, "UInt", 0x8004667E, "UInt*", &nb, "Int") = -1)
+            return false
+        if (DllCall("ws2_32\connect", "UPtr", sock, "Ptr", sa, "Int", 16, "Int") = 0)
+            return true
+        if (DllCall("ws2_32\WSAGetLastError", "Int") != 10035)
+            return false
+        t := Max(500, Integer(timeoutMs))
+        writeSet := Buffer(132, 0)
+        NumPut("UInt", 1, writeSet, 0)
+        NumPut("UPtr", sock, writeSet, 4)
+        tv := Buffer(8, 0)
+        NumPut("UInt", t // 1000, tv, 0)
+        NumPut("UInt", Mod(t, 1000) * 1000, tv, 4)
+        if (DllCall("ws2_32\select", "Int", 0, "Ptr", 0, "Ptr", writeSet, "Ptr", 0, "Ptr", tv, "Int") <= 0)
+            return false
+        optErr := 0
+        optLen := 4
+        if (DllCall("ws2_32\getsockopt", "UPtr", sock, "Int", 0xFFFF, "Int", 0x1007, "Int*", &optErr, "Int*", &optLen, "Int") = -1)
+            return false
+        return optErr = 0
+    } catch {
+        return false
+    } finally {
+        try DllCall("ws2_32\closesocket", "UPtr", sock)
+        catch {
+        }
+    }
+}
+
+UserStudio_ProbeOpenClawGateway(base, token, timeoutMs := 12000) {
+    if FuncExists("LlmApiPing_TestOpenClaw")
+        return LlmApiPing_TestOpenClaw(base, token, timeoutMs)
+    token := UserStudio_NormalizeApiKey(token)
+    if (token = "")
+        return Map("ok", false, "error", "缺少 Gateway Token", "elapsedMs", 0)
+    host := "127.0.0.1"
+    port := 18789
+    base := Trim(String(base))
+    if RegExMatch(base, "i)^[a-z]+://([^/:]+)(?::(\d+))?", &m) {
+        if (m[1] != "")
+            host := m[1]
+        if (m[2] != "")
+            port := Integer(m[2])
+    } else if RegExMatch(base, ":(\d+)", &mp)
+        port := Integer(mp[1])
+    t0 := A_TickCount
+    if UserStudio_OpenClawGatewayCliOk()
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    tcpMs := Min(Max(800, Integer(timeoutMs)), 3000)
+    if UserStudio_TcpPortOpen(host, port, tcpMs)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    return Map(
+        "ok", false,
+        "error", "无法连接本机 OpenClaw Gateway（" . host . ":" . port . "）。请执行 openclaw gateway restart。",
+        "elapsedMs", A_TickCount - t0
+    )
+}
+
+UserStudio_ParseOpenClawCliStdout(raw) {
+    raw := Trim(String(raw))
+    if (raw = "")
+        return ""
+    try {
+        head := SubStr(raw, 1, 1)
+        if (head = Chr(34) || head = "{" || head = "[") {
+            parsed := Jxon_Load(raw)
+            if (parsed != "")
+                return UserStudio_NormalizeApiKey(String(parsed))
+        }
+    } catch {
+    }
+    dq := Chr(34)
+    if RegExMatch(raw, "^" . dq . "(.+)" . dq . "$", &m)
+        return UserStudio_NormalizeApiKey(m[1])
+    last := ""
+    for _, line in StrSplit(raw, "`n", "`r") {
+        line := Trim(line)
+        if (line = "")
+            continue
+        if RegExMatch(line, "i)^Config warnings:")
+            continue
+        if RegExMatch(line, "^OpenClaw \d")
+            continue
+        if RegExMatch(line, "i)^Usage:")
+            continue
+        if (StrLen(line) >= 8 && StrLen(line) <= 256 && RegExMatch(line, "^[\w\-\./\+]+$"))
+            last := line
+    }
+    if (last != "")
+        return UserStudio_NormalizeApiKey(last)
+    return UserStudio_NormalizeApiKey(raw)
+}
+
+UserStudio_FetchOpenClawTokenViaCli(timeoutMs := 20000) {
+    exe := UserStudio_FindOpenClawCliExe()
+    if (exe = "")
+        return Map("token", "", "source", "")
+    outFile := A_Temp . "\nmer_oc_gwtoken_" . A_TickCount . ".txt"
+    q := Chr(34)
+    cmd := q . A_ComSpec . q . " /c " . q . exe . q . " config get gateway.auth.token --json > " . q . outFile . q . " 2>nul"
+    pid := 0
+    try {
+        Run(cmd, , "Hide", &pid)
+    } catch as eRun {
+        try UserStudio_LogOpenClawProbe("cli_run_fail err=" . eRun.Message)
+        catch {
+        }
+        return Map("token", "", "source", "")
+    }
+    if !pid
+        return Map("token", "", "source", "")
+    deadline := A_TickCount + Max(1000, Integer(timeoutMs))
+    while ProcessExist(pid) {
+        if (A_TickCount > deadline) {
+            try ProcessClose(pid)
+            try UserStudio_LogOpenClawProbe("cli_get_timeout ms=" . timeoutMs)
+            catch {
+            }
+            try FileDelete(outFile)
+            return Map("token", "", "source", "")
+        }
+        Sleep 40
+    }
+    try {
+        if !FileExist(outFile)
+            return Map("token", "", "source", "")
+        raw := Trim(FileRead(outFile, "UTF-8"))
+        try FileDelete(outFile)
+        tok := UserStudio_ParseOpenClawCliStdout(raw)
+        if (tok != "")
+            return Map("token", tok, "source", "openclaw config get gateway.auth.token --json")
+    } catch as eCli {
+        try FileDelete(outFile)
+        try UserStudio_LogOpenClawProbe("cli_get_fail err=" . eCli.Message)
+        catch {
+        }
+    }
+    return Map("token", "", "source", "")
+}
+
+UserStudio_ReadOpenClawDeviceOperatorToken() {
+    home := UserStudio_ResolveOpenClawUserHome()
+    if (home = "")
+        return Map("token", "", "source", "")
+    path := home . "\identity\device-auth.json"
+    if !FileExist(path)
+        return Map("token", "", "source", "")
+    try {
+        doc := Jxon_Load(FileRead(path, "UTF-8"))
+        if !(doc is Map) || !doc.Has("tokens") || !(doc["tokens"] is Map)
+            return Map("token", "", "source", "")
+        op := doc["tokens"].Has("operator") ? doc["tokens"]["operator"] : ""
+        if !(op is Map)
+            return Map("token", "", "source", "")
+        tok := UserStudio_NormalizeApiKey(op.Get("token", ""))
+        if (tok = "")
+            return Map("token", "", "source", "")
+        return Map("token", tok, "source", path . " (operator)")
+    } catch {
+        return Map("token", "", "source", "")
+    }
+}
+
+; openclaw.json 体积大时 Jxon_Load 会溢出返回空 Map，用片段正则 / InStr 读取 gateway 段
+UserStudio_StripUtf8Bom(raw) {
+    raw := String(raw)
+    if (raw = "")
+        return raw
+    if (Ord(SubStr(raw, 1, 1)) = 0xFEFF)
+        return SubStr(raw, 2)
+    return raw
+}
+
+UserStudio_ResolveOpenClawUserHome() {
+    dirs := []
+    try {
+        up := Trim(String(EnvGet("USERPROFILE")))
+        if (up != "")
+            dirs.Push(up)
+    } catch {
+    }
+    try {
+        localApp := Trim(String(EnvGet("LOCALAPPDATA")))
+        if (localApp != "")
+            dirs.Push(localApp)
+    } catch {
+    }
+    if (A_AppData != "") {
+        homeFromRoaming := RegExReplace(A_AppData, "\\AppData\\Roaming$", "")
+        if (homeFromRoaming != "" && homeFromRoaming != A_AppData)
+            dirs.Push(homeFromRoaming)
+        dirs.Push(A_AppData)
+    }
+    try {
+        hd := Trim(String(EnvGet("HOMEDRIVE")))
+        hp := Trim(String(EnvGet("HOMEPATH")))
+        hpHome := hd . hp
+        if (hpHome != "")
+            dirs.Push(hpHome)
+    } catch {
+    }
+    for _, dir in dirs {
+        dir := Trim(String(dir))
+        if (dir = "")
+            continue
+        dir := RTrim(dir, "\")
+        if FileExist(dir . "\.openclaw\openclaw.json")
+            return dir
+    }
+    for _, dir in dirs {
+        dir := Trim(String(dir))
+        if (dir != "")
+            return RTrim(dir, "\")
+    }
+    return ""
+}
+
+UserStudio_OpenClawConfigFileCandidates() {
+    home := UserStudio_ResolveOpenClawUserHome()
+    names := ["openclaw.json", "openclaw.json.last-good", "openclaw.json.bak"]
+    paths := []
+    try {
+        up := Trim(String(EnvGet("USERPROFILE")))
+        if (up != "")
+            paths.Push(up . "\.openclaw\openclaw.json")
+    } catch {
+    }
+    if (A_AppData != "") {
+        hm := Trim(RegExReplace(A_AppData, "\\AppData\\Roaming$", ""))
+        if (hm != "") {
+            for _, name in names
+                paths.Push(hm . "\.openclaw\" . name)
+        }
+    }
+    try {
+        up := Trim(String(EnvGet("USERPROFILE")))
+        if (up != "") {
+            for _, name in names
+                paths.Push(up . "\.openclaw\" . name)
+        }
+    } catch {
+    }
+    if (home != "") {
+        for _, name in names
+            paths.Push(home . "\.openclaw\" . name)
+    }
+    try {
+        stateDir := Trim(String(EnvGet("OPENCLAW_STATE_DIR")))
+        if (stateDir != "") {
+            stateDir := RTrim(stateDir, "\")
+            for _, name in names
+                paths.Push(stateDir . "\" . name)
+        }
+    } catch {
+    }
+    paths.Push(A_AppData . "\openclaw\openclaw.json")
+    paths.Push(A_AppData . "\clawhub\openclaw.json")
+    uniq := Map()
+    out := []
+    for _, p in paths {
+        p := Trim(String(p))
+        if (p = "" || uniq.Has(p))
+            continue
+        uniq[p] := true
+        out.Push(p)
+    }
+    return out
+}
+
+UserStudio_ReadJsonStringValueAfterKey(haystack, key, startPos := 1) {
+    if (haystack = "" || key = "")
+        return ""
+    ; 必须匹配 "key": ，避免命中 "mode": "token" 里的值 token
+    needle := Chr(34) . key . Chr(34) . ":"
+    pos := startPos
+    while (pos := InStr(haystack, needle, false, pos)) {
+        tail := SubStr(haystack, pos + StrLen(needle))
+        tail := LTrim(tail, " `t`r`n")
+        if (SubStr(tail, 1, 1) = Chr(34)) {
+            end := InStr(tail, Chr(34), false, 2)
+            if (end > 1)
+                return SubStr(tail, 2, end - 1)
+        } else if RegExMatch(tail, 'i)^\$\{([A-Z][A-Z0-9_]+)\}$', &mEnv) {
+            return Trim(String(EnvGet(mEnv[1])))
+        }
+        pos += StrLen(needle)
+    }
+    return ""
+}
+
+UserStudio_ReadOpenClawAuthTokenLiteral(raw) {
+    raw := UserStudio_StripUtf8Bom(Trim(String(raw)))
+    if (raw = "")
+        return ""
+    gwAt := InStr(raw, '"gateway"', false)
+    if (gwAt < 1)
+        return ""
+    chunk := SubStr(raw, gwAt, 3000)
+    authAt := InStr(chunk, '"auth"', false)
+    if (authAt < 1)
+        return ""
+    sub := SubStr(chunk, authAt, 600)
+    for _, needle in ['"token": "', '"token":"'] {
+        p := InStr(sub, needle, false)
+        if (p < 1)
+            continue
+        rest := SubStr(sub, p + StrLen(needle))
+        end := InStr(rest, Chr(34), false)
+        if (end > 1)
+            return SubStr(rest, 1, end - 1)
+    }
+    return ""
+}
+
+UserStudio_ExtractOpenClawGatewayFromRaw(raw) {
+    out := Map("token", "", "host", "127.0.0.1", "port", 18789)
+    raw := UserStudio_StripUtf8Bom(Trim(String(raw)))
+    if (raw = "")
+        return out
+    tok := UserStudio_ReadOpenClawAuthTokenLiteral(raw)
+    if (tok != "")
+        out["token"] := UserStudio_CoerceTokenFromSecretInput(tok)
+    gwAt := InStr(raw, '"gateway"', false)
+    if (gwAt < 1)
+        return out
+    chunk := SubStr(raw, gwAt, 8000)
+    if (out["token"] = "") {
+        authAt := InStr(chunk, '"auth"', false)
+        if (authAt > 0) {
+            authChunk := SubStr(chunk, authAt, 800)
+            tok := UserStudio_ReadJsonStringValueAfterKey(authChunk, "token")
+            if (tok != "")
+                out["token"] := UserStudio_CoerceTokenFromSecretInput(tok)
+        }
+    }
+    if (out["token"] = "")
+        out["token"] := UserStudio_CoerceTokenFromSecretInput(UserStudio_ReadJsonStringValueAfterKey(chunk, "token"))
+    portStr := UserStudio_ReadJsonStringValueAfterKey(chunk, "port")
+    if (portStr != "" && RegExMatch(portStr, "^\d+$"))
+        out["port"] := Integer(portStr)
+    else if RegExMatch(chunk, 'i)"port"\s*:\s*(\d+)', &mp)
+        out["port"] := Integer(mp[1])
+    bindVal := UserStudio_ReadJsonStringValueAfterKey(chunk, "bind")
+    if (bindVal = "loopback" || bindVal = "localhost")
+        out["host"] := "127.0.0.1"
+    else if RegExMatch(chunk, 'i)"bind"\s*:\s*"([^"]+)"', &mb) {
+        b := Trim(mb[1])
+        if (b = "loopback" || b = "localhost")
+            out["host"] := "127.0.0.1"
+    }
+    return out
+}
+
+UserStudio_LogOpenClawProbe(lines*) {
+    try {
+        path := A_ScriptDir . "\Cache\debug\openclaw_probe.log"
+        DirCreate(A_ScriptDir . "\Cache\debug")
+        buf := ""
+        for _, ln in lines
+            buf .= FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss") . " " . String(ln) . "`n"
+        FileAppend(buf, path, "UTF-8")
+    } catch {
+    }
+}
+
+UserStudio_ReadOpenClawGatewayToken() {
+    tried := []
+    for _, path in UserStudio_OpenClawConfigFileCandidates() {
+        tried.Push(path)
+        try {
+            if !FileExist(path)
+                continue
+            raw := FileRead(path, "UTF-8")
+            if (Trim(raw) = "")
+                continue
+            tok := ""
+            meta := Map("host", "127.0.0.1", "port", 18789)
+            if (StrLen(raw) <= 524288) {
+                try {
+                    cfg := Jxon_Load(raw)
+                    tok := UserStudio_ExtractOpenClawGatewayToken(cfg)
+                } catch as eJxon {
+                    try UserStudio_LogOpenClawProbe("jxon_fail path=" . path . " err=" . eJxon.Message)
+                    catch {
+                    }
+                }
+            }
+            if (tok = "") {
+                meta := UserStudio_ExtractOpenClawGatewayFromRaw(raw)
+                tok := Trim(String(meta.Get("token", "")))
+            } else {
+                meta := UserStudio_ExtractOpenClawGatewayFromRaw(raw)
+            }
+            if (tok != "") {
+                tok := UserStudio_NormalizeApiKey(tok)
+                return Map(
+                    "token", tok,
+                    "source", path,
+                    "host", meta.Get("host", "127.0.0.1"),
+                    "port", meta.Get("port", 18789)
+                )
+            }
+        } catch as ePath {
+            try UserStudio_LogOpenClawProbe("read_fail path=" . path . " err=" . ePath.Message)
+            catch {
+            }
+        }
+    }
+    cli := UserStudio_FetchOpenClawTokenViaCli(20000)
+    cliTok := Trim(String(cli.Get("token", "")))
+    if (cliTok != "") {
+        return Map(
+            "token", cliTok,
+            "source", String(cli.Get("source", "")),
+            "host", "127.0.0.1",
+            "port", 18789,
+            "tried", tried
+        )
+    }
+    dev := UserStudio_ReadOpenClawDeviceOperatorToken()
+    devTok := Trim(String(dev.Get("token", "")))
+    if (devTok != "") {
+        return Map(
+            "token", devTok,
+            "source", String(dev.Get("source", "")),
+            "host", "127.0.0.1",
+            "port", 18789,
+            "tried", tried
+        )
+    }
+    try UserStudio_LogOpenClawProbe(
+        "no_token USERPROFILE=" . EnvGet("USERPROFILE"),
+        "home=" . UserStudio_ResolveOpenClawUserHome(),
+        "tried=" . tried.Length,
+        "cli=" . UserStudio_FindOpenClawCliExe()
+    )
+    catch {
+    }
+    return Map("token", "", "source", "", "host", "127.0.0.1", "port", 18789, "tried", tried)
+}
+
+UserStudio_ProbeOpenClawGatewayToken() {
+    host := "127.0.0.1"
+    port := 18789
+    try {
+        envTok := Trim(String(EnvGet("OPENCLAW_GATEWAY_TOKEN")))
+        if (envTok != "")
+            return Map("token", envTok, "source", "env:OPENCLAW_GATEWAY_TOKEN", "host", host, "port", port)
+    } catch {
+    }
+    try {
+        envPwd := Trim(String(EnvGet("OPENCLAW_GATEWAY_PASSWORD")))
+        if (envPwd != "")
+            return Map("token", envPwd, "source", "env:OPENCLAW_GATEWAY_PASSWORD", "host", host, "port", port)
+    } catch {
+    }
+    info := UserStudio_ReadOpenClawGatewayToken()
+    tok := Trim(String(info.Get("token", "")))
+    if (tok != "") {
+        host := Trim(String(info.Get("host", host)))
+        port := Integer(info.Get("port", port))
+        return info
+    }
+    if FuncExists("FloatingToolbar_ReadOpenClawGatewayToken") {
+        try {
+            fb := FloatingToolbar_ReadOpenClawGatewayToken()
+            if (fb is Map) {
+                tok := Trim(String(fb.Get("token", "")))
+                if (tok != "")
+                    return Map(
+                        "token", tok,
+                        "source", String(fb.Get("source", "")),
+                        "host", Trim(String(fb.Get("host", host))),
+                        "port", Integer(fb.Get("port", port))
+                    )
+            }
+        } catch {
+        }
+    }
+    return info
+}
+
+UserStudio_ExtractOpenClawKeyFromDoc(doc) {
+    if !(doc is Map)
+        return ""
+    if doc.Has("apiKeys") && doc["apiKeys"] is Map {
+        k := UserStudio_NormalizeApiKey(doc["apiKeys"].Get("openclaw", ""))
+        if (k != "")
+            return k
+    }
+    if doc.Has("llm") && doc["llm"] is Map {
+        if UserStudio_NormalizeLlmProvider(doc["llm"].Get("provider", "")) = "openclaw" {
+            k2 := UserStudio_NormalizeApiKey(doc["llm"].Get("apiKey", ""))
+            if (k2 != "")
+                return k2
+        }
+    }
+    opt := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
+    opt := UserStudio_NormalizeNiumaOptions(opt)
+    if opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map {
+        k3 := UserStudio_NormalizeApiKey(opt["llmApiKeys"].Get("openclaw", ""))
+        if (k3 != "")
+            return k3
+    }
+    return ""
+}
+
+UserStudio_ReadNiumaOpenClawKey() {
+    path := ""
+    if FuncExists("Nmer_NiumaChatLlmPath")
+        path := Nmer_NiumaChatLlmPath()
+    else if FuncExists("UserStudio_NiumaLlmSyncPath")
+        path := UserStudio_NiumaLlmSyncPath()
+    if (path != "" && FileExist(path)) {
+        try {
+            raw := FileRead(path, "UTF-8")
+            if (Trim(raw) != "") {
+                doc := Jxon_Load(raw)
+                k := UserStudio_ExtractOpenClawKeyFromDoc(doc)
+                if (k != "")
+                    return k
+            }
+        } catch {
+        }
+    }
+    try {
+        kStudio := UserStudio_ExtractOpenClawKeyFromDoc(UserStudio_Get())
+        if (kStudio != "")
+            return kStudio
+    } catch {
+    }
+    return ""
+}
+
 UserStudio_ApplyLlmAutoDefaults(doc) {
     if !(doc is Map)
         return doc
@@ -431,19 +1126,31 @@ UserStudio_Load(*) {
 UserStudio_SyncFromNiumaFile(*) {
     doc := UserStudio_Load()
     keyBefore := Trim(String(doc["llm"].Get("apiKey", "")))
+    ocBefore := UserStudio_ExtractOpenClawKeyFromDoc(doc)
     doc := UserStudio_MergeLlmFromNiumaSync(doc)
     keyAfter := Trim(String(doc["llm"].Get("apiKey", "")))
+    ocAfter := UserStudio_ExtractOpenClawKeyFromDoc(doc)
     if (keyAfter != "" && keyAfter != keyBefore) {
         try UserStudio_Save(doc)
         catch {
         }
-    } else if (keyAfter != "") {
+    } else if (keyAfter != "" || ocAfter != ocBefore) {
         global g_UserStudio
         g_UserStudio := doc
+        if (ocAfter != "" && ocAfter != ocBefore) {
+            try UserStudio_Save(doc)
+            catch {
+            }
+        }
     }
     ok := (keyAfter != "")
     err := ok ? "" : "未找到 API Key（请先在 Niuma Chat 设置中保存，或点「从 Niuma Chat 同步 API」）"
-    return Map("ok", ok, "error", err, "studio", UserStudio_PayloadForWeb())
+    return Map(
+        "ok", ok,
+        "error", err,
+        "openclawOk", (ocAfter != ""),
+        "studio", UserStudio_PayloadForWeb()
+    )
 }
 
 UserStudio_MergeLlmFromNiumaSync(doc) {
@@ -725,7 +1432,7 @@ UserStudio_MergePayloadLlmApiKeys(mergedOpt, optPayload, llmPayload) {
     if !(mergedOpt is Map)
         mergedOpt := Map()
     keys := mergedOpt.Has("llmApiKeys") && mergedOpt["llmApiKeys"] is Map ? mergedOpt["llmApiKeys"].Clone() : Map()
-    if (optPayload is Map) && optPayload.Has("llmApiKeys") && optPayload["llmApiKeys"] is Map {
+    if (optPayload is Map && optPayload.Has("llmApiKeys") && optPayload["llmApiKeys"] is Map) {
         for k, v in optPayload["llmApiKeys"] {
             pk := UserStudio_NormalizeLlmProvider(k)
             vk := UserStudio_NormalizeApiKey(v)

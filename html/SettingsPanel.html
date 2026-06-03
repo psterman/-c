@@ -944,6 +944,44 @@
       border-radius: 10px;
       font-size: 13px;
     }
+    .studio-openclaw-quick {
+      margin-bottom: 14px;
+      padding: 14px 16px;
+      border: 1px solid rgba(255, 102, 0, 0.35);
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(255, 102, 0, 0.12), rgba(255, 102, 0, 0.04));
+    }
+    .studio-openclaw-quick-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .studio-openclaw-quick-head strong { font-size: 15px; }
+    .studio-openclaw-quick-status {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border2);
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .studio-openclaw-quick-status.ok { color: #6bcf8a; border-color: rgba(107, 207, 138, 0.4); }
+    .studio-openclaw-quick .btn.primary { width: 100%; margin-top: 4px; font-size: 14px; padding: 10px 16px; }
+    .studio-api-steps {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border2);
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--text-dim);
+    }
+    .studio-api-steps strong { color: var(--text); }
+    .studio-llm-add-bar .btn-openclaw-quick { border-color: rgba(255, 102, 0, 0.45); }
     .studio-modal {
       display: none;
       position: fixed;
@@ -1056,11 +1094,16 @@
         <div class="label">服务商</div>
         <select id="studioModalProvider" class="ctl" data-nosave="1"></select>
       </div>
-      <div class="studio-modal-row">
-        <div class="label">API Key</div>
+      <div class="studio-modal-row" id="studioModalOpenClawRow" style="display:none">
+        <button type="button" class="btn primary" id="studioModalOpenClawImport" style="width:100%">一键连接本机 OpenClaw</button>
+        <div class="hint mini" style="margin-top:8px">自动读取本机配置并检测 Gateway（<code>http://127.0.0.1:18789</code>），无需手抄 Token。</div>
+      </div>
+      <div class="hint mini" id="studioModalOpenClawOrManual" style="display:none;margin:4px 0 8px;text-align:center;color:var(--text-dim)">— 或手动填写下方 —</div>
+      <div class="studio-modal-row" id="studioModalApiKeyRow">
+        <div class="label" id="studioModalApiKeyLabel">API Key</div>
         <input id="studioModalApiKey" class="ctl" type="password" data-nosave="1" autocomplete="off" placeholder="填写该平台密钥">
       </div>
-      <div class="studio-modal-row">
+      <div class="studio-modal-row" id="studioModalModelRow">
         <div class="label">模型</div>
         <select id="studioModalModel" class="ctl" data-nosave="1"></select>
       </div>
@@ -2114,8 +2157,8 @@
         baseUrl: "http://127.0.0.1:18789",
         model: "gateway",
         models: ["gateway"],
-        keyPh: "Gateway Token",
-        hint: "OpenClaw 本地网关 Token"
+        keyPh: "Gateway Token（推荐点一键连接）",
+        hint: "本机 Gateway · 非 sk- 云 API · 默认 127.0.0.1:18789"
       },
       custom: {
         label: "自定义（中转 / 私有网关）",
@@ -2647,7 +2690,8 @@
       <button type="button" class="btn studio-llm-remove" data-prov="${esc(pid)}">移除</button>
     </div>
   </div>
-  <div class="row"><div class="label">API Key</div><input class="us-card-key" data-prov="${esc(pid)}" type="password" data-nosave="1" value="${esc(slotKey)}" placeholder="${esc(pre.keyPh || "API Key")}" autocomplete="off"></div>
+  <div class="row"><div class="label">${pid === "openclaw" ? "Gateway Token" : "API Key"}</div><input class="us-card-key" data-prov="${esc(pid)}" type="${pid === "openclaw" ? "text" : "password"}" data-nosave="1" value="${esc(slotKey)}" placeholder="${esc(pre.keyPh || "API Key")}" autocomplete="off"></div>
+  ${pid === "openclaw" ? `<div class="hint mini">本机网关 <code>http://127.0.0.1:18789</code> · WebSocket 对话，与云端 API Key 无关</div>` : ""}
   <div class="row us-card-base-auto" data-prov="${esc(pid)}" style="display:${showManual ? "none" : ""}">
     <div class="label">接口地址</div>
     <div class="studio-url-auto">${esc(autoText)}</div>
@@ -2667,8 +2711,9 @@
     </div>
   </div>
   <div class="hint mini us-card-hint">${esc(pre.hint || "")}</div>
-  <div class="inline" style="margin-top:8px;flex-wrap:wrap">
-    <button type="button" class="btn studio-llm-test-card" data-prov="${esc(pid)}">测试</button>
+  <div class="inline" style="margin-top:8px;flex-wrap:wrap;gap:8px">
+    ${pid === "openclaw" ? `<button type="button" class="btn primary studio-openclaw-import-card" data-prov="${esc(pid)}">一键连接</button>` : ""}
+    <button type="button" class="btn studio-llm-test-card" data-prov="${esc(pid)}">${pid === "openclaw" ? "检测 Gateway" : "测试"}</button>
   </div>
 </div>`;
     }
@@ -2677,24 +2722,352 @@
       const providers = getStudioLlmCardProviders();
       const cardsHtml = providers.length
         ? providers.map((pid) => renderStudioLlmCardHtml(pid, activeProv)).join("")
-        : `<div class="studio-llm-empty">尚未添加大模型卡片，点击上方「添加大模型」填写密钥并选择模型。</div>`;
-      return `<div class="studio-llm-add-bar"><button type="button" class="btn primary" id="btnAddStudioLlmCard">添加大模型</button></div>
+        : `<div class="studio-llm-empty">尚未配置：可点上方<strong>连接本机 OpenClaw</strong>（已安装时一键完成），或<strong>添加云模型 API</strong> 填写密钥。</div>`;
+      return `${buildStudioOpenClawQuickHtml(providers)}
+<div class="studio-llm-add-bar">
+  <button type="button" class="btn primary btn-openclaw-quick" id="btnStudioOpenClawQuick">连接本机 OpenClaw</button>
+  <button type="button" class="btn" id="btnAddStudioLlmCard">添加云模型 API</button>
+</div>
 <div id="studioLlmCards" class="studio-llm-cards">${cardsHtml}</div>`;
+    }
+
+    function studioOpenClawConfigured() {
+      return !!getStudioOpenClawEffectiveToken();
+    }
+
+    function buildStudioOpenClawQuickHtml(cardProviders) {
+      const hasCard = (cardProviders || getStudioLlmCardProviders()).includes("openclaw");
+      const st = state.studioOpenClawStatus || {};
+      let statusCls = "";
+      let statusText = "检测中…";
+      if (studioOpenClawConfigured()) {
+        if (st.gatewayOk === true) {
+          statusCls = "ok";
+          statusText = hasCard ? "已连接 · 已添加卡片" : "已连接 · 可点一键同步到本页";
+        } else if (st.gatewayOk === false) {
+          statusText = "Token 已就绪 · Gateway 未启动";
+        } else {
+          statusCls = "ok";
+          statusText = hasCard ? "Token 已配置" : "本机 Token 可读 · 点一键写入并保存";
+        }
+      } else {
+        statusText = "未写入智能定制 · 点一键从本机读取";
+      }
+      return `<div class="studio-openclaw-quick" id="studioOpenClawQuick">
+  <div class="studio-openclaw-quick-head">
+    <div>
+      <strong>本机 OpenClaw（Gateway）</strong>
+      <div class="hint mini" style="margin-top:4px">与 DeepSeek / MiniMax 等<strong>云 API 分开</strong>：走本机 WebSocket，不用填 sk- 密钥。</div>
+    </div>
+    <span class="studio-openclaw-quick-status ${statusCls}" id="studioOpenClawQuickStatus">${esc(statusText)}</span>
+  </div>
+  <button type="button" class="btn primary" id="btnStudioOpenClawQuickInner">一键连接本机 OpenClaw</button>
+  <div class="hint mini" style="margin-top:8px">自动读取顺序：环境变量 <code>OPENCLAW_GATEWAY_TOKEN</code> → <code>openclaw.json</code>（含 SecretRef）→ <code>openclaw config get</code> → 设备配对 <code>device-auth.json</code>；并检测 <code>127.0.0.1:18789</code>。</div>
+</div>`;
+    }
+
+    function studioConnectOpenClawFromSettings() {
+      const hasCard = getStudioLlmCardProviders().includes("openclaw");
+      if (hasCard) runStudioOpenClawImportConnect({ fromCard: true });
+      else runStudioOpenClawImportConnect({ fromCard: false });
     }
 
     let studioModalMinimaxUrl = STUDIO_MINIMAX_BASE_CN;
     let studioModalBound = false;
 
+    let studioOpenClawImportPending = null;
+    let studioOpenClawImportRunning = false;
+    let studioOpenClawStatusRefreshGen = 0;
+
+    function getStudioOpenClawEffectiveToken() {
+      const saved = getStudioApiKeyForProvider("openclaw");
+      if (saved) return saved;
+      const st = state.studioOpenClawStatus || {};
+      return normalizeStudioApiKey(st.token || st.niumaToken || "");
+    }
+
+    function updateStudioOpenClawQuickStatusDom() {
+      const el = document.getElementById("studioOpenClawQuickStatus");
+      if (!el) return;
+      const key = getStudioOpenClawEffectiveToken();
+      const st = state.studioOpenClawStatus || {};
+      let cls = "";
+      let text = "未配置 · 点一键连接从本机读取";
+      if (key) {
+        const saved = !!getStudioApiKeyForProvider("openclaw");
+        const src = st.source ? st.source.replace(/^.*[\\/]/, "") : "";
+        if (st.gatewayOk === true) {
+          cls = "ok";
+          text = saved
+            ? "已连接 · Gateway 正常" + (src ? "（" + src + "）" : "")
+            : "本机 Token 可用 · Gateway 正常 · 点一键连接保存";
+        } else if (st.gatewayOk === false) {
+          const portHint = st.port ? String(st.port) : "18789";
+          const gwErr = String(st.gatewayError || "").trim();
+          const errHint = gwErr ? " · " + gwErr.substring(0, 80) : "";
+          text = saved
+            ? "Token 已保存 · Gateway 未响应（端口 " + portHint + "，请执行 openclaw gateway restart）" + errHint
+            : "本机已读到 Token · Gateway 未响应（端口 " + portHint + "）· 点一键连接保存" + errHint;
+        } else {
+          cls = "ok";
+          text = "已读取 Token · 正在检测 Gateway…";
+        }
+      } else if (st.probeError) {
+        text = st.probeError;
+      }
+      el.className = "studio-openclaw-quick-status" + (cls ? " " + cls : "");
+      el.textContent = text;
+    }
+
+    function requestStudioOpenClawStatusRefresh(force) {
+      return new Promise((resolve, reject) => {
+        const reqId = "oc_stat_" + Date.now();
+        const timer = setTimeout(() => {
+          if (studioOpenClawImportPending && studioOpenClawImportPending.reqId === reqId) {
+            studioOpenClawImportPending = null;
+            reject(new Error("OpenClaw 状态检测超时"));
+          }
+        }, 20000);
+        studioOpenClawImportPending = {
+          reqId,
+          resolve: (d) => {
+            clearTimeout(timer);
+            studioOpenClawImportPending = null;
+            resolve(d || {});
+          },
+          reject: (e) => {
+            clearTimeout(timer);
+            studioOpenClawImportPending = null;
+            reject(e);
+          }
+        };
+        post({ type: "refreshOpenClawStudioStatus", force: !!force, reqId });
+      });
+    }
+
+    function applyStudioOpenClawStatusPayload(msg) {
+      const token = normalizeStudioApiKey(msg.token || msg.niumaToken || "");
+      state.studioOpenClawStatus = {
+        token: String(msg.token || "").trim(),
+        niumaToken: String(msg.niumaToken || "").trim(),
+        source: String(msg.source || "").trim(),
+        host: String(msg.host || "127.0.0.1").trim(),
+        port: Number(msg.port) || 18789,
+        gatewayOk: msg.gatewayOk === true ? true : msg.gatewayOk === false ? false : null,
+        gatewayError: String(msg.gatewayError || "").trim(),
+        probeError: ""
+      };
+      if (!token) {
+        const dbg = String(msg.debug || msg.gatewayError || "").trim();
+        state.studioOpenClawStatus.probeError = dbg
+          ? "未读到 Gateway Token（" + dbg + "）"
+          : "未读到 Gateway Token（已尝试环境变量、openclaw.json、openclaw CLI、device-auth；请重启牛马后重试）";
+      }
+      updateStudioOpenClawQuickStatusDom();
+      return token;
+    }
+
+    async function refreshStudioOpenClawStatusAsync() {
+      const gen = ++studioOpenClawStatusRefreshGen;
+      try {
+        post({ type: "invokeAction", op: "syncNiumaChatLlmToStudio" });
+        await new Promise((r) => setTimeout(r, 400));
+        const stat = await requestStudioOpenClawStatusRefresh(false);
+        if (gen !== studioOpenClawStatusRefreshGen) return;
+        applyStudioOpenClawStatusPayload(stat);
+      } catch (e) {
+        if (gen !== studioOpenClawStatusRefreshGen) return;
+        state.studioOpenClawStatus = state.studioOpenClawStatus || {};
+        state.studioOpenClawStatus.probeError = e?.message || "检测失败";
+        updateStudioOpenClawQuickStatusDom();
+      }
+    }
+
     function updateStudioModalMinimaxRow(pid) {
       const row = document.getElementById("studioModalMinimaxRow");
+      const ocRow = document.getElementById("studioModalOpenClawRow");
+      const ocOr = document.getElementById("studioModalOpenClawOrManual");
+      const modelRow = document.getElementById("studioModalModelRow");
+      const keyLabel = document.getElementById("studioModalApiKeyLabel");
       const hint = document.getElementById("studioModalHint");
       pid = normalizeStudioLlmProvider(pid);
       const pre = studioLlmPreset(pid);
+      const isOc = pid === "openclaw";
       if (row) row.style.display = pid === "minimax" ? "" : "none";
-      if (hint) hint.textContent = pre.hint || "";
+      if (ocRow) ocRow.style.display = isOc ? "" : "none";
+      if (ocOr) ocOr.style.display = isOc ? "" : "none";
+      if (modelRow) modelRow.style.display = isOc ? "none" : "";
+      if (hint) {
+        hint.textContent = isOc
+          ? "已安装 OpenClaw 时优先点上方橙色按钮；Gateway 需在本机运行（默认端口 18789）。"
+          : pre.hint || "";
+      }
       const keyEl = document.getElementById("studioModalApiKey");
-      if (keyEl) keyEl.placeholder = pre.keyPh || "API Key";
+      if (keyEl) {
+        keyEl.placeholder = pre.keyPh || "API Key";
+        keyEl.type = isOc ? "text" : "password";
+      }
+      if (keyLabel) keyLabel.textContent = isOc ? "Gateway Token（可选，一键连接会自动填入）" : "API Key";
       if (pid === "minimax") studioModalMinimaxUrl = STUDIO_MINIMAX_BASE_CN;
+    }
+
+    function requestStudioOpenClawHostProbe(force) {
+      return new Promise((resolve, reject) => {
+        const reqId = "oc_probe_" + Date.now();
+        const timer = setTimeout(() => {
+          if (studioOpenClawImportPending && studioOpenClawImportPending.reqId === reqId) {
+            studioOpenClawImportPending = null;
+            reject(new Error("读取本机 OpenClaw 配置超时"));
+          }
+        }, 8000);
+        studioOpenClawImportPending = {
+          reqId,
+          resolve: (d) => {
+            clearTimeout(timer);
+            studioOpenClawImportPending = null;
+            resolve(d || {});
+          },
+          reject: (e) => {
+            clearTimeout(timer);
+            studioOpenClawImportPending = null;
+            reject(e);
+          }
+        };
+        post({ type: "openclaw_probe_token", force: !!force, reqId });
+      });
+    }
+
+    function studioTestLlmPromise(pl) {
+      return new Promise((resolve) => {
+        state._studioTestWaiter = resolve;
+        let payloadJson = "";
+        try {
+          payloadJson = JSON.stringify(pl);
+        } catch (_) {
+          state._studioTestWaiter = null;
+          resolve({ ok: false, error: "配置序列化失败" });
+          return;
+        }
+        state._studioTestInFlight = true;
+        post({ type: "testUserStudioLlm", payloadJson });
+      });
+    }
+
+    async function runStudioOpenClawImportConnect(opts) {
+      opts = opts || {};
+      if (studioOpenClawImportRunning) return;
+      const btn =
+        opts.fromCard
+          ? document.querySelector('.studio-openclaw-import-card[data-prov="openclaw"]')
+          : document.getElementById("studioModalOpenClawImport");
+      studioOpenClawImportRunning = true;
+      if (btn) btn.disabled = true;
+      const pid = "openclaw";
+      try {
+        if (!opts.fromCard) {
+          const provEl = document.getElementById("studioModalProvider");
+          if (provEl && normalizeStudioLlmProvider(provEl.value) !== pid) provEl.value = pid;
+          updateStudioModalMinimaxRow(pid);
+        } else {
+          stashAllStudioCardsFromDom();
+        }
+        setStatus("正在从本机 OpenClaw 读取配置并检测 Gateway…", "ok");
+        post({ type: "invokeAction", op: "syncNiumaChatLlmToStudio" });
+        await new Promise((r) => setTimeout(r, 350));
+        const stat = await requestStudioOpenClawStatusRefresh(true);
+        const token = normalizeStudioApiKey(stat.token || stat.niumaToken || "");
+        const source = String(stat.source || "").trim();
+        if (!token) {
+          throw new Error(
+            "未找到 Gateway Token。可设置 OPENCLAW_GATEWAY_TOKEN、在终端执行 openclaw config set gateway.auth.token <值>，或在 Niuma Chat 连接后同步。"
+          );
+        }
+        const pre = studioLlmPreset(pid);
+        const baseUrl =
+          "http://" + (stat.host || "127.0.0.1") + ":" + (Number(stat.port) || 18789);
+        stashStudioApiKeyForProvider(pid, token);
+        stashStudioBaseUrlForProvider(pid, baseUrl, false);
+        stashStudioModelForProvider(pid, pre.model || "gateway");
+        if (!opts.fromCard) {
+          const keyEl = document.getElementById("studioModalApiKey");
+          if (keyEl) {
+            keyEl.value = token;
+            keyEl.type = "text";
+          }
+        } else {
+          const card = document.querySelector('.studio-llm-card[data-prov="openclaw"]');
+          const keyInp = card?.querySelector(".us-card-key");
+          if (keyInp) {
+            keyInp.value = token;
+            keyInp.type = "text";
+          }
+        }
+        const srcHint = source ? source.replace(/^.*[\\/]/, "") : "本机配置";
+        state.studioOpenClawStatus = state.studioOpenClawStatus || {};
+        state.studioOpenClawStatus.token = token;
+        state.studioOpenClawStatus.source = source;
+        state.studioOpenClawStatus.host = stat.host || "127.0.0.1";
+        state.studioOpenClawStatus.port = Number(stat.port) || 18789;
+        const gwOk = stat.gatewayOk === true;
+        state.studioOpenClawStatus.gatewayOk = gwOk;
+        state.studioOpenClawStatus.gatewayError = gwOk ? "" : String(stat.gatewayError || "");
+        updateStudioOpenClawQuickStatusDom();
+        setStatus(
+          gwOk
+            ? "已导入 Token（" + srcHint + "），Gateway 正常。"
+            : "已导入 Token（" + srcHint + "）；Gateway 未响应，请启动本机 openclaw gateway。",
+          gwOk ? "ok" : "err"
+        );
+        const finishSave = function (gatewayOk) {
+          if (opts.fromCard) {
+            const list = [...getStudioLlmCardProviders()];
+            if (!list.includes(pid)) list.push(pid);
+            setStudioLlmCardProviders(list);
+            mergeUserStudioState({
+              llm: {
+                provider: pid,
+                apiKey: token,
+                baseUrl: baseUrl,
+                model: pre.model
+              },
+              options: {
+                llmCardProviders: list,
+                llmApiKeys: { ...getStudioLlmApiKeys(), openclaw: token },
+                llmBaseUrls: { ...getStudioLlmBaseUrls(), openclaw: baseUrl },
+                llmModels: { ...getStudioLlmModels(), openclaw: pre.model }
+              }
+            });
+            render();
+            persistStudioCardsNow(false);
+            if (gatewayOk) {
+              setStatus("OpenClaw 一键连接成功，Gateway 正常。", "ok");
+            } else {
+              setStatus(
+                "Token 已保存到智能定制。Gateway 未响应：请在本机启动 OpenClaw（openclaw gateway / 服务），端口 " +
+                  (Number(stat.port) || 18789) +
+                  "。",
+                "err"
+              );
+            }
+          } else {
+            const defEl = document.getElementById("studioModalSetDefault");
+            if (defEl && getStudioLlmCardProviders().length === 0) defEl.checked = true;
+            confirmStudioLlmAddModal();
+            setStatus(
+              gatewayOk
+                ? "OpenClaw 已导入、检测通过并已保存。"
+                : "Token 已保存。Gateway 未响应，请先启动本机 OpenClaw Gateway。",
+              gatewayOk ? "ok" : "err"
+            );
+          }
+        };
+        finishSave(gwOk);
+      } catch (e) {
+        setStatus(e?.message || String(e || "连接失败"), "err");
+      } finally {
+        studioOpenClawImportRunning = false;
+        if (btn) btn.disabled = false;
+      }
     }
 
     function bindStudioLlmAddModalOnce() {
@@ -2734,12 +3107,13 @@
         setStatus("弹窗内已选国际节点", "ok");
       });
       document.getElementById("studioModalConfirm")?.addEventListener("click", () => confirmStudioLlmAddModal());
+      document.getElementById("studioModalOpenClawImport")?.addEventListener("click", () => runStudioOpenClawImportConnect({ fromCard: false }));
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && modal?.classList.contains("open")) close();
       });
     }
 
-    function openStudioLlmAddModal() {
+    function openStudioLlmAddModal(preferPid) {
       bindStudioLlmAddModalOnce();
       const modal = document.getElementById("studioLlmAddModal");
       if (!modal) return;
@@ -2753,7 +3127,9 @@
       if (sel) {
         sel.innerHTML = available.map((k) => `<option value="${esc(k)}">${esc(STUDIO_LLM_PRESETS[k].label)}</option>`).join("");
       }
-      const pid = normalizeStudioLlmProvider(available[0]);
+      let pid = normalizeStudioLlmProvider(available[0]);
+      preferPid = normalizeStudioLlmProvider(preferPid || "");
+      if (preferPid && available.includes(preferPid)) pid = preferPid;
       const keyEl = document.getElementById("studioModalApiKey");
       if (keyEl) keyEl.value = getStudioApiKeyForProvider(pid) || "";
       let modelEl = document.getElementById("studioModalModel");
@@ -2771,6 +3147,11 @@
       if (defEl) defEl.checked = getStudioLlmCardProviders().length === 0;
       modal.classList.add("open");
       modal.setAttribute("aria-hidden", "false");
+      if (pid === "openclaw") {
+        try {
+          post({ type: "openclaw_probe_token" });
+        } catch (_) {}
+      }
       keyEl?.focus();
     }
 
@@ -2908,6 +3289,8 @@
       });
       ensureStudioLlmDelegatedEvents();
       document.getElementById("btnAddStudioLlmCard")?.addEventListener("click", () => openStudioLlmAddModal());
+      document.getElementById("btnStudioOpenClawQuick")?.addEventListener("click", () => studioConnectOpenClawFromSettings());
+      document.getElementById("btnStudioOpenClawQuickInner")?.addEventListener("click", () => studioConnectOpenClawFromSettings());
       cardsRoot.querySelectorAll(".studio-llm-remove").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const pid = normalizeStudioLlmProvider(btn.dataset.prov || "");
@@ -2922,6 +3305,9 @@
       });
       cardsRoot.querySelectorAll(".studio-llm-test-card").forEach((btn) => {
         btn.addEventListener("click", () => testStudioLlmCard(btn.dataset.prov));
+      });
+      cardsRoot.querySelectorAll(".studio-openclaw-import-card").forEach((btn) => {
+        btn.addEventListener("click", () => runStudioOpenClawImportConnect({ fromCard: true }));
       });
       cardsRoot.querySelectorAll(".us-card-manual-link").forEach((link) => {
         link.addEventListener("click", (e) => {
@@ -4037,8 +4423,12 @@
           `<div class="row"><div class="label">${label}</div><div class="inline" style="flex:1"><input id="usPath_${id}" type="text" data-nosave="1" value="${esc(val || "")}" placeholder="留空则使用系统默认"><button class="btn us-browse" data-us-field="${id}">浏览</button></div></div>`;
         panel.innerHTML = `
 <div class="card studio-api-card"><div class="title">大模型 API</div>
-<div class="hint mini" style="margin-bottom:8px">点击「添加大模型」填写密钥；修改后离开本页或切换标签时会自动保存，也可在 Niuma Chat 悬浮窗中保存。</div>
-<div class="hint mini">已配置 ${configuredCount} 个密钥槽 · 当前默认：<strong>${esc(studioLlmPreset(activeProv).label)}</strong></div>
+<div class="studio-api-steps">
+  <strong>两种配置方式：</strong><br>
+  ① <strong>本机 OpenClaw</strong> — 点橙色「一键连接」，自动读 Token + 检测网关（无需 sk- 密钥）<br>
+  ② <strong>云端模型</strong> — 点「添加云模型 API」，填写各平台 API Key（DeepSeek、MiniMax 等）
+</div>
+<div class="hint mini">已配置 ${configuredCount} 个密钥槽 · 当前默认：<strong>${esc(studioLlmPreset(activeProv).label)}</strong> · 修改后切换标签或关闭设置页会自动保存</div>
 ${buildStudioLlmCardsHtml(activeProv)}
 <div class="inline" style="margin-top:12px;flex-wrap:wrap">
   <button class="btn" type="button" id="btnStudioSyncNiuma">从 Niuma Chat 同步</button>
@@ -4070,6 +4460,11 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
 </div>
 </details>`;
         bindStudioLlmCardsUi(activeProv);
+        refreshStudioOpenClawStatusAsync();
+        if (!getStudioApiKeyForProvider("openclaw")) {
+          state._studioSyncSilent = true;
+          post({ type: "invokeAction", op: "syncNiumaChatLlmToStudio" });
+        }
         const openAsk = (sendNow) => {
           const prompt = (document.getElementById("studioAskInput")?.value || "").trim();
           post({
@@ -4450,9 +4845,52 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (el) el.value = msg.path;
         return;
       }
+      if (msg.type === "openclaw_studio_status" || msg.type === "openclaw_host_token_probe") {
+        const payload = {
+          token: String(msg.token || "").trim(),
+          niumaToken: String(msg.niumaToken || "").trim(),
+          source: String(msg.source || "").trim(),
+          host: String(msg.host || "127.0.0.1").trim(),
+          port: Number(msg.port) || 18789,
+          gatewayOk: msg.gatewayOk,
+          gatewayError: String(msg.gatewayError || "").trim(),
+          debug: String(msg.debug || "").trim(),
+          force: !!msg.force
+        };
+        if (studioOpenClawImportPending) {
+          studioOpenClawImportPending.resolve(payload);
+          return;
+        }
+        applyStudioOpenClawStatusPayload(payload);
+        state.studioOpenClawStatus = state.studioOpenClawStatus || {};
+        state.studioOpenClawStatus.token = payload.token;
+        state.studioOpenClawStatus.source = payload.source;
+        updateStudioOpenClawQuickStatusDom();
+        const modal = document.getElementById("studioLlmAddModal");
+        const modalOpen = modal?.classList.contains("open");
+        if (modalOpen && payload.token && normalizeStudioLlmProvider(document.getElementById("studioModalProvider")?.value) === "openclaw") {
+          const keyEl = document.getElementById("studioModalApiKey");
+          if (keyEl) {
+            keyEl.value = payload.token;
+            keyEl.type = "text";
+          }
+          setStatus("已从本机填入 Gateway Token，可点「一键连接」完成保存。", "ok");
+        }
+        return;
+      }
       if (msg.type === "testUserStudioLlmResult") {
         state._studioTestInFlight = false;
         const ms = msg.elapsedMs ? `（${msg.elapsedMs}ms）` : "";
+        if (state._studioTestWaiter) {
+          const waiter = state._studioTestWaiter;
+          state._studioTestWaiter = null;
+          waiter({
+            ok: !!msg.ok,
+            error: String(msg.error || "").trim() || "API 测试失败",
+            elapsedMs: msg.elapsedMs
+          });
+          return;
+        }
         if (msg.ok) {
           setStatus(`API 测试通过${ms}`, "ok");
         } else {
@@ -4539,11 +4977,18 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       }
       if (msg.type === "syncNiumaChatLlmResult") {
         if (msg.ok && msg.userStudio) mergeUserStudioStateFromServer(msg.userStudio);
+        const silent = !!state._studioSyncSilent;
+        state._studioSyncSilent = false;
         if (msg.ok) {
-          setStatus("已从 Niuma Chat 同步 API", "ok");
-          if (state.activeTab === "customize") render();
+          if (!silent) setStatus("已从 Niuma Chat 同步 API", "ok");
+          if (state.activeTab === "customize") {
+            render();
+            refreshStudioOpenClawStatusAsync();
+          }
         } else if (state._studioSyncManual) {
           setStatus(msg.error || "同步失败", "err");
+        } else if (silent && state.activeTab === "customize") {
+          refreshStudioOpenClawStatusAsync();
         }
         state._studioSyncManual = false;
         return;

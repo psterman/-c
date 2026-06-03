@@ -2021,6 +2021,240 @@ ConfigWebView_UserStudioPayloadForWebAfterSave() {
     return Map()
 }
 
+ConfigWebView_FindOpenClawCliExe() {
+    if FuncExists("UserStudio_FindOpenClawCliExe") {
+        try {
+            p := UserStudio_FindOpenClawCliExe()
+            if (p != "")
+                return p
+        } catch {
+        }
+    }
+    for _, p in [A_AppData . "\npm\openclaw.cmd", "C:\Program Files\nodejs\openclaw.cmd"] {
+        if (p != "" && FileExist(p))
+            return p
+    }
+    return ""
+}
+
+ConfigWebView_OpenClawGatewayCliOk() {
+    exe := ConfigWebView_FindOpenClawCliExe()
+    if (exe = "")
+        return false
+    out := A_Temp . "\nmer_openclaw_gw_status.txt"
+    try FileDelete(out)
+    inner := '"' . exe . '" gateway status > "' . out . '" 2>&1'
+    try {
+        RunWait(A_ComSpec . ' /c "' . inner . '"', , "Hide")
+    } catch {
+        return false
+    }
+    if !FileExist(out)
+        return false
+    raw := ""
+    try raw := FileRead(out, "UTF-8")
+    catch {
+        return false
+    }
+    try FileDelete(out)
+    if InStr(raw, "Connectivity probe: ok")
+        return true
+    if InStr(raw, "Runtime: running") && InStr(raw, "Listening: 127.0.0.1")
+        return true
+    return false
+}
+
+ConfigWebView_TcpPortOpen(host, port, timeoutMs := 2500) {
+    if FuncExists("LlmApiPing_TcpPortOpen")
+        return LlmApiPing_TcpPortOpen(host, port, timeoutMs)
+    host := Trim(String(host))
+    if (host = "localhost")
+        host := "127.0.0.1"
+    port := Integer(port)
+    if (host = "" || port < 1 || port > 65535)
+        return false
+    if !RegExMatch(host, "^\d{1,3}(\.\d{1,3}){3}$")
+        return false
+    static wsaReady := false
+    if !wsaReady {
+        wsaData := Buffer(400, 0)
+        if DllCall("ws2_32\WSAStartup", "UShort", 0x0202, "Ptr", wsaData, "Int")
+            return false
+        wsaReady := true
+    }
+    ip := DllCall("ws2_32\inet_addr", "AStr", host, "UInt")
+    if (ip = 0xFFFFFFFF)
+        return false
+    sock := DllCall("ws2_32\socket", "Int", 2, "Int", 1, "Int", 6, "UPtr")
+    if (sock = -1 || sock = 0xFFFFFFFFFFFFFFFF)
+        return false
+    try {
+        sa := Buffer(16, 0)
+        NumPut("UShort", 2, sa, 0)
+        NumPut("UShort", DllCall("ws2_32\htons", "UShort", port, "UShort"), sa, 2)
+        NumPut("UInt", ip, sa, 4)
+        nb := 1
+        if (DllCall("ws2_32\ioctlsocket", "UPtr", sock, "UInt", 0x8004667E, "UInt*", &nb, "Int") = -1)
+            return false
+        if (DllCall("ws2_32\connect", "UPtr", sock, "Ptr", sa, "Int", 16, "Int") = 0)
+            return true
+        if (DllCall("ws2_32\WSAGetLastError", "Int") != 10035)
+            return false
+        t := Max(500, Integer(timeoutMs))
+        writeSet := Buffer(132, 0)
+        NumPut("UInt", 1, writeSet, 0)
+        NumPut("UPtr", sock, writeSet, 4)
+        tv := Buffer(8, 0)
+        NumPut("UInt", t // 1000, tv, 0)
+        NumPut("UInt", Mod(t, 1000) * 1000, tv, 4)
+        if (DllCall("ws2_32\select", "Int", 0, "Ptr", 0, "Ptr", writeSet, "Ptr", 0, "Ptr", tv, "Int") <= 0)
+            return false
+        optErr := 0
+        optLen := 4
+        if (DllCall("ws2_32\getsockopt", "UPtr", sock, "Int", 0xFFFF, "Int", 0x1007, "Int*", &optErr, "Int*", &optLen, "Int") = -1)
+            return false
+        return optErr = 0
+    } catch {
+        return false
+    } finally {
+        try DllCall("ws2_32\closesocket", "UPtr", sock)
+        catch {
+        }
+    }
+}
+
+ConfigWebView_ProbeOpenClawGateway(base, token, timeoutMs := 12000) {
+    if FuncExists("UserStudio_ProbeOpenClawGateway") {
+        try return UserStudio_ProbeOpenClawGateway(base, token, timeoutMs)
+        catch {
+        }
+    }
+    if FuncExists("LlmApiPing_TestOpenClaw") {
+        try return LlmApiPing_TestOpenClaw(base, token, timeoutMs)
+        catch {
+        }
+    }
+    token := Trim(String(token))
+    if (token = "")
+        return Map("ok", false, "error", "缺少 Gateway Token", "elapsedMs", 0)
+    host := "127.0.0.1"
+    port := 18789
+    base := Trim(String(base))
+    if RegExMatch(base, "i)^[a-z]+://([^/:]+)(?::(\d+))?", &m) {
+        if (m[1] != "")
+            host := m[1]
+        if (m[2] != "")
+            port := Integer(m[2])
+    } else if RegExMatch(base, ":(\d+)", &mp)
+        port := Integer(mp[1])
+    t0 := A_TickCount
+    if ConfigWebView_OpenClawGatewayCliOk()
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    tcpMs := Min(Max(800, Integer(timeoutMs)), 3000)
+    if ConfigWebView_TcpPortOpen(host, port, tcpMs)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    return Map(
+        "ok", false,
+        "error", "无法连接本机 OpenClaw Gateway（" . host . ":" . port . "）。请执行 openclaw gateway restart。",
+        "elapsedMs", A_TickCount - t0
+    )
+}
+
+ConfigWebView_QuickReadOpenClawGatewayToken() {
+    host := "127.0.0.1"
+    port := 18789
+    paths := []
+    try {
+        up0 := Trim(String(EnvGet("USERPROFILE")))
+        if (up0 != "")
+            paths.Push(up0 . "\.openclaw\openclaw.json")
+    } catch {
+    }
+    if (A_AppData != "") {
+        hm := Trim(RegExReplace(A_AppData, "\\AppData\\Roaming$", ""))
+        if (hm != "") {
+            paths.Push(hm . "\.openclaw\openclaw.json")
+            paths.Push(hm . "\.openclaw\openclaw.json.last-good")
+            paths.Push(hm . "\.openclaw\openclaw.json.bak")
+            paths.Push(hm . "\.openclaw\identity\device-auth.json")
+        }
+    }
+    try {
+        up := Trim(String(EnvGet("USERPROFILE")))
+        if (up != "") {
+            paths.Push(up . "\.openclaw\openclaw.json")
+            paths.Push(up . "\.openclaw\openclaw.json.last-good")
+            paths.Push(up . "\.openclaw\identity\device-auth.json")
+        }
+    } catch {
+    }
+    for _, path in paths {
+        path := Trim(String(path))
+        if (path = "" || !FileExist(path))
+            continue
+        try {
+            raw := FileRead(path, "UTF-8")
+            if (Trim(raw) = "")
+                continue
+            tok := ""
+            if InStr(path, "device-auth.json") {
+                doc := Jxon_Load(raw)
+                if (doc is Map && doc.Has("tokens") && doc["tokens"] is Map) {
+                    op := doc["tokens"].Has("operator") ? doc["tokens"]["operator"] : ""
+                    if (op is Map)
+                        tok := Trim(String(op.Get("token", "")))
+                }
+            } else {
+                meta := Map("token", "", "host", host, "port", port)
+                if (StrLen(raw) <= 524288) {
+                    try {
+                        if FuncExists("UserStudio_ExtractOpenClawGatewayToken") {
+                            cfg := Jxon_Load(raw)
+                            tok := UserStudio_ExtractOpenClawGatewayToken(cfg)
+                            if (tok != "")
+                                meta["token"] := tok
+                        }
+                    } catch {
+                    }
+                }
+                if (meta["token"] = "" && FuncExists("UserStudio_ReadOpenClawAuthTokenLiteral")) {
+                    lit := UserStudio_ReadOpenClawAuthTokenLiteral(raw)
+                    if (lit != "")
+                        meta["token"] := lit
+                }
+                if (meta["token"] = "" && FuncExists("UserStudio_ExtractOpenClawGatewayFromRaw"))
+                    meta := UserStudio_ExtractOpenClawGatewayFromRaw(raw)
+                else if (meta["token"] = "" && FuncExists("UserStudio_ReadJsonStringValueAfterKey")) {
+                    gwAt := InStr(raw, '"gateway"', false)
+                    if (gwAt > 0) {
+                        chunk := SubStr(raw, gwAt, 8000)
+                        authAt := InStr(chunk, '"auth"', false)
+                        if (authAt > 0) {
+                            authChunk := SubStr(chunk, authAt, 800)
+                            meta["token"] := UserStudio_ReadJsonStringValueAfterKey(authChunk, "token")
+                        }
+                        if (meta["token"] = "")
+                            meta["token"] := UserStudio_ReadJsonStringValueAfterKey(chunk, "token")
+                    }
+                }
+                tok := Trim(String(meta.Get("token", "")))
+                host := Trim(String(meta.Get("host", host)))
+                port := Integer(meta.Get("port", port))
+            }
+            if FuncExists("UserStudio_NormalizeApiKey")
+                tok := UserStudio_NormalizeApiKey(tok)
+            else if FuncExists("LlmApiPing_NormalizeApiKey")
+                tok := LlmApiPing_NormalizeApiKey(tok)
+            else
+                tok := Trim(tok)
+            if (tok != "")
+                return Map("token", tok, "source", path, "host", host, "port", port)
+        } catch {
+        }
+    }
+    return Map("token", "", "source", "", "host", host, "port", port)
+}
+
 ConfigWebView_OnMessage(sender, args) {
     global ConfigWV2Ready, UseWebViewSettings
     jsonStr := args.WebMessageAsJson
@@ -2145,6 +2379,140 @@ ConfigWebView_OnMessage(sender, args) {
             }
             studio := ok ? ConfigWebView_UserStudioPayloadForWebAfterSave() : Map()
             ConfigWebView_Send(Map("type", "saveUserStudioResult", "ok", ok, "error", err, "userStudio", studio))
+        case "openclaw_probe_token", "niuma_openclaw_probe_token", "refreshOpenClawStudioStatus":
+            token := ""
+            source := ""
+            host := "127.0.0.1"
+            port := 18789
+            niumaKey := ""
+            gwOk := false
+            gwErr := ""
+            info := Map()
+            quickDbg := ""
+            try {
+                envTok := Trim(String(EnvGet("OPENCLAW_GATEWAY_TOKEN")))
+                if (envTok != "") {
+                    token := envTok
+                    source := "env:OPENCLAW_GATEWAY_TOKEN"
+                }
+            } catch {
+            }
+            if (token = "") {
+                try {
+                    fb := ConfigWebView_QuickReadOpenClawGatewayToken()
+                    if (fb is Map) {
+                        token := Trim(String(fb.Get("token", "")))
+                        if (token != "") {
+                            source := String(fb.Get("source", ""))
+                            host := Trim(String(fb.Get("host", host)))
+                            port := Integer(fb.Get("port", port))
+                        } else {
+                            quickDbg := "quick=empty"
+                        }
+                    } else {
+                        quickDbg := "quick=not_map"
+                    }
+                } catch as eQuick {
+                    quickDbg := "quick_err=" . eQuick.Message
+                }
+            }
+            if (token = "") {
+                try {
+                    if FuncExists("UserStudio_ProbeOpenClawGatewayToken") {
+                        info := UserStudio_ProbeOpenClawGatewayToken()
+                        if (info is Map) {
+                            token := Trim(String(info.Get("token", "")))
+                            source := String(info.Get("source", ""))
+                            host := Trim(String(info.Get("host", host)))
+                            port := Integer(info.Get("port", port))
+                        }
+                    }
+                } catch as e1 {
+                    try OutputDebug("[ConfigWebView] openclaw probe failed: " . e1.Message)
+                    catch {
+                    }
+                }
+            }
+            try {
+                if FuncExists("UserStudio_LogOpenClawProbe")
+                    UserStudio_LogOpenClawProbe(
+                        "probe_result tokenLen=" . StrLen(token),
+                        "source=" . source,
+                        "quickDbg=" . quickDbg,
+                        "USERPROFILE=" . EnvGet("USERPROFILE"),
+                        "func=" . (FuncExists("UserStudio_ProbeOpenClawGatewayToken") ? "yes" : "no"),
+                        "literal=" . (FuncExists("UserStudio_ReadOpenClawAuthTokenLiteral") ? "yes" : "no")
+                    )
+            } catch {
+            }
+            try {
+                if FuncExists("UserStudio_ReadNiumaOpenClawKey")
+                    niumaKey := UserStudio_ReadNiumaOpenClawKey()
+            } catch {
+            }
+            if (token = "" && niumaKey != "") {
+                token := niumaKey
+                source := "niuma_chat_llm.json"
+            }
+            if (token != "") {
+                base := "http://" . host . ":" . port
+                pingMs := (action = "refreshOpenClawStudioStatus") ? 12000 : 6000
+                try {
+                    r := ConfigWebView_ProbeOpenClawGateway(base, token, pingMs)
+                    gwOk := !!r.Get("ok", false)
+                    gwErr := String(r.Get("error", ""))
+                } catch as e2 {
+                    gwErr := e2.Message
+                }
+                try {
+                    if FuncExists("UserStudio_LogOpenClawProbe")
+                        UserStudio_LogOpenClawProbe(
+                            "gateway_test ok=" . (gwOk ? "1" : "0"),
+                            "err=" . gwErr,
+                            "pingMs=" . pingMs,
+                            "host=" . host . ":" . port
+                        )
+                } catch {
+                }
+            }
+            dbg := quickDbg
+            if (token = "") {
+                home := ""
+                if FuncExists("UserStudio_ResolveOpenClawUserHome")
+                    try home := UserStudio_ResolveOpenClawUserHome()
+                dbg := (dbg != "" ? dbg . " | " : "") . "home=" . home
+                if (info is Map && info.Has("tried") && info["tried"] is Array) {
+                    for _, p in info["tried"]
+                        dbg .= " | " . p
+                }
+            }
+            if (action = "refreshOpenClawStudioStatus") {
+                ConfigWebView_Send(Map(
+                    "type", "openclaw_studio_status",
+                    "token", token,
+                    "source", source,
+                    "host", host,
+                    "port", port,
+                    "niumaToken", niumaKey,
+                    "gatewayOk", gwOk,
+                    "gatewayError", gwErr,
+                    "debug", dbg,
+                    "force", !!(msg.Has("force") && msg["force"])
+                ))
+            } else {
+                ConfigWebView_Send(Map(
+                    "type", "openclaw_host_token_probe",
+                    "token", token,
+                    "source", source,
+                    "host", host,
+                    "port", port,
+                    "niumaToken", niumaKey,
+                    "gatewayOk", gwOk,
+                    "gatewayError", gwErr,
+                    "debug", dbg,
+                    "force", !!(msg.Has("force") && msg["force"])
+                ))
+            }
         case "testUserStudioLlm":
             payload := ConfigWebView_ParseUserStudioSavePayload(msg)
             if !(payload is Map)
@@ -2401,6 +2769,7 @@ ConfigWebView_OnMessage(sender, args) {
                         ok := false
                         err := ""
                         studio := Map()
+                        needChatExport := false
                         try {
                             if FuncExists("UserStudio_SyncFromNiumaFile") {
                                 r := UserStudio_SyncFromNiumaFile()
@@ -2409,7 +2778,16 @@ ConfigWebView_OnMessage(sender, args) {
                                 if r.Has("studio")
                                     studio := r["studio"]
                             }
-                            if !ok && FuncExists("FloatingToolbar_RequestNiumaLlmExport") {
+                            ; 文件里已有 minimax 等 Key 时 ok=true，但 OpenClaw 可能只在 Chat localStorage
+                            if FuncExists("UserStudio_ReadNiumaOpenClawKey") {
+                                try {
+                                    if (UserStudio_ReadNiumaOpenClawKey() = "")
+                                        needChatExport := true
+                                } catch {
+                                    needChatExport := true
+                                }
+                            }
+                            if ((!ok || needChatExport) && FuncExists("FloatingToolbar_RequestNiumaLlmExport")) {
                                 global g_ConfigWebView_PendingStudioSync := true
                                 FloatingToolbar_RequestNiumaLlmExport()
                                 return

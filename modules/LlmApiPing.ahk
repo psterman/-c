@@ -464,6 +464,143 @@ LlmApiPing_TestOllama(base, model, timeoutMs := 18000) {
     return Map("ok", false, "error", err2, "elapsedMs", A_TickCount - t0)
 }
 
+LlmApiPing_InetAddrV4(host) {
+    host := Trim(String(host))
+    if (host = "localhost")
+        host := "127.0.0.1"
+    if !RegExMatch(host, "^\d{1,3}(\.\d{1,3}){3}$")
+        return 0
+    addr := DllCall("ws2_32\inet_addr", "AStr", host, "UInt")
+    return (addr = 0xFFFFFFFF) ? 0 : addr
+}
+
+LlmApiPing_TcpPortOpen(host, port, timeoutMs := 2500) {
+    static wsaReady := false
+    if !wsaReady {
+        wsaData := Buffer(400, 0)
+        if DllCall("ws2_32\WSAStartup", "UShort", 0x0202, "Ptr", wsaData, "Int")
+            return false
+        wsaReady := true
+    }
+    host := Trim(String(host))
+    port := Integer(port)
+    if (host = "" || port < 1 || port > 65535)
+        return false
+    ip := LlmApiPing_InetAddrV4(host)
+    if !ip
+        return false
+    sock := DllCall("ws2_32\socket", "Int", 2, "Int", 1, "Int", 6, "UPtr")
+    if (sock = -1 || sock = 0xFFFFFFFFFFFFFFFF)
+        return false
+    try {
+        sa := Buffer(16, 0)
+        NumPut("UShort", 2, sa, 0)
+        NumPut("UShort", DllCall("ws2_32\htons", "UShort", port, "UShort"), sa, 2)
+        NumPut("UInt", ip, sa, 4)
+        nb := 1
+        if (DllCall("ws2_32\ioctlsocket", "UPtr", sock, "UInt", 0x8004667E, "UInt*", &nb, "Int") = -1)
+            return false
+        if (DllCall("ws2_32\connect", "UPtr", sock, "Ptr", sa, "Int", 16, "Int") = 0)
+            return true
+        if (DllCall("ws2_32\WSAGetLastError", "Int") != 10035)
+            return false
+        t := Max(500, Integer(timeoutMs))
+        writeSet := Buffer(132, 0)
+        NumPut("UInt", 1, writeSet, 0)
+        NumPut("UPtr", sock, writeSet, 4)
+        tv := Buffer(8, 0)
+        NumPut("UInt", t // 1000, tv, 0)
+        NumPut("UInt", Mod(t, 1000) * 1000, tv, 4)
+        if (DllCall("ws2_32\select", "Int", 0, "Ptr", 0, "Ptr", writeSet, "Ptr", 0, "Ptr", tv, "Int") <= 0)
+            return false
+        optErr := 0
+        optLen := 4
+        if (DllCall("ws2_32\getsockopt", "UPtr", sock, "Int", 0xFFFF, "Int", 0x1007, "Int*", &optErr, "Int*", &optLen, "Int") = -1)
+            return false
+        return optErr = 0
+    } catch {
+        return false
+    } finally {
+        try DllCall("ws2_32\closesocket", "UPtr", sock)
+        catch {
+        }
+    }
+}
+
+LlmApiPing_ParseOpenClawEndpoint(base) {
+    host := "127.0.0.1"
+    port := 18789
+    base := Trim(String(base))
+    if (base = "")
+        return Map("host", host, "port", port)
+    raw := base
+    if !RegExMatch(raw, "i)^[a-z]+://")
+        raw := "http://" . raw
+    try {
+        if RegExMatch(raw, "i)^[a-z]+://([^/:]+)(?::(\d+))?", &m) {
+            if (m[1] != "")
+                host := m[1]
+            if (m[2] != "")
+                port := Integer(m[2])
+        }
+    } catch {
+    }
+    if (port < 1 || port > 65535)
+        port := 18789
+    return Map("host", host, "port", port)
+}
+
+LlmApiPing_OpenClawGatewayStatusOk(timeoutMs := 9000) {
+    if !FuncExists("UserStudio_FindOpenClawCliExe")
+        return false
+    exe := UserStudio_FindOpenClawCliExe()
+    if (exe = "")
+        return false
+    out := A_Temp . "\nmer_openclaw_gw_status.txt"
+    try FileDelete(out)
+    ; 整条子命令必须包在一对引号内，否则 gateway status 不会传给 openclaw.cmd（约 60ms 空跑）
+    inner := '"' . exe . '" gateway status > "' . out . '" 2>&1'
+    try {
+        RunWait(A_ComSpec . ' /c "' . inner . '"', , "Hide")
+    } catch {
+        return false
+    }
+    if !FileExist(out)
+        return false
+    raw := ""
+    try raw := FileRead(out, "UTF-8")
+    catch {
+        return false
+    }
+    try FileDelete(out)
+    if InStr(raw, "Connectivity probe: ok")
+        return true
+    if InStr(raw, "Runtime: running") && InStr(raw, "Listening: 127.0.0.1")
+        return true
+    return false
+}
+
+LlmApiPing_TestOpenClaw(base, key, timeoutMs := 8000) {
+    key := LlmApiPing_NormalizeApiKey(key)
+    if (key = "")
+        return Map("ok", false, "error", "缺少 Gateway Token", "elapsedMs", 0)
+    ep := LlmApiPing_ParseOpenClawEndpoint(base)
+    host := ep.Get("host", "127.0.0.1")
+    port := Integer(ep.Get("port", 18789))
+    t0 := A_TickCount
+    tcpMs := Min(Max(800, Integer(timeoutMs)), 3000)
+    ; CLI 含 WebSocket 探活最准；TCP 作快速兜底（Gateway 根路径 HTTP 常挂起）
+    if LlmApiPing_OpenClawGatewayStatusOk(Min(Max(6000, Integer(timeoutMs)), 15000))
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    if LlmApiPing_TcpPortOpen(host, port, tcpMs)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    return Map(
+        "ok", false,
+        "error", "无法连接本机 OpenClaw Gateway（" . host . ":" . port . "）。请执行 openclaw gateway restart 后重试。",
+        "elapsedMs", A_TickCount - t0
+    )
+}
+
 LlmApiPing_Test(llm, timeoutMs := 18000) {
     if !(llm is Map)
         return Map("ok", false, "error", "配置无效", "elapsedMs", 0)
@@ -482,6 +619,8 @@ LlmApiPing_Test(llm, timeoutMs := 18000) {
         return Map("ok", false, "error", "请先填写 API Key", "elapsedMs", 0)
     if (prov = "ollama")
         return LlmApiPing_TestOllama(base, model, timeoutMs)
+    if (prov = "openclaw")
+        return LlmApiPing_TestOpenClaw(base, key, Min(timeoutMs, 12000))
     pingAnth := Jxon_Dump(Map("model", model, "max_tokens", 8, "messages", [Map("role", "user", "content", "ping")]))
     pingOpenAI := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_tokens", 8, "temperature", 0.1))
     pingOpenAINew := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_completion_tokens", 16, "temperature", 0.1))
