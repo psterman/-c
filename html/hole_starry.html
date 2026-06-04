@@ -298,6 +298,12 @@
       transition: opacity 220ms ease;
     }
     #gestureTrailCanvas.active { opacity: 1; }
+    #gestureTrailCanvas.trail-pending {
+      filter: drop-shadow(0 0 6px rgba(140, 190, 255, 0.35));
+    }
+    #gestureTrailCanvas.trail-matched {
+      filter: drop-shadow(0 0 10px rgba(80, 255, 180, 0.75));
+    }
   </style>
 </head>
 <body>
@@ -332,6 +338,10 @@
       const gestureTrailCanvas = document.getElementById('gestureTrailCanvas');
       const gestureTrailCtx = gestureTrailCanvas ? gestureTrailCanvas.getContext('2d') : null;
       let gestureTrailActive = false;
+      let gestureTrailMatched = false;
+      let gestureTrailStroke = 'rgba(140, 190, 255, 0.48)';
+      let gestureTrailLastX = 0;
+      let gestureTrailLastY = 0;
       const canvas = document.getElementById('galaxyCanvas');
       const ctx = canvas.getContext('2d', { alpha: false });
       const holeBody = document.getElementById('holeBody');
@@ -564,8 +574,22 @@
         clearGestureTrail: () => {
           if (!gestureTrailCtx || !gestureTrailCanvas) return;
           gestureTrailActive = false;
-          gestureTrailCanvas.classList.remove('active');
+          gestureTrailMatched = false;
+          gestureTrailStroke = 'rgba(140, 190, 255, 0.48)';
+          gestureTrailCanvas.classList.remove('active', 'trail-pending', 'trail-matched');
           gestureTrailCtx.clearRect(0, 0, gestureTrailCanvas.width, gestureTrailCanvas.height);
+        },
+        gestureTrailSetMatch: (matched, dir) => {
+          if (!gestureTrailCanvas) return;
+          const ok = !!matched;
+          gestureTrailMatched = ok;
+          gestureTrailStroke = ok ? 'rgba(80, 255, 180, 0.92)' : 'rgba(140, 190, 255, 0.48)';
+          gestureTrailCanvas.classList.toggle('trail-matched', ok);
+          gestureTrailCanvas.classList.toggle('trail-pending', !ok && gestureTrailActive);
+          if (gestureTrailCtx && gestureTrailActive) {
+            gestureTrailCtx.strokeStyle = gestureTrailStroke;
+            gestureTrailCtx.lineWidth = ok ? 2.8 : 2.2;
+          }
         },
         gestureTrailPoint: (cx, cy) => {
           if (!gestureTrailCtx || !gestureTrailCanvas) return;
@@ -573,17 +597,25 @@
           const y = Number(cy) || 0;
           if (!gestureTrailActive) {
             gestureTrailActive = true;
-            gestureTrailCanvas.classList.add('active');
+            gestureTrailMatched = false;
+            gestureTrailStroke = 'rgba(140, 190, 255, 0.48)';
+            gestureTrailLastX = x;
+            gestureTrailLastY = y;
+            gestureTrailCanvas.classList.add('active', 'trail-pending');
+            gestureTrailCanvas.classList.remove('trail-matched');
             gestureTrailCtx.clearRect(0, 0, gestureTrailCanvas.width, gestureTrailCanvas.height);
-            gestureTrailCtx.strokeStyle = 'rgba(120, 255, 200, 0.55)';
+            gestureTrailCtx.strokeStyle = gestureTrailStroke;
             gestureTrailCtx.lineWidth = 2.2;
             gestureTrailCtx.lineJoin = 'round';
             gestureTrailCtx.lineCap = 'round';
             gestureTrailCtx.beginPath();
             gestureTrailCtx.moveTo(x, y);
           } else {
+            gestureTrailCtx.strokeStyle = gestureTrailStroke;
             gestureTrailCtx.lineTo(x, y);
             gestureTrailCtx.stroke();
+            gestureTrailLastX = x;
+            gestureTrailLastY = y;
           }
         },
         show: (_payload, opts) => {

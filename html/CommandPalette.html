@@ -817,6 +817,11 @@ body[data-theme="light"] .ai-bg-card {
   var ICON_SECOND = "/assets/icons/app/";
   var ICON_FALLBACK = "/assets/icons/app/chat-ai-fallback.svg";
   var PROVIDER_ICON_EXTS = [".png", ".jpg", ".jpeg", ".svg", ".webp"];
+  var LOCAL_AGENT_ICON_PRIOR = {
+    openclaw: ["openclaw.svg"],
+    hermes: ["hermes.png", "hermes.svg"],
+    openclaw_cli: ["openclaw.svg"]
+  };
   var AI_PROVIDER_ICON_KEY = {
     openai: "openai",
     deepseek: "deepseek",
@@ -830,6 +835,7 @@ body[data-theme="light"] .ai-bg-card {
     siliconflow: "siliconflow",
     ollama: "ollama",
     openclaw: "openclaw",
+    hermes: "hermes",
     codex_cli: "codex_cli",
     gemini_cli: "gemini_cli",
     openclaw_cli: "openclaw_cli",
@@ -864,8 +870,14 @@ body[data-theme="light"] .ai-bg-card {
     minimax: ["minimax", "MiniMax"],
     zhipu: ["zhipu", "Zhipu"],
     ollama: ["ollama", "Ollama"],
-    openclaw: ["openclaw", "OpenClaw"]
+    openclaw: ["openclaw", "OpenClaw"],
+    hermes: ["hermes", "Hermes"]
   };
+
+  function localAgentIconKey(pid) {
+    if (pid === "openclaw_cli") return "openclaw_cli";
+    return LOCAL_AGENT_ICON_PRIOR[pid] ? pid : "";
+  }
 
   function providerIconKeyForItem(item) {
     if (!item) return "openai";
@@ -881,6 +893,14 @@ body[data-theme="light"] .ai-bg-card {
     var bases = PROVIDER_ICON_BASES[pid];
     if (!bases || !bases.length) bases = [pid];
     var list = [];
+    var localKey = localAgentIconKey(pid);
+    var localFiles = localKey ? LOCAL_AGENT_ICON_PRIOR[localKey] : null;
+    if (localFiles && localFiles.length) {
+      localFiles.forEach(function (file) {
+        list.push(ICON_PRIMARY + file);
+        list.push(ICON_SECOND + file);
+      });
+    }
     bases.forEach(function (base) {
       PROVIDER_ICON_EXTS.forEach(function (ext) {
         list.push(ICON_SECOND + base + ext);

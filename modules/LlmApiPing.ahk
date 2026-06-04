@@ -3,6 +3,13 @@
 global LlmApiPing_MINIMAX_BASE_CN := "https://api.minimaxi.com/anthropic"
 global LlmApiPing_MINIMAX_BASE_INTL := "https://api.minimax.io/anthropic"
 
+/** 避免静态分析把内置 FuncExists 当成未赋值局部变量 */
+LlmApiPing_HasFunc(name) {
+    try return (%"FuncExists"%).Call(name)
+    catch
+        return false
+}
+
 LlmApiPing_StripSurroundingQuotes(key) {
     key := Trim(String(key))
     dq := Chr(34)
@@ -39,7 +46,7 @@ LlmApiPing_NormalizeApiKey(key) {
 }
 
 LlmApiPing_NormalizeProvider(prov) {
-    if FuncExists("UserStudio_NormalizeLlmProvider")
+    if LlmApiPing_HasFunc("UserStudio_NormalizeLlmProvider")
         return UserStudio_NormalizeLlmProvider(prov)
     prov := Trim(String(prov))
     if (prov = "anthropic")
@@ -50,7 +57,7 @@ LlmApiPing_NormalizeProvider(prov) {
 }
 
 LlmApiPing_BaseUrlMatchesProvider(prov, url) {
-    if FuncExists("UserStudio_BaseUrlMatchesProvider")
+    if LlmApiPing_HasFunc("UserStudio_BaseUrlMatchesProvider")
         return UserStudio_BaseUrlMatchesProvider(prov, url)
     prov := LlmApiPing_NormalizeProvider(prov)
     url := Trim(String(url))
@@ -86,7 +93,7 @@ LlmApiPing_BaseUrlMatchesProvider(prov, url) {
 }
 
 LlmApiPing_PresetFor(prov) {
-    if FuncExists("UserStudio_LlmPresetFor")
+    if LlmApiPing_HasFunc("UserStudio_LlmPresetFor")
         return UserStudio_LlmPresetFor(prov)
     prov := LlmApiPing_NormalizeProvider(prov)
     switch prov {
@@ -108,7 +115,7 @@ LlmApiPing_PresetFor(prov) {
 }
 
 LlmApiPing_EncodeUri(s) {
-    if FuncExists("UriEncode")
+    if LlmApiPing_HasFunc("UriEncode")
         return UriEncode(s)
     return s
 }
@@ -551,7 +558,7 @@ LlmApiPing_ParseOpenClawEndpoint(base) {
 }
 
 LlmApiPing_OpenClawGatewayStatusOk(timeoutMs := 9000) {
-    if !FuncExists("UserStudio_FindOpenClawCliExe")
+    if !LlmApiPing_HasFunc("UserStudio_FindOpenClawCliExe")
         return false
     exe := UserStudio_FindOpenClawCliExe()
     if (exe = "")
@@ -578,6 +585,25 @@ LlmApiPing_OpenClawGatewayStatusOk(timeoutMs := 9000) {
     if InStr(raw, "Runtime: running") && InStr(raw, "Listening: 127.0.0.1")
         return true
     return false
+}
+
+LlmApiPing_TestHermes(base, key, timeoutMs := 8000) {
+    if LlmApiPing_HasFunc("UserStudio_ProbeHermesApiServer")
+        try return UserStudio_ProbeHermesApiServer(base, key, timeoutMs)
+    key := LlmApiPing_NormalizeApiKey(key)
+    if (key = "")
+        return Map("ok", false, "error", "缺少 API Server Key（API_SERVER_KEY）", "elapsedMs", 0)
+    ep := LlmApiPing_ParseOpenClawEndpoint(base)
+    host := ep.Get("host", "127.0.0.1")
+    port := Integer(ep.Get("port", 8642))
+    t0 := A_TickCount
+    if LlmApiPing_TcpPortOpen(host, port, Min(Max(800, Integer(timeoutMs)), 3000))
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    return Map(
+        "ok", false,
+        "error", "无法连接本机 Hermes API Server（" . host . ":" . port . "）。请设置 ~/.hermes/.env 并执行 hermes gateway。",
+        "elapsedMs", A_TickCount - t0
+    )
 }
 
 LlmApiPing_TestOpenClaw(base, key, timeoutMs := 8000) {
@@ -621,6 +647,8 @@ LlmApiPing_Test(llm, timeoutMs := 18000) {
         return LlmApiPing_TestOllama(base, model, timeoutMs)
     if (prov = "openclaw")
         return LlmApiPing_TestOpenClaw(base, key, Min(timeoutMs, 12000))
+    if (prov = "hermes")
+        return LlmApiPing_TestHermes(base, key, Min(timeoutMs, 12000))
     pingAnth := Jxon_Dump(Map("model", model, "max_tokens", 8, "messages", [Map("role", "user", "content", "ping")]))
     pingOpenAI := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_tokens", 8, "temperature", 0.1))
     pingOpenAINew := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_completion_tokens", 16, "temperature", 0.1))

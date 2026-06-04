@@ -1,14 +1,35 @@
 ; UserStudio.ahk — 智能定制：大模型 API、软件路径、总览与还原（local/user_studio.json）
+; 跨模块符号由主脚本 #Include；Func 包装避免单独打开本文件时静态分析误报「未赋值」。
+
+_US_JxonLoad(s) => Func("Jxon_Load").Call(s)
+_US_JxonDump(o) => Func("Jxon_Dump").Call(o)
 
 global g_UserStudio := Map()
 global g_UserStudioLoaded := false
+
+UserStudio_LocalDir() {
+    return A_ScriptDir . "\local"
+}
+
+UserStudio_MainConfigFile() {
+    return UserStudio_LocalDir() . "\CursorShortcut.ini"
+}
+
+UserStudio_NormalizeWinPath(path) {
+    path := Trim(String(path))
+    if (path = "")
+        return ""
+    if FuncExists("NormalizeWindowsPath")
+        try return Func("NormalizeWindowsPath").Call(path)
+    return path
+}
 
 UserStudio_ConfigDir() {
     return A_ScriptDir . "\config"
 }
 
 UserStudio_Path() {
-    return Nmer_UserStudioPath()
+    return UserStudio_LocalDir() . "\user_studio.json"
 }
 
 UserStudio_DefaultsPath() {
@@ -16,11 +37,11 @@ UserStudio_DefaultsPath() {
 }
 
 UserStudio_BackupPath() {
-    return Nmer_UserStudioBackupPath()
+    return UserStudio_LocalDir() . "\user_studio.backup.json"
 }
 
 UserStudio_NiumaLlmSyncPath() {
-    return Nmer_NiumaChatLlmPath()
+    return UserStudio_LocalDir() . "\niuma_chat_llm.json"
 }
 
 UserStudio_NiumaBriefPath() {
@@ -47,7 +68,7 @@ UserStudio_ResolveInstallRoot(doc) {
     opt := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
     root := Trim(String(opt.Get("niumaInstallRoot", "")))
     if (root != "") {
-        try root := NormalizeWindowsPath(root)
+        try root := UserStudio_NormalizeWinPath(root)
         catch {
         }
         if DirExist(root)
@@ -160,7 +181,7 @@ UserStudio_BaseUrlMatchesProvider(prov, url) {
             return InStr(low, "siliconflow")
         case "ollama":
             return InStr(low, "11434") || InStr(low, "ollama")
-        case "openclaw":
+        case "openclaw", "hermes":
             return true
         default:
             return true
@@ -240,7 +261,8 @@ UserStudio_GetNiumaContext() {
 }
 
 UserStudio_EnsureConfigDir() {
-    Nmer_EnsureLocalDir()
+    if !DirExist(UserStudio_LocalDir())
+        try DirCreate(UserStudio_LocalDir())
     dir := UserStudio_ConfigDir()
     if !DirExist(dir)
         DirCreate(dir)
@@ -251,7 +273,7 @@ UserStudio_DefaultDocument() {
     if FileExist(defPath) {
         try {
             raw := FileRead(defPath, "UTF-8")
-            parsed := Jxon_Load(raw)
+            parsed := _US_JxonLoad(raw)
             if (parsed is Map)
                 return UserStudio_NormalizeDoc(parsed)
         } catch {
@@ -300,6 +322,8 @@ UserStudio_LlmPresetFor(prov) {
             return Map("baseUrl", "http://127.0.0.1:11434/v1", "model", "nemotron-3-super:cloud")
         case "openclaw":
             return Map("baseUrl", "http://127.0.0.1:18789", "model", "gateway")
+        case "hermes":
+            return Map("baseUrl", "http://127.0.0.1:8642/v1", "model", "hermes-agent")
         case "custom":
             return Map("baseUrl", "", "model", "")
         default:
@@ -440,7 +464,7 @@ UserStudio_OpenClawGatewayCliOk() {
 
 UserStudio_TcpPortOpen(host, port, timeoutMs := 2500) {
     if FuncExists("LlmApiPing_TcpPortOpen")
-        return LlmApiPing_TcpPortOpen(host, port, timeoutMs)
+        return Func("LlmApiPing_TcpPortOpen").Call(host, port, timeoutMs)
     host := Trim(String(host))
     if (host = "localhost")
         host := "127.0.0.1"
@@ -499,7 +523,7 @@ UserStudio_TcpPortOpen(host, port, timeoutMs := 2500) {
 
 UserStudio_ProbeOpenClawGateway(base, token, timeoutMs := 12000) {
     if FuncExists("LlmApiPing_TestOpenClaw")
-        return LlmApiPing_TestOpenClaw(base, token, timeoutMs)
+        return Func("LlmApiPing_TestOpenClaw").Call(base, token, timeoutMs)
     token := UserStudio_NormalizeApiKey(token)
     if (token = "")
         return Map("ok", false, "error", "缺少 Gateway Token", "elapsedMs", 0)
@@ -533,7 +557,7 @@ UserStudio_ParseOpenClawCliStdout(raw) {
     try {
         head := SubStr(raw, 1, 1)
         if (head = Chr(34) || head = "{" || head = "[") {
-            parsed := Jxon_Load(raw)
+            parsed := _US_JxonLoad(raw)
             if (parsed != "")
                 return UserStudio_NormalizeApiKey(String(parsed))
         }
@@ -616,7 +640,7 @@ UserStudio_ReadOpenClawDeviceOperatorToken() {
     if !FileExist(path)
         return Map("token", "", "source", "")
     try {
-        doc := Jxon_Load(FileRead(path, "UTF-8"))
+        doc := _US_JxonLoad(FileRead(path, "UTF-8"))
         if !(doc is Map) || !doc.Has("tokens") || !(doc["tokens"] is Map)
             return Map("token", "", "source", "")
         op := doc["tokens"].Has("operator") ? doc["tokens"]["operator"] : ""
@@ -631,7 +655,7 @@ UserStudio_ReadOpenClawDeviceOperatorToken() {
     }
 }
 
-; openclaw.json 体积大时 Jxon_Load 会溢出返回空 Map，用片段正则 / InStr 读取 gateway 段
+; openclaw.json 体积大时 _US_JxonLoad 会溢出返回空 Map，用片段正则 / InStr 读取 gateway 段
 UserStudio_StripUtf8Bom(raw) {
     raw := String(raw)
     if (raw = "")
@@ -847,7 +871,7 @@ UserStudio_ReadOpenClawGatewayToken() {
             meta := Map("host", "127.0.0.1", "port", 18789)
             if (StrLen(raw) <= 524288) {
                 try {
-                    cfg := Jxon_Load(raw)
+                    cfg := _US_JxonLoad(raw)
                     tok := UserStudio_ExtractOpenClawGatewayToken(cfg)
                 } catch as eJxon {
                     try UserStudio_LogOpenClawProbe("jxon_fail path=" . path . " err=" . eJxon.Message)
@@ -933,7 +957,7 @@ UserStudio_ProbeOpenClawGatewayToken() {
     }
     if FuncExists("FloatingToolbar_ReadOpenClawGatewayToken") {
         try {
-            fb := FloatingToolbar_ReadOpenClawGatewayToken()
+            fb := Func("FloatingToolbar_ReadOpenClawGatewayToken").Call()
             if (fb is Map) {
                 tok := Trim(String(fb.Get("token", "")))
                 if (tok != "")
@@ -948,6 +972,530 @@ UserStudio_ProbeOpenClawGatewayToken() {
         }
     }
     return info
+}
+
+UserStudio_HermesAddDataDir(dirs, seen, path) {
+    path := Trim(String(path))
+    if (path = "")
+        return
+    try path := RTrim(path, "\/")
+    catch {
+    }
+    if seen.Has(path)
+        return
+    if (DirExist(path) || FileExist(path . "\config.yaml") || FileExist(path . "\.env")) {
+        seen[path] := true
+        dirs.Push(path)
+    }
+}
+
+UserStudio_ListHermesDataDirs() {
+    dirs := []
+    seen := Map()
+    la := UserStudio_LocalAppDataDir()
+    if (la != "")
+        UserStudio_HermesAddDataDir(dirs, seen, la . "\hermes")
+    try {
+        h := Trim(String(EnvGet("HERMES_HOME")))
+        if (h != "")
+            UserStudio_HermesAddDataDir(dirs, seen, h)
+    } catch {
+    }
+    up := ""
+    try up := Trim(String(EnvGet("USERPROFILE")))
+    catch {
+    }
+    if (up = "")
+        up := A_UserName ? "C:\Users\" . A_UserName : A_AppData
+    UserStudio_HermesAddDataDir(dirs, seen, up . "\.hermes")
+    if (up != "")
+        UserStudio_HermesAddDataDir(dirs, seen, up . "\AppData\Local\hermes")
+    return dirs
+}
+
+UserStudio_LocalAppDataDir() {
+    static cached := ""
+    if (cached != "")
+        return cached
+    try cached := Trim(EnvGet("LOCALAPPDATA"))
+    catch {
+        cached := ""
+    }
+    if (cached = "" && A_AppData != "") {
+        try {
+            p := RegExReplace(A_AppData, "\\Roaming$", "\\Local", , 1)
+            if (p != A_AppData && DirExist(p))
+                cached := p
+        } catch {
+        }
+    }
+    if (cached = "") {
+        up := ""
+        try up := Trim(EnvGet("USERPROFILE"))
+        catch {
+        }
+        if (up = "")
+            up := A_UserName ? "C:\Users\" . A_UserName : ""
+        if (up != "") {
+            p2 := up . "\AppData\Local"
+            if DirExist(p2)
+                cached := p2
+        }
+    }
+    return cached
+}
+
+UserStudio_ResolveHermesHome() {
+    dirs := UserStudio_ListHermesDataDirs()
+    if (dirs.Length > 0)
+        return dirs[1]
+    try {
+        h := Trim(String(EnvGet("HERMES_HOME")))
+        if (h != "")
+            return h
+    } catch {
+    }
+    up := ""
+    try up := Trim(String(EnvGet("USERPROFILE")))
+    catch {
+    }
+    if (up = "")
+        up := A_UserName ? "C:\Users\" . A_UserName : A_AppData
+    return up . "\.hermes"
+}
+
+UserStudio_GetHermesEnvPath() {
+    la := UserStudio_LocalAppDataDir()
+    if (la != "") {
+        p := la . "\hermes\.env"
+        if FileExist(p)
+            return p
+    }
+    return UserStudio_GetHermesPrimaryDataDir() . "\.env"
+}
+
+UserStudio_GetHermesPrimaryDataDir() {
+    la := UserStudio_LocalAppDataDir()
+    if (la != "" && DirExist(la . "\hermes"))
+        return la . "\hermes"
+    dirs := UserStudio_ListHermesDataDirs()
+    if (dirs.Length > 0)
+        return dirs[1]
+    return UserStudio_ResolveHermesHome()
+}
+
+/** 供 NiumaChat / 设置页 Hermes 探测：返回已查找的 .env 路径与 LOCALAPPDATA（写入日志，不含密钥）。 */
+UserStudio_CollectHermesProbeMeta() {
+    tried := []
+    seen := Map()
+    for _, dir in UserStudio_ListHermesDataDirs() {
+        p := dir . "\.env"
+        if (p != "" && !seen.Has(p)) {
+            seen[p] := true
+            tried.Push(p)
+        }
+    }
+    up := ""
+    try up := Trim(String(EnvGet("USERPROFILE")))
+    catch {
+    }
+    if (up != "") {
+        p2 := up . "\.hermes\.env"
+        if !seen.Has(p2) {
+            seen[p2] := true
+            tried.Push(p2)
+        }
+    }
+    la := UserStudio_LocalAppDataDir()
+    return Map("tried", tried, "localAppData", la, "primaryDir", UserStudio_GetHermesPrimaryDataDir())
+}
+
+UserStudio_ParseHermesEnvFile(path) {
+    out := Map()
+    path := Trim(String(path))
+    if (path = "" || !FileExist(path))
+        return out
+    raw := ""
+    try raw := FileRead(path, "UTF-8")
+    catch {
+        return out
+    }
+    if (Ord(SubStr(raw, 1, 1)) = 0xFEFF)
+        raw := SubStr(raw, 2)
+    for _, line in StrSplit(raw, "`n", "`r") {
+        line := Trim(line)
+        if (line = "" || SubStr(line, 1, 1) = "#" || SubStr(line, 1, 1) = ";")
+            continue
+        if !RegExMatch(line, "^([A-Za-z_][A-Za-z0-9_]*)=(.*)$", &m)
+            continue
+        key := m[1]
+        val := Trim(m[2])
+        if (SubStr(val, 1, 1) = Chr(34) && SubStr(val, -1) = Chr(34))
+            val := SubStr(val, 2, -1)
+        else if (SubStr(val, 1, 1) = "'" && SubStr(val, -1) = "'")
+            val := SubStr(val, 2, -1)
+        out[key] := val
+    }
+    if (!out.Has("API_SERVER_KEY") || Trim(String(out.Get("API_SERVER_KEY", ""))) = "") {
+        if RegExMatch(raw, "m)^API_SERVER_KEY\s*=\s*([^\r\n#;]+)", &mk)
+            out["API_SERVER_KEY"] := Trim(mk[1])
+    }
+    return out
+}
+
+UserStudio_HermesNormalizeKey(key) {
+    key := Trim(String(key))
+    if (key = "")
+        return ""
+    key := RegExReplace(key, "i)^\s*Bearer\s+", "")
+    dq := Chr(34)
+    if (SubStr(key, 1, 1) = dq && SubStr(key, -1) = dq)
+        key := SubStr(key, 2, -1)
+    return RegExReplace(key, "\s+", "")
+}
+
+UserStudio_ExtractHermesApiKeyFromEnvRaw(raw) {
+    raw := Trim(String(raw))
+    if (raw = "")
+        return ""
+    if (Ord(SubStr(raw, 1, 1)) = 0xFEFF)
+        raw := SubStr(raw, 2)
+    last := ""
+    pos := 1
+    while RegExMatch(raw, "i)API_SERVER_KEY\s*=\s*([^\r\n#;]+)", &mk, pos) {
+        cand := UserStudio_HermesNormalizeKey(Trim(mk[1]))
+        if (cand != "")
+            last := cand
+        pos := mk.Pos(0) + mk.Len(0)
+    }
+    return last
+}
+
+/** 从本机 hermes .env 读取 API_SERVER_KEY（供 NiumaChat / 设置页一键连接） */
+UserStudio_QuickReadHermesApiServerKey() {
+    host := "127.0.0.1"
+    port := 8642
+    key := ""
+    source := ""
+    tried := []
+    seen := Map()
+    pushPath(p) {
+        p := Trim(String(p))
+        if (p = "" || seen.Has(p))
+            return
+        seen[p] := true
+        tried.Push(p)
+    }
+    for _, dir in UserStudio_ListHermesDataDirs()
+        pushPath(dir . "\.env")
+    la := UserStudio_LocalAppDataDir()
+    if (la != "")
+        pushPath(la . "\hermes\.env")
+    up := ""
+    try up := Trim(EnvGet("USERPROFILE"))
+    catch {
+    }
+    if (up != "") {
+        pushPath(up . "\.hermes\.env")
+        pushPath(up . "\AppData\Local\hermes\.env")
+    }
+    for _, path in tried {
+        if !FileExist(path)
+            continue
+        raw := ""
+        try raw := FileRead(path, "UTF-8")
+        catch {
+            try raw := FileRead(path)
+            catch {
+                continue
+            }
+        }
+        k := UserStudio_ExtractHermesApiKeyFromEnvRaw(raw)
+        if (k = "")
+            continue
+        key := k
+        source := path
+        if RegExMatch(raw, "m)^API_SERVER_HOST\s*=\s*([^\r\n#;]+)", &mh)
+            host := Trim(mh[1])
+        if RegExMatch(raw, "m)^API_SERVER_PORT\s*=\s*(\d+)", &mp)
+            port := Integer(mp[1])
+        if (host = "localhost")
+            host := "127.0.0.1"
+        break
+    }
+    return Map("token", key, "source", source, "host", host, "port", port, "tried", tried)
+}
+
+UserStudio_HermesEnvTruthy(val) {
+    v := StrLower(Trim(String(val)))
+    return (v = "1" || v = "true" || v = "yes" || v = "on")
+}
+
+UserStudio_ReadHermesDotEnv() {
+    merged := Map()
+    merged["_sources"] := Map()
+    for _, dir in UserStudio_ListHermesDataDirs() {
+        envPath := dir . "\.env"
+        part := UserStudio_ParseHermesEnvFile(envPath)
+        if !(part is Map)
+            continue
+        for k, v in part {
+            if (k = "_sources")
+                continue
+            merged[k] := v
+            if (k = "API_SERVER_KEY" && Trim(String(v)) != "")
+                merged["_sources"]["API_SERVER_KEY"] := envPath
+        }
+    }
+    return merged
+}
+
+UserStudio_GenerateHermesApiServerKey() {
+    chars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    out := ""
+    Loop 32
+        out .= SubStr(chars, Random(1, StrLen(chars)), 1)
+    return out
+}
+
+UserStudio_AppendHermesEnvLines(envPath, lines) {
+    envPath := Trim(String(envPath))
+    if (envPath = "")
+        return false
+    dir := ""
+    if RegExMatch(envPath, "^(.*)\\[^\\]+$", &m)
+        dir := m[1]
+    if (dir != "" && !DirExist(dir))
+        try DirCreate(dir)
+    block := "`n# NMER: Hermes API Server (for 牛马智能定制一键连接)`n"
+    for _, line in lines
+        block .= line . "`n"
+    try {
+        if FileExist(envPath) {
+            raw := FileRead(envPath, "UTF-8")
+            if !RegExMatch(raw, "i)\r?\n\s*$")
+                block := "`n" . block
+            FileAppend(block, envPath, "UTF-8")
+        } else
+            FileAppend(RTrim(block, "`n"), envPath, "UTF-8")
+        return true
+    } catch {
+        return false
+    }
+}
+
+UserStudio_EnsureHermesApiServerEnv() {
+    cfg := UserStudio_ReadHermesApiConfig()
+    key := Trim(String(cfg.Get("key", "")))
+    if (key != "")
+        return Map("ok", true, "key", key, "source", String(cfg.Get("source", "")), "wrote", false, "path", "")
+    envPath := UserStudio_GetHermesEnvPath()
+    key := UserStudio_GenerateHermesApiServerKey()
+    lines := [
+        "API_SERVER_ENABLED=true",
+        "API_SERVER_KEY=" . key,
+        "API_SERVER_HOST=127.0.0.1",
+        "API_SERVER_PORT=8642"
+    ]
+    if !UserStudio_AppendHermesEnvLines(envPath, lines)
+        return Map("ok", false, "error", "无法写入 " . envPath, "wrote", false, "path", envPath)
+    cfg2 := UserStudio_ReadHermesApiConfig()
+    key2 := Trim(String(cfg2.Get("key", "")))
+    if (key2 = "")
+        key2 := key
+    return Map(
+        "ok", true,
+        "key", key2,
+        "source", envPath,
+        "wrote", true,
+        "path", envPath,
+        "hint", "已写入 API_SERVER_KEY。请完全退出并重新打开 Hermes 桌面应用，待网关启动后再点一键连接（端口 8642）。"
+    )
+}
+
+UserStudio_FindHermesCliExe() {
+    candidates := []
+    try {
+        la := Trim(String(EnvGet("LOCALAPPDATA")))
+        if (la != "") {
+            candidates.Push(la . "\hermes\bin\hermes.cmd")
+            candidates.Push(la . "\hermes\hermes-agent\venv\Scripts\hermes.exe")
+            candidates.Push(la . "\hermes\hermes-agent\apps\desktop\release\win-unpacked\Hermes.exe")
+        }
+    } catch {
+    }
+    candidates.Push("C:\Program Files\hermes\hermes.exe")
+    for _, p in candidates {
+        if FileExist(p)
+            return p
+    }
+    out := A_Temp . "\nmer_hermes_where_" . A_TickCount . ".txt"
+    q := Chr(34)
+    try {
+        RunWait(q . A_ComSpec . q . " /c where hermes > " . q . out . q . " 2>nul", , "Hide")
+        if FileExist(out) {
+            raw := FileRead(out, "UTF-8")
+            try FileDelete(out)
+            for _, line in StrSplit(raw, "`n", "`r") {
+                line := Trim(line)
+                if (line != "" && FileExist(line))
+                    return line
+            }
+        }
+    } catch {
+        try FileDelete(out)
+    }
+    return ""
+}
+
+UserStudio_HermesGatewayCliOk(timeoutMs := 15000) {
+    exe := UserStudio_FindHermesCliExe()
+    if (exe = "")
+        return false
+    out := A_Temp . "\nmer_hermes_gw_status.txt"
+    try FileDelete(out)
+    inner := '"' . exe . '" gateway status > "' . out . '" 2>&1'
+    try {
+        RunWait(A_ComSpec . ' /c "' . inner . '"', , "Hide")
+    } catch {
+        return false
+    }
+    if !FileExist(out)
+        return false
+    raw := ""
+    try raw := FileRead(out, "UTF-8")
+    catch {
+        return false
+    }
+    try FileDelete(out)
+    low := StrLower(raw)
+    if InStr(low, "running") || InStr(low, "listening") || InStr(low, "ok")
+        return true
+    if RegExMatch(raw, ":\s*8642")
+        return true
+    return false
+}
+
+UserStudio_ReadHermesApiConfig() {
+    host := "127.0.0.1"
+    port := 8642
+    key := ""
+    enabled := false
+    source := ""
+    try {
+        if UserStudio_HermesEnvTruthy(EnvGet("API_SERVER_ENABLED"))
+            enabled := true
+    } catch {
+    }
+    try {
+        eh := Trim(String(EnvGet("API_SERVER_HOST")))
+        if (eh != "")
+            host := eh
+    } catch {
+    }
+    try {
+        ep := Trim(String(EnvGet("API_SERVER_PORT")))
+        if (ep != "" && ep ~= "^\d+$")
+            port := Integer(ep)
+    } catch {
+    }
+    try {
+        ek := UserStudio_NormalizeApiKey(EnvGet("API_SERVER_KEY"))
+        if (ek != "") {
+            key := ek
+            source := "env:API_SERVER_KEY"
+        }
+    } catch {
+    }
+    dot := UserStudio_ReadHermesDotEnv()
+    if (dot is Map) {
+        if (dot.Has("API_SERVER_ENABLED") && UserStudio_HermesEnvTruthy(dot["API_SERVER_ENABLED"]))
+            enabled := true
+        if (dot.Has("API_SERVER_HOST") && Trim(String(dot["API_SERVER_HOST"])) != "")
+            host := Trim(String(dot["API_SERVER_HOST"]))
+        if (dot.Has("API_SERVER_PORT") && Trim(String(dot["API_SERVER_PORT"])) ~= "^\d+$")
+            port := Integer(dot["API_SERVER_PORT"])
+        if (key = "" && dot.Has("API_SERVER_KEY")) {
+            k2 := UserStudio_NormalizeApiKey(dot["API_SERVER_KEY"])
+            if (k2 != "") {
+                key := k2
+                srcPath := ""
+                if (dot.Has("_sources") && dot["_sources"] is Map)
+                    srcPath := Trim(String(dot["_sources"].Get("API_SERVER_KEY", "")))
+                source := srcPath != "" ? srcPath : (UserStudio_GetHermesPrimaryDataDir() . "\.env")
+            }
+        }
+    }
+    if (host = "localhost")
+        host := "127.0.0.1"
+    return Map("host", host, "port", port, "key", key, "enabled", enabled, "source", source)
+}
+
+UserStudio_ProbeHermesApiServer(base, key, timeoutMs := 12000) {
+    key := UserStudio_NormalizeApiKey(key)
+    host := "127.0.0.1"
+    port := 8642
+    base := Trim(String(base))
+    if RegExMatch(base, "i)^[a-z]+://([^/:]+)(?::(\d+))?", &m) {
+        if (m[1] != "")
+            host := m[1]
+        if (m[2] != "")
+            port := Integer(m[2])
+    } else if RegExMatch(base, ":(\d+)", &mp)
+        port := Integer(mp[1])
+    t0 := A_TickCount
+    if (key != "" && FuncExists("LlmApiPing_HttpSync")) {
+        url := "http://" . host . ":" . port . "/health"
+        try {
+            r := Func("LlmApiPing_HttpSync").Call("GET", url, Map("Authorization", "Bearer " . key), "", Min(Max(3000, Integer(timeoutMs)), 8000))
+            if r is Map && r.Get("ok", false)
+                return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+            if r is Map && Integer(r.Get("status", 0)) = 401
+                return Map("ok", false, "error", "API Server 鉴权失败：请核对 ~/.hermes/.env 中 API_SERVER_KEY 与 NMER 中保存的一致。", "elapsedMs", A_TickCount - t0)
+        } catch {
+        }
+        url2 := "http://" . host . ":" . port . "/v1/models"
+        try {
+            r2 := Func("LlmApiPing_HttpSync").Call("GET", url2, Map("Authorization", "Bearer " . key), "", Min(Max(3000, Integer(timeoutMs)), 8000))
+            if r2 is Map && r2.Get("ok", false)
+                return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+        } catch {
+        }
+    }
+    if UserStudio_HermesGatewayCliOk(Min(Max(6000, Integer(timeoutMs)), 15000))
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    tcpMs := Min(Max(800, Integer(timeoutMs)), 3000)
+    if UserStudio_TcpPortOpen(host, port, tcpMs)
+        return Map(
+            "ok", true,
+            "error", "",
+            "elapsedMs", A_TickCount - t0,
+            "hint", key = "" ? "端口已开放但未验证 API Key" : ""
+        )
+    dataDir := UserStudio_GetHermesPrimaryDataDir()
+    err := "无法连接 Hermes API Server（" . host . ":" . port . "）。Key 已就绪时请完全退出并重启 Hermes 桌面应用以启动 API Server。"
+    if (key = "")
+        err := "未找到 API_SERVER_KEY。请在 " . dataDir . "\.env 配置，或在设置里点「一键连接 Hermes」自动写入。"
+    return Map("ok", false, "error", err, "elapsedMs", A_TickCount - t0)
+}
+
+UserStudio_ProbeHermesGatewayToken(ensureEnv := false) {
+    if (ensureEnv && FuncExists("UserStudio_EnsureHermesApiServerEnv")) {
+        try UserStudio_EnsureHermesApiServerEnv()
+        catch {
+        }
+    }
+    cfg := UserStudio_ReadHermesApiConfig()
+    host := Trim(String(cfg.Get("host", "127.0.0.1")))
+    port := Integer(cfg.Get("port", 8642))
+    key := Trim(String(cfg.Get("key", "")))
+    source := Trim(String(cfg.Get("source", "")))
+    tried := []
+    for _, dir in UserStudio_ListHermesDataDirs()
+        tried.Push(dir . "\.env")
+    if (key != "")
+        return Map("token", key, "source", source, "host", host, "port", port, "apiEnabled", !!cfg.Get("enabled", false), "tried", tried)
+    return Map("token", "", "source", "", "host", host, "port", port, "apiEnabled", !!cfg.Get("enabled", false), "tried", tried)
 }
 
 UserStudio_ExtractOpenClawKeyFromDoc(doc) {
@@ -975,17 +1523,45 @@ UserStudio_ExtractOpenClawKeyFromDoc(doc) {
     return ""
 }
 
-UserStudio_ReadNiumaOpenClawKey() {
+UserStudio_ReadNiumaHermesKey() {
     path := ""
-    if FuncExists("Nmer_NiumaChatLlmPath")
-        path := Nmer_NiumaChatLlmPath()
-    else if FuncExists("UserStudio_NiumaLlmSyncPath")
+    if FuncExists("UserStudio_NiumaLlmSyncPath")
         path := UserStudio_NiumaLlmSyncPath()
     if (path != "" && FileExist(path)) {
         try {
             raw := FileRead(path, "UTF-8")
             if (Trim(raw) != "") {
-                doc := Jxon_Load(raw)
+                doc := _US_JxonLoad(raw)
+                if ((doc is Map) && doc.Has("apiKeys") && doc["apiKeys"] is Map) {
+                    k := UserStudio_NormalizeApiKey(doc["apiKeys"].Get("hermes", ""))
+                    if (k != "")
+                        return k
+                }
+            }
+        } catch {
+        }
+    }
+    try {
+        doc := UserStudio_Get()
+        if ((doc is Map) && doc.Has("apiKeys") && doc["apiKeys"] is Map) {
+            k := UserStudio_NormalizeApiKey(doc["apiKeys"].Get("hermes", ""))
+            if (k != "")
+                return k
+        }
+    } catch {
+    }
+    return ""
+}
+
+UserStudio_ReadNiumaOpenClawKey() {
+    path := ""
+    if FuncExists("UserStudio_NiumaLlmSyncPath")
+        path := UserStudio_NiumaLlmSyncPath()
+    if (path != "" && FileExist(path)) {
+        try {
+            raw := FileRead(path, "UTF-8")
+            if (Trim(raw) != "") {
+                doc := _US_JxonLoad(raw)
                 k := UserStudio_ExtractOpenClawKeyFromDoc(doc)
                 if (k != "")
                     return k
@@ -1104,7 +1680,7 @@ UserStudio_Load(*) {
     if FileExist(path) {
         try {
             raw := FileRead(path, "UTF-8")
-            parsed := Jxon_Load(raw)
+            parsed := _US_JxonLoad(raw)
             if (parsed is Map)
                 doc := UserStudio_NormalizeDoc(parsed)
         } catch as e {
@@ -1159,7 +1735,7 @@ UserStudio_MergeLlmFromNiumaSync(doc) {
         return doc
     try {
         raw := FileRead(path, "UTF-8")
-        sync := Jxon_Load(raw)
+        sync := _US_JxonLoad(raw)
         if !(sync is Map)
             return doc
         if !doc.Has("llm") || !(doc["llm"] is Map)
@@ -1233,7 +1809,7 @@ UserStudio_WriteNiumaLlmSync(docOrLlm) {
         f := FileOpen(UserStudio_NiumaLlmSyncPath(), "w", "UTF-8")
         if !f
             return
-        f.Write(Jxon_Dump(Map(
+        f.Write(_US_JxonDump(Map(
             "llm", Map(
                 "provider", llm.Get("provider", "openai"),
                 "apiKey", key,
@@ -1269,7 +1845,7 @@ UserStudio_Save(doc) {
     f := FileOpen(path, "w", "UTF-8")
     if !f
         throw Error("无法写入 " . path)
-    f.Write(Jxon_Dump(doc))
+    f.Write(_US_JxonDump(doc))
     f.Close()
     g_UserStudio := doc
     g_UserStudioLoaded := true
@@ -1308,7 +1884,7 @@ UserStudio_ImportFrom(path) {
         return Map("ok", false, "error", "文件不存在")
     try {
         raw := FileRead(path, "UTF-8")
-        parsed := Jxon_Load(raw)
+        parsed := _US_JxonLoad(raw)
         if !(parsed is Map)
             return Map("ok", false, "error", "JSON 格式无效")
         doc := UserStudio_NormalizeDoc(parsed)
@@ -1330,7 +1906,7 @@ UserStudio_ApplyPathsToGlobals(doc) {
     paths := doc.Has("paths") && doc["paths"] is Map ? doc["paths"] : Map()
     cp := Trim(String(paths.Get("cursor", "")))
     if (cp != "") {
-        try cp := NormalizeWindowsPath(cp)
+        try cp := UserStudio_NormalizeWinPath(cp)
         catch {
         }
         if FileExist(cp) {
@@ -1360,7 +1936,7 @@ UserStudio_CoerceWebMap(val) {
         s := Trim(String(val))
         if (s != "") {
             try {
-                parsed := Jxon_Load(s)
+                parsed := _US_JxonLoad(s)
                 if (parsed is Map)
                     return parsed
             } catch {
@@ -1378,7 +1954,7 @@ UserStudio_CoerceWebPayload(&payload) {
         if (payload is String) {
             s := Trim(String(payload))
             if (s != "")
-                try payload := Jxon_Load(s)
+                try payload := _US_JxonLoad(s)
         }
         if !(payload is Map)
             payload := Map()
@@ -1413,7 +1989,7 @@ UserStudio_NormalizeCardProviders(raw) {
         s := Trim(String(raw))
         if (s != "") {
             try {
-                parsed := Jxon_Load(s)
+                parsed := _US_JxonLoad(s)
                 if (parsed is Array) {
                     for _, p in parsed {
                         pv := UserStudio_NormalizeLlmProvider(p)
@@ -1484,7 +2060,7 @@ UserStudio_ApplyLlmCardsFlat(msg) {
     keysJson := Trim(String(msg.Get("keysJson", "")))
     if (keysJson != "") {
         try {
-            keysParsed := Jxon_Load(keysJson)
+            keysParsed := _US_JxonLoad(keysJson)
             if (keysParsed is Map) {
                 keys := Map()
                 for k, v in keysParsed {
@@ -1501,7 +2077,7 @@ UserStudio_ApplyLlmCardsFlat(msg) {
     modelsJson := Trim(String(msg.Get("modelsJson", "")))
     if (modelsJson != "") {
         try {
-            modelsParsed := Jxon_Load(modelsJson)
+            modelsParsed := _US_JxonLoad(modelsJson)
             if (modelsParsed is Map) {
                 models := Map()
                 for k, v in modelsParsed {
@@ -1629,7 +2205,7 @@ UserStudio_GetTtydWorkDir() {
         }
     }
     if FuncExists("NiumaTtyd_WorkDir")
-        return NiumaTtyd_WorkDir()
+        return Func("NiumaTtyd_WorkDir").Call()
     return A_ScriptDir
 }
 
@@ -1641,7 +2217,7 @@ UserStudio_SyncTtydToIni(doc) {
     sh := Trim(String(ttyd.Get("shell", "cmd.exe")))
     if (sh = "")
         sh := "cmd.exe"
-    cf := Nmer_MainConfigFile()
+    cf := UserStudio_MainConfigFile()
     if (IsSet(ConfigFile) && ConfigFile != "")
         cf := ConfigFile
     try {
@@ -1662,13 +2238,13 @@ UserStudio_TtydPayloadForWeb() {
         port := 7691
     baseUrl := "http://127.0.0.1:" . port . "/"
     if FuncExists("NiumaTtyd_BaseUrlForEngine")
-        baseUrl := NiumaTtyd_BaseUrlForEngine("studio_cli")
+        baseUrl := Func("NiumaTtyd_BaseUrlForEngine").Call("studio_cli")
     exeOk := false
     if FuncExists("NiumaTtyd_ExePath")
-        exeOk := FileExist(NiumaTtyd_ExePath())
+        exeOk := FileExist(Func("NiumaTtyd_ExePath").Call())
     httpOk := false
     if FuncExists("NiumaTtyd_IsHttpReadyOnPort")
-        try httpOk := NiumaTtyd_IsHttpReadyOnPort(port, 400)
+        try httpOk := Func("NiumaTtyd_IsHttpReadyOnPort").Call(port, 400)
     return Map(
         "shell", ttyd.Get("shell", "cmd.exe"),
         "workDir", ttyd.Get("workDir", ""),
@@ -1827,7 +2403,7 @@ UserStudio_BrowsePath(field, filterDesc := "可执行文件 (*.exe)") {
     }
     if (selected = "")
         return ""
-    try selected := NormalizeWindowsPath(selected)
+    try selected := UserStudio_NormalizeWinPath(selected)
     catch {
     }
     return selected
@@ -1835,9 +2411,9 @@ UserStudio_BrowsePath(field, filterDesc := "可执行文件 (*.exe)") {
 
 UserStudio_NormalizeApiKey(key) {
     if FuncExists("LlmApiPing_NormalizeApiKey")
-        return LlmApiPing_NormalizeApiKey(key)
+        return Func("LlmApiPing_NormalizeApiKey").Call(key)
     if FuncExists("ConfigWebView_NormalizeApiKey")
-        return ConfigWebView_NormalizeApiKey(key)
+        return Func("ConfigWebView_NormalizeApiKey").Call(key)
     return Trim(String(key))
 }
 
@@ -1845,9 +2421,9 @@ UserStudio_TestLlmPing(llm, timeoutMs := 18000) {
     if FuncExists("ConfigWebView_TestMinimaxPing") && (llm is Map) {
         prov := UserStudio_NormalizeLlmProvider(llm.Get("provider", "openai"))
         if (prov = "minimax")
-            return ConfigWebView_TestMinimaxPing(UserStudio_NormalizeApiKey(llm.Get("apiKey", "")), llm.Get("baseUrl", ""), llm.Get("model", ""), timeoutMs)
+            return Func("ConfigWebView_TestMinimaxPing").Call(UserStudio_NormalizeApiKey(llm.Get("apiKey", "")), llm.Get("baseUrl", ""), llm.Get("model", ""), timeoutMs)
     }
     if FuncExists("LlmApiPing_Test")
-        return LlmApiPing_Test(llm, timeoutMs)
+        return Func("LlmApiPing_Test").Call(llm, timeoutMs)
     return Map("ok", false, "error", "LlmApiPing 模块未加载，请重载牛马主程序", "elapsedMs", 0)
 }

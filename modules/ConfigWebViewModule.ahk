@@ -2450,6 +2450,16 @@ ConfigWebView_TcpPortOpen(host, port, timeoutMs := 2500) {
     }
 }
 
+ConfigWebView_ProbeHermesApiServer(base, token, timeoutMs := 12000) {
+    if FuncExists("UserStudio_ProbeHermesApiServer") {
+        try return UserStudio_ProbeHermesApiServer(base, token, timeoutMs)
+    }
+    if FuncExists("LlmApiPing_TestHermes") {
+        try return LlmApiPing_TestHermes(base, token, timeoutMs)
+    }
+    return Map("ok", false, "error", "Hermes 探测模块未加载", "elapsedMs", 0)
+}
+
 ConfigWebView_ProbeOpenClawGateway(base, token, timeoutMs := 12000) {
     if FuncExists("UserStudio_ProbeOpenClawGateway") {
         try return UserStudio_ProbeOpenClawGateway(base, token, timeoutMs)
@@ -2582,6 +2592,114 @@ ConfigWebView_QuickReadOpenClawGatewayToken() {
     return Map("token", "", "source", "", "host", host, "port", port)
 }
 
+ConfigWebView_LocalAppDataDir() {
+    if FuncExists("UserStudio_LocalAppDataDir")
+        return UserStudio_LocalAppDataDir()
+    try {
+        la := Trim(EnvGet("LOCALAPPDATA"))
+        if (la != "")
+            return la
+    } catch {
+    }
+    if (A_AppData != "") {
+        try {
+            p := RegExReplace(A_AppData, "\\Roaming$", "\\Local", , 1)
+            if (p != A_AppData)
+                return p
+        } catch {
+        }
+    }
+    return ""
+}
+
+ConfigWebView_NormalizeHermesApiKey(key) {
+    key := Trim(String(key))
+    if (key = "")
+        return ""
+    if FuncExists("UserStudio_NormalizeApiKey")
+        return UserStudio_NormalizeApiKey(key)
+    if FuncExists("LlmApiPing_NormalizeApiKey")
+        return LlmApiPing_NormalizeApiKey(key)
+    key := RegExReplace(key, "i)^\s*Bearer\s+", "")
+    if (SubStr(key, 1, 1) = Chr(34) && SubStr(key, -1) = Chr(34))
+        key := SubStr(key, 2, -1)
+    return RegExReplace(key, "\s+", "")
+}
+
+ConfigWebView_QuickReadHermesApiServerKey() {
+    if FuncExists("UserStudio_QuickReadHermesApiServerKey") {
+        try return UserStudio_QuickReadHermesApiServerKey()
+        catch {
+        }
+    }
+    host := "127.0.0.1"
+    port := 8642
+    key := ""
+    source := ""
+    paths := []
+    seen := Map()
+    pushHermesEnvPath(p) {
+        p := Trim(String(p))
+        if (p = "" || seen.Has(p))
+            return
+        seen[p] := true
+        paths.Push(p)
+    }
+    la := ConfigWebView_LocalAppDataDir()
+    if (la != "")
+        pushHermesEnvPath(la . "\hermes\.env")
+    try {
+        up := Trim(String(EnvGet("USERPROFILE")))
+        if (up != "") {
+            pushHermesEnvPath(up . "\.hermes\.env")
+            pushHermesEnvPath(up . "\AppData\Local\hermes\.env")
+        }
+    } catch {
+    }
+    for _, path in paths {
+        if !FileExist(path)
+            continue
+        try {
+            raw := FileRead(path, "UTF-8")
+            k := FuncExists("UserStudio_ExtractHermesApiKeyFromEnvRaw")
+                ? UserStudio_ExtractHermesApiKeyFromEnvRaw(raw)
+                : ""
+            if (k = "" && FuncExists("ConfigWebView_NormalizeHermesApiKey")) {
+                if (Ord(SubStr(raw, 1, 1)) = 0xFEFF)
+                    raw := SubStr(raw, 2)
+                lastKey := ""
+                for _, line in StrSplit(raw, "`n", "`r") {
+                    line := Trim(line)
+                    if (line = "" || SubStr(line, 1, 1) = "#" || SubStr(line, 1, 1) = ";")
+                        continue
+                    if RegExMatch(line, "i)^API_SERVER_KEY\s*=\s*(.+)$", &mk) {
+                        cand := ConfigWebView_NormalizeHermesApiKey(Trim(mk[1]))
+                        if (cand != "")
+                            lastKey := cand
+                    }
+                }
+                k := lastKey
+            }
+            if (k = "")
+                continue
+            key := k
+            source := path
+            if RegExMatch(raw, "m)^API_SERVER_HOST\s*=\s*([^\r\n#;]+)", &mh)
+                host := Trim(mh[1])
+            if RegExMatch(raw, "m)^API_SERVER_PORT\s*=\s*(\d+)", &mp)
+                port := Integer(mp[1])
+            if (host = "localhost")
+                host := "127.0.0.1"
+            break
+        } catch {
+        }
+    }
+    tried := []
+    for _, path in paths
+        tried.Push(path)
+    return Map("token", key, "source", source, "host", host, "port", port, "tried", tried)
+}
+
 ConfigWebView_OnMessage(sender, args) {
     global ConfigWV2Ready, UseWebViewSettings
     jsonStr := args.WebMessageAsJson
@@ -2707,6 +2825,185 @@ ConfigWebView_OnMessage(sender, args) {
             }
             studio := ok ? ConfigWebView_UserStudioPayloadForWebAfterSave() : Map()
             ConfigWebView_Send(Map("type", "saveUserStudioResult", "ok", ok, "error", err, "userStudio", studio))
+        case "hermes_probe_token", "refreshHermesStudioStatus", "ensureHermesApiServerEnv":
+            token := ""
+            source := ""
+            host := "127.0.0.1"
+            port := 8642
+            apiEnabled := false
+            gwOk := false
+            gwErr := ""
+            info := Map()
+            dbg := ""
+            try {
+                fb := ConfigWebView_QuickReadHermesApiServerKey()
+                if (fb is Map) {
+                    token := Trim(String(fb.Get("token", "")))
+                    if (token != "") {
+                        source := String(fb.Get("source", ""))
+                        host := Trim(String(fb.Get("host", host)))
+                        port := Integer(fb.Get("port", port))
+                        dbg := "quick=" . source
+                    }
+                }
+            } catch as eQuick {
+                dbg := "quick_err=" . eQuick.Message
+            }
+            hermesEnsure := (action = "ensureHermesApiServerEnv")
+                || !!(msg.Has("ensureEnv") && msg["ensureEnv"])
+                || (action = "refreshHermesStudioStatus")
+            if (token = "" && hermesEnsure && FuncExists("UserStudio_EnsureHermesApiServerEnv")) {
+                try {
+                    ens := UserStudio_EnsureHermesApiServerEnv()
+                    if (ens is Map) {
+                        if (ens.Get("wrote", false))
+                            dbg := "wrote=" . String(ens.Get("path", ""))
+                        if (!ens.Get("ok", false) && ens.Has("error"))
+                            dbg .= (dbg != "" ? " | " : "") . String(ens["error"])
+                    }
+                } catch as eEns {
+                    dbg := "ensure_err=" . eEns.Message
+                }
+            }
+            if (token = "") {
+                try {
+                    if FuncExists("UserStudio_ProbeHermesGatewayToken") {
+                        info := UserStudio_ProbeHermesGatewayToken(hermesEnsure)
+                        if (info is Map) {
+                            token := Trim(String(info.Get("token", "")))
+                            source := String(info.Get("source", ""))
+                            host := Trim(String(info.Get("host", host)))
+                            port := Integer(info.Get("port", port))
+                            apiEnabled := !!info.Get("apiEnabled", false)
+                        }
+                    }
+                } catch as eH1 {
+                    dbg := (dbg != "" ? dbg . " | " : "") . "probe_err=" . eH1.Message
+                    try OutputDebug("[ConfigWebView] hermes probe failed: " . eH1.Message)
+                    catch {
+                    }
+                }
+            }
+            if (token = "") {
+                try {
+                    fb2 := ConfigWebView_QuickReadHermesApiServerKey()
+                    if (fb2 is Map) {
+                        token := Trim(String(fb2.Get("token", "")))
+                        if (token != "") {
+                            source := String(fb2.Get("source", ""))
+                            host := Trim(String(fb2.Get("host", host)))
+                            port := Integer(fb2.Get("port", port))
+                            dbg := (dbg != "" ? dbg . " | " : "") . "quick2=" . source
+                        }
+                    }
+                } catch {
+                }
+            }
+            if (token != "") {
+                base := "http://" . host . ":" . port . "/v1"
+                pingMs := (action = "refreshHermesStudioStatus") ? 12000 : 6000
+                try {
+                    r := ConfigWebView_ProbeHermesApiServer(base, token, pingMs)
+                    gwOk := !!r.Get("ok", false)
+                    gwErr := String(r.Get("error", ""))
+                } catch as eH2 {
+                    gwErr := eH2.Message
+                }
+            } else if (info is Map && info.Has("tried") && info["tried"] is Array) {
+                for _, p in info["tried"]
+                    dbg .= (dbg != "" ? " | " : "") . p
+            }
+            if (token = "" && gwErr = "")
+                gwErr := "未从本机 .env 读到 API_SERVER_KEY"
+            tried := []
+            localAppData := ""
+            primaryDir := ""
+            if FuncExists("UserStudio_CollectHermesProbeMeta") {
+                try {
+                    meta := UserStudio_CollectHermesProbeMeta()
+                    if (meta is Map) {
+                        if (meta.Has("tried") && meta["tried"] is Array)
+                            tried := meta["tried"]
+                        localAppData := String(meta.Get("localAppData", ""))
+                        primaryDir := String(meta.Get("primaryDir", ""))
+                    }
+                } catch {
+                }
+            }
+            if (token = "" && dbg = "") {
+                if (primaryDir != "")
+                    dbg := "primary=" . primaryDir
+                else if FuncExists("UserStudio_ListHermesDataDirs") {
+                    dirs := UserStudio_ListHermesDataDirs()
+                    dbg := "dirs=" . (dirs.Length > 0 ? dirs[1] : "")
+                } else if FuncExists("UserStudio_ResolveHermesHome")
+                    dbg := "home=" . UserStudio_ResolveHermesHome()
+            }
+            niumaKey := ""
+            try {
+                if FuncExists("UserStudio_ReadNiumaHermesKey")
+                    niumaKey := UserStudio_ReadNiumaHermesKey()
+            } catch {
+            }
+            hasEnvKey := (token != "" && source != "" && source != "niuma_chat_llm.json")
+            hasNiumaKey := (niumaKey != "")
+            try OutputDebug("[ConfigWebView] hermes_probe token=" . (token != "" ? "yes" : "no")
+                . " gwOk=" . (gwOk ? "yes" : "no") . " err=" . gwErr)
+            catch {
+            }
+            if (action = "ensureHermesApiServerEnv") {
+                ConfigWebView_Send(Map(
+                    "type", "hermes_ensure_env_result",
+                    "ok", token != "",
+                    "token", token,
+                    "source", source,
+                    "path", source,
+                    "wrote", InStr(dbg, "wrote=") > 0,
+                    "debug", dbg,
+                    "gatewayOk", gwOk,
+                    "gatewayError", gwErr,
+                    "tried", tried,
+                    "localAppData", localAppData,
+                    "hasEnvKey", hasEnvKey,
+                    "hasNiumaKey", hasNiumaKey
+                ))
+            } else if (action = "refreshHermesStudioStatus") {
+                ConfigWebView_Send(Map(
+                    "type", "hermes_studio_status",
+                    "token", token,
+                    "source", source,
+                    "host", host,
+                    "port", port,
+                    "apiEnabled", apiEnabled,
+                    "gatewayOk", gwOk,
+                    "gatewayError", gwErr,
+                    "debug", dbg,
+                    "tried", tried,
+                    "localAppData", localAppData,
+                    "hasEnvKey", hasEnvKey,
+                    "hasNiumaKey", hasNiumaKey,
+                    "force", !!(msg.Has("force") && msg["force"])
+                ))
+            } else {
+                ConfigWebView_Send(Map(
+                    "type", "hermes_host_token_probe",
+                    "token", token,
+                    "source", source,
+                    "host", host,
+                    "port", port,
+                    "apiEnabled", apiEnabled,
+                    "niumaToken", niumaKey,
+                    "gatewayOk", gwOk,
+                    "gatewayError", gwErr,
+                    "debug", dbg,
+                    "tried", tried,
+                    "localAppData", localAppData,
+                    "primaryDir", primaryDir,
+                    "hasEnvKey", hasEnvKey,
+                    "hasNiumaKey", hasNiumaKey,
+                    "force", !!(msg.Has("force") && msg["force"])
+                ))
+            }
         case "openclaw_probe_token", "niuma_openclaw_probe_token", "refreshOpenClawStudioStatus":
             token := ""
             source := ""

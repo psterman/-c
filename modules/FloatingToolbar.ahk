@@ -2441,6 +2441,12 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(FloatingToolbar_DeferredProbeOpenClawToken.Bind(force), -10)
         return
     }
+    if (typ = "niuma_hermes_probe_token") {
+        force := msg.Has("force") && !!msg["force"]
+        ensureEnv := msg.Has("ensureEnv") && !!msg["ensureEnv"]
+        SetTimer(FloatingToolbar_DeferredProbeHermesApiServer.Bind(force, ensureEnv), -10)
+        return
+    }
     if (typ = "niuma_debug_event") {
         evt := msg.Has("event") ? msg["event"] : ""
         FloatingToolbar_DebugWriteEvent(evt)
@@ -3085,6 +3091,250 @@ FloatingToolbar_LoadNiumaAttachContext(ids) {
 
 FloatingToolbar_DeferredProbeOpenClawToken(force := false) {
     try FloatingToolbar_ProbeOpenClawGatewayToken(!!force)
+}
+
+FloatingToolbar_DeferredProbeHermesApiServer(force := false, ensureEnv := false) {
+    try FloatingToolbar_ProbeHermesApiServerKey(!!force, !!ensureEnv)
+}
+
+/** 不依赖 FuncExists / UserStudio 是否已加载，直接读本机 hermes\.env */
+FloatingToolbar_ReadHermesEnvKeyDirect(&outSource := "", &outHost := "", &outPort := 8642) {
+    outSource := ""
+    outHost := "127.0.0.1"
+    outPort := 8642
+    paths := []
+    la := ""
+    up := ""
+    try la := Trim(EnvGet("LOCALAPPDATA"))
+    catch {
+    }
+    try up := Trim(EnvGet("USERPROFILE"))
+    catch {
+    }
+    if (la != "")
+        paths.Push(la . "\hermes\.env")
+    if (up != "") {
+        paths.Push(up . "\AppData\Local\hermes\.env")
+        paths.Push(up . "\.hermes\.env")
+    }
+    for _, path in paths {
+        if !FileExist(path)
+            continue
+        raw := ""
+        try {
+            f := FileOpen(path, "r", "UTF-8")
+            raw := f.Read()
+            f.Close()
+        } catch {
+            try raw := FileRead(path, "UTF-8")
+            catch {
+                continue
+            }
+        }
+        if (Ord(SubStr(raw, 1, 1)) = 0xFEFF)
+            raw := SubStr(raw, 2)
+        key := ""
+        pos := 1
+        while RegExMatch(raw, "i)API_SERVER_KEY\s*=\s*([^\r\n#;]+)", &mk, pos) {
+            key := Trim(mk[1])
+            key := RegExReplace(key, "i)^\s*Bearer\s+", "")
+            key := RegExReplace(key, "\s+", "")
+            pos := mk.Pos(0) + mk.Len(0)
+        }
+        if (key = "")
+            continue
+        outSource := path
+        if RegExMatch(raw, "m)API_SERVER_HOST\s*=\s*([^\r\n#;]+)", &mh)
+            outHost := Trim(mh[1])
+        if RegExMatch(raw, "m)API_SERVER_PORT\s*=\s*(\d+)", &mp)
+            outPort := Integer(mp[1])
+        if (outHost = "localhost")
+            outHost := "127.0.0.1"
+        return key
+    }
+    return ""
+}
+
+FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
+    global g_FTB_WV2
+    if !g_FTB_WV2
+        return
+
+    token := ""
+    source := ""
+    host := "127.0.0.1"
+    port := 8642
+    apiEnabled := false
+    niumaKey := ""
+    gwOk := false
+    gwErr := ""
+    dbg := ""
+
+    token := FloatingToolbar_ReadHermesEnvKeyDirect(&source, &host, &port)
+    if (token != "")
+        dbg := "direct=" . source
+
+    if (ensureEnv && FuncExists("UserStudio_EnsureHermesApiServerEnv")) {
+        try {
+            ens := UserStudio_EnsureHermesApiServerEnv()
+            if (ens is Map) {
+                if (ens.Get("wrote", false))
+                    dbg := "wrote=" . String(ens.Get("path", ""))
+                if (!ens.Get("ok", false) && ens.Has("error"))
+                    dbg .= (dbg != "" ? " | " : "") . String(ens["error"])
+            }
+        } catch as eEns {
+            dbg := "ensure_err=" . eEns.Message
+        }
+    }
+
+    if (token = "") {
+        try {
+            fb := UserStudio_QuickReadHermesApiServerKey()
+            if (fb is Map) {
+                token := Trim(String(fb.Get("token", "")))
+                if (token != "") {
+                    source := String(fb.Get("source", ""))
+                    host := Trim(String(fb.Get("host", host)))
+                    port := Integer(fb.Get("port", port))
+                    dbg .= (dbg != "" ? " | " : "") . "us=" . source
+                }
+            }
+        } catch as eUs {
+            dbg .= (dbg != "" ? " | " : "") . "us_err=" . eUs.Message
+        }
+    }
+    if (token = "" && FuncExists("ConfigWebView_QuickReadHermesApiServerKey")) {
+        try {
+            fb := ConfigWebView_QuickReadHermesApiServerKey()
+            if (fb is Map) {
+                token := Trim(String(fb.Get("token", "")))
+                if (token != "") {
+                    source := String(fb.Get("source", ""))
+                    host := Trim(String(fb.Get("host", host)))
+                    port := Integer(fb.Get("port", port))
+                }
+            }
+        } catch {
+        }
+    }
+
+    if (token = "" && FuncExists("UserStudio_ProbeHermesGatewayToken")) {
+        try {
+            info := UserStudio_ProbeHermesGatewayToken(ensureEnv)
+            if (info is Map) {
+                token := Trim(String(info.Get("token", "")))
+                source := String(info.Get("source", ""))
+                host := Trim(String(info.Get("host", host)))
+                port := Integer(info.Get("port", port))
+                apiEnabled := !!info.Get("apiEnabled", false)
+            }
+        } catch {
+        }
+    }
+
+    try {
+        if FuncExists("UserStudio_ReadNiumaHermesKey")
+            niumaKey := UserStudio_ReadNiumaHermesKey()
+    } catch {
+    }
+    if (token = "" && niumaKey != "") {
+        token := niumaKey
+        source := "niuma_chat_llm.json"
+    }
+
+    if (token != "") {
+        base := "http://" . host . ":" . port . "/v1"
+        try {
+            r := Map("ok", false, "error", "")
+            if FuncExists("ConfigWebView_ProbeHermesApiServer")
+                r := ConfigWebView_ProbeHermesApiServer(base, token, 8000)
+            else if FuncExists("UserStudio_ProbeHermesApiServer")
+                r := UserStudio_ProbeHermesApiServer(base, token, 8000)
+            else if FuncExists("LlmApiPing_TestHermes")
+                r := LlmApiPing_TestHermes(base, token, 8000)
+            gwOk := !!r.Get("ok", false)
+            gwErr := String(r.Get("error", ""))
+        } catch as eGw {
+            gwErr := eGw.Message
+        }
+    } else if (gwErr = "") {
+        gwErr := "未从本机 .env 读到 API_SERVER_KEY"
+        dbg .= (dbg != "" ? " | " : "") . "la=" . EnvGet("LOCALAPPDATA")
+    }
+
+    tried := []
+    localAppData := ""
+    primaryDir := ""
+    laProbe := ""
+    upProbe := ""
+    try laProbe := Trim(EnvGet("LOCALAPPDATA"))
+    catch {
+    }
+    try upProbe := Trim(EnvGet("USERPROFILE"))
+    catch {
+    }
+    if (laProbe != "")
+        tried.Push(laProbe . "\hermes\.env" . (FileExist(laProbe . "\hermes\.env") ? " ✓" : " ✗"))
+    if (upProbe != "")
+        tried.Push(upProbe . "\AppData\Local\hermes\.env" . (FileExist(upProbe . "\AppData\Local\hermes\.env") ? " ✓" : " ✗"))
+    if FuncExists("UserStudio_CollectHermesProbeMeta") {
+        try {
+            meta := UserStudio_CollectHermesProbeMeta()
+            if (meta is Map) {
+                if (meta.Has("tried") && meta["tried"] is Array) {
+                    for _, p in meta["tried"] {
+                        if (p != "" && !InStr(StrJoin(tried, "`n"), p))
+                            tried.Push(p . (FileExist(p) ? " ✓" : " ✗"))
+                    }
+                }
+                localAppData := String(meta.Get("localAppData", ""))
+                primaryDir := String(meta.Get("primaryDir", ""))
+            }
+        } catch {
+        }
+    }
+    hasEnvKey := (token != "" && source != "" && source != "niuma_chat_llm.json")
+    hasNiumaKey := (niumaKey != "")
+
+    try {
+        logEvt := Map(
+            "event", "hermes_probe",
+            "hasToken", token != "",
+            "source", source,
+            "host", host,
+            "port", port,
+            "gatewayOk", gwOk,
+            "gatewayError", gwErr,
+            "hasEnvKey", hasEnvKey,
+            "hasNiumaKey", hasNiumaKey,
+            "localAppData", localAppData,
+            "debug", dbg
+        )
+        logLine := (%"FuncExists"%).Call("Jxon_Dump") ? Jxon_Dump(logEvt) : "hermes_probe"
+        OutputDebug("[FTB] " . logLine)
+        FloatingToolbar_DebugWriteEvent(logLine)
+    } catch {
+    }
+
+    try WebView_QueuePayload(g_FTB_WV2, Map(
+        "type", "hermes_host_token_probe",
+        "token", token,
+        "source", source,
+        "host", host,
+        "port", port,
+        "apiEnabled", apiEnabled,
+        "niumaToken", niumaKey,
+        "gatewayOk", gwOk,
+        "gatewayError", gwErr,
+        "debug", dbg,
+        "tried", tried,
+        "localAppData", localAppData,
+        "primaryDir", primaryDir,
+        "hasEnvKey", hasEnvKey,
+        "hasNiumaKey", hasNiumaKey,
+        "force", !!force
+    ))
 }
 
 FloatingToolbar_DebugWriteEvent(evt) {

@@ -1036,6 +1036,7 @@ body.niuma-confirm-open{overflow:hidden}
 <div class="fld" id="nodeConfigModelRow"><label for="nodeConfigModel">模型</label><input id="nodeConfigModel" class="ctl" type="text" autocomplete="off" placeholder="当前话题模型" /></div>
 <div class="fld" id="nodeConfigOpenClawRow"><label for="nodeConfigOpenClawKey">OpenClaw Gateway Key</label><input id="nodeConfigOpenClawKey" class="ctl" type="text" autocomplete="off" placeholder="agent:main:main" /></div>
 <div class="fld" id="fldOpenClawImportRow" style="display:none"><label>本机 OpenClaw Gateway</label><button type="button" class="btn3" id="openClawImportConnectBtn" style="width:100%">一键连接本机 OpenClaw</button><div class="hint mini" id="openClawImportHint">自动读取 Token 并检测 127.0.0.1:18789；无需手填 sk- 类密钥。</div></div>
+<div class="fld" id="fldHermesImportRow" style="display:none"><label>本机 Hermes API Server</label><button type="button" class="btn3" id="hermesImportConnectBtn" style="width:100%">一键连接本机 Hermes</button><div class="hint mini" id="hermesImportHint">自动读取 <code>API_SERVER_KEY</code> 并检测 <code>127.0.0.1:8642</code>（需 Hermes 桌面版已启动 Gateway）。</div></div>
 </div>
 <div id="settingsAiHint" class="hint" style="display:none;margin-bottom:10px;padding:10px 12px;border:1px solid rgba(255,102,0,.45);border-radius:10px;background:rgba(255,102,0,.1);line-height:1.5">
 <span id="settingsAiHintText">当前对话标签为「终端」模式，此处请切换到 MiniMax 等 AI 服务商填写 API Key。</span>
@@ -1170,7 +1171,11 @@ body.niuma-confirm-open{overflow:hidden}
 <section id="cmp">
 <div id="inlineApiSetup" class="api-setup-box" hidden>
 <div class="api-setup-title">快速连接 AI</div>
-<div class="hint mini" style="margin-bottom:4px">云端模型：选服务商 → 粘贴 API Key → 保存。本机 OpenClaw：点下方橙色一键连接。</div>
+<div class="hint mini" style="margin-bottom:4px">云端模型：选服务商 → 粘贴 API Key → 保存。本机 Hermes / OpenClaw：点下方一键连接。</div>
+<div id="inlineHermesQuick" class="fld" style="display:none;margin-bottom:8px;padding:10px 12px;border:1px solid rgba(96,165,250,.4);border-radius:10px;background:rgba(96,165,250,.08)">
+<button type="button" class="btn3" id="inlineHermesImport" style="width:100%">一键连接本机 Hermes</button>
+<div class="hint mini" style="margin-top:6px">自动读取 <code>API_SERVER_KEY</code> 并检测 <code>127.0.0.1:8642</code>（需已启动 Hermes）</div>
+</div>
 <div id="inlineOpenClawQuick" class="fld" style="display:none;margin-bottom:8px;padding:10px 12px;border:1px solid rgba(255,102,0,.35);border-radius:10px;background:rgba(255,102,0,.08)">
 <button type="button" class="btn3" id="inlineOpenClawImport" style="width:100%">一键连接本机 OpenClaw</button>
 <div class="hint mini" style="margin-top:6px">自动读取 Gateway Token 并检测 <code>127.0.0.1:18789</code>（需已启动 OpenClaw）</div>
@@ -1187,6 +1192,11 @@ body.niuma-confirm-open{overflow:hidden}
 <button type="button" class="btn2" id="inlineLlmOpenFull">更多选项…</button>
 </div>
 <div class="hint mini">保存后即可对话；高级项（System Prompt 等）点左侧 ⚙️ 打开连接管理。</div>
+</div>
+<div id="hermesSetupBanner" class="setup-banner" hidden>
+<div class="setup-banner-title" id="hermesSetupTitle">连接本机 Hermes</div>
+<div id="hermesSetupBody" class="hint mini">已安装 Hermes 桌面版时，点下方按钮自动读取 <code>API_SERVER_KEY</code> 并检测 API Server（127.0.0.1:8642）。</div>
+<button type="button" class="btn3" id="hermesSetupImportBtn" style="width:100%;margin-top:8px">一键连接 Hermes</button>
 </div>
 <div id="openclawSetupBanner" class="setup-banner" hidden>
 <div class="setup-banner-title" id="openclawSetupTitle">连接本机 OpenClaw</div>
@@ -1399,11 +1409,18 @@ body.niuma-confirm-open{overflow:hidden}
         model: 'nemotron-3-super:cloud',
         models: ['nemotron-3-super:cloud']
       },
-      openclaw: { label: 'OpenClaw', transport: 'openclaw', baseUrl: 'http://127.0.0.1:18789', model: 'gateway', models: ['gateway'] }
+      openclaw: { label: 'OpenClaw', transport: 'openclaw', baseUrl: 'http://127.0.0.1:18789', model: 'gateway', models: ['gateway'] },
+      hermes: {
+        label: 'Hermes',
+        transport: 'openai',
+        baseUrl: 'http://127.0.0.1:8642/v1',
+        model: 'hermes-agent',
+        models: ['hermes-agent']
+      }
     },
     PROVIDER_PICK_ORDER = [
       'openai',
-      'kimi', 'qwen', 'deepseek', 'claude', 'gemini', 'glm', 'siliconflow', 'minimax', 'zhipu', 'ollama', 'openclaw',
+      'kimi', 'qwen', 'deepseek', 'claude', 'gemini', 'glm', 'siliconflow', 'minimax', 'zhipu', 'ollama', 'hermes', 'openclaw',
       'codex_cli', 'gemini_cli', 'openclaw_cli', 'qwen_cli', 'ollama_cli',
       'claude_cli', 'deepseek_cli', 'kimi_cli', 'zhipu_cli', 'copilot_cli', 'studio_cli'
     ],
@@ -1419,6 +1436,7 @@ body.niuma-confirm-open{overflow:hidden}
       { label: 'MiniMax', icon: 'minimax', api: 'minimax', cli: null },
       { label: '硅基流动', icon: 'siliconflow', api: 'siliconflow', cli: null },
       { label: 'Ollama 本地', icon: 'ollama', api: 'ollama', cli: 'ollama_cli' },
+      { label: 'Hermes', icon: 'hermes', api: 'hermes', cli: null, hint: '本机 OpenAI 兼容 API · 8642' },
       { label: 'OpenClaw', icon: 'openclaw', api: 'openclaw', cli: 'openclaw_cli' },
       { label: 'Copilot CLI', icon: 'copilot_cli', api: null, cli: 'copilot_cli' },
       { label: '定制终端', icon: 'studio_cli', api: null, cli: 'studio_cli', hint: '智能定制 ttyd · 端口 7691' }
@@ -1427,6 +1445,12 @@ body.niuma-confirm-open{overflow:hidden}
     ICON_SECOND = '/assets/icons/app/',
     ICON_FALLBACK = '/assets/icons/app/chat-ai-fallback.svg',
     PROVIDER_ICON_EXTS = ['.png', '.jpg', '.jpeg', '.svg', '.webp'],
+    /** 本机 Agent：优先专用图标（Hermes 用 hermes.png，OpenClaw 用 openclaw.svg） */
+    LOCAL_AGENT_ICON_PRIOR = {
+      openclaw: ['openclaw.svg'],
+      hermes: ['hermes.png', 'hermes.svg'],
+      openclaw_cli: ['openclaw.svg']
+    },
     PROVIDER_ICON_BASES = {
       openai: ['ChatGPT', 'chatgpt', 'openai', 'codex', 'Codex'],
       codex_cli: ['codex', 'Codex', 'codex1', 'terminal', 'cmd'],
@@ -1449,7 +1473,8 @@ body.niuma-confirm-open{overflow:hidden}
       minimax: ['minimax', 'MiniMax'],
       zhipu: ['zhipu', 'Zhipu'],
       ollama: ['ollama', 'Ollama'],
-      openclaw: ['openclaw', 'OpenClaw']
+      openclaw: ['openclaw', 'OpenClaw'],
+      hermes: ['hermes', 'Hermes']
     },
     KEYMETA = {
       openai: { keyLabel: 'OpenAI API Key', keyPlaceholder: 'sk-...', keyHint: '仅保存到「OpenAI」槽位；与 Kimi、DeepSeek 等密钥互不覆盖。' },
@@ -1483,6 +1508,11 @@ body.niuma-confirm-open{overflow:hidden}
         keyLabel: 'Gateway Token',
         keyPlaceholder: '与 openclaw dashboard 中 token 一致',
         keyHint: '也可留空，仅把带 #token= 的完整控制台地址填在 Base URL；走本机 WebSocket，与 OpenAI HTTP 无关。'
+      },
+      hermes: {
+        keyLabel: 'API Server Key',
+        keyPlaceholder: '与 %LOCALAPPDATA%\\hermes\\.env 中 API_SERVER_KEY 一致',
+        keyHint: '走本机 OpenAI 兼容 HTTP（8642/v1）；可点「一键连接 Hermes」自动读取并检测。'
       }
     },
     PROMPT_BUILTIN = [
@@ -1515,13 +1545,14 @@ body.niuma-confirm-open{overflow:hidden}
     glm: ['bigmodel.cn'],
     zhipu: ['bigmodel.cn'],
     siliconflow: ['siliconflow.cn'],
-    ollama: ['11434', 'ollama']
+    ollama: ['11434', 'ollama'],
+    hermes: ['127.0.0.1', '8642', 'localhost']
   };
 
   function baseUrlMatchesProvider(pid, url) {
     pid = normalizeProviderId(pid);
     var u = String(url || '').trim().toLowerCase();
-    if (!u || pid === 'custom' || pid === 'openclaw') return true;
+    if (!u || pid === 'custom' || pid === 'openclaw' || pid === 'hermes') return true;
     var hints = PROVIDER_HOST_HINTS[pid];
     if (!hints || !hints.length) return true;
     return hints.some(function (h) { return u.indexOf(h) >= 0; });
@@ -1535,6 +1566,16 @@ body.niuma-confirm-open{overflow:hidden}
     var sess = String(sessionUrl || '').trim();
     if (p.transport === 'cli') return form || sess || String(p.baseUrl || '').trim();
     if (pid === 'custom') return form || sess;
+    if (pid === 'hermes') {
+      var defH = (P.hermes && P.hermes.baseUrl) || 'http://127.0.0.1:8642/v1';
+      var uH = state.manualBaseUrl ? (form || sess) : '';
+      if (uH && baseUrlMatchesProvider('hermes', uH)) {
+        uH = uH.replace(/\/+$/, '');
+        if (!/\/v1$/i.test(uH)) uH += '/v1';
+        return uH;
+      }
+      return defH;
+    }
     if (state.manualBaseUrl) {
       var u = form || sess || String(p.baseUrl || '').trim();
       if (u && !baseUrlMatchesProvider(pid, u)) return String(p.baseUrl || '').trim();
@@ -1545,7 +1586,7 @@ body.niuma-confirm-open{overflow:hidden}
 
   function shouldShowManualBaseUrl(pid) {
     pid = normalizeProviderId(pid);
-    if (pid === 'custom' || pid === 'openclaw') return true;
+    if (pid === 'custom' || pid === 'openclaw' || pid === 'hermes') return true;
     return !!state.manualBaseUrl;
   }
 
@@ -1556,7 +1597,7 @@ body.niuma-confirm-open{overflow:hidden}
   }
 
   var AI_SETUP_PROVIDERS = [
-    'openai', 'minimax', 'gemini', 'deepseek', 'kimi', 'claude', 'qwen', 'glm', 'zhipu', 'siliconflow', 'ollama', 'openclaw'
+    'openai', 'minimax', 'gemini', 'deepseek', 'kimi', 'claude', 'qwen', 'glm', 'zhipu', 'siliconflow', 'ollama', 'hermes', 'openclaw'
   ];
 
   var _tpl = $('ftb-toolbar-tpl');
@@ -1886,6 +1927,8 @@ body.niuma-confirm-open{overflow:hidden}
     nodeConfigBaseUrlRow = $('nodeConfigBaseUrlRow'),
     nodeConfigOpenClawRow = $('nodeConfigOpenClawRow'),
     fldOpenClawImportRow = $('fldOpenClawImportRow'),
+    fldHermesImportRow = $('fldHermesImportRow'),
+    hermesImportConnectBtn = $('hermesImportConnectBtn'),
     openClawImportConnectBtn = $('openClawImportConnectBtn'),
     nodeConfigClose = null,
     nodeConfigTest = $('nodeConfigTest'),
@@ -1900,8 +1943,12 @@ body.niuma-confirm-open{overflow:hidden}
     composerHintBtn = $('composerHintBtn'),
     eyeSpacePanel = $('eyeSpacePanel'),
     ollamaSetupBanner = $('ollamaSetupBanner'),
+    hermesSetupBanner = $('hermesSetupBanner'),
+    hermesSetupImportBtn = $('hermesSetupImportBtn'),
     openclawSetupBanner = $('openclawSetupBanner'),
     openclawSetupImportBtn = $('openclawSetupImportBtn'),
+    inlineHermesQuick = $('inlineHermesQuick'),
+    inlineHermesImport = $('inlineHermesImport'),
     inlineOpenClawQuick = $('inlineOpenClawQuick'),
     inlineOpenClawImport = $('inlineOpenClawImport'),
     inlineLlmApiKeyLabel = $('inlineLlmApiKeyLabel'),
@@ -2050,6 +2097,8 @@ body.niuma-confirm-open{overflow:hidden}
     openclawSessionRowsFetchedAt: 0,
     openclawSessionRowsLoading: false,
     openClawImportRunning: false,
+    hermesImportRunning: false,
+    hermesDiagnostic: null,
     freeChatMode: false,
     pendingStudioLlm: null,
     studioLlmOptions: null,
@@ -4152,6 +4201,10 @@ body.niuma-confirm-open{overflow:hidden}
     var sec = getNodeSecrets(nodeKey || nodeKeyForSession(s));
     var p = P[pid] || P.openai;
     var bu = sec.baseUrl || s.baseUrl || effectiveBaseUrl(pid, s.baseUrl, baseUrl ? baseUrl.value : '');
+    if (pid === 'hermes') {
+      bu = String(bu || '').trim() || hermesDefaultBaseUrl();
+      if (!baseUrlMatchesProvider('hermes', bu)) bu = hermesDefaultBaseUrl();
+    }
     var key = trimApiKey(sec.apiKey) || getApiKeyForProvider(pid);
     return {
       provider: pid,
@@ -4266,7 +4319,10 @@ body.niuma-confirm-open{overflow:hidden}
       id: sid,
       provider: pid,
       model: (p.transport === 'cli') ? '' : model.value.trim() || p.model,
-      baseUrl: baseUrl.value.trim(),
+      baseUrl:
+        pid === 'hermes'
+          ? effectiveBaseUrl('hermes', baseUrl.value.trim(), '')
+          : baseUrl.value.trim(),
       gatewaySessionKey: pid === 'openclaw' ? wantedOpenClawKey || hintedOpenClawKey || buildOpenClawSessionKey(sid) : '',
       nodeKey: pid === 'openclaw' ? 'openclaw:' + (wantedOpenClawKey || hintedOpenClawKey || buildOpenClawSessionKey(sid)) : pid,
       history: [],
@@ -4338,11 +4394,24 @@ body.niuma-confirm-open{overflow:hidden}
     }
   }
 
+  function localAgentIconKey(pid) {
+    if (pid === 'openclaw_cli') return 'openclaw_cli';
+    return LOCAL_AGENT_ICON_PRIOR[pid] ? pid : '';
+  }
+
   function providerIconUrlList(pid) {
     pid = pid && P[pid] ? pid : 'openai';
     var bases = PROVIDER_ICON_BASES[pid];
     if (!bases || !bases.length) bases = [pid];
     var list = [];
+    var localKey = localAgentIconKey(pid);
+    var localFiles = localKey ? LOCAL_AGENT_ICON_PRIOR[localKey] : null;
+    if (localFiles && localFiles.length) {
+      localFiles.forEach(function (file) {
+        list.push(ICON_PRIMARY + file);
+        list.push(ICON_SECOND + file);
+      });
+    }
     bases.forEach(function (base) {
       PROVIDER_ICON_EXTS.forEach(function (ext) {
         list.push(ICON_SECOND + base + ext);
@@ -4417,11 +4486,13 @@ body.niuma-confirm-open{overflow:hidden}
     var isCli = (p.transport === 'cli');
     var isTtyd = p.transport === 'cli';
     var isOpenClaw = pid === 'openclaw';
+    var isHermes = pid === 'hermes';
     if (fldModelDdCol) fldModelDdCol.style.display = isCli ? 'none' : '';
     if (fldModelRow) fldModelRow.style.display = isCli ? 'none' : '';
     if (fldTtydShellRow) fldTtydShellRow.style.display = isTtyd ? '' : 'none';
     if (fldOpenClawSessionRow) fldOpenClawSessionRow.style.display = !isCli && isOpenClaw ? '' : 'none';
     if (fldOpenClawImportRow) fldOpenClawImportRow.style.display = !isCli && isOpenClaw ? '' : 'none';
+    if (fldHermesImportRow) fldHermesImportRow.style.display = !isCli && isHermes ? '' : 'none';
     if (!isCli && isOpenClaw) refreshOpenClawSessionRows(false);
     if (fldMinimaxRegionRow) fldMinimaxRegionRow.style.display = !isCli && pid === 'minimax' && state.settings ? '' : 'none';
     if (fldBaseUrlRow) {
@@ -4493,8 +4564,16 @@ body.niuma-confirm-open{overflow:hidden}
     var pid = resolveApiSetupProviderId(sel);
     var p = P[pid] || P.openai;
     var isOc = pid === 'openclaw';
+    var isHm = pid === 'hermes';
     if (inlineOpenClawQuick) inlineOpenClawQuick.style.display = isOc ? '' : 'none';
-    if (inlineLlmApiKeyLabel) inlineLlmApiKeyLabel.textContent = isOc ? 'Gateway Token（可一键填入）' : 'API Key';
+    if (inlineHermesQuick) inlineHermesQuick.style.display = isHm ? '' : 'none';
+    if (inlineLlmApiKeyLabel) {
+      inlineLlmApiKeyLabel.textContent = isOc
+        ? 'Gateway Token（可一键填入）'
+        : isHm
+          ? 'API Server Key（可一键填入）'
+          : 'API Key';
+    }
     if (keyEl) {
       keyEl.value = getApiKeyForProvider(pid);
       applyKeyMetaToInput(pid, keyEl, null, null);
@@ -4509,11 +4588,30 @@ body.niuma-confirm-open{overflow:hidden}
     return !!(state.needSetup || !hasAnyApiConfigured());
   }
 
+  function shouldShowHermesSetupBanner() {
+    if (getApiKeyForProvider('hermes')) return false;
+    return !!(state.needSetup || !hasAnyApiConfigured());
+  }
+
   function refreshOpenClawSetupBanner() {
     if (!openclawSetupBanner) return;
     var show = shouldShowOpenClawSetupBanner();
     openclawSetupBanner.hidden = !show;
     if (ollamaSetupBanner && show) ollamaSetupBanner.hidden = true;
+    refreshHermesSetupBanner();
+  }
+
+  function refreshHermesSetupBanner() {
+    if (!hermesSetupBanner) return;
+    var show = shouldShowHermesSetupBanner();
+    hermesSetupBanner.hidden = !show;
+    if (ollamaSetupBanner && show) ollamaSetupBanner.hidden = true;
+    if (openclawSetupBanner && show) openclawSetupBanner.hidden = true;
+  }
+
+  function refreshLocalAgentSetupBanners() {
+    refreshHermesSetupBanner();
+    refreshOpenClawSetupBanner();
   }
 
   function applyApiSetupFromFields(sel, keyEl, baseEl, modelEl, opts) {
@@ -4521,6 +4619,12 @@ body.niuma-confirm-open{overflow:hidden}
     var pid = resolveApiSetupProviderId(sel);
     var key = keyEl ? trimApiKey(keyEl.value) : '';
     if (!key) {
+      if (pid === 'hermes') {
+        logHermesDiag('inline_save_no_key', {});
+        apiTestStat('Hermes 缺少 API Server Key，正在尝试一键连接…', '');
+        runHermesImportConnect({ force: true });
+        return false;
+      }
       sstat('请填写 API Key。', 'error');
       if (ttydCustomizeStatus) ttydCustomizeStatus.textContent = '请填写 API Key';
       return false;
@@ -4558,7 +4662,7 @@ body.niuma-confirm-open{overflow:hidden}
       onApiSetupProviderChange(inlineLlmProvider, inlineLlmApiKey, null, inlineLlmModel);
     }
     if (state.ttydCustomize) syncApiSetupFieldsFromMain(ttydLlmProvider, ttydLlmApiKey, null, ttydLlmModel);
-    refreshOpenClawSetupBanner();
+    refreshLocalAgentSetupBanners();
     emptyState();
   }
 
@@ -7053,7 +7157,7 @@ body.niuma-confirm-open{overflow:hidden}
     if (nodeConfigSub) nodeConfigSub.textContent = isCliSession(ref) ? '本机 ttyd 终端 · 无需 API Key' : (p.label || pid) + ' · 节点配置';
     if (nodeConfigKeyRow) nodeConfigKeyRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
     if (nodeConfigApiKey) {
-      nodeConfigApiKey.type = pid === 'openclaw' ? 'text' : 'password';
+      nodeConfigApiKey.type = pid === 'openclaw' || pid === 'hermes' ? 'text' : 'password';
       nodeConfigApiKey.value = apiKey ? apiKey.value : '';
     }
     if (nodeConfigKeyLabel && KEYMETA[pid]) nodeConfigKeyLabel.textContent = KEYMETA[pid].keyLabel || 'API 密匙';
@@ -7067,6 +7171,10 @@ body.niuma-confirm-open{overflow:hidden}
     }
     if (nodeConfigOpenClawRow) nodeConfigOpenClawRow.style.display = pid === 'openclaw' ? '' : 'none';
     if (fldOpenClawImportRow) fldOpenClawImportRow.style.display = pid === 'openclaw' ? '' : 'none';
+    if (fldHermesImportRow) fldHermesImportRow.style.display = pid === 'hermes' ? '' : 'none';
+    if (pid === 'hermes' && !trimApiKey(nodeConfigApiKey ? nodeConfigApiKey.value : '')) {
+      requestHermesHostTokenProbe(false).catch(function () {});
+    }
     if (nodeConfigOpenClawKey) nodeConfigOpenClawKey.value = pid === 'openclaw' ? getOpenClawSessionKey(ref) : '';
     if (nodeConfigModelRow) nodeConfigModelRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
     if (nodeConfigBaseUrlRow) nodeConfigBaseUrlRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
@@ -7922,7 +8030,14 @@ body.niuma-confirm-open{overflow:hidden}
       } catch (eShell) {}
     }
     var savedKey = state.connectionsPickNodeKey || nodeKey || activeNodeKey();
-    mergeNodeRuntime({ nodeKey: savedKey, status: 'ready', detail: '已连接', updatedAt: Date.now() });
+    var savedPid = providerIdFromNodeKey(savedKey);
+    var hmReady = !(savedPid === 'hermes' && state.hermesDiagnostic && state.hermesDiagnostic.gatewayOk !== true);
+    mergeNodeRuntime({
+      nodeKey: savedKey,
+      status: hmReady ? 'ready' : 'needSetup',
+      detail: hmReady ? '已连接' : '8642 未响应',
+      updatedAt: Date.now()
+    });
     requestAnimationFrame(function () {
       closeConnectionsPanel();
       requestAnimationFrame(function () {
@@ -7939,7 +8054,16 @@ body.niuma-confirm-open{overflow:hidden}
         }
       });
     });
-    appendAudit({ nodeKey: savedKey, level: 'success', message: '已保存并连接' });
+    if (savedPid === 'hermes' && !hmReady) {
+      appendAudit({
+        nodeKey: savedKey,
+        level: 'error',
+        message: 'Hermes Key 已保存；API Server（8642）未启动，请重启 Hermes 后再对话'
+      });
+      cstat('Hermes Key 已保存。请完全退出并重启 Hermes 桌面版，待 8642 监听后再发消息。', 'error');
+    } else {
+      appendAudit({ nodeKey: savedKey, level: 'success', message: '已保存并连接' });
+    }
   }
 
   function clearNodeHistory(nodeKey) {
@@ -8872,9 +8996,12 @@ body.niuma-confirm-open{overflow:hidden}
         }
       }
     });
-    if (providerTransport(pid) !== 'cli' && pid !== 'openclaw' && !getApiKeyForProvider(pid)) {
+    if (providerTransport(pid) !== 'cli' && pid !== 'openclaw' && pid !== 'hermes' && !getApiKeyForProvider(pid)) {
       openConnectionsPanel(nodeKeyForSession(s));
       sstat('已创建会话，请填写「' + p.label + '」API Key 并点「保存并连接」。', '');
+    }
+    if (pid === 'hermes' && !getApiKeyForProvider('hermes')) {
+      runHermesImportConnect({});
     }
   }
 
@@ -9427,7 +9554,9 @@ body.niuma-confirm-open{overflow:hidden}
   }
 
   var OPENCLAW_HOST_PROBE_TIMEOUT_MS = 8000;
+  var HERMES_HOST_PROBE_TIMEOUT_MS = 8000;
   var openClawImportPending = null;
+  var hermesImportPending = null;
 
   function openClawDefaultBaseUrl() {
     return (P.openclaw && P.openclaw.baseUrl) || 'http://127.0.0.1:18789';
@@ -9596,6 +9725,276 @@ body.niuma-confirm-open{overflow:hidden}
     } finally {
       state.openClawImportRunning = false;
       if (openClawImportConnectBtn) openClawImportConnectBtn.disabled = false;
+    }
+  }
+
+  function hermesDefaultBaseUrl() {
+    return (P.hermes && P.hermes.baseUrl) || 'http://127.0.0.1:8642/v1';
+  }
+
+  function logHermesDiag(phase, data) {
+    try {
+      niumaTrace('hermes_' + String(phase || 'event'), 'hermes', data || {});
+    } catch (_) {}
+  }
+
+  function absorbHermesProbePayload(d) {
+    if (!d || typeof d !== 'object') return null;
+    var tok = trimApiKey(d.token) || trimApiKey(d.niumaToken);
+    var diag = {
+      at: Date.now(),
+      hasToken: !!tok,
+      source: String(d.source || '').trim(),
+      host: String(d.host || '127.0.0.1').trim() || '127.0.0.1',
+      port: Number(d.port) || 8642,
+      gatewayOk: d.gatewayOk === true,
+      gatewayError: String(d.gatewayError || '').trim(),
+      debug: String(d.debug || '').trim(),
+      tried: Array.isArray(d.tried) ? d.tried.slice() : [],
+      localAppData: String(d.localAppData || '').trim(),
+      primaryDir: String(d.primaryDir || '').trim(),
+      hasEnvKey: !!d.hasEnvKey,
+      hasNiumaKey: !!d.hasNiumaKey
+    };
+    state.hermesDiagnostic = diag;
+    logHermesDiag('probe', diag);
+    return diag;
+  }
+
+  function formatHermesProbeFailure(probe, pingErr) {
+    probe = probe || state.hermesDiagnostic || {};
+    var lines = [];
+    var tok = probe.hasToken;
+    if (!tok) {
+      lines.push('【密钥】未读取到 API_SERVER_KEY（Hermes 用 API Server Key，不是 OpenClaw Gateway Token）');
+      if (probe.localAppData) lines.push('  LOCALAPPDATA=' + probe.localAppData);
+      if (probe.primaryDir) lines.push('  数据目录=' + probe.primaryDir);
+      if (probe.tried && probe.tried.length) {
+        lines.push('  已查找 .env：');
+        probe.tried.forEach(function (p) {
+          lines.push('    · ' + p);
+        });
+      } else {
+        var laHint = probe.localAppData || '%LOCALAPPDATA%';
+        lines.push('  请在 ' + laHint + '\\hermes\\.env 配置 API_SERVER_KEY');
+        lines.push('  或点「一键连接本机 Hermes」自动写入并导入');
+      }
+      if (probe.hasNiumaKey) lines.push('  注：牛马配置里曾有 Key，但 .env 未读到，请点「一键连接」同步');
+      if (probe.debug) lines.push('  探测备注：' + probe.debug);
+    } else {
+      lines.push('【密钥】已读取' + (probe.source ? '（' + probe.source.replace(/^.*[\\/]/, '') + '）' : ''));
+    }
+    var base = 'http://' + (probe.host || '127.0.0.1') + ':' + (probe.port || 8642) + '/v1';
+    lines.push('【接口】' + base + '（本机 OpenAI 兼容 HTTP；地址无误时需 Hermes 启动 API Server）');
+    if (probe.gatewayOk === true) {
+      lines.push('【网关】8642 可连通');
+    } else {
+      var gw = probe.gatewayError || '';
+      if (pingErr && pingErr.message) gw = gw || pingErr.message;
+      if (gw) lines.push('【网关】' + gw);
+      else if (tok) lines.push('【网关】8642 无响应：请完全退出并重启 Hermes 桌面应用（非仅刷新页面）');
+    }
+    lines.push('（详情已写入调试日志，可在设置→调试日志中查看 hermes_probe 条目）');
+    return lines.join('\n');
+  }
+
+  function hermesSendBlockedMessage(cfg) {
+    var first = 'Hermes：未配置 API Server Key，无法发送。请点「一键连接本机 Hermes」。';
+    var detail = formatHermesProbeFailure(state.hermesDiagnostic);
+    logHermesDiag('send_blocked', {
+      reason: 'no_api_server_key',
+      baseUrl: cfg && cfg.baseUrl,
+      model: cfg && cfg.model
+    });
+    return first + '\n' + detail;
+  }
+
+  function applyHermesHostToken(token, source, baseUrlOverride) {
+    token = trimApiKey(token);
+    if (!token) return false;
+    if (!state.apiKeys) state.apiKeys = {};
+    state.apiKeys.hermes = token;
+    var bu = String(baseUrlOverride || '').trim() || hermesDefaultBaseUrl();
+    if (provider) provider.value = 'hermes';
+    applyProvider('hermes', true);
+    if (apiKey) {
+      apiKey.value = token;
+      apiKey.type = 'text';
+    }
+    if (nodeConfigApiKey) {
+      nodeConfigApiKey.type = 'text';
+      nodeConfigApiKey.value = token;
+    }
+    if (baseUrl) baseUrl.value = bu;
+    if (nodeConfigBaseUrl) nodeConfigBaseUrl.value = bu;
+    refreshApiKeyField('hermes');
+    updateNeedSetup();
+    return true;
+  }
+
+  function ensureHermesSessionForImport() {
+    var found = null;
+    state.sessions.forEach(function (s) {
+      if (normalizeProviderId(s.provider) === 'hermes') found = s;
+    });
+    if (found) {
+      if (found.id !== state.activeSessionId) switchSession(found.id);
+      syncFormFromSession(found);
+      return found;
+    }
+    if (provider) provider.value = 'hermes';
+    applyProvider('hermes', false);
+    var s = createSessionFromForm();
+    state.sessions.push(s);
+    state.activeSessionId = s.id;
+    persistSessions();
+    syncFormFromSession(s);
+    renderSessionTabs();
+    renderContactNav();
+    return s;
+  }
+
+  function buildHermesTestCfgFromForm() {
+    var bu = effectiveBaseUrl('hermes', '', baseUrl ? baseUrl.value : '');
+    if (nodeConfigBaseUrl) {
+      var nb = String(nodeConfigBaseUrl.value || '').trim();
+      if (nb) bu = nb;
+    }
+    var key = getApiKeyForProvider('hermes');
+    if (nodeConfigApiKey && String(nodeConfigApiKey.value || '').trim()) key = trimApiKey(nodeConfigApiKey.value);
+    return {
+      provider: 'hermes',
+      model: (P.hermes && P.hermes.model) || 'hermes-agent',
+      baseUrl: bu,
+      apiKey: key,
+      systemPrompt: getEffectiveSystemPromptForSend()
+    };
+  }
+
+  function requestHermesHostTokenProbe(force) {
+    return new Promise(function (resolve, reject) {
+      var reqId = 'hm_probe_' + Date.now();
+      var timer = setTimeout(function () {
+        if (hermesImportPending && hermesImportPending.reqId === reqId) {
+          hermesImportPending = null;
+          reject(new Error('读取本机 Hermes 配置超时'));
+        }
+      }, HERMES_HOST_PROBE_TIMEOUT_MS);
+      hermesImportPending = {
+        reqId: reqId,
+        resolve: function (d) {
+          clearTimeout(timer);
+          hermesImportPending = null;
+          resolve(d || {});
+        },
+        reject: function (e) {
+          clearTimeout(timer);
+          hermesImportPending = null;
+          reject(e);
+        }
+      };
+      try {
+        post({ type: 'niuma_hermes_probe_token', force: !!force, ensureEnv: true, reqId: reqId });
+      } catch (e) {
+        clearTimeout(timer);
+        hermesImportPending = null;
+        reject(e);
+      }
+    });
+  }
+
+  async function runHermesImportConnect(opts) {
+    opts = opts || {};
+    if (state.hermesImportRunning) return;
+    state.hermesImportRunning = true;
+    if (hermesImportConnectBtn) hermesImportConnectBtn.disabled = true;
+    apiTestStat('正在从本机 Hermes 读取 API_SERVER_KEY…', '');
+    try {
+      var probe = await requestHermesHostTokenProbe(!!opts.force);
+      absorbHermesProbePayload(probe);
+      var token = trimApiKey(probe.token || probe.niumaToken || '');
+      var source = String(probe.source || '').trim();
+      if (!token) {
+        throw new Error(formatHermesProbeFailure(probe));
+      }
+      var hmHost = String(probe.host || '127.0.0.1').trim() || '127.0.0.1';
+      var hmPort = Number(probe.port) || 8642;
+      var hmBase = 'http://' + hmHost + ':' + hmPort + '/v1';
+      applyHermesHostToken(token, source, hmBase);
+      var hmSess = ensureHermesSessionForImport();
+      if (hmSess) {
+        var hmNk = nodeKeyForSession(hmSess);
+        state.nodeConfigDiskKey = hmNk;
+        state.connectionsPickNodeKey = hmNk;
+      }
+      var srcHint = source ? source.replace(/^.*[\\/]/, '') : 'hermes\\.env';
+      apiTestStat('已导入 Key（' + srcHint + '），正在检测 API Server…', '');
+      var cfg = buildHermesTestCfgFromForm();
+      if (!cfg.apiKey) throw new Error('API Server Key 无效');
+      var gwOk = probe.gatewayOk === true;
+      var pingErr = null;
+      if (!gwOk) {
+        try {
+          await reqOpenAI(cfg);
+          gwOk = true;
+        } catch (ePing) {
+          pingErr = ePing;
+          gwOk = false;
+          absorbHermesProbePayload(
+            Object.assign({}, probe, {
+              gatewayOk: false,
+              gatewayError: probe.gatewayError || (ePing && ePing.message) || ''
+            })
+          );
+        }
+      }
+      var s = activeSession();
+      if (s && normalizeProviderId(s.provider) === 'hermes') {
+        s.baseUrl = cfg.baseUrl;
+        s.model = cfg.model;
+        syncSessionFromForm(s);
+      }
+      if (state.settings || state.connectionsPickNodeKey || state.nodeConfigDiskKey) {
+        saveConnectionsForm();
+      } else {
+        saveCfg(true);
+        try {
+          syncLlmToStudioHost();
+        } catch (syncErr) {}
+        updateNeedSetup();
+        refreshInlineApiSetupVisibility();
+        renderContactNav();
+        cstat(
+          gwOk
+            ? 'Hermes 已从本机导入并连接。'
+            : formatHermesProbeFailure(state.hermesDiagnostic, pingErr).split('\n').slice(0, 2).join(' '),
+          gwOk ? 'success' : 'error'
+        );
+      }
+      if (gwOk) {
+        apiTestStat('Hermes 一键连接成功。', 'success');
+      } else {
+        var hmFail = formatHermesProbeFailure(state.hermesDiagnostic, pingErr);
+        apiTestStat(hmFail.split('\n')[0], 'error');
+        logHermesDiag('import_gateway_fail', { gatewayError: probe.gatewayError, ping: pingErr && pingErr.message });
+      }
+      refreshHermesSetupBanner();
+      refreshInlineApiSetupVisibility();
+    } catch (e) {
+      var msg = e && e.message ? e.message : String(e || '连接失败');
+      logHermesDiag('import_error', { message: msg });
+      apiTestStat(msg.split('\n')[0], 'error');
+      if (msg.indexOf('\n') >= 0) {
+        sstat(msg.split('\n')[0], 'error');
+        try {
+          console.warn('[Hermes]\n' + msg);
+        } catch (_) {}
+      } else {
+        sstat(msg, 'error');
+      }
+    } finally {
+      state.hermesImportRunning = false;
+      if (hermesImportConnectBtn) hermesImportConnectBtn.disabled = false;
     }
   }
 
@@ -9906,6 +10305,20 @@ body.niuma-confirm-open{overflow:hidden}
       refreshInlineApiSetupVisibility();
       return;
     }
+    if (sp === 'hermes') {
+      url = effectiveBaseUrl('hermes', s.baseUrl, baseUrl ? baseUrl.value : '');
+      state.needSetup = !k || !url || !m;
+      if (state.needSetup) {
+        logHermesDiag('need_setup', {
+          hasKey: !!k,
+          baseUrl: url,
+          model: m,
+          reason: !k ? 'no_api_server_key' : !url ? 'no_base_url' : 'no_model'
+        });
+      }
+      refreshInlineApiSetupVisibility();
+      return;
+    }
     state.needSetup = !k || !url || !m;
     refreshInlineApiSetupVisibility();
   }
@@ -9964,11 +10377,16 @@ body.niuma-confirm-open{overflow:hidden}
     {
       var act = activeSession();
       var skipApiHint = act && isCliSession(act);
+      if (act && normalizeProviderId(act.provider) === 'hermes' && state.needSetup) {
+        requestHermesHostTokenProbe(false).catch(function () {});
+      }
       sstat(
         skipApiHint
           ? '配置与对话已从本地恢复。'
           : state.needSetup
-            ? '首次使用请先完成 API 设置。'
+            ? act && normalizeProviderId(act.provider) === 'hermes'
+              ? 'Hermes 待配置：请点「一键连接本机 Hermes」（详见状态栏与调试日志）。'
+              : '首次使用请先完成 API 设置。'
             : '配置与对话已从本地恢复。',
         !skipApiHint && state.needSetup ? '' : 'success'
       );
@@ -10462,6 +10880,23 @@ body.niuma-confirm-open{overflow:hidden}
         apiTestStat('OpenClaw 连接正常。', 'success');
         return;
       }
+      if (cfg.provider === 'hermes') {
+        var probeHmTest = await requestHermesHostTokenProbe(true).catch(function () {
+          return {};
+        });
+        absorbHermesProbePayload(probeHmTest);
+        if (!cfg.apiKey) {
+          throw new Error(formatHermesProbeFailure(probeHmTest));
+        }
+        cfg.baseUrl = effectiveBaseUrl('hermes', cfg.baseUrl, '');
+        try {
+          await reqOpenAI(cfg);
+          apiTestStat('Hermes API Server 连接正常。', 'success');
+        } catch (eHm) {
+          throw new Error(formatHermesProbeFailure(probeHmTest, eHm));
+        }
+        return;
+      }
       if (cfg.provider === 'ollama') {
         var root = ollamaRootUrl(cfg.baseUrl);
         var rTags = await hostHttpRequest(root + '/api/tags', { method: 'GET', timeoutMs: 15000 });
@@ -10833,6 +11268,43 @@ body.niuma-confirm-open{overflow:hidden}
     if (/^http_status_/i.test(fb) && (raw || status)) return formatMinimaxApiError(status || 0, raw);
     if (status >= 400 && raw) return formatMinimaxApiError(status, raw);
     return fb || ('HTTP ' + status);
+  }
+
+  function formatHermesHttpError(err, cfg) {
+    var msg = err && err.message ? String(err.message) : String(err || '未知错误');
+    if (
+      /80072EFD|80072EE2|ERROR_INTERNET_CANNOT_CONNECT|ERROR_INTERNET_TIMEOUT|操作超时|请求超时|无法与服务器建立连接|timeout|timed out|无法连接|could not connect|connection refused|actively refused|ECONNREFUSED/i.test(
+        msg
+      )
+    ) {
+      var root = String((cfg && cfg.baseUrl) || 'http://127.0.0.1:8642/v1').replace(/\/v1\/?$/i, '');
+      return (
+        'Hermes API Server 未在 ' +
+        root +
+        ' 监听（0x80072EFD=连接被拒绝）。桌面版已打开不等于 API Server 已启动：任务管理器结束自早上启动的旧 pythonw Gateway，再完全退出并重启 Hermes；gateway.log 应出现 api_server connected。PowerShell：Test-NetConnection 127.0.0.1 -Port 8642'
+      );
+    }
+    return msg;
+  }
+
+  async function probeHermesApiServerReachable(cfg, timeoutMs) {
+    cfg = cfg || {};
+    timeoutMs = Math.max(3000, Number(timeoutMs) || 8000);
+    var root = String(cfg.baseUrl || 'http://127.0.0.1:8642/v1').replace(/\/v1\/?$/i, '');
+    var key = trimApiKey(cfg.apiKey || '');
+    var headers = key ? { Authorization: 'Bearer ' + key } : {};
+    var urls = [root + '/health', root + '/v1/models'];
+    var lastErr = null;
+    for (var ui = 0; ui < urls.length; ui++) {
+      try {
+        var r = await hostHttpRequest(urls[ui], { method: 'GET', headers: headers, timeoutMs: timeoutMs });
+        if (r && r.ok) return true;
+        lastErr = new Error('HTTP ' + (r && r.status));
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('Hermes API Server 无响应');
   }
 
   async function reqMinimax(cfg) {
@@ -18376,6 +18848,14 @@ body.niuma-confirm-open{overflow:hidden}
       setSettings(true);
       return;
     }
+    if (cfg.provider === 'hermes' && !cfg.apiKey) {
+      var hmBlockExec = hermesSendBlockedMessage(cfg);
+      cstatForSession(sid, hmBlockExec.split('\n')[0], 'error');
+      apiTestStat(hmBlockExec.split('\n').slice(0, 3).join(' · '), 'error');
+      setSettings(true);
+      requestHermesHostTokenProbe(true).catch(function () {});
+      return;
+    }
     if (p0.transport !== 'openclaw' && cfg.provider !== 'ollama' && !cfg.apiKey) {
       cstatForSession(sid, '请先在设置里填写 API Key、Base URL 和 Model。', 'error');
       setSettings(true);
@@ -18385,6 +18865,20 @@ body.niuma-confirm-open{overflow:hidden}
       cstatForSession(sid, 'OpenClaw：请在「Gateway Token」填写 token，或将带 #token= 的完整控制台地址填入 Base URL。', 'error');
       setSettings(true);
       return;
+    }
+    if (cfg.provider === 'hermes') {
+      try {
+        await probeHermesApiServerReachable(cfg, 8000);
+      } catch (eHmPre) {
+        var hmPreMsg = formatHermesHttpError(eHmPre, cfg);
+        cstatForSession(sid, hmPreMsg, 'error');
+        appendAudit({
+          nodeKey: nodeKeyForSession(s),
+          level: 'error',
+          message: 'Hermes 连接失败：' + hmPreMsg
+        });
+        return;
+      }
     }
 
     setSessionSending(sid, true);
@@ -18472,15 +18966,17 @@ body.niuma-confirm-open{overflow:hidden}
           }
         }
       }
+      var errMsg = err && err.message ? String(err.message) : '未知错误';
+      if (cfg && cfg.provider === 'hermes') errMsg = formatHermesHttpError(err, cfg);
       appendAudit({
         nodeKey: nodeKeyForSession(sessionById(sid)),
         level: 'error',
-        message: '请求失败：' + (err && err.message ? err.message : '未知错误')
+        message: '请求失败：' + errMsg
       });
-      cstatForSession(sid, '请求失败：' + (err && err.message ? err.message : '未知错误'), 'error');
+      cstatForSession(sid, '请求失败：' + errMsg, 'error');
       var sFail = sessionById(sid);
       if (sFail) {
-        sFail.lastError = err && err.message ? String(err.message) : '未知错误';
+        sFail.lastError = errMsg;
         sFail.lastErrorAt = Date.now();
         refreshSessionMeta(sFail);
         renderThreadHub();
@@ -18706,6 +19202,14 @@ body.niuma-confirm-open{overflow:hidden}
     if (!cfg.baseUrl || !cfg.model) {
       cstatForSession(sid, '请先在设置里填写 Base URL 和 Model。', 'error');
       setSettings(true);
+      return;
+    }
+    if (cfg.provider === 'hermes' && !cfg.apiKey) {
+      var hmBlockChat = hermesSendBlockedMessage(cfg);
+      cstatForSession(sid, hmBlockChat.split('\n')[0], 'error');
+      apiTestStat(hmBlockChat.split('\n').slice(0, 3).join(' · '), 'error');
+      setSettings(true);
+      requestHermesHostTokenProbe(true).catch(function () {});
       return;
     }
     if (p0.transport !== 'openclaw' && cfg.provider !== 'ollama' && !cfg.apiKey) {
@@ -19176,17 +19680,29 @@ body.niuma-confirm-open{overflow:hidden}
     });
   }
   if (nodeConfigTest) {
-    nodeConfigTest.addEventListener('click', function () {
+    nodeConfigTest.addEventListener('click', async function () {
       if (nodeConfigApiKey && apiKey) apiKey.value = nodeConfigApiKey.value;
       var s = activeSession();
       if (!s) return;
       var pid = normalizeProviderId(s.provider);
       var p = P[pid] || P.openai;
+      var key = trimApiKey(nodeConfigApiKey ? nodeConfigApiKey.value : '');
+      if (pid === 'hermes' && !key) {
+        apiTestStat('正在从本机 Hermes 读取 API_SERVER_KEY…', '');
+        try {
+          await runHermesImportConnect({ force: true });
+          key = getApiKeyForProvider('hermes');
+          if (nodeConfigApiKey) nodeConfigApiKey.value = key;
+        } catch (eHm) {
+          apiTestStat('Hermes 一键连接失败：' + (eHm && eHm.message ? eHm.message : String(eHm)), 'error');
+          return;
+        }
+      }
       testApiConfig({
         provider: pid,
         model: s.model || p.model,
         baseUrl: effectiveBaseUrl(pid, s.baseUrl, baseUrl ? baseUrl.value : ''),
-        apiKey: trimApiKey(nodeConfigApiKey ? nodeConfigApiKey.value : '')
+        apiKey: key || getApiKeyForProvider(pid)
       });
     });
   }
@@ -19205,6 +19721,23 @@ body.niuma-confirm-open{overflow:hidden}
       if (inlineLlmProvider) inlineLlmProvider.value = 'openclaw';
       onApiSetupProviderChange(inlineLlmProvider, inlineLlmApiKey, null, inlineLlmModel);
       runOpenClawImportConnect({ force: true });
+    });
+  }
+  if (hermesImportConnectBtn) {
+    hermesImportConnectBtn.addEventListener('click', function () {
+      runHermesImportConnect({ force: true });
+    });
+  }
+  if (hermesSetupImportBtn) {
+    hermesSetupImportBtn.addEventListener('click', function () {
+      runHermesImportConnect({ force: true });
+    });
+  }
+  if (inlineHermesImport) {
+    inlineHermesImport.addEventListener('click', function () {
+      if (inlineLlmProvider) inlineLlmProvider.value = 'hermes';
+      onApiSetupProviderChange(inlineLlmProvider, inlineLlmApiKey, null, inlineLlmModel);
+      runHermesImportConnect({ force: true });
     });
   }
   if (nodeConfigClear) {
@@ -20910,6 +21443,46 @@ body.niuma-confirm-open{overflow:hidden}
           syncProviderDdUi();
           updateProviderFormLayout(ep);
           refreshSettingsAiHint();
+        }
+        return;
+      }
+      if (d.type === 'hermes_host_token_probe') {
+        var hmTok = String(d.token || d.niumaToken || '').trim();
+        var hmHostMsg = String(d.host || '127.0.0.1').trim() || '127.0.0.1';
+        var hmPortMsg = Number(d.port) || 8642;
+        var hmPayload = {
+          token: hmTok,
+          niumaToken: String(d.niumaToken || '').trim(),
+          source: String(d.source || '').trim(),
+          host: hmHostMsg,
+          port: hmPortMsg,
+          gatewayOk: d.gatewayOk,
+          gatewayError: String(d.gatewayError || '').trim(),
+          debug: String(d.debug || '').trim(),
+          tried: Array.isArray(d.tried) ? d.tried : [],
+          localAppData: String(d.localAppData || '').trim(),
+          primaryDir: String(d.primaryDir || '').trim(),
+          hasEnvKey: !!d.hasEnvKey,
+          hasNiumaKey: !!d.hasNiumaKey,
+          force: !!d.force
+        };
+        absorbHermesProbePayload(hmPayload);
+        if (hermesImportPending) {
+          hermesImportPending.resolve(hmPayload);
+          return;
+        }
+        if (hmPayload.token) {
+          applyHermesHostToken(hmPayload.token, hmPayload.source, 'http://' + hmHostMsg + ':' + hmPortMsg + '/v1');
+          if (nodeConfigApiKey && normalizeProviderId(provider.value) === 'hermes') {
+            nodeConfigApiKey.value = hmPayload.token;
+          }
+          var hmHint2 =
+            hmPayload.gatewayOk === true
+              ? '已从本机填入 API_SERVER_KEY，API Server 正常。'
+              : formatHermesProbeFailure(hmPayload).split('\n').slice(0, 2).join(' ');
+          if (!getApiKeyForProvider('hermes') || hmPayload.force) sstat(hmHint2, hmPayload.gatewayOk === true ? 'success' : 'error');
+        } else if (!hmPayload.token) {
+          sstat(formatHermesProbeFailure(hmPayload).split('\n')[0], 'error');
         }
         return;
       }

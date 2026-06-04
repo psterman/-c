@@ -197,6 +197,9 @@ if FuncExists("Nmer_AutoStartSearchCenterCore") {
 #Include modules\NiumaTtyd.ahk
 #Include modules\NiumaOllama.ahk
 #Include modules\CloudPlayer.ahk
+; Hermes / LLM 探测须在 FloatingToolbar 之前加载，供 NiumaChat 一键连接读 .env
+#Include modules\LlmApiPing.ahk
+#Include modules\UserStudio.ahk
 
 ; ===================== 包含悬浮工具栏模块 =====================
 global CommandPaletteUseWebView := true
@@ -4572,8 +4575,6 @@ StartWebViewWarmup(*) {
 }
 
 #Include modules\ConfigManager.ahk
-#Include modules\LlmApiPing.ahk
-#Include modules\UserStudio.ahk
 #Include modules\AppUpdateCheck.ahk
 InitConfig() ; 启动初始化
 try UserStudio_Load()

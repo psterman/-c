@@ -1318,32 +1318,94 @@
       border-radius: 10px;
       font-size: 13px;
     }
-    .studio-openclaw-quick {
+    .studio-local-connect-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
       margin-bottom: 14px;
+    }
+    @media (max-width: 720px) {
+      .studio-local-connect-grid { grid-template-columns: 1fr; }
+    }
+    .studio-local-quick {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
       padding: 14px 16px;
-      border: 1px solid rgba(255, 102, 0, 0.35);
       border-radius: 12px;
+      border: 1px solid var(--border2);
+    }
+    .studio-local-quick--openclaw {
+      border-color: rgba(255, 102, 0, 0.35);
       background: linear-gradient(135deg, rgba(255, 102, 0, 0.12), rgba(255, 102, 0, 0.04));
     }
-    .studio-openclaw-quick-head {
+    .studio-local-quick--hermes {
+      border-color: rgba(120, 160, 255, 0.35);
+      background: linear-gradient(135deg, rgba(120, 160, 255, 0.14), rgba(120, 160, 255, 0.04));
+    }
+    .studio-local-quick-head {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
       margin-bottom: 10px;
     }
-    .studio-openclaw-quick-head strong { font-size: 15px; }
-    .studio-openclaw-quick-status {
+    .studio-local-quick-title {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+    .studio-local-quick-icon {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+      border-radius: 10px;
+      object-fit: contain;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 4px;
+      box-sizing: border-box;
+    }
+    .studio-local-quick-icon.is-raster {
+      padding: 0;
+      background: transparent;
+      border-radius: 8px;
+    }
+    .studio-local-quick-title strong { font-size: 15px; display: block; }
+    .studio-local-quick-status,
+    .studio-openclaw-quick-status,
+    .studio-hermes-quick-status {
       font-size: 11px;
       padding: 3px 10px;
       border-radius: 999px;
       border: 1px solid var(--border2);
       color: var(--text-dim);
       white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .studio-openclaw-quick-status.ok { color: #6bcf8a; border-color: rgba(107, 207, 138, 0.4); }
-    .studio-openclaw-quick .btn.primary { width: 100%; margin-top: 4px; font-size: 14px; padding: 10px 16px; }
+    .studio-local-quick-status.ok,
+    .studio-openclaw-quick-status.ok,
+    .studio-hermes-quick-status.ok { color: #6bcf8a; border-color: rgba(107, 207, 138, 0.4); }
+    .studio-local-connect-btn {
+      width: 100%;
+      margin-top: auto;
+      font-size: 14px;
+      padding: 10px 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .studio-local-connect-btn img {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
     .studio-api-steps {
       margin: 0 0 12px;
       padding: 10px 12px;
@@ -1355,7 +1417,6 @@
       color: var(--text-dim);
     }
     .studio-api-steps strong { color: var(--text); }
-    .studio-llm-add-bar .btn-openclaw-quick { border-color: rgba(255, 102, 0, 0.45); }
     .studio-modal {
       display: none;
       position: fixed;
@@ -1474,6 +1535,11 @@
         <div class="hint mini" style="margin-top:8px">自动读取本机配置并检测 Gateway（<code>http://127.0.0.1:18789</code>），无需手抄 Token。</div>
       </div>
       <div class="hint mini" id="studioModalOpenClawOrManual" style="display:none;margin:4px 0 8px;text-align:center;color:var(--text-dim)">— 或手动填写下方 —</div>
+      <div class="studio-modal-row" id="studioModalHermesRow" style="display:none">
+        <button type="button" class="btn primary" id="studioModalHermesImport" style="width:100%">一键连接本机 Hermes</button>
+        <div class="hint mini" style="margin-top:8px">自动读取 <code>~/.hermes/.env</code> 中的 <code>API_SERVER_KEY</code>，并检测本机 API Server（<code>http://127.0.0.1:8642/v1</code>）。</div>
+      </div>
+      <div class="hint mini" id="studioModalHermesOrManual" style="display:none;margin:4px 0 8px;text-align:center;color:var(--text-dim)">— 或手动填写下方 —</div>
       <div class="studio-modal-row" id="studioModalApiKeyRow">
         <div class="label" id="studioModalApiKeyLabel">API Key</div>
         <input id="studioModalApiKey" class="ctl" type="password" data-nosave="1" autocomplete="off" placeholder="填写该平台密钥">
@@ -1535,7 +1601,7 @@
     const CLI_ENGINES = [
       { id:"codex", icon:"https://app.local/assets/icons/app/ChatGPT.png", label:"Codex" },
       { id:"gemini", icon:"https://app.local/assets/icons/app/DeepSeek.png", label:"Gemini" },
-      { id:"openclaw", icon:"https://app.local/assets/icons/app/Claude.png", label:"OpenClaw" },
+      { id:"openclaw", icon:"https://app.local/assets/icons/ai/openclaw.svg", label:"OpenClaw" },
       { id:"qwen", icon:"https://app.local/assets/icons/app/qwen.png", label:"Qwen" }
     ];
     const DEFAULT_CURSOR_SHORTCUTS = [
@@ -1576,8 +1642,8 @@
       { combo: "悬浮栏 · 搜索", label: "搜索中心", desc: "打开全局搜索中心，检索文件、剪贴板与 AI 能力。" },
       { combo: "悬浮栏 · 设置", label: "设置中心", desc: "打开本设置页面；与单键 Q 等效。" },
       { combo: "黑洞 · 划选文本", label: "唤起 Hub 交互", desc: "在「外观设置」中启用；划选文字后弹出 Hub 胶囊等交互（与激活模式相关）。" },
-      { combo: "黑洞 · 顺时针画圈", label: "顺时针手势", desc: "在外观中启用后，于屏幕上顺时针画圈触发快捷操作。" },
-      { combo: "黑洞 · 逆时针画圈", label: "逆时针手势", desc: "在外观中启用后，于屏幕上逆时针画圈触发快捷操作。" }
+      { combo: "黑洞 · 顺时针画圈", label: "顺时针手势", desc: "在外观中启用后，按住右键顺时针画圈，识别成功后松手触发。" },
+      { combo: "黑洞 · 逆时针画圈", label: "逆时针手势", desc: "在外观中启用后，按住右键逆时针画圈，识别成功后松手触发。" }
     ];
     const TOOLBAR_BUTTON_OPTIONS = [
       { id:"Search", name:"搜索" }, { id:"Record", name:"记录" }, { id:"Prompt", name:"提示词" },
@@ -3293,6 +3359,14 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
         keyPh: "Gateway Token（推荐点一键连接）",
         hint: "本机 Gateway · 非 sk- 云 API · 默认 127.0.0.1:18789"
       },
+      hermes: {
+        label: "Hermes Agent",
+        baseUrl: "http://127.0.0.1:8642/v1",
+        model: "hermes-agent",
+        models: ["hermes-agent"],
+        keyPh: "API Server Key（推荐点一键连接）",
+        hint: "本机 Hermes OpenAI 兼容 API · 需在 ~/.hermes/.env 启用 API_SERVER_ENABLED 并设置 API_SERVER_KEY，然后 hermes gateway"
+      },
       custom: {
         label: "自定义（中转 / 私有网关）",
         baseUrl: "",
@@ -3375,6 +3449,10 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
 
     const STUDIO_MINIMAX_BASE_CN = "https://api.minimaxi.com/anthropic";
     const STUDIO_MINIMAX_BASE_INTL = "https://api.minimax.io/anthropic";
+    const STUDIO_LOCAL_AGENT_ICONS = {
+      openclaw: "https://app.local/assets/icons/ai/openclaw.svg",
+      hermes: "https://app.local/assets/icons/ai/hermes.png"
+    };
 
     function normalizeStudioApiKey(raw) {
       let k = String(raw || "").trim();
@@ -3601,7 +3679,7 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
     function studioBaseUrlMatchesProvider(pid, url) {
       pid = normalizeStudioLlmProvider(pid);
       const u = String(url || "").trim().toLowerCase();
-      if (!u || pid === "custom" || pid === "openclaw") return true;
+      if (!u || pid === "custom" || pid === "openclaw" || pid === "hermes") return true;
       const hints = STUDIO_PROVIDER_HOST_HINTS[pid];
       if (!hints || !hints.length) return true;
       return hints.some((h) => u.includes(h));
@@ -3823,8 +3901,9 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       <button type="button" class="btn studio-llm-remove" data-prov="${esc(pid)}">移除</button>
     </div>
   </div>
-  <div class="row"><div class="label">${pid === "openclaw" ? "Gateway Token" : "API Key"}</div><input class="us-card-key" data-prov="${esc(pid)}" type="${pid === "openclaw" ? "text" : "password"}" data-nosave="1" value="${esc(slotKey)}" placeholder="${esc(pre.keyPh || "API Key")}" autocomplete="off"></div>
+  <div class="row"><div class="label">${pid === "openclaw" ? "Gateway Token" : pid === "hermes" ? "API Server Key" : "API Key"}</div><input class="us-card-key" data-prov="${esc(pid)}" type="${pid === "openclaw" || pid === "hermes" ? "text" : "password"}" data-nosave="1" value="${esc(slotKey)}" placeholder="${esc(pre.keyPh || "API Key")}" autocomplete="off"></div>
   ${pid === "openclaw" ? `<div class="hint mini">本机网关 <code>http://127.0.0.1:18789</code> · WebSocket 对话，与云端 API Key 无关</div>` : ""}
+  ${pid === "hermes" ? `<div class="hint mini">本机 API <code>http://127.0.0.1:8642/v1</code> · 读取 <code>~/.hermes/.env</code> 中 API_SERVER_KEY</div>` : ""}
   <div class="row us-card-base-auto" data-prov="${esc(pid)}" style="display:${showManual ? "none" : ""}">
     <div class="label">接口地址</div>
     <div class="studio-url-auto">${esc(autoText)}</div>
@@ -3846,7 +3925,8 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
   <div class="hint mini us-card-hint">${esc(pre.hint || "")}</div>
   <div class="inline" style="margin-top:8px;flex-wrap:wrap;gap:8px">
     ${pid === "openclaw" ? `<button type="button" class="btn primary studio-openclaw-import-card" data-prov="${esc(pid)}">一键连接</button>` : ""}
-    <button type="button" class="btn studio-llm-test-card" data-prov="${esc(pid)}">${pid === "openclaw" ? "检测 Gateway" : "测试"}</button>
+    ${pid === "hermes" ? `<button type="button" class="btn primary studio-hermes-import-card" data-prov="${esc(pid)}">一键连接</button>` : ""}
+    <button type="button" class="btn studio-llm-test-card" data-prov="${esc(pid)}">${pid === "openclaw" ? "检测 Gateway" : pid === "hermes" ? "检测 API Server" : "测试"}</button>
   </div>
 </div>`;
     }
@@ -3855,10 +3935,9 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       const providers = getStudioLlmCardProviders();
       const cardsHtml = providers.length
         ? providers.map((pid) => renderStudioLlmCardHtml(pid, activeProv)).join("")
-        : `<div class="studio-llm-empty">尚未配置：可点上方<strong>连接本机 OpenClaw</strong>（已安装时一键完成），或<strong>添加云模型 API</strong> 填写密钥。</div>`;
-      return `${buildStudioOpenClawQuickHtml(providers)}
+        : `<div class="studio-llm-empty">尚未配置：可点上方<strong>一键连接本机 Hermes / OpenClaw</strong>，或<strong>添加云模型 API</strong> 填写密钥。</div>`;
+      return `${buildStudioLocalConnectGridHtml(providers)}
 <div class="studio-llm-add-bar">
-  <button type="button" class="btn primary btn-openclaw-quick" id="btnStudioOpenClawQuick">连接本机 OpenClaw</button>
   <button type="button" class="btn" id="btnAddStudioLlmCard">添加云模型 API</button>
 </div>
 <div id="studioLlmCards" class="studio-llm-cards">${cardsHtml}</div>`;
@@ -3868,7 +3947,7 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       return !!getStudioOpenClawEffectiveToken();
     }
 
-    function buildStudioOpenClawQuickHtml(cardProviders) {
+    function buildStudioOpenClawQuickStatus(cardProviders) {
       const hasCard = (cardProviders || getStudioLlmCardProviders()).includes("openclaw");
       const st = state.studioOpenClawStatus || {};
       let statusCls = "";
@@ -3876,27 +3955,87 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       if (studioOpenClawConfigured()) {
         if (st.gatewayOk === true) {
           statusCls = "ok";
-          statusText = hasCard ? "已连接 · 已添加卡片" : "已连接 · 可点一键同步到本页";
+          statusText = hasCard ? "已连接" : "可一键保存";
         } else if (st.gatewayOk === false) {
-          statusText = "Token 已就绪 · Gateway 未启动";
+          statusText = "Token 就绪 · 网关未启";
         } else {
           statusCls = "ok";
-          statusText = hasCard ? "Token 已配置" : "本机 Token 可读 · 点一键写入并保存";
+          statusText = hasCard ? "Token 已配置" : "可读 Token";
         }
       } else {
-        statusText = "未写入智能定制 · 点一键从本机读取";
+        statusText = "未配置";
       }
-      return `<div class="studio-openclaw-quick" id="studioOpenClawQuick">
-  <div class="studio-openclaw-quick-head">
-    <div>
-      <strong>本机 OpenClaw（Gateway）</strong>
-      <div class="hint mini" style="margin-top:4px">与 DeepSeek / MiniMax 等<strong>云 API 分开</strong>：走本机 WebSocket，不用填 sk- 密钥。</div>
+      return { statusCls, statusText };
+    }
+
+    function buildStudioHermesQuickStatus(cardProviders) {
+      const hasCard = (cardProviders || getStudioLlmCardProviders()).includes("hermes");
+      const st = state.studioHermesStatus || {};
+      let statusCls = "";
+      let statusText = "检测中…";
+      if (studioHermesConfigured()) {
+        if (st.gatewayOk === true) {
+          statusCls = "ok";
+          statusText = hasCard ? "已连接" : "可一键保存";
+        } else if (st.gatewayOk === false) {
+          statusText = "Key 就绪 · 服务未启";
+        } else {
+          statusCls = "ok";
+          statusText = hasCard ? "Key 已配置" : "可读 Key";
+        }
+      } else if (st.probeError) {
+        statusText = "缺 API_SERVER_KEY";
+      } else {
+        statusText = "未配置";
+      }
+      return { statusCls, statusText };
+    }
+
+    function buildStudioLocalConnectGridHtml(cardProviders) {
+      const oc = buildStudioOpenClawQuickStatus(cardProviders);
+      const hm = buildStudioHermesQuickStatus(cardProviders);
+      const ocIcon = esc(STUDIO_LOCAL_AGENT_ICONS.openclaw);
+      const hmIcon = esc(STUDIO_LOCAL_AGENT_ICONS.hermes);
+      return `<div class="studio-local-connect-grid">
+  <div class="studio-local-quick studio-local-quick--hermes" id="studioHermesQuick">
+    <div class="studio-local-quick-head">
+      <div class="studio-local-quick-title">
+        <img class="studio-local-quick-icon is-raster" src="${hmIcon}" alt="" width="36" height="36" decoding="async">
+        <div>
+          <strong>Hermes Agent</strong>
+          <div class="hint mini" style="margin-top:4px">本机 API <code>8642/v1</code> · <code>~/.hermes/.env</code></div>
+        </div>
+      </div>
+      <span class="studio-hermes-quick-status studio-local-quick-status ${hm.statusCls}" id="studioHermesQuickStatus">${esc(hm.statusText)}</span>
     </div>
-    <span class="studio-openclaw-quick-status ${statusCls}" id="studioOpenClawQuickStatus">${esc(statusText)}</span>
+    <button type="button" class="btn primary studio-local-connect-btn" id="btnStudioHermesQuickInner">
+      <img src="${hmIcon}" alt="" width="20" height="20" decoding="async" style="border-radius:4px">
+      <span>一键连接 Hermes</span>
+    </button>
+    <div class="hint mini" style="margin-top:8px"><code>%LOCALAPPDATA%\\hermes\\.env</code> · 一键连接可自动写入 Key</div>
   </div>
-  <button type="button" class="btn primary" id="btnStudioOpenClawQuickInner">一键连接本机 OpenClaw</button>
-  <div class="hint mini" style="margin-top:8px">自动读取顺序：环境变量 <code>OPENCLAW_GATEWAY_TOKEN</code> → <code>openclaw.json</code>（含 SecretRef）→ <code>openclaw config get</code> → 设备配对 <code>device-auth.json</code>；并检测 <code>127.0.0.1:18789</code>。</div>
+  <div class="studio-local-quick studio-local-quick--openclaw" id="studioOpenClawQuick">
+    <div class="studio-local-quick-head">
+      <div class="studio-local-quick-title">
+        <img class="studio-local-quick-icon" src="${ocIcon}" alt="" width="36" height="36" decoding="async">
+        <div>
+          <strong>OpenClaw Gateway</strong>
+          <div class="hint mini" style="margin-top:4px">本机 WebSocket · <code>127.0.0.1:18789</code></div>
+        </div>
+      </div>
+      <span class="studio-openclaw-quick-status studio-local-quick-status ${oc.statusCls}" id="studioOpenClawQuickStatus">${esc(oc.statusText)}</span>
+    </div>
+    <button type="button" class="btn primary studio-local-connect-btn" id="btnStudioOpenClawQuickInner">
+      <img src="${ocIcon}" alt="" width="20" height="20" decoding="async">
+      <span>一键连接 OpenClaw</span>
+    </button>
+    <div class="hint mini" style="margin-top:8px">读 <code>openclaw.json</code> / 环境变量 Token</div>
+  </div>
 </div>`;
+    }
+
+    function studioHermesConfigured() {
+      return !!getStudioHermesEffectiveToken();
     }
 
     function studioConnectOpenClawFromSettings() {
@@ -3905,12 +4044,21 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       else runStudioOpenClawImportConnect({ fromCard: false });
     }
 
+    function studioConnectHermesFromSettings() {
+      const hasCard = getStudioLlmCardProviders().includes("hermes");
+      if (hasCard) runStudioHermesImportConnect({ fromCard: true });
+      else runStudioHermesImportConnect({ fromCard: false });
+    }
+
     let studioModalMinimaxUrl = STUDIO_MINIMAX_BASE_CN;
     let studioModalBound = false;
 
     let studioOpenClawImportPending = null;
     let studioOpenClawImportRunning = false;
     let studioOpenClawStatusRefreshGen = 0;
+    let studioHermesImportPending = null;
+    let studioHermesImportRunning = false;
+    let studioHermesStatusRefreshGen = 0;
 
     function getStudioOpenClawEffectiveToken() {
       const saved = getStudioApiKeyForProvider("openclaw");
@@ -3924,31 +4072,23 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       if (!el) return;
       const key = getStudioOpenClawEffectiveToken();
       const st = state.studioOpenClawStatus || {};
+      const hasCard = getStudioLlmCardProviders().includes("openclaw");
       let cls = "";
-      let text = "未配置 · 点一键连接从本机读取";
+      let text = "未配置";
       if (key) {
-        const saved = !!getStudioApiKeyForProvider("openclaw");
-        const src = st.source ? st.source.replace(/^.*[\\/]/, "") : "";
         if (st.gatewayOk === true) {
           cls = "ok";
-          text = saved
-            ? "已连接 · Gateway 正常" + (src ? "（" + src + "）" : "")
-            : "本机 Token 可用 · Gateway 正常 · 点一键连接保存";
+          text = hasCard ? "已连接" : "可一键保存";
         } else if (st.gatewayOk === false) {
-          const portHint = st.port ? String(st.port) : "18789";
-          const gwErr = String(st.gatewayError || "").trim();
-          const errHint = gwErr ? " · " + gwErr.substring(0, 80) : "";
-          text = saved
-            ? "Token 已保存 · Gateway 未响应（端口 " + portHint + "，请执行 openclaw gateway restart）" + errHint
-            : "本机已读到 Token · Gateway 未响应（端口 " + portHint + "）· 点一键连接保存" + errHint;
+          text = "网关未响应";
         } else {
           cls = "ok";
-          text = "已读取 Token · 正在检测 Gateway…";
+          text = "检测中…";
         }
       } else if (st.probeError) {
-        text = st.probeError;
+        text = "未读到 Token";
       }
-      el.className = "studio-openclaw-quick-status" + (cls ? " " + cls : "");
+      el.className = "studio-openclaw-quick-status studio-local-quick-status" + (cls ? " " + cls : "");
       el.textContent = text;
     }
 
@@ -4016,31 +4156,262 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       }
     }
 
+    function getStudioHermesEffectiveToken() {
+      const saved = getStudioApiKeyForProvider("hermes");
+      if (saved) return saved;
+      const st = state.studioHermesStatus || {};
+      return normalizeStudioApiKey(st.token || "");
+    }
+
+    function updateStudioHermesQuickStatusDom() {
+      const el = document.getElementById("studioHermesQuickStatus");
+      if (!el) return;
+      const key = getStudioHermesEffectiveToken();
+      const st = state.studioHermesStatus || {};
+      const hasCard = getStudioLlmCardProviders().includes("hermes");
+      let cls = "";
+      let text = "未配置";
+      if (key) {
+        if (st.gatewayOk === true) {
+          cls = "ok";
+          text = hasCard ? "已连接" : "可一键保存";
+        } else if (st.gatewayOk === false) {
+          cls = "ok";
+          text = hasCard ? "Key 就绪 · API 未启" : "可一键保存";
+        } else {
+          cls = "ok";
+          text = "检测中…";
+        }
+      } else if (st.probeError) {
+        text = "缺 API_SERVER_KEY";
+      }
+      el.className = "studio-hermes-quick-status studio-local-quick-status" + (cls ? " " + cls : "");
+      el.textContent = text;
+    }
+
+    function requestStudioHermesStatusRefresh(force) {
+      return new Promise((resolve, reject) => {
+        const reqId = "hm_stat_" + Date.now();
+        const timer = setTimeout(() => {
+          if (studioHermesImportPending && studioHermesImportPending.reqId === reqId) {
+            studioHermesImportPending = null;
+            reject(new Error("Hermes 状态检测超时"));
+          }
+        }, 20000);
+        studioHermesImportPending = {
+          reqId,
+          resolve: (d) => {
+            clearTimeout(timer);
+            studioHermesImportPending = null;
+            resolve(d || {});
+          },
+          reject: (e) => {
+            clearTimeout(timer);
+            studioHermesImportPending = null;
+            reject(e);
+          }
+        };
+        post({ type: "refreshHermesStudioStatus", force: !!force, ensureEnv: true, reqId });
+      });
+    }
+
+    function applyStudioHermesStatusPayload(msg) {
+      const token = normalizeStudioApiKey(msg.token || "");
+      state.studioHermesStatus = {
+        token: String(msg.token || "").trim(),
+        source: String(msg.source || "").trim(),
+        host: String(msg.host || "127.0.0.1").trim(),
+        port: Number(msg.port) || 8642,
+        apiEnabled: !!msg.apiEnabled,
+        gatewayOk: msg.gatewayOk === true ? true : msg.gatewayOk === false ? false : null,
+        gatewayError: String(msg.gatewayError || "").trim(),
+        probeError: ""
+      };
+      if (!token) {
+        const dbg = String(msg.debug || msg.gatewayError || "").trim();
+        state.studioHermesStatus.probeError = dbg
+          ? "未读到 API_SERVER_KEY（" + dbg + "）"
+          : "未读到 API_SERVER_KEY。Windows 桌面版通常在 %LOCALAPPDATA%\\hermes\\.env；点「一键连接」可自动写入。";
+        if (state.activeTab === "customize") setStatus(state.studioHermesStatus.probeError, "err");
+      } else if (state.activeTab === "customize") {
+        if (msg.gatewayOk === true)
+          setStatus("Hermes API Server 已连通（" + (msg.source || "").replace(/^.*[\\/]/, "") + "）", "ok");
+        else
+          setStatus(
+            "已读到 API_SERVER_KEY；127.0.0.1:8642 未监听。可先点「一键连接 Hermes」保存 Key，完全退出并重启 Hermes 桌面应用后 API Server 即可用。",
+            "ok"
+          );
+      }
+      updateStudioHermesQuickStatusDom();
+      return token;
+    }
+
+    async function refreshStudioHermesStatusAsync() {
+      const gen = ++studioHermesStatusRefreshGen;
+      try {
+        const stat = await requestStudioHermesStatusRefresh(false);
+        if (gen !== studioHermesStatusRefreshGen) return;
+        applyStudioHermesStatusPayload(stat);
+      } catch (e) {
+        if (gen !== studioHermesStatusRefreshGen) return;
+        state.studioHermesStatus = state.studioHermesStatus || {};
+        state.studioHermesStatus.probeError = e?.message || "检测失败";
+        updateStudioHermesQuickStatusDom();
+      }
+    }
+
+    async function runStudioHermesImportConnect(opts) {
+      opts = opts || {};
+      if (studioHermesImportRunning) return;
+      const btn =
+        opts.fromCard
+          ? document.querySelector('.studio-hermes-import-card[data-prov="hermes"]')
+          : document.getElementById("studioModalHermesImport");
+      studioHermesImportRunning = true;
+      if (btn) btn.disabled = true;
+      const pid = "hermes";
+      try {
+        if (!opts.fromCard) {
+          const provEl = document.getElementById("studioModalProvider");
+          if (provEl && normalizeStudioLlmProvider(provEl.value) !== pid) provEl.value = pid;
+          updateStudioModalMinimaxRow(pid);
+        } else {
+          stashAllStudioCardsFromDom();
+        }
+        setStatus("正在从本机 Hermes 读取 API_SERVER_KEY 并检测 API Server…", "ok");
+        const stat = await requestStudioHermesStatusRefresh(true);
+        const token = normalizeStudioApiKey(stat.token || "");
+        const source = String(stat.source || "").trim();
+        if (!token) {
+          throw new Error(
+            "未找到 API_SERVER_KEY。请完全退出并重启牛马主程序后重试；或检查 %LOCALAPPDATA%\\hermes\\.env 是否含 API_SERVER_KEY=…，并重启 Hermes 桌面应用。"
+          );
+        }
+        const pre = studioLlmPreset(pid);
+        const baseUrl =
+          "http://" + (stat.host || "127.0.0.1") + ":" + (Number(stat.port) || 8642) + "/v1";
+        stashStudioApiKeyForProvider(pid, token);
+        stashStudioBaseUrlForProvider(pid, baseUrl, false);
+        stashStudioModelForProvider(pid, pre.model || "hermes-agent");
+        if (!opts.fromCard) {
+          const keyEl = document.getElementById("studioModalApiKey");
+          if (keyEl) {
+            keyEl.value = token;
+            keyEl.type = "text";
+          }
+        } else {
+          const card = document.querySelector('.studio-llm-card[data-prov="hermes"]');
+          const keyInp = card?.querySelector(".us-card-key");
+          if (keyInp) {
+            keyInp.value = token;
+            keyInp.type = "text";
+          }
+        }
+        const srcHint = source ? source.replace(/^.*[\\/]/, "") : "~/.hermes/.env";
+        state.studioHermesStatus = state.studioHermesStatus || {};
+        state.studioHermesStatus.token = token;
+        state.studioHermesStatus.source = source;
+        state.studioHermesStatus.host = stat.host || "127.0.0.1";
+        state.studioHermesStatus.port = Number(stat.port) || 8642;
+        const gwOk = stat.gatewayOk === true;
+        state.studioHermesStatus.gatewayOk = gwOk;
+        state.studioHermesStatus.gatewayError = gwOk ? "" : String(stat.gatewayError || "");
+        updateStudioHermesQuickStatusDom();
+        setStatus(
+          gwOk
+            ? "已导入 API_SERVER_KEY（" + srcHint + "），API Server 正常。"
+            : "已导入并保存 Key（" + srcHint + "）；请完全退出并重启 Hermes 桌面应用以启动 8642 API Server。",
+          "ok"
+        );
+        const finishSave = function (gatewayOk) {
+          if (opts.fromCard) {
+            const list = [...getStudioLlmCardProviders()];
+            if (!list.includes(pid)) list.push(pid);
+            setStudioLlmCardProviders(list);
+            mergeUserStudioState({
+              llm: {
+                provider: pid,
+                apiKey: token,
+                baseUrl: baseUrl,
+                model: pre.model
+              },
+              options: {
+                llmCardProviders: list,
+                llmApiKeys: { ...getStudioLlmApiKeys(), hermes: token },
+                llmBaseUrls: { ...getStudioLlmBaseUrls(), hermes: baseUrl }
+              }
+            });
+            render();
+            persistStudioCardsNow(false);
+            if (gatewayOk) setStatus("Hermes 一键连接成功，API Server 正常。", "ok");
+            else
+              setStatus(
+                "Key 已保存。请完全退出并重启 Hermes 桌面应用以启动 API Server（" +
+                  (stat.host || "127.0.0.1") +
+                  ":" +
+                  (Number(stat.port) || 8642) +
+                  "）。",
+                "ok"
+              );
+          } else {
+            const defEl = document.getElementById("studioModalSetDefault");
+            if (defEl && getStudioLlmCardProviders().length === 0) defEl.checked = true;
+            confirmStudioLlmAddModal();
+            setStatus(
+              gatewayOk
+                ? "Hermes 已导入、检测通过并已保存。"
+                : "Key 已保存。请完全退出并重启 Hermes 桌面应用后再检测 API Server。",
+              "ok"
+            );
+          }
+        };
+        finishSave(gwOk);
+      } catch (e) {
+        setStatus(e?.message || String(e || "连接失败"), "err");
+      } finally {
+        studioHermesImportRunning = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
     function updateStudioModalMinimaxRow(pid) {
       const row = document.getElementById("studioModalMinimaxRow");
       const ocRow = document.getElementById("studioModalOpenClawRow");
       const ocOr = document.getElementById("studioModalOpenClawOrManual");
+      const hmRow = document.getElementById("studioModalHermesRow");
+      const hmOr = document.getElementById("studioModalHermesOrManual");
       const modelRow = document.getElementById("studioModalModelRow");
       const keyLabel = document.getElementById("studioModalApiKeyLabel");
       const hint = document.getElementById("studioModalHint");
       pid = normalizeStudioLlmProvider(pid);
       const pre = studioLlmPreset(pid);
       const isOc = pid === "openclaw";
+      const isHm = pid === "hermes";
       if (row) row.style.display = pid === "minimax" ? "" : "none";
       if (ocRow) ocRow.style.display = isOc ? "" : "none";
       if (ocOr) ocOr.style.display = isOc ? "" : "none";
+      if (hmRow) hmRow.style.display = isHm ? "" : "none";
+      if (hmOr) hmOr.style.display = isHm ? "" : "none";
       if (modelRow) modelRow.style.display = isOc ? "none" : "";
       if (hint) {
         hint.textContent = isOc
           ? "已安装 OpenClaw 时优先点上方橙色按钮；Gateway 需在本机运行（默认端口 18789）。"
-          : pre.hint || "";
+          : isHm
+            ? "已安装 Hermes 时优先点上方按钮；需在 ~/.hermes/.env 配置 API Server 并 hermes gateway（默认 8642）。"
+            : pre.hint || "";
       }
       const keyEl = document.getElementById("studioModalApiKey");
       if (keyEl) {
         keyEl.placeholder = pre.keyPh || "API Key";
-        keyEl.type = isOc ? "text" : "password";
+        keyEl.type = isOc || isHm ? "text" : "password";
       }
-      if (keyLabel) keyLabel.textContent = isOc ? "Gateway Token（可选，一键连接会自动填入）" : "API Key";
+      if (keyLabel) {
+        keyLabel.textContent = isOc
+          ? "Gateway Token（可选，一键连接会自动填入）"
+          : isHm
+            ? "API Server Key（可选，一键连接会自动填入）"
+            : "API Key";
+      }
       if (pid === "minimax") studioModalMinimaxUrl = STUDIO_MINIMAX_BASE_CN;
     }
 
@@ -4241,6 +4612,7 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       });
       document.getElementById("studioModalConfirm")?.addEventListener("click", () => confirmStudioLlmAddModal());
       document.getElementById("studioModalOpenClawImport")?.addEventListener("click", () => runStudioOpenClawImportConnect({ fromCard: false }));
+      document.getElementById("studioModalHermesImport")?.addEventListener("click", () => runStudioHermesImportConnect({ fromCard: false }));
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && modal?.classList.contains("open")) close();
       });
@@ -4283,6 +4655,11 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       if (pid === "openclaw") {
         try {
           post({ type: "openclaw_probe_token" });
+        } catch (_) {}
+      }
+      if (pid === "hermes") {
+        try {
+          post({ type: "hermes_probe_token" });
         } catch (_) {}
       }
       keyEl?.focus();
@@ -4422,8 +4799,8 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       });
       ensureStudioLlmDelegatedEvents();
       document.getElementById("btnAddStudioLlmCard")?.addEventListener("click", () => openStudioLlmAddModal());
-      document.getElementById("btnStudioOpenClawQuick")?.addEventListener("click", () => studioConnectOpenClawFromSettings());
       document.getElementById("btnStudioOpenClawQuickInner")?.addEventListener("click", () => studioConnectOpenClawFromSettings());
+      document.getElementById("btnStudioHermesQuickInner")?.addEventListener("click", () => studioConnectHermesFromSettings());
       cardsRoot.querySelectorAll(".studio-llm-remove").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const pid = normalizeStudioLlmProvider(btn.dataset.prov || "");
@@ -4441,6 +4818,9 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       });
       cardsRoot.querySelectorAll(".studio-openclaw-import-card").forEach((btn) => {
         btn.addEventListener("click", () => runStudioOpenClawImportConnect({ fromCard: true }));
+      });
+      cardsRoot.querySelectorAll(".studio-hermes-import-card").forEach((btn) => {
+        btn.addEventListener("click", () => runStudioHermesImportConnect({ fromCard: true }));
       });
       cardsRoot.querySelectorAll(".us-card-manual-link").forEach((link) => {
         link.addEventListener("click", (e) => {
@@ -5397,7 +5777,7 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
 <label class="hole-trigger-item"><input id="holeTriggerRButtonHold" type="checkbox" ${checked(!!d.holeTriggerRButtonHold)}>长按右键</label>
 </div>
 <div class="row hole-rbtn-row" id="holeRbtnRow"><div class="label">长按右键时长</div><select id="holeRButtonHoldMs">${optionsKV(HOLE_RBUTTON_HOLD_MS_OPTS, String(normalizeHoleRButtonHoldMs(d.holeRButtonHoldMs ?? 3000)))}</select></div>
-<div class="hint">画圈：无需按键，闭合一圈后短暂停住即可。长按右键：按住<strong>不动</strong>达到所选时长后唤起（到时会提前弹出，无需等松手）；移动超过约 20 像素则视为普通右键/拖拽。至少勾选一种唤起方式。</div>
+<div class="hint">画圈：按住<strong>右键</strong>拖动轨迹，识别成功（轨迹变绿）后<strong>松手</strong>唤起；未闭合或未识别时松手不会触发。长按右键：按住<strong>不动</strong>达到所选时长后唤起（到时会提前弹出，无需等松手）；移动超过约 20 像素则进入画圈模式。至少勾选一种唤起方式。</div>
 </div>`;
         bindAppearanceActivationMode();
         bindHoleSettingsUi();
@@ -5567,9 +5947,10 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
         panel.innerHTML = `
 <div class="card studio-api-card"><div class="title">大模型 API</div>
 <div class="studio-api-steps">
-  <strong>两种配置方式：</strong><br>
-  ① <strong>本机 OpenClaw</strong> — 点橙色「一键连接」，自动读 Token + 检测网关（无需 sk- 密钥）<br>
-  ② <strong>云端模型</strong> — 点「添加云模型 API」，填写各平台 API Key（DeepSeek、MiniMax 等）
+  <strong>三种配置方式：</strong><br>
+  ① <strong>本机 Hermes</strong> — 点蓝色「连接本机 Hermes」，自动读 <code>~/.hermes/.env</code> 的 API_SERVER_KEY + 检测 <code>8642</code><br>
+  ② <strong>本机 OpenClaw</strong> — 点橙色「连接本机 OpenClaw」，自动读 Gateway Token + 检测 <code>18789</code><br>
+  ③ <strong>云端模型</strong> — 点「添加云模型 API」，填写各平台 API Key（DeepSeek、MiniMax 等）
 </div>
 <div class="hint mini">已配置 ${configuredCount} 个密钥槽 · 当前默认：<strong>${esc(studioLlmPreset(activeProv).label)}</strong> · 修改后切换标签或关闭设置页会自动保存</div>
 ${buildStudioLlmCardsHtml(activeProv)}
@@ -5603,6 +5984,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
 </div>
 </details>`;
         bindStudioLlmCardsUi(activeProv);
+        refreshStudioHermesStatusAsync();
         refreshStudioOpenClawStatusAsync();
         if (!getStudioApiKeyForProvider("openclaw")) {
           state._studioSyncSilent = true;
@@ -6057,6 +6439,39 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (el) el.value = msg.path;
         return;
       }
+      if (msg.type === "hermes_studio_status" || msg.type === "hermes_host_token_probe") {
+        const payload = {
+          token: String(msg.token || "").trim(),
+          source: String(msg.source || "").trim(),
+          host: String(msg.host || "127.0.0.1").trim(),
+          port: Number(msg.port) || 8642,
+          apiEnabled: !!msg.apiEnabled,
+          gatewayOk: msg.gatewayOk,
+          gatewayError: String(msg.gatewayError || "").trim(),
+          debug: String(msg.debug || "").trim(),
+          force: !!msg.force
+        };
+        if (studioHermesImportPending) {
+          studioHermesImportPending.resolve(payload);
+          return;
+        }
+        applyStudioHermesStatusPayload(payload);
+        state.studioHermesStatus = state.studioHermesStatus || {};
+        state.studioHermesStatus.token = payload.token;
+        state.studioHermesStatus.source = payload.source;
+        updateStudioHermesQuickStatusDom();
+        const modalHm = document.getElementById("studioLlmAddModal");
+        const modalHmOpen = modalHm?.classList.contains("open");
+        if (modalHmOpen && payload.token && normalizeStudioLlmProvider(document.getElementById("studioModalProvider")?.value) === "hermes") {
+          const keyElHm = document.getElementById("studioModalApiKey");
+          if (keyElHm) {
+            keyElHm.value = payload.token;
+            keyElHm.type = "text";
+          }
+          setStatus("已从本机填入 API_SERVER_KEY，可点「一键连接」完成保存。", "ok");
+        }
+        return;
+      }
       if (msg.type === "openclaw_studio_status" || msg.type === "openclaw_host_token_probe") {
         const payload = {
           token: String(msg.token || "").trim(),
@@ -6195,11 +6610,13 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           if (!silent) setStatus("已从 Niuma Chat 同步 API", "ok");
           if (state.activeTab === "customize") {
             render();
+            refreshStudioHermesStatusAsync();
             refreshStudioOpenClawStatusAsync();
           }
         } else if (state._studioSyncManual) {
           setStatus(msg.error || "同步失败", "err");
         } else if (silent && state.activeTab === "customize") {
+          refreshStudioHermesStatusAsync();
           refreshStudioOpenClawStatusAsync();
         }
         state._studioSyncManual = false;
