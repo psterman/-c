@@ -1,0 +1,13 @@
+﻿start
+script_dir=C:\Users\Administrator\Desktop\牛马nmer\tools\dev
+env=C:\Users\Administrator\AppData\Local\hermes\.env
+key_len=22
+api_server_state=connected
+tcp_8642=yes
+health_ok=yes
+health_status=200
+health_err=
+models_ok=yes
+models_status=200
+models_err=
+verdict=Hermes API Server 正常。请完全退出并重启牛马后再在设置里点「测试连接」。

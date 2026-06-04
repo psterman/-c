@@ -2230,28 +2230,53 @@ FloatingToolbar_OnWebMessage(sender, args) {
     }
     if (typ = "niuma_request_studio_llm") {
         llm := FloatingToolbar_GetStudioLlm()
+        keys := FloatingToolbar_GetStudioApiKeys()
         ok := false
         err := ""
+        studioOnly := false
         try FloatingToolbar_PushStudioContextToChat()
         catch {
         }
+        if Trim(String(llm.Get("apiKey", ""))) = ""
+            FloatingToolbar_PickStudioLlmFromKeys(llm, keys)
         if Trim(String(llm.Get("apiKey", ""))) != "" {
             try FloatingToolbar_PushStudioLlmToChat(llm, "", false)
             ok := true
-        } else
-            err := "智能定制中未保存 API Key（请在设置中心「智能定制」填写并点「保存 API」）"
+            if (keys.Has("hermes") && Trim(String(keys["hermes"])) != "") {
+                if FuncExists("UserStudio_Get") {
+                    try {
+                        doc := UserStudio_Get()
+                        opt := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
+                        saved := opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map ? opt["llmApiKeys"].Get("hermes", "") : ""
+                        if (Trim(String(saved)) = "")
+                            studioOnly := true
+                    } catch {
+                    }
+                }
+            }
+        } else {
+            err := "未找到可用 API Key：请在设置中心「智能定制」点「确认保存」，或 Hermes 节点点「一键连接 Hermes」。"
+        }
         ctx := Map()
         if FuncExists("UserStudio_GetNiumaContext") {
             try ctx := UserStudio_GetNiumaContext()
             catch {
             }
         }
-        syncPayload := Map("type", "studio_llm_sync_result", "ok", ok, "error", err, "niumaContext", ctx, "llm", llm)
+        syncPayload := Map("type", "studio_llm_sync_result", "ok", ok, "error", err, "niumaContext", ctx, "llm", llm, "apiKeys", keys)
+        if (studioOnly)
+            syncPayload["hint"] := "Key 来自本机 Hermes，建议在设置中心测试后点「确认保存」写入智能定制。"
         if FuncExists("UserStudio_PayloadForWeb") {
             try {
                 pl := UserStudio_PayloadForWeb()
-                if (pl.Has("options") && pl["options"] is Map)
-                    syncPayload["options"] := pl["options"]
+                if (pl.Has("options") && pl["options"] is Map) {
+                    opt := pl["options"].Clone()
+                    if !opt.Has("llmApiKeys") || !(opt["llmApiKeys"] is Map)
+                        opt["llmApiKeys"] := Map()
+                    for k, v in keys
+                        opt["llmApiKeys"][k] := v
+                    syncPayload["options"] := opt
+                }
             } catch {
             }
         }
@@ -2445,6 +2470,10 @@ FloatingToolbar_OnWebMessage(sender, args) {
         force := msg.Has("force") && !!msg["force"]
         ensureEnv := msg.Has("ensureEnv") && !!msg["ensureEnv"]
         SetTimer(FloatingToolbar_DeferredProbeHermesApiServer.Bind(force, ensureEnv), -10)
+        return
+    }
+    if (typ = "niuma_hermes_restart_gateway") {
+        SetTimer(FloatingToolbar_DeferredRestartHermesGateway, -10)
         return
     }
     if (typ = "niuma_debug_event") {
@@ -3097,6 +3126,26 @@ FloatingToolbar_DeferredProbeHermesApiServer(force := false, ensureEnv := false)
     try FloatingToolbar_ProbeHermesApiServerKey(!!force, !!ensureEnv)
 }
 
+FloatingToolbar_DeferredRestartHermesGateway() {
+    global g_FTB_WV2
+    rr := Map("ok", false, "error", "UserStudio_RestartHermesGateway 不可用")
+    if FuncExists("UserStudio_RestartHermesGateway") {
+        try rr := UserStudio_RestartHermesGateway(45000)
+        catch as eR {
+            rr := Map("ok", false, "error", eR.Message)
+        }
+    }
+    try FloatingToolbar_ProbeHermesApiServerKey(true, false)
+    if !g_FTB_WV2
+        return
+    try WebView_QueuePayload(g_FTB_WV2, Map(
+        "type", "hermes_gateway_restart_result",
+        "ok", !!rr.Get("ok", false),
+        "error", String(rr.Get("error", "")),
+        "elapsedMs", Integer(rr.Get("elapsedMs", 0))
+    ))
+}
+
 /** 不依赖 FuncExists / UserStudio 是否已加载，直接读本机 hermes\.env */
 FloatingToolbar_ReadHermesEnvKeyDirect(&outSource := "", &outHost := "", &outPort := 8642) {
     outSource := ""
@@ -3297,6 +3346,36 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
     hasEnvKey := (token != "" && source != "" && source != "niuma_chat_llm.json")
     hasNiumaKey := (niumaKey != "")
 
+    installKind := "none"
+    installLabel := ""
+    apiServerState := ""
+    gatewayRunning := false
+    canRestartGateway := false
+    hermesDataDir := ""
+    probeAction := ""
+    if FuncExists("UserStudio_DiscoverHermesInstall") {
+        try {
+            disc := UserStudio_DiscoverHermesInstall()
+            if (disc is Map) {
+                installKind := String(disc.Get("installKind", "none"))
+                installLabel := String(disc.Get("installLabel", ""))
+                apiServerState := String(disc.Get("apiServerState", ""))
+                gatewayRunning := !!disc.Get("gatewayRunning", false)
+                canRestartGateway := !!disc.Get("canRestartGateway", false)
+                hermesDataDir := String(disc.Get("dataDir", ""))
+            }
+        } catch {
+        }
+    }
+    if (token != "" && !gwOk && FuncExists("UserStudio_ProbeHermesApiServer")) {
+        try {
+            rAct := UserStudio_ProbeHermesApiServer("http://" . host . ":" . port . "/v1", token, 2000)
+            if (rAct is Map)
+                probeAction := String(rAct.Get("action", ""))
+        } catch {
+        }
+    }
+
     try {
         logEvt := Map(
             "event", "hermes_probe",
@@ -3309,6 +3388,8 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
             "hasEnvKey", hasEnvKey,
             "hasNiumaKey", hasNiumaKey,
             "localAppData", localAppData,
+            "installKind", installKind,
+            "apiServerState", apiServerState,
             "debug", dbg
         )
         logLine := (%"FuncExists"%).Call("Jxon_Dump") ? Jxon_Dump(logEvt) : "hermes_probe"
@@ -3330,9 +3411,15 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
         "debug", dbg,
         "tried", tried,
         "localAppData", localAppData,
-        "primaryDir", primaryDir,
+        "primaryDir", primaryDir != "" ? primaryDir : hermesDataDir,
         "hasEnvKey", hasEnvKey,
         "hasNiumaKey", hasNiumaKey,
+        "installKind", installKind,
+        "installLabel", installLabel,
+        "apiServerState", apiServerState,
+        "gatewayRunning", gatewayRunning,
+        "canRestartGateway", canRestartGateway,
+        "probeAction", probeAction,
         "force", !!force
     ))
 }
@@ -3861,6 +3948,76 @@ FloatingToolbar_OpenNiumaChatTtydCustomize(startChat := false) {
     SetTimer(FloatingToolbar_DeferredOpenTtydCustomize, -900)
 }
 
+FloatingToolbar_EnrichStudioApiKeys(keys) {
+    if !(keys is Map)
+        keys := Map()
+    hk := Trim(String(keys.Get("hermes", "")))
+    if (hk = "") && FuncExists("UserStudio_ReadNiumaHermesKey") {
+        try hk := UserStudio_ReadNiumaHermesKey()
+        catch {
+        }
+    }
+    if (hk = "") && FuncExists("UserStudio_ProbeHermesGatewayToken") {
+        try {
+            info := UserStudio_ProbeHermesGatewayToken(false)
+            hk := Trim(String(info.Get("token", "")))
+        } catch {
+        }
+    }
+    if (hk != "")
+        keys["hermes"] := hk
+    return keys
+}
+
+FloatingToolbar_ApplyStudioKeyToLlm(llm, pk, vk) {
+    if !(llm is Map) || pk = "" || vk = ""
+        return
+    llm["provider"] := pk
+    llm["apiKey"] := vk
+    if FuncExists("UserStudio_LlmPresetFor") {
+        try {
+            pre := UserStudio_LlmPresetFor(pk)
+            if (Trim(String(llm.Get("baseUrl", ""))) = "")
+                llm["baseUrl"] := pre.Get("baseUrl", "")
+            if (Trim(String(llm.Get("model", ""))) = "")
+                llm["model"] := pre.Get("model", "")
+        } catch {
+        }
+    }
+}
+
+FloatingToolbar_PickStudioLlmFromKeys(llm, keys) {
+    if !(llm is Map) || !(keys is Map) || Trim(String(llm.Get("apiKey", ""))) != ""
+        return
+    prov := ""
+    if FuncExists("UserStudio_NormalizeLlmProvider")
+        prov := UserStudio_NormalizeLlmProvider(llm.Get("provider", ""))
+    if (prov != "" && keys.Has(prov)) {
+        vk := Trim(String(keys[prov]))
+        if (vk != "") {
+            FloatingToolbar_ApplyStudioKeyToLlm(llm, prov, vk)
+            return
+        }
+    }
+    for _, pref in ["hermes", "openclaw", "openai", "deepseek", "kimi"] {
+        if !keys.Has(pref)
+            continue
+        vk := Trim(String(keys[pref]))
+        if (vk = "")
+            continue
+        FloatingToolbar_ApplyStudioKeyToLlm(llm, pref, vk)
+        return
+    }
+    for k, v in keys {
+        vk := Trim(String(v))
+        if (vk = "")
+            continue
+        pk := FuncExists("UserStudio_NormalizeLlmProvider") ? UserStudio_NormalizeLlmProvider(k) : k
+        FloatingToolbar_ApplyStudioKeyToLlm(llm, pk, vk)
+        return
+    }
+}
+
 FloatingToolbar_GetStudioLlm() {
     llm := Map("provider", "openai", "apiKey", "", "baseUrl", "https://api.openai.com/v1", "model", "gpt-4o-mini")
     if FuncExists("UserStudio_Load")
@@ -3874,25 +4031,30 @@ FloatingToolbar_GetStudioLlm() {
                 llm := doc["llm"]
             if (Trim(String(llm.Get("apiKey", ""))) = "") {
                 opt := doc.Has("options") && doc["options"] is Map ? doc["options"] : Map()
+                prov := FuncExists("UserStudio_NormalizeLlmProvider") ? UserStudio_NormalizeLlmProvider(llm.Get("provider", "")) : ""
                 if (opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map) {
-                    for k, v in opt["llmApiKeys"] {
-                        vk := UserStudio_NormalizeApiKey(v)
-                        if (vk = "")
-                            continue
-                        llm["provider"] := UserStudio_NormalizeLlmProvider(k)
-                        llm["apiKey"] := vk
-                        pre := UserStudio_LlmPresetFor(llm["provider"])
-                        if (Trim(String(llm.Get("baseUrl", ""))) = "")
-                            llm["baseUrl"] := pre.Get("baseUrl", "")
-                        if (Trim(String(llm.Get("model", ""))) = "")
-                            llm["model"] := pre.Get("model", "")
-                        break
+                    if (prov != "" && opt["llmApiKeys"].Has(prov)) {
+                        vk := UserStudio_NormalizeApiKey(opt["llmApiKeys"][prov])
+                        if (vk != "")
+                            FloatingToolbar_ApplyStudioKeyToLlm(llm, prov, vk)
+                    }
+                    if (Trim(String(llm.Get("apiKey", ""))) = "") {
+                        keysPick := Map()
+                        for k, v in opt["llmApiKeys"] {
+                            pk := UserStudio_NormalizeLlmProvider(k)
+                            vk := UserStudio_NormalizeApiKey(v)
+                            if (vk != "")
+                                keysPick[pk] := vk
+                        }
+                        FloatingToolbar_PickStudioLlmFromKeys(llm, FloatingToolbar_EnrichStudioApiKeys(keysPick))
                     }
                 }
             }
         } catch {
         }
     }
+    if (Trim(String(llm.Get("apiKey", ""))) = "")
+        FloatingToolbar_PickStudioLlmFromKeys(llm, FloatingToolbar_GetStudioApiKeys())
     return llm
 }
 
@@ -3917,7 +4079,7 @@ FloatingToolbar_GetStudioApiKeys() {
         } catch {
         }
     }
-    return keys
+    return FloatingToolbar_EnrichStudioApiKeys(keys)
 }
 
 FloatingToolbar_PushStudioLlmOnReady(*) {

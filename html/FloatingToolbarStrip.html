@@ -424,6 +424,15 @@ textarea.ctl{min-height:calc(100px * var(--ui));resize:vertical}
 .api-setup-box{padding:calc(12px * var(--ui));border:1px solid rgba(255,102,0,.28);border-radius:calc(12px * var(--ui));background:rgba(255,102,0,.06);display:grid;gap:calc(10px * var(--ui))}
 .api-setup-title{font-size:calc(13px * var(--ui));font-weight:700;color:var(--text)}
 .api-setup-actions{display:flex;flex-wrap:wrap;gap:calc(8px * var(--ui));align-items:center}
+.api-setup-cat-h{font-size:calc(10px * var(--ui));font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-top:calc(2px * var(--ui))}
+.api-manual-toggle{align-self:flex-start;font-size:calc(11px * var(--ui));padding:calc(4px * var(--ui)) calc(8px * var(--ui))}
+.settings-tier{display:grid;gap:calc(10px * var(--ui))}
+.settings-advanced-toggle{margin-top:calc(4px * var(--ui))}
+.settings-advanced{display:grid;gap:calc(10px * var(--ui));padding-top:calc(8px * var(--ui));border-top:1px dashed rgba(255,102,0,.2)}
+.settings-advanced[hidden]{display:none!important}
+.settings-advanced-h{font-size:calc(11px * var(--ui));font-weight:700;color:var(--muted);margin:calc(4px * var(--ui)) 0 0}
+.dd-group-label{padding:calc(8px * var(--ui)) calc(12px * var(--ui)) calc(4px * var(--ui));font-size:calc(10px * var(--ui));font-weight:700;letter-spacing:.05em;color:var(--muted);pointer-events:none;user-select:none}
+#inlineApiManualBlock[hidden],#connNodeManualBlock[hidden]{display:none!important}
 #inlineApiSetup[hidden]{display:none!important}
 body[data-theme="light"] .api-setup-box{background:#FFF8F0;border-color:#E9B889}
 .prompt-tools{display:flex;flex-wrap:wrap;gap:calc(8px * var(--ui));align-items:center;margin-bottom:calc(8px * var(--ui))}
@@ -1030,30 +1039,38 @@ body.niuma-confirm-open{overflow:hidden}
 </header>
 <div class="sbody" id="connectionsFormBody">
 <div class="conn-node-fields">
-<div class="fld" id="nodeConfigLabelRow"><label for="nodeConfigCustomLabel">节点名称</label><input id="nodeConfigCustomLabel" class="ctl" type="text" autocomplete="off" placeholder="例如 Claude-3.5-Sonic" /></div>
+<div class="fld" id="nodeConfigLabelRow"><label for="nodeConfigCustomLabel">节点名称（可选）</label><input id="nodeConfigCustomLabel" class="ctl" type="text" autocomplete="off" placeholder="留空则用服务商名" /></div>
+<div class="fld" id="fldOpenClawImportRow" style="display:none"><label>本机 OpenClaw · 推荐</label><button type="button" class="btn3" id="openClawImportConnectBtn" style="width:100%">一键连接 OpenClaw</button><div class="hint mini" id="openClawImportHint">自动读 Gateway Token · 127.0.0.1:18789，无需手填 Key</div></div>
+<div class="fld" id="fldHermesImportRow" style="display:none"><label>本机 Hermes · 推荐</label><div class="hint mini" id="hermesInstallHint" style="margin-bottom:6px">自动读 Key、填地址与模型，无需手填下方参数</div><button type="button" class="btn3" id="hermesImportConnectBtn" style="width:100%">一键连接 Hermes</button><button type="button" class="btn2" id="hermesRestartGatewayBtn" style="width:100%;margin-top:6px;display:none">重启 Gateway</button></div>
+<button type="button" class="btn2 api-manual-toggle" id="connManualToggle" hidden>手动填写 Key / 地址 ▾</button>
+<div id="connNodeManualBlock" hidden>
 <div class="fld" id="nodeConfigKeyRow"><label for="nodeConfigApiKey" id="nodeConfigKeyLabel">API 密匙</label><div class="pwd-toggle-wrap"><input id="nodeConfigApiKey" class="ctl" type="password" autocomplete="off" placeholder="sk-…" /><button type="button" class="pwd-toggle-btn" id="nodeConfigKeyToggle" title="显示/隐藏密钥" aria-label="显示密钥">👁</button></div></div>
 <div class="fld" id="nodeConfigBaseUrlRow"><label for="nodeConfigBaseUrl">接口端点 (Base URL)</label><input id="nodeConfigBaseUrl" class="ctl" type="text" autocomplete="off" placeholder="留空则按服务商默认" /></div>
 <div class="fld" id="nodeConfigModelRow"><label for="nodeConfigModel">模型</label><input id="nodeConfigModel" class="ctl" type="text" autocomplete="off" placeholder="当前话题模型" /></div>
-<div class="fld" id="nodeConfigOpenClawRow"><label for="nodeConfigOpenClawKey">OpenClaw Gateway Key</label><input id="nodeConfigOpenClawKey" class="ctl" type="text" autocomplete="off" placeholder="agent:main:main" /></div>
-<div class="fld" id="fldOpenClawImportRow" style="display:none"><label>本机 OpenClaw Gateway</label><button type="button" class="btn3" id="openClawImportConnectBtn" style="width:100%">一键连接本机 OpenClaw</button><div class="hint mini" id="openClawImportHint">自动读取 Token 并检测 127.0.0.1:18789；无需手填 sk- 类密钥。</div></div>
-<div class="fld" id="fldHermesImportRow" style="display:none"><label>本机 Hermes API Server</label><button type="button" class="btn3" id="hermesImportConnectBtn" style="width:100%">一键连接本机 Hermes</button><div class="hint mini" id="hermesImportHint">自动读取 <code>API_SERVER_KEY</code> 并检测 <code>127.0.0.1:8642</code>（需 Hermes 桌面版已启动 Gateway）。</div></div>
+<div class="fld" id="nodeConfigOpenClawRow"><label for="nodeConfigOpenClawKey">OpenClaw Session Key</label><input id="nodeConfigOpenClawKey" class="ctl" type="text" autocomplete="off" placeholder="agent:main:main" /></div>
+</div>
 </div>
 <div id="settingsAiHint" class="hint" style="display:none;margin-bottom:10px;padding:10px 12px;border:1px solid rgba(255,102,0,.45);border-radius:10px;background:rgba(255,102,0,.1);line-height:1.5">
 <span id="settingsAiHintText">当前对话标签为「终端」模式，此处请切换到 MiniMax 等 AI 服务商填写 API Key。</span>
 </div>
-<div id="settingsQuick">
-<div class="settings-quick-note">云端 API：选服务商 → 粘贴 Key → 保存并连接。<strong>OpenClaw</strong>：选 OpenClaw 后点「一键导入并连接」，或见对话区上方橙色条。</div>
+<div id="settingsQuick" class="settings-tier">
+<div class="settings-quick-note" id="settingsQuickNote">选分类 → 粘贴 Key（云端）或点一键连接（本机 Agent）→ 保存。</div>
+<div id="settingsLocalHint" class="hint mini" hidden>本机 Agent：点上方「一键连接」即可，无需手填 Key 与地址。</div>
+<div id="settingsCloudBlock">
 <div class="row" id="fldModelPresetRow"><div class="fld fld-dd"><label for="providerDdBtn">服务商</label><div class="dd" id="providerDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="providerDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="providerDdMenu"><img id="providerDdIcon" class="dd-icon" alt="" /><span id="providerDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="providerDdMenu" role="listbox" hidden></div></div><select id="provider" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div><div class="fld fld-dd" id="fldModelDdCol"><label for="modelDdBtn">模型</label><div class="dd" id="modelDd"><div class="dd-wrap"><button type="button" class="dd-btn" id="modelDdBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="modelDdMenu"><img id="modelDdIcon" class="dd-icon" alt="" /><span id="modelDdLabel" class="dd-label"></span><span class="dd-chev" aria-hidden="true">▾</span></button><div class="dd-menu" id="modelDdMenu" role="listbox" hidden></div></div><select id="modelPreset" class="ctl vh-select" tabindex="-1" aria-hidden="true"></select></div></div></div>
-<div class="fld"><label for="apiKey" id="apiKeyLabel">API Key</label><div class="pwd-toggle-wrap"><input id="apiKey" class="ctl" type="password" autocomplete="off" placeholder="粘贴 API Key"><button type="button" class="pwd-toggle-btn" id="apiKeyToggle" title="显示/隐藏密钥" aria-label="显示密钥">👁</button></div><div class="hint mini" id="apiKeyKeyHint" style="display:none"></div></div>
-<div class="fld" id="fldModelRow"><label for="model">Model</label><input id="model" class="ctl" type="text" autocomplete="off" placeholder="与上方预设一致或手填"></div>
-<div id="settingsProviderStatus" class="hint mini" style="margin-bottom:8px"></div>
+<div class="fld" id="settingsApiKeyRow"><label for="apiKey" id="apiKeyLabel">API Key</label><div class="pwd-toggle-wrap"><input id="apiKey" class="ctl" type="password" autocomplete="off" placeholder="粘贴 API Key"><button type="button" class="pwd-toggle-btn" id="apiKeyToggle" title="显示/隐藏密钥" aria-label="显示密钥">👁</button></div><div class="hint mini" id="apiKeyKeyHint" style="display:none"></div></div>
+</div>
+<div id="settingsProviderStatus" class="hint mini" style="margin-bottom:4px"></div>
 </div>
 <button type="button" class="btn2 settings-advanced-toggle" id="settingsAdvancedToggle">高级选项 ▾</button>
 <div id="settingsAdvanced" class="settings-advanced" hidden>
+<div class="settings-advanced-h">手动连接参数</div>
+<div class="fld" id="fldModelRow"><label for="model">Model（手填覆盖）</label><input id="model" class="ctl" type="text" autocomplete="off" placeholder="留空则用上方预设"></div>
 <div class="fld" id="fldTtydShellRow" style="display:none"><label for="ttydShellCommand">终端启动命令（Shell）</label><input id="ttydShellCommand" class="ctl" type="text" spellcheck="false" autocomplete="off" placeholder="cmd.exe" /><div class="hint mini">传给本机 ttyd 的 Shell（如 <code>cmd.exe</code>、<code>powershell</code> 完整路径等）。点「完成」后写入配置并建议重启 ttyd。若被拦截请允许 <code>tools/ttyd/ttyd.exe</code> 或检查本机安全软件。</div></div>
 <div class="fld" id="fldMinimaxRegionRow" style="display:none"><label>MiniMax 节点（须与 Token Plan 密钥区域一致）</label><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn2" id="minimaxRegionCn">国内 · api.minimaxi.com</button><button type="button" class="btn2" id="minimaxRegionIntl">国际 · api.minimax.io</button></div><div class="hint mini">与 OpenClaw 一致请选<strong>国内</strong>；勿混用国际地址 + 国内密钥（会 invalid api key）。</div></div>
 <div class="fld" id="fldBaseUrlRow"><label for="baseUrl">Base URL</label><input id="baseUrl" class="ctl" type="text" autocomplete="off"></div>
 <div class="fld" id="fldOpenClawSessionRow" style="display:none"><label for="openclawSessionKey">Gateway Session Key</label><input id="openclawSessionKey" class="ctl" type="text" autocomplete="off" list="openclawSessionOptions" placeholder="agent:main:... / main"><datalist id="openclawSessionOptions"></datalist><div class="hint mini" id="openclawSessionHint">留空时该标签自动使用独立 `niuma-*` 会话；如需对齐 OpenClaw Control，请填写完整 session key。</div></div>
+<div class="settings-advanced-h">对话与提示词</div>
 <div class="fld" id="fldChatModeRow">
   <label for="freeChatMode">对话模式</label>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -1067,16 +1084,16 @@ body.niuma-confirm-open{overflow:hidden}
 <div class="fld"><label for="systemPrompt">System Prompt</label><div class="prompt-tools"><select id="promptBuiltin" class="ctl"></select><button type="button" class="btn3" id="promptTplApply">应用到上方</button><button type="button" class="btn3" id="promptImportBtn">从文件导入</button><input type="file" id="promptImportFile" accept=".txt,.md,.json,text/plain" style="display:none" /></div><textarea id="systemPrompt" class="ctl"></textarea></div>
 <div class="hint" id="providerHint"></div>
 <a href="#" id="linkManualBaseUrl" class="hint mini" style="display:none;cursor:pointer;color:#ff9a4d;text-decoration:underline;margin-top:2px">使用中转 / 私有网关？手动指定 Base URL</a>
-<div class="hint">各服务商 API Key 分槽保存；Base URL 默认自动，无需手填。记录很多时可在下方导出备份。</div>
-<div class="row" style="display:flex;gap:8px;align-items:center;justify-content:flex-start;">
-  <button class="btn2" id="chat-export-md" type="button" title="导出当前对话 Markdown">导出 Markdown</button>
-  <button class="btn2" id="chat-export-json" type="button" title="导出当前对话 JSON">导出 JSON</button>
-</div>
-<div class="node-config-actions" style="margin-top:8px">
+<div class="settings-advanced-h">节点与导出</div>
+<div class="node-config-actions" style="margin-top:4px">
 <button type="button" class="btn2" id="nodeConfigClear">清空会话记忆</button>
 <button type="button" class="btn2" id="nodeConfigRemove">从侧栏移除</button>
 </div>
-<div class="hint mini" id="nodeConfigHint">Ctrl+Enter 或点「保存并连接」完成配置；左侧 ⚙️ 随时打开此面板。</div>
+<div class="row" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+  <button class="btn2" id="chat-export-md" type="button" title="导出当前对话 Markdown">导出 Markdown</button>
+  <button class="btn2" id="chat-export-json" type="button" title="导出当前对话 JSON">导出 JSON</button>
+</div>
+<div class="hint mini" id="nodeConfigHint">Ctrl+Enter 或「保存并连接」完成配置。</div>
 </div>
 </div>
 <footer class="sf"><div class="st" id="config-status"></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn2" id="syncStudioLlm" type="button" title="从 local/user_studio.json 读取">从智能定制同步</button><button class="btn2" id="resetCfg" type="button">重置</button><button class="btn2" id="nodeConfigTest" type="button">测试 API</button><button class="btn2" id="testCfg" type="button" hidden aria-hidden="true">测试</button><button class="btn3" id="nodeConfigSave" type="button">保存并连接</button><button class="btn3" id="saveCfg" type="button" hidden aria-hidden="true">完成</button></div></footer>
@@ -1171,32 +1188,34 @@ body.niuma-confirm-open{overflow:hidden}
 <section id="cmp">
 <div id="inlineApiSetup" class="api-setup-box" hidden>
 <div class="api-setup-title">快速连接 AI</div>
-<div class="hint mini" style="margin-bottom:4px">云端模型：选服务商 → 粘贴 API Key → 保存。本机 Hermes / OpenClaw：点下方一键连接。</div>
-<div id="inlineHermesQuick" class="fld" style="display:none;margin-bottom:8px;padding:10px 12px;border:1px solid rgba(96,165,250,.4);border-radius:10px;background:rgba(96,165,250,.08)">
+<div class="api-setup-cat-h" id="inlineApiCatHint">云端 API · 粘贴 Key 即可</div>
+<div id="inlineHermesQuick" class="fld" style="display:none;margin-bottom:4px;padding:10px 12px;border:1px solid rgba(96,165,250,.4);border-radius:10px;background:rgba(96,165,250,.08)">
 <button type="button" class="btn3" id="inlineHermesImport" style="width:100%">一键连接本机 Hermes</button>
-<div class="hint mini" style="margin-top:6px">自动读取 <code>API_SERVER_KEY</code> 并检测 <code>127.0.0.1:8642</code>（需已启动 Hermes）</div>
 </div>
-<div id="inlineOpenClawQuick" class="fld" style="display:none;margin-bottom:8px;padding:10px 12px;border:1px solid rgba(255,102,0,.35);border-radius:10px;background:rgba(255,102,0,.08)">
+<div id="inlineOpenClawQuick" class="fld" style="display:none;margin-bottom:4px;padding:10px 12px;border:1px solid rgba(255,102,0,.35);border-radius:10px;background:rgba(255,102,0,.08)">
 <button type="button" class="btn3" id="inlineOpenClawImport" style="width:100%">一键连接本机 OpenClaw</button>
-<div class="hint mini" style="margin-top:6px">自动读取 Gateway Token 并检测 <code>127.0.0.1:18789</code>（需已启动 OpenClaw）</div>
 </div>
 <div class="fld"><label for="inlineLlmProvider">服务商</label><select id="inlineLlmProvider" class="ctl"></select></div>
+<button type="button" class="btn2 api-manual-toggle" id="inlineApiManualToggle" hidden>手动填写 Key ▾</button>
+<div id="inlineApiManualBlock">
 <div class="fld"><label for="inlineLlmApiKey" id="inlineLlmApiKeyLabel">API Key</label><input id="inlineLlmApiKey" class="ctl" type="password" autocomplete="off" placeholder="sk-…" /></div>
 <div class="row">
 <div class="fld" id="inlineBaseUrlAutoRow"><label>接口地址</label><span class="hint mini" id="inlineBaseUrlAutoText">按服务商自动配置</span></div>
 <div class="fld"><label for="inlineLlmModel">模型</label><input id="inlineLlmModel" class="ctl" type="text" autocomplete="off" /></div>
 </div>
+</div>
 <div class="api-setup-actions">
 <button type="button" class="btn2" id="inlineLlmTest">测试 API</button>
 <button type="button" class="btn3" id="inlineLlmSave">保存并开始对话</button>
-<button type="button" class="btn2" id="inlineLlmOpenFull">更多选项…</button>
+<button type="button" class="btn2" id="inlineLlmOpenFull">连接管理…</button>
 </div>
-<div class="hint mini">保存后即可对话；高级项（System Prompt 等）点左侧 ⚙️ 打开连接管理。</div>
+<div class="hint mini">保存后即可对话；System Prompt 等见 ⚙️ 连接管理 → 高级选项。</div>
 </div>
 <div id="hermesSetupBanner" class="setup-banner" hidden>
-<div class="setup-banner-title" id="hermesSetupTitle">连接本机 Hermes</div>
-<div id="hermesSetupBody" class="hint mini">已安装 Hermes 桌面版时，点下方按钮自动读取 <code>API_SERVER_KEY</code> 并检测 API Server（127.0.0.1:8642）。</div>
+<div class="setup-banner-title" id="hermesSetupTitle">连接本机 Hermes（Win10/11）</div>
+<div id="hermesSetupBody" class="hint mini">牛马启动后会扫描 Hermes 桌面版 / CLI。点「一键连接」读取 Key 并验证 8642；失败可点「重启 Gateway」或手动填写 API Server Key。</div>
 <button type="button" class="btn3" id="hermesSetupImportBtn" style="width:100%;margin-top:8px">一键连接 Hermes</button>
+<button type="button" class="btn2" id="hermesSetupRestartBtn" style="width:100%;margin-top:6px;display:none">重启 Hermes Gateway</button>
 </div>
 <div id="openclawSetupBanner" class="setup-banner" hidden>
 <div class="setup-banner-title" id="openclawSetupTitle">连接本机 OpenClaw</div>
@@ -1599,6 +1618,94 @@ body.niuma-confirm-open{overflow:hidden}
   var AI_SETUP_PROVIDERS = [
     'openai', 'minimax', 'gemini', 'deepseek', 'kimi', 'claude', 'qwen', 'glm', 'zhipu', 'siliconflow', 'ollama', 'hermes', 'openclaw'
   ];
+  var API_SETUP_CATEGORIES = [
+    { id: 'local', label: '本机 Agent', ids: ['hermes', 'openclaw', 'ollama'] },
+    {
+      id: 'cloud',
+      label: '云端 API',
+      ids: ['openai', 'kimi', 'qwen', 'deepseek', 'claude', 'gemini', 'glm', 'zhipu', 'siliconflow', 'minimax']
+    }
+  ];
+
+  function isAutoConnectProvider(pid) {
+    pid = normalizeProviderId(pid);
+    return pid === 'hermes' || pid === 'openclaw';
+  }
+
+  function getApiSetupProfile(pid) {
+    pid = normalizeProviderId(pid);
+    var p = P[pid] || P.openai;
+    var autoLocal = isAutoConnectProvider(pid);
+    var isCli = p.transport === 'cli';
+    var isOllama = pid === 'ollama';
+    return {
+      autoLocal: autoLocal,
+      isOllama: isOllama,
+      isCli: isCli,
+      hideQuickKey: autoLocal,
+      showOneClick: autoLocal,
+      hideQuickModel: autoLocal || isOllama,
+      hideAutoBaseLabel: autoLocal && !state.apiSetupManualOpen
+    };
+  }
+
+  function refreshApiSetupVisibility(pid) {
+    pid = normalizeProviderId(pid);
+    if (!(pid && P[pid])) pid = 'openai';
+    var prof = getApiSetupProfile(pid);
+    var manual = !!state.apiSetupManualOpen;
+    var showManual = !prof.hideQuickKey || manual;
+
+    if (inlineApiCatHint) {
+      inlineApiCatHint.textContent = prof.autoLocal
+        ? '本机 Agent · 推荐一键连接'
+        : prof.isOllama
+          ? 'Ollama · 通常无需 API Key'
+          : '云端 API · 粘贴 Key 即可';
+    }
+    if (inlineApiManualToggle) {
+      inlineApiManualToggle.hidden = !prof.autoLocal;
+      inlineApiManualToggle.textContent = manual ? '收起手动填写 ▴' : '手动填写 Key ▾';
+    }
+    if (inlineApiManualBlock) inlineApiManualBlock.hidden = prof.autoLocal && !manual;
+    if (inlineBaseUrlAutoRow) inlineBaseUrlAutoRow.hidden = prof.hideAutoBaseLabel && !manual;
+    var inlineKeyFld = inlineLlmApiKey && inlineLlmApiKey.closest('.fld');
+    if (inlineKeyFld) inlineKeyFld.hidden = (prof.autoLocal || prof.isOllama) && !manual;
+
+    if (connManualToggle) {
+      connManualToggle.hidden = !prof.autoLocal;
+      connManualToggle.textContent = manual ? '收起手动参数 ▴' : '手动填写 Key / 地址 ▾';
+    }
+    if (connNodeManualBlock) connNodeManualBlock.hidden = prof.autoLocal && !manual;
+
+    if (settingsLocalHint) settingsLocalHint.hidden = !prof.autoLocal;
+    if (settingsApiKeyRow)
+      settingsApiKeyRow.style.display = (prof.hideQuickKey || prof.isOllama) && !manual ? 'none' : '';
+    if (settingsQuickNote) {
+      settingsQuickNote.textContent = prof.autoLocal
+        ? '本机 Agent：点「一键连接」→ 保存并连接。'
+        : '云端：选服务商 → 粘贴 Key → 保存并连接。';
+    }
+
+    if (nodeConfigOpenClawRow) {
+      nodeConfigOpenClawRow.style.display = pid === 'openclaw' && manual ? '' : 'none';
+    }
+    if (nodeConfigKeyRow) nodeConfigKeyRow.style.display = prof.isCli ? 'none' : '';
+    if (nodeConfigModelRow) nodeConfigModelRow.style.display = prof.isCli ? 'none' : '';
+    if (nodeConfigBaseUrlRow) nodeConfigBaseUrlRow.style.display = prof.isCli ? 'none' : '';
+  }
+
+  function toggleApiSetupManual(force) {
+    state.apiSetupManualOpen = force != null ? !!force : !state.apiSetupManualOpen;
+    var pid = normalizeProviderId(
+      (inlineLlmProvider && inlineLlmProvider.value) || (provider && provider.value) || 'openai'
+    );
+    refreshApiSetupVisibility(pid);
+    if (state.settings) {
+      var ep = pickSettingsEditProvider();
+      updateProviderFormLayout(ep);
+    }
+  }
 
   var _tpl = $('ftb-toolbar-tpl');
   var _th = _tpl ? _tpl.innerHTML : '';
@@ -1929,6 +2036,9 @@ body.niuma-confirm-open{overflow:hidden}
     fldOpenClawImportRow = $('fldOpenClawImportRow'),
     fldHermesImportRow = $('fldHermesImportRow'),
     hermesImportConnectBtn = $('hermesImportConnectBtn'),
+    hermesRestartGatewayBtn = $('hermesRestartGatewayBtn'),
+    hermesInstallHint = $('hermesInstallHint'),
+    hermesSetupRestartBtn = $('hermesSetupRestartBtn'),
     openClawImportConnectBtn = $('openClawImportConnectBtn'),
     nodeConfigClose = null,
     nodeConfigTest = $('nodeConfigTest'),
@@ -2043,6 +2153,15 @@ body.niuma-confirm-open{overflow:hidden}
     ttydLlmModel = $('ttydLlmModel'),
     ttydLlmSave = $('ttydLlmSave'),
     inlineApiSetup = $('inlineApiSetup'),
+    inlineApiManualBlock = $('inlineApiManualBlock'),
+    inlineApiManualToggle = $('inlineApiManualToggle'),
+    inlineApiCatHint = $('inlineApiCatHint'),
+    connNodeManualBlock = $('connNodeManualBlock'),
+    connManualToggle = $('connManualToggle'),
+    settingsLocalHint = $('settingsLocalHint'),
+    settingsCloudBlock = $('settingsCloudBlock'),
+    settingsApiKeyRow = $('settingsApiKeyRow'),
+    settingsQuickNote = $('settingsQuickNote'),
     inlineLlmProvider = $('inlineLlmProvider'),
     inlineLlmApiKey = $('inlineLlmApiKey'),
     inlineLlmBaseUrl = $('inlineLlmBaseUrl'),
@@ -2149,6 +2268,7 @@ body.niuma-confirm-open{overflow:hidden}
     ollamaAutoStartTried: false,
     chatModelBarExpanded: false,
     settingsAdvancedOpen: false,
+    apiSetupManualOpen: false,
     agentLoop: {
       status: 'idle',
       currentTx: 0,
@@ -4488,7 +4608,7 @@ body.niuma-confirm-open{overflow:hidden}
     var isOpenClaw = pid === 'openclaw';
     var isHermes = pid === 'hermes';
     if (fldModelDdCol) fldModelDdCol.style.display = isCli ? 'none' : '';
-    if (fldModelRow) fldModelRow.style.display = isCli ? 'none' : '';
+    if (fldModelRow) fldModelRow.style.display = isCli ? 'none' : state.settingsAdvancedOpen ? '' : 'none';
     if (fldTtydShellRow) fldTtydShellRow.style.display = isTtyd ? '' : 'none';
     if (fldOpenClawSessionRow) fldOpenClawSessionRow.style.display = !isCli && isOpenClaw ? '' : 'none';
     if (fldOpenClawImportRow) fldOpenClawImportRow.style.display = !isCli && isOpenClaw ? '' : 'none';
@@ -4510,6 +4630,7 @@ body.niuma-confirm-open{overflow:hidden}
       if (apiWrap) apiWrap.style.display = isCli ? 'none' : '';
       refreshSettingsAiHint();
     }
+    refreshApiSetupVisibility(pid);
   }
 
   function migrateApiKeysFromStorage(d) {
@@ -4534,13 +4655,16 @@ body.niuma-confirm-open{overflow:hidden}
 
   function fillApiSetupSelect(sel) {
     if (!sel) return;
-    sel.innerHTML = AI_SETUP_PROVIDERS.filter(function (k) {
-      return P[k] && providerTransport(k) !== 'cli';
-    })
-      .map(function (k) {
-        return '<option value="' + k + '">' + esc(P[k].label) + '</option>';
-      })
-      .join('');
+    var html = '';
+    API_SETUP_CATEGORIES.forEach(function (cat) {
+      html += '<optgroup label="' + esc(cat.label) + '">';
+      cat.ids.forEach(function (k) {
+        if (!P[k] || providerTransport(k) === 'cli') return;
+        html += '<option value="' + k + '">' + esc(P[k].label) + '</option>';
+      });
+      html += '</optgroup>';
+    });
+    sel.innerHTML = html;
   }
 
   function resolveApiSetupProviderId(sel) {
@@ -4581,6 +4705,8 @@ body.niuma-confirm-open{overflow:hidden}
     if (modelEl && !modelEl.value.trim()) modelEl.value = p.model;
     refreshBaseUrlAutoLabel(pid, $('inlineBaseUrlAutoText'));
     refreshBaseUrlAutoLabel(pid, $('ttydBaseUrlAutoText'));
+    if (isAutoConnectProvider(pid) && state.apiSetupManualOpen) state.apiSetupManualOpen = false;
+    refreshApiSetupVisibility(pid);
   }
 
   function shouldShowOpenClawSetupBanner() {
@@ -4625,6 +4751,11 @@ body.niuma-confirm-open{overflow:hidden}
         runHermesImportConnect({ force: true });
         return false;
       }
+      if (pid === 'openclaw') {
+        apiTestStat('OpenClaw 缺少 Token，正在尝试一键连接…', '');
+        runOpenClawImportConnect({ force: true });
+        return false;
+      }
       sstat('请填写 API Key。', 'error');
       if (ttydCustomizeStatus) ttydCustomizeStatus.textContent = '请填写 API Key';
       return false;
@@ -4639,11 +4770,28 @@ body.niuma-confirm-open{overflow:hidden}
     refreshApiKeyField(pid);
     saveCfg(true);
     syncLlmToStudioHost();
+    if (pid === 'hermes' && key) {
+      markHermesClientVerified(true);
+      var nkSave = activeNodeKey();
+      if (nkSave) {
+        mergeNodeRuntime({
+          nodeKey: nkSave,
+          status: 'ready',
+          detail: state.hermesDiagnostic && state.hermesDiagnostic.gatewayOk === true ? '已连接' : 'Key 已保存',
+          updatedAt: Date.now()
+        });
+      }
+    }
     refreshInlineApiSetupVisibility();
     refreshTtydApiStatus();
     if (opts.startChat) {
       setTtydCustomize(false);
       applyStudioLlmFromPayload(buildLlmSyncPayload(), '', false);
+      refreshInlineApiSetupVisibility();
+      renderAgentStrip();
+      try {
+        if (input) input.focus();
+      } catch (_) {}
       cstat('API 已保存，可直接提问。', 'success');
     }
     if (ttydCustomizeStatus) ttydCustomizeStatus.textContent = 'API 已保存';
@@ -6813,6 +6961,8 @@ body.niuma-confirm-open{overflow:hidden}
     if (settingsAdvanced) settingsAdvanced.hidden = !state.settingsAdvancedOpen;
     if (settingsAdvancedToggle)
       settingsAdvancedToggle.textContent = state.settingsAdvancedOpen ? '收起高级选项 ▴' : '高级选项 ▾';
+    var ep = pickSettingsEditProvider();
+    if (fldModelRow && P[ep]) fldModelRow.style.display = providerTransport(ep) === 'cli' ? 'none' : state.settingsAdvancedOpen ? '' : 'none';
   }
 
   function closeThreadPopover() {
@@ -7155,7 +7305,6 @@ body.niuma-confirm-open{overflow:hidden}
     var p = P[pid] || P.openai;
     if (nodeConfigTitle) nodeConfigTitle.textContent = nodeLabel(nodeKey);
     if (nodeConfigSub) nodeConfigSub.textContent = isCliSession(ref) ? '本机 ttyd 终端 · 无需 API Key' : (p.label || pid) + ' · 节点配置';
-    if (nodeConfigKeyRow) nodeConfigKeyRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
     if (nodeConfigApiKey) {
       nodeConfigApiKey.type = pid === 'openclaw' || pid === 'hermes' ? 'text' : 'password';
       nodeConfigApiKey.value = apiKey ? apiKey.value : '';
@@ -7169,16 +7318,15 @@ body.niuma-confirm-open{overflow:hidden}
         (ref.baseUrl || '').trim() ||
         (shouldShowManualBaseUrl(pid) ? (P[pid] || {}).baseUrl || '' : effectiveBaseUrl(pid, ref.baseUrl, ''));
     }
-    if (nodeConfigOpenClawRow) nodeConfigOpenClawRow.style.display = pid === 'openclaw' ? '' : 'none';
     if (fldOpenClawImportRow) fldOpenClawImportRow.style.display = pid === 'openclaw' ? '' : 'none';
     if (fldHermesImportRow) fldHermesImportRow.style.display = pid === 'hermes' ? '' : 'none';
     if (pid === 'hermes' && !trimApiKey(nodeConfigApiKey ? nodeConfigApiKey.value : '')) {
       requestHermesHostTokenProbe(false).catch(function () {});
     }
     if (nodeConfigOpenClawKey) nodeConfigOpenClawKey.value = pid === 'openclaw' ? getOpenClawSessionKey(ref) : '';
-    if (nodeConfigModelRow) nodeConfigModelRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
-    if (nodeConfigBaseUrlRow) nodeConfigBaseUrlRow.style.display = providerTransport(pid) === 'cli' ? 'none' : '';
     renderConnectionsNavList();
+    state.apiSetupManualOpen = false;
+    refreshApiSetupVisibility(pid);
   }
 
   function syncConnectionsProviderForm() {
@@ -8031,11 +8179,13 @@ body.niuma-confirm-open{overflow:hidden}
     }
     var savedKey = state.connectionsPickNodeKey || nodeKey || activeNodeKey();
     var savedPid = providerIdFromNodeKey(savedKey);
-    var hmReady = !(savedPid === 'hermes' && state.hermesDiagnostic && state.hermesDiagnostic.gatewayOk !== true);
+    var hasHmKey = savedPid === 'hermes' && !!getApiKeyForProvider('hermes');
+    var hmGwLive = !state.hermesDiagnostic || state.hermesDiagnostic.gatewayOk === true;
+    var hmReady = savedPid !== 'hermes' || hasHmKey;
     mergeNodeRuntime({
       nodeKey: savedKey,
       status: hmReady ? 'ready' : 'needSetup',
-      detail: hmReady ? '已连接' : '8642 未响应',
+      detail: savedPid === 'hermes' ? (hmGwLive ? '已连接' : 'Key 已保存') : '已连接',
       updatedAt: Date.now()
     });
     requestAnimationFrame(function () {
@@ -8054,13 +8204,20 @@ body.niuma-confirm-open{overflow:hidden}
         }
       });
     });
-    if (savedPid === 'hermes' && !hmReady) {
+    if (savedPid === 'hermes' && hasHmKey && !hmGwLive) {
+      appendAudit({
+        nodeKey: savedKey,
+        level: 'warn',
+        message: 'Hermes Key 已保存；若发消息失败请重启 Gateway 或点「重启 Hermes Gateway」'
+      });
+      cstat('Hermes Key 已保存。若无法发消息，请重启 Hermes Gateway。', 'success');
+    } else if (savedPid === 'hermes' && !hasHmKey) {
       appendAudit({
         nodeKey: savedKey,
         level: 'error',
-        message: 'Hermes Key 已保存；API Server（8642）未启动，请重启 Hermes 后再对话'
+        message: 'Hermes 缺少 API Server Key'
       });
-      cstat('Hermes Key 已保存。请完全退出并重启 Hermes 桌面版，待 8642 监听后再发消息。', 'error');
+      cstat('请填写 API Server Key 或点「一键连接 Hermes」。', 'error');
     } else {
       appendAudit({ nodeKey: savedKey, level: 'success', message: '已保存并连接' });
     }
@@ -9195,7 +9352,10 @@ body.niuma-confirm-open{overflow:hidden}
     if (!providerDdMenu) return;
     providerDdMenu.innerHTML = '';
     var keys = state.settings ? providerKeysForSettingsUi() : Object.keys(P);
-    keys.forEach(function (k) {
+    var seen = {};
+    function appendItem(k) {
+      if (!P[k] || seen[k]) return;
+      seen[k] = 1;
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'dd-item';
@@ -9216,6 +9376,29 @@ body.niuma-confirm-open{overflow:hidden}
         closeProviderDd();
       });
       providerDdMenu.appendChild(b);
+    }
+    API_SETUP_CATEGORIES.forEach(function (cat) {
+      var any = false;
+      cat.ids.forEach(function (k) {
+        if (keys.indexOf(k) >= 0 || (!state.settings && P[k])) any = true;
+      });
+      if (!any) return;
+      var lab = document.createElement('div');
+      lab.className = 'dd-group-label';
+      lab.textContent = cat.label;
+      providerDdMenu.appendChild(lab);
+      cat.ids.forEach(function (k) {
+        if (state.settings) {
+          if (keys.indexOf(k) >= 0) appendItem(k);
+        } else if (P[k]) appendItem(k);
+      });
+    });
+    keys.forEach(function (k) {
+      var inCat = false;
+      API_SETUP_CATEGORIES.forEach(function (cat) {
+        if (cat.ids.indexOf(k) >= 0) inCat = true;
+      });
+      if (!inCat) appendItem(k);
     });
   }
 
@@ -9743,6 +9926,7 @@ body.niuma-confirm-open{overflow:hidden}
     var tok = trimApiKey(d.token) || trimApiKey(d.niumaToken);
     var diag = {
       at: Date.now(),
+      token: tok,
       hasToken: !!tok,
       source: String(d.source || '').trim(),
       host: String(d.host || '127.0.0.1').trim() || '127.0.0.1',
@@ -9754,16 +9938,86 @@ body.niuma-confirm-open{overflow:hidden}
       localAppData: String(d.localAppData || '').trim(),
       primaryDir: String(d.primaryDir || '').trim(),
       hasEnvKey: !!d.hasEnvKey,
-      hasNiumaKey: !!d.hasNiumaKey
+      hasNiumaKey: !!d.hasNiumaKey,
+      installKind: String(d.installKind || 'none'),
+      installLabel: String(d.installLabel || '').trim(),
+      apiServerState: String(d.apiServerState || '').trim(),
+      gatewayRunning: !!d.gatewayRunning,
+      canRestartGateway: !!d.canRestartGateway,
+      probeAction: String(d.probeAction || '').trim()
     };
     state.hermesDiagnostic = diag;
     logHermesDiag('probe', diag);
+    refreshHermesDiscoveryUi(diag);
     return diag;
+  }
+
+  function refreshHermesDiscoveryUi(diag) {
+    diag = diag || state.hermesDiagnostic || {};
+    var showRestart = !!diag.canRestartGateway && diag.gatewayOk !== true;
+    if (hermesRestartGatewayBtn) hermesRestartGatewayBtn.style.display = showRestart ? '' : 'none';
+    if (hermesSetupRestartBtn) hermesSetupRestartBtn.style.display = showRestart ? '' : 'none';
+  var label = diag.installLabel || (diag.installKind === 'none' ? '未检测到 Hermes' : diag.installKind);
+    var line = '本机：' + label;
+    if (diag.apiServerState) line += ' · api_server=' + diag.apiServerState;
+    else if (diag.gatewayOk) line += ' · API Server 可用';
+    else if (diag.hasToken) line += ' · Key 已读取，等待 Gateway';
+    if (hermesInstallHint) hermesInstallHint.textContent = line;
+    if (hermesSetupBody && diag.installKind === 'none' && !diag.hasToken) {
+      hermesSetupBody.textContent =
+        '未检测到 Hermes。请安装桌面版（Win10/11）或手动填写 API Server Key 与 http://127.0.0.1:8642/v1。';
+    }
+  }
+
+  function runHermesRestartGateway() {
+    apiTestStat('正在重启 Hermes Gateway…', '');
+    post({ type: 'niuma_hermes_restart_gateway' });
+  }
+
+  function maybeAutoConnectHermesFromProbe(probe, opts) {
+    opts = opts || {};
+    probe = absorbHermesProbePayload(probe) || probe;
+    if (!probe || !probe.hasToken) return probe;
+    var saved = getApiKeyForProvider('hermes');
+    if (!saved || opts.forceApply) {
+      applyHermesHostToken(probe.token, probe.source, 'http://' + probe.host + ':' + probe.port + '/v1');
+    }
+    if (probe.gatewayOk) {
+      updateNeedSetup();
+      refreshLocalAgentSetupBanners();
+    }
+    return probe;
+  }
+
+  function scheduleHermesStartupHandshake(pass) {
+    var ensureEnv = pass >= 2;
+    post({ type: 'niuma_hermes_probe_token', force: false, ensureEnv: ensureEnv });
+    requestHermesHostTokenProbe(false, ensureEnv)
+      .then(function (probe) {
+        var wantsHermes =
+          state.sessions.some(function (s) {
+            return normalizeProviderId(s.provider) === 'hermes';
+          }) || !hasAnyApiConfigured();
+        if (!wantsHermes) {
+          refreshHermesDiscoveryUi(probe);
+          return;
+        }
+        if (probe && probe.hasToken && (probe.gatewayOk || !getApiKeyForProvider('hermes'))) {
+          maybeAutoConnectHermesFromProbe(probe, { forceApply: !getApiKeyForProvider('hermes') });
+        }
+        if (pass < 2 && probe && probe.hasToken && !probe.gatewayOk) {
+          setTimeout(function () {
+            scheduleHermesStartupHandshake(pass + 1);
+          }, 2800);
+        }
+      })
+      .catch(function () {});
   }
 
   function formatHermesProbeFailure(probe, pingErr) {
     probe = probe || state.hermesDiagnostic || {};
     var lines = [];
+    if (probe.installLabel) lines.push('【环境】' + probe.installLabel + (probe.apiServerState ? ' · api_server=' + probe.apiServerState : ''));
     var tok = probe.hasToken;
     if (!tok) {
       lines.push('【密钥】未读取到 API_SERVER_KEY（Hermes 用 API Server Key，不是 OpenClaw Gateway Token）');
@@ -9792,10 +10046,26 @@ body.niuma-confirm-open{overflow:hidden}
       var gw = probe.gatewayError || '';
       if (pingErr && pingErr.message) gw = gw || pingErr.message;
       if (gw) lines.push('【网关】' + gw);
-      else if (tok) lines.push('【网关】8642 无响应：请完全退出并重启 Hermes 桌面应用（非仅刷新页面）');
+      else if (tok) {
+        lines.push('【网关】8642 无响应：桌面版已打开不等于 API Server 已启动。');
+        if (probe.canRestartGateway) lines.push('  可点「重启 Hermes Gateway」，或完全退出 Hermes 后重开。');
+        else lines.push('  请安装 Hermes 桌面版/CLI，或在下方手动填写 Key 与接口地址。');
+      }
     }
-    lines.push('（详情已写入调试日志，可在设置→调试日志中查看 hermes_probe 条目）');
+    lines.push('（详情已写入调试日志 hermes_probe）');
     return lines.join('\n');
+  }
+
+  function markHermesClientVerified(ok) {
+    if (!state.hermesDiagnostic) state.hermesDiagnostic = {};
+    if (ok !== false) {
+      state.hermesDiagnostic.gatewayOk = true;
+      state.hermesDiagnostic.gatewayError = '';
+      state.hermesDiagnostic.hasToken = true;
+    } else {
+      state.hermesDiagnostic.gatewayOk = false;
+    }
+    state.hermesDiagnostic.at = Date.now();
   }
 
   function hermesSendBlockedMessage(cfg) {
@@ -9871,7 +10141,7 @@ body.niuma-confirm-open{overflow:hidden}
     };
   }
 
-  function requestHermesHostTokenProbe(force) {
+  function requestHermesHostTokenProbe(force, ensureEnv) {
     return new Promise(function (resolve, reject) {
       var reqId = 'hm_probe_' + Date.now();
       var timer = setTimeout(function () {
@@ -9885,7 +10155,7 @@ body.niuma-confirm-open{overflow:hidden}
         resolve: function (d) {
           clearTimeout(timer);
           hermesImportPending = null;
-          resolve(d || {});
+          resolve(absorbHermesProbePayload(d) || d || {});
         },
         reject: function (e) {
           clearTimeout(timer);
@@ -9894,7 +10164,12 @@ body.niuma-confirm-open{overflow:hidden}
         }
       };
       try {
-        post({ type: 'niuma_hermes_probe_token', force: !!force, ensureEnv: true, reqId: reqId });
+        post({
+          type: 'niuma_hermes_probe_token',
+          force: !!force,
+          ensureEnv: ensureEnv === true,
+          reqId: reqId
+        });
       } catch (e) {
         clearTimeout(timer);
         hermesImportPending = null;
@@ -9910,8 +10185,7 @@ body.niuma-confirm-open{overflow:hidden}
     if (hermesImportConnectBtn) hermesImportConnectBtn.disabled = true;
     apiTestStat('正在从本机 Hermes 读取 API_SERVER_KEY…', '');
     try {
-      var probe = await requestHermesHostTokenProbe(!!opts.force);
-      absorbHermesProbePayload(probe);
+      var probe = await requestHermesHostTokenProbe(!!opts.force, opts.ensureEnv !== false);
       var token = trimApiKey(probe.token || probe.niumaToken || '');
       var source = String(probe.source || '').trim();
       if (!token) {
@@ -10313,6 +10587,7 @@ body.niuma-confirm-open{overflow:hidden}
           hasKey: !!k,
           baseUrl: url,
           model: m,
+          gatewayOk: !!(state.hermesDiagnostic && state.hermesDiagnostic.gatewayOk),
           reason: !k ? 'no_api_server_key' : !url ? 'no_base_url' : 'no_model'
         });
       }
@@ -10378,7 +10653,7 @@ body.niuma-confirm-open{overflow:hidden}
       var act = activeSession();
       var skipApiHint = act && isCliSession(act);
       if (act && normalizeProviderId(act.provider) === 'hermes' && state.needSetup) {
-        requestHermesHostTokenProbe(false).catch(function () {});
+        requestHermesHostTokenProbe(false, false).catch(function () {});
       }
       sstat(
         skipApiHint
@@ -10470,7 +10745,7 @@ body.niuma-confirm-open{overflow:hidden}
       order.push(pid);
     }
     pushPid(d.provider);
-    ['openai', 'deepseek', 'kimi', 'claude', 'qwen', 'gemini', 'glm', 'zhipu', 'ollama', 'minimax', 'siliconflow'].forEach(pushPid);
+    ['hermes', 'openclaw', 'openai', 'deepseek', 'kimi', 'claude', 'qwen', 'gemini', 'glm', 'zhipu', 'ollama', 'minimax', 'siliconflow'].forEach(pushPid);
     Object.keys(keys).forEach(pushPid);
     for (var i = 0; i < order.length; i++) {
       var pid = order[i];
@@ -10891,6 +11166,10 @@ body.niuma-confirm-open{overflow:hidden}
         cfg.baseUrl = effectiveBaseUrl('hermes', cfg.baseUrl, '');
         try {
           await reqOpenAI(cfg);
+          markHermesClientVerified(true);
+          updateNeedSetup();
+          refreshInlineApiSetupVisibility();
+          renderAgentStrip();
           apiTestStat('Hermes API Server 连接正常。', 'success');
         } catch (eHm) {
           throw new Error(formatHermesProbeFailure(probeHmTest, eHm));
@@ -19404,6 +19683,16 @@ body.niuma-confirm-open{overflow:hidden}
     });
   }
   if (inlineLlmOpenFull) inlineLlmOpenFull.addEventListener('click', function () { openConnectionsPanel(activeNodeKey()); });
+  if (inlineApiManualToggle) {
+    inlineApiManualToggle.addEventListener('click', function () {
+      toggleApiSetupManual();
+    });
+  }
+  if (connManualToggle) {
+    connManualToggle.addEventListener('click', function () {
+      toggleApiSetupManual();
+    });
+  }
   if (inlineLlmProvider) {
     inlineLlmProvider.addEventListener('change', function () {
       onApiSetupProviderChange(inlineLlmProvider, inlineLlmApiKey, inlineLlmBaseUrl, inlineLlmModel);
@@ -19726,6 +20015,16 @@ body.niuma-confirm-open{overflow:hidden}
   if (hermesImportConnectBtn) {
     hermesImportConnectBtn.addEventListener('click', function () {
       runHermesImportConnect({ force: true });
+    });
+  }
+  if (hermesRestartGatewayBtn) {
+    hermesRestartGatewayBtn.addEventListener('click', function () {
+      runHermesRestartGateway();
+    });
+  }
+  if (hermesSetupRestartBtn) {
+    hermesSetupRestartBtn.addEventListener('click', function () {
+      runHermesRestartGateway();
     });
   }
   if (hermesSetupImportBtn) {
@@ -21446,6 +21745,15 @@ body.niuma-confirm-open{overflow:hidden}
         }
         return;
       }
+      if (d.type === 'hermes_gateway_restart_result') {
+        if (d.ok) {
+          apiTestStat('Hermes Gateway 已重启，正在重新检测…', 'success');
+          runHermesImportConnect({ force: true });
+        } else {
+          apiTestStat('重启失败：' + String(d.error || 'unknown'), 'error');
+        }
+        return;
+      }
       if (d.type === 'hermes_host_token_probe') {
         var hmTok = String(d.token || d.niumaToken || '').trim();
         var hmHostMsg = String(d.host || '127.0.0.1').trim() || '127.0.0.1';
@@ -21464,6 +21772,12 @@ body.niuma-confirm-open{overflow:hidden}
           primaryDir: String(d.primaryDir || '').trim(),
           hasEnvKey: !!d.hasEnvKey,
           hasNiumaKey: !!d.hasNiumaKey,
+          installKind: String(d.installKind || 'none'),
+          installLabel: String(d.installLabel || '').trim(),
+          apiServerState: String(d.apiServerState || '').trim(),
+          gatewayRunning: !!d.gatewayRunning,
+          canRestartGateway: !!d.canRestartGateway,
+          probeAction: String(d.probeAction || '').trim(),
           force: !!d.force
         };
         absorbHermesProbePayload(hmPayload);
@@ -21529,9 +21843,24 @@ body.niuma-confirm-open{overflow:hidden}
         } else {
           ensureStudioContextApplied(true);
         }
+        var connNk = state.connectionsPickNodeKey || state.nodeConfigDiskKey || '';
+        var connPid = connNk ? providerIdFromNodeKey(connNk) : '';
+        if (connNk && connPid && getApiKeyForProvider(connPid)) {
+          if (nodeConfigApiKey) nodeConfigApiKey.value = getApiKeyForProvider(connPid);
+          if (apiKey) apiKey.value = getApiKeyForProvider(connPid);
+          refreshApiKeyField(connPid);
+          refreshSettingsProviderStatus();
+        }
         if (d.ok) {
-          sstat('已从智能定制同步 API', 'success');
+          var okMsg = '已从智能定制同步 API';
+          if (String(d.hint || '').trim()) okMsg += '（' + String(d.hint).trim() + '）';
+          sstat(okMsg, 'success');
+          if (connPid === 'hermes' && getApiKeyForProvider('hermes') && !trimApiKey(nodeConfigApiKey ? nodeConfigApiKey.value : '')) {
+            requestHermesHostTokenProbe(false).catch(function () {});
+          }
           if (state.settings) refreshSettingsAiHint();
+        } else if (connPid && getApiKeyForProvider(connPid)) {
+          sstat('已同步 ' + (P[connPid] ? P[connPid].label : connPid) + ' Key' + (String(d.hint || '').trim() ? '；' + d.hint : ''), 'success');
         } else if (d.niumaContext && d.niumaContext.systemPrompt) {
           sstat('已注入项目说明；' + (d.error || '请先在智能定制保存 API Key'), '');
         } else {
@@ -22026,9 +22355,13 @@ body.niuma-confirm-open{overflow:hidden}
   fillProviders();
   fillApiSetupSelect(inlineLlmProvider);
   fillApiSetupSelect(ttydLlmProvider);
+  refreshApiSetupVisibility(normalizeProviderId(provider ? provider.value : 'openai'));
   fillPromptBuiltinSelect();
   loadCfg();
   refreshInlineApiSetupVisibility();
+  setTimeout(function () {
+    scheduleHermesStartupHandshake(1);
+  }, 800);
   setTimeout(function () {
     try {
       post({ type: 'niuma_request_studio_context' });

@@ -2835,6 +2835,16 @@ ConfigWebView_OnMessage(sender, args) {
             gwErr := ""
             info := Map()
             dbg := ""
+            niumaKey := ""
+            try {
+                if FuncExists("FloatingToolbar_ReadHermesEnvKeyDirect") {
+                    token := FloatingToolbar_ReadHermesEnvKeyDirect(&source, &host, &port)
+                    if (token != "")
+                        dbg := "direct=" . source
+                }
+            } catch as eDirect {
+                dbg := "direct_err=" . eDirect.Message
+            }
             try {
                 fb := ConfigWebView_QuickReadHermesApiServerKey()
                 if (fb is Map) {
@@ -2899,6 +2909,16 @@ ConfigWebView_OnMessage(sender, args) {
                 } catch {
                 }
             }
+            try {
+                if FuncExists("UserStudio_ReadNiumaHermesKey")
+                    niumaKey := UserStudio_ReadNiumaHermesKey()
+            } catch {
+            }
+            if (token = "" && niumaKey != "") {
+                token := niumaKey
+                source := "niuma_chat_llm.json"
+                dbg := (dbg != "" ? dbg . " | " : "") . "niuma_sync"
+            }
             if (token != "") {
                 base := "http://" . host . ":" . port . "/v1"
                 pingMs := (action = "refreshHermesStudioStatus") ? 12000 : 6000
@@ -2939,14 +2959,30 @@ ConfigWebView_OnMessage(sender, args) {
                 } else if FuncExists("UserStudio_ResolveHermesHome")
                     dbg := "home=" . UserStudio_ResolveHermesHome()
             }
-            niumaKey := ""
-            try {
-                if FuncExists("UserStudio_ReadNiumaHermesKey")
-                    niumaKey := UserStudio_ReadNiumaHermesKey()
-            } catch {
-            }
             hasEnvKey := (token != "" && source != "" && source != "niuma_chat_llm.json")
             hasNiumaKey := (niumaKey != "")
+            installKind := "none"
+            installLabel := ""
+            apiServerState := ""
+            gatewayRunning := false
+            canRestartGateway := false
+            if FuncExists("UserStudio_DiscoverHermesInstall") {
+                try {
+                    disc := UserStudio_DiscoverHermesInstall()
+                    if (disc is Map) {
+                        installKind := String(disc.Get("installKind", "none"))
+                        installLabel := String(disc.Get("installLabel", ""))
+                        apiServerState := String(disc.Get("apiServerState", ""))
+                        gatewayRunning := !!disc.Get("gatewayRunning", false)
+                        canRestartGateway := !!disc.Get("canRestartGateway", false)
+                        if (primaryDir = "")
+                            primaryDir := String(disc.Get("dataDir", ""))
+                    }
+                } catch {
+                }
+            }
+            if (!gwOk && token != "" && apiServerState = "connected")
+                gwErr := "API Server 已在 8642 运行，但当前 Key 与 %LOCALAPPDATA%\hermes\.env 不一致；请点「一键连接 Hermes」对齐。"
             try OutputDebug("[ConfigWebView] hermes_probe token=" . (token != "" ? "yes" : "no")
                 . " gwOk=" . (gwOk ? "yes" : "no") . " err=" . gwErr)
             catch {
@@ -2965,7 +3001,11 @@ ConfigWebView_OnMessage(sender, args) {
                     "tried", tried,
                     "localAppData", localAppData,
                     "hasEnvKey", hasEnvKey,
-                    "hasNiumaKey", hasNiumaKey
+                    "hasNiumaKey", hasNiumaKey,
+                    "installKind", installKind,
+                    "installLabel", installLabel,
+                    "apiServerState", apiServerState,
+                    "canRestartGateway", canRestartGateway
                 ))
             } else if (action = "refreshHermesStudioStatus") {
                 ConfigWebView_Send(Map(
@@ -2982,6 +3022,10 @@ ConfigWebView_OnMessage(sender, args) {
                     "localAppData", localAppData,
                     "hasEnvKey", hasEnvKey,
                     "hasNiumaKey", hasNiumaKey,
+                    "installKind", installKind,
+                    "installLabel", installLabel,
+                    "apiServerState", apiServerState,
+                    "canRestartGateway", canRestartGateway,
                     "force", !!(msg.Has("force") && msg["force"])
                 ))
             } else {
@@ -3001,9 +3045,28 @@ ConfigWebView_OnMessage(sender, args) {
                     "primaryDir", primaryDir,
                     "hasEnvKey", hasEnvKey,
                     "hasNiumaKey", hasNiumaKey,
+                    "installKind", installKind,
+                    "installLabel", installLabel,
+                    "apiServerState", apiServerState,
+                    "gatewayRunning", gatewayRunning,
+                    "canRestartGateway", canRestartGateway,
                     "force", !!(msg.Has("force") && msg["force"])
                 ))
             }
+        case "hermes_restart_gateway", "niuma_hermes_restart_gateway":
+            rr := Map("ok", false, "error", "restart_unavailable")
+            if FuncExists("UserStudio_RestartHermesGateway") {
+                try rr := UserStudio_RestartHermesGateway(45000)
+                catch as eRr {
+                    rr := Map("ok", false, "error", eRr.Message)
+                }
+            }
+            ConfigWebView_Send(Map(
+                "type", "hermes_gateway_restart_result",
+                "ok", !!rr.Get("ok", false),
+                "error", String(rr.Get("error", "")),
+                "elapsedMs", Integer(rr.Get("elapsedMs", 0))
+            ))
         case "openclaw_probe_token", "niuma_openclaw_probe_token", "refreshOpenClawStudioStatus":
             token := ""
             source := ""
@@ -3149,6 +3212,28 @@ ConfigWebView_OnMessage(sender, args) {
                 llm := payload["llm"]
             if !(llm is Map)
                 llm := Map()
+            provTest := ConfigWebView_LlmNormProv(llm.Get("provider", ""))
+            if (provTest = "hermes") {
+                if FuncExists("UserStudio_ReadHermesApiConfig") {
+                    try {
+                        cfgH := UserStudio_ReadHermesApiConfig()
+                        if (cfgH is Map) {
+                            envKey := ConfigWebView_NormalizeApiKey(cfgH.Get("key", ""))
+                            if (envKey != "")
+                                llm["apiKey"] := envKey
+                            eh := Trim(String(cfgH.Get("host", "")))
+                            ep := Integer(cfgH.Get("port", 8642))
+                            if (eh = "localhost")
+                                eh := "127.0.0.1"
+                            if (eh != "" && ep > 0)
+                                llm["baseUrl"] := "http://" . eh . ":" . ep . "/v1"
+                        }
+                    } catch {
+                    }
+                }
+                if Trim(String(llm.Get("baseUrl", ""))) = ""
+                    llm["baseUrl"] := "http://127.0.0.1:8642/v1"
+            }
             ok := false
             err := ""
             elapsed := 0
@@ -3836,9 +3921,16 @@ ConfigWebView_LlmUriEnc(s) {
 }
 
 ConfigWebView_LlmHttpSync(method, url, headers, body, timeoutMs := 18000) {
+    if FuncExists("LlmApiPing_HttpSync") {
+        try return LlmApiPing_HttpSync(method, url, headers, body, timeoutMs)
+        catch {
+        }
+    }
     start := A_TickCount
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if RegExMatch(String(url), "i)^https?://(127\.0\.0\.1|localhost)(:\d+)?/")
+            try whr.SetProxy(1)
         whr.Open(method, url, false)
         t := Max(3000, Integer(timeoutMs))
         whr.SetTimeouts(t, t, t, t)

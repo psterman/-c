@@ -1376,6 +1376,169 @@ UserStudio_HermesGatewayCliOk(timeoutMs := 15000) {
     return false
 }
 
+UserStudio_ReadHermesGatewayState() {
+    out := Map(
+        "found", false,
+        "path", "",
+        "gatewayState", "",
+        "apiServerState", "",
+        "pid", 0
+    )
+    for _, dir in UserStudio_ListHermesDataDirs() {
+        p := dir . "\gateway_state.json"
+        if !FileExist(p)
+            continue
+        raw := ""
+        try raw := FileRead(p, "UTF-8")
+        catch
+            continue
+        doc := ""
+        try doc := _US_JxonLoad(raw)
+        catch
+            continue
+        if !(doc is Map)
+            continue
+        out["found"] := true
+        out["path"] := p
+        out["gatewayState"] := Trim(String(doc.Get("gateway_state", "")))
+        out["pid"] := Integer(doc.Get("pid", 0))
+        if doc.Has("platforms") && doc["platforms"] is Map {
+            api := doc["platforms"].Get("api_server", Map())
+            if api is Map
+                out["apiServerState"] := Trim(String(api.Get("state", "")))
+        }
+        return out
+    }
+    return out
+}
+
+UserStudio_FindHermesDesktopExe() {
+    la := UserStudio_LocalAppDataDir()
+    paths := []
+    if (la != "") {
+        paths.Push(la . "\hermes\hermes-agent\apps\desktop\release\win-unpacked\Hermes.exe")
+        paths.Push(la . "\Programs\Hermes\Hermes.exe")
+        paths.Push(la . "\hermes\Hermes.exe")
+    }
+    paths.Push("C:\Program Files\Hermes\Hermes.exe")
+    paths.Push("C:\Program Files (x86)\Hermes\Hermes.exe")
+    for _, p in paths {
+        if FileExist(p)
+            return p
+    }
+    return ""
+}
+
+UserStudio_FindHermesGatewayCmd() {
+    la := UserStudio_LocalAppDataDir()
+    if (la = "")
+        return ""
+    p := la . "\hermes\gateway-service\Hermes_Gateway.cmd"
+    return FileExist(p) ? p : ""
+}
+
+/** Win10/11：识别本机 Hermes 桌面版 / CLI / Gateway 状态（不含密钥）。 */
+UserStudio_DiscoverHermesInstall() {
+    la := UserStudio_LocalAppDataDir()
+    cliExe := UserStudio_FindHermesCliExe()
+    desktopExe := UserStudio_FindHermesDesktopExe()
+    gatewayCmd := UserStudio_FindHermesGatewayCmd()
+    desktopRunning := false
+    try desktopRunning := !!ProcessExist("Hermes.exe")
+    catch {
+    }
+    gw := UserStudio_ReadHermesGatewayState()
+    gwRunning := false
+    if (gw.Get("found", false)) {
+        gs := StrLower(Trim(String(gw.Get("gatewayState", ""))))
+        gwRunning := (gs = "running" || gs != "" && gs != "stopped" && gs != "exited")
+        if !gwRunning && Integer(gw.Get("pid", 0)) > 0
+            gwRunning := true
+    }
+    installKind := "none"
+    if (desktopExe != "" || desktopRunning) {
+        installKind := (cliExe != "" || gatewayCmd != "") ? "both" : "desktop"
+    } else if (cliExe != "" || gatewayCmd != "")
+        installKind := "cli"
+    apiSt := Trim(String(gw.Get("apiServerState", "")))
+    canRestart := (cliExe != "")
+    if !canRestart && la != "" {
+        py := la . "\hermes\hermes-agent\venv\Scripts\python.exe"
+        if FileExist(py)
+            canRestart := true
+    }
+    return Map(
+        "installKind", installKind,
+        "installLabel", installKind = "both" ? "桌面版 + CLI"
+            : installKind = "desktop" ? "Hermes 桌面版"
+            : installKind = "cli" ? "Hermes CLI / Gateway"
+            : "未检测到 Hermes",
+        "desktopExe", desktopExe,
+        "desktopRunning", desktopRunning,
+        "cliExe", cliExe,
+        "gatewayCmd", gatewayCmd,
+        "dataDir", UserStudio_GetHermesPrimaryDataDir(),
+        "gatewayRunning", gwRunning,
+        "apiServerState", apiSt,
+        "gatewayStatePath", String(gw.Get("path", "")),
+        "canRestartGateway", canRestart
+    )
+}
+
+UserStudio_RestartHermesGateway(timeoutMs := 45000) {
+    t0 := A_TickCount
+    exe := UserStudio_FindHermesCliExe()
+    la := UserStudio_LocalAppDataDir()
+    hermesHome := la != "" ? la . "\hermes" : UserStudio_GetHermesPrimaryDataDir()
+    out := A_Temp . "\nmer_hermes_gw_restart_" . A_TickCount . ".txt"
+    try FileDelete(out)
+    if (exe = "") {
+        py := ""
+        if (la != "")
+            py := la . "\hermes\hermes-agent\venv\Scripts\python.exe"
+        if (py != "" && FileExist(py))
+            exe := py
+    }
+    if (exe = "") {
+        return Map(
+            "ok", false,
+            "error", "未找到 hermes CLI。请安装 Hermes 桌面版（Win10/11），或在 %LOCALAPPDATA%\hermes 完成 hermes-agent 安装。",
+            "elapsedMs", A_TickCount - t0
+        )
+    }
+    if (exe != "") {
+        if InStr(exe, "python.exe")
+            inner := '"' . exe . '" -m hermes_cli.main gateway restart > "' . out . '" 2>&1'
+        else
+            inner := '"' . exe . '" gateway restart > "' . out . '" 2>&1'
+        cmd := 'set "HERMES_HOME=' . hermesHome . '"&& set "PYTHONIOENCODING=utf-8"&& ' . inner
+        try {
+            RunWait(A_ComSpec . ' /c ' . cmd, hermesHome, "Hide")
+        } catch as eRun {
+            return Map("ok", false, "error", "gateway restart 失败：" . eRun.Message, "elapsedMs", A_TickCount - t0)
+        }
+    }
+  waitLoop:
+    while (A_TickCount - t0 < timeoutMs) {
+        gw := UserStudio_ReadHermesGatewayState()
+        if (Trim(String(gw.Get("apiServerState", ""))) = "connected")
+            return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "apiServerState", "connected")
+        if UserStudio_TcpPortOpen("127.0.0.1", 8642, 800)
+            break
+        Sleep(500)
+    }
+    gw2 := UserStudio_ReadHermesGatewayState()
+    apiSt := Trim(String(gw2.Get("apiServerState", "")))
+    if (apiSt = "connected" || UserStudio_TcpPortOpen("127.0.0.1", 8642, 1200))
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "apiServerState", apiSt)
+    return Map(
+        "ok", false,
+        "error", "已执行 gateway restart，但 api_server 仍未就绪。请完全退出 Hermes 桌面版后重开，或查看 %LOCALAPPDATA%\hermes\logs\gateway.log。",
+        "elapsedMs", A_TickCount - t0,
+        "apiServerState", apiSt
+    )
+}
+
 UserStudio_ReadHermesApiConfig() {
     host := "127.0.0.1"
     port := 8642
@@ -1443,40 +1606,87 @@ UserStudio_ProbeHermesApiServer(base, key, timeoutMs := 12000) {
             port := Integer(m[2])
     } else if RegExMatch(base, ":(\d+)", &mp)
         port := Integer(mp[1])
+    if (host = "localhost")
+        host := "127.0.0.1"
     t0 := A_TickCount
+    disc := UserStudio_DiscoverHermesInstall()
+    gwMeta := UserStudio_ReadHermesGatewayState()
+    apiSt := Trim(String(gwMeta.Get("apiServerState", "")))
+    installKind := String(disc.Get("installKind", "none"))
+    installLabel := String(disc.Get("installLabel", ""))
+    httpOk := false
+    authFail := false
     if (key != "" && FuncExists("LlmApiPing_HttpSync")) {
         url := "http://" . host . ":" . port . "/health"
         try {
             r := Func("LlmApiPing_HttpSync").Call("GET", url, Map("Authorization", "Bearer " . key), "", Min(Max(3000, Integer(timeoutMs)), 8000))
             if r is Map && r.Get("ok", false)
-                return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
-            if r is Map && Integer(r.Get("status", 0)) = 401
-                return Map("ok", false, "error", "API Server 鉴权失败：请核对 ~/.hermes/.env 中 API_SERVER_KEY 与 NMER 中保存的一致。", "elapsedMs", A_TickCount - t0)
+                httpOk := true
+            else if r is Map && Integer(r.Get("status", 0)) = 401
+                authFail := true
         } catch {
         }
-        url2 := "http://" . host . ":" . port . "/v1/models"
-        try {
-            r2 := Func("LlmApiPing_HttpSync").Call("GET", url2, Map("Authorization", "Bearer " . key), "", Min(Max(3000, Integer(timeoutMs)), 8000))
-            if r2 is Map && r2.Get("ok", false)
-                return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
-        } catch {
+        if !httpOk && !authFail {
+            url2 := "http://" . host . ":" . port . "/v1/models"
+            try {
+                r2 := Func("LlmApiPing_HttpSync").Call("GET", url2, Map("Authorization", "Bearer " . key), "", Min(Max(3000, Integer(timeoutMs)), 8000))
+                if r2 is Map && r2.Get("ok", false)
+                    httpOk := true
+                else if r2 is Map && Integer(r2.Get("status", 0)) = 401
+                    authFail := true
+            } catch {
+            }
         }
     }
-    if UserStudio_HermesGatewayCliOk(Min(Max(6000, Integer(timeoutMs)), 15000))
-        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
-    tcpMs := Min(Max(800, Integer(timeoutMs)), 3000)
-    if UserStudio_TcpPortOpen(host, port, tcpMs)
+    if httpOk
         return Map(
             "ok", true,
             "error", "",
             "elapsedMs", A_TickCount - t0,
-            "hint", key = "" ? "端口已开放但未验证 API Key" : ""
+            "httpOk", true,
+            "installKind", installKind,
+            "installLabel", installLabel,
+            "apiServerState", apiSt,
+            "gatewayRunning", !!disc.Get("gatewayRunning", false),
+            "canRestartGateway", !!disc.Get("canRestartGateway", false)
         )
-    dataDir := UserStudio_GetHermesPrimaryDataDir()
-    err := "无法连接 Hermes API Server（" . host . ":" . port . "）。Key 已就绪时请完全退出并重启 Hermes 桌面应用以启动 API Server。"
-    if (key = "")
-        err := "未找到 API_SERVER_KEY。请在 " . dataDir . "\.env 配置，或在设置里点「一键连接 Hermes」自动写入。"
-    return Map("ok", false, "error", err, "elapsedMs", A_TickCount - t0)
+    if authFail
+        return Map(
+            "ok", false,
+            "error", "API Server 鉴权失败：请核对 %LOCALAPPDATA%\hermes\.env 中 API_SERVER_KEY 与牛马中保存的一致。",
+            "elapsedMs", A_TickCount - t0,
+            "httpOk", false,
+            "installKind", installKind,
+            "installLabel", installLabel,
+            "apiServerState", apiSt,
+            "canRestartGateway", !!disc.Get("canRestartGateway", false),
+            "action", "fix_key"
+        )
+    dataDir := String(disc.Get("dataDir", UserStudio_GetHermesPrimaryDataDir()))
+    err := ""
+    if (installKind = "none")
+        err := "未检测到 Hermes（Win10/11 请安装桌面版或 hermes-agent CLI）。可在下方手动填写 API Server Key 与 " . host . ":" . port . "/v1。"
+    else if (apiSt != "" && apiSt != "connected")
+        err := "已识别 " . installLabel . "，但 api_server 状态为「" . apiSt . "」。请点「重启 Hermes Gateway」或完全退出 Hermes 后重开。"
+    else if (key != "")
+        err := "已识别 " . installLabel . " 且 Key 已读取，但 " . host . ":" . port . " 无响应。桌面版已打开不等于 API Server 已启动；请重启 Gateway。"
+    else
+        err := "未找到 API_SERVER_KEY。请在 " . dataDir . "\.env 配置 API_SERVER_ENABLED=true 与 API_SERVER_KEY，或点「一键连接 Hermes」。"
+    tcpMs := Min(Max(800, Integer(timeoutMs)), 3000)
+    tcpOk := UserStudio_TcpPortOpen(host, port, tcpMs)
+    return Map(
+        "ok", false,
+        "error", err,
+        "elapsedMs", A_TickCount - t0,
+        "httpOk", false,
+        "tcpOk", tcpOk,
+        "installKind", installKind,
+        "installLabel", installLabel,
+        "apiServerState", apiSt,
+        "gatewayRunning", !!disc.Get("gatewayRunning", false),
+        "canRestartGateway", !!disc.Get("canRestartGateway", false),
+        "action", tcpOk ? "auth_or_restart" : (installKind = "none" ? "install" : "restart_gateway")
+    )
 }
 
 UserStudio_ProbeHermesGatewayToken(ensureEnv := false) {
@@ -1495,6 +1705,9 @@ UserStudio_ProbeHermesGatewayToken(ensureEnv := false) {
         tried.Push(dir . "\.env")
     if (key != "")
         return Map("token", key, "source", source, "host", host, "port", port, "apiEnabled", !!cfg.Get("enabled", false), "tried", tried)
+    niuma := UserStudio_ReadNiumaHermesKey()
+    if (niuma != "")
+        return Map("token", niuma, "source", "niuma_chat_llm.json", "host", host, "port", port, "apiEnabled", !!cfg.Get("enabled", false), "tried", tried)
     return Map("token", "", "source", "", "host", host, "port", port, "apiEnabled", !!cfg.Get("enabled", false), "tried", tried)
 }
 

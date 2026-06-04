@@ -120,10 +120,16 @@ LlmApiPing_EncodeUri(s) {
     return s
 }
 
+LlmApiPing_IsLoopbackUrl(url) {
+    return RegExMatch(String(url), "i)^https?://(127\.0\.0\.1|localhost)(:\d+)?/")
+}
+
 LlmApiPing_HttpSync(method, url, headers, body, timeoutMs := 18000) {
     start := A_TickCount
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if LlmApiPing_IsLoopbackUrl(url)
+            try whr.SetProxy(1)
         whr.Open(method, url, false)
         t := Max(3000, Integer(timeoutMs))
         whr.SetTimeouts(t, t, t, t)
@@ -534,6 +540,32 @@ LlmApiPing_TcpPortOpen(host, port, timeoutMs := 2500) {
     }
 }
 
+LlmApiPing_ParseHermesEndpoint(base) {
+    host := "127.0.0.1"
+    port := 8642
+    base := Trim(String(base))
+    if (base = "")
+        return Map("host", host, "port", port)
+    raw := base
+    if !RegExMatch(raw, "i)^[a-z]+://")
+        raw := "http://" . raw
+    try {
+        if RegExMatch(raw, "i)^[a-z]+://([^/:]+)(?::(\d+))?", &m) {
+            if (m[1] != "")
+                host := m[1]
+            if (m[2] != "")
+                port := Integer(m[2])
+        } else if RegExMatch(raw, ":(\d+)", &mp)
+            port := Integer(mp[1])
+    } catch {
+    }
+    if (host = "localhost")
+        host := "127.0.0.1"
+    if (port < 1 || port > 65535)
+        port := 8642
+    return Map("host", host, "port", port)
+}
+
 LlmApiPing_ParseOpenClawEndpoint(base) {
     host := "127.0.0.1"
     port := 18789
@@ -588,20 +620,70 @@ LlmApiPing_OpenClawGatewayStatusOk(timeoutMs := 9000) {
 }
 
 LlmApiPing_TestHermes(base, key, timeoutMs := 8000) {
-    if LlmApiPing_HasFunc("UserStudio_ProbeHermesApiServer")
-        try return UserStudio_ProbeHermesApiServer(base, key, timeoutMs)
     key := LlmApiPing_NormalizeApiKey(key)
     if (key = "")
         return Map("ok", false, "error", "缺少 API Server Key（API_SERVER_KEY）", "elapsedMs", 0)
-    ep := LlmApiPing_ParseOpenClawEndpoint(base)
+    ep := LlmApiPing_ParseHermesEndpoint(base)
     host := ep.Get("host", "127.0.0.1")
+    if (host = "localhost")
+        host := "127.0.0.1"
     port := Integer(ep.Get("port", 8642))
+    baseNorm := "http://" . host . ":" . port . "/v1"
     t0 := A_TickCount
-    if LlmApiPing_TcpPortOpen(host, port, Min(Max(800, Integer(timeoutMs)), 3000))
-        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    pingMs := Min(Max(3000, Integer(timeoutMs)), 8000)
+    for _, path in ["/health", "/v1/models"] {
+        try {
+            r0 := LlmApiPing_HttpSync("GET", "http://" . host . ":" . port . path, Map("Authorization", "Bearer " . key), "", pingMs)
+            if (r0 is Map && r0.Get("ok", false))
+                return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "http" . path)
+            if (r0 is Map && Integer(r0.Get("status", 0)) = 401)
+                return Map(
+                    "ok", false,
+                    "error", "API 鉴权失败：请用 %LOCALAPPDATA%\hermes\.env 中的 API_SERVER_KEY，或点测试连接重新读取。",
+                    "elapsedMs", A_TickCount - t0
+                )
+        } catch {
+        }
+    }
+    if LlmApiPing_HasFunc("UserStudio_ProbeHermesApiServer") {
+        try {
+            r := UserStudio_ProbeHermesApiServer(baseNorm, key, timeoutMs)
+            if (r is Map)
+                return r
+        } catch as eProbe {
+            try OutputDebug("[LlmApiPing] UserStudio_ProbeHermesApiServer: " . eProbe.Message)
+            catch {
+            }
+        }
+    }
+    apiSt := ""
+    if LlmApiPing_HasFunc("UserStudio_ReadHermesGatewayState") {
+        try {
+            gw := UserStudio_ReadHermesGatewayState()
+            if (gw is Map)
+                apiSt := Trim(String(gw.Get("apiServerState", "")))
+        } catch {
+        }
+    }
+    tcpMs := Min(Max(1200, Integer(timeoutMs)), 4000)
+    tcpOk := LlmApiPing_TcpPortOpen(host, port, tcpMs)
+    if (apiSt = "connected" && tcpOk)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "gateway_state")
+    if tcpOk
+        return Map(
+            "ok", false,
+            "error", "8642 已监听，但 API 鉴权失败。请点「测试连接」从 .env 重新读取 Key，或执行 hermes gateway restart。",
+            "elapsedMs", A_TickCount - t0
+        )
+    if (apiSt != "" && apiSt != "connected")
+        return Map(
+            "ok", false,
+            "error", "Hermes api_server 状态为「" . apiSt . "」。请完全退出 Hermes 桌面版后重开，或点「重启 Gateway」。",
+            "elapsedMs", A_TickCount - t0
+        )
     return Map(
         "ok", false,
-        "error", "无法连接本机 Hermes API Server（" . host . ":" . port . "）。请设置 ~/.hermes/.env 并执行 hermes gateway。",
+        "error", "无法连接本机 Hermes API Server（" . host . ":" . port . "）。请启动 Hermes 桌面版并执行 hermes gateway restart。",
         "elapsedMs", A_TickCount - t0
     )
 }
