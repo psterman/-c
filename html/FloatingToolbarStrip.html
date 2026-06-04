@@ -1041,7 +1041,7 @@ body.niuma-confirm-open{overflow:hidden}
 <div class="conn-node-fields">
 <div class="fld" id="nodeConfigLabelRow"><label for="nodeConfigCustomLabel">节点名称（可选）</label><input id="nodeConfigCustomLabel" class="ctl" type="text" autocomplete="off" placeholder="留空则用服务商名" /></div>
 <div class="fld" id="fldOpenClawImportRow" style="display:none"><label>本机 OpenClaw · 推荐</label><button type="button" class="btn3" id="openClawImportConnectBtn" style="width:100%">一键连接 OpenClaw</button><div class="hint mini" id="openClawImportHint">自动读 Gateway Token · 127.0.0.1:18789，无需手填 Key</div></div>
-<div class="fld" id="fldHermesImportRow" style="display:none"><label>本机 Hermes · 推荐</label><div class="hint mini" id="hermesInstallHint" style="margin-bottom:6px">自动读 Key、填地址与模型，无需手填下方参数</div><button type="button" class="btn3" id="hermesImportConnectBtn" style="width:100%">一键连接 Hermes</button><button type="button" class="btn2" id="hermesRestartGatewayBtn" style="width:100%;margin-top:6px;display:none">重启 Gateway</button></div>
+<div class="fld" id="fldHermesImportRow" style="display:none"><label>本机 Hermes · 推荐</label><div class="hint mini" id="hermesInstallHint" style="margin-bottom:6px">已装 Hermes 时点「一键连接」：自动写 .env 并读 Key，无需手改配置</div><button type="button" class="btn3" id="hermesImportConnectBtn" style="width:100%">一键连接本机 Hermes</button><button type="button" class="btn2" id="hermesRestartGatewayBtn" style="width:100%;margin-top:6px;display:none">重启 Gateway</button><div class="hint mini" style="margin-top:12px;margin-bottom:6px;font-weight:600">其他电脑上的 Hermes（局域网）</div><input id="hermesRemoteAdvertiseIp" class="ctl" type="text" autocomplete="off" placeholder="Hermes 电脑的 IP，如 192.168.1.20" style="margin-bottom:6px" /><button type="button" class="btn2" id="hermesExportRemoteBundleBtn" style="width:100%;margin-bottom:6px">生成连接码（复制给牛马电脑）</button><button type="button" class="btn2" id="hermesImportRemoteBundleBtn" style="width:100%;margin-bottom:6px">从剪贴板导入连接码</button><button type="button" class="btn3" id="hermesRemoteConnectBtn" style="width:100%">一键连接远程 Hermes</button><div class="hint mini" id="hermesRemoteHint">A 机装 Hermes：填 A 的 IP → 生成连接码。B 机装牛马：导入 → 一键连接远程。远程 Hermes 须监听 0.0.0.0 且防火墙放行 8642。</div></div>
 <button type="button" class="btn2 api-manual-toggle" id="connManualToggle" hidden>手动填写 Key / 地址 ▾</button>
 <div id="connNodeManualBlock" hidden>
 <div class="fld" id="nodeConfigKeyRow"><label for="nodeConfigApiKey" id="nodeConfigKeyLabel">API 密匙</label><div class="pwd-toggle-wrap"><input id="nodeConfigApiKey" class="ctl" type="password" autocomplete="off" placeholder="sk-…" /><button type="button" class="pwd-toggle-btn" id="nodeConfigKeyToggle" title="显示/隐藏密钥" aria-label="显示密钥">👁</button></div></div>
@@ -1213,7 +1213,7 @@ body.niuma-confirm-open{overflow:hidden}
 </div>
 <div id="hermesSetupBanner" class="setup-banner" hidden>
 <div class="setup-banner-title" id="hermesSetupTitle">连接本机 Hermes（Win10/11）</div>
-<div id="hermesSetupBody" class="hint mini">牛马启动后会扫描 Hermes 桌面版 / CLI。点「一键连接」读取 Key 并验证 8642；失败可点「重启 Gateway」或手动填写 API Server Key。</div>
+<div id="hermesSetupBody" class="hint mini">已装 Hermes 时点「一键连接」：牛马会自动开启 API Server 并写入密钥（无需手改 .env），然后验证 8642；若刚写入请完全退出并重启 Hermes 后再点一次。</div>
 <button type="button" class="btn3" id="hermesSetupImportBtn" style="width:100%;margin-top:8px">一键连接 Hermes</button>
 <button type="button" class="btn2" id="hermesSetupRestartBtn" style="width:100%;margin-top:6px;display:none">重启 Hermes Gateway</button>
 </div>
@@ -1530,8 +1530,8 @@ body.niuma-confirm-open{overflow:hidden}
       },
       hermes: {
         keyLabel: 'API Server Key',
-        keyPlaceholder: '与 %LOCALAPPDATA%\\hermes\\.env 中 API_SERVER_KEY 一致',
-        keyHint: '走本机 OpenAI 兼容 HTTP（8642/v1）；可点「一键连接 Hermes」自动读取并检测。'
+        keyPlaceholder: '一般留空，由「一键连接」自动写入',
+        keyHint: '本机 OpenAI 兼容 HTTP（8642/v1）；一键连接会自动配置 Hermes，无需手改 .env。'
       }
     },
     PROMPT_BUILTIN = [
@@ -2037,6 +2037,11 @@ body.niuma-confirm-open{overflow:hidden}
     fldHermesImportRow = $('fldHermesImportRow'),
     hermesImportConnectBtn = $('hermesImportConnectBtn'),
     hermesRestartGatewayBtn = $('hermesRestartGatewayBtn'),
+    hermesRemoteAdvertiseIp = $('hermesRemoteAdvertiseIp'),
+    hermesExportRemoteBundleBtn = $('hermesExportRemoteBundleBtn'),
+    hermesImportRemoteBundleBtn = $('hermesImportRemoteBundleBtn'),
+    hermesRemoteConnectBtn = $('hermesRemoteConnectBtn'),
+    hermesRemoteHint = $('hermesRemoteHint'),
     hermesInstallHint = $('hermesInstallHint'),
     hermesSetupRestartBtn = $('hermesSetupRestartBtn'),
     openClawImportConnectBtn = $('openClawImportConnectBtn'),
@@ -2217,6 +2222,8 @@ body.niuma-confirm-open{overflow:hidden}
     openclawSessionRowsLoading: false,
     openClawImportRunning: false,
     hermesImportRunning: false,
+    localAgentsAutoConnectRunning: false,
+    localAgentsAutoConnectActive: false,
     hermesDiagnostic: null,
     freeChatMode: false,
     pendingStudioLlm: null,
@@ -8346,7 +8353,7 @@ body.niuma-confirm-open{overflow:hidden}
       empty.textContent = 'ttyd 终端：Ctrl+Tab 打开任务看板，可新建任务并保留会话记录。';
     } else if (state.needSetup || !hasAnyApiConfigured()) {
       empty.textContent =
-        '请先连接 AI：本机 OpenClaw 点对话区橙色「一键连接」；云端模型点 ⚙️ 或下方快速配置。';
+        '正在检测本机 Hermes / OpenClaw… 若已安装将自动连接；也可点下方「一键连接」或 ⚙️ 配置云端 API。';
     } else {
       empty.textContent = '开始对话，或点「新话题」在同联系人下开分支（空话题不会重复创建）。';
     }
@@ -9740,6 +9747,214 @@ body.niuma-confirm-open{overflow:hidden}
   var HERMES_HOST_PROBE_TIMEOUT_MS = 8000;
   var openClawImportPending = null;
   var hermesImportPending = null;
+  var hermesRemoteBundlePending = null;
+
+  function parseHermesRemoteBundleText(raw) {
+    raw = String(raw || '').trim();
+    if (!raw) return null;
+    var line = raw.split(/\r?\n/).filter(function (x) { return x.trim(); })[0] || raw;
+    if (/^nmer-hermes:\/\//i.test(line)) {
+      try {
+        var u = new URL(line.replace(/^nmer-hermes:/i, 'http:'));
+        var hk = (u.searchParams.get('key') || '').trim();
+        if (!hk && u.hash) {
+          var hs = new URLSearchParams(u.hash.replace(/^#/, '?'));
+          hk = (hs.get('key') || '').trim();
+        }
+        var hp = u.hostname || '';
+        var pp = u.port ? parseInt(u.port, 10) : 8642;
+        if (!hp || !hk) return null;
+        return {
+          host: hp,
+          port: pp,
+          key: hk,
+          baseUrl: 'http://' + hp + ':' + pp + '/v1',
+          model: 'hermes-agent'
+        };
+      } catch (eUrl) {
+        return null;
+      }
+    }
+    try {
+      var doc = JSON.parse(line);
+      if (!doc || doc.type !== 'hermes-remote' || !doc.host || !doc.key) return null;
+      var port = Number(doc.port) || 8642;
+      return {
+        host: String(doc.host).trim(),
+        port: port,
+        key: String(doc.key).trim(),
+        baseUrl: String(doc.baseUrl || '').trim() || 'http://' + doc.host + ':' + port + '/v1',
+        model: String(doc.model || 'hermes-agent').trim(),
+        label: String(doc.label || '').trim()
+      };
+    } catch (eJ) {
+      return null;
+    }
+  }
+
+  function formatHermesRemoteBundleText(bundle) {
+    bundle = bundle || {};
+    var port = Number(bundle.port) || 8642;
+    var host = String(bundle.host || '').trim();
+    var key = String(bundle.key || '').trim();
+    var json = JSON.stringify({
+      v: 1,
+      type: 'hermes-remote',
+      host: host,
+      port: port,
+      key: key,
+      baseUrl: String(bundle.baseUrl || 'http://' + host + ':' + port + '/v1'),
+      model: String(bundle.model || 'hermes-agent'),
+      label: String(bundle.label || '').trim(),
+      machine: String(bundle.machine || ''),
+      createdAt: String(bundle.createdAt || '')
+    });
+    var url = 'nmer-hermes://' + host + ':' + port + '?key=' + encodeURIComponent(key);
+    return json + '\n' + url;
+  }
+
+  function applyHermesRemoteBundle(bundle) {
+    if (!bundle || !bundle.host || !bundle.key) return false;
+    state.manualBaseUrl = true;
+    state.apiSetupManualOpen = true;
+    var bu = String(bundle.baseUrl || 'http://' + bundle.host + ':' + (bundle.port || 8642) + '/v1');
+    applyHermesHostToken(bundle.key, 'remote_bundle', bu);
+    if (nodeConfigBaseUrl) nodeConfigBaseUrl.value = bu;
+    if (nodeConfigApiKey) nodeConfigApiKey.value = bundle.key;
+    if (nodeConfigModel && !nodeConfigModel.value.trim()) nodeConfigModel.value = bundle.model || 'hermes-agent';
+    if (hermesRemoteAdvertiseIp) hermesRemoteAdvertiseIp.value = bundle.host;
+    refreshApiSetupVisibility('hermes');
+    return true;
+  }
+
+  function requestHermesExportRemoteBundle(advertiseHost, label) {
+    return new Promise(function (resolve, reject) {
+      var reqId = 'hm_exp_' + Date.now();
+      var timer = setTimeout(function () {
+        if (hermesRemoteBundlePending && hermesRemoteBundlePending.reqId === reqId) {
+          hermesRemoteBundlePending = null;
+          reject(new Error('生成连接码超时'));
+        }
+      }, 20000);
+      hermesRemoteBundlePending = {
+        reqId: reqId,
+        resolve: function (d) {
+          clearTimeout(timer);
+          hermesRemoteBundlePending = null;
+          resolve(d || {});
+        },
+        reject: function (e) {
+          clearTimeout(timer);
+          hermesRemoteBundlePending = null;
+          reject(e);
+        }
+      };
+      try {
+        post({
+          type: 'niuma_hermes_export_remote_bundle',
+          advertiseHost: String(advertiseHost || '').trim(),
+          label: String(label || '').trim()
+        });
+      } catch (e) {
+        clearTimeout(timer);
+        hermesRemoteBundlePending = null;
+        reject(e);
+      }
+    });
+  }
+
+  async function exportHermesRemoteBundle() {
+    var ip = hermesRemoteAdvertiseIp ? String(hermesRemoteAdvertiseIp.value || '').trim() : '';
+    apiTestStat('正在读取本机 Key 并生成远程连接码…', '');
+    try {
+      var res = await requestHermesExportRemoteBundle(ip, '');
+      if (!res.ok || !res.bundle || !res.bundle.host || !res.bundle.key) {
+        throw new Error(res.error || '生成失败');
+      }
+      var text = formatHermesRemoteBundleText(res.bundle);
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (eClip) {
+        window.prompt('复制以下连接码到牛马电脑：', text);
+      }
+      if (hermesRemoteAdvertiseIp && res.bundle.host) hermesRemoteAdvertiseIp.value = res.bundle.host;
+      apiTestStat('已复制连接码（JSON + 短链接）。请在牛马电脑点「从剪贴板导入」。', 'success');
+      sstat('远程连接码已复制到剪贴板', 'success');
+    } catch (e) {
+      apiTestStat(e && e.message ? e.message : String(e), 'error');
+      sstat(e && e.message ? e.message : String(e), 'error');
+    }
+  }
+
+  function importHermesRemoteBundleFromClipboard() {
+    var done = function (raw) {
+      var bundle = parseHermesRemoteBundleText(raw);
+      if (!bundle) {
+        sstat('剪贴板内容不是有效的 Hermes 连接码', 'error');
+        apiTestStat('无效连接码', 'error');
+        return;
+      }
+      applyHermesRemoteBundle(bundle);
+      sstat('已导入远程 Hermes（' + bundle.host + '），请点「一键连接远程」', 'success');
+      apiTestStat('已导入 ' + bundle.host + ' 的连接码', 'success');
+    };
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(done).catch(function () {
+        var raw = window.prompt('粘贴 Hermes 连接码（JSON 或 nmer-hermes:// 行）：', '');
+        if (raw) done(raw);
+      });
+    } else {
+      var raw2 = window.prompt('粘贴 Hermes 连接码（JSON 或 nmer-hermes:// 行）：', '');
+      if (raw2) done(raw2);
+    }
+  }
+
+  async function runHermesRemoteConnect() {
+    var key = trimApiKey(nodeConfigApiKey ? nodeConfigApiKey.value : getApiKeyForProvider('hermes'));
+    var bu = nodeConfigBaseUrl ? String(nodeConfigBaseUrl.value || '').trim() : '';
+    var host = '';
+    var port = 8642;
+    if (bu) {
+      try {
+        var u = new URL(bu.indexOf('://') >= 0 ? bu : 'http://' + bu);
+        host = u.hostname;
+        if (u.port) port = parseInt(u.port, 10) || 8642;
+      } catch (eBu) {}
+    }
+    if (!host && hermesRemoteAdvertiseIp) host = String(hermesRemoteAdvertiseIp.value || '').trim();
+    if (!host) {
+      sstat('请先导入连接码或填写 Hermes 电脑的 IP', 'error');
+      return;
+    }
+    if (!key) {
+      sstat('缺少 API Key，请先「从剪贴板导入连接码」', 'error');
+      return;
+    }
+    if (state.hermesImportRunning) return;
+    state.hermesImportRunning = true;
+    if (hermesRemoteConnectBtn) hermesRemoteConnectBtn.disabled = true;
+    apiTestStat('正在连接远程 Hermes ' + host + ':' + port + '…', '');
+    try {
+      var probe = await requestHermesHostTokenProbe(true, false, { host: host, port: port, apiKey: key });
+      var buFinal = 'http://' + host + ':' + port + '/v1';
+      applyHermesHostToken(key, 'remote_bundle', buFinal);
+      if (probe.gatewayOk) {
+        apiTestStat('远程 Hermes 连接成功（' + host + '）', 'success');
+        sstat('已连接远程 Hermes · ' + host, 'success');
+        saveConnectionsForm();
+      } else {
+        var err = formatHermesProbeFailure(probe).split('\n')[0];
+        apiTestStat(err, 'error');
+        sstat(err, 'error');
+      }
+    } catch (e) {
+      apiTestStat(e && e.message ? e.message : String(e), 'error');
+      sstat(e && e.message ? e.message : String(e), 'error');
+    } finally {
+      state.hermesImportRunning = false;
+      if (hermesRemoteConnectBtn) hermesRemoteConnectBtn.disabled = false;
+    }
+  }
 
   function openClawDefaultBaseUrl() {
     return (P.openclaw && P.openclaw.baseUrl) || 'http://127.0.0.1:18789';
@@ -9983,35 +10198,145 @@ body.niuma-confirm-open{overflow:hidden}
       applyHermesHostToken(probe.token, probe.source, 'http://' + probe.host + ':' + probe.port + '/v1');
     }
     if (probe.gatewayOk) {
+      markHermesClientVerified(true);
       updateNeedSetup();
       refreshLocalAgentSetupBanners();
     }
     return probe;
   }
 
-  function scheduleHermesStartupHandshake(pass) {
-    var ensureEnv = pass >= 2;
-    post({ type: 'niuma_hermes_probe_token', force: false, ensureEnv: ensureEnv });
-    requestHermesHostTokenProbe(false, ensureEnv)
-      .then(function (probe) {
-        var wantsHermes =
-          state.sessions.some(function (s) {
-            return normalizeProviderId(s.provider) === 'hermes';
-          }) || !hasAnyApiConfigured();
-        if (!wantsHermes) {
-          refreshHermesDiscoveryUi(probe);
-          return;
+  function maybeAutoConnectOpenClawFromProbe(probe, opts) {
+    opts = opts || {};
+    var token = trimApiKey(probe.token || probe.niumaToken || '');
+    if (!token) return probe;
+    var saved = getApiKeyForProvider('openclaw');
+    if (!saved || opts.forceApply) {
+      var ocHost = String(probe.host || '127.0.0.1').trim() || '127.0.0.1';
+      var ocPort = Number(probe.port) || 18789;
+      applyOpenClawHostToken(token, probe.source, 'http://' + ocHost + ':' + ocPort);
+    }
+    if (probe.gatewayOk) {
+      updateNeedSetup();
+      refreshLocalAgentSetupBanners();
+    }
+    return probe;
+  }
+
+  function shouldAutoConnectLocalAgents() {
+    if (!hasAnyApiConfigured()) return true;
+    var hk = state.hermesDiagnostic || {};
+    if (hk.installKind && hk.installKind !== 'none' && !getApiKeyForProvider('hermes')) return true;
+    if (!getApiKeyForProvider('openclaw')) return true;
+    return false;
+  }
+
+  function finalizeLocalAgentAutoConnect() {
+    saveCfg(false);
+    persistSessions();
+    try {
+      syncLlmToStudioHost();
+    } catch (_) {}
+    try {
+      post({ type: 'niuma_request_studio_llm' });
+    } catch (_) {}
+    updateNeedSetup();
+    refreshInlineApiSetupVisibility();
+    refreshLocalAgentSetupBanners();
+    renderContactNav();
+    emptyState();
+  }
+
+  function pickDefaultLocalAgentSessionAfterAutoConnect(hmProbe, ocProbe) {
+    hmProbe = hmProbe || {};
+    ocProbe = ocProbe || {};
+    if (hmProbe.gatewayOk && getApiKeyForProvider('hermes')) {
+      ensureHermesSessionForImport();
+      return;
+    }
+    if (trimApiKey(ocProbe.token || ocProbe.niumaToken) && getApiKeyForProvider('openclaw')) {
+      ensureOpenClawSessionForImport();
+    }
+  }
+
+  function scheduleLocalAgentsAutoConnect(pass) {
+    pass = pass || 1;
+    if (pass === 1) {
+      if (!shouldAutoConnectLocalAgents()) return;
+      if (state.localAgentsAutoConnectRunning) return;
+      state.localAgentsAutoConnectActive = true;
+    } else if (!state.localAgentsAutoConnectActive) {
+      return;
+    }
+    state.localAgentsAutoConnectRunning = true;
+    var firstRun = !hasAnyApiConfigured();
+    var ensureEnv = true;
+    Promise.all([
+      requestHermesHostTokenProbe(false, ensureEnv).catch(function () {
+        return {};
+      }),
+      requestOpenClawHostTokenProbe(false).catch(function () {
+        return {};
+      })
+    ])
+      .then(function (arr) {
+        var hm = absorbHermesProbePayload(arr[0]) || arr[0] || {};
+        var oc = arr[1] || {};
+        var ocTok = trimApiKey(oc.token || oc.niumaToken || '');
+        if (ocTok) oc.hasToken = true;
+        var touched = false;
+        if (hm.hasToken) {
+          maybeAutoConnectHermesFromProbe(hm, {
+            forceApply: !getApiKeyForProvider('hermes'),
+            silent: true
+          });
+          ensureHermesSessionForImport();
+          if (hm.gatewayOk) {
+            var hs = activeSession();
+            if (hs && normalizeProviderId(hs.provider) === 'hermes') {
+              mergeNodeRuntime({
+                nodeKey: nodeKeyForSession(hs),
+                status: 'ready',
+                detail: '已连接',
+                updatedAt: Date.now()
+              });
+            }
+          }
+          touched = true;
         }
-        if (probe && probe.hasToken && (probe.gatewayOk || !getApiKeyForProvider('hermes'))) {
-          maybeAutoConnectHermesFromProbe(probe, { forceApply: !getApiKeyForProvider('hermes') });
+        if (ocTok) {
+          maybeAutoConnectOpenClawFromProbe(oc, {
+            forceApply: !getApiKeyForProvider('openclaw'),
+            silent: true
+          });
+          ensureOpenClawSessionForImport();
+          touched = true;
         }
-        if (pass < 2 && probe && probe.hasToken && !probe.gatewayOk) {
+        if (touched) finalizeLocalAgentAutoConnect();
+        if (firstRun) pickDefaultLocalAgentSessionAfterAutoConnect(hm, oc);
+        var needRetry = pass < 3 && hm.hasToken && !hm.gatewayOk;
+        if (needRetry) {
           setTimeout(function () {
-            scheduleHermesStartupHandshake(pass + 1);
-          }, 2800);
+            scheduleLocalAgentsAutoConnect(pass + 1);
+          }, 3200);
+        } else {
+          state.localAgentsAutoConnectRunning = false;
+          state.localAgentsAutoConnectActive = false;
+          if (touched) {
+            var parts = [];
+            if (getApiKeyForProvider('hermes')) parts.push('Hermes');
+            if (getApiKeyForProvider('openclaw')) parts.push('OpenClaw');
+            if (parts.length) cstat('已自动连接本机 ' + parts.join('、') + '，可直接对话。', 'success');
+          }
         }
       })
-      .catch(function () {});
+      .catch(function () {
+        state.localAgentsAutoConnectRunning = false;
+        state.localAgentsAutoConnectActive = false;
+      });
+  }
+
+  function scheduleHermesStartupHandshake(pass) {
+    scheduleLocalAgentsAutoConnect(pass || 1);
   }
 
   function formatHermesProbeFailure(probe, pingErr) {
@@ -10029,9 +10354,8 @@ body.niuma-confirm-open{overflow:hidden}
           lines.push('    · ' + p);
         });
       } else {
-        var laHint = probe.localAppData || '%LOCALAPPDATA%';
-        lines.push('  请在 ' + laHint + '\\hermes\\.env 配置 API_SERVER_KEY');
-        lines.push('  或点「一键连接本机 Hermes」自动写入并导入');
+        lines.push('  请点「一键连接 Hermes」：牛马会自动写入 API_SERVER_KEY 并开启 API Server');
+        lines.push('  若已写入仍无 Key，请完全退出并重启 Hermes 桌面版后再点一键连接');
       }
       if (probe.hasNiumaKey) lines.push('  注：牛马配置里曾有 Key，但 .env 未读到，请点「一键连接」同步');
       if (probe.debug) lines.push('  探测备注：' + probe.debug);
@@ -10141,13 +10465,15 @@ body.niuma-confirm-open{overflow:hidden}
     };
   }
 
-  function requestHermesHostTokenProbe(force, ensureEnv) {
+  function requestHermesHostTokenProbe(force, ensureEnv, remoteOpts) {
+    remoteOpts = remoteOpts || null;
+    var isRemote = !!(remoteOpts && String(remoteOpts.host || '').trim());
     return new Promise(function (resolve, reject) {
       var reqId = 'hm_probe_' + Date.now();
       var timer = setTimeout(function () {
         if (hermesImportPending && hermesImportPending.reqId === reqId) {
           hermesImportPending = null;
-          reject(new Error('读取本机 Hermes 配置超时'));
+          reject(new Error(isRemote ? '远程 Hermes 连接超时' : '读取本机 Hermes 配置超时'));
         }
       }, HERMES_HOST_PROBE_TIMEOUT_MS);
       hermesImportPending = {
@@ -10164,12 +10490,19 @@ body.niuma-confirm-open{overflow:hidden}
         }
       };
       try {
-        post({
+        var payload = {
           type: 'niuma_hermes_probe_token',
           force: !!force,
-          ensureEnv: ensureEnv === true,
+          ensureEnv: isRemote ? false : ensureEnv !== false,
           reqId: reqId
-        });
+        };
+        if (isRemote) {
+          payload.remote = true;
+          payload.remoteHost = String(remoteOpts.host || '').trim();
+          payload.port = Number(remoteOpts.port) || 8642;
+          payload.apiKey = trimApiKey(remoteOpts.apiKey || '');
+        }
+        post(payload);
       } catch (e) {
         clearTimeout(timer);
         hermesImportPending = null;
@@ -10183,9 +10516,12 @@ body.niuma-confirm-open{overflow:hidden}
     if (state.hermesImportRunning) return;
     state.hermesImportRunning = true;
     if (hermesImportConnectBtn) hermesImportConnectBtn.disabled = true;
-    apiTestStat('正在从本机 Hermes 读取 API_SERVER_KEY…', '');
+    apiTestStat('正在配置并连接本机 Hermes（自动写入 .env，无需手改）…', '');
     try {
       var probe = await requestHermesHostTokenProbe(!!opts.force, opts.ensureEnv !== false);
+      if (probe.envWrote && probe.envHint) {
+        apiTestStat(String(probe.envHint), '');
+      }
       var token = trimApiKey(probe.token || probe.niumaToken || '');
       var source = String(probe.source || '').trim();
       if (!token) {
@@ -11156,12 +11492,19 @@ body.niuma-confirm-open{overflow:hidden}
         return;
       }
       if (cfg.provider === 'hermes') {
-        var probeHmTest = await requestHermesHostTokenProbe(true).catch(function () {
-          return {};
-        });
-        absorbHermesProbePayload(probeHmTest);
-        if (!cfg.apiKey) {
-          throw new Error(formatHermesProbeFailure(probeHmTest));
+        var buHm = String(cfg.baseUrl || '').trim();
+        var isLocalHm = !buHm || /127\.0\.0\.1|localhost/i.test(buHm);
+        var probeHmTest = {};
+        if (isLocalHm) {
+          probeHmTest = await requestHermesHostTokenProbe(true, false).catch(function () {
+            return {};
+          });
+          absorbHermesProbePayload(probeHmTest);
+          if (!cfg.apiKey) {
+            throw new Error(formatHermesProbeFailure(probeHmTest));
+          }
+        } else if (!cfg.apiKey) {
+          throw new Error('远程 Hermes 缺少 API Key，请先导入连接码');
         }
         cfg.baseUrl = effectiveBaseUrl('hermes', cfg.baseUrl, '');
         try {
@@ -20022,6 +20365,21 @@ body.niuma-confirm-open{overflow:hidden}
       runHermesRestartGateway();
     });
   }
+  if (hermesExportRemoteBundleBtn) {
+    hermesExportRemoteBundleBtn.addEventListener('click', function () {
+      exportHermesRemoteBundle();
+    });
+  }
+  if (hermesImportRemoteBundleBtn) {
+    hermesImportRemoteBundleBtn.addEventListener('click', function () {
+      importHermesRemoteBundleFromClipboard();
+    });
+  }
+  if (hermesRemoteConnectBtn) {
+    hermesRemoteConnectBtn.addEventListener('click', function () {
+      runHermesRemoteConnect();
+    });
+  }
   if (hermesSetupRestartBtn) {
     hermesSetupRestartBtn.addEventListener('click', function () {
       runHermesRestartGateway();
@@ -21722,6 +22080,10 @@ body.niuma-confirm-open{overflow:hidden}
         applyStudioContextFromHost(d.autoInjectContext !== false, d.systemPrompt, true);
         return;
       }
+      if (d.type === 'host_run_local_agents_autoconnect') {
+        scheduleLocalAgentsAutoConnect(1);
+        return;
+      }
       if (d.type === 'host_apply_studio_llm') {
         if (d.llm) state.pendingStudioLlm = d.llm;
         cacheStudioLlmBundle(d);
@@ -21754,6 +22116,16 @@ body.niuma-confirm-open{overflow:hidden}
         }
         return;
       }
+      if (d.type === 'hermes_remote_bundle') {
+        if (hermesRemoteBundlePending) {
+          hermesRemoteBundlePending.resolve({
+            ok: !!d.ok,
+            bundle: d.bundle || {},
+            error: String(d.error || '').trim()
+          });
+        }
+        return;
+      }
       if (d.type === 'hermes_host_token_probe') {
         var hmTok = String(d.token || d.niumaToken || '').trim();
         var hmHostMsg = String(d.host || '127.0.0.1').trim() || '127.0.0.1';
@@ -21778,7 +22150,9 @@ body.niuma-confirm-open{overflow:hidden}
           gatewayRunning: !!d.gatewayRunning,
           canRestartGateway: !!d.canRestartGateway,
           probeAction: String(d.probeAction || '').trim(),
-          force: !!d.force
+          force: !!d.force,
+          envWrote: !!d.envWrote,
+          envHint: String(d.envHint || '').trim()
         };
         absorbHermesProbePayload(hmPayload);
         if (hermesImportPending) {
@@ -21792,8 +22166,12 @@ body.niuma-confirm-open{overflow:hidden}
           }
           var hmHint2 =
             hmPayload.gatewayOk === true
-              ? '已从本机填入 API_SERVER_KEY，API Server 正常。'
-              : formatHermesProbeFailure(hmPayload).split('\n').slice(0, 2).join(' ');
+              ? (hmPayload.envWrote
+                  ? '已自动配置 Hermes API Server，连接正常。'
+                  : '已从本机填入 API_SERVER_KEY，API Server 正常。')
+              : hmPayload.envWrote && hmPayload.envHint
+                ? hmPayload.envHint
+                : formatHermesProbeFailure(hmPayload).split('\n').slice(0, 2).join(' ');
           if (!getApiKeyForProvider('hermes') || hmPayload.force) sstat(hmHint2, hmPayload.gatewayOk === true ? 'success' : 'error');
         } else if (!hmPayload.token) {
           sstat(formatHermesProbeFailure(hmPayload).split('\n')[0], 'error');
@@ -22360,15 +22738,19 @@ body.niuma-confirm-open{overflow:hidden}
   loadCfg();
   refreshInlineApiSetupVisibility();
   setTimeout(function () {
-    scheduleHermesStartupHandshake(1);
-  }, 800);
+    scheduleLocalAgentsAutoConnect(1);
+  }, 600);
   setTimeout(function () {
     try {
       post({ type: 'niuma_request_studio_context' });
-      post({ type: 'niuma_request_studio_llm' });
       requestBrowserCurrentStateSync();
     } catch (e) {}
-  }, 600);
+  }, 400);
+  setTimeout(function () {
+    try {
+      post({ type: 'niuma_request_studio_llm' });
+    } catch (e) {}
+  }, 3200);
   setTimeout(requestBrowserCurrentStateSync, 1200);
   setTimeout(requestBrowserCurrentStateSync, 2400);
   var syncStudioBtn = $('syncStudioLlm');

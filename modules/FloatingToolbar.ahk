@@ -206,6 +206,7 @@ global g_FTB_AllowedCmdIds := Map(
 global g_FTB_WV2_Ctrl := 0
 global g_FTB_WV2 := 0
 global g_FTB_WV2_Ready := false
+global g_FTB_HermesProbeOpts := Map()
 global g_FTB_CompatLock := false
 global g_FTB_CompatQueue := []
 global g_FTB_CompatLockTimestamp := 0
@@ -1639,6 +1640,7 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(FloatingToolbar_PushLayoutDeferred, -180)
         SetTimer(FloatingToolbar_PushLayoutDeferred, -520)
         SetTimer(FloatingToolbar_PushStudioLlmOnReady, -450)
+        SetTimer(FloatingToolbar_PushLocalAgentsAutoConnect, -900)
         FloatingToolbar_FlushPendingSelectionIfReady()
         FloatingToolbar_FlushPendingNiumaComposeIfReady()
         if FuncExists("CommandPalette_FlushPendingAiSendIfReady")
@@ -2469,7 +2471,37 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ = "niuma_hermes_probe_token") {
         force := msg.Has("force") && !!msg["force"]
         ensureEnv := msg.Has("ensureEnv") && !!msg["ensureEnv"]
+        g_FTB_HermesProbeOpts := Map()
+        if (msg.Has("remote") && !!msg["remote"]) {
+            ensureEnv := false
+            g_FTB_HermesProbeOpts := Map(
+                "remote", true,
+                "host", Trim(String(msg.Get("remoteHost", ""))),
+                "port", Integer(msg.Get("port", 8642)),
+                "apiKey", Trim(String(msg.Get("apiKey", "")))
+            )
+        }
         SetTimer(FloatingToolbar_DeferredProbeHermesApiServer.Bind(force, ensureEnv), -10)
+        return
+    }
+    if (typ = "niuma_hermes_export_remote_bundle") {
+        advertiseHost := Trim(String(msg.Get("advertiseHost", "")))
+        label := Trim(String(msg.Get("label", "")))
+        bundle := Map("ok", false, "error", "UserStudio_BuildHermesRemoteBundle 不可用")
+        if FuncExists("UserStudio_BuildHermesRemoteBundle") {
+            try bundle := UserStudio_BuildHermesRemoteBundle(advertiseHost, label)
+            catch as eB {
+                bundle := Map("ok", false, "error", eB.Message)
+            }
+        }
+        try WebView_QueuePayload(g_FTB_WV2, Map(
+            "type", "hermes_remote_bundle",
+            "ok", !!bundle.Get("ok", false),
+            "bundle", bundle,
+            "error", String(bundle.Get("error", ""))
+        ))
+        catch {
+        }
         return
     }
     if (typ = "niuma_hermes_restart_gateway") {
@@ -3205,7 +3237,7 @@ FloatingToolbar_ReadHermesEnvKeyDirect(&outSource := "", &outHost := "", &outPor
 }
 
 FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
-    global g_FTB_WV2
+    global g_FTB_WV2, g_FTB_HermesProbeOpts
     if !g_FTB_WV2
         return
 
@@ -3218,16 +3250,52 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
     gwOk := false
     gwErr := ""
     dbg := ""
+    remoteMode := false
+    installKind := "none"
+    installLabel := ""
+    apiServerState := ""
+    gatewayRunning := false
+    canRestartGateway := false
+    probeAction := ""
+    tried := []
+    localAppData := ""
+    primaryDir := ""
+    hermesDataDir := ""
+    hasEnvKey := false
+    hasNiumaKey := false
 
-    token := FloatingToolbar_ReadHermesEnvKeyDirect(&source, &host, &port)
-    if (token != "")
-        dbg := "direct=" . source
+    envWrote := false
+    envHint := ""
 
+    if (g_FTB_HermesProbeOpts is Map && g_FTB_HermesProbeOpts.Get("remote", false)) {
+        remoteMode := true
+        ensureEnv := false
+        host := Trim(String(g_FTB_HermesProbeOpts.Get("host", "")))
+        port := Integer(g_FTB_HermesProbeOpts.Get("port", 8642))
+        if (port < 1)
+            port := 8642
+        token := Trim(String(g_FTB_HermesProbeOpts.Get("apiKey", "")))
+        source := "remote_bundle"
+        installKind := "remote"
+        installLabel := "远程 Hermes · " . host
+        dbg := "remote=" . host . ":" . port
+        g_FTB_HermesProbeOpts := Map()
+        if (host = "localhost")
+            host := "127.0.0.1"
+        if (host = "" || token = "")
+            gwErr := "远程探测缺少 IP 或 API Key（请先导入连接码）。"
+    } else
+        g_FTB_HermesProbeOpts := Map()
+
+    if !remoteMode {
     if (ensureEnv && FuncExists("UserStudio_EnsureHermesApiServerEnv")) {
         try {
             ens := UserStudio_EnsureHermesApiServerEnv()
             if (ens is Map) {
-                if (ens.Get("wrote", false))
+                envWrote := !!ens.Get("wrote", false)
+                if ens.Has("hint")
+                    envHint := Trim(String(ens["hint"]))
+                if (envWrote)
                     dbg := "wrote=" . String(ens.Get("path", ""))
                 if (!ens.Get("ok", false) && ens.Has("error"))
                     dbg .= (dbg != "" ? " | " : "") . String(ens["error"])
@@ -3236,6 +3304,10 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
             dbg := "ensure_err=" . eEns.Message
         }
     }
+
+    token := FloatingToolbar_ReadHermesEnvKeyDirect(&source, &host, &port)
+    if (token != "")
+        dbg := (dbg != "" ? dbg . " | " : "") . "direct=" . source
 
     if (token = "") {
         try {
@@ -3291,8 +3363,9 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
         token := niumaKey
         source := "niuma_chat_llm.json"
     }
+    }
 
-    if (token != "") {
+    if (token != "" && gwErr = "") {
         base := "http://" . host . ":" . port . "/v1"
         try {
             r := Map("ok", false, "error", "")
@@ -3307,64 +3380,58 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
         } catch as eGw {
             gwErr := eGw.Message
         }
-    } else if (gwErr = "") {
+    } else if (gwErr = "" && !remoteMode) {
         gwErr := "未从本机 .env 读到 API_SERVER_KEY"
         dbg .= (dbg != "" ? " | " : "") . "la=" . EnvGet("LOCALAPPDATA")
     }
 
-    tried := []
-    localAppData := ""
-    primaryDir := ""
-    laProbe := ""
-    upProbe := ""
-    try laProbe := Trim(EnvGet("LOCALAPPDATA"))
-    catch {
-    }
-    try upProbe := Trim(EnvGet("USERPROFILE"))
-    catch {
-    }
-    if (laProbe != "")
-        tried.Push(laProbe . "\hermes\.env" . (FileExist(laProbe . "\hermes\.env") ? " ✓" : " ✗"))
-    if (upProbe != "")
-        tried.Push(upProbe . "\AppData\Local\hermes\.env" . (FileExist(upProbe . "\AppData\Local\hermes\.env") ? " ✓" : " ✗"))
-    if FuncExists("UserStudio_CollectHermesProbeMeta") {
-        try {
-            meta := UserStudio_CollectHermesProbeMeta()
-            if (meta is Map) {
-                if (meta.Has("tried") && meta["tried"] is Array) {
-                    for _, p in meta["tried"] {
-                        if (p != "" && !InStr(StrJoin(tried, "`n"), p))
-                            tried.Push(p . (FileExist(p) ? " ✓" : " ✗"))
-                    }
-                }
-                localAppData := String(meta.Get("localAppData", ""))
-                primaryDir := String(meta.Get("primaryDir", ""))
-            }
-        } catch {
+    if remoteMode {
+        tried.Push("remote://" . host . ":" . port)
+        probeAction := "remote_http"
+    } else {
+        laProbe := ""
+        upProbe := ""
+        try laProbe := Trim(EnvGet("LOCALAPPDATA"))
+        catch {
         }
-    }
-    hasEnvKey := (token != "" && source != "" && source != "niuma_chat_llm.json")
-    hasNiumaKey := (niumaKey != "")
-
-    installKind := "none"
-    installLabel := ""
-    apiServerState := ""
-    gatewayRunning := false
-    canRestartGateway := false
-    hermesDataDir := ""
-    probeAction := ""
-    if FuncExists("UserStudio_DiscoverHermesInstall") {
-        try {
-            disc := UserStudio_DiscoverHermesInstall()
-            if (disc is Map) {
-                installKind := String(disc.Get("installKind", "none"))
-                installLabel := String(disc.Get("installLabel", ""))
-                apiServerState := String(disc.Get("apiServerState", ""))
-                gatewayRunning := !!disc.Get("gatewayRunning", false)
-                canRestartGateway := !!disc.Get("canRestartGateway", false)
-                hermesDataDir := String(disc.Get("dataDir", ""))
+        try upProbe := Trim(EnvGet("USERPROFILE"))
+        catch {
+        }
+        if (laProbe != "")
+            tried.Push(laProbe . "\hermes\.env" . (FileExist(laProbe . "\hermes\.env") ? " ✓" : " ✗"))
+        if (upProbe != "")
+            tried.Push(upProbe . "\AppData\Local\hermes\.env" . (FileExist(upProbe . "\AppData\Local\hermes\.env") ? " ✓" : " ✗"))
+        if FuncExists("UserStudio_CollectHermesProbeMeta") {
+            try {
+                meta := UserStudio_CollectHermesProbeMeta()
+                if (meta is Map) {
+                    if (meta.Has("tried") && meta["tried"] is Array) {
+                        for _, p in meta["tried"] {
+                            if (p != "" && !InStr(StrJoin(tried, "`n"), p))
+                                tried.Push(p . (FileExist(p) ? " ✓" : " ✗"))
+                        }
+                    }
+                    localAppData := String(meta.Get("localAppData", ""))
+                    primaryDir := String(meta.Get("primaryDir", ""))
+                }
+            } catch {
             }
-        } catch {
+        }
+        hasEnvKey := (token != "" && source != "" && source != "niuma_chat_llm.json")
+        hasNiumaKey := (niumaKey != "")
+        if FuncExists("UserStudio_DiscoverHermesInstall") {
+            try {
+                disc := UserStudio_DiscoverHermesInstall()
+                if (disc is Map) {
+                    installKind := String(disc.Get("installKind", "none"))
+                    installLabel := String(disc.Get("installLabel", ""))
+                    apiServerState := String(disc.Get("apiServerState", ""))
+                    gatewayRunning := !!disc.Get("gatewayRunning", false)
+                    canRestartGateway := !!disc.Get("canRestartGateway", false)
+                    hermesDataDir := String(disc.Get("dataDir", ""))
+                }
+            } catch {
+            }
         }
     }
     if (token != "" && !gwOk && FuncExists("UserStudio_ProbeHermesApiServer")) {
@@ -3420,7 +3487,10 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
         "gatewayRunning", gatewayRunning,
         "canRestartGateway", canRestartGateway,
         "probeAction", probeAction,
-        "force", !!force
+        "force", !!force,
+        "envWrote", envWrote,
+        "envHint", envHint,
+        "remote", remoteMode
     ))
 }
 
@@ -4080,6 +4150,15 @@ FloatingToolbar_GetStudioApiKeys() {
         }
     }
     return FloatingToolbar_EnrichStudioApiKeys(keys)
+}
+
+FloatingToolbar_PushLocalAgentsAutoConnect(*) {
+    global g_FTB_WV2, g_FTB_WV2_Ready
+    if !g_FTB_WV2_Ready || !g_FTB_WV2
+        return
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_run_local_agents_autoconnect"))
+    catch {
+    }
 }
 
 FloatingToolbar_PushStudioLlmOnReady(*) {

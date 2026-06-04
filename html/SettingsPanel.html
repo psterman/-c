@@ -3381,7 +3381,7 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
         model: "hermes-agent",
         models: ["hermes-agent"],
         keyPh: "API Server Key（推荐点一键连接）",
-        hint: "本机 Hermes OpenAI 兼容 API · 需在 ~/.hermes/.env 启用 API_SERVER_ENABLED 并设置 API_SERVER_KEY，然后 hermes gateway"
+        hint: "本机 Hermes OpenAI 兼容 API · 点「测试连接」会自动写入 .env 并开启 API Server（无需手改），重启 Hermes 后即可用"
       },
       custom: {
         label: "自定义（中转 / 私有网关）",
@@ -4308,7 +4308,7 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       }
       if (!token) {
         throw new Error(
-          "未读到 Hermes Key。NiumaChat 若已能对话，请先在对话里保存 Hermes；或检查 %LOCALAPPDATA%\\hermes\\.env。"
+          "未读到 Hermes Key。请先安装 Hermes 并点「测试连接」（会自动写入 .env）；写入后请完全退出并重启 Hermes 再试。"
         );
       }
       const pre = studioLlmPreset("hermes");
@@ -6395,8 +6395,8 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
 <div class="card studio-api-card"><div class="title">大模型 API</div>
 <div class="studio-api-steps">
   <strong>三种配置方式：</strong><br>
-  ① <strong>本机 Hermes</strong> — 先点「测试连接」，通过后再「确认保存」（读 <code>~/.hermes/.env</code> + 检测 <code>8642</code>）<br>
-  ② <strong>本机 OpenClaw</strong> — 先「测试连接」，再「确认保存」（读 Gateway Token + 检测 <code>18789</code>）<br>
+  ① <strong>本机 Hermes / OpenClaw</strong> — 与牛马装在同一台电脑时，打开 Niuma Chat 会<strong>自动检测并连接</strong>（无需手改 <code>.env</code>）；也可手动点卡片「一键连接」<br>
+  ② <strong>Hermes 首次</strong> — 自动写入 <code>.env</code> 后请<strong>完全退出并重启 Hermes</strong>，再开牛马即可对话<br>
   ③ <strong>云端模型</strong> — 点「添加云模型 API」，填写各平台 API Key（DeepSeek、MiniMax 等）
 </div>
 <div class="hint mini">已配置 ${configuredCount} 个密钥槽 · 当前默认：<strong>${esc(studioLlmPreset(activeProv).label)}</strong> · 修改后切换标签或关闭设置页会自动保存</div>

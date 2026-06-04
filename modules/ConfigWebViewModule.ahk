@@ -2836,11 +2836,32 @@ ConfigWebView_OnMessage(sender, args) {
             info := Map()
             dbg := ""
             niumaKey := ""
+            envWrote := false
+            envHint := ""
+            hermesEnsure := (action = "ensureHermesApiServerEnv")
+                || !!(msg.Has("ensureEnv") && msg["ensureEnv"])
+                || (action = "refreshHermesStudioStatus")
+            if (hermesEnsure && FuncExists("UserStudio_EnsureHermesApiServerEnv")) {
+                try {
+                    ens := UserStudio_EnsureHermesApiServerEnv()
+                    if (ens is Map) {
+                        envWrote := !!ens.Get("wrote", false)
+                        if ens.Has("hint")
+                            envHint := Trim(String(ens["hint"]))
+                        if (envWrote)
+                            dbg := "wrote=" . String(ens.Get("path", ""))
+                        if (!ens.Get("ok", false) && ens.Has("error"))
+                            dbg .= (dbg != "" ? " | " : "") . String(ens["error"])
+                    }
+                } catch as eEns {
+                    dbg := "ensure_err=" . eEns.Message
+                }
+            }
             try {
                 if FuncExists("FloatingToolbar_ReadHermesEnvKeyDirect") {
                     token := FloatingToolbar_ReadHermesEnvKeyDirect(&source, &host, &port)
                     if (token != "")
-                        dbg := "direct=" . source
+                        dbg := (dbg != "" ? dbg . " | " : "") . "direct=" . source
                 }
             } catch as eDirect {
                 dbg := "direct_err=" . eDirect.Message
@@ -2853,27 +2874,11 @@ ConfigWebView_OnMessage(sender, args) {
                         source := String(fb.Get("source", ""))
                         host := Trim(String(fb.Get("host", host)))
                         port := Integer(fb.Get("port", port))
-                        dbg := "quick=" . source
+                        dbg := (dbg != "" ? dbg . " | " : "") . "quick=" . source
                     }
                 }
             } catch as eQuick {
                 dbg := "quick_err=" . eQuick.Message
-            }
-            hermesEnsure := (action = "ensureHermesApiServerEnv")
-                || !!(msg.Has("ensureEnv") && msg["ensureEnv"])
-                || (action = "refreshHermesStudioStatus")
-            if (token = "" && hermesEnsure && FuncExists("UserStudio_EnsureHermesApiServerEnv")) {
-                try {
-                    ens := UserStudio_EnsureHermesApiServerEnv()
-                    if (ens is Map) {
-                        if (ens.Get("wrote", false))
-                            dbg := "wrote=" . String(ens.Get("path", ""))
-                        if (!ens.Get("ok", false) && ens.Has("error"))
-                            dbg .= (dbg != "" ? " | " : "") . String(ens["error"])
-                    }
-                } catch as eEns {
-                    dbg := "ensure_err=" . eEns.Message
-                }
             }
             if (token = "") {
                 try {
@@ -2994,7 +2999,9 @@ ConfigWebView_OnMessage(sender, args) {
                     "token", token,
                     "source", source,
                     "path", source,
-                    "wrote", InStr(dbg, "wrote=") > 0,
+                    "wrote", envWrote,
+                    "envWrote", envWrote,
+                    "envHint", envHint,
                     "debug", dbg,
                     "gatewayOk", gwOk,
                     "gatewayError", gwErr,
@@ -3026,7 +3033,9 @@ ConfigWebView_OnMessage(sender, args) {
                     "installLabel", installLabel,
                     "apiServerState", apiServerState,
                     "canRestartGateway", canRestartGateway,
-                    "force", !!(msg.Has("force") && msg["force"])
+                    "force", !!(msg.Has("force") && msg["force"]),
+                    "envWrote", envWrote,
+                    "envHint", envHint
                 ))
             } else {
                 ConfigWebView_Send(Map(
@@ -3050,7 +3059,9 @@ ConfigWebView_OnMessage(sender, args) {
                     "apiServerState", apiServerState,
                     "gatewayRunning", gatewayRunning,
                     "canRestartGateway", canRestartGateway,
-                    "force", !!(msg.Has("force") && msg["force"])
+                    "force", !!(msg.Has("force") && msg["force"]),
+                    "envWrote", envWrote,
+                    "envHint", envHint
                 ))
             }
         case "hermes_restart_gateway", "niuma_hermes_restart_gateway":

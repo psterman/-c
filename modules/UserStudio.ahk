@@ -1284,32 +1284,249 @@ UserStudio_AppendHermesEnvLines(envPath, lines) {
     }
 }
 
-UserStudio_EnsureHermesApiServerEnv() {
+/** 更新或追加 .env 单项（避免重复追加多行 API_SERVER_KEY）。 */
+UserStudio_PatchHermesEnvFile(envPath, updates) {
+    if !(updates is Map) || updates.Count = 0
+        return false
+    envPath := Trim(String(envPath))
+    if (envPath = "")
+        return false
+    dir := ""
+    if RegExMatch(envPath, "^(.*)\\[^\\]+$", &m)
+        dir := m[1]
+    if (dir != "" && !DirExist(dir))
+        try DirCreate(dir)
+    raw := ""
+    if FileExist(envPath) {
+        try raw := FileRead(envPath, "UTF-8")
+        catch {
+            raw := ""
+        }
+    }
+    if (Ord(SubStr(raw, 1, 1)) = 0xFEFF)
+        raw := SubStr(raw, 2)
+    wroteBlock := false
+    for name, val in updates {
+        name := Trim(String(name))
+        if (name = "")
+            continue
+        val := Trim(String(val))
+        line := name . "=" . val
+        pat := "m)^" . name . "\s*=.*$"
+        if RegExMatch(raw, pat)
+            raw := RegExReplace(raw, pat, line)
+        else {
+            if (raw != "" && !RegExMatch(raw, "i)\r?\n\s*$"))
+                raw .= "`n"
+            if !wroteBlock && !InStr(raw, "# NMER: Hermes API Server") {
+                raw .= (raw != "" ? "`n" : "") . "# NMER: Hermes API Server (牛马一键连接自动配置)`n"
+                wroteBlock := true
+            }
+            raw .= line . "`n"
+        }
+    }
+    try {
+        if FileExist(envPath)
+            FileDelete(envPath)
+        FileAppend(RTrim(raw, "`n`r") . "`n", envPath, "UTF-8")
+        return true
+    } catch {
+        return false
+    }
+}
+
+/** 猜测本机局域网 IPv4（供「生成远程连接码」预填，失败返回空）。 */
+UserStudio_GuessLanIPv4() {
+    try {
+        ps1 := "Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notmatch '^127\.' -and $_.PrefixOrigin -ne 'WellKnown' } | Select-Object -First 1 -ExpandProperty IPAddress"
+        q := Chr(34)
+        cmd := "powershell -NoProfile -Command " . q . ps1 . q
+        outFile := A_Temp . "\nmer_lan_ip_" . A_TickCount . ".txt"
+        try FileDelete(outFile)
+        RunWait(cmd . " > " . q . outFile . q . " 2>nul", , "Hide")
+        if FileExist(outFile) {
+            ip := Trim(FileRead(outFile, "UTF-8"), "`n`r `t")
+            try FileDelete(outFile)
+            if (ip != "" && RegExMatch(ip, "^\d{1,3}(\.\d{1,3}){3}$"))
+                return ip
+        }
+    } catch {
+    }
+    return ""
+}
+
+UserStudio_BuildHermesRemoteBundle(advertiseHost := "", label := "") {
+    if FuncExists("UserStudio_EnsureHermesApiServerEnv") {
+        cfg0 := UserStudio_ReadHermesApiConfig()
+        if (Trim(String(cfg0.Get("key", ""))) = "")
+            try UserStudio_EnsureHermesApiServerEnv()
+            catch {
+            }
+    }
     cfg := UserStudio_ReadHermesApiConfig()
     key := Trim(String(cfg.Get("key", "")))
-    if (key != "")
-        return Map("ok", true, "key", key, "source", String(cfg.Get("source", "")), "wrote", false, "path", "")
+    if (key = "") {
+        try key := UserStudio_ReadNiumaHermesKey()
+        catch {
+        }
+    }
+    if (key = "")
+        return Map("ok", false, "error", "本机未读到 API_SERVER_KEY，请先在 Hermes 电脑上点「一键连接」或配置 .env。")
+    host := Trim(String(advertiseHost))
+    if (host = "" || host = "127.0.0.1" || host = "localhost")
+        host := UserStudio_GuessLanIPv4()
+    if (host = "")
+        return Map("ok", false, "error", "请填写 Hermes 电脑的局域网 IP（如 192.168.1.20），再生成连接码。")
+    port := Integer(cfg.Get("port", 8642))
+    if (port < 1)
+        port := 8642
+    baseUrl := "http://" . host . ":" . port . "/v1"
+    bundle := Map(
+        "ok", true,
+        "v", 1,
+        "type", "hermes-remote",
+        "host", host,
+        "port", port,
+        "key", key,
+        "baseUrl", baseUrl,
+        "model", "hermes-agent",
+        "label", Trim(String(label)),
+        "machine", A_ComputerName,
+        "createdAt", FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
+    )
+    return bundle
+}
+
+UserStudio_UriDecode(s) {
+    if FuncExists("CloudPlayer_UrlDecodeToken") {
+        try return CloudPlayer_UrlDecodeToken(s)
+        catch {
+        }
+    }
+    t := StrReplace(String(s), "+", " ")
+    out := ""
+    i := 1
+    n := StrLen(t)
+    while (i <= n) {
+        ch := SubStr(t, i, 1)
+        if (ch = "%" && i + 2 <= n) {
+            hx := SubStr(t, i + 1, 2)
+            if RegExMatch(hx, "i)^[0-9a-f]{2}$") {
+                out .= Chr("0x" . hx)
+                i += 3
+                continue
+            }
+        }
+        out .= ch
+        i += 1
+    }
+    return out
+}
+
+UserStudio_ParseHermesRemoteBundle(raw) {
+    raw := Trim(String(raw))
+    if (raw = "")
+        return Map("ok", false, "error", "连接码为空")
+    if RegExMatch(raw, "i)^nmer-hermes://([^/:?#]+)(?::(\d+))?", &mu) {
+        host := Trim(mu[1])
+        port := mu[2] != "" ? Integer(mu[2]) : 8642
+        key := ""
+        if RegExMatch(raw, "[?&]key=([^&#]+)", &mk)
+            key := UserStudio_NormalizeApiKey(UserStudio_UriDecode(mk[1]))
+        if (key = "" && RegExMatch(raw, "#key=([^&#]+)", &mk2))
+            key := UserStudio_NormalizeApiKey(UserStudio_UriDecode(mk2[1]))
+        if (host = "" || key = "")
+            return Map("ok", false, "error", "连接 URL 缺少 host 或 key")
+        return Map(
+            "ok", true,
+            "host", host,
+            "port", port,
+            "key", key,
+            "baseUrl", "http://" . host . ":" . port . "/v1",
+            "model", "hermes-agent"
+        )
+    }
+    try {
+        doc := _US_JxonLoad(raw)
+        if !(doc is Map)
+            return Map("ok", false, "error", "连接码格式无效")
+        if (doc.Get("type", "") != "" && doc["type"] != "hermes-remote")
+            return Map("ok", false, "error", "不是 Hermes 远程连接码")
+        host := Trim(String(doc.Get("host", "")))
+        port := Integer(doc.Get("port", 8642))
+        key := UserStudio_NormalizeApiKey(doc.Get("key", ""))
+        if (host = "" || key = "")
+            return Map("ok", false, "error", "连接码缺少 host 或 key")
+        bu := Trim(String(doc.Get("baseUrl", "")))
+        if (bu = "")
+            bu := "http://" . host . ":" . port . "/v1"
+        return Map(
+            "ok", true,
+            "host", host,
+            "port", port,
+            "key", key,
+            "baseUrl", bu,
+            "model", Trim(String(doc.Get("model", "hermes-agent"))),
+            "label", Trim(String(doc.Get("label", "")))
+        )
+    } catch as eJ {
+        return Map("ok", false, "error", "无法解析连接码: " . eJ.Message)
+    }
+}
+
+UserStudio_EnsureHermesApiServerEnv() {
+    cfg := UserStudio_ReadHermesApiConfig()
     envPath := UserStudio_GetHermesEnvPath()
-    key := UserStudio_GenerateHermesApiServerKey()
-    lines := [
-        "API_SERVER_ENABLED=true",
-        "API_SERVER_KEY=" . key,
-        "API_SERVER_HOST=127.0.0.1",
-        "API_SERVER_PORT=8642"
-    ]
-    if !UserStudio_AppendHermesEnvLines(envPath, lines)
+    key := Trim(String(cfg.Get("key", "")))
+    enabled := !!cfg.Get("enabled", false)
+    port := Integer(cfg.Get("port", 8642))
+    if (port < 1)
+        port := 8642
+    host := Trim(String(cfg.Get("host", "127.0.0.1")))
+    if (host = "" || host = "localhost")
+        host := "127.0.0.1"
+    if (key != "" && enabled)
+        return Map(
+            "ok", true,
+            "key", key,
+            "source", String(cfg.Get("source", envPath)),
+            "wrote", false,
+            "enabled", true,
+            "path", envPath
+        )
+    updates := Map()
+    wrote := false
+    if (key = "") {
+        key := UserStudio_GenerateHermesApiServerKey()
+        updates["API_SERVER_KEY"] := key
+        wrote := true
+    }
+    if !enabled {
+        updates["API_SERVER_ENABLED"] := "true"
+        wrote := true
+    }
+    if wrote {
+        updates["API_SERVER_HOST"] := host
+        updates["API_SERVER_PORT"] := String(port)
+    }
+    if !wrote
+        return Map("ok", true, "key", key, "source", String(cfg.Get("source", envPath)), "wrote", false, "enabled", enabled, "path", envPath)
+    if !UserStudio_PatchHermesEnvFile(envPath, updates)
         return Map("ok", false, "error", "无法写入 " . envPath, "wrote", false, "path", envPath)
     cfg2 := UserStudio_ReadHermesApiConfig()
     key2 := Trim(String(cfg2.Get("key", "")))
     if (key2 = "")
         key2 := key
+    hint := "已自动开启 Hermes API Server 并写入密钥。"
+    hint .= "请完全退出并重新打开 Hermes 桌面应用（或重启 Gateway），再点「一键连接」。"
     return Map(
         "ok", true,
         "key", key2,
         "source", envPath,
         "wrote", true,
+        "enabled", true,
         "path", envPath,
-        "hint", "已写入 API_SERVER_KEY。请完全退出并重新打开 Hermes 桌面应用，待网关启动后再点一键连接（端口 8642）。"
+        "hint", hint
     )
 }
 
@@ -1671,7 +1888,7 @@ UserStudio_ProbeHermesApiServer(base, key, timeoutMs := 12000) {
     else if (key != "")
         err := "已识别 " . installLabel . " 且 Key 已读取，但 " . host . ":" . port . " 无响应。桌面版已打开不等于 API Server 已启动；请重启 Gateway。"
     else
-        err := "未找到 API_SERVER_KEY。请在 " . dataDir . "\.env 配置 API_SERVER_ENABLED=true 与 API_SERVER_KEY，或点「一键连接 Hermes」。"
+        err := "未找到 API_SERVER_KEY。请点「一键连接 Hermes」自动写入配置；若已安装 Hermes，写入后需完全退出并重启 Hermes 桌面版。"
     tcpMs := Min(Max(800, Integer(timeoutMs)), 3000)
     tcpOk := UserStudio_TcpPortOpen(host, port, tcpMs)
     return Map(
