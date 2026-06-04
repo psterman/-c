@@ -2502,6 +2502,7 @@ body.niuma-confirm-open{overflow:hidden}
   }
 
   var _paletteAiStreamCancelled = false;
+  var _paletteAgentStreamCancelled = false;
   var _paletteAiHudActive = false;
 
   function paletteAiHudSet(mode) {
@@ -2550,8 +2551,34 @@ body.niuma-confirm-open{overflow:hidden}
     var list = state.sessions || [];
     for (var i = list.length - 1; i >= 0; i--) {
       if (list[i] && String(list[i]._paletteReqId || '') === rid) return list[i];
+      if (list[i] && String(list[i]._paletteAgentReqId || '') === rid) return list[i];
     }
     return typeof activeSession === 'function' ? activeSession() : null;
+  }
+
+  function paletteDedupeRepeatedText(text) {
+    var t = String(text || '').trim();
+    if (t.length < 60) return t;
+    for (var reps = 3; reps >= 2; reps--) {
+      if (t.length % reps !== 0) continue;
+      var unitLen = t.length / reps;
+      if (unitLen < 24) continue;
+      var unit = t.slice(0, unitLen);
+      var ok = true;
+      for (var r = 1; r < reps; r++) {
+        if (t.slice(r * unitLen, (r + 1) * unitLen) !== unit) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) return unit;
+    }
+    return t;
+  }
+
+  function palettePickAssistantAnswerForAgent(reqId, query) {
+    var ans = palettePickAssistantAnswer(reqId, query);
+    return paletteDedupeRepeatedText(ans);
   }
 
   function palettePickAssistantAnswer(reqId, query) {
@@ -2581,6 +2608,20 @@ body.niuma-confirm-open{overflow:hidden}
     } catch (_) {}
     try {
       post({ type: 'niuma_palette_ai_end', reqId: String(reqId || ''), answer: a });
+    } catch (_) {}
+  }
+
+  function paletteNotifyPaletteAgentEnd(reqId, cardId, answer, sessionRef) {
+    if (_paletteAgentStreamCancelled) return;
+    var a = String(answer || '');
+    try {
+      post({
+        type: 'niuma_palette_agent_end',
+        reqId: String(reqId || ''),
+        cardId: String(cardId || ''),
+        answer: a,
+        sessionRef: sessionRef != null ? String(sessionRef) : ''
+      });
     } catch (_) {}
   }
 
@@ -2774,6 +2815,173 @@ body.niuma-confirm-open{overflow:hidden}
     runPaletteAiStream(String(opts.reqId || ''), String(opts.query || ''), String(opts.provider || ''));
   };
   window.runPaletteAiStream = runPaletteAiStream;
+
+  async function runPaletteAgentStream(reqId, cardId, query, provider, systemPrompt) {
+    _paletteAgentStreamCancelled = false;
+    var q = String(query || '').trim();
+    var cid = String(cardId || '');
+    if (!q) {
+      post({ type: 'niuma_palette_agent_error', reqId: reqId, cardId: cid, message: '空问题' });
+      return;
+    }
+    var provNode = String(provider || 'openclaw').trim() || 'openclaw';
+    if (!state.chatBridgeReady) {
+      try {
+        declareChatBridgeReady();
+      } catch (_) {}
+      try {
+        await waitForChatBridgeReady(8000);
+      } catch (_) {}
+    }
+    post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cid, delta: '⏳ 正在准备代理引擎…\n' });
+    if (provNode) {
+      try {
+        var grpA = findNodeGroup(provNode);
+        if (grpA && grpA.sessions && grpA.sessions.length) switchToNode(provNode);
+        else if (typeof createSessionWithProvider === 'function' && P[provNode]) createSessionWithProvider(provNode);
+      } catch (_) {}
+    }
+    var s = activeSession();
+    if (!s || !s.id) {
+      try {
+        if (typeof createSessionWithProvider === 'function' && P[provNode]) {
+          createSessionWithProvider(provNode);
+          s = activeSession();
+        }
+      } catch (_) {}
+    }
+    if (!s || !s.id) {
+      post({ type: 'niuma_palette_agent_error', reqId: reqId, cardId: cid, message: '无活动会话：请先在 Niuma Chat 对「' + provNode + '」点一键连接' });
+      return;
+    }
+    var sid = s.id;
+    s._paletteAgentReqId = reqId;
+    s._paletteAgentCardId = cid;
+    s._paletteReqId = reqId;
+    saveCfg(false);
+    var cfg = buildSendCfg();
+    if (!cfg) {
+      post({ type: 'niuma_palette_agent_error', reqId: reqId, cardId: cid, message: '无法构建模型配置' });
+      return;
+    }
+    var agentSys = String(systemPrompt || '').trim();
+    if (agentSys) cfg.systemPrompt = agentSys;
+    if (cfg.provider === 'ollama') {
+      try {
+        await checkOllamaHealthWithStart({ tryStart: true });
+      } catch (eOl) {
+        post({ type: 'niuma_palette_agent_error', reqId: reqId, cardId: cid, message: (eOl && eOl.message) ? eOl.message : String(eOl) });
+        return;
+      }
+      cfg.model = resolveOllamaModelForSend(cfg);
+    }
+    cfg.userContentForModel = composeUserTextForModel(q, cfg);
+    var p0 = P[cfg.provider] || P.openai;
+    if (p0.transport === 'cli') {
+      post({ type: 'niuma_palette_agent_error', reqId: reqId, cardId: cid, message: 'CLI 模式请在大窗中使用' });
+      return;
+    }
+    if (!cfg.baseUrl || !cfg.model) {
+      post({ type: 'niuma_palette_agent_error', reqId: reqId, cardId: cid, message: '请先配置 Base URL 与 Model' });
+      return;
+    }
+    if (p0.transport !== 'openclaw' && cfg.provider !== 'ollama' && !cfg.apiKey) {
+      post({ type: 'niuma_palette_agent_error', reqId: reqId, cardId: cid, message: '请先配置 API Key' });
+      return;
+    }
+    post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cid, delta: '💭 正在请求托管大脑…\n' });
+    var hist = s.history || [];
+    var lastH = hist.length ? hist[hist.length - 1] : null;
+    if (!lastH || lastH.role !== 'user' || String(lastH.content || '').trim() !== q) add('user', q);
+    clearPendingAttach();
+    setSessionSending(sid, true);
+    var streamDraftId = '';
+    var lastPostedLen = 0;
+    var sessionRefOut = s.gatewaySessionKey || s.id || '';
+    function postAgentProgressFull(fullText) {
+      if (_paletteAgentStreamCancelled) return;
+      var t = String(fullText || '');
+      if (t.length <= lastPostedLen) return;
+      var delta = t.slice(lastPostedLen);
+      lastPostedLen = t.length;
+      post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cid, delta: delta });
+      var sAct = sessionById(sid);
+      if (sAct && p0.transport === 'openclaw') {
+        var draft = streamDraftId ? { _id: streamDraftId } : ensureAssistantDraft(sAct, String(fullText || '').trim() || '思考中...');
+        if (draft && draft._id) streamDraftId = draft._id;
+        if (streamDraftId) updateHistoryMessageById(sAct, streamDraftId, String(fullText || '').trim() || '思考中...', false);
+      }
+    }
+    try {
+      var content = '';
+      if (cfg.provider === 'minimax') {
+        content = await reqMinimax(cfg);
+        post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cid, delta: String(content || '') });
+      } else if (p0.transport === 'anthropic') {
+        content = await reqClaude(cfg);
+        post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cid, delta: String(content || '') });
+      } else if (p0.transport === 'gemini') {
+        content = await reqGemini(cfg);
+        post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cid, delta: String(content || '') });
+      } else if (p0.transport === 'openclaw') {
+        content = await reqOpenClaw(cfg, {
+          onProgress: function (textNow) {
+            postAgentProgressFull(textNow);
+          }
+        });
+        if (content && lastPostedLen < String(content).length) {
+          post({
+            type: 'niuma_palette_agent_chunk',
+            reqId: reqId,
+            cardId: cid,
+            delta: String(content).slice(lastPostedLen)
+          });
+        }
+        if (s.gatewaySessionKey) sessionRefOut = String(s.gatewaySessionKey);
+      } else {
+        content = await reqOpenAI(cfg);
+        post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cid, delta: String(content || '') });
+      }
+      if (_paletteAgentStreamCancelled) return;
+      content = paletteDedupeRepeatedText(String(content || ''));
+      if (streamDraftId) {
+        var sAct2 = sessionById(sid);
+        if (sAct2) {
+          updateHistoryMessageById(sAct2, streamDraftId, content, true);
+          for (var di = sAct2.history.length - 1; di >= 0; di--) {
+            if (sAct2.history[di] && sAct2.history[di]._id === streamDraftId) {
+              sAct2.history[di]._draft = false;
+              break;
+            }
+          }
+          persistSessions();
+        }
+      } else if (content) add('assistant', content);
+      paletteNotifyPaletteAgentEnd(reqId, cid, content, sessionRefOut);
+      setTimeout(function () {
+        if (!_paletteAgentStreamCancelled) {
+          var pulled = palettePickAssistantAnswerForAgent(reqId, q);
+          if (pulled && pulled.length > String(content || '').length) {
+            post({ type: 'niuma_palette_agent_end', reqId: reqId, cardId: cid, answer: pulled, sessionRef: sessionRefOut });
+          }
+        }
+      }, 150);
+    } catch (err) {
+      if (!_paletteAgentStreamCancelled) {
+        post({
+          type: 'niuma_palette_agent_error',
+          reqId: reqId,
+          cardId: cid,
+          message: err && err.message ? err.message : '未知错误'
+        });
+      }
+    } finally {
+      setSessionSending(sid, false);
+    }
+  }
+
+  window.runPaletteAgentStream = runPaletteAgentStream;
+  window.palettePickAssistantAnswerForAgent = palettePickAssistantAnswerForAgent;
   window.paletteSyncAnswerForReq = paletteSyncAnswerForReq;
   window.exportPaletteLlmForProvider = exportPaletteLlmForProvider;
   window.niumaProviderIconUrlList = providerIconUrlList;
@@ -19245,10 +19453,15 @@ body.niuma-confirm-open{overflow:hidden}
           if (chatTxt) {
             /* delta：可能是增量片段（需拼接）或每帧全量快照（需整段替换） */
             if (pl.state === 'delta') {
-              if (pendingText && chatTxt.length >= pendingText.length && chatTxt.indexOf(pendingText) === 0)
+              if (pendingText && chatTxt === pendingText) {
+                /* 重复帧，忽略 */
+              } else if (pendingText && chatTxt.length >= pendingText.length && chatTxt.indexOf(pendingText) === 0)
                 pendingText = chatTxt;
-              else pendingText += chatTxt;
+              else if (pendingText && pendingText.indexOf(chatTxt) === 0) {
+                /* 更短重复片段 */
+              } else pendingText += chatTxt;
             } else pendingText = chatTxt;
+            pendingText = paletteDedupeRepeatedText(pendingText);
             emitProgress(false, pl);
           }
           if (handleOpenClawFinalState(pl)) return;
@@ -21872,6 +22085,20 @@ body.niuma-confirm-open{overflow:hidden}
         runPaletteAiStream(String(d.reqId || ''), String(d.query || ''), String(d.provider || ''));
         return;
       }
+      if (d.type === 'host_palette_agent_stream') {
+        runPaletteAgentStream(
+          String(d.reqId || ''),
+          String(d.cardId || ''),
+          String(d.query || ''),
+          String(d.provider || 'openclaw'),
+          String(d.systemPrompt || '')
+        );
+        return;
+      }
+      if (d.type === 'host_palette_agent_stream_cancel') {
+        _paletteAgentStreamCancelled = true;
+        return;
+      }
       if (d.type === 'host_palette_ai_sync') {
         var reqSyncInj = String(d.reqId || '');
         var qSyncInj = String(d.query || '');
@@ -22422,6 +22649,20 @@ body.niuma-confirm-open{overflow:hidden}
       if (d.type === 'host_palette_ai_stream_cancel') {
         _paletteAiStreamCancelled = true;
         paletteAiHudSet('idle');
+        return;
+      }
+      if (d.type === 'host_palette_agent_stream') {
+        runPaletteAgentStream(
+          String(d.reqId || ''),
+          String(d.cardId || ''),
+          String(d.query || ''),
+          String(d.provider || 'openclaw'),
+          String(d.systemPrompt || '')
+        );
+        return;
+      }
+      if (d.type === 'host_palette_agent_stream_cancel') {
+        _paletteAgentStreamCancelled = true;
         return;
       }
       if (d.type === 'niuma_compose_send') {

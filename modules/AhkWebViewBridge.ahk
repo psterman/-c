@@ -31,6 +31,21 @@ class AhkInterface {
         }
     }
 
+    /** 动作 Tab：提交托管任务（JSON 字符串，与 palette_agent_submit 同结构） */
+    CommandPaletteAgentSubmit(jsonStr) {
+        try {
+            if !FuncExists("CommandPalette_HandleAgentSubmit")
+                return "err:not_loaded"
+            root := Jxon_Load(String(jsonStr))
+            if !(root is Map)
+                return "err:bad_json"
+            CommandPalette_HandleAgentSubmit(root)
+            return "ok"
+        } catch as e {
+            return "err:" . e.Message
+        }
+    }
+
     /** 诊断面板「全部探测」 */
     RunCommandPaletteSearchDebugProbes(keyword := "1") {
         try {

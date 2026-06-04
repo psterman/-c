@@ -2340,8 +2340,39 @@ FloatingToolbar_OnWebMessage(sender, args) {
             }
         return
     }
+    if (typ = "niuma_palette_agent_chunk") {
+        if FuncExists("CommandPalette_OnNiumaPaletteAgentChunk")
+            try CommandPalette_OnNiumaPaletteAgentChunk(msg)
+            catch {
+            }
+        return
+    }
+    if (typ = "niuma_palette_agent_end") {
+        if FuncExists("CommandPalette_OnNiumaPaletteAgentEnd")
+            try CommandPalette_OnNiumaPaletteAgentEnd(msg)
+            catch {
+            }
+        return
+    }
+    if (typ = "niuma_palette_agent_error") {
+        if FuncExists("CommandPalette_OnNiumaPaletteAgentError")
+            try CommandPalette_OnNiumaPaletteAgentError(msg)
+            catch {
+            }
+        return
+    }
     if (typ = "host_palette_ai_stream") {
         SetTimer(FloatingToolbar_StartPaletteAiStream.Bind(msg), -10)
+        return
+    }
+    if (typ = "host_palette_agent_stream") {
+        SetTimer(FloatingToolbar_StartPaletteAgentStream.Bind(msg), -10)
+        return
+    }
+    if (typ = "host_palette_agent_stream_cancel") {
+        try WebView_QueuePayload(g_FTB_WV2, msg)
+        catch {
+        }
         return
     }
     if (typ = "host_palette_ai_handoff") {
@@ -3919,6 +3950,44 @@ FloatingToolbar_StartPaletteAiStream(msg) {
             try CommandPalette_OnNiumaPaletteAiError(Map("reqId", reqId, "message", eQ.Message))
             catch {
             }
+    }
+}
+
+FloatingToolbar_StartPaletteAgentStream(msg) {
+    if !(msg is Map)
+        return false
+    reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    cardId := msg.Has("cardId") ? String(msg["cardId"]) : ""
+    q := msg.Has("query") ? String(msg["query"]) : ""
+    prov := msg.Has("provider") ? String(msg["provider"]) : ""
+    sys := msg.Has("systemPrompt") ? String(msg["systemPrompt"]) : ""
+    if (reqId = "" || Trim(q) = "")
+        return false
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if !(g_FTB_WV2 && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return false
+    payload := Map(
+        "type", "host_palette_agent_stream",
+        "reqId", reqId,
+        "cardId", cardId,
+        "query", q,
+        "provider", prov,
+        "systemPrompt", sys,
+        "openDrawer", false
+    )
+    try {
+        WebView_QueuePayload(g_FTB_WV2, payload)
+        if FuncExists("CommandPalette_InjectFtbHostPayload")
+            try CommandPalette_InjectFtbHostPayload(payload)
+            catch {
+            }
+        return true
+    } catch as eQ {
+        if FuncExists("CommandPalette_OnNiumaPaletteAgentError")
+            try CommandPalette_OnNiumaPaletteAgentError(Map("reqId", reqId, "cardId", cardId, "message", eQ.Message))
+            catch {
+            }
+        return false
     }
 }
 

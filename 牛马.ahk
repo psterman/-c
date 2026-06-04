@@ -6986,6 +6986,7 @@ ExitFunc(ExitReason, ExitCode) {
 #Include modules\VirtualKeyboardInterop.ahk
 #Include "modules\ConfigWebViewModule.ahk"
 #Include modules\CommandPaletteCore.ahk
+#Include modules\CommandPaletteAgentOrchestrator.ahk
 #Include modules\CommandPaletteSearchDebug.ahk
 
 ; Cursor + CapsLock：动态右键菜单（须在 VirtualKeyboardCore 之后注册）

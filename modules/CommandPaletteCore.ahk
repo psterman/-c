@@ -422,6 +422,8 @@ CommandPalette_DoShow(*) {
     CommandPalette_CenterAndShow()
     SetTimer(CommandPalette_EnsureWebInputVisible, -60)
     SetTimer(CommandPalette_SyncAiOnShow, -350)
+    if FuncExists("CommandPalette_AgentPushCardSync")
+        SetTimer(CommandPalette_AgentPushCardSync, -120)
     SetTimer(CommandPalette_PushEmptyQuery, -180)
     SetTimer(CommandPalette_PushAiProviders, -220)
     SetTimer(CommandPalette_RevealFallback, -600)
@@ -1958,19 +1960,51 @@ CommandPalette_PromoteAiToNiumaChat(msg := 0) {
     g_CmdPal_AiSession := 0
 }
 
-CommandPalette_PushToWeb(payload) {
+CommandPalette_InjectPalettePayload(payload) {
     global g_CmdPal_WV2
     if !IsObject(g_CmdPal_WV2)
         return false
+    if !(payload is Map)
+        return false
+    jsonStr := ""
+    try jsonStr := Jxon_Dump(payload)
+    catch {
+        return false
+    }
+    if (jsonStr = "")
+        return false
+    escaped := CommandPalette_JsEscapeForParse(jsonStr)
+    js := "try{if(window.__nmerPaletteHostInject)window.__nmerPaletteHostInject('" . escaped . "');"
+        . "}catch(e){}"
     try {
-        if FuncExists("WebView_QueuePayload")
-            return WebView_QueuePayload(g_CmdPal_WV2, payload)
-        json := Jxon_Dump(payload)
-        g_CmdPal_WV2.PostWebMessageAsJson(json)
+        g_CmdPal_WV2.ExecuteScriptAsync(js)
         return true
     } catch {
         return false
     }
+}
+
+CommandPalette_PushToWeb(payload) {
+    global g_CmdPal_WV2
+    if !IsObject(g_CmdPal_WV2)
+        return false
+    ok := false
+    try {
+        if FuncExists("WebView_QueuePayload")
+            ok := !!WebView_QueuePayload(g_CmdPal_WV2, payload)
+        if !ok {
+            json := Jxon_Dump(payload)
+            g_CmdPal_WV2.PostWebMessageAsJson(json)
+            ok := true
+        }
+    } catch {
+        ok := false
+    }
+    if FuncExists("CommandPalette_InjectPalettePayload")
+        try CommandPalette_InjectPalettePayload(payload)
+        catch {
+        }
+    return ok
 }
 
 CommandPalette_ExecScript(js) {
@@ -2031,6 +2065,8 @@ CommandPalette_OnWebMessage(sender, args) {
     if (typ = "palette_ready") {
         CommandPalette_PushThemeToWeb()
         SetTimer(CommandPalette_PushAiProviders, -40)
+        if FuncExists("CommandPalette_AgentOnReady")
+            SetTimer(CommandPalette_AgentOnReady, -60)
         SetTimer(CommandPalette_Reveal, -1)
         SetTimer(CommandPalette_DeferredFocus, -80)
         SetTimer(CommandPalette_SyncHostShape, -1)
@@ -2112,6 +2148,21 @@ CommandPalette_OnWebMessage(sender, args) {
     }
     if (typ = "palette_search_debug") {
         CommandPalette_HandleSearchDebug()
+        return
+    }
+    if (typ = "palette_agent_submit") {
+        if FuncExists("CommandPalette_HandleAgentSubmit")
+            CommandPalette_HandleAgentSubmit(msg)
+        return
+    }
+    if (typ = "palette_agent_cancel") {
+        if FuncExists("CommandPalette_HandleAgentCancel")
+            CommandPalette_HandleAgentCancel(msg)
+        return
+    }
+    if (typ = "palette_agent_physical") {
+        if FuncExists("CommandPalette_HandleAgentPhysical")
+            CommandPalette_HandleAgentPhysical(msg)
         return
     }
 }
@@ -3920,6 +3971,11 @@ CommandPalette_FlushPendingAiSendIfReady() {
 ; 命令面板可见时 Esc 关闭（WebView 未收到按键时由宿主兜底）
 #HotIf CommandPalette_IsVisible()
 Esc:: {
+    if FuncExists("CommandPalette_IsAgentRunning") && CommandPalette_IsAgentRunning() {
+        if FuncExists("CommandPalette_AgentCancel")
+            CommandPalette_AgentCancel("")
+        return
+    }
     if CommandPalette_IsAiStreaming()
         CommandPalette_HandoffAiToToolbar(false)
     CommandPalette_Hide()
