@@ -1814,12 +1814,20 @@ SelectionSense_OnLButtonDown(*) {
 }
 
 SelectionSense_IsHoleCaptureEnabled() {
-    global g_HoleRuntimeEnabled, EnableHoleOverlayOnNativeDrop, EnableHoleOverlay
+    global EnableHoleOverlayOnNativeDrop
     if !EnableHoleOverlayOnNativeDrop
         return false
-    if g_HoleRuntimeEnabled
-        return true
-    return !!(IsSet(EnableHoleOverlay) && EnableHoleOverlay)
+    if FuncExists("GDHO_IsHoleOnlyMode") {
+        try return GDHO_IsHoleOnlyMode()
+        catch {
+        }
+    }
+    if FuncExists("IsHoleRuntimeEnabledByActivationMode") {
+        try return IsHoleRuntimeEnabledByActivationMode()
+        catch {
+        }
+    }
+    return false
 }
 
 SelectionSense_IsSelectionGestureActive() {
@@ -2423,6 +2431,13 @@ SelectionSense_ShowDragHintToast(selectedText, anchorX := "", anchorY := "") {
 
 SelectionSense_OpenHolePreviewAt(ax, ay, selectedText := "") {
     global g_SelSense_LastAnchorX, g_SelSense_LastAnchorY, g_SelSense_TextCaptured
+    if FuncExists("GDHO_IsHoleOnlyMode") {
+        try {
+            if !GDHO_IsHoleOnlyMode()
+                return false
+        } catch {
+        }
+    }
     t := Trim(String(selectedText))
     if (t != "") {
         if FuncExists("GDHO_StampTextHoleCapturedText")
@@ -4022,4 +4037,3 @@ SelectionSense_RegisterStartupSql() {
     sql.Push("INSERT OR IGNORE INTO HubLocalDictSource (SourceId, Name, DbPath, Kind) VALUES ('builtin_default', '内置词典', '[builtin]', 'builtin')")
     StartupSql_Register(sql, "hub_dict_schema", 8, 20)
 }
-SelectionSense_RegisterStartupSql()

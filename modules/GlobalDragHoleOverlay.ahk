@@ -1420,6 +1420,15 @@ GDHO_ShouldShowDecoupledPanel(reason := "") {
 
 GDHO_OpenSelectionTextPreview(mx, my) {
     global g_GDHO_CloseAfterReady, GDHO_PAYLOAD, GDHO_DESKTOP_PINNED, g_SelSense_AllowTextHoleGesture
+    if FuncExists("GDHO_IsHoleOnlyMode") {
+        try {
+            if !GDHO_IsHoleOnlyMode() {
+                try NativeDropDiag_Log("[TextHole] preview_open_skip reason=not_hole_mode")
+                return
+            }
+        } catch {
+        }
+    }
     if FuncExists("GDHO_CanOpenWeakPreview") {
         try {
             if !GDHO_CanOpenWeakPreview() {

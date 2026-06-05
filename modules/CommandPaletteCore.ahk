@@ -21,6 +21,7 @@ global g_CmdPal_ExecDirty := false
 global g_CmdPal_ExecFileMtime := ""
 global g_CmdPal_PendingShow := false
 global g_CmdPal_ShowRetryCount := 0
+global g_CmdPal_HtmlVer := ""
 global g_CmdPal_TurboReqGen := 0
 global g_CmdPal_TurboInFlight := false
 global g_CmdPal_TurboWhr := 0
@@ -277,14 +278,38 @@ CommandPalette_OnWV2Created(ctrl) {
         SetTimer(CommandPalette_DoShow, -1)
 }
 
+CommandPalette_MaybeReloadHtml(*) {
+    global g_CmdPal_WV2, g_CmdPal_Ready, g_CmdPal_HtmlVer
+    if !IsObject(g_CmdPal_WV2) || !g_CmdPal_Ready
+        return
+    ver := ""
+    try {
+        path := FuncExists("HtmlPanelPath") ? HtmlPanelPath("CommandPalette.html") : (A_ScriptDir . "\html\CommandPalette.html")
+        ver := String(FileGetTime(path, "M"))
+    } catch {
+        return
+    }
+    if (ver = "" || ver = g_CmdPal_HtmlVer)
+        return
+    g_CmdPal_HtmlVer := ver
+    try g_CmdPal_WV2.Navigate(CommandPalette_BuildPageUrl("CommandPalette.html"))
+    catch {
+    }
+}
+
 CommandPalette_OnNavigationCompleted(sender, args) {
-    global g_CmdPal_Visible, g_CmdPal_Revealed
+    global g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_HtmlVer
     try ok := args.IsSuccess
     catch {
         ok := true
     }
     if !ok
         return
+    try {
+        path := FuncExists("HtmlPanelPath") ? HtmlPanelPath("CommandPalette.html") : (A_ScriptDir . "\html\CommandPalette.html")
+        g_CmdPal_HtmlVer := String(FileGetTime(path, "M"))
+    } catch {
+    }
     if g_CmdPal_Visible {
         CommandPalette_PushThemeToWeb()
         if !g_CmdPal_Revealed
@@ -419,10 +444,13 @@ CommandPalette_DoShow(*) {
     global g_CmdPal_PendingShow, CapsLock
     g_CmdPal_PendingShow := false
     CapsLock := false
+    SetTimer(CommandPalette_MaybeReloadHtml, -1)
     CommandPalette_CenterAndShow()
     SetTimer(CommandPalette_EnsureWebInputVisible, -60)
     SetTimer(CommandPalette_SyncAiOnShow, -350)
-    if FuncExists("CommandPalette_AgentPushCardSync")
+    if FuncExists("CommandPalette_AgentOnReady")
+        SetTimer(CommandPalette_AgentOnReady, -80)
+    else if FuncExists("CommandPalette_AgentPushCardSync")
         SetTimer(CommandPalette_AgentPushCardSync, -120)
     SetTimer(CommandPalette_PushEmptyQuery, -180)
     SetTimer(CommandPalette_PushAiProviders, -220)
@@ -497,6 +525,13 @@ CommandPalette_PushEmptyQuery(*) {
     }
     if (g_CmdPal_AiLastCard is Map)
         return
+    if FuncExists("CommandPalette_AgentCardCount") {
+        try {
+            if CommandPalette_AgentCardCount() > 0
+                return
+        } catch {
+        }
+    }
     CommandPalette_HandleQuery("")
 }
 
@@ -522,7 +557,7 @@ CommandPalette_ApplyHeight(h) {
     nh := Integer(h)
     if (nh < g_CmdPal_MinHeight)
         nh := g_CmdPal_MinHeight
-    maxH := 520
+    maxH := 720
     if (nh > maxH)
         nh := maxH
     g_CmdPal_CurrentHeight := nh
@@ -1839,6 +1874,15 @@ CommandPalette_OnNiumaPaletteAiChunk(msg) {
     global g_CmdPal_AiSession, g_CmdPal_AiRetryToken
     if !(msg is Map)
         return
+    if FuncExists("CommandPalette_AgentForwardAiEvent")
+        try CommandPalette_AgentForwardAiEvent("chunk", msg)
+        catch {
+        }
+    if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq") {
+        reqId0 := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        delta0 := msg.Has("delta") ? String(msg["delta"]) : ""
+        CommandPalette_AgentDebug_TraceIfAgentReq(reqId0, "ftb", "ai_chunk", "len=" . StrLen(delta0) . " head=" . SubStr(delta0, 1, 40))
+    }
     reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
     gen := msg.Has("gen") ? Integer(msg["gen"]) : Integer(g_CmdPal_AiSession is Map ? g_CmdPal_AiSession.Get("gen", 0) : 0)
     delta := msg.Has("delta") ? String(msg["delta"]) : (msg.Has("text") ? String(msg["text"]) : "")
@@ -1855,6 +1899,15 @@ CommandPalette_OnNiumaPaletteAiEnd(msg) {
     global g_CmdPal_AiSession
     if !(msg is Map)
         return
+    if FuncExists("CommandPalette_AgentForwardAiEvent")
+        try CommandPalette_AgentForwardAiEvent("end", msg)
+        catch {
+        }
+    if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq") {
+        reqId0 := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        ans0 := msg.Has("answer") ? String(msg["answer"]) : ""
+        CommandPalette_AgentDebug_TraceIfAgentReq(reqId0, "ftb", "ai_end", "len=" . StrLen(ans0))
+    }
     reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
     if !CommandPalette_AiSessionMatches(reqId, false)
         return
@@ -1881,6 +1934,15 @@ CommandPalette_OnNiumaPaletteAiEnd(msg) {
 CommandPalette_OnNiumaPaletteAiError(msg) {
     if !(msg is Map)
         return
+    if FuncExists("CommandPalette_AgentForwardAiEvent")
+        try CommandPalette_AgentForwardAiEvent("error", msg)
+        catch {
+        }
+    if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq") {
+        reqId0 := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        err0 := msg.Has("message") ? String(msg["message"]) : ""
+        CommandPalette_AgentDebug_TraceIfAgentReq(reqId0, "ftb", "ai_error", err0, "err")
+    }
     reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
     gen := msg.Has("gen") ? Integer(msg["gen"]) : 0
     err := msg.Has("message") ? String(msg["message"]) : (msg.Has("error") ? String(msg["error"]) : "未知错误")
@@ -1979,7 +2041,11 @@ CommandPalette_InjectPalettePayload(payload) {
     try {
         g_CmdPal_WV2.ExecuteScriptAsync(js)
         return true
-    } catch {
+    } catch as eInj {
+        if FuncExists("CommandPalette_AgentDebugTrace")
+            try CommandPalette_AgentDebugTrace("push", "inject_fail", eInj.Message, "err")
+            catch {
+            }
         return false
     }
 }
@@ -2002,6 +2068,10 @@ CommandPalette_PushToWeb(payload) {
     }
     if FuncExists("CommandPalette_InjectPalettePayload")
         try CommandPalette_InjectPalettePayload(payload)
+        catch {
+        }
+    if FuncExists("CommandPalette_AgentDebug_TracePalettePush")
+        try CommandPalette_AgentDebug_TracePalettePush(payload)
         catch {
         }
     return ok
@@ -2147,17 +2217,63 @@ CommandPalette_OnWebMessage(sender, args) {
         return
     }
     if (typ = "palette_search_debug") {
-        CommandPalette_HandleSearchDebug()
+        tab := msg.Has("tab") ? Trim(String(msg["tab"])) : "search"
+        if FuncExists("CommandPalette_ShowSearchDebug")
+            CommandPalette_ShowSearchDebug(true, tab)
+        else
+            CommandPalette_HandleSearchDebug()
+        return
+    }
+    if (typ = "palette_agent_debug") {
+        CommandPalette_HandleAgentDebug()
+        return
+    }
+    if (typ = "palette_agent_debug_log") {
+        if FuncExists("CommandPalette_AgentWireLog")
+            try CommandPalette_AgentWireLog("wm_debug_log", msg.Has("event") ? String(msg["event"]) : "log")
+            catch {
+            }
+        try {
+            lay := msg.Has("layer") ? String(msg["layer"]) : "palette"
+            evt := msg.Has("event") ? String(msg["event"]) : "log"
+            det := msg.Has("detail") ? String(msg["detail"]) : ""
+            lvl := msg.Has("level") ? String(msg["level"]) : "info"
+            CommandPalette_AgentDebugTrace(lay, evt, det, lvl)
+        } catch as eDbg {
+            if FuncExists("CommandPalette_AgentWireLog")
+                try CommandPalette_AgentWireLog("wm_debug_err", eDbg.Message)
+                catch {
+                }
+        }
         return
     }
     if (typ = "palette_agent_submit") {
-        if FuncExists("CommandPalette_HandleAgentSubmit")
-            CommandPalette_HandleAgentSubmit(msg)
+        if FuncExists("CommandPalette_AgentWireLog")
+            try CommandPalette_AgentWireLog("wm_submit", SubStr(String(msg.Has("text") ? msg["text"] : ""), 1, 80))
+            catch {
+            }
+        try CommandPalette_HandleAgentSubmit(msg)
+        catch as eSub {
+            if FuncExists("CommandPalette_AgentWireLog")
+                try CommandPalette_AgentWireLog("wm_submit_err", eSub.Message)
+                catch {
+                }
+        }
         return
     }
     if (typ = "palette_agent_cancel") {
         if FuncExists("CommandPalette_HandleAgentCancel")
             CommandPalette_HandleAgentCancel(msg)
+        return
+    }
+    if (typ = "palette_agent_dismiss") {
+        if FuncExists("CommandPalette_HandleAgentDismiss")
+            CommandPalette_HandleAgentDismiss(msg)
+        return
+    }
+    if (typ = "palette_agent_pull") {
+        if FuncExists("CommandPalette_AgentOnReady")
+            CommandPalette_AgentOnReady()
         return
     }
     if (typ = "palette_agent_physical") {
@@ -2469,6 +2585,26 @@ CommandPalette_HandleVoiceToggle() {
     }
     if FuncExists("WailsWhisper_StartRecording")
         WailsWhisper_StartRecording()
+}
+
+CommandPalette_HandleAgentDebug() {
+    if FuncExists("CommandPalette_ShowSearchDebug") {
+        try CommandPalette_ShowSearchDebug(true, "agent")
+        catch as e {
+            try TrayTip("命令面板", "无法打开诊断: " . e.Message, "Iconx 2")
+            catch {
+            }
+        }
+        return
+    }
+    if FuncExists("CommandPalette_AgentDebug_Show") {
+        try CommandPalette_AgentDebug_Show(true)
+        catch as e {
+            try TrayTip("命令面板", "无法打开诊断: " . e.Message, "Iconx 2")
+            catch {
+            }
+        }
+    }
 }
 
 CommandPalette_ExecFilePath() {

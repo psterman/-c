@@ -25,6 +25,7 @@ global ClipboardFTS5DBPath := ""  ; 由 InitClipboardFTS5DB 设为 Data\Clipboar
 ; ===================== 启动 SQL 批处理（核心 DDL）=====================
 ClipboardFTS5_GetStartupSqlStatements() {
     sql := []
+    sql.Push("PRAGMA busy_timeout = 5000;")
     sql.Push("PRAGMA journal_mode = WAL;")
     sql.Push(
         "CREATE TABLE IF NOT EXISTS ClipMain ("
@@ -50,17 +51,64 @@ ClipboardFTS5_GetStartupSqlStatements() {
     return sql
 }
 
-ClipboardFTS5_RegisterStartupSql() {
-    static registered := false
-    if (registered)
-        return
-    if !FuncExists("StartupSql_Register")
-        return
-    StartupSql_Register(ClipboardFTS5_GetStartupSqlStatements(), "fts5_schema", 8, 20)
-    registered := true
+ClipboardFTS5_ResetDbFiles(dbPath, tag := "recover") {
+    if FuncExists("Nmer_SqliteBackupDbFile")
+        try Nmer_SqliteBackupDbFile(dbPath, tag)
+        catch {
+        }
+    if FuncExists("Nmer_SqliteResetDbFile")
+        return Nmer_SqliteResetDbFile(dbPath)
+    if FuncExists("Nmer_SqliteClearWalSidecars")
+        try Nmer_SqliteClearWalSidecars(dbPath)
+        catch {
+        }
+    if FileExist(dbPath) {
+        try FileDelete(dbPath)
+        catch {
+            return false
+        }
+    }
+    return true
 }
 
-ClipboardFTS5_RegisterStartupSql()
+ClipboardFTS5_OpenDbWithRecovery(dbPath) {
+    dbPath := Trim(String(dbPath))
+    if FileExist(dbPath) {
+        if FuncExists("Nmer_SqliteClearWalSidecars")
+            try Nmer_SqliteClearWalSidecars(dbPath)
+            catch {
+            }
+        if FuncExists("Nmer_SqliteQuickCheck") && !Nmer_SqliteQuickCheck(dbPath)
+            ClipboardFTS5_ResetDbFiles(dbPath, "corrupt")
+    }
+    loop 3 {
+        attempt := A_Index
+        if (attempt > 1) {
+            if !ClipboardFTS5_ResetDbFiles(dbPath, attempt = 2 ? "recover" : "reset")
+                throw Error("无法删除损坏的剪贴板库（文件可能被占用）: " . dbPath . "`n请先托盘完全退出牛马后再启动")
+            Sleep(200 * attempt)
+        }
+        db := SQLiteDB()
+        if !db.OpenDB(dbPath) {
+            if (attempt >= 3)
+                throw Error("无法打开数据库: " . dbPath . "`n错误: " . db.ErrorMsg)
+            continue
+        }
+        try {
+            if FuncExists("SqlBatch_Run")
+                SqlBatch_Run(db, ClipboardFTS5_GetStartupSqlStatements(), "fts5_schema", 8, 20)
+            return db
+        } catch as e {
+            try db.CloseDB()
+            catch {
+            }
+            isIo := InStr(e.Message, "disk I/O") || InStr(e.Message, "IOERR") || InStr(e.Message, "locked")
+            if (attempt >= 3 || !isIo)
+                throw e
+        }
+    }
+    throw Error("无法打开数据库: " . dbPath)
+}
 
 ; ===================== 数据库初始化 =====================
 ; 创建 Clipboard.db 数据库，开启 WAL 模式，创建 FTS5 虚拟表
@@ -94,20 +142,10 @@ InitClipboardFTS5DB() {
         hasFileSize := false
         hasThumbPath := false
 
-        ClipboardFTS5DB := SQLiteDB()
-        if (!ClipboardFTS5DB.OpenDB(ClipboardFTS5DBPath)) {
-            MsgBox("无法打开数据库: " . ClipboardFTS5DBPath . "`n错误: " . ClipboardFTS5DB.ErrorMsg, "数据库初始化错误", "IconX")
-            ClipboardFTS5DB := 0
-            return false
-        }
-        
-        if FuncExists("StartupSql_RunAll") {
-            ClipboardFTS5_RegisterStartupSql()
-            batchRes := StartupSql_RunAll(ClipboardFTS5DB)
-            try {
-                if FuncExists("NMER_Log")
-                    NMER_Log("startup", "sql_batch_done", "label=fts5_schema batches=" . batchRes["batches"] . " total=" . batchRes["total"])
-            }
+        ClipboardFTS5DB := ClipboardFTS5_OpenDbWithRecovery(ClipboardFTS5DBPath)
+        try {
+            if FuncExists("NMER_Log")
+                NMER_Log("startup", "sql_batch_done", "label=fts5_schema path=" . ClipboardFTS5DBPath)
         }
         
         ; 4.1 添加新字段（如果表已存在，使用 ALTER TABLE）
@@ -269,7 +307,8 @@ InitClipboardFTS5DB() {
         return true
         
     } catch as err {
-        MsgBox("数据库初始化异常: " . err.Message, "数据库初始化错误", "IconX")
+        hint := InStr(err.Message, "被占用") ? "" : "`n`n若反复失败：托盘完全退出后，手动将 Data\\db\\Clipboard.db 改名为 .bak 再启动。"
+        MsgBox("数据库初始化异常: " . err.Message . hint, "数据库初始化错误", "IconX")
         if (ClipboardFTS5DB != 0) {
             ClipboardFTS5DB.CloseDB()
         }

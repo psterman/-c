@@ -198,6 +198,9 @@ body[data-theme="light"] #intent-tag[data-intent="action"] {
 .palette-panel.intent-ai-multiline .palette-debug-btn {
   margin-top: 6px;
 }
+.palette-panel.intent-ai-multiline .palette-agent-debug-btn {
+  margin-top: 6px;
+}
 .palette-debug-btn {
   flex: 0 0 auto;
   width: 36px;
@@ -223,6 +226,35 @@ body[data-theme="light"] #intent-tag[data-intent="action"] {
 }
 .palette-debug-btn:active {
   transform: scale(0.96);
+}
+.palette-agent-debug-btn {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  margin-right: 2px;
+  border: 1px solid rgba(245, 158, 66, 0.32);
+  border-radius: 11px;
+  background: #241a12;
+  color: #fdba74;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: background var(--ease), border-color var(--ease), box-shadow var(--ease), color var(--ease);
+}
+.palette-agent-debug-btn:hover {
+  background: #2e2218;
+  border-color: rgba(253, 186, 116, 0.55);
+  color: #fed7aa;
+  box-shadow: 0 0 16px rgba(245, 158, 66, 0.16);
+}
+.palette-agent-debug-btn:active {
+  transform: scale(0.96);
+}
+.palette-agent-debug-btn[hidden] {
+  display: none;
 }
 .palette-status {
   display: none;
@@ -254,6 +286,19 @@ body[data-theme="light"] #intent-tag[data-intent="action"] {
   max-height: 320px;
   overflow-y: auto;
   padding: 6px 8px 8px;
+}
+.palette-panel.intent-action.has-results .palette-results {
+  max-height: none;
+  flex: 0 0 auto;
+  min-height: 0;
+  overflow: visible;
+  overflow-x: hidden;
+  padding-bottom: 8px;
+}
+.palette-panel.intent-action.has-results .palette-results.is-scrollable {
+  max-height: min(520px, 58vh);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .palette-panel.has-results .palette-results.is-scrolling {
   scrollbar-width: thin;
@@ -445,6 +490,17 @@ body[data-theme="light"] .palette-debug-btn:hover {
   border-color: rgba(37, 99, 235, 0.45);
   color: #1d4ed8;
   box-shadow: 0 0 12px rgba(37, 99, 235, 0.1);
+}
+body[data-theme="light"] .palette-agent-debug-btn {
+  background: #fff7ed;
+  border-color: rgba(234, 88, 12, 0.25);
+  color: #c2410c;
+}
+body[data-theme="light"] .palette-agent-debug-btn:hover {
+  background: #ffedd5;
+  border-color: rgba(234, 88, 12, 0.4);
+  color: #9a3412;
+  box-shadow: 0 0 12px rgba(234, 88, 12, 0.1);
 }
 body[data-theme="light"] .palette-status {
   color: #a65a12;
@@ -768,26 +824,105 @@ body[data-theme="light"] .ai-bg-card {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(255, 255, 255, 0.9));
 }
 .palette-results.has-action-cards {
-  max-height: 420px;
+  max-height: none;
   overflow-y: auto;
-  padding: 6px 8px 8px;
+  overflow-x: hidden;
+  padding: 4px 8px 10px;
 }
 .action-card-stack {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+}
+.action-card-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.action-card-section + .action-card-section {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.action-card-section-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-soft);
+  letter-spacing: 0.04em;
+  padding: 2px 4px 0;
+}
+.action-card-section-head .section-count {
+  font-weight: 600;
+  color: #ffc896;
+  opacity: 0.9;
+}
+.action-card-section-head .section-hint {
+  margin-left: auto;
+  font-weight: 500;
+  opacity: 0.75;
 }
 .action-card-list {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+}
+.action-card-section[data-section="done"] .action-card-list {
+  gap: 3px;
+}
+.action-live-dock {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 141, 42, 0.35);
+  background: linear-gradient(135deg, rgba(255, 102, 0, 0.12), rgba(15, 22, 34, 0.96));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+}
+.action-live-dock-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffc896;
+  margin-bottom: 4px;
+}
+.action-live-dock-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+.action-live-dock-progress {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #9db0c6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 72px;
+  overflow-y: auto;
+}
+.action-live-dock-progress.thinking { color: #ffc896; }
+.action-live-dock-meta {
+  display: flex;
   gap: 8px;
-  min-height: 72px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--text-soft);
+}
+.action-live-dock-meta .dock-plan {
+  color: #93c5fd;
 }
 .palette-panel.intent-action.has-results .palette-results.has-action-cards {
-  min-height: 160px;
+  min-height: 0;
 }
 .palette-panel.intent-action.has-results .action-card-list {
-  min-height: 96px;
+  min-height: 0;
 }
 .action-history-head {
   font-size: 11px;
@@ -798,6 +933,183 @@ body[data-theme="light"] .ai-bg-card {
 }
 .cmd-action-card.is-active {
   border-color: rgba(255, 141, 42, 0.55);
+  box-shadow: 0 0 0 1px rgba(255, 141, 42, 0.18);
+}
+.cmd-action-card.is-collapsed {
+  padding: 5px 8px;
+}
+.cmd-action-card.is-collapsed.state-Done {
+  padding: 4px 8px;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(12, 18, 28, 0.88);
+}
+.cmd-action-card.is-collapsed .card-body,
+.cmd-action-card.is-collapsed .card-live-thought,
+.cmd-action-card.is-collapsed .card-followup,
+.cmd-action-card.is-collapsed .card-pulse-loader {
+  display: none !important;
+}
+.cmd-action-card.is-collapsed .cmd-action-card-head {
+  margin-bottom: 0;
+  align-items: center;
+}
+.cmd-action-card.is-collapsed .card-head-main {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.cmd-action-card.is-collapsed .cmd-action-card-title {
+  -webkit-line-clamp: 1;
+  flex: 0 1 auto;
+  max-width: 34%;
+  font-size: 11px;
+  font-weight: 600;
+}
+.cmd-action-card.is-collapsed .card-preview-line {
+  display: block !important;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 10px;
+  opacity: 0.82;
+}
+.cmd-action-card.is-collapsed .card-meta-line {
+  display: inline;
+  flex: 0 0 auto;
+  font-size: 9px;
+  color: var(--text-soft);
+  opacity: 0.75;
+  white-space: nowrap;
+}
+.cmd-action-card.is-expanded .card-meta-line {
+  display: none;
+}
+.cmd-action-card.is-collapsed .card-compact-progress {
+  display: none;
+}
+.card-hover-preview {
+  position: fixed;
+  z-index: 10000;
+  max-width: min(420px, 92vw);
+  max-height: min(280px, 50vh);
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 141, 42, 0.35);
+  background: rgba(10, 16, 26, 0.97);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  font-size: 11px;
+  line-height: 1.5;
+  color: #c8d6e8;
+  pointer-events: none;
+}
+.card-hover-preview .chp-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffc896;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+.card-hover-preview .chp-section {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.card-hover-preview .chp-section b {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  color: #7f92a8;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+.cmd-action-card.is-expanded .card-compact-progress,
+.cmd-action-card.is-expanded .card-preview-line {
+  display: none;
+}
+.cmd-action-card.is-expanded .card-status-log {
+  max-height: min(320px, 42vh);
+}
+.cmd-action-card.is-expanded.is-active .card-status-log {
+  max-height: none;
+}
+.card-head-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.card-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.2);
+}
+.cmd-action-card.state-Planning .card-state-dot,
+.cmd-action-card.state-Running .card-state-dot {
+  background: #ff8d2a;
+  animation: card-dot-pulse 1.2s ease-in-out infinite;
+}
+.cmd-action-card.state-Waiting .card-state-dot { background: #fbbf24; }
+.cmd-action-card.state-Done .card-state-dot { background: #22c55e; }
+@keyframes card-dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
+}
+.card-preview-line {
+  font-size: 10px;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.9;
+}
+.card-compact-progress {
+  display: none;
+  font-size: 10px;
+  line-height: 1.4;
+  color: #ffc896;
+  margin: 4px 0 0 28px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-plan-chip {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(147, 197, 253, 0.28);
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.1);
+}
+.card-delete-btn:hover {
+  color: #ff9b7a;
+  border-color: rgba(255, 90, 60, 0.35);
+}
+.action-history-tool {
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 10px;
+  cursor: pointer;
+}
+.action-history-tool.active {
+  color: #ffc896;
+  border-color: rgba(255, 141, 42, 0.35);
+}
+.action-done-more-btn {
+  align-self: flex-start;
+  margin: 2px 0 0 4px;
+  font-size: 10px;
+  color: #8ec5ff;
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 .action-agent-bar {
   display: none;
@@ -985,6 +1297,7 @@ body[data-theme="light"] .ai-bg-card {
   word-break: break-word;
 }
 .card-live-thought.thinking { color: #ffc896; border-color: rgba(255, 141, 42, 0.2); }
+.cmd-action-card.has-status-log .card-live-thought { display: none; }
 .card-followup {
   display: flex;
   gap: 6px;
@@ -1038,6 +1351,15 @@ body[data-theme="light"] .ai-bg-card {
   color: #ffc896;
 }
 .cmd-action-card.state-Done .cmd-action-card-badge { color: #86efac; }
+.cmd-action-card.is-collapsed .cmd-action-card-badge {
+  display: none;
+}
+.cmd-action-card.is-collapsed .card-delete-btn {
+  opacity: 0.65;
+}
+.cmd-action-card.is-collapsed:hover .card-delete-btn {
+  opacity: 1;
+}
 .cmd-action-card.state-Waiting .cmd-action-card-badge { color: #fbbf24; }
 .card-pulse-loader {
   height: 3px;
@@ -1069,8 +1391,9 @@ body[data-theme="light"] .ai-bg-card {
   margin: 2px 0;
 }
 .card-status-log {
-  max-height: 140px;
+  max-height: 200px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1151,9 +1474,130 @@ body[data-theme="light"] .ai-bg-card {
     activeCardId: null,
     cards: {},
     _pendingCardId: null,
-    historyFilter: "all"
+    historyFilter: "all",
+    focusMode: false,
+    showAllDone: true
   };
   state.agentProvider = "openclaw";
+
+  function isActionCardRunning(card) {
+    if (!card) return false;
+    return card.uiState === "Planning" || card.uiState === "Running" || card.uiState === "Waiting";
+  }
+
+  function cardPlanProgressMeta(card) {
+    if (!card || !card.blocks || !Array.isArray(card.blocks.plan) || !card.blocks.plan.length) return null;
+    var total = card.blocks.plan.length;
+    var done = 0;
+    if (card.uiState === "Done") done = total;
+    else if (card.uiState === "Running") done = Math.min(total, Math.max(1, card.blocks.status ? card.blocks.status.length : 1));
+    return { done: done, total: total, label: "步骤 " + done + "/" + total };
+  }
+
+  function cardPreviewText(card) {
+    if (!card) return "";
+    if (card.liveThought && String(card.liveThought).trim()) return String(card.liveThought).trim().slice(0, 160);
+    if (card.blocks && card.blocks.reply) {
+      var rb = String(card.blocks.reply.content || card.blocks.reply.body || "").trim();
+      if (rb) return rb.slice(0, 160);
+    }
+    if (card.blocks && Array.isArray(card.blocks.status) && card.blocks.status.length) {
+      var st = card.blocks.status[card.blocks.status.length - 1];
+      var lg = String(st.log || st.body || st.title || "").trim();
+      if (lg) return lg.slice(0, 160);
+    }
+    var raw = String(card.rawAnswer || "").trim();
+    if (raw) return raw.replace(/::\w+_(START|END)::/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
+    var q = card.query && String(card.query).trim();
+    var title = String(card.title || "").trim();
+    if (q && q !== title) return q.slice(0, 120);
+    if (card.uiState === "Done") return "无详细记录";
+    return q ? q.slice(0, 120) : "";
+  }
+
+  function cardMetaLineText(card) {
+    if (!card) return "";
+    var parts = [actionCardUiLabel(card.uiState)];
+    parts.push(agentProviderLabel(card.provider || state.agentProvider));
+    var plan = cardPlanProgressMeta(card);
+    if (plan) parts.push(plan.label);
+    if (card.updatedAt) parts.push(String(card.updatedAt).slice(5, 16));
+    return parts.join(" · ");
+  }
+
+  var cardHoverPreviewEl = null;
+  var cardHoverPreviewTimer = null;
+
+  function ensureCardHoverPreviewEl() {
+    if (!cardHoverPreviewEl) {
+      cardHoverPreviewEl = document.createElement("div");
+      cardHoverPreviewEl.className = "card-hover-preview";
+      cardHoverPreviewEl.hidden = true;
+      document.body.appendChild(cardHoverPreviewEl);
+    }
+    return cardHoverPreviewEl;
+  }
+
+  function cardDetailPreviewHtml(card) {
+    if (!card) return "";
+    var title = esc(card.title || card.query || "代理任务");
+    var sections = [];
+    if (card.query && String(card.query).trim())
+      sections.push('<div class="chp-section"><b>任务描述</b>' + esc(String(card.query)) + "</div>");
+    var preview = cardPreviewText(card);
+    if (preview && preview !== "无详细记录")
+      sections.push('<div class="chp-section"><b>摘要</b>' + esc(preview) + "</div>");
+    if (card.blocks && card.blocks.reply) {
+      var rb = String(card.blocks.reply.content || card.blocks.reply.body || "").trim();
+      if (rb) sections.push('<div class="chp-section"><b>回复</b>' + esc(rb.slice(0, 1200)) + "</div>");
+    }
+    if (card.blocks && Array.isArray(card.blocks.status) && card.blocks.status.length) {
+      var logs = card.blocks.status
+        .map(function (st) {
+          return String(st.title || "") + (st.log ? "\n" + st.log : "");
+        })
+        .join("\n\n")
+        .trim();
+      if (logs) sections.push('<div class="chp-section"><b>执行日志</b>' + esc(logs.slice(0, 1200)) + "</div>");
+    }
+    if (card.liveThought && String(card.liveThought).trim())
+      sections.push('<div class="chp-section"><b>进度</b>' + esc(String(card.liveThought)) + "</div>");
+    if (!sections.length)
+      sections.push('<div class="chp-section">点击展开查看完整详情；可在此卡追加新指令。</div>');
+    return '<div class="chp-title">' + title + "</div>" + sections.join("");
+  }
+
+  function showCardHoverPreview(card, anchorEl) {
+    if (!card || !anchorEl || card.expanded) return;
+    var pop = ensureCardHoverPreviewEl();
+    pop.innerHTML = cardDetailPreviewHtml(card);
+    pop.hidden = false;
+    var r = anchorEl.getBoundingClientRect();
+    var top = r.bottom + 6;
+    var left = Math.max(8, Math.min(r.left, window.innerWidth - 430));
+    if (top + 200 > window.innerHeight) top = Math.max(8, r.top - 8 - Math.min(200, pop.offsetHeight || 160));
+    pop.style.top = top + "px";
+    pop.style.left = left + "px";
+  }
+
+  function hideCardHoverPreview() {
+    if (cardHoverPreviewTimer) {
+      clearTimeout(cardHoverPreviewTimer);
+      cardHoverPreviewTimer = null;
+    }
+    if (cardHoverPreviewEl) cardHoverPreviewEl.hidden = true;
+  }
+
+  function removeActionLiveDock(stack) {
+    var root = stack || document.querySelector(".action-card-stack");
+    if (!root) return;
+    var dock = root.querySelector("#action-live-dock");
+    if (dock) dock.remove();
+  }
+
+  function updateActionLiveDock(_cardId) {
+    removeActionLiveDock();
+  }
 
   function normalizeAgentCardsArray(cards) {
     if (Array.isArray(cards)) return cards;
@@ -1181,7 +1625,6 @@ body[data-theme="light"] .ai-bg-card {
     };
     stub.onChunk = function (t) {
       stub._buf += String(t || "");
-      setCardLiveThought(cardId, stub._buf.slice(-280), true);
       var c = getActionCard(cardId);
       if (c && c.uiState === "Planning") actionCardManager.transitionCardState(cardId, "Running");
       var dom = document.getElementById("card-" + cardId);
@@ -1192,19 +1635,31 @@ body[data-theme="light"] .ai-bg-card {
           esc(stub._buf) +
           "</div></div>";
         log.scrollTop = log.scrollHeight;
+        syncActionCardStatusLogVisibility(dom);
+      } else {
+        setCardLiveThought(cardId, stub._buf.slice(-280), true);
       }
     };
     stub.flush = function () {};
     return stub;
   }
 
-  function removeActionCard(cardId) {
+  function removeActionCard(cardId, syncHost) {
     var id = String(cardId || "");
     if (!id) return;
     delete actionState.cards[id];
     var el = document.getElementById("card-" + id);
     if (el) el.remove();
-    if (actionState.activeCardId === id) actionState.activeCardId = null;
+    if (actionState.activeCardId === id) {
+      actionState.activeCardId = null;
+      var dock = document.getElementById("action-live-dock");
+      if (dock) dock.hidden = true;
+    }
+    if (syncHost !== false) {
+      try {
+        post({ type: "palette_agent_dismiss", cardId: id });
+      } catch (_) {}
+    }
   }
 
   function reconcilePendingAgentCard(serverDto) {
@@ -1235,6 +1690,61 @@ body[data-theme="light"] .ai-bg-card {
     actionState._pendingCardId = null;
   }
 
+  function pullAgentCardsFromHostSync() {
+    try {
+      var ahk = getPaletteSyncAhk();
+      if (ahk && typeof ahk.PullCommandPaletteAgentCards === "function") {
+        var raw = String(ahk.PullCommandPaletteAgentCards("") || "[]");
+        var data = JSON.parse(raw);
+        if (Array.isArray(data)) {
+          actionState._cardsSyncDone = true;
+          if (data.length) {
+            renderActionCardSync(data);
+          } else if (!actionHasStoredCards() && state.intent === "action") {
+            purgeActionEmptyHint();
+          }
+          return data.length;
+        }
+      }
+    } catch (e) {
+      agentDebugLog("pull_cards_sync", String(e && e.message || e), "warn");
+    }
+    return -1;
+  }
+
+  function showActionEmptyIfNeeded() {
+    if (actionHasStoredCards() || state.input.trim() || state.actionCmdBrowse) return;
+    state.actions = [];
+    state.showResults = true;
+    clearActionCmdResultsDom();
+    purgeActionEmptyHint();
+    var box = document.getElementById("results");
+    if (box && !box.querySelector(".action-card-stack")) {
+      var stack = document.createElement("div");
+      stack.className = "action-card-stack";
+      box.appendChild(stack);
+    }
+    showActionIntentEmpty();
+    var panel = document.getElementById("palette-panel");
+    if (panel) panel.classList.add("has-results");
+    syncWindowSize();
+  }
+
+  function requestAgentCardSync() {
+    var n = pullAgentCardsFromHostSync();
+    if (n >= 0) {
+      if (n === 0 && state.intent === "action") showActionEmptyIfNeeded();
+      return;
+    }
+    try {
+      post({ type: "palette_agent_pull" });
+    } catch (_) {}
+  }
+
+  function actionHasStoredCards() {
+    return Object.keys(actionState.cards).length > 0;
+  }
+
   function refreshActionHistoryHead() {
     var box = document.getElementById("results");
     if (!box) return;
@@ -1253,6 +1763,8 @@ body[data-theme="light"] .ai-bg-card {
         '<button type="button" class="action-history-filter active" data-filter="all">全部</button>' +
         '<button type="button" class="action-history-filter" data-filter="running">进行中</button>' +
         '<button type="button" class="action-history-filter" data-filter="done">已归档</button>' +
+        '<button type="button" class="action-history-tool action-focus-mode" title="只展开当前任务">聚焦当前</button>' +
+        '<button type="button" class="action-history-tool action-collapse-others" title="折叠非当前任务">折叠其他</button>' +
         '<button type="button" class="action-history-browse-cmd">本地命令</button>' +
         '<button type="button" class="action-history-clear">清除已完成</button>';
       stack.insertBefore(toolbar, stack.firstChild);
@@ -1279,6 +1791,22 @@ body[data-theme="light"] .ai-bg-card {
           renderActionHistoryList();
         });
       });
+      var focusBtn = toolbar.querySelector(".action-focus-mode");
+      if (focusBtn) {
+        focusBtn.addEventListener("click", function () {
+          actionState.focusMode = !actionState.focusMode;
+          focusBtn.classList.toggle("active", actionState.focusMode);
+          if (actionState.focusMode) collapseNonActiveCards();
+          renderActionHistoryList();
+        });
+      }
+      var collapseBtn = toolbar.querySelector(".action-collapse-others");
+      if (collapseBtn) {
+        collapseBtn.addEventListener("click", function () {
+          collapseNonActiveCards();
+          renderActionHistoryList();
+        });
+      }
       var clr = toolbar.querySelector(".action-history-clear");
       if (clr) {
         clr.addEventListener("click", function () {
@@ -1318,7 +1846,8 @@ body[data-theme="light"] .ai-bg-card {
       "任务 · 共 " + n + " 张（进行中 " + runN + " · 已归档 " + doneN + "）→ " + agentProviderLabel(state.agentProvider);
   }
   var MORPH_HEIGHT = 380;
-  var ACTION_CARD_MIN_H = 200;
+  var ACTION_CARD_MIN_H = 120;
+  var ACTION_RESULTS_SCROLL_CAP = 520;
   var ACTION_IDLE_MIN_H = 172;
   var ACTION_AGENT_BAR_H = 36;
   var AI_LIST_MAX_HEIGHT = 520;
@@ -1553,15 +2082,141 @@ body[data-theme="light"] .ai-bg-card {
   var root = document.getElementById("root");
   var themeMode = "dark";
 
+  function getPaletteSyncAhk() {
+    try {
+      var ho = window.chrome && window.chrome.webview && window.chrome.webview.hostObjects;
+      if (ho && ho.sync && ho.sync.ahk) return ho.sync.ahk;
+    } catch (_) {}
+    return window.ahk || null;
+  }
+
+  function agentDebugLog(event, detail, level) {
+    try {
+      var ahk = getPaletteSyncAhk();
+      if (ahk && typeof ahk.CommandPaletteAgentDebugLog === "function") {
+        ahk.CommandPaletteAgentDebugLog("palette", String(event || "log"), String(detail || "").slice(0, 800), level || "info");
+        return;
+      }
+    } catch (_) {}
+    try {
+      post({
+        type: "palette_agent_debug_log",
+        layer: "palette",
+        event: String(event || "log"),
+        detail: String(detail || "").slice(0, 800),
+        level: level || "info"
+      });
+    } catch (_2) {}
+  }
+
+  function applyAgentSubmitBridgeRet(ahkRet, o, provGuess) {
+    if (!ahkRet || ahkRet.indexOf("ok|") !== 0) return false;
+    var pts = ahkRet.split("|");
+    if (pts.length < 3 || !pts[1]) return false;
+    var dto = {
+      cardId: pts[1],
+      reqId: pts[2] || "",
+      provider: pts[3] || provGuess,
+      title: o.text || o.query || "",
+      query: o.text || o.query || ""
+    };
+    agentDebugLog("bridge_card", "card=" + dto.cardId + " req=" + dto.reqId);
+    applyAgentCardNew({
+      cardId: dto.cardId,
+      reqId: dto.reqId,
+      uiState: "Planning",
+      title: dto.title,
+      query: dto.query,
+      provider: dto.provider,
+      liveThought: "🔗 已提交，正在连接 " + agentProviderLabel(dto.provider) + "…"
+    });
+    actionState._pendingCardId = null;
+    return true;
+  }
+
+  function probeAgentHostBridge() {
+    var ahk = getPaletteSyncAhk();
+    if (!ahk) {
+      agentDebugLog("bridge_ping", "no_sync_ahk", "warn");
+      return;
+    }
+    try {
+      if (typeof ahk.Ping === "function") agentDebugLog("bridge_ping", String(ahk.Ping("") || ahk.Ping()));
+    } catch (e1) {
+      agentDebugLog("bridge_ping", "err:" + String(e1 && e1.message || e1), "warn");
+    }
+    try {
+      if (typeof ahk.PingAgentSubmit === "function") {
+        agentDebugLog("bridge_submit", String(ahk.PingAgentSubmit("") || ahk.PingAgentSubmit()));
+      }
+    } catch (e1b) {
+      agentDebugLog("bridge_submit", "err:" + String(e1b && e1b.message || e1b), "warn");
+    }
+    try {
+      if (typeof ahk.ProbeCommandPaletteAgentDebug === "function") {
+        agentDebugLog("bridge_probe", String(ahk.ProbeCommandPaletteAgentDebug("") || ahk.ProbeCommandPaletteAgentDebug()));
+      }
+    } catch (e2) {
+      agentDebugLog("bridge_probe", "err:" + String(e2 && e2.message || e2), "warn");
+    }
+  }
+
+  function submitAgentToHostSync(o) {
+    if (!o) return "";
+    var text = String(o.text || o.query || "");
+    var prov = normalizeAgentProvider(o.provider || state.agentProvider || "openclaw");
+    var kind = o.kind || "new";
+    var cardId = o.cardId || "";
+    var ahk = getPaletteSyncAhk();
+    var submitPayload = JSON.stringify({
+      type: "palette_agent_submit",
+      text: text,
+      query: text,
+      provider: prov,
+      kind: kind,
+      cardId: cardId
+    });
+    if (ahk && typeof ahk.CommandPaletteAgentSubmitQuick === "function") {
+      var rQuick = "";
+      var rArgs = "";
+      try {
+        rQuick = String(ahk.CommandPaletteAgentSubmitQuick(submitPayload) || "");
+      } catch (e1) {
+        agentDebugLog("submit_sync_exc", String(e1 && e1.message || e1).slice(0, 120), "warn");
+      }
+      if (rQuick.indexOf("ok|") === 0) return rQuick;
+      try {
+        rArgs = String(ahk.CommandPaletteAgentSubmitQuick(text, prov, kind, cardId) || "");
+      } catch (e1b) {
+        agentDebugLog("submit_args_exc", String(e1b && e1b.message || e1b).slice(0, 120), "warn");
+      }
+      if (rArgs.indexOf("ok|") === 0) return rArgs;
+      if (rQuick) return rQuick;
+      if (rArgs) return rArgs;
+    }
+    if (ahk && typeof ahk.CommandPaletteAgentSubmit === "function") {
+      try {
+        return String(ahk.CommandPaletteAgentSubmit(submitPayload) || "");
+      } catch (e0) {
+        agentDebugLog("submit_json_exc", String(e0 && e0.message || e0).slice(0, 120), "warn");
+      }
+    }
+    return "";
+  }
+
   function post(o) {
     if (!o) return;
     var typ = o.type ? String(o.type) : "";
-    if (typ === "palette_search_debug") {
+    if (typ === "palette_search_debug" && !o.tab) {
       try {
         if (window.ahk && typeof window.ahk.OpenCommandPaletteSearchDebug === "function") {
           if (String(window.ahk.OpenCommandPaletteSearchDebug()) === "ok") return;
         }
       } catch (_) {}
+    }
+    if (typ === "palette_agent_debug") {
+      o = { type: "palette_search_debug", tab: "agent" };
+      typ = o.type;
     }
     var payload = "";
     try {
@@ -1570,13 +2225,8 @@ body[data-theme="light"] .ai-bg-card {
       return;
     }
     if (typ === "palette_agent_submit") {
-      var ahkOk = false;
-      try {
-        if (window.ahk && typeof window.ahk.CommandPaletteAgentSubmit === "function") {
-          ahkOk = String(window.ahk.CommandPaletteAgentSubmit(payload) || "") === "ok";
-        }
-      } catch (_) {}
-      if (ahkOk) return;
+      if (o._hostSynced) return;
+      agentDebugLog("submit_postmsg_only", "fallback", "warn");
     }
     try {
       if (window.chrome && window.chrome.webview && typeof window.chrome.webview.postMessage === "function") {
@@ -1743,11 +2393,35 @@ body[data-theme="light"] .ai-bg-card {
   }
 
   function resolveAgentSubmitText(override) {
-    var el = getInputEl();
-    var fromEl = el ? String(el.value || "") : "";
-    var fromState = String(state.input || "");
-    var fromArg = override != null ? String(override) : "";
-    return (fromArg || fromEl || fromState).trim();
+    var live = readInputValue().trim();
+    if (override != null && String(override).trim()) return String(override).trim();
+    return live;
+  }
+
+  function postAgentSubmitMsg(submitMsg) {
+    if (!submitMsg) return false;
+    var payload = "";
+    try {
+      payload = JSON.stringify(submitMsg);
+    } catch (_) {
+      return false;
+    }
+    try {
+      if (window.chrome && window.chrome.webview && typeof window.chrome.webview.postMessage === "function") {
+        window.chrome.webview.postMessage(payload);
+        return true;
+      }
+    } catch (_) {}
+    try {
+      window.chrome.webview.postMessage(submitMsg);
+      return true;
+    } catch (_2) {}
+    return false;
+  }
+
+  function isAgentProviderKeyword(text) {
+    var t = String(text || "").trim().toLowerCase();
+    return t === "openclaw" || t === "hermes" || t === "龙虾";
   }
 
   var _actionEnterLock = false;
@@ -1770,6 +2444,11 @@ body[data-theme="light"] .ai-bg-card {
     var q = resolveAgentSubmitText();
     if (!q) {
       window.nmerPalette.setStatus("请先在输入框描述任务，再按 Enter 提交", "error");
+      getInputEl()?.focus();
+      return false;
+    }
+    if (isAgentProviderKeyword(q)) {
+      window.nmerPalette.setStatus("请输入具体任务内容，不要只输入引擎名称（龙虾 / Hermes / openclaw）", "error");
       getInputEl()?.focus();
       return false;
     }
@@ -1847,8 +2526,14 @@ body[data-theme="light"] .ai-bg-card {
     return next;
   }
 
+  function normalizeAgentProvider(prov) {
+    var p = String(prov || "").trim().toLowerCase();
+    if (!p || p === "new" || p === "append" || p === "correction") return state.agentProvider || "openclaw";
+    return p;
+  }
+
   function agentProviderLabel(pid) {
-    var p = String(pid || state.agentProvider || "openclaw");
+    var p = normalizeAgentProvider(pid || state.agentProvider || "openclaw");
     for (var i = 0; i < AGENT_PROVIDERS.length; i++) {
       if (AGENT_PROVIDERS[i].id === p) return AGENT_PROVIDERS[i].short;
     }
@@ -1896,7 +2581,8 @@ body[data-theme="light"] .ai-bg-card {
         renderAgentEngineBar();
         refreshActionHistoryHead();
         if (state.intent === "action" && !Object.keys(actionState.cards).length && !state.input.trim()) {
-          applyActionIdleLayout();
+          pullAgentCardsFromHostSync();
+          if (!actionHasStoredCards()) showActionEmptyIfNeeded();
         }
         window.nmerPalette.setStatus("已选引擎 · " + agentProviderLabel(state.agentProvider) + " · 输入后 Enter 提交", "idle");
         syncWindowSize();
@@ -1986,13 +2672,14 @@ body[data-theme="light"] .ai-bg-card {
   function refreshIntentResults(immediate) {
     if (state.intent === "action") {
       purgeAiResultsDom();
+      requestAgentCardSync();
       renderActionHistoryList();
       var cardN = Object.keys(actionState.cards).length;
       if (cardN > 0 && !state.actionCmdBrowse) {
         purgeActionEmptyHint();
         syncActionResultsLayout();
         window.nmerPalette.setStatus(
-          "托管 · " + agentProviderLabel(state.agentProvider) + " · Enter 新建任务",
+          "托管 · " + cardN + " 个任务 · " + agentProviderLabel(state.agentProvider) + " · Enter 新建",
           "idle"
         );
         syncWindowSize();
@@ -2000,11 +2687,30 @@ body[data-theme="light"] .ai-bg-card {
       }
       var q = state.input.trim();
       if (!q && !state.actionCmdBrowse) {
+        var pulledN = pullAgentCardsFromHostSync();
+        if (pulledN < 0) requestAgentCardSync();
+        if (actionHasStoredCards()) {
+          purgeActionEmptyHint();
+          renderActionHistoryList();
+          syncActionResultsLayout();
+          window.nmerPalette.setStatus(
+            "托管 · " + Object.keys(actionState.cards).length + " 个任务 · " + agentProviderLabel(state.agentProvider),
+            "idle"
+          );
+          syncWindowSize();
+          return;
+        }
+        if (pulledN >= 0) {
+          showActionEmptyIfNeeded();
+          return;
+        }
         window.nmerPalette.setStatus(
-          "已选引擎 · " + agentProviderLabel(state.agentProvider) + " · 输入后 Enter 提交",
+          "正在加载历史任务… · " + agentProviderLabel(state.agentProvider),
           "idle"
         );
-        applyActionIdleLayout();
+        purgeActionEmptyHint();
+        syncActionResultsLayout();
+        syncWindowSize();
         return;
       }
       purgeActionEmptyHint();
@@ -2038,6 +2744,7 @@ body[data-theme="light"] .ai-bg-card {
     if (state.intent !== "ai") purgeAiResultsDom();
     syncIntentUI();
     if (state.intent === "ai") post({ type: "palette_ai_refresh" });
+    if (state.intent === "action") requestAgentCardSync();
     refreshIntentResults(true);
     requestAnimationFrame(function () {
       syncWindowSize();
@@ -2113,25 +2820,94 @@ body[data-theme="light"] .ai-bg-card {
   function setCardLiveThought(cardId, text, thinking) {
     var card = getActionCard(cardId);
     if (card) card.liveThought = String(text || "");
+    refreshActionCardPreview(cardId);
+    if (cardId === actionState.activeCardId) updateActionLiveDock(cardId);
     var dom = document.getElementById("card-" + cardId);
     if (!dom) return;
+    if (dom.classList.contains("has-status-log")) return;
     var el = dom.querySelector(".card-live-thought");
     if (!el) return;
     el.textContent = card.liveThought || "等待引擎响应…";
     el.classList.toggle("thinking", !!thinking);
   }
 
-  function focusActionCard(cardId) {
+  function refreshActionCardPreview(cardId) {
+    var card = getActionCard(cardId);
+    var dom = document.getElementById("card-" + cardId);
+    if (!card || !dom) return;
+    var previewEl = dom.querySelector(".card-preview-line");
+    var metaEl = dom.querySelector(".card-meta-line");
+    var compactEl = dom.querySelector(".card-compact-progress");
+    var planChip = dom.querySelector(".card-plan-chip");
+    var preview = cardPreviewText(card);
+    if (previewEl) {
+      previewEl.textContent = preview || "";
+      previewEl.title = preview || card.query || "";
+    }
+    if (metaEl) metaEl.textContent = cardMetaLineText(card);
+    if (compactEl) {
+      compactEl.textContent = isActionCardRunning(card) ? preview || "执行中…" : preview || "已归档";
+      compactEl.title = compactEl.textContent;
+    }
+    if (planChip) {
+      var plan = cardPlanProgressMeta(card);
+      if (plan) {
+        planChip.hidden = false;
+        planChip.textContent = plan.label;
+      } else planChip.hidden = true;
+    }
+  }
+
+  function collapseNonActiveCards() {
+    var active = actionState.activeCardId;
+    Object.keys(actionState.cards).forEach(function (id) {
+      var c = actionState.cards[id];
+      if (!c) return;
+      c.expanded = id === active && (isActionCardRunning(c) || !!c.expanded);
+      refreshActionCardDom(c);
+    });
+  }
+
+  function collapseOtherDoneCards(exceptId) {
+    Object.keys(actionState.cards).forEach(function (id) {
+      if (id === exceptId) return;
+      var c = actionState.cards[id];
+      if (!c || c.uiState !== "Done") return;
+      c.expanded = false;
+      refreshActionCardDom(c);
+    });
+  }
+
+  function syncActionCardStatusLogVisibility(dom) {
+    if (!dom) return;
+    var logBox = dom.querySelector(".card-status-log");
+    var has = !!(logBox && logBox.querySelector(".b-status"));
+    dom.classList.toggle("has-status-log", has);
+  }
+
+  function focusActionCard(cardId, opts) {
+    opts = opts || {};
     actionState.activeCardId = cardId;
     var cur = getActionCard(cardId);
     if (cur) {
-      cur.expanded = true;
+      if (isActionCardRunning(cur) || opts.expand) cur.expanded = true;
       refreshActionCardDom(cur);
+      updateActionLiveDock(cardId);
     }
-    Object.keys(actionState.cards).forEach(function (id) {
-      if (id === cardId) return;
-      refreshActionCardDom(actionState.cards[id]);
-    });
+    if (actionState.focusMode) {
+      Object.keys(actionState.cards).forEach(function (id) {
+        if (id === cardId) return;
+        var c = actionState.cards[id];
+        if (!c) return;
+        c.expanded = false;
+        refreshActionCardDom(c);
+      });
+    } else if (!opts.skipOthers) {
+      Object.keys(actionState.cards).forEach(function (id) {
+        if (id === cardId) return;
+        refreshActionCardDom(actionState.cards[id]);
+      });
+    }
     renderActionHistoryList();
     syncActionResultsLayout();
   }
@@ -2140,12 +2916,20 @@ body[data-theme="light"] .ai-bg-card {
     var card = getActionCard(cardId);
     if (!card) return;
     card.expanded = !card.expanded;
+    if (card.expanded) {
+      actionState.activeCardId = cardId;
+      if (card.uiState === "Done") collapseOtherDoneCards(cardId);
+    }
+    hideCardHoverPreview();
     refreshActionCardDom(card);
+    renderActionHistoryList();
     syncActionResultsLayout();
+    syncWindowSize();
   }
 
   function refreshActionCardDom(card) {
     if (!card) return;
+    if (card.expanded == null) card.expanded = card.id === actionState.activeCardId;
     var dom = ensureActionCardDom(card);
     if (!dom) return;
     var prov = card.provider || state.agentProvider || "openclaw";
@@ -2160,17 +2944,28 @@ body[data-theme="light"] .ai-bg-card {
     if (badge) badge.textContent = actionCardUiLabel(card.uiState);
     var expandBtn = dom.querySelector(".card-expand-btn");
     if (expandBtn) expandBtn.textContent = card.expanded ? "▼" : "▶";
-    if (card.expanded !== false) card.expanded = true;
     dom.className =
       "cmd-action-card state-" +
       (card.uiState || "Planning") +
-      (card.expanded ? " is-expanded" : " is-expanded") +
-      (card.id === actionState.activeCardId ? " is-active" : "");
+      (card.expanded ? " is-expanded" : " is-collapsed") +
+      (card.id === actionState.activeCardId ? " is-active" : "") +
+      (dom.classList.contains("has-status-log") ? " has-status-log" : "");
     var loader = dom.querySelector(".card-pulse-loader");
-    if (loader) loader.style.display = card.uiState === "Planning" || card.uiState === "Running" ? "block" : "none";
-    setCardLiveThought(card.id, card.liveThought || "", card.uiState === "Planning" || card.uiState === "Running");
+    if (loader) loader.style.display =
+      card.expanded && (card.uiState === "Planning" || card.uiState === "Running") ? "block" : "none";
+    if (card.expanded || (card.id === actionState.activeCardId && isActionCardRunning(card))) {
+      setCardLiveThought(
+        card.id,
+        card.liveThought || "",
+        card.uiState === "Planning" || card.uiState === "Running"
+      );
+    }
+    refreshActionCardPreview(card.id);
+    if (card.id === actionState.activeCardId) updateActionLiveDock(card.id);
+    var cancelBtn = dom.querySelector(".card-cancel-btn");
+    if (cancelBtn) cancelBtn.hidden = !isActionCardRunning(card);
     var follow = dom.querySelector(".card-followup");
-    if (follow) follow.hidden = card.uiState === "Done" && card.id !== actionState.activeCardId;
+    if (follow) follow.hidden = !card.expanded;
     var fin = dom.querySelector(".card-followup-input");
     if (fin) {
       fin.placeholder =
@@ -2189,7 +2984,34 @@ body[data-theme="light"] .ai-bg-card {
     if (head) {
       head.addEventListener("click", function (e) {
         if (e.target.closest(".card-mini-btn")) return;
+        if (e.target.closest(".card-expand-btn")) {
+          toggleActionCardExpand(card.id);
+          return;
+        }
+        if (card.uiState === "Done" && !isActionCardRunning(card)) {
+          toggleActionCardExpand(card.id);
+          return;
+        }
         focusActionCard(card.id);
+      });
+      head.addEventListener("mouseenter", function () {
+        if (card.expanded) return;
+        if (cardHoverPreviewTimer) clearTimeout(cardHoverPreviewTimer);
+        cardHoverPreviewTimer = setTimeout(function () {
+          showCardHoverPreview(card, dom);
+        }, 300);
+      });
+      head.addEventListener("mouseleave", function () {
+        hideCardHoverPreview();
+      });
+    }
+    dom.addEventListener("mouseleave", function () {
+      hideCardHoverPreview();
+    });
+    var expandBtn = dom.querySelector(".card-expand-btn");
+    if (expandBtn) {
+      expandBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
         toggleActionCardExpand(card.id);
       });
     }
@@ -2198,6 +3020,15 @@ body[data-theme="light"] .ai-bg-card {
       cancelBtn.addEventListener("click", function (e) {
         e.stopPropagation();
         post({ type: "palette_agent_cancel", cardId: card.id });
+      });
+    }
+    var deleteBtn = dom.querySelector(".card-delete-btn");
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        removeActionCard(card.id, true);
+        renderActionHistoryList();
+        syncActionResultsLayout();
       });
     }
     var sendBtn = dom.querySelector(".card-followup-btn");
@@ -2235,17 +3066,25 @@ body[data-theme="light"] .ai-bg-card {
     if (!el) {
       el = document.createElement("article");
       el.id = id;
-      el.className = "cmd-action-card is-expanded";
+      el.className = "cmd-action-card is-collapsed";
       el.innerHTML =
         '<div class="card-pulse-loader" style="display:none"></div>' +
         '<div class="cmd-action-card-head">' +
         '<button type="button" class="card-expand-btn" aria-label="展开">▼</button>' +
+        '<span class="card-state-dot" aria-hidden="true"></span>' +
         '<span class="card-provider-chip">龙虾</span>' +
+        '<div class="card-head-main">' +
         '<span class="cmd-action-card-title"></span>' +
+        '<span class="card-preview-line"></span>' +
+        '<span class="card-meta-line"></span>' +
+        "</div>" +
         '<div class="card-head-actions">' +
+        '<span class="card-plan-chip" hidden></span>' +
         '<span class="cmd-action-card-badge"></span>' +
         '<button type="button" class="card-mini-btn card-cancel-btn" title="取消任务">取消</button>' +
+        '<button type="button" class="card-mini-btn card-delete-btn" title="移除此卡片">删除</button>' +
         "</div></div>" +
+        '<div class="card-compact-progress"></div>' +
         '<div class="card-live-thought thinking">等待引擎响应…</div>' +
         '<div class="card-body">' +
         '<div class="card-timeline"></div>' +
@@ -2273,14 +3112,43 @@ body[data-theme="light"] .ai-bg-card {
   }
 
   function ensureActionCardListHost(stack) {
+    var runSec = ensureActionCardSection(stack, "running");
+    return runSec ? runSec.querySelector(".action-card-list") : null;
+  }
+
+  function ensureActionCardSection(stack, sectionId) {
     if (!stack) return null;
-    var list = stack.querySelector(".action-card-list");
-    if (!list) {
-      list = document.createElement("div");
-      list.className = "action-card-list";
-      stack.appendChild(list);
+    var sec = stack.querySelector('.action-card-section[data-section="' + sectionId + '"]');
+    if (!sec) {
+      sec = document.createElement("div");
+      sec.className = "action-card-section";
+      sec.setAttribute("data-section", sectionId);
+      sec.innerHTML =
+        '<div class="action-card-section-head"></div><div class="action-card-list"></div>';
+      stack.appendChild(sec);
     }
-    return list;
+    return sec;
+  }
+
+  function sortCardIds(ids) {
+    var active = actionState.activeCardId;
+    return ids.sort(function (a, b) {
+      if (a === active) return -1;
+      if (b === active) return 1;
+      return String(actionState.cards[b].updatedAt || "").localeCompare(String(actionState.cards[a].updatedAt || ""));
+    });
+  }
+
+  function mountActionCardIntoList(card, listHost) {
+    if (!card || !listHost) return;
+    var dom = ensureActionCardDom(card);
+    if (!dom) return;
+    dom.style.display = "";
+    dom.style.visibility = "visible";
+    dom.style.height = "";
+    dom.style.overflow = "";
+    listHost.appendChild(dom);
+    refreshActionCardDom(card);
   }
 
   function renderActionHistoryList() {
@@ -2295,44 +3163,119 @@ body[data-theme="light"] .ai-bg-card {
       else box.insertBefore(stack, box.firstChild);
     }
     refreshActionHistoryHead();
-    var listHost = ensureActionCardListHost(stack);
-    var ids = Object.keys(actionState.cards);
-    ids.sort(function (a, b) {
-      return String(actionState.cards[b].updatedAt || "").localeCompare(String(actionState.cards[a].updatedAt || ""));
+    removeActionLiveDock(stack);
+
+    var oldFlat = stack.querySelector(":scope > .action-card-list");
+    if (oldFlat) oldFlat.remove();
+    stack.querySelectorAll(".action-done-more-btn").forEach(function (b) {
+      b.remove();
     });
-    ids.forEach(function (cid) {
-      var card = actionState.cards[cid];
-      if (!card) return;
-      if (!cardMatchesHistoryFilter(card)) {
+
+    var runningIds = [];
+    var doneIds = [];
+    Object.keys(actionState.cards).forEach(function (cid) {
+      var c = actionState.cards[cid];
+      if (!c) return;
+      if (!cardMatchesHistoryFilter(c)) {
         var hideEl = document.getElementById("card-" + cid);
         if (hideEl) hideEl.style.display = "none";
         return;
       }
-      if (card.expanded !== false) card.expanded = true;
-      var dom = ensureActionCardDom(card);
-      if (dom && listHost) {
-        dom.style.display = "";
-        dom.style.visibility = "visible";
-        dom.style.height = "";
-        dom.style.overflow = "";
-        listHost.appendChild(dom);
-        refreshActionCardDom(card);
-      }
+      if (isActionCardRunning(c)) runningIds.push(cid);
+      else doneIds.push(cid);
     });
-    if (ids.length > 0) {
+
+    sortCardIds(runningIds);
+    sortCardIds(doneIds);
+
+    var showRunning = actionState.historyFilter === "all" || actionState.historyFilter === "running";
+    var showDone = actionState.historyFilter === "all" || actionState.historyFilter === "done";
+
+    stack.querySelectorAll(".action-card-section").forEach(function (sec) {
+      sec.style.display = "none";
+    });
+
+    if (showRunning && runningIds.length) {
+      var runSec = ensureActionCardSection(stack, "running");
+      runSec.style.display = "";
+      var runHead = runSec.querySelector(".action-card-section-head");
+      if (runHead) {
+        runHead.innerHTML =
+          '<span>进行中</span><span class="section-count">' + runningIds.length + "</span>" +
+          '<span class="section-hint">实时进度与操作见下方任务卡</span>';
+      }
+      var runList = runSec.querySelector(".action-card-list");
+      if (runList) {
+        runList.innerHTML = "";
+        runningIds.forEach(function (cid) {
+          var card = actionState.cards[cid];
+          if (!card) return;
+          if (actionState.focusMode && cid !== actionState.activeCardId) {
+            card.expanded = false;
+          } else if (cid === actionState.activeCardId || runningIds.length === 1) {
+            card.expanded = true;
+          } else if (card.expanded == null) {
+            card.expanded = false;
+          }
+          mountActionCardIntoList(card, runList);
+        });
+      }
+    }
+
+    if (showDone && doneIds.length) {
+      var doneSec = ensureActionCardSection(stack, "done");
+      doneSec.style.display = "";
+      var doneHead = doneSec.querySelector(".action-card-section-head");
+      var doneLimit = actionState.showAllDone ? doneIds.length : 4;
+      var doneVisible = doneIds.slice(0, doneLimit);
+      if (doneHead) {
+        doneHead.innerHTML =
+          '<span>已归档</span><span class="section-count">' + doneIds.length + "</span>" +
+          '<span class="section-hint">默认紧凑 · 点击展开 · 悬浮预览</span>';
+      }
+      var doneList = doneSec.querySelector(".action-card-list");
+      if (doneList) {
+        doneList.innerHTML = "";
+        doneVisible.forEach(function (cid) {
+          var card = actionState.cards[cid];
+          if (!card) return;
+          if (actionState.focusMode && cid !== actionState.activeCardId) card.expanded = false;
+          else if (cid !== actionState.activeCardId || !card.expanded) card.expanded = false;
+          mountActionCardIntoList(card, doneList);
+        });
+      }
+      if (!actionState.showAllDone && doneIds.length > doneLimit) {
+        var moreBtn = document.createElement("button");
+        moreBtn.type = "button";
+        moreBtn.className = "action-done-more-btn";
+        moreBtn.textContent = "展开更多已归档（+" + (doneIds.length - doneLimit) + "）";
+        moreBtn.addEventListener("click", function () {
+          actionState.showAllDone = true;
+          renderActionHistoryList();
+        });
+        doneSec.appendChild(moreBtn);
+      }
+    }
+
+    if (runningIds.length + doneIds.length > 0) {
       var panel = document.getElementById("palette-panel");
       if (panel) panel.classList.add("has-results", "intent-action");
       box.classList.add("palette-results", "has-action-cards");
-      var firstVis = listHost && listHost.querySelector(".cmd-action-card:not([style*='display: none'])");
-      if (firstVis) {
-        requestAnimationFrame(function () {
-          try {
-            firstVis.scrollIntoView({ block: "nearest", behavior: "smooth" });
-          } catch (_) {
-            firstVis.scrollIntoView(false);
-          }
-          syncWindowSize();
-        });
+      requestAnimationFrame(function () {
+        syncActionResultsScrollMode();
+        syncWindowSize();
+      });
+    } else {
+      removeActionLiveDock(stack);
+      if (state.intent === "action" && !state.input.trim() && !state.actionCmdBrowse) {
+        purgeActionEmptyHint();
+        var empty = document.createElement("div");
+        empty.className = "action-intent-empty";
+        empty.textContent =
+          "暂无历史任务。输入描述后 Enter 提交至 " +
+          agentProviderLabel(state.agentProvider) +
+          "；提交后会在此按「进行中 / 已归档」分区显示。";
+        stack.appendChild(empty);
       }
     }
   }
@@ -2347,13 +3290,18 @@ body[data-theme="light"] .ai-bg-card {
       dom.className =
         "cmd-action-card state-" +
         newState +
-        (card.expanded !== false ? " is-expanded" : "") +
-        (card.id === actionState.activeCardId ? " is-active" : "");
+        (card.expanded ? " is-expanded" : " is-collapsed") +
+        (card.id === actionState.activeCardId ? " is-active" : "") +
+        (dom.classList.contains("has-status-log") ? " has-status-log" : "");
       var loader = dom.querySelector(".card-pulse-loader");
       var badge = dom.querySelector(".cmd-action-card-badge");
       var inputEl = getInputEl();
       if (badge) badge.textContent = actionCardUiLabel(newState);
-      if (loader) loader.style.display = newState === "Planning" || newState === "Running" ? "block" : "none";
+      if (loader)
+        loader.style.display =
+          card.expanded && (newState === "Planning" || newState === "Running") ? "block" : "none";
+      refreshActionCardPreview(cardId);
+      if (cardId === actionState.activeCardId) updateActionLiveDock(cardId);
       if (inputEl) {
         if (newState === "Planning") inputEl.placeholder = "引擎正在重新规划任务流…";
         else if (newState === "Running") inputEl.placeholder = "正在执行云端代理具身流，请稍候…";
@@ -2390,6 +3338,7 @@ body[data-theme="light"] .ai-bg-card {
               })
               .join("");
           }
+          refreshActionCardPreview(cardId);
           if (card.uiState === "Planning") actionCardManager.transitionCardState(cardId, "Running");
         }
       } else if (block.type === "status") {
@@ -2418,9 +3367,38 @@ body[data-theme="light"] .ai-bg-card {
             tail.querySelector(".b-status-log").textContent = open.log || open.body || "";
           }
           logBox.scrollTop = logBox.scrollHeight;
+          syncActionCardStatusLogVisibility(dom);
         }
-        card.liveThought = (open.title || "[执行中]") + (open.log ? " · " + open.log.slice(0, 120) : "");
-        setCardLiveThought(cardId, card.liveThought, !block.closed);
+        refreshActionCardPreview(cardId);
+        if (cardId === actionState.activeCardId) updateActionLiveDock(cardId);
+        if (card.uiState !== "Waiting" && card.uiState !== "Done") actionCardManager.transitionCardState(cardId, "Running");
+      } else if (block.type === "orphan" && block.closed) {
+        var orphanBody = String(block.content || block.body || "").trim();
+        if (orphanBody) {
+          var orphanLog = dom.querySelector(".card-status-log");
+          if (orphanLog) {
+            var orphanNorm = orphanBody.replace(/\s+/g, " ").trim();
+            var orphanNodes = orphanLog.querySelectorAll(".b-status");
+            for (var oi = orphanNodes.length - 1; oi >= 0; oi--) {
+              var prevTxt = orphanNodes[oi].querySelector(".b-status-log");
+              if (prevTxt && prevTxt.textContent.replace(/\s+/g, " ").trim() === orphanNorm) return;
+            }
+            var orphanHit = orphanLog.querySelector('.b-status[data-seq="' + block.seq + '"]');
+            if (!orphanHit) {
+              orphanHit = document.createElement("div");
+              orphanHit.className = "b-status";
+              orphanHit.setAttribute("data-seq", String(block.seq));
+              orphanHit.innerHTML =
+                '<div class="b-status-title">[回复]</div><div class="b-status-log"></div>';
+              orphanLog.appendChild(orphanHit);
+            }
+            orphanHit.querySelector(".b-status-log").textContent = orphanBody;
+            orphanLog.scrollTop = orphanLog.scrollHeight;
+            syncActionCardStatusLogVisibility(dom);
+          }
+        }
+        refreshActionCardPreview(cardId);
+        if (cardId === actionState.activeCardId) updateActionLiveDock(cardId);
         if (card.uiState !== "Waiting" && card.uiState !== "Done") actionCardManager.transitionCardState(cardId, "Running");
       } else if (block.type === "question" && block.closed) {
         card.blocks.question = block;
@@ -2468,6 +3446,7 @@ body[data-theme="light"] .ai-bg-card {
       panel.classList.add("has-results");
       renderActionHistoryList();
     }
+    syncActionResultsScrollMode();
     syncWindowSize();
     requestAnimationFrame(syncWindowSize);
   }
@@ -2477,6 +3456,7 @@ body[data-theme="light"] .ai-bg-card {
     var id = String(dto.cardId || dto.id || "");
     if (!id) return;
     reconcilePendingAgentCard(dto);
+    var wasNew = !actionState.cards[id];
     var card = actionState.cards[id];
     if (!card) {
       card = {
@@ -2486,13 +3466,14 @@ body[data-theme="light"] .ai-bg-card {
         parser: createAgentParser(id),
         waitingForUser: false,
         sessionRef: dto.sessionRef || "",
-        provider: dto.provider || state.agentProvider || "openclaw",
+        provider: normalizeAgentProvider(dto.provider || state.agentProvider || "openclaw"),
         title: dto.title || dto.query || "代理任务",
         query: dto.query || dto.title || "",
         reqId: dto.reqId || "",
         _protoStarted: false,
-        expanded: true,
+        expanded: false,
         liveThought: "",
+        rawAnswer: dto.rawAnswer || "",
         updatedAt: dto.updatedAt || ""
       };
       actionState.cards[id] = card;
@@ -2502,26 +3483,34 @@ body[data-theme="light"] .ai-bg-card {
     card.query = dto.query || card.query;
     card.reqId = dto.reqId || card.reqId;
     card.sessionRef = dto.sessionRef || card.sessionRef;
-    if (dto.provider) card.provider = dto.provider;
+    if (dto.provider) card.provider = normalizeAgentProvider(dto.provider);
     if (dto.updatedAt) card.updatedAt = dto.updatedAt;
+    if (dto.rawAnswer != null) card.rawAnswer = String(dto.rawAnswer || "");
     if (dto.liveThought != null && String(dto.liveThought) !== "") card.liveThought = String(dto.liveThought);
-    if (card.expanded === undefined) card.expanded = true;
-    actionState.activeCardId = id;
+    if (card.expanded === undefined) card.expanded = id === actionState.activeCardId;
+    if (wasNew || isActionCardRunning(card)) actionState.activeCardId = id;
+    if (actionState.focusMode && (wasNew || id === actionState.activeCardId)) collapseNonActiveCards();
     refreshActionCardDom(card);
     actionCardManager.transitionCardState(id, card.uiState);
     if (dto.rawAnswer && card.parser) {
-      card.parser.reset();
-      card.parser.onChunk(String(dto.rawAnswer));
-      card.parser.flush();
+      var rawSig = String(dto.rawAnswer);
+      if (card._rawReplaySig !== rawSig) {
+        card._rawReplaySig = rawSig;
+        card.parser.reset();
+        card._protoStarted = /::(PLAN|STATUS|QUESTION|REPLY)_START::/.test(rawSig);
+        card.parser.onChunk(rawSig);
+        if (card.uiState === "Done" || dto.uiState === "Done") card.parser.flush();
+      }
     }
     renderActionHistoryList();
   }
 
   function submitAgentTask(text, opts) {
     opts = opts || {};
-    var q = resolveAgentSubmitText(text);
+    var q = readInputValue().trim() || resolveAgentSubmitText(text);
     if (!q) return;
-    var prov = opts.provider || state.agentProvider || "openclaw";
+    agentDebugLog("submit_text", "q=" + q.slice(0, 80));
+    var prov = normalizeAgentProvider(opts.provider || state.agentProvider || "openclaw");
     var targetId = opts.cardId || (opts.fromCardFollowup ? actionState.activeCardId : "");
     var active = targetId ? getActionCard(targetId) : null;
     var kind = opts.forceKind || "new";
@@ -2536,6 +3525,11 @@ body[data-theme="light"] .ai-bg-card {
       kind = "new";
       cardId = "";
     }
+    if (kind === "new" && isAgentProviderKeyword(q)) {
+      window.nmerPalette.setStatus("请输入具体任务内容，不要只输入引擎名称（龙虾 / Hermes / openclaw）", "error");
+      getInputEl()?.focus();
+      return;
+    }
     if (active && active.parser && kind !== "new") {
       active.parser.reset();
       active._protoStarted = false;
@@ -2544,29 +3538,45 @@ body[data-theme="light"] .ai-bg-card {
       actionCardManager.transitionCardState(active.id, active.uiState);
       refreshActionCardDom(active);
     }
-    if (kind === "new") {
-      purgeActionEmptyHint();
-      var pendingId = "card_pending_" + Date.now();
-      actionState._pendingCardId = pendingId;
-      upsertActionCardFromDto({
-        cardId: pendingId,
-        uiState: "Planning",
-        title: q,
-        query: q,
-        provider: prov,
-        reqId: "",
-        liveThought: "正在连接 " + agentProviderLabel(prov) + "…",
-        running: true
-      });
-    }
-    post({
+    var submitMsg = {
       type: "palette_agent_submit",
       text: q,
+      query: q,
       kind: kind,
       cardId: cardId,
       provider: prov
-    });
+    };
+    agentDebugLog("submit_start", "kind=" + kind + " text=" + String(q).slice(0, 60));
+    var provGuess = prov;
+    var hostOk = false;
+    var posted = postAgentSubmitMsg(submitMsg);
+    if (posted) {
+      agentDebugLog("submit_post", "via=postMessage primary");
+      hostOk = true;
+    }
+    if (!hostOk) {
+      var ahkRet = "";
+      try {
+        ahkRet = submitAgentToHostSync(submitMsg);
+        agentDebugLog("bridge_ret", (ahkRet || "(empty)").slice(0, 120));
+        hostOk = applyAgentSubmitBridgeRet(ahkRet, submitMsg, provGuess);
+        if (!hostOk) {
+          window.nmerPalette.setStatus(
+            "⚠ 提交失败：" + (ahkRet && ahkRet.indexOf("err:") === 0 ? ahkRet.slice(4) : "请完全退出托盘后重启牛马.ahk"),
+            "error"
+          );
+          agentDebugLog("submit_failed", ahkRet || "empty", "err");
+          return;
+        }
+      } catch (eSub) {
+        agentDebugLog("bridge_exc", String(eSub && eSub.message || eSub).slice(0, 120), "warn");
+        window.nmerPalette.setStatus("⚠ 提交失败：宿主桥接异常", "error");
+        return;
+      }
+    }
+    agentDebugLog("submit_ui", "card=" + actionState.activeCardId);
     state._userPickedCommand = false;
+    if (kind === "new") purgeActionEmptyHint();
     if (kind === "new" || kind === "append") {
       var inputEl = getInputEl();
       if (inputEl && !opts.fromCardFollowup) {
@@ -2619,13 +3629,51 @@ body[data-theme="light"] .ai-bg-card {
 
   function renderActionCardSync(cards) {
     cards = normalizeAgentCardsArray(cards);
+    var hostIds = {};
+    for (var hi = 0; hi < cards.length; hi++) {
+      var hid = String(cards[hi].cardId || cards[hi].id || "");
+      if (hid) hostIds[hid] = true;
+    }
+    Object.keys(actionState.cards).forEach(function (id) {
+      if (!hostIds[id] && id !== actionState._pendingCardId) removeActionCard(id, false);
+    });
     for (var i = 0; i < cards.length; i++) upsertActionCardFromDto(cards[i]);
-    if (!cards.length && Object.keys(actionState.cards).length === 0) return;
+    if (!cards.length && !actionHasStoredCards()) return;
+    purgeActionEmptyHint();
+    if (!actionState.activeCardId || !getActionCard(actionState.activeCardId)) {
+      var pick = "";
+      Object.keys(actionState.cards).forEach(function (cid) {
+        if (!pick && isActionCardRunning(actionState.cards[cid])) pick = cid;
+      });
+      if (!pick) {
+        var all = Object.keys(actionState.cards);
+        sortCardIds(all);
+        if (all.length) pick = all[0];
+      }
+      if (pick) {
+        actionState.activeCardId = pick;
+        if (isActionCardRunning(actionState.cards[pick])) actionState.cards[pick].expanded = true;
+      }
+    }
+    if (Object.keys(actionState.cards).length === 1) {
+      var sole = Object.keys(actionState.cards)[0];
+      actionState.activeCardId = sole;
+      actionState.cards[sole].expanded = isActionCardRunning(actionState.cards[sole]);
+    }
+    if (actionState.focusMode) collapseNonActiveCards();
     renderActionHistoryList();
+    syncActionResultsLayout();
+    if (actionHasStoredCards()) {
+      window.nmerPalette.setStatus(
+        "已加载 " + Object.keys(actionState.cards).length + " 个历史任务",
+        "success"
+      );
+    }
   }
 
   function applyAgentCardNew(d) {
     if (!d) return;
+    var nid = String(d.cardId || d.id || "");
     upsertActionCardFromDto({
       cardId: d.cardId || d.id,
       reqId: d.reqId,
@@ -2635,8 +3683,18 @@ body[data-theme="light"] .ai-bg-card {
       provider: d.provider,
       sessionRef: d.sessionRef,
       rawAnswer: d.rawAnswer,
-      updatedAt: d.updatedAt
+      updatedAt: d.updatedAt,
+      liveThought: d.liveThought
     });
+    if (nid) {
+      actionState.activeCardId = nid;
+      var nc = getActionCard(nid);
+      if (nc && isActionCardRunning(nc)) nc.expanded = true;
+    }
+    purgeActionEmptyHint();
+    ensureActionResultsVisible();
+    syncActionResultsLayout();
+    syncWindowSize();
   }
 
   function ensureShell() {
@@ -2647,7 +3705,7 @@ body[data-theme="light"] .ai-bg-card {
       '<header class="palette-header">' +
       '<span id="intent-tag" data-intent="action" title="Tab 切换意图">动作</span>' +
       '<input id="command-input" class="palette-search" type="text" lang="zh-CN" autocomplete="off" spellcheck="false" placeholder="搜索文件、路径或剪贴板…" />' +
-      '<button type="button" id="debug-btn" class="palette-debug-btn" title="本地搜索诊断 (Ctrl+Shift+D)" aria-label="打开本地搜索诊断">诊</button>' +
+      '<button type="button" id="debug-btn" class="palette-debug-btn" title="命令面板诊断 (Ctrl+Shift+D 搜索 / Ctrl+Shift+A 动作托管)" aria-label="打开命令面板诊断">诊</button>' +
       "</header>" +
       '<p id="voice-hint" class="palette-status"></p>' +
       '<div id="action-agent-bar" class="action-agent-bar" hidden>' +
@@ -2660,6 +3718,8 @@ body[data-theme="light"] .ai-bg-card {
     bindUI();
     bindActionSubmitButton();
     post({ type: "palette_ready" });
+    setTimeout(probeAgentHostBridge, 400);
+    setTimeout(requestAgentCardSync, 120);
   }
 
   function bindResultsScrollHide(box) {
@@ -2796,16 +3856,17 @@ body[data-theme="light"] .ai-bg-card {
     var panel = document.getElementById("palette-panel");
     if (!box || !panel) return;
     var rows = currentRows();
-    var hasActionCards =
-      !!box.querySelector(".cmd-action-card") || Object.keys(actionState.cards).length > 0;
-    state.showResults = rows.length > 0 || hasActionCards;
+    var hasActionCards = actionHasStoredCards() || !!box.querySelector(".cmd-action-card");
+    state.showResults = rows.length > 0 || hasActionCards || state.intent === "action";
     panel.classList.toggle("has-results", state.showResults);
     panel.classList.toggle("has-ai-providers", state.intent === "ai" && rows.length > 0);
     box.classList.toggle("has-action-cards", hasActionCards);
     box.classList.toggle("show-cmd-browse", !!state.actionCmdBrowse);
     if (state.intent === "action" && !hasActionCards && !state.actionCmdBrowse && !state.input.trim()) {
+      requestAgentCardSync();
       renderActionHistoryList();
-      applyActionIdleLayout();
+      purgeActionEmptyHint();
+      syncWindowSize();
       return;
     }
     if (state.intent === "action" && hasActionCards) {
@@ -2840,7 +3901,8 @@ body[data-theme="light"] .ai-bg-card {
       } else if (state.actionCmdBrowse && rows.length) {
         renderActionCmdList(rows);
       } else if (!state.input.trim()) {
-        applyActionIdleLayout();
+        pullAgentCardsFromHostSync();
+        if (!actionHasStoredCards()) showActionEmptyIfNeeded();
         return;
       }
       bindResultsScrollHide(box);
@@ -2889,7 +3951,14 @@ body[data-theme="light"] .ai-bg-card {
         return;
       }
       if (state.intent === "action" && !q && !state.actionCmdBrowse) {
-        applyActionIdleLayout();
+        if (actionHasStoredCards()) {
+          renderActionHistoryList();
+          syncActionResultsLayout();
+        } else {
+          requestAgentCardSync();
+          purgeActionEmptyHint();
+          syncWindowSize();
+        }
         return;
       }
       state.resultMode = "command";
@@ -2944,31 +4013,38 @@ body[data-theme="light"] .ai-bg-card {
     });
   }
 
+  function syncActionResultsScrollMode() {
+    var results = document.getElementById("results");
+    var stack = results && results.querySelector(".action-card-stack");
+    if (!results || !stack) return;
+    var cap = Math.min(ACTION_RESULTS_SCROLL_CAP, Math.floor(window.innerHeight * 0.58));
+    var needScroll = stack.scrollHeight > cap + 4;
+    results.classList.toggle("is-scrollable", needScroll);
+    return needScroll ? cap + 8 : stack.offsetHeight + 8;
+  }
+
   function measureActionPanelExtra(results) {
     var extra = 0;
     var agentBar = document.getElementById("action-agent-bar");
     if (agentBar && !agentBar.hidden) {
       extra += Math.max(ACTION_AGENT_BAR_H, agentBar.offsetHeight || ACTION_AGENT_BAR_H) + 4;
     }
-    if (!results) return extra + 64;
-    var cardCount = Object.keys(actionState.cards).length;
-    var actionCards = results.querySelectorAll(".cmd-action-card");
+    if (!results) return extra + 48;
+    var stack = results.querySelector(".action-card-stack");
     var toolbarH = 0;
     var tb = results.querySelector(".action-history-toolbar");
     var hd = results.querySelector(".action-history-head");
     if (tb) toolbarH += tb.offsetHeight || 28;
     if (hd) toolbarH += hd.offsetHeight || 22;
+    if (stack) {
+      var listH = syncActionResultsScrollMode();
+      if (listH == null) listH = stack.offsetHeight || stack.scrollHeight || ACTION_CARD_MIN_H;
+      extra += toolbarH + listH + 10;
+      return extra;
+    }
+    var cardCount = Object.keys(actionState.cards).length;
     if (cardCount > 0) {
-      var acH = toolbarH + 12;
-      if (actionCards && actionCards.length) {
-        for (var aci = 0; aci < actionCards.length; aci++) {
-          var oh = actionCards[aci].offsetHeight;
-          acH += (oh > 0 ? oh : 96) + 8;
-        }
-      } else {
-        acH += cardCount * 108;
-      }
-      extra += Math.min(480, Math.max(ACTION_CARD_MIN_H, acH));
+      extra += toolbarH + Math.max(ACTION_CARD_MIN_H, cardCount * 38);
       return extra;
     }
     var actEmpty = results.querySelector(".action-intent-empty");
@@ -3005,7 +4081,7 @@ body[data-theme="light"] .ai-bg-card {
     }
     if (state.intent === "action") {
       h += measureActionPanelExtra(results);
-      var capA = 520;
+      var capA = 720;
       return Math.min(capA, Math.max(ACTION_IDLE_MIN_H, Math.ceil(h)));
     }
     var cap = state.intent === "ai" ? AI_LIST_MAX_HEIGHT : 520;
@@ -3016,7 +4092,7 @@ body[data-theme="light"] .ai-bg-card {
       if (actionCards && actionCards.length) {
         var acH = 24;
         for (var aci = 0; aci < actionCards.length; aci++) acH += actionCards[aci].offsetHeight + 8;
-        h += Math.min(480, Math.max(ACTION_CARD_MIN_H, acH + 16));
+        h += Math.min(560, Math.max(ACTION_CARD_MIN_H, acH + 16));
       } else if (state.intent === "ai") {
         var card = document.querySelector(".ai-bg-card");
         var hint = document.querySelector(".palette-ai-provider-hint");
@@ -3498,10 +4574,12 @@ body[data-theme="light"] .ai-bg-card {
     if (sizeTimer) clearTimeout(sizeTimer);
     sizeTimer = setTimeout(function () {
       ensureHeaderInputVisible();
+      if (state.intent === "action") syncActionResultsScrollMode();
       var h = measureContentHeight();
       post({ type: "palette_resize", height: h });
       requestAnimationFrame(function () {
         ensureHeaderInputVisible();
+        if (state.intent === "action") syncActionResultsScrollMode();
         var h2 = measureContentHeight();
         if (h2 !== h) post({ type: "palette_resize", height: h2 });
       });
@@ -3521,6 +4599,11 @@ body[data-theme="light"] .ai-bg-card {
     input.addEventListener("input", function (e) {
       state.input = e.target.value;
       state._userPickedCommand = false;
+      if (state.intent === "action" && state.voiceStatus === "error") {
+        state.voiceStatus = "idle";
+        state.voiceHint = "";
+        updateVoiceHint();
+      }
       syncAiListSelectionIndex();
       if (state.voiceStatus === "loading" && state.intent !== "ai") {
         state.voiceStatus = "idle";
@@ -3548,9 +4631,14 @@ body[data-theme="light"] .ai-bg-card {
         cycleIntent();
         return;
       }
+      if (e.ctrlKey && e.shiftKey && String(e.key || "").toLowerCase() === "a") {
+        e.preventDefault();
+        post({ type: "palette_search_debug", tab: "agent" });
+        return;
+      }
       if (e.ctrlKey && e.shiftKey && String(e.key || "").toLowerCase() === "d") {
         e.preventDefault();
-        post({ type: "palette_search_debug" });
+        post({ type: "palette_search_debug", tab: "search" });
         return;
       }
       if (state.intent === "ai" && e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
@@ -3621,15 +4709,6 @@ body[data-theme="light"] .ai-bg-card {
     },
       true
     );
-    input.addEventListener("keyup", function (e) {
-      var isEnter = e.key === "Enter" || e.keyCode === 13;
-      if (!isEnter || e.shiftKey || state.intent !== "action") return;
-      if (e.isComposing || composing) return;
-      if (_actionEnterLock) return;
-      var q = resolveAgentSubmitText();
-      if (!q) return;
-      handleActionEnterKey(e);
-    });
   }
 
   function bindUI() {
@@ -3646,7 +4725,8 @@ body[data-theme="light"] .ai-bg-card {
     debugBtn?.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      post({ type: "palette_search_debug" });
+      var tab = state.intent === "action" ? "agent" : "search";
+      post({ type: "palette_search_debug", tab: tab });
     });
     input.focus();
   }
@@ -3689,11 +4769,18 @@ body[data-theme="light"] .ai-bg-card {
           return;
         }
         if (!state.input.trim() && !state.actionCmdBrowse) {
-          if (Object.keys(actionState.cards).length > 0) {
+          var syncN = pullAgentCardsFromHostSync();
+          if (syncN < 0) requestAgentCardSync();
+          if (actionHasStoredCards()) {
             renderActionHistoryList();
             syncActionResultsLayout();
             syncWindowSize();
-          } else applyActionIdleLayout();
+          } else if (syncN >= 0) {
+            showActionEmptyIfNeeded();
+          } else {
+            purgeActionEmptyHint();
+            window.nmerPalette.setStatus("正在加载历史任务…", "idle");
+          }
           return;
         }
         if (!state.actionCmdBrowse) {
@@ -3761,10 +4848,17 @@ body[data-theme="light"] .ai-bg-card {
     } else if (d.type === "palette_status") {
       window.nmerPalette.setStatus(d.message || "", d.status || "idle");
     } else if (d.type === "palette_agent_card_sync") {
-      renderActionCardSync(d.cards || []);
+      agentDebugLog("host_card_sync", "n=" + (Array.isArray(d.cards) ? d.cards.length : 0));
+      var syncCards = d.cards || [];
+      renderActionCardSync(syncCards);
+      if (!syncCards.length && state.intent === "action" && !state.input.trim() && !state.actionCmdBrowse) {
+        showActionEmptyIfNeeded();
+      }
     } else if (d.type === "palette_agent_card_new") {
+      agentDebugLog("host_card_new", "card=" + (d.cardId || "") + " req=" + (d.reqId || ""));
       applyAgentCardNew(d);
     } else if (d.type === "palette_agent_chunk") {
+      agentDebugLog("host_chunk", "card=" + (d.cardId || "") + " req=" + (d.reqId || "") + " Δ=" + String(d.delta || d.text || "").slice(0, 48));
       var resolved = resolveActionCard(d.cardId, d.reqId);
       var card = resolved.card;
       var cid = resolved.id;
@@ -3800,34 +4894,32 @@ body[data-theme="light"] .ai-bg-card {
         var delta = String(d.delta || d.text || "");
         var preview = delta.replace(/\s+/g, " ").trim().slice(0, 160);
         if (preview) {
-          setCardLiveThought(cid, preview, true);
-          window.nmerPalette.setStatus(preview.slice(0, 80), "loading");
-        }
-        if (card.parser) {
-          if (!card._protoStarted && !/::(PLAN|STATUS|QUESTION|REPLY)_START::/.test(delta)) {
-            card.parser.onChunk(delta);
-          } else {
-            if (/::(PLAN|STATUS|QUESTION|REPLY)_START::/.test(delta)) card._protoStarted = true;
-            card.parser.onChunk(delta);
+          var isStatusLine = /^[🔗⏳📨💭]/.test(preview) || /^(正在|等待|任务已)/.test(preview);
+          if (isStatusLine || !card._protoStarted) {
+            setCardLiveThought(cid, preview, true);
+            window.nmerPalette.setStatus(preview.slice(0, 80), "loading");
           }
+        }
+        if (card.parser && delta) {
+          if (/::(PLAN|STATUS|QUESTION|REPLY)_START::/.test(delta)) card._protoStarted = true;
+          card.parser.onChunk(delta);
         }
         if (card.uiState === "Planning") actionCardManager.transitionCardState(cid, "Running");
         refreshActionCardDom(card);
         syncActionResultsLayout();
       }
     } else if (d.type === "palette_agent_end") {
+      agentDebugLog("host_end", "card=" + (d.cardId || "") + " req=" + (d.reqId || "") + " len=" + String(d.answer || "").length);
       var endR = resolveActionCard(d.cardId, d.reqId);
       var cid2 = endR.id;
       var card2 = endR.card;
       if (card2 && d.answer && String(d.answer).trim()) {
-        var tail = String(d.answer);
-        if (!card2._protoStarted && !/::(PLAN|STATUS|QUESTION|REPLY)_START::/.test(tail)) {
-          setCardLiveThought(cid2, tail.replace(/\s+/g, " ").trim().slice(0, 200), false);
-        }
+        card2._rawReplaySig = String(d.answer);
       }
       if (card2 && card2.parser) card2.parser.flush();
       if (card2 && d.sessionRef) card2.sessionRef = String(d.sessionRef);
       if (card2) actionCardManager.transitionCardState(cid2, "Done");
+      updateActionLiveDock(cid2);
       document.querySelectorAll(".cmd-action-card").forEach(function (el) {
         el.classList.toggle("is-active", el.id === "card-" + cid2);
         el.classList.toggle("is-collapsed", el.id !== "card-" + cid2);
@@ -3836,6 +4928,7 @@ body[data-theme="light"] .ai-bg-card {
       syncActionResultsLayout();
     } else if (d.type === "palette_agent_error" || (d.type === "palette_agent_status" && d.status === "error")) {
       var errMsg = d.message || "代理任务失败";
+      agentDebugLog("host_error", errMsg, "err");
       window.nmerPalette.setStatus(errMsg, "error");
       var er = resolveActionCard(d.cardId, d.reqId);
       if (er.card && er.id) {
@@ -3848,10 +4941,12 @@ body[data-theme="light"] .ai-bg-card {
         syncActionResultsLayout();
       }
     } else if (d.type === "palette_agent_status") {
+      agentDebugLog("host_status", String(d.message || "").slice(0, 80));
       window.nmerPalette.setStatus(d.message || "", d.status || "idle");
       var stR = resolveActionCard(d.cardId, d.reqId);
       if (stR.id) setCardLiveThought(stR.id, d.message || "", d.status === "loading");
     } else if (d.type === "palette_agent_heartbeat") {
+      agentDebugLog("host_heartbeat", String(d.message || "").slice(0, 60), "warn");
       var hb = resolveActionCard(d.cardId, d.reqId);
       if (hb.id) setCardLiveThought(hb.id, d.message || "等待响应…", true);
     } else if (d.type === "palette_agent_session") {

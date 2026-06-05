@@ -54,6 +54,13 @@ HoleActivation_Log(msg) {
 
 ; 统一激活：返回是否已成功分派（含已展示启动层）
 HoleActivation_OpenAt(x, y, source := "gesture", reason := "") {
+    if FuncExists("GDHO_IsHoleOnlyMode") {
+        try {
+            if !GDHO_IsHoleOnlyMode()
+                return false
+        } catch {
+        }
+    }
     ax := Integer(x), ay := Integer(y)
     if (ax = 0 && ay = 0) {
         CoordMode("Mouse", "Screen")

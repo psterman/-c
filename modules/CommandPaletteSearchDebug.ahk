@@ -14,9 +14,13 @@ global g_CmdPalDbg_CachedHealthSync := Map("line", "(未探测)", "ok", false, "
 global g_CmdPalDbg_CachedHealthProxy := Map("line", "(未探测)", "ok", false, "tick", 0)
 ; 诊断窗默认不读取/展示本地 log 文件（仅 HTTP 探测，无上传）
 global CommandPaletteSearchDebugShowLogs := false
+global g_CmdPalDbg_AgentTabActive := false
+global g_CmdPalDbg_PendingTab := "search"
+global g_CmdPalDbg_PageReady := false
+global g_CmdPalDbg_LoadedHtmlVer := ""
 
 CommandPalette_HandleSearchDebug() {
-    try CommandPalette_ShowSearchDebug(true)
+    try CommandPalette_ShowSearchDebug(true, "search")
     catch as e {
         try TrayTip("命令面板", "无法打开诊断: " . e.Message, "Iconx 2")
         catch {
@@ -24,7 +28,31 @@ CommandPalette_HandleSearchDebug() {
     }
 }
 
-CommandPalette_ShowSearchDebug(activate := true) {
+CommandPalette_SearchDebug_IsAgentTabActive() {
+    global g_CmdPalDbg_AgentTabActive, g_CmdPalDbg_Gui
+    return !!g_CmdPalDbg_AgentTabActive && IsObject(g_CmdPalDbg_Gui)
+}
+
+CommandPalette_SearchDebug_DbgReady() {
+    return CommandPaletteSearchDebug_CanPushToWeb()
+}
+
+CommandPalette_SearchDebug_PushAgentDebugNow(*) {
+    if !CommandPalette_SearchDebug_DbgReady()
+        return
+    if FuncExists("CommandPalette_AgentDebug_FlushEvents")
+        CommandPalette_AgentDebug_FlushEvents()
+    if FuncExists("CommandPalette_AgentDebug_PushSnapshot")
+        CommandPalette_AgentDebug_PushSnapshot()
+}
+
+CommandPalette_ShowSearchDebug(activate := true, tab := "search") {
+    tab := Trim(String(tab))
+    if (tab = "")
+        tab := "search"
+    global g_CmdPalDbg_PendingTab, g_CmdPalDbg_AgentTabActive, g_CmdPalDbg_WV2, g_CmdPalDbg_Ready
+    g_CmdPalDbg_PendingTab := tab
+    g_CmdPalDbg_AgentTabActive := (tab = "agent")
     CommandPaletteSearchDebug_Init()
     CommandPaletteSearchDebug_EnsureVisible()
     global g_CmdPalDbg_Gui
@@ -41,10 +69,29 @@ CommandPalette_ShowSearchDebug(activate := true) {
             }
         }
     }
-    try TrayTip("命令面板", "已打开本地搜索诊断面板", "Iconi 1")
+    try TrayTip("命令面板", tab = "agent" ? "已打开诊断 · 动作托管" : "已打开诊断 · 本地搜索", "Iconi 1")
     catch {
     }
-    SetTimer(CommandPaletteSearchDebug_PushSnapshot, -200)
+    SetTimer(CommandPaletteSearchDebug_PushUiState, -80)
+    SetTimer(CommandPalette_SearchDebug_PushAgentDebugNow, -160)
+    SetTimer(CommandPaletteSearchDebug_MaybeReloadPage, -1)
+    if g_CmdPalDbg_AgentTabActive {
+        if FuncExists("CommandPalette_AgentDebugTrace")
+            try CommandPalette_AgentDebugTrace("sys", "panel_open", "诊断窗·动作托管标签", "info")
+            catch {
+            }
+        if FuncExists("CommandPalette_AgentDebug_Tick")
+            SetTimer(CommandPalette_AgentDebug_Tick, 2000)
+    } else {
+        if FuncExists("CommandPalette_AgentDebug_Tick")
+            SetTimer(CommandPalette_AgentDebug_Tick, 0)
+        SetTimer(CommandPaletteSearchDebug_PushSnapshot, -200)
+    }
+}
+
+CommandPaletteSearchDebug_PushUiState(*) {
+    global g_CmdPalDbg_PendingTab
+    CommandPaletteSearchDebug_PushPayload(Map("type", "cp_search_debug_ui", "tab", g_CmdPalDbg_PendingTab))
 }
 
 CommandPalette_AutoShowSearchDebug(*) {
@@ -67,8 +114,8 @@ CommandPaletteSearchDebug_PositionNearPalette() {
     global g_CmdPalDbg_Gui
     if !IsObject(g_CmdPalDbg_Gui)
         return
-    w := 920
-    h := 720
+    w := 960
+    h := 740
     x := (A_ScreenWidth - w) // 2
     y := (A_ScreenHeight - h) // 2
     if FuncExists("CommandPalette_GetGuiHwnd") {
@@ -97,9 +144,9 @@ CommandPaletteSearchDebug_PositionNearPalette() {
 CommandPaletteSearchDebug_Init() {
     global g_CmdPalDbg_Gui, g_CmdPalDbg_WV2, g_CmdPalDbg_Ctrl, g_CmdPalDbg_Ready, g_CmdPalDbg_WV2Pending
     if !IsObject(g_CmdPalDbg_Gui) {
-        g_CmdPalDbg_Gui := Gui("+Resize +AlwaysOnTop -DPIScale", "CommandPalette 本地搜索诊断")
+        g_CmdPalDbg_Gui := Gui("+Resize +AlwaysOnTop -DPIScale", "命令面板诊断")
         g_CmdPalDbg_Gui.BackColor := "1a2438"
-        g_CmdPalDbg_Gui.OnEvent("Close", (*) => g_CmdPalDbg_Gui.Hide())
+        g_CmdPalDbg_Gui.OnEvent("Close", CommandPaletteSearchDebug_OnClose)
         g_CmdPalDbg_Gui.OnEvent("Size", (*) => CommandPaletteSearchDebug_ApplyBounds())
     }
     if !g_CmdPalDbg_Ready && !g_CmdPalDbg_WV2Pending {
@@ -131,6 +178,13 @@ CommandPaletteSearchDebug_OnWV2Created(ctrl) {
     try ApplyWebView2PerformanceSettings(g_CmdPalDbg_WV2)
     catch {
     }
+    try {
+        s := g_CmdPalDbg_WV2.Settings
+        s.IsWebMessageEnabled := true
+        s.AreHostObjectsAllowed := true
+        s.AreDefaultContextMenusEnabled := false
+    } catch {
+    }
     try WebView2_RegisterHostBridge(g_CmdPalDbg_WV2)
     catch {
     }
@@ -141,7 +195,67 @@ CommandPaletteSearchDebug_OnWV2Created(ctrl) {
     try ApplyUnifiedWebViewAssets(g_CmdPalDbg_WV2)
     catch {
     }
+    global g_CmdPalDbg_PageReady
+    g_CmdPalDbg_PageReady := false
     g_CmdPalDbg_WV2.Navigate(CommandPaletteSearchDebug_BuildPageUrl())
+}
+
+CommandPaletteSearchDebug_MaybeReloadPage(*) {
+    global g_CmdPalDbg_WV2, g_CmdPalDbg_Ready, g_CmdPalDbg_PageReady, g_CmdPalDbg_LoadedHtmlVer
+    if !IsObject(g_CmdPalDbg_WV2) || !g_CmdPalDbg_Ready
+        return
+    ver := ""
+    try {
+        path := FuncExists("HtmlPanelPath") ? HtmlPanelPath("CommandPaletteSearchDebug.html") : (A_ScriptDir . "\html\CommandPaletteSearchDebug.html")
+        ver := String(FileGetTime(path, "M"))
+    } catch {
+        return
+    }
+    if (ver = "" || ver = g_CmdPalDbg_LoadedHtmlVer)
+        return
+    g_CmdPalDbg_LoadedHtmlVer := ver
+    g_CmdPalDbg_PageReady := false
+    try g_CmdPalDbg_WV2.Navigate(CommandPaletteSearchDebug_BuildPageUrl())
+    catch {
+    }
+}
+
+CommandPaletteSearchDebug_BuildAgentDebugPullPack() {
+    snap := Map("type", "cp_agent_debug_snapshot", "tick", A_TickCount, "cards", [], "routes", [], "lastSubmit", Map(), "health", Map())
+    if FuncExists("CommandPalette_AgentDebug_BuildSnapshot")
+        snap := CommandPalette_AgentDebug_BuildSnapshot()
+    events := []
+    global g_AgentDbg_Events
+    if (g_AgentDbg_Events is Array) {
+        for _, row in g_AgentDbg_Events {
+            if (row is Map)
+                events.Push(row)
+        }
+    }
+    return Map("snapshot", snap, "events", events)
+}
+
+CommandPaletteSearchDebug_PullAgentDebugJson() {
+    global g_AgentDbg_PullCache
+    try CommandPalette_AgentLoadCards()
+    catch {
+    }
+    try CommandPalette_AgentDebug_RefreshPullCache()
+    catch {
+    }
+    if (g_AgentDbg_PullCache != "")
+        return g_AgentDbg_PullCache
+    try return Jxon_Dump(CommandPaletteSearchDebug_BuildAgentDebugPullPack())
+    catch {
+        return ""
+    }
+}
+
+CommandPaletteSearchDebug_PullSearchDebugJson() {
+    try return Jxon_Dump(CommandPaletteSearchDebug_BuildSnapshot(true))
+    catch {
+        return ""
+    }
 }
 
 CommandPaletteSearchDebug_BuildPageUrl() {
@@ -177,12 +291,34 @@ CommandPaletteSearchDebug_ParseWebMessage(args) {
     return 0
 }
 
+CommandPaletteSearchDebug_OnClose(*) {
+    global g_CmdPalDbg_Gui, g_CmdPalDbg_AgentTabActive
+    g_CmdPalDbg_AgentTabActive := false
+    if FuncExists("CommandPalette_AgentDebug_Tick")
+        SetTimer(CommandPalette_AgentDebug_Tick, 0)
+    if IsObject(g_CmdPalDbg_Gui)
+        try g_CmdPalDbg_Gui.Hide()
+        catch {
+        }
+}
+
 CommandPaletteSearchDebug_OnNavCompleted(*) {
-    global g_CmdPalDbg_Ready
+    global g_CmdPalDbg_Ready, g_CmdPalDbg_PageReady, g_CmdPalDbg_LoadedHtmlVer
     g_CmdPalDbg_Ready := true
+    g_CmdPalDbg_PageReady := true
+    try {
+        path := FuncExists("HtmlPanelPath") ? HtmlPanelPath("CommandPaletteSearchDebug.html") : (A_ScriptDir . "\html\CommandPaletteSearchDebug.html")
+        g_CmdPalDbg_LoadedHtmlVer := String(FileGetTime(path, "M"))
+    } catch {
+    }
     CommandPaletteSearchDebug_ApplyBounds()
     CommandPaletteSearchDebug_EnsureVisible()
-    SetTimer(CommandPaletteSearchDebug_PushSnapshot, -100)
+    SetTimer(CommandPaletteSearchDebug_PushUiState, -60)
+    global g_CmdPalDbg_AgentTabActive
+    if g_CmdPalDbg_AgentTabActive
+        SetTimer(CommandPalette_SearchDebug_PushAgentDebugNow, -80)
+    else
+        SetTimer(CommandPaletteSearchDebug_PushSnapshot, -100)
 }
 
 CommandPaletteSearchDebug_ApplyBounds() {
@@ -197,16 +333,17 @@ CommandPaletteSearchDebug_ApplyBounds() {
 }
 
 CommandPaletteSearchDebug_OnWebMessage(sender, args) {
-    msg := 0
-    if FuncExists("CommandPalette_ParseWebMessage")
+    msg := CommandPaletteSearchDebug_ParseWebMessage(args)
+    if !(msg is Map) && FuncExists("CommandPalette_ParseWebMessage")
         msg := CommandPalette_ParseWebMessage(args)
-    if !(msg is Map)
-        msg := CommandPaletteSearchDebug_ParseWebMessage(args)
     if !(msg is Map)
         return
     typ := msg.Has("type") ? String(msg["type"]) : ""
     if (typ = "cp_search_debug_ready" || typ = "cp_search_debug_refresh") {
+        global g_CmdPalDbg_PageReady
+        g_CmdPalDbg_PageReady := true
         CommandPaletteSearchDebug_PushSnapshotHeavy()
+        SetTimer(CommandPalette_SearchDebug_PushAgentDebugNow, -40)
         return
     }
     if (typ = "cp_search_debug_run_all") {
@@ -219,25 +356,111 @@ CommandPaletteSearchDebug_OnWebMessage(sender, args) {
         }
         return
     }
+    if (typ = "cp_search_debug_set_tab") {
+        t := msg.Has("tab") ? Trim(String(msg["tab"])) : "search"
+        global g_CmdPalDbg_PendingTab, g_CmdPalDbg_AgentTabActive
+        g_CmdPalDbg_PendingTab := t
+        g_CmdPalDbg_AgentTabActive := (t = "agent")
+        if g_CmdPalDbg_AgentTabActive {
+            if FuncExists("CommandPalette_AgentDebug_Tick")
+                SetTimer(CommandPalette_AgentDebug_Tick, 2000)
+            SetTimer(CommandPalette_SearchDebug_PushAgentDebugNow, -40)
+        } else {
+            if FuncExists("CommandPalette_AgentDebug_Tick")
+                SetTimer(CommandPalette_AgentDebug_Tick, 0)
+            SetTimer(CommandPaletteSearchDebug_PushSnapshot, -80)
+        }
+        return
+    }
+    if (typ = "cp_agent_debug_ready" || typ = "cp_agent_debug_refresh") {
+        global g_CmdPalDbg_PageReady
+        g_CmdPalDbg_PageReady := true
+        CommandPalette_SearchDebug_PushAgentDebugNow()
+        return
+    }
+    if (typ = "cp_agent_debug_clear") {
+        if FuncExists("CommandPalette_AgentDebug_ClearEvents")
+            CommandPalette_AgentDebug_ClearEvents()
+        return
+    }
 }
 
-CommandPaletteSearchDebug_PushSnapshotToWeb(snap) {
-    global g_CmdPalDbg_WV2, g_CmdPalDbg_Ready
-    if !g_CmdPalDbg_Ready || !IsObject(g_CmdPalDbg_WV2) || !(snap is Map)
+CommandPaletteSearchDebug_PushPayload(snap) {
+    return CommandPaletteSearchDebug_PushSnapshotToWeb(snap)
+}
+
+CommandPaletteSearchDebug_CanPushToWeb() {
+    global g_CmdPalDbg_WV2, g_CmdPalDbg_Ready, g_CmdPalDbg_PageReady
+    return IsObject(g_CmdPalDbg_WV2) && (!!g_CmdPalDbg_Ready || !!g_CmdPalDbg_PageReady)
+}
+
+CommandPaletteSearchDebug_JsEscapeForInject(s) {
+    if FuncExists("CommandPalette_JsEscapeForParse")
+        return CommandPalette_JsEscapeForParse(s)
+    s := String(s)
+    s := StrReplace(s, "\", "\\")
+    s := StrReplace(s, "'", "\'")
+    s := StrReplace(s, "`r", "\r")
+    s := StrReplace(s, "`n", "\n")
+    s := StrReplace(s, "`t", "\t")
+    return s
+}
+
+CommandPaletteSearchDebug_InjectPayload(snap) {
+    global g_CmdPalDbg_WV2, g_CmdPalDbg_Ctrl
+    if !(snap is Map)
         return false
-    if !snap.Has("type")
-        snap["type"] := "cp_search_debug_snapshot"
-    try {
-        if FuncExists("WebView_QueuePayload")
-            return WebView_QueuePayload(g_CmdPalDbg_WV2, snap)
-    } catch {
+    jsonStr := ""
+    try jsonStr := Jxon_Dump(snap)
+    catch {
+        return false
     }
+    if (jsonStr = "")
+        return false
+    escaped := CommandPaletteSearchDebug_JsEscapeForInject(jsonStr)
+    js := "try{if(window.__nmerCmdPalDbgHostInject)window.__nmerCmdPalDbgHostInject('" . escaped . "');"
+        . "}catch(e){}"
+    for target in [g_CmdPalDbg_WV2, g_CmdPalDbg_Ctrl] {
+        if !IsObject(target)
+            continue
+        try {
+            target.ExecuteScriptAsync(js)
+            return true
+        } catch {
+        }
+    }
+    return false
+}
+
+CommandPaletteSearchDebug_PostPayload(snap) {
+    global g_CmdPalDbg_WV2
+    if !IsObject(g_CmdPalDbg_WV2) || !(snap is Map)
+        return false
+    jsonStr := ""
+    try jsonStr := Jxon_Dump(snap)
+    catch {
+        return false
+    }
+    if (jsonStr = "")
+        return false
     try {
-        g_CmdPalDbg_WV2.PostWebMessageAsJson(Jxon_Dump(snap))
+        g_CmdPalDbg_WV2.PostWebMessageAsJson(jsonStr)
         return true
     } catch {
         return false
     }
+}
+
+CommandPaletteSearchDebug_PushSnapshotToWeb(snap) {
+    if !(snap is Map)
+        return false
+    if !CommandPaletteSearchDebug_CanPushToWeb()
+        return false
+    if !snap.Has("type")
+        snap["type"] := "cp_search_debug_snapshot"
+    if CommandPaletteSearchDebug_InjectPayload(snap)
+        return true
+    return CommandPaletteSearchDebug_PostPayload(snap)
 }
 
 CommandPaletteSearchDebug_PushSnapshot(*) {
@@ -591,3 +814,5 @@ CommandPaletteSearchDebug_ProbeCmdPalWatchdog(seq, t0, *) {
         CommandPaletteSearchDebug_PushSnapshot()
     }
 }
+
+global g_CmdPal_AgentPullDebugDispatch := CommandPaletteSearchDebug_PullAgentDebugJson

@@ -2340,7 +2340,21 @@ FloatingToolbar_OnWebMessage(sender, args) {
             }
         return
     }
+    if (typ = "niuma_palette_agent_trace") {
+        if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq") {
+            reqId0 := msg.Has("reqId") ? String(msg["reqId"]) : ""
+            step0 := msg.Has("step") ? String(msg["step"]) : ""
+            det0 := msg.Has("detail") ? String(msg["detail"]) : ""
+            CommandPalette_AgentDebug_TraceIfAgentReq(reqId0, "ftb", "agent_trace", step0 . " " . det0)
+        }
+        return
+    }
     if (typ = "niuma_palette_agent_chunk") {
+        if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq") {
+            reqId0 := msg.Has("reqId") ? String(msg["reqId"]) : ""
+            delta0 := msg.Has("delta") ? String(msg["delta"]) : ""
+            CommandPalette_AgentDebug_TraceIfAgentReq(reqId0, "ftb", "agent_chunk", "len=" . StrLen(delta0))
+        }
         if FuncExists("CommandPalette_OnNiumaPaletteAgentChunk")
             try CommandPalette_OnNiumaPaletteAgentChunk(msg)
             catch {
@@ -2348,6 +2362,10 @@ FloatingToolbar_OnWebMessage(sender, args) {
         return
     }
     if (typ = "niuma_palette_agent_end") {
+        if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq") {
+            reqId0 := msg.Has("reqId") ? String(msg["reqId"]) : ""
+            CommandPalette_AgentDebug_TraceIfAgentReq(reqId0, "ftb", "agent_end", "from=ftb")
+        }
         if FuncExists("CommandPalette_OnNiumaPaletteAgentEnd")
             try CommandPalette_OnNiumaPaletteAgentEnd(msg)
             catch {
@@ -3941,9 +3959,17 @@ FloatingToolbar_StartPaletteAiStream(msg) {
             try CommandPalette_AiLog("palette_stream_not_ready", "reqId=" . reqId)
             catch {
             }
+        if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq")
+            try CommandPalette_AgentDebug_TraceIfAgentReq(reqId, "ftb", "ai_stream_not_ready", "frame=" . (g_FTB_WV2_FrameReady ? 1 : 0), "warn")
+            catch {
+            }
         return
     }
     payload := Map("type", "host_palette_ai_stream", "reqId", reqId, "query", q, "provider", prov, "openDrawer", false)
+    if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq")
+        try CommandPalette_AgentDebug_TraceIfAgentReq(reqId, "ftb", "ai_stream_start", "q=" . SubStr(q, 1, 40) . " prov=" . prov)
+        catch {
+        }
     try WebView_QueuePayload(g_FTB_WV2, payload)
     catch as eQ {
         if FuncExists("CommandPalette_OnNiumaPaletteAiError")
@@ -3964,8 +3990,17 @@ FloatingToolbar_StartPaletteAgentStream(msg) {
     if (reqId = "" || Trim(q) = "")
         return false
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
-    if !(g_FTB_WV2 && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+    if !(g_FTB_WV2 && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
+        if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq")
+            try CommandPalette_AgentDebug_TraceIfAgentReq(reqId, "ftb", "agent_stream_not_ready", "card=" . cardId, "warn")
+            catch {
+            }
         return false
+    }
+    if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq")
+        try CommandPalette_AgentDebug_TraceIfAgentReq(reqId, "ftb", "agent_stream_start", "card=" . cardId . " q=" . SubStr(q, 1, 40))
+        catch {
+        }
     payload := Map(
         "type", "host_palette_agent_stream",
         "reqId", reqId,
@@ -3976,11 +4011,14 @@ FloatingToolbar_StartPaletteAgentStream(msg) {
         "openDrawer", false
     )
     try {
-        WebView_QueuePayload(g_FTB_WV2, payload)
-        if FuncExists("CommandPalette_InjectFtbHostPayload")
-            try CommandPalette_InjectFtbHostPayload(payload)
-            catch {
-            }
+        if FuncExists("CommandPalette_InjectFtbHostPayload") {
+            if CommandPalette_InjectFtbHostPayload(payload)
+                return true
+        }
+        if FuncExists("WebView_QueuePayload")
+            WebView_QueuePayload(g_FTB_WV2, payload)
+        else
+            g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
         return true
     } catch as eQ {
         if FuncExists("CommandPalette_OnNiumaPaletteAgentError")

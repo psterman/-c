@@ -144,6 +144,25 @@ global NativeDropBridgeOut := Nmer_DebugPath("native_drop_events.jsonl")
 global NativeDropDiagLogPath := Nmer_DebugPath("drop_diagnostics_runtime.log")
 #Include modules\ToolsPaths.ahk
 #Include lib\ahk\WebView2.ahk
+
+FuncExists(fnName) {
+    fnName := Trim(String(fnName))
+    if (fnName = "")
+        return false
+    ; hostObjects.sync 上下文中 Func("长名") 常误报不存在，改用动态函数引用
+    try {
+        fnRef := %fnName%
+        return IsObject(fnRef)
+    } catch as _e1 {
+    }
+    try {
+        Func(fnName)
+        return true
+    } catch as _e2 {
+        return false
+    }
+}
+
 #Include modules\AhkWebViewBridge.ahk
 #Include modules\WebView2SharedEnv.ahk
 #Include modules\FocusBroker.ahk
@@ -174,11 +193,7 @@ TrayMenu_Init()
 ; ===================== 定义主脚本目录（供模块使用）=====================
 global MainScriptDir := A_ScriptDir
 
-; 尽早拉起 SearchCenterCore（不依赖 WebView 预热完成）
-if FuncExists("Nmer_AutoStartSearchCenterCore") {
-    SetTimer(Nmer_AutoStartSearchCenterCore, -1500)
-    SetTimer(Nmer_AutoStartSearchCenterCore, -6000)
-}
+; SearchCenterCore 须在剪贴板库 Init 之后再拉起（见文末 InitClipboardFTS5DB 之后）
 
 ; ===================== WM_ACTIVATE 链（须在任意 OnMessage(0x0006) 模块之前）=====================
 #Include modules\WMActivateChain.ahk
@@ -209,6 +224,13 @@ global CommandPaletteUseWebView := true
 #Include modules\GlobalDragHoleOverlay.ahk
 #Include modules\NativeDropCursorSync.ahk
 #Include modules\FloatingToolbar.ahk
+#Include modules\CommandPaletteCore.ahk
+#Include modules\CommandPaletteAgentOrchestrator.ahk
+#Include modules\CommandPaletteSearchDebug.ahk
+global g_CmdPal_AgentSubmitDispatch := CommandPalette_HandleAgentSubmit
+global g_CmdPal_AgentDebugTraceDispatch := CommandPalette_AgentDebugTrace
+global g_CmdPal_AgentWireLogDispatch := CommandPalette_AgentWireLog
+global g_CmdPal_AgentPullDebugDispatch := CommandPaletteSearchDebug_PullAgentDebugJson
 #Include modules\FloatingBubble.ahk
 #Include modules\GravityPump.ahk
 #Include modules\AIListPanel.ahk
@@ -2329,10 +2351,22 @@ InitClipboardDB() {
         ; Timestamp: 时间戳
         ; MetaData: JSON 格式扩展数据
         ; IsPinned: 收藏/置顶
+        ; 曾误将 FTS5 虚拟表 ClipboardHistory 建入 CursorData.db，需先剔除再建普通表
+        try {
+            tbl := ""
+            if (ClipboardDB.GetTable("SELECT sql FROM sqlite_master WHERE name='ClipboardHistory'", &tbl)
+                && tbl && tbl.HasProp("Rows") && tbl.Rows.Length > 0 && tbl.Rows[1].Length > 0) {
+                ddl := String(tbl.Rows[1][1])
+                if InStr(ddl, "fts5")
+                    ClipboardDB.Exec("DROP TABLE IF EXISTS ClipboardHistory")
+            }
+            ClipboardDB.Exec("DROP TABLE IF EXISTS ClipMain")
+        } catch {
+        }
         startupSql := []
-        startupSql.Push("DROP TABLE IF EXISTS ClipboardHistory;")
+        startupSql.Push("DROP VIEW IF EXISTS v_GlobalSearch")
         startupSql.Push(
-            "CREATE TABLE ClipboardHistory ("
+            "CREATE TABLE IF NOT EXISTS ClipboardHistory ("
             . "ID INTEGER PRIMARY KEY AUTOINCREMENT, "
             . "Timestamp DATETIME DEFAULT (datetime('now', 'localtime')), "
             . "Content TEXT, "
@@ -2346,8 +2380,7 @@ InitClipboardDB() {
             . "IsPinned INTEGER DEFAULT 0)"
         )
         
-        ; 5.1. 兼容性处理：如果表已存在但包含 SessionID 或 ItemIndex 字段，删除它们
-        ; 注意：由于上面已经 DROP TABLE，这个检查主要是为了处理其他可能的场景
+        ; 5.1. 兼容性处理：如果表已存在但包含 SessionID 或 ItemIndex 字段，记录日志（不删表）
         try {
             ResultTable := ""
             if (ClipboardDB.GetTable("PRAGMA table_info(ClipboardHistory)", &ResultTable)) {
@@ -2422,9 +2455,8 @@ InitClipboardDB() {
         startupSql.Push("CREATE INDEX IF NOT EXISTS idx_prompts_title ON Prompts(Title COLLATE NOCASE)")
         startupSql.Push("CREATE INDEX IF NOT EXISTS idx_prompts_content ON Prompts(Content COLLATE NOCASE)")
         startupSql.Push("CREATE INDEX IF NOT EXISTS idx_prompts_category ON Prompts(Category COLLATE NOCASE)")
-        StartupSql_Register(startupSql, "clipboard_startup_schema", 8, 20)
-        batchRes := StartupSql_RunAll(ClipboardDB)
-        try NMER_Log("startup", "sql_batch_done", "label=clipboard_startup_schema batches=" . batchRes["batches"] . " total=" . batchRes["total"])
+        batchRes := SqlBatch_Run(ClipboardDB, startupSql, "clipboard_startup_schema", 8, 20)
+        try NMER_Log("startup", "sql_batch_done", "label=clipboard_startup_schema batches=" . batchRes["batches"] . " count=" . batchRes["count"])
         
         ; 7.1. SessionID 模式已废弃，不再需要初始化
         
@@ -3075,15 +3107,6 @@ WebView_QueuePayload(wv2, payload) {
         return
     WebViewMsgQueue.Push(Map("wv2", wv2, "payload", payload))
     _WebView_QueueKick()
-}
-
-FuncExists(fnName) {
-    try {
-        Func(fnName)
-        return true
-    } catch as _e {
-        return false
-    }
 }
 
 _WebView_QueueKick() {
@@ -4592,8 +4615,32 @@ PromptQuickPad_ReloadCapsLockBSettings()
 InitClipboardDB()
 ; 初始化 Everything 服务（在数据库初始化后）
 InitEverythingService()
+; 上次崩溃残留的 SearchCenterCore / 旧连接会锁住 Clipboard.db
+if ProcessExist("SearchCenterCore.exe") {
+    try ProcessClose("SearchCenterCore.exe")
+    catch {
+    }
+    Sleep(400)
+}
+global ClipboardFTS5DB
+if IsObject(ClipboardFTS5DB) && ClipboardFTS5DB {
+    try ClipboardFTS5DB.CloseDB()
+    catch {
+    }
+    ClipboardFTS5DB := 0
+}
+if FuncExists("Nmer_SqliteClearWalSidecars") {
+    try Nmer_SqliteClearWalSidecars(Nmer_ClipboardFts5DbPath())
+    catch {
+    }
+}
 ; 初始化新的剪贴板管理器数据库（FTS5）
 InitClipboardFTS5DB()
+; 剪贴板库就绪后再拉起 SearchCenterCore（避免 Go 进程抢先锁 Clipboard.db）
+if FuncExists("Nmer_AutoStartSearchCenterCore") {
+    SetTimer(Nmer_AutoStartSearchCenterCore, -1500)
+    SetTimer(Nmer_AutoStartSearchCenterCore, -6000)
+}
 ; 初始化粘贴板历史面板
 InitClipboardHistoryPanel()
 ; 初始化 WebView2 剪贴板面板（尽早创建共享环境；悬浮栏/球在 _WV2_BeginWarmupAfterEnv 内应用，见上）
@@ -6985,9 +7032,26 @@ ExitFunc(ExitReason, ExitCode) {
 #Include modules\VirtualKeyboardCore.ahk
 #Include modules\VirtualKeyboardInterop.ahk
 #Include "modules\ConfigWebViewModule.ahk"
-#Include modules\CommandPaletteCore.ahk
-#Include modules\CommandPaletteAgentOrchestrator.ahk
-#Include modules\CommandPaletteSearchDebug.ahk
+
+; 命令面板可见时 Ctrl+Shift+A：诊断窗 · 动作托管标签
+#HotIf CommandPalette_IsVisible()
+^+a:: {
+    try {
+        if FuncExists("CommandPalette_ShowSearchDebug")
+            CommandPalette_ShowSearchDebug(true, "agent")
+        else if FuncExists("CommandPalette_HandleAgentDebug")
+            CommandPalette_HandleAgentDebug()
+        else
+            try TrayTip("命令面板", "诊断模块未载入，请完全重启牛马脚本", "Iconx 2")
+            catch {
+            }
+    } catch as e {
+        try TrayTip("命令面板", "诊断热键失败: " . e.Message, "Iconx 2")
+        catch {
+        }
+    }
+}
+#HotIf
 
 ; Cursor + CapsLock：动态右键菜单（须在 VirtualKeyboardCore 之后注册）
 #HotIf WinActive("ahk_exe Cursor.exe") && GetCapsLockState() && VK_ToolbarLayoutHasContextMenuItems()

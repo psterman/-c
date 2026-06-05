@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>CommandPalette 本地搜索诊断</title>
+<title>命令面板诊断</title>
 <style>
   :root {
     --bg: #0f1419;
@@ -142,21 +142,83 @@
     font-size: 12px;
   }
   .diff-box strong { color: var(--warn); }
+  .head-main { flex: 1; min-width: 0; }
+  .tabs { display: flex; gap: 6px; margin-top: 10px; }
+  .tabs button {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 8px;
+  }
+  .tabs button.active { color: var(--text); border-color: var(--accent); background: rgba(91,156,245,.12); }
+  .tabs button.tab-agent.active { border-color: #f59e42; background: rgba(245,158,66,.12); color: #f5b96a; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .toolbar-agent { display: none; gap: 8px; flex-wrap: wrap; }
+  .toolbar-agent.show { display: flex; }
+  .toolbar-search.hide { display: none !important; }
+  /* 动作托管标签 */
+  .agent-accent { --accent: #f59e42; --palette: #5b9cf5; --ahk: #a78bfa; --ftb: #34d399; --push: #f472b6; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 800px) { .grid3 { grid-template-columns: 1fr; } }
+  .node {
+    flex: 1; min-width: 88px; padding: 8px 6px; border-radius: 8px; border: 1px solid var(--border);
+    text-align: center; font-size: 10px;
+  }
+  .node .lbl { font-weight: 600; margin-bottom: 4px; }
+  .node.ok { border-color: var(--ok); box-shadow: 0 0 0 1px rgba(61,214,140,.25); }
+  .node.warn { border-color: var(--warn); }
+  .node.err { border-color: var(--err); }
+  .node.idle { opacity: .55; }
+  .kv { font-size: 11px; color: var(--muted); word-break: break-all; }
+  .kv b { color: var(--text); font-weight: 500; }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .filters button.active { border-color: #f59e42; color: #f5b96a; }
+  .agent-log {
+    max-height: 380px; overflow: auto; border: 1px solid var(--border); border-radius: 8px;
+    background: #0a0e14; font-family: Consolas, monospace; font-size: 11px;
+  }
+  .agent-log .row {
+    display: grid; grid-template-columns: 72px 52px 120px 1fr; gap: 8px;
+    padding: 5px 10px; border-bottom: 1px solid rgba(255,255,255,.04);
+  }
+  .tag {
+    display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;
+  }
+  .tag.palette { background: rgba(91,156,245,.15); color: #5b9cf5; }
+  .tag.ahk { background: rgba(167,139,250,.15); color: #a78bfa; }
+  .tag.ftb { background: rgba(52,211,153,.15); color: #34d399; }
+  .tag.push { background: rgba(244,114,182,.15); color: #f472b6; }
+  .tag.bridge { background: rgba(245,158,66,.15); color: #f59e42; }
+  .tag.dispatch { background: rgba(251,191,36,.15); color: #fbbf24; }
+  .lvl-err .det { color: var(--err); }
+  .hint { color: var(--muted); font-size: 11px; }
 </style>
 </head>
 <body>
 <header>
-  <div>
-    <h1>CommandPalette × SearchCenter 诊断</h1>
-    <div class="sub">对比两条 HTTP 链路，定位「搜索中心快 / 命令面板慢」卡点</div>
+  <div class="head-main">
+    <h1>命令面板诊断</h1>
+    <div class="sub" id="header-sub">本地搜索 · HTTP 链路对比</div>
+    <nav class="tabs" aria-label="诊断标签">
+      <button type="button" class="tab-btn active" data-tab="search">本地搜索</button>
+      <button type="button" class="tab-btn tab-agent" data-tab="agent">动作托管</button>
+    </nav>
   </div>
-  <div class="toolbar">
+  <div class="toolbar toolbar-search" id="toolbar-search">
     <input type="text" id="kw" value="1" placeholder="测试关键词" />
     <button type="button" id="btnRunAll">全部探测</button>
     <button type="button" id="btnRefresh" class="secondary">刷新状态</button>
   </div>
+  <div class="toolbar toolbar-agent" id="toolbar-agent">
+    <button type="button" id="btn-agent-refresh" class="secondary">刷新快照</button>
+    <button type="button" id="btn-agent-copy" class="secondary">复制日志</button>
+    <button type="button" id="btn-agent-clear" class="secondary">清空</button>
+  </div>
 </header>
 <main>
+  <div id="panel-search" class="tab-panel active">
   <section class="card">
     <h2>架构对比 <span class="badge idle" id="summaryBadge">待探测</span></h2>
     <div class="flow">
@@ -190,6 +252,44 @@
     <h2>HTTP 探测（同一关键词）</h2>
     <div id="probes"></div>
   </section>
+  </div>
+
+  <div id="panel-agent" class="tab-panel agent-accent">
+    <section class="card">
+      <h2>链路探针 <span class="hint">（绿=就绪 / 灰=未触达 / 红=异常）</span></h2>
+      <div class="flow" id="flow-nodes">
+        <div class="node idle" data-stage="palette"><div class="lbl">① 面板</div><div>submit</div></div>
+        <span class="arrow">→</span>
+        <div class="node idle" data-stage="bridge"><div class="lbl">② 桥接</div><div>ahk</div></div>
+        <span class="arrow">→</span>
+        <div class="node idle" data-stage="dispatch"><div class="lbl">③ 派发</div><div>dispatch</div></div>
+        <span class="arrow">→</span>
+        <div class="node idle" data-stage="ftb"><div class="lbl">④ FTB</div><div>stream</div></div>
+        <span class="arrow">→</span>
+        <div class="node idle" data-stage="back"><div class="lbl">⑤ 回传</div><div>chunk/end</div></div>
+        <span class="arrow">→</span>
+        <div class="node idle" data-stage="card"><div class="lbl">⑥ 卡片</div><div>UI</div></div>
+      </div>
+    </section>
+    <div class="grid3">
+      <section class="card"><h2>宿主 / 引擎</h2><div class="kv" id="health-box">等待快照…</div></section>
+      <section class="card"><h2>最近提交</h2><div class="kv" id="submit-box">尚无提交记录</div></section>
+      <section class="card"><h2>任务卡 / 路由</h2><div class="kv" id="cards-box">—</div></section>
+    </div>
+    <section class="card">
+      <h2>事件时间线 <span class="hint">（新事件在顶部）</span></h2>
+      <div class="filters" id="filters">
+        <button type="button" data-f="all" class="active">全部</button>
+        <button type="button" data-f="palette">面板</button>
+        <button type="button" data-f="bridge">桥接</button>
+        <button type="button" data-f="dispatch">派发</button>
+        <button type="button" data-f="ahk">AHK</button>
+        <button type="button" data-f="push">推送</button>
+        <button type="button" data-f="ftb">FTB</button>
+      </div>
+      <div class="agent-log" id="log"></div>
+    </section>
+  </div>
 </main>
 <script>
 (function () {
@@ -199,6 +299,147 @@
     { id: "search_scwv", name: "Search · SCWV 路径", hint: "与搜索中心相同 WinHttp 参数" },
     { id: "search_cmdpal", name: "Search · 命令面板 HttpGetAsync", hint: "tag=cmdpal_turbo_search" }
   ];
+
+  function getAhkBridge() {
+    try {
+      var ho = window.chrome && window.chrome.webview && window.chrome.webview.hostObjects;
+      if (ho && ho.sync && ho.sync.ahk) return { ahk: ho.sync.ahk, kind: "sync.ahk" };
+      if (window.ahk) return { ahk: window.ahk, kind: "window.ahk" };
+      if (ho && ho.ahk) return { ahk: ho.ahk, kind: "hostObjects.ahk" };
+    } catch (_) {}
+    return null;
+  }
+
+  function invokeAhkMethod(ahk, method, args) {
+    if (!ahk) return null;
+    var fn = ahk[method];
+    if (typeof fn !== "function") return null;
+    if (args !== undefined) return fn(args);
+    try {
+      return fn("");
+    } catch (e1) {
+      try {
+        return fn();
+      } catch (e2) {
+        throw e1;
+      }
+    }
+  }
+
+  async function callAhkMethod(method, args) {
+    var br = getAhkBridge();
+    if (!br) return { ok: false, err: "no_host", bridge: "none" };
+    if (typeof br.ahk[method] !== "function") return { ok: false, err: "no_method:" + method, bridge: br.kind };
+    try {
+      var raw = invokeAhkMethod(br.ahk, method, args);
+      if (raw && typeof raw.then === "function") raw = await raw;
+      return { ok: true, raw: String(raw || ""), bridge: br.kind };
+    } catch (e) {
+      return { ok: false, err: String(e && e.message || e), bridge: br.kind };
+    }
+  }
+
+  function showAgentPullStatus(msg) {
+    var box = document.getElementById("health-box");
+    if (!box) return;
+    box.innerHTML = "<b>诊断桥接</b> " + esc(msg);
+  }
+
+  async function pullSearchDebugFromHost() {
+    var ret = await callAhkMethod("PullCommandPaletteSearchDebugSnapshot");
+    if (!ret.ok || !ret.raw) return false;
+    try {
+      var d = JSON.parse(ret.raw);
+      if (d && d.type) {
+        handleCmdPalDbgHostPayload(d);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  function applyAgentEventsBatch(items, replace) {
+    if (!Array.isArray(items) || !items.length) return;
+    if (replace) {
+      agentLogs = items.slice().reverse();
+      if (agentLogs.length) updateAgentFlow(inferAgentStage(agentLogs[0]), agentLogs[0].level || "info");
+      renderAgentLog();
+      return;
+    }
+    items.slice().reverse().forEach(function (it) { pushAgentLog(it); });
+  }
+
+  function mergeAgentEvents(items) {
+    if (!Array.isArray(items) || !items.length) return;
+    var seen = {};
+    agentLogs.forEach(function (r) {
+      seen[(r.ts || "") + "|" + (r.layer || "") + "|" + (r.event || "") + "|" + (r.detail || "")] = 1;
+    });
+    items.forEach(function (it) {
+      if (!it) return;
+      var k = (it.ts || "") + "|" + (it.layer || "") + "|" + (it.event || "") + "|" + (it.detail || "");
+      if (seen[k]) return;
+      seen[k] = 1;
+      pushAgentLog(it);
+    });
+  }
+
+  async function pullAgentDebugFromHost(replaceEvents) {
+    var ret = await callAhkMethod("PullCommandPaletteAgentDebug");
+    if (!ret.ok || !ret.raw) {
+      showAgentPullStatus((ret.err || "拉取失败") + " · " + (ret.bridge || "none"));
+      return false;
+    }
+    try {
+      var probe = await callAhkMethod("ProbeCommandPaletteAgentDebug");
+      if (probe.ok && probe.raw) agentDebugProbeHint = String(probe.raw);
+    } catch (_) {}
+    try {
+      var pack = JSON.parse(ret.raw);
+      if (pack && pack.error) {
+        showAgentPullStatus(String(pack.error) + " · " + (ret.bridge || "none"));
+        return false;
+      }
+      if (pack && pack.snapshot) {
+        handleCmdPalDbgHostPayload(pack.snapshot);
+        var cards = (pack.snapshot.cards || []).length;
+        var evn = (pack.events || []).length;
+        if (pack.events && pack.events.length) {
+          if (replaceEvents !== false) applyAgentEventsBatch(pack.events, true);
+          else mergeAgentEvents(pack.events);
+        }
+        if (cards < 1 && evn < 1 && !agentLogs.length) {
+          var hc = (pack.snapshot.health && pack.snapshot.health.cardCount != null) ? pack.snapshot.health.cardCount : 0;
+          var he = (pack.snapshot.health && pack.snapshot.health.eventCount != null) ? pack.snapshot.health.eventCount : 0;
+          showAgentPullStatus(
+            "桥接正常(" + ret.bridge + ") · 宿主卡=" + hc + " 事件=" + he +
+            " · 面板有任务但宿主未登记时请重试提交或点刷新"
+          );
+        }
+        return true;
+      }
+    } catch (e) {
+      showAgentPullStatus("JSON 解析失败: " + String(e && e.message || e));
+    }
+    return false;
+  }
+
+  async function pullAgentSnapshotOnly() {
+    var ret = await callAhkMethod("PullCommandPaletteAgentDebug");
+    if (!ret.ok || !ret.raw) return false;
+    try {
+      var pack = JSON.parse(ret.raw);
+      if (pack && pack.snapshot) {
+        handleCmdPalDbgHostPayload(pack.snapshot);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  function scheduleAgentPull(replaceEvents, delayMs) {
+    setTimeout(function () { pullAgentDebugFromHost(replaceEvents); }, delayMs || 0);
+  }
 
   function post(o) {
     if (!o) return;
@@ -210,6 +451,14 @@
           if (String(window.ahk.RunCommandPaletteSearchDebugProbes(kw)) === "ok") return;
         }
       } catch (_) {}
+    }
+    if (typ === "cp_agent_debug_refresh") {
+      scheduleAgentPull(true, 0);
+      return;
+    }
+    if (typ === "cp_search_debug_refresh") {
+      pullSearchDebugFromHost();
+      return;
     }
     var payload = "";
     try {
@@ -280,23 +529,253 @@
   }
 
   document.getElementById("btnRefresh").addEventListener("click", function () {
-    post({ type: "cp_search_debug_refresh" });
+    if (!pullSearchDebugFromHost()) post({ type: "cp_search_debug_refresh" });
   });
   document.getElementById("btnRunAll").addEventListener("click", function () {
     setProbesRunning();
     post({ type: "cp_search_debug_run_all", keyword: document.getElementById("kw").value });
   });
 
+  var currentTab = "search";
+  var agentLogs = [];
+  var agentFilter = "all";
+  var agentLastStage = "";
+  var agentDebugProbeHint = "";
+
+  function switchTab(tab) {
+    currentTab = tab === "agent" ? "agent" : "search";
+    document.querySelectorAll(".tab-btn").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-tab") === currentTab);
+    });
+    document.getElementById("panel-search").classList.toggle("active", currentTab === "search");
+    document.getElementById("panel-agent").classList.toggle("active", currentTab === "agent");
+    document.getElementById("toolbar-search").classList.toggle("hide", currentTab !== "search");
+    document.getElementById("toolbar-agent").classList.toggle("show", currentTab === "agent");
+    document.getElementById("header-sub").textContent =
+      currentTab === "agent"
+        ? "动作托管 · 面板 → AHK → FTB → 回传卡片"
+        : "本地搜索 · HTTP 链路对比";
+    post({ type: "cp_search_debug_set_tab", tab: currentTab });
+    if (currentTab === "agent") {
+      scheduleAgentPull(true, 0);
+      post({ type: "cp_agent_debug_ready" });
+    } else {
+      pullSearchDebugFromHost();
+    }
+  }
+
+  document.querySelectorAll(".tab-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      switchTab(btn.getAttribute("data-tab") || "search");
+    });
+  });
+
+  function layerTag(layer) {
+    var l = String(layer || "sys").toLowerCase();
+    var cls = l;
+    if (l === "panel" || l === "palette") cls = "palette";
+    else if (l === "bridge") cls = "bridge";
+    else if (l === "dispatch") cls = "dispatch";
+    else if (l === "push") cls = "push";
+    else if (l === "ftb") cls = "ftb";
+    else if (l === "ahk" || l === "sys") cls = "ahk";
+    return '<span class="tag ' + cls + '">' + esc(l) + "</span>";
+  }
+
+  function inferAgentStage(ev) {
+    var e = String(ev.event || "").toLowerCase();
+    var l = String(ev.layer || "").toLowerCase();
+    if (l === "dispatch" || e.indexOf("dispatch") >= 0) return "dispatch";
+    if (l === "ftb" || e.indexOf("agent_stream") >= 0 || e.indexOf("agent_chunk") >= 0 || e.indexOf("forward_") >= 0) return "ftb";
+    if (e === "host_chunk" || e === "host_status" || e === "chunk" || e === "status") return "back";
+    if (e.indexOf("agent_end") >= 0 || e.indexOf("host_end") >= 0 || e === "end") return "card";
+    if (l === "bridge" || e.indexOf("bridge") >= 0 || e === "submit" || e.indexOf("submit") >= 0) return "bridge";
+    if (l === "palette" || l === "panel") return "palette";
+    if (l === "push") return agentLastStage || "palette";
+    if (e.indexOf("error") >= 0) return "card";
+    return agentLastStage || "palette";
+  }
+
+  function inferFlowFromCards(cards) {
+    if (!Array.isArray(cards) || !cards.length) return null;
+    var run = cards.find(function (c) { return c && c.running; });
+    if (!run) return null;
+    if (run.streamDispatched) return "ftb";
+    if (run.rawLen > 0) return "back";
+    return "dispatch";
+  }
+
+  function updateAgentFlow(stage, level) {
+    if (!stage) return;
+    agentLastStage = stage;
+    var order = ["palette", "bridge", "dispatch", "ftb", "back", "card"];
+    var idx = order.indexOf(stage);
+    document.querySelectorAll("#flow-nodes .node").forEach(function (n) {
+      var st = n.getAttribute("data-stage");
+      var si = order.indexOf(st);
+      n.classList.remove("ok", "warn", "err", "idle");
+      if (si < idx) n.classList.add("ok");
+      else if (si === idx) n.classList.add(level === "err" ? "err" : level === "warn" ? "warn" : "ok");
+      else n.classList.add("idle");
+    });
+  }
+
+  function renderAgentLog() {
+    var box = document.getElementById("log");
+    if (!box) return;
+    var rows = agentLogs.filter(function (r) {
+      if (agentFilter === "all") return true;
+      var l = String(r.layer || "").toLowerCase();
+      if (agentFilter === "palette") return l === "palette" || l === "panel";
+      if (agentFilter === "bridge") return l === "bridge";
+      if (agentFilter === "dispatch") return l === "dispatch";
+      if (agentFilter === "push") return l === "push";
+      return l === agentFilter;
+    });
+    if (!rows.length) {
+      box.innerHTML = '<div class="row"><span class="det">暂无日志 — 请在动作 Tab 提交一条任务</span></div>';
+      return;
+    }
+    box.innerHTML = rows
+      .map(function (r) {
+        return (
+          '<div class="row lvl-' +
+          esc(r.level || "info") +
+          '"><span class="ts">' +
+          esc((r.ts || "").slice(11)) +
+          "</span>" +
+          layerTag(r.layer) +
+          '<span class="ev">' +
+          esc(r.event) +
+          '</span><span class="det">' +
+          esc(r.detail) +
+          "</span></div>"
+        );
+      })
+      .join("");
+  }
+
+  function pushAgentLog(item) {
+    if (!item) return;
+    agentLogs.unshift(item);
+    if (agentLogs.length > 500) agentLogs.length = 500;
+    updateAgentFlow(inferAgentStage(item), item.level || "info");
+    renderAgentLog();
+  }
+
+  function applyAgentSnapshot(d) {
+    if (!d) return;
+    var h = d.health || {};
+    var tick = d.tick != null ? String(d.tick) : "—";
+    document.getElementById("health-box").innerHTML = [
+      "<b>快照 tick</b> " + esc(tick),
+      "<b>宿主卡</b> " + esc(h.cardCount != null ? h.cardCount : "—") + " · <b>事件</b> " + esc(h.eventCount != null ? h.eventCount : "—"),
+      "<b>面板 WV2</b> " + (h.cmdPalWv2 ? "✓" : "✗"),
+      "<b>FTB WV2</b> " + (h.ftbWv2 ? "✓" : "✗"),
+      "<b>FTB Ready</b> " + (h.ftbReady ? "✓" : "✗"),
+      "<b>编排器</b> " + (h.orchestrator ? "✓" : "✗"),
+      agentDebugProbeHint ? "<b>探针</b> " + esc(agentDebugProbeHint) : ""
+    ].filter(Boolean).join("<br/>");
+    var cards = d.cards || [];
+    var ls = d.lastSubmit || {};
+    if (!ls.cardId && cards.length) {
+      ls = {
+        cardId: cards[0].cardId,
+        reqId: cards[0].reqId,
+        provider: cards[0].provider,
+        at: "（来自任务卡）"
+      };
+    }
+    if (ls.cardId) {
+      document.getElementById("submit-box").innerHTML =
+        "<b>时间</b> " + esc(ls.at) +
+        (ls.query ? "<br/><b>任务</b> " + esc(ls.query) : "") +
+        "<br/><b>cardId</b> " + esc(ls.cardId) +
+        "<br/><b>reqId</b> " + esc(ls.reqId) + "<br/><b>引擎</b> " + esc(ls.provider);
+    } else {
+      document.getElementById("submit-box").innerHTML = "尚无提交记录";
+    }
+    document.getElementById("cards-box").innerHTML = cards.length < 1
+      ? "无任务卡"
+      : cards.map(function (c) {
+          var title = c.title || c.query || c.cardId || "";
+          var st = c.running ? "进行中" : (c.ended ? "已结束" : (c.uiState || "—"));
+          var extra = c.streamDispatched ? " · 已派发" : "";
+          return "<b>" + esc(title) + "</b> · " + esc(st) + extra + " · " + esc(c.provider || "") + " · req=" + esc(c.reqId || "");
+        }).join("<br/>");
+    var flowStage = agentLogs.length ? inferAgentStage(agentLogs[0]) : inferFlowFromCards(cards);
+    if (flowStage) updateAgentFlow(flowStage, agentLogs.length ? (agentLogs[0].level || "info") : "ok");
+  }
+
+  document.getElementById("btn-agent-refresh").addEventListener("click", function () {
+    scheduleAgentPull(true, 0);
+    post({ type: "cp_agent_debug_refresh" });
+  });
+  document.getElementById("btn-agent-clear").addEventListener("click", function () {
+    agentLogs = [];
+    renderAgentLog();
+    post({ type: "cp_agent_debug_clear" });
+  });
+  document.getElementById("btn-agent-copy").addEventListener("click", function () {
+    var text = agentLogs.slice().reverse().map(function (r) {
+      return (r.ts || "") + "\t" + (r.layer || "") + "\t" + (r.event || "") + "\t" + (r.detail || "");
+    }).join("\n");
+    try { navigator.clipboard.writeText(text); } catch (_) {}
+  });
+  document.getElementById("filters").addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-f]");
+    if (!btn) return;
+    agentFilter = btn.getAttribute("data-f") || "all";
+    document.querySelectorAll("#filters button").forEach(function (b) {
+      b.classList.toggle("active", b === btn);
+    });
+    renderAgentLog();
+  });
+
+  function handleCmdPalDbgHostPayload(d) {
+    if (!d || !d.type) return;
+    if (d.type === "cp_search_debug_ui" && d.tab) {
+      switchTab(d.tab);
+      return;
+    }
+    if (d.type === "cp_search_debug_snapshot") applySnapshot(d);
+    if (d.type === "cp_agent_debug_snapshot") applyAgentSnapshot(d);
+    if (d.type === "cp_agent_debug_events" && Array.isArray(d.items)) {
+      applyAgentEventsBatch(d.items, false);
+    }
+    if (d.type === "cp_agent_debug_clear_ok") {
+      agentLogs = [];
+      renderAgentLog();
+    }
+  }
+
+  window.__nmerCmdPalDbgHostInject = function (jsonStr) {
+    var d = jsonStr;
+    if (typeof d === "string") {
+      try { d = JSON.parse(d); } catch (_) { return; }
+    }
+    handleCmdPalDbgHostPayload(d);
+  };
+
   window.chrome && window.chrome.webview && window.chrome.webview.addEventListener("message", function (ev) {
     var d = ev.data;
     if (typeof d === "string") {
       try { d = JSON.parse(d); } catch (_) { return; }
     }
-    if (d && d.type === "cp_search_debug_snapshot") applySnapshot(d);
+    handleCmdPalDbgHostPayload(d);
   });
 
   renderProbes({});
-  post({ type: "cp_search_debug_ready" });
+  renderAgentLog();
+  pullSearchDebugFromHost().then(function (ok) {
+    if (!ok) post({ type: "cp_search_debug_ready" });
+  });
+  var initTab = (location.search.match(/[?&]tab=(agent|search)/) || [])[1];
+  if (initTab) switchTab(initTab);
+  [0, 80, 250, 700, 1600].forEach(function (ms) { scheduleAgentPull(true, ms); });
+  setInterval(function () {
+    if (currentTab === "agent") pullAgentSnapshotOnly();
+  }, 2500);
 })();
 </script>
 </body>

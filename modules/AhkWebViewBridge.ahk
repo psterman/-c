@@ -14,15 +14,33 @@ class AhkInterface {
     /**
      * 连通性探测（供前端验证 hostObjects）。
      */
-    Ping() => "ok"
+    Ping(_hint := "") => "ok"
 
-    /** 命令面板「诊」按钮 / 诊断入口：同步打开本地搜索诊断窗 */
+    /** 打开诊断窗「动作托管」标签（原独立探面板） */
+    OpenCommandPaletteAgentDebug() {
+        try {
+            if FuncExists("CommandPalette_ShowSearchDebug")
+                CommandPalette_ShowSearchDebug(true, "agent")
+            else if FuncExists("CommandPalette_HandleAgentDebug")
+                CommandPalette_HandleAgentDebug()
+            else
+                return "err:not_loaded"
+            global g_CmdPalDbg_Gui
+            if IsObject(g_CmdPalDbg_Gui) && g_CmdPalDbg_Gui.Hwnd
+                return "ok"
+            return "err:gui_not_shown"
+        } catch as e {
+            return "err:" . e.Message
+        }
+    }
+
+    /** 命令面板「诊」按钮：打开诊断窗（默认本地搜索标签） */
     OpenCommandPaletteSearchDebug() {
         try {
-            if FuncExists("CommandPalette_HandleSearchDebug")
+            if FuncExists("CommandPalette_ShowSearchDebug")
+                CommandPalette_ShowSearchDebug(true, "search")
+            else if FuncExists("CommandPalette_HandleSearchDebug")
                 CommandPalette_HandleSearchDebug()
-            else if FuncExists("CommandPalette_ShowSearchDebug")
-                CommandPalette_ShowSearchDebug()
             else
                 return "err:not_loaded"
             return "ok"
@@ -31,18 +49,162 @@ class AhkInterface {
         }
     }
 
+    /** 动作 Tab：同步提交（推荐 JSON 字符串；兼容旧版多参数，避免 WebView2 参数错位） */
+    CommandPaletteAgentSubmitQuick(arg1, provider := "openclaw", kind := "new", cardId := "") {
+        try {
+            if !_AhkBridge_AgentSubmitReady()
+                return "err:not_loaded"
+            msg := Map("type", "palette_agent_submit")
+            raw := Trim(String(arg1))
+            if (SubStr(raw, 1, 1) = "{") {
+                root := Jxon_Load(raw)
+                if (root is Map) {
+                    for k, v in root
+                        msg[String(k)] := v
+                }
+            } else {
+                msg["text"] := raw
+                msg["provider"] := Trim(String(provider)) != "" ? String(provider) : "openclaw"
+                msg["kind"] := Trim(String(kind)) != "" ? String(kind) : "new"
+                msg["cardId"] := Trim(String(cardId))
+            }
+            if !msg.Has("text") && msg.Has("query")
+                msg["text"] := String(msg["query"])
+            provRaw := Trim(String(msg.Has("provider") ? msg["provider"] : ""))
+            if (provRaw = "" || provRaw = "new" || provRaw = "append" || provRaw = "correction")
+                msg["provider"] := "openclaw"
+            else
+                msg["provider"] := provRaw
+            if !msg.Has("kind") || Trim(String(msg["kind"])) = ""
+                msg["kind"] := "new"
+            if !msg.Has("text") && !msg.Has("query")
+                return "err:bad_json"
+            if Trim(String(msg.Has("text") ? msg["text"] : "")) = ""
+                return "err:empty_text"
+            _AhkBridge_AgentWireLog("bridge_quick", "text=" . SubStr(String(msg["text"]), 1, 60)
+                . " prov=" . String(msg["provider"]) . " kind=" . String(msg["kind"]))
+            ret := _AhkBridge_AgentSubmit(msg)
+            if !(ret is Map) || !ret.Get("ok", false) {
+                errCode := (ret is Map) ? String(ret.Get("error", "")) : ""
+                if (errCode = "provider_keyword")
+                    return "err:provider_keyword"
+                if (errCode = "empty_text")
+                    return "err:empty_text"
+                return "err:submit_failed"
+            }
+            cid := String(ret.Get("cardId", ""))
+            rid := String(ret.Get("reqId", ""))
+            prov := String(ret.Get("provider", msg["provider"]))
+            if (cid = "")
+                return "err:no_card_id"
+            _AhkBridge_AgentDebugTrace("bridge", "submit_ok", "card=" . cid . " req=" . rid . " prov=" . prov)
+            try CommandPalette_AgentDebugNoteSubmit(cid, rid, prov, "bridge_quick")
+            catch {
+            }
+            return "ok|" . cid . "|" . rid . "|" . prov
+        } catch as e {
+            return "err:" . e.Message
+        }
+    }
+
+    /** 动作 Tab：同步写诊断事件（绕过 postMessage） */
+    CommandPaletteAgentDebugLog(layer := "palette", event := "", detail := "", level := "info") {
+        try {
+            _AhkBridge_AgentDebugTrace(String(layer), String(event), SubStr(String(detail), 1, 800), String(level))
+            return "ok"
+        } catch as e {
+            return "err:" . e.Message
+        }
+    }
+
+    /** 动作 Tab：探测编排器是否已登记（供前端 probe） */
+    PingAgentSubmit(_hint := "") {
+        return _AhkBridge_AgentSubmitReady() ? "ok|submit" : "err:not_loaded"
+    }
+
     /** 动作 Tab：提交托管任务（JSON 字符串，与 palette_agent_submit 同结构） */
     CommandPaletteAgentSubmit(jsonStr) {
         try {
-            if !FuncExists("CommandPalette_HandleAgentSubmit")
+            if !_AhkBridge_AgentSubmitReady()
                 return "err:not_loaded"
             root := Jxon_Load(String(jsonStr))
             if !(root is Map)
                 return "err:bad_json"
-            CommandPalette_HandleAgentSubmit(root)
-            return "ok"
+            ret := _AhkBridge_AgentSubmit(root)
+            if !(ret is Map) || !ret.Get("ok", false)
+                return "err:submit_failed"
+            cid := String(ret.Get("cardId", ""))
+            rid := String(ret.Get("reqId", ""))
+            prov := String(ret.Get("provider", "openclaw"))
+            if (cid = "")
+                return "err:no_card_id"
+            if FuncExists("CommandPalette_AgentDebugNoteSubmit")
+                try CommandPalette_AgentDebugNoteSubmit(cid, rid, prov, "bridge")
+                catch {
+                }
+            _AhkBridge_AgentDebugTrace("bridge", "submit_ok", "card=" . cid . " req=" . rid . " prov=" . prov)
+            return "ok|" . cid . "|" . rid . "|" . prov
         } catch as e {
             return "err:" . e.Message
+        }
+    }
+
+    /** 动作 Tab：同步拉取全部任务卡 JSON 数组（不依赖 postMessage 顺序） */
+    PullCommandPaletteAgentCards(_hint := "") {
+        try {
+            if FuncExists("CommandPalette_AgentPullCardsJson")
+                return CommandPalette_AgentPullCardsJson()
+        } catch {
+        }
+        return "[]"
+    }
+
+    /** 诊断窗「动作托管」：由页面主动拉取快照+事件（不依赖 postMessage） */
+    PullCommandPaletteAgentDebug(_hint := "") {
+        try {
+            out := _AhkBridge_PullAgentDebugJson()
+            if (out = "")
+                out := _AhkBridge_PullAgentDebugFallback()
+            return out != "" ? out : '{"snapshot":{"type":"cp_agent_debug_snapshot","tick":0,"cards":[],"routes":[],"lastSubmit":{},"health":{}},"events":[]}'
+        } catch as e {
+            return '{"error":"' . StrReplace(String(e.Message), '"', "'") . '"}'
+        }
+    }
+
+    /** 动作托管诊断探针：ok|cards|events */
+    ProbeCommandPaletteAgentDebug(_hint := "") {
+        try {
+            raw := _AhkBridge_PullAgentDebugJson()
+            if (raw = "")
+                raw := _AhkBridge_PullAgentDebugFallback()
+            if (raw = "")
+                return "err:empty"
+            pack := Jxon_Load(raw)
+            if !(pack is Map)
+                return "err:bad_json"
+            cards := 0
+            events := 0
+            if pack.Has("snapshot") && (pack["snapshot"] is Map) && pack["snapshot"].Has("cards") {
+                c := pack["snapshot"]["cards"]
+                if (c is Array)
+                    cards := c.Length
+            }
+            if pack.Has("events") && (pack["events"] is Array)
+                events := pack["events"].Length
+            return "ok|" . cards . "|" . events
+        } catch as e {
+            return "err:" . e.Message
+        }
+    }
+
+    /** 诊断窗「本地搜索」：拉取运行时快照 */
+    PullCommandPaletteSearchDebugSnapshot(_hint := "") {
+        try {
+            if !FuncExists("CommandPaletteSearchDebug_PullSearchDebugJson")
+                return ""
+            return CommandPaletteSearchDebug_PullSearchDebugJson()
+        } catch as e {
+            return '{"error":"' . StrReplace(String(e.Message), '"', "'") . '"}'
         }
     }
 
@@ -318,6 +480,71 @@ class AhkInterface {
     /** 与 GetBrowserSnapshot 相同，供前端 pull 自愈通道按行业命名调用。 */
     GetLatestSnapshotCache() {
         return this.GetBrowserSnapshot()
+    }
+}
+
+_AhkBridge_AgentSubmitReady() {
+    global g_CmdPal_AgentSubmitDispatch
+    if IsSet(g_CmdPal_AgentSubmitDispatch) && g_CmdPal_AgentSubmitDispatch
+        return true
+    try {
+        ref := CommandPalette_HandleAgentSubmit
+        return !!ref
+    } catch {
+        return false
+    }
+}
+
+_AhkBridge_AgentSubmit(msg) {
+    global g_CmdPal_AgentSubmitDispatch
+    if IsSet(g_CmdPal_AgentSubmitDispatch) && g_CmdPal_AgentSubmitDispatch
+        return g_CmdPal_AgentSubmitDispatch(msg)
+    return CommandPalette_HandleAgentSubmit(msg)
+}
+
+_AhkBridge_AgentDebugTrace(layer, event, detail, level := "info") {
+    global g_CmdPal_AgentDebugTraceDispatch
+    if IsSet(g_CmdPal_AgentDebugTraceDispatch) && g_CmdPal_AgentDebugTraceDispatch
+        g_CmdPal_AgentDebugTraceDispatch(layer, event, detail, level)
+    else
+        CommandPalette_AgentDebugTrace(layer, event, detail, level)
+}
+
+_AhkBridge_AgentWireLog(event, detail := "") {
+    global g_CmdPal_AgentWireLogDispatch
+    try {
+        if IsSet(g_CmdPal_AgentWireLogDispatch) && g_CmdPal_AgentWireLogDispatch
+            g_CmdPal_AgentWireLogDispatch(event, detail)
+        else
+            CommandPalette_AgentWireLog(event, detail)
+    } catch {
+    }
+}
+
+_AhkBridge_PullAgentDebugJson() {
+    global g_CmdPal_AgentPullDebugDispatch
+    if IsSet(g_CmdPal_AgentPullDebugDispatch) && g_CmdPal_AgentPullDebugDispatch
+        return g_CmdPal_AgentPullDebugDispatch()
+    try {
+        return CommandPaletteSearchDebug_PullAgentDebugJson()
+    } catch {
+        return ""
+    }
+}
+
+_AhkBridge_PullAgentDebugFallback() {
+    try {
+        snap := CommandPalette_AgentDebug_BuildSnapshot()
+        events := []
+        global g_AgentDbg_Events
+        if (g_AgentDbg_Events is Array) {
+            for _, row in g_AgentDbg_Events
+                if (row is Map)
+                    events.Push(row)
+        }
+        return Jxon_Dump(Map("snapshot", snap, "events", events))
+    } catch {
+        return ""
     }
 }
 
