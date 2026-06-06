@@ -10,6 +10,8 @@ global g_Agent_DefaultProvider := "openclaw"
 global g_Agent_StreamGen := 0
 global g_Agent_AiRoute := Map()
 global g_Agent_DispatchPending := Map()
+global g_Agent_RecoverPending := Map()
+global g_Agent_FtbFetchBusy := false
 
 CommandPalette_AgentProtocolPrompt() {
     return "
@@ -163,7 +165,7 @@ CommandPalette_AgentPersistCards() {
 }
 
 CommandPalette_AgentLoadCards() {
-    global g_Agent_Cards
+    global g_Agent_Cards, g_CardSessionMap
     if FuncExists("Nmer_EnsureDebugDir")
         try Nmer_EnsureDebugDir()
     path := CommandPalette_AgentCardsPath()
@@ -184,6 +186,8 @@ CommandPalette_AgentLoadCards() {
                 continue
             if g_Agent_Cards.Has(cid) && (g_Agent_Cards[cid] is Map) {
                 card := g_Agent_Cards[cid]
+                if card.Get("running", false) && !card.Get("ended", false)
+                    continue
             } else {
                 card := Map()
                 g_Agent_Cards[cid] := card
@@ -375,7 +379,8 @@ CommandPalette_AgentForwardAiEvent(kind, msg) {
             try CommandPalette_AgentDebugTrace("ftb", "forward_end", "req=" . reqId . " len=" . StrLen(ans))
             catch {
             }
-        CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", reqId, "cardId", cardId, "answer", ans))
+        if CommandPalette_AgentAnswerIsSubstantial(ans)
+            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", reqId, "cardId", cardId, "answer", ans))
         CommandPalette_AgentClearAiRoute(reqId)
     } else if (kind = "error") {
         err := msg.Has("message") ? String(msg["message"]) : (msg.Has("error") ? String(msg["error"]) : "代理请求失败")
@@ -391,13 +396,16 @@ CommandPalette_AgentCardCount() {
 
 CommandPalette_AgentPullCardsJson() {
     global g_Agent_Cards
-    CommandPalette_AgentLoadCards()
-    items := []
-    for _, c in g_Agent_Cards {
-        if (c is Map)
-            items.Push(CommandPalette_AgentCardToSyncDto(c))
-    }
     try {
+        CommandPalette_AgentLoadCards()
+        items := []
+        for _, c in g_Agent_Cards {
+            if !(c is Map)
+                continue
+            try items.Push(CommandPalette_AgentCardToSyncDto(c))
+            catch {
+            }
+        }
         return Jxon_Dump(items)
     } catch {
         return "[]"
@@ -541,26 +549,32 @@ CommandPalette_AgentIsStatusOnlyDelta(delta) {
     d := Trim(String(delta))
     if (d = "")
         return true
-    if RegExMatch(d, "i)^(🔗|⏳|💭|正在|等待|仍连接|同步|引擎|Niuma)")
+    if RegExMatch(d, "i)^(🔗|⏳|💭|📨|正在|等待|仍连接|同步|引擎|Niuma)")
         return true
-    if RegExMatch(d, "i)^(正在连接|正在准备|正在请求|OpenClaw 流式|OpenClaw 处理|流式输出中)")
+    if RegExMatch(d, "i)^(正在连接|正在准备|正在请求|OpenClaw 流式|OpenClaw 处理|OpenClaw 已发送|流式输出中|已提交至 Gateway)")
+        return true
+    if RegExMatch(d, "i)chat\.send")
         return true
     return false
+}
+
+CommandPalette_AgentAnswerIsSubstantial(ans) {
+    raw := Trim(String(ans))
+    if (raw = "")
+        return false
+    if RegExMatch(raw, "i)::(PLAN|STATUS|QUESTION|REPLY)_(START|END)::")
+        return true
+    if CommandPalette_AgentIsStatusOnlyDelta(raw)
+        return false
+    if (StrLen(raw) < 8)
+        return false
+    return true
 }
 
 CommandPalette_AgentHasSubstantialAnswer(card) {
     if !(card is Map)
         return false
-    raw := Trim(String(card.Get("rawAnswer", "")))
-    if (raw = "")
-        return false
-    if RegExMatch(raw, "::(PLAN|STATUS|QUESTION|REPLY)_(START|END)::")
-        return true
-    if (StrLen(raw) < 24)
-        return false
-    if CommandPalette_AgentIsStatusOnlyDelta(raw)
-        return false
-    return true
+    return CommandPalette_AgentAnswerIsSubstantial(String(card.Get("rawAnswer", "")))
 }
 
 CommandPalette_AgentTagFtbSession(reqId, cardId, query, provider) {
@@ -601,27 +615,76 @@ CommandPalette_AgentTagFtbSession(reqId, cardId, query, provider) {
     }
 }
 
-CommandPalette_InvokeFtbPaletteAgentScript(cardId, reqId, query, provider) {
+CommandPalette_AgentResolveSessionRef(cardId) {
+    global g_CardSessionMap
+    cid := Trim(String(cardId))
+    card := CommandPalette_AgentGetCard(cid)
+    sr := ""
+    if (card is Map)
+        sr := Trim(String(card.Get("sessionRef", "")))
+    if (sr = "" && IsObject(g_CardSessionMap) && g_CardSessionMap.Has(cid))
+        sr := Trim(String(g_CardSessionMap[cid]))
+    return sr
+}
+
+CommandPalette_AgentPrefetchOpenClawSessionRef(cardId) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_CardSessionMap
+    cid := Trim(String(cardId))
+    if (cid = "")
+        return ""
+    card := CommandPalette_AgentGetCard(cid)
+    sr := CommandPalette_AgentResolveSessionRef(cardId)
+    if (sr != "")
+        return sr
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return ""
+    if !FuncExists("CommandPalette_JsEscapeForParse")
+        return ""
+    js := "(function(){try{var fn=window.exportPaletteOpenClawGatewayKey;"
+        . "if(typeof fn!=='function')return JSON.stringify({ok:0});"
+        . "return JSON.stringify({ok:1,key:String(fn('')||'')});"
+        . "}catch(e){return JSON.stringify({ok:0});}})();"
+    try {
+        raw := g_FTB_WV2.ExecuteScriptAsync(js).await(3500)
+        data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
+        if (data is Map) && data.Get("ok", false) {
+            sr := Trim(String(data.Get("key", "")))
+            if (sr != "" && card is Map) {
+                card["sessionRef"] := sr
+                if IsObject(g_CardSessionMap)
+                    g_CardSessionMap[cid] := sr
+            }
+        }
+    } catch {
+    }
+    return sr
+}
+
+CommandPalette_InvokeFtbPaletteAgentScript(cardId, reqId, query, provider, sessionRef := "") {
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
     if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
         return false
     if !FuncExists("CommandPalette_JsEscapeForParse")
         return false
     prov := CommandPalette_AgentSanitizeProvider(provider)
+    sr := Trim(String(sessionRef))
+    if (sr = "")
+        sr := CommandPalette_AgentResolveSessionRef(cardId)
     argsJson := "{}"
     try argsJson := Jxon_Dump(Map(
         "reqId", String(reqId),
         "cardId", String(cardId),
         "query", String(query),
         "provider", prov,
-        "systemPrompt", CommandPalette_AgentProtocolPrompt()
+        "systemPrompt", CommandPalette_AgentProtocolPrompt(),
+        "sessionRef", sr
     ))
     catch {
         return false
     }
     escaped := CommandPalette_JsEscapeForParse(argsJson)
     js := "try{var o=JSON.parse('" . escaped . "');"
-        . "if(window.runPaletteAgentStream)window.runPaletteAgentStream(o.reqId,o.cardId,o.query,o.provider,o.systemPrompt||'');"
+        . "if(window.runPaletteAgentStream)window.runPaletteAgentStream(o.reqId,o.cardId,o.query,o.provider,o.systemPrompt||'',o.sessionRef||'');"
         . "else if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(JSON.stringify({type:'niuma_palette_agent_trace',step:'exec_no_fn',detail:'missing_runPaletteAgentStream'}));"
         . "}catch(e){try{if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(JSON.stringify({type:'niuma_palette_agent_trace',step:'exec_script_err',detail:String(e&&e.message||e)}));}catch(_){}}"
     try {
@@ -735,8 +798,84 @@ CommandPalette_AgentStartAnswerPoll(cardId, reqId, query) {
     SetTimer(CommandPalette_AgentPollFtbAnswer.Bind(cardId, reqId, query, 0), -2500)
 }
 
+CommandPalette_AgentPaletteStreamScriptBackup(cardId, reqId, query, provider, sessionRef := "") {
+    card := CommandPalette_AgentGetCard(cardId)
+    if !(card is Map) || card.Get("ended", false) || !card.Get("running", false)
+        return
+    if CommandPalette_AgentHasSubstantialAnswer(card)
+        return
+    rid := Trim(String(reqId))
+    if (rid = "") || Trim(String(card.Get("reqId", ""))) != rid
+        return
+    if CommandPalette_AgentFtbSessionStillSending(rid)
+        return
+    q := Trim(String(query))
+    if (q = "")
+        return
+    sr := Trim(String(sessionRef))
+    if (sr = "")
+        sr := CommandPalette_AgentResolveSessionRef(cardId)
+    try CommandPalette_InvokeFtbPaletteAgentScript(cardId, reqId, q, provider, sr)
+    catch {
+    }
+}
+
+CommandPalette_AgentRecoverCardAnswer(msg) {
+    global g_Agent_RecoverPending
+    if !(msg is Map)
+        return
+    cid := msg.Has("cardId") ? Trim(String(msg["cardId"])) : ""
+    rid := msg.Has("reqId") ? Trim(String(msg["reqId"])) : ""
+    q := msg.Has("query") ? Trim(String(msg["query"])) : ""
+    if (cid = "" || rid = "")
+        return
+    if !IsObject(g_Agent_RecoverPending)
+        g_Agent_RecoverPending := Map()
+    if g_Agent_RecoverPending.Has(cid)
+        return
+    g_Agent_RecoverPending[cid] := true
+    SetTimer(CommandPalette_AgentRecoverCardAnswerOnce.Bind(cid, rid, q, 0), -1200)
+}
+
+CommandPalette_AgentRecoverCardAnswerOnce(cid, rid, q, tryN) {
+    global g_Agent_FtbFetchBusy, g_Agent_RecoverPending
+    card := CommandPalette_AgentGetCard(cid)
+    if !(card is Map) {
+        if IsObject(g_Agent_RecoverPending)
+            g_Agent_RecoverPending.Delete(cid)
+        return
+    }
+    if CommandPalette_AgentHasSubstantialAnswer(card) {
+        if IsObject(g_Agent_RecoverPending)
+            g_Agent_RecoverPending.Delete(cid)
+        return
+    }
+    if g_Agent_FtbFetchBusy {
+        SetTimer(CommandPalette_AgentRecoverCardAnswerOnce.Bind(cid, rid, q, tryN), -800)
+        return
+    }
+    ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
+    stillSending := CommandPalette_AgentFtbSessionStillSending(rid)
+    if (ans != "" && !CommandPalette_AgentIsStatusOnlyDelta(ans) && CommandPalette_AgentAnswerIsSubstantial(ans) && !stillSending) {
+        CommandPalette_AgentLog("recover_hit", "card=" . cid . " len=" . StrLen(ans))
+        CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
+        if IsObject(g_Agent_RecoverPending)
+            g_Agent_RecoverPending.Delete(cid)
+        return
+    }
+    tryN := Integer(tryN)
+    if (tryN >= 40) {
+        if IsObject(g_Agent_RecoverPending)
+            g_Agent_RecoverPending.Delete(cid)
+        return
+    }
+    SetTimer(CommandPalette_AgentRecoverCardAnswerOnce.Bind(cid, rid, q, tryN + 1), -3000)
+}
+
 CommandPalette_AgentFetchAnswerFromFtb(reqId, query) {
-    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_Agent_FtbFetchBusy
+    if g_Agent_FtbFetchBusy
+        return ""
     if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
         return ""
     argsJson := "{}"
@@ -752,12 +891,15 @@ CommandPalette_AgentFetchAnswerFromFtb(reqId, query) {
         . "if(typeof fn!=='function')return JSON.stringify({ok:0,err:'no_fn'});"
         . "return JSON.stringify({ok:1,answer:String(fn(o.reqId,o.query,{allowWhileSending:true})||'')});"
         . "}catch(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});}})();"
+    g_Agent_FtbFetchBusy := true
     try {
         raw := g_FTB_WV2.ExecuteScriptAsync(js).await(4000)
         data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
         if (data is Map) && data.Get("ok", false)
             return Trim(String(data.Get("answer", "")))
     } catch {
+    } finally {
+        g_Agent_FtbFetchBusy := false
     }
     return ""
 }
@@ -774,14 +916,18 @@ CommandPalette_AgentPollFtbAnswer(cardId, reqId, query, tryN) {
         return
     tryN := Integer(tryN)
     if CommandPalette_AgentHasSubstantialAnswer(card) && !CommandPalette_AgentFtbSessionStillSending(rid) {
-        ans := Trim(String(card.Get("rawAnswer", "")))
-        if (ans != "")
+        ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
+        if (ans = "" || !CommandPalette_AgentAnswerIsSubstantial(ans))
+            ans := Trim(String(card.Get("rawAnswer", "")))
+        if CommandPalette_AgentAnswerIsSubstantial(ans)
             CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
         return
     }
     ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
+    if (ans != "" && !CommandPalette_AgentAnswerIsSubstantial(ans))
+        ans := ""
     stillSending := CommandPalette_AgentFtbSessionStillSending(rid)
-    if (ans != "") {
+    if (ans != "" && CommandPalette_AgentAnswerIsSubstantial(ans)) {
         prev := String(card.Get("rawAnswer", ""))
         if (ans != prev) {
             delta := ""
@@ -801,8 +947,13 @@ CommandPalette_AgentPollFtbAnswer(cardId, reqId, query, tryN) {
             }
         }
         if !stillSending && CommandPalette_AgentHasSubstantialAnswer(card) {
-            CommandPalette_AgentLog("poll_hit", "card=" . cid . " len=" . StrLen(ans))
-            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", String(card.Get("rawAnswer", ans))))
+            ansEnd := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
+            if (ansEnd = "" || !CommandPalette_AgentAnswerIsSubstantial(ansEnd))
+                ansEnd := Trim(String(card.Get("rawAnswer", ans)))
+            if CommandPalette_AgentAnswerIsSubstantial(ansEnd) {
+                CommandPalette_AgentLog("poll_hit", "card=" . cid . " len=" . StrLen(ansEnd))
+                CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ansEnd))
+            }
             return
         }
     }
@@ -877,24 +1028,17 @@ CommandPalette_AgentDispatchRetry(cardId, reqId, query, provider, gen, tryN) {
 CommandPalette_AgentDeliverStreamPayload(payload) {
     if !(payload is Map)
         return false
-    if FuncExists("CommandPalette_InjectFtbHostPayload") {
-        try {
-            if CommandPalette_InjectFtbHostPayload(payload)
-                return true
-        } catch {
-        }
-    }
-    if FuncExists("FloatingToolbar_StartPaletteAgentStream") {
-        try {
-            if FloatingToolbar_StartPaletteAgentStream(payload)
-                return true
-        } catch {
-        }
-    }
-    if FuncExists("CommandPalette_DeliverFtbPayload")
+    ; 单路径投递，避免 DeliverFtbPayload + StartPaletteAgentStream 重复入队
+    if FuncExists("CommandPalette_DeliverFtbPayload") {
         try return !!CommandPalette_DeliverFtbPayload(payload)
         catch {
         }
+    }
+    if FuncExists("FloatingToolbar_StartPaletteAgentStream") {
+        try return !!FloatingToolbar_StartPaletteAgentStream(payload)
+        catch {
+        }
+    }
     return false
 }
 
@@ -933,6 +1077,9 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
     if (tryN = 0)
         CommandPalette_AgentPushStreamStatus(cardId, reqId, "🔗 正在连接 " . provLabel . "…")
     CommandPalette_AgentTagFtbSession(reqId, cardId, q, prov)
+    sessionRef := CommandPalette_AgentPrefetchOpenClawSessionRef(cardId)
+    if (sessionRef = "")
+        sessionRef := CommandPalette_AgentResolveSessionRef(cardId)
     if (IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
         agentPayload := Map(
             "type", "host_palette_agent_stream",
@@ -941,15 +1088,17 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
             "query", q,
             "provider", prov,
             "systemPrompt", CommandPalette_AgentProtocolPrompt(),
+            "sessionRef", sessionRef,
             "openDrawer", false
         )
         streamOk := CommandPalette_AgentDeliverStreamPayload(agentPayload)
         scriptOk := false
-        if !streamOk {
-            try scriptOk := CommandPalette_InvokeFtbPaletteAgentScript(cardId, reqId, q, prov)
-            catch {
-                scriptOk := false
-            }
+        try scriptOk := CommandPalette_InvokeFtbPaletteAgentScript(cardId, reqId, q, prov, sessionRef)
+        catch {
+            scriptOk := false
+        }
+        if streamOk {
+            SetTimer(CommandPalette_AgentPaletteStreamScriptBackup.Bind(cardId, reqId, q, prov, sessionRef), -2500)
         }
         CommandPalette_AgentLog("dispatch_ai_paths", "agent=" . (streamOk ? 1 : 0) . " script=" . (scriptOk ? 1 : 0) . " compose=0")
         try CommandPalette_AgentDebugTrace("ftb", "agent_dispatch", "card=" . cardId . " agent=" . (streamOk ? 1 : 0) . " script=" . (scriptOk ? 1 : 0), "info")
@@ -1092,7 +1241,7 @@ CommandPalette_AgentSessionMatches(reqId, cardId := "") {
 }
 
 CommandPalette_OnNiumaPaletteAgentChunk(msg) {
-    global g_Agent_Cards
+    global g_Agent_Cards, g_CardSessionMap
     if !(msg is Map)
         return
     reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
@@ -1142,13 +1291,21 @@ CommandPalette_OnNiumaPaletteAgentChunk(msg) {
     card["updatedAt"] := A_Now
     if (cardId = "")
         cardId := String(card.Get("cardId", ""))
+    if msg.Has("sessionRef") {
+        sr := Trim(String(msg["sessionRef"]))
+        if (sr != "") {
+            card["sessionRef"] := sr
+            g_CardSessionMap[cardId] := sr
+        }
+    }
     if FuncExists("CommandPalette_PushToWeb")
         CommandPalette_PushToWeb(Map(
             "type", "palette_agent_chunk",
             "cardId", cardId,
             "reqId", reqId,
             "delta", delta,
-            "liveThought", String(card.Get("liveThought", ""))
+            "liveThought", String(card.Get("liveThought", "")),
+            "sessionRef", String(card.Get("sessionRef", ""))
         ))
 }
 
@@ -1161,13 +1318,14 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
     card := CommandPalette_AgentSessionMatches(reqId, cardId)
     if !(card is Map)
         return
+    ans := msg.Has("answer") ? String(msg["answer"]) : String(card.Get("rawAnswer", ""))
+    if !CommandPalette_AgentAnswerIsSubstantial(ans)
+        return
     if card.Get("ended", false) {
-        prevErr := Trim(String(card.Get("error", "")))
-        ansTry := msg.Has("answer") ? String(msg["answer"]) : String(card.Get("rawAnswer", ""))
-        if (prevErr = "" || StrLen(Trim(ansTry)) < 8)
+        prev := Trim(String(card.Get("rawAnswer", "")))
+        if CommandPalette_AgentAnswerIsSubstantial(prev) && StrLen(prev) >= StrLen(Trim(ans))
             return
     }
-    ans := msg.Has("answer") ? String(msg["answer"]) : String(card.Get("rawAnswer", ""))
     card["rawAnswer"] := ans
     card["ended"] := true
     card["running"] := false
@@ -1190,7 +1348,8 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
             "type", "palette_agent_end",
             "cardId", cardId,
             "reqId", reqId,
-            "answer", ans
+            "answer", ans,
+            "sessionRef", String(card.Get("sessionRef", ""))
         ))
     CommandPalette_AgentPushCardSync()
 }

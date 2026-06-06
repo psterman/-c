@@ -1435,8 +1435,14 @@ body[data-theme="light"] .ai-bg-card {
   border: 1px solid rgba(34, 197, 94, 0.2);
 }
 .card-question-title, .card-reply-title { font-weight: 700; margin-bottom: 4px; }
+.card-a2ui { display: none; }
+.b-status.is-error .b-status-title { color: #f87171; }
+.b-status.is-warning .b-status-title { color: #fbbf24; }
 </style>
 <script src="CommandPaletteStreamParser.js?v=3"></script>
+<script src="PaletteBlockSchema.js?v=1"></script>
+<script src="PaletteBlockPipeline.js?v=1"></script>
+<script src="PaletteBlockPipeline.fixtures.js?v=1"></script>
 <script src="CommandPaletteReplyStructurer.js?v=1"></script>
 </head>
 <body>
@@ -1511,13 +1517,55 @@ body[data-theme="light"] .ai-bg-card {
   }
 
   function isAgentStatusPreview(text) {
+    if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.isStatusOnlyAgentText)
+      return PaletteBlockPipeline.isStatusOnlyAgentText(text);
     var p = String(text || "").replace(/\s+/g, " ").trim();
     if (!p) return true;
-    return /^[🔗⏳📨💭]/.test(p) || /^(正在|等待|任务已|仍连接|OpenClaw 流式|OpenClaw 处理|同步 Niuma|流式输出中)/.test(p);
+    if (/chat\.send/i.test(p)) return true;
+    return /^[🔗⏳📨💭]/.test(p) || /^(正在|等待|任务已|仍连接|OpenClaw 流式|OpenClaw 处理|OpenClaw 已发送|已提交至 Gateway|同步 Niuma|流式输出中)/.test(p);
+  }
+
+  function cardHasPipelineReply(card) {
+    if (!card) return false;
+    var blocks = (card.blockStore && card.blockStore.blocks) || card.pipelineBlocks || [];
+    for (var i = 0; i < blocks.length; i++) {
+      if (blocks[i] && blocks[i].type === "reply" && String(blocks[i].markdown || "").trim()) return true;
+    }
+    return !!(card.blocks && card.blocks.reply);
+  }
+
+  function cardHasSubstantialRawAnswer(card) {
+    if (!card) return false;
+    var raw = String(card.rawAnswer || "").trim();
+    if (!raw || isAgentStatusPreview(raw)) return false;
+    if (agentTextHasProtocolTags(raw)) return true;
+    return raw.length >= 8;
   }
 
   function cardPreviewText(card) {
     if (!card) return "";
+    var pipeBlocks =
+      (card.blockStore && card.blockStore.blocks) ||
+      card.pipelineBlocks ||
+      [];
+    if (Array.isArray(pipeBlocks) && pipeBlocks.length) {
+      for (var pi = pipeBlocks.length - 1; pi >= 0; pi--) {
+        var pb = pipeBlocks[pi];
+        if (pb && pb.type === "reply" && pb.markdown) return String(pb.markdown).slice(0, 160);
+      }
+      for (var pj = 0; pj < pipeBlocks.length; pj++) {
+        var ps = pipeBlocks[pj];
+        if (ps && ps.type === "plan" && ps.items && ps.items.length) {
+          var planPipe = ps.items
+            .slice(0, 2)
+            .map(function (it, i) {
+              return "步骤" + (i + 1) + "：" + (it.text || "");
+            })
+            .join(" · ");
+          if (planPipe) return planPipe.slice(0, 160);
+        }
+      }
+    }
     if (card.blocks && Array.isArray(card.blocks.plan) && card.blocks.plan.length) {
       var planPrev = card.blocks.plan
         .slice(0, 2)
@@ -2372,30 +2420,314 @@ body[data-theme="light"] .ai-bg-card {
     return true;
   }
 
-  function finalizeAgentCardAnswer(cardId, answerText) {
-    var card = getActionCard(cardId);
+  function syncLegacyBlocksFromPipeline(card, blocks) {
     if (!card) return;
-    var ans = String(answerText || "").trim();
-    if (!ans) return;
-    card.rawAnswer = ans;
-    if (card.parser && card.parser.reset) {
-      card.parser.reset();
-      card._protoStarted = agentTextHasProtocolTags(ans);
-      card.parser.onChunk(ans);
-      if (card.parser.flush) card.parser.flush();
+    if (!card.blocks) card.blocks = { plan: [], status: [], question: null, reply: null };
+    card.blocks.plan = [];
+    card.blocks.status = [];
+    card.blocks.question = null;
+    card.blocks.reply = null;
+    var list = Array.isArray(blocks) ? blocks : [];
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i];
+      if (!b) continue;
+      if (b.type === "plan" && b.items && b.items.length) {
+        card.blocks.plan = b.items.map(function (it) {
+          return String(it.text || "");
+        });
+      } else if (b.type === "status" && b.items) {
+        for (var j = 0; j < b.items.length; j++) {
+          card.blocks.status.push({
+            title: "[执行中]",
+            log: b.items[j].text,
+            body: b.items[j].text,
+            seq: b.seq,
+            closed: true
+          });
+        }
+      } else if (b.type === "question") {
+        card.blocks.question = {
+          title: b.title,
+          content: b.markdown,
+          body: b.markdown,
+          closed: true,
+          seq: b.seq
+        };
+      } else if (b.type === "reply") {
+        card.blocks.reply = {
+          title: b.title,
+          content: b.markdown,
+          body: b.markdown,
+          closed: true,
+          seq: b.seq
+        };
+      }
     }
-    var hasProto = card._protoStarted || agentTextHasProtocolTags(ans);
-    if (!hasProto && !card.blocks.reply) applyAgentReplyStructurer(cardId, ans);
-    if (!card.blocks.reply && !hasProto) showAgentReplyFromText(cardId, "任务完结", ans);
-    if (hasProto || card.blocks.reply) {
-      var replyPreview = card.blocks.reply
-        ? String(card.blocks.reply.content || card.blocks.reply.body || card.blocks.reply.title || "").trim()
-        : "";
-      setCardLiveThought(cardId, replyPreview || "任务已完结", false);
+  }
+
+  function renderPipelineBlock(cardId, dom, block) {
+    if (!dom || !block) return;
+    if (block.type === "plan") {
+      var tl = dom.querySelector(".card-timeline");
+      if (!tl) return;
+      (block.items || []).forEach(function (it, idx) {
+        var div = document.createElement("div");
+        div.className = "card-timeline-step";
+        div.setAttribute("data-block-id", block.id || "");
+        div.textContent = "步骤" + (idx + 1) + "：" + String(it.text || "");
+        tl.appendChild(div);
+      });
+    } else if (block.type === "status") {
+      var logBox = dom.querySelector(".card-status-log");
+      if (!logBox) return;
+      (block.items || []).forEach(function (it) {
+        var lv = it.level === "error" ? " is-error" : it.level === "warning" ? " is-warning" : "";
+        var tail = document.createElement("div");
+        tail.className = "b-status" + lv;
+        tail.setAttribute("data-block-id", block.id || "");
+        tail.innerHTML =
+          '<div class="b-status-title">' +
+          esc(it.time ? "[" + it.time + "] " : "[执行中]") +
+          '</div><div class="b-status-log md-body">' +
+          renderAgentPlainMarkdown(it.text || "") +
+          "</div>";
+        logBox.appendChild(tail);
+      });
+      logBox.scrollTop = logBox.scrollHeight;
+    } else if (block.type === "question") {
+      var qEl = dom.querySelector(".card-question");
+      if (qEl) {
+        qEl.hidden = false;
+        qEl.setAttribute("data-block-id", block.id || "");
+        qEl.innerHTML =
+          '<div class="card-question-title">' +
+          esc(block.title || "需要您的确认") +
+          '</div><div class="card-question-body md-body">' +
+          renderAgentPlainMarkdown(block.markdown || "") +
+          "</div>";
+      }
+    } else if (block.type === "reply") {
+      var rEl = dom.querySelector(".card-reply");
+      if (rEl) {
+        rEl.hidden = false;
+        rEl.setAttribute("data-block-id", block.id || "");
+        rEl.innerHTML =
+          '<div class="card-reply-title">' +
+          esc(block.title || "任务回复") +
+          '</div><div class="card-reply-body md-body">' +
+          renderAgentPlainMarkdown(block.markdown || "") +
+          "</div>";
+      }
+    } else if (block.type === "a2ui") {
+      var a2 = dom.querySelector(".card-a2ui");
+      if (a2) {
+        a2.hidden = true;
+        a2.setAttribute("data-component", block.component || "");
+        a2.innerHTML = "";
+      }
+    } else if (block.type === "error") {
+      var errLog = dom.querySelector(".card-status-log");
+      if (errLog) {
+        var errEl = document.createElement("div");
+        errEl.className = "b-status is-error";
+        errEl.setAttribute("data-block-id", block.id || "");
+        errEl.innerHTML =
+          '<div class="b-status-title">[错误]</div><div class="b-status-log">' +
+          esc(block.message || "任务失败") +
+          "</div>";
+        errLog.appendChild(errEl);
+      }
+    }
+  }
+
+  function renderBlocks(cardId, blocks) {
+    var card = getActionCard(cardId);
+    var dom = ensureActionCardDom(card);
+    if (!dom) return { ok: false, blocks: [] };
+    var validated =
+      typeof PaletteBlockSchema !== "undefined"
+        ? PaletteBlockSchema.validateBlocks(blocks || [])
+        : { blocks: blocks || [] };
+    var list = validated.blocks || [];
+    var tl = dom.querySelector(".card-timeline");
+    if (tl) tl.innerHTML = "";
+    var logBox = dom.querySelector(".card-status-log");
+    if (logBox) logBox.innerHTML = "";
+    var qEl = dom.querySelector(".card-question");
+    if (qEl) {
+      qEl.hidden = true;
+      qEl.innerHTML = "";
+    }
+    var rEl = dom.querySelector(".card-reply");
+    if (rEl) {
+      rEl.hidden = true;
+      rEl.innerHTML = "";
+    }
+    var a2 = dom.querySelector(".card-a2ui");
+    if (a2) {
+      a2.hidden = true;
+      a2.innerHTML = "";
+    }
+    for (var i = 0; i < list.length; i++) renderPipelineBlock(cardId, dom, list[i]);
+    syncActionCardStatusLogVisibility(dom);
+    refreshActionCardPreview(cardId);
+    agentDebugLog(
+      "render_blocks",
+      "n=" +
+        list.length +
+        " types=" +
+        list
+          .map(function (b) {
+            return b.type;
+          })
+          .join(",")
+    );
+    return { ok: true, blocks: list };
+  }
+
+  function applyPipelineFinalize(cardId, answerText) {
+    var card = getActionCard(cardId);
+    if (!card || typeof PaletteBlockPipeline === "undefined") return null;
+    var ans = String(answerText || "").trim();
+    if (!ans) return null;
+    card.rawAnswer = ans;
+    var result = PaletteBlockPipeline.finalize(ans, {
+      turnId: 1,
+      traceId: card.id + "_" + Date.now()
+    });
+    var bv = typeof PaletteBlockSchema !== "undefined" ? PaletteBlockSchema.BLOCK_VERSION : 1;
+    var nv =
+      typeof PaletteBlockSchema !== "undefined"
+        ? PaletteBlockSchema.NORMALIZER_VERSION
+        : "2026-06-06";
+    card.blockStore = {
+      blocks: result.blocks,
+      blockVersion: bv,
+      normalizerVersion: nv
+    };
+    card.pipelineBlocks = result.blocks;
+    card._protoStarted = !!(result.meta && result.meta.protoStarted);
+    syncLegacyBlocksFromPipeline(card, result.blocks);
+    renderBlocks(cardId, result.blocks);
+    var replyBlock = null;
+    var questionBlock = null;
+    for (var ri = result.blocks.length - 1; ri >= 0; ri--) {
+      if (!replyBlock && result.blocks[ri].type === "reply") replyBlock = result.blocks[ri];
+      if (!questionBlock && result.blocks[ri].type === "question") questionBlock = result.blocks[ri];
+    }
+    if (questionBlock && questionBlock.status === "waiting") {
+      card.waitingForUser = true;
+      setCardLiveThought(
+        cardId,
+        String(questionBlock.markdown || questionBlock.title || "").slice(0, 200),
+        false
+      );
+    } else if (replyBlock) {
+      card.waitingForUser = false;
+      setCardLiveThought(
+        cardId,
+        String(replyBlock.markdown || replyBlock.title || "任务已完结").slice(0, 200),
+        false
+      );
     } else {
       setCardLiveThought(cardId, ans, false);
     }
     refreshActionCardDom(card);
+    agentDebugLog(
+      "pipeline_finalize",
+      "blocks=" +
+        result.blocks
+          .map(function (b) {
+            return b.type;
+          })
+          .join(",") +
+        " proto=" +
+        (result.meta && result.meta.protoStarted ? 1 : 0)
+    );
+    var domFin = document.getElementById("card-" + cardId);
+    if (domFin) {
+      var hasReplyDom = !!domFin.querySelector(".card-reply:not([hidden])");
+      var ltEl = domFin.querySelector(".card-live-thought");
+      if (ltEl && hasReplyDom) ltEl.style.display = "none";
+    }
+    return result;
+  }
+
+  function finalizeAgentCardAnswer(cardId, answerText) {
+    applyPipelineFinalize(cardId, answerText);
+  }
+
+  /** 列表重排会销毁 card DOM；内存 blocks 需在 mount/展开时重放 */
+  function ensureCardPipelineRendered(card) {
+    if (!card) return false;
+    var id = card.id;
+    var blocks = (card.blockStore && card.blockStore.blocks) || card.pipelineBlocks || [];
+    if (
+      !blocks.length &&
+      card.uiState === "Done" &&
+      cardHasSubstantialRawAnswer(card) &&
+      !cardHasPipelineReply(card)
+    ) {
+      applyPipelineFinalize(id, card.rawAnswer);
+      blocks = (card.blockStore && card.blockStore.blocks) || card.pipelineBlocks || [];
+    }
+    if (!blocks.length) return false;
+    var dom = document.getElementById("card-" + id);
+    if (!dom) return false;
+    var rEl = dom.querySelector(".card-reply");
+    var qEl = dom.querySelector(".card-question");
+    var tl = dom.querySelector(".card-timeline");
+    var hasRendered =
+      (rEl && !rEl.hidden && rEl.querySelector(".card-reply-body")) ||
+      (qEl && !qEl.hidden && qEl.querySelector(".card-question-body")) ||
+      (tl && tl.querySelector(".card-timeline-step"));
+    if (!hasRendered) renderBlocks(id, blocks);
+    return true;
+  }
+
+  function replayAllCardPipelineBlocks() {
+    Object.keys(actionState.cards).forEach(function (cid) {
+      ensureCardPipelineRendered(actionState.cards[cid]);
+    });
+  }
+
+  function runMockRenderBlocks(cardId, blocks) {
+    cardId = String(cardId || "mock-pipeline-card");
+    if (!getActionCard(cardId)) {
+      actionState.cards[cardId] = {
+        id: cardId,
+        uiState: "Done",
+        blocks: { plan: [], status: [], question: null, reply: null },
+        blockStore: { blocks: [], blockVersion: 1, normalizerVersion: "2026-06-06" },
+        pipelineBlocks: [],
+        parser: createAgentParser(cardId),
+        waitingForUser: false,
+        title: "[Mock] Pipeline 验收",
+        query: "mock",
+        reqId: "",
+        _protoStarted: false,
+        expanded: true,
+        liveThought: "",
+        rawAnswer: "",
+        updatedAt: new Date().toISOString()
+      };
+      actionState.activeCardId = cardId;
+    }
+    var card = getActionCard(cardId);
+    var list = blocks || [];
+    if (typeof PaletteBlockSchema !== "undefined") list = PaletteBlockSchema.validateBlocks(list).blocks;
+    card.pipelineBlocks = list;
+    card.blockStore = {
+      blocks: list,
+      blockVersion: typeof PaletteBlockSchema !== "undefined" ? PaletteBlockSchema.BLOCK_VERSION : 1,
+      normalizerVersion:
+        typeof PaletteBlockSchema !== "undefined" ? PaletteBlockSchema.NORMALIZER_VERSION : "2026-06-06"
+    };
+    syncLegacyBlocksFromPipeline(card, list);
+    var out = renderBlocks(cardId, list);
+    syncActionResultsLayout();
+    focusActionCard(cardId, { expand: true });
+    return out;
   }
 
   function kindIcon(kind) {
@@ -2913,7 +3245,15 @@ body[data-theme="light"] .ai-bg-card {
       state.voiceStatus = String(status || "idle");
       updateVoiceHint();
       syncWindowSize();
-    }
+    },
+    runMockRenderBlocks: runMockRenderBlocks,
+    runPalettePipelineFixture: function (name, cardId) {
+      if (typeof PaletteBlockFixtures !== "undefined" && PaletteBlockFixtures.runPalettePipelineFixture)
+        return PaletteBlockFixtures.runPalettePipelineFixture(name, cardId);
+      return { ok: false, error: "fixtures_unavailable" };
+    },
+    applyPipelineFinalize: applyPipelineFinalize,
+    renderBlocks: renderBlocks
   };
 
   function actionCardUiLabel(uiState) {
@@ -3068,6 +3408,7 @@ body[data-theme="light"] .ai-bg-card {
     }
     hideCardHoverPreview();
     refreshActionCardDom(card);
+    if (card.expanded) ensureCardPipelineRendered(card);
     renderActionHistoryList();
     syncActionResultsLayout();
     syncWindowSize();
@@ -3100,11 +3441,25 @@ body[data-theme="light"] .ai-bg-card {
     if (loader) loader.style.display =
       card.expanded && (card.uiState === "Planning" || card.uiState === "Running") ? "block" : "none";
     if (card.expanded || (card.id === actionState.activeCardId && isActionCardRunning(card))) {
-      setCardLiveThought(
-        card.id,
-        card.liveThought || "",
-        card.uiState === "Planning" || card.uiState === "Running"
-      );
+      ensureCardPipelineRendered(card);
+      var ltEl = dom.querySelector(".card-live-thought");
+      if (card.uiState === "Done" && cardHasPipelineReply(card)) {
+        if (ltEl) ltEl.style.display = "none";
+      } else if (card.uiState === "Done" && isAgentStatusPreview(card.liveThought) && !cardHasPipelineReply(card)) {
+        if (ltEl) {
+          ltEl.style.display = "";
+          ltEl.classList.remove("card-live-thought-rich");
+          ltEl.textContent = "回复未同步 · 可展开 Niuma Chat 查看完整回答";
+          ltEl.classList.remove("thinking");
+        }
+      } else {
+        if (ltEl) ltEl.style.display = "";
+        setCardLiveThought(
+          card.id,
+          card.liveThought || "",
+          card.uiState === "Planning" || card.uiState === "Running"
+        );
+      }
     }
     refreshActionCardPreview(card.id);
     if (card.id === actionState.activeCardId) updateActionLiveDock(card.id);
@@ -3237,6 +3592,7 @@ body[data-theme="light"] .ai-bg-card {
         '<div class="card-status-log"></div>' +
         '<div class="card-question" hidden></div>' +
         '<div class="card-reply" hidden></div>' +
+        '<div class="card-a2ui" hidden></div>' +
         "</div>" +
         '<div class="card-followup">' +
         '<input type="text" class="card-followup-input" />' +
@@ -3252,6 +3608,15 @@ body[data-theme="light"] .ai-bg-card {
       if (list0) list0.appendChild(el);
       else stack0.appendChild(el);
       refreshActionCardDom(card);
+    }
+    if (el && !el.querySelector(".card-a2ui")) {
+      var replySlot = el.querySelector(".card-reply");
+      if (replySlot && replySlot.parentNode) {
+        var a2Slot = document.createElement("div");
+        a2Slot.className = "card-a2ui";
+        a2Slot.hidden = true;
+        replySlot.parentNode.insertBefore(a2Slot, replySlot.nextSibling);
+      }
     }
     bindActionCardEvents(card, el);
     return el;
@@ -3295,6 +3660,7 @@ body[data-theme="light"] .ai-bg-card {
     dom.style.overflow = "";
     listHost.appendChild(dom);
     refreshActionCardDom(card);
+    ensureCardPipelineRendered(card);
   }
 
   function renderActionHistoryList() {
@@ -3424,6 +3790,7 @@ body[data-theme="light"] .ai-bg-card {
         stack.appendChild(empty);
       }
     }
+    replayAllCardPipelineBlocks();
   }
 
   var actionCardManager = {
@@ -3570,6 +3937,8 @@ body[data-theme="light"] .ai-bg-card {
         }
         actionCardManager.transitionCardState(cardId, "Waiting");
       } else if (block.type === "reply" && block.closed) {
+        var rBodyCheck = String(block.content || block.body || "").trim();
+        if (!rBodyCheck || isAgentStatusPreview(rBodyCheck)) return;
         card.blocks.reply = block;
         card.waitingForUser = false;
         var rEl = dom.querySelector(".card-reply");
@@ -3620,6 +3989,8 @@ body[data-theme="light"] .ai-bg-card {
         id: id,
         uiState: dto.uiState || "Planning",
         blocks: { plan: [], status: [], question: null, reply: null },
+        blockStore: { blocks: [], blockVersion: 1, normalizerVersion: "2026-06-06" },
+        pipelineBlocks: [],
         parser: createAgentParser(id),
         waitingForUser: false,
         sessionRef: dto.sessionRef || "",
@@ -3636,6 +4007,13 @@ body[data-theme="light"] .ai-bg-card {
       actionState.cards[id] = card;
     }
     card.uiState = dto.uiState || card.uiState;
+    if (dto.running === true || dto.running === 1 || dto.running === "1") {
+      if (!(dto.ended === true || dto.ended === 1 || dto.ended === "1")) {
+        if (card.uiState === "Done") card.uiState = "Running";
+        else if (dto.uiState === "Planning" || dto.uiState === "Running" || dto.uiState === "Waiting")
+          card.uiState = dto.uiState;
+      }
+    }
     card.title = dto.title || dto.query || card.title;
     card.query = dto.query || card.query;
     card.reqId = dto.reqId || card.reqId;
@@ -3656,20 +4034,43 @@ body[data-theme="light"] .ai-bg-card {
     if (actionState.focusMode && (wasNew || id === actionState.activeCardId)) collapseNonActiveCards();
     refreshActionCardDom(card);
     actionCardManager.transitionCardState(id, card.uiState);
-    if (dto.rawAnswer && card.parser) {
+    if (dto.rawAnswer) {
       var rawSig = String(dto.rawAnswer);
-      if (card._rawReplaySig !== rawSig) {
+      var isDone = card.uiState === "Done" || dto.uiState === "Done";
+      if (isDone && cardHasSubstantialRawAnswer(card) && !cardHasPipelineReply(card)) {
+        card._rawReplaySig = rawSig;
+        applyPipelineFinalize(id, rawSig);
+      } else if (isDone && card._rawReplaySig !== rawSig) {
+        card._rawReplaySig = rawSig;
+        if (cardHasSubstantialRawAnswer(card)) applyPipelineFinalize(id, rawSig);
+      } else if (card.parser && card._rawReplaySig !== rawSig) {
         card._rawReplaySig = rawSig;
         card.parser.reset();
         card._protoStarted = agentTextHasProtocolTags(rawSig);
         card.parser.onChunk(rawSig);
-        if (card.uiState === "Done" || dto.uiState === "Done") {
-          if (card.parser.flush) card.parser.flush();
-          if (!card._protoStarted && !card.blocks.reply) applyAgentReplyStructurer(id, rawSig);
-        }
+        if (card.parser.flush) card.parser.flush();
       }
     }
     renderActionHistoryList();
+  }
+
+  function scheduleAgentCardsRecover() {
+    if (actionState._recoverTimer) clearTimeout(actionState._recoverTimer);
+    actionState._recoverTimer = setTimeout(function () {
+      actionState._recoverTimer = 0;
+      var ids = Object.keys(actionState.cards);
+      for (var ri = 0; ri < ids.length; ri++) {
+        var c = actionState.cards[ids[ri]];
+        if (!c || c.uiState !== "Done" || cardHasPipelineReply(c) || !c.reqId) continue;
+        if (cardHasSubstantialRawAnswer(c)) continue;
+        post({
+          type: "palette_agent_recover",
+          cardId: c.id,
+          reqId: c.reqId,
+          query: c.query || ""
+        });
+      }
+    }, 1500);
   }
 
   function submitAgentTask(text, opts) {
@@ -3836,6 +4237,8 @@ body[data-theme="light"] .ai-bg-card {
         "success"
       );
     }
+    scheduleAgentCardsRecover();
+    requestAnimationFrame(replayAllCardPipelineBlocks);
   }
 
   function applyAgentCardNew(d) {
@@ -5053,6 +5456,7 @@ body[data-theme="light"] .ai-bg-card {
       }
       if (card) {
         actionState.activeCardId = cid;
+        if (d.sessionRef) card.sessionRef = String(d.sessionRef);
         var domC = document.getElementById("card-" + cid);
         if (domC) {
           domC.classList.add("is-active");
@@ -5100,14 +5504,34 @@ body[data-theme="light"] .ai-bg-card {
       var endR = resolveActionCard(d.cardId, d.reqId);
       var cid2 = endR.id;
       var card2 = endR.card;
-      if (card2 && d.answer && String(d.answer).trim()) {
-        card2._rawReplaySig = String(d.answer);
-        finalizeAgentCardAnswer(cid2, String(d.answer).trim());
+      var endAns = String(d.answer || "").trim();
+      var endSubstantial = endAns && cardHasSubstantialRawAnswer({ rawAnswer: endAns });
+      if (card2 && endSubstantial) {
+        card2._rawReplaySig = endAns;
+        finalizeAgentCardAnswer(cid2, endAns);
       }
       if (card2 && card2.parser && card2.parser.flush) card2.parser.flush();
       if (card2 && d.sessionRef) card2.sessionRef = String(d.sessionRef);
       if (card2) {
-        var endState = card2.waitingForUser || card2.uiState === "Waiting" ? "Waiting" : "Done";
+        if (!endSubstantial && !cardHasPipelineReply(card2)) {
+          if (card2.uiState === "Done") actionCardManager.transitionCardState(cid2, "Running");
+          card2.liveThought = card2.liveThought || "⏳ 等待 OpenClaw 回复同步…";
+          refreshActionCardDom(card2);
+          scheduleAgentCardsRecover();
+          syncActionResultsLayout();
+          return;
+        }
+        var pipeBlocks =
+          (card2.blockStore && card2.blockStore.blocks) || card2.pipelineBlocks || [];
+        var waitingQ = false;
+        for (var wi = 0; wi < pipeBlocks.length; wi++) {
+          if (pipeBlocks[wi].type === "question" && pipeBlocks[wi].status === "waiting") {
+            waitingQ = true;
+            break;
+          }
+        }
+        var endState =
+          waitingQ || card2.waitingForUser || card2.uiState === "Waiting" ? "Waiting" : "Done";
         actionCardManager.transitionCardState(cid2, endState);
       }
       updateActionLiveDock(cid2);

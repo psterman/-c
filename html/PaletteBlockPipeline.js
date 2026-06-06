@@ -1,0 +1,199 @@
+/**
+ * Palette Block Pipeline — 第一批：finalize(rawAnswer) v1
+ */
+(function (root) {
+  var PROTO_RE = /::(PLAN|STATUS|QUESTION|REPLY)_(START|END)::/;
+
+  function hasProtocolTags(text) {
+    return PROTO_RE.test(String(text || ""));
+  }
+
+  function protocolBlockToCanonical(block, ctx) {
+    if (!block || !block.closed) return null;
+    var type = String(block.type || "").toLowerCase();
+    var now = Date.now();
+    var base = {
+      id: root.PaletteBlockSchema ? PaletteBlockSchema.genBlockId("blk") : "blk_" + now,
+      state: "final",
+      source: "protocol",
+      confidence: 0.95,
+      seq: ctx.nextSeq(),
+      turnId: ctx.turnId,
+      traceId: ctx.traceId,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    if (type === "plan") {
+      var steps = Array.isArray(block.steps) ? block.steps : [];
+      if (!steps.length && block.body) {
+        steps = String(block.body)
+          .split("|")
+          .map(function (s) {
+            return s.trim();
+          })
+          .filter(Boolean);
+      }
+      if (!steps.length) return null;
+      return Object.assign(base, {
+        type: "plan",
+        items: steps.map(function (s) {
+          return { text: String(s), state: "done" };
+        })
+      });
+    }
+
+    if (type === "status") {
+      var stText = String(block.log || block.content || block.body || "").trim();
+      if (!stText) stText = String(block.title || "[执行中]").trim();
+      if (!stText) return null;
+      return Object.assign(base, {
+        type: "status",
+        items: [{ text: stText, level: "info" }]
+      });
+    }
+
+    if (type === "question") {
+      var qMd = String(block.content || block.body || "").trim();
+      return Object.assign(base, {
+        type: "question",
+        title: String(block.title || "需要您的确认"),
+        markdown: qMd,
+        status: "waiting"
+      });
+    }
+
+    if (type === "reply") {
+      var rMd = String(block.content || block.body || "").trim();
+      if (!rMd) return null;
+      return Object.assign(base, {
+        type: "reply",
+        title: String(block.title || "任务完结"),
+        markdown: rMd
+      });
+    }
+
+    if (type === "orphan") {
+      var oMd = String(block.content || block.body || "").trim();
+      if (!oMd) return null;
+      return Object.assign(base, {
+        type: "reply",
+        source: "protocol",
+        confidence: 0.7,
+        title: "任务回复",
+        markdown: oMd
+      });
+    }
+
+    return null;
+  }
+
+  function collectProtocolBlocks(raw, ctx) {
+    if (typeof StreamTagParser === "undefined") return [];
+    var collected = [];
+    var parser = new StreamTagParser(function (b) {
+      collected.push(b);
+    });
+    parser.onChunk(String(raw || ""));
+    parser.flush();
+    var out = [];
+    for (var i = 0; i < collected.length; i++) {
+      var c = protocolBlockToCanonical(collected[i], ctx);
+      if (c) out.push(c);
+    }
+    return out;
+  }
+
+  function hasFinalReply(blocks) {
+    for (var i = 0; i < blocks.length; i++) {
+      if (blocks[i] && blocks[i].type === "reply" && blocks[i].state === "final") return true;
+    }
+    return false;
+  }
+
+  function stripProtocolTags(text) {
+    return String(text || "")
+      .replace(/::(?:PLAN|STATUS|QUESTION|REPLY)_(?:START|END)::/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function isStatusOnlyAgentText(text) {
+    var p = String(text || "").replace(/\s+/g, " ").trim();
+    if (!p) return true;
+    if (/^[🔗⏳📨💭]/.test(p)) return true;
+    if (/chat\.send/i.test(p)) return true;
+    return /^(正在|等待|任务已|仍连接|OpenClaw 流式|OpenClaw 处理|OpenClaw 已发送|已提交至 Gateway|同步 Niuma|流式输出中)/.test(p);
+  }
+
+  function finalize(rawAnswer, options) {
+    options = options || {};
+    var raw = String(rawAnswer || "").trim();
+    var turnId = options.turnId != null ? Number(options.turnId) : 1;
+    var traceId = String(options.traceId || "tr_" + Date.now());
+    var seq = 0;
+    function nextSeq() {
+      return ++seq;
+    }
+    var ctx = { turnId: turnId, traceId: traceId, nextSeq: nextSeq };
+
+    var blocks = [];
+    if (raw && hasProtocolTags(raw)) {
+      blocks = collectProtocolBlocks(raw, ctx);
+    }
+
+    if (root.PaletteBlockSchema) {
+      blocks = blocks
+        .map(function (b) {
+          return PaletteBlockSchema.sanitizeBlock(b);
+        })
+        .filter(Boolean);
+    }
+
+    if (raw && !hasFinalReply(blocks)) {
+      var fbSource = hasProtocolTags(raw) ? "markdown" : "raw";
+      var fbMd = fbSource === "raw" ? raw : stripProtocolTags(raw);
+      if (fbMd && !isStatusOnlyAgentText(fbMd)) {
+        var fallback = {
+          id: root.PaletteBlockSchema ? PaletteBlockSchema.genBlockId("blk_raw") : "blk_raw_" + Date.now(),
+          type: "reply",
+          state: "final",
+          source: fbSource,
+          confidence: fbSource === "raw" ? 0.5 : 0.6,
+          seq: nextSeq(),
+          turnId: turnId,
+          traceId: traceId,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          title: "任务回复",
+          markdown: fbMd
+        };
+        if (root.PaletteBlockSchema) fallback = PaletteBlockSchema.sanitizeBlock(fallback);
+        if (fallback) blocks.push(fallback);
+      }
+    }
+
+    var validated =
+      root.PaletteBlockSchema && PaletteBlockSchema.validateBlocks
+        ? PaletteBlockSchema.validateBlocks(blocks)
+        : { ok: true, blocks: blocks, errors: [], dropped: [] };
+
+    return {
+      blocks: validated.blocks || [],
+      meta: {
+        protoStarted: hasProtocolTags(raw),
+        traceId: traceId,
+        turnId: turnId,
+        errors: validated.errors || [],
+        dropped: (validated.dropped || []).length
+      }
+    };
+  }
+
+  root.PaletteBlockPipeline = {
+    finalize: finalize,
+    hasProtocolTags: hasProtocolTags,
+    hasFinalReply: hasFinalReply,
+    isStatusOnlyAgentText: isStatusOnlyAgentText
+  };
+})(typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : this);

@@ -4011,6 +4011,9 @@ FloatingToolbar_StartPaletteAgentStream(msg) {
     q := msg.Has("query") ? String(msg["query"]) : ""
     prov := msg.Has("provider") ? String(msg["provider"]) : ""
     sys := msg.Has("systemPrompt") ? String(msg["systemPrompt"]) : ""
+    sr := msg.Has("sessionRef") ? String(msg["sessionRef"]) : ""
+    if (sr = "" && cardId != "" && FuncExists("CommandPalette_AgentResolveSessionRef"))
+        sr := CommandPalette_AgentResolveSessionRef(cardId)
     if (reqId = "" || Trim(q) = "")
         return false
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
@@ -4032,6 +4035,7 @@ FloatingToolbar_StartPaletteAgentStream(msg) {
         "query", q,
         "provider", prov,
         "systemPrompt", sys,
+        "sessionRef", sr,
         "openDrawer", false
     )
     try {

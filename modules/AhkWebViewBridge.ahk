@@ -153,8 +153,9 @@ class AhkInterface {
     PullCommandPaletteAgentCards(_hint := "") {
         try {
             if FuncExists("CommandPalette_AgentPullCardsJson")
-                return CommandPalette_AgentPullCardsJson()
-        } catch {
+                return SubStr(String(CommandPalette_AgentPullCardsJson()), 1, 200000)
+        } catch as e {
+            try return "[]"
         }
         return "[]"
     }

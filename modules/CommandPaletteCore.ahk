@@ -674,10 +674,11 @@ CommandPalette_InjectFtbHostPayload(payload) {
         . "}catch(e){try{if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(JSON.stringify({type:'niuma_palette_ai_trace',step:'inject_err',detail:String(e&&e.message||e)}));}catch(_){}}"
     try {
         g_FTB_WV2.ExecuteScriptAsync(js)
-        return true
     } catch {
         return false
     }
+    ; 注入仅为加速通道，不能代表已送达；队列成功由 DeliverFtbPayload 判定
+    return false
 }
 
 CommandPalette_DeliverFtbPayload(payload) {
@@ -2274,6 +2275,11 @@ CommandPalette_OnWebMessage(sender, args) {
     if (typ = "palette_agent_pull") {
         if FuncExists("CommandPalette_AgentOnReady")
             CommandPalette_AgentOnReady()
+        return
+    }
+    if (typ = "palette_agent_recover") {
+        if FuncExists("CommandPalette_AgentRecoverCardAnswer")
+            CommandPalette_AgentRecoverCardAnswer(msg)
         return
     }
     if (typ = "palette_agent_physical") {
