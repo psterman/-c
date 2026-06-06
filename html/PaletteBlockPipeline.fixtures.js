@@ -80,6 +80,20 @@
     plain_markdown: {
       description: "无标签纯 Markdown → raw reply fallback",
       rawAnswer: "早上好！\n\n**结论**：可以继续。"
+    },
+    stream_plain: {
+      description: "ingestDelta 流式纯 Markdown",
+      deltas: ["早上", "好！", "\n\n**结论**：", "可以继续。"]
+    },
+    stream_status_then_reply: {
+      description: "ingestDelta 状态行 + 实质回复",
+      deltas: ["📨 OpenClaw 已发送: chat.send", "早上好！这是回复。"]
+    },
+    research_table: {
+      description: "Markdown 表格 → ComparisonTable A2UI",
+      rawAnswer:
+        "对比结论如下：\n\n| 维度 | 小米 | Meta |\n|---|---|---|\n| 优势 | 生态 | VR |\n| 风险 | 监管 | 隐私 |",
+      route: { routeId: "research_compare", a2uiCandidates: ["ComparisonTable"] }
     }
   };
 
@@ -109,10 +123,30 @@
     }
     if (fx.rawAnswer != null && root.PaletteBlockPipeline) {
       out.input = { rawLen: String(fx.rawAnswer).length };
-      var result = PaletteBlockPipeline.finalize(fx.rawAnswer, { traceId: "fx_" + name });
+      var finOpts = { traceId: "fx_" + name, route: fx.route || {} };
+      var result = PaletteBlockPipeline.finalize(fx.rawAnswer, finOpts);
       out.blocks = result.blocks;
       out.meta = result.meta;
+      if (root.PaletteBlockStore && PaletteBlockStore.pack) out.blockStore = PaletteBlockStore.pack(result.blocks);
       if (renderFn) out.render = renderFn(cardId || "mock-fixture-card", result.blocks);
+      out.ok = true;
+      return out;
+    }
+    if (Array.isArray(fx.deltas) && fx.deltas.length && root.PaletteBlockPipeline) {
+      var state = PaletteBlockPipeline.createIngestState({ traceId: "fx_" + name });
+      var lastIngest = null;
+      for (var di = 0; di < fx.deltas.length; di++) {
+        lastIngest = PaletteBlockPipeline.ingestDelta(state, fx.deltas[di]);
+      }
+      var fin =
+        state.rawBuffer && PaletteBlockPipeline.finalizeFromState
+          ? PaletteBlockPipeline.finalizeFromState(state)
+          : PaletteBlockPipeline.finalize(state.rawBuffer, { traceId: "fx_" + name });
+      out.input = { deltas: fx.deltas.length, rawLen: String(state.rawBuffer || "").length };
+      out.ingest = lastIngest;
+      out.blocks = fin.blocks;
+      out.meta = fin.meta;
+      if (renderFn) out.render = renderFn(cardId || "mock-fixture-card", fin.blocks);
       out.ok = true;
       return out;
     }

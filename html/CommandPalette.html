@@ -1435,14 +1435,29 @@ body[data-theme="light"] .ai-bg-card {
   border: 1px solid rgba(34, 197, 94, 0.2);
 }
 .card-question-title, .card-reply-title { font-weight: 700; margin-bottom: 4px; }
-.card-a2ui { display: none; }
+.card-a2ui { margin-top: 8px; }
+.card-a2ui[hidden] { display: none !important; }
+.card-a2ui .a2ui-slot { margin-bottom: 8px; }
+.a2ui-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.a2ui-table th, .a2ui-table td { border: 1px solid rgba(255,255,255,.12); padding: 6px 8px; text-align: left; }
+.a2ui-table th { background: rgba(255,255,255,.06); font-weight: 600; }
+.a2ui-steps-list { margin: 0; padding-left: 1.2em; line-height: 1.55; }
+.a2ui-alert { padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.5; }
+.a2ui-alert-warning { background: rgba(251,191,36,.12); border: 1px solid rgba(251,191,36,.35); color: #fcd34d; }
+.a2ui-alert-error { background: rgba(248,113,113,.12); border: 1px solid rgba(248,113,113,.35); color: #fca5a5; }
+.a2ui-alert-success { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3); color: #86efac; }
+.a2ui-alert-info { background: rgba(96,165,250,.1); border: 1px solid rgba(96,165,250,.3); color: #93c5fd; }
+.card-route-chip { font-size: 10px; opacity: .85; margin-left: 6px; color: #a5b4fc; }
 .b-status.is-error .b-status-title { color: #f87171; }
 .b-status.is-warning .b-status-title { color: #fbbf24; }
 </style>
 <script src="CommandPaletteStreamParser.js?v=3"></script>
 <script src="PaletteBlockSchema.js?v=1"></script>
-<script src="PaletteBlockPipeline.js?v=1"></script>
-<script src="PaletteBlockPipeline.fixtures.js?v=1"></script>
+<script src="PaletteBlockPipeline.js?v=3"></script>
+<script src="PaletteBlockPipeline.fixtures.js?v=3"></script>
+<script src="PaletteBlockStore.js?v=1"></script>
+<script src="PaletteRouterSkill.js?v=1"></script>
+<script src="PaletteMiniA2UI.js?v=1"></script>
 <script src="CommandPaletteReplyStructurer.js?v=1"></script>
 </head>
 <body>
@@ -1549,6 +1564,10 @@ body[data-theme="light"] .ai-bg-card {
       card.pipelineBlocks ||
       [];
     if (Array.isArray(pipeBlocks) && pipeBlocks.length) {
+      if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.blockPreviewSummary) {
+        var pipeSum = PaletteBlockPipeline.blockPreviewSummary(pipeBlocks);
+        if (pipeSum) return pipeSum;
+      }
       for (var pi = pipeBlocks.length - 1; pi >= 0; pi--) {
         var pb = pipeBlocks[pi];
         if (pb && pb.type === "reply" && pb.markdown) return String(pb.markdown).slice(0, 160);
@@ -1604,6 +1623,8 @@ body[data-theme="light"] .ai-bg-card {
     if (!card) return "";
     var parts = [actionCardUiLabel(card.uiState)];
     parts.push(agentProviderLabel(card.provider || state.agentProvider));
+    if (card.routeLabel || card.routeId)
+      parts.push(String(card.routeLabel || card.routeId));
     var plan = cardPlanProgressMeta(card);
     if (plan) parts.push(plan.label);
     if (card.updatedAt) parts.push(String(card.updatedAt).slice(5, 16));
@@ -1632,7 +1653,17 @@ body[data-theme="light"] .ai-bg-card {
     var preview = cardPreviewText(card);
     if (preview && preview !== "无详细记录")
       sections.push('<div class="chp-section"><b>摘要</b>' + esc(preview) + "</div>");
-    if (card.blocks && card.blocks.reply) {
+    var pipeBlocks = (card.blockStore && card.blockStore.blocks) || card.pipelineBlocks || [];
+    var pipeReply = "";
+    for (var pri = pipeBlocks.length - 1; pri >= 0; pri--) {
+      if (pipeBlocks[pri] && pipeBlocks[pri].type === "reply" && pipeBlocks[pri].markdown) {
+        pipeReply = String(pipeBlocks[pri].markdown).trim();
+        break;
+      }
+    }
+    if (pipeReply)
+      sections.push('<div class="chp-section"><b>回复</b>' + esc(pipeReply.slice(0, 1200)) + "</div>");
+    else if (card.blocks && card.blocks.reply) {
       var rb = String(card.blocks.reply.content || card.blocks.reply.body || "").trim();
       if (rb) sections.push('<div class="chp-section"><b>回复</b>' + esc(rb.slice(0, 1200)) + "</div>");
     }
@@ -2180,6 +2211,7 @@ body[data-theme="light"] .ai-bg-card {
       var ahk = getPaletteSyncAhk();
       if (ahk && typeof ahk.CommandPaletteAgentDebugLog === "function") {
         ahk.CommandPaletteAgentDebugLog("palette", String(event || "log"), String(detail || "").slice(0, 800), level || "info");
+        updatePipelineDebugFromEvent(String(event || ""), String(detail || ""));
         return;
       }
     } catch (_) {}
@@ -2192,6 +2224,36 @@ body[data-theme="light"] .ai-bg-card {
         level: level || "info"
       });
     } catch (_2) {}
+    updatePipelineDebugFromEvent(String(event || ""), String(detail || ""));
+  }
+
+  var pipelineDebugState = {
+    route: "",
+    routeDetail: "",
+    prompt: "",
+    blocks: "",
+    render: "",
+    a2ui: "",
+    preview: ""
+  };
+
+  function updatePipelineDebugFromEvent(event, detail) {
+    var ev = String(event || "");
+    var det = String(detail || "");
+    if (ev === "pipeline_route" || ev === "submit_route") {
+      pipelineDebugState.route = det;
+      pipelineDebugState.routeDetail = det;
+    } else if (ev === "prompt_inject" || ev.indexOf("prompt") >= 0) {
+      pipelineDebugState.prompt = det;
+    } else if (ev === "pipeline_finalize" || ev === "pipeline_ingest") {
+      pipelineDebugState.blocks = det;
+    } else if (ev === "render_blocks" || ev === "pipeline_a2ui") {
+      pipelineDebugState.render = det;
+      if (ev === "pipeline_a2ui") pipelineDebugState.a2ui = det;
+    }
+    try {
+      post({ type: "cp_pipeline_debug", state: pipelineDebugState });
+    } catch (_) {}
   }
 
   function applyAgentSubmitBridgeRet(ahkRet, o, provGuess) {
@@ -2521,9 +2583,15 @@ body[data-theme="light"] .ai-bg-card {
     } else if (block.type === "a2ui") {
       var a2 = dom.querySelector(".card-a2ui");
       if (a2) {
-        a2.hidden = true;
-        a2.setAttribute("data-component", block.component || "");
-        a2.innerHTML = "";
+        a2.hidden = false;
+        var slot = document.createElement("div");
+        slot.className = "a2ui-slot";
+        slot.setAttribute("data-block-id", block.id || "");
+        slot.setAttribute("data-component", block.component || "");
+        a2.appendChild(slot);
+        if (typeof PaletteMiniA2UI !== "undefined" && PaletteMiniA2UI.render) {
+          if (!PaletteMiniA2UI.render(slot, block)) slot.remove();
+        }
       }
     } else if (block.type === "error") {
       var errLog = dom.querySelector(".card-status-log");
@@ -2585,16 +2653,139 @@ body[data-theme="light"] .ai-bg-card {
     return { ok: true, blocks: list };
   }
 
+  function ensurePipelineIngest(card) {
+    if (!card || typeof PaletteBlockPipeline === "undefined" || !PaletteBlockPipeline.createIngestState) return null;
+    if (!card.pipelineIngest) {
+      card.pipelineIngest = PaletteBlockPipeline.createIngestState({
+        turnId: 1,
+        traceId: card.id + "_" + (card.reqId || Date.now())
+      });
+    }
+    return card.pipelineIngest;
+  }
+
+  function syncCardPipelineStore(card, blocks, meta) {
+    if (!card) return;
+    var bv = typeof PaletteBlockSchema !== "undefined" ? PaletteBlockSchema.BLOCK_VERSION : 1;
+    var nv =
+      typeof PaletteBlockSchema !== "undefined"
+        ? PaletteBlockSchema.NORMALIZER_VERSION
+        : "2026-06-06";
+    card.blockStore = { blocks: blocks, blockVersion: bv, normalizerVersion: nv };
+    card.pipelineBlocks = blocks;
+    if (meta && meta.protoStarted) card._protoStarted = true;
+    syncLegacyBlocksFromPipeline(card, blocks);
+  }
+
+  function applyDtoBlockStore(card, dto) {
+    if (!card || !dto) return false;
+    if (isActionCardRunning(card) && !dto.ended && cardHasPipelineReply(card)) return false;
+    var store = dto.blockStore;
+    if (!store) return false;
+    if (typeof PaletteBlockStore !== "undefined" && PaletteBlockStore.unpack) store = PaletteBlockStore.unpack(store);
+    var blocks = store && store.blocks ? store.blocks : [];
+    if (!blocks.length) return false;
+    card.blockStore = store;
+    card.pipelineBlocks = blocks;
+    syncLegacyBlocksFromPipeline(card, blocks);
+    card._protoStarted = blocks.some(function (b) {
+      return b && b.source === "protocol";
+    });
+    return true;
+  }
+
+  function persistCardBlockStore(cardId) {
+    var card = getActionCard(cardId);
+    if (!card || !card.blockStore || !Array.isArray(card.blockStore.blocks) || !card.blockStore.blocks.length)
+      return false;
+    var packed =
+      typeof PaletteBlockStore !== "undefined" && PaletteBlockStore.pack
+        ? PaletteBlockStore.pack(card.blockStore.blocks, card.blockStore)
+        : card.blockStore;
+    try {
+      post({
+        type: "palette_agent_block_store",
+        cardId: cardId,
+        reqId: card.reqId || "",
+        blockStore: packed
+      });
+      agentDebugLog("block_store_persist", "n=" + (packed.blocks || []).length);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function cardHasRenderablePipelineBlocks(blocks) {
+    var list = blocks || [];
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i];
+      if (!b) continue;
+      if (b.type === "reply" && String(b.markdown || "").trim()) return true;
+      if (b.type === "plan" && b.items && b.items.length) return true;
+      if (b.type === "question" && String(b.markdown || "").trim()) return true;
+      if (b.type === "status" && b.items && b.items.length) return true;
+    }
+    return false;
+  }
+
+  function hideCardLiveThoughtIfReply(cardId) {
+    var card = getActionCard(cardId);
+    if (!card || !cardHasPipelineReply(card)) return;
+    var dom = document.getElementById("card-" + cardId);
+    if (!dom) return;
+    var ltEl = dom.querySelector(".card-live-thought");
+    if (ltEl) ltEl.style.display = "none";
+  }
+
+  function applyPipelineIngestDelta(cardId, delta) {
+    var card = getActionCard(cardId);
+    if (!card || typeof PaletteBlockPipeline === "undefined" || !PaletteBlockPipeline.ingestDelta) return null;
+    var state = ensurePipelineIngest(card);
+    if (!state) return null;
+    if (!state.rawBuffer && card.rawAnswer && !isAgentStatusPreview(card.rawAnswer))
+      state.rawBuffer = String(card.rawAnswer);
+    var result = PaletteBlockPipeline.ingestDelta(state, delta);
+    syncCardPipelineStore(card, result.blocks, result.meta);
+    if (cardHasRenderablePipelineBlocks(result.blocks)) {
+      renderBlocks(cardId, result.blocks);
+      if (cardHasPipelineReply(card)) hideCardLiveThoughtIfReply(cardId);
+    }
+    agentDebugLog(
+      "pipeline_ingest",
+      "n=" +
+        result.blocks.length +
+        " statusOnly=" +
+        (result.meta && result.meta.statusOnly ? 1 : 0) +
+        " proto=" +
+        (result.meta && result.meta.protoStarted ? 1 : 0)
+    );
+    return result;
+  }
+
   function applyPipelineFinalize(cardId, answerText) {
     var card = getActionCard(cardId);
     if (!card || typeof PaletteBlockPipeline === "undefined") return null;
     var ans = String(answerText || "").trim();
     if (!ans) return null;
     card.rawAnswer = ans;
-    var result = PaletteBlockPipeline.finalize(ans, {
-      turnId: 1,
-      traceId: card.id + "_" + Date.now()
-    });
+    var routeOpt = card.routeProfile || {
+      routeId: card.routeId,
+      a2uiCandidates: card.a2uiCandidates || []
+    };
+    var result;
+    if (card.pipelineIngest && PaletteBlockPipeline.finalizeFromState) {
+      if (!card.pipelineIngest.rawBuffer || card.pipelineIngest.rawBuffer.length < ans.length)
+        card.pipelineIngest.rawBuffer = ans;
+      result = PaletteBlockPipeline.finalizeFromState(card.pipelineIngest, { route: routeOpt });
+    } else {
+      result = PaletteBlockPipeline.finalize(ans, {
+        turnId: 1,
+        traceId: card.id + "_" + Date.now(),
+        route: routeOpt
+      });
+    }
+    card.pipelineIngest = null;
     var bv = typeof PaletteBlockSchema !== "undefined" ? PaletteBlockSchema.BLOCK_VERSION : 1;
     var nv =
       typeof PaletteBlockSchema !== "undefined"
@@ -2642,14 +2833,27 @@ body[data-theme="light"] .ai-bg-card {
           })
           .join(",") +
         " proto=" +
-        (result.meta && result.meta.protoStarted ? 1 : 0)
+        (result.meta && result.meta.protoStarted ? 1 : 0) +
+        " a2ui=" +
+        ((result.meta && result.meta.a2ui && result.meta.a2ui.length) || 0)
     );
+    if (result.meta && result.meta.a2ui && result.meta.a2ui.length) {
+      agentDebugLog(
+        "pipeline_a2ui",
+        result.meta.a2ui
+          .map(function (a) {
+            return a.component + ":" + a.from;
+          })
+          .join(",")
+      );
+    }
     var domFin = document.getElementById("card-" + cardId);
     if (domFin) {
       var hasReplyDom = !!domFin.querySelector(".card-reply:not([hidden])");
       var ltEl = domFin.querySelector(".card-live-thought");
       if (ltEl && hasReplyDom) ltEl.style.display = "none";
     }
+    persistCardBlockStore(cardId);
     return result;
   }
 
@@ -3252,7 +3456,13 @@ body[data-theme="light"] .ai-bg-card {
         return PaletteBlockFixtures.runPalettePipelineFixture(name, cardId);
       return { ok: false, error: "fixtures_unavailable" };
     },
+    routeAgentQuery: function (query) {
+      if (typeof PaletteRouterSkill !== "undefined" && PaletteRouterSkill.route)
+        return PaletteRouterSkill.route(query);
+      return null;
+    },
     applyPipelineFinalize: applyPipelineFinalize,
+    applyPipelineIngestDelta: applyPipelineIngestDelta,
     renderBlocks: renderBlocks
   };
 
@@ -3443,7 +3653,7 @@ body[data-theme="light"] .ai-bg-card {
     if (card.expanded || (card.id === actionState.activeCardId && isActionCardRunning(card))) {
       ensureCardPipelineRendered(card);
       var ltEl = dom.querySelector(".card-live-thought");
-      if (card.uiState === "Done" && cardHasPipelineReply(card)) {
+      if (cardHasPipelineReply(card)) {
         if (ltEl) ltEl.style.display = "none";
       } else if (card.uiState === "Done" && isAgentStatusPreview(card.liveThought) && !cardHasPipelineReply(card)) {
         if (ltEl) {
@@ -4019,6 +4229,13 @@ body[data-theme="light"] .ai-bg-card {
     card.reqId = dto.reqId || card.reqId;
     card.sessionRef = dto.sessionRef || card.sessionRef;
     if (dto.provider) card.provider = normalizeAgentProvider(dto.provider);
+    if (dto.routeId) card.routeId = String(dto.routeId);
+    if (dto.routeLabel) card.routeLabel = String(dto.routeLabel);
+    if (dto.promptAddon) card.promptAddon = String(dto.promptAddon);
+    if (dto.a2uiCandidates) card.a2uiCandidates = dto.a2uiCandidates;
+    if (card.routeId && typeof PaletteRouterSkill !== "undefined" && PaletteRouterSkill.PROFILES) {
+      card.routeProfile = PaletteRouterSkill.PROFILES[card.routeId] || { routeId: card.routeId, a2uiCandidates: card.a2uiCandidates || [] };
+    }
     if (dto.updatedAt) card.updatedAt = dto.updatedAt;
     if (dto.rawAnswer != null) {
       card.rawAnswer = String(dto.rawAnswer || "");
@@ -4034,7 +4251,11 @@ body[data-theme="light"] .ai-bg-card {
     if (actionState.focusMode && (wasNew || id === actionState.activeCardId)) collapseNonActiveCards();
     refreshActionCardDom(card);
     actionCardManager.transitionCardState(id, card.uiState);
-    if (dto.rawAnswer) {
+    var restoredBlocks = applyDtoBlockStore(card, dto);
+    if (restoredBlocks) {
+      card._rawReplaySig = String(dto.rawAnswer || card.rawAnswer || "");
+      if (card.uiState === "Done" || dto.uiState === "Done") ensureCardPipelineRendered(card);
+    } else if (dto.rawAnswer) {
       var rawSig = String(dto.rawAnswer);
       var isDone = card.uiState === "Done" || dto.uiState === "Done";
       if (isDone && cardHasSubstantialRawAnswer(card) && !cardHasPipelineReply(card)) {
@@ -4043,12 +4264,20 @@ body[data-theme="light"] .ai-bg-card {
       } else if (isDone && card._rawReplaySig !== rawSig) {
         card._rawReplaySig = rawSig;
         if (cardHasSubstantialRawAnswer(card)) applyPipelineFinalize(id, rawSig);
-      } else if (card.parser && card._rawReplaySig !== rawSig) {
+      } else if (card._rawReplaySig !== rawSig) {
         card._rawReplaySig = rawSig;
-        card.parser.reset();
-        card._protoStarted = agentTextHasProtocolTags(rawSig);
-        card.parser.onChunk(rawSig);
-        if (card.parser.flush) card.parser.flush();
+        if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.ingestDelta) {
+          card.pipelineIngest = PaletteBlockPipeline.createIngestState({
+            turnId: 1,
+            traceId: card.id + "_" + (card.reqId || Date.now())
+          });
+          applyPipelineIngestDelta(id, rawSig);
+        } else if (card.parser) {
+          card.parser.reset();
+          card._protoStarted = agentTextHasProtocolTags(rawSig);
+          card.parser.onChunk(rawSig);
+          if (card.parser.flush) card.parser.flush();
+        }
       }
     }
     renderActionHistoryList();
@@ -4114,6 +4343,25 @@ body[data-theme="light"] .ai-bg-card {
       cardId: cardId,
       provider: prov
     };
+    if (typeof PaletteRouterSkill !== "undefined" && PaletteRouterSkill.route) {
+      var routeResult = PaletteRouterSkill.route(q);
+      submitMsg.routeId = routeResult.routeId;
+      submitMsg.routeLabel = routeResult.label;
+      submitMsg.promptAddon = routeResult.promptAddon;
+      submitMsg.routeConfidence = routeResult.confidence;
+      submitMsg.a2uiCandidates = routeResult.a2uiCandidates;
+      agentDebugLog(
+        "pipeline_route",
+        "id=" + routeResult.routeId + " label=" + routeResult.label + " conf=" + routeResult.confidence
+      );
+      if (active) {
+        active.routeId = routeResult.routeId;
+        active.routeLabel = routeResult.label;
+        active.routeProfile = routeResult;
+        active.a2uiCandidates = routeResult.a2uiCandidates;
+        active.promptAddon = routeResult.promptAddon;
+      }
+    }
     agentDebugLog("submit_start", "kind=" + kind + " text=" + String(q).slice(0, 60));
     var provGuess = prov;
     var hostOk = false;
@@ -5467,6 +5715,7 @@ body[data-theme="light"] .ai-bg-card {
         var statusPreview = preview && isAgentStatusPreview(preview);
         var statusLive = d.liveThought && isAgentStatusPreview(d.liveThought);
         var hasBody = card.rawAnswer && !isAgentStatusPreview(card.rawAnswer);
+        if (cardHasPipelineReply(card)) hasBody = true;
         if (card.parser && card.parser._buf && !isAgentStatusPreview(card.parser._buf)) hasBody = true;
         if (preview && !statusPreview) {
           if (card.rawAnswer && preview.indexOf(String(card.rawAnswer).trim()) === 0)
@@ -5476,7 +5725,38 @@ body[data-theme="light"] .ai-bg-card {
           else if (delta)
             card.rawAnswer = String(card.rawAnswer || "") + delta;
         }
-        if (preview && !statusPreview) {
+        var pipelineActive =
+          typeof PaletteBlockPipeline !== "undefined" && typeof PaletteBlockPipeline.ingestDelta === "function";
+        if (pipelineActive && delta) {
+          var ingestOut = applyPipelineIngestDelta(cid, delta);
+          var ingestStatusOnly = ingestOut && ingestOut.meta && ingestOut.meta.statusOnly;
+          var ingestHasReply = cardHasPipelineReply(card);
+          if (ingestHasReply) {
+            window.nmerPalette.setStatus("流式输出中…", "loading");
+          } else if (ingestStatusOnly) {
+            if (d.liveThought && (!hasBody || !statusLive))
+              setCardLiveThought(cid, String(d.liveThought), true);
+            else if (preview && statusPreview && !hasBody) setCardLiveThought(cid, preview, true);
+            if (statusLive || statusPreview)
+              window.nmerPalette.setStatus(
+                (d.liveThought || preview || "").slice(0, 80),
+                "loading"
+              );
+          } else if (preview && !statusPreview) {
+            var sum =
+              (ingestOut &&
+                ingestOut.blocks &&
+                PaletteBlockPipeline.blockPreviewSummary &&
+                PaletteBlockPipeline.blockPreviewSummary(ingestOut.blocks)) ||
+              preview;
+            if (card._protoStarted || (domC && domC.classList.contains("has-status-log"))) {
+              window.nmerPalette.setStatus("流式输出中…", "loading");
+            } else {
+              setCardLiveThought(cid, sum, true);
+              window.nmerPalette.setStatus("流式输出中…", "loading");
+            }
+          }
+        } else if (preview && !statusPreview) {
           if (card.parser && delta) {
             if (agentTextHasProtocolTags(delta)) card._protoStarted = true;
             card.parser.onChunk(delta);
@@ -5484,7 +5764,7 @@ body[data-theme="light"] .ai-bg-card {
           if (card._protoStarted || (domC && domC.classList.contains("has-status-log"))) {
             window.nmerPalette.setStatus("流式输出中…", "loading");
           } else {
-            var bodyPreview = (card.parser && card.parser._buf) ? String(card.parser._buf).trim() : preview;
+            var bodyPreview = card.parser && card.parser._buf ? String(card.parser._buf).trim() : preview;
             setCardLiveThought(cid, bodyPreview, true);
             window.nmerPalette.setStatus("流式输出中…", "loading");
           }
@@ -5496,6 +5776,8 @@ body[data-theme="light"] .ai-bg-card {
           window.nmerPalette.setStatus(preview.slice(0, 80), "loading");
         }
         if (card.uiState === "Planning") actionCardManager.transitionCardState(cid, "Running");
+        if (card.uiState === "Done" && !cardHasPipelineReply(card) && (statusPreview || statusLive || /同步 Niuma|OpenClaw 处理|chat\.send/i.test(preview)))
+          actionCardManager.transitionCardState(cid, "Running");
         refreshActionCardDom(card);
         syncActionResultsLayout();
       }

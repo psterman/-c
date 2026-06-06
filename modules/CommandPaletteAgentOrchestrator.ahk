@@ -12,6 +12,7 @@ global g_Agent_AiRoute := Map()
 global g_Agent_DispatchPending := Map()
 global g_Agent_RecoverPending := Map()
 global g_Agent_FtbFetchBusy := false
+global g_AgentDbg_PipelineState := Map()
 
 CommandPalette_AgentProtocolPrompt() {
     return "
@@ -34,6 +35,16 @@ Markdown 复盘 ::REPLY_END::
 4. 需用户确认时用 QUESTION 并等待回复。
 5. 全链路完成用 REPLY 完结。
 )"
+}
+
+CommandPalette_AgentBuildSystemPrompt(card) {
+    base := CommandPalette_AgentProtocolPrompt()
+    if !(card is Map)
+        return base
+    addon := Trim(String(card.Get("promptAddon", "")))
+    if (addon = "")
+        return base
+    return base . "`n`n" . addon
 }
 
 CommandPalette_AgentCardsPath() {
@@ -113,7 +124,7 @@ CommandPalette_IsAgentRunning(*) {
 CommandPalette_AgentCardToSyncDto(card) {
     if !(card is Map)
         return Map()
-    return Map(
+    dto := Map(
         "cardId", String(card.Get("cardId", "")),
         "reqId", String(card.Get("reqId", "")),
         "gen", Integer(card.Get("gen", 0)),
@@ -128,8 +139,18 @@ CommandPalette_AgentCardToSyncDto(card) {
         "rawAnswer", SubStr(String(card.Get("rawAnswer", "")), 1, 12000),
         "liveThought", SubStr(String(card.Get("liveThought", "")), 1, 400),
         "hasProto", !!RegExMatch(String(card.Get("rawAnswer", "")), "::(PLAN|STATUS|QUESTION|REPLY)_(START|END)::"),
-        "updatedAt", String(card.Get("updatedAt", ""))
+        "routeId", String(card.Get("routeId", "")),
+        "routeLabel", String(card.Get("routeLabel", "")),
+        "updatedAt", String(card.Get("updatedAt", "")),
+        "blockCount", 0
     )
+    if card.Has("blockStore") && card["blockStore"] is Map {
+        bs := card["blockStore"]
+        dto["blockStore"] := bs
+        if bs.Has("blocks") && bs["blocks"] is Array
+            dto["blockCount"] := bs["blocks"].Length
+    }
+    return dto
 }
 
 CommandPalette_AgentPersistCards() {
@@ -204,6 +225,10 @@ CommandPalette_AgentLoadCards() {
             card["running"] := !!dto.Get("running", false)
             card["error"] := String(dto.Get("error", ""))
             card["rawAnswer"] := String(dto.Get("rawAnswer", ""))
+            card["routeId"] := String(dto.Get("routeId", ""))
+            card["routeLabel"] := String(dto.Get("routeLabel", ""))
+            if dto.Has("blockStore") && dto["blockStore"] is Map
+                card["blockStore"] := dto["blockStore"]
             card["updatedAt"] := String(dto.Get("updatedAt", ""))
             if Trim(String(dto.Get("sessionRef", ""))) != ""
                 g_CardSessionMap[cid] := String(dto.Get("sessionRef", ""))
@@ -423,6 +448,41 @@ CommandPalette_AgentPushCardSync() {
         CommandPalette_PushToWeb(Map("type", "palette_agent_card_sync", "cards", items))
 }
 
+CommandPalette_AgentSaveBlockStore(msg) {
+    global g_Agent_Cards
+    if !(msg is Map)
+        return false
+    cid := Trim(String(msg.Get("cardId", "")))
+    if (cid = "" || !IsObject(g_Agent_Cards) || !g_Agent_Cards.Has(cid))
+        return false
+    card := g_Agent_Cards[cid]
+    if !(card is Map)
+        return false
+    store := 0
+    if msg.Has("blockStore") && msg["blockStore"] is Map
+        store := msg["blockStore"]
+    else if msg.Has("blocks") && msg["blocks"] is Array {
+        store := Map(
+            "blocks", msg["blocks"],
+            "blockVersion", msg.Has("blockVersion") ? Integer(msg["blockVersion"]) : 1,
+            "normalizerVersion", msg.Has("normalizerVersion") ? String(msg["normalizerVersion"]) : "2026-06-06"
+        )
+    }
+    if !(store is Map)
+        return false
+    card["blockStore"] := store
+    n := 0
+    if store.Has("blocks") && store["blocks"] is Array
+        n := store["blocks"].Length
+    CommandPalette_AgentPersistCards()
+    if FuncExists("CommandPalette_AgentDebugTrace") {
+        try CommandPalette_AgentDebugTrace("ahk", "block_store_persist", "card=" . cid . " n=" . n, "info")
+        catch {
+        }
+    }
+    return true
+}
+
 CommandPalette_AgentSubmit(msg) {
     global g_Agent_Cards, g_CardSessionMap, g_Agent_ActiveCardId, g_Agent_CancelToken, g_Agent_StreamGen
     global g_Agent_LastSubmitSig, g_Agent_LastSubmitCardId, g_Agent_LastSubmitTick
@@ -455,6 +515,15 @@ CommandPalette_AgentSubmit(msg) {
     }
     cardId := msg.Has("cardId") ? Trim(String(msg["cardId"])) : ""
     prov := CommandPalette_AgentSanitizeProvider(msg.Has("provider") ? msg["provider"] : "")
+    routeId := msg.Has("routeId") ? Trim(String(msg["routeId"])) : ""
+    routeLabel := msg.Has("routeLabel") ? Trim(String(msg["routeLabel"])) : ""
+    promptAddon := msg.Has("promptAddon") ? Trim(String(msg["promptAddon"])) : ""
+    routeConfidence := msg.Has("routeConfidence") ? String(msg["routeConfidence"]) : ""
+    if (routeId != "") {
+        try CommandPalette_AgentDebugTrace("route", "pipeline_route", "id=" . routeId . " conf=" . routeConfidence, "info")
+        catch {
+        }
+    }
 
     if (kind = "correction" || kind = "append") {
         if (cardId = "")
@@ -477,6 +546,12 @@ CommandPalette_AgentSubmit(msg) {
             msgs := card.Has("messages") && card["messages"] is Array ? card["messages"] : []
             msgs.Push(Map("role", "user", "text", text, "at", A_Now))
             card["messages"] := msgs
+            if (routeId != "") {
+                card["routeId"] := routeId
+                card["routeLabel"] := routeLabel
+                card["promptAddon"] := promptAddon
+                card["routeConfidence"] := routeConfidence
+            }
             CommandPalette_AgentPersistCards()
             CommandPalette_AgentPushCardNew(card)
             CommandPalette_AgentPushCardSync()
@@ -525,6 +600,10 @@ CommandPalette_AgentSubmit(msg) {
         "liveThought", "🔗 已提交，正在连接 " . ((prov = "hermes") ? "Hermes" : "OpenClaw") . "…",
         "gen", gen,
         "messages", [Map("role", "user", "text", text, "at", A_Now)],
+        "routeId", routeId,
+        "routeLabel", routeLabel,
+        "promptAddon", promptAddon,
+        "routeConfidence", routeConfidence,
         "updatedAt", A_Now
     )
     g_Agent_Cards[cardId] := card
@@ -670,13 +749,21 @@ CommandPalette_InvokeFtbPaletteAgentScript(cardId, reqId, query, provider, sessi
     sr := Trim(String(sessionRef))
     if (sr = "")
         sr := CommandPalette_AgentResolveSessionRef(cardId)
+    card := CommandPalette_AgentGetCard(cardId)
+    sysPrompt := CommandPalette_AgentBuildSystemPrompt(card)
+    routeId0 := (card is Map) ? Trim(String(card.Get("routeId", ""))) : ""
+    if (routeId0 != "") {
+        try CommandPalette_AgentDebugTrace("route", "prompt_inject", "route=" . routeId0 . " len=" . StrLen(sysPrompt), "info")
+        catch {
+        }
+    }
     argsJson := "{}"
     try argsJson := Jxon_Dump(Map(
         "reqId", String(reqId),
         "cardId", String(cardId),
         "query", String(query),
         "provider", prov,
-        "systemPrompt", CommandPalette_AgentProtocolPrompt(),
+        "systemPrompt", sysPrompt,
         "sessionRef", sr
     ))
     catch {
@@ -767,6 +854,11 @@ CommandPalette_AgentPushStreamStatus(cardId, reqId, message) {
         card["liveThought"] := msg
         card["updatedAt"] := A_Now
         card["streamDispatched"] := true
+        if !card.Get("ended", false) {
+            card["running"] := true
+            if (card.Get("uiState", "") = "Done")
+                card["uiState"] := "Running"
+        }
     }
     if FuncExists("CommandPalette_PushToWeb")
         CommandPalette_PushToWeb(Map(
@@ -888,12 +980,20 @@ CommandPalette_AgentFetchAnswerFromFtb(reqId, query) {
     escaped := CommandPalette_JsEscapeForParse(argsJson)
     js := "(function(){try{var o=JSON.parse('" . escaped . "');"
         . "var fn=window.palettePickAssistantAnswerForAgent;"
+        . "var hy=window.paletteHydrateAssistantFromGateway;"
         . "if(typeof fn!=='function')return JSON.stringify({ok:0,err:'no_fn'});"
-        . "return JSON.stringify({ok:1,answer:String(fn(o.reqId,o.query,{allowWhileSending:true})||'')});"
+        . "var pick=function(){return String(fn(o.reqId,o.query,{allowWhileSending:true})||'');};"
+        . "if(typeof hy==='function'){"
+        . "return hy(o.reqId,o.query,{allowWhileSending:true}).then(function(a){"
+        . "var ans=String(a||pick()||'');"
+        . "return JSON.stringify({ok:1,answer:ans});"
+        . "}).catch(function(){return JSON.stringify({ok:1,answer:pick()});});"
+        . "}"
+        . "return JSON.stringify({ok:1,answer:pick()});"
         . "}catch(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});}})();"
     g_Agent_FtbFetchBusy := true
     try {
-        raw := g_FTB_WV2.ExecuteScriptAsync(js).await(4000)
+        raw := g_FTB_WV2.ExecuteScriptAsync(js).await(12000)
         data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
         if (data is Map) && data.Get("ok", false)
             return Trim(String(data.Get("answer", "")))
@@ -1081,13 +1181,20 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
     if (sessionRef = "")
         sessionRef := CommandPalette_AgentResolveSessionRef(cardId)
     if (IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
+        sysPrompt := CommandPalette_AgentBuildSystemPrompt(card)
+        routeId1 := Trim(String(card.Get("routeId", "")))
+        if (routeId1 != "") {
+            try CommandPalette_AgentDebugTrace("route", "prompt_inject", "route=" . routeId1 . " len=" . StrLen(sysPrompt), "info")
+            catch {
+            }
+        }
         agentPayload := Map(
             "type", "host_palette_agent_stream",
             "reqId", reqId,
             "cardId", cardId,
             "query", q,
             "provider", prov,
-            "systemPrompt", CommandPalette_AgentProtocolPrompt(),
+            "systemPrompt", sysPrompt,
             "sessionRef", sessionRef,
             "openDrawer", false
         )
@@ -1583,11 +1690,22 @@ CommandPalette_AgentDebugNoteSubmit(cardId, reqId, provider, bridgeRet := "") {
         if (c is Map)
             q := SubStr(String(c.Get("query", c.Get("title", ""))), 1, 120)
     }
+    routeId := ""
+    routeLabel := ""
+    if IsObject(g_Agent_Cards) && g_Agent_Cards.Has(cardId) {
+        c1 := g_Agent_Cards[cardId]
+        if (c1 is Map) {
+            routeId := String(c1.Get("routeId", ""))
+            routeLabel := String(c1.Get("routeLabel", ""))
+        }
+    }
     g_AgentDbg_LastSubmit := Map(
         "cardId", String(cardId),
         "reqId", String(reqId),
         "provider", String(provider),
         "query", q,
+        "routeId", routeId,
+        "routeLabel", routeLabel,
         "bridgeRet", SubStr(String(bridgeRet), 1, 200),
         "tick", A_TickCount,
         "at", SubStr(A_Now, 1, 19)
@@ -1656,7 +1774,10 @@ CommandPalette_AgentDebug_BuildSnapshot() {
                 "ended", !!c.Get("ended", false),
                 "streamDispatched", !!c.Get("streamDispatched", false),
                 "rawLen", StrLen(String(c.Get("rawAnswer", ""))),
-                "error", SubStr(String(c.Get("error", "")), 1, 120)
+                "error", SubStr(String(c.Get("error", "")), 1, 120),
+                "routeId", String(c.Get("routeId", "")),
+                "routeLabel", String(c.Get("routeLabel", "")),
+                "blockCount", (c.Has("blockStore") && c["blockStore"] is Map && c["blockStore"].Has("blocks") && c["blockStore"]["blocks"] is Array) ? c["blockStore"]["blocks"].Length : 0
             ))
         }
     }
@@ -1696,7 +1817,8 @@ CommandPalette_AgentDebug_BuildSnapshot() {
         "activeCardId", String(g_Agent_ActiveCardId),
         "cards", cards,
         "routes", routes,
-        "lastSubmit", (g_AgentDbg_LastSubmit is Map) ? g_AgentDbg_LastSubmit : Map()
+        "lastSubmit", (g_AgentDbg_LastSubmit is Map) ? g_AgentDbg_LastSubmit : Map(),
+        "pipeline", (g_AgentDbg_PipelineState is Map) ? g_AgentDbg_PipelineState : Map()
     )
     return snap
 }

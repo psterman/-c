@@ -1,5 +1,5 @@
 /**
- * Palette Block Pipeline — 第一批：finalize(rawAnswer) v1
+ * Palette Block Pipeline — v2：ingestDelta + finalize
  */
 (function (root) {
   var PROTO_RE = /::(PLAN|STATUS|QUESTION|REPLY)_(START|END)::/;
@@ -106,7 +106,14 @@
 
   function hasFinalReply(blocks) {
     for (var i = 0; i < blocks.length; i++) {
-      if (blocks[i] && blocks[i].type === "reply" && blocks[i].state === "final") return true;
+      if (blocks[i] && blocks[i].type === "reply" && String(blocks[i].markdown || "").trim()) return true;
+    }
+    return false;
+  }
+
+  function hasStreamingReply(blocks) {
+    for (var i = 0; i < blocks.length; i++) {
+      if (blocks[i] && blocks[i].type === "reply" && blocks[i].state === "streaming") return true;
     }
     return false;
   }
@@ -123,7 +130,162 @@
     if (!p) return true;
     if (/^[🔗⏳📨💭]/.test(p)) return true;
     if (/chat\.send/i.test(p)) return true;
+    if (/Gateway session/i.test(p)) return true;
+    if (/绑定 OpenClaw/i.test(p)) return true;
     return /^(正在|等待|任务已|仍连接|OpenClaw 流式|OpenClaw 处理|OpenClaw 已发送|已提交至 Gateway|同步 Niuma|流式输出中)/.test(p);
+  }
+
+  function validateBlocksList(blocks) {
+    if (root.PaletteBlockSchema && PaletteBlockSchema.validateBlocks) {
+      return PaletteBlockSchema.validateBlocks(blocks || []);
+    }
+    return { ok: true, blocks: blocks || [], errors: [], dropped: [] };
+  }
+
+  function createIngestState(options) {
+    options = options || {};
+    return {
+      turnId: options.turnId != null ? Number(options.turnId) : 1,
+      traceId: String(options.traceId || "tr_" + Date.now()),
+      seq: 0,
+      rawBuffer: "",
+      statusItems: [],
+      blocks: [],
+      protoStarted: false
+    };
+  }
+
+  function nextSeq(state) {
+    return ++state.seq;
+  }
+
+  function makeCtx(state) {
+    return {
+      turnId: state.turnId,
+      traceId: state.traceId,
+      nextSeq: function () {
+        return nextSeq(state);
+      }
+    };
+  }
+
+  function appendStatusItem(state, text) {
+    var t = String(text || "").replace(/\s+/g, " ").trim();
+    if (!t) return;
+    for (var i = 0; i < state.statusItems.length; i++) {
+      if (state.statusItems[i] === t) return;
+    }
+    state.statusItems.push(t);
+    var now = Date.now();
+    var statusBlock = null;
+    for (var j = state.blocks.length - 1; j >= 0; j--) {
+      if (state.blocks[j] && state.blocks[j].type === "status") {
+        statusBlock = state.blocks[j];
+        break;
+      }
+    }
+    if (!statusBlock) {
+      statusBlock = {
+        id: root.PaletteBlockSchema ? PaletteBlockSchema.genBlockId("blk_st") : "blk_st_" + now,
+        type: "status",
+        state: "streaming",
+        source: "system",
+        confidence: 0.9,
+        seq: nextSeq(state),
+        turnId: state.turnId,
+        traceId: state.traceId,
+        createdAt: now,
+        updatedAt: now,
+        items: []
+      };
+      state.blocks.push(statusBlock);
+    }
+    statusBlock.items.push({ text: t, level: "info" });
+    statusBlock.updatedAt = now;
+  }
+
+  function upsertStreamingReply(state, markdown) {
+    var md = String(markdown || "").trim();
+    if (!md || isStatusOnlyAgentText(md)) return;
+    var found = null;
+    for (var i = state.blocks.length - 1; i >= 0; i--) {
+      if (state.blocks[i] && state.blocks[i].type === "reply") {
+        found = state.blocks[i];
+        break;
+      }
+    }
+    var now = Date.now();
+    if (!found) {
+      found = {
+        id: root.PaletteBlockSchema ? PaletteBlockSchema.genBlockId("blk_stream") : "blk_stream_" + now,
+        type: "reply",
+        state: "streaming",
+        source: "raw",
+        confidence: 0.45,
+        seq: nextSeq(state),
+        turnId: state.turnId,
+        traceId: state.traceId,
+        createdAt: now,
+        updatedAt: now,
+        title: "任务回复",
+        markdown: md
+      };
+      state.blocks.push(found);
+    } else {
+      found.markdown = md;
+      found.state = found.state === "final" ? "final" : "streaming";
+      found.updatedAt = now;
+    }
+  }
+
+  function rebuildProtocolBlocks(state) {
+    var ctx = makeCtx(state);
+    var protocolBlocks = collectProtocolBlocks(state.rawBuffer, ctx);
+    var statusBlocks = state.blocks.filter(function (b) {
+      return b && b.type === "status";
+    });
+    state.blocks = statusBlocks.concat(protocolBlocks);
+    if (!hasFinalReply(state.blocks) && !hasStreamingReply(state.blocks)) {
+      var tail = stripProtocolTags(state.rawBuffer);
+      if (tail && !isStatusOnlyAgentText(tail)) upsertStreamingReply(state, tail);
+    }
+  }
+
+  function ingestDelta(state, delta, meta) {
+    meta = meta || {};
+    if (!state) state = createIngestState(meta);
+    var d = String(delta || "");
+    if (!d) {
+      var v0 = validateBlocksList(state.blocks);
+      return { blocks: v0.blocks || [], meta: { protoStarted: state.protoStarted, statusOnly: true } };
+    }
+
+    if (isStatusOnlyAgentText(d) && !hasProtocolTags(d)) {
+      appendStatusItem(state, d.trim());
+      var vSt = validateBlocksList(state.blocks);
+      state.blocks = vSt.blocks || [];
+      return { blocks: state.blocks, meta: { protoStarted: state.protoStarted, statusOnly: true } };
+    }
+
+    state.rawBuffer += d;
+    if (hasProtocolTags(state.rawBuffer) || hasProtocolTags(d)) {
+      state.protoStarted = true;
+      rebuildProtocolBlocks(state);
+    } else if (!state.protoStarted) {
+      upsertStreamingReply(state, state.rawBuffer);
+    }
+
+    var validated = validateBlocksList(state.blocks);
+    state.blocks = validated.blocks || [];
+    return {
+      blocks: state.blocks,
+      meta: {
+        protoStarted: state.protoStarted,
+        statusOnly: false,
+        errors: validated.errors || [],
+        dropped: (validated.dropped || []).length
+      }
+    };
   }
 
   function finalize(rawAnswer, options) {
@@ -132,10 +294,10 @@
     var turnId = options.turnId != null ? Number(options.turnId) : 1;
     var traceId = String(options.traceId || "tr_" + Date.now());
     var seq = 0;
-    function nextSeq() {
+    function nextSeqFn() {
       return ++seq;
     }
-    var ctx = { turnId: turnId, traceId: traceId, nextSeq: nextSeq };
+    var ctx = { turnId: turnId, traceId: traceId, nextSeq: nextSeqFn };
 
     var blocks = [];
     if (raw && hasProtocolTags(raw)) {
@@ -160,7 +322,7 @@
           state: "final",
           source: fbSource,
           confidence: fbSource === "raw" ? 0.5 : 0.6,
-          seq: nextSeq(),
+          seq: nextSeqFn(),
           turnId: turnId,
           traceId: traceId,
           createdAt: Date.now(),
@@ -173,25 +335,83 @@
       }
     }
 
-    var validated =
-      root.PaletteBlockSchema && PaletteBlockSchema.validateBlocks
-        ? PaletteBlockSchema.validateBlocks(blocks)
-        : { ok: true, blocks: blocks, errors: [], dropped: [] };
+    for (var fi = 0; fi < blocks.length; fi++) {
+      if (blocks[fi]) blocks[fi].state = "final";
+    }
+
+    var validated = validateBlocksList(blocks);
+    blocks = validated.blocks || [];
+    var a2meta = [];
+    if (root.PaletteMiniA2UI && PaletteMiniA2UI.enrichBlocksWithA2UI) {
+      var enriched = PaletteMiniA2UI.enrichBlocksWithA2UI(blocks, {
+        route: options.route || {},
+        turnId: turnId,
+        traceId: traceId,
+        nextSeq: nextSeqFn
+      });
+      blocks = enriched.blocks || blocks;
+      a2meta = (enriched.meta && enriched.meta.a2ui) || [];
+    }
 
     return {
-      blocks: validated.blocks || [],
+      blocks: blocks,
       meta: {
         protoStarted: hasProtocolTags(raw),
         traceId: traceId,
         turnId: turnId,
+        a2ui: a2meta,
         errors: validated.errors || [],
         dropped: (validated.dropped || []).length
       }
     };
   }
 
+  function finalizeFromState(state, options) {
+    options = options || {};
+    if (!state) return finalize("", options);
+    return finalize(state.rawBuffer, {
+      turnId: state.turnId,
+      traceId: state.traceId,
+      route: options.route || state.route || {}
+    });
+  }
+
+  function blockPreviewSummary(blocks) {
+    var list = blocks || [];
+    for (var pi = list.length - 1; pi >= 0; pi--) {
+      var pb = list[pi];
+      if (pb && pb.type === "reply" && pb.markdown) {
+        return String(pb.markdown).replace(/\s+/g, " ").trim().slice(0, 160);
+      }
+    }
+    for (var pj = 0; pj < list.length; pj++) {
+      var ps = list[pj];
+      if (ps && ps.type === "plan" && ps.items && ps.items.length) {
+        var planPipe = ps.items
+          .slice(0, 2)
+          .map(function (it, i) {
+            return "步骤" + (i + 1) + "：" + (it.text || "");
+          })
+          .join(" · ");
+        if (planPipe) return planPipe.slice(0, 160);
+      }
+    }
+    for (var pk = list.length - 1; pk >= 0; pk--) {
+      var st = list[pk];
+      if (st && st.type === "status" && st.items && st.items.length) {
+        var lt = String(st.items[st.items.length - 1].text || "").trim();
+        if (lt) return lt.slice(0, 160);
+      }
+    }
+    return "";
+  }
+
   root.PaletteBlockPipeline = {
+    createIngestState: createIngestState,
+    ingestDelta: ingestDelta,
     finalize: finalize,
+    finalizeFromState: finalizeFromState,
+    blockPreviewSummary: blockPreviewSummary,
     hasProtocolTags: hasProtocolTags,
     hasFinalReply: hasFinalReply,
     isStatusOnlyAgentText: isStatusOnlyAgentText

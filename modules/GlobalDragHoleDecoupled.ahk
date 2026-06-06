@@ -935,8 +935,13 @@ GDHO_PrepareDecoupledHoleForTextSelection(reason := "activation_hole") {
 
 ; 启动层关闭后回收手势会话，避免星空残留 + SelectionSense 仍占 preview 导致无法再次画圈唤起。
 GDHO_ClearGestureHolePresentation(reason := "gesture_clear") {
-    global g_GDHO_GestureOpenGraceUntil, g_GDHO_SuppressSelectionAutoHide, GDHO_VISIBLE
+    static clearing := false
+    if clearing
+        return
+    clearing := true
+    global g_GDHO_GestureOpenGraceUntil, g_GDHO_SuppressSelectionAutoHide, GDHO_VISIBLE, GDHO_ACTIVE
     global g_SelSense_TextCaptured, g_SelSense_AllowTextHoleGesture, g_SelSense_HoleDragPhase
+    try {
     r := StrLower(Trim(String(reason)))
     g_GDHO_GestureOpenGraceUntil := 0
     g_GDHO_SuppressSelectionAutoHide := false
@@ -966,14 +971,25 @@ GDHO_ClearGestureHolePresentation(reason := "gesture_clear") {
         try GDHO_RunStarryJS("window.HoleOverlay?.hideSilent?.()")
         catch {
         }
+        ; 已在 dismiss/hide_launcher 链上时勿再 HideStarryAfterPanel→DismissLauncherUI，否则会无限递归。
+        skipStarryDismiss := InStr(r, "dismiss") || InStr(r, "hide_launcher") || InStr(r, "hide_starry_after_panel")
         if (GDHO_VISIBLE || (FuncExists("GDHO_IsStarryHostVisible") && GDHO_IsStarryHostVisible())) {
-            if FuncExists("GDHO_HideStarryAfterPanel")
-                try GDHO_HideStarryAfterPanel("clear_gesture:" . r)
-            catch {
-            }
-            if FuncExists("GDHO_HideStarryHost")
-                try GDHO_HideStarryHost("clear_gesture:" . r)
-            catch {
+            if skipStarryDismiss {
+                if FuncExists("GDHO_HideStarryHost")
+                    try GDHO_HideStarryHost("clear_gesture_direct:" . r)
+                catch {
+                }
+                GDHO_VISIBLE := false
+                GDHO_ACTIVE := false
+            } else {
+                if FuncExists("GDHO_HideStarryAfterPanel")
+                    try GDHO_HideStarryAfterPanel("clear_gesture:" . r)
+                catch {
+                }
+                if FuncExists("GDHO_HideStarryHost")
+                    try GDHO_HideStarryHost("clear_gesture:" . r)
+                catch {
+                }
             }
         }
         try GDHO_SetStarryClickThrough(true, "clear_gesture:" . r)
@@ -986,6 +1002,9 @@ GDHO_ClearGestureHolePresentation(reason := "gesture_clear") {
         }
     }
     try NativeDropDiag_Log("[TextHole] clear_gesture_presentation reason=" . r . " vis=" . (GDHO_VISIBLE ? "1" : "0"))
+    } finally {
+        clearing := false
+    }
 }
 
 ; 画圈/长按等无划选手势：在光标处弹出启动层（starry 拓扑），与划选弱预览同会话标记
@@ -1195,6 +1214,7 @@ GDHO_StampTextHoleCapturedText(txt := "") {
 
 GDHO_HideStarryAfterPanel(reason := "") {
     global GDHO_STAR_GUI, GDHO_HOST_W, GDHO_HOST_H, GDHO_PARK_X, GDHO_PARK_Y, GDHO_VISIBLE, GDHO_ACTIVE
+    global g_GDHO_StarryLauncherOpen, g_GDHO_PendingLauncherShow, g_GDHO_LauncherGridSent
     if FuncExists("GDHO_ShouldDeferStarryCloseForTextHole") && GDHO_ShouldDeferStarryCloseForTextHole(reason)
         return
     gui := GDHO_GetStarryGui()
@@ -1207,7 +1227,11 @@ GDHO_HideStarryAfterPanel(reason := "") {
             || InStr(r, "dismiss") || InStr(r, "hide_overlay") || InStr(r, "internal_close")
             || InStr(r, "reset_session") || InStr(r, "abort_") || InStr(r, "request_close") || InStr(r, "idle")
             || InStr(r, "clear_gesture") || InStr(r, "gesture_clear") || InStr(r, "hide_launcher")) {
-            try GDHO_DismissLauncherUI("hide_starry_after_panel:" . reason)
+            try GDHO_HideLauncherLayer("hide_starry_after_panel:" . reason)
+            try GDHO_UnregisterLauncherEscHotkey()
+            g_GDHO_StarryLauncherOpen := false
+            g_GDHO_PendingLauncherShow := false
+            g_GDHO_LauncherGridSent := false
             try GDHO_RunStarryJS("window.HoleOverlay?.hideSilent?.()")
             if !GDHO_P0_BlockHostMoveHide("hide_starry_after_panel")
                 try gui.Move(Integer(GDHO_PARK_X), Integer(GDHO_PARK_Y), Integer(GDHO_HOST_W), Integer(GDHO_HOST_H))
@@ -2936,7 +2960,8 @@ GDHO_HideLauncherLayer(reason := "") {
     try SetTimer(GDHO_CommitEarlyLauncherPump, 0)
     rs := StrLower(Trim(String(reason)))
     shouldClearSession := !(InStr(rs, "reset_session") || InStr(rs, "prepare_hole") || InStr(rs, "show_launcher_layer")
-        || InStr(rs, "force_policy") || InStr(rs, "force_show"))
+        || InStr(rs, "force_policy") || InStr(rs, "force_show") || InStr(rs, "hide_starry_after_panel")
+        || InStr(rs, "dismiss_ui") || InStr(rs, "clear_gesture"))
     if !GDHO_LAUNCHER_VISIBLE && !IsObject(GDHO_LAUNCHER_GUI) {
         if shouldClearSession && FuncExists("GDHO_ClearGestureHolePresentation") {
             try GDHO_ClearGestureHolePresentation("hide_launcher_early:" . rs)
@@ -2972,8 +2997,16 @@ GDHO_IsStarryHostVisible() {
     global GDHO_VISIBLE, GDHO_STAR_GUI
     if !GDHO_VISIBLE
         return false
-    if IsObject(GDHO_STAR_GUI) && GDHO_STAR_GUI.Hwnd
-        return WinExist("ahk_id " GDHO_STAR_GUI.Hwnd)
+    if IsObject(GDHO_STAR_GUI) && GDHO_STAR_GUI.Hwnd {
+        hwnd := GDHO_STAR_GUI.Hwnd
+        try {
+            if !DllCall("IsWindow", "Ptr", hwnd, "Int")
+                return false
+            return !!DllCall("IsWindowVisible", "Ptr", hwnd, "Int")
+        } catch {
+            return false
+        }
+    }
     return false
 }
 

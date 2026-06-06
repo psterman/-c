@@ -2248,6 +2248,17 @@ CommandPalette_OnWebMessage(sender, args) {
         }
         return
     }
+    if (typ = "cp_pipeline_debug") {
+        global g_AgentDbg_PipelineState
+        if msg.Has("state") && msg["state"] is Map
+            g_AgentDbg_PipelineState := msg["state"]
+        if FuncExists("CommandPaletteSearchDebug_PushPayload") {
+            try CommandPaletteSearchDebug_PushPayload(Map("type", "cp_pipeline_debug", "state", g_AgentDbg_PipelineState))
+            catch {
+            }
+        }
+        return
+    }
     if (typ = "palette_agent_submit") {
         if FuncExists("CommandPalette_AgentWireLog")
             try CommandPalette_AgentWireLog("wm_submit", SubStr(String(msg.Has("text") ? msg["text"] : ""), 1, 80))
@@ -2280,6 +2291,11 @@ CommandPalette_OnWebMessage(sender, args) {
     if (typ = "palette_agent_recover") {
         if FuncExists("CommandPalette_AgentRecoverCardAnswer")
             CommandPalette_AgentRecoverCardAnswer(msg)
+        return
+    }
+    if (typ = "palette_agent_block_store") {
+        if FuncExists("CommandPalette_AgentSaveBlockStore")
+            CommandPalette_AgentSaveBlockStore(msg)
         return
     }
     if (typ = "palette_agent_physical") {

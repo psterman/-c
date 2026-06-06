@@ -195,6 +195,16 @@
   .lvl-err .det { color: var(--err); }
   .agent-log .ev-block { color: #34d399; font-weight: 600; }
   .hint { color: var(--muted); font-size: 11px; }
+  .pipeline-grid4 {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  }
+  @media (max-width: 900px) { .pipeline-grid4 { grid-template-columns: 1fr 1fr; } }
+  .pipe-col {
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+    min-height: 72px; font-size: 11px; color: var(--muted); word-break: break-word;
+  }
+  .pipe-col b { display: block; color: #f5b96a; margin-bottom: 4px; font-size: 10px; }
+  .tag.route { background: rgba(165,180,252,.15); color: #a5b4fc; }
 </style>
 </head>
 <body>
@@ -278,6 +288,15 @@
       <section class="card"><h2>任务卡 / 路由</h2><div class="kv" id="cards-box">—</div></section>
     </div>
     <section class="card">
+      <h2>Pipeline 四栏 <span class="hint">Route · Prompt · Blocks · Render</span></h2>
+      <div class="pipeline-grid4">
+        <div class="pipe-col" id="pipe-route"><b>① Route</b>—</div>
+        <div class="pipe-col" id="pipe-prompt"><b>② Prompt</b>—</div>
+        <div class="pipe-col" id="pipe-blocks"><b>③ Blocks</b>—</div>
+        <div class="pipe-col" id="pipe-render"><b>④ Render</b>—</div>
+      </div>
+    </section>
+    <section class="card">
       <h2>事件时间线 <span class="hint">（新事件在顶部）</span></h2>
       <div class="filters" id="filters">
         <button type="button" data-f="all" class="active">全部</button>
@@ -288,6 +307,8 @@
         <button type="button" data-f="push">推送</button>
         <button type="button" data-f="ftb">FTB</button>
         <button type="button" data-f="blocks">UI块</button>
+        <button type="button" data-f="route">路由</button>
+        <button type="button" data-f="pipeline">Pipeline</button>
       </div>
       <div class="agent-log" id="log"></div>
     </section>
@@ -543,6 +564,36 @@
   var agentFilter = "all";
   var agentLastStage = "";
   var agentDebugProbeHint = "";
+  var pipelineDebugState = {};
+
+  function renderPipelineDebugPanel(state, lastSubmit) {
+    state = state || pipelineDebugState || {};
+    var ls = lastSubmit || {};
+    var routeTxt = state.route || state.routeDetail || "";
+    if (!routeTxt && ls.routeLabel) routeTxt = ls.routeId + " · " + ls.routeLabel;
+    document.getElementById("pipe-route").innerHTML = "<b>① Route</b>" + esc(routeTxt || "—");
+    document.getElementById("pipe-prompt").innerHTML = "<b>② Prompt</b>" + esc(state.prompt || "—");
+    document.getElementById("pipe-blocks").innerHTML = "<b>③ Blocks</b>" + esc(state.blocks || "—");
+    var renderTxt = state.render || "—";
+    if (state.a2ui) renderTxt += (renderTxt !== "—" ? " · " : "") + "a2ui:" + state.a2ui;
+    document.getElementById("pipe-render").innerHTML = "<b>④ Render</b>" + esc(renderTxt);
+  }
+
+  function inferPipelineFromLogs() {
+    var st = { route: "", prompt: "", blocks: "", render: "", a2ui: "" };
+    for (var i = 0; i < agentLogs.length; i++) {
+      var r = agentLogs[i];
+      var ev = String(r.event || "");
+      var det = String(r.detail || "");
+      var lay = String(r.layer || "").toLowerCase();
+      if (!st.route && (ev === "pipeline_route" || ev === "prompt_inject" && lay === "route")) st.route = det;
+      if (!st.prompt && (ev === "prompt_inject" || ev.indexOf("prompt") >= 0)) st.prompt = det;
+      if (!st.blocks && (ev === "pipeline_finalize" || ev === "pipeline_ingest")) st.blocks = det;
+      if (!st.render && ev === "render_blocks") st.render = det;
+      if (!st.a2ui && ev === "pipeline_a2ui") st.a2ui = det;
+    }
+    return st;
+  }
 
   function switchTab(tab) {
     currentTab = tab === "agent" ? "agent" : "search";
@@ -581,6 +632,7 @@
     else if (l === "push") cls = "push";
     else if (l === "ftb") cls = "ftb";
     else if (l === "ahk" || l === "sys") cls = "ahk";
+    else if (l === "route") cls = "route";
     return '<span class="tag ' + cls + '">' + esc(l) + "</span>";
   }
 
@@ -636,6 +688,11 @@
       if (agentFilter === "blocks") {
         var ev = String(r.event || "").toLowerCase();
         return ev.indexOf("block_") === 0 || ev === "structurer";
+      }
+      if (agentFilter === "route") return String(r.layer || "").toLowerCase() === "route";
+      if (agentFilter === "pipeline") {
+        var evp = String(r.event || "").toLowerCase();
+        return evp.indexOf("pipeline_") === 0 || evp === "render_blocks" || evp === "prompt_inject";
       }
       return l === agentFilter;
     });
@@ -701,6 +758,7 @@
       document.getElementById("submit-box").innerHTML =
         "<b>时间</b> " + esc(ls.at) +
         (ls.query ? "<br/><b>任务</b> " + esc(ls.query) : "") +
+        (ls.routeLabel ? "<br/><b>路由</b> " + esc(ls.routeLabel) + " (" + esc(ls.routeId || "") + ")" : "") +
         "<br/><b>cardId</b> " + esc(ls.cardId) +
         "<br/><b>reqId</b> " + esc(ls.reqId) + "<br/><b>引擎</b> " + esc(ls.provider);
     } else {
@@ -713,9 +771,18 @@
           var st = c.running ? "进行中" : (c.ended ? "已结束" : (c.uiState || "—"));
           var extra = c.streamDispatched ? " · 已派发" : "";
           var proto = c.hasProto ? " · 协议✓" : "";
+          var route = c.routeLabel || c.routeId || "";
           var rawLen = c.rawAnswer ? String(c.rawAnswer).length : (c.rawLen != null ? c.rawLen : 0);
-          return "<b>" + esc(title) + "</b> · " + esc(st) + extra + proto + " · " + esc(c.provider || "") + " · req=" + esc(c.reqId || "") + (rawLen ? " · ans=" + rawLen + "字" : "");
+          var blkN = c.blockCount != null ? c.blockCount : (c.blockStore && c.blockStore.blocks ? c.blockStore.blocks.length : 0);
+          return "<b>" + esc(title) + "</b> · " + esc(st) + extra + proto +
+            (route ? " · <span class='tag route'>" + esc(route) + "</span>" : "") +
+            " · " + esc(c.provider || "") + " · req=" + esc(c.reqId || "") +
+            (blkN ? " · blocks=" + blkN : "") +
+            (rawLen ? " · ans=" + rawLen + "字" : "");
         }).join("<br/>");
+    pipelineDebugState = d.pipeline || pipelineDebugState || {};
+    if (!pipelineDebugState.route) pipelineDebugState = Object.assign(inferPipelineFromLogs(), pipelineDebugState);
+    renderPipelineDebugPanel(pipelineDebugState, ls);
     var flowStage = agentLogs.length ? inferAgentStage(agentLogs[0]) : inferFlowFromCards(cards);
     if (flowStage) updateAgentFlow(flowStage, agentLogs.length ? (agentLogs[0].level || "info") : "ok");
   }
@@ -759,6 +826,10 @@
     if (d.type === "cp_agent_debug_clear_ok") {
       agentLogs = [];
       renderAgentLog();
+    }
+    if (d.type === "cp_pipeline_debug" && d.state) {
+      pipelineDebugState = d.state;
+      renderPipelineDebugPanel(pipelineDebugState);
     }
   }
 
