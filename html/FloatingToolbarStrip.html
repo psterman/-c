@@ -1221,6 +1221,7 @@ body.niuma-confirm-open{overflow:hidden}
 <div class="setup-banner-title" id="openclawSetupTitle">连接本机 OpenClaw</div>
 <div id="openclawSetupBody" class="hint mini">已安装 OpenClaw 时，点下方按钮自动读取 Gateway Token 并检测本机网关（127.0.0.1:18789）。</div>
 <button type="button" class="btn3" id="openclawSetupImportBtn" style="width:100%;margin-top:8px">一键连接 OpenClaw</button>
+<button type="button" class="btn2" id="openclawSetupRestartBtn" style="width:100%;margin-top:6px;display:none">重启 OpenClaw Gateway</button>
 </div>
 <div id="ollamaSetupBanner" class="setup-banner" hidden>
 <div class="setup-banner-title" id="ollamaSetupTitle">Ollama 未连接</div>
@@ -2062,6 +2063,7 @@ body.niuma-confirm-open{overflow:hidden}
     hermesSetupImportBtn = $('hermesSetupImportBtn'),
     openclawSetupBanner = $('openclawSetupBanner'),
     openclawSetupImportBtn = $('openclawSetupImportBtn'),
+    openclawSetupRestartBtn = $('openclawSetupRestartBtn'),
     inlineHermesQuick = $('inlineHermesQuick'),
     inlineHermesImport = $('inlineHermesImport'),
     inlineOpenClawQuick = $('inlineOpenClawQuick'),
@@ -2611,6 +2613,31 @@ body.niuma-confirm-open{overflow:hidden}
     return t;
   }
 
+  function ocOverlapSuffixPrefixLen(left, right) {
+    left = String(left || '');
+    right = String(right || '');
+    var max = Math.min(left.length, right.length, 4000);
+    for (var n = max; n >= 12; n--) {
+      if (left.slice(left.length - n) === right.slice(0, n)) return n;
+    }
+    return 0;
+  }
+
+  function ocMergeStreamText(prev, next, isDelta) {
+    var a = String(prev || '');
+    var b = String(next || '');
+    if (!b) return a;
+    if (!a) return paletteDedupeRepeatedText(b);
+    if (b === a) return a;
+    if (b.indexOf(a) === 0) return paletteDedupeRepeatedText(b);
+    if (a.indexOf(b) >= 0) return a;
+    if (!isDelta) return paletteDedupeRepeatedText(b);
+    if (a.slice(-b.length) === b) return a;
+    var overlap = ocOverlapSuffixPrefixLen(a, b);
+    if (overlap > 0) return paletteDedupeRepeatedText(a + b.slice(overlap));
+    return paletteDedupeRepeatedText(a + b);
+  }
+
   function palettePickAssistantAnswerForAgent(reqId, query, opts) {
     opts = opts || {};
     var rid = String(reqId || '').trim();
@@ -2696,6 +2723,25 @@ body.niuma-confirm-open{overflow:hidden}
       });
     } catch (_) {}
   }
+
+  function paletteMaybeNotifyAgentEndFromSession(sid, content) {
+    var s = sessionById(sid);
+    if (!s || !s._paletteAgentReqId) return;
+    var rid = String(s._paletteAgentReqId || '');
+    var cid = String(s._paletteAgentCardId || '');
+    var q = String(s._paletteAgentQuery || '');
+    var ans = paletteDedupeRepeatedText(String(content || '').trim());
+    if (!ans) ans = palettePickAssistantAnswerForAgent(rid, q, { allowWhileSending: true });
+    if (!ans) return;
+    var ref = s.gatewaySessionKey || s.id || '';
+    paletteNotifyPaletteAgentEnd(rid, cid, ans, ref);
+  }
+
+  window.paletteIsSessionSendingForAgentReqId = function (reqId) {
+    var s = paletteFindSessionByReqId(reqId);
+    if (!s || !s.id) return false;
+    return !!isSessionSending(s.id);
+  };
 
   function paletteSyncAnswerForReq(reqId, query) {
     var ans = palettePickAssistantAnswer(reqId, query);
@@ -3017,13 +3063,42 @@ body.niuma-confirm-open{overflow:hidden}
       if (t.length <= palettePostedLen) return;
       var delta = t.slice(palettePostedLen);
       palettePostedLen = t.length;
-      post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cid, delta: delta });
+      var lt = t.trim().slice(0, 120) + (t.trim().length > 120 ? '…' : '');
+      post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cid, delta: delta, liveThought: lt || '流式输出中…' });
     };
     try {
-      await handleSendChat();
+      var waitStart = Date.now();
+      var waitTimer = setInterval(function () {
+        if (_paletteAgentStreamCancelled) return;
+        var sec = Math.round((Date.now() - waitStart) / 1000);
+        post({
+          type: 'niuma_palette_agent_chunk',
+          reqId: reqId,
+          cardId: cid,
+          delta: '⏳ OpenClaw 处理中… (' + sec + 's)\n',
+          liveThought: 'OpenClaw 处理中… (' + sec + 's)'
+        });
+      }, 15000);
+      try {
+        await handleSendChat();
+      } finally {
+        clearInterval(waitTimer);
+      }
       if (_paletteAgentStreamCancelled) return;
-      var content = palettePickAssistantAnswerForAgent(reqId, q, { allowWhileSending: false });
+      var content = palettePickAssistantAnswerForAgent(reqId, q, { allowWhileSending: true });
       content = paletteDedupeRepeatedText(String(content || ''));
+      if (!String(content || '').trim()) {
+        var waitLeftPick = 60;
+        while (!String(content || '').trim() && waitLeftPick-- > 0) {
+          await new Promise(function (r) {
+            setTimeout(r, 500);
+          });
+          if (_paletteAgentStreamCancelled) return;
+          content = paletteDedupeRepeatedText(
+            String(palettePickAssistantAnswerForAgent(reqId, q, { allowWhileSending: true }) || '')
+          );
+        }
+      }
       if (!String(content || '').trim()) {
         post({
           type: 'niuma_palette_agent_error',
@@ -3038,7 +3113,7 @@ body.niuma-confirm-open{overflow:hidden}
       paletteNotifyPaletteAgentEnd(reqId, cid, content, sessionRefOut);
     } catch (err) {
       if (!_paletteAgentStreamCancelled) {
-        var errFallback = palettePickAssistantAnswerForAgent(reqId, q, { allowWhileSending: false });
+        var errFallback = palettePickAssistantAnswerForAgent(reqId, q, { allowWhileSending: true });
         if (errFallback) {
           paletteNotifyPaletteAgentEnd(reqId, cid, errFallback, sessionRefOut);
         } else {
@@ -3901,6 +3976,8 @@ body.niuma-confirm-open{overflow:hidden}
       r === 'customer' ||
       r === 'client' ||
       r === 'operator' ||
+      r === 'requester' ||
+      r === 'viewer' ||
       r === 'user_message'
     )
       return 'user';
@@ -4053,7 +4130,32 @@ body.niuma-confirm-open{overflow:hidden}
       seen[k] = 1;
       out.push(n);
     });
+    out.sort(function (a, b) {
+      var at = 0,
+        bt = 0;
+      try {
+        at = new Date(a && a.ts || 0).getTime() || 0;
+      } catch (_) {}
+      try {
+        bt = new Date(b && b.ts || 0).getTime() || 0;
+      } catch (_) {}
+      if (at && bt && at !== bt) return at - bt;
+      if (at && !bt) return -1;
+      if (!at && bt) return 1;
+      return 0;
+    });
     return out;
+  }
+
+  function sessionHasDraftAssistant(s) {
+    if (!s || !Array.isArray(s.history)) return false;
+    for (var i = s.history.length - 1; i >= 0; i--) {
+      var m = s.history[i];
+      if (!m) continue;
+      if (m.role === 'assistant' && m._draft) return true;
+      if (m.role === 'user') return false;
+    }
+    return false;
   }
 
   function buildOpenClawSessionKey(seed) {
@@ -5024,6 +5126,7 @@ body.niuma-confirm-open{overflow:hidden}
     if (!openclawSetupBanner) return;
     var show = shouldShowOpenClawSetupBanner();
     openclawSetupBanner.hidden = !show;
+    if (openclawSetupRestartBtn) openclawSetupRestartBtn.style.display = show ? '' : 'none';
     if (ollamaSetupBanner && show) ollamaSetupBanner.hidden = true;
     refreshHermesSetupBanner();
   }
@@ -9979,8 +10082,8 @@ body.niuma-confirm-open{overflow:hidden}
   var OPENCLAW_GATEWAY_MAX_PROTOCOL = 5;
   /** OpenClaw 对话：工具型任务需更长 WS 等待与 history 轮询 */
   var OPENCLAW_CHAT_WS_TIMEOUT_MS = 180000;
-  var OPENCLAW_CHAT_LATE_POLL_ROUNDS = 10;
-  var OPENCLAW_CHAT_LATE_POLL_MS = 2500;
+  var OPENCLAW_CHAT_LATE_POLL_ROUNDS = 4;
+  var OPENCLAW_CHAT_LATE_POLL_MS = 3500;
 
   function openClawConnectProtocolRange() {
     return { minProtocol: OPENCLAW_GATEWAY_MIN_PROTOCOL, maxProtocol: OPENCLAW_GATEWAY_MAX_PROTOCOL };
@@ -10387,6 +10490,11 @@ body.niuma-confirm-open{overflow:hidden}
           gwOk = false;
         }
       }
+      if (!gwOk && !opts.fromRestart) {
+        apiTestStat('OpenClaw Gateway 未响应，正在尝试重启…', 'error');
+        runOpenClawRestartGateway();
+        return;
+      }
       if (gwOk) await refreshOpenClawSessionRows(true);
       var s = activeSession();
       if (s && normalizeProviderId(s.provider) === 'openclaw') {
@@ -10422,6 +10530,11 @@ body.niuma-confirm-open{overflow:hidden}
       state.openClawImportRunning = false;
       if (openClawImportConnectBtn) openClawImportConnectBtn.disabled = false;
     }
+  }
+
+  function runOpenClawRestartGateway() {
+    apiTestStat('正在重启 OpenClaw Gateway…', '');
+    post({ type: 'niuma_openclaw_restart_gateway' });
   }
 
   function hermesDefaultBaseUrl() {
@@ -11037,7 +11150,7 @@ body.niuma-confirm-open{overflow:hidden}
     var cacheKey = [String(cfg.baseUrl || '').trim(), out.sessionKey].join('|');
     if (!state.openclawMetaCache || typeof state.openclawMetaCache !== 'object') state.openclawMetaCache = {};
     var cached = state.openclawMetaCache[cacheKey];
-    if (cached && now - Number(cached.ts || 0) < 15000) {
+    if (cached && now - Number(cached.ts || 0) < 120000) {
       return {
         sessionKey: String(cached.sessionKey || out.sessionKey),
         canonicalKey: String(cached.canonicalKey || ''),
@@ -11102,6 +11215,22 @@ body.niuma-confirm-open{overflow:hidden}
     return out;
   }
 
+  function ocCachedSessionMeta(cfg, wantedSessionKey, maxAgeMs) {
+    var key = String(wantedSessionKey || '').trim();
+    if (!key) return null;
+    var cacheKey = [String(cfg && cfg.baseUrl || '').trim(), key].join('|');
+    var cached = state.openclawMetaCache && state.openclawMetaCache[cacheKey];
+    if (!cached) return null;
+    if (Date.now() - Number(cached.ts || 0) > (Number(maxAgeMs) || 120000)) return null;
+    return {
+      sessionKey: String(cached.sessionKey || key),
+      canonicalKey: String(cached.canonicalKey || ''),
+      model: String(cached.model || ''),
+      row: cached.row || null,
+      previewItems: cached.previewItems || []
+    };
+  }
+
   function ocGetSessionMessagePayload(msg) {
     if (!msg || typeof msg !== 'object') return null;
     var t = String(msg.type || '').toLowerCase();
@@ -11162,7 +11291,7 @@ body.niuma-confirm-open{overflow:hidden}
   async function refreshOpenClawSessionRows(force) {
     if (state.openclawSessionRowsLoading) return;
     var now = Date.now();
-    if (!force && state.openclawSessionRowsFetchedAt && now - state.openclawSessionRowsFetchedAt < 20000) return;
+    if (!force && state.openclawSessionRowsFetchedAt && now - state.openclawSessionRowsFetchedAt < 60000) return;
     var s = activeSession();
     var cfg = {
       provider: 'openclaw',
@@ -18489,6 +18618,7 @@ body.niuma-confirm-open{overflow:hidden}
       t = ocExtractAssistantTextFromPayload(pl);
     }
     if (!t) return false;
+    if (!pl) return false;
     if (pl && ocPayloadIsIntermediatePhase(pl)) return false;
     return true;
   }
@@ -18507,14 +18637,72 @@ body.niuma-confirm-open{overflow:hidden}
     );
   }
 
+  function ocCollectSessionKeysDeep(v, out, depth) {
+    if (!v || typeof v !== 'object' || depth > 4) return;
+    var fields = ['sessionKey', 'session_key', 'key', 'conversationKey', 'conversation_key', 'threadKey', 'thread_key'];
+    for (var i = 0; i < fields.length; i++) {
+      var val = v[fields[i]];
+      if (typeof val === 'string' && val.trim()) out.push(val.trim());
+    }
+    var nested = [v.session, v.conversation, v.thread, v.chat, v.message, v.payload, v.params, v.data, v.result, v.item, v.entry];
+    for (var ni = 0; ni < nested.length; ni++) {
+      var n = nested[ni];
+      if (n && typeof n === 'object') ocCollectSessionKeysDeep(n, out, depth + 1);
+    }
+  }
+
   function ocPayloadMatchesSession(v, expectedSessionKey) {
-    return true; // 彻底停用过滤。NiuMa 对每次会话连接独立分配了独占 WebSocket 句柄，底层已物理隔离跨并发数据流泄漏的环境，过度核验会导致结构体同名属性严重丢包。
+    var expected = String(expectedSessionKey || '').trim();
+    if (!v || !expected) return true;
+    var keys = [];
+    ocCollectSessionKeysDeep(v, keys, 0);
+    if (!keys.length) return true;
+    for (var i = 0; i < keys.length; i++) {
+      if (ocSessionKeysEquivalent(keys[i], expected)) return true;
+    }
+    return false;
+  }
+
+  function ocCollectRequestIdsDeep(v, out, depth) {
+    if (!v || typeof v !== 'object' || depth > 3) return;
+    var fields = ['requestId', 'request_id', 'clientRequestId', 'client_request_id', 'correlationId', 'correlation_id', 'idempotencyKey', 'idempotency_key'];
+    for (var i = 0; i < fields.length; i++) {
+      var val = v[fields[i]];
+      if (typeof val === 'string' && val.trim()) out.push(val.trim());
+    }
+    if (typeof v.id === 'string' && /^msg-\d+$/i.test(v.id.trim())) out.push(v.id.trim());
+    var nested = [v.payload, v.params, v.data, v.result, v.message, v.item, v.entry];
+    for (var ni = 0; ni < nested.length; ni++) {
+      var n = nested[ni];
+      if (n && typeof n === 'object') ocCollectRequestIdsDeep(n, out, depth + 1);
+    }
   }
 
   function ocPayloadMatchesRequest(v, expectedRequestId) {
-    if (!v || !expectedRequestId) return true;
-    if (v.id === expectedRequestId || v.requestId === expectedRequestId || v.runId === expectedRequestId || v.correlationId === expectedRequestId) return true;
-    return true; // Keep true for now to avoid false negatives, but prioritization logic may use the checks above.
+    var expected = String(expectedRequestId || '').trim();
+    if (!v || !expected) return true;
+    var ids = [];
+    ocCollectRequestIdsDeep(v, ids, 0);
+    if (!ids.length) return true;
+    for (var i = 0; i < ids.length; i++) {
+      if (String(ids[i] || '').trim() === expected) return true;
+    }
+    return false;
+  }
+
+  function ocTimestampMsFromAny(v) {
+    if (!v || typeof v !== 'object') return 0;
+    var fields = ['ts', 'timestamp', 'createdAt', 'created_at', 'updatedAt', 'updated_at', 'time', 'date'];
+    for (var i = 0; i < fields.length; i++) {
+      var raw = v[fields[i]];
+      if (raw == null || raw === '') continue;
+      var n = Number(raw);
+      var ms = isFinite(n) && n > 0 ? (n < 10000000000 ? n * 1000 : n) : new Date(raw).getTime();
+      if (ms && !isNaN(ms)) return ms;
+    }
+    var nested = v.message || v.item || v.entry || v.payload || v.data || v.result;
+    if (nested && nested !== v && typeof nested === 'object') return ocTimestampMsFromAny(nested);
+    return 0;
   }
 
   function extractGatewayHistoryMessages(res) {
@@ -18787,6 +18975,7 @@ body.niuma-confirm-open{overflow:hidden}
         seq = 0,
         connected = false,
         connectSent = false,
+        connectEverSent = false,
         connectAttempts = 0,
         rpcId = '';
       var timer = setTimeout(function () {
@@ -18814,6 +19003,7 @@ body.niuma-confirm-open{overflow:hidden}
       function sendConnect() {
         if (connectSent || connected || done) return;
         connectSent = true;
+        connectEverSent = true;
         connectAttempts += 1;
         seq += 1;
         var cid = 'connect-' + seq;
@@ -18862,8 +19052,8 @@ body.niuma-confirm-open{overflow:hidden}
         if (msg && msg.type !== 'heartbeat' && msg.event !== 'heartbeat') dbg('WS←', wsFrameBrief(msg), msg.error ? 'err' : 'ok');
         var ev = msg.event || msg.type || msg.method || '';
         if (ev === 'connect.challenge') {
-          if (connected || rpcId) {
-            dbg('WS', 'ignore late connect.challenge', 'err');
+          if (connected || rpcId || connectEverSent) {
+            dbg('WS', 'ignore duplicate connect.challenge', 'err');
             return;
           }
           connectSent = false;
@@ -18874,8 +19064,10 @@ body.niuma-confirm-open{overflow:hidden}
         if (typeof msg.id === 'string' && msg.id.indexOf('connect-') === 0) {
           if (msg.error || msg.ok === false) {
             var em = formatOpenClawConnectError(msg.error || { message: 'connect failed' });
-            if (connected && /connect is only valid as the first request/i.test(em)) {
+            if ((connected || connectEverSent) && /connect is only valid as the first request/i.test(em)) {
               dbg('WS', 'ignore duplicate connect error', 'err');
+              connected = true;
+              sendRpc();
               return;
             }
             finishErr(new Error(em));
@@ -18931,8 +19123,13 @@ body.niuma-confirm-open{overflow:hidden}
 
   async function hydrateOpenClawHistoryForSession(s, force) {
     if (!s || s.provider !== 'openclaw') return;
+    if (isSessionSending(s.id) || sessionHasDraftAssistant(s)) return;
     if (s._historyHydrating) return;
+    var now = Date.now();
+    var lastHydratedAt = Number(s._historyHydratedAt || 0);
     if (s._historyHydrated && !force) return;
+    if (lastHydratedAt && now - lastHydratedAt < (force ? 30000 : 120000)) return;
+    s._historyHydratedAt = now;
     s._historyHydrating = true;
     try {
       pullStoreHistoryToSession(s);
@@ -18945,7 +19142,12 @@ body.niuma-confirm-open{overflow:hidden}
       var ep = openClawEndpointFromCfg(cfg);
       if (ep.ok) {
         var sk = getOpenClawSessionKey(s);
-        var meta = await ocResolveSessionMeta(cfg, sk);
+        var meta = ocCachedSessionMeta(cfg, sk, 120000);
+        if (!meta) {
+          setTimeout(function () {
+            ocResolveSessionMeta(cfg, sk).catch(function () {});
+          }, 50);
+        }
         if (meta && (meta.canonicalKey || meta.sessionKey)) sk = String(meta.canonicalKey || meta.sessionKey).trim() || sk;
         s.gatewaySessionKey = sk;
         if (meta && meta.row) s.openclawMeta = meta.row;
@@ -18995,7 +19197,7 @@ body.niuma-confirm-open{overflow:hidden}
       String(cfg.openclawSessionKey || '').trim() ||
       openClawSessionKeyHintFromBaseUrl(cfg.baseUrl) ||
       getOpenClawSessionKey(s0);
-    var meta = await ocResolveSessionMeta(cfg, sessionKey);
+    var meta = ocCachedSessionMeta(cfg, sessionKey, 120000);
     var canonicalSessionKey = ocCanonicalSessionKey(sessionKey);
     if (meta && typeof meta === 'object') {
       if (meta.sessionKey) sessionKey = String(meta.sessionKey).trim();
@@ -19003,7 +19205,7 @@ body.niuma-confirm-open{overflow:hidden}
       if (meta.model) cfg.model = String(meta.model).trim();
     }
     if (!canonicalSessionKey) canonicalSessionKey = ocCanonicalSessionKey(sessionKey);
-    var canUseSessionSend = !!(meta && meta.row && canonicalSessionKey);
+    var canUseSessionSend = !!canonicalSessionKey;
     var sendModel = ocNormalizeModelForSend(cfg.model);
     if (s0) {
       s0.gatewaySessionKey = canonicalSessionKey || sessionKey || s0.gatewaySessionKey;
@@ -19014,7 +19216,13 @@ body.niuma-confirm-open{overflow:hidden}
       persistSessions();
       renderSessionTabs();
     }
+    if (!meta) {
+      setTimeout(function () {
+        ocResolveSessionMeta(cfg, sessionKey).catch(function () {});
+      }, 50);
+    }
     var instanceId = 'niuma-' + Date.now() + '-' + Math.random().toString(36).slice(2, 11);
+    var isPaletteAgentRequest = !!(s0 && s0._paletteAgentReqId);
     ocBeginAgentLoopFromChat(msgText);
 
     return new Promise(function (resolve, reject) {
@@ -19030,6 +19238,7 @@ body.niuma-confirm-open{overflow:hidden}
       var authenticated = false;
       var challengeReceived = false;
       var connectSent = false;
+      var connectEverSent = false;
       var connectAcked = false;
       var chatMsgId = '';
       var subscribeMsgId = '';
@@ -19042,12 +19251,11 @@ body.niuma-confirm-open{overflow:hidden}
       var bgHistTimer = 0;
       var _dbgFrames = [];
       var hardTimeout = setTimeout(function () {
-        if (pendingText.trim()) {
-          emitProgress(true);
-          settleResolve(pendingText.trim());
+        if (pendingText.trim() || authenticated) {
+          recoverFinalFromHistory(true, null);
           return;
         }
-        recoverFinalFromHistory(true);
+        settleReject(new Error('OpenClaw 发送后未收到任何回复事件；请检查 Gateway 日志是否出现 chat.send。'));
       }, OPENCLAW_CHAT_WS_TIMEOUT_MS);
       var lastEmitAt = 0;
       var lastEmitText = '';
@@ -19078,6 +19286,7 @@ body.niuma-confirm-open{overflow:hidden}
       }
 
       function ensureBackgroundHistoryPoll() {
+        if (isPaletteAgentRequest) return;
         if (bgHistTimer || settled) return;
         bgHistTimer = setInterval(function () {
           if (settled) {
@@ -19138,8 +19347,8 @@ body.niuma-confirm-open{overflow:hidden}
         finalizeTimer = setTimeout(function () {
           if (settled) return;
           var t = pendingText.trim();
-          if (t && ocShouldSettleOpenClawChat(t, null)) settleResolve(t);
-        }, 900);
+          if (t) ensureBackgroundHistoryPoll();
+        }, 2500);
       }
 
       function fail(err) {
@@ -19178,7 +19387,7 @@ body.niuma-confirm-open{overflow:hidden}
           } catch (_) {}
         }
         dbg('WS', 'ignore intermediate final · ' + hint, 'ok');
-        ensureBackgroundHistoryPoll();
+        if (!isPaletteAgentRequest) ensureBackgroundHistoryPoll();
         return true;
       }
 
@@ -19265,11 +19474,6 @@ body.niuma-confirm-open{overflow:hidden}
               return;
             }
           }
-          if (pendingText.trim()) {
-            emitProgress(true);
-            settleResolve(pendingText.trim());
-            return;
-          }
           var shouldLatePoll =
             fromTimeout || ocHistoryAssistantHasToolOrThinking(lastRpcRes);
           if (shouldLatePoll) {
@@ -19284,6 +19488,10 @@ body.niuma-confirm-open{overflow:hidden}
           }
           if (ocHistoryAssistantHasToolOrThinking(lastRpcRes)) {
             settleResolve(ocBuildOpenClawStillRunningMessage(lastRpcRes, msgText, chatSentAtMs));
+            return;
+          }
+          if (pendingText.trim()) {
+            settleResolve(ocBuildOpenClawStillRunningMessage(lastRpcRes || finalPayload || {}, msgText, chatSentAtMs));
             return;
           }
           var formatDbg = function(obj) {
@@ -19309,6 +19517,7 @@ body.niuma-confirm-open{overflow:hidden}
       function sendConnectOnce() {
         if (connectSent || authenticated || connectAcked) return;
         connectSent = true;
+        connectEverSent = true;
         seq += 1;
         var cid = 'connect-' + seq;
         dbg('WS→', 'connect ' + cid, 'ok');
@@ -19351,17 +19560,15 @@ body.niuma-confirm-open{overflow:hidden}
         chatDispatched = true;
         seq += 1;
         chatMsgId = 'msg-' + seq;
-        sendMethod = canUseSessionSend ? 'sessions.send' : 'chat.send';
-        var params =
-          sendMethod === 'sessions.send'
-            ? { key: canonicalSessionKey || sessionKey, message: msgText, idempotencyKey: chatMsgId }
-            : { message: msgText, idempotencyKey: chatMsgId, sessionKey: sessionKey };
-        if (sendModel && sendMethod !== 'sessions.send') {
-          // OpenClaw v2+ 架构已在 session meta 固化模型参数，网关强制执行严格 JSON 校验，
-          // 不再允许于 chat.send Request Root 继续携带 model / modelIdentifier 声明，否则将抛出 Unexpected Property Error。
-        }
+        sendMethod = 'chat.send';
+        var params = { message: msgText, idempotencyKey: chatMsgId, sessionKey: canonicalSessionKey || sessionKey };
         try {
           dbg('WS→', sendMethod + ' ' + chatMsgId, 'ok');
+          if (hooks && typeof hooks.onProgress === 'function') {
+            try {
+              hooks.onProgress('⏳ OpenClaw 已发送：' + sendMethod + ' → ' + String(params.sessionKey || '').slice(0, 80));
+            } catch (_) {}
+          }
           ws.send(
             JSON.stringify({
               type: 'req',
@@ -19376,24 +19583,6 @@ body.niuma-confirm-open{overflow:hidden}
       }
 
       function sendSessionSubscribe() {
-        if (!canonicalSessionKey || subscribeSent) {
-          sendChatMsg();
-          return;
-        }
-        subscribeSent = true;
-        seq += 1;
-        subscribeMsgId = 'sub-' + seq;
-        try {
-          ws.send(
-            JSON.stringify({
-              type: 'req',
-              id: subscribeMsgId,
-              method: 'sessions.messages.subscribe',
-              params: { key: canonicalSessionKey }
-            })
-          );
-        } catch (e) {}
-        // 订阅是增强能力，不应阻塞本轮消息发送。
         sendChatMsg();
       }
 
@@ -19403,8 +19592,8 @@ body.niuma-confirm-open{overflow:hidden}
         var evLower = String(ev || '').toLowerCase();
 
         if (ev === 'connect.challenge') {
-          if (authenticated || connectAcked) {
-            dbg('WS', 'ignore late connect.challenge', 'err');
+          if (authenticated || connectAcked || connectEverSent) {
+            dbg('WS', 'ignore duplicate connect.challenge', 'err');
             return;
           }
           challengeReceived = true;
@@ -19417,8 +19606,11 @@ body.niuma-confirm-open{overflow:hidden}
         if (typeof msg.id === 'string' && msg.id.indexOf('connect-') === 0) {
           if (msg.error || msg.ok === false) {
             var em = formatOpenClawConnectError(msg.error || { message: 'Gateway 认证失败' });
-            if ((authenticated || connectAcked) && /connect is only valid as the first request/i.test(String(em))) {
+            if ((authenticated || connectAcked || connectEverSent) && /connect is only valid as the first request/i.test(String(em))) {
               dbg('WS', 'ignore duplicate connect error', 'err');
+              authenticated = true;
+              connectAcked = true;
+              sendSessionSubscribe();
               return;
             }
             fail(new Error(String(em)));
@@ -19490,6 +19682,8 @@ body.niuma-confirm-open{overflow:hidden}
             ocPayloadMatchesSession(msg, canonicalSessionKey) ||
             ocPayloadMatchesSession(plSession, canonicalSessionKey);
           if (!sessOk) return;
+          var sessionTsMs = ocTimestampMsFromAny(plSession);
+          if (chatSentAtMs > 0 && sessionTsMs > 0 && sessionTsMs + 1200 < chatSentAtMs) return;
           var sr = ocRoleFromSessionMessage(plSession);
           if (sr && sr !== 'assistant') {
             if (ocSessionMessageDone(plSession) && pendingText.trim()) okDone();
@@ -19526,7 +19720,7 @@ body.niuma-confirm-open{overflow:hidden}
           var toolHint = ocExtractToolActionFromPayload(pl);
           if (thinkSnip && !chatTxt) {
             ocFeedAgentLoopFromOpenClawStream('', pl, thinkSnip.slice(0, 160));
-            ensureBackgroundHistoryPoll();
+            if (!isPaletteAgentRequest) ensureBackgroundHistoryPoll();
             if (hooks && typeof hooks.onProgress === 'function') {
               try {
                 hooks.onProgress('💭 ' + thinkSnip.slice(0, 100) + (thinkSnip.length > 100 ? '…' : ''));
@@ -19541,26 +19735,7 @@ body.niuma-confirm-open{overflow:hidden}
             }
           }
           if (chatTxt) {
-            /* delta：可能是增量片段（需拼接）或每帧全量快照（需整段替换） */
-            if (pl.state === 'delta') {
-              if (pendingText && chatTxt === pendingText) {
-                /* 重复帧，忽略 */
-              } else if (pendingText && chatTxt.length >= pendingText.length && chatTxt.indexOf(pendingText) === 0) {
-                pendingText = chatTxt;
-              } else if (pendingText && pendingText.indexOf(chatTxt) === 0) {
-                /* 更短重复片段 */
-              } else if (pendingText && pendingText.indexOf(chatTxt) >= 0) {
-                /* 全量快照已含本帧正文 */
-              } else if (
-                pendingText &&
-                chatTxt.length >= 48 &&
-                pendingText.length >= 48 &&
-                paletteNormDedupeKey(chatTxt).indexOf(paletteNormDedupeKey(pendingText).slice(0, 48)) >= 0
-              ) {
-                pendingText = chatTxt;
-              } else pendingText += chatTxt;
-            } else pendingText = chatTxt;
-            pendingText = paletteDedupeRepeatedText(pendingText);
+            pendingText = ocMergeStreamText(pendingText, chatTxt, pl.state === 'delta');
             emitProgress(false, pl);
           }
           if (handleOpenClawFinalState(pl)) return;
@@ -19602,7 +19777,7 @@ body.niuma-confirm-open{overflow:hidden}
             ocExtractText(respPayload.text || respPayload.content || respPayload.message || '') ||
             ocExtractChatEventPayload(respPayload);
           if (piece) {
-            pendingText += piece;
+            pendingText = ocMergeStreamText(pendingText, piece, true);
             emitProgress(false, respPayload);
           }
           if (respPayload.done || respPayload.finish_reason || respPayload.finished) {
@@ -19632,7 +19807,7 @@ body.niuma-confirm-open{overflow:hidden}
           var restSessionOk = ocPayloadMatchesSession(msg, sessionKey) || ocPayloadMatchesSession(rest, sessionKey);
           var restReqOk = ocPayloadMatchesRequest(msg, chatMsgId) || ocPayloadMatchesRequest(rest, chatMsgId);
           if (!restSessionOk || !restReqOk) return;
-          pendingText += rt;
+          pendingText = ocMergeStreamText(pendingText, rt, true);
           emitProgress(false, rest);
           armFinalize();
         }
@@ -19660,10 +19835,7 @@ body.niuma-confirm-open{overflow:hidden}
               }
               var gt = ocExtractChatEventPayload(guess);
               if (gt) {
-                if (guess.state === 'delta') {
-                  if (pendingText && gt.length >= pendingText.length && gt.indexOf(pendingText) === 0) pendingText = gt;
-                  else pendingText += gt;
-                } else pendingText = gt;
+                pendingText = ocMergeStreamText(pendingText, gt, guess.state === 'delta');
                 emitProgress(false, guess);
                 if (handleOpenClawFinalState(guess)) return;
                 armFinalize();
@@ -19707,10 +19879,6 @@ body.niuma-confirm-open{overflow:hidden}
       ws.onclose = function (e) {
         dbg('WS', 'close chat stream code=' + e.code, authenticated ? 'ok' : 'err');
         if (settled) return;
-        if (authenticated && ocShouldSettleOpenClawChat(pendingText, null)) {
-          settleResolve(pendingText.trim());
-          return;
-        }
         if (authenticated) {
           recoverFinalFromHistory(true, null);
           return;
@@ -19777,7 +19945,7 @@ body.niuma-confirm-open{overflow:hidden}
       cstatForSession(sid, '请先发送一条消息。', 'error');
       return;
     }
-    if (!cfg.baseUrl || !cfg.model) {
+    if (!cfg.baseUrl || (p0.transport !== 'openclaw' && !cfg.model)) {
       cstatForSession(sid, '请先在设置里填写 Base URL 和 Model。', 'error');
       setSettings(true);
       return;
@@ -19825,7 +19993,8 @@ body.niuma-confirm-open{overflow:hidden}
       if (cfg.provider === 'minimax') content = await reqMinimax(cfg);
       else if (p.transport === 'anthropic') content = await reqClaude(cfg);
       else if (p.transport === 'gemini') content = await reqGemini(cfg);
-      else if (p.transport === 'openclaw')
+      else if (p.transport === 'openclaw') {
+        cstatForSession(sid, 'OpenClaw：正在发送到 Gateway…');
         content = await reqOpenClaw(cfg, {
           onProgress: function (textNow) {
             var sAct = sessionById(sid);
@@ -19848,7 +20017,7 @@ body.niuma-confirm-open{overflow:hidden}
             }
           }
         });
-      else content = await reqOpenAI(cfg);
+      } else content = await reqOpenAI(cfg);
       if (streamDraftId) {
         var sAct2 = sessionById(sid);
         if (sAct2) {
@@ -19881,6 +20050,7 @@ body.niuma-confirm-open{overflow:hidden}
         refreshSessionMeta(sOk);
         renderThreadHub();
       }
+      paletteMaybeNotifyAgentEndFromSession(sid, content);
     } catch (err) {
       cancelAllPendingHttpOnTimeout(err);
       if (streamDraftId) {
@@ -19921,9 +20091,14 @@ body.niuma-confirm-open{overflow:hidden}
         refreshSessionMeta(sFail);
         renderThreadHub();
       }
+      paletteMaybeNotifyAgentEndFromSession(sid, '');
     } finally {
       var sDone = sessionById(sid);
       if (sDone && sDone._pendingUserContentForModel != null) delete sDone._pendingUserContentForModel;
+      if (sDone) {
+        delete sDone._openclawLocalPendingText;
+        delete sDone._openclawLocalPendingAt;
+      }
       setSessionSending(sid, false);
     }
   }
@@ -20139,7 +20314,7 @@ body.niuma-confirm-open{overflow:hidden}
       if (shouldClearAttachAfterSend) clearPendingAttach();
       return;
     }
-    if (!cfg.baseUrl || !cfg.model) {
+    if (!cfg.baseUrl || (p0.transport !== 'openclaw' && !cfg.model)) {
       cstatForSession(sid, '请先在设置里填写 Base URL 和 Model。', 'error');
       setSettings(true);
       return;
@@ -20163,6 +20338,8 @@ body.niuma-confirm-open{overflow:hidden}
       return;
     }
     add('user', displayText);
+    s._openclawLocalPendingText = String(displayText || text || '').trim();
+    s._openclawLocalPendingAt = Date.now();
     input.value = '';
 
     var browserIntent = detectBrowserControlIntent(text);
@@ -20218,8 +20395,16 @@ body.niuma-confirm-open{overflow:hidden}
     }
 
     niumaTrace('executeModelRequest_start', traceId, {});
-    await executeModelRequest(sid);
-    niumaTrace('executeModelRequest_done', traceId, {});
+    try {
+      await executeModelRequest(sid);
+      niumaTrace('executeModelRequest_done', traceId, {});
+    } finally {
+      var sAfter = sessionById(sid);
+      if (sAfter) {
+        delete sAfter._openclawLocalPendingText;
+        delete sAfter._openclawLocalPendingAt;
+      }
+    }
     if (shouldClearAttachAfterSend) clearPendingAttach();
   }
 
@@ -20664,6 +20849,11 @@ body.niuma-confirm-open{overflow:hidden}
   if (openclawSetupImportBtn) {
     openclawSetupImportBtn.addEventListener('click', function () {
       runOpenClawImportConnect({ force: true });
+    });
+  }
+  if (openclawSetupRestartBtn) {
+    openclawSetupRestartBtn.addEventListener('click', function () {
+      runOpenClawRestartGateway();
     });
   }
   if (inlineOpenClawImport) {
@@ -22450,6 +22640,15 @@ body.niuma-confirm-open{overflow:hidden}
         if (d.ok) {
           apiTestStat('Hermes Gateway 已重启，正在重新检测…', 'success');
           runHermesImportConnect({ force: true });
+        } else {
+          apiTestStat('重启失败：' + String(d.error || 'unknown'), 'error');
+        }
+        return;
+      }
+      if (d.type === 'openclaw_gateway_restart_result') {
+        if (d.ok) {
+          apiTestStat('OpenClaw Gateway 已重启，正在重新检测…', 'success');
+          runOpenClawImportConnect({ force: true, fromRestart: true });
         } else {
           apiTestStat('重启失败：' + String(d.error || 'unknown'), 'error');
         }

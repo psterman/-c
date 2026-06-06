@@ -2557,6 +2557,10 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(FloatingToolbar_DeferredRestartHermesGateway, -10)
         return
     }
+    if (typ = "niuma_openclaw_restart_gateway") {
+        SetTimer(FloatingToolbar_DeferredRestartOpenClawGateway, -10)
+        return
+    }
     if (typ = "niuma_debug_event") {
         evt := msg.Has("event") ? msg["event"] : ""
         FloatingToolbar_DebugWriteEvent(evt)
@@ -3221,6 +3225,26 @@ FloatingToolbar_DeferredRestartHermesGateway() {
         return
     try WebView_QueuePayload(g_FTB_WV2, Map(
         "type", "hermes_gateway_restart_result",
+        "ok", !!rr.Get("ok", false),
+        "error", String(rr.Get("error", "")),
+        "elapsedMs", Integer(rr.Get("elapsedMs", 0))
+    ))
+}
+
+FloatingToolbar_DeferredRestartOpenClawGateway() {
+    global g_FTB_WV2
+    rr := Map("ok", false, "error", "UserStudio_RestartOpenClawGateway 不可用")
+    if FuncExists("UserStudio_RestartOpenClawGateway") {
+        try rr := UserStudio_RestartOpenClawGateway(45000)
+        catch as eR {
+            rr := Map("ok", false, "error", eR.Message)
+        }
+    }
+    try FloatingToolbar_ProbeOpenClawGatewayToken(true)
+    if !g_FTB_WV2
+        return
+    try WebView_QueuePayload(g_FTB_WV2, Map(
+        "type", "openclaw_gateway_restart_result",
         "ok", !!rr.Get("ok", false),
         "error", String(rr.Get("error", "")),
         "elapsedMs", Integer(rr.Get("elapsedMs", 0))

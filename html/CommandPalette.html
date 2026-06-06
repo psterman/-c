@@ -1494,9 +1494,21 @@ body[data-theme="light"] .ai-bg-card {
     return { done: done, total: total, label: "步骤 " + done + "/" + total };
   }
 
+  function isAgentStatusPreview(text) {
+    var p = String(text || "").replace(/\s+/g, " ").trim();
+    if (!p) return true;
+    return /^[🔗⏳📨💭]/.test(p) || /^(正在|等待|任务已|仍连接|OpenClaw 流式|OpenClaw 处理|同步 Niuma|流式输出中)/.test(p);
+  }
+
   function cardPreviewText(card) {
     if (!card) return "";
-    if (card.liveThought && String(card.liveThought).trim()) return String(card.liveThought).trim().slice(0, 160);
+    var raw = String(card.rawAnswer || "").trim();
+    if (raw && !isAgentStatusPreview(raw))
+      return raw.replace(/::\w+_(START|END)::/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
+    if (card.parser && card.parser._buf && String(card.parser._buf).trim() && !isAgentStatusPreview(card.parser._buf))
+      return String(card.parser._buf).trim().slice(0, 160);
+    if (card.liveThought && String(card.liveThought).trim() && !isAgentStatusPreview(card.liveThought))
+      return String(card.liveThought).trim().slice(0, 160);
     if (card.blocks && card.blocks.reply) {
       var rb = String(card.blocks.reply.content || card.blocks.reply.body || "").trim();
       if (rb) return rb.slice(0, 160);
@@ -1506,8 +1518,8 @@ body[data-theme="light"] .ai-bg-card {
       var lg = String(st.log || st.body || st.title || "").trim();
       if (lg) return lg.slice(0, 160);
     }
-    var raw = String(card.rawAnswer || "").trim();
-    if (raw) return raw.replace(/::\w+_(START|END)::/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
+    var rawFallback = String(card.rawAnswer || "").trim();
+    if (rawFallback) return rawFallback.replace(/::\w+_(START|END)::/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
     var q = card.query && String(card.query).trim();
     var title = String(card.title || "").trim();
     if (q && q !== title) return q.slice(0, 120);
@@ -3485,8 +3497,15 @@ body[data-theme="light"] .ai-bg-card {
     card.sessionRef = dto.sessionRef || card.sessionRef;
     if (dto.provider) card.provider = normalizeAgentProvider(dto.provider);
     if (dto.updatedAt) card.updatedAt = dto.updatedAt;
-    if (dto.rawAnswer != null) card.rawAnswer = String(dto.rawAnswer || "");
-    if (dto.liveThought != null && String(dto.liveThought) !== "") card.liveThought = String(dto.liveThought);
+    if (dto.rawAnswer != null) {
+      card.rawAnswer = String(dto.rawAnswer || "");
+      if (card.rawAnswer && !isAgentStatusPreview(card.rawAnswer))
+        card.liveThought = card.rawAnswer.slice(0, 280) + (card.rawAnswer.length > 280 ? "…" : "");
+    }
+    if (dto.liveThought != null && String(dto.liveThought) !== "") {
+      if (!card.rawAnswer || isAgentStatusPreview(card.rawAnswer) || !isAgentStatusPreview(dto.liveThought))
+        card.liveThought = String(dto.liveThought);
+    }
     if (card.expanded === undefined) card.expanded = id === actionState.activeCardId;
     if (wasNew || isActionCardRunning(card)) actionState.activeCardId = id;
     if (actionState.focusMode && (wasNew || id === actionState.activeCardId)) collapseNonActiveCards();
@@ -4893,16 +4912,32 @@ body[data-theme="light"] .ai-bg-card {
         }
         var delta = String(d.delta || d.text || "");
         var preview = delta.replace(/\s+/g, " ").trim().slice(0, 160);
-        if (preview) {
-          var isStatusLine = /^[🔗⏳📨💭]/.test(preview) || /^(正在|等待|任务已)/.test(preview);
-          if (isStatusLine || !card._protoStarted) {
-            setCardLiveThought(cid, preview, true);
-            window.nmerPalette.setStatus(preview.slice(0, 80), "loading");
-          }
+        var statusPreview = preview && isAgentStatusPreview(preview);
+        var statusLive = d.liveThought && isAgentStatusPreview(d.liveThought);
+        var hasBody = card.rawAnswer && !isAgentStatusPreview(card.rawAnswer);
+        if (card.parser && card.parser._buf && !isAgentStatusPreview(card.parser._buf)) hasBody = true;
+        if (preview && !statusPreview) {
+          if (card.rawAnswer && preview.indexOf(String(card.rawAnswer).trim()) === 0)
+            card.rawAnswer = preview;
+          else if (!card.rawAnswer || isAgentStatusPreview(card.rawAnswer))
+            card.rawAnswer = preview;
+          else if (delta)
+            card.rawAnswer = String(card.rawAnswer || "") + delta;
         }
-        if (card.parser && delta) {
-          if (/::(PLAN|STATUS|QUESTION|REPLY)_START::/.test(delta)) card._protoStarted = true;
-          card.parser.onChunk(delta);
+        if (preview && !statusPreview) {
+          if (card.parser && delta) {
+            if (/::(PLAN|STATUS|QUESTION|REPLY)_START::/.test(delta)) card._protoStarted = true;
+            card.parser.onChunk(delta);
+          }
+          var bodyPreview = (card.parser && card.parser._buf) ? String(card.parser._buf).trim() : preview;
+          setCardLiveThought(cid, bodyPreview.slice(0, 280) + (bodyPreview.length > 280 ? "…" : ""), true);
+          window.nmerPalette.setStatus("流式输出中…", "loading");
+        } else if (d.liveThought && (!hasBody || !statusLive)) {
+          setCardLiveThought(cid, String(d.liveThought), true);
+          if (statusLive) window.nmerPalette.setStatus(String(d.liveThought).slice(0, 80), "loading");
+        } else if (preview && statusPreview && !hasBody) {
+          setCardLiveThought(cid, preview, true);
+          window.nmerPalette.setStatus(preview.slice(0, 80), "loading");
         }
         if (card.uiState === "Planning") actionCardManager.transitionCardState(cid, "Running");
         refreshActionCardDom(card);
@@ -4915,6 +4950,14 @@ body[data-theme="light"] .ai-bg-card {
       var card2 = endR.card;
       if (card2 && d.answer && String(d.answer).trim()) {
         card2._rawReplaySig = String(d.answer);
+        card2.rawAnswer = String(d.answer);
+        var ansPreview = String(d.answer).trim();
+        if (card2.parser && card2.parser.reset) {
+          card2.parser.reset();
+          card2.parser.onChunk(ansPreview);
+          if (card2.parser.flush) card2.parser.flush();
+        }
+        setCardLiveThought(cid2, ansPreview.slice(0, 280) + (ansPreview.length > 280 ? "…" : ""), false);
       }
       if (card2 && card2.parser) card2.parser.flush();
       if (card2 && d.sessionRef) card2.sessionRef = String(d.sessionRef);
@@ -4948,7 +4991,11 @@ body[data-theme="light"] .ai-bg-card {
     } else if (d.type === "palette_agent_heartbeat") {
       agentDebugLog("host_heartbeat", String(d.message || "").slice(0, 60), "warn");
       var hb = resolveActionCard(d.cardId, d.reqId);
-      if (hb.id) setCardLiveThought(hb.id, d.message || "等待响应…", true);
+      var hbMsg = String(d.liveThought || d.message || "等待响应…");
+      if (hb.id) {
+        setCardLiveThought(hb.id, hbMsg, true);
+        window.nmerPalette.setStatus(hbMsg.slice(0, 80), "loading");
+      }
     } else if (d.type === "palette_agent_session") {
       var cid3 = String(d.cardId || "");
       var card3 = getActionCard(cid3);

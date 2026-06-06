@@ -550,6 +550,40 @@ UserStudio_ProbeOpenClawGateway(base, token, timeoutMs := 12000) {
     )
 }
 
+UserStudio_RestartOpenClawGateway(timeoutMs := 45000) {
+    t0 := A_TickCount
+    exe := UserStudio_FindOpenClawCliExe()
+    if (exe = "") {
+        return Map(
+            "ok", false,
+            "error", "未找到 openclaw CLI。请先安装 OpenClaw，再重试。",
+            "elapsedMs", A_TickCount - t0
+        )
+    }
+    out := A_Temp . "\nmer_openclaw_gw_restart_" . A_TickCount . ".txt"
+    try FileDelete(out)
+    inner := '"' . exe . '" gateway restart > "' . out . '" 2>&1'
+    try {
+        RunWait(A_ComSpec . ' /c ' . inner, , "Hide")
+    } catch as eRun {
+        return Map("ok", false, "error", "gateway restart 失败：" . eRun.Message, "elapsedMs", A_TickCount - t0)
+    }
+    while (A_TickCount - t0 < timeoutMs) {
+        if UserStudio_OpenClawGatewayCliOk()
+            return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+        if UserStudio_TcpPortOpen("127.0.0.1", 18789, 800)
+            break
+        Sleep(500)
+    }
+    if UserStudio_OpenClawGatewayCliOk() || UserStudio_TcpPortOpen("127.0.0.1", 18789, 1200)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    return Map(
+        "ok", false,
+        "error", "已执行 gateway restart，但 OpenClaw Gateway 仍未就绪。请查看 " . out . " 或重启 OpenClaw。",
+        "elapsedMs", A_TickCount - t0
+    )
+}
+
 UserStudio_ParseOpenClawCliStdout(raw) {
     raw := Trim(String(raw))
     if (raw = "")

@@ -124,6 +124,7 @@ CommandPalette_AgentCardToSyncDto(card) {
         "running", !!card.Get("running", false),
         "error", String(card.Get("error", "")),
         "rawAnswer", SubStr(String(card.Get("rawAnswer", "")), 1, 12000),
+        "liveThought", SubStr(String(card.Get("liveThought", "")), 1, 400),
         "updatedAt", String(card.Get("updatedAt", ""))
     )
 }
@@ -512,6 +513,7 @@ CommandPalette_AgentSubmit(msg) {
         "running", true,
         "error", "",
         "rawAnswer", "",
+        "liveThought", "🔗 已提交，正在连接 " . ((prov = "hermes") ? "Hermes" : "OpenClaw") . "…",
         "gen", gen,
         "messages", [Map("role", "user", "text", text, "at", A_Now)],
         "updatedAt", A_Now
@@ -540,7 +542,7 @@ CommandPalette_AgentIsStatusOnlyDelta(delta) {
         return true
     if RegExMatch(d, "i)^(🔗|⏳|💭|正在|等待|仍连接|同步|引擎|Niuma)")
         return true
-    if RegExMatch(d, "i)^(正在连接|正在准备|正在请求)")
+    if RegExMatch(d, "i)^(正在连接|正在准备|正在请求|OpenClaw 流式|OpenClaw 处理|流式输出中)")
         return true
     return false
 }
@@ -655,12 +657,27 @@ CommandPalette_AgentHeartbeatTick(cardId) {
         return
     prov := String(card.Get("provider", "openclaw"))
     provLabel := (prov = "hermes") ? "Hermes" : "龙虾 OpenClaw"
-    if FuncExists("CommandPalette_PushToWeb")
+    dispatchTick := Integer(card.Get("dispatchTick", 0))
+    elapsed := dispatchTick > 0 ? Round((A_TickCount - dispatchTick) / 1000) : 0
+    hbMsg := "仍连接 " . provLabel . "，等待模型响应… (" . elapsed . "s)"
+    card["liveThought"] := hbMsg
+    card["updatedAt"] := A_Now
+    if FuncExists("CommandPalette_PushToWeb") {
         CommandPalette_PushToWeb(Map(
             "type", "palette_agent_heartbeat",
             "cardId", cid,
-            "message", "仍连接 " . provLabel . "，等待模型响应…"
+            "reqId", String(card.Get("reqId", "")),
+            "message", hbMsg,
+            "liveThought", hbMsg
         ))
+        CommandPalette_PushToWeb(Map(
+            "type", "palette_agent_status",
+            "cardId", cid,
+            "reqId", String(card.Get("reqId", "")),
+            "message", hbMsg,
+            "status", "loading"
+        ))
+    }
     SetTimer(CommandPalette_AgentHeartbeatTick.Bind(cid), -5000)
 }
 
@@ -678,12 +695,22 @@ CommandPalette_AgentEnsureEngine(*) {
 }
 
 CommandPalette_AgentPushStreamStatus(cardId, reqId, message) {
+    msg := Trim(String(message))
+    if (msg = "")
+        return
+    card := CommandPalette_AgentGetCard(cardId)
+    if (card is Map) {
+        card["liveThought"] := msg
+        card["updatedAt"] := A_Now
+        card["streamDispatched"] := true
+    }
     if FuncExists("CommandPalette_PushToWeb")
         CommandPalette_PushToWeb(Map(
             "type", "palette_agent_chunk",
             "cardId", String(cardId),
             "reqId", String(reqId),
-            "delta", String(message) . "`n"
+            "delta", msg . "`n",
+            "liveThought", msg
         ))
 }
 
@@ -745,30 +772,52 @@ CommandPalette_AgentPollFtbAnswer(cardId, reqId, query, tryN) {
     if !(card is Map) || card.Get("ended", false) || !card.Get("running", false)
         return
     tryN := Integer(tryN)
-    if CommandPalette_AgentHasSubstantialAnswer(card)
-        return
-    ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
-    if (ans != "") {
-        CommandPalette_AgentLog("poll_hit", "card=" . cid . " len=" . StrLen(ans))
-        prev := String(card.Get("rawAnswer", ""))
-        delta := ""
-        if (prev = "")
-            delta := ans
-        else if (InStr(ans, prev) = 1)
-            delta := SubStr(ans, StrLen(prev) + 1)
-        else if (InStr(prev, ans) = 1 || ans = prev)
-            delta := ""
-        else
-            card["rawAnswer"] := ans
-        if (delta != "")
-            CommandPalette_OnNiumaPaletteAgentChunk(Map("reqId", rid, "cardId", cid, "delta", delta))
-        CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
+    if CommandPalette_AgentHasSubstantialAnswer(card) && !CommandPalette_AgentFtbSessionStillSending(rid) {
+        ans := Trim(String(card.Get("rawAnswer", "")))
+        if (ans != "")
+            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
         return
     }
-    if (tryN > 0 && Mod(tryN, 5) = 0)
-        CommandPalette_AgentPushStreamStatus(cid, rid, "⏳ 同步 Niuma 会话回复中 (" . (tryN + 1) . ")…")
-    if (tryN >= 90) {
+    ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
+    stillSending := CommandPalette_AgentFtbSessionStillSending(rid)
+    if (ans != "") {
+        prev := String(card.Get("rawAnswer", ""))
+        if (ans != prev) {
+            delta := ""
+            if (prev = "")
+                delta := ans
+            else if (InStr(ans, prev) = 1)
+                delta := SubStr(ans, StrLen(prev) + 1)
+            else if !(InStr(prev, ans) = 1 || ans = prev) {
+                card["rawAnswer"] := ans
+                CommandPalette_OnNiumaPaletteAgentChunk(Map("reqId", rid, "cardId", cid, "delta", ans))
+            }
+            if (delta != "")
+                CommandPalette_OnNiumaPaletteAgentChunk(Map("reqId", rid, "cardId", cid, "delta", delta))
+            else if (StrLen(ans) > StrLen(prev)) {
+                card["rawAnswer"] := ans
+                CommandPalette_OnNiumaPaletteAgentChunk(Map("reqId", rid, "cardId", cid, "delta", SubStr(ans, StrLen(prev) + 1)))
+            }
+        }
+        if !stillSending && CommandPalette_AgentHasSubstantialAnswer(card) {
+            CommandPalette_AgentLog("poll_hit", "card=" . cid . " len=" . StrLen(ans))
+            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", String(card.Get("rawAnswer", ans))))
+            return
+        }
+    }
+    if (tryN > 0 && Mod(tryN, 3) = 0 && !CommandPalette_AgentHasSubstantialAnswer(card)) {
         prov := String(card.Get("provider", "openclaw"))
+        pl := (prov = "hermes") ? "Hermes" : "OpenClaw"
+        dispatchTick := Integer(card.Get("dispatchTick", 0))
+        elapsed := dispatchTick > 0 ? Round((A_TickCount - dispatchTick) / 1000) : 0
+        if stillSending
+            CommandPalette_AgentPushStreamStatus(cid, rid, "⏳ " . pl . " 处理中… (" . elapsed . "s)")
+        else
+            CommandPalette_AgentPushStreamStatus(cid, rid, "⏳ 同步 Niuma 会话回复中 (" . (tryN + 1) . " · " . elapsed . "s)")
+    }
+    prov := String(card.Get("provider", "openclaw"))
+    pollMax := (prov = "openclaw" || prov = "hermes") ? 300 : 90
+    if (tryN >= pollMax) {
         pl := (prov = "hermes") ? "Hermes" : "龙虾 OpenClaw"
         CommandPalette_AgentPushError(rid, cid, "同步超时：Niuma 未返回回复。请确认悬浮栏已加载，并在设置中对「" . pl . "」点一键连接")
         return
@@ -946,6 +995,45 @@ CommandPalette_AgentArmStreamWatchdog(cardId) {
     SetTimer(CommandPalette_AgentStreamWatchdogTick.Bind(cardId), -15000)
 }
 
+CommandPalette_AgentStreamIdleLimitMs(card) {
+    if !(card is Map)
+        return 120000
+    prov := String(card.Get("provider", "openclaw"))
+    if (prov = "openclaw" || prov = "hermes")
+        return 600000
+    return 120000
+}
+
+CommandPalette_AgentFtbSessionStillSending(reqId) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    rid := Trim(String(reqId))
+    if (rid = "")
+        return false
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return false
+    if !FuncExists("CommandPalette_JsEscapeForParse")
+        return false
+    argsJson := "{}"
+    try argsJson := Jxon_Dump(Map("reqId", rid))
+    catch {
+        return false
+    }
+    escaped := CommandPalette_JsEscapeForParse(argsJson)
+    js := "(function(){try{var o=JSON.parse('" . escaped . "');"
+        . "var fn=window.paletteIsSessionSendingForAgentReqId;"
+        . "if(typeof fn!=='function')return JSON.stringify({ok:0});"
+        . "return JSON.stringify({ok:1,sending:!!fn(o.reqId)});"
+        . "}catch(e){return JSON.stringify({ok:0});}})();"
+    try {
+        raw := g_FTB_WV2.ExecuteScriptAsync(js).await(3000)
+        data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
+        if (data is Map) && data.Get("ok", false)
+            return !!data.Get("sending", false)
+    } catch {
+    }
+    return false
+}
+
 CommandPalette_AgentStreamWatchdogTick(cardId) {
     global g_Agent_Cards, g_Agent_CancelToken
     if (g_Agent_CancelToken)
@@ -956,16 +1044,24 @@ CommandPalette_AgentStreamWatchdogTick(cardId) {
     cid := String(card.Get("cardId", cardId))
     rid := String(card.Get("reqId", ""))
     now := A_TickCount
-    last := Integer(card.Get("lastChunkTick", 0))
+    lastSub := Integer(card.Get("lastSubstantiveChunkTick", 0))
+    dispatchTick := Integer(card.Get("dispatchTick", 0))
+    idleFrom := lastSub > 0 ? lastSub : (dispatchTick > 0 ? dispatchTick : now)
+    idleMs := now - idleFrom
+    idleLimit := CommandPalette_AgentStreamIdleLimitMs(card)
     dispatched := !!card.Get("streamDispatched", false)
     rawLen := StrLen(String(card.Get("rawAnswer", "")))
-    if (!dispatched && (now - Integer(card.Get("dispatchTick", now)) > 45000)) {
+    if (!dispatched && dispatchTick > 0 && (now - dispatchTick > 45000)) {
         prov := String(card.Get("provider", "openclaw"))
         pl := (prov = "hermes") ? "Hermes" : "龙虾 OpenClaw"
         CommandPalette_AgentPushError(rid, cid, "引擎未启动：请先打开牛马悬浮栏，并在设置里对「" . pl . "」点一键连接")
         return
     }
-    if (dispatched && rawLen < 1 && last > 0 && (now - last > 120000)) {
+    if (dispatched && rawLen < 1 && idleMs > idleLimit) {
+        if CommandPalette_AgentFtbSessionStillSending(rid) {
+            CommandPalette_AgentArmStreamWatchdog(cid)
+            return
+        }
         q := Trim(String(card.Get("query", "")))
         ans := (q != "") ? CommandPalette_AgentFetchAnswerFromFtb(rid, q) : ""
         if (ans != "") {
@@ -1021,6 +1117,8 @@ CommandPalette_OnNiumaPaletteAgentChunk(msg) {
     }
     if card.Get("ended", false)
         return
+    if CommandPalette_AgentIsStatusOnlyDelta(delta)
+        card["liveThought"] := Trim(delta)
     if !CommandPalette_AgentIsStatusOnlyDelta(delta) {
         prev := String(card.Get("rawAnswer", ""))
         if (prev = "")
@@ -1033,6 +1131,10 @@ CommandPalette_OnNiumaPaletteAgentChunk(msg) {
             card["rawAnswer"] := prev
         else
             card["rawAnswer"] := prev . delta
+        card["lastSubstantiveChunkTick"] := A_TickCount
+        lt := Trim(SubStr(String(card.Get("rawAnswer", "")), 1, 120))
+        if (lt != "")
+            card["liveThought"] := lt . (StrLen(String(card.Get("rawAnswer", ""))) > 120 ? "…" : "")
     }
     card["lastChunkTick"] := A_TickCount
     card["streamDispatched"] := true
@@ -1044,7 +1146,8 @@ CommandPalette_OnNiumaPaletteAgentChunk(msg) {
             "type", "palette_agent_chunk",
             "cardId", cardId,
             "reqId", reqId,
-            "delta", delta
+            "delta", delta,
+            "liveThought", String(card.Get("liveThought", ""))
         ))
 }
 
@@ -1057,8 +1160,12 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
     card := CommandPalette_AgentSessionMatches(reqId, cardId)
     if !(card is Map)
         return
-    if card.Get("ended", false)
-        return
+    if card.Get("ended", false) {
+        prevErr := Trim(String(card.Get("error", "")))
+        ansTry := msg.Has("answer") ? String(msg["answer"]) : String(card.Get("rawAnswer", ""))
+        if (prevErr = "" || StrLen(Trim(ansTry)) < 8)
+            return
+    }
     ans := msg.Has("answer") ? String(msg["answer"]) : String(card.Get("rawAnswer", ""))
     card["rawAnswer"] := ans
     card["ended"] := true
