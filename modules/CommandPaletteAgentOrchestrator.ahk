@@ -125,6 +125,7 @@ CommandPalette_AgentCardToSyncDto(card) {
         "error", String(card.Get("error", "")),
         "rawAnswer", SubStr(String(card.Get("rawAnswer", "")), 1, 12000),
         "liveThought", SubStr(String(card.Get("liveThought", "")), 1, 400),
+        "hasProto", !!RegExMatch(String(card.Get("rawAnswer", "")), "::(PLAN|STATUS|QUESTION|REPLY)_(START|END)::"),
         "updatedAt", String(card.Get("updatedAt", ""))
     )
 }

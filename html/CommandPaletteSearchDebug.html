@@ -193,6 +193,7 @@
   .tag.bridge { background: rgba(245,158,66,.15); color: #f59e42; }
   .tag.dispatch { background: rgba(251,191,36,.15); color: #fbbf24; }
   .lvl-err .det { color: var(--err); }
+  .agent-log .ev-block { color: #34d399; font-weight: 600; }
   .hint { color: var(--muted); font-size: 11px; }
 </style>
 </head>
@@ -286,6 +287,7 @@
         <button type="button" data-f="ahk">AHK</button>
         <button type="button" data-f="push">推送</button>
         <button type="button" data-f="ftb">FTB</button>
+        <button type="button" data-f="blocks">UI块</button>
       </div>
       <div class="agent-log" id="log"></div>
     </section>
@@ -589,6 +591,7 @@
     if (l === "ftb" || e.indexOf("agent_stream") >= 0 || e.indexOf("agent_chunk") >= 0 || e.indexOf("forward_") >= 0) return "ftb";
     if (e === "host_chunk" || e === "host_status" || e === "chunk" || e === "status") return "back";
     if (e.indexOf("agent_end") >= 0 || e.indexOf("host_end") >= 0 || e === "end") return "card";
+    if (e.indexOf("block_") === 0 || e === "structurer") return "card";
     if (l === "bridge" || e.indexOf("bridge") >= 0 || e === "submit" || e.indexOf("submit") >= 0) return "bridge";
     if (l === "palette" || l === "panel") return "palette";
     if (l === "push") return agentLastStage || "palette";
@@ -630,6 +633,10 @@
       if (agentFilter === "bridge") return l === "bridge";
       if (agentFilter === "dispatch") return l === "dispatch";
       if (agentFilter === "push") return l === "push";
+      if (agentFilter === "blocks") {
+        var ev = String(r.event || "").toLowerCase();
+        return ev.indexOf("block_") === 0 || ev === "structurer";
+      }
       return l === agentFilter;
     });
     if (!rows.length) {
@@ -638,6 +645,8 @@
     }
     box.innerHTML = rows
       .map(function (r) {
+        var ev = String(r.event || "");
+        var evCls = ev.indexOf("block_") === 0 || ev === "structurer" ? " ev-block" : "";
         return (
           '<div class="row lvl-' +
           esc(r.level || "info") +
@@ -645,8 +654,10 @@
           esc((r.ts || "").slice(11)) +
           "</span>" +
           layerTag(r.layer) +
-          '<span class="ev">' +
-          esc(r.event) +
+          '<span class="ev' +
+          evCls +
+          '">' +
+          esc(ev) +
           '</span><span class="det">' +
           esc(r.detail) +
           "</span></div>"
@@ -701,7 +712,9 @@
           var title = c.title || c.query || c.cardId || "";
           var st = c.running ? "进行中" : (c.ended ? "已结束" : (c.uiState || "—"));
           var extra = c.streamDispatched ? " · 已派发" : "";
-          return "<b>" + esc(title) + "</b> · " + esc(st) + extra + " · " + esc(c.provider || "") + " · req=" + esc(c.reqId || "");
+          var proto = c.hasProto ? " · 协议✓" : "";
+          var rawLen = c.rawAnswer ? String(c.rawAnswer).length : (c.rawLen != null ? c.rawLen : 0);
+          return "<b>" + esc(title) + "</b> · " + esc(st) + extra + proto + " · " + esc(c.provider || "") + " · req=" + esc(c.reqId || "") + (rawLen ? " · ans=" + rawLen + "字" : "");
         }).join("<br/>");
     var flowStage = agentLogs.length ? inferAgentStage(agentLogs[0]) : inferFlowFromCards(cards);
     if (flowStage) updateAgentFlow(flowStage, agentLogs.length ? (agentLogs[0].level || "info") : "ok");

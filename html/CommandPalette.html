@@ -1405,7 +1405,22 @@ body[data-theme="light"] .ai-bg-card {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .b-status-title { font-weight: 600; color: #ffc896; font-size: 11px; }
-.b-status-log { color: var(--text-soft); font-size: 11px; white-space: pre-wrap; word-break: break-word; }
+.b-status-log { color: var(--text-soft); font-size: 11px; white-space: pre-wrap; word-break: break-word; line-height: 1.55; }
+.card-reply-body, .card-question-body, .md-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-main);
+}
+.md-h1 { font-size: 15px; font-weight: 700; margin: 10px 0 6px; color: var(--text-main); }
+.md-h2 { font-size: 13px; font-weight: 700; margin: 8px 0 4px; color: #e8dcc8; }
+.md-h3 { font-size: 12px; font-weight: 600; margin: 6px 0 3px; color: #ffc896; }
+.md-p { margin: 2px 0; font-size: 11px; line-height: 1.55; color: var(--text-soft); }
+.md-p-empty { height: 6px; margin: 0; }
+.md-li { margin: 2px 0 2px 8px; font-size: 11px; line-height: 1.5; color: var(--text-soft); }
+.card-live-thought.card-live-thought-rich { white-space: normal; line-height: 1.55; }
+.card-live-thought.card-live-thought-rich .md-h2 { font-size: 12px; }
 .card-question, .card-reply {
   margin-top: 8px;
   padding: 8px 10px;
@@ -1422,6 +1437,7 @@ body[data-theme="light"] .ai-bg-card {
 .card-question-title, .card-reply-title { font-weight: 700; margin-bottom: 4px; }
 </style>
 <script src="CommandPaletteStreamParser.js?v=3"></script>
+<script src="CommandPaletteReplyStructurer.js?v=1"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -1502,6 +1518,24 @@ body[data-theme="light"] .ai-bg-card {
 
   function cardPreviewText(card) {
     if (!card) return "";
+    if (card.blocks && Array.isArray(card.blocks.plan) && card.blocks.plan.length) {
+      var planPrev = card.blocks.plan
+        .slice(0, 2)
+        .map(function (s, i) {
+          return "步骤" + (i + 1) + "：" + s;
+        })
+        .join(" · ");
+      if (planPrev) return planPrev.slice(0, 160);
+    }
+    if (card.blocks && card.blocks.reply) {
+      var rb0 = String(card.blocks.reply.title || card.blocks.reply.content || card.blocks.reply.body || "").trim();
+      if (rb0) return rb0.slice(0, 160);
+    }
+    if (card.blocks && Array.isArray(card.blocks.status) && card.blocks.status.length) {
+      var st0 = card.blocks.status[card.blocks.status.length - 1];
+      var lg0 = String(st0.title || st0.log || st0.body || "").trim();
+      if (lg0) return lg0.slice(0, 160);
+    }
     var raw = String(card.rawAnswer || "").trim();
     if (raw && !isAgentStatusPreview(raw))
       return raw.replace(/::\w+_(START|END)::/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
@@ -1509,15 +1543,6 @@ body[data-theme="light"] .ai-bg-card {
       return String(card.parser._buf).trim().slice(0, 160);
     if (card.liveThought && String(card.liveThought).trim() && !isAgentStatusPreview(card.liveThought))
       return String(card.liveThought).trim().slice(0, 160);
-    if (card.blocks && card.blocks.reply) {
-      var rb = String(card.blocks.reply.content || card.blocks.reply.body || "").trim();
-      if (rb) return rb.slice(0, 160);
-    }
-    if (card.blocks && Array.isArray(card.blocks.status) && card.blocks.status.length) {
-      var st = card.blocks.status[card.blocks.status.length - 1];
-      var lg = String(st.log || st.body || st.title || "").trim();
-      if (lg) return lg.slice(0, 160);
-    }
     var rawFallback = String(card.rawAnswer || "").trim();
     if (rawFallback) return rawFallback.replace(/::\w+_(START|END)::/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
     var q = card.query && String(card.query).trim();
@@ -1643,13 +1668,13 @@ body[data-theme="light"] .ai-bg-card {
       var log = dom && dom.querySelector(".card-status-log");
       if (log) {
         log.innerHTML =
-          '<div class="b-status"><div class="b-status-title">[流式输出]</div><div class="b-status-log">' +
-          esc(stub._buf) +
+          '<div class="b-status"><div class="b-status-title">[流式输出]</div><div class="b-status-log md-body">' +
+          renderAgentPlainMarkdown(stub._buf) +
           "</div></div>";
         log.scrollTop = log.scrollHeight;
         syncActionCardStatusLogVisibility(dom);
       } else {
-        setCardLiveThought(cardId, stub._buf.slice(-280), true);
+        setCardLiveThought(cardId, stub._buf, true);
       }
     };
     stub.flush = function () {};
@@ -2271,6 +2296,108 @@ body[data-theme="light"] .ai-bg-card {
       .replace(/"/g, "&quot;");
   }
 
+  /** Phase A.1：轻量 Markdown → 安全 HTML（仅标题/段落/列表，全文 esc） */
+  function renderAgentPlainMarkdown(text) {
+    var lines = String(text || "").split(/\r?\n/);
+    var html = [];
+    var i;
+    for (i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      var m3 = line.match(/^###\s+(.+)$/);
+      var m2 = line.match(/^##\s+(.+)$/);
+      var m1 = line.match(/^#\s+(.+)$/);
+      if (m3) html.push('<div class="md-h3">' + esc(m3[1]) + "</div>");
+      else if (m2) html.push('<div class="md-h2">' + esc(m2[1]) + "</div>");
+      else if (m1) html.push('<div class="md-h1">' + esc(m1[1]) + "</div>");
+      else if (/^\s*[-*•]\s+/.test(line))
+        html.push('<div class="md-li">' + esc(line.replace(/^\s*[-*•]\s+/, "• ")) + "</div>");
+      else if (/^\s*\d+[.)]\s+/.test(line))
+        html.push('<div class="md-li">' + esc(line) + "</div>");
+      else if (line.trim() === "") html.push('<div class="md-p md-p-empty"></div>');
+      else html.push('<div class="md-p">' + esc(line) + "</div>");
+    }
+    return html.join("");
+  }
+
+  function showAgentReplyFromText(cardId, title, body) {
+    var dom = document.getElementById("card-" + cardId);
+    if (!dom) return;
+    var rEl = dom.querySelector(".card-reply");
+    if (!rEl) return;
+    var b = String(body || "").trim();
+    if (!b) return;
+    rEl.hidden = false;
+    rEl.innerHTML =
+      '<div class="card-reply-title">' +
+      esc(title || "任务回复") +
+      '</div><div class="card-reply-body md-body">' +
+      renderAgentPlainMarkdown(b) +
+      "</div>";
+  }
+
+  function writeAgentRichText(el, text) {
+    if (!el) return;
+    var t = String(text || "");
+    if (!t) {
+      el.textContent = "";
+      el.removeAttribute("data-raw-md");
+      return;
+    }
+    el.setAttribute("data-raw-md", t);
+    el.innerHTML = renderAgentPlainMarkdown(t);
+  }
+
+  function agentTextHasProtocolTags(text) {
+    return /::(PLAN|STATUS|QUESTION|REPLY)_(START|END)::/.test(String(text || ""));
+  }
+
+  function applyAgentReplyStructurer(cardId, text) {
+    if (typeof CommandPaletteReplyStructurer === "undefined") return false;
+    var t = String(text || "").trim();
+    if (!t || agentTextHasProtocolTags(t) || CommandPaletteReplyStructurer.hasProtocolTags(t)) return false;
+    var blocks = CommandPaletteReplyStructurer.structurePlainAgentReply(t);
+    if (!blocks || !blocks.length) return false;
+    for (var bi = 0; bi < blocks.length; bi++) {
+      actionCardManager.onBlockUpdate(cardId, blocks[bi]);
+    }
+    agentDebugLog(
+      "structurer",
+      "blocks=" +
+        blocks
+          .map(function (b) {
+            return b.type + (b.parseWarn ? "(" + b.parseWarn + ")" : "");
+          })
+          .join(",")
+    );
+    return true;
+  }
+
+  function finalizeAgentCardAnswer(cardId, answerText) {
+    var card = getActionCard(cardId);
+    if (!card) return;
+    var ans = String(answerText || "").trim();
+    if (!ans) return;
+    card.rawAnswer = ans;
+    if (card.parser && card.parser.reset) {
+      card.parser.reset();
+      card._protoStarted = agentTextHasProtocolTags(ans);
+      card.parser.onChunk(ans);
+      if (card.parser.flush) card.parser.flush();
+    }
+    var hasProto = card._protoStarted || agentTextHasProtocolTags(ans);
+    if (!hasProto && !card.blocks.reply) applyAgentReplyStructurer(cardId, ans);
+    if (!card.blocks.reply && !hasProto) showAgentReplyFromText(cardId, "任务完结", ans);
+    if (hasProto || card.blocks.reply) {
+      var replyPreview = card.blocks.reply
+        ? String(card.blocks.reply.content || card.blocks.reply.body || card.blocks.reply.title || "").trim()
+        : "";
+      setCardLiveThought(cardId, replyPreview || "任务已完结", false);
+    } else {
+      setCardLiveThought(cardId, ans, false);
+    }
+    refreshActionCardDom(card);
+  }
+
   function kindIcon(kind) {
     if (kind === "file" || kind === "folder") return "📄";
     if (kind === "history") return "🕘";
@@ -2839,7 +2966,14 @@ body[data-theme="light"] .ai-bg-card {
     if (dom.classList.contains("has-status-log")) return;
     var el = dom.querySelector(".card-live-thought");
     if (!el) return;
-    el.textContent = card.liveThought || "等待引擎响应…";
+    var t = card.liveThought || "等待引擎响应…";
+    if (!isAgentStatusPreview(t) && t.length > 8) {
+      el.classList.add("card-live-thought-rich");
+      writeAgentRichText(el, t);
+    } else {
+      el.classList.remove("card-live-thought-rich");
+      el.textContent = t;
+    }
     el.classList.toggle("thinking", !!thinking);
   }
 
@@ -3336,10 +3470,20 @@ body[data-theme="light"] .ai-bg-card {
     onBlockUpdate: function (cardId, block) {
       var card = getActionCard(cardId);
       if (!card || !block) return;
+      agentDebugLog(
+        "block_" + String(block.type || "unknown"),
+        "seq=" +
+          block.seq +
+          " closed=" +
+          (block.closed ? 1 : 0) +
+          (block.parseWarn ? " warn=" + block.parseWarn : "") +
+          (block.replan ? " replan=1" : "")
+      );
       var dom = ensureActionCardDom(card);
       if (!dom) return;
       if (block.type === "plan") {
         if (block.closed) {
+          card._protoStarted = true;
           card.blocks.plan = block.steps || [];
           if (block.replan) actionCardManager.transitionCardState(cardId, "Planning");
           var tl = dom.querySelector(".card-timeline");
@@ -3354,6 +3498,7 @@ body[data-theme="light"] .ai-bg-card {
           if (card.uiState === "Planning") actionCardManager.transitionCardState(cardId, "Running");
         }
       } else if (block.type === "status") {
+        card._protoStarted = true;
         if (!card.blocks.status) card.blocks.status = [];
         var idx = card.blocks.status.length - 1;
         if (!block.closed && idx >= 0 && card.blocks.status[idx] && card.blocks.status[idx].seq === block.seq) {
@@ -3376,7 +3521,7 @@ body[data-theme="light"] .ai-bg-card {
           }
           if (tail) {
             tail.querySelector(".b-status-title").textContent = open.title || "[执行中]";
-            tail.querySelector(".b-status-log").textContent = open.log || open.body || "";
+            writeAgentRichText(tail.querySelector(".b-status-log"), open.log || open.body || "");
           }
           logBox.scrollTop = logBox.scrollHeight;
           syncActionCardStatusLogVisibility(dom);
@@ -3389,22 +3534,19 @@ body[data-theme="light"] .ai-bg-card {
         if (orphanBody) {
           var orphanLog = dom.querySelector(".card-status-log");
           if (orphanLog) {
-            var orphanNorm = orphanBody.replace(/\s+/g, " ").trim();
-            var orphanNodes = orphanLog.querySelectorAll(".b-status");
-            for (var oi = orphanNodes.length - 1; oi >= 0; oi--) {
-              var prevTxt = orphanNodes[oi].querySelector(".b-status-log");
-              if (prevTxt && prevTxt.textContent.replace(/\s+/g, " ").trim() === orphanNorm) return;
-            }
             var orphanHit = orphanLog.querySelector('.b-status[data-seq="' + block.seq + '"]');
             if (!orphanHit) {
               orphanHit = document.createElement("div");
               orphanHit.className = "b-status";
               orphanHit.setAttribute("data-seq", String(block.seq));
               orphanHit.innerHTML =
-                '<div class="b-status-title">[回复]</div><div class="b-status-log"></div>';
+                '<div class="b-status-title">[回复]</div><div class="b-status-log md-body"></div>';
               orphanLog.appendChild(orphanHit);
             }
-            orphanHit.querySelector(".b-status-log").textContent = orphanBody;
+            var orphanLogEl = orphanHit.querySelector(".b-status-log");
+            if (orphanLogEl && orphanLogEl.getAttribute("data-raw-md") !== orphanBody) {
+              writeAgentRichText(orphanLogEl, orphanBody);
+            }
             orphanLog.scrollTop = orphanLog.scrollHeight;
             syncActionCardStatusLogVisibility(dom);
           }
@@ -3418,11 +3560,12 @@ body[data-theme="light"] .ai-bg-card {
         var qEl = dom.querySelector(".card-question");
         if (qEl) {
           qEl.hidden = false;
+          var qBody = String(block.content || block.body || "").trim();
           qEl.innerHTML =
             '<div class="card-question-title">' +
             esc(block.title || "需要您的确认") +
-            "</div><div>" +
-            esc(block.content || block.body || "") +
+            '</div><div class="card-question-body md-body">' +
+            renderAgentPlainMarkdown(qBody) +
             "</div>";
         }
         actionCardManager.transitionCardState(cardId, "Waiting");
@@ -3432,11 +3575,13 @@ body[data-theme="light"] .ai-bg-card {
         var rEl = dom.querySelector(".card-reply");
         if (rEl) {
           rEl.hidden = false;
+          var rBody = String(block.content || block.body || "").trim();
+          var rTitle = String(block.title || "任务完结").trim();
           rEl.innerHTML =
             '<div class="card-reply-title">' +
-            esc(block.title || "任务完结") +
-            "</div><div>" +
-            esc(block.content || block.body || "") +
+            esc(rTitle) +
+            '</div><div class="card-reply-body md-body">' +
+            renderAgentPlainMarkdown(rBody || block.body || "") +
             "</div>";
         }
         actionCardManager.transitionCardState(cardId, "Done");
@@ -3500,7 +3645,7 @@ body[data-theme="light"] .ai-bg-card {
     if (dto.rawAnswer != null) {
       card.rawAnswer = String(dto.rawAnswer || "");
       if (card.rawAnswer && !isAgentStatusPreview(card.rawAnswer))
-        card.liveThought = card.rawAnswer.slice(0, 280) + (card.rawAnswer.length > 280 ? "…" : "");
+        card.liveThought = card.rawAnswer;
     }
     if (dto.liveThought != null && String(dto.liveThought) !== "") {
       if (!card.rawAnswer || isAgentStatusPreview(card.rawAnswer) || !isAgentStatusPreview(dto.liveThought))
@@ -3516,9 +3661,12 @@ body[data-theme="light"] .ai-bg-card {
       if (card._rawReplaySig !== rawSig) {
         card._rawReplaySig = rawSig;
         card.parser.reset();
-        card._protoStarted = /::(PLAN|STATUS|QUESTION|REPLY)_START::/.test(rawSig);
+        card._protoStarted = agentTextHasProtocolTags(rawSig);
         card.parser.onChunk(rawSig);
-        if (card.uiState === "Done" || dto.uiState === "Done") card.parser.flush();
+        if (card.uiState === "Done" || dto.uiState === "Done") {
+          if (card.parser.flush) card.parser.flush();
+          if (!card._protoStarted && !card.blocks.reply) applyAgentReplyStructurer(id, rawSig);
+        }
       }
     }
     renderActionHistoryList();
@@ -4926,12 +5074,16 @@ body[data-theme="light"] .ai-bg-card {
         }
         if (preview && !statusPreview) {
           if (card.parser && delta) {
-            if (/::(PLAN|STATUS|QUESTION|REPLY)_START::/.test(delta)) card._protoStarted = true;
+            if (agentTextHasProtocolTags(delta)) card._protoStarted = true;
             card.parser.onChunk(delta);
           }
-          var bodyPreview = (card.parser && card.parser._buf) ? String(card.parser._buf).trim() : preview;
-          setCardLiveThought(cid, bodyPreview.slice(0, 280) + (bodyPreview.length > 280 ? "…" : ""), true);
-          window.nmerPalette.setStatus("流式输出中…", "loading");
+          if (card._protoStarted || (domC && domC.classList.contains("has-status-log"))) {
+            window.nmerPalette.setStatus("流式输出中…", "loading");
+          } else {
+            var bodyPreview = (card.parser && card.parser._buf) ? String(card.parser._buf).trim() : preview;
+            setCardLiveThought(cid, bodyPreview, true);
+            window.nmerPalette.setStatus("流式输出中…", "loading");
+          }
         } else if (d.liveThought && (!hasBody || !statusLive)) {
           setCardLiveThought(cid, String(d.liveThought), true);
           if (statusLive) window.nmerPalette.setStatus(String(d.liveThought).slice(0, 80), "loading");
@@ -4950,18 +5102,14 @@ body[data-theme="light"] .ai-bg-card {
       var card2 = endR.card;
       if (card2 && d.answer && String(d.answer).trim()) {
         card2._rawReplaySig = String(d.answer);
-        card2.rawAnswer = String(d.answer);
-        var ansPreview = String(d.answer).trim();
-        if (card2.parser && card2.parser.reset) {
-          card2.parser.reset();
-          card2.parser.onChunk(ansPreview);
-          if (card2.parser.flush) card2.parser.flush();
-        }
-        setCardLiveThought(cid2, ansPreview.slice(0, 280) + (ansPreview.length > 280 ? "…" : ""), false);
+        finalizeAgentCardAnswer(cid2, String(d.answer).trim());
       }
-      if (card2 && card2.parser) card2.parser.flush();
+      if (card2 && card2.parser && card2.parser.flush) card2.parser.flush();
       if (card2 && d.sessionRef) card2.sessionRef = String(d.sessionRef);
-      if (card2) actionCardManager.transitionCardState(cid2, "Done");
+      if (card2) {
+        var endState = card2.waitingForUser || card2.uiState === "Waiting" ? "Waiting" : "Done";
+        actionCardManager.transitionCardState(cid2, endState);
+      }
       updateActionLiveDock(cid2);
       document.querySelectorAll(".cmd-action-card").forEach(function (el) {
         el.classList.toggle("is-active", el.id === "card-" + cid2);

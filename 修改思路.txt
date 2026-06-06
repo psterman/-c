@@ -1,0 +1,704 @@
+你的方案整体是正确的，而且已经接近可以进入开发拆票的程度。
+我建议只做几处关键校准：**先保证 blocks[] 成为唯一渲染入口，再逐步接 Router、Normalizer、Mini-A2UI。**
+
+---
+
+# 总体判断
+
+这版方案可以成立，核心价值在于把过去分散的几条线：
+
+```text
+StreamTagParser
+ReplyStructurer
+B.1 协议注入
+B.2 完结/回放
+A.1 Markdown
+C.1 Mini-A2UI
+```
+
+统一成：
+
+```text
+PaletteRouterSkill
+      ↓
+Execution Layer
+      ↓
+PaletteBlockPipeline / ReplyNormalizer
+      ↓
+BlockStore
+      ↓
+CommandPaletteRenderer
+```
+
+这比单独做四标签、单独做 A2UI、单独修 Markdown 都更稳。
+
+一句话概括：
+
+> Command Palette 不再消费 rawAnswer，而是消费 blocks[]；四标签、Markdown、Gateway 事件、A2UI 都只是 blocks[] 的不同来源。
+
+这是正确方向。
+
+---
+
+# 我建议你保留的核心设计
+
+## 1. `rawAnswer` 降级为 fallback
+
+这个非常重要。
+
+最终渲染优先级应该固定成：
+
+```text
+blocks[] 
+  > normalize(rawAnswer)
+  > rawAnswer markdown fallback
+  > 占位提示
+```
+
+不要再让这些逻辑并行存在：
+
+```text
+showAgentReplyFromText(rawAnswer)
+setCardLiveThought(rawAnswer)
+applyAgentReplyStructurer(rawAnswer)
+parser.onChunk(delta)
+render A2UI
+```
+
+否则后面一定会出现：
+
+```text
+reply 被 liveThought 覆盖
+Done 后 replay 和实时 UI 不一致
+A2UI 和 Markdown 重复显示
+四标签解析出来了但 rawAnswer 又抢了 DOM
+```
+
+所以 Phase 0 先做 `blocks-first` 是对的。
+
+---
+
+## 2. B.1 应该是 preferred path，不是唯一主路径
+
+你这句判断很重要：
+
+> B.1 定位调整：Preferred path，非 Only path。
+
+这说明你已经不再把希望全部压在模型遵守四标签上。
+
+正确关系是：
+
+```text
+模型遵守四标签
+  → protocol source blocks，高置信度
+
+模型不遵守四标签
+  → Normalizer 兜底，markdown / heuristic source blocks
+
+模型输出 Markdown 表格
+  → markdown_table source a2ui block
+```
+
+所以 B.1 的价值是提高结构化输出概率，而不是保证 UI 唯一可用。
+
+---
+
+## 3. Mini-A2UI 作为 block 类型挂载，而不是第三套渲染链
+
+这也是正确的。
+
+不要做成：
+
+```text
+四标签渲染一套
+Markdown 渲染一套
+A2UI 又渲染一套
+```
+
+而应该统一成：
+
+```json
+{
+  "type": "a2ui",
+  "component": "ComparisonTable",
+  "props": {}
+}
+```
+
+再由统一 renderer 分发：
+
+```text
+block.type === "a2ui" → CommandPaletteA2UI.render()
+```
+
+这样 A2UI 不会和 B.1/B.2 打架。
+
+---
+
+# 我建议补强的几个点
+
+## 1. 先定义 canonical block schema，不要边写边变
+
+Phase 0 里你已经写了 schema 文档，我建议这个必须先做。
+
+最小 schema 可以这样：
+
+```json
+{
+  "id": "block_xxx",
+  "type": "plan|status|question|reply|a2ui|error",
+  "state": "streaming|final|stale",
+  "source": "protocol|heuristic|markdown|markdown_table|tool_event|raw|system",
+  "confidence": 0.95,
+  "turnId": 1,
+  "createdAt": 1710000000000,
+  "updatedAt": 1710000000000
+}
+```
+
+不同类型扩展字段：
+
+```json
+{
+  "type": "reply",
+  "markdown": "..."
+}
+```
+
+```json
+{
+  "type": "plan",
+  "items": [
+    {
+      "text": "检查 gateway 状态",
+      "state": "pending|running|done|error|interrupted"
+    }
+  ]
+}
+```
+
+```json
+{
+  "type": "status",
+  "items": [
+    {
+      "text": "gateway 重启被中断",
+      "level": "info|warning|error",
+      "time": "10:32"
+    }
+  ]
+}
+```
+
+```json
+{
+  "type": "a2ui",
+  "component": "ComparisonTable",
+  "props": {}
+}
+```
+
+这一步必须稳定，因为它会影响：
+
+```text
+BlockStore
+renderBlocks
+Debug
+agent_cards.json
+follow-up segment
+Mini-A2UI
+```
+
+---
+
+## 2. `blocks` 持久化建议不要只限 32KB
+
+你写了“限长如 32KB”，这个要谨慎。
+
+如果是对比类任务，`ComparisonTable` + reply markdown + status 很容易超过 32KB。
+建议策略不是硬截断 blocks，而是：
+
+```text
+blocks 持久化完整结构的轻量版本
+rawAnswer 继续保存完整原文
+超大字段做裁剪，但保留 block shell
+```
+
+例如：
+
+```json
+{
+  "type": "reply",
+  "markdown": "...前 20KB...",
+  "truncated": true,
+  "rawRef": "rawAnswer"
+}
+```
+
+A2UI 表格也可以限制：
+
+```text
+最多 20 行
+最多 8 列
+单元格最长 500 字
+```
+
+否则一个大表格会把卡片持久化拖垮。
+
+---
+
+## 3. Normalizer 不要在流式阶段过度重排 Markdown
+
+流式阶段最容易出问题。
+
+例如 Markdown 表格在流式输出中可能是半截：
+
+```markdown
+| 产品 | 优点 |
+|---|---
+```
+
+这时如果立刻转 A2UI，容易生成坏表。
+
+建议分两级：
+
+```text
+ingestDelta()
+  - 只做 protocol block 增量解析
+  - 只更新 status / live partial reply
+  - 不做重型 Markdown 表格转换
+
+finalize()
+  - parser.flush()
+  - thinking strip
+  - markdown table → A2UI
+  - final blocks merge
+```
+
+也就是说：
+
+```text
+流式阶段：稳定优先
+完结阶段：结构化增强
+```
+
+否则用户看到的 UI 会频繁跳变。
+
+---
+
+## 4. `ReplyStructurer` 不要完全废弃，先降级为 Normalizer plugin
+
+你写“收敛并入 Pipeline，保留 export 兼容”是对的。
+
+建议结构：
+
+```text
+PaletteBlockPipeline
+  - ProtocolPlugin
+  - ThinkingStripPlugin
+  - MarkdownReplyPlugin
+  - MarkdownTableA2UIPlugin
+  - LegacyStructurerPlugin
+  - ErrorPlugin
+```
+
+这样不用一次性重写全部逻辑。
+
+`CommandPaletteReplyStructurer.js` 可以暂时变成：
+
+```js
+export function structureMarkdownToBlocks(markdown, route) {
+  return PaletteBlockPipeline.normalizeMarkdown(markdown, route)
+}
+```
+
+逐步迁移即可。
+
+---
+
+## 5. `md()` 抽 shared 文件时要注意依赖隔离
+
+你提到从 FTB 抽：
+
+```text
+NiumaMarkdown.js
+```
+
+这个方向对，但要避免把 FloatingToolbarStrip 的上下文依赖一起带进去。
+
+建议抽成纯函数：
+
+```js
+renderMarkdownToSafeHtml(markdown, options)
+preMarkdownForChat(markdown, options)
+sanitizeHtml(html)
+```
+
+不要依赖：
+
+```text
+session
+DOM
+chat bubble state
+FTB 全局变量
+```
+
+Palette 只需要：
+
+```js
+cardReply.innerHTML = renderMarkdownToSafeHtml(block.markdown)
+```
+
+如果短期抽不干净，宁可先做 Palette 版最小 markdown renderer，后续再统一。
+
+---
+
+# 对落地顺序的微调建议
+
+你现在的顺序是：
+
+```text
+Phase 0 — Block Schema + BlockStore
+Phase 1 — PaletteRouterSkill
+Phase 2 — ReplyNormalizer v1 + Pipeline 收口
+Phase 3 — B.2 生命周期
+Phase 4 — Mini-A2UI C.1
+Phase 5 — Gateway event tap + Debug 四栏
+```
+
+我建议稍微调整为：
+
+```text
+Phase 0 — Block Schema + Renderer blocks-first
+Phase 1 — Pipeline v1：四标签 → blocks，rawAnswer → reply block
+Phase 2 — BlockStore 持久化 + replay
+Phase 3 — RouterSkill + promptAddon
+Phase 4 — B.2 生命周期：Done / preview / liveThought 降级 / follow-up segment
+Phase 5 — Mini-A2UI：ComparisonTable / Steps / Alert
+Phase 6 — Debug 四栏 + Gateway event tap
+```
+
+原因是：
+
+如果先做 Router，但 renderer 还没有 blocks-first，收益不明显。
+如果先做 BlockStore，但 Pipeline 还没稳定，存进去的结构可能很快变化。
+
+更稳的第一闭环应该是：
+
+```text
+rawAnswer / protocol
+      ↓
+blocks[]
+      ↓
+renderBlocks()
+      ↓
+card UI
+```
+
+先证明 Command Palette 可以只靠 blocks 渲染。
+
+---
+
+# 每个阶段的清晰目标
+
+## Phase 0：定义 blocks，建立 renderer 入口
+
+目标：
+
+```text
+Command Palette 有统一 renderBlocks(blocks)。
+```
+
+完成后，即使 blocks 是手写 mock，也能渲染：
+
+```text
+plan → timeline
+status → status-log
+question → question
+reply → reply markdown
+a2ui → a2ui slot
+```
+
+验收：
+
+```text
+不经过 OpenClaw，传入 mock blocks，卡片能正确显示。
+```
+
+---
+
+## Phase 1：Pipeline v1 收口
+
+目标：
+
+```text
+所有 chunk / end / finalize 都进入 PaletteBlockPipeline。
+```
+
+最小能力：
+
+```text
+四标签 → blocks
+纯 Markdown → reply block
+orphan → reply fallback
+error → status/error block
+```
+
+验收：
+
+```text
+OpenClaw 打四标签时，timeline/status/reply 正常。
+OpenClaw 不打四标签时，reply markdown 正常。
+```
+
+---
+
+## Phase 2：BlockStore 与 replay
+
+目标：
+
+```text
+Done 卡片持久化 blocks。
+重启后优先 blocks-first 恢复。
+```
+
+验收：
+
+```text
+归档卡片重开后，不重新从 rawAnswer 猜 UI。
+结构化布局与完结时一致。
+```
+
+这是 B.2 历史稳定性的核心。
+
+---
+
+## Phase 3：RouterSkill + promptAddon
+
+目标：
+
+```text
+不同任务类型有不同 UI profile 和 promptAddon。
+```
+
+例如：
+
+```text
+research_compare → 要表格、允许 a2uiCandidates
+execute_task → 要 status、question
+qa_explain → 重点 reply，不强制 status
+debug_diagnose → 强 status/log
+```
+
+验收：
+
+```text
+“小米 vs Meta”自动进入 research_compare。
+“重启 gateway”自动进入 execute_task。
+system prompt 中能看到 BaseProtocol + promptAddon。
+```
+
+---
+
+## Phase 4：B.2 生命周期
+
+目标：
+
+```text
+Done、preview、liveThought、follow-up 全部围绕 blocks。
+```
+
+规则：
+
+```text
+有 blocks 时，liveThought 不显示整段 rawAnswer。
+Done 以 final reply block 为主。
+Preview 取 block summary，不取 rawAnswer 前 160 字。
+Follow-up 追加 segment，不覆盖旧 blocks。
+```
+
+验收：
+
+```text
+长任务 STATUS 持续追加，reply 不被覆盖。
+Waiting 问题可以继续。
+Done 后 append 形成新 segment。
+```
+
+---
+
+## Phase 5：Mini-A2UI C.1
+
+目标：
+
+```text
+先做后处理转换，不要求模型直接输出 JSON。
+```
+
+优先级：
+
+```text
+1. Markdown table → ComparisonTable
+2. numbered/checklist → Steps
+3. warning/error → Alert
+```
+
+暂不做：
+
+```text
+ActionButton
+Confirm destructive action
+模型直出 palette-ui JSON
+```
+
+验收：
+
+```text
+研究对比任务出现 ComparisonTable。
+reply markdown 仍完整保留。
+A2UI 失败时回退 Markdown。
+```
+
+---
+
+## Phase 6：Debug + Gateway event tap
+
+Debug 四栏非常有价值，但建议在基础链路跑通后做。
+
+最终 Debug 应该能判断：
+
+```text
+Route 是否识别
+Prompt 是否注入
+Protocol 是否开始
+Normalizer 生成了哪些 blocks
+A2UI 从哪里来
+Renderer 渲染了几个 block
+Done 为什么触发
+Preview 来源是什么
+```
+
+---
+
+# 你方案里最需要警惕的三个风险
+
+## 风险 1：一次性改太多入口
+
+你列到：
+
+```text
+finalizeAgentCardAnswer
+chunk handler
+applyAgentReplyStructurer
+upsertActionCardFromDto
+onBlockUpdate
+FTB
+AHK DTO
+Debug
+A2UI
+```
+
+范围很大。
+
+建议每次只改一条主链：
+
+```text
+先 renderBlocks
+再 pipeline finalize
+再 persistence
+再 streaming
+再 router
+再 a2ui
+```
+
+不要同时改 streaming + persistence + a2ui，否则 debug 会非常痛苦。
+
+---
+
+## 风险 2：流式 blocks 与最终 blocks 合并规则不清
+
+必须定义 merge 规则。
+
+例如：
+
+```text
+同 type=reply 且 same turnId：
+  streaming reply 可以被 final reply 替换
+
+status：
+  默认 append，不替换
+
+plan：
+  如果同 source=protocol 且同 turnId：
+    更新 items state
+  如果新 segment：
+    新增 plan block
+
+a2ui：
+  finalize 后生成，不在 streaming 阶段频繁替换
+```
+
+没有 merge 规则，卡片会重复显示。
+
+---
+
+## 风险 3：A2UI 和 reply markdown 重复
+
+比如 Markdown 表格转 ComparisonTable 后，reply 里还显示原始表格，会重复。
+
+可以设一个策略：
+
+```text
+a2ui 从 markdown table 生成后：
+  option A：reply 保留原表格，A2UI 作为增强预览
+  option B：reply 删除原表格，只留正文
+```
+
+我建议 v1 用 option A，避免误删内容：
+
+```text
+A2UI 在上，Markdown 原文在下。
+```
+
+等稳定后再做：
+
+```text
+hideOriginalTable: true
+```
+
+---
+
+# 最终工作方向总结
+
+你的当前方向可以正式收敛成这句话：
+
+> Command Palette 的下一阶段不是继续增强 raw Markdown 展示，也不是直接全量接 A2UI，而是建立 Palette Block Pipeline：所有模型、OpenClaw、Hermes、Skills 输出先统一归一化为 blocks[]，再由 Command Palette 统一渲染。Mini-A2UI 是 blocks[] 的一种增强 block，而不是独立方案。
+
+推荐最终架构：
+
+```text
+用户任务
+  ↓
+PaletteRouterSkill
+  ↓
+OpenClaw / Hermes / Local Skill
+  ↓
+PaletteBlockPipeline
+  ↓
+BlockStore
+  ↓
+CommandPaletteRenderer
+  ↓
+Markdown + Timeline + Status + Mini-A2UI
+```
+
+当前最应该先做的不是 C.1，而是：
+
+```text
+1. canonical blocks schema
+2. renderBlocks()
+3. Pipeline v1：protocol/raw markdown → blocks
+4. blocks-first replay
+```
+
+做到这一步后，B.1、B.2、A.1、A.2、C.1 都会变成同一条 pipeline 上的插件，而不是互相抢 UI 的几套逻辑。

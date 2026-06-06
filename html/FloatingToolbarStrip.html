@@ -3047,7 +3047,16 @@ body.niuma-confirm-open{overflow:hidden}
     }
     post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cid, delta: '💭 经 Niuma Chat 发送任务…\n' });
     var agentSys = String(systemPrompt || '').trim();
-    if (agentSys) s._paletteAgentSystemPrompt = agentSys;
+    if (agentSys) {
+      s._paletteAgentSystemPrompt = agentSys;
+      try {
+        post({
+          type: 'niuma_palette_agent_trace',
+          step: 'agent_sys_inject',
+          detail: 'len=' + agentSys.length + ' req=' + rid
+        });
+      } catch (_) {}
+    }
     if (input) {
       input.value = q;
       try {
@@ -4739,7 +4748,7 @@ body.niuma-confirm-open{overflow:hidden}
           : '',
       apiKey: key,
       temperature: sec.temperature != null ? sec.temperature : 0.7,
-      systemPrompt: getEffectiveSystemPromptForSend()
+      systemPrompt: getEffectiveSystemPromptForSend(s)
     };
   }
 
@@ -11637,7 +11646,15 @@ body.niuma-confirm-open{overflow:hidden}
     return false;
   }
 
-  function getEffectiveSystemPromptForSend() {
+  function getPaletteAgentSystemPrompt(session) {
+    var s = session || activeSession();
+    if (!s || !String(s._paletteAgentReqId || '').trim()) return '';
+    return String(s._paletteAgentSystemPrompt || '').trim();
+  }
+
+  function getEffectiveSystemPromptForSend(session) {
+    var paletteSp = getPaletteAgentSystemPrompt(session);
+    if (paletteSp) return paletteSp;
     if (state.freeChatMode) {
       var sp0 = systemPrompt ? String(systemPrompt.value || '').trim() : '';
       return sp0;
@@ -19186,13 +19203,19 @@ body.niuma-confirm-open{overflow:hidden}
     var msgText = String(cfg && cfg.userContentForModel != null ? cfg.userContentForModel : '');
     if (!msgText.trim()) msgText = String(last.content != null ? last.content : '');
     if (!msgText.trim()) msgText = ocExtractMessageContentForHistory(last);
-    cfg.systemPrompt = '';
+    var s0 = activeSession();
+    var isPaletteAgentRequest = !!(s0 && s0._paletteAgentReqId);
+    if (!isPaletteAgentRequest) {
+      cfg.systemPrompt = '';
+    } else {
+      var palSp = getPaletteAgentSystemPrompt(s0) || String(cfg.systemPrompt || '').trim();
+      if (palSp) cfg.systemPrompt = palSp;
+    }
     if (!String(msgText || '').trim()) throw new Error('上一条用户消息正文为空，请重新输入后发送。');
     if (cfg.systemPrompt && h.length === 1) {
       msgText = '【系统提示】\n' + cfg.systemPrompt + '\n\n' + msgText;
     }
     var chatSentAtMs = Date.now();
-    var s0 = activeSession();
     var sessionKey =
       String(cfg.openclawSessionKey || '').trim() ||
       openClawSessionKeyHintFromBaseUrl(cfg.baseUrl) ||
@@ -19222,7 +19245,6 @@ body.niuma-confirm-open{overflow:hidden}
       }, 50);
     }
     var instanceId = 'niuma-' + Date.now() + '-' + Math.random().toString(36).slice(2, 11);
-    var isPaletteAgentRequest = !!(s0 && s0._paletteAgentReqId);
     ocBeginAgentLoopFromChat(msgText);
 
     return new Promise(function (resolve, reject) {
@@ -19896,7 +19918,7 @@ body.niuma-confirm-open{overflow:hidden}
       return;
     }
     saveCfg(false);
-    if (!state.freeChatMode) {
+    if (!state.freeChatMode && !getPaletteAgentSystemPrompt(s)) {
       await fetchStudioContextBlocking();
       ensureStudioContextApplied(true);
     }
