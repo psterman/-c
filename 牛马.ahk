@@ -2780,8 +2780,9 @@ ApplyAppearanceActivationMode_Run(m, token) {
                 try FloatingToolbarChatDrawerOpen := false
                 catch {
                 }
+                global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WaitingUiFinishedReveal
                 try {
-                    if (IsSet(g_FTB_WV2) && g_FTB_WV2) {
+                    if (g_FTB_WV2_Ready && g_FTB_WV2 && !g_FTB_WaitingUiFinishedReveal) {
                         WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
                     }
                 } catch {
@@ -2794,14 +2795,11 @@ ApplyAppearanceActivationMode_Run(m, token) {
                 }
             }
             if !openNiumaDrawer {
-                try FloatingToolbarReloadFromToolbarLayout()
-                catch {
-                }
-                try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -120)
-                catch {
-                }
-                try SetTimer((*) => FloatingToolbarReloadFromToolbarLayout(), -520)
-                catch {
+                global g_FTB_WV2_Ready, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal
+                if (g_FTB_WV2_Ready && FloatingToolbarIsVisible && !g_FTB_WaitingUiFinishedReveal) {
+                    try FloatingToolbarReloadFromToolbarLayout()
+                    catch {
+                    }
                 }
             } else {
                 try FloatingToolbar_ScheduleNiumaDrawerOpen(280)
@@ -4649,8 +4647,8 @@ Global_InitAllPanels()
 InitFloatingToolbar()
 InitFloatingBubble()
 ; 悬浮栏/球：待 WebView2 共享环境就绪后在 _WV2_BeginWarmupAfterEnv 中 ApplyAppearanceActivationMode
-; 若环境回调异常未触发，延后重试一次以免无悬浮界面
-SetTimer(ApplyAppearanceActivationMode, -5000)
+; 若环境回调异常未触发，延后重试一次以免无悬浮界面（已就绪则跳过，避免二次闪烁）
+SetTimer(FloatingToolbar_ApplyActivationFallback, -5000)
 ; 启动主脚本后自动拉起 ttyd（内部自带端口占用检测，非 ttyd 占用时会安全退出）
 SetTimer(AutoStartTtydForNiumaChat, -800)
 GravityPump_Register()

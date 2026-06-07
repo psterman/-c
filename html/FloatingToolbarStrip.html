@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Floating Toolbar</title>
+<style id="ftb-theme-boot">html,body{background:#0d1016!important}</style>
+<script>
+(function () {
+  try {
+    var t = String(localStorage.getItem('settings_themeMode') || '').toLowerCase();
+    if (t === 'light') {
+      var s = document.getElementById('ftb-theme-boot');
+      if (s) s.textContent = 'html,body{background:#F7F7F7!important}';
+    }
+  } catch (_) {}
+})();
+</script>
 <!-- 不使用外链图标字体：WebView2 常拦截 CDN，会导致工具栏只显示圆点/方块 -->
 <style>
 @font-face{font-family:"AppUi";src:local("Segoe UI");unicode-range:U+0000-024F,U+1E00-1EFF,U+2000-206F,U+20A0-20CF,U+2100-214F}
@@ -13,25 +25,39 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--toolbar-bg);font-size:calc(14px * var(--ui));line-height:1.5;font-family:"AppUi","Segoe UI","DengXian","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;color:var(--text);user-select:none;-webkit-user-select:none}
 button,input,textarea,select{font:inherit}
-#ftbBootSplash{position:fixed;inset:0;z-index:10050;display:grid;place-items:center;background:#0d1016;background-image:radial-gradient(circle at 50% 35%,rgba(58,107,168,.28),transparent 58%),linear-gradient(180deg,#0c1017 0%,#16253b 100%);opacity:1;visibility:visible;transition:opacity .22s ease,visibility .22s ease}
-#ftbBootSplash.hide{opacity:0;visibility:hidden;pointer-events:none}
+#ftbBootSplash{position:fixed;inset:0;z-index:10050;display:grid;place-items:center;background:var(--toolbar-bg);background-image:radial-gradient(circle at 50% 35%,rgba(58,107,168,.28),transparent 58%),linear-gradient(180deg,#0c1017 0%,#16253b 100%);opacity:1;visibility:visible;transition:opacity .32s cubic-bezier(.22,1,.36,1),visibility .32s cubic-bezier(.22,1,.36,1),transform .32s cubic-bezier(.22,1,.36,1)}
+#ftbBootSplash.hide{opacity:0;visibility:hidden;pointer-events:none;transform:scale(1.04)}
 #ftbBootSplash.done{display:none}
-.ftb-boot-card{position:relative;min-width:136px;min-height:136px;padding:16px 18px 14px;border-radius:20px;border:1px solid rgba(255,102,0,.42);background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.02));box-shadow:0 10px 28px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.24);display:grid;place-items:center;gap:8px}
+body[data-theme="light"] #ftbBootSplash{background:#F7F7F7;background-image:radial-gradient(circle at 50% 40%,rgba(255,102,0,.12),transparent 55%),linear-gradient(180deg,#F7F7F7 0%,#EFEFEF 100%)}
+.ftb-boot-card{position:relative;min-width:136px;min-height:136px;padding:16px 18px 14px;border-radius:20px;border:1px solid rgba(255,102,0,.42);background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.02));box-shadow:0 10px 28px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.24);display:grid;place-items:center;gap:8px;animation:ftbBootCardIn .55s cubic-bezier(.22,1,.36,1) both}
+body[data-theme="light"] .ftb-boot-card{border-color:rgba(255,102,0,.35);background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(245,245,245,.88));box-shadow:0 8px 24px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.9)}
 .ftb-boot-ring{position:absolute;width:58px;height:58px;border-radius:50%;border:2px solid rgba(255,179,71,.45);border-top-color:#ff8d2a;animation:ftbBootSpin .95s linear infinite}
 .ftb-boot-logo{width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 5px 11px rgba(0,0,0,.35));opacity:0;transition:opacity .16s ease}
 .ftb-boot-logo.ready{opacity:1}
 .ftb-boot-fb{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:12px;border:1px solid rgba(255,179,71,.5);color:#ffb347;font-size:20px;font-weight:700}
 .ftb-boot-fb[hidden]{display:none}
 .ftb-boot-text{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text);opacity:.9}
+.ftb-boot-bar{position:absolute;left:12%;right:12%;bottom:18%;height:2px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;display:none}
+.ftb-boot-bar>i{display:block;height:100%;width:36%;border-radius:inherit;background:linear-gradient(90deg,transparent,rgba(255,141,42,.85),transparent);animation:ftbBootBarSlide 1.1s ease-in-out infinite}
+body[data-theme="light"] .ftb-boot-bar{background:rgba(0,0,0,.06)}
 @media (max-height:120px){
-#ftbBootSplash{background:linear-gradient(180deg,#0d1016 0%,#16253b 100%)}
-.ftb-boot-card{min-width:auto;min-height:auto;padding:0;border:none;border-radius:999px;background:transparent;box-shadow:none;gap:0}
-.ftb-boot-ring{width:26px;height:26px;border-width:1.5px}
-.ftb-boot-logo{width:20px;height:20px}
-.ftb-boot-fb{width:20px;height:20px;border-radius:6px;font-size:12px}
+#ftbBootSplash{background:var(--toolbar-bg);background-image:none}
+body[data-theme="light"] #ftbBootSplash{background:#F7F7F7}
+.ftb-boot-card{min-width:auto;min-height:auto;padding:0 6px;border:none;border-radius:999px;background:transparent;box-shadow:none;gap:0;flex-direction:row;display:flex;align-items:center;animation:ftbBootStripIn .45s cubic-bezier(.22,1,.36,1) both}
+.ftb-boot-ring{position:relative;width:22px;height:22px;border-width:1.5px;flex-shrink:0}
+.ftb-boot-logo{width:18px;height:18px;margin-left:4px}
+.ftb-boot-fb{width:18px;height:18px;border-radius:6px;font-size:11px;margin-left:4px}
 .ftb-boot-text{display:none}
+.ftb-boot-bar{display:block;left:8%;right:8%;bottom:14%;height:2px}
 }
+@keyframes ftbBootCardIn{from{opacity:0;transform:scale(.92) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes ftbBootStripIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+@keyframes ftbBootBarSlide{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
 @keyframes ftbBootSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+html.ftb-minimal-boot #ftbBootSplash{display:none!important}
+body.ftb-first-show #collapsedRoot{opacity:1;visibility:visible;animation:ftbFinalFadeIn .28s cubic-bezier(.22,1,.36,1) forwards}
+@keyframes ftbFinalFadeIn{from{opacity:0}to{opacity:1}}
+body.ftb-boot-exiting #collapsedRoot{opacity:1;visibility:visible;transition:opacity .34s cubic-bezier(.22,1,.36,1) .06s,visibility .34s cubic-bezier(.22,1,.36,1) .06s}
 #app{position:relative;width:100%;height:100%;background:var(--toolbar-bg)}
 html.ftb-handoff-no-anim #collapsedRoot,html.ftb-handoff-no-anim #drawerRoot,html.ftb-handoff-no-anim #panel,html.ftb-handoff-no-anim #stage{transition:none!important}
 body.drawer-open{background:var(--toolbar-bg)}
@@ -948,8 +974,33 @@ body.niuma-confirm-open{overflow:hidden}
 <img id="ftbBootLogo" class="ftb-boot-logo" src="https://app.local/assets/%E7%89%9B%E9%A9%AC.png" alt="NiuMa">
 <span id="ftbBootFallback" class="ftb-boot-fb" hidden>牛</span>
 <div class="ftb-boot-text">NIUMA</div>
+<div class="ftb-boot-bar" aria-hidden="true"><i></i></div>
 </div>
 </div>
+<script>
+(function () {
+  window.__FTB_MINIMAL_BOOT = true;
+  window.__ftbBootStartAt = Date.now();
+  try {
+    var t = String(localStorage.getItem('settings_themeMode') || '').toLowerCase();
+    if (t === 'light') document.body.setAttribute('data-theme', 'light');
+  } catch (_) {}
+  if (window.__FTB_MINIMAL_BOOT) {
+    try { document.documentElement.classList.add('ftb-minimal-boot'); } catch (_) {}
+    return;
+  }
+  function emitBootVisible() {
+    try {
+      if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage)
+        window.chrome.webview.postMessage(JSON.stringify({ type: 'UI_BOOT_VISIBLE' }));
+    } catch (_) {}
+  }
+  if (document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', function () { requestAnimationFrame(emitBootVisible); }, { once: true });
+  else
+    requestAnimationFrame(emitBootVisible);
+})();
+</script>
 <div id="app">
 <template id="ftb-toolbar-tpl">
 <div class="tb" data-action="Search" title="搜索"><svg viewBox="0 0 24 24" fill="none" stroke="#ff6600" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><div class="bubble">Selection Ready</div><span class="dot"></span></div>
@@ -1742,6 +1793,12 @@ body.niuma-confirm-open{overflow:hidden}
     $('drawerBtns').innerHTML = html;
     bindSearchDnD();
     if (state.activeAction) sel(state.activeAction);
+    if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
+      bootCmdsReady = true;
+      tryPostPaintReady();
+    } else {
+      schedulePostPaintReady();
+    }
   }
 
   function escAttr(s) {
@@ -1973,6 +2030,12 @@ body.niuma-confirm-open{overflow:hidden}
     attachToolbarIconFallback($('drawerBtns'));
     bindSearchDnD();
     if (state.activeCmdId) sel(state.activeCmdId);
+    if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
+      bootCmdsReady = true;
+      tryPostPaintReady();
+    } else {
+      schedulePostPaintReady();
+    }
   }
 
   var stage = $('stage'),
@@ -2293,8 +2356,101 @@ body.niuma-confirm-open{overflow:hidden}
   window.g_NiumaLastElementsCache = {};
   var toolbarVisibleSynced = false;
   var toolbarRevealTimer = 0;
-  var ftbBootStartAt = Date.now();
+  var FTB_MINIMAL_BOOT = window.__FTB_MINIMAL_BOOT !== false;
+  var ftbBootStartAt = window.__ftbBootStartAt || Date.now();
   var ftbBootHidden = false;
+  var ftbBootAwaitLayout = true;
+  var ftbHostRevealRequested = false;
+  var toolbarPaintReadySent = false;
+  var paintReadyTimer = 0;
+  var bootCmdsReady = false;
+  var bootLogoReady = false;
+  var FTB_BOOT_MIN_MS = 520;
+  var FTB_BOOT_EXIT_MS = 340;
+
+  function markBootLogoReady() {
+    bootLogoReady = true;
+    tryPostPaintReady();
+  }
+
+  function tryPostPaintReady() {
+    if (!FTB_MINIMAL_BOOT || !ftbBootAwaitLayout) {
+      schedulePostPaintReady();
+      return;
+    }
+    if (!bootCmdsReady || !bootLogoReady)
+      return;
+    schedulePostPaintReady();
+  }
+
+  function playBootToToolbarTransition(done) {
+    applyTheme(state.themeMode);
+    var elapsed = Date.now() - ftbBootStartAt;
+    var wait = Math.max(0, FTB_BOOT_MIN_MS - elapsed);
+    setTimeout(function () {
+      if (toolbarVisibleSynced) {
+        if (typeof done === 'function') done();
+        return;
+      }
+      document.body.classList.add('ftb-boot-exiting');
+      document.body.classList.add('ftb-ready');
+      var splash = $('ftbBootSplash');
+      if (splash) {
+        splash.classList.add('hide');
+        splash.setAttribute('aria-hidden', 'true');
+      }
+      setTimeout(function () {
+        if (splash) splash.classList.add('done');
+        ftbBootHidden = true;
+        toolbarVisibleSynced = true;
+        if (typeof done === 'function') done();
+      }, FTB_BOOT_EXIT_MS);
+    }, wait);
+  }
+
+  function postPaintReady() {
+    if (toolbarPaintReadySent) return;
+    toolbarPaintReadySent = true;
+    ftbBootAwaitLayout = false;
+    if (paintReadyTimer) {
+      clearTimeout(paintReadyTimer);
+      paintReadyTimer = 0;
+    }
+    if (FTB_MINIMAL_BOOT) {
+      applyTheme(state.themeMode);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          post({ type: 'UI_PAINT_READY' });
+        });
+      });
+      return;
+    }
+    playBootToToolbarTransition(function () {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          post({ type: 'UI_PAINT_READY' });
+        });
+      });
+    });
+  }
+
+  function schedulePostPaintReady() {
+    if (toolbarPaintReadySent) return;
+    if (paintReadyTimer) clearTimeout(paintReadyTimer);
+    paintReadyTimer = setTimeout(function () {
+      paintReadyTimer = 0;
+      postPaintReady();
+    }, 16);
+  }
+
+  function tryBootReveal() {
+    if (toolbarVisibleSynced) return;
+    if (ftbBootAwaitLayout) {
+      schedulePostPaintReady();
+      return;
+    }
+    revealToolbarSync();
+  }
 
   window.onWebViewResetState = function () {
     if (toolbarRevealTimer) {
@@ -2412,7 +2568,6 @@ body.niuma-confirm-open{overflow:hidden}
       if (fb) fb.hidden = false;
     }, { once: true });
   }
-  setTimeout(function () { dismissBootSplash(true); }, 2600);
 
   function dbg(tag, msg, cls) {
     if (!DEBUG_HUD) return;
@@ -2483,6 +2638,10 @@ body.niuma-confirm-open{overflow:hidden}
 
   function revealToolbarSync() {
     if (toolbarVisibleSynced) return;
+    if (!toolbarPaintReadySent) {
+      schedulePostPaintReady();
+      return;
+    }
     toolbarVisibleSynced = true;
     document.body.classList.add('ftb-ready');
     dismissBootSplash(false);
@@ -23366,8 +23525,15 @@ body.niuma-confirm-open{overflow:hidden}
         var u = d.url || '';
         var imgs = Array.prototype.slice.call(document.querySelectorAll('.logo-btn .logo-img'));
         function paintThenReveal() {
+          if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
+            markBootLogoReady();
+            return;
+          }
           requestAnimationFrame(function () {
-            requestAnimationFrame(revealToolbarSync);
+            requestAnimationFrame(function () {
+              if (ftbBootAwaitLayout) schedulePostPaintReady();
+              else if (!toolbarVisibleSynced) revealToolbarSync();
+            });
           });
         }
         if (!u || !imgs.length) {
@@ -24051,17 +24217,45 @@ body.niuma-confirm-open{overflow:hidden}
       }
       if (d.type === 'host_request_reveal') {
         if (d.preserve_drawer || state.drawer || document.body.classList.contains('drawer-open')) {
-          document.body.classList.add('ftb-ready');
-          try {
-            dismissBootSplash(false);
-          } catch (_) {}
+          ftbHostRevealRequested = true;
+          if (toolbarVisibleSynced) return;
+          if (ftbBootAwaitLayout) {
+            if (FTB_MINIMAL_BOOT) tryPostPaintReady();
+            else schedulePostPaintReady();
+          } else revealToolbarSync();
           return;
         }
+        if (!toolbarVisibleSynced) {
+          ftbHostRevealRequested = true;
+          if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) tryPostPaintReady();
+          else schedulePostPaintReady();
+          return;
+        }
+        if (toolbarPaintReadySent && !state.drawer && !state.settings && !state.nspick) return;
         resetToolbarHomeUi();
+        return;
+      }
+      if (d.type === 'host_first_show') {
+        document.body.classList.add('ftb-ready', 'ftb-first-show');
+        toolbarVisibleSynced = true;
+        ftbBootHidden = true;
+        setTimeout(function () {
+          try { document.body.classList.remove('ftb-first-show'); } catch (_) {}
+        }, 320);
         return;
       }
       if (d.type === 'host_force_toolbar_home') {
         resetToolbarHomeUi();
+        return;
+      }
+      if (d.type === 'ftb_boot_paint_nudge') {
+        if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
+          if (!bootCmdsReady) bootCmdsReady = true;
+          if (!bootLogoReady) bootLogoReady = true;
+          tryPostPaintReady();
+        } else {
+          schedulePostPaintReady();
+        }
         return;
       }
     });
@@ -24141,21 +24335,11 @@ body.niuma-confirm-open{overflow:hidden}
   scale(1);
   setCompact(false);
   post({ type: 'toolbar_ready' });
-  if (document.readyState === 'complete') {
+  function emitToolbarLoadSignals() {
     declareChatBridgeReady();
-  } else {
-    window.addEventListener('load', declareChatBridgeReady, { once: true });
-  }
-  setTimeout(function () {
     post({ type: 'UI_FINISHED' });
-  }, 180);
-  requestAnimationFrame(function () {
-    requestAnimationFrame(function () {
-      setTimeout(function () {
-        post({ type: 'UI_FINISHED' });
-      }, 16);
-    });
-  });
+  }
+  setTimeout(emitToolbarLoadSignals, 0);
 })();
 </script>
 </body>
