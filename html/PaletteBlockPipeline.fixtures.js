@@ -113,7 +113,75 @@
         }
       ],
       segmentRaw: "第二轮补充：经典语录包括「回首掏」。"
+    },
+    execute_steps: {
+      description: "numbered list → Steps A2UI",
+      rawAnswer:
+        "执行计划如下：\n\n1. 检查 gateway 状态\n2. 重启 gateway 服务\n3. 验证端口连通",
+      route: { routeId: "execute_task", a2uiCandidates: ["Steps", "Alert"] }
+    },
+    debug_alert: {
+      description: "warning/error marker → Alert A2UI",
+      rawAnswer: "诊断结果：\n\n⚠ gateway 端口被占用\n\n建议先释放 18789 再重启。",
+      route: { routeId: "debug_fix", a2uiCandidates: ["Alert"] }
+    },
+    replay_blockstore: {
+      description: "BlockStore pack/unpack + render replay",
+      replayFrom: "research_table"
+    },
+    legacy_raw_replay: {
+      description: "旧卡 rawAnswer-only → re-finalize 生成 reply block",
+      rawAnswer: "早上好！\n\n**结论**：重启 gateway 后可继续。",
+      legacyReplay: true
+    },
+    legacy_raw_replay_table: {
+      description: "旧卡 rawAnswer + route → reply + ComparisonTable",
+      rawAnswer:
+        "对比结论如下：\n\n| 维度 | 小米 | Meta |\n|---|---|---|\n| 优势 | 生态 | VR |",
+      route: { routeId: "research_compare", a2uiCandidates: ["ComparisonTable"] },
+      legacyReplay: true
+    },
+    a2ui_render_fail: {
+      description: "未知 component → render 失败，reply markdown 仍保留（DOM 手测）",
+      blocks: [
+        {
+          id: "blk_legacy_reply",
+          type: "reply",
+          state: "final",
+          source: "raw",
+          confidence: 0.8,
+          seq: 1,
+          turnId: 1,
+          traceId: "fx_fail",
+          title: "任务回复",
+          markdown: "正文应完整保留，即使 A2UI slot 被移除。"
+        },
+        {
+          id: "blk_bad_a2ui",
+          type: "a2ui",
+          state: "final",
+          source: "heuristic",
+          confidence: 0.5,
+          seq: 2,
+          turnId: 1,
+          traceId: "fx_fail",
+          component: "UnknownWidget",
+          props: {}
+        }
+      ]
     }
+  };
+
+  var FIXTURE_ASSERT = {
+    execute_steps: { a2uiComponent: "Steps" },
+    debug_alert: { a2uiComponent: "Alert" },
+    research_table: { a2uiComponent: "ComparisonTable" },
+    replay_blockstore: { a2uiComponent: "ComparisonTable", checkDom: true },
+    follow_up_merge: { replyCountMin: 2 },
+    mock_all_slots: { a2uiComponent: "ComparisonTable" },
+    legacy_raw_replay: { hasReply: true },
+    legacy_raw_replay_table: { hasReply: true, a2uiComponent: "ComparisonTable" },
+    a2ui_render_fail: { hasReply: true }
   };
 
   function getFixture(name) {
@@ -127,11 +195,89 @@
     return null;
   }
 
+  function hasA2uiComponent(blocks, component) {
+    return (blocks || []).some(function (b) {
+      return b && b.type === "a2ui" && b.component === component;
+    });
+  }
+
+  function assertFixtureResult(out, name) {
+    var spec = FIXTURE_ASSERT[name] || {};
+    var errors = [];
+    if (!out || !out.ok) errors.push("ok=false" + (out && out.error ? ":" + out.error : ""));
+    if (spec.a2uiComponent && !hasA2uiComponent(out && out.blocks, spec.a2uiComponent))
+      errors.push("missing_a2ui:" + spec.a2uiComponent);
+    if (spec.replyCountMin != null && (out.replyCount == null || out.replyCount < spec.replyCountMin))
+      errors.push("replyCount<" + spec.replyCountMin);
+    if (spec.hasReply) {
+      var hasReplyBlock =
+        out.hasReply ||
+        (out.blocks || []).some(function (b) {
+          return b && b.type === "reply" && String(b.markdown || "").trim();
+        });
+      if (!hasReplyBlock) errors.push("missing_reply");
+    }
+    if (spec.checkDom && typeof document !== "undefined") {
+      if (!document.querySelector(".card-a2ui .a2ui-slot")) errors.push("missing_dom:.card-a2ui .a2ui-slot");
+    }
+    return { pass: errors.length === 0, errors: errors };
+  }
+
+  function runReplayBlockstoreFixture(fx, name, cardId, renderFn) {
+    var srcName = fx.replayFrom || "research_table";
+    var src = getFixture(srcName);
+    if (!src || src.rawAnswer == null || !root.PaletteBlockPipeline) {
+      return { ok: false, error: "replay_source_missing:" + srcName, fixture: name };
+    }
+    var finOpts = { traceId: "fx_replay_" + name, route: src.route || {} };
+    var result = PaletteBlockPipeline.finalize(src.rawAnswer, finOpts);
+    if (!root.PaletteBlockStore || !PaletteBlockStore.pack || !PaletteBlockStore.unpack) {
+      return { ok: false, error: "blockstore_unavailable", fixture: name };
+    }
+    var packed = PaletteBlockStore.pack(result.blocks);
+    var store = PaletteBlockStore.unpack(packed);
+    var blocks = store && store.blocks ? store.blocks : [];
+    var out = {
+      fixture: name,
+      description: fx.description || "",
+      input: { replayFrom: srcName, packedBlocks: blocks.length },
+      blocks: blocks,
+      meta: result.meta,
+      blockStore: store,
+      ok: blocks.length > 0 && hasA2uiComponent(blocks, "ComparisonTable")
+    };
+    if (renderFn) out.render = renderFn(cardId || "mock-fixture-replay", blocks);
+    return out;
+  }
+
   function runPalettePipelineFixture(name, cardId) {
     var fx = getFixture(name);
     if (!fx) return { ok: false, error: "unknown_fixture:" + name };
     var out = { fixture: name, description: fx.description || "" };
     var renderFn = getMockRenderer();
+    if (fx.replayFrom != null) {
+      out = runReplayBlockstoreFixture(fx, name, cardId, renderFn);
+      var replayAssert = assertFixtureResult(out, name);
+      out.assert = replayAssert;
+      if (!replayAssert.pass) out.ok = false;
+      return out;
+    }
+    if (fx.legacyReplay && fx.rawAnswer != null && root.PaletteBlockPipeline) {
+      var legRoute = fx.route || {};
+      var legResult = PaletteBlockPipeline.finalize(fx.rawAnswer, {
+        traceId: "fx_legacy_" + name,
+        route: legRoute
+      });
+      out.input = { legacyReplay: true, rawLen: String(fx.rawAnswer).length, hadBlockStore: false };
+      out.blocks = legResult.blocks;
+      out.meta = legResult.meta;
+      out.hasReply = (legResult.blocks || []).some(function (b) {
+        return b && b.type === "reply" && String(b.markdown || "").trim();
+      });
+      out.ok = !!out.hasReply;
+      if (renderFn) out.render = renderFn(cardId || "mock-fixture-legacy", legResult.blocks);
+      return out;
+    }
     if (fx.blocks) {
       out.input = { blocks: fx.blocks.length };
       out.blocks = fx.blocks;
@@ -188,9 +334,36 @@
     return { ok: false, error: "empty_fixture" };
   }
 
+  function runAllPaletteFixtures() {
+    var names = Object.keys(FIXTURES);
+    var results = [];
+    var passed = 0;
+    var failed = 0;
+    for (var i = 0; i < names.length; i++) {
+      var nm = names[i];
+      var out = runPalettePipelineFixture(nm, "mock-fixture-" + nm);
+      var spec = FIXTURE_ASSERT[nm];
+      var assert = spec ? assertFixtureResult(out, nm) : { pass: !!out.ok, errors: out.ok ? [] : ["ok=false"] };
+      if (!assert.pass && out.ok) {
+        out.ok = false;
+        out.assertErrors = assert.errors;
+      } else if (!out.ok && assert.pass && spec) {
+        assert = { pass: false, errors: ["ok=false"] };
+      }
+      out.assert = assert;
+      results.push(out);
+      if (out.ok && assert.pass) passed++;
+      else failed++;
+    }
+    return { ok: failed === 0, passed: passed, failed: failed, results: results };
+  }
+
   root.PaletteBlockFixtures = {
     FIXTURES: FIXTURES,
+    FIXTURE_ASSERT: FIXTURE_ASSERT,
     getFixture: getFixture,
-    runPalettePipelineFixture: runPalettePipelineFixture
+    assertFixtureResult: assertFixtureResult,
+    runPalettePipelineFixture: runPalettePipelineFixture,
+    runAllPaletteFixtures: runAllPaletteFixtures
   };
 })(typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : this);

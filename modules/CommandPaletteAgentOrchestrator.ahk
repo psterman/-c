@@ -649,7 +649,9 @@ CommandPalette_AgentLooksLikeThinkingPreamble(ans) {
         return false
     if (StrLen(raw) >= 400)
         return false
-    if RegExMatch(raw, "i)(让我先|我先想|我先查|让我查|比较靠谱|想想到底|查一下|let me (check|think|search)|i('ll| will) (check|search|look))")
+    if RegExMatch(raw, "\|") && RegExMatch(raw, "---")
+        return false
+    if RegExMatch(raw, "i)(让我先|我先想|我先查|让我查|我来搜|我来查|我去查|比较靠谱|想想到底|查一下|搜一下|给你做|给你个|我直接基于|let me (check|think|search)|i('ll| will) (check|search|look))")
         return StrLen(raw) < 320
     return false
 }
@@ -673,6 +675,25 @@ CommandPalette_AgentHasSubstantialAnswer(card) {
     if !(card is Map)
         return false
     return CommandPalette_AgentAnswerIsSubstantial(String(card.Get("rawAnswer", "")))
+}
+
+CommandPalette_AgentAnswerTextLooksIncomplete(ans) {
+    raw := Trim(String(ans))
+    if (raw = "")
+        return true
+    if CommandPalette_AgentLooksLikeThinkingPreamble(raw)
+        return true
+    if !RegExMatch(raw, "\|") && StrLen(raw) < 480 {
+        if RegExMatch(raw, "i)(对比|策略|vs |research|华为|小米|meta|ray-ban|眼镜)")
+            return true
+    }
+    return false
+}
+
+CommandPalette_AgentAnswerLooksIncomplete(card) {
+    if !(card is Map)
+        return true
+    return CommandPalette_AgentAnswerTextLooksIncomplete(String(card.Get("rawAnswer", "")))
 }
 
 CommandPalette_AgentTagFtbSession(reqId, cardId, query, provider) {
@@ -966,7 +987,7 @@ CommandPalette_AgentRecoverCardAnswerOnce(cid, rid, q, tryN) {
             g_Agent_RecoverPending.Delete(cid)
         return
     }
-    if CommandPalette_AgentHasSubstantialAnswer(card) {
+    if CommandPalette_AgentHasSubstantialAnswer(card) && !CommandPalette_AgentAnswerLooksIncomplete(card) {
         if IsObject(g_Agent_RecoverPending)
             g_Agent_RecoverPending.Delete(cid)
         return
@@ -978,11 +999,13 @@ CommandPalette_AgentRecoverCardAnswerOnce(cid, rid, q, tryN) {
     ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
     stillSending := CommandPalette_AgentFtbSessionStillSending(rid)
     if (ans != "" && !CommandPalette_AgentIsStatusOnlyDelta(ans) && CommandPalette_AgentAnswerIsSubstantial(ans) && !stillSending) {
-        CommandPalette_AgentLog("recover_hit", "card=" . cid . " len=" . StrLen(ans))
-        CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
-        if IsObject(g_Agent_RecoverPending)
-            g_Agent_RecoverPending.Delete(cid)
-        return
+        if !CommandPalette_AgentAnswerTextLooksIncomplete(ans) {
+            CommandPalette_AgentLog("recover_hit", "card=" . cid . " len=" . StrLen(ans))
+            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
+            if IsObject(g_Agent_RecoverPending)
+                g_Agent_RecoverPending.Delete(cid)
+            return
+        }
     }
     tryN := Integer(tryN)
     maxTry := 40
@@ -1051,7 +1074,7 @@ CommandPalette_AgentPollFtbAnswer(cardId, reqId, query, tryN) {
         ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
         if (ans = "" || !CommandPalette_AgentAnswerIsSubstantial(ans))
             ans := Trim(String(card.Get("rawAnswer", "")))
-        if CommandPalette_AgentAnswerIsSubstantial(ans)
+        if CommandPalette_AgentAnswerIsSubstantial(ans) && !CommandPalette_AgentAnswerTextLooksIncomplete(ans)
             CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
         return
     }
@@ -1082,7 +1105,7 @@ CommandPalette_AgentPollFtbAnswer(cardId, reqId, query, tryN) {
             ansEnd := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
             if (ansEnd = "" || !CommandPalette_AgentAnswerIsSubstantial(ansEnd))
                 ansEnd := Trim(String(card.Get("rawAnswer", ans)))
-            if CommandPalette_AgentAnswerIsSubstantial(ansEnd) {
+            if CommandPalette_AgentAnswerIsSubstantial(ansEnd) && !CommandPalette_AgentAnswerTextLooksIncomplete(ansEnd) {
                 CommandPalette_AgentLog("poll_hit", "card=" . cid . " len=" . StrLen(ansEnd))
                 CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ansEnd))
             }
@@ -1464,8 +1487,11 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
         return
     if card.Get("ended", false) {
         prev := Trim(String(card.Get("rawAnswer", "")))
-        if CommandPalette_AgentAnswerIsSubstantial(prev) && StrLen(prev) >= StrLen(Trim(ans))
-            return
+        newAns := Trim(ans)
+        if CommandPalette_AgentAnswerIsSubstantial(prev) && StrLen(prev) >= StrLen(newAns) {
+            if !(CommandPalette_AgentAnswerTextLooksIncomplete(prev) && !CommandPalette_AgentAnswerTextLooksIncomplete(newAns))
+                return
+        }
     }
     card["rawAnswer"] := ans
     card["ended"] := true

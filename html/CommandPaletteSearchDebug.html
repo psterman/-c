@@ -204,6 +204,8 @@
     min-height: 72px; font-size: 11px; color: var(--muted); word-break: break-word;
   }
   .pipe-col b { display: block; color: #f5b96a; margin-bottom: 4px; font-size: 10px; }
+  .pipe-sub { margin-top: 3px; line-height: 1.45; color: var(--muted); }
+  .pipe-fail { display: block; margin-top: 4px; color: #f87171; font-size: 10px; }
   .tag.route { background: rgba(165,180,252,.15); color: #a5b4fc; }
 </style>
 </head>
@@ -566,31 +568,116 @@
   var agentDebugProbeHint = "";
   var pipelineDebugState = {};
 
+  function tryParsePipelineJson(text) {
+    var s = String(text || "").trim();
+    if (!s || (s.charAt(0) !== "{" && s.charAt(0) !== "[")) return null;
+    try {
+      return JSON.parse(s);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function formatA2uiDebugLine(state) {
+    if (state.a2uiItems) return state.a2uiItems;
+    var parsed = tryParsePipelineJson(state.a2ui);
+    if (parsed && Array.isArray(parsed)) {
+      return parsed
+        .map(function (a) {
+          return String(a.component || "?") + "←" + String(a.from || "?");
+        })
+        .join(" · ");
+    }
+    return state.a2ui || "";
+  }
+
   function renderPipelineDebugPanel(state, lastSubmit) {
     state = state || pipelineDebugState || {};
     var ls = lastSubmit || {};
-    var routeTxt = state.route || state.routeDetail || "";
-    if (!routeTxt && ls.routeLabel) routeTxt = ls.routeId + " · " + ls.routeLabel;
-    document.getElementById("pipe-route").innerHTML = "<b>① Route</b>" + esc(routeTxt || "—");
-    document.getElementById("pipe-prompt").innerHTML = "<b>② Prompt</b>" + esc(state.prompt || "—");
-    document.getElementById("pipe-blocks").innerHTML = "<b>③ Blocks</b>" + esc(state.blocks || "—");
-    var renderTxt = state.render || "—";
-    if (state.a2ui) renderTxt += (renderTxt !== "—" ? " · " : "") + "a2ui:" + state.a2ui;
-    document.getElementById("pipe-render").innerHTML = "<b>④ Render</b>" + esc(renderTxt);
+    var routeEl = document.getElementById("pipe-route");
+    var routeHtml = "<b>① Route</b>";
+    if (state.routeId || state.routeLabel) {
+      routeHtml +=
+        '<div class="pipe-sub">' +
+        esc(
+          (state.routeId || "") +
+            " · " +
+            (state.routeLabel || "") +
+            (state.routeConfidence ? " · conf=" + state.routeConfidence : "")
+        ) +
+        "</div>";
+      if (state.a2uiCandidates) {
+        routeHtml += '<div class="pipe-sub">candidates: ' + esc(state.a2uiCandidates) + "</div>";
+      }
+    } else {
+      var routeTxt = state.route || state.routeDetail || "";
+      if (!routeTxt && ls.routeLabel) routeTxt = ls.routeId + " · " + ls.routeLabel;
+      routeHtml += '<div class="pipe-sub">' + esc(routeTxt || "—") + "</div>";
+    }
+    routeEl.innerHTML = routeHtml;
+    document.getElementById("pipe-prompt").innerHTML =
+      "<b>② Prompt</b><div class=\"pipe-sub\">" + esc(state.prompt || "—") + "</div>";
+    document.getElementById("pipe-blocks").innerHTML =
+      "<b>③ Blocks</b><div class=\"pipe-sub\">" + esc(state.blocks || "—") + "</div>";
+    var renderHtml = "<b>④ Render</b>";
+    if (state.render) renderHtml += '<div class="pipe-sub">' + esc(state.render) + "</div>";
+    var a2line = formatA2uiDebugLine(state);
+    if (a2line) renderHtml += '<div class="pipe-sub">a2ui: ' + esc(a2line) + "</div>";
+    if (state.renderFailed) {
+      renderHtml += '<span class="pipe-fail">failed: ' + esc(state.renderFailed) + "</span>";
+    }
+    if (!state.render && !a2line && !state.renderFailed) {
+      renderHtml += '<div class="pipe-sub">—</div>';
+    }
+    document.getElementById("pipe-render").innerHTML = renderHtml;
   }
 
   function inferPipelineFromLogs() {
-    var st = { route: "", prompt: "", blocks: "", render: "", a2ui: "" };
+    var st = {
+      route: "",
+      routeId: "",
+      routeLabel: "",
+      routeConfidence: "",
+      a2uiCandidates: "",
+      prompt: "",
+      blocks: "",
+      render: "",
+      a2ui: "",
+      a2uiItems: "",
+      renderFailed: ""
+    };
     for (var i = 0; i < agentLogs.length; i++) {
       var r = agentLogs[i];
       var ev = String(r.event || "");
       var det = String(r.detail || "");
       var lay = String(r.layer || "").toLowerCase();
-      if (!st.route && (ev === "pipeline_route" || ev === "prompt_inject" && lay === "route")) st.route = det;
+      if (!st.route && (ev === "pipeline_route" || (ev === "prompt_inject" && lay === "route"))) {
+        st.route = det;
+        var routeObj = tryParsePipelineJson(det);
+        if (routeObj && routeObj.routeId) {
+          st.routeId = String(routeObj.routeId || "");
+          st.routeLabel = String(routeObj.label || "");
+          st.routeConfidence = routeObj.confidence != null ? String(routeObj.confidence) : "";
+          st.a2uiCandidates = Array.isArray(routeObj.a2uiCandidates)
+            ? routeObj.a2uiCandidates.join(", ")
+            : "";
+        }
+      }
       if (!st.prompt && (ev === "prompt_inject" || ev.indexOf("prompt") >= 0)) st.prompt = det;
       if (!st.blocks && (ev === "pipeline_finalize" || ev === "pipeline_ingest")) st.blocks = det;
       if (!st.render && ev === "render_blocks") st.render = det;
-      if (!st.a2ui && ev === "pipeline_a2ui") st.a2ui = det;
+      if (ev === "pipeline_a2ui") {
+        st.a2ui = det;
+        var a2arr = tryParsePipelineJson(det);
+        if (a2arr && Array.isArray(a2arr)) {
+          st.a2uiItems = a2arr
+            .map(function (a) {
+              return String(a.component || "?") + "←" + String(a.from || "?");
+            })
+            .join(" · ");
+        }
+      }
+      if (ev === "a2ui_render_failed") st.renderFailed = det;
     }
     return st;
   }
@@ -692,7 +779,7 @@
       if (agentFilter === "route") return String(r.layer || "").toLowerCase() === "route";
       if (agentFilter === "pipeline") {
         var evp = String(r.event || "").toLowerCase();
-        return evp.indexOf("pipeline_") === 0 || evp === "render_blocks" || evp === "prompt_inject";
+        return evp.indexOf("pipeline_") === 0 || evp === "render_blocks" || evp === "prompt_inject" || evp === "a2ui_render_failed";
       }
       return l === agentFilter;
     });

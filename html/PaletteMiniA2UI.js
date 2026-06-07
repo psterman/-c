@@ -1,5 +1,8 @@
 /**
  * Palette Mini-A2UI — finalize 后处理：Markdown → a2ui blocks
+ *
+ * C.1 范围：仅 finalize 阶段 enrich；Option A 保留完整 reply markdown；
+ * render 失败时 reply 仍可见，见 a2ui_render_failed 日志与修改思路 Phase 5 C.1 约定。
  */
 (function (root) {
   function escHtml(s) {
@@ -242,6 +245,8 @@
 
   root.PaletteMiniA2UI = {
     extractMarkdownTables: extractMarkdownTables,
+    extractSteps: extractSteps,
+    extractAlerts: extractAlerts,
     enrichBlocksWithA2UI: enrichBlocksWithA2UI,
     render: render
   };

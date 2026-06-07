@@ -559,6 +559,18 @@ reply markdown 仍完整保留。
 A2UI 失败时回退 Markdown。
 ```
 
+### C.1 实现约定（产品验收口径）
+
+```text
+enrich 时机：仅在 finalize / finalizeFromState 后执行；流式 ingest 阶段不生成 A2UI。
+白名单组件：ComparisonTable | Steps | Alert（见 PaletteBlockSchema.A2UI_WHITELIST）。
+Option A（当前）：reply markdown 完整保留；A2UI block 作为 reply 前的附加展示，不做 strip/dedupe。
+失败策略：PaletteMiniA2UI.render 返回 false → 移除 slot + a2ui_render_failed 结构化日志；reply markdown 仍可见。
+路由：PaletteRouterSkill.PROFILES[].a2uiCandidates 控制 enrich 候选；re-finalize 须保留 routeProfile。
+验收 fixture：html/PaletteBlockPipeline.fixtures.js + node html/run-palette-fixtures.mjs
+Debug：pipeline_route / pipeline_a2ui / a2ui_render_failed JSON → Agent Debug 四栏。
+```
+
 ---
 
 ## Phase 6：Debug + Gateway event tap

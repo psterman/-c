@@ -19630,6 +19630,7 @@ body.niuma-confirm-open{overflow:hidden}
     if (/^(\d+[.)]\s|[-*•]\s|\*\*[^*]+\*\*|#{1,3}\s)/m.test(t)) return true;
     if (t.split(/\n+/).length >= 4) return true;
     if (t.length >= 400) return true;
+    if (/\|/.test(t) && /---/.test(t)) return true;
     return false;
   }
 
@@ -19640,7 +19641,7 @@ body.niuma-confirm-open{overflow:hidden}
     if (ocAnswerHasSubstantiveStructure(t)) return false;
     if (/^(正在|等待|任务已|OpenClaw|Gateway|📨|⏳|💭|🔗)/.test(t)) return true;
     if (
-      !/(让我先|我先想|我先查|让我查|比较靠谱|想想到底|查一下|等我(先|一下)|稍等|思考中|我来查|我去查|let me (check|think|search)|i('ll| will) (check|search|look))/i.test(
+      !/(让我先|我先想|我先查|让我查|比较靠谱|想想到底|查一下|等我(先|一下)|稍等|思考中|我来查|我去查|我来搜|搜一下|给你做|给你个|我直接基于|let me (check|think|search)|i('ll| will) (check|search|look))/i.test(
         t
       )
     )
@@ -21013,18 +21014,23 @@ body.niuma-confirm-open{overflow:hidden}
             }
             var sAct2 = sessionById(sid);
             if (!sAct2) return;
-            var shown = String(textNow || '').trim();
-            if (!shown) return;
-            if (typeof ocIsSystemOrMetaText === 'function' && ocIsSystemOrMetaText(shown)) return;
-            if (getPaletteAgentSystemPrompt(sAct2) && paletteIsAgentStatusText(shown) && !streamHasText) return;
+            var rawShown = String(textNow || '').trim();
+            if (!rawShown) return;
+            if (typeof ocIsSystemOrMetaText === 'function' && ocIsSystemOrMetaText(rawShown)) return;
+            var displayShown = rawShown;
+            if (
+              typeof ocLooksLikeThinkingPreambleOnly === 'function' &&
+              ocLooksLikeThinkingPreambleOnly(rawShown)
+            )
+              displayShown = '思考中...';
+            else streamHasText = true;
+            if (getPaletteAgentSystemPrompt(sAct2) && paletteIsAgentStatusText(displayShown) && !streamHasText) return;
             var draft = streamDraftId
               ? { _id: streamDraftId }
-              : ensureAssistantDraft(sAct2, shown || '思考中...');
+              : ensureAssistantDraft(sAct2, displayShown || '思考中...');
             if (draft && draft._id) streamDraftId = draft._id;
             if (streamDraftId) {
-              var shown = String(textNow || '').trim() || '思考中...';
-              streamHasText = !!String(textNow || '').trim();
-              updateHistoryMessageById(sAct2, streamDraftId, shown, false);
+              updateHistoryMessageById(sAct2, streamDraftId, displayShown || '思考中...', false);
               if (state.activeSessionId === sid) scrollMsgsToLatest();
             }
           }
@@ -21032,6 +21038,16 @@ body.niuma-confirm-open{overflow:hidden}
       } else content = await reqOpenAI(cfg);
       if (typeof ocIsSystemOrMetaText === 'function' && ocIsSystemOrMetaText(content)) content = '';
       if (typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(content)) content = '';
+      if (!content && paletteExecCtx && paletteExecCtx.reqId) {
+        try {
+          var latePick = paletteAgentContentReady(
+            palettePickAssistantAnswerForAgent(paletteExecCtx.reqId, paletteExecCtx.query || '', {
+              allowWhileSending: true
+            })
+          );
+          if (latePick) content = latePick;
+        } catch (_) {}
+      }
       if (streamDraftId) {
         var sAct2 = sessionById(sid);
         if (sAct2 && content) {
@@ -21053,6 +21069,9 @@ body.niuma-confirm-open{overflow:hidden}
               isDraft: false
             });
           }
+        } else if (sAct2 && streamDraftId) {
+          updateHistoryMessageById(sAct2, streamDraftId, '仍在等待完整回复…', true);
+          if (paletteExecCtx && paletteExecCtx.reqId) armPaletteAgentLateRecover(paletteExecCtx.reqId);
         }
       } else if (content) add('assistant', content);
       appendAudit({ nodeKey: nodeKeyForSession(sessionById(sid)), level: 'success', message: '模型响应完成' });

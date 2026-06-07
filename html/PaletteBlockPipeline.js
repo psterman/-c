@@ -411,6 +411,23 @@
 
   function blockPreviewSummary(blocks) {
     var list = blocks || [];
+    for (var pa = list.length - 1; pa >= 0; pa--) {
+      var a2 = list[pa];
+      if (!a2 || a2.type !== "a2ui") continue;
+      if (a2.component === "ComparisonTable") {
+        var cols = (a2.props && a2.props.columns) || [];
+        var rows = (a2.props && a2.props.rows) || [];
+        return ("对比表格 · " + cols.length + " 列 · " + rows.length + " 行").slice(0, 160);
+      }
+      if (a2.component === "Steps") {
+        var stepItems = (a2.props && a2.props.items) || [];
+        return ("执行步骤 · " + stepItems.length + " 步").slice(0, 160);
+      }
+      if (a2.component === "Alert") {
+        var alertTxt = (a2.props && a2.props.text) || "";
+        return String(alertTxt).trim().slice(0, 160) || "⚠ 警告";
+      }
+    }
     var bestReply = null;
     var bestTurn = -1;
     for (var pi = 0; pi < list.length; pi++) {
@@ -424,7 +441,12 @@
       }
     }
     if (bestReply) {
-      return String(bestReply.markdown).replace(/\s+/g, " ").trim().slice(0, 160);
+      var replyMd = String(bestReply.markdown);
+      var tblSum = inferTablePreviewFromMarkdown(replyMd);
+      if (tblSum) return tblSum;
+      var lead = extractNonTablePreview(replyMd);
+      if (lead) return lead.slice(0, 160);
+      return replyMd.replace(/\s+/g, " ").trim().slice(0, 160);
     }
     for (var pj = 0; pj < list.length; pj++) {
       var ps = list[pj];
@@ -448,6 +470,31 @@
     return "";
   }
 
+  function inferTablePreviewFromMarkdown(md) {
+    if (root.PaletteMiniA2UI && PaletteMiniA2UI.extractMarkdownTables) {
+      var tables = PaletteMiniA2UI.extractMarkdownTables(md);
+      if (tables.length && tables[0].columns && tables[0].columns.length) {
+        var tb = tables[0];
+        return ("对比表格 · " + tb.columns.length + " 列 · " + (tb.rows || []).length + " 行").slice(0, 160);
+      }
+    }
+    return "";
+  }
+
+  function extractNonTablePreview(md) {
+    var lines = String(md || "").split(/\r?\n/);
+    var parts = [];
+    for (var i = 0; i < lines.length; i++) {
+      var ln = lines[i].trim();
+      if (!ln) continue;
+      if (/^\|/.test(ln)) continue;
+      if (/^:?-{2,}:?(\s*\|\s*:?-{2,}:?)*$/.test(ln.replace(/\s/g, ""))) continue;
+      parts.push(ln.replace(/\*\*/g, ""));
+      if (parts.join(" ").length > 100) break;
+    }
+    return parts.join(" ").replace(/\s+/g, " ").trim();
+  }
+
   root.PaletteBlockPipeline = {
     createIngestState: createIngestState,
     ingestDelta: ingestDelta,
@@ -457,6 +504,8 @@
     freezeBlocks: freezeBlocks,
     maxTurnId: maxTurnId,
     blockPreviewSummary: blockPreviewSummary,
+    inferTablePreviewFromMarkdown: inferTablePreviewFromMarkdown,
+    extractNonTablePreview: extractNonTablePreview,
     hasProtocolTags: hasProtocolTags,
     hasFinalReply: hasFinalReply,
     isStatusOnlyAgentText: isStatusOnlyAgentText
