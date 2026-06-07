@@ -2413,34 +2413,36 @@ body.niuma-confirm-open{overflow:hidden}
     toolbarPaintReadySent = true;
     ftbBootAwaitLayout = false;
     if (paintReadyTimer) {
-      clearTimeout(paintReadyTimer);
+      cancelAnimationFrame(paintReadyTimer);
       paintReadyTimer = 0;
     }
     if (FTB_MINIMAL_BOOT) {
       applyTheme(state.themeMode);
       requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          post({ type: 'UI_PAINT_READY' });
-        });
+        post({ type: 'UI_PAINT_READY' });
       });
+      setTimeout(function () {
+        scheduleLoadCfgDeferred();
+      }, 800);
       return;
     }
     playBootToToolbarTransition(function () {
       requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          post({ type: 'UI_PAINT_READY' });
-        });
+        post({ type: 'UI_PAINT_READY' });
       });
     });
   }
 
   function schedulePostPaintReady() {
     if (toolbarPaintReadySent) return;
-    if (paintReadyTimer) clearTimeout(paintReadyTimer);
-    paintReadyTimer = setTimeout(function () {
+    if (paintReadyTimer) {
+      cancelAnimationFrame(paintReadyTimer);
+      paintReadyTimer = 0;
+    }
+    paintReadyTimer = requestAnimationFrame(function () {
       paintReadyTimer = 0;
       postPaintReady();
-    }, 16);
+    });
   }
 
   function tryBootReveal() {
@@ -12116,7 +12118,7 @@ body.niuma-confirm-open{overflow:hidden}
     refreshInlineApiSetupVisibility();
   }
 
-  function loadCfg() {
+  function loadCfgToolbarBootstrap() {
     var d = {};
     try {
       d = JSON.parse(localStorage.getItem(LS) || localStorage.getItem(LEGACY_LS) || '{}') || {};
@@ -12128,13 +12130,70 @@ body.niuma-confirm-open{overflow:hidden}
     try {
       if (freeChatMode) freeChatMode.checked = !!d.freeChatMode;
     } catch (_) {}
-    systemPrompt.value = Object.prototype.hasOwnProperty.call(d, 'systemPrompt') ? String(d.systemPrompt) : SP;
-    if (ttydShellCommand) ttydShellCommand.value = d.ttydShell != null ? String(d.ttydShell) : '';
+    if (systemPrompt) {
+      systemPrompt.value = Object.prototype.hasOwnProperty.call(d, 'systemPrompt') ? String(d.systemPrompt) : SP;
+    }
+    if (ttydShellCommand) {
+      ttydShellCommand.value = d.ttydShell != null ? String(d.ttydShell) : '';
+    }
+    loadChatModelBarExpandedPref();
+  }
+
+  var cfgDeferredLoaded = false;
+
+  function scheduleLoadCfgDeferred() {
+    if (cfgDeferredLoaded) return;
+    cfgDeferredLoaded = true;
+    var run = function () {
+      try {
+        loadCfgDeferredHeavy();
+      } catch (e) {}
+      schedulePostToolbarHostRequests();
+    };
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 800 });
+    else setTimeout(run, 0);
+  }
+
+  function schedulePostToolbarHostRequests() {
+    setTimeout(function () {
+      try {
+        scheduleLocalAgentsAutoConnect(1);
+      } catch (_) {}
+    }, 600);
+    setTimeout(function () {
+      try {
+        post({ type: 'niuma_request_studio_context' });
+        requestBrowserCurrentStateSync();
+      } catch (_) {}
+    }, 400);
+    setTimeout(function () {
+      try {
+        post({ type: 'niuma_request_studio_llm' });
+      } catch (_) {}
+    }, 3200);
+    setTimeout(function () {
+      try {
+        requestBrowserCurrentStateSync();
+      } catch (_) {}
+    }, 1200);
+    setTimeout(function () {
+      try {
+        requestBrowserCurrentStateSync();
+      } catch (_) {}
+    }, 2400);
+  }
+
+  function loadCfgDeferredHeavy() {
+    var d = {};
+    try {
+      d = JSON.parse(localStorage.getItem(LS) || localStorage.getItem(LEGACY_LS) || '{}') || {};
+    } catch (e) {
+      d = {};
+    }
     loadNiumaHistoryStore();
 
     loadSessions();
     migrateOllamaSessionsToCloud();
-    loadChatModelBarExpandedPref();
     loadAudit();
 
     if (state.sessions.length === 0) {
@@ -12202,6 +12261,12 @@ body.niuma-confirm-open{overflow:hidden}
     if (sAct && normalizeProviderId(sAct.provider) === 'openclaw') hydrateOpenClawHistoryForSession(sAct, false);
     ensureDynamicModelsForActiveProvider();
     renderChatModelBar();
+  }
+
+  function loadCfg() {
+    loadCfgToolbarBootstrap();
+    loadCfgDeferredHeavy();
+    cfgDeferredLoaded = true;
   }
 
   function mapStudioProviderToChat(llm) {
@@ -23536,6 +23601,28 @@ body.niuma-confirm-open{overflow:hidden}
             });
           });
         }
+        function applyLogoImageAsync() {
+          if (!u || !imgs.length) return;
+          imgs.forEach(function (im) {
+            function onLogoPainted() {
+              if (im.naturalWidth && im.naturalHeight) im.classList.add('logo-ready');
+            }
+            im.classList.remove('logo-ready');
+            im.onload = onLogoPainted;
+            im.onerror = onLogoPainted;
+            im.src = u;
+            if (im.decode) {
+              im.decode().then(onLogoPainted).catch(onLogoPainted);
+            } else if (im.complete) {
+              onLogoPainted();
+            }
+          });
+        }
+        if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
+          markBootLogoReady();
+          applyLogoImageAsync();
+          return;
+        }
         if (!u || !imgs.length) {
           paintThenReveal();
           return;
@@ -24239,6 +24326,7 @@ body.niuma-confirm-open{overflow:hidden}
         document.body.classList.add('ftb-ready', 'ftb-first-show');
         toolbarVisibleSynced = true;
         ftbBootHidden = true;
+        scheduleLoadCfgDeferred();
         setTimeout(function () {
           try { document.body.classList.remove('ftb-first-show'); } catch (_) {}
         }, 320);
@@ -24302,24 +24390,13 @@ body.niuma-confirm-open{overflow:hidden}
   fillApiSetupSelect(ttydLlmProvider);
   refreshApiSetupVisibility(normalizeProviderId(provider ? provider.value : 'openai'));
   fillPromptBuiltinSelect();
-  loadCfg();
+  if (FTB_MINIMAL_BOOT) {
+    loadCfgToolbarBootstrap();
+  } else {
+    loadCfg();
+    schedulePostToolbarHostRequests();
+  }
   refreshInlineApiSetupVisibility();
-  setTimeout(function () {
-    scheduleLocalAgentsAutoConnect(1);
-  }, 600);
-  setTimeout(function () {
-    try {
-      post({ type: 'niuma_request_studio_context' });
-      requestBrowserCurrentStateSync();
-    } catch (e) {}
-  }, 400);
-  setTimeout(function () {
-    try {
-      post({ type: 'niuma_request_studio_llm' });
-    } catch (e) {}
-  }, 3200);
-  setTimeout(requestBrowserCurrentStateSync, 1200);
-  setTimeout(requestBrowserCurrentStateSync, 2400);
   var syncStudioBtn = $('syncStudioLlm');
   if (syncStudioBtn) {
     syncStudioBtn.addEventListener('click', function () {
