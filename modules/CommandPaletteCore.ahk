@@ -15,6 +15,9 @@ global g_CmdPal_MinHeight := 120
 global g_CmdPal_CurrentHeight := 120
 global g_CmdPal_CornerRadius := 20
 global g_CmdPal_Revealed := false
+global g_CmdPal_AnchorX := 0
+global g_CmdPal_AnchorY := 0
+global g_CmdPal_HasAnchor := false
 
 global g_CmdPal_ExecCache := ""
 global g_CmdPal_ExecDirty := false
@@ -57,7 +60,7 @@ CommandPalette_AiLog(event, detail := "") {
     try OutputDebug("[CmdPalAI] " . line . "`n")
     catch {
     }
-    if FuncExists("NMER_Log") {
+    if (FuncExists("NMER_Log")) {
         try NMER_Log("cmdpal_ai", ev, body)
         catch {
         }
@@ -79,9 +82,9 @@ CommandPalette_ResolveActivationMode() {
     if (m = "")
         m := "toolbar"
     try {
-        if FuncExists("NormalizeAppearanceActivationMode")
+        if (FuncExists("NormalizeAppearanceActivationMode"))
             m := Trim(String(NormalizeAppearanceActivationMode(m)))
-        else if FuncExists("FloatingToolbar_NormalizeAppearanceMode")
+        else if (FuncExists("FloatingToolbar_NormalizeAppearanceMode"))
             m := Trim(String(FloatingToolbar_NormalizeAppearanceMode(m)))
     } catch {
     }
@@ -343,25 +346,23 @@ CommandPalette_ApplyBounds() {
 
 CommandPalette_CenterAndShow() {
     global g_CmdPal_Gui, g_CmdPal_Width, g_CmdPal_CurrentHeight, g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_Ctrl
+    global g_CmdPal_AnchorX, g_CmdPal_AnchorY, g_CmdPal_HasAnchor
     w := g_CmdPal_Width
     h := g_CmdPal_CurrentHeight
     CoordMode("Mouse", "Screen")
     MouseGetPos(&mx, &my)
-    idx := 1
-    try idx := MonitorGet(mx, my)
-    catch {
-    }
     ml := 0
     mt := 0
     mr := A_ScreenWidth
     mb := A_ScreenHeight
-    try MonitorGet(idx, &ml, &mt, &mr, &mb)
-    catch {
-    }
+    CommandPalette_GetWorkAreaAtPoint(mx, my, &ml, &mt, &mr, &mb)
     x := ml + (mr - ml - w) // 2
     y := mt + Round((mb - mt) * 0.28)
     if (y < mt + 8)
         y := mt + 8
+    g_CmdPal_AnchorX := x
+    g_CmdPal_AnchorY := y
+    g_CmdPal_HasAnchor := true
     g_CmdPal_Revealed := false
     try g_CmdPal_Gui.Show("x" . x . " y" . y . " w" . w . " h" . h)
     catch {
@@ -537,6 +538,7 @@ CommandPalette_PushEmptyQuery(*) {
 
 CommandPalette_Hide(*) {
     global g_CmdPal_Gui, g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_AiSession
+    global g_CmdPal_HasAnchor
     if (g_CmdPal_AiSession is Map) && !g_CmdPal_AiSession.Get("handoff", false) && !g_CmdPal_AiSession.Get("ended", false) {
         try CommandPalette_HandoffAiToToolbar(true)
         catch {
@@ -544,6 +546,7 @@ CommandPalette_Hide(*) {
     }
     g_CmdPal_Visible := false
     g_CmdPal_Revealed := false
+    g_CmdPal_HasAnchor := false
     if IsObject(g_CmdPal_Gui) {
         try g_CmdPal_Gui.Hide()
         catch {
@@ -552,19 +555,88 @@ CommandPalette_Hide(*) {
     }
 }
 
-CommandPalette_ApplyHeight(h) {
+CommandPalette_MonitorAtPoint(px, py) {
+    count := 1
+    try count := MonitorGetCount()
+    Loop count {
+        l := 0, t := 0, r := 0, b := 0
+        try MonitorGet(A_Index, &l, &t, &r, &b)
+        catch
+            continue
+        if (px >= l && px < r && py >= t && py < b)
+            return A_Index
+    }
+    try return MonitorGetPrimary()
+    catch
+        return 1
+}
+
+CommandPalette_GetWorkAreaAtPoint(px, py, &ml, &mt, &mr, &mb) {
+    idx := CommandPalette_MonitorAtPoint(px, py)
+    ml := 0, mt := 0, mr := A_ScreenWidth, mb := A_ScreenHeight
+    try MonitorGetWorkArea(idx, &ml, &mt, &mr, &mb)
+    catch {
+        try MonitorGet(idx, &ml, &mt, &mr, &mb)
+        catch {
+        }
+    }
+    return idx
+}
+
+CommandPalette_MaxHeight(expanded := false) {
+    global g_CmdPal_Gui, g_CmdPal_Width
+    px := A_ScreenWidth // 2
+    py := A_ScreenHeight // 2
+    if IsObject(g_CmdPal_Gui) {
+        try {
+            WinGetPos(&wx, &wy, &ww, &wh, g_CmdPal_Gui.Hwnd)
+            px := wx + (ww > 0 ? ww : g_CmdPal_Width) // 2
+            py := wy + (wh > 0 ? wh : 1) // 2
+        } catch {
+        }
+    } else {
+        try MouseGetPos(&px, &py)
+        catch {
+        }
+    }
+    ml := 0, mt := 0, mr := A_ScreenWidth, mb := A_ScreenHeight
+    CommandPalette_GetWorkAreaAtPoint(px, py, &ml, &mt, &mr, &mb)
+    workH := mb - mt
+    if (workH < 400)
+        workH := A_ScreenHeight
+    pct := expanded ? 0.96 : 0.82
+    return Max(400, Round(workH * pct))
+}
+
+CommandPalette_ApplyHeight(h, expanded := false, actionWorkspace := false) {
     global g_CmdPal_Gui, g_CmdPal_Width, g_CmdPal_CurrentHeight, g_CmdPal_MinHeight
+    global g_CmdPal_AnchorX, g_CmdPal_AnchorY, g_CmdPal_HasAnchor
     nh := Integer(h)
-    if (nh < g_CmdPal_MinHeight)
-        nh := g_CmdPal_MinHeight
-    maxH := 720
+    minH := actionWorkspace ? (expanded ? 640 : 560) : g_CmdPal_MinHeight
+    if (nh < minH)
+        nh := minH
+    maxH := CommandPalette_MaxHeight(expanded)
     if (nh > maxH)
         nh := maxH
     g_CmdPal_CurrentHeight := nh
     if !IsObject(g_CmdPal_Gui)
         return
     try {
-        WinGetPos(&x, &y, , , g_CmdPal_Gui.Hwnd)
+        WinGetPos(&x, &y, &ww, &wh, g_CmdPal_Gui.Hwnd)
+        baseX := g_CmdPal_HasAnchor ? g_CmdPal_AnchorX : x
+        baseY := g_CmdPal_HasAnchor ? g_CmdPal_AnchorY : y
+        ml := 0, mt := 0, mr := A_ScreenWidth, mb := A_ScreenHeight
+        CommandPalette_GetWorkAreaAtPoint(
+            baseX + (ww > 0 ? ww : g_CmdPal_Width) // 2,
+            baseY + 1,
+            &ml, &mt, &mr, &mb
+        )
+        x := baseX
+        y := baseY
+        if (y + nh > mb - 8)
+            y := Max(mt + 8, mb - 8 - nh)
+        if (y < mt + 8)
+            y := mt + 8
         g_CmdPal_Gui.Move(x, y, g_CmdPal_Width, nh)
     } catch {
     }
@@ -2145,7 +2217,13 @@ CommandPalette_OnWebMessage(sender, args) {
     }
     if (typ = "palette_resize") {
         h := msg.Has("height") ? Integer(msg["height"]) : 76
-        CommandPalette_ApplyHeight(h)
+        expanded := false
+        if (msg.Has("expanded"))
+            expanded := !!msg["expanded"]
+        actionWorkspace := msg.Has("workspace") ? !!msg["workspace"] : false
+        if (!actionWorkspace && msg.Has("intent"))
+            actionWorkspace := (String(msg["intent"]) = "action")
+        CommandPalette_ApplyHeight(h, expanded, actionWorkspace)
         return
     }
     if (typ = "palette_morph_resize") {

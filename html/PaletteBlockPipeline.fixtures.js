@@ -175,12 +175,12 @@
   var FIXTURE_ASSERT = {
     execute_steps: { a2uiComponent: "Steps" },
     debug_alert: { a2uiComponent: "Alert" },
-    research_table: { a2uiComponent: "ComparisonTable" },
-    replay_blockstore: { a2uiComponent: "ComparisonTable", checkDom: true },
+    research_table: { a2uiComponent: "ComparisonTable", replyNoTable: true },
+    replay_blockstore: { a2uiComponent: "ComparisonTable", checkDom: true, replyNoTable: true },
     follow_up_merge: { replyCountMin: 2 },
     mock_all_slots: { a2uiComponent: "ComparisonTable" },
     legacy_raw_replay: { hasReply: true },
-    legacy_raw_replay_table: { hasReply: true, a2uiComponent: "ComparisonTable" },
+    legacy_raw_replay_table: { hasReply: true, a2uiComponent: "ComparisonTable", replyNoTable: true },
     a2ui_render_fail: { hasReply: true }
   };
 
@@ -216,6 +216,12 @@
           return b && b.type === "reply" && String(b.markdown || "").trim();
         });
       if (!hasReplyBlock) errors.push("missing_reply");
+    }
+    if (spec.replyNoTable) {
+      var replyWithTable = (out.blocks || []).some(function (b) {
+        return b && b.type === "reply" && /\|/.test(String(b.markdown || "")) && /---/.test(String(b.markdown || ""));
+      });
+      if (replyWithTable) errors.push("reply_still_has_table");
     }
     if (spec.checkDom && typeof document !== "undefined") {
       if (!document.querySelector(".card-a2ui .a2ui-slot")) errors.push("missing_dom:.card-a2ui .a2ui-slot");

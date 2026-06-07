@@ -283,21 +283,35 @@ body[data-theme="light"] #intent-tag[data-intent="action"] {
   -ms-overflow-style: none;
 }
 .palette-panel.has-results .palette-results {
-  max-height: 320px;
+  max-height: var(--palette-results-max-height, 360px);
   overflow-y: auto;
   padding: 6px 8px 8px;
 }
 .palette-panel.intent-action.has-results .palette-results {
   max-height: none;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   min-height: 0;
-  overflow: visible;
+  overflow-y: auto;
   overflow-x: hidden;
   padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 141, 42, 0.48) transparent;
 }
 .palette-panel.intent-action.has-results .palette-results.is-scrollable {
-  max-height: min(520px, 58vh);
+  max-height: var(--palette-action-results-scroll-cap, min(720px, 72vh));
   overflow-y: auto;
+  overflow-x: hidden;
+}
+.palette-panel.intent-action.has-results .palette-results.has-expanded-card:not(.is-scrollable),
+.palette-results.has-action-cards.has-expanded-card:not(.is-scrollable) {
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+}
+.palette-panel.intent-action.has-results .palette-results.has-expanded-card.is-scrollable {
+  flex: 1 1 auto;
+  min-height: 80px;
+  overflow-y: auto !important;
   overflow-x: hidden;
 }
 .palette-panel.has-results .palette-results.is-scrolling {
@@ -305,6 +319,16 @@ body[data-theme="light"] #intent-tag[data-intent="action"] {
   scrollbar-color: rgba(255, 102, 0, 0.35) transparent;
 }
 .palette-results::-webkit-scrollbar { width: 0; height: 0; }
+.palette-panel.intent-action.has-results .palette-results::-webkit-scrollbar {
+  width: 7px;
+}
+.palette-panel.intent-action.has-results .palette-results::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 141, 42, 0.45);
+}
+.palette-panel.intent-action.has-results .palette-results::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.025);
+}
 .palette-panel.has-results .palette-results.is-scrolling::-webkit-scrollbar { width: 5px; }
 .palette-panel.has-results .palette-results.is-scrolling::-webkit-scrollbar-thumb {
   background: rgba(255, 102, 0, 0.32);
@@ -1037,7 +1061,8 @@ body[data-theme="light"] .ai-bg-card {
   display: none;
 }
 .cmd-action-card.is-expanded .card-status-log {
-  max-height: min(320px, 42vh);
+  max-height: none;
+  overflow: visible;
 }
 .cmd-action-card.is-expanded.is-active .card-status-log {
   max-height: none;
@@ -1215,6 +1240,163 @@ body[data-theme="light"] .ai-bg-card {
 }
 .action-card-stack {
   min-height: 48px;
+}
+.action-detail-nav {
+  display: none;
+}
+.action-card-stack.detail-mode .action-detail-nav {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  margin: -4px -2px 10px;
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 24, 38, 0.96);
+  backdrop-filter: blur(16px);
+}
+.action-detail-back {
+  flex: 0 0 auto;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 141, 42, 0.3);
+  background: rgba(255, 102, 0, 0.08);
+  color: #ffc896;
+  font-size: 11px;
+  cursor: pointer;
+}
+.action-detail-identity {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.action-detail-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 9px;
+  color: var(--text-soft);
+}
+.action-detail-breadcrumb .crumb-current {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #b8c7d9;
+}
+.action-detail-title {
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 650;
+}
+.action-detail-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+.action-detail-tab {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 10px;
+  cursor: pointer;
+}
+.action-detail-tab:hover,
+.action-detail-tab.active {
+  color: #ffc896;
+  border-color: rgba(255, 141, 42, 0.32);
+  background: rgba(255, 102, 0, 0.08);
+}
+.action-detail-tab[hidden] {
+  display: none;
+}
+.action-card-stack.detail-mode > .action-history-toolbar,
+.action-card-stack.detail-mode > .action-history-head,
+.action-card-stack.detail-mode .action-card-section-head,
+.action-card-stack.detail-mode .action-done-more-btn,
+.action-card-stack.detail-mode .action-filter-empty,
+.action-card-stack.detail-mode .action-intent-empty {
+  display: none !important;
+}
+.action-card-stack.detail-mode .action-card-section {
+  display: contents !important;
+}
+.action-card-stack.detail-mode .action-card-list {
+  display: contents;
+}
+.action-card-stack.detail-mode .cmd-action-card {
+  display: none !important;
+}
+.action-card-stack.detail-mode .cmd-action-card.is-detail-card {
+  display: block !important;
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 2px 8px 18px;
+}
+.action-card-stack.detail-mode .cmd-action-card.is-detail-card .cmd-action-card-head {
+  position: sticky;
+  top: 58px;
+  z-index: 6;
+  margin: 0 -2px 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(15, 24, 38, 0.94);
+  backdrop-filter: blur(14px);
+}
+.action-card-stack.detail-mode .cmd-action-card.is-detail-card .card-expand-btn {
+  display: none;
+}
+.action-card-stack.detail-mode .cmd-action-card-title {
+  -webkit-line-clamp: 2;
+  font-size: 14px;
+}
+.action-card-stack.detail-mode .card-body {
+  display: block !important;
+}
+.action-card-stack.detail-mode .card-followup {
+  position: sticky;
+  bottom: 0;
+  z-index: 7;
+  margin: 16px -2px -12px;
+  padding: 10px 4px 4px;
+  background: linear-gradient(180deg, rgba(15, 24, 38, 0), rgba(15, 24, 38, 0.98) 24%);
+}
+.palette-results.action-detail-mode {
+  scroll-padding-top: 112px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 141, 42, 0.5) transparent;
+}
+.palette-results.action-detail-mode::-webkit-scrollbar {
+  width: 7px;
+}
+.palette-results.action-detail-mode::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 141, 42, 0.45);
+}
+.palette-panel.action-detail-open .palette-header,
+.palette-panel.action-detail-open > .palette-status,
+.palette-panel.action-detail-open > .action-agent-bar {
+  display: none !important;
+}
+.palette-panel.action-detail-open .palette-results {
+  padding-top: 4px;
+}
+body[data-theme="light"] .action-card-stack.detail-mode .action-detail-nav,
+body[data-theme="light"] .action-card-stack.detail-mode .cmd-action-card.is-detail-card .cmd-action-card-head {
+  background: rgba(247, 249, 252, 0.96);
 }
 .action-intent-empty {
   font-size: 11px;
@@ -1458,9 +1640,31 @@ body[data-theme="light"] .ai-bg-card {
   border: 1px solid rgba(34, 197, 94, 0.2);
 }
 .card-question-title, .card-reply-title { font-weight: 700; margin-bottom: 4px; }
-.card-a2ui { margin-top: 8px; }
+.card-a2ui { margin-bottom: 10px; }
 .card-a2ui[hidden] { display: none !important; }
-.card-a2ui .a2ui-slot { margin-bottom: 8px; }
+.card-a2ui-head {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #93c5fd;
+  margin-bottom: 6px;
+  opacity: 0.9;
+}
+.card-a2ui .a2ui-slot {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  overflow-x: auto;
+  overflow-y: visible;
+}
+.card-a2ui .a2ui-slot:last-child { margin-bottom: 0; }
+body[data-theme="light"] .card-a2ui .a2ui-slot {
+  background: rgba(59, 130, 246, 0.05);
+  border-color: rgba(37, 99, 235, 0.15);
+}
+.card-replies { margin-top: 0; }
 .a2ui-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .a2ui-table th, .a2ui-table td { border: 1px solid rgba(255,255,255,.12); padding: 6px 8px; text-align: left; }
 .a2ui-table th { background: rgba(255,255,255,.06); font-weight: 600; }
@@ -1540,6 +1744,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   ];
   var actionState = {
     activeCardId: null,
+    detailCardId: null,
     cards: {},
     _pendingCardId: null,
     _batchUpsert: 0,
@@ -1683,12 +1888,23 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return false;
   }
 
+  function cardReplyHasEnrichedTableDup(card, blocks) {
+    if (!card || card.uiState !== "Done") return false;
+    if (countPipelineBlocksByType(blocks, "a2ui") === 0) return false;
+    var replyMd = getLatestReplyMarkdownFromBlocks(blocks) || String(card.rawAnswer || "");
+    if (!replyMd || !/\|/.test(replyMd)) return false;
+    if (typeof PaletteMiniA2UI !== "undefined" && PaletteMiniA2UI.extractMarkdownTables)
+      return PaletteMiniA2UI.extractMarkdownTables(replyMd).length > 0;
+    return /---/.test(replyMd);
+  }
+
   function maybeHealDoneCardPipelineBlocks(card, cardId) {
     if (!card || !cardId) return false;
     var blocks = getCardPipelineBlocks(card);
     var needsFinalize =
       (!blocks.length && card.uiState === "Done" && cardHasSubstantialRawAnswer(card) && !cardHasPipelineReply(card)) ||
-      cardMissingExpectedA2ui(card, blocks);
+      cardMissingExpectedA2ui(card, blocks) ||
+      cardReplyHasEnrichedTableDup(card, blocks);
     if (!needsFinalize || !cardHasSubstantialRawAnswer(card)) return false;
     applyPipelineFinalize(cardId, card.rawAnswer);
     return true;
@@ -2039,6 +2255,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   function removeActionCard(cardId, syncHost) {
     var id = String(cardId || "");
     if (!id) return;
+    if (actionState.detailCardId === id) actionState.detailCardId = null;
     delete actionState.cards[id];
     var el = document.getElementById("card-" + id);
     if (el) el.remove();
@@ -2237,13 +2454,469 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     head.textContent =
       "任务 · 共 " + n + " 张（进行中 " + runN + " · 已归档 " + doneN + "）→ " + agentProviderLabel(state.agentProvider);
   }
+
+  function actionDetailSectionTarget(dom, section) {
+    if (!dom) return null;
+    if (section === "structure") return dom.querySelector(".card-a2ui:not([hidden])");
+    if (section === "answer") return dom.querySelector(".card-replies");
+    if (section === "process")
+      return dom.querySelector(".card-status-log:not(:empty)") ||
+        dom.querySelector(".card-live-thought") ||
+        dom.querySelector(".card-timeline");
+    if (section === "followup") return dom.querySelector(".card-followup");
+    return dom.querySelector(".cmd-action-card-head");
+  }
+
+  function scrollActionDetailSection(section) {
+    var cardId = actionState.detailCardId;
+    var dom = cardId ? document.getElementById("card-" + cardId) : null;
+    var results = document.getElementById("results");
+    var target = actionDetailSectionTarget(dom, section);
+    if (!target || !results) return;
+    var resultsRect = results.getBoundingClientRect();
+    var targetRect = target.getBoundingClientRect();
+    results.scrollTo({
+      top: results.scrollTop + targetRect.top - resultsRect.top - 112,
+      behavior: "smooth"
+    });
+    var nav = results.querySelector(".action-detail-nav");
+    if (nav) {
+      nav.querySelectorAll(".action-detail-tab").forEach(function (btn) {
+        btn.classList.toggle("active", btn.getAttribute("data-section") === section);
+      });
+    }
+  }
+
+  function ensureActionDetailNav(stack) {
+    if (!stack) return null;
+    var nav = stack.querySelector(":scope > .action-detail-nav");
+    if (nav) return nav;
+    nav = document.createElement("div");
+    nav.className = "action-detail-nav";
+    nav.innerHTML =
+      '<button type="button" class="action-detail-back">← 任务列表</button>' +
+      '<div class="action-detail-identity">' +
+      '<div class="action-detail-breadcrumb"><span>任务</span><span>/</span><span class="crumb-state"></span><span>/</span><span class="crumb-current"></span></div>' +
+      '<div class="action-detail-title"></div></div>' +
+      '<div class="action-detail-tabs">' +
+      '<button type="button" class="action-detail-tab" data-section="structure">结构</button>' +
+      '<button type="button" class="action-detail-tab" data-section="answer">回答</button>' +
+      '<button type="button" class="action-detail-tab" data-section="process">过程</button>' +
+      '<button type="button" class="action-detail-tab" data-section="followup">补充</button>' +
+      "</div>";
+    stack.insertBefore(nav, stack.firstChild);
+    nav.querySelector(".action-detail-back").addEventListener("click", closeActionCardDetail);
+    nav.querySelectorAll(".action-detail-tab").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        scrollActionDetailSection(btn.getAttribute("data-section") || "top");
+      });
+    });
+    return nav;
+  }
+
+  function syncActionDetailNav() {
+    var box = document.getElementById("results");
+    var stack = box && box.querySelector(".action-card-stack");
+    var panel = document.getElementById("palette-panel");
+    var cardId = actionState.detailCardId;
+    var card = cardId ? getActionCard(cardId) : null;
+    if (!box || !stack || !card) {
+      if (stack) stack.classList.remove("detail-mode");
+      if (box) box.classList.remove("action-detail-mode");
+      if (panel) panel.classList.remove("action-detail-open");
+      return;
+    }
+    var nav = ensureActionDetailNav(stack);
+    var dom = document.getElementById("card-" + cardId);
+    stack.classList.add("detail-mode");
+    box.classList.add("action-detail-mode");
+    if (panel) panel.classList.add("action-detail-open");
+    if (!nav) return;
+    var title = card.title || card.query || "代理任务";
+    var stateEl = nav.querySelector(".crumb-state");
+    var currentEl = nav.querySelector(".crumb-current");
+    var titleEl = nav.querySelector(".action-detail-title");
+    if (stateEl) stateEl.textContent = actionCardUiLabel(card.uiState);
+    if (currentEl) currentEl.textContent = agentProviderLabel(card.provider || state.agentProvider);
+    if (titleEl) titleEl.textContent = title;
+    nav.querySelectorAll(".action-detail-tab").forEach(function (btn) {
+      var section = btn.getAttribute("data-section") || "";
+      var target = actionDetailSectionTarget(dom, section);
+      var empty =
+        !target ||
+        target.hidden ||
+        (section === "answer" && !target.querySelector(".card-reply, .card-reply-segment")) ||
+        (section === "process" && !String(target.textContent || "").trim());
+      btn.hidden = empty;
+      if (empty) btn.classList.remove("active");
+    });
+    var activeTab = nav.querySelector(".action-detail-tab.active:not([hidden])");
+    if (!activeTab) {
+      var firstTab = nav.querySelector(".action-detail-tab:not([hidden])");
+      if (firstTab) firstTab.classList.add("active");
+    }
+  }
+
+  function openActionCardDetail(cardId) {
+    var id = String(cardId || "");
+    var card = getActionCard(id);
+    if (!card) return;
+    actionState.detailCardId = id;
+    actionState.activeCardId = id;
+    Object.keys(actionState.cards).forEach(function (otherId) {
+      actionState.cards[otherId].expanded = otherId === id;
+    });
+    hideCardHoverPreview();
+    renderActionHistoryList();
+    syncActionDetailNav();
+    requestAnimationFrame(function () {
+      var results = document.getElementById("results");
+      if (results) results.scrollTop = 0;
+      scheduleExpandedCardLayout(card, { pipeline: true, recover: true });
+      syncActionDetailNav();
+    });
+  }
+
+  function closeActionCardDetail() {
+    var id = actionState.detailCardId;
+    actionState.detailCardId = null;
+    var card = id ? getActionCard(id) : null;
+    if (card) card.expanded = false;
+    renderActionHistoryList();
+    syncActionDetailNav();
+    var results = document.getElementById("results");
+    requestAnimationFrame(function () {
+      var row = id ? document.getElementById("card-" + id) : null;
+      if (row && results) {
+        var rr = results.getBoundingClientRect();
+        var cr = row.getBoundingClientRect();
+        results.scrollTop += cr.top - rr.top - 8;
+      }
+      syncActionResultsLayout();
+    });
+  }
+
+  var DEFAULT_HEIGHT_CONFIG = {
+    morphHeight: 380,
+    actionCardMinHeight: 140,
+    actionResultsScrollCap: 1600,
+    actionPaletteMaxHeight: 1160,
+    actionHomeViewportRatio: 0.78,
+    actionPaletteViewportRatio: 0.94,
+    actionPaletteExpandedViewportRatio: 0.97,
+    actionIdleMinHeight: 208,
+    actionHomeMinHeight: 560,
+    actionDetailMinHeight: 640,
+    actionReservedBottomGap: 52,
+    actionMinVisibleCards: 4,
+    actionMaxVisibleCards: 8,
+    actionRunningRowHeight: 52,
+    actionDoneRowHeight: 42,
+    actionHistoryChromeHeight: 76,
+    actionMinViewportHeight: 232,
+    actionExpandedMinViewportHeight: 420,
+    actionEmptyViewportHeight: 96,
+    actionHistoryEmptyViewportHeight: 132,
+    actionExpandedCardHeightCap: 2200,
+    resultsMaxHeight: 420,
+    aiListMaxHeight: 560,
+    aiProviderRowHeight: 46,
+    actionAgentBarHeight: 36,
+    actionStatusLogMaxHeight: 1200
+  };
+  var heightConfig = Object.assign({}, DEFAULT_HEIGHT_CONFIG);
   var MORPH_HEIGHT = 380;
-  var ACTION_CARD_MIN_H = 120;
-  var ACTION_RESULTS_SCROLL_CAP = 520;
-  var ACTION_IDLE_MIN_H = 172;
+  var ACTION_CARD_MIN_H = 140;
+  var ACTION_RESULTS_SCROLL_CAP = 1600;
+  var ACTION_PALETTE_MAX_H = 1160;
+  var ACTION_IDLE_MIN_H = 208;
   var ACTION_AGENT_BAR_H = 36;
-  var AI_LIST_MAX_HEIGHT = 520;
+  var AI_LIST_MAX_HEIGHT = 560;
   var AI_PROVIDER_ROW_H = 46;
+  var RESULTS_MAX_HEIGHT = 420;
+
+  function readHeightConfigNumber(key, fallback) {
+    var val = Number(heightConfig[key]);
+    return Number.isFinite(val) ? val : fallback;
+  }
+
+  function applyHeightConfigCssVars() {
+    var root = document.documentElement;
+    if (!root || !root.style) return;
+    root.style.setProperty("--palette-results-max-height", RESULTS_MAX_HEIGHT + "px");
+    root.style.setProperty(
+      "--palette-action-results-scroll-cap",
+      "min(" + ACTION_RESULTS_SCROLL_CAP + "px, " + Math.round(readHeightConfigNumber("actionPaletteViewportRatio", 0.94) * 100) + "vh)"
+    );
+    root.style.setProperty(
+      "--palette-action-status-log-max-height",
+      "min(" + readHeightConfigNumber("actionStatusLogMaxHeight", 420) + "px, 52vh)"
+    );
+  }
+
+  function syncHeightConfigState() {
+    MORPH_HEIGHT = readHeightConfigNumber("morphHeight", 380);
+    ACTION_CARD_MIN_H = readHeightConfigNumber("actionCardMinHeight", 140);
+    ACTION_RESULTS_SCROLL_CAP = readHeightConfigNumber("actionResultsScrollCap", 1600);
+    ACTION_PALETTE_MAX_H = readHeightConfigNumber("actionPaletteMaxHeight", 1160);
+    ACTION_IDLE_MIN_H = readHeightConfigNumber("actionIdleMinHeight", 208);
+    ACTION_AGENT_BAR_H = readHeightConfigNumber("actionAgentBarHeight", 36);
+    AI_LIST_MAX_HEIGHT = readHeightConfigNumber("aiListMaxHeight", 560);
+    AI_PROVIDER_ROW_H = readHeightConfigNumber("aiProviderRowHeight", 46);
+    RESULTS_MAX_HEIGHT = readHeightConfigNumber("resultsMaxHeight", 420);
+    applyHeightConfigCssVars();
+  }
+
+  function setHeightConfig(nextCfg) {
+    if (!nextCfg || typeof nextCfg !== "object") return Object.assign({}, heightConfig);
+    Object.keys(nextCfg).forEach(function (key) {
+      var val = Number(nextCfg[key]);
+      if (Number.isFinite(val) && val > 0) heightConfig[key] = val;
+    });
+    syncHeightConfigState();
+    syncWindowSize();
+    return Object.assign({}, heightConfig);
+  }
+
+  function getHeightConfig() {
+    return Object.assign({}, heightConfig);
+  }
+
+  function actionResultsMinViewportHeight(expanded) {
+    var counts = countVisibleHistoryCards();
+    var visibleCards = counts.running + counts.doneVisible;
+    if (!visibleCards) {
+      return Object.keys(actionState.cards).length
+        ? readHeightConfigNumber("actionHistoryEmptyViewportHeight", 132)
+        : readHeightConfigNumber("actionEmptyViewportHeight", 96);
+    }
+    if (expanded) {
+      return Math.max(
+        readHeightConfigNumber("actionExpandedMinViewportHeight", 260),
+        readHeightConfigNumber("actionMinViewportHeight", 232)
+      );
+    }
+    var targetRows = Math.min(
+      readHeightConfigNumber("actionMaxVisibleCards", 8),
+      Math.max(readHeightConfigNumber("actionMinVisibleCards", 4), visibleCards)
+    );
+    var runningRows = Math.min(counts.running, targetRows);
+    var doneRows = Math.min(counts.doneVisible, Math.max(0, targetRows - runningRows));
+    if (!runningRows && !doneRows) doneRows = Math.min(visibleCards, targetRows);
+    var chromeH = readHeightConfigNumber("actionHistoryChromeHeight", 76);
+    var bodyH =
+      runningRows * readHeightConfigNumber("actionRunningRowHeight", 52) +
+      doneRows * readHeightConfigNumber("actionDoneRowHeight", 42);
+    return Math.max(
+      readHeightConfigNumber("actionMinViewportHeight", 232),
+      chromeH + bodyH + 12
+    );
+  }
+
+  syncHeightConfigState();
+
+  function actionPaletteMaxHeight(expanded) {
+    var pct = expanded
+      ? readHeightConfigNumber("actionPaletteExpandedViewportRatio", 0.97)
+      : readHeightConfigNumber("actionHomeViewportRatio", 0.78);
+    var screenH = Number(window.screen && window.screen.availHeight) || Number(window.screen && window.screen.height) || 800;
+    var viewportCap = Math.floor(screenH * pct);
+    var minWorkspace = expanded
+      ? readHeightConfigNumber("actionDetailMinHeight", 640)
+      : readHeightConfigNumber("actionHomeMinHeight", 560);
+    return Math.max(minWorkspace, Math.min(ACTION_PALETTE_MAX_H, viewportCap));
+  }
+
+  function actionPaletteExpandedMaxHeight() {
+    return actionPaletteMaxHeight(true);
+  }
+
+  function hasExpandedActionCard() {
+    var ids = Object.keys(actionState.cards);
+    for (var i = 0; i < ids.length; i++) {
+      var c = actionState.cards[ids[i]];
+      if (c && c.expanded) return true;
+    }
+    return false;
+  }
+
+  function countVisibleHistoryCards() {
+    var running = 0;
+    var done = 0;
+    Object.keys(actionState.cards).forEach(function (cid) {
+      var c = actionState.cards[cid];
+      if (!c || !cardMatchesHistoryFilter(c)) return;
+      if (isActionCardRunning(c)) running++;
+      else done++;
+    });
+    var showRunning = actionState.historyFilter === "all" || actionState.historyFilter === "running";
+    var showDone = actionState.historyFilter === "all" || actionState.historyFilter === "done";
+    return {
+      running: showRunning ? running : 0,
+      done: showDone ? done : 0,
+      doneVisible: showDone ? (actionState.showAllDone ? done : Math.min(done, 4)) : 0
+    };
+  }
+
+  function syncExpandedCardsToHistoryFilter() {
+    Object.keys(actionState.cards).forEach(function (cid) {
+      var c = actionState.cards[cid];
+      if (c && c.expanded && !cardMatchesHistoryFilter(c)) c.expanded = false;
+    });
+  }
+
+  function historyFilterEmptyMessage() {
+    if (actionState.historyFilter === "running") return "当前没有进行中的任务，可点「全部」或「已归档」查看历史。";
+    if (actionState.historyFilter === "done") return "当前没有已归档的任务。";
+    return "当前筛选下没有任务。";
+  }
+
+  function estimateActionStackHeight() {
+    var counts = countVisibleHistoryCards();
+    var h = 0;
+    var stack = document.querySelector(".action-card-stack");
+    if (stack) {
+      var tb = stack.querySelector(".action-history-toolbar");
+      var hd = stack.querySelector(".action-history-head");
+      h += (tb ? tb.offsetHeight || 32 : 32) + (hd ? hd.offsetHeight || 20 : 20);
+    } else {
+      h += 52;
+    }
+    if (counts.running) h += 28 + counts.running * 44;
+    if (counts.doneVisible) {
+      h += 28 + counts.doneVisible * 36;
+      if (!actionState.showAllDone && counts.done > 4) h += 34;
+    }
+    if (!counts.running && !counts.doneVisible) {
+      h += Object.keys(actionState.cards).length ? 56 : 0;
+    }
+    if (hasExpandedActionCard()) {
+      Object.keys(actionState.cards).forEach(function (cid) {
+        var c = actionState.cards[cid];
+        if (!c || !c.expanded || !cardMatchesHistoryFilter(c)) return;
+        var dom = document.getElementById("card-" + cid);
+        var intrinsic = measureExpandedCardIntrinsicHeight(c, dom);
+        if (dom && intrinsic > 48) h += intrinsic - 36;
+        else h += 360;
+      });
+    }
+    return Math.max(h, counts.running || counts.doneVisible ? ACTION_CARD_MIN_H : 0);
+  }
+
+  /** 展开卡片的真实内容高度（不依赖已被 WebView 裁切后的 offsetHeight） */
+  function measureExpandedCardIntrinsicHeight(card, dom) {
+    if (!dom) return 360;
+    var headEl = dom.querySelector(".cmd-action-card-head");
+    var total = headEl ? headEl.offsetHeight || 32 : 32;
+    var body = dom.querySelector(".card-body");
+    if (body) {
+      body.querySelectorAll(
+        ".card-a2ui:not([hidden]), .card-replies:not([hidden]), .card-live-thought:not([hidden]), .card-followup:not([hidden])"
+      ).forEach(function (part) {
+        total += Math.max(part.scrollHeight || 0, part.offsetHeight || 0, 0) + 4;
+      });
+      if (total <= (headEl ? headEl.offsetHeight || 32 : 32) + 8) {
+        total += Math.max(body.scrollHeight || 0, body.offsetHeight || 0);
+      }
+    }
+    var slotH = 0;
+    dom.querySelectorAll(".card-a2ui:not([hidden]) .a2ui-slot").forEach(function (slot) {
+      slotH += Math.max(slot.scrollHeight || 0, slot.offsetHeight || 0, 0) + 8;
+    });
+    if (slotH > 0) total = Math.max(total, (headEl ? headEl.offsetHeight : 32) + slotH + 36);
+    var blocks = card ? getCardPipelineBlocks(card) : [];
+    if (blocks.length) {
+      var est = headEl ? headEl.offsetHeight || 32 : 32;
+      for (var bi = 0; bi < blocks.length; bi++) {
+        var b = blocks[bi];
+        if (!b) continue;
+        if (b.type === "a2ui") est += 300;
+        else if (b.type === "reply") {
+          var txt = String(b.text || b.content || b.markdown || "");
+          est += Math.min(480, Math.max(72, Math.ceil(txt.length / 2.5)));
+        } else est += 48;
+      }
+      total = Math.max(total, est);
+    }
+    return Math.max(total, dom.scrollHeight || 0, 200);
+  }
+
+  function withUnclippedPaletteMeasure(fn) {
+    var panel = document.getElementById("palette-panel");
+    var results = document.getElementById("results");
+    if (!panel || !results || typeof fn !== "function") return fn ? fn() : 0;
+    var saved = {
+      panelHeight: panel.style.height,
+      panelMinH: panel.style.minHeight,
+      panelOverflow: panel.style.overflow,
+      resultsMax: results.style.maxHeight,
+      resultsOverflow: results.style.overflow
+    };
+    panel.style.height = "auto";
+    panel.style.minHeight = "0";
+    panel.style.overflow = "visible";
+    results.style.maxHeight = "none";
+    results.style.overflow = "visible";
+    var out;
+    try {
+      out = fn();
+    } finally {
+      panel.style.height = saved.panelHeight;
+      panel.style.minHeight = saved.panelMinH;
+      panel.style.overflow = saved.panelOverflow;
+      results.style.maxHeight = saved.resultsMax;
+      if (saved.resultsOverflow) results.style.overflow = saved.resultsOverflow;
+      else results.style.removeProperty("overflow");
+    }
+    return out;
+  }
+
+  function measureExpandedStackContentHeight(stack) {
+    if (!stack) return 0;
+    var h = 0;
+    var tb = stack.querySelector(".action-history-toolbar");
+    var hd = stack.querySelector(".action-history-head");
+    h += (tb ? tb.offsetHeight || 0 : 0) + (hd ? hd.offsetHeight || 0 : 0);
+    var sectionFound = false;
+    stack.querySelectorAll(".action-card-section").forEach(function (sec) {
+      if (sec.style.display === "none") return;
+      sectionFound = true;
+      var secHead = sec.querySelector(".action-card-section-head");
+      h += secHead ? secHead.offsetHeight || 24 : 24;
+      sec.querySelectorAll(".cmd-action-card").forEach(function (dom) {
+        var cardId = dom.id ? dom.id.replace(/^card-/, "") : "";
+        var card = cardId ? getActionCard(cardId) : null;
+        if (card && card.expanded) {
+          h += measureExpandedCardIntrinsicHeight(card, dom) + 8;
+        } else {
+          h += Math.max(dom.offsetHeight || 0, 44) + 8;
+        }
+      });
+    });
+    if (!sectionFound) {
+      h = Math.max(stack.scrollHeight || 0, stack.offsetHeight || 0, h);
+      if (hasExpandedActionCard()) {
+        Object.keys(actionState.cards).forEach(function (cid) {
+          var c = actionState.cards[cid];
+          if (!c || !c.expanded || !cardMatchesHistoryFilter(c)) return;
+          var dom = document.getElementById("card-" + cid);
+          if (dom) {
+            h = Math.max(h, (dom.offsetTop || 0) + measureExpandedCardIntrinsicHeight(c, dom) + 8);
+          }
+        });
+      }
+    }
+    return h;
+  }
+
+  function measureActionStackHeight(stack) {
+    if (!stack) return estimateActionStackHeight();
+    var est = estimateActionStackHeight();
+    var domH = measureExpandedStackContentHeight(stack);
+    var counts = countVisibleHistoryCards();
+    var minH = counts.running || counts.doneVisible ? ACTION_CARD_MIN_H : 0;
+    return Math.max(est, domH, minH) + 8;
+  }
   /* 与 FloatingToolbarStrip providerIconUrlList / bindProviderIconImg 同源（优先 app 目录 PNG/JPG） */
   var ICON_PRIMARY = "/assets/icons/ai/";
   var ICON_SECOND = "/assets/icons/app/";
@@ -2948,6 +3621,52 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     }
   }
 
+  function ensureCardA2uiDomOrder(dom) {
+    if (!dom) return;
+    var body = dom.querySelector(".card-body");
+    var a2 = dom.querySelector(".card-a2ui");
+    var replies = dom.querySelector(".card-replies");
+    if (!body || !a2 || !replies) return;
+    if (replies.compareDocumentPosition(a2) & Node.DOCUMENT_POSITION_FOLLOWING) {
+      body.insertBefore(a2, replies);
+    }
+  }
+
+  function scrollExpandedCardContent(card) {
+    if (!card || !card.expanded) return;
+    var dom = document.getElementById("card-" + card.id);
+    var results = document.getElementById("results");
+    if (!dom || !results) return;
+    requestAnimationFrame(function () {
+      var resultsRect = results.getBoundingClientRect();
+      var domRect = dom.getBoundingClientRect();
+      if (results.scrollHeight > results.clientHeight + 4) {
+        var topGap = domRect.top - resultsRect.top - 8;
+        if (topGap < 0 || topGap > 24) {
+          results.scrollTop += topGap;
+        }
+      }
+      var anchor =
+        dom.querySelector(".card-a2ui:not([hidden]) .a2ui-slot") ||
+        dom.querySelector(".card-a2ui:not([hidden])") ||
+        dom.querySelector(".card-replies .card-reply-body") ||
+        dom.querySelector(".card-status-log") ||
+        dom.querySelector(".card-live-thought");
+      if (!anchor) return;
+      var anchorRect = anchor.getBoundingClientRect();
+      if (results.scrollHeight > results.clientHeight + 4) {
+        results.scrollTop += anchorRect.top - resultsRect.top - 10;
+      }
+      try {
+        anchor.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      } catch (_) {
+        try {
+          anchor.scrollIntoView(true);
+        } catch (_2) {}
+      }
+    });
+  }
+
   function ensureCardRepliesHost(dom) {
     if (!dom) return null;
     var host = dom.querySelector(".card-replies");
@@ -3095,7 +3814,14 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       a2.hidden = true;
       a2.innerHTML = "";
     }
+    ensureCardA2uiDomOrder(dom);
     for (var i = 0; i < list.length; i++) renderPipelineBlock(cardId, dom, list[i]);
+    if (a2 && !a2.hidden && a2.querySelector(".a2ui-slot") && !a2.querySelector(".card-a2ui-head")) {
+      var a2Head = document.createElement("div");
+      a2Head.className = "card-a2ui-head";
+      a2Head.textContent = "结构化视图";
+      a2.insertBefore(a2Head, a2.firstChild);
+    }
     syncActionCardStatusLogVisibility(dom);
     refreshActionCardPreview(cardId);
     var a2uiBlockCount = 0;
@@ -3116,6 +3842,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         a2uiRendered: a2uiRendered
       })
     );
+    if (cardId === actionState.detailCardId) syncActionDetailNav();
     return { ok: true, blocks: list };
   }
 
@@ -3427,7 +4154,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   /** 列表重排会销毁 card DOM；内存 blocks 需在 mount/展开时重放 */
-  function ensureCardPipelineRendered(card) {
+  function ensureCardPipelineRendered(card, opts) {
+    opts = opts || {};
     if (!card) return false;
     var id = card.id;
     maybeHealDoneCardPipelineBlocks(card, id);
@@ -3437,7 +4165,41 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (!dom) return false;
     var needsRender = pipelineDomNeedsRerender(card, dom, blocks);
     if (needsRender) renderBlocks(id, blocks);
+    if (!opts.skipLayout && card.expanded) {
+      scheduleExpandedCardLayout(card);
+    }
     return true;
+  }
+
+  function scheduleExpandedCardLayout(card, opts) {
+    opts = opts || {};
+    function runLayoutPass(forcePublish) {
+      withUnclippedPaletteMeasure(function () {
+        syncActionResultsScrollMode();
+      });
+      if (forcePublish) _lastPublishedPaletteH = 0;
+      publishPaletteHeight();
+      if (card && card.expanded) scrollExpandedCardContent(card);
+    }
+    requestAnimationFrame(function () {
+      if (opts.pipeline && card && card.expanded) {
+        ensureCardPipelineRendered(card, { skipLayout: true });
+      }
+      requestAnimationFrame(function () {
+        runLayoutPass(true);
+        if (opts.recover && card && card.expanded && card.uiState === "Done") {
+          maybeRecoverIncompleteDoneCard(card);
+        }
+        if (card && card.expanded) {
+          [80, 220, 520].forEach(function (ms) {
+            setTimeout(function () {
+              if (!getActionCard(card.id) || !card.expanded) return;
+              runLayoutPass(false);
+            }, ms);
+          });
+        }
+      });
+    });
   }
 
   function replayExpandedCardPipelineBlocks() {
@@ -3845,7 +4607,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function purgeActionEmptyHint() {
-    document.querySelector(".action-intent-empty")?.remove();
+    document.querySelectorAll(".action-intent-empty, .action-filter-empty").forEach(function (n) {
+      n.remove();
+    });
   }
 
   function clearActionCmdResultsDom() {
@@ -3965,6 +4729,11 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   function cycleIntent() {
     var prev = state.intent;
+    if (actionState.detailCardId) {
+      var detailCard = getActionCard(actionState.detailCardId);
+      if (detailCard) detailCard.expanded = false;
+      actionState.detailCardId = null;
+    }
     state.intent = IntentRouter.nextIntent(state.intent);
     state.selected = 0;
     if (prev === "ai" && state.intent !== "ai" && aiPhase === "streaming") handoffAiStream();
@@ -4022,6 +4791,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         return PaletteRouterSkill.route(query);
       return null;
     },
+    setHeightConfig: setHeightConfig,
+    getHeightConfig: getHeightConfig,
     applyPipelineFinalize: applyPipelineFinalize,
     applyPipelineIngestDelta: applyPipelineIngestDelta,
     renderBlocks: renderBlocks
@@ -4172,18 +4943,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   function toggleActionCardExpand(cardId) {
     var card = getActionCard(cardId);
     if (!card) return;
-    card.expanded = !card.expanded;
-    if (card.expanded) {
-      actionState.activeCardId = cardId;
-      if (card.uiState === "Done") collapseOtherDoneCards(cardId);
-    }
-    hideCardHoverPreview();
-    refreshActionCardDom(card);
-    if (card.expanded) ensureCardPipelineRendered(card);
-    if (card.expanded && card.uiState === "Done") maybeRecoverIncompleteDoneCard(card);
-    renderActionHistoryList();
-    syncActionResultsLayout();
-    syncWindowSize();
+    if (actionState.detailCardId === String(cardId)) closeActionCardDetail();
+    else openActionCardDetail(cardId);
   }
 
   function refreshActionCardDom(card) {
@@ -4208,6 +4969,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       (card.uiState || "Planning") +
       (card.expanded ? " is-expanded" : " is-collapsed") +
       (card.id === actionState.activeCardId ? " is-active" : "") +
+      (card.id === actionState.detailCardId ? " is-detail-card" : "") +
       (dom.classList.contains("has-status-log") ? " has-status-log" : "");
     var loader = dom.querySelector(".card-pulse-loader");
     if (loader) loader.style.display =
@@ -4374,8 +5136,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         '<div class="card-timeline"></div>' +
         '<div class="card-status-log"></div>' +
         '<div class="card-question" hidden></div>' +
-        '<div class="card-replies"></div>' +
         '<div class="card-a2ui" hidden></div>' +
+        '<div class="card-replies"></div>' +
         "</div>" +
         '<div class="card-followup">' +
         '<input type="text" class="card-followup-input" />' +
@@ -4404,11 +5166,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         var a2Slot = document.createElement("div");
         a2Slot.className = "card-a2ui";
         a2Slot.hidden = true;
-        replySlot.parentNode.insertBefore(a2Slot, replySlot.nextSibling);
+        replySlot.parentNode.insertBefore(a2Slot, replySlot);
       }
     } else if (el && !el.querySelector(".card-replies")) {
       ensureCardRepliesHost(el);
     }
+    ensureCardA2uiDomOrder(el);
     bindActionCardEvents(card, el);
     return el;
   }
@@ -4453,9 +5216,16 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     refreshActionCardDom(card);
   }
 
+  var _renderActionHistoryLock = false;
+
   function renderActionHistoryList() {
+    if (_renderActionHistoryLock) return;
+    _renderActionHistoryLock = true;
+    try {
     var box = document.getElementById("results");
     if (!box) return;
+    syncExpandedCardsToHistoryFilter();
+    if (Object.keys(actionState.cards).length > 0) purgeActionEmptyHint();
     var stack = box.querySelector(".action-card-stack");
     if (!stack) {
       stack = document.createElement("div");
@@ -4512,13 +5282,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         runningIds.forEach(function (cid) {
           var card = actionState.cards[cid];
           if (!card) return;
-          if (actionState.focusMode && cid !== actionState.activeCardId) {
-            card.expanded = false;
-          } else if (cid === actionState.activeCardId || runningIds.length === 1) {
-            card.expanded = true;
-          } else if (card.expanded == null) {
-            card.expanded = false;
-          }
+          card.expanded = actionState.detailCardId === cid;
           mountActionCardIntoList(card, runList);
         });
       }
@@ -4530,6 +5294,13 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       var doneHead = doneSec.querySelector(".action-card-section-head");
       var doneLimit = actionState.showAllDone ? doneIds.length : 4;
       var doneVisible = doneIds.slice(0, doneLimit);
+      if (
+        actionState.detailCardId &&
+        doneIds.indexOf(actionState.detailCardId) >= 0 &&
+        doneVisible.indexOf(actionState.detailCardId) < 0
+      ) {
+        doneVisible.push(actionState.detailCardId);
+      }
       if (doneHead) {
         doneHead.innerHTML =
           '<span>已归档</span><span class="section-count">' + doneIds.length + "</span>" +
@@ -4541,8 +5312,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         doneVisible.forEach(function (cid) {
           var card = actionState.cards[cid];
           if (!card) return;
-          if (actionState.focusMode && cid !== actionState.activeCardId) card.expanded = false;
-          else if (cid !== actionState.activeCardId || !card.expanded) card.expanded = false;
+          card.expanded = actionState.detailCardId === cid;
           mountActionCardIntoList(card, doneList);
         });
       }
@@ -4559,17 +5329,26 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       }
     }
 
+    stack.querySelectorAll(".action-filter-empty").forEach(function (n) {
+      n.remove();
+    });
+
     if (runningIds.length + doneIds.length > 0) {
       var panel = document.getElementById("palette-panel");
       if (panel) panel.classList.add("has-results", "intent-action");
       box.classList.add("palette-results", "has-action-cards");
-      requestAnimationFrame(function () {
-        syncActionResultsScrollMode();
-        syncWindowSize();
-      });
     } else {
       removeActionLiveDock(stack);
-      if (state.intent === "action" && !state.input.trim() && !state.actionCmdBrowse) {
+      if (Object.keys(actionState.cards).length > 0) {
+        var filtEmpty = document.createElement("div");
+        filtEmpty.className = "action-intent-empty action-filter-empty";
+        filtEmpty.textContent = historyFilterEmptyMessage();
+        stack.appendChild(filtEmpty);
+      } else if (
+        state.intent === "action" &&
+        !state.input.trim() &&
+        !state.actionCmdBrowse
+      ) {
         purgeActionEmptyHint();
         var empty = document.createElement("div");
         empty.className = "action-intent-empty";
@@ -4581,6 +5360,11 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       }
     }
     replayExpandedCardPipelineBlocks();
+    syncActionDetailNav();
+    requestAnimationFrame(syncActionListLayout);
+    } finally {
+      _renderActionHistoryLock = false;
+    }
   }
 
   var actionCardManager = {
@@ -4595,6 +5379,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         newState +
         (card.expanded ? " is-expanded" : " is-collapsed") +
         (card.id === actionState.activeCardId ? " is-active" : "") +
+        (card.id === actionState.detailCardId ? " is-detail-card" : "") +
         (dom.classList.contains("has-status-log") ? " has-status-log" : "");
       var loader = dom.querySelector(".card-pulse-loader");
       var badge = dom.querySelector(".cmd-action-card-badge");
@@ -4623,6 +5408,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         var logEl = dom.querySelector(".card-status-log");
         if (logEl) logEl.scrollTop = logEl.scrollHeight;
       }
+      if (card.id === actionState.detailCardId) syncActionDetailNav();
       syncActionResultsLayout();
     },
     onBlockUpdate: function (cardId, block) {
@@ -4749,6 +5535,15 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     }
   };
 
+  var _lastPublishedPaletteH = 0;
+  var layoutResizeObserver = null;
+  var layoutMutationObserver = null;
+
+  function syncActionListLayout() {
+    syncActionResultsScrollMode();
+    syncWindowSize();
+  }
+
   function syncActionResultsLayout() {
     var panel = document.getElementById("palette-panel");
     var box = document.getElementById("results");
@@ -4758,14 +5553,11 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     panel.classList.toggle("has-results", hasCards || state.showResults);
     panel.classList.toggle("intent-action", state.intent === "action");
     box.classList.toggle("has-action-cards", hasCards);
-    if (hasCards && !isActionCardBatchUpsert()) {
+    if (hasCards) {
       box.classList.add("palette-results");
       panel.classList.add("has-results");
-      renderActionHistoryList();
     }
-    syncActionResultsScrollMode();
-    syncWindowSize();
-    requestAnimationFrame(syncWindowSize);
+    syncActionListLayout();
   }
 
   function upsertActionCardFromDto(dto, opts) {
@@ -5048,12 +5840,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (rbox) rbox.classList.remove("show-cmd-browse");
     ensureActionResultsVisible();
     renderActionHistoryList();
-    syncActionResultsLayout();
     requestAnimationFrame(function () {
       ensureActionResultsVisible();
-      renderActionHistoryList();
-      syncActionResultsLayout();
-      syncWindowSize();
+      syncActionListLayout();
     });
   }
 
@@ -5176,6 +5965,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     root.dataset.ready = "1";
     syncIntentUI();
     bindUI();
+    bindLayoutObservers();
     bindActionSubmitButton();
     post({ type: "palette_ready" });
     setTimeout(probeAgentHostBridge, 400);
@@ -5473,14 +6263,52 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     });
   }
 
+  function actionResultsReservedHeight() {
+    var panel = document.getElementById("palette-panel");
+    if (panel && panel.classList.contains("action-detail-open")) return 16;
+    var header = panel && panel.querySelector(".palette-header");
+    var agentBar = document.getElementById("action-agent-bar");
+    var status = document.getElementById("voice-hint");
+    var reserved =
+      (header ? header.offsetHeight : 48) +
+      (agentBar && !agentBar.hidden ? agentBar.offsetHeight || ACTION_AGENT_BAR_H : 0) +
+      (status && status.classList.contains("show") ? status.offsetHeight || 24 : 0) +
+      readHeightConfigNumber("actionReservedBottomGap", 52);
+    return reserved;
+  }
+
   function syncActionResultsScrollMode() {
     var results = document.getElementById("results");
     var stack = results && results.querySelector(".action-card-stack");
-    if (!results || !stack) return;
-    var cap = Math.min(ACTION_RESULTS_SCROLL_CAP, Math.floor(window.innerHeight * 0.58));
-    var needScroll = stack.scrollHeight > cap + 4;
+    if (!results || !stack) return null;
+    var expanded = hasExpandedActionCard();
+    var cardN = Object.keys(actionState.cards).length;
+    results.classList.toggle("has-expanded-card", expanded);
+    results.classList.toggle("has-action-cards", cardN > 0);
+    var detailDom = actionState.detailCardId
+      ? document.getElementById("card-" + actionState.detailCardId)
+      : null;
+    var detailNav = stack.querySelector(":scope > .action-detail-nav");
+    var contentH = detailDom
+      ? measureExpandedCardIntrinsicHeight(getActionCard(actionState.detailCardId), detailDom) +
+        (detailNav ? detailNav.offsetHeight || 48 : 48) +
+        24
+      : Math.max(measureExpandedStackContentHeight(stack), estimateActionStackHeight());
+    var paletteMax = expanded ? actionPaletteExpandedMaxHeight() : actionPaletteMaxHeight();
+    var minList = actionResultsMinViewportHeight(expanded);
+    var availableList = Math.max(minList, paletteMax - actionResultsReservedHeight());
+    var maxList = expanded
+      ? availableList
+      : Math.min(ACTION_RESULTS_SCROLL_CAP, availableList);
+    var needScroll = contentH > maxList + 4;
     results.classList.toggle("is-scrollable", needScroll);
-    return needScroll ? cap + 8 : stack.offsetHeight + 8;
+    results.classList.toggle("is-scrolling", needScroll);
+    if (needScroll) {
+      results.style.maxHeight = maxList + "px";
+    } else {
+      results.style.maxHeight = "";
+    }
+    return (needScroll ? maxList : Math.max(contentH, minList)) + 12;
   }
 
   function measureActionPanelExtra(results) {
@@ -5497,14 +6325,21 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (tb) toolbarH += tb.offsetHeight || 28;
     if (hd) toolbarH += hd.offsetHeight || 22;
     if (stack) {
-      var listH = syncActionResultsScrollMode();
-      if (listH == null) listH = stack.offsetHeight || stack.scrollHeight || ACTION_CARD_MIN_H;
-      extra += toolbarH + listH + 10;
+      var viewportH = syncActionResultsScrollMode();
+      if (viewportH != null && viewportH > 0) {
+        extra += viewportH + 10;
+        return extra;
+      }
+      extra += measureActionStackHeight(stack) + 10;
       return extra;
     }
     var cardCount = Object.keys(actionState.cards).length;
     if (cardCount > 0) {
-      extra += toolbarH + Math.max(ACTION_CARD_MIN_H, cardCount * 38);
+      var collapsedRowGuess = Math.max(
+        readHeightConfigNumber("actionRunningRowHeight", 52),
+        readHeightConfigNumber("actionDoneRowHeight", 42)
+      );
+      extra += toolbarH + Math.max(ACTION_CARD_MIN_H, cardCount * collapsedRowGuess);
       return extra;
     }
     var actEmpty = results.querySelector(".action-intent-empty");
@@ -5519,8 +6354,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (state.actionCmdBrowse || results.querySelector(".result-item")) {
       var rowH2 = 54;
       var rowsN = Math.max(1, currentRows().length);
-      var listH2 = Math.min(320, rowsN * rowH2 + 14);
-      if (results.scrollHeight > 0) listH2 = Math.min(320, results.scrollHeight + 14);
+      var listH2 = Math.min(RESULTS_MAX_HEIGHT, rowsN * rowH2 + 14);
+      if (results.scrollHeight > 0) listH2 = Math.min(RESULTS_MAX_HEIGHT, results.scrollHeight + 14);
       extra += Math.max(80, listH2);
       return extra;
     }
@@ -5533,18 +6368,25 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     var status = document.getElementById("voice-hint");
     var results = document.getElementById("results");
     if (!panel || !header) return state.intent === "action" ? ACTION_IDLE_MIN_H : 120;
-    var headerH = header.offsetHeight || 0;
-    if (headerH < 48) headerH = 48;
+    var detailOpen = panel.classList.contains("action-detail-open");
+    var headerH = detailOpen ? 0 : header.offsetHeight || 0;
+    if (!detailOpen && headerH < 48) headerH = 48;
     var h = headerH;
-    if (status && status.classList.contains("show")) {
+    if (!detailOpen && status && status.classList.contains("show")) {
       h += status.offsetHeight || 24;
     }
     if (state.intent === "action") {
-      h += measureActionPanelExtra(results);
-      var capA = 720;
-      return Math.min(capA, Math.max(ACTION_IDLE_MIN_H, Math.ceil(h)));
+      h += withUnclippedPaletteMeasure(function () {
+        return measureActionPanelExtra(results);
+      });
+      var expanded = hasExpandedActionCard();
+      var cap = expanded ? actionPaletteExpandedMaxHeight() : actionPaletteMaxHeight();
+      var workspaceMin = expanded
+        ? readHeightConfigNumber("actionDetailMinHeight", 640)
+        : readHeightConfigNumber("actionHomeMinHeight", 560);
+      return Math.min(cap, Math.max(workspaceMin, Math.ceil(h)));
     }
-    var cap = state.intent === "ai" ? AI_LIST_MAX_HEIGHT : 520;
+    var cap = state.intent === "ai" ? AI_LIST_MAX_HEIGHT : RESULTS_MAX_HEIGHT + 140;
     var remain = cap - h - 8;
     if (remain < 120) remain = 120;
     if (state.showResults && results) {
@@ -5552,7 +6394,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       if (actionCards && actionCards.length) {
         var acH = 24;
         for (var aci = 0; aci < actionCards.length; aci++) acH += actionCards[aci].offsetHeight + 8;
-        h += Math.min(560, Math.max(ACTION_CARD_MIN_H, acH + 16));
+        h += Math.min(readHeightConfigNumber("actionExpandedCardHeightCap", 680), Math.max(ACTION_CARD_MIN_H, acH + 16));
       } else if (state.intent === "ai") {
         var card = document.querySelector(".ai-bg-card");
         var hint = document.querySelector(".palette-ai-provider-hint");
@@ -5566,8 +6408,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       } else {
         var rowH = state.resultMode === "turbo" ? 40 : 54;
         var rows = Math.max(1, currentRows().length);
-        var listH = Math.min(320, rows * rowH + 14);
-        if (results.scrollHeight > 0) listH = Math.min(320, results.scrollHeight + 14);
+        var listH = Math.min(RESULTS_MAX_HEIGHT, rows * rowH + 14);
+        if (results.scrollHeight > 0) listH = Math.min(RESULTS_MAX_HEIGHT, results.scrollHeight + 14);
         h += listH;
       }
     }
@@ -6010,6 +6852,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function handlePaletteEsc() {
+    if (state.intent === "action" && actionState.detailCardId) {
+      closeActionCardDetail();
+      return true;
+    }
     if (state.intent === "action" && agentHasRunningCard()) {
       post({ type: "palette_agent_cancel", cardId: actionState.activeCardId || "" });
       window.nmerPalette.setStatus("正在取消托管任务…", "idle");
@@ -6028,22 +6874,64 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return true;
   }
 
+  function publishPaletteHeight() {
+    ensureHeaderInputVisible();
+    if (state.intent === "action") {
+      withUnclippedPaletteMeasure(function () {
+        syncActionResultsScrollMode();
+      });
+    }
+    var h = measureContentHeight();
+    var expanded = state.intent === "action" && hasExpandedActionCard();
+    if (Math.abs(h - _lastPublishedPaletteH) >= 2) {
+      _lastPublishedPaletteH = h;
+      post({
+        type: "palette_resize",
+        height: h,
+        expanded: expanded,
+        intent: state.intent,
+        workspace: state.intent === "action"
+      });
+    }
+    return h;
+  }
+
   function syncWindowSize() {
     if (composing) return;
     if (state.intent === "ai" && aiPhase !== "idle" && aiPhase !== "compact") return;
     if (sizeTimer) clearTimeout(sizeTimer);
     sizeTimer = setTimeout(function () {
-      ensureHeaderInputVisible();
-      if (state.intent === "action") syncActionResultsScrollMode();
-      var h = measureContentHeight();
-      post({ type: "palette_resize", height: h });
-      requestAnimationFrame(function () {
-        ensureHeaderInputVisible();
-        if (state.intent === "action") syncActionResultsScrollMode();
-        var h2 = measureContentHeight();
-        if (h2 !== h) post({ type: "palette_resize", height: h2 });
+      requestAnimationFrame(publishPaletteHeight);
+    }, 80);
+  }
+
+  function bindLayoutObservers() {
+    var panel = document.getElementById("palette-panel");
+    var results = document.getElementById("results");
+    var status = document.getElementById("voice-hint");
+    var agentBar = document.getElementById("action-agent-bar");
+    if (typeof ResizeObserver === "function") {
+      if (!layoutResizeObserver) {
+        layoutResizeObserver = new ResizeObserver(function () {
+          syncWindowSize();
+        });
+      }
+      [panel, results, status, agentBar].forEach(function (el) {
+        if (!el || el.__paletteLayoutObserved) return;
+        el.__paletteLayoutObserved = true;
+        layoutResizeObserver.observe(el);
       });
-    }, 50);
+    }
+    if (results && typeof MutationObserver === "function" && !layoutMutationObserver) {
+      layoutMutationObserver = new MutationObserver(function () {
+        syncWindowSize();
+      });
+      layoutMutationObserver.observe(results, {
+        childList: true,
+        subtree: true,
+        characterData: true
+      });
+    }
   }
 
   function bindInputEvents(input) {

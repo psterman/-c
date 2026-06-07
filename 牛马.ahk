@@ -144,24 +144,7 @@ global NativeDropBridgeOut := Nmer_DebugPath("native_drop_events.jsonl")
 global NativeDropDiagLogPath := Nmer_DebugPath("drop_diagnostics_runtime.log")
 #Include modules\ToolsPaths.ahk
 #Include lib\ahk\WebView2.ahk
-
-FuncExists(fnName) {
-    fnName := Trim(String(fnName))
-    if (fnName = "")
-        return false
-    ; hostObjects.sync 上下文中 Func("长名") 常误报不存在，改用动态函数引用
-    try {
-        fnRef := %fnName%
-        return IsObject(fnRef)
-    } catch as _e1 {
-    }
-    try {
-        Func(fnName)
-        return true
-    } catch as _e2 {
-        return false
-    }
-}
+#Include modules\FuncExists.ahk
 
 #Include modules\AhkWebViewBridge.ahk
 #Include modules\WebView2SharedEnv.ahk

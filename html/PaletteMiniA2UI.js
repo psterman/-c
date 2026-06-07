@@ -1,8 +1,8 @@
 /**
  * Palette Mini-A2UI — finalize 后处理：Markdown → a2ui blocks
  *
- * C.1 范围：仅 finalize 阶段 enrich；Option A 保留完整 reply markdown；
- * render 失败时 reply 仍可见，见 a2ui_render_failed 日志与修改思路 Phase 5 C.1 约定。
+ * C.1+ 范围：仅 finalize 阶段 enrich；A2UI 在 reply 前展示；
+ * 已 enrich 的表格从 reply markdown 剥离（hideOriginalTable，默认开）。
  */
 (function (root) {
   function escHtml(s) {
@@ -52,6 +52,33 @@
       i++;
     }
     return tables;
+  }
+
+  /** 从 reply markdown 移除表格块（A2UI ComparisonTable 已承接时） */
+  function stripMarkdownTables(markdown) {
+    var lines = String(markdown || "").split(/\r?\n/);
+    var out = [];
+    var i = 0;
+    while (i < lines.length) {
+      var header = splitTableRow(lines[i]);
+      var sep = i + 1 < lines.length ? splitTableRow(lines[i + 1]) : [];
+      if (header.length >= 2 && isSeparatorRow(sep)) {
+        i += 2;
+        while (i < lines.length) {
+          var row = splitTableRow(lines[i]);
+          if (row.length < 2) break;
+          i++;
+        }
+        if (out.length && String(out[out.length - 1]).trim() !== "") out.push("");
+        continue;
+      }
+      out.push(lines[i]);
+      i++;
+    }
+    return out
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
   }
 
   function extractSteps(markdown) {
@@ -172,6 +199,27 @@
       list = list.concat(inserts);
     }
 
+    var hideTables = options.hideOriginalTable !== false;
+    if (hideTables && replyIdx >= 0) {
+      var hadTableA2ui = false;
+      for (var mi = 0; mi < meta.length; mi++) {
+        if (meta[mi] && meta[mi].component === "ComparisonTable") {
+          hadTableA2ui = true;
+          break;
+        }
+      }
+      if (hadTableA2ui) {
+        var replyAt = replyIdx + inserts.length;
+        var rb = list[replyAt];
+        if (rb && rb.type === "reply" && rb.markdown) {
+          var stripped = stripMarkdownTables(String(rb.markdown));
+          if (stripped && stripped !== rb.markdown) {
+            list[replyAt] = Object.assign({}, rb, { markdown: stripped, updatedAt: Date.now() });
+          }
+        }
+      }
+    }
+
     if (root.PaletteBlockSchema && PaletteBlockSchema.validateBlocks) {
       list = PaletteBlockSchema.validateBlocks(list).blocks;
     }
@@ -245,6 +293,7 @@
 
   root.PaletteMiniA2UI = {
     extractMarkdownTables: extractMarkdownTables,
+    stripMarkdownTables: stripMarkdownTables,
     extractSteps: extractSteps,
     extractAlerts: extractAlerts,
     enrichBlocksWithA2UI: enrichBlocksWithA2UI,
