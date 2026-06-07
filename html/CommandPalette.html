@@ -985,25 +985,26 @@ body[data-theme="light"] .ai-bg-card {
 }
 .cmd-action-card.is-collapsed .cmd-action-card-title {
   -webkit-line-clamp: 1;
-  flex: 0 1 auto;
-  max-width: 34%;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
   font-size: 11px;
   font-weight: 600;
 }
 .cmd-action-card.is-collapsed .card-preview-line {
-  display: block !important;
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: 10px;
-  opacity: 0.82;
+  display: none !important;
 }
 .cmd-action-card.is-collapsed .card-meta-line {
   display: inline;
   flex: 0 0 auto;
   font-size: 9px;
-  color: var(--text-soft);
-  opacity: 0.75;
+  color: rgba(168, 184, 204, 0.88);
+  opacity: 1;
   white-space: nowrap;
+  margin-left: auto;
+}
+.cmd-action-card.is-collapsed.state-Done .cmd-action-card-badge {
+  display: none;
 }
 .cmd-action-card.is-expanded .card-meta-line {
   display: none;
@@ -1015,9 +1016,10 @@ body[data-theme="light"] .ai-bg-card {
   position: fixed;
   z-index: 10000;
   max-width: min(420px, 92vw);
-  max-height: min(280px, 50vh);
-  overflow: auto;
-  padding: 10px 12px;
+  max-height: min(360px, 58vh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 10px 12px 12px;
   border-radius: 10px;
   border: 1px solid rgba(255, 141, 42, 0.35);
   background: rgba(10, 16, 26, 0.97);
@@ -1025,7 +1027,53 @@ body[data-theme="light"] .ai-bg-card {
   font-size: 11px;
   line-height: 1.5;
   color: #c8d6e8;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+  overscroll-behavior: contain;
+}
+.card-hover-preview::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -12px;
+  height: 12px;
+}
+.card-hover-preview .chp-meta-line {
+  font-size: 9px;
+  color: #8fa3b8;
+  margin-bottom: 8px;
+}
+.card-hover-preview .chp-topics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.card-hover-preview .chp-topic {
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.card-hover-preview .chp-topic-q {
+  font-size: 10px;
+  font-weight: 600;
+  color: #ffc896;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+.card-hover-preview .chp-topic-a {
+  font-size: 11px;
+  line-height: 1.55;
+  color: rgba(226, 234, 245, 0.92);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.card-hover-preview .chp-foot-hint {
+  margin-top: 8px;
+  font-size: 10px;
+  color: #8ec5ff;
+  text-align: right;
 }
 .card-hover-preview .chp-title {
   font-size: 12px;
@@ -1051,6 +1099,95 @@ body[data-theme="light"] .ai-bg-card {
   max-height: 140px;
   overflow: auto;
   white-space: normal;
+}
+.cp-followup-toast {
+  position: fixed;
+  right: 14px;
+  bottom: 72px;
+  z-index: 12000;
+  max-width: min(320px, calc(100vw - 28px));
+  padding: 10px 12px 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 141, 42, 0.38);
+  background: rgba(18, 26, 40, 0.96);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+  color: var(--text-main);
+  font-size: 11px;
+  line-height: 1.45;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.cp-followup-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.cp-followup-toast b {
+  display: block;
+  font-size: 11px;
+  color: #ffc896;
+  margin-bottom: 3px;
+}
+.cp-followup-toast .cp-toast-preview {
+  color: var(--text-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cp-followup-toast .cp-toast-hint {
+  margin-top: 5px;
+  font-size: 10px;
+  color: #8ec5ff;
+}
+.card-reply-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+.card-reply-act-btn {
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 102, 0, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.card-reply-act-btn:hover {
+  color: #ffc896;
+  border-color: rgba(255, 141, 42, 0.45);
+  background: rgba(255, 102, 0, 0.1);
+}
+.card-reply-act-btn.is-active {
+  color: #ffb347;
+  border-color: rgba(255, 141, 42, 0.55);
+  background: rgba(255, 102, 0, 0.16);
+}
+.card-reply-act-btn.card-reply-act-danger:hover {
+  color: #ff9b7a;
+  border-color: rgba(255, 90, 60, 0.45);
+}
+.card-hover-preview .chp-section .chp-preview-quote {
+  margin-top: 4px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(230, 236, 245, 0.92);
+  font-size: 11px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .card-hover-preview .chp-a2ui-tag {
   color: #a5b4fc;
@@ -1093,12 +1230,22 @@ body[data-theme="light"] .ai-bg-card {
   50% { opacity: 0.55; transform: scale(0.85); }
 }
 .card-preview-line {
-  font-size: 10px;
-  color: var(--text-soft);
-  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.45;
+  color: rgba(220, 228, 240, 0.88);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  opacity: 0.9;
+  white-space: normal;
+  opacity: 0.95;
+  letter-spacing: 0.01em;
+}
+.cmd-action-card.is-collapsed .card-preview-line {
+  margin-top: 1px;
+}
+.card-preview-line.is-rich {
+  color: rgba(255, 210, 170, 0.92);
 }
 .card-compact-progress {
   display: none;
@@ -1843,6 +1990,342 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return best;
   }
 
+  function getLatestTurnA2uiSummaries(blocks) {
+    var list = blocks || [];
+    var latestTurn =
+      typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.maxTurnId
+        ? PaletteBlockPipeline.maxTurnId(list)
+        : 1;
+    var tags = [];
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i];
+      if (!b || b.type !== "a2ui") continue;
+      var tid = b.turnId != null ? Number(b.turnId) : 1;
+      if (tid !== latestTurn) continue;
+      var sum =
+        typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.a2uiBlockSummary
+          ? PaletteBlockPipeline.a2uiBlockSummary(b)
+          : "";
+      if (sum) tags.push(sum);
+    }
+    return tags;
+  }
+
+  function dedupeCardPipelineBlocks(blocks) {
+    if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.dedupeMergedBlocks) {
+      return (PaletteBlockPipeline.dedupeMergedBlocks(blocks).blocks) || blocks || [];
+    }
+    return blocks || [];
+  }
+
+  function copyPaletteText(text) {
+    var t = String(text || "").trim();
+    if (!t) return false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(t);
+        return true;
+      }
+    } catch (_) {}
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = t;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  var paletteTtsBlockKey = "";
+
+  function stopPaletteReplyTts() {
+    paletteTtsBlockKey = "";
+    try {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    } catch (_) {}
+    document.querySelectorAll(".card-reply-act-btn[data-reply-act='tts'].is-active").forEach(function (b) {
+      b.classList.remove("is-active");
+      b.textContent = "朗读";
+    });
+  }
+
+  function togglePaletteReplyTts(cardId, blockId, text) {
+    var key = String(cardId || "") + ":" + String(blockId || "");
+    var btn = document.querySelector(
+      '.card-reply-act-btn[data-reply-act="tts"][data-card-id="' + cardId + '"][data-block-id="' + blockId + '"]'
+    );
+    if (paletteTtsBlockKey === key) {
+      stopPaletteReplyTts();
+      return;
+    }
+    var plain = String(text || "").replace(/[#>*`|]/g, " ").replace(/\s+/g, " ").trim();
+    if (!plain) {
+      window.nmerPalette.setStatus("没有可朗读的内容。", "error");
+      return;
+    }
+    if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === "undefined") {
+      window.nmerPalette.setStatus("当前环境不支持语音朗读。", "error");
+      return;
+    }
+    stopPaletteReplyTts();
+    paletteTtsBlockKey = key;
+    if (btn) {
+      btn.classList.add("is-active");
+      btn.textContent = "停止";
+    }
+    var utt = new SpeechSynthesisUtterance(plain);
+    utt.lang = "zh-CN";
+    utt.onend = stopPaletteReplyTts;
+    utt.onerror = stopPaletteReplyTts;
+    try {
+      window.speechSynthesis.speak(utt);
+      window.nmerPalette.setStatus("正在朗读…", "idle");
+    } catch (_) {
+      stopPaletteReplyTts();
+      window.nmerPalette.setStatus("朗读失败。", "error");
+    }
+  }
+
+  function buildCardReplyActionsHtml(cardId, block) {
+    if (!block || block.type !== "reply" || !String(block.markdown || "").trim()) return "";
+    var bid = String(block.id || "");
+    var tid = block.turnId != null ? Number(block.turnId) : 1;
+    return (
+      '<div class="card-reply-actions" role="toolbar" aria-label="回复操作">' +
+      '<button type="button" class="card-reply-act-btn" data-reply-act="copy" data-card-id="' +
+      esc(cardId) +
+      '" data-block-id="' +
+      esc(bid) +
+      '" data-turn-id="' +
+      tid +
+      '" title="复制正文">复制</button>' +
+      '<button type="button" class="card-reply-act-btn card-reply-act-danger" data-reply-act="regen" data-card-id="' +
+      esc(cardId) +
+      '" data-block-id="' +
+      esc(bid) +
+      '" data-turn-id="' +
+      tid +
+      '" title="删除此回复并重新生成">重答</button>' +
+      '<button type="button" class="card-reply-act-btn" data-reply-act="tts" data-card-id="' +
+      esc(cardId) +
+      '" data-block-id="' +
+      esc(bid) +
+      '" data-turn-id="' +
+      tid +
+      '" title="语音朗读">朗读</button>' +
+      '<button type="button" class="card-reply-act-btn" data-reply-act="export-md" data-card-id="' +
+      esc(cardId) +
+      '" data-block-id="' +
+      esc(bid) +
+      '" data-turn-id="' +
+      tid +
+      '" title="导出 Markdown">MD</button>' +
+      '<button type="button" class="card-reply-act-btn" data-reply-act="export-txt" data-card-id="' +
+      esc(cardId) +
+      '" data-block-id="' +
+      esc(bid) +
+      '" data-turn-id="' +
+      tid +
+      '" title="导出纯文本">TXT</button>' +
+      '<button type="button" class="card-reply-act-btn" data-reply-act="share" data-card-id="' +
+      esc(cardId) +
+      '" data-block-id="' +
+      esc(bid) +
+      '" data-turn-id="' +
+      tid +
+      '" title="复制分享">分享</button>' +
+      "</div>"
+    );
+  }
+
+  function getReplyBlockFromCard(card, blockId, turnId) {
+    if (!card) return null;
+    var blocks = getCardPipelineBlocks(card);
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (!b || b.type !== "reply") continue;
+      if (blockId && b.id === blockId) return b;
+      if (!blockId && turnId != null && Number(b.turnId) === Number(turnId)) return b;
+    }
+    return null;
+  }
+
+  function replyPlainTextFromBlock(block) {
+    if (!block || !block.markdown) return "";
+    return String(block.markdown).trim();
+  }
+
+  function downloadPaletteText(filename, text, mime) {
+    try {
+      var blob = new Blob([String(text || "")], { type: mime || "text/plain;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function resolveFollowUpQueryForTurn(card, turnId) {
+    if (!card) return "";
+    if (Array.isArray(card.messages) && card.messages.length) {
+      var userMsgs = card.messages.filter(function (m) {
+        return m && m.role === "user" && String(m.text || "").trim();
+      });
+      var idx = Math.max(0, Number(turnId || 1) - 1);
+      if (userMsgs[idx]) return String(userMsgs[idx].text || "").trim();
+      if (userMsgs.length) return String(userMsgs[userMsgs.length - 1].text || "").trim();
+    }
+    return String(card._lastFollowUpQuery || card.activeQuery || "").trim();
+  }
+
+  function handleCardReplyAction(act, cardId, blockId, turnId) {
+    var card = getActionCard(cardId);
+    var block = getReplyBlockFromCard(card, blockId, turnId);
+    var text = replyPlainTextFromBlock(block);
+    if (!text && act !== "regen") {
+      window.nmerPalette.setStatus("没有可操作的内容。", "error");
+      return;
+    }
+    if (act === "copy" || act === "share") {
+      if (copyPaletteText(text)) window.nmerPalette.setStatus("已复制到剪贴板。", "idle");
+      else window.nmerPalette.setStatus("复制失败，请手动选择正文。", "error");
+      return;
+    }
+    if (act === "tts") {
+      togglePaletteReplyTts(cardId, blockId, text);
+      return;
+    }
+    if (act === "export-md") {
+      if (downloadPaletteText("palette-reply.md", text, "text/markdown;charset=utf-8"))
+        window.nmerPalette.setStatus("已导出 Markdown。", "idle");
+      return;
+    }
+    if (act === "export-txt") {
+      if (downloadPaletteText("palette-reply.txt", text, "text/plain;charset=utf-8"))
+        window.nmerPalette.setStatus("已导出纯文本。", "idle");
+      return;
+    }
+    if (act === "regen") {
+      var q = resolveFollowUpQueryForTurn(card, turnId);
+      if (!q) {
+        window.nmerPalette.setStatus("找不到对应提问，无法重答。", "error");
+        return;
+      }
+      focusActionCard(cardId, { expand: true });
+      submitAgentTask(q, {
+        cardId: cardId,
+        forceKind: card && card.uiState === "Waiting" ? "correction" : "append",
+        fromCardFollowup: true,
+        explicitCardFollowup: true,
+        provider: (card && card.provider) || state.agentProvider
+      });
+      window.nmerPalette.setStatus("已重新提交该轮提问…", "loading");
+    }
+  }
+
+  var followUpToastEl = null;
+  var followUpToastTimer = 0;
+
+  function ensureFollowUpToastEl() {
+    if (!followUpToastEl) {
+      followUpToastEl = document.createElement("div");
+      followUpToastEl.className = "cp-followup-toast";
+      followUpToastEl.hidden = true;
+      followUpToastEl.setAttribute("role", "status");
+      document.body.appendChild(followUpToastEl);
+    }
+    return followUpToastEl;
+  }
+
+  function hideFollowUpToast() {
+    if (!followUpToastEl) return;
+    followUpToastEl.classList.remove("show");
+    if (followUpToastTimer) clearTimeout(followUpToastTimer);
+    followUpToastTimer = setTimeout(function () {
+      if (followUpToastEl) followUpToastEl.hidden = true;
+    }, 240);
+  }
+
+  function scrollToLatestReply(cardId) {
+    var dom = document.getElementById("card-" + cardId);
+    if (!dom) return;
+    var segs = dom.querySelectorAll(".card-reply-segment, .card-reply:not([hidden])");
+    var target = segs.length ? segs[segs.length - 1] : null;
+    if (!target) return;
+    var body = dom.querySelector(".card-body");
+    if (body) {
+      var top = target.offsetTop - body.offsetTop;
+      body.scrollTop = Math.max(0, top - 8);
+    }
+    target.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  function showFollowUpCompleteToast(cardId, queryText) {
+    var card = getActionCard(cardId);
+    if (!card) return;
+    var turns = pipelineTurnCount(card);
+    if (turns < 2 && !card._lastFollowUpQuery) return;
+    var el = ensureFollowUpToastEl();
+    var preview = cardPreviewText(card);
+    var q = String(queryText || card._lastFollowUpQuery || card.activeQuery || "").trim();
+    el.innerHTML =
+      "<b>补充回复已完成</b>" +
+      (q ? '<div class="cp-toast-preview">「' + esc(q.slice(0, 48)) + "」</div>" : "") +
+      (preview ? '<div class="cp-toast-preview">' + esc(preview.slice(0, 120)) + "</div>" : "") +
+      '<div class="cp-toast-hint">点击查看最新回复</div>';
+    el.hidden = false;
+    el.onclick = function (e) {
+      e.preventDefault();
+      hideFollowUpToast();
+      focusActionCard(cardId, { expand: true });
+      setTimeout(function () {
+        scrollToLatestReply(cardId);
+      }, 120);
+    };
+    requestAnimationFrame(function () {
+      el.classList.add("show");
+    });
+    if (followUpToastTimer) clearTimeout(followUpToastTimer);
+    followUpToastTimer = setTimeout(hideFollowUpToast, 9000);
+  }
+
+  function cardEndFinalizeNeeded(card, reqId, answer) {
+    if (!card || !answer) return false;
+    var ans = String(answer).trim();
+    var key = String(reqId || card.reqId || "") + ":" + ans.length + ":" + ans.slice(0, 160);
+    if (card._lastAgentEndKey === key && Date.now() - (card._lastAgentEndTick || 0) < 20000) return false;
+    var blocks = getCardPipelineBlocks(card);
+    if (!blocks.length) return true;
+    var maxTurn =
+      typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.maxTurnId
+        ? PaletteBlockPipeline.maxTurnId(blocks)
+        : 1;
+    for (var i = blocks.length - 1; i >= 0; i--) {
+      var b = blocks[i];
+      if (!b || b.type !== "reply") continue;
+      var tid = b.turnId != null ? Number(b.turnId) : 1;
+      if (tid !== maxTurn) continue;
+      var md = String(b.markdown || "").trim();
+      if (!md) break;
+      if (md === ans) return false;
+      if (ans.length > 48 && md.length > 48 && (ans.indexOf(md.slice(0, 80)) >= 0 || md.indexOf(ans.slice(0, 80)) >= 0))
+        return false;
+      break;
+    }
+    return true;
+  }
+
   function cardMissingExpectedA2ui(card, blocks) {
     if (!card || card.uiState !== "Done") return false;
     if (countPipelineBlocksByType(blocks, "a2ui") > 0) return false;
@@ -2063,29 +2546,217 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return q ? q.slice(0, 120) : "";
   }
 
+  function formatCardTimeLabel(card) {
+    if (!card) return "—";
+    var raw = String(card.createdAt || card.updatedAt || "").trim();
+    if (/^\d{14}$/.test(raw)) {
+      return raw.slice(4, 6) + "-" + raw.slice(6, 8) + " " + raw.slice(8, 10) + ":" + raw.slice(10, 12);
+    }
+    if (raw) {
+      var d = new Date(raw);
+      if (!isNaN(d.getTime())) {
+        var mo = d.getMonth() + 1;
+        var da = d.getDate();
+        var h = d.getHours();
+        var mi = d.getMinutes();
+        return (mo < 10 ? "0" : "") + mo + "-" + (da < 10 ? "0" : "") + da + " " + (h < 10 ? "0" : "") + h + ":" + (mi < 10 ? "0" : "") + mi;
+      }
+      if (raw.length >= 12) return raw.slice(4, 6) + "-" + raw.slice(6, 8) + " " + raw.slice(8, 10) + ":" + raw.slice(10, 12);
+    }
+    return "—";
+  }
+
+  function cardContentCharCount(card) {
+    if (!card) return 0;
+    var n = 0;
+    var blocks = getCardPipelineBlocks(card);
+    var hasReplyBlocks = false;
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (!b) continue;
+      if (b.type === "reply" && b.markdown) {
+        hasReplyBlocks = true;
+        n += String(b.markdown).length;
+      } else if (b.type === "question" && b.markdown) n += String(b.markdown).length;
+    }
+    if (Array.isArray(card.messages)) {
+      card.messages.forEach(function (m) {
+        if (m && m.text) n += String(m.text).length;
+      });
+    } else if (card.query) {
+      n += String(card.query).length;
+    }
+    if (!hasReplyBlocks) {
+      var raw = String(card.rawAnswer || "").trim();
+      if (raw && !isAgentStatusPreview(raw)) n += raw.length;
+    }
+    return n;
+  }
+
+  function estimateCardTokens(card) {
+    if (!card) return 0;
+    if (card.tokenUsage > 0) return Math.round(card.tokenUsage);
+    return Math.max(0, Math.round(cardContentCharCount(card) / 3.5));
+  }
+
+  function stripMdHeading(text) {
+    return String(text || "")
+      .replace(/^#{1,6}\s+/gm, "")
+      .replace(/\*\*/g, "")
+      .replace(/`/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function replySummaryTextForTurn(blocks, turnId) {
+    var reply = null;
+    for (var i = 0; i < (blocks || []).length; i++) {
+      var b = blocks[i];
+      if (!b || b.type !== "reply") continue;
+      if (Number(b.turnId != null ? b.turnId : 1) === Number(turnId)) reply = b;
+    }
+    if (!reply || !reply.markdown) return "";
+    var md = String(reply.markdown);
+    if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.extractNonTablePreview) {
+      var lead = PaletteBlockPipeline.extractNonTablePreview(md);
+      if (lead) return stripMdHeading(lead).slice(0, 180);
+    }
+    return stripMdHeading(md).slice(0, 180);
+  }
+
+  function cardUserTurnQueries(card) {
+    var out = [];
+    if (Array.isArray(card.messages)) {
+      card.messages.forEach(function (m) {
+        if (m && m.role === "user" && String(m.text || "").trim())
+          out.push({ text: String(m.text).trim(), at: m.at || "" });
+      });
+    }
+    if (!out.length && card.query) out.push({ text: String(card.query).trim(), at: card.createdAt || card.updatedAt || "" });
+    return out;
+  }
+
+  function cardTopicPreviewItems(card) {
+    if (!card) return [];
+    var blocks = getCardPipelineBlocks(card);
+    var queries = cardUserTurnQueries(card);
+    var maxTurn =
+      typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.maxTurnId
+        ? Math.max(PaletteBlockPipeline.maxTurnId(blocks), queries.length, 1)
+        : Math.max(queries.length, 1);
+    var items = [];
+    for (var t = 1; t <= maxTurn; t++) {
+      var q = queries[t - 1] ? queries[t - 1].text : t === 1 ? String(card.query || "").trim() : "";
+      if (!q && t > 1) q = String(card._lastFollowUpQuery || "").trim() || "补充提问";
+      var summary = replySummaryTextForTurn(blocks, t);
+      if (!summary && t === maxTurn) summary = stripMdHeading(getLatestReplyMarkdownFromBlocks(blocks)).slice(0, 180);
+      if (!q && !summary) continue;
+      items.push({ turnId: t, query: q || "补充提问", summary: summary || "（等待回复）" });
+    }
+    return items;
+  }
+
   function cardMetaLineText(card) {
     if (!card) return "";
-    var parts = [actionCardUiLabel(card.uiState)];
-    parts.push(agentProviderLabel(card.provider || state.agentProvider));
-    if (card.routeLabel || card.routeId)
-      parts.push(String(card.routeLabel || card.routeId));
-    var plan = cardPlanProgressMeta(card);
-    if (plan) parts.push(plan.label);
-    if (card.updatedAt) parts.push(String(card.updatedAt).slice(5, 16));
+    var parts = [formatCardTimeLabel(card)];
+    var chars = cardContentCharCount(card);
+    if (chars > 0) parts.push(chars + " 字");
+    var tok = estimateCardTokens(card);
+    if (tok > 0) parts.push("~" + tok + " tok");
     return parts.join(" · ");
   }
 
   var cardHoverPreviewEl = null;
   var cardHoverPreviewTimer = null;
+  var cardHoverPreviewHideTimer = null;
+  var cardHoverPreviewCardId = "";
+  var cardHoverPreviewAnchorId = "";
+
+  function cardHoverPreviewTargetDom(cardId, anchorEl) {
+    var dom = anchorEl && anchorEl.isConnected ? anchorEl : document.getElementById("card-" + cardId);
+    return dom || null;
+  }
+
+  function isCardHoverPreviewHovering(cardId, anchorEl) {
+    var dom = cardHoverPreviewTargetDom(cardId, anchorEl);
+    if (dom && dom.matches(":hover")) return true;
+    if (cardHoverPreviewEl && !cardHoverPreviewEl.hidden && cardHoverPreviewEl.matches(":hover")) return true;
+    return false;
+  }
+
+  function cancelCardHoverPreviewShow() {
+    if (cardHoverPreviewTimer) {
+      clearTimeout(cardHoverPreviewTimer);
+      cardHoverPreviewTimer = null;
+    }
+  }
+
+  function hideVisibleCardHoverPreview() {
+    cardHoverPreviewCardId = "";
+    cardHoverPreviewAnchorId = "";
+    if (cardHoverPreviewEl) cardHoverPreviewEl.hidden = true;
+  }
+
+  function scheduleShowCardHoverPreview(cardId, anchorEl, delayMs) {
+    cancelCardHoverPreviewShow();
+    cardHoverPreviewAnchorId = String(cardId || "");
+    cardHoverPreviewTimer = setTimeout(function () {
+      cardHoverPreviewTimer = null;
+      var card = getActionCard(cardId);
+      var dom = cardHoverPreviewTargetDom(cardId, anchorEl);
+      if (!card || !dom || card.expanded || actionState.detailCardId) return;
+      if (!isCardHoverPreviewHovering(cardId, dom)) return;
+      showCardHoverPreview(card, dom);
+    }, delayMs == null ? 180 : delayMs);
+  }
 
   function ensureCardHoverPreviewEl() {
     if (!cardHoverPreviewEl) {
       cardHoverPreviewEl = document.createElement("div");
       cardHoverPreviewEl.className = "card-hover-preview";
       cardHoverPreviewEl.hidden = true;
+      cardHoverPreviewEl.addEventListener("mouseenter", function () {
+        if (cardHoverPreviewHideTimer) {
+          clearTimeout(cardHoverPreviewHideTimer);
+          cardHoverPreviewHideTimer = null;
+        }
+      });
+      cardHoverPreviewEl.addEventListener("mouseleave", function () {
+        scheduleHideCardHoverPreview();
+      });
+      cardHoverPreviewEl.addEventListener("click", function (e) {
+        if (e.target.closest("a")) return;
+        var cid = cardHoverPreviewCardId || cardHoverPreviewEl.getAttribute("data-card-id") || "";
+        if (!cid) return;
+        hideCardHoverPreview();
+        focusActionCard(cid, { expand: true });
+        setTimeout(function () {
+          scrollToLatestReply(cid);
+        }, 120);
+      });
       document.body.appendChild(cardHoverPreviewEl);
     }
     return cardHoverPreviewEl;
+  }
+
+  function scheduleHideCardHoverPreview() {
+    if (cardHoverPreviewHideTimer) clearTimeout(cardHoverPreviewHideTimer);
+    cardHoverPreviewHideTimer = setTimeout(function () {
+      cardHoverPreviewHideTimer = null;
+      if (cardHoverPreviewEl && cardHoverPreviewEl.matches(":hover")) return;
+      if (document.querySelector(".cmd-action-card.is-collapsed:hover")) return;
+      cancelCardHoverPreviewShow();
+      hideVisibleCardHoverPreview();
+    }, 320);
+  }
+
+  function cardHoverLeaveShouldHide(cardEl, relatedTarget) {
+    if (!cardEl) return true;
+    if (relatedTarget) {
+      if (cardEl.contains(relatedTarget)) return false;
+      if (cardHoverPreviewEl && cardHoverPreviewEl.contains(relatedTarget)) return false;
+    }
+    return true;
   }
 
   function cardLatestUserText(card) {
@@ -2103,97 +2774,71 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   function cardDetailPreviewHtml(card) {
     if (!card) return "";
     var title = esc(card.title || card.query || "代理任务");
-    var sections = [];
-    var latestUser = cardLatestUserText(card);
-    if (latestUser)
-      sections.push('<div class="chp-section"><b>任务描述</b>' + esc(latestUser) + "</div>");
-    var pipeBlocks = (card.blockStore && card.blockStore.blocks) || card.pipelineBlocks || [];
-    var a2Tags = [];
-    for (var ai = 0; ai < pipeBlocks.length; ai++) {
-      var ab = pipeBlocks[ai];
-      if (!ab || ab.type !== "a2ui") continue;
-      if (ab.component === "ComparisonTable") {
-        var ac = (ab.props && ab.props.columns) || [];
-        var ar = (ab.props && ab.props.rows) || [];
-        a2Tags.push("对比表格 · " + ac.length + " 列 · " + ar.length + " 行");
-      } else if (ab.component === "Steps") {
-        a2Tags.push("执行步骤 · " + ((ab.props && ab.props.items) || []).length + " 步");
-      } else if (ab.component === "Alert") {
-        a2Tags.push("⚠ " + String((ab.props && ab.props.text) || "警告").slice(0, 80));
-      }
-    }
-    if (a2Tags.length)
-      sections.push(
-        '<div class="chp-section"><b>A2UI</b><span class="chp-a2ui-tag">' + esc(a2Tags.join(" · ")) + "</span></div>"
-      );
-    var preview = cardPreviewText(card);
-    if (preview && preview !== "无详细记录")
-      sections.push('<div class="chp-section"><b>摘要</b>' + esc(preview) + "</div>");
-    var pipeReply = getLatestReplyMarkdownFromBlocks(pipeBlocks);
-    var hasA2uiTable = a2Tags.some(function (t) {
-      return t.indexOf("对比表格") === 0;
-    });
-    if (pipeReply) {
-      var replyShow = pipeReply.slice(0, 4000);
-      if (hasA2uiTable && typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.extractNonTablePreview) {
-        var leadOnly = PaletteBlockPipeline.extractNonTablePreview(replyShow);
-        if (leadOnly)
-          sections.push(
-            '<div class="chp-section"><b>回复摘要</b><div class="chp-reply-md">' +
-              renderAgentPlainMarkdown(leadOnly) +
-              "</div></div>"
-          );
-      } else {
-        sections.push(
-          '<div class="chp-section"><b>回复</b><div class="chp-reply-md">' +
-            renderAgentPlainMarkdown(replyShow) +
-            "</div></div>"
+    var meta = esc(cardMetaLineText(card));
+    var items = cardTopicPreviewItems(card);
+    var topicHtml = items
+      .map(function (it, idx) {
+        var qLabel = (idx === 0 ? "问" : "补" + (idx + 1)) + " · " + it.query.slice(0, 96);
+        return (
+          '<div class="chp-topic">' +
+          '<div class="chp-topic-q">' +
+          esc(qLabel) +
+          "</div>" +
+          '<div class="chp-topic-a">' +
+          esc(it.summary) +
+          "</div></div>"
         );
-      }
-    } else if (card.blocks && card.blocks.reply) {
-      var rb = String(card.blocks.reply.content || card.blocks.reply.body || "").trim();
-      if (rb)
-        sections.push(
-          '<div class="chp-section"><b>回复</b><div class="chp-reply-md">' +
-            renderAgentPlainMarkdown(rb.slice(0, 4000)) +
-            "</div></div>"
-        );
+      })
+      .join("");
+    if (!topicHtml) {
+      var fallback = stripMdHeading(cardPreviewText(card) || card.rawAnswer || "");
+      topicHtml =
+        '<div class="chp-topic"><div class="chp-topic-a">' +
+        esc(fallback.slice(0, 240) || "暂无摘要") +
+        "</div></div>";
     }
-    if (card.blocks && Array.isArray(card.blocks.status) && card.blocks.status.length) {
-      var logs = card.blocks.status
-        .map(function (st) {
-          return String(st.title || "") + (st.log ? "\n" + st.log : "");
-        })
-        .join("\n\n")
-        .trim();
-      if (logs) sections.push('<div class="chp-section"><b>执行日志</b>' + esc(logs.slice(0, 1200)) + "</div>");
-    }
-    if (card.liveThought && String(card.liveThought).trim())
-      sections.push('<div class="chp-section"><b>进度</b>' + esc(String(card.liveThought)) + "</div>");
-    if (!sections.length)
-      sections.push('<div class="chp-section">点击展开查看完整详情；续聊请用卡片底部「补充」输入框。</div>');
-    return '<div class="chp-title">' + title + "</div>" + sections.join("");
+    return (
+      '<div class="chp-title">' +
+      title +
+      "</div>" +
+      '<div class="chp-meta-line">' +
+      meta +
+      "</div>" +
+      '<div class="chp-topics">' +
+      topicHtml +
+      "</div>" +
+      '<div class="chp-foot-hint">点击查看完整回复</div>'
+    );
   }
 
   function showCardHoverPreview(card, anchorEl) {
-    if (!card || !anchorEl || card.expanded) return;
+    if (!card || !anchorEl || card.expanded || actionState.detailCardId) return;
+    if (!isCardHoverPreviewHovering(card.id, anchorEl)) return;
     var pop = ensureCardHoverPreviewEl();
+    cardHoverPreviewCardId = card.id;
+    cardHoverPreviewAnchorId = card.id;
+    pop.setAttribute("data-card-id", card.id);
     pop.innerHTML = cardDetailPreviewHtml(card);
     pop.hidden = false;
     var r = anchorEl.getBoundingClientRect();
-    var top = r.bottom + 6;
+    var top = r.bottom + 2;
     var left = Math.max(8, Math.min(r.left, window.innerWidth - 430));
-    if (top + 200 > window.innerHeight) top = Math.max(8, r.top - 8 - Math.min(200, pop.offsetHeight || 160));
+    pop.style.visibility = "hidden";
     pop.style.top = top + "px";
     pop.style.left = left + "px";
+    var popH = pop.offsetHeight || 200;
+    if (top + popH + 8 > window.innerHeight) top = Math.max(8, r.top - 8 - popH);
+    pop.style.top = top + "px";
+    pop.style.visibility = "";
   }
 
   function hideCardHoverPreview() {
-    if (cardHoverPreviewTimer) {
-      clearTimeout(cardHoverPreviewTimer);
-      cardHoverPreviewTimer = null;
+    cancelCardHoverPreviewShow();
+    if (cardHoverPreviewHideTimer) {
+      clearTimeout(cardHoverPreviewHideTimer);
+      cardHoverPreviewHideTimer = null;
     }
-    if (cardHoverPreviewEl) cardHoverPreviewEl.hidden = true;
+    hideVisibleCardHoverPreview();
   }
 
   function removeActionLiveDock(stack) {
@@ -3729,7 +4374,11 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         var divider = document.createElement("div");
         divider.className = "card-segment-divider";
         divider.setAttribute("data-segment-turn", String(turnId));
-        divider.textContent = "补充 · 第 " + turnId + " 轮";
+        var cardRef = getActionCard(cardId);
+        var qHint = cardRef && (cardRef._lastFollowUpQuery || cardRef.activeQuery);
+        divider.textContent = qHint
+          ? "补充 · " + String(qHint).slice(0, 56)
+          : "补充 · 第 " + turnId + " 轮";
         host.appendChild(divider);
       }
       var seg = document.createElement("div");
@@ -3741,7 +4390,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         esc(block.title || (turnId > 1 ? "补充回复" : "任务回复")) +
         '</div><div class="card-reply-body md-body">' +
         renderAgentPlainMarkdown(block.markdown || "") +
-        "</div>";
+        "</div>" +
+        buildCardReplyActionsHtml(cardId, block);
       host.appendChild(seg);
     } else if (block.type === "a2ui") {
       var cardA2 = getActionCard(cardId);
@@ -3938,20 +4588,38 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   function syncCardPipelineStore(card, blocks, meta) {
     if (!card) return;
+    var list = dedupeCardPipelineBlocks(blocks || []);
     var bv = typeof PaletteBlockSchema !== "undefined" ? PaletteBlockSchema.BLOCK_VERSION : 1;
     var nv =
       typeof PaletteBlockSchema !== "undefined"
         ? PaletteBlockSchema.NORMALIZER_VERSION
         : "2026-06-06";
-    card.blockStore = { blocks: blocks, blockVersion: bv, normalizerVersion: nv };
-    card.pipelineBlocks = blocks;
+    card.blockStore = { blocks: list, blockVersion: bv, normalizerVersion: nv };
+    card.pipelineBlocks = list;
     if (meta && meta.protoStarted) card._protoStarted = true;
-    syncLegacyBlocksFromPipeline(card, blocks);
+    syncLegacyBlocksFromPipeline(card, list);
+  }
+
+  function pipelineTurnCount(card) {
+    var blocks = getCardPipelineBlocks(card);
+    if (!blocks.length) return 0;
+    if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.maxTurnId)
+      return PaletteBlockPipeline.maxTurnId(blocks);
+    return 1;
+  }
+
+  function shouldSkipDtoRawReplay(card, dto) {
+    if (!card || !dto || dto.rawAnswer == null) return false;
+    if (dto.blockStore) return false;
+    if (card._segmentPriorBlocks && card._segmentPriorBlocks.length) return true;
+    if (pipelineTurnCount(card) > 1) return true;
+    if (card._followUpMergedTick && Date.now() - card._followUpMergedTick < 8000) return true;
+    return false;
   }
 
   function applyDtoBlockStore(card, dto) {
     if (!card || !dto) return false;
-    if (isActionCardRunning(card) && !dto.ended && cardHasPipelineReply(card)) return false;
+    if (isActionCardRunning(card) && !dto.ended && cardHasPipelineReply(card) && !dto.blockStore) return false;
     var store = dto.blockStore;
     if (!store) return false;
     if (typeof PaletteBlockStore !== "undefined" && PaletteBlockStore.unpack) store = PaletteBlockStore.unpack(store);
@@ -4072,7 +4740,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       typeof PaletteBlockPipeline.mergeSegmentBlocks === "function"
         ? PaletteBlockPipeline.mergeSegmentBlocks(prior, result.blocks)
         : { blocks: prior.concat(result.blocks || []) };
-    result.blocks = mergedOut.blocks || result.blocks || [];
+    result.blocks = dedupeCardPipelineBlocks(mergedOut.blocks || result.blocks || []);
     card._activeTurnId =
       typeof PaletteBlockPipeline.maxTurnId === "function"
         ? PaletteBlockPipeline.maxTurnId(result.blocks)
@@ -4870,9 +5538,13 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     var preview = cardPreviewText(card);
     if (previewEl) {
       previewEl.textContent = preview || "";
-      previewEl.title = preview || card.query || "";
+      previewEl.title = card.title || card.query || "";
+      previewEl.classList.toggle("is-rich", !!(preview && preview !== "无详细记录" && card.uiState === "Done"));
     }
-    if (metaEl) metaEl.textContent = cardMetaLineText(card);
+    if (metaEl) {
+      metaEl.textContent = cardMetaLineText(card);
+      metaEl.title = metaEl.textContent;
+    }
     if (compactEl) {
       compactEl.textContent = isActionCardRunning(card) ? preview || "执行中…" : preview || "已归档";
       compactEl.title = compactEl.textContent;
@@ -5022,6 +5694,28 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     }
   }
 
+  function bindActionCardHoverPreview(card, dom) {
+    if (!card || !dom || dom.dataset.hoverPreviewBound) return;
+    dom.dataset.hoverPreviewBound = "1";
+    var cid = card.id;
+    function onCardEnter() {
+      var cur = getActionCard(cid);
+      if (!cur || cur.expanded || actionState.detailCardId === cid) return;
+      if (cardHoverPreviewHideTimer) {
+        clearTimeout(cardHoverPreviewHideTimer);
+        cardHoverPreviewHideTimer = null;
+      }
+      scheduleShowCardHoverPreview(cid, dom);
+    }
+    function onCardLeave(e) {
+      if (!cardHoverLeaveShouldHide(dom, e.relatedTarget)) return;
+      cancelCardHoverPreviewShow();
+      scheduleHideCardHoverPreview();
+    }
+    dom.addEventListener("mouseenter", onCardEnter);
+    dom.addEventListener("mouseleave", onCardLeave);
+  }
+
   function bindActionCardEvents(card, dom) {
     if (!card || !dom || dom.dataset.eventsBound) return;
     dom.dataset.eventsBound = "1";
@@ -5039,20 +5733,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         }
         focusActionCard(card.id);
       });
-      head.addEventListener("mouseenter", function () {
-        if (card.expanded) return;
-        if (cardHoverPreviewTimer) clearTimeout(cardHoverPreviewTimer);
-        cardHoverPreviewTimer = setTimeout(function () {
-          showCardHoverPreview(card, dom);
-        }, 300);
-      });
-      head.addEventListener("mouseleave", function () {
-        hideCardHoverPreview();
-      });
     }
-    dom.addEventListener("mouseleave", function () {
-      hideCardHoverPreview();
-    });
     var expandBtn = dom.querySelector(".card-expand-btn");
     if (expandBtn) {
       expandBtn.addEventListener("click", function (e) {
@@ -5084,7 +5765,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       focusActionCard(card.id);
       submitAgentTask(t, {
         cardId: card.id,
-        forceKind: card.uiState === "Waiting" ? "correction" : card.uiState === "Done" ? "append" : "correction",
+        forceKind: card.uiState === "Waiting" ? "correction" : "append",
         fromCardFollowup: true,
         explicitCardFollowup: true,
         provider: card.provider || state.agentProvider
@@ -5100,6 +5781,20 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           e.stopPropagation();
           sendFollowup();
         }
+      });
+    }
+    if (!dom._replyActBound) {
+      dom._replyActBound = true;
+      dom.addEventListener("click", function (e) {
+        var btn = e.target.closest(".card-reply-act-btn[data-reply-act]");
+        if (!btn || !dom.contains(btn)) return;
+        e.stopPropagation();
+        handleCardReplyAction(
+          btn.getAttribute("data-reply-act"),
+          btn.getAttribute("data-card-id"),
+          btn.getAttribute("data-block-id"),
+          btn.getAttribute("data-turn-id")
+        );
       });
     }
   }
@@ -5172,6 +5867,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       ensureCardRepliesHost(el);
     }
     ensureCardA2uiDomOrder(el);
+    bindActionCardHoverPreview(card, el);
     bindActionCardEvents(card, el);
     return el;
   }
@@ -5222,6 +5918,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (_renderActionHistoryLock) return;
     _renderActionHistoryLock = true;
     try {
+    hideCardHoverPreview();
     var box = document.getElementById("results");
     if (!box) return;
     syncExpandedCardsToHistoryFilter();
@@ -5304,7 +6001,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       if (doneHead) {
         doneHead.innerHTML =
           '<span>已归档</span><span class="section-count">' + doneIds.length + "</span>" +
-          '<span class="section-hint">默认紧凑 · 点击展开 · 悬浮预览</span>';
+          '<span class="section-hint">默认紧凑 · 悬浮看各轮摘要 · 点击展开</span>';
       }
       var doneList = doneSec.querySelector(".action-card-list");
       if (doneList) {
@@ -5587,7 +6284,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         expanded: false,
         liveThought: "",
         rawAnswer: dto.rawAnswer || "",
-        updatedAt: dto.updatedAt || ""
+        updatedAt: dto.updatedAt || "",
+        createdAt: dto.createdAt || dto.updatedAt || "",
+        messages: Array.isArray(dto.messages) ? dto.messages.slice() : []
       };
       actionState.cards[id] = card;
     }
@@ -5604,6 +6303,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     card.title = dto.title || dto.query || card.title;
     if (wasNew || !card.query) card.query = dto.query || dto.title || card.query;
     else if (dto.reqId && String(dto.reqId) === String(card.reqId || "")) card.query = dto.query || card.query;
+    if (dto.activeQuery) card.activeQuery = String(dto.activeQuery);
     if (dto.reqId) card.reqId = dto.reqId;
     card.sessionRef = dto.sessionRef || card.sessionRef;
     if (dto.provider) card.provider = normalizeAgentProvider(dto.provider);
@@ -5615,10 +6315,17 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       card.routeProfile = PaletteRouterSkill.PROFILES[card.routeId] || { routeId: card.routeId, a2uiCandidates: card.a2uiCandidates || [] };
     }
     if (dto.updatedAt) card.updatedAt = dto.updatedAt;
+    if (dto.createdAt) card.createdAt = dto.createdAt;
+    else if (!card.createdAt && dto.updatedAt) card.createdAt = dto.updatedAt;
+    if (dto.messages && Array.isArray(dto.messages)) card.messages = dto.messages.slice();
     if (dto.rawAnswer != null) {
-      card.rawAnswer = String(dto.rawAnswer || "");
-      if (card.rawAnswer && !isAgentStatusPreview(card.rawAnswer))
-        card.liveThought = card.rawAnswer;
+      var incomingRaw = String(dto.rawAnswer || "");
+      var followUp = cardFollowUpInFlight(card) || (card.running && !card.ended && card._segmentPriorBlocks && card._segmentPriorBlocks.length);
+      if (!followUp || incomingRaw) {
+        card.rawAnswer = incomingRaw;
+        if (card.rawAnswer && !isAgentStatusPreview(card.rawAnswer))
+          card.liveThought = card.rawAnswer;
+      }
     }
     if (dto.liveThought != null && String(dto.liveThought) !== "") {
       if (!card.rawAnswer || isAgentStatusPreview(card.rawAnswer) || !isAgentStatusPreview(dto.liveThought))
@@ -5634,7 +6341,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         card.liveThought = "";
         hideCardLiveThoughtIfReply(id);
       }
-    } else if (dto.rawAnswer) {
+    } else if (dto.rawAnswer && !shouldSkipDtoRawReplay(card, dto)) {
       var rawSig = String(dto.rawAnswer);
       var isDone = card.uiState === "Done" || dto.uiState === "Done";
       if (isDone && cardHasSubstantialRawAnswer(card) && !cardHasPipelineReply(card)) {
@@ -5671,6 +6378,31 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     }
   }
 
+  function cardFollowUpInFlight(card) {
+    return !!(
+      card &&
+      card.running &&
+      !card.ended &&
+      card._segmentPriorBlocks &&
+      card._segmentPriorBlocks.length
+    );
+  }
+
+  function ensureFollowUpPriorBlocks(card) {
+    if (!card || (card._segmentPriorBlocks && card._segmentPriorBlocks.length)) return;
+    var prior = getCardPipelineBlocks(card);
+    if (!prior.length) return;
+    card._segmentPriorBlocks =
+      typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.freezeBlocks
+        ? PaletteBlockPipeline.freezeBlocks(prior)
+        : prior.slice();
+  }
+
+  function cardActiveQuery(card) {
+    if (!card) return "";
+    return String(card.activeQuery || card.query || "").trim();
+  }
+
   function agentEndAnswerReady(text, card) {
     var t = String(text || "").trim();
     if (!t) return false;
@@ -5687,29 +6419,43 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       type: "palette_agent_recover",
       cardId: card.id,
       reqId: card.reqId,
-      query: card.query || ""
+      query: cardActiveQuery(card)
     });
   }
 
   function scheduleAgentCardsRecover() {
     if (actionState._recoverTimer) clearTimeout(actionState._recoverTimer);
+    var delay = 1500;
+    var ids0 = Object.keys(actionState.cards);
+    for (var di = 0; di < ids0.length; di++) {
+      var cr = actionState.cards[ids0[di]];
+      if (!isActionCardRunning(cr)) continue;
+      var runMs = cr._runningSince ? Date.now() - Number(cr._runningSince) : 0;
+      delay = runMs > 60000 ? 8000 : runMs > 20000 ? 4000 : 3000;
+      break;
+    }
     actionState._recoverTimer = setTimeout(function () {
       actionState._recoverTimer = 0;
+      var now = Date.now();
       var ids = Object.keys(actionState.cards);
       for (var ri = 0; ri < ids.length; ri++) {
         var c = actionState.cards[ids[ri]];
         if (!c || !c.reqId) continue;
-        if (cardHasPipelineReply(c) && !cardAnswerLooksIncomplete(c)) continue;
-        if (cardHasSubstantialRawAnswer(c) && !cardAnswerLooksIncomplete(c)) continue;
-        if (!(isActionCardRunning(c) || c.uiState === "Done")) continue;
+        if (!cardFollowUpInFlight(c)) {
+          if (cardHasPipelineReply(c) && !cardAnswerLooksIncomplete(c)) continue;
+          if (cardHasSubstantialRawAnswer(c) && !cardAnswerLooksIncomplete(c)) continue;
+        }
+        if (!(isActionCardRunning(c) || c.uiState === "Done" || cardFollowUpInFlight(c))) continue;
+        if (c._lastRecoverPost && now - c._lastRecoverPost < 5000) continue;
+        c._lastRecoverPost = now;
         post({
           type: "palette_agent_recover",
           cardId: c.id,
           reqId: c.reqId,
-          query: c.query || ""
+          query: cardActiveQuery(c)
         });
       }
-    }, 1500);
+    }, delay);
   }
 
   function submitAgentTask(text, opts) {
@@ -5733,9 +6479,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       active = getActionCard(opts.cardId);
       if (active) {
         cardId = active.id;
-        kind =
-          opts.forceKind ||
-          (active.uiState === "Waiting" ? "correction" : active.uiState === "Done" ? "append" : "correction");
+        kind = opts.forceKind || (active.uiState === "Waiting" ? "correction" : "append");
       }
     } else {
       kind = "new";
@@ -5747,10 +6491,17 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       return;
     }
     if (active && kind !== "new") {
-      if (kind === "append") beginCardFollowUpSegment(active, "append");
-      else beginCardCorrectionTurn(active);
+      active.activeQuery = q;
+      active._lastFollowUpQuery = q;
+      if (!Array.isArray(active.messages)) active.messages = [];
+      active.messages.push({ role: "user", text: q, at: new Date().toISOString() });
+      if (kind === "append") {
+        ensureFollowUpPriorBlocks(active);
+        beginCardFollowUpSegment(active, "append");
+      } else beginCardCorrectionTurn(active);
       active.running = true;
       active.ended = false;
+      active._runningSince = Date.now();
       active.uiState = kind === "append" ? "Planning" : "Running";
       active.liveThought = "已收到补充，继续执行…";
       actionCardManager.transitionCardState(active.id, active.uiState);
@@ -5920,12 +6671,14 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   function applyAgentCardNew(d) {
     if (!d) return;
     var nid = String(d.cardId || d.id || "");
+    var existing = nid ? getActionCard(nid) : null;
     upsertActionCardFromDto({
       cardId: d.cardId || d.id,
       reqId: d.reqId,
       uiState: d.uiState || "Planning",
       title: d.title,
       query: d.query,
+      activeQuery: d.activeQuery,
       provider: d.provider,
       sessionRef: d.sessionRef,
       rawAnswer: d.rawAnswer,
@@ -5937,6 +6690,13 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (nid) {
       actionState.activeCardId = nid;
       collapseNonActiveCards();
+      if (existing && existing.running) {
+        refreshActionCardDom(existing);
+        ensureActionResultsVisible();
+        syncActionResultsLayout();
+        syncWindowSize();
+        return;
+      }
       focusActionCard(nid, { expand: true });
     }
     purgeActionEmptyHint();
@@ -7326,15 +8086,32 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       var card2 = endR.card;
       var endAns = String(d.answer || "").trim();
       var endReady = endAns && agentEndAnswerReady(endAns, card2);
-      if (card2 && endReady) {
+      var followUpQuery = card2 ? String(card2._lastFollowUpQuery || card2.activeQuery || "").trim() : "";
+      var wasCollapsed = card2 && !card2.expanded;
+      if (card2 && endReady && cardEndFinalizeNeeded(card2, d.reqId, endAns)) {
+        ensureFollowUpPriorBlocks(card2);
         card2.rawAnswer = endAns;
         card2._rawReplaySig = endAns;
+        card2.activeQuery = "";
+        card2._lastAgentEndKey =
+          String(d.reqId || card2.reqId || "") + ":" + endAns.length + ":" + endAns.slice(0, 160);
+        card2._lastAgentEndTick = Date.now();
         finalizeAgentCardAnswer(cid2, endAns);
+        card2._followUpMergedTick = Date.now();
+        refreshActionCardDom(card2);
+        ensureCardPipelineRendered(card2);
+        scheduleExpandedCardLayout(card2);
+      } else if (card2 && endReady) {
+        card2.rawAnswer = endAns;
+        card2._rawReplaySig = endAns;
+        card2.activeQuery = "";
+        card2._lastAgentEndTick = Date.now();
+        refreshActionCardDom(card2);
       }
       if (card2 && card2.parser && card2.parser.flush) card2.parser.flush();
       if (card2 && d.sessionRef) card2.sessionRef = String(d.sessionRef);
       if (card2) {
-        if (!endReady && !cardHasPipelineReply(card2)) {
+        if (!endReady && (cardFollowUpInFlight(card2) || !cardHasPipelineReply(card2))) {
           card2.running = true;
           card2.ended = false;
           if (card2.uiState === "Done") actionCardManager.transitionCardState(cid2, "Running");
@@ -7358,6 +8135,14 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         var endState =
           waitingQ || card2.waitingForUser || card2.uiState === "Waiting" ? "Waiting" : "Done";
         actionCardManager.transitionCardState(cid2, endState);
+        if (endState === "Done" && (pipelineTurnCount(card2) > 1 || followUpQuery)) {
+          showFollowUpCompleteToast(cid2, followUpQuery);
+          if (!wasCollapsed && card2.expanded) {
+            setTimeout(function () {
+              scrollToLatestReply(cid2);
+            }, 80);
+          }
+        }
       }
       updateActionLiveDock(cid2);
       document.querySelectorAll(".cmd-action-card").forEach(function (el) {

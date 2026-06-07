@@ -3564,9 +3564,11 @@ body.niuma-confirm-open{overflow:hidden}
     var rid = String(reqId || '').trim();
     var s = activeSession();
     if (s && s.id) setSessionSending(s.id, false);
-    _paletteAgentStreamQueue = _paletteAgentStreamQueue.filter(function (j) {
-      return String(j.reqId || '') === rid;
-    });
+    if (rid) {
+      _paletteAgentStreamQueue = _paletteAgentStreamQueue.filter(function (j) {
+        return String(j.reqId || '') === rid;
+      });
+    }
     Object.keys(_paletteAgentInflightByReqId).forEach(function (orid) {
       if (orid === rid) return;
       var job = _paletteAgentInflightByReqId[orid];
@@ -3674,6 +3676,7 @@ body.niuma-confirm-open{overflow:hidden}
       startedAt: Date.now()
     };
     var _paletteStreamContentDelivered = false;
+    var sid = '';
     try {
     try {
       post({ type: 'niuma_palette_agent_trace', step: 'agent_stream_start', detail: 'req=' + rid + ' q=' + q.slice(0, 48) });
@@ -3708,7 +3711,7 @@ body.niuma-confirm-open{overflow:hidden}
       post({ type: 'niuma_palette_agent_error', reqId: reqId, cardId: cid, message: '无活动会话：请先在 Niuma Chat 对「' + provNode + '」点一键连接' });
       return;
     }
-    var sid = s.id;
+    sid = s.id;
     paletteEnsureActiveSession(sid);
     s = sessionById(sid) || s;
     if (isSessionSending(sid)) {
@@ -3880,6 +3883,7 @@ body.niuma-confirm-open{overflow:hidden}
       }
     }
     } finally {
+      if (sid) setSessionSending(sid, false);
       if (typeof _paletteStreamContentDelivered === 'undefined' || !_paletteStreamContentDelivered) {
         if (_paletteAgentInflightByReqId[rid] && !_paletteAgentLateRecoverTimers[rid]) armPaletteAgentLateRecover(rid);
       }

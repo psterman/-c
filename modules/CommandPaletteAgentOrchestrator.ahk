@@ -131,6 +131,7 @@ CommandPalette_AgentCardToSyncDto(card) {
         "uiState", String(card.Get("uiState", "Planning")),
         "title", String(card.Get("title", card.Get("query", ""))),
         "query", String(card.Get("query", card.Get("title", ""))),
+        "activeQuery", String(card.Get("activeQuery", card.Get("query", card.Get("title", "")))),
         "provider", String(card.Get("provider", CommandPalette_AgentDefaultProvider())),
         "sessionRef", String(card.Get("sessionRef", "")),
         "ended", !!card.Get("ended", false),
@@ -142,8 +143,22 @@ CommandPalette_AgentCardToSyncDto(card) {
         "routeId", String(card.Get("routeId", "")),
         "routeLabel", String(card.Get("routeLabel", "")),
         "updatedAt", String(card.Get("updatedAt", "")),
+        "createdAt", String(card.Get("createdAt", card.Get("updatedAt", ""))),
         "blockCount", 0
     )
+    userMsgs := []
+    if card.Has("messages") && card["messages"] is Array {
+        for _, m in card["messages"] {
+            if !(m is Map) || String(m.Get("role", "")) != "user"
+                continue
+            userMsgs.Push(Map(
+                "role", "user",
+                "text", SubStr(String(m.Get("text", "")), 1, 500),
+                "at", String(m.Get("at", ""))
+            ))
+        }
+    }
+    dto["messages"] := userMsgs
     if card.Has("blockStore") && card["blockStore"] is Map {
         bs := card["blockStore"]
         dto["blockStore"] := bs
@@ -230,6 +245,9 @@ CommandPalette_AgentLoadCards() {
             if dto.Has("blockStore") && dto["blockStore"] is Map
                 card["blockStore"] := dto["blockStore"]
             card["updatedAt"] := String(dto.Get("updatedAt", ""))
+            card["createdAt"] := String(dto.Get("createdAt", dto.Get("updatedAt", "")))
+            if dto.Has("messages") && dto["messages"] is Array
+                card["messages"] := dto["messages"]
             if Trim(String(dto.Get("sessionRef", ""))) != ""
                 g_CardSessionMap[cid] := String(dto.Get("sessionRef", ""))
         }
@@ -538,11 +556,21 @@ CommandPalette_AgentSubmit(msg) {
             card["running"] := true
             card["uiState"] := (kind = "append") ? "Planning" : "Running"
             card["updatedAt"] := A_Now
+            card["priorRawAnswer"] := String(card.Get("rawAnswer", ""))
+            card["activeQuery"] := text
+            card["rawAnswer"] := ""
+            card["liveThought"] := (kind = "append") ? "已收到补充，继续执行…" : "已收到修正，继续执行…"
             g_Agent_ActiveCardId := cardId
+            CommandPalette_AgentCancelPriorStreamForCard(cardId)
             g_Agent_StreamGen++
             gen := g_Agent_StreamGen
             reqId := CommandPalette_AgentNewId("cpag")
             card["reqId"] := reqId
+            if FuncExists("CommandPalette_DeliverFtbPayload") {
+                try CommandPalette_DeliverFtbPayload(Map("type", "palette_agent_prepare_new", "cardId", cardId, "reqId", reqId))
+                catch {
+                }
+            }
             card["gen"] := gen
             msgs := card.Has("messages") && card["messages"] is Array ? card["messages"] : []
             msgs.Push(Map("role", "user", "text", text, "at", A_Now))
@@ -607,7 +635,8 @@ CommandPalette_AgentSubmit(msg) {
         "routeLabel", routeLabel,
         "promptAddon", promptAddon,
         "routeConfidence", routeConfidence,
-        "updatedAt", A_Now
+        "updatedAt", A_Now,
+        "createdAt", A_Now
     )
     g_Agent_Cards[cardId] := card
     g_CardSessionMap[cardId] := paletteSr
@@ -669,6 +698,29 @@ CommandPalette_AgentAnswerIsSubstantial(ans) {
     if (StrLen(raw) < 8)
         return false
     return true
+}
+
+CommandPalette_AgentResolveCardQuery(card) {
+    if !(card is Map)
+        return ""
+    aq := Trim(String(card.Get("activeQuery", "")))
+    if (aq != "")
+        return aq
+    return Trim(String(card.Get("query", "")))
+}
+
+CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ans) {
+    if !(card is Map)
+        return false
+    prior := Trim(String(card.Get("priorRawAnswer", "")))
+    ansT := Trim(String(ans))
+    if (prior = "" || ansT = "")
+        return false
+    if (ansT = prior)
+        return true
+    if (InStr(prior, ansT) = 1 && StrLen(ansT) < StrLen(prior))
+        return true
+    return false
 }
 
 CommandPalette_AgentHasSubstantialAnswer(card) {
@@ -931,7 +983,7 @@ CommandPalette_AgentMarkStreamDispatched(cardId, viaCompose := false) {
         card["composeDispatched"] := true
     CommandPalette_AgentArmStreamWatchdog(cardId)
     rid := String(card.Get("reqId", ""))
-    q := Trim(String(card.Get("query", "")))
+    q := CommandPalette_AgentResolveCardQuery(card)
     if (rid != "" && q != "")
         CommandPalette_AgentStartAnswerPoll(cardId, rid, q)
 }
@@ -971,6 +1023,9 @@ CommandPalette_AgentRecoverCardAnswer(msg) {
     q := msg.Has("query") ? Trim(String(msg["query"])) : ""
     if (cid = "" || rid = "")
         return
+    card0 := CommandPalette_AgentGetCard(cid)
+    if (q = "" && card0 is Map)
+        q := CommandPalette_AgentResolveCardQuery(card0)
     if !IsObject(g_Agent_RecoverPending)
         g_Agent_RecoverPending := Map()
     if g_Agent_RecoverPending.Has(cid)
@@ -988,9 +1043,10 @@ CommandPalette_AgentRecoverCardAnswerOnce(cid, rid, q, tryN) {
         return
     }
     if CommandPalette_AgentHasSubstantialAnswer(card) && !CommandPalette_AgentAnswerLooksIncomplete(card) {
-        if IsObject(g_Agent_RecoverPending)
-            g_Agent_RecoverPending.Delete(cid)
-        return
+        if !(card.Get("running", false) && !card.Get("ended", false))
+            if IsObject(g_Agent_RecoverPending)
+                g_Agent_RecoverPending.Delete(cid)
+            return
     }
     if g_Agent_FtbFetchBusy {
         SetTimer(CommandPalette_AgentRecoverCardAnswerOnce.Bind(cid, rid, q, tryN), -800)
@@ -999,7 +1055,7 @@ CommandPalette_AgentRecoverCardAnswerOnce(cid, rid, q, tryN) {
     ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
     stillSending := CommandPalette_AgentFtbSessionStillSending(rid)
     if (ans != "" && !CommandPalette_AgentIsStatusOnlyDelta(ans) && CommandPalette_AgentAnswerIsSubstantial(ans) && !stillSending) {
-        if !CommandPalette_AgentAnswerTextLooksIncomplete(ans) {
+        if !CommandPalette_AgentAnswerTextLooksIncomplete(ans) && !CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ans) {
             CommandPalette_AgentLog("recover_hit", "card=" . cid . " len=" . StrLen(ans))
             CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
             if IsObject(g_Agent_RecoverPending)
@@ -1069,14 +1125,20 @@ CommandPalette_AgentPollFtbAnswer(cardId, reqId, query, tryN) {
     card := CommandPalette_AgentGetCard(cid)
     if !(card is Map) || card.Get("ended", false) || !card.Get("running", false)
         return
-    tryN := Integer(tryN)
-    if CommandPalette_AgentHasSubstantialAnswer(card) && !CommandPalette_AgentFtbSessionStillSending(rid) {
-        ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
-        if (ans = "" || !CommandPalette_AgentAnswerIsSubstantial(ans))
-            ans := Trim(String(card.Get("rawAnswer", "")))
-        if CommandPalette_AgentAnswerIsSubstantial(ans) && !CommandPalette_AgentAnswerTextLooksIncomplete(ans)
-            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
+    if Trim(String(card.Get("reqId", ""))) != rid
         return
+    tryN := Integer(tryN)
+    qCard := CommandPalette_AgentResolveCardQuery(card)
+    if (qCard != "")
+        q := qCard
+    followUp := card.Get("running", false) && !card.Get("ended", false) && Trim(String(card.Get("priorRawAnswer", ""))) != ""
+    if !followUp && CommandPalette_AgentHasSubstantialAnswer(card) && !CommandPalette_AgentFtbSessionStillSending(rid) {
+        ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
+        if (ans != "" && CommandPalette_AgentAnswerIsSubstantial(ans) && !CommandPalette_AgentAnswerTextLooksIncomplete(ans)
+            && !CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ans)) {
+            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
+            return
+        }
     }
     ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
     if (ans != "" && !CommandPalette_AgentAnswerIsSubstantial(ans))
@@ -1105,7 +1167,8 @@ CommandPalette_AgentPollFtbAnswer(cardId, reqId, query, tryN) {
             ansEnd := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
             if (ansEnd = "" || !CommandPalette_AgentAnswerIsSubstantial(ansEnd))
                 ansEnd := Trim(String(card.Get("rawAnswer", ans)))
-            if CommandPalette_AgentAnswerIsSubstantial(ansEnd) && !CommandPalette_AgentAnswerTextLooksIncomplete(ansEnd) {
+            if CommandPalette_AgentAnswerIsSubstantial(ansEnd) && !CommandPalette_AgentAnswerTextLooksIncomplete(ansEnd)
+                && !CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ansEnd) {
                 CommandPalette_AgentLog("poll_hit", "card=" . cid . " len=" . StrLen(ansEnd))
                 CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ansEnd))
             }
@@ -1376,9 +1439,9 @@ CommandPalette_AgentStreamWatchdogTick(cardId) {
             CommandPalette_AgentArmStreamWatchdog(cid)
             return
         }
-        q := Trim(String(card.Get("query", "")))
+        q := CommandPalette_AgentResolveCardQuery(card)
         ans := (q != "") ? CommandPalette_AgentFetchAnswerFromFtb(rid, q) : ""
-        if (ans != "") {
+        if (ans != "" && !CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ans)) {
             CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
             return
         }
@@ -1434,9 +1497,12 @@ CommandPalette_OnNiumaPaletteAgentChunk(msg) {
     if CommandPalette_AgentIsStatusOnlyDelta(delta)
         card["liveThought"] := Trim(delta)
     if !CommandPalette_AgentIsStatusOnlyDelta(delta) {
+        priorRaw := Trim(String(card.Get("priorRawAnswer", "")))
         prev := String(card.Get("rawAnswer", ""))
         if (prev = "")
             card["rawAnswer"] := delta
+        else if (priorRaw != "" && InStr(delta, priorRaw) = 1)
+            card["rawAnswer"] := SubStr(delta, StrLen(priorRaw) + 1)
         else if (InStr(delta, prev) = 1)
             card["rawAnswer"] := delta
         else if (InStr(prev, delta) = 1)
@@ -1485,6 +1551,8 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
     ans := msg.Has("answer") ? String(msg["answer"]) : String(card.Get("rawAnswer", ""))
     if !CommandPalette_AgentAnswerIsSubstantial(ans)
         return
+    if CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ans)
+        return
     if card.Get("ended", false) {
         prev := Trim(String(card.Get("rawAnswer", "")))
         newAns := Trim(ans)
@@ -1494,6 +1562,7 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
         }
     }
     card["rawAnswer"] := ans
+    card["priorRawAnswer"] := ""
     card["ended"] := true
     card["running"] := false
     card["uiState"] := "Done"
@@ -1518,7 +1587,7 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
             "answer", ans,
             "sessionRef", String(card.Get("sessionRef", ""))
         ))
-    CommandPalette_AgentPushCardSync()
+    SetTimer(CommandPalette_AgentPushCardSync, -600)
 }
 
 CommandPalette_AgentPushError(reqId, cardId, message) {
@@ -1549,6 +1618,24 @@ CommandPalette_OnNiumaPaletteAgentError(msg) {
         msg.Has("cardId") ? String(msg["cardId"]) : "",
         msg.Has("message") ? String(msg["message"]) : "代理请求失败"
     )
+}
+
+CommandPalette_AgentCancelPriorStreamForCard(cardId) {
+    cid := Trim(String(cardId))
+    if (cid = "")
+        return
+    card := CommandPalette_AgentGetCard(cid)
+    if !(card is Map)
+        return
+    rid := Trim(String(card.Get("reqId", "")))
+    if (rid = "")
+        return
+    CommandPalette_AgentClearAiRoute(rid)
+    if FuncExists("CommandPalette_DeliverFtbPayload") {
+        try CommandPalette_DeliverFtbPayload(Map("type", "host_palette_agent_stream_cancel", "reqId", rid, "cardId", cid))
+        catch {
+        }
+    }
 }
 
 CommandPalette_AgentCancelOtherStreams(keepCardId := "") {

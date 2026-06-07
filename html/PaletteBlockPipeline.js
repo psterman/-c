@@ -396,6 +396,48 @@
     return m || 0;
   }
 
+  function dedupeMergedBlocks(blocks) {
+    var list = Array.isArray(blocks) ? blocks.slice() : [];
+    var replyByTurn = {};
+    var a2uiByKey = {};
+    var others = [];
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i];
+      if (!b || !b.type) continue;
+      if (b.type === "reply") {
+        var rt = b.turnId != null ? Number(b.turnId) : 1;
+        replyByTurn[rt] = b;
+      } else if (b.type === "a2ui") {
+        var at = b.turnId != null ? Number(b.turnId) : 1;
+        a2uiByKey[at + ":" + String(b.component || "")] = b;
+      } else {
+        others.push(b);
+      }
+    }
+    var merged = others
+      .concat(
+        Object.keys(replyByTurn)
+          .sort(function (a, b) {
+            return Number(a) - Number(b);
+          })
+          .map(function (k) {
+            return replyByTurn[k];
+          }),
+        Object.keys(a2uiByKey)
+          .sort()
+          .map(function (k) {
+            return a2uiByKey[k];
+          })
+      );
+    merged.sort(function (a, b) {
+      var ta = a && a.turnId != null ? Number(a.turnId) : 1;
+      var tb = b && b.turnId != null ? Number(b.turnId) : 1;
+      if (ta !== tb) return ta - tb;
+      return (a && a.seq ? a.seq : 0) - (b && b.seq ? b.seq : 0);
+    });
+    return validateBlocksList(merged);
+  }
+
   function mergeSegmentBlocks(priorBlocks, segmentBlocks) {
     var prior = freezeBlocks(priorBlocks || []);
     var seg = Array.isArray(segmentBlocks) ? segmentBlocks.slice() : [];
@@ -406,28 +448,29 @@
       if (ta !== tb) return ta - tb;
       return (a && a.seq ? a.seq : 0) - (b && b.seq ? b.seq : 0);
     });
-    return validateBlocksList(merged);
+    return dedupeMergedBlocks(merged);
+  }
+
+  function a2uiBlockSummary(block) {
+    if (!block || block.type !== "a2ui") return "";
+    if (block.component === "ComparisonTable") {
+      var cols = (block.props && block.props.columns) || [];
+      var rows = (block.props && block.props.rows) || [];
+      return "对比表格 · " + cols.length + " 列 · " + rows.length + " 行";
+    }
+    if (block.component === "Steps") {
+      var stepItems = (block.props && block.props.items) || [];
+      return "执行步骤 · " + stepItems.length + " 步";
+    }
+    if (block.component === "Alert") {
+      var alertTxt = (block.props && block.props.text) || "";
+      return String(alertTxt).trim().slice(0, 80) || "⚠ 警告";
+    }
+    return "";
   }
 
   function blockPreviewSummary(blocks) {
     var list = blocks || [];
-    for (var pa = list.length - 1; pa >= 0; pa--) {
-      var a2 = list[pa];
-      if (!a2 || a2.type !== "a2ui") continue;
-      if (a2.component === "ComparisonTable") {
-        var cols = (a2.props && a2.props.columns) || [];
-        var rows = (a2.props && a2.props.rows) || [];
-        return ("对比表格 · " + cols.length + " 列 · " + rows.length + " 行").slice(0, 160);
-      }
-      if (a2.component === "Steps") {
-        var stepItems = (a2.props && a2.props.items) || [];
-        return ("执行步骤 · " + stepItems.length + " 步").slice(0, 160);
-      }
-      if (a2.component === "Alert") {
-        var alertTxt = (a2.props && a2.props.text) || "";
-        return String(alertTxt).trim().slice(0, 160) || "⚠ 警告";
-      }
-    }
     var bestReply = null;
     var bestTurn = -1;
     for (var pi = 0; pi < list.length; pi++) {
@@ -442,11 +485,26 @@
     }
     if (bestReply) {
       var replyMd = String(bestReply.markdown);
-      var tblSum = inferTablePreviewFromMarkdown(replyMd);
-      if (tblSum) return tblSum;
       var lead = extractNonTablePreview(replyMd);
       if (lead) return lead.slice(0, 160);
+      var tblSum = inferTablePreviewFromMarkdown(replyMd);
+      if (tblSum) return tblSum;
       return replyMd.replace(/\s+/g, " ").trim().slice(0, 160);
+    }
+    var bestA2 = null;
+    var bestA2Turn = -1;
+    for (var pa = 0; pa < list.length; pa++) {
+      var a2 = list[pa];
+      if (!a2 || a2.type !== "a2ui") continue;
+      var at = a2.turnId != null ? Number(a2.turnId) : 1;
+      if (at >= bestA2Turn) {
+        bestA2Turn = at;
+        bestA2 = a2;
+      }
+    }
+    if (bestA2) {
+      var a2Sum = a2uiBlockSummary(bestA2);
+      if (a2Sum) return a2Sum.slice(0, 160);
     }
     for (var pj = 0; pj < list.length; pj++) {
       var ps = list[pj];
@@ -501,9 +559,11 @@
     finalize: finalize,
     finalizeFromState: finalizeFromState,
     mergeSegmentBlocks: mergeSegmentBlocks,
+    dedupeMergedBlocks: dedupeMergedBlocks,
     freezeBlocks: freezeBlocks,
     maxTurnId: maxTurnId,
     blockPreviewSummary: blockPreviewSummary,
+    a2uiBlockSummary: a2uiBlockSummary,
     inferTablePreviewFromMarkdown: inferTablePreviewFromMarkdown,
     extractNonTablePreview: extractNonTablePreview,
     hasProtocolTags: hasProtocolTags,
