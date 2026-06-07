@@ -1421,10 +1421,24 @@ body[data-theme="light"] .ai-bg-card {
 .md-li { margin: 2px 0 2px 8px; font-size: 11px; line-height: 1.5; color: var(--text-soft); }
 .card-live-thought.card-live-thought-rich { white-space: normal; line-height: 1.55; }
 .card-live-thought.card-live-thought-rich .md-h2 { font-size: 12px; }
-.card-question, .card-reply {
+.card-question, .card-reply, .card-reply-segment {
   margin-top: 8px;
   padding: 8px 10px;
   border-radius: 8px;
+}
+.card-replies { display: flex; flex-direction: column; gap: 0; }
+.card-segment-divider {
+  margin: 10px 0 4px;
+  padding: 4px 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #a5b4fc;
+  border-top: 1px dashed rgba(165, 180, 252, 0.35);
+}
+.card-reply-segment {
+  background: rgba(34, 197, 94, 0.06);
+  border: 1px solid rgba(34, 197, 94, 0.2);
 }
 .card-question {
   background: rgba(251, 191, 36, 0.08);
@@ -1511,14 +1525,33 @@ body[data-theme="light"] .ai-bg-card {
     activeCardId: null,
     cards: {},
     _pendingCardId: null,
+    _batchUpsert: 0,
     historyFilter: "all",
     focusMode: false,
     showAllDone: true
   };
+
+  function isActionCardBatchUpsert() {
+    return (actionState._batchUpsert || 0) > 0;
+  }
+
+  function beginActionCardBatchUpsert() {
+    actionState._batchUpsert = (actionState._batchUpsert || 0) + 1;
+  }
+
+  function endActionCardBatchUpsert() {
+    actionState._batchUpsert = Math.max(0, (actionState._batchUpsert || 0) - 1);
+  }
+
+  function shouldEagerPipelineFinalize(card) {
+    return !!(card && (card.expanded || isActionCardRunning(card)));
+  }
   state.agentProvider = "openclaw";
 
   function isActionCardRunning(card) {
     if (!card) return false;
+    if (card.ended === true || card.ended === 1) return false;
+    if (card.running === true || card.running === 1) return true;
     return card.uiState === "Planning" || card.uiState === "Running" || card.uiState === "Waiting";
   }
 
@@ -1547,6 +1580,23 @@ body[data-theme="light"] .ai-bg-card {
       if (blocks[i] && blocks[i].type === "reply" && String(blocks[i].markdown || "").trim()) return true;
     }
     return !!(card.blocks && card.blocks.reply);
+  }
+
+  function cardLatestTurnHasReply(card) {
+    if (!card) return false;
+    var blocks = getCardPipelineBlocks(card);
+    var latestTurn =
+      typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.maxTurnId
+        ? PaletteBlockPipeline.maxTurnId(blocks)
+        : 1;
+    if (isActionCardRunning(card) && card._activeTurnId) latestTurn = Math.max(latestTurn, card._activeTurnId);
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (!b || b.type !== "reply") continue;
+      var tid = b.turnId != null ? Number(b.turnId) : 1;
+      if (tid === latestTurn && String(b.markdown || "").trim()) return true;
+    }
+    return false;
   }
 
   function cardHasSubstantialRawAnswer(card) {
@@ -1644,12 +1694,25 @@ body[data-theme="light"] .ai-bg-card {
     return cardHoverPreviewEl;
   }
 
+  function cardLatestUserText(card) {
+    if (!card) return "";
+    if (Array.isArray(card.messages) && card.messages.length) {
+      for (var mi = card.messages.length - 1; mi >= 0; mi--) {
+        var m = card.messages[mi];
+        if (!m) continue;
+        if (m.role === "user" && String(m.text || "").trim()) return String(m.text).trim();
+      }
+    }
+    return String(card.query || "").trim();
+  }
+
   function cardDetailPreviewHtml(card) {
     if (!card) return "";
     var title = esc(card.title || card.query || "代理任务");
     var sections = [];
-    if (card.query && String(card.query).trim())
-      sections.push('<div class="chp-section"><b>任务描述</b>' + esc(String(card.query)) + "</div>");
+    var latestUser = cardLatestUserText(card);
+    if (latestUser)
+      sections.push('<div class="chp-section"><b>任务描述</b>' + esc(latestUser) + "</div>");
     var preview = cardPreviewText(card);
     if (preview && preview !== "无详细记录")
       sections.push('<div class="chp-section"><b>摘要</b>' + esc(preview) + "</div>");
@@ -1662,10 +1725,10 @@ body[data-theme="light"] .ai-bg-card {
       }
     }
     if (pipeReply)
-      sections.push('<div class="chp-section"><b>回复</b>' + esc(pipeReply.slice(0, 1200)) + "</div>");
+      sections.push('<div class="chp-section"><b>回复</b>' + esc(pipeReply.slice(0, 8000)) + "</div>");
     else if (card.blocks && card.blocks.reply) {
       var rb = String(card.blocks.reply.content || card.blocks.reply.body || "").trim();
-      if (rb) sections.push('<div class="chp-section"><b>回复</b>' + esc(rb.slice(0, 1200)) + "</div>");
+      if (rb) sections.push('<div class="chp-section"><b>回复</b>' + esc(rb.slice(0, 8000)) + "</div>");
     }
     if (card.blocks && Array.isArray(card.blocks.status) && card.blocks.status.length) {
       var logs = card.blocks.status
@@ -1679,7 +1742,7 @@ body[data-theme="light"] .ai-bg-card {
     if (card.liveThought && String(card.liveThought).trim())
       sections.push('<div class="chp-section"><b>进度</b>' + esc(String(card.liveThought)) + "</div>");
     if (!sections.length)
-      sections.push('<div class="chp-section">点击展开查看完整详情；可在此卡追加新指令。</div>');
+      sections.push('<div class="chp-section">点击展开查看完整详情；续聊请用卡片底部「补充」输入框。</div>');
     return '<div class="chp-title">' + title + "</div>" + sections.join("");
   }
 
@@ -2516,15 +2579,32 @@ body[data-theme="light"] .ai-bg-card {
           seq: b.seq
         };
       } else if (b.type === "reply") {
-        card.blocks.reply = {
-          title: b.title,
-          content: b.markdown,
-          body: b.markdown,
-          closed: true,
-          seq: b.seq
-        };
+        var replyTurn = b.turnId != null ? Number(b.turnId) : 1;
+        if (!card.blocks.reply || replyTurn >= (card.blocks._replyTurnId || 0)) {
+          card.blocks._replyTurnId = replyTurn;
+          card.blocks.reply = {
+            title: b.title,
+            content: b.markdown,
+            body: b.markdown,
+            closed: true,
+            seq: b.seq
+          };
+        }
       }
     }
+  }
+
+  function ensureCardRepliesHost(dom) {
+    if (!dom) return null;
+    var host = dom.querySelector(".card-replies");
+    if (host) return host;
+    host = document.createElement("div");
+    host.className = "card-replies";
+    var body = dom.querySelector(".card-body");
+    var legacy = dom.querySelector(".card-reply");
+    if (legacy && legacy.parentNode) legacy.parentNode.replaceChild(host, legacy);
+    else if (body) body.appendChild(host);
+    return host;
   }
 
   function renderPipelineBlock(cardId, dom, block) {
@@ -2569,17 +2649,27 @@ body[data-theme="light"] .ai-bg-card {
           "</div>";
       }
     } else if (block.type === "reply") {
-      var rEl = dom.querySelector(".card-reply");
-      if (rEl) {
-        rEl.hidden = false;
-        rEl.setAttribute("data-block-id", block.id || "");
-        rEl.innerHTML =
-          '<div class="card-reply-title">' +
-          esc(block.title || "任务回复") +
-          '</div><div class="card-reply-body md-body">' +
-          renderAgentPlainMarkdown(block.markdown || "") +
-          "</div>";
+      var host = ensureCardRepliesHost(dom);
+      if (!host) return;
+      var turnId = block.turnId != null ? Number(block.turnId) : 1;
+      if (turnId > 1 && !host.querySelector('[data-segment-turn="' + turnId + '"]')) {
+        var divider = document.createElement("div");
+        divider.className = "card-segment-divider";
+        divider.setAttribute("data-segment-turn", String(turnId));
+        divider.textContent = "补充 · 第 " + turnId + " 轮";
+        host.appendChild(divider);
       }
+      var seg = document.createElement("div");
+      seg.className = "card-reply-segment";
+      seg.setAttribute("data-block-id", block.id || "");
+      seg.setAttribute("data-turn-id", String(turnId));
+      seg.innerHTML =
+        '<div class="card-reply-title">' +
+        esc(block.title || (turnId > 1 ? "补充回复" : "任务回复")) +
+        '</div><div class="card-reply-body md-body">' +
+        renderAgentPlainMarkdown(block.markdown || "") +
+        "</div>";
+      host.appendChild(seg);
     } else if (block.type === "a2ui") {
       var a2 = dom.querySelector(".card-a2ui");
       if (a2) {
@@ -2626,10 +2716,12 @@ body[data-theme="light"] .ai-bg-card {
       qEl.hidden = true;
       qEl.innerHTML = "";
     }
-    var rEl = dom.querySelector(".card-reply");
-    if (rEl) {
-      rEl.hidden = true;
-      rEl.innerHTML = "";
+    var repliesHost = ensureCardRepliesHost(dom);
+    if (repliesHost) repliesHost.innerHTML = "";
+    var legacyReply = dom.querySelector(".card-reply");
+    if (legacyReply) {
+      legacyReply.hidden = true;
+      legacyReply.innerHTML = "";
     }
     var a2 = dom.querySelector(".card-a2ui");
     if (a2) {
@@ -2653,12 +2745,91 @@ body[data-theme="light"] .ai-bg-card {
     return { ok: true, blocks: list };
   }
 
+  function getCardPipelineBlocks(card) {
+    if (!card) return [];
+    return (card.blockStore && card.blockStore.blocks) || card.pipelineBlocks || [];
+  }
+
+  function mergeCardPipelineBlocks(card, segmentBlocks) {
+    var prior = card && card._segmentPriorBlocks ? card._segmentPriorBlocks : [];
+    if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.mergeSegmentBlocks) {
+      return (PaletteBlockPipeline.mergeSegmentBlocks(prior, segmentBlocks).blocks) || [];
+    }
+    return prior.concat(segmentBlocks || []);
+  }
+
+  function beginCardFollowUpSegment(card, reason) {
+    if (!card || typeof PaletteBlockPipeline === "undefined" || !PaletteBlockPipeline.createIngestState) return null;
+    var prior = getCardPipelineBlocks(card);
+    card._segmentPriorBlocks =
+      typeof PaletteBlockPipeline.freezeBlocks === "function"
+        ? PaletteBlockPipeline.freezeBlocks(prior)
+        : prior.slice();
+    var nextTurn =
+      typeof PaletteBlockPipeline.maxTurnId === "function"
+        ? PaletteBlockPipeline.maxTurnId(prior) + 1
+        : (card._activeTurnId || 1) + 1;
+    card._activeTurnId = nextTurn;
+    card.pipelineIngest = PaletteBlockPipeline.createIngestState({
+      turnId: nextTurn,
+      traceId: card.id + "_t" + nextTurn + "_" + (card.reqId || Date.now())
+    });
+    card._protoStarted = false;
+    if (card.parser) card.parser.reset();
+    syncCardPipelineStore(card, card._segmentPriorBlocks, { segmentBegin: true, turnId: nextTurn });
+    renderBlocks(card.id, card._segmentPriorBlocks);
+    agentDebugLog(
+      "pipeline_segment_begin",
+      "turn=" + nextTurn + " prior=" + prior.length + " reason=" + String(reason || "")
+    );
+    return card.pipelineIngest;
+  }
+
+  function beginCardCorrectionTurn(card) {
+    if (!card || typeof PaletteBlockPipeline === "undefined" || !PaletteBlockPipeline.createIngestState) return null;
+    card._segmentPriorBlocks = null;
+    var turnId =
+      typeof PaletteBlockPipeline.maxTurnId === "function"
+        ? Math.max(1, PaletteBlockPipeline.maxTurnId(getCardPipelineBlocks(card)))
+        : card._activeTurnId || 1;
+    card._activeTurnId = turnId;
+    card.pipelineIngest = PaletteBlockPipeline.createIngestState({
+      turnId: turnId,
+      traceId: card.id + "_t" + turnId + "_corr_" + Date.now()
+    });
+    card._protoStarted = false;
+    if (card.parser) card.parser.reset();
+    return card.pipelineIngest;
+  }
+
+  function getLatestPipelineReplyBlock(blocks) {
+    var list = blocks || [];
+    var best = null;
+    var bestTurn = -1;
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i];
+      if (!b || b.type !== "reply" || !String(b.markdown || "").trim()) continue;
+      var tid = b.turnId != null ? Number(b.turnId) : 1;
+      if (tid >= bestTurn) {
+        bestTurn = tid;
+        best = b;
+      }
+    }
+    return best;
+  }
+
   function ensurePipelineIngest(card) {
     if (!card || typeof PaletteBlockPipeline === "undefined" || !PaletteBlockPipeline.createIngestState) return null;
     if (!card.pipelineIngest) {
+      var turnId =
+        card._activeTurnId ||
+        (typeof PaletteBlockPipeline.maxTurnId === "function"
+          ? Math.max(1, PaletteBlockPipeline.maxTurnId(getCardPipelineBlocks(card)))
+          : 1);
+      card._activeTurnId = turnId;
       card.pipelineIngest = PaletteBlockPipeline.createIngestState({
-        turnId: 1,
-        traceId: card.id + "_" + (card.reqId || Date.now())
+        turnId: turnId,
+        traceId: card.id + "_t" + turnId + "_" + (card.reqId || Date.now())
       });
     }
     return card.pipelineIngest;
@@ -2691,6 +2862,9 @@ body[data-theme="light"] .ai-bg-card {
     card._protoStarted = blocks.some(function (b) {
       return b && b.source === "protocol";
     });
+    if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.maxTurnId) {
+      card._activeTurnId = PaletteBlockPipeline.maxTurnId(blocks);
+    }
     return true;
   }
 
@@ -2746,10 +2920,11 @@ body[data-theme="light"] .ai-bg-card {
     if (!state.rawBuffer && card.rawAnswer && !isAgentStatusPreview(card.rawAnswer))
       state.rawBuffer = String(card.rawAnswer);
     var result = PaletteBlockPipeline.ingestDelta(state, delta);
-    syncCardPipelineStore(card, result.blocks, result.meta);
-    if (cardHasRenderablePipelineBlocks(result.blocks)) {
-      renderBlocks(cardId, result.blocks);
-      if (cardHasPipelineReply(card)) hideCardLiveThoughtIfReply(cardId);
+    var merged = mergeCardPipelineBlocks(card, result.blocks);
+    syncCardPipelineStore(card, merged, result.meta);
+    if (cardHasRenderablePipelineBlocks(merged)) {
+      renderBlocks(cardId, merged);
+      if (cardLatestTurnHasReply(card)) hideCardLiveThoughtIfReply(cardId);
     }
     agentDebugLog(
       "pipeline_ingest",
@@ -2769,23 +2944,40 @@ body[data-theme="light"] .ai-bg-card {
     var ans = String(answerText || "").trim();
     if (!ans) return null;
     card.rawAnswer = ans;
+    card.pipelineIngest = null;
+    card._segmentPriorBlocks = null;
     var routeOpt = card.routeProfile || {
       routeId: card.routeId,
       a2uiCandidates: card.a2uiCandidates || []
     };
+    var prior = card._segmentPriorBlocks || [];
     var result;
     if (card.pipelineIngest && PaletteBlockPipeline.finalizeFromState) {
       if (!card.pipelineIngest.rawBuffer || card.pipelineIngest.rawBuffer.length < ans.length)
         card.pipelineIngest.rawBuffer = ans;
       result = PaletteBlockPipeline.finalizeFromState(card.pipelineIngest, { route: routeOpt });
     } else {
+      var turnId =
+        typeof PaletteBlockPipeline.maxTurnId === "function"
+          ? Math.max(1, PaletteBlockPipeline.maxTurnId(getCardPipelineBlocks(card)))
+          : card._activeTurnId || 1;
       result = PaletteBlockPipeline.finalize(ans, {
-        turnId: 1,
-        traceId: card.id + "_" + Date.now(),
+        turnId: turnId,
+        traceId: card.id + "_t" + turnId + "_" + Date.now(),
         route: routeOpt
       });
     }
     card.pipelineIngest = null;
+    card._segmentPriorBlocks = null;
+    var mergedOut =
+      typeof PaletteBlockPipeline.mergeSegmentBlocks === "function"
+        ? PaletteBlockPipeline.mergeSegmentBlocks(prior, result.blocks)
+        : { blocks: prior.concat(result.blocks || []) };
+    result.blocks = mergedOut.blocks || result.blocks || [];
+    card._activeTurnId =
+      typeof PaletteBlockPipeline.maxTurnId === "function"
+        ? PaletteBlockPipeline.maxTurnId(result.blocks)
+        : card._activeTurnId;
     var bv = typeof PaletteBlockSchema !== "undefined" ? PaletteBlockSchema.BLOCK_VERSION : 1;
     var nv =
       typeof PaletteBlockSchema !== "undefined"
@@ -2803,9 +2995,9 @@ body[data-theme="light"] .ai-bg-card {
     var replyBlock = null;
     var questionBlock = null;
     for (var ri = result.blocks.length - 1; ri >= 0; ri--) {
-      if (!replyBlock && result.blocks[ri].type === "reply") replyBlock = result.blocks[ri];
       if (!questionBlock && result.blocks[ri].type === "question") questionBlock = result.blocks[ri];
     }
+    replyBlock = getLatestPipelineReplyBlock(result.blocks);
     if (questionBlock && questionBlock.status === "waiting") {
       card.waitingForUser = true;
       setCardLiveThought(
@@ -2849,7 +3041,9 @@ body[data-theme="light"] .ai-bg-card {
     }
     var domFin = document.getElementById("card-" + cardId);
     if (domFin) {
-      var hasReplyDom = !!domFin.querySelector(".card-reply:not([hidden])");
+      var hasReplyDom =
+        !!domFin.querySelector(".card-replies .card-reply-body") ||
+        !!domFin.querySelector(".card-reply:not([hidden]) .card-reply-body");
       var ltEl = domFin.querySelector(".card-live-thought");
       if (ltEl && hasReplyDom) ltEl.style.display = "none";
     }
@@ -2881,7 +3075,9 @@ body[data-theme="light"] .ai-bg-card {
     var rEl = dom.querySelector(".card-reply");
     var qEl = dom.querySelector(".card-question");
     var tl = dom.querySelector(".card-timeline");
+    var repliesHost = dom.querySelector(".card-replies");
     var hasRendered =
+      (repliesHost && repliesHost.querySelector(".card-reply-body")) ||
       (rEl && !rEl.hidden && rEl.querySelector(".card-reply-body")) ||
       (qEl && !qEl.hidden && qEl.querySelector(".card-question-body")) ||
       (tl && tl.querySelector(".card-timeline-step"));
@@ -2889,9 +3085,10 @@ body[data-theme="light"] .ai-bg-card {
     return true;
   }
 
-  function replayAllCardPipelineBlocks() {
+  function replayExpandedCardPipelineBlocks() {
     Object.keys(actionState.cards).forEach(function (cid) {
-      ensureCardPipelineRendered(actionState.cards[cid]);
+      var c = actionState.cards[cid];
+      if (c && c.expanded) ensureCardPipelineRendered(c);
     });
   }
 
@@ -3129,7 +3326,7 @@ body[data-theme="light"] .ai-bg-card {
     }
     _actionEnterLock = true;
     try {
-      submitAgentTask(q);
+      submitAgentTask(q, { forceNewFromMainInput: true });
     } finally {
       setTimeout(function () {
         _actionEnterLock = false;
@@ -3270,7 +3467,12 @@ body[data-theme="light"] .ai-bg-card {
     IntentRouter.applyTag(tag, state.intent);
     ensureInputForIntent();
     var input = getInputEl();
-    if (input) input.placeholder = IntentRouter.PLACEHOLDERS[state.intent] || IntentRouter.PLACEHOLDERS.local;
+    if (input) {
+      var ac = actionState.activeCardId ? getActionCard(actionState.activeCardId) : null;
+      if (state.intent === "action") {
+        input.placeholder = IntentRouter.PLACEHOLDERS[state.intent] || IntentRouter.PLACEHOLDERS.local;
+      }
+    }
     renderAgentEngineBar();
     syncInputHeight();
   }
@@ -3347,11 +3549,12 @@ body[data-theme="light"] .ai-bg-card {
   function refreshIntentResults(immediate) {
     if (state.intent === "action") {
       purgeAiResultsDom();
-      requestAgentCardSync();
-      renderActionHistoryList();
+      var pulledN = pullAgentCardsFromHostSync();
+      if (pulledN < 0) requestAgentCardSync();
       var cardN = Object.keys(actionState.cards).length;
       if (cardN > 0 && !state.actionCmdBrowse) {
         purgeActionEmptyHint();
+        if (pulledN < 0) renderActionHistoryList();
         syncActionResultsLayout();
         window.nmerPalette.setStatus(
           "托管 · " + cardN + " 个任务 · " + agentProviderLabel(state.agentProvider) + " · Enter 新建",
@@ -3362,8 +3565,6 @@ body[data-theme="light"] .ai-bg-card {
       }
       var q = state.input.trim();
       if (!q && !state.actionCmdBrowse) {
-        var pulledN = pullAgentCardsFromHostSync();
-        if (pulledN < 0) requestAgentCardSync();
         if (actionHasStoredCards()) {
           purgeActionEmptyHint();
           renderActionHistoryList();
@@ -3496,13 +3697,13 @@ body[data-theme="light"] .ai-bg-card {
         var c1 = actionState.cards[ids[i]];
         if (c1 && String(c1.reqId || "") === rid) return { card: c1, id: ids[i] };
       }
+      return { card: null, id: cid || "" };
     }
+    if (cid) return { card: null, id: cid };
     if (actionState.activeCardId) {
       var c2 = getActionCard(actionState.activeCardId);
       if (c2) return { card: c2, id: actionState.activeCardId };
     }
-    var ids2 = Object.keys(actionState.cards);
-    if (ids2.length === 1) return { card: actionState.cards[ids2[0]], id: ids2[0] };
     return { card: null, id: "" };
   }
 
@@ -3653,9 +3854,9 @@ body[data-theme="light"] .ai-bg-card {
     if (card.expanded || (card.id === actionState.activeCardId && isActionCardRunning(card))) {
       ensureCardPipelineRendered(card);
       var ltEl = dom.querySelector(".card-live-thought");
-      if (cardHasPipelineReply(card)) {
+      if (cardLatestTurnHasReply(card)) {
         if (ltEl) ltEl.style.display = "none";
-      } else if (card.uiState === "Done" && isAgentStatusPreview(card.liveThought) && !cardHasPipelineReply(card)) {
+      } else if (card.uiState === "Done" && isAgentStatusPreview(card.liveThought) && !cardLatestTurnHasReply(card)) {
         if (ltEl) {
           ltEl.style.display = "";
           ltEl.classList.remove("card-live-thought-rich");
@@ -3752,6 +3953,7 @@ body[data-theme="light"] .ai-bg-card {
         cardId: card.id,
         forceKind: card.uiState === "Waiting" ? "correction" : card.uiState === "Done" ? "append" : "correction",
         fromCardFollowup: true,
+        explicitCardFollowup: true,
         provider: card.provider || state.agentProvider
       });
       if (fin) fin.value = "";
@@ -3801,7 +4003,7 @@ body[data-theme="light"] .ai-bg-card {
         '<div class="card-timeline"></div>' +
         '<div class="card-status-log"></div>' +
         '<div class="card-question" hidden></div>' +
-        '<div class="card-reply" hidden></div>' +
+        '<div class="card-replies"></div>' +
         '<div class="card-a2ui" hidden></div>' +
         "</div>" +
         '<div class="card-followup">' +
@@ -3820,13 +4022,21 @@ body[data-theme="light"] .ai-bg-card {
       refreshActionCardDom(card);
     }
     if (el && !el.querySelector(".card-a2ui")) {
-      var replySlot = el.querySelector(".card-reply");
+      var replySlot = el.querySelector(".card-replies") || el.querySelector(".card-reply");
       if (replySlot && replySlot.parentNode) {
+        if (replySlot.classList.contains("card-reply")) {
+          var repliesHost0 = document.createElement("div");
+          repliesHost0.className = "card-replies";
+          replySlot.parentNode.replaceChild(repliesHost0, replySlot);
+          replySlot = repliesHost0;
+        }
         var a2Slot = document.createElement("div");
         a2Slot.className = "card-a2ui";
         a2Slot.hidden = true;
         replySlot.parentNode.insertBefore(a2Slot, replySlot.nextSibling);
       }
+    } else if (el && !el.querySelector(".card-replies")) {
+      ensureCardRepliesHost(el);
     }
     bindActionCardEvents(card, el);
     return el;
@@ -3870,7 +4080,6 @@ body[data-theme="light"] .ai-bg-card {
     dom.style.overflow = "";
     listHost.appendChild(dom);
     refreshActionCardDom(card);
-    ensureCardPipelineRendered(card);
   }
 
   function renderActionHistoryList() {
@@ -4000,7 +4209,7 @@ body[data-theme="light"] .ai-bg-card {
         stack.appendChild(empty);
       }
     }
-    replayAllCardPipelineBlocks();
+    replayExpandedCardPipelineBlocks();
   }
 
   var actionCardManager = {
@@ -4033,9 +4242,10 @@ body[data-theme="light"] .ai-bg-card {
           dom.classList.add("waiting-user-reply");
           inputEl.focus();
         } else if (newState === "Done") {
-          inputEl.placeholder = "当前任务已归档。敲击回车可在此卡片追加新命令…";
+          inputEl.placeholder = IntentRouter.PLACEHOLDERS.action || "描述任务 Enter 提交至上方所选引擎（龙虾/Hermes）…";
           dom.classList.remove("waiting-user-reply");
-          inputEl.value = "";
+        } else {
+          inputEl.placeholder = IntentRouter.PLACEHOLDERS[state.intent] || IntentRouter.PLACEHOLDERS.local;
         }
       }
       if (newState === "Running") {
@@ -4177,7 +4387,7 @@ body[data-theme="light"] .ai-bg-card {
     panel.classList.toggle("has-results", hasCards || state.showResults);
     panel.classList.toggle("intent-action", state.intent === "action");
     box.classList.toggle("has-action-cards", hasCards);
-    if (hasCards) {
+    if (hasCards && !isActionCardBatchUpsert()) {
       box.classList.add("palette-results");
       panel.classList.add("has-results");
       renderActionHistoryList();
@@ -4187,10 +4397,12 @@ body[data-theme="light"] .ai-bg-card {
     requestAnimationFrame(syncWindowSize);
   }
 
-  function upsertActionCardFromDto(dto) {
+  function upsertActionCardFromDto(dto, opts) {
+    opts = opts || {};
     if (!dto) return;
     var id = String(dto.cardId || dto.id || "");
     if (!id) return;
+    var batch = !!opts.batch || isActionCardBatchUpsert();
     reconcilePendingAgentCard(dto);
     var wasNew = !actionState.cards[id];
     var card = actionState.cards[id];
@@ -4216,17 +4428,20 @@ body[data-theme="light"] .ai-bg-card {
       };
       actionState.cards[id] = card;
     }
-    card.uiState = dto.uiState || card.uiState;
-    if (dto.running === true || dto.running === 1 || dto.running === "1") {
-      if (!(dto.ended === true || dto.ended === 1 || dto.ended === "1")) {
-        if (card.uiState === "Done") card.uiState = "Running";
-        else if (dto.uiState === "Planning" || dto.uiState === "Running" || dto.uiState === "Waiting")
-          card.uiState = dto.uiState;
-      }
+    if (dto.running !== undefined)
+      card.running = !!(dto.running === true || dto.running === 1 || dto.running === "1");
+    if (dto.ended !== undefined) card.ended = !!(dto.ended === true || dto.ended === 1 || dto.ended === "1");
+    if (card.running && !card.ended) {
+      if (card.uiState === "Done") card.uiState = "Running";
+      else if (dto.uiState === "Planning" || dto.uiState === "Running" || dto.uiState === "Waiting") card.uiState = dto.uiState;
+      else if (!card.uiState || card.uiState === "Done") card.uiState = "Running";
+    } else if (dto.uiState) {
+      card.uiState = dto.uiState;
     }
     card.title = dto.title || dto.query || card.title;
-    card.query = dto.query || card.query;
-    card.reqId = dto.reqId || card.reqId;
+    if (wasNew || !card.query) card.query = dto.query || dto.title || card.query;
+    else if (dto.reqId && String(dto.reqId) === String(card.reqId || "")) card.query = dto.query || card.query;
+    if (dto.reqId) card.reqId = dto.reqId;
     card.sessionRef = dto.sessionRef || card.sessionRef;
     if (dto.provider) card.provider = normalizeAgentProvider(dto.provider);
     if (dto.routeId) card.routeId = String(dto.routeId);
@@ -4248,39 +4463,43 @@ body[data-theme="light"] .ai-bg-card {
     }
     if (card.expanded === undefined) card.expanded = id === actionState.activeCardId;
     if (wasNew || isActionCardRunning(card)) actionState.activeCardId = id;
-    if (actionState.focusMode && (wasNew || id === actionState.activeCardId)) collapseNonActiveCards();
-    refreshActionCardDom(card);
-    actionCardManager.transitionCardState(id, card.uiState);
+    if (!batch && actionState.focusMode && (wasNew || id === actionState.activeCardId)) collapseNonActiveCards();
     var restoredBlocks = applyDtoBlockStore(card, dto);
     if (restoredBlocks) {
       card._rawReplaySig = String(dto.rawAnswer || card.rawAnswer || "");
-      if (card.uiState === "Done" || dto.uiState === "Done") ensureCardPipelineRendered(card);
     } else if (dto.rawAnswer) {
       var rawSig = String(dto.rawAnswer);
       var isDone = card.uiState === "Done" || dto.uiState === "Done";
       if (isDone && cardHasSubstantialRawAnswer(card) && !cardHasPipelineReply(card)) {
         card._rawReplaySig = rawSig;
-        applyPipelineFinalize(id, rawSig);
+        if (!batch && shouldEagerPipelineFinalize(card)) applyPipelineFinalize(id, rawSig);
       } else if (isDone && card._rawReplaySig !== rawSig) {
         card._rawReplaySig = rawSig;
-        if (cardHasSubstantialRawAnswer(card)) applyPipelineFinalize(id, rawSig);
+        if (!batch && shouldEagerPipelineFinalize(card) && cardHasSubstantialRawAnswer(card))
+          applyPipelineFinalize(id, rawSig);
       } else if (card._rawReplaySig !== rawSig) {
         card._rawReplaySig = rawSig;
-        if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.ingestDelta) {
-          card.pipelineIngest = PaletteBlockPipeline.createIngestState({
-            turnId: 1,
-            traceId: card.id + "_" + (card.reqId || Date.now())
-          });
-          applyPipelineIngestDelta(id, rawSig);
-        } else if (card.parser) {
-          card.parser.reset();
-          card._protoStarted = agentTextHasProtocolTags(rawSig);
-          card.parser.onChunk(rawSig);
-          if (card.parser.flush) card.parser.flush();
+        if (!batch) {
+          if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.ingestDelta) {
+            card.pipelineIngest = PaletteBlockPipeline.createIngestState({
+              turnId: 1,
+              traceId: card.id + "_" + (card.reqId || Date.now())
+            });
+            applyPipelineIngestDelta(id, rawSig);
+          } else if (card.parser) {
+            card.parser.reset();
+            card._protoStarted = agentTextHasProtocolTags(rawSig);
+            card.parser.onChunk(rawSig);
+            if (card.parser.flush) card.parser.flush();
+          }
         }
       }
     }
-    renderActionHistoryList();
+    if (batch) return;
+    refreshActionCardDom(card);
+    actionCardManager.transitionCardState(id, card.uiState);
+    if (restoredBlocks && (card.uiState === "Done" || dto.uiState === "Done") && shouldEagerPipelineFinalize(card))
+      ensureCardPipelineRendered(card);
   }
 
   function scheduleAgentCardsRecover() {
@@ -4290,8 +4509,9 @@ body[data-theme="light"] .ai-bg-card {
       var ids = Object.keys(actionState.cards);
       for (var ri = 0; ri < ids.length; ri++) {
         var c = actionState.cards[ids[ri]];
-        if (!c || c.uiState !== "Done" || cardHasPipelineReply(c) || !c.reqId) continue;
-        if (cardHasSubstantialRawAnswer(c)) continue;
+        if (!c || !c.reqId) continue;
+        if (cardHasPipelineReply(c) || cardHasSubstantialRawAnswer(c)) continue;
+        if (!(isActionCardRunning(c) || c.uiState === "Done")) continue;
         post({
           type: "palette_agent_recover",
           cardId: c.id,
@@ -4308,16 +4528,25 @@ body[data-theme="light"] .ai-bg-card {
     if (!q) return;
     agentDebugLog("submit_text", "q=" + q.slice(0, 80));
     var prov = normalizeAgentProvider(opts.provider || state.agentProvider || "openclaw");
-    var targetId = opts.cardId || (opts.fromCardFollowup ? actionState.activeCardId : "");
-    var active = targetId ? getActionCard(targetId) : null;
-    var kind = opts.forceKind || "new";
+    var kind = "new";
     var cardId = "";
-    if (opts.fromCardFollowup && active) {
-      cardId = active.id;
-      kind = opts.forceKind || (active.uiState === "Waiting" ? "correction" : active.uiState === "Done" ? "append" : "correction");
-    } else if (opts.forceKind && opts.cardId) {
-      cardId = String(opts.cardId);
-      kind = opts.forceKind;
+    var active = null;
+    if (opts.forceNewFromMainInput || (!opts.fromCardFollowup && !opts.explicitCardFollowup)) {
+      kind = "new";
+      cardId = "";
+      var mainInput = getInputEl();
+      if (mainInput && state.intent === "action") {
+        mainInput.placeholder =
+          IntentRouter.PLACEHOLDERS[state.intent] || IntentRouter.PLACEHOLDERS.local;
+      }
+    } else if (opts.fromCardFollowup && opts.explicitCardFollowup && opts.cardId) {
+      active = getActionCard(opts.cardId);
+      if (active) {
+        cardId = active.id;
+        kind =
+          opts.forceKind ||
+          (active.uiState === "Waiting" ? "correction" : active.uiState === "Done" ? "append" : "correction");
+      }
     } else {
       kind = "new";
       cardId = "";
@@ -4327,9 +4556,11 @@ body[data-theme="light"] .ai-bg-card {
       getInputEl()?.focus();
       return;
     }
-    if (active && active.parser && kind !== "new") {
-      active.parser.reset();
-      active._protoStarted = false;
+    if (active && kind !== "new") {
+      if (kind === "append") beginCardFollowUpSegment(active, "append");
+      else beginCardCorrectionTurn(active);
+      active.running = true;
+      active.ended = false;
       active.uiState = kind === "append" ? "Planning" : "Running";
       active.liveThought = "已收到补充，继续执行…";
       actionCardManager.transitionCardState(active.id, active.uiState);
@@ -4453,7 +4684,12 @@ body[data-theme="light"] .ai-bg-card {
     Object.keys(actionState.cards).forEach(function (id) {
       if (!hostIds[id] && id !== actionState._pendingCardId) removeActionCard(id, false);
     });
-    for (var i = 0; i < cards.length; i++) upsertActionCardFromDto(cards[i]);
+    beginActionCardBatchUpsert();
+    try {
+      for (var i = 0; i < cards.length; i++) upsertActionCardFromDto(cards[i], { batch: true });
+    } finally {
+      endActionCardBatchUpsert();
+    }
     if (!cards.length && !actionHasStoredCards()) return;
     purgeActionEmptyHint();
     if (!actionState.activeCardId || !getActionCard(actionState.activeCardId)) {
@@ -4486,7 +4722,7 @@ body[data-theme="light"] .ai-bg-card {
       );
     }
     scheduleAgentCardsRecover();
-    requestAnimationFrame(replayAllCardPipelineBlocks);
+    requestAnimationFrame(replayExpandedCardPipelineBlocks);
   }
 
   function applyAgentCardNew(d) {
@@ -4502,15 +4738,18 @@ body[data-theme="light"] .ai-bg-card {
       sessionRef: d.sessionRef,
       rawAnswer: d.rawAnswer,
       updatedAt: d.updatedAt,
-      liveThought: d.liveThought
+      liveThought: d.liveThought,
+      running: d.running !== false,
+      ended: !!d.ended
     });
     if (nid) {
       actionState.activeCardId = nid;
-      var nc = getActionCard(nid);
-      if (nc && isActionCardRunning(nc)) nc.expanded = true;
+      collapseNonActiveCards();
+      focusActionCard(nid, { expand: true });
     }
     purgeActionEmptyHint();
     ensureActionResultsVisible();
+    renderActionHistoryList();
     syncActionResultsLayout();
     syncWindowSize();
   }
@@ -5686,7 +5925,9 @@ body[data-theme="light"] .ai-bg-card {
           reqId: d.reqId || "",
           uiState: "Running",
           title: "代理任务",
-          query: ""
+          query: "",
+          running: true,
+          ended: false
         });
         card = getActionCard(cid);
       }
@@ -5696,17 +5937,23 @@ body[data-theme="light"] .ai-bg-card {
           reqId: d.reqId || "",
           uiState: "Running",
           title: "代理任务",
-          query: ""
+          query: "",
+          running: true,
+          ended: false
         });
         resolved = resolveActionCard(d.cardId, d.reqId);
         card = resolved.card;
         cid = resolved.id;
       }
       if (card) {
-        actionState.activeCardId = cid;
+        card.running = true;
+        card.ended = false;
+        if (isActionCardRunning(card) || card.uiState === "Planning" || card.uiState === "Running") {
+          actionState.activeCardId = cid;
+        }
         if (d.sessionRef) card.sessionRef = String(d.sessionRef);
         var domC = document.getElementById("card-" + cid);
-        if (domC) {
+        if (domC && isActionCardRunning(card)) {
           domC.classList.add("is-active");
           domC.classList.remove("is-collapsed");
         }
@@ -5717,13 +5964,9 @@ body[data-theme="light"] .ai-bg-card {
         var hasBody = card.rawAnswer && !isAgentStatusPreview(card.rawAnswer);
         if (cardHasPipelineReply(card)) hasBody = true;
         if (card.parser && card.parser._buf && !isAgentStatusPreview(card.parser._buf)) hasBody = true;
-        if (preview && !statusPreview) {
-          if (card.rawAnswer && preview.indexOf(String(card.rawAnswer).trim()) === 0)
-            card.rawAnswer = preview;
-          else if (!card.rawAnswer || isAgentStatusPreview(card.rawAnswer))
-            card.rawAnswer = preview;
-          else if (delta)
-            card.rawAnswer = String(card.rawAnswer || "") + delta;
+        if (delta && !statusPreview) {
+          if (!card.rawAnswer || isAgentStatusPreview(card.rawAnswer)) card.rawAnswer = delta;
+          else card.rawAnswer = String(card.rawAnswer || "") + delta;
         }
         var pipelineActive =
           typeof PaletteBlockPipeline !== "undefined" && typeof PaletteBlockPipeline.ingestDelta === "function";
@@ -5789,6 +6032,7 @@ body[data-theme="light"] .ai-bg-card {
       var endAns = String(d.answer || "").trim();
       var endSubstantial = endAns && cardHasSubstantialRawAnswer({ rawAnswer: endAns });
       if (card2 && endSubstantial) {
+        card2.rawAnswer = endAns;
         card2._rawReplaySig = endAns;
         finalizeAgentCardAnswer(cid2, endAns);
       }
@@ -5796,6 +6040,8 @@ body[data-theme="light"] .ai-bg-card {
       if (card2 && d.sessionRef) card2.sessionRef = String(d.sessionRef);
       if (card2) {
         if (!endSubstantial && !cardHasPipelineReply(card2)) {
+          card2.running = true;
+          card2.ended = false;
           if (card2.uiState === "Done") actionCardManager.transitionCardState(cid2, "Running");
           card2.liveThought = card2.liveThought || "⏳ 等待 OpenClaw 回复同步…";
           refreshActionCardDom(card2);
@@ -5803,6 +6049,8 @@ body[data-theme="light"] .ai-bg-card {
           syncActionResultsLayout();
           return;
         }
+        card2.running = false;
+        card2.ended = true;
         var pipeBlocks =
           (card2.blockStore && card2.blockStore.blocks) || card2.pipelineBlocks || [];
         var waitingQ = false;
@@ -5829,6 +6077,8 @@ body[data-theme="light"] .ai-bg-card {
       window.nmerPalette.setStatus(errMsg, "error");
       var er = resolveActionCard(d.cardId, d.reqId);
       if (er.card && er.id) {
+        er.card.running = false;
+        er.card.ended = true;
         er.card.uiState = "Done";
         er.card.liveThought = errMsg;
         er.card.error = errMsg;

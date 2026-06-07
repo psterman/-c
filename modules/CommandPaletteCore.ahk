@@ -2293,6 +2293,13 @@ CommandPalette_OnWebMessage(sender, args) {
             CommandPalette_AgentRecoverCardAnswer(msg)
         return
     }
+    if (typ = "palette_agent_prepare_new") {
+        if FuncExists("CommandPalette_DeliverFtbPayload")
+            try CommandPalette_DeliverFtbPayload(msg)
+            catch {
+            }
+        return
+    }
     if (typ = "palette_agent_block_store") {
         if FuncExists("CommandPalette_AgentSaveBlockStore")
             CommandPalette_AgentSaveBlockStore(msg)

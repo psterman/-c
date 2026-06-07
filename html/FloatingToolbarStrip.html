@@ -2507,6 +2507,14 @@ body.niuma-confirm-open{overflow:hidden}
   var _paletteAgentStreamCancelled = false;
   var _paletteAgentActiveReqId = '';
   var _paletteAgentStreamRunning = false;
+  var _paletteAgentStreamQueue = [];
+  var _paletteAgentStreamDraining = false;
+  var _paletteAgentInflightByReqId = {};
+  var _paletteAgentLateRecoverTimers = {};
+  var PALETTE_AGENT_WAIT_MS = 600000;
+  var PALETTE_AGENT_WAIT_POLL_MS = 3000;
+  var PALETTE_AGENT_LATE_RECOVER_MAX_MS = 600000;
+  var PALETTE_AGENT_LATE_RECOVER_POLL_MS = 4000;
   var _paletteAiHudActive = false;
 
   function paletteAiHudSet(mode) {
@@ -2554,8 +2562,15 @@ body.niuma-confirm-open{overflow:hidden}
     if (!rid) return typeof activeSession === 'function' ? activeSession() : null;
     var list = state.sessions || [];
     for (var i = list.length - 1; i >= 0; i--) {
-      if (list[i] && String(list[i]._paletteReqId || '') === rid) return list[i];
-      if (list[i] && String(list[i]._paletteAgentReqId || '') === rid) return list[i];
+      var s = list[i];
+      if (!s) continue;
+      if (String(s._paletteReqId || '') === rid || String(s._paletteAgentReqId || '') === rid) return s;
+      var hist = s.history || [];
+      for (var j = hist.length - 1; j >= 0; j--) {
+        var m = hist[j];
+        if (!m) continue;
+        if (String(m._paletteAgentReqId || m._paletteReqId || '') === rid) return s;
+      }
     }
     return null;
   }
@@ -2637,6 +2652,7 @@ body.niuma-confirm-open{overflow:hidden}
     var a = String(prev || '');
     var b = String(next || '');
     if (!b) return a;
+    if (typeof ocIsSystemOrMetaText === 'function' && ocIsSystemOrMetaText(b)) return a;
     if (!a) return paletteDedupeRepeatedText(b);
     if (b === a) return a;
     if (b.indexOf(a) === 0) return paletteDedupeRepeatedText(b);
@@ -2653,6 +2669,8 @@ body.niuma-confirm-open{overflow:hidden}
     if (!p) return true;
     if (/^[🔗⏳📨💭]/.test(p)) return true;
     if (/chat\.send/i.test(p)) return true;
+    if (typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(p)) return true;
+    if (typeof ocIsSystemOrMetaText === 'function' && ocIsSystemOrMetaText(p)) return true;
     return /^(正在|等待|任务已|仍连接|OpenClaw 流式|OpenClaw 处理|OpenClaw 已发送|已提交至 Gateway|同步 Niuma|流式输出中)/.test(p);
   }
 
@@ -2670,6 +2688,19 @@ body.niuma-confirm-open{overflow:hidden}
       if (String(umR._paletteAgentReqId || umR._paletteReqId || '') === rid) {
         userIdx = i;
         break;
+      }
+    }
+    if (userIdx < 0) {
+      var qn = paletteNormDedupeKey(query);
+      if (qn) {
+        for (i = s.history.length - 1; i >= 0; i--) {
+          var umQ = s.history[i];
+          if (!umQ || umQ.role !== 'user') continue;
+          if (paletteNormDedupeKey(umQ.content) === qn) {
+            userIdx = i;
+            break;
+          }
+        }
       }
     }
     if (userIdx < 0) return '';
@@ -2768,14 +2799,17 @@ body.niuma-confirm-open{overflow:hidden}
     var s = paletteFindSessionByReqId(reqId);
     if (!s) return '';
     var local = palettePickAssistantAnswerForAgent(reqId, query, Object.assign({ allowWhileSending: true }, opts));
-    if (local && !paletteIsAgentStatusText(local) && local.length >= 8) return local;
+    if (local && !paletteIsAgentStatusText(local) && local.length >= 8 && !(typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(local)))
+      return local;
     var cfg = getNodeSendCfg(nodeKeyForSession(s), s);
     var p0 = cfg && P[cfg.provider] ? P[cfg.provider] : null;
     if (!cfg || !p0 || p0.transport !== 'openclaw') return local || '';
-    var histKey = String(s.gatewaySessionKey || resolvePaletteAgentGatewaySessionKey(s, {}) || '').trim();
+    var histKey = paletteResolveGatewayHistKey(s, reqId);
     if (!histKey) return local || '';
+    cfg.openclawSessionKey = histKey;
     var userText = String(query || s._paletteAgentQuery || '').trim();
     var sentAt = paletteUserSentAtMs(s, reqId);
+    if (paletteFindUserHistoryIndex(s, reqId) < 0 && userText) sentAt = Date.now() - 900000;
     try {
       var rpcRes = await openClawRpcWithRetry(
         cfg,
@@ -2838,10 +2872,15 @@ body.niuma-confirm-open{overflow:hidden}
   function paletteNotifyPaletteAgentEnd(reqId, cardId, answer, sessionRef) {
     if (_paletteAgentStreamCancelled) return;
     var a = String(answer || '');
+    var rid = String(reqId || '').trim();
+    paletteClearLateRecover(rid);
+    try {
+      delete _paletteAgentInflightByReqId[rid];
+    } catch (_) {}
     try {
       post({
         type: 'niuma_palette_agent_end',
-        reqId: String(reqId || ''),
+        reqId: rid,
         cardId: String(cardId || ''),
         answer: a,
         sessionRef: sessionRef != null ? String(sessionRef) : ''
@@ -2849,16 +2888,21 @@ body.niuma-confirm-open{overflow:hidden}
     } catch (_) {}
   }
 
-  function paletteMaybeNotifyAgentEndFromSession(sid, content) {
+  function paletteMaybeNotifyAgentEndFromSession(sid, content, reqIdOpt, cardIdOpt) {
     var s = sessionById(sid);
-    if (!s || !s._paletteAgentReqId) return;
-    var rid = String(s._paletteAgentReqId || '');
-    var cid = String(s._paletteAgentCardId || '');
-    var q = String(s._paletteAgentQuery || '');
+    if (!s) return;
+    var rid = String(reqIdOpt || s._paletteAgentReqId || '').trim();
+    var cid = String(cardIdOpt || s._paletteAgentCardId || '').trim();
+    var job = rid && _paletteAgentInflightByReqId[rid] ? _paletteAgentInflightByReqId[rid] : null;
+    if (!rid && job) rid = String(job.reqId || '');
+    if (!cid && job) cid = String(job.cardId || '');
+    if (!rid) return;
+    var q = job ? String(job.query || '') : String(s._paletteAgentQuery || '');
     var ans = paletteDedupeRepeatedText(String(content || '').trim());
     if (!ans) ans = palettePickAssistantAnswerForAgent(rid, q, { allowWhileSending: true });
     if (!ans || paletteIsAgentStatusText(ans)) return;
-    var ref = s.gatewaySessionKey || s.id || '';
+    if (typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(ans)) return;
+    var ref = (job && job.sessionRef) || s._paletteOpenClawSessionKey || s.gatewaySessionKey || '';
     paletteNotifyPaletteAgentEnd(rid, cid, ans, ref);
   }
 
@@ -3069,38 +3113,141 @@ body.niuma-confirm-open{overflow:hidden}
   };
   window.runPaletteAiStream = runPaletteAiStream;
 
+  function isPaletteCardGatewaySessionKey(key) {
+    var k = ocCanonicalSessionKey(String(key || '').trim()) || String(key || '').trim();
+    return /^agent:main:niuma-cp-/i.test(k);
+  }
+
+  function isAutoNiumaGatewaySessionKey(session, key) {
+    var k = ocCanonicalSessionKey(String(key || '').trim()) || String(key || '').trim();
+    if (!k || k === 'agent:main:main') return false;
+    if (isPaletteCardGatewaySessionKey(k)) return false;
+    if (/^agent:main:niuma-/i.test(k)) return true;
+    if (session) {
+      var auto = ocCanonicalSessionKey(buildOpenClawSessionKey(session.id || '')) || buildOpenClawSessionKey(session.id || '');
+      if (k === auto) return true;
+    }
+    return false;
+  }
+
+  function paletteSessionKeyForCard(cardId) {
+    var slug = String(cardId || '')
+      .replace(/^card[-_]?/i, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 40);
+    if (!slug) slug = 'task';
+    return ocCanonicalSessionKey(buildOpenClawSessionKey('cp-' + slug));
+  }
+
+  function paletteResolveGatewayHistKey(session, reqId) {
+    var rid = String(reqId || '').trim();
+    var job = rid && _paletteAgentInflightByReqId[rid] ? _paletteAgentInflightByReqId[rid] : null;
+    if (!session && rid) session = paletteFindSessionByReqId(rid);
+    var key = '';
+    if (session) key = String(session._paletteOpenClawSessionKey || '').trim();
+    if (!key && job && job.sessionRef) key = String(job.sessionRef).trim();
+    if (!key && session) key = String(session.gatewaySessionKey || '').trim();
+    if (!key && session && session._paletteAgentCardId) key = paletteSessionKeyForCard(session._paletteAgentCardId);
+    if (!key && job && job.cardId) key = paletteSessionKeyForCard(job.cardId);
+    if (!key && session) {
+      key = resolvePaletteAgentGatewaySessionKey(session, {
+        cardId: session._paletteAgentCardId || (job && job.cardId) || '',
+        reqId: rid,
+        sessionRef: job ? job.sessionRef : ''
+      });
+    }
+    return key;
+  }
+
+  function paletteAgentContentReady(text) {
+    var t = paletteDedupeRepeatedText(String(text || '').trim());
+    if (!t || paletteIsAgentStatusText(t)) return '';
+    if (typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(t)) return '';
+    return t;
+  }
+
+  function paletteClearLateRecover(reqId) {
+    var rid = String(reqId || '').trim();
+    if (!rid) return;
+    if (_paletteAgentLateRecoverTimers[rid]) {
+      clearTimeout(_paletteAgentLateRecoverTimers[rid]);
+      delete _paletteAgentLateRecoverTimers[rid];
+    }
+  }
+
+  function armPaletteAgentLateRecover(reqId) {
+    var rid = String(reqId || '').trim();
+    var job = rid && _paletteAgentInflightByReqId[rid] ? _paletteAgentInflightByReqId[rid] : null;
+    if (!rid || !job || _paletteAgentLateRecoverTimers[rid]) return;
+    var started = job.lateRecoverSince || Date.now();
+    job.lateRecoverSince = started;
+    async function tick() {
+      if (_paletteAgentStreamCancelled) {
+        paletteClearLateRecover(rid);
+        return;
+      }
+      if (Date.now() - started > PALETTE_AGENT_LATE_RECOVER_MAX_MS) {
+        paletteClearLateRecover(rid);
+        try {
+          delete _paletteAgentInflightByReqId[rid];
+        } catch (_) {}
+        return;
+      }
+      var ans = '';
+      try {
+        ans = paletteAgentContentReady(await paletteHydrateAssistantFromGateway(rid, job.query, { allowWhileSending: true }));
+      } catch (_) {}
+      if (!ans) ans = paletteAgentContentReady(palettePickAssistantAnswerForAgent(rid, job.query, { allowWhileSending: true }));
+      if (ans) {
+        paletteNotifyPaletteAgentEnd(rid, job.cardId, ans, job.sessionRef || '');
+        return;
+      }
+      try {
+        post({
+          type: 'niuma_palette_agent_chunk',
+          reqId: rid,
+          cardId: job.cardId,
+          delta: '⏳ OpenClaw 回复较慢，后台继续同步… (' + Math.round((Date.now() - started) / 1000) + 's)\n',
+          liveThought: '后台等待 Gateway 回复…'
+        });
+      } catch (_) {}
+      _paletteAgentLateRecoverTimers[rid] = setTimeout(tick, PALETTE_AGENT_LATE_RECOVER_POLL_MS);
+    }
+    _paletteAgentLateRecoverTimers[rid] = setTimeout(tick, PALETTE_AGENT_LATE_RECOVER_POLL_MS);
+  }
+
   function resolvePaletteAgentGatewaySessionKey(session, opts) {
     opts = opts || {};
     var fromPayload = String(opts.sessionRef || opts.gatewaySessionKey || '').trim();
+    if (fromPayload === 'main') fromPayload = 'agent:main:main';
+    if (fromPayload && isAutoNiumaGatewaySessionKey(session, fromPayload)) fromPayload = '';
     if (fromPayload) {
-      if (fromPayload === 'main') fromPayload = 'agent:main:main';
       return ocCanonicalSessionKey(fromPayload) || fromPayload;
     }
-    var active = typeof activeSession === 'function' ? activeSession() : null;
-    if (active && active.provider === 'openclaw') {
-      var ak = String(active.gatewaySessionKey || '').trim();
-      if (ak && ak.indexOf('agent:main:') === 0) return ocCanonicalSessionKey(ak) || ak;
-    }
+    var cardId = String(opts.cardId || (session && session._paletteAgentCardId) || '').trim();
+    if (cardId) return paletteSessionKeyForCard(cardId);
     if (session) {
+      var explicit = String(session.gatewaySessionKey || '').trim();
+      if (explicit === 'main') explicit = 'agent:main:main';
+      if (explicit && !isAutoNiumaGatewaySessionKey(session, explicit)) {
+        return ocCanonicalSessionKey(explicit) || explicit;
+      }
       var cfg0 = getNodeSendCfg(nodeKeyForSession(session), session);
       var hint = cfg0 ? openClawSessionKeyHintFromBaseUrl(cfg0.baseUrl) : '';
-      if (hint) return ocCanonicalSessionKey(hint) || hint;
-      var gk0 = String(session.gatewaySessionKey || '').trim();
-      if (gk0 && gk0.indexOf('agent:main:') === 0) return gk0;
-      if (gk0 && gk0.indexOf('niuma-') !== 0 && gk0.length > 2) return ocCanonicalSessionKey(gk0) || gk0;
-    }
-    var best = '';
-    var activeSid = String(state.activeSessionId || '');
-    (state.sessions || []).forEach(function (x) {
-      if (!x || x.provider !== 'openclaw') return;
-      var k = String(x.gatewaySessionKey || '').trim();
-      if (k && k.indexOf('agent:main:') === 0) {
-        if (x.id === activeSid) best = k;
-        else if (!best) best = k;
+      if (hint && !isAutoNiumaGatewaySessionKey(session, hint)) {
+        return ocCanonicalSessionKey(hint) || hint;
       }
-    });
-    if (best) return best;
-    return session ? getOpenClawSessionKey(session) : '';
+      if (openclawSessionKey) {
+        var uiKey = String(openclawSessionKey.value || '').trim();
+        if (uiKey === 'main') uiKey = 'agent:main:main';
+        if (uiKey && !isAutoNiumaGatewaySessionKey(session, uiKey)) {
+          return ocCanonicalSessionKey(uiKey) || uiKey;
+        }
+      }
+    }
+    return 'agent:main:main';
   }
 
   function applyPaletteGatewaySessionKey(session, gatewayKey) {
@@ -3109,13 +3256,15 @@ body.niuma-confirm-open{overflow:hidden}
     if (!gk) return '';
     if (gk === 'main') gk = 'agent:main:main';
     gk = ocCanonicalSessionKey(gk) || gk;
-    session.gatewaySessionKey = gk;
-    try {
-      if (openclawSessionKey && session.provider === 'openclaw') openclawSessionKey.value = gk;
-    } catch (_) {}
-    persistSessions();
-    saveCfg(false);
+    session._paletteOpenClawSessionKey = gk;
     return gk;
+  }
+
+  function paletteClearTransientOpenClawKey(session) {
+    if (!session) return;
+    try {
+      delete session._paletteOpenClawSessionKey;
+    } catch (_) {}
   }
 
   function paletteEnsureActiveSession(sid) {
@@ -3149,16 +3298,15 @@ body.niuma-confirm-open{overflow:hidden}
     else try {
       delete s._paletteAgentSystemPrompt;
     } catch (_) {}
-    var gatewayKey = resolvePaletteAgentGatewaySessionKey(s, { sessionRef: sessionRef });
+    var gatewayKey = resolvePaletteAgentGatewaySessionKey(s, { sessionRef: sessionRef, cardId: cardId, reqId: reqId });
     gatewayKey = applyPaletteGatewaySessionKey(s, gatewayKey);
     try {
       post({
         type: 'niuma_palette_agent_trace',
         step: 'agent_gateway_key',
-        detail: 'key=' + String(gatewayKey || '').slice(0, 80) + ' req=' + String(reqId || '')
+        detail: 'key=' + String(gatewayKey || '').slice(0, 80) + ' req=' + String(reqId || '') + ' q=' + q.slice(0, 40)
       });
     } catch (_) {}
-    add('user', q);
     saveCfg(false);
     var cfg = getNodeSendCfg(nodeKeyForSession(s), s);
     if (!cfg) throw new Error('无法构建模型配置');
@@ -3170,7 +3318,18 @@ body.niuma-confirm-open{overflow:hidden}
     }
     cfg.userContentForModel = composeUserTextForModel(q, cfg);
     s._pendingUserContentForModel = cfg.userContentForModel;
-    if (!paletteAgentUserWasPosted(s, reqId, q)) throw new Error('用户消息未写入会话 history');
+    s._paletteOnChatSendAck = function () {
+      if (paletteAgentUserWasPosted(s, reqId, q)) return;
+      add('user', q);
+      var sPost = sessionById(sid);
+      if (sPost && sPost.history && sPost.history.length) {
+        var um = sPost.history[sPost.history.length - 1];
+        if (um && um.role === 'user') tagPaletteAgentOnHistoryItem(um, sPost);
+      }
+      persistSessions();
+      pushSessionHistoryToStore(sPost);
+      if (sPost && sPost.id === state.activeSessionId) rebuildMsgList();
+    };
     post({
       type: 'niuma_palette_agent_chunk',
       reqId: reqId,
@@ -3180,14 +3339,27 @@ body.niuma-confirm-open{overflow:hidden}
       sessionRef: String(gatewayKey || '')
     });
     var palettePostedLen = 0;
+    var hookReqId = String(reqId || '');
+    var hookCardId = String(cardId || '');
+    if (_paletteAgentInflightByReqId[hookReqId]) _paletteAgentInflightByReqId[hookReqId].sessionRef = String(gatewayKey || '');
     s._paletteAgentChunkHook = function (fullText) {
-      if (_paletteAgentStreamCancelled) return;
+      if (paletteAgentStreamWasCancelled(hookReqId)) return;
+      var job = _paletteAgentInflightByReqId[hookReqId];
+      if (!job) return;
       var t = String(fullText || '');
+      if (typeof ocIsSystemOrMetaText === 'function' && ocIsSystemOrMetaText(t)) return;
       if (t.length <= palettePostedLen) return;
       var delta = t.slice(palettePostedLen);
       palettePostedLen = t.length;
+      if (typeof ocIsSystemOrMetaText === 'function' && ocIsSystemOrMetaText(delta)) return;
       var lt = t.trim().slice(0, 120) + (t.trim().length > 120 ? '…' : '');
-      post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cardId, delta: delta, liveThought: lt || '流式输出中…' });
+      post({
+        type: 'niuma_palette_agent_chunk',
+        reqId: hookReqId,
+        cardId: job.cardId || hookCardId,
+        delta: delta,
+        liveThought: lt || '流式输出中…'
+      });
     };
     try {
       await executeModelRequest(sid);
@@ -3196,8 +3368,13 @@ body.niuma-confirm-open{overflow:hidden}
         delete s._paletteAgentChunkHook;
       } catch (_) {}
       try {
+        delete s._paletteOnChatSendAck;
+      } catch (_) {}
+      try {
         delete s._pendingUserContentForModel;
       } catch (_) {}
+      paletteClearTransientOpenClawKey(s);
+      if (isSessionSending(sid)) setSessionSending(sid, false);
     }
     return gatewayKey;
   }
@@ -3214,23 +3391,128 @@ body.niuma-confirm-open{overflow:hidden}
     return false;
   }
 
-  async function runPaletteAgentStream(reqId, cardId, query, provider, systemPrompt, sessionRef) {
-    _paletteAgentStreamCancelled = false;
+  function paletteAgentStreamWasCancelled(reqId) {
+    var rid = String(reqId || _paletteAgentActiveReqId || '').trim();
+    if (_paletteAgentStreamCancelled) return true;
+    var job = rid && _paletteAgentInflightByReqId[rid] ? _paletteAgentInflightByReqId[rid] : null;
+    return !!(job && job.cancelled);
+  }
+
+  function palettePrepareAgentStreamForCard(cardId, reqId) {
+    var cid = String(cardId || '').trim();
+    var rid = String(reqId || '').trim();
+    var s = activeSession();
+    if (s && s.id) setSessionSending(s.id, false);
+    _paletteAgentStreamQueue = _paletteAgentStreamQueue.filter(function (j) {
+      return String(j.reqId || '') === rid;
+    });
+    Object.keys(_paletteAgentInflightByReqId).forEach(function (orid) {
+      if (orid === rid) return;
+      var job = _paletteAgentInflightByReqId[orid];
+      if (!job) return;
+      job.cancelled = true;
+      paletteClearLateRecover(orid);
+      delete _paletteAgentInflightByReqId[orid];
+      if (_paletteAgentActiveReqId === orid) {
+        _paletteAgentActiveReqId = '';
+        _paletteAgentStreamRunning = false;
+      }
+    });
+    try {
+      post({
+        type: 'niuma_palette_agent_trace',
+        step: 'agent_stream_prepare',
+        detail: 'card=' + cid + ' req=' + rid
+      });
+    } catch (_) {}
+  }
+
+  async function drainPaletteAgentStreamQueue() {
+    if (_paletteAgentStreamDraining) return;
+    _paletteAgentStreamDraining = true;
+    try {
+      while (_paletteAgentStreamQueue.length) {
+        var job = _paletteAgentStreamQueue.shift();
+        if (!job) continue;
+        try {
+          await runPaletteAgentStreamOnce(
+            job.reqId,
+            job.cardId,
+            job.query,
+            job.provider,
+            job.systemPrompt,
+            job.sessionRef
+          );
+        } catch (eJob) {
+          try {
+            post({
+              type: 'niuma_palette_agent_error',
+              reqId: job.reqId,
+              cardId: job.cardId,
+              message: eJob && eJob.message ? eJob.message : String(eJob)
+            });
+          } catch (_) {}
+        }
+      }
+    } finally {
+      _paletteAgentStreamDraining = false;
+    }
+  }
+
+  function runPaletteAgentStream(reqId, cardId, query, provider, systemPrompt, sessionRef) {
     var rid = String(reqId || '').trim();
     var q = String(query || '').trim();
     var cid = String(cardId || '');
     if (!q) {
       post({ type: 'niuma_palette_agent_error', reqId: reqId, cardId: cid, message: '空问题' });
-      return;
+      return Promise.resolve();
     }
-    if (rid && _paletteAgentActiveReqId === rid && _paletteAgentStreamRunning) {
+    for (var qi = 0; qi < _paletteAgentStreamQueue.length; qi++) {
+      if (String(_paletteAgentStreamQueue[qi].reqId || '') === rid) {
+        try {
+          post({ type: 'niuma_palette_agent_trace', step: 'agent_stream_queue_dup', detail: 'req=' + rid });
+        } catch (_) {}
+        return Promise.resolve();
+      }
+    }
+    if (rid && _paletteAgentInflightByReqId[rid] && !paletteAgentStreamWasCancelled(rid)) {
       try {
         post({ type: 'niuma_palette_agent_trace', step: 'agent_stream_dup_skip', detail: 'req=' + rid });
       } catch (_) {}
-      return;
+      return Promise.resolve();
     }
+    palettePrepareAgentStreamForCard(cid, rid);
+    _paletteAgentStreamCancelled = false;
+    return runPaletteAgentStreamOnce(reqId, cardId, q, provider, systemPrompt, sessionRef)
+      .catch(function (eRun) {
+        try {
+          post({
+            type: 'niuma_palette_agent_error',
+            reqId: rid,
+            cardId: cid,
+            message: eRun && eRun.message ? eRun.message : String(eRun)
+          });
+        } catch (_) {}
+      })
+      .finally(function () {
+        return drainPaletteAgentStreamQueue();
+      });
+  }
+
+  async function runPaletteAgentStreamOnce(reqId, cardId, query, provider, systemPrompt, sessionRef) {
+    var rid = String(reqId || '').trim();
+    var q = String(query || '').trim();
+    var cid = String(cardId || '');
     _paletteAgentActiveReqId = rid;
     _paletteAgentStreamRunning = true;
+    _paletteAgentInflightByReqId[rid] = {
+      reqId: rid,
+      cardId: cid,
+      query: q,
+      sessionRef: String(sessionRef || ''),
+      startedAt: Date.now()
+    };
+    var _paletteStreamContentDelivered = false;
     try {
     try {
       post({ type: 'niuma_palette_agent_trace', step: 'agent_stream_start', detail: 'req=' + rid + ' q=' + q.slice(0, 48) });
@@ -3270,16 +3552,20 @@ body.niuma-confirm-open{overflow:hidden}
     s = sessionById(sid) || s;
     if (isSessionSending(sid)) {
       post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cid, delta: '⏳ 等待当前会话完成上一次请求…\n' });
-      var waitLeft = 120;
+      var waitLeft = 360;
       while (isSessionSending(sid) && waitLeft-- > 0) {
         await new Promise(function (r) {
           setTimeout(r, 500);
         });
-        if (_paletteAgentStreamCancelled) return;
+        if (paletteAgentStreamWasCancelled(rid)) return;
       }
       if (isSessionSending(sid)) {
         try {
-          post({ type: 'niuma_palette_agent_trace', step: 'agent_stream_force_release', detail: 'sid=' + sid });
+          post({
+            type: 'niuma_palette_agent_trace',
+            step: 'palette_force_clear_sending',
+            detail: 'sid=' + sid + ' req=' + rid
+          });
         } catch (_) {}
         setSessionSending(sid, false);
       }
@@ -3328,7 +3614,7 @@ body.niuma-confirm-open{overflow:hidden}
       return;
     }
     var agentSys = String(systemPrompt || '').trim();
-    var sessionRefOut = resolvePaletteAgentGatewaySessionKey(s, { sessionRef: sessionRef });
+    var sessionRefOut = resolvePaletteAgentGatewaySessionKey(s, { sessionRef: sessionRef, cardId: cid, reqId: rid });
     sessionRefOut = applyPaletteGatewaySessionKey(s, sessionRefOut);
     try {
       post({
@@ -3343,7 +3629,7 @@ body.niuma-confirm-open{overflow:hidden}
     try {
       var waitStart = Date.now();
       var waitTimer = setInterval(function () {
-        if (_paletteAgentStreamCancelled) return;
+        if (paletteAgentStreamWasCancelled(rid)) return;
         var sec = Math.round((Date.now() - waitStart) / 1000);
         post({
           type: 'niuma_palette_agent_chunk',
@@ -3358,50 +3644,59 @@ body.niuma-confirm-open{overflow:hidden}
       } finally {
         clearInterval(waitTimer);
       }
-      if (_paletteAgentStreamCancelled) return;
-      var content = palettePickAssistantAnswerForAgent(reqId, q, { allowWhileSending: true });
-      content = paletteDedupeRepeatedText(String(content || ''));
-      if (!String(content || '').trim()) {
-        var waitLeftPick = 240;
-        var hydrateEvery = 0;
-        while (!String(content || '').trim() && waitLeftPick-- > 0) {
-          await new Promise(function (r) {
-            setTimeout(r, 500);
+      if (paletteAgentStreamWasCancelled(rid)) return;
+      var waitDeadline = Date.now() + PALETTE_AGENT_WAIT_MS;
+      var pollN = 0;
+      var content = paletteAgentContentReady(palettePickAssistantAnswerForAgent(reqId, q, { allowWhileSending: true }));
+      while (!content && Date.now() < waitDeadline) {
+        await new Promise(function (r) {
+          setTimeout(r, PALETTE_AGENT_WAIT_POLL_MS);
+        });
+        if (paletteAgentStreamWasCancelled(rid)) return;
+        pollN++;
+        try {
+          content = paletteAgentContentReady(
+            await paletteHydrateAssistantFromGateway(reqId, q, { allowWhileSending: true })
+          );
+        } catch (_) {}
+        if (!content)
+          content = paletteAgentContentReady(palettePickAssistantAnswerForAgent(reqId, q, { allowWhileSending: true }));
+        if (!content && pollN % 10 === 0) {
+          var elapsed = Math.round((Date.now() - (waitDeadline - PALETTE_AGENT_WAIT_MS)) / 1000);
+          post({
+            type: 'niuma_palette_agent_chunk',
+            reqId: reqId,
+            cardId: cid,
+            delta: '⏳ 等待 OpenClaw 回复… (' + elapsed + 's)\n',
+            liveThought: 'Gateway 处理中… (' + elapsed + 's)'
           });
-          if (_paletteAgentStreamCancelled) return;
-          hydrateEvery++;
-          if (hydrateEvery % 6 === 0 && typeof paletteHydrateAssistantFromGateway === 'function') {
-            try {
-              content = paletteDedupeRepeatedText(
-                String((await paletteHydrateAssistantFromGateway(reqId, q, { allowWhileSending: true })) || '')
-              );
-            } catch (_) {}
-          }
-          if (!String(content || '').trim()) {
-            content = paletteDedupeRepeatedText(
-              String(palettePickAssistantAnswerForAgent(reqId, q, { allowWhileSending: true }) || '')
-            );
-          }
         }
       }
-      if (!String(content || '').trim()) {
+      if (content) {
+        var sFin = sessionById(sid);
+        if (sFin && sFin._paletteOpenClawSessionKey) sessionRefOut = String(sFin._paletteOpenClawSessionKey);
+        else if (_paletteAgentInflightByReqId[rid] && _paletteAgentInflightByReqId[rid].sessionRef)
+          sessionRefOut = String(_paletteAgentInflightByReqId[rid].sessionRef);
+        else if (sFin && sFin.gatewaySessionKey) sessionRefOut = String(sFin.gatewaySessionKey);
+        paletteNotifyPaletteAgentEnd(reqId, cid, content, sessionRefOut);
+        _paletteStreamContentDelivered = true;
+      } else {
         post({
           type: 'niuma_palette_agent_chunk',
           reqId: reqId,
           cardId: cid,
-          delta: '⏳ 回复尚未写入会话，继续等待 Gateway…\n',
-          liveThought: '等待 OpenClaw 回复写入 Niuma 会话…'
+          delta: '⏳ OpenClaw 回复较慢，后台继续从 Gateway 同步…\n',
+          liveThought: '后台等待 Gateway 完整回复…'
         });
-        return;
+        if (_paletteAgentInflightByReqId[rid]) _paletteAgentInflightByReqId[rid].sessionRef = String(sessionRefOut || '');
+        armPaletteAgentLateRecover(rid);
       }
-      var sFin = sessionById(sid);
-      if (sFin && sFin.gatewaySessionKey) sessionRefOut = String(sFin.gatewaySessionKey);
-      paletteNotifyPaletteAgentEnd(reqId, cid, content, sessionRefOut);
     } catch (err) {
-      if (!_paletteAgentStreamCancelled) {
-        var errFallback = palettePickAssistantAnswerForAgent(reqId, q, { allowWhileSending: true });
+      if (!paletteAgentStreamWasCancelled(rid)) {
+        var errFallback = paletteAgentContentReady(palettePickAssistantAnswerForAgent(reqId, q, { allowWhileSending: true }));
         if (errFallback) {
           paletteNotifyPaletteAgentEnd(reqId, cid, errFallback, sessionRefOut);
+          _paletteStreamContentDelivered = true;
         } else {
           post({
             type: 'niuma_palette_agent_error',
@@ -3420,18 +3715,26 @@ body.niuma-confirm-open{overflow:hidden}
         try {
           delete sCl._paletteAgentSystemPrompt;
         } catch (_) {}
+        paletteClearTransientOpenClawKey(sCl);
       }
     }
     } finally {
+      if (typeof _paletteStreamContentDelivered === 'undefined' || !_paletteStreamContentDelivered) {
+        if (_paletteAgentInflightByReqId[rid] && !_paletteAgentLateRecoverTimers[rid]) armPaletteAgentLateRecover(rid);
+      }
       if (_paletteAgentActiveReqId === rid) _paletteAgentActiveReqId = '';
       _paletteAgentStreamRunning = false;
     }
   }
 
   window.runPaletteAgentStream = runPaletteAgentStream;
-  window.exportPaletteOpenClawGatewayKey = function (sessionRef) {
+  window.palettePrepareAgentStreamForCard = palettePrepareAgentStreamForCard;
+  window.exportPaletteOpenClawGatewayKey = function (sessionRef, cardId) {
     var s = activeSession();
-    return resolvePaletteAgentGatewaySessionKey(s, { sessionRef: String(sessionRef || '') });
+    return resolvePaletteAgentGatewaySessionKey(s, {
+      sessionRef: String(sessionRef || ''),
+      cardId: String(cardId || (s && s._paletteAgentCardId) || '')
+    });
   };
   window.palettePickAssistantAnswerForAgent = palettePickAssistantAnswerForAgent;
   window.paletteHydrateAssistantFromGateway = paletteHydrateAssistantFromGateway;
@@ -5027,7 +5330,9 @@ body.niuma-confirm-open{overflow:hidden}
       baseUrl: bu,
       openclawSessionKey:
         pid === 'openclaw'
-          ? String(s.gatewaySessionKey || '').trim() || openClawSessionKeyHintFromBaseUrl(bu) || getOpenClawSessionKey(s)
+          ? String(s._paletteOpenClawSessionKey || s.gatewaySessionKey || '').trim() ||
+            openClawSessionKeyHintFromBaseUrl(bu) ||
+            getOpenClawSessionKey(s)
           : '',
       apiKey: key,
       temperature: sec.temperature != null ? sec.temperature : 0.7,
@@ -18654,10 +18959,23 @@ body.niuma-confirm-open{overflow:hidden}
       if ((t[0] === '{' && t[t.length - 1] === '}') || (t[0] === '[' && t[t.length - 1] === ']')) {
         try {
           var obj = JSON.parse(t);
+          if (
+            obj &&
+            typeof obj === 'object' &&
+            (obj.scopes ||
+              obj.reason === 'disconnect' ||
+              obj.instanceId ||
+              obj.tokenSource ||
+              obj.channels ||
+              obj.accounts ||
+              obj.feishu)
+          )
+            return;
           ocCollectTextDeep(obj, out);
           return; // parsed successfully — don't also push raw JSON string
         } catch (_) {}
       }
+      if (ocIsSystemOrMetaText(t)) return;
       out.push(t);
       return;
     }
@@ -18666,6 +18984,16 @@ body.niuma-confirm-open{overflow:hidden}
       return;
     }
     if (typeof v === 'object') {
+      if (
+        v.scopes ||
+        v.reason === 'disconnect' ||
+        v.tokenSource ||
+        v.channels ||
+        v.accounts ||
+        v.feishu ||
+        (v.client && v.client.id === 'openclaw-control-ui' && v.role === 'operator')
+      )
+        return;
       if (v.functionCall && v.functionCall.name) out.push('[调用工具: ' + v.functionCall.name + ']');
       if (v.function && v.function.name) out.push('[调用工具: ' + v.function.name + ']');
       if ((v.type === 'tool_call' || v.type === 'function_call' || v.type === 'toolcall') && v.name)
@@ -18674,15 +19002,15 @@ body.niuma-confirm-open{overflow:hidden}
       if ((v.type === 'tool_result' || v.type === 'toolResult' || v.type === 'toolresult') && typeof v.text === 'string' && v.text.trim())
         out.push(v.text.trim());
 
-      if (typeof v.text === 'string' && v.text.trim()) out.push(v.text.trim());
-      if (typeof v.message === 'string' && v.message.trim()) out.push(v.message.trim());
-      if (typeof v.content === 'string' && v.content.trim()) out.push(v.content.trim());
-      if (typeof v.body === 'string' && v.body.trim()) out.push(v.body.trim());
-      if (typeof v.value === 'string' && v.value.trim()) out.push(v.value.trim());
-      if (typeof v.result === 'string' && v.result.trim()) out.push(v.result.trim());
-      if (typeof v.item === 'string' && v.item.trim()) out.push(v.item.trim());
-      if (typeof v.entry === 'string' && v.entry.trim()) out.push(v.entry.trim());
-      if (typeof v.payload === 'string' && v.payload.trim()) out.push(v.payload.trim());
+      if (typeof v.text === 'string' && v.text.trim() && !ocIsSystemOrMetaText(v.text)) out.push(v.text.trim());
+      if (typeof v.message === 'string' && v.message.trim() && !ocIsSystemOrMetaText(v.message)) out.push(v.message.trim());
+      if (typeof v.content === 'string' && v.content.trim() && !ocIsSystemOrMetaText(v.content)) out.push(v.content.trim());
+      if (typeof v.body === 'string' && v.body.trim() && !ocIsSystemOrMetaText(v.body)) out.push(v.body.trim());
+      if (typeof v.value === 'string' && v.value.trim() && !ocIsSystemOrMetaText(v.value)) out.push(v.value.trim());
+      if (typeof v.result === 'string' && v.result.trim() && !ocIsSystemOrMetaText(v.result)) out.push(v.result.trim());
+      if (typeof v.item === 'string' && v.item.trim() && !ocIsSystemOrMetaText(v.item)) out.push(v.item.trim());
+      if (typeof v.entry === 'string' && v.entry.trim() && !ocIsSystemOrMetaText(v.entry)) out.push(v.entry.trim());
+      if (typeof v.payload === 'string' && v.payload.trim() && !ocIsSystemOrMetaText(v.payload)) out.push(v.payload.trim());
       if (v.content && typeof v.content !== 'string') ocCollectTextDeep(v.content, out);
       if (v.delta) ocCollectTextDeep(v.delta, out);
       if (v.output) ocCollectTextDeep(v.output, out);
@@ -18777,8 +19105,10 @@ body.niuma-confirm-open{overflow:hidden}
     if (!pl || typeof pl !== 'object') return '';
     if (pl.state === 'error') return '';
     var t = ocExtractAssistantTextFromPayload(pl);
-    if (t) return t;
-    return ocExtractText(pl.text || pl.content || pl.message || pl.output || '');
+    if (t && !ocIsSystemOrMetaText(t)) return t;
+    t = ocExtractText(pl.text || pl.content || pl.message || pl.output || '');
+    if (t && !ocIsSystemOrMetaText(t)) return t;
+    return '';
   }
 
   /**
@@ -18916,7 +19246,7 @@ body.niuma-confirm-open{overflow:hidden}
     if (!t && pl && ocPayloadHasAssistantTextPart(pl)) {
       t = ocExtractAssistantTextFromPayload(pl);
     }
-    if (!t) return false;
+    if (!t || ocIsSystemOrMetaText(t) || ocLooksLikeThinkingPreambleOnly(t)) return false;
     if (!pl) return false;
     if (pl && ocPayloadIsIntermediatePhase(pl)) return false;
     return true;
@@ -18928,6 +19258,9 @@ body.niuma-confirm-open{overflow:hidden}
       ev === 'health' ||
       ev === 'tick' ||
       ev === 'presence' ||
+      ev === 'disconnect' ||
+      ev === 'connect.challenge' ||
+      ev === 'connect.ack' ||
       ev === 'heartbeat' ||
       ev === 'ping' ||
       ev === 'pong' ||
@@ -19050,7 +19383,49 @@ body.niuma-confirm-open{overflow:hidden}
       .toLowerCase();
   }
 
+  function ocIsSystemOrMetaText(text) {
+    var t = String(text || '').trim();
+    if (!t) return true;
+    if (/^[\[{]/.test(t) && /["']scopes["']/.test(t)) return true;
+    if (/["']reason["']\s*:\s*["']disconnect["']/i.test(t)) return true;
+    if (/["']tokenSource["']/i.test(t)) return true;
+    if (/["']feishu["']/i.test(t) && (/["']channels["']/i.test(t) || /["']accounts["']/i.test(t))) return true;
+    if (/openclaw-weixin/i.test(t)) return true;
+    if (/heartbeat\s+poll/i.test(t)) return true;
+    if (/<br\s*\/?>/i.test(t) && /["'](?:tokenSource|feishu|accounts|channels|bot)["']/i.test(t)) return true;
+    if (/operator\.(admin|write|read|pairing|approvals)/i.test(t) && /instanceId/i.test(t)) return true;
+    if (/openclaw-control-ui/i.test(t) && /mode\s*webchat/i.test(t)) return true;
+    if (/Node:\s*openclaw-control-ui/i.test(t)) return true;
+    if (/^[\[{][\s\S]*["']roles["'][\s\S]*[\]}]$/.test(t)) return true;
+    if (/^[\[{][\s\S]*["'](?:bot|accounts|channels)["'][\s\S]*[\]}]$/.test(t)) return true;
+    return false;
+  }
+
+  function ocAnswerHasSubstantiveStructure(text) {
+    var t = String(text || '');
+    if (/^(\d+[.)]\s|[-*•]\s|\*\*[^*]+\*\*|#{1,3}\s)/m.test(t)) return true;
+    if (t.split(/\n+/).length >= 4) return true;
+    if (t.length >= 400) return true;
+    return false;
+  }
+
+  /** Gateway 常把 thinking 前言当 type:text 发出；此类短前言不应触发 settle / 归档 */
+  function ocLooksLikeThinkingPreambleOnly(text) {
+    var t = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!t || ocIsSystemOrMetaText(t)) return true;
+    if (ocAnswerHasSubstantiveStructure(t)) return false;
+    if (/^(正在|等待|任务已|OpenClaw|Gateway|📨|⏳|💭|🔗)/.test(t)) return true;
+    if (
+      !/(让我先|我先想|我先查|让我查|比较靠谱|想想到底|查一下|等我(先|一下)|稍等|思考中|我来查|我去查|let me (check|think|search)|i('ll| will) (check|search|look))/i.test(
+        t
+      )
+    )
+      return false;
+    return t.length < 320;
+  }
+
   function ocIsIgnorableGatewayText(s) {
+    if (ocIsSystemOrMetaText(s)) return true;
     var n = ocNormForMatch(s)
       .replace(/[\-_]+/g, ' ')
       .replace(/\s+/g, ' ')
@@ -19177,7 +19552,13 @@ body.niuma-confirm-open{overflow:hidden}
         var latePicked = ocPickAssistantFromHistory(lateRaw, sentText, sentAtMs);
         if (latePicked && String(latePicked).trim()) return { text: String(latePicked).trim(), res: lateRes };
         var deepPicked = ocPickReadableTextDeep(lateRes, sentText);
-        if (deepPicked && String(deepPicked).trim()) return { text: String(deepPicked).trim(), res: lateRes };
+        if (
+          deepPicked &&
+          String(deepPicked).trim() &&
+          !ocIsSystemOrMetaText(deepPicked) &&
+          !(typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(deepPicked))
+        )
+          return { text: String(deepPicked).trim(), res: lateRes };
         if (typeof options.onProgressHint === 'function') {
           try {
             var hint = ocExtractInProgressSummary(lateRes, sentText, sentAtMs);
@@ -19190,6 +19571,24 @@ body.niuma-confirm-open{overflow:hidden}
       }
     }
     return { text: '', res: lastRpcRes };
+  }
+
+  function ocHistoryHasUserMessage(rawMessages, sentText, sentAtMs) {
+    var arr = Array.isArray(rawMessages) ? rawMessages : extractGatewayHistoryMessages(rawMessages);
+    var sentNorm = ocNormForMatch(sentText);
+    var sentMs = Number(sentAtMs) || 0;
+    if (!sentNorm || !arr.length) return false;
+    for (var u = arr.length - 1; u >= 0; u--) {
+      var hm = arr[u];
+      if (!hm || typeof hm !== 'object') continue;
+      if (ocRoleFromHistoryItem(hm) !== 'user') continue;
+      if (sentMs > 0) {
+        var tsMs = ocTimestampMsFromAny(hm);
+        if (tsMs > 0 && tsMs + 1200 < sentMs) continue;
+      }
+      if (ocLooksLikeSentTextMatch(ocExtractMessageContentForHistory(hm), sentText)) return true;
+    }
+    return false;
   }
 
   function ocPickAssistantFromHistory(rawMessages, sentText, sentAtMs) {
@@ -19230,7 +19629,8 @@ body.niuma-confirm-open{overflow:hidden}
     var sentNorm = ocNormForMatch(sentText);
     var sentMs = Number(sentAtMs) || 0;
     if (!sentNorm) return '';
-    
+    if (!ocHistoryHasUserMessage(rawMessages, sentText, sentAtMs)) return '';
+
     // 找与 sentText 匹配的最新的 user 消息，取其紧随其后的 assistant 回复
     for (var u = rows.length - 1; u >= 0; u--) {
       if (rows[u].role !== 'user') continue;
@@ -19264,7 +19664,7 @@ body.niuma-confirm-open{overflow:hidden}
     var sentNorm = ocNormForMatch(sentText);
     for (var i = acc.length - 1; i >= 0; i--) {
       var t = String(acc[i] || '').trim();
-      if (!t) continue;
+      if (!t || ocIsSystemOrMetaText(t) || ocLooksLikeThinkingPreambleOnly(t)) continue;
       var n = ocNormForMatch(t);
       if (!n) continue;
       if (sentNorm && (n === sentNorm || n.indexOf(sentNorm) >= 0 || sentNorm.indexOf(n) >= 0)) continue;
@@ -19496,14 +19896,15 @@ body.niuma-confirm-open{overflow:hidden}
     if (!ep.ok) throw new Error('缺少 Gateway Token：请填写密钥，或将带 #token= 的控制台地址填入 Base URL。');
     var wsUrl = 'ws://' + ep.host + ':' + ep.port + '/?token=' + encodeURIComponent(ep.token);
     var h = activeSession() ? activeSession().history : [];
-    var last = h[h.length - 1];
-    if (!last || last.role !== 'user') throw new Error('内部错误：缺少用户消息。');
+    var last = h.length ? h[h.length - 1] : null;
     // openclaw 分支也必须吃到 sendChat/executeModelRequest 预处理后的内容（含附件上下文）。
     var msgText = String(cfg && cfg.userContentForModel != null ? cfg.userContentForModel : '');
-    if (!msgText.trim()) msgText = String(last.content != null ? last.content : '');
-    if (!msgText.trim()) msgText = ocExtractMessageContentForHistory(last);
+    if (!msgText.trim() && last && last.role === 'user') msgText = String(last.content != null ? last.content : '');
+    if (!msgText.trim() && last && last.role === 'user') msgText = ocExtractMessageContentForHistory(last);
     var s0 = activeSession();
     var isPaletteAgentRequest = !!(s0 && s0._paletteAgentReqId);
+    if ((!last || last.role !== 'user') && !(isPaletteAgentRequest && msgText.trim()))
+      throw new Error('内部错误：缺少用户消息。');
     if (!isPaletteAgentRequest) {
       cfg.systemPrompt = '';
     } else {
@@ -19529,7 +19930,7 @@ body.niuma-confirm-open{overflow:hidden}
     if (!canonicalSessionKey) canonicalSessionKey = ocCanonicalSessionKey(sessionKey);
     var canUseSessionSend = !!canonicalSessionKey;
     var sendModel = ocNormalizeModelForSend(cfg.model);
-    if (s0) {
+    if (s0 && !isPaletteAgentRequest) {
       s0.gatewaySessionKey = canonicalSessionKey || sessionKey || s0.gatewaySessionKey;
       if (meta && meta.row) s0.openclawMeta = meta.row;
       if (cfg.model && String(cfg.model).trim()) s0.model = String(cfg.model).trim();
@@ -19537,6 +19938,8 @@ body.niuma-confirm-open{overflow:hidden}
       if (model && state.activeSessionId === s0.id && s0.model) model.value = s0.model;
       persistSessions();
       renderSessionTabs();
+    } else if (s0 && isPaletteAgentRequest && cfg.model && String(cfg.model).trim()) {
+      s0.model = String(cfg.model).trim();
     }
     if (!meta) {
       setTimeout(function () {
@@ -19757,7 +20160,12 @@ body.niuma-confirm-open{overflow:hidden}
                 return;
               }
               var deepPicked = ocPickReadableTextDeep(rpcRes, msgText);
-              if (deepPicked && String(deepPicked).trim()) {
+              if (
+                deepPicked &&
+                String(deepPicked).trim() &&
+                !ocIsSystemOrMetaText(deepPicked) &&
+                !(typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(deepPicked))
+              ) {
                 pendingText = String(deepPicked).trim();
                 emitProgress(true);
                 settleResolve(pendingText);
@@ -19787,7 +20195,12 @@ body.niuma-confirm-open{overflow:hidden}
           }
           if (lastRpcRes) {
             var fallbackPicked = ocPickReadableTextDeep(lastRpcRes, msgText);
-            if (fallbackPicked && String(fallbackPicked).trim()) {
+            if (
+              fallbackPicked &&
+              String(fallbackPicked).trim() &&
+              !ocIsSystemOrMetaText(fallbackPicked) &&
+              !(typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(fallbackPicked))
+            ) {
               pendingText = String(fallbackPicked).trim();
               emitProgress(true);
               settleResolve(pendingText);
@@ -19820,11 +20233,35 @@ body.niuma-confirm-open{overflow:hidden}
           var framesRev = (_dbgFrames && _dbgFrames.length) ? _dbgFrames.slice().reverse() : [];
           var framesSummary = framesRev.length ? '\n\n**WebSocket 记录 (倒序前100帧):**' + formatDbg(framesRev.slice(0, 100)) : '\n\n**没有捕获到任何 WebSocket 帧。**';
           
+          var histKeyShown = canonicalSessionKey || sessionKey || '';
+          var userPostedToGw =
+            lastRpcRes && ocHistoryHasUserMessage(lastRpcRes, msgText, chatSentAtMs);
           if (fromTimeout) {
-            settleResolve('### 【OpenClaw 响应解析异常 - 超时】\n\n已尝试回查 History 但未能寻获有效内容 (Waited ' + (Date.now() - chatSentAtMs) + 'ms)。\n\n' +
-              (finalPayload ? '**最后收到的 Payload:**' + formatDbg(finalPayload) + '\n\n' : '') +
-              (lastRpcRes ? '**History 接口结果:**' + formatDbg(lastRpcRes) : '') +
-              framesSummary);
+            if (!userPostedToGw) {
+              settleResolve(
+                '### 【OpenClaw 未收到本条消息】\n\n' +
+                  '会话 `' +
+                  histKeyShown +
+                  '` 的 history 中**没有**「' +
+                  String(msgText || '').slice(0, 120) +
+                  '」，说明 `chat.send` 很可能未成功发出（已等待 ' +
+                  (Date.now() - chatSentAtMs) +
+                  'ms）。\n\n' +
+                  '请确认 Gateway 已运行、Token 有效，并完全重启牛马.ahk 后再试。' +
+                  framesSummary
+              );
+            } else {
+              settleResolve(
+                '### 【OpenClaw 响应解析异常 - 超时】\n\n' +
+                  'Gateway 已记录用户消息，但 ' +
+                  (Date.now() - chatSentAtMs) +
+                  'ms 内未拿到助手正文。会话：`' +
+                  histKeyShown +
+                  '`。\n\n' +
+                  '可在 OpenClaw 控制台打开同会话查看是否仍在生成。' +
+                  framesSummary
+              );
+            }
           } else {
             settleResolve('### 【OpenClaw 响应解析异常 - 结束】\n\n网关已返回 Final 状态，但回查 History 仍无有效正文。\n\n' +
               (finalPayload ? '**Final Payload:**' + formatDbg(finalPayload) + '\n\n' : '') +
@@ -19985,6 +20422,11 @@ body.niuma-confirm-open{overflow:hidden}
             return;
           }
           ocFeedAgentLoopFromOpenClawStream(pendingText, msg.result || msg.payload || null, 'Gateway 已接收，模型生成中…');
+          if (isPaletteAgentRequest && s0 && typeof s0._paletteOnChatSendAck === 'function') {
+            try {
+              s0._paletteOnChatSendAck();
+            } catch (_) {}
+          }
           if (isPaletteAgentRequest) ensureBackgroundHistoryPoll();
           return;
         }
@@ -20013,7 +20455,7 @@ body.niuma-confirm-open{overflow:hidden}
           var sessionTxt =
             ocExtractAssistantTextFromPayload(plSession.message || plSession.item || plSession.entry || plSession) ||
             ocExtractChatEventPayload(plSession);
-          if (sessionTxt) {
+          if (sessionTxt && !ocIsSystemOrMetaText(sessionTxt)) {
             pendingText = String(sessionTxt).trim();
             emitProgress(false, plSession);
           }
@@ -20071,7 +20513,7 @@ body.niuma-confirm-open{overflow:hidden}
           var side = sidePl;
           var st = ocExtractText(side.text || side.message || side.content || '');
           if (!st && side.btw && typeof side.btw.question === 'string') st = side.btw.question.trim();
-          if (st) {
+          if (st && !ocIsSystemOrMetaText(st)) {
             pendingText = st;
             emitProgress(false, side);
             armFinalize();
@@ -20092,7 +20534,7 @@ body.niuma-confirm-open{overflow:hidden}
           var piece =
             ocExtractText(respPayload.text || respPayload.content || respPayload.message || '') ||
             ocExtractChatEventPayload(respPayload);
-          if (piece) {
+          if (piece && !ocIsSystemOrMetaText(piece)) {
             pendingText = ocMergeStreamText(pendingText, piece, true);
             emitProgress(false, respPayload);
           }
@@ -20121,6 +20563,7 @@ body.niuma-confirm-open{overflow:hidden}
           (rest && typeof rest === 'object' && (String(rest.event || rest.type || '').toLowerCase().indexOf('chat') === 0));
         if (likelyChatEnvelope && rt && (msg.id === chatMsgId || msg.id == null || msg.id === '')) {
           if (!ocShouldAcceptChatEvent(msg, rest, [sessionKey, canonicalSessionKey], chatMsgId, isPaletteAgentRequest)) return;
+          if (ocIsSystemOrMetaText(rt)) return;
           pendingText = ocMergeStreamText(pendingText, rt, true);
           emitProgress(false, rest);
           armFinalize();
@@ -20203,9 +20646,37 @@ body.niuma-confirm-open{overflow:hidden}
   async function executeModelRequest(sid) {
     var s = sessionById(sid);
     if (!s || !s.id) return;
+    var isPaletteAgent = !!(s._paletteAgentReqId || s._paletteReqId);
+    var paletteExecCtx = isPaletteAgent
+      ? {
+          reqId: String(s._paletteAgentReqId || s._paletteReqId || ''),
+          cardId: String(s._paletteAgentCardId || ''),
+          query: String(s._paletteAgentQuery || '')
+        }
+      : null;
     if (isSessionSending(sid)) {
-      cstatForSession(sid, '该标签仍在等待上一次响应，请稍候。', 'error');
-      return;
+      if (isPaletteAgent) {
+        cstatForSession(sid, 'Palette 代理等待上一次 OpenClaw 响应结束…', 'loading');
+        var paletteWaitLeft = 360;
+        while (isSessionSending(sid) && paletteWaitLeft-- > 0) {
+          await new Promise(function (r) {
+            setTimeout(r, 500);
+          });
+        }
+        if (isSessionSending(sid)) {
+          try {
+            post({
+              type: 'niuma_palette_agent_trace',
+              step: 'palette_force_clear_sending',
+              detail: 'exec sid=' + sid
+            });
+          } catch (_) {}
+          setSessionSending(sid, false);
+        }
+      } else {
+        cstatForSession(sid, '该标签仍在等待上一次响应，请稍候。', 'error');
+        return;
+      }
     }
     saveCfg(false);
     if (!state.freeChatMode && !getPaletteAgentSystemPrompt(s)) {
@@ -20253,7 +20724,8 @@ body.niuma-confirm-open{overflow:hidden}
       cstatForSession(sid, '终端模式请直接在下方向导输入。', 'error');
       return;
     }
-    if (!s.history.length) {
+    var paletteExecHasText = isPaletteAgent && String(cfg.userContentForModel || s._pendingUserContentForModel || '').trim();
+    if (!s.history.length && !paletteExecHasText) {
       cstatForSession(sid, '请先发送一条消息。', 'error');
       return;
     }
@@ -20317,9 +20789,13 @@ body.niuma-confirm-open{overflow:hidden}
             }
             var sAct2 = sessionById(sid);
             if (!sAct2) return;
+            var shown = String(textNow || '').trim();
+            if (!shown) return;
+            if (typeof ocIsSystemOrMetaText === 'function' && ocIsSystemOrMetaText(shown)) return;
+            if (getPaletteAgentSystemPrompt(sAct2) && paletteIsAgentStatusText(shown) && !streamHasText) return;
             var draft = streamDraftId
               ? { _id: streamDraftId }
-              : ensureAssistantDraft(sAct2, String(textNow || '').trim() || '思考中...');
+              : ensureAssistantDraft(sAct2, shown || '思考中...');
             if (draft && draft._id) streamDraftId = draft._id;
             if (streamDraftId) {
               var shown = String(textNow || '').trim() || '思考中...';
@@ -20330,9 +20806,11 @@ body.niuma-confirm-open{overflow:hidden}
           }
         });
       } else content = await reqOpenAI(cfg);
+      if (typeof ocIsSystemOrMetaText === 'function' && ocIsSystemOrMetaText(content)) content = '';
+      if (typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(content)) content = '';
       if (streamDraftId) {
         var sAct2 = sessionById(sid);
-        if (sAct2) {
+        if (sAct2 && content) {
           updateHistoryMessageById(sAct2, streamDraftId, content, true);
           for (var di = sAct2.history.length - 1; di >= 0; di--) {
             if (sAct2.history[di] && sAct2.history[di]._id === streamDraftId) {
@@ -20352,9 +20830,9 @@ body.niuma-confirm-open{overflow:hidden}
             });
           }
         }
-      } else add('assistant', content);
+      } else if (content) add('assistant', content);
       appendAudit({ nodeKey: nodeKeyForSession(sessionById(sid)), level: 'success', message: '模型响应完成' });
-      cstatForSession(sid, '响应完成。', 'success');
+      cstatForSession(sid, content ? '响应完成。' : '仍在等待 Gateway 完整回复…', content ? 'success' : 'loading');
       var sOk = sessionById(sid);
       if (sOk) {
         sOk.lastError = null;
@@ -20362,7 +20840,9 @@ body.niuma-confirm-open{overflow:hidden}
         refreshSessionMeta(sOk);
         renderThreadHub();
       }
-      paletteMaybeNotifyAgentEndFromSession(sid, content);
+      if (content && paletteExecCtx && paletteExecCtx.reqId) {
+        paletteMaybeNotifyAgentEndFromSession(sid, content, paletteExecCtx.reqId, paletteExecCtx.cardId);
+      } else if (content) paletteMaybeNotifyAgentEndFromSession(sid, content);
     } catch (err) {
       cancelAllPendingHttpOnTimeout(err);
       if (streamDraftId) {
@@ -22710,8 +23190,18 @@ body.niuma-confirm-open{overflow:hidden}
         );
         return;
       }
+      if (d.type === 'palette_agent_prepare_new') {
+        palettePrepareAgentStreamForCard(String(d.cardId || ''), String(d.reqId || ''));
+        return;
+      }
       if (d.type === 'host_palette_agent_stream_cancel') {
-        _paletteAgentStreamCancelled = true;
+        var crid = String(d.reqId || '').trim();
+        if (crid && _paletteAgentInflightByReqId[crid]) {
+          _paletteAgentInflightByReqId[crid].cancelled = true;
+          paletteClearLateRecover(crid);
+        } else {
+          _paletteAgentStreamCancelled = true;
+        }
         return;
       }
       if (d.type === 'host_palette_ai_sync') {
@@ -23293,8 +23783,18 @@ body.niuma-confirm-open{overflow:hidden}
         );
         return;
       }
+      if (d.type === 'palette_agent_prepare_new') {
+        palettePrepareAgentStreamForCard(String(d.cardId || ''), String(d.reqId || ''));
+        return;
+      }
       if (d.type === 'host_palette_agent_stream_cancel') {
-        _paletteAgentStreamCancelled = true;
+        var crid = String(d.reqId || '').trim();
+        if (crid && _paletteAgentInflightByReqId[crid]) {
+          _paletteAgentInflightByReqId[crid].cancelled = true;
+          paletteClearLateRecover(crid);
+        } else {
+          _paletteAgentStreamCancelled = true;
+        }
         return;
       }
       if (d.type === 'niuma_compose_send') {

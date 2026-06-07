@@ -376,13 +376,55 @@
     });
   }
 
+  function freezeBlocks(blocks) {
+    if (!Array.isArray(blocks)) return [];
+    return blocks.map(function (b) {
+      if (!b || typeof b !== "object") return b;
+      if (b.state === "streaming") {
+        return Object.assign({}, b, { state: "final", updatedAt: Date.now() });
+      }
+      return b;
+    });
+  }
+
+  function maxTurnId(blocks) {
+    var m = 0;
+    for (var i = 0; i < (blocks || []).length; i++) {
+      var t = blocks[i] && blocks[i].turnId != null ? Number(blocks[i].turnId) : 0;
+      if (t > m) m = t;
+    }
+    return m || 0;
+  }
+
+  function mergeSegmentBlocks(priorBlocks, segmentBlocks) {
+    var prior = freezeBlocks(priorBlocks || []);
+    var seg = Array.isArray(segmentBlocks) ? segmentBlocks.slice() : [];
+    var merged = prior.concat(seg);
+    merged.sort(function (a, b) {
+      var ta = a && a.turnId != null ? Number(a.turnId) : 1;
+      var tb = b && b.turnId != null ? Number(b.turnId) : 1;
+      if (ta !== tb) return ta - tb;
+      return (a && a.seq ? a.seq : 0) - (b && b.seq ? b.seq : 0);
+    });
+    return validateBlocksList(merged);
+  }
+
   function blockPreviewSummary(blocks) {
     var list = blocks || [];
-    for (var pi = list.length - 1; pi >= 0; pi--) {
+    var bestReply = null;
+    var bestTurn = -1;
+    for (var pi = 0; pi < list.length; pi++) {
       var pb = list[pi];
       if (pb && pb.type === "reply" && pb.markdown) {
-        return String(pb.markdown).replace(/\s+/g, " ").trim().slice(0, 160);
+        var tid = pb.turnId != null ? Number(pb.turnId) : 1;
+        if (tid >= bestTurn) {
+          bestTurn = tid;
+          bestReply = pb;
+        }
       }
+    }
+    if (bestReply) {
+      return String(bestReply.markdown).replace(/\s+/g, " ").trim().slice(0, 160);
     }
     for (var pj = 0; pj < list.length; pj++) {
       var ps = list[pj];
@@ -411,6 +453,9 @@
     ingestDelta: ingestDelta,
     finalize: finalize,
     finalizeFromState: finalizeFromState,
+    mergeSegmentBlocks: mergeSegmentBlocks,
+    freezeBlocks: freezeBlocks,
+    maxTurnId: maxTurnId,
     blockPreviewSummary: blockPreviewSummary,
     hasProtocolTags: hasProtocolTags,
     hasFinalReply: hasFinalReply,

@@ -94,6 +94,25 @@
       rawAnswer:
         "对比结论如下：\n\n| 维度 | 小米 | Meta |\n|---|---|---|\n| 优势 | 生态 | VR |\n| 风险 | 监管 | 隐私 |",
       route: { routeId: "research_compare", a2uiCandidates: ["ComparisonTable"] }
+    },
+    follow_up_merge: {
+      description: "Phase4 append：turn1 reply 保留 + turn2 新 segment 合并",
+      turnId: 2,
+      priorBlocks: [
+        {
+          id: "blk_turn1",
+          type: "reply",
+          state: "final",
+          source: "raw",
+          confidence: 0.8,
+          seq: 1,
+          turnId: 1,
+          traceId: "fx_t1",
+          title: "任务回复",
+          markdown: "第一轮：芜湖大司马是知名主播。"
+        }
+      ],
+      segmentRaw: "第二轮补充：经典语录包括「回首掏」。"
     }
   };
 
@@ -130,6 +149,22 @@
       if (root.PaletteBlockStore && PaletteBlockStore.pack) out.blockStore = PaletteBlockStore.pack(result.blocks);
       if (renderFn) out.render = renderFn(cardId || "mock-fixture-card", result.blocks);
       out.ok = true;
+      return out;
+    }
+    if (fx.priorBlocks && fx.segmentRaw != null && root.PaletteBlockPipeline && PaletteBlockPipeline.mergeSegmentBlocks) {
+      var segFin = PaletteBlockPipeline.finalize(fx.segmentRaw, {
+        turnId: fx.turnId != null ? fx.turnId : 2,
+        traceId: "fx_seg_" + name
+      });
+      var mergedOut = PaletteBlockPipeline.mergeSegmentBlocks(fx.priorBlocks, segFin.blocks);
+      out.input = { prior: fx.priorBlocks.length, segmentLen: String(fx.segmentRaw).length };
+      out.blocks = mergedOut.blocks;
+      out.meta = segFin.meta;
+      out.replyCount = (mergedOut.blocks || []).filter(function (b) {
+        return b && b.type === "reply";
+      }).length;
+      out.ok = out.replyCount >= 2;
+      if (renderFn) out.render = renderFn(cardId || "mock-fixture-card", mergedOut.blocks);
       return out;
     }
     if (Array.isArray(fx.deltas) && fx.deltas.length && root.PaletteBlockPipeline) {

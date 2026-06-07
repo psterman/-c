@@ -2393,6 +2393,12 @@ FloatingToolbar_OnWebMessage(sender, args) {
         }
         return
     }
+    if (typ = "palette_agent_prepare_new") {
+        try WebView_QueuePayload(g_FTB_WV2, msg)
+        catch {
+        }
+        return
+    }
     if (typ = "host_palette_ai_handoff") {
         try WebView_QueuePayload(g_FTB_WV2, msg)
         catch {

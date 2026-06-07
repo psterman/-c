@@ -422,7 +422,8 @@ CommandPalette_AgentCardCount() {
 CommandPalette_AgentPullCardsJson() {
     global g_Agent_Cards
     try {
-        CommandPalette_AgentLoadCards()
+        if g_Agent_Cards.Count < 1
+            CommandPalette_AgentLoadCards()
         items := []
         for _, c in g_Agent_Cards {
             if !(c is Map)
@@ -581,7 +582,9 @@ CommandPalette_AgentSubmit(msg) {
     g_Agent_StreamGen++
     gen := g_Agent_StreamGen
     cardId := CommandPalette_AgentNewId("card")
+    CommandPalette_AgentCancelOtherStreams(cardId)
     reqId := CommandPalette_AgentNewId("cpag")
+    paletteSr := CommandPalette_AgentPaletteSessionKey(cardId)
     title := SubStr(text, 1, 48)
     if (StrLen(text) > 48)
         title .= "…"
@@ -592,7 +595,7 @@ CommandPalette_AgentSubmit(msg) {
         "title", title,
         "query", text,
         "provider", prov,
-        "sessionRef", "",
+        "sessionRef", paletteSr,
         "ended", false,
         "running", true,
         "error", "",
@@ -607,6 +610,7 @@ CommandPalette_AgentSubmit(msg) {
         "updatedAt", A_Now
     )
     g_Agent_Cards[cardId] := card
+    g_CardSessionMap[cardId] := paletteSr
     g_Agent_ActiveCardId := cardId
     g_Agent_LastSubmitSig := sig
     g_Agent_LastSubmitCardId := cardId
@@ -637,6 +641,19 @@ CommandPalette_AgentIsStatusOnlyDelta(delta) {
     return false
 }
 
+CommandPalette_AgentLooksLikeThinkingPreamble(ans) {
+    raw := Trim(String(ans))
+    if (raw = "")
+        return false
+    if RegExMatch(raw, "m)^(\d+[.)]\s|[-*•]\s|\*\*[^*]+\*\*|#{1,3}\s)")
+        return false
+    if (StrLen(raw) >= 400)
+        return false
+    if RegExMatch(raw, "i)(让我先|我先想|我先查|让我查|比较靠谱|想想到底|查一下|let me (check|think|search)|i('ll| will) (check|search|look))")
+        return StrLen(raw) < 320
+    return false
+}
+
 CommandPalette_AgentAnswerIsSubstantial(ans) {
     raw := Trim(String(ans))
     if (raw = "")
@@ -644,6 +661,8 @@ CommandPalette_AgentAnswerIsSubstantial(ans) {
     if RegExMatch(raw, "i)::(PLAN|STATUS|QUESTION|REPLY)_(START|END)::")
         return true
     if CommandPalette_AgentIsStatusOnlyDelta(raw)
+        return false
+    if CommandPalette_AgentLooksLikeThinkingPreamble(raw)
         return false
     if (StrLen(raw) < 8)
         return false
@@ -694,6 +713,15 @@ CommandPalette_AgentTagFtbSession(reqId, cardId, query, provider) {
     }
 }
 
+CommandPalette_AgentPaletteSessionKey(cardId) {
+    slug := RegExReplace(String(cardId), "i)^card[-_]?", "")
+    slug := RegExReplace(slug, "[^a-zA-Z0-9_-]", "-")
+    slug := Trim(slug, "-")
+    if (slug = "")
+        slug := "task"
+    return "agent:main:niuma-cp-" . slug
+}
+
 CommandPalette_AgentResolveSessionRef(cardId) {
     global g_CardSessionMap
     cid := Trim(String(cardId))
@@ -719,9 +747,10 @@ CommandPalette_AgentPrefetchOpenClawSessionRef(cardId) {
         return ""
     if !FuncExists("CommandPalette_JsEscapeForParse")
         return ""
+    cidEsc := CommandPalette_JsEscapeForParse(cid)
     js := "(function(){try{var fn=window.exportPaletteOpenClawGatewayKey;"
         . "if(typeof fn!=='function')return JSON.stringify({ok:0});"
-        . "return JSON.stringify({ok:1,key:String(fn('')||'')});"
+        . "return JSON.stringify({ok:1,key:String(fn('','" . cidEsc . "')||'')});"
         . "}catch(e){return JSON.stringify({ok:0});}})();"
     try {
         raw := g_FTB_WV2.ExecuteScriptAsync(js).await(3500)
@@ -956,7 +985,10 @@ CommandPalette_AgentRecoverCardAnswerOnce(cid, rid, q, tryN) {
         return
     }
     tryN := Integer(tryN)
-    if (tryN >= 40) {
+    maxTry := 40
+    if (card is Map) && String(card.Get("provider", "openclaw")) = "openclaw"
+        maxTry := 120
+    if (tryN >= maxTry) {
         if IsObject(g_Agent_RecoverPending)
             g_Agent_RecoverPending.Delete(cid)
         return
@@ -1200,11 +1232,13 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
         )
         streamOk := CommandPalette_AgentDeliverStreamPayload(agentPayload)
         scriptOk := false
-        try scriptOk := CommandPalette_InvokeFtbPaletteAgentScript(cardId, reqId, q, prov, sessionRef)
-        catch {
-            scriptOk := false
+        if !streamOk {
+            try scriptOk := CommandPalette_InvokeFtbPaletteAgentScript(cardId, reqId, q, prov, sessionRef)
+            catch {
+                scriptOk := false
+            }
         }
-        if streamOk {
+        if (streamOk || scriptOk) {
             SetTimer(CommandPalette_AgentPaletteStreamScriptBackup.Bind(cardId, reqId, q, prov, sessionRef), -2500)
         }
         CommandPalette_AgentLog("dispatch_ai_paths", "agent=" . (streamOk ? 1 : 0) . " script=" . (scriptOk ? 1 : 0) . " compose=0")
@@ -1489,6 +1523,32 @@ CommandPalette_OnNiumaPaletteAgentError(msg) {
         msg.Has("cardId") ? String(msg["cardId"]) : "",
         msg.Has("message") ? String(msg["message"]) : "代理请求失败"
     )
+}
+
+CommandPalette_AgentCancelOtherStreams(keepCardId := "") {
+    global g_Agent_Cards
+    keep := Trim(String(keepCardId))
+    if FuncExists("CommandPalette_DeliverFtbPayload") {
+        try CommandPalette_DeliverFtbPayload(Map("type", "palette_agent_prepare_new", "cardId", keep))
+        catch {
+        }
+    }
+    for id, c in g_Agent_Cards {
+        if !(c is Map) || id = keep
+            continue
+        if !c.Get("running", false) || c.Get("ended", false)
+            continue
+        rid := String(c.Get("reqId", ""))
+        if (rid = "") || !FuncExists("CommandPalette_DeliverFtbPayload")
+            continue
+        try CommandPalette_DeliverFtbPayload(Map(
+            "type", "host_palette_agent_stream_cancel",
+            "reqId", rid,
+            "cardId", id
+        ))
+        catch {
+        }
+    }
 }
 
 CommandPalette_AgentCancel(cardId := "") {
