@@ -1,5 +1,5 @@
 /**
- * PaletteLitRenderer — card-level Lit 渲染桥（FollowUpChips v2）
+ * PaletteLitRenderer — card-level Lit 渲染桥（FollowUpChips + 通用 renderSlot）
  */
 (function (root) {
   var COMPONENT_KEY = "FollowUpChips";
@@ -13,32 +13,60 @@
     return null;
   }
 
-  function isAvailable() {
+  function resolveComponentDef(descriptor) {
+    descriptor = descriptor || {};
+    if (root.PaletteCardSlots && PaletteCardSlots.getComponentById) {
+      var byId = PaletteCardSlots.getComponentById(descriptor.component);
+      if (byId) return byId;
+    }
+    if (descriptor.component === COMPONENT_ID) return getComponentDef();
+    return null;
+  }
+
+  function isLitAvailableForTag(tag) {
     if (typeof customElements === "undefined") return false;
-    if (!customElements.get("palette-followup-chips")) return false;
+    if (!tag || !customElements.get(tag)) return false;
     if (!root.Lit || !root.Lit.LitElement) return false;
     return true;
   }
 
+  function isAvailable() {
+    return isLitAvailableForTag("palette-followup-chips");
+  }
+
   function mapLegacyReason(context) {
     context = context || {};
-    if (context.renderFailed || context.reason === "render_exception") return "render_exception";
-    if (context.resultNull) return "render_exception";
-    if (context.noContainer) return "bridge_unavailable";
-    if (context.invalidDescriptor) return "invalid_descriptor";
-    if (context.emptyChips) return "empty_chips";
-    if (context.noComponent) return "component_not_registered";
-    if (typeof customElements === "undefined" || !root.Lit || !root.Lit.LitElement) return "lit_unavailable";
-    if (!customElements.get("palette-followup-chips")) return "lit_unavailable";
-    return "lit_unavailable";
+    if (context.renderFailed || context.reason === "render_error" || context.reason === "render_exception") {
+      return "render_error";
+    }
+    if (context.resultNull) return "render_error";
+    if (context.noContainer) return "no_lit_component";
+    if (context.invalidDescriptor) return "invalid_schema";
+    if (context.emptyChips) return "invalid_schema";
+    if (context.emptyEntries) return "invalid_schema";
+    if (context.noComponent) return "no_lit_component";
+    if (context.tag && !isLitAvailableForTag(context.tag)) return "no_lit_component";
+    if (typeof customElements === "undefined" || !root.Lit || !root.Lit.LitElement) return "no_lit_component";
+    return context.reason || "no_lit_component";
   }
 
   function explainLitFallback(context) {
     context = context || {};
-    if (isAvailable() && !context.renderFailed && !context.resultNull && !context.invalidDescriptor) {
-      return { available: true, reason: "lit_ok", detail: "" };
+    var tag = context.tag;
+    if (!tag) {
+      if (context.component === "status-log") tag = "palette-status-log";
+      else if (context.component === "ActionChips") tag = "palette-action-chips";
+      else tag = "palette-followup-chips";
     }
-    var reason = mapLegacyReason(context);
+    if (
+      isLitAvailableForTag(tag) &&
+      !context.renderFailed &&
+      !context.resultNull &&
+      !context.invalidDescriptor
+    ) {
+      return { available: true, reason: "ok", detail: "" };
+    }
+    var reason = mapLegacyReason(Object.assign({ tag: tag }, context));
     return {
       available: false,
       reason: reason,
@@ -46,14 +74,32 @@
     };
   }
 
+  function validateActionChipsDescriptor(descriptor) {
+    if (!descriptor || !descriptor.props) return false;
+    if (!Array.isArray(descriptor.props.actions) || !descriptor.props.actions.length) return false;
+    for (var i = 0; i < descriptor.props.actions.length; i++) {
+      var a = descriptor.props.actions[i];
+      if (!a || !a.id || !a.label) return false;
+    }
+    return true;
+  }
+
   function validateDescriptor(descriptor) {
     if (!descriptor || !descriptor.props) return false;
+    if (descriptor.component === "status-log") return validateStatusDescriptor(descriptor);
+    if (descriptor.component === "ActionChips") return validateActionChipsDescriptor(descriptor);
     if (!Array.isArray(descriptor.props.chips)) return false;
     for (var i = 0; i < descriptor.props.chips.length; i++) {
       var c = descriptor.props.chips[i];
       if (!c || !c.id || !c.action || c.action.type !== "prefill") return false;
     }
     return true;
+  }
+
+  function validateStatusDescriptor(descriptor) {
+    if (!descriptor || !descriptor.props) return false;
+    if (Array.isArray(descriptor.props.entries) && descriptor.props.entries.length) return true;
+    return !!String(descriptor.props.text || "").trim();
   }
 
   function toFollowUpChipsDescriptor(card, chips) {
@@ -84,6 +130,65 @@
     return el;
   }
 
+  function findOrCreateSlotElement(container, tag, blockId, mountMode) {
+    if (mountMode === "append" && blockId) {
+      var safeId = String(blockId).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+      var existing = container.querySelector(tag + '[data-block-id="' + safeId + '"]');
+      if (existing) return existing;
+      var appended = document.createElement(tag);
+      appended.setAttribute("data-block-id", blockId);
+      container.appendChild(appended);
+      return appended;
+    }
+    return findOrCreateElement(container, tag);
+  }
+
+  function slotCount(descriptor) {
+    var props = (descriptor && descriptor.props) || {};
+    if (descriptor.component === "status-log") {
+      if (Array.isArray(props.entries) && props.entries.length) return props.entries.length;
+      return String(props.text || "").trim() ? 1 : 0;
+    }
+    if (descriptor.component === "ActionChips" && Array.isArray(props.actions)) return props.actions.length;
+    if (Array.isArray(props.chips)) return props.chips.length;
+    return 0;
+  }
+
+  function logActionChipsLitRender(cardId, descriptor, result, options) {
+    if (!options.debugLog) return;
+    try {
+      options.debugLog(
+        "action_chips_lit_rendered",
+        JSON.stringify({
+          cardId: cardId,
+          blockId: (descriptor.props && descriptor.props.blockId) || "",
+          component: "ActionChips",
+          count: result.count != null ? result.count : slotCount(descriptor),
+          renderer: result.renderer || "lit",
+          reason: result.reason || ""
+        })
+      );
+    } catch (_) {}
+  }
+
+  function logSlotRender(eventName, cardId, descriptor, result, options) {
+    if (!options.debugLog) return;
+    try {
+      options.debugLog(
+        eventName,
+        JSON.stringify({
+          cardId: cardId,
+          blockId: (descriptor.props && descriptor.props.blockId) || "",
+          component: descriptor.component || "",
+          slot: descriptor.slot || "",
+          count: result.count != null ? result.count : slotCount(descriptor),
+          renderer: result.renderer || "legacy",
+          reason: result.reason || ""
+        })
+      );
+    } catch (_) {}
+  }
+
   function logRender(cardId, descriptor, count, options) {
     if (!options.debugLog) return;
     try {
@@ -105,39 +210,43 @@
     } catch (_) {}
   }
 
-  function renderByDescriptor(cardId, card, containerEl, descriptor, options) {
+  function renderSlot(cardId, containerEl, descriptor, options) {
     options = options || {};
-    card = card || {};
     descriptor = descriptor || {};
     var props = descriptor.props || {};
+    var componentId = descriptor.component || "";
+    var slotId = descriptor.slot || "";
+    var def = resolveComponentDef(descriptor);
+    var tag = (def && def.tag) || descriptor.tag || "";
+
     if (!containerEl) {
       return {
         ok: false,
         renderer: "legacy",
-        component: COMPONENT_ID,
-        slot: SLOT_ID,
-        reason: "bridge_unavailable",
+        component: componentId,
+        slot: slotId,
+        reason: "no_lit_component",
         count: 0
       };
     }
-    if (!isAvailable()) {
+    if (!def || !tag) {
       return {
         ok: false,
         renderer: "legacy",
-        component: COMPONENT_ID,
-        slot: SLOT_ID,
-        reason: explainLitFallback({}).reason,
+        component: componentId,
+        slot: slotId,
+        reason: "no_lit_component",
         count: 0
       };
     }
-    var def = getComponentDef();
-    if (!def) {
+    if (!isLitAvailableForTag(tag)) {
+      var fb = explainLitFallback({ tag: tag });
       return {
         ok: false,
         renderer: "legacy",
-        component: COMPONENT_ID,
-        slot: SLOT_ID,
-        reason: "component_not_registered",
+        component: componentId,
+        slot: slotId,
+        reason: fb.reason,
         count: 0
       };
     }
@@ -145,62 +254,141 @@
       return {
         ok: false,
         renderer: "legacy",
-        component: COMPONENT_ID,
-        slot: SLOT_ID,
-        reason: "invalid_descriptor",
+        component: componentId,
+        slot: slotId,
+        reason: "invalid_schema",
         count: 0
       };
     }
-    if (!props.visible || !props.chips.length) {
-      containerEl.hidden = true;
-      containerEl.innerHTML = "";
-      logRender(cardId, descriptor, 0, options);
-      return {
-        ok: true,
-        renderer: "none",
-        component: COMPONENT_ID,
-        slot: SLOT_ID,
-        reason: "empty_chips",
-        count: 0
-      };
+
+    if (componentId === "follow-up-chips") {
+      if (!props.visible || !props.chips.length) {
+        containerEl.hidden = true;
+        containerEl.innerHTML = "";
+        logRender(cardId, descriptor, 0, options);
+        return {
+          ok: true,
+          renderer: "none",
+          component: componentId,
+          slot: slotId,
+          reason: "empty_chips",
+          count: 0
+        };
+      }
+    } else if (componentId === "status-log") {
+      var entryCount = slotCount(descriptor);
+      if (!entryCount) {
+        return {
+          ok: false,
+          renderer: "legacy",
+          component: componentId,
+          slot: slotId,
+          reason: "empty_entries",
+          count: 0
+        };
+      }
+    } else if (componentId === "ActionChips") {
+      if (!props.actions || !props.actions.length) {
+        return {
+          ok: false,
+          renderer: "legacy",
+          component: componentId,
+          slot: slotId,
+          reason: "invalid_schema",
+          count: 0
+        };
+      }
     }
+
     try {
-      containerEl.hidden = false;
-      var el = findOrCreateElement(containerEl, def.tag);
+      if (componentId === "follow-up-chips" || componentId === "ActionChips") containerEl.hidden = false;
+      var mountMode = def.mountMode || (slotId === "status" ? "append" : "replace");
+      var el = findOrCreateSlotElement(containerEl, tag, props.blockId || "", mountMode);
       def.applyProps(el, props);
-      logRender(cardId, descriptor, props.chips.length, options);
+      var count = slotCount(descriptor);
+      if (componentId === "follow-up-chips") {
+        logRender(cardId, descriptor, count, options);
+      } else if (componentId === "ActionChips") {
+        logActionChipsLitRender(cardId, descriptor, { renderer: "lit", count: count }, options);
+      } else if (componentId === "status-log") {
+        logSlotRender("status_block_render", cardId, descriptor, { renderer: "lit", count: count }, options);
+      }
       return {
         ok: true,
         renderer: "lit",
-        component: COMPONENT_ID,
-        slot: SLOT_ID,
-        count: props.chips.length,
-        chips: props.chips
+        component: componentId,
+        slot: slotId,
+        count: count
       };
     } catch (err) {
       if (options.debugLog) {
         try {
-          options.debugLog(
-            "lit_render_failed",
-            JSON.stringify({
-              cardId: cardId,
-              error: String(err && err.message ? err.message : err),
-              component: COMPONENT_ID,
-              reason: "render_exception"
-            })
-          );
+          if (componentId === "ActionChips") {
+            options.debugLog(
+              "action_chips_lit_error",
+              JSON.stringify({
+                cardId: cardId,
+                blockId: props.blockId || "",
+                error: String(err && err.message ? err.message : err),
+                component: componentId,
+                reason: "render_error"
+              })
+            );
+          } else {
+            options.debugLog(
+              "lit_render_failed",
+              JSON.stringify({
+                cardId: cardId,
+                blockId: props.blockId || "",
+                error: String(err && err.message ? err.message : err),
+                component: componentId,
+                slot: slotId,
+                reason: "render_error"
+              })
+            );
+          }
         } catch (_) {}
       }
       return {
         ok: false,
         renderer: "legacy",
-        component: COMPONENT_ID,
-        slot: SLOT_ID,
-        reason: "render_exception",
+        component: componentId,
+        slot: slotId,
+        reason: "render_error",
         count: 0,
         error: String(err && err.message ? err.message : err)
       };
     }
+  }
+
+  function renderByDescriptor(cardId, card, containerEl, descriptor, options) {
+    return renderSlot(cardId, containerEl, descriptor, options);
+  }
+
+  function toActionChipsDescriptor(card, block) {
+    var def =
+      root.PaletteCardSlots && PaletteCardSlots.getComponent
+        ? PaletteCardSlots.getComponent("ActionChips")
+        : null;
+    if (def && def.toDescriptorFromBlock) return def.toDescriptorFromBlock(card, block);
+    block = block || {};
+    return {
+      component: "ActionChips",
+      slot: "ActionChips",
+      tag: "palette-action-chips",
+      props: {
+        cardId: (card && card.id) || "",
+        blockId: block.id || "",
+        actions: (block.props && block.props.actions) || [],
+        renderer: "lit"
+      }
+    };
+  }
+
+  function renderActionChipsBlock(cardId, card, containerEl, block, options) {
+    options = options || {};
+    var descriptor = toActionChipsDescriptor(card, block);
+    return renderSlot(cardId, containerEl, descriptor, options);
   }
 
   function renderFollowUpChips(cardId, card, containerEl, options) {
@@ -216,10 +404,15 @@
 
   root.PaletteLitRenderer = {
     isAvailable: isAvailable,
+    isLitAvailableForTag: isLitAvailableForTag,
     explainLitFallback: explainLitFallback,
     validateDescriptor: validateDescriptor,
     toFollowUpChipsDescriptor: toFollowUpChipsDescriptor,
+    renderSlot: renderSlot,
     renderByDescriptor: renderByDescriptor,
-    renderFollowUpChips: renderFollowUpChips
+    renderFollowUpChips: renderFollowUpChips,
+    renderActionChipsBlock: renderActionChipsBlock,
+    toActionChipsDescriptor: toActionChipsDescriptor,
+    validateActionChipsDescriptor: validateActionChipsDescriptor
   };
 })(typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : this);

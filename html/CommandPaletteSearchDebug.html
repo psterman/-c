@@ -578,6 +578,29 @@
     }
   }
 
+  function formatSlotRenderersLines(slotRenderers) {
+    if (!slotRenderers || typeof slotRenderers !== "object") return [];
+    var order = ["status", "actions", "plan", "reply", "a2ui"];
+    var lines = [];
+    function pushLine(slot, info) {
+      if (!info) return;
+      var line =
+        String(slot) +
+        " · " +
+        String(info.component || "?") +
+        " · " +
+        String(info.renderer || "?");
+      if (info.reason) line += " (" + String(info.reason) + ")";
+      lines.push(line);
+    }
+    for (var oi = 0; oi < order.length; oi++) pushLine(order[oi], slotRenderers[order[oi]]);
+    Object.keys(slotRenderers).forEach(function (slot) {
+      if (order.indexOf(slot) >= 0) return;
+      pushLine(slot, slotRenderers[slot]);
+    });
+    return lines;
+  }
+
   function formatA2uiDebugLine(state) {
     if (state.a2uiItems) return state.a2uiItems;
     var parsed = tryParsePipelineJson(state.a2ui);
@@ -673,7 +696,18 @@
       renderHtml +=
         '<div class="pipe-sub">rejected: ' + esc(state.lastActionRejectedReason) + "</div>";
     }
-    if (!state.render && !a2line && !state.renderFailed && !state.uiMatches && !state.followUpChipsRenderer) {
+    var slotLines = formatSlotRenderersLines(state.slotRenderers);
+    for (var si = 0; si < slotLines.length; si++) {
+      renderHtml += '<div class="pipe-sub">' + esc(slotLines[si]) + "</div>";
+    }
+    if (
+      !state.render &&
+      !a2line &&
+      !state.renderFailed &&
+      !state.uiMatches &&
+      !state.followUpChipsRenderer &&
+      !slotLines.length
+    ) {
       renderHtml += '<div class="pipe-sub">—</div>';
     }
     document.getElementById("pipe-render").innerHTML = renderHtml;
@@ -704,7 +738,8 @@
       lastActionRenderer: "",
       lastActionComponent: "",
       lastActionSlot: "",
-      lastActionRejectedReason: ""
+      lastActionRejectedReason: "",
+      slotRenderers: {}
     };
     for (var i = 0; i < agentLogs.length; i++) {
       var r = agentLogs[i];
@@ -824,6 +859,10 @@
       }
       if (ev === "lit_render_failed") {
         st.followUpChipsFallback = "render_exception";
+      }
+      if (ev === "slot_renderers") {
+        var srObj = tryParsePipelineJson(det);
+        if (srObj && srObj.slotRenderers) st.slotRenderers = srObj.slotRenderers;
       }
     }
     return st;

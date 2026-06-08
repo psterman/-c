@@ -3915,10 +3915,43 @@ body.niuma-confirm-open{overflow:hidden}
     return t;
   }
 
+  function paletteCompareAnswerLooksTruncated(text) {
+    var raw = String(text || '').trim();
+    if (!raw || !/\|/.test(raw) || !/---/.test(raw)) return false;
+    if (/怎么选|个人建议|结论|推荐|总结|建议继续/i.test(raw)) return false;
+    if (raw.length >= 1400) return false;
+    var lines = raw.split(/\r?\n/);
+    var lastNonEmpty = '';
+    for (var li = lines.length - 1; li >= 0; li--) {
+      var ln = String(lines[li] || '').trim();
+      if (ln) {
+        lastNonEmpty = ln;
+        break;
+      }
+    }
+    if (!lastNonEmpty) return true;
+    if (/\|/.test(lastNonEmpty) && /对比|vs /i.test(raw.slice(0, 160))) return true;
+    if (/\|/.test(lastNonEmpty)) {
+      var cells = lastNonEmpty.split('|').map(function (c) {
+        return c.trim();
+      });
+      if (cells.length && !cells[0]) cells.shift();
+      if (cells.length && !cells[cells.length - 1]) cells.pop();
+      var emptyTail = 0;
+      for (var ci = cells.length - 1; ci >= 1; ci--) {
+        if (!cells[ci]) emptyTail++;
+        else break;
+      }
+      if (emptyTail > 0) return true;
+    }
+    return false;
+  }
+
   function paletteAgentAnswerCompleteEnough(text, query) {
     var t = paletteDedupeRepeatedText(String(text || '').trim());
     if (!t || paletteIsAgentStatusText(t)) return false;
     if (typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(t)) return false;
+    if (paletteCompareAnswerLooksTruncated(t)) return false;
     if (/\|/.test(t) && /---/.test(t)) return true;
     if (t.length >= 900) return true;
     if (typeof ocAnswerHasSubstantiveStructure === 'function' && ocAnswerHasSubstantiveStructure(t)) {

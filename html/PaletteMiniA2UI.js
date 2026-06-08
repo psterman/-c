@@ -287,6 +287,7 @@
     if (comp === "ComparisonTable") return renderComparisonTable(container, props);
     if (comp === "Steps") return renderSteps(container, props);
     if (comp === "Alert") return renderAlert(container, props);
+    if (comp === "ActionChips") return false;
     container.hidden = true;
     return false;
   }

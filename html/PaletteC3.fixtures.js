@@ -96,7 +96,7 @@
       litUnavailable: true,
       contractKind: "chip_click",
       actionType: "prefill",
-      fallbackReason: "lit_unavailable",
+      fallbackReason: "no_lit_component",
       invalidActionRejected: true
     }
   };
@@ -261,10 +261,10 @@
         out.v1Normalized.source === undefined &&
         out.v1Normalized.prefill === undefined &&
         out.fallbackInfo &&
-        out.fallbackInfo.reason === "lit_unavailable" &&
+        (out.fallbackInfo.reason === "no_lit_component" || out.fallbackInfo.reason === "lit_unavailable") &&
         fbEntry &&
         fbEntry.det &&
-        fbEntry.det.indexOf("lit_unavailable") >= 0 &&
+        (fbEntry.det.indexOf("no_lit_component") >= 0 || fbEntry.det.indexOf("lit_unavailable") >= 0) &&
         safeResult &&
         safeResult.ok === true &&
         safeResult.actionType === "prefill" &&

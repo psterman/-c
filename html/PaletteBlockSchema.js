@@ -13,7 +13,19 @@
     "raw",
     "system"
   ];
-  var A2UI_WHITELIST = ["ComparisonTable", "Steps", "Alert"];
+  var A2UI_WHITELIST = ["ComparisonTable", "Steps", "Alert", "ActionChips"];
+  var ACTION_CHIP_INTENTS = ["prefill", "submit", "inspect", "apply", "undo", "route"];
+  var ACTION_CHIP_TONES = ["primary", "secondary", "muted", "danger"];
+  var LEGACY_INTENT_MAP = {
+    append: "prefill",
+    execute: "submit",
+    prefill: "prefill",
+    submit: "submit",
+    inspect: "inspect",
+    apply: "apply",
+    undo: "undo",
+    route: "route"
+  };
   var LIMITS = {
     MAX_REPLY_MD: 20000,
     MAX_STATUS_TEXT: 8000,
@@ -25,7 +37,10 @@
     MAX_CELL: 500,
     MAX_BLOCKS: 40,
     MAX_STEPS: 20,
-    MAX_ALERTS: 5
+    MAX_ALERTS: 5,
+    MAX_ACTION_CHIPS: 24,
+    MAX_ACTION_CHIP_LABEL: 120,
+    MAX_ACTION_CHIP_PAYLOAD_TEXT: 2000
   };
   var PLAN_ITEM_STATES = ["pending", "running", "done", "error", "interrupted"];
   var STATUS_LEVELS = ["info", "warning", "error"];
@@ -132,6 +147,61 @@
     return out;
   }
 
+  function resolveActionChipIntent(rawIntent) {
+    var raw = String(rawIntent != null ? rawIntent : "").trim();
+    if (ACTION_CHIP_INTENTS.indexOf(raw) >= 0) return raw;
+    if (raw && LEGACY_INTENT_MAP[raw]) return LEGACY_INTENT_MAP[raw];
+    return "prefill";
+  }
+
+  function resolveActionChipPayloadText(action, label) {
+    action = action || {};
+    var text = action.text != null ? String(action.text).trim() : "";
+    if (!text && action.prompt != null) text = String(action.prompt).trim();
+    if (!text && action.prefill != null) text = String(action.prefill).trim();
+    if (!text) text = String(label || "").trim();
+    return trimText(text, LIMITS.MAX_ACTION_CHIP_PAYLOAD_TEXT);
+  }
+
+  function sanitizeActionChip(action, index) {
+    if (!action || typeof action !== "object") return null;
+    var label = String(action.label != null ? action.label : "").trim();
+    if (!label) return null;
+    var id = String(action.id != null ? action.id : "").trim();
+    if (!id) id = "action_" + String((index != null ? index : 0) + 1);
+    var row = {
+      id: id.slice(0, 64),
+      label: label.slice(0, LIMITS.MAX_ACTION_CHIP_LABEL),
+      intent: resolveActionChipIntent(action.intent),
+      payload: { text: resolveActionChipPayloadText(action, label) }
+    };
+    if (action.disabled) row.disabled = true;
+    var tone = String(action.tone != null ? action.tone : "").trim();
+    if (tone && ACTION_CHIP_TONES.indexOf(tone) >= 0) row.tone = tone;
+    if (action.payload && typeof action.payload === "object" && !Array.isArray(action.payload)) {
+      try {
+        var extra = JSON.parse(JSON.stringify(action.payload));
+        if (extra.text == null && row.payload && row.payload.text) extra.text = row.payload.text;
+        row.payload = extra;
+        if (row.payload.text != null) {
+          row.payload.text = trimText(row.payload.text, LIMITS.MAX_ACTION_CHIP_PAYLOAD_TEXT);
+        }
+      } catch (_) {}
+    }
+    return row;
+  }
+
+  function sanitizeActionChipsProps(props) {
+    props = props || {};
+    var raw = Array.isArray(props.actions) ? props.actions : [];
+    var actions = [];
+    for (var i = 0; i < raw.length && actions.length < LIMITS.MAX_ACTION_CHIPS; i++) {
+      var row = sanitizeActionChip(raw[i], i);
+      if (row) actions.push(row);
+    }
+    return { actions: actions };
+  }
+
   function sanitizeActions(actions) {
     if (!Array.isArray(actions)) return [];
     var out = [];
@@ -208,7 +278,13 @@
       var comp = String(block.component || "");
       if (A2UI_WHITELIST.indexOf(comp) < 0) return null;
       out.component = comp;
-      out.props = sanitizeProps(block.props);
+      if (comp === "ActionChips") {
+        var chipProps = sanitizeActionChipsProps(block.props);
+        if (!chipProps.actions.length) return null;
+        out.props = chipProps;
+      } else {
+        out.props = sanitizeProps(block.props);
+      }
     } else if (type === "error") {
       out.message = String(block.message || "任务失败").slice(0, 2000);
       if (block.code != null) out.code = String(block.code).slice(0, 64);
@@ -248,7 +324,14 @@
     BLOCK_VERSION: 1,
     NORMALIZER_VERSION: "2026-06-06",
     A2UI_WHITELIST: A2UI_WHITELIST,
+    ACTION_CHIP_INTENTS: ACTION_CHIP_INTENTS,
+    ACTION_CHIP_TONES: ACTION_CHIP_TONES,
+    ACTION_CHIPS_COMPONENT: "ActionChips",
     LIMITS: LIMITS,
+    resolveActionChipIntent: resolveActionChipIntent,
+    resolveActionChipPayloadText: resolveActionChipPayloadText,
+    sanitizeActionChip: sanitizeActionChip,
+    sanitizeActionChipsProps: sanitizeActionChipsProps,
     TOOL_EVENT_PHASES: TOOL_EVENT_PHASES,
     ACTION_KINDS: ACTION_KINDS,
     trimText: trimText,

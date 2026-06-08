@@ -740,6 +740,26 @@ CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ans) {
         return true
     if (InStr(prior, ansT) = 1 && StrLen(ansT) < StrLen(prior))
         return true
+    if (InStr(prior, ansT) = 1 && StrLen(ansT) <= StrLen(prior) * 0.98)
+        return true
+    if RegExMatch(prior, "\|") && RegExMatch(prior, "---") && RegExMatch(ansT, "\|") && RegExMatch(ansT, "---") {
+        hdrLen := Min(80, StrLen(ansT))
+        if (hdrLen >= 24 && InStr(prior, SubStr(ansT, 1, hdrLen)) = 1 && StrLen(ansT) <= StrLen(prior))
+            return true
+    }
+    return false
+}
+
+CommandPalette_AgentCompareAnswerLooksTruncated(ans) {
+    raw := Trim(String(ans))
+    if (raw = "" || !RegExMatch(raw, "\|") || !RegExMatch(raw, "---"))
+        return false
+    if RegExMatch(raw, "i)(怎么选|个人建议|结论|推荐|总结|建议继续)")
+        return false
+    if (StrLen(raw) >= 1400)
+        return false
+    if RegExMatch(raw, "i)(对比|vs )") && RegExMatch(raw, "m)^[^\r\n]*\|[^\r\n]*\|[^\r\n]*$")
+        return true
     return false
 }
 
@@ -754,6 +774,8 @@ CommandPalette_AgentAnswerTextLooksIncomplete(ans) {
     if (raw = "")
         return true
     if CommandPalette_AgentLooksLikeThinkingPreamble(raw)
+        return true
+    if CommandPalette_AgentCompareAnswerLooksTruncated(raw)
         return true
     if RegExMatch(raw, "\|") && RegExMatch(raw, "---")
         return false

@@ -1,9 +1,134 @@
 /**
- * PaletteActionBinder — 动作策略层：FollowUpChips（v2，executeAction 唯一执行入口）
+ * PaletteActionBinder — legacy compatibility layer
+ *
+ * 职责（仅此，勿在此新增 intent 分支）：
+ * - legacy DOM 渲染 fallback（.card-followup-chips 按钮 HTML）
+ * - legacy DOM click 桥接（bindFollowUpChips）
+ * - FollowUpChips 数据合并（resolveFollowUpChips，供 legacy/Lit 渲染读取）
+ *
+ * 动作语义全部委托 PaletteActionController（A2UI action runtime，唯一新动作运行时）。
  */
 (function (root) {
   var COMPONENT_ID = "follow-up-chips";
   var SLOT_ID = "actions";
+  var ACTION_SOURCE_LEGACY = "legacy_bridge";
+  var ACTION_CHIPS_COMPONENT = "ActionChips";
+
+  function getCardPipelineBlocks(card) {
+    return (card && card.blockStore && card.blockStore.blocks) || (card && card.pipelineBlocks) || [];
+  }
+
+  function isValidActionChipsBlock(block) {
+    return !!(
+      block &&
+      block.type === "a2ui" &&
+      String(block.component || "") === ACTION_CHIPS_COMPONENT &&
+      block.props &&
+      Array.isArray(block.props.actions) &&
+      block.props.actions.length
+    );
+  }
+
+  function findValidActionChipsBlock(card) {
+    var blocks = getCardPipelineBlocks(card);
+    for (var i = 0; i < blocks.length; i++) {
+      if (isValidActionChipsBlock(blocks[i])) return blocks[i];
+    }
+    return null;
+  }
+
+  function actionChipDedupeKey(chip) {
+    chip = chip || {};
+    if (chip.id) return "id:" + String(chip.id);
+    var label = String(chip.label != null ? chip.label : "").trim();
+    var intent = String(chip.intent != null ? chip.intent : "prefill").trim();
+    var text = "";
+    if (chip.payload && chip.payload.text != null) text = String(chip.payload.text).trim();
+    else if (chip.prefill != null) text = String(chip.prefill).trim();
+    return "sig:" + label + "|" + intent + "|" + text;
+  }
+
+  function logLegacyActionsEvent(options, event, payload) {
+    if (!options || !options.debugLog) return;
+    try {
+      options.debugLog(event, typeof payload === "string" ? payload : JSON.stringify(payload));
+    } catch (_) {}
+  }
+
+  function queryActionChipsLitEl(dom) {
+    if (!dom || !dom.querySelector) return null;
+    var box = dom.querySelector(".card-followup-chips");
+    if (box) {
+      if (box.querySelector) {
+        var nested = box.querySelector("palette-action-chips");
+        if (nested) return nested;
+      }
+      if (box.children) {
+        for (var i = 0; i < box.children.length; i++) {
+          var child = box.children[i];
+          if (
+            child &&
+            (child.tagName === "PALETTE-ACTION-CHIPS" || child.tagName === "palette-action-chips")
+          ) {
+            return child;
+          }
+        }
+      }
+    }
+    return dom.querySelector("palette-action-chips");
+  }
+
+  function countLitActionChipsDom(dom) {
+    var litEl = queryActionChipsLitEl(dom);
+    if (!litEl) return 0;
+    if (litEl.actions && litEl.actions.length) return litEl.actions.length;
+    return 1;
+  }
+
+  function evaluateLegacyFollowUpRender(card, dom) {
+    var validBlock = findValidActionChipsBlock(card);
+    var litEl = queryActionChipsLitEl(dom);
+
+    if (!validBlock) {
+      return {
+        mode: "render",
+        trace: "legacy_actions_rendered_no_action_chips",
+        reason: "no_valid_action_chips_block"
+      };
+    }
+
+    if (card && card._actionChipsLitRendered) {
+      return {
+        mode: "skip",
+        trace: "legacy_actions_skipped_by_action_chips",
+        reason: "action_chips_lit_flag",
+        count: countLitActionChipsDom(dom)
+      };
+    }
+
+    if (litEl && litEl.actions && litEl.actions.length) {
+      return {
+        mode: "skip",
+        trace: "legacy_actions_skipped_by_action_chips",
+        reason: "action_chips_lit_active",
+        count: litEl.actions.length
+      };
+    }
+
+    if (card && card._actionChipsPipelineHandled) {
+      return {
+        mode: "fallback",
+        trace: "legacy_actions_rendered_as_fallback",
+        reason: "action_chips_pipeline_lit_failed"
+      };
+    }
+
+    return {
+      mode: "skip",
+      trace: "legacy_actions_skipped_by_action_chips",
+      reason: "action_chips_block_pending_pipeline"
+    };
+  }
 
   function getLatestReplyBlock(card) {
     var blocks =
@@ -24,26 +149,105 @@
     return best;
   }
 
+  function mapPipelineActionChipToLegacy(chip) {
+    chip = chip || {};
+    var text =
+      chip.payload && chip.payload.text != null
+        ? String(chip.payload.text)
+        : chip.label != null
+          ? String(chip.label)
+          : "";
+    return {
+      id: chip.id || "",
+      label: chip.label || chip.id || "",
+      kind: "safe",
+      intent: chip.intent || "prefill",
+      prefill: text,
+      disabled: !!chip.disabled
+    };
+  }
+
+  function getPipelineActionChips(card) {
+    var blocks = getCardPipelineBlocks(card);
+    var out = [];
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (!isValidActionChipsBlock(b)) continue;
+      var acts = b.props.actions;
+      for (var j = 0; j < acts.length; j++) {
+        var mapped = mapPipelineActionChipToLegacy(acts[j]);
+        if (mapped.id || mapped.label) out.push(mapped);
+      }
+    }
+    return out;
+  }
+
   function resolveFollowUpChips(card, options) {
     options = options || {};
     card = card || {};
     var chips = [];
-    var seen = {};
-    var reply = getLatestReplyBlock(card);
-    if (reply && Array.isArray(reply.actions) && reply.actions.length) {
-      chips = chips.concat(reply.actions);
+    var dedupedCount = 0;
+    var validBlock = findValidActionChipsBlock(card);
+    var primaryKeys = {};
+
+    var pipeline = getPipelineActionChips(card);
+    if (pipeline.length) {
+      for (var pi = 0; pi < pipeline.length; pi++) {
+        chips.push(pipeline[pi]);
+        primaryKeys[actionChipDedupeKey(pipeline[pi])] = true;
+      }
     }
+
+    if (!validBlock) {
+      var reply = getLatestReplyBlock(card);
+      if (reply && Array.isArray(reply.actions) && reply.actions.length) {
+        chips = chips.concat(reply.actions);
+      }
+    } else {
+      var replyBlock = getLatestReplyBlock(card);
+      if (replyBlock && Array.isArray(replyBlock.actions)) {
+        for (var rai = 0; rai < replyBlock.actions.length; rai++) {
+          if (primaryKeys[actionChipDedupeKey(replyBlock.actions[rai])]) dedupedCount++;
+        }
+      }
+    }
+
     var rp = card.routeProfile || {};
     if (Array.isArray(rp.followUpChips) && rp.followUpChips.length) {
-      chips = chips.concat(rp.followUpChips);
+      for (var fi = 0; fi < rp.followUpChips.length; fi++) {
+        var fc = rp.followUpChips[fi];
+        if (!fc) continue;
+        if (primaryKeys[actionChipDedupeKey(fc)]) {
+          dedupedCount++;
+          continue;
+        }
+        chips.push(fc);
+      }
     }
+
     var merged = [];
+    var mergeSeen = {};
     for (var i = 0; i < chips.length; i++) {
       var c = chips[i];
-      if (!c || !c.id || seen[c.id]) continue;
-      seen[c.id] = true;
+      if (!c) continue;
+      var dk = actionChipDedupeKey(c);
+      if (mergeSeen[dk]) {
+        dedupedCount++;
+        continue;
+      }
+      mergeSeen[dk] = true;
       merged.push(c);
     }
+
+    if (dedupedCount > 0) {
+      logLegacyActionsEvent(options, "legacy_actions_deduped", {
+        cardId: (card && card.id) || "",
+        dedupedCount: dedupedCount,
+        outputCount: merged.length,
+        hasValidActionChipsBlock: !!validBlock
+      });
+    }
+
     if (root.PaletteActionPolicy && PaletteActionPolicy.filterSafeActions) {
       return PaletteActionPolicy.filterSafeActions(merged, {
         debugLog: options.debugLog,
@@ -79,6 +283,7 @@
           renderer: "legacy",
           component: COMPONENT_ID,
           slot: SLOT_ID,
+          actionSource: ACTION_SOURCE_LEGACY,
           available: false
         })
       );
@@ -92,14 +297,7 @@
     } catch (_) {}
   }
 
-  function emitActionResult(result, options) {
-    if (typeof options.onActionResult !== "function") return;
-    try {
-      options.onActionResult(result);
-    } catch (_) {}
-  }
-
-  /** Legacy chip active 态；触发依据为 executeAction 统一 result，非 click 路径自行决定 */
+  /** Legacy chip active 态；由 ActionController result 触发，非 Binder 自行决定 */
   function applyLegacyChipActive(cardId, chipId) {
     if (!chipId) return;
     var dom = typeof document !== "undefined" ? document.getElementById("card-" + cardId) : null;
@@ -130,7 +328,8 @@
             dataSource: detail.dataSource || "",
             renderer: detail.renderer || "legacy",
             component: detail.component || COMPONENT_ID,
-            slot: detail.slot || SLOT_ID
+            slot: detail.slot || SLOT_ID,
+            actionSource: ACTION_SOURCE_LEGACY
           })
         );
       } catch (_) {}
@@ -142,121 +341,101 @@
       renderer: detail.renderer || "legacy",
       component: detail.component || COMPONENT_ID,
       slot: detail.slot || SLOT_ID,
-      chipId: detail.chipId || ""
+      chipId: detail.chipId || "",
+      actionSource: ACTION_SOURCE_LEGACY
     };
   }
 
-  function applyPrefillToInput(cardId, value) {
-    var dom = typeof document !== "undefined" ? document.getElementById("card-" + cardId) : null;
-    var input = dom && dom.querySelector ? dom.querySelector(".card-followup-input") : null;
-    if (!input) return false;
-    input.value = value;
-    if (input.classList && input.classList.add) {
-      input.classList.add("is-prefilled");
-      setTimeout(function () {
-        if (input.classList && input.classList.remove) input.classList.remove("is-prefilled");
-      }, 1800);
+  function validateLegacyPaletteAction(detail, options) {
+    if (!root.PaletteUIEventContract || !PaletteUIEventContract.isValidPaletteAction) {
+      return { ok: true };
     }
-    if (input.focus) input.focus();
-    return true;
+    if (PaletteUIEventContract.isValidPaletteAction(detail)) {
+      return { ok: true };
+    }
+    var reason =
+      PaletteUIEventContract.getRejectReason && PaletteUIEventContract.getRejectReason(detail);
+    return { ok: false, reason: reason || "invalid_action" };
   }
 
-  /** 唯一 action 执行入口：input + debug + onActionResult（不含 toast/active DOM） */
-  function executeAction(cardId, card, detail, options) {
+  function buildControllerContext(cardId, card, detail, options) {
     options = options || {};
-    card = card || {};
     detail = detail || {};
-    var action = detail.action;
-    var chipId = detail.chipId || "";
-
-    if (!action || action.type === "noop") {
-      return rejectAction(detail, "noop_not_wired", options, "execute");
-    }
-    if (action.type === "submit") {
-      return rejectAction(detail, "submit_not_wired", options, "execute");
-    }
-    if (action.type !== "prefill") {
-      return rejectAction(detail, "invalid_action", options, "execute");
-    }
-
-    var prefill = String(action.value || "");
-    var chips = resolveFollowUpChips(card, options);
-    var chip = detail.chip || null;
-    if (!chip || !chip.id) {
-      for (var i = 0; i < chips.length; i++) {
-        if (chips[i] && chips[i].id === chipId) {
-          chip = chips[i];
-          break;
-        }
-      }
-    }
-    if (!chip && chipId) {
-      chip = { id: chipId, label: prefill, kind: "safe", prefill: prefill };
-    }
-
-    if (root.PaletteActionPolicy && PaletteActionPolicy.evaluateChip) {
-      var ev = PaletteActionPolicy.evaluateChip(chip || { id: chipId, label: prefill, kind: "safe" }, {
-        card: card
-      });
-      if (!ev.allowed) {
-        return rejectAction(detail, ev.reason, options, "policy");
-      }
-      if (chip && chip.prefill) prefill = String(chip.prefill);
-      else if (chip && chip.label && !prefill.trim()) prefill = String(chip.label);
-      action = { type: "prefill", value: prefill };
-    }
-
-    applyPrefillToInput(cardId, prefill);
-
-    var result = {
-      ok: true,
+    return {
       cardId: cardId,
-      actionType: action.type,
-      prefill: prefill,
+      card: card,
+      chipId: detail.chipId || "",
+      chip: detail.chip || null,
       dataSource: detail.dataSource || "merged",
       renderer: detail.renderer || "legacy",
       component: detail.component || COMPONENT_ID,
       slot: detail.slot || SLOT_ID,
-      chipId: chipId,
-      label: chip && chip.label ? chip.label : String(prefill).slice(0, 40),
-      intent: detail.intent || (chip && chip.intent) || "append"
+      actionSource: options.actionSource || ACTION_SOURCE_LEGACY,
+      debugLog: options.debugLog,
+      onActionResult: options.onActionResult,
+      submitFollowup: options.submitFollowup,
+      resolveChips: function () {
+        return resolveFollowUpChips(card, options);
+      }
     };
+  }
 
+  /**
+   * legacy palette-action detail → ActionController（Binder 不执行 intent）
+   */
+  function bridgeLegacyActionToController(cardId, card, detail, options) {
+    options = options || {};
+    card = card || {};
+    detail = detail || {};
+    if (!root.PaletteActionController || !PaletteActionController.handleA2uiAction) {
+      return rejectAction(detail, "controller_unavailable", options, "bridge");
+    }
+    var a2uiAction = PaletteActionController.legacyDetailToA2uiAction(detail, card, {
+      resolveChips: function () {
+        return resolveFollowUpChips(card, options);
+      }
+    });
     if (options.debugLog) {
       try {
         options.debugLog(
-          "action_clicked",
+          "legacy_action_bridge",
           JSON.stringify({
-            id: chipId,
-            label: result.label,
-            intent: result.intent,
-            behavior: "prefill_only",
-            actionType: result.actionType,
-            dataSource: result.dataSource,
-            renderer: result.renderer,
-            component: result.component,
-            slot: result.slot
+            cardId: cardId,
+            chipId: detail.chipId || "",
+            intent: a2uiAction.intent || "",
+            renderer: detail.renderer || "legacy",
+            actionSource: options.actionSource || ACTION_SOURCE_LEGACY
           })
         );
       } catch (_) {}
     }
-
-    emitActionResult(result, options);
-    return result;
+    return PaletteActionController.handleA2uiAction(
+      a2uiAction,
+      buildControllerContext(cardId, card, detail, options)
+    );
   }
 
+  /** @deprecated 使用 bridgeLegacyActionToController；保留别名兼容旧调用 */
+  function executeAction(cardId, card, detail, options) {
+    return bridgeLegacyActionToController(cardId, card, detail, options);
+  }
+
+  /**
+   * legacy DOM / palette-action 统一入口：校验契约后桥接到 ActionController
+   */
   function handleAction(cardId, card, detail, options) {
     options = options || {};
     detail = normalizeDetail(detail);
-    if (root.PaletteUIEventContract && PaletteUIEventContract.isValidPaletteAction) {
-      if (!PaletteUIEventContract.isValidPaletteAction(detail)) {
-        var reason =
-          PaletteUIEventContract.getRejectReason &&
-          PaletteUIEventContract.getRejectReason(detail);
-        return rejectAction(detail, reason || "invalid_action", options, "validate");
-      }
+    var validation = validateLegacyPaletteAction(detail, options);
+    if (!validation.ok) {
+      return rejectAction(detail, validation.reason, options, "validate");
     }
-    return executeAction(cardId, card, detail, options);
+    return bridgeLegacyActionToController(
+      cardId,
+      card,
+      detail,
+      Object.assign({ actionSource: ACTION_SOURCE_LEGACY }, options)
+    );
   }
 
   function renderLegacyFollowUpChips(cardId, card, box, chips, options, fallbackInfo) {
@@ -277,7 +456,7 @@
         );
       })
       .join("");
-    var reason = fallbackInfo && fallbackInfo.reason && fallbackInfo.reason !== "lit_ok" ? fallbackInfo.reason : "";
+    var reason = fallbackInfo && fallbackInfo.reason && fallbackInfo.reason !== "ok" ? fallbackInfo.reason : "";
     if (reason) logFallback(cardId, card, options, reason, fallbackInfo.detail);
     logChipsRender(
       cardId,
@@ -292,6 +471,7 @@
         renderer: "legacy",
         component: COMPONENT_ID,
         slot: SLOT_ID,
+        actionSource: ACTION_SOURCE_LEGACY,
         fallbackReason: reason
       },
       options
@@ -310,10 +490,42 @@
   function renderFollowUpChips(cardId, card, options) {
     options = options || {};
     card = card || {};
-    var dom = typeof document !== "undefined" ? document.getElementById("card-" + cardId) : null;
+    var dom =
+      options.dom ||
+      (typeof document !== "undefined" ? document.getElementById("card-" + cardId) : null);
     if (!dom) return { ok: false, count: 0, renderer: "none", reason: "bridge_unavailable" };
     var box = dom.querySelector(".card-followup-chips");
     if (!box) return { ok: false, count: 0, renderer: "none", reason: "bridge_unavailable" };
+
+    var decision = options.legacyRenderDecision || evaluateLegacyFollowUpRender(card, dom);
+    if (decision.mode === "skip") {
+      logLegacyActionsEvent(options, decision.trace || "legacy_actions_skipped_by_action_chips", {
+        cardId: cardId,
+        reason: decision.reason || "",
+        count: decision.count != null ? decision.count : countLitActionChipsDom(dom)
+      });
+      if (queryActionChipsLitEl(dom)) box.hidden = false;
+      return {
+        ok: true,
+        count: decision.count != null ? decision.count : countLitActionChipsDom(dom),
+        renderer: "skipped",
+        reason: decision.reason || "skipped_by_action_chips",
+        skippedByActionChips: true
+      };
+    }
+
+    if (decision.mode === "fallback") {
+      logLegacyActionsEvent(options, decision.trace || "legacy_actions_rendered_as_fallback", {
+        cardId: cardId,
+        reason: decision.reason || ""
+      });
+    } else {
+      logLegacyActionsEvent(options, decision.trace || "legacy_actions_rendered_no_action_chips", {
+        cardId: cardId,
+        reason: decision.reason || ""
+      });
+    }
+
     var chips = resolveFollowUpChips(card, options);
 
     if (!shouldShowChips(card) || !chips.length) {
@@ -338,7 +550,7 @@
     if (root.PaletteLitRenderer && PaletteLitRenderer.renderFollowUpChips) {
       var litResult = PaletteLitRenderer.renderFollowUpChips(cardId, card, box, options);
       if (litResult && litResult.ok && litResult.renderer === "lit") return litResult;
-      var fallbackInfo = { reason: "lit_unavailable", detail: "" };
+      var fallbackInfo = { reason: "no_lit_component", detail: "" };
       if (litResult && litResult.reason) {
         fallbackInfo.reason = litResult.reason;
         fallbackInfo.detail = litResult.error || "";
@@ -349,11 +561,12 @@
     }
 
     return renderLegacyFollowUpChips(cardId, card, box, chips, options, {
-      reason: "lit_unavailable",
+      reason: "no_lit_component",
       detail: ""
     });
   }
 
+  /** legacy .card-followup-chip DOM click → handleAction → ActionController */
   function bindFollowUpChips(cardId, card, options) {
     options = options || {};
     var dom = typeof document !== "undefined" ? document.getElementById("card-" + cardId) : null;
@@ -364,6 +577,7 @@
       var btn = e.target && e.target.closest ? e.target.closest(".card-followup-chip") : null;
       if (!btn || !dom.contains(btn)) return;
       if (btn.closest && btn.closest("palette-followup-chips")) return;
+      if (btn.closest && btn.closest("palette-action-chips")) return;
       e.stopPropagation();
       if (!root.PaletteUIEventContract || !PaletteUIEventContract.buildChipClickDetail) return;
       var chipId = btn.getAttribute("data-chip-id") || "";
@@ -376,18 +590,42 @@
         dataSource: "merged",
         renderer: "legacy"
       });
-      handleAction(cardId, card, detail, options);
+      handleAction(
+        cardId,
+        card,
+        detail,
+        Object.assign({ actionSource: ACTION_SOURCE_LEGACY }, options)
+      );
     });
   }
 
+  /** @deprecated 请使用 PaletteActionController.applyPrefillToInput */
+  function applyPrefillToInput(cardId, value, card) {
+    if (root.PaletteActionController && PaletteActionController.applyPrefillToInput) {
+      return PaletteActionController.applyPrefillToInput(cardId, value, card);
+    }
+    return false;
+  }
+
   root.PaletteActionBinder = {
+    ACTION_SOURCE_LEGACY: ACTION_SOURCE_LEGACY,
+    ACTION_CHIPS_COMPONENT: ACTION_CHIPS_COMPONENT,
+    isValidActionChipsBlock: isValidActionChipsBlock,
+    findValidActionChipsBlock: findValidActionChipsBlock,
+    actionChipDedupeKey: actionChipDedupeKey,
+    evaluateLegacyFollowUpRender: evaluateLegacyFollowUpRender,
+    queryActionChipsLitEl: queryActionChipsLitEl,
+    logLegacyActionsEvent: logLegacyActionsEvent,
     resolveFollowUpChips: resolveFollowUpChips,
+    getPipelineActionChips: getPipelineActionChips,
     getLatestReplyBlock: getLatestReplyBlock,
     renderFollowUpChips: renderFollowUpChips,
     bindFollowUpChips: bindFollowUpChips,
     shouldShowChips: shouldShowChips,
     handleAction: handleAction,
+    bridgeLegacyActionToController: bridgeLegacyActionToController,
     executeAction: executeAction,
+    applyPrefillToInput: applyPrefillToInput,
     applyLegacyChipActive: applyLegacyChipActive
   };
 })(typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : this);
