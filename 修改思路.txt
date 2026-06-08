@@ -573,21 +573,132 @@ Debug：pipeline_route / pipeline_a2ui / a2ui_render_failed JSON → Agent Debug
 
 ---
 
+## 从内容后处理到组件匹配中间件
+
+C.1 之后 enrich 链路拆成三层，避免 Pipeline 与 MiniA2UI 直连、也避免在 MiniA2UI 里堆路由策略：
+
+```text
+PaletteBlockPipeline.finalize（协议归一化 → blocks[]）
+      ↓
+PaletteComponentMatcher.match（匹配策略中间件）
+      ↓
+PaletteMiniA2UI（Markdown 启发式提取 + DOM 渲染实现）
+```
+
+### ComponentMatcher 职责（v1）
+
+| 职责 | 说明 |
+|------|------|
+| route → 候选解析 | 读 `uiCandidates.a2ui`，fallback `a2uiCandidates` |
+| 展示策略 | `uiCandidates.display.hideOriginalTable`：false=Option A（默认），true=Option B |
+| 表格裁剪 | 调用 `PaletteBlockSchema.clipComparisonTableProps`（20 行 × 8 列 × 500 字/格）；BlockStore.pack 二次兜底 |
+| 委托提取 | 调用 `PaletteMiniA2UI.enrichBlocksWithA2UI`，不在 Matcher 重复解析 Markdown |
+
+### uiCandidates 广义 profile
+
+与 `a2uiCandidates` **并存兼容**（`a2uiCandidates` = `uiCandidates.a2ui` 的快捷字段）：
+
+```json
+{
+  "uiCandidates": {
+    "a2ui": ["ComparisonTable"],
+    "display": { "hideOriginalTable": false },
+    "slots": { "wantPlan": false, "wantStatus": true, "wantReply": true }
+  },
+  "promptAddon": "【路由：研究对比】…"
+}
+```
+
+- `a2ui`：enrich 时允许的 A2UI 组件白名单子集
+- `display`：Option A/B 等展示策略（不删 reply 正文）
+- `slots`：槽位偏好（收敛原 `uiHints`）
+
+### 未来扩展（不在 v1）
+
+- 模型直出 `palette-ui` JSON → Matcher 新 adapter
+- Gateway `tool_event` → a2ui block
+- ActionButton / Confirm 注册到 Matcher，**不扩 Pipeline.finalize 主链**
+
+### 验收
+
+```text
+node html/run-palette-fixtures.mjs
+  research_table          → Option A，reply 保留原表
+  research_table_option_b → Option B，reply 无表
+  research_table_large    → 大表裁剪 + meta.clipped
+```
+
+---
+
 ## Phase 6：Debug + Gateway event tap
 
-Debug 四栏非常有价值，但建议在基础链路跑通后做。
+### 已落地（补偿票）
 
-最终 Debug 应该能判断：
+**Matcher 决策透明化**
+
+- `finalize` meta 透传：`uiMatches` / `displayPolicy` / `matcher`
+- 结构化日志：`pipeline_matcher`（汇总）、`pipeline_a2ui`、`a2ui_render_failed`
+- Debug ④ Render 栏：`uiMatches` · `display: Option A/B` · `clipped` · `preview source`
+
+**ToolEvent blocks 化（最小链路）**
+
+```text
+AHK CommandPalette_AgentPushToolEvent
+  → palette_agent_tool_event
+  → PaletteBlockPipeline.ingestToolEvent
+  → status block（source: tool_event，items 含 tool/phase）
+```
+
+- `PushStreamStatus` 匹配 Gateway 工具短语时并行发结构化事件（chunk 仍保留）
+- BlockStore 持久化 `source` + `tool/phase/ts`
+
+**Preview blocks-first**
+
+- `blockPreviewSummaryWithSource` → `{ text, source }`
+- `preview_source` 日志写入 Debug `preview` / `previewSource`
+
+**预留（未接线）**
+
+- `actions[]` schema（`kind: safe|confirm`，v1 不执行）
+- FollowUpChips v1：PaletteSkillRegistry 声明 + ActionBinder 渲染，点击仅预填输入框
+
+### C.3-alpha 三层（已落地）
+
+```text
+声明层：PaletteSkillRegistry + PaletteProfileComposer
+提示词层：PalettePromptComposer（preserveRoute on follow-up append）
+动作策略层：PaletteActionPolicy + PaletteActionBinder（safe chips only）
+```
+
+验收：
+
+```text
+node html/run-palette-fixtures.mjs  # 含 C.3 fixtures
+研究对比卡 Done → chips 可见 → 点击预填 → 手动补充提交
+Debug：followup_chips_render / action_clicked / prompt_compose
+```
+
+### 验收 fixture
+
+```text
+node html/run-palette-fixtures.mjs
+  matcher_ui_matches
+  tool_event_status_append
+  replay_tool_status_blocks
+  preview_source_blocks
+```
+
+### 仍待后续
+
+最终 Debug 还应补齐：
 
 ```text
 Route 是否识别
 Prompt 是否注入
 Protocol 是否开始
 Normalizer 生成了哪些 blocks
-A2UI 从哪里来
-Renderer 渲染了几个 block
 Done 为什么触发
-Preview 来源是什么
+Gateway WS 全量 event tap
 ```
 
 ---

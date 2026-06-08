@@ -2,7 +2,7 @@
  * Palette Mini-A2UI — finalize 后处理：Markdown → a2ui blocks
  *
  * C.1+ 范围：仅 finalize 阶段 enrich；A2UI 在 reply 前展示；
- * 已 enrich 的表格从 reply markdown 剥离（hideOriginalTable，默认开）。
+ * Option A 默认保留 reply 原表；hideOriginalTable:true 时剥离（Option B）。
  */
 (function (root) {
   function escHtml(s) {
@@ -199,7 +199,7 @@
       list = list.concat(inserts);
     }
 
-    var hideTables = options.hideOriginalTable !== false;
+    var hideTables = options.hideOriginalTable === true;
     if (hideTables && replyIdx >= 0) {
       var hadTableA2ui = false;
       for (var mi = 0; mi < meta.length; mi++) {

@@ -609,6 +609,16 @@
       if (state.a2uiCandidates) {
         routeHtml += '<div class="pipe-sub">candidates: ' + esc(state.a2uiCandidates) + "</div>";
       }
+      if (state.followUpChipsCount !== "" || state.followUpChipsRenderer) {
+        var chipsLine = "chips: " + esc(state.followUpChipsCount || "0");
+        if (state.followUpChipsRenderer) {
+          chipsLine += " · " + esc(state.followUpChipsRenderer);
+        }
+        if (state.followUpChipsFallback) {
+          chipsLine += " (" + esc(state.followUpChipsFallback) + ")";
+        }
+        routeHtml += '<div class="pipe-sub">' + chipsLine + "</div>";
+      }
     } else {
       var routeTxt = state.route || state.routeDetail || "";
       if (!routeTxt && ls.routeLabel) routeTxt = ls.routeId + " · " + ls.routeLabel;
@@ -623,10 +633,47 @@
     if (state.render) renderHtml += '<div class="pipe-sub">' + esc(state.render) + "</div>";
     var a2line = formatA2uiDebugLine(state);
     if (a2line) renderHtml += '<div class="pipe-sub">a2ui: ' + esc(a2line) + "</div>";
+    if (state.uiMatches) {
+      renderHtml += '<div class="pipe-sub">uiMatches: ' + esc(state.uiMatches) + "</div>";
+    }
+    if (state.displayPolicy) {
+      renderHtml += '<div class="pipe-sub">display: ' + esc(state.displayPolicy) + "</div>";
+    }
+    if (state.clippedSummary) {
+      renderHtml += '<div class="pipe-sub">clipped: ' + esc(state.clippedSummary) + "</div>";
+    }
+    if (state.previewSource || state.preview) {
+      renderHtml +=
+        '<div class="pipe-sub">preview: ' +
+        esc((state.previewSource || "?") + (state.preview ? " · " + state.preview : "")) +
+        "</div>";
+    }
     if (state.renderFailed) {
       renderHtml += '<span class="pipe-fail">failed: ' + esc(state.renderFailed) + "</span>";
     }
-    if (!state.render && !a2line && !state.renderFailed) {
+    if (state.followUpChipsRenderer || state.followUpChipsFallback) {
+      var fuLine = "followup: follow-up-chips";
+      if (state.followUpChipsRenderer) fuLine += " · " + state.followUpChipsRenderer;
+      if (state.followUpChipsFallback) fuLine += " · fallback: " + state.followUpChipsFallback;
+      renderHtml += '<div class="pipe-sub">' + esc(fuLine) + "</div>";
+    }
+    if (state.lastActionSource || state.lastActionRenderer || state.lastActionComponent) {
+      renderHtml +=
+        '<div class="pipe-sub">action: ' +
+        esc(
+          (state.lastActionSource || "?") +
+            " · " +
+            (state.lastActionRenderer || "?") +
+            (state.lastActionComponent ? " · " + state.lastActionComponent : "") +
+            (state.lastActionSlot ? "/" + state.lastActionSlot : "")
+        ) +
+        "</div>";
+    }
+    if (state.lastActionRejectedReason) {
+      renderHtml +=
+        '<div class="pipe-sub">rejected: ' + esc(state.lastActionRejectedReason) + "</div>";
+    }
+    if (!state.render && !a2line && !state.renderFailed && !state.uiMatches && !state.followUpChipsRenderer) {
       renderHtml += '<div class="pipe-sub">—</div>';
     }
     document.getElementById("pipe-render").innerHTML = renderHtml;
@@ -644,7 +691,20 @@
       render: "",
       a2ui: "",
       a2uiItems: "",
-      renderFailed: ""
+      uiMatches: "",
+      displayPolicy: "",
+      clippedSummary: "",
+      renderFailed: "",
+      preview: "",
+      previewSource: "",
+      followUpChipsCount: "",
+      followUpChipsRenderer: "",
+      followUpChipsFallback: "",
+      lastActionSource: "",
+      lastActionRenderer: "",
+      lastActionComponent: "",
+      lastActionSlot: "",
+      lastActionRejectedReason: ""
     };
     for (var i = 0; i < agentLogs.length; i++) {
       var r = agentLogs[i];
@@ -666,18 +726,105 @@
       if (!st.prompt && (ev === "prompt_inject" || ev.indexOf("prompt") >= 0)) st.prompt = det;
       if (!st.blocks && (ev === "pipeline_finalize" || ev === "pipeline_ingest")) st.blocks = det;
       if (!st.render && ev === "render_blocks") st.render = det;
+      if (ev === "pipeline_matcher") {
+        var matcherObj = tryParsePipelineJson(det);
+        if (matcherObj) {
+          if (Array.isArray(matcherObj.uiMatches)) {
+            st.uiMatches = matcherObj.uiMatches
+              .map(function (m) {
+                var line = String(m.component || "?") + "←" + String(m.from || "?");
+                if (m.clipped) line += "[clipped]";
+                return line;
+              })
+              .join(" · ");
+          }
+          if (matcherObj.displayPolicy) {
+            st.displayPolicy =
+              "Option " +
+              String(matcherObj.displayPolicy.option || "?") +
+              " · hideOriginalTable=" +
+              String(!!matcherObj.displayPolicy.hideOriginalTable);
+          }
+          if (Array.isArray(matcherObj.a2ui)) {
+            st.a2ui = JSON.stringify(matcherObj.a2ui);
+            st.a2uiItems = matcherObj.a2ui
+              .map(function (a) {
+                var line = String(a.component || "?") + "←" + String(a.from || "?");
+                if (a.clipped) line += "[clipped]";
+                return line;
+              })
+              .join(" · ");
+            st.clippedSummary = matcherObj.a2ui
+              .filter(function (a) {
+                return a && a.clipped;
+              })
+              .map(function (a) {
+                return String(a.component) + " " + (a.originalRows || "?") + "x" + (a.originalCols || "?");
+              })
+              .join(" · ");
+          }
+        }
+      }
       if (ev === "pipeline_a2ui") {
         st.a2ui = det;
         var a2arr = tryParsePipelineJson(det);
         if (a2arr && Array.isArray(a2arr)) {
           st.a2uiItems = a2arr
             .map(function (a) {
-              return String(a.component || "?") + "←" + String(a.from || "?");
+              var line = String(a.component || "?") + "←" + String(a.from || "?");
+              if (a.clipped) line += "[clipped]";
+              return line;
             })
             .join(" · ");
         }
       }
       if (ev === "a2ui_render_failed") st.renderFailed = det;
+      if (ev === "preview_source") {
+        var prevObj = tryParsePipelineJson(det);
+        if (prevObj) {
+          st.preview = String(prevObj.textPreview || "").slice(0, 120);
+          st.previewSource = String(prevObj.source || "");
+        }
+      }
+      if (ev === "followup_chips_render") {
+        var chipObj = tryParsePipelineJson(det);
+        if (chipObj) {
+          if (chipObj.count != null) st.followUpChipsCount = String(chipObj.count);
+          if (chipObj.renderer) st.followUpChipsRenderer = String(chipObj.renderer);
+          if (chipObj.reason === "empty_chips") st.followUpChipsFallback = "empty_chips";
+          else if (chipObj.fallbackReason) st.followUpChipsFallback = String(chipObj.fallbackReason);
+        }
+      }
+      if (ev === "followup_chips_fallback") {
+        var fbObj = tryParsePipelineJson(det);
+        if (fbObj) {
+          st.followUpChipsRenderer = "legacy";
+          st.followUpChipsFallback = String(fbObj.reason || fbObj.detail || "");
+        }
+      }
+      if (ev === "action_clicked") {
+        var actObj = tryParsePipelineJson(det);
+        if (actObj) {
+          st.lastActionSource = String(actObj.dataSource || "");
+          st.lastActionRenderer = String(actObj.renderer || "");
+          st.lastActionComponent = String(actObj.component || "");
+          st.lastActionSlot = String(actObj.slot || "");
+          st.lastActionRejectedReason = "";
+        }
+      }
+      if (ev === "action_rejected") {
+        var rejObj = tryParsePipelineJson(det);
+        if (rejObj) {
+          st.lastActionRejectedReason = String(rejObj.reason || "");
+          st.lastActionSource = String(rejObj.dataSource || "");
+          st.lastActionRenderer = String(rejObj.renderer || "");
+          st.lastActionComponent = String(rejObj.component || "");
+          st.lastActionSlot = String(rejObj.slot || "");
+        }
+      }
+      if (ev === "lit_render_failed") {
+        st.followUpChipsFallback = "render_exception";
+      }
     }
     return st;
   }
@@ -779,7 +926,20 @@
       if (agentFilter === "route") return String(r.layer || "").toLowerCase() === "route";
       if (agentFilter === "pipeline") {
         var evp = String(r.event || "").toLowerCase();
-        return evp.indexOf("pipeline_") === 0 || evp === "render_blocks" || evp === "prompt_inject" || evp === "a2ui_render_failed";
+        return (
+          evp.indexOf("pipeline_") === 0 ||
+          evp === "render_blocks" ||
+          evp === "prompt_inject" ||
+          evp === "prompt_compose" ||
+          evp === "a2ui_render_failed" ||
+          evp === "preview_source" ||
+          evp === "host_tool_event" ||
+          evp === "followup_chips_render" ||
+          evp === "followup_chips_fallback" ||
+          evp === "action_clicked" ||
+          evp === "action_rejected" ||
+          evp === "lit_render_failed"
+        );
       }
       return l === agentFilter;
     });

@@ -12,6 +12,7 @@ global g_Agent_AiRoute := Map()
 global g_Agent_DispatchPending := Map()
 global g_Agent_RecoverPending := Map()
 global g_Agent_FtbFetchBusy := false
+global g_Agent_BootstrapForce := false
 global g_AgentDbg_PipelineState := Map()
 
 CommandPalette_AgentProtocolPrompt() {
@@ -670,11 +671,30 @@ CommandPalette_AgentIsStatusOnlyDelta(delta) {
     return false
 }
 
+CommandPalette_AgentAnswerHasStructure(raw) {
+    raw := Trim(String(raw))
+    if (raw = "")
+        return false
+    if RegExMatch(raw, "m)^\d")
+        return true
+    if RegExMatch(raw, "m)^[-*•]")
+        return true
+    if RegExMatch(raw, "m)^\*\*")
+        return true
+    if RegExMatch(raw, "m)^#")
+        return true
+    if RegExMatch(raw, "m)^##")
+        return true
+    if RegExMatch(raw, "m)^###")
+        return true
+    return false
+}
+
 CommandPalette_AgentLooksLikeThinkingPreamble(ans) {
     raw := Trim(String(ans))
     if (raw = "")
         return false
-    if RegExMatch(raw, "m)^(\d+[.)]\s|[-*•]\s|\*\*[^*]+\*\*|#{1,3}\s)")
+    if CommandPalette_AgentAnswerHasStructure(raw)
         return false
     if (StrLen(raw) >= 400)
         return false
@@ -735,8 +755,16 @@ CommandPalette_AgentAnswerTextLooksIncomplete(ans) {
         return true
     if CommandPalette_AgentLooksLikeThinkingPreamble(raw)
         return true
+    if RegExMatch(raw, "\|") && RegExMatch(raw, "---")
+        return false
+    if (StrLen(raw) >= 900)
+        return false
+    if CommandPalette_AgentAnswerHasStructure(raw) && StrLen(raw) >= 400
+        return false
+    if (StrLen(raw) >= 1200)
+        return false
     if !RegExMatch(raw, "\|") && StrLen(raw) < 480 {
-        if RegExMatch(raw, "i)(对比|策略|vs |research|华为|小米|meta|ray-ban|眼镜)")
+        if RegExMatch(raw, "i)(对比|策略|vs |research|华为|小米|meta|蔚来|yu7|es9|ray-ban|眼镜)")
             return true
     }
     return false
@@ -947,6 +975,39 @@ CommandPalette_AgentEnsureEngine(*) {
     return IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady
 }
 
+CommandPalette_AgentPushToolEvent(cardId, reqId, tool, phase, text, level := "info") {
+    if FuncExists("CommandPalette_PushToWeb")
+        CommandPalette_PushToWeb(Map(
+            "type", "palette_agent_tool_event",
+            "cardId", String(cardId),
+            "reqId", String(reqId),
+            "tool", String(tool),
+            "phase", String(phase),
+            "text", String(text),
+            "level", String(level),
+            "ts", A_TickCount
+        ))
+}
+
+CommandPalette_AgentTryPushToolEventFromStatus(cardId, reqId, message) {
+    msg := Trim(String(message))
+    if (msg = "")
+        return
+    tool := ""
+    phase := "progress"
+    if InStr(msg, "chat.send")
+        tool := "chat.send"
+    else if RegExMatch(msg, "i)正在调用工具\s+``([^``]+)``", &m)
+        tool := m[1]
+    else if RegExMatch(msg, "i)正在调用工具\s+'([^']+)'", &m)
+        tool := m[1]
+    else if RegExMatch(msg, "i)正在调用工具\s+(\S+)", &m)
+        tool := m[1]
+    if (tool = "")
+        return
+    CommandPalette_AgentPushToolEvent(cardId, reqId, tool, phase, msg, "info")
+}
+
 CommandPalette_AgentPushStreamStatus(cardId, reqId, message) {
     msg := Trim(String(message))
     if (msg = "")
@@ -962,6 +1023,7 @@ CommandPalette_AgentPushStreamStatus(cardId, reqId, message) {
                 card["uiState"] := "Running"
         }
     }
+    CommandPalette_AgentTryPushToolEventFromStatus(cardId, reqId, msg)
     if FuncExists("CommandPalette_PushToWeb")
         CommandPalette_PushToWeb(Map(
             "type", "palette_agent_chunk",
@@ -1026,6 +1088,11 @@ CommandPalette_AgentRecoverCardAnswer(msg) {
     card0 := CommandPalette_AgentGetCard(cid)
     if (q = "" && card0 is Map)
         q := CommandPalette_AgentResolveCardQuery(card0)
+    sessionRef := ""
+    if (card0 is Map)
+        sessionRef := Trim(String(card0.Get("sessionRef", "")))
+    if (sessionRef = "" && msg.Has("sessionRef"))
+        sessionRef := Trim(String(msg["sessionRef"]))
     if !IsObject(g_Agent_RecoverPending)
         g_Agent_RecoverPending := Map()
     if g_Agent_RecoverPending.Has(cid)
@@ -1052,12 +1119,13 @@ CommandPalette_AgentRecoverCardAnswerOnce(cid, rid, q, tryN) {
         SetTimer(CommandPalette_AgentRecoverCardAnswerOnce.Bind(cid, rid, q, tryN), -800)
         return
     }
-    ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
+    sessionRef := (card is Map) ? Trim(String(card.Get("sessionRef", ""))) : ""
+    ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q, cid, sessionRef)
     stillSending := CommandPalette_AgentFtbSessionStillSending(rid)
-    if (ans != "" && !CommandPalette_AgentIsStatusOnlyDelta(ans) && CommandPalette_AgentAnswerIsSubstantial(ans) && !stillSending) {
-        if !CommandPalette_AgentAnswerTextLooksIncomplete(ans) && !CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ans) {
+    if (ans != "" && !CommandPalette_AgentIsStatusOnlyDelta(ans) && CommandPalette_AgentAnswerIsSubstantial(ans)) {
+        if (!stillSending || StrLen(ans) >= 600) && !CommandPalette_AgentAnswerTextLooksIncomplete(ans) && !CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ans) {
             CommandPalette_AgentLog("recover_hit", "card=" . cid . " len=" . StrLen(ans))
-            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
+            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans, "sessionRef", sessionRef))
             if IsObject(g_Agent_RecoverPending)
                 g_Agent_RecoverPending.Delete(cid)
             return
@@ -1066,7 +1134,7 @@ CommandPalette_AgentRecoverCardAnswerOnce(cid, rid, q, tryN) {
     tryN := Integer(tryN)
     maxTry := 40
     if (card is Map) && String(card.Get("provider", "openclaw")) = "openclaw"
-        maxTry := 120
+        maxTry := 200
     if (tryN >= maxTry) {
         if IsObject(g_Agent_RecoverPending)
             g_Agent_RecoverPending.Delete(cid)
@@ -1075,14 +1143,126 @@ CommandPalette_AgentRecoverCardAnswerOnce(cid, rid, q, tryN) {
     SetTimer(CommandPalette_AgentRecoverCardAnswerOnce.Bind(cid, rid, q, tryN + 1), -3000)
 }
 
-CommandPalette_AgentFetchAnswerFromFtb(reqId, query) {
+CommandPalette_AgentSyncNiumaSession(reqId, cardId, query, sessionRef := "", answer := "") {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return false
+    q := Trim(String(query))
+    cid := Trim(String(cardId))
+    if (q = "" || cid = "")
+        return false
+    if !FuncExists("CommandPalette_JsEscapeForParse")
+        return false
+    argsJson := "{}"
+    try argsJson := Jxon_Dump(Map(
+        "reqId", String(reqId),
+        "cardId", cid,
+        "query", q,
+        "sessionRef", String(sessionRef),
+        "answer", String(answer)
+    ))
+    catch {
+        return false
+    }
+    escaped := CommandPalette_JsEscapeForParse(argsJson)
+    js := "(function(){try{var o=JSON.parse('" . escaped . "');"
+        . "var fn=window.paletteSyncCardAnswerToNiumaSession;"
+        . "if(typeof fn!=='function')return JSON.stringify({ok:0,err:'no_fn'});"
+        . "return fn(o).then(function(a){return JSON.stringify({ok:1,answer:String(a||'')});})"
+        . ".catch(function(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});});"
+        . "}catch(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});}})();"
+    try {
+        raw := g_FTB_WV2.ExecuteScriptAsync(js).await(60000)
+        data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
+        return (data is Map) && data.Get("ok", false)
+    } catch {
+        return false
+    }
+}
+
+CommandPalette_AgentBootstrapNiumaSessions(*) {
+    global g_Agent_Cards, g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_Agent_BootstrapForce
+    static bootBusy := false
+    static bootDoneAt := 0
+    force := !!g_Agent_BootstrapForce
+    g_Agent_BootstrapForce := false
+    if bootBusy
+        return
+    if !force && bootDoneAt && (A_TickCount - bootDoneAt < 45000)
+        return
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return
+    bootBusy := true
+    try {
+        if FuncExists("CommandPalette_AgentLoadCards")
+            try CommandPalette_AgentLoadCards()
+        items := []
+        for cid, card in g_Agent_Cards {
+            if !(card is Map)
+                continue
+            q := FuncExists("CommandPalette_AgentResolveCardQuery")
+                ? CommandPalette_AgentResolveCardQuery(card)
+                : Trim(String(card.Get("query", card.Get("title", ""))))
+            if (q = "")
+                continue
+            items.Push(Map(
+                "cardId", cid,
+                "reqId", String(card.Get("reqId", "")),
+                "query", q,
+                "sessionRef", String(card.Get("sessionRef", "")),
+                "rawAnswer", String(card.Get("rawAnswer", ""))
+            ))
+        }
+        if !items.Length
+            return
+        if FuncExists("WebView_QueuePayload") {
+            try WebView_QueuePayload(g_FTB_WV2, Map("type", "palette_agent_cards_sync", "cards", items, "force", true))
+            catch {
+            }
+        }
+        if !FuncExists("CommandPalette_JsEscapeForParse")
+            return
+        cardsJson := "[]"
+        try cardsJson := Jxon_Dump(items)
+        catch {
+            return
+        }
+        escaped := CommandPalette_JsEscapeForParse(cardsJson)
+        js := "(function(){try{var arr=JSON.parse('" . escaped . "');"
+            . "var fn=window.paletteBootstrapSessionsFromAgentCards;"
+            . "if(typeof fn!=='function')return JSON.stringify({ok:0,err:'no_fn'});"
+            . "return fn(arr).then(function(n){return JSON.stringify({ok:1,count:Number(n)||0});})"
+            . ".catch(function(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});});"
+            . "}catch(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});}})();"
+        raw := g_FTB_WV2.ExecuteScriptAsync(js).await(120000)
+        data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
+        if (data is Map) && data.Get("ok", false) {
+            bootDoneAt := A_TickCount
+            CommandPalette_AgentLog("niuma_bootstrap", "count=" . Integer(data.Get("count", 0)))
+        } else if (data is Map) {
+            CommandPalette_AgentLog("niuma_bootstrap_fail", String(data.Get("err", "unknown")))
+        }
+    } catch as eBoot {
+        try CommandPalette_AgentLog("niuma_bootstrap_err", eBoot.Message)
+    } finally {
+        bootBusy := false
+    }
+}
+
+CommandPalette_AgentFetchAnswerFromFtb(reqId, query, cardId := "", sessionRef := "") {
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_Agent_FtbFetchBusy
     if g_Agent_FtbFetchBusy
         return ""
     if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
         return ""
     argsJson := "{}"
-    try argsJson := Jxon_Dump(Map("reqId", String(reqId), "query", String(query)))
+    try argsJson := Jxon_Dump(Map(
+        "reqId", String(reqId),
+        "query", String(query),
+        "cardId", String(cardId),
+        "sessionRef", String(sessionRef),
+        "createSession", false
+    ))
     catch {
         return ""
     }
@@ -1090,21 +1270,28 @@ CommandPalette_AgentFetchAnswerFromFtb(reqId, query) {
         return ""
     escaped := CommandPalette_JsEscapeForParse(argsJson)
     js := "(function(){try{var o=JSON.parse('" . escaped . "');"
+        . "var rec=window.paletteRecoverAnswerForCard;"
         . "var fn=window.palettePickAssistantAnswerForAgent;"
         . "var hy=window.paletteHydrateAssistantFromGateway;"
-        . "if(typeof fn!=='function')return JSON.stringify({ok:0,err:'no_fn'});"
-        . "var pick=function(){return String(fn(o.reqId,o.query,{allowWhileSending:true})||'');};"
+        . "var pick=function(){return (typeof fn==='function')?String(fn(o.reqId,o.query,{allowWhileSending:true})||''):'';};"
+        . "if(typeof rec==='function'){"
+        . "return rec(Object.assign({},o,{createSession:false})).then(function(a){"
+        . "var ans=String(a||pick()||'');"
+        . "return JSON.stringify({ok:1,answer:ans});"
+        . "}).catch(function(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});});"
+        . "}"
         . "if(typeof hy==='function'){"
-        . "return hy(o.reqId,o.query,{allowWhileSending:true}).then(function(a){"
+        . "return hy(o.reqId,o.query,{allowWhileSending:true,extendedPoll:true}).then(function(a){"
         . "var ans=String(a||pick()||'');"
         . "return JSON.stringify({ok:1,answer:ans});"
         . "}).catch(function(){return JSON.stringify({ok:1,answer:pick()});});"
         . "}"
+        . "if(typeof fn!=='function')return JSON.stringify({ok:0,err:'no_fn'});"
         . "return JSON.stringify({ok:1,answer:pick()});"
         . "}catch(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});}})();"
     g_Agent_FtbFetchBusy := true
     try {
-        raw := g_FTB_WV2.ExecuteScriptAsync(js).await(12000)
+        raw := g_FTB_WV2.ExecuteScriptAsync(js).await(45000)
         data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
         if (data is Map) && data.Get("ok", false)
             return Trim(String(data.Get("answer", "")))
@@ -1131,16 +1318,23 @@ CommandPalette_AgentPollFtbAnswer(cardId, reqId, query, tryN) {
     qCard := CommandPalette_AgentResolveCardQuery(card)
     if (qCard != "")
         q := qCard
+    sessionRef := Trim(String(card.Get("sessionRef", "")))
     followUp := card.Get("running", false) && !card.Get("ended", false) && Trim(String(card.Get("priorRawAnswer", ""))) != ""
     if !followUp && CommandPalette_AgentHasSubstantialAnswer(card) && !CommandPalette_AgentFtbSessionStillSending(rid) {
-        ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
+        ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q, cid, sessionRef)
         if (ans != "" && CommandPalette_AgentAnswerIsSubstantial(ans) && !CommandPalette_AgentAnswerTextLooksIncomplete(ans)
             && !CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ans)) {
             CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
             return
         }
+        if (ans != "" && CommandPalette_AgentAnswerIsSubstantial(ans) && StrLen(ans) >= 800
+            && !CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ans)) {
+            CommandPalette_AgentLog("poll_hit_long", "card=" . cid . " len=" . StrLen(ans))
+            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
+            return
+        }
     }
-    ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
+    ans := CommandPalette_AgentFetchAnswerFromFtb(rid, q, cid, sessionRef)
     if (ans != "" && !CommandPalette_AgentAnswerIsSubstantial(ans))
         ans := ""
     stillSending := CommandPalette_AgentFtbSessionStillSending(rid)
@@ -1163,19 +1357,20 @@ CommandPalette_AgentPollFtbAnswer(cardId, reqId, query, tryN) {
                 CommandPalette_OnNiumaPaletteAgentChunk(Map("reqId", rid, "cardId", cid, "delta", SubStr(ans, StrLen(prev) + 1)))
             }
         }
-        if !stillSending && CommandPalette_AgentHasSubstantialAnswer(card) {
-            ansEnd := CommandPalette_AgentFetchAnswerFromFtb(rid, q)
+        if (!stillSending || StrLen(ans) >= 600) && CommandPalette_AgentHasSubstantialAnswer(card) {
+            ansEnd := CommandPalette_AgentFetchAnswerFromFtb(rid, q, cid, sessionRef)
             if (ansEnd = "" || !CommandPalette_AgentAnswerIsSubstantial(ansEnd))
                 ansEnd := Trim(String(card.Get("rawAnswer", ans)))
-            if CommandPalette_AgentAnswerIsSubstantial(ansEnd) && !CommandPalette_AgentAnswerTextLooksIncomplete(ansEnd)
-                && !CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ansEnd) {
-                CommandPalette_AgentLog("poll_hit", "card=" . cid . " len=" . StrLen(ansEnd))
-                CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ansEnd))
+            if CommandPalette_AgentAnswerIsSubstantial(ansEnd) && !CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ansEnd) {
+                if !CommandPalette_AgentAnswerTextLooksIncomplete(ansEnd) || StrLen(ansEnd) >= 800 {
+                    CommandPalette_AgentLog("poll_hit", "card=" . cid . " len=" . StrLen(ansEnd))
+                    CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ansEnd))
+                }
             }
             return
         }
     }
-    if (tryN > 0 && Mod(tryN, 3) = 0 && !CommandPalette_AgentHasSubstantialAnswer(card)) {
+    if (tryN > 0 && Mod(tryN, 6) = 0 && !CommandPalette_AgentHasSubstantialAnswer(card)) {
         prov := String(card.Get("provider", "openclaw"))
         pl := (prov = "hermes") ? "Hermes" : "OpenClaw"
         dispatchTick := Integer(card.Get("dispatchTick", 0))
@@ -1186,8 +1381,14 @@ CommandPalette_AgentPollFtbAnswer(cardId, reqId, query, tryN) {
             CommandPalette_AgentPushStreamStatus(cid, rid, "⏳ 同步 Niuma 会话回复中 (" . (tryN + 1) . " · " . elapsed . "s)")
     }
     prov := String(card.Get("provider", "openclaw"))
-    pollMax := (prov = "openclaw" || prov = "hermes") ? 300 : 90
+    pollMax := (prov = "openclaw" || prov = "hermes") ? 450 : 90
     if (tryN >= pollMax) {
+        ansFinal := CommandPalette_AgentFetchAnswerFromFtb(rid, q, cid, sessionRef)
+        if (ansFinal != "" && CommandPalette_AgentAnswerIsSubstantial(ansFinal) && !CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ansFinal)) {
+            CommandPalette_AgentLog("poll_final_hit", "card=" . cid . " len=" . StrLen(ansFinal))
+            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ansFinal, "sessionRef", sessionRef))
+            return
+        }
         pl := (prov = "hermes") ? "Hermes" : "龙虾 OpenClaw"
         CommandPalette_AgentPushError(rid, cid, "同步超时：Niuma 未返回回复。请确认悬浮栏已加载，并在设置中对「" . pl . "」点一键连接")
         return
@@ -1440,7 +1641,8 @@ CommandPalette_AgentStreamWatchdogTick(cardId) {
             return
         }
         q := CommandPalette_AgentResolveCardQuery(card)
-        ans := (q != "") ? CommandPalette_AgentFetchAnswerFromFtb(rid, q) : ""
+        sessionRef := Trim(String(card.Get("sessionRef", "")))
+        ans := (q != "") ? CommandPalette_AgentFetchAnswerFromFtb(rid, q, cid, sessionRef) : ""
         if (ans != "" && !CommandPalette_AgentFetchAnswerLooksStaleForCard(card, ans)) {
             CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
             return
@@ -1558,6 +1760,7 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
         newAns := Trim(ans)
         if CommandPalette_AgentAnswerIsSubstantial(prev) && StrLen(prev) >= StrLen(newAns) {
             if !(CommandPalette_AgentAnswerTextLooksIncomplete(prev) && !CommandPalette_AgentAnswerTextLooksIncomplete(newAns))
+                && !(StrLen(newAns) >= 800 && StrLen(newAns) > StrLen(prev))
                 return
         }
     }
@@ -1579,13 +1782,20 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
         }
     }
     CommandPalette_AgentPersistCards()
+    qSync := FuncExists("CommandPalette_AgentResolveCardQuery")
+        ? CommandPalette_AgentResolveCardQuery(card)
+        : Trim(String(card.Get("query", card.Get("title", ""))))
+    srSync := String(card.Get("sessionRef", ""))
+    if FuncExists("CommandPalette_AgentSyncNiumaSession")
+        SetTimer(CommandPalette_AgentSyncNiumaSession.Bind(reqId, cardId, qSync, srSync, ans), -50)
     if FuncExists("CommandPalette_PushToWeb")
         CommandPalette_PushToWeb(Map(
             "type", "palette_agent_end",
             "cardId", cardId,
             "reqId", reqId,
             "answer", ans,
-            "sessionRef", String(card.Get("sessionRef", ""))
+            "sessionRef", srSync,
+            "query", qSync
         ))
     SetTimer(CommandPalette_AgentPushCardSync, -600)
 }
@@ -2030,6 +2240,15 @@ CommandPalette_AgentDebug_TracePalettePush(payload) {
         evt := "chunk"
         if payload.Has("delta")
             det .= (det != "" ? " " : "") . "Δ=" . SubStr(String(payload["delta"]), 1, 80)
+    } else if (typ = "palette_agent_tool_event") {
+        lay := "palette"
+        evt := "tool_event"
+        if payload.Has("tool")
+            det .= (det != "" ? " " : "") . "tool=" . String(payload["tool"])
+        if payload.Has("phase")
+            det .= (det != "" ? " " : "") . "phase=" . String(payload["phase"])
+        if payload.Has("text")
+            det .= (det != "" ? " " : "") . "txt=" . SubStr(String(payload["text"]), 1, 80)
     } else if (typ = "palette_agent_status") {
         lay := "palette"
         evt := "status"
@@ -2059,3 +2278,5 @@ global g_CmdPal_AgentWireLogDispatch := CommandPalette_AgentWireLog
 ; 启动时从磁盘恢复历史任务卡；若曾持久化失败则从 trace 日志一次性重建
 try CommandPalette_AgentLoadCards()
 try CommandPalette_AgentRecoverCardsIfEmpty()
+if FuncExists("CommandPalette_AgentBootstrapNiumaSessions")
+    SetTimer(CommandPalette_AgentBootstrapNiumaSessions, -12000)

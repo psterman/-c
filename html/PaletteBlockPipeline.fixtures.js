@@ -90,10 +90,57 @@
       deltas: ["📨 OpenClaw 已发送: chat.send", "早上好！这是回复。"]
     },
     research_table: {
-      description: "Markdown 表格 → ComparisonTable A2UI",
+      description: "Markdown 表格 → ComparisonTable A2UI（Option A：reply 保留原表）",
       rawAnswer:
         "对比结论如下：\n\n| 维度 | 小米 | Meta |\n|---|---|---|\n| 优势 | 生态 | VR |\n| 风险 | 监管 | 隐私 |",
-      route: { routeId: "research_compare", a2uiCandidates: ["ComparisonTable"] }
+      route: {
+        routeId: "research_compare",
+        a2uiCandidates: ["ComparisonTable"],
+        uiCandidates: {
+          a2ui: ["ComparisonTable"],
+          display: { hideOriginalTable: false }
+        }
+      }
+    },
+    research_table_option_b: {
+      description: "ComparisonTable + hideOriginalTable（Option B：reply 剥离原表）",
+      rawAnswer:
+        "对比结论如下：\n\n| 维度 | 小米 | Meta |\n|---|---|---|\n| 优势 | 生态 | VR |\n| 风险 | 监管 | 隐私 |",
+      route: {
+        routeId: "research_compare",
+        a2uiCandidates: ["ComparisonTable"],
+        uiCandidates: {
+          a2ui: ["ComparisonTable"],
+          display: { hideOriginalTable: true }
+        }
+      }
+    },
+    research_table_large: {
+      description: "大表 enrich 时裁剪至 20 行 × 8 列",
+      rawAnswer: (function () {
+        var cols = [];
+        for (var ci = 0; ci < 10; ci++) cols.push("列" + ci);
+        var lines = [
+          "大表裁剪测试：",
+          "",
+          "| " + cols.join(" | ") + " |",
+          "|" + cols.map(function () { return "---"; }).join("|") + "|"
+        ];
+        for (var ri = 0; ri < 25; ri++) {
+          var cells = [];
+          for (var cj = 0; cj < 10; cj++) cells.push("R" + ri + "C" + cj);
+          lines.push("| " + cells.join(" | ") + " |");
+        }
+        return lines.join("\n");
+      })(),
+      route: {
+        routeId: "research_compare",
+        a2uiCandidates: ["ComparisonTable"],
+        uiCandidates: {
+          a2ui: ["ComparisonTable"],
+          display: { hideOriginalTable: false }
+        }
+      }
     },
     follow_up_merge: {
       description: "Phase4 append：turn1 reply 保留 + turn2 新 segment 合并",
@@ -141,6 +188,47 @@
       route: { routeId: "research_compare", a2uiCandidates: ["ComparisonTable"] },
       legacyReplay: true
     },
+    matcher_ui_matches: {
+      description: "ComponentMatcher finalize meta 含 uiMatches / displayPolicy",
+      rawAnswer:
+        "对比结论如下：\n\n| 维度 | 小米 | Meta |\n|---|---|---|\n| 优势 | 生态 | VR |",
+      route: {
+        routeId: "research_compare",
+        a2uiCandidates: ["ComparisonTable"],
+        uiCandidates: {
+          a2ui: ["ComparisonTable"],
+          display: { hideOriginalTable: false }
+        }
+      }
+    },
+    tool_event_status_append: {
+      description: "ingestToolEvent 序列 → status block source=tool_event",
+      toolEvents: [
+        { tool: "chat.send", phase: "start", text: "⏳ 开始调用 chat.send", level: "info" },
+        { tool: "chat.send", phase: "progress", text: "⏳ OpenClaw 正在调用工具 chat.send", level: "info" },
+        { tool: "chat.send", phase: "done", text: "✅ chat.send 完成", level: "info" }
+      ]
+    },
+    replay_tool_status_blocks: {
+      description: "tool_event status BlockStore pack/unpack replay",
+      replayFrom: "tool_event_status_append"
+    },
+    preview_source_blocks: {
+      description: "blockPreviewSummaryWithSource 从 reply_lead 取 preview",
+      blocks: [
+        {
+          id: "blk_preview_reply",
+          type: "reply",
+          state: "final",
+          source: "raw",
+          confidence: 0.8,
+          seq: 1,
+          turnId: 1,
+          traceId: "fx_preview",
+          markdown: "结论先行。\n\n| A | B |\n|---|---|\n| 1 | 2 |"
+        }
+      ]
+    },
     a2ui_render_fail: {
       description: "未知 component → render 失败，reply markdown 仍保留（DOM 手测）",
       blocks: [
@@ -175,13 +263,19 @@
   var FIXTURE_ASSERT = {
     execute_steps: { a2uiComponent: "Steps" },
     debug_alert: { a2uiComponent: "Alert" },
-    research_table: { a2uiComponent: "ComparisonTable", replyNoTable: true },
-    replay_blockstore: { a2uiComponent: "ComparisonTable", checkDom: true, replyNoTable: true },
+    research_table: { a2uiComponent: "ComparisonTable", replyHasTable: true },
+    research_table_option_b: { a2uiComponent: "ComparisonTable", replyNoTable: true },
+    research_table_large: { a2uiComponent: "ComparisonTable", tableClipped: true, replyHasTable: true },
+    replay_blockstore: { a2uiComponent: "ComparisonTable", checkDom: true, replyHasTable: true },
     follow_up_merge: { replyCountMin: 2 },
     mock_all_slots: { a2uiComponent: "ComparisonTable" },
     legacy_raw_replay: { hasReply: true },
-    legacy_raw_replay_table: { hasReply: true, a2uiComponent: "ComparisonTable", replyNoTable: true },
-    a2ui_render_fail: { hasReply: true }
+    legacy_raw_replay_table: { hasReply: true, a2uiComponent: "ComparisonTable", replyHasTable: true },
+    a2ui_render_fail: { hasReply: true },
+    matcher_ui_matches: { hasUiMatches: true, displayOptionA: true },
+    tool_event_status_append: { toolEventSource: true, statusItemMin: 3 },
+    replay_tool_status_blocks: { toolEventSource: true, statusItemMin: 3 },
+    preview_source_blocks: { previewSource: "reply_lead" }
   };
 
   function getFixture(name) {
@@ -223,26 +317,103 @@
       });
       if (replyWithTable) errors.push("reply_still_has_table");
     }
+    if (spec.replyHasTable) {
+      var replyHasTable = (out.blocks || []).some(function (b) {
+        return b && b.type === "reply" && /\|/.test(String(b.markdown || "")) && /---/.test(String(b.markdown || ""));
+      });
+      if (!replyHasTable) errors.push("reply_missing_table");
+    }
+    if (spec.tableClipped) {
+      var tableBlock = null;
+      for (var tb = 0; tb < (out.blocks || []).length; tb++) {
+        var blk = out.blocks[tb];
+        if (blk && blk.type === "a2ui" && blk.component === "ComparisonTable") {
+          tableBlock = blk;
+          break;
+        }
+      }
+      var metaClipped = ((out.meta && out.meta.a2ui) || []).some(function (m) {
+        return m && m.clipped;
+      });
+      var rowsOk =
+        tableBlock && tableBlock.props && (tableBlock.props.rows || []).length <= 20;
+      var colsOk =
+        tableBlock && tableBlock.props && (tableBlock.props.columns || []).length <= 8;
+      if (!metaClipped || !rowsOk || !colsOk) errors.push("table_not_clipped");
+    }
     if (spec.checkDom && typeof document !== "undefined") {
       if (!document.querySelector(".card-a2ui .a2ui-slot")) errors.push("missing_dom:.card-a2ui .a2ui-slot");
     }
+    if (spec.hasUiMatches) {
+      var matches = (out.meta && out.meta.uiMatches) || [];
+      if (!matches.length) errors.push("missing_uiMatches");
+      if (spec.displayOptionA && out.meta && out.meta.displayPolicy && out.meta.displayPolicy.option !== "A")
+        errors.push("display_not_option_a");
+    }
+    if (spec.toolEventSource) {
+      var toolBlk = (out.blocks || []).find(function (b) {
+        return b && b.type === "status" && b.source === "tool_event";
+      });
+      if (!toolBlk) errors.push("missing_tool_event_status");
+      else if (spec.statusItemMin != null && (toolBlk.items || []).length < spec.statusItemMin)
+        errors.push("status_items<" + spec.statusItemMin);
+    }
+    if (spec.previewSource) {
+      if (!root.PaletteBlockPipeline || !PaletteBlockPipeline.blockPreviewSummaryWithSource)
+        errors.push("preview_helper_missing");
+      else {
+        var prev = PaletteBlockPipeline.blockPreviewSummaryWithSource(out.blocks || []);
+        if (!prev || prev.source !== spec.previewSource) errors.push("preview_source:" + (prev && prev.source));
+      }
+    }
     return { pass: errors.length === 0, errors: errors };
+  }
+
+  function runToolEventFixture(fx, name) {
+    if (!root.PaletteBlockPipeline || !PaletteBlockPipeline.ingestToolEvent) {
+      return { ok: false, error: "ingestToolEvent_unavailable", fixture: name };
+    }
+    var state = PaletteBlockPipeline.createIngestState({ traceId: "fx_tool_" + name });
+    var events = fx.toolEvents || [];
+    for (var ei = 0; ei < events.length; ei++) {
+      PaletteBlockPipeline.ingestToolEvent(state, events[ei]);
+    }
+    for (var bi = 0; bi < state.blocks.length; bi++) {
+      if (state.blocks[bi]) state.blocks[bi].state = "final";
+    }
+    return {
+      fixture: name,
+      description: fx.description || "",
+      input: { toolEvents: events.length },
+      blocks: state.blocks,
+      meta: { toolEvent: true },
+      ok: state.blocks.length > 0
+    };
   }
 
   function runReplayBlockstoreFixture(fx, name, cardId, renderFn) {
     var srcName = fx.replayFrom || "research_table";
     var src = getFixture(srcName);
-    if (!src || src.rawAnswer == null || !root.PaletteBlockPipeline) {
+    if (!src || !root.PaletteBlockPipeline) {
       return { ok: false, error: "replay_source_missing:" + srcName, fixture: name };
     }
-    var finOpts = { traceId: "fx_replay_" + name, route: src.route || {} };
-    var result = PaletteBlockPipeline.finalize(src.rawAnswer, finOpts);
+    var result;
+    if (src.toolEvents) {
+      var toolOut = runToolEventFixture(src, srcName);
+      result = { blocks: toolOut.blocks, meta: toolOut.meta };
+    } else if (src.rawAnswer != null) {
+      var finOpts = { traceId: "fx_replay_" + name, route: src.route || {} };
+      result = PaletteBlockPipeline.finalize(src.rawAnswer, finOpts);
+    } else {
+      return { ok: false, error: "replay_source_empty:" + srcName, fixture: name };
+    }
     if (!root.PaletteBlockStore || !PaletteBlockStore.pack || !PaletteBlockStore.unpack) {
       return { ok: false, error: "blockstore_unavailable", fixture: name };
     }
     var packed = PaletteBlockStore.pack(result.blocks);
     var store = PaletteBlockStore.unpack(packed);
     var blocks = store && store.blocks ? store.blocks : [];
+    var expectA2ui = !src.toolEvents;
     var out = {
       fixture: name,
       description: fx.description || "",
@@ -250,7 +421,7 @@
       blocks: blocks,
       meta: result.meta,
       blockStore: store,
-      ok: blocks.length > 0 && hasA2uiComponent(blocks, "ComparisonTable")
+      ok: blocks.length > 0 && (!expectA2ui || hasA2uiComponent(blocks, "ComparisonTable"))
     };
     if (renderFn) out.render = renderFn(cardId || "mock-fixture-replay", blocks);
     return out;
@@ -284,12 +455,24 @@
       if (renderFn) out.render = renderFn(cardId || "mock-fixture-legacy", legResult.blocks);
       return out;
     }
+    if (fx.toolEvents && root.PaletteBlockPipeline) {
+      out = runToolEventFixture(fx, name);
+      var toolAssert = assertFixtureResult(out, name);
+      out.assert = toolAssert;
+      if (!toolAssert.pass) out.ok = false;
+      return out;
+    }
     if (fx.blocks) {
       out.input = { blocks: fx.blocks.length };
       out.blocks = fx.blocks;
       if (root.PaletteBlockSchema) out.blocks = PaletteBlockSchema.validateBlocks(fx.blocks).blocks;
       if (renderFn) out.render = renderFn(cardId || "mock-fixture-card", out.blocks);
       out.ok = true;
+      if (name === "preview_source_blocks" || FIXTURE_ASSERT[name]) {
+        var blkAssert = assertFixtureResult(out, name);
+        out.assert = blkAssert;
+        if (!blkAssert.pass) out.ok = false;
+      }
       return out;
     }
     if (fx.rawAnswer != null && root.PaletteBlockPipeline) {
@@ -301,6 +484,11 @@
       if (root.PaletteBlockStore && PaletteBlockStore.pack) out.blockStore = PaletteBlockStore.pack(result.blocks);
       if (renderFn) out.render = renderFn(cardId || "mock-fixture-card", result.blocks);
       out.ok = true;
+      if (FIXTURE_ASSERT[name]) {
+        var rawAssert = assertFixtureResult(out, name);
+        out.assert = rawAssert;
+        if (!rawAssert.pass) out.ok = false;
+      }
       return out;
     }
     if (fx.priorBlocks && fx.segmentRaw != null && root.PaletteBlockPipeline && PaletteBlockPipeline.mergeSegmentBlocks) {

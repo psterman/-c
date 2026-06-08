@@ -132,6 +132,7 @@
     if (/chat\.send/i.test(p)) return true;
     if (/Gateway session/i.test(p)) return true;
     if (/绑定 OpenClaw/i.test(p)) return true;
+    if (/^\[执行中\]/.test(p)) return true;
     return /^(正在|等待|任务已|仍连接|OpenClaw 流式|OpenClaw 处理|OpenClaw 已发送|已提交至 Gateway|同步 Niuma|流式输出中)/.test(p);
   }
 
@@ -169,18 +170,14 @@
     };
   }
 
-  function appendStatusItem(state, text) {
-    var t = String(text || "").replace(/\s+/g, " ").trim();
-    if (!t) return;
-    for (var i = 0; i < state.statusItems.length; i++) {
-      if (state.statusItems[i] === t) return;
-    }
-    state.statusItems.push(t);
+  function findOrCreateStatusBlock(state, source) {
     var now = Date.now();
+    var src = String(source || "system");
     var statusBlock = null;
     for (var j = state.blocks.length - 1; j >= 0; j--) {
-      if (state.blocks[j] && state.blocks[j].type === "status") {
-        statusBlock = state.blocks[j];
+      var sb = state.blocks[j];
+      if (sb && sb.type === "status" && String(sb.source || "system") === src) {
+        statusBlock = sb;
         break;
       }
     }
@@ -189,7 +186,7 @@
         id: root.PaletteBlockSchema ? PaletteBlockSchema.genBlockId("blk_st") : "blk_st_" + now,
         type: "status",
         state: "streaming",
-        source: "system",
+        source: src,
         confidence: 0.9,
         seq: nextSeq(state),
         turnId: state.turnId,
@@ -200,8 +197,69 @@
       };
       state.blocks.push(statusBlock);
     }
-    statusBlock.items.push({ text: t, level: "info" });
-    statusBlock.updatedAt = now;
+    return statusBlock;
+  }
+
+  function statusItemDedupeKey(item) {
+    if (!item) return "";
+    return (
+      String(item.tool || "") +
+      "|" +
+      String(item.phase || "") +
+      "|" +
+      String(item.text || "").replace(/\s+/g, " ").trim()
+    );
+  }
+
+  function appendStatusEvent(state, event) {
+    event = event || {};
+    var t = String(event.text != null ? event.text : "").replace(/\s+/g, " ").trim();
+    if (!t) return;
+    var source = event.source === "tool_event" ? "tool_event" : "system";
+    var item = {
+      text: t,
+      level: String(event.level || "info"),
+      ts: event.ts != null ? Number(event.ts) : Date.now()
+    };
+    if (event.tool != null) item.tool = String(event.tool);
+    if (event.phase != null) item.phase = String(event.phase);
+    var dedupeKey = statusItemDedupeKey(item);
+    if (source === "system") {
+      for (var i = 0; i < state.statusItems.length; i++) {
+        if (state.statusItems[i] === t) return;
+      }
+      state.statusItems.push(t);
+    } else {
+      if (!state._toolEventKeys) state._toolEventKeys = {};
+      if (state._toolEventKeys[dedupeKey]) return;
+      state._toolEventKeys[dedupeKey] = true;
+    }
+    var statusBlock = findOrCreateStatusBlock(state, source);
+    for (var ki = 0; ki < statusBlock.items.length; ki++) {
+      if (statusItemDedupeKey(statusBlock.items[ki]) === dedupeKey) return;
+    }
+    statusBlock.items.push(item);
+    statusBlock.updatedAt = Date.now();
+  }
+
+  function appendStatusItem(state, text) {
+    appendStatusEvent(state, { text: text, source: "system", level: "info" });
+  }
+
+  function ingestToolEvent(state, payload) {
+    payload = payload || {};
+    appendStatusEvent(state, {
+      source: "tool_event",
+      text: payload.text || payload.message || "",
+      tool: payload.tool || "",
+      phase: payload.phase || "progress",
+      level: payload.level || "info",
+      ts: payload.ts
+    });
+    return {
+      blocks: state.blocks,
+      meta: { toolEvent: true, tool: payload.tool, phase: payload.phase }
+    };
   }
 
   function upsertStreamingReply(state, markdown) {
@@ -342,15 +400,32 @@
     var validated = validateBlocksList(blocks);
     blocks = validated.blocks || [];
     var a2meta = [];
-    if (root.PaletteMiniA2UI && PaletteMiniA2UI.enrichBlocksWithA2UI) {
-      var enriched = PaletteMiniA2UI.enrichBlocksWithA2UI(blocks, {
+    var matcherMeta = null;
+    var uiMatches = [];
+    var displayPolicy = null;
+    if (root.PaletteComponentMatcher && PaletteComponentMatcher.match) {
+      var enriched = PaletteComponentMatcher.match(blocks, {
         route: options.route || {},
         turnId: turnId,
         traceId: traceId,
-        nextSeq: nextSeqFn
+        nextSeq: nextSeqFn,
+        hideOriginalTable: options.hideOriginalTable
       });
       blocks = enriched.blocks || blocks;
       a2meta = (enriched.meta && enriched.meta.a2ui) || [];
+      matcherMeta = enriched.meta && enriched.meta.matcher ? enriched.meta.matcher : null;
+      uiMatches = (enriched.meta && enriched.meta.uiMatches) || [];
+      displayPolicy = (enriched.meta && enriched.meta.displayPolicy) || null;
+    } else if (root.PaletteMiniA2UI && PaletteMiniA2UI.enrichBlocksWithA2UI) {
+      var enrichedFallback = PaletteMiniA2UI.enrichBlocksWithA2UI(blocks, {
+        route: options.route || {},
+        turnId: turnId,
+        traceId: traceId,
+        nextSeq: nextSeqFn,
+        hideOriginalTable: options.hideOriginalTable === true
+      });
+      blocks = enrichedFallback.blocks || blocks;
+      a2meta = (enrichedFallback.meta && enrichedFallback.meta.a2ui) || [];
     }
 
     return {
@@ -360,6 +435,9 @@
         traceId: traceId,
         turnId: turnId,
         a2ui: a2meta,
+        matcher: matcherMeta,
+        uiMatches: uiMatches,
+        displayPolicy: displayPolicy,
         errors: validated.errors || [],
         dropped: (validated.dropped || []).length
       }
@@ -469,7 +547,7 @@
     return "";
   }
 
-  function blockPreviewSummary(blocks) {
+  function blockPreviewSummaryWithSource(blocks) {
     var list = blocks || [];
     var bestReply = null;
     var bestTurn = -1;
@@ -486,10 +564,13 @@
     if (bestReply) {
       var replyMd = String(bestReply.markdown);
       var lead = extractNonTablePreview(replyMd);
-      if (lead) return lead.slice(0, 160);
+      if (lead) return { text: lead.slice(0, 160), source: "reply_lead" };
       var tblSum = inferTablePreviewFromMarkdown(replyMd);
-      if (tblSum) return tblSum;
-      return replyMd.replace(/\s+/g, " ").trim().slice(0, 160);
+      if (tblSum) return { text: tblSum, source: "reply_table" };
+      return {
+        text: replyMd.replace(/\s+/g, " ").trim().slice(0, 160),
+        source: "reply"
+      };
     }
     var bestA2 = null;
     var bestA2Turn = -1;
@@ -504,7 +585,7 @@
     }
     if (bestA2) {
       var a2Sum = a2uiBlockSummary(bestA2);
-      if (a2Sum) return a2Sum.slice(0, 160);
+      if (a2Sum) return { text: a2Sum.slice(0, 160), source: "a2ui" };
     }
     for (var pj = 0; pj < list.length; pj++) {
       var ps = list[pj];
@@ -515,17 +596,27 @@
             return "步骤" + (i + 1) + "：" + (it.text || "");
           })
           .join(" · ");
-        if (planPipe) return planPipe.slice(0, 160);
+        if (planPipe) return { text: planPipe.slice(0, 160), source: "plan" };
       }
     }
     for (var pk = list.length - 1; pk >= 0; pk--) {
       var st = list[pk];
       if (st && st.type === "status" && st.items && st.items.length) {
         var lt = String(st.items[st.items.length - 1].text || "").trim();
-        if (lt) return lt.slice(0, 160);
+        if (lt) {
+          return {
+            text: lt.slice(0, 160),
+            source: st.source === "tool_event" ? "tool_event_status" : "status"
+          };
+        }
       }
     }
-    return "";
+    return { text: "", source: "none" };
+  }
+
+  function blockPreviewSummary(blocks) {
+    var r = blockPreviewSummaryWithSource(blocks);
+    return r && r.text ? r.text : "";
   }
 
   function inferTablePreviewFromMarkdown(md) {
@@ -562,7 +653,10 @@
     dedupeMergedBlocks: dedupeMergedBlocks,
     freezeBlocks: freezeBlocks,
     maxTurnId: maxTurnId,
+    appendStatusEvent: appendStatusEvent,
+    ingestToolEvent: ingestToolEvent,
     blockPreviewSummary: blockPreviewSummary,
+    blockPreviewSummaryWithSource: blockPreviewSummaryWithSource,
     a2uiBlockSummary: a2uiBlockSummary,
     inferTablePreviewFromMarkdown: inferTablePreviewFromMarkdown,
     extractNonTablePreview: extractNonTablePreview,

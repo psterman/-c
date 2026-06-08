@@ -1306,6 +1306,10 @@ FloatingToolbar_OnNavigationCompleted(sender, args) {
     }
     FloatingToolbar_FlushPendingSelectionIfReady()
     FloatingToolbar_FlushPendingNiumaComposeIfReady()
+    if ok {
+        if FuncExists("CommandPalette_AgentBootstrapNiumaSessions")
+            SetTimer(CommandPalette_AgentBootstrapNiumaSessions, -2500)
+    }
 }
 
 ; ===================== 閸﹀棜顫楁潏瑙勵攱婢跺嫮鎮?=====================
@@ -2603,6 +2607,14 @@ FloatingToolbar_OnWebMessage(sender, args) {
     if (typ = "palette_agent_prepare_new") {
         try WebView_QueuePayload(g_FTB_WV2, msg)
         catch {
+        }
+        return
+    }
+    if (typ = "palette_agent_bootstrap_niuma") {
+        if FuncExists("CommandPalette_AgentBootstrapNiumaSessions") {
+            global g_Agent_BootstrapForce
+            g_Agent_BootstrapForce := true
+            SetTimer(CommandPalette_AgentBootstrapNiumaSessions, -80)
         }
         return
     }

@@ -1638,10 +1638,51 @@ body[data-theme="light"] .action-card-stack.detail-mode .cmd-action-card.is-deta
 .cmd-action-card.has-status-log .card-live-thought { display: none; }
 .card-followup {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.card-followup-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 2px;
+}
+.card-followup-chips[hidden] { display: none !important; }
+.card-followup-chip {
+  flex: 0 0 auto;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #d8e4f0;
+  font-size: 11px;
+  cursor: pointer;
+}
+.card-followup-chip:hover {
+  border-color: rgba(255, 141, 42, 0.45);
+  background: rgba(255, 102, 0, 0.12);
+  color: #ffc896;
+}
+.card-followup-chip.is-active {
+  border-color: rgba(255, 141, 42, 0.65);
+  background: rgba(255, 102, 0, 0.2);
+  color: #ffd4a8;
+}
+.card-followup-input.is-prefilled {
+  border-color: rgba(255, 141, 42, 0.55);
+  box-shadow: 0 0 0 1px rgba(255, 141, 42, 0.25);
+}
+.card-followup-input-row {
+  display: flex;
+  flex: 1 1 100%;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
 }
 .card-followup-input {
   flex: 1;
@@ -1834,12 +1875,25 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 .b-status.is-warning .b-status-title { color: #fbbf24; }
 </style>
 <script src="CommandPaletteStreamParser.js?v=3"></script>
-<script src="PaletteBlockSchema.js?v=1"></script>
-<script src="PaletteBlockPipeline.js?v=3"></script>
-<script src="PaletteBlockPipeline.fixtures.js?v=3"></script>
-<script src="PaletteBlockStore.js?v=1"></script>
-<script src="PaletteRouterSkill.js?v=1"></script>
-<script src="PaletteMiniA2UI.js?v=1"></script>
+<script src="PaletteBlockSchema.js?v=3"></script>
+<script src="PaletteSkillRegistry.js?v=1"></script>
+<script src="PaletteProfileComposer.js?v=1"></script>
+<script src="PalettePromptComposer.js?v=1"></script>
+<script src="PaletteActionPolicy.js?v=1"></script>
+<script src="vendor/lit/lit.min.js"></script>
+<script src="components/palette-followup-chips.js"></script>
+<script src="PaletteUIEventContract.js?v=1"></script>
+<script src="PaletteCardSlots.js?v=2"></script>
+<script src="PaletteLitRenderer.js?v=2"></script>
+<script src="PaletteActionBinder.js?v=3"></script>
+<script src="PaletteUIEventBridge.js?v=2"></script>
+<script src="PaletteBlockPipeline.js?v=5"></script>
+<script src="PaletteBlockPipeline.fixtures.js?v=5"></script>
+<script src="PaletteC3.fixtures.js?v=2"></script>
+<script src="PaletteBlockStore.js?v=4"></script>
+<script src="PaletteRouterSkill.js?v=3"></script>
+<script src="PaletteMiniA2UI.js?v=2"></script>
+<script src="PaletteComponentMatcher.js?v=2"></script>
 <script src="CommandPaletteReplyStructurer.js?v=1"></script>
 </head>
 <body>
@@ -1939,7 +1993,42 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     var p = String(text || "").replace(/\s+/g, " ").trim();
     if (!p) return true;
     if (/chat\.send/i.test(p)) return true;
+    if (/^\[执行中\]/.test(p)) return true;
     return /^[🔗⏳📨💭]/.test(p) || /^(正在|等待|任务已|仍连接|OpenClaw 流式|OpenClaw 处理|OpenClaw 已发送|已提交至 Gateway|同步 Niuma|流式输出中)/.test(p);
+  }
+
+  function dedupeRepeatedAgentText(text) {
+    var t = String(text || "").trim();
+    if (t.length < 40) return t;
+    var blocks = t.split(/\n{2,}/).map(function (s) {
+      return String(s || "").trim();
+    }).filter(Boolean);
+    if (blocks.length >= 2) {
+      var seenB = {};
+      var outB = [];
+      blocks.forEach(function (b) {
+        var key = b.replace(/\s+/g, " ").trim();
+        if (!key || seenB[key]) return;
+        seenB[key] = true;
+        outB.push(b);
+      });
+      if (outB.length < blocks.length) return outB.join("\n\n");
+    }
+    var lines = t.split("\n").map(function (ln) {
+      return String(ln || "").trim();
+    }).filter(Boolean);
+    if (lines.length >= 4) {
+      var seenL = {};
+      var outL = [];
+      lines.forEach(function (ln) {
+        var key = ln.replace(/\s+/g, " ").trim();
+        if (!key || seenL[key]) return;
+        seenL[key] = true;
+        outL.push(ln);
+      });
+      if (outL.length < lines.length) return outL.join("\n");
+    }
+    return t;
   }
 
   function cardHasPipelineReply(card) {
@@ -1967,9 +2056,15 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   function getCardA2uiCandidates(card) {
     if (!card) return [];
-    if (card.routeProfile && card.routeProfile.a2uiCandidates && card.routeProfile.a2uiCandidates.length)
-      return card.routeProfile.a2uiCandidates;
+    var rp = card.routeProfile || {};
+    if (rp.uiCandidates && rp.uiCandidates.a2ui && rp.uiCandidates.a2ui.length) return rp.uiCandidates.a2ui;
+    if (rp.a2uiCandidates && rp.a2uiCandidates.length) return rp.a2uiCandidates;
     if (card.a2uiCandidates && card.a2uiCandidates.length) return card.a2uiCandidates;
+    if (
+      typeof PaletteComponentMatcher !== "undefined" &&
+      PaletteComponentMatcher.resolveA2uiCandidates
+    )
+      return PaletteComponentMatcher.resolveA2uiCandidates(rp);
     if (card.routeId === "research_compare") return ["ComparisonTable"];
     return [];
   }
@@ -2300,6 +2395,30 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     followUpToastTimer = setTimeout(hideFollowUpToast, 9000);
   }
 
+  function showChipPrefillToast(cardId, prefill) {
+    var text = String(prefill || "").trim();
+    if (!text) return;
+    var el = ensureFollowUpToastEl();
+    el.innerHTML =
+      "<b>已填入输入框，可继续编辑后发送</b>" +
+      '<div class="cp-toast-preview">「' + esc(text.slice(0, 48)) + "」</div>" +
+      '<div class="cp-toast-hint">请手动点「补充」提交</div>';
+    el.hidden = false;
+    el.onclick = function (e) {
+      e.preventDefault();
+      hideFollowUpToast();
+      focusActionCard(cardId, { expand: true });
+      var dom = document.getElementById("card-" + cardId);
+      var input = dom && dom.querySelector ? dom.querySelector(".card-followup-input") : null;
+      if (input && input.focus) input.focus();
+    };
+    requestAnimationFrame(function () {
+      el.classList.add("show");
+    });
+    if (followUpToastTimer) clearTimeout(followUpToastTimer);
+    followUpToastTimer = setTimeout(hideFollowUpToast, 3000);
+  }
+
   function cardEndFinalizeNeeded(card, reqId, answer) {
     if (!card || !answer) return false;
     var ans = String(answer).trim();
@@ -2371,23 +2490,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return false;
   }
 
-  function cardReplyHasEnrichedTableDup(card, blocks) {
-    if (!card || card.uiState !== "Done") return false;
-    if (countPipelineBlocksByType(blocks, "a2ui") === 0) return false;
-    var replyMd = getLatestReplyMarkdownFromBlocks(blocks) || String(card.rawAnswer || "");
-    if (!replyMd || !/\|/.test(replyMd)) return false;
-    if (typeof PaletteMiniA2UI !== "undefined" && PaletteMiniA2UI.extractMarkdownTables)
-      return PaletteMiniA2UI.extractMarkdownTables(replyMd).length > 0;
-    return /---/.test(replyMd);
-  }
-
   function maybeHealDoneCardPipelineBlocks(card, cardId) {
     if (!card || !cardId) return false;
     var blocks = getCardPipelineBlocks(card);
     var needsFinalize =
       (!blocks.length && card.uiState === "Done" && cardHasSubstantialRawAnswer(card) && !cardHasPipelineReply(card)) ||
-      cardMissingExpectedA2ui(card, blocks) ||
-      cardReplyHasEnrichedTableDup(card, blocks);
+      cardMissingExpectedA2ui(card, blocks);
     if (!needsFinalize || !cardHasSubstantialRawAnswer(card)) return false;
     applyPipelineFinalize(cardId, card.rawAnswer);
     return true;
@@ -2438,6 +2546,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     var raw = String(card.rawAnswer || "").trim();
     if (!raw) return true;
     if (agentLooksLikeThinkingPreambleOnly(raw)) return true;
+    if (/\|/.test(raw) && /---/.test(raw)) return false;
+    if (raw.length >= 900) return false;
+    if (agentAnswerHasSubstantiveStructure(raw) && raw.length >= 400) return false;
+    if (raw.length >= 1200) return false;
     if (
       (card.routeId === "research_compare" ||
         /对比|策略|vs /i.test(String(card.query || card.title || ""))) &&
@@ -2465,7 +2577,13 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       card.pipelineBlocks ||
       [];
     if (Array.isArray(pipeBlocks) && pipeBlocks.length) {
-      if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.blockPreviewSummary) {
+      if (
+        typeof PaletteBlockPipeline !== "undefined" &&
+        PaletteBlockPipeline.blockPreviewSummaryWithSource
+      ) {
+        var pipeRes = PaletteBlockPipeline.blockPreviewSummaryWithSource(pipeBlocks);
+        if (pipeRes && pipeRes.text) return pipeRes.text;
+      } else if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.blockPreviewSummary) {
         var pipeSum = PaletteBlockPipeline.blockPreviewSummary(pipeBlocks);
         if (pipeSum) return pipeSum;
       }
@@ -3833,8 +3951,20 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     render: "",
     a2ui: "",
     a2uiItems: "",
+    uiMatches: "",
+    displayPolicy: "",
+    clippedSummary: "",
     renderFailed: "",
-    preview: ""
+    preview: "",
+    previewSource: "",
+    followUpChipsCount: "",
+    followUpChipsRenderer: "",
+    followUpChipsFallback: "",
+    lastActionSource: "",
+    lastActionRenderer: "",
+    lastActionComponent: "",
+    lastActionSlot: "",
+    lastActionRejectedReason: ""
   };
 
   function tryParsePipelineDebugJson(text) {
@@ -3890,18 +4020,116 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       } else {
         pipelineDebugState.render = det;
       }
+    } else if (ev === "pipeline_matcher") {
+      var matcherObj = tryParsePipelineDebugJson(det);
+      if (matcherObj) {
+        if (Array.isArray(matcherObj.uiMatches)) {
+          pipelineDebugState.uiMatches = matcherObj.uiMatches
+            .map(function (m) {
+              var line = String(m.component || "?") + "←" + String(m.from || "?");
+              if (m.clipped) line += "[clipped " + (m.originalRows || "?") + "→20]";
+              return line;
+            })
+            .join(" · ");
+        }
+        if (matcherObj.displayPolicy) {
+          pipelineDebugState.displayPolicy =
+            "Option " +
+            String(matcherObj.displayPolicy.option || "?") +
+            " · hideOriginalTable=" +
+            String(!!matcherObj.displayPolicy.hideOriginalTable);
+        }
+        if (Array.isArray(matcherObj.a2ui)) {
+          pipelineDebugState.a2ui = JSON.stringify(matcherObj.a2ui);
+          pipelineDebugState.a2uiItems = matcherObj.a2ui
+            .map(function (a) {
+              var line = String(a.component || "?") + "←" + String(a.from || "?");
+              if (a.clipped) line += "[clipped]";
+              return line;
+            })
+            .join(" · ");
+          pipelineDebugState.clippedSummary = matcherObj.a2ui
+            .filter(function (a) {
+              return a && a.clipped;
+            })
+            .map(function (a) {
+              return String(a.component) + " " + (a.originalRows || "?") + "x" + (a.originalCols || "?");
+            })
+            .join(" · ");
+        }
+      }
     } else if (ev === "pipeline_a2ui") {
       pipelineDebugState.a2ui = det;
       var a2arr = tryParsePipelineDebugJson(det);
       if (a2arr && Array.isArray(a2arr)) {
         pipelineDebugState.a2uiItems = a2arr
           .map(function (a) {
-            return String(a.component || "?") + "←" + String(a.from || "?");
+            var line = String(a.component || "?") + "←" + String(a.from || "?");
+            if (a.clipped) line += "[clipped]";
+            return line;
+          })
+          .join(" · ");
+        pipelineDebugState.clippedSummary = a2arr
+          .filter(function (a) {
+            return a && a.clipped;
+          })
+          .map(function (a) {
+            return String(a.component) + " " + (a.originalRows || "?") + "x" + (a.originalCols || "?");
           })
           .join(" · ");
       }
     } else if (ev === "a2ui_render_failed") {
       pipelineDebugState.renderFailed = det;
+    } else if (ev === "preview_source") {
+      var prevObj = tryParsePipelineDebugJson(det);
+      if (prevObj) {
+        pipelineDebugState.preview = String(prevObj.textPreview || "").slice(0, 120);
+        pipelineDebugState.previewSource = String(prevObj.source || "");
+      } else {
+        pipelineDebugState.preview = det;
+      }
+    } else if (ev === "followup_chips_render") {
+      var chipObj = tryParsePipelineDebugJson(det);
+      if (chipObj && chipObj.count != null) {
+        pipelineDebugState.followUpChipsCount = String(chipObj.count);
+      }
+      if (chipObj && chipObj.renderer) {
+        pipelineDebugState.followUpChipsRenderer = String(chipObj.renderer);
+      }
+      if (chipObj && chipObj.reason === "empty_chips") {
+        pipelineDebugState.followUpChipsFallback = "empty_chips";
+      } else if (chipObj && chipObj.fallbackReason) {
+        pipelineDebugState.followUpChipsFallback = String(chipObj.fallbackReason);
+      }
+    } else if (ev === "followup_chips_fallback") {
+      var fbObj = tryParsePipelineDebugJson(det);
+      if (fbObj) {
+        pipelineDebugState.followUpChipsRenderer = "legacy";
+        pipelineDebugState.followUpChipsFallback = String(fbObj.reason || fbObj.detail || "");
+      }
+    } else if (ev === "action_clicked") {
+      var actObj = tryParsePipelineDebugJson(det);
+      if (actObj) {
+        pipelineDebugState.lastActionSource = String(actObj.dataSource || "");
+        pipelineDebugState.lastActionRenderer = String(actObj.renderer || "");
+        pipelineDebugState.lastActionComponent = String(actObj.component || "");
+        pipelineDebugState.lastActionSlot = String(actObj.slot || "");
+        pipelineDebugState.lastActionRejectedReason = "";
+      }
+    } else if (ev === "action_rejected") {
+      var rejObj = tryParsePipelineDebugJson(det);
+      if (rejObj) {
+        pipelineDebugState.lastActionRejectedReason = String(rejObj.reason || "");
+        pipelineDebugState.lastActionSource = String(rejObj.dataSource || "");
+        pipelineDebugState.lastActionRenderer = String(rejObj.renderer || "");
+        pipelineDebugState.lastActionComponent = String(rejObj.component || "");
+        pipelineDebugState.lastActionSlot = String(rejObj.slot || "");
+      }
+    } else if (ev === "lit_render_failed") {
+      pipelineDebugState.followUpChipsFallback = "render_exception";
+    } else if (ev === "prompt_compose") {
+      var pcObj = tryParsePipelineDebugJson(det);
+      if (pcObj && pcObj.preserveRoute) pipelineDebugState.prompt = "preserveRoute · " + (pcObj.routeId || "");
     }
     try {
       post({ type: "cp_pipeline_debug", state: pipelineDebugState });
@@ -4681,6 +4909,28 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (ltEl) ltEl.style.display = "none";
   }
 
+  function applyPipelineToolEvent(cardId, payload) {
+    var card = getActionCard(cardId);
+    if (!card || typeof PaletteBlockPipeline === "undefined" || !PaletteBlockPipeline.ingestToolEvent)
+      return null;
+    var state = ensurePipelineIngest(card);
+    if (!state) return null;
+    var result = PaletteBlockPipeline.ingestToolEvent(state, payload || {});
+    var merged = mergeCardPipelineBlocks(card, result.blocks);
+    syncCardPipelineStore(card, merged, result.meta);
+    renderBlocks(cardId, merged);
+    agentDebugLog(
+      "pipeline_tool_event",
+      JSON.stringify({
+        tool: payload && payload.tool ? payload.tool : "",
+        phase: payload && payload.phase ? payload.phase : "",
+        level: payload && payload.level ? payload.level : "info",
+        text: String((payload && payload.text) || "").slice(0, 120)
+      })
+    );
+    return result;
+  }
+
   function applyPipelineIngestDelta(cardId, delta) {
     var card = getActionCard(cardId);
     if (!card || typeof PaletteBlockPipeline === "undefined" || !PaletteBlockPipeline.ingestDelta) return null;
@@ -4710,7 +4960,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   function applyPipelineFinalize(cardId, answerText) {
     var card = getActionCard(cardId);
     if (!card || typeof PaletteBlockPipeline === "undefined") return null;
-    var ans = String(answerText || "").trim();
+    var ans = dedupeRepeatedAgentText(String(answerText || "").trim());
     if (!ans) return null;
     card.rawAnswer = ans;
     var ingest = card.pipelineIngest;
@@ -4802,6 +5052,17 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         " a2ui=" +
         ((result.meta && result.meta.a2ui && result.meta.a2ui.length) || 0)
     );
+    if (result.meta && (result.meta.uiMatches || result.meta.matcher || result.meta.a2ui)) {
+      agentDebugLog(
+        "pipeline_matcher",
+        JSON.stringify({
+          uiMatches: result.meta.uiMatches || [],
+          displayPolicy: result.meta.displayPolicy || null,
+          matcher: result.meta.matcher || null,
+          a2ui: result.meta.a2ui || []
+        })
+      );
+    }
     if (result.meta && result.meta.a2ui && result.meta.a2ui.length) {
       agentDebugLog("pipeline_a2ui", JSON.stringify(result.meta.a2ui));
     }
@@ -5536,6 +5797,30 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     var compactEl = dom.querySelector(".card-compact-progress");
     var planChip = dom.querySelector(".card-plan-chip");
     var preview = cardPreviewText(card);
+    var previewSource = "legacy";
+    var pipeBlocks =
+      (card.blockStore && card.blockStore.blocks) || card.pipelineBlocks || [];
+    if (
+      Array.isArray(pipeBlocks) &&
+      pipeBlocks.length &&
+      typeof PaletteBlockPipeline !== "undefined" &&
+      PaletteBlockPipeline.blockPreviewSummaryWithSource
+    ) {
+      var prevRes = PaletteBlockPipeline.blockPreviewSummaryWithSource(pipeBlocks);
+      if (prevRes && prevRes.source && prevRes.source !== "none") {
+        previewSource = prevRes.source;
+        if (prevRes.text) preview = prevRes.text;
+      }
+    }
+    agentDebugLog(
+      "preview_source",
+      JSON.stringify({
+        cardId: cardId,
+        uiState: card.uiState || "",
+        source: previewSource,
+        textPreview: String(preview || "").slice(0, 120)
+      })
+    );
     if (previewEl) {
       previewEl.textContent = preview || "";
       previewEl.title = card.title || card.query || "";
@@ -5652,6 +5937,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       if (cardLatestTurnHasReply(card)) {
         if (ltEl) ltEl.style.display = "none";
       } else if (card.uiState === "Done" && isAgentStatusPreview(card.liveThought) && !cardLatestTurnHasReply(card)) {
+        maybeRecoverIncompleteDoneCard(card);
+        scheduleAgentCardsRecover();
         if (ltEl) {
           ltEl.style.display = "";
           ltEl.classList.remove("card-live-thought-rich");
@@ -5691,6 +5978,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           : card.uiState === "Done"
             ? "追加新指令…"
             : "补充要求（不中断当前任务）…";
+    }
+    if (typeof PaletteActionBinder !== "undefined" && PaletteActionBinder.renderFollowUpChips) {
+      PaletteActionBinder.renderFollowUpChips(card.id, card, { debugLog: agentDebugLog });
     }
   }
 
@@ -5783,6 +6073,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         }
       });
     }
+    if (typeof PaletteActionBinder !== "undefined" && PaletteActionBinder.bindFollowUpChips) {
+      PaletteActionBinder.bindFollowUpChips(card.id, card, {
+        debugLog: agentDebugLog,
+        onActionResult: onPaletteActionResult
+      });
+    }
     if (!dom._replyActBound) {
       dom._replyActBound = true;
       dom.addEventListener("click", function (e) {
@@ -5835,9 +6131,11 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         '<div class="card-replies"></div>' +
         "</div>" +
         '<div class="card-followup">' +
+        '<div class="card-followup-chips" hidden></div>' +
+        '<div class="card-followup-input-row">' +
         '<input type="text" class="card-followup-input" />' +
         '<button type="button" class="card-followup-btn">补充</button>' +
-        "</div>";
+        "</div></div>";
       var stack0 = box.querySelector(".action-card-stack");
       if (!stack0) {
         stack0 = document.createElement("div");
@@ -6311,8 +6609,29 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (dto.routeLabel) card.routeLabel = String(dto.routeLabel);
     if (dto.promptAddon) card.promptAddon = String(dto.promptAddon);
     if (dto.a2uiCandidates) card.a2uiCandidates = dto.a2uiCandidates;
-    if (card.routeId && typeof PaletteRouterSkill !== "undefined" && PaletteRouterSkill.PROFILES) {
-      card.routeProfile = PaletteRouterSkill.PROFILES[card.routeId] || { routeId: card.routeId, a2uiCandidates: card.a2uiCandidates || [] };
+    if (card.routeId && typeof PaletteProfileComposer !== "undefined" && PaletteProfileComposer.compose) {
+      card.routeProfile = PaletteProfileComposer.compose(card.routeId, { reason: "dto_hydrate" });
+      card.a2uiCandidates = card.routeProfile.a2uiCandidates || card.a2uiCandidates || [];
+      if (!card.promptAddon && card.routeProfile.promptAddon) card.promptAddon = card.routeProfile.promptAddon;
+    } else if (card.routeId && typeof PaletteRouterSkill !== "undefined" && PaletteRouterSkill.PROFILES) {
+      var prof = PaletteRouterSkill.PROFILES[card.routeId];
+      if (prof) {
+        var uiCand =
+          PaletteRouterSkill.buildUiCandidates
+            ? PaletteRouterSkill.buildUiCandidates(prof)
+            : { a2ui: (prof.a2uiCandidates || []).slice(), display: { hideOriginalTable: false }, slots: {} };
+        card.routeProfile = {
+          routeId: prof.id,
+          label: prof.label,
+          promptAddon: prof.promptAddon || "",
+          a2uiCandidates: uiCand.a2ui.slice(),
+          uiCandidates: uiCand,
+          uiHints: Object.assign({}, uiCand.slots || prof.uiHints || {}),
+          followUpChips: prof.followUpChips || []
+        };
+      } else {
+        card.routeProfile = { routeId: card.routeId, a2uiCandidates: card.a2uiCandidates || [] };
+      }
     }
     if (dto.updatedAt) card.updatedAt = dto.updatedAt;
     if (dto.createdAt) card.createdAt = dto.createdAt;
@@ -6404,8 +6723,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function agentEndAnswerReady(text, card) {
-    var t = String(text || "").trim();
+    var t = dedupeRepeatedAgentText(String(text || "").trim());
     if (!t) return false;
+    var prevLen = card ? String(card.rawAnswer || "").length : 0;
+    if (t.length >= 800 && t.length > prevLen * 1.15 && !agentLooksLikeThinkingPreambleOnly(t)) return true;
     var probe = card ? Object.assign({}, card, { rawAnswer: t }) : { rawAnswer: t };
     if (!cardHasSubstantialRawAnswer(probe)) return false;
     if (cardAnswerLooksIncomplete(probe)) return false;
@@ -6419,7 +6740,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       type: "palette_agent_recover",
       cardId: card.id,
       reqId: card.reqId,
-      query: cardActiveQuery(card)
+      query: cardActiveQuery(card),
+      sessionRef: String(card.sessionRef || "")
     });
   }
 
@@ -6452,7 +6774,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           type: "palette_agent_recover",
           cardId: c.id,
           reqId: c.reqId,
-          query: cardActiveQuery(c)
+          query: cardActiveQuery(c),
+          sessionRef: String(c.sessionRef || "")
         });
       }
     }, delay);
@@ -6515,20 +6838,49 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       cardId: cardId,
       provider: prov
     };
-    if (typeof PaletteRouterSkill !== "undefined" && PaletteRouterSkill.route) {
-      var routeResult = PaletteRouterSkill.route(q);
+    var preserveRoute = !!(opts.fromCardFollowup && opts.explicitCardFollowup && active && active.routeProfile);
+    var routeResult = null;
+    if (preserveRoute && typeof PalettePromptComposer !== "undefined" && PalettePromptComposer.composeSubmitPayload) {
+      var preserved = PalettePromptComposer.composeSubmitPayload(active.routeProfile, active, {
+        preserveRoute: true
+      });
+      routeResult = preserved.routeProfile || active.routeProfile;
+      submitMsg.routeId = routeResult.routeId || active.routeId;
+      submitMsg.routeLabel = routeResult.label || active.routeLabel;
+      submitMsg.promptAddon = preserved.promptAddon;
+      submitMsg.routeConfidence = routeResult.confidence != null ? routeResult.confidence : 1;
+      submitMsg.a2uiCandidates = routeResult.a2uiCandidates || active.a2uiCandidates || [];
+      agentDebugLog("prompt_compose", JSON.stringify(preserved.promptMeta || {}));
+      agentDebugLog(
+        "pipeline_route",
+        JSON.stringify({
+          routeId: submitMsg.routeId,
+          label: submitMsg.routeLabel,
+          preserveRoute: true,
+          a2uiCandidates: submitMsg.a2uiCandidates || []
+        })
+      );
+      active.promptAddon = preserved.promptAddon;
+    } else if (typeof PaletteRouterSkill !== "undefined" && PaletteRouterSkill.route) {
+      routeResult = PaletteRouterSkill.route(q);
+      var composePayload =
+        typeof PalettePromptComposer !== "undefined" && PalettePromptComposer.composeSubmitPayload
+          ? PalettePromptComposer.composeSubmitPayload(routeResult, active, { preserveRoute: false })
+          : { promptAddon: routeResult.promptAddon, promptMeta: {} };
       submitMsg.routeId = routeResult.routeId;
       submitMsg.routeLabel = routeResult.label;
-      submitMsg.promptAddon = routeResult.promptAddon;
+      submitMsg.promptAddon = composePayload.promptAddon;
       submitMsg.routeConfidence = routeResult.confidence;
       submitMsg.a2uiCandidates = routeResult.a2uiCandidates;
+      agentDebugLog("prompt_compose", JSON.stringify(composePayload.promptMeta || {}));
       agentDebugLog(
         "pipeline_route",
         JSON.stringify({
           routeId: routeResult.routeId,
           label: routeResult.label,
           confidence: routeResult.confidence,
-          a2uiCandidates: routeResult.a2uiCandidates || []
+          a2uiCandidates: routeResult.a2uiCandidates || [],
+          followUpChips: (routeResult.followUpChips || []).length
         })
       );
       if (active) {
@@ -6536,7 +6888,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         active.routeLabel = routeResult.label;
         active.routeProfile = routeResult;
         active.a2uiCandidates = routeResult.a2uiCandidates;
-        active.promptAddon = routeResult.promptAddon;
+        active.promptAddon = composePayload.promptAddon;
       }
     }
     agentDebugLog("submit_start", "kind=" + kind + " text=" + String(q).slice(0, 60));
@@ -7965,6 +8317,27 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     } else if (d.type === "palette_agent_card_new") {
       agentDebugLog("host_card_new", "card=" + (d.cardId || "") + " req=" + (d.reqId || ""));
       applyAgentCardNew(d);
+    } else if (d.type === "palette_agent_tool_event") {
+      agentDebugLog(
+        "host_tool_event",
+        "card=" +
+          (d.cardId || "") +
+          " tool=" +
+          (d.tool || "") +
+          " phase=" +
+          (d.phase || "")
+      );
+      var toolResolved = resolveActionCard(d.cardId, d.reqId);
+      if (toolResolved.card && toolResolved.id) {
+        applyPipelineToolEvent(toolResolved.id, {
+          tool: d.tool,
+          phase: d.phase,
+          text: d.text || d.message || "",
+          level: d.level || "info",
+          ts: d.ts
+        });
+        refreshActionCardPreview(toolResolved.id);
+      }
     } else if (d.type === "palette_agent_chunk") {
       agentDebugLog("host_chunk", "card=" + (d.cardId || "") + " req=" + (d.reqId || "") + " Δ=" + String(d.delta || d.text || "").slice(0, 48));
       var resolved = resolveActionCard(d.cardId, d.reqId);
@@ -8084,11 +8457,17 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       var endR = resolveActionCard(d.cardId, d.reqId);
       var cid2 = endR.id;
       var card2 = endR.card;
-      var endAns = String(d.answer || "").trim();
+      var endAns = dedupeRepeatedAgentText(String(d.answer || "").trim());
+      var prevRawLen = card2 ? String(card2.rawAnswer || "").length : 0;
       var endReady = endAns && agentEndAnswerReady(endAns, card2);
+      var forceFinalize =
+        endAns &&
+        (endReady ||
+          (endAns.length >= 800 && endAns.length > prevRawLen) ||
+          (endAns.length > prevRawLen + 120 && !agentLooksLikeThinkingPreambleOnly(endAns)));
       var followUpQuery = card2 ? String(card2._lastFollowUpQuery || card2.activeQuery || "").trim() : "";
       var wasCollapsed = card2 && !card2.expanded;
-      if (card2 && endReady && cardEndFinalizeNeeded(card2, d.reqId, endAns)) {
+      if (card2 && forceFinalize && cardEndFinalizeNeeded(card2, d.reqId, endAns)) {
         ensureFollowUpPriorBlocks(card2);
         card2.rawAnswer = endAns;
         card2._rawReplaySig = endAns;
@@ -8101,17 +8480,20 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         refreshActionCardDom(card2);
         ensureCardPipelineRendered(card2);
         scheduleExpandedCardLayout(card2);
-      } else if (card2 && endReady) {
+      } else if (card2 && forceFinalize) {
         card2.rawAnswer = endAns;
         card2._rawReplaySig = endAns;
         card2.activeQuery = "";
         card2._lastAgentEndTick = Date.now();
+        if (cardMissingExpectedA2ui(card2, getCardPipelineBlocks(card2)) || !cardHasPipelineReply(card2)) {
+          finalizeAgentCardAnswer(cid2, endAns);
+        }
         refreshActionCardDom(card2);
       }
       if (card2 && card2.parser && card2.parser.flush) card2.parser.flush();
       if (card2 && d.sessionRef) card2.sessionRef = String(d.sessionRef);
       if (card2) {
-        if (!endReady && (cardFollowUpInFlight(card2) || !cardHasPipelineReply(card2))) {
+        if (!forceFinalize && (cardFollowUpInFlight(card2) || !cardHasPipelineReply(card2))) {
           card2.running = true;
           card2.ended = false;
           if (card2.uiState === "Done") actionCardManager.transitionCardState(cid2, "Running");
@@ -8135,6 +8517,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         var endState =
           waitingQ || card2.waitingForUser || card2.uiState === "Waiting" ? "Waiting" : "Done";
         actionCardManager.transitionCardState(cid2, endState);
+        if (endState === "Done") {
+          maybeHealDoneCardPipelineBlocks(card2, cid2);
+          ensureCardPipelineRendered(card2);
+        }
         if (endState === "Done" && (pipelineTurnCount(card2) > 1 || followUpQuery)) {
           showFollowUpCompleteToast(cid2, followUpQuery);
           if (!wasCollapsed && card2.expanded) {
@@ -8232,6 +8618,27 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   if (window.chrome && window.chrome.webview) {
     window.chrome.webview.addEventListener("message", onHostMessage);
+  }
+
+  function onPaletteActionResult(result) {
+    if (!result || !result.ok) return;
+    var cid = result.cardId || actionState.activeCardId || "";
+    if (cid && result.prefill) showChipPrefillToast(cid, result.prefill);
+    if (result.renderer === "lit") {
+      try {
+        document.dispatchEvent(new CustomEvent("palette-action-result", { detail: result }));
+      } catch (_) {}
+    } else if (typeof PaletteActionBinder !== "undefined" && PaletteActionBinder.applyLegacyChipActive) {
+      PaletteActionBinder.applyLegacyChipActive(cid, result.chipId);
+    }
+  }
+
+  if (typeof PaletteUIEventBridge !== "undefined" && PaletteUIEventBridge.install) {
+    PaletteUIEventBridge.install({
+      getCard: getActionCard,
+      debugLog: agentDebugLog,
+      onActionResult: onPaletteActionResult
+    });
   }
 
   ensureShell();

@@ -14,14 +14,56 @@
     "system"
   ];
   var A2UI_WHITELIST = ["ComparisonTable", "Steps", "Alert"];
+  var LIMITS = {
+    MAX_REPLY_MD: 20000,
+    MAX_STATUS_TEXT: 8000,
+    MAX_STATUS_ITEMS: 50,
+    MAX_PLAN_ITEMS: 30,
+    MAX_QUESTION_MD: 8000,
+    MAX_TABLE_ROWS: 20,
+    MAX_TABLE_COLS: 8,
+    MAX_CELL: 500,
+    MAX_BLOCKS: 40,
+    MAX_STEPS: 20,
+    MAX_ALERTS: 5
+  };
   var PLAN_ITEM_STATES = ["pending", "running", "done", "error", "interrupted"];
   var STATUS_LEVELS = ["info", "warning", "error"];
+  var TOOL_EVENT_PHASES = ["start", "progress", "done", "error"];
+  var ACTION_KINDS = ["safe", "confirm"];
   var QUESTION_STATUSES = ["waiting", "answered", "expired", "cancelled"];
 
   function clamp(n, lo, hi) {
     n = Number(n);
     if (isNaN(n)) return lo;
     return Math.max(lo, Math.min(hi, n));
+  }
+
+  function trimText(text, max) {
+    var t = String(text != null ? text : "");
+    if (t.length <= max) return t;
+    return t.slice(0, max);
+  }
+
+  function clipComparisonTableProps(props) {
+    props = props || {};
+    var origCols = (props.columns || []).length;
+    var origRows = (props.rows || []).length;
+    var cols = (props.columns || []).slice(0, LIMITS.MAX_TABLE_COLS).map(function (c) {
+      return trimText(c, LIMITS.MAX_CELL);
+    });
+    var rows = (props.rows || []).slice(0, LIMITS.MAX_TABLE_ROWS).map(function (row) {
+      return (row || []).slice(0, LIMITS.MAX_TABLE_COLS).map(function (c) {
+        return trimText(c, LIMITS.MAX_CELL);
+      });
+    });
+    var clipped = origCols > LIMITS.MAX_TABLE_COLS || origRows > LIMITS.MAX_TABLE_ROWS;
+    return {
+      props: { columns: cols, rows: rows },
+      clipped: clipped,
+      originalRows: origRows,
+      originalCols: origCols
+    };
   }
 
   function genId(prefix) {
@@ -77,8 +119,37 @@
       if (!text) continue;
       var lv = String(it.level || "info");
       if (STATUS_LEVELS.indexOf(lv) < 0) lv = "info";
-      var row = { text: text.slice(0, 8000), level: lv };
+      var row = { text: text.slice(0, LIMITS.MAX_STATUS_TEXT), level: lv };
       if (it.time != null) row.time = String(it.time).slice(0, 32);
+      if (it.tool != null) row.tool = trimText(it.tool, 120);
+      if (it.phase != null) {
+        var ph = String(it.phase);
+        if (TOOL_EVENT_PHASES.indexOf(ph) >= 0) row.phase = ph;
+      }
+      if (it.ts != null) row.ts = Number(it.ts) || Date.now();
+      out.push(row);
+    }
+    return out;
+  }
+
+  function sanitizeActions(actions) {
+    if (!Array.isArray(actions)) return [];
+    var out = [];
+    for (var i = 0; i < actions.length; i++) {
+      var a = actions[i];
+      if (!a || typeof a !== "object") continue;
+      var id = String(a.id || "").trim();
+      var label = String(a.label || "").trim();
+      if (!id || !label) continue;
+      var kind = String(a.kind || "safe");
+      if (ACTION_KINDS.indexOf(kind) < 0) kind = "safe";
+      var row = {
+        id: id.slice(0, 64),
+        label: label.slice(0, 120),
+        kind: kind,
+        disabled: !!a.disabled
+      };
+      if (a.intent != null) row.intent = String(a.intent).slice(0, 64);
       out.push(row);
     }
     return out;
@@ -143,6 +214,10 @@
       if (block.code != null) out.code = String(block.code).slice(0, 64);
     }
 
+    if (Array.isArray(block.actions) && block.actions.length) {
+      out.actions = sanitizeActions(block.actions);
+    }
+
     return out;
   }
 
@@ -173,6 +248,12 @@
     BLOCK_VERSION: 1,
     NORMALIZER_VERSION: "2026-06-06",
     A2UI_WHITELIST: A2UI_WHITELIST,
+    LIMITS: LIMITS,
+    TOOL_EVENT_PHASES: TOOL_EVENT_PHASES,
+    ACTION_KINDS: ACTION_KINDS,
+    trimText: trimText,
+    clipComparisonTableProps: clipComparisonTableProps,
+    sanitizeActions: sanitizeActions,
     validateBlock: validateBlock,
     validateBlocks: validateBlocks,
     sanitizeBlock: sanitizeBlock,

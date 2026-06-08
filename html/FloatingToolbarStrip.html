@@ -2674,7 +2674,7 @@ body.niuma-confirm-open{overflow:hidden}
   var _paletteAgentLateRecoverTimers = {};
   var PALETTE_AGENT_WAIT_MS = 600000;
   var PALETTE_AGENT_WAIT_POLL_MS = 3000;
-  var PALETTE_AGENT_LATE_RECOVER_MAX_MS = 600000;
+  var PALETTE_AGENT_LATE_RECOVER_MAX_MS = 900000;
   var PALETTE_AGENT_LATE_RECOVER_POLL_MS = 4000;
   var _paletteAiHudActive = false;
 
@@ -2825,9 +2825,24 @@ body.niuma-confirm-open{overflow:hidden}
     return paletteDedupeRepeatedText(a + b);
   }
 
+  function ocIsHeartbeatOrPollText(text) {
+    var n = String(text || '')
+      .replace(/[\-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+    if (!n) return true;
+    if (n === 'heartbeat' || n === 'heartbeat ok' || n === 'heartbeat_ok' || n === 'heartbeatok') return true;
+    if (/^heartbeat[\s.!]*$/.test(n)) return true;
+    if (n.indexOf('heartbeat poll') >= 0) return true;
+    if (n.indexOf('check todos') >= 0 && n.length < 96) return true;
+    return false;
+  }
+
   function paletteIsAgentStatusText(text) {
     var p = String(text || '').replace(/\s+/g, ' ').trim();
     if (!p) return true;
+    if (ocIsHeartbeatOrPollText(p)) return true;
     if (/^[🔗⏳📨💭]/.test(p)) return true;
     if (/chat\.send/i.test(p)) return true;
     if (typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(p)) return true;
@@ -2865,6 +2880,7 @@ body.niuma-confirm-open{overflow:hidden}
       }
     }
     if (userIdx < 0) return '';
+    var best = '';
     for (i = userIdx + 1; i < s.history.length; i++) {
       var mid = s.history[i];
       if (!mid) continue;
@@ -2880,9 +2896,10 @@ body.niuma-confirm-open{overflow:hidden}
       if (!ac) continue;
       if (mid._draft && ac.length < 2) continue;
       if (paletteIsAgentStatusText(ac)) continue;
-      return paletteDedupeRepeatedText(ac);
+      var pick = paletteDedupeRepeatedText(ac);
+      if (pick.length > best.length) best = pick;
     }
-    return '';
+    return best;
   }
 
   function palettePickAssistantAnswerForAgent(reqId, query, opts) {
@@ -2913,6 +2930,401 @@ body.niuma-confirm-open{overflow:hidden}
     return Date.now() - 600000;
   }
 
+  function palettePersistAgentSessionAfterAnswer(s, reqId, cardId, query) {
+    if (!s) return;
+    var rid = String(reqId || s._paletteAgentReqId || s._paletteReqId || '').trim();
+    var cid = String(cardId || s._paletteAgentCardId || '').trim();
+    var q = String(query || s._paletteAgentQuery || '').trim();
+    if (rid) {
+      s._paletteAgentReqId = rid;
+      s._paletteReqId = rid;
+    }
+    if (cid) s._paletteAgentCardId = cid;
+    if (q) {
+      s._paletteAgentQuery = q;
+      if (!s.title || /^新对话|^OpenClaw|^任务/.test(String(s.title || ''))) {
+        s.title = q.slice(0, 36) + (q.length > 36 ? '…' : '');
+      }
+    }
+    if (s.gatewaySessionKey) {
+      s.gatewaySessionKey = ocCanonicalSessionKey(s.gatewaySessionKey) || s.gatewaySessionKey;
+    }
+    persistSessions();
+    pushSessionHistoryToStore(s);
+  }
+
+  async function paletteFetchAssistantFromGatewayKey(session, histKey, query, sentAtMs) {
+    var cfg = session
+      ? getNodeSendCfg(nodeKeyForSession(session), session)
+      : {
+          provider: 'openclaw',
+          baseUrl: (P.openclaw && P.openclaw.baseUrl) || '',
+          apiKey: getApiKeyForProvider('openclaw')
+        };
+    var p0 = cfg && P[cfg.provider] ? P[cfg.provider] : null;
+    if (!cfg || !p0 || p0.transport !== 'openclaw') return '';
+    var key = ocCanonicalSessionKey(String(histKey || '').trim()) || String(histKey || '').trim();
+    if (!key) return '';
+    cfg.openclawSessionKey = key;
+    var userText = String(query || '').trim();
+    var sentAt = Number(sentAtMs) || Date.now() - 7200000;
+    var matchTexts = ocBuildHistoryMatchTexts(userText, [userText]);
+    try {
+      var rpcRes = await openClawRpcWithRetry(
+        cfg,
+        'chat.history',
+        { sessionKey: key, limit: 200 },
+        { attempts: 2, timeoutMs: 15000, timeoutStepMs: 4000, backoffMs: [300, 900] }
+      );
+      var raw = extractGatewayHistoryMessages(rpcRes);
+      var picked = ocPickAssistantFromHistory(raw, userText, sentAt, matchTexts.slice(1));
+      if (picked && String(picked).trim()) return String(picked).trim();
+      var late = await ocLatePollHistoryForReply(cfg, key, userText, sentAt, {
+        rounds: 12,
+        intervalMs: 2500,
+        altMatchTexts: matchTexts.slice(1)
+      });
+      if (late && late.text) return String(late.text).trim();
+    } catch (_) {}
+    return '';
+  }
+
+  async function paletteHydrateCpSessionFromGateway(s, force) {
+    if (!s || normalizeProviderId(s.provider) !== 'openclaw') return;
+    if (!isPaletteAgentChatSession(s)) return;
+    var gk = ocCanonicalSessionKey(getOpenClawSessionKey(s)) || getOpenClawSessionKey(s);
+    if (!gk) return;
+    s.gatewaySessionKey = gk;
+    var cfg = {
+      provider: 'openclaw',
+      baseUrl: (s.baseUrl || '').trim() || (P.openclaw && P.openclaw.baseUrl) || '',
+      apiKey: getApiKeyForProvider('openclaw'),
+      openclawSessionKey: gk
+    };
+    var ep = openClawEndpointFromCfg(cfg);
+    if (!ep.ok) return;
+    try {
+      var rpcRes = await openClawRpcWithRetry(
+        cfg,
+        'chat.history',
+        { sessionKey: gk, limit: 200 },
+        { attempts: 2, timeoutMs: 15000, timeoutStepMs: 4000, backoffMs: [300, 900] }
+      );
+      var raw = extractGatewayHistoryMessages(rpcRes);
+      var gwItems = rebuildOpenClawHistoryFromGatewayRaw(raw, s);
+      var q = String(s._paletteAgentQuery || '').trim();
+      var rid = String(s._paletteAgentReqId || s._paletteReqId || '').trim();
+      var localAsst = paletteHistoryAssistantCount(s.history);
+      var gwAsst = paletteHistoryAssistantCount(gwItems);
+      if (q && gwAsst <= localAsst) {
+        var picked = ocPickAssistantFromHistory(raw, q, paletteUserSentAtMs(s, rid), [q]);
+        if (picked && String(picked).trim()) {
+          gwItems.push({
+            _id: genMsgId(),
+            role: 'assistant',
+            content: String(picked).trim(),
+            ts: new Date().toISOString(),
+            _paletteAgentReqId: rid,
+            _paletteReqId: rid
+          });
+          gwAsst++;
+        }
+      }
+      if (gwAsst > 0 && gwAsst >= localAsst) {
+        s.history = gwItems.slice(-400);
+      } else if (gwItems.length > (s.history || []).length) {
+        s.history = mergeHistoryList(s.history || [], gwItems).slice(-400);
+      } else if (paletteHistoryUserCount(s.history) > 1) {
+        await paletteRepairSessionUsersFromGateway(s);
+        return;
+      }
+      palettePersistAgentSessionAfterAnswer(s, rid, s._paletteAgentCardId, q);
+      if (s.id === state.activeSessionId) rebuildMsgList();
+    } catch (_) {}
+  }
+
+  async function paletteSyncCardAnswerToNiumaSession(opts) {
+    opts = opts || {};
+    var reqId = String(opts.reqId || '').trim();
+    var cardId = String(opts.cardId || '').trim();
+    var query = String(opts.query || '').trim();
+    var sessionRef = String(opts.sessionRef || '').trim();
+    var answer = paletteAgentContentReady(String(opts.answer || ''));
+    if (!query) return '';
+    if (sessionRef === 'main') sessionRef = 'agent:main:main';
+    if (!sessionRef && cardId) sessionRef = paletteSessionKeyForCard(cardId);
+    var s =
+      paletteFindSessionByReqId(reqId) ||
+      (sessionRef ? paletteFindSessionByGatewayKey(sessionRef) : null);
+    if (!s && cardId) {
+      var list = state.sessions || [];
+      for (var si = list.length - 1; si >= 0; si--) {
+        if (list[si] && String(list[si]._paletteAgentCardId || '') === cardId) {
+          s = list[si];
+          break;
+        }
+      }
+    }
+    if (!s && (cardId || sessionRef)) {
+      s = paletteEnsureAgentSessionForCard(cardId, reqId, query, 'openclaw', sessionRef);
+    }
+    if (!s) return answer || '';
+    if (reqId) {
+      s._paletteAgentReqId = reqId;
+      s._paletteReqId = reqId;
+    }
+    if (cardId) s._paletteAgentCardId = cardId;
+    if (query) s._paletteAgentQuery = query;
+    if (sessionRef) s.gatewaySessionKey = ocCanonicalSessionKey(sessionRef) || sessionRef;
+    s.nodeKey = 'openclaw';
+    if (!paletteAgentUserWasPosted(s, reqId, query)) {
+      paletteAppendHistoryToSession(s, 'user', query, {
+        _paletteAgentReqId: reqId,
+        _paletteReqId: reqId,
+        _paletteAgentCardId: cardId
+      });
+    }
+    if (answer) {
+      if (reqId) {
+        if (paletteFindUserHistoryIndex(s, reqId) < 0 && query) {
+          var qnTag = paletteNormDedupeKey(query);
+          for (var ut = s.history.length - 1; ut >= 0; ut--) {
+            var umTag = s.history[ut];
+            if (umTag && umTag.role === 'user' && paletteNormDedupeKey(umTag.content) === qnTag) {
+              umTag._paletteAgentReqId = reqId;
+              umTag._paletteReqId = reqId;
+              if (cardId) umTag._paletteAgentCardId = cardId;
+              break;
+            }
+          }
+        }
+        if (!paletteMergeGatewayAssistantIntoSession(s, reqId, answer)) {
+          paletteAppendHistoryToSession(s, 'assistant', answer, {
+            _paletteAgentReqId: reqId,
+            _paletteReqId: reqId,
+            _paletteAgentCardId: cardId,
+            _draft: false
+          });
+        }
+      } else {
+        var qn = paletteNormDedupeKey(query);
+        var hasAsst = false;
+        for (var ai = s.history.length - 1; ai >= 0; ai--) {
+          var mid = s.history[ai];
+          if (!mid || mid.role !== 'assistant') continue;
+          var prevUser = null;
+          for (var ui = ai - 1; ui >= 0; ui--) {
+            if (s.history[ui] && s.history[ui].role === 'user') {
+              prevUser = s.history[ui];
+              break;
+            }
+          }
+          if (prevUser && paletteNormDedupeKey(prevUser.content) === qn) {
+            mid.content = answer;
+            mid._draft = false;
+            hasAsst = true;
+            break;
+          }
+        }
+        if (!hasAsst) {
+          paletteAppendHistoryToSession(s, 'assistant', answer, {
+            _paletteAgentReqId: reqId,
+            _paletteReqId: reqId,
+            _paletteAgentCardId: cardId,
+            _draft: false
+          });
+        }
+      }
+    } else if (paletteSessionNeedsAssistantHydrate(s)) {
+      try {
+        await paletteHydrateCpSessionFromGateway(s, true);
+      } catch (_) {}
+    }
+    palettePersistAgentSessionAfterAnswer(s, reqId, cardId, query);
+    if (opts.focus && s.id) paletteEnsureActiveSession(s.id);
+    else if (s.id === state.activeSessionId) rebuildMsgList();
+    return answer || palettePickAssistantAnswerForAgent(reqId, query, { allowWhileSending: true }) || '';
+  }
+
+  function paletteSanitizeSessionHistory(s) {
+    if (!s || !Array.isArray(s.history)) return;
+    var out = [];
+    s.history.forEach(function (m) {
+      if (!m) return;
+      if (m.role === 'assistant') {
+        var c = String(m.content || '').trim();
+        if (!c || paletteIsAgentStatusText(c) || ocIsIgnorableGatewayText(c)) return;
+      }
+      out.push(m);
+    });
+    if (out.length !== s.history.length) s.history = out;
+  }
+
+  function paletteRemovePollutedBucketSessions() {
+    var removeIds = [];
+    (state.sessions || []).forEach(function (s) {
+      if (!s || normalizeProviderId(s.provider) !== 'openclaw') return;
+      if (isPaletteAgentChatSession(s)) return;
+      paletteSanitizeSessionHistory(s);
+      var uc = paletteHistoryUserCount(s.history);
+      var ac = paletteHistoryAssistantCount(s.history);
+      if (uc >= 2 && ac === 0) removeIds.push(s.id);
+    });
+    if (!removeIds.length) return;
+    state.sessions = state.sessions.filter(function (s) {
+      return removeIds.indexOf(s.id) < 0;
+    });
+    if (removeIds.indexOf(state.activeSessionId) >= 0) state.activeSessionId = '';
+  }
+
+  function paletteFocusBestCpSession() {
+    var best = null;
+    var bestScore = -1;
+    (state.sessions || []).forEach(function (s) {
+      if (!s || !isPaletteAgentChatSession(s)) return;
+      paletteSanitizeSessionHistory(s);
+      var ac = paletteHistoryAssistantCount(s.history);
+      if (ac === 0) return;
+      var last = s.history[s.history.length - 1];
+      var bonus = last && last.role === 'assistant' ? 500 : 0;
+      var score = ac * 1000 + bonus + (s.history || []).length;
+      if (score > bestScore) {
+        bestScore = score;
+        best = s;
+      }
+    });
+    if (!best || !best.id) return null;
+    setNodeLastThread('openclaw', best.id);
+    paletteEnsureActiveSession(best.id);
+    rebuildMsgList();
+    return best;
+  }
+
+  function palettePruneMigratedUsersFromBucketSessions(cardQueries) {
+    var qset = {};
+    (cardQueries || []).forEach(function (q) {
+      var qn = paletteNormDedupeKey(q);
+      if (qn) qset[qn] = true;
+    });
+    if (!Object.keys(qset).length) return;
+    (state.sessions || []).forEach(function (s) {
+      if (!s || normalizeProviderId(s.provider) !== 'openclaw') return;
+      if (isPaletteAgentChatSession(s)) return;
+      if (!Array.isArray(s.history) || s.history.length < 2) return;
+      var out = [];
+      s.history.forEach(function (m) {
+        if (m && m.role === 'user' && qset[paletteNormDedupeKey(m.content)]) return;
+        out.push(m);
+      });
+      if (out.length !== s.history.length) {
+        s.history = out;
+        persistSessions();
+        pushSessionHistoryToStore(s);
+        if (s.id === state.activeSessionId) rebuildMsgList();
+      }
+    });
+  }
+
+  async function paletteBootstrapSessionsFromAgentCards(cards) {
+    var arr = Array.isArray(cards) ? cards : [];
+    if (!arr.length) return 0;
+    paletteMigrateOpenClawNodeKeys();
+    paletteDedupeCpSessions();
+    var n = 0;
+    var queries = [];
+    for (var i = 0; i < arr.length; i++) {
+      var c = arr[i] || {};
+      var q = String(c.query || c.title || c.activeQuery || '').trim();
+      var cid = String(c.cardId || c.id || '').trim();
+      if (!q || !cid) continue;
+      queries.push(q);
+      try {
+        if (await paletteApplyCardToSession(c)) n++;
+      } catch (_) {}
+    }
+    paletteDedupeCpSessions();
+    palettePruneMigratedUsersFromBucketSessions(queries);
+    paletteRemovePollutedBucketSessions();
+    (state.sessions || []).forEach(function (sx) {
+      if (!sx || normalizeProviderId(sx.provider) !== 'openclaw') return;
+      if (isPaletteAgentChatSession(sx)) {
+        sx.nodeKey = 'openclaw';
+        paletteSanitizeSessionHistory(sx);
+      }
+    });
+    var focused = paletteFocusBestCpSession();
+    persistSessions();
+    renderSessionTabs();
+    rebuildMsgList();
+    if (focused) {
+      cstat('已从任务卡恢复 ' + n + ' 条 OpenClaw 对话。', 'success');
+    }
+    return n;
+  }
+
+  async function paletteRecoverAnswerForCard(opts) {
+    opts = opts || {};
+    var createSession = opts.createSession !== false;
+    var reqId = String(opts.reqId || '').trim();
+    var cardId = String(opts.cardId || '').trim();
+    var query = String(opts.query || '').trim();
+    var sessionRef = String(opts.sessionRef || '').trim();
+    if (sessionRef === 'main') sessionRef = 'agent:main:main';
+    if (!sessionRef && cardId) sessionRef = paletteSessionKeyForCard(cardId);
+    var s = paletteFindSessionByReqId(reqId);
+    if (!s && sessionRef) s = paletteFindSessionByGatewayKey(sessionRef);
+    if (!s && cardId) {
+      var list = state.sessions || [];
+      for (var si = list.length - 1; si >= 0; si--) {
+        if (list[si] && String(list[si]._paletteAgentCardId || '') === cardId) {
+          s = list[si];
+          break;
+        }
+      }
+    }
+    if (!s && createSession && (cardId || sessionRef) && query) {
+      s = paletteEnsureAgentSessionForCard(cardId, reqId, query, 'openclaw', sessionRef);
+    }
+    if (s) {
+      if (reqId) {
+        s._paletteAgentReqId = reqId;
+        s._paletteReqId = reqId;
+      }
+      if (cardId) s._paletteAgentCardId = cardId;
+      if (query) s._paletteAgentQuery = query;
+      if (sessionRef) s.gatewaySessionKey = ocCanonicalSessionKey(sessionRef) || sessionRef;
+    }
+    var ans = '';
+    if (reqId) {
+      try {
+        ans = paletteAgentContentReady(
+          await paletteHydrateAssistantFromGateway(reqId, query, { allowWhileSending: true, extendedPoll: true })
+        );
+      } catch (_) {}
+      if (!ans)
+        ans = paletteAgentContentReady(
+          palettePickAssistantAnswerForAgent(reqId, query, { allowWhileSending: true })
+        );
+    }
+    if (!ans && sessionRef) {
+      ans = paletteAgentContentReady(await paletteFetchAssistantFromGatewayKey(s, sessionRef, query));
+    }
+    if (ans) {
+      await paletteSyncCardAnswerToNiumaSession({
+        reqId: reqId,
+        cardId: cardId,
+        query: query,
+        sessionRef: sessionRef,
+        answer: ans
+      });
+    }
+    if (ans && reqId && cardId && createSession) {
+      var refOut = sessionRef || '';
+      paletteNotifyPaletteAgentEnd(reqId, cardId, ans, refOut, query);
+    }
+    return ans || '';
+  }
+
   function paletteMergeGatewayAssistantIntoSession(s, reqId, assistantText) {
     var rid = String(reqId || '').trim();
     var text = paletteDedupeRepeatedText(String(assistantText || '').trim());
@@ -2932,6 +3344,7 @@ body.niuma-confirm-open{overflow:hidden}
           pushSessionHistoryToStore(s);
           if (s.id === state.activeSessionId) rebuildMsgList();
           paletteMaybeNotifyAgentEndFromSession(s.id, text);
+          palettePersistAgentSessionAfterAnswer(s, rid, s._paletteAgentCardId, s._paletteAgentQuery);
           return true;
         }
       }
@@ -2952,6 +3365,7 @@ body.niuma-confirm-open{overflow:hidden}
       scrollMsgsToLatest();
     }
     paletteMaybeNotifyAgentEndFromSession(s.id, text);
+    palettePersistAgentSessionAfterAnswer(s, reqId, s._paletteAgentCardId, s._paletteAgentQuery);
     return true;
   }
 
@@ -2959,9 +3373,9 @@ body.niuma-confirm-open{overflow:hidden}
     opts = opts || {};
     var s = paletteFindSessionByReqId(reqId);
     if (!s) return '';
+    var q = String(query || s._paletteAgentQuery || '').trim();
     var local = palettePickAssistantAnswerForAgent(reqId, query, Object.assign({ allowWhileSending: true }, opts));
-    if (local && !paletteIsAgentStatusText(local) && local.length >= 8 && !(typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(local)))
-      return local;
+    if (local && paletteAgentAnswerCompleteEnough(local, q)) return local;
     var cfg = getNodeSendCfg(nodeKeyForSession(s), s);
     var p0 = cfg && P[cfg.provider] ? P[cfg.provider] : null;
     if (!cfg || !p0 || p0.transport !== 'openclaw') return local || '';
@@ -2971,6 +3385,8 @@ body.niuma-confirm-open{overflow:hidden}
     var userText = String(query || s._paletteAgentQuery || '').trim();
     var sentAt = paletteUserSentAtMs(s, reqId);
     if (paletteFindUserHistoryIndex(s, reqId) < 0 && userText) sentAt = Date.now() - 900000;
+    var matchExtras = [s._pendingUserContentForModel, cfg.userContentForModel];
+    var matchTexts = ocBuildHistoryMatchTexts(userText, matchExtras);
     try {
       var rpcRes = await openClawRpcWithRetry(
         cfg,
@@ -2979,10 +3395,22 @@ body.niuma-confirm-open{overflow:hidden}
         { attempts: 2, timeoutMs: 15000, timeoutStepMs: 4000, backoffMs: [300, 900] }
       );
       var raw = extractGatewayHistoryMessages(rpcRes);
-      var picked = ocPickAssistantFromHistory(raw, userText, sentAt);
+      var picked = ocPickAssistantFromHistory(raw, userText, sentAt, matchTexts.slice(1));
+      if (!picked && opts.extendedPoll !== false) {
+        var late = await ocLatePollHistoryForReply(cfg, histKey, userText, sentAt, {
+          rounds: OPENCLAW_PALETTE_AGENT_LATE_POLL_ROUNDS,
+          intervalMs: OPENCLAW_PALETTE_AGENT_LATE_POLL_MS,
+          altMatchTexts: matchTexts.slice(1)
+        });
+        if (late && late.text) picked = late.text;
+      }
       if (picked && String(picked).trim() && !paletteIsAgentStatusText(picked)) {
         paletteMergeGatewayAssistantIntoSession(s, reqId, picked);
-        return palettePickAssistantAnswerForAgent(reqId, query, { allowWhileSending: true });
+        var merged = palettePickAssistantAnswerForAgent(reqId, query, { allowWhileSending: true });
+        if (merged && paletteAgentAnswerCompleteEnough(merged, q)) return merged;
+        if (merged && (!local || merged.length > local.length)) return merged;
+        if (local) return local;
+        return merged || local || '';
       }
       var inProg = ocExtractInProgressSummary(rpcRes, userText, sentAt);
       if (inProg) {
@@ -3030,21 +3458,35 @@ body.niuma-confirm-open{overflow:hidden}
     } catch (_) {}
   }
 
-  function paletteNotifyPaletteAgentEnd(reqId, cardId, answer, sessionRef) {
+  function paletteNotifyPaletteAgentEnd(reqId, cardId, answer, sessionRef, queryOpt) {
     if (_paletteAgentStreamCancelled) return;
     var a = String(answer || '');
     var rid = String(reqId || '').trim();
+    var cid = String(cardId || '').trim();
+    var ref = sessionRef != null ? String(sessionRef) : '';
+    var job = rid && _paletteAgentInflightByReqId[rid] ? _paletteAgentInflightByReqId[rid] : null;
+    var q = String(queryOpt || (job && job.query) || '').trim();
     paletteClearLateRecover(rid);
     try {
       delete _paletteAgentInflightByReqId[rid];
     } catch (_) {}
+    if (a && q && cid) {
+      paletteSyncCardAnswerToNiumaSession({
+        reqId: rid,
+        cardId: cid,
+        query: q,
+        sessionRef: ref || (job && job.sessionRef) || '',
+        answer: a
+      }).catch(function () {});
+    }
     try {
       post({
         type: 'niuma_palette_agent_end',
         reqId: rid,
-        cardId: String(cardId || ''),
+        cardId: cid,
         answer: a,
-        sessionRef: sessionRef != null ? String(sessionRef) : ''
+        sessionRef: ref,
+        query: q
       });
     } catch (_) {}
   }
@@ -3063,6 +3505,7 @@ body.niuma-confirm-open{overflow:hidden}
     if (!ans) ans = palettePickAssistantAnswerForAgent(rid, q, { allowWhileSending: true });
     if (!ans || paletteIsAgentStatusText(ans)) return;
     if (typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(ans)) return;
+    if (!paletteAgentAnswerCompleteEnough(ans, q) && ans.length < 400) return;
     var ref = (job && job.sessionRef) || s._paletteOpenClawSessionKey || s.gatewaySessionKey || '';
     paletteNotifyPaletteAgentEnd(rid, cid, ans, ref);
   }
@@ -3299,7 +3742,150 @@ body.niuma-confirm-open{overflow:hidden}
       .replace(/^-|-$/g, '')
       .slice(0, 40);
     if (!slug) slug = 'task';
-    return ocCanonicalSessionKey(buildOpenClawSessionKey('cp-' + slug));
+    return ocCanonicalSessionKey('agent:main:niuma-cp-' + slug) || 'agent:main:niuma-cp-' + slug;
+  }
+
+  function paletteFindSessionByCardId(cardId) {
+    var cid = String(cardId || '').trim();
+    if (!cid) return null;
+    var list = state.sessions || [];
+    for (var i = list.length - 1; i >= 0; i--) {
+      if (list[i] && String(list[i]._paletteAgentCardId || '') === cid) return list[i];
+    }
+    return null;
+  }
+
+  function paletteSessionQualityScore(s) {
+    if (!s) return -1;
+    paletteSanitizeSessionHistory(s);
+    var ac = paletteHistoryAssistantCount(s.history);
+    var uc = paletteHistoryUserCount(s.history);
+    var bestLen = 0;
+    (s.history || []).forEach(function (m) {
+      if (m && m.role === 'assistant') {
+        var c = String(m.content || '').trim();
+        if (c.length > bestLen) bestLen = c.length;
+      }
+    });
+    return ac * 100000 + bestLen - Math.max(0, uc - 2) * 500;
+  }
+
+  function paletteMigrateOpenClawNodeKeys() {
+    (state.sessions || []).forEach(function (sx) {
+      if (!sx || normalizeProviderId(sx.provider) !== 'openclaw') return;
+      if (isPaletteAgentChatSession(sx)) sx.nodeKey = 'openclaw';
+    });
+  }
+
+  function paletteDedupeCpSessions() {
+    var byCard = {};
+    var byQuery = {};
+    var toRemove = {};
+    (state.sessions || []).forEach(function (s) {
+      if (!s || normalizeProviderId(s.provider) !== 'openclaw') return;
+      if (!isPaletteAgentChatSession(s) && !String(s._paletteAgentQuery || '').trim()) return;
+      s.nodeKey = 'openclaw';
+      var cid = String(s._paletteAgentCardId || '').trim();
+      var qn = paletteNormDedupeKey(s._paletteAgentQuery || s.title || '');
+      if (cid) {
+        if (!byCard[cid]) byCard[cid] = [];
+        byCard[cid].push(s);
+      } else if (qn) {
+        if (!byQuery[qn]) byQuery[qn] = [];
+        byQuery[qn].push(s);
+      }
+    });
+    function pickKeeper(list) {
+      if (!list || list.length <= 1) return;
+      list.sort(function (a, b) {
+        return paletteSessionQualityScore(b) - paletteSessionQualityScore(a);
+      });
+      for (var i = 1; i < list.length; i++) toRemove[list[i].id] = true;
+    }
+    Object.keys(byCard).forEach(function (k) {
+      pickKeeper(byCard[k]);
+    });
+    Object.keys(byQuery).forEach(function (k) {
+      pickKeeper(byQuery[k]);
+    });
+    if (!Object.keys(toRemove).length) return;
+    state.sessions = state.sessions.filter(function (s) {
+      return !toRemove[s.id];
+    });
+    if (toRemove[state.activeSessionId]) state.activeSessionId = '';
+  }
+
+  async function paletteApplyCardToSession(c) {
+    c = c || {};
+    var q = String(c.query || c.title || c.activeQuery || '').trim();
+    var cid = String(c.cardId || c.id || '').trim();
+    var rid = String(c.reqId || '').trim();
+    var sr = String(c.sessionRef || '').trim();
+    if (sr === 'main') sr = 'agent:main:main';
+    if (!sr && cid) sr = paletteSessionKeyForCard(cid);
+    var ans = paletteAgentContentReady(String(c.rawAnswer || c.answer || ''));
+    if (!q || !cid) return null;
+    var s = paletteFindSessionByCardId(cid) || paletteFindSessionByGatewayKey(sr);
+    if (!s) s = paletteEnsureAgentSessionForCard(cid, rid, q, 'openclaw', sr);
+    if (!s) return null;
+    s._paletteAgentCardId = cid;
+    s._paletteAgentReqId = rid;
+    s._paletteReqId = rid;
+    s._paletteAgentQuery = q;
+    s.title = q.length > 42 ? q.slice(0, 40) + '…' : q;
+    s.nodeKey = 'openclaw';
+    if (sr) s.gatewaySessionKey = ocCanonicalSessionKey(sr) || sr;
+    var hist = [
+      {
+        _id: genMsgId(),
+        role: 'user',
+        content: q,
+        ts: new Date().toISOString(),
+        _paletteAgentReqId: rid,
+        _paletteReqId: rid,
+        _paletteAgentCardId: cid
+      }
+    ];
+    if (ans) {
+      hist.push({
+        _id: genMsgId(),
+        role: 'assistant',
+        content: ans,
+        ts: new Date().toISOString(),
+        _paletteAgentReqId: rid,
+        _paletteReqId: rid,
+        _paletteAgentCardId: cid,
+        _draft: false
+      });
+    }
+    s.history = hist;
+    palettePersistAgentSessionAfterAnswer(s, rid, cid, q);
+    var hk = historyStoreKeyForSession(s);
+    if (hk && state.niumaHistoryStore && state.niumaHistoryStore.sessions) {
+      state.niumaHistoryStore.sessions[hk] = hist.slice();
+      saveNiumaHistoryStoreToLocal();
+    }
+    if (!ans && paletteSessionNeedsAssistantHydrate(s)) {
+      try {
+        await paletteHydrateCpSessionFromGateway(s, true);
+        paletteSanitizeSessionHistory(s);
+      } catch (_) {}
+    }
+    return s;
+  }
+
+  async function paletteSyncOpenClawNow() {
+    cstat('正在整理 OpenClaw 会话并同步任务卡…');
+    paletteMigrateOpenClawNodeKeys();
+    paletteDedupeCpSessions();
+    paletteRemovePollutedBucketSessions();
+    try {
+      post({ type: 'palette_agent_bootstrap_niuma' });
+    } catch (_) {}
+    renderContactNav();
+    rebuildMsgList();
+    cstat('已请求同步，正在写入任务卡回复…');
+    return true;
   }
 
   function paletteResolveGatewayHistKey(session, reqId) {
@@ -3329,6 +3915,24 @@ body.niuma-confirm-open{overflow:hidden}
     return t;
   }
 
+  function paletteAgentAnswerCompleteEnough(text, query) {
+    var t = paletteDedupeRepeatedText(String(text || '').trim());
+    if (!t || paletteIsAgentStatusText(t)) return false;
+    if (typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(t)) return false;
+    if (/\|/.test(t) && /---/.test(t)) return true;
+    if (t.length >= 900) return true;
+    if (typeof ocAnswerHasSubstantiveStructure === 'function' && ocAnswerHasSubstantiveStructure(t)) {
+      var qn = paletteNormDedupeKey(query);
+      if (/对比|vs /i.test(qn || String(query || ''))) {
+        if (/\|/.test(t)) return true;
+        if (t.length >= 650 && (/\*\*[^*]+\*\*/.test(t) || /^#{1,3}\s/m.test(t))) return true;
+        return t.length >= 1200;
+      }
+      return true;
+    }
+    return t.length >= 480;
+  }
+
   function paletteClearLateRecover(reqId) {
     var rid = String(reqId || '').trim();
     if (!rid) return;
@@ -3351,6 +3955,14 @@ body.niuma-confirm-open{overflow:hidden}
       }
       if (Date.now() - started > PALETTE_AGENT_LATE_RECOVER_MAX_MS) {
         paletteClearLateRecover(rid);
+        var partial = paletteAgentContentReady(
+          palettePickAssistantAnswerForAgent(rid, job.query, { allowWhileSending: true })
+        );
+        if (partial && partial.length >= 400 && !paletteIsAgentStatusText(partial)) {
+          var sPartial = paletteFindSessionByReqId(rid);
+          if (sPartial) paletteMergeGatewayAssistantIntoSession(sPartial, rid, partial);
+          paletteNotifyPaletteAgentEnd(rid, job.cardId, partial, job.sessionRef || '');
+        }
         try {
           delete _paletteAgentInflightByReqId[rid];
         } catch (_) {}
@@ -3361,7 +3973,15 @@ body.niuma-confirm-open{overflow:hidden}
         ans = paletteAgentContentReady(await paletteHydrateAssistantFromGateway(rid, job.query, { allowWhileSending: true }));
       } catch (_) {}
       if (!ans) ans = paletteAgentContentReady(palettePickAssistantAnswerForAgent(rid, job.query, { allowWhileSending: true }));
-      if (ans) {
+      if (ans && paletteAgentAnswerCompleteEnough(ans, job.query)) {
+        var sRec = paletteFindSessionByReqId(rid);
+        if (sRec) paletteMergeGatewayAssistantIntoSession(sRec, rid, ans);
+        paletteNotifyPaletteAgentEnd(rid, job.cardId, ans, job.sessionRef || '');
+        return;
+      }
+      if (ans && ans.length >= 1200 && !paletteIsAgentStatusText(ans)) {
+        var sRec2 = paletteFindSessionByReqId(rid);
+        if (sRec2) paletteMergeGatewayAssistantIntoSession(sRec2, rid, ans);
         paletteNotifyPaletteAgentEnd(rid, job.cardId, ans, job.sessionRef || '');
         return;
       }
@@ -3370,8 +3990,11 @@ body.niuma-confirm-open{overflow:hidden}
           type: 'niuma_palette_agent_chunk',
           reqId: rid,
           cardId: job.cardId,
-          delta: '⏳ OpenClaw 回复较慢，后台继续同步… (' + Math.round((Date.now() - started) / 1000) + 's)\n',
-          liveThought: '后台等待 Gateway 回复…'
+          delta:
+            ans && ans.length >= 480
+              ? '⏳ 已从 Gateway 同步片段，继续拉取完整回复… (' + Math.round((Date.now() - started) / 1000) + 's)\n'
+              : '⏳ OpenClaw 回复较慢，后台继续同步… (' + Math.round((Date.now() - started) / 1000) + 's)\n',
+          liveThought: ans && ans.length >= 480 ? '继续同步完整回复…' : '后台等待 Gateway 回复…'
         });
       } catch (_) {}
       _paletteAgentLateRecoverTimers[rid] = setTimeout(tick, PALETTE_AGENT_LATE_RECOVER_POLL_MS);
@@ -3428,6 +4051,125 @@ body.niuma-confirm-open{overflow:hidden}
     } catch (_) {}
   }
 
+  function paletteFindSessionByGatewayKey(gatewayKey) {
+    var wanted = ocCanonicalSessionKey(String(gatewayKey || '').trim()) || String(gatewayKey || '').trim();
+    if (!wanted) return null;
+    var list = state.sessions || [];
+    for (var i = list.length - 1; i >= 0; i--) {
+      var s = list[i];
+      if (!s) continue;
+      var gk =
+        ocCanonicalSessionKey(String(s.gatewaySessionKey || s._paletteOpenClawSessionKey || '')) ||
+        String(s.gatewaySessionKey || s._paletteOpenClawSessionKey || '').trim();
+      if (gk === wanted) return s;
+    }
+    return null;
+  }
+
+  function paletteAppendHistoryToSession(sPost, role, content, meta) {
+    if (!sPost) return null;
+    meta = meta || {};
+    var n = normalizeHistoryItem({ role: role, content: content, ts: new Date().toISOString() });
+    if (!n) return null;
+    n._id = genMsgId();
+    if (meta._paletteAgentReqId) n._paletteAgentReqId = meta._paletteAgentReqId;
+    if (meta._paletteReqId) n._paletteReqId = meta._paletteReqId;
+    if (meta._paletteAgentCardId) n._paletteAgentCardId = meta._paletteAgentCardId;
+    if (meta._draft != null) n._draft = meta._draft;
+    tagPaletteAgentOnHistoryItem(n, sPost);
+    if (!Array.isArray(sPost.history)) sPost.history = [];
+    sPost.history.push(n);
+    persistSessions();
+    pushSessionHistoryToStore(sPost);
+    if (sPost.id === state.activeSessionId) {
+      emptyState();
+      appendMessageDom(n.role, n.content, n.ts, n._id, { isDraft: !!n._draft });
+      scrollMsgsToLatest();
+      renderSessionTabs();
+    }
+    return n;
+  }
+
+  function paletteEnsureAgentUserInHistory(session, sid, reqId, cardId, query) {
+    var q = String(query || '').trim();
+    var rid = String(reqId || '').trim();
+    if (!session || !sid || !q || !rid) return false;
+    var sPost = sessionById(sid) || session;
+    if (paletteAgentUserWasPosted(sPost, rid, q)) return true;
+    paletteAppendHistoryToSession(sPost, 'user', q, {
+      _paletteAgentReqId: rid,
+      _paletteReqId: rid,
+      _paletteAgentCardId: cardId ? String(cardId) : ''
+    });
+    sPost._paletteAgentReqId = rid;
+    sPost._paletteReqId = rid;
+    sPost._paletteAgentCardId = String(cardId || sPost._paletteAgentCardId || '');
+    sPost._paletteAgentQuery = q;
+    persistSessions();
+    pushSessionHistoryToStore(sPost);
+    return true;
+  }
+
+  function paletteEnsureAgentSessionForCard(cardId, reqId, query, provider, sessionRef) {
+    var cid = String(cardId || '').trim();
+    var rid = String(reqId || '').trim();
+    var q = String(query || '').trim();
+    var provNode = String(provider || 'openclaw').trim() || 'openclaw';
+    if (provNode) {
+      try {
+        var grpA = findNodeGroup(provNode);
+        if (grpA && grpA.sessions && grpA.sessions.length) switchToNode(provNode);
+      } catch (_) {}
+    }
+    var wantedKey = String(sessionRef || '').trim();
+    if (wantedKey === 'main') wantedKey = 'agent:main:main';
+    if (!wantedKey || isAutoNiumaGatewaySessionKey(null, wantedKey)) {
+      wantedKey = paletteSessionKeyForCard(cid);
+    }
+    wantedKey = ocCanonicalSessionKey(wantedKey) || wantedKey;
+    var s = paletteFindSessionByGatewayKey(wantedKey);
+    if (!s && cid) {
+      var list = state.sessions || [];
+      for (var i = list.length - 1; i >= 0; i--) {
+        var cand = list[i];
+        if (cand && String(cand._paletteAgentCardId || '') === cid) {
+          s = cand;
+          break;
+        }
+      }
+    }
+    if (!s) {
+      if (typeof createSessionWithProvider === 'function' && P[provNode]) {
+        var prevUiKey = openclawSessionKey ? String(openclawSessionKey.value || '') : '';
+        if (openclawSessionKey && provNode === 'openclaw') openclawSessionKey.value = wantedKey;
+        createSessionWithProvider(provNode);
+        s = activeSession();
+        if (openclawSessionKey && prevUiKey !== undefined && s && s.id === state.activeSessionId) {
+          openclawSessionKey.value = wantedKey;
+        }
+      }
+    }
+    if (!s || !s.id) return null;
+    s.gatewaySessionKey = wantedKey;
+    s.nodeKey = 'openclaw';
+    s._paletteAgentCardId = cid;
+    s._paletteAgentReqId = rid;
+    s._paletteReqId = rid;
+    s._paletteAgentQuery = q;
+    applyPaletteGatewaySessionKey(s, wantedKey);
+    var titleHint = q.slice(0, 36) + (q.length > 36 ? '…' : '');
+    if (titleHint && (!s.title || /^新对话|^OpenClaw|^任务/.test(String(s.title || '')))) {
+      s.title = titleHint;
+    }
+    paletteEnsureActiveSession(s.id);
+    persistSessions();
+    try {
+      renderSessionTabs();
+    } catch (_) {}
+    paletteEnsureAgentUserInHistory(s, s.id, rid, cid, q);
+    return sessionById(s.id) || s;
+  }
+
   function paletteEnsureActiveSession(sid) {
     sid = String(sid || '').trim();
     if (!sid) return activeSession();
@@ -3479,17 +4221,9 @@ body.niuma-confirm-open{overflow:hidden}
     }
     cfg.userContentForModel = composeUserTextForModel(q, cfg);
     s._pendingUserContentForModel = cfg.userContentForModel;
+    paletteEnsureAgentUserInHistory(s, sid, reqId, cardId, q);
     s._paletteOnChatSendAck = function () {
-      if (paletteAgentUserWasPosted(s, reqId, q)) return;
-      add('user', q);
-      var sPost = sessionById(sid);
-      if (sPost && sPost.history && sPost.history.length) {
-        var um = sPost.history[sPost.history.length - 1];
-        if (um && um.role === 'user') tagPaletteAgentOnHistoryItem(um, sPost);
-      }
-      persistSessions();
-      pushSessionHistoryToStore(sPost);
-      if (sPost && sPost.id === state.activeSessionId) rebuildMsgList();
+      paletteEnsureAgentUserInHistory(s, sid, reqId, cardId, q);
     };
     post({
       type: 'niuma_palette_agent_chunk',
@@ -3543,13 +4277,185 @@ body.niuma-confirm-open{overflow:hidden}
   function paletteAgentUserWasPosted(session, reqId, query) {
     if (!session || !Array.isArray(session.history)) return false;
     var rid = String(reqId || '').trim();
-    if (!rid) return false;
+    var qn = paletteNormDedupeKey(query);
     for (var i = session.history.length - 1; i >= 0; i--) {
       var m = session.history[i];
       if (!m || m.role !== 'user') continue;
-      return String(m._paletteAgentReqId || m._paletteReqId || '') === rid;
+      if (rid && String(m._paletteAgentReqId || m._paletteReqId || '') === rid) return true;
+      if (qn && paletteNormDedupeKey(m.content) === qn) return true;
     }
     return false;
+  }
+
+  function paletteHistoryAssistantCount(history) {
+    return (history || []).filter(function (m) {
+      return m && m.role === 'assistant' && String(m.content || '').trim();
+    }).length;
+  }
+
+  function paletteHistoryUserCount(history) {
+    return (history || []).filter(function (m) {
+      return m && m.role === 'user';
+    }).length;
+  }
+
+  function paletteSessionNeedsAssistantHydrate(s) {
+    if (!s || !Array.isArray(s.history) || !s.history.length) return false;
+    if (paletteHistoryAssistantCount(s.history) < paletteHistoryUserCount(s.history)) return true;
+    var last = s.history[s.history.length - 1];
+    return !!(last && last.role === 'user');
+  }
+
+  function paletteDedupeSessionUserMessages(s) {
+    if (!s || !Array.isArray(s.history)) return;
+    var seen = {};
+    var out = [];
+    s.history.forEach(function (m) {
+      if (!m) return;
+      if (m.role === 'user') {
+        var qn = paletteNormDedupeKey(m.content);
+        if (qn && seen[qn]) return;
+        if (qn) seen[qn] = true;
+      }
+      out.push(m);
+    });
+    if (out.length !== s.history.length) s.history = out;
+  }
+
+  function paletteFindGatewayKeyForQuery(query) {
+    var qn = paletteNormDedupeKey(query);
+    if (!qn) return '';
+    var list = state.sessions || [];
+    for (var i = 0; i < list.length; i++) {
+      var sx = list[i];
+      if (!sx || normalizeProviderId(sx.provider) !== 'openclaw') continue;
+      if (paletteNormDedupeKey(sx._paletteAgentQuery) === qn) {
+        var gk0 = sx.gatewaySessionKey || (sx._paletteAgentCardId ? paletteSessionKeyForCard(sx._paletteAgentCardId) : '');
+        if (gk0) return ocCanonicalSessionKey(gk0) || gk0;
+      }
+      for (var j = 0; j < (sx.history || []).length; j++) {
+        var hm = sx.history[j];
+        if (!hm || hm.role !== 'user' || paletteNormDedupeKey(hm.content) !== qn) continue;
+        var cid = String(hm._paletteAgentCardId || sx._paletteAgentCardId || '').trim();
+        if (cid) return ocCanonicalSessionKey(paletteSessionKeyForCard(cid)) || paletteSessionKeyForCard(cid);
+        if (sx.gatewaySessionKey && isPaletteAgentChatSession(sx)) {
+          return ocCanonicalSessionKey(sx.gatewaySessionKey) || sx.gatewaySessionKey;
+        }
+      }
+    }
+    return '';
+  }
+
+  function paletteResolveGatewayKeyForUserMsg(session, userMsg) {
+    var um = userMsg || {};
+    var q = String(um.content || '').trim();
+    var cid = String(um._paletteAgentCardId || (session && session._paletteAgentCardId) || '').trim();
+    if (cid) return ocCanonicalSessionKey(paletteSessionKeyForCard(cid)) || paletteSessionKeyForCard(cid);
+    var byQ = paletteFindGatewayKeyForQuery(q);
+    if (byQ) return byQ;
+    if (session && session.gatewaySessionKey) {
+      return ocCanonicalSessionKey(session.gatewaySessionKey) || String(session.gatewaySessionKey).trim();
+    }
+    return ocCanonicalSessionKey(getOpenClawSessionKey(session)) || getOpenClawSessionKey(session);
+  }
+
+  function rebuildOpenClawHistoryFromGatewayRaw(raw, localSession) {
+    var arr = Array.isArray(raw) ? raw : [];
+    if (!arr.length) return [];
+    var rows = [];
+    for (var i = 0; i < arr.length; i++) {
+      var role = ocRoleFromHistoryItem(arr[i]);
+      var content = ocExtractMessageContentForHistory(arr[i]);
+      if (!role || !content || ocIsIgnorableGatewayText(content)) continue;
+      if (role === 'assistant' && ocLooksLikeThinkingPreambleOnly(content) && !ocAnswerHasSubstantiveStructure(content)) continue;
+      rows.push({
+        role: role,
+        content: String(content).trim(),
+        ts: ensureIsoTime(arr[i].ts || arr[i].timestamp || arr[i].createdAt || arr[i].updatedAt),
+        origIdx: i
+      });
+    }
+    rows.sort(function (a, b) {
+      var at = 0,
+        bt = 0;
+      try {
+        at = new Date(a.ts || 0).getTime() || 0;
+      } catch (_) {}
+      try {
+        bt = new Date(b.ts || 0).getTime() || 0;
+      } catch (_) {}
+      if (at && bt && at !== bt) return at - bt;
+      return a.origIdx - b.origIdx;
+    });
+    return rows.map(function (it) {
+      var item = { role: it.role, content: it.content, ts: it.ts, _id: genMsgId() };
+      if (localSession && localSession.history && it.role === 'user') {
+        var qn = paletteNormDedupeKey(it.content);
+        for (var j = 0; j < localSession.history.length; j++) {
+          var lm = localSession.history[j];
+          if (!lm || lm.role !== 'user' || paletteNormDedupeKey(lm.content) !== qn) continue;
+          if (lm._paletteAgentReqId) item._paletteAgentReqId = lm._paletteAgentReqId;
+          if (lm._paletteReqId) item._paletteReqId = lm._paletteReqId;
+          if (lm._paletteAgentCardId) item._paletteAgentCardId = lm._paletteAgentCardId;
+          break;
+        }
+      }
+      return item;
+    });
+  }
+
+  async function paletteRepairSessionUsersFromGateway(s) {
+    if (!s || !Array.isArray(s.history) || paletteHistoryUserCount(s.history) < 1) return;
+    paletteDedupeSessionUserMessages(s);
+    var cfg = {
+      provider: 'openclaw',
+      baseUrl: (s.baseUrl || '').trim() || (P.openclaw && P.openclaw.baseUrl) || '',
+      apiKey: getApiKeyForProvider('openclaw')
+    };
+    if (!openClawEndpointFromCfg(cfg).ok) return;
+    var newHistory = [];
+    var users = [];
+    for (var i = 0; i < s.history.length; i++) {
+      if (s.history[i] && s.history[i].role === 'user') users.push({ idx: i, msg: s.history[i] });
+    }
+    for (var ui = 0; ui < users.length; ui++) {
+      var um = users[ui].msg;
+      var q = String(um.content || '').trim();
+      if (!q) continue;
+      newHistory.push(um);
+      var hasAsst = false;
+      for (var j = users[ui].idx + 1; j < s.history.length; j++) {
+        var mid = s.history[j];
+        if (mid && mid.role === 'user') break;
+        if (mid && mid.role === 'assistant' && String(mid.content || '').trim()) {
+          newHistory.push(mid);
+          hasAsst = true;
+          break;
+        }
+      }
+      if (hasAsst) continue;
+      var gk = paletteResolveGatewayKeyForUserMsg(s, um);
+      var ans = paletteAgentContentReady(await paletteFetchAssistantFromGatewayKey(s, gk, q));
+      if (ans) {
+        var na = {
+          _id: genMsgId(),
+          role: 'assistant',
+          content: ans,
+          ts: new Date().toISOString(),
+          _draft: false
+        };
+        if (um._paletteAgentReqId) na._paletteAgentReqId = um._paletteAgentReqId;
+        if (um._paletteReqId) na._paletteReqId = um._paletteReqId;
+        if (um._paletteAgentCardId) na._paletteAgentCardId = um._paletteAgentCardId;
+        tagPaletteAgentOnHistoryItem(na, s);
+        newHistory.push(na);
+      }
+    }
+    if (paletteHistoryAssistantCount(newHistory) > paletteHistoryAssistantCount(s.history)) {
+      s.history = newHistory.slice(-400);
+      palettePersistAgentSessionAfterAnswer(s, s._paletteAgentReqId, s._paletteAgentCardId, s._paletteAgentQuery);
+      if (s.id === state.activeSessionId) rebuildMsgList();
+    }
   }
 
   function paletteAgentStreamWasCancelled(reqId) {
@@ -3691,19 +4597,12 @@ body.niuma-confirm-open{overflow:hidden}
       } catch (_) {}
     }
     post({ type: 'niuma_palette_agent_chunk', reqId: reqId, cardId: cid, delta: '⏳ 正在准备代理引擎…\n' });
-    if (provNode) {
-      try {
-        var grpA = findNodeGroup(provNode);
-        if (grpA && grpA.sessions && grpA.sessions.length) switchToNode(provNode);
-        else if (typeof createSessionWithProvider === 'function' && P[provNode]) createSessionWithProvider(provNode);
-      } catch (_) {}
-    }
-    var s = activeSession();
+    var s = paletteEnsureAgentSessionForCard(cid, rid, q, provNode, sessionRef);
     if (!s || !s.id) {
       try {
         if (typeof createSessionWithProvider === 'function' && P[provNode]) {
           createSessionWithProvider(provNode);
-          s = activeSession();
+          s = paletteEnsureAgentSessionForCard(cid, rid, q, provNode, sessionRef);
         }
       } catch (_) {}
     }
@@ -3836,7 +4735,7 @@ body.niuma-confirm-open{overflow:hidden}
           });
         }
       }
-      if (content) {
+      if (content && (paletteAgentAnswerCompleteEnough(content, q) || content.length >= 1200)) {
         var sFin = sessionById(sid);
         if (sFin && sFin._paletteOpenClawSessionKey) sessionRefOut = String(sFin._paletteOpenClawSessionKey);
         else if (_paletteAgentInflightByReqId[rid] && _paletteAgentInflightByReqId[rid].sessionRef)
@@ -3844,6 +4743,19 @@ body.niuma-confirm-open{overflow:hidden}
         else if (sFin && sFin.gatewaySessionKey) sessionRefOut = String(sFin.gatewaySessionKey);
         paletteNotifyPaletteAgentEnd(reqId, cid, content, sessionRefOut);
         _paletteStreamContentDelivered = true;
+      } else if (content && content.length >= 480 && (/\|/.test(content) || content.length >= 800)) {
+        paletteNotifyPaletteAgentEnd(reqId, cid, content, sessionRefOut);
+        _paletteStreamContentDelivered = true;
+      } else if (content) {
+        post({
+          type: 'niuma_palette_agent_chunk',
+          reqId: reqId,
+          cardId: cid,
+          delta: '⏳ 已同步部分回复，继续从 Gateway 拉取完整内容…\n',
+          liveThought: '继续同步完整回复…'
+        });
+        if (_paletteAgentInflightByReqId[rid]) _paletteAgentInflightByReqId[rid].sessionRef = String(sessionRefOut || '');
+        armPaletteAgentLateRecover(rid);
       } else {
         post({
           type: 'niuma_palette_agent_chunk',
@@ -3892,6 +4804,8 @@ body.niuma-confirm-open{overflow:hidden}
     }
   }
 
+  window.paletteEnsureAgentSessionForCard = paletteEnsureAgentSessionForCard;
+  window.paletteEnsureAgentUserInHistory = paletteEnsureAgentUserInHistory;
   window.runPaletteAgentStream = runPaletteAgentStream;
   window.palettePrepareAgentStreamForCard = palettePrepareAgentStreamForCard;
   window.exportPaletteOpenClawGatewayKey = function (sessionRef, cardId) {
@@ -3903,6 +4817,13 @@ body.niuma-confirm-open{overflow:hidden}
   };
   window.palettePickAssistantAnswerForAgent = palettePickAssistantAnswerForAgent;
   window.paletteHydrateAssistantFromGateway = paletteHydrateAssistantFromGateway;
+  window.paletteRecoverAnswerForCard = paletteRecoverAnswerForCard;
+  window.paletteSyncCardAnswerToNiumaSession = paletteSyncCardAnswerToNiumaSession;
+  window.paletteBootstrapSessionsFromAgentCards = paletteBootstrapSessionsFromAgentCards;
+  window.paletteSyncOpenClawNow = paletteSyncOpenClawNow;
+  window.paletteApplyCardToSession = paletteApplyCardToSession;
+  window.paletteDedupeCpSessions = paletteDedupeCpSessions;
+  window.paletteAgentAnswerCompleteEnough = paletteAgentAnswerCompleteEnough;
   window.paletteSyncAnswerForReq = paletteSyncAnswerForReq;
   window.exportPaletteLlmForProvider = exportPaletteLlmForProvider;
   window.niumaProviderIconUrlList = providerIconUrlList;
@@ -4985,20 +5906,18 @@ body.niuma-confirm-open{overflow:hidden}
 
   function pullStoreHistoryToSession(s) {
     if (!s) return;
+    if (isPaletteAgentChatSession(s)) {
+      var keyCp = historyStoreKeyForSession(s);
+      if (!keyCp || !state.niumaHistoryStore || !state.niumaHistoryStore.sessions) return;
+      var arrCp = state.niumaHistoryStore.sessions[keyCp];
+      if (!Array.isArray(arrCp) || !arrCp.length) return;
+      if (!s.history || !s.history.length) s.history = arrCp.slice(-20);
+      return;
+    }
     if (!state.niumaHistoryStore || !state.niumaHistoryStore.sessions) return;
     var key = historyStoreKeyForSession(s);
     if (!key) return;
     var arr = state.niumaHistoryStore.sessions[key];
-    if ((!Array.isArray(arr) || !arr.length) && s.provider === 'openclaw') {
-      var sk = getOpenClawSessionKey(s);
-      var collected = [];
-      state.sessions.forEach(function (x) {
-        if (!x || x.id === s.id || x.provider !== 'openclaw') return;
-        if (getOpenClawSessionKey(x) !== sk) return;
-        collected = mergeHistoryList(collected, x.history || []);
-      });
-      arr = collected;
-    }
     if (!Array.isArray(arr) || !arr.length) return;
     s.history = mergeHistoryList(s.history || [], arr).slice(-400);
   }
@@ -5450,6 +6369,9 @@ body.niuma-confirm-open{overflow:hidden}
       map[gk].sessions.push(s);
     });
     return order.map(function (k) {
+      map[k].sessions.sort(function (a, b) {
+        return paletteSessionQualityScore(b) - paletteSessionQualityScore(a);
+      });
       return map[k];
     });
   }
@@ -5534,11 +6456,17 @@ body.niuma-confirm-open{overflow:hidden}
             .map(function (m) {
               var n = normalizeHistoryItem(m);
               if (!n) return null;
-              return {
+              var item = {
                 role: n.role,
                 content: n.content,
                 ts: n.ts
               };
+              if (m && m._id) item._id = m._id;
+              if (m && m._paletteAgentReqId) item._paletteAgentReqId = m._paletteAgentReqId;
+              if (m && m._paletteReqId) item._paletteReqId = m._paletteReqId;
+              if (m && m._paletteAgentCardId) item._paletteAgentCardId = m._paletteAgentCardId;
+              if (m && m._draft != null) item._draft = m._draft;
+              return item;
             })
             .filter(Boolean)
         : [],
@@ -5558,8 +6486,13 @@ body.niuma-confirm-open{overflow:hidden}
       contextTokens: typeof s.contextTokens === 'number' ? s.contextTokens : 0,
       contextLimit: typeof s.contextLimit === 'number' ? s.contextLimit : 0,
       stashedAt: s.stashedAt || null,
-      stashedSummary: s.stashedSummary != null ? String(s.stashedSummary) : null
+      stashedSummary: s.stashedSummary != null ? String(s.stashedSummary) : null,
+      title: s.title != null ? String(s.title) : ''
     };
+    if (s._paletteAgentCardId) row._paletteAgentCardId = String(s._paletteAgentCardId);
+    if (s._paletteAgentReqId) row._paletteAgentReqId = String(s._paletteAgentReqId);
+    if (s._paletteReqId) row._paletteReqId = String(s._paletteReqId);
+    if (s._paletteAgentQuery) row._paletteAgentQuery = String(s._paletteAgentQuery);
     if (!row.nodeKey) row.nodeKey = nodeKeyForSession(row);
     refreshSessionMeta(row);
     return row;
@@ -5582,6 +6515,14 @@ body.niuma-confirm-open{overflow:hidden}
     if (!data || !Array.isArray(data.sessions)) return;
     var ver = data.v || 1;
     state.sessions = data.sessions.map(mapLoadedSession);
+    state.sessions.forEach(function (sx) {
+      if (sx && isPaletteAgentChatSession(sx)) sx.nodeKey = 'openclaw';
+    });
+    try {
+      paletteMigrateOpenClawNodeKeys();
+      paletteDedupeCpSessions();
+      paletteRemovePollutedBucketSessions();
+    } catch (_) {}
     if (ver >= 2) migrateSessionsPayloadToV2(data);
     else migrateSessionsPayloadToV2({ sessions: state.sessions, activeSessionId: data.activeSessionId });
     if (ver >= 3) migrateSessionsPayloadToV3(data);
@@ -6025,10 +6966,20 @@ body.niuma-confirm-open{overflow:hidden}
     return pl + ' · ' + shortModel(s.model);
   }
 
+  function isPaletteAgentChatSession(s) {
+    if (!s) return false;
+    if (String(s._paletteAgentCardId || '').trim()) return true;
+    var gk = getOpenClawSessionKey(s);
+    return isPaletteCardGatewaySessionKey(gk);
+  }
+
   function nodeKeyForSession(s) {
     if (!s) return '';
     var pid = normalizeProviderId(s.provider);
-    if (pid === 'openclaw') return 'openclaw:' + getOpenClawSessionKey(s);
+    if (pid === 'openclaw') {
+      if (isPaletteAgentChatSession(s)) return 'openclaw';
+      return 'openclaw:' + getOpenClawSessionKey(s);
+    }
     return pid;
   }
 
@@ -6154,21 +7105,30 @@ body.niuma-confirm-open{overflow:hidden}
   function threadTitleForSession(s) {
     if (!s) return '话题';
     if (isCliSession(s)) return 'CLI 终端';
+    var titled = String(s.title || s._paletteAgentQuery || '').trim();
+    if (titled) return titled.length > 42 ? titled.slice(0, 40) + '…' : titled;
     var cnt = Array.isArray(s.history) ? s.history.length : 0;
     var sub = shortModel(s.model);
     if (cnt > 0) {
-      var last = s.history[cnt - 1];
-      var preview = last && last.content ? String(last.content).replace(/\s+/g, ' ').trim() : '';
-      if (preview.length > 28) preview = preview.slice(0, 26) + '…';
-      if (preview) sub = preview;
-    } else sub = sub + ' · 空对话';
-    return sub;
+      for (var i = 0; i < cnt; i++) {
+        var um = s.history[i];
+        if (!um || um.role !== 'user') continue;
+        var preview = String(um.content || '').replace(/\s+/g, ' ').trim();
+        if (preview.length > 28) preview = preview.slice(0, 26) + '…';
+        if (preview) return preview;
+      }
+    }
+    return sub + ' · 空对话';
   }
 
   function threadSubForSession(s) {
     if (!s) return '';
-    var cnt = Array.isArray(s.history) ? s.history.length : 0;
-    return (isCliSession(s) ? 'ttyd' : shortModel(s.model)) + ' · ' + cnt + ' 条消息';
+    paletteSanitizeSessionHistory(s);
+    var uc = paletteHistoryUserCount(s.history);
+    var ac = paletteHistoryAssistantCount(s.history);
+    var cnt = uc + ac;
+    var st = ac > 0 ? '已回复' : '待回复';
+    return (isCliSession(s) ? 'ttyd' : shortModel(s.model)) + ' · ' + cnt + ' 条 · ' + st;
   }
 
   var niumaConfirmActive = null;
@@ -9865,12 +10825,25 @@ body.niuma-confirm-open{overflow:hidden}
       if (!item || !item.role) return;
       var raw = item.content != null ? String(item.content) : '';
       var disp = raw.trim() ? raw : ocExtractMessageContentForHistory(item);
+      if (item.role === 'assistant' && (!String(disp || '').trim() || paletteIsAgentStatusText(disp) || ocIsIgnorableGatewayText(disp))) return;
       if (!String(disp || '').trim()) disp = '（无正文）';
       appendMessageDom(item.role, disp, item.ts, item._id || '');
     });
     emptyState();
     scrollMsgsToLatest();
     syncChatViewMode();
+    if (s.provider === 'openclaw' && paletteSessionNeedsAssistantHydrate(s) && !s._hydrateScheduleAt) {
+      s._hydrateScheduleAt = Date.now();
+      setTimeout(function () {
+        var s2 = sessionById(s.id);
+        if (!s2 || s2.id !== state.activeSessionId) return;
+        delete s2._hydrateScheduleAt;
+        if (!paletteSessionNeedsAssistantHydrate(s2)) return;
+        if (isPaletteAgentChatSession(s2)) paletteHydrateCpSessionFromGateway(s2, true).catch(function () {});
+        else if (paletteHistoryUserCount(s2.history) > 1) paletteRepairSessionUsersFromGateway(s2).catch(function () {});
+        else hydrateOpenClawHistoryForSession(s2, true).catch(function () {});
+      }, 400);
+    }
   }
 
   function add(role, content) {
@@ -9947,7 +10920,13 @@ body.niuma-confirm-open{overflow:hidden}
     renderSessionTabs();
     updateNeedSetup();
     refreshSendUi();
-    if (target && target.provider === 'openclaw') hydrateOpenClawHistoryForSession(target, false);
+    if (target && target.provider === 'openclaw') {
+      if (isPaletteAgentChatSession(target)) paletteHydrateCpSessionFromGateway(target, true).catch(function () {});
+      else if (paletteSessionNeedsAssistantHydrate(target)) {
+        if (paletteHistoryUserCount(target.history) > 1) paletteRepairSessionUsersFromGateway(target).catch(function () {});
+        else hydrateOpenClawHistoryForSession(target, true).catch(function () {});
+      } else hydrateOpenClawHistoryForSession(target, false);
+    }
     syncAgentLoopFromSession(target);
     syncChatViewMode();
     syncViewModeUi();
@@ -10845,6 +11824,10 @@ body.niuma-confirm-open{overflow:hidden}
   var OPENCLAW_CHAT_WS_TIMEOUT_MS = 180000;
   var OPENCLAW_CHAT_LATE_POLL_ROUNDS = 4;
   var OPENCLAW_CHAT_LATE_POLL_MS = 3500;
+  /** Command Palette 代理：OpenClaw 工具型长任务需更长 WS 与 history 轮询 */
+  var OPENCLAW_PALETTE_AGENT_WS_TIMEOUT_MS = 600000;
+  var OPENCLAW_PALETTE_AGENT_LATE_POLL_ROUNDS = 100;
+  var OPENCLAW_PALETTE_AGENT_LATE_POLL_MS = 5000;
 
   function openClawConnectProtocolRange() {
     return { minProtocol: OPENCLAW_GATEWAY_MIN_PROTOCOL, maxProtocol: OPENCLAW_GATEWAY_MAX_PROTOCOL };
@@ -12263,6 +13246,27 @@ body.niuma-confirm-open{overflow:hidden}
     }
     var sAct = activeSession();
     if (sAct && normalizeProviderId(sAct.provider) === 'openclaw') hydrateOpenClawHistoryForSession(sAct, false);
+    try {
+      post({ type: 'palette_agent_bootstrap_niuma' });
+    } catch (_) {}
+    state.sessions.forEach(function (sx, idx) {
+      if (!sx || normalizeProviderId(sx.provider) !== 'openclaw') return;
+      setTimeout(function () {
+        var sOc = sessionById(sx.id) || sx;
+        if (!sOc) return;
+        pullStoreHistoryToSession(sOc);
+        paletteDedupeSessionUserMessages(sOc);
+        paletteSanitizeSessionHistory(sOc);
+        if (!paletteSessionNeedsAssistantHydrate(sOc)) return;
+        if (isPaletteAgentChatSession(sOc)) {
+          paletteHydrateCpSessionFromGateway(sOc, true).catch(function () {});
+        } else if (paletteHistoryUserCount(sOc.history) > 1) {
+          paletteRepairSessionUsersFromGateway(sOc).catch(function () {});
+        } else {
+          hydrateOpenClawHistoryForSession(sOc, true).catch(function () {});
+        }
+      }, 800 + idx * 600);
+    });
     ensureDynamicModelsForActiveProvider();
     renderChatModelBar();
   }
@@ -19655,6 +20659,7 @@ body.niuma-confirm-open{overflow:hidden}
 
   function ocIsIgnorableGatewayText(s) {
     if (ocIsSystemOrMetaText(s)) return true;
+    if (ocIsHeartbeatOrPollText(s)) return true;
     var n = ocNormForMatch(s)
       .replace(/[\-_]+/g, ' ')
       .replace(/\s+/g, ' ')
@@ -19677,6 +20682,34 @@ body.niuma-confirm-open{overflow:hidden}
     var bn = ocNormForMatch(b);
     if (!an || !bn) return false;
     return an === bn || an.indexOf(bn) >= 0 || bn.indexOf(an) >= 0;
+  }
+
+  function ocBuildHistoryMatchTexts(primary, extras) {
+    var out = [];
+    function push(t) {
+      t = String(t || '').trim();
+      if (!t) return;
+      var tn = ocNormForMatch(t);
+      if (!tn) return;
+      for (var i = 0; i < out.length; i++) {
+        if (ocNormForMatch(out[i]) === tn) return;
+      }
+      out.push(t);
+    }
+    push(primary);
+    if (Array.isArray(extras)) {
+      for (var ei = 0; ei < extras.length; ei++) push(extras[ei]);
+    }
+    return out;
+  }
+
+  function ocLooksLikeAnySentTextMatch(content, matchTexts) {
+    var texts = Array.isArray(matchTexts) ? matchTexts : ocBuildHistoryMatchTexts(matchTexts, null);
+    if (!texts.length) return false;
+    for (var i = 0; i < texts.length; i++) {
+      if (ocLooksLikeSentTextMatch(content, texts[i])) return true;
+    }
+    return false;
   }
 
   function ocHistoryAssistantHasToolOrThinking(historyRes) {
@@ -19778,7 +20811,7 @@ body.niuma-confirm-open{overflow:hidden}
           dbgPush('stream', 'late_poll', { round: w + 1, rounds: rounds, key: histKey }, true);
         }
         var lateRaw = extractGatewayHistoryMessages(lateRes);
-        var latePicked = ocPickAssistantFromHistory(lateRaw, sentText, sentAtMs);
+        var latePicked = ocPickAssistantFromHistory(lateRaw, sentText, sentAtMs, options.altMatchTexts);
         if (latePicked && String(latePicked).trim()) return { text: String(latePicked).trim(), res: lateRes };
         var deepPicked = ocPickReadableTextDeep(lateRes, sentText);
         if (
@@ -19802,11 +20835,11 @@ body.niuma-confirm-open{overflow:hidden}
     return { text: '', res: lastRpcRes };
   }
 
-  function ocHistoryHasUserMessage(rawMessages, sentText, sentAtMs) {
+  function ocHistoryHasUserMessage(rawMessages, sentText, sentAtMs, altMatchTexts) {
     var arr = Array.isArray(rawMessages) ? rawMessages : extractGatewayHistoryMessages(rawMessages);
-    var sentNorm = ocNormForMatch(sentText);
+    var matchTexts = ocBuildHistoryMatchTexts(sentText, altMatchTexts);
     var sentMs = Number(sentAtMs) || 0;
-    if (!sentNorm || !arr.length) return false;
+    if (!matchTexts.length || !arr.length) return false;
     for (var u = arr.length - 1; u >= 0; u--) {
       var hm = arr[u];
       if (!hm || typeof hm !== 'object') continue;
@@ -19815,12 +20848,21 @@ body.niuma-confirm-open{overflow:hidden}
         var tsMs = ocTimestampMsFromAny(hm);
         if (tsMs > 0 && tsMs + 1200 < sentMs) continue;
       }
-      if (ocLooksLikeSentTextMatch(ocExtractMessageContentForHistory(hm), sentText)) return true;
+      if (ocLooksLikeAnySentTextMatch(ocExtractMessageContentForHistory(hm), matchTexts)) return true;
+    }
+    if (sentMs > 0) {
+      for (var u2 = arr.length - 1; u2 >= 0; u2--) {
+        var hm2 = arr[u2];
+        if (!hm2 || typeof hm2 !== 'object') continue;
+        if (ocRoleFromHistoryItem(hm2) !== 'user') continue;
+        var tsMs2 = ocTimestampMsFromAny(hm2);
+        if (tsMs2 > 0 && tsMs2 + 1200 >= sentMs) return true;
+      }
     }
     return false;
   }
 
-  function ocPickAssistantFromHistory(rawMessages, sentText, sentAtMs) {
+  function ocPickAssistantFromHistory(rawMessages, sentText, sentAtMs, altMatchTexts) {
     var arr = Array.isArray(rawMessages) ? rawMessages : [];
     if (!arr.length) return '';
     var rows = [];
@@ -19855,30 +20897,50 @@ body.niuma-confirm-open{overflow:hidden}
       return a.origIdx - b.origIdx;
     });
 
-    var sentNorm = ocNormForMatch(sentText);
+    var matchTexts = ocBuildHistoryMatchTexts(sentText, altMatchTexts);
     var sentMs = Number(sentAtMs) || 0;
-    if (!sentNorm) return '';
-    if (!ocHistoryHasUserMessage(rawMessages, sentText, sentAtMs)) return '';
+    if (!matchTexts.length) return '';
+    if (!ocHistoryHasUserMessage(rawMessages, sentText, sentAtMs, altMatchTexts)) return '';
 
-    // 找与 sentText 匹配的最新的 user 消息，取其紧随其后的 assistant 回复
+    // 找与 sentText 匹配的最新 user，取其后的最长 assistant（多轮 thinking 时最终答案往往在最后且最长）
     for (var u = rows.length - 1; u >= 0; u--) {
       if (rows[u].role !== 'user') continue;
-      // Prefer users at/after this send time to avoid matching an old identical prompt.
       if (sentMs > 0 && rows[u].tsMs > 0 && rows[u].tsMs + 1200 < sentMs) continue;
       var un = ocNormForMatch(rows[u].content);
       if (!un) continue;
-      if (ocLooksLikeSentTextMatch(un, sentNorm)) {
-        // 找到了 user，向后寻找由于生成延迟可能刚刚出现的第一条 assistant 回复
+      if (ocLooksLikeAnySentTextMatch(rows[u].content, matchTexts)) {
+        var best = '';
         for (var a = u + 1; a < rows.length; a++) {
-          if (rows[a].role === 'assistant') {
-            if (sentMs > 0 && rows[a].tsMs > 0 && rows[a].tsMs + 1200 < sentMs) continue;
-            if (!ocIsIgnorableGatewayText(rows[a].content)) {
-              return rows[a].content;
-            }
-          }
+          if (rows[a].role === 'user') break;
+          if (rows[a].role !== 'assistant') continue;
+          if (sentMs > 0 && rows[a].tsMs > 0 && rows[a].tsMs + 1200 < sentMs) continue;
+          if (ocIsIgnorableGatewayText(rows[a].content)) continue;
+          var c = String(rows[a].content || '').trim();
+          if (c.length > best.length) best = c;
         }
-        // user 已出现但 assistant 未出现：继续等待轮询
-        return '';
+        return best;
+      }
+    }
+
+    if (sentMs > 0) {
+      var fallbackUser = -1;
+      for (var fu = rows.length - 1; fu >= 0; fu--) {
+        if (rows[fu].role !== 'user') continue;
+        if (rows[fu].tsMs > 0 && rows[fu].tsMs + 1200 < sentMs) continue;
+        fallbackUser = fu;
+        break;
+      }
+      if (fallbackUser >= 0) {
+        var bestFb = '';
+        for (var af = fallbackUser + 1; af < rows.length; af++) {
+          if (rows[af].role === 'user') break;
+          if (rows[af].role !== 'assistant') continue;
+          if (sentMs > 0 && rows[af].tsMs > 0 && rows[af].tsMs + 1200 < sentMs) continue;
+          if (ocIsIgnorableGatewayText(rows[af].content)) continue;
+          var cf = String(rows[af].content || '').trim();
+          if (cf.length > bestFb.length) bestFb = cf;
+        }
+        return bestFb;
       }
     }
     
@@ -20097,18 +21159,29 @@ body.niuma-confirm-open{overflow:hidden}
         s.gatewaySessionKey = sk;
         if (meta && meta.row) s.openclawMeta = meta.row;
         if (meta && meta.model) s.model = String(meta.model).trim() || s.model;
-        var rpcRes = await openClawRpcWithRetry(cfg, 'chat.history', { sessionKey: sk, limit: 100 }, {
+        var rpcRes = await openClawRpcWithRetry(cfg, 'chat.history', { sessionKey: sk, limit: 200 }, {
           attempts: 3,
-          timeoutMs: 12000,
+          timeoutMs: 15000,
           timeoutStepMs: 4000,
           backoffMs: [250, 900]
         });
-        var gw = extractGatewayHistoryMessages(rpcRes).map(mapGatewayHistoryItem).filter(Boolean);
-        if ((!gw.length || gw.length < 2) && meta && meta.previewItems && meta.previewItems.length) {
+        var rawGw = extractGatewayHistoryMessages(rpcRes);
+        var gw = rebuildOpenClawHistoryFromGatewayRaw(rawGw, s);
+        if ((!gw.length || paletteHistoryAssistantCount(gw) < 1) && meta && meta.previewItems && meta.previewItems.length) {
           gw = mergeHistoryList(gw, ocHistoryItemsFromPreviewItems(meta.previewItems));
         }
-        /* 本地优先：避免网关 chat.history 占位项（content 空、仅有 id）与刚发送条目同 key 时盖住本地正文 */
-        if (gw.length) s.history = mergeHistoryList(s.history || [], gw).slice(-400);
+        var localAsst = paletteHistoryAssistantCount(s.history);
+        var gwAsst = paletteHistoryAssistantCount(gw);
+        if (gwAsst > 0 && gwAsst > localAsst) {
+          s.history = gw.slice(-400);
+        } else if (gw.length && paletteHistoryUserCount(s.history) > paletteHistoryUserCount(gw) && gwAsst > 0) {
+          s.history = gw.slice(-400);
+        } else if (gw.length) {
+          s.history = mergeHistoryList(s.history || [], gw).slice(-400);
+        }
+        if (paletteSessionNeedsAssistantHydrate(s)) {
+          await paletteRepairSessionUsersFromGateway(s);
+        }
       }
       pushSessionHistoryToStore(s);
       persistSessions();
@@ -20144,6 +21217,19 @@ body.niuma-confirm-open{overflow:hidden}
     if (cfg.systemPrompt && h.length === 1) {
       msgText = '【系统提示】\n' + cfg.systemPrompt + '\n\n' + msgText;
     }
+    var historyMatchTexts = ocBuildHistoryMatchTexts(msgText, null);
+    if (isPaletteAgentRequest && s0) {
+      var pqHist = String(s0._paletteAgentQuery || '').trim();
+      if (pqHist) historyMatchTexts = ocBuildHistoryMatchTexts(pqHist, historyMatchTexts);
+      for (var hxi = h.length - 1; hxi >= 0; hxi--) {
+        if (h[hxi] && h[hxi].role === 'user') {
+          var hu = String(h[hxi].content || '').trim();
+          if (hu) historyMatchTexts = ocBuildHistoryMatchTexts(hu, historyMatchTexts);
+          break;
+        }
+      }
+    }
+    var historyMatchAlt = historyMatchTexts.length > 1 ? historyMatchTexts.slice(1) : null;
     var chatSentAtMs = Date.now();
     var sessionKey =
       String(cfg.openclawSessionKey || '').trim() ||
@@ -20203,13 +21289,14 @@ body.niuma-confirm-open{overflow:hidden}
       var recoveringFinal = false;
       var bgHistTimer = 0;
       var _dbgFrames = [];
+      var wsTimeoutMs = isPaletteAgentRequest ? OPENCLAW_PALETTE_AGENT_WS_TIMEOUT_MS : OPENCLAW_CHAT_WS_TIMEOUT_MS;
       var hardTimeout = setTimeout(function () {
         if (pendingText.trim() || authenticated) {
           recoverFinalFromHistory(true, null);
           return;
         }
         settleReject(new Error('OpenClaw 发送后未收到任何回复事件；请检查 Gateway 日志是否出现 chat.send。'));
-      }, OPENCLAW_CHAT_WS_TIMEOUT_MS);
+      }, wsTimeoutMs);
       var lastEmitAt = 0;
       var lastEmitText = '';
 
@@ -20248,9 +21335,19 @@ body.niuma-confirm-open{overflow:hidden}
             }
             return;
           }
-          if (pendingText.trim() && ocShouldSettleOpenClawChat(pendingText, null)) {
-            settleResolve(pendingText.trim());
-            return;
+          if (pendingText.trim()) {
+            if (
+              isPaletteAgentRequest &&
+              typeof paletteAgentAnswerCompleteEnough === 'function' &&
+              paletteAgentAnswerCompleteEnough(pendingText, s0 && s0._paletteAgentQuery)
+            ) {
+              settleResolve(pendingText.trim());
+              return;
+            }
+            if (ocShouldSettleOpenClawChat(pendingText, null)) {
+              settleResolve(pendingText.trim());
+              return;
+            }
           }
           var histKey = canonicalSessionKey || sessionKey;
           openClawRpcWithRetry(cfg, 'chat.history', { sessionKey: histKey, limit: 200 }, {
@@ -20261,7 +21358,12 @@ body.niuma-confirm-open{overflow:hidden}
           })
             .then(function (rpcRes) {
               if (settled) return;
-              var picked = ocPickAssistantFromHistory(extractGatewayHistoryMessages(rpcRes), msgText, chatSentAtMs);
+              var picked = ocPickAssistantFromHistory(
+                extractGatewayHistoryMessages(rpcRes),
+                historyMatchTexts[0],
+                chatSentAtMs,
+                historyMatchAlt
+              );
               if (picked && String(picked).trim()) {
                 pendingText = String(picked).trim();
                 emitProgress(true);
@@ -20352,8 +21454,13 @@ body.niuma-confirm-open{overflow:hidden}
           var lastRpcRes = null;
           var histKey = canonicalSessionKey || sessionKey;
           var pollOpts = {
-            rounds: fromTimeout ? OPENCLAW_CHAT_LATE_POLL_ROUNDS : Math.max(4, Math.floor(OPENCLAW_CHAT_LATE_POLL_ROUNDS / 2)),
-            intervalMs: OPENCLAW_CHAT_LATE_POLL_MS,
+            rounds: fromTimeout
+              ? isPaletteAgentRequest
+                ? OPENCLAW_PALETTE_AGENT_LATE_POLL_ROUNDS
+                : OPENCLAW_CHAT_LATE_POLL_ROUNDS
+              : Math.max(4, Math.floor(OPENCLAW_CHAT_LATE_POLL_ROUNDS / 2)),
+            intervalMs: fromTimeout && isPaletteAgentRequest ? OPENCLAW_PALETTE_AGENT_LATE_POLL_MS : OPENCLAW_CHAT_LATE_POLL_MS,
+            altMatchTexts: historyMatchAlt,
             onProgressHint: function (hintText) {
               if (hooks && typeof hooks.onProgress === 'function') {
                 try {
@@ -20381,7 +21488,7 @@ body.niuma-confirm-open{overflow:hidden}
               lastRpcRes = rpcRes;
               if (typeof dbgPush === 'function') dbgPush('stream', 'recover_history_try', { attempt: i + 1, waitMs: waitList[i], key: histKey }, true);
               var raw = extractGatewayHistoryMessages(rpcRes);
-              var picked = ocPickAssistantFromHistory(raw, msgText, chatSentAtMs);
+              var picked = ocPickAssistantFromHistory(raw, historyMatchTexts[0], chatSentAtMs, historyMatchAlt);
               if (picked && String(picked).trim()) {
                 pendingText = String(picked).trim();
                 emitProgress(true);
@@ -20411,7 +21518,12 @@ body.niuma-confirm-open{overflow:hidden}
                   backoffMs: [180]
                 }
               );
-              var prevPicked = ocPickAssistantFromHistory(ocHistoryItemsFromPreviewItems(ocSessionPreviewItemsFromAny(prevRes)), msgText, chatSentAtMs);
+              var prevPicked = ocPickAssistantFromHistory(
+                ocHistoryItemsFromPreviewItems(ocSessionPreviewItemsFromAny(prevRes)),
+                historyMatchTexts[0],
+                chatSentAtMs,
+                historyMatchAlt
+              );
               if (prevPicked && String(prevPicked).trim()) {
                 pendingText = String(prevPicked).trim();
                 emitProgress(true);
@@ -20439,7 +21551,7 @@ body.niuma-confirm-open{overflow:hidden}
           var shouldLatePoll =
             fromTimeout || ocHistoryAssistantHasToolOrThinking(lastRpcRes);
           if (shouldLatePoll) {
-            var late = await ocLatePollHistoryForReply(cfg, histKey, msgText, chatSentAtMs, pollOpts);
+            var late = await ocLatePollHistoryForReply(cfg, histKey, historyMatchTexts[0], chatSentAtMs, pollOpts);
             if (late.text) {
               pendingText = late.text;
               emitProgress(true);
@@ -20449,11 +21561,29 @@ body.niuma-confirm-open{overflow:hidden}
             if (late.res) lastRpcRes = late.res;
           }
           if (ocHistoryAssistantHasToolOrThinking(lastRpcRes)) {
-            settleResolve(ocBuildOpenClawStillRunningMessage(lastRpcRes, msgText, chatSentAtMs));
+            if (isPaletteAgentRequest) {
+              var partialPal = paletteDedupeRepeatedText(String(pendingText || '').trim());
+              if (partialPal && !paletteIsAgentStatusText(partialPal)) {
+                settleResolve(partialPal);
+                return;
+              }
+              settleResolve('');
+              return;
+            }
+            settleResolve(ocBuildOpenClawStillRunningMessage(lastRpcRes, historyMatchTexts[0], chatSentAtMs));
             return;
           }
           if (pendingText.trim()) {
-            settleResolve(ocBuildOpenClawStillRunningMessage(lastRpcRes || finalPayload || {}, msgText, chatSentAtMs));
+            if (isPaletteAgentRequest) {
+              var partialPal2 = paletteDedupeRepeatedText(String(pendingText || '').trim());
+              if (partialPal2 && !paletteIsAgentStatusText(partialPal2)) {
+                settleResolve(partialPal2);
+                return;
+              }
+              settleResolve('');
+              return;
+            }
+            settleResolve(ocBuildOpenClawStillRunningMessage(lastRpcRes || finalPayload || {}, historyMatchTexts[0], chatSentAtMs));
             return;
           }
           var formatDbg = function(obj) {
@@ -20464,7 +21594,11 @@ body.niuma-confirm-open{overflow:hidden}
           
           var histKeyShown = canonicalSessionKey || sessionKey || '';
           var userPostedToGw =
-            lastRpcRes && ocHistoryHasUserMessage(lastRpcRes, msgText, chatSentAtMs);
+            lastRpcRes && ocHistoryHasUserMessage(lastRpcRes, historyMatchTexts[0], chatSentAtMs, historyMatchAlt);
+          if (fromTimeout && isPaletteAgentRequest) {
+            settleResolve('');
+            return;
+          }
           if (fromTimeout) {
             if (!userPostedToGw) {
               settleResolve(
@@ -21042,6 +22176,17 @@ body.niuma-confirm-open{overflow:hidden}
       } else content = await reqOpenAI(cfg);
       if (typeof ocIsSystemOrMetaText === 'function' && ocIsSystemOrMetaText(content)) content = '';
       if (typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(content)) content = '';
+      if (paletteExecCtx && paletteExecCtx.reqId && p0.transport === 'openclaw') {
+        try {
+          var syncedFromGw = paletteAgentContentReady(
+            await paletteHydrateAssistantFromGateway(paletteExecCtx.reqId, paletteExecCtx.query || '', {
+              allowWhileSending: true,
+              extendedPoll: true
+            })
+          );
+          if (syncedFromGw && (!content || syncedFromGw.length > String(content || '').length)) content = syncedFromGw;
+        } catch (_) {}
+      }
       if (!content && paletteExecCtx && paletteExecCtx.reqId) {
         try {
           var latePick = paletteAgentContentReady(
@@ -21089,7 +22234,13 @@ body.niuma-confirm-open{overflow:hidden}
       }
       if (content && paletteExecCtx && paletteExecCtx.reqId) {
         paletteMaybeNotifyAgentEndFromSession(sid, content, paletteExecCtx.reqId, paletteExecCtx.cardId);
+        if (!paletteAgentAnswerCompleteEnough(content, paletteExecCtx.query || '')) {
+          armPaletteAgentLateRecover(paletteExecCtx.reqId);
+        }
       } else if (content) paletteMaybeNotifyAgentEndFromSession(sid, content);
+      else if (paletteExecCtx && paletteExecCtx.reqId && p0.transport === 'openclaw') {
+        armPaletteAgentLateRecover(paletteExecCtx.reqId);
+      }
     } catch (err) {
       cancelAllPendingHttpOnTimeout(err);
       if (streamDraftId) {
@@ -21968,8 +23119,20 @@ body.niuma-confirm-open{overflow:hidden}
   if (chatModelSyncBtn) {
     chatModelSyncBtn.addEventListener('click', function () {
       var pid = normalizeProviderId(provider.value);
+      var act = activeSession();
       if (pid === 'ollama') syncOllamaAll();
-      else {
+      else if (pid === 'openclaw' || (act && normalizeProviderId(act.provider) === 'openclaw')) {
+        Promise.resolve(paletteSyncOpenClawNow())
+          .then(function () {
+            setTimeout(function () {
+              cstat('同步完成：请在任务看板选择各话题查看回复。', 'success');
+              renderContactNav();
+            }, 3500);
+          })
+          .catch(function () {
+            cstat('OpenClaw 同步失败。', 'error');
+          });
+      } else {
         cstat('正在刷新模型列表…');
         ensureDynamicModelsForActiveProvider(true).then(function () {
           renderChatModelBar();
@@ -23441,6 +24604,13 @@ body.niuma-confirm-open{overflow:hidden}
         palettePrepareAgentStreamForCard(String(d.cardId || ''), String(d.reqId || ''));
         return;
       }
+      if (d.type === 'palette_agent_cards_sync') {
+        var cardsInj = Array.isArray(d.cards) ? d.cards : [];
+        if (cardsInj.length) {
+          paletteBootstrapSessionsFromAgentCards(cardsInj).catch(function () {});
+        }
+        return;
+      }
       if (d.type === 'host_palette_agent_stream_cancel') {
         var crid = String(d.reqId || '').trim();
         if (crid && _paletteAgentInflightByReqId[crid]) {
@@ -24061,6 +25231,19 @@ body.niuma-confirm-open{overflow:hidden}
       }
       if (d.type === 'palette_agent_prepare_new') {
         palettePrepareAgentStreamForCard(String(d.cardId || ''), String(d.reqId || ''));
+        return;
+      }
+      if (d.type === 'palette_agent_cards_sync') {
+        var cardsSync = Array.isArray(d.cards) ? d.cards : [];
+        if (cardsSync.length) {
+          paletteBootstrapSessionsFromAgentCards(cardsSync)
+            .then(function (n) {
+              cstat('已从 Command Palette 恢复 ' + (n || 0) + ' 条任务对话。', 'success');
+            })
+            .catch(function () {
+              cstat('任务卡同步失败。', 'error');
+            });
+        }
         return;
       }
       if (d.type === 'host_palette_agent_stream_cancel') {
