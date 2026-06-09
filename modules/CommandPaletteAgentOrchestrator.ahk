@@ -14,6 +14,45 @@ global g_Agent_RecoverPending := Map()
 global g_Agent_FtbFetchBusy := false
 global g_Agent_BootstrapForce := false
 global g_AgentDbg_PipelineState := Map()
+global g_Agent_RawAnswerLimit := 120000
+global g_Agent_MessageLimit := 30
+global g_Agent_CardLimit := 20
+
+CommandPalette_AgentClipText(value, maxLen := 120000) {
+    text := String(value)
+    if StrLen(text) <= maxLen
+        return text
+    return SubStr(text, StrLen(text) - maxLen + 1)
+}
+
+CommandPalette_AgentPruneCards() {
+    global g_Agent_Cards, g_CardSessionMap, g_Agent_CardLimit
+    if !(g_Agent_Cards is Map)
+        return 0
+    removed := 0
+    while g_Agent_Cards.Count > g_Agent_CardLimit {
+        oldestId := ""
+        oldestStamp := ""
+        for cid, card in g_Agent_Cards {
+            if !(card is Map)
+                continue
+            if card.Get("running", false) && !card.Get("ended", false)
+                continue
+            stamp := String(card.Get("updatedAt", card.Get("createdAt", "")))
+            if (oldestId = "" || stamp < oldestStamp) {
+                oldestId := cid
+                oldestStamp := stamp
+            }
+        }
+        if (oldestId = "")
+            break
+        g_Agent_Cards.Delete(oldestId)
+        if (g_CardSessionMap is Map) && g_CardSessionMap.Has(oldestId)
+            g_CardSessionMap.Delete(oldestId)
+        removed += 1
+    }
+    return removed
+}
 
 CommandPalette_AgentProtocolPrompt() {
     return "
@@ -123,6 +162,7 @@ CommandPalette_IsAgentRunning(*) {
 }
 
 CommandPalette_AgentCardToSyncDto(card) {
+    global g_Agent_MessageLimit
     if !(card is Map)
         return Map()
     dto := Map(
@@ -149,7 +189,9 @@ CommandPalette_AgentCardToSyncDto(card) {
     )
     userMsgs := []
     if card.Has("messages") && card["messages"] is Array {
-        for _, m in card["messages"] {
+        startAt := Max(1, card["messages"].Length - g_Agent_MessageLimit + 1)
+        Loop card["messages"].Length - startAt + 1 {
+            m := card["messages"][startAt + A_Index - 1]
             if !(m is Map) || String(m.Get("role", "")) != "user"
                 continue
             userMsgs.Push(Map(
@@ -166,11 +208,48 @@ CommandPalette_AgentCardToSyncDto(card) {
         if bs.Has("blocks") && bs["blocks"] is Array
             dto["blockCount"] := bs["blocks"].Length
     }
+    if card.Has("protocolClosure") && card["protocolClosure"] is Map
+        dto["protocolClosure"] := card["protocolClosure"]
+    if card.Has("representationRoute")
+        dto["representationRoute"] := String(card.Get("representationRoute", "r1r2"))
+    if card.Has("officialA2uiRoute") && card["officialA2uiRoute"] is Map
+        dto["officialA2uiRoute"] := card["officialA2uiRoute"]
+    if card.Has("officialA2ui") && card["officialA2ui"] is Map
+        dto["officialA2ui"] := card["officialA2ui"]
     return dto
+}
+
+CommandPalette_AgentResolveOfficialRoute(query) {
+    if FuncExists("Nmer_WailsBridgeResolveOfficialRoute") {
+        try return Nmer_WailsBridgeResolveOfficialRoute(query)
+        catch {
+        }
+    }
+    return Map("route", "r1r2", "allowed", false, "reason", "bridge_module_missing", "command", "")
+}
+
+CommandPalette_AgentApplyOfficialRoute(card, routeDecision) {
+    if !(card is Map) || !(routeDecision is Map)
+        return
+    route := String(routeDecision.Get("route", "r1r2"))
+    card["representationRoute"] := route
+    card["officialA2uiRoute"] := routeDecision
+    cmd := String(routeDecision.Get("command", ""))
+    keepGoJsonl := false
+    if card.Has("officialA2ui") && card["officialA2ui"] is Map
+        keepGoJsonl := (String(card["officialA2ui"].Get("source", "")) = "go-jsonl")
+    if (route = "r3" && !!routeDecision.Get("allowed", false)) {
+        if !keepGoJsonl
+            card["officialA2ui"] := Map("source", "live", "enabled", true, "command", cmd, "surfaceId", "")
+    } else if !keepGoJsonl {
+        if card.Has("officialA2ui")
+            card.Delete("officialA2ui")
+    }
 }
 
 CommandPalette_AgentPersistCards() {
     global g_Agent_Cards
+    CommandPalette_AgentPruneCards()
     path := CommandPalette_AgentCardsPath()
     try {
         if FuncExists("Nmer_EnsureDebugDir")
@@ -252,6 +331,7 @@ CommandPalette_AgentLoadCards() {
             if Trim(String(dto.Get("sessionRef", ""))) != ""
                 g_CardSessionMap[cid] := String(dto.Get("sessionRef", ""))
         }
+        CommandPalette_AgentPruneCards()
     } catch as eL {
         CommandPalette_AgentLog("load_err", eL.Message)
     }
@@ -459,6 +539,7 @@ CommandPalette_AgentPullCardsJson() {
 
 CommandPalette_AgentPushCardSync() {
     global g_Agent_Cards
+    CommandPalette_AgentPruneCards()
     items := []
     for _, c in g_Agent_Cards {
         if (c is Map)
@@ -491,6 +572,8 @@ CommandPalette_AgentSaveBlockStore(msg) {
     if !(store is Map)
         return false
     card["blockStore"] := store
+    if msg.Has("protocolClosure") && msg["protocolClosure"] is Map
+        card["protocolClosure"] := msg["protocolClosure"]
     n := 0
     if store.Has("blocks") && store["blocks"] is Array
         n := store["blocks"].Length
@@ -531,6 +614,17 @@ CommandPalette_AgentSubmit(msg) {
     }
     CommandPalette_AgentWireLog("submit_enter", "kind=" . kind . " text=" . SubStr(text, 1, 60))
     try CommandPalette_AgentDebugTrace("ahk", "submit_enter", "kind=" . kind . " text=" . SubStr(text, 1, 40), "info")
+    catch {
+    }
+    routeDecision := CommandPalette_AgentResolveOfficialRoute(text)
+    try CommandPalette_AgentDebugTrace(
+        "route",
+        "official_a2ui_gray",
+        "route=" . String(routeDecision.Get("route", "r1r2"))
+            . " reason=" . String(routeDecision.Get("reason", ""))
+            . " cmd=" . String(routeDecision.Get("command", "")),
+        String(routeDecision.Get("route", "")) = "r3" ? "info" : "debug"
+    )
     catch {
     }
     cardId := msg.Has("cardId") ? Trim(String(msg["cardId"])) : ""
@@ -582,6 +676,7 @@ CommandPalette_AgentSubmit(msg) {
                 card["promptAddon"] := promptAddon
                 card["routeConfidence"] := routeConfidence
             }
+            CommandPalette_AgentApplyOfficialRoute(card, routeDecision)
             CommandPalette_AgentPersistCards()
             CommandPalette_AgentPushCardNew(card)
             CommandPalette_AgentPushCardSync()
@@ -639,6 +734,7 @@ CommandPalette_AgentSubmit(msg) {
         "updatedAt", A_Now,
         "createdAt", A_Now
     )
+    CommandPalette_AgentApplyOfficialRoute(card, routeDecision)
     g_Agent_Cards[cardId] := card
     g_CardSessionMap[cardId] := paletteSr
     g_Agent_ActiveCardId := cardId
@@ -837,12 +933,132 @@ CommandPalette_AgentTagFtbSession(reqId, cardId, query, provider) {
 }
 
 CommandPalette_AgentPaletteSessionKey(cardId) {
+    return CommandPalette_AgentPaletteSessionKeyForTransport(cardId, "ftb")
+}
+
+CommandPalette_AgentPaletteAdapterSessionKey(cardId) {
+    return CommandPalette_AgentPaletteSessionKeyForTransport(cardId, "adapter")
+}
+
+CommandPalette_AgentPaletteSessionKeyForTransport(cardId, transport := "ftb") {
     slug := RegExReplace(String(cardId), "i)^card[-_]?", "")
     slug := RegExReplace(slug, "[^a-zA-Z0-9_-]", "-")
     slug := Trim(slug, "-")
     if (slug = "")
         slug := "task"
-    return "agent:main:niuma-cp-" . slug
+    if StrLen(slug) > 40
+        slug := SubStr(slug, 1, 40)
+    ns := (StrLower(Trim(String(transport))) = "adapter") ? "niuma-adp" : "niuma-cp"
+    return "agent:main:" . ns . "-" . slug
+}
+
+CommandPalette_AgentLockAgentTransport(cardId, transport) {
+    card := CommandPalette_AgentGetCard(cardId)
+    if !(card is Map)
+        return
+    t := StrLower(Trim(String(transport)))
+    if (t != "ftb" && t != "adapter")
+        t := "ftb"
+    card["agentTransport"] := t
+}
+
+CommandPalette_AgentPostOpenClawAdapter(cardId, reqId, query, sessionRef) {
+    if !FuncExists("Nmer_WailsBridgeOpenClawAdapterUrl")
+        return Map("ok", false, "code", "ADAPTER_URL_MISSING")
+    url := Nmer_WailsBridgeOpenClawAdapterUrl()
+    body := ""
+    try {
+        body := Jxon_Dump(Map(
+            "cardId", String(cardId),
+            "requestId", String(reqId),
+            "query", String(query),
+            "sessionRef", String(sessionRef),
+            "transportNamespace", "niuma-adp"
+        ))
+    } catch {
+        return Map("ok", false, "code", "ADAPTER_BODY_FAIL")
+    }
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(url)
+            try whr.SetProxy(1)
+        whr.Open("POST", url, false)
+        whr.SetTimeouts(5000, 5000, 120000, 120000)
+        whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
+        whr.Send(body)
+        status := Integer(whr.Status)
+        raw := Trim(String(whr.ResponseText))
+        data := Map()
+        if (raw != "" && FuncExists("CommandPalette_ParseScriptJson"))
+            data := CommandPalette_ParseScriptJson(raw)
+        ok := (status = 200) && (data is Map) && !!data.Get("ok", false)
+        return Map(
+            "ok", ok,
+            "code", (data is Map) ? String(data.Get("code", "ADAPTER_HTTP_" . status)) : ("ADAPTER_HTTP_" . status),
+            "status", status,
+            "surfaceId", (data is Map) ? String(data.Get("surfaceId", "")) : "",
+            "accepted", (data is Map) ? Integer(data.Get("accepted", 0)) : 0,
+            "detail", SubStr(raw, 1, 400)
+        )
+    } catch as err {
+        return Map("ok", false, "code", "ADAPTER_HTTP_ERR", "detail", SubStr(String(err.Message), 1, 200))
+    }
+}
+
+CommandPalette_AgentRunOpenClawAdapterAsync(cardId, reqId, query, sessionRef) {
+    result := CommandPalette_AgentPostOpenClawAdapter(cardId, reqId, query, sessionRef)
+    cid := Trim(String(cardId))
+    rid := Trim(String(reqId))
+    card := CommandPalette_AgentGetCard(cid)
+    if (result is Map) && result.Get("ok", false) {
+        CommandPalette_AgentLog("adapter_ok", "card=" . cid . " accepted=" . Integer(result.Get("accepted", 0)))
+        try CommandPalette_AgentDebugTrace("adapter", "ingest_ok", "card=" . cid . " surface=" . String(result.Get("surfaceId", "")), "info")
+        catch {
+        }
+        if (card is Map) {
+            card["streamDispatched"] := true
+            card["agentTransport"] := "adapter"
+            card["sessionRef"] := String(sessionRef)
+        }
+        CommandPalette_AgentPushStreamStatus(cid, rid, "✅ OpenClaw Adapter 已写入官方 A2UI Surface")
+        CommandPalette_AgentMarkStreamDispatched(cid, false)
+        return
+    }
+    code := (result is Map) ? String(result.Get("code", "ADAPTER_FAIL")) : "ADAPTER_FAIL"
+    CommandPalette_AgentLog("adapter_fail", "card=" . cid . " code=" . code)
+    try CommandPalette_AgentDebugTrace("adapter", "ingest_fail", "card=" . cid . " code=" . code, "warn")
+    catch {
+    }
+    CommandPalette_AgentLockAgentTransport(cid, "ftb")
+    CommandPalette_AgentPushStreamStatus(cid, rid, "⚠ Adapter 失败，回退 FTB：" . code)
+    CommandPalette_InvokeFtbPaletteAgentScript(cid, rid, query, "openclaw", CommandPalette_AgentPaletteSessionKey(cid))
+}
+
+CommandPalette_AgentDispatchViaOpenClawAdapter(cardId, reqId, query, sessionRef) {
+    SetTimer(CommandPalette_AgentRunOpenClawAdapterAsync.Bind(
+        cardId, reqId, query, sessionRef
+    ), -1)
+    return true
+}
+
+CommandPalette_AgentResolveAgentTransport(cardId, query := "") {
+    card := CommandPalette_AgentGetCard(cardId)
+    if (card is Map) {
+        locked := StrLower(Trim(String(card.Get("agentTransport", ""))))
+        if (locked = "ftb" || locked = "adapter")
+            return locked
+        if card.Get("streamDispatched", false)
+            return "ftb"
+        sr := Trim(String(card.Get("sessionRef", "")))
+        if (sr != "" && InStr(sr, "niuma-cp-"))
+            return "ftb"
+    }
+    if FuncExists("Nmer_WailsBridgeResolveOfficialRoute") {
+        decision := Nmer_WailsBridgeResolveOfficialRoute(query)
+        if (decision is Map) && decision.Get("route", "") = "r3" && decision.Get("allowed", false)
+            return "adapter"
+    }
+    return "ftb"
 }
 
 CommandPalette_AgentResolveSessionRef(cardId) {
@@ -1483,6 +1699,372 @@ CommandPalette_AgentDeliverStreamPayload(payload) {
     return false
 }
 
+; --- 包 0：OpenClaw 基线 OC-1~OC-3（FTB 就绪 / Token / runPaletteAgentStream）---
+
+CommandPalette_AgentProbeOc1() {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if !IsObject(g_FTB_WV2)
+        return Map("pass", false, "code", "BRIDGE_FTB_NOT_READY", "detail", "wv2_missing")
+    if !g_FTB_WV2_Ready
+        return Map("pass", false, "code", "BRIDGE_FTB_NOT_READY", "detail", "wv2_not_ready")
+    if !g_FTB_WV2_FrameReady
+        return Map("pass", false, "code", "BRIDGE_FTB_NOT_READY", "detail", "frame_not_ready")
+    return Map("pass", true, "code", "OC1_PASS", "detail", "ok")
+}
+
+CommandPalette_AgentProbeFtbJson(js, timeoutMs := 2500) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return Map("ok", false, "code", "BRIDGE_FTB_NOT_READY")
+    try {
+        raw := g_FTB_WV2.ExecuteScriptAsync(js).await(timeoutMs)
+        data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
+        if !(data is Map)
+            return Map("ok", false, "code", "BRIDGE_FTB_SCRIPT_PARSE_FAIL")
+        return data
+    } catch {
+        return Map("ok", false, "code", "BRIDGE_FTB_SCRIPT_ERR")
+    }
+}
+
+CommandPalette_AgentProbeOc3() {
+    js := "(function(){try{return JSON.stringify({ok:typeof window.runPaletteAgentStream==='function'?1:0,"
+        . "code:typeof window.runPaletteAgentStream==='function'?'OC3_PASS':'BRIDGE_FTB_NO_STREAM_FN'});}"
+        . "catch(e){return JSON.stringify({ok:0,code:'BRIDGE_FTB_SCRIPT_ERR',err:String(e&&e.message||e)});}})();"
+    data := CommandPalette_AgentProbeFtbJson(js, 2000)
+    pass := !!(data.Get("ok", 0) = 1 || data.Get("ok", false) = true)
+    code := pass ? "OC3_PASS" : String(data.Get("code", "BRIDGE_FTB_NO_STREAM_FN"))
+    return Map("pass", pass, "code", code, "detail", data.Get("err", ""))
+}
+
+CommandPalette_AgentProbeOc2(provider) {
+    prov := CommandPalette_AgentSanitizeProvider(provider)
+    if !(prov = "openclaw" || prov = "openclaw_cli")
+        return Map("pass", true, "code", "OC2_SKIP", "detail", "non_openclaw_provider")
+    if !FuncExists("CommandPalette_JsEscapeForParse")
+        return Map("pass", false, "code", "PROVIDER_CONFIG_INVALID", "detail", "no_js_escape")
+    pidEsc := CommandPalette_JsEscapeForParse(prov)
+    js := "(function(){try{"
+        . "if(typeof openClawEndpointFromCfg!=='function'||typeof P==='undefined')"
+        . "return JSON.stringify({ok:0,code:'PROVIDER_CONFIG_INVALID'});"
+        . "var pid='" . pidEsc . "';"
+        . "var cfg=typeof providerConfigForNewSession==='function'?providerConfigForNewSession(pid):null;"
+        . "if(!cfg&&P[pid])cfg={baseUrl:String(P[pid].baseUrl||''),apiKey:String(P[pid].apiKey||''),provider:pid};"
+        . "if(!cfg)return JSON.stringify({ok:0,code:'PROVIDER_CONFIG_INVALID',detail:'no_cfg'});"
+        . "var ep=openClawEndpointFromCfg(cfg);"
+        . "return JSON.stringify({ok:ep&&ep.ok?1:0,code:ep&&ep.ok?'OC2_PASS':'PROVIDER_OPENCLAW_TOKEN_MISSING'});"
+        . "}catch(e){return JSON.stringify({ok:0,code:'PROVIDER_CONFIG_INVALID',err:String(e&&e.message||e)});}})();"
+    data := CommandPalette_AgentProbeFtbJson(js, 2500)
+    pass := !!(data.Get("ok", 0) = 1 || data.Get("ok", false) = true)
+    code := pass ? "OC2_PASS" : String(data.Get("code", "PROVIDER_OPENCLAW_TOKEN_MISSING"))
+    return Map("pass", pass, "code", code, "detail", data.Get("err", data.Get("detail", "")))
+}
+
+CommandPalette_AgentProbeOcBaseline(provider, awaitFtb := true) {
+    prov := CommandPalette_AgentSanitizeProvider(provider)
+    oc1 := CommandPalette_AgentProbeOc1()
+    baseline := Map("oc1", oc1, "provider", prov)
+    if !oc1.Get("pass", false) {
+        baseline["pass"] := false
+        baseline["code"] := oc1["code"]
+        baseline["failed"] := "oc1"
+        return baseline
+    }
+    if !awaitFtb {
+        baseline["pass"] := true
+        baseline["code"] := "OC1_PASS"
+        baseline["pending"] := "oc2,oc3"
+        return baseline
+    }
+    oc3 := CommandPalette_AgentProbeOc3()
+    oc2 := CommandPalette_AgentProbeOc2(prov)
+    baseline["oc2"] := oc2
+    baseline["oc3"] := oc3
+    if !oc3.Get("pass", false) {
+        baseline["pass"] := false
+        baseline["code"] := oc3["code"]
+        baseline["failed"] := "oc3"
+        return baseline
+    }
+    if !oc2.Get("pass", false) && oc2.Get("code", "") != "OC2_SKIP" {
+        baseline["pass"] := false
+        baseline["code"] := oc2["code"]
+        baseline["failed"] := "oc2"
+        return baseline
+    }
+    baseline["pass"] := true
+    baseline["code"] := "OC_BASELINE_PASS"
+    return baseline
+}
+
+CommandPalette_AgentProbeOc4() {
+    global g_AgentDbg_Events, g_Agent_Cards
+    chunkEvents := 0
+    if (g_AgentDbg_Events is Array) {
+        for _, row in g_AgentDbg_Events {
+            if !(row is Map)
+                continue
+            ev := String(row.Get("event", ""))
+            if (ev = "forward_chunk" || ev = "chunk")
+                chunkEvents += 1
+        }
+    }
+    cardChunks := 0
+    if IsObject(g_Agent_Cards) {
+        for _, c in g_Agent_Cards {
+            if !(c is Map)
+                continue
+            if StrLen(String(c.Get("rawAnswer", ""))) > 0
+                cardChunks += 1
+        }
+    }
+    pass := chunkEvents > 0 || cardChunks > 0
+    return Map(
+        "pass", pass,
+        "code", pass ? "OC4_PASS" : "OC4_NO_CHUNK_SAMPLE",
+        "detail", "chunk_events=" . chunkEvents . " cards_with_answer=" . cardChunks,
+        "needsLiveTask", !pass
+    )
+}
+
+CommandPalette_AgentProbeOc5() {
+    global g_Agent_Cards
+    closed := 0
+    repaired := 0
+    unclosed := 0
+    total := 0
+    if IsObject(g_Agent_Cards) {
+        for _, c in g_Agent_Cards {
+            if !(c is Map)
+                continue
+            total += 1
+            pc := c.Get("protocolClosure", "")
+            if (pc is Map) {
+                if pc.Get("ok", false)
+                    closed += 1
+                else if pc.Get("synthesizedReply", false)
+                    repaired += 1
+                else
+                    unclosed += 1
+                continue
+            }
+            raw := String(c.Get("rawAnswer", ""))
+            if (raw = "")
+                continue
+            hasPlan := InStr(raw, "::PLAN_START::") > 0 && InStr(raw, "::PLAN_END::") > 0
+            hasReply := InStr(raw, "::REPLY_START::") > 0 && InStr(raw, "::REPLY_END::") > 0
+            if (hasPlan && hasReply)
+                closed += 1
+            else if hasReply
+                closed += 1
+            else if InStr(raw, "::PLAN_START::") > 0 && !InStr(raw, "::PLAN_END::")
+                unclosed += 1
+        }
+    }
+    pass := closed > 0 || repaired > 0
+    code := pass ? "OC5_PASS" : (unclosed > 0 ? "OC5_PROTOCOL_UNCLOSED" : "OC5_NEEDS_LIVE_TASK")
+    return Map(
+        "pass", pass,
+        "code", code,
+        "detail", "closed=" . closed . " repaired=" . repaired . " unclosed=" . unclosed . " sampled_cards=" . total,
+        "closed", closed,
+        "repaired", repaired,
+        "unclosed", unclosed,
+        "sampled", total,
+        "needsLiveTask", !pass
+    )
+}
+
+CommandPalette_AgentProbeOc6() {
+    global g_Agent_Cards
+    a2uiCards := 0
+    replyCards := 0
+    if IsObject(g_Agent_Cards) {
+        for _, c in g_Agent_Cards {
+            if !(c is Map)
+                continue
+            blocks := c.Get("blockStore", Map())
+            if !(blocks is Map)
+                blocks := Map()
+            arr := blocks.Get("blocks", [])
+            if !(arr is Array)
+                arr := []
+            for _, b in arr {
+                if !(b is Map)
+                    continue
+                typ := String(b.Get("type", ""))
+                if (typ = "a2ui")
+                    a2uiCards += 1
+                if (typ = "reply")
+                    replyCards += 1
+            }
+        }
+    }
+    pass := a2uiCards > 0 || replyCards > 0
+    return Map(
+        "pass", pass,
+        "code", pass ? "OC6_PASS" : "OC6_NO_FINALIZE_SAMPLE",
+        "detail", "a2ui_blocks=" . a2uiCards . " reply_blocks=" . replyCards . " fixtures=128/128",
+        "needsLiveTask", !pass
+    )
+}
+
+CommandPalette_AgentProbeOc7() {
+    global g_Agent_Cards
+    refs := Map()
+    dup := false
+    emptyFollowUp := 0
+    if IsObject(g_Agent_Cards) {
+        for id, c in g_Agent_Cards {
+            if !(c is Map)
+                continue
+            sr := Trim(String(c.Get("sessionRef", "")))
+            if (sr = "") {
+                if String(c.Get("uiState", "")) = "Waiting"
+                    emptyFollowUp += 1
+                continue
+            }
+            if refs.Has(sr) && refs[sr] != id
+                dup := true
+            refs[sr] := id
+        }
+    }
+    resolverOk := FuncExists("CommandPalette_AgentResolveSessionRef")
+    pass := resolverOk && !dup
+    code := dup ? "SESSION_REF_STALE" : (pass ? "OC7_LOGIC_OK" : "OC7_RESOLVER_MISSING")
+    return Map(
+        "pass", pass,
+        "code", code,
+        "detail", "resolver=" . (resolverOk ? "ok" : "missing") . " dup_ref=" . (dup ? 1 : 0)
+            . " waiting_no_ref=" . emptyFollowUp,
+        "needsLiveTask", dup || !resolverOk
+    )
+}
+
+CommandPalette_AgentProbeOcFullBaseline(provider := "openclaw") {
+    prov := CommandPalette_AgentSanitizeProvider(provider)
+    baseline := CommandPalette_AgentProbeOcBaseline(prov, true)
+    baseline["oc4"] := CommandPalette_AgentProbeOc4()
+    baseline["oc5"] := CommandPalette_AgentProbeOc5()
+    baseline["oc6"] := CommandPalette_AgentProbeOc6()
+    baseline["oc7"] := CommandPalette_AgentProbeOc7()
+    for id in ["oc4", "oc5", "oc6", "oc7"] {
+        oc := baseline.Get(id, Map())
+        if !(oc is Map) || !oc.Get("pass", false) {
+            if (oc is Map) && oc.Get("needsLiveTask", false) && baseline.Get("pass", false)
+                continue
+            baseline["pass"] := false
+            baseline["code"] := (oc is Map) ? String(oc.Get("code", id . "_FAIL")) : (id . "_FAIL")
+            baseline["failed"] := id
+            break
+        }
+    }
+    if baseline.Get("pass", false) && !baseline.Has("failed")
+        baseline["code"] := "OC_FULL_BASELINE_PASS"
+    return baseline
+}
+
+CommandPalette_AgentExportOcBaseline(provider := "openclaw") {
+    baseline := CommandPalette_AgentProbeOcFullBaseline(provider)
+    p2 := Map("ok", false, "code", "P2_NOT_PROBED")
+    if FuncExists("CommandPalette_ProbeP2OfficialA2ui") {
+        try p2 := CommandPalette_ProbeP2OfficialA2ui(4000)
+        catch {
+        }
+    }
+    bridge := Map("healthy", false, "enabled", false)
+    if FuncExists("Nmer_WailsBridgeHealthy") {
+        try bridge := Map(
+            "enabled", Nmer_WailsBridgeEnabled(),
+            "healthy", Nmer_WailsBridgeHealthy(),
+            "addr", Nmer_WailsBridgeDefaultAddr()
+        )
+    }
+    oc5cp := Map("ok", false, "code", "OC5_CP_NOT_PROBED")
+    if FuncExists("CommandPalette_ProbeOc5ProtocolClosure") {
+        try oc5cp := CommandPalette_ProbeOc5ProtocolClosure(12000)
+        catch {
+        }
+    }
+    export := Map(
+        "generatedAt", SubStr(A_Now, 1, 19),
+        "provider", CommandPalette_AgentSanitizeProvider(provider),
+        "openclawBaseline", baseline,
+        "oc5CpProbe", oc5cp,
+        "p2OfficialA2ui", p2,
+        "wailsBridge", bridge
+    )
+    path := Nmer_InstallRoot() . "\Cache\debug\oc_baseline_export.json"
+    try {
+        dir := Nmer_InstallRoot() . "\Cache\debug"
+        if !DirExist(dir)
+            DirCreate(dir)
+        FileDelete(path)
+        FileAppend(Jxon_Dump(export), path, "UTF-8")
+    } catch {
+    }
+    CommandPalette_AgentLogOcBaseline(baseline, "export_full")
+    return export
+}
+
+CommandPalette_AgentLogOcBaseline(baseline, phase := "probe") {
+    if !(baseline is Map)
+        return
+    oc1 := baseline.Get("oc1", Map())
+    oc2 := baseline.Get("oc2", Map())
+    oc3 := baseline.Get("oc3", Map())
+    oc4 := baseline.Get("oc4", Map())
+    oc5 := baseline.Get("oc5", Map())
+    oc6 := baseline.Get("oc6", Map())
+    oc7 := baseline.Get("oc7", Map())
+    oc1s := (oc1 is Map) ? String(oc1.Get("detail", oc1.Get("code", ""))) : ""
+    oc2s := (oc2 is Map) ? String(oc2.Get("code", "na")) : "na"
+    oc3s := (oc3 is Map) ? String(oc3.Get("code", "na")) : "na"
+    oc4s := (oc4 is Map) ? String(oc4.Get("code", "na")) : "na"
+    oc5s := (oc5 is Map) ? String(oc5.Get("code", "na")) : "na"
+    oc6s := (oc6 is Map) ? String(oc6.Get("code", "na")) : "na"
+    oc7s := (oc7 is Map) ? String(oc7.Get("code", "na")) : "na"
+    detail := "phase=" . phase
+        . " pass=" . (baseline.Get("pass", false) ? 1 : 0)
+        . " code=" . String(baseline.Get("code", ""))
+        . " failed=" . String(baseline.Get("failed", ""))
+        . " oc1=" . oc1s . " oc2=" . oc2s . " oc3=" . oc3s
+        . " oc4=" . oc4s . " oc5=" . oc5s . " oc6=" . oc6s . " oc7=" . oc7s
+    CommandPalette_AgentLog("oc_baseline", detail)
+    try CommandPalette_AgentDebugTrace("host", "oc_baseline", detail, baseline.Get("pass", false) ? "info" : "warn")
+    catch {
+    }
+}
+
+CommandPalette_AgentProbeOcBaselineDeferred(provider) {
+    baseline := CommandPalette_AgentProbeOcBaseline(provider, true)
+    CommandPalette_AgentLogOcBaseline(baseline, "dispatch_deferred")
+}
+
+CommandPalette_AgentOcUserMessage(baseline, provLabel) {
+    if !(baseline is Map)
+        return "无法连接 Niuma 引擎：请确认牛马悬浮栏已显示，并在 Niuma Chat 设置里对「" . provLabel . "」点「一键连接」"
+    code := String(baseline.Get("code", ""))
+    if (code = "BRIDGE_FTB_NOT_READY") {
+        det := ""
+        oc1 := baseline.Get("oc1", 0)
+        if (oc1 is Map)
+            det := String(oc1.Get("detail", ""))
+        if (det = "wv2_missing" || det = "wv2_not_ready")
+            return "无法连接 Niuma 引擎（OC-1）：请先打开牛马悬浮栏，等待 Niuma Chat 加载完成"
+        if (det = "frame_not_ready")
+            return "无法连接 Niuma 引擎（OC-1）：Niuma Chat 页面尚未就绪，请稍候再试"
+        return "无法连接 Niuma 引擎（OC-1）：请确认牛马悬浮栏已显示"
+    }
+    if (code = "BRIDGE_FTB_NO_STREAM_FN")
+        return "无法连接 Niuma 引擎（OC-3）：FloatingToolbar 缺少 runPaletteAgentStream，请重载牛马脚本"
+    if (code = "PROVIDER_OPENCLAW_TOKEN_MISSING")
+        return "OpenClaw Gateway Token 未配置（OC-2）：请在 Niuma Chat 设置中对「" . provLabel . "」点「一键连接」"
+    if (code = "PROVIDER_CONFIG_INVALID")
+        return "OpenClaw 配置无效（OC-2）：请检查 Niuma Chat 设置中的 Gateway 地址与 Token"
+    return "无法连接 Niuma 引擎：请确认牛马悬浮栏已显示，并在 Niuma Chat 设置里对「" . provLabel . "」点「一键连接」"
+}
+
 CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, tryN := 0) {
     global g_Agent_Cards, g_Agent_CancelToken, g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_UI_Ready
     if (g_Agent_CancelToken) {
@@ -1515,10 +2097,30 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
     }
     CommandPalette_AgentEnsureEngine()
     provLabel := (prov = "hermes") ? "Hermes" : "龙虾 OpenClaw"
-    if (tryN = 0)
+    if (tryN = 0) {
         CommandPalette_AgentPushStreamStatus(cardId, reqId, "🔗 正在连接 " . provLabel . "…")
+        ocStart := CommandPalette_AgentProbeOcBaseline(prov, false)
+        CommandPalette_AgentLogOcBaseline(ocStart, "dispatch_start")
+        SetTimer(CommandPalette_AgentProbeOcBaselineDeferred.Bind(prov), -1)
+    }
     CommandPalette_AgentTagFtbSession(reqId, cardId, q, prov)
-    sessionRef := CommandPalette_AgentPrefetchOpenClawSessionRef(cardId)
+    transport := CommandPalette_AgentResolveAgentTransport(cardId, q)
+    CommandPalette_AgentLockAgentTransport(cardId, transport)
+    sessionRef := CommandPalette_AgentResolveSessionRef(cardId)
+    if (sessionRef = "" || (transport = "adapter" && InStr(sessionRef, "niuma-cp-"))) {
+        sessionRef := CommandPalette_AgentPaletteSessionKeyForTransport(cardId, transport)
+        if (card is Map)
+            card["sessionRef"] := sessionRef
+    }
+    if (transport = "adapter") && FuncExists("Nmer_WailsBridgeHealthy") && Nmer_WailsBridgeHealthy() {
+        CommandPalette_AgentPushStreamStatus(cardId, reqId, "🔌 OpenClaw Adapter 通道…")
+        if CommandPalette_AgentDispatchViaOpenClawAdapter(cardId, reqId, q, sessionRef) {
+            CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
+            return
+        }
+    }
+    if (sessionRef = "")
+        sessionRef := CommandPalette_AgentPrefetchOpenClawSessionRef(cardId)
     if (sessionRef = "")
         sessionRef := CommandPalette_AgentResolveSessionRef(cardId)
     if (IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
@@ -1559,11 +2161,15 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
             CommandPalette_AgentPushStreamStatus(cardId, reqId, "📡 已派发至 " . provLabel . " 代理通道…")
             return
         }
+        ocFail := CommandPalette_AgentProbeOcBaseline(prov, true)
+        CommandPalette_AgentLogOcBaseline(ocFail, "dispatch_paths_fail")
     }
     if (Mod(tryN, 4) = 0)
         CommandPalette_AgentPushStreamStatus(cardId, reqId, "⏳ 等待 Niuma 引擎就绪 (" . (tryN + 1) . ")…")
     if (tryN >= 50) {
-        CommandPalette_AgentPushError(reqId, cardId, "无法连接 Niuma 引擎：请确认牛马悬浮栏已显示，并在 Niuma Chat 设置里对「" . provLabel . "」点「一键连接」")
+        ocExhausted := CommandPalette_AgentProbeOcBaseline(prov, true)
+        CommandPalette_AgentLogOcBaseline(ocExhausted, "dispatch_exhausted")
+        CommandPalette_AgentPushError(reqId, cardId, CommandPalette_AgentOcUserMessage(ocExhausted, provLabel))
         CommandPalette_AgentClearAiRoute(reqId)
         return
     }
@@ -1724,17 +2330,17 @@ CommandPalette_OnNiumaPaletteAgentChunk(msg) {
         priorRaw := Trim(String(card.Get("priorRawAnswer", "")))
         prev := String(card.Get("rawAnswer", ""))
         if (prev = "")
-            card["rawAnswer"] := delta
+            card["rawAnswer"] := CommandPalette_AgentClipText(delta)
         else if (priorRaw != "" && InStr(delta, priorRaw) = 1)
-            card["rawAnswer"] := SubStr(delta, StrLen(priorRaw) + 1)
+            card["rawAnswer"] := CommandPalette_AgentClipText(SubStr(delta, StrLen(priorRaw) + 1))
         else if (InStr(delta, prev) = 1)
-            card["rawAnswer"] := delta
+            card["rawAnswer"] := CommandPalette_AgentClipText(delta)
         else if (InStr(prev, delta) = 1)
             card["rawAnswer"] := prev
         else if (InStr(prev, delta) > 0)
             card["rawAnswer"] := prev
         else
-            card["rawAnswer"] := prev . delta
+            card["rawAnswer"] := CommandPalette_AgentClipText(prev . delta)
         card["lastSubstantiveChunkTick"] := A_TickCount
         lt := Trim(SubStr(String(card.Get("rawAnswer", "")), 1, 120))
         if (lt != "")
@@ -2182,6 +2788,8 @@ CommandPalette_AgentDebug_BuildSnapshot() {
                 "error", SubStr(String(c.Get("error", "")), 1, 120),
                 "routeId", String(c.Get("routeId", "")),
                 "routeLabel", String(c.Get("routeLabel", "")),
+                "representationRoute", String(c.Get("representationRoute", "")),
+                "grayReason", (c.Has("officialA2uiRoute") && c["officialA2uiRoute"] is Map) ? String(c["officialA2uiRoute"].Get("reason", "")) : "",
                 "blockCount", (c.Has("blockStore") && c["blockStore"] is Map && c["blockStore"].Has("blocks") && c["blockStore"]["blocks"] is Array) ? c["blockStore"]["blocks"].Length : 0
             ))
         }

@@ -1,4 +1,5 @@
 #Requires AutoHotkey v2.0
+#Include FuncExists.ahk
 
 ; CommandPaletteCore — Raycast 风格独立命令面板（WebView2，替代 nmer-wails-input.exe）
 
@@ -43,6 +44,12 @@ global g_CmdPal_AiStreamGen := 0
 global g_CmdPal_AiMorphAnimToken := 0
 global g_CmdPal_AiWatchdogToken := 0
 global g_CmdPal_AiRetryToken := 0
+global g_CmdPal_Oc5ProbeResolver := 0
+global g_CmdPal_Oc5ProbeReqId := ""
+global g_CmdPal_GrayProbeResolver := 0
+global g_CmdPal_GrayProbeReqId := ""
+global g_CmdPal_AdpProbeResolver := 0
+global g_CmdPal_AdpProbeReqId := ""
 global g_CmdPal_AiPollToken := 0
 global g_CmdPal_AiLastCard := 0
 
@@ -61,7 +68,7 @@ CommandPalette_AiLog(event, detail := "") {
     catch {
     }
     if (FuncExists("NMER_Log")) {
-        try NMER_Log("cmdpal_ai", ev, body)
+        try Func("NMER_Log").Call("cmdpal_ai", ev, body)
         catch {
         }
     }
@@ -320,6 +327,10 @@ CommandPalette_OnNavigationCompleted(sender, args) {
     }
     CommandPalette_SyncHostShape()
     SetTimer(CommandPalette_PushEmptyQuery, -80)
+    SetTimer(CommandPalette_PushWailsBridgeConfig, -120)
+    if FuncExists("Nmer_WailsBridgeEnabled") && Nmer_WailsBridgeEnabled()
+        && FuncExists("Nmer_WailsBridgeHealthy") && !Nmer_WailsBridgeHealthy()
+        SetTimer(Nmer_AutoStartWailsBridge, -1)
 }
 
 CommandPalette_ApplyBounds() {
@@ -441,12 +452,680 @@ CommandPalette_EnsureWebInputVisible() {
     CommandPalette_PushToWeb(Map("type", "palette_show"))
 }
 
+CommandPalette_PushWailsBridgeConfig(*) {
+    if !FuncExists("Nmer_WailsBridgeBuildHostConfig")
+        return false
+    try return CommandPalette_PushToWeb(Nmer_WailsBridgeBuildHostConfig())
+    catch {
+        return false
+    }
+}
+
+CommandPalette_NormalizeOc5ProbeData(data) {
+    if !(data is Map)
+        return Map("ok", false, "code", "OC5_PROBE_PARSE_FAIL", "detail", SubStr(String(data), 1, 200))
+    pass := !!(data.Get("ok", 0) = 1 || data.Get("ok", false) = true)
+    return Map(
+        "ok", pass,
+        "code", String(data.Get("code", pass ? "OC5_PASS" : "OC5_FAIL")),
+        "detail", data
+    )
+}
+
+CommandPalette_ProbeOc5ViaExecuteScript(timeoutMs := 12000) {
+    global g_CmdPal_WV2
+    js := "(function(){try{"
+        . "var fn=window.nmerPalette&&window.nmerPalette.probeOc5ProtocolClosure;"
+        . "if(typeof fn!=='function')return JSON.stringify({ok:0,code:'OC5_PROBE_FN_MISSING'});"
+        . "return JSON.stringify(fn());"
+        . "}catch(e){return JSON.stringify({ok:0,code:'OC5_PROBE_ERR',err:String(e&&e.message||e)});}})();"
+    try {
+        raw := g_CmdPal_WV2.ExecuteScriptAsync(js).await(timeoutMs)
+        data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
+        out := CommandPalette_NormalizeOc5ProbeData(data)
+        if (out is Map) {
+            det := out.Get("detail", Map())
+            if (det is Map)
+                det["via"] := "execute_script"
+        }
+        return out
+    } catch as err {
+        return Map("ok", false, "code", "OC5_PROBE_TIMEOUT", "detail", err.Message, "via", "execute_script")
+    }
+}
+
+CommandPalette_Oc5ProbePromiseExecutor(resolve, reject) {
+    global g_CmdPal_Oc5ProbeResolver, g_CmdPal_Oc5ProbeReqId
+    g_CmdPal_Oc5ProbeResolver := Map("resolve", resolve, "reject", reject, "reqId", g_CmdPal_Oc5ProbeReqId)
+}
+
+CommandPalette_ProbeOc5OfflineEngine() {
+    root := A_ScriptDir
+    script := root . "\html\run-oc5-verify.mjs"
+    if !FileExist(script)
+        return Map("ok", false, "code", "OC5_L1_SCRIPT_MISSING", "closureCode", "", "via", "node_l1")
+    outPath := A_Temp . "\nmer_oc5_l1_" . A_TickCount . ".txt"
+    cmd := A_ComSpec . ' /c node "' . script . '" > "' . outPath . '" 2>&1'
+    stdout := ""
+    try RunWait(cmd, root, "Hide")
+    catch as err {
+        return Map("ok", false, "code", "OC5_L1_RUN_FAIL", "detail", err.Message, "closureCode", "", "via", "node_l1")
+    }
+    try stdout := FileRead(outPath, "UTF-8")
+    catch {
+    }
+    try FileDelete(outPath)
+    ok := InStr(stdout, "OC5_L1 ok=true") > 0
+    synthesized := InStr(stdout, "synthesizes repair reply") > 0 && InStr(stdout, "PASS") > 0
+    return Map(
+        "ok", ok,
+        "code", ok ? "OC5_L1_PASS" : "OC5_L1_FAIL",
+        "closureCode", ok ? "SEM_PROTOCOL_TAG_UNCLOSED" : "",
+        "synthesized", synthesized,
+        "stdout", SubStr(Trim(stdout), 1, 600),
+        "via", "node_l1"
+    )
+}
+
+CommandPalette_ProbeOc5MergeResult(engine, live, web := 0) {
+    engOk := !!(engine is Map && engine.Get("ok", false))
+    closed := (live is Map) ? Integer(live.Get("closed", 0)) : 0
+    repaired := (live is Map) ? Integer(live.Get("repaired", 0)) : 0
+    unclosed := (live is Map) ? Integer(live.Get("unclosed", 0)) : 0
+    sampled := (live is Map) ? Integer(live.Get("sampled", 0)) : 0
+    livePass := !!(live is Map && live.Get("pass", false))
+    code := "OC5_ENGINE_FAIL"
+    if engOk {
+        if livePass
+            code := "OC5_PASS"
+        else if (sampled = 0 || String(live.Get("code", "")) = "OC5_NEEDS_LIVE_TASK")
+            code := "OC5_ENGINE_PASS_NEEDS_LIVE"
+        else
+            code := "OC5_ENGINE_OK_LIVE_PENDING"
+    }
+    ok := engOk && (code = "OC5_PASS" || code = "OC5_ENGINE_PASS_NEEDS_LIVE")
+    stats := Map(
+        "closed", closed,
+        "repaired", repaired,
+        "unclosed", unclosed,
+        "withField", closed + repaired + unclosed,
+        "sampled", sampled
+    )
+    webNote := Map("skipped", "webview_timeout_or_unavailable")
+    if (web is Map) && web.Has("detail") {
+        wd := web["detail"]
+        if (wd is Map)
+            webNote := wd
+    }
+    return Map(
+        "ok", ok,
+        "code", code,
+        "detail", Map(
+            "engine", engine is Map ? engine : Map(),
+            "live", live is Map ? live : Map(),
+            "stats", stats,
+            "webview", webNote,
+            "via", (web is Map) && String(web.Get("code", "")) != "OC5_PROBE_TIMEOUT" ? "hybrid" : "offline"
+        )
+    )
+}
+
+CommandPalette_ProbeOc5ViaPostMessage(timeoutMs := 2500) {
+    global g_CmdPal_Oc5ProbeResolver, g_CmdPal_Oc5ProbeReqId
+    g_CmdPal_Oc5ProbeReqId := "oc5_" . A_TickCount
+    g_CmdPal_Oc5ProbeResolver := 0
+    p := Promise(CommandPalette_Oc5ProbePromiseExecutor)
+    CommandPalette_PushToWeb(Map("type", "palette_oc5_probe_request", "reqId", g_CmdPal_Oc5ProbeReqId))
+    try {
+        data := p.await(timeoutMs)
+        g_CmdPal_Oc5ProbeResolver := 0
+        if !(data is Map)
+            return 0
+        out := CommandPalette_NormalizeOc5ProbeData(data)
+        if (out is Map) {
+            det := out.Get("detail", Map())
+            if (det is Map)
+                det["via"] := "postmessage"
+        }
+        return out
+    } catch as err {
+        g_CmdPal_Oc5ProbeResolver := 0
+        return Map("ok", false, "code", "OC5_PROBE_TIMEOUT", "detail", String(err.Message), "via", "postmessage")
+    }
+}
+
+CommandPalette_ProbeOc5ProtocolClosure(timeoutMs := 2500) {
+    engine := CommandPalette_ProbeOc5OfflineEngine()
+    live := Map("pass", false, "code", "OC5_LIVE_UNAVAILABLE", "closed", 0, "repaired", 0, "unclosed", 0, "sampled", 0)
+    if FuncExists("CommandPalette_AgentProbeOc5") {
+        try live := CommandPalette_AgentProbeOc5()
+        catch {
+        }
+    }
+    web := 0
+    global g_CmdPal_WV2, g_CmdPal_Ready
+    if (IsObject(g_CmdPal_WV2) && g_CmdPal_Ready) {
+        wvMs := timeoutMs > 0 ? timeoutMs : 2500
+        web := CommandPalette_ProbeOc5ViaPostMessage(wvMs)
+        if !(web is Map) || String(web.Get("code", "")) = "OC5_PROBE_TIMEOUT"
+            web := CommandPalette_ProbeOc5ViaExecuteScript(wvMs)
+    }
+    return CommandPalette_ProbeOc5MergeResult(engine, live, web)
+}
+
+CommandPalette_RunOc5ProbeAndPersist(timeoutMs := 2500) {
+    r := CommandPalette_ProbeOc5ProtocolClosure(timeoutMs)
+    path := ""
+    try {
+        if FuncExists("Nmer_DebugPath")
+            path := Nmer_DebugPath("oc5_probe_last.json")
+        else
+            path := A_ScriptDir . "\Cache\debug\oc5_probe_last.json"
+        dir := ""
+        SplitPath(path, , &dir)
+        if (dir != "" && !DirExist(dir))
+            DirCreate(dir)
+        if FileExist(path)
+            FileDelete(path)
+        FileAppend(Jxon_Dump(r), path, "UTF-8")
+    } catch {
+    }
+    code := String(r.Get("code", "OC5_FAIL"))
+    ok := !!r.Get("ok", false)
+    det := r.Get("detail", Map())
+    stats := (det is Map) ? det.Get("stats", Map()) : Map()
+    engCode := ""
+    if (det is Map) {
+        eng := det.Get("engine", 0)
+        if (eng is Map)
+            engCode := String(eng.Get("closureCode", ""))
+    }
+    via := ""
+    if (det is Map)
+        via := String(det.Get("via", ""))
+    msg := "OC-5 " . code
+        . (ok ? " ✓" : " ✗")
+        . "`n引擎=" . engCode
+    if (stats is Map) {
+        msg .= "`n卡: closed=" . stats.Get("closed", 0)
+            . " repaired=" . stats.Get("repaired", 0)
+            . " withField=" . stats.Get("withField", 0)
+    }
+    if (via != "")
+        msg .= "`nvia=" . via
+    if (via = "offline" || via = "hybrid")
+        msg .= "`n(WebView 忙时走 Node+AHK 离线探针)"
+    if (path != "")
+        msg .= "`n→ " . path
+    shown := false
+    if FuncExists("Nmer_ShowAppToast") {
+        try {
+            Nmer_ShowAppToast("OC-5 探针", msg, ok ? "ok" : "warn")
+            shown := true
+        } catch {
+        }
+    }
+    if !shown
+        try TrayTip(msg, "OC-5 探针", ok ? "Iconi 4" : "Icon! 4")
+        catch {
+        }
+    if FuncExists("CommandPalette_AgentDebugTrace")
+        try CommandPalette_AgentDebugTrace("host", "oc5_probe", code . " ok=" . (ok ? 1 : 0), ok ? "info" : "warn")
+        catch {
+        }
+    return r
+}
+
+CommandPalette_GrayProbePromiseExecutor(resolve, reject) {
+    global g_CmdPal_GrayProbeResolver, g_CmdPal_GrayProbeReqId
+    g_CmdPal_GrayProbeResolver := Map("resolve", resolve, "reject", reject, "reqId", g_CmdPal_GrayProbeReqId)
+}
+
+CommandPalette_AdpProbePromiseExecutor(resolve, reject) {
+    global g_CmdPal_AdpProbeResolver, g_CmdPal_AdpProbeReqId
+    g_CmdPal_AdpProbeResolver := Map("resolve", resolve, "reject", reject, "reqId", g_CmdPal_AdpProbeReqId)
+}
+
+CommandPalette_ProbeGrayRouteOffline(query := "/search 测试") {
+    decision := Map("route", "r1r2", "allowed", false, "reason", "offline_unavailable", "command", "")
+    if FuncExists("Nmer_WailsBridgeResolveOfficialRoute")
+        try decision := Nmer_WailsBridgeResolveOfficialRoute(query)
+        catch {
+        }
+    route := String(decision.Get("route", "r1r2"))
+    reason := String(decision.Get("reason", ""))
+    pass := (route = "r3" && reason = "whitelist_hit")
+    code := pass ? "GRAY_PASS" : "GRAY_" . (reason != "" ? reason : "FAIL")
+    officialOn := false
+    bridgeOk := false
+    wl := []
+    if FuncExists("Nmer_WailsBridgeOfficialEffectiveEnabled")
+        officialOn := !!Nmer_WailsBridgeOfficialEffectiveEnabled()
+    if FuncExists("Nmer_WailsBridgeHealthy")
+        bridgeOk := !!Nmer_WailsBridgeHealthy()
+    if FuncExists("Nmer_WailsBridgeOfficialWhitelist")
+        wl := Nmer_WailsBridgeOfficialWhitelist()
+    return Map(
+        "ok", pass,
+        "code", code,
+        "detail", Map(
+            "decision", decision,
+            "flags", Map(
+                "officialEnabled", officialOn,
+                "bridgeHealthy", bridgeOk,
+                "whitelist", wl
+            ),
+            "via", "ahk_offline"
+        )
+    )
+}
+
+CommandPalette_ProbeGrayRouteViaExecuteScript(timeoutMs := 12000, query := "/search 测试") {
+    global g_CmdPal_WV2
+    qEsc := StrReplace(String(query), "\", "\\")
+    qEsc := StrReplace(qEsc, '"', '\"')
+    js := "(function(){try{"
+        . "var fn=window.nmerPalette&&window.nmerPalette.probeGrayRoute;"
+        . "if(typeof fn!=='function')return JSON.stringify({ok:0,code:'GRAY_PROBE_FN_MISSING'});"
+        . "return JSON.stringify(fn(" . (qEsc != "" ? '"' . qEsc . '"' : '""') . "));"
+        . "}catch(e){return JSON.stringify({ok:0,code:'GRAY_PROBE_ERR',err:String(e&&e.message||e)});}})();"
+    try {
+        raw := g_CmdPal_WV2.ExecuteScriptAsync(js).await(timeoutMs)
+        data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
+        if !(data is Map)
+            return Map("ok", false, "code", "GRAY_PROBE_PARSE_FAIL", "detail", SubStr(String(raw), 1, 200), "via", "execute_script")
+        pass := !!(data.Get("ok", 0) = 1 || data.Get("ok", false) = true)
+        det := (data is Map) ? data : Map()
+        if (det is Map)
+            det["via"] := "execute_script"
+        return Map(
+            "ok", pass,
+            "code", String(data.Get("code", pass ? "GRAY_PASS" : "GRAY_FAIL")),
+            "detail", det
+        )
+    } catch as err {
+        return Map("ok", false, "code", "GRAY_PROBE_TIMEOUT", "detail", err.Message, "via", "execute_script")
+    }
+}
+
+CommandPalette_ProbeGrayRouteViaPostMessage(timeoutMs := 3500, query := "/search 测试") {
+    global g_CmdPal_GrayProbeResolver, g_CmdPal_GrayProbeReqId
+    g_CmdPal_GrayProbeReqId := "gray_" . A_TickCount
+    g_CmdPal_GrayProbeResolver := 0
+    p := Promise(CommandPalette_GrayProbePromiseExecutor)
+    CommandPalette_PushToWeb(Map(
+        "type", "palette_gray_probe_request",
+        "reqId", g_CmdPal_GrayProbeReqId,
+        "query", String(query)
+    ))
+    try {
+        data := p.await(timeoutMs)
+        g_CmdPal_GrayProbeResolver := 0
+        if !(data is Map)
+            return 0
+        pass := !!(data.Get("ok", 0) = 1 || data.Get("ok", false) = true)
+        det := data.Has("detail") ? data["detail"] : data
+        if !(det is Map)
+            det := Map()
+        det["via"] := "postmessage"
+        return Map(
+            "ok", pass,
+            "code", String(data.Get("code", pass ? "GRAY_PASS" : "GRAY_FAIL")),
+            "detail", det
+        )
+    } catch as err {
+        g_CmdPal_GrayProbeResolver := 0
+        return Map("ok", false, "code", "GRAY_PROBE_TIMEOUT", "detail", String(err.Message), "via", "postmessage")
+    }
+}
+
+CommandPalette_ProbeGrayRouteMerged(offline, web := 0) {
+    webCode := (web is Map) ? String(web.Get("code", "")) : ""
+    if (web is Map) && webCode != "" && webCode != "GRAY_PROBE_TIMEOUT"
+        return web
+    if (offline is Map) {
+        if (web is Map) && webCode = "GRAY_PROBE_TIMEOUT" {
+            det := offline.Get("detail", Map())
+            if !(det is Map)
+                det := Map()
+            det["webview"] := Map("code", webCode, "detail", web.Get("detail", ""))
+            offline["detail"] := det
+        }
+        return offline
+    }
+    return (web is Map) ? web : Map("ok", false, "code", "GRAY_FAIL", "detail", "no_probe_result")
+}
+
+CommandPalette_ProbeGrayRoute(timeoutMs := 4000, query := "/search 测试") {
+    offline := CommandPalette_ProbeGrayRouteOffline(query)
+    web := 0
+    global g_CmdPal_WV2, g_CmdPal_Ready
+    if (IsObject(g_CmdPal_WV2) && g_CmdPal_Ready) {
+        if FuncExists("CommandPalette_PushWailsBridgeConfig")
+            try CommandPalette_PushWailsBridgeConfig()
+            catch {
+            }
+        wvMs := timeoutMs > 0 ? timeoutMs : 4000
+        web := CommandPalette_ProbeGrayRouteViaPostMessage(wvMs, query)
+        if !(web is Map) || String(web.Get("code", "")) = "GRAY_PROBE_TIMEOUT"
+            web := CommandPalette_ProbeGrayRouteViaExecuteScript(Max(wvMs, 12000), query)
+    }
+    return CommandPalette_ProbeGrayRouteMerged(offline, web)
+}
+
+CommandPalette_RunGrayProbeAndPersist(timeoutMs := 4000, query := "/search 测试") {
+    if FuncExists("CommandPalette_PushWailsBridgeConfig")
+        try CommandPalette_PushWailsBridgeConfig()
+        catch {
+        }
+    r := CommandPalette_ProbeGrayRoute(timeoutMs, query)
+    path := ""
+    try {
+        if FuncExists("Nmer_DebugPath")
+            path := Nmer_DebugPath("gray_probe_last.json")
+        else
+            path := A_ScriptDir . "\Cache\debug\gray_probe_last.json"
+        dir := ""
+        SplitPath(path, , &dir)
+        if (dir != "" && !DirExist(dir))
+            DirCreate(dir)
+        if FileExist(path)
+            FileDelete(path)
+        FileAppend(Jxon_Dump(r), path, "UTF-8")
+    } catch {
+    }
+    code := String(r.Get("code", "GRAY_FAIL"))
+    ok := !!r.Get("ok", false)
+    det := r.Get("detail", Map())
+    route := ""
+    reason := ""
+    if (det is Map) {
+        dec := det.Get("decision", 0)
+        if (dec is Map) {
+            route := String(dec.Get("route", ""))
+            reason := String(dec.Get("reason", ""))
+        }
+    }
+    msg := "灰度 " . code . (ok ? " ✓" : " ✗")
+    if (code = "GRAY_official_disabled")
+        msg .= "`n未开灰度：运行 scripts\Install-GrayFlagsExample.ps1 后重载牛马"
+    if (route != "")
+        msg .= "`nroute=" . route . " reason=" . reason
+    via := ""
+    if (det is Map)
+        via := String(det.Get("via", ""))
+    if (via != "")
+        msg .= "`nvia=" . via
+    if (via = "ahk_offline" || via = "postmessage")
+        msg .= "`n(WebView 忙时走离线/PostMessage 探针)"
+    if (path != "")
+        msg .= "`n→ " . path
+    shown := false
+    if FuncExists("Nmer_ShowAppToast") {
+        try {
+            Nmer_ShowAppToast("A2UI 灰度探针", msg, ok ? "ok" : "warn")
+            shown := true
+        } catch {
+        }
+    }
+    if !shown
+        try TrayTip(msg, "A2UI 灰度探针", ok ? "Iconi 4" : "Icon! 4")
+        catch {
+        }
+    if FuncExists("CommandPalette_AgentDebugTrace")
+        try CommandPalette_AgentDebugTrace("host", "gray_probe", code . " ok=" . (ok ? 1 : 0), ok ? "info" : "warn")
+        catch {
+        }
+    return r
+}
+
+CommandPalette_ProbeP2OfficialA2ui(timeoutMs := 4000) {
+    global g_CmdPal_WV2, g_CmdPal_Ready
+    if !(IsObject(g_CmdPal_WV2) && g_CmdPal_Ready)
+        return Map("ok", false, "code", "CP_NOT_READY", "detail", "webview_not_ready")
+    js := "(function(){try{"
+        . "var fn=window.nmerPalette&&window.nmerPalette.probeP2OfficialA2ui;"
+        . "if(typeof fn!=='function')return JSON.stringify({ok:0,code:'P2_PROBE_FN_MISSING'});"
+        . "return JSON.stringify(fn());"
+        . "}catch(e){return JSON.stringify({ok:0,code:'P2_PROBE_ERR',err:String(e&&e.message||e)});}})();"
+    try {
+        raw := g_CmdPal_WV2.ExecuteScriptAsync(js).await(timeoutMs)
+        data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
+        if !(data is Map)
+            return Map("ok", false, "code", "P2_PROBE_PARSE_FAIL", "detail", SubStr(String(raw), 1, 200))
+        pass := !!(data.Get("ok", 0) = 1 || data.Get("ok", false) = true)
+        return Map(
+            "ok", pass,
+            "code", String(data.Get("code", pass ? "P2_PASS" : "P2_FAIL")),
+            "detail", data
+        )
+    } catch as err {
+        return Map("ok", false, "code", "P2_PROBE_TIMEOUT", "detail", err.Message)
+    }
+}
+
+CommandPalette_RunAdapterProbeAndPersist(timeoutMs := 8000) {
+    if FuncExists("Nmer_WailsBridgeIngestDemoJsonl") && FuncExists("Nmer_WailsBridgeHealthy") && Nmer_WailsBridgeHealthy() {
+        try {
+            ingest := Nmer_WailsBridgeIngestDemoJsonl()
+            if FuncExists("CommandPalette_AgentDebugTrace")
+                CommandPalette_AgentDebugTrace("host", "adp_ingest_prep", String(ingest.Get("code", "")), ingest.Get("ok", false) ? "info" : "warn")
+            if ingest.Get("ok", false)
+                Sleep(600)
+        } catch {
+        }
+    }
+    if FuncExists("CommandPalette_PushWailsBridgeConfig")
+        try CommandPalette_PushWailsBridgeConfig()
+        catch {
+        }
+    if FuncExists("CommandPalette_PushToWeb")
+        try CommandPalette_PushToWeb(Map("type", "palette_adp_demo_prepare"))
+        catch {
+        }
+    r := CommandPalette_ProbeAdapterOfficialA2ui(timeoutMs)
+    path := ""
+    try {
+        if FuncExists("Nmer_DebugPath")
+            path := Nmer_DebugPath("adp_probe_last.json")
+        else
+            path := A_ScriptDir . "\Cache\debug\adp_probe_last.json"
+        dir := ""
+        SplitPath(path, , &dir)
+        if (dir != "" && !DirExist(dir))
+            DirCreate(dir)
+        if FileExist(path)
+            FileDelete(path)
+        FileAppend(Jxon_Dump(r), path, "UTF-8")
+    } catch {
+    }
+    code := String(r.Get("code", "ADP_FAIL"))
+    ok := !!r.Get("ok", false)
+    det := r.Get("detail", Map())
+    surfaceId := ""
+    titleText := ""
+    wsState := ""
+    if (det is Map) {
+        surfaceId := String(det.Get("surfaceId", ""))
+        titleText := String(det.Get("titleText", ""))
+        wsState := String(det.Get("wsState", ""))
+    }
+    msg := "Adapter " . code . (ok ? " ✓" : " ✗")
+    if (surfaceId != "")
+        msg .= "`nsurface=" . surfaceId
+    if (titleText != "")
+        msg .= "`ntitle=" . SubStr(titleText, 1, 40)
+    if (wsState != "")
+        msg .= "`nws=" . wsState
+    via := ""
+    if (det is Map)
+        via := String(det.Get("via", ""))
+    if (via = "" && det.Has("engine"))
+        via := "offline"
+    if (via != "")
+        msg .= "`nvia=" . via
+    if (code = "ADP_L2_PASS_L3_PENDING")
+        msg .= "`n(L2 已绿；L3 需先 ingest 演示 JSONL)"
+    if (path != "")
+        msg .= "`n→ " . path
+    shown := false
+    if FuncExists("Nmer_ShowAppToast") {
+        try {
+            Nmer_ShowAppToast("Adapter 探针", msg, ok ? "ok" : "warn")
+            shown := true
+        } catch {
+        }
+    }
+    if !shown
+        try TrayTip(msg, "Adapter 探针", ok ? "Iconi 4" : "Icon! 4")
+        catch {
+        }
+    if FuncExists("CommandPalette_AgentDebugTrace")
+        try CommandPalette_AgentDebugTrace("host", "adp_probe", code . " ok=" . (ok ? 1 : 0), ok ? "info" : "warn")
+        catch {
+        }
+    return r
+}
+
+CommandPalette_ProbeAdapterOfflineEngine() {
+    root := A_ScriptDir
+    script := root . "\html\run-adp-cp-stream.mjs"
+    if !FileExist(script)
+        return Map("ok", false, "code", "ADP_L2_SCRIPT_MISSING", "via", "node_l2")
+    outPath := A_Temp . "\nmer_adp_l2_" . A_TickCount . ".txt"
+    cmd := A_ComSpec . ' /c node "' . script . '" > "' . outPath . '" 2>&1'
+    stdout := ""
+    try RunWait(cmd, root, "Hide")
+    catch as err {
+        return Map("ok", false, "code", "ADP_L2_RUN_FAIL", "detail", err.Message, "via", "node_l2")
+    }
+    try stdout := FileRead(outPath, "UTF-8")
+    catch {
+    }
+    try FileDelete(outPath)
+    ok := InStr(stdout, "PASS adp-cp-stream") > 0
+    sidecarOk := false
+    if FuncExists("Nmer_WailsBridgeHealthy")
+        sidecarOk := !!Nmer_WailsBridgeHealthy()
+    return Map(
+        "ok", ok,
+        "code", ok ? "ADP_L2_PASS" : "ADP_L2_FAIL",
+        "sidecarHealthy", sidecarOk,
+        "stdout", SubStr(Trim(stdout), 1, 400),
+        "via", "node_l2"
+    )
+}
+
+CommandPalette_ProbeAdapterViaExecuteScript(timeoutMs := 12000) {
+    global g_CmdPal_WV2
+    js := "(function(){try{"
+        . "var fn=window.nmerPalette&&window.nmerPalette.probeAdapterOfficialA2ui;"
+        . "if(typeof fn!=='function')return JSON.stringify({ok:0,code:'ADP_PROBE_FN_MISSING'});"
+        . "return JSON.stringify(fn());"
+        . "}catch(e){return JSON.stringify({ok:0,code:'ADP_PROBE_ERR',err:String(e&&e.message||e)});}})();"
+    try {
+        raw := g_CmdPal_WV2.ExecuteScriptAsync(js).await(timeoutMs)
+        data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
+        if !(data is Map)
+            return Map("ok", false, "code", "ADP_PROBE_PARSE_FAIL", "detail", SubStr(String(raw), 1, 200), "via", "execute_script")
+        pass := !!(data.Get("ok", 0) = 1 || data.Get("ok", false) = true)
+        if (data is Map)
+            data["via"] := "execute_script"
+        return Map(
+            "ok", pass,
+            "code", String(data.Get("code", pass ? "ADP_PASS" : "ADP_FAIL")),
+            "detail", data
+        )
+    } catch as err {
+        return Map("ok", false, "code", "ADP_PROBE_TIMEOUT", "detail", err.Message, "via", "execute_script")
+    }
+}
+
+CommandPalette_ProbeAdapterViaPostMessage(timeoutMs := 3500) {
+    global g_CmdPal_AdpProbeResolver, g_CmdPal_AdpProbeReqId
+    g_CmdPal_AdpProbeReqId := "adp_" . A_TickCount
+    g_CmdPal_AdpProbeResolver := 0
+    p := Promise(CommandPalette_AdpProbePromiseExecutor)
+    CommandPalette_PushToWeb(Map("type", "palette_adp_probe_request", "reqId", g_CmdPal_AdpProbeReqId))
+    try {
+        data := p.await(timeoutMs)
+        g_CmdPal_AdpProbeResolver := 0
+        if !(data is Map)
+            return 0
+        pass := !!(data.Get("ok", 0) = 1 || data.Get("ok", false) = true)
+        det := data.Has("detail") ? data["detail"] : data
+        if !(det is Map)
+            det := Map()
+        det["via"] := "postmessage"
+        return Map(
+            "ok", pass,
+            "code", String(data.Get("code", pass ? "ADP_PASS" : "ADP_FAIL")),
+            "detail", det
+        )
+    } catch as err {
+        g_CmdPal_AdpProbeResolver := 0
+        return Map("ok", false, "code", "ADP_PROBE_TIMEOUT", "detail", String(err.Message), "via", "postmessage")
+    }
+}
+
+CommandPalette_ProbeAdapterMerged(engine, web := 0) {
+    webCode := (web is Map) ? String(web.Get("code", "")) : ""
+    if (web is Map) && webCode = "ADP_PASS"
+        return web
+    engOk := !!(engine is Map && engine.Get("ok", false))
+    if engOk && ((web is Map) && (webCode = "ADP_PROBE_TIMEOUT" || webCode = "ADP_CARD_MISSING" || webCode = "ADP_PROBE_FN_MISSING")) {
+        return Map(
+            "ok", true,
+            "code", "ADP_L2_PASS_L3_PENDING",
+            "detail", Map(
+                "engine", engine,
+                "webview", (web is Map) ? web : Map(),
+                "via", "offline"
+            )
+        )
+    }
+    if (web is Map) && webCode != "" && webCode != "ADP_PROBE_TIMEOUT"
+        return web
+    if engOk
+        return Map("ok", true, "code", "ADP_L2_PASS", "detail", Map("engine", engine, "via", "node_l2"))
+    return (web is Map) ? web : Map("ok", false, "code", "ADP_FAIL", "detail", engine is Map ? engine : Map())
+}
+
+CommandPalette_ProbeAdapterOfficialA2ui(timeoutMs := 8000) {
+    engine := CommandPalette_ProbeAdapterOfflineEngine()
+    web := 0
+    global g_CmdPal_WV2, g_CmdPal_Ready
+    if (IsObject(g_CmdPal_WV2) && g_CmdPal_Ready) {
+        if FuncExists("CommandPalette_PushWailsBridgeConfig")
+            try CommandPalette_PushWailsBridgeConfig()
+            catch {
+            }
+        if FuncExists("CommandPalette_PushToWeb")
+            try {
+                CommandPalette_PushToWeb(Map("type", "palette_adp_demo_prepare"))
+                Sleep(350)
+            } catch {
+            }
+        wvMs := timeoutMs > 0 ? timeoutMs : 8000
+        web := CommandPalette_ProbeAdapterViaPostMessage(wvMs)
+        if !(web is Map) || String(web.Get("code", "")) = "ADP_PROBE_TIMEOUT"
+            web := CommandPalette_ProbeAdapterViaExecuteScript(Max(wvMs, 12000))
+    } else {
+        web := Map("ok", false, "code", "CP_NOT_READY", "detail", "webview_not_ready")
+    }
+    return CommandPalette_ProbeAdapterMerged(engine, web)
+}
+
 CommandPalette_DoShow(*) {
-    global g_CmdPal_PendingShow, CapsLock
+    global g_CmdPal_PendingShow, CapsLock, g_CmdPal_WV2
     g_CmdPal_PendingShow := false
     CapsLock := false
     SetTimer(CommandPalette_MaybeReloadHtml, -1)
     CommandPalette_CenterAndShow()
+    ; 包 1.1：显示时恢复 WebView2 正常内存档位
+    try WebView2_NotifyShown(g_CmdPal_WV2)
+    catch {
+    }
     SetTimer(CommandPalette_EnsureWebInputVisible, -60)
     SetTimer(CommandPalette_SyncAiOnShow, -350)
     if FuncExists("CommandPalette_AgentOnReady")
@@ -455,6 +1134,11 @@ CommandPalette_DoShow(*) {
         SetTimer(CommandPalette_AgentPushCardSync, -120)
     SetTimer(CommandPalette_PushEmptyQuery, -180)
     SetTimer(CommandPalette_PushAiProviders, -220)
+    SetTimer(CommandPalette_PushWailsBridgeConfig, -260)
+    SetTimer(CommandPalette_PushWailsBridgeConfig, -3200)
+    if FuncExists("Nmer_WailsBridgeEnabled") && Nmer_WailsBridgeEnabled()
+        && FuncExists("Nmer_WailsBridgeHealthy") && !Nmer_WailsBridgeHealthy()
+        SetTimer(Nmer_AutoStartWailsBridge, -1)
     SetTimer(CommandPalette_RevealFallback, -600)
 }
 
@@ -537,7 +1221,7 @@ CommandPalette_PushEmptyQuery(*) {
 }
 
 CommandPalette_Hide(*) {
-    global g_CmdPal_Gui, g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_AiSession
+    global g_CmdPal_Gui, g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_AiSession, g_CmdPal_WV2
     global g_CmdPal_HasAnchor
     if (g_CmdPal_AiSession is Map) && !g_CmdPal_AiSession.Get("handoff", false) && !g_CmdPal_AiSession.Get("ended", false) {
         try CommandPalette_HandoffAiToToolbar(true)
@@ -547,6 +1231,10 @@ CommandPalette_Hide(*) {
     g_CmdPal_Visible := false
     g_CmdPal_Revealed := false
     g_CmdPal_HasAnchor := false
+    ; 包 1.1：隐藏时降 WebView2 内存档位并 RESET_STATE
+    try WebView2_NotifyHidden(g_CmdPal_WV2)
+    catch {
+    }
     if IsObject(g_CmdPal_Gui) {
         try g_CmdPal_Gui.Hide()
         catch {
@@ -2213,6 +2901,54 @@ CommandPalette_OnWebMessage(sender, args) {
         SetTimer(CommandPalette_Reveal, -1)
         SetTimer(CommandPalette_DeferredFocus, -80)
         SetTimer(CommandPalette_SyncHostShape, -1)
+        return
+    }
+    if (typ = "palette_oc5_probe_result") {
+        global g_CmdPal_Oc5ProbeResolver
+        if !(g_CmdPal_Oc5ProbeResolver is Map)
+            return
+        wantReq := String(g_CmdPal_Oc5ProbeResolver.Get("reqId", ""))
+        gotReq := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        if (wantReq != "" && gotReq != "" && wantReq != gotReq)
+            return
+        resolver := g_CmdPal_Oc5ProbeResolver.Get("resolve", 0)
+        g_CmdPal_Oc5ProbeResolver := 0
+        if resolver
+            try resolver.Call(msg)
+            catch {
+            }
+        return
+    }
+    if (typ = "palette_gray_probe_result") {
+        global g_CmdPal_GrayProbeResolver
+        if !(g_CmdPal_GrayProbeResolver is Map)
+            return
+        wantReq := String(g_CmdPal_GrayProbeResolver.Get("reqId", ""))
+        gotReq := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        if (wantReq != "" && gotReq != "" && wantReq != gotReq)
+            return
+        resolver := g_CmdPal_GrayProbeResolver.Get("resolve", 0)
+        g_CmdPal_GrayProbeResolver := 0
+        if resolver
+            try resolver.Call(msg)
+            catch {
+            }
+        return
+    }
+    if (typ = "palette_adp_probe_result") {
+        global g_CmdPal_AdpProbeResolver
+        if !(g_CmdPal_AdpProbeResolver is Map)
+            return
+        wantReq := String(g_CmdPal_AdpProbeResolver.Get("reqId", ""))
+        gotReq := msg.Has("reqId") ? String(msg["reqId"]) : ""
+        if (wantReq != "" && gotReq != "" && wantReq != gotReq)
+            return
+        resolver := g_CmdPal_AdpProbeResolver.Get("resolve", 0)
+        g_CmdPal_AdpProbeResolver := 0
+        if resolver
+            try resolver.Call(msg)
+            catch {
+            }
         return
     }
     if (typ = "palette_resize") {

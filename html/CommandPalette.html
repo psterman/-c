@@ -28,6 +28,16 @@
   --text-main: #fff9f2;
   --accent: #ff6600;
   --accent-2: #ff8d2a;
+  --palette-a2ui-primary: var(--accent-2);
+  --palette-a2ui-primary-muted: #fdba74;
+  --palette-a2ui-surface-bg: rgba(255, 141, 42, 0.06);
+  --palette-a2ui-surface-border: rgba(255, 141, 42, 0.3);
+  --palette-a2ui-on-surface: var(--text-main);
+  --palette-a2ui-head: #fdba74;
+  --palette-a2ui-slot-bg: rgba(255, 141, 42, 0.06);
+  --palette-a2ui-slot-border: rgba(255, 141, 42, 0.18);
+  --palette-a2ui-fallback-bg: rgba(251, 191, 36, 0.06);
+  --palette-a2ui-fallback-border: rgba(251, 191, 36, 0.35);
   --radius-lg: 12px;
   --ease: 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   --font-ui: "AppUi", "Segoe UI", "DengXian", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
@@ -1903,7 +1913,7 @@ palette-status-log { display: contents; }
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: #93c5fd;
+  color: var(--palette-a2ui-head);
   margin-bottom: 6px;
   opacity: 0.9;
 }
@@ -1911,15 +1921,36 @@ palette-status-log { display: contents; }
   margin-bottom: 8px;
   padding: 8px 10px;
   border-radius: 8px;
-  background: rgba(59, 130, 246, 0.06);
-  border: 1px solid rgba(59, 130, 246, 0.18);
+  background: var(--palette-a2ui-slot-bg);
+  border: 1px solid var(--palette-a2ui-slot-border);
   overflow-x: auto;
   overflow-y: visible;
 }
 .card-a2ui .a2ui-slot:last-child { margin-bottom: 0; }
-body[data-theme="light"] .card-a2ui .a2ui-slot {
-  background: rgba(59, 130, 246, 0.05);
-  border-color: rgba(37, 99, 235, 0.15);
+.card-official-a2ui {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--palette-a2ui-surface-border);
+  background: var(--palette-a2ui-surface-bg);
+  color: var(--palette-a2ui-on-surface);
+  overflow: visible;
+}
+.card-official-a2ui[hidden] { display: none !important; }
+.card-official-a2ui-head {
+  margin-bottom: 7px;
+  color: var(--palette-a2ui-head);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.card-official-a2ui.is-fallback {
+  border-color: var(--palette-a2ui-fallback-border);
+  background: var(--palette-a2ui-fallback-bg);
+}
+nmer-official-a2ui-surface {
+  color: var(--palette-a2ui-on-surface);
+  --a2ui-primary-color: var(--palette-a2ui-primary);
 }
 .card-replies { margin-top: 0; }
 .a2ui-table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -1951,16 +1982,32 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 <script src="PaletteActionPolicy.js?v=1"></script>
 <script src="vendor/lit/lit.min.js"></script>
 <script src="components/palette-followup-chips.js?v=3"></script>
-<script src="components/palette-action-chips.js?v=1"></script>
+<script src="components/palette-action-chips.js?v=2"></script>
+<script src="components/palette-comparison-table.js?v=1"></script>
+<script src="components/palette-steps.js?v=1"></script>
+<script src="components/palette-alert.js?v=1"></script>
 <script src="palette/components/status-log/palette-status-log.js?v=1"></script>
 <script src="PaletteUIEventContract.js?v=1"></script>
+<script src="palette/render/PaletteComponentRegistry.js?v=1"></script>
 <script src="PaletteCardSlots.js?v=4"></script>
 <script src="PaletteLitRenderer.js?v=3"></script>
-<script src="palette/actions/PaletteActionController.js?v=1"></script>
-<script src="palette/actions/PaletteA2UIEventBridge.js?v=1"></script>
+<script src="palette/actions/PaletteActionController.js?v=2"></script>
+<script src="palette/actions/PaletteA2UIEventBridge.js?v=2"></script>
 <script src="PaletteActionBinder.js?v=3"></script>
 <script src="palette/render/PaletteSlotRenderTrace.js?v=1"></script>
+<script src="palette/render/PaletteA2UILegacyRenderer.js?v=1"></script>
 <script src="palette/render/PaletteCardRenderer.js?v=1"></script>
+<script src="palette/theme/PaletteA2UIDesignTokens.js?v=1"></script>
+<script src="vendor/a2ui/nmer-a2ui-v09.js?v=1"></script>
+<script src="palette/official/PaletteOfficialA2UIBridge.js?v=2"></script>
+<script src="palette/render/PaletteRendererRegistry.js?v=1"></script>
+<script src="palette/observability/PaletteA2UIMetrics.js?v=1"></script>
+<script src="palette/official/PaletteOfficialA2UIActionLabels.js?v=1"></script>
+<script src="palette/official/PaletteOfficialA2UIActionPolicy.js?v=1"></script>
+<script src="palette/official/PaletteOfficialA2UIGray.js?v=1"></script>
+<script src="palette/official/PaletteOfficialA2UIStreamClient.js?v=1"></script>
+<script src="palette/official/PaletteOfficialA2UICardNotify.js?v=1"></script>
+<script src="palette/adapters/PaletteA2UIAdapter.js?v=1"></script>
 <script src="palette/adapters/PaletteActionChipsAdapter.js?v=1"></script>
 <script src="palette/adapters/PaletteActionChipsProdInjector.js?v=1"></script>
 <script src="palette/host/PaletteHostAdapter.js?v=1"></script>
@@ -1970,6 +2017,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 <script src="PaletteC3.fixtures.js?v=2"></script>
 <script src="PaletteBlockStore.js?v=4"></script>
 <script src="PaletteRouterSkill.js?v=3"></script>
+<script src="palette/normalizers/PaletteComparisonTableMarkdown.js?v=1"></script>
+<script src="palette/normalizers/PaletteA2UITextNormalizer.js?v=1"></script>
 <script src="PaletteMiniA2UI.js?v=2"></script>
 <script src="PaletteComponentMatcher.js?v=2"></script>
 <script src="CommandPaletteReplyStructurer.js?v=1"></script>
@@ -2031,6 +2080,32 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     focusMode: false,
     showAllDone: true
   };
+  var ACTION_CARD_MEMORY_LIMIT = 20;
+  var ACTION_CARD_MESSAGE_LIMIT = 30;
+  var STREAM_TEXT_MEMORY_LIMIT = 120000;
+
+  function clipStreamText(value) {
+    var text = String(value || "");
+    return text.length <= STREAM_TEXT_MEMORY_LIMIT
+      ? text
+      : text.slice(text.length - STREAM_TEXT_MEMORY_LIMIT);
+  }
+
+  function limitActionCardDtos(cards) {
+    var list = normalizeAgentCardsArray(cards);
+    if (list.length <= ACTION_CARD_MEMORY_LIMIT) return list;
+    return list
+      .slice()
+      .sort(function (left, right) {
+        var leftRunning = left && left.running && !left.ended ? 1 : 0;
+        var rightRunning = right && right.running && !right.ended ? 1 : 0;
+        if (leftRunning !== rightRunning) return rightRunning - leftRunning;
+        return String((right && (right.updatedAt || right.createdAt)) || "").localeCompare(
+          String((left && (left.updatedAt || left.createdAt)) || "")
+        );
+      })
+      .slice(0, ACTION_CARD_MEMORY_LIMIT);
+  }
 
   function isActionCardBatchUpsert() {
     return (actionState._batchUpsert || 0) > 0;
@@ -2483,12 +2558,26 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (!cands.length) return false;
     var replyMd = getLatestReplyMarkdownFromBlocks(blocks) || String(card.rawAnswer || "");
     if (!replyMd.trim()) return false;
-    if (typeof PaletteMiniA2UI !== "undefined" && PaletteMiniA2UI.extractMarkdownTables) {
-      if (cands.indexOf("ComparisonTable") >= 0 && PaletteMiniA2UI.extractMarkdownTables(replyMd).length)
+    if (
+      typeof PaletteComparisonTableMarkdown !== "undefined" &&
+      PaletteComparisonTableMarkdown.extract
+    ) {
+      if (
+        cands.indexOf("ComparisonTable") >= 0 &&
+        PaletteComparisonTableMarkdown.extract(replyMd).length
+      )
         return true;
-      if (cands.indexOf("Steps") >= 0 && PaletteMiniA2UI.extractSteps && PaletteMiniA2UI.extractSteps(replyMd).length >= 2)
+    }
+    if (typeof PaletteA2UITextNormalizer !== "undefined") {
+      if (
+        cands.indexOf("Steps") >= 0 &&
+        PaletteA2UITextNormalizer.matchesCandidate("Steps", replyMd)
+      )
         return true;
-      if (cands.indexOf("Alert") >= 0 && PaletteMiniA2UI.extractAlerts && PaletteMiniA2UI.extractAlerts(replyMd).length)
+      if (
+        cands.indexOf("Alert") >= 0 &&
+        PaletteA2UITextNormalizer.matchesCandidate("Alert", replyMd)
+      )
         return true;
     }
     return cands.indexOf("ComparisonTable") >= 0 && /\|/.test(replyMd);
@@ -2676,17 +2765,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       for (var pa = pipeBlocks.length - 1; pa >= 0; pa--) {
         var a2b = pipeBlocks[pa];
         if (!a2b || a2b.type !== "a2ui") continue;
-        if (a2b.component === "ComparisonTable") {
-          var cols = (a2b.props && a2b.props.columns) || [];
-          return ("对比表格 · " + cols.length + " 列").slice(0, 160);
-        }
-        if (a2b.component === "Steps") {
-          var stepItems = (a2b.props && a2b.props.items) || [];
-          return ("执行步骤 · " + stepItems.length + " 步").slice(0, 160);
-        }
-        if (a2b.component === "Alert") {
-          var alertTxt = (a2b.props && a2b.props.text) || "";
-          return String(alertTxt).trim().slice(0, 160) || "⚠ 警告";
+        if (
+          typeof PaletteBlockPipeline !== "undefined" &&
+          PaletteBlockPipeline.a2uiBlockSummary
+        ) {
+          var a2uiSummary = PaletteBlockPipeline.a2uiBlockSummary(a2b);
+          if (a2uiSummary) return a2uiSummary.slice(0, 160);
         }
       }
       var q0 = card.query && String(card.query).trim();
@@ -2840,6 +2924,16 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   function cardMetaLineText(card) {
     if (!card) return "";
     var parts = [formatCardTimeLabel(card)];
+    if (card.representationRoute === "r3") {
+      parts.push("R3");
+    } else if (card.officialA2uiRoute && card.officialA2uiRoute.reason) {
+      var grayLbl =
+        typeof PaletteOfficialA2UIActionLabels !== "undefined" &&
+        PaletteOfficialA2UIActionLabels.formatGrayDecision
+          ? PaletteOfficialA2UIActionLabels.formatGrayDecision(card.officialA2uiRoute)
+          : null;
+      parts.push(grayLbl ? grayLbl.label + "·" + grayLbl.detail : "R1+R2");
+    }
     var chars = cardContentCharCount(card);
     if (chars > 0) parts.push(chars + " 字");
     var tok = estimateCardTokens(card);
@@ -3058,7 +3152,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       stub._buf = "";
     };
     stub.onChunk = function (t) {
-      stub._buf += String(t || "");
+      stub._buf = clipStreamText(stub._buf + String(t || ""));
       var c = getActionCard(cardId);
       if (c && c.uiState === "Planning") actionCardManager.transitionCardState(cardId, "Running");
       var dom = document.getElementById("card-" + cardId);
@@ -4030,14 +4124,27 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     lastActionComponent: "",
     lastActionSlot: "",
     lastActionRejectedReason: "",
-    slotRenderers: {}
+    slotRenderers: {},
+    a2uiMetrics: null
   };
 
   function publishSlotRenderersDebug(cardId) {
     if (typeof PaletteSlotRenderTrace === "undefined" || !PaletteSlotRenderTrace.snapshot) return;
     var snap = PaletteSlotRenderTrace.snapshot(cardId);
     pipelineDebugState.slotRenderers = snap;
-    agentDebugLog("slot_renderers", JSON.stringify({ cardId: cardId, slotRenderers: snap }));
+    var card = getActionCard(cardId);
+    var registryDescribe =
+      typeof PaletteRendererRegistry !== "undefined" && PaletteRendererRegistry.describeCard
+        ? PaletteRendererRegistry.describeCard(card)
+        : null;
+    agentDebugLog(
+      "slot_renderers",
+      JSON.stringify({
+        cardId: cardId,
+        slotRenderers: snap,
+        registry: registryDescribe
+      })
+    );
   }
 
   function tryParsePipelineDebugJson(text) {
@@ -4214,6 +4321,15 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     } else if (ev === "prompt_compose") {
       var pcObj = tryParsePipelineDebugJson(det);
       if (pcObj && pcObj.preserveRoute) pipelineDebugState.prompt = "preserveRoute · " + (pcObj.routeId || "");
+    } else if (ev === "official_a2ui_gray") {
+      var grayObj = tryParsePipelineDebugJson(det);
+      if (grayObj && grayObj.route) {
+        pipelineDebugState.route =
+          "gray:" + String(grayObj.route) + " · " + String(grayObj.reason || "");
+      }
+    }
+    if (typeof PaletteA2UIMetrics !== "undefined" && PaletteA2UIMetrics.snapshot) {
+      pipelineDebugState.a2uiMetrics = PaletteA2UIMetrics.snapshot();
     }
     try {
       post({ type: "cp_pipeline_debug", state: pipelineDebugState });
@@ -4328,6 +4444,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     try {
       document.documentElement.style.colorScheme = themeMode;
     } catch (_) {}
+    if (typeof PaletteA2UIDesignTokens !== "undefined" && PaletteA2UIDesignTokens.syncAll) {
+      PaletteA2UIDesignTokens.syncAll(themeMode);
+    }
   }
 
   function hidePalette() {
@@ -4368,6 +4487,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function parseMarkdownSegments(text) {
+    if (
+      typeof PaletteComparisonTableMarkdown !== "undefined" &&
+      PaletteComparisonTableMarkdown.parseSegments
+    ) {
+      return PaletteComparisonTableMarkdown.parseSegments(text);
+    }
     var lines = String(text || "").split(/\r?\n/);
     var segments = [];
     var buf = [];
@@ -4400,6 +4525,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function renderMdTableHtml(columns, rows) {
+    if (
+      typeof PaletteComparisonTableMarkdown !== "undefined" &&
+      PaletteComparisonTableMarkdown.renderHtml
+    ) {
+      return PaletteComparisonTableMarkdown.renderHtml(columns, rows, esc);
+    }
     var html =
       '<div class="a2ui-comparison"><table class="a2ui-table md-table"><thead><tr>';
     for (var ci = 0; ci < columns.length; ci++) {
@@ -4604,6 +4735,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     var card = getActionCard(cardId);
     var dom = ensureActionCardDom(card);
     if (!dom) return { ok: false, blocks: [] };
+    if (typeof PaletteRendererRegistry !== "undefined" && PaletteRendererRegistry.renderBlocks) {
+      return PaletteRendererRegistry.renderBlocks(cardId, dom, blocks, paletteRendererOptions());
+    }
     if (typeof PaletteCardRenderer !== "undefined" && PaletteCardRenderer.renderBlocks) {
       return PaletteCardRenderer.renderBlocks(cardId, dom, blocks, paletteRendererOptions());
     }
@@ -4723,6 +4857,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     card.blockStore = { blocks: list, blockVersion: bv, normalizerVersion: nv };
     card.pipelineBlocks = list;
     if (meta && meta.protoStarted) card._protoStarted = true;
+    if (meta && meta.protocolClosure) card.protocolClosure = meta.protocolClosure;
     syncLegacyBlocksFromPipeline(card, list);
   }
 
@@ -4779,7 +4914,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         type: "palette_agent_block_store",
         cardId: cardId,
         reqId: card.reqId || "",
-        blockStore: packed
+        blockStore: packed,
+        protocolClosure: card.protocolClosure || null
       });
       agentDebugLog("block_store_persist", "n=" + (packed.blocks || []).length);
       return true;
@@ -4909,6 +5045,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     };
     card.pipelineBlocks = result.blocks;
     card._protoStarted = !!(result.meta && result.meta.protoStarted);
+    card.protocolClosure =
+      result.meta && result.meta.protocolClosure ? result.meta.protocolClosure : null;
     syncLegacyBlocksFromPipeline(card, result.blocks);
     renderBlocks(cardId, result.blocks);
     var replyBlock = null;
@@ -4952,8 +5090,22 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         " proto=" +
         (result.meta && result.meta.protoStarted ? 1 : 0) +
         " a2ui=" +
-        ((result.meta && result.meta.a2ui && result.meta.a2ui.length) || 0)
+        ((result.meta && result.meta.a2ui && result.meta.a2ui.length) || 0) +
+        (card.protocolClosure && !card.protocolClosure.ok
+          ? " closure=" + String(card.protocolClosure.code || "UNCLOSED")
+          : "")
     );
+    if (card.protocolClosure && !card.protocolClosure.ok) {
+      agentDebugLog(
+        "pipeline_protocol_closure",
+        JSON.stringify({
+          code: card.protocolClosure.code,
+          missingEnds: card.protocolClosure.missingEnds || [],
+          forcedCloses: card.protocolClosure.forcedCloses || [],
+          synthesizedReply: !!card.protocolClosure.synthesizedReply
+        })
+      );
+    }
     if (result.meta && (result.meta.uiMatches || result.meta.matcher || result.meta.a2ui)) {
       agentDebugLog(
         "pipeline_matcher",
@@ -5078,6 +5230,36 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     syncActionResultsLayout();
     focusActionCard(cardId, { expand: true });
     return out;
+  }
+
+  function runOfficialA2uiFixture(fixtureId) {
+    var cardId = "mock-official-a2ui-card";
+    runMockRenderBlocks(cardId, [
+      {
+        id: "mock-official-alert",
+        type: "a2ui",
+        component: "Alert",
+        state: "final",
+        source: "system",
+        seq: 1,
+        turnId: 1,
+        props: {
+          variant: "info",
+          text: "旧 NMER Alert 通道仍在工作。"
+        }
+      },
+      {
+        id: "mock-official-reply",
+        type: "reply",
+        state: "final",
+        source: "system",
+        seq: 2,
+        turnId: 1,
+        title: "旧 Markdown 回退",
+        markdown: "这段旧回复用于验证官方 A2UI 失败时可以安全回退。"
+      }
+    ]);
+    return mountOfficialA2uiFixture(cardId, fixtureId || "happy-six-components");
   }
 
   function kindIcon(kind) {
@@ -5596,6 +5778,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       syncWindowSize();
     },
     runMockRenderBlocks: runMockRenderBlocks,
+    runOfficialA2uiFixture: runOfficialA2uiFixture,
     runPalettePipelineFixture: function (name, cardId) {
       if (typeof PaletteBlockFixtures !== "undefined" && PaletteBlockFixtures.runPalettePipelineFixture)
         return PaletteBlockFixtures.runPalettePipelineFixture(name, cardId);
@@ -5615,8 +5798,254 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     getHeightConfig: getHeightConfig,
     applyPipelineFinalize: applyPipelineFinalize,
     applyPipelineIngestDelta: applyPipelineIngestDelta,
-    renderBlocks: renderBlocks
+    renderBlocks: renderBlocks,
+    mountOfficialA2uiFixture: mountOfficialA2uiFixture,
+    clearOfficialA2ui: clearOfficialA2ui,
+    applyOfficialA2uiEnvelope: applyOfficialA2uiEnvelope,
+    probeP2OfficialA2ui: probeP2OfficialA2ui,
+    prepareAdapterOfficialA2uiProbe: prepareAdapterOfficialA2uiProbe,
+    probeAdapterOfficialA2ui: probeAdapterOfficialA2ui,
+    probeGrayRoute: probeGrayRoute,
+    probeOc5ProtocolClosure: probeOc5ProtocolClosure
   };
+
+  function probeOc5ProtocolClosure() {
+    var engineOk = false;
+    var engine = { closureCode: "", synthesized: false, blockTypes: [] };
+    if (
+      typeof PaletteBlockPipeline !== "undefined" &&
+      PaletteBlockPipeline.analyzeProtocolClosure &&
+      PaletteBlockPipeline.finalize
+    ) {
+      var truncated =
+        "::PLAN_START:: 步骤1：检查内存 | 步骤2：分析 ::STATUS_START:: 进行中";
+      var closure = PaletteBlockPipeline.analyzeProtocolClosure(truncated);
+      var fin = PaletteBlockPipeline.finalize(truncated, {
+        traceId: "oc5_probe_" + Date.now()
+      });
+      var hasRepair = (fin.blocks || []).some(function (b) {
+        return (
+          b &&
+          b.type === "reply" &&
+          (/协议未完整闭合/.test(String(b.markdown || "")) ||
+            String(b.title || "").indexOf("协议修复") >= 0)
+        );
+      });
+      engineOk = !!(
+        closure &&
+        closure.ok === false &&
+        hasRepair &&
+        fin.meta &&
+        fin.meta.protocolClosure &&
+        fin.meta.protocolClosure.synthesizedReply
+      );
+      engine = {
+        closureCode: closure ? String(closure.code || "") : "",
+        synthesized: !!(fin.meta && fin.meta.protocolClosure && fin.meta.protocolClosure.synthesizedReply),
+        blockTypes: (fin.blocks || []).map(function (b) {
+          return b && b.type;
+        })
+      };
+    }
+    var stats = { closed: 0, repaired: 0, unclosed: 0, withField: 0, sampled: 0, cardCap: 64, truncated: false };
+    var samples = [];
+    var cards = actionState.cards || {};
+    var cardCap = 64;
+    var scanned = 0;
+    for (var cid in cards) {
+      if (!Object.prototype.hasOwnProperty.call(cards, cid)) continue;
+      if (scanned >= cardCap) {
+        stats.truncated = true;
+        break;
+      }
+      scanned++;
+      stats.sampled++;
+      var c = cards[cid];
+      if (!c || !c.protocolClosure) continue;
+      stats.withField++;
+      var pc = c.protocolClosure;
+      if (pc.ok) stats.closed++;
+      else if (pc.synthesizedReply) stats.repaired++;
+      else stats.unclosed++;
+      samples.push({
+        cardId: cid,
+        code: String(pc.code || ""),
+        ok: !!pc.ok,
+        synthesizedReply: !!pc.synthesizedReply,
+        missingEnds: pc.missingEnds || []
+      });
+    }
+    var liveOk = stats.closed > 0 || stats.repaired > 0;
+    var code = "OC5_ENGINE_FAIL";
+    if (engineOk) {
+      code = liveOk ? "OC5_PASS" : stats.withField === 0 ? "OC5_ENGINE_PASS_NEEDS_LIVE" : "OC5_ENGINE_OK_LIVE_PENDING";
+    }
+    return {
+      ok: engineOk && (liveOk || stats.withField === 0),
+      code: code,
+      engine: engine,
+      stats: stats,
+      samples: samples.slice(0, 8)
+    };
+  }
+
+  function probeGrayRoute(query) {
+    query = String(query || "/search 测试");
+    var cfg = window.nmerPaletteBridgeConfig || {};
+    var decision = null;
+    if (typeof PaletteOfficialA2UIGray !== "undefined" && PaletteOfficialA2UIGray.resolveSubmit) {
+      decision = PaletteOfficialA2UIGray.resolveSubmit(query, cfg);
+    }
+    var metrics =
+      typeof PaletteA2UIMetrics !== "undefined" && PaletteA2UIMetrics.snapshot
+        ? PaletteA2UIMetrics.snapshot()
+        : null;
+    var routeOk = !!(decision && decision.route === "r3" && decision.reason === "whitelist_hit");
+    var card = actionState.activeCardId ? getActionCard(actionState.activeCardId) : null;
+    return {
+      ok: routeOk,
+      code: routeOk ? "GRAY_PASS" : "GRAY_" + String((decision && decision.reason) || "UNAVAILABLE"),
+      decision: decision,
+      metrics: metrics,
+      flags: {
+        officialEnabled: !!(
+          cfg.officialA2ui &&
+          (cfg.officialA2ui.enabled === true ||
+            cfg.officialA2ui.enabled === 1 ||
+            String(cfg.officialA2ui.enabled) === "1")
+        ),
+        bridgeHealthy: !!(cfg.wailsBridge && cfg.wailsBridge.healthy !== false),
+        whitelist: (cfg.officialA2ui && cfg.officialA2ui.commandWhitelist) || []
+      },
+      activeCard: card
+        ? {
+            id: card.id,
+            representationRoute: String(card.representationRoute || ""),
+            grayReason: card.officialA2uiRoute ? String(card.officialA2uiRoute.reason || "") : ""
+          }
+        : null
+    };
+  }
+
+  function probeP2OfficialA2ui() {
+    var card = getActionCard("p2-a2ui-demo");
+    var client = typeof PaletteOfficialA2UIStreamClient !== "undefined"
+      ? PaletteOfficialA2UIStreamClient
+      : null;
+    var wsState = client && typeof client.getState === "function" ? client.getState() : "missing";
+    var wsRetries = client && typeof client.getRetryCount === "function" ? client.getRetryCount() : -1;
+    if (!card) {
+      return {
+        ok: false,
+        code: "P2_CARD_MISSING",
+        wsState: wsState,
+        wsRetries: wsRetries
+      };
+    }
+    var dom = document.getElementById("card-" + card.id);
+    var official = card.officialA2ui || {};
+    var renderStatus = "";
+    var titleText = "";
+    if (dom) {
+      var container = dom.querySelector(".card-official-a2ui");
+      if (container) renderStatus = String(container.dataset.renderStatus || "");
+      var host = dom.querySelector("nmer-official-a2ui-surface");
+      if (host && host.shadowRoot) {
+        var titleNode = host.shadowRoot.querySelector("[data-a2ui-path='/title'], h3, .a2ui-text");
+        if (titleNode) titleText = String(titleNode.textContent || "").trim();
+      }
+      if (!titleText) {
+        var head = dom.querySelector(".card-official-a2ui-head");
+        if (head) titleText = String(head.textContent || "").trim();
+      }
+    }
+    var surfaceOk = official.source === "go-jsonl"
+      && String(official.surfaceId || "") === "surface-p2-demo";
+    var titleOk = titleText.indexOf("JSONL") >= 0 || titleText.indexOf("流转发完成") >= 0;
+    return {
+      ok: !!(surfaceOk && (titleOk || renderStatus === "rendered")),
+      code: titleOk ? "P2_PASS" : (surfaceOk ? "P2_SURFACE_OK_TITLE_PENDING" : "P2_SURFACE_MISSING"),
+      cardId: card.id,
+      surfaceId: String(official.surfaceId || ""),
+      titleText: titleText,
+      renderStatus: renderStatus,
+      wsState: wsState,
+      wsRetries: wsRetries
+    };
+  }
+
+  var ADP_DEMO_ENVELOPES = [
+    {"schemaVersion":"nmer.a2ui.transport.v1","eventId":"evt-adp-1","requestId":"req-adp-demo","correlationId":"corr-adp-demo","cardId":"adp-a2ui-demo","surfaceId":"surface-adp-demo","seq":1,"message":{"version":"v0.9","createSurface":{"surfaceId":"surface-adp-demo","catalogId":"https://a2ui.org/specification/v0_9/basic_catalog.json","sendDataModel":true}}},
+    {"schemaVersion":"nmer.a2ui.transport.v1","eventId":"evt-adp-2","requestId":"req-adp-demo","correlationId":"corr-adp-demo","cardId":"adp-a2ui-demo","surfaceId":"surface-adp-demo","seq":2,"message":{"version":"v0.9","updateComponents":{"surfaceId":"surface-adp-demo","components":[{"id":"root","component":"Column","children":["title","body"],"align":"stretch"},{"id":"title","component":"Text","text":{"path":"/title"},"variant":"h3"},{"id":"body","component":"Text","text":{"path":"/answer"},"variant":"body"}]}}},
+    {"schemaVersion":"nmer.a2ui.transport.v1","eventId":"evt-adp-3","requestId":"req-adp-demo","correlationId":"corr-adp-demo","cardId":"adp-a2ui-demo","surfaceId":"surface-adp-demo","seq":3,"final":true,"message":{"version":"v0.9","updateDataModel":{"surfaceId":"surface-adp-demo","path":"/","value":{"title":"OpenClaw · Adapter","answer":"Adapter ingest smoke OK"}}}}
+  ];
+
+  function prepareAdapterOfficialA2uiProbe() {
+    var applied = 0;
+    var lastReason = "";
+    for (var i = 0; i < ADP_DEMO_ENVELOPES.length; i++) {
+      var result = applyOfficialA2uiEnvelope(ADP_DEMO_ENVELOPES[i]);
+      if (result && result.ok) {
+        applied += 1;
+      } else {
+        lastReason = result && result.reason ? String(result.reason) : "apply_failed";
+      }
+    }
+    return {
+      ok: applied === ADP_DEMO_ENVELOPES.length,
+      code: applied === ADP_DEMO_ENVELOPES.length ? "ADP_PREP_OK" : "ADP_PREP_PARTIAL",
+      applied: applied,
+      total: ADP_DEMO_ENVELOPES.length,
+      reason: lastReason
+    };
+  }
+
+  function probeAdapterOfficialA2ui() {
+    var card = getActionCard("adp-a2ui-demo");
+    var client = typeof PaletteOfficialA2UIStreamClient !== "undefined"
+      ? PaletteOfficialA2UIStreamClient
+      : null;
+    var wsState = client && typeof client.getState === "function" ? client.getState() : "missing";
+    var wsRetries = client && typeof client.getRetryCount === "function" ? client.getRetryCount() : -1;
+    if (!card) {
+      return {
+        ok: false,
+        code: "ADP_CARD_MISSING",
+        wsState: wsState,
+        wsRetries: wsRetries
+      };
+    }
+    var dom = document.getElementById("card-" + card.id);
+    var official = card.officialA2ui || {};
+    var renderStatus = "";
+    var titleText = "";
+    if (dom) {
+      var container = dom.querySelector(".card-official-a2ui");
+      if (container) renderStatus = String(container.dataset.renderStatus || "");
+      var host = dom.querySelector("nmer-official-a2ui-surface");
+      if (host && host.shadowRoot) {
+        var titleNode = host.shadowRoot.querySelector("[data-a2ui-path='/title'], h3, .a2ui-text");
+        if (titleNode) titleText = String(titleNode.textContent || "").trim();
+      }
+      if (!titleText) {
+        var head = dom.querySelector(".card-official-a2ui-head");
+        if (head) titleText = String(head.textContent || "").trim();
+      }
+    }
+    var surfaceOk = official.source === "go-jsonl"
+      && String(official.surfaceId || "") === "surface-adp-demo";
+    var titleOk = titleText.indexOf("Adapter") >= 0 || titleText.indexOf("OpenClaw") >= 0;
+    return {
+      ok: !!(surfaceOk && (titleOk || renderStatus === "rendered")),
+      code: titleOk ? "ADP_PASS" : (surfaceOk ? "ADP_SURFACE_OK_TITLE_PENDING" : "ADP_SURFACE_MISSING"),
+      cardId: card.id,
+      surfaceId: String(official.surfaceId || ""),
+      titleText: titleText,
+      renderStatus: renderStatus,
+      wsState: wsState,
+      wsRetries: wsRetries
+    };
+  }
 
   function actionCardUiLabel(uiState) {
     var m = { Planning: "规划中", Running: "执行中", Waiting: "待回复", Done: "已归档" };
@@ -5633,6 +6062,76 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   function getActionCard(cardId) {
     return actionState.cards[cardId] || null;
+  }
+
+  function mountOfficialA2uiFixture(cardId, fixtureId) {
+    var targetId = String(cardId || actionState.activeCardId || "");
+    var card = getActionCard(targetId);
+    if (!card) return { ok: false, reason: "card_not_found" };
+    card.officialA2ui = {
+      source: "fixture",
+      fixtureId: String(fixtureId || "happy-six-components")
+    };
+    card.expanded = true;
+    actionState.activeCardId = card.id;
+    refreshActionCardDom(card);
+    return { ok: true, cardId: card.id, fixtureId: card.officialA2ui.fixtureId };
+  }
+
+  function clearOfficialA2ui(cardId) {
+    var targetId = String(cardId || actionState.activeCardId || "");
+    var card = getActionCard(targetId);
+    if (!card) return { ok: false, reason: "card_not_found" };
+    card.officialA2ui = null;
+    var dom = document.getElementById("card-" + card.id);
+    if (typeof PaletteRendererRegistry !== "undefined" && PaletteRendererRegistry.clearOfficial && dom) {
+      PaletteRendererRegistry.clearOfficial(dom);
+    } else if (typeof PaletteOfficialA2UIBridge !== "undefined" && dom) {
+      PaletteOfficialA2UIBridge.clear(dom);
+    }
+    return { ok: true, cardId: card.id };
+  }
+
+  function applyOfficialA2uiEnvelope(envelope) {
+    envelope = envelope || {};
+    var cardId = String(envelope.cardId || "");
+    if (!cardId) return { ok: false, reason: "card_id_required" };
+    var card = getActionCard(cardId);
+    if (!card) {
+      runMockRenderBlocks(cardId, [
+        {
+          id: "official-a2ui-fallback-" + cardId,
+          type: "reply",
+          state: "final",
+          source: "system",
+          seq: 1,
+          turnId: 1,
+          title: "官方 A2UI 流",
+          markdown: "官方 A2UI 正在接收结构化界面；若渲染失败，将保留此安全文本。"
+        }
+      ]);
+      card = getActionCard(cardId);
+    }
+    if (!card) return { ok: false, reason: "card_create_failed" };
+    card.officialA2ui = {
+      source: "go-jsonl",
+      surfaceId: String(envelope.surfaceId || "")
+    };
+    card.expanded = true;
+    actionState.activeCardId = card.id;
+    var dom = ensureActionCardDom(card);
+    if (!dom) {
+      return { ok: false, reason: "dom_unavailable" };
+    }
+    var result =
+      typeof PaletteRendererRegistry !== "undefined" && PaletteRendererRegistry.applyOfficialEnvelope
+        ? PaletteRendererRegistry.applyOfficialEnvelope(card.id, dom, envelope, { debugLog: agentDebugLog })
+        : typeof PaletteOfficialA2UIBridge !== "undefined" && PaletteOfficialA2UIBridge.applyEnvelope
+          ? PaletteOfficialA2UIBridge.applyEnvelope(card.id, dom, envelope, { debugLog: agentDebugLog })
+          : { ok: false, reason: "bridge_unavailable" };
+    refreshActionCardDom(card);
+    syncActionResultsLayout();
+    return result;
   }
 
   function resolveActionCard(cardId, reqId) {
@@ -5863,8 +6362,18 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
             ? "追加新指令…"
             : "补充要求（不中断当前任务）…";
     }
-    if (typeof PaletteCardRenderer !== "undefined" && PaletteCardRenderer.renderActions) {
-      PaletteCardRenderer.renderActions(card.id, card, dom, { debugLog: agentDebugLog });
+    if (typeof PaletteRendererRegistry !== "undefined" && PaletteRendererRegistry.refreshCard) {
+      PaletteRendererRegistry.refreshCard(card, dom, { debugLog: agentDebugLog });
+    } else {
+      if (typeof PaletteCardRenderer !== "undefined" && PaletteCardRenderer.renderActions) {
+        PaletteCardRenderer.renderActions(card.id, card, dom, { debugLog: agentDebugLog });
+      }
+      if (
+        typeof PaletteOfficialA2UIBridge !== "undefined" &&
+        PaletteOfficialA2UIBridge.syncCard
+      ) {
+        PaletteOfficialA2UIBridge.syncCard(card, dom, { debugLog: agentDebugLog });
+      }
     }
     publishSlotRenderersDebug(card.id);
   }
@@ -6022,6 +6531,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         '<div class="card-timeline"></div>' +
         '<div class="card-status-log"></div>' +
         '<div class="card-question" hidden></div>' +
+        '<section class="card-official-a2ui" hidden>' +
+        '<div class="card-official-a2ui-head">官方 A2UI v0.9</div>' +
+        '<div class="card-official-a2ui-mount"></div>' +
+        "</section>" +
         '<div class="card-a2ui" hidden></div>' +
         '<div class="card-replies"></div>' +
         "</div>" +
@@ -6058,6 +6571,18 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       }
     } else if (el && !el.querySelector(".card-replies")) {
       PaletteCardRenderer.ensureCardRepliesHost(el);
+    }
+    if (
+      el &&
+      typeof PaletteRendererRegistry !== "undefined" &&
+      PaletteRendererRegistry.ensureOfficialContainer
+    ) {
+      PaletteRendererRegistry.ensureOfficialContainer(el);
+    } else if (
+      typeof PaletteOfficialA2UIBridge !== "undefined" &&
+      PaletteOfficialA2UIBridge.ensureContainer
+    ) {
+      PaletteOfficialA2UIBridge.ensureContainer(el);
     }
     PaletteCardRenderer.ensureCardA2uiDomOrder(el);
     bindActionCardHoverPreview(card, el);
@@ -6476,10 +7001,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         _protoStarted: false,
         expanded: false,
         liveThought: "",
-        rawAnswer: dto.rawAnswer || "",
+        rawAnswer: clipStreamText(dto.rawAnswer || ""),
         updatedAt: dto.updatedAt || "",
         createdAt: dto.createdAt || dto.updatedAt || "",
-        messages: Array.isArray(dto.messages) ? dto.messages.slice() : []
+        messages: Array.isArray(dto.messages)
+          ? dto.messages.slice(-ACTION_CARD_MESSAGE_LIMIT)
+          : []
       };
       actionState.cards[id] = card;
     }
@@ -6504,6 +7031,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (dto.routeLabel) card.routeLabel = String(dto.routeLabel);
     if (dto.promptAddon) card.promptAddon = String(dto.promptAddon);
     if (dto.a2uiCandidates) card.a2uiCandidates = dto.a2uiCandidates;
+    if (dto.officialA2ui !== undefined) card.officialA2ui = dto.officialA2ui;
+    if (dto.representationRoute) card.representationRoute = String(dto.representationRoute);
+    if (dto.officialA2uiRoute) card.officialA2uiRoute = dto.officialA2uiRoute;
     if (card.routeId && typeof PaletteProfileComposer !== "undefined" && PaletteProfileComposer.compose) {
       card.routeProfile = PaletteProfileComposer.compose(card.routeId, { reason: "dto_hydrate" });
       card.a2uiCandidates = card.routeProfile.a2uiCandidates || card.a2uiCandidates || [];
@@ -6531,12 +7061,13 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (dto.updatedAt) card.updatedAt = dto.updatedAt;
     if (dto.createdAt) card.createdAt = dto.createdAt;
     else if (!card.createdAt && dto.updatedAt) card.createdAt = dto.updatedAt;
-    if (dto.messages && Array.isArray(dto.messages)) card.messages = dto.messages.slice();
+    if (dto.messages && Array.isArray(dto.messages))
+      card.messages = dto.messages.slice(-ACTION_CARD_MESSAGE_LIMIT);
     if (dto.rawAnswer != null) {
       var incomingRaw = String(dto.rawAnswer || "");
       var followUp = cardFollowUpInFlight(card) || (card.running && !card.ended && card._segmentPriorBlocks && card._segmentPriorBlocks.length);
       if (!followUp || incomingRaw) {
-        card.rawAnswer = incomingRaw;
+        card.rawAnswer = clipStreamText(incomingRaw);
         if (card.rawAnswer && !isAgentStatusPreview(card.rawAnswer))
           card.liveThought = card.rawAnswer;
       }
@@ -6713,6 +7244,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       active._lastFollowUpQuery = q;
       if (!Array.isArray(active.messages)) active.messages = [];
       active.messages.push({ role: "user", text: q, at: new Date().toISOString() });
+      if (active.messages.length > ACTION_CARD_MESSAGE_LIMIT)
+        active.messages = active.messages.slice(-ACTION_CARD_MESSAGE_LIMIT);
       if (kind === "append") {
         ensureFollowUpPriorBlocks(active);
         beginCardFollowUpSegment(active, "append");
@@ -6785,6 +7318,17 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         active.a2uiCandidates = routeResult.a2uiCandidates;
         active.promptAddon = composePayload.promptAddon;
       }
+    }
+    var grayDecision = null;
+    if (typeof PaletteOfficialA2UIGray !== "undefined" && PaletteOfficialA2UIGray.resolveSubmit) {
+      grayDecision = PaletteOfficialA2UIGray.resolveSubmit(q, window.nmerPaletteBridgeConfig || {});
+      submitMsg.representationRoute = grayDecision.route;
+      submitMsg.officialA2uiRoute = grayDecision;
+      submitMsg.slashCommand = grayDecision.command || "";
+      if (active) PaletteOfficialA2UIGray.applyToCard(active, grayDecision);
+      agentDebugLog("official_a2ui_gray", JSON.stringify(grayDecision));
+    } else {
+      submitMsg.representationRoute = "r1r2";
     }
     agentDebugLog("submit_start", "kind=" + kind + " text=" + String(q).slice(0, 60));
     var provGuess = prov;
@@ -6865,7 +7409,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function renderActionCardSync(cards) {
-    cards = normalizeAgentCardsArray(cards);
+    cards = limitActionCardDtos(cards);
     var hostIds = {};
     for (var hi = 0; hi < cards.length; hi++) {
       var hid = String(cards[hi].cardId || cards[hi].id || "");
@@ -7597,7 +8141,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (!pendingChunkBuf || isBackgroundStreaming) return;
     var body = document.querySelector(".ai-stream-body");
     if (!body) return;
-    aiStreamText += pendingChunkBuf;
+    aiStreamText = clipStreamText(aiStreamText + pendingChunkBuf);
     pendingChunkBuf = "";
     body.textContent = aiStreamText;
     body.scrollTop = body.scrollHeight;
@@ -7606,12 +8150,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   function appendAiChunk(delta) {
     if (isBackgroundStreaming || !delta) return;
     if (aiPhase === "compact") {
-      aiStreamText += String(delta);
+      aiStreamText = clipStreamText(aiStreamText + String(delta));
       if (aiBgCardPayload) aiBgCardPayload.answer = aiStreamText;
       updateAiBackgroundCard();
       return;
     }
-    pendingChunkBuf += String(delta);
+    pendingChunkBuf = clipStreamText(pendingChunkBuf + String(delta));
     if (aiPhase === "streaming") {
       updateAiStreamHeader({ query: state.input, phase: "streaming" });
     }
@@ -8095,8 +8639,153 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     } catch (_) {}
   };
 
+  function applyWailsBridgeConfig(cfg) {
+    if (!cfg || typeof cfg !== "object") return;
+    window.nmerPaletteBridgeConfig = cfg;
+    var client = typeof PaletteOfficialA2UIStreamClient !== "undefined"
+      ? PaletteOfficialA2UIStreamClient
+      : null;
+    if (!client) return;
+    if (typeof client.applyBridgeConfig === "function") {
+      client.applyBridgeConfig(cfg);
+      return;
+    }
+    var wb = cfg.wailsBridge || {};
+    if (wb.enabled === false) {
+      if (typeof client.stop === "function") client.stop();
+      return;
+    }
+    if (wb.wsUrl && typeof client.connect === "function") client.connect(String(wb.wsUrl));
+    else if (typeof client.connect === "function") client.connect();
+  }
+
   function handleHostMessage(d) {
     if (!d || !d.type) return;
+    if (d.type === "palette_oc5_probe_request") {
+      var oc5ReqId = String(d.reqId || "");
+      try {
+        var out =
+          typeof probeOc5ProtocolClosure === "function"
+            ? probeOc5ProtocolClosure()
+            : { ok: false, code: "OC5_PROBE_FN_MISSING" };
+        var payload = {
+          type: "palette_oc5_probe_result",
+          reqId: oc5ReqId,
+          ok: !!out.ok,
+          code: String(out.code || ""),
+          engine: out.engine || {},
+          stats: out.stats || {},
+          samples: out.samples || []
+        };
+        if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.send) {
+          PaletteHostAdapter.send("palette_oc5_probe_result", payload);
+        } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+          window.chrome.webview.postMessage(JSON.stringify(payload));
+        }
+      } catch (e) {
+        var errPayload = {
+          type: "palette_oc5_probe_result",
+          reqId: oc5ReqId,
+          ok: false,
+          code: "OC5_PROBE_ERR",
+          err: String((e && e.message) || e)
+        };
+        if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.send) {
+          PaletteHostAdapter.send("palette_oc5_probe_result", errPayload);
+        } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+          window.chrome.webview.postMessage(JSON.stringify(errPayload));
+        }
+      }
+      return;
+    }
+    if (d.type === "palette_gray_probe_request") {
+      var grayReqId = String(d.reqId || "");
+      var grayQuery = String(d.query || "/search 测试");
+      try {
+        var grayOut =
+          typeof probeGrayRoute === "function"
+            ? probeGrayRoute(grayQuery)
+            : { ok: false, code: "GRAY_PROBE_FN_MISSING" };
+        var grayPayload = {
+          type: "palette_gray_probe_result",
+          reqId: grayReqId,
+          ok: !!grayOut.ok,
+          code: String(grayOut.code || ""),
+          detail: grayOut
+        };
+        if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.send) {
+          PaletteHostAdapter.send("palette_gray_probe_result", grayPayload);
+        } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+          window.chrome.webview.postMessage(JSON.stringify(grayPayload));
+        }
+      } catch (e) {
+        var grayErr = {
+          type: "palette_gray_probe_result",
+          reqId: grayReqId,
+          ok: false,
+          code: "GRAY_PROBE_ERR",
+          detail: { err: String((e && e.message) || e) }
+        };
+        if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.send) {
+          PaletteHostAdapter.send("palette_gray_probe_result", grayErr);
+        } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+          window.chrome.webview.postMessage(JSON.stringify(grayErr));
+        }
+      }
+      return;
+    }
+    if (d.type === "palette_adp_demo_prepare") {
+      if (typeof prepareAdapterOfficialA2uiProbe === "function") {
+        prepareAdapterOfficialA2uiProbe();
+      }
+      return;
+    }
+    if (d.type === "palette_adp_probe_request") {
+      var adpReqId = String(d.reqId || "");
+      try {
+        var adpPrep =
+          typeof prepareAdapterOfficialA2uiProbe === "function"
+            ? prepareAdapterOfficialA2uiProbe()
+            : { ok: false, code: "ADP_PREP_FN_MISSING" };
+        var adpOut =
+          typeof probeAdapterOfficialA2ui === "function"
+            ? probeAdapterOfficialA2ui()
+            : { ok: false, code: "ADP_PROBE_FN_MISSING" };
+        if (adpOut && typeof adpOut === "object") {
+          adpOut.prep = adpPrep;
+        }
+        var adpPayload = {
+          type: "palette_adp_probe_result",
+          reqId: adpReqId,
+          ok: !!adpOut.ok,
+          code: String(adpOut.code || ""),
+          detail: adpOut
+        };
+        if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.send) {
+          PaletteHostAdapter.send("palette_adp_probe_result", adpPayload);
+        } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+          window.chrome.webview.postMessage(JSON.stringify(adpPayload));
+        }
+      } catch (e) {
+        var adpErr = {
+          type: "palette_adp_probe_result",
+          reqId: adpReqId,
+          ok: false,
+          code: "ADP_PROBE_ERR",
+          detail: { err: String((e && e.message) || e) }
+        };
+        if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.send) {
+          PaletteHostAdapter.send("palette_adp_probe_result", adpErr);
+        } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+          window.chrome.webview.postMessage(JSON.stringify(adpErr));
+        }
+      }
+      return;
+    }
+    if (d.type === "palette_wails_bridge_config") {
+      applyWailsBridgeConfig(d);
+      return;
+    }
     if (d.type === "palette_results") {
       if (state.intent === "local" && state.input.trim()) return;
       if (d.seq && Number(d.seq) !== state.querySeq) return;
@@ -8282,8 +8971,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         if (cardHasPipelineReply(card)) hasBody = true;
         if (card.parser && card.parser._buf && !isAgentStatusPreview(card.parser._buf)) hasBody = true;
         if (delta && !statusPreview) {
-          if (!card.rawAnswer || isAgentStatusPreview(card.rawAnswer)) card.rawAnswer = delta;
-          else card.rawAnswer = String(card.rawAnswer || "") + delta;
+          if (!card.rawAnswer || isAgentStatusPreview(card.rawAnswer))
+            card.rawAnswer = clipStreamText(delta);
+          else card.rawAnswer = clipStreamText(String(card.rawAnswer || "") + delta);
         }
         var pipelineActive =
           typeof PaletteBlockPipeline !== "undefined" && typeof PaletteBlockPipeline.ingestDelta === "function";
@@ -8552,6 +9242,19 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       getCard: getActionCard,
       debugLog: agentDebugLog,
       onActionResult: onPaletteActionResult
+    });
+  }
+  if (typeof PaletteOfficialA2UICardNotify !== "undefined" && PaletteOfficialA2UICardNotify.install) {
+    PaletteOfficialA2UICardNotify.install({
+      getCardDom: function (cardId) {
+        return document.getElementById("card-" + String(cardId || ""));
+      },
+      onActionResultLine: function (cardId, line) {
+        agentDebugLog("a2ui_action_result", String(line.title || "") + " " + String(line.body || ""));
+      },
+      onRejectedLine: function (cardId, line) {
+        agentDebugLog("a2ui_rejected", String(line.title || "") + " " + String(line.body || ""));
+      }
     });
   }
 

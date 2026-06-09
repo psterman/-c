@@ -545,6 +545,7 @@ global WailsInputAllowHtmlFallback := false
 ; true：每次双击 CapsLock 先结束旧进程再启动 build\bin 下最新 exe（避免一直激活内存里的老透明版）
 global WailsInputRestartOnActivate := true
 
+; TODO(wails-migration): 脚手架就绪后改为 apps\nmer-wails；当前路径兼容本机旧 prototype 构建。
 WailsInput_GetAppRoot() {
     return A_ScriptDir . "\archive\prototype\wails-toolbar-app"
 }
@@ -611,7 +612,7 @@ WailsInput_IsRunningCanonicalExe() {
 WailsInput_LaunchCanonicalExe() {
     launchPath := WailsInput_ResolveLaunchPath()
     if (launchPath = "" || !FileExist(launchPath)) {
-        TrayTip("命令栏", "未找到命令栏程序，请执行：`narchive\prototype\wails-toolbar-app 目录下 wails build", "Icon!")
+        TrayTip("命令栏", "未找到命令栏程序。WebView2 模式请确认 CommandPaletteUseWebView=true；Wails 回退请构建 apps\nmer-wails（见 docs\wails-migration-boundary.md）", "Icon!")
         return false
     }
     global WailsInputLaunchPath

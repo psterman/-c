@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Official A2UI P1 Browser Fixture</title>
+  <script src="../../vendor/a2ui/nmer-a2ui-v09.js"></script>
+  <script src="../official/PaletteOfficialA2UIBridge.js"></script>
+</head>
+<body>
+  <article id="card-browser-test">
+    <div class="card-body">
+      <section class="card-official-a2ui" hidden>
+        <div class="card-official-a2ui-head">官方 A2UI v0.9</div>
+        <div class="card-official-a2ui-mount"></div>
+      </section>
+      <div class="card-a2ui" hidden></div>
+      <div class="card-replies"></div>
+    </div>
+  </article>
+  <output id="result">pending</output>
+  <script>
+    (function () {
+      var card = document.getElementById("card-browser-test");
+      card.addEventListener("official-a2ui-render", function (event) {
+        var detail = event.detail || {};
+        document.body.dataset.testStatus = detail.status || "missing";
+        document.getElementById("result").textContent =
+          detail.status === "rendered" ? "PASS official A2UI mounted" : "FAIL " + (detail.error || "");
+      });
+      PaletteOfficialA2UIBridge.mountFixture(
+        "browser-test",
+        card,
+        { source: "fixture", fixtureId: "happy-six-components" },
+        {}
+      );
+    })();
+  </script>
+</body>
+</html>

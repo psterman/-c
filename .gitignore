@@ -26,6 +26,18 @@ CursorHelper.db
 Data/*
 !Data/.gitkeep
 
+# 环境变量文件（真实 Key/Token 勿提交；示例模板可提交）
+.env
+.env.*
+!.env.example
+*.env
+!*.env.example
+!env.example
+
+# 通用凭证文件名（勿提交）
+**/credentials.json
+**/*secret*
+
 # 用户私有数据（API Key、主配置、OpenClaw 状态）
 local/*
 !local/.gitkeep
@@ -68,7 +80,13 @@ tools/whisper-stt/models/
 tools/whisper-stt/output.txt
 tools/whisper-stt/__pycache__/
 
-# Prototype: generated artifacts and local deps（已迁至 archive/prototype/）
+# Wails 工程构建产物（apps/nmer-wails/ 脚手架创建后生效）
+apps/nmer-wails/**/build/bin/
+apps/nmer-wails/**/.wails/
+apps/nmer-wails/**/frontend/node_modules/
+apps/nmer-wails/**/frontend/dist/
+
+# 历史 prototype 构建产物（archive/prototype/wails-toolbar-app 已从 Git 移除，本地残留勿提交）
 archive/prototype/**/frontend/node_modules/
 archive/prototype/**/frontend/dist/
 archive/prototype/**/build/bin/

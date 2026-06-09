@@ -1,12 +1,43 @@
 ; ===================== msg =====================
 #Requires AutoHotkey v2.0
+#Include modules\LocalPaths.ahk
+
+NMER_StartupOnError(err, mode) {
+    if (mode = "Return")
+        return false
+    line := 0
+    try line := err.Line
+    msg := "启动或运行出错：`n" . err.Message
+    if (line)
+        msg .= "`n`n" . err.File . " (行 " . line . ")"
+    try NMER_Log("startup", "unhandled_error", err.Message . " line=" . line)
+    catch {
+        try FileAppend(Format("{} {}\n", A_Now, msg), Nmer_DebugPath("startup_error.log"))
+    }
+    try MsgBox(msg, "CursorHelper", 0x10)
+    return false
+}
+
+NMER_Log(scope, event, detail := "") {
+    global NMER_TraceSession
+    try {
+        logPath := Nmer_DebugPath("nmer_trace.log")
+        dir := ""
+        SplitPath(logPath, , &dir)
+        if (dir != "" && !DirExist(dir))
+            DirCreate(dir)
+        ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
+        FileAppend("[" . ts . "][" . NMER_TraceSession . "][" . scope . "][" . event . "] " . String(detail) . "`r`n", logPath, "UTF-8")
+    } catch {
+    }
+}
 
 OnError(NMER_StartupOnError)
+global NMER_TraceSession := FormatTime(A_Now, "yyyyMMdd-HHmmss") . "-" . A_TickCount
 global pToken := Gdip_Startup()
 if (!pToken) {
     MsgBox "GDI+ 启动失败，请检查 lib\ahk\Gdip_All.ahk"
 }
-global NMER_TraceSession := FormatTime(A_Now, "yyyyMMdd-HHmmss") . "-" . A_TickCount
 NMER_Log("startup", "boot", "gdip=" . (pToken ? "ok" : "fail"))
 ; ScreenshotEditorPlugin #HotIf 可能在主脚本后部全局块执行前被求值，须尽早初始化
 global ScreenshotColorPickerActive := false
@@ -138,7 +169,6 @@ HoleDragHooks_Emit(eventName, data := 0) {
 ; 包含 lib 文件夹中的 Class_SQLiteDB.ahk（AHK v2 版本）
 #Include lib\ahk\Class_SQLiteDB.ahk
 #Include lib\ahk\Jxon.ahk
-#Include modules\LocalPaths.ahk
 Nmer_MigrateDebugFiles()
 global NativeDropBridgeOut := Nmer_DebugPath("native_drop_events.jsonl")
 global NativeDropDiagLogPath := Nmer_DebugPath("drop_diagnostics_runtime.log")
@@ -207,6 +237,7 @@ global CommandPaletteUseWebView := true
 #Include modules\GlobalDragHoleOverlay.ahk
 #Include modules\NativeDropCursorSync.ahk
 #Include modules\FloatingToolbar.ahk
+#Include modules\NmerWailsBridge.ahk
 #Include modules\CommandPaletteCore.ahk
 #Include modules\CommandPaletteAgentOrchestrator.ahk
 #Include modules\CommandPaletteSearchDebug.ahk
@@ -242,7 +273,7 @@ if (EnableHoleOverlayOnNativeDrop) {
     try GDHO_SetFallbackUrl(holeFallbackUrl)
 }
 
-OnExit((*) => NativeDropBridge_Stop())
+OnExit((*) => (NativeDropBridge_Stop(), Nmer_StopWailsBridge()))
 NativeDropBridge_InitCopyDataReceiver()
 
 ; 已移除强制管理员自提权，避免与 Everything 产生权限不一致导致 IPC 失败。
@@ -3001,6 +3032,7 @@ GDHO_IsHoleUrlReachable(url, timeoutMs := 800) {
 
 GDHO_TryStartHoleDevServer() {
     try {
+        ; TODO(wails-migration): 迁移后优先 apps\nmer-wails\frontend；保留 archive 路径以兼容本机旧目录。
         workDir := A_ScriptDir . "\archive\prototype\wails-toolbar-app\frontend"
         if !DirExist(workDir)
             return false
@@ -4622,6 +4654,10 @@ if FuncExists("Nmer_AutoStartSearchCenterCore") {
     SetTimer(Nmer_AutoStartSearchCenterCore, -1500)
     SetTimer(Nmer_AutoStartSearchCenterCore, -6000)
 }
+if FuncExists("Nmer_AutoStartWailsBridge") {
+    SetTimer(Nmer_AutoStartWailsBridge, -2000)
+    SetTimer(Nmer_AutoStartWailsBridge, -8000)
+}
 ; 初始化粘贴板历史面板
 InitClipboardHistoryPanel()
 ; 初始化 WebView2 剪贴板面板（尽早创建共享环境；悬浮栏/球在 _WV2_BeginWarmupAfterEnv 内应用，见上）
@@ -5310,38 +5346,6 @@ ConfigOpenFlightRelease(*) {
         NMER_Log("ui", "open_config_force_release", "vis=1")
     }
 }
-
-NMER_StartupOnError(err, mode) {
-    if (mode = "Return")
-        return false
-    line := 0
-    try line := err.Line
-    msg := "启动或运行出错：`n" . err.Message
-    if (line)
-        msg .= "`n`n" . err.File . " (行 " . line . ")"
-    try NMER_Log("startup", "unhandled_error", err.Message . " line=" . line)
-    catch {
-        try FileAppend(Format("{} {}\n", A_Now, msg), Nmer_DebugPath("startup_error.log"))
-    }
-    try MsgBox(msg, "CursorHelper", 0x10)
-    return false
-}
-
-NMER_Log(scope, event, detail := "") {
-    global NMER_TraceSession
-    try {
-        logPath := Nmer_DebugPath("nmer_trace.log")
-        dir := ""
-        SplitPath(logPath, , &dir)
-        if (dir != "" && !DirExist(dir))
-            DirCreate(dir)
-        ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
-        FileAppend("[" . ts . "][" . NMER_TraceSession . "][" . scope . "][" . event . "] " . String(detail) . "`r`n", logPath, "UTF-8")
-    } catch {
-    }
-}
-
-
 
 ; ===================== 保存剪贴板管理器窗口位置 =====================
 SaveClipboardManagerPosition() {
@@ -7014,8 +7018,59 @@ ExitFunc(ExitReason, ExitCode) {
 #Include modules\VirtualKeyboardInterop.ahk
 #Include "modules\ConfigWebViewModule.ahk"
 
-; 命令面板可见时 Ctrl+Shift+A：诊断窗 · 动作托管标签
+; 命令面板可见时 Ctrl+Shift+O：OC-5 协议闭合探针（结果写入 Cache\debug\oc5_probe_last.json）
 #HotIf CommandPalette_IsVisible()
+^+o:: {
+    try {
+        if FuncExists("CommandPalette_RunOc5ProbeAndPersist")
+            CommandPalette_RunOc5ProbeAndPersist()
+        else if FuncExists("CommandPalette_ProbeOc5ProtocolClosure")
+            CommandPalette_ProbeOc5ProtocolClosure()
+        else
+            try TrayTip("命令面板", "OC-5 探针未载入，请完全重启牛马脚本", "Iconx 2")
+            catch {
+            }
+    } catch as e {
+        try TrayTip("命令面板", "OC-5 探针失败: " . e.Message, "Iconx 2")
+        catch {
+        }
+    }
+}
+; 命令面板可见时 Ctrl+Shift+U：Adapter A2UI 探针（结果写入 Cache\debug\adp_probe_last.json；需先 curl ingest 演示 JSONL）
+^+u:: {
+    try {
+        if FuncExists("CommandPalette_RunAdapterProbeAndPersist")
+            CommandPalette_RunAdapterProbeAndPersist()
+        else if FuncExists("CommandPalette_ProbeAdapterOfficialA2ui")
+            CommandPalette_ProbeAdapterOfficialA2ui()
+        else
+            try TrayTip("命令面板", "Adapter 探针未载入，请完全重启牛马脚本", "Iconx 2")
+            catch {
+            }
+    } catch as e {
+        try TrayTip("命令面板", "Adapter 探针失败: " . e.Message, "Iconx 2")
+        catch {
+        }
+    }
+}
+; 命令面板可见时 Ctrl+Shift+G：A2UI 灰度路由探针（结果写入 Cache\debug\gray_probe_last.json）
+^+g:: {
+    try {
+        if FuncExists("CommandPalette_RunGrayProbeAndPersist")
+            CommandPalette_RunGrayProbeAndPersist()
+        else if FuncExists("CommandPalette_ProbeGrayRoute")
+            CommandPalette_ProbeGrayRoute()
+        else
+            try TrayTip("命令面板", "灰度探针未载入，请完全重启牛马脚本", "Iconx 2")
+            catch {
+            }
+    } catch as e {
+        try TrayTip("命令面板", "灰度探针失败: " . e.Message, "Iconx 2")
+        catch {
+        }
+    }
+}
+; 命令面板可见时 Ctrl+Shift+A：诊断窗 · 动作托管标签
 ^+a:: {
     try {
         if FuncExists("CommandPalette_ShowSearchDebug")

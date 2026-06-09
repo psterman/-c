@@ -162,6 +162,26 @@
 
     },
 
+    controller_submit_async_dedupes: {
+
+      description: "异步 submit pending 期间相同 action 只提交一次",
+
+      card: { id: "card-ctrl-async-dedupe", uiState: "Done" },
+
+      action: {
+
+        id: "sb_async",
+
+        label: "异步发送",
+
+        intent: "submit",
+
+        payload: { text: "异步发送内容" }
+
+      }
+
+    },
+
     controller_unsupported_no_throw: {
 
       description: "unsupported intent 不抛异常",
@@ -831,6 +851,90 @@
         fixture: name,
 
         ok: pendingDuringSubmit && pendingChipDisabled && pendingClearedAfter
+
+      };
+
+    }
+
+    if (name === "controller_submit_async_dedupes") {
+
+      var asyncCard = Object.assign({}, fx.card);
+
+      var submitCount = 0;
+
+      var settle;
+
+      var pendingThenable = {
+
+        then: function (resolve) {
+
+          settle = resolve;
+
+        }
+
+      };
+
+      var asyncRun = withMockDom(fx.card.id, {}, function () {
+
+        var context = Object.assign({}, contextBase, {
+
+          cardId: fx.card.id,
+
+          blockId: "blk_async",
+
+          card: asyncCard,
+
+          chipId: fx.action.id,
+
+          submitFollowup: function () {
+
+            submitCount++;
+
+            return pendingThenable;
+
+          }
+
+        });
+
+        var first = PaletteActionController.handleA2uiAction(fx.action, context);
+
+        var duplicate = PaletteActionController.handleA2uiAction(fx.action, context);
+
+        return {
+
+          firstIsPromise: !!first && typeof first.then === "function",
+
+          duplicate: duplicate,
+
+          pendingActionId: asyncCard.pendingActionId,
+
+          submitCount: submitCount
+
+        };
+
+      });
+
+      if (settle) settle(true);
+
+      return {
+
+        fixture: name,
+
+        ok:
+
+          asyncRun.out.firstIsPromise &&
+
+          asyncRun.out.submitCount === 1 &&
+
+          asyncRun.out.pendingActionId === fx.action.id &&
+
+          asyncRun.out.duplicate &&
+
+          asyncRun.out.duplicate.deduped === true &&
+
+          asyncRun.out.duplicate.reason === "action_pending" &&
+
+          logs.some(function (l) { return l.ev === "a2ui_action_deduped"; })
 
       };
 

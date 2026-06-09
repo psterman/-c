@@ -712,11 +712,11 @@ HoleTriggers_MapSensitivityPreset(preset) {
     p := StrLower(Trim(String(preset)))
     switch p {
         case "compact":
-            return { trigger: 200, dismiss: 260 }
+            return Map("trigger", 200, "dismiss", 260)
         case "relaxed":
-            return { trigger: 340, dismiss: 420 }
+            return Map("trigger", 340, "dismiss", 420)
         default:
-            return { trigger: 260, dismiss: 320 }
+            return Map("trigger", 260, "dismiss", 320)
     }
 }
 

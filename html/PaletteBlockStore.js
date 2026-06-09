@@ -80,6 +80,7 @@
       "traceId",
       "title",
       "component",
+      "schemaVersion",
       "status",
       "message",
       "code"
@@ -120,26 +121,24 @@
     } else if (block.type === "question") {
       b.markdown = trimText(block.markdown, L.MAX_QUESTION_MD);
       b.title = trimText(block.title, 500);
-    } else if (block.type === "a2ui" && block.component === "ComparisonTable" && block.props) {
-      var clip =
-        root.PaletteBlockSchema && PaletteBlockSchema.clipComparisonTableProps
-          ? PaletteBlockSchema.clipComparisonTableProps(block.props)
-          : { props: block.props };
-      b.props = clip.props;
+    } else if (block.type === "a2ui" && block.component === "ComparisonTable") {
+      b.props =
+        root.PaletteBlockSchema && PaletteBlockSchema.sanitizeA2UIProps
+          ? PaletteBlockSchema.sanitizeA2UIProps("ComparisonTable", block.props)
+          : { columns: [], rows: [] };
       b.component = "ComparisonTable";
-    } else if (block.type === "a2ui" && block.component === "Steps" && block.props) {
+    } else if (block.type === "a2ui" && block.component === "Steps") {
       b.component = "Steps";
-      b.props = {
-        items: (block.props.items || []).slice(0, L.MAX_STEPS).map(function (it) {
-          return trimText(it, 2000);
-        })
-      };
-    } else if (block.type === "a2ui" && block.component === "Alert" && block.props) {
+      b.props =
+        root.PaletteBlockSchema && PaletteBlockSchema.sanitizeA2UIProps
+          ? PaletteBlockSchema.sanitizeA2UIProps("Steps", block.props)
+          : { items: [] };
+    } else if (block.type === "a2ui" && block.component === "Alert") {
       b.component = "Alert";
-      b.props = {
-        variant: block.props.variant || "info",
-        text: trimText(block.props.text, 2000)
-      };
+      b.props =
+        root.PaletteBlockSchema && PaletteBlockSchema.sanitizeA2UIProps
+          ? PaletteBlockSchema.sanitizeA2UIProps("Alert", block.props)
+          : { variant: "info", text: "" };
     } else if (block.type === "a2ui" && block.component === "ActionChips") {
       var chipProps = packActionChipsProps(block.props);
       if (!chipProps.actions.length) {

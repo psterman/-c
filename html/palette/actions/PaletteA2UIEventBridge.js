@@ -15,18 +15,56 @@
   }
 
   function resolveCardId(target, action) {
+    if (action && action.cardId) return String(action.cardId);
     if (target && target.getAttribute) {
       var fromEl = target.getAttribute("card-id");
       if (fromEl) return String(fromEl);
     }
-    if (action && action.cardId) return String(action.cardId);
     return "";
   }
 
-  function buildContext(cardId, card, action, target, options) {
+  function resolveBlockId(target, envelope) {
+    if (envelope && envelope.blockId) return String(envelope.blockId);
+    if (target && target.getAttribute) {
+      var fromEl = target.getAttribute("block-id");
+      if (fromEl) return String(fromEl);
+    }
+    return "";
+  }
+
+  function normalizeEventDetail(detail) {
+    detail = detail || {};
+    if (detail.action && typeof detail.action === "object") {
+      return {
+        version: Number(detail.version || 1),
+        eventId: String(detail.eventId || ""),
+        timestamp: Number(detail.timestamp || Date.now()),
+        cardId: String(detail.cardId || ""),
+        blockId: String(detail.blockId || ""),
+        action: detail.action,
+        state: detail.state && typeof detail.state === "object" ? detail.state : {}
+      };
+    }
+    return {
+      version: 0,
+      eventId: "",
+      timestamp: Date.now(),
+      cardId: String(detail.cardId || ""),
+      blockId: String(detail.blockId || ""),
+      action: detail,
+      state: {}
+    };
+  }
+
+  function buildContext(cardId, card, envelope, target, options) {
     options = options || {};
+    var action = envelope.action || {};
     return {
       cardId: cardId,
+      blockId: resolveBlockId(target, envelope),
+      eventId: envelope.eventId || "",
+      eventTimestamp: envelope.timestamp || 0,
+      eventState: envelope.state || {},
       card: card,
       chipId: action.id || "",
       chip: { id: action.id || "", label: action.label || "", kind: "safe" },
@@ -54,11 +92,14 @@
     installed = true;
 
     document.addEventListener("a2ui-action", function (e) {
-      var action = (e && e.detail) || {};
+      var envelope = normalizeEventDetail((e && e.detail) || {});
+      var action = envelope.action || {};
       var target = e && e.target;
       try {
         trace(options, "action_chips_lit_event", {
-          cardId: resolveCardId(target, action),
+          eventId: envelope.eventId || "",
+          cardId: resolveCardId(target, envelope),
+          blockId: resolveBlockId(target, envelope),
           actionId: action.id || "",
           intent: action.intent || "",
           actionSource: ACTION_SOURCE_LIT,
@@ -68,7 +109,7 @@
           trace(options, "action_chips_lit_error", { reason: "controller_unavailable" });
           return;
         }
-        var cardId = resolveCardId(target, action);
+        var cardId = resolveCardId(target, envelope);
         if (!cardId) {
           trace(options, "action_chips_lit_error", { reason: "missing_card_id" });
           return;
@@ -78,10 +119,13 @@
           trace(options, "action_chips_lit_error", { reason: "card_not_found", cardId: cardId });
           return;
         }
-        PaletteActionController.handleA2uiAction(action, buildContext(cardId, card, action, target, options));
+        PaletteActionController.handleA2uiAction(
+          action,
+          buildContext(cardId, card, envelope, target, options)
+        );
       } catch (err) {
         trace(options, "action_chips_lit_error", {
-          cardId: resolveCardId(target, action),
+          cardId: resolveCardId(target, envelope),
           actionId: action.id || "",
           error: String(err && err.message ? err.message : err)
         });
@@ -95,6 +139,7 @@
 
   root.PaletteA2UIEventBridge = {
     install: install,
+    normalizeEventDetail: normalizeEventDetail,
     _resetForTest: _resetForTest
   };
 })(typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : this);

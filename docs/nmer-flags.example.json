@@ -1,0 +1,12 @@
+{
+  "wailsBridge": {
+    "enabled": true
+  },
+  "officialA2ui": {
+    "enabled": true,
+    "commandWhitelist": ["/search", "/explain", "/compare"]
+  },
+  "rollback": {
+    "forceNmerOnly": false
+  }
+}

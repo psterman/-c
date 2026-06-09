@@ -15,6 +15,10 @@
 
   function resolveComponentDef(descriptor) {
     descriptor = descriptor || {};
+    if (root.PaletteComponentRegistry && PaletteComponentRegistry.resolve) {
+      var registered = PaletteComponentRegistry.resolve(descriptor);
+      if (registered) return registered;
+    }
     if (root.PaletteCardSlots && PaletteCardSlots.getComponentById) {
       var byId = PaletteCardSlots.getComponentById(descriptor.component);
       if (byId) return byId;
@@ -56,6 +60,7 @@
     if (!tag) {
       if (context.component === "status-log") tag = "palette-status-log";
       else if (context.component === "ActionChips") tag = "palette-action-chips";
+      else if (context.component === "Alert") tag = "palette-alert";
       else tag = "palette-followup-chips";
     }
     if (
@@ -84,10 +89,18 @@
     return true;
   }
 
+  function validateAlertDescriptor(descriptor) {
+    if (!descriptor || !descriptor.props) return false;
+    return !!String(descriptor.props.text || "").trim();
+  }
+
   function validateDescriptor(descriptor) {
     if (!descriptor || !descriptor.props) return false;
     if (descriptor.component === "status-log") return validateStatusDescriptor(descriptor);
     if (descriptor.component === "ActionChips") return validateActionChipsDescriptor(descriptor);
+    if (descriptor.component === "ComparisonTable") return validateComparisonTableDescriptor(descriptor);
+    if (descriptor.component === "Steps") return validateStepsDescriptor(descriptor);
+    if (descriptor.component === "Alert") return validateAlertDescriptor(descriptor);
     if (!Array.isArray(descriptor.props.chips)) return false;
     for (var i = 0; i < descriptor.props.chips.length; i++) {
       var c = descriptor.props.chips[i];
@@ -100,6 +113,27 @@
     if (!descriptor || !descriptor.props) return false;
     if (Array.isArray(descriptor.props.entries) && descriptor.props.entries.length) return true;
     return !!String(descriptor.props.text || "").trim();
+  }
+
+  function validateComparisonTableDescriptor(descriptor) {
+    if (!descriptor || !descriptor.props) return false;
+    var columns = descriptor.props.columns;
+    var rows = descriptor.props.rows;
+    if (!Array.isArray(columns) || !columns.length || !Array.isArray(rows)) return false;
+    for (var i = 0; i < rows.length; i++) {
+      if (!Array.isArray(rows[i])) return false;
+    }
+    return true;
+  }
+
+  function validateStepsDescriptor(descriptor) {
+    if (!descriptor || !descriptor.props) return false;
+    var items = descriptor.props.items;
+    if (!Array.isArray(items) || !items.length) return false;
+    for (var i = 0; i < items.length; i++) {
+      if (!String(items[i] == null ? "" : items[i]).trim()) return false;
+    }
+    return true;
   }
 
   function toFollowUpChipsDescriptor(card, chips) {
@@ -150,6 +184,9 @@
       return String(props.text || "").trim() ? 1 : 0;
     }
     if (descriptor.component === "ActionChips" && Array.isArray(props.actions)) return props.actions.length;
+    if (descriptor.component === "ComparisonTable" && Array.isArray(props.rows)) return props.rows.length;
+    if (descriptor.component === "Steps" && Array.isArray(props.items)) return props.items.length;
+    if (descriptor.component === "Alert" && String(props.text || "").trim()) return 1;
     if (Array.isArray(props.chips)) return props.chips.length;
     return 0;
   }
@@ -298,10 +335,51 @@
           count: 0
         };
       }
+    } else if (componentId === "ComparisonTable") {
+      if (!props.columns || !props.columns.length || !Array.isArray(props.rows)) {
+        return {
+          ok: false,
+          renderer: "legacy",
+          component: componentId,
+          slot: slotId,
+          reason: "invalid_schema",
+          count: 0
+        };
+      }
+    } else if (componentId === "Steps") {
+      if (!props.items || !props.items.length) {
+        return {
+          ok: false,
+          renderer: "legacy",
+          component: componentId,
+          slot: slotId,
+          reason: "invalid_schema",
+          count: 0
+        };
+      }
+    } else if (componentId === "Alert") {
+      if (!String(props.text || "").trim()) {
+        return {
+          ok: false,
+          renderer: "legacy",
+          component: componentId,
+          slot: slotId,
+          reason: "invalid_schema",
+          count: 0
+        };
+      }
     }
 
     try {
-      if (componentId === "follow-up-chips" || componentId === "ActionChips") containerEl.hidden = false;
+      if (
+        componentId === "follow-up-chips" ||
+        componentId === "ActionChips" ||
+        componentId === "ComparisonTable" ||
+        componentId === "Steps" ||
+        componentId === "Alert"
+      ) {
+        containerEl.hidden = false;
+      }
       var mountMode = def.mountMode || (slotId === "status" ? "append" : "replace");
       var el = findOrCreateSlotElement(containerEl, tag, props.blockId || "", mountMode);
       def.applyProps(el, props);
@@ -413,6 +491,9 @@
     renderFollowUpChips: renderFollowUpChips,
     renderActionChipsBlock: renderActionChipsBlock,
     toActionChipsDescriptor: toActionChipsDescriptor,
-    validateActionChipsDescriptor: validateActionChipsDescriptor
+    validateActionChipsDescriptor: validateActionChipsDescriptor,
+    validateComparisonTableDescriptor: validateComparisonTableDescriptor,
+    validateStepsDescriptor: validateStepsDescriptor,
+    validateAlertDescriptor: validateAlertDescriptor
   };
 })(typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : this);

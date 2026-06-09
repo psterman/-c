@@ -4286,6 +4286,15 @@ FloatingToolbar_NotifyWebDrawerState(open := false) {
     global g_FTB_WV2, g_FTB_WV2_Ready
     if !(g_FTB_WV2 && g_FTB_WV2_Ready)
         return
+    if open {
+        try WebView2_NotifyShown(g_FTB_WV2)
+        catch {
+        }
+    } else {
+        try WebView2_NotifyHidden(g_FTB_WV2)
+        catch {
+        }
+    }
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_set_drawer", "open", !!open))
     catch as _e {
     }

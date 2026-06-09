@@ -77,6 +77,15 @@
         "::STATUS_START:: [执行器] 进行中\n日志 ::STATUS_END::\n" +
         "::REPLY_START:: 任务完结\n早上好！ ::REPLY_END::"
     },
+    protocol_truncated_plan: {
+      description: "PLAN/STATUS 截断无 END → forcedClose + 合成 reply",
+      rawAnswer:
+        "::PLAN_START:: 步骤1：检查内存 | 步骤2：分析 ::STATUS_START:: 进行中"
+    },
+    protocol_reply_only: {
+      description: "仅 REPLY 标签（无 PLAN）",
+      rawAnswer: "::REPLY_START:: 任务完结\n早上好！ ::REPLY_END::"
+    },
     plain_markdown: {
       description: "无标签纯 Markdown → raw reply fallback",
       rawAnswer: "早上好！\n\n**结论**：可以继续。"
@@ -88,6 +97,13 @@
     stream_status_then_reply: {
       description: "ingestDelta 状态行 + 实质回复",
       deltas: ["📨 OpenClaw 已发送: chat.send", "早上好！这是回复。"]
+    },
+    stream_protocol_truncated: {
+      description: "ingestDelta 流式截断协议 → finalize 合成 reply",
+      deltas: [
+        "::PLAN_START:: 步骤1：检查",
+        "内存 | 步骤2：分析 ::STATUS_START:: 进行中"
+      ]
     },
     research_table: {
       description: "Markdown 表格 → ComparisonTable A2UI（Option A：reply 保留原表）",
@@ -275,7 +291,11 @@
     matcher_ui_matches: { hasUiMatches: true, displayOptionA: true },
     tool_event_status_append: { toolEventSource: true, statusItemMin: 3 },
     replay_tool_status_blocks: { toolEventSource: true, statusItemMin: 3 },
-    preview_source_blocks: { previewSource: "reply_lead" }
+    preview_source_blocks: { previewSource: "reply_lead" },
+    protocol_basic: { hasReply: true, protocolOk: true },
+    protocol_truncated_plan: { hasReply: true, protocolUnclosed: true, synthesizedReply: true },
+    protocol_reply_only: { hasReply: true, protocolOk: true },
+    stream_protocol_truncated: { hasReply: true, protocolUnclosed: true, synthesizedReply: true }
   };
 
   function getFixture(name) {
@@ -365,6 +385,30 @@
         var prev = PaletteBlockPipeline.blockPreviewSummaryWithSource(out.blocks || []);
         if (!prev || prev.source !== spec.previewSource) errors.push("preview_source:" + (prev && prev.source));
       }
+    }
+    if (spec.protocolOk != null) {
+      var pcOk = out.meta && out.meta.protocolClosure && out.meta.protocolClosure.ok;
+      if (spec.protocolOk && !pcOk) errors.push("protocol_not_ok");
+      if (!spec.protocolOk && pcOk) errors.push("protocol_unexpected_ok");
+    }
+    if (spec.protocolUnclosed) {
+      var pc = out.meta && out.meta.protocolClosure;
+      if (!pc || pc.ok) errors.push("protocol_should_be_unclosed");
+      if (pc && pc.code !== "SEM_PROTOCOL_TAG_UNCLOSED" && pc.code !== "SEM_PROTOCOL_TAG_NESTED")
+        errors.push("protocol_code:" + (pc && pc.code));
+    }
+    if (spec.synthesizedReply) {
+      if (!(out.meta && out.meta.protocolClosure && out.meta.protocolClosure.synthesizedReply))
+        errors.push("missing_synthesized_reply_flag");
+      var synBlk = (out.blocks || []).some(function (b) {
+        if (!b || b.type !== "reply" || !String(b.markdown || "").trim()) return false;
+        return (
+          b.source === "protocol_repair" ||
+          String(b.title || "").indexOf("协议修复") >= 0 ||
+          /协议未完整闭合/.test(String(b.markdown || ""))
+        );
+      });
+      if (!synBlk) errors.push("missing_protocol_repair_reply");
     }
     return { pass: errors.length === 0, errors: errors };
   }
@@ -523,6 +567,11 @@
       out.meta = fin.meta;
       if (renderFn) out.render = renderFn(cardId || "mock-fixture-card", fin.blocks);
       out.ok = true;
+      if (FIXTURE_ASSERT[name]) {
+        var deltaAssert = assertFixtureResult(out, name);
+        out.assert = deltaAssert;
+        if (!deltaAssert.pass) out.ok = false;
+      }
       return out;
     }
     return { ok: false, error: "empty_fixture" };

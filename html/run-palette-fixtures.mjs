@@ -12,6 +12,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const sandbox = { console };
 sandbox.globalThis = sandbox;
 sandbox.window = sandbox;
+sandbox.__stId = 0;
+sandbox.__stQueue = [];
+sandbox.setTimeout = function (fn, delay) {
+  if (typeof fn !== "function") return 0;
+  const id = ++sandbox.__stId;
+  if (!delay) {
+    fn();
+    return id;
+  }
+  sandbox.__stQueue.push({ id, fn, delay });
+  return id;
+};
+sandbox.clearTimeout = function (id) {
+  sandbox.__stQueue = sandbox.__stQueue.filter((t) => t.id !== id);
+};
 
 function loadScript(name) {
   const code = fs.readFileSync(path.join(__dirname, name), "utf8");
@@ -25,19 +40,33 @@ function loadScript(name) {
   "PalettePromptComposer.js",
   "PaletteActionPolicy.js",
   "PaletteUIEventContract.js",
+  "palette/render/PaletteComponentRegistry.js",
   "PaletteCardSlots.js",
   "PaletteLitRenderer.js",
   "palette/actions/PaletteActionController.js",
   "palette/actions/PaletteA2UIEventBridge.js",
   "PaletteActionBinder.js",
   "palette/render/PaletteSlotRenderTrace.js",
+  "palette/render/PaletteA2UILegacyRenderer.js",
   "palette/render/PaletteCardRenderer.js",
+  "palette/theme/PaletteA2UIDesignTokens.js",
+  "palette/official/PaletteOfficialA2UIBridge.js",
+  "palette/render/PaletteRendererRegistry.js",
+  "palette/observability/PaletteA2UIMetrics.js",
+  "palette/official/PaletteOfficialA2UIActionLabels.js",
+  "palette/official/PaletteOfficialA2UIActionPolicy.js",
+  "palette/official/PaletteOfficialA2UIGray.js",
+  "palette/official/PaletteOfficialA2UIStreamClient.js",
   "PaletteUIEventBridge.js",
   "PaletteRouterSkill.js",
+  "palette/normalizers/PaletteComparisonTableMarkdown.js",
+  "palette/normalizers/PaletteA2UITextNormalizer.js",
   "PaletteMiniA2UI.js",
   "PaletteComponentMatcher.js",
+  "palette/adapters/PaletteA2UIAdapter.js",
   "palette/adapters/PaletteActionChipsAdapter.js",
   "palette/adapters/PaletteActionChipsProdInjector.js",
+  "CommandPaletteStreamParser.js",
   "PaletteBlockPipeline.js",
   "PaletteBlockStore.js",
   "PaletteBlockPipeline.fixtures.js",
@@ -51,7 +80,15 @@ function loadScript(name) {
   "PaletteActionBoundary.fixtures.js",
   "PaletteActionChipsProd.fixtures.js",
   "PaletteActionChipsDedupe.fixtures.js",
-  "PaletteBlockStoreActionChips.fixtures.js"
+  "PaletteBlockStoreActionChips.fixtures.js",
+  "PaletteA2UIContract.fixtures.js",
+  "PaletteOfficialA2UI.fixtures.js",
+  "palette/official/PaletteOfficialA2UIGray.fixtures.js",
+  "palette/official/PaletteOfficialA2UIActionLabels.fixtures.js",
+  "palette/official/PaletteOfficialA2UIActionPolicy.fixtures.js",
+  "palette/theme/PaletteA2UIDesignTokens.fixtures.js",
+  "palette/render/PaletteRendererRegistry.fixtures.js",
+  "palette/observability/PaletteA2UIMetrics.fixtures.js"
 ].forEach(loadScript);
 
 let allOk = true;
@@ -256,6 +293,177 @@ if (PaletteBlockStoreActionChipsFixtures && PaletteBlockStoreActionChipsFixtures
   if (!store.ok) allOk = false;
 } else {
   console.error("PaletteBlockStoreActionChipsFixtures unavailable");
+  allOk = false;
+}
+
+console.log("--- A2UI Contract ---");
+
+const { PaletteA2UIContractFixtures } = sandbox;
+if (PaletteA2UIContractFixtures && PaletteA2UIContractFixtures.runAllContractFixtures) {
+  const contract = PaletteA2UIContractFixtures.runAllContractFixtures();
+  for (const r of contract.results) {
+    const tag = r.ok ? "PASS" : "FAIL";
+    const err = r.error || (r.errors && r.errors.join(",")) || "";
+    console.log(tag + " contract:" + r.fixture + (err && !r.ok ? " — " + err : ""));
+  }
+  totalPassed += contract.passed;
+  totalFailed += contract.failed;
+  if (!contract.ok) allOk = false;
+} else {
+  console.error("PaletteA2UIContractFixtures unavailable");
+  allOk = false;
+}
+
+console.log("--- Official A2UI P1 ---");
+
+const { PaletteOfficialA2UIFixtures } = sandbox;
+if (PaletteOfficialA2UIFixtures && PaletteOfficialA2UIFixtures.runAllOfficialA2UIFixtures) {
+  const official = PaletteOfficialA2UIFixtures.runAllOfficialA2UIFixtures();
+  for (const r of official.results) {
+    const tag = r.ok ? "PASS" : "FAIL";
+    console.log(tag + " official:" + r.fixture + (r.error ? " — " + r.error : ""));
+  }
+  totalPassed += official.passed;
+  totalFailed += official.failed;
+  if (!official.ok) allOk = false;
+} else {
+  console.error("PaletteOfficialA2UIFixtures unavailable");
+  allOk = false;
+}
+
+console.log("--- Renderer Registry ---");
+
+const { PaletteRendererRegistryFixtures } = sandbox;
+if (
+  PaletteRendererRegistryFixtures &&
+  PaletteRendererRegistryFixtures.runAllRendererRegistryFixtures
+) {
+  const registryFx = PaletteRendererRegistryFixtures.runAllRendererRegistryFixtures();
+  for (const r of registryFx.results) {
+    const tag = r.ok ? "PASS" : "FAIL";
+    console.log(tag + " registry:" + r.fixture + (r.error ? " — " + r.error : ""));
+  }
+  totalPassed += registryFx.passed;
+  totalFailed += registryFx.failed;
+  if (!registryFx.ok) allOk = false;
+} else {
+  console.error("PaletteRendererRegistryFixtures unavailable");
+  allOk = false;
+}
+
+console.log("--- A2UI Metrics ---");
+
+const { PaletteA2UIMetricsFixtures } = sandbox;
+if (PaletteA2UIMetricsFixtures && PaletteA2UIMetricsFixtures.runAllA2UIMetricsFixtures) {
+  const metricsFx = PaletteA2UIMetricsFixtures.runAllA2UIMetricsFixtures();
+  for (const r of metricsFx.results) {
+    const tag = r.ok ? "PASS" : "FAIL";
+    console.log(tag + " metrics:" + r.fixture + (r.error ? " — " + r.error : ""));
+  }
+  totalPassed += metricsFx.passed;
+  totalFailed += metricsFx.failed;
+  if (!metricsFx.ok) allOk = false;
+} else {
+  console.error("PaletteA2UIMetricsFixtures unavailable");
+  allOk = false;
+}
+
+const streamClient = sandbox.PaletteOfficialA2UIStreamClient;
+if (streamClient && streamClient.handleWireFrame && sandbox.PaletteA2UIMetrics) {
+  sandbox.PaletteA2UIMetrics._resetForTest();
+  streamClient.handleWireFrame({
+    type: "official_a2ui_rejected",
+    reason: "bad envelope",
+    error: {
+      schemaVersion: "nmer.a2ui.error.v1",
+      code: "TPA_ENVELOPE_INVALID",
+      message: "bad envelope",
+      layer: "transport",
+      retryable: false
+    }
+  });
+  const snap = sandbox.PaletteA2UIMetrics.snapshot();
+  if (snap.errorByCode.TPA_ENVELOPE_INVALID === 1) {
+    console.log("PASS metrics:ws_rejected_wire");
+    totalPassed += 1;
+  } else {
+    console.log("FAIL metrics:ws_rejected_wire");
+    totalFailed += 1;
+    allOk = false;
+  }
+} else {
+  console.error("StreamClient metrics wire test unavailable");
+  allOk = false;
+  totalFailed += 1;
+}
+
+console.log("--- A2UI Design Tokens ---");
+
+const { PaletteA2UIDesignTokensFixtures } = sandbox;
+if (
+  PaletteA2UIDesignTokensFixtures &&
+  PaletteA2UIDesignTokensFixtures.runAllDesignTokenFixtures
+) {
+  const tokens = PaletteA2UIDesignTokensFixtures.runAllDesignTokenFixtures();
+  for (const r of tokens.results) {
+    const tag = r.ok ? "PASS" : "FAIL";
+    console.log(tag + " tokens:" + r.fixture + (r.error ? " — " + r.error : ""));
+  }
+  totalPassed += tokens.passed;
+  totalFailed += tokens.failed;
+  if (!tokens.ok) allOk = false;
+} else {
+  console.error("PaletteA2UIDesignTokensFixtures unavailable");
+  allOk = false;
+}
+
+console.log("--- Official A2UI Gray ---");
+
+const { PaletteOfficialA2UIGrayFixtures } = sandbox;
+if (PaletteOfficialA2UIGrayFixtures && PaletteOfficialA2UIGrayFixtures.runGrayRouteContracts) {
+  try {
+    PaletteOfficialA2UIGrayFixtures.runGrayRouteContracts();
+    console.log("PASS gray:gray_route_contracts");
+    totalPassed += 1;
+  } catch (e) {
+    console.log("FAIL gray:gray_route_contracts — " + (e && e.message ? e.message : e));
+    totalFailed += 1;
+    allOk = false;
+  }
+} else {
+  console.error("PaletteOfficialA2UIGrayFixtures unavailable");
+  allOk = false;
+}
+
+const { PaletteOfficialA2UIActionLabelsFixtures } = sandbox;
+if (PaletteOfficialA2UIActionLabelsFixtures && PaletteOfficialA2UIActionLabelsFixtures.runActionLabelContracts) {
+  try {
+    PaletteOfficialA2UIActionLabelsFixtures.runActionLabelContracts();
+    console.log("PASS gray:action_label_contracts");
+    totalPassed += 1;
+  } catch (e) {
+    console.log("FAIL gray:action_label_contracts — " + (e && e.message ? e.message : e));
+    totalFailed += 1;
+    allOk = false;
+  }
+} else {
+  console.error("PaletteOfficialA2UIActionLabelsFixtures unavailable");
+  allOk = false;
+}
+
+const { PaletteOfficialA2UIActionPolicyFixtures } = sandbox;
+if (PaletteOfficialA2UIActionPolicyFixtures && PaletteOfficialA2UIActionPolicyFixtures.runActionPolicyContracts) {
+  try {
+    PaletteOfficialA2UIActionPolicyFixtures.runActionPolicyContracts();
+    console.log("PASS gray:action_policy_contracts");
+    totalPassed += 1;
+  } catch (e) {
+    console.log("FAIL gray:action_policy_contracts — " + (e && e.message ? e.message : e));
+    totalFailed += 1;
+    allOk = false;
+  }
+} else {
+  console.error("PaletteOfficialA2UIActionPolicyFixtures unavailable");
   allOk = false;
 }
 

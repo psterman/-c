@@ -5,7 +5,10 @@
   var COMPONENT_IDS = {
     FollowUpChips: "follow-up-chips",
     StatusLog: "status-log",
-    ActionChips: "ActionChips"
+    ActionChips: "ActionChips",
+    ComparisonTable: "ComparisonTable",
+    Steps: "Steps",
+    Alert: "Alert"
   };
   var SLOT_IDS = { actions: "actions", followupChips: "followup-chips" };
 
@@ -141,6 +144,100 @@
         else el.removeAttribute("aria-disabled");
       }
     },
+    ComparisonTable: {
+      slot: BLOCK_SLOT_IDS.a2ui,
+      mount: BLOCK_MOUNTS.a2ui,
+      tag: "palette-comparison-table",
+      componentId: COMPONENT_IDS.ComparisonTable,
+      mountMode: "append",
+      toDescriptorFromBlock: function (card, block) {
+        card = card || {};
+        block = block || {};
+        var props = block.props || {};
+        return {
+          component: COMPONENT_IDS.ComparisonTable,
+          slot: BLOCK_SLOT_IDS.a2ui,
+          mount: BLOCK_MOUNTS.a2ui,
+          tag: "palette-comparison-table",
+          props: {
+            cardId: card.id || "",
+            blockId: block.id || "",
+            columns: Array.isArray(props.columns) ? props.columns : [],
+            rows: Array.isArray(props.rows) ? props.rows : [],
+            renderer: "lit"
+          }
+        };
+      },
+      applyProps: function (el, props) {
+        props = props || {};
+        el.cardId = props.cardId || "";
+        el.blockId = props.blockId || "";
+        el.columns = Array.isArray(props.columns) ? props.columns : [];
+        el.rows = Array.isArray(props.rows) ? props.rows : [];
+      }
+    },
+    Steps: {
+      slot: BLOCK_SLOT_IDS.a2ui,
+      mount: BLOCK_MOUNTS.a2ui,
+      tag: "palette-steps",
+      componentId: COMPONENT_IDS.Steps,
+      mountMode: "append",
+      toDescriptorFromBlock: function (card, block) {
+        card = card || {};
+        block = block || {};
+        var props = block.props || {};
+        return {
+          component: COMPONENT_IDS.Steps,
+          slot: BLOCK_SLOT_IDS.a2ui,
+          mount: BLOCK_MOUNTS.a2ui,
+          tag: "palette-steps",
+          props: {
+            cardId: card.id || "",
+            blockId: block.id || "",
+            items: Array.isArray(props.items) ? props.items : [],
+            renderer: "lit"
+          }
+        };
+      },
+      applyProps: function (el, props) {
+        props = props || {};
+        el.cardId = props.cardId || "";
+        el.blockId = props.blockId || "";
+        el.items = Array.isArray(props.items) ? props.items : [];
+      }
+    },
+    Alert: {
+      slot: BLOCK_SLOT_IDS.a2ui,
+      mount: BLOCK_MOUNTS.a2ui,
+      tag: "palette-alert",
+      componentId: COMPONENT_IDS.Alert,
+      mountMode: "append",
+      toDescriptorFromBlock: function (card, block) {
+        card = card || {};
+        block = block || {};
+        var props = block.props || {};
+        return {
+          component: COMPONENT_IDS.Alert,
+          slot: BLOCK_SLOT_IDS.a2ui,
+          mount: BLOCK_MOUNTS.a2ui,
+          tag: "palette-alert",
+          props: {
+            cardId: card.id || "",
+            blockId: block.id || "",
+            variant: props.variant || "info",
+            text: props.text || "",
+            renderer: "lit"
+          }
+        };
+      },
+      applyProps: function (el, props) {
+        props = props || {};
+        el.cardId = props.cardId || "";
+        el.blockId = props.blockId || "";
+        el.variant = props.variant || "info";
+        el.text = props.text || "";
+      }
+    },
     StatusLog: {
       slot: BLOCK_SLOT_IDS.status,
       mount: BLOCK_MOUNTS.status,
@@ -218,6 +315,12 @@
     }
   };
 
+  if (root.PaletteComponentRegistry && PaletteComponentRegistry.register) {
+    Object.keys(COMPONENTS).forEach(function (name) {
+      PaletteComponentRegistry.register(name, COMPONENTS[name]);
+    });
+  }
+
   function resolveA2uiComponent(block) {
     block = block || {};
     var comp = String(block.component || "").trim();
@@ -263,6 +366,24 @@
           return acDef.toDescriptorFromBlock(card, block);
         }
       }
+      if (block.component === COMPONENT_IDS.ComparisonTable) {
+        var tableDef = COMPONENTS.ComparisonTable;
+        if (tableDef && tableDef.toDescriptorFromBlock) {
+          return tableDef.toDescriptorFromBlock(card, block);
+        }
+      }
+      if (block.component === COMPONENT_IDS.Steps) {
+        var stepsDef = COMPONENTS.Steps;
+        if (stepsDef && stepsDef.toDescriptorFromBlock) {
+          return stepsDef.toDescriptorFromBlock(card, block);
+        }
+      }
+      if (block.component === COMPONENT_IDS.Alert) {
+        var alertDef = COMPONENTS.Alert;
+        if (alertDef && alertDef.toDescriptorFromBlock) {
+          return alertDef.toDescriptorFromBlock(card, block);
+        }
+      }
     }
 
     return {
@@ -289,9 +410,17 @@
       return SLOTS[name] || null;
     },
     getComponent: function (name) {
+      if (root.PaletteComponentRegistry && PaletteComponentRegistry.get) {
+        var registered = PaletteComponentRegistry.get(name);
+        if (registered) return registered;
+      }
       return COMPONENTS[name] || null;
     },
     getComponentById: function (componentId) {
+      if (root.PaletteComponentRegistry && PaletteComponentRegistry.getById) {
+        var registered = PaletteComponentRegistry.getById(componentId);
+        if (registered) return registered;
+      }
       var id = String(componentId || "");
       var keys = Object.keys(COMPONENTS);
       for (var i = 0; i < keys.length; i++) {
@@ -301,6 +430,9 @@
       return null;
     },
     listComponents: function () {
+      if (root.PaletteComponentRegistry && PaletteComponentRegistry.list) {
+        return PaletteComponentRegistry.list();
+      }
       return Object.keys(COMPONENTS);
     }
   };

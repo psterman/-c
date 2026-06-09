@@ -5,110 +5,25 @@
  * Option A 默认保留 reply 原表；hideOriginalTable:true 时剥离（Option B）。
  */
 (function (root) {
-  function escHtml(s) {
-    return String(s || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  function splitTableRow(line) {
-    var t = String(line || "").trim();
-    if (!t.includes("|")) return [];
-    if (t.charAt(0) === "|") t = t.slice(1);
-    if (t.charAt(t.length - 1) === "|") t = t.slice(0, -1);
-    return t.split("|").map(function (c) {
-      return c.trim();
-    });
-  }
-
-  function isSeparatorRow(cells) {
-    if (!cells || !cells.length) return false;
-    return cells.every(function (c) {
-      return /^:?-{2,}:?$/.test(String(c || "").trim());
-    });
-  }
-
   function extractMarkdownTables(markdown) {
-    var lines = String(markdown || "").split(/\r?\n/);
-    var tables = [];
-    var i = 0;
-    while (i < lines.length - 1) {
-      var header = splitTableRow(lines[i]);
-      var sep = splitTableRow(lines[i + 1]);
-      if (header.length >= 2 && isSeparatorRow(sep)) {
-        var rows = [];
-        i += 2;
-        while (i < lines.length) {
-          var row = splitTableRow(lines[i]);
-          if (row.length < 2) break;
-          rows.push(row);
-          i++;
-        }
-        tables.push({ columns: header, rows: rows });
-        continue;
-      }
-      i++;
-    }
-    return tables;
+    if (!root.PaletteComparisonTableMarkdown) return [];
+    return PaletteComparisonTableMarkdown.extract(markdown);
   }
 
   /** 从 reply markdown 移除表格块（A2UI ComparisonTable 已承接时） */
   function stripMarkdownTables(markdown) {
-    var lines = String(markdown || "").split(/\r?\n/);
-    var out = [];
-    var i = 0;
-    while (i < lines.length) {
-      var header = splitTableRow(lines[i]);
-      var sep = i + 1 < lines.length ? splitTableRow(lines[i + 1]) : [];
-      if (header.length >= 2 && isSeparatorRow(sep)) {
-        i += 2;
-        while (i < lines.length) {
-          var row = splitTableRow(lines[i]);
-          if (row.length < 2) break;
-          i++;
-        }
-        if (out.length && String(out[out.length - 1]).trim() !== "") out.push("");
-        continue;
-      }
-      out.push(lines[i]);
-      i++;
-    }
-    return out
-      .join("\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
+    if (!root.PaletteComparisonTableMarkdown) return String(markdown || "").trim();
+    return PaletteComparisonTableMarkdown.strip(markdown);
   }
 
   function extractSteps(markdown) {
-    var lines = String(markdown || "").split(/\r?\n/);
-    var items = [];
-    for (var i = 0; i < lines.length; i++) {
-      var ln = lines[i].trim();
-      var m =
-        ln.match(/^\d+[\.\)、]\s+(.+)$/) ||
-        ln.match(/^[-*]\s+\[[ xX]\]\s+(.+)$/) ||
-        ln.match(/^步骤\s*\d+\s*[：:]\s*(.+)$/);
-      if (m && m[1]) items.push(String(m[1]).trim());
-    }
-    return items.slice(0, 20);
+    if (!root.PaletteA2UITextNormalizer) return [];
+    return PaletteA2UITextNormalizer.extractSteps(markdown);
   }
 
   function extractAlerts(markdown) {
-    var lines = String(markdown || "").split(/\r?\n/);
-    var alerts = [];
-    for (var i = 0; i < lines.length; i++) {
-      var ln = lines[i].trim();
-      if (!ln) continue;
-      var variant = null;
-      if (/^(⚠️|⚠|警告|注意|风险提示)/.test(ln)) variant = "warning";
-      else if (/^(❌|错误|失败|异常)/.test(ln)) variant = "error";
-      else if (/^(✅|成功|完成)/.test(ln)) variant = "success";
-      else if (/^(ℹ️|提示|说明)/.test(ln)) variant = "info";
-      if (variant) alerts.push({ variant: variant, text: ln.replace(/^(⚠️|⚠|❌|✅|ℹ️)\s*/, "") });
-    }
-    return alerts.slice(0, 5);
+    if (!root.PaletteA2UITextNormalizer) return [];
+    return PaletteA2UITextNormalizer.extractAlerts(markdown);
   }
 
   function makeA2UIBlock(component, props, ctx) {
@@ -163,7 +78,16 @@
         var blk = makeA2UIBlock("ComparisonTable", { columns: tb.columns, rows: tb.rows }, ctx);
         blk.source = "markdown_table";
         inserts.push(blk);
-        meta.push({ component: "ComparisonTable", from: "markdown_table" });
+        var tableMeta = { component: "ComparisonTable", from: "markdown_table" };
+        if (root.PaletteBlockSchema && PaletteBlockSchema.clipComparisonTableProps) {
+          var tableClip = PaletteBlockSchema.clipComparisonTableProps(blk.props);
+          if (tableClip.clipped) {
+            tableMeta.clipped = true;
+            tableMeta.originalRows = tableClip.originalRows;
+            tableMeta.originalCols = tableClip.originalCols;
+          }
+        }
+        meta.push(tableMeta);
       }
     }
 
@@ -226,70 +150,9 @@
     return { blocks: list, meta: { a2ui: meta } };
   }
 
-  function renderComparisonTable(el, props) {
-    var cols = (props && props.columns) || [];
-    var rows = (props && props.rows) || [];
-    if (!cols.length) return false;
-    var html =
-      '<div class="a2ui-comparison"><table class="a2ui-table"><thead><tr>' +
-      cols
-        .map(function (c) {
-          return "<th>" + escHtml(c) + "</th>";
-        })
-        .join("") +
-      "</tr></thead><tbody>";
-    for (var r = 0; r < rows.length; r++) {
-      html += "<tr>";
-      for (var c = 0; c < cols.length; c++) {
-        html += "<td>" + escHtml(rows[r][c] != null ? rows[r][c] : "") + "</td>";
-      }
-      html += "</tr>";
-    }
-    html += "</tbody></table></div>";
-    el.innerHTML = html;
-    return true;
-  }
-
-  function renderSteps(el, props) {
-    var items = (props && props.items) || [];
-    if (!items.length) return false;
-    el.innerHTML =
-      '<div class="a2ui-steps"><ol class="a2ui-steps-list">' +
-      items
-        .map(function (it) {
-          return "<li>" + escHtml(it) + "</li>";
-        })
-        .join("") +
-      "</ol></div>";
-    return true;
-  }
-
-  function renderAlert(el, props) {
-    var text = String((props && props.text) || "").trim();
-    if (!text) return false;
-    var variant = String((props && props.variant) || "info");
-    el.innerHTML =
-      '<div class="a2ui-alert a2ui-alert-' +
-      escHtml(variant) +
-      '">' +
-      escHtml(text) +
-      "</div>";
-    return true;
-  }
-
   function render(container, block) {
-    if (!container || !block) return false;
-    container.hidden = false;
-    container.setAttribute("data-component", block.component || "");
-    container.setAttribute("data-block-id", block.id || "");
-    var comp = String(block.component || "");
-    var props = block.props || {};
-    if (comp === "ComparisonTable") return renderComparisonTable(container, props);
-    if (comp === "Steps") return renderSteps(container, props);
-    if (comp === "Alert") return renderAlert(container, props);
-    if (comp === "ActionChips") return false;
-    container.hidden = true;
-    return false;
+    if (!root.PaletteA2UILegacyRenderer || !PaletteA2UILegacyRenderer.render) return false;
+    return PaletteA2UILegacyRenderer.render(container, block);
   }
 
   root.PaletteMiniA2UI = {

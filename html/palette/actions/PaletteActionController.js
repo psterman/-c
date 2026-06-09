@@ -194,6 +194,34 @@
 
   }
 
+  function pendingActionKey(action, context) {
+    return [
+      context && context.cardId ? context.cardId : "",
+      context && context.blockId ? context.blockId : "",
+      action && action.id ? action.id : ""
+    ].join(":");
+  }
+
+  function beginPendingAction(action, context) {
+    var card = context && context.card;
+    if (!card) return true;
+    if (!card._a2uiPendingActions) card._a2uiPendingActions = {};
+    var key = pendingActionKey(action, context);
+    if (card._a2uiPendingActions[key]) return false;
+    card._a2uiPendingActions[key] = true;
+    return true;
+  }
+
+  function endPendingAction(action, context) {
+    var card = context && context.card;
+    if (!card || !card._a2uiPendingActions) return;
+    delete card._a2uiPendingActions[pendingActionKey(action, context)];
+  }
+
+  function isThenable(value) {
+    return !!value && typeof value.then === "function";
+  }
+
 
 
   function queryActionChipsLitEl(dom) {
@@ -335,6 +363,8 @@
         ok: extra.ok !== false,
 
         cardId: context.cardId || "",
+        blockId: context.blockId || "",
+        eventId: context.eventId || "",
 
         actionId: action.id || "",
 
@@ -688,19 +718,56 @@
 
     var text = resolvePayloadText(action);
 
+    if (!beginPendingAction(action, context)) {
+      trace(context, "a2ui_action_deduped", {
+        cardId: context.cardId || "",
+        blockId: context.blockId || "",
+        actionId: action.id || "",
+        eventId: context.eventId || "",
+        reason: "action_pending"
+      });
+      var duplicateResult = buildResult(context, action, {
+        ok: false,
+        actionType: "submit",
+        submitted: false,
+        deduped: true,
+        reason: "action_pending"
+      });
+      emitActionResult(duplicateResult, context);
+      return duplicateResult;
+    }
+
     setCardPendingAction(context.card, action.id);
 
     syncPendingToActionChipsDom(context.cardId, context.card);
 
     var submitted = false;
+    var submitResult;
 
     try {
 
       if (text) applyPrefillToInput(context.cardId, text, context.card, context);
 
       if (typeof context.submitFollowup === "function") {
-
-        submitted = context.submitFollowup(text) !== false;
+        submitResult = context.submitFollowup(text);
+        if (isThenable(submitResult)) {
+          return Promise.resolve(submitResult).then(
+            function (value) {
+              submitted = value !== false;
+              return finishSubmit(action, context, text, submitted, submitted ? "" : "submit_rejected");
+            },
+            function (err) {
+              trace(context, "a2ui_action_error", {
+                cardId: context.cardId || "",
+                actionId: action.id || "",
+                intent: "submit",
+                error: String(err && err.message ? err.message : err)
+              });
+              return finishSubmit(action, context, text, false, "submit_failed");
+            }
+          );
+        }
+        submitted = submitResult !== false;
 
       }
 
@@ -718,15 +785,22 @@
 
       });
 
-      return buildResult(context, action, { ok: false, actionType: "submit", reason: "submit_failed" });
-
-    } finally {
-
-      clearCardPendingAction(context.card);
-
-      syncPendingToActionChipsDom(context.cardId, context.card);
-
+      return finishSubmit(action, context, text, false, "submit_failed");
     }
+
+    return finishSubmit(
+      action,
+      context,
+      text,
+      submitted,
+      submitted ? "" : "submit_handler_missing"
+    );
+  }
+
+  function finishSubmit(action, context, text, submitted, reason) {
+    endPendingAction(action, context);
+    clearCardPendingAction(context.card);
+    syncPendingToActionChipsDom(context.cardId, context.card);
 
     trace(context, "a2ui_action_submit", {
 
@@ -747,15 +821,13 @@
       actionType: "submit",
 
       submitted: submitted,
-
-      reason: submitted ? "" : "submit_handler_missing"
+      reason: reason || ""
 
     });
 
     emitActionResult(result, context);
 
     return result;
-
   }
 
 
@@ -961,6 +1033,9 @@
     setCardPendingAction: setCardPendingAction,
 
     clearCardPendingAction: clearCardPendingAction,
+    beginPendingAction: beginPendingAction,
+    endPendingAction: endPendingAction,
+    pendingActionKey: pendingActionKey,
 
     syncPendingToActionChipsDom: syncPendingToActionChipsDom,
 

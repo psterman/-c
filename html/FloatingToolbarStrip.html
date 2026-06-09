@@ -1396,6 +1396,7 @@ body.niuma-confirm-open{overflow:hidden}
 </footer>
 </section>
 </div>
+<script src="ftb/palette/palette-agent-bridge.js"></script>
 <script>
 (function () {
   /*
@@ -3458,7 +3459,7 @@ body.niuma-confirm-open{overflow:hidden}
     } catch (_) {}
   }
 
-  function paletteNotifyPaletteAgentEnd(reqId, cardId, answer, sessionRef, queryOpt) {
+  var paletteNotifyPaletteAgentEnd = function paletteNotifyPaletteAgentEnd(reqId, cardId, answer, sessionRef, queryOpt) {
     if (_paletteAgentStreamCancelled) return;
     var a = String(answer || '');
     var rid = String(reqId || '').trim();
@@ -3489,7 +3490,7 @@ body.niuma-confirm-open{overflow:hidden}
         query: q
       });
     } catch (_) {}
-  }
+  };
 
   function paletteMaybeNotifyAgentEndFromSession(sid, content, reqIdOpt, cardIdOpt) {
     var s = sessionById(sid);
@@ -4491,14 +4492,14 @@ body.niuma-confirm-open{overflow:hidden}
     }
   }
 
-  function paletteAgentStreamWasCancelled(reqId) {
+  var paletteAgentStreamWasCancelled = function paletteAgentStreamWasCancelled(reqId) {
     var rid = String(reqId || _paletteAgentActiveReqId || '').trim();
     if (_paletteAgentStreamCancelled) return true;
     var job = rid && _paletteAgentInflightByReqId[rid] ? _paletteAgentInflightByReqId[rid] : null;
     return !!(job && job.cancelled);
-  }
+  };
 
-  function palettePrepareAgentStreamForCard(cardId, reqId) {
+  var palettePrepareAgentStreamForCard = function palettePrepareAgentStreamForCard(cardId, reqId) {
     var cid = String(cardId || '').trim();
     var rid = String(reqId || '').trim();
     var s = activeSession();
@@ -4527,7 +4528,7 @@ body.niuma-confirm-open{overflow:hidden}
         detail: 'card=' + cid + ' req=' + rid
       });
     } catch (_) {}
-  }
+  };
 
   async function drainPaletteAgentStreamQueue() {
     if (_paletteAgentStreamDraining) return;
@@ -4837,10 +4838,82 @@ body.niuma-confirm-open{overflow:hidden}
     }
   }
 
+  var _paletteAgentBridgeState = {
+    get cancelled() {
+      return _paletteAgentStreamCancelled;
+    },
+    set cancelled(v) {
+      _paletteAgentStreamCancelled = !!v;
+    },
+    get activeReqId() {
+      return _paletteAgentActiveReqId;
+    },
+    set activeReqId(v) {
+      _paletteAgentActiveReqId = String(v || "");
+    },
+    get running() {
+      return _paletteAgentStreamRunning;
+    },
+    set running(v) {
+      _paletteAgentStreamRunning = !!v;
+    },
+    get queue() {
+      return _paletteAgentStreamQueue;
+    },
+    set queue(v) {
+      _paletteAgentStreamQueue = Array.isArray(v) ? v : [];
+    },
+    get draining() {
+      return _paletteAgentStreamDraining;
+    },
+    set draining(v) {
+      _paletteAgentStreamDraining = !!v;
+    },
+    inflightByReqId: _paletteAgentInflightByReqId,
+    lateRecoverTimers: _paletteAgentLateRecoverTimers
+  };
+  var _m1BridgeInstalled = null;
+  try {
+    if (typeof NmerPaletteAgentBridge !== "undefined" && NmerPaletteAgentBridge.install) {
+      _m1BridgeInstalled = NmerPaletteAgentBridge.install({
+        post: post,
+        state: _paletteAgentBridgeState,
+        runPaletteAgentStreamOnce: runPaletteAgentStreamOnce,
+        paletteClearLateRecover: paletteClearLateRecover,
+        paletteSyncCardAnswerToNiumaSession: paletteSyncCardAnswerToNiumaSession,
+        activeSession: activeSession,
+        setSessionSending: setSessionSending
+      });
+      if (_m1BridgeInstalled) {
+        if (_m1BridgeInstalled.paletteNotifyPaletteAgentEnd) {
+          paletteNotifyPaletteAgentEnd = _m1BridgeInstalled.paletteNotifyPaletteAgentEnd;
+        }
+        if (_m1BridgeInstalled.palettePrepareAgentStreamForCard) {
+          palettePrepareAgentStreamForCard = _m1BridgeInstalled.palettePrepareAgentStreamForCard;
+        }
+        if (_m1BridgeInstalled.paletteAgentStreamWasCancelled) {
+          paletteAgentStreamWasCancelled = _m1BridgeInstalled.paletteAgentStreamWasCancelled;
+        }
+      }
+    }
+  } catch (eM1Bridge) {
+    try {
+      post({
+        type: "niuma_palette_agent_trace",
+        step: "m1_bridge_fallback",
+        detail: eM1Bridge && eM1Bridge.message ? eM1Bridge.message : String(eM1Bridge)
+      });
+    } catch (_) {}
+  }
+
   window.paletteEnsureAgentSessionForCard = paletteEnsureAgentSessionForCard;
   window.paletteEnsureAgentUserInHistory = paletteEnsureAgentUserInHistory;
-  window.runPaletteAgentStream = runPaletteAgentStream;
-  window.palettePrepareAgentStreamForCard = palettePrepareAgentStreamForCard;
+  window.runPaletteAgentStream = _m1BridgeInstalled
+    ? _m1BridgeInstalled.runPaletteAgentStream
+    : runPaletteAgentStream;
+  window.palettePrepareAgentStreamForCard = _m1BridgeInstalled
+    ? _m1BridgeInstalled.palettePrepareAgentStreamForCard
+    : palettePrepareAgentStreamForCard;
   window.exportPaletteOpenClawGatewayKey = function (sessionRef, cardId) {
     var s = activeSession();
     return resolvePaletteAgentGatewaySessionKey(s, {

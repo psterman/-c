@@ -8,6 +8,8 @@
 
   var LitElement = Lit.LitElement;
   var html = Lit.html;
+  var eventSequence = 0;
+  var ACTIVATION_DEBOUNCE_MS = 350;
 
   function escText(s) {
     return String(s || "")
@@ -29,6 +31,22 @@
       payload: payload,
       tone: action.tone ? String(action.tone) : "",
       disabled: !!action.disabled
+    };
+  }
+
+  function createActionEventDetail(component, action) {
+    eventSequence += 1;
+    return {
+      version: 1,
+      eventId: "a2ui-" + Date.now() + "-" + eventSequence,
+      timestamp: Date.now(),
+      cardId: String(component.cardId || ""),
+      blockId: String(component.blockId || ""),
+      action: cloneAction(action),
+      state: {
+        selectedActionId: String(component.selectedActionId || ""),
+        pendingActionId: String(component.pendingActionId || "")
+      }
     };
   }
 
@@ -54,6 +72,7 @@
       this.pendingActionId = "";
       this.selectedActionId = "";
       this.focusedIndex = -1;
+      this._activationLocks = {};
     }
 
     createRenderRoot() {
@@ -91,13 +110,19 @@
     _onChipActivate(action, index) {
       if (!action || !action.id) return;
       if (this._isChipDisabled(action)) return;
+      if (this._activationLocks[action.id]) return;
+      this._activationLocks[action.id] = true;
+      var self = this;
+      setTimeout(function () {
+        delete self._activationLocks[action.id];
+      }, ACTIVATION_DEBOUNCE_MS);
       this.selectedActionId = action.id;
       this.focusedIndex = index;
       this.dispatchEvent(
         new CustomEvent("a2ui-action", {
           bubbles: true,
           composed: true,
-          detail: cloneAction(action)
+          detail: createActionEventDetail(this, action)
         })
       );
     }
@@ -171,4 +196,11 @@
   if (!customElements.get("palette-action-chips")) {
     customElements.define("palette-action-chips", PaletteActionChips);
   }
+
+  globalThis.PaletteActionChipsEventContract = {
+    VERSION: 1,
+    ACTIVATION_DEBOUNCE_MS: ACTIVATION_DEBOUNCE_MS,
+    cloneAction: cloneAction,
+    createActionEventDetail: createActionEventDetail
+  };
 })();

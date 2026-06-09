@@ -16,6 +16,8 @@
   var A2UI_WHITELIST = ["ComparisonTable", "Steps", "Alert", "ActionChips"];
   var ACTION_CHIP_INTENTS = ["prefill", "submit", "inspect", "apply", "undo", "route"];
   var ACTION_CHIP_TONES = ["primary", "secondary", "muted", "danger"];
+  var A2UI_SCHEMA_VERSION = 1;
+  var ALERT_VARIANTS = ["info", "warning", "error", "success"];
   var LEGACY_INTENT_MAP = {
     append: "prefill",
     execute: "submit",
@@ -61,17 +63,20 @@
   }
 
   function clipComparisonTableProps(props) {
-    props = props || {};
-    var origCols = (props.columns || []).length;
-    var origRows = (props.rows || []).length;
-    var cols = (props.columns || []).slice(0, LIMITS.MAX_TABLE_COLS).map(function (c) {
+    props = props && typeof props === "object" && !Array.isArray(props) ? props : {};
+    var rawCols = Array.isArray(props.columns) ? props.columns : [];
+    var rawRows = Array.isArray(props.rows) ? props.rows : [];
+    var origCols = rawCols.length;
+    var origRows = rawRows.length;
+    var cols = rawCols.slice(0, LIMITS.MAX_TABLE_COLS).map(function (c) {
       return trimText(c, LIMITS.MAX_CELL);
     });
-    var rows = (props.rows || []).slice(0, LIMITS.MAX_TABLE_ROWS).map(function (row) {
-      return (row || []).slice(0, LIMITS.MAX_TABLE_COLS).map(function (c) {
+    var rows = rawRows.slice(0, LIMITS.MAX_TABLE_ROWS).map(function (row) {
+      if (!Array.isArray(row)) return null;
+      return row.slice(0, LIMITS.MAX_TABLE_COLS).map(function (c) {
         return trimText(c, LIMITS.MAX_CELL);
       });
-    });
+    }).filter(Boolean);
     var clipped = origCols > LIMITS.MAX_TABLE_COLS || origRows > LIMITS.MAX_TABLE_ROWS;
     return {
       props: { columns: cols, rows: rows },
@@ -202,6 +207,36 @@
     return { actions: actions };
   }
 
+  function sanitizeStepsProps(props) {
+    props = props && typeof props === "object" && !Array.isArray(props) ? props : {};
+    var raw = Array.isArray(props.items) ? props.items : [];
+    var items = [];
+    for (var i = 0; i < raw.length && items.length < LIMITS.MAX_STEPS; i++) {
+      var text = trimText(raw[i], 2000).trim();
+      if (text) items.push(text);
+    }
+    return { items: items };
+  }
+
+  function sanitizeAlertProps(props) {
+    props = props && typeof props === "object" && !Array.isArray(props) ? props : {};
+    var variant = String(props.variant || "info").trim();
+    if (ALERT_VARIANTS.indexOf(variant) < 0) variant = "info";
+    return {
+      variant: variant,
+      text: trimText(props.text, 2000).trim()
+    };
+  }
+
+  function sanitizeA2UIProps(component, props) {
+    var comp = String(component || "");
+    if (comp === "ComparisonTable") return clipComparisonTableProps(props).props;
+    if (comp === "Steps") return sanitizeStepsProps(props);
+    if (comp === "Alert") return sanitizeAlertProps(props);
+    if (comp === "ActionChips") return sanitizeActionChipsProps(props);
+    return sanitizeProps(props);
+  }
+
   function sanitizeActions(actions) {
     if (!Array.isArray(actions)) return [];
     var out = [];
@@ -278,12 +313,13 @@
       var comp = String(block.component || "");
       if (A2UI_WHITELIST.indexOf(comp) < 0) return null;
       out.component = comp;
+      out.schemaVersion = Number(block.schemaVersion) || A2UI_SCHEMA_VERSION;
       if (comp === "ActionChips") {
-        var chipProps = sanitizeActionChipsProps(block.props);
+        var chipProps = sanitizeA2UIProps(comp, block.props);
         if (!chipProps.actions.length) return null;
         out.props = chipProps;
       } else {
-        out.props = sanitizeProps(block.props);
+        out.props = sanitizeA2UIProps(comp, block.props);
       }
     } else if (type === "error") {
       out.message = String(block.message || "任务失败").slice(0, 2000);
@@ -324,6 +360,8 @@
     BLOCK_VERSION: 1,
     NORMALIZER_VERSION: "2026-06-06",
     A2UI_WHITELIST: A2UI_WHITELIST,
+    A2UI_SCHEMA_VERSION: A2UI_SCHEMA_VERSION,
+    ALERT_VARIANTS: ALERT_VARIANTS,
     ACTION_CHIP_INTENTS: ACTION_CHIP_INTENTS,
     ACTION_CHIP_TONES: ACTION_CHIP_TONES,
     ACTION_CHIPS_COMPONENT: "ActionChips",
@@ -332,6 +370,9 @@
     resolveActionChipPayloadText: resolveActionChipPayloadText,
     sanitizeActionChip: sanitizeActionChip,
     sanitizeActionChipsProps: sanitizeActionChipsProps,
+    sanitizeStepsProps: sanitizeStepsProps,
+    sanitizeAlertProps: sanitizeAlertProps,
+    sanitizeA2UIProps: sanitizeA2UIProps,
     TOOL_EVENT_PHASES: TOOL_EVENT_PHASES,
     ACTION_KINDS: ACTION_KINDS,
     trimText: trimText,

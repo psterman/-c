@@ -107,11 +107,130 @@ ResolveDefaultUiIconPath() {
         return CustomIconPath
     if FileExist(Nmer_AppIconPngPath())
         return Nmer_AppIconPngPath()
+    if FileExist(Nmer_AppIconIcoPath())
+        return Nmer_AppIconIcoPath()
+    chIco := A_ScriptDir "\cursor_helper.ico"
+    if FileExist(chIco)
+        return chIco
     return A_ScriptDir "\favicon.ico"
 }
 
 UpdateTrayIcon() {
     TrySetTrayIconHighQuality()
+}
+
+global g_NmerAppToastGui := 0
+global g_NmerAppToastTitle := 0
+global g_NmerAppToastBody := 0
+global g_NmerAppToastPic := 0
+global g_NmerAppToastHideSerial := 0
+
+Nmer_PrepareToastIconPath(targetPx := 96) {
+    src := ResolveDefaultUiIconPath()
+    if !FileExist(src)
+        return ""
+    if !RegExMatch(src, "i)\.(png|ico|bmp)$")
+        return src
+    if !FuncExists("Gdip_CreateBitmapFromFile")
+        return src
+    dest := A_Temp "\nmer_toast_icon_" . targetPx . ".png"
+    try {
+        if FileExist(dest)
+            FileDelete(dest)
+    } catch {
+    }
+    pBitmap := 0
+    pNew := 0
+    G := 0
+    try {
+        pBitmap := Gdip_CreateBitmapFromFile(src)
+        if !pBitmap
+            return src
+        sw := Gdip_GetImageWidth(pBitmap), sh := Gdip_GetImageHeight(pBitmap)
+        if (sw < 1 || sh < 1)
+            return src
+        pNew := Gdip_CreateBitmap(targetPx, targetPx)
+        G := Gdip_GraphicsFromImage(pNew)
+        Gdip_SetInterpolationMode(G, 7)
+        Gdip_SetSmoothingMode(G, 4)
+        Gdip_DrawImage(G, pBitmap, 0, 0, targetPx, targetPx, 0, 0, sw, sh)
+        Gdip_SaveBitmapToFile(pNew, dest, 100)
+        return FileExist(dest) ? dest : src
+    } catch {
+        return src
+    } finally {
+        if G
+            try Gdip_DeleteGraphics(G)
+            catch {
+            }
+        if pNew
+            try Gdip_DisposeImage(pNew)
+            catch {
+            }
+        if pBitmap
+            try Gdip_DisposeImage(pBitmap)
+            catch {
+            }
+    }
+}
+
+Nmer_ShowAppToast(heading, body, severity := "info") {
+    global g_NmerAppToastGui, g_NmerAppToastTitle, g_NmerAppToastBody, g_NmerAppToastPic, g_NmerAppToastHideSerial
+    heading := String(heading || "")
+    body := String(body || "")
+    sev := StrLower(String(severity || "info"))
+    accent := (sev = "error" || sev = "warn") ? "f87171" : (sev = "ok" ? "4ade80" : "ff8d2a")
+    iconPath := Nmer_PrepareToastIconPath(96)
+    if !g_NmerAppToastGui {
+        g_NmerAppToastGui := Gui("+AlwaysOnTop -Caption +ToolWindow", "牛马")
+        g_NmerAppToastGui.BackColor := "1a1f28"
+        g_NmerAppToastGui.MarginX := 12
+        g_NmerAppToastGui.MarginY := 10
+        if (iconPath != "" && FileExist(iconPath))
+            g_NmerAppToastPic := g_NmerAppToastGui.Add("Picture", "x12 y12 w48 h48", iconPath)
+        g_NmerAppToastTitle := g_NmerAppToastGui.Add(
+            "Text",
+            "x68 y12 w300 BackgroundTrans c" . accent,
+            ""
+        )
+        g_NmerAppToastTitle.SetFont("s11 Bold", "Segoe UI")
+        g_NmerAppToastBody := g_NmerAppToastGui.Add("Text", "x68 y36 w300 +Wrap BackgroundTrans cE8EDF2", "")
+        g_NmerAppToastBody.SetFont("s9", "Segoe UI")
+    } else if (iconPath != "" && FileExist(iconPath) && g_NmerAppToastPic) {
+        try g_NmerAppToastPic.Value := iconPath
+        catch {
+        }
+    }
+    g_NmerAppToastTitle.Opt("c" . accent)
+    g_NmerAppToastTitle.Value := heading
+    g_NmerAppToastBody.Value := body
+    g_NmerAppToastGui.Show("AutoSize Hide")
+    wl := 0, wt := 0, wr := A_ScreenWidth, wb := A_ScreenHeight
+    try MonitorGetWorkArea(, &wl, &wt, &wr, &wb)
+    catch {
+    }
+    g_NmerAppToastGui.GetPos(, , &tw, &th)
+    tx := wr - tw - 16
+    ty := wb - th - 16
+    if (tx < wl + 8)
+        tx := wl + 8
+    if (ty < wt + 8)
+        ty := wt + 8
+    g_NmerAppToastGui.Show("x" . tx . " y" . ty . " NoActivate")
+    g_NmerAppToastHideSerial += 1
+    serial := g_NmerAppToastHideSerial
+    SetTimer(Nmer_HideAppToast.Bind(serial), -5000)
+}
+
+Nmer_HideAppToast(serial, *) {
+    global g_NmerAppToastGui, g_NmerAppToastHideSerial
+    if (serial != g_NmerAppToastHideSerial)
+        return
+    try {
+        if g_NmerAppToastGui
+            g_NmerAppToastGui.Hide()
+    } catch {
+    }
 }
 
 global TrayMenuGUI := 0

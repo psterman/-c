@@ -299,6 +299,10 @@
       </div>
     </section>
     <section class="card">
+      <h2>A2UI 灰度指标 <span class="hint">error / fallback / action / gray</span></h2>
+      <div class="kv mono" id="a2ui-metrics-box">等待指标…</div>
+    </section>
+    <section class="card">
       <h2>事件时间线 <span class="hint">（新事件在顶部）</span></h2>
       <div class="filters" id="filters">
         <button type="button" data-f="all" class="active">全部</button>
@@ -614,9 +618,45 @@
     return state.a2ui || "";
   }
 
+  function renderA2uiMetricsPanel(metrics) {
+    var box = document.getElementById("a2ui-metrics-box");
+    if (!box) return;
+    metrics = metrics || {};
+    var lines = [];
+    lines.push("errors=" + (metrics.errors || 0) + " · fallbacks=" + (metrics.fallbacks || 0) + " · actions=" + (metrics.actions || 0) + " · gray=" + (metrics.grayRoutes || 0));
+    function pushBucket(label, bucket) {
+      var keys = Object.keys(bucket || {}).sort();
+      for (var i = 0; i < keys.length; i++) {
+        lines.push(label + "{" + keys[i] + "}=" + bucket[keys[i]]);
+      }
+    }
+    pushBucket("a2ui_error_total", metrics.errorByCode);
+    pushBucket("a2ui_fallback_total", metrics.fallbackByHint);
+    pushBucket("a2ui_action_result_total", metrics.actionByStatus);
+    pushBucket("gray_route", metrics.grayByRoute);
+    pushBucket("gray_reason", metrics.grayByReason);
+    var recent = Array.isArray(metrics.recent) ? metrics.recent : [];
+    if (recent.length) {
+      lines.push("— recent —");
+      for (var r = recent.length - 1; r >= Math.max(0, recent.length - 5); r--) {
+        var evt = recent[r] || {};
+        lines.push(
+          String(evt.evt || "?") +
+            (evt.code ? " code=" + evt.code : "") +
+            (evt.status ? " status=" + evt.status : "") +
+            (evt.hint ? " hint=" + evt.hint : "") +
+            (evt.route ? " route=" + evt.route : "") +
+            (evt.reason ? " reason=" + evt.reason : "")
+        );
+      }
+    }
+    box.textContent = lines.length ? lines.join("\n") : "尚无 A2UI 指标";
+  }
+
   function renderPipelineDebugPanel(state, lastSubmit) {
     state = state || pipelineDebugState || {};
     var ls = lastSubmit || {};
+    renderA2uiMetricsPanel(state.a2uiMetrics);
     var routeEl = document.getElementById("pipe-route");
     var routeHtml = "<b>① Route</b>";
     if (state.routeId || state.routeLabel) {
@@ -1058,9 +1098,12 @@
           var extra = c.streamDispatched ? " · 已派发" : "";
           var proto = c.hasProto ? " · 协议✓" : "";
           var route = c.routeLabel || c.routeId || "";
+          var repr = c.representationRoute || "";
+          var gray = c.grayReason || "";
           var rawLen = c.rawAnswer ? String(c.rawAnswer).length : (c.rawLen != null ? c.rawLen : 0);
           var blkN = c.blockCount != null ? c.blockCount : (c.blockStore && c.blockStore.blocks ? c.blockStore.blocks.length : 0);
           return "<b>" + esc(title) + "</b> · " + esc(st) + extra + proto +
+            (repr ? " · <span class='tag route'>" + esc(repr) + (gray ? "/" + esc(gray) : "") + "</span>" : "") +
             (route ? " · <span class='tag route'>" + esc(route) + "</span>" : "") +
             " · " + esc(c.provider || "") + " · req=" + esc(c.reqId || "") +
             (blkN ? " · blocks=" + blkN : "") +

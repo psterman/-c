@@ -36,11 +36,22 @@
     action_chips_a2ui_bridge_emit: {
       description: "a2ui-action emit 后 ActionController 被调用",
       card: { id: "card-lit-bridge", uiState: "Done", _submitFollowup: null },
-      action: {
-        id: "br1",
-        label: "Bridge",
-        intent: "prefill",
-        payload: { text: "bridge prefill" }
+      event: {
+        version: 1,
+        eventId: "evt-bridge-1",
+        timestamp: 1,
+        cardId: "card-lit-bridge",
+        blockId: "blk-lit-bridge",
+        action: {
+          id: "br1",
+          label: "Bridge",
+          intent: "prefill",
+          payload: { text: "bridge prefill" }
+        },
+        state: {
+          selectedActionId: "br1",
+          pendingActionId: ""
+        }
       }
     },
     action_chips_disabled_no_emit: {
@@ -281,7 +292,7 @@
       var target = { getAttribute: function (k) { return k === "card-id" ? fx.card.id : ""; } };
       listeners.forEach(function (l) {
         if (l.type === "a2ui-action") {
-          l.fn({ detail: fx.action, target: target });
+          l.fn({ detail: fx.event, target: target });
         }
       });
       if (savedDoc !== undefined) root.document = savedDoc;
@@ -291,6 +302,11 @@
         ok:
           bridgeLogs.some(function (l) { return l.ev === "action_chips_lit_event"; }) &&
           bridgeLogs.some(function (l) { return l.ev === "a2ui_action_prefill"; }) &&
+          bridgeLogs.some(function (l) {
+            if (l.ev !== "a2ui_action_received") return false;
+            var detail = JSON.parse(l.det);
+            return detail.cardId === fx.card.id && detail.actionId === fx.event.action.id;
+          }) &&
           bridgeInput.value === "bridge prefill"
       };
     }

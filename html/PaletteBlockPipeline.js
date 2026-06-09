@@ -3,9 +3,106 @@
  */
 (function (root) {
   var PROTO_RE = /::(PLAN|STATUS|QUESTION|REPLY)_(START|END)::/;
+  var PROTO_TAG_NAMES = ["PLAN", "STATUS", "QUESTION", "REPLY"];
 
   function hasProtocolTags(text) {
     return PROTO_RE.test(String(text || ""));
+  }
+
+  function detectMissingEndsInSource(raw) {
+    var s = String(raw || "");
+    var missing = [];
+    for (var ti = 0; ti < PROTO_TAG_NAMES.length; ti++) {
+      var tag = PROTO_TAG_NAMES[ti];
+      var startRe = new RegExp("::" + tag + "_START::", "g");
+      var endRe = new RegExp("::" + tag + "_END::", "g");
+      var starts = (s.match(startRe) || []).length;
+      var ends = (s.match(endRe) || []).length;
+      for (var mi = 0; mi < starts - ends; mi++) missing.push(tag.toLowerCase());
+    }
+    return missing;
+  }
+
+  function analyzeProtocolClosure(raw) {
+    raw = String(raw || "");
+    if (!hasProtocolTags(raw)) {
+      return {
+        ok: true,
+        code: "OK",
+        forcedCloses: [],
+        missingEnds: [],
+        nestedCuts: [],
+        synthesizedReply: false
+      };
+    }
+    var forcedCloses = [];
+    var nestedCuts = [];
+    if (typeof StreamTagParser !== "undefined") {
+      var parser = new StreamTagParser(function (b) {
+        if (!b || !b.forcedClose) return;
+        var entry = { type: String(b.type || ""), parseWarn: String(b.parseWarn || "forced") };
+        forcedCloses.push(entry);
+        if (entry.parseWarn === "nested_cut") nestedCuts.push(entry);
+      });
+      parser.onChunk(raw);
+      parser.flush();
+    }
+    var missingEnds = detectMissingEndsInSource(raw);
+    var hasNested = nestedCuts.length > 0;
+    var hasIssue = forcedCloses.length > 0 || missingEnds.length > 0;
+    return {
+      ok: !hasIssue,
+      code: hasNested ? "SEM_PROTOCOL_TAG_NESTED" : hasIssue ? "SEM_PROTOCOL_TAG_UNCLOSED" : "OK",
+      forcedCloses: forcedCloses,
+      missingEnds: missingEnds,
+      nestedCuts: nestedCuts,
+      synthesizedReply: false
+    };
+  }
+
+  function synthesizeTruncatedReply(blocks, closure, ctx) {
+    var lines = ["任务已结束（协议未完整闭合，以下为可用摘要）"];
+    var list = blocks || [];
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i];
+      if (!b) continue;
+      if (b.type === "plan" && b.items && b.items.length) {
+        var planParts = [];
+        for (var pi = 0; pi < b.items.length; pi++) {
+          if (b.items[pi] && b.items[pi].text) planParts.push(String(b.items[pi].text));
+        }
+        if (planParts.length) lines.push("计划：" + planParts.join(" · "));
+      }
+      if (b.type === "status" && b.items && b.items.length) {
+        var stParts = [];
+        for (var si = 0; si < b.items.length; si++) {
+          if (b.items[si] && b.items[si].text) stParts.push(String(b.items[si].text));
+        }
+        if (stParts.length) lines.push("状态：" + stParts.join(" · "));
+      }
+    }
+    if (closure && closure.missingEnds && closure.missingEnds.length) {
+      lines.push("未闭合标签：" + closure.missingEnds.join(", "));
+    }
+    var md = lines.join("\n\n").trim();
+    if (!md) return null;
+    var now = Date.now();
+    var reply = {
+      id: root.PaletteBlockSchema ? PaletteBlockSchema.genBlockId("blk_syn") : "blk_syn_" + now,
+      type: "reply",
+      state: "final",
+      source: "protocol_repair",
+      confidence: 0.55,
+      seq: ctx.nextSeq(),
+      turnId: ctx.turnId,
+      traceId: ctx.traceId,
+      createdAt: now,
+      updatedAt: now,
+      title: "任务完结（协议修复）",
+      markdown: md
+    };
+    if (root.PaletteBlockSchema) reply = PaletteBlockSchema.sanitizeBlock(reply);
+    return reply;
   }
 
   function protocolBlockToCanonical(block, ctx) {
@@ -335,11 +432,16 @@
 
     var validated = validateBlocksList(state.blocks);
     state.blocks = validated.blocks || [];
+    var ingestClosure =
+      state.rawBuffer && hasProtocolTags(state.rawBuffer)
+        ? analyzeProtocolClosure(state.rawBuffer)
+        : null;
     return {
       blocks: state.blocks,
       meta: {
         protoStarted: state.protoStarted,
         statusOnly: false,
+        protocolClosure: ingestClosure,
         errors: validated.errors || [],
         dropped: (validated.dropped || []).length
       }
@@ -357,6 +459,7 @@
     }
     var ctx = { turnId: turnId, traceId: traceId, nextSeq: nextSeqFn };
 
+    var protocolClosure = analyzeProtocolClosure(raw);
     var blocks = [];
     if (raw && hasProtocolTags(raw)) {
       blocks = collectProtocolBlocks(raw, ctx);
@@ -371,25 +474,33 @@
     }
 
     if (raw && !hasFinalReply(blocks)) {
-      var fbSource = hasProtocolTags(raw) ? "markdown" : "raw";
-      var fbMd = fbSource === "raw" ? raw : stripProtocolTags(raw);
-      if (fbMd && !isStatusOnlyAgentText(fbMd)) {
-        var fallback = {
-          id: root.PaletteBlockSchema ? PaletteBlockSchema.genBlockId("blk_raw") : "blk_raw_" + Date.now(),
-          type: "reply",
-          state: "final",
-          source: fbSource,
-          confidence: fbSource === "raw" ? 0.5 : 0.6,
-          seq: nextSeqFn(),
-          turnId: turnId,
-          traceId: traceId,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          title: "任务回复",
-          markdown: fbMd
-        };
-        if (root.PaletteBlockSchema) fallback = PaletteBlockSchema.sanitizeBlock(fallback);
-        if (fallback) blocks.push(fallback);
+      if (hasProtocolTags(raw) && !protocolClosure.ok) {
+        var synReply = synthesizeTruncatedReply(blocks, protocolClosure, ctx);
+        if (synReply) {
+          blocks.push(synReply);
+          protocolClosure = Object.assign({}, protocolClosure, { synthesizedReply: true });
+        }
+      } else {
+        var fbSource = hasProtocolTags(raw) ? "markdown" : "raw";
+        var fbMd = fbSource === "raw" ? raw : stripProtocolTags(raw);
+        if (fbMd && !isStatusOnlyAgentText(fbMd)) {
+          var fallback = {
+            id: root.PaletteBlockSchema ? PaletteBlockSchema.genBlockId("blk_raw") : "blk_raw_" + Date.now(),
+            type: "reply",
+            state: "final",
+            source: fbSource,
+            confidence: fbSource === "raw" ? 0.5 : 0.6,
+            seq: nextSeqFn(),
+            turnId: turnId,
+            traceId: traceId,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            title: "任务回复",
+            markdown: fbMd
+          };
+          if (root.PaletteBlockSchema) fallback = PaletteBlockSchema.sanitizeBlock(fallback);
+          if (fallback) blocks.push(fallback);
+        }
       }
     }
 
@@ -428,17 +539,29 @@
       a2meta = (enrichedFallback.meta && enrichedFallback.meta.a2ui) || [];
     }
 
+    var metaErrors = (validated.errors || []).slice();
+    if (!protocolClosure.ok) {
+      metaErrors.push({
+        code: protocolClosure.code,
+        layer: "semantic",
+        retryable: false,
+        forcedCloses: protocolClosure.forcedCloses,
+        missingEnds: protocolClosure.missingEnds
+      });
+    }
+
     return {
       blocks: blocks,
       meta: {
         protoStarted: hasProtocolTags(raw),
+        protocolClosure: protocolClosure,
         traceId: traceId,
         turnId: turnId,
         a2ui: a2meta,
         matcher: matcherMeta,
         uiMatches: uiMatches,
         displayPolicy: displayPolicy,
-        errors: validated.errors || [],
+        errors: metaErrors,
         dropped: (validated.dropped || []).length
       }
     };
@@ -662,6 +785,9 @@
     extractNonTablePreview: extractNonTablePreview,
     hasProtocolTags: hasProtocolTags,
     hasFinalReply: hasFinalReply,
-    isStatusOnlyAgentText: isStatusOnlyAgentText
+    isStatusOnlyAgentText: isStatusOnlyAgentText,
+    analyzeProtocolClosure: analyzeProtocolClosure,
+    detectMissingEndsInSource: detectMissingEndsInSource,
+    synthesizeTruncatedReply: synthesizeTruncatedReply
   };
 })(typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : this);

@@ -1,0 +1,24 @@
+{
+  "name": "nmer-wails-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:reducer": "tsx scripts/test-reducer.ts",
+    "test:a2ui": "tsx scripts/test-a2ui-spike.ts",
+    "build:palette-a2ui": "vite build --config vite.palette-a2ui.config.js"
+  },
+  "dependencies": {
+    "@a2ui/lit": "0.10.0",
+    "@a2ui/web_core": "0.10.0",
+    "lit": "^3.2.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vite": "8.0.16"
+  }
+}

@@ -80,6 +80,30 @@
     return !!(block && block.type === "a2ui" && String(block.component || "") === ACTION_CHIPS_COMPONENT);
   }
 
+  function isComparisonTableBlock(block) {
+    return !!(
+      block &&
+      block.type === "a2ui" &&
+      String(block.component || "") === "ComparisonTable"
+    );
+  }
+
+  function isStepsBlock(block) {
+    return !!(
+      block &&
+      block.type === "a2ui" &&
+      String(block.component || "") === "Steps"
+    );
+  }
+
+  function isAlertBlock(block) {
+    return !!(
+      block &&
+      block.type === "a2ui" &&
+      String(block.component || "") === "Alert"
+    );
+  }
+
   function actionChipsCount(block) {
     return block && block.props && Array.isArray(block.props.actions) ? block.props.actions.length : 0;
   }
@@ -374,6 +398,60 @@
     return PaletteLitRenderer.renderSlot(cardId, logBox, descriptor, options);
   }
 
+  function tryRenderComparisonTableLit(cardId, dom, block, card, options) {
+    if (!root.PaletteCardSlots || !PaletteCardSlots.toBlockDescriptor) return null;
+    if (!root.PaletteLitRenderer || !PaletteLitRenderer.renderSlot) return null;
+    if (!PaletteLitRenderer.isLitAvailableForTag("palette-comparison-table")) return null;
+    var host = dom.querySelector(".card-a2ui");
+    if (!host) return null;
+    host.hidden = false;
+    var slot = document.createElement("div");
+    slot.className = "a2ui-slot";
+    slot.setAttribute("data-block-id", block.id || "");
+    slot.setAttribute("data-component", block.component || "");
+    host.appendChild(slot);
+    var descriptor = PaletteCardSlots.toBlockDescriptor(card, block);
+    var result = PaletteLitRenderer.renderSlot(cardId, slot, descriptor, options);
+    if (!result || !result.ok || result.renderer !== "lit") slot.remove();
+    return result;
+  }
+
+  function tryRenderStepsLit(cardId, dom, block, card, options) {
+    if (!root.PaletteCardSlots || !PaletteCardSlots.toBlockDescriptor) return null;
+    if (!root.PaletteLitRenderer || !PaletteLitRenderer.renderSlot) return null;
+    if (!PaletteLitRenderer.isLitAvailableForTag("palette-steps")) return null;
+    var host = dom.querySelector(".card-a2ui");
+    if (!host) return null;
+    host.hidden = false;
+    var slot = document.createElement("div");
+    slot.className = "a2ui-slot";
+    slot.setAttribute("data-block-id", block.id || "");
+    slot.setAttribute("data-component", block.component || "");
+    host.appendChild(slot);
+    var descriptor = PaletteCardSlots.toBlockDescriptor(card, block);
+    var result = PaletteLitRenderer.renderSlot(cardId, slot, descriptor, options);
+    if (!result || !result.ok || result.renderer !== "lit") slot.remove();
+    return result;
+  }
+
+  function tryRenderAlertLit(cardId, dom, block, card, options) {
+    if (!root.PaletteCardSlots || !PaletteCardSlots.toBlockDescriptor) return null;
+    if (!root.PaletteLitRenderer || !PaletteLitRenderer.renderSlot) return null;
+    if (!PaletteLitRenderer.isLitAvailableForTag("palette-alert")) return null;
+    var host = dom.querySelector(".card-a2ui");
+    if (!host) return null;
+    host.hidden = false;
+    var slot = document.createElement("div");
+    slot.className = "a2ui-slot";
+    slot.setAttribute("data-block-id", block.id || "");
+    slot.setAttribute("data-component", block.component || "");
+    host.appendChild(slot);
+    var descriptor = PaletteCardSlots.toBlockDescriptor(card, block);
+    var result = PaletteLitRenderer.renderSlot(cardId, slot, descriptor, options);
+    if (!result || !result.ok || result.renderer !== "lit") slot.remove();
+    return result;
+  }
+
   function renderPipelineBlockImpl(cardId, dom, block, options) {
     if (!dom || !block) return;
     var d = resolveDeps(options);
@@ -554,7 +632,198 @@
       return;
     }
 
-    if (block.type === "plan" || block.type === "reply" || (block.type === "a2ui" && !isActionChipsBlock(block))) {
+    if (isComparisonTableBlock(block)) {
+      var tableCount = block.props && Array.isArray(block.props.rows) ? block.props.rows.length : 0;
+      var tableLitResult = tryRenderComparisonTableLit(cardId, dom, block, card, options);
+      if (tableLitResult && tableLitResult.ok && tableLitResult.renderer === "lit") {
+        traceBlockRender(
+          cardId,
+          block,
+          {
+            slot: "a2ui",
+            component: "ComparisonTable",
+            blockType: "ComparisonTable",
+            renderer: "lit",
+            reason: TRACE_REASONS.OK,
+            count: tableLitResult.count != null ? tableLitResult.count : tableCount,
+            blockId: block.id || ""
+          },
+          options
+        );
+        return;
+      }
+      var tableFallbackReason =
+        tableLitResult && tableLitResult.reason
+          ? tableLitResult.reason
+          : TRACE_REASONS.NO_LIT_COMPONENT;
+      traceBlockRender(
+        cardId,
+        block,
+        {
+          slot: "a2ui",
+          component: "ComparisonTable",
+          blockType: "ComparisonTable",
+          renderer: "legacy",
+          reason: tableFallbackReason,
+          count: tableCount,
+          blockId: block.id || ""
+        },
+        options
+      );
+      renderPipelineBlockImpl(cardId, dom, block, options);
+      var tableSlot = dom.querySelector(
+        '.card-a2ui .a2ui-slot[data-block-id="' + String(block.id || "").replace(/"/g, '\\"') + '"]'
+      );
+      if (!tableSlot) {
+        traceBlockRender(
+          cardId,
+          block,
+          {
+            slot: "a2ui",
+            component: "ComparisonTable",
+            blockType: "ComparisonTable",
+            renderer: "fallback",
+            reason: TRACE_REASONS.RENDER_ERROR,
+            count: 0,
+            blockId: block.id || ""
+          },
+          options
+        );
+      }
+      return;
+    }
+
+    if (isStepsBlock(block)) {
+      var stepsCount = block.props && Array.isArray(block.props.items) ? block.props.items.length : 0;
+      var stepsLitResult = tryRenderStepsLit(cardId, dom, block, card, options);
+      if (stepsLitResult && stepsLitResult.ok && stepsLitResult.renderer === "lit") {
+        traceBlockRender(
+          cardId,
+          block,
+          {
+            slot: "a2ui",
+            component: "Steps",
+            blockType: "Steps",
+            renderer: "lit",
+            reason: TRACE_REASONS.OK,
+            count: stepsLitResult.count != null ? stepsLitResult.count : stepsCount,
+            blockId: block.id || ""
+          },
+          options
+        );
+        return;
+      }
+      var stepsFallbackReason =
+        stepsLitResult && stepsLitResult.reason
+          ? stepsLitResult.reason
+          : TRACE_REASONS.NO_LIT_COMPONENT;
+      traceBlockRender(
+        cardId,
+        block,
+        {
+          slot: "a2ui",
+          component: "Steps",
+          blockType: "Steps",
+          renderer: "legacy",
+          reason: stepsFallbackReason,
+          count: stepsCount,
+          blockId: block.id || ""
+        },
+        options
+      );
+      renderPipelineBlockImpl(cardId, dom, block, options);
+      var stepsSlot = dom.querySelector(
+        '.card-a2ui .a2ui-slot[data-block-id="' + String(block.id || "").replace(/"/g, '\\"') + '"]'
+      );
+      if (!stepsSlot) {
+        traceBlockRender(
+          cardId,
+          block,
+          {
+            slot: "a2ui",
+            component: "Steps",
+            blockType: "Steps",
+            renderer: "fallback",
+            reason: TRACE_REASONS.RENDER_ERROR,
+            count: 0,
+            blockId: block.id || ""
+          },
+          options
+        );
+      }
+      return;
+    }
+
+    if (isAlertBlock(block)) {
+      var alertCount = block.props && String(block.props.text || "").trim() ? 1 : 0;
+      var alertLitResult = tryRenderAlertLit(cardId, dom, block, card, options);
+      if (alertLitResult && alertLitResult.ok && alertLitResult.renderer === "lit") {
+        traceBlockRender(
+          cardId,
+          block,
+          {
+            slot: "a2ui",
+            component: "Alert",
+            blockType: "Alert",
+            renderer: "lit",
+            reason: TRACE_REASONS.OK,
+            count: alertLitResult.count != null ? alertLitResult.count : alertCount,
+            blockId: block.id || ""
+          },
+          options
+        );
+        return;
+      }
+      var alertFallbackReason =
+        alertLitResult && alertLitResult.reason
+          ? alertLitResult.reason
+          : TRACE_REASONS.NO_LIT_COMPONENT;
+      traceBlockRender(
+        cardId,
+        block,
+        {
+          slot: "a2ui",
+          component: "Alert",
+          blockType: "Alert",
+          renderer: "legacy",
+          reason: alertFallbackReason,
+          count: alertCount,
+          blockId: block.id || ""
+        },
+        options
+      );
+      renderPipelineBlockImpl(cardId, dom, block, options);
+      var alertSlot = dom.querySelector(
+        '.card-a2ui .a2ui-slot[data-block-id="' + String(block.id || "").replace(/"/g, '\\"') + '"]'
+      );
+      if (!alertSlot) {
+        traceBlockRender(
+          cardId,
+          block,
+          {
+            slot: "a2ui",
+            component: "Alert",
+            blockType: "Alert",
+            renderer: "fallback",
+            reason: TRACE_REASONS.RENDER_ERROR,
+            count: 0,
+            blockId: block.id || ""
+          },
+          options
+        );
+      }
+      return;
+    }
+
+    if (
+      block.type === "plan" ||
+      block.type === "reply" ||
+      (block.type === "a2ui" &&
+        !isActionChipsBlock(block) &&
+        !isComparisonTableBlock(block) &&
+        !isStepsBlock(block) &&
+        !isAlertBlock(block))
+    ) {
       var legDesc =
         root.PaletteCardSlots && PaletteCardSlots.toBlockDescriptor
           ? PaletteCardSlots.toBlockDescriptor(card, block)
