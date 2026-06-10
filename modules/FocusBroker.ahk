@@ -114,6 +114,9 @@ FocusBroker_AttemptActivate(ctx) {
     reason := String(ctx["reason"])
     retry := Integer(ctx["retry"])
     start := Integer(ctx["start"])
+    pri := Integer(ctx.Has("priority") ? ctx["priority"] : 50)
+    maxRetry := (pri >= 55) ? 14 : g_FocusBroker_MaxRetry
+    maxWaitMs := (pri >= 55) ? 900 : g_FocusBroker_MaxWaitMs
     timerFn := ctx["timerFunc"]
     if !ctx["active"] {
         try SetTimer(timerFn, 0)
@@ -130,7 +133,7 @@ FocusBroker_AttemptActivate(ctx) {
         return
     }
     now := A_TickCount
-    if (retry >= g_FocusBroker_MaxRetry || (now - start) > g_FocusBroker_MaxWaitMs) {
+    if (retry >= maxRetry || (now - start) > maxWaitMs) {
         FocusBroker_Log("focus_failed_fallback", "owner=" . owner . " reason=" . reason . " retry=" . retry . " elapsed=" . (now - start))
         ctx["active"] := false
         try SetTimer(timerFn, 0)
@@ -164,6 +167,13 @@ FocusBroker_SetForegroundNow(hwnd) {
     h := Integer(hwnd)
     if !h
         return false
+    if FuncExists("SCWV_ForegroundPulse") {
+        try {
+            if SCWV_ForegroundPulse(h)
+                return true
+        } catch {
+        }
+    }
     try DllCall("ShowWindow", "Ptr", h, "Int", 9) ; SW_RESTORE
     ok := 0
     try ok := !!DllCall("SetForegroundWindow", "Ptr", h, "Int")

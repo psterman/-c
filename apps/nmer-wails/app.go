@@ -16,9 +16,10 @@ const shellVersion = "0.1.0-poc"
 
 // AppInfo is exposed to the frontend via Wails bindings.
 type AppInfo struct {
-	AppName   string `json:"appName"`
-	Version   string `json:"version"`
-	BuildMode string `json:"buildMode"`
+	AppName    string `json:"appName"`
+	Version    string `json:"version"`
+	BuildMode  string `json:"buildMode"`
+	BridgeOnly bool   `json:"bridgeOnly"`
 }
 
 // App is the Wails shell application struct.
@@ -51,6 +52,11 @@ func (a *App) startup(ctx context.Context) {
 		log.Printf("[poc-hub] start failed: %v", err)
 	}
 	a.onHubStatus(a.hub.Status())
+	a.hub.SetShellFtbEmit(func(event string, payload interface{}) {
+		if a.ctx != nil {
+			runtime.EventsEmit(a.ctx, event, payload)
+		}
+	})
 }
 
 func (a *App) onAgentEvent(ev poc.AgentEvent) {
@@ -69,10 +75,16 @@ func (a *App) onHubStatus(st poc.HubStatus) {
 
 // GetAppInfo returns minimal shell metadata for the frontend ready banner.
 func (a *App) GetAppInfo() AppInfo {
+	bridgeOnly := strings.TrimSpace(os.Getenv("NMER_BRIDGE_ONLY")) == "1"
+	appName := "NMER Wails POC"
+	if bridgeOnly {
+		appName = "NMER Bridge"
+	}
 	return AppInfo{
-		AppName:   "NMER Wails POC",
-		Version:   shellVersion,
-		BuildMode: buildMode,
+		AppName:    appName,
+		Version:    shellVersion,
+		BuildMode:  buildMode,
+		BridgeOnly: bridgeOnly,
 	}
 }
 
@@ -112,6 +124,14 @@ func (a *App) StopWsFakePump() {
 	if a.hub != nil {
 		a.hub.StopFakePump()
 	}
+}
+
+// GetFtbShellStatus returns S10 phase-2 FTB shell mount state.
+func (a *App) GetFtbShellStatus() poc.ShellFtbStatus {
+	if a.hub == nil {
+		return poc.ShellFtbStatus{Phase: 2}
+	}
+	return a.hub.ShellFtbStatus()
 }
 
 func (a *App) shutdown(ctx context.Context) {

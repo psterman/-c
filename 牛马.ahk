@@ -239,18 +239,29 @@ global CommandPaletteUseWebView := true
 #Include modules\GlobalDragHoleOverlay.ahk
 #Include modules\NativeDropCursorSync.ahk
 #Include modules\FloatingToolbar.ahk
+#Include modules\FloatingToolbarWailsHost.ahk
+#Include modules\FloatingToolbarRouter.ahk
 #Include modules\NmerWailsBridge.ahk
 #Include modules\SurfaceRuntimeManager.ahk
+#Include modules\SurfaceTransaction.ahk
 #Include modules\SurfaceIntentRouter.ahk
 #Include modules\SurfaceDisposeProbe.ahk
 try SurfaceManager_ObserveSystemBootstrap(Map(
     "traceSession", NMER_TraceSession,
     "gdip", pToken ? 1 : 0,
     "phase", "includes_ready",
+    "managerEnabled", FuncExists("Nmer_SurfaceManagerEnabled") ? (Nmer_SurfaceManagerEnabled() ? 1 : 0) : -1,
+    "shadowMode", FuncExists("Nmer_SurfaceManagerShadowMode") ? (Nmer_SurfaceManagerShadowMode() ? 1 : 0) : -1,
     "routeIntents", FuncExists("Nmer_SurfaceManagerRouteIntents") ? (Nmer_SurfaceManagerRouteIntents() ? 1 : 0) : -1,
-    "interceptOpenClose", FuncExists("Nmer_SurfaceManagerInterceptOpenClose") ? (Nmer_SurfaceManagerInterceptOpenClose() ? 1 : 0) : -1
+    "useTransactions", FuncExists("Nmer_SurfaceManagerUseTransactions") ? (Nmer_SurfaceManagerUseTransactions() ? 1 : 0) : -1,
+    "interceptOpenClose", FuncExists("Nmer_SurfaceManagerInterceptOpenClose") ? (Nmer_SurfaceManagerInterceptOpenClose() ? 1 : 0) : -1,
+    "interceptWarmup", FuncExists("Nmer_SurfaceManagerInterceptWarmup") ? (Nmer_SurfaceManagerInterceptWarmup() ? 1 : 0) : -1,
+    "enforceBudget", FuncExists("Nmer_SurfaceManagerEnforceBudget") ? (Nmer_SurfaceManagerEnforceBudget() ? 1 : 0) : -1,
+    "enforceSlots", FuncExists("Nmer_SurfaceManagerEnforceSlots") ? (Nmer_SurfaceManagerEnforceSlots() ? 1 : 0) : -1
 ))
 #Include modules\CommandPaletteCore.ahk
+#Include modules\CommandPaletteWailsHost.ahk
+#Include modules\CommandPaletteRouter.ahk
 #Include modules\CommandPaletteAgentOrchestrator.ahk
 #Include modules\CommandPaletteSearchDebug.ahk
 global g_CmdPal_AgentSubmitDispatch := CommandPalette_HandleAgentSubmit
@@ -262,6 +273,8 @@ global g_CmdPal_AgentPullDebugDispatch := CommandPaletteSearchDebug_PullAgentDeb
 #Include modules\AIListPanel.ahk
 #Include modules\PromptQuickPadCore.ahk
 #Include modules\SearchCenterWebViewCore.ahk
+#Include modules\DomainCSurfaceRouter.ahk
+#Include modules\DomainCWailsHost.ahk
 #Include modules\SelectionSenseCore.ahk
 #Include modules\HoleActivationRouter.ahk
 #Include modules\HoleActivationTriggers.ahk
@@ -4694,8 +4707,7 @@ if FuncExists("Nmer_AutoStartSearchCenterCore") {
     SetTimer(Nmer_AutoStartSearchCenterCore, -6000)
 }
 if FuncExists("Nmer_AutoStartWailsBridge") {
-    SetTimer(Nmer_AutoStartWailsBridge, -2000)
-    SetTimer(Nmer_AutoStartWailsBridge, -8000)
+    SetTimer(Nmer_AutoStartWailsBridge, -3000)
 }
 ; 初始化粘贴板历史面板
 InitClipboardHistoryPanel()
@@ -5156,6 +5168,9 @@ ProcessClipboardChange() {
         ; 静默处理错误，避免影响其他功能
     }
 }
+
+; VirtualKeyboardCore 在热键块之后才 #Include；CapsLock 和弦会先调到 VK_*，须提前声明
+global g_VK_TextInputActive := false
 
 ; 快捷操作面板与提示词执行（模块化）
 #Include modules\CursorPanelController.ahk
@@ -6307,7 +6322,7 @@ OnScreenshotEditorContextMenu(Ctrl, Info := 0, *) {
 ; ===================== 面板快捷键 =====================
 ; 当 CapsLock 按下时，响应快捷键（采用 CapsLock+ 方案）
 ; 注意：在 AutoHotkey v2 中，需要使用函数来检查变量
-#HotIf IsSearchCenterActive()
+#HotIf SearchCenter_ShouldCaptureGlobalHotkeys()
 
 Esc:: {
     global IsCountdownActive, GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
@@ -6348,6 +6363,12 @@ Esc:: {
     Send("{Esc}")
 }
 
+$^+q:: {
+    try ReloadScriptFromPopupMenu()
+    catch {
+    }
+}
+
 RestoreActivationRuntimeAfterConfigClose(*) {
     global g_ConfigOpenEntryMode, TrayMenuCustomFailStreak, TrayMenuSuppressNativeFallbackUntil
     try {
@@ -6369,10 +6390,12 @@ RestoreActivationRuntimeAfterConfigClose(*) {
     g_ConfigOpenEntryMode := ""
 }
 
-#HotIf GetCapsLockState()
+#HotIf CapsLockChordHotIf()
 
 ; ESC 关闭面板
 Esc:: {
+    if FuncExists("CapsLockChordInputBlocked") && CapsLockChordInputBlocked()
+        return
     ; 搜索中心优先：避免 WebView 激活态瞬时判定失败时，Esc 误落到全局动态热键（如关闭工具栏）
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
     if FuncExists("GDHO_DismissLauncherOnEsc") {
@@ -6439,7 +6462,7 @@ $c:: {
     if (HandleDynamicHotkey("c", "C"))
         VK_NoteLastChFromCapsLockKey("c")
     else
-        Send("c")
+        return
 }
 
 ; V 键：Shift+V 合并粘贴（Hub）；否则一律唤醒剪贴板时间线（不走 HotkeyV / VK 绑定）
@@ -6469,7 +6492,7 @@ $x:: {
     if (HandleDynamicHotkey("x", "X"))
         VK_NoteLastChFromCapsLockKey("x")
     else
-        Send("x")
+        return
 }
 
 ; E 键执行解释
@@ -6481,7 +6504,7 @@ $e:: {
     if (HandleDynamicHotkey("e", "E"))
         VK_NoteLastChFromCapsLockKey("e")
     else
-        Send("e")
+        return
 }
 
 ; R 键执行重构
@@ -6493,7 +6516,7 @@ $r:: {
     if (HandleDynamicHotkey("r", "R"))
         VK_NoteLastChFromCapsLockKey("r")
     else
-        Send("r")
+        return
 }
 
 ; O 键执行优化
@@ -6503,7 +6526,7 @@ o:: {
     if (HandleDynamicHotkey("o", "O"))
         VK_NoteLastChFromCapsLockKey("o")
     else
-        Send("o")
+        return
 }
 
 ; Q 键打开配置面板
@@ -6515,7 +6538,7 @@ $q:: {
     if (HandleDynamicHotkey("q", "Q"))
         VK_NoteLastChFromCapsLockKey("q")
     else
-        Send("q")
+        return
 }
 
 ; Z 键语音输入（切换模式）
@@ -6533,7 +6556,7 @@ $z:: {
     if (HandleDynamicHotkey("z", "Z"))
         VK_NoteLastChFromCapsLockKey("z")
     else
-        Send("z")
+        return
 }
 
 ; T 键执行截图并弹出智能菜单
@@ -6543,7 +6566,7 @@ t:: {
     if (HandleDynamicHotkey("t", "T"))
         VK_NoteLastChFromCapsLockKey("t")
     else
-        Send("t")
+        return
 }
 
 ; F 键：激活搜索中心或执行区域内操作
@@ -6614,11 +6637,48 @@ b:: {
 
 #HotIf  ; 结束 GetCapsLockState() 作用域，为 SearchCenter 专用热键让路
 
+; 命令面板可见时仍允许 CapsLock+F 抢占打开搜索中心（不经 InputBlocked，否则 CP 前台时 #HotIf 恒为假）
+#HotIf CapsLockChordPhysDown() && FuncExists("CommandPalette_IsVisible") && CommandPalette_IsVisible()
+$f:: {
+    global CapsLock2, IsCountdownActive
+    CapsLock2 := false
+    if FuncExists("CapsLock_RestoreForUiTypingOpen")
+        CapsLock_RestoreForUiTypingOpen()
+    else {
+        RestoreCapsLockAfterChord()
+        if FuncExists("CapsLock_ScheduleNormalizeAfterChord")
+            CapsLock_ScheduleNormalizeAfterChord()
+    }
+    if (IsCountdownActive) {
+        ExecuteCountdownAction()
+        try VK_NoteLastChFromCapsLockKey("f")
+        catch {
+        }
+        return
+    }
+    if (SearchCenter_ShouldUseWebView()) {
+        try {
+            pid := DllCall("GetCurrentProcessId", "UInt")
+            DllCall("AllowSetForegroundWindow", "UInt", pid)
+        } catch {
+        }
+        SurfaceIntent_OpenSearch("", "search_hotkey")
+        if FuncExists("SCWV_StartHotkeyForegroundPump")
+            try SCWV_StartHotkeyForegroundPump()
+            catch {
+            }
+    } else
+        ShowSearchCenter()
+    try VK_NoteLastChFromCapsLockKey("f")
+    catch {
+    }
+}
+#HotIf
+
 ; ===================== SearchCenter 窗口热键（优先级最高）=====================
 ; 【重要】必须在全局 CapsLock 热键之前定义，确保优先级
-; 【作用域】仅在 SearchCenter 窗口激活时生效
-
-#HotIf IsSearchCenterActive()
+; 【作用域】Legacy GUI 才托管 Enter/方向键；WebView 由页面收键
+#HotIf SearchCenter_ShouldCaptureLegacyListHotkeys()
 
     ; Enter 键：根据焦点区域执行不同操作，或加速倒计时
 Enter:: {
@@ -6705,7 +6765,7 @@ $Right::HandleSearchCenterRight() ; → 键：根据当前区域执行相应操�
 ; 【优先级】更具体的作用域（IsSearchCenterActive() && GetCapsLockState()）优先于全局作用域（GetCapsLockState()）
 ; 【功能】在 searchcenter 中，capslock+wsad 与方向键行为完全一致，遵守三个区域的操作规范
 ; 【三个区域】category（分类栏）、input（输入框）、listview（结果列表）
-#HotIf IsSearchCenterActive() && GetCapsLockState()
+#HotIf SearchCenter_ShouldCaptureGlobalHotkeys() && CapsLockChordHotIf()
 $q::SearchCenter_HandleCapsChordKey("q")
 $w::SearchCenter_HandleCapsChordKey("w")
 $e::SearchCenter_HandleCapsChordKey("e")
@@ -6774,10 +6834,12 @@ Esc:: {
 
 ; ===================== 全局 CapsLock 热键（优先级较低）=====================
 ; 【作用域】CapsLock 按下时全局生效（SearchCenter 除外，因为上面已经定义了更具体的热键）
-#HotIf GetCapsLockState()
+#HotIf CapsLockChordHotIf()
 
 ; W 键映射为 Up（上方向键）- 全局生效（SearchCenter 中会被上面的专用热键覆盖）
 $w:: {
+    if FuncExists("CapsLockChordInputBlocked") && CapsLockChordInputBlocked()
+        return
     if (SearchCenter_HandleCapsChordKey("w"))
         return
     global CapsLock2
@@ -6791,6 +6853,8 @@ $w:: {
 
 ; S 键映射为 Down（下方向键）- 全局生效（SearchCenter 中会被上面的专用热键覆盖）
 $s:: {
+    if FuncExists("CapsLockChordInputBlocked") && CapsLockChordInputBlocked()
+        return
     if (SearchCenter_HandleCapsChordKey("s"))
         return
     global CapsLock2
@@ -6804,6 +6868,8 @@ $s:: {
 
 ; A 键映射为 Left（左方向键）- 全局生效（SearchCenter 中会被上面的专用热键覆盖）
 $a:: {
+    if FuncExists("CapsLockChordInputBlocked") && CapsLockChordInputBlocked()
+        return
     if (SearchCenter_HandleCapsChordKey("a"))
         return
     global CapsLock2
@@ -6817,6 +6883,8 @@ $a:: {
 
 ; D 键映射为 Right（右方向键）- 全局生效（SearchCenter 中会被上面的专用热键覆盖）
 $d:: {
+    if FuncExists("CapsLockChordInputBlocked") && CapsLockChordInputBlocked()
+        return
     if (SearchCenter_HandleCapsChordKey("d"))
         return
     global CapsLock2
@@ -6835,7 +6903,7 @@ p:: {
     if (HandleDynamicHotkey("p", "P"))
         VK_NoteLastChFromCapsLockKey("p")
     else
-        Send("p")
+        return
 }
 
 #HotIf
@@ -6942,7 +7010,7 @@ StopDynamicHotkeys() {
 }
 
 ; ===================== 面板显示时的动态快捷键 =====================
-; 注：CapsLock+B 批量逻辑已合并到上方 #HotIf GetCapsLockState() 的 b:: 中
+; 注：CapsLock+B 批量逻辑已合并到上方 #HotIf CapsLockChordHotIf() 的 b:: 中
 
 ; SetAutoStart → modules\ConfigManager.ahk（注册表 Run 写入 A_AhkPath + 主脚本）
 
@@ -7128,10 +7196,16 @@ ExitFunc(ExitReason, ExitCode) {
         }
     }
 }
+; 命令面板 WebView 聚焦时会吞全局 Ctrl+Shift+Q，宿主 $ 钩子兜底重载脚本
+$^+q:: {
+    try ReloadScriptFromPopupMenu()
+    catch {
+    }
+}
 #HotIf
 
 ; Cursor + CapsLock：动态右键菜单（须在 VirtualKeyboardCore 之后注册）
-#HotIf WinActive("ahk_exe Cursor.exe") && GetCapsLockState() && VK_ToolbarLayoutHasContextMenuItems()
+#HotIf WinActive("ahk_exe Cursor.exe") && CapsLockChordHotIf() && VK_ToolbarLayoutHasContextMenuItems()
 RButton:: {
     VK_ShowToolbarLayoutContextMenu()
 }

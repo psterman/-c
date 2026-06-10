@@ -750,7 +750,7 @@ _VK_NormalizeAhkKey(ahkKey) {
     return k
 }
 
-; 无 ^!+# 的单字母/数字键：只能走 L1（CapsLock 和弦），禁止落到 L3 全局热键。
+; 无 ^!+# 的单字母/数字/编辑键：只能走 L1（CapsLock 和弦），禁止落到 L3 全局热键。
 _VK_IsBareSingleKey(ahkKey) {
     k := _VK_NormalizeAhkKey(ahkKey)
     if (k = "")
@@ -758,6 +758,8 @@ _VK_IsBareSingleKey(ahkKey) {
     if RegExMatch(k, "^[a-z0-9]$")
         return true
     if (k = "esc" || k = "escape" || k = "enter" || k = "space" || k = "tab")
+        return true
+    if (k = "backspace" || k = "delete" || k = "del" || k = "insert" || k = "ins")
         return true
     return false
 }
@@ -3020,8 +3022,7 @@ _JsonStr(s) {
 }
 
 VK_IsVkTextInputFocused() {
-    global g_VK_TextInputActive
-    if !g_VK_TextInputActive
+    if !IsSet(g_VK_TextInputActive) || !g_VK_TextInputActive
         return false
     return VK_IsHostVisible()
 }
@@ -3036,7 +3037,12 @@ VK_IsTypingPassthroughContext() {
     } catch {
     }
     try {
-        if FuncExists("CommandPalette_IsVisible") && CommandPalette_IsVisible()
+        if FuncExists("CommandPalette_IsInputActive") && CommandPalette_IsInputActive()
+            return true
+    } catch {
+    }
+    try {
+        if FuncExists("ConfigWebView_HostWindowVisible") && ConfigWebView_HostWindowVisible()
             return true
     } catch {
     }
@@ -3044,6 +3050,8 @@ VK_IsTypingPassthroughContext() {
 }
 
 _VK_DispatchBoundHotkey(cmdId, ahkKey) {
+    if FuncExists("CapsLockChordInputBlocked") && CapsLockChordInputBlocked()
+        return
     ; 输入态：热键不注册 $，按键会自然进 WebView；此处只拦截命令，绝不 SendText
     if (VK_IsTypingPassthroughContext() && _VK_IsBareSingleKey(ahkKey))
         return
@@ -3057,8 +3065,13 @@ _BindKey(ahkKey, cmdId) {
     if g_HotkeyBound.Has(ahkKey)
         _VK_ReleaseBoundHotkey(ahkKey)
     fn := _MakeCmdFn(cmdId, ahkKey)
+    useTypingGate := _VK_IsBareSingleKey(ahkKey)
     try {
+        if useTypingGate
+            HotIf(_VkTypingBlockedHotIfCb)
         Hotkey(ahkKey, fn, "On")
+        if useTypingGate
+            HotIf()
         g_HotkeyBound[ahkKey] := 1
         OutputDebug("[VK] Bound: " . ahkKey . " -> " . cmdId)
         return true
@@ -3411,6 +3424,11 @@ VK_SearchCenterResolveCapsChordCmd(physKey) {
 ; 嵌入 CursorHelper：若当前物理键在 g_Bindings 中有命令则执行并返回 true（截断宿主默认）
 VirtualKeyboard_HandleKey(physKey) {
     global g_VK_Embedded
+    try {
+        if FuncExists("CapsLockChordInputBlocked") && CapsLockChordInputBlocked()
+            return false
+    } catch {
+    }
     if (VK_IsTypingPassthroughContext() && _VK_IsBareSingleKey(physKey))
         return false
     if !IsSet(g_VK_Embedded)
@@ -3448,7 +3466,17 @@ VirtualKeyboard_HandleKey(physKey) {
 }
 
 _VkCapsLockHotIfCb(*) {
+    if FuncExists("CapsLockChordHotIf")
+        return CapsLockChordHotIf()
     return GetCapsLockState()
+}
+
+_VkTypingBlockedHotIfCb(*) {
+    return !VK_IsTypingPassthroughContext()
+}
+
+_VkCapsLockDispatchHotIfCb(*) {
+    return _VkCapsLockHotIfCb()
 }
 
 _VkCursorWinHotIfCb(*) {
@@ -3635,7 +3663,7 @@ _VK_RegisterCapsLockDispatchHotkeys() {
     }
     _VK_UnregisterCapsLockDispatchHotkeys()
     try {
-        HotIf(_VkCapsLockHotIfCb)
+        HotIf(_VkCapsLockDispatchHotIfCb)
         for ahkKey, cmdId in g_Bindings {
             if _VK_IsHostStaticCapsHotkeyKey(ahkKey)
                 continue
@@ -3652,16 +3680,13 @@ _VK_RegisterCapsLockDispatchHotkeys() {
 
 VkDynCapsLockHandler(*) {
     th := A_ThisHotkey
+    if FuncExists("CapsLockChordInputBlocked") && CapsLockChordInputBlocked()
+        return
     if (VK_IsTypingPassthroughContext() && _VK_IsBareSingleKey(th))
         return
     if VirtualKeyboard_HandleKey(th)
         return
-    if (StrLen(th) = 1) {
-        try SendText(th)
-        catch as e
-            OutputDebug("[VK] VkDynCapsLockHandler passthrough: " . e.Message)
-    } else
-        OutputDebug("[VK] VkDynCapsLockHandler: unhandled " . th)
+    ; 未绑定命令时不 SendText，避免与 CapsLock/$ 热键形成反馈风暴
 }
 
 _OnWV2Created(ctrl) {

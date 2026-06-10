@@ -2830,6 +2830,8 @@ GDHO_ShowOverlay() {
         if GDHO_IsDecoupled()
             GDHO_RaisePanelAboveStarry()
         try WebView2_NotifyShown(GDHO_WV2)
+        if FuncExists("SurfaceManager_ObserveShow")
+            try SurfaceManager_ObserveShow("drag_hole_overlay", Map("entry", "GDHO_ShowOverlay"))
     }
 }
 
@@ -3082,6 +3084,8 @@ GDHO_HideOverlay() {
     }
     GDHO_VISIBLE := false
     g_GDHO_WaitingReadyReveal := false
+    if FuncExists("SurfaceManager_ObserveHide")
+        try SurfaceManager_ObserveHide("drag_hole_overlay", Map("entry", "GDHO_HideOverlay"))
 }
 
 GDHO_Hide() {

@@ -262,7 +262,7 @@ if ($CardCount -eq 0 -and $PreserveEmptyWhenCpLoaded -and $prevSnapshot) {
     }
 }
 
-if ($CardCount -eq 0 -and $snapshotKind -eq "empty" -and $wv2Scoped.Count -lt 8) {
+if ($CardCount -eq 0 -and $snapshotKind -eq "empty") {
     @{
         capturedAt          = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
         emptyLoadPrivateMiB = $emptyForBaseline

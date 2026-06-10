@@ -77,21 +77,28 @@ SurfaceIntent_ExecuteOpen(surfaceId, meta := 0) {
     m := SurfaceIntent_NormalizeMeta(meta)
     switch sid {
         case "search_center":
-            mode := m.Has("mode") ? String(m["mode"]) : ""
-            kw := m.Has("keyword") ? String(m["keyword"]) : ""
-            ts := m.Has("triggerSource") ? String(m["triggerSource"]) : ""
-            useUnified := m.Has("unified") ? !!m["unified"] : (mode != "" || ts != "")
-            if useUnified {
-                openMode := (StrLower(mode) = "clipboard") ? "clipboard" : "search"
-                if (ts = "")
-                    ts := (openMode = "clipboard") ? "clipboard_hotkey" : "search_hotkey"
-                SurfaceManager_InvokeOptional("SCWV_OpenUnified", openMode, kw, ts)
-            } else {
-                reason := m.Has("reason") ? String(m["reason"]) : ""
-                SurfaceManager_InvokeOptional("SCWV_Show", reason, ts)
+            if FuncExists("SearchCenterRouter_Open")
+                SearchCenterRouter_Open(m)
+            else {
+                mode := m.Has("mode") ? String(m["mode"]) : ""
+                kw := m.Has("keyword") ? String(m["keyword"]) : ""
+                ts := m.Has("triggerSource") ? String(m["triggerSource"]) : ""
+                useUnified := m.Has("unified") ? !!m["unified"] : (mode != "" || ts != "")
+                if useUnified {
+                    openMode := (StrLower(mode) = "clipboard") ? "clipboard" : "search"
+                    if (ts = "")
+                        ts := (openMode = "clipboard") ? "clipboard_hotkey" : "search_hotkey"
+                    SurfaceManager_InvokeOptional("SCWV_OpenUnified", openMode, kw, ts)
+                } else {
+                    reason := m.Has("reason") ? String(m["reason"]) : ""
+                    SurfaceManager_InvokeOptional("SCWV_Show", reason, ts)
+                }
             }
         case "command_palette":
-            SurfaceManager_InvokeOptional("CommandPalette_Show")
+            if FuncExists("CommandPaletteRouter_Show")
+                CommandPaletteRouter_Show()
+            else
+                SurfaceManager_InvokeOptional("CommandPalette_Show")
         case "clipboard_panel":
             SurfaceManager_InvokeOptional("CP_Show")
         case "prompt_quick_pad":
@@ -99,9 +106,15 @@ SurfaceIntent_ExecuteOpen(surfaceId, meta := 0) {
         case "virtual_keyboard":
             SurfaceManager_InvokeOptional("VK_Show")
         case "config_webview":
-            SurfaceManager_InvokeOptional("ShowConfigWebViewGUI")
+            if FuncExists("ConfigWebViewRouter_Show")
+                ConfigWebViewRouter_Show()
+            else
+                SurfaceManager_InvokeOptional("ShowConfigWebViewGUI")
         case "floating_toolbar":
-            SurfaceManager_InvokeOptional("ShowFloatingToolbar")
+            if FuncExists("FloatingToolbarRouter_Show")
+                FloatingToolbarRouter_Show(m)
+            else
+                SurfaceManager_InvokeOptional("ShowFloatingToolbar")
         default:
             throw Error("SurfaceIntent_ExecuteOpen: unknown surface " . sid)
     }
@@ -113,9 +126,15 @@ SurfaceIntent_ExecuteClose(surfaceId, meta := 0) {
     switch sid {
         case "search_center":
             persist := m.Has("persistSelection") ? !!m["persistSelection"] : false
-            SurfaceManager_InvokeOptional("SCWV_Hide", persist)
+            if FuncExists("SearchCenterRouter_Hide")
+                SearchCenterRouter_Hide(persist)
+            else
+                SurfaceManager_InvokeOptional("SCWV_Hide", persist)
         case "command_palette":
-            SurfaceManager_InvokeOptional("CommandPalette_Hide")
+            if FuncExists("CommandPaletteRouter_Hide")
+                CommandPaletteRouter_Hide(m)
+            else
+                SurfaceManager_InvokeOptional("CommandPalette_Hide", m)
         case "clipboard_panel":
             SurfaceManager_InvokeOptional("CP_Hide")
         case "prompt_quick_pad":
@@ -123,9 +142,15 @@ SurfaceIntent_ExecuteClose(surfaceId, meta := 0) {
         case "virtual_keyboard":
             SurfaceManager_InvokeOptional("VK_Hide")
         case "config_webview":
-            SurfaceManager_InvokeOptional("ConfigWebView_Close")
+            if FuncExists("ConfigWebViewRouter_Hide")
+                ConfigWebViewRouter_Hide()
+            else
+                SurfaceManager_InvokeOptional("ConfigWebView_Close")
         case "floating_toolbar":
-            SurfaceManager_InvokeOptional("HideFloatingToolbar")
+            if FuncExists("FloatingToolbarRouter_Hide")
+                FloatingToolbarRouter_Hide(m)
+            else
+                SurfaceManager_InvokeOptional("HideFloatingToolbar")
         default:
             throw Error("SurfaceIntent_ExecuteClose: unknown surface " . sid)
     }
@@ -139,9 +164,21 @@ SurfaceIntent_Open(surfaceId, meta := 0) {
     m := SurfaceIntent_NormalizeMeta(meta)
     m["intentAction"] := "open"
     requestId := 0
+    genId := 0
+    useTxn := false
+    if FuncExists("SurfaceTransaction_ShouldUse") && SurfaceTransaction_ShouldUse()
+        && SurfaceIntent_ShouldRoute() && !(FuncExists("SurfaceTransaction_IsRestoreContext") && SurfaceTransaction_IsRestoreContext(m))
+        && !(FuncExists("SurfaceTransaction_ShouldBeginFor") && !SurfaceTransaction_ShouldBeginFor(sid, m))
+        useTxn := true
+    if useTxn {
+        genId := SurfaceTransaction_Begin(sid, m, 0)
+        m["generationId"] := genId
+    }
     if SurfaceIntent_ShouldObserveRequest() {
         try SurfaceManager_RegisterSurface(sid)
         requestId := SurfaceManager_Request(sid, "open", "SurfaceIntent_Open", m)
+        if useTxn && genId
+            SurfaceTransaction_UpdateRequestId(genId, requestId)
         try SurfaceManager_BeforeOpen(sid, "SurfaceIntent_Open", m)
     }
     if SurfaceIntent_ShouldRoute()
@@ -152,7 +189,9 @@ SurfaceIntent_Open(surfaceId, meta := 0) {
     try {
         SurfaceIntent_ExecuteOpen(sid, m)
     } catch as err {
-        SurfaceIntent_Record("intent_open_error", sid, Map("message", err.Message, "requestId", requestId), requestId)
+        if useTxn && genId
+            SurfaceTransaction_Abort(genId, "open_error", Map("message", err.Message, "requestId", requestId))
+        SurfaceIntent_Record("intent_open_error", sid, Map("message", err.Message, "requestId", requestId, "generationId", genId), requestId)
         throw err
     } finally {
         g_SurfaceIntent_InExecute := prevExec
@@ -166,6 +205,8 @@ SurfaceIntent_Close(surfaceId, meta := 0) {
         return 0
     m := SurfaceIntent_NormalizeMeta(meta)
     m["intentAction"] := "close"
+    if FuncExists("SurfaceTransaction_OnTargetClose")
+        try SurfaceTransaction_OnTargetClose(sid, m)
     requestId := 0
     if SurfaceIntent_ShouldObserveRequest() {
         requestId := SurfaceManager_Request(sid, "close", "SurfaceIntent_Close", m)
@@ -212,7 +253,63 @@ SurfaceIntent_Dispose(surfaceId, meta := 0) {
     return requestId
 }
 
+SurfaceIntent_PreemptCommandPaletteForSearch(*) {
+    cpVisible := false
+    try {
+        if FuncExists("CommandPalette_IsVisible")
+            cpVisible := CommandPalette_IsVisible()
+    } catch {
+    }
+    cpActive := false
+    try {
+        if FuncExists("SurfaceManager_HasActivePrimaryConflict")
+            cpActive := SurfaceManager_HasActivePrimaryConflict("search_center")
+    } catch {
+    }
+    if !cpVisible && !cpActive
+        return
+    try {
+        pid := DllCall("GetCurrentProcessId", "UInt")
+        DllCall("AllowSetForegroundWindow", "UInt", pid)
+    } catch {
+    }
+    if FuncExists("CommandPalette_CancelDeferredFocusTimers")
+        try CommandPalette_CancelDeferredFocusTimers()
+        catch {
+        }
+    preemptMeta := Map("reason", "search_preempt", "skipTransaction", true)
+    if FuncExists("SurfaceIntent_Close") {
+        try SurfaceIntent_Close("command_palette", preemptMeta)
+        catch {
+            if FuncExists("CommandPalette_Hide")
+                CommandPalette_Hide(preemptMeta)
+        }
+    } else if FuncExists("CommandPalette_Hide")
+        CommandPalette_Hide(preemptMeta)
+    if FuncExists("FocusBroker_Release")
+        try FocusBroker_Release("CommandPalette", "search_preempt")
+        catch {
+        }
+    if FuncExists("SurfaceManager_ObserveHide")
+        try SurfaceManager_ObserveHide("command_palette", Map("reason", "search_preempt"))
+        catch {
+        }
+}
+
 SurfaceIntent_OpenSearch(keyword := "", triggerSource := "search_hotkey") {
+    try {
+        pid := DllCall("GetCurrentProcessId", "UInt")
+        DllCall("AllowSetForegroundWindow", "UInt", pid)
+    } catch {
+    }
+    try DllCall("LockSetForegroundWindow", "UInt", 2)
+    catch {
+    }
+    SurfaceIntent_PreemptCommandPaletteForSearch()
+    if FuncExists("SCWV_StartHotkeyForegroundPump")
+        try SCWV_StartHotkeyForegroundPump()
+        catch {
+        }
     return SurfaceIntent_Open("search_center", Map(
         "mode", "search",
         "keyword", String(keyword),

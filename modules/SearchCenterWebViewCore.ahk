@@ -6,6 +6,7 @@ global g_SCWV_WV2 := 0
 global g_SCWV_Ready := false
 global g_SCWV_UI_Ready := false
 global g_SCWV_WaitingUiFinishedReveal := false
+global g_SCWV_DeferredHostShow := false
 global g_SCWV_WV2_CreateRetry := 0
 global g_SCWV_CreateInFlight := false
 global g_SCWV_CreateStartTick := 0
@@ -46,6 +47,9 @@ global g_SCWV_RecycleBin := []  ; 鍒犻櫎椤瑰揩鐓?{title,content,id}
 global g_SCWV_PreviewCapabilityCache := Map() ; extDot -> {state, ts, ...}
 global g_SCWV_DeactivateBlockUntil := 0
 global g_SCWV_DeactivateBlockReason := ""
+global g_SCWV_FgAttachTid := 0
+global g_SCWV_HotkeyFgPumpUntil := 0
+global g_SCWV_HotkeyFgPumpCount := 0
 global g_SCWV_QuickLookVersion := "4.5.0"
 global g_SCWV_QuickLookInstallBusy := false
 global g_SCWV_QuickLookInstallQueued := false
@@ -191,7 +195,7 @@ SCWV_HostAlive() {
 }
 
 SCWV_ResetHostState() {
-    global g_SCWV_Gui, g_SCWV_Ctrl, g_SCWV_WV2, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Visible
+    global g_SCWV_Gui, g_SCWV_Ctrl, g_SCWV_WV2, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_DeferredHostShow, g_SCWV_Visible
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
     global g_SCWV_FocusPending, g_SCWV_PendingJsonQueue, GuiID_SearchCenter
     global g_SCWV_LifecyclePhase
@@ -203,6 +207,7 @@ SCWV_ResetHostState() {
     g_SCWV_Ready := false
     g_SCWV_UI_Ready := false
     g_SCWV_WaitingUiFinishedReveal := false
+    g_SCWV_DeferredHostShow := false
     g_SCWV_WV2_CreateRetry := 0
     g_SCWV_CreateInFlight := false
     g_SCWV_CreateStartTick := 0
@@ -559,6 +564,7 @@ SCWV_ArmAntiHang(token) {
 
 SCWV_AntiHangTick(token) {
     global g_SCWV_CurrentToken, g_SCWV_CurrentPhase, g_SCWV_PhaseLastChanged, g_SCWV_AntiHangTimerArmed, g_SCWV_NavProgressTick
+    global g_SCWV_PendingTriggerSource, g_SCWV_WaitingUiFinishedReveal, g_SCWV_HotkeyFgPumpUntil, g_SCWV_Ready
     if (token != g_SCWV_CurrentToken)
         return
     if (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING) {
@@ -576,7 +582,14 @@ SCWV_AntiHangTick(token) {
         return
     }
     elapsed := A_TickCount - g_SCWV_PhaseLastChanged
-    timeoutMs := (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING) ? 7000 : 2500
+    timeoutMs := (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING) ? 20000 : 2500
+    ts := Trim(String(g_SCWV_PendingTriggerSource))
+    if (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING && ts = "search_hotkey")
+        timeoutMs := 45000
+    if (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING && g_SCWV_HotkeyFgPumpUntil > A_TickCount)
+        timeoutMs := Max(timeoutMs, 45000)
+    if (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING && g_SCWV_WaitingUiFinishedReveal && (g_SCWV_Ready || g_SCWV_NavProgressTick > 0))
+        timeoutMs := Max(timeoutMs, 45000)
     if (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING && g_SCWV_NavProgressTick > 0 && (A_TickCount - g_SCWV_NavProgressTick) < 2200) {
         SetTimer((*) => SCWV_AntiHangTick(token), -120)
         return
@@ -626,6 +639,8 @@ SCWV_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
         return true
     } else {
         if (cur = SCWV_PHASE_OPENING) {
+            if FuncExists("SurfaceTransaction_OnTargetClose")
+                try SurfaceTransaction_OnTargetClose("search_center", Map("reason", reason, "entry", "opening_close"))
             g_SCWV_CloseAfterReady := true
             return true
         }
@@ -989,7 +1004,7 @@ SCWV_Init(reason := "") {
     g_SCWV_LifecyclePhase := "opening"
 
     ; 浣跨敤 Windows 鍘熺敓鏍囬鏍忎笌绯荤粺绐楀彛鎸夐挳锛堟渶灏忓寲/鏈€澶у寲/鍏抽棴锛?
-    g_SCWV_Gui := Gui("+Resize +MinSize760x540 +MinimizeBox +MaximizeBox -DPIScale +Owner", "搜索中心")
+    g_SCWV_Gui := Gui("+Resize +MinSize760x540 +MinimizeBox +MaximizeBox -DPIScale", "搜索中心")
     g_SCWV_Gui.BackColor := "1b1b1d"
     g_SCWV_Gui.MarginX := 0
     g_SCWV_Gui.MarginY := 0
@@ -1155,6 +1170,10 @@ SCWV_OnNavigationCompleted(sender, args) {
     if (g_SCWV_WaitingUiFinishedReveal && (g_SCWV_UI_Ready || g_SCWV_FirstFrameSeen))
         SCWV_FinishReveal()
 
+    global g_SCWV_PendingTriggerSource
+    if (Trim(String(g_SCWV_PendingTriggerSource)) = "search_hotkey")
+        SCWV_StartHotkeyForegroundPump(10000)
+
     SCWV_RefreshComposition()
 }
 
@@ -1191,6 +1210,212 @@ SCWV_EnsureMaximized(*) {
     }
 }
 
+SCWV_ApplyCapsLockForSearchOpen() {
+    if FuncExists("CapsLock_RestoreForUiTypingOpen")
+        CapsLock_RestoreForUiTypingOpen()
+    else if FuncExists("CapsLock_ScheduleNormalizeAfterChord")
+        CapsLock_ScheduleNormalizeAfterChord()
+}
+
+SCWV_PrepareForegroundSteal() {
+    try {
+        pid := DllCall("GetCurrentProcessId", "UInt")
+        DllCall("AllowSetForegroundWindow", "UInt", pid)
+    } catch {
+    }
+    try DllCall("LockSetForegroundWindow", "UInt", 2)
+    catch {
+    }
+    try {
+        if FuncExists("CommandPalette_CancelDeferredFocusTimers")
+            CommandPalette_CancelDeferredFocusTimers()
+    } catch {
+    }
+    try {
+        cpHwnd := FuncExists("CommandPalette_GetGuiHwnd") ? CommandPalette_GetGuiHwnd() : 0
+        if cpHwnd && WinExist("ahk_id " . cpHwnd)
+            DllCall("ShowWindow", "Ptr", cpHwnd, "Int", 0)
+    } catch {
+    }
+    global g_SCWV_FgAttachTid
+    g_SCWV_FgAttachTid := 0
+    try {
+        fore := WinGetID("A")
+        if fore {
+            foreTid := DllCall("GetWindowThreadProcessId", "Ptr", fore, "UInt*", 0)
+            curTid := DllCall("GetCurrentThreadId", "UInt")
+            if foreTid && foreTid != curTid {
+                if DllCall("AttachThreadInput", "UInt", curTid, "UInt", foreTid, "Int", true)
+                    g_SCWV_FgAttachTid := foreTid
+            }
+        }
+    } catch {
+    }
+}
+
+SCWV_ReleaseForegroundSteal() {
+    global g_SCWV_FgAttachTid
+    if !g_SCWV_FgAttachTid
+        return
+    try {
+        curTid := DllCall("GetCurrentThreadId", "UInt")
+        DllCall("AttachThreadInput", "UInt", curTid, "UInt", g_SCWV_FgAttachTid, "Int", false)
+    } catch {
+    }
+    g_SCWV_FgAttachTid := 0
+}
+
+SCWV_ScheduleHandoffForegroundRetries() {
+    SetTimer((*) => SCWV_RaiseToForeground("handoff_retry_80"), -80)
+    SetTimer((*) => SCWV_RaiseToForeground("handoff_retry_220"), -220)
+    SetTimer((*) => SCWV_RaiseToForeground("handoff_retry_500"), -500)
+    SetTimer((*) => SCWV_RaiseToForeground("handoff_retry_1000"), -1000)
+    SetTimer((*) => SCWV_RaiseToForeground("handoff_retry_1800"), -1800)
+}
+
+SCWV_ForegroundPulse(hwnd) {
+    if !hwnd
+        return false
+    expr := "ahk_id " . hwnd
+    if !WinExist(expr)
+        return false
+    posFlags := 0x0001 | 0x0002 | 0x0040
+    try DllCall("ShowWindow", "Ptr", hwnd, "Int", 9)
+    catch {
+    }
+    try DllCall("ShowWindow", "Ptr", hwnd, "Int", 3)
+    catch {
+    }
+    try DllCall("SetWindowPos", "Ptr", hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", posFlags)
+    catch {
+    }
+    try {
+        vkAlt := 0x12
+        DllCall("keybd_event", "UChar", vkAlt, "UChar", 0, "UInt", 0, "UPtr", 0)
+        DllCall("keybd_event", "UChar", vkAlt, "UChar", 0, "UInt", 2, "UPtr", 0)
+    } catch {
+    }
+    ok := false
+    try ok := !!DllCall("SetForegroundWindow", "Ptr", hwnd)
+    catch {
+    }
+    try DllCall("SwitchToThisWindow", "Ptr", hwnd, "Int", true)
+    catch {
+    }
+    try DllCall("SetWindowPos", "Ptr", hwnd, "Ptr", -2, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", posFlags)
+    catch {
+    }
+    try {
+        if WinActive(expr)
+            ok := true
+    } catch {
+    }
+    return ok
+}
+
+SCWV_StartHotkeyForegroundPump(durationMs := 14000) {
+    global g_SCWV_HotkeyFgPumpUntil, g_SCWV_HotkeyFgPumpCount
+    g_SCWV_HotkeyFgPumpUntil := A_TickCount + Max(3000, Integer(durationMs))
+    g_SCWV_HotkeyFgPumpCount := 0
+    try SCWV_PrepareForegroundSteal()
+    SetTimer(SCWV_HotkeyForegroundPumpTick, 0)
+    SetTimer(SCWV_HotkeyForegroundPumpTick, -1)
+}
+
+SCWV_HotkeyForegroundPumpTick(*) {
+    global g_SCWV_HotkeyFgPumpUntil, g_SCWV_HotkeyFgPumpCount, g_SCWV_Gui
+    if (A_TickCount > g_SCWV_HotkeyFgPumpUntil) {
+        SetTimer(SCWV_HotkeyForegroundPumpTick, 0)
+        return
+    }
+    g_SCWV_HotkeyFgPumpCount += 1
+    hwnd := 0
+    if IsObject(g_SCWV_Gui) {
+        try hwnd := g_SCWV_Gui.Hwnd
+        catch {
+        }
+    }
+    if hwnd && WinExist("ahk_id " . hwnd) {
+        try SCWV_EnsureMaximized()
+        catch {
+        }
+        ok := false
+        try ok := SCWV_RaiseToForeground("hotkey_fg_pump_" . g_SCWV_HotkeyFgPumpCount)
+        catch {
+        }
+        if !ok {
+            try ok := SCWV_ForegroundPulse(hwnd)
+            catch {
+            }
+        }
+        if ok && (SCWV_IsRevealedToUser() || WinActive("ahk_id " . hwnd)) {
+            SetTimer(SCWV_HotkeyForegroundPumpTick, 0)
+            return
+        }
+    }
+    SetTimer(SCWV_HotkeyForegroundPumpTick, -90)
+}
+
+SCWV_RaiseToForeground(reason := "sc_raise", focusCb := 0) {
+    global g_SCWV_Gui, g_SCWV_Ctrl
+    if !IsObject(g_SCWV_Gui)
+        return false
+    hwnd := 0
+    try hwnd := g_SCWV_Gui.Hwnd
+    catch {
+    }
+    if !hwnd
+        return false
+    SCWV_PrepareForegroundSteal()
+    expr := "ahk_id " . hwnd
+    try WinShow(expr)
+    catch {
+    }
+    try {
+        ex := WinGetExStyle(expr)
+        if (ex & 0x80)
+            WinSetExStyle(ex & ~0x80, expr)
+    } catch {
+    }
+    cb := focusCb
+    if !IsObject(cb) && IsObject(g_SCWV_Ctrl)
+        cb := (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl)
+    rs := String(reason)
+    handoffRaise := (InStr(rs, "handoff") > 0 || InStr(rs, "hotkey") > 0 || InStr(rs, "finish_reveal") > 0 || InStr(rs, "show_host") > 0 || InStr(rs, "show_focus") > 0)
+    ok := false
+    if handoffRaise {
+        try ok := SCWV_ForegroundPulse(hwnd)
+        catch {
+        }
+    }
+    if !ok {
+        if FuncExists("LegacyGuard_RequestFocus")
+            ok := LegacyGuard_RequestFocus("SearchCenter", hwnd, 60, rs, 900, cb)
+        else if FuncExists("FocusBroker_Request")
+            ok := FocusBroker_Request("SearchCenter", hwnd, 60, rs, 900, cb)
+    }
+    if !ok {
+        try ok := SCWV_ForegroundPulse(hwnd)
+        catch {
+        }
+    }
+    if !ok {
+        try {
+            DllCall("ShowWindow", "Ptr", hwnd, "Int", 9)
+            DllCall("SetForegroundWindow", "Ptr", hwnd)
+            ok := WinActive(expr)
+        } catch {
+        }
+    }
+    if ok && IsObject(cb) {
+        try cb.Call()
+        catch {
+        }
+    }
+    SCWV_ReleaseForegroundSteal()
+    return ok
+}
+
 SCWV_ShowHostFullscreen(*) {
     global g_SCWV_Gui
     if !g_SCWV_Gui
@@ -1205,13 +1430,65 @@ SCWV_ShowHostFullscreen(*) {
         catch {
         }
     }
+    try SCWV_RaiseToForeground("show_host_fullscreen")
+    catch {
+    }
+}
+
+SCWV_EnsureTaskbarEligible(*) {
+    global g_SCWV_Gui
+    if !g_SCWV_Gui
+        return
+    try hwnd := g_SCWV_Gui.Hwnd
+    catch {
+        return
+    }
+    if !hwnd
+        return
+    expr := "ahk_id " . hwnd
+    try {
+        ex := WinGetExStyle(expr)
+        if (ex & 0x80)
+            WinSetExStyle(ex & ~0x80, expr)
+    } catch {
+    }
 }
 
 SCWV_FinishReveal() {
-    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal
-    global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
+    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_DeferredHostShow
+    global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts, g_SCWV_LastShown, g_SCWV_PendingTriggerSource
+    global g_SCWV_Ctrl, g_SCWV_WV2, g_SCWV_CurrentToken
     if !g_SCWV_Gui
         return
+    wasDeferred := !!g_SCWV_DeferredHostShow
+    if wasDeferred {
+        g_SCWV_DeferredHostShow := false
+        SCWV_ShowHostFullscreen()
+        try SCWV_SetHostTopMost(g_SCWV_HostTopMost)
+        SCWV_ApplyBounds()
+        SetTimer(SCWV_ApplyBounds, -80)
+        try FloatingToolbar_PageDockEnter("search")
+        g_SCWV_LastShown := A_TickCount
+        try WebView2_NotifyShown(g_SCWV_WV2)
+        try {
+            WMActivateChain_Register(SCWV_WM_ACTIVATE)
+        } catch {
+        }
+        ts := Trim(String(g_SCWV_PendingTriggerSource))
+        if (ts != "clipboard_hotkey") {
+            try SCWV_RaiseToForeground("finish_reveal_focus", (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
+            curToken := g_SCWV_CurrentToken
+            SetTimer((*) => _SCWV_DeferredMoveFocus100(curToken), -100)
+            SetTimer((*) => SCWV_FocusDeferred(curToken), -80)
+            SetTimer((*) => SCWV_RaiseToForeground("finish_reveal_reassert"), -180)
+            SCWV_RequestFocusInput()
+        }
+        if (ts = "search_hotkey" || ts = "clipboard_hotkey")
+            SCWV_ApplyCapsLockForSearchOpen()
+        else
+            try CapsLock_ScheduleNormalizeAfterChord()
+        try SearchCenter_ScheduleIMEStabilize()
+    }
     g_SCWV_WaitingUiFinishedReveal := false
     g_SCWV_ShowWaitStartTick := 0
     g_SCWV_ShowRecoveryAttempts := 0
@@ -1223,9 +1500,22 @@ SCWV_FinishReveal() {
     SCWV_ApplyBounds()
     SetTimer(SCWV_ApplyBounds, -80)
     g_SCWV_Visible := true
+    SCWV_EnsureTaskbarEligible()
     SCWV_PushLifecycleState("open", "finish_reveal")
     try SurfaceManager_ObserveShow("search_center", Map("entry", "SCWV_FinishReveal"))
+    try SCWV_RaiseToForeground("finish_reveal")
+    catch {
+    }
+    tsReveal := Trim(String(g_SCWV_PendingTriggerSource))
+    if (tsReveal = "search_hotkey") {
+        SCWV_ApplyCapsLockForSearchOpen()
+        SCWV_ScheduleHandoffForegroundRetries()
+        SCWV_StartHotkeyForegroundPump(10000)
+        if g_SCWV_HostTopMost
+            SetTimer((*) => SCWV_SetHostTopMost(false), -1500)
+    }
     SetTimer(SCWV_PostHostShow, -90)
+    SetTimer((*) => SCWV_RaiseToForeground("finish_reveal_delayed"), -220)
 }
 
 SCWV_ForceRevealIfStuck(*) {
@@ -1250,7 +1540,7 @@ SCWV_ShowWaitTimeoutCheck(token := 0, *) {
         return
 
     elapsed := (g_SCWV_ShowWaitStartTick > 0) ? (A_TickCount - g_SCWV_ShowWaitStartTick) : -1
-    safeWaitMs := 7000
+    safeWaitMs := 15000
     if (g_SCWV_NavProgressTick > 0 && (A_TickCount - g_SCWV_NavProgressTick) < 1800) {
         curToken := g_SCWV_CurrentToken
         SetTimer((*) => SCWV_ShowWaitTimeoutCheck(curToken), -400)
@@ -2912,6 +3202,23 @@ _SCWV_ResultItemGet(Item, Prop, Default := "") {
     }
 }
 
+SCWV_PreemptPrimaryConflictsBeforeOpen(reason := "") {
+    needsPreempt := false
+    if FuncExists("CommandPalette_IsVisible") && CommandPalette_IsVisible()
+        needsPreempt := true
+    else if FuncExists("SurfaceManager_HasActivePrimaryConflict") && SurfaceManager_HasActivePrimaryConflict("search_center")
+        needsPreempt := true
+    if !needsPreempt
+        return
+    try SCWV_Log("preempt_primary_conflict", "reason=" . reason)
+    catch {
+    }
+    if FuncExists("SurfaceIntent_PreemptCommandPaletteForSearch")
+        SurfaceIntent_PreemptCommandPaletteForSearch()
+    else if FuncExists("CommandPalette_Hide")
+        CommandPalette_Hide()
+}
+
 SCWV_Show(reason := "", triggerSource := "") {
     reqId := SurfaceManager_Request("search_center", "open", "SCWV_Show", Map("reason", reason, "triggerSource", triggerSource))
     try SurfaceManager_BeforeOpen("search_center", "SCWV_Show", Map("requestId", reqId, "reason", reason, "triggerSource", triggerSource))
@@ -2932,6 +3239,11 @@ SCWV_Show(reason := "", triggerSource := "") {
         SCWV_SubmitIntent("open", 25, redir)
         return
     }
+    try SCWV_PreemptPrimaryConflictsBeforeOpen(reason != "" ? reason : "show")
+    catch {
+    }
+    if (ts = "search_hotkey")
+        SCWV_PrepareForegroundSteal()
     try SCWV_Log("show_begin", "reason=" . reason . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
     g_SCWV_LimitedRecoverReloadAttempts := 0
     SCWV_PushLifecycleState("opening", reason)
@@ -2970,42 +3282,41 @@ SCWV_Show(reason := "", triggerSource := "") {
         }
         SetTimer(SCWV_PostHostShow, -80)
         if (ts != "clipboard_hotkey") {
-            try FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "show_already_visible", 300, (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
+            try SCWV_RaiseToForeground("show_already_visible", (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
             curToken := g_SCWV_CurrentToken
             SetTimer((*) => _SCWV_DeferredMoveFocus100(curToken), -100)
+            SetTimer((*) => SCWV_RaiseToForeground("show_already_visible_reassert"), -180)
             SCWV_RequestFocusInput()
         }
-        try CapsLock_ScheduleNormalizeAfterChord()
+        if (ts = "search_hotkey")
+            SCWV_ApplyCapsLockForSearchOpen()
+        else
+            try CapsLock_ScheduleNormalizeAfterChord()
         try SearchCenter_ScheduleIMEStabilize()
+        SCWV_EnsureTaskbarEligible()
+        if (ts = "search_hotkey")
+            SCWV_ScheduleHandoffForegroundRetries()
         try SurfaceManager_ObserveShow("search_center", Map("entry", "SCWV_Show", "reason", reason, "trigger", ts, "alreadyVisible", 1, "requestId", reqId))
         return
     }
 
     readyToReveal := (g_SCWV_Ready && g_SCWV_UI_Ready)
+    deferHost := !readyToReveal
+        && (ts != "search_hotkey")
+        && FuncExists("SurfaceManager_HasActivePrimaryConflict")
+        && SurfaceManager_HasActivePrimaryConflict("search_center")
+    g_SCWV_DeferredHostShow := deferHost
+    hotkeyShellVisible := (ts = "search_hotkey") && !readyToReveal && !deferHost
     if readyToReveal {
         try WinSetTransparent(255, "ahk_id " . g_SCWV_Gui.Hwnd)
         catch {
         }
-    } else {
-        try WinSetTransparent(0, "ahk_id " . g_SCWV_Gui.Hwnd)
-        catch {
-        }
-    }
-
-    try {
-        ; 单入口全屏显示，避免 "固定尺寸 -> 最大化 -> 再最大化" 抖动链。
-        SCWV_ShowHostFullscreen()
-        SCWV_SetHostTopMost(g_SCWV_HostTopMost)
-        SCWV_ApplyBounds()
-        SetTimer(SCWV_ApplyBounds, -80)
-    } catch {
-        ; 鍏滃簳锛氱獥鍙ｅ璞″瓨鍦ㄤ絾鍙ユ焺澶辨晥鏃堕噸寤轰竴娆★紝閬垮厤 鈥淕ui has no window鈥?        SCWV_ResetHostState()
-        SCWV_Init(reason)
-        if !g_SCWV_Gui
-            return
-        readyToReveal := (g_SCWV_Ready && g_SCWV_UI_Ready)
-        if readyToReveal {
+    } else if !deferHost {
+        if hotkeyShellVisible {
             try WinSetTransparent(255, "ahk_id " . g_SCWV_Gui.Hwnd)
+            catch {
+            }
+            try SCWV_SetHostTopMost(true)
             catch {
             }
         } else {
@@ -3013,10 +3324,58 @@ SCWV_Show(reason := "", triggerSource := "") {
             catch {
             }
         }
-        SCWV_ShowHostFullscreen()
-        SCWV_SetHostTopMost(g_SCWV_HostTopMost)
-        SCWV_ApplyBounds()
-        SetTimer(SCWV_ApplyBounds, -80)
+    }
+
+    if !deferHost {
+        try {
+            ; 单入口全屏显示，避免 "固定尺寸 -> 最大化 -> 再最大化" 抖动链。
+            SCWV_ShowHostFullscreen()
+            if !hotkeyShellVisible
+                SCWV_SetHostTopMost(g_SCWV_HostTopMost)
+            SCWV_ApplyBounds()
+            SetTimer(SCWV_ApplyBounds, -80)
+        } catch {
+            ; 鍏滃簳锛氱獥鍙ｅ璞″瓨鍦ㄤ絾鍙ユ焺澶辨晥鏃堕噸寤轰竴娆★紝閬垮厤 鈥淕ui has no window鈥?            SCWV_ResetHostState()
+            SCWV_Init(reason)
+            if !g_SCWV_Gui
+                return
+            readyToReveal := (g_SCWV_Ready && g_SCWV_UI_Ready)
+            deferHost := !readyToReveal
+                && (ts != "search_hotkey")
+                && FuncExists("SurfaceManager_HasActivePrimaryConflict")
+                && SurfaceManager_HasActivePrimaryConflict("search_center")
+            g_SCWV_DeferredHostShow := deferHost
+            hotkeyShellVisible := (ts = "search_hotkey") && !readyToReveal && !deferHost
+            if readyToReveal {
+                try WinSetTransparent(255, "ahk_id " . g_SCWV_Gui.Hwnd)
+                catch {
+                }
+            } else if !deferHost {
+                if hotkeyShellVisible {
+                    try WinSetTransparent(255, "ahk_id " . g_SCWV_Gui.Hwnd)
+                    catch {
+                    }
+                    try SCWV_SetHostTopMost(true)
+                    catch {
+                    }
+                } else {
+                    try WinSetTransparent(0, "ahk_id " . g_SCWV_Gui.Hwnd)
+                    catch {
+                    }
+                }
+            }
+            if !deferHost {
+                SCWV_ShowHostFullscreen()
+                if !hotkeyShellVisible
+                    SCWV_SetHostTopMost(g_SCWV_HostTopMost)
+                SCWV_ApplyBounds()
+                SetTimer(SCWV_ApplyBounds, -80)
+            } else {
+                try SCWV_Log("show_defer_host", "reason=" . reason . " entry=recover")
+            }
+        }
+    } else {
+        try SCWV_Log("show_defer_host", "reason=" . reason)
     }
     if readyToReveal {
         try SCWV_Log("show_finish_reveal_immediate", "reason=" . reason)
@@ -3032,17 +3391,19 @@ SCWV_Show(reason := "", triggerSource := "") {
         SetTimer(SCWV_ShowWaitTimeoutCheck, -1500)
     }
     SCWV_PushLifecycleState("open", reason)
-    ; 仅在宿主窗口成功显示后再压下工具栏，避免“先隐藏工具栏但搜索中心没显示”的竞态
-    try FloatingToolbar_PageDockEnter("search")
-    g_SCWV_LastShown := A_TickCount
-    try WebView2_NotifyShown(g_SCWV_WV2)
-    try {
-        SCWV_Log("wm_chain_register_begin", "reason=" . reason . " count=" . WMActivateChain_Count())
-        WMActivateChain_Register(SCWV_WM_ACTIVATE)
-        SCWV_Log("wm_chain_register_done", "reason=" . reason . " count=" . WMActivateChain_Count())
-    } catch as err {
-        try SCWV_Log("wm_chain_register_failed", "reason=" . reason . " msg=" . err.Message)
-        catch {
+    if !deferHost {
+        ; 仅在宿主窗口成功显示后再压下工具栏，避免“先隐藏工具栏但搜索中心没显示”的竞态
+        try FloatingToolbar_PageDockEnter("search")
+        g_SCWV_LastShown := A_TickCount
+        try WebView2_NotifyShown(g_SCWV_WV2)
+        try {
+            SCWV_Log("wm_chain_register_begin", "reason=" . reason . " count=" . WMActivateChain_Count())
+            WMActivateChain_Register(SCWV_WM_ACTIVATE)
+            SCWV_Log("wm_chain_register_done", "reason=" . reason . " count=" . WMActivateChain_Count())
+        } catch as err {
+            try SCWV_Log("wm_chain_register_failed", "reason=" . reason . " msg=" . err.Message)
+            catch {
+            }
         }
     }
 
@@ -3082,15 +3443,37 @@ SCWV_Show(reason := "", triggerSource := "") {
     if (ts != "clipboard_hotkey" && !(ts = "search_hotkey" && Trim(SearchCenterWebKeyword) = ""))
         SetTimer(_SCWV_PostRequestSearchGo, -20)
 
-    if (ts != "clipboard_hotkey") {
-        try FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "show_focus", 300, (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
+    if !deferHost && (ts != "clipboard_hotkey") {
+        try SCWV_RaiseToForeground("show_focus", (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
         curToken := g_SCWV_CurrentToken
         SetTimer((*) => _SCWV_DeferredMoveFocus100(curToken), -100)
         SetTimer((*) => SCWV_FocusDeferred(curToken), -80)
+        SetTimer((*) => SCWV_RaiseToForeground("show_focus_reassert"), -200)
         SCWV_RequestFocusInput()
     }
-    try CapsLock_ScheduleNormalizeAfterChord()
-    try SearchCenter_ScheduleIMEStabilize()
+    if !deferHost && hotkeyShellVisible && IsObject(g_SCWV_Gui) {
+        try hwndShell := g_SCWV_Gui.Hwnd
+        catch {
+            hwndShell := 0
+        }
+        if hwndShell {
+            try SCWV_ForegroundPulse(hwndShell)
+            catch {
+            }
+            try SCWV_StartHotkeyForegroundPump(16000)
+            catch {
+            }
+        }
+    }
+    if !deferHost {
+        if (ts = "search_hotkey")
+            SCWV_ApplyCapsLockForSearchOpen()
+        else
+            try CapsLock_ScheduleNormalizeAfterChord()
+        try SearchCenter_ScheduleIMEStabilize()
+        if (ts = "search_hotkey")
+            SCWV_ScheduleHandoffForegroundRetries()
+    }
 }
 
 _SCWV_DeferredMoveFocus100(token := 0, *) {
@@ -3098,7 +3481,7 @@ _SCWV_DeferredMoveFocus100(token := 0, *) {
     if (token && !SCWV_IsCurrentToken(token))
         return
     if g_SCWV_Visible && g_SCWV_Gui
-        FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "deferred_move_focus", 300, (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
+        SCWV_RaiseToForeground("deferred_move_focus", (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
 }
 
 SCWV_DeferredPush(*) {
@@ -3151,6 +3534,8 @@ SCWV_RequestFocusInput() {
 SCWV_Hide(PersistSelection := true) {
     if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("search_center", Map("persistSelection", PersistSelection ? 1 : 0))
         return
+    if FuncExists("SurfaceTransaction_OnTargetClose")
+        try SurfaceTransaction_OnTargetClose("search_center", Map("entry", "SCWV_Hide"))
     skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
     reqId := 0
     if !skipTel {
@@ -3249,6 +3634,10 @@ SCWV_Hide(PersistSelection := true) {
     } catch {
     }
     try SCWV_Log("hide_done", "visible=" . (g_SCWV_Visible ? "1" : "0"))
+    if FuncExists("CapsLock_NormalizeAfterUiClose")
+        try CapsLock_NormalizeAfterUiClose()
+        catch {
+        }
     g_SCWV_CloseCommitActive := false
     g_SCWV_CloseCommitUntilTick := 0
     try SCWV_Preview_UnloadNative()

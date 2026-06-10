@@ -1,6 +1,13 @@
 {
   "wailsBridge": {
-    "enabled": true
+    "enabled": true,
+    "commandPaletteHost": "ahk",
+    "searchCenterHost": "ahk",
+    "configWebviewHost": "ahk",
+    "floatingToolbarHost": "ahk",
+    "_comment_commandPaletteHost": "S8：ahk=现有 WebView CP；wails=侧车 nmer-wails.exe（须 legacySurfaceLifecycle:false 且已构建 exe）",
+    "_comment_domainC": "S9：searchCenterHost/configWebviewHost 同上；默认 ahk 保持 SCWV/Config WebView 行为",
+    "_comment_floatingToolbarHost": "S10：ahk=现有 FTB WebView（rollback）；wails=合壳 POC 底栏（须 legacySurfaceLifecycle:false）；S11 hybrid=AHK 悬浮窗呈现 + Hub inject（可与 legacySurfaceLifecycle:true 并用，nmer-wails bridge-only 隐藏启动）"
   },
   "officialA2ui": {
     "enabled": true,
@@ -14,7 +21,8 @@
     "enforceSlots": false,
     "enforceBudget": false,
     "routeIntents": false,
-    "_comment": "P1 控制者三件套完成并通过门禁前，禁止 enabled+enforceBudget。interceptWarmup:true 可单独用于停启动预热。"
+    "useTransactions": false,
+    "_comment": "S5：enforceBudget 灰度开启；BudgetPolicy 读取 a2ui_memory_baseline.json（S4 实测）。双开 CP+SC 应触发 budget_pressure dispose。"
   },
   "rollback": {
     "forceNmerOnly": false,

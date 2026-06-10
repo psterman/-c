@@ -1,8 +1,11 @@
 import './style.css';
 import './poc/poc.css';
 import './a2ui-spike/spike-element';
+import './ftb-shell/ftb-shell-host';
 import { GetAppInfo, GetWsHubStatus, GetWsUrl, StartWsFakePump, StopWsFakePump } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
+import type { FtbShellEventDetail } from './ftb-shell/ftb-shell-host';
+import type { NmerFtbShellHostElement } from './ftb-shell/ftb-shell-host';
 import { reduceAgentEvent } from './poc/agentReducer';
 import { initialReducerState } from './poc/types';
 import { fakeCompareProvider } from './poc/fakeProvider';
@@ -16,6 +19,19 @@ let poc1State: ReducerState = initialReducerState();
 let poc2State: ReducerState = initialReducerState();
 let wsClient: AgentWsClient | null = null;
 let poc1Running = false;
+let ftbShellHost: NmerFtbShellHostElement | null = null;
+
+function ensureFtbShellHost(): NmerFtbShellHostElement {
+  if (!ftbShellHost) {
+    ftbShellHost = document.createElement('nmer-ftb-shell-host') as NmerFtbShellHostElement;
+    document.body.appendChild(ftbShellHost);
+  }
+  return ftbShellHost;
+}
+
+function applyFtbShellEvent(detail: FtbShellEventDetail) {
+  ensureFtbShellHost().applyShellEvent(detail || {});
+}
 
 function renderShell() {
   app.innerHTML = `
@@ -49,7 +65,7 @@ function renderShell() {
       </section>
       <section class="poc-panel poc-panel-wide" id="poc3">
         <h2>POC 3 · 官方 A2UI v0.9 隔离 Spike</h2>
-        <p class="poc-desc">固定 Fixture → 输入闸门 → 官方 MessageProcessor → 官方 Lit renderer；不接 LLM，不替换旧 NmerBlock。</p>
+        <p class="poc-desc">固定 Fixture → 输入闸门 → 官方 MessageProcessor → 官方 Lit renderer；不接 LLM，不替换旧 NmerBlock。S10 阶段 2 时 FTB 仅在窗口<strong>底栏</strong>懒加载，本区 POC 审查界面保持可见。</p>
         <nmer-a2ui-spike></nmer-a2ui-spike>
       </section>
     </div>
@@ -139,35 +155,91 @@ async function connectWs() {
   wsClient.connect();
 }
 
+function isBridgeOnlyPresentation(info: { bridgeOnly?: boolean }, ftbStatus?: { presentationMode?: string }) {
+  if (info?.bridgeOnly) return true;
+  return String(ftbStatus?.presentationMode || '').toLowerCase() === 'external';
+}
+
 async function boot() {
-  renderShell();
+  let bridgeOnly = false;
+  let ftbStatus: { presentationMode?: string; visible?: boolean } | undefined;
   try {
     const info = await GetAppInfo();
+    bridgeOnly = !!info.bridgeOnly;
+    if (!bridgeOnly) {
+      const hub = await GetWsHubStatus();
+      const addr = hub?.addr || '127.0.0.1:18791';
+      const res = await fetch(`http://${addr}/shell/ftb/status`);
+      if (res.ok) {
+        const body = (await res.json()) as { status?: { presentationMode?: string; visible?: boolean } };
+        ftbStatus = body?.status;
+        bridgeOnly = isBridgeOnlyPresentation(info, ftbStatus);
+      }
+    }
+    if (bridgeOnly) {
+      document.body.classList.add('nmer-bridge-only');
+      const appRoot = document.querySelector('#app');
+      if (appRoot) appRoot.innerHTML = '<header class="shell-header"><h1>NMER Bridge</h1><p id="app-meta" class="tagline">HTTP/WS hub · FTB external presentation</p></header>';
+    } else {
+      renderShell();
+    }
     const meta = document.querySelector('#app-meta');
     if (meta) {
-      meta.textContent = `${info.appName} v${info.version} · ${info.buildMode} · app ready`;
+      meta.textContent = bridgeOnly
+        ? `${info.appName} v${info.version} · bridge-only · hub ready`
+        : `${info.appName} v${info.version} · ${info.buildMode} · app ready`;
     }
-    const hub = await GetWsHubStatus();
-    updateWsMeta(`hub clients=${hub.clientCount}`);
+    if (!bridgeOnly) {
+      const hub = await GetWsHubStatus();
+      updateWsMeta(`hub clients=${hub.clientCount}`);
+    }
   } catch {
+    renderShell();
     const meta = document.querySelector('#app-meta');
     if (meta) meta.textContent = 'browser preview (Wails bindings unavailable)';
   }
 
-  EventsOn('ws:agent_event', (data: AgentEvent) => {
-    if (data && data.kind) applyPoc2Event(data, 'wails');
-  });
-  EventsOn('ws:hub_status', (st: { clientCount?: number; pumpRunning?: boolean }) => {
-    updateWsMeta(`clients=${st?.clientCount ?? 0} pump=${st?.pumpRunning ? 'on' : 'off'}`);
-  });
+  if (!bridgeOnly) {
+    EventsOn('ws:agent_event', (data: AgentEvent) => {
+      if (data && data.kind) applyPoc2Event(data, 'wails');
+    });
+    EventsOn('ws:hub_status', (st: { clientCount?: number; pumpRunning?: boolean }) => {
+      updateWsMeta(`clients=${st?.clientCount ?? 0} pump=${st?.pumpRunning ? 'on' : 'off'}`);
+    });
+    EventsOn('shell:ftb', (detail: FtbShellEventDetail) => {
+      applyFtbShellEvent(detail || {});
+    });
+    try {
+      const hub = await GetWsHubStatus();
+      const addr = hub?.addr || '127.0.0.1:18791';
+      const res = await fetch(`http://${addr}/shell/ftb/status`);
+      if (res.ok) {
+        const body = (await res.json()) as { status?: FtbShellEventDetail & { htmlUrl?: string; presentationMode?: string } };
+        const ftb = body?.status;
+        if (ftb?.visible && String(ftb.presentationMode || '').toLowerCase() !== 'external') {
+          applyFtbShellEvent({
+            action: 'show',
+            visible: true,
+            mounted: ftb.mounted,
+            ready: ftb.ready,
+            entry: ftb.entry,
+            htmlUrl: ftb.htmlUrl,
+            phase: ftb.phase,
+          });
+        }
+      }
+    } catch {
+      // hub may not be up in browser preview
+    }
 
-  document.body.addEventListener('poc-chip-click', ((e: CustomEvent) => {
-    const d = e.detail || {};
-    appendTrace('#poc1-trace', `chip: ${d.action?.label || ''}`);
-    appendTrace('#poc2-trace', `chip: ${d.action?.label || ''}`);
-  }) as EventListener);
+    document.body.addEventListener('poc-chip-click', ((e: CustomEvent) => {
+      const d = e.detail || {};
+      appendTrace('#poc1-trace', `chip: ${d.action?.label || ''}`);
+      appendTrace('#poc2-trace', `chip: ${d.action?.label || ''}`);
+    }) as EventListener);
 
-  connectWs();
+    connectWs();
+  }
 }
 
 boot();

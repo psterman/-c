@@ -1,4 +1,4 @@
-﻿; ScreenshotEditorPlugin.ahk 鈥?鎴浘鍔╂墜锛堢被灏佽锛岀敱涓昏剼鏈?#Include锛?
+; ScreenshotEditorPlugin.ahk 鈥?鎴浘鍔╂墜锛堢被灏佽锛岀敱涓昏剼鏈?#Include锛?
 ; 鐘舵€佷负 ScreenshotEditorPlugin 鐨?static 瀛楁锛汬ub 鍚屾灏戦噺鍏ㄥ眬渚?LegacyConfigGui銆?
 
 class ScreenshotEditorPlugin {
@@ -755,6 +755,8 @@ class ScreenshotEditorPlugin {
         }
         ; 浣跨敤灞€閮?EditorGui 璋冪敤 Show锛岄伩鍏嶅叏灞€鍙橀噺鍦ㄦ瀬灏戞暟鎯呭喌涓嬮潪瀵硅薄鏃跺穿婧?
         EditorGui.Show("w" . WindowWidth . " h" . WindowHeight . " x" . WindowX . " y" . WindowY)
+        if FuncExists("SurfaceManager_ObserveShow")
+            try SurfaceManager_ObserveShow("screenshot_editor", Map("entry", "ShowScreenshotEditor"))
         try OutputDebug("[SSE] editor gui shown hwnd=" . (EditorGui.HasProp("Hwnd") ? EditorGui.Hwnd : 0))
         catch {
         }
@@ -4247,6 +4249,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
          
         ; 閿€姣丟UI锛堝畨鍏ㄥ鐞咷ui瀵硅薄锛?
         if (IsObject(this.GuiID_ScreenshotEditor)) {
+            if FuncExists("SurfaceManager_ObserveClose")
+                try SurfaceManager_ObserveClose("screenshot_editor", Map("entry", "CloseScreenshotEditor"))
             try {
                 this.GuiID_ScreenshotEditor.Destroy()
             } catch as e {

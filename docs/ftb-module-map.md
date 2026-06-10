@@ -2,8 +2,8 @@
 
 本文档为 `html/FloatingToolbarStrip.html`（**~24,501 行 / ~1.05 MB**）的只读边界测绘，供 FTB 绞杀者拆解与 OpenClaw 集成决策使用。
 
-**宿主：** `modules/FloatingToolbar.ahk` → `g_FTB_WV2`  
-**CommandPalette 生产依赖：** 是（`runPaletteAgentStream`、`reqOpenClaw`）
+**宿主：** `modules/FloatingToolbar.ahk` → `g_FTB_WV2`（`floatingToolbarHost:ahk` / **S11 `hybrid`**）；S10 `wails` 合壳为 POC 底栏 iframe（退役 AHK `g_FTB_WV2`）  
+**CommandPalette 生产依赖：** 是（`runPaletteAgentStream`、`reqOpenClaw`）；hybrid/wails 经 `CommandPalette_DeliverFtbPayload` → Hub inject
 
 **相关：** [`a2ui-architecture-v2.md`](./a2ui-architecture-v2.md)、[`nmer-a2ui-error-v1.md`](./nmer-a2ui-error-v1.md)
 
@@ -216,7 +216,7 @@ flowchart LR
 | 阶段 | 动作 | 模块 | 放弃 / 保留 |
 |------|------|------|-------------|
 | **FTB-0** | 本文档 + OC 基线 | 全图 | 不改行为 |
-| **FTB-1** | 抽出 M1 → 独立 JS，FTB 用 `<script src>` | M1 | **进行中** — `html/ftb/palette/palette-agent-bridge.js` v1.1（stream/notify/prepare/cancel）；`runPaletteAgentStreamOnce` 仍内联 |
+| **FTB-1** | 抽出 M1 → 独立 JS，FTB 用 `<script src>` | M1 | **已完成** — `palette-agent-bridge.js` v1.2（含 `runPaletteAgentStreamOnce`）；S7 静态门禁通过 |
 | **FTB-2** | 抽出 M6 `reqOpenClaw` + endpoint | M6 | 为 Go Adapter 复用 WS 契约文档 |
 | **FTB-3** | M5 懒加载；M4/M3 分包 | M5,M4,M3 | 减初始解析内存 |
 | **FTB-4** | CP 任务改 `paletteAgent.transport=adapter` | M1 依赖降级 | **不删** FTB 聊天 |

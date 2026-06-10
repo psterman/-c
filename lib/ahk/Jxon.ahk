@@ -205,9 +205,12 @@ _parseString(s, &pos) {
                                         }
                                     }
                                 }
-                                result .= Chr(code)
+                                if (code >= 0xD800 && code <= 0xDFFF)
+                                    result .= "?"
+                                else if (code >= 0 && code <= 0x10FFFF)
+                                    result .= Chr(code)
                             } catch {
-                                result .= next
+                                result .= "?"
                             }
                         } else {
                             result .= next

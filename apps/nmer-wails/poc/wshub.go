@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -72,6 +73,7 @@ type Hub struct {
 	a2uiProvider      A2UIProvider
 	a2uiProviderName  string
 	a2uiActionCancels map[string]a2uiActionCancel
+	shellFtb          *ShellFtbController
 }
 
 // NewHub creates a hub; emitFn receives each broadcast event (e.g. Wails EventsEmit).
@@ -93,7 +95,22 @@ func NewHub(addr, path string, emitFn func(AgentEvent), statusFn func(HubStatus)
 		a2uiProvider:      FakeA2UIProvider{},
 		a2uiProviderName:  "fake",
 		a2uiActionCancels: make(map[string]a2uiActionCancel),
+		shellFtb:          NewShellFtbController(strings.TrimSpace(os.Getenv("NMER_SCRIPT_DIR"))),
 	}
+}
+
+func (h *Hub) SetShellFtbEmit(fn func(string, interface{})) {
+	if h == nil || h.shellFtb == nil || fn == nil {
+		return
+	}
+	h.shellFtb.SetEmit(fn)
+}
+
+func (h *Hub) ShellFtbStatus() ShellFtbStatus {
+	if h == nil || h.shellFtb == nil {
+		return ShellFtbStatus{Phase: 2}
+	}
+	return h.shellFtb.Status()
 }
 
 func (h *Hub) SetA2UIProvider(name string, provider A2UIProvider) {
@@ -121,6 +138,10 @@ func (h *Hub) Start(ctx context.Context) error {
 	mux.HandleFunc(h.path, h.handleWS)
 	mux.HandleFunc(A2UIIngestPath, h.handleA2UIIngest)
 	mux.HandleFunc(OpenClawAdapterActionPath, h.handleOpenClawAdapterAction)
+	if h.shellFtb != nil {
+		h.shellFtb.SetAddr(h.addr)
+		h.shellFtb.RegisterRoutes(mux)
+	}
 	h.pump = NewFakePump(h.BroadcastEvent)
 
 	listener, err := net.Listen("tcp", h.addr)

@@ -13,6 +13,7 @@ global g_Agent_DispatchPending := Map()
 global g_Agent_RecoverPending := Map()
 global g_Agent_FtbFetchBusy := false
 global g_Agent_BootstrapForce := false
+global g_Agent_ShellSendingReqIds := Map()
 global g_AgentDbg_PipelineState := Map()
 global g_Agent_RawAnswerLimit := 120000
 global g_Agent_MessageLimit := 30
@@ -1109,16 +1110,36 @@ CommandPalette_AgentPrefetchOpenClawSessionRef(cardId) {
 
 CommandPalette_InvokeFtbPaletteAgentScript(cardId, reqId, query, provider, sessionRef := "") {
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
-    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
-        return false
-    if !FuncExists("CommandPalette_JsEscapeForParse")
-        return false
     prov := CommandPalette_AgentSanitizeProvider(provider)
     sr := Trim(String(sessionRef))
     if (sr = "")
         sr := CommandPalette_AgentResolveSessionRef(cardId)
     card := CommandPalette_AgentGetCard(cardId)
     sysPrompt := CommandPalette_AgentBuildSystemPrompt(card)
+    ftbMode := FuncExists("CommandPalette_FtbTransportMode") ? CommandPalette_FtbTransportMode() : ""
+    if (ftbMode = "wails_shell" || ftbMode = "hybrid") {
+        if (ftbMode = "wails_shell") && FuncExists("FloatingToolbarWails_EnsureShellForAgent")
+            FloatingToolbarWails_EnsureShellForAgent(false)
+        if (ftbMode = "hybrid") && FuncExists("FloatingToolbarWails_EnsureHybridBridge")
+            FloatingToolbarWails_EnsureHybridBridge()
+        if FuncExists("CommandPalette_DeliverFtbPayload") {
+            return !!CommandPalette_DeliverFtbPayload(Map(
+                "type", "host_palette_agent_stream",
+                "reqId", String(reqId),
+                "cardId", String(cardId),
+                "query", String(query),
+                "provider", prov,
+                "systemPrompt", sysPrompt,
+                "sessionRef", sr,
+                "openDrawer", false
+            ))
+        }
+        return false
+    }
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        return false
+    if !FuncExists("CommandPalette_JsEscapeForParse")
+        return false
     routeId0 := (card is Map) ? Trim(String(card.Get("routeId", ""))) : ""
     if (routeId0 != "") {
         try CommandPalette_AgentDebugTrace("route", "prompt_inject", "route=" . routeId0 . " len=" . StrLen(sysPrompt), "info")
@@ -1201,6 +1222,25 @@ CommandPalette_AgentHeartbeatTick(cardId) {
 }
 
 CommandPalette_AgentEnsureEngine(*) {
+    if FuncExists("FloatingToolbarWails_ShouldUseHybrid") && FloatingToolbarWails_ShouldUseHybrid() {
+        if FuncExists("FloatingToolbarWails_EnsureHybridBridge")
+            try FloatingToolbarWails_EnsureHybridBridge()
+            catch {
+            }
+        if FuncExists("PaletteAgent_FtbTransportReady")
+            return (PaletteAgent_FtbTransportReady() = "hybrid")
+        global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+        return IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady
+    }
+    if FuncExists("FloatingToolbar_AhkWebViewEnabled") && !FloatingToolbar_AhkWebViewEnabled() {
+        if FuncExists("FloatingToolbarWails_EnsureShellForAgent")
+            try return !!FloatingToolbarWails_EnsureShellForAgent(false)
+            catch {
+            }
+        if FuncExists("PaletteAgent_FtbTransportReady")
+            return PaletteAgent_FtbTransportReady() != ""
+        return false
+    }
     if FuncExists("StartWebViewWarmup")
         try StartWebViewWarmup()
         catch {
@@ -1209,6 +1249,11 @@ CommandPalette_AgentEnsureEngine(*) {
         try CommandPalette_BootstrapNiumaChat("agent_stream", false)
         catch {
         }
+    if FuncExists("PaletteAgent_FtbTransportReady") {
+        tr := PaletteAgent_FtbTransportReady()
+        if (tr != "")
+            return true
+    }
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
     return IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady
 }
@@ -1273,6 +1318,7 @@ CommandPalette_AgentPushStreamStatus(cardId, reqId, message) {
 }
 
 CommandPalette_AgentMarkStreamDispatched(cardId, viaCompose := false) {
+    global g_Agent_ShellSendingReqIds
     card := CommandPalette_AgentGetCard(cardId)
     if !(card is Map)
         return
@@ -1281,15 +1327,64 @@ CommandPalette_AgentMarkStreamDispatched(cardId, viaCompose := false) {
     card["lastChunkTick"] := A_TickCount
     if viaCompose
         card["composeDispatched"] := true
-    CommandPalette_AgentArmStreamWatchdog(cardId)
     rid := String(card.Get("reqId", ""))
+    if (rid != "") {
+        if !IsObject(g_Agent_ShellSendingReqIds)
+            g_Agent_ShellSendingReqIds := Map()
+        g_Agent_ShellSendingReqIds[rid] := true
+    }
+    CommandPalette_AgentArmStreamWatchdog(cardId)
     q := CommandPalette_AgentResolveCardQuery(card)
     if (rid != "" && q != "")
         CommandPalette_AgentStartAnswerPoll(cardId, rid, q)
 }
 
 CommandPalette_AgentStartAnswerPoll(cardId, reqId, query) {
-    SetTimer(CommandPalette_AgentPollFtbAnswer.Bind(cardId, reqId, query, 0), -2500)
+    if FuncExists("CommandPalette_FtbTransportMode") && (CommandPalette_FtbTransportMode() = "wails_shell")
+        SetTimer(CommandPalette_AgentPollFtbAnswerShell.Bind(cardId, reqId, query, 0), -2500)
+    else
+        SetTimer(CommandPalette_AgentPollFtbAnswer.Bind(cardId, reqId, query, 0), -2500)
+}
+
+CommandPalette_AgentPollFtbAnswerShell(cardId, reqId, query, tryN) {
+    global g_Agent_CancelToken
+    if (g_Agent_CancelToken)
+        return
+    cid := Trim(String(cardId))
+    rid := Trim(String(reqId))
+    card := CommandPalette_AgentGetCard(cid)
+    if !(card is Map) || card.Get("ended", false) || !card.Get("running", false)
+        return
+    if Trim(String(card.Get("reqId", ""))) != rid
+        return
+    tryN := Integer(tryN)
+    if CommandPalette_AgentHasSubstantialAnswer(card)
+        return
+    dispatchTick := Integer(card.Get("dispatchTick", 0))
+    elapsed := dispatchTick > 0 ? Round((A_TickCount - dispatchTick) / 1000) : 0
+    lastChunk := Integer(card.Get("lastChunkTick", 0))
+    if (tryN > 0 && Mod(tryN, 6) = 0) {
+        if (lastChunk > dispatchTick)
+            CommandPalette_AgentPushStreamStatus(cid, rid, "⏳ OpenClaw 处理中… (" . elapsed . "s)")
+        else
+            CommandPalette_AgentPushStreamStatus(cid, rid, "⏳ 等待 FTB shell 响应… (" . (tryN + 1) . " · " . elapsed . "s)")
+    }
+    if (tryN > 0 && Mod(tryN, 12) = 0) && FuncExists("CommandPalette_InvokeFtbPaletteAgentScript") {
+        q := Trim(String(query))
+        if (q = "")
+            q := CommandPalette_AgentResolveCardQuery(card)
+        prov := String(card.Get("provider", "openclaw"))
+        sr := Trim(String(card.Get("sessionRef", "")))
+        try CommandPalette_InvokeFtbPaletteAgentScript(cid, rid, q, prov, sr)
+        catch {
+        }
+    }
+    if (tryN >= 120) {
+        pl := (String(card.Get("provider", "openclaw")) = "hermes") ? "Hermes" : "龙虾 OpenClaw"
+        CommandPalette_AgentPushError(rid, cid, "同步超时：FTB shell 未返回回复。请确认 POC 底栏 FTB 已加载，并在 Niuma Chat 对「" . pl . "」点一键连接")
+        return
+    }
+    SetTimer(CommandPalette_AgentPollFtbAnswerShell.Bind(cid, rid, query, tryN + 1), -2000)
 }
 
 CommandPalette_AgentPaletteStreamScriptBackup(cardId, reqId, query, provider, sessionRef := "") {
@@ -1383,6 +1478,23 @@ CommandPalette_AgentRecoverCardAnswerOnce(cid, rid, q, tryN) {
 
 CommandPalette_AgentSyncNiumaSession(reqId, cardId, query, sessionRef := "", answer := "") {
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    syncMode := FuncExists("CommandPalette_FtbTransportMode") ? CommandPalette_FtbTransportMode() : ""
+    if (syncMode = "wails_shell" || syncMode = "hybrid") {
+        if FuncExists("CommandPalette_DeliverFtbPayload") {
+            try {
+                return !!CommandPalette_DeliverFtbPayload(Map(
+                    "type", "host_palette_agent_sync_session",
+                    "reqId", String(reqId),
+                    "cardId", Trim(String(cardId)),
+                    "query", Trim(String(query)),
+                    "sessionRef", String(sessionRef),
+                    "answer", String(answer)
+                ))
+            } catch {
+            }
+        }
+        return false
+    }
     if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
         return false
     q := Trim(String(query))
@@ -1428,7 +1540,7 @@ CommandPalette_AgentBootstrapNiumaSessions(*) {
         return
     if !force && bootDoneAt && (A_TickCount - bootDoneAt < 45000)
         return
-    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+    if !FuncExists("CommandPalette_AgentEnsureEngine") || !CommandPalette_AgentEnsureEngine()
         return
     bootBusy := true
     try {
@@ -1453,11 +1565,19 @@ CommandPalette_AgentBootstrapNiumaSessions(*) {
         }
         if !items.Length
             return
-        if FuncExists("WebView_QueuePayload") {
-            try WebView_QueuePayload(g_FTB_WV2, Map("type", "palette_agent_cards_sync", "cards", items, "force", true))
+        if FuncExists("CommandPalette_DeliverFtbPayload") {
+            try CommandPalette_DeliverFtbPayload(Map("type", "palette_agent_cards_sync", "cards", items, "force", true))
             catch {
             }
         }
+        bootMode := FuncExists("CommandPalette_FtbTransportMode") ? CommandPalette_FtbTransportMode() : ""
+        if (bootMode = "wails_shell" || bootMode = "hybrid") {
+            bootDoneAt := A_TickCount
+            CommandPalette_AgentLog("niuma_bootstrap", "transport=" . bootMode . " count=" . items.Length)
+            return
+        }
+        if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+            return
         if !FuncExists("CommandPalette_JsEscapeForParse")
             return
         cardsJson := "[]"
@@ -1490,6 +1610,8 @@ CommandPalette_AgentBootstrapNiumaSessions(*) {
 CommandPalette_AgentFetchAnswerFromFtb(reqId, query, cardId := "", sessionRef := "") {
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_Agent_FtbFetchBusy
     if g_Agent_FtbFetchBusy
+        return ""
+    if FuncExists("CommandPalette_FtbTransportMode") && (CommandPalette_FtbTransportMode() = "wails_shell")
         return ""
     if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
         return ""
@@ -1702,6 +1824,13 @@ CommandPalette_AgentDeliverStreamPayload(payload) {
 ; --- 包 0：OpenClaw 基线 OC-1~OC-3（FTB 就绪 / Token / runPaletteAgentStream）---
 
 CommandPalette_AgentProbeOc1() {
+    if FuncExists("PaletteAgent_FtbTransportReady") {
+        tr := PaletteAgent_FtbTransportReady()
+        if (tr = "wails_shell")
+            return Map("pass", true, "code", "OC1_PASS", "detail", "wails_shell")
+        if (tr = "hybrid")
+            return Map("pass", true, "code", "OC1_PASS", "detail", "hybrid")
+    }
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
     if !IsObject(g_FTB_WV2)
         return Map("pass", false, "code", "BRIDGE_FTB_NOT_READY", "detail", "wv2_missing")
@@ -1728,6 +1857,13 @@ CommandPalette_AgentProbeFtbJson(js, timeoutMs := 2500) {
 }
 
 CommandPalette_AgentProbeOc3() {
+    if FuncExists("PaletteAgent_FtbTransportReady") {
+        tr3 := PaletteAgent_FtbTransportReady()
+        if (tr3 = "wails_shell")
+            return Map("pass", true, "code", "OC3_PASS", "detail", "wails_shell")
+        if (tr3 = "hybrid")
+            return Map("pass", true, "code", "OC3_PASS", "detail", "hybrid")
+    }
     js := "(function(){try{return JSON.stringify({ok:typeof window.runPaletteAgentStream==='function'?1:0,"
         . "code:typeof window.runPaletteAgentStream==='function'?'OC3_PASS':'BRIDGE_FTB_NO_STREAM_FN'});}"
         . "catch(e){return JSON.stringify({ok:0,code:'BRIDGE_FTB_SCRIPT_ERR',err:String(e&&e.message||e)});}})();"
@@ -2123,7 +2259,16 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
         sessionRef := CommandPalette_AgentPrefetchOpenClawSessionRef(cardId)
     if (sessionRef = "")
         sessionRef := CommandPalette_AgentResolveSessionRef(cardId)
-    if (IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
+    if FuncExists("FloatingToolbarWails_EnsureShellForAgent")
+        try FloatingToolbarWails_EnsureShellForAgent(false)
+        catch {
+        }
+    ftbReady := false
+    if FuncExists("PaletteAgent_FtbTransportReady") && (PaletteAgent_FtbTransportReady() != "")
+        ftbReady := true
+    else if (IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+        ftbReady := true
+    if ftbReady {
         sysPrompt := CommandPalette_AgentBuildSystemPrompt(card)
         routeId1 := Trim(String(card.Get("routeId", "")))
         if (routeId1 != "") {
@@ -2164,7 +2309,7 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
         ocFail := CommandPalette_AgentProbeOcBaseline(prov, true)
         CommandPalette_AgentLogOcBaseline(ocFail, "dispatch_paths_fail")
     }
-    if (Mod(tryN, 4) = 0)
+    if (tryN = 0 || Mod(tryN, 8) = 0)
         CommandPalette_AgentPushStreamStatus(cardId, reqId, "⏳ 等待 Niuma 引擎就绪 (" . (tryN + 1) . ")…")
     if (tryN >= 50) {
         ocExhausted := CommandPalette_AgentProbeOcBaseline(prov, true)
@@ -2211,10 +2356,15 @@ CommandPalette_AgentStreamIdleLimitMs(card) {
 }
 
 CommandPalette_AgentFtbSessionStillSending(reqId) {
-    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_Agent_ShellSendingReqIds
     rid := Trim(String(reqId))
     if (rid = "")
         return false
+    if FuncExists("CommandPalette_FtbTransportMode") && (CommandPalette_FtbTransportMode() = "wails_shell") {
+        if IsObject(g_Agent_ShellSendingReqIds) && g_Agent_ShellSendingReqIds.Has(rid)
+            return true
+        return false
+    }
     if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
         return false
     if !FuncExists("CommandPalette_JsEscapeForParse")
@@ -2370,11 +2520,13 @@ CommandPalette_OnNiumaPaletteAgentChunk(msg) {
 }
 
 CommandPalette_OnNiumaPaletteAgentEnd(msg) {
-    global g_Agent_Cards, g_CardSessionMap
+    global g_Agent_Cards, g_CardSessionMap, g_Agent_ShellSendingReqIds
     if !(msg is Map)
         return
     reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
     cardId := msg.Has("cardId") ? String(msg["cardId"]) : ""
+    if (reqId != "") && IsObject(g_Agent_ShellSendingReqIds)
+        g_Agent_ShellSendingReqIds.Delete(reqId)
     card := CommandPalette_AgentSessionMatches(reqId, cardId)
     if !(card is Map)
         return
@@ -2449,10 +2601,14 @@ CommandPalette_AgentPushError(reqId, cardId, message) {
 }
 
 CommandPalette_OnNiumaPaletteAgentError(msg) {
+    global g_Agent_ShellSendingReqIds
     if !(msg is Map)
         return
+    rid := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    if (rid != "") && IsObject(g_Agent_ShellSendingReqIds)
+        g_Agent_ShellSendingReqIds.Delete(rid)
     CommandPalette_AgentPushError(
-        msg.Has("reqId") ? String(msg["reqId"]) : "",
+        rid,
         msg.Has("cardId") ? String(msg["cardId"]) : "",
         msg.Has("message") ? String(msg["message"]) : "代理请求失败"
     )

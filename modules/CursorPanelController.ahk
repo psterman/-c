@@ -277,6 +277,37 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
 ; 2) 按住期间按第二键：#HotIf 为真（本函数 = true），先走 VirtualKeyboard_HandleKey(键)；
 ;    仅当 VK 内 _ExecuteCommand 对该绑定返回「已执行」时才 return（吞键），否则继续 HandleDynamicHotkey（CapsLock+C 等宿主逻辑）。
 ; 3) 录制快捷键时本函数临时为 false，避免 #HotIf 抢走第二键导致录到「… then CapsLock」或大写灯异常。
+; 用于 #HotIf：命令面板/设置/搜索输入态下禁止 CapsLock 字母热键（防 401 hotkeys 风暴）
+CapsLockChordHotIf(*) {
+    if CapsLockChordInputBlocked()
+        return false
+    return GetCapsLockState()
+}
+
+CapsLockChordInputBlocked(*) {
+    try {
+        if FuncExists("CommandPalette_IsInputActive") && CommandPalette_IsInputActive()
+            return true
+        if FuncExists("VK_IsTypingPassthroughContext") && VK_IsTypingPassthroughContext()
+            return true
+        if FuncExists("ConfigWebView_HostWindowVisible") && ConfigWebView_HostWindowVisible()
+            return true
+    } catch {
+    }
+    return false
+}
+
+; 仅检测 CapsLock 是否按住，不经过 InputBlocked（供 CP 可见时 CapsLock+F 抢占搜索）
+CapsLockChordPhysDown(*) {
+    global CapsLock
+    physDown := false
+    try physDown := GetKeyState("CapsLock", "P")
+    catch {
+        physDown := false
+    }
+    return CapsLock || physDown
+}
+
 GetCapsLockState() {
     global CapsLock
     physDown := false
@@ -284,11 +315,8 @@ GetCapsLockState() {
     catch {
         physDown := false
     }
-    try {
-        if FuncExists("CommandPalette_IsVisible") && CommandPalette_IsVisible()
-            return false
-    } catch {
-    }
+    if CapsLockChordInputBlocked()
+        return false
     try {
         if VK_IsVkRecordingHotkey()
             return false
@@ -301,7 +329,8 @@ GetCapsLockState() {
     } catch {
     }
     try {
-        if FuncExists("VK_IsTypingPassthroughContext") && VK_IsTypingPassthroughContext()
+        ; 搜索框聚焦时一律退出 Caps 和弦态，避免 CapsLock+F 开 SC 后 Backspace/字母仍被当热键
+        if FuncExists("SCWV_IsSearchInputFocused") && SCWV_IsSearchInputFocused()
             return false
     } catch {
     }
@@ -343,6 +372,44 @@ IsSearchCenterActive() {
         }
     }
     return false
+}
+
+; #HotIf 专用：WebView 模式不注册 Enter/方向键（由页面收键）；仅 SC 前台或 CP 未占前台时托管 Esc/Caps 和弦
+SearchCenter_ShouldCaptureGlobalHotkeys(*) {
+    if !IsSearchCenterActive()
+        return false
+    try {
+        if FuncExists("CommandPalette_IsInputActive") && CommandPalette_IsInputActive() {
+            cpHwnd := FuncExists("CommandPalette_GetGuiHwnd") ? CommandPalette_GetGuiHwnd() : 0
+            if cpHwnd && WinActive("ahk_id " . cpHwnd)
+                return false
+        }
+    } catch {
+    }
+    try {
+        if SearchCenter_ShouldUseWebView() {
+            if FuncExists("SCWV_IsSearchInputFocused") && SCWV_IsSearchInputFocused()
+                return true
+            global g_SCWV_Gui
+            if IsObject(g_SCWV_Gui) && g_SCWV_Gui.Hwnd && WinActive("ahk_id " . g_SCWV_Gui.Hwnd)
+                return true
+            return false
+        }
+    } catch {
+    }
+    return true
+}
+
+; 仅 Legacy 搜索中心 GUI 需要 Enter/方向键热键；WebView 版由页面处理，避免 ~Enter 被吞
+SearchCenter_ShouldCaptureLegacyListHotkeys(*) {
+    if !SearchCenter_ShouldCaptureGlobalHotkeys()
+        return false
+    try {
+        if SearchCenter_ShouldUseWebView()
+            return false
+    } catch {
+    }
+    return true
 }
 
 SearchCenter_HandleCapsChordKey(ch) {
@@ -536,6 +603,47 @@ CapsLock_ScheduleNormalizeAfterChord() {
     SetTimer(CapsLock_DeferredNormalize_Tick, -120)
     SetTimer(CapsLock_DeferredNormalize_Tick, -350)
     SetTimer(CapsLock_DeferredNormalize_Tick, -800)
+}
+
+; 命令面板/搜索中心等 Web 输入面打开：取消延迟切换并恢复按下 CapsLock 前的逻辑大写（不强制 Off）
+CapsLock_RestoreForUiTypingOpen() {
+    global CapsLock, CapsLock2, CapsLockInitialStateForChord
+    SetTimer(CapsLock_DeferredSingleTapToggle, 0)
+    SetTimer(CapsLock_DeferredNormalize_Tick, 0)
+    CapsLock := false
+    CapsLock2 := false
+    try CapsLock_ApplyLogicalState(CapsLockInitialStateForChord)
+    catch {
+        try SetCapsLockState("Off")
+        catch {
+        }
+    }
+}
+
+; 关闭命令面板/搜索中心等 Web 面后：取消延迟单击切换，物理键未按住时强制灭大写灯
+CapsLock_NormalizeAfterUiClose() {
+    global CapsLock, CapsLock2, CapsLockInitialStateForChord
+    SetTimer(CapsLock_DeferredSingleTapToggle, 0)
+    SetTimer(CapsLock_DeferredNormalize_Tick, 0)
+    CapsLock := false
+    CapsLock2 := false
+    physDown := false
+    try physDown := GetKeyState("CapsLock", "P")
+    catch {
+    }
+    try Send("{CapsLock up}")
+    catch {
+    }
+    if physDown {
+        try CapsLock_ApplyLogicalState(CapsLockInitialStateForChord)
+        catch {
+        }
+    } else {
+        try SetCapsLockState("Off")
+        catch {
+        }
+    }
+    CapsLock_ScheduleNormalizeAfterChord()
 }
 
 ; 搜索中心 WebView 打开后：在 CapsLock 与焦点稳定后再多次尝试切换中文，减少「有时整句中文、有时英文小写」的竞态
@@ -1111,8 +1219,8 @@ CapsLock:: {
                     WailsWhisper_OnInputActivated()
             }
         }
+        CapsLock_RestoreForUiTypingOpen()
         SetTimer(ClearCapsLockTimer, -100)
-        CapsLock2 := false
         return
     }
     

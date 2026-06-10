@@ -593,9 +593,12 @@ WailsWhisper_OnInputActivated() {
         SetTimer(WailsWhisper_StopAndTranscribe, -30)
         return
     }
-    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_DeferredFocus"))
-        SetTimer(CommandPalette_DeferredFocus, -120)
-    else if FuncExists("WailsInput_FocusWebInput")
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView) {
+        if FuncExists("CommandPaletteRouter_ShouldUseWails") && CommandPaletteRouter_ShouldUseWails()
+            return
+        if FuncExists("CommandPalette_DeferredFocus")
+            SetTimer(CommandPalette_DeferredFocus, -120)
+    } else if FuncExists("WailsInput_FocusWebInput")
         SetTimer(WailsInput_FocusWebInput, -120)
 }
 

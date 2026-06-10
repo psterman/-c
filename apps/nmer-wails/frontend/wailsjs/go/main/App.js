@@ -10,6 +10,10 @@ export function GetAppInfo() {
   return window['go']['main']['App']['GetAppInfo']();
 }
 
+export function GetFtbShellStatus() {
+  return window['go']['main']['App']['GetFtbShellStatus']();
+}
+
 export function GetWsHubStatus() {
   return window['go']['main']['App']['GetWsHubStatus']();
 }

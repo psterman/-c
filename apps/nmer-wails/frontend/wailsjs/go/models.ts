@@ -4,6 +4,7 @@ export namespace main {
 	    appName: string;
 	    version: string;
 	    buildMode: string;
+	    bridgeOnly: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppInfo(source);
@@ -14,6 +15,7 @@ export namespace main {
 	        this.appName = source["appName"];
 	        this.version = source["version"];
 	        this.buildMode = source["buildMode"];
+	        this.bridgeOnly = source["bridgeOnly"];
 	    }
 	}
 
@@ -90,6 +92,35 @@ export namespace poc {
 		    }
 		    return a;
 		}
+	}
+	
+	export class ShellFtbStatus {
+	    visible: boolean;
+	    mounted: boolean;
+	    ready: boolean;
+	    entry: string;
+	    htmlUrl: string;
+	    scriptRoot: string;
+	    updatedAt: string;
+	    phase: number;
+	    presentationMode: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ShellFtbStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.visible = source["visible"];
+	        this.mounted = source["mounted"];
+	        this.ready = source["ready"];
+	        this.entry = source["entry"];
+	        this.htmlUrl = source["htmlUrl"];
+	        this.scriptRoot = source["scriptRoot"];
+	        this.updatedAt = source["updatedAt"];
+	        this.phase = source["phase"];
+	        this.presentationMode = source["presentationMode"];
+	    }
 	}
 
 }

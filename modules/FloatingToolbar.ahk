@@ -683,6 +683,30 @@ FloatingToolbar_EnsureCommandsLoaded() {
     }
 }
 
+FloatingToolbar_PrefetchIconAssets() {
+    try FloatingToolbar_EnsureCommandsLoaded()
+    catch {
+    }
+    try FloatingToolbar_GetCursorIconPath()
+    catch {
+    }
+}
+
+FloatingToolbar_PushEarlyToolbarIcons(*) {
+    global g_FTB_WV2, g_FTB_WaitingUiFinishedReveal
+    if !g_FTB_WV2 || !g_FTB_WaitingUiFinishedReveal
+        return
+    items := []
+    try items := FloatingToolbar_BuildItemsFromCmdIds(FloatingToolbar_GetFallbackCmdIds())
+    catch {
+    }
+    if items.Length > 0 {
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_toolbar_cmds", "items", items))
+        catch {
+        }
+    }
+}
+
 FloatingToolbar_PushLayoutDeferred(*) {
     global g_FTB_WV2, g_FTB_WaitingUiFinishedReveal, FloatingToolbarIsVisible
     if !g_FTB_WV2
@@ -1053,6 +1077,11 @@ FloatingToolbar_ForceRevealIfStuck() {
 }
 
 ShowFloatingToolbar() {
+    if FuncExists("FloatingToolbar_AhkWebViewEnabled") && !FloatingToolbar_AhkWebViewEnabled() {
+        if FuncExists("FloatingToolbarRouter_Show")
+            return !!FloatingToolbarRouter_Show()
+        return false
+    }
     if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("floating_toolbar")
         return
     global FloatingToolbarGUI, FloatingToolbarIsVisible, FloatingToolbarWindowX, FloatingToolbarWindowY
@@ -1159,6 +1188,11 @@ ShowFloatingToolbar() {
 }
 
 HideFloatingToolbar() {
+    if FuncExists("FloatingToolbar_AhkWebViewEnabled") && !FloatingToolbar_AhkWebViewEnabled() {
+        if FuncExists("FloatingToolbarRouter_Hide")
+            return !!FloatingToolbarRouter_Hide()
+        return false
+    }
     if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("floating_toolbar")
         return
     global FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2, g_FTB_LastRequestId
@@ -1190,7 +1224,49 @@ HideFloatingToolbar() {
     }
 }
 
+FloatingToolbar_DisposeAhkWebViewIfRetired(reason := "shell_retired") {
+    if FuncExists("FloatingToolbar_AhkWebViewEnabled") && FloatingToolbar_AhkWebViewEnabled()
+        return false
+    global FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WV2_Ctrl, g_FTB_WV2, g_FTB_WV2_Ready
+    global g_FTB_WV2_FrameReady, g_FTB_UI_Ready, g_FTB_WaitingUiFinishedReveal, g_FTB_BootFrameVisible
+    if !(IsObject(FloatingToolbarGUI) && FloatingToolbarGUI.Hwnd)
+        return false
+    try SetTimer(FloatingToolbar_ForceRevealIfStuck, 0)
+    catch {
+    }
+    try SetTimer(FloatingToolbarCheckWindowPosition, 0)
+    catch {
+    }
+    try SurfaceManager_CloseWebViewControl(g_FTB_WV2_Ctrl)
+    catch {
+    }
+    g_FTB_WV2_Ctrl := 0
+    g_FTB_WV2 := 0
+    g_FTB_WV2_Ready := false
+    g_FTB_WV2_FrameReady := false
+    g_FTB_UI_Ready := false
+    g_FTB_WaitingUiFinishedReveal := false
+    g_FTB_BootFrameVisible := false
+    FloatingToolbarIsVisible := false
+    try SurfaceManager_DestroyGui(FloatingToolbarGUI)
+    catch {
+        try FloatingToolbarGUI.Destroy()
+        catch {
+        }
+    }
+    FloatingToolbarGUI := 0
+    try SurfaceManager_ObserveClose("floating_toolbar", Map("entry", "FloatingToolbar_DisposeAhkWebViewIfRetired", "reason", String(reason), "host", "ahk_retired"))
+    catch {
+    }
+    return true
+}
+
 FloatingToolbar_Dispose(reason := "") {
+    if FuncExists("FloatingToolbar_AhkWebViewEnabled") && !FloatingToolbar_AhkWebViewEnabled() {
+        if FuncExists("FloatingToolbarRouter_Dispose")
+            return FloatingToolbarRouter_Dispose(reason)
+        return FloatingToolbar_DisposeAhkWebViewIfRetired(reason)
+    }
     global FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WV2_Ctrl, g_FTB_WV2, g_FTB_WV2_Ready
     global g_FTB_UI_Ready, g_FTB_WaitingUiFinishedReveal, g_FTB_BootFrameVisible
     try HideFloatingToolbar()
@@ -1234,6 +1310,8 @@ ToggleFloatingToolbar() {
 
 ; ===================== 閸掓稑缂揋UI =====================
 CreateFloatingToolbarGUI() {
+    if FuncExists("FloatingToolbar_AhkWebViewEnabled") && !FloatingToolbar_AhkWebViewEnabled()
+        return false
     global FloatingToolbarGUI, g_FTB_WV2_Ctrl, g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_PendingSelection
     global g_FTB_UI_Ready, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2_CreateRetry
     global WebView2
@@ -1343,6 +1421,10 @@ FloatingToolbar_OnNavigationCompleted(sender, args) {
         ok := false
     }
     g_FTB_WV2_FrameReady := !!ok
+    if ok && g_FTB_WaitingUiFinishedReveal {
+        SetTimer(FloatingToolbar_PushEarlyToolbarIcons, -40)
+        SetTimer(FloatingToolbar_PushEarlyToolbarIcons, -180)
+    }
     if ok && !g_FTB_WaitingUiFinishedReveal {
         SetTimer(FloatingToolbar_PushLayoutDeferred, -40)
         SetTimer(FloatingToolbar_PushLayoutDeferred, -220)
@@ -1452,6 +1534,7 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
     g_FTB_WV2.add_NavigationStarting(FloatingToolbar_OnNavigationStarting)
     g_FTB_WV2.add_NavigationCompleted(FloatingToolbar_OnNavigationCompleted)
     g_FTB_WV2.add_WebMessageReceived(FloatingToolbar_OnWebMessage)
+    SetTimer(FloatingToolbar_PrefetchIconAssets, -1)
     try ApplyUnifiedWebViewAssets(g_FTB_WV2)
     ; 强制刷新 WebView 资源版本，避免命中旧缓存脚本导致前端变量未定义
     stripUrl := BuildAppLocalUrl("FloatingToolbarStrip.html")
@@ -1833,6 +1916,12 @@ FloatingToolbar_OnWebMessage(sender, args) {
 
     if (typ = "toolbar_ready") {
         g_FTB_WV2_Ready := true
+        if FuncExists("FloatingToolbarWails_ShouldUseHybrid") && FloatingToolbarWails_ShouldUseHybrid() {
+            if FuncExists("FloatingToolbarWails_RegisterExternalReady")
+                try FloatingToolbarWails_RegisterExternalReady()
+                catch {
+                }
+        }
         FloatingToolbar_ApplyWebViewBounds()
         try FloatingToolbar_PushThemeToWeb()
         catch {
@@ -1931,6 +2020,12 @@ FloatingToolbar_OnWebMessage(sender, args) {
         SetTimer(FloatingToolbar_BootPaintFallbackForce, 0)
         g_FTB_UI_Ready := true
         g_FTB_PaintReady := true
+        if FuncExists("FloatingToolbarWails_ShouldUseHybrid") && FloatingToolbarWails_ShouldUseHybrid() {
+            if FuncExists("FloatingToolbarWails_RegisterExternalReady")
+                try FloatingToolbarWails_RegisterExternalReady()
+                catch {
+                }
+        }
         if !g_FTB_WaitingUiFinishedReveal
             return
         wasMinimalBoot := g_FTB_CompactBootMinimal && g_FTB_BootInProgress
@@ -4644,18 +4739,49 @@ FloatingToolbar_StudioContextPayload() {
 }
 
 FloatingToolbar_PushStudioContextToChat() {
-    global g_FTB_WV2
-    if !g_FTB_WV2
-        return
     payload := FloatingToolbar_StudioContextPayload()
-    try WebView_QueuePayload(g_FTB_WV2, Map(
+    msg := Map(
         "type", "host_push_studio_context",
         "autoInjectContext", payload.Get("autoInjectContext", true),
         "systemPrompt", payload.Get("systemPrompt", ""),
         "installRoot", payload.Get("installRoot", A_ScriptDir),
         "scriptDir", payload.Get("scriptDir", A_ScriptDir)
-    ))
+    )
+    if FuncExists("CommandPalette_FtbTransportMode") && (CommandPalette_FtbTransportMode() = "wails_shell") {
+        if FuncExists("CommandPalette_DeliverFtbPayload")
+            try CommandPalette_DeliverFtbPayload(msg)
+            catch {
+            }
+        return
+    }
+    global g_FTB_WV2
+    if !g_FTB_WV2
+        return
+    try WebView_QueuePayload(g_FTB_WV2, msg)
     catch {
+    }
+}
+
+FloatingToolbar_ForwardShellEgressMessage(msg) {
+    if !(msg is Map)
+        return
+    typ := String(msg.Get("type", ""))
+    if (typ = "niuma_request_studio_context") {
+        try FloatingToolbar_PushStudioContextToChat()
+        catch {
+        }
+        return
+    }
+    if (typ = "niuma_request_studio_llm") {
+        try {
+            llm := FloatingToolbar_GetStudioLlm()
+            keys := FloatingToolbar_GetStudioApiKeys()
+            if FuncExists("CommandPalette_DeliverFtbPayload") {
+                CommandPalette_DeliverFtbPayload(Map("type", "host_apply_studio_llm", "llm", llm, "apiKeys", keys))
+            }
+        } catch {
+        }
+        return
     }
 }
 

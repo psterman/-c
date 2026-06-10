@@ -508,6 +508,11 @@ VK_ExecCursorHelperCmd(cmdId) {
                     _VK_H("ExecuteCountdownAction")
                 } else if (_VK_H("IsSearchCenterActive")) {
                     _VK_H("HandleSearchCenterF")
+                } else if (FuncExists("SearchCenter_ShouldUseWebView") && SearchCenter_ShouldUseWebView()) {
+                    try SurfaceIntent_OpenSearch("", "search_hotkey")
+                    catch {
+                        _VK_H("ShowSearchCenter")
+                    }
                 } else {
                     _VK_H("ShowSearchCenter")
                 }

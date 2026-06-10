@@ -161,6 +161,25 @@ CommandPalette_IsVisible() {
     return !!g_CmdPal_Visible
 }
 
+; 热键输入守护：含 PendingShow / 窗口已 Show 但未置 g_CmdPal_Visible 的间隙，避免 CapsLock+字母风暴
+CommandPalette_IsInputActive() {
+    global g_CmdPal_PendingShow, g_CmdPal_Gui
+    if g_CmdPal_PendingShow
+        return true
+    if IsObject(g_CmdPal_Gui) {
+        try {
+            hwnd := g_CmdPal_Gui.Hwnd
+            if hwnd && WinExist("ahk_id " . hwnd) {
+                ; 仅命令面板在前台且可见时视为输入态；Hide 后或 CP 在后台时不阻断 CapsLock 和弦
+                if (WinGetStyle("ahk_id " . hwnd) & 0x10000000)
+                    return WinActive("ahk_id " . hwnd)
+            }
+        } catch {
+        }
+    }
+    return false
+}
+
 CommandPalette_GetGuiHwnd() {
     global g_CmdPal_Gui
     if IsObject(g_CmdPal_Gui) {
@@ -393,6 +412,25 @@ CommandPalette_CenterAndShow() {
     SetTimer(CommandPalette_DeferredFocus, -120)
 }
 
+CommandPalette_IsHandoffHideMeta(meta) {
+    if !(meta is Map)
+        return false
+    if !meta.Has("reason")
+        return false
+    r := String(meta["reason"])
+    return (r = "search_preempt" || r = "primary_handoff")
+}
+
+CommandPalette_CancelDeferredFocusTimers() {
+    SetTimer(CommandPalette_DeferredFocus, 0)
+    SetTimer(CommandPalette_EnsureWebInputVisible, 0)
+    SetTimer(CommandPalette_RevealFallback, 0)
+    SetTimer(CommandPalette_SyncAiOnShow, 0)
+    SetTimer(CommandPalette_AgentOnReady, 0)
+    SetTimer(CommandPalette_AgentPushCardSync, 0)
+    SetTimer(CommandPalette_PushEmptyQuery, 0)
+}
+
 CommandPalette_DeferredFocus(*) {
     global g_CmdPal_Visible, g_CmdPal_WV2, g_CmdPal_Ctrl
     if !g_CmdPal_Visible || !g_CmdPal_WV2
@@ -432,8 +470,6 @@ CommandPalette_Show() {
     g_CmdPal_ShowRetryCount := 0
     if g_CmdPal_Ready {
         CommandPalette_DoShow()
-        if !skipTel
-            try SurfaceManager_ObserveShow("command_palette", Map("entry", "CommandPalette_Show", "ready", 1, "requestId", reqId))
         return true
     }
     SetTimer(CommandPalette_RetryShow, -250)
@@ -447,12 +483,18 @@ CommandPalette_RetryShow(*) {
     if !g_CmdPal_PendingShow
         return
     g_CmdPal_ShowRetryCount += 1
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
     if g_CmdPal_Ready {
         CommandPalette_DoShow()
         return
     }
     if (g_CmdPal_ShowRetryCount >= 40) {
         g_CmdPal_PendingShow := false
+        if !skipTel {
+            try SurfaceTransaction_OnSurfaceFailed("command_palette", Map("entry", "CommandPalette_RetryShow", "reason", "init_timeout"))
+            catch {
+            }
+        }
         try TrayTip("命令面板", "WebView2 初始化超时，请重载脚本后再试", "Icon!")
         catch {
         }
@@ -1132,10 +1174,17 @@ CommandPalette_ProbeAdapterOfficialA2ui(timeoutMs := 8000) {
 
 CommandPalette_DoShow(*) {
     global g_CmdPal_PendingShow, CapsLock, g_CmdPal_WV2
-    g_CmdPal_PendingShow := false
-    CapsLock := false
+    if FuncExists("CapsLock_RestoreForUiTypingOpen")
+        CapsLock_RestoreForUiTypingOpen()
+    else {
+        CapsLock := false
+        try SetTimer(CapsLock_DeferredSingleTapToggle, 0)
+        catch {
+        }
+    }
     SetTimer(CommandPalette_MaybeReloadHtml, -1)
     CommandPalette_CenterAndShow()
+    g_CmdPal_PendingShow := false
     ; 包 1.1：显示时恢复 WebView2 正常内存档位
     try WebView2_NotifyShown(g_CmdPal_WV2)
     catch {
@@ -1154,6 +1203,22 @@ CommandPalette_DoShow(*) {
         && FuncExists("Nmer_WailsBridgeHealthy") && !Nmer_WailsBridgeHealthy()
         SetTimer(Nmer_AutoStartWailsBridge, -1)
     SetTimer(CommandPalette_RevealFallback, -600)
+    ; 冷启动异步 WV2：OnWV2Created→DoShow 也必须 COMMIT，否则 S3 永远 timeout
+    try SurfaceManager_ObserveShow("command_palette", Map("entry", "CommandPalette_DoShow", "ready", 1))
+    catch {
+    }
+    try {
+        mode := "toolbar"
+        if FuncExists("FloatingToolbar_NormalizeAppearanceMode")
+            mode := FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode)
+        if (mode = "toolbar") {
+            if FuncExists("SurfaceIntent_Open")
+                SetTimer((*) => SurfaceIntent_Open("floating_toolbar", Map("reason", "cmdpal_show_ftb", "skipTransaction", true)), -80)
+            else if FuncExists("ShowFloatingToolbar")
+                SetTimer(ShowFloatingToolbar, -80)
+        }
+    } catch {
+    }
 }
 
 CommandPalette_RevealFallback(*) {
@@ -1234,11 +1299,14 @@ CommandPalette_PushEmptyQuery(*) {
     CommandPalette_HandleQuery("")
 }
 
-CommandPalette_Hide(*) {
-    if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("command_palette")
+CommandPalette_Hide(meta := 0) {
+    if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("command_palette", meta)
         return
     global g_CmdPal_Gui, g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_AiSession, g_CmdPal_WV2
     global g_CmdPal_HasAnchor
+    handoff := CommandPalette_IsHandoffHideMeta(meta)
+    if handoff
+        CommandPalette_CancelDeferredFocusTimers()
     skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
     if !skipTel {
         reqId := SurfaceManager_Request("command_palette", "close", "CommandPalette_Hide", Map("visibleBefore", g_CmdPal_Visible ? 1 : 0))
@@ -1262,6 +1330,17 @@ CommandPalette_Hide(*) {
         }
         CommandPalette_ClearWindowRegion()
     }
+    if handoff {
+        if FuncExists("FocusBroker_Release") {
+            try FocusBroker_Release("CommandPalette", "search_preempt")
+            catch {
+            }
+            try FocusBroker_Release("LegacyWinActivate", "search_preempt")
+            catch {
+            }
+        }
+    } else if FuncExists("CapsLock_NormalizeAfterUiClose")
+        CapsLock_NormalizeAfterUiClose()
 }
 
 CommandPalette_Dispose(reason := "") {
@@ -1453,10 +1532,18 @@ CommandPalette_JsEscapeForParse(s) {
 }
 
 CommandPalette_InjectFtbHostPayload(payload) {
+    if !(payload is Map)
+        return false
+    if FuncExists("CommandPalette_FtbUsesHubInject") && CommandPalette_FtbUsesHubInject() {
+        mode := CommandPalette_FtbTransportMode()
+        if (mode = "hybrid") && FuncExists("FloatingToolbarWails_DeliverPayloadHybrid")
+            return !!FloatingToolbarWails_DeliverPayloadHybrid(payload)
+        if (mode = "wails_shell") && FuncExists("FloatingToolbarWails_DeliverPayload")
+            return !!FloatingToolbarWails_DeliverPayload(payload)
+        return false
+    }
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
     if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
-        return false
-    if !(payload is Map)
         return false
     jsonStr := ""
     try jsonStr := Jxon_Dump(payload)
@@ -1478,11 +1565,43 @@ CommandPalette_InjectFtbHostPayload(payload) {
     return false
 }
 
+CommandPalette_FtbTransportMode(*) {
+    if FuncExists("PaletteAgent_FtbTransportReady") {
+        tr := PaletteAgent_FtbTransportReady()
+        if (tr = "hybrid")
+            return "hybrid"
+        if (tr = "wails_shell")
+            return "wails_shell"
+        if (tr = "ahk_wv2")
+            return "ahk_wv2"
+    }
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    if IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady
+        return "ahk_wv2"
+    return ""
+}
+
+CommandPalette_FtbUsesHubInject(*) {
+    mode := CommandPalette_FtbTransportMode()
+    return (mode = "wails_shell" || mode = "hybrid")
+}
+
 CommandPalette_DeliverFtbPayload(payload) {
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
-    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
-        return false
     if !(payload is Map)
+        return false
+    mode := CommandPalette_FtbTransportMode()
+    if (mode = "hybrid") {
+        if FuncExists("FloatingToolbarWails_DeliverPayloadHybrid")
+            return !!FloatingToolbarWails_DeliverPayloadHybrid(payload)
+        return false
+    }
+    if (mode = "wails_shell") {
+        if FuncExists("FloatingToolbarWails_DeliverPayload")
+            return !!FloatingToolbarWails_DeliverPayload(payload)
+        return false
+    }
+    if (mode != "ahk_wv2")
         return false
     ok := false
     try {
@@ -1499,6 +1618,13 @@ CommandPalette_DeliverFtbPayload(payload) {
 }
 
 CommandPalette_InvokeFtbPaletteAiSyncScript(reqId, q) {
+    if FuncExists("CommandPalette_DeliverFtbPayload") {
+        try {
+            if CommandPalette_DeliverFtbPayload(Map("type", "host_palette_ai_sync", "reqId", String(reqId), "query", String(q)))
+                return true
+        } catch {
+        }
+    }
     global g_FTB_WV2
     if !IsObject(g_FTB_WV2)
         return false
@@ -1541,10 +1667,24 @@ CommandPalette_ParseScriptJson(raw) {
 }
 
 CommandPalette_SyncFtbContextForPalette(prov, reqId := "") {
+    prov := CommandPalette_NormalizeAiProvider(prov)
+    if FuncExists("CommandPalette_FtbUsesHubInject") && CommandPalette_FtbUsesHubInject() {
+        ok := false
+        if FuncExists("CommandPalette_DeliverFtbPayload") {
+            try ok := !!CommandPalette_DeliverFtbPayload(Map("type", "host_request_palette_ai_llm", "reqId", String(reqId), "provider", prov))
+            catch {
+            }
+            try CommandPalette_DeliverFtbPayload(Map("type", "niuma_request_studio_context"))
+            catch {
+            }
+        }
+        CommandPalette_PullLiveKeysFromFtb()
+        CommandPalette_RequestFtbLlmExport(prov, reqId)
+        return ok
+    }
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
     if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
         return false
-    prov := CommandPalette_NormalizeAiProvider(prov)
     provEsc := CommandPalette_JsEscapeForParse(prov)
     js := "(function(){try{"
         . "if(typeof exportPaletteLlmForProvider!=='function')return JSON.stringify({ok:0,err:'no_export_fn'});"
@@ -1790,8 +1930,8 @@ CommandPalette_StopAiStreamSideEffects(oldReqId := "") {
         }
     }
     ; 仅取消悬浮栏侧 palette 流，禁止广播 niuma_llm_http_cancel *（会误杀命令面板宿主直连）
-    if (rid != "") && IsObject(g_FTB_WV2) {
-        try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_palette_ai_stream_cancel", "reqId", rid))
+    if (rid != "") && FuncExists("CommandPalette_DeliverFtbPayload") {
+        try CommandPalette_DeliverFtbPayload(Map("type", "host_palette_ai_stream_cancel", "reqId", rid))
         catch {
         }
     }
@@ -4527,6 +4667,27 @@ CommandPalette_BootstrapNiumaChat(reason := "", openDrawer := false) {
         g_FTB_NiumaHandoffOpening := true
     }
 
+    ; S10 shell 模式：跳过 AHK WebView 创建/反复 SurfaceIntent，仅确保 Wails FTB shell
+    if FuncExists("FloatingToolbar_AhkWebViewEnabled") && !FloatingToolbar_AhkWebViewEnabled() {
+        if FuncExists("FloatingToolbarWails_EnsureShellForAgent")
+            try FloatingToolbarWails_EnsureShellForAgent(false)
+            catch {
+            }
+        else if FuncExists("FloatingToolbarRouter_Show")
+            try FloatingToolbarRouter_Show(Map("reason", "cmdpal_bootstrap", "soft", true))
+            catch {
+            }
+        if openDrawer {
+            if FuncExists("FloatingToolbar_ScheduleNiumaDrawerOpen")
+                try FloatingToolbar_ScheduleNiumaDrawerOpen(100)
+                catch {
+                }
+            CommandPalette_ForceOpenNiumaDrawer()
+        }
+        CommandPalette_AiLog("bootstrap_end", "shell_mode reason=" . Trim(String(reason)))
+        return
+    }
+
     mode := CommandPalette_ResolveActivationMode()
 
     if (mode != "toolbar") {
@@ -4641,8 +4802,7 @@ CommandPalette_ApplyLiveAiKeys(apiKeys, activeProvider := "") {
 }
 
 CommandPalette_PullLiveKeysFromFtb() {
-    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
-    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
+    if FuncExists("CommandPalette_FtbTransportMode") && (CommandPalette_FtbTransportMode() = "")
         return false
     try {
         CommandPalette_DeliverFtbPayload(Map("type", "host_request_palette_ai_keys"))

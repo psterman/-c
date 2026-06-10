@@ -7,6 +7,8 @@ export function GetA2UIIngestURL():Promise<string>;
 
 export function GetAppInfo():Promise<main.AppInfo>;
 
+export function GetFtbShellStatus():Promise<poc.ShellFtbStatus>;
+
 export function GetWsHubStatus():Promise<poc.HubStatus>;
 
 export function GetWsUrl():Promise<string>;

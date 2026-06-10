@@ -56,7 +56,8 @@ SurfaceManager_EnsureBootstrap(*) {
     SurfaceManager_RegisterSurface("virtual_keyboard", "secondary", "webview", Map("area", "vk"))
     SurfaceManager_RegisterSurface("config_webview", "secondary", "webview", Map("area", "config"))
     SurfaceManager_RegisterSurface("floating_bubble", "resident", "native", Map("area", "bubble"))
-    SurfaceManager_RegisterSurface("drag_hole_overlay", "resident", "native", Map("area", "hole"))
+    SurfaceManager_RegisterSurface("drag_hole_overlay", "overlay", "native", Map("area", "hole"))
+    SurfaceManager_RegisterSurface("screenshot_editor", "overlay", "native", Map("area", "screenshot"))
 }
 
 SurfaceManager_MapWarmupFuncToSurface(name) {
@@ -272,6 +273,8 @@ SurfaceManager_ConflictGroupFor(surfaceId) {
     switch String(surfaceId) {
         case "command_palette", "search_center":
             return "primary"
+        case "drag_hole_overlay", "screenshot_editor":
+            return "overlay"
         case "clipboard_panel", "prompt_quick_pad", "virtual_keyboard", "config_webview":
             return "secondary"
         default:
@@ -279,27 +282,59 @@ SurfaceManager_ConflictGroupFor(surfaceId) {
     }
 }
 
+SurfaceManager_OverlaySurfaceIds() {
+    return ["drag_hole_overlay", "screenshot_editor"]
+}
+
+SurfaceManager_PrimarySurfaceIds() {
+    return ["command_palette", "search_center"]
+}
+
 SurfaceManager_ConflictSurfaces(surfaceId) {
-    group := SurfaceManager_ConflictGroupFor(surfaceId)
+    sid := String(surfaceId)
+    group := SurfaceManager_ConflictGroupFor(sid)
     surfaces := []
     if (group = "primary") {
-        for _, sid in ["command_palette", "search_center"] {
-            if (sid != surfaceId)
-                surfaces.Push(sid)
+        for _, other in SurfaceManager_PrimarySurfaceIds() {
+            if (other != sid)
+                surfaces.Push(other)
+        }
+        for _, other in SurfaceManager_OverlaySurfaceIds()
+            surfaces.Push(other)
+        return surfaces
+    }
+    if (group = "overlay") {
+        for _, other in SurfaceManager_PrimarySurfaceIds()
+            surfaces.Push(other)
+        for _, other in SurfaceManager_OverlaySurfaceIds() {
+            if (other != sid)
+                surfaces.Push(other)
         }
         return surfaces
     }
     if (group = "secondary") {
-        for _, sid in ["clipboard_panel", "prompt_quick_pad", "virtual_keyboard", "config_webview"] {
-            if (sid != surfaceId)
-                surfaces.Push(sid)
+        for _, other in ["clipboard_panel", "prompt_quick_pad", "virtual_keyboard", "config_webview"] {
+            if (other != sid)
+                surfaces.Push(other)
         }
     }
     return surfaces
 }
 
+SurfaceManager_IsPrimaryHandoff(requester, victim) {
+    req := String(requester)
+    vic := String(victim)
+    if !(req = "command_palette" || req = "search_center")
+        return false
+    if !(vic = "command_palette" || vic = "search_center")
+        return false
+    return (req != vic)
+}
+
 SurfaceManager_ReasonImpliesDispose(reason) {
     r := String(reason)
+    if (r = "primary_handoff" || r = "slot_conflict" || r = "search_preempt")
+        return false
     if (r = "budget_pressure" || r = "tray" || r = "dispose" || r = "explicit_dispose")
         return true
     if (InStr(r, "dispose") > 0)
@@ -360,11 +395,21 @@ SurfaceExecutor_Suspend(surfaceId, meta := 0) {
                 SurfaceManager_InvokeOptional("ConfigWebView_Close")
             case "floating_toolbar":
                 SurfaceManager_InvokeOptional("HideFloatingToolbar")
+            case "drag_hole_overlay":
+                if FuncExists("GDHO_RequestClose")
+                    GDHO_RequestClose("slot_conflict")
+                else if FuncExists("GDHO_Stop")
+                    GDHO_Stop()
+            case "screenshot_editor":
+                if FuncExists("CloseScreenshotEditor")
+                    CloseScreenshotEditor()
         }
     } catch as err {
         SurfaceManager_RecordEvent("suspend_error", sid, Map("reason", reason, "requester", requester, "message", err.Message))
         return
     }
+    if FuncExists("SurfaceManager_ObserveHide")
+        try SurfaceManager_ObserveHide(sid, payload)
     SurfaceManager_RecordEvent("suspend", sid, payload)
 }
 
@@ -381,11 +426,15 @@ SurfaceExecutor_Dispose(surfaceId, meta := 0) {
     try {
         switch sid {
             case "command_palette":
-                if !SurfaceManager_InvokeOptional("CommandPalette_Dispose", reason)
+                if FuncExists("CommandPaletteRouter_Dispose")
+                    CommandPaletteRouter_Dispose(reason)
+                else if !SurfaceManager_InvokeOptional("CommandPalette_Dispose", reason)
                     SurfaceManager_InvokeOptional("CommandPalette_Hide")
                 disposed := true
             case "search_center":
-                if !SurfaceManager_InvokeOptional("SCWV_Dispose", reason)
+                if FuncExists("SearchCenterRouter_Dispose")
+                    SearchCenterRouter_Dispose(reason)
+                else if !SurfaceManager_InvokeOptional("SCWV_Dispose", reason)
                     SurfaceManager_InvokeOptional("SCWV_RequestHardClose", reason)
                 disposed := true
             case "clipboard_panel":
@@ -401,12 +450,24 @@ SurfaceExecutor_Dispose(surfaceId, meta := 0) {
                     SurfaceManager_InvokeOptional("VK_Hide")
                 disposed := true
             case "config_webview":
-                if !SurfaceManager_InvokeOptional("ConfigWebView_Dispose", reason)
+                if FuncExists("ConfigWebViewRouter_Dispose")
+                    ConfigWebViewRouter_Dispose(reason)
+                else if !SurfaceManager_InvokeOptional("ConfigWebView_Dispose", reason)
                     SurfaceManager_InvokeOptional("ConfigWebView_Close")
                 disposed := true
             case "floating_toolbar":
-                if !SurfaceManager_InvokeOptional("FloatingToolbar_Dispose", reason)
+                if FuncExists("FloatingToolbarRouter_Dispose")
+                    FloatingToolbarRouter_Dispose(reason)
+                else if !SurfaceManager_InvokeOptional("FloatingToolbar_Dispose", reason)
                     SurfaceManager_InvokeOptional("HideFloatingToolbar")
+                disposed := true
+            case "drag_hole_overlay":
+                if FuncExists("GDHO_Stop")
+                    GDHO_Stop()
+                disposed := true
+            case "screenshot_editor":
+                if FuncExists("CloseScreenshotEditor")
+                    CloseScreenshotEditor()
                 disposed := true
         }
     } catch as err {
@@ -465,10 +526,28 @@ SurfaceManager_ClassifyOpenContext(surfaceId, source := "", meta := 0) {
 SurfaceManager_ShouldEnforceSlotsForRequest(surfaceId, source := "", meta := 0) {
     if !(FuncExists("Nmer_SurfaceManagerEnforceSlots") && Nmer_SurfaceManagerEnforceSlots())
         return false
-    context := SurfaceManager_ClassifyOpenContext(surfaceId, source, meta)
-    if (context != "external_panel")
+    sid := String(surfaceId)
+    if SurfaceManager_ConflictGroupFor(sid) = ""
         return false
-    return SurfaceManager_ConflictGroupFor(surfaceId) != ""
+    context := SurfaceManager_ClassifyOpenContext(sid, source, meta)
+    if (context = "external_panel" || context = "external_hotkey" || context = "internal_toolbar")
+        return true
+    return false
+}
+
+SurfaceManager_HasActivePrimaryConflict(surfaceId) {
+    global g_SurfaceRuntime_Registry
+    if !FuncExists("SurfaceManager_ConflictSurfaces")
+        return false
+    for _, sid in SurfaceManager_ConflictSurfaces(surfaceId) {
+        if !g_SurfaceRuntime_Registry.Has(sid)
+            continue
+        rec := g_SurfaceRuntime_Registry[sid]
+        state := (rec is Map) && rec.Has("state") ? String(rec["state"]) : ""
+        if (state = "ACTIVE" || state = "CREATING")
+            return true
+    }
+    return false
 }
 
 SurfaceManager_BeforeOpen(surfaceId, source := "", meta := 0) {
@@ -505,30 +584,48 @@ SurfaceManager_BeforeOpen(surfaceId, source := "", meta := 0) {
     SurfaceManager_RecordEvent("open_plan", surfaceId, payload)
     if !shouldEnforce
         return
+    skipTxnSlotHide := false
+    if (meta is Map) && meta.Has("generationId") && String(meta["generationId"]) != "" {
+        ; Transaction 路径下仍须仲裁 CP↔SC 主槽位，否则 budget dispose 会破坏切换。
+        if !(context = "external_hotkey" && SurfaceManager_ConflictGroupFor(surfaceId) = "primary")
+            skipTxnSlotHide := true
+    }
+    if skipTxnSlotHide
+        return
     for _, item in conflicts
         SurfaceManager_HideSurface(item["surface"], "slot_conflict", surfaceId)
 }
 
 SurfaceManager_BudgetPolicy(mode := "") {
     m := String(mode != "" ? mode : SurfaceManager_CurrentMode())
+    baseline := SurfaceManager_MeasuredBaseline()
+    emptyWv2 := baseline.Has("webview2_count") ? (baseline["webview2_count"] + 0) : 7
+    ; S5: totalWebview = S4 空载 wv2 实测 + 1 余量；primary=1 保证 CP+SC 双开触发回收
+    totalCap := emptyWv2 + 1
+    if (totalCap < 2)
+        totalCap := 2
     policy := Map(
         "mode", m,
         "primary", 1,
         "secondary", 1,
         "residentWebview", 1,
-        "totalWebview", 2
+        "totalWebview", totalCap,
+        "baselineRef", baseline.Has("capturedAt") ? String(baseline["capturedAt"]) : "",
+        "baselineSource", baseline.Has("source") ? String(baseline["source"]) : "",
+        "emptyLoadWv2", emptyWv2,
+        "emptyLoadPrivateMiB", baseline.Has("emptyLoadPrivateMiB") ? (baseline["emptyLoadPrivateMiB"] + 0.0) : 0.0
     )
     switch m {
         case "bubble":
             policy["primary"] := 0
             policy["secondary"] := 0
             policy["residentWebview"] := 1
-            policy["totalWebview"] := 1
+            policy["totalWebview"] := 2
         case "hole":
             policy["primary"] := 1
             policy["secondary"] := 0
             policy["residentWebview"] := 0
-            policy["totalWebview"] := 1
+            policy["totalWebview"] := 2
         case "tray":
             policy["primary"] := 0
             policy["secondary"] := 0
@@ -536,6 +633,41 @@ SurfaceManager_BudgetPolicy(mode := "") {
             policy["totalWebview"] := 0
     }
     return policy
+}
+
+SurfaceManager_MeasuredBaseline(*) {
+    static cached := 0
+    if (cached is Map)
+        return cached
+    defaults := Map(
+        "emptyLoadPrivateMiB", 1909.03,
+        "webview2_count", 7,
+        "capturedAt", "2026-06-10T01:50:57Z",
+        "source", "s4_gate_defaults"
+    )
+    try {
+        path := FuncExists("Nmer_DebugPath")
+            ? Nmer_DebugPath("a2ui_memory_baseline.json")
+            : (A_ScriptDir . "\Cache\debug\a2ui_memory_baseline.json")
+        if FileExist(path) {
+            raw := FileRead(path, "UTF-8")
+            if (Trim(raw) != "" && FuncExists("Jxon_Load")) {
+                data := Jxon_Load(raw)
+                if (data is Map) {
+                    if data.Has("emptyLoadPrivateMiB")
+                        defaults["emptyLoadPrivateMiB"] := data["emptyLoadPrivateMiB"] + 0.0
+                    if data.Has("capturedAt")
+                        defaults["capturedAt"] := String(data["capturedAt"])
+                    if data.Has("processes") && IsObject(data["processes"]) && data["processes"].Has("webview2_count")
+                        defaults["webview2_count"] := data["processes"]["webview2_count"] + 0
+                    defaults["source"] := path
+                }
+            }
+        }
+    } catch {
+    }
+    cached := defaults
+    return cached
 }
 
 SurfaceManager_IsBudgetTrackedState(state) {
@@ -607,9 +739,10 @@ SurfaceManager_BuildBudgetSnapshot(mode := "", targetSurface := "", reason := ""
         candidatePool.Push(row)
     }
     overages := []
-    for key, limit in policy {
-        if (key = "mode")
+    for _, key in ["primary", "secondary", "residentWebview", "totalWebview"] {
+        if !policy.Has(key)
             continue
+        limit := policy[key] + 0
         used := counts.Has(key) ? counts[key] : 0
         if (used > limit)
             overages.Push(Map("bucket", key, "used", used, "limit", limit, "overflow", used - limit))
@@ -687,30 +820,58 @@ SurfaceManager_BudgetSignature(snapshot) {
     return sig
 }
 
-SurfaceManager_RecomputeBudget(reason := "", targetSurface := "", modeOverride := "") {
+SurfaceManager_RecomputeBudget(reason := "", targetSurface := "", modeOverride := "", force := false) {
     global g_SurfaceRuntime_LastBudgetSignature
     if !SurfaceManager_IsObservationEnabled()
-        return
-    snapshot := SurfaceManager_BuildBudgetSnapshot(modeOverride, targetSurface, reason)
-    sig := SurfaceManager_BudgetSignature(snapshot)
-    if (sig = g_SurfaceRuntime_LastBudgetSignature)
-        return
-    g_SurfaceRuntime_LastBudgetSignature := sig
-    payload := Map(
-        "mode", snapshot["mode"],
-        "reason", String(reason),
-        "targetSurface", String(targetSurface),
-        "enforceBudget", FuncExists("Nmer_SurfaceManagerEnforceBudget") ? !!Nmer_SurfaceManagerEnforceBudget() : false,
-        "policy", snapshot["policy"],
-        "counts", snapshot["counts"],
-        "overages", snapshot["overages"],
-        "candidates", snapshot["candidates"]
-    )
-    SurfaceManager_RecordEvent("budget_plan", "", payload)
-    if !(FuncExists("Nmer_SurfaceManagerEnforceBudget") && Nmer_SurfaceManagerEnforceBudget())
-        return
-    for _, cand in snapshot["candidates"]
-        SurfaceExecutor_Dispose(cand["surface"], Map("reason", "budget_pressure", "requester", targetSurface))
+        return false
+    try {
+        snapshot := SurfaceManager_BuildBudgetSnapshot(modeOverride, targetSurface, reason)
+        sig := SurfaceManager_BudgetSignature(snapshot)
+        if !force && (sig = g_SurfaceRuntime_LastBudgetSignature)
+            return false
+        payload := Map(
+            "mode", snapshot["mode"],
+            "reason", String(reason),
+            "targetSurface", String(targetSurface),
+            "enforceBudget", FuncExists("Nmer_SurfaceManagerEnforceBudget") ? !!Nmer_SurfaceManagerEnforceBudget() : false,
+            "policy", snapshot["policy"],
+            "counts", snapshot["counts"],
+            "overages", snapshot["overages"],
+            "candidates", snapshot["candidates"]
+        )
+        SurfaceManager_RecordEvent("budget_plan", "", payload)
+        g_SurfaceRuntime_LastBudgetSignature := sig
+        if !(FuncExists("Nmer_SurfaceManagerEnforceBudget") && Nmer_SurfaceManagerEnforceBudget())
+            return true
+        for _, cand in snapshot["candidates"] {
+            sid := String(cand["surface"])
+            requester := String(targetSurface)
+            handoff := SurfaceManager_IsPrimaryHandoff(requester, sid)
+            meta := Map(
+                "reason", handoff ? "primary_handoff" : "budget_pressure",
+                "requester", requester,
+                "bucket", String(cand["bucket"]),
+                "mode", snapshot["mode"]
+            )
+            SurfaceManager_RecordEvent("budget_enforce", sid, meta)
+            if handoff {
+                SurfaceExecutor_Suspend(sid, meta)
+                continue
+            }
+            if FuncExists("SurfaceIntent_Dispose") && FuncExists("Nmer_SurfaceManagerRouteIntents") && Nmer_SurfaceManagerRouteIntents()
+                SurfaceIntent_Dispose(sid, meta)
+            else
+                SurfaceExecutor_Dispose(sid, meta)
+        }
+        return true
+    } catch as err {
+        SurfaceManager_RecordEvent("budget_plan_error", "", Map(
+            "reason", String(reason),
+            "targetSurface", String(targetSurface),
+            "message", err.Message
+        ))
+        return false
+    }
 }
 
 SurfaceManager_WriteSnapshot(*) {
@@ -797,7 +958,12 @@ SurfaceManager_ObserveInit(surfaceId, meta := 0) {
 }
 
 SurfaceManager_ObserveShow(surfaceId, meta := 0) {
-    SurfaceManager_SetState(surfaceId, "ACTIVE", meta)
+    observeMeta := meta
+    if FuncExists("SurfaceTransaction_EnrichObserveMeta")
+        observeMeta := SurfaceTransaction_EnrichObserveMeta(surfaceId, meta)
+    if FuncExists("SurfaceTransaction_OnSurfaceActive")
+        try SurfaceTransaction_OnSurfaceActive(surfaceId, observeMeta)
+    SurfaceManager_SetState(surfaceId, "ACTIVE", observeMeta)
 }
 
 SurfaceManager_ObserveHide(surfaceId, meta := 0) {
@@ -848,6 +1014,8 @@ SurfaceManager_ObserveModeTransition(stage, targetMode := "", meta := 0) {
 
 SurfaceManager_ObserveSystemBootstrap(meta := 0) {
     SurfaceManager_RecordEvent("bootstrap", "", meta)
+    SurfaceManager_EnsureBootstrap()
+    SurfaceManager_RecomputeBudget("bootstrap", "", "", true)
 }
 
 SurfaceManager_BuildWarmupQueue(defaultQueue) {

@@ -109,6 +109,58 @@ $legacyCloseRequests = @($requestRows | Where-Object {
     $_.meta.action -eq "close" -and $_.meta.source -notin @("SurfaceIntent_Close", "SurfaceIntent_Dispose")
 })
 $s2GatePass = ($intentOpenRows.Count -gt 0) -and ($intentDisposeRows.Count -gt 0) -and ($intentCloseRows.Count -gt 0)
+$txnBeginRows = @($rows | Where-Object { $_.type -eq "transaction_begin" })
+$txnCommitRows = @($rows | Where-Object { $_.type -eq "transaction_commit" })
+$txnAbortRows = @($rows | Where-Object { $_.type -eq "transaction_abort" })
+$txnStaleRows = @($rows | Where-Object { $_.type -eq "transaction_stale" })
+$intentOpenWithGen = @($intentOpenRows | Where-Object { $_.meta -and $_.meta.generationId })
+$s3GatePass = ($txnBeginRows.Count -gt 0) -and ($txnCommitRows.Count -gt 0) -and ($intentOpenWithGen.Count -gt 0)
+
+$warmupSteps = @($rows | Where-Object { $_.type -eq "warmup_step" })
+$bootstrapIncludesReady = @($rows | Where-Object { $_.type -eq "bootstrap" -and $_.meta -and $_.meta.phase -eq "includes_ready" } | Select-Object -Last 1)
+$managerEnabledFlag = $null
+$interceptWarmupFlag = $null
+$enforceBudgetFlag = $null
+if ($bootstrapIncludesReady) {
+    if ($bootstrapIncludesReady.meta.PSObject.Properties.Name -contains "managerEnabled") {
+        $managerEnabledFlag = [string]$bootstrapIncludesReady.meta.managerEnabled
+    }
+    if ($bootstrapIncludesReady.meta.PSObject.Properties.Name -contains "interceptWarmup") {
+        $interceptWarmupFlag = [string]$bootstrapIncludesReady.meta.interceptWarmup
+    }
+    if ($bootstrapIncludesReady.meta.PSObject.Properties.Name -contains "enforceBudget") {
+        $enforceBudgetFlag = [string]$bootstrapIncludesReady.meta.enforceBudget
+    }
+}
+$flagsPath = Join-Path $RepoRoot "local\nmer-flags.json"
+if (Test-Path $flagsPath) {
+    try {
+        $sm = (Get-Content $flagsPath -Raw -Encoding UTF8 | ConvertFrom-Json).surfaceManager
+        if ($null -eq $managerEnabledFlag -and $sm) { $managerEnabledFlag = if ($sm.enabled) { "1" } else { "0" } }
+        if ($null -eq $interceptWarmupFlag -and $sm) { $interceptWarmupFlag = if ($sm.interceptWarmup) { "1" } else { "0" } }
+        if ($null -eq $enforceBudgetFlag -and $sm) { $enforceBudgetFlag = if ($sm.enforceBudget) { "1" } else { "0" } }
+    } catch { }
+}
+function Test-SurfaceRuntimeFlagOn($val) {
+    if ($null -eq $val) { return $false }
+    $s = [string]$val
+    return ($s -eq "1" -or $s -ieq "true")
+}
+$absentSurfaces = @()
+if ($snapshot) {
+    $absentSurfaces = @($snapshot | Where-Object { [string]$_.state -eq "ABSENT" } | Select-Object -ExpandProperty id -Unique)
+}
+$memoryBaselinePath = Join-Path $debugDir "a2ui_memory_baseline.json"
+$memoryBaseline = Read-JsonFile $memoryBaselinePath
+$currentEmptyMiB = if ($memoryBaseline -and $memoryBaseline.emptyLoadPrivateMiB) { [double]$memoryBaseline.emptyLoadPrivateMiB } else { $null }
+$s4GatePass = $s2GatePass -and $s3GatePass `
+    -and (Test-SurfaceRuntimeFlagOn $managerEnabledFlag) `
+    -and (Test-SurfaceRuntimeFlagOn $interceptWarmupFlag) `
+    -and (-not (Test-SurfaceRuntimeFlagOn $enforceBudgetFlag)) `
+    -and ($warmupSteps.Count -eq 0) `
+    -and ($intentDisposeRows.Count -gt 0) `
+    -and ($absentSurfaces.Count -gt 0) `
+    -and ($currentEmptyMiB -gt 0)
 
 $out = [ordered]@{
     capturedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -133,6 +185,24 @@ $out = [ordered]@{
         requestSurfaceIntentDispose = $intentDisposeRequests.Count
         requestCloseLegacyExecutor = $legacyCloseRequests.Count
     }
+    s3Transaction = [ordered]@{
+        gatePass = $s3GatePass
+        transactionBegin = $txnBeginRows.Count
+        transactionCommit = $txnCommitRows.Count
+        transactionAbort = $txnAbortRows.Count
+        transactionStale = $txnStaleRows.Count
+        intentOpenWithGenerationId = $intentOpenWithGen.Count
+    }
+    s4P1Gate = [ordered]@{
+        gatePass = $s4GatePass
+        managerEnabled = $managerEnabledFlag
+        interceptWarmup = $interceptWarmupFlag
+        enforceBudget = $enforceBudgetFlag
+        warmupSteps = $warmupSteps.Count
+        intentDispose = $intentDisposeRows.Count
+        registryAbsent = $absentSurfaces.Count
+        emptyLoadPrivateMiB = $currentEmptyMiB
+    }
     requestBySurface = $requestBySurface
     surfaces = $surfaceTable
     modeTail = $modeTail
@@ -146,4 +216,14 @@ $out | ConvertTo-Json -Depth 8 | Set-Content -Path $outPath -Encoding UTF8
 Write-Host "surface runtime summary -> $outPath"
 Write-Host "events=$($rows.Count) surfaces=$($surfaceTable.Count) modeTransitions=$($modeRows.Count) warmup=$($warmup.Count)"
 Write-Host "s2 intent_open=$($intentOpenRows.Count) intent_close=$($intentCloseRows.Count) intent_dispose=$($intentDisposeRows.Count) gatePass=$s2GatePass"
+Write-Host "s3 transaction_begin=$($txnBeginRows.Count) transaction_commit=$($txnCommitRows.Count) gatePass=$s3GatePass"
+Write-Host "s4 managerEnabled=$managerEnabledFlag warmupSteps=$($warmupSteps.Count) emptyLoadMiB=$currentEmptyMiB gatePass=$s4GatePass"
+$budgetEnforceRows = @($rows | Where-Object { $_.type -eq "budget_enforce" })
+$budgetPressureDispose = @($rows | Where-Object {
+    ($_.type -eq "dispose" -or $_.type -eq "intent_dispose") -and $_.meta -and [string]$_.meta.reason -eq "budget_pressure"
+})
+$s5GatePass = $s4GatePass -and (Test-SurfaceRuntimeFlagOn $enforceBudgetFlag) `
+    -and ($budgetPlanRows.Count -gt 0) `
+    -and ($budgetEnforceRows.Count -gt 0 -or $budgetPressureDispose.Count -gt 0)
+Write-Host "s5 enforceBudget=$enforceBudgetFlag budget_enforce=$($budgetEnforceRows.Count) budget_pressure_dispose=$($budgetPressureDispose.Count) gatePass=$s5GatePass"
 exit 0

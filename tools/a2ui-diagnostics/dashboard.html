@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Surface Manager 门禁看板</title>
+  <style>
+    :root {
+      --bg1: #0f1419;
+      --bg2: #1a2332;
+      --ink: #e8eef7;
+      --muted: #8b9cb3;
+      --ok: #3dd68c;
+      --fail: #ff6b6b;
+      --warn: #ffb347;
+      --card: rgba(255, 255, 255, 0.04);
+      --border: rgba(255, 255, 255, 0.1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(145deg, var(--bg1), var(--bg2));
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 20px; }
+    h1 { margin: 0 0 4px; font-size: 22px; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    button {
+      border: 1px solid var(--border);
+      background: rgba(96, 165, 250, 0.12);
+      color: #dbeafe;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    button:hover { background: rgba(96, 165, 250, 0.22); }
+    .gates { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .gate {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .gate.pass { border-color: rgba(61, 214, 140, 0.45); }
+    .gate.fail { border-color: rgba(255, 107, 107, 0.45); }
+    .gate h2 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+    .pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .pill.pass { background: rgba(61, 214, 140, 0.2); color: var(--ok); }
+    .pill.fail { background: rgba(255, 107, 107, 0.2); color: var(--fail); }
+    .metrics { font-size: 12px; color: var(--muted); line-height: 1.7; }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .panel h3 { margin: 0 0 8px; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; }
+    .hint { color: var(--warn); font-size: 12px; line-height: 1.6; }
+    .empty { color: var(--muted); font-size: 13px; }
+    code { font-family: Consolas, monospace; font-size: 11px; color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Surface Manager 门禁看板</h1>
+    <div class="sub" id="meta">加载中…</div>
+    <div class="toolbar">
+      <button type="button" id="btn-refresh">刷新数据</button>
+      <button type="button" id="btn-pick">选择 diagnosis.json</button>
+    </div>
+    <div class="gates" id="gates"></div>
+    <div class="panel">
+      <h3>Surface 注册表快照</h3>
+      <table>
+        <thead><tr><th>Surface</th><th>State</th><th>Role</th><th>Runtime</th></tr></thead>
+        <tbody id="registry"></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>最近事务事件</h3>
+      <table>
+        <thead><tr><th>时间</th><th>类型</th><th>Surface</th><th>Gen</th><th>原因</th></tr></thead>
+        <tbody id="txn"></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>诊断提示</h3>
+      <div id="hints" class="hint"></div>
+    </div>
+    <div class="panel empty">
+      用法：在项目根目录运行
+      <code>powershell -File tools\a2ui-diagnostics\Diagnose-SurfaceRuntime.ps1</code>
+      或运行 <code>Open-SurfaceGateDashboard.ps1</code>（会自动跑诊断并打开看板）。
+      <br />本看板读取 <code>Cache\debug\surface_runtime_diagnosis.json</code>；内嵌快照模式下须重新运行上述脚本，不能只按 F5 刷新页面。
+      <br />命令面板内 <code>Ctrl+Shift+A</code> 打开的是「搜索/Agent 诊断窗」，不含 S2/S3/S4 门禁。
+      <br />S4 额外步骤：重载后空载运行 <code>capture-memory-baseline.ps1</code>，再跑本诊断。
+    </div>
+  </div>
+  <script>
+    const JSON_URL = "../../Cache/debug/surface_runtime_diagnosis.json";
+
+    function pill(pass) {
+      return `<span class="pill ${pass ? "pass" : "fail"}">${pass ? "通过" : "未通过"}</span>`;
+    }
+
+    function render(data) {
+      document.getElementById("meta").textContent =
+        `更新时间 ${data.capturedAt || "-"} | session ${data.traceSession || "-"} | enabled=${data.runtimeFlags?.managerEnabled} routeIntents=${data.runtimeFlags?.routeIntents} interceptWarmup=${data.runtimeFlags?.interceptWarmup}`;
+
+      const gates = data.gates || [];
+      document.getElementById("gates").innerHTML = gates.map(g => {
+      const metricLabels = {
+        enforceBudget: "启用预算强制",
+        budget_plan: "预算计划事件数",
+        budget_enforce: "预算强制执行事件数",
+        budget_pressure_dispose: "预算压力销毁事件数",
+        policy_baseline_ref: "已链接基线的计划数",
+        enforceSlots: "启用槽位互斥",
+        hotkey_should_enforce: "热键应强制互斥计划数",
+        slot_suspend_conflict: "槽位冲突挂起数",
+        toolbar_should_enforce: "工具栏应强制互斥计划数",
+        primary_conflict_resolved: "主面板冲突已解决",
+        bridge_version: "Bridge 版本",
+        bridge_has_stream_once: "Bridge 含 streamOnce",
+        html_loads_bridge: "HTML 引用 Bridge",
+        html_inline_stream_once: "HTML 内联 streamOnce",
+        html_injects_stream_once: "HTML 注入 streamOnce",
+        intent_open: "打开意图数",
+        intent_close: "关闭意图数",
+        intent_dispose: "销毁意图数"
+      };
+      const metrics = Object.entries(g.metrics || {}).map(([k, v]) => {
+        const label = metricLabels[k] || k;
+        return `${label}=${v}`;
+      }).join(" · ");
+      const s2HintMap = {
+        missing_intent_open: "缺少 intent_open：需在本 session 打开任意面板（如双击 CapsLock）",
+        missing_intent_close: "缺少 intent_close：Esc 关命令面板 / 托盘隐藏悬浮栏 / 切换外观模式（Close 与 Dispose 不同）",
+        missing_intent_dispose: "缺少 intent_dispose：命令面板输入 >dispose ftb 或 Ctrl+Shift+F（可与其它步骤同 session，不必与 S5 双开同时做）",
+        startup_only_session: "Session only has startup FTB intent_open. Complete STEP 1-5 in one session before opening dashboard.",
+        intent_open_error: "存在 intent_open_error",
+        intent_close_error: "存在 intent_close_error"
+      };
+      const s4HintMap = {
+        s2_prereq_failed: "S2 未通过，先完成 Intent Router 门禁",
+        s3_prereq_failed: "S3 未通过，先完成 transaction begin→commit",
+        bootstrap_stale_reload_required: "bootstrap 无 S4 字段，须重载牛马.ahk",
+        manager_not_enabled: "surfaceManager.enabled 须为 true，并重载牛马.ahk",
+        enforce_budget_on: "S4 阶段 enforceBudget 须保持 false",
+        intercept_warmup_off: "interceptWarmup 须为 true",
+        legacy_warmup_four_chain: "仍存在四连 warmup_step，interceptWarmup 未生效",
+        warmup_steps_present: "空载仍有 warmup_step，请重载并确认 lazy warmup",
+        memory_baseline_missing: "运行 capture-memory-baseline.ps1（空载、无 CP）",
+        memory_captured_while_cp_loaded: "基线 JSON 为 cp_loaded（或含 cpLoadedPrivateMiB）；须重载、关面板后在交互测试前先空载 capture",
+        memory_not_improved_vs_s0: "空载内存未低于 S0 对照值",
+        dispose_absent_not_observed: "执行 >dispose ftb 后 registry 应出现 ABSENT"
+      };
+      let failHint = "";
+      if (g.id === "s2" && !g.pass && data.s2_failure_reasons?.length) {
+        failHint = `<div class="metrics" style="color:#ffb347;margin-top:6px">${data.s2_failure_reasons.map(r => (s2HintMap[r] || r)).join("<br>")}</div>`;
+      } else if (g.id === "s4" && !g.pass && data.s4_failure_reasons?.length) {
+        failHint = `<div class="metrics" style="color:#ffb347;margin-top:6px">${data.s4_failure_reasons.map(r => (s4HintMap[r] || r)).join("<br>")}</div>`;
+      } else if (g.id === "s5" && !g.pass && data.s5_failure_reasons?.length) {
+        const s5HintMap = {
+          s4_prereq_failed: "第四阶段内存门禁未通过，请先完成第四阶段再测第五阶段",
+          enforce_budget_off: "请在 local/nmer-flags.json 将 surfaceManager.enforceBudget 设为 true，并完全退出后重新启动牛马.ahk",
+          missing_budget_plan: "当前会话日志里没有「预算计划」事件。请完全退出牛马后重新启动；启动后运行 Open-SurfaceGateDashboard.ps1 重新生成看板（仅刷新浏览器不会更新诊断结果）",
+          policy_missing_baseline_ref: "预算策略未关联内存基线文件。请确认 Cache/debug/a2ui_memory_baseline.json 存在，并重载以加载最新 SurfaceRuntimeManager 代码",
+          missing_budget_pressure_dispose: "尚未观测到「预算压力销毁」。压测步骤：先打开命令面板且不要关闭，再打开搜索中心，系统应回收其中一个主面板"
+        };
+        failHint = `<div class="metrics" style="color:#ffb347;margin-top:6px">${data.s5_failure_reasons.map(r => (s5HintMap[r] || r)).join("<br>")}</div>`;
+      } else if (g.id === "s6" && !g.pass && data.s6_failure_reasons?.length) {
+        const s6HintMap = {
+          s5_prereq_failed: "第五阶段未通过，请先完成预算强制门禁",
+          enforce_slots_off: "请在 local/nmer-flags.json 将 surfaceManager.enforceSlots 设为 true，并完全退出后重新启动牛马.ahk",
+          missing_hotkey_should_enforce: "尚未观测到搜索热键打开搜索中心时的 open_plan（应含 context=external_hotkey 且 shouldEnforce=1）",
+          missing_primary_conflict_resolution: "尚未观测到主面板冲突解决（slot_conflict 挂起 或 budget_pressure 销毁 任一即可）",
+          overlay_coexists_with_primary: "注册表快照中叠加层与主面板同时处于 ACTIVE，互斥未生效"
+        };
+        failHint = `<div class="metrics" style="color:#ffb347;margin-top:6px">${data.s6_failure_reasons.map(r => (s6HintMap[r] || r)).join("<br>")}</div>`;
+      } else if (g.id === "s7" && !g.pass && data.s7_failure_reasons?.length) {
+        const s7HintMap = {
+          bridge_file_missing: "缺少 html/ftb/palette/palette-agent-bridge.js",
+          ftb_html_missing: "缺少 html/FloatingToolbarStrip.html",
+          bridge_missing_runPaletteAgentStreamOnce: "Bridge 未定义 runPaletteAgentStreamOnce，请完成 FTB-1 抽离",
+          bridge_still_requires_host_inject: "Bridge 仍要求宿主注入 runPaletteAgentStreamOnce",
+          html_still_has_inline_stream_once: "FloatingToolbarStrip.html 仍含内联 runPaletteAgentStreamOnce",
+          html_missing_bridge_script: "FloatingToolbarStrip.html 未引用 palette-agent-bridge.js",
+          html_still_injects_stream_once: "宿主 install 仍传入 runPaletteAgentStreamOnce",
+          bridge_version_below_1_2: "Bridge 版本须 ≥ ftb-1.2.0"
+        };
+        failHint = `<div class="metrics" style="color:#ffb347;margin-top:6px">${data.s7_failure_reasons.map(r => (s7HintMap[r] || r)).join("<br>")}</div>`;
+      } else if (g.id === "s8" && !g.pass && data.s8_failure_reasons?.length) {
+        const s8HintMap = {
+          router_module_missing: "缺少 modules/CommandPaletteRouter.ahk",
+          wails_host_module_missing: "缺少 modules/CommandPaletteWailsHost.ahk",
+          intent_not_using_router: "SurfaceIntentRouter 未调用 CommandPaletteRouter_Show",
+          main_ahk_not_found: "未在仓库根目录找到含 CommandPaletteCore 的主 AHK 入口",
+          main_missing_router_include: "主入口未 #Include CommandPaletteRouter.ahk",
+          main_missing_wails_host_include: "主入口未 #Include CommandPaletteWailsHost.ahk",
+          example_flags_missing_cp_host: "docs/nmer-flags.example.json 缺少 wailsBridge.commandPaletteHost",
+          legacy_surface_lifecycle_off: "S8 阶段 1 须保持 rollback.legacySurfaceLifecycle:true；灰度 wails 时再关",
+          wails_app_missing: "缺少 apps/nmer-wails/app.go",
+          palette_a2ui_bundle_missing: "缺少 html/vendor/a2ui/nmer-a2ui-v09.js（npm build）"
+        };
+        failHint = `<div class="metrics" style="color:#ffb347;margin-top:6px">${data.s8_failure_reasons.map(r => (s8HintMap[r] || r)).join("<br>")}</div>`;
+      } else if (g.id === "s8" && g.pass && g.metrics) {
+        const m = g.metrics;
+        const wailsNote = m.wails_exe_present ? "侧车 exe 已构建" : "侧车 exe 未构建（静态门禁不阻塞；灰度 wails 前须 wails build）";
+        failHint = `<div class="metrics" style="margin-top:6px">宿主=${m.commandPaletteHost || "ahk"} · legacy=${m.legacySurfaceLifecycle ? "on" : "off"} · ${wailsNote} · cp_host_show=${m.cp_host_show ?? 0}</div>`;
+      } else if (g.id === "s9" && !g.pass && data.s9_failure_reasons?.length) {
+        const s9HintMap = {
+          router_module_missing: "缺少 modules/DomainCSurfaceRouter.ahk",
+          wails_host_module_missing: "缺少 modules/DomainCWailsHost.ahk",
+          intent_not_using_sc_router: "SurfaceIntentRouter 未调用 SearchCenterRouter_Open",
+          intent_not_using_config_router: "SurfaceIntentRouter 未调用 ConfigWebViewRouter_Show",
+          main_missing_domainc_router_include: "主入口未 #Include DomainCSurfaceRouter.ahk",
+          example_flags_missing_domainc_hosts: "docs/nmer-flags.example.json 缺少 searchCenterHost/configWebviewHost",
+          legacy_surface_lifecycle_off: "S9 阶段 1 须保持 rollback.legacySurfaceLifecycle:true"
+        };
+        failHint = `<div class="metrics" style="color:#ffb347;margin-top:6px">${data.s9_failure_reasons.map(r => (s9HintMap[r] || r)).join("<br>")}</div>`;
+      } else if (g.id === "s9" && g.pass && g.metrics) {
+        const m = g.metrics;
+        failHint = `<div class="metrics" style="margin-top:6px">SC=${m.searchCenterHost || "ahk"} · Config=${m.configWebviewHost || "ahk"} · sc_host_show=${m.sc_host_show ?? 0} · config_host_show=${m.config_host_show ?? 0}</div>`;
+      } else if (g.id === "s4" && data.memoryGate) {
+        const mg = data.memoryGate;
+        failHint = `<div class="metrics" style="margin-top:6px">内存 ${mg.status} · 当前 ${mg.current_emptyLoadPrivateMiB ?? "-"} MiB vs S0 ${mg.s0_emptyLoadPrivateMiB} (${mg.s0_reference_source}) · wv2 ${mg.current_webview2_count ?? "-"} vs ${mg.s0_webview2_count}</div>`;
+      }
+      return `<div class="gate ${g.pass ? "pass" : "fail"}">
+          <h2>${g.title || g.id} ${pill(!!g.pass)}</h2>
+          <div class="metrics">${metrics || "无指标"}</div>
+          ${failHint}
+        </div>`;
+      }).join("");
+
+      const reg = data.registry || [];
+      document.getElementById("registry").innerHTML = reg.length
+        ? reg.map(r => `<tr><td>${r.id}</td><td>${r.state}</td><td>${r.role}</td><td>${r.runtime}</td></tr>`).join("")
+        : `<tr><td colspan="4">无快照</td></tr>`;
+
+      const txn = data.recentTransactionEvents || [];
+      document.getElementById("txn").innerHTML = txn.length
+        ? txn.map(t => `<tr><td>${t.ts}</td><td>${t.type}</td><td>${t.surface}</td><td>${t.generationId}</td><td>${t.reason}</td></tr>`).join("")
+        : `<tr><td colspan="5">无事务事件</td></tr>`;
+
+      const hints = data.diagnosis || [];
+      document.getElementById("hints").innerHTML = hints.length
+        ? hints.map(h => `<div>• ${h}</div>`).join("")
+        : "暂无额外提示。";
+    }
+
+    async function loadFromUrl() {
+      const r = await fetch(`${JSON_URL}?t=${Date.now()}`, { cache: "no-store" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    }
+
+    async function refresh() {
+      if (window.__SURFACE_GATE_DATA__) {
+        render(window.__SURFACE_GATE_DATA__);
+        const meta = document.getElementById("meta");
+        meta.textContent = (meta.textContent.split(" | ")[0] || meta.textContent)
+          + " | 内嵌快照（要更新请重新运行 Open-SurfaceGateDashboard.ps1）";
+        return;
+      }
+      try {
+        render(await loadFromUrl());
+      } catch (e) {
+        document.getElementById("meta").textContent =
+          `无法自动加载 JSON（${e.message}）。请运行 Open-SurfaceGateDashboard.ps1，或点「选择 diagnosis.json」手动加载 Cache\\debug\\surface_runtime_diagnosis.json。`;
+      }
+    }
+
+    document.getElementById("btn-refresh").addEventListener("click", refresh);
+    document.getElementById("btn-pick").addEventListener("click", () => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".json,application/json";
+      input.onchange = async () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        try {
+          render(JSON.parse(await file.text()));
+        } catch (e) {
+          alert("JSON 解析失败: " + e.message);
+        }
+      };
+      input.click();
+    });
+
+    refresh();
+    if (!window.__SURFACE_GATE_DATA__) {
+      setInterval(refresh, 5000);
+    }
+  </script>
+</body>
+</html>

@@ -282,9 +282,22 @@ ABORT(gen, reason)
 
 ### 落地目标
 
-- [ ] **门禁签字**：空载内存较 S0 下降（具体阈值写进 baseline json）
-- [ ] Dispose 后 webview2_count 可复现下降
+- [ ] **门禁签字**：空载内存较 S0 下降（`Diagnose-SurfaceRuntime.ps1` → `s4_gate_pass`，对照 `memoryGate.s0_reference_source`）
+- [ ] Dispose 后 registry 出现 `ABSENT` 且 `webview2_count` 较 S0 下降
 - [ ] 明确记录：**未过门禁不得进入 S5/S7**
+
+### S4 门禁自动化（`Diagnose-SurfaceRuntime.ps1`）
+
+| 条件 | 说明 |
+|------|------|
+| `s2_gate_pass` + `s3_gate_pass` | 前置 |
+| `managerEnabled=1` | `local/nmer-flags.json` → `enabled: true` |
+| `interceptWarmup=1` 且 `warmupSteps=0` | 空载无四连 warmup |
+| `enforceBudget=0` | S5 前禁止 enforce |
+| `memory_improved_vs_s0` | 跑 `capture-memory-baseline.ps1` 后空载 MiB &lt; S0 |
+| `dispose_absent` | 本 session 有 `intent_dispose` 且 snapshot 含 `ABSENT` |
+
+复测顺序：改 flags → **重载牛马** → 空载 `capture-memory-baseline.ps1` → 交互补测（Caps+CP / Search / `>dispose ftb`）→ `Open-SurfaceGateDashboard.ps1`。
 
 ---
 
@@ -294,16 +307,28 @@ ABORT(gen, reason)
 
 ### 方案
 
-1. 用 S0/S4 baseline 反填 `SurfaceManager_BudgetPolicy`：
-   - toolbar：totalWebview = 空载实测 + 1 余量
-   - hole/tray/bubble 各档单独测
-2. `enforceBudget: true` 灰度：超限调用 `SurfaceIntent_Dispose`（**禁止**仅 Hide）
-3. 双开 SC+CP 压测：触发回收后内存回落
+1. `SurfaceManager_BudgetPolicy` 读取 `Cache/debug/a2ui_memory_baseline.json`（S4 实测）：
+   - toolbar：`totalWebview = emptyLoadWv2 + 1`（S4 实测 7 → cap 8），`primary = 1`
+   - hole/tray/bubble 各档保守 cap
+   - `budget_plan.policy` 含 `baselineRef` / `baselineSource`
+2. `enforceBudget: true` 灰度：超限走 `SurfaceIntent_Dispose`（记 `budget_enforce`）
+3. 双开 SC+CP 压测：触发 `budget_pressure` 回收后内存回落
+
+### S5 门禁（`Diagnose-SurfaceRuntime.ps1`）
+
+| 条件 | 说明 |
+|------|------|
+| `s4_gate_pass` | 前置 |
+| `enforceBudget=1` | flags 已开 |
+| `budget_plan` 含 baseline 引用 | Policy 链到 S4 json |
+| `budget_enforce` 或 `budget_pressure` dispose | 双开 CP+SC 压测 |
+
+复测：重载 → 开 CP（CapsLock）→ **不关 CP** 再开搜索中心 → `Open-SurfaceGateDashboard.ps1`。
 
 ### 落地目标
 
-- [ ] BudgetPolicy 数字有实测出处（注释链到 baseline json 时间戳）
-- [ ] 超限时 ndjson 有 `budget_plan` + 后续 `dispose` 事件
+- [ ] BudgetPolicy 数字有实测出处（`baselineRef` → baseline json 时间戳）
+- [ ] 超限时 ndjson 有 `budget_plan` + `budget_enforce` + dispose
 - [ ] 双开场景内存可控，无「越收越高」
 
 ---
@@ -343,24 +368,39 @@ ABORT(gen, reason)
 
 | 项 | 内容 |
 |----|------|
-| 方案 | CP UI → [`apps/nmer-wails/`](../apps/nmer-wails/)；AHK 保留热键与 `SurfaceIntent_Open("command_palette")`；侧车 exe 由 Router 管理生命周期 |
+| 方案 | **阶段 1（当前）**：`CommandPaletteRouter` + `CommandPaletteWailsHost`；Intent/Dispose 经路由器；`wailsBridge.commandPaletteHost` 切换 `ahk`/`wails`；Wails 路径激活侧车窗并记 `cp_host_show`，失败回退 AHK CP。**阶段 2+**：CP UI 迁入 [`apps/nmer-wails/`](../apps/nmer-wails/) |
 | 目标 | `g_CmdPal_WV2` 可卸；`rollback.legacySurfaceLifecycle:true` 一键回 AHK CP |
-| 验收 | B3 前后各跑 baseline；generationId 切换 CP 源不崩 |
+| 验收 | 静态：`Diagnose-S8B3Gate.ps1`；灰度：`commandPaletteHost:wails` + `legacySurfaceLifecycle:false` 时开 CP 出现 `cp_host_show`；默认 `ahk` 行为不变 |
+| 门禁 | `tools/a2ui-diagnostics/Diagnose-S8B3Gate.ps1`；看板卡片 **S8 B3 CP** |
 
 ### S9 — 域 C 原生化 MVP（约 2～4 周）
 
 | 项 | 内容 |
 |----|------|
-| 方案 | SearchCenter + Config 原生/单 Shell；消灭 SCWV/Config 常驻 WebView |
+| 方案 | **阶段 1（当前）**：`DomainCSurfaceRouter` + `DomainCWailsHost`；SearchCenter/Config 的 Intent/Dispose 经路由器；`searchCenterHost` / `configWebviewHost` 切换 `ahk`/`wails`；Wails 路径激活侧车并记 `sc_host_show` / `config_host_show`，失败回退 AHK SCWV/Config。**阶段 2+**：UI 迁入 Wails Shell，消灭常驻 WebView |
 | 目标 | secondary 面 Dispose 后不再重建 WebView |
+| 验收 | 静态：`Diagnose-S9DomainCGate.ps1`；灰度：两 host 设 `wails` 且 `legacySurfaceLifecycle:false` 时出现对应 host_show；默认 `ahk` 不变 |
+| 门禁 | `tools/a2ui-diagnostics/Diagnose-S9DomainCGate.ps1`；看板卡片 **S9 Domain C** |
 | 并列 | Bubble / VK / Hole Preview 原生可拆独立 stream，但应在 S8 稳定后 |
 
 ### S10 — FTB 合壳 + 退役旧宿主（约 1～2 周）
 
 | 项 | 内容 |
 |----|------|
-| 方案 | FTB 懒加载进 Wails Shell；删除独立 WebView 宿主文件 |
+| 方案 | **阶段 1～3（完成）**：Router + iframe 懒加载 + inject/egress 双向桥。**阶段 4（完成）**：`FloatingToolbar_AhkWebViewEnabled` 在 shell 模式禁止创建/复用 `g_FTB_WV2`，首次 shell show 自动 `DisposeAhkWebViewIfRetired`；CP/Agent 经 `wails_shell` 投递。**回退**：`legacySurfaceLifecycle:true` + `floatingToolbarHost:ahk` |
 | 目标 | 全应用 ≤2 个受控 WebView；旧 `*WebViewCore*` 宿主删除或仅留 rollback 分支 |
+| 验收 | 静态：`Diagnose-S10FTBShellGate.ps1`（含 `shell_phase2_wired`）；灰度：`floatingToolbarHost:wails` + `legacySurfaceLifecycle:false` 时出现 `ftb_host_show` 且 `shellPhase=2`；默认 `ahk` 行为不变 |
+| 门禁 | `tools/a2ui-diagnostics/Diagnose-S10FTBShellGate.ps1`；看板卡片 **S10 FTB Shell** |
+
+### S11 — FTB Hybrid（AHK 呈现 + Hub inject）（约 1 周）
+
+| 项 | 内容 |
+|----|------|
+| 方案 | **AHK 悬浮窗全保留**（缩放/拖拽/光标/气泡/黑洞/抽屉）；CP/Agent 经 `POST /shell/ftb/inject` → `GET /shell/ftb/inject/drain` → AHK InjectPump → `g_FTB_WV2`；egress 仍走 `chrome.webview`；`nmer-wails.exe` **bridge-only**（`NMER_BRIDGE_ONLY=1`，`StartHidden`） |
+| 目标 | 桌面悬浮条 UX + Wails 统一 inject 通道；不与 S10 合壳 POC 底栏互斥 |
+| 验收 | 静态：`Diagnose-S11HybridFTBGate.ps1`；灰度：`floatingToolbarHost:hybrid` + `legacySurfaceLifecycle:true`；`ftb_host_show` 且 `host=hybrid`；无 POC 窗抢焦点 |
+| 门禁 | `tools/a2ui-diagnostics/Diagnose-S11HybridFTBGate.ps1` |
+| 回退 | `floatingToolbarHost:ahk` 或 `wails`（合壳） |
 
 ---
 
@@ -417,14 +457,22 @@ W6+    S7 FTB-1 → S8 B3 → S9 域 C → S10 合壳   原生化可拆 stream
 
 ---
 
-## 十四、当前状态快照（2026-06-09）
+## 十四、当前状态快照（2026-06-10）
 
 | 步骤 | 状态 |
 |------|------|
-| S0 | **完成** — `Cache/debug/pre-p1/manifest.json`、`docs/surface-intent-bypass-inventory.md`；内存基线需在重载牛马后复采 |
+| S0 | **完成** — `Cache/debug/pre-p1/manifest.json`、`docs/surface-intent-bypass-inventory.md` |
 | S1 | **完成** — Dispose A/B 验证通过（FTB −1103 MiB scoped WV2） |
-| S2 | **基本完成** — Executor 入口自动路由 Close/Open；`intent_close` 补测待验证 |
-| S3 | 未开始 |
-| S4～S10 | 未开始 |
+| S2 | **已通过** — `s2_gate_pass=True`（open/close/dispose 均走 Intent Router） |
+| S3 | **已通过** — `s3_gate_pass=True`（begin→commit 含 generationId；CP DoShow 补 ObserveShow） |
+| S4 | **已通过** — 空载 1909 MiB / wv2=7 vs S0 4034 |
+| S5 | **已通过** — 预算计划链 baseline + 双开压测触发 budget_pressure |
+| S6 | **已通过** — 热键 `shouldEnforce=1` + 主面板冲突解决 |
+| S7 | **已通过** — `palette-agent-bridge.js` v1.2 含 `runPaletteAgentStreamOnce`；看板 `s7_gate_pass=True`（静态） |
+| S8 | **完成（阶段 1）** — `CommandPaletteRouter_*` + 静态门禁 PASS；默认 `commandPaletteHost:ahk` |
+| S9 | **完成（阶段 1）** — `SearchCenterRouter_*` / `ConfigWebViewRouter_*` + `DomainCWailsHost`；默认两 host 均为 `ahk` |
+| S10 | **完成（阶段 4）** — shell 模式退役 AHK FTB WebView；Wails 底栏 iframe + inject/egress；rollback 保留 ahk 宿主 |
+| S10 阶段 1 | **完成** — Router + `ftb_host_show` 侧车 |
+| S11 | **完成（代码）** — `floatingToolbarHost:hybrid`；AHK 呈现 + external presentation + inject drain；bridge-only 侧车 |
 
-**下一步行动**：重载牛马 → 手动 `SurfaceExecutor_Dispose("clipboard_panel")` 验证 webview2_count → 推进 S1 primary（SCWV/CP）→ S2 Intent Router。
+**下一步行动**：`local/nmer-flags.json` 设 `floatingToolbarHost:hybrid` 后重载牛马；`wails build` 更新 `nmer-wails.exe`；跑 `Diagnose-S11HybridFTBGate.ps1`；手动回归缩放/光标/CP hello。
