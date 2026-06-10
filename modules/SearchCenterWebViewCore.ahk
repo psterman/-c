@@ -16,6 +16,7 @@ global g_SCWV_ShowRecoveryAttempts := 0
 global g_SCWV_SearchTimer := 0
 global g_SCWV_FocusPending := false
 global g_SCWV_CliTerminalFocus := false
+global g_SCWV_SearchInputFocused := false
 global SearchCenterWebKeyword := ""
 global SearchCenterSearchResults := []
 global g_SCWV_AllResultsCache := []
@@ -214,6 +215,7 @@ SCWV_ResetHostState() {
     g_SCWV_HandoffPendingOpen := 0
     g_SCWV_HandoffUntilTick := 0
     g_SCWV_CliTerminalFocus := false
+    g_SCWV_SearchInputFocused := false
     SetTimer(SCWV_Show, 0)
     SetTimer(SCWV_RecoverAfterShowWaitTimeout, 0)
     SetTimer(SCWV_ForceRevealIfStuck, 0)
@@ -852,8 +854,19 @@ SCWV_ModeSwitchGuardSuspendHeavyWork(suspend := true) {
     }
 }
 
+SCWV_IsSearchInputFocused() {
+    global g_SCWV_SearchInputFocused
+    try {
+        return !!(IsSet(g_SCWV_SearchInputFocused) && g_SCWV_SearchInputFocused)
+    } catch {
+        return false
+    }
+}
+
 SCWV_PostCapsHintPressGuarded(key) {
     global g_SCWV_ModeSwitchGuard, g_SCWV_ModeSwitchDeferredCaps
+    if SCWV_IsSearchInputFocused()
+        return
     k := StrLower(Trim(String(key)))
     if (k = "")
         return
@@ -945,6 +958,7 @@ _SCWV_IsDarkCtxMenuOpen() {
 SCWV_Init(reason := "") {
     global g_SCWV_Gui, g_SCWV_CreateInFlight, g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx
     r := Trim(String(reason))
+    try SurfaceManager_ObserveInit("search_center", Map("entry", "SCWV_Init", "reason", r))
 
     try SCWV_Log("init_begin", "reason=" . r . " gui=" . (g_SCWV_Gui ? "1" : "0") . " alive=" . (SCWV_HostAlive() ? "1" : "0") . " inflight=" . (g_SCWV_CreateInFlight ? "1" : "0"))
 
@@ -1210,6 +1224,7 @@ SCWV_FinishReveal() {
     SetTimer(SCWV_ApplyBounds, -80)
     g_SCWV_Visible := true
     SCWV_PushLifecycleState("open", "finish_reveal")
+    try SurfaceManager_ObserveShow("search_center", Map("entry", "SCWV_FinishReveal"))
     SetTimer(SCWV_PostHostShow, -90)
 }
 
@@ -1457,6 +1472,16 @@ SCWV_RequestHardClose(reason := "") {
     }
 }
 
+SCWV_Dispose(reason := "") {
+    r := String(reason != "" ? reason : "dispose")
+    try SCWV_ForceCloseHost(r)
+    catch as err {
+        try SCWV_Log("dispose_error", "reason=" . r . " msg=" . err.Message)
+        try SCWV_RequestHardClose(r)
+    }
+    try SurfaceManager_ObserveClose("search_center", Map("entry", "SCWV_Dispose", "reason", r))
+}
+
 _SCWV_IsRecoveryCloseReason(reason := "") {
     r := StrLower(Trim(String(reason)))
     if (r = "")
@@ -1516,6 +1541,8 @@ SCWV_FocusForIME(*) {
     try {
         FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "focus_for_ime", 300, (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
         if g_SCWV_Ready && g_SCWV_WV2
+            global g_SCWV_SearchInputFocused
+            g_SCWV_SearchInputFocused := true
             WebView_QueueJson(g_SCWV_WV2, '{"type":"focus_input"}')
     } catch {
     }
@@ -2886,6 +2913,9 @@ _SCWV_ResultItemGet(Item, Prop, Default := "") {
 }
 
 SCWV_Show(reason := "", triggerSource := "") {
+    reqId := SurfaceManager_Request("search_center", "open", "SCWV_Show", Map("reason", reason, "triggerSource", triggerSource))
+    try SurfaceManager_BeforeOpen("search_center", "SCWV_Show", Map("requestId", reqId, "reason", reason, "triggerSource", triggerSource))
+    try SurfaceManager_RegisterSurface("search_center")
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
     global SearchCenterEngineMode, g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx, g_SCWV_LimitedRecoverReloadAttempts, g_SCWV_CurrentToken
@@ -2897,6 +2927,7 @@ SCWV_Show(reason := "", triggerSource := "") {
         g_SCWV_PendingTriggerSource := ts
     if !(g_SCWV_TransitionCtx is Map) || !g_SCWV_TransitionCtx["allow"] {
         try SCWV_Log("show_redirect_intent", "reason=" . reason)
+        try SurfaceManager_ObserveInit("search_center", Map("entry", "SCWV_Show", "redirect", "intent", "reason", reason, "requestId", reqId))
         redir := Map("reason", reason != "" ? reason : "show_redirect", "initialMode", SCWV_GetUnifiedMode(), "triggerSource", ts)
         SCWV_SubmitIntent("open", 25, redir)
         return
@@ -2946,6 +2977,7 @@ SCWV_Show(reason := "", triggerSource := "") {
         }
         try CapsLock_ScheduleNormalizeAfterChord()
         try SearchCenter_ScheduleIMEStabilize()
+        try SurfaceManager_ObserveShow("search_center", Map("entry", "SCWV_Show", "reason", reason, "trigger", ts, "alreadyVisible", 1, "requestId", reqId))
         return
     }
 
@@ -3107,6 +3139,8 @@ SCWV_RequestFocusInput() {
     if g_SCWV_CliTerminalFocus
         return
     if g_SCWV_WV2 && g_SCWV_Ready {
+        global g_SCWV_SearchInputFocused
+        g_SCWV_SearchInputFocused := true
         WebView_QueueJson(g_SCWV_WV2, '{"type":"focus_input"}')
         g_SCWV_FocusPending := false
         return
@@ -3115,6 +3149,14 @@ SCWV_RequestFocusInput() {
 }
 
 SCWV_Hide(PersistSelection := true) {
+    if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("search_center", Map("persistSelection", PersistSelection ? 1 : 0))
+        return
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    reqId := 0
+    if !skipTel {
+        reqId := SurfaceManager_Request("search_center", "close", "SCWV_Hide", Map("persistSelection", PersistSelection ? 1 : 0))
+        try SurfaceManager_ObserveHide("search_center", Map("entry", "SCWV_Hide", "persistSelection", PersistSelection ? 1 : 0, "requestId", reqId))
+    }
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_SearchTimer, GuiID_SearchCenter, g_SCWV_PendingJsonQueue
     global g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason, g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
     global g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx, g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
@@ -3611,7 +3653,7 @@ SCWV_OnWebMessage(sender, args) {
                         g_ConfigWebView_OneShotDefaultTab := tab
                 }
                 if IsSet(ShowConfigWebViewGUI) {
-                    ShowConfigWebViewGUI()
+                    SurfaceIntent_Open("config_webview")
                 } else if IsSet(ShowConfigGUI) {
                     ShowConfigGUI()
                 }
@@ -3738,6 +3780,9 @@ SCWV_OnWebMessage(sender, args) {
             g_SCWV_CliTerminalFocus := msg.Has("active") ? !!msg["active"] : false
             if g_SCWV_CliTerminalFocus
                 _SCWV_BlockDeactivate(4500, "cli_terminal")
+        case "searchInputFocus":
+            global g_SCWV_SearchInputFocused
+            g_SCWV_SearchInputFocused := msg.Has("active") ? !!msg["active"] : false
         case "niuma_cli_open":
             global g_SCWV_WV2
             reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""

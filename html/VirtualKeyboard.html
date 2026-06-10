@@ -8448,11 +8448,42 @@ document.querySelectorAll('.k').forEach(el => {
 // ═══════════════════════════════════════════════════════════════════════════
 // Search
 // ═══════════════════════════════════════════════════════════════════════════
-document.getElementById('cmd-search').addEventListener('input', (e) => {
+function notifyVkTextInputFocus(active) {
+  postToAhk({ type: 'typingFocus', active: !!active });
+}
+
+function bindVkTextInputFocus(el) {
+  if (!el || el.__vkTypingFocusBound) return;
+  el.__vkTypingFocusBound = true;
+  el.addEventListener('focus', () => notifyVkTextInputFocus(true));
+  el.addEventListener('blur', () => notifyVkTextInputFocus(false));
+}
+
+const cmdSearchEl = document.getElementById('cmd-search');
+bindVkTextInputFocus(cmdSearchEl);
+['dashboard-edit-title', 'dashboard-edit-note', 'dashboard-edit-shortcut'].forEach((id) => {
+  bindVkTextInputFocus(document.getElementById(id));
+});
+
+cmdSearchEl.addEventListener('input', (e) => {
   state.search = e.target.value;
   renderCommandList();
   renderKeyboardSlots();
   renderModifierKeys();
+});
+
+cmdSearchEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    e.stopPropagation();
+    if (state.search) {
+      e.preventDefault();
+      state.search = '';
+      e.target.value = '';
+      renderCommandList();
+      renderKeyboardSlots();
+      renderModifierKeys();
+    }
+  }
 });
 
 document.addEventListener('keydown', (e) => {

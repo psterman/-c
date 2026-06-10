@@ -1,5 +1,6 @@
 ; ===================== msg =====================
 #Requires AutoHotkey v2.0
+A_MaxHotkeysPerInterval := 400
 #Include modules\LocalPaths.ahk
 
 NMER_StartupOnError(err, mode) {
@@ -39,6 +40,7 @@ if (!pToken) {
     MsgBox "GDI+ 启动失败，请检查 lib\ahk\Gdip_All.ahk"
 }
 NMER_Log("startup", "boot", "gdip=" . (pToken ? "ok" : "fail"))
+try SurfaceManager_ObserveSystemBootstrap(Map("traceSession", NMER_TraceSession, "gdip", pToken ? 1 : 0))
 ; ScreenshotEditorPlugin #HotIf 可能在主脚本后部全局块执行前被求值，须尽早初始化
 global ScreenshotColorPickerActive := false
 ; 托盘菜单可能在 Appearance / 悬浮模块全局块执行前被点击（TrayMenu_Init 很早），须尽早初始化
@@ -238,6 +240,16 @@ global CommandPaletteUseWebView := true
 #Include modules\NativeDropCursorSync.ahk
 #Include modules\FloatingToolbar.ahk
 #Include modules\NmerWailsBridge.ahk
+#Include modules\SurfaceRuntimeManager.ahk
+#Include modules\SurfaceIntentRouter.ahk
+#Include modules\SurfaceDisposeProbe.ahk
+try SurfaceManager_ObserveSystemBootstrap(Map(
+    "traceSession", NMER_TraceSession,
+    "gdip", pToken ? 1 : 0,
+    "phase", "includes_ready",
+    "routeIntents", FuncExists("Nmer_SurfaceManagerRouteIntents") ? (Nmer_SurfaceManagerRouteIntents() ? 1 : 0) : -1,
+    "interceptOpenClose", FuncExists("Nmer_SurfaceManagerInterceptOpenClose") ? (Nmer_SurfaceManagerInterceptOpenClose() ? 1 : 0) : -1
+))
 #Include modules\CommandPaletteCore.ahk
 #Include modules\CommandPaletteAgentOrchestrator.ahk
 #Include modules\CommandPaletteSearchDebug.ahk
@@ -2593,6 +2605,7 @@ BeginScreenshotUiSession() {
         return false
     g_ScreenshotSuspendActivationToken += 1
     g_ScreenshotSuspendActivationMode := m
+    try SurfaceManager_ObserveModeTransition("screenshot_suspend_begin", m, Map("token", g_ScreenshotSuspendActivationToken))
     try SetHoleRuntimeEnabled(false)
     catch {
     }
@@ -2621,6 +2634,7 @@ EndScreenshotUiSession(token := 0) {
         return false
     suspendedMode := g_ScreenshotSuspendActivationMode
     g_ScreenshotSuspendActivationMode := ""
+    try SurfaceManager_ObserveModeTransition("screenshot_suspend_end", suspendedMode, Map("token", token))
     if (suspendedMode = "hole" && NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole") {
         try SetTimer((*) => RestoreActivationRuntimeAfterScreenshot(token), -120)
         catch {
@@ -2640,6 +2654,7 @@ RestoreActivationRuntimeAfterScreenshot(token) {
         return false
     if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") != "hole")
         return false
+    try SurfaceManager_ObserveModeTransition("screenshot_restore_runtime", "hole", Map("token", token))
     try ApplyActivationRuntimeAsync("hole")
     catch {
     }
@@ -2650,6 +2665,7 @@ ApplyActivationRuntimeAsync(mode) {
     global g_ActivationRuntimeToken
     g_ActivationRuntimeToken += 1
     tok := g_ActivationRuntimeToken
+    try SurfaceManager_ObserveModeTransition("runtime_schedule", NormalizeAppearanceActivationMode(mode), Map("token", tok))
     try SetTimer(ApplyActivationRuntimeDeferred.Bind(mode, tok), -40)
 }
 
@@ -2658,6 +2674,7 @@ ApplyActivationRuntimeDeferred(mode, token) {
     if (token != g_ActivationRuntimeToken)
         return
     m := NormalizeAppearanceActivationMode(mode)
+    try SurfaceManager_ObserveModeTransition("runtime_begin", m, Map("token", token))
     NMER_Log("activation", "runtime_deferred", "mode=" . m . " token=" . token)
     t0 := A_TickCount
     ; 切换激活模式时统一清理残留的 CapsLock 物理/逻辑状态，避免重启或黑洞切换后
@@ -2719,6 +2736,7 @@ ApplyActivationRuntimeDeferred(mode, token) {
         if FuncExists("HoleTriggers_SyncInputCapture")
             try HoleTriggers_SyncInputCapture()
         NMER_Log("activation", "runtime_hole_ready", "elapsed_ms=" . (A_TickCount - t0))
+        try SurfaceManager_ObserveModeTransition("runtime_ready", "hole", Map("token", token, "elapsedMs", A_TickCount - t0))
         return
     }
     if (m = "disabled") {
@@ -2732,6 +2750,7 @@ ApplyActivationRuntimeDeferred(mode, token) {
         catch {
         }
         NMER_Log("activation", "runtime_disabled_ready", "elapsed_ms=" . (A_TickCount - t0))
+        try SurfaceManager_ObserveModeTransition("runtime_ready", "disabled", Map("token", token, "elapsedMs", A_TickCount - t0))
         return
     }
     try SetHoleRuntimeEnabled(false)
@@ -2754,6 +2773,7 @@ ApplyActivationRuntimeDeferred(mode, token) {
     catch {
     }
     NMER_Log("activation", "runtime_non_hole_ready", "mode=" . m . " elapsed_ms=" . (A_TickCount - t0))
+    try SurfaceManager_ObserveModeTransition("runtime_ready", m, Map("token", token, "elapsedMs", A_TickCount - t0))
 }
 
 ; 根据「外观 · 激活方式」显示悬浮栏 / 黑洞模式 / 或仅托盘
@@ -2769,6 +2789,7 @@ ApplyAppearanceActivationMode() {
     g_ActivationApplyLastTick := nowTick
     g_ActivationApplyToken += 1
     token := g_ActivationApplyToken
+    try SurfaceManager_ObserveModeTransition("appearance_schedule", m, Map("token", token))
     SetTimer((*) => ApplyAppearanceActivationMode_Run(m, token), -10)
     return true
 }
@@ -2778,6 +2799,7 @@ ApplyAppearanceActivationMode_Run(m, token) {
     if (token != g_ActivationApplyToken)
         return
     g_ActivationApplyInFlight := true
+    try SurfaceManager_ObserveModeTransition("appearance_begin", m, Map("token", token))
     try {
         NMER_Log("activation", "apply_mode_begin", "mode=" . m)
         if (m = "toolbar") {
@@ -2824,6 +2846,7 @@ ApplyAppearanceActivationMode_Run(m, token) {
                 }
             }
             NMER_Log("activation", "apply_mode_toolbar", "ok=1 open_niuma=" . (openNiumaDrawer ? "1" : "0"))
+            try SurfaceManager_ObserveModeTransition("appearance_ready", "toolbar", Map("token", token, "openNiumaDrawer", openNiumaDrawer ? 1 : 0))
             return
         }
         if (m = "bubble") {
@@ -2831,13 +2854,14 @@ ApplyAppearanceActivationMode_Run(m, token) {
             try FloatingToolbarChatDrawerOpen := false
             catch {
             }
-            try HideFloatingToolbar()
+            try SurfaceIntent_Close("floating_toolbar")
             catch {
             }
             try ShowFloatingBubble()
             catch {
             }
             NMER_Log("activation", "apply_mode_bubble", "ok=1")
+            try SurfaceManager_ObserveModeTransition("appearance_ready", "bubble", Map("token", token))
             return
         }
         if (m = "hole") {
@@ -2846,7 +2870,7 @@ ApplyAppearanceActivationMode_Run(m, token) {
                 catch {
                 }
             }
-            try HideFloatingToolbar()
+            try SurfaceIntent_Close("floating_toolbar")
             catch {
             }
             try FloatingBubble_DestroyCompletely()
@@ -2859,9 +2883,10 @@ ApplyAppearanceActivationMode_Run(m, token) {
             }
             try ApplyActivationRuntimeAsync("hole")
             NMER_Log("activation", "apply_mode_hole", "ok=1")
+            try SurfaceManager_ObserveModeTransition("appearance_ready", "hole", Map("token", token))
             return
         }
-        try HideFloatingToolbar()
+        try SurfaceIntent_Close("floating_toolbar")
         catch {
         }
         try FloatingBubble_DestroyCompletely()
@@ -2869,6 +2894,7 @@ ApplyAppearanceActivationMode_Run(m, token) {
         }
         NMER_Log("activation", "apply_mode_tray", "ok=1")
         try ApplyActivationRuntimeAsync("tray")
+        try SurfaceManager_ObserveModeTransition("appearance_ready", "tray", Map("token", token))
     } finally {
         g_ActivationApplyInFlight := false
     }
@@ -2900,6 +2926,7 @@ Nmer_PersistAndApplyActivationMode(mode) {
     persistInFlight := true
     try {
     m := NormalizeAppearanceActivationMode(mode)
+    try SurfaceManager_ObserveModeTransition("persist_begin", m)
     if (m != "hole" && FuncExists("FloatingToolbar_CancelReturnToHoleAfterNiuma")) {
         try FloatingToolbar_CancelReturnToHoleAfterNiuma()
         catch {
@@ -2939,6 +2966,7 @@ Nmer_PersistAndApplyActivationMode(mode) {
     try NMER_Log("activation", "persist_apply", "mode=" . m)
     catch {
     }
+    try SurfaceManager_ObserveModeTransition("persist_ready", m)
     if FuncExists("TrayMenu_Log") {
         try TrayMenu_Log("persist_activation_mode mode=" . m)
         catch {
@@ -3161,8 +3189,14 @@ _WebView_QueueFlush(*) {
 
 _WarmupConfigWebView(*) {
     global UseWebViewSettings
+    try SurfaceManager_ObserveWarmupStep(WebViewWarmupIndex + 1, Func("_WarmupConfigWebView"))
     if !UseWebViewSettings
         return
+    if !SurfaceManager_ShouldWarmupConfig() {
+        try SurfaceManager_RecordEvent("warmup_skip", "config_webview", Map("reason", "interceptWarmup_enabled"))
+        return
+    }
+    try SurfaceManager_ObserveInit("config_webview", Map("source", "warmup"))
     try ConfigWebView_CreateHost()
 }
 
@@ -3173,6 +3207,7 @@ _RunWebViewWarmupStep(*) {
 
     WebViewWarmupIndex += 1
     initFn := WebViewWarmupQueue[WebViewWarmupIndex]
+    try SurfaceManager_ObserveWarmupStep(WebViewWarmupIndex, initFn)
     try initFn.Call()
 
     if (WebViewWarmupIndex < WebViewWarmupQueue.Length)
@@ -3187,8 +3222,10 @@ _WV2_BeginWarmupAfterEnv(*) {
     ; Runtime mode switch async/coalesced to keep startup and settings transitions smooth.
     try ApplyActivationRuntimeAsync(NormalizeAppearanceActivationMode(AppearanceActivationMode))
     global WebViewWarmupQueue, WebViewWarmupIndex
+    try SurfaceManager_EnsureBootstrap()
     WebViewWarmupIndex := 0
-    WebViewWarmupQueue := [CP_Init, PQP_Init, SCWV_Init, VK_EnsureInit.Bind(true)]
+    WebViewWarmupQueue := SurfaceManager_BuildWarmupQueue([CP_Init, PQP_Init, SCWV_Init, VK_EnsureInit.Bind(true)])
+    try SurfaceManager_ObserveWarmupQueue(WebViewWarmupQueue)
     SetTimer(_RunWebViewWarmupStep, -10)
     SetTimer(_WarmupConfigWebView, -5000)
     if FuncExists("Nmer_AutoStartSearchCenterCore")
@@ -4602,6 +4639,8 @@ Global_InitAllPanels(*) {
     if WebViewWarmupStarted
         return
 
+    try SurfaceManager_EnsureBootstrap()
+    try SurfaceManager_RecordEvent("warmup_start", "", Map("source", "Global_InitAllPanels"))
     WebViewWarmupStarted := true
     WebView2_InitSharedEnvAsync(_WV2_BeginWarmupAfterEnv)
 }
@@ -5129,7 +5168,7 @@ ProcessClipboardChange() {
 ShowConfigGUI_Core() {
     global UseWebViewSettings
     if (UseWebViewSettings) {
-        ShowConfigWebViewGUI()
+        SurfaceIntent_Open("config_webview")
         return
     }
     LegacyConfigGui_Show()
@@ -5211,7 +5250,7 @@ ShowConfigGUI_FallbackCheck(*) {
     } catch {
     }
     if (g_ConfigPreferWebViewOnly) {
-        try SetTimer((*) => ShowConfigWebViewGUI(), -120)
+        try SetTimer((*) => SurfaceIntent_Open("config_webview"), -120)
         g_ConfigWebViewOpenStartTick := A_TickCount
         retryCount += 1
         if (retryCount <= 12)
@@ -5294,7 +5333,7 @@ ShowConfigGUI_Safe() {
     try GDHO_HideOverlay()
     catch {
     }
-    try HideFloatingToolbar()
+    try SurfaceIntent_Close("floating_toolbar")
     catch {
     }
     try HideFloatingBubble()
@@ -5391,11 +5430,13 @@ CloseConfigGUI() {
 
     ; WebView 设置页关闭路径（首期改造）
     if (ConfigWebViewMode) {
+        reqId := SurfaceManager_Request("config_webview", "close", "CloseConfigGUI", Map("mode", "webview"))
+        try SurfaceManager_ObserveHide("config_webview", Map("entry", "CloseConfigGUI", "mode", "webview", "requestId", reqId))
         g_ConfigUserClosedTick := A_TickCount
         g_ConfigOpenInFlight := false
         g_ConfigWebViewOpenStartTick := 0
         try SetTimer(ShowConfigGUI_FallbackCheck, 0)
-        ConfigWebView_Close()
+        SurfaceIntent_Close("config_webview")
         ; Restore activation runtime (especially hole mode bridge/overlay) after settings close.
         try SetTimer(RestoreActivationRuntimeAfterConfigClose, -120)
         SetTimer(LegacyConfigGui_ClearClosingFlag, -100)
@@ -6413,7 +6454,7 @@ $v:: {
     CapsLock2 := false
     RestoreCapsLockAfterChord()
     if (SearchCenter_ShouldUseWebView())
-        SCWV_OpenUnified("clipboard", "", "clipboard_hotkey")
+        SurfaceIntent_OpenClipboardUnified("", "clipboard_hotkey")
     else
         ShowSearchCenter()
     VK_NoteLastChFromCapsLockKey("v")
@@ -6541,7 +6582,7 @@ f:: {
     } else {
         ; 否则激活搜索中心窗口（综合搜索意图）
         if (SearchCenter_ShouldUseWebView())
-            SCWV_OpenUnified("search", "", "search_hotkey")
+            SurfaceIntent_OpenSearch("", "search_hotkey")
         else
             ShowSearchCenter()
         VK_NoteLastChFromCapsLockKey("f")
@@ -6684,7 +6725,7 @@ $v:: {
     }
     CapsLock2 := false
     RestoreCapsLockAfterChord()
-    SCWV_OpenUnified("clipboard", "", "clipboard_hotkey")
+    SurfaceIntent_OpenClipboardUnified("", "clipboard_hotkey")
 }
 
 ; F 键：在倒计时期间加速执行
@@ -6809,7 +6850,7 @@ p:: {
     try AppearanceActivationMode := "toolbar"
     try IniWrite("toolbar", ConfigFile, "Appearance", "ActivationMode")
     try HideFloatingBubble()
-    try ShowFloatingToolbar()
+    try SurfaceIntent_Open("floating_toolbar")
     try ApplyAppearanceActivationMode()
     try TrayTip("悬浮工具栏", "已恢复工具栏模式", "Iconi Mute")
 }
@@ -6860,7 +6901,7 @@ ExecuteQuickActionByType(Type) {
         case "Paste":
             CapsLockPaste()
         case "Clipboard":
-            CP_Show()
+            SurfaceIntent_Open("clipboard_panel")
         case "Voice":
             StartVoiceInput()
         case "Split":

@@ -973,7 +973,7 @@ FloatingToolbar_FinishRevealBoot() {
 
 FloatingToolbar_FinishReveal() {
     global FloatingToolbarGUI, FloatingToolbarIsVisible, FloatingToolbarWindowX, FloatingToolbarWindowY
-    global g_FTB_WaitingUiFinishedReveal, g_FTB_WV2, g_FTB_WV2_Ctrl, g_FTB_BootInProgress, g_FTB_BootFrameVisible
+    global g_FTB_WaitingUiFinishedReveal, g_FTB_WV2, g_FTB_WV2_Ctrl, g_FTB_BootInProgress, g_FTB_BootFrameVisible, g_FTB_LastRequestId
 
     if !FloatingToolbarGUI
         return
@@ -1001,6 +1001,7 @@ FloatingToolbar_FinishReveal() {
     }
 
     FloatingToolbarIsVisible := true
+    try SurfaceManager_ObserveShow("floating_toolbar", Map("entry", "FloatingToolbar_FinishReveal", "requestId", g_FTB_LastRequestId))
     wasBoot := g_FTB_BootInProgress
     g_FTB_BootInProgress := false
     try FloatingToolbar_ClearHandoffWeb()
@@ -1052,8 +1053,18 @@ FloatingToolbar_ForceRevealIfStuck() {
 }
 
 ShowFloatingToolbar() {
+    if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("floating_toolbar")
+        return
     global FloatingToolbarGUI, FloatingToolbarIsVisible, FloatingToolbarWindowX, FloatingToolbarWindowY
-    global g_FTB_UI_Ready, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2_Ready, FloatingToolbarChatDrawerOpen
+    global g_FTB_UI_Ready, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2_Ready, FloatingToolbarChatDrawerOpen, g_FTB_LastRequestId
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    reqId := 0
+    if !skipTel {
+        reqId := SurfaceManager_Request("floating_toolbar", "open", "ShowFloatingToolbar", Map("visibleBefore", FloatingToolbarIsVisible ? 1 : 0, "waitingReveal", g_FTB_WaitingUiFinishedReveal ? 1 : 0, "wv2ReadyBefore", g_FTB_WV2_Ready ? 1 : 0))
+        if reqId
+            g_FTB_LastRequestId := reqId
+        try SurfaceManager_RegisterSurface("floating_toolbar")
+    }
 
     ; Safety: entering toolbar mode should start collapsed — unless we are opening Niuma from hole handoff.
     global g_FTB_PendingOpenNiumaDrawer
@@ -1075,6 +1086,8 @@ ShowFloatingToolbar() {
             catch {
             }
         }
+        if !skipTel
+            try SurfaceManager_ObserveShow("floating_toolbar", Map("entry", "ShowFloatingToolbar", "alreadyVisible", 1, "requestId", reqId))
         return
     }
     ; 首启等 UI_PAINT_READY 期间禁止重复 Show 取消等待并提前亮窗（会导致黑条连闪）
@@ -1117,6 +1130,8 @@ ShowFloatingToolbar() {
         }
         FloatingToolbarGUI.Show("x" . FloatingToolbarWindowX . " y" . FloatingToolbarWindowY . " w" . ToolbarWidth . " h" . ToolbarHeight . " NoActivate")
         FloatingToolbar_FinishReveal()
+        if !skipTel
+            try SurfaceManager_ObserveShow("floating_toolbar", Map("entry", "ShowFloatingToolbar", "reused", 1, "wv2Ready", g_FTB_WV2_Ready ? 1 : 0, "requestId", reqId))
         return
     }
 
@@ -1139,10 +1154,22 @@ ShowFloatingToolbar() {
     FloatingToolbar_ApplyWebViewBounds()
     SetTimer(FloatingToolbar_ForceRevealIfStuck, 0)
     SetTimer(FloatingToolbar_ForceRevealIfStuck, -4500)
+    if !skipTel
+        try SurfaceManager_ObserveInit("floating_toolbar", Map("entry", "ShowFloatingToolbar", "waitingReveal", 1, "wv2Ready", g_FTB_WV2_Ready ? 1 : 0, "requestId", reqId))
 }
 
 HideFloatingToolbar() {
-    global FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2
+    if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("floating_toolbar")
+        return
+    global FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2, g_FTB_LastRequestId
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    reqId := 0
+    if !skipTel {
+        reqId := SurfaceManager_Request("floating_toolbar", "close", "HideFloatingToolbar", Map("visibleBefore", FloatingToolbarIsVisible ? 1 : 0, "waitingReveal", g_FTB_WaitingUiFinishedReveal ? 1 : 0))
+        if reqId
+            g_FTB_LastRequestId := reqId
+        try SurfaceManager_ObserveHide("floating_toolbar", Map("entry", "HideFloatingToolbar", "requestId", reqId))
+    }
 
     try NiumaMobileBrowser_Close()
     catch {
@@ -1161,6 +1188,25 @@ HideFloatingToolbar() {
         FloatingToolbarIsVisible := false
         SetTimer(FloatingToolbarCheckWindowPosition, 0)
     }
+}
+
+FloatingToolbar_Dispose(reason := "") {
+    global FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WV2_Ctrl, g_FTB_WV2, g_FTB_WV2_Ready
+    global g_FTB_UI_Ready, g_FTB_WaitingUiFinishedReveal, g_FTB_BootFrameVisible
+    try HideFloatingToolbar()
+    catch {
+    }
+    SurfaceManager_CloseWebViewControl(g_FTB_WV2_Ctrl)
+    g_FTB_WV2_Ctrl := 0
+    g_FTB_WV2 := 0
+    g_FTB_WV2_Ready := false
+    g_FTB_UI_Ready := false
+    g_FTB_WaitingUiFinishedReveal := false
+    g_FTB_BootFrameVisible := false
+    FloatingToolbarIsVisible := false
+    SurfaceManager_DestroyGui(FloatingToolbarGUI)
+    FloatingToolbarGUI := 0
+    try SurfaceManager_ObserveClose("floating_toolbar", Map("entry", "FloatingToolbar_Dispose", "reason", String(reason)))
 }
 
 ToggleFloatingToolbar() {
@@ -1916,8 +1962,10 @@ FloatingToolbar_OnWebMessage(sender, args) {
 
     if (typ = "toolbar_cmd") {
         cid := msg.Has("cmdId") ? Trim(String(msg["cmdId"])) : ""
-        if (cid != "")
+        if (cid != "") {
+            FloatingToolbar_NormalizeInputRuntime("toolbar_cmd_" . cid)
             SetTimer(FloatingToolbar_DeferredToolbarCmd.Bind(cid), -10)
+        }
         return
     }
 
@@ -1925,11 +1973,14 @@ FloatingToolbar_OnWebMessage(sender, args) {
         action := msg.Has("action") ? String(msg["action"]) : ""
         FTB_Debug("toggle " . action)
         if (action != "")
+            FloatingToolbar_NormalizeInputRuntime("toolbar_toggle_msg_" . action)
+        if (action != "")
             FloatingToolbarToggleButtonAction(action)
         return
     }
 
     if (typ = "toolbar_search_click") {
+        FloatingToolbar_NormalizeInputRuntime("toolbar_search_click")
         FloatingToolbar_ActivateSearchCenter()
         return
     }
@@ -1972,7 +2023,7 @@ FloatingToolbar_OnWebMessage(sender, args) {
                     case "Prompt", "NewPrompt":
                         PromptQuickPad_OpenCaptureDraft(t, true)
                     case "Record":
-                        CP_Show()
+                        SurfaceIntent_Open("clipboard_panel")
                         CP_SetSearchText(t, true, true)
                     default:
                         ; 未定义入口图标统一回退到搜索中心
@@ -4964,6 +5015,32 @@ FloatingToolbar_RequestSearchByKeyword(keyword) {
     SetTimer(FloatingToolbar_DeferredOpenSearchByKeyword.Bind(kw), -10)
 }
 
+FloatingToolbar_NormalizeInputRuntime(reason := "") {
+    physCapsDown := false
+    try physCapsDown := GetKeyState("CapsLock", "P")
+    catch {
+        physCapsDown := false
+    }
+    ; 鼠标点击悬浮栏后的页面切换不应继承上一轮 CapsLock 和弦态，否则普通字母会被当成全局命令。
+    if physCapsDown
+        return
+    try NormalizeCapsLockRuntimeForUiOpen()
+    catch {
+        global CapsLock, CapsLock2, VKHoldVisible, CapsLockDownTime
+        try CapsLock := false
+        try CapsLock2 := false
+        try VKHoldVisible := false
+        try CapsLockDownTime := 0
+        try Send("{CapsLock up}")
+        try SetCapsLockState("Off")
+    }
+    try {
+        if FuncExists("SearchCenter_ScheduleIMEStabilize")
+            SearchCenter_ScheduleIMEStabilize()
+    } catch {
+    }
+}
+
 FloatingToolbar_DeferredOpenSearchByKeyword(keyword, *) {
     global FloatingToolbarIsVisible, AppearanceActivationMode
     kw := Trim(String(keyword))
@@ -4971,6 +5048,7 @@ FloatingToolbar_DeferredOpenSearchByKeyword(keyword, *) {
         return
 
     opened := false
+    try FloatingToolbar_NormalizeInputRuntime("drop_search")
     try FloatingToolbarCollapseTransientUi()
     ; 兜底清理：若上一次 search dock 标记残留，先释放，后续由 SCWV_Show 重新进入
     try FloatingToolbar_PageDockLeave("search")
@@ -5012,6 +5090,7 @@ FloatingToolbar_ActivateSearchCenter() {
     opened := false
     usedWebView := false
 
+    try FloatingToolbar_NormalizeInputRuntime("toolbar_search")
     try usedWebView := SearchCenter_ShouldUseWebView()
     try SCWV_Log("toolbar_activate_search_begin", "used_webview=" . (usedWebView ? "1" : "0"))
     ; If the app is already in hole mode and SearchCenter is not visible, reuse the same hard
@@ -5108,7 +5187,7 @@ FloatingToolbarExecuteButtonAction(action, buttonHwnd) {
             FloatingToolbar_ActivateSearchCenter()
         case "Record":
             ; 剪贴板：WebView2 + ClipMain/FTS5 等，失败时提示
-            try CP_Show()
+            try SurfaceIntent_Open("clipboard_panel")
             catch as err {
                 try TrayTip("剪贴板", "无法显示 WebView 剪贴板: " . err.Message, "Iconx 1")
                 catch {
@@ -5144,14 +5223,14 @@ FloatingToolbar_SearchToggleDeferred(*) {
     try {
         h := SCWV_GetGuiHwnd()
         if (h && WinExist("ahk_id " . h) && (WinGetStyle("ahk_id " . h) & 0x10000000)) {
-            SCWV_Hide(true)
+            SurfaceIntent_Close("search_center", Map("persistSelection", 1))
             return
         }
     } catch {
     }
     try {
         if (SCWV_IsVisible()) {
-            SCWV_Hide(true)
+            SurfaceIntent_Close("search_center", Map("persistSelection", 1))
             return
         }
     } catch {
@@ -5170,14 +5249,14 @@ FloatingToolbar_PromptToggleDeferred(*) {
     global g_PQP_Gui
     try {
         if (g_PQP_Gui && WinExist("ahk_id " . g_PQP_Gui.Hwnd) && (WinGetStyle("ahk_id " . g_PQP_Gui.Hwnd) & 0x10000000)) {
-            PQP_Hide()
+            SurfaceIntent_Close("prompt_quick_pad")
             return
         }
     } catch {
     }
     try {
         if (PQP_IsVisible()) {
-            PQP_Hide()
+            SurfaceIntent_Close("prompt_quick_pad")
             return
         }
     } catch {
@@ -5187,6 +5266,7 @@ FloatingToolbar_PromptToggleDeferred(*) {
 
 FloatingToolbarToggleButtonAction(action) {
     global GuiID_SearchCenter, GuiID_ConfigGUI, ConfigWebViewMode, GuiID_ScreenshotEditor, g_PQP_Gui
+    try FloatingToolbar_NormalizeInputRuntime("toolbar_toggle_" . String(action))
     switch action {
         case "Search":
             SetTimer(FloatingToolbar_ActivateSearchCenter, -10)
@@ -5194,7 +5274,7 @@ FloatingToolbarToggleButtonAction(action) {
         case "Record":
             try {
                 if (IsSet(g_CP_Visible) && g_CP_Visible) {
-                    CP_Hide()
+                    SurfaceIntent_Close("clipboard_panel")
                     return
                 }
             } catch {
@@ -5252,7 +5332,7 @@ FloatingToolbarToggleButtonAction(action) {
             ; VK_ToggleEmbedded 依赖可见性；失焦自动 Hide 后需与 VK_IsHostVisible 一致，见 VirtualKeyboardCore
             try {
                 if (VK_IsHostVisible()) {
-                    VK_Hide()
+                    SurfaceIntent_Close("virtual_keyboard")
                     return
                 }
             } catch {
@@ -5304,7 +5384,7 @@ FloatingToolbarActivateVirtualKeyboard() {
 FloatingToolbarOpenSettings() {
     try {
         if IsSet(ShowConfigWebViewGUI) {
-            ShowConfigWebViewGUI()
+            SurfaceIntent_Open("config_webview")
             return
         }
     } catch {
@@ -6379,6 +6459,7 @@ FloatingToolbar_MakeContextMenuAction(cmdId) {
 
 FloatingToolbar_DeferredToolbarCmd(cmdId) {
     c := String(cmdId)
+    try FloatingToolbar_NormalizeInputRuntime("toolbar_deferred_" . c)
     ; 命令工具栏与面板类入口统一走 toggle，保证同一按钮可显可隐
     if (c = "sc_activate_search" || c = "ftm_search_center") {
         FloatingToolbar_OpenSearchCenterFromMenu()

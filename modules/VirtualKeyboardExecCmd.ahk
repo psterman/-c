@@ -417,7 +417,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                     _VK_H("CapsLockPaste")
                     executed := true
                 } else if (_VK_H("SearchCenter_ShouldUseWebView") && _VK_H("SearchCenter_ShouldUseWebView")()) {
-                    SCWV_OpenUnified("clipboard", "", "clipboard_hotkey")
+                    SurfaceIntent_OpenClipboardUnified("", "clipboard_hotkey")
                     executed := true
                 } else {
                     _VK_H("ShowSearchCenter")
@@ -518,7 +518,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                 else if (VK_IsHubCapsuleActive())
                     VK_HubCapsuleAction("close")
                 else {
-                    try VK_Show()
+                    try SurfaceIntent_Open("virtual_keyboard")
                     catch as e {
                         OutputDebug("[VK-Exec] VK_Show failed: " . e.Message)
                     }
@@ -757,7 +757,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                     try AppearanceActivationMode := "toolbar"
                     try IniWrite("toolbar", ConfigFile, "Appearance", "ActivationMode")
                     try HideFloatingBubble()
-                    try ShowFloatingToolbar()
+                    try SurfaceIntent_Open("floating_toolbar")
                     try ApplyAppearanceActivationMode()
                 }
                 executed := true

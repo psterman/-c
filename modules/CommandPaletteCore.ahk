@@ -238,6 +238,7 @@ CommandPalette_SyncHostShape() {
 
 CommandPalette_Init() {
     global g_CmdPal_Gui, g_CmdPal_Width, g_CmdPal_CurrentHeight
+    try SurfaceManager_ObserveInit("command_palette", Map("entry", "CommandPalette_Init"))
     if IsObject(g_CmdPal_Gui)
         return
     g_CmdPal_Gui := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale", "NMER Command Palette")
@@ -414,7 +415,16 @@ CommandPalette_Reveal(*) {
 }
 
 CommandPalette_Show() {
+    if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("command_palette")
+        return true
     global g_CmdPal_Ready, g_CmdPal_PendingShow, g_CmdPal_ShowRetryCount
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    reqId := 0
+    if !skipTel {
+        reqId := SurfaceManager_Request("command_palette", "open", "CommandPalette_Show", Map("readyBefore", g_CmdPal_Ready ? 1 : 0))
+        try SurfaceManager_BeforeOpen("command_palette", "CommandPalette_Show", Map("requestId", reqId, "readyBefore", g_CmdPal_Ready ? 1 : 0))
+        try SurfaceManager_RegisterSurface("command_palette")
+    }
     CommandPalette_Init()
     if !IsObject(g_CmdPal_Gui)
         return false
@@ -422,9 +432,13 @@ CommandPalette_Show() {
     g_CmdPal_ShowRetryCount := 0
     if g_CmdPal_Ready {
         CommandPalette_DoShow()
+        if !skipTel
+            try SurfaceManager_ObserveShow("command_palette", Map("entry", "CommandPalette_Show", "ready", 1, "requestId", reqId))
         return true
     }
     SetTimer(CommandPalette_RetryShow, -250)
+    if !skipTel
+        try SurfaceManager_ObserveInit("command_palette", Map("entry", "CommandPalette_Show", "ready", 0, "requestId", reqId))
     return true
 }
 
@@ -1221,8 +1235,15 @@ CommandPalette_PushEmptyQuery(*) {
 }
 
 CommandPalette_Hide(*) {
+    if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("command_palette")
+        return
     global g_CmdPal_Gui, g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_AiSession, g_CmdPal_WV2
     global g_CmdPal_HasAnchor
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    if !skipTel {
+        reqId := SurfaceManager_Request("command_palette", "close", "CommandPalette_Hide", Map("visibleBefore", g_CmdPal_Visible ? 1 : 0))
+        try SurfaceManager_ObserveHide("command_palette", Map("entry", "CommandPalette_Hide", "requestId", reqId))
+    }
     if (g_CmdPal_AiSession is Map) && !g_CmdPal_AiSession.Get("handoff", false) && !g_CmdPal_AiSession.Get("ended", false) {
         try CommandPalette_HandoffAiToToolbar(true)
         catch {
@@ -1241,6 +1262,22 @@ CommandPalette_Hide(*) {
         }
         CommandPalette_ClearWindowRegion()
     }
+}
+
+CommandPalette_Dispose(reason := "") {
+    global g_CmdPal_Gui, g_CmdPal_Ctrl, g_CmdPal_WV2, g_CmdPal_Ready, g_CmdPal_Visible, g_CmdPal_Revealed
+    try CommandPalette_Hide()
+    catch {
+    }
+    SurfaceManager_CloseWebViewControl(g_CmdPal_Ctrl)
+    g_CmdPal_Ctrl := 0
+    g_CmdPal_WV2 := 0
+    g_CmdPal_Ready := false
+    g_CmdPal_Visible := false
+    g_CmdPal_Revealed := false
+    SurfaceManager_DestroyGui(g_CmdPal_Gui)
+    g_CmdPal_Gui := 0
+    try SurfaceManager_ObserveClose("command_palette", Map("entry", "CommandPalette_Dispose", "reason", String(reason)))
 }
 
 CommandPalette_MonitorAtPoint(px, py) {
@@ -3039,6 +3076,13 @@ CommandPalette_OnWebMessage(sender, args) {
             CommandPalette_HandleSearchDebug()
         return
     }
+    if (typ = "palette_surface_dispose") {
+        if FuncExists("SurfaceDisposeProbe_HandleWebMessage")
+            SurfaceDisposeProbe_HandleWebMessage(msg)
+        if FuncExists("CommandPalette_SetInputText")
+            try CommandPalette_SetInputText("")
+        return
+    }
     if (typ = "palette_agent_debug") {
         CommandPalette_HandleAgentDebug()
         return
@@ -3286,8 +3330,11 @@ CommandPalette_BuildActionList(query := "") {
             "desc", desc
         ))
     }
-    if (scored.Length = 0)
+    if (scored.Length = 0) {
+        if FuncExists("SurfaceDisposeProbe_AppendMatchingActions")
+            SurfaceDisposeProbe_AppendMatchingActions(&out, q)
         return out
+    }
     CommandPalette_SortScoredRows(&scored)
     lim := Min(8, scored.Length)
     loop lim {
@@ -3302,6 +3349,8 @@ CommandPalette_BuildActionList(query := "") {
             "kind", "command"
         ))
     }
+    if FuncExists("SurfaceDisposeProbe_AppendMatchingActions")
+        SurfaceDisposeProbe_AppendMatchingActions(&out, q)
     return out
 }
 
@@ -3372,6 +3421,15 @@ CommandPalette_InvalidateEmptyCache() {
 }
 
 CommandPalette_HandleQuery(q, seq := 0) {
+    if (SubStr(Trim(String(q)), 1, 1) = ">") {
+        CommandPalette_PushResults([
+            Map("id", "", "label", ">dispose ftb", "desc", "释放悬浮栏 WebView · 回车执行", "binding", "^+Shift+F", "matched", true, "kind", "history"),
+            Map("id", "", "label", ">restore ftb", "desc", "恢复悬浮栏 · 回车执行", "binding", "^+Shift+R", "matched", true, "kind", "history"),
+            Map("id", "", "label", ">dispose clipboard", "desc", "释放剪贴板 WebView", "binding", "", "matched", true, "kind", "history"),
+            Map("id", "", "label", ">dispose config", "desc", "释放设置 WebView", "binding", "", "matched", true, "kind", "history")
+        ], seq)
+        return
+    }
     try {
         CommandPalette_PushResults(CommandPalette_BuildActionList(q), seq)
     } catch as e {
@@ -3390,6 +3448,10 @@ CommandPalette_HandleExecute(msg) {
     if (kind = "history") {
         pick := label != "" ? label : query
         if (pick != "") {
+            if FuncExists("SurfaceDisposeProbe_TryExecuteSlashQuery") && SurfaceDisposeProbe_TryExecuteSlashQuery(pick) != "" {
+                CommandPalette_Hide()
+                return
+            }
             CommandPalette_SetInputText(pick)
             SetTimer(() => CommandPalette_HandleQuery(pick), -80)
         }
@@ -3413,6 +3475,11 @@ CommandPalette_HandleExecute(msg) {
             if (cl is Map && cl.Has(cmdId) && cl[cmdId] is Map)
                 name := cl[cmdId].Has("name") ? String(cl[cmdId]["name"]) : cmdId
         }
+    }
+    if FuncExists("SurfaceDisposeProbe_TryExecute") && SurfaceDisposeProbe_TryExecute(cmdId) {
+        CommandPalette_RecordExec(cmdId, name, query)
+        CommandPalette_Hide()
+        return
     }
     CommandPalette_RecordExec(cmdId, name, query)
     if FuncExists("VK_Execute")
@@ -4519,7 +4586,11 @@ CommandPalette_BootstrapNiumaChat(reason := "", openDrawer := false) {
         try FloatingToolbar_ShowForActivationMode()
         catch {
         }
-    if FuncExists("ShowFloatingToolbar")
+    if FuncExists("SurfaceIntent_Open")
+        try SurfaceIntent_Open("floating_toolbar", Map("reason", "cmdpal_bootstrap"))
+        catch {
+        }
+    else if FuncExists("ShowFloatingToolbar")
         try ShowFloatingToolbar()
         catch {
         }
@@ -4949,6 +5020,30 @@ CommandPalette_FlushPendingAiSendIfReady() {
 
 ; 命令面板可见时 Esc 关闭（WebView 未收到按键时由宿主兜底）
 #HotIf CommandPalette_IsVisible()
+^+f:: {
+    try {
+        if FuncExists("SurfaceIntent_Dispose")
+            SurfaceIntent_Dispose("floating_toolbar", Map("reason", "hotkey_dispose_ftb"))
+        else if FuncExists("SurfaceDisposeProbe_TryExecute")
+            SurfaceDisposeProbe_TryExecute("dev_surface_dispose_ftb")
+    } catch as e {
+        try TrayTip("Surface 探针", e.Message, "Iconx 2")
+        catch {
+        }
+    }
+}
+^+r:: {
+    try {
+        if FuncExists("SurfaceIntent_Open")
+            SurfaceIntent_Open("floating_toolbar", Map("reason", "hotkey_restore_ftb"))
+        else if FuncExists("SurfaceDisposeProbe_TryExecute")
+            SurfaceDisposeProbe_TryExecute("dev_surface_restore_ftb")
+    } catch as e {
+        try TrayTip("Surface 探针", e.Message, "Iconx 2")
+        catch {
+        }
+    }
+}
 Esc:: {
     if FuncExists("CommandPalette_IsAgentRunning") && CommandPalette_IsAgentRunning() {
         if FuncExists("CommandPalette_AgentCancel")

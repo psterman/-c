@@ -26,7 +26,7 @@ global ClipboardFTS5DBPath := ""  ; 由 InitClipboardFTS5DB 设为 Data\Clipboar
 ClipboardFTS5_GetStartupSqlStatements() {
     sql := []
     sql.Push("PRAGMA busy_timeout = 5000;")
-    sql.Push("PRAGMA journal_mode = WAL;")
+    ; WAL 在表结构创建成功后再开（见 ClipboardFTS5_EnableWalMode），避免残留 -shm 导致首批 DDL disk I/O
     sql.Push(
         "CREATE TABLE IF NOT EXISTS ClipMain ("
         . "ID INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -51,43 +51,92 @@ ClipboardFTS5_GetStartupSqlStatements() {
     return sql
 }
 
+ClipboardFTS5_StopExternalDbLockers() {
+    if ProcessExist("SearchCenterCore.exe") {
+        try ProcessClose("SearchCenterCore.exe")
+        catch {
+        }
+        Sleep(350)
+    }
+}
+
+ClipboardFTS5_ClearWalSidecars(dbPath) {
+    if !FuncExists("Nmer_SqliteClearWalSidecars")
+        return 0
+    n := 0
+    loop 3 {
+        try n += Nmer_SqliteClearWalSidecars(dbPath)
+        catch {
+        }
+        if (A_Index < 3)
+            Sleep(80)
+    }
+    return n
+}
+
+; 崩溃后常见 4096 字节空壳 + 陈旧 -shm，quick_check 仍可能返回 ok，但 CREATE TABLE 会 disk I/O。
+ClipboardFTS5_IsSuspectStubDb(dbPath) {
+    dbPath := Trim(String(dbPath))
+    if (dbPath = "" || !FileExist(dbPath))
+        return false
+    try size := FileGetSize(dbPath)
+    catch {
+        return true
+    }
+    if (size <= 8192)
+        return true
+    if !FuncExists("Nmer_SqliteQuickCheck")
+        return false
+    return !Nmer_SqliteQuickCheck(dbPath)
+}
+
 ClipboardFTS5_ResetDbFiles(dbPath, tag := "recover") {
+    ClipboardFTS5_StopExternalDbLockers()
     if FuncExists("Nmer_SqliteBackupDbFile")
         try Nmer_SqliteBackupDbFile(dbPath, tag)
         catch {
         }
+    ClipboardFTS5_ClearWalSidecars(dbPath)
     if FuncExists("Nmer_SqliteResetDbFile")
         return Nmer_SqliteResetDbFile(dbPath)
-    if FuncExists("Nmer_SqliteClearWalSidecars")
-        try Nmer_SqliteClearWalSidecars(dbPath)
-        catch {
-        }
     if FileExist(dbPath) {
         try FileDelete(dbPath)
         catch {
             return false
         }
     }
-    return true
+    ClipboardFTS5_ClearWalSidecars(dbPath)
+    return !FileExist(dbPath)
+}
+
+ClipboardFTS5_EnableWalMode(db) {
+    if !(IsObject(db) && db)
+        return false
+    try {
+        if db.Exec("PRAGMA journal_mode = WAL;")
+            return true
+    } catch {
+    }
+    return false
 }
 
 ClipboardFTS5_OpenDbWithRecovery(dbPath) {
     dbPath := Trim(String(dbPath))
+    ClipboardFTS5_StopExternalDbLockers()
     if FileExist(dbPath) {
-        if FuncExists("Nmer_SqliteClearWalSidecars")
-            try Nmer_SqliteClearWalSidecars(dbPath)
-            catch {
-            }
-        if FuncExists("Nmer_SqliteQuickCheck") && !Nmer_SqliteQuickCheck(dbPath)
+        ClipboardFTS5_ClearWalSidecars(dbPath)
+        if ClipboardFTS5_IsSuspectStubDb(dbPath)
             ClipboardFTS5_ResetDbFiles(dbPath, "corrupt")
     }
     loop 3 {
         attempt := A_Index
         if (attempt > 1) {
+            ClipboardFTS5_StopExternalDbLockers()
             if !ClipboardFTS5_ResetDbFiles(dbPath, attempt = 2 ? "recover" : "reset")
                 throw Error("无法删除损坏的剪贴板库（文件可能被占用）: " . dbPath . "`n请先托盘完全退出牛马后再启动")
-            Sleep(200 * attempt)
+            Sleep(250 * attempt)
         }
+        ClipboardFTS5_ClearWalSidecars(dbPath)
         db := SQLiteDB()
         if !db.OpenDB(dbPath) {
             if (attempt >= 3)
@@ -97,11 +146,14 @@ ClipboardFTS5_OpenDbWithRecovery(dbPath) {
         try {
             if FuncExists("SqlBatch_Run")
                 SqlBatch_Run(db, ClipboardFTS5_GetStartupSqlStatements(), "fts5_schema", 8, 20)
+            ClipboardFTS5_EnableWalMode(db)
             return db
         } catch as e {
             try db.CloseDB()
             catch {
             }
+            Sleep(120)
+            ClipboardFTS5_ClearWalSidecars(dbPath)
             isIo := InStr(e.Message, "disk I/O") || InStr(e.Message, "IOERR") || InStr(e.Message, "locked")
             if (attempt >= 3 || !isIo)
                 throw e

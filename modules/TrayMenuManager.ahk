@@ -851,7 +851,7 @@ TrayMenu_OpenSearchActionRun(*) {
     try {
         if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole") {
             try {
-                SCWV_OpenUnified("search", "", "search_hotkey")
+                SurfaceIntent_OpenSearch("", "search_hotkey")
                 return
             } catch as err {
                 try TrayMenu_Log("open_search_direct_failed msg=" . err.Message)
@@ -859,7 +859,7 @@ TrayMenu_OpenSearchActionRun(*) {
         }
         ; Non-hole path also use robust init+show instead of mixed entry points.
         try {
-            SCWV_OpenUnified("search", "", "search_hotkey")
+            SurfaceIntent_OpenSearch("", "search_hotkey")
             return
         } catch as err2 {
             try TrayMenu_Log("open_search_fallback_failed msg=" . err2.Message)
@@ -931,7 +931,7 @@ ShowSearchCenterFromMenuRun(*) {
                 }
             }
             ; opening/busy 时优先复用当前实例，避免强制关闭打断 WebView 初始化造成白屏。
-            try SCWV_OpenUnified("search", "", "search_hotkey")
+            try SurfaceIntent_OpenSearch("", "search_hotkey")
             return
         }
     } catch {
@@ -951,7 +951,7 @@ ShowSearchCenterFromMenuRun(*) {
 TrayMenu_OpenClipboardAction(*) {
     try TrayMenu_Log("open_clipboard_from_menu")
     try {
-        CP_Show()
+        SurfaceIntent_Open("clipboard_panel")
         TrayMenu_Log("open_clipboard_from_menu_done")
     } catch as err {
         try TrayMenu_Log("open_clipboard_from_menu_failed msg=" . err.Message)
@@ -1238,7 +1238,7 @@ HideFloatingToolbarFromPopupMenu(*) {
         catch {
         }
     } else {
-        HideFloatingToolbar()
+        SurfaceIntent_Close("floating_toolbar")
     }
 }
 

@@ -3638,7 +3638,7 @@ GDHO_ExecutePanelDockCmd(cmdId) {
             }
         case "qa_clipboard", "ftm_clipboard":
             try {
-                CP_Show()
+                SurfaceIntent_Open("clipboard_panel")
                 try NativeDropDiag_Log("[LauncherPick] exec_path=CP_Show")
                 return true
             } catch as e {

@@ -1,4 +1,4 @@
-﻿; ======================================================================================================================
+; ======================================================================================================================
 ; Prompt Quick-Pad锛堝師 AI 鍔╂墜鍏ュ彛锛夛細鎻愮ず璇嶅揩鎹疯褰曚笌绮樿创
 ; 鏁版嵁锛欰_ScriptDir "\prompts.json" 浠呯敤鎴锋潯鐩?[{title, tags, content, category?}]
 ; 鍒楄〃灞曠ず = 璁剧疆涓揩鎹蜂笁椤?+ PromptTemplates + json 鍚堝苟
@@ -2392,7 +2392,7 @@ ShowAIListPanel_WebView(openForCapture := false, forceCenterMaximize := false) {
     AIListPanelWindowW := panelW
     AIListPanelWindowH := panelH
 
-    PQP_Show()
+    SurfaceIntent_Open("prompt_quick_pad")
     if forceCenterMaximize
         PromptQuickPad_CenterAndMaximizeOnActiveMonitor()
 
@@ -2444,7 +2444,7 @@ HideAIListPanel() {
             catch {
             }
         }
-        PQP_Hide()
+        SurfaceIntent_Close("prompt_quick_pad")
         AIListPanelIsVisible := false
         PromptQuickPad_CaptureChromeVisible := false
         SetTimer(AIListPanelFollowToolbar, 0)

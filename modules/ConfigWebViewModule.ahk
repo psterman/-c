@@ -56,7 +56,7 @@ ConfigWebView_OpenVkKeybinder() {
         OutputDebug("[ConfigWebView] VK_EnsureInit: " . e.Message)
     }
     try {
-        VK_Show()
+        SurfaceIntent_Open("virtual_keyboard")
         return
     } catch as e {
         try {
@@ -101,6 +101,7 @@ ConfigWebView_HostAlive() {
 }
 
 ConfigWebView_CreateHost() {
+    try SurfaceManager_ObserveInit("config_webview", Map("entry", "ConfigWebView_CreateHost"))
     global GuiID_ConfigGUI, ConfigWebViewMode, ConfigWV2Ready, ConfigWebViewPreloaded, ConfigWebViewNavFallbackTried
     global ConfigWV2Ctrl, ConfigWV2
 
@@ -155,7 +156,16 @@ ConfigWebView_SendInitDataIfReady(*) {
 }
 
 ShowConfigWebViewGUI() {
+    if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("config_webview")
+        return
     global GuiID_ConfigGUI, GuiID_ClipboardManager, ConfigPanelScreenIndex, g_ConfigWebView_LastShown, g_ConfigWebView_StartTabNavigated
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    reqId := 0
+    if !skipTel {
+        reqId := SurfaceManager_Request("config_webview", "open", "ShowConfigWebViewGUI", Map("hostAliveBefore", ConfigWebView_HostAlive() ? 1 : 0))
+        try SurfaceManager_BeforeOpen("config_webview", "ShowConfigWebViewGUI", Map("requestId", reqId, "hostAliveBefore", ConfigWebView_HostAlive() ? 1 : 0))
+        try SurfaceManager_RegisterSurface("config_webview")
+    }
     g_ConfigWebView_StartTabNavigated := false
     try FloatingToolbar_PageDockEnter("settings")
     ; 鍗曚緥
@@ -192,6 +202,7 @@ ShowConfigWebViewGUI() {
     try WebView2_NotifyShown(ConfigWV2)
     ; 姣忔鎵撳紑閮介噸鏂版帹閫?initData锛堝欢鍚庝竴甯э級锛岀‘淇濅富棰樼瓑涓?INI 涓€鑷翠笖閬垮紑 WebView 鍥炶皟閲嶅叆
     SetTimer(ConfigWebView_SendInitDataIfReady, -10)
+    try SurfaceManager_ObserveShow("config_webview", Map("entry", "ShowConfigWebViewGUI", "hostAlive", ConfigWebView_HostAlive() ? 1 : 0, "requestId", reqId))
 }
 
 ConfigWebView_EnsureVisibleOrRecover(*) {
@@ -1880,7 +1891,7 @@ ConfigWebView_SaveAppearanceActivationMode(mode, &errorMsg := "") {
             catch {
             }
         } else if (newMode = "hole" || newMode = "bubble") {
-            try SetTimer((*) => HideFloatingToolbar(), -50)
+            try SetTimer((*) => SurfaceIntent_Close("floating_toolbar"), -50)
             catch {
             }
         }
@@ -3765,7 +3776,14 @@ SaveConfigGUIPosition(ConfigGUI) {
 
 ; WebView 设置页关闭（由 CloseConfigGUI 在 ConfigWebViewMode 下调用）
 ConfigWebView_Close() {
+    if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("config_webview")
+        return
     global GuiID_ConfigGUI, ConfigWV2Ctrl, ConfigWV2, g_ConfigWebView_StartTabNavigated
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    if !skipTel {
+        reqId := SurfaceManager_Request("config_webview", "close", "ConfigWebView_Close", Map("hostAliveBefore", ConfigWebView_HostAlive() ? 1 : 0))
+        try SurfaceManager_ObserveHide("config_webview", Map("entry", "ConfigWebView_Close", "requestId", reqId))
+    }
     g_ConfigWebView_StartTabNavigated := false
     try {
         if IsSet(ConfigWV2) && ConfigWV2
@@ -3780,6 +3798,25 @@ ConfigWebView_Close() {
         GuiID_ConfigGUI.Hide()
     } catch {
     }
+}
+
+ConfigWebView_Dispose(reason := "") {
+    global GuiID_ConfigGUI, ConfigWV2Ctrl, ConfigWV2, ConfigWebViewMode, ConfigWV2Ready
+    global ConfigWebViewPreloaded, ConfigWebViewNavFallbackTried, g_ConfigWebView_StartTabNavigated
+    try ConfigWebView_Close()
+    catch {
+    }
+    SurfaceManager_CloseWebViewControl(ConfigWV2Ctrl)
+    ConfigWV2Ctrl := 0
+    ConfigWV2 := 0
+    ConfigWV2Ready := false
+    ConfigWebViewMode := false
+    ConfigWebViewPreloaded := false
+    ConfigWebViewNavFallbackTried := false
+    g_ConfigWebView_StartTabNavigated := false
+    SurfaceManager_DestroyGui(GuiID_ConfigGUI)
+    GuiID_ConfigGUI := 0
+    try SurfaceManager_ObserveClose("config_webview", Map("entry", "ConfigWebView_Dispose", "reason", String(reason)))
 }
 
 ; ===================== 智能定制 API 连通性测试（内置于设置中心，不依赖 FuncExists / 外部模块） =====================

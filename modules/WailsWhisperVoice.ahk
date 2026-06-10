@@ -199,7 +199,7 @@ WailsWhisper_HasLocalModel() {
 
 WailsWhisper_EnsureInputVisible() {
     if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_Show"))
-        SetTimer(() => CommandPalette_Show(), -50)
+        SetTimer(() => SurfaceIntent_Open("command_palette"), -50)
     else if FuncExists("ActivateWailsInputBox")
         SetTimer(() => ActivateWailsInputBox(), -50)
     else if FuncExists("WailsInput_FocusWebInput")
@@ -385,7 +385,7 @@ WailsWhisper_FillInputText(text) {
         return false
     if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_SetInputText")) {
         if FuncExists("CommandPalette_Show")
-            CommandPalette_Show()
+            SurfaceIntent_Open("command_palette")
         CommandPalette_SetInputText(t)
         return true
     }

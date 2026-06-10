@@ -336,6 +336,7 @@ _CP_LSP_Hints() {
 ; ===================== 初始化 =====================
 CP_Init() {
     global g_CP_Gui, WebView2
+    try SurfaceManager_ObserveInit("clipboard_panel", Map("entry", "CP_Init"))
 
     if g_CP_Gui
         return
@@ -377,10 +378,21 @@ CP_IsForeground() {
 }
 
 CP_Show() {
+    if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("clipboard_panel")
+        return
     global g_CP_UnifiedRedirectEnabled, g_CP_LastKeyword
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    reqId := 0
+    if !skipTel {
+        reqId := SurfaceManager_Request("clipboard_panel", "open", "CP_Show", Map("redirect", g_CP_UnifiedRedirectEnabled ? 1 : 0))
+        try SurfaceManager_BeforeOpen("clipboard_panel", "CP_Show", Map("requestId", reqId, "redirect", g_CP_UnifiedRedirectEnabled ? 1 : 0))
+        try SurfaceManager_RegisterSurface("clipboard_panel")
+    }
     if g_CP_UnifiedRedirectEnabled {
         try FloatingToolbar_PageDockEnter("clipboard")
-        try SCWV_OpenUnified("clipboard", g_CP_LastKeyword)
+        try SurfaceIntent_OpenClipboardUnified(g_CP_LastKeyword, "clipboard_unified_redirect")
+        if !skipTel
+            try SurfaceManager_ObserveShow("clipboard_panel", Map("entry", "CP_Show", "redirect", "scwv_unified", "requestId", reqId))
         return
     }
     global g_CP_Gui, g_CP_Visible, g_CP_Ready, g_CP_Ctrl
@@ -418,6 +430,7 @@ CP_Show() {
     SetTimer(_CP_DeferredMoveFocus100, -100)
     SetTimer(_CP_FocusDeferred, -80)
     CP_RequestFocusInput()
+    try SurfaceManager_ObserveShow("clipboard_panel", Map("entry", "CP_Show", "ready", g_CP_Ready ? 1 : 0, "requestId", reqId))
 }
 
 _CP_DeferredMoveFocus100(*) {
@@ -435,13 +448,21 @@ _CP_FocusDeferred() {
 }
 
 CP_Hide() {
+    if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("clipboard_panel")
+        return
     global g_CP_UnifiedRedirectEnabled
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    reqId := 0
+    if !skipTel
+        reqId := SurfaceManager_Request("clipboard_panel", "close", "CP_Hide", Map("redirect", g_CP_UnifiedRedirectEnabled ? 1 : 0))
     if g_CP_UnifiedRedirectEnabled {
         try FloatingToolbar_PageDockLeave("clipboard")
         try {
             if SCWV_IsClipboardUnifiedActive()
                 SCWV_SubmitIntent("close", 30, Map("reason", "clipboard_unified_hide"))
         }
+        if !skipTel
+            try SurfaceManager_ObserveHide("clipboard_panel", Map("entry", "CP_Hide", "redirect", "scwv_unified", "requestId", reqId))
         return
     }
     global g_CP_Gui, g_CP_Visible, g_CP_SearchTimer, g_CP_WM_ActivateHideCallback
@@ -465,6 +486,30 @@ CP_Hide() {
     try WebView2_NotifyHidden(g_CP_WV2)
     if g_CP_Gui
         g_CP_Gui.Hide()
+    if !skipTel
+        try SurfaceManager_ObserveHide("clipboard_panel", Map("entry", "CP_Hide", "requestId", reqId))
+}
+
+CP_Dispose(reason := "") {
+    global g_CP_Gui, g_CP_Ctrl, g_CP_WV2, g_CP_Ready, g_CP_Visible, g_CP_FocusPending
+    global g_CP_WM_ActivateHideCallback, g_CP_SearchTimer
+    try CP_Hide()
+    catch {
+    }
+    SurfaceManager_CloseWebViewControl(g_CP_Ctrl)
+    g_CP_Ctrl := 0
+    g_CP_WV2 := 0
+    g_CP_Ready := false
+    g_CP_Visible := false
+    g_CP_FocusPending := false
+    g_CP_WM_ActivateHideCallback := 0
+    if g_CP_SearchTimer {
+        try SetTimer(g_CP_SearchTimer, 0)
+        g_CP_SearchTimer := 0
+    }
+    SurfaceManager_DestroyGui(g_CP_Gui)
+    g_CP_Gui := 0
+    try SurfaceManager_ObserveClose("clipboard_panel", Map("entry", "CP_Dispose", "reason", String(reason)))
 }
 
 CP_RequestFocusInput() {

@@ -5415,6 +5415,42 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return t === "openclaw" || t === "hermes" || t === "龙虾";
   }
 
+  function trySurfaceDisposeSlashQuery(q) {
+    var t = String(q || "").trim();
+    if (!t || t.charAt(0) !== ">") return false;
+    var body = t.slice(1).trim();
+  var m = body.match(/^(?:surface\s+)?dispose\s+(.+)$/i);
+    if (m) {
+      var target = String(m[1] || "").trim().toLowerCase();
+      var map = {
+        ftb: "dev_surface_dispose_ftb",
+        toolbar: "dev_surface_dispose_ftb",
+        floating_toolbar: "dev_surface_dispose_ftb",
+        clipboard: "dev_surface_dispose_clipboard",
+        cp: "dev_surface_dispose_clipboard",
+        config: "dev_surface_dispose_config",
+        settings: "dev_surface_dispose_config"
+      };
+      if (map[target]) {
+        post({ type: "palette_surface_dispose", cmdId: map[target] });
+        if (window.nmerPalette && window.nmerPalette.setInputText) window.nmerPalette.setInputText("");
+        window.nmerPalette.setStatus("已执行 Surface Dispose: " + target, "idle");
+        return true;
+      }
+    }
+    m = body.match(/^(?:surface\s+)?restore\s+(.+)$/i);
+    if (m) {
+      var rt = String(m[1] || "").trim().toLowerCase();
+      if (rt === "ftb" || rt === "toolbar" || rt === "floating_toolbar") {
+        post({ type: "palette_surface_dispose", cmdId: "dev_surface_restore_ftb" });
+        if (window.nmerPalette && window.nmerPalette.setInputText) window.nmerPalette.setInputText("");
+        window.nmerPalette.setStatus("已 Restore 悬浮栏", "idle");
+        return true;
+      }
+    }
+    return false;
+  }
+
   var _actionEnterLock = false;
 
   function handleActionEnterKey(e) {
@@ -5433,6 +5469,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       }
     }
     var q = resolveAgentSubmitText();
+    if (trySurfaceDisposeSlashQuery(q)) return true;
     if (!q) {
       window.nmerPalette.setStatus("请先在输入框描述任务，再按 Enter 提交", "error");
       getInputEl()?.focus();

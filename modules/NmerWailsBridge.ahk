@@ -37,11 +37,30 @@ Nmer_WailsBridgeNormalizeWhitelist(list) {
     return out
 }
 
+Nmer_WailsBridgeNormalizeBool(value, default := false) {
+    if (value = "")
+        return !!default
+    return !!(value = true || value = 1 || String(value) = "true" || String(value) = "1")
+}
+
 Nmer_WailsBridgeReadFlags(*) {
     defaults := Map(
         "wailsBridge", Map("enabled", true),
         "officialA2ui", Map("enabled", false, "commandWhitelist", []),
-        "rollback", Map("forceNmerOnly", false)
+        "surfaceManager", Map(
+            "enabled", false,
+            "shadowMode", true,
+            "interceptWarmup", false,
+            "interceptOpenClose", false,
+            "enforceSlots", false,
+            "enforceBudget", false,
+            "routeIntents", false
+        ),
+        "rollback", Map(
+            "forceNmerOnly", false,
+            "legacySurfaceLifecycle", true,
+            "forceTraySafeMode", false
+        )
     )
     path := Nmer_WailsBridgeFlagsPath()
     if !FileExist(path)
@@ -55,30 +74,43 @@ Nmer_WailsBridgeReadFlags(*) {
             return defaults
         wb := data.Get("wailsBridge", Map())
         oa := data.Get("officialA2ui", Map())
+        sm := data.Get("surfaceManager", Map())
         rb := data.Get("rollback", Map())
         out := Map()
         if (wb is Map) {
-            en := wb.Get("enabled", true)
             out["wailsBridge"] := Map(
-                "enabled", !!(en = true || en = 1 || String(en) = "true" || String(en) = "1")
+                "enabled", Nmer_WailsBridgeNormalizeBool(wb.Get("enabled", true), true)
             )
         } else {
             out["wailsBridge"] := defaults["wailsBridge"]
         }
         if (oa is Map) {
-            en := oa.Get("enabled", false)
             wlRaw := oa.Get("commandWhitelist", [])
             out["officialA2ui"] := Map(
-                "enabled", !!(en = true || en = 1 || String(en) = "true" || String(en) = "1"),
+                "enabled", Nmer_WailsBridgeNormalizeBool(oa.Get("enabled", false), false),
                 "commandWhitelist", Nmer_WailsBridgeNormalizeWhitelist(wlRaw)
             )
         } else {
             out["officialA2ui"] := defaults["officialA2ui"]
         }
+        if (sm is Map) {
+            out["surfaceManager"] := Map(
+                "enabled", Nmer_WailsBridgeNormalizeBool(sm.Get("enabled", false), false),
+                "shadowMode", Nmer_WailsBridgeNormalizeBool(sm.Get("shadowMode", true), true),
+                "interceptWarmup", Nmer_WailsBridgeNormalizeBool(sm.Get("interceptWarmup", false), false),
+                "interceptOpenClose", Nmer_WailsBridgeNormalizeBool(sm.Get("interceptOpenClose", false), false),
+                "enforceSlots", Nmer_WailsBridgeNormalizeBool(sm.Get("enforceSlots", false), false),
+                "enforceBudget", Nmer_WailsBridgeNormalizeBool(sm.Get("enforceBudget", false), false),
+                "routeIntents", Nmer_WailsBridgeNormalizeBool(sm.Get("routeIntents", false), false)
+            )
+        } else {
+            out["surfaceManager"] := defaults["surfaceManager"]
+        }
         if (rb is Map) {
-            fn := rb.Get("forceNmerOnly", false)
             out["rollback"] := Map(
-                "forceNmerOnly", !!(fn = true || fn = 1 || String(fn) = "true" || String(fn) = "1")
+                "forceNmerOnly", Nmer_WailsBridgeNormalizeBool(rb.Get("forceNmerOnly", false), false),
+                "legacySurfaceLifecycle", Nmer_WailsBridgeNormalizeBool(rb.Get("legacySurfaceLifecycle", true), true),
+                "forceTraySafeMode", Nmer_WailsBridgeNormalizeBool(rb.Get("forceTraySafeMode", false), false)
             )
         } else {
             out["rollback"] := defaults["rollback"]
@@ -128,6 +160,56 @@ Nmer_WailsBridgeOfficialWhitelist(*) {
     if !(wl is Array)
         return []
     return wl
+}
+
+Nmer_SurfaceManagerFlags(*) {
+    flags := Nmer_WailsBridgeReadFlags()
+    sm := flags.Get("surfaceManager", Map())
+    return (sm is Map) ? sm : Map()
+}
+
+Nmer_SurfaceManagerEnabled(*) {
+    return !!Nmer_SurfaceManagerFlags().Get("enabled", false)
+}
+
+Nmer_SurfaceManagerShadowMode(*) {
+    return !!Nmer_SurfaceManagerFlags().Get("shadowMode", true)
+}
+
+Nmer_SurfaceManagerInterceptWarmup(*) {
+    return !!Nmer_SurfaceManagerFlags().Get("interceptWarmup", false)
+}
+
+Nmer_SurfaceManagerInterceptOpenClose(*) {
+    return !!Nmer_SurfaceManagerFlags().Get("interceptOpenClose", false)
+}
+
+Nmer_SurfaceManagerEnforceSlots(*) {
+    return !!Nmer_SurfaceManagerFlags().Get("enforceSlots", false)
+}
+
+Nmer_SurfaceManagerEnforceBudget(*) {
+    return !!Nmer_SurfaceManagerFlags().Get("enforceBudget", false)
+}
+
+Nmer_SurfaceManagerRouteIntents(*) {
+    return !!Nmer_SurfaceManagerFlags().Get("routeIntents", false)
+}
+
+Nmer_LegacySurfaceLifecycleEnabled(*) {
+    flags := Nmer_WailsBridgeReadFlags()
+    rb := flags.Get("rollback", Map())
+    if !(rb is Map)
+        return true
+    return !!rb.Get("legacySurfaceLifecycle", true)
+}
+
+Nmer_ForceTraySafeModeEnabled(*) {
+    flags := Nmer_WailsBridgeReadFlags()
+    rb := flags.Get("rollback", Map())
+    if !(rb is Map)
+        return false
+    return !!rb.Get("forceTraySafeMode", false)
 }
 
 Nmer_WailsBridgeExtractSlashCommand(text) {
@@ -339,8 +421,19 @@ Nmer_WailsBridgeBuildHostConfig(*) {
             "enabled", Nmer_WailsBridgeOfficialEffectiveEnabled(),
             "commandWhitelist", Nmer_WailsBridgeOfficialWhitelist()
         ),
+        "surfaceManager", Map(
+            "enabled", Nmer_SurfaceManagerEnabled(),
+            "shadowMode", Nmer_SurfaceManagerShadowMode(),
+            "interceptWarmup", Nmer_SurfaceManagerInterceptWarmup(),
+            "interceptOpenClose", Nmer_SurfaceManagerInterceptOpenClose(),
+            "enforceSlots", Nmer_SurfaceManagerEnforceSlots(),
+            "enforceBudget", Nmer_SurfaceManagerEnforceBudget(),
+            "routeIntents", Nmer_SurfaceManagerRouteIntents()
+        ),
         "rollback", Map(
-            "forceNmerOnly", Nmer_WailsBridgeForceNmerOnly()
+            "forceNmerOnly", Nmer_WailsBridgeForceNmerOnly(),
+            "legacySurfaceLifecycle", Nmer_LegacySurfaceLifecycleEnabled(),
+            "forceTraySafeMode", Nmer_ForceTraySafeModeEnabled()
         )
     )
 }

@@ -1,4 +1,4 @@
-﻿; ScreenshotWorkflow.ahk 鈥?鎴浘涓氬姟娴佺▼锛堟櫤鑳借彍鍗曘€佸尯鍩熸埅鍥俱€佹偓娴寜閽瓑锛岀敱涓昏剼鏈?#Include锛?
+; ScreenshotWorkflow.ahk 鈥?鎴浘涓氬姟娴佺▼锛堟櫤鑳借彍鍗曘€佸尯鍩熸埅鍥俱€佹偓娴寜閽瓑锛岀敱涓昏剼鏈?#Include锛?
 ; 渚濊禆锛歋howScreenshotEditor銆丆loseScreenshotEditor銆丏eferredScreenshotHistorySave銆丟etScreenInfo銆?
 ; UI_Colors銆乀hemeMode銆丗loatingToolbar銆丠ideCursorPanel銆両magePut/OCR銆丟etText 绛夈€?
 
@@ -10,7 +10,7 @@ ScreenshotFlowRestoreFloatingToolbarIfNeeded() {
         FloatingToolbar_ScheduleRestoreAfterScreenshot := false
         if (NormalizeAppearanceActivationMode(AppearanceActivationMode) != "toolbar")
             return
-        try ShowFloatingToolbar()
+        try SurfaceIntent_Open("floating_toolbar", Map("reason", "screenshot_restore"))
         catch as _e {
         }
     }

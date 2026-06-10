@@ -33,6 +33,7 @@ global g_VK_WV2 := 0
 global g_VK_Ctrl := 0
 global g_VK_Ready := false
 global g_VK_FocusPending := false
+global g_VK_TextInputActive := false
 global g_VK_LastShown := 0
 global g_VK_TitleBgCtrl := 0
 global g_VK_TitleLblCtrl := 0
@@ -84,7 +85,7 @@ VK_HostGuiValid() {
 }
 
 VK_ResetHostState() {
-    global g_VK_Gui, g_VK_WV2, g_VK_Ctrl, g_VK_Ready, g_VK_FocusPending
+    global g_VK_Gui, g_VK_WV2, g_VK_Ctrl, g_VK_Ready, g_VK_FocusPending, g_VK_TextInputActive
     try {
         if IsObject(g_VK_Gui)
             g_VK_Gui.Destroy()
@@ -95,10 +96,12 @@ VK_ResetHostState() {
     g_VK_Ctrl := 0
     g_VK_Ready := false
     g_VK_FocusPending := false
+    g_VK_TextInputActive := false
 }
 
 VK_EnsureInit(embedded := true) {
     global g_VK_Gui
+    try SurfaceManager_ObserveInit("virtual_keyboard", Map("entry", "VK_EnsureInit", "embedded", embedded ? 1 : 0))
     if VK_HostGuiValid()
         return
     ; Gui object exists but host window is gone/stale: rebuild cleanly.
@@ -733,8 +736,34 @@ _VK_HotkeyLayerPush(layerMap, hotkey, infoObj) {
     layerMap[hotkey].Push(infoObj)
 }
 
+_VK_NormalizeAhkKey(ahkKey) {
+    k := StrLower(Trim(String(ahkKey)))
+    while (StrLen(k) > 0) {
+        p := SubStr(k, 1, 1)
+        if (p = "$" || p = "*" || p = "~")
+            k := SubStr(k, 2)
+        else
+            break
+    }
+    if RegExMatch(k, "\s+up$")
+        k := RegExReplace(k, "\s+up$")
+    return k
+}
+
+; 无 ^!+# 的单字母/数字键：只能走 L1（CapsLock 和弦），禁止落到 L3 全局热键。
+_VK_IsBareSingleKey(ahkKey) {
+    k := _VK_NormalizeAhkKey(ahkKey)
+    if (k = "")
+        return false
+    if RegExMatch(k, "^[a-z0-9]$")
+        return true
+    if (k = "esc" || k = "escape" || k = "enter" || k = "space" || k = "tab")
+        return true
+    return false
+}
+
 ; Normalize command priority/context with hard rules so behavior is stable even if JSON misses fields.
-_VK_NormalizeCommandLayer(cmdId, cmd, &p, &ctx) {
+_VK_NormalizeCommandLayer(cmdId, cmd, &p, &ctx, ahkKey := "") {
     cid := Trim(String(cmdId))
     p := 3
     ctx := "global"
@@ -762,10 +791,19 @@ _VK_NormalizeCommandLayer(cmdId, cmd, &p, &ctx) {
             ctx := "cursor"
     }
 
+    ; KeyBinder 漏洞修复：SuggestedBindings 里 y/x/c 等若无 priority 会落到 L3，变成「单按全局热键」。
+    if (_VK_IsBareSingleKey(ahkKey)) {
+        p := 1
+        if (SubStr(cid, 1, 3) = "sc_")
+            ctx := "searchcenter"
+    }
+
     if (p < 0)
         p := 0
     else if (p > 3)
         p := 3
+    if (_VK_IsBareSingleKey(ahkKey) && p = 3)
+        p := 1
     if (ctx = "")
         ctx := "global"
 }
@@ -792,7 +830,7 @@ LoadCommandsConfig() {
         if (ahkKey = "" || cmdId = "" || !cmdList.Has(cmdId))
             continue
         cmd := cmdList[cmdId]
-        _VK_NormalizeCommandLayer(cmdId, cmd, &p, &ctx)
+        _VK_NormalizeCommandLayer(cmdId, cmd, &p, &ctx, ahkKey)
         info := Map("cmdId", cmdId, "key", ahkKey, "priority", p, "context", ctx)
         switch p {
             case 0:
@@ -2981,13 +3019,44 @@ _JsonStr(s) {
     return '"' . s . '"'
 }
 
+VK_IsVkTextInputFocused() {
+    global g_VK_TextInputActive
+    if !g_VK_TextInputActive
+        return false
+    return VK_IsHostVisible()
+}
+
+VK_IsTypingPassthroughContext() {
+    ; VK 搜索框：WebView 原生收键，仅抑制热键命令，禁止 SendText（否则会热键风暴）
+    if VK_IsVkTextInputFocused()
+        return true
+    try {
+        if FuncExists("SCWV_IsSearchInputFocused") && SCWV_IsSearchInputFocused()
+            return true
+    } catch {
+    }
+    try {
+        if FuncExists("CommandPalette_IsVisible") && CommandPalette_IsVisible()
+            return true
+    } catch {
+    }
+    return false
+}
+
+_VK_DispatchBoundHotkey(cmdId, ahkKey) {
+    ; 输入态：热键不注册 $，按键会自然进 WebView；此处只拦截命令，绝不 SendText
+    if (VK_IsTypingPassthroughContext() && _VK_IsBareSingleKey(ahkKey))
+        return
+    _ExecuteCommand(cmdId)
+}
+
 _BindKey(ahkKey, cmdId) {
     global g_HotkeyBound
     if _VkIsRuntimeHookKey(ahkKey)
         return true
     if g_HotkeyBound.Has(ahkKey)
         _VK_ReleaseBoundHotkey(ahkKey)
-    fn := _MakeCmdFn(cmdId)
+    fn := _MakeCmdFn(cmdId, ahkKey)
     try {
         Hotkey(ahkKey, fn, "On")
         g_HotkeyBound[ahkKey] := 1
@@ -3020,8 +3089,9 @@ _BindKey(ahkKey, cmdId) {
     }
 }
 
-_MakeCmdFn(cmdId) {
-    return (*) => _ExecuteCommand(cmdId)
+_MakeCmdFn(cmdId, ahkKey := "") {
+    boundKey := ahkKey
+    return (*) => _VK_DispatchBoundHotkey(cmdId, boundKey != "" ? boundKey : A_ThisHotkey)
 }
 
 _VK_LayerCmdIdForHotkey(layerMap, ahkKey) {
@@ -3042,6 +3112,10 @@ _VK_BindLayerHotkeys(layerMap, layerName := "L3") {
     for ahkKey, _ in layerMap {
         if _VkIsRuntimeHookKey(ahkKey)
             continue
+        if (layerName = "L3" && _VK_IsBareSingleKey(ahkKey)) {
+            OutputDebug("[VK] Skip L3 bare key (CapsLock-only): " . ahkKey)
+            continue
+        }
         cmdId := _VK_LayerCmdIdForHotkey(layerMap, ahkKey)
         if (cmdId = "")
             continue
@@ -3337,13 +3411,8 @@ VK_SearchCenterResolveCapsChordCmd(physKey) {
 ; 嵌入 CursorHelper：若当前物理键在 g_Bindings 中有命令则执行并返回 true（截断宿主默认）
 VirtualKeyboard_HandleKey(physKey) {
     global g_VK_Embedded
-    if FuncExists("CommandPalette_IsVisible") {
-        try {
-            if CommandPalette_IsVisible()
-                return false
-        } catch {
-        }
-    }
+    if (VK_IsTypingPassthroughContext() && _VK_IsBareSingleKey(physKey))
+        return false
     if !IsSet(g_VK_Embedded)
         g_VK_Embedded := false
     if !g_VK_Embedded || physKey = ""
@@ -3582,9 +3651,11 @@ _VK_RegisterCapsLockDispatchHotkeys() {
 }
 
 VkDynCapsLockHandler(*) {
-    if VirtualKeyboard_HandleKey(A_ThisHotkey)
-        return
     th := A_ThisHotkey
+    if (VK_IsTypingPassthroughContext() && _VK_IsBareSingleKey(th))
+        return
+    if VirtualKeyboard_HandleKey(th)
+        return
     if (StrLen(th) = 1) {
         try SendText(th)
         catch as e
@@ -3863,6 +3934,10 @@ _OnWebMessage(sender, args) {
             _StartKeyPreviewHook()
             if g_VK_FocusPending
                 _VK_RequestFocusInput()
+
+        case "typingFocus":
+            global g_VK_TextInputActive
+            g_VK_TextInputActive := !!(msg.Has("active") && msg["active"])
 
         case "bindKey":
             if !msg.Has("commandId") || !msg.Has("ahkKey")
@@ -5234,6 +5309,15 @@ VK_MarkNextShowFromCapsLockHold(enabled := true) {
 }
 
 VK_Show() {
+    if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("virtual_keyboard")
+        return
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    reqId := 0
+    if !skipTel {
+        reqId := SurfaceManager_Request("virtual_keyboard", "open", "VK_Show", Map("readyBefore", g_VK_Ready ? 1 : 0))
+        try SurfaceManager_BeforeOpen("virtual_keyboard", "VK_Show", Map("requestId", reqId, "readyBefore", g_VK_Ready ? 1 : 0))
+        try SurfaceManager_RegisterSurface("virtual_keyboard")
+    }
     global g_VK_Gui, g_VK_Ready, g_VK_LastShown, g_VK_NextShowFromCapsLockHold
     try FloatingToolbar_PageDockEnter("hotkeys")
     if !VK_HostGuiValid()
@@ -5277,12 +5361,22 @@ VK_Show() {
         SetTimer(_VK_DeferredMoveFocus, -100)
         _VK_RequestFocusInput()
         try WebView2_NotifyShown(g_VK_WV2)
+        if !skipTel
+            try SurfaceManager_ObserveShow("virtual_keyboard", Map("entry", "VK_Show", "ready", g_VK_Ready ? 1 : 0, "requestId", reqId))
         ; 不再 WinActivate：会与 Cursor/WebView 抢焦点，触发 WM_ACTIVATE 失活链，导致快捷键设置窗「闪一下就被 _VK_WM_ACTIVATE 关掉」
     }
 }
 
 VK_Hide() {
-    global g_VK_Gui, g_VK_WV2
+    if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("virtual_keyboard")
+        return
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    if !skipTel {
+        reqId := SurfaceManager_Request("virtual_keyboard", "close", "VK_Hide")
+        try SurfaceManager_ObserveHide("virtual_keyboard", Map("entry", "VK_Hide", "requestId", reqId))
+    }
+    global g_VK_Gui, g_VK_WV2, g_VK_TextInputActive
+    g_VK_TextInputActive := false
     try FloatingToolbar_PageDockLeave("hotkeys")
     VK_SendToWeb('{"type":"keyPreviewClear"}')
     _StopKeyPreviewHook()
@@ -5295,6 +5389,26 @@ VK_Hide() {
         try g_VK_Gui.Hide()
         catch {
         }
+}
+
+VK_Dispose(reason := "") {
+    global g_VK_Gui, g_VK_Ctrl, g_VK_WV2, g_VK_Ready, g_VK_FocusPending
+    global g_VK_TitleBgCtrl, g_VK_TitleLblCtrl, g_VK_MinBtnCtrl, g_VK_CloseBtnCtrl
+    try VK_Hide()
+    catch {
+    }
+    SurfaceManager_CloseWebViewControl(g_VK_Ctrl)
+    g_VK_Ctrl := 0
+    g_VK_WV2 := 0
+    g_VK_Ready := false
+    g_VK_FocusPending := false
+    g_VK_TitleBgCtrl := 0
+    g_VK_TitleLblCtrl := 0
+    g_VK_MinBtnCtrl := 0
+    g_VK_CloseBtnCtrl := 0
+    SurfaceManager_DestroyGui(g_VK_Gui)
+    g_VK_Gui := 0
+    try SurfaceManager_ObserveClose("virtual_keyboard", Map("entry", "VK_Dispose", "reason", String(reason)))
 }
 
 ; CursorHelper 悬浮条：同进程内切换显示（首次调用会懒加载）
@@ -5370,7 +5484,8 @@ _VK_IsForegroundGlobalFloat() {
 }
 
 _VK_RequestFocusInput() {
-    global g_VK_WV2, g_VK_Ready, g_VK_FocusPending
+    global g_VK_WV2, g_VK_Ready, g_VK_FocusPending, g_VK_TextInputActive
+    g_VK_TextInputActive := true
     if g_VK_WV2 && g_VK_Ready {
         WebView_QueueJson(g_VK_WV2, '{"type":"focus_input"}')
         g_VK_FocusPending := false
@@ -5578,4 +5693,3 @@ _FallbackHtml() {
             . '</div></body></html>'
     )
 }
-

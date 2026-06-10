@@ -52,7 +52,7 @@ ToggleToolbarAndPanel(*) {
         RestoreFloatingToolbar()
         RestoreAIListPanel()
         if (!FloatingToolbarIsVisible) {
-            ShowFloatingToolbar()
+            SurfaceIntent_Open("floating_toolbar")
         }
     } else {
         if (FloatingToolbarIsVisible) {
@@ -279,6 +279,11 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
 ; 3) 录制快捷键时本函数临时为 false，避免 #HotIf 抢走第二键导致录到「… then CapsLock」或大写灯异常。
 GetCapsLockState() {
     global CapsLock
+    physDown := false
+    try physDown := GetKeyState("CapsLock", "P")
+    catch {
+        physDown := false
+    }
     try {
         if FuncExists("CommandPalette_IsVisible") && CommandPalette_IsVisible()
             return false
@@ -289,8 +294,19 @@ GetCapsLockState() {
             return false
     } catch as e {
     }
+    try {
+        ; 搜索中心已进入输入态后，若物理 CapsLock 已松开，就不要再让宿主残留的 CapsLock 变量继续劫持普通字母输入。
+        if (!physDown && FuncExists("SCWV_IsRevealedToUser") && SCWV_IsRevealedToUser())
+            return false
+    } catch {
+    }
+    try {
+        if FuncExists("VK_IsTypingPassthroughContext") && VK_IsTypingPassthroughContext()
+            return false
+    } catch {
+    }
     ; 变量 true（按下分支已置位）或物理仍按住，均可匹配组合键（与逻辑大写灯是否 On 无关）
-    return CapsLock || GetKeyState("CapsLock", "P")
+    return CapsLock || physDown
 }
 
 ; ===================== 面板可见状态检查函数 =====================
@@ -353,6 +369,15 @@ SearchCenter_HandleCapsChordKey(ch) {
         if dbg
             OutputDebug("SC_CapsChord abort: !IsSearchCenterActive key=" . k)
         return false
+    }
+    try {
+        if FuncExists("VK_IsTypingPassthroughContext") && VK_IsTypingPassthroughContext() {
+            try SCWV_Log("caps_chord_skip", "key=" . k . " reason=typing_passthrough")
+            catch {
+            }
+            return false
+        }
+    } catch {
     }
 
     cmdId := VK_SearchCenterResolveCapsChordCmd(k)
@@ -798,7 +823,7 @@ WailsInput_AfterActivated() {
 ActivateWailsInputBox() {
     global CommandPaletteUseWebView
     if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_Show")) {
-        if CommandPalette_Show() {
+        if SurfaceIntent_Open("command_palette") {
             SetTimer(CommandPalette_DeferredFocus, -150)
             return true
         }
@@ -897,7 +922,7 @@ ShowPanelTimer(*) {
         return
     ; 仅长按 CapsLock 调起 VK 时，才允许进入「复制/绑定上一个动作」模式
     try VK_MarkNextShowFromCapsLockHold(true)
-    try VK_Show()
+    try SurfaceIntent_Open("virtual_keyboard")
     VKHoldVisible := true
 }
 
@@ -1059,7 +1084,7 @@ CapsLock:: {
 
     local vkShownThisPress := VKHoldVisible
     if (VKHoldVisible) {
-        try VK_Hide()
+        try SurfaceIntent_Close("virtual_keyboard")
         VKHoldVisible := false
     }
     
@@ -1073,7 +1098,7 @@ CapsLock:: {
             ok := false
             try {
                 if (CommandPaletteUseWebView)
-                    ok := CommandPalette_Show()
+                    ok := SurfaceIntent_Open("command_palette")
                 else if FuncExists("ActivateWailsInputBox")
                     ok := ActivateWailsInputBox()
             } catch as e {

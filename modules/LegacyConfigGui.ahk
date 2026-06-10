@@ -8821,7 +8821,7 @@ ExecuteFunction(FunctionName) {
             ExecutePrompt("Optimize")
         case "剪贴板管理":
             ; 打开粘贴板面板
-            CP_Show()
+            SurfaceIntent_Open("clipboard_panel")
         case "模板管理":
             ; 跳转到模板管理标签页
             SwitchTab("prompts")
@@ -9921,7 +9921,7 @@ SafeHideLegacyClipboardManager(*) {
 
 ; 打开设置前收起剪贴板（WebView + 旧版 ListView），以 Hide 为主、避免无谓 Destroy
 HideClipboardPanelsForConfigConflict(*) {
-    try CP_Hide()
+    try SurfaceIntent_Close("clipboard_panel")
     catch as e {
     }
     SafeHideLegacyClipboardManager()

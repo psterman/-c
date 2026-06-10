@@ -29,6 +29,7 @@ OnExit (*) => VK_OnHostExit()
     if !g_VK_Gui
         return
     if WinExist("ahk_id " . g_VK_Gui.Hwnd) && WinGetStyle("ahk_id " . g_VK_Gui.Hwnd) & 0x10000000
+        ; 独立 VK 进程无 SurfaceIntentRouter，直调 executor
         VK_Hide()
     else
         VK_Show()

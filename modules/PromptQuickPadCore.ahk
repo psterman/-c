@@ -74,6 +74,7 @@ PQP_IsVisible() {
 ; ===================== 初始化 =====================
 PQP_Init() {
     global g_PQP_Gui
+    try SurfaceManager_ObserveInit("prompt_quick_pad", Map("entry", "PQP_Init"))
 
     if g_PQP_Gui
         return
@@ -359,8 +360,17 @@ _PQP_ExecuteSearch(*) {
 
 ; ===================== 显示 / 隐藏 =====================
 PQP_Show() {
+    if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("prompt_quick_pad")
+        return
     global g_PQP_Gui, g_PQP_Visible, g_PQP_Ready, g_PQP_Ctrl, g_PQP_LastShown
     global AIListPanelWindowX, AIListPanelWindowY, AIListPanelWindowW, AIListPanelWindowH
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    reqId := 0
+    if !skipTel {
+        reqId := SurfaceManager_Request("prompt_quick_pad", "open", "PQP_Show", Map("visibleBefore", g_PQP_Visible ? 1 : 0))
+        try SurfaceManager_BeforeOpen("prompt_quick_pad", "PQP_Show", Map("requestId", reqId, "visibleBefore", g_PQP_Visible ? 1 : 0))
+        try SurfaceManager_RegisterSurface("prompt_quick_pad")
+    }
     try FloatingToolbar_PageDockEnter("prompts")
 
     if !g_PQP_Gui
@@ -408,6 +418,8 @@ PQP_Show() {
     SetTimer(_PQP_DeferredMoveFocus100, -100)
     SetTimer(_PQP_FocusDeferred, -80)
     PQP_RequestFocusInput()
+    if !skipTel
+        try SurfaceManager_ObserveShow("prompt_quick_pad", Map("entry", "PQP_Show", "ready", g_PQP_Ready ? 1 : 0, "requestId", reqId))
 }
 
 _PQP_DeferredMoveFocus100(*) {
@@ -453,7 +465,13 @@ _PQP_WMDeactivateHideTick(*) {
 }
 
 PQP_Hide() {
+    if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("prompt_quick_pad")
+        return
     global g_PQP_Gui, g_PQP_Visible, g_PQP_SearchTimer
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    reqId := 0
+    if !skipTel
+        reqId := SurfaceManager_Request("prompt_quick_pad", "close", "PQP_Hide", Map("visibleBefore", g_PQP_Visible ? 1 : 0))
     try FloatingToolbar_PageDockLeave("prompts")
 
     SetTimer(_PQP_WMDeactivateHideTick, 0)
@@ -473,6 +491,28 @@ PQP_Hide() {
     if g_PQP_Gui {
         try g_PQP_Gui.Hide()
     }
+    if !skipTel
+        try SurfaceManager_ObserveHide("prompt_quick_pad", Map("entry", "PQP_Hide", "requestId", reqId))
+}
+
+PQP_Dispose(reason := "") {
+    global g_PQP_Gui, g_PQP_Ctrl, g_PQP_WV2, g_PQP_Ready, g_PQP_Visible, g_PQP_FocusPending, g_PQP_SearchTimer
+    try PQP_Hide()
+    catch {
+    }
+    SurfaceManager_CloseWebViewControl(g_PQP_Ctrl)
+    g_PQP_Ctrl := 0
+    g_PQP_WV2 := 0
+    g_PQP_Ready := false
+    g_PQP_Visible := false
+    g_PQP_FocusPending := false
+    if g_PQP_SearchTimer {
+        try SetTimer(g_PQP_SearchTimer, 0)
+        g_PQP_SearchTimer := 0
+    }
+    SurfaceManager_DestroyGui(g_PQP_Gui)
+    g_PQP_Gui := 0
+    try SurfaceManager_ObserveClose("prompt_quick_pad", Map("entry", "PQP_Dispose", "reason", String(reason)))
 }
 
 PQP_RequestFocusInput() {

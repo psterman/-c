@@ -89,7 +89,7 @@ HandleDynamicHotkey(PressedKey, ActionType) {
                 if GetKeyState("Shift", "P") {
                     CapsLockPaste()
                 } else if (FuncExists("SearchCenter_ShouldUseWebView") && SearchCenter_ShouldUseWebView()) {
-                    SCWV_OpenUnified("clipboard", "", "clipboard_hotkey")
+                    SurfaceIntent_OpenClipboardUnified("", "clipboard_hotkey")
                 } else if (FuncExists("ShowSearchCenter")) {
                     ShowSearchCenter()
                 } else {
@@ -97,7 +97,7 @@ HandleDynamicHotkey(PressedKey, ActionType) {
                 }
             case "X":
                 CapsLock2 := false
-                CP_Show()
+                SurfaceIntent_Open("clipboard_panel")
             case "Q":
                 CapsLock2 := false
                 ShowConfigGUI()

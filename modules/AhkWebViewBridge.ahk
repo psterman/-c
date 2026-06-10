@@ -110,7 +110,11 @@ class AhkInterface {
     /** 动作 Tab：同步写诊断事件（绕过 postMessage） */
     CommandPaletteAgentDebugLog(layer := "palette", event := "", detail := "", level := "info") {
         try {
-            _AhkBridge_AgentDebugTrace(String(layer), String(event), SubStr(String(detail), 1, 800), String(level))
+            if !FuncExists("CommandPalette_AgentDebugTrace")
+                return "err:not_loaded"
+            safeDetail := ""
+            try safeDetail := SubStr(String(detail), 1, 800)
+            _AhkBridge_AgentDebugTrace(String(layer), String(event), safeDetail, String(level))
             return "ok"
         } catch as e {
             return "err:" . e.Message

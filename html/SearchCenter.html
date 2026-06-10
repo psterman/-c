@@ -5242,7 +5242,10 @@ function initSearchWrapperFocus() {
   if (!wrap || !input) return;
   const sync = () => {
     wrap.classList.toggle("has-content", !!String(input.value || "").trim());
-    wrap.classList.toggle("focused", document.activeElement === input);
+    const focused = document.activeElement === input;
+    wrap.classList.toggle("focused", focused);
+    syncSearchInputFocusToHost(focused);
+    if (focused) endCapsHoldHint();
   };
   input.addEventListener("focus", sync);
   input.addEventListener("blur", sync);
@@ -5879,9 +5882,11 @@ function flashCapsPressedKey(key) {
 }
 
 function beginCapsHoldHint() {
+  if (isScTypingFocus()) return;
   if (capsHoldTimer) clearTimeout(capsHoldTimer);
   lastCapsDownAt = Date.now();
   capsHoldTimer = setTimeout(() => {
+    if (isScTypingFocus()) return;
     setCapsHintActive(true);
   }, 220);
 }
@@ -6176,10 +6181,22 @@ function applyHostShow(payload) {
   refreshClipFloatFromServer();
 }
 
+function isScTypingFocus(el) {
+  const node = el || document.activeElement;
+  if (!node) return false;
+  const tag = String(node.tagName || "").toUpperCase();
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (node.isContentEditable) return true;
+  return false;
+}
+
+function syncSearchInputFocusToHost(active) {
+  postToAhk({ type: "searchInputFocus", active: !!active });
+}
+
 function shouldHandleCapsChordNow() {
-  if (state.capsHintActive) return true;
-  if (!lastCapsDownAt) return false;
-  return (Date.now() - lastCapsDownAt) <= 700;
+  if (isScTypingFocus()) return false;
+  return !!state.capsHintActive;
 }
 
 function captureHotkeyActivationState() {
@@ -9041,14 +9058,21 @@ syncComposeHintsUi();
 document.addEventListener("keydown", (event) => {
   if (handleHotkeyBindKeydown(event)) return;
   if (shouldYieldKeysToCliTerminal(event)) return;
-  if (event.key === "CapsLock") {
-    beginCapsHoldHint();
-  } else if (state.capsHintActive) {
-    const pressed = normalizeHintKey(event.key);
-    if (pressed) setCapsPressedKey(pressed);
+
+  const activeTag = document.activeElement ? document.activeElement.tagName : "";
+  const isTyping = activeTag === "INPUT" || activeTag === "TEXTAREA" || activeTag === "SELECT"
+    || !!(document.activeElement && document.activeElement.isContentEditable);
+
+  if (!isTyping) {
+    if (event.key === "CapsLock") {
+      beginCapsHoldHint();
+    } else if (state.capsHintActive) {
+      const pressed = normalizeHintKey(event.key);
+      if (pressed) setCapsPressedKey(pressed);
+    }
   }
 
-  if (!event.repeat && shouldHandleCapsChordNow()) {
+  if (!event.repeat && !isTyping && shouldHandleCapsChordNow()) {
     const pressed = normalizeHintKey(event.key);
     if (pressed && queueCapsHotkeyTrigger(pressed, String(state.engineMode || "go"), "caps")) {
       event.preventDefault();
@@ -9056,9 +9080,6 @@ document.addEventListener("keydown", (event) => {
       return;
     }
   }
-
-  const activeTag = document.activeElement ? document.activeElement.tagName : "";
-  const isTyping = activeTag === "INPUT" || activeTag === "TEXTAREA" || activeTag === "SELECT";
 
   if (event.key === "Escape") {
     if (getUIMode() === "cli" && shouldYieldKeysToCliTerminal(event)) return;
@@ -9162,9 +9183,11 @@ if (window.chrome && window.chrome.webview) {
       return;
     }
     if (payload.type === "capsHintPress") {
-      flashCapsPressedKey(payload.key || "");
-      queueCapsHotkeyTrigger(payload.key || "", String(state.engineMode || "go"), "host_caps");
-      scheduleHostCapsHotkeyFallback(payload.key || "");
+      if (!isScTypingFocus()) {
+        flashCapsPressedKey(payload.key || "");
+        queueCapsHotkeyTrigger(payload.key || "", String(state.engineMode || "go"), "host_caps");
+        scheduleHostCapsHotkeyFallback(payload.key || "");
+      }
       return;
     }
     if (payload.type === "setCategory") {
