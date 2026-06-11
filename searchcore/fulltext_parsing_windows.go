@@ -50,7 +50,10 @@ func (b *blugeIndexer) readFileForIndex(path string, fileSize int64) (string, st
 }
 
 func (b *blugeIndexer) readPlainTextFileForIndex(path string, fileSize int64) (string, string, error) {
-	maxRead := b.cfg.HardReadLimit
+	maxRead := b.readBudgetForPath(path)
+	if maxRead <= 0 {
+		maxRead = b.cfg.HardReadLimit
+	}
 	if maxRead <= 0 {
 		maxRead = defaultHardReadLimit
 	}

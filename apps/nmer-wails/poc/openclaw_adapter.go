@@ -17,20 +17,35 @@ const (
 
 // OpenClawActionRequest is the ADP-1 ingress before OpenClaw WS orchestration.
 type OpenClawActionRequest struct {
-	CardID      string `json:"cardId"`
-	RequestID   string `json:"requestId"`
-	Query       string `json:"query"`
-	SessionRef  string `json:"sessionRef"`
-	TransportNS string `json:"transportNamespace,omitempty"`
+	CardID       string `json:"cardId"`
+	RequestID    string `json:"requestId"`
+	Query        string `json:"query"`
+	SessionRef   string `json:"sessionRef"`
+	SystemPrompt string `json:"systemPrompt,omitempty"`
+	TransportNS  string `json:"transportNamespace,omitempty"`
 }
 
 type openClawActionResponse struct {
-	OK       bool            `json:"ok"`
-	Code     string          `json:"code"`
-	Message  string          `json:"message,omitempty"`
-	Accepted int             `json:"accepted,omitempty"`
-	SurfaceID string         `json:"surfaceId,omitempty"`
-	Detail   json.RawMessage `json:"detail,omitempty"`
+	OK        bool            `json:"ok"`
+	Code      string          `json:"code"`
+	Message   string          `json:"message,omitempty"`
+	Accepted  int             `json:"accepted,omitempty"`
+	SurfaceID string          `json:"surfaceId,omitempty"`
+	RequestID string          `json:"requestId,omitempty"`
+	Answer    string          `json:"answer,omitempty"`
+	Detail    json.RawMessage `json:"detail,omitempty"`
+}
+
+func composeOpenClawChatMessage(systemPrompt, query string) string {
+	systemPrompt = strings.TrimSpace(systemPrompt)
+	query = strings.TrimSpace(query)
+	if systemPrompt == "" {
+		return query
+	}
+	if query == "" {
+		return systemPrompt
+	}
+	return systemPrompt + "\n\n" + query
 }
 
 func (h *Hub) handleOpenClawAdapterAction(w http.ResponseWriter, r *http.Request) {
@@ -89,11 +104,36 @@ func (h *Hub) handleOpenClawAdapterAction(w http.ResponseWriter, r *http.Request
 	defer cancel()
 
 	client := NewOpenClawGatewayClient(cfg)
-	answer, err := client.SendChat(ctx, sessionRef, req.Query)
+	chatMessage := composeOpenClawChatMessage(req.SystemPrompt, req.Query)
+	answer, err := client.SendChatStreaming(ctx, sessionRef, chatMessage, func(delta string) {
+		if strings.TrimSpace(delta) == "" {
+			return
+		}
+		h.BroadcastEvent(AgentEvent{
+			Kind:   EventReplyDelta,
+			CardID: req.CardID,
+			Payload: map[string]interface{}{
+				"reqId":   req.RequestID,
+				"delta":   delta,
+				"cardId":  req.CardID,
+				"source":  "openclaw_adapter",
+			},
+		})
+	})
 	if err != nil {
 		writeOpenClawActionError(w, http.StatusBadGateway, "OPENCLAW_CHAT_FAILED", err.Error())
 		return
 	}
+	h.BroadcastEvent(AgentEvent{
+		Kind:   EventReplyFinal,
+		CardID: req.CardID,
+		Payload: map[string]interface{}{
+			"reqId":  req.RequestID,
+			"answer": answer,
+			"cardId": req.CardID,
+			"source": "openclaw_adapter",
+		},
+	})
 
 	surfaceID := openClawAdapterSurfaceID(req.CardID)
 	envelopes, err := BuildOpenClawTextSurfaceEnvelopes(
@@ -121,6 +161,8 @@ func (h *Hub) handleOpenClawAdapterAction(w http.ResponseWriter, r *http.Request
 		Message:   "openclaw answer ingested",
 		Accepted:  accepted,
 		SurfaceID: surfaceID,
+		RequestID: req.RequestID,
+		Answer:    answer,
 	})
 }
 

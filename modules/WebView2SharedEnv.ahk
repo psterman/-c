@@ -12,6 +12,8 @@ global g_WV2EnvCreateFailed := false
 global g_WV2EnvCreateError := ""
 global CoreAsyncStrictMode := 1
 global LegacySyncFallback := 1
+global g_WV2_CreateQueue := []
+global g_WV2_CreateBusy := false
 
 WebView2_GetSharedUserDataPath() {
     return A_AppData "\CursorHelper\Wv2Data"
@@ -115,14 +117,123 @@ WebView2_OnSharedEnvReady(onReady?) {
     WebView2_GetOrCreateSharedEnvPromise().then(_WV2_OnSharedEnvPromiseResolved, _WV2_OnSharedEnvPromiseRejected)
 }
 
+WebView2_IsHighPriorityCreateReason(reason := "") {
+    r := StrLower(Trim(String(reason)))
+    if (r = "")
+        return false
+    return (InStr(r, "searchcenter")
+        || InStr(r, "search_center")
+        || InStr(r, "command_palette")
+        || InStr(r, "commandpalette"))
+}
+
+WebView2_CopyWebMessageJson(args, maxLen := 4194304) {
+    s := ""
+    try {
+        if IsObject(args) {
+            try {
+                t := args.TryGetWebMessageAsString()
+                if (t != "")
+                    s := "" . t
+            } catch {
+            }
+            if (s = "") {
+                try {
+                    if args.HasProp("WebMessageAsJson")
+                        s := "" . String(args.WebMessageAsJson)
+                } catch {
+                }
+            }
+        }
+    } catch {
+    }
+    if (s = "")
+        return ""
+    if (maxLen > 0 && StrLen(s) > maxLen)
+        s := SubStr(s, 1, maxLen)
+    return s
+}
+
+WebView2_GetCreateQueueDepth() {
+    global g_WV2_CreateQueue, g_WV2_CreateBusy
+    depth := (g_WV2_CreateQueue is Array) ? g_WV2_CreateQueue.Length : 0
+    if g_WV2_CreateBusy
+        depth += 1
+    return depth
+}
+
+; 强制宿主 HWND 走一遍 DWM 合成（截图/截屏会隐式触发同类刷新，首屏未合成时可主动调用）
+WebView2_ForceHostRedraw(hwnd) {
+    if !hwnd
+        return
+    try DllCall("InvalidateRect", "Ptr", hwnd, "Ptr", 0, "Int", 1)
+    catch {
+    }
+    try DllCall("UpdateWindow", "Ptr", hwnd)
+    catch {
+    }
+    try DllCall("RedrawWindow", "Ptr", hwnd, "Ptr", 0, "Ptr", 0, "UInt", 0x105)
+    catch {
+    }
+    try DllCall("SetWindowPos", "Ptr", hwnd, "Ptr", 0, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0037)
+    catch {
+    }
+}
+
 WebView2_CreateWithSharedEnvAsync(hwnd, callback, reason := "") {
-    WebView2_OnSharedEnvReady((env, err := 0) => _WV2_CreateWithSharedEnvReady(hwnd, callback, reason, env, err))
+    global g_WV2_CreateQueue
+    if !(g_WV2_CreateQueue is Array)
+        g_WV2_CreateQueue := []
+    item := Map("hwnd", hwnd, "cb", callback, "reason", String(reason))
+    if WebView2_IsHighPriorityCreateReason(reason)
+        g_WV2_CreateQueue.InsertAt(1, item)
+    else
+        g_WV2_CreateQueue.Push(item)
+    try NMER_AsyncLog(Nmer_DebugPath("wv2_shared_env.log"), "[" . A_Now . "][create_enqueue] reason=" . String(reason) . " qlen=" . g_WV2_CreateQueue.Length . " pri=" . (WebView2_IsHighPriorityCreateReason(reason) ? "1" : "0") . "`r`n")
+    catch {
+    }
+    WebView2_DrainCreateQueue()
+}
+
+WebView2_DrainCreateQueue(*) {
+    global g_WV2_CreateQueue, g_WV2_CreateBusy
+    if g_WV2_CreateBusy
+        return
+    if !(g_WV2_CreateQueue is Array) || g_WV2_CreateQueue.Length = 0
+        return
+    g_WV2_CreateBusy := true
+    item := g_WV2_CreateQueue.RemoveAt(1)
+    hwnd := item["hwnd"]
+    cb := item["cb"]
+    reason := item.Has("reason") ? item["reason"] : ""
+    wrappedCb := (ctrl) => _WV2_OnCreateQueueItemDone(ctrl, cb, reason)
+    WebView2_OnSharedEnvReady((env, err := 0) => _WV2_CreateWithSharedEnvReady(hwnd, wrappedCb, reason, env, err))
+}
+
+_WV2_OnCreateQueueItemDone(ctrl, cb, reason) {
+    global g_WV2_CreateBusy
+    try {
+        if cb
+            cb.Call(ctrl)
+    } catch {
+    } finally {
+        g_WV2_CreateBusy := false
+        try NMER_AsyncLog(Nmer_DebugPath("wv2_shared_env.log"), "[" . A_Now . "][create_done] reason=" . String(reason) . "`r`n")
+        catch {
+        }
+        SetTimer(WebView2_DrainCreateQueue, -1)
+    }
 }
 
 ; 脚本 Reload / 硬重启前调用，避免旧 Environment 与新建 WebView 竞态触发 0x8007139F
 WebView2_PrepareForScriptReload() {
     global g_WV2SharedEnv, g_WV2EnvCreatePromise, g_WV2EnvReadyCallbacks
     global g_WV2EnvCreateFailed, g_WV2EnvCreateError
+    try {
+        if FuncExists("Nmer_WailsBridgePrepareForScriptReload")
+            Nmer_WailsBridgePrepareForScriptReload()
+    } catch {
+    }
     try {
         if FuncExists("NiumaMobileBrowser_PrepareForScriptReload")
             NiumaMobileBrowser_PrepareForScriptReload()
@@ -133,6 +244,9 @@ WebView2_PrepareForScriptReload() {
     g_WV2EnvReadyCallbacks := []
     g_WV2EnvCreateFailed := false
     g_WV2EnvCreateError := ""
+    global g_WV2_CreateQueue, g_WV2_CreateBusy
+    g_WV2_CreateQueue := []
+    g_WV2_CreateBusy := false
     try OutputDebug("[WV2] PrepareForScriptReload: shared env reset")
     catch {
     }
@@ -188,6 +302,10 @@ WebView2_NotifyShown(wv2) {
     try wv2.MemoryUsageTargetLevel := 0
     catch as e {
         try OutputDebug("[WV2] NotifyShown MemoryUsageTargetLevel: " . e.Message)
+    }
+    try wv2.PostWebMessageAsJson('{"type":"hostPaintNudge","reason":"notify_shown"}')
+    catch as e {
+        try OutputDebug("[WV2] NotifyShown hostPaintNudge: " . e.Message)
     }
 }
 

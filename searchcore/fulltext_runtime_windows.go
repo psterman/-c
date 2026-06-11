@@ -101,14 +101,14 @@ func ensureFullTextRuntime(baseDir string) {
 
 func defaultFullTextRuntimeConfig(baseDir string) FullTextRuntimeConfig {
 	idxDir := defaultIndexDirByBase(baseDir)
-	useMFT := parseBoolEnv("SEARCHCENTER_FT_USE_MFT", true)
-	useEverything := parseBoolEnv("SEARCHCENTER_FT_USE_EVERYTHING", false)
+	useMFT := parseBoolEnv("SEARCHCENTER_FT_USE_MFT", false)
+	useEverything := parseBoolEnv("SEARCHCENTER_FT_USE_EVERYTHING", true)
 	return FullTextRuntimeConfig{
 		AutoStart:        parseBoolEnv("SEARCHCENTER_FT_AUTOSTART", true),
 		Workers:          resolveWorkerCount(),
 		IndexDir:         idxDir,
 		IncludeLargeText: parseBoolEnv("SEARCHCENTER_FT_INCLUDE_LARGE", false),
-		MaxFileSizeMB:    parseInt64Env("SEARCHCENTER_FT_MAX_FILE_MB", 8),
+		MaxFileSizeMB:    parseInt64Env("SEARCHCENTER_FT_MAX_FILE_MB", 16),
 		InitialDelaySec:  parseInt64Env("SEARCHCENTER_FT_INITIAL_DELAY_SEC", 1),
 		PauseMS:          parseInt64Env("SEARCHCENTER_FT_PAUSE_MS", -1),
 		ScanSpeed:        resolveScanSpeed(),
@@ -414,7 +414,8 @@ func probeEverythingIPC(baseDir string) (bool, string) {
 
 func probeFullTextFeasibility(baseDir string) map[string]any {
 	cfg := fullTextRuntimeConfig(baseDir)
-	roots := fullTextRoots(baseDir)
+	res := ResolveRoots(baseDir)
+	roots := res.Roots
 
 	everythingOK, everythingReason := probeEverythingIPC(baseDir)
 	rootChecks := make([]map[string]any, 0, len(roots))
@@ -477,16 +478,22 @@ func probeFullTextFeasibility(baseDir string) map[string]any {
 		recommended = "everything"
 	}
 
+	rootDiscovery := buildRootDiscoveryStatuses(res, everythingOK, everythingReason)
 	return map[string]any{
-		"time":              time.Now().Format(time.RFC3339),
-		"currentConfig":     cfg,
-		"roots":             roots,
-		"rootChecks":        rootChecks,
-		"everythingOk":      everythingOK,
-		"everythingReason":  everythingReason,
-		"mftOkCount":        mftOKCount,
-		"usnOkCount":        usnOKCount,
-		"recommendedScheme": recommended,
+		"time":               time.Now().Format(time.RFC3339),
+		"currentConfig":      cfg,
+		"roots":              roots,
+		"rootResolution":     res,
+		"needsSetupWizard":   NeedsSetupWizard(res),
+		"wizardCandidates":   DefaultWizardCandidates(baseDir),
+		"rootChecks":         rootChecks,
+		"rootDiscovery":      rootDiscovery,
+		"discoverySummary":   summarizeDiscovery(rootDiscovery),
+		"everythingOk":       everythingOK,
+		"everythingReason":   everythingReason,
+		"mftOkCount":         mftOKCount,
+		"usnOkCount":         usnOKCount,
+		"recommendedScheme":  recommended,
 	}
 }
 
@@ -520,14 +527,10 @@ func (b *blugeIndexer) Stop() error {
 		log.Printf("[fulltext] drain pending batches: %v", err)
 	}
 	b.closeCachedReaderOnStop()
+	b.closeLegacyQueryReader()
 	var closeErr error
 	if b.writer != nil {
 		closeErr = b.writer.Close()
-	}
-	if b.meta != nil {
-		if err := b.meta.Close(); closeErr == nil {
-			closeErr = err
-		}
 	}
 	b.mu.Lock()
 	b.status.Running = false
@@ -540,6 +543,11 @@ func (b *blugeIndexer) Stop() error {
 	b.status.LastUpdatedRFC3339 = time.Now().Format(time.RFC3339)
 	b.mu.Unlock()
 	b.persistIndexStateSnapshot()
+	if b.meta != nil {
+		if err := b.meta.Close(); closeErr == nil {
+			closeErr = err
+		}
+	}
 	return closeErr
 }
 
@@ -551,7 +559,15 @@ func StopIndexer() error {
 	if idx == nil {
 		return nil
 	}
-	return idx.Stop()
+	err := idx.Stop()
+	// Let cancelled indexer goroutines unwind before one-shot heap release.
+	time.Sleep(300 * time.Millisecond)
+	setIndexActivity(false)
+	if idleExitEnabled() {
+		markIdleIndexerStopped()
+	}
+	releaseProcessHeapAfterIndexerStop()
+	return err
 }
 
 func applyFullTextRuntimePatch(baseDir string, patch fullTextRuntimeConfigPatch) (FullTextRuntimeConfig, error) {
@@ -739,6 +755,7 @@ func handleFullTextControl(w http.ResponseWriter, r *http.Request) {
 	switch action {
 	case "start":
 		setFullTextStartSuppressed(false)
+		cancelIdleExitCountdown()
 		_ = os.Unsetenv("SEARCHCENTER_FT_FORCE_RECHECK")
 		err = StartIndexer(baseDir)
 	case "stop":

@@ -1,13 +1,15 @@
 {
   "wailsBridge": {
     "enabled": true,
+    "sidecarHost": "hub",
     "commandPaletteHost": "ahk",
     "searchCenterHost": "ahk",
     "configWebviewHost": "ahk",
     "floatingToolbarHost": "ahk",
     "_comment_commandPaletteHost": "S8：ahk=现有 WebView CP；wails=侧车 nmer-wails.exe（须 legacySurfaceLifecycle:false 且已构建 exe）",
     "_comment_domainC": "S9：searchCenterHost/configWebviewHost 同上；默认 ahk 保持 SCWV/Config WebView 行为",
-    "_comment_floatingToolbarHost": "S10：ahk=现有 FTB WebView（rollback）；wails=合壳 POC 底栏（须 legacySurfaceLifecycle:false）；S11 hybrid=AHK 悬浮窗呈现 + Hub inject（可与 legacySurfaceLifecycle:true 并用，nmer-wails bridge-only 隐藏启动）"
+    "_comment_sidecarHost": "v4：hub=默认侧车 nmer-hub.exe；wails=回滚 nmer-wails.exe",
+    "_comment_floatingToolbarHost": "S10：ahk=现有 FTB WebView（rollback）；wails=合壳 POC 底栏（须 legacySurfaceLifecycle:false）；S11 hybrid=AHK 悬浮窗呈现 + Hub inject（可与 legacySurfaceLifecycle:true 并用）"
   },
   "officialA2ui": {
     "enabled": true,
@@ -28,5 +30,13 @@
     "forceNmerOnly": false,
     "legacySurfaceLifecycle": true,
     "forceTraySafeMode": false
+  },
+  "palette": {
+    "fastInput": false,
+    "discreteLayout": false,
+    "streamBatching": false,
+    "stateStore": false,
+    "agentTransport": "auto",
+    "_comment": "CP0-CP2: fastInput/discreteLayout/streamBatching；CP3: stateStore=摘要同步+防抖持久化；CP4: agentTransport=auto|hub|ftb"
   }
 }

@@ -2695,6 +2695,32 @@ body.niuma-confirm-open{overflow:hidden}
   var PALETTE_AGENT_WAIT_POLL_MS = 3000;
   var PALETTE_AGENT_LATE_RECOVER_MAX_MS = 900000;
   var PALETTE_AGENT_LATE_RECOVER_POLL_MS = 4000;
+  var PALETTE_AGENT_HISTORY_DOM_MAX = 120;
+  var PALETTE_AGENT_INFLIGHT_MAX = 4;
+  var _browserAgentLazyLoaded = false;
+
+  function trimPaletteAgentHistoryDom(host) {
+    if (!host) return;
+    var lines = host.querySelectorAll('.sandbox-history-line');
+    var extra = lines.length - PALETTE_AGENT_HISTORY_DOM_MAX;
+    for (var i = 0; i < extra; i++) {
+      if (lines[i]) lines[i].remove();
+    }
+  }
+
+  function ensureBrowserAgentLazyLoaded() {
+    if (_browserAgentLazyLoaded) return true;
+    _browserAgentLazyLoaded = true;
+    return true;
+  }
+
+  function paletteAgentInflightPrune() {
+    var keys = Object.keys(_paletteAgentInflightByReqId || {});
+    if (keys.length <= PALETTE_AGENT_INFLIGHT_MAX) return;
+    keys.sort().slice(0, keys.length - PALETTE_AGENT_INFLIGHT_MAX).forEach(function (k) {
+      try { delete _paletteAgentInflightByReqId[k]; } catch (e) {}
+    });
+  }
   var _paletteAiHudActive = false;
 
   function paletteAiHudSet(mode) {
@@ -3279,6 +3305,70 @@ body.niuma-confirm-open{overflow:hidden}
       cstat('已从任务卡恢复 ' + n + ' 条 OpenClaw 对话。', 'success');
     }
     return n;
+  }
+
+  async function paletteAgentSyncSessionFromHost(opts) {
+    opts = opts || {};
+    var reqId = String(opts.reqId || '').trim();
+    var cardId = String(opts.cardId || '').trim();
+    var query = String(opts.query || '').trim();
+    var sessionRef = String(opts.sessionRef || '').trim();
+    var seed = paletteAgentContentReady(String(opts.answer || ''));
+    if (seed) {
+      try {
+        await paletteSyncCardAnswerToNiumaSession({
+          reqId: reqId,
+          cardId: cardId,
+          query: query,
+          sessionRef: sessionRef,
+          answer: seed
+        });
+      } catch (_) {}
+    }
+    var ans = '';
+    try {
+      ans = paletteAgentContentReady(
+        await paletteRecoverAnswerForCard({
+          reqId: reqId,
+          cardId: cardId,
+          query: query,
+          sessionRef: sessionRef,
+          createSession: false
+        })
+      );
+    } catch (_) {}
+    if (!ans) ans = seed;
+    return ans || '';
+  }
+
+  function paletteShouldPushGatewayAnswerToPalette(seed, gateway, query) {
+    var prev = paletteAgentContentReady(String(seed || ''));
+    var next = paletteAgentContentReady(String(gateway || ''));
+    if (!next) return false;
+    if (!prev) return true;
+    if (next.length > prev.length + 40) return true;
+    if (!paletteAgentAnswerCompleteEnough(prev, query) && next.length >= Math.max(80, prev.length * 0.5)) return true;
+    if (prev.length >= 40 && next.length >= prev.length * 1.15) return true;
+    return false;
+  }
+
+  function paletteHostSyncSessionAndNotify(opts) {
+    return paletteAgentSyncSessionFromHost(opts).then(function (ans) {
+      var a = paletteAgentContentReady(String(ans || ''));
+      if (!a) return a;
+      if (
+        paletteShouldPushGatewayAnswerToPalette(opts && opts.answer, a, opts && opts.query)
+      ) {
+        paletteNotifyPaletteAgentEnd(
+          String((opts && opts.reqId) || ''),
+          String((opts && opts.cardId) || ''),
+          a,
+          String((opts && opts.sessionRef) || ''),
+          String((opts && opts.query) || '')
+        );
+      }
+      return a;
+    });
   }
 
   async function paletteRecoverAnswerForCard(opts) {
@@ -4625,6 +4715,7 @@ body.niuma-confirm-open{overflow:hidden}
   window.palettePickAssistantAnswerForAgent = palettePickAssistantAnswerForAgent;
   window.paletteHydrateAssistantFromGateway = paletteHydrateAssistantFromGateway;
   window.paletteRecoverAnswerForCard = paletteRecoverAnswerForCard;
+  window.paletteAgentSyncSessionFromHost = paletteAgentSyncSessionFromHost;
   window.paletteSyncCardAnswerToNiumaSession = paletteSyncCardAnswerToNiumaSession;
   window.paletteBootstrapSessionsFromAgentCards = paletteBootstrapSessionsFromAgentCards;
   window.paletteSyncOpenClawNow = paletteSyncOpenClawNow;
@@ -8400,6 +8491,7 @@ body.niuma-confirm-open{overflow:hidden}
       }
     }
     body.innerHTML = html || '<div class="sandbox-placeholder">暂无步骤记录</div>';
+    trimPaletteAgentHistoryDom(body);
   }
 
   function renderControlActionBus() {
@@ -24481,7 +24573,7 @@ body.niuma-confirm-open{overflow:hidden}
         return;
       }
       if (d.type === 'host_palette_agent_sync_session') {
-        paletteSyncCardAnswerToNiumaSession({
+        paletteHostSyncSessionAndNotify({
           reqId: String(d.reqId || ''),
           cardId: String(d.cardId || ''),
           query: String(d.query || ''),
@@ -25139,7 +25231,7 @@ body.niuma-confirm-open{overflow:hidden}
         return;
       }
       if (d.type === 'host_palette_agent_sync_session') {
-        paletteSyncCardAnswerToNiumaSession({
+        paletteHostSyncSessionAndNotify({
           reqId: String(d.reqId || ''),
           cardId: String(d.cardId || ''),
           query: String(d.query || ''),

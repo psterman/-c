@@ -105,25 +105,21 @@ func (m *indexMetaStore) Delete(path string) error {
 	return err
 }
 
-func (m *indexMetaStore) LoadAll() (map[string]fileFingerprint, error) {
-	out := map[string]fileFingerprint{}
+func (m *indexMetaStore) Count() (int64, error) {
 	if m == nil || m.db == nil {
-		return out, nil
+		return 0, nil
 	}
-	rows, err := m.db.Query(`SELECT path, size, mtime_ns, COALESCE(content_hash,0), COALESCE(fast_hash,0) FROM file_meta`)
-	if err != nil {
-		return nil, err
+	var n int64
+	err := m.db.QueryRow(`SELECT COUNT(*) FROM file_meta`).Scan(&n)
+	return n, err
+}
+
+func (m *indexMetaStore) ClearFileMeta() error {
+	if m == nil || m.db == nil {
+		return nil
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var path string
-		var fp fileFingerprint
-		if err := rows.Scan(&path, &fp.Size, &fp.ModNano, &fp.ContentHash, &fp.FastHash); err != nil {
-			continue
-		}
-		out[path] = fp
-	}
-	return out, rows.Err()
+	_, err := m.db.Exec(`DELETE FROM file_meta`)
+	return err
 }
 
 func (m *indexMetaStore) LoadUSNCursor(driveKey string) (nextUSN int64, journalID int64, ok bool, err error) {

@@ -745,6 +745,9 @@ VK_ExecCursorHelperCmd(cmdId) {
             case "tray_reload_script":
                 ReloadScriptFromPopupMenu()
                 executed := true
+            case "tray_restart_clean":
+                try RestartAppCleanFromTrayMenu()
+                executed := true
             case "tray_exit_app":
                 ExitFromMenu()
                 executed := true

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>v4 运行态签收看板</title>
+  <style>
+    :root {
+      --bg1: #0f1419; --bg2: #1a2332; --ink: #e8eef7; --muted: #8b9cb3;
+      --ok: #3dd68c; --fail: #ff6b6b; --warn: #ffb347;
+      --card: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--ink);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(145deg, var(--bg1), var(--bg2));
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    h1 { margin: 0 0 4px; font-size: 22px; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+    .hero {
+      border-radius: 14px; padding: 16px 18px; margin-bottom: 14px;
+      border: 1px solid var(--border); background: var(--card);
+    }
+    .hero.ready { border-color: rgba(61,214,140,0.5); }
+    .hero.notready { border-color: rgba(255,107,107,0.5); }
+    .hero h2 { margin: 0 0 6px; font-size: 18px; }
+    .gates { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .gate { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .gate.pass { border-color: rgba(61,214,140,0.45); }
+    .gate.fail { border-color: rgba(255,107,107,0.45); }
+    .gate h3 { margin: 0 0 8px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+    .pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+    .pill.pass { background: rgba(61,214,140,0.2); color: var(--ok); }
+    .pill.fail { background: rgba(255,107,107,0.2); color: var(--fail); }
+    .metrics { font-size: 12px; color: var(--muted); line-height: 1.7; }
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+    .panel h3 { margin: 0 0 8px; font-size: 14px; }
+    .step { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .step:last-child { border-bottom: none; }
+    .step .n { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+    .step.pass .n { background: rgba(61,214,140,0.25); color: var(--ok); }
+    .step.fail .n { background: rgba(255,107,107,0.25); color: var(--fail); }
+    .step.manual .n { background: rgba(255,179,71,0.25); color: var(--warn); }
+    code { font-family: Consolas, monospace; font-size: 11px; color: #93c5fd; background: rgba(0,0,0,0.25); padding: 2px 6px; border-radius: 4px; }
+    .cmd { display: block; margin: 6px 0; padding: 8px 10px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 12px; word-break: break-all; }
+    ul.subgates { margin: 6px 0 0; padding-left: 18px; font-size: 12px; color: var(--muted); }
+    .hint { color: var(--warn); font-size: 12px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>v4 运行态签收看板</h1>
+    <div class="sub" id="meta">加载中…</div>
+    <div class="hero" id="hero"></div>
+    <div class="gates" id="gates"></div>
+    <div class="panel">
+      <h3>前置步骤（看板自动检测 + 少量手动）</h3>
+      <div id="steps"></div>
+    </div>
+    <div class="panel">
+      <h3>一键命令（在项目根 PowerShell 执行）</h3>
+      <div id="commands"></div>
+    </div>
+    <div class="panel">
+      <h3>说明</h3>
+      <div id="notes" class="hint"></div>
+    </div>
+  </div>
+  <script>
+    const JSON_URL = "../../Cache/debug/v4_signoff_dashboard.json";
+
+    function pill(pass) {
+      return `<span class="pill ${pass ? "pass" : "fail"}">${pass ? "通过" : "未通过"}</span>`;
+    }
+
+    function render(data) {
+      const ready = !!data.readyForFormalSignoff;
+      document.getElementById("meta").textContent =
+        `采集 ${data.capturedAt || "-"} | 仓库 ${data.repoRoot || "-"}`;
+
+      document.getElementById("hero").className = "hero " + (ready ? "ready" : "notready");
+      document.getElementById("hero").innerHTML = ready
+        ? `<h2>可以启动正式签核</h2><div class="metrics">侧车、切换态、P0A、P0B cap 均已满足。运行下方 <code>-FormalSignoff</code>（约 30 分钟）。</div>`
+        : `<h2>正式签核前置未齐</h2><div class="metrics">请按下方步骤补齐红色项，然后重新运行 <code>Open-V4SignoffDashboard.ps1</code> 刷新看板（浏览器 F5 无效）。</div>`;
+
+      const gateHints = {
+        sidecar: "确认 nmer-hub 在跑、nmer-wails 不在；health.ok=true",
+        switch: "窄根 configured + scanScheme=everything + maxFileSizeMB=16",
+        p0a: "根策略四门禁；可运行 Open-V4SignoffDashboard.ps1 -RunP0AQuick",
+        p0b: "P0B 按 webview2_host_root_count≤4（宿主根进程，非 Chromium 子进程）；多开面板时 host_roots≥3 视为 loaded"
+      };
+
+      document.getElementById("gates").innerHTML = (data.gates || []).map(g => {
+        const m = g.metrics || {};
+        let lines = Object.entries(m).map(([k, v]) => {
+          if (Array.isArray(v)) return `${k}=${v.join(",")}`;
+          return `${k}=${v}`;
+        }).join(" · ");
+        let extra = "";
+        if (g.id === "p0a" && g.gates && g.gates.length) {
+          extra = "<ul class='subgates'>" + g.gates.map(x =>
+            `<li>${x.pass ? "✓" : "✗"} ${x.id}: ${x.detail || ""}</li>`
+          ).join("") + "</ul>";
+        }
+        if (g.errors && g.errors.length) {
+          extra += `<div class="hint" style="margin-top:6px">${g.errors.join("<br>")}</div>`;
+        }
+        if (!g.pass && gateHints[g.id]) {
+          extra += `<div class="hint" style="margin-top:6px">${gateHints[g.id]}</div>`;
+        }
+        return `<div class="gate ${g.pass ? "pass" : "fail"}">
+          <h3>${g.title} ${pill(!!g.pass)}</h3>
+          <div class="metrics">${lines || "无数据"}</div>${extra}
+        </div>`;
+      }).join("");
+
+      const steps = data.manualSteps || [];
+      document.getElementById("steps").innerHTML = steps.map((s, i) => {
+        const cls = s.pass ? "pass" : (s.autoCheck ? "fail" : "manual");
+        const mark = s.pass ? "✓" : (s.autoCheck ? "!" : "…");
+        return `<div class="step ${cls}">
+          <div class="n">${mark}</div>
+          <div><strong>${s.title}</strong><br><span class="metrics">${s.hint || ""}</span></div>
+        </div>`;
+      }).join("");
+
+      const cmds = data.commands || {};
+      document.getElementById("commands").innerHTML = Object.entries(cmds).map(([k, v]) =>
+        `<div><span class="metrics">${k}</span><code class="cmd">${v}</code></div>`
+      ).join("");
+
+      document.getElementById("notes").innerHTML = (data.notes || []).map(n => `• ${n}`).join("<br>");
+      if (data.lastSignoff) {
+        document.getElementById("notes").innerHTML +=
+          `<br>• 上次签核 ${data.lastSignoff.capturedAt} mode=${data.lastSignoff.mode} overallPass=${data.lastSignoff.overallPass}`;
+      }
+    }
+
+    async function load() {
+      let data = null;
+      if (window.__V4_SIGNOFF_DATA__) {
+        data = window.__V4_SIGNOFF_DATA__;
+      } else {
+        try {
+          const r = await fetch(JSON_URL + "?t=" + Date.now());
+          data = await r.json();
+        } catch (e) {
+          document.getElementById("meta").textContent = "无法加载 JSON: " + e.message;
+          return;
+        }
+      }
+      render(data);
+    }
+    load();
+  </script>
+</body>
+</html>

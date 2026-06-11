@@ -37,6 +37,7 @@ func handleSearchWithDB(w http.ResponseWriter, r *http.Request, db *sql.DB, base
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	bumpQueryActivity()
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	typeStr := normalizeSearchType(strings.TrimSpace(r.URL.Query().Get("type")))
 	limit := 30

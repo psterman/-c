@@ -20,6 +20,9 @@ const defaultAddr = "127.0.0.1:8080"
 
 func recoverHTTP(name string, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if name != "health" {
+			bumpClientActivity()
+		}
 		defer func() {
 			if rec := recover(); rec != nil {
 				log.Printf("[panic] route=%s method=%s path=%s err=%v\n%s", name, r.Method, r.URL.Path, rec, string(debug.Stack()))
@@ -46,6 +49,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	initActivityTracker()
+
 	db, err := openDatabases(absBase)
 	if err != nil {
 		log.Fatal(err)
@@ -58,6 +63,9 @@ func main() {
 			log.Printf("[fulltext] StartIndexer failed: %v", err)
 		}
 	}
+
+	startIdleLifecycleLoop(absBase)
+	startMemoryGovernorLoop(absBase)
 
 	clipHTTPBase = clipHTTPBaseFromAddr(*addr)
 
@@ -89,6 +97,16 @@ func main() {
 	http.HandleFunc("/v1/fulltext/config", recoverHTTP("v1/fulltext/config", handleFullTextConfig))
 	http.HandleFunc("/v1/fulltext/probe", recoverHTTP("v1/fulltext/probe", handleFullTextProbe))
 	http.HandleFunc("/v1/fulltext/control", recoverHTTP("v1/fulltext/control", handleFullTextControl))
+	http.HandleFunc("/v1/fulltext/roots", recoverHTTP("v1/fulltext/roots", handleFullTextRoots))
+	http.HandleFunc("/v1/fulltext/memory", recoverHTTP("v1/fulltext/memory", handleFullTextMemory))
+	http.HandleFunc("/v1/fulltext/roots/confirm", recoverHTTP("v1/fulltext/roots/confirm", func(w http.ResponseWriter, r *http.Request) {
+		baseDir := fullTextBaseDir()
+		if baseDir == "" {
+			http.Error(w, "base dir not initialized", http.StatusInternalServerError)
+			return
+		}
+		handleFullTextRootsConfirm(w, r, baseDir)
+	}))
 	http.HandleFunc("/clip/search", recoverHTTP("clip/search", func(w http.ResponseWriter, r *http.Request) {
 		handleClipSearch(w, r, db)
 	}))

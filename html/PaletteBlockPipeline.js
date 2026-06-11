@@ -230,7 +230,50 @@
     if (/Gateway session/i.test(p)) return true;
     if (/绑定 OpenClaw/i.test(p)) return true;
     if (/^\[执行中\]/.test(p)) return true;
+    if (/hub 通道/i.test(p)) return true;
+    if (/等待 FTB/i.test(p)) return true;
     return /^(正在|等待|任务已|仍连接|OpenClaw 流式|OpenClaw 处理|OpenClaw 已发送|已提交至 Gateway|同步 Niuma|流式输出中)/.test(p);
+  }
+
+  function periodicStatusKey(text) {
+    var p = String(text || "").replace(/\s+/g, " ").trim();
+    if (!p) return "";
+    if (/OpenClaw 处理中/i.test(p)) return "oc_processing";
+    if (/同步 Niuma/i.test(p)) return "niuma_sync";
+    if (/等待 OpenClaw/i.test(p)) return "oc_wait";
+    if (/Gateway 处理中/i.test(p)) return "gw_processing";
+    if (/hub 通道处理中/i.test(p)) return "hub_processing";
+    if (/流式输出中/i.test(p)) return "streaming";
+    if (/正在连接/i.test(p)) return "connecting";
+    if (/已派发至/i.test(p)) return "dispatched";
+    if (/chat\.send/i.test(p)) return "chat_send";
+    return "";
+  }
+
+  function pruneTransientStatusBlocks(blocks, opts) {
+    opts = opts || {};
+    var list = blocks || [];
+    if (!opts.keepTransport && !hasFinalReply(list)) return list;
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i];
+      if (!b) continue;
+      if (b.type !== "status") {
+        out.push(b);
+        continue;
+      }
+      if (String(b.source || "system") === "tool_event") {
+        out.push(b);
+        continue;
+      }
+      var items = (b.items || []).filter(function (it) {
+        return it && !isStatusOnlyAgentText(it.text);
+      });
+      if (!items.length) continue;
+      var copy = Object.assign({}, b, { items: items });
+      out.push(copy);
+    }
+    return out;
   }
 
   function validateBlocksList(blocks) {
@@ -308,6 +351,19 @@
     );
   }
 
+  function replacePeriodicStatusItem(statusBlock, item, periodicKey) {
+    if (!statusBlock || !periodicKey) return false;
+    for (var si = statusBlock.items.length - 1; si >= 0; si--) {
+      var prev = statusBlock.items[si];
+      if (prev && periodicStatusKey(prev.text) === periodicKey) {
+        statusBlock.items[si] = item;
+        statusBlock.updatedAt = Date.now();
+        return true;
+      }
+    }
+    return false;
+  }
+
   function appendStatusEvent(state, event) {
     event = event || {};
     var t = String(event.text != null ? event.text : "").replace(/\s+/g, " ").trim();
@@ -321,7 +377,18 @@
     if (event.tool != null) item.tool = String(event.tool);
     if (event.phase != null) item.phase = String(event.phase);
     var dedupeKey = statusItemDedupeKey(item);
+    var periodicKey = source === "system" ? periodicStatusKey(t) : "";
     if (source === "system") {
+      if (periodicKey) {
+        for (var pi = state.statusItems.length - 1; pi >= 0; pi--) {
+          if (periodicStatusKey(state.statusItems[pi]) === periodicKey) {
+            state.statusItems[pi] = t;
+            var statusBlock0 = findOrCreateStatusBlock(state, source);
+            replacePeriodicStatusItem(statusBlock0, item, periodicKey);
+            return;
+          }
+        }
+      }
       for (var i = 0; i < state.statusItems.length; i++) {
         if (state.statusItems[i] === t) return;
       }
@@ -506,6 +573,10 @@
 
     for (var fi = 0; fi < blocks.length; fi++) {
       if (blocks[fi]) blocks[fi].state = "final";
+    }
+
+    if (hasFinalReply(blocks)) {
+      blocks = pruneTransientStatusBlocks(blocks, { keepTransport: true });
     }
 
     var validated = validateBlocksList(blocks);
@@ -786,6 +857,9 @@
     hasProtocolTags: hasProtocolTags,
     hasFinalReply: hasFinalReply,
     isStatusOnlyAgentText: isStatusOnlyAgentText,
+    periodicStatusKey: periodicStatusKey,
+    pruneTransientStatusBlocks: pruneTransientStatusBlocks,
+    stripProtocolTags: stripProtocolTags,
     analyzeProtocolClosure: analyzeProtocolClosure,
     detectMissingEndsInSource: detectMissingEndsInSource,
     synthesizeTruncatedReply: synthesizeTruncatedReply

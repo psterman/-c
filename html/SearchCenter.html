@@ -587,6 +587,41 @@ html[data-theme="light"] #startup-splash {
   flex: 1 1 420px;
   min-width: 260px;
 }
+.ft-discovery-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.ft-discovery-badge.walk { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+.ft-discovery-badge.degraded { background: rgba(248, 113, 113, 0.2); color: #f87171; }
+.ft-discovery-badge.setup { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+.ft-roots-wizard {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+.ft-roots-wizard.open { display: flex; }
+.ft-roots-wizard-card {
+  width: min(520px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+.ft-roots-wizard-card h3 { margin: 0 0 8px; font-size: 15px; }
+.ft-roots-wizard-card .hint { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.ft-roots-candidate { display: block; margin: 6px 0; font-size: 13px; }
 .hit-context-wrap {
   margin-top: 5px;
   width: 100%;
@@ -3182,6 +3217,18 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
     </div>
   </footer>
 
+  <div id="ft-roots-wizard" class="ft-roots-wizard" aria-hidden="true">
+    <div class="ft-roots-wizard-card" role="dialog" aria-modal="true" aria-labelledby="ft-roots-wizard-title">
+      <h3 id="ft-roots-wizard-title">选择要索引的文件夹</h3>
+      <div class="hint">首次使用需确认索引范围；选择后会记住，下次不再询问。</div>
+      <div id="ft-roots-candidates"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="chrome-btn" id="ft-roots-wizard-cancel">稍后</button>
+        <button type="button" class="chrome-btn primary" id="ft-roots-wizard-confirm">开始索引</button>
+      </div>
+    </div>
+  </div>
+
   <div id="recycle-overlay" class="recycle-overlay" aria-hidden="true">
     <div class="recycle-dialog card" role="dialog" aria-modal="true" aria-labelledby="recycle-dlg-title">
       <div class="recycle-dialog-head">
@@ -3534,6 +3581,31 @@ const state = {
   }
 };
 let __nmDock = null;
+function installGlobalWheelScrollRouting() {
+  if (window.__scWheelRoutingInstalled) return;
+  window.__scWheelRoutingInstalled = true;
+  document.addEventListener("wheel", function (ev) {
+    const path = ev.composedPath ? ev.composedPath() : [];
+    for (let i = 0; i < path.length; i++) {
+      const node = path[i];
+      if (!node || node === document || node === document.documentElement || node === document.body) continue;
+      if (node.nodeType !== 1) continue;
+      try {
+        const style = getComputedStyle(node);
+        const oy = style.overflowY;
+        if ((oy === "auto" || oy === "scroll") && node.scrollHeight > node.clientHeight + 2) {
+          return;
+        }
+      } catch (_) {}
+    }
+    const list = document.getElementById("result-list");
+    if (!list || list.scrollHeight <= list.clientHeight + 2) return;
+    const dy = Number(ev.deltaY) || 0;
+    if (!dy) return;
+    list.scrollTop += dy;
+    ev.preventDefault();
+  }, { passive: false, capture: true });
+}
 function dismissStartupSplash(forceNow = false) {
   if (scSplashHidden) return;
   const splash = document.getElementById("startup-splash");
@@ -5343,8 +5415,104 @@ function normalizeFulltextPayload(payload) {
       : ["off", "off", "off", "off"],
     scan_mode: String(scanMode || ""),
     indexEpoch: Number.isFinite(Number(indexEpoch)) ? Number(indexEpoch) : 0,
-    indexVersion: String(indexVersion || "")
+    indexVersion: String(indexVersion || ""),
+    rootLifecycleState: String(pick(src, ["rootLifecycleState"], "") || ""),
+    rootsConfirmedAt: String(pick(src, ["rootsConfirmedAt"], "") || ""),
+    discoverySummary: src.discoverySummary && typeof src.discoverySummary === "object" ? src.discoverySummary : null,
+    rootDiscovery: Array.isArray(src.rootDiscovery) ? src.rootDiscovery : []
   };
+}
+
+let ftRootsWizardDismissedSession = false;
+
+function discoveryBadgeHtml(summary) {
+  if (!summary || typeof summary !== "object") return "";
+  const mode = String(summary.mode || "").toLowerCase();
+  if (mode === "setup_required" || summary.setupRequired) {
+    return '<span class="ft-discovery-badge setup">待选择目录</span>';
+  }
+  if (mode === "degraded" || (Number(summary.degradedCount) || 0) > 0) {
+    return '<span class="ft-discovery-badge degraded">部分根不可用</span>';
+  }
+  if (mode === "walk_fallback" || (Number(summary.walkFallbackCount) || 0) > 0 || (Number(summary.walkCount) || 0) > 0) {
+    return '<span class="ft-discovery-badge walk">目录遍历回退</span>';
+  }
+  return "";
+}
+
+async function fetchFulltextRootsWizard() {
+  const origin = typeof SEARCH_CORE_ORIGIN === "string" ? SEARCH_CORE_ORIGIN : "http://127.0.0.1:8080";
+  const res = await fetch(origin + "/v1/fulltext/roots", { method: "GET" });
+  if (!res.ok) throw new Error("roots fetch failed");
+  return res.json();
+}
+
+async function confirmFulltextRoots(roots) {
+  const origin = typeof SEARCH_CORE_ORIGIN === "string" ? SEARCH_CORE_ORIGIN : "http://127.0.0.1:8080";
+  const res = await fetch(origin + "/v1/fulltext/roots/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ roots, remember: true })
+  });
+  if (!res.ok) throw new Error("roots confirm failed");
+  return res.json();
+}
+
+function renderFulltextRootsWizard(candidates) {
+  const host = document.getElementById("ft-roots-candidates");
+  const modal = document.getElementById("ft-roots-wizard");
+  if (!host || !modal) return;
+  const list = Array.isArray(candidates) ? candidates : [];
+  host.innerHTML = list.map((p, i) => {
+    const path = String(p || "");
+    return `<label class="ft-roots-candidate"><input type="checkbox" data-root-path="${path.replace(/"/g, "&quot;")}" ${i < 2 ? "checked" : ""}> ${path}</label>`;
+  }).join("") || '<div class="hint">未找到候选目录，请在设置中手动配置 knowledgeRoots。</div>';
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function hideFulltextRootsWizard() {
+  const modal = document.getElementById("ft-roots-wizard");
+  if (!modal) return;
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+async function maybeShowFulltextRootsWizard(payload) {
+  const phase = String((payload && payload.scanPhase) || (state.fulltext && state.fulltext.scanPhase) || "").toLowerCase();
+  const lifecycle = String((payload && payload.rootLifecycleState) || (state.fulltext && state.fulltext.rootLifecycleState) || "").toLowerCase();
+  const needs = lifecycle === "setup_required" || phase === "setup_required";
+  if (!needs || ftRootsWizardDismissedSession) return;
+  try {
+    const data = await fetchFulltextRootsWizard();
+    if (!data || !data.needsSetupWizard) return;
+    renderFulltextRootsWizard(data.wizardCandidates || []);
+  } catch (_) {}
+}
+
+function bindFulltextRootsWizardUi() {
+  document.getElementById("ft-roots-wizard-cancel")?.addEventListener("click", () => {
+    ftRootsWizardDismissedSession = true;
+    hideFulltextRootsWizard();
+  });
+  document.getElementById("ft-roots-wizard-confirm")?.addEventListener("click", async () => {
+    const boxes = document.querySelectorAll("#ft-roots-candidates input[type=checkbox][data-root-path]");
+    const roots = [];
+    boxes.forEach((el) => {
+      if (el.checked) roots.push(String(el.getAttribute("data-root-path") || ""));
+    });
+    if (!roots.length) return;
+    try {
+      await confirmFulltextRoots(roots);
+      hideFulltextRootsWizard();
+      requestFulltextStatus(true);
+    } catch (_) {}
+  });
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bindFulltextRootsWizardUi, { once: true });
+} else {
+  bindFulltextRootsWizardUi();
 }
 
 function formatEtaHuman(etaSec) {
@@ -5596,6 +5764,7 @@ function startFulltextProgressStream() {
 
 window.onWebViewResetState = function onWebViewResetState() {
   stopFulltextBackgroundTasks();
+  dismissStartupSplash(true);
 };
 
 function fulltextLooksLikePlaceholder(ft) {
@@ -5755,9 +5924,11 @@ function applyFulltextStatus(payload) {
     } else if (state.fulltext.lastError) {
       hint = `索引提示：${state.fulltext.lastError}`;
     }
-    hintEl.textContent = `说明: ${hint}`;
+    const badge = discoveryBadgeHtml(state.fulltext.discoverySummary);
+    hintEl.innerHTML = `说明: ${hint}${badge}`;
     hintEl.title = hint;
   }
+  maybeShowFulltextRootsWizard(payload || state.fulltext);
   const toggleBtn = document.getElementById("btn-ft-toggle");
   const toggleIcon = document.getElementById("ft-toggle-icon");
   if (toggleBtn) {
@@ -9242,8 +9413,36 @@ if (window.chrome && window.chrome.webview) {
       }
       return;
     }
+    if (payload.type === "hostPaintNudge") {
+      dismissStartupSplash(true);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          try { void document.body.offsetHeight; } catch (_) {}
+          postToAhk({ type: "UI_PAINT_READY" });
+        });
+      });
+      return;
+    }
+    if (payload.type === "hostLayout") {
+      dismissStartupSplash(true);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          try { window.dispatchEvent(new Event("resize")); } catch (_) {}
+          try { void document.body.offsetHeight; } catch (_) {}
+          postToAhk({ type: "UI_PAINT_READY" });
+        });
+      });
+      return;
+    }
     if (payload.type === "hostShow") {
+      dismissStartupSplash(true);
       applyHostShow(payload);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          try { void document.body.offsetHeight; } catch (_) {}
+          postToAhk({ type: "UI_PAINT_READY" });
+        });
+      });
       return;
     }
     if (payload.type === "clipFloat") {
@@ -9443,9 +9642,15 @@ if (window.chrome && window.chrome.webview) {
       renderClipFloatBar();
     }
   });
+  installGlobalWheelScrollRouting();
   if (window.NiumaBottomDock && typeof window.NiumaBottomDock.mount === "function")
     __nmDock = window.NiumaBottomDock.mount({ sceneId: "search", post: postToAhk });
   postToAhk({ type: "ready" });
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      postToAhk({ type: "UI_PAINT_READY" });
+    });
+  });
   setTimeout(() => scheduleScHotkeyBindingsSync(10), 120);
   requestFulltextStatus(true);
   ensureFulltextStatusHeartbeat();

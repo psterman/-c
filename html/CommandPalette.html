@@ -2022,11 +2022,19 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 <script src="PaletteMiniA2UI.js?v=2"></script>
 <script src="PaletteComponentMatcher.js?v=2"></script>
 <script src="CommandPaletteReplyStructurer.js?v=1"></script>
+<script src="palette/app/perf-marks.js?v=1"></script>
+<script src="palette/search/command-index.js?v=1"></script>
+<script src="palette/app/query-controller.js?v=1"></script>
+<script src="palette/views/result-list.js?v=1"></script>
+<script src="palette/app/palette-layout.js?v=1"></script>
+<script src="palette/app/stream-batcher.js?v=1"></script>
+<script src="palette/app/agent-chunk-coalescer.js?v=1"></script>
 </head>
 <body>
 <div id="root"></div>
 <script>
 (function () {
+  if (typeof PalettePerfMarks !== "undefined") PalettePerfMarks.mark("palette_init_start");
   var IntentRouter = (function () {
     var ORDER = ["local", "ai", "action"];
     var LABELS = { local: "本地", ai: "问 AI", action: "动作" };
@@ -2064,8 +2072,250 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     querySeq: 0,
     _userPickedCommand: false,
     actionCmdBrowse: false,
-    _actionQueryCache: []
+    _actionQueryCache: [],
+    paletteFlags: {
+      fastInput: false,
+      discreteLayout: false,
+      streamBatching: false,
+      stateStore: false,
+      agentTransport: "auto",
+      openclawAnswerSync: true
+    }
   };
+  var aiChunkBatcher = null;
+  var agentChunkCoalescer = null;
+  var agentIngestBuffers = Object.create(null);
+  var hostQueryTimer = null;
+  var actionIdlePaintTimer = null;
+  var actionCmdPaintRaf = 0;
+  var _layoutPausedUntil = 0;
+  var _queryStartMark = 0;
+  var HOST_QUERY_DEBOUNCE_MS = 200;
+
+  function pauseLayoutDuringTyping(ms) {
+    _layoutPausedUntil = Date.now() + (ms != null ? ms : 500);
+  }
+
+  function isLayoutPaused() {
+    return paletteFastInput() && state.intent === "action" && Date.now() < _layoutPausedUntil;
+  }
+
+  function shouldRunActionCommandSearch(q) {
+    var text = String(q || "").trim();
+    if (!text) return false;
+    if (text.charAt(0) === ">") return true;
+    return !!state.actionCmdBrowse;
+  }
+
+  function paletteFastInput() {
+    return !!(state.paletteFlags && state.paletteFlags.fastInput);
+  }
+  function paletteDiscreteLayout() {
+    return !!(state.paletteFlags && state.paletteFlags.discreteLayout);
+  }
+  function paletteStreamBatching() {
+    return !!(state.paletteFlags && state.paletteFlags.streamBatching);
+  }
+  function paletteOpenClawAnswerSync() {
+    return !state.paletteFlags || state.paletteFlags.openclawAnswerSync !== false;
+  }
+
+  function cardIsOfficialA2uiRoute(card) {
+    if (typeof PaletteOfficialA2UIGray !== "undefined" && PaletteOfficialA2UIGray.cardIsOfficialA2uiRoute) {
+      return PaletteOfficialA2UIGray.cardIsOfficialA2uiRoute(card);
+    }
+    if (!card) return false;
+    return String(card.representationRoute || "") === "r3";
+  }
+
+  function shouldSkipProseFinalize(card, opts) {
+    if (typeof PaletteOfficialA2UIGray !== "undefined" && PaletteOfficialA2UIGray.shouldSkipProseFinalize) {
+      return PaletteOfficialA2UIGray.shouldSkipProseFinalize(card, opts || {});
+    }
+    return cardIsOfficialA2uiRoute(card);
+  }
+
+  function finalizeOfficialA2uiCard(cardId, meta) {
+    meta = meta || {};
+    var card = getActionCard(cardId);
+    if (!card || !cardIsOfficialA2uiRoute(card)) return false;
+    card.running = false;
+    card.ended = true;
+    card.liveThought = "";
+    card._summaryOnly = false;
+    card._summaryPreview = "";
+    card.officialA2uiPending = false;
+    card._officialA2uiFinalized = true;
+    if (meta.surfaceId) {
+      card.officialA2ui = Object.assign({}, card.officialA2ui || {}, {
+        source: "go-jsonl",
+        surfaceId: String(meta.surfaceId),
+        enabled: true
+      });
+    }
+    actionCardManager.transitionCardState(cardId, "Done");
+    refreshActionCardDom(card);
+    ensureCardPipelineRendered(card);
+    var dom = document.getElementById("card-" + cardId);
+    if (dom) {
+      var logBox = dom.querySelector(".card-status-log");
+      if (logBox) logBox.innerHTML = "";
+      dom.classList.remove("has-status-log");
+      var lt = dom.querySelector(".card-live-thought");
+      if (lt) lt.style.display = "none";
+      var official = dom.querySelector(".card-official-a2ui");
+      if (official) official.hidden = false;
+    }
+    try {
+      post({
+        type: "palette_agent_official_done",
+        cardId: cardId,
+        reqId: String(meta.requestId || card.reqId || ""),
+        surfaceId: String(meta.surfaceId || (card.officialA2ui && card.officialA2ui.surfaceId) || "")
+      });
+    } catch (_) {}
+    window.nmerPalette.setStatus("官方 A2UI 任务已完结", "idle");
+    syncActionResultsLayout();
+    agentDebugLog("official_a2ui_finalize", "card=" + cardId + " surface=" + String(meta.surfaceId || ""));
+    return true;
+  }
+  function isOpenClawProviderCard(card) {
+    if (!card) return false;
+    return normalizeAgentProvider(card.provider || state.agentProvider || "openclaw") === "openclaw";
+  }
+  function shouldPreferIncomingGatewayAnswer(stored, incoming, card) {
+    var prev = String(stored || "").trim();
+    var next = String(incoming || "").trim();
+    if (!next || isAgentStatusPreview(next)) return false;
+    if (!prev) return true;
+    if (next.length > prev.length + 40) return true;
+    if (card && cardAnswerLooksIncomplete(Object.assign({}, card, { rawAnswer: prev })) && next.length >= prev.length)
+      return true;
+    if (prev.length >= 40 && next.length >= prev.length * 1.15) return true;
+    if (
+      paletteOpenClawAnswerSync() &&
+      isOpenClawProviderCard(card) &&
+      next.length >= Math.max(120, prev.length + 20)
+    )
+      return true;
+    return false;
+  }
+  function teardownResultsMutationObserver() {
+    if (layoutMutationObserver) {
+      layoutMutationObserver.disconnect();
+      layoutMutationObserver = null;
+    }
+  }
+
+  function applyPaletteFlags(d) {
+    if (!d || typeof d !== "object") return;
+    state.paletteFlags = {
+      fastInput: !!d.fastInput,
+      discreteLayout: !!d.discreteLayout,
+      streamBatching: !!d.streamBatching,
+      stateStore: !!d.stateStore,
+      agentTransport: String(d.agentTransport || "auto"),
+      openclawAnswerSync: d.openclawAnswerSync !== false
+    };
+    ensureAiChunkBatcher();
+    ensureAgentChunkCoalescer();
+    if (paletteFastInput() || paletteDiscreteLayout()) teardownResultsMutationObserver();
+    if (paletteDiscreteLayout() && typeof PaletteLayout !== "undefined") {
+      PaletteLayout.resetMode();
+      setTimeout(function () {
+        if (typeof publishDiscreteLayout === "function") publishDiscreteLayout();
+      }, 0);
+    }
+  }
+  function ensureAgentChunkCoalescer() {
+    if (!paletteStreamBatching()) {
+      if (agentChunkCoalescer) {
+        agentChunkCoalescer.destroy();
+        agentChunkCoalescer = null;
+      }
+      return;
+    }
+    if (agentChunkCoalescer || typeof PaletteAgentChunkCoalescer === "undefined") return;
+    agentChunkCoalescer = PaletteAgentChunkCoalescer.create({ intervalMs: 50, hiddenIntervalMs: 100 });
+  }
+  function scheduleAgentCardDomRefresh(cardId) {
+    if (!paletteStreamBatching() || !agentChunkCoalescer) {
+      var cardNow = getActionCard(cardId);
+      if (cardNow) refreshActionCardDom(cardNow);
+      syncActionResultsLayout();
+      return;
+    }
+    agentChunkCoalescer.schedule(
+      cardId,
+      function (id) {
+        var card = getActionCard(id);
+        if (card) refreshActionCardDom(card);
+      },
+      function () {
+        syncActionResultsLayout();
+      }
+    );
+  }
+  function flushAgentCardDomRefresh(cardId) {
+    flushAgentPipelineIngest(cardId);
+    if (!agentChunkCoalescer) {
+      var cardNow = getActionCard(cardId);
+      if (cardNow) refreshActionCardDom(cardNow);
+      syncActionResultsLayout();
+      return;
+    }
+    agentChunkCoalescer.flushNow(
+      cardId,
+      function (id) {
+        var card = getActionCard(id);
+        if (card) refreshActionCardDom(card);
+      },
+      function () {
+        syncActionResultsLayout();
+      }
+    );
+  }
+  function flushAgentPipelineIngest(cardId) {
+    var id = String(cardId || "");
+    if (!id || !agentIngestBuffers[id]) return;
+    var buf = agentIngestBuffers[id];
+    delete agentIngestBuffers[id];
+    if (buf && typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.ingestDelta)
+      applyPipelineIngestDelta(id, buf);
+  }
+  function scheduleAgentPipelineIngest(cardId, delta) {
+    var id = String(cardId || "");
+    var piece = String(delta || "");
+    if (!id || !piece) return null;
+    if (!paletteStreamBatching()) return applyPipelineIngestDelta(id, piece);
+    agentIngestBuffers[id] = (agentIngestBuffers[id] || "") + piece;
+    ensureAgentChunkCoalescer();
+    agentChunkCoalescer.schedule(
+      id,
+      function (cid) {
+        flushAgentPipelineIngest(cid);
+      },
+      function () {}
+    );
+    return null;
+  }
+  function ensureAiChunkBatcher() {
+    if (!paletteStreamBatching()) {
+      if (aiChunkBatcher) {
+        aiChunkBatcher.destroy();
+        aiChunkBatcher = null;
+      }
+      return;
+    }
+    if (aiChunkBatcher || typeof PaletteStreamBatcher === "undefined") return;
+    aiChunkBatcher = PaletteStreamBatcher.create(function (batch) {
+      var merged = "";
+      for (var i = 0; i < batch.length; i++) merged += String(batch[i] || "");
+      if (!merged) return;
+      appendAiChunkImmediate(merged);
+    }, { intervalMs: 50, hiddenIntervalMs: 100 });
+  }
+
   var AGENT_PROVIDERS = [
     { id: "openclaw", label: "龙虾 OpenClaw", short: "龙虾" },
     { id: "hermes", label: "Hermes", short: "Hermes" }
@@ -2119,7 +2369,24 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     actionState._batchUpsert = Math.max(0, (actionState._batchUpsert || 0) - 1);
   }
 
+  function isTruthyAgentFlag(v) {
+    return v === true || v === 1 || v === "1";
+  }
+
+  function isDtoAgentSummary(dto, opts) {
+    opts = opts || {};
+    if (opts.fullDetail) return false;
+    if (dto && isTruthyAgentFlag(dto.summaryOnly)) return true;
+    if (opts.summary) return true;
+    return false;
+  }
+
+  function isCardSummaryOnly(card) {
+    return !!(card && card._summaryOnly);
+  }
+
   function shouldEagerPipelineFinalize(card) {
+    if (isCardSummaryOnly(card)) return false;
     return !!(card && (card.expanded || isActionCardRunning(card)));
   }
   state.agentProvider = "openclaw";
@@ -2610,7 +2877,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function maybeHealDoneCardPipelineBlocks(card, cardId) {
-    if (!card || !cardId) return false;
+    if (!card || !cardId || isCardSummaryOnly(card)) return false;
     var blocks = getCardPipelineBlocks(card);
     var needsFinalize =
       (!blocks.length && card.uiState === "Done" && cardHasSubstantialRawAnswer(card) && !cardHasPipelineReply(card)) ||
@@ -2694,6 +2961,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   function cardAnswerLooksIncomplete(card) {
     if (!card) return true;
+    if (isCardSummaryOnly(card)) return false;
     var raw = String(card.rawAnswer || "").trim();
     if (!raw) return true;
     if (agentLooksLikeThinkingPreambleOnly(raw)) return true;
@@ -2724,6 +2992,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   function cardPreviewText(card) {
     if (!card) return "";
+    if (isCardSummaryOnly(card) && card._summaryPreview) {
+      return String(card._summaryPreview).replace(/\s+/g, " ").trim().slice(0, 160);
+    }
     var pipeBlocks =
       (card.blockStore && card.blockStore.blocks) ||
       card.pipelineBlocks ||
@@ -3219,28 +3490,6 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     actionState._pendingCardId = null;
   }
 
-  function pullAgentCardsFromHostSync() {
-    try {
-      var ahk = getPaletteSyncAhk();
-      if (ahk && typeof ahk.PullCommandPaletteAgentCards === "function") {
-        var raw = String(ahk.PullCommandPaletteAgentCards("") || "[]");
-        var data = JSON.parse(raw);
-        if (Array.isArray(data)) {
-          actionState._cardsSyncDone = true;
-          if (data.length) {
-            renderActionCardSync(data);
-          } else if (!actionHasStoredCards() && state.intent === "action") {
-            purgeActionEmptyHint();
-          }
-          return data.length;
-        }
-      }
-    } catch (e) {
-      agentDebugLog("pull_cards_sync", String(e && e.message || e), "warn");
-    }
-    return -1;
-  }
-
   function showActionEmptyIfNeeded() {
     if (actionHasStoredCards() || state.input.trim() || state.actionCmdBrowse) return;
     state.actions = [];
@@ -3259,15 +3508,35 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     syncWindowSize();
   }
 
-  function requestAgentCardSync() {
-    var n = pullAgentCardsFromHostSync();
-    if (n >= 0) {
-      if (n === 0 && state.intent === "action") showActionEmptyIfNeeded();
+  function actionHasRunningCard() {
+    var ids = Object.keys(actionState.cards);
+    for (var ri = 0; ri < ids.length; ri++) {
+      if (isActionCardRunning(actionState.cards[ids[ri]])) return true;
+    }
+    return false;
+  }
+
+  function shouldDeferAgentCardPullOnReady() {
+    return paletteFastInput() && state.paletteFlags && state.paletteFlags.stateStore;
+  }
+
+  function maybeRequestAgentCardSync(force) {
+    if (!force && shouldDeferAgentCardPullOnReady() && state.intent === "action" && !String(state.input || "").trim()) {
       return;
     }
+    requestAgentCardSync();
+  }
+
+  function requestAgentCardSync() {
+    if (actionState._cardPullPending) return;
+    if (paletteFastInput() && actionHasRunningCard()) return;
+    actionState._cardPullPending = true;
     try {
       post({ type: "palette_agent_pull" });
     } catch (_) {}
+    setTimeout(function () {
+      actionState._cardPullPending = false;
+    }, 1500);
   }
 
   function actionHasStoredCards() {
@@ -3308,7 +3577,11 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           if (state.actionCmdBrowse && state._actionQueryCache && state._actionQueryCache.length) {
             state.actions = state._actionQueryCache.slice();
           }
-          updateResults();
+          if (paletteFastInput() && state.actionCmdBrowse && state.input.trim()) {
+            scheduleActionCommandPaint(state.input.trim());
+          } else {
+            updateResults();
+          }
         });
       }
       toolbar.querySelectorAll(".action-history-filter").forEach(function (btn) {
@@ -3481,6 +3754,22 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     var id = String(cardId || "");
     var card = getActionCard(id);
     if (!card) return;
+    if (state.paletteFlags && state.paletteFlags.stateStore) {
+      try {
+        post({ type: "palette_agent_detail", cardId: id });
+      } catch (_) {}
+    }
+    if (paletteOpenClawAnswerSync() && card && card.reqId) {
+      try {
+        post({
+          type: "palette_agent_recover",
+          cardId: id,
+          reqId: card.reqId,
+          query: cardActiveQuery(card),
+          sessionRef: String(card.sessionRef || "")
+        });
+      } catch (_) {}
+    }
     actionState.detailCardId = id;
     actionState.activeCardId = id;
     Object.keys(actionState.cards).forEach(function (otherId) {
@@ -4450,7 +4739,61 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function hidePalette() {
+    if (typeof PalettePerfMarks !== "undefined" && PalettePerfMarks.flush) PalettePerfMarks.flush();
+    cancelHostQuery();
     post({ type: "palette_hide" });
+  }
+
+  function cancelHostQuery() {
+    if (hostQueryTimer) {
+      clearTimeout(hostQueryTimer);
+      hostQueryTimer = 0;
+    }
+  }
+
+  function scheduleHostQuery(seq) {
+    cancelHostQuery();
+    hostQueryTimer = setTimeout(function () {
+      hostQueryTimer = 0;
+      post({
+        type: "palette_query",
+        input: state.input,
+        seq: seq,
+        generation: seq,
+        intent: state.intent,
+        limit: 30
+      });
+    }, HOST_QUERY_DEBOUNCE_MS);
+  }
+
+  function scheduleLayoutSync() {
+    if (paletteFastInput()) {
+      if (sizeTimer) clearTimeout(sizeTimer);
+      sizeTimer = setTimeout(function () {
+        requestAnimationFrame(publishPaletteHeight);
+      }, 120);
+      return;
+    }
+    syncWindowSize();
+  }
+
+  function updateActionCmdOverlay(rows) {
+    var box = document.getElementById("results");
+    if (!box) return;
+    state.showResults = true;
+    var panel = document.getElementById("palette-panel");
+    if (panel) panel.classList.add("has-results");
+    box.classList.toggle("show-cmd-browse", !!(rows && rows.length));
+    if (!rows || !rows.length) {
+      var ch0 = box.querySelector(".action-cmd-list");
+      if (ch0) ch0.remove();
+      state._actionCmdQueryActive = false;
+      scheduleLayoutSync();
+      return;
+    }
+    renderActionCmdList(rows);
+    bindResultsScrollHide(box);
+    scheduleLayoutSync();
   }
 
   function esc(t) {
@@ -4648,11 +4991,16 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           return String(it.text || "");
         });
       } else if (b.type === "status" && b.items) {
+        var statusLines = [];
         for (var j = 0; j < b.items.length; j++) {
+          var stLine = String((b.items[j] && b.items[j].text) || "").trim();
+          if (stLine) statusLines.push(stLine);
+        }
+        if (statusLines.length) {
           card.blocks.status.push({
             title: "[执行中]",
-            log: b.items[j].text,
-            body: b.items[j].text,
+            log: statusLines.join("\n"),
+            body: statusLines.join("\n"),
             seq: b.seq,
             closed: true
           });
@@ -4869,7 +5217,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return 1;
   }
 
-  function shouldSkipDtoRawReplay(card, dto) {
+  function shouldSkipDtoRawReplay(card, dto, opts) {
+    opts = opts || {};
+    if (isDtoAgentSummary(dto, opts)) return true;
     if (!card || !dto || dto.rawAnswer == null) return false;
     if (dto.blockStore) return false;
     if (card._segmentPriorBlocks && card._segmentPriorBlocks.length) return true;
@@ -5127,6 +5477,11 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         !!domFin.querySelector(".card-reply:not([hidden]) .card-reply-body");
       var ltEl = domFin.querySelector(".card-live-thought");
       if (ltEl && hasReplyDom) ltEl.style.display = "none";
+      if (replyBlock) {
+        var logBoxFin = domFin.querySelector(".card-status-log");
+        if (logBoxFin) logBoxFin.innerHTML = "";
+        domFin.classList.remove("has-status-log");
+      }
     }
     persistCardBlockStore(cardId);
     return result;
@@ -5609,7 +5964,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         renderAgentEngineBar();
         refreshActionHistoryHead();
         if (state.intent === "action" && !Object.keys(actionState.cards).length && !state.input.trim()) {
-          pullAgentCardsFromHostSync();
+          maybeRequestAgentCardSync();
           if (!actionHasStoredCards()) showActionEmptyIfNeeded();
         }
         window.nmerPalette.setStatus("已选引擎 · " + agentProviderLabel(state.agentProvider) + " · 输入后 Enter 提交", "idle");
@@ -5707,12 +6062,11 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   function refreshIntentResults(immediate) {
     if (state.intent === "action") {
       purgeAiResultsDom();
-      var pulledN = pullAgentCardsFromHostSync();
-      if (pulledN < 0) requestAgentCardSync();
+      requestAgentCardSync();
       var cardN = Object.keys(actionState.cards).length;
       if (cardN > 0 && !state.actionCmdBrowse) {
         purgeActionEmptyHint();
-        if (pulledN < 0) renderActionHistoryList();
+        renderActionHistoryList();
         syncActionResultsLayout();
         window.nmerPalette.setStatus(
           "托管 · " + cardN + " 个任务 · " + agentProviderLabel(state.agentProvider) + " · Enter 新建",
@@ -6168,6 +6522,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           : { ok: false, reason: "bridge_unavailable" };
     refreshActionCardDom(card);
     syncActionResultsLayout();
+    if (envelope.final === true || envelope.final === 1 || String(envelope.final) === "1") {
+      finalizeOfficialA2uiCard(cardId, {
+        surfaceId: envelope.surfaceId,
+        requestId: envelope.requestId
+      });
+    }
     return result;
   }
 
@@ -6194,6 +6554,18 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return { card: null, id: "" };
   }
 
+  function sanitizeLiveThoughtDisplay(text) {
+    var t = String(text || "").trim();
+    if (!t) return "";
+    if (agentTextHasProtocolTags(t)) {
+      if (typeof PaletteBlockPipeline !== "undefined" && PaletteBlockPipeline.stripProtocolTags) {
+        t = PaletteBlockPipeline.stripProtocolTags(t);
+      }
+      if (!t || agentTextHasProtocolTags(t)) return "";
+    }
+    return t;
+  }
+
   function setCardLiveThought(cardId, text, thinking) {
     var card = getActionCard(cardId);
     if (card) card.liveThought = String(text || "");
@@ -6204,7 +6576,13 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (dom.classList.contains("has-status-log")) return;
     var el = dom.querySelector(".card-live-thought");
     if (!el) return;
-    var t = card.liveThought || "等待引擎响应…";
+    var t = sanitizeLiveThoughtDisplay(card.liveThought) || card.liveThought || "等待引擎响应…";
+    if (agentTextHasProtocolTags(t)) {
+      el.classList.remove("card-live-thought-rich");
+      el.textContent = thinking ? "协议输出解析中…" : "等待结构化回复…";
+      el.classList.toggle("thinking", !!thinking);
+      return;
+    }
     if (!isAgentStatusPreview(t) && t.length > 8) {
       el.classList.add("card-live-thought-rich");
       writeAgentRichText(el, t);
@@ -6356,6 +6734,17 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       var ltEl = dom.querySelector(".card-live-thought");
       if (cardLatestTurnHasReply(card)) {
         if (ltEl) ltEl.style.display = "none";
+      } else if (
+        isCardSummaryOnly(card) &&
+        card.uiState === "Done" &&
+        !cardLatestTurnHasReply(card)
+      ) {
+        if (ltEl) {
+          ltEl.style.display = "";
+          ltEl.classList.remove("card-live-thought-rich");
+          ltEl.textContent = "摘要预览 · 展开查看完整回复";
+          ltEl.classList.remove("thinking");
+        }
       } else if (card.uiState === "Done" && isAgentStatusPreview(card.liveThought) && !cardLatestTurnHasReply(card)) {
         maybeRecoverIncompleteDoneCard(card);
         scheduleAgentCardsRecover();
@@ -7018,9 +7407,20 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     var id = String(dto.cardId || dto.id || "");
     if (!id) return;
     var batch = !!opts.batch || isActionCardBatchUpsert();
+    var summaryDto = isDtoAgentSummary(dto, opts);
+    var fullDetailDto = !!opts.fullDetail;
     reconcilePendingAgentCard(dto);
     var wasNew = !actionState.cards[id];
     var card = actionState.cards[id];
+    if (
+      summaryDto &&
+      card &&
+      (isActionCardRunning(card) ||
+        cardHasPipelineReply(card) ||
+        String(card.rawAnswer || "").length > 520)
+    ) {
+      summaryDto = false;
+    }
     if (!card) {
       card = {
         id: id,
@@ -7036,9 +7436,11 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         query: dto.query || dto.title || "",
         reqId: dto.reqId || "",
         _protoStarted: false,
+        _summaryOnly: summaryDto,
+        _summaryPreview: summaryDto ? String(dto.rawAnswer || "") : "",
         expanded: false,
         liveThought: "",
-        rawAnswer: clipStreamText(dto.rawAnswer || ""),
+        rawAnswer: summaryDto ? "" : clipStreamText(dto.rawAnswer || ""),
         updatedAt: dto.updatedAt || "",
         createdAt: dto.createdAt || dto.updatedAt || "",
         messages: Array.isArray(dto.messages)
@@ -7046,6 +7448,13 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           : []
       };
       actionState.cards[id] = card;
+    }
+    if (summaryDto) {
+      card._summaryOnly = true;
+      if (dto.rawAnswer != null) card._summaryPreview = String(dto.rawAnswer || "");
+    } else if (fullDetailDto || dto.blockStore || !isTruthyAgentFlag(dto.summaryOnly)) {
+      card._summaryOnly = false;
+      card._summaryPreview = "";
     }
     if (dto.running !== undefined)
       card.running = !!(dto.running === true || dto.running === 1 || dto.running === "1");
@@ -7102,11 +7511,18 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       card.messages = dto.messages.slice(-ACTION_CARD_MESSAGE_LIMIT);
     if (dto.rawAnswer != null) {
       var incomingRaw = String(dto.rawAnswer || "");
-      var followUp = cardFollowUpInFlight(card) || (card.running && !card.ended && card._segmentPriorBlocks && card._segmentPriorBlocks.length);
-      if (!followUp || incomingRaw) {
-        card.rawAnswer = clipStreamText(incomingRaw);
-        if (card.rawAnswer && !isAgentStatusPreview(card.rawAnswer))
-          card.liveThought = card.rawAnswer;
+      if (summaryDto) {
+        card._summaryPreview = incomingRaw;
+        var previewTxt = incomingRaw.replace(/\s+/g, " ").trim().slice(0, 160);
+        if (previewTxt && !isAgentStatusPreview(previewTxt)) card.liveThought = previewTxt;
+      } else {
+        var followUp =
+          cardFollowUpInFlight(card) ||
+          (card.running && !card.ended && card._segmentPriorBlocks && card._segmentPriorBlocks.length);
+        if (!followUp || incomingRaw) {
+          card.rawAnswer = clipStreamText(incomingRaw);
+          if (card.rawAnswer && !isAgentStatusPreview(card.rawAnswer)) card.liveThought = card.rawAnswer;
+        }
       }
     }
     if (dto.liveThought != null && String(dto.liveThought) !== "") {
@@ -7118,12 +7534,14 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (!batch && actionState.focusMode && (wasNew || id === actionState.activeCardId)) collapseNonActiveCards();
     var restoredBlocks = applyDtoBlockStore(card, dto);
     if (restoredBlocks) {
+      card._summaryOnly = false;
+      card._summaryPreview = "";
       card._rawReplaySig = String(dto.rawAnswer || card.rawAnswer || "");
       if (cardHasPipelineReply(card)) {
         card.liveThought = "";
         hideCardLiveThoughtIfReply(id);
       }
-    } else if (dto.rawAnswer && !shouldSkipDtoRawReplay(card, dto)) {
+    } else if (!summaryDto && dto.rawAnswer && !shouldSkipDtoRawReplay(card, dto, opts)) {
       var rawSig = String(dto.rawAnswer);
       var isDone = card.uiState === "Done" || dto.uiState === "Done";
       if (isDone && cardHasSubstantialRawAnswer(card) && !cardHasPipelineReply(card)) {
@@ -7154,7 +7572,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (batch) return;
     refreshActionCardDom(card);
     actionCardManager.transitionCardState(id, card.uiState);
-    if (restoredBlocks && (card.uiState === "Done" || dto.uiState === "Done")) {
+    if (!summaryDto && restoredBlocks && (card.uiState === "Done" || dto.uiState === "Done")) {
       if (shouldEagerPipelineFinalize(card)) ensureCardPipelineRendered(card);
       else maybeHealDoneCardPipelineBlocks(card, id);
     }
@@ -7191,6 +7609,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     var prevLen = card ? String(card.rawAnswer || "").length : 0;
     if (t.length >= 800 && t.length > prevLen * 1.15 && !agentLooksLikeThinkingPreambleOnly(t)) return true;
     var probe = card ? Object.assign({}, card, { rawAnswer: t }) : { rawAnswer: t };
+    if (card && paletteOpenClawAnswerSync() && isOpenClawProviderCard(card)) {
+      if (t.length >= 200 && !agentLooksLikeThinkingPreambleOnly(t) && !isAgentStatusPreview(t)) return true;
+      if (shouldPreferIncomingGatewayAnswer(card.rawAnswer, t, card) && t.length >= 120) return true;
+    }
     if (!cardHasSubstantialRawAnswer(probe)) return false;
     if (cardAnswerLooksIncomplete(probe)) return false;
     return true;
@@ -7198,6 +7620,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   function maybeRecoverIncompleteDoneCard(card) {
     if (!card || !card.reqId) return;
+    if (isCardSummaryOnly(card)) {
+      try {
+        post({ type: "palette_agent_detail", cardId: card.id });
+      } catch (_) {}
+      return;
+    }
     if (!cardAnswerLooksIncomplete(card)) return;
     post({
       type: "palette_agent_recover",
@@ -7445,7 +7873,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     ensureActionCardListHost(stack);
   }
 
-  function renderActionCardSync(cards) {
+  function renderActionCardSync(cards, syncOpts) {
+    syncOpts = syncOpts || {};
     cards = limitActionCardDtos(cards);
     var hostIds = {};
     for (var hi = 0; hi < cards.length; hi++) {
@@ -7457,7 +7886,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     });
     beginActionCardBatchUpsert();
     try {
-      for (var i = 0; i < cards.length; i++) upsertActionCardFromDto(cards[i], { batch: true });
+      for (var i = 0; i < cards.length; i++) {
+        upsertActionCardFromDto(cards[i], { batch: true, summary: !!syncOpts.summary });
+      }
     } finally {
       endActionCardBatchUpsert();
     }
@@ -7555,9 +7986,18 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     bindUI();
     bindLayoutObservers();
     bindActionSubmitButton();
+    if (typeof PalettePerfMarks !== "undefined") {
+      if (PalettePerfMarks.setSender) {
+        PalettePerfMarks.setSender(function (payload) {
+          post(payload);
+        });
+      }
+      PalettePerfMarks.mark("palette_ready");
+      PalettePerfMarks.flush();
+    }
     post({ type: "palette_ready" });
     setTimeout(probeAgentHostBridge, 400);
-    setTimeout(requestAgentCardSync, 120);
+    if (!shouldDeferAgentCardPullOnReady()) setTimeout(requestAgentCardSync, 120);
   }
 
   function bindResultsScrollHide(box) {
@@ -7637,50 +8077,71 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     bindResultClicks(cmdHost);
   }
 
+  function buildCommandResultRowHtml(item, idx, active) {
+    var activeCls = active ? " active" : "";
+    var matched = item.matched ? " matched" : "";
+    var kind = item.kind ? " kind-" + esc(item.kind) : "";
+    var binding = item.binding ? '<span class="result-binding">' + esc(item.binding) + "</span>" : "";
+    if (!binding && item.kind === "ai_provider") {
+      if (String(item.id || "") === state.selectedAiProvider) binding = '<span class="result-binding">已选</span>';
+      else if (isAiConfigured(item)) binding = '<span class="result-binding">已配置</span>';
+    }
+    var icon = item.kind === "ai_provider" ? renderProviderIconHtml(item) : kindIcon(item.kind || "command");
+    var rowKey =
+      typeof PaletteResultList !== "undefined"
+        ? PaletteResultList.rowKey(item, idx)
+        : String(item.id || item.label || idx);
+    return (
+      '<button class="result-item' + activeCls + matched + kind + '" type="button" data-idx="' + idx + '" data-row-key="' + esc(rowKey) + '">' +
+      '<span class="result-icon" aria-hidden="true">' + icon + "</span>" +
+      '<span class="result-body">' +
+      '<div class="result-row"><span class="result-title">' + esc(item.label || item.name || "") + "</span>" + binding + "</div>" +
+      '<span class="result-desc">' + esc(item.desc || "") + "</span></span></button>"
+    );
+  }
+
   function renderCommandResults(box, rows) {
     if (!box) return;
     if (state.intent === "action" && box.id === "results") {
       renderActionCmdList(rows);
       return;
     }
-    box.innerHTML = rows
+    var limited = rows;
+    if (typeof PaletteResultList !== "undefined") {
+      limited = rows.slice(0, PaletteResultList.MAX_ROWS);
+    }
+    if (paletteFastInput() && typeof PaletteResultList !== "undefined") {
+      PaletteResultList.patchList(box, limited, state.selected, buildCommandResultRowHtml, {
+        hydrateFn: hydrateResultIcons
+      });
+      return;
+    }
+    box.innerHTML = limited
       .map(function (item, idx) {
-        var active = idx === state.selected ? " active" : "";
-        var matched = item.matched ? " matched" : "";
-        var kind = item.kind ? " kind-" + esc(item.kind) : "";
-        var binding = item.binding ? '<span class="result-binding">' + esc(item.binding) + "</span>" : "";
-        if (!binding && item.kind === "ai_provider") {
-          if (String(item.id || "") === state.selectedAiProvider) binding = '<span class="result-binding">已选</span>';
-          else if (isAiConfigured(item)) binding = '<span class="result-binding">已配置</span>';
-        }
-        var icon = item.kind === "ai_provider" ? renderProviderIconHtml(item) : kindIcon(item.kind || "command");
-        return (
-          '<button class="result-item' + active + matched + kind + '" type="button" data-idx="' + idx + '">' +
-          '<span class="result-icon" aria-hidden="true">' + icon + "</span>" +
-          '<span class="result-body">' +
-          '<div class="result-row"><span class="result-title">' + esc(item.label || item.name || "") + "</span>" + binding + "</div>" +
-          '<span class="result-desc">' + esc(item.desc || "") + "</span></span></button>"
-        );
+        return buildCommandResultRowHtml(item, idx, idx === state.selected);
       })
       .join("");
     hydrateResultIcons(box);
   }
 
   function bindResultClicks(box) {
-    box.querySelectorAll("[data-idx]").forEach(function (node) {
-      node.addEventListener("click", function (e) {
-        var idx = Number(e.currentTarget.getAttribute("data-idx"));
-        if (idx < 0) return;
-          state.selected = idx;
-        var rows = currentRows();
-        var item = rows[idx];
-        if (item && item.kind === "ai_provider") {
-          pickAiProvider(item.id);
-          return;
-        }
-          updateResults();
-          executeSelected();
-      });
+    if (!box) return;
+    if (box.dataset.clickDelegated) return;
+    box.dataset.clickDelegated = "1";
+    box.addEventListener("click", function (e) {
+      var node = e.target && e.target.closest ? e.target.closest("[data-idx]") : null;
+      if (!node || !box.contains(node)) return;
+      var idx = Number(node.getAttribute("data-idx"));
+      if (idx < 0 || isNaN(idx)) return;
+      state.selected = idx;
+      var rows = currentRows();
+      var item = rows[idx];
+      if (item && item.kind === "ai_provider") {
+        pickAiProvider(item.id);
+        return;
+      }
+      updateResults();
+      executeSelected();
     });
   }
 
@@ -7701,10 +8162,14 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     box.classList.toggle("has-action-cards", hasActionCards);
     box.classList.toggle("show-cmd-browse", !!state.actionCmdBrowse);
     if (state.intent === "action" && !hasActionCards && !state.actionCmdBrowse && !state.input.trim()) {
-      requestAgentCardSync();
+      maybeRequestAgentCardSync();
       renderActionHistoryList();
       purgeActionEmptyHint();
       syncWindowSize();
+      return;
+    }
+    if (state.intent === "action" && hasActionCards && state._actionCmdQueryActive && state.input.trim() && rows.length) {
+      updateActionCmdOverlay(rows);
       return;
     }
     if (state.intent === "action" && hasActionCards) {
@@ -7739,7 +8204,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       } else if (state.actionCmdBrowse && rows.length) {
         renderActionCmdList(rows);
       } else if (!state.input.trim()) {
-        pullAgentCardsFromHostSync();
+        maybeRequestAgentCardSync();
         if (!actionHasStoredCards()) showActionEmptyIfNeeded();
         return;
       }
@@ -7757,6 +8222,130 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     syncWindowSize();
   }
 
+  function runLocalCommandQuery(q, gen, opts) {
+    opts = opts || {};
+    if (typeof PaletteCommandIndex === "undefined") return 0;
+    var localItems = PaletteCommandIndex.search(q, 30);
+    state.actions = localItems;
+    state.resultMode = "command";
+    state.turboItems = [];
+    if (state.selected >= state.actions.length) state.selected = 0;
+    state._actionCmdQueryActive = localItems.length > 0 && !!String(q || "").trim();
+    if (opts.light && actionHasStoredCards()) updateActionCmdOverlay(localItems);
+    else updateResults();
+    scheduleQueryPaintMark(gen, localItems.length);
+    return localItems.length;
+  }
+
+  function scheduleQueryPaintMark(gen, resultCount) {
+    if (typeof PalettePerfMarks === "undefined") return;
+    requestAnimationFrame(function () {
+      var durationMs =
+        typeof PalettePerfMarks.elapsedSince === "function"
+          ? PalettePerfMarks.elapsedSince("query_start")
+          : 0;
+      PalettePerfMarks.mark("local_results_painted", {
+        generation: gen,
+        resultCount: resultCount,
+        durationMs: durationMs
+      });
+      PalettePerfMarks.measure("query_to_paint", "query_start", "local_results_painted", {
+        generation: gen
+      });
+    });
+  }
+
+  function clearActionCmdOverlayDom() {
+    var box = document.getElementById("results");
+    if (!box) return;
+    var ch = box.querySelector(".action-cmd-list");
+    if (ch) ch.remove();
+    if (!state.actionCmdBrowse) box.classList.remove("show-cmd-browse");
+  }
+
+  function paintActionCommandSearch(text) {
+    var seq =
+      typeof PaletteQueryController !== "undefined"
+        ? PaletteQueryController.nextGeneration()
+        : (state.querySeq += 1);
+    state.querySeq = seq;
+    if (typeof PalettePerfMarks !== "undefined") {
+      PalettePerfMarks.mark("query_start", { generation: seq });
+    }
+    var hitCount = runLocalCommandQuery(text, seq, { light: actionHasStoredCards() });
+    if (hitCount > 0) cancelHostQuery();
+    else scheduleHostQuery(seq);
+  }
+
+  function scheduleActionCommandPaint(text) {
+    if (actionCmdPaintRaf) cancelAnimationFrame(actionCmdPaintRaf);
+    actionCmdPaintRaf = requestAnimationFrame(function () {
+      actionCmdPaintRaf = 0;
+      if (state.intent !== "action" || !shouldRunActionCommandSearch(text)) return;
+      if (String(state.input || "").trim() !== String(text || "").trim()) return;
+      paintActionCommandSearch(text);
+    });
+  }
+
+  function runFastInputActionQuery(q) {
+    if (!paletteFastInput() || state.intent !== "action") return false;
+    var text = String(q || "").trim();
+    if (!text) {
+      state._actionCmdQueryActive = false;
+      cancelHostQuery();
+      if (actionCmdPaintRaf) {
+        cancelAnimationFrame(actionCmdPaintRaf);
+        actionCmdPaintRaf = 0;
+      }
+      clearActionCmdOverlayDom();
+      if (actionIdlePaintTimer) clearTimeout(actionIdlePaintTimer);
+      actionIdlePaintTimer = setTimeout(function () {
+        actionIdlePaintTimer = 0;
+        if (state.input.trim()) return;
+        if (actionHasStoredCards()) {
+          renderActionHistoryList();
+          syncActionResultsLayout();
+        } else {
+          maybeRequestAgentCardSync();
+          purgeActionEmptyHint();
+        }
+        if (!isLayoutPaused()) scheduleLayoutSync();
+      }, 120);
+      return true;
+    }
+    if (text.charAt(0) === ">") {
+      cancelHostQuery();
+      if (actionCmdPaintRaf) {
+        cancelAnimationFrame(actionCmdPaintRaf);
+        actionCmdPaintRaf = 0;
+      }
+      var seqSlash = typeof PaletteQueryController !== "undefined" ? PaletteQueryController.nextGeneration() : (state.querySeq += 1);
+      state.querySeq = seqSlash;
+      state._actionCmdQueryActive = true;
+      post({
+        type: "palette_query",
+        input: state.input,
+        seq: seqSlash,
+        generation: seqSlash,
+        intent: state.intent,
+        limit: 30
+      });
+      return true;
+    }
+    if (!shouldRunActionCommandSearch(text)) {
+      state._actionCmdQueryActive = false;
+      cancelHostQuery();
+      if (actionCmdPaintRaf) {
+        cancelAnimationFrame(actionCmdPaintRaf);
+        actionCmdPaintRaf = 0;
+      }
+      clearActionCmdOverlayDom();
+      return true;
+    }
+    scheduleActionCommandPaint(text);
+    return true;
+  }
+
   function runQuery(immediate) {
     if (composing) return;
     state.input = readInputValue();
@@ -7771,16 +8360,23 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       syncWindowSize();
       return;
     }
-    if (fetchTimer) clearTimeout(fetchTimer);
     var q = state.input.trim();
+    if (paletteFastInput() && state.intent === "action") {
+      if (fetchTimer) clearTimeout(fetchTimer);
+      fetchTimer = 0;
+      if (runFastInputActionQuery(q)) return;
+    }
+    if (fetchTimer) clearTimeout(fetchTimer);
     var delay = state.intent === "local" ? 50 : 100;
     var run = function () {
-      state.querySeq += 1;
-      var seq = state.querySeq;
+      var seq = (state.querySeq += 1);
+      if (typeof PalettePerfMarks !== "undefined") {
+        PalettePerfMarks.mark("query_start", { generation: seq });
+      }
       if (state.intent === "local" && q) {
         state.turboQuery = q;
         state.resultMode = "turbo";
-        post({ type: "palette_turbo_search", query: q, intent: "local", limit: 20, seq: seq });
+        post({ type: "palette_turbo_search", query: q, intent: "local", limit: 20, seq: seq, generation: seq });
         return;
       }
       if (state.intent === "action" && Object.keys(actionState.cards).length > 0 && !state.actionCmdBrowse) {
@@ -7793,7 +8389,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           renderActionHistoryList();
           syncActionResultsLayout();
         } else {
-          requestAgentCardSync();
+          maybeRequestAgentCardSync();
           purgeActionEmptyHint();
           syncWindowSize();
         }
@@ -7801,7 +8397,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       }
       state.resultMode = "command";
       state.turboItems = [];
-      post({ type: "palette_query", input: state.input, seq: seq });
+      post({ type: "palette_query", input: state.input, seq: seq, generation: seq, intent: state.intent, limit: 30 });
     };
     if (immediate) run();
     else fetchTimer = setTimeout(run, delay);
@@ -8184,7 +8780,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     body.scrollTop = body.scrollHeight;
   }
 
-  function appendAiChunk(delta) {
+  function appendAiChunkImmediate(delta) {
     if (isBackgroundStreaming || !delta) return;
     if (aiPhase === "compact") {
       aiStreamText = clipStreamText(aiStreamText + String(delta));
@@ -8199,6 +8795,15 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (!scrollRaf) {
       scrollRaf = requestAnimationFrame(flushPendingChunks);
     }
+  }
+
+  function appendAiChunk(delta) {
+    if (!delta) return;
+    if (paletteStreamBatching() && aiChunkBatcher) {
+      aiChunkBatcher.push(String(delta));
+      return;
+    }
+    appendAiChunkImmediate(delta);
   }
 
   function aiProviderLabel(id) {
@@ -8462,7 +9067,21 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return true;
   }
 
+  function publishDiscreteLayout() {
+    if (!paletteDiscreteLayout() || typeof PaletteLayout === "undefined") return false;
+    var mode = PaletteLayout.resolveMode({
+      hasResults: state.showResults || (state.actions && state.actions.length > 0),
+      hasInput: !!String(state.input || "").trim(),
+      expanded: state.intent === "action" && hasExpandedActionCard()
+    });
+    return PaletteLayout.requestLayoutMode(mode, post);
+  }
+
   function publishPaletteHeight() {
+    if (paletteDiscreteLayout()) {
+      publishDiscreteLayout();
+      return 0;
+    }
     ensureHeaderInputVisible();
     if (state.intent === "action") {
       withUnclippedPaletteMeasure(function () {
@@ -8486,7 +9105,15 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   function syncWindowSize() {
     if (composing) return;
+    if (isLayoutPaused()) return;
     if (state.intent === "ai" && aiPhase !== "idle" && aiPhase !== "compact") return;
+    if (paletteDiscreteLayout()) {
+      if (sizeTimer) clearTimeout(sizeTimer);
+      sizeTimer = setTimeout(function () {
+        requestAnimationFrame(publishDiscreteLayout);
+      }, 80);
+      return;
+    }
     if (sizeTimer) clearTimeout(sizeTimer);
     sizeTimer = setTimeout(function () {
       requestAnimationFrame(publishPaletteHeight);
@@ -8498,20 +9125,23 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     var results = document.getElementById("results");
     var status = document.getElementById("voice-hint");
     var agentBar = document.getElementById("action-agent-bar");
+    var observeTargets = paletteDiscreteLayout() ? [panel] : [panel, results, status, agentBar];
     if (typeof ResizeObserver === "function") {
       if (!layoutResizeObserver) {
         layoutResizeObserver = new ResizeObserver(function () {
+          if (isLayoutPaused()) return;
           syncWindowSize();
         });
       }
-      [panel, results, status, agentBar].forEach(function (el) {
+      observeTargets.forEach(function (el) {
         if (!el || el.__paletteLayoutObserved) return;
         el.__paletteLayoutObserved = true;
         layoutResizeObserver.observe(el);
       });
     }
-    if (results && typeof MutationObserver === "function" && !layoutMutationObserver) {
+    if (!paletteDiscreteLayout() && !paletteFastInput() && results && typeof MutationObserver === "function" && !layoutMutationObserver) {
       layoutMutationObserver = new MutationObserver(function () {
+        if (isLayoutPaused()) return;
         syncWindowSize();
       });
       layoutMutationObserver.observe(results, {
@@ -8533,14 +9163,16 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       runQuery(false);
     });
     input.addEventListener("input", function (e) {
+      if (typeof PalettePerfMarks !== "undefined") PalettePerfMarks.markFirstInput();
       state.input = e.target.value;
       state._userPickedCommand = false;
+      if (paletteFastInput() && state.intent === "action") pauseLayoutDuringTyping(600);
       if (state.intent === "action" && state.voiceStatus === "error") {
         state.voiceStatus = "idle";
         state.voiceHint = "";
         updateVoiceHint();
       }
-      syncAiListSelectionIndex();
+      if (state.intent === "ai" || aiPhase === "compact") syncAiListSelectionIndex();
       if (state.voiceStatus === "loading" && state.intent !== "ai") {
         state.voiceStatus = "idle";
         state.voiceHint = "";
@@ -8696,6 +9328,39 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     else if (typeof client.connect === "function") client.connect();
   }
 
+  function handleHubAgentEvent(ev) {
+    if (!ev || !ev.kind) return;
+    var kind = String(ev.kind || "");
+    var cardId = String(ev.cardId || "");
+    var payload = ev.payload && typeof ev.payload === "object" ? ev.payload : {};
+    if (!cardId && payload.cardId) cardId = String(payload.cardId || "");
+    var reqId = String(payload.reqId || "");
+    var hubCard = cardId ? getActionCard(cardId) : null;
+    if (hubCard && shouldSkipProseFinalize(hubCard, { source: "hub_ws" })) {
+      agentDebugLog("hub_ws_skip_prose", "kind=" + kind + " card=" + cardId);
+      return;
+    }
+    if (kind === "reply_delta") {
+      handleHostMessage({
+        type: "palette_agent_chunk",
+        cardId: cardId,
+        reqId: reqId,
+        delta: String(payload.delta || ""),
+        source: "hub_ws"
+      });
+      return;
+    }
+    if (kind === "reply_final") {
+      handleHostMessage({
+        type: "palette_agent_end",
+        cardId: cardId,
+        reqId: reqId,
+        answer: String(payload.answer || ""),
+        source: "hub_ws"
+      });
+    }
+  }
+
   function handleHostMessage(d) {
     if (!d || !d.type) return;
     if (d.type === "palette_oc5_probe_request") {
@@ -8823,8 +9488,25 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       applyWailsBridgeConfig(d);
       return;
     }
+    if (d.type === "palette_flags") {
+      applyPaletteFlags(d);
+      return;
+    }
+    if (d.type === "palette_command_snapshot") {
+      if (typeof PaletteCommandIndex !== "undefined") {
+        PaletteCommandIndex.load(d);
+      }
+      return;
+    }
     if (d.type === "palette_results") {
       if (state.intent === "local" && state.input.trim()) return;
+      var remoteGen = d.generation != null ? Number(d.generation) : Number(d.seq || 0);
+      if (paletteFastInput() && typeof PaletteQueryController !== "undefined" && remoteGen > 0 && PaletteQueryController.dropIfStale(remoteGen)) {
+        return;
+      }
+      if (paletteFastInput() && state._actionCmdQueryActive && state.actions.length > 0 && remoteGen > 0 && remoteGen !== state.querySeq) {
+        return;
+      }
       if (d.seq && Number(d.seq) !== state.querySeq) return;
       var items = Array.isArray(d.items) ? d.items : [];
       if (state.intent === "action") {
@@ -8848,14 +9530,11 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           return;
         }
         if (!state.input.trim() && !state.actionCmdBrowse) {
-          var syncN = pullAgentCardsFromHostSync();
-          if (syncN < 0) requestAgentCardSync();
+          maybeRequestAgentCardSync();
           if (actionHasStoredCards()) {
             renderActionHistoryList();
             syncActionResultsLayout();
             syncWindowSize();
-          } else if (syncN >= 0) {
-            showActionEmptyIfNeeded();
           } else {
             purgeActionEmptyHint();
             window.nmerPalette.setStatus("正在加载历史任务…", "idle");
@@ -8874,6 +9553,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         updateResults();
         return;
       }
+      if (typeof PalettePerfMarks !== "undefined") {
+        PalettePerfMarks.mark("remote_results_painted", {
+          generation: remoteGen || state.querySeq,
+          resultCount: state.actions.length
+        });
+      }
       updateResults();
     } else if (d.type === "palette_turbo_results") {
       if (state.intent !== "local") return;
@@ -8891,6 +9576,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       }
       updateVoiceHint();
       updateResults();
+      scheduleQueryPaintMark(d.seq || state.querySeq, state.turboItems.length);
     } else if (d.type === "palette_turbo_error") {
       if (state.intent !== "local") return;
       state.turboItems = [];
@@ -8903,10 +9589,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       if (d.reqId) aiStreamReqId = String(d.reqId);
       appendAiChunk(d.delta || d.text || "");
     } else if (d.type === "palette_ai_end") {
+      if (aiChunkBatcher) aiChunkBatcher.flushNow();
       if (d.reqId) aiStreamReqId = String(d.reqId);
       if (d.answer && String(d.answer).trim()) aiStreamText = String(d.answer);
       finishAiStream(d);
     } else if (d.type === "palette_ai_error") {
+      if (aiChunkBatcher) aiChunkBatcher.flushNow();
       if (d.reqId) aiStreamReqId = String(d.reqId);
       showAiStreamError(d.message || d.error || "请求失败");
     } else if (d.type === "palette_ai_reset") {
@@ -8927,11 +9615,21 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     } else if (d.type === "palette_status") {
       window.nmerPalette.setStatus(d.message || "", d.status || "idle");
     } else if (d.type === "palette_agent_card_sync") {
-      agentDebugLog("host_card_sync", "n=" + (Array.isArray(d.cards) ? d.cards.length : 0));
+      agentDebugLog("host_card_sync", "n=" + (Array.isArray(d.cards) ? d.cards.length : 0) + (d.summary ? " summary" : ""));
       var syncCards = d.cards || [];
-      renderActionCardSync(syncCards);
+      renderActionCardSync(syncCards, { summary: !!d.summary });
       if (!syncCards.length && state.intent === "action" && !state.input.trim() && !state.actionCmdBrowse) {
         showActionEmptyIfNeeded();
+      }
+    } else if (d.type === "palette_agent_card_detail") {
+      var detailCard = d.card;
+      if (detailCard && detailCard.cardId) {
+        upsertActionCardFromDto(detailCard, { fullDetail: true });
+        var detailId = String(detailCard.cardId);
+        if (actionState.detailCardId === detailId) {
+          renderActionHistoryList();
+          scheduleExpandedCardLayout(getActionCard(detailId), { pipeline: true, recover: false });
+        }
       }
     } else if (d.type === "palette_agent_card_new") {
       agentDebugLog("host_card_new", "card=" + (d.cardId || "") + " req=" + (d.reqId || ""));
@@ -8989,8 +9687,30 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         cid = resolved.id;
       }
       if (card) {
+        var delta = String(d.delta || d.text || "");
+        var preview = delta.replace(/\s+/g, " ").trim().slice(0, 160);
+        var statusPreview = preview && isAgentStatusPreview(preview);
+        if (cardIsOfficialA2uiRoute(card)) {
+          if (statusPreview || !delta) {
+            if (d.liveThought && statusPreview) setCardLiveThought(cid, String(d.liveThought), true);
+            scheduleAgentCardDomRefresh(cid);
+            return;
+          }
+          agentDebugLog("host_chunk_skip_prose", "route=r3 card=" + cid);
+          return;
+        }
+        if (
+          card.ended &&
+          card.uiState === "Done" &&
+          cardHasPipelineReply(card) &&
+          (!delta || statusPreview)
+        ) {
+          return;
+        }
         card.running = true;
         card.ended = false;
+        card._summaryOnly = false;
+        card._summaryPreview = "";
         if (isActionCardRunning(card) || card.uiState === "Planning" || card.uiState === "Running") {
           actionState.activeCardId = cid;
         }
@@ -9000,9 +9720,6 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           domC.classList.add("is-active");
           domC.classList.remove("is-collapsed");
         }
-        var delta = String(d.delta || d.text || "");
-        var preview = delta.replace(/\s+/g, " ").trim().slice(0, 160);
-        var statusPreview = preview && isAgentStatusPreview(preview);
         var statusLive = d.liveThought && isAgentStatusPreview(d.liveThought);
         var hasBody = card.rawAnswer && !isAgentStatusPreview(card.rawAnswer);
         if (cardHasPipelineReply(card)) hasBody = true;
@@ -9015,7 +9732,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         var pipelineActive =
           typeof PaletteBlockPipeline !== "undefined" && typeof PaletteBlockPipeline.ingestDelta === "function";
         if (pipelineActive && delta) {
-          var ingestOut = applyPipelineIngestDelta(cid, delta);
+          var ingestOut = scheduleAgentPipelineIngest(cid, delta);
           var ingestStatusOnly = ingestOut && ingestOut.meta && ingestOut.meta.statusOnly;
           var ingestHasReply = cardHasPipelineReply(card);
           if (ingestHasReply) {
@@ -9055,8 +9772,20 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           if (card._protoStarted || (domC && domC.classList.contains("has-status-log"))) {
             window.nmerPalette.setStatus("流式输出中…", "loading");
           } else {
-            var bodyPreview = card.parser && card.parser._buf ? String(card.parser._buf).trim() : preview;
-            setCardLiveThought(cid, bodyPreview, true);
+            var bodyPreview = "";
+            var pipeBlocksPreview = getCardPipelineBlocks(card);
+            if (
+              pipeBlocksPreview.length &&
+              typeof PaletteBlockPipeline !== "undefined" &&
+              PaletteBlockPipeline.blockPreviewSummary
+            ) {
+              bodyPreview = PaletteBlockPipeline.blockPreviewSummary(pipeBlocksPreview);
+            }
+            if (!bodyPreview && card.parser && card.parser._buf) {
+              bodyPreview = sanitizeLiveThoughtDisplay(String(card.parser._buf).trim());
+            }
+            if (!bodyPreview) bodyPreview = sanitizeLiveThoughtDisplay(preview);
+            if (bodyPreview) setCardLiveThought(cid, bodyPreview, true);
             window.nmerPalette.setStatus("流式输出中…", "loading");
           }
         } else if (d.liveThought && (!hasBody || !statusLive)) {
@@ -9067,28 +9796,44 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           window.nmerPalette.setStatus(preview.slice(0, 80), "loading");
         }
         if (card.uiState === "Planning") actionCardManager.transitionCardState(cid, "Running");
-        if (card.uiState === "Done" && !cardHasPipelineReply(card) && (statusPreview || statusLive || /同步 Niuma|OpenClaw 处理|chat\.send/i.test(preview)))
+        if (
+          card.uiState === "Done" &&
+          !card.ended &&
+          !cardHasPipelineReply(card) &&
+          (statusPreview || statusLive || /同步 Niuma|OpenClaw 处理|chat\.send/i.test(preview))
+        )
           actionCardManager.transitionCardState(cid, "Running");
-        refreshActionCardDom(card);
-        syncActionResultsLayout();
+        scheduleAgentCardDomRefresh(cid);
       }
     } else if (d.type === "palette_agent_end") {
       agentDebugLog("host_end", "card=" + (d.cardId || "") + " req=" + (d.reqId || "") + " len=" + String(d.answer || "").length);
       var endR = resolveActionCard(d.cardId, d.reqId);
       var cid2 = endR.id;
+      if (cid2) flushAgentCardDomRefresh(cid2);
       var card2 = endR.card;
+      var endSource = String(d.source || "host");
+      if (card2 && shouldSkipProseFinalize(card2, { source: endSource === "hub_ws" ? "hub_ws" : "openclaw_sync" })) {
+        agentDebugLog("host_end_skip_prose", "card=" + cid2 + " route=r3 source=" + endSource);
+        if (card2 && d.sessionRef) card2.sessionRef = String(d.sessionRef);
+        return;
+      }
       var endAns = dedupeRepeatedAgentText(String(d.answer || "").trim());
       var prevRawLen = card2 ? String(card2.rawAnswer || "").length : 0;
       var endReady = endAns && agentEndAnswerReady(endAns, card2);
+      var gatewayPrefer =
+        card2 && shouldPreferIncomingGatewayAnswer(card2.rawAnswer, endAns, card2) && endAns.length >= 120;
       var forceFinalize =
         endAns &&
         (endReady ||
+          gatewayPrefer ||
           (endAns.length >= 800 && endAns.length > prevRawLen) ||
           (endAns.length > prevRawLen + 120 && !agentLooksLikeThinkingPreambleOnly(endAns)));
       var followUpQuery = card2 ? String(card2._lastFollowUpQuery || card2.activeQuery || "").trim() : "";
       var wasCollapsed = card2 && !card2.expanded;
       if (card2 && forceFinalize && cardEndFinalizeNeeded(card2, d.reqId, endAns)) {
         ensureFollowUpPriorBlocks(card2);
+        card2._summaryOnly = false;
+        card2._summaryPreview = "";
         card2.rawAnswer = endAns;
         card2._rawReplaySig = endAns;
         card2.activeQuery = "";
@@ -9101,6 +9846,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         ensureCardPipelineRendered(card2);
         scheduleExpandedCardLayout(card2);
       } else if (card2 && forceFinalize) {
+        card2._summaryOnly = false;
+        card2._summaryPreview = "";
         card2.rawAnswer = endAns;
         card2._rawReplaySig = endAns;
         card2.activeQuery = "";
@@ -9152,8 +9899,17 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           waitingQ || card2.waitingForUser || card2.uiState === "Waiting" ? "Waiting" : "Done";
         actionCardManager.transitionCardState(cid2, endState);
         if (endState === "Done") {
+          card2.liveThought = "";
           maybeHealDoneCardPipelineBlocks(card2, cid2);
           ensureCardPipelineRendered(card2);
+          var domDone = document.getElementById("card-" + cid2);
+          if (domDone && cardHasPipelineReply(card2)) {
+            var logDone = domDone.querySelector(".card-status-log");
+            if (logDone) logDone.innerHTML = "";
+            domDone.classList.remove("has-status-log");
+            var ltDone = domDone.querySelector(".card-live-thought");
+            if (ltDone) ltDone.style.display = "none";
+          }
         }
         if (endState === "Done" && (pipelineTurnCount(card2) > 1 || followUpQuery)) {
           showFollowUpCompleteToast(cid2, followUpQuery);
@@ -9184,8 +9940,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         er.card.error = errMsg;
         actionCardManager.transitionCardState(er.id, "Done");
         setCardLiveThought(er.id, errMsg, false);
-        refreshActionCardDom(er.card);
-        syncActionResultsLayout();
+        flushAgentCardDomRefresh(er.id);
       }
     } else if (d.type === "palette_agent_status") {
       agentDebugLog("host_status", String(d.message || "").slice(0, 80));
@@ -9294,6 +10049,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       }
     });
   }
+
+  document.addEventListener("palette-hub-agent-event", function (e) {
+    try {
+      handleHubAgentEvent(e && e.detail);
+    } catch (_) {}
+  });
 
   ensureShell();
   refreshIntentResults(true);

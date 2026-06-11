@@ -100,11 +100,18 @@ global g_SCWV_TransitionCtx := Map("allow", false)
 global g_SCWV_ForceResetStreak := 0
 global g_SCWV_DegradedMode := false
 global g_SCWV_FirstFrameSeen := false
+global g_SCWV_PaintReady := false
+global g_SCWV_AwaitingReshowPaint := false
+global g_SCWV_LastPaintReadyTick := 0
+global g_SCWV_LastRevealWaitLogTick := 0
+global g_SCWV_RevealCommitted := false
 global g_SCWV_GoStartPhase := "IDLE"
 global g_SCWV_GoStartGen := 0
 global g_SCWV_GoStartPending := false
 global g_SCWV_GoKillLastTick := 0
 global g_SCWV_GoResetInFlight := false
+global g_SCWV_PrewarmScheduled := false
+global g_SCWV_PrewarmDone := false
 global g_SCWV_GoPhaseSinceTick := 0
 global g_SCWV_GoStartTryCount := 0
 global g_SCWV_LastSearchIntent := 0
@@ -121,6 +128,11 @@ global g_SCWV_LastOpenIntentReason := ""
 global g_SCWV_LastOpenIntentTick := 0
 global g_SCWV_CloseCommitActive := false
 global g_SCWV_CloseCommitUntilTick := 0
+global g_SCWV_UserMinimized := false
+global g_SCWV_WebMsgQueue := []
+global g_SCWV_WebMsgDrainBusy := false
+global g_SCWV_CompositionWatchdogUntil := 0
+global g_SCWV_CompositionWatchdogArmed := false
 global g_SCWV_LastStaleDropTick := 0
 global g_SCWV_ModeSwitchGuard := false
 global g_SCWV_ModeSwitchGuardUntilTick := 0
@@ -206,12 +218,18 @@ SCWV_ResetHostState() {
     g_SCWV_WV2 := 0
     g_SCWV_Ready := false
     g_SCWV_UI_Ready := false
+    global g_SCWV_FirstFrameSeen, g_SCWV_PaintReady, g_SCWV_AwaitingReshowPaint, g_SCWV_RevealCommitted
+    g_SCWV_FirstFrameSeen := false
+    g_SCWV_PaintReady := false
+    g_SCWV_AwaitingReshowPaint := false
+    g_SCWV_RevealCommitted := false
     g_SCWV_WaitingUiFinishedReveal := false
     g_SCWV_DeferredHostShow := false
     g_SCWV_WV2_CreateRetry := 0
     g_SCWV_CreateInFlight := false
     g_SCWV_CreateStartTick := 0
     g_SCWV_Visible := false
+    g_SCWV_UserMinimized := false
     g_SCWV_FocusPending := false
     g_SCWV_PendingJsonQueue := []
     g_SCWV_ShowWaitStartTick := 0
@@ -245,6 +263,17 @@ SCWV_ClearStaleHostState(reason := "") {
     return true
 }
 
+SCWV_CreateWatchdogTick(*) {
+    global g_SCWV_CreateInFlight
+    if !g_SCWV_CreateInFlight
+        return
+    try SCWV_MaintainLifecycleState("create_watchdog")
+    catch {
+    }
+    if g_SCWV_CreateInFlight
+        SetTimer(SCWV_CreateWatchdogTick, -2000)
+}
+
 SCWV_MaintainLifecycleState(reason := "") {
     global g_SCWV_WaitingUiFinishedReveal, g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
     global g_SCWV_CreateInFlight, g_SCWV_CreateStartTick
@@ -252,7 +281,9 @@ SCWV_MaintainLifecycleState(reason := "") {
 
     if (g_SCWV_WaitingUiFinishedReveal && g_SCWV_ShowWaitStartTick > 0) {
         g_SCWV_LifecyclePhase := "opening"
-        if ((A_TickCount - g_SCWV_ShowWaitStartTick) > 5000) {
+        ; 首屏等待由 ShowWaitTimeoutCheck 负责；此处阈值须大于 safeWaitMs，避免 5s 误杀慢导航。
+        waitStaleMs := 120000
+        if ((A_TickCount - g_SCWV_ShowWaitStartTick) > waitStaleMs) {
             try SCWV_Log("wait_stale_reset", "reason=" . reason . " elapsed=" . (A_TickCount - g_SCWV_ShowWaitStartTick))
             catch {
             }
@@ -263,8 +294,11 @@ SCWV_MaintainLifecycleState(reason := "") {
 
     if (g_SCWV_CreateInFlight && g_SCWV_CreateStartTick > 0) {
         g_SCWV_LifecyclePhase := "opening"
-        if ((A_TickCount - g_SCWV_CreateStartTick) > 8000) {
-            try SCWV_Log("create_stale_reset", "reason=" . reason . " elapsed=" . (A_TickCount - g_SCWV_CreateStartTick))
+        createStaleMs := 12000
+        if (FuncExists("WebView2_GetCreateQueueDepth") && WebView2_GetCreateQueueDepth() > 1)
+            createStaleMs := 90000
+        if ((A_TickCount - g_SCWV_CreateStartTick) > createStaleMs) {
+            try SCWV_Log("create_stale_reset", "reason=" . reason . " elapsed=" . (A_TickCount - g_SCWV_CreateStartTick) . " qlen=" . (FuncExists("WebView2_GetCreateQueueDepth") ? WebView2_GetCreateQueueDepth() : -1))
             catch {
             }
             SCWV_ForceCloseHost("stale_create_timeout")
@@ -380,7 +414,27 @@ SCWV_SubmitIntent(intent, priority := 50, payload := 0) {
         g_SCWV_CloseCommitUntilTick := 0
     }
     if (g_SCWV_CloseCommitActive && A_TickCount < g_SCWV_CloseCommitUntilTick && normalized = "OPEN") {
-        try SCWV_Log("intent_drop_close_commit", "intent=OPEN remain_ms=" . (g_SCWV_CloseCommitUntilTick - A_TickCount))
+        if _SCWV_IsUserInitiatedOpen(payload) {
+            g_SCWV_CloseCommitActive := false
+            g_SCWV_CloseCommitUntilTick := 0
+            try SCWV_Log("intent_open_clear_close_commit", "reason=" . (payload is Map ? String(payload.Get("reason", "")) : ""))
+        } else {
+            try SCWV_Log("intent_drop_close_commit", "intent=OPEN remain_ms=" . (g_SCWV_CloseCommitUntilTick - A_TickCount))
+            return
+        }
+    }
+    global g_SCWV_CloseInFlight
+    if (g_SCWV_CloseInFlight && normalized = "OPEN") {
+        if _SCWV_IsUserInitiatedOpen(payload) {
+            deferMs := Max(80, Min(400, g_SCWV_CloseCommitUntilTick - A_TickCount))
+            if (deferMs < 80)
+                deferMs := 120
+            openPayload := (payload is Map) ? payload : Map()
+            try SCWV_Log("intent_open_defer_close_inflight", "defer_ms=" . deferMs)
+            SetTimer((*) => SCWV_SubmitIntent("OPEN", priority, openPayload), -deferMs)
+            return
+        }
+        try SCWV_Log("intent_drop_close_inflight", "intent=OPEN")
         return
     }
     _SCWV_LogIFS(intentHex, "0x00")
@@ -569,7 +623,7 @@ SCWV_AntiHangTick(token) {
         return
     if (g_SCWV_CurrentPhase = SCWV_PHASE_OPENING) {
         try {
-            if (g_SCWV_UI_Ready || (SCWV_IsVisible() && g_SCWV_FirstFrameSeen)) {
+            if g_SCWV_FirstFrameSeen {
                 SCWV_SetPhase(SCWV_PHASE_OPEN, "anti_hang_promote_open")
                 g_SCWV_AntiHangTimerArmed := false
                 return
@@ -641,7 +695,7 @@ SCWV_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
         if (cur = SCWV_PHASE_OPENING) {
             if FuncExists("SurfaceTransaction_OnTargetClose")
                 try SurfaceTransaction_OnTargetClose("search_center", Map("reason", reason, "entry", "opening_close"))
-            g_SCWV_CloseAfterReady := true
+            SCWV_ApplyUserCloseDuringOpening(reason)
             return true
         }
         if (cur = SCWV_PHASE_CLOSED || cur = SCWV_PHASE_CLOSING)
@@ -651,9 +705,22 @@ SCWV_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
         token := g_SCWV_CurrentToken
         SCWV_SetPhase(SCWV_PHASE_CLOSING, reason)
         SCWV_ArmAntiHang(token)
-        ; "彻底退出"：关闭统一走硬关闭，销毁 WebView 宿主并中止在途请求。
-        SCWV_ForceCloseHost(reason)
-        SCWV_SetPhase(SCWV_PHASE_CLOSED, "closed_after_hide_" . reason)
+        rLowClose := StrLower(Trim(String(reason)))
+        useHardClose := _SCWV_IsRecoveryCloseReason(reason)
+            || InStr(rLowClose, "force")
+            || InStr(rLowClose, "dispose")
+            || !SCWV_CanWarmKeepAliveClose()
+        if         useHardClose {
+            SCWV_ForceCloseHost(reason)
+            SCWV_SetPhase(SCWV_PHASE_CLOSED, "closed_after_hide_" . reason)
+        } else {
+            SCWV_StopForegroundPumps()
+            SCWV_ArmCloseCommit(1200)
+            g_SCWV_TransitionCtx["allow"] := true
+            try SCWV_Hide(true)
+            finally g_SCWV_TransitionCtx["allow"] := false
+            SCWV_SetPhase(SCWV_PHASE_CLOSED, "closed_after_soft_hide_" . reason)
+        }
         return true
     }
 }
@@ -948,6 +1015,16 @@ SCWV_GetGuiHwnd() {
     return 0
 }
 
+SCWV_NotifyToolbarSearchClosed(*) {
+    if FuncExists("FloatingToolbar_ClearToolbarSelection") {
+        try FloatingToolbar_ClearToolbarSelection("")
+        catch {
+        }
+        SetTimer((*) => FloatingToolbar_ClearToolbarSelection(""), -120)
+        SetTimer((*) => FloatingToolbar_ClearToolbarSelection(""), -480)
+    }
+}
+
 ; 打开 Windows 系统回收站（剪贴板 / Hub / PQP 等面板共用消息 type: openWindowsRecycleBin）
 SCWV_OpenWindowsRecycleBinFolder() {
     try Run("explorer.exe shell:RecycleBinFolder")
@@ -1019,6 +1096,7 @@ SCWV_Init(reason := "") {
     try SCWV_Log("init_create_begin", "reason=" . r . " hwnd=" . g_SCWV_Gui.Hwnd)
 
     WebView2_CreateWithSharedEnvAsync(g_SCWV_Gui.Hwnd, SCWV_OnCreated, "searchcenter_" . r)
+    SetTimer(SCWV_CreateWatchdogTick, -2000)
 
     _SCWV_EnsureCurrentCategoryState()
     _SCWV_LoadSearchEngineMode()
@@ -1057,6 +1135,7 @@ SCWV_OnCreated(ctrl) {
         }
         g_SCWV_CreateInFlight := false
         g_SCWV_CreateStartTick := 0
+        SetTimer(SCWV_CreateWatchdogTick, 0)
         SCWV_ForceCloseHost("webview_create_failed")
         if (g_SCWV_WV2_CreateRetry < 2) {
             g_SCWV_WV2_CreateRetry += 1
@@ -1075,12 +1154,15 @@ SCWV_OnCreated(ctrl) {
     g_SCWV_WV2_CreateRetry := 0
     g_SCWV_CreateInFlight := false
     g_SCWV_CreateStartTick := 0
+    SetTimer(SCWV_CreateWatchdogTick, 0)
     g_SCWV_LifecyclePhase := "opening"
     g_SCWV_Ctrl := ctrl
     g_SCWV_WV2 := ctrl.CoreWebView2
     g_SCWV_Ready := false
     g_SCWV_UI_Ready := false
     g_SCWV_FirstFrameSeen := false
+    g_SCWV_PaintReady := false
+    g_SCWV_RevealCommitted := false
     g_SCWV_WaitingUiFinishedReveal := false
     g_SCWV_NavFallbackTried := false
     SetTimer(SCWV_ForceRevealIfStuck, 0)
@@ -1115,44 +1197,177 @@ SCWV_OnCreated(ctrl) {
     g_SCWV_WV2.Navigate(BuildAppLocalUrl("SearchCenter.html"))
 }
 
+SCWV_IsCloseRequested() {
+    global g_SCWV_CloseInFlight, g_SCWV_CloseAfterReady, g_SCWV_CurrentPhase, g_SCWV_LifecyclePhase
+    global g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
+    if g_SCWV_CloseAfterReady || g_SCWV_CloseInFlight
+        return true
+    cur := StrUpper(Trim(String(g_SCWV_CurrentPhase)))
+    if (cur = SCWV_PHASE_CLOSED || cur = SCWV_PHASE_CLOSING)
+        return true
+    lc := StrLower(Trim(String(g_SCWV_LifecyclePhase)))
+    if (lc = "closed" || lc = "closing")
+        return true
+    if (g_SCWV_CloseCommitActive && A_TickCount < g_SCWV_CloseCommitUntilTick)
+        return true
+    return false
+}
+
+SCWV_ApplyUserCloseDuringOpening(reason := "") {
+    global g_SCWV_TransitionCtx, g_SCWV_CloseInFlight
+    global g_SCWV_WaitingUiFinishedReveal, g_SCWV_CloseAfterReady
+    g_SCWV_CloseAfterReady := false
+    g_SCWV_WaitingUiFinishedReveal := false
+    g_SCWV_CloseInFlight := true
+    SCWV_SetPhase(SCWV_PHASE_CLOSING, "opening_user_close_" . reason)
+    SetTimer(SCWV_ForceRevealIfStuck, 0)
+    SetTimer(SCWV_ShowWaitTimeoutCheck, 0)
+    SetTimer(SCWV_RefreshComposition, 0)
+    SCWV_StopForegroundPumps()
+    SCWV_ArmCloseCommit(2000)
+    SCWV_NotifyToolbarSearchClosed()
+    useHard := _SCWV_IsRecoveryCloseReason(reason) || !SCWV_CanWarmKeepAliveClose()
+    if useHard {
+        SCWV_ForceCloseHost(reason)
+        SCWV_SetPhase(SCWV_PHASE_CLOSED, "opening_hard_close_" . reason)
+        g_SCWV_CloseInFlight := false
+        return
+    }
+    g_SCWV_TransitionCtx["allow"] := true
+    try SCWV_Hide(true)
+    finally g_SCWV_TransitionCtx["allow"] := false
+    SCWV_SetPhase(SCWV_PHASE_CLOSED, "opening_soft_close_" . reason)
+    g_SCWV_CloseInFlight := false
+}
+
+SCWV_CanWarmKeepAliveClose() {
+    global g_SCWV_CreateInFlight, g_SCWV_WV2, g_SCWV_Ready, g_SCWV_DegradedMode, AppearanceActivationMode
+    if g_SCWV_DegradedMode || g_SCWV_CreateInFlight
+        return false
+    if !SCWV_HostAlive() || !g_SCWV_WV2 || !g_SCWV_Ready
+        return false
+    mode := "toolbar"
+    try mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
+    catch {
+    }
+    if (mode = "hole")
+        return false
+    return true
+}
+
+SCWV_ScheduleIdlePrewarm(delayMs := 6000) {
+    global g_SCWV_PrewarmScheduled, g_SCWV_Gui, g_SCWV_Visible
+    if g_SCWV_PrewarmScheduled
+        return
+    if (g_SCWV_Gui && SCWV_HostAlive())
+        return
+    if g_SCWV_Visible
+        return
+    g_SCWV_PrewarmScheduled := true
+    SetTimer(SCWV_PrewarmHost, -Max(1500, Abs(delayMs)))
+}
+
+SCWV_PrewarmHost(*) {
+    global g_SCWV_PrewarmDone, g_SCWV_Gui, g_SCWV_CreateInFlight, g_SCWV_TransitionCtx, g_SCWV_Visible
+    if (g_SCWV_Gui && SCWV_HostAlive()) {
+        g_SCWV_PrewarmDone := true
+        return
+    }
+    if g_SCWV_CreateInFlight || g_SCWV_Visible
+        return
+    try SCWV_Log("prewarm_begin", "")
+    g_SCWV_TransitionCtx["allow"] := true
+    try SCWV_Init("idle_prewarm")
+    catch {
+    } finally {
+        g_SCWV_TransitionCtx["allow"] := false
+    }
+    g_SCWV_PrewarmDone := true
+    try SCWV_Log("prewarm_done", "ready=" . (g_SCWV_Ready ? "1" : "0") . " inflight=" . (g_SCWV_CreateInFlight ? "1" : "0"))
+    catch {
+    }
+}
+
 SCWV_OnGuiClose(*) {
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Visible
-    global g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick, g_SCWV_ShowWaitStartTick, g_SCWV_CreateInFlight
-    if (g_SCWV_WaitingUiFinishedReveal || g_SCWV_CreateInFlight) {
-        try SCWV_Log("gui_close_ignored", "waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " inflight=" . (g_SCWV_CreateInFlight ? "1" : "0"))
+    global g_SCWV_CreateInFlight, g_SCWV_LifecyclePhase, g_SCWV_Gui, g_SCWV_IntentQueue
+    global g_SCWV_CloseAfterReady, g_SCWV_HandoffActive, g_SCWV_HandoffPendingOpen, g_SCWV_TransitionCtx
+    global g_SCWV_CloseInFlight
+    if g_SCWV_CloseInFlight {
+        try SCWV_Log("gui_close_skip_inflight", "")
         return
     }
-    if (g_SCWV_ShowWaitStartTick > 0 && (A_TickCount - g_SCWV_ShowWaitStartTick) < 4000 && !SCWV_IsRevealedToUser()) {
-        try SCWV_Log("gui_close_ignored", "reason=early_after_show_ms=" . (A_TickCount - g_SCWV_ShowWaitStartTick))
+    if (g_SCWV_LifecyclePhase = "closing") {
+        try SCWV_Log("gui_close_force_destroy", "hwnd=" . (g_SCWV_Gui ? g_SCWV_Gui.Hwnd : 0))
+        try {
+            if g_SCWV_Gui
+                g_SCWV_Gui.Destroy()
+        } catch {
+        }
+        try SCWV_ResetHostState()
+        catch {
+        }
         return
     }
-    g_SCWV_CloseCommitActive := true
-    g_SCWV_CloseCommitUntilTick := A_TickCount + 260
-    try SCWV_Log("gui_close_request", "visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " gdho=" . (GDHO_VISIBLE ? "1" : "0") . " native=" . (NativeDropSessionActive ? "1" : "0"))
-    SearchCenterUnifiedClose("gui_close", true, true)
+    g_SCWV_CloseInFlight := true
+    g_SCWV_CloseAfterReady := false
+    g_SCWV_WaitingUiFinishedReveal := false
+    g_SCWV_HandoffActive := false
+    g_SCWV_HandoffPendingOpen := 0
+    g_SCWV_IntentQueue := []
+    SetTimer(SCWV_PumpIntents, 0)
+    SetTimer(SCWV_ForceRevealIfStuck, 0)
+    SetTimer(SCWV_ShowWaitTimeoutCheck, 0)
+    SetTimer(SCWV_RefreshComposition, 0)
+    SCWV_SetPhase(SCWV_PHASE_CLOSING, "gui_close")
+    SCWV_NotifyToolbarSearchClosed()
+    try SCWV_Log("gui_close_request", "visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " inflight=" . (g_SCWV_CreateInFlight ? "1" : "0") . " gdho=" . (GDHO_VISIBLE ? "1" : "0") . " native=" . (NativeDropSessionActive ? "1" : "0") . " warm=" . (SCWV_CanWarmKeepAliveClose() ? "1" : "0"))
+    if SCWV_CanWarmKeepAliveClose() {
+        SCWV_StopForegroundPumps()
+        SCWV_ArmCloseCommit(2000)
+        g_SCWV_TransitionCtx["allow"] := true
+        try SCWV_Hide(true)
+        finally g_SCWV_TransitionCtx["allow"] := false
+        SCWV_SetPhase(SCWV_PHASE_CLOSED, "gui_soft_close")
+        g_SCWV_CloseInFlight := false
+        return
+    }
+    SCWV_StopForegroundPumps()
+    SCWV_ArmCloseCommit(1200)
+    g_SCWV_LifecyclePhase := "closing"
+    SCWV_ForceCloseHost("gui_close")
 }
 
 SCWV_OnGuiResize(GuiObj, MinMax, Width, Height) {
-    if (MinMax = -1)
+    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_UserMinimized
+    if (MinMax = -1) {
+        g_SCWV_UserMinimized := true
+        SCWV_StopForegroundPumps()
         return
-    SCWV_ApplyBounds()
-    try SCWV_Preview_OnHostLayoutChanged()
-    catch {
     }
+    if (MinMax >= 0)
+        g_SCWV_UserMinimized := false
+    if (Width > 0 && Height > 0)
+        SCWV_ApplyBounds(Width, Height)
+    if SCWV_ShouldRunComposition()
+        SCWV_ScheduleCompositionPump("gui_resize")
+    else {
+        SCWV_ApplyBounds(Width, Height)
+        try SCWV_Preview_OnHostLayoutChanged()
+        catch {
+        }
+    }
+    SCWV_ScheduleBoundsRetries("gui_resize")
 }
 
 SCWV_OnNavigationCompleted(sender, args) {
     global g_SCWV_Visible, g_SCWV_NavFallbackTried, g_SCWV_FirstFrameSeen, g_SCWV_NavProgressTick
     global g_SCWV_WaitingUiFinishedReveal, g_SCWV_UI_Ready
 
-    if !g_SCWV_Visible && !g_SCWV_WaitingUiFinishedReveal
-        return
-
     try ok := args.IsSuccess
     catch {
         ok := true
     }
-    try SCWV_Log("nav_completed", "ok=" . (ok ? "1" : "0") . " visible=" . (g_SCWV_Visible ? "1" : "0"))
     if !ok {
         if !g_SCWV_NavFallbackTried {
             g_SCWV_NavFallbackTried := true
@@ -1166,39 +1381,263 @@ SCWV_OnNavigationCompleted(sender, args) {
     }
     g_SCWV_FirstFrameSeen := true
     g_SCWV_NavProgressTick := A_TickCount
+    if !g_SCWV_Visible && !g_SCWV_WaitingUiFinishedReveal {
+        try SCWV_Log("nav_completed_prewarm", "ok=1 ui=" . (g_SCWV_UI_Ready ? "1" : "0"))
+        return
+    }
+    try SCWV_Log("nav_completed", "ok=1 visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
     _SCWV_HandoffEnd("first_frame")
-    if (g_SCWV_WaitingUiFinishedReveal && (g_SCWV_UI_Ready || g_SCWV_FirstFrameSeen))
-        SCWV_FinishReveal()
+    if SCWV_IsCloseRequested()
+        return
+    try SCWV_PushThemeToWeb()
+    catch {
+    }
+    SCWV_ScheduleCompositionPump("nav_completed")
+    SCWV_TryFinishReveal("nav_completed")
 
     global g_SCWV_PendingTriggerSource
-    if (Trim(String(g_SCWV_PendingTriggerSource)) = "search_hotkey")
+    if (Trim(String(g_SCWV_PendingTriggerSource)) = "search_hotkey") && !SCWV_IsCloseRequested()
         SCWV_StartHotkeyForegroundPump(10000)
 
     SCWV_RefreshComposition()
 }
 
 SCWV_OnNavigationStarting(sender, args) {
-    global g_SCWV_NavProgressTick
+    global g_SCWV_NavProgressTick, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_FirstFrameSeen, g_SCWV_PaintReady, g_SCWV_RevealCommitted
     g_SCWV_NavProgressTick := A_TickCount
+    g_SCWV_Ready := false
+    g_SCWV_UI_Ready := false
+    g_SCWV_FirstFrameSeen := false
+    g_SCWV_PaintReady := false
+    g_SCWV_RevealCommitted := false
 }
 
-SCWV_ApplyBounds() {
+SCWV_CanRevealToUser() {
+    global g_SCWV_FirstFrameSeen, g_SCWV_UI_Ready, g_SCWV_AwaitingReshowPaint, g_SCWV_PaintReady, g_SCWV_Ready
+    if !g_SCWV_UI_Ready
+        return false
+    ; 温保活再开：页面未重新导航，FirstFrameSeen 可能仍为 0（prewarm 时 nav_completed 早退）
+    if g_SCWV_AwaitingReshowPaint || (g_SCWV_Ready && !g_SCWV_FirstFrameSeen)
+        return g_SCWV_Ready && g_SCWV_PaintReady
+    return g_SCWV_FirstFrameSeen && g_SCWV_UI_Ready
+}
+
+SCWV_TryFinishReveal(source := "") {
+    global g_SCWV_WaitingUiFinishedReveal, g_SCWV_RevealCommitted, g_SCWV_Visible
+    global g_SCWV_FirstFrameSeen, g_SCWV_UI_Ready, g_SCWV_PaintReady, g_SCWV_AwaitingReshowPaint
+    if SCWV_IsCloseRequested()
+        return false
+    if g_SCWV_RevealCommitted || g_SCWV_Visible
+        return false
+    if !g_SCWV_WaitingUiFinishedReveal
+        return false
+    if !SCWV_CanRevealToUser() {
+        try {
+            global g_SCWV_LastRevealWaitLogTick
+            if !(IsSet(g_SCWV_LastRevealWaitLogTick) && (A_TickCount - g_SCWV_LastRevealWaitLogTick) < 400) {
+                g_SCWV_LastRevealWaitLogTick := A_TickCount
+                SCWV_Log("finish_reveal_wait", "source=" . String(source) . " frame=" . (g_SCWV_FirstFrameSeen ? "1" : "0") . " ui=" . (g_SCWV_UI_Ready ? "1" : "0") . " paint=" . (g_SCWV_PaintReady ? "1" : "0") . " awaiting=" . (g_SCWV_AwaitingReshowPaint ? "1" : "0"))
+            }
+        } catch {
+        }
+        return false
+    }
+    g_SCWV_RevealCommitted := true
+    SCWV_FinishReveal()
+    return true
+}
+
+_SCWV_IsUserInitiatedOpen(payload) {
+    if !(payload is Map)
+        return false
+    r := StrLower(Trim(String(payload.Get("reason", ""))))
+    ts := StrLower(Trim(String(payload.Get("triggerSource", ""))))
+    if (ts = "search_hotkey" || ts = "clipboard_hotkey")
+        return true
+    if (InStr(r, "toolbar_search") || InStr(r, "search_hotkey") || InStr(r, "ftb_") || InStr(r, "tray_"))
+        return true
+    return false
+}
+
+SCWV_NotifyHostLayout(clientW, clientH) {
+    global g_SCWV_WV2
+    if !g_SCWV_WV2 || clientW < 1 || clientH < 1
+        return
+    try WebView_QueuePayload(g_SCWV_WV2, Map("type", "hostLayout", "width", Integer(clientW), "height", Integer(clientH)))
+    catch {
+    }
+}
+
+SCWV_ApplyBounds(clientW := 0, clientH := 0) {
     global g_SCWV_Gui, g_SCWV_Ctrl
 
     if !g_SCWV_Gui || !g_SCWV_Ctrl
-        return
+        return false
 
-    WinGetClientPos(, , &cw, &ch, g_SCWV_Gui.Hwnd)
+    cw := Integer(clientW)
+    ch := Integer(clientH)
+    if (cw < 1 || ch < 1) {
+        cw := 0, ch := 0
+        try WinGetClientPos(, , &cw, &ch, g_SCWV_Gui.Hwnd)
+        catch {
+            return false
+        }
+    }
+    if (cw < 200 || ch < 160)
+        return false
     rc := WebView2.RECT()
     rc.left := 0
     rc.top := 0
     rc.right := cw
     rc.bottom := ch
-    g_SCWV_Ctrl.Bounds := rc
+    try g_SCWV_Ctrl.Bounds := rc
+    catch {
+        return false
+    }
+    try g_SCWV_Ctrl.NotifyParentWindowPositionChanged()
+    catch {
+    }
+    SCWV_NotifyHostLayout(cw, ch)
+    return true
+}
+
+SCWV_ScheduleBoundsRetries(reason := "") {
+    global g_SCWV_CurrentToken
+    tok := g_SCWV_CurrentToken
+    r := String(reason)
+    for delay in [16, 80, 200, 480, 900, 1400, 2200, 3200] {
+        SetTimer((*) => SCWV_ApplyBoundsRetryTick(tok, r), -delay)
+    }
+}
+
+SCWV_ApplyBoundsRetryTick(token := 0, reason := "") {
+    if (token && !SCWV_IsCurrentToken(token))
+        return
+    if !SCWV_ShouldRunComposition()
+        return
+    if SCWV_IsCloseRequested()
+        return
+    if SCWV_ApplyBounds()
+        return
+    try SCWV_EnsureMaximized()
+    catch {
+    }
+    SCWV_ApplyBounds()
+}
+
+SCWV_CompositionPump(reason := "", token := 0) {
+    global g_SCWV_Gui, g_SCWV_Ctrl, g_SCWV_WV2
+    if (token && !SCWV_IsCurrentToken(token))
+        return
+    if !g_SCWV_Gui || !g_SCWV_Ctrl
+        return
+    try {
+        SCWV_ApplyBounds()
+        try g_SCWV_Ctrl.IsVisible := true
+        catch {
+        }
+        try g_SCWV_Ctrl.NotifyParentWindowPositionChanged()
+        catch {
+        }
+        try SCWV_Preview_OnHostLayoutChanged()
+        catch {
+        }
+        hwnd := g_SCWV_Gui.Hwnd
+        if hwnd {
+            if FuncExists("WebView2_ForceHostRedraw")
+                try WebView2_ForceHostRedraw(hwnd)
+                catch {
+                }
+        }
+    } catch {
+    }
+    if IsObject(g_SCWV_WV2) {
+        try WebView_QueuePayload(g_SCWV_WV2, Map("type", "hostPaintNudge", "reason", String(reason)))
+        catch {
+        }
+    }
+}
+
+SCWV_StartCompositionWatchdog(durationMs := 12000) {
+    global g_SCWV_CompositionWatchdogUntil, g_SCWV_CompositionWatchdogArmed
+    g_SCWV_CompositionWatchdogUntil := A_TickCount + Max(2000, Integer(durationMs))
+    if !g_SCWV_CompositionWatchdogArmed {
+        g_SCWV_CompositionWatchdogArmed := true
+        SetTimer(SCWV_CompositionWatchdogTick, 200)
+    }
+}
+
+SCWV_StopCompositionWatchdog(*) {
+    global g_SCWV_CompositionWatchdogUntil, g_SCWV_CompositionWatchdogArmed
+    g_SCWV_CompositionWatchdogUntil := 0
+    g_SCWV_CompositionWatchdogArmed := false
+    SetTimer(SCWV_CompositionWatchdogTick, 0)
+}
+
+SCWV_CompositionWatchdogTick(*) {
+    global g_SCWV_CompositionWatchdogUntil, g_SCWV_CompositionWatchdogArmed
+    global g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_PaintReady, g_SCWV_Gui
+    if !g_SCWV_CompositionWatchdogArmed
+        return
+    if SCWV_IsCloseRequested() || !(g_SCWV_Visible || g_SCWV_WaitingUiFinishedReveal) {
+        SCWV_StopCompositionWatchdog()
+        return
+    }
+    if (A_TickCount > g_SCWV_CompositionWatchdogUntil) {
+        SCWV_StopCompositionWatchdog()
+        return
+    }
+    global g_SCWV_AwaitingReshowPaint
+    if (g_SCWV_Visible && g_SCWV_PaintReady && g_SCWV_Gui && !g_SCWV_AwaitingReshowPaint) {
+        cw := 0, ch := 0
+        try WinGetClientPos(, , &cw, &ch, g_SCWV_Gui.Hwnd)
+        if (cw >= 320 && ch >= 240) {
+            SCWV_StopCompositionWatchdog()
+            return
+        }
+    }
+    SCWV_CompositionPump("watchdog")
+}
+
+SCWV_ScheduleCompositionPump(reason := "") {
+    global g_SCWV_CurrentToken
+    tok := g_SCWV_CurrentToken
+    SCWV_CompositionPump(reason . "_0", tok)
+    SetTimer((*) => SCWV_CompositionPump(reason . "_16", tok), -16)
+    SetTimer((*) => SCWV_CompositionPump(reason . "_48", tok), -48)
+    SetTimer((*) => SCWV_CompositionPump(reason . "_120", tok), -120)
+    SetTimer((*) => SCWV_CompositionPump(reason . "_280", tok), -280)
+    SetTimer((*) => SCWV_CompositionPump(reason . "_420", tok), -420)
+    SetTimer((*) => SCWV_CompositionPump(reason . "_640", tok), -640)
+    SetTimer((*) => SCWV_CompositionPump(reason . "_900", tok), -900)
+    SetTimer((*) => SCWV_CompositionPump(reason . "_1400", tok), -1400)
+    SetTimer((*) => SCWV_CompositionPump(reason . "_2200", tok), -2200)
+    SetTimer((*) => SCWV_CompositionPump(reason . "_3200", tok), -3200)
+    SCWV_StartCompositionWatchdog(12000)
+}
+
+SCWV_ShouldRunComposition(*) {
+    global g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal
+    return g_SCWV_Visible || g_SCWV_WaitingUiFinishedReveal
+}
+
+SCWV_ArmCloseCommit(ms := 900) {
+    global g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
+    g_SCWV_CloseCommitActive := true
+    g_SCWV_CloseCommitUntilTick := A_TickCount + Max(250, Integer(ms))
+}
+
+SCWV_StopForegroundPumps(*) {
+    global g_SCWV_HotkeyFgPumpUntil, g_SCWV_HotkeyFgPumpCount
+    g_SCWV_HotkeyFgPumpUntil := 0
+    g_SCWV_HotkeyFgPumpCount := 0
+    SetTimer(SCWV_HotkeyForegroundPumpTick, 0)
 }
 
 SCWV_EnsureMaximized(*) {
-    global g_SCWV_Gui
+    global g_SCWV_Gui, g_SCWV_UserMinimized, g_SCWV_Visible
+    if g_SCWV_UserMinimized || !g_SCWV_Visible
+        return
     if !g_SCWV_Gui
         return
     hwndExpr := "ahk_id " . g_SCWV_Gui.Hwnd
@@ -1323,7 +1762,11 @@ SCWV_StartHotkeyForegroundPump(durationMs := 14000) {
 }
 
 SCWV_HotkeyForegroundPumpTick(*) {
-    global g_SCWV_HotkeyFgPumpUntil, g_SCWV_HotkeyFgPumpCount, g_SCWV_Gui
+    global g_SCWV_HotkeyFgPumpUntil, g_SCWV_HotkeyFgPumpCount, g_SCWV_Gui, g_SCWV_Visible, g_SCWV_UserMinimized
+    if SCWV_IsCloseRequested() || !g_SCWV_Visible || g_SCWV_UserMinimized {
+        SetTimer(SCWV_HotkeyForegroundPumpTick, 0)
+        return
+    }
     if (A_TickCount > g_SCWV_HotkeyFgPumpUntil) {
         SetTimer(SCWV_HotkeyForegroundPumpTick, 0)
         return
@@ -1357,7 +1800,14 @@ SCWV_HotkeyForegroundPumpTick(*) {
 }
 
 SCWV_RaiseToForeground(reason := "sc_raise", focusCb := 0) {
-    global g_SCWV_Gui, g_SCWV_Ctrl
+    global g_SCWV_Gui, g_SCWV_Ctrl, g_SCWV_Visible, g_SCWV_UserMinimized, g_SCWV_LifecyclePhase, g_SCWV_CurrentPhase
+    global g_SCWV_WaitingUiFinishedReveal
+    if !(g_SCWV_Visible || g_SCWV_WaitingUiFinishedReveal) || g_SCWV_UserMinimized
+        return false
+    if (g_SCWV_LifecyclePhase = "closing" || g_SCWV_LifecyclePhase = "closed")
+        return false
+    if (g_SCWV_CurrentPhase = SCWV_PHASE_CLOSED)
+        return false
     if !IsObject(g_SCWV_Gui)
         return false
     hwnd := 0
@@ -1417,8 +1867,10 @@ SCWV_RaiseToForeground(reason := "sc_raise", focusCb := 0) {
 }
 
 SCWV_ShowHostFullscreen(*) {
-    global g_SCWV_Gui
-    if !g_SCWV_Gui
+    global g_SCWV_Gui, g_SCWV_UserMinimized
+    if g_SCWV_UserMinimized || !g_SCWV_Gui
+        return
+    if SCWV_IsCloseRequested()
         return
     try Nmer_MoveGuiToPopupScreen(g_SCWV_Gui)
     catch {
@@ -1430,6 +1882,10 @@ SCWV_ShowHostFullscreen(*) {
         catch {
         }
     }
+    try SCWV_EnsureMaximized()
+    catch {
+    }
+    SCWV_ScheduleBoundsRetries("show_host_fullscreen")
     try SCWV_RaiseToForeground("show_host_fullscreen")
     catch {
     }
@@ -1455,51 +1911,66 @@ SCWV_EnsureTaskbarEligible(*) {
 }
 
 SCWV_FinishReveal() {
-    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_DeferredHostShow
+    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_DeferredHostShow, g_SCWV_UserMinimized
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts, g_SCWV_LastShown, g_SCWV_PendingTriggerSource
     global g_SCWV_Ctrl, g_SCWV_WV2, g_SCWV_CurrentToken
+    if SCWV_IsCloseRequested()
+        return
+    if !SCWV_ShouldRunComposition()
+        return
     if !g_SCWV_Gui
         return
-    wasDeferred := !!g_SCWV_DeferredHostShow
-    if wasDeferred {
-        g_SCWV_DeferredHostShow := false
-        SCWV_ShowHostFullscreen()
-        try SCWV_SetHostTopMost(g_SCWV_HostTopMost)
-        SCWV_ApplyBounds()
-        SetTimer(SCWV_ApplyBounds, -80)
-        try FloatingToolbar_PageDockEnter("search")
-        g_SCWV_LastShown := A_TickCount
-        try WebView2_NotifyShown(g_SCWV_WV2)
-        try {
-            WMActivateChain_Register(SCWV_WM_ACTIVATE)
-        } catch {
-        }
-        ts := Trim(String(g_SCWV_PendingTriggerSource))
-        if (ts != "clipboard_hotkey") {
-            try SCWV_RaiseToForeground("finish_reveal_focus", (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
-            curToken := g_SCWV_CurrentToken
-            SetTimer((*) => _SCWV_DeferredMoveFocus100(curToken), -100)
-            SetTimer((*) => SCWV_FocusDeferred(curToken), -80)
-            SetTimer((*) => SCWV_RaiseToForeground("finish_reveal_reassert"), -180)
-            SCWV_RequestFocusInput()
-        }
-        if (ts = "search_hotkey" || ts = "clipboard_hotkey")
-            SCWV_ApplyCapsLockForSearchOpen()
-        else
-            try CapsLock_ScheduleNormalizeAfterChord()
-        try SearchCenter_ScheduleIMEStabilize()
+    if !SCWV_CanRevealToUser() {
+        try SCWV_Log("finish_reveal_defer_not_ready", "waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
+        return
     }
+    try SCWV_Log("finish_reveal_begin", "deferred=" . (g_SCWV_DeferredHostShow ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
+    g_SCWV_DeferredHostShow := false
+    try WinSetTransparent(255, "ahk_id " . g_SCWV_Gui.Hwnd)
+    catch {
+    }
+    if g_SCWV_Ctrl {
+        try g_SCWV_Ctrl.IsVisible := true
+        catch {
+        }
+    }
+    if !g_SCWV_UserMinimized {
+        SCWV_ShowHostFullscreen()
+        SCWV_EnsureMaximized()
+        try SCWV_SetHostTopMost(g_SCWV_HostTopMost)
+    }
+    SCWV_ApplyBounds()
+    SCWV_ScheduleBoundsRetries("finish_reveal")
+    g_SCWV_Visible := true
+    SCWV_ScheduleCompositionPump("finish_reveal")
+    SCWV_ScheduleBoundsRetries("finish_reveal_visible")
+    g_SCWV_LastShown := A_TickCount
+    try WebView2_NotifyShown(g_SCWV_WV2)
+    try {
+        if WMActivateChain_Count() < 1
+            WMActivateChain_Register(SCWV_WM_ACTIVATE)
+    } catch {
+    }
+    ts := Trim(String(g_SCWV_PendingTriggerSource))
+    if (ts != "clipboard_hotkey") {
+        try SCWV_RaiseToForeground("finish_reveal_focus", (*) => WebView2_MoveFocusProgrammatic(g_SCWV_Ctrl))
+        curToken := g_SCWV_CurrentToken
+        SetTimer((*) => _SCWV_DeferredMoveFocus100(curToken), -100)
+        SetTimer((*) => SCWV_FocusDeferred(curToken), -80)
+        SetTimer((*) => SCWV_RaiseToForeground("finish_reveal_reassert"), -180)
+        SCWV_RequestFocusInput()
+    }
+    if (ts = "search_hotkey" || ts = "clipboard_hotkey")
+        SCWV_ApplyCapsLockForSearchOpen()
+    else
+        try CapsLock_ScheduleNormalizeAfterChord()
+    try SearchCenter_ScheduleIMEStabilize()
     g_SCWV_WaitingUiFinishedReveal := false
+    g_SCWV_AwaitingReshowPaint := false
     g_SCWV_ShowWaitStartTick := 0
     g_SCWV_ShowRecoveryAttempts := 0
     SetTimer(SCWV_ForceRevealIfStuck, 0)
     SetTimer(SCWV_ShowWaitTimeoutCheck, 0)
-    try WinSetTransparent(255, "ahk_id " . g_SCWV_Gui.Hwnd)
-    catch {
-    }
-    SCWV_ApplyBounds()
-    SetTimer(SCWV_ApplyBounds, -80)
-    g_SCWV_Visible := true
     SCWV_EnsureTaskbarEligible()
     SCWV_PushLifecycleState("open", "finish_reveal")
     try SurfaceManager_ObserveShow("search_center", Map("entry", "SCWV_FinishReveal"))
@@ -1519,15 +1990,14 @@ SCWV_FinishReveal() {
 }
 
 SCWV_ForceRevealIfStuck(*) {
-    global g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_FirstFrameSeen
+    global g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_FirstFrameSeen, g_SCWV_PaintReady, g_SCWV_AwaitingReshowPaint
     if !g_SCWV_WaitingUiFinishedReveal
         return
-    ; Guard: never force-reveal before first frame/web ready, otherwise hole mode can show a full black host.
-    if !(g_SCWV_UI_Ready || (g_SCWV_Ready && g_SCWV_FirstFrameSeen)) {
-        try SCWV_Log("force_reveal_skip_not_ready", "ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0") . " first_frame=" . (g_SCWV_FirstFrameSeen ? "1" : "0"))
+    if !SCWV_CanRevealToUser() {
+        try SCWV_Log("force_reveal_skip_not_ready", "ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0") . " first_frame=" . (g_SCWV_FirstFrameSeen ? "1" : "0") . " paint=" . (g_SCWV_PaintReady ? "1" : "0") . " awaiting=" . (g_SCWV_AwaitingReshowPaint ? "1" : "0"))
         return
     }
-    SCWV_FinishReveal()
+    SCWV_TryFinishReveal("force_reveal")
 }
 
 SCWV_ShowWaitTimeoutCheck(token := 0, *) {
@@ -1540,8 +2010,16 @@ SCWV_ShowWaitTimeoutCheck(token := 0, *) {
         return
 
     elapsed := (g_SCWV_ShowWaitStartTick > 0) ? (A_TickCount - g_SCWV_ShowWaitStartTick) : -1
-    safeWaitMs := 15000
-    if (g_SCWV_NavProgressTick > 0 && (A_TickCount - g_SCWV_NavProgressTick) < 1800) {
+    global g_SCWV_CreateInFlight, g_SCWV_FirstFrameSeen
+    safeWaitMs := 20000
+    if g_SCWV_CreateInFlight
+        safeWaitMs := 90000
+    else if !g_SCWV_Ready
+        safeWaitMs := 60000
+    else if !g_SCWV_FirstFrameSeen
+        safeWaitMs := 45000
+    navGraceMs := 5000
+    if (g_SCWV_NavProgressTick > 0 && (A_TickCount - g_SCWV_NavProgressTick) < navGraceMs) {
         curToken := g_SCWV_CurrentToken
         SetTimer((*) => SCWV_ShowWaitTimeoutCheck(curToken), -400)
         return
@@ -1552,9 +2030,9 @@ SCWV_ShowWaitTimeoutCheck(token := 0, *) {
         return
     }
 
-    if (g_SCWV_UI_Ready || (g_SCWV_Visible && g_SCWV_FirstFrameSeen)) {
-        SCWV_FinishReveal()
-        try SCWV_SetPhase(SCWV_PHASE_OPEN, "show_wait_timeout_promote_open")
+    if SCWV_CanRevealToUser() {
+        if SCWV_TryFinishReveal("show_wait_timeout_promote")
+            try SCWV_SetPhase(SCWV_PHASE_OPEN, "show_wait_timeout_promote_open")
         return
     }
     if (g_SCWV_Ready && !g_SCWV_UI_Ready) {
@@ -1587,31 +2065,16 @@ SCWV_ShowWaitTimeoutCheck(token := 0, *) {
     try GDHO_RequestClose("scwv_show_wait_timeout")
     SCWV_ForceCloseHost("show_wait_timeout")
 
-    ; 只允许一次自动复位，避免在底层环境持续异常时无限重启。
-    if (g_SCWV_ShowRecoveryAttempts = 0) {
-        g_SCWV_ShowRecoveryAttempts := 1
-        curToken := g_SCWV_CurrentToken
-        SetTimer((*) => SCWV_RecoverAfterShowWaitTimeout(curToken), -120)
-    } else {
-        try SCWV_Log("show_wait_timeout_no_recover", "attempts=" . g_SCWV_ShowRecoveryAttempts)
-    }
+    try SCWV_Log("show_wait_timeout_no_auto_reopen", "attempts=" . g_SCWV_ShowRecoveryAttempts)
+    g_SCWV_ShowRecoveryAttempts := 0
 }
 
 SCWV_RecoverAfterShowWaitTimeout(token := 0, *) {
-    global g_SCWV_Gui, g_SCWV_ShowRecoveryAttempts, g_SCWV_DegradedMode
+    global g_SCWV_ShowRecoveryAttempts
     if (token && !SCWV_IsCurrentToken(token))
         return
-    if g_SCWV_DegradedMode {
-        try SCWV_Log("show_wait_recover_skip_degraded", "attempts=" . g_SCWV_ShowRecoveryAttempts)
-        return
-    }
-    try SCWV_Log("show_wait_recover", "attempts=" . g_SCWV_ShowRecoveryAttempts)
-    if !SCWV_HostAlive()
-        SCWV_Init("show_wait_recover")
-    if !g_SCWV_Gui
-        return
-    ; Recovery must submit open intent instead of direct show.
-    SCWV_SubmitIntent("open", 15, Map("reason", "show_wait_recover"))
+    try SCWV_Log("show_wait_recover_disabled", "attempts=" . g_SCWV_ShowRecoveryAttempts)
+    g_SCWV_ShowRecoveryAttempts := 0
 }
 
 SCWV_ForceCloseHost(reason := "") {
@@ -1626,8 +2089,10 @@ SCWV_ForceCloseHost(reason := "") {
     global SearchCenterHasMoreData, g_SCWV_LastRenderedID, g_SCWV_RequestID, g_SCWV_SearchPendingReq, AppearanceActivationMode
     global g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
 
+    SetTimer(SCWV_CreateWatchdogTick, 0)
     try SCWV_Log("force_close_begin", "reason=" . reason . " visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
     SCWV_PushLifecycleState("closing", reason)
+    SCWV_StopForegroundPumps()
 
     SetTimer(SCWV_ShowWaitTimeoutCheck, 0)
     SetTimer(SCWV_ForceRevealIfStuck, 0)
@@ -1638,6 +2103,10 @@ SCWV_ForceCloseHost(reason := "") {
     SetTimer(_SCWV_DeferredMoveFocus100, 0)
     SetTimer(SCWV_FocusDeferred, 0)
     SetTimer(SCWV_FlushPendingJsonQueue, 0)
+    SetTimer(SCWV_DrainWebMessageQueue, 0)
+    global g_SCWV_WebMsgQueue
+    g_SCWV_WebMsgQueue := []
+    g_SCWV_WebMsgDrainBusy := false
     if g_SCWV_SearchTimer {
         SetTimer(g_SCWV_SearchTimer, 0)
         g_SCWV_SearchTimer := 0
@@ -1648,6 +2117,8 @@ SCWV_ForceCloseHost(reason := "") {
     g_SCWV_ShowWaitStartTick := 0
     g_SCWV_Visible := false
     g_SCWV_FirstFrameSeen := false
+    g_SCWV_PaintReady := false
+    g_SCWV_RevealCommitted := false
     g_SCWV_PendingJsonQueue := []
     g_SCWV_CurrentToken += 1
     g_SCWV_AsyncPollToken += 1
@@ -1695,10 +2166,16 @@ SCWV_ForceCloseHost(reason := "") {
 
     ; Hard close path must perform the same teardown that SCWV_Hide() normally does.
     ; Otherwise black-hole close buttons can leave dock/session state behind and block later tray opens.
-    try NativeDropBridge_ResetSessionAsync("search_center_exit", 0)
+    try SetTimer((*) => NativeDropBridge_ResetSessionAsync("search_center_exit", 0), -1)
     catch as err {
         try SCWV_Log("force_close_error", "reason=" . reason . " step=reset_bridge msg=" . err.Message)
     }
+    global g_SCWV_IntentQueue, g_SCWV_CloseAfterReady, g_SCWV_HandoffActive, g_SCWV_HandoffPendingOpen
+    g_SCWV_IntentQueue := []
+    g_SCWV_CloseAfterReady := false
+    g_SCWV_HandoffActive := false
+    g_SCWV_HandoffPendingOpen := 0
+    SetTimer(SCWV_PumpIntents, 0)
     ; 关闭统一宿主时，unifiedMode 可能已被切回 search，导致仅按当前模式释放会漏掉 clipboard dock。
     ; 为避免悬浮栏长期被抑制，统一兜底：同时释放 search/clipboard 两个 dock 标签。
     try FloatingToolbar_PageDockLeave("clipboard")
@@ -1733,13 +2210,8 @@ SCWV_ForceCloseHost(reason := "") {
     catch {
     }
     try {
-        if g_SCWV_Gui {
-            hwnd := 0
-            try hwnd := g_SCWV_Gui.Hwnd
-            if (hwnd)
-                PostMessage(0x0010, 0, 0, , "ahk_id " . hwnd) ; WM_CLOSE
-            try g_SCWV_Gui.Destroy()
-        }
+        if g_SCWV_Gui
+            g_SCWV_Gui.Destroy()
     } catch as err {
         try SCWV_Log("force_close_error", "reason=" . reason . " msg=" . err.Message)
     }
@@ -1747,8 +2219,10 @@ SCWV_ForceCloseHost(reason := "") {
     SCWV_ResetHostState()
     g_SCWV_CloseCommitActive := false
     g_SCWV_CloseCommitUntilTick := 0
+    g_SCWV_CloseInFlight := false
     if (reason != "show_wait_timeout")
         g_SCWV_ShowRecoveryAttempts := 0
+    SCWV_NotifyToolbarSearchClosed()
     try SCWV_SetPhase(SCWV_PHASE_CLOSED, "close_commit_" . reason)
     SCWV_PushLifecycleState("closed", reason)
     try SCWV_Log("hide_done", "visible=0 reason=" . reason)
@@ -1788,8 +2262,8 @@ _SCWV_IsRecoveryCloseReason(reason := "") {
 SearchCenterUnifiedClose(reason := "unknown", preferHardClose := false, PersistSelection := true) {
     global g_SCWV_CloseInFlight, AppearanceActivationMode
     if (g_SCWV_CloseInFlight) {
-        try SCWV_Log("unified_close_skip_inflight", "reason=" . reason)
-        return true
+        try SCWV_Log("unified_close_while_inflight", "reason=" . reason)
+        preferHardClose := true
     }
     g_SCWV_CloseInFlight := true
     try {
@@ -1801,7 +2275,7 @@ SearchCenterUnifiedClose(reason := "unknown", preferHardClose := false, PersistS
         if (mode = "hole")
             preferHardClose := true
         if (preferHardClose) {
-            SCWV_SubmitIntent("force_close", 10, Map("reason", reason))
+            SCWV_ForceCloseHost(reason)
             return true
         }
         if (SearchCenter_ShouldUseWebView()) {
@@ -1813,10 +2287,10 @@ SearchCenterUnifiedClose(reason := "unknown", preferHardClose := false, PersistS
             SearchCenterCloseHandler()
             return true
         }
-    } catch as err {
-        try SCWV_Log("unified_close_error", "reason=" . reason . " msg=" . err.Message)
-    } finally {
         g_SCWV_CloseInFlight := false
+    } catch as err {
+        g_SCWV_CloseInFlight := false
+        try SCWV_Log("unified_close_error", "reason=" . reason . " msg=" . err.Message)
     }
     return false
 }
@@ -1839,17 +2313,9 @@ SCWV_FocusForIME(*) {
 }
 
 SCWV_RefreshComposition(*) {
-    global g_SCWV_Gui, g_SCWV_Ctrl, g_SCWV_Visible
-
-    if !g_SCWV_Visible || !g_SCWV_Gui || !g_SCWV_Ctrl
+    if !SCWV_ShouldRunComposition()
         return
-
-    try {
-        SCWV_ApplyBounds()
-        g_SCWV_Ctrl.NotifyParentWindowPositionChanged()
-        SCWV_Preview_OnHostLayoutChanged()
-    } catch {
-    }
+    SCWV_CompositionPump("refresh")
 }
 
 _SCWV_LoadSearchEngineMode() {
@@ -1882,15 +2348,42 @@ _SCWV_SearchCoreExePath() {
 }
 
 _SCWV_ApplySearchCoreDefaults() {
-    ; 提升全文初扫效率：优先允许 Everything 枚举，同时显式开启 MFT/USN
-    ; 仅作用于本进程及其子进程，不写系统级环境变量。
+    ; v4：Everything 仅做发现；默认不启全盘 MFT（窄根 + walk 回退由 RootPolicy 控制）
     try EnvSet("SEARCHCENTER_FT_USE_EVERYTHING", "1")
     catch {
     }
-    try EnvSet("SEARCHCENTER_FT_USE_MFT", "1")
+    try EnvSet("SEARCHCENTER_FT_USE_MFT", "0")
     catch {
     }
     try EnvSet("SEARCHCENTER_FT_USE_USN", "1")
+    catch {
+    }
+    try EnvSet("SEARCHCENTER_FT_MAX_FILE_MB", "16")
+    catch {
+    }
+    try EnvSet("SEARCHCENTER_FT_HARD_LIMIT_MB", "32")
+    catch {
+    }
+    try EnvSet("SEARCHCENTER_FT_COLD_IDLE", "1")
+    catch {
+    }
+    ; P2：空闲停 indexer + 进程退出（诊断脚本会临时设 SEARCHCENTER_IDLE_EXIT=0）
+    try EnvSet("SEARCHCENTER_IDLE_EXIT", "1")
+    catch {
+    }
+    try EnvSet("SEARCHCENTER_IDLE_STOP_INDEXER_SEC", "300")
+    catch {
+    }
+    try EnvSet("SEARCHCENTER_IDLE_EXIT_SEC", "600")
+    catch {
+    }
+    try EnvSet("SEARCHCENTER_MEM_GOVERNOR", "1")
+    catch {
+    }
+    try EnvSet("SEARCHCENTER_MEM_SOFT_MIB", "600")
+    catch {
+    }
+    try EnvSet("SEARCHCENTER_MEM_HARD_MIB", "900")
     catch {
     }
 }
@@ -2294,7 +2787,7 @@ _SCWV_DefaultFullTextStatusPayload() {
         "workerCount", 0,
         "scanSpeed", "normal",
         "includeLargeText", false,
-        "maxFileSizeMB", 2,
+        "maxFileSizeMB", 16,
         "indexDir", "",
         "lastError", "",
         "scan_mode", "",
@@ -3223,7 +3716,7 @@ SCWV_Show(reason := "", triggerSource := "") {
     reqId := SurfaceManager_Request("search_center", "open", "SCWV_Show", Map("reason", reason, "triggerSource", triggerSource))
     try SurfaceManager_BeforeOpen("search_center", "SCWV_Show", Map("requestId", reqId, "reason", reason, "triggerSource", triggerSource))
     try SurfaceManager_RegisterSurface("search_center")
-    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
+    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_FirstFrameSeen, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
     global SearchCenterEngineMode, g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx, g_SCWV_LimitedRecoverReloadAttempts, g_SCWV_CurrentToken
     global g_SCWV_PendingTriggerSource, SearchCenterFilterType, SearchCenterCurrentLimit
@@ -3244,7 +3737,13 @@ SCWV_Show(reason := "", triggerSource := "") {
     }
     if (ts = "search_hotkey")
         SCWV_PrepareForegroundSteal()
-    try SCWV_Log("show_begin", "reason=" . reason . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0"))
+    warmHost := SCWV_HostAlive() && g_SCWV_Gui && g_SCWV_WV2 && g_SCWV_Ready
+    if warmHost && g_SCWV_UI_Ready && !g_SCWV_FirstFrameSeen
+        g_SCWV_FirstFrameSeen := true
+    g_SCWV_UserMinimized := false
+    global g_SCWV_CloseInFlight
+    g_SCWV_CloseInFlight := false
+    try SCWV_Log("show_begin", "reason=" . reason . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0") . " warm=" . (warmHost ? "1" : "0"))
     g_SCWV_LimitedRecoverReloadAttempts := 0
     SCWV_PushLifecycleState("opening", reason)
     ; 打开阶段先屏蔽失焦自动关闭，避免 WebView/焦点切换瞬时抖动把窗口提前关掉（白屏/一闪）。
@@ -3300,76 +3799,50 @@ SCWV_Show(reason := "", triggerSource := "") {
         return
     }
 
-    readyToReveal := (g_SCWV_Ready && g_SCWV_UI_Ready)
+    readyToReveal := SCWV_CanRevealToUser()
     deferHost := !readyToReveal
-        && (ts != "search_hotkey")
         && FuncExists("SurfaceManager_HasActivePrimaryConflict")
         && SurfaceManager_HasActivePrimaryConflict("search_center")
-    g_SCWV_DeferredHostShow := deferHost
-    hotkeyShellVisible := (ts = "search_hotkey") && !readyToReveal && !deferHost
-    if readyToReveal {
+    ; 首屏未就绪时也保持宿主可见（深色壳 + HTML splash），否则 WebView2 在 Hide 父窗下不会合成首帧。
+    openingShellVisible := !readyToReveal && !deferHost
+    g_SCWV_DeferredHostShow := deferHost || !readyToReveal
+    canShowHostShell := readyToReveal || openingShellVisible
+    if readyToReveal || openingShellVisible {
         try WinSetTransparent(255, "ahk_id " . g_SCWV_Gui.Hwnd)
         catch {
         }
-    } else if !deferHost {
-        if hotkeyShellVisible {
-            try WinSetTransparent(255, "ahk_id " . g_SCWV_Gui.Hwnd)
-            catch {
-            }
-            try SCWV_SetHostTopMost(true)
-            catch {
-            }
-        } else {
-            try WinSetTransparent(0, "ahk_id " . g_SCWV_Gui.Hwnd)
-            catch {
-            }
+    } else if deferHost && g_SCWV_Gui {
+        try g_SCWV_Gui.Show("Hide")
+        catch {
         }
     }
 
-    if !deferHost {
+    if canShowHostShell && !deferHost {
         try {
             ; 单入口全屏显示，避免 "固定尺寸 -> 最大化 -> 再最大化" 抖动链。
             SCWV_ShowHostFullscreen()
-            if !hotkeyShellVisible
-                SCWV_SetHostTopMost(g_SCWV_HostTopMost)
-            SCWV_ApplyBounds()
-            SetTimer(SCWV_ApplyBounds, -80)
+            SCWV_SetHostTopMost(g_SCWV_HostTopMost)
+            SCWV_ScheduleBoundsRetries("show_open")
         } catch {
             ; 鍏滃簳锛氱獥鍙ｅ璞″瓨鍦ㄤ絾鍙ユ焺澶辨晥鏃堕噸寤轰竴娆★紝閬垮厤 鈥淕ui has no window鈥?            SCWV_ResetHostState()
             SCWV_Init(reason)
             if !g_SCWV_Gui
                 return
-            readyToReveal := (g_SCWV_Ready && g_SCWV_UI_Ready)
+            readyToReveal := SCWV_CanRevealToUser()
             deferHost := !readyToReveal
-                && (ts != "search_hotkey")
                 && FuncExists("SurfaceManager_HasActivePrimaryConflict")
                 && SurfaceManager_HasActivePrimaryConflict("search_center")
+            openingShellVisible := !readyToReveal && !deferHost
             g_SCWV_DeferredHostShow := deferHost
-            hotkeyShellVisible := (ts = "search_hotkey") && !readyToReveal && !deferHost
-            if readyToReveal {
+            if readyToReveal || openingShellVisible {
                 try WinSetTransparent(255, "ahk_id " . g_SCWV_Gui.Hwnd)
                 catch {
                 }
-            } else if !deferHost {
-                if hotkeyShellVisible {
-                    try WinSetTransparent(255, "ahk_id " . g_SCWV_Gui.Hwnd)
-                    catch {
-                    }
-                    try SCWV_SetHostTopMost(true)
-                    catch {
-                    }
-                } else {
-                    try WinSetTransparent(0, "ahk_id " . g_SCWV_Gui.Hwnd)
-                    catch {
-                    }
-                }
             }
-            if !deferHost {
+            if canShowHostShell && !deferHost {
                 SCWV_ShowHostFullscreen()
-                if !hotkeyShellVisible
-                    SCWV_SetHostTopMost(g_SCWV_HostTopMost)
-                SCWV_ApplyBounds()
-                SetTimer(SCWV_ApplyBounds, -80)
+                SCWV_SetHostTopMost(g_SCWV_HostTopMost)
+                SCWV_ScheduleBoundsRetries("show_open_recover")
             } else {
                 try SCWV_Log("show_defer_host", "reason=" . reason . " entry=recover")
             }
@@ -3381,35 +3854,30 @@ SCWV_Show(reason := "", triggerSource := "") {
         try SCWV_Log("show_finish_reveal_immediate", "reason=" . reason)
         SCWV_FinishReveal()
     } else {
-        try SCWV_Log("show_wait_ui_ready", "reason=" . reason)
+        try SCWV_Log("show_wait_ui_ready", "reason=" . reason . " shell=" . (openingShellVisible ? "1" : "0"))
         g_SCWV_WaitingUiFinishedReveal := true
         g_SCWV_ShowWaitStartTick := A_TickCount
         g_SCWV_Visible := false
+        if openingShellVisible {
+            SCWV_ScheduleCompositionPump("show_wait_shell")
+            try {
+                if WMActivateChain_Count() < 1
+                    WMActivateChain_Register(SCWV_WM_ACTIVATE)
+            } catch {
+            }
+        }
         SetTimer(SCWV_ForceRevealIfStuck, 0)
-        SetTimer(SCWV_ForceRevealIfStuck, -1500)
+        SetTimer(SCWV_ForceRevealIfStuck, -800)
+        SetTimer(SCWV_ForceRevealIfStuck, -1800)
         SetTimer(SCWV_ShowWaitTimeoutCheck, 0)
         SetTimer(SCWV_ShowWaitTimeoutCheck, -1500)
     }
     SCWV_PushLifecycleState("open", reason)
-    if !deferHost {
-        ; 仅在宿主窗口成功显示后再压下工具栏，避免“先隐藏工具栏但搜索中心没显示”的竞态
-        try FloatingToolbar_PageDockEnter("search")
-        g_SCWV_LastShown := A_TickCount
-        try WebView2_NotifyShown(g_SCWV_WV2)
-        try {
-            SCWV_Log("wm_chain_register_begin", "reason=" . reason . " count=" . WMActivateChain_Count())
-            WMActivateChain_Register(SCWV_WM_ACTIVATE)
-            SCWV_Log("wm_chain_register_done", "reason=" . reason . " count=" . WMActivateChain_Count())
-        } catch as err {
-            try SCWV_Log("wm_chain_register_failed", "reason=" . reason . " msg=" . err.Message)
-            catch {
-            }
-        }
-    }
 
     SCWV_RefreshComposition()
-    SetTimer(SCWV_RefreshComposition, -120)
-    SetTimer(SCWV_RefreshComposition, -380)
+    SetTimer(SCWV_RefreshComposition, -80)
+    SetTimer(SCWV_RefreshComposition, -200)
+    SetTimer(SCWV_RefreshComposition, -480)
 
     ; 窗口显示后：剪贴板热键走时间线；普通空词走历史（含 3 分钟内置顶卡）
     try {
@@ -3451,16 +3919,13 @@ SCWV_Show(reason := "", triggerSource := "") {
         SetTimer((*) => SCWV_RaiseToForeground("show_focus_reassert"), -200)
         SCWV_RequestFocusInput()
     }
-    if !deferHost && hotkeyShellVisible && IsObject(g_SCWV_Gui) {
+    if !deferHost && openingShellVisible && (ts = "search_hotkey") && IsObject(g_SCWV_Gui) && !SCWV_IsCloseRequested() {
         try hwndShell := g_SCWV_Gui.Hwnd
         catch {
             hwndShell := 0
         }
         if hwndShell {
             try SCWV_ForegroundPulse(hwndShell)
-            catch {
-            }
-            try SCWV_StartHotkeyForegroundPump(16000)
             catch {
             }
         }
@@ -3544,12 +4009,20 @@ SCWV_Hide(PersistSelection := true) {
     }
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_SearchTimer, GuiID_SearchCenter, g_SCWV_PendingJsonQueue
     global g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason, g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
-    global g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx, g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick
+    global g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx, g_SCWV_CloseCommitActive, g_SCWV_CloseCommitUntilTick, g_SCWV_CloseInFlight
     if !(g_SCWV_TransitionCtx is Map) || !g_SCWV_TransitionCtx["allow"] {
         try SCWV_Log("hide_redirect_intent", "persist=" . (PersistSelection ? "1" : "0"))
+        g_SCWV_CloseInFlight := true
         SCWV_SubmitIntent("close", 25, Map("reason", "hide_redirect", "persist", PersistSelection ? 1 : 0))
         return
     }
+    g_SCWV_CloseInFlight := true
+    g_SCWV_CloseAfterReady := false
+    g_SCWV_WaitingUiFinishedReveal := false
+    SetTimer(SCWV_ForceRevealIfStuck, 0)
+    SetTimer(SCWV_ShowWaitTimeoutCheck, 0)
+    if (g_SCWV_CurrentPhase != SCWV_PHASE_CLOSING && g_SCWV_CurrentPhase != SCWV_PHASE_CLOSED)
+        SCWV_SetPhase(SCWV_PHASE_CLOSING, "hide")
     try SCWV_Log("hide_begin", "persist=" . (PersistSelection ? "1" : "0") . " visible=" . (g_SCWV_Visible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " deact_block=" . Integer(g_SCWV_DeactivateBlockUntil))
     SCWV_PushLifecycleState("closing", "hide")
     ; Drag-hole reentry safety: when exiting SearchCenter, force-reset native drag session
@@ -3591,9 +4064,14 @@ SCWV_Hide(PersistSelection := true) {
     g_SCWV_WaitingUiFinishedReveal := false
     g_SCWV_ShowWaitStartTick := 0
     g_SCWV_ShowRecoveryAttempts := 0
+    g_SCWV_RevealCommitted := false
+    g_SCWV_AwaitingReshowPaint := true
+    g_SCWV_PaintReady := false
     g_SCWV_PendingJsonQueue := []
     g_SCWV_DeactivateBlockUntil := 0
     g_SCWV_DeactivateBlockReason := ""
+    SCWV_StopForegroundPumps()
+    SCWV_StopCompositionWatchdog()
 
     if PersistSelection {
         try SCWV_Log("hide_step", "save_selection_begin")
@@ -3638,11 +4116,13 @@ SCWV_Hide(PersistSelection := true) {
         try CapsLock_NormalizeAfterUiClose()
         catch {
         }
-    g_SCWV_CloseCommitActive := false
-    g_SCWV_CloseCommitUntilTick := 0
     try SCWV_Preview_UnloadNative()
     catch {
     }
+    SCWV_ArmCloseCommit(2000)
+    SCWV_NotifyToolbarSearchClosed()
+    SCWV_SetPhase(SCWV_PHASE_CLOSED, "hide")
+    g_SCWV_CloseInFlight := false
     SCWV_PushLifecycleState("closed", "hide")
 }
 
@@ -3706,8 +4186,14 @@ SCWV_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
         return
     }
 
-    if !g_SCWV_Visible || !g_SCWV_Gui
+    if !g_SCWV_Gui
         return
+    if !(g_SCWV_Visible || g_SCWV_WaitingUiFinishedReveal)
+        return
+
+    if (hwnd = g_SCWV_Gui.Hwnd && (wParam & 0xFFFF) = 1) {
+        SCWV_ScheduleCompositionPump("wm_activate")
+    }
 
     if (hwnd = g_SCWV_Gui.Hwnd && (wParam & 0xFFFF) = 0) {
         try {
@@ -3905,17 +4391,46 @@ SCWV_ToggleHostTopMost() {
 }
 
 SCWV_OnWebMessage(sender, args) {
+    jsonStr := FuncExists("WebView2_CopyWebMessageJson") ? WebView2_CopyWebMessageJson(args) : ""
+    if (jsonStr = "")
+        return
+    global g_SCWV_WebMsgQueue
+    if !(g_SCWV_WebMsgQueue is Array)
+        g_SCWV_WebMsgQueue := []
+    if (g_SCWV_WebMsgQueue.Length >= 48)
+        g_SCWV_WebMsgQueue.RemoveAt(1)
+    g_SCWV_WebMsgQueue.Push(jsonStr)
+    SetTimer(SCWV_DrainWebMessageQueue, -1)
+}
+
+SCWV_DrainWebMessageQueue(*) {
+    global g_SCWV_WebMsgQueue, g_SCWV_WebMsgDrainBusy
+    if g_SCWV_WebMsgDrainBusy
+        return
+    if !(g_SCWV_WebMsgQueue is Array) || g_SCWV_WebMsgQueue.Length = 0
+        return
+    g_SCWV_WebMsgDrainBusy := true
+    try {
+        while g_SCWV_WebMsgQueue.Length
+            SCWV_ProcessWebMessageJson(g_SCWV_WebMsgQueue.RemoveAt(1))
+    } finally {
+        g_SCWV_WebMsgDrainBusy := false
+        if (g_SCWV_WebMsgQueue is Array) && g_SCWV_WebMsgQueue.Length
+            SetTimer(SCWV_DrainWebMessageQueue, -1)
+    }
+}
+
+SCWV_ProcessWebMessageJson(jsonStr) {
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
     global g_SCWV_LifecyclePhase
-    jsonStr := args.WebMessageAsJson
     try {
-        msg := Jxon_Load(jsonStr)
+        msg := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(jsonStr) : Jxon_Load(jsonStr)
     } catch {
         return
     }
 
     if (msg is String) {
-        try msg := Jxon_Load(msg)
+        try msg := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(msg) : Jxon_Load(msg)
         catch {
             return
         }
@@ -3937,9 +4452,15 @@ SCWV_OnWebMessage(sender, args) {
             g_SCWV_UI_Ready := true
             g_SCWV_GoStartPhase := "RUNNING"
             _SCWV_HandoffEnd("web_ready")
+            if SCWV_IsCloseRequested() {
+                try SCWV_Log("web_ready_skip_close_requested", "close_after=" . (g_SCWV_CloseAfterReady ? "1" : "0"))
+                if (g_SCWV_CloseAfterReady) {
+                    g_SCWV_CloseAfterReady := false
+                    SCWV_SubmitIntent("CLOSE", 15, Map("reason", "close_after_ready"))
+                }
+                return
+            }
             SCWV_SetPhase(SCWV_PHASE_OPEN, "web_ready")
-            if g_SCWV_WaitingUiFinishedReveal
-                SCWV_FinishReveal()
             SCWV_PushThemeToWeb()
             SCWV_PushState("init")
             _SCWV_SendDockConfig()
@@ -3947,14 +4468,23 @@ SCWV_OnWebMessage(sender, args) {
             try SCWV_FlushPendingJsonQueue()
             if g_SCWV_FocusPending
                 SCWV_RequestFocusInput()
-            if (g_SCWV_CloseAfterReady) {
-                g_SCWV_CloseAfterReady := false
-                SCWV_SubmitIntent("CLOSE", 15, Map("reason", "close_after_ready"))
-            }
             if g_SCWV_ReloadRecoveryPending {
                 g_SCWV_ReloadRecoveryPending := false
                 SetTimer((*) => SCWV_ReplayLastSearchIntent("reload_ready"), -10)
             }
+            SCWV_ScheduleCompositionPump("web_ready")
+            SCWV_TryFinishReveal("web_ready")
+        case "UI_PAINT_READY":
+            global g_SCWV_PaintReady, g_SCWV_LastPaintReadyTick
+            if SCWV_IsCloseRequested()
+                return
+            now := A_TickCount
+            if g_SCWV_PaintReady && (now - g_SCWV_LastPaintReadyTick) < 120
+                return
+            g_SCWV_LastPaintReadyTick := now
+            g_SCWV_PaintReady := true
+            SCWV_ScheduleCompositionPump("ui_paint_ready")
+            SCWV_TryFinishReveal("ui_paint_ready")
         case "setEngineMode":
             global SearchCenterEngineMode
             mo := msg.Has("mode") ? String(msg["mode"]) : "go"

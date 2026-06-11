@@ -175,10 +175,24 @@
     }
   }
 
+  function deliverAgentEvent(ev) {
+    if (!ev || typeof ev !== "object") return false;
+    if (root.document && typeof root.CustomEvent === "function") {
+      document.dispatchEvent(
+        new CustomEvent("palette-hub-agent-event", { detail: ev })
+      );
+    }
+    return true;
+  }
+
   function handleWireFrame(frame) {
     if (!frame || typeof frame !== "object") return false;
     if (frame.type === "hello_ack" && Array.isArray(frame.a2uiReplay)) {
       deliverReplay(frame.a2uiReplay);
+      return true;
+    }
+    if (frame.type === "agent_event" && frame.event) {
+      deliverAgentEvent(frame.event);
       return true;
     }
     if (frame.type === "official_a2ui_event" && frame.a2ui) {

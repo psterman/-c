@@ -117,6 +117,36 @@
     };
   }
 
+  function cardIsOfficialA2uiRoute(card) {
+    if (!card || typeof card !== "object") return false;
+    if (String(card.representationRoute || "") === "r3") return true;
+    var oar = card.officialA2uiRoute;
+    return !!(oar && oar.route === "r3" && oar.allowed);
+  }
+
+  /**
+   * R3 呈现以 official A2UI Surface 为权威，禁止 adapter/WS/同步 prose finalize。
+   */
+  function shouldSkipProseFinalize(card, opts) {
+    opts = opts || {};
+    if (!cardIsOfficialA2uiRoute(card)) return false;
+    var source = String(opts.source || "");
+    if (source === "hub_ws" || source === "adapter_http" || source === "openclaw_sync") return true;
+    if (card._officialA2uiFinalized) return true;
+    if (card.officialA2uiPending) return true;
+    if (card.officialA2ui && String(card.officialA2ui.source || "") === "go-jsonl") return true;
+    if (root.document && card.id) {
+      var dom = root.document.getElementById("card-" + String(card.id));
+      if (dom) {
+        var official = dom.querySelector(".card-official-a2ui");
+        if (official && !official.hidden && String(official.dataset.renderStatus || "") === "rendered") {
+          return true;
+        }
+      }
+    }
+    return opts.strictR3 !== false;
+  }
+
   function applyToCard(card, decision) {
     if (!card || !decision) return card;
     if (root.PaletteA2UIMetrics && PaletteA2UIMetrics.recordGrayRoute) {
@@ -133,6 +163,7 @@
           surfaceId: ""
         };
       }
+      card.officialA2uiPending = true;
       card.expanded = true;
     } else if (!card.officialA2ui || card.officialA2ui.source !== "go-jsonl") {
       card.officialA2ui = null;
@@ -148,6 +179,8 @@
     isBridgeReady: isBridgeReady,
     isForceNmerOnly: isForceNmerOnly,
     resolveSubmit: resolveSubmit,
-    applyToCard: applyToCard
+    applyToCard: applyToCard,
+    cardIsOfficialA2uiRoute: cardIsOfficialA2uiRoute,
+    shouldSkipProseFinalize: shouldSkipProseFinalize
   };
 })(typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : this);

@@ -48,10 +48,17 @@ global g_CmdPal_Oc5ProbeResolver := 0
 global g_CmdPal_Oc5ProbeReqId := ""
 global g_CmdPal_GrayProbeResolver := 0
 global g_CmdPal_GrayProbeReqId := ""
+global g_CmdPal_WebMsgQueue := []
+global g_CmdPal_WebMsgDrainBusy := false
 global g_CmdPal_AdpProbeResolver := 0
 global g_CmdPal_AdpProbeReqId := ""
 global g_CmdPal_AiPollToken := 0
 global g_CmdPal_AiLastCard := 0
+global g_CmdPal_PerfBuf := []
+global g_CmdPal_PerfFlushPending := false
+global g_CmdPal_PerfSessionId := ""
+global g_CmdPal_LayoutMode := ""
+global g_CmdPal_ShowRequestedTick := 0
 
 CommandPalette_AiLog(event, detail := "") {
     ev := Trim(String(event))
@@ -81,6 +88,159 @@ CommandPalette_AiLog(event, detail := "") {
         FileAppend(line . "`r`n", path, "UTF-8")
     } catch {
     }
+}
+
+CommandPalette_PerfSessionId() {
+    global g_CmdPal_PerfSessionId
+    if (g_CmdPal_PerfSessionId = "")
+        g_CmdPal_PerfSessionId := "cp_" . A_TickCount
+    return g_CmdPal_PerfSessionId
+}
+
+CommandPalette_PerfLog(event, extra := "") {
+    global g_CmdPal_PerfBuf, g_CmdPal_PerfFlushPending
+    ev := Trim(String(event))
+    if (ev = "")
+        return
+    row := Map(
+        "ts", A_TickCount,
+        "sessionId", CommandPalette_PerfSessionId(),
+        "event", ev,
+        "source", "ahk",
+        "durationMs", 0,
+        "generation", 0,
+        "resultCount", 0,
+        "layoutMode", ""
+    )
+    if (extra is Map) {
+        for k, v in extra
+            row[k] := v
+    }
+    g_CmdPal_PerfBuf.Push(row)
+    if !g_CmdPal_PerfFlushPending {
+        g_CmdPal_PerfFlushPending := true
+        SetTimer(CommandPalette_PerfFlush, -50)
+    }
+}
+
+CommandPalette_PerfJsonNumber(value) {
+    try {
+        if IsNumber(value)
+            return String(value)
+    } catch {
+    }
+    return "0"
+}
+
+CommandPalette_PerfDump(row) {
+    return "{"
+        . '"durationMs":' . CommandPalette_PerfJsonNumber(row.Get("durationMs", 0)) . ","
+        . '"event":' . Jxon_Dump(String(row.Get("event", ""))) . ","
+        . '"generation":' . CommandPalette_PerfJsonNumber(row.Get("generation", 0)) . ","
+        . '"layoutMode":' . Jxon_Dump(String(row.Get("layoutMode", ""))) . ","
+        . '"resultCount":' . CommandPalette_PerfJsonNumber(row.Get("resultCount", 0)) . ","
+        . '"sessionId":' . Jxon_Dump(String(row.Get("sessionId", ""))) . ","
+        . '"source":' . Jxon_Dump(String(row.Get("source", ""))) . ","
+        . '"ts":' . CommandPalette_PerfJsonNumber(row.Get("ts", 0))
+        . "}"
+}
+
+CommandPalette_PerfFlush(*) {
+    global g_CmdPal_PerfBuf, g_CmdPal_PerfFlushPending
+    g_CmdPal_PerfFlushPending := false
+    if (g_CmdPal_PerfBuf.Length = 0)
+        return
+    buf := g_CmdPal_PerfBuf.Clone()
+    g_CmdPal_PerfBuf := []
+    path := ""
+    try {
+        path := FuncExists("Nmer_DebugPath") ? Nmer_DebugPath("command_palette_perf.ndjson") : (A_ScriptDir . "\Cache\debug\command_palette_perf.ndjson")
+        dir := ""
+        SplitPath(path, , &dir)
+        if (dir != "" && !DirExist(dir))
+            DirCreate(dir)
+        for row in buf {
+            try FileAppend(CommandPalette_PerfDump(row) . "`n", path, "UTF-8")
+            catch {
+            }
+        }
+    } catch {
+    }
+}
+
+CommandPalette_PushPaletteFlags() {
+    pl := FuncExists("Nmer_PaletteFlags") ? Nmer_PaletteFlags() : Map("fastInput", false, "discreteLayout", false, "streamBatching", false, "stateStore", false, "agentTransport", "auto", "openclawAnswerSync", true)
+    CommandPalette_PushToWeb(Map(
+        "type", "palette_flags",
+        "fastInput", !!pl.Get("fastInput", false),
+        "discreteLayout", !!pl.Get("discreteLayout", false),
+        "streamBatching", !!pl.Get("streamBatching", false),
+        "stateStore", !!pl.Get("stateStore", false),
+        "agentTransport", String(pl.Get("agentTransport", "auto")),
+        "openclawAnswerSync", !!pl.Get("openclawAnswerSync", true)
+    ))
+}
+
+CommandPalette_BuildCommandSnapshot() {
+    out := []
+    CommandPalette_EnsureCommandsLoaded()
+    global g_Commands
+    if !(IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList"))
+        return out
+    for cmdId, meta in g_Commands["CommandList"] {
+        if !(meta is Map)
+            continue
+        id := Trim(String(cmdId))
+        if (id = "")
+            continue
+        name := meta.Has("name") ? String(meta["name"]) : id
+        desc := meta.Has("desc") ? String(meta["desc"]) : ""
+        kws := []
+        if meta.Has("keywords") && meta["keywords"] is Array {
+            for kw in meta["keywords"]
+                kws.Push(String(kw))
+        }
+        out.Push(Map(
+            "id", id,
+            "label", name,
+            "desc", desc,
+            "binding", CommandPalette_GetBindingLabel(id),
+            "keywords", kws,
+            "kind", "command"
+        ))
+    }
+    return out
+}
+
+CommandPalette_PushCommandSnapshot() {
+    items := CommandPalette_BuildCommandSnapshot()
+    CommandPalette_PushToWeb(Map(
+        "type", "palette_command_snapshot",
+        "version", 1,
+        "items", items
+    ))
+}
+
+CommandPalette_PushPaletteBootstrap() {
+    CommandPalette_PushPaletteFlags()
+    CommandPalette_PushCommandSnapshot()
+}
+
+CommandPalette_ApplyLayoutMode(mode) {
+    global g_CmdPal_LayoutMode, g_CmdPal_Width
+    if !(FuncExists("Nmer_PaletteDiscreteLayoutEnabled") && Nmer_PaletteDiscreteLayoutEnabled())
+        return false
+    m := Trim(String(mode))
+    if (m != "compact" && m != "list" && m != "detail")
+        return false
+    if (g_CmdPal_LayoutMode = m)
+        return true
+    g_CmdPal_LayoutMode := m
+    g_CmdPal_Width := (m = "detail") ? 960 : 720
+    h := (m = "compact") ? 72 : ((m = "detail") ? 620 : 460)
+    CommandPalette_ApplyHeight(h, false, false)
+    CommandPalette_PerfLog("resize_applied", Map("layoutMode", m, "durationMs", 0))
+    return true
 }
 
 CommandPalette_ResolveActivationMode() {
@@ -445,17 +605,25 @@ CommandPalette_DeferredFocus(*) {
 }
 
 CommandPalette_Reveal(*) {
-    global g_CmdPal_Gui, g_CmdPal_Revealed, g_CmdPal_Visible
+    global g_CmdPal_Gui, g_CmdPal_Revealed, g_CmdPal_Visible, g_CmdPal_ShowRequestedTick
     if !g_CmdPal_Visible || g_CmdPal_Revealed || !IsObject(g_CmdPal_Gui)
         return
     g_CmdPal_Revealed := true
+    dur := 0
+    if (g_CmdPal_ShowRequestedTick > 0)
+        dur := Max(0, A_TickCount - g_CmdPal_ShowRequestedTick)
+    CommandPalette_PerfLog("visible", Map("durationMs", dur))
+    if (dur > 0)
+        CommandPalette_PerfLog("show_to_visible", Map("durationMs", dur))
     CommandPalette_SyncHostShape()
 }
 
 CommandPalette_Show() {
     if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("command_palette")
         return true
-    global g_CmdPal_Ready, g_CmdPal_PendingShow, g_CmdPal_ShowRetryCount
+    global g_CmdPal_Ready, g_CmdPal_PendingShow, g_CmdPal_ShowRetryCount, g_CmdPal_ShowRequestedTick
+    g_CmdPal_ShowRequestedTick := A_TickCount
+    CommandPalette_PerfLog("show_requested")
     skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
     reqId := 0
     if !skipTel {
@@ -1300,6 +1468,9 @@ CommandPalette_PushEmptyQuery(*) {
 }
 
 CommandPalette_Hide(meta := 0) {
+    CommandPalette_PerfFlush()
+    if FuncExists("CommandPalette_AgentFlushPersist")
+        CommandPalette_AgentFlushPersist()
     if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("command_palette", meta)
         return
     global g_CmdPal_Gui, g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_AiSession, g_CmdPal_WV2
@@ -1425,6 +1596,9 @@ CommandPalette_ApplyHeight(h, expanded := false, actionWorkspace := false) {
     g_CmdPal_CurrentHeight := nh
     if !IsObject(g_CmdPal_Gui)
         return
+    if !(FuncExists("Nmer_PaletteDiscreteLayoutEnabled") && Nmer_PaletteDiscreteLayoutEnabled()) {
+        CommandPalette_PerfLog("resize_applied", Map("layoutMode", "continuous", "resultCount", nh))
+    }
     try {
         WinGetPos(&x, &y, &ww, &wh, g_CmdPal_Gui.Hwnd)
         baseX := g_CmdPal_HasAnchor ? g_CmdPal_AnchorX : x
@@ -3040,24 +3214,37 @@ CommandPalette_PushResults(items, seq := 0) {
     if (Integer(seq) > 0)
         payload["seq"] := Integer(seq)
     CommandPalette_PushToWeb(payload)
+    cnt := 0
+    try cnt := items is Array ? items.Length : 0
+    catch {
+        cnt := 0
+    }
+    CommandPalette_PerfLog("results_sent", Map("generation", Integer(seq), "resultCount", cnt))
 }
 
 CommandPalette_ParseWebMessage(args) {
-    if FuncExists("FloatingToolbar_ParseWebMessage")
-        return FloatingToolbar_ParseWebMessage(args)
-    try {
-        raw := args.TryGetWebMessageAsString()
-        if (raw != "") {
-            m := Jxon_Load(raw)
-            if (m is Map)
-                return m
+    raw := FuncExists("WebView2_CopyWebMessageJson") ? WebView2_CopyWebMessageJson(args) : ""
+    if (raw = "") {
+        try {
+            t := args.TryGetWebMessageAsString()
+            if (t != "")
+                raw := "" . t
+        } catch {
         }
-    } catch {
+        if (raw = "") {
+            try {
+                if IsObject(args) && args.HasProp("WebMessageAsJson")
+                    raw := "" . String(args.WebMessageAsJson)
+            } catch {
+            }
+        }
     }
+    if (raw = "")
+        return 0
     try {
-        m := Jxon_Load(args.WebMessageAsJson)
+        m := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(raw) : Jxon_Load(raw)
         if (m is String)
-            m := Jxon_Load(m)
+            m := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(m) : Jxon_Load(m)
         if (m is Map)
             return m
     } catch {
@@ -3066,11 +3253,56 @@ CommandPalette_ParseWebMessage(args) {
 }
 
 CommandPalette_OnWebMessage(sender, args) {
+    raw := FuncExists("WebView2_CopyWebMessageJson") ? WebView2_CopyWebMessageJson(args) : ""
+    if (raw != "") {
+        global g_CmdPal_WebMsgQueue
+        if !(g_CmdPal_WebMsgQueue is Array)
+            g_CmdPal_WebMsgQueue := []
+        if (g_CmdPal_WebMsgQueue.Length >= 64)
+            g_CmdPal_WebMsgQueue.RemoveAt(1)
+        g_CmdPal_WebMsgQueue.Push(raw)
+        SetTimer(CommandPalette_DrainWebMessageQueue, -1)
+        return
+    }
     msg := CommandPalette_ParseWebMessage(args)
+    if !(msg is Map)
+        return
+    CommandPalette_DispatchWebMessage(msg)
+}
+
+CommandPalette_DrainWebMessageQueue(*) {
+    global g_CmdPal_WebMsgQueue, g_CmdPal_WebMsgDrainBusy
+    if g_CmdPal_WebMsgDrainBusy
+        return
+    if !(g_CmdPal_WebMsgQueue is Array) || g_CmdPal_WebMsgQueue.Length = 0
+        return
+    g_CmdPal_WebMsgDrainBusy := true
+    try {
+        while g_CmdPal_WebMsgQueue.Length {
+            raw := g_CmdPal_WebMsgQueue.RemoveAt(1)
+            try {
+                m := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(raw) : Jxon_Load(raw)
+                if (m is String)
+                    m := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(m) : Jxon_Load(m)
+                if (m is Map)
+                    CommandPalette_DispatchWebMessage(m)
+            } catch {
+            }
+        }
+    } finally {
+        g_CmdPal_WebMsgDrainBusy := false
+        if (g_CmdPal_WebMsgQueue is Array) && g_CmdPal_WebMsgQueue.Length
+            SetTimer(CommandPalette_DrainWebMessageQueue, -1)
+    }
+}
+
+CommandPalette_DispatchWebMessage(msg) {
     if !(msg is Map)
         return
     typ := msg.Has("type") ? String(msg["type"]) : ""
     if (typ = "palette_ready") {
+        CommandPalette_PerfLog("web_ready")
+        CommandPalette_PushPaletteBootstrap()
         CommandPalette_PushThemeToWeb()
         SetTimer(CommandPalette_PushAiProviders, -40)
         if FuncExists("CommandPalette_AgentOnReady")
@@ -3078,6 +3310,27 @@ CommandPalette_OnWebMessage(sender, args) {
         SetTimer(CommandPalette_Reveal, -1)
         SetTimer(CommandPalette_DeferredFocus, -80)
         SetTimer(CommandPalette_SyncHostShape, -1)
+        return
+    }
+    if (typ = "palette_layout_mode") {
+        mode := msg.Has("mode") ? String(msg["mode"]) : ""
+        CommandPalette_ApplyLayoutMode(mode)
+        return
+    }
+    if (typ = "palette_perf_event") {
+        ev := msg.Has("event") ? String(msg["event"]) : ""
+        if (ev = "")
+            return
+        extra := Map("source", "web")
+        if msg.Has("durationMs")
+            extra["durationMs"] := Integer(msg["durationMs"])
+        if msg.Has("generation")
+            extra["generation"] := Integer(msg["generation"])
+        if msg.Has("resultCount")
+            extra["resultCount"] := Integer(msg["resultCount"])
+        if msg.Has("layoutMode")
+            extra["layoutMode"] := String(msg["layoutMode"])
+        CommandPalette_PerfLog(ev, extra)
         return
     }
     if (typ = "palette_oc5_probe_result") {
@@ -3129,6 +3382,8 @@ CommandPalette_OnWebMessage(sender, args) {
         return
     }
     if (typ = "palette_resize") {
+        if FuncExists("Nmer_PaletteDiscreteLayoutEnabled") && Nmer_PaletteDiscreteLayoutEnabled()
+            return
         h := msg.Has("height") ? Integer(msg["height"]) : 76
         expanded := false
         if (msg.Has("expanded"))
@@ -3286,9 +3541,20 @@ CommandPalette_OnWebMessage(sender, args) {
             CommandPalette_AgentOnReady()
         return
     }
+    if (typ = "palette_agent_detail") {
+        cid := msg.Has("cardId") ? Trim(String(msg["cardId"])) : ""
+        if (cid != "") && FuncExists("CommandPalette_AgentPushCardDetail")
+            CommandPalette_AgentPushCardDetail(cid)
+        return
+    }
     if (typ = "palette_agent_recover") {
         if FuncExists("CommandPalette_AgentRecoverCardAnswer")
             CommandPalette_AgentRecoverCardAnswer(msg)
+        return
+    }
+    if (typ = "palette_agent_official_done") {
+        if FuncExists("CommandPalette_OnPaletteAgentOfficialDone")
+            CommandPalette_OnPaletteAgentOfficialDone(msg)
         return
     }
     if (typ = "palette_agent_prepare_new") {
@@ -3561,6 +3827,7 @@ CommandPalette_InvalidateEmptyCache() {
 }
 
 CommandPalette_HandleQuery(q, seq := 0) {
+    CommandPalette_PerfLog("query_received", Map("generation", Integer(seq)))
     if (SubStr(Trim(String(q)), 1, 1) = ">") {
         CommandPalette_PushResults([
             Map("id", "", "label", ">dispose ftb", "desc", "释放悬浮栏 WebView · 回车执行", "binding", "^+Shift+F", "matched", true, "kind", "history"),
@@ -3581,6 +3848,7 @@ CommandPalette_HandleQuery(q, seq := 0) {
 }
 
 CommandPalette_HandleExecute(msg) {
+    CommandPalette_PerfLog("submit_received")
     kind := msg.Has("kind") ? StrLower(String(msg["kind"])) : "command"
     query := msg.Has("query") ? Trim(String(msg["query"])) : ""
     cmdId := msg.Has("cmdId") ? Trim(String(msg["cmdId"])) : ""

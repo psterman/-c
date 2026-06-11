@@ -402,6 +402,7 @@ UpdateTrayMenu() {
     A_TrayMenu.Add(GetText("open_config_menu"), ((*) => TrayMenu_RunSceneCmd("tray_show_config")))
     A_TrayMenu.Add()
     A_TrayMenu.Add("重启脚本", ((*) => TrayMenu_RunSceneCmd("tray_reload_script")))
+    A_TrayMenu.Add("彻底退出重启", ((*) => TrayMenu_RunSceneCmd("tray_restart_clean")))
     A_TrayMenu.Add("[!] 强制重置搜索中心", ((*) => TrayMenu_RunSceneCmd("tray_force_reinit_search")))
     A_TrayMenu.Add(GetText("exit_menu"), ((*) => TrayMenu_RunSceneCmd("tray_exit_app")))
     A_TrayMenu.Default := "搜索中心"
@@ -1031,6 +1032,7 @@ TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis) {
         MenuItems.Push({ Text: "关闭工具栏", Action: ((*) => TrayMenu_RunSceneCmd("tray_hide_toolbar")), Icon: "◼" })
     }
     MenuItems.Push({ Text: "重启脚本", Action: ((*) => TrayMenu_RunSceneCmd("tray_reload_script")), Icon: "↻" })
+    MenuItems.Push({ Text: "彻底退出重启", Action: ((*) => TrayMenu_RunSceneCmd("tray_restart_clean")), Icon: "⟲" })
     MenuItems.Push({ Text: "[!] 强制重置搜索中心", Action: ((*) => TrayMenu_RunSceneCmd("tray_force_reinit_search")), Icon: "!" })
     MenuItems.Push({ Text: GetText("exit_menu"), Action: ((*) => TrayMenu_RunSceneCmd("tray_exit_app")), Icon: "✕" })
 }
@@ -1242,6 +1244,89 @@ HideFloatingToolbarFromPopupMenu(*) {
     }
 }
 
+Nmer_ScheduleCleanRestart() {
+    ahkExe := A_AhkPath
+    scriptPath := A_ScriptFullPath
+    pid := DllCall("GetCurrentProcessId", "UInt")
+    ; 等当前进程完全退出后再拉起，避免与 #SingleInstance Force 抢实例、WebView2 环境未释放
+    ps := "while (Get-Process -Id " . pid . " -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 250 }; "
+        . "Start-Process -FilePath '" . StrReplace(ahkExe, "'", "''") . "' -ArgumentList '" . StrReplace(scriptPath, "'", "''") . "'"
+    try {
+        Run('powershell.exe -NoProfile -WindowStyle Hidden -Command "' . ps . '"', , "Hide")
+        try TrayMenu_Log("restart_clean_spawn_scheduled pid=" . pid)
+        return
+    } catch as err {
+        try TrayMenu_Log("restart_clean_spawn_ps_failed msg=" . err.Message)
+    }
+    cmd := 'cmd /c ping 127.0.0.1 -n 4 >nul & start "" "' . ahkExe . '" "' . scriptPath . '"'
+    try Run(cmd, , "Hide")
+    catch {
+    }
+}
+
+RestartAppCleanFromTrayMenu(*) {
+    global TrayMenuGUI, ConfigFile
+    if (TrayMenuGUI != 0) {
+        try {
+            TrayMenuGUI.Destroy()
+            TrayMenuGUI := 0
+            SetTimer(CheckTrayMenuMousePosition, 0)
+            SetTimer(CloseTrayMenuIfClickedOutside, 0)
+        } catch {
+        }
+    }
+    try TrayMenu_Log("restart_clean_begin")
+    try FloatingToolbarSaveScale()
+    catch {
+    }
+    try SaveFloatingToolbarPosition()
+    catch {
+    }
+    try _Cfg_NormalizeIniEncoding(ConfigFile)
+    catch {
+    }
+    try TrayMenu_ForceBreakSearchCenterStuck("tray_restart_clean")
+    catch {
+    }
+    try {
+        if FuncExists("SCWV_RequestHardClose")
+            SCWV_RequestHardClose("tray_restart_clean_sync")
+    } catch {
+    }
+    try {
+        if FuncExists("HideFloatingToolbar")
+            HideFloatingToolbar()
+    } catch {
+    }
+    try GDHO_HideOverlay()
+    catch {
+    }
+    try NiumaTtyd_StopProcess()
+    catch {
+    }
+    try {
+        if ProcessExist("SearchCenterCore.exe")
+            ProcessClose("SearchCenterCore.exe")
+    } catch {
+    }
+    try {
+        if FuncExists("WebView2_PrepareForScriptReload")
+            WebView2_PrepareForScriptReload()
+    } catch {
+    }
+    try {
+        if FuncExists("Nmer_StopWailsBridge")
+            Nmer_StopWailsBridge()
+    } catch {
+    }
+    try NativeDropBridge_Stop()
+    catch {
+    }
+    Nmer_ScheduleCleanRestart()
+    try TrayMenu_Log("restart_clean_exit")
+    ExitApp()
+}
+
 ReloadScriptFromPopupMenu(*) {
     global TrayMenuGUI, ConfigFile
     if (TrayMenuGUI != 0) {
@@ -1262,6 +1347,11 @@ ReloadScriptFromPopupMenu(*) {
     ; 重启前先归一化配置文件编码，避免 ThemeMode 被混写 ini 覆盖
     try _Cfg_NormalizeIniEncoding(ConfigFile)
     catch {
+    }
+    try {
+        if FuncExists("Nmer_WailsBridgePrepareForScriptReload")
+            Nmer_WailsBridgePrepareForScriptReload()
+    } catch {
     }
     try {
         if FuncExists("WebView2_PrepareForScriptReload")
@@ -1682,6 +1772,9 @@ TrayMenu_RunSceneCmdRun(cmdId) {
         case "tray_reload_script":
             try ReloadScriptFromPopupMenu()
             return
+        case "tray_restart_clean":
+            try RestartAppCleanFromTrayMenu()
+            return
         case "tray_force_reinit_search":
             try SCWV_ForceReinitFromTray()
             return
@@ -1729,6 +1822,7 @@ TrayMenu_NormalizeCmdId(cmdId) {
     c := StrReplace(c, "tray:toggle_toolbar", "tray_toggle_toolbar")
     c := StrReplace(c, "tray:hide_toolbar", "tray_hide_toolbar")
     c := StrReplace(c, "tray:reload_script", "tray_reload_script")
+    c := StrReplace(c, "tray:restart_clean", "tray_restart_clean")
     c := StrReplace(c, "tray:force_reinit_search", "tray_force_reinit_search")
     c := StrReplace(c, "tray:exit_app", "tray_exit_app")
     c := StrReplace(c, "tray:show_hole_input_panel", "tray_show_hole_input_panel")
@@ -1831,6 +1925,8 @@ TrayMenu_GetSceneFallbackLabel(cmdId, defaultLabel := "") {
             return "关闭工具栏"
         case "tray_reload_script":
             return "重启脚本"
+        case "tray_restart_clean":
+            return "彻底退出重启"
         case "tray_force_reinit_search":
             return "[!] 强制重置搜索中心"
         case "tray_exit_app":

@@ -42,6 +42,12 @@ func TestOpenClawAdapterIngestWithMockGateway(t *testing.T) {
 	if !out.OK || out.Accepted != 3 {
 		t.Fatalf("unexpected response: %+v", out)
 	}
+	if out.Answer != "mock openclaw answer" {
+		t.Fatalf("answer: got %q", out.Answer)
+	}
+	if out.RequestID != "req-adp-int" {
+		t.Fatalf("requestId: got %q", out.RequestID)
+	}
 	if len(hub.a2uiReplaySnapshot()) == 0 {
 		t.Fatalf("expected replay buffer entries")
 	}

@@ -600,8 +600,11 @@ SurfaceManager_BudgetPolicy(mode := "") {
     m := String(mode != "" ? mode : SurfaceManager_CurrentMode())
     baseline := SurfaceManager_MeasuredBaseline()
     emptyWv2 := baseline.Has("webview2_count") ? (baseline["webview2_count"] + 0) : 7
-    ; S5: totalWebview = S4 空载 wv2 实测 + 1 余量；primary=1 保证 CP+SC 双开触发回收
-    totalCap := emptyWv2 + 1
+    wv2ProcessCap := baseline.Has("webview2_process_cap") ? (baseline["webview2_process_cap"] + 0) : 4
+    if (wv2ProcessCap < 2)
+        wv2ProcessCap := 4
+    ; P0B: 固定 cap，禁止 emptyLoadWv2+1 动态放宽
+    totalCap := wv2ProcessCap
     if (totalCap < 2)
         totalCap := 2
     policy := Map(
@@ -658,8 +661,14 @@ SurfaceManager_MeasuredBaseline(*) {
                         defaults["emptyLoadPrivateMiB"] := data["emptyLoadPrivateMiB"] + 0.0
                     if data.Has("capturedAt")
                         defaults["capturedAt"] := String(data["capturedAt"])
-                    if data.Has("processes") && IsObject(data["processes"]) && data["processes"].Has("webview2_count")
-                        defaults["webview2_count"] := data["processes"]["webview2_count"] + 0
+                    if data.Has("processes") && IsObject(data["processes"]) {
+                        if data["processes"].Has("webview2_count")
+                            defaults["webview2_count"] := data["processes"]["webview2_count"] + 0
+                        if data["processes"].Has("webview2_process_cap")
+                            defaults["webview2_process_cap"] := data["processes"]["webview2_process_cap"] + 0
+                        if data["processes"].Has("webview2_host_control_cap")
+                            defaults["webview2_host_control_cap"] := data["processes"]["webview2_host_control_cap"] + 0
+                    }
                     defaults["source"] := path
                 }
             }

@@ -55,6 +55,20 @@
     assert(card.representationRoute === "r3", "card route r3");
     assert(card.officialA2ui && card.officialA2ui.source === "live", "card live official slot");
 
+    assert(Gray.cardIsOfficialA2uiRoute(card), "cardIsOfficialA2uiRoute r3");
+    assert(
+      Gray.shouldSkipProseFinalize(card, { source: "hub_ws" }),
+      "r3 must skip hub_ws prose"
+    );
+    assert(
+      Gray.shouldSkipProseFinalize(card, { source: "adapter_http" }),
+      "r3 must skip adapter_http prose"
+    );
+    assert(
+      !Gray.shouldSkipProseFinalize({ representationRoute: "r1r2" }, { source: "hub_ws" }),
+      "r1r2 keeps prose path"
+    );
+
     return { ok: true, name: "gray_route_contracts" };
   }
 

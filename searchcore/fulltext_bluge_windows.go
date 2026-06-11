@@ -96,6 +96,13 @@ type FullTextStatus struct {
 	ScanMode           string   `json:"scan_mode,omitempty"`
 	IndexEpoch         uint64   `json:"indexEpoch,omitempty"`
 	IndexVersion       string   `json:"indexVersion,omitempty"`
+	RootLifecycleState string   `json:"rootLifecycleState,omitempty"`
+	RootsConfirmedAt   string   `json:"rootsConfirmedAt,omitempty"`
+	RootPolicyVersion  int      `json:"rootPolicyVersion,omitempty"`
+	RootSource         string   `json:"rootSource,omitempty"`
+	DiscoverySummary      any `json:"discoverySummary,omitempty"`
+	RootDiscoveryDetails  any `json:"rootDiscovery,omitempty"`
+	IndexLifecycle        any `json:"indexLifecycle,omitempty"`
 }
 
 type fullTextConfig struct {
@@ -128,6 +135,8 @@ type fullTextConfig struct {
 	SemanticMaxScanKB   int
 	PrivacyMode         string
 	PipelineV2          bool
+	ColdIdleDefer       bool
+	RootResolution      RootResolution
 }
 
 type fileFingerprint struct {
@@ -153,16 +162,18 @@ type preparedIndexTask struct {
 }
 
 type blugeIndexer struct {
-	cfg     fullTextConfig
-	writer  *bluge.Writer
-	watcher *fsnotify.Watcher
-	meta    *indexMetaStore
+	cfg            fullTextConfig
+	indexLifecycle *indexLifecycleManager
+	writer         *bluge.Writer
+	watcher        *fsnotify.Watcher
+	meta           *indexMetaStore
 
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	tasks chan indexTask
-	docs  chan preparedIndexTask
+	tasks     chan indexTask
+	coldTasks chan indexTask
+	docs      chan preparedIndexTask
 
 	startOnce sync.Once
 
@@ -170,7 +181,7 @@ type blugeIndexer struct {
 
 	status FullTextStatus
 
-	knownFiles    map[string]fileFingerprint
+	metaCache     *fileMetaCache
 	watchedDirs   map[string]struct{}
 	recentEnqueue map[string]time.Time
 	overflowTasks map[string]indexTask
@@ -181,7 +192,9 @@ type blugeIndexer struct {
 	idleWaitNotified bool
 	startedAt        time.Time
 
-	cachedReader atomic.Pointer[bluge.Reader]
+	cachedReader       atomic.Pointer[bluge.Reader]
+	legacyQueryReader  atomic.Pointer[bluge.Reader]
+	cutoverMu          sync.Mutex
 
 	batchMu       sync.Mutex
 	pendingBatch  *blugeindex.Batch
@@ -231,6 +244,9 @@ func StartIndexer(baseDir string) error {
 	if isFullTextStartSuppressed() {
 		return errors.New("fulltext indexer is paused")
 	}
+	if NeedsSetupWizard(ResolveRoots(baseDir)) {
+		return errors.New("index roots not configured; complete setup wizard first")
+	}
 
 	fullTextGlobalMu.Lock()
 	defer fullTextGlobalMu.Unlock()
@@ -248,6 +264,7 @@ func StartIndexer(baseDir string) error {
 }
 
 func Search(query string, limit int) ([]map[string]any, error) {
+	bumpQueryActivity()
 	fullTextGlobalMu.RLock()
 	idx := fullTextGlobal
 	fullTextGlobalMu.RUnlock()
@@ -262,7 +279,7 @@ func GetStatus() FullTextStatus {
 	idx := fullTextGlobal
 	fullTextGlobalMu.RUnlock()
 	if idx == nil {
-		return FullTextStatus{
+		st := FullTextStatus{
 			Engine:             "bluge",
 			Running:            false,
 			Ready:              false,
@@ -275,8 +292,37 @@ func GetStatus() FullTextStatus {
 			IndexVersion:       fullTextIndexVersion,
 			LastUpdatedRFC3339: time.Now().Format(time.RFC3339),
 		}
+		return enrichFullTextStatus(st, fullTextBaseDir())
 	}
-	return idx.GetStatus()
+	return enrichFullTextStatus(idx.GetStatus(), idx.cfg.BaseDir)
+}
+
+func enrichFullTextStatus(st FullTextStatus, baseDir string) FullTextStatus {
+	if strings.TrimSpace(baseDir) == "" {
+		return st
+	}
+	res := ResolveRoots(baseDir)
+	st.RootLifecycleState = string(res.State)
+	st.RootsConfirmedAt = res.RootsConfirmedAt
+	st.RootPolicyVersion = res.PolicyVersion
+	st.RootSource = res.Source
+	if len(st.Roots) == 0 {
+		st.Roots = append([]string{}, res.Roots...)
+	}
+	if NeedsSetupWizard(res) {
+		st.ScanPhase = "setup_required"
+		if strings.TrimSpace(st.ProgressDetail) == "" || st.ProgressDetail == "not started" {
+			st.ProgressDetail = "请选择要索引的文件夹"
+		}
+	}
+	everythingOK, everythingReason := probeEverythingIPC(baseDir)
+	rootDiscovery := buildRootDiscoveryStatuses(res, everythingOK, everythingReason)
+	st.RootDiscoveryDetails = rootDiscovery
+	st.DiscoverySummary = summarizeDiscovery(rootDiscovery)
+	if lc, err := loadIndexLifecycleSnapshot(baseDir); err == nil {
+		st.IndexLifecycle = lc
+	}
+	return st
 }
 
 func GetProgressPayload() fullTextProgressPayload {
@@ -406,9 +452,9 @@ func newBlugeIndexer(baseDir string) (*blugeIndexer, error) {
 	if err := os.MkdirAll(cfg.IndexDir, 0o755); err != nil {
 		return nil, fmt.Errorf("create index dir failed: %w", err)
 	}
-	forceRebuild, err := ensureIndexVersion(cfg.IndexDir, fullTextIndexVersion)
+	writerIndexDir, queryIndexDir, lifecycle, forceRebuild, err := ensureIndexDirsForLifecycle(cfg.IndexDir, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("ensure index version failed: %w", err)
+		return nil, err
 	}
 	if forceRebuild {
 		cfg.ForceContentRecheck = true
@@ -422,9 +468,9 @@ func newBlugeIndexer(baseDir string) (*blugeIndexer, error) {
 		}
 	}
 
-	writer, err := openBlugeWriterWithRetry(cfg.IndexDir, 6, 180*time.Millisecond)
+	writer, err := openBlugeWriterWithRetry(writerIndexDir, 6, 180*time.Millisecond)
 	if err != nil {
-		return nil, fmt.Errorf("open bluge writer failed (%s): %w", cfg.IndexDir, err)
+		return nil, fmt.Errorf("open bluge writer failed (%s): %w", writerIndexDir, err)
 	}
 
 	watcher, err := fsnotify.NewWatcher()
@@ -432,7 +478,7 @@ func newBlugeIndexer(baseDir string) (*blugeIndexer, error) {
 		_ = writer.Close()
 		return nil, fmt.Errorf("create watcher failed: %w", err)
 	}
-	meta, err := openIndexMetaStore(cfg.IndexDir)
+	meta, err := openIndexMetaStore(writerIndexDir)
 	if err != nil {
 		_ = watcher.Close()
 		_ = writer.Close()
@@ -441,15 +487,16 @@ func newBlugeIndexer(baseDir string) (*blugeIndexer, error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	idx := &blugeIndexer{
-		cfg:           cfg,
-		writer:        writer,
+		cfg:            cfg,
+		indexLifecycle: lifecycle,
+		writer:         writer,
 		watcher:       watcher,
 		meta:          meta,
 		ctx:           ctx,
 		cancel:        cancel,
-		tasks:         make(chan indexTask, cfg.QueueSize),
-		docs:          make(chan preparedIndexTask, cfg.QueueSize),
-		knownFiles:    map[string]fileFingerprint{},
+		tasks: make(chan indexTask, cfg.QueueSize),
+		docs:  make(chan preparedIndexTask, cfg.QueueSize),
+		metaCache:     newFileMetaCache(defaultFileMetaCacheSize),
 		watchedDirs:   map[string]struct{}{},
 		recentEnqueue: map[string]time.Time{},
 		overflowTasks: map[string]indexTask{},
@@ -482,6 +529,9 @@ func newBlugeIndexer(baseDir string) (*blugeIndexer, error) {
 		},
 		startedAt: time.Now(),
 	}
+	if cfg.ColdIdleDefer {
+		idx.coldTasks = make(chan indexTask, cfg.QueueSize)
+	}
 
 	if cfg.NeedUserIndexDir {
 		idx.appendAlert("set SEARCHCENTER_FT_INDEX_DIR to a dedicated directory for better stability")
@@ -493,25 +543,28 @@ func newBlugeIndexer(baseDir string) (*blugeIndexer, error) {
 		idx.appendAlert("full sync enabled: rechecking file contents against index")
 	}
 
-	if known, kerr := idx.meta.LoadAll(); kerr == nil {
-		idx.knownFiles = known
-	} else {
-		idx.recordError(fmt.Errorf("load index meta failed: %w", kerr))
+	var persistedMetaCount int64
+	if idx.meta != nil {
+		if n, cerr := idx.meta.Count(); cerr == nil {
+			persistedMetaCount = n
+		} else {
+			idx.recordError(fmt.Errorf("count index meta failed: %w", cerr))
+		}
 	}
 	if pst, ok, perr := idx.meta.LoadIndexState(); perr == nil && ok {
 		if pst.IndexedFiles > 0 && idx.status.IndexedFiles < pst.IndexedFiles {
 			idx.status.IndexedFiles = pst.IndexedFiles
 		}
-		if !cfg.ForceContentRecheck && pst.InitialScanDone && len(idx.knownFiles) > 0 {
+		if !cfg.ForceContentRecheck && pst.InitialScanDone && pst.IndexedFiles > 0 {
 			idx.status.InitialScanDone = true
 			idx.status.Ready = true
 			idx.status.Progress = 100
 			idx.status.ProgressText = "100.0%"
 			idx.status.ScanPhase = "ready"
 			if strings.TrimSpace(pst.LastUpdated) != "" {
-				idx.status.ProgressDetail = fmt.Sprintf("Loaded previous snapshot (%d files) at %s", int64(len(idx.knownFiles)), pst.LastUpdated)
+				idx.status.ProgressDetail = fmt.Sprintf("Loaded previous snapshot (%d files) at %s", pst.IndexedFiles, pst.LastUpdated)
 			} else {
-				idx.status.ProgressDetail = fmt.Sprintf("Loaded previous snapshot (%d files)", int64(len(idx.knownFiles)))
+				idx.status.ProgressDetail = fmt.Sprintf("Loaded previous snapshot (%d files)", pst.IndexedFiles)
 			}
 		}
 	} else if perr != nil {
@@ -521,9 +574,12 @@ func newBlugeIndexer(baseDir string) (*blugeIndexer, error) {
 	if err := idx.refreshIndexedCount(); err != nil {
 		idx.recordError(fmt.Errorf("refresh index count: %w", err))
 	}
-	if !cfg.ForceContentRecheck && len(idx.knownFiles) > 0 && idx.status.IndexedFiles == 0 {
-		// Index files were reset but snapshot still indicates incremental mode.
-		idx.knownFiles = map[string]fileFingerprint{}
+	if !cfg.ForceContentRecheck && persistedMetaCount > 0 && idx.status.IndexedFiles == 0 {
+		// Index files were reset but SQLite meta still indicates incremental mode.
+		idx.metaCache.Clear()
+		if idx.meta != nil {
+			_ = idx.meta.ClearFileMeta()
+		}
 		idx.status.InitialScanDone = false
 		idx.status.Ready = false
 		idx.status.Progress = 0
@@ -539,11 +595,23 @@ func newBlugeIndexer(baseDir string) (*blugeIndexer, error) {
 		})
 	}
 
+	if queryIndexDir != writerIndexDir {
+		if qr, qerr := openBlugeReader(queryIndexDir); qerr == nil {
+			idx.legacyQueryReader.Store(qr)
+		} else {
+			idx.recordError(fmt.Errorf("open legacy query reader (%s): %w", queryIndexDir, qerr))
+		}
+	}
+
 	if err := idx.refreshReader(); err != nil {
 		idx.recordError(fmt.Errorf("initial bluge reader: %w", err))
 	}
 
 	return idx, nil
+}
+
+func openBlugeReader(indexDir string) (*bluge.Reader, error) {
+	return bluge.OpenReader(bluge.DefaultConfig(indexDir))
 }
 
 func openBlugeWriterWithRetry(indexDir string, attempts int, baseDelay time.Duration) (*bluge.Writer, error) {
@@ -731,6 +799,36 @@ func (b *blugeIndexer) closeCachedReaderOnStop() {
 	}
 }
 
+func (b *blugeIndexer) closeLegacyQueryReader() {
+	old := b.legacyQueryReader.Swap(nil)
+	if old != nil {
+		_ = old.Close()
+	}
+}
+
+func (b *blugeIndexer) searchReader() (*bluge.Reader, error) {
+	if lr := b.legacyQueryReader.Load(); lr != nil {
+		return lr, nil
+	}
+	reader := b.cachedReader.Load()
+	if reader == nil {
+		if err := b.refreshReader(); err != nil {
+			return nil, err
+		}
+		reader = b.cachedReader.Load()
+	}
+	if reader == nil {
+		return nil, errors.New("bluge reader unavailable")
+	}
+	return reader, nil
+}
+
+func (b *blugeIndexer) hasPendingBatch() bool {
+	b.batchMu.Lock()
+	defer b.batchMu.Unlock()
+	return b.batchOpCount > 0
+}
+
 func (b *blugeIndexer) StartIndexer() error {
 	var startErr error
 	b.startOnce.Do(func() {
@@ -753,6 +851,9 @@ func (b *blugeIndexer) StartIndexer() error {
 			go b.workerLoop(i + 1)
 		}
 		go b.overflowRetryLoop()
+		if b.cfg.ColdIdleDefer && b.coldTasks != nil {
+			go b.coldDeferLoop()
+		}
 		if b.cfg.PipelineV2 {
 			writers := resolvePipelineWriterCount(b.cfg.Workers)
 			for i := 0; i < writers; i++ {
@@ -797,15 +898,9 @@ func (b *blugeIndexer) Search(query string, limit int) ([]map[string]any, error)
 		limit = 30
 	}
 
-	reader := b.cachedReader.Load()
-	if reader == nil {
-		if err := b.refreshReader(); err != nil {
-			return nil, err
-		}
-		reader = b.cachedReader.Load()
-	}
-	if reader == nil {
-		return nil, errors.New("bluge reader unavailable")
+	reader, err := b.searchReader()
+	if err != nil {
+		return nil, err
 	}
 
 	q := lookupFullTextQueryCache(qText, limit, func() bluge.Query {
@@ -839,6 +934,9 @@ func (b *blugeIndexer) GetStatus() FullTextStatus {
 	defer b.mu.Unlock()
 	b.refreshProgressLocked()
 	pending := len(b.tasks)
+	if b.coldTasks != nil {
+		pending += len(b.coldTasks)
+	}
 	if b.cfg.PipelineV2 {
 		pending += len(b.docs)
 	}
@@ -846,6 +944,9 @@ func (b *blugeIndexer) GetStatus() FullTextStatus {
 	pending += len(b.overflowTasks)
 	b.overflowMu.Unlock()
 	capacity := cap(b.tasks)
+	if b.coldTasks != nil {
+		capacity += cap(b.coldTasks)
+	}
 	if b.cfg.PipelineV2 {
 		capacity += cap(b.docs)
 	}
@@ -906,6 +1007,17 @@ func (b *blugeIndexer) initialScanLoop() {
 		return
 	case <-time.After(b.cfg.InitialDelay):
 	}
+	setIndexActivity(true)
+	if NeedsSetupWizard(b.cfg.RootResolution) {
+		setIndexActivity(false)
+		b.mu.Lock()
+		b.status.ScanPhase = "setup_required"
+		b.status.ProgressText = "请选择要索引的文件夹"
+		b.status.LastUpdatedRFC3339 = time.Now().Format(time.RFC3339)
+		b.mu.Unlock()
+		return
+	}
+	resetDiscoveryStatus()
 	if !b.waitInitialIdleOnce() {
 		return
 	}
@@ -941,6 +1053,10 @@ func (b *blugeIndexer) initialScanLoop() {
 	}
 	b.refreshProgressLocked()
 	b.mu.Unlock()
+	if b.status.ScanPhase == "ready" || (b.status.InitialScanDone && b.status.PendingTasks == 0) {
+		setIndexActivity(false)
+	}
+	b.scheduleIndexCutoverCheck()
 }
 
 func (b *blugeIndexer) scanInitialRoot(root string, initial bool) {
@@ -954,27 +1070,40 @@ func (b *blugeIndexer) scanInitialRoot(root string, initial bool) {
 	b.status.IndexingFile = "Walking root: " + root
 	b.status.LastUpdatedRFC3339 = time.Now().Format(time.RFC3339)
 	b.mu.Unlock()
-	b.walkRoot(root, initial)
+	primaryFailed := b.walkRoot(root, initial)
 	if !initial {
 		return
 	}
 	afterDiscovered := b.snapshotInitialTaskTotal()
-	if afterDiscovered == beforeDiscovered {
-		b.appendAlert(fmt.Sprintf("root %s produced 0 files in primary scan, running supplemental scan", root))
-		b.runSupplementalRootScan(root, true)
-		return
-	}
-	if isNonSystemVolumeRoot(root) {
-		b.appendAlert(fmt.Sprintf("running non-system supplemental scan for %s", root))
+	discoveredDelta := afterDiscovered - beforeDiscovered
+	if primaryFailed || discoveredDelta == 0 {
+		reason := "0 files"
+		if primaryFailed && discoveredDelta > 0 {
+			reason = "primary scan failed (partial)"
+		} else if primaryFailed {
+			reason = "primary scan failed"
+		}
+		b.appendAlert(fmt.Sprintf("root %s %s, running supplemental scan", root, reason))
 		b.runSupplementalRootScan(root, true)
 	}
 }
 
-func (b *blugeIndexer) walkRoot(root string, initial bool) {
+func (b *blugeIndexer) walkRoot(root string, initial bool) bool {
 	cleanRoot := filepath.Clean(root)
+	primaryFailed := false
 	if st, err := os.Stat(cleanRoot); err != nil || !st.IsDir() {
-		return
+		return true
 	}
+	if NeedsSetupWizard(b.cfg.RootResolution) {
+		recordDiscoveryOutcome(cleanRoot, DiscoveryOutcome{
+			Mode:           DiscoverySetupRequired,
+			Reason:         "ROOT_SETUP_REQUIRED",
+			ActionableHint: "请选择要索引的文件夹",
+		})
+		return true
+	}
+
+	everythingOK, everythingReason := probeEverythingIPC(b.cfg.BaseDir)
 
 	if b.cfg.UseMFT && isVolumeRootPath(cleanRoot) {
 		b.mu.Lock()
@@ -1019,17 +1148,28 @@ func (b *blugeIndexer) walkRoot(root string, initial bool) {
 
 				evEmitted, evErr := b.walkRootWithEverythingWithTimeout(cleanRoot, initial, defaultEverythingTimeout)
 				if evErr == nil && evEmitted > 0 {
-					return
+					recordDiscoveryOutcome(cleanRoot, DiscoveryOutcome{Mode: DiscoveryEverything, Reason: "OK"})
+					return false
+				}
+				primaryFailed = true
+				outcome := planDiscoveryForRoot(b.cfg.RootResolution, cleanRoot, everythingOK, everythingReason)
+				recordDiscoveryOutcome(cleanRoot, outcome)
+				if outcome.Skipped || shouldSkipRootOnEverythingFailure(cleanRoot, b.cfg.RootResolution) {
+					b.appendAlert(outcome.ActionableHint)
+					return true
 				}
 				if evErr != nil {
-					b.appendAlert(fmt.Sprintf("Everything failed, fallback to WalkDir: %v", evErr))
+					b.appendAlert(fmt.Sprintf("Everything failed on %s: %v", cleanRoot, evErr))
 				}
 			}
-			b.walkRootDirConcurrent(cleanRoot, initial)
-		} else {
-			b.usedMFT.Store(true)
+			if shouldWalkOnEverythingFailure(cleanRoot, b.cfg.RootResolution) {
+				b.walkRootDirConcurrent(cleanRoot, initial)
+			}
+			return primaryFailed
 		}
-		return
+		b.usedMFT.Store(true)
+		recordDiscoveryOutcome(cleanRoot, DiscoveryOutcome{Mode: DiscoveryEverything, Reason: "MFT"})
+		return false
 	}
 
 	if initial && b.cfg.UseEverything {
@@ -1040,14 +1180,30 @@ func (b *blugeIndexer) walkRoot(root string, initial bool) {
 
 		emitted, err := b.walkRootWithEverythingWithTimeout(cleanRoot, initial, defaultEverythingTimeout)
 		if err == nil && emitted > 0 {
-			return
+			recordDiscoveryOutcome(cleanRoot, DiscoveryOutcome{Mode: DiscoveryEverything, Reason: "OK"})
+			return false
+		}
+		primaryFailed = true
+		outcome := planDiscoveryForRoot(b.cfg.RootResolution, cleanRoot, everythingOK, everythingReason)
+		recordDiscoveryOutcome(cleanRoot, outcome)
+		if outcome.Skipped || shouldSkipRootOnEverythingFailure(cleanRoot, b.cfg.RootResolution) {
+			b.appendAlert(outcome.ActionableHint)
+			return true
 		}
 		if err != nil {
-			b.appendAlert(fmt.Sprintf("Everything failed, fallback to WalkDir: %v", err))
+			b.appendAlert(fmt.Sprintf("Everything failed on %s: %v", cleanRoot, err))
 		}
+		if shouldWalkOnEverythingFailure(cleanRoot, b.cfg.RootResolution) {
+			b.walkRootDirConcurrent(cleanRoot, initial)
+		}
+		return primaryFailed
 	}
 
-	b.walkRootDirConcurrent(cleanRoot, initial)
+	if shouldWalkOnEverythingFailure(cleanRoot, b.cfg.RootResolution) || !isVolumeRootPath(cleanRoot) {
+		recordDiscoveryOutcome(cleanRoot, DiscoveryOutcome{Mode: DiscoveryWalkFallback, Reason: "WALKDIR"})
+		b.walkRootDirConcurrent(cleanRoot, initial)
+	}
+	return false
 }
 
 func (b *blugeIndexer) snapshotInitialTaskTotal() int64 {
@@ -1585,6 +1741,65 @@ func (b *blugeIndexer) addWatchRecursive(root string) {
 	})
 }
 
+func (b *blugeIndexer) isColdIndexPath(path string) bool {
+	ext := normalizeExt(pathExtLower(path))
+	if _, hot := b.cfg.FilterConfig.HotExts[ext]; hot {
+		return false
+	}
+	_, cold := b.cfg.FilterConfig.ColdExts[ext]
+	return cold
+}
+
+func (b *blugeIndexer) coldProcessingAllowed() bool {
+	if !b.cfg.ColdIdleDefer {
+		return true
+	}
+	act := activityTrackerSnapshot(b.GetStatus())
+	if indexing, _ := act["indexActivity"].(bool); indexing {
+		return false
+	}
+	if leases, _ := act["activityLeases"].(int32); leases > 0 {
+		return false
+	}
+	minIdle := 30 * time.Second
+	if b.cfg.IdleIndexAfter > 0 {
+		minIdle = b.cfg.IdleIndexAfter
+	}
+	return userIdleForAtLeast(minIdle)
+}
+
+func (b *blugeIndexer) shouldDeferColdTask(task indexTask) bool {
+	if !b.cfg.ColdIdleDefer || task.Delete || b.coldTasks == nil {
+		return false
+	}
+	return b.isColdIndexPath(task.Path)
+}
+
+func (b *blugeIndexer) enqueueColdTask(task indexTask) {
+	select {
+	case b.coldTasks <- task:
+	case <-b.ctx.Done():
+	}
+}
+
+func (b *blugeIndexer) coldDeferLoop() {
+	for {
+		select {
+		case <-b.ctx.Done():
+			return
+		case task := <-b.coldTasks:
+			for !b.coldProcessingAllowed() {
+				select {
+				case <-b.ctx.Done():
+					return
+				case <-time.After(2 * time.Second):
+				}
+			}
+			b.enqueueHotTask(task)
+		}
+	}
+}
+
 func (b *blugeIndexer) enqueueTask(task indexTask) {
 	if task.Path == "" {
 		return
@@ -1597,6 +1812,24 @@ func (b *blugeIndexer) enqueueTask(task indexTask) {
 		if abs, err := filepath.Abs(task.Path); err == nil && abs != "" {
 			task.Path = filepath.Clean(abs)
 		}
+	}
+	if b.isIndexDirPath(task.Path) {
+		return
+	}
+	if b.shouldDeferColdTask(task) {
+		b.enqueueColdTask(task)
+		return
+	}
+	b.enqueueHotTask(task)
+}
+
+func (b *blugeIndexer) enqueueHotTask(task indexTask) {
+	if task.Path == "" {
+		return
+	}
+	task.Path = filepath.Clean(strings.TrimSpace(task.Path))
+	if task.Path == "" {
+		return
 	}
 	if b.isIndexDirPath(task.Path) {
 		return
@@ -1635,6 +1868,9 @@ func (b *blugeIndexer) enqueueTask(task indexTask) {
 	}
 	b.mu.Lock()
 	pending := len(b.tasks)
+	if b.coldTasks != nil {
+		pending += len(b.coldTasks)
+	}
 	if b.cfg.PipelineV2 {
 		pending += len(b.docs)
 	}
@@ -1642,6 +1878,9 @@ func (b *blugeIndexer) enqueueTask(task indexTask) {
 	pending += len(b.overflowTasks)
 	b.overflowMu.Unlock()
 	capacity := cap(b.tasks)
+	if b.coldTasks != nil {
+		capacity += cap(b.coldTasks)
+	}
 	if b.cfg.PipelineV2 {
 		capacity += cap(b.docs)
 	}
@@ -1805,7 +2044,127 @@ func (b *blugeIndexer) markTaskDone(task indexTask) {
 	}
 	b.refreshProgressLocked()
 	b.status.LastUpdatedRFC3339 = time.Now().Format(time.RFC3339)
+	scanDone := b.initialWalkDone && b.initialTaskDone >= b.initialTaskTotal
 	b.mu.Unlock()
+	if scanDone {
+		b.scheduleIndexCutoverCheck()
+	}
+}
+
+func (b *blugeIndexer) countPendingTasks() int {
+	pending := len(b.tasks) + len(b.docs)
+	if b.coldTasks != nil {
+		pending += len(b.coldTasks)
+	}
+	b.overflowMu.Lock()
+	pending += len(b.overflowTasks)
+	b.overflowMu.Unlock()
+	if b.hasPendingBatch() {
+		pending++
+	}
+	return pending
+}
+
+func (b *blugeIndexer) scheduleIndexCutoverCheck() {
+	go b.maybeCutoverIndexLifecycle()
+}
+
+func (b *blugeIndexer) maybeCutoverIndexLifecycle() {
+	if b == nil || b.indexLifecycle == nil {
+		return
+	}
+	b.cutoverMu.Lock()
+	defer b.cutoverMu.Unlock()
+
+	snap := b.indexLifecycle.snapshot()
+	if snap.CutoverState != CutoverBuilding && snap.CutoverState != CutoverReady {
+		return
+	}
+	b.mu.RLock()
+	walkDone := b.initialWalkDone
+	scanDone := b.initialWalkDone && b.initialTaskDone >= b.initialTaskTotal
+	b.mu.RUnlock()
+	if !walkDone || !scanDone {
+		return
+	}
+	if b.countPendingTasks() > 0 {
+		return
+	}
+	if snap.CutoverState == CutoverBuilding {
+		if err := b.indexLifecycle.markBuildingReady(); err != nil {
+			b.recordError(fmt.Errorf("mark building ready: %w", err))
+			return
+		}
+	}
+	if err := b.performIndexCutover(); err != nil {
+		b.recordError(fmt.Errorf("index cutover: %w", err))
+		b.appendAlert(fmt.Sprintf("index cutover failed: %v", err))
+	}
+}
+
+func (b *blugeIndexer) performIndexCutover() error {
+	if b.indexLifecycle == nil {
+		return nil
+	}
+	snap := b.indexLifecycle.snapshot()
+	if snap.CutoverState != CutoverReady {
+		return nil
+	}
+	if b.countPendingTasks() > 0 {
+		return nil
+	}
+	if err := b.drainPendingBatches(); err != nil {
+		return fmt.Errorf("drain batches before cutover: %w", err)
+	}
+
+	b.closeLegacyQueryReader()
+	b.closeCachedReaderOnStop()
+
+	b.mu.Lock()
+	writer := b.writer
+	meta := b.meta
+	b.writer = nil
+	b.meta = nil
+	b.mu.Unlock()
+
+	if writer != nil {
+		if err := writer.Close(); err != nil {
+			return fmt.Errorf("close writer before cutover: %w", err)
+		}
+	}
+	if meta != nil {
+		if err := meta.Close(); err != nil {
+			return fmt.Errorf("close meta before cutover: %w", err)
+		}
+	}
+
+	if err := b.indexLifecycle.cutoverIfReady(0); err != nil {
+		return fmt.Errorf("lifecycle cutover: %w", err)
+	}
+
+	activeDir := b.indexLifecycle.activeIndexDir()
+	newWriter, err := openBlugeWriterWithRetry(activeDir, 6, 180*time.Millisecond)
+	if err != nil {
+		return fmt.Errorf("reopen writer after cutover (%s): %w", activeDir, err)
+	}
+	newMeta, err := openIndexMetaStore(activeDir)
+	if err != nil {
+		_ = newWriter.Close()
+		return fmt.Errorf("reopen meta after cutover (%s): %w", activeDir, err)
+	}
+
+	b.mu.Lock()
+	b.writer = newWriter
+	b.meta = newMeta
+	b.mu.Unlock()
+
+	if err := b.refreshReader(); err != nil {
+		return fmt.Errorf("refresh reader after cutover: %w", err)
+	}
+	bumpFullTextQueryCacheEpoch()
+	b.appendAlert("index lifecycle cutover completed")
+	log.Printf("[fulltext] index lifecycle cutover completed -> %s", activeDir)
+	return nil
 }
 
 type recentPathEntry struct {
@@ -1869,21 +2228,9 @@ func (b *blugeIndexer) needsIndexingLocked(path string, st os.FileInfo) bool {
 	id := docIDForPath(path)
 	modNano := st.ModTime().UnixNano()
 	size := st.Size()
-
-	b.mu.RLock()
-	if fp, ok := b.knownFiles[id]; ok {
+	if fp, ok := b.lookupFingerprint(path, id); ok {
 		if fp.Size == size && fp.ModNano == modNano {
-			b.mu.RUnlock()
 			return false
-		}
-	}
-	b.mu.RUnlock()
-
-	if b.meta != nil {
-		if old, ok, err := b.meta.Get(path); err == nil && ok {
-			if old.Size == size && old.ModNano == modNano {
-				return false
-			}
 		}
 	}
 	return true
@@ -1940,25 +2287,8 @@ func (b *blugeIndexer) prepareIndexTask(task indexTask) (*preparedIndexTask, boo
 		}
 	}
 	if !b.cfg.ForceContentRecheck {
-		b.mu.RLock()
-		if prev, ok := b.knownFiles[id]; ok && prev.Size == st.Size() && prev.ModNano == modNano {
-			b.mu.RUnlock()
+		if prev, ok := b.lookupFingerprint(path, id); ok && prev.Size == st.Size() && prev.ModNano == modNano {
 			return nil, true, nil
-		}
-		b.mu.RUnlock()
-		if b.meta != nil {
-			if old, ok, gerr := b.meta.Get(path); gerr == nil && ok && old.Size == st.Size() && old.ModNano == modNano {
-				b.mu.Lock()
-				if _, exists := b.knownFiles[id]; !exists {
-					b.knownFiles[id] = old
-					if b.status.IndexedFiles < int64(len(b.knownFiles)) {
-						b.status.IndexedFiles = int64(len(b.knownFiles))
-					}
-				}
-				b.status.LastUpdatedRFC3339 = time.Now().Format(time.RFC3339)
-				b.mu.Unlock()
-				return nil, true, nil
-			}
 		}
 	}
 	content, summary, err := b.readFileForIndex(path, st.Size())
@@ -1978,17 +2308,9 @@ func (b *blugeIndexer) prepareIndexTask(task indexTask) (*preparedIndexTask, boo
 	}
 	fp := fileFingerprint{Size: st.Size(), ModNano: modNano, ContentHash: contentCRC, FastHash: fastHash}
 
-	if b.meta != nil {
-		if oldFP, ok, gerr := b.meta.Get(path); gerr == nil && ok && oldFP == fp {
-			return nil, true, nil
-		}
-	}
-	b.mu.RLock()
-	if prev, ok := b.knownFiles[id]; ok && prev == fp {
-		b.mu.RUnlock()
+	if prev, ok := b.lookupFingerprint(path, id); ok && prev == fp {
 		return nil, true, nil
 	}
-	b.mu.RUnlock()
 
 	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
 	mod := st.ModTime()
@@ -2042,16 +2364,11 @@ func (b *blugeIndexer) commitPreparedTask(task preparedIndexTask) error {
 		return fmt.Errorf("bluge update failed (%s): %w", task.Path, err)
 	}
 
+	b.bumpIndexedFilesIfNew(task.Path)
+	b.rememberFingerprint(task.Path, task.ID, task.FP)
 	b.mu.Lock()
-	b.knownFiles[task.ID] = task.FP
-	if b.status.IndexedFiles < int64(len(b.knownFiles)) {
-		b.status.IndexedFiles = int64(len(b.knownFiles))
-	}
 	b.status.LastUpdatedRFC3339 = time.Now().Format(time.RFC3339)
 	b.mu.Unlock()
-	if b.meta != nil {
-		_ = b.meta.Upsert(task.Path, task.FP)
-	}
 	return nil
 }
 
@@ -2103,16 +2420,11 @@ func (b *blugeIndexer) indexFileMetaOnly(path string, st os.FileInfo, reason err
 		}
 	}
 	fp := fileFingerprint{Size: st.Size(), ModNano: st.ModTime().UnixNano(), ContentHash: 0, FastHash: fastHash}
+	b.bumpIndexedFilesIfNew(path)
+	b.rememberFingerprint(path, id, fp)
 	b.mu.Lock()
-	b.knownFiles[id] = fp
-	if b.status.IndexedFiles < int64(len(b.knownFiles)) {
-		b.status.IndexedFiles = int64(len(b.knownFiles))
-	}
 	b.status.LastUpdatedRFC3339 = time.Now().Format(time.RFC3339)
 	b.mu.Unlock()
-	if b.meta != nil {
-		_ = b.meta.Upsert(path, fp)
-	}
 	return nil
 }
 
@@ -2130,16 +2442,13 @@ func (b *blugeIndexer) deleteByPath(path string) error {
 	if err := b.enqueueBatchDelete(id); err != nil {
 		return fmt.Errorf("bluge delete failed (%s): %w", path, err)
 	}
+	b.forgetFingerprint(path, id)
 	b.mu.Lock()
-	delete(b.knownFiles, id)
 	if b.status.IndexedFiles > 0 {
 		b.status.IndexedFiles--
 	}
 	b.status.LastUpdatedRFC3339 = time.Now().Format(time.RFC3339)
 	b.mu.Unlock()
-	if b.meta != nil {
-		_ = b.meta.Delete(path)
-	}
 	return nil
 }
 
@@ -2514,8 +2823,19 @@ func (b *blugeIndexer) shouldSkipFileByName(path string) bool {
 }
 
 func (b *blugeIndexer) shouldIndexByColdPath(path string, size int64) bool {
-	_ = path
-	_ = size
+	if size <= 0 {
+		return false
+	}
+	ext := normalizeExt(pathExtLower(path))
+	if allowed := b.everythingExtWhitelist(); len(allowed) > 0 {
+		if _, ok := allowed[ext]; !ok {
+			return false
+		}
+	}
+	candidateMax := b.readBudgetForPath(path)
+	if candidateMax > 0 && size > candidateMax {
+		return false
+	}
 	return true
 }
 
@@ -2714,12 +3034,9 @@ func (b *blugeIndexer) shouldWarmIncrementalSync() bool {
 	if b.cfg.ForceContentRecheck {
 		return false
 	}
-	if len(b.knownFiles) == 0 {
-		return false
-	}
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	return b.status.InitialScanDone
+	return b.status.InitialScanDone && b.status.IndexedFiles > 0
 }
 
 func (b *blugeIndexer) statePersistLoop() {
@@ -2732,6 +3049,7 @@ func (b *blugeIndexer) statePersistLoop() {
 			return
 		case <-t.C:
 			b.persistIndexStateSnapshot()
+			b.maybeCutoverIndexLifecycle()
 		}
 	}
 }
@@ -2753,7 +3071,8 @@ func (b *blugeIndexer) persistIndexStateSnapshot() {
 
 func loadFullTextConfig(baseDir string) fullTextConfig {
 	filterCfg := loadFullTextFilterConfig(baseDir)
-	roots := mergeAnyTXTRoots(baseDir, fullTextRoots(baseDir))
+	rootRes := ResolveRoots(baseDir)
+	roots := append([]string{}, rootRes.Roots...)
 	indexDir, needHint := resolveIndexDir(baseDir)
 	workers := resolveWorkerCount()
 	scanSpeed := resolveScanSpeed()
@@ -2814,6 +3133,7 @@ func loadFullTextConfig(baseDir string) fullTextConfig {
 		BaseDir:             baseDir,
 		IndexDir:            indexDir,
 		Roots:               roots,
+		RootResolution:      rootRes,
 		FilterConfig:        filterCfg,
 		Workers:             workers,
 		InitialDelay:        initialDelay,
@@ -2840,42 +3160,18 @@ func loadFullTextConfig(baseDir string) fullTextConfig {
 		SemanticMaxScanKB:   semScanKB,
 		PrivacyMode:         normalizePrivacyMode(strings.TrimSpace(os.Getenv("SEARCHCENTER_FT_PRIVACY_MODE"))),
 		PipelineV2:          parseBoolEnv("SEARCHCENTER_FT_PIPELINE_V2", false),
+		ColdIdleDefer:       parseBoolEnv("SEARCHCENTER_FT_COLD_IDLE", true),
 	}
 }
 
+// mergeAnyTXTRoots is deprecated; roots are resolved exclusively via ResolveRoots.
 func mergeAnyTXTRoots(baseDir string, preferred []string) []string {
-	ntfsRoots := listNTFSDriveRoots()
-	if len(ntfsRoots) == 0 {
-		return preferred
-	}
-
-	out := make([]string, 0, len(ntfsRoots)+len(preferred))
+	_ = baseDir
+	out := make([]string, 0, len(preferred))
 	seen := map[string]struct{}{}
-	for _, root := range ntfsRoots {
-		clean := filepath.Clean(strings.TrimSpace(root))
-		if clean == "" {
-			continue
-		}
-		key := normalizePathKey(clean)
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		out = append(out, clean)
-	}
 	for _, p := range preferred {
 		clean := filepath.Clean(strings.TrimSpace(p))
 		if clean == "" {
-			continue
-		}
-		covered := false
-		for _, root := range ntfsRoots {
-			if pathHasRootPrefix(clean, root) {
-				covered = true
-				break
-			}
-		}
-		if covered {
 			continue
 		}
 		key := normalizePathKey(clean)
@@ -3388,6 +3684,9 @@ func handleFullTextProgressStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
+
+	acquireActivityLease()
+	defer releaseActivityLease()
 
 	ticker := time.NewTicker(200 * time.Millisecond)
 	defer ticker.Stop()

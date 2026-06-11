@@ -1,13 +1,28 @@
 ; Simple Jxon - JSON library for AHK v2
 ; Minimal implementation to avoid syntax issues
 
+global g_Jxon_ParseDepth := 0
+
 ; Global functions
 Jxon_Load(jsonText) {
+    global g_Jxon_ParseDepth
+    s := ""
+    try s := "" . String(jsonText)
+    catch {
+        return Map()
+    }
+    if (s = "")
+        return Map()
+    if (g_Jxon_ParseDepth > 0)
+        return Map()
+    g_Jxon_ParseDepth++
     try {
         pos := 1
-        return _parseValue(jsonText, &pos)
+        return _parseValue(s, &pos)
     } catch {
         return Map()
+    } finally {
+        g_Jxon_ParseDepth--
     }
 }
 
@@ -319,4 +334,18 @@ StrJoin(arr, sep) {
 ; Helper to check if value is string
 IsString(v) {
     return (v is String)
+}
+
+; WebView/COM 回调中解析前先截断超大负载；Jxon_Load 已负责字符串拷贝与嵌套解析防护。
+Jxon_LoadSafe(text, maxLen := 4194304) {
+    s := ""
+    try s := "" . String(text)
+    catch {
+        return Map()
+    }
+    if (s = "")
+        return Map()
+    if (maxLen > 0 && StrLen(s) > maxLen)
+        s := SubStr(s, 1, maxLen)
+    return Jxon_Load(s)
 }

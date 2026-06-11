@@ -76,6 +76,14 @@ func (c *OpenClawGatewayClient) wsURL() string {
 }
 
 func (c *OpenClawGatewayClient) SendChat(ctx context.Context, sessionKey, message string) (string, error) {
+	return c.SendChatStreaming(ctx, sessionKey, message, nil)
+}
+
+func (c *OpenClawGatewayClient) SendChatStreaming(
+	ctx context.Context,
+	sessionKey, message string,
+	onDelta func(delta string),
+) (string, error) {
 	sessionKey = OpenClawCanonicalSessionKey(sessionKey)
 	message = strings.TrimSpace(message)
 	if sessionKey == "" || message == "" {
@@ -202,6 +210,9 @@ func (c *OpenClawGatewayClient) SendChat(ctx context.Context, sessionKey, messag
 		}
 		if pl := openClawGetChatBroadcastPayload(msg); pl != nil {
 			if chunk := openClawExtractAssistantText(pl); chunk != "" {
+				if onDelta != nil {
+					onDelta(chunk)
+				}
 				mu.Lock()
 				pending.WriteString(chunk)
 				mu.Unlock()

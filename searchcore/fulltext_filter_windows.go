@@ -24,8 +24,11 @@ type fullTextFilterConfig struct {
 	ExcludePaths      []string            `json:"excludePaths"`
 	KnowledgeRoots    []string            `json:"knowledgeRoots"`
 	PDFToTextPath     string              `json:"pdftotextPath"`
-	AutoDiscoverRoots bool                `json:"autoDiscoverRoots"`
+	AutoDiscoverRoots *bool               `json:"autoDiscoverRoots"`
 	IdleIndexAfterSec int64               `json:"idleIndexAfterSec"`
+	RootsConfirmedAt  string              `json:"rootsConfirmedAt,omitempty"`
+	RootPolicyVersion int                 `json:"rootPolicyVersion,omitempty"`
+	WizardDismissed   bool                `json:"wizardDismissed,omitempty"`
 }
 
 type fullTextFilterResolved struct {
@@ -36,7 +39,7 @@ type fullTextFilterResolved struct {
 	ExcludePrefixes   []string
 	KnowledgeRoots    []string
 	PDFToTextPath     string
-	AutoDiscoverRoots bool
+	AutoDiscoverRoots bool // resolved effective value
 	IdleIndexAfter    int64
 }
 
@@ -74,9 +77,19 @@ func defaultFullTextFilterConfig(baseDir string) fullTextFilterConfig {
 		},
 		KnowledgeRoots:    []string{},
 		PDFToTextPath:     "",
-		AutoDiscoverRoots: true,
+		AutoDiscoverRoots: boolPtr(true),
 		IdleIndexAfterSec: 0,
+		RootPolicyVersion: currentRootPolicyVersion,
 	}
+}
+
+func boolPtr(v bool) *bool { return &v }
+
+func effectiveAutoDiscoverRoots(raw fullTextFilterConfig) bool {
+	if raw.AutoDiscoverRoots != nil {
+		return *raw.AutoDiscoverRoots
+	}
+	return true
 }
 
 func loadFullTextFilterConfig(baseDir string) fullTextFilterResolved {
@@ -105,6 +118,9 @@ func readAndNormalizeFullTextFilterConfig(baseDir string) fullTextFilterResolved
 		var loaded fullTextFilterConfig
 		if json.Unmarshal(buf, &loaded) == nil {
 			raw = mergeFullTextFilterConfig(raw, loaded)
+			if migrateLegacyRootPolicyConfig(baseDir, &raw) {
+				invalidateFullTextFilterCache()
+			}
 		}
 	} else {
 		_ = os.MkdirAll(filepath.Dir(path), 0o755)
@@ -170,7 +186,7 @@ func readAndNormalizeFullTextFilterConfig(baseDir string) fullTextFilterResolved
 		ExcludePrefixes:   excludes,
 		KnowledgeRoots:    roots,
 		PDFToTextPath:     strings.TrimSpace(pdfTool),
-		AutoDiscoverRoots: raw.AutoDiscoverRoots,
+		AutoDiscoverRoots: effectiveAutoDiscoverRoots(raw),
 		IdleIndexAfter:    raw.IdleIndexAfterSec,
 	}
 }
@@ -198,7 +214,9 @@ func mergeFullTextFilterConfig(base, override fullTextFilterConfig) fullTextFilt
 	if strings.TrimSpace(override.PDFToTextPath) != "" {
 		out.PDFToTextPath = strings.TrimSpace(override.PDFToTextPath)
 	}
-	out.AutoDiscoverRoots = override.AutoDiscoverRoots || out.AutoDiscoverRoots
+	if override.AutoDiscoverRoots != nil {
+		out.AutoDiscoverRoots = override.AutoDiscoverRoots
+	}
 	if override.IdleIndexAfterSec > 0 {
 		out.IdleIndexAfterSec = override.IdleIndexAfterSec
 	}
@@ -248,38 +266,11 @@ func isExcludedByFilter(path string, cfg fullTextFilterResolved) bool {
 }
 
 func fullTextRoots(baseDir string) []string {
-	cfg := loadFullTextFilterConfig(baseDir)
-	if len(cfg.KnowledgeRoots) > 0 {
-		return append([]string{}, cfg.KnowledgeRoots...)
+	res := ResolveRoots(baseDir)
+	if len(res.Roots) > 0 {
+		return append([]string{}, res.Roots...)
 	}
-
-	env := strings.TrimSpace(os.Getenv("SEARCHCENTER_FULLTEXT_ROOTS"))
-	if env != "" {
-		parts := strings.Split(env, ";")
-		out := make([]string, 0, len(parts))
-		for _, p := range parts {
-			s := strings.TrimSpace(p)
-			if s == "" {
-				continue
-			}
-			if !filepath.IsAbs(s) {
-				s = filepath.Join(baseDir, s)
-			}
-			if st, err := os.Stat(s); err == nil && st.IsDir() {
-				out = append(out, s)
-			}
-		}
-		if len(out) > 0 {
-			return out
-		}
-	}
-
-	if cfg.AutoDiscoverRoots {
-		if roots := discoverSearchRoots(); len(roots) > 0 {
-			return roots
-		}
-	}
-	return []string{baseDir}
+	return nil
 }
 
 func discoverSearchRoots() []string {

@@ -2417,6 +2417,29 @@
       document.getElementById("btnFtPickDir")?.addEventListener("click", () => post({ type: "fulltextPickIndexDir" }));
       document.getElementById("btnFtProbe")?.addEventListener("click", () => requestFullTextProbe());
       document.getElementById("btnFtRecommend")?.addEventListener("click", () => applyRecommendedFullTextScheme());
+      document.getElementById("btnFtRoots")?.addEventListener("click", async () => {
+        try {
+          const res = await fetch("http://127.0.0.1:8080/v1/fulltext/roots");
+          if (!res.ok) throw new Error("fetch failed");
+          const data = await res.json();
+          const candidates = Array.isArray(data.wizardCandidates) ? data.wizardCandidates : [];
+          const current = Array.isArray(data.resolution && data.resolution.roots) ? data.resolution.roots : candidates;
+          const picked = window.prompt("输入要索引的目录（每行一个）", current.join("\n"));
+          if (!picked) return;
+          const roots = picked.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+          if (!roots.length) return;
+          const confirmRes = await fetch("http://127.0.0.1:8080/v1/fulltext/roots/confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ roots, remember: true })
+          });
+          if (!confirmRes.ok) throw new Error("confirm failed");
+          setStatus("索引范围已更新", "ok");
+          requestFullTextStatus(true);
+        } catch (e) {
+          setStatus("更新索引范围失败：" + String(e && e.message || e), "err");
+        }
+      });
       document.getElementById("btnFtRebuild")?.addEventListener("click", async () => {
         const ok = await (window.nmConfirm ? window.nmConfirm(
           "重建全文索引？",
@@ -6624,6 +6647,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       <button class="btn" id="btnFtRefresh">刷新状态</button>
       <button class="btn" id="btnFtProbe">检测可行性</button>
       <button class="btn" id="btnFtRecommend">应用推荐方式</button>
+      <button class="btn" id="btnFtRoots">重新选择索引范围</button>
     </div>
     <div class="ft-mode-grid">
       <select id="ftScanScheme" data-nosave="1" title="扫描方式">

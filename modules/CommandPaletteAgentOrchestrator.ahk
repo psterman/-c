@@ -18,6 +18,8 @@ global g_AgentDbg_PipelineState := Map()
 global g_Agent_RawAnswerLimit := 120000
 global g_Agent_MessageLimit := 30
 global g_Agent_CardLimit := 20
+global g_Agent_PersistToken := 0
+global g_Agent_PersistPending := false
 
 CommandPalette_AgentClipText(value, maxLen := 120000) {
     text := String(value)
@@ -220,6 +222,52 @@ CommandPalette_AgentCardToSyncDto(card) {
     return dto
 }
 
+CommandPalette_AgentCardToSummaryDto(card) {
+    dto := CommandPalette_AgentCardToSyncDto(card)
+    if !(dto is Map)
+        return Map()
+    dto["rawAnswer"] := SubStr(String(dto.Get("rawAnswer", "")), 1, 480)
+    dto["summaryOnly"] := true
+    if dto.Has("blockStore")
+        dto.Delete("blockStore")
+    if dto.Has("officialA2ui")
+        dto.Delete("officialA2ui")
+    if dto.Has("protocolClosure")
+        dto.Delete("protocolClosure")
+    return dto
+}
+
+CommandPalette_AgentCardToPushDto(card) {
+    if FuncExists("Nmer_PaletteStateStoreEnabled") && Nmer_PaletteStateStoreEnabled()
+        return CommandPalette_AgentCardToSummaryDto(card)
+    return CommandPalette_AgentCardToSyncDto(card)
+}
+
+CommandPalette_AgentSchedulePersist(immediate := false) {
+    global g_Agent_PersistToken, g_Agent_PersistPending
+    if immediate {
+        g_Agent_PersistPending := false
+        SetTimer(CommandPalette_AgentPersistCards, 0)
+        return
+    }
+    g_Agent_PersistPending := true
+    g_Agent_PersistToken := A_TickCount
+    token := g_Agent_PersistToken
+    SetTimer(CommandPalette_AgentPersistCardsDebounced.Bind(token), -800)
+}
+
+CommandPalette_AgentPersistCardsDebounced(token) {
+    global g_Agent_PersistToken, g_Agent_PersistPending
+    if !g_Agent_PersistPending || token != g_Agent_PersistToken
+        return
+    g_Agent_PersistPending := false
+    CommandPalette_AgentPersistCards()
+}
+
+CommandPalette_AgentFlushPersist(*) {
+    CommandPalette_AgentSchedulePersist(true)
+}
+
 CommandPalette_AgentResolveOfficialRoute(query) {
     if FuncExists("Nmer_WailsBridgeResolveOfficialRoute") {
         try return Nmer_WailsBridgeResolveOfficialRoute(query)
@@ -229,6 +277,20 @@ CommandPalette_AgentResolveOfficialRoute(query) {
     return Map("route", "r1r2", "allowed", false, "reason", "bridge_module_missing", "command", "")
 }
 
+CommandPalette_AgentCardIsOfficialA2uiRoute(card) {
+    if !(card is Map)
+        return false
+    route := StrLower(Trim(String(card.Get("representationRoute", ""))))
+    if (route = "r3")
+        return true
+    if card.Has("officialA2uiRoute") && card["officialA2uiRoute"] is Map {
+        oar := card["officialA2uiRoute"]
+        if (String(oar.Get("route", "")) = "r3" && oar.Get("allowed", false))
+            return true
+    }
+    return false
+}
+
 CommandPalette_AgentApplyOfficialRoute(card, routeDecision) {
     if !(card is Map) || !(routeDecision is Map)
         return
@@ -236,6 +298,8 @@ CommandPalette_AgentApplyOfficialRoute(card, routeDecision) {
     card["representationRoute"] := route
     card["officialA2uiRoute"] := routeDecision
     cmd := String(routeDecision.Get("command", ""))
+    if (cmd != "")
+        card["slashCommand"] := cmd
     keepGoJsonl := false
     if card.Has("officialA2ui") && card["officialA2ui"] is Map
         keepGoJsonl := (String(card["officialA2ui"].Get("source", "")) = "go-jsonl")
@@ -528,7 +592,7 @@ CommandPalette_AgentPullCardsJson() {
         for _, c in g_Agent_Cards {
             if !(c is Map)
                 continue
-            try items.Push(CommandPalette_AgentCardToSyncDto(c))
+            try items.Push(CommandPalette_AgentCardToPushDto(c))
             catch {
             }
         }
@@ -539,15 +603,54 @@ CommandPalette_AgentPullCardsJson() {
 }
 
 CommandPalette_AgentPushCardSync() {
-    global g_Agent_Cards
+    global g_Agent_Cards, g_Agent_CardLimit
     CommandPalette_AgentPruneCards()
-    items := []
+    useSummary := FuncExists("Nmer_PaletteStateStoreEnabled") && Nmer_PaletteStateStoreEnabled()
+    sorted := []
     for _, c in g_Agent_Cards {
         if (c is Map)
-            items.Push(CommandPalette_AgentCardToSyncDto(c))
+            sorted.Push(c)
+    }
+    if sorted.Length > 1 {
+        Loop sorted.Length - 1 {
+            swapped := false
+            Loop sorted.Length - A_Index {
+                i := A_Index
+                a := sorted[i]
+                b := sorted[i + 1]
+                ta := (a is Map) ? String(a.Get("updatedAt", a.Get("createdAt", ""))) : ""
+                tb := (b is Map) ? String(b.Get("updatedAt", b.Get("createdAt", ""))) : ""
+                if (tb > ta) {
+                    sorted[i] := b
+                    sorted[i + 1] := a
+                    swapped := true
+                }
+            }
+            if !swapped
+                break
+        }
+    }
+    maxPush := useSummary ? g_Agent_CardLimit : sorted.Length
+    items := []
+    Loop Min(maxPush, sorted.Length) {
+        c := sorted[A_Index]
+        if (c is Map)
+            items.Push(CommandPalette_AgentCardToPushDto(c))
     }
     if FuncExists("CommandPalette_PushToWeb")
-        CommandPalette_PushToWeb(Map("type", "palette_agent_card_sync", "cards", items))
+        CommandPalette_PushToWeb(Map("type", "palette_agent_card_sync", "cards", items, "summary", useSummary))
+}
+
+CommandPalette_AgentPushCardDetail(cardId) {
+    cid := Trim(String(cardId))
+    if (cid = "")
+        return false
+    card := CommandPalette_AgentGetCard(cid)
+    if !(card is Map)
+        return false
+    if FuncExists("CommandPalette_PushToWeb")
+        return CommandPalette_PushToWeb(Map("type", "palette_agent_card_detail", "card", CommandPalette_AgentCardToSyncDto(card)))
+    return false
 }
 
 CommandPalette_AgentSaveBlockStore(msg) {
@@ -578,7 +681,7 @@ CommandPalette_AgentSaveBlockStore(msg) {
     n := 0
     if store.Has("blocks") && store["blocks"] is Array
         n := store["blocks"].Length
-    CommandPalette_AgentPersistCards()
+    CommandPalette_AgentSchedulePersist()
     if FuncExists("CommandPalette_AgentDebugTrace") {
         try CommandPalette_AgentDebugTrace("ahk", "block_store_persist", "card=" . cid . " n=" . n, "info")
         catch {
@@ -678,7 +781,7 @@ CommandPalette_AgentSubmit(msg) {
                 card["routeConfidence"] := routeConfidence
             }
             CommandPalette_AgentApplyOfficialRoute(card, routeDecision)
-            CommandPalette_AgentPersistCards()
+            CommandPalette_AgentSchedulePersist()
             CommandPalette_AgentPushCardNew(card)
             CommandPalette_AgentPushCardSync()
             CommandPalette_AgentArmHeartbeat(cardId)
@@ -742,7 +845,7 @@ CommandPalette_AgentSubmit(msg) {
     g_Agent_LastSubmitSig := sig
     g_Agent_LastSubmitCardId := cardId
     g_Agent_LastSubmitTick := A_TickCount
-    CommandPalette_AgentPersistCards()
+    CommandPalette_AgentSchedulePersist()
     CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
     CommandPalette_AgentFlushUi(card)
     CommandPalette_AgentPushCardSync()
@@ -963,19 +1066,23 @@ CommandPalette_AgentLockAgentTransport(cardId, transport) {
     card["agentTransport"] := t
 }
 
-CommandPalette_AgentPostOpenClawAdapter(cardId, reqId, query, sessionRef) {
+CommandPalette_AgentPostOpenClawAdapter(cardId, reqId, query, sessionRef, systemPrompt := "") {
     if !FuncExists("Nmer_WailsBridgeOpenClawAdapterUrl")
         return Map("ok", false, "code", "ADAPTER_URL_MISSING")
     url := Nmer_WailsBridgeOpenClawAdapterUrl()
     body := ""
     try {
-        body := Jxon_Dump(Map(
+        payload := Map(
             "cardId", String(cardId),
             "requestId", String(reqId),
             "query", String(query),
             "sessionRef", String(sessionRef),
             "transportNamespace", "niuma-adp"
-        ))
+        )
+        sys := Trim(String(systemPrompt))
+        if (sys != "")
+            payload["systemPrompt"] := sys
+        body := Jxon_Dump(payload)
     } catch {
         return Map("ok", false, "code", "ADAPTER_BODY_FAIL")
     }
@@ -999,6 +1106,8 @@ CommandPalette_AgentPostOpenClawAdapter(cardId, reqId, query, sessionRef) {
             "status", status,
             "surfaceId", (data is Map) ? String(data.Get("surfaceId", "")) : "",
             "accepted", (data is Map) ? Integer(data.Get("accepted", 0)) : 0,
+            "answer", (data is Map) ? String(data.Get("answer", "")) : "",
+            "requestId", (data is Map) ? String(data.Get("requestId", "")) : "",
             "detail", SubStr(raw, 1, 400)
         )
     } catch as err {
@@ -1007,19 +1116,37 @@ CommandPalette_AgentPostOpenClawAdapter(cardId, reqId, query, sessionRef) {
 }
 
 CommandPalette_AgentRunOpenClawAdapterAsync(cardId, reqId, query, sessionRef) {
-    result := CommandPalette_AgentPostOpenClawAdapter(cardId, reqId, query, sessionRef)
     cid := Trim(String(cardId))
     rid := Trim(String(reqId))
     card := CommandPalette_AgentGetCard(cid)
+    isR3 := CommandPalette_AgentCardIsOfficialA2uiRoute(card)
+    sysPrompt := isR3 ? "" : CommandPalette_AgentBuildSystemPrompt(card)
+    result := CommandPalette_AgentPostOpenClawAdapter(cardId, reqId, query, sessionRef, sysPrompt)
     if (result is Map) && result.Get("ok", false) {
-        CommandPalette_AgentLog("adapter_ok", "card=" . cid . " accepted=" . Integer(result.Get("accepted", 0)))
-        try CommandPalette_AgentDebugTrace("adapter", "ingest_ok", "card=" . cid . " surface=" . String(result.Get("surfaceId", "")), "info")
+        ans := Trim(String(result.Get("answer", "")))
+        surfaceId := Trim(String(result.Get("surfaceId", "")))
+        CommandPalette_AgentLog("adapter_ok", "card=" . cid . " r3=" . (isR3 ? 1 : 0) . " accepted=" . Integer(result.Get("accepted", 0)) . " ansLen=" . StrLen(ans))
+        try CommandPalette_AgentDebugTrace("adapter", "ingest_ok", "card=" . cid . " r3=" . (isR3 ? 1 : 0) . " surface=" . surfaceId . " ans=" . StrLen(ans), "info")
         catch {
         }
         if (card is Map) {
             card["streamDispatched"] := true
             card["agentTransport"] := "adapter"
             card["sessionRef"] := String(sessionRef)
+        }
+        if isR3 {
+            if (card is Map) {
+                card["officialA2uiPending"] := true
+                card["officialA2ui"] := Map("source", "live", "enabled", true, "surfaceId", surfaceId, "command", Trim(String(card.Get("slashCommand", ""))))
+            }
+            CommandPalette_AgentPushStreamStatus(cid, rid, "✅ 官方 A2UI 已投递，等待 Surface 渲染…")
+            CommandPalette_AgentMarkOfficialA2uiPending(cid, rid)
+            return
+        }
+        if (ans != "" && CommandPalette_AgentAnswerIsSubstantial(ans)) {
+            CommandPalette_AgentPushStreamStatus(cid, rid, "✅ hub 通道已完成回复")
+            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans, "sessionRef", String(sessionRef)))
+            return
         }
         CommandPalette_AgentPushStreamStatus(cid, rid, "✅ OpenClaw Adapter 已写入官方 A2UI Surface")
         CommandPalette_AgentMarkStreamDispatched(cid, false)
@@ -1042,7 +1169,45 @@ CommandPalette_AgentDispatchViaOpenClawAdapter(cardId, reqId, query, sessionRef)
     return true
 }
 
+CommandPalette_AgentTryDispatchHubFallback(cardId, reqId, query, prov, sessionRef, statusMsg := "") {
+    prov0 := Trim(String(prov))
+    if (prov0 != "openclaw" && prov0 != "hermes")
+        return false
+    if !FuncExists("Nmer_WailsBridgeHealthy") || !Nmer_WailsBridgeHealthy()
+        return false
+    cid := Trim(String(cardId))
+    rid := Trim(String(reqId))
+    q := Trim(String(query))
+    if (cid = "" || rid = "" || q = "")
+        return false
+    card := CommandPalette_AgentGetCard(cid)
+    hubSr := Trim(String(sessionRef))
+    if (hubSr = "" || InStr(hubSr, "niuma-cp-"))
+        hubSr := CommandPalette_AgentPaletteSessionKeyForTransport(cid, "adapter")
+    if (hubSr = "")
+        return false
+    if !CommandPalette_AgentDispatchViaOpenClawAdapter(cid, rid, q, hubSr)
+        return false
+    if (card is Map) {
+        card["sessionRef"] := hubSr
+        card["agentTransport"] := "adapter"
+    }
+    CommandPalette_AgentMarkStreamDispatched(cid, false)
+    msg := Trim(String(statusMsg))
+    if (msg = "")
+        msg := "🔌 hub 通道（OpenClaw Adapter）…"
+    CommandPalette_AgentPushStreamStatus(cid, rid, msg)
+    return true
+}
+
 CommandPalette_AgentResolveAgentTransport(cardId, query := "") {
+    flagT := "auto"
+    if FuncExists("Nmer_PaletteAgentTransport")
+        flagT := Nmer_PaletteAgentTransport()
+    if (flagT = "ftb")
+        return "ftb"
+    if (flagT = "hub")
+        return "adapter"
     card := CommandPalette_AgentGetCard(cardId)
     if (card is Map) {
         locked := StrLower(Trim(String(card.Get("agentTransport", ""))))
@@ -1059,6 +1224,8 @@ CommandPalette_AgentResolveAgentTransport(cardId, query := "") {
         if (decision is Map) && decision.Get("route", "") = "r3" && decision.Get("allowed", false)
             return "adapter"
     }
+    if (flagT = "auto") && FuncExists("Nmer_WailsBridgeHealthy") && Nmer_WailsBridgeHealthy()
+        return "adapter"
     return "ftb"
 }
 
@@ -1339,11 +1506,131 @@ CommandPalette_AgentMarkStreamDispatched(cardId, viaCompose := false) {
         CommandPalette_AgentStartAnswerPoll(cardId, rid, q)
 }
 
+CommandPalette_AgentMarkOfficialA2uiPending(cardId, reqId) {
+    global g_Agent_ShellSendingReqIds
+    card := CommandPalette_AgentGetCard(cardId)
+    if !(card is Map)
+        return
+    card["streamDispatched"] := true
+    card["officialA2uiPending"] := true
+    rid := Trim(String(reqId))
+    if (rid != "") {
+        if !IsObject(g_Agent_ShellSendingReqIds)
+            g_Agent_ShellSendingReqIds := Map()
+        g_Agent_ShellSendingReqIds[rid] := true
+    }
+    CommandPalette_AgentArmOfficialA2uiWatchdog(cardId, reqId)
+}
+
+CommandPalette_AgentArmOfficialA2uiWatchdog(cardId, reqId) {
+    SetTimer(CommandPalette_AgentOfficialA2uiWatchdogTick.Bind(cardId, reqId, 0), -120000)
+}
+
+CommandPalette_AgentOfficialA2uiWatchdogTick(cardId, reqId, tryN) {
+    global g_Agent_CancelToken
+    if (g_Agent_CancelToken)
+        return
+    cid := Trim(String(cardId))
+    rid := Trim(String(reqId))
+    card := CommandPalette_AgentGetCard(cid)
+    if !(card is Map) || card.Get("ended", false) || !card.Get("officialA2uiPending", false)
+        return
+    if Trim(String(card.Get("reqId", ""))) != rid
+        return
+    tryN := Integer(tryN)
+    if (tryN > 0 && Mod(tryN, 4) = 0)
+        CommandPalette_AgentPushStreamStatus(cid, rid, "⏳ 等待官方 A2UI Surface…")
+    if (tryN >= 12) {
+        card["officialA2uiPending"] := false
+        CommandPalette_AgentPushError(rid, cid, "官方 A2UI 渲染超时：请确认 nmer-hub WS 已连接且命令命中 R3 白名单")
+        return
+    }
+    SetTimer(CommandPalette_AgentOfficialA2uiWatchdogTick.Bind(cid, rid, tryN + 1), -15000)
+}
+
+CommandPalette_OnPaletteAgentOfficialDone(msg) {
+    global g_Agent_Cards, g_Agent_ShellSendingReqIds, g_CardSessionMap
+    if !(msg is Map)
+        return
+    reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+    cardId := msg.Has("cardId") ? String(msg["cardId"]) : ""
+    if (reqId != "") && IsObject(g_Agent_ShellSendingReqIds)
+        g_Agent_ShellSendingReqIds.Delete(reqId)
+    card := CommandPalette_AgentSessionMatches(reqId, cardId)
+    if !(card is Map)
+        return
+    if (cardId = "")
+        cardId := String(card.Get("cardId", ""))
+    surfaceId := msg.Has("surfaceId") ? Trim(String(msg["surfaceId"])) : ""
+    card["ended"] := true
+    card["running"] := false
+    card["officialA2uiPending"] := false
+    card["uiState"] := "Done"
+    card["error"] := ""
+    card["heartbeatTick"] := 0
+    card["updatedAt"] := A_Now
+    if (surfaceId != "")
+        card["officialA2ui"] := Map("source", "go-jsonl", "surfaceId", surfaceId, "enabled", true)
+    CommandPalette_AgentPersistCards()
+    if FuncExists("CommandPalette_PushToWeb")
+        CommandPalette_PushToWeb(Map(
+            "type", "palette_agent_card_sync",
+            "cardId", cardId,
+            "reqId", reqId,
+            "uiState", "Done",
+            "ended", true,
+            "running", false,
+            "representationRoute", String(card.Get("representationRoute", "r3"))
+        ))
+    SetTimer(CommandPalette_AgentPushCardSync, -600)
+    try CommandPalette_AgentDebugTrace("adapter", "official_done", "card=" . cardId . " surface=" . surfaceId, "info")
+    catch {
+    }
+}
+
 CommandPalette_AgentStartAnswerPoll(cardId, reqId, query) {
+    card := CommandPalette_AgentGetCard(cardId)
+    transport := (card is Map) ? StrLower(Trim(String(card.Get("agentTransport", "")))) : ""
+    if (transport = "adapter") {
+        if CommandPalette_AgentCardIsOfficialA2uiRoute(card)
+            return
+        SetTimer(CommandPalette_AgentPollAdapterAnswer.Bind(cardId, reqId, query, 0), -2500)
+        return
+    }
     if FuncExists("CommandPalette_FtbTransportMode") && (CommandPalette_FtbTransportMode() = "wails_shell")
         SetTimer(CommandPalette_AgentPollFtbAnswerShell.Bind(cardId, reqId, query, 0), -2500)
     else
         SetTimer(CommandPalette_AgentPollFtbAnswer.Bind(cardId, reqId, query, 0), -2500)
+}
+
+CommandPalette_AgentPollAdapterAnswer(cardId, reqId, query, tryN) {
+    global g_Agent_CancelToken
+    if (g_Agent_CancelToken)
+        return
+    cid := Trim(String(cardId))
+    rid := Trim(String(reqId))
+    card := CommandPalette_AgentGetCard(cid)
+    if !(card is Map) || card.Get("ended", false) || !card.Get("running", false)
+        return
+    if Trim(String(card.Get("reqId", ""))) != rid
+        return
+    tryN := Integer(tryN)
+    if CommandPalette_AgentHasSubstantialAnswer(card) {
+        ans := Trim(String(card.Get("rawAnswer", "")))
+        if (ans != "")
+            CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans))
+        return
+    }
+    if (tryN > 0 && Mod(tryN, 6) = 0) {
+        dispatchTick := Integer(card.Get("dispatchTick", 0))
+        elapsed := dispatchTick > 0 ? Round((A_TickCount - dispatchTick) / 1000) : 0
+        CommandPalette_AgentPushStreamStatus(cid, rid, "⏳ hub 通道处理中… (" . elapsed . "s)")
+    }
+    if (tryN >= 90) {
+        CommandPalette_AgentPushError(rid, cid, "hub 通道超时：OpenClaw Adapter 未返回回复。请确认 nmer-hub 与 OPENCLAW_GATEWAY_TOKEN 已配置")
+        return
+    }
+    SetTimer(CommandPalette_AgentPollAdapterAnswer.Bind(cid, rid, query, tryN + 1), -2000)
 }
 
 CommandPalette_AgentPollFtbAnswerShell(cardId, reqId, query, tryN) {
@@ -1353,6 +1640,8 @@ CommandPalette_AgentPollFtbAnswerShell(cardId, reqId, query, tryN) {
     cid := Trim(String(cardId))
     rid := Trim(String(reqId))
     card := CommandPalette_AgentGetCard(cid)
+    if (card is Map) && StrLower(Trim(String(card.Get("agentTransport", "")))) = "adapter"
+        return
     if !(card is Map) || card.Get("ended", false) || !card.Get("running", false)
         return
     if Trim(String(card.Get("reqId", ""))) != rid
@@ -1516,15 +1805,35 @@ CommandPalette_AgentSyncNiumaSession(reqId, cardId, query, sessionRef := "", ans
     }
     escaped := CommandPalette_JsEscapeForParse(argsJson)
     js := "(function(){try{var o=JSON.parse('" . escaped . "');"
-        . "var fn=window.paletteSyncCardAnswerToNiumaSession;"
-        . "if(typeof fn!=='function')return JSON.stringify({ok:0,err:'no_fn'});"
+        . "var fn=window.paletteAgentSyncSessionFromHost;"
+        . "if(typeof fn!=='function'){"
+        . "var fb=window.paletteSyncCardAnswerToNiumaSession;"
+        . "if(typeof fb!=='function')return JSON.stringify({ok:0,err:'no_fn'});"
+        . "return fb(o).then(function(a){return JSON.stringify({ok:1,answer:String(a||'')});})"
+        . ".catch(function(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});});"
+        . "}"
         . "return fn(o).then(function(a){return JSON.stringify({ok:1,answer:String(a||'')});})"
         . ".catch(function(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});});"
         . "}catch(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});}})();"
     try {
         raw := g_FTB_WV2.ExecuteScriptAsync(js).await(60000)
         data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
-        return (data is Map) && data.Get("ok", false)
+        if !(data is Map) || !data.Get("ok", false)
+            return false
+        syncedAns := Trim(String(data.Get("answer", "")))
+        if (syncedAns != "") && CommandPalette_AgentAnswerIsSubstantial(syncedAns) {
+            card := CommandPalette_AgentGetCard(cid)
+            prev := (card is Map) ? Trim(String(card.Get("rawAnswer", ""))) : ""
+            if (StrLen(syncedAns) > StrLen(prev) + 40)
+                || (prev != "" && CommandPalette_AgentAnswerLooksIncomplete(card) && StrLen(syncedAns) >= StrLen(prev))
+                CommandPalette_OnNiumaPaletteAgentEnd(Map(
+                    "reqId", String(reqId),
+                    "cardId", cid,
+                    "answer", syncedAns,
+                    "sessionRef", String(sessionRef)
+                ))
+        }
+        return true
     } catch {
         return false
     }
@@ -1670,6 +1979,8 @@ CommandPalette_AgentPollFtbAnswer(cardId, reqId, query, tryN) {
     rid := Trim(String(reqId))
     q := Trim(String(query))
     card := CommandPalette_AgentGetCard(cid)
+    if (card is Map) && StrLower(Trim(String(card.Get("agentTransport", "")))) = "adapter"
+        return
     if !(card is Map) || card.Get("ended", false) || !card.Get("running", false)
         return
     if Trim(String(card.Get("reqId", ""))) != rid
@@ -2223,10 +2534,31 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
     q := Trim(String(query))
     prov := Trim(String(provider))
     tryN := Integer(tryN)
+    flagT := FuncExists("Nmer_PaletteAgentTransport") ? Nmer_PaletteAgentTransport() : "auto"
     card["streamDispatched"] := false
     card["dispatchTick"] := A_TickCount
     card["lastChunkTick"] := 0
     CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
+    if (flagT = "hub") {
+        if !(FuncExists("Nmer_WailsBridgeHealthy") && Nmer_WailsBridgeHealthy()) {
+            CommandPalette_AgentPushError(reqId, cardId, "nmer-hub 未就绪，请确认侧车已启动（sidecarHost: hub）")
+            CommandPalette_AgentClearAiRoute(reqId)
+            return
+        }
+        CommandPalette_AgentPushStreamStatus(cardId, reqId, "🔌 nmer-hub 通道…")
+        hubTransport := CommandPalette_AgentResolveAgentTransport(cardId, q)
+        hubSession := CommandPalette_AgentPaletteSessionKeyForTransport(cardId, hubTransport)
+        if (card is Map)
+            card["sessionRef"] := hubSession
+        if CommandPalette_AgentDispatchViaOpenClawAdapter(cardId, reqId, q, hubSession) {
+            CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
+            CommandPalette_AgentMarkStreamDispatched(cardId, false)
+            return
+        }
+        CommandPalette_AgentPushError(reqId, cardId, "nmer-hub 投递失败，请检查 OPENCLAW_GATEWAY_TOKEN 与 hub 日志")
+        CommandPalette_AgentClearAiRoute(reqId)
+        return
+    }
     CommandPalette_AgentLog("dispatch_ai", "card=" . cardId . " req=" . reqId . " prov=" . prov . " try=" . tryN)
     try CommandPalette_AgentDebugTrace("dispatch", "dispatch_start", "card=" . cardId . " req=" . reqId . " prov=" . prov . " try=" . tryN, "info")
     catch {
@@ -2252,6 +2584,7 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
         CommandPalette_AgentPushStreamStatus(cardId, reqId, "🔌 OpenClaw Adapter 通道…")
         if CommandPalette_AgentDispatchViaOpenClawAdapter(cardId, reqId, q, sessionRef) {
             CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
+            CommandPalette_AgentMarkStreamDispatched(cardId, false)
             return
         }
     }
@@ -2308,10 +2641,23 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
         }
         ocFail := CommandPalette_AgentProbeOcBaseline(prov, true)
         CommandPalette_AgentLogOcBaseline(ocFail, "dispatch_paths_fail")
+        if CommandPalette_AgentTryDispatchHubFallback(cardId, reqId, q, prov, sessionRef, "🔌 hub 回退（FTB 派发失败）…") {
+            CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
+            return
+        }
+    }
+    if !ftbReady {
+        hubMsg := (tryN = 0)
+            ? "🔌 hub 通道（FTB 未就绪，直送 OpenClaw）…"
+            : "🔌 hub 回退通道（FTB 未就绪）…"
+        if CommandPalette_AgentTryDispatchHubFallback(cardId, reqId, q, prov, sessionRef, hubMsg) {
+            CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
+            return
+        }
     }
     if (tryN = 0 || Mod(tryN, 8) = 0)
         CommandPalette_AgentPushStreamStatus(cardId, reqId, "⏳ 等待 Niuma 引擎就绪 (" . (tryN + 1) . ")…")
-    if (tryN >= 50) {
+    if (tryN >= 24) {
         ocExhausted := CommandPalette_AgentProbeOcBaseline(prov, true)
         CommandPalette_AgentLogOcBaseline(ocExhausted, "dispatch_exhausted")
         CommandPalette_AgentPushError(reqId, cardId, CommandPalette_AgentOcUserMessage(ocExhausted, provLabel))
@@ -2472,6 +2818,8 @@ CommandPalette_OnNiumaPaletteAgentChunk(msg) {
             }
         return
     }
+    if CommandPalette_AgentCardIsOfficialA2uiRoute(card)
+        return
     if card.Get("ended", false)
         return
     if CommandPalette_AgentIsStatusOnlyDelta(delta)
@@ -2530,6 +2878,12 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
     card := CommandPalette_AgentSessionMatches(reqId, cardId)
     if !(card is Map)
         return
+    if CommandPalette_AgentCardIsOfficialA2uiRoute(card) {
+        try CommandPalette_AgentDebugTrace("adapter", "end_skip_prose", "card=" . cardId, "info")
+        catch {
+        }
+        return
+    }
     ans := msg.Has("answer") ? String(msg["answer"]) : String(card.Get("rawAnswer", ""))
     if !CommandPalette_AgentAnswerIsSubstantial(ans)
         return
@@ -2538,7 +2892,8 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
     if card.Get("ended", false) {
         prev := Trim(String(card.Get("rawAnswer", "")))
         newAns := Trim(ans)
-        if CommandPalette_AgentAnswerIsSubstantial(prev) && StrLen(prev) >= StrLen(newAns) {
+        gatewayLonger := (StrLen(newAns) > StrLen(prev) + 40)
+        if !gatewayLonger && CommandPalette_AgentAnswerIsSubstantial(prev) && StrLen(prev) >= StrLen(newAns) {
             if !(CommandPalette_AgentAnswerTextLooksIncomplete(prev) && !CommandPalette_AgentAnswerTextLooksIncomplete(newAns))
                 && !(StrLen(newAns) >= 800 && StrLen(newAns) > StrLen(prev))
                 return
@@ -2568,6 +2923,16 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
     srSync := String(card.Get("sessionRef", ""))
     if FuncExists("CommandPalette_AgentSyncNiumaSession")
         SetTimer(CommandPalette_AgentSyncNiumaSession.Bind(reqId, cardId, qSync, srSync, ans), -50)
+    if FuncExists("CommandPalette_AgentRecoverCardAnswer")
+        && (CommandPalette_AgentAnswerLooksIncomplete(card)
+            || (FuncExists("Nmer_PaletteOpenClawAnswerSync") && Nmer_PaletteOpenClawAnswerSync()
+                && String(card.Get("provider", "openclaw")) = "openclaw"))
+        SetTimer(CommandPalette_AgentRecoverCardAnswer.Bind(Map(
+            "cardId", cardId,
+            "reqId", reqId,
+            "query", qSync,
+            "sessionRef", srSync
+        )), -2500)
     if FuncExists("CommandPalette_PushToWeb")
         CommandPalette_PushToWeb(Map(
             "type", "palette_agent_end",

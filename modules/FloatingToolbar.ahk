@@ -156,6 +156,46 @@ FloatingToolbar_NotifyWebViewHidden(wv2) {
     }
 }
 
+FloatingToolbar_ClearToolbarSelection(action := "") {
+    global g_FTB_WV2
+    if !g_FTB_WV2
+        return
+    try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_selected", "action", String(action)))
+    catch {
+    }
+}
+
+FloatingToolbar_IsSearchCenterRevealedForToggle(*) {
+    try {
+        if SCWV_IsCloseRequested()
+            return false
+    } catch {
+    }
+    try {
+        if SCWV_IsRevealedToUser()
+            return true
+    } catch {
+    }
+    return false
+}
+
+FloatingToolbar_IsSearchCenterConsideredOpen(*) {
+    if FloatingToolbar_IsSearchCenterRevealedForToggle()
+        return true
+    try {
+        global g_SCWV_WaitingUiFinishedReveal
+        if g_SCWV_WaitingUiFinishedReveal
+            return true
+    } catch {
+    }
+    try {
+        if SearchCenter_IsOpeningOrBusy()
+            return true
+    } catch {
+    }
+    return false
+}
+
 ; 无 INI 时默认抽屉「逻辑宽」（三栏：52+200+主区），随高 DPI 略增、并限制在 560–1000
 FloatingToolbar_ChatDrawerDefaultWidth() {
     return Min(1000, Max(560, Round(780 * FloatingToolbar_DpiFactor())))
@@ -319,6 +359,9 @@ FloatingToolbar_OnChatReady(msg) {
     }
 }
 global g_FTB_WV2_FrameReady := false
+global g_FTB_WebMsgQueue := []
+global g_FTB_WebMsgDrainBusy := false
+global g_FTB_NavFallbackTried := false
 global g_FTB_PendingSelection := ""
 global g_FTB_PendingNiumaCompose := []
 global g_FTB_PendingStudioAsk := 0
@@ -338,6 +381,8 @@ global g_FTB_BootInProgress := true
 global g_FTB_PaintReady := false
 global g_FTB_BootFrameVisible := false
 global g_FTB_CompactBootMinimal := true
+global g_FTB_CompositionWatchdogUntil := 0
+global g_FTB_CompositionWatchdogArmed := false
 
 FloatingToolbar_UseMinimalBoot() {
     global g_FTB_CompactBootMinimal, g_FTB_WaitingUiFinishedReveal
@@ -357,11 +402,14 @@ FloatingToolbar_ClearOverlaySuppression() {
     g_FTB_OverlaySuppressedByPageDock := false
 }
 FloatingToolbar_PageDockEnter(tag := "") {
-    global g_FTB_PageDockActive, g_FTB_OverlaySuppressedByPageDock
+    global g_FTB_PageDockActive, g_FTB_OverlaySuppressedByPageDock, AppearanceActivationMode
     t := Trim(StrLower(String(tag)))
     if (t = "")
         return
     g_FTB_PageDockActive[t] := A_TickCount
+    ; 悬浮栏模式下搜索中心全屏不再隐藏工具栏，避免用户误以为工具栏崩溃消失。
+    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) = "toolbar")
+        return
     g_FTB_OverlaySuppressedByPageDock := true
     try HideFloatingToolbar()
 }
@@ -420,6 +468,14 @@ FloatingToolbar_ShowForActivationMode() {
         return
     try FloatingToolbar_ClearOverlaySuppression()
     catch {
+    }
+    if FuncExists("FloatingToolbarRouter_ShouldUseHybrid") && FloatingToolbarRouter_ShouldUseHybrid()
+        && FuncExists("FloatingToolbarWails_ShowHybrid") {
+        try {
+            if FloatingToolbarWails_ShowHybrid(Map("reason", "activation_mode"))
+                return
+        } catch {
+        }
     }
     try ShowFloatingToolbar()
     catch {
@@ -993,6 +1049,8 @@ FloatingToolbar_FinishRevealBoot() {
     FloatingToolbarIsVisible := true
     FloatingToolbarApplyRoundedCorners()
     FloatingToolbar_ApplyWebViewBounds()
+    FloatingToolbar_ScheduleCompositionPump("finish_reveal_boot")
+    FloatingToolbar_ScheduleBoundsRetries("finish_reveal_boot")
 }
 
 FloatingToolbar_FinishReveal() {
@@ -1034,6 +1092,8 @@ FloatingToolbar_FinishReveal() {
     try FloatingToolbar_NotifyWebViewShown(g_FTB_WV2)
     FloatingToolbarApplyRoundedCorners()
     FloatingToolbar_ApplyWebViewBounds()
+    FloatingToolbar_ScheduleCompositionPump("finish_reveal")
+    FloatingToolbar_ScheduleBoundsRetries("finish_reveal")
     SetTimer(FloatingToolbarCheckWindowPosition, 100)
     if !wasBoot {
         try FloatingToolbar_RequestWebRevealSafe()
@@ -1054,20 +1114,26 @@ FloatingToolbar_SendHostFirstShow() {
 }
 
 FloatingToolbar_ForceRevealIfStuck() {
-    global g_FTB_WaitingUiFinishedReveal, g_FTB_UI_Ready, g_FTB_RevealWaitStartTick
+    global g_FTB_WaitingUiFinishedReveal, g_FTB_UI_Ready, g_FTB_RevealWaitStartTick, g_FTB_PaintReady
     if !g_FTB_WaitingUiFinishedReveal
         return
     if (!g_FTB_RevealWaitStartTick)
         g_FTB_RevealWaitStartTick := A_TickCount
-    if !g_FTB_UI_Ready {
-        if (A_TickCount - g_FTB_RevealWaitStartTick > 7000) {
+    elapsed := A_TickCount - g_FTB_RevealWaitStartTick
+    if !g_FTB_UI_Ready && !g_FTB_PaintReady {
+        if (elapsed > 10000) {
+            try FloatingToolbar_BootPaintFallbackForce()
+            catch {
+            }
+            return
+        }
+        if (elapsed > 7000) {
             try {
-                g_FTB_WaitingUiFinishedReveal := false
-                g_FTB_RevealWaitStartTick := 0
                 FloatingToolbar_RetryCreateWebView()
-                return
             } catch {
             }
+            SetTimer(FloatingToolbar_ForceRevealIfStuck, -600)
+            return
         }
         SetTimer(FloatingToolbar_ForceRevealIfStuck, -600)
         return
@@ -1164,25 +1230,33 @@ ShowFloatingToolbar() {
         return
     }
 
-    ; 首次加载或重建：先在真实位置创建但保持隐藏，等 HTML 发 UI_FINISHED 后再显示。
-    ; 避免屏幕外坐标污染位置状态，也避免 WebView2 首帧白底露出。
-    try WinSetTransparent(0, "ahk_id " . FloatingToolbarGUI.Hwnd)
+    ; 首次加载：在真实位置显示深色壳（非 Hide），等 UI_PAINT_READY 后再揭示；Hide 父窗下 WebView 不合成会整块发黑。
+    FloatingToolbar_ApplyHostThemeColors()
+    try WinSetTransparent(255, "ahk_id " . FloatingToolbarGUI.Hwnd)
     catch {
     }
-    FloatingToolbarGUI.Show("Hide x" . FloatingToolbarWindowX . " y" . FloatingToolbarWindowY . " w" . ToolbarWidth . " h" . ToolbarHeight . " NoActivate")
+    FloatingToolbarGUI.Show("x" . FloatingToolbarWindowX . " y" . FloatingToolbarWindowY . " w" . ToolbarWidth . " h" . ToolbarHeight . " NoActivate")
     g_FTB_WaitingUiFinishedReveal := true
     g_FTB_RevealWaitStartTick := A_TickCount
     FloatingToolbarIsVisible := false
     FloatingToolbarApplyRoundedCorners()
-    if FloatingToolbar_UseMinimalBoot() {
-        global g_FTB_WV2_Ctrl
-        try g_FTB_WV2_Ctrl.IsVisible := true
+    global g_FTB_WV2_Ctrl
+    try g_FTB_WV2_Ctrl.IsVisible := true
+    catch {
+    }
+    FloatingToolbar_ApplyWebViewBounds()
+    FloatingToolbar_ScheduleCompositionPump("boot_show")
+    FloatingToolbar_ScheduleBoundsRetries("boot_show")
+    SetTimer(FloatingToolbar_ForceRevealIfStuck, 0)
+    SetTimer(FloatingToolbar_ForceRevealIfStuck, -4500)
+    SetTimer(FloatingToolbar_BootPaintFallback, 0)
+    SetTimer(FloatingToolbar_BootPaintFallback, -5000)
+    if FuncExists("FloatingToolbarWails_ShouldUseHybrid") && FloatingToolbarWails_ShouldUseHybrid()
+        && FuncExists("FloatingToolbarWails_EnsureHybridBridge") {
+        try FloatingToolbarWails_EnsureHybridBridge()
         catch {
         }
     }
-    FloatingToolbar_ApplyWebViewBounds()
-    SetTimer(FloatingToolbar_ForceRevealIfStuck, 0)
-    SetTimer(FloatingToolbar_ForceRevealIfStuck, -4500)
     if !skipTel
         try SurfaceManager_ObserveInit("floating_toolbar", Map("entry", "ShowFloatingToolbar", "waitingReveal", 1, "wv2Ready", g_FTB_WV2_Ready ? 1 : 0, "requestId", reqId))
 }
@@ -1214,6 +1288,7 @@ HideFloatingToolbar() {
         g_FTB_WaitingUiFinishedReveal := false
         g_FTB_BootFrameVisible := false
         SetTimer(FloatingToolbar_ForceRevealIfStuck, 0)
+        FloatingToolbar_StopCompositionWatchdog()
         try WinSetTransparent(255, "ahk_id " . FloatingToolbarGUI.Hwnd)
         catch {
         }
@@ -1342,12 +1417,14 @@ CreateFloatingToolbarGUI() {
     FloatingToolbarGUI := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale +E0x02080000", "Floating Toolbar")
     FloatingToolbarGUI.BackColor := FloatingToolbar_GetBootBackColorHex()
     FloatingToolbar_ApplyHostThemeColors()
-    ; 创建后立即设为完全透明，避免 WebView2 初始化期间闪现白色矩形
-    try WinSetTransparent(0, "ahk_id " . FloatingToolbarGUI.Hwnd)
+    ; 首启须宿主可见才能合成 WebView 首帧；用主题底色代替全透明，避免黑块/白闪
+    try WinSetTransparent(255, "ahk_id " . FloatingToolbarGUI.Hwnd)
     FloatingToolbarGUI.OnEvent("Close", OnFloatingToolbarClose)
     FloatingToolbarGUI.OnEvent("ContextMenu", OnFloatingToolbarContextMenu)
+    FloatingToolbarGUI.OnEvent("Size", FloatingToolbar_OnGuiResize)
 
     OnMessage(0x020A, FloatingToolbarWM_MOUSEWHEEL)
+    OnMessage(0x0006, FloatingToolbar_WM_ACTIVATE)
 
     try {
         WebView2_CreateWithSharedEnvAsync(FloatingToolbarGUI.Hwnd, FloatingToolbar_OnWebViewCreated, "floating_toolbar")
@@ -1414,16 +1491,30 @@ FloatingToolbar_OnNavigationStarting(sender, args) {
 }
 
 FloatingToolbar_OnNavigationCompleted(sender, args) {
-    global g_FTB_WV2_FrameReady
+    global g_FTB_WV2_FrameReady, g_FTB_NavFallbackTried, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2
     ok := false
     try ok := args.IsSuccess
     catch as _e {
         ok := false
     }
+    if !ok && !g_FTB_NavFallbackTried {
+        g_FTB_NavFallbackTried := true
+        try {
+            fileUrl := "file:///" . StrReplace(HtmlPanelPath("FloatingToolbarStrip.html"), "\", "/")
+            sender.Navigate(fileUrl)
+            return
+        } catch {
+        }
+    }
     g_FTB_WV2_FrameReady := !!ok
     if ok && g_FTB_WaitingUiFinishedReveal {
+        FloatingToolbar_ScheduleCompositionPump("nav_completed_boot")
+        FloatingToolbar_ScheduleBoundsRetries("nav_completed_boot")
         SetTimer(FloatingToolbar_PushEarlyToolbarIcons, -40)
         SetTimer(FloatingToolbar_PushEarlyToolbarIcons, -180)
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "ftb_boot_paint_nudge"))
+        catch {
+        }
     }
     if ok && !g_FTB_WaitingUiFinishedReveal {
         SetTimer(FloatingToolbar_PushLayoutDeferred, -40)
@@ -1496,6 +1587,8 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
     g_NiumaMobile_Wv2Class := WebView2
     g_FTB_WV2_Ready := false
     g_FTB_WV2_FrameReady := false
+    global g_FTB_NavFallbackTried
+    g_FTB_NavFallbackTried := false
     if FuncExists("CommandPalette_FlushPendingAiSendIfReady")
         try CommandPalette_FlushPendingAiSendIfReady()
         catch {
@@ -1516,6 +1609,8 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
     }
 
     FloatingToolbar_ApplyWebViewBounds()
+    FloatingToolbar_ScheduleCompositionPump("wv2_created")
+    FloatingToolbar_ScheduleBoundsRetries("wv2_created")
 
     s := 0
     try s := g_FTB_WV2.Settings
@@ -1620,15 +1715,143 @@ FloatingToolbar_RefreshMobileLayout(*) {
     FloatingToolbar_ApplyWebViewBounds()
 }
 
-FloatingToolbar_ApplyWebViewBounds() {
+FloatingToolbar_OnGuiResize(GuiObj, MinMax, Width, Height) {
+    global g_FTB_WaitingUiFinishedReveal, FloatingToolbarIsVisible
+    if (Width > 0 && Height > 0)
+        FloatingToolbar_ApplyWebViewBounds(Width, Height)
+    else
+        FloatingToolbar_ApplyWebViewBounds()
+    if g_FTB_WaitingUiFinishedReveal || FloatingToolbarIsVisible
+        FloatingToolbar_ScheduleCompositionPump("gui_resize")
+}
+
+FloatingToolbar_CompositionPump(reason := "") {
+    global FloatingToolbarGUI, g_FTB_WV2_Ctrl, g_FTB_WV2
+    if !(FloatingToolbarGUI && g_FTB_WV2_Ctrl)
+        return
+    FloatingToolbar_ApplyWebViewBounds()
+    try g_FTB_WV2_Ctrl.IsVisible := true
+    catch {
+    }
+    try g_FTB_WV2_Ctrl.NotifyParentWindowPositionChanged()
+    catch {
+    }
+    try {
+        hwnd := FloatingToolbarGUI.Hwnd
+        if hwnd {
+            if FuncExists("WebView2_ForceHostRedraw")
+                try WebView2_ForceHostRedraw(hwnd)
+                catch {
+                }
+        }
+    } catch {
+    }
+    if IsObject(g_FTB_WV2) {
+        try WebView_QueuePayload(g_FTB_WV2, Map("type", "ftb_boot_paint_nudge", "reason", String(reason)))
+        catch {
+        }
+    }
+}
+
+FloatingToolbar_StartCompositionWatchdog(durationMs := 12000) {
+    global g_FTB_CompositionWatchdogUntil, g_FTB_CompositionWatchdogArmed
+    g_FTB_CompositionWatchdogUntil := A_TickCount + Max(2000, Integer(durationMs))
+    if !g_FTB_CompositionWatchdogArmed {
+        g_FTB_CompositionWatchdogArmed := true
+        SetTimer(FloatingToolbar_CompositionWatchdogTick, 200)
+    }
+}
+
+FloatingToolbar_StopCompositionWatchdog(*) {
+    global g_FTB_CompositionWatchdogUntil, g_FTB_CompositionWatchdogArmed
+    g_FTB_CompositionWatchdogUntil := 0
+    g_FTB_CompositionWatchdogArmed := false
+    SetTimer(FloatingToolbar_CompositionWatchdogTick, 0)
+}
+
+FloatingToolbar_CompositionWatchdogTick(*) {
+    global g_FTB_CompositionWatchdogUntil, g_FTB_CompositionWatchdogArmed
+    global FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal, g_FTB_PaintReady, FloatingToolbarGUI
+    if !g_FTB_CompositionWatchdogArmed
+        return
+    if !(FloatingToolbarIsVisible || g_FTB_WaitingUiFinishedReveal) {
+        FloatingToolbar_StopCompositionWatchdog()
+        return
+    }
+    if (A_TickCount > g_FTB_CompositionWatchdogUntil) {
+        FloatingToolbar_StopCompositionWatchdog()
+        return
+    }
+    if (g_FTB_PaintReady && FloatingToolbarIsVisible && FloatingToolbarGUI) {
+        cw := 0, ch := 0
+        try WinGetClientPos(, , &cw, &ch, FloatingToolbarGUI.Hwnd)
+        if (cw >= 48 && ch >= 32) {
+            FloatingToolbar_StopCompositionWatchdog()
+            return
+        }
+    }
+    FloatingToolbar_CompositionPump("watchdog")
+}
+
+FloatingToolbar_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
+    global FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal
+    if !(FloatingToolbarGUI && hwnd = FloatingToolbarGUI.Hwnd)
+        return
+    if !(FloatingToolbarIsVisible || g_FTB_WaitingUiFinishedReveal)
+        return
+    if ((wParam & 0xFFFF) = 1)
+        FloatingToolbar_ScheduleCompositionPump("wm_activate")
+}
+
+FloatingToolbar_ScheduleCompositionPump(reason := "") {
+    r := String(reason)
+    FloatingToolbar_CompositionPump(r . "_0")
+    SetTimer((*) => FloatingToolbar_CompositionPump(r . "_16"), -16)
+    SetTimer((*) => FloatingToolbar_CompositionPump(r . "_48"), -48)
+    SetTimer((*) => FloatingToolbar_CompositionPump(r . "_120"), -120)
+    SetTimer((*) => FloatingToolbar_CompositionPump(r . "_280"), -280)
+    SetTimer((*) => FloatingToolbar_CompositionPump(r . "_480"), -480)
+    SetTimer((*) => FloatingToolbar_CompositionPump(r . "_900"), -900)
+    SetTimer((*) => FloatingToolbar_CompositionPump(r . "_1400"), -1400)
+    SetTimer((*) => FloatingToolbar_CompositionPump(r . "_2200"), -2200)
+    SetTimer((*) => FloatingToolbar_CompositionPump(r . "_3200"), -3200)
+    FloatingToolbar_StartCompositionWatchdog(12000)
+}
+
+FloatingToolbar_ScheduleBoundsRetries(reason := "") {
+    r := String(reason)
+    for delay in [16, 80, 200, 480, 900] {
+        SetTimer((*) => FloatingToolbar_ApplyBoundsRetryTick(r), -delay)
+    }
+}
+
+FloatingToolbar_ApplyBoundsRetryTick(reason := "") {
+    global g_FTB_WaitingUiFinishedReveal, FloatingToolbarIsVisible
+    if !(g_FTB_WaitingUiFinishedReveal || FloatingToolbarIsVisible)
+        return
+    if !FloatingToolbar_ApplyWebViewBounds()
+        FloatingToolbar_ApplyWebViewBounds()
+}
+
+FloatingToolbar_ApplyWebViewBounds(clientW := 0, clientH := 0) {
     global FloatingToolbarGUI, g_FTB_WV2_Ctrl
 
     if !(FloatingToolbarGUI && g_FTB_WV2_Ctrl)
-        return
+        return false
     if FloatingToolbarIsCompactMode() && !NiumaMobileBrowser_IsActive()
         FloatingToolbar_SyncCompactWindowSquare()
 
-    WinGetClientPos(, , &cw, &ch, FloatingToolbarGUI.Hwnd)
+    cw := Integer(clientW)
+    ch := Integer(clientH)
+    if (cw < 1 || ch < 1) {
+        cw := 0, ch := 0
+        try WinGetClientPos(, , &cw, &ch, FloatingToolbarGUI.Hwnd)
+        catch {
+            return false
+        }
+    }
+    if (cw < 32 || ch < 24)
+        return false
     mobileW := 0
     if NiumaMobileBrowser_IsActive()
         mobileW := NiumaMobileBrowser_WidthPx()
@@ -1636,17 +1859,19 @@ FloatingToolbar_ApplyWebViewBounds() {
     rc.left := 0
     rc.top := 0
     rc.right := Max(1, cw - mobileW)
-    rc.bottom := ch
+    rc.bottom := Max(1, ch)
     try {
         g_FTB_WV2_Ctrl.Bounds := rc
         g_FTB_WV2_Ctrl.NotifyParentWindowPositionChanged()
     } catch {
+        return false
     }
     if mobileW > 0 {
         try NiumaMobileBrowser_ApplyBounds(FloatingToolbarGUI.Hwnd)
         catch {
         }
     }
+    return true
 }
 
 FloatingToolbar_ActivateMobileBrowser(url := "") {
@@ -1875,8 +2100,51 @@ FloatingToolbar_GetThemeMode() {
 
 FloatingToolbar_OnWebMessage(sender, args) {
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_PendingSelection, FloatingToolbarGUI, FloatingToolbarScale
+    global g_FTB_WebMsgQueue, g_FTB_WebMsgDrainBusy
+    raw := FuncExists("WebView2_CopyWebMessageJson") ? WebView2_CopyWebMessageJson(args) : ""
+    if (raw = "") {
+        msg := FloatingToolbar_ParseWebMessage(args)
+        if !(msg is Map)
+            return
+        FloatingToolbar_DispatchWebMessage(msg)
+        return
+    }
+    if !(g_FTB_WebMsgQueue is Array)
+        g_FTB_WebMsgQueue := []
+    if (g_FTB_WebMsgQueue.Length >= 64)
+        g_FTB_WebMsgQueue.RemoveAt(1)
+    g_FTB_WebMsgQueue.Push(raw)
+    SetTimer(FloatingToolbar_DrainWebMessageQueue, -1)
+}
 
-    msg := FloatingToolbar_ParseWebMessage(args)
+FloatingToolbar_DrainWebMessageQueue(*) {
+    global g_FTB_WebMsgQueue, g_FTB_WebMsgDrainBusy
+    if g_FTB_WebMsgDrainBusy
+        return
+    if !(g_FTB_WebMsgQueue is Array) || g_FTB_WebMsgQueue.Length = 0
+        return
+    g_FTB_WebMsgDrainBusy := true
+    try {
+        while g_FTB_WebMsgQueue.Length {
+            raw := g_FTB_WebMsgQueue.RemoveAt(1)
+            try {
+                m := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(raw) : Jxon_Load(raw)
+                if (m is String)
+                    m := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(m) : Jxon_Load(m)
+                if (m is Map)
+                    FloatingToolbar_DispatchWebMessage(m)
+            } catch {
+            }
+        }
+    } finally {
+        g_FTB_WebMsgDrainBusy := false
+        if (g_FTB_WebMsgQueue is Array) && g_FTB_WebMsgQueue.Length
+            SetTimer(FloatingToolbar_DrainWebMessageQueue, -1)
+    }
+}
+
+FloatingToolbar_DispatchWebMessage(msg) {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_PendingSelection, FloatingToolbarGUI, FloatingToolbarScale
     if !(msg is Map)
         return
 
@@ -2265,7 +2533,7 @@ FloatingToolbar_OnWebMessage(sender, args) {
         }
         isOpen := NiumaMobileBrowser_IsOpen()
         NiumaMobileBrowser_Log("STATE", "", typ . " 收到, IsOpen=" . (isOpen ? 1 : 0) . " url=" . u)
-        NiumaMobileBrowser_NotifyStateVia(sender, isOpen, u)
+        NiumaMobileBrowser_NotifyState(isOpen, u)
         return
     }
     if (typ = "niuma_mobile_browser_navigate") {
@@ -5230,18 +5498,13 @@ FloatingToolbar_ActivateSearchCenter() {
     try {
         if (SearchCenter_IsOpeningOrBusy()) {
             try SCWV_Log("ftb_activate_search_center_busy", "active=" . (IsSearchCenterActive() ? "1" : "0") . " vis=" . (SCWV_IsVisible() ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
-            if (SCWV_IsVisible()) {
-                SCWV_SubmitIntent("open", 20, Map(
-                    "reason", "toolbar_search_reuse",
-                    "initialMode", "search",
-                    "triggerSource", "search_hotkey"
-                ))
-                opened := true
-                return
-            }
-            try SCWV_RequestHardClose("toolbar_search_busy_recover")
-            catch {
-            }
+            SCWV_SubmitIntent("open", 30, Map(
+                "reason", SCWV_IsRevealedToUser() ? "toolbar_search_reuse" : "toolbar_search_stale_recover",
+                "initialMode", "search",
+                "triggerSource", "search_hotkey"
+            ))
+            opened := true
+            return
         }
     } catch {
     }
@@ -5346,20 +5609,14 @@ FloatingToolbarExecuteButtonAction(action, buttonHwnd) {
 ; 延后一帧处理搜索切换：让 WM_ACTIVATE / 延迟 Hide 与 postMessage 顺序稳定，避免先关后立又弹回
 FloatingToolbar_SearchToggleDeferred(*) {
     global GuiID_SearchCenter
-    try {
-        h := SCWV_GetGuiHwnd()
-        if (h && WinExist("ahk_id " . h) && (WinGetStyle("ahk_id " . h) & 0x10000000)) {
-            SurfaceIntent_Close("search_center", Map("persistSelection", 1))
-            return
+    if FloatingToolbar_IsSearchCenterRevealedForToggle() {
+        try SurfaceIntent_Close("search_center", Map("persistSelection", 1, "reason", "ftb_search_toggle_close"))
+        catch {
+            try SearchCenterUnifiedClose("ftb_search_toggle_close", false, true)
+            catch {
+            }
         }
-    } catch {
-    }
-    try {
-        if (SCWV_IsVisible()) {
-            SurfaceIntent_Close("search_center", Map("persistSelection", 1))
-            return
-        }
-    } catch {
+        return
     }
     try {
         if (GuiID_SearchCenter != 0 && (!IsSet(SearchCenter_ShouldUseWebView) || !SearchCenter_ShouldUseWebView())) {
@@ -5395,7 +5652,7 @@ FloatingToolbarToggleButtonAction(action) {
     try FloatingToolbar_NormalizeInputRuntime("toolbar_toggle_" . String(action))
     switch action {
         case "Search":
-            SetTimer(FloatingToolbar_ActivateSearchCenter, -10)
+            SetTimer(FloatingToolbar_SearchToggleDeferred, -10)
             return
         case "Record":
             try {
@@ -6169,31 +6426,17 @@ OnFloatingToolbarContextMenu(*) {
 }
 
 FloatingToolbar_ParseWebMessage(args) {
-    ; 1) Preferred path for postMessage(string): raw payload without extra JSON wrapper.
+    raw := FuncExists("WebView2_CopyWebMessageJson") ? WebView2_CopyWebMessageJson(args) : ""
+    if (raw = "")
+        return 0
     try {
-        raw := args.TryGetWebMessageAsString()
-        if (raw != "") {
-            try {
-                m := Jxon_Load(raw)
-                if (m is Map)
-                    return m
-            } catch {
-            }
-        }
-    } catch {
-    }
-
-    ; 2) Fallback path for postMessage(object): JSON value from WebMessageAsJson.
-    try {
-        jsonStr := args.WebMessageAsJson
-        m := Jxon_Load(jsonStr)
+        m := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(raw) : Jxon_Load(raw)
         if (m is String)
-            m := Jxon_Load(m)
+            m := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(m) : Jxon_Load(m)
         if (m is Map)
             return m
     } catch {
     }
-
     FTB_Debug("web message parse failed", "err")
     return 0
 }
@@ -7081,12 +7324,19 @@ FloatingToolbar_ApplyActivationFallback(*) {
 
 FloatingToolbar_InitShowFallback(*) {
     global AppearanceActivationMode, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal, FloatingToolbarGUI
+    global g_FTB_RevealWaitStartTick, g_FTB_PaintReady
     if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar")
         return
     if (FloatingToolbarIsVisible && !g_FTB_WaitingUiFinishedReveal)
         return
-    if (FloatingToolbarGUI != 0 && g_FTB_WaitingUiFinishedReveal)
+    if (FloatingToolbarGUI != 0 && g_FTB_WaitingUiFinishedReveal) {
+        if (g_FTB_RevealWaitStartTick > 0 && (A_TickCount - g_FTB_RevealWaitStartTick) > 12000 && !g_FTB_PaintReady) {
+            try FloatingToolbar_BootPaintFallbackForce()
+            catch {
+            }
+        }
         return
+    }
     try FloatingToolbar_ShowForActivationMode()
     catch {
         try ShowFloatingToolbar()

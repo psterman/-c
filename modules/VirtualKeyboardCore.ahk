@@ -463,6 +463,7 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "tray_toggle_toolbar", "name", "托盘/显示隐藏工具栏", "desc", "系统托盘右键菜单项", "fn", "CH_RUN"),
             Map("id", "tray_hide_toolbar", "name", "托盘/关闭工具栏", "desc", "系统托盘右键菜单项", "fn", "CH_RUN"),
             Map("id", "tray_reload_script", "name", "托盘/重启脚本", "desc", "系统托盘右键菜单项", "fn", "CH_RUN"),
+            Map("id", "tray_restart_clean", "name", "托盘/彻底退出重启", "desc", "完整关闭 WebView 与子进程后再启动", "fn", "CH_RUN"),
             Map("id", "tray_exit_app", "name", "托盘/退出程序", "desc", "系统托盘右键菜单项", "fn", "CH_RUN"),
             ; 下列 cmd 供悬浮条/场景条专用绑定；VK 网页「快捷键」标签由 HOTKEY_TAB_PRESET 展示，不再重复列出
             Map("id", "ftb_scratchpad", "name", "草稿本", "desc", "悬浮条按钮：打开 HubCapsule", "fn", "CH_RUN", "iconClass", "fa-note-sticky"),
@@ -1510,7 +1511,7 @@ _VK_DefaultSceneMenuGlobalHotkeysCmds() {
         "ch_w", "ch_s", "ch_a", "ch_d",
         "ch_f", "ch_x", "ch_q", "hub_capsule", "ch_t", "ch_p", "ch_r", "ch_b", "ch_g", "sys_show_vk",
         "ftm_reset_scale", "ftm_search_center", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script",
-        "tray_show_search", "tray_show_clipboard", "tray_show_screenshot", "tray_show_config", "tray_toggle_toolbar", "tray_hide_toolbar", "tray_reload_script", "tray_exit_app"
+        "tray_show_search", "tray_show_clipboard", "tray_show_screenshot", "tray_show_config", "tray_toggle_toolbar", "tray_hide_toolbar", "tray_reload_script", "tray_restart_clean", "tray_exit_app"
     ]
 }
 
@@ -1519,7 +1520,7 @@ _VK_DefaultSceneMenuFloatingToolbarMenuCmds() {
 }
 
 _VK_DefaultSceneMenuTrayMenuCmds() {
-    return ["tray_show_search", "tray_show_clipboard", "tray_show_screenshot", "tray_show_config", "tray_toggle_toolbar", "tray_hide_toolbar", "tray_reload_script", "tray_exit_app"]
+    return ["tray_show_search", "tray_show_clipboard", "tray_show_screenshot", "tray_show_config", "tray_toggle_toolbar", "tray_hide_toolbar", "tray_reload_script", "tray_restart_clean", "tray_exit_app"]
 }
 
 _VK_DefaultSceneMenuMobileBrowserCmds() {
@@ -1914,13 +1915,13 @@ _VK_SceneCtxActMap(sceneKey) {
     }
     if (sk = "tray_menu") {
         m := Map()
-        for c in ["tray_show_search", "tray_show_clipboard", "tray_show_screenshot", "tray_show_config", "tray_toggle_toolbar", "tray_hide_toolbar", "tray_reload_script", "tray_exit_app"]
+        for c in ["tray_show_search", "tray_show_clipboard", "tray_show_screenshot", "tray_show_config", "tray_toggle_toolbar", "tray_hide_toolbar", "tray_reload_script", "tray_restart_clean", "tray_exit_app"]
             m[c] := c
         return m
     }
     if (sk = "global_hotkeys") {
         m := Map()
-        for c in ["ch_w", "ch_s", "ch_a", "ch_d", "ch_f", "ch_x", "ch_q", "hub_capsule", "ch_t", "ch_p", "ch_r", "ch_b", "ch_g", "sys_show_vk", "ftm_reset_scale", "ftm_search_center", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script", "tray_show_search", "tray_show_clipboard", "tray_show_screenshot", "tray_show_config", "tray_toggle_toolbar", "tray_hide_toolbar", "tray_reload_script", "tray_exit_app"]
+        for c in ["ch_w", "ch_s", "ch_a", "ch_d", "ch_f", "ch_x", "ch_q", "hub_capsule", "ch_t", "ch_p", "ch_r", "ch_b", "ch_g", "sys_show_vk", "ftm_reset_scale", "ftm_search_center", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script", "tray_show_search", "tray_show_clipboard", "tray_show_screenshot", "tray_show_config", "tray_toggle_toolbar", "tray_hide_toolbar", "tray_reload_script", "tray_restart_clean", "tray_exit_app"]
             m[c] := c
         return m
     }

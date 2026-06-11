@@ -11,7 +11,14 @@ NMER_StartupOnError(err, mode) {
     msg := "启动或运行出错：`n" . err.Message
     if (line)
         msg .= "`n`n" . err.File . " (行 " . line . ")"
-    try NMER_Log("startup", "unhandled_error", err.Message . " line=" . line)
+    errFile := ""
+    errWhat := ""
+    errStack := ""
+    try errFile := err.File
+    try errWhat := err.What
+    try errStack := err.Stack
+    try NMER_Log("startup", "unhandled_error",
+        err.Message . " file=" . errFile . " line=" . line . " what=" . errWhat . " stack=" . errStack)
     catch {
         try FileAppend(Format("{} {}\n", A_Now, msg), Nmer_DebugPath("startup_error.log"))
     }
@@ -3243,6 +3250,9 @@ _WV2_BeginWarmupAfterEnv(*) {
     SetTimer(_WarmupConfigWebView, -5000)
     if FuncExists("Nmer_AutoStartSearchCenterCore")
         SetTimer(Nmer_AutoStartSearchCenterCore, -1200)
+    ; interceptWarmup 下搜索中心不进入 warmup 队列，改为悬浮栏就绪后后台预热隐藏宿主。
+    if FuncExists("SCWV_ScheduleIdlePrewarm")
+        SetTimer((*) => SCWV_ScheduleIdlePrewarm(8000), -4000)
 }
 
 NativeDropBridge_Start() {
@@ -4708,6 +4718,11 @@ if FuncExists("Nmer_AutoStartSearchCenterCore") {
 }
 if FuncExists("Nmer_AutoStartWailsBridge") {
     SetTimer(Nmer_AutoStartWailsBridge, -3000)
+}
+if FuncExists("Nmer_HybridSignoffBootstrapEnsure") {
+    SetTimer(Nmer_HybridSignoffBootstrapEnsure, -8000)
+} else if FuncExists("Nmer_HybridManualProbeEnsure") {
+    SetTimer(Nmer_HybridManualProbeEnsure, -8000)
 }
 ; 初始化粘贴板历史面板
 InitClipboardHistoryPanel()

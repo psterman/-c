@@ -1,0 +1,415 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hybrid 运行终验看板</title>
+  <style>
+    :root {
+      --bg1: #0d1117; --bg2: #161b22; --ink: #e6edf3; --muted: #8b949e;
+      --ok: #3fb950; --fail: #f85149; --warn: #d29922; --accent: #58a6ff;
+      --card: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--ink);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(160deg, var(--bg1), var(--bg2));
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 20px; }
+    h1 { margin: 0 0 4px; font-size: 22px; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+    .hero {
+      border-radius: 14px; padding: 16px 18px; margin-bottom: 14px;
+      border: 1px solid var(--border); background: var(--card);
+    }
+    .hero.ready { border-color: rgba(63,185,80,0.5); }
+    .hero.notready { border-color: rgba(248,81,73,0.5); }
+    .hero h2 { margin: 0 0 8px; font-size: 18px; }
+    .pipeline {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      margin: 12px 0 4px; font-size: 12px;
+    }
+    .pipe-node {
+      background: rgba(88,166,255,0.12); border: 1px solid rgba(88,166,255,0.35);
+      border-radius: 8px; padding: 8px 10px; min-width: 110px;
+    }
+    .pipe-node strong { display: block; font-size: 13px; color: var(--accent); }
+    .pipe-node span { color: var(--muted); font-size: 11px; }
+    .pipe-arrow { color: var(--muted); font-size: 18px; padding: 0 2px; }
+    .gates {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 10px; margin-bottom: 12px;
+    }
+    .gate { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .gate.pass { border-color: rgba(63,185,80,0.45); }
+    .gate.fail { border-color: rgba(248,81,73,0.45); }
+    .gate.pending { border-color: rgba(210,153,34,0.45); }
+    .gate h3 { margin: 0 0 8px; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+    .pill.pass { background: rgba(63,185,80,0.2); color: var(--ok); }
+    .pill.fail { background: rgba(248,81,73,0.2); color: var(--fail); }
+    .pill.pending { background: rgba(210,153,34,0.2); color: var(--warn); }
+    .metrics { font-size: 12px; color: var(--muted); line-height: 1.65; }
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+    .panel h3 { margin: 0 0 8px; font-size: 14px; }
+    .step { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .step:last-child { border-bottom: none; }
+    .step .n {
+      width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;
+    }
+    .step.pass .n { background: rgba(63,185,80,0.25); color: var(--ok); }
+    .step.fail .n { background: rgba(248,81,73,0.25); color: var(--fail); }
+    .step.manual .n { background: rgba(210,153,34,0.25); color: var(--warn); }
+    code, .cmd {
+      font-family: Consolas, monospace; font-size: 11px; color: #79c0ff;
+      background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;
+    }
+    .cmd { display: block; margin: 6px 0; padding: 8px 10px; word-break: break-all; }
+    ul.subgates { margin: 6px 0 0; padding-left: 18px; font-size: 11px; color: var(--muted); }
+    .hint { color: var(--warn); font-size: 12px; line-height: 1.6; }
+    .err { color: var(--fail); font-size: 11px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <script>window.__HYBRID_SIGNOFF_DATA__ = {
+    "capturedAt":  "2026-06-11T12:39:23Z",
+    "repoRoot":  "C:\\Users\\Administrator\\Desktop\\牛马nmer",
+    "readyForHybridSignoff":  false,
+    "overallPass":  false,
+    "autoPass":  false,
+    "manualPass":  false,
+    "memoryDeltaLimitMiB":  80,
+    "pipeline":  [
+                     {
+                         "endpoint":  "g_FTB_WV2",
+                         "step":  "AHK FTB",
+                         "role":  "presentation"
+                     },
+                     {
+                         "endpoint":  ":18791",
+                         "step":  "nmer-hub",
+                         "role":  "agent+inject"
+                     },
+                     {
+                         "endpoint":  "/shell/ftb/inject",
+                         "step":  "inject/drain",
+                         "role":  "transport"
+                     },
+                     {
+                         "endpoint":  "paletteAgent.transport",
+                         "step":  "CP/Agent",
+                         "role":  "client"
+                     },
+                     {
+                         "endpoint":  "/a2ui/openclaw/action",
+                         "step":  "OpenClaw",
+                         "role":  "backend"
+                     }
+                 ],
+    "gates":  [
+                  {
+                      "id":  "flags",
+                      "title":  "Flags config",
+                      "pass":  true,
+                      "metrics":  {
+                                      "sidecarHost":  "hub",
+                                      "floatingToolbarHost":  "hybrid",
+                                      "legacySurfaceLifecycle":  true
+                                  },
+                      "errors":  {
+
+                                 }
+                  },
+                  {
+                      "id":  "sidecar",
+                      "title":  "Sidecar hub",
+                      "pass":  true,
+                      "metrics":  {
+                                      "nmer_hub":  18536,
+                                      "provider":  "fake",
+                                      "health_ok":  true,
+                                      "hubPrivateMiB":  46.3,
+                                      "nmer_wails":  null
+                                  }
+                  },
+                  {
+                      "id":  "s11_static",
+                      "title":  "S11 static wiring",
+                      "pass":  true,
+                      "metrics":  {
+                                      "failureReasons":  {
+
+                                                         },
+                                      "capturedAt":  "2026-06-11 20:39:18"
+                                  }
+                  },
+                  {
+                      "id":  "hub_chain",
+                      "title":  "Hub chain smoke",
+                      "pass":  true,
+                      "metrics":  {
+                                      "overallPass":  true
+                                  },
+                      "gates":  [
+                                    {
+                                        "id":  "health",
+                                        "pass":  true,
+                                        "detail":  "ok=True provider=fake"
+                                    },
+                                    {
+                                        "id":  "register_external",
+                                        "pass":  true,
+                                        "detail":  "presentationMode=external visible=True"
+                                    },
+                                    {
+                                        "id":  "inject_drain",
+                                        "pass":  true,
+                                        "detail":  "inject=SHELL_FTB_INJECT_QUEUED drainCount=7"
+                                    },
+                                    {
+                                        "id":  "egress_roundtrip",
+                                        "pass":  true,
+                                        "detail":  "post=SHELL_FTB_EGRESS_OK drainCount=1"
+                                    }
+                                ]
+                  },
+                  {
+                      "id":  "ftb_external",
+                      "title":  "FTB external presentation",
+                      "pass":  true,
+                      "metrics":  {
+                                      "presentationMode":  "external",
+                                      "ready":  false,
+                                      "entry":  "hybrid-signoff-203918",
+                                      "visible":  true
+                                  },
+                      "errors":  [
+
+                                 ]
+                  },
+                  {
+                      "id":  "memory_delta",
+                      "title":  "Memory delta hybrid vs ahk ref",
+                      "pass":  false,
+                      "metrics":  {
+                                      "deltaMiB":  -125.63,
+                                      "referenceAhkMiB":  1439.39,
+                                      "currentTotalPrivateMiB":  1313.76,
+                                      "webview2_count":  8,
+                                      "referenceHybridMiB":  1495.41,
+                                      "hasReference":  true,
+                                      "deltaTotalPrivateMiB":  1313.76,
+                                      "deltaLimitMiB":  80,
+                                      "deltaSource":  "live_baseline"
+                                  },
+                      "errors":  "delta=-125.63MiB exceeds limit 80MiB"
+                  },
+                  {
+                      "id":  "hub_cycle",
+                      "title":  "Hub inject cycle stability",
+                      "pass":  true,
+                      "metrics":  {
+                                      "hubEndMiB":  46.3,
+                                      "hubPeakMiB":  46.3,
+                                      "recoveryPct":  0.06,
+                                      "hubStartMiB":  46.27,
+                                      "rounds":  10
+                                  }
+                  }
+              ],
+    "manualSteps":  [
+                        {
+                            "id":  "reload_ahk",
+                            "title":  "Reload niuma.ahk hybrid flags",
+                            "autoCheck":  true,
+                            "pass":  true,
+                            "hint":  "Ctrl+Shift+Q; confirm floatingToolbarHost=hybrid, sidecarHost=hub"
+                        },
+                        {
+                            "id":  "ftb_ux",
+                            "title":  "FTB manual UX",
+                            "autoCheck":  false,
+                            "pass":  false,
+                            "hint":  "Run-HybridManualSignoff.ps1 or Run-HybridFtbUxSmoke.ps1 (inject proxy)"
+                        },
+                        {
+                            "id":  "cp_hello",
+                            "title":  "CP Agent hello",
+                            "autoCheck":  false,
+                            "pass":  false,
+                            "hint":  "Run-HybridManualSignoff.ps1 agent_hello IPC; no deliver_ready_timeout"
+                        },
+                        {
+                            "id":  "ui_cycle_10",
+                            "title":  "10-round UI recovery CP/FTB/SC",
+                            "autoCheck":  true,
+                            "pass":  false,
+                            "hint":  "Run-HybridManualSignoff.ps1 ui_cycle + memory drift \u003c=10%"
+                        }
+                    ],
+    "processes":  {
+                      "nmer_hub":  {
+                                       "id":  18536
+                                   },
+                      "ahk":  {
+                                  "id":  10488
+                              },
+                      "nmer_wails":  null
+                  },
+    "references":  {
+                       "ahk":  {
+                                   "totalPrivateMiB":  1439.39,
+                                   "capturedAt":  "2026-06-11T10:22:00Z"
+                               },
+                       "hybrid":  {
+                                      "totalPrivateMiB":  1495.41,
+                                      "capturedAt":  "2026-06-11T10:22:05Z"
+                                  }
+                   },
+    "commands":  {
+                     "openDashboard":  ".\\tools\\a2ui-diagnostics\\Open-HybridSignoffDashboard.ps1",
+                     "fullCollect":  ".\\tools\\a2ui-diagnostics\\Collect-HybridSignoffDashboard.ps1 -RunOpenClawSmoke",
+                     "manualSignoff":  ".\\tools\\a2ui-diagnostics\\Run-HybridManualSignoff.ps1 -RefreshDashboard",
+                     "captureAhkRef":  ".\\tools\\a2ui-diagnostics\\Capture-HybridMemoryReference.ps1 -Mode ahk",
+                     "hubChainOnly":  ".\\tools\\a2ui-diagnostics\\Run-HybridHubChainSmoke.ps1",
+                     "captureHybridRef":  ".\\tools\\a2ui-diagnostics\\Capture-HybridMemoryReference.ps1 -Mode hybrid"
+                 },
+    "manualSignoff":  {
+                          "overallPass":  false,
+                          "capturedAt":  "2026-06-11T12:39:17Z"
+                      },
+    "notes":  [
+                  "Browser F5 does not refresh data; rerun Open-HybridSignoffDashboard.ps1",
+                  "Memory compare: Capture-HybridMemoryReference -Mode ahk first, then hybrid after reload",
+                  "Manual 3 items: Run-HybridManualSignoff.ps1 (reload niuma once after probe IPC update)",
+                  "overallPass needs all auto gates green plus four manual checks"
+              ]
+};</script>
+  <div class="wrap">
+    <h1>Hybrid 运行终验看板</h1>
+    <div class="sub" id="meta">加载中…</div>
+    <div class="hero" id="hero"></div>
+    <div class="panel">
+      <h3>验证链路（AHK 呈现 + Hub 传输）</h3>
+      <div class="pipeline" id="pipeline"></div>
+    </div>
+    <div class="gates" id="gates"></div>
+    <div class="panel">
+      <h3>手动终验步骤</h3>
+      <div id="steps"></div>
+    </div>
+    <div class="panel">
+      <h3>命令</h3>
+      <div id="commands"></div>
+    </div>
+    <div class="panel">
+      <h3>说明</h3>
+      <div id="notes" class="hint"></div>
+    </div>
+  </div>
+  <script>
+    const JSON_URL = "../../Cache/debug/hybrid_signoff_dashboard.json";
+
+    function pill(pass) {
+      if (pass === null || pass === undefined) return `<span class="pill pending">待测</span>`;
+      return `<span class="pill ${pass ? "pass" : "fail"}">${pass ? "通过" : "未通过"}</span>`;
+    }
+
+    function gateClass(pass) {
+      if (pass === null || pass === undefined) return "pending";
+      return pass ? "pass" : "fail";
+    }
+
+    const gateHints = {
+      flags: "local/nmer-flags.json: floatingToolbarHost=hybrid, sidecarHost=hub",
+      sidecar: "nmer-hub 运行；nmer-wails 不运行；/agent/health ok",
+      s11_static: "Diagnose-S11HybridFTBGate.ps1 静态接线",
+      hub_chain: "health → register_external → inject → drain → egress",
+      ftb_external: "presentationMode=external（牛马已注册 hybrid 呈现）",
+      memory_delta: "先采 ahk 参考，再 hybrid；增量 ≤ 80 MiB",
+      hub_cycle: "10 轮 inject/drain，hub 私有内存波动 ≤ 10%",
+      openclaw_adapter: "需 OPENCLAW_GATEWAY_TOKEN；可选"
+    };
+
+    function render(data) {
+      const autoReady = !!data.readyForHybridSignoff;
+      document.getElementById("meta").textContent =
+        `采集 ${data.capturedAt || "-"} | 仓库 ${data.repoRoot || "-"}`;
+
+      document.getElementById("hero").className = "hero " + (autoReady ? "ready" : "notready");
+      document.getElementById("hero").innerHTML = autoReady
+        ? `<h2>自动门禁已通过</h2><div class="metrics">完成下方手动四项后即可签收 Hybrid 生产默认。内存参考：${data.references?.ahk ? "已采 ahk" : "未采 ahk 参考"}。</div>`
+        : `<h2>自动门禁未齐</h2><div class="metrics">修复红色自动项后重新运行 <code>Open-HybridSignoffDashboard.ps1</code>（浏览器 F5 无效）。</div>`;
+
+      const pipe = data.pipeline || [];
+      document.getElementById("pipeline").innerHTML = pipe.map((n, i) => {
+        const arrow = i < pipe.length - 1 ? '<span class="pipe-arrow">→</span>' : "";
+        return `<div class="pipe-node"><strong>${n.step}</strong><span>${n.role}</span><span>${n.endpoint || ""}</span></div>${arrow}`;
+      }).join("");
+
+      document.getElementById("gates").innerHTML = (data.gates || []).map(g => {
+        const m = g.metrics || {};
+        const lines = Object.entries(m).map(([k, v]) => {
+          if (Array.isArray(v)) return `${k}=${v.join(",")}`;
+          if (v === null || v === undefined) return `${k}=—`;
+          return `${k}=${v}`;
+        }).join(" · ");
+        let extra = "";
+        if (g.gates && g.gates.length) {
+          extra = "<ul class='subgates'>" + g.gates.map(x =>
+            `<li>${x.pass ? "✓" : "✗"} ${x.id}: ${x.detail || ""}</li>`
+          ).join("") + "</ul>";
+        }
+        if (g.errors && g.errors.length) {
+          extra += g.errors.map(e => `<div class="err">${e}</div>`).join("");
+        }
+        if (!g.pass && g.pass !== null && gateHints[g.id]) {
+          extra += `<div class="hint" style="margin-top:6px">${gateHints[g.id]}</div>`;
+        }
+        return `<div class="gate ${gateClass(g.pass)}">
+          <h3>${g.title} ${pill(g.pass)}</h3>
+          <div class="metrics">${lines || "无数据"}</div>${extra}
+        </div>`;
+      }).join("");
+
+      document.getElementById("steps").innerHTML = (data.manualSteps || []).map(s => {
+        const cls = s.pass ? "pass" : (s.autoCheck ? "fail" : "manual");
+        const mark = s.pass ? "✓" : (s.autoCheck ? "!" : "…");
+        return `<div class="step ${cls}">
+          <div class="n">${mark}</div>
+          <div><strong>${s.title}</strong><br><span class="metrics">${s.hint || ""}</span></div>
+        </div>`;
+      }).join("");
+
+      const cmds = data.commands || {};
+      document.getElementById("commands").innerHTML = Object.entries(cmds).map(([k, v]) =>
+        `<div><span class="metrics">${k}</span><code class="cmd">${v}</code></div>`
+      ).join("");
+
+      document.getElementById("notes").innerHTML = (data.notes || []).map(n => `• ${n}`).join("<br>");
+    }
+
+    async function load() {
+      let data = null;
+      if (window.__HYBRID_SIGNOFF_DATA__) {
+        data = window.__HYBRID_SIGNOFF_DATA__;
+      } else {
+        try {
+          const r = await fetch(JSON_URL + "?t=" + Date.now());
+          data = await r.json();
+        } catch (e) {
+          document.getElementById("meta").textContent =
+            "无法加载 JSON: " + e.message + " — 请运行 Open-HybridSignoffDashboard.ps1 打开 -live.html";
+          return;
+        }
+      }
+      render(data);
+    }
+    load();
+  </script>
+</body>
+</html>
+

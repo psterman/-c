@@ -494,7 +494,7 @@ ConfigWebView_DefaultFullTextStatusPayload() {
         "workerCount", 0,
         "scanSpeed", "normal",
         "includeLargeText", false,
-        "maxFileSizeMB", 2,
+        "maxFileSizeMB", 16,
         "indexDir", "",
         "lastError", ""
     )
@@ -805,7 +805,7 @@ ConfigWebView_RelayVkWebJson(jsonStr) {
     global ConfigWV2Ready
     if !ConfigWV2Ready || (Trim(String(jsonStr)) = "")
         return
-    try evt := Jxon_Load(jsonStr)
+    try evt := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(jsonStr) : Jxon_Load(jsonStr)
     catch {
         return
     }
@@ -2713,9 +2713,11 @@ ConfigWebView_QuickReadHermesApiServerKey() {
 
 ConfigWebView_OnMessage(sender, args) {
     global ConfigWV2Ready, UseWebViewSettings
-    jsonStr := args.WebMessageAsJson
+    jsonStr := FuncExists("WebView2_CopyWebMessageJson") ? WebView2_CopyWebMessageJson(args) : ""
+    if (jsonStr = "")
+        return
     try {
-        msg := Jxon_Load(jsonStr)
+        msg := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(jsonStr) : Jxon_Load(jsonStr)
     } catch {
         return
     }

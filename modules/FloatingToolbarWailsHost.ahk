@@ -640,6 +640,10 @@ FloatingToolbarWails_EnsureHybridBridge(*) {
     if !g_FTBWails_HybridRegistered
         FloatingToolbarWails_RegisterExternalFtb("ensure_bridge")
     FloatingToolbarWails_EnsureInjectPump()
+    if FuncExists("Nmer_HybridManualProbeEnsure")
+        try Nmer_HybridManualProbeEnsure()
+        catch {
+        }
     return FuncExists("Nmer_WailsBridgeHealthy") && Nmer_WailsBridgeHealthy()
 }
 
@@ -660,29 +664,17 @@ FloatingToolbarWails_StopInjectPump(*) {
 }
 
 FloatingToolbarWails_InjectPumpTick(*) {
-    global g_FTBWails_InjectPumpOn, g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
+    global g_FTBWails_InjectPumpOn
+    if FloatingToolbarWails_ShouldUseHybrid() {
+        if FuncExists("Nmer_HybridManualProbeEnsure")
+            try Nmer_HybridManualProbeEnsure()
+        if FuncExists("Nmer_HybridManualProbePoll")
+            try Nmer_HybridManualProbePoll()
+    }
     if !g_FTBWails_InjectPumpOn || !FloatingToolbarWails_ShouldUseHybrid()
         return
-    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
-        return
-    if !FuncExists("Nmer_WailsBridgeDrainShellFtbInject")
-        return
-    payloads := []
-    try payloads := Nmer_WailsBridgeDrainShellFtbInject()
-    catch {
-        return
-    }
-    for _, payload in payloads {
-        if !(payload is Map)
-            continue
-        try {
-            if FuncExists("WebView_QueuePayload")
-                WebView_QueuePayload(g_FTB_WV2, payload)
-            else
-                g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
-        } catch {
-        }
-    }
+    if FuncExists("Nmer_HybridSignoffDrainInjectQueue")
+        try Nmer_HybridSignoffDrainInjectQueue()
 }
 
 FloatingToolbarWails_DeliverPayloadHybrid(payload) {

@@ -54,7 +54,7 @@ function Test-NmerRootProcess($row, $repoRoot) {
     if (-not $row) { return $false }
     $name = [string]$row.Name
     $cmd = [string]$row.CommandLine
-    if ($name -eq "nmer-wails.exe" -or $name -eq "SearchCenterCore.exe") {
+    if ($name -eq "nmer-wails.exe" -or $name -eq "nmer-hub.exe" -or $name -eq "SearchCenterCore.exe") {
         return $true
     }
     if ($name -like "AutoHotkey*.exe") {
@@ -141,6 +141,22 @@ function Get-ScopedWebView2($allWebViews, $table, $repoRoot) {
     }
 }
 
+function Get-WebView2HostRootRows($table, $rootRows) {
+    $rootIds = New-Object 'System.Collections.Generic.HashSet[int]'
+    foreach ($root in @($rootRows)) {
+        if (-not $root) { continue }
+        [void]$rootIds.Add([int]$root.ProcessId)
+    }
+    $hostRoots = @()
+    foreach ($row in @($table)) {
+        if ([string]$row.Name -ne "msedgewebview2.exe") { continue }
+        if ($rootIds.Contains([int]$row.ParentProcessId)) {
+            $hostRoots += $row
+        }
+    }
+    return @($hostRoots)
+}
+
 function Get-SearchCoreStatus() {
     $out = [ordered]@{
         healthy = $false
@@ -164,13 +180,51 @@ function Get-SearchCoreStatus() {
     return $out
 }
 
+function Get-SearchCoreMemory() {
+    $out = [ordered]@{
+        healthy = $false
+    }
+    try {
+        $resp = Invoke-WebRequest -Uri "http://127.0.0.1:8080/v1/fulltext/memory" -UseBasicParsing -TimeoutSec 3
+        if ($resp.StatusCode -eq 200) {
+            $json = $resp.Content | ConvertFrom-Json
+            $mem = $json.memory
+            if ($mem) {
+                $out["healthy"] = $true
+                $out["privateMiB"] = $mem.privateMiB
+                $out["workingSetMiB"] = $mem.workingSetMiB
+                $out["heapAllocMiB"] = $mem.heapAllocMiB
+                $out["heapSysMiB"] = $mem.heapSysMiB
+                $out["heapInuseMiB"] = $mem.heapInuseMiB
+                $out["heapIdleMiB"] = $mem.heapIdleMiB
+                $out["heapReleasedMiB"] = $mem.heapReleasedMiB
+                $out["indexMappedMiB"] = $mem.indexMappedMiB
+                if ($mem.idleLifecycle) {
+                    $out["idleLifecycle"] = $mem.idleLifecycle
+                }
+            }
+        }
+    } catch {
+    }
+    return $out
+}
+
 $procTable = Get-ProcessTable
 $wv2All = @(Get-Process -Name "msedgewebview2" -ErrorAction SilentlyContinue | Sort-Object PrivateMemorySize64 -Descending)
 $wv2Scope = Get-ScopedWebView2 $wv2All $procTable $RepoRoot
 $wv2Scoped = @($wv2Scope.webviews)
+$scopeRootRows = @($wv2Scope.roots)
+$wv2HostRootRows = Get-WebView2HostRootRows $procTable $scopeRootRows
 $wv2Top = if ($wv2Scoped.Count -gt 0) { $wv2Scoped[0] } else { $null }
-$sidecar = Get-Process -Name "nmer-wails" -ErrorAction SilentlyContinue | Select-Object -First 1
+$sidecar = Get-Process -Name "nmer-hub","nmer-wails" -ErrorAction SilentlyContinue | Sort-Object PrivateMemorySize64 -Descending | Select-Object -First 1
 $searchCore = Get-Process -Name "SearchCenterCore" -ErrorAction SilentlyContinue | Select-Object -First 1
+$ahkHost = @($procTable | Where-Object {
+    $n = [string]$_.Name
+    $cmd = [string]$_.CommandLine
+    return ($n -like "AutoHotkey*.exe") -and ($cmd -like "*$RepoRoot*" -or $cmd -like "*牛马.ahk*" -or $cmd -like "*niuma.ahk*")
+} | ForEach-Object {
+    try { Get-Process -Id ([int]$_.ProcessId) -ErrorAction SilentlyContinue } catch { $null }
+}) | Where-Object { $_ } | Select-Object -First 1
 
 $wv2TotalPrivate = Get-WebView2TotalPrivateMiB $wv2Scoped
 $wv2GlobalTotalPrivate = Get-WebView2TotalPrivateMiB $wv2All
@@ -188,10 +242,25 @@ if ($searchCore) {
         $searchCorePrivate = $searchCore.PrivateMemorySize64 / 1MB
     } catch { }
 }
-$totalPrivate = [math]::Round($wv2TotalPrivate + $sidecarPrivate + $searchCorePrivate, 2)
+$ahkPrivate = 0.0
+$ahkWorkingSet = 0.0
+if ($ahkHost) {
+    try {
+        $ahkHost.Refresh()
+        $ahkPrivate = $ahkHost.PrivateMemorySize64 / 1MB
+        $ahkWorkingSet = $ahkHost.WorkingSet64 / 1MB
+    } catch { }
+}
+$webview2HostRootCount = @($wv2HostRootRows).Count
+$webview2DescendantCount = $wv2Scoped.Count
+$webview2HostControlCount = $webview2HostRootCount
+$webview2ProcessCap = 4
+$webview2HostControlCap = 4
+$totalPrivate = [math]::Round($wv2TotalPrivate + $sidecarPrivate + $searchCorePrivate + $ahkPrivate, 2)
 
-function Test-LooksLikeCpLoaded([int]$wv2Count, [double]$measuredTotal, [double]$prevEmpty) {
-    if ($wv2Count -ge 8) { return $true }
+function Test-LooksLikeCpLoaded([int]$wv2HostRoots, [int]$wv2Descendants, [double]$measuredTotal, [double]$prevEmpty) {
+    if ($wv2HostRoots -ge 3) { return $true }
+    if ($wv2Descendants -ge 8) { return $true }
     if ($prevEmpty -gt 0 -and $measuredTotal -gt ($prevEmpty * 1.35)) { return $true }
     return $false
 }
@@ -247,7 +316,7 @@ if ($prevSnapshot -and $prevSnapshot.singleCardMemoryCost -and $prevSnapshot.sin
 
 if ($CardCount -eq 0 -and $PreserveEmptyWhenCpLoaded -and $prevSnapshot) {
     $prevEmpty = [double]$prevSnapshot.emptyLoadPrivateMiB
-    if (Test-LooksLikeCpLoaded $wv2Scoped.Count $totalPrivate $prevEmpty) {
+    if (Test-LooksLikeCpLoaded $wv2HostRootRows.Count $wv2Scoped.Count $totalPrivate $prevEmpty) {
         $snapshotKind = "cp_loaded"
         $cpLoadedPrivateMiB = $totalPrivate
         $emptyForBaseline = $prevEmpty
@@ -284,16 +353,37 @@ if ($SetMultiCardReference) {
 
 $scopeRootRows = @($wv2Scope.roots)
 $searchCoreStatus = Get-SearchCoreStatus
+$searchCoreMemory = Get-SearchCoreMemory
+$componentSumPrivate = [math]::Round($wv2TotalPrivate + $sidecarPrivate + $searchCorePrivate + $ahkPrivate, 2)
+$memoryReconciliation = @{
+    componentSumMiB   = $componentSumPrivate
+    totalPrivateMiB   = $totalPrivate
+    deltaMiB          = [math]::Round($totalPrivate - $componentSumPrivate, 2)
+    withinTolerance   = ([math]::Abs($totalPrivate - $componentSumPrivate) -lt 1.0)
+    components        = [ordered]@{
+        webview2ScopedPrivateMiB = $wv2TotalPrivate
+        sidecarPrivateMiB        = [math]::Round($sidecarPrivate, 2)
+        searchCorePrivateMiB     = [math]::Round($searchCorePrivate, 2)
+        ahkHostPrivateMiB        = [math]::Round($ahkPrivate, 2)
+    }
+}
 $processes = @{
     webview2_largest      = Get-ProcMemMiB $wv2Top
     webview2_totalPrivate = $wv2TotalPrivate
-    webview2_count        = $wv2Scoped.Count
+    webview2_count        = $webview2DescendantCount
+    webview2_host_root_count = $webview2HostRootCount
+    webview2_descendant_count = $webview2DescendantCount
     webview2_globalTotalPrivate = $wv2GlobalTotalPrivate
     webview2_globalCount  = $wv2All.Count
     webview2_scopeStatus  = if ($scopeRootRows.Count -gt 0) { "scoped" } else { "unscoped_no_roots" }
-    nmer_wails            = Get-ProcMemMiB $sidecar
+    nmer_sidecar          = Get-ProcMemMiB $sidecar
     search_center_core    = Get-ProcMemMiB $searchCore
+    ahk_host              = Get-ProcMemMiB $ahkHost
     totalPrivateMiB       = $totalPrivate
+    webview2_host_control_count = $webview2HostControlCount
+    webview2_process_cap  = $webview2ProcessCap
+    webview2_host_control_cap = $webview2HostControlCap
+    webview2_cap_exceeded = ($webview2HostRootCount -gt $webview2ProcessCap) -or ($webview2HostRootCount -gt $webview2HostControlCap)
 }
 $processAttribution = [ordered]@{
     repoRoot = $RepoRoot
@@ -305,8 +395,17 @@ $processAttribution = [ordered]@{
             commandLine = [string]$_.CommandLine
         }
     })
+    webview2HostRoots = @($wv2HostRootRows | ForEach-Object {
+        [ordered]@{
+            pid = [int]$_.ProcessId
+            parentPid = [int]$_.ParentProcessId
+            name = [string]$_.Name
+            commandLine = [string]$_.CommandLine
+        }
+    })
     webview2 = @($wv2Scope.diagnostics)
-    scopedCount = $wv2Scoped.Count
+    scopedCount = $webview2DescendantCount
+    hostRootCount = $webview2HostRootCount
     globalCount = $wv2All.Count
 }
 
@@ -319,6 +418,8 @@ if ($SetMultiCardReference -and (Test-Path $OutPath) -and $prevSnapshot) {
     $out["processes"] = $processes
     $out["processAttribution"] = $processAttribution
     $out["searchCenterStatus"] = $searchCoreStatus
+    $out["searchCenterMemory"] = $searchCoreMemory
+    $out["memoryReconciliation"] = $memoryReconciliation
     $out | ConvertTo-Json -Depth 8 | Set-Content -Path $OutPath -Encoding UTF8
     exit 0
 }
@@ -349,6 +450,8 @@ if ($CardCount -gt 0 -and $prevSnapshot) {
             $out["processes"] = $processes
             $out["processAttribution"] = $processAttribution
             $out["searchCenterStatus"] = $searchCoreStatus
+            $out["searchCenterMemory"] = $searchCoreMemory
+            $out["memoryReconciliation"] = $memoryReconciliation
             $out["singleCardMemoryCost"] = @{
                 tiers        = $tierList
                 deltaFormula = "(totalPrivateMiB_at_N - multiCardReferencePrivateMiB) / N"
@@ -375,6 +478,8 @@ $baseline = @{
     processes                   = $processes
     processAttribution          = $processAttribution
     searchCenterStatus          = $searchCoreStatus
+    searchCenterMemory          = $searchCoreMemory
+    memoryReconciliation        = $memoryReconciliation
     emptyLoadPrivateMiB         = $emptyForBaseline
     cpLoadedPrivateMiB          = $cpLoadedPrivateMiB
     multiCardReferencePrivateMiB = $multiCardRef
@@ -383,5 +488,5 @@ $baseline = @{
 
 $baseline | ConvertTo-Json -Depth 8 | Set-Content -Path $OutPath -Encoding UTF8
 Write-Host "a2ui_memory_baseline -> $OutPath"
-Write-Host "emptyLoadPrivateMiB=$($baseline.emptyLoadPrivateMiB) totalPrivateMiB=$totalPrivate webview2_count=$($wv2Scoped.Count) global_webview2_count=$($wv2All.Count) scope=$($processes.webview2_scopeStatus) sidecar=$([bool]$sidecar)"
+Write-Host "emptyLoadPrivateMiB=$($baseline.emptyLoadPrivateMiB) totalPrivateMiB=$totalPrivate webview2_host_roots=$webview2HostRootCount webview2_descendants=$webview2DescendantCount cap_exceeded=$($processes.webview2_cap_exceeded) scope=$($processes.webview2_scopeStatus) sidecar=$([bool]$sidecar)"
 exit 0

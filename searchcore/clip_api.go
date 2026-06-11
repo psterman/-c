@@ -82,6 +82,7 @@ func handleClipSearch(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	bumpQueryActivity()
 	q := strings.TrimSpace(r.URL.Query().Get("keyword"))
 	if q == "" {
 		q = strings.TrimSpace(r.URL.Query().Get("q"))
@@ -610,6 +611,7 @@ func handleClipPreview(w http.ResponseWriter, r *http.Request, db *sql.DB, absBa
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	bumpQueryActivity()
 	idStr := strings.TrimSpace(r.URL.Query().Get("id"))
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil || id < 1 {

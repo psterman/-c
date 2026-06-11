@@ -88,7 +88,16 @@ function loadScript(name) {
   "palette/official/PaletteOfficialA2UIActionPolicy.fixtures.js",
   "palette/theme/PaletteA2UIDesignTokens.fixtures.js",
   "palette/render/PaletteRendererRegistry.fixtures.js",
-  "palette/observability/PaletteA2UIMetrics.fixtures.js"
+  "palette/observability/PaletteA2UIMetrics.fixtures.js",
+  "palette/app/perf-marks.js",
+  "palette/search/command-index.js",
+  "palette/app/query-controller.js",
+  "palette/views/result-list.js",
+  "palette/app/palette-layout.js",
+  "palette/app/stream-batcher.js",
+  "palette/app/agent-chunk-coalescer.js",
+  "palette/test/command-index.fixtures.js",
+  "palette/test/stream-batcher.fixtures.js"
 ].forEach(loadScript);
 
 let allOk = true;
@@ -464,6 +473,40 @@ if (PaletteOfficialA2UIActionPolicyFixtures && PaletteOfficialA2UIActionPolicyFi
   }
 } else {
   console.error("PaletteOfficialA2UIActionPolicyFixtures unavailable");
+  allOk = false;
+}
+
+console.log("--- StreamBatcher ---");
+const { PaletteStreamBatcherFixtures } = sandbox;
+if (PaletteStreamBatcherFixtures && PaletteStreamBatcherFixtures.run) {
+  try {
+    PaletteStreamBatcherFixtures.run();
+    console.log("PASS stream-batcher:coalescer");
+    totalPassed += 1;
+  } catch (e) {
+    console.log("FAIL stream-batcher:coalescer — " + (e && e.message ? e.message : e));
+    totalFailed += 1;
+    allOk = false;
+  }
+} else {
+  console.error("PaletteStreamBatcherFixtures unavailable");
+  allOk = false;
+}
+
+console.log("--- CommandIndex ---");
+const { PaletteCommandIndexFixtures } = sandbox;
+if (PaletteCommandIndexFixtures && PaletteCommandIndexFixtures.run) {
+  try {
+    PaletteCommandIndexFixtures.run();
+    console.log("PASS command-index:search_generation");
+    totalPassed += 1;
+  } catch (e) {
+    console.log("FAIL command-index:search_generation — " + (e && e.message ? e.message : e));
+    totalFailed += 1;
+    allOk = false;
+  }
+} else {
+  console.error("PaletteCommandIndexFixtures unavailable");
   allOk = false;
 }
 
