@@ -1,8 +1,18 @@
 ; UserStudio.ahk — 智能定制：大模型 API、软件路径、总览与还原（local/user_studio.json）
 ; 跨模块符号由主脚本 #Include；Func 包装避免单独打开本文件时静态分析误报「未赋值」。
 
-_US_JxonLoad(s) => Func("Jxon_Load").Call(s)
-_US_JxonDump(o) => Func("Jxon_Dump").Call(o)
+_US_JxonLoad(s) {
+    try return Jxon_Load(s)
+    catch as e {
+        throw e
+    }
+}
+_US_JxonDump(o) {
+    try return Jxon_Dump(o)
+    catch as e {
+        throw e
+    }
+}
 
 global g_UserStudio := Map()
 global g_UserStudioLoaded := false
@@ -435,17 +445,33 @@ UserStudio_FindOpenClawCliExe() {
     return ""
 }
 
-UserStudio_OpenClawGatewayCliOk() {
+UserStudio_OpenClawGatewayCliOk(timeoutMs := 9000) {
+    if FuncExists("LlmApiPing_OpenClawGatewayStatusOk")
+        return LlmApiPing_OpenClawGatewayStatusOk(timeoutMs)
     exe := UserStudio_FindOpenClawCliExe()
     if (exe = "")
         return false
     out := A_Temp . "\nmer_openclaw_gw_status.txt"
     try FileDelete(out)
     inner := '"' . exe . '" gateway status > "' . out . '" 2>&1'
+    pid := 0
     try {
-        RunWait(A_ComSpec . ' /c "' . inner . '"', , "Hide")
+        Run(A_ComSpec . ' /c "' . inner . '"', , "Hide", &pid)
     } catch {
         return false
+    }
+    if !pid
+        return false
+    deadline := A_TickCount + Max(1500, Integer(timeoutMs))
+    while ProcessExist(pid) {
+        if (A_TickCount > deadline) {
+            try ProcessClose(pid)
+            catch {
+            }
+            try FileDelete(out)
+            return false
+        }
+        Sleep(50)
     }
     if !FileExist(out)
         return false
@@ -522,8 +548,11 @@ UserStudio_TcpPortOpen(host, port, timeoutMs := 2500) {
 }
 
 UserStudio_ProbeOpenClawGateway(base, token, timeoutMs := 12000) {
-    if FuncExists("LlmApiPing_TestOpenClaw")
-        return Func("LlmApiPing_TestOpenClaw").Call(base, token, timeoutMs)
+    if FuncExists("LlmApiPing_TestOpenClaw") {
+        try return LlmApiPing_TestOpenClaw(base, token, timeoutMs)
+        catch {
+        }
+    }
     token := UserStudio_NormalizeApiKey(token)
     if (token = "")
         return Map("ok", false, "error", "缺少 Gateway Token", "elapsedMs", 0)
@@ -538,11 +567,19 @@ UserStudio_ProbeOpenClawGateway(base, token, timeoutMs := 12000) {
     } else if RegExMatch(base, ":(\d+)", &mp)
         port := Integer(mp[1])
     t0 := A_TickCount
-    if UserStudio_OpenClawGatewayCliOk()
-        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    if FuncExists("LlmApiPing_OpenClawHttpReachable") {
+        try {
+            if LlmApiPing_OpenClawHttpReachable(host, port, Min(3000, Max(800, Integer(timeoutMs))))
+                return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "http")
+        } catch {
+        }
+    }
     tcpMs := Min(Max(800, Integer(timeoutMs)), 3000)
     if UserStudio_TcpPortOpen(host, port, tcpMs)
-        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "tcp")
+    cliMs := Max(10000, Integer(timeoutMs))
+    if UserStudio_OpenClawGatewayCliOk(cliMs)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "cli_status")
     return Map(
         "ok", false,
         "error", "无法连接本机 OpenClaw Gateway（" . host . ":" . port . "）。请执行 openclaw gateway restart。",
@@ -586,7 +623,7 @@ UserStudio_RestartOpenClawGateway(timeoutMs := 45000) {
 
 UserStudio_ParseOpenClawCliStdout(raw) {
     raw := Trim(String(raw))
-    if (raw = "")
+    if (raw = "" || InStr(raw, "__OPENCLAW_REDACTED__"))
         return ""
     try {
         head := SubStr(raw, 1, 1)
@@ -891,7 +928,7 @@ UserStudio_LogOpenClawProbe(lines*) {
     }
 }
 
-UserStudio_ReadOpenClawGatewayToken() {
+UserStudio_ReadOpenClawGatewayToken(fastProbe := false) {
     tried := []
     for _, path in UserStudio_OpenClawConfigFileCandidates() {
         tried.Push(path)
@@ -920,7 +957,10 @@ UserStudio_ReadOpenClawGatewayToken() {
                 meta := UserStudio_ExtractOpenClawGatewayFromRaw(raw)
             }
             if (tok != "") {
-                tok := UserStudio_NormalizeApiKey(tok)
+                try tok := UserStudio_NormalizeApiKey(tok)
+                catch {
+                    tok := RegExReplace(Trim(String(tok)), "\s+", "")
+                }
                 return Map(
                     "token", tok,
                     "source", path,
@@ -934,7 +974,7 @@ UserStudio_ReadOpenClawGatewayToken() {
             }
         }
     }
-    cli := UserStudio_FetchOpenClawTokenViaCli(20000)
+    cli := UserStudio_FetchOpenClawTokenViaCli(fastProbe ? 6000 : 20000)
     cliTok := Trim(String(cli.Get("token", "")))
     if (cliTok != "") {
         return Map(
@@ -967,7 +1007,7 @@ UserStudio_ReadOpenClawGatewayToken() {
     return Map("token", "", "source", "", "host", "127.0.0.1", "port", 18789, "tried", tried)
 }
 
-UserStudio_ProbeOpenClawGatewayToken() {
+UserStudio_ProbeOpenClawGatewayToken(fastProbe := false) {
     host := "127.0.0.1"
     port := 18789
     try {
@@ -982,7 +1022,7 @@ UserStudio_ProbeOpenClawGatewayToken() {
             return Map("token", envPwd, "source", "env:OPENCLAW_GATEWAY_PASSWORD", "host", host, "port", port)
     } catch {
     }
-    info := UserStudio_ReadOpenClawGatewayToken()
+    info := UserStudio_ReadOpenClawGatewayToken(!!fastProbe)
     tok := Trim(String(info.Get("token", "")))
     if (tok != "") {
         host := Trim(String(info.Get("host", host)))
@@ -991,7 +1031,7 @@ UserStudio_ProbeOpenClawGatewayToken() {
     }
     if FuncExists("FloatingToolbar_ReadOpenClawGatewayToken") {
         try {
-            fb := Func("FloatingToolbar_ReadOpenClawGatewayToken").Call()
+            fb := FloatingToolbar_ReadOpenClawGatewayToken()
             if (fb is Map) {
                 tok := Trim(String(fb.Get("token", "")))
                 if (tok != "")
@@ -2874,11 +2914,19 @@ UserStudio_BrowsePath(field, filterDesc := "可执行文件 (*.exe)") {
 }
 
 UserStudio_NormalizeApiKey(key) {
-    if FuncExists("LlmApiPing_NormalizeApiKey")
-        return Func("LlmApiPing_NormalizeApiKey").Call(key)
-    if FuncExists("ConfigWebView_NormalizeApiKey")
-        return Func("ConfigWebView_NormalizeApiKey").Call(key)
-    return Trim(String(key))
+    if FuncExists("LlmApiPing_NormalizeApiKey") {
+        try return LlmApiPing_NormalizeApiKey(key)
+        catch {
+        }
+    }
+    if FuncExists("ConfigWebView_NormalizeApiKey") {
+        try return ConfigWebView_NormalizeApiKey(key)
+        catch {
+        }
+    }
+    key := Trim(String(key))
+    key := RegExReplace(key, "\s+", "")
+    return key
 }
 
 UserStudio_TestLlmPing(llm, timeoutMs := 18000) {

@@ -74,6 +74,7 @@ type Hub struct {
 	a2uiProviderName  string
 	a2uiActionCancels map[string]a2uiActionCancel
 	shellFtb          *ShellFtbController
+	paletteShadow     *PaletteStateShadowStore
 }
 
 // NewHub creates a hub; emitFn receives each broadcast event (e.g. Wails EventsEmit).
@@ -96,6 +97,7 @@ func NewHub(addr, path string, emitFn func(AgentEvent), statusFn func(HubStatus)
 		a2uiProviderName:  "fake",
 		a2uiActionCancels: make(map[string]a2uiActionCancel),
 		shellFtb:          NewShellFtbController(strings.TrimSpace(os.Getenv("NMER_SCRIPT_DIR"))),
+		paletteShadow:     NewPaletteStateShadowStore(),
 	}
 }
 
@@ -141,6 +143,9 @@ func (h *Hub) Start(ctx context.Context) error {
 	if h.shellFtb != nil {
 		h.shellFtb.SetAddr(h.addr)
 		h.shellFtb.RegisterRoutes(mux)
+	}
+	if h.paletteShadow != nil {
+		h.paletteShadow.RegisterRoutes(mux)
 	}
 	h.pump = NewFakePump(h.BroadcastEvent)
 

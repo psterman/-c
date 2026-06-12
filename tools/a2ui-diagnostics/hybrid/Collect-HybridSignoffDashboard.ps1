@@ -178,7 +178,7 @@ $gates += [ordered]@{
     )
 }
 
-# G6 memory delta
+# G6 memory delta (reference contract: ahk ref only; no hybrid ref fallback)
 $totalPrivate = $null
 $wv2Count = $null
 if ($baseline -and $baseline.processes) {
@@ -188,47 +188,64 @@ if ($baseline -and $baseline.processes) {
 $deltaMiB = $null
 $deltaPass = $null
 $deltaVerdict = $null
-$deltaSource = "live_baseline"
-if ($refAhk -and ($null -ne $totalPrivate)) {
-    $deltaTotal = [double]$totalPrivate
-    if ($refHybrid -and $refHybrid.totalPrivateMiB) {
-        $hybRefMiB = [double]$refHybrid.totalPrivateMiB
-        if ($deltaTotal -lt ($hybRefMiB * 0.78)) {
-            $deltaTotal = $hybRefMiB
-            $deltaSource = "hybrid_reference_fallback"
-        }
-    }
-    $deltaMiB = [math]::Round($deltaTotal - [double]$refAhk.totalPrivateMiB, 2)
-    if ($deltaMiB -lt 0) {
+$deltaDeferred = $false
+$deltaWarnings = @()
+$sampling = Test-HybridMemoryDeltaSamplingReady -Flags $flags -Ahk $ahk -Hub $hub -Wails $wails `
+    -FtbStatus $ftbStatus -Baseline $baseline -RefAhk $refAhk
+if ($sampling.warnings) { $deltaWarnings = @($sampling.warnings) }
+
+if ($sampling.deferred) {
+    $deltaDeferred = $true
+    $deltaPass = $null
+} elseif ($refAhk -and ($null -ne $totalPrivate)) {
+    $deltaMiB = [math]::Round([double]$totalPrivate - [double]$refAhk.totalPrivateMiB, 2)
+    if ($deltaMiB -le 0) {
         $deltaPass = $true
         $deltaVerdict = "improvement"
-    } elseif ($deltaMiB -gt $memoryDeltaLimitMiB) {
+    } elseif ($deltaMiB -le $memoryDeltaLimitMiB) {
+        $deltaPass = $true
+        $deltaVerdict = "within_limit"
+    } else {
         $deltaPass = $false
         $deltaVerdict = "regression"
-    } else {
-        $deltaPass = $true
-        $deltaVerdict = "within"
     }
 }
+
+$refAgeHours = Get-ReferenceAgeHours $refAhk
 $gates += [ordered]@{
     id = "memory_delta"
     title = "Memory delta hybrid vs ahk ref"
     pass = $deltaPass
+    deferred = $deltaDeferred
     metrics = @{
+        comparisonBaseline = "ahk_ref"
+        referenceKind = "ahk"
+        referenceFile = "hybrid_signoff_reference_ahk.json"
         currentTotalPrivateMiB = $totalPrivate
-        deltaTotalPrivateMiB = if ($refAhk -and ($null -ne $totalPrivate)) { $deltaTotal } else { $null }
-        deltaSource = if ($refAhk -and ($null -ne $totalPrivate)) { $deltaSource } else { $null }
         referenceAhkMiB = if ($refAhk) { $refAhk.totalPrivateMiB } else { $null }
         referenceHybridMiB = if ($refHybrid) { $refHybrid.totalPrivateMiB } else { $null }
+        referenceHybridNote = "display only; not used for memory_delta"
         deltaMiB = $deltaMiB
         deltaVerdict = if ($deltaVerdict) { $deltaVerdict } else { $null }
         isImprovement = ($deltaVerdict -eq "improvement")
         deltaLimitMiB = $memoryDeltaLimitMiB
         webview2_count = $wv2Count
         hasReference = [bool]$refAhk
+        referenceAgeHours = $refAgeHours
+        searchCorePhase = $sampling.searchCorePhase
+        searchCorePrivateMiB = $sampling.searchCorePrivateMiB
+        searchCoreActive = $sampling.searchCoreActive
+        samplingReady = $sampling.ready
+        samplingReasons = @($sampling.reasons)
+        warnings = @($deltaWarnings)
     }
     errors = @(
-        if (-not $refAhk) { "missing hybrid_signoff_reference_ahk.json; run Capture-HybridMemoryReference.ps1 -Mode ahk" }
+        if ($deltaDeferred) {
+            if ($sampling.reasons.Count -gt 0) { "deferred: " + ($sampling.reasons -join "; ") }
+            elseif ($sampling.searchCoreActive) { "deferred: searchcore_active phase=$($sampling.searchCorePhase)" }
+            else { "deferred: sampling not ready" }
+        }
+        elseif (-not $refAhk) { "missing hybrid_signoff_reference_ahk.json; run Capture-HybridMemoryReference.ps1 -Mode ahk" }
         elseif ($deltaPass -eq $false) { "regression delta=${deltaMiB}MiB exceeds limit ${memoryDeltaLimitMiB}MiB" }
     ) | Where-Object { $_ }
 }
@@ -340,6 +357,10 @@ if ($manualAuto -and $manualAuto.ui01Recovery) {
         memBeforeMiB          = $ui01Actual.memBeforeMiB
         memAfterMiB           = $ui01Actual.memAfterMiB
         hybridReferenceMiB    = $ui01Actual.hybridReferenceMiB
+        referenceKind         = $ui01Actual.referenceKind
+        referenceFile         = $ui01Actual.referenceFile
+        referenceCapturedAt   = $ui01Actual.referenceCapturedAt
+        searchCorePhase       = $ui01Actual.searchCorePhase
         coldStartConfirmed    = $ui01Actual.coldStartConfirmed
     }
 }
@@ -466,7 +487,8 @@ $dashboard = [ordered]@{
     signoffCases = @($signoffCases)
     notes = @(
         "Browser F5 does not refresh data; rerun Open-HybridSignoffDashboard.ps1",
-        "Memory compare: Capture-HybridMemoryReference -Mode ahk first, then hybrid after reload",
+        "memory_delta: hybrid_signoff_reference_ahk.json only; UI-01 refDrift: hybrid_signoff_reference_hybrid.json only",
+        "B0: Test-HybridReferenceContract.ps1; B1 post-signoff: Capture-HybridMemoryReference ahk then hybrid",
         "UI-01 primary: sessionDriftPct <= 10%; refDrift auxiliary except formal-cold",
         "overallPass = autoPass AND productPass (FTB-01 + CP-01 + UI-01 sessionRecovery)",
         "signoffMode on dashboard is auto-gate context; manualSignoffMode is UI-01 policy"

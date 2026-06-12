@@ -697,7 +697,8 @@ FloatingToolbarWails_DeliverPayloadHybrid(payload) {
         }
         g_FTBWails_HybridInjectFailStreak += 1
         FloatingToolbarWails_Log("hybrid_inject_fail type=" . String(payload.Get("type", "")) . " code=" . (res is Map ? res.Get("code", "?") : "?"))
-        if (g_FTBWails_HybridInjectFailStreak >= 3)
+        agentStream := (String(payload.Get("type", "")) = "host_palette_agent_stream")
+        if agentStream || (g_FTBWails_HybridInjectFailStreak >= 3)
             return FloatingToolbarWails_DeliverPayloadHybridFallback(payload)
         return false
     } catch as errHybrid {

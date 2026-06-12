@@ -553,13 +553,15 @@ FloatingToolbar_SoftRecoverVisible(*) {
 }
 
 FloatingToolbar_IsNiumaHandoffActive() {
-    global g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening, FloatingToolbarChatDrawerOpen
-    return !!(g_FTB_PendingOpenNiumaDrawer || g_FTB_NiumaHandoffOpening || FloatingToolbarChatDrawerOpen)
+    global g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
+    return !!(g_FTB_PendingOpenNiumaDrawer || g_FTB_NiumaHandoffOpening)
 }
 
 FloatingToolbar_ShouldSuppressToolbarHomeReset() {
-    global g_FTB_SuspendToolbarHomeResetUntil
+    global g_FTB_SuspendToolbarHomeResetUntil, FloatingToolbarChatDrawerOpen
     if FloatingToolbar_IsNiumaHandoffActive()
+        return true
+    if FloatingToolbarChatDrawerOpen
         return true
     return (g_FTB_SuspendToolbarHomeResetUntil > 0 && A_TickCount < g_FTB_SuspendToolbarHomeResetUntil)
 }
@@ -697,11 +699,11 @@ FloatingToolbar_RequestWebReveal() {
 
 ; 黑洞/启动层 handoff 打开牛马 Chat 时：禁止 host_request_reveal 把 Web 侧抽屉打回折叠条。
 FloatingToolbar_RequestWebRevealSafe() {
-    global g_FTB_WV2, g_FTB_PendingOpenNiumaDrawer, FloatingToolbarChatDrawerOpen
+    global g_FTB_WV2, g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
     if !g_FTB_WV2
         return
     if FloatingToolbar_ShouldSuppressToolbarHomeReset() {
-        if (FloatingToolbarChatDrawerOpen || g_FTB_PendingOpenNiumaDrawer) {
+        if (g_FTB_PendingOpenNiumaDrawer || g_FTB_NiumaHandoffOpening) {
             try FloatingToolbar_NotifyWebDrawerState(true)
             catch {
             }
@@ -1161,10 +1163,20 @@ ShowFloatingToolbar() {
         try SurfaceManager_RegisterSurface("floating_toolbar")
     }
 
-    ; Safety: entering toolbar mode should start collapsed — unless we are opening Niuma from hole handoff.
-    global g_FTB_PendingOpenNiumaDrawer
-    if !g_FTB_PendingOpenNiumaDrawer
+    ; 从隐藏态重新显示时缩回工具条；用户已打开 Chat 或 handoff 时不要强行折叠。
+    global g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
+    if !g_FTB_PendingOpenNiumaDrawer && !FloatingToolbarIsVisible {
         FloatingToolbarChatDrawerOpen := false
+        g_FTB_NiumaHandoffOpening := false
+        try FloatingToolbar_CancelToolbarRecoveryTimers()
+        catch {
+        }
+        if IsObject(FloatingToolbarGUI) && FloatingToolbarGUI {
+            try FloatingToolbarSetChatDrawerState(false, true, false)
+            catch {
+            }
+        }
+    }
 
     if !FloatingToolbar_CanShowOverlay() {
         if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) = "toolbar")
@@ -1176,10 +1188,13 @@ ShowFloatingToolbar() {
     }
 
     if (FloatingToolbarIsVisible && FloatingToolbarGUI != 0 && !g_FTB_WaitingUiFinishedReveal) {
-        if FloatingToolbar_IsNiumaHandoffActive() {
+        if g_FTB_PendingOpenNiumaDrawer || g_FTB_NiumaHandoffOpening {
             try FloatingToolbar_OpenNiumaChatDrawer(true)
             catch {
             }
+        }
+        try SetTimer(FloatingToolbar_PushLayoutDeferred, -30)
+        catch {
         }
         if !skipTel
             try SurfaceManager_ObserveShow("floating_toolbar", Map("entry", "ShowFloatingToolbar", "alreadyVisible", 1, "requestId", reqId))
@@ -1225,6 +1240,9 @@ ShowFloatingToolbar() {
         }
         FloatingToolbarGUI.Show("x" . FloatingToolbarWindowX . " y" . FloatingToolbarWindowY . " w" . ToolbarWidth . " h" . ToolbarHeight . " NoActivate")
         FloatingToolbar_FinishReveal()
+        try SetTimer(FloatingToolbar_PushLayoutDeferred, -30)
+        catch {
+        }
         if !skipTel
             try SurfaceManager_ObserveShow("floating_toolbar", Map("entry", "ShowFloatingToolbar", "reused", 1, "wv2Ready", g_FTB_WV2_Ready ? 1 : 0, "requestId", reqId))
         return
@@ -1281,6 +1299,25 @@ HideFloatingToolbar() {
 
     try NiumaMobileBrowser_Close()
     catch {
+    }
+    global g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
+    g_FTB_PendingOpenNiumaDrawer := false
+    g_FTB_NiumaHandoffOpening := false
+    try FloatingToolbar_CancelToolbarRecoveryTimers()
+    catch {
+    }
+    try FloatingToolbarChatDrawerOpen := false
+    catch {
+    }
+    if (g_FTB_WV2 && g_FTB_WV2_Ready) {
+        try FloatingToolbar_ResetWebToToolbarHome()
+        catch {
+        }
+    }
+    if IsObject(FloatingToolbarGUI) && FloatingToolbarGUI {
+        try FloatingToolbarSetChatDrawerState(false, true, false)
+        catch {
+        }
     }
     if (FloatingToolbarGUI != 0) {
         try FloatingToolbar_ExitHoleCompactRuntime()
@@ -1958,8 +1995,23 @@ FloatingToolbar_RetryCreateWebView() {
 }
 
 FloatingToolbar_GetLogoAppUrl() {
+    if FuncExists("Nmer_AppIconPngPath") {
+        p := Nmer_AppIconPngPath()
+        if (p != "" && FileExist(p)) {
+            rel := p
+            if InStr(p, A_ScriptDir . "\") = 1
+                rel := SubStr(p, StrLen(A_ScriptDir) + 2)
+            rel := StrReplace(rel, "\", "/")
+            try {
+                if (InStr(rel, "assets/") = 1)
+                    return BuildAppAssetUrl(rel)
+                return BuildAppLocalUrl(rel)
+            } catch {
+            }
+        }
+    }
     if !IsSet(BuildAppLocalUrl)
-        return ""
+        return FloatingToolbar_GetLogoFallbackAppUrl()
     candidates := [
         "牛马.png",
         "assets\牛马.png",
@@ -1984,7 +2036,14 @@ FloatingToolbar_GetLogoAppUrl() {
             }
         }
     }
-    return ""
+    return FloatingToolbar_GetLogoFallbackAppUrl()
+}
+
+FloatingToolbar_GetLogoFallbackAppUrl() {
+    try return BuildAppAssetUrl("icons/app/chat-ai-fallback.svg")
+    catch {
+        return ""
+    }
 }
 
 FloatingToolbar_PushLogoToWeb(*) {
@@ -1993,9 +2052,9 @@ FloatingToolbar_PushLogoToWeb(*) {
         return
     url := FloatingToolbar_GetLogoAppUrl()
     if (url = "")
-        try url := BuildAppAssetUrl("牛马.png")
-        catch {
-        }
+        url := FloatingToolbar_GetLogoFallbackAppUrl()
+    if (url = "")
+        return
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_logo", "url", url))
     catch as _e {
     }
@@ -2755,8 +2814,15 @@ FloatingToolbar_DispatchWebMessage(msg) {
     if (typ = "drawer_state") {
         open := msg.Has("open") && !!msg["open"]
         global FloatingToolbarChatDrawerOpen, g_FTB_NiumaHandoffOpening
-        if !open
+        if !open {
             FloatingToolbar_ResetChatBridge()
+            g_FTB_NiumaHandoffOpening := false
+            global g_FTB_PendingOpenNiumaDrawer
+            g_FTB_PendingOpenNiumaDrawer := false
+            try FloatingToolbar_CancelToolbarRecoveryTimers()
+            catch {
+            }
+        }
         try {
             if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
                 NiumaMobileBrowser_TraceOverlayPush("DRAWER state open=" . (open ? 1 : 0), open ? "success" : "warn")
@@ -2772,7 +2838,7 @@ FloatingToolbar_DispatchWebMessage(msg) {
             return
         }
         FTB_Debug("drawer_state open=" . open)
-        FloatingToolbarSetChatDrawerState(open, g_FTB_NiumaHandoffOpening && open)
+        FloatingToolbarSetChatDrawerState(open, g_FTB_NiumaHandoffOpening && open, false)
         if open {
             try FloatingToolbar_PushStudioContextToChat()
             catch {
@@ -4482,12 +4548,13 @@ FloatingToolbarLoadDrawerWidth() {
     }
 }
 
-FloatingToolbarSetChatDrawerState(open, force := false) {
+FloatingToolbarSetChatDrawerState(open, force := false, notifyWeb := true) {
     global FloatingToolbarGUI, FloatingToolbarChatDrawerOpen, AppearanceActivationMode
     global FloatingToolbarWindowX, FloatingToolbarWindowY, FloatingToolbarIsVisible
     global FloatingToolbarLastClosedX, FloatingToolbarLastClosedY
 
     open := !!open
+    notifyWeb := !!notifyWeb
     if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar") {
         if (open && FuncExists("CommandPalette_AiLog"))
             try CommandPalette_AiLog("set_drawer_blocked", "reason=not_toolbar actMode=" . String(AppearanceActivationMode))
@@ -4509,7 +4576,8 @@ FloatingToolbarSetChatDrawerState(open, force := false) {
         try FloatingToolbarGUI.GetPos(, , &curW, )
         expW := FloatingToolbarCalculateWidth()
         if (curW > 0 && Abs(curW - expW) <= 12) {
-            FloatingToolbar_NotifyWebDrawerState(true)
+            if notifyWeb
+                FloatingToolbar_NotifyWebDrawerState(true)
             return
         }
     }
@@ -4580,7 +4648,8 @@ FloatingToolbarSetChatDrawerState(open, force := false) {
     FloatingToolbar_ApplyWebViewBounds()
     FloatingToolbarPushScaleStateToWeb(FloatingToolbarScale)
     SaveFloatingToolbarPosition()
-    FloatingToolbar_NotifyWebDrawerState(open)
+    if notifyWeb
+        FloatingToolbar_NotifyWebDrawerState(open)
     if open
         FloatingToolbar_PushWorkAreaInsetsToWeb()
     if !open
@@ -4678,16 +4747,27 @@ FloatingToolbar_StartPaletteAgentStream(msg) {
         "openDrawer", false
     )
     try {
-        if FuncExists("CommandPalette_InjectFtbHostPayload") {
-            if CommandPalette_InjectFtbHostPayload(payload)
-                return true
-        }
+        ; AHK FTB WebView 已就绪时优先直送 runPaletteAgentStream，避免 hybrid inject 假成功
         if FuncExists("WebView_QueuePayload")
             WebView_QueuePayload(g_FTB_WV2, payload)
         else
             g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
         return true
     } catch as eQ {
+        if FuncExists("CommandPalette_InjectFtbHostPayload") {
+            try {
+                if CommandPalette_InjectFtbHostPayload(payload) {
+                    if FuncExists("Nmer_WailsBridgeDrainInjectToFtb")
+                        try Nmer_WailsBridgeDrainInjectToFtb()
+                    if FuncExists("WebView_QueuePayload")
+                        WebView_QueuePayload(g_FTB_WV2, payload)
+                    else
+                        g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
+                    return true
+                }
+            } catch {
+            }
+        }
         if FuncExists("CommandPalette_OnNiumaPaletteAgentError")
             try CommandPalette_OnNiumaPaletteAgentError(Map("reqId", reqId, "cardId", cardId, "message", eQ.Message))
             catch {
@@ -5079,7 +5159,8 @@ FloatingToolbar_PushStudioLlmToChat(llm, prompt := "", autoSend := false) {
         "prompt", Trim(String(prompt)),
         "autoSend", !!autoSend,
         "autoInjectContext", ctx.Get("autoInject", true),
-        "systemPrompt", Trim(String(ctx.Get("systemPrompt", "")))
+        "systemPrompt", Trim(String(ctx.Get("systemPrompt", ""))),
+        "openDrawer", false
     ))
     catch {
     }

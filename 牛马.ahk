@@ -270,8 +270,10 @@ try SurfaceManager_ObserveSystemBootstrap(Map(
 #Include modules\CommandPaletteWailsHost.ahk
 #Include modules\CommandPaletteRouter.ahk
 #Include modules\CommandPaletteAgentOrchestrator.ahk
+#Include modules\CommandPaletteStateStoreShadow.ahk
 #Include modules\CommandPaletteSearchDebug.ahk
 #Include modules\MultiCardMemoryProbe.ahk
+#Include modules\CommandPalettePerfProbe.ahk
 global g_CmdPal_AgentSubmitDispatch := CommandPalette_HandleAgentSubmit
 global g_CmdPal_AgentDebugTraceDispatch := CommandPalette_AgentDebugTrace
 global g_CmdPal_AgentWireLogDispatch := CommandPalette_AgentWireLog
@@ -4728,6 +4730,9 @@ if FuncExists("Nmer_HybridSignoffBootstrapEnsure") {
 if FuncExists("Nmer_MultiCardMemoryProbeEnsure") {
     SetTimer(Nmer_MultiCardMemoryProbeEnsure, -5000)
 }
+if FuncExists("Nmer_CpPerfProbeEnsure") {
+    SetTimer(Nmer_CpPerfProbeEnsure, -5200)
+}
 ; 初始化粘贴板历史面板
 InitClipboardHistoryPanel()
 ; 初始化 WebView2 剪贴板面板（尽早创建共享环境；悬浮栏/球在 _WV2_BeginWarmupAfterEnv 内应用，见上）
@@ -5470,7 +5475,22 @@ CloseConfigGUI() {
         g_ConfigOpenInFlight := false
         g_ConfigWebViewOpenStartTick := 0
         try SetTimer(ShowConfigGUI_FallbackCheck, 0)
-        SurfaceIntent_Close("config_webview")
+        try SurfaceIntent_Close("config_webview")
+        catch {
+            try {
+                if FuncExists("ConfigWebView_Close")
+                    ConfigWebView_Close()
+            } catch {
+            }
+        }
+        ; 兜底：Intent 路由未真正 Hide 时强制收起设置窗
+        try {
+            if IsObject(GuiID_ConfigGUI) && GuiID_ConfigGUI.Hwnd
+                && DllCall("IsWindowVisible", "Ptr", GuiID_ConfigGUI.Hwnd)
+                && FuncExists("ConfigWebView_Close")
+                ConfigWebView_Close()
+        } catch {
+        }
         ; Restore activation runtime (especially hole mode bridge/overlay) after settings close.
         try SetTimer(RestoreActivationRuntimeAfterConfigClose, -120)
         SetTimer(LegacyConfigGui_ClearClosingFlag, -100)

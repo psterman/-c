@@ -1,4 +1,4 @@
-# 采集 v4 签核前置状态，写入 Cache/debug/v4_signoff_dashboard.json
+﻿# 采集 v4 签核前置状态，写入 Cache/debug/v4_signoff_dashboard.json
 param(
     [string]$RepoRoot = "",
     [switch]$SkipBaselineCapture,

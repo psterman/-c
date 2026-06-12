@@ -10,6 +10,9 @@ global g_CmdPal_Gui := 0
 global g_CmdPal_WV2 := 0
 global g_CmdPal_Ctrl := 0
 global g_CmdPal_Ready := false
+global g_CmdPal_WebReady := false
+global g_CmdPal_NavigationReady := false
+global g_CmdPal_WantVisible := false
 global g_CmdPal_Visible := false
 global g_CmdPal_Width := 760
 global g_CmdPal_MinHeight := 120
@@ -437,9 +440,10 @@ CommandPalette_Init() {
 }
 
 CommandPalette_OnWV2Created(ctrl) {
-    global g_CmdPal_WV2, g_CmdPal_Ctrl, g_CmdPal_Ready
+    global g_CmdPal_WV2, g_CmdPal_Ctrl, g_CmdPal_Ready, g_CmdPal_NavigationReady
     g_CmdPal_Ctrl := ctrl
     g_CmdPal_WV2 := ctrl.CoreWebView2
+    g_CmdPal_NavigationReady := false
     try g_CmdPal_Ctrl.IsVisible := true
     CommandPalette_SyncHostShape()
     CommandPalette_ApplyBounds()
@@ -469,7 +473,7 @@ CommandPalette_OnWV2Created(ctrl) {
 }
 
 CommandPalette_MaybeReloadHtml(*) {
-    global g_CmdPal_WV2, g_CmdPal_Ready, g_CmdPal_HtmlVer
+    global g_CmdPal_WV2, g_CmdPal_Ready, g_CmdPal_HtmlVer, g_CmdPal_NavigationReady
     if !IsObject(g_CmdPal_WV2) || !g_CmdPal_Ready
         return
     ver := ""
@@ -482,19 +486,22 @@ CommandPalette_MaybeReloadHtml(*) {
     if (ver = "" || ver = g_CmdPal_HtmlVer)
         return
     g_CmdPal_HtmlVer := ver
+    g_CmdPal_NavigationReady := false
     try g_CmdPal_WV2.Navigate(CommandPalette_BuildPageUrl("CommandPalette.html"))
     catch {
     }
 }
 
 CommandPalette_OnNavigationCompleted(sender, args) {
-    global g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_HtmlVer
+    global g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_HtmlVer, g_CmdPal_WebReady, g_CmdPal_NavigationReady
     try ok := args.IsSuccess
     catch {
         ok := true
     }
     if !ok
         return
+    g_CmdPal_NavigationReady := true
+    g_CmdPal_WebReady := false
     try {
         path := FuncExists("HtmlPanelPath") ? HtmlPanelPath("CommandPalette.html") : (A_ScriptDir . "\html\CommandPalette.html")
         g_CmdPal_HtmlVer := String(FileGetTime(path, "M"))
@@ -593,6 +600,7 @@ CommandPalette_CancelDeferredFocusTimers() {
     SetTimer(CommandPalette_SyncAiOnShow, 0)
     SetTimer(CommandPalette_AgentOnReady, 0)
     SetTimer(CommandPalette_AgentPushCardSync, 0)
+    SetTimer(CommandPalette_CommitShow, 0)
     SetTimer(CommandPalette_PushEmptyQuery, 0)
 }
 
@@ -1359,29 +1367,24 @@ CommandPalette_DiscreteLayoutHeight(mode := "") {
     return 0
 }
 
-CommandPalette_DoShow(*) {
-    global g_CmdPal_PendingShow, CapsLock, g_CmdPal_WV2, g_CmdPal_LayoutMode
-    if FuncExists("CapsLock_RestoreForUiTypingOpen")
-        CapsLock_RestoreForUiTypingOpen()
-    else {
-        CapsLock := false
-        try SetTimer(CapsLock_DeferredSingleTapToggle, 0)
+CommandPalette_PrepareShowLayout() {
+    global g_CmdPal_LayoutMode
+    if !(FuncExists("Nmer_PaletteDiscreteLayoutEnabled") && Nmer_PaletteDiscreteLayoutEnabled())
+        return
+    hasCards := false
+    if FuncExists("CommandPalette_AgentCardCount") {
+        try hasCards := CommandPalette_AgentCardCount() > 0
         catch {
         }
     }
-    SetTimer(CommandPalette_MaybeReloadHtml, -1)
-    CommandPalette_CenterAndShow()
-    if FuncExists("Nmer_PaletteDiscreteLayoutEnabled") && Nmer_PaletteDiscreteLayoutEnabled() {
-        if (Trim(String(g_CmdPal_LayoutMode)) = "")
-            CommandPalette_ApplyLayoutMode("list")
-        else
-            CommandPalette_ApplyLayoutMode(g_CmdPal_LayoutMode)
-    }
-    g_CmdPal_PendingShow := false
-    ; 包 1.1：显示时恢复 WebView2 正常内存档位
-    try WebView2_NotifyShown(g_CmdPal_WV2)
-    catch {
-    }
+    if hasCards || Trim(String(g_CmdPal_LayoutMode)) = "" || Trim(String(g_CmdPal_LayoutMode)) = "compact"
+        CommandPalette_ApplyLayoutMode("list")
+    else
+        CommandPalette_ApplyLayoutMode(g_CmdPal_LayoutMode)
+}
+
+CommandPalette_AfterShowBootstrap() {
+    global g_CmdPal_WV2
     SetTimer(CommandPalette_EnsureWebInputVisible, -60)
     SetTimer(CommandPalette_SyncAiOnShow, -350)
     if FuncExists("CommandPalette_AgentOnReady")
@@ -1396,10 +1399,6 @@ CommandPalette_DoShow(*) {
         && FuncExists("Nmer_WailsBridgeHealthy") && !Nmer_WailsBridgeHealthy()
         SetTimer(Nmer_AutoStartWailsBridge, -1)
     SetTimer(CommandPalette_RevealFallback, -600)
-    ; 冷启动异步 WV2：OnWV2Created→DoShow 也必须 COMMIT，否则 S3 永远 timeout
-    try SurfaceManager_ObserveShow("command_palette", Map("entry", "CommandPalette_DoShow", "ready", 1))
-    catch {
-    }
     try {
         mode := "toolbar"
         if FuncExists("FloatingToolbar_NormalizeAppearanceMode")
@@ -1412,6 +1411,58 @@ CommandPalette_DoShow(*) {
         }
     } catch {
     }
+}
+
+CommandPalette_CommitShow(*) {
+    global g_CmdPal_WV2, g_CmdPal_Visible, g_CmdPal_WantVisible
+    if !g_CmdPal_WantVisible || g_CmdPal_Visible
+        return
+    CommandPalette_PrepareShowLayout()
+    CommandPalette_CenterAndShow()
+    try WebView2_NotifyShown(g_CmdPal_WV2)
+    catch {
+    }
+    CommandPalette_AfterShowBootstrap()
+    try SurfaceManager_ObserveShow("command_palette", Map("entry", "CommandPalette_CommitShow", "ready", 1))
+    catch {
+    }
+}
+
+CommandPalette_DoShow(*) {
+    global g_CmdPal_PendingShow, CapsLock, g_CmdPal_WV2, g_CmdPal_WebReady, g_CmdPal_WantVisible
+    if FuncExists("CapsLock_RestoreForUiTypingOpen")
+        CapsLock_RestoreForUiTypingOpen()
+    else {
+        CapsLock := false
+        try SetTimer(CapsLock_DeferredSingleTapToggle, 0)
+        catch {
+        }
+    }
+    SetTimer(CommandPalette_MaybeReloadHtml, -1)
+    g_CmdPal_WantVisible := true
+    g_CmdPal_PendingShow := false
+    if g_CmdPal_WebReady {
+        CommandPalette_CommitShow()
+        return
+    }
+    SetTimer(CommandPalette_WaitReadyToShow, -120)
+}
+
+CommandPalette_WaitReadyToShow(*) {
+    global g_CmdPal_WantVisible, g_CmdPal_Visible, g_CmdPal_WebReady, g_CmdPal_NavigationReady, g_CmdPal_ShowRequestedTick
+    if !g_CmdPal_WantVisible || g_CmdPal_Visible
+        return
+    if g_CmdPal_WebReady {
+        CommandPalette_CommitShow()
+        return
+    }
+    elapsed := (g_CmdPal_ShowRequestedTick > 0) ? Max(0, A_TickCount - g_CmdPal_ShowRequestedTick) : 0
+    ; HTML 已内联最小骨架后，导航完成即可先亮出 loading shell，避免继续黑屏等待脚本完全 ready。
+    if (g_CmdPal_NavigationReady && elapsed >= 120) || (elapsed >= 2200) {
+        CommandPalette_CommitShow()
+        return
+    }
+    SetTimer(CommandPalette_WaitReadyToShow, -120)
 }
 
 CommandPalette_RevealFallback(*) {
@@ -1515,6 +1566,7 @@ CommandPalette_Hide(meta := 0) {
     }
     g_CmdPal_Visible := false
     g_CmdPal_Revealed := false
+    g_CmdPal_WantVisible := false
     g_CmdPal_HasAnchor := false
     ; 包 1.1：隐藏时降 WebView2 内存档位并 RESET_STATE
     try WebView2_NotifyHidden(g_CmdPal_WV2)
@@ -1548,6 +1600,8 @@ CommandPalette_Dispose(reason := "") {
     g_CmdPal_Ctrl := 0
     g_CmdPal_WV2 := 0
     g_CmdPal_Ready := false
+    g_CmdPal_WebReady := false
+    g_CmdPal_WantVisible := false
     g_CmdPal_Visible := false
     g_CmdPal_Revealed := false
     SurfaceManager_DestroyGui(g_CmdPal_Gui)
@@ -1791,6 +1845,14 @@ CommandPalette_DeliverFtbPayload(payload) {
         return false
     typ := String(payload.Get("type", ""))
     if (typ = "host_palette_agent_stream") && IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady {
+        try {
+            if FuncExists("WebView_QueuePayload")
+                WebView_QueuePayload(g_FTB_WV2, payload)
+            else
+                g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
+            return true
+        } catch {
+        }
         if FuncExists("FloatingToolbar_StartPaletteAgentStream") {
             try {
                 if FloatingToolbar_StartPaletteAgentStream(payload)
@@ -1801,7 +1863,17 @@ CommandPalette_DeliverFtbPayload(payload) {
     }
     mode := CommandPalette_FtbTransportMode()
     if (mode = "hybrid") {
-        if IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady {
+        if (typ = "host_palette_agent_stream") && IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady {
+            try {
+                if FuncExists("WebView_QueuePayload")
+                    WebView_QueuePayload(g_FTB_WV2, payload)
+                else
+                    g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
+                return true
+            } catch {
+            }
+        }
+        if IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady && typ != "host_palette_agent_stream" {
             try {
                 if FuncExists("WebView_QueuePayload")
                     WebView_QueuePayload(g_FTB_WV2, payload)
@@ -3351,12 +3423,16 @@ CommandPalette_DispatchWebMessage(msg) {
         return
     typ := msg.Has("type") ? String(msg["type"]) : ""
     if (typ = "palette_ready") {
+        global g_CmdPal_WebReady, g_CmdPal_WantVisible, g_CmdPal_Visible, g_CmdPal_PendingShow
+        g_CmdPal_WebReady := true
+        SetTimer(CommandPalette_CommitShow, 0)
         CommandPalette_PerfLog("web_ready")
         CommandPalette_PushPaletteBootstrap()
         CommandPalette_PushThemeToWeb()
         SetTimer(CommandPalette_PushAiProviders, -40)
         if FuncExists("CommandPalette_AgentOnReady")
-            SetTimer(CommandPalette_AgentOnReady, -60)
+            SetTimer(CommandPalette_AgentOnReady, -20)
+        g_CmdPal_PendingShow := false
         SetTimer(CommandPalette_Reveal, -1)
         SetTimer(CommandPalette_DeferredFocus, -80)
         SetTimer(CommandPalette_SyncHostShape, -1)
@@ -5531,11 +5607,9 @@ CommandPalette_FlushPendingAiSendIfReady() {
 Esc:: {
     if FuncExists("CommandPalette_IsAgentRunning") && CommandPalette_IsAgentRunning() {
         if FuncExists("CommandPalette_AgentCancel")
-            CommandPalette_AgentCancel("")
-        return
-    }
-    if CommandPalette_IsAiStreaming()
-        CommandPalette_HandoffAiToToolbar(false)
+            SetTimer(CommandPalette_AgentCancel.Bind(""), -1)
+    } else if CommandPalette_IsAiStreaming()
+        SetTimer(() => CommandPalette_HandoffAiToToolbar(false), -1)
     CommandPalette_Hide()
 }
 #HotIf

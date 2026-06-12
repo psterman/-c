@@ -4439,6 +4439,7 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
     let studioModalBound = false;
 
     let studioOpenClawImportPending = null;
+    const studioOpenClawPendingByReqId = new Map();
     let studioOpenClawImportRunning = false;
     let studioOpenClawStatusRefreshGen = 0;
     let studioHermesImportPending = null;
@@ -4479,28 +4480,32 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       el.textContent = text;
     }
 
+    function finishStudioOpenClawPending(reqId, payload, err) {
+      const rid = String(reqId || "");
+      const entry = rid ? studioOpenClawPendingByReqId.get(rid) : studioOpenClawImportPending;
+      if (!entry) return false;
+      clearTimeout(entry.timer);
+      if (rid) studioOpenClawPendingByReqId.delete(rid);
+      if (studioOpenClawImportPending === entry) studioOpenClawImportPending = null;
+      if (err) entry.reject(err);
+      else entry.resolve(payload || {});
+      return true;
+    }
+
     function requestStudioOpenClawStatusRefresh(force) {
       return new Promise((resolve, reject) => {
         const reqId = "oc_stat_" + Date.now();
         const timer = setTimeout(() => {
-          if (studioOpenClawImportPending && studioOpenClawImportPending.reqId === reqId) {
-            studioOpenClawImportPending = null;
-            reject(new Error("OpenClaw 状态检测超时"));
-          }
-        }, 20000);
-        studioOpenClawImportPending = {
+          if (!finishStudioOpenClawPending(reqId, null, new Error("OpenClaw 状态检测超时（12s）。请确认 Gateway 已启动：openclaw gateway restart"))) return;
+        }, 12000);
+        const entry = {
           reqId,
-          resolve: (d) => {
-            clearTimeout(timer);
-            studioOpenClawImportPending = null;
-            resolve(d || {});
-          },
-          reject: (e) => {
-            clearTimeout(timer);
-            studioOpenClawImportPending = null;
-            reject(e);
-          }
+          resolve,
+          reject,
+          timer
         };
+        studioOpenClawImportPending = entry;
+        studioOpenClawPendingByReqId.set(reqId, entry);
         post({ type: "refreshOpenClawStudioStatus", force: !!force, reqId });
       });
     }
@@ -4521,7 +4526,14 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
         const dbg = String(msg.debug || msg.gatewayError || "").trim();
         state.studioOpenClawStatus.probeError = dbg
           ? "未读到 Gateway Token（" + dbg + "）"
-          : "未读到 Gateway Token（已尝试环境变量、openclaw.json、openclaw CLI、device-auth；请重启牛马后重试）";
+          : "未读到 Gateway Token（已尝试 openclaw.json 片段读取、device-auth、CLI；请重载牛马后重试）";
+      } else if (msg.gatewayOk === false) {
+        const gwErr = String(msg.gatewayError || "").trim();
+        state.studioOpenClawStatus.probeError = gwErr
+          ? ("Gateway 未就绪：" + gwErr)
+          : "Gateway 未就绪：请在本机终端执行 openclaw gateway restart";
+      } else {
+        state.studioOpenClawStatus.probeError = "";
       }
       updateStudioOpenClawQuickStatusDom();
       return token;
@@ -4535,11 +4547,23 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
         const stat = await requestStudioOpenClawStatusRefresh(false);
         if (gen !== studioOpenClawStatusRefreshGen) return;
         applyStudioOpenClawStatusPayload(stat);
+        const token = normalizeStudioApiKey(stat.token || stat.niumaToken || "");
+        if (!token) {
+          setStatus(state.studioOpenClawStatus.probeError || "未读到 Gateway Token", "err");
+        } else if (stat.gatewayOk === false) {
+          setStatus(
+            stat.gatewayError || "OpenClaw Gateway 未响应，请在本机终端执行 openclaw gateway restart",
+            "err"
+          );
+        } else if (stat.gatewayOk === true) {
+          setStatus("OpenClaw Gateway 已就绪", "ok");
+        }
       } catch (e) {
         if (gen !== studioOpenClawStatusRefreshGen) return;
         state.studioOpenClawStatus = state.studioOpenClawStatus || {};
         state.studioOpenClawStatus.probeError = e?.message || "检测失败";
         updateStudioOpenClawQuickStatusDom();
+        if (state.activeTab === "customize") setStatus(state.studioOpenClawStatus.probeError, "err");
       }
     }
 
@@ -4858,24 +4882,11 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       return new Promise((resolve, reject) => {
         const reqId = "oc_probe_" + Date.now();
         const timer = setTimeout(() => {
-          if (studioOpenClawImportPending && studioOpenClawImportPending.reqId === reqId) {
-            studioOpenClawImportPending = null;
-            reject(new Error("读取本机 OpenClaw 配置超时"));
-          }
-        }, 8000);
-        studioOpenClawImportPending = {
-          reqId,
-          resolve: (d) => {
-            clearTimeout(timer);
-            studioOpenClawImportPending = null;
-            resolve(d || {});
-          },
-          reject: (e) => {
-            clearTimeout(timer);
-            studioOpenClawImportPending = null;
-            reject(e);
-          }
-        };
+          if (!finishStudioOpenClawPending(reqId, null, new Error("读取本机 OpenClaw 配置超时"))) return;
+        }, 12000);
+        const entry = { reqId, resolve, reject, timer };
+        studioOpenClawImportPending = entry;
+        studioOpenClawPendingByReqId.set(reqId, entry);
         post({ type: "openclaw_probe_token", force: !!force, reqId });
       });
     }
@@ -6454,8 +6465,14 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
 </div>
 </details>`;
         bindStudioLlmCardsUi(activeProv);
-        refreshStudioHermesStatusAsync();
-        refreshStudioOpenClawStatusAsync();
+        (async function () {
+          try {
+            await refreshStudioHermesStatusAsync();
+          } catch (_) {}
+          try {
+            await refreshStudioOpenClawStatusAsync();
+          } catch (_) {}
+        })();
         if (!getStudioApiKeyForProvider("openclaw")) {
           state._studioSyncSilent = true;
           post({ type: "invokeAction", op: "syncNiumaChatLlmToStudio" });
@@ -6971,10 +6988,12 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           gatewayOk: msg.gatewayOk,
           gatewayError: String(msg.gatewayError || "").trim(),
           debug: String(msg.debug || "").trim(),
-          force: !!msg.force
+          force: !!msg.force,
+          reqId: String(msg.reqId || "").trim()
         };
+        if (payload.reqId && finishStudioOpenClawPending(payload.reqId, payload, null)) return;
         if (studioOpenClawImportPending) {
-          studioOpenClawImportPending.resolve(payload);
+          finishStudioOpenClawPending(studioOpenClawImportPending.reqId, payload, null);
           return;
         }
         applyStudioOpenClawStatusPayload(payload);
@@ -7326,6 +7345,9 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       render();
       post({ type: "ready" });
       setStatus("正在连接...");
+      setTimeout(function () {
+        if (!initDataReceived) setStatus("连接超时：请重载牛马.ahk 或关闭设置后重开", "err");
+      }, 12000);
     } else {
       render();
       setStatus("预览模式");

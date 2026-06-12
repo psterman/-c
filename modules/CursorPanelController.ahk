@@ -1179,7 +1179,7 @@ CapsLock:: {
     PressDuration := A_TickCount - CapsLockPressTime
     IsShortTap := (PressDuration <= 300)
     IsCapsDoubleClick := false
-    if (IsShortTap && LastCapsLockTapTick > 0 && (A_TickCount - LastCapsLockTapTick <= 450)) {
+    if (IsShortTap && LastCapsLockTapTick > 0 && (A_TickCount - LastCapsLockTapTick <= 600)) {
         IsCapsDoubleClick := true
         LastCapsLockTapTick := 0
         SetTimer(CapsLock_DeferredSingleTapToggle, 0)

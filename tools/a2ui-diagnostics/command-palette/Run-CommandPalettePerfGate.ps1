@@ -6,6 +6,7 @@ param(
     [switch]$ExpectDiscreteLayout,
     [int]$MinRows = 10,
     [int]$MinPaintSamples = 5,
+    [int]$SkipFirstPaintSamples = 0,
     [int]$MaxContinuousResize = 0,
     [int]$MaxLayoutModeResize = 40
 )
@@ -61,9 +62,13 @@ if ($ExpectDiscreteLayout) { $discreteEnabled = $true }
 $rows = @(Get-CpPerfLogRows $LogPath)
 $pipeline = Invoke-CpPerfPipelineTest -Rows $rows -LogPath $LogPath -MinPaintSamples $MinPaintSamples -MinRows $MinRows
 
-$localStats = Get-CpPerfEventStats $rows @("local_results_painted")
-$queryStats = Get-CpPerfEventStats $rows @("query_to_paint")
-$showStats = Get-CpPerfEventStats $rows @("show_to_visible")
+$perfRows = if ($SkipFirstPaintSamples -gt 0) {
+    @(Get-CpPerfRowsSkipFirstPaintEvents -Rows $rows -SkipFirst $SkipFirstPaintSamples)
+} else { $rows }
+
+$localStats = Get-CpPerfEventStats $perfRows @("local_results_painted")
+$queryStats = Get-CpPerfEventStats $perfRows @("query_to_paint")
+$showStats = Get-CpPerfEventStats $gateRows @("show_to_visible")
 
 $stats = @{
     local_results_painted = $localStats
@@ -148,6 +153,7 @@ $report = [ordered]@{
     failures = @($pipeline.failures) + @($perfFailures)
     failReason = $failReason
     overallPass = $overallPass
+    skipFirstPaintSamples = $SkipFirstPaintSamples
     generatedAt = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
 }
 

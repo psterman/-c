@@ -22,18 +22,31 @@ $baselinePath = Join-Path $debugDir "a2ui_memory_baseline.json"
 if (-not (Test-Path $baselinePath)) { throw "missing baseline: $baselinePath" }
 
 $bl = Get-Content $baselinePath -Raw -Encoding UTF8 | ConvertFrom-Json
+$flagsPath = Join-Path $RepoRoot "local\nmer-flags.json"
+$flagsSnap = $null
+if (Test-Path $flagsPath) {
+    try { $flagsSnap = Get-Content $flagsPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
+}
 $ref = [ordered]@{
-    capturedAt         = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    mode               = $Mode
-    repoRoot           = $RepoRoot
-    totalPrivateMiB    = [double]$bl.processes.totalPrivateMiB
-    emptyLoadPrivateMiB = [double]$bl.processes.emptyLoadPrivateMiB
-    hubPrivateMiB      = $null
-    wailsPrivateMiB    = $null
-    ahkPrivateMiB      = $null
-    webview2_count     = [int]$bl.processes.webview2_count
-    webview2_host_roots = [int]$bl.processes.webview2_host_root_count
-    baseline           = $bl
+    capturedAt            = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    mode                  = $Mode
+    referenceKind         = $Mode
+    referenceFile         = "hybrid_signoff_reference_$Mode.json"
+    repoRoot              = $RepoRoot
+    totalPrivateMiB       = [double]$bl.processes.totalPrivateMiB
+    emptyLoadPrivateMiB   = [double]$bl.processes.emptyLoadPrivateMiB
+    hubPrivateMiB         = $null
+    wailsPrivateMiB       = $null
+    ahkPrivateMiB         = $null
+    ahkPid                = $null
+    nmerWailsRunning      = $false
+    webview2_count        = [int]$bl.processes.webview2_count
+    webview2_host_roots   = [int]$bl.processes.webview2_host_root_count
+    webview2_descendants  = if ($bl.processes.webview2_descendant_count) { [int]$bl.processes.webview2_descendant_count } else { [int]$bl.processes.webview2_count }
+    searchCorePhase       = $null
+    searchCorePrivateMiB  = $null
+    flags                 = $null
+    baseline              = $bl
 }
 $hub = Get-Process -Name "nmer-hub" -ErrorAction SilentlyContinue | Select-Object -First 1
 $wails = Get-Process -Name "nmer-wails" -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -45,12 +58,27 @@ $ahk = Get-Process -Name "AutoHotkey64","AutoHotkey32" -ErrorAction SilentlyCont
 } | Select-Object -First 1
 if ($hub) { $hub.Refresh(); $ref.hubPrivateMiB = [math]::Round($hub.PrivateMemorySize64 / 1MB, 2) }
 if ($wails) { $wails.Refresh(); $ref.wailsPrivateMiB = [math]::Round($wails.PrivateMemorySize64 / 1MB, 2) }
-if ($ahk) { $ahk.Refresh(); $ref.ahkPrivateMiB = [math]::Round($ahk.PrivateMemorySize64 / 1MB, 2) }
+if ($ahk) {
+    $ahk.Refresh()
+    $ref.ahkPrivateMiB = [math]::Round($ahk.PrivateMemorySize64 / 1MB, 2)
+    $ref.ahkPid = [int]$ahk.Id
+}
+if ($wails) { $ref.nmerWailsRunning = $true }
 
 $scSnap = Get-SearchCoreSignoffSnapshot
 $ref.searchCore = $scSnap.searchCore
+$ref.searchCorePhase = [string]$scSnap.searchCore.scanPhase
+$ref.searchCorePrivateMiB = $scSnap.searchCore.privateMiB
 $ref.fulltextReady = $scSnap.fulltextReady
 $ref.indexLifecycle = $scSnap.indexLifecycle
+
+if ($flagsSnap -and $flagsSnap.wailsBridge) {
+    $ref.flags = [ordered]@{
+        floatingToolbarHost = [string]$flagsSnap.wailsBridge.floatingToolbarHost
+        sidecarHost         = [string]$flagsSnap.wailsBridge.sidecarHost
+        commandPaletteHost  = [string]$flagsSnap.wailsBridge.commandPaletteHost
+    }
+}
 
 $ref | ConvertTo-Json -Depth 8 | Set-Content -Path $OutPath -Encoding UTF8
 Write-Host "hybrid memory reference ($Mode) -> $OutPath totalPrivateMiB=$($ref.totalPrivateMiB) hub=$($ref.hubPrivateMiB) scanPhase=$($scSnap.searchCore.scanPhase)"

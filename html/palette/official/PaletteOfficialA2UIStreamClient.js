@@ -300,13 +300,20 @@
 
   function shouldConnect(cfg) {
     cfg = cfg || root.nmerPaletteBridgeConfig || {};
-    if (root.PaletteOfficialA2UIGray && PaletteOfficialA2UIGray.isOfficialGloballyEnabled) {
-      return PaletteOfficialA2UIGray.isOfficialGloballyEnabled(cfg) && PaletteOfficialA2UIGray.isBridgeReady(cfg);
-    }
     var rb = cfg.rollback || {};
     if (rb.forceNmerOnly === true || rb.forceNmerOnly === 1) return false;
     var wb = cfg.wailsBridge || {};
     if (wb.enabled === false || wb.healthy === false) return false;
+    var pl = cfg.palette || {};
+    if (String(pl.agentTransport || "").toLowerCase() === "hub") {
+      if (root.PaletteOfficialA2UIGray && PaletteOfficialA2UIGray.isBridgeReady) {
+        return PaletteOfficialA2UIGray.isBridgeReady(cfg);
+      }
+      return true;
+    }
+    if (root.PaletteOfficialA2UIGray && PaletteOfficialA2UIGray.isOfficialGloballyEnabled) {
+      return PaletteOfficialA2UIGray.isOfficialGloballyEnabled(cfg) && PaletteOfficialA2UIGray.isBridgeReady(cfg);
+    }
     var oa = cfg.officialA2ui || {};
     return oa.enabled === true || oa.enabled === 1 || String(oa.enabled) === "1";
   }

@@ -2471,6 +2471,166 @@ ConfigWebView_ProbeHermesApiServer(base, token, timeoutMs := 12000) {
     return Map("ok", false, "error", "Hermes 探测模块未加载", "elapsedMs", 0)
 }
 
+ConfigWebView_RefreshOpenClawStudioStatus_Deferred(msg) {
+    try ConfigWebView_RunOpenClawProbe(msg, "refreshOpenClawStudioStatus")
+    catch as eDef {
+        reqIdOut := (msg is Map && msg.Has("reqId")) ? String(msg["reqId"]) : ""
+        ConfigWebView_Send(Map(
+            "type", "openclaw_studio_status",
+            "token", "",
+            "source", "",
+            "host", "127.0.0.1",
+            "port", 18789,
+            "niumaToken", "",
+            "gatewayOk", false,
+            "gatewayError", eDef.Message,
+            "debug", "deferred_err",
+            "force", !!(msg is Map && msg.Has("force") && msg["force"]),
+            "reqId", reqIdOut
+        ))
+    }
+}
+
+ConfigWebView_RunOpenClawProbe(msg, action) {
+    token := ""
+    source := ""
+    host := "127.0.0.1"
+    port := 18789
+    niumaKey := ""
+    gwOk := false
+    gwErr := ""
+    info := Map()
+    quickDbg := ""
+    try {
+        envTok := Trim(String(EnvGet("OPENCLAW_GATEWAY_TOKEN")))
+        if (envTok != "") {
+            token := envTok
+            source := "env:OPENCLAW_GATEWAY_TOKEN"
+        }
+    } catch {
+    }
+    if (token = "") {
+        try {
+            fb := ConfigWebView_QuickReadOpenClawGatewayToken()
+            if (fb is Map) {
+                token := Trim(String(fb.Get("token", "")))
+                if (token != "") {
+                    source := String(fb.Get("source", ""))
+                    host := Trim(String(fb.Get("host", host)))
+                    port := Integer(fb.Get("port", port))
+                } else {
+                    quickDbg := "quick=empty"
+                }
+            } else {
+                quickDbg := "quick=not_map"
+            }
+        } catch as eQuick {
+            quickDbg := "quick_err=" . eQuick.Message
+        }
+    }
+    if (token = "") {
+        try {
+            fastProbe := (action = "refreshOpenClawStudioStatus")
+            if FuncExists("UserStudio_ProbeOpenClawGatewayToken") {
+                info := UserStudio_ProbeOpenClawGatewayToken(fastProbe)
+                if (info is Map) {
+                    token := Trim(String(info.Get("token", "")))
+                    source := String(info.Get("source", ""))
+                    host := Trim(String(info.Get("host", host)))
+                    port := Integer(info.Get("port", port))
+                }
+            }
+        } catch as e1 {
+            try OutputDebug("[ConfigWebView] openclaw probe failed: " . e1.Message)
+            catch {
+            }
+        }
+    }
+    try {
+        if FuncExists("UserStudio_LogOpenClawProbe")
+            UserStudio_LogOpenClawProbe(
+                "probe_result tokenLen=" . StrLen(token),
+                "source=" . source,
+                "quickDbg=" . quickDbg,
+                "USERPROFILE=" . EnvGet("USERPROFILE"),
+                "func=" . (FuncExists("UserStudio_ProbeOpenClawGatewayToken") ? "yes" : "no"),
+                "literal=" . (FuncExists("UserStudio_ReadOpenClawAuthTokenLiteral") ? "yes" : "no")
+            )
+    } catch {
+    }
+    try {
+        if FuncExists("UserStudio_ReadNiumaOpenClawKey")
+            niumaKey := UserStudio_ReadNiumaOpenClawKey()
+    } catch {
+    }
+    if (token = "" && niumaKey != "") {
+        token := niumaKey
+        source := "niuma_chat_llm.json"
+    }
+    if (token != "") {
+        base := "http://" . host . ":" . port
+        pingMs := (action = "refreshOpenClawStudioStatus") ? 12000 : 8000
+        try {
+            r := ConfigWebView_ProbeOpenClawGateway(base, token, pingMs)
+            gwOk := !!r.Get("ok", false)
+            gwErr := String(r.Get("error", ""))
+        } catch as e2 {
+            gwErr := e2.Message
+        }
+        try {
+            if FuncExists("UserStudio_LogOpenClawProbe")
+                UserStudio_LogOpenClawProbe(
+                    "gateway_test ok=" . (gwOk ? "1" : "0"),
+                    "err=" . gwErr,
+                    "pingMs=" . pingMs,
+                    "host=" . host . ":" . port
+                )
+        } catch {
+        }
+    }
+    dbg := quickDbg
+    if (token = "") {
+        home := ""
+        if FuncExists("UserStudio_ResolveOpenClawUserHome")
+            try home := UserStudio_ResolveOpenClawUserHome()
+        dbg := (dbg != "" ? dbg . " | " : "") . "home=" . home
+        if (info is Map && info.Has("tried") && info["tried"] is Array) {
+            for _, p in info["tried"]
+                dbg .= " | " . p
+        }
+    }
+    reqIdOut := (msg is Map && msg.Has("reqId")) ? String(msg["reqId"]) : ""
+    if (action = "refreshOpenClawStudioStatus") {
+        ConfigWebView_Send(Map(
+            "type", "openclaw_studio_status",
+            "token", token,
+            "source", source,
+            "host", host,
+            "port", port,
+            "niumaToken", niumaKey,
+            "gatewayOk", gwOk,
+            "gatewayError", gwErr,
+            "debug", dbg,
+            "force", !!(msg is Map && msg.Has("force") && msg["force"]),
+            "reqId", reqIdOut
+        ))
+    } else {
+        ConfigWebView_Send(Map(
+            "type", "openclaw_host_token_probe",
+            "token", token,
+            "source", source,
+            "host", host,
+            "port", port,
+            "niumaToken", niumaKey,
+            "gatewayOk", gwOk,
+            "gatewayError", gwErr,
+            "debug", dbg,
+            "force", !!(msg is Map && msg.Has("force") && msg["force"]),
+            "reqId", reqIdOut
+        ))
+    }
+}
+
 ConfigWebView_ProbeOpenClawGateway(base, token, timeoutMs := 12000) {
     if FuncExists("UserStudio_ProbeOpenClawGateway") {
         try return UserStudio_ProbeOpenClawGateway(base, token, timeoutMs)
@@ -3091,140 +3251,10 @@ ConfigWebView_OnMessage(sender, args) {
                 "error", String(rr.Get("error", "")),
                 "elapsedMs", Integer(rr.Get("elapsedMs", 0))
             ))
-        case "openclaw_probe_token", "niuma_openclaw_probe_token", "refreshOpenClawStudioStatus":
-            token := ""
-            source := ""
-            host := "127.0.0.1"
-            port := 18789
-            niumaKey := ""
-            gwOk := false
-            gwErr := ""
-            info := Map()
-            quickDbg := ""
-            try {
-                envTok := Trim(String(EnvGet("OPENCLAW_GATEWAY_TOKEN")))
-                if (envTok != "") {
-                    token := envTok
-                    source := "env:OPENCLAW_GATEWAY_TOKEN"
-                }
-            } catch {
-            }
-            if (token = "") {
-                try {
-                    fb := ConfigWebView_QuickReadOpenClawGatewayToken()
-                    if (fb is Map) {
-                        token := Trim(String(fb.Get("token", "")))
-                        if (token != "") {
-                            source := String(fb.Get("source", ""))
-                            host := Trim(String(fb.Get("host", host)))
-                            port := Integer(fb.Get("port", port))
-                        } else {
-                            quickDbg := "quick=empty"
-                        }
-                    } else {
-                        quickDbg := "quick=not_map"
-                    }
-                } catch as eQuick {
-                    quickDbg := "quick_err=" . eQuick.Message
-                }
-            }
-            if (token = "") {
-                try {
-                    if FuncExists("UserStudio_ProbeOpenClawGatewayToken") {
-                        info := UserStudio_ProbeOpenClawGatewayToken()
-                        if (info is Map) {
-                            token := Trim(String(info.Get("token", "")))
-                            source := String(info.Get("source", ""))
-                            host := Trim(String(info.Get("host", host)))
-                            port := Integer(info.Get("port", port))
-                        }
-                    }
-                } catch as e1 {
-                    try OutputDebug("[ConfigWebView] openclaw probe failed: " . e1.Message)
-                    catch {
-                    }
-                }
-            }
-            try {
-                if FuncExists("UserStudio_LogOpenClawProbe")
-                    UserStudio_LogOpenClawProbe(
-                        "probe_result tokenLen=" . StrLen(token),
-                        "source=" . source,
-                        "quickDbg=" . quickDbg,
-                        "USERPROFILE=" . EnvGet("USERPROFILE"),
-                        "func=" . (FuncExists("UserStudio_ProbeOpenClawGatewayToken") ? "yes" : "no"),
-                        "literal=" . (FuncExists("UserStudio_ReadOpenClawAuthTokenLiteral") ? "yes" : "no")
-                    )
-            } catch {
-            }
-            try {
-                if FuncExists("UserStudio_ReadNiumaOpenClawKey")
-                    niumaKey := UserStudio_ReadNiumaOpenClawKey()
-            } catch {
-            }
-            if (token = "" && niumaKey != "") {
-                token := niumaKey
-                source := "niuma_chat_llm.json"
-            }
-            if (token != "") {
-                base := "http://" . host . ":" . port
-                pingMs := (action = "refreshOpenClawStudioStatus") ? 12000 : 6000
-                try {
-                    r := ConfigWebView_ProbeOpenClawGateway(base, token, pingMs)
-                    gwOk := !!r.Get("ok", false)
-                    gwErr := String(r.Get("error", ""))
-                } catch as e2 {
-                    gwErr := e2.Message
-                }
-                try {
-                    if FuncExists("UserStudio_LogOpenClawProbe")
-                        UserStudio_LogOpenClawProbe(
-                            "gateway_test ok=" . (gwOk ? "1" : "0"),
-                            "err=" . gwErr,
-                            "pingMs=" . pingMs,
-                            "host=" . host . ":" . port
-                        )
-                } catch {
-                }
-            }
-            dbg := quickDbg
-            if (token = "") {
-                home := ""
-                if FuncExists("UserStudio_ResolveOpenClawUserHome")
-                    try home := UserStudio_ResolveOpenClawUserHome()
-                dbg := (dbg != "" ? dbg . " | " : "") . "home=" . home
-                if (info is Map && info.Has("tried") && info["tried"] is Array) {
-                    for _, p in info["tried"]
-                        dbg .= " | " . p
-                }
-            }
-            if (action = "refreshOpenClawStudioStatus") {
-                ConfigWebView_Send(Map(
-                    "type", "openclaw_studio_status",
-                    "token", token,
-                    "source", source,
-                    "host", host,
-                    "port", port,
-                    "niumaToken", niumaKey,
-                    "gatewayOk", gwOk,
-                    "gatewayError", gwErr,
-                    "debug", dbg,
-                    "force", !!(msg.Has("force") && msg["force"])
-                ))
-            } else {
-                ConfigWebView_Send(Map(
-                    "type", "openclaw_host_token_probe",
-                    "token", token,
-                    "source", source,
-                    "host", host,
-                    "port", port,
-                    "niumaToken", niumaKey,
-                    "gatewayOk", gwOk,
-                    "gatewayError", gwErr,
-                    "debug", dbg,
-                    "force", !!(msg.Has("force") && msg["force"])
-                ))
-            }
+        case "refreshOpenClawStudioStatus":
+            SetTimer(ConfigWebView_RefreshOpenClawStudioStatus_Deferred.Bind(msg), -1)
+        case "openclaw_probe_token", "niuma_openclaw_probe_token":
+            ConfigWebView_RunOpenClawProbe(msg, action)
         case "testUserStudioLlm":
             payload := ConfigWebView_ParseUserStudioSavePayload(msg)
             if !(payload is Map)

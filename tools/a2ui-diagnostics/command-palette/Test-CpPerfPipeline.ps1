@@ -34,6 +34,24 @@ function Test-CpPerfValidDurationRow($row) {
     return $true
 }
 
+function Get-CpPerfRowsSkipFirstPaintEvents([array]$Rows, [int]$SkipFirst = 0) {
+    if ($SkipFirst -le 0) { return $Rows }
+    $dropTs = New-Object 'System.Collections.Generic.HashSet[long]'
+    foreach ($evName in @("local_results_painted", "query_to_paint")) {
+        $items = @($Rows | Where-Object { $_.event -eq $evName } | Sort-Object { [long]$_.ts })
+        $n = [Math]::Min($SkipFirst, $items.Count)
+        for ($i = 0; $i -lt $n; $i++) {
+            [void]$dropTs.Add([long]$items[$i].ts)
+        }
+    }
+    if ($dropTs.Count -eq 0) { return $Rows }
+    return @($Rows | Where-Object {
+        $ev = [string]$_.event
+        if ($ev -ne "local_results_painted" -and $ev -ne "query_to_paint") { return $true }
+        return -not $dropTs.Contains([long]$_.ts)
+    })
+}
+
 function Get-CpPerfEventStats([array]$rows, [string[]]$eventNames) {
     $valid = @($rows | Where-Object {
         $ev = [string]$_.event

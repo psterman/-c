@@ -36,7 +36,8 @@
     "discreteLayout": false,
     "streamBatching": false,
     "stateStore": false,
+    "stateStoreShadow": false,
     "agentTransport": "auto",
-    "_comment": "CP0-CP2: fastInput/discreteLayout/streamBatching；CP3: stateStore=摘要同步+防抖持久化；CP4: agentTransport=auto|hub|ftb"
+    "_comment": "CP0-CP2: fastInput/discreteLayout/streamBatching；CP3: stateStore=摘要 DTO；CP3a: stateStoreShadow=hub 影子写入；CP3b: 两者同开→summary 写入 Go；CP4: agentTransport=auto|hub|ftb"
   }
 }

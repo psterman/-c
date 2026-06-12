@@ -52,6 +52,8 @@
     .pill.fail { background: rgba(248,81,73,0.2); color: var(--fail); }
     .pill.pending { background: rgba(210,153,34,0.2); color: var(--warn); }
     .pill.improvement { background: rgba(63,185,80,0.25); color: var(--ok); }
+    .pill.aux-warn { background: rgba(210,153,34,0.22); color: var(--warn); }
+    .pill.deferred { background: rgba(139,148,158,0.22); color: var(--muted); }
     .banner-warn {
       border: 1px solid rgba(210,153,34,0.45); background: rgba(210,153,34,0.08);
       border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; font-size: 12px; color: var(--warn);
@@ -114,7 +116,7 @@
 </head>
 <body>
   <script>window.__HYBRID_SIGNOFF_DATA__ = {
-    "capturedAt":  "2026-06-12T00:12:11Z",
+    "capturedAt":  "2026-06-12T01:43:57Z",
     "signoffMode":  "live",
     "manualSignoffMode":  "warm-session",
     "repoRoot":  "C:\\Users\\Administrator\\Desktop\\牛马nmer",
@@ -125,22 +127,26 @@
     "productPass":  true,
     "memoryDeltaLimitMiB":  80,
     "warnings":  [
-                     "refDrift 34.33% exceeds 10% (auxiliary; warm-session does not block on ref)"
+                     "refDrift 29.37% exceeds 10% (auxiliary; warm-session does not block on ref)"
                  ],
     "ui01Recovery":  {
                          "functionalPass":  true,
-                         "sessionDriftPct":  -1.2,
-                         "refDriftPct":  34.33,
+                         "sessionDriftPct":  -18.83,
+                         "refDriftPct":  29.37,
                          "sessionRecoveryPass":  true,
                          "referenceBaselinePass":  false,
                          "signoffMode":  "warm-session",
                          "warnings":  [
-                                          "refDrift 34.33% exceeds 10% (auxiliary; warm-session does not block on ref)"
+                                          "refDrift 29.37% exceeds 10% (auxiliary; warm-session does not block on ref)"
                                       ],
                          "pass":  true,
-                         "memBeforeMiB":  1493.64,
-                         "memAfterMiB":  1475.69,
-                         "hybridReferenceMiB":  1098.56,
+                         "memBeforeMiB":  1888.43,
+                         "memAfterMiB":  1532.78,
+                         "hybridReferenceMiB":  1184.8,
+                         "referenceKind":  "hybrid",
+                         "referenceFile":  "hybrid_signoff_reference_hybrid.json",
+                         "referenceCapturedAt":  "2026-06-12T01:40:06Z",
+                         "searchCorePhase":  "indexing",
                          "coldStartConfirmed":  null
                      },
     "pipeline":  [
@@ -189,10 +195,10 @@
                       "title":  "Sidecar hub",
                       "pass":  true,
                       "metrics":  {
-                                      "nmer_hub":  20820,
+                                      "nmer_hub":  24932,
                                       "provider":  "fake",
                                       "health_ok":  true,
-                                      "hubPrivateMiB":  51.59,
+                                      "hubPrivateMiB":  51.31,
                                       "nmer_wails":  null
                                   }
                   },
@@ -204,7 +210,7 @@
                                       "failureReasons":  {
 
                                                          },
-                                      "capturedAt":  "2026-06-12 08:12:05"
+                                      "capturedAt":  "2026-06-12 09:43:51"
                                   }
                   },
                   {
@@ -244,7 +250,7 @@
                       "metrics":  {
                                       "presentationMode":  "external",
                                       "ready":  true,
-                                      "entry":  "hybrid-signoff-081206",
+                                      "entry":  "hybrid-signoff-094351",
                                       "visible":  true
                                   },
                       "errors":  [
@@ -254,33 +260,45 @@
                   {
                       "id":  "memory_delta",
                       "title":  "Memory delta hybrid vs ahk ref",
-                      "pass":  true,
+                      "pass":  null,
+                      "deferred":  true,
                       "metrics":  {
-                                      "deltaMiB":  -32.04,
-                                      "referenceAhkMiB":  1189.82,
-                                      "currentTotalPrivateMiB":  1157.78,
-                                      "webview2_count":  8,
-                                      "referenceHybridMiB":  1427.4,
-                                      "isImprovement":  true,
-                                      "hasReference":  true,
-                                      "deltaTotalPrivateMiB":  1157.78,
-                                      "deltaVerdict":  "improvement",
-                                      "deltaLimitMiB":  80,
-                                      "deltaSource":  "live_baseline"
-                                  },
-                      "errors":  {
+                                      "samplingReasons":  [
 
-                                 }
+                                                          ],
+                                      "searchCorePhase":  "indexing",
+                                      "hasReference":  true,
+                                      "searchCorePrivateMiB":  972.02,
+                                      "referenceHybridNote":  "display only; not used for memory_delta",
+                                      "searchCoreActive":  true,
+                                      "warnings":  [
+                                                       "searchcore_active phase=indexing (memory_delta deferred)"
+                                                   ],
+                                      "referenceFile":  "hybrid_signoff_reference_ahk.json",
+                                      "webview2_count":  8,
+                                      "comparisonBaseline":  "ahk_ref",
+                                      "referenceHybridMiB":  1184.8,
+                                      "deltaMiB":  null,
+                                      "currentTotalPrivateMiB":  1152.89,
+                                      "referenceAhkMiB":  1189.82,
+                                      "deltaVerdict":  null,
+                                      "deltaLimitMiB":  80,
+                                      "isImprovement":  false,
+                                      "samplingReady":  false,
+                                      "referenceAgeHours":  3.26,
+                                      "referenceKind":  "ahk"
+                                  },
+                      "errors":  "deferred: searchcore_active phase=indexing"
                   },
                   {
                       "id":  "hub_cycle",
                       "title":  "Hub inject cycle stability",
                       "pass":  true,
                       "metrics":  {
-                                      "hubEndMiB":  51.59,
-                                      "hubPeakMiB":  51.59,
-                                      "recoveryPct":  0.1,
-                                      "hubStartMiB":  51.54,
+                                      "hubEndMiB":  51.27,
+                                      "hubPeakMiB":  51.27,
+                                      "recoveryPct":  0.18,
+                                      "hubStartMiB":  51.18,
                                       "rounds":  10
                                   }
                   }
@@ -323,10 +341,10 @@
                     ],
     "processes":  {
                       "nmer_hub":  {
-                                       "id":  20820
+                                       "id":  24932
                                    },
                       "ahk":  {
-                                  "id":  14312
+                                  "id":  23204
                               },
                       "nmer_wails":  null
                   },
@@ -336,8 +354,8 @@
                                    "capturedAt":  "2026-06-11T22:28:20Z"
                                },
                        "hybrid":  {
-                                      "totalPrivateMiB":  1427.4,
-                                      "capturedAt":  "2026-06-12T00:09:44Z"
+                                      "totalPrivateMiB":  1184.8,
+                                      "capturedAt":  "2026-06-12T01:40:06Z"
                                   }
                    },
     "commands":  {
@@ -356,7 +374,7 @@
                                             "title":  "FTB manual UX",
                                             "pass":  true,
                                             "autoCheck":  true,
-                                            "detail":  "hub inject + external status probeId=hybrid-ftb-ux-071250",
+                                            "detail":  "hub inject + external status probeId=hybrid-ftb-ux-094210",
                                             "hint":  "Automated: register_external + 5x inject/drain + egress + log scan"
                                         },
                                         {
@@ -364,7 +382,7 @@
                                             "title":  "CP Agent hello",
                                             "pass":  true,
                                             "autoCheck":  true,
-                                            "detail":  "inject_fallback pass=True reqId=hybrid-hello-071253",
+                                            "detail":  "inject_fallback pass=True reqId=hybrid-hello-094213",
                                             "hint":  "Automated: palette_agent_submit hello via hybrid_manual_probe.json IPC"
                                         },
                                         {
@@ -372,28 +390,32 @@
                                             "title":  "10-round UI recovery CP/FTB/SC",
                                             "pass":  true,
                                             "autoCheck":  true,
-                                            "detail":  "ui_ok sessionDrift=-1.2% refDrift=34.33% mode=warm-session",
+                                            "detail":  "ui_ok sessionDrift=-18.83% refDrift=29.37% mode=warm-session",
                                             "hint":  "UI-01: functionalPass + sessionDrift \u003c= 10% (primary); refDrift auxiliary per signoffMode"
                                         }
                                     ],
-                          "capturedAt":  "2026-06-11T23:14:27Z",
-                          "warnings":  "refDrift 34.33% exceeds 10% (auxiliary; warm-session does not block on ref)",
+                          "capturedAt":  "2026-06-12T01:43:51Z",
+                          "warnings":  "refDrift 29.37% exceeds 10% (auxiliary; warm-session does not block on ref)",
                           "signoffMode":  "warm-session",
                           "productPass":  true,
                           "ui01Recovery":  {
                                                "functionalPass":  true,
-                                               "sessionDriftPct":  -1.2,
-                                               "refDriftPct":  34.33,
+                                               "sessionDriftPct":  -18.83,
+                                               "refDriftPct":  29.37,
                                                "sessionRecoveryPass":  true,
                                                "referenceBaselinePass":  false,
                                                "signoffMode":  "warm-session",
                                                "warnings":  [
-                                                                "refDrift 34.33% exceeds 10% (auxiliary; warm-session does not block on ref)"
+                                                                "refDrift 29.37% exceeds 10% (auxiliary; warm-session does not block on ref)"
                                                             ],
                                                "pass":  true,
-                                               "memBeforeMiB":  1493.64,
-                                               "memAfterMiB":  1475.69,
-                                               "hybridReferenceMiB":  1098.56,
+                                               "memBeforeMiB":  1888.43,
+                                               "memAfterMiB":  1532.78,
+                                               "hybridReferenceMiB":  1184.8,
+                                               "referenceKind":  "hybrid",
+                                               "referenceFile":  "hybrid_signoff_reference_hybrid.json",
+                                               "referenceCapturedAt":  "2026-06-12T01:40:06Z",
+                                               "searchCorePhase":  "indexing",
                                                "coldStartConfirmed":  null
                                            },
                           "signoffCases":  [
@@ -410,7 +432,7 @@
                                                    "actual":  {
                                                                   "gates":  {
                                                                                 "ahk_running":  {
-                                                                                                    "detail":  "pid=25924",
+                                                                                                    "detail":  "pid=23204",
                                                                                                     "pass":  true
                                                                                                 },
                                                                                 "no_inject_fail_log":  {
@@ -430,20 +452,20 @@
                                                                                                          "pass":  true
                                                                                                      },
                                                                                 "ftb_external":  {
-                                                                                                     "detail":  "mode=external visible=True ready=False",
+                                                                                                     "detail":  "mode=external visible=True ready=True",
                                                                                                      "pass":  true
                                                                                                  }
                                                                             },
                                                                   "pass":  true,
-                                                                  "probeId":  "hybrid-ftb-ux-071250"
+                                                                  "probeId":  "hybrid-ftb-ux-094210"
                                                               },
                                                    "trace":  [
-                                                                 "OK ftb_external: mode=external visible=True ready=False",
+                                                                 "OK ftb_external: mode=external visible=True ready=True",
                                                                  "OK register_external: visible=True",
                                                                  "OK inject_refresh: ok=5 fail=0 pumpPing=hybrid_signoff_ping",
                                                                  "OK egress_roundtrip: post=SHELL_FTB_EGRESS_OK count=1",
                                                                  "OK no_inject_fail_log: scanned=wails_bridge,hubcapsule",
-                                                                 "OK ahk_running: pid=25924"
+                                                                 "OK ahk_running: pid=23204"
                                                              ],
                                                    "pass":  true,
                                                    "status":  "signed",
@@ -467,7 +489,7 @@
                                                              ],
                                                    "expected":  "CP 可收到 Agent hello 并生成卡片；inject 被 AHK 消费",
                                                    "actual":  {
-                                                                  "reqId":  "hybrid-hello-071253",
+                                                                  "reqId":  "hybrid-hello-094213",
                                                                   "pass":  true,
                                                                   "gates":  {
                                                                                 "no_error_logs":  {
@@ -479,7 +501,7 @@
                                                                                                         "pass":  true
                                                                                                     },
                                                                                 "activity":  {
-                                                                                                 "detail":  "goodSeen=True logsChanged=False",
+                                                                                                 "detail":  "goodSeen=True logsChanged=True",
                                                                                                  "pass":  true
                                                                                              },
                                                                                 "inject_queued":  {
@@ -492,7 +514,7 @@
                                                    "trace":  [
                                                                  "OK inject_queued: code=SHELL_FTB_INJECT_QUEUED",
                                                                  "OK inject_consumed: drainCount=0 pumpLikely=True",
-                                                                 "OK activity: goodSeen=True logsChanged=False",
+                                                                 "OK activity: goodSeen=True logsChanged=True",
                                                                  "OK no_error_logs: no forbidden patterns in tail"
                                                              ],
                                                    "pass":  true,
@@ -521,34 +543,38 @@
                                                                   "mode":  "hub_inject_ui_cycle",
                                                                   "functionalPass":  true,
                                                                   "pass":  true,
-                                                                  "memBeforeMiB":  1493.64,
-                                                                  "memAfterMiB":  1475.69,
-                                                                  "hybridReferenceMiB":  1098.56,
-                                                                  "sessionDeltaMiB":  -17.95,
-                                                                  "sessionDriftPct":  -1.2,
-                                                                  "refDeltaMiB":  377.13,
-                                                                  "refDriftPct":  34.33,
+                                                                  "memBeforeMiB":  1888.43,
+                                                                  "memAfterMiB":  1532.78,
+                                                                  "hybridReferenceMiB":  1184.8,
+                                                                  "referenceKind":  "hybrid",
+                                                                  "referenceFile":  "hybrid_signoff_reference_hybrid.json",
+                                                                  "referenceCapturedAt":  "2026-06-12T01:40:06Z",
+                                                                  "searchCorePhase":  "indexing",
+                                                                  "sessionDeltaMiB":  -355.65,
+                                                                  "sessionDriftPct":  -18.83,
+                                                                  "refDeltaMiB":  347.98,
+                                                                  "refDriftPct":  29.37,
                                                                   "sessionRecoveryPass":  true,
                                                                   "referenceBaselinePass":  false,
                                                                   "coldStartConfirmed":  null,
                                                                   "signoffMode":  "warm-session",
                                                                   "warnings":  [
-                                                                                   "refDrift 34.33% exceeds 10% (auxiliary; warm-session does not block on ref)"
+                                                                                   "refDrift 29.37% exceeds 10% (auxiliary; warm-session does not block on ref)"
                                                                                ],
                                                                   "recoveryLimitPct":  10,
-                                                                  "detail":  "ui_ok sessionDrift=-1.2% refDrift=34.33% mode=warm-session",
+                                                                  "detail":  "ui_ok sessionDrift=-18.83% refDrift=29.37% mode=warm-session",
                                                                   "rounds":  10,
-                                                                  "ahkPid":  25924,
-                                                                  "lastAhkPid":  15112
+                                                                  "ahkPid":  23204,
+                                                                  "lastAhkPid":  23204
                                                               },
                                                    "trace":  [
                                                                  "inject resultCode=UI_CYCLE_OK cpOpens=10 scOpens=10",
-                                                                 "sessionDriftPct=-1.2 refDriftPct=34.33 sessionPass=True refPass=False"
+                                                                 "sessionDriftPct=-18.83 refDriftPct=29.37 sessionPass=True refPass=False"
                                                              ],
                                                    "pass":  true,
                                                    "status":  "signed",
                                                    "warnings":  [
-                                                                    "refDrift 34.33% exceeds 10% (auxiliary; warm-session does not block on ref)"
+                                                                    "refDrift 29.37% exceeds 10% (auxiliary; warm-session does not block on ref)"
                                                                 ],
                                                    "artifacts":  [
                                                                      "Cache\\debug\\hybrid_ui_cycle_inject_smoke.json",
@@ -575,7 +601,7 @@
                              "actual":  {
                                             "gates":  {
                                                           "ahk_running":  {
-                                                                              "detail":  "pid=25924",
+                                                                              "detail":  "pid=23204",
                                                                               "pass":  true
                                                                           },
                                                           "no_inject_fail_log":  {
@@ -595,20 +621,20 @@
                                                                                    "pass":  true
                                                                                },
                                                           "ftb_external":  {
-                                                                               "detail":  "mode=external visible=True ready=False",
+                                                                               "detail":  "mode=external visible=True ready=True",
                                                                                "pass":  true
                                                                            }
                                                       },
                                             "pass":  true,
-                                            "probeId":  "hybrid-ftb-ux-071250"
+                                            "probeId":  "hybrid-ftb-ux-094210"
                                         },
                              "trace":  [
-                                           "OK ftb_external: mode=external visible=True ready=False",
+                                           "OK ftb_external: mode=external visible=True ready=True",
                                            "OK register_external: visible=True",
                                            "OK inject_refresh: ok=5 fail=0 pumpPing=hybrid_signoff_ping",
                                            "OK egress_roundtrip: post=SHELL_FTB_EGRESS_OK count=1",
                                            "OK no_inject_fail_log: scanned=wails_bridge,hubcapsule",
-                                           "OK ahk_running: pid=25924"
+                                           "OK ahk_running: pid=23204"
                                        ],
                              "pass":  true,
                              "status":  "signed",
@@ -632,7 +658,7 @@
                                        ],
                              "expected":  "CP 可收到 Agent hello 并生成卡片；inject 被 AHK 消费",
                              "actual":  {
-                                            "reqId":  "hybrid-hello-071253",
+                                            "reqId":  "hybrid-hello-094213",
                                             "pass":  true,
                                             "gates":  {
                                                           "no_error_logs":  {
@@ -644,7 +670,7 @@
                                                                                   "pass":  true
                                                                               },
                                                           "activity":  {
-                                                                           "detail":  "goodSeen=True logsChanged=False",
+                                                                           "detail":  "goodSeen=True logsChanged=True",
                                                                            "pass":  true
                                                                        },
                                                           "inject_queued":  {
@@ -657,7 +683,7 @@
                              "trace":  [
                                            "OK inject_queued: code=SHELL_FTB_INJECT_QUEUED",
                                            "OK inject_consumed: drainCount=0 pumpLikely=True",
-                                           "OK activity: goodSeen=True logsChanged=False",
+                                           "OK activity: goodSeen=True logsChanged=True",
                                            "OK no_error_logs: no forbidden patterns in tail"
                                        ],
                              "pass":  true,
@@ -686,34 +712,38 @@
                                             "mode":  "hub_inject_ui_cycle",
                                             "functionalPass":  true,
                                             "pass":  true,
-                                            "memBeforeMiB":  1493.64,
-                                            "memAfterMiB":  1475.69,
-                                            "hybridReferenceMiB":  1098.56,
-                                            "sessionDeltaMiB":  -17.95,
-                                            "sessionDriftPct":  -1.2,
-                                            "refDeltaMiB":  377.13,
-                                            "refDriftPct":  34.33,
+                                            "memBeforeMiB":  1888.43,
+                                            "memAfterMiB":  1532.78,
+                                            "hybridReferenceMiB":  1184.8,
+                                            "referenceKind":  "hybrid",
+                                            "referenceFile":  "hybrid_signoff_reference_hybrid.json",
+                                            "referenceCapturedAt":  "2026-06-12T01:40:06Z",
+                                            "searchCorePhase":  "indexing",
+                                            "sessionDeltaMiB":  -355.65,
+                                            "sessionDriftPct":  -18.83,
+                                            "refDeltaMiB":  347.98,
+                                            "refDriftPct":  29.37,
                                             "sessionRecoveryPass":  true,
                                             "referenceBaselinePass":  false,
                                             "coldStartConfirmed":  null,
                                             "signoffMode":  "warm-session",
                                             "warnings":  [
-                                                             "refDrift 34.33% exceeds 10% (auxiliary; warm-session does not block on ref)"
+                                                             "refDrift 29.37% exceeds 10% (auxiliary; warm-session does not block on ref)"
                                                          ],
                                             "recoveryLimitPct":  10,
-                                            "detail":  "ui_ok sessionDrift=-1.2% refDrift=34.33% mode=warm-session",
+                                            "detail":  "ui_ok sessionDrift=-18.83% refDrift=29.37% mode=warm-session",
                                             "rounds":  10,
-                                            "ahkPid":  25924,
-                                            "lastAhkPid":  15112
+                                            "ahkPid":  23204,
+                                            "lastAhkPid":  23204
                                         },
                              "trace":  [
                                            "inject resultCode=UI_CYCLE_OK cpOpens=10 scOpens=10",
-                                           "sessionDriftPct=-1.2 refDriftPct=34.33 sessionPass=True refPass=False"
+                                           "sessionDriftPct=-18.83 refDriftPct=29.37 sessionPass=True refPass=False"
                                        ],
                              "pass":  true,
                              "status":  "signed",
                              "warnings":  [
-                                              "refDrift 34.33% exceeds 10% (auxiliary; warm-session does not block on ref)"
+                                              "refDrift 29.37% exceeds 10% (auxiliary; warm-session does not block on ref)"
                                           ],
                              "artifacts":  [
                                                "Cache\\debug\\hybrid_ui_cycle_inject_smoke.json",
@@ -726,7 +756,8 @@
                      ],
     "notes":  [
                   "Browser F5 does not refresh data; rerun Open-HybridSignoffDashboard.ps1",
-                  "Memory compare: Capture-HybridMemoryReference -Mode ahk first, then hybrid after reload",
+                  "memory_delta: hybrid_signoff_reference_ahk.json only; UI-01 refDrift: hybrid_signoff_reference_hybrid.json only",
+                  "B0: Test-HybridReferenceContract.ps1; B1 post-signoff: Capture-HybridMemoryReference ahk then hybrid",
                   "UI-01 primary: sessionDriftPct \u003c= 10%; refDrift auxiliary except formal-cold",
                   "overallPass = autoPass AND productPass (FTB-01 + CP-01 + UI-01 sessionRecovery)",
                   "signoffMode on dashboard is auto-gate context; manualSignoffMode is UI-01 policy"
@@ -787,16 +818,27 @@
       s11_static: "Diagnose-S11HybridFTBGate.ps1 静态接线",
       hub_chain: "health → register_external → inject → drain → egress",
       ftb_external: "presentationMode=external（牛马已注册 hybrid 呈现）",
-      memory_delta: "相对 ahk 参考：负 delta = improvement（pass）；仅 regression（delta > 80 MiB）fail",
+      memory_delta: "仅用 hybrid_signoff_reference_ahk.json；delta<=0 improvement；0<delta<=80 within_limit；>80 regression；组件不全或 SearchCore active 则 deferred",
       hub_cycle: "10 轮 inject/drain，hub 私有内存波动 ≤ 10%",
       openclaw_adapter: "需 OPENCLAW_GATEWAY_TOKEN；可选"
     };
 
     function gatePill(g) {
+      if (g.deferred) return `<span class="pill deferred">deferred</span>`;
       if (g.id === "memory_delta" && g.metrics && g.metrics.deltaVerdict === "improvement") {
         return `<span class="pill improvement">改善 ${g.metrics.deltaMiB} MiB</span>`;
       }
       return pill(g.pass);
+    }
+
+    function refDriftPill(ui) {
+      if (ui.refDriftPct == null) return "—";
+      const mode = ui.signoffMode || "";
+      const pct = `${ui.refDriftPct}%`;
+      if (mode === "formal-cold") return `${pct} ${pill(ui.referenceBaselinePass)}`;
+      const over = Math.abs(Number(ui.refDriftPct)) > 10;
+      if (over) return `${pct} <span class="pill aux-warn">辅判 warning</span>`;
+      return `${pct} ${pill(ui.referenceBaselinePass)}`;
     }
 
     function statusPill(status) {
@@ -818,12 +860,14 @@
       const cells = [
         ["UI 功能", pill(ui.functionalPass)],
         ["sessionDrift", ui.sessionDriftPct != null ? `${ui.sessionDriftPct}% ${pill(ui.sessionRecoveryPass)}` : "—"],
-        ["refDrift", ui.refDriftPct != null ? `${ui.refDriftPct}% ${pill(ui.referenceBaselinePass)}` : "—"],
+        ["refDrift", refDriftPill(ui)],
+        ["refKind", ui.referenceKind ? `<code>${ui.referenceKind}</code>` : "—"],
         ["signoffMode", `<code>${ui.signoffMode || "—"}</code>`],
         ["UI-01 pass", pill(ui.pass)],
         ["memBefore", ui.memBeforeMiB != null ? `${ui.memBeforeMiB} MiB` : "—"],
         ["memAfter", ui.memAfterMiB != null ? `${ui.memAfterMiB} MiB` : "—"],
-        ["hybridRef", ui.hybridReferenceMiB != null ? `${ui.hybridReferenceMiB} MiB` : "—"]
+        ["hybridRef", ui.hybridReferenceMiB != null ? `${ui.hybridReferenceMiB} MiB` : "—"],
+        ["SearchCore", ui.searchCorePhase ? `<code>${ui.searchCorePhase}</code>` : "—"]
       ];
       const grid = `<div class="dual-grid">${cells.map(([k, v]) =>
         `<div class="dual-cell"><strong>${k}</strong>${v}</div>`
@@ -945,7 +989,7 @@
         if (!g.pass && g.pass !== null && gateHints[g.id]) {
           extra += `<div class="hint" style="margin-top:6px">${gateHints[g.id]}</div>`;
         }
-        return `<div class="gate ${gateClass(g.pass)}">
+        return `<div class="gate ${g.deferred ? "pending" : gateClass(g.pass)}">
           <h3>${g.title} ${gatePill(g)}</h3>
           <div class="metrics">${lines || "无数据"}</div>${extra}
         </div>`;

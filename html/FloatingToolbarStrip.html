@@ -203,6 +203,8 @@ body.drawer-open #chatStatusRow{padding-bottom:calc(2px * var(--ui))}
 .logo-btn:focus-visible{background:rgba(255,102,0,.12);border-color:rgba(255,102,0,.5);box-shadow:none}
 .logo-img{width:max(calc(30px * var(--ui)),28px);height:max(calc(30px * var(--ui)),28px);min-width:max(calc(28px * var(--ui)),24px);min-height:max(calc(28px * var(--ui)),24px);object-fit:contain;pointer-events:none;transform-origin:center;transform:translate3d(0,0,0);opacity:0;transition:opacity .12s ease,transform .24s cubic-bezier(.22,1,.36,1),width .24s cubic-bezier(.22,1,.36,1),height .24s cubic-bezier(.22,1,.36,1);image-rendering:auto;-ms-interpolation-mode:bicubic}
 .logo-img.logo-ready{opacity:1}
+.logo-btn .logo-svg-fallback{display:flex;align-items:center;justify-content:center;width:max(calc(30px * var(--ui)),28px);height:max(calc(30px * var(--ui)),28px);pointer-events:none}
+.logo-btn .logo-svg-fallback svg{width:100%;height:100%;stroke:#ff6600}
 .icon-btns{display:flex;flex-direction:row;align-items:center;gap:calc(5px * var(--ui));flex:1;min-width:0;flex-wrap:nowrap;overflow:visible;transition:max-width .22s cubic-bezier(.22,1,.36,1),opacity .18s ease,transform .18s ease}
 .icon-btns::-webkit-scrollbar{height:4px}
 body.ftb-compact #collapsedRoot{justify-content:center;padding:0;gap:0;border-radius:999px;overflow:hidden}
@@ -854,8 +856,8 @@ body[data-theme="light"] .debug-hud{background:rgba(255,255,255,.55);border-colo
 .ns-pick-sub{font-size:calc(10px * var(--ui));color:var(--muted);margin-top:calc(2px * var(--ui));line-height:1.35;font-weight:400}
 .ns-pick-badge{flex-shrink:0;font-size:calc(10px * var(--ui));color:#6bcf8a;opacity:.88}
 .ns-pick-hint{font-size:calc(10px * var(--ui));color:var(--muted);padding:0 calc(4px * var(--ui)) calc(6px * var(--ui));line-height:1.45}
-.ns-mode-sheet{display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden}
-body.ns-mode-open .ns-mode-sheet{display:flex}
+#nsModeSheet{display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+body.ns-mode-open #nsModeSheet:not([hidden]){display:flex !important}
 body.ns-mode-open #newSessionGrid{display:none}
 .ns-mode-sheet-head{display:flex;align-items:center;gap:calc(8px * var(--ui));padding:calc(8px * var(--ui)) calc(12px * var(--ui));border-bottom:1px solid rgba(255,102,0,.12);flex-shrink:0}
 .ns-mode-back{border:none;background:transparent;color:var(--orange);font-size:calc(11px * var(--ui));font-weight:700;cursor:pointer;padding:calc(4px * var(--ui)) calc(6px * var(--ui));border-radius:calc(6px * var(--ui))}
@@ -2372,6 +2374,100 @@ body.niuma-confirm-open{overflow:hidden}
   function markBootLogoReady() {
     bootLogoReady = true;
     tryPostPaintReady();
+  }
+
+  var LOGO_PRIMARY_URL = 'https://app.local/assets/%E7%89%9B%E9%A9%AC.png';
+  var LOGO_FALLBACK_URL = 'https://app.local/assets/icons/app/chat-ai-fallback.svg';
+
+  function paintToolbarLogoThenReveal() {
+    if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
+      markBootLogoReady();
+      return;
+    }
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (ftbBootAwaitLayout) schedulePostPaintReady();
+        else if (!toolbarVisibleSynced) revealToolbarSync();
+      });
+    });
+  }
+
+  function applyToolbarLogoSvgFallback(img) {
+    if (!img || !img.parentElement) return;
+    var btn = img.parentElement;
+    if (btn.querySelector('.logo-svg-fallback')) return;
+    var wrap = document.createElement('span');
+    wrap.className = 'logo-svg-fallback tb-ico';
+    wrap.innerHTML = TOOLBAR_SVG_PARTS.robot || TOOLBAR_SVG_PARTS.comments || TOOLBAR_SVG_PARTS.bolt;
+    var svg = wrap.querySelector('svg');
+    if (svg) svg.setAttribute('stroke', '#ff6600');
+    img.remove();
+    btn.insertBefore(wrap, btn.firstChild);
+    btn.classList.add('logo-has-fallback');
+  }
+
+  function loadToolbarLogoImage(im, url, onDone) {
+    var triedFallback = false;
+    var done = false;
+    function finish(ok) {
+      if (done) return;
+      done = true;
+      if (ok && im.isConnected) im.classList.add('logo-ready');
+      else if (im.isConnected) applyToolbarLogoSvgFallback(im);
+      if (typeof onDone === 'function') onDone();
+    }
+    function tryLoad(src) {
+      if (!im.isConnected) {
+        finish(false);
+        return;
+      }
+      im.classList.remove('logo-ready');
+      im.onload = function () {
+        finish(im.naturalWidth > 0 && im.naturalHeight > 0);
+      };
+      im.onerror = function () {
+        if (!triedFallback && src !== LOGO_FALLBACK_URL) {
+          triedFallback = true;
+          tryLoad(LOGO_FALLBACK_URL);
+          return;
+        }
+        finish(false);
+      };
+      im.src = src;
+      if (im.decode) {
+        im.decode()
+          .then(function () {
+            finish(im.naturalWidth > 0 && im.naturalHeight > 0);
+          })
+          .catch(function () {});
+      } else if (im.complete && im.naturalWidth > 0) {
+        finish(true);
+      }
+    }
+    tryLoad(url || LOGO_PRIMARY_URL);
+  }
+
+  function applyToolbarLogoFromHost(url) {
+    var u = String(url || '').trim() || LOGO_PRIMARY_URL;
+    var imgs = Array.prototype.slice.call(document.querySelectorAll('.logo-btn .logo-img'));
+    if (!imgs.length) {
+      paintToolbarLogoThenReveal();
+      return;
+    }
+    if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
+      imgs.forEach(function (im) {
+        loadToolbarLogoImage(im, u, function () {});
+      });
+      markBootLogoReady();
+      return;
+    }
+    var remain = imgs.length;
+    imgs.forEach(function (im) {
+      loadToolbarLogoImage(im, u, function () {
+        remain--;
+        if (remain <= 0) paintToolbarLogoThenReveal();
+      });
+    });
   }
 
   function tryPostPaintReady() {
@@ -4946,6 +5042,21 @@ body.niuma-confirm-open{overflow:hidden}
     } catch (_) {}
   }
 
+  function applyCollapsedToolbarUi() {
+    state.drawer = false;
+    document.body.classList.remove('drawer-open');
+    if (stage) stage.setAttribute('aria-hidden', 'true');
+    if (panel) panel.setAttribute('aria-hidden', 'true');
+  }
+
+  /** Web 已折叠但宿主仍按 Chat 抽屉放大窗口时，强制通知宿主缩回工具条尺寸 */
+  function syncHostDrawerCollapsed() {
+    applyCollapsedToolbarUi();
+    try {
+      post({ type: 'drawer_state', open: false });
+    } catch (_) {}
+  }
+
   function setDrawer(v) {
     state.drawer = !!v;
     document.body.classList.toggle('drawer-open', state.drawer);
@@ -4987,14 +5098,13 @@ body.niuma-confirm-open{overflow:hidden}
   function resetToolbarHomeUi() {
     setSettings(false);
     setNspick(false);
+    closeNsModeSheet();
+    try {
+      ThreadPanelDrawer.setState(false);
+    } catch (_) {}
     closeMobileBrowser();
     if (state.drawer) setDrawer(false);
-    else {
-      state.drawer = false;
-      document.body.classList.remove('drawer-open');
-      if (stage) stage.setAttribute('aria-hidden', 'true');
-      if (panel) panel.setAttribute('aria-hidden', 'true');
-    }
+    else syncHostDrawerCollapsed();
     try {
       forceReleaseInteractionLocks();
     } catch (_) {}
@@ -6172,7 +6282,7 @@ body.niuma-confirm-open{overflow:hidden}
     var tokens = estimateContextTokens(s);
     var limit = getContextLimitForSession(s);
     if (tokens >= limit * 0.92) return 'locked';
-    if (isSessionSending(s.id)) return 'running';
+    if (isChatOutboundActive(s.id)) return 'running';
     if (state.openclawChatRunning && s.id === state.activeSessionId && normalizeProviderId(s.provider) === 'openclaw') {
       return 'running';
     }
@@ -6205,7 +6315,8 @@ body.niuma-confirm-open{overflow:hidden}
   function migrateSessionsPayloadToV3(data) {
     ensureThreadHub();
     if (data.threadHub && typeof data.threadHub === 'object') {
-      state.threadHub.expanded = !!data.threadHub.expanded;
+      // 任务看板仅随用户显式打开，勿在重载/重开 Chat 时自动展开（否则易卡在 Hermes 看板）
+      state.threadHub.expanded = false;
       state.threadHub.accordionOpen = !!data.threadHub.accordionOpen;
       state.threadHub.collapsedGroups = Array.isArray(data.threadHub.collapsedGroups) ? data.threadHub.collapsedGroups.slice() : [];
     }
@@ -6969,21 +7080,22 @@ body.niuma-confirm-open{overflow:hidden}
     var grp = findNodeGroup(nodeKey);
     if (!grp) return 'ready';
     var pid = providerIdFromNodeKey(nodeKey);
-    var rt = state.nodeRuntime[nodeKey];
-    if (rt && rt.status) {
-      var age = Date.now() - (rt.updatedAt || 0);
-      if (age < 300000) {
-        if (rt.status === 'running' || rt.status === 'busy') return 'running';
-        return rt.status;
-      }
-    }
     if (state.browserAgentRunning || state.openclawChatRunning) {
       var nk = activeNodeKey();
       if (nk === nodeKey) return 'running';
     }
     var i;
     for (i = 0; i < grp.sessions.length; i++) {
-      if (isSessionSending(grp.sessions[i].id)) return 'thinking';
+      if (isChatOutboundActive(grp.sessions[i].id)) return 'thinking';
+    }
+    var rt = state.nodeRuntime[nodeKey];
+    if (rt && rt.status) {
+      var age = Date.now() - (rt.updatedAt || 0);
+      if (age < 300000) {
+        if (rt.status === 'running' || rt.status === 'busy') return 'running';
+        if (rt.status === 'error') return 'error';
+        if (rt.status !== 'ready' && rt.status !== 'idle') return rt.status;
+      }
     }
     if (providerTransport(pid) === 'cli') return 'cli';
     if (!hasKeyForNode(nodeKey)) return 'needSetup';
@@ -9048,8 +9160,12 @@ body.niuma-confirm-open{overflow:hidden}
   }
 
   function switchToNode(nodeKey, sessionId) {
+    var prevKey = activeNodeKey();
     var grp = findNodeGroup(nodeKey);
     if (!grp || !grp.sessions.length) return;
+    if (prevKey && nodeKey && prevKey !== nodeKey && state.featurePhase1) {
+      switchViewMode('chat', nodeKey);
+    }
     closeThreadPopover();
     if (state.mainViewportMode === 'connections') closeConnectionsPanel();
     var targetId = sessionId || grp.lastActiveId || grp.sessions[0].id;
@@ -10978,7 +11094,7 @@ body.niuma-confirm-open{overflow:hidden}
   function closeNsModeSheet() {
     document.body.classList.remove('ns-mode-open');
     if (nsModeSheet) {
-      nsModeSheet.hidden = true;
+      nsModeSheet.setAttribute('hidden', '');
       nsModeSheet.setAttribute('aria-hidden', 'true');
     }
     if (nsModeSheetBody) nsModeSheetBody.innerHTML = '';
@@ -11025,9 +11141,9 @@ body.niuma-confirm-open{overflow:hidden}
       hintEl.textContent = hint;
       nsModeSheetBody.appendChild(hintEl);
     }
-    nsModeSheet.hidden = false;
-    nsModeSheet.setAttribute('aria-hidden', 'false');
     document.body.classList.add('ns-mode-open');
+    nsModeSheet.removeAttribute('hidden');
+    nsModeSheet.setAttribute('aria-hidden', 'false');
   }
 
   function handleNsPickGroup(g) {
@@ -11043,7 +11159,8 @@ body.niuma-confirm-open{overflow:hidden}
 
   function fillNewSessionGrid() {
     if (!newSessionGrid) return;
-    closeNsModeSheet();
+    // studio_llm_sync_result 可能在用户点选「对话/CLI」后到达，勿关掉已打开的方式页
+    if (!document.body.classList.contains('ns-mode-open')) closeNsModeSheet();
     newSessionGrid.innerHTML = '';
     var groups = newSessionGroupsAvailable();
     if (!groups.length) {
@@ -11337,9 +11454,20 @@ body.niuma-confirm-open{overflow:hidden}
     return !!(state.sendingBySession && state.sendingBySession[id]);
   }
 
+  function isChatOutboundActive(id) {
+    if (!id) return false;
+    if (isSessionSending(id)) return true;
+    var s = sessionById(id);
+    if (!s) return false;
+    if (state.openclawChatRunning && normalizeProviderId(s.provider) === 'openclaw' && id === state.activeSessionId)
+      return true;
+    if (state.browserAgentRunning && id === state.activeSessionId) return true;
+    return false;
+  }
+
   function refreshSendUi() {
     var sid = state.activeSessionId || (activeSession() && activeSession().id) || '';
-    var sending = isSessionSending(sid);
+    var sending = isChatOutboundActive(sid);
     var s = activeSession();
     if (isCliSession(s)) {
       send.disabled = true;
@@ -11359,6 +11487,48 @@ body.niuma-confirm-open{overflow:hidden}
     if (!state.useLegacyTabs) {
       if (agentStripEl) renderAgentStrip();
       renderThreadHub();
+    }
+  }
+
+  function syncChatSendChrome(sid, hint, mood) {
+    refreshSendUi();
+    try {
+      if (ThreadPanelDrawer && typeof ThreadPanelDrawer.applyUi === 'function') ThreadPanelDrawer.applyUi();
+    } catch (_) {}
+    if (hint != null && sid) cstatForSession(sid, hint, mood);
+  }
+
+  function beginChatSend(sid, hint) {
+    if (!sid) return;
+    setSessionSending(sid, true);
+    var s = sessionById(sid);
+    if (s) {
+      s.lastError = null;
+      s.lastErrorAt = 0;
+      refreshSessionMeta(s);
+      renderThreadHub();
+    }
+    syncChatSendChrome(sid, hint || '正在发送…');
+  }
+
+  function endChatSend(sid) {
+    if (!sid) return;
+    if (state.openclawChatRunning) {
+      var sOc = sessionById(sid);
+      if (sOc && normalizeProviderId(sOc.provider) === 'openclaw' && sid === state.activeSessionId) return;
+    }
+    if (state.browserAgentRunning && sid === state.activeSessionId) return;
+    var wasSending = isSessionSending(sid);
+    setSessionSending(sid, false);
+    var s = sessionById(sid);
+    if (s) {
+      refreshSessionMeta(s);
+      renderThreadHub();
+    }
+    if (wasSending) {
+      try {
+        if (ThreadPanelDrawer && typeof ThreadPanelDrawer.applyUi === 'function') ThreadPanelDrawer.applyUi();
+      } catch (_) {}
     }
   }
 
@@ -20229,6 +20399,16 @@ body.niuma-confirm-open{overflow:hidden}
     ocFinishControlTask(ok, text, errMsg);
     setAgentLoopStatus('idle');
     if (activeViewMode() === 'control') renderAgentSandbox();
+    var sid = state.activeSessionId;
+    if (sid) {
+      setSessionSending(sid, false);
+      refreshSendUi();
+      try {
+        if (ThreadPanelDrawer && typeof ThreadPanelDrawer.applyUi === 'function') ThreadPanelDrawer.applyUi();
+      } catch (_) {}
+      if (!ok && errMsg) cstatForSession(sid, 'OpenClaw：' + String(errMsg), 'error');
+      else if (ok && text) cstatForSession(sid, '响应完成。', 'success');
+    }
   }
 
   /** OpenClaw broadcast("chat", payload)：仅提取 assistant 正文，不含 thinking */
@@ -21905,7 +22085,8 @@ body.niuma-confirm-open{overflow:hidden}
     });
   }
 
-  async function executeModelRequest(sid) {
+  async function executeModelRequest(sid, opts) {
+    opts = opts || {};
     var s = sessionById(sid);
     if (!s || !s.id) return;
     var isPaletteAgent = !!(s._paletteAgentReqId || s._paletteReqId);
@@ -21916,7 +22097,7 @@ body.niuma-confirm-open{overflow:hidden}
           query: String(s._paletteAgentQuery || '')
         }
       : null;
-    if (isSessionSending(sid)) {
+    if (!opts.fromSendChat && isSessionSending(sid)) {
       if (isPaletteAgent) {
         cstatForSession(sid, 'Palette 代理等待上一次 OpenClaw 响应结束…', 'loading');
         var paletteWaitLeft = 360;
@@ -21933,13 +22114,17 @@ body.niuma-confirm-open{overflow:hidden}
               detail: 'exec sid=' + sid
             });
           } catch (_) {}
-          setSessionSending(sid, false);
+          endChatSend(sid);
         }
       } else {
         cstatForSession(sid, '该标签仍在等待上一次响应，请稍候。', 'error');
         return;
       }
     }
+    var ownsSendUi = !opts.fromSendChat;
+    var manageSendUi = ownsSendUi || !!opts.fromSendChat;
+    if (ownsSendUi) beginChatSend(sid, '正在请求模型响应...');
+    try {
     saveCfg(false);
     if (!state.freeChatMode && !getPaletteAgentSystemPrompt(s)) {
       await fetchStudioContextBlocking();
@@ -22029,8 +22214,7 @@ body.niuma-confirm-open{overflow:hidden}
       }
     }
 
-    setSessionSending(sid, true);
-    cstatForSession(sid, '正在请求模型响应...');
+    if (!isSessionSending(sid)) beginChatSend(sid, '正在请求模型响应...');
     var streamDraftId = '';
     var streamHasText = false;
     try {
@@ -22122,8 +22306,33 @@ body.niuma-confirm-open{overflow:hidden}
           if (paletteExecCtx && paletteExecCtx.reqId) armPaletteAgentLateRecover(paletteExecCtx.reqId);
         }
       } else if (content) add('assistant', content);
+      if (!content && p0.transport === 'openclaw') {
+        var sOcEmpty = sessionById(sid);
+        if (sOcEmpty && Array.isArray(sOcEmpty.history)) {
+          for (var oei = sOcEmpty.history.length - 1; oei >= 0; oei--) {
+            var oem = sOcEmpty.history[oei];
+            if (oem && oem.role === 'assistant' && oem._draft) {
+              updateHistoryMessageById(
+                sOcEmpty,
+                oem._id,
+                'Gateway 未返回正文。请在终端执行 openclaw gateway restart 后重试。',
+                true
+              );
+              break;
+            }
+          }
+        }
+      }
       appendAudit({ nodeKey: nodeKeyForSession(sessionById(sid)), level: 'success', message: '模型响应完成' });
-      cstatForSession(sid, content ? '响应完成。' : '仍在等待 Gateway 完整回复…', content ? 'success' : 'loading');
+      cstatForSession(
+        sid,
+        content
+          ? '响应完成。'
+          : p0.transport === 'openclaw'
+            ? 'OpenClaw 未返回正文，请检查 Gateway。'
+            : '仍在等待 Gateway 完整回复…',
+        content ? 'success' : 'error'
+      );
       var sOk = sessionById(sid);
       if (sOk) {
         sOk.lastError = null;
@@ -22188,7 +22397,9 @@ body.niuma-confirm-open{overflow:hidden}
         delete sDone._openclawLocalPendingText;
         delete sDone._openclawLocalPendingAt;
       }
-      setSessionSending(sid, false);
+    }
+    } finally {
+      if (manageSendUi) endChatSend(sid);
     }
   }
 
@@ -22309,10 +22520,11 @@ body.niuma-confirm-open{overflow:hidden}
     var s = activeSession();
     if (!s || !s.id) return;
     var sid = s.id;
-    if (isSessionSending(sid)) {
+    if (isChatOutboundActive(sid)) {
       cstatForSession(sid, '该标签仍在等待上一次响应，请稍候。', 'error');
       return;
     }
+    beginChatSend(sid, '正在准备发送…');
     var pa = state.pendingAttach || { items: [], fileIds: [], files: [] };
     var traceId = 'chat_' + String(sid) + '_' + Date.now().toString(36);
     niumaTrace('send_enter', traceId, {
@@ -22327,7 +22539,10 @@ body.niuma-confirm-open{overflow:hidden}
     });
     niumaTrace('assemble_start', traceId, {});
     var assembled = await assembleLlmPayload(input.value, pa, sid, traceId);
-    if (!assembled) return;
+    if (!assembled) {
+      endChatSend(sid);
+      return;
+    }
     niumaTrace('assemble_done', traceId, {
       hasAttach: assembled.hasAttach,
       composedLen: String(assembled.composedForModel || '').length,
@@ -22344,7 +22559,10 @@ body.niuma-confirm-open{overflow:hidden}
       ensureStudioContextApplied(true);
     }
     var cfg = buildSendCfg();
-    if (!cfg) return;
+    if (!cfg) {
+      endChatSend(sid);
+      return;
+    }
     if (cfg.provider === 'ollama') {
       await checkOllamaHealthWithStart({ tryStart: true });
       cfg.model = resolveOllamaModelForSend(cfg);
@@ -22397,15 +22615,17 @@ body.niuma-confirm-open{overflow:hidden}
     if (p0.transport === 'cli') {
       add('user', displayText);
       input.value = '';
-      cstatForSession(sid, '正在连接 ttyd 终端…');
+      syncChatSendChrome(sid, '正在连接 ttyd 终端…');
       appendAudit({ nodeKey: nodeKeyForSession(s), level: 'info', message: '发送消息 → 连接 ttyd' });
       throttledNiumaCliOpen(true);
       if (shouldClearAttachAfterSend) clearPendingAttach();
+      endChatSend(sid);
       return;
     }
     if (!cfg.baseUrl || (p0.transport !== 'openclaw' && !cfg.model)) {
       cstatForSession(sid, '请先在设置里填写 Base URL 和 Model。', 'error');
       setSettings(true);
+      endChatSend(sid);
       return;
     }
     if (cfg.provider === 'hermes' && !cfg.apiKey) {
@@ -22414,22 +22634,36 @@ body.niuma-confirm-open{overflow:hidden}
       apiTestStat(hmBlockChat.split('\n').slice(0, 3).join(' · '), 'error');
       setSettings(true);
       requestHermesHostTokenProbe(true).catch(function () {});
+      endChatSend(sid);
       return;
     }
     if (p0.transport !== 'openclaw' && cfg.provider !== 'ollama' && !cfg.apiKey) {
       cstatForSession(sid, '请先在设置里填写 API Key、Base URL 和 Model。', 'error');
       setSettings(true);
+      endChatSend(sid);
       return;
     }
     if (p0.transport === 'openclaw' && !openClawEndpointFromCfg(cfg).ok) {
       cstatForSession(sid, 'OpenClaw：请在「Gateway Token」填写 token，或将带 #token= 的完整控制台地址填入 Base URL。', 'error');
       setSettings(true);
+      endChatSend(sid);
       return;
     }
+    var sendHint =
+      p0.transport === 'openclaw'
+        ? 'OpenClaw：正在连接 Gateway…'
+        : p0.transport === 'cli'
+          ? '正在连接终端…'
+          : '正在发送…';
+    syncChatSendChrome(sid, sendHint);
     add('user', displayText);
     s._openclawLocalPendingText = String(displayText || text || '').trim();
     s._openclawLocalPendingAt = Date.now();
     input.value = '';
+    if (p0.transport === 'openclaw') {
+      ensureAssistantDraft(s, '思考中…');
+      if (state.activeSessionId === sid) scrollMsgsToLatest();
+    }
 
     var browserIntent = detectBrowserControlIntent(text);
     if (browserIntent.hit) {
@@ -22440,10 +22674,9 @@ body.niuma-confirm-open{overflow:hidden}
           '网页智能操控需要 OpenAI 兼容 API（如 OpenAI / DeepSeek / Ollama 等）。当前提供商请切换 transport=openai，或使用 @网页 前先换模型。',
           'error'
         );
-        setSessionSending(sid, false);
+        endChatSend(sid);
         return;
       }
-      setSessionSending(sid, true);
       try {
         await runBrowserAgentChat(sid, browserIntent.query, cfg, browserIntent);
         cstatForSession(sid, '网页智能操控流程结束。', 'success');
@@ -22478,20 +22711,27 @@ body.niuma-confirm-open{overflow:hidden}
           }
         }
       } finally {
-        setSessionSending(sid, false);
+        endChatSend(sid);
       }
       return;
     }
 
     niumaTrace('executeModelRequest_start', traceId, {});
     try {
-      await executeModelRequest(sid);
+      await executeModelRequest(sid, { fromSendChat: true });
       niumaTrace('executeModelRequest_done', traceId, {});
-    } finally {
-      var sAfter = sessionById(sid);
-      if (sAfter) {
-        delete sAfter._openclawLocalPendingText;
-        delete sAfter._openclawLocalPendingAt;
+    } catch (sendErr) {
+      cstatForSession(
+        sid,
+        '发送失败：' + (sendErr && sendErr.message ? sendErr.message : String(sendErr)),
+        'error'
+      );
+      var sFail = sessionById(sid);
+      if (sFail) {
+        sFail.lastError = sendErr && sendErr.message ? String(sendErr.message) : String(sendErr);
+        sFail.lastErrorAt = Date.now();
+        refreshSessionMeta(sFail);
+        renderThreadHub();
       }
     }
     if (shouldClearAttachAfterSend) clearPendingAttach();
@@ -22688,6 +22928,7 @@ body.niuma-confirm-open{overflow:hidden}
       var row = e.target.closest('.ns-pick-row');
       if (row) {
         e.preventDefault();
+        e.stopPropagation();
         handleNsPickGroup({
           api: row.dataset.nsApi || '',
           cli: row.dataset.nsCli || '',
@@ -23165,7 +23406,7 @@ body.niuma-confirm-open{overflow:hidden}
     if (!pa.items.length) {
       attachList.style.display = 'none';
       attachList.textContent = '';
-      if (chatStatus) chatStatus.textContent = '就绪';
+      if (chatStatus && !isSessionSending(state.activeSessionId)) chatStatus.textContent = '就绪';
       return;
     }
     while (attachList.firstChild) attachList.removeChild(attachList.firstChild);
@@ -23742,6 +23983,12 @@ body.niuma-confirm-open{overflow:hidden}
     if (state.drawer) {
       e.preventDefault();
       e.stopPropagation();
+      try {
+        if (ThreadPanelDrawer.isOpen()) {
+          ThreadPanelDrawer.setState(false);
+          return;
+        }
+      } catch (_) {}
       setDrawer(false);
     }
   }
@@ -24512,7 +24759,7 @@ body.niuma-confirm-open{overflow:hidden}
         return;
       }
       if (d.type === 'set_logo') {
-        markBootLogoReady();
+        applyToolbarLogoFromHost(d.url || '');
         return;
       }
       if (d.type === 'host_push_studio_context') {
@@ -24754,66 +25001,7 @@ body.niuma-confirm-open{overflow:hidden}
         return;
       }
       if (d.type === 'set_logo') {
-        var u = d.url || '';
-        var imgs = Array.prototype.slice.call(document.querySelectorAll('.logo-btn .logo-img'));
-        function paintThenReveal() {
-          if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
-            markBootLogoReady();
-            return;
-          }
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-              if (ftbBootAwaitLayout) schedulePostPaintReady();
-              else if (!toolbarVisibleSynced) revealToolbarSync();
-            });
-          });
-        }
-        function applyLogoImageAsync() {
-          if (!u || !imgs.length) return;
-          imgs.forEach(function (im) {
-            function onLogoPainted() {
-              if (im.naturalWidth && im.naturalHeight) im.classList.add('logo-ready');
-            }
-            im.classList.remove('logo-ready');
-            im.onload = onLogoPainted;
-            im.onerror = onLogoPainted;
-            im.src = u;
-            if (im.decode) {
-              im.decode().then(onLogoPainted).catch(onLogoPainted);
-            } else if (im.complete) {
-              onLogoPainted();
-            }
-          });
-        }
-        if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
-          markBootLogoReady();
-          applyLogoImageAsync();
-          return;
-        }
-        if (!u || !imgs.length) {
-          paintThenReveal();
-          return;
-        }
-        var remain = imgs.length;
-        imgs.forEach(function (im) {
-          var done = false;
-          function once() {
-            if (done) return;
-            done = true;
-            if (im.naturalWidth && im.naturalHeight) im.classList.add('logo-ready');
-            remain--;
-            if (remain <= 0) paintThenReveal();
-          }
-          im.classList.remove('logo-ready');
-          im.onload = once;
-          im.onerror = once;
-          im.src = u;
-          if (im.decode) {
-            im.decode().then(once).catch(once);
-          } else if (im.complete) {
-            once();
-          }
-        });
+        applyToolbarLogoFromHost(d.url || '');
         return;
       }
       if (d.type === 'set_theme') {
@@ -24839,7 +25027,7 @@ body.niuma-confirm-open{overflow:hidden}
       if (d.type === 'host_apply_studio_llm') {
         if (d.llm) state.pendingStudioLlm = d.llm;
         cacheStudioLlmBundle(d);
-        setDrawer(true);
+        if (d.openDrawer !== false && !state.drawer) setDrawer(true);
         setTtydCustomize(false);
         applyStudioLlmFromPayload(d.llm || {}, d.prompt || '', !!d.autoSend, {
           autoInjectContext: d.autoInjectContext,
@@ -25493,23 +25681,15 @@ body.niuma-confirm-open{overflow:hidden}
         return;
       }
       if (d.type === 'host_request_reveal') {
-        if (d.preserve_drawer || state.drawer || document.body.classList.contains('drawer-open')) {
-          ftbHostRevealRequested = true;
-          if (toolbarVisibleSynced) return;
-          if (ftbBootAwaitLayout) {
-            if (FTB_MINIMAL_BOOT) tryPostPaintReady();
-            else schedulePostPaintReady();
-          } else revealToolbarSync();
-          return;
+        ftbHostRevealRequested = true;
+        if (!d.preserve_drawer && !state.drawer && !document.body.classList.contains('drawer-open')) {
+          syncHostDrawerCollapsed();
         }
-        if (!toolbarVisibleSynced) {
-          ftbHostRevealRequested = true;
-          if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) tryPostPaintReady();
+        if (toolbarVisibleSynced) return;
+        if (ftbBootAwaitLayout) {
+          if (FTB_MINIMAL_BOOT) tryPostPaintReady();
           else schedulePostPaintReady();
-          return;
-        }
-        if (toolbarPaintReadySent && !state.drawer && !state.settings && !state.nspick) return;
-        resetToolbarHomeUi();
+        } else revealToolbarSync();
         return;
       }
       if (d.type === 'host_first_show') {
@@ -25601,6 +25781,14 @@ body.niuma-confirm-open{overflow:hidden}
   applyTheme(state.themeMode);
   scale(1);
   setCompact(false);
+  setTimeout(function () {
+    try {
+      var bootLogoImgs = document.querySelectorAll('.logo-btn .logo-img');
+      if (bootLogoImgs.length && !String(bootLogoImgs[0].getAttribute('src') || '').trim()) {
+        applyToolbarLogoFromHost(LOGO_PRIMARY_URL);
+      }
+    } catch (_) {}
+  }, 0);
   post({ type: 'toolbar_ready' });
   function emitToolbarLoadSignals() {
     declareChatBridgeReady();

@@ -20,7 +20,7 @@ $scenarioDefs = [ordered]@{
         wait = 35
         steps = @(
             "Reload niuma.ahk if AHK/HTML changed"
-            "Ctrl+Shift+Q open CommandPalette"
+            "CapsLock double-tap open CommandPalette (do NOT use Ctrl+Shift+Q — reloads AHK)"
             "Stay on Local intent (default)"
             "Type at least 20 characters in the input box"
             "Esc to close CP (optional)"

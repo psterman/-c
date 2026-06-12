@@ -597,12 +597,25 @@ LlmApiPing_OpenClawGatewayStatusOk(timeoutMs := 9000) {
         return false
     out := A_Temp . "\nmer_openclaw_gw_status.txt"
     try FileDelete(out)
-    ; 整条子命令必须包在一对引号内，否则 gateway status 不会传给 openclaw.cmd（约 60ms 空跑）
     inner := '"' . exe . '" gateway status > "' . out . '" 2>&1'
+    pid := 0
     try {
-        RunWait(A_ComSpec . ' /c "' . inner . '"', , "Hide")
+        Run(A_ComSpec . ' /c "' . inner . '"', , "Hide", &pid)
     } catch {
         return false
+    }
+    if !pid
+        return false
+    deadline := A_TickCount + Max(1500, Integer(timeoutMs))
+    while ProcessExist(pid) {
+        if (A_TickCount > deadline) {
+            try ProcessClose(pid)
+            catch {
+            }
+            try FileDelete(out)
+            return false
+        }
+        Sleep(50)
     }
     if !FileExist(out)
         return false
@@ -688,23 +701,56 @@ LlmApiPing_TestHermes(base, key, timeoutMs := 8000) {
     )
 }
 
+LlmApiPing_OpenClawHttpReachable(host, port, timeoutMs := 3000) {
+    host := Trim(String(host))
+    if (host = "localhost")
+        host := "127.0.0.1"
+    port := Integer(port)
+    if (host = "" || port < 1 || port > 65535)
+        return false
+    pingMs := Max(600, Integer(timeoutMs))
+    try {
+        r := LlmApiPing_HttpSync("GET", "http://" . host . ":" . port . "/", Map(), "", pingMs)
+        if (r is Map) {
+            st := Integer(r.Get("status", 0))
+            if (st >= 200 && st < 500)
+                return true
+            if (r.Get("ok", false))
+                return true
+        }
+    } catch {
+    }
+    return false
+}
+
 LlmApiPing_TestOpenClaw(base, key, timeoutMs := 8000) {
     key := LlmApiPing_NormalizeApiKey(key)
     if (key = "")
         return Map("ok", false, "error", "缺少 Gateway Token", "elapsedMs", 0)
     ep := LlmApiPing_ParseOpenClawEndpoint(base)
     host := ep.Get("host", "127.0.0.1")
+    if (host = "localhost")
+        host := "127.0.0.1"
     port := Integer(ep.Get("port", 18789))
     t0 := A_TickCount
-    tcpMs := Min(Max(800, Integer(timeoutMs)), 3000)
-    ; CLI 含 WebSocket 探活最准；TCP 作快速兜底（Gateway 根路径 HTTP 常挂起）
-    if LlmApiPing_OpenClawGatewayStatusOk(Min(Max(6000, Integer(timeoutMs)), 15000))
-        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+    budget := Max(3000, Integer(timeoutMs))
+    httpMs := Min(2500, Max(800, budget // 4))
+    if LlmApiPing_OpenClawHttpReachable(host, port, httpMs)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "http")
+    tcpMs := Min(3000, Max(800, budget // 3))
     if LlmApiPing_TcpPortOpen(host, port, tcpMs)
-        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "tcp")
+    ; openclaw gateway status 在本机常需 6–8s，勿把 CLI 超时压在 5s 内
+    cliMs := Max(10000, budget)
+    if LlmApiPing_OpenClawGatewayStatusOk(cliMs)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "cli_status")
+    if LlmApiPing_TcpPortOpen(host, port, tcpMs)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "tcp_retry")
+    if LlmApiPing_OpenClawHttpReachable(host, port, httpMs + 1500)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "http_retry")
     return Map(
         "ok", false,
-        "error", "无法连接本机 OpenClaw Gateway（" . host . ":" . port . "）。请执行 openclaw gateway restart 后重试。",
+        "error", "无法连接本机 OpenClaw Gateway（" . host . ":" . port . "）。Gateway 若在运行，请重载牛马后再点「测试连接」。",
         "elapsedMs", A_TickCount - t0
     )
 }

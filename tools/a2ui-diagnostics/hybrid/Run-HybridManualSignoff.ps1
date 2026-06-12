@@ -72,10 +72,13 @@ function Get-Ui01MemoryMetrics {
         [double]$MemBefore,
         [double]$MemAfter,
         [double]$HybridReferenceMiB,
+        [string]$HybridReferenceCapturedAt,
+        [bool]$HasHybridReference,
         [double]$RecoveryPct,
         [string]$Mode,
         [int]$CurrentPid,
-        [int]$LastPid
+        [int]$LastPid,
+        [string]$SearchCorePhase = ""
     )
     $sessionDeltaMiB = $null
     $sessionDriftPct = $null
@@ -85,7 +88,7 @@ function Get-Ui01MemoryMetrics {
         $sessionDeltaMiB = [math]::Round($MemAfter - $MemBefore, 2)
         $sessionDriftPct = [math]::Round(($sessionDeltaMiB / $MemBefore) * 100, 2)
     }
-    if ($HybridReferenceMiB -gt 0 -and ($null -ne $MemAfter)) {
+    if ($HasHybridReference -and $HybridReferenceMiB -gt 0 -and ($null -ne $MemAfter)) {
         $refDeltaMiB = [math]::Round($MemAfter - $HybridReferenceMiB, 2)
         $refDriftPct = [math]::Round(($refDeltaMiB / $HybridReferenceMiB) * 100, 2)
     }
@@ -96,10 +99,15 @@ function Get-Ui01MemoryMetrics {
     }
     $coldStartConfirmed = $null
     $warnings = @()
+    if (-not $HasHybridReference) {
+        $warnings += "missing_hybrid_reference: run Capture-HybridMemoryReference.ps1 -Mode hybrid (no ahk fallback)"
+    }
     if ($Mode -eq "formal-cold") {
         $coldStartConfirmed = ($LastPid -gt 0) -and ($CurrentPid -ne $LastPid)
         if (-not $coldStartConfirmed) {
-            $warnings += "formal-cold: pid unchanged (current=$CurrentPid last=$LastPid); Ctrl+Shift+Q is not cold start — restart niuma process"
+            $warnings += "formal-cold: pid unchanged (current=$CurrentPid last=$LastPid); Ctrl+Shift+Q is not cold start - restart niuma process"
+            $referenceBaselinePass = $false
+        } elseif (-not $HasHybridReference) {
             $referenceBaselinePass = $false
         }
     } elseif ($Mode -in @("warm-session", "live", "relaxed")) {
@@ -110,7 +118,10 @@ function Get-Ui01MemoryMetrics {
     return @{
         memBeforeMiB           = $MemBefore
         memAfterMiB            = $MemAfter
-        hybridReferenceMiB     = if ($HybridReferenceMiB -gt 0) { $HybridReferenceMiB } else { $null }
+        hybridReferenceMiB     = if ($HasHybridReference -and $HybridReferenceMiB -gt 0) { $HybridReferenceMiB } else { $null }
+        referenceKind          = if ($HasHybridReference) { "hybrid" } else { $null }
+        referenceFile          = if ($HasHybridReference) { "hybrid_signoff_reference_hybrid.json" } else { $null }
+        referenceCapturedAt    = if ($HasHybridReference) { $HybridReferenceCapturedAt } else { $null }
         sessionDeltaMiB        = $sessionDeltaMiB
         sessionDriftPct        = $sessionDriftPct
         refDeltaMiB            = $refDeltaMiB
@@ -119,6 +130,7 @@ function Get-Ui01MemoryMetrics {
         referenceBaselinePass  = $referenceBaselinePass
         coldStartConfirmed     = $coldStartConfirmed
         signoffMode            = $Mode
+        searchCorePhase        = $SearchCorePhase
         warnings               = $warnings
     }
 }
@@ -347,9 +359,19 @@ if (-not $SkipUiCycle) {
         }
     }
     $hybridRefMiB = 0.0
-    $ref = Read-Json (Join-Path $debugDir "hybrid_signoff_reference_hybrid.json")
-    if (-not $ref) { $ref = Read-Json (Join-Path $debugDir "hybrid_signoff_reference_ahk.json") }
-    if ($ref -and $ref.totalPrivateMiB) { $hybridRefMiB = [double]$ref.totalPrivateMiB }
+    $hybridRefCapturedAt = $null
+    $hasHybridRef = $false
+    $hybridRefPath = Join-Path $debugDir "hybrid_signoff_reference_hybrid.json"
+    $ref = Read-Json $hybridRefPath
+    if ($ref -and $ref.totalPrivateMiB) {
+        $hasHybridRef = $true
+        $hybridRefMiB = [double]$ref.totalPrivateMiB
+        $hybridRefCapturedAt = [string]$ref.capturedAt
+    } else {
+        $uiTrace += "missing_hybrid_reference path=$hybridRefPath"
+    }
+    $scSnapUi = Get-SearchCoreSignoffSnapshot
+    $uiSearchCorePhase = [string]$scSnapUi.searchCore.scanPhase
 
     if ($uiOk) {
         Write-Host "  idle ${IdleSec}s before memory sample..." -ForegroundColor DarkGray
@@ -363,8 +385,10 @@ if (-not $SkipUiCycle) {
 
     $functionalPass = [bool]$uiOk
     $metrics = Get-Ui01MemoryMetrics -MemBefore $(if ($null -ne $memBefore) { $memBefore } else { 0 }) `
-        -MemAfter $memAfter -HybridReferenceMiB $hybridRefMiB -RecoveryPct $MemoryRecoveryPct `
-        -Mode $SignoffMode -CurrentPid $ahk.Id -LastPid $lastAhkPid
+        -MemAfter $memAfter -HybridReferenceMiB $hybridRefMiB `
+        -HybridReferenceCapturedAt $hybridRefCapturedAt -HasHybridReference $hasHybridRef `
+        -RecoveryPct $MemoryRecoveryPct -Mode $SignoffMode -CurrentPid $ahk.Id -LastPid $lastAhkPid `
+        -SearchCorePhase $uiSearchCorePhase
 
     if ($uiOk) {
         $ui01Warnings = @($metrics.warnings)
@@ -376,8 +400,10 @@ if (-not $SkipUiCycle) {
     } else {
         if (-not $cycleDetail) { $cycleDetail = "ui_cycle probe failed" }
         $metrics = Get-Ui01MemoryMetrics -MemBefore $(if ($null -ne $memBefore) { $memBefore } else { 0 }) `
-            -MemAfter $memAfter -HybridReferenceMiB $hybridRefMiB -RecoveryPct $MemoryRecoveryPct `
-            -Mode $SignoffMode -CurrentPid $ahk.Id -LastPid $lastAhkPid
+            -MemAfter $memAfter -HybridReferenceMiB $hybridRefMiB `
+            -HybridReferenceCapturedAt $hybridRefCapturedAt -HasHybridReference $hasHybridRef `
+            -RecoveryPct $MemoryRecoveryPct -Mode $SignoffMode -CurrentPid $ahk.Id -LastPid $lastAhkPid `
+            -SearchCorePhase $uiSearchCorePhase
         $metrics.functionalPass = $false
     }
 
@@ -431,6 +457,10 @@ $ui01Actual = if ($SkipUiCycle) {
         memBeforeMiB           = $ui01Recovery.memBeforeMiB
         memAfterMiB            = $ui01Recovery.memAfterMiB
         hybridReferenceMiB     = $ui01Recovery.hybridReferenceMiB
+        referenceKind          = $ui01Recovery.referenceKind
+        referenceFile          = $ui01Recovery.referenceFile
+        referenceCapturedAt    = $ui01Recovery.referenceCapturedAt
+        searchCorePhase        = $ui01Recovery.searchCorePhase
         sessionDeltaMiB        = $ui01Recovery.sessionDeltaMiB
         sessionDriftPct        = $ui01Recovery.sessionDriftPct
         refDeltaMiB            = $ui01Recovery.refDeltaMiB
@@ -493,6 +523,10 @@ $report = [ordered]@{
             memBeforeMiB          = $ui01Recovery.memBeforeMiB
             memAfterMiB           = $ui01Recovery.memAfterMiB
             hybridReferenceMiB    = $ui01Recovery.hybridReferenceMiB
+            referenceKind         = $ui01Recovery.referenceKind
+            referenceFile         = $ui01Recovery.referenceFile
+            referenceCapturedAt   = $ui01Recovery.referenceCapturedAt
+            searchCorePhase       = $ui01Recovery.searchCorePhase
             coldStartConfirmed    = $ui01Recovery.coldStartConfirmed
         }
     } else { $null }
