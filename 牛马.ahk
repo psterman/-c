@@ -271,6 +271,7 @@ try SurfaceManager_ObserveSystemBootstrap(Map(
 #Include modules\CommandPaletteRouter.ahk
 #Include modules\CommandPaletteAgentOrchestrator.ahk
 #Include modules\CommandPaletteSearchDebug.ahk
+#Include modules\MultiCardMemoryProbe.ahk
 global g_CmdPal_AgentSubmitDispatch := CommandPalette_HandleAgentSubmit
 global g_CmdPal_AgentDebugTraceDispatch := CommandPalette_AgentDebugTrace
 global g_CmdPal_AgentWireLogDispatch := CommandPalette_AgentWireLog
@@ -4723,6 +4724,9 @@ if FuncExists("Nmer_HybridSignoffBootstrapEnsure") {
     SetTimer(Nmer_HybridSignoffBootstrapEnsure, -8000)
 } else if FuncExists("Nmer_HybridManualProbeEnsure") {
     SetTimer(Nmer_HybridManualProbeEnsure, -8000)
+}
+if FuncExists("Nmer_MultiCardMemoryProbeEnsure") {
+    SetTimer(Nmer_MultiCardMemoryProbeEnsure, -5000)
 }
 ; 初始化粘贴板历史面板
 InitClipboardHistoryPanel()

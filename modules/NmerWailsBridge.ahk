@@ -1175,11 +1175,56 @@ Nmer_HybridRunUiCycle(rounds, pauseMs) {
     return Map("pass", pass, "rounds", rounds, "okRounds", okRounds, "errors", errors)
 }
 
+; UI cycle 反复开关 CP/SC/FTB 后，悬浮栏 WebView 可能卡在 waitingReveal / ready=False，需主动恢复图标与 hub ready。
+Nmer_HybridSignoffRecoverFtbAfterStress() {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_WaitingUiFinishedReveal
+    if FuncExists("FloatingToolbarWails_EnsureHybridBridge")
+        try FloatingToolbarWails_EnsureHybridBridge()
+        catch {
+        }
+    if FuncExists("ShowFloatingToolbar")
+        try ShowFloatingToolbar()
+        catch {
+        }
+    if IsObject(g_FTB_WV2) {
+        if g_FTB_WaitingUiFinishedReveal && FuncExists("FloatingToolbar_FinishRevealBoot")
+            try FloatingToolbar_FinishRevealBoot()
+            catch {
+            }
+        if FuncExists("FloatingToolbarPushButtonConfigToWeb")
+            try FloatingToolbarPushButtonConfigToWeb()
+            catch {
+            }
+        if FuncExists("FloatingToolbar_PushLogoToWeb")
+            try FloatingToolbar_PushLogoToWeb()
+            catch {
+            }
+        if FuncExists("FloatingToolbar_RequestWebRevealSafe")
+            try FloatingToolbar_RequestWebRevealSafe()
+            catch {
+            }
+        else if FuncExists("FloatingToolbar_RequestWebReveal")
+            try FloatingToolbar_RequestWebReveal()
+            catch {
+            }
+    }
+    if (g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) && FuncExists("FloatingToolbarWails_RegisterExternalReady")
+        try FloatingToolbarWails_RegisterExternalReady()
+        catch {
+        }
+    Nmer_HybridManualProbeLog("recover_ftb_after_stress wv2=" . (IsObject(g_FTB_WV2) ? 1 : 0)
+        . " ready=" . (g_FTB_WV2_Ready ? 1 : 0) . " frame=" . (g_FTB_WV2_FrameReady ? 1 : 0)
+        . " waitingReveal=" . (g_FTB_WaitingUiFinishedReveal ? 1 : 0))
+}
+
 Nmer_HybridSignoffInjectUiCycleRun(probeId, rounds, pauseMs) {
     res := Nmer_HybridRunUiCycle(rounds, pauseMs)
     pass := !!res.Get("pass", false)
     Nmer_HybridSignoffWriteInjectResult(probeId, true, pass, pass ? "UI_CYCLE_OK" : "UI_CYCLE_FAIL",
         "rounds=" . res.Get("okRounds", 0) . "/" . res.Get("rounds", rounds), res)
+    try Nmer_HybridSignoffRecoverFtbAfterStress()
+    catch {
+    }
 }
 
 Nmer_HybridSignoffHandleInjectPayload(payload) {
@@ -1533,4 +1578,7 @@ Nmer_HybridManualProbeUiCycle(id, root) {
     pass := !!res.Get("pass", false)
     Nmer_HybridManualProbeWriteResult(id, true, pass, pass ? "UI_CYCLE_OK" : "UI_CYCLE_FAIL",
         "rounds=" . res.Get("okRounds", 0) . "/" . res.Get("rounds", rounds), res)
+    try Nmer_HybridSignoffRecoverFtbAfterStress()
+    catch {
+    }
 }

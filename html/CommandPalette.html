@@ -3580,7 +3580,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           if (paletteFastInput() && state.actionCmdBrowse && state.input.trim()) {
             scheduleActionCommandPaint(state.input.trim());
           } else {
-            updateResults();
+          updateResults();
           }
         });
       }
@@ -7519,7 +7519,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         var followUp =
           cardFollowUpInFlight(card) ||
           (card.running && !card.ended && card._segmentPriorBlocks && card._segmentPriorBlocks.length);
-        if (!followUp || incomingRaw) {
+      if (!followUp || incomingRaw) {
           card.rawAnswer = clipStreamText(incomingRaw);
           if (card.rawAnswer && !isAgentStatusPreview(card.rawAnswer)) card.liveThought = card.rawAnswer;
         }
@@ -8079,25 +8079,25 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   function buildCommandResultRowHtml(item, idx, active) {
     var activeCls = active ? " active" : "";
-    var matched = item.matched ? " matched" : "";
-    var kind = item.kind ? " kind-" + esc(item.kind) : "";
-    var binding = item.binding ? '<span class="result-binding">' + esc(item.binding) + "</span>" : "";
-    if (!binding && item.kind === "ai_provider") {
-      if (String(item.id || "") === state.selectedAiProvider) binding = '<span class="result-binding">已选</span>';
-      else if (isAiConfigured(item)) binding = '<span class="result-binding">已配置</span>';
-    }
-    var icon = item.kind === "ai_provider" ? renderProviderIconHtml(item) : kindIcon(item.kind || "command");
+        var matched = item.matched ? " matched" : "";
+        var kind = item.kind ? " kind-" + esc(item.kind) : "";
+        var binding = item.binding ? '<span class="result-binding">' + esc(item.binding) + "</span>" : "";
+        if (!binding && item.kind === "ai_provider") {
+          if (String(item.id || "") === state.selectedAiProvider) binding = '<span class="result-binding">已选</span>';
+          else if (isAiConfigured(item)) binding = '<span class="result-binding">已配置</span>';
+        }
+        var icon = item.kind === "ai_provider" ? renderProviderIconHtml(item) : kindIcon(item.kind || "command");
     var rowKey =
       typeof PaletteResultList !== "undefined"
         ? PaletteResultList.rowKey(item, idx)
         : String(item.id || item.label || idx);
-    return (
+        return (
       '<button class="result-item' + activeCls + matched + kind + '" type="button" data-idx="' + idx + '" data-row-key="' + esc(rowKey) + '">' +
-      '<span class="result-icon" aria-hidden="true">' + icon + "</span>" +
-      '<span class="result-body">' +
-      '<div class="result-row"><span class="result-title">' + esc(item.label || item.name || "") + "</span>" + binding + "</div>" +
-      '<span class="result-desc">' + esc(item.desc || "") + "</span></span></button>"
-    );
+          '<span class="result-icon" aria-hidden="true">' + icon + "</span>" +
+          '<span class="result-body">' +
+          '<div class="result-row"><span class="result-title">' + esc(item.label || item.name || "") + "</span>" + binding + "</div>" +
+          '<span class="result-desc">' + esc(item.desc || "") + "</span></span></button>"
+        );
   }
 
   function renderCommandResults(box, rows) {
@@ -8133,15 +8133,15 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       if (!node || !box.contains(node)) return;
       var idx = Number(node.getAttribute("data-idx"));
       if (idx < 0 || isNaN(idx)) return;
-      state.selected = idx;
-      var rows = currentRows();
-      var item = rows[idx];
-      if (item && item.kind === "ai_provider") {
-        pickAiProvider(item.id);
-        return;
-      }
-      updateResults();
-      executeSelected();
+          state.selected = idx;
+        var rows = currentRows();
+        var item = rows[idx];
+        if (item && item.kind === "ai_provider") {
+          pickAiProvider(item.id);
+          return;
+        }
+          updateResults();
+          executeSelected();
     });
   }
 
@@ -8237,21 +8237,29 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return localItems.length;
   }
 
-  function scheduleQueryPaintMark(gen, resultCount) {
+  function scheduleQueryPaintMark(gen, resultCount, opts) {
+    opts = opts || {};
     if (typeof PalettePerfMarks === "undefined") return;
     requestAnimationFrame(function () {
       var durationMs =
         typeof PalettePerfMarks.elapsedSince === "function"
           ? PalettePerfMarks.elapsedSince("query_start")
           : 0;
-      PalettePerfMarks.mark("local_results_painted", {
+      var emptyResult = opts.emptyResult === true || Number(resultCount || 0) === 0;
+      var paintMeta = {
         generation: gen,
         resultCount: resultCount,
-        durationMs: durationMs
-      });
-      PalettePerfMarks.measure("query_to_paint", "query_start", "local_results_painted", {
-        generation: gen
-      });
+        durationMs: durationMs,
+        source: opts.source || "",
+        emptyResult: emptyResult
+      };
+      PalettePerfMarks.mark("local_results_painted", paintMeta);
+      if (!emptyResult) {
+        PalettePerfMarks.measure("query_to_paint", "query_start", "local_results_painted", {
+          generation: gen,
+          source: opts.source || ""
+        });
+      }
     });
   }
 
@@ -9576,7 +9584,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       }
       updateVoiceHint();
       updateResults();
-      scheduleQueryPaintMark(d.seq || state.querySeq, state.turboItems.length);
+      scheduleQueryPaintMark(d.seq || state.querySeq, state.turboItems.length, {
+        source: "turbo",
+        emptyResult: !state.turboItems.length
+      });
     } else if (d.type === "palette_turbo_error") {
       if (state.intent !== "local") return;
       state.turboItems = [];
@@ -9974,6 +9985,19 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       }
     } else if (d.type === "palette_set_input") {
       window.nmerPalette.setInputText(d.text || "");
+    } else if (d.type === "palette_set_intent") {
+      state.intent = String(d.intent || "local");
+      syncIntentUI();
+      if (state.intent === "action") requestAgentCardSync();
+      refreshIntentResults(true);
+      syncWindowSize();
+    } else if (d.type === "palette_memory_tier_mount") {
+      var tierIds = Array.isArray(d.cardIds) ? d.cardIds : [];
+      var tierFixture = String(d.fixtureId || "happy-six-components");
+      for (var ti = 0; ti < tierIds.length; ti++) {
+        mountOfficialA2uiFixture(String(tierIds[ti] || ""), tierFixture);
+      }
+      syncActionResultsLayout();
     } else if (d.type === "palette_focus" || d.type === "palette_show") {
       ensureHeaderInputVisible();
       if (state.intent === "action") refreshIntentResults(true);

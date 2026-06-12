@@ -141,6 +141,7 @@ CommandPalette_PerfDump(row) {
         . '"resultCount":' . CommandPalette_PerfJsonNumber(row.Get("resultCount", 0)) . ","
         . '"sessionId":' . Jxon_Dump(String(row.Get("sessionId", ""))) . ","
         . '"source":' . Jxon_Dump(String(row.Get("source", ""))) . ","
+        . '"emptyResult":' . (row.Get("emptyResult", false) ? "true" : "false") . ","
         . '"ts":' . CommandPalette_PerfJsonNumber(row.Get("ts", 0))
         . "}"
 }
@@ -3330,6 +3331,8 @@ CommandPalette_DispatchWebMessage(msg) {
             extra["resultCount"] := Integer(msg["resultCount"])
         if msg.Has("layoutMode")
             extra["layoutMode"] := String(msg["layoutMode"])
+        if msg.Has("emptyResult")
+            extra["emptyResult"] := !!msg["emptyResult"]
         CommandPalette_PerfLog(ev, extra)
         return
     }

@@ -20,12 +20,13 @@
       type: "palette_perf_event",
       ts: Date.now(),
       sessionId: sessionId,
-      source: "web",
+      source: extra && extra.source ? String(extra.source) : "web",
       event: String(event || ""),
       durationMs: extra && extra.durationMs != null ? Number(extra.durationMs) : 0,
       generation: extra && extra.generation != null ? Number(extra.generation) : 0,
       resultCount: extra && extra.resultCount != null ? Number(extra.resultCount) : 0,
-      layoutMode: extra && extra.layoutMode ? String(extra.layoutMode) : ""
+      layoutMode: extra && extra.layoutMode ? String(extra.layoutMode) : "",
+      emptyResult: !!(extra && extra.emptyResult)
     });
     if (flushTimer) return;
     flushTimer = setTimeout(flushPosts, 32);
