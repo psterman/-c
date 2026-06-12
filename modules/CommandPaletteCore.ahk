@@ -170,13 +170,14 @@ CommandPalette_PerfFlush(*) {
 }
 
 CommandPalette_PushPaletteFlags() {
-    pl := FuncExists("Nmer_PaletteFlags") ? Nmer_PaletteFlags() : Map("fastInput", false, "discreteLayout", false, "streamBatching", false, "stateStore", false, "agentTransport", "auto", "openclawAnswerSync", true)
+    pl := FuncExists("Nmer_PaletteFlags") ? Nmer_PaletteFlags() : Map("fastInput", false, "discreteLayout", false, "streamBatching", false, "stateStore", false, "stateStoreShadow", false, "agentTransport", "auto", "openclawAnswerSync", true)
     CommandPalette_PushToWeb(Map(
         "type", "palette_flags",
         "fastInput", !!pl.Get("fastInput", false),
         "discreteLayout", !!pl.Get("discreteLayout", false),
         "streamBatching", !!pl.Get("streamBatching", false),
         "stateStore", !!pl.Get("stateStore", false),
+        "stateStoreShadow", !!pl.Get("stateStoreShadow", false),
         "agentTransport", String(pl.Get("agentTransport", "auto")),
         "openclawAnswerSync", !!pl.Get("openclawAnswerSync", true)
     ))
@@ -234,8 +235,6 @@ CommandPalette_ApplyLayoutMode(mode) {
     m := Trim(String(mode))
     if (m != "compact" && m != "list" && m != "detail")
         return false
-    if (g_CmdPal_LayoutMode = m)
-        return true
     g_CmdPal_LayoutMode := m
     g_CmdPal_Width := (m = "detail") ? 960 : 720
     h := (m = "compact") ? 72 : ((m = "detail") ? 620 : 460)
@@ -538,9 +537,14 @@ CommandPalette_ApplyBounds() {
 
 CommandPalette_CenterAndShow() {
     global g_CmdPal_Gui, g_CmdPal_Width, g_CmdPal_CurrentHeight, g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_Ctrl
-    global g_CmdPal_AnchorX, g_CmdPal_AnchorY, g_CmdPal_HasAnchor
+    global g_CmdPal_AnchorX, g_CmdPal_AnchorY, g_CmdPal_HasAnchor, g_CmdPal_LayoutMode
     w := g_CmdPal_Width
     h := g_CmdPal_CurrentHeight
+    if FuncExists("Nmer_PaletteDiscreteLayoutEnabled") && Nmer_PaletteDiscreteLayoutEnabled() {
+        dh := CommandPalette_DiscreteLayoutHeight()
+        if (dh > 0)
+            h := dh
+    }
     CoordMode("Mouse", "Screen")
     MouseGetPos(&mx, &my)
     ml := 0
@@ -1341,8 +1345,22 @@ CommandPalette_ProbeAdapterOfficialA2ui(timeoutMs := 8000) {
     return CommandPalette_ProbeAdapterMerged(engine, web)
 }
 
+CommandPalette_DiscreteLayoutHeight(mode := "") {
+    global g_CmdPal_LayoutMode
+    m := Trim(String(mode))
+    if (m = "")
+        m := Trim(String(g_CmdPal_LayoutMode))
+    if (m = "compact")
+        return 72
+    if (m = "detail")
+        return 620
+    if (m = "list")
+        return 460
+    return 0
+}
+
 CommandPalette_DoShow(*) {
-    global g_CmdPal_PendingShow, CapsLock, g_CmdPal_WV2
+    global g_CmdPal_PendingShow, CapsLock, g_CmdPal_WV2, g_CmdPal_LayoutMode
     if FuncExists("CapsLock_RestoreForUiTypingOpen")
         CapsLock_RestoreForUiTypingOpen()
     else {
@@ -1353,6 +1371,12 @@ CommandPalette_DoShow(*) {
     }
     SetTimer(CommandPalette_MaybeReloadHtml, -1)
     CommandPalette_CenterAndShow()
+    if FuncExists("Nmer_PaletteDiscreteLayoutEnabled") && Nmer_PaletteDiscreteLayoutEnabled() {
+        if (Trim(String(g_CmdPal_LayoutMode)) = "")
+            CommandPalette_ApplyLayoutMode("list")
+        else
+            CommandPalette_ApplyLayoutMode(g_CmdPal_LayoutMode)
+    }
     g_CmdPal_PendingShow := false
     ; 包 1.1：显示时恢复 WebView2 正常内存档位
     try WebView2_NotifyShown(g_CmdPal_WV2)
@@ -1765,11 +1789,36 @@ CommandPalette_DeliverFtbPayload(payload) {
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
     if !(payload is Map)
         return false
+    typ := String(payload.Get("type", ""))
+    if (typ = "host_palette_agent_stream") && IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady {
+        if FuncExists("FloatingToolbar_StartPaletteAgentStream") {
+            try {
+                if FloatingToolbar_StartPaletteAgentStream(payload)
+                    return true
+            } catch {
+            }
+        }
+    }
     mode := CommandPalette_FtbTransportMode()
     if (mode = "hybrid") {
+        if IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady {
+            try {
+                if FuncExists("WebView_QueuePayload")
+                    WebView_QueuePayload(g_FTB_WV2, payload)
+                else
+                    g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
+                return true
+            } catch {
+            }
+        }
+        ok := false
         if FuncExists("FloatingToolbarWails_DeliverPayloadHybrid")
-            return !!FloatingToolbarWails_DeliverPayloadHybrid(payload)
-        return false
+            ok := !!FloatingToolbarWails_DeliverPayloadHybrid(payload)
+        if ok && FuncExists("Nmer_WailsBridgeDrainInjectToFtb")
+            try Nmer_WailsBridgeDrainInjectToFtb()
+            catch {
+            }
+        return ok
     }
     if (mode = "wails_shell") {
         if FuncExists("FloatingToolbarWails_DeliverPayload")
@@ -4931,6 +4980,10 @@ CommandPalette_BootstrapNiumaChat(reason := "", openDrawer := false) {
     global FloatingToolbarGUI, g_FTB_WV2, g_FTB_WaitingUiFinishedReveal, g_FTB_UI_Ready
 
     openDrawer := !!openDrawer
+    if !openDrawer && FuncExists("Nmer_PaletteAgentTransportHubEnabled") && Nmer_PaletteAgentTransportHubEnabled() {
+        CommandPalette_AiLog("bootstrap_skip", "hub_transport reason=" . Trim(String(reason)) . " | " . CommandPalette_AiStateSnapshot())
+        return
+    }
     CommandPalette_AiLog("bootstrap_begin", "reason=" . Trim(String(reason)) . " openDrawer=" . (openDrawer ? 1 : 0) . " | " . CommandPalette_AiStateSnapshot())
 
     if openDrawer {

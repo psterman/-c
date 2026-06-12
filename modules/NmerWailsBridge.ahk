@@ -6,6 +6,7 @@ global g_Nmer_WailsBridgeHealthCacheOk := false
 global g_Nmer_WailsBridgeHealthCacheTick := 0
 global g_Nmer_WailsBridgeHealthBusy := false
 global g_Nmer_WailsBridgeShuttingDown := false
+global g_Nmer_WailsBridgeOpenClawEnvTick := 0
 
 Nmer_WailsBridgeDefaultAddr(*) {
     addr := Trim(String(EnvGet("NMER_A2UI_BRIDGE_ADDR")))
@@ -71,6 +72,7 @@ Nmer_WailsBridgeReadFlags(*) {
             "discreteLayout", false,
             "streamBatching", false,
             "stateStore", false,
+            "stateStoreShadow", false,
             "agentTransport", "auto",
             "openclawAnswerSync", true
         )
@@ -158,6 +160,7 @@ Nmer_WailsBridgeReadFlags(*) {
                 "discreteLayout", Nmer_WailsBridgeNormalizeBool(pl.Get("discreteLayout", false), false),
                 "streamBatching", Nmer_WailsBridgeNormalizeBool(pl.Get("streamBatching", false), false),
                 "stateStore", Nmer_WailsBridgeNormalizeBool(pl.Get("stateStore", false), false),
+                "stateStoreShadow", Nmer_WailsBridgeNormalizeBool(pl.Get("stateStoreShadow", false), false),
                 "agentTransport", agentTransport,
                 "openclawAnswerSync", Nmer_WailsBridgeNormalizeBool(pl.Get("openclawAnswerSync", true), true)
             )
@@ -175,7 +178,11 @@ Nmer_PaletteFlags(*) {
     pl := flags.Get("palette", Map())
     if (pl is Map)
         return pl
-    return Map("fastInput", false, "discreteLayout", false, "streamBatching", false, "stateStore", false, "agentTransport", "auto", "openclawAnswerSync", true)
+    return Map("fastInput", false, "discreteLayout", false, "streamBatching", false, "stateStore", false, "stateStoreShadow", false, "agentTransport", "auto", "openclawAnswerSync", true)
+}
+
+Nmer_PaletteStateStoreShadowEnabled(*) {
+    return !!Nmer_PaletteFlags().Get("stateStoreShadow", false)
 }
 
 Nmer_PaletteFastInputEnabled(*) {
@@ -199,6 +206,10 @@ Nmer_PaletteAgentTransport(*) {
     if (t != "hub" && t != "ftb")
         t := "auto"
     return t
+}
+
+Nmer_PaletteAgentTransportHubEnabled(*) {
+    return Nmer_PaletteAgentTransport() = "hub"
 }
 
 Nmer_PaletteOpenClawAnswerSync(*) {
@@ -868,6 +879,63 @@ Nmer_HybridManualProbeMaybeEnsure(*) {
         }
 }
 
+; 将 Niuma Chat / user_studio / 环境变量中的 OpenClaw Token 同步到当前进程，供 nmer-hub 子进程继承
+Nmer_WailsBridgeSyncOpenClawTokenToEnv(*) {
+    token := ""
+    host := "127.0.0.1"
+    port := "18789"
+    source := ""
+    if FuncExists("UserStudio_ProbeOpenClawGatewayToken") {
+        try {
+            info := UserStudio_ProbeOpenClawGatewayToken()
+            if (info is Map) {
+                token := Trim(String(info.Get("token", "")))
+                source := Trim(String(info.Get("source", "")))
+                h := Trim(String(info.Get("host", "")))
+                if (h != "")
+                    host := h
+                p := info.Get("port", "")
+                if (p != "")
+                    port := String(p)
+            }
+        } catch {
+        }
+    }
+    if (token = "")
+        return Map("ok", false, "code", "TOKEN_MISSING", "source", source)
+    prev := ""
+    try prev := Trim(String(EnvGet("OPENCLAW_GATEWAY_TOKEN")))
+    changed := (prev != token)
+    try EnvSet("OPENCLAW_GATEWAY_TOKEN", token)
+    try EnvSet("OPENCLAW_GATEWAY_HOST", host)
+    try EnvSet("OPENCLAW_GATEWAY_PORT", port)
+    return Map("ok", true, "code", "TOKEN_SYNCED", "changed", changed, "source", source)
+}
+
+; Adapter 调用前确保 hub 子进程已继承 Token（必要时重启 hub）
+Nmer_WailsBridgeEnsureOpenClawHubEnv(*) {
+    global g_Nmer_WailsBridgeOpenClawEnvTick
+    sync := Nmer_WailsBridgeSyncOpenClawTokenToEnv()
+    if !sync.Get("ok", false)
+        return sync
+    now := A_TickCount
+    needRestart := !!sync.Get("changed", false) && Nmer_WailsBridge_ProcessExists()
+    if needRestart && (now - Integer(g_Nmer_WailsBridgeOpenClawEnvTick) > 5000) {
+        g_Nmer_WailsBridgeOpenClawEnvTick := now
+        Nmer_WailsBridgeLog("openclaw_env_restart source=" . String(sync.Get("source", "")))
+        Nmer_WailsBridgeKillStale()
+        ok := Nmer_StartWailsBridge(true)
+        return Map(
+            "ok", ok,
+            "code", ok ? "HUB_RESTARTED_FOR_TOKEN" : "HUB_RESTART_FAILED",
+            "source", sync.Get("source", "")
+        )
+    }
+    if !Nmer_WailsBridgeHealthy()
+        return Map("ok", Nmer_StartWailsBridge(false), "code", "HUB_ENSURE_STARTED", "source", sync.Get("source", ""))
+    return Map("ok", true, "code", "TOKEN_READY", "source", sync.Get("source", ""))
+}
+
 Nmer_StartWailsBridge(*) {
     global g_Nmer_WailsBridgeLastLaunchTick, g_Nmer_WailsBridgeLaunching
     forceRestart := (A_Args.Length > 0) ? !!A_Args[1] : false
@@ -920,6 +988,9 @@ Nmer_StartWailsBridge(*) {
     }
     g_Nmer_WailsBridgeLastLaunchTick := now
     g_Nmer_WailsBridgeLaunching := true
+    try Nmer_WailsBridgeSyncOpenClawTokenToEnv()
+    catch {
+    }
     rootForChild := Nmer_WailsBridge_ToShortPath(root)
     markerPath := Nmer_WailsBridge_WriteScriptDirMarker(root)
     try EnvSet("NMER_SCRIPT_DIR", rootForChild)
@@ -1020,6 +1091,11 @@ Nmer_WailsBridgeBuildHostConfig(*) {
             "forceNmerOnly", Nmer_WailsBridgeForceNmerOnly(),
             "legacySurfaceLifecycle", Nmer_LegacySurfaceLifecycleEnabled(),
             "forceTraySafeMode", Nmer_ForceTraySafeModeEnabled()
+        ),
+        "palette", Map(
+            "agentTransport", Nmer_PaletteAgentTransport(),
+            "stateStore", Nmer_PaletteStateStoreEnabled(),
+            "openclawAnswerSync", Nmer_PaletteOpenClawAnswerSync()
         )
     )
 }
@@ -1131,11 +1207,13 @@ Nmer_HybridSignoffWriteInjectResult(probeId, ok, pass, code, detail := "", extra
         for k, v in extra
             body[String(k)] := v
     }
-    try FileDelete(paths["injectRes"])
-    catch {
-    }
-    try FileAppend(Jxon_Dump(body), paths["injectRes"], "UTF-8")
-    catch {
+    try {
+        f := FileOpen(paths["injectRes"], "w", "UTF-8-RAW")
+        if IsObject(f) {
+            f.Write(Jxon_Dump(body))
+            f.Close()
+        }
+    } catch {
     }
     Nmer_HybridManualProbeLog("inject_result id=" . probeId . " code=" . code . " pass=" . (pass ? 1 : 0))
 }
@@ -1237,7 +1315,8 @@ Nmer_HybridSignoffHandleInjectPayload(payload) {
         "hybrid_probe_wake", true,
         "hybrid_signoff_ping", true,
         "hybrid_signoff_ensure_ftb", true,
-        "hybrid_signoff_ui_cycle", true
+        "hybrid_signoff_ui_cycle", true,
+        "cp_perf_capture", true
     )
     if !signoffTypes.Has(typ)
         return false
@@ -1283,37 +1362,69 @@ Nmer_HybridSignoffHandleInjectPayload(payload) {
             Nmer_HybridSignoffWriteInjectResult(probeId, true, false, "UI_CYCLE_PENDING", "started")
             SetTimer(Nmer_HybridSignoffInjectUiCycleRun.Bind(probeId, rounds, pauseMs), -40)
             return true
+        case "cp_perf_capture":
+            mode := payload.Has("mode") ? StrLower(Trim(String(payload.Get("mode", "")))) : "synthetic_turbo"
+            Nmer_HybridSignoffWriteInjectResult(probeId, true, false, "CP_PERF_PENDING", "started mode=" . mode)
+            SetTimer(Nmer_CpPerfCaptureInjectRun.Bind(probeId, mode), -40)
+            return true
     }
     return false
 }
 
-Nmer_HybridSignoffDrainInjectQueue(*) {
+Nmer_CpPerfCaptureInjectRun(probeId, mode := "synthetic_turbo") {
+    if !FuncExists("Nmer_CpPerfProbeRunCapture") {
+        Nmer_HybridSignoffWriteInjectResult(probeId, true, false, "CP_PERF_FAIL", "perf_probe_module_missing")
+        return
+    }
+    try {
+        if (mode = "manual_equivalent") && FuncExists("Nmer_CpPerfProbeRunManualEquivalentCapture")
+            info := Nmer_CpPerfProbeRunManualEquivalentCapture()
+        else
+            info := Nmer_CpPerfProbeRunCapture(false)
+    }
+    catch as errCap {
+        Nmer_HybridSignoffWriteInjectResult(probeId, true, false, "CP_PERF_FAIL", SubStr(String(errCap.Message), 1, 160))
+        return
+    }
+    ok := !!info.Get("pass", false)
+    Nmer_HybridSignoffWriteInjectResult(probeId, true, ok, String(info.Get("code", "CP_PERF_FAIL")),
+        String(info.Get("detail", "")), info)
+}
+
+Nmer_WailsBridgeDrainInjectToFtb(*) {
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady
-    if !Nmer_HybridSignoffIsActive()
-        return
-    if FuncExists("FloatingToolbarWails_EnsureInjectPump")
-        try FloatingToolbarWails_EnsureInjectPump()
     if !FuncExists("Nmer_WailsBridgeDrainShellFtbInject")
-        return
+        return 0
     payloads := []
     try payloads := Nmer_WailsBridgeDrainShellFtbInject()
     catch {
-        return
+        return 0
     }
     if (payloads.Length = 0)
-        return
+        return 0
     wvReady := IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady
+    delivered := 0
     for _, payload in payloads {
         if !(payload is Map)
             continue
         handled := false
-        if FuncExists("Nmer_HybridSignoffHandleInjectPayload") {
+        if FuncExists("Nmer_HybridSignoffHandleInjectPayload") && FuncExists("Nmer_HybridSignoffIsActive") && Nmer_HybridSignoffIsActive() {
             try handled := Nmer_HybridSignoffHandleInjectPayload(payload)
             catch {
             }
         }
         if handled
             continue
+        typ := String(payload.Get("type", ""))
+        if (typ = "host_palette_agent_stream") && FuncExists("FloatingToolbar_StartPaletteAgentStream") {
+            try {
+                if FloatingToolbar_StartPaletteAgentStream(payload) {
+                    delivered += 1
+                    continue
+                }
+            } catch {
+            }
+        }
         if !wvReady
             continue
         try {
@@ -1321,9 +1432,22 @@ Nmer_HybridSignoffDrainInjectQueue(*) {
                 WebView_QueuePayload(g_FTB_WV2, payload)
             else
                 g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
+            delivered += 1
         } catch {
         }
     }
+    return delivered
+}
+
+Nmer_HybridSignoffDrainInjectQueue(*) {
+    if !Nmer_HybridSignoffIsActive()
+        return
+    if FuncExists("FloatingToolbarWails_EnsureInjectPump")
+        try FloatingToolbarWails_EnsureInjectPump()
+    if FuncExists("Nmer_WailsBridgeDrainInjectToFtb")
+        try Nmer_WailsBridgeDrainInjectToFtb()
+        catch {
+        }
 }
 
 Nmer_HybridManualProbeLog(line) {

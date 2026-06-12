@@ -340,6 +340,10 @@ CommandPalette_AgentPersistCards() {
         f.Write(json)
         f.Close()
         CommandPalette_AgentLog("persist_ok", "n=" . arr.Length . " path=" . path)
+        if FuncExists("CommandPalette_AgentQueueShadowWrite")
+            try CommandPalette_AgentQueueShadowWrite()
+            catch {
+            }
     } catch as eP {
         CommandPalette_AgentLog("persist_err", path . " :: " . eP.Message)
     }
@@ -510,16 +514,20 @@ CommandPalette_AgentFlushUi(card) {
         return
     prov := String(card.Get("provider", CommandPalette_AgentDefaultProvider()))
     provLabel := (prov = "hermes") ? "Hermes" : "龙虾 OpenClaw"
+    useHub := FuncExists("Nmer_PaletteAgentTransportHubEnabled") && Nmer_PaletteAgentTransportHubEnabled()
     CommandPalette_AgentPushCardNew(card)
     if FuncExists("CommandPalette_PushToWeb") {
         CommandPalette_PushToWeb(Map(
             "type", "palette_agent_status",
             "cardId", cid,
             "reqId", rid,
-            "message", "正在连接 " . provLabel . "…",
+            "message", useHub ? ("经 nmer-hub 连接 " . provLabel . "…") : ("正在连接 " . provLabel . "…"),
             "status", "loading"
         ))
-        CommandPalette_AgentPushStreamStatus(cid, rid, "🔗 任务已提交，正在拉起 " . provLabel . "…")
+        streamMsg := useHub
+            ? ("🔗 任务已提交，经 nmer-hub 连接 " . provLabel . "…")
+            : ("🔗 任务已提交，正在拉起 " . provLabel . "…")
+        CommandPalette_AgentPushStreamStatus(cid, rid, streamMsg)
     }
 }
 
@@ -588,6 +596,11 @@ CommandPalette_AgentPullCardsJson() {
     try {
         if g_Agent_Cards.Count < 1
             CommandPalette_AgentLoadCards()
+        if FuncExists("CommandPalette_AgentShadowBuildCards") && FuncExists("Nmer_PaletteStateStoreEnabled") && Nmer_PaletteStateStoreEnabled() {
+            built := CommandPalette_AgentShadowBuildCards()
+            arr := built.Get("cards", [])
+            return Jxon_Dump(arr is Array ? arr : [])
+        }
         items := []
         for _, c in g_Agent_Cards {
             if !(c is Map)
@@ -648,8 +661,13 @@ CommandPalette_AgentPushCardDetail(cardId) {
     card := CommandPalette_AgentGetCard(cid)
     if !(card is Map)
         return false
+    dto := CommandPalette_AgentCardToSyncDto(card)
+    if FuncExists("CommandPalette_AgentShadowWriteDetail")
+        try CommandPalette_AgentShadowWriteDetail(cid, dto)
+        catch {
+        }
     if FuncExists("CommandPalette_PushToWeb")
-        return CommandPalette_PushToWeb(Map("type", "palette_agent_card_detail", "card", CommandPalette_AgentCardToSyncDto(card)))
+        return CommandPalette_PushToWeb(Map("type", "palette_agent_card_detail", "card", dto))
     return false
 }
 
@@ -799,14 +817,13 @@ CommandPalette_AgentSubmit(msg) {
         }
     }
 
-    if FuncExists("CommandPalette_BootstrapNiumaChat")
-        try CommandPalette_BootstrapNiumaChat("agent_submit", false)
-        catch {
-        }
-    if FuncExists("StartWebViewWarmup")
-        try StartWebViewWarmup()
-        catch {
-        }
+    CommandPalette_AgentWarmFtbHost("agent_submit")
+    if !(FuncExists("Nmer_PaletteAgentTransportHubEnabled") && Nmer_PaletteAgentTransportHubEnabled()) {
+        if FuncExists("CommandPalette_BootstrapNiumaChat")
+            try CommandPalette_BootstrapNiumaChat("agent_submit", false)
+            catch {
+            }
+    }
     g_Agent_StreamGen++
     gen := g_Agent_StreamGen
     cardId := CommandPalette_AgentNewId("card")
@@ -1066,9 +1083,107 @@ CommandPalette_AgentLockAgentTransport(cardId, transport) {
     card["agentTransport"] := t
 }
 
+CommandPalette_AgentWarmFtbHost(reason := "") {
+    global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, FloatingToolbarGUI
+    if FuncExists("Nmer_WailsBridgeEnsureOpenClawHubEnv")
+        try Nmer_WailsBridgeEnsureOpenClawHubEnv()
+        catch {
+        }
+    if FuncExists("FloatingToolbarWails_EnsureHybridBridge")
+        try FloatingToolbarWails_EnsureHybridBridge()
+        catch {
+        }
+    if FuncExists("FloatingToolbarWails_RegisterExternalFtb")
+        try FloatingToolbarWails_RegisterExternalFtb("agent_warm_" . Trim(String(reason)))
+        catch {
+        }
+    if FuncExists("StartWebViewWarmup")
+        try StartWebViewWarmup()
+        catch {
+        }
+    if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
+        if (FloatingToolbarGUI = 0) && FuncExists("CreateFloatingToolbarGUI")
+            try CreateFloatingToolbarGUI()
+            catch {
+            }
+        if !IsObject(g_FTB_WV2) && FuncExists("FloatingToolbar_RetryCreateWebView")
+            try FloatingToolbar_RetryCreateWebView()
+            catch {
+            }
+    }
+    return IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady
+}
+
+CommandPalette_AgentFallbackToFtb(cardId, reqId, query, provider, statusMsg := "") {
+    cid := Trim(String(cardId))
+    rid := Trim(String(reqId))
+    q := Trim(String(query))
+    if (cid = "" || rid = "" || q = "")
+        return false
+    prov := CommandPalette_AgentSanitizeProvider(provider)
+    card := CommandPalette_AgentGetCard(cid)
+    CommandPalette_AgentLockAgentTransport(cid, "ftb")
+    if (card is Map) {
+        card["agentTransport"] := "ftb"
+        card["streamDispatched"] := false
+        card["officialA2uiPending"] := false
+        sr := CommandPalette_AgentPaletteSessionKey(cid)
+        card["sessionRef"] := sr
+    }
+    msg := Trim(String(statusMsg))
+    if (msg != "")
+        CommandPalette_AgentPushStreamStatus(cid, rid, msg)
+    CommandPalette_AgentWarmFtbHost("ftb_fallback")
+    if FuncExists("FloatingToolbarWails_EnsureShellForAgent")
+        try FloatingToolbarWails_EnsureShellForAgent(false)
+    sr := CommandPalette_AgentPaletteSessionKey(cid)
+    sysPrompt := CommandPalette_AgentBuildSystemPrompt(card)
+    agentPayload := Map(
+        "type", "host_palette_agent_stream",
+        "reqId", rid,
+        "cardId", cid,
+        "query", q,
+        "provider", prov,
+        "systemPrompt", sysPrompt,
+        "sessionRef", sr,
+        "openDrawer", false
+    )
+    streamOk := false
+    scriptOk := false
+    if FuncExists("FloatingToolbar_StartPaletteAgentStream") {
+        try streamOk := !!FloatingToolbar_StartPaletteAgentStream(agentPayload)
+        catch {
+            streamOk := false
+        }
+    }
+    if !streamOk
+        streamOk := CommandPalette_AgentDeliverStreamPayload(agentPayload)
+    if !streamOk {
+        try scriptOk := CommandPalette_InvokeFtbPaletteAgentScript(cid, rid, q, prov, sr)
+        catch {
+            scriptOk := false
+        }
+    }
+    if (streamOk || scriptOk) {
+        CommandPalette_AgentMarkStreamDispatched(cid, false)
+        CommandPalette_AgentPushStreamStatus(cid, rid, "📡 已改走 Niuma Chat 直连 OpenClaw…")
+        CommandPalette_AgentWireLog("dispatch_ftb_fallback", "card=" . cid . " req=" . rid . " agent=" . (streamOk ? 1 : 0) . " script=" . (scriptOk ? 1 : 0))
+        return true
+    }
+    CommandPalette_AgentWireLog("dispatch_ftb_fallback_fail", "card=" . cid . " req=" . rid)
+    return false
+}
+
 CommandPalette_AgentPostOpenClawAdapter(cardId, reqId, query, sessionRef, systemPrompt := "") {
     if !FuncExists("Nmer_WailsBridgeOpenClawAdapterUrl")
         return Map("ok", false, "code", "ADAPTER_URL_MISSING")
+    if FuncExists("Nmer_WailsBridgeEnsureOpenClawHubEnv") {
+        envSync := Nmer_WailsBridgeEnsureOpenClawHubEnv()
+        if !(envSync is Map) || !envSync.Get("ok", false) {
+            code := (envSync is Map) ? String(envSync.Get("code", "TOKEN_MISSING")) : "TOKEN_MISSING"
+            return Map("ok", false, "code", "OPENCLAW_CONFIG_MISSING", "detail", code)
+        }
+    }
     url := Nmer_WailsBridgeOpenClawAdapterUrl()
     body := ""
     try {
@@ -1157,9 +1272,45 @@ CommandPalette_AgentRunOpenClawAdapterAsync(cardId, reqId, query, sessionRef) {
     try CommandPalette_AgentDebugTrace("adapter", "ingest_fail", "card=" . cid . " code=" . code, "warn")
     catch {
     }
-    CommandPalette_AgentLockAgentTransport(cid, "ftb")
-    CommandPalette_AgentPushStreamStatus(cid, rid, "⚠ Adapter 失败，回退 FTB：" . code)
-    CommandPalette_InvokeFtbPaletteAgentScript(cid, rid, query, "openclaw", CommandPalette_AgentPaletteSessionKey(cid))
+    prov := "openclaw"
+    if (card is Map)
+        prov := CommandPalette_AgentSanitizeProvider(String(card.Get("provider", "openclaw")))
+    retryable := (code = "OPENCLAW_CONFIG_MISSING" || code = "TOKEN_MISSING"
+        || code = "OPENCLAW_CHAT_FAILED" || code = "ADAPTER_HTTP_502" || InStr(code, "ADAPTER_HTTP_") = 1)
+    if retryable && FuncExists("Nmer_WailsBridgeEnsureOpenClawHubEnv") {
+        try {
+            env := Nmer_WailsBridgeEnsureOpenClawHubEnv()
+            if (env is Map) && env.Get("ok", false) {
+                result2 := CommandPalette_AgentPostOpenClawAdapter(cardId, reqId, query, sessionRef, sysPrompt)
+                if (result2 is Map) && result2.Get("ok", false) {
+                    ans2 := Trim(String(result2.Get("answer", "")))
+                    if (ans2 != "" && CommandPalette_AgentAnswerIsSubstantial(ans2)) {
+                        CommandPalette_AgentPushStreamStatus(cid, rid, "✅ hub 通道已完成回复")
+                        CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", rid, "cardId", cid, "answer", ans2, "sessionRef", String(sessionRef)))
+                        return
+                    }
+                    if (card is Map) {
+                        card["streamDispatched"] := true
+                        card["agentTransport"] := "adapter"
+                    }
+                    CommandPalette_AgentMarkStreamDispatched(cid, false)
+                    return
+                }
+                if (result2 is Map)
+                    code := String(result2.Get("code", code))
+            }
+        } catch {
+        }
+    }
+    ftbMsg := "⚠ hub Adapter 失败（" . code . "），改走 Niuma Chat…"
+    if CommandPalette_AgentFallbackToFtb(cid, rid, query, prov, ftbMsg)
+        return
+    if (code = "OPENCLAW_CONFIG_MISSING" || code = "TOKEN_MISSING") {
+        CommandPalette_AgentPushError(rid, cid, "OpenClaw Gateway Token 未配置：请在 Niuma Chat 设置里对「龙虾」点「一键连接」后重载牛马")
+        return
+    }
+    detail := (result is Map) ? SubStr(String(result.Get("detail", "")), 1, 160) : ""
+    CommandPalette_AgentPushError(rid, cid, "OpenClaw 派发失败：" . code . (detail != "" ? (" · " . detail) : "") . "（Niuma Chat 通路也未就绪，请打开悬浮栏）")
 }
 
 CommandPalette_AgentDispatchViaOpenClawAdapter(cardId, reqId, query, sessionRef) {
@@ -1362,6 +1513,8 @@ CommandPalette_AgentHeartbeatTick(cardId) {
     card := CommandPalette_AgentGetCard(cid)
     if !(card is Map) || card.Get("ended", false) || !card.Get("running", false)
         return
+    if Trim(String(card.Get("error", ""))) != ""
+        return
     prov := String(card.Get("provider", "openclaw"))
     provLabel := (prov = "hermes") ? "Hermes" : "龙虾 OpenClaw"
     dispatchTick := Integer(card.Get("dispatchTick", 0))
@@ -1389,6 +1542,12 @@ CommandPalette_AgentHeartbeatTick(cardId) {
 }
 
 CommandPalette_AgentEnsureEngine(*) {
+    if FuncExists("Nmer_PaletteAgentTransport") && Nmer_PaletteAgentTransport() = "hub" {
+        CommandPalette_AgentWarmFtbHost("ensure_engine")
+        if FuncExists("Nmer_WailsBridgeHealthy") && Nmer_WailsBridgeHealthy()
+            return true
+        return false
+    }
     if FuncExists("FloatingToolbarWails_ShouldUseHybrid") && FloatingToolbarWails_ShouldUseHybrid() {
         if FuncExists("FloatingToolbarWails_EnsureHybridBridge")
             try FloatingToolbarWails_EnsureHybridBridge()
@@ -1611,6 +1770,8 @@ CommandPalette_AgentPollAdapterAnswer(cardId, reqId, query, tryN) {
     rid := Trim(String(reqId))
     card := CommandPalette_AgentGetCard(cid)
     if !(card is Map) || card.Get("ended", false) || !card.Get("running", false)
+        return
+    if Trim(String(card.Get("error", ""))) != ""
         return
     if Trim(String(card.Get("reqId", ""))) != rid
         return
@@ -1843,6 +2004,8 @@ CommandPalette_AgentBootstrapNiumaSessions(*) {
     global g_Agent_Cards, g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_Agent_BootstrapForce
     static bootBusy := false
     static bootDoneAt := 0
+    if FuncExists("Nmer_PaletteAgentTransportHubEnabled") && Nmer_PaletteAgentTransportHubEnabled()
+        return
     force := !!g_Agent_BootstrapForce
     g_Agent_BootstrapForce := false
     if bootBusy
@@ -2535,13 +2698,24 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
     prov := Trim(String(provider))
     tryN := Integer(tryN)
     flagT := FuncExists("Nmer_PaletteAgentTransport") ? Nmer_PaletteAgentTransport() : "auto"
+    CommandPalette_AgentWireLog("dispatch_enter", "card=" . cardId . " req=" . reqId . " transport=" . flagT . " try=" . tryN)
     card["streamDispatched"] := false
     card["dispatchTick"] := A_TickCount
     card["lastChunkTick"] := 0
     CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
     if (flagT = "hub") {
+        CommandPalette_AgentWireLog("dispatch_hub", "card=" . cardId . " req=" . reqId)
+        CommandPalette_AgentWarmFtbHost("dispatch_hub")
+        if FuncExists("Nmer_WailsBridgeEnsureOpenClawHubEnv")
+            try Nmer_WailsBridgeEnsureOpenClawHubEnv()
+            catch {
+            }
         if !(FuncExists("Nmer_WailsBridgeHealthy") && Nmer_WailsBridgeHealthy()) {
-            CommandPalette_AgentPushError(reqId, cardId, "nmer-hub 未就绪，请确认侧车已启动（sidecarHost: hub）")
+            if CommandPalette_AgentFallbackToFtb(cardId, reqId, q, prov, "⚠ nmer-hub 未就绪，改走 Niuma Chat…") {
+                CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
+                return
+            }
+            CommandPalette_AgentPushError(reqId, cardId, "nmer-hub 未就绪且 Niuma Chat 不可用，请确认侧车或打开悬浮栏")
             CommandPalette_AgentClearAiRoute(reqId)
             return
         }
@@ -2555,7 +2729,11 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
             CommandPalette_AgentMarkStreamDispatched(cardId, false)
             return
         }
-        CommandPalette_AgentPushError(reqId, cardId, "nmer-hub 投递失败，请检查 OPENCLAW_GATEWAY_TOKEN 与 hub 日志")
+        if CommandPalette_AgentFallbackToFtb(cardId, reqId, q, prov, "⚠ hub 投递失败，改走 Niuma Chat…") {
+            CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
+            return
+        }
+        CommandPalette_AgentPushError(reqId, cardId, "nmer-hub 与 Niuma Chat 均未就绪，请打开悬浮栏并确认 OpenClaw Token")
         CommandPalette_AgentClearAiRoute(reqId)
         return
     }
@@ -2952,6 +3130,8 @@ CommandPalette_AgentPushError(reqId, cardId, message) {
         card["running"] := false
         card["uiState"] := "Done"
         card["error"] := String(message)
+        card["liveThought"] := ""
+        card["heartbeatTick"] := 0
         card["updatedAt"] := A_Now
         CommandPalette_AgentPersistCards()
     }

@@ -2026,7 +2026,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 <script src="palette/search/command-index.js?v=1"></script>
 <script src="palette/app/query-controller.js?v=1"></script>
 <script src="palette/views/result-list.js?v=1"></script>
-<script src="palette/app/palette-layout.js?v=1"></script>
+<script src="palette/app/palette-layout.js?v=2"></script>
 <script src="palette/app/stream-batcher.js?v=1"></script>
 <script src="palette/app/agent-chunk-coalescer.js?v=1"></script>
 </head>
@@ -2214,6 +2214,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       discreteLayout: !!d.discreteLayout,
       streamBatching: !!d.streamBatching,
       stateStore: !!d.stateStore,
+      stateStoreShadow: !!d.stateStoreShadow,
       agentTransport: String(d.agentTransport || "auto"),
       openclawAnswerSync: d.openclawAnswerSync !== false
     };
@@ -3516,7 +3517,97 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return false;
   }
 
+  var PALETTE_HUB_SUMMARY_URL = "http://127.0.0.1:18791/v1/palette/state/summary";
+  var PALETTE_HUB_DETAIL_URL = "http://127.0.0.1:18791/v1/palette/state/detail";
+
+  function paletteStateStoreShadowEnabled() {
+    return !!(
+      state.paletteFlags &&
+      state.paletteFlags.stateStore &&
+      state.paletteFlags.stateStoreShadow
+    );
+  }
+
+  function applyAgentCardDetailDto(detailCard) {
+    if (!detailCard || !detailCard.cardId) return false;
+    upsertActionCardFromDto(detailCard, { fullDetail: true });
+    var detailId = String(detailCard.cardId);
+    if (actionState.detailCardId === detailId) {
+      renderActionHistoryList();
+      scheduleExpandedCardLayout(getActionCard(detailId), { pipeline: true, recover: false });
+    }
+    return true;
+  }
+
+  function pullAgentCardDetailFromAhk(cardId) {
+    var id = String(cardId || "");
+    if (!id) return;
+    try {
+      post({ type: "palette_agent_detail", cardId: id });
+    } catch (_) {}
+  }
+
+  function requestAgentCardDetail(cardId) {
+    var id = String(cardId || "");
+    if (!id) return;
+    if (!(state.paletteFlags && state.paletteFlags.stateStore)) return;
+    if (!paletteStateStoreShadowEnabled()) {
+      pullAgentCardDetailFromAhk(id);
+      return;
+    }
+    var hubFallbackTimer = setTimeout(function () {
+      pullAgentCardDetailFromAhk(id);
+    }, 1200);
+    fetch(PALETTE_HUB_DETAIL_URL + "?cardId=" + encodeURIComponent(id), {
+      method: "GET",
+      cache: "no-store"
+    })
+      .then(function (res) {
+        if (!res || !res.ok) return null;
+        return res.json();
+      })
+      .then(function (data) {
+        clearTimeout(hubFallbackTimer);
+        if (data && data.ready && data.card && data.card.cardId) {
+          agentDebugLog(
+            "hub_detail_pull",
+            "card=" + id + " blocks=" + (data.hasBlocks ? "1" : "0")
+          );
+          applyAgentCardDetailDto(data.card);
+          return;
+        }
+        pullAgentCardDetailFromAhk(id);
+      })
+      .catch(function () {
+        clearTimeout(hubFallbackTimer);
+        pullAgentCardDetailFromAhk(id);
+      });
+  }
+
+  function fetchAgentSummaryFromHub(done) {
+    if (!paletteStateStoreShadowEnabled()) {
+      if (done) done(null);
+      return;
+    }
+    fetch(PALETTE_HUB_SUMMARY_URL, { method: "GET", cache: "no-store" })
+      .then(function (res) {
+        if (!res || !res.ok) return null;
+        return res.json();
+      })
+      .then(function (data) {
+        if (!data || data.summary !== true || !Array.isArray(data.cards)) {
+          if (done) done(null);
+          return;
+        }
+        if (done) done(data);
+      })
+      .catch(function () {
+        if (done) done(null);
+      });
+  }
+
   function shouldDeferAgentCardPullOnReady() {
+    if (paletteStateStoreShadowEnabled()) return false;
     return paletteFastInput() && state.paletteFlags && state.paletteFlags.stateStore;
   }
 
@@ -3531,12 +3622,37 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (actionState._cardPullPending) return;
     if (paletteFastInput() && actionHasRunningCard()) return;
     actionState._cardPullPending = true;
-    try {
-      post({ type: "palette_agent_pull" });
-    } catch (_) {}
-    setTimeout(function () {
+    var finishPull = function () {
       actionState._cardPullPending = false;
-    }, 1500);
+    };
+    var pullFromAhk = function () {
+      try {
+        post({ type: "palette_agent_pull" });
+      } catch (_) {}
+      setTimeout(finishPull, 1500);
+    };
+    if (paletteStateStoreShadowEnabled()) {
+      var hubFallbackTimer = setTimeout(function () {
+        if (!actionState._cardPullPending) return;
+        pullFromAhk();
+      }, 1200);
+      fetchAgentSummaryFromHub(function (data) {
+        clearTimeout(hubFallbackTimer);
+        if (!actionState._cardPullPending) return;
+        if (data && data.cards && data.cards.length > 0) {
+          agentDebugLog(
+            "hub_summary_pull",
+            "n=" + data.cards.length + " seq=" + String(data.writeSeq || "")
+          );
+          renderActionCardSync(data.cards, { summary: true, source: "hub" });
+          finishPull();
+          return;
+        }
+        pullFromAhk();
+      });
+      return;
+    }
+    pullFromAhk();
   }
 
   function actionHasStoredCards() {
@@ -3755,9 +3871,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     var card = getActionCard(id);
     if (!card) return;
     if (state.paletteFlags && state.paletteFlags.stateStore) {
-      try {
-        post({ type: "palette_agent_detail", cardId: id });
-      } catch (_) {}
+      requestAgentCardDetail(id);
     }
     if (paletteOpenClawAnswerSync() && card && card.reqId) {
       try {
@@ -6162,6 +6276,25 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       runQuery(true);
       syncWindowSize();
     },
+    runPerfBrowseQuery: function (text) {
+      state.actionCmdBrowse = true;
+      state.intent = "action";
+      syncIntentUI();
+      var q = String(text || "");
+      state.input = q;
+      var input = getInputEl();
+      if (input) {
+        input.value = q;
+        try {
+          input.setSelectionRange(q.length, q.length);
+        } catch (_) {}
+        syncInputHeight();
+      }
+      state.selected = 0;
+      paintActionCommandSearch(q.trim(), { perfOnly: true });
+      if (typeof PalettePerfMarks !== "undefined" && PalettePerfMarks.flush) PalettePerfMarks.flush();
+      syncWindowSize();
+    },
     setStatus: function (text, status) {
       state.voiceHint = String(text || "");
       state.voiceStatus = String(status || "idle");
@@ -6636,7 +6769,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       metaEl.title = metaEl.textContent;
     }
     if (compactEl) {
-      compactEl.textContent = isActionCardRunning(card) ? preview || "执行中…" : preview || "已归档";
+      var errCompact = String(card.error || "").trim();
+      if (errCompact && !isActionCardRunning(card)) {
+        compactEl.textContent = errCompact.length > 48 ? errCompact.slice(0, 48) + "…" : errCompact;
+      } else {
+        compactEl.textContent = isActionCardRunning(card) ? preview || "执行中…" : preview || "已归档";
+      }
       compactEl.title = compactEl.textContent;
     }
     if (planChip) {
@@ -6751,7 +6889,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         if (ltEl) {
           ltEl.style.display = "";
           ltEl.classList.remove("card-live-thought-rich");
-          ltEl.textContent = "回复未同步 · 可展开 Niuma Chat 查看完整回答";
+          var errTxt = String(card.error || "").trim();
+          ltEl.textContent = errTxt
+            ? errTxt
+            : "回复未同步 · 可展开 Niuma Chat 查看完整回答";
           ltEl.classList.remove("thinking");
         }
       } else {
@@ -7621,9 +7762,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   function maybeRecoverIncompleteDoneCard(card) {
     if (!card || !card.reqId) return;
     if (isCardSummaryOnly(card)) {
-      try {
-        post({ type: "palette_agent_detail", cardId: card.id });
-      } catch (_) {}
+      requestAgentCardDetail(card.id);
       return;
     }
     if (!cardAnswerLooksIncomplete(card)) return;
@@ -7871,6 +8010,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       box.insertBefore(stack, box.firstChild);
     }
     ensureActionCardListHost(stack);
+    if (paletteDiscreteLayout() && typeof PaletteLayout !== "undefined") {
+      PaletteLayout.resetMode();
+      publishDiscreteLayout(true);
+    } else {
+      syncWindowSize();
+    }
   }
 
   function renderActionCardSync(cards, syncOpts) {
@@ -7915,8 +8060,15 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       actionState.cards[sole].expanded = isActionCardRunning(actionState.cards[sole]);
     }
     if (actionState.focusMode) collapseNonActiveCards();
+    ensureActionResultsVisible();
     renderActionHistoryList();
     syncActionResultsLayout();
+    if (paletteDiscreteLayout() && typeof PaletteLayout !== "undefined") {
+      PaletteLayout.resetMode();
+      publishDiscreteLayout(true);
+    } else {
+      syncWindowSize();
+    }
     if (actionHasStoredCards()) {
       window.nmerPalette.setStatus(
         "已加载 " + Object.keys(actionState.cards).length + " 个历史任务",
@@ -8224,7 +8376,13 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   function runLocalCommandQuery(q, gen, opts) {
     opts = opts || {};
-    if (typeof PaletteCommandIndex === "undefined") return 0;
+    if (typeof PaletteCommandIndex === "undefined") {
+      scheduleQueryPaintMark(gen, 0, {
+        emptyResult: true,
+        source: opts.source || "no_index"
+      });
+      return 0;
+    }
     var localItems = PaletteCommandIndex.search(q, 30);
     state.actions = localItems;
     state.resultMode = "command";
@@ -8233,14 +8391,14 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     state._actionCmdQueryActive = localItems.length > 0 && !!String(q || "").trim();
     if (opts.light && actionHasStoredCards()) updateActionCmdOverlay(localItems);
     else updateResults();
-    scheduleQueryPaintMark(gen, localItems.length);
+    scheduleQueryPaintMark(gen, localItems.length, opts);
     return localItems.length;
   }
 
   function scheduleQueryPaintMark(gen, resultCount, opts) {
     opts = opts || {};
     if (typeof PalettePerfMarks === "undefined") return;
-    requestAnimationFrame(function () {
+    var paintFn = function () {
       var durationMs =
         typeof PalettePerfMarks.elapsedSince === "function"
           ? PalettePerfMarks.elapsedSince("query_start")
@@ -8260,7 +8418,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           source: opts.source || ""
         });
       }
-    });
+    };
+    requestAnimationFrame(paintFn);
   }
 
   function clearActionCmdOverlayDom() {
@@ -8271,7 +8430,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (!state.actionCmdBrowse) box.classList.remove("show-cmd-browse");
   }
 
-  function paintActionCommandSearch(text) {
+  function paintActionCommandSearch(text, perfOpts) {
+    perfOpts = perfOpts || {};
     var seq =
       typeof PaletteQueryController !== "undefined"
         ? PaletteQueryController.nextGeneration()
@@ -8280,7 +8440,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (typeof PalettePerfMarks !== "undefined") {
       PalettePerfMarks.mark("query_start", { generation: seq });
     }
-    var hitCount = runLocalCommandQuery(text, seq, { light: actionHasStoredCards() });
+    var queryOpts = Object.assign({ light: actionHasStoredCards() }, perfOpts);
+    var hitCount = runLocalCommandQuery(text, seq, queryOpts);
+    if (perfOpts.perfOnly) return;
     if (hitCount > 0) cancelHostQuery();
     else scheduleHostQuery(seq);
   }
@@ -9075,14 +9237,23 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return true;
   }
 
-  function publishDiscreteLayout() {
+  function actionLayoutHasResults() {
+    return !!(
+      state.showResults ||
+      (state.actions && state.actions.length > 0) ||
+      actionHasStoredCards()
+    );
+  }
+
+  function publishDiscreteLayout(force) {
     if (!paletteDiscreteLayout() || typeof PaletteLayout === "undefined") return false;
     var mode = PaletteLayout.resolveMode({
-      hasResults: state.showResults || (state.actions && state.actions.length > 0),
+      hasResults: actionLayoutHasResults(),
       hasInput: !!String(state.input || "").trim(),
       expanded: state.intent === "action" && hasExpandedActionCard()
     });
-    return PaletteLayout.requestLayoutMode(mode, post);
+    if (state.intent === "action" && actionLayoutHasResults() && mode === "compact") mode = "list";
+    return PaletteLayout.requestLayoutMode(mode, post, !!force);
   }
 
   function publishPaletteHeight() {
@@ -9559,6 +9730,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         }
         purgeActionEmptyHint();
         updateResults();
+        scheduleQueryPaintMark(remoteGen || state.querySeq, state.actions.length, {
+          source: "host_browse",
+          emptyResult: !state.actions.length
+        });
         return;
       }
       if (typeof PalettePerfMarks !== "undefined") {
@@ -9635,12 +9810,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     } else if (d.type === "palette_agent_card_detail") {
       var detailCard = d.card;
       if (detailCard && detailCard.cardId) {
-        upsertActionCardFromDto(detailCard, { fullDetail: true });
-        var detailId = String(detailCard.cardId);
-        if (actionState.detailCardId === detailId) {
-          renderActionHistoryList();
-          scheduleExpandedCardLayout(getActionCard(detailId), { pipeline: true, recover: false });
-        }
+        agentDebugLog("host_card_detail", "card=" + String(detailCard.cardId));
+        applyAgentCardDetailDto(detailCard);
       }
     } else if (d.type === "palette_agent_card_new") {
       agentDebugLog("host_card_new", "card=" + (d.cardId || "") + " req=" + (d.reqId || ""));
@@ -9951,20 +10122,38 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         er.card.error = errMsg;
         actionCardManager.transitionCardState(er.id, "Done");
         setCardLiveThought(er.id, errMsg, false);
+        var errDom = document.getElementById("card-" + er.id);
+        if (errDom) {
+          var errLog = errDom.querySelector(".card-status-log");
+          if (errLog) {
+            var errTail = errLog.querySelector(".b-status:last-child");
+            if (errTail) {
+              errTail.querySelector(".b-status-title").textContent = "[失败]";
+              var errLogEl = errTail.querySelector(".b-status-log");
+              if (errLogEl) errLogEl.textContent = errMsg;
+            }
+          }
+        }
         flushAgentCardDomRefresh(er.id);
       }
     } else if (d.type === "palette_agent_status") {
       agentDebugLog("host_status", String(d.message || "").slice(0, 80));
       window.nmerPalette.setStatus(d.message || "", d.status || "idle");
       var stR = resolveActionCard(d.cardId, d.reqId);
-      if (stR.id) setCardLiveThought(stR.id, d.message || "", d.status === "loading");
+      if (stR.id) {
+        ensureActionResultsVisible();
+        setCardLiveThought(stR.id, d.message || "", d.status === "loading");
+        syncWindowSize();
+      }
     } else if (d.type === "palette_agent_heartbeat") {
       agentDebugLog("host_heartbeat", String(d.message || "").slice(0, 60), "warn");
       var hb = resolveActionCard(d.cardId, d.reqId);
       var hbMsg = String(d.liveThought || d.message || "等待响应…");
       if (hb.id) {
+        ensureActionResultsVisible();
         setCardLiveThought(hb.id, hbMsg, true);
         window.nmerPalette.setStatus(hbMsg.slice(0, 80), "loading");
+        syncWindowSize();
       }
     } else if (d.type === "palette_agent_session") {
       var cid3 = String(d.cardId || "");
@@ -10001,7 +10190,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     } else if (d.type === "palette_focus" || d.type === "palette_show") {
       ensureHeaderInputVisible();
       if (state.intent === "action") refreshIntentResults(true);
-      syncWindowSize();
+      if (paletteDiscreteLayout() && state.intent === "action" && typeof PaletteLayout !== "undefined") {
+        PaletteLayout.resetMode();
+        publishDiscreteLayout(true);
+      } else {
+        syncWindowSize();
+      }
       getInputEl()?.focus();
     } else if (d.type === "set_theme") {
       applyTheme(d.themeMode || d.theme || "dark");

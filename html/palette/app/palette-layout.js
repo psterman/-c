@@ -20,10 +20,10 @@
     return "list";
   }
 
-  function requestLayoutMode(mode, postFn) {
+  function requestLayoutMode(mode, postFn, force) {
     var m = String(mode || "");
     if (!MODES[m]) return false;
-    if (m === lastMode) return false;
+    if (!force && m === lastMode) return false;
     lastMode = m;
     if (typeof global.PalettePerfMarks !== "undefined") {
       global.PalettePerfMarks.mark("layout_mode_requested", { layoutMode: m });
