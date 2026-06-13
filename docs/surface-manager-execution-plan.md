@@ -649,7 +649,7 @@ W6+    S7 FTB-1 → S8 B3 → S9 域 C → S10 合壳   原生化可拆 stream
 |----|------|
 | **P0** | 关 CP 发布票（默认 AHK）：手动 6 项 + Hybrid warm-session + `manual_equivalent` PerfGate + `defaultHost=ahk` + legacy rollback |
 | **P1** | 文档与 Git 收口（本 §、diagnostics README）；commit 用 `release: sign off CommandPalette on AHK host` / `docs: mark Wails CP as architecture-ready non-default` |
-| **P2** | 内存与侧车（CP 发布后下一主线）：Hub private ≤50 PASS / 50–55 WARN / >55 FAIL；30min slope hub ≤1 MiB/h、UI ≤5 MiB/h 或 abs ≤30 MiB；10 轮恢复 after ≤ before+10% |
+| **P2** | 内存与侧车：`Run-P2MemorySidecarGate.ps1` — Hub private ≤50 PASS / 50–55 WARN / >55 FAIL；30min slope hub ≤1 MiB/h、UI ≤5 MiB/h 或 abs ≤30 MiB；10 轮恢复 `hubEnd ≤ hubStart+10%` |
 | **P3** | A2UI 产品灰度（独立线）：Wave0/2、7×24、Day4、`Run-A2uiRolloutGate.ps1`；**`rolloutGatePass=true` 不改变 `commandPaletteHost` 或 `wailsDefaultEligible`** |
 | **P4.1** | Wails Raycast UX Gate — **spec only**，暂不实现（见 `docs/cp-wails-raycast-ux-gate-spec.md`） |
 | **P4.2** | SearchCenter / Config WebView → Wails 灰度（S9 域 C） |

@@ -57,8 +57,8 @@ powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Open-SurfaceGate
 # v4 签收看板
 powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Open-V4SignoffDashboard.ps1
 
-# A2UI 灰度合并门禁
-powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Run-A2uiRolloutGate.ps1
+# P2 内存侧车门禁（hub private + 30min 斜率）
+powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Run-P2MemorySidecarGate.ps1 -QuickSoakMinutes 3 -PauseIndexerForSoak
 ```
 
 也可 `cd tools\a2ui-diagnostics\hybrid` 后直接跑子目录脚本；路径解析不依赖当前工作目录。
@@ -74,7 +74,8 @@ powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Run-A2uiRolloutG
 | `Cache/debug/hybrid_cp_signoff_pipeline.json` | Hybrid + CP 发布聚合（`cpReleasePass`） |
 | `Cache/debug/cp_manual_release_checklist.json` | CP 发布手动 6 项 |
 | `Cache/debug/command_palette_perf_gate.json` | CP 性能门禁（pipelinePass + performancePass） |
-| `Cache/debug/multi_card_memory_report.json` | 多卡内存阶梯报告（uiPrivateMiB 剥离 SearchCore） |
+| `Cache/debug/p2_memory_sidecar_gate.json` | P2 hub/UI 斜率 + 10 轮恢复聚合 |
+| `Cache/debug/p2_hub_ui_soak.json` | P2 30min hub/UI 斜率采样 |
 | `Cache/debug/*_gate_diagnosis.json` | 各阶段静态门禁 |
 | `dashboards/*-live.html` | 注入 JSON 后的本地看板（`file://` 打开） |
 

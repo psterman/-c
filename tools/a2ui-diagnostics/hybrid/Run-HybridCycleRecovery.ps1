@@ -42,7 +42,9 @@ for ($i = 1; $i -le $Rounds; $i++) {
 $end = Get-HubPrivateMiB
 $recoveryPct = if ($start -gt 0) { [math]::Round((($peak - $start) / $start) * 100, 2) } else { 0 }
 $endDriftPct = if ($start -gt 0) { [math]::Round((([math]::Abs($end - $start)) / $start) * 100, 2) } else { 0 }
-$pass = ($recoveryPct -le $RecoveryLimitPct) -and ($endDriftPct -le $RecoveryLimitPct)
+$endLimitMiB = if ($start -gt 0) { [math]::Round($start * (1 + $RecoveryLimitPct / 100), 2) } else { $null }
+$endWithinBudget = if ($null -ne $end -and $null -ne $endLimitMiB) { ($end -le $endLimitMiB) } else { $false }
+$pass = $endWithinBudget
 
 $report = [ordered]@{
     capturedAt        = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -50,12 +52,14 @@ $report = [ordered]@{
     hubStartMiB       = $start
     hubPeakMiB        = $peak
     hubEndMiB         = $end
+    hubEndLimitMiB    = $endLimitMiB
     recoveryPct       = $recoveryPct
     endDriftPct       = $endDriftPct
+    endWithinBudget   = $endWithinBudget
     recoveryLimitPct  = $RecoveryLimitPct
     pass              = $pass
     samples           = $samples
-    note              = "hub inject cycle proxy; full UI 10-round open/close remains manual on dashboard"
+    note              = "P2: after (hubEnd) <= before + ${RecoveryLimitPct}% ; peak drift informational"
 }
 $report | ConvertTo-Json -Depth 6 | Set-Content -Path $outPath -Encoding UTF8
 Write-Host "hybrid_cycle_recovery -> $outPath pass=$pass start=$start peak=$peak end=$end recoveryPct=$recoveryPct%"

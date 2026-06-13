@@ -221,12 +221,13 @@ WebView2 门禁采用双指标：
 | 指标 | 阶段目标 |
 |---|---:|
 | hybrid Hub 新增 WebView | 0 |
-| nmer-hub Private | <= 50 MiB |
+| nmer-hub Private | <= 50 MiB PASS; 50–55 WARN; >55 FAIL（`Run-P2MemorySidecarGate.ps1`） |
 | SearchCore 无活动任务 | 进程退出，或 <= 150 MiB |
 | SearchCore 索引中 | 建立机器基线后下降 >= 30% |
 | hybrid 相对 pure-AHK 增量 | <= 80 MiB |
-| 30 分钟空闲内存斜率 | <= 1 MiB/分钟 |
-| 10 轮开关后的恢复 | 回到初始空载 + 10% 内 |
+| P2 30min hub 斜率 | <= 1 MiB/hour |
+| P2 30min UI aggregate 斜率 | <= 5 MiB/hour 或 abs delta <= 30 MiB |
+| P2 10 轮 hub 恢复 | hubEnd <= hubStart + 10% |
 
 不建议在迁移前直接要求 scoped WebView2 进程 `<= 4`。应先去掉 Wails Chromium 栈，再根据真实进程模型收紧。
 

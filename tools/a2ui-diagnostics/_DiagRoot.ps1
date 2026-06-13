@@ -568,3 +568,92 @@ function Read-HybridSignoffReference {
         return $null
     }
 }
+
+function Get-DiagHubPrivateMiB {
+    $p = Get-Process -Name "nmer-hub" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $p) { return $null }
+    $p.Refresh()
+    return [math]::Round($p.PrivateMemorySize64 / 1MB, 2)
+}
+
+function Test-P2HubPrivateGate([double]$HubPrivateMiB) {
+    if ($null -eq $HubPrivateMiB) {
+        return [ordered]@{
+            pass   = $false
+            warn   = $false
+            status = "FAIL"
+            value  = $null
+            detail = "nmer-hub not running"
+        }
+    }
+    if ($HubPrivateMiB -le 50) {
+        return [ordered]@{
+            pass   = $true
+            warn   = $false
+            status = "PASS"
+            value  = $HubPrivateMiB
+            detail = "hub private <= 50 MiB"
+        }
+    }
+    if ($HubPrivateMiB -le 55) {
+        return [ordered]@{
+            pass   = $true
+            warn   = $true
+            status = "WARN"
+            value  = $HubPrivateMiB
+            detail = "50 < hub private <= 55 MiB (warn band)"
+        }
+    }
+    return [ordered]@{
+        pass   = $false
+        warn   = $false
+        status = "FAIL"
+        value  = $HubPrivateMiB
+        detail = "hub private > 55 MiB"
+    }
+}
+
+function Get-DiagMemorySlopeMiBPerHour {
+    param(
+        [array]$SampleRows,
+        [string]$FieldName = "valueMiB",
+        [string]$TimeField = "tMin"
+    )
+    $rows = @($SampleRows | Where-Object { $null -ne $_.$FieldName })
+    if ($rows.Count -lt 2) {
+        return [ordered]@{
+            slopeMiBPerHour = 0.0
+            sampleCount     = $rows.Count
+            firstTMin       = $null
+            lastTMin        = $null
+            firstMiB        = $null
+            lastMiB         = $null
+            absDeltaMiB     = $null
+        }
+    }
+    $first = $rows[0]
+    $last = $rows[-1]
+    $hours = [math]::Max(0.01, ([double]$last.$TimeField - [double]$first.$TimeField) / 60.0)
+    $firstMiB = [double]$first.$FieldName
+    $lastMiB = [double]$last.$FieldName
+    $slope = [math]::Round(($lastMiB - $firstMiB) / $hours, 3)
+    return [ordered]@{
+        slopeMiBPerHour = $slope
+        sampleCount     = $rows.Count
+        firstTMin       = $first.$TimeField
+        lastTMin        = $last.$TimeField
+        firstMiB        = $firstMiB
+        lastMiB         = $lastMiB
+        absDeltaMiB     = [math]::Round([math]::Abs($lastMiB - $firstMiB), 2)
+    }
+}
+
+function Write-DiagJson {
+    param(
+        [object]$Object,
+        [string]$Path,
+        [int]$Depth = 8
+    )
+    $utf8 = [System.Text.UTF8Encoding]::new($false)
+    [System.IO.File]::WriteAllText($Path, ($Object | ConvertTo-Json -Depth $Depth), $utf8)
+}

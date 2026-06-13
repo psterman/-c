@@ -95,7 +95,12 @@ try {
 } catch {}
 
 $hubPrivate = $null
-if ($hub) { $hub.Refresh(); $hubPrivate = [math]::Round($hub.PrivateMemorySize64 / 1MB, 2) }
+$hubPrivateP2 = $null
+if ($hub) {
+    $hub.Refresh()
+    $hubPrivate = [math]::Round($hub.PrivateMemorySize64 / 1MB, 2)
+    $hubPrivateP2 = Test-P2HubPrivateGate $hubPrivate
+}
 
 $gates = @()
 
@@ -126,6 +131,8 @@ $gates += [ordered]@{
         nmer_hub = if ($hub) { $hub.Id } else { $null }
         nmer_wails = if ($wails) { $wails.Id } else { $null }
         hubPrivateMiB = $hubPrivate
+        hubPrivateP2Status = if ($hubPrivateP2) { $hubPrivateP2.status } else { $null }
+        hubPrivateP2Warn = if ($hubPrivateP2) { $hubPrivateP2.warn } else { $null }
         health_ok = if ($health) { $health.ok } else { $false }
         provider = if ($health) { $health.provider } else { "" }
     }

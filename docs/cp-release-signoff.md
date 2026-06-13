@@ -47,10 +47,26 @@ cd tools\a2ui-diagnostics
 
 | 线 | 说明 |
 |----|------|
-| P2 | 内存与侧车（下一主线） |
+| **P2** | 内存与侧车：`Run-P2MemorySidecarGate.ps1`（见下） |
 | P3 | A2UI 灰度（独立；`rolloutGatePass` 不改 CP host） |
 | P4.1 | Wails Raycast UX Gate（spec only） |
 | P4.2 | SearchCenter / Config → Wails 灰度 |
 | P4.3 | Surface-by-surface eligibility |
 
 详见 [`surface-manager-execution-plan.md`](surface-manager-execution-plan.md) §十五。
+
+## P2 — 内存与侧车
+
+```powershell
+cd tools\a2ui-diagnostics
+.\Run-P2MemorySidecarGate.ps1 -PauseIndexerForSoak
+```
+
+| 门禁 | 阈值 |
+|------|------|
+| Hub private | ≤50 PASS · 50–55 WARN · >55 FAIL |
+| 30min hub slope | ≤ 1 MiB/hour |
+| 30min UI aggregate | ≤ 5 MiB/hour **或** abs Δ ≤ 30 MiB |
+| 10 轮 hub 恢复 | `hubEnd ≤ hubStart × 1.10` |
+
+产物：`Cache/debug/p2_memory_sidecar_gate.json`。`PASS_WITH_WARNINGS` = hub 在 50–55 MiB 警告带。
