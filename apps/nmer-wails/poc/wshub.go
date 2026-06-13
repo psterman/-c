@@ -74,6 +74,7 @@ type Hub struct {
 	a2uiProviderName  string
 	a2uiActionCancels map[string]a2uiActionCancel
 	shellFtb          *ShellFtbController
+	shellCp           *ShellCpController
 	paletteShadow     *PaletteStateShadowStore
 }
 
@@ -97,8 +98,23 @@ func NewHub(addr, path string, emitFn func(AgentEvent), statusFn func(HubStatus)
 		a2uiProviderName:  "fake",
 		a2uiActionCancels: make(map[string]a2uiActionCancel),
 		shellFtb:          NewShellFtbController(strings.TrimSpace(os.Getenv("NMER_SCRIPT_DIR"))),
+		shellCp:           NewShellCpController(strings.TrimSpace(os.Getenv("NMER_SCRIPT_DIR"))),
 		paletteShadow:     NewPaletteStateShadowStore(),
 	}
+}
+
+func (h *Hub) SetShellCpEmit(fn func(string, interface{})) {
+	if h == nil || h.shellCp == nil || fn == nil {
+		return
+	}
+	h.shellCp.SetEmit(fn)
+}
+
+func (h *Hub) ShellCpStatus() ShellCpStatus {
+	if h == nil || h.shellCp == nil {
+		return ShellCpStatus{Phase: 2}
+	}
+	return h.shellCp.Status()
 }
 
 func (h *Hub) SetShellFtbEmit(fn func(string, interface{})) {
@@ -143,6 +159,10 @@ func (h *Hub) Start(ctx context.Context) error {
 	if h.shellFtb != nil {
 		h.shellFtb.SetAddr(h.addr)
 		h.shellFtb.RegisterRoutes(mux)
+	}
+	if h.shellCp != nil {
+		h.shellCp.SetAddr(h.addr)
+		h.shellCp.RegisterRoutes(mux)
 	}
 	if h.paletteShadow != nil {
 		h.paletteShadow.RegisterRoutes(mux)

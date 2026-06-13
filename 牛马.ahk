@@ -267,8 +267,8 @@ try SurfaceManager_ObserveSystemBootstrap(Map(
     "enforceSlots", FuncExists("Nmer_SurfaceManagerEnforceSlots") ? (Nmer_SurfaceManagerEnforceSlots() ? 1 : 0) : -1
 ))
 #Include modules\CommandPaletteCore.ahk
-#Include modules\CommandPaletteWailsHost.ahk
 #Include modules\CommandPaletteRouter.ahk
+#Include modules\CommandPaletteWailsHost.ahk
 #Include modules\CommandPaletteAgentOrchestrator.ahk
 #Include modules\CommandPaletteStateStoreShadow.ahk
 #Include modules\CommandPaletteSearchDebug.ahk
@@ -4722,8 +4722,12 @@ if FuncExists("Nmer_AutoStartSearchCenterCore") {
 if FuncExists("Nmer_AutoStartWailsBridge") {
     SetTimer(Nmer_AutoStartWailsBridge, -3000)
 }
+if FuncExists("Nmer_HybridSignoffStartupEnsure") {
+    SetTimer(Nmer_HybridSignoffStartupEnsure, -2500)
+}
 if FuncExists("Nmer_HybridSignoffBootstrapEnsure") {
     SetTimer(Nmer_HybridSignoffBootstrapEnsure, -8000)
+    SetTimer(Nmer_HybridSignoffBootstrapEnsure, -18000)
 } else if FuncExists("Nmer_HybridManualProbeEnsure") {
     SetTimer(Nmer_HybridManualProbeEnsure, -8000)
 }

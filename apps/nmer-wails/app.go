@@ -57,6 +57,11 @@ func (a *App) startup(ctx context.Context) {
 			runtime.EventsEmit(a.ctx, event, payload)
 		}
 	})
+	a.hub.SetShellCpEmit(func(event string, payload interface{}) {
+		if a.ctx != nil {
+			runtime.EventsEmit(a.ctx, event, payload)
+		}
+	})
 }
 
 func (a *App) onAgentEvent(ev poc.AgentEvent) {

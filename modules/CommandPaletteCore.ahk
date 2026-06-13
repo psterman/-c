@@ -238,6 +238,8 @@ CommandPalette_ApplyLayoutMode(mode) {
     m := Trim(String(mode))
     if (m != "compact" && m != "list" && m != "detail")
         return false
+    if (Trim(String(g_CmdPal_LayoutMode)) = m)
+        return true
     g_CmdPal_LayoutMode := m
     g_CmdPal_Width := (m = "detail") ? 960 : 720
     h := (m = "compact") ? 72 : ((m = "detail") ? 620 : 460)
@@ -321,7 +323,13 @@ CommandPalette_GetWv2() {
 
 CommandPalette_IsVisible() {
     global g_CmdPal_Visible
-    return !!g_CmdPal_Visible
+    if g_CmdPal_Visible
+        return true
+    if FuncExists("Nmer_CommandPaletteHost") && Nmer_CommandPaletteHost() = "wails" {
+        if FuncExists("CommandPaletteWails_IsVisible")
+            return CommandPaletteWails_IsVisible()
+    }
+    return false
 }
 
 ; 热键输入守护：含 PendingShow / 窗口已 Show 但未置 g_CmdPal_Visible 的间隙，避免 CapsLock+字母风暴
@@ -420,6 +428,8 @@ CommandPalette_SyncHostShape() {
 
 CommandPalette_Init() {
     global g_CmdPal_Gui, g_CmdPal_Width, g_CmdPal_CurrentHeight
+    if FuncExists("CommandPalette_AhkWebViewEnabled") && !CommandPalette_AhkWebViewEnabled()
+        return
     try SurfaceManager_ObserveInit("command_palette", Map("entry", "CommandPalette_Init"))
     if IsObject(g_CmdPal_Gui)
         return
@@ -632,6 +642,11 @@ CommandPalette_Reveal(*) {
 }
 
 CommandPalette_Show() {
+    if FuncExists("CommandPalette_AhkWebViewEnabled") && !CommandPalette_AhkWebViewEnabled() {
+        if FuncExists("CommandPaletteRouter_Show")
+            return !!CommandPaletteRouter_Show()
+        return false
+    }
     if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("command_palette")
         return true
     global g_CmdPal_Ready, g_CmdPal_PendingShow, g_CmdPal_ShowRetryCount, g_CmdPal_ShowRequestedTick
@@ -1388,7 +1403,7 @@ CommandPalette_AfterShowBootstrap() {
     SetTimer(CommandPalette_EnsureWebInputVisible, -60)
     SetTimer(CommandPalette_SyncAiOnShow, -350)
     if FuncExists("CommandPalette_AgentOnReady")
-        SetTimer(CommandPalette_AgentOnReady, -80)
+        SetTimer(CommandPalette_AgentOnReady, -450)
     else if FuncExists("CommandPalette_AgentPushCardSync")
         SetTimer(CommandPalette_AgentPushCardSync, -120)
     SetTimer(CommandPalette_PushEmptyQuery, -180)
@@ -1591,7 +1606,51 @@ CommandPalette_Hide(meta := 0) {
         CapsLock_NormalizeAfterUiClose()
 }
 
+CommandPalette_DisposeAhkWebViewIfRetired(reason := "shell_retired") {
+    if FuncExists("CommandPalette_AhkWebViewEnabled") && CommandPalette_AhkWebViewEnabled()
+        return false
+    global g_CmdPal_Gui, g_CmdPal_Ctrl, g_CmdPal_WV2, g_CmdPal_Ready, g_CmdPal_Visible, g_CmdPal_Revealed
+    global g_CmdPal_WebReady, g_CmdPal_WantVisible, g_CmdPal_PendingShow, g_CmdPal_NavigationReady
+    if !(IsObject(g_CmdPal_Gui) && g_CmdPal_Gui.Hwnd)
+        return false
+    try CommandPalette_Hide()
+    catch {
+    }
+    try SurfaceManager_CloseWebViewControl(g_CmdPal_Ctrl)
+    catch {
+    }
+    g_CmdPal_Ctrl := 0
+    g_CmdPal_WV2 := 0
+    g_CmdPal_Ready := false
+    g_CmdPal_WebReady := false
+    g_CmdPal_NavigationReady := false
+    g_CmdPal_WantVisible := false
+    g_CmdPal_Visible := false
+    g_CmdPal_Revealed := false
+    g_CmdPal_PendingShow := false
+    try SurfaceManager_DestroyGui(g_CmdPal_Gui)
+    catch {
+        try g_CmdPal_Gui.Destroy()
+        catch {
+        }
+    }
+    g_CmdPal_Gui := 0
+    try SurfaceManager_ObserveClose("command_palette", Map(
+        "entry", "CommandPalette_DisposeAhkWebViewIfRetired",
+        "reason", String(reason),
+        "host", "ahk_retired"
+    ))
+    catch {
+    }
+    return true
+}
+
 CommandPalette_Dispose(reason := "") {
+    if FuncExists("CommandPalette_AhkWebViewEnabled") && !CommandPalette_AhkWebViewEnabled() {
+        if FuncExists("CommandPaletteRouter_Dispose")
+            return CommandPaletteRouter_Dispose(reason)
+        return CommandPalette_DisposeAhkWebViewIfRetired(reason)
+    }
     global g_CmdPal_Gui, g_CmdPal_Ctrl, g_CmdPal_WV2, g_CmdPal_Ready, g_CmdPal_Visible, g_CmdPal_Revealed
     try CommandPalette_Hide()
     catch {
@@ -3257,6 +3316,13 @@ CommandPalette_PromoteAiToNiumaChat(msg := 0) {
 }
 
 CommandPalette_InjectPalettePayload(payload) {
+    if FuncExists("Nmer_CommandPaletteHost") && Nmer_CommandPaletteHost() = "wails" {
+        if FuncExists("Nmer_WailsBridgePostShellCpInject") {
+            res := Nmer_WailsBridgePostShellCpInject(payload)
+            return !!(res is Map) && res.Get("ok", false)
+        }
+        return false
+    }
     global g_CmdPal_WV2
     if !IsObject(g_CmdPal_WV2)
         return false
@@ -3285,6 +3351,14 @@ CommandPalette_InjectPalettePayload(payload) {
 }
 
 CommandPalette_PushToWeb(payload) {
+    if FuncExists("Nmer_CommandPaletteHost") && Nmer_CommandPaletteHost() = "wails" {
+        if FuncExists("CommandPaletteWails_PushToWeb")
+            return CommandPaletteWails_PushToWeb(payload)
+        if FuncExists("Nmer_WailsBridgePostShellCpInject") {
+            res := Nmer_WailsBridgePostShellCpInject(payload)
+            return !!(res is Map) && res.Get("ok", false)
+        }
+    }
     global g_CmdPal_WV2
     if !IsObject(g_CmdPal_WV2)
         return false
@@ -3312,6 +3386,8 @@ CommandPalette_PushToWeb(payload) {
 }
 
 CommandPalette_ExecScript(js) {
+    if FuncExists("Nmer_CommandPaletteHost") && Nmer_CommandPaletteHost() = "wails"
+        return false
     global g_CmdPal_WV2
     if !IsObject(g_CmdPal_WV2)
         return false
@@ -3424,15 +3500,21 @@ CommandPalette_DispatchWebMessage(msg) {
     typ := msg.Has("type") ? String(msg["type"]) : ""
     if (typ = "palette_ready") {
         global g_CmdPal_WebReady, g_CmdPal_WantVisible, g_CmdPal_Visible, g_CmdPal_PendingShow
+        wailsHost := FuncExists("Nmer_CommandPaletteHost") && Nmer_CommandPaletteHost() = "wails"
         g_CmdPal_WebReady := true
-        SetTimer(CommandPalette_CommitShow, 0)
         CommandPalette_PerfLog("web_ready")
         CommandPalette_PushPaletteBootstrap()
         CommandPalette_PushThemeToWeb()
         SetTimer(CommandPalette_PushAiProviders, -40)
-        if FuncExists("CommandPalette_AgentOnReady")
-            SetTimer(CommandPalette_AgentOnReady, -20)
         g_CmdPal_PendingShow := false
+        if wailsHost {
+            if FuncExists("Nmer_WailsBridgePostShellCp")
+                try Nmer_WailsBridgePostShellCp("ready", "palette_ready")
+                catch {
+                }
+            return
+        }
+        SetTimer(CommandPalette_CommitShow, 0)
         SetTimer(CommandPalette_Reveal, -1)
         SetTimer(CommandPalette_DeferredFocus, -80)
         SetTimer(CommandPalette_SyncHostShape, -1)
@@ -3665,8 +3747,10 @@ CommandPalette_DispatchWebMessage(msg) {
         return
     }
     if (typ = "palette_agent_pull") {
-        if FuncExists("CommandPalette_AgentOnReady")
-            CommandPalette_AgentOnReady()
+        if FuncExists("CommandPalette_AgentOnPull")
+            CommandPalette_AgentOnPull()
+        else if FuncExists("CommandPalette_AgentPushCardSync")
+            SetTimer(CommandPalette_AgentPushCardSync, -20)
         return
     }
     if (typ = "palette_agent_detail") {

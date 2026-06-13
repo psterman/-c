@@ -34,7 +34,11 @@ $body = [ordered]@{
 
 Write-Host ("probe -> action={0} id={1}" -f $Action, $id) -ForegroundColor DarkGray
 
-Start-Sleep -Seconds 2
+$consumeDeadline = (Get-Date).AddSeconds(8)
+while ((Get-Date) -lt $consumeDeadline) {
+    if (-not (Test-Path $reqPath)) { break }
+    Start-Sleep -Milliseconds 250
+}
 if (Test-Path $reqPath) {
     $logHint = ""
     $logPath = Join-Path $debugDir "multi_card_memory_probe.log"
@@ -42,7 +46,7 @@ if (Test-Path $reqPath) {
         $tail = Get-Content $logPath -Tail 3 -Encoding UTF8 -ErrorAction SilentlyContinue
         $logHint = " log_tail=" + ($tail -join " | ")
     }
-    throw "multi-card memory probe IPC inactive (request not consumed in 2s). Reload niuma.ahk once.$logHint"
+    throw "multi-card memory probe IPC inactive (request not consumed in 8s). Reload niuma.ahk once.$logHint"
 }
 
 $deadline = (Get-Date).AddSeconds($TimeoutSec)

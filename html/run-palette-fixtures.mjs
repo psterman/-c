@@ -96,8 +96,10 @@ function loadScript(name) {
   "palette/app/palette-layout.js",
   "palette/app/stream-batcher.js",
   "palette/app/agent-chunk-coalescer.js",
+  "palette/agent/agent-summary.js",
   "palette/test/command-index.fixtures.js",
-  "palette/test/stream-batcher.fixtures.js"
+  "palette/test/stream-batcher.fixtures.js",
+  "palette/test/PaletteActionHistoryShell.fixtures.js"
 ].forEach(loadScript);
 
 let allOk = true;
@@ -473,6 +475,26 @@ if (PaletteOfficialA2UIActionPolicyFixtures && PaletteOfficialA2UIActionPolicyFi
   }
 } else {
   console.error("PaletteOfficialA2UIActionPolicyFixtures unavailable");
+  allOk = false;
+}
+
+console.log("--- ActionHistoryShell ---");
+const { PaletteActionHistoryShellFixtures } = sandbox;
+if (PaletteActionHistoryShellFixtures && PaletteActionHistoryShellFixtures.run) {
+  try {
+    var ahOut = PaletteActionHistoryShellFixtures.run();
+    var ahCases = ahOut && ahOut.cases ? ahOut.cases : 1;
+    for (var ahi = 0; ahi < ahCases; ahi++) {
+      console.log("PASS action-history-shell:case_" + (ahi + 1));
+      totalPassed += 1;
+    }
+  } catch (e) {
+    console.log("FAIL action-history-shell — " + (e && e.message ? e.message : e));
+    totalFailed += 1;
+    allOk = false;
+  }
+} else {
+  console.error("PaletteActionHistoryShellFixtures unavailable");
   allOk = false;
 }
 

@@ -3,7 +3,8 @@ param(
     [string]$RepoRoot = "",
     [switch]$RunOpenClawSmoke,
     [switch]$CaptureAhkReferenceFirst,
-    [switch]$RunManualSignoff
+    [switch]$RunManualSignoff,
+    [switch]$RunCpPipeline
 )
 
 . (Join-Path $PSScriptRoot "..\_DiagRoot.ps1")
@@ -22,6 +23,11 @@ if ($CaptureAhkReferenceFirst) {
 
 if ($RunManualSignoff) {
     & (Join-Path $here "Run-HybridManualSignoff.ps1") -RepoRoot $RepoRoot -RefreshDashboard
+    exit $LASTEXITCODE
+}
+
+if ($RunCpPipeline) {
+    & (Join-Path $here "Run-HybridCpSignoffPipeline.ps1") -RepoRoot $RepoRoot
     exit $LASTEXITCODE
 }
 

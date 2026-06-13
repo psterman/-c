@@ -639,6 +639,8 @@ CommandPalette_AgentPullCardsJson() {
 
 CommandPalette_AgentPushCardSync() {
     global g_Agent_Cards, g_Agent_CardLimit
+    if g_Agent_Cards.Count < 1
+        CommandPalette_AgentLoadCards(true)
     CommandPalette_AgentPruneCards()
     useSummary := FuncExists("Nmer_PaletteStateStoreEnabled") && Nmer_PaletteStateStoreEnabled()
     sorted := []
@@ -674,6 +676,10 @@ CommandPalette_AgentPushCardSync() {
     }
     if FuncExists("CommandPalette_PushToWeb")
         CommandPalette_PushToWeb(Map("type", "palette_agent_card_sync", "cards", items, "summary", useSummary))
+    if FuncExists("CommandPalette_AgentQueueShadowWrite")
+        try CommandPalette_AgentQueueShadowWrite()
+        catch {
+        }
 }
 
 CommandPalette_AgentPushCardDetail(cardId) {
@@ -1105,7 +1111,13 @@ CommandPalette_AgentLockAgentTransport(cardId, transport) {
     card["agentTransport"] := t
 }
 
+CommandPalette_AgentHubTransportStrict(*) {
+    return FuncExists("Nmer_PaletteAgentTransportHubEnabled") && Nmer_PaletteAgentTransportHubEnabled()
+}
+
 CommandPalette_AgentWarmFtbHost(reason := "") {
+    if CommandPalette_AgentHubTransportStrict()
+        return false
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, FloatingToolbarGUI
     if FuncExists("Nmer_WailsBridgeEnsureOpenClawHubEnv")
         try Nmer_WailsBridgeEnsureOpenClawHubEnv()
@@ -1137,6 +1149,8 @@ CommandPalette_AgentWarmFtbHost(reason := "") {
 }
 
 CommandPalette_AgentFallbackToFtb(cardId, reqId, query, provider, statusMsg := "") {
+    if CommandPalette_AgentHubTransportStrict()
+        return false
     cid := Trim(String(cardId))
     rid := Trim(String(reqId))
     q := Trim(String(query))
@@ -1197,6 +1211,8 @@ CommandPalette_AgentFallbackToFtb(cardId, reqId, query, provider, statusMsg := "
 CommandPalette_AgentPostOpenClawAdapter(cardId, reqId, query, sessionRef, systemPrompt := "") {
     if !FuncExists("Nmer_WailsBridgeOpenClawAdapterUrl")
         return Map("ok", false, "code", "ADAPTER_URL_MISSING")
+    if FuncExists("Nmer_WailsBridge_ShouldAvoidSyncWinHttp") && Nmer_WailsBridge_ShouldAvoidSyncWinHttp()
+        return Map("ok", false, "code", "ADAPTER_DEFER_WINHTTP", "detail", "webview_busy")
     if FuncExists("Nmer_WailsBridgeEnsureOpenClawHubEnv") {
         envSync := Nmer_WailsBridgeEnsureOpenClawHubEnv()
         if !(envSync is Map) || !envSync.Get("ok", false) {
@@ -1256,6 +1272,10 @@ CommandPalette_AgentRunOpenClawAdapterAsync(cardId, reqId, query, sessionRef) {
     card := CommandPalette_AgentGetCard(cid)
     isR3 := CommandPalette_AgentCardIsOfficialA2uiRoute(card)
     sysPrompt := isR3 ? "" : CommandPalette_AgentBuildSystemPrompt(card)
+    if FuncExists("Nmer_WailsBridge_ShouldAvoidSyncWinHttp") && Nmer_WailsBridge_ShouldAvoidSyncWinHttp() {
+        SetTimer(CommandPalette_AgentRunOpenClawAdapterAsync.Bind(cardId, reqId, query, sessionRef), -180)
+        return
+    }
     result := CommandPalette_AgentPostOpenClawAdapter(cardId, reqId, query, sessionRef, sysPrompt)
     if (result is Map) && result.Get("ok", false) {
         ans := Trim(String(result.Get("answer", "")))
@@ -1296,7 +1316,8 @@ CommandPalette_AgentRunOpenClawAdapterAsync(cardId, reqId, query, sessionRef) {
     if (card is Map)
         prov := CommandPalette_AgentSanitizeProvider(String(card.Get("provider", "openclaw")))
     retryable := (code = "OPENCLAW_CONFIG_MISSING" || code = "TOKEN_MISSING"
-        || code = "OPENCLAW_CHAT_FAILED" || code = "ADAPTER_HTTP_502" || InStr(code, "ADAPTER_HTTP_") = 1)
+        || code = "OPENCLAW_CHAT_FAILED" || code = "ADAPTER_HTTP_502" || code = "ADAPTER_DEFER_WINHTTP"
+        || InStr(code, "ADAPTER_HTTP_") = 1)
     if retryable && FuncExists("Nmer_WailsBridgeEnsureOpenClawHubEnv") {
         try {
             env := Nmer_WailsBridgeEnsureOpenClawHubEnv()
@@ -1323,13 +1344,17 @@ CommandPalette_AgentRunOpenClawAdapterAsync(cardId, reqId, query, sessionRef) {
         }
     }
     ftbMsg := "⚠ hub Adapter 失败（" . code . "），改走 Niuma Chat…"
-    if CommandPalette_AgentFallbackToFtb(cid, rid, query, prov, ftbMsg)
+    if !CommandPalette_AgentHubTransportStrict() && CommandPalette_AgentFallbackToFtb(cid, rid, query, prov, ftbMsg)
         return
     if (code = "OPENCLAW_CONFIG_MISSING" || code = "TOKEN_MISSING") {
         CommandPalette_AgentPushError(rid, cid, "OpenClaw Gateway Token 未配置：请在 Niuma Chat 设置里对「龙虾」点「一键连接」后重载牛马")
         return
     }
     detail := (result is Map) ? SubStr(String(result.Get("detail", "")), 1, 160) : ""
+    if CommandPalette_AgentHubTransportStrict() {
+        CommandPalette_AgentPushError(rid, cid, "OpenClaw hub 派发失败：" . code . (detail != "" ? (" · " . detail) : ""))
+        return
+    }
     CommandPalette_AgentPushError(rid, cid, "OpenClaw 派发失败：" . code . (detail != "" ? (" · " . detail) : "") . "（Niuma Chat 通路也未就绪，请打开悬浮栏）")
 }
 
@@ -2726,35 +2751,29 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
     CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
     if (flagT = "hub") {
         CommandPalette_AgentWireLog("dispatch_hub", "card=" . cardId . " req=" . reqId)
-        CommandPalette_AgentWarmFtbHost("dispatch_hub")
         if FuncExists("Nmer_WailsBridgeEnsureOpenClawHubEnv")
             try Nmer_WailsBridgeEnsureOpenClawHubEnv()
             catch {
             }
         if !(FuncExists("Nmer_WailsBridgeHealthy") && Nmer_WailsBridgeHealthy()) {
-            if CommandPalette_AgentFallbackToFtb(cardId, reqId, q, prov, "⚠ nmer-hub 未就绪，改走 Niuma Chat…") {
-                CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
-                return
-            }
-            CommandPalette_AgentPushError(reqId, cardId, "nmer-hub 未就绪且 Niuma Chat 不可用，请确认侧车或打开悬浮栏")
+            CommandPalette_AgentWireLog("dispatch_hub_fail", "card=" . cardId . " req=" . reqId . " reason=hub_not_ready")
+            CommandPalette_AgentPushError(reqId, cardId, "nmer-hub 未就绪，请确认侧车已启动且 OpenClaw Token 已配置")
             CommandPalette_AgentClearAiRoute(reqId)
             return
         }
         CommandPalette_AgentPushStreamStatus(cardId, reqId, "🔌 nmer-hub 通道…")
-        hubTransport := CommandPalette_AgentResolveAgentTransport(cardId, q)
-        hubSession := CommandPalette_AgentPaletteSessionKeyForTransport(cardId, hubTransport)
-        if (card is Map)
+        hubSession := CommandPalette_AgentPaletteSessionKeyForTransport(cardId, "adapter")
+        if (card is Map) {
             card["sessionRef"] := hubSession
+            card["agentTransport"] := "adapter"
+        }
+        CommandPalette_AgentWireLog("dispatch_hub_adapter", "card=" . cardId . " req=" . reqId . " session=" . hubSession)
         if CommandPalette_AgentDispatchViaOpenClawAdapter(cardId, reqId, q, hubSession) {
             CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
             CommandPalette_AgentMarkStreamDispatched(cardId, false)
             return
         }
-        if CommandPalette_AgentFallbackToFtb(cardId, reqId, q, prov, "⚠ hub 投递失败，改走 Niuma Chat…") {
-            CommandPalette_AgentRegisterAiRoute(reqId, cardId, gen)
-            return
-        }
-        CommandPalette_AgentPushError(reqId, cardId, "nmer-hub 与 Niuma Chat 均未就绪，请打开悬浮栏并确认 OpenClaw Token")
+        CommandPalette_AgentPushError(reqId, cardId, "nmer-hub Adapter 未能启动，请重载牛马后重试")
         CommandPalette_AgentClearAiRoute(reqId)
         return
     }
@@ -3165,6 +3184,7 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
         ))
     SetTimer(CommandPalette_AgentPushCardSync, -600)
     if (cardId != "") && FuncExists("CommandPalette_AgentPushCardDetail")
+        && !(FuncExists("Nmer_PaletteStateStoreEnabled") && Nmer_PaletteStateStoreEnabled())
         SetTimer(CommandPalette_AgentPushCardDetail.Bind(cardId), -120)
 }
 
@@ -3340,12 +3360,18 @@ CommandPalette_AgentReconcileStaleRunningCards(maxAgeSec := 180) {
 CommandPalette_AgentOnReady() {
     CommandPalette_AgentLoadCards()
     CommandPalette_AgentReconcileStaleRunningCards()
-    if FuncExists("CommandPalette_PushToWeb") {
+    global g_CmdPal_Visible
+    if FuncExists("CommandPalette_PushToWeb") && g_CmdPal_Visible {
         try CommandPalette_PushToWeb(Map("type", "palette_show"))
         catch {
         }
     }
-    SetTimer(CommandPalette_AgentPushCardSync, -120)
+    SetTimer(CommandPalette_AgentPushCardSync, -180)
+}
+
+CommandPalette_AgentOnPull(*) {
+    CommandPalette_AgentLoadCards(true)
+    SetTimer(CommandPalette_AgentPushCardSync, -20)
 }
 
 CommandPalette_DispatchPhysicalAction(actionType, actionArgs, cardId := "") {

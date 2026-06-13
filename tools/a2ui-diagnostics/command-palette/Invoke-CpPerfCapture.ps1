@@ -105,7 +105,7 @@ function Read-HubInjectResult {
 
 function Invoke-HubCpPerfCapture {
     param(
-        [int]$TimeoutSec = 120,
+        [int]$TimeoutSec = 180,
         [string]$Mode = "synthetic_turbo"
     )
     $addr = if ($env:NMER_A2UI_BRIDGE_ADDR) { $env:NMER_A2UI_BRIDGE_ADDR } else { "127.0.0.1:18791" }

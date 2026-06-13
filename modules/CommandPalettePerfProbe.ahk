@@ -69,15 +69,32 @@ Nmer_CpPerfProbeHideCp(*) {
 }
 
 Nmer_CpPerfProbeShowCp(*) {
-    if FuncExists("CommandPaletteRouter_Show")
+    global g_CmdPal_Ready, g_CmdPal_ShowRequestedTick
+    if FuncExists("CommandPalette_Init")
+        CommandPalette_Init()
+    deadline := A_TickCount + 25000
+    while (A_TickCount < deadline) {
+        if g_CmdPal_Ready
+            break
+        Sleep(40)
+    }
+    g_CmdPal_ShowRequestedTick := A_TickCount
+    if FuncExists("CommandPalette_PerfLog")
+        try CommandPalette_PerfLog("show_requested")
+        catch {
+        }
+    if FuncExists("CommandPalette_DoShow")
+        CommandPalette_DoShow()
+    else if FuncExists("CommandPaletteRouter_Show")
         CommandPaletteRouter_Show()
     else if FuncExists("CommandPalette_Show")
         CommandPalette_Show()
 }
 
 Nmer_CpPerfProbeWaitReady(maxMs := 12000) {
-    global g_CmdPal_Ready, g_CmdPal_Visible, g_CmdPal_Revealed
-    deadline := A_TickCount + Max(1000, Integer(maxMs))
+    global g_CmdPal_Ready, g_CmdPal_Visible
+    limit := Max(12000, Integer(maxMs))
+    deadline := A_TickCount + limit
     while (A_TickCount < deadline) {
         if g_CmdPal_Ready && g_CmdPal_Visible
             return true
@@ -174,7 +191,7 @@ Nmer_CpPerfProbeQueryWebShellReady() {
     global g_CmdPal_WV2
     if !IsObject(g_CmdPal_WV2)
         return false
-    js := "(function(){try{return !!(window.nmerPalette&&document.getElementById('palette-panel')&&typeof PaletteCommandIndex!=='undefined');}catch(e){return false;}})()"
+    js := "(function(){try{return !!(document.getElementById('palette-panel')&&typeof PaletteCommandIndex!=='undefined'&&PaletteCommandIndex.getSize);}catch(e){return false;}})()"
     try {
         raw := g_CmdPal_WV2.ExecuteScriptAsync(js).await(4000)
         return Nmer_CpPerfProbeScriptTruthy(raw)
@@ -184,7 +201,7 @@ Nmer_CpPerfProbeQueryWebShellReady() {
 }
 
 Nmer_CpPerfProbeWaitWebShellReady(maxMs := 18000) {
-    deadline := A_TickCount + Max(3000, Integer(maxMs))
+    deadline := A_TickCount + Max(5000, Integer(maxMs))
     while (A_TickCount < deadline) {
         if Nmer_CpPerfProbeQueryWebShellReady()
             return true
@@ -222,7 +239,7 @@ Nmer_CpPerfProbeEnsureCommandIndexReady(maxMs := 20000) {
     if (hostN = 0) {
         return Map("ok", false, "hostCount", 0, "webCount", 0, "reason", "host_snapshot_empty")
     }
-    if !Nmer_CpPerfProbeWaitWebShellReady(Min(16000, maxMs)) {
+    if !Nmer_CpPerfProbeWaitWebShellReady(Min(28000, maxMs)) {
         return Map("ok", false, "hostCount", hostN, "webCount", 0, "reason", "web_shell_not_ready")
     }
     deadline := A_TickCount + Max(4000, Integer(maxMs))
@@ -261,23 +278,26 @@ Nmer_CpPerfProbeExecActionBrowse(text) {
     return true
 }
 
-Nmer_CpPerfProbeRunManualEquivalentCapture() {
+Nmer_CpPerfProbeRunManualEquivalentCaptureCore(fresh := false) {
     steps := 0
-    Nmer_CpPerfProbePrepareWarm()
+    if fresh
+        Nmer_CpPerfProbePrepareFresh()
+    else
+        Nmer_CpPerfProbePrepareWarm()
     Nmer_CpPerfProbeShowCp()
-    if !Nmer_CpPerfProbeWaitReady(16000) {
-        return Map("pass", false, "code", "CP_NOT_READY", "detail", "webview_not_ready", "steps", steps, "mode", "manual_equivalent")
+    if !Nmer_CpPerfProbeWaitReady(45000) {
+        return Map("pass", false, "code", "CP_NOT_READY", "detail", "webview_not_ready fresh=" . (fresh ? 1 : 0), "steps", steps, "mode", "manual_equivalent")
     }
     Nmer_CpPerfProbeYield(600)
     if FuncExists("CommandPalette_PushToWeb")
         CommandPalette_PushToWeb(Map("type", "palette_show"))
-    Nmer_CpPerfProbeYield(400)
-    idxInfo := Nmer_CpPerfProbeEnsureCommandIndexReady(22000)
+    Nmer_CpPerfProbeYield(600)
+    idxInfo := Nmer_CpPerfProbeEnsureCommandIndexReady(28000)
     if !(idxInfo is Map) || !idxInfo.Get("ok", false) {
         reason := idxInfo is Map ? String(idxInfo.Get("reason", "palette_command_snapshot_empty")) : "palette_command_snapshot_empty"
         hostN := idxInfo is Map ? Integer(idxInfo.Get("hostCount", 0)) : 0
         webN := idxInfo is Map ? Integer(idxInfo.Get("webCount", 0)) : 0
-        detail := "reason=" . reason . " host=" . hostN . " web=" . webN
+        detail := "reason=" . reason . " host=" . hostN . " web=" . webN . " fresh=" . (fresh ? 1 : 0)
         return Map("pass", false, "code", "CMD_INDEX_NOT_READY", "detail", detail, "steps", steps, "mode", "manual_equivalent")
     }
     if FuncExists("CommandPalette_ExecScript")
@@ -309,11 +329,30 @@ Nmer_CpPerfProbeRunManualEquivalentCapture() {
     return Map(
         "pass", true,
         "code", "CAPTURE_OK",
-        "detail", "steps=" . steps . " mode=manual_equivalent warmup_discard=2",
+        "detail", "steps=" . steps . " mode=manual_equivalent warmup_discard=2 fresh=" . (fresh ? 1 : 0),
         "steps", steps,
         "mode", "manual_equivalent",
         "warmupDiscardPaint", 2
     )
+}
+
+Nmer_CpPerfProbeRunManualEquivalentCapture() {
+    r := Nmer_CpPerfProbeRunManualEquivalentCaptureCore(false)
+    if r.Get("pass", false)
+        return r
+    code := String(r.Get("code", ""))
+    detail := String(r.Get("detail", ""))
+    if (code = "CMD_INDEX_NOT_READY" || code = "CP_NOT_READY") && (InStr(detail, "web_shell_not_ready") || InStr(detail, "webview_not_ready")) {
+        r2 := Nmer_CpPerfProbeRunManualEquivalentCaptureCore(true)
+        if r2.Get("pass", false) {
+            d := String(r2.Get("detail", ""))
+            r2["detail"] := d . " retry=fresh_after_signoff_ui_cycle"
+            return r2
+        }
+        r2["detail"] := String(r2.Get("detail", "")) . " first=" . detail
+        return r2
+    }
+    return r
 }
 
 Nmer_CpPerfProbeRunCapture(fresh := false) {

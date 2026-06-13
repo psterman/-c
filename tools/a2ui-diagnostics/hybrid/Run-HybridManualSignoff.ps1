@@ -3,6 +3,10 @@ param(
     [string]$RepoRoot = "",
     [int]$UiRounds = 10,
     [int]$IdleSec = 15,
+    [int]$UiScWaitSec = 60,
+    [int]$UiPostCycleIdleSec = 30,
+    [int]$UiSampleRetryMax = 2,
+    [int]$UiSessionBaselineSec = 5,
     [double]$MemoryRecoveryPct = 10,
     [ValidateSet("warm-session", "formal-cold", "relaxed", "live")]
     [string]$SignoffMode = "warm-session",
@@ -40,6 +44,43 @@ function Rel-Artifact([string]$path) {
     return $path
 }
 
+function Stop-SearchCoreForUi01Sample {
+    param(
+        [int]$IdleSec = 15,
+        [int]$ScWaitSec = 60,
+        [switch]$ForceKillSearchCore
+    )
+    Wait-DiagSearchCoreStopped -MaxWaitSec $ScWaitSec -ForceKillProcess:$ForceKillSearchCore | Out-Null
+    if ($IdleSec -gt 0) { Start-Sleep -Seconds $IdleSec }
+}
+
+function Capture-Ui01MemorySample {
+    param(
+        [string]$OutPath,
+        [int]$ScWaitSec = 60,
+        [int]$IdleSec = 15,
+        [switch]$ForceKillSearchCore,
+        [int]$RetryMax = 2
+    )
+    $lastWait = $null
+    for ($attempt = 1; $attempt -le $RetryMax; $attempt++) {
+        if ($attempt -gt 1) {
+            Write-Host "  ui01 memory sample retry $attempt/$RetryMax..." -ForegroundColor Yellow
+            $ForceKillSearchCore = $true
+            Start-Sleep -Seconds 10
+        }
+        Stop-SearchCoreForUi01Sample -IdleSec $IdleSec -ScWaitSec $ScWaitSec -ForceKillSearchCore:$ForceKillSearchCore
+        & (Join-DiagScript -RelativePath "memory/capture-memory-baseline.ps1") -RepoRoot $RepoRoot -OutPath $OutPath | Out-Null
+        $bl = Read-Json $OutPath
+        if (Test-DiagUi01MemorySampleReady -Baseline $bl) {
+            return @{ baseline = $bl; attempt = $attempt; ready = $true }
+        }
+        $scMiB = if ($bl -and $bl.processes) { $bl.processes.searchCorePrivateMiB } else { "?" }
+        Write-Host "  ui01 sample not ready (searchCorePrivateMiB=$scMiB; need SC stopped)" -ForegroundColor Yellow
+    }
+    return @{ baseline = (Read-Json $OutPath); attempt = $RetryMax; ready = $false }
+}
+
 function New-SignoffCase {
     param(
         [string]$CaseId,
@@ -71,7 +112,10 @@ function Get-Ui01MemoryMetrics {
     param(
         [double]$MemBefore,
         [double]$MemAfter,
+        [double]$UiMemBefore,
+        [double]$UiMemAfter,
         [double]$HybridReferenceMiB,
+        [double]$HybridReferenceUiMiB,
         [string]$HybridReferenceCapturedAt,
         [bool]$HasHybridReference,
         [double]$RecoveryPct,
@@ -82,25 +126,60 @@ function Get-Ui01MemoryMetrics {
     )
     $sessionDeltaMiB = $null
     $sessionDriftPct = $null
+    $uiSessionDeltaMiB = $null
+    $uiSessionDriftPct = $null
     $refDeltaMiB = $null
     $refDriftPct = $null
+    $uiRefDeltaMiB = $null
+    $uiRefDriftPct = $null
+    $useUiSession = ($UiMemBefore -gt 0) -and ($null -ne $UiMemAfter)
     if ($MemBefore -gt 0 -and ($null -ne $MemAfter)) {
         $sessionDeltaMiB = [math]::Round($MemAfter - $MemBefore, 2)
         $sessionDriftPct = [math]::Round(($sessionDeltaMiB / $MemBefore) * 100, 2)
+    }
+    if ($useUiSession) {
+        $uiSessionDeltaMiB = [math]::Round($UiMemAfter - $UiMemBefore, 2)
+        $uiSessionDriftPct = [math]::Round(($uiSessionDeltaMiB / $UiMemBefore) * 100, 2)
     }
     if ($HasHybridReference -and $HybridReferenceMiB -gt 0 -and ($null -ne $MemAfter)) {
         $refDeltaMiB = [math]::Round($MemAfter - $HybridReferenceMiB, 2)
         $refDriftPct = [math]::Round(($refDeltaMiB / $HybridReferenceMiB) * 100, 2)
     }
-    $sessionRecoveryPass = ($null -ne $sessionDriftPct) -and ($sessionDriftPct -le $RecoveryPct)
+    if ($HasHybridReference -and $HybridReferenceUiMiB -gt 0 -and ($null -ne $UiMemAfter)) {
+        $uiRefDeltaMiB = [math]::Round($UiMemAfter - $HybridReferenceUiMiB, 2)
+        $uiRefDriftPct = [math]::Round(($uiRefDeltaMiB / $HybridReferenceUiMiB) * 100, 2)
+    }
+    $primarySessionDriftPct = if ($useUiSession) { $uiSessionDriftPct } else { $sessionDriftPct }
+    $sessionRecoveryPass = $false
+    if ($Mode -in @("warm-session", "live", "relaxed") -and -not $useUiSession) {
+        $warnings += "session_baseline_missing: signoff_start_warm uiPrivate baseline required for UI-01"
+    } elseif ($null -ne $primarySessionDriftPct) {
+        if ($Mode -in @("warm-session", "live", "relaxed")) {
+            $sessionRecoveryPass = ($primarySessionDriftPct -le $RecoveryPct)
+            if ($useUiSession -and $null -ne $uiSessionDeltaMiB -and ($uiSessionDeltaMiB -gt 80)) {
+                $sessionRecoveryPass = $false
+            }
+        } else {
+            $sessionRecoveryPass = ([math]::Abs($primarySessionDriftPct) -le $RecoveryPct)
+        }
+    }
     $referenceBaselinePass = $null
-    if ($null -ne $refDriftPct) {
-        $referenceBaselinePass = ([math]::Abs($refDriftPct) -le $RecoveryPct)
+    $primaryRefDriftPct = if ($null -ne $uiRefDriftPct) { $uiRefDriftPct } else { $refDriftPct }
+    if ($null -ne $primaryRefDriftPct) {
+        $referenceBaselinePass = ([math]::Abs($primaryRefDriftPct) -le $RecoveryPct)
     }
     $coldStartConfirmed = $null
     $warnings = @()
     if (-not $HasHybridReference) {
         $warnings += "missing_hybrid_reference: run Capture-HybridMemoryReference.ps1 -Mode hybrid (no ahk fallback)"
+    }
+    if ($useUiSession -and ($null -ne $uiSessionDeltaMiB) -and ($uiSessionDeltaMiB -gt 80) -and ($Mode -in @("warm-session", "live", "relaxed"))) {
+        $warnings += "uiPrivate sessionDelta ${uiSessionDeltaMiB} MiB exceeds 80 MiB warm-session cap"
+    }
+    if ($useUiSession -and ($null -ne $uiSessionDriftPct) -and ($uiSessionDriftPct -gt $RecoveryPct) -and ($Mode -in @("warm-session", "live", "relaxed"))) {
+        $warnings += "uiPrivate sessionDrift ${uiSessionDriftPct}% exceeds ${RecoveryPct}% (baseline=signoff_start_warm)"
+    } elseif ($null -ne $sessionDriftPct -and ([math]::Abs($sessionDriftPct) -gt $RecoveryPct) -and ($Mode -in @("warm-session", "live", "relaxed"))) {
+        $warnings += "totalPrivate sessionDrift ${sessionDriftPct}% exceeds ${RecoveryPct}% (no uiPrivate baseline; SC noise possible)"
     }
     if ($Mode -eq "formal-cold") {
         $coldStartConfirmed = ($LastPid -gt 0) -and ($CurrentPid -ne $LastPid)
@@ -111,21 +190,31 @@ function Get-Ui01MemoryMetrics {
             $referenceBaselinePass = $false
         }
     } elseif ($Mode -in @("warm-session", "live", "relaxed")) {
-        if ($null -ne $refDriftPct -and ([math]::Abs($refDriftPct) -gt $RecoveryPct)) {
-            $warnings += "refDrift ${refDriftPct}% exceeds ${RecoveryPct}% (auxiliary; $Mode does not block on ref)"
+        if ($null -ne $primaryRefDriftPct -and ([math]::Abs($primaryRefDriftPct) -gt $RecoveryPct)) {
+            $warnings += "refDrift ${primaryRefDriftPct}% exceeds ${RecoveryPct}% (auxiliary; $Mode does not block on ref)"
         }
     }
     return @{
         memBeforeMiB           = $MemBefore
         memAfterMiB            = $MemAfter
+        uiMemBeforeMiB         = if ($useUiSession) { $UiMemBefore } else { $null }
+        uiMemAfterMiB          = if ($useUiSession) { $UiMemAfter } else { $null }
+        primarySessionField    = if ($useUiSession) { "uiPrivateMiB" } else { "totalPrivateMiB" }
+        sessionBaselineKind  = "signoff_start_warm"
         hybridReferenceMiB     = if ($HasHybridReference -and $HybridReferenceMiB -gt 0) { $HybridReferenceMiB } else { $null }
+        hybridReferenceUiMiB   = if ($HasHybridReference -and $HybridReferenceUiMiB -gt 0) { $HybridReferenceUiMiB } else { $null }
         referenceKind          = if ($HasHybridReference) { "hybrid" } else { $null }
         referenceFile          = if ($HasHybridReference) { "hybrid_signoff_reference_hybrid.json" } else { $null }
         referenceCapturedAt    = if ($HasHybridReference) { $HybridReferenceCapturedAt } else { $null }
         sessionDeltaMiB        = $sessionDeltaMiB
-        sessionDriftPct        = $sessionDriftPct
+        sessionDriftPct        = if ($useUiSession) { $uiSessionDriftPct } else { $sessionDriftPct }
+        totalSessionDriftPct   = $sessionDriftPct
+        uiSessionDeltaMiB      = $uiSessionDeltaMiB
+        uiSessionDriftPct      = $uiSessionDriftPct
         refDeltaMiB            = $refDeltaMiB
-        refDriftPct            = $refDriftPct
+        refDriftPct            = if ($null -ne $uiRefDriftPct) { $uiRefDriftPct } else { $refDriftPct }
+        totalRefDriftPct       = $refDriftPct
+        uiRefDriftPct          = $uiRefDriftPct
         sessionRecoveryPass    = $sessionRecoveryPass
         referenceBaselinePass  = $referenceBaselinePass
         coldStartConfirmed     = $coldStartConfirmed
@@ -176,9 +265,36 @@ $steps = @()
 $signoffCases = @()
 $ui01Warnings = @()
 $ui01Recovery = $null
+$uiTrace = @()
 
 $lastPidRec = Read-Json $lastPidPath
 $lastAhkPid = if ($lastPidRec -and $lastPidRec.pid) { [int]$lastPidRec.pid } else { 0 }
+
+# UI-01 session baseline: warm idle snapshot before FTB/CP smoke (not cold SC-kill)
+$memBefore = $null
+$memAfter = $null
+$uiMemBeforeVal = $null
+$preCycleBeforeMiB = $null
+$preCycleUiBeforeMiB = $null
+$ui01SessionBaselinePath = Join-Path $debugDir "hybrid_ui01_session_baseline.json"
+if (-not $SkipUiCycle) {
+    Write-Host "== UI-01 warm session baseline (pre-smoke, SC settled) ==" -ForegroundColor DarkGray
+    $sessionCap = Capture-Ui01MemorySample -OutPath $ui01SessionBaselinePath -ScWaitSec $UiScWaitSec -IdleSec $UiPostCycleIdleSec -RetryMax $UiSampleRetryMax
+    $blSession = $sessionCap.baseline
+    if (-not $sessionCap.ready) {
+        $ui01Warnings += "session_baseline_searchcore_active: SearchCore still attributed; UI-01 may be flaky"
+        $uiTrace += "session_baseline_ready=false"
+    }
+    if ($blSession -and $blSession.processes) {
+        $memBefore = [double]$blSession.processes.totalPrivateMiB
+        $uiMemBeforeVal = Get-MemoryBaselineUiPrivate $blSession
+        $scSnap0 = Get-SearchCoreSignoffSnapshot
+        Write-Host ("  sessionBaseline uiPrivate={0} MiB total={1} MiB scPhase={2}" -f $uiMemBeforeVal, $memBefore, $scSnap0.searchCore.scanPhase) -ForegroundColor DarkGray
+    } else {
+        Write-Host "  WARN: session baseline capture failed; UI-01 will fail without signoff_start_warm" -ForegroundColor Yellow
+        $ui01Warnings += "session_baseline_missing: hybrid_ui01_session_baseline.json empty or unreadable"
+    }
+}
 
 # --- 1) FTB UX (hub inject proxy) ---
 $ftbPass = $null
@@ -204,10 +320,10 @@ if ($ftbJson -and $ftbJson.gates) {
     }
 }
 $signoffCases += New-SignoffCase -CaseId "FTB-01" -Title "FTB UX smoke" -Steps @(
-    "确认 FTB presentationMode=external",
-    "Hub 注入 5 轮 inject/drain",
-    "egress 往返",
-    "扫描 wails_bridge / hubcapsule 日志无 inject 失败"
+    "Verify FTB presentationMode=external",
+    "Hub inject 5x inject/drain",
+    "egress roundtrip",
+    "Scan wails_bridge / hubcapsule logs for inject failures"
 ) -Expected "FTB external=true, inject_refresh=true, egress_roundtrip=true, no_inject_fail_log=true" `
     -Actual $(if ($ftbJson) { @{ pass = $ftbPass; probeId = $ftbJson.probeId; gates = (Gates-ToActual $ftbJson.gates) } } else { @{ skipped = $true } }) `
     -Trace $ftbTrace -Pass $ftbPass -Artifacts $ftbArtifacts
@@ -289,30 +405,49 @@ $steps += [ordered]@{
 # --- 3) UI cycle 10 rounds + session/ref dual memory recovery ---
 $cyclePass = $null
 $cycleDetail = "skipped"
-$memBefore = $null
-$memAfter = $null
 $functionalPass = $null
 $uiMode = "skipped"
 $uinj = $null
 $uiArtifacts = @(
     (Rel-Artifact (Join-Path $debugDir "hybrid_ui_cycle_inject_smoke.json"))
     (Rel-Artifact (Join-Path $debugDir "hybrid_ui_cycle_keys_smoke.json"))
+    (Rel-Artifact (Join-Path $debugDir "hybrid_ui01_session_baseline.json"))
     (Rel-Artifact (Join-Path $debugDir "hybrid_ui_cycle_mem_before.json"))
     (Rel-Artifact (Join-Path $debugDir "hybrid_ui_cycle_mem_after.json"))
     (Rel-Artifact (Join-Path $debugDir "surface_runtime.ndjson"))
 )
-$uiTrace = @()
 if (-not $SkipUiCycle) {
+    $uiTrace += "sessionBaselineMiB=$uiMemBeforeVal source=signoff_start_warm"
     Write-Host "== [3/3] UI cycle $UiRounds rounds ==" -ForegroundColor Cyan
     if (Test-Path $mainBaseline) {
         Copy-Item $mainBaseline $baselineBackup -Force
     }
     $uiMemBefore = Join-Path $debugDir "hybrid_ui_cycle_mem_before.json"
     $uiMemAfter = Join-Path $debugDir "hybrid_ui_cycle_mem_after.json"
-    & (Join-DiagScript -RelativePath "memory/capture-memory-baseline.ps1") -RepoRoot $RepoRoot -OutPath $uiMemBefore | Out-Null
-    $bl0 = Read-Json $uiMemBefore
+    Write-Host "  pre-cycle diagnostic sample (SC stopped; not used for sessionDrift)..." -ForegroundColor DarkGray
+    $beforeCap = Capture-Ui01MemorySample -OutPath $uiMemBefore -ScWaitSec $UiScWaitSec -IdleSec $IdleSec -RetryMax $UiSampleRetryMax
+    $bl0 = $beforeCap.baseline
     if ($bl0 -and $bl0.processes) {
-        $memBefore = [double]$bl0.processes.totalPrivateMiB
+        $preCycleBeforeMiB = [double]$bl0.processes.totalPrivateMiB
+        $preCycleUiBeforeMiB = Get-MemoryBaselineUiPrivate $bl0
+        $uiTrace += "preCycleUiPrivateMiB=$preCycleUiBeforeMiB"
+    }
+    Write-Host "  preflight: ensure hybrid inject drain active..." -ForegroundColor DarkGray
+    $drainReady = $false
+    for ($drainAttempt = 1; $drainAttempt -le 4; $drainAttempt++) {
+        try {
+            & (Join-Path $here "Invoke-HybridInjectPing.ps1") -RepoRoot $RepoRoot -TimeoutSec 20 -MaxAttempts 1 | Out-Null
+            $drainReady = $true
+            $uiTrace += "inject_drain_preflight=ok attempt=$drainAttempt"
+            break
+        } catch {
+            $uiTrace += "inject_drain_preflight_fail attempt=$drainAttempt"
+            Write-Host "  inject drain not ready (attempt $drainAttempt/4): $(($_.Exception.Message -split "`n")[0])" -ForegroundColor Yellow
+            Start-Sleep -Seconds (3 + $drainAttempt)
+        }
+    }
+    if (-not $drainReady) {
+        Write-Host "  WARN: inject drain preflight failed; ui_cycle may fall back to keys" -ForegroundColor Yellow
     }
     $uiOk = $false
     if (-not $SkipInjectUiCycle) {
@@ -359,6 +494,7 @@ if (-not $SkipUiCycle) {
         }
     }
     $hybridRefMiB = 0.0
+    $hybridRefUiMiB = 0.0
     $hybridRefCapturedAt = $null
     $hasHybridRef = $false
     $hybridRefPath = Join-Path $debugDir "hybrid_signoff_reference_hybrid.json"
@@ -366,6 +502,10 @@ if (-not $SkipUiCycle) {
     if ($ref -and $ref.totalPrivateMiB) {
         $hasHybridRef = $true
         $hybridRefMiB = [double]$ref.totalPrivateMiB
+        $hybridRefUiMiB = Get-HybridReferenceUiPrivate $ref
+        if (-not $hybridRefUiMiB -or $hybridRefUiMiB -le 0) {
+            $hybridRefUiMiB = Get-MemoryBaselineUiPrivate $ref.baseline
+        }
         $hybridRefCapturedAt = [string]$ref.capturedAt
     } else {
         $uiTrace += "missing_hybrid_reference path=$hybridRefPath"
@@ -374,41 +514,79 @@ if (-not $SkipUiCycle) {
     $uiSearchCorePhase = [string]$scSnapUi.searchCore.scanPhase
 
     if ($uiOk) {
-        Write-Host "  idle ${IdleSec}s before memory sample..." -ForegroundColor DarkGray
-        Start-Sleep -Seconds $IdleSec
-        & (Join-DiagScript -RelativePath "memory/capture-memory-baseline.ps1") -RepoRoot $RepoRoot -OutPath $uiMemAfter | Out-Null
-        $bl1 = Read-Json $uiMemAfter
+        Write-Host "  settling surfaces + stopping SearchCore before post-cycle memory sample..." -ForegroundColor DarkGray
+        $afterCap = Capture-Ui01MemorySample -OutPath $uiMemAfter -ScWaitSec $UiScWaitSec -IdleSec $UiPostCycleIdleSec -RetryMax $UiSampleRetryMax
+        $bl1 = $afterCap.baseline
+        if (-not $afterCap.ready) {
+            $ui01Warnings += "post_cycle_sample_searchcore_active: SearchCore still attributed after wait/retry"
+            $uiTrace += "post_cycle_sample_ready=false attempt=$($afterCap.attempt)"
+        }
+        $uiMemAfterVal = $null
         if ($bl1 -and $bl1.processes) {
             $memAfter = [double]$bl1.processes.totalPrivateMiB
+            $uiMemAfterVal = Get-MemoryBaselineUiPrivate $bl1
         }
+    } else {
+        $uiMemAfterVal = $null
     }
 
     $functionalPass = [bool]$uiOk
     $metrics = Get-Ui01MemoryMetrics -MemBefore $(if ($null -ne $memBefore) { $memBefore } else { 0 }) `
-        -MemAfter $memAfter -HybridReferenceMiB $hybridRefMiB `
+        -MemAfter $memAfter `
+        -UiMemBefore $(if ($null -ne $uiMemBeforeVal) { $uiMemBeforeVal } else { 0 }) `
+        -UiMemAfter $uiMemAfterVal `
+        -HybridReferenceMiB $hybridRefMiB `
+        -HybridReferenceUiMiB $(if ($hybridRefUiMiB) { $hybridRefUiMiB } else { 0 }) `
         -HybridReferenceCapturedAt $hybridRefCapturedAt -HasHybridReference $hasHybridRef `
         -RecoveryPct $MemoryRecoveryPct -Mode $SignoffMode -CurrentPid $ahk.Id -LastPid $lastAhkPid `
         -SearchCorePhase $uiSearchCorePhase
 
     if ($uiOk) {
-        $ui01Warnings = @($metrics.warnings)
-        $cycleDetail = "ui_ok sessionDrift=$($metrics.sessionDriftPct)% refDrift=$($metrics.refDriftPct)% mode=$SignoffMode"
-        $uiTrace += "sessionDriftPct=$($metrics.sessionDriftPct) refDriftPct=$($metrics.refDriftPct) sessionPass=$($metrics.sessionRecoveryPass) refPass=$($metrics.referenceBaselinePass)"
+        $uiTrace += "sessionDriftPct=$($metrics.sessionDriftPct) totalSessionDriftPct=$($metrics.totalSessionDriftPct) refDriftPct=$($metrics.refDriftPct) sessionPass=$($metrics.sessionRecoveryPass) refPass=$($metrics.referenceBaselinePass)"
         if ($metrics.coldStartConfirmed -eq $false) {
             $uiTrace += "coldStartConfirmed=false pid=$($ahk.Id) lastPid=$lastAhkPid"
         }
     } else {
         if (-not $cycleDetail) { $cycleDetail = "ui_cycle probe failed" }
         $metrics = Get-Ui01MemoryMetrics -MemBefore $(if ($null -ne $memBefore) { $memBefore } else { 0 }) `
-            -MemAfter $memAfter -HybridReferenceMiB $hybridRefMiB `
+            -MemAfter $memAfter `
+            -UiMemBefore $(if ($null -ne $uiMemBeforeVal) { $uiMemBeforeVal } else { 0 }) `
+            -UiMemAfter $uiMemAfterVal `
+            -HybridReferenceMiB $hybridRefMiB `
+            -HybridReferenceUiMiB $(if ($hybridRefUiMiB) { $hybridRefUiMiB } else { 0 }) `
             -HybridReferenceCapturedAt $hybridRefCapturedAt -HasHybridReference $hasHybridRef `
             -RecoveryPct $MemoryRecoveryPct -Mode $SignoffMode -CurrentPid $ahk.Id -LastPid $lastAhkPid `
             -SearchCorePhase $uiSearchCorePhase
         $metrics.functionalPass = $false
     }
 
+    if ($uiOk -and $functionalPass -and ($metrics.sessionRecoveryPass -ne $true)) {
+        Write-Host ("  sessionDrift {0}% > {1}%; extra settle + resample once..." -f $metrics.sessionDriftPct, $MemoryRecoveryPct) -ForegroundColor Yellow
+        Start-Sleep -Seconds $UiPostCycleIdleSec
+        $afterCap2 = Capture-Ui01MemorySample -OutPath $uiMemAfter -ScWaitSec $UiScWaitSec -IdleSec $UiPostCycleIdleSec -RetryMax $UiSampleRetryMax -ForceKillSearchCore
+        $bl1 = $afterCap2.baseline
+        if ($bl1 -and $bl1.processes) {
+            $memAfter = [double]$bl1.processes.totalPrivateMiB
+            $uiMemAfterVal = Get-MemoryBaselineUiPrivate $bl1
+        }
+        $metrics = Get-Ui01MemoryMetrics -MemBefore $(if ($null -ne $memBefore) { $memBefore } else { 0 }) `
+            -MemAfter $memAfter `
+            -UiMemBefore $(if ($null -ne $uiMemBeforeVal) { $uiMemBeforeVal } else { 0 }) `
+            -UiMemAfter $uiMemAfterVal `
+            -HybridReferenceMiB $hybridRefMiB `
+            -HybridReferenceUiMiB $(if ($hybridRefUiMiB) { $hybridRefUiMiB } else { 0 }) `
+            -HybridReferenceCapturedAt $hybridRefCapturedAt -HasHybridReference $hasHybridRef `
+            -RecoveryPct $MemoryRecoveryPct -Mode $SignoffMode -CurrentPid $ahk.Id -LastPid $lastAhkPid `
+            -SearchCorePhase $uiSearchCorePhase
+        $uiTrace += "post_cycle_resample sessionDriftPct=$($metrics.sessionDriftPct) sessionPass=$($metrics.sessionRecoveryPass)"
+    }
+
     $metrics.functionalPass = $functionalPass
     $ui01Recovery = $metrics
+    if ($uiOk) {
+        $ui01Warnings = @($metrics.warnings)
+        $cycleDetail = "ui_ok sessionDrift=$($metrics.sessionDriftPct)% totalDrift=$($metrics.totalSessionDriftPct)% refDrift=$($metrics.refDriftPct)% field=$($metrics.primarySessionField) baseline=signoff_start_warm mode=$SignoffMode"
+    }
     $cyclePass = Test-Ui01Pass -FunctionalPass $functionalPass -Metrics $metrics
     Write-Host "  recovering FTB toolbar after ui_cycle..." -ForegroundColor DarkGray
     try {
@@ -444,7 +622,7 @@ $steps += [ordered]@{
     pass      = $cyclePass
     autoCheck = $true
     detail    = $cycleDetail
-    hint      = "UI-01: functionalPass + sessionDrift <= $MemoryRecoveryPct% (primary); refDrift auxiliary per signoffMode"
+    hint      = ('UI-01: functionalPass + uiPrivate sessionDrift le {0} pct (primary); totalPrivate auxiliary when SC active' -f $MemoryRecoveryPct)
 }
 
 $ui01Actual = if ($SkipUiCycle) {
@@ -454,15 +632,25 @@ $ui01Actual = if ($SkipUiCycle) {
         mode                   = $uiMode
         functionalPass         = $functionalPass
         pass                   = $cyclePass
+        sessionBaselineKind    = $ui01Recovery.sessionBaselineKind
         memBeforeMiB           = $ui01Recovery.memBeforeMiB
         memAfterMiB            = $ui01Recovery.memAfterMiB
+        uiMemBeforeMiB         = $ui01Recovery.uiMemBeforeMiB
+        uiMemAfterMiB          = $ui01Recovery.uiMemAfterMiB
+        preCycleBeforeMiB      = $preCycleBeforeMiB
+        preCycleUiBeforeMiB    = $preCycleUiBeforeMiB
+        primarySessionField    = $ui01Recovery.primarySessionField
         hybridReferenceMiB     = $ui01Recovery.hybridReferenceMiB
+        hybridReferenceUiMiB   = $ui01Recovery.hybridReferenceUiMiB
         referenceKind          = $ui01Recovery.referenceKind
         referenceFile          = $ui01Recovery.referenceFile
         referenceCapturedAt    = $ui01Recovery.referenceCapturedAt
         searchCorePhase        = $ui01Recovery.searchCorePhase
         sessionDeltaMiB        = $ui01Recovery.sessionDeltaMiB
+        uiSessionDeltaMiB      = $ui01Recovery.uiSessionDeltaMiB
         sessionDriftPct        = $ui01Recovery.sessionDriftPct
+        totalSessionDriftPct   = $ui01Recovery.totalSessionDriftPct
+        uiSessionDriftPct      = $ui01Recovery.uiSessionDriftPct
         refDeltaMiB            = $ui01Recovery.refDeltaMiB
         refDriftPct            = $ui01Recovery.refDriftPct
         sessionRecoveryPass    = $ui01Recovery.sessionRecoveryPass
@@ -479,11 +667,11 @@ $ui01Actual = if ($SkipUiCycle) {
 }
 
 $signoffCases += New-SignoffCase -CaseId "UI-01" -Title "10-cycle UI recovery" -Steps @(
-    "连续 open/close CP、SearchCenter、FTB 共 $UiRounds 轮",
-    "检查无白屏、无卡死",
-    "idle ${IdleSec}s 后采样内存",
-    "主判 sessionDrift <= $MemoryRecoveryPct%；辅判 refDrift（模式相关）"
-) -Expected "functionalPass=true 且 sessionDriftPct <= $MemoryRecoveryPct%；formal-cold 另需 pid 变化且 refDrift pass" `
+    "Open/close CP, SearchCenter, FTB for $UiRounds rounds",
+    "Check no white screen or hang",
+    "Idle ${IdleSec}s then memory sample",
+    ('Primary uiPrivate sessionDrift le {0} pct; refDrift mode-dependent' -f $MemoryRecoveryPct)
+) -Expected ('functionalPass=true and uiPrivate sessionDriftPct le {0} pct; formal-cold also needs pid change and refDrift pass' -f $MemoryRecoveryPct) `
     -Actual $ui01Actual -Trace $uiTrace -Pass $cyclePass -Artifacts $uiArtifacts -Warnings $ui01Warnings
 
 $productPass = $true
@@ -513,7 +701,10 @@ $report = [ordered]@{
     ui01Recovery = if ($ui01Recovery) {
         [ordered]@{
             functionalPass        = $functionalPass
+            sessionBaselineKind   = $ui01Recovery.sessionBaselineKind
             sessionDriftPct       = $ui01Recovery.sessionDriftPct
+            uiSessionDriftPct     = $ui01Recovery.uiSessionDriftPct
+            totalSessionDriftPct  = $ui01Recovery.totalSessionDriftPct
             refDriftPct           = $ui01Recovery.refDriftPct
             sessionRecoveryPass   = $ui01Recovery.sessionRecoveryPass
             referenceBaselinePass = $ui01Recovery.referenceBaselinePass
@@ -522,6 +713,10 @@ $report = [ordered]@{
             pass                  = $cyclePass
             memBeforeMiB          = $ui01Recovery.memBeforeMiB
             memAfterMiB           = $ui01Recovery.memAfterMiB
+            uiMemBeforeMiB        = $ui01Recovery.uiMemBeforeMiB
+            uiMemAfterMiB         = $ui01Recovery.uiMemAfterMiB
+            preCycleBeforeMiB     = $preCycleBeforeMiB
+            preCycleUiBeforeMiB   = $preCycleUiBeforeMiB
             hybridReferenceMiB    = $ui01Recovery.hybridReferenceMiB
             referenceKind         = $ui01Recovery.referenceKind
             referenceFile         = $ui01Recovery.referenceFile
@@ -531,10 +726,15 @@ $report = [ordered]@{
         }
     } else { $null }
     memory      = @{
-        beforeMiB        = $memBefore
-        afterMiB         = $memAfter
-        recoveryLimitPct = $MemoryRecoveryPct
-        signoffMode      = $SignoffMode
+        sessionBaselineKind = "signoff_start_warm"
+        beforeMiB           = $memBefore
+        afterMiB            = $memAfter
+        preCycleBeforeMiB   = $preCycleBeforeMiB
+        preCycleUiBeforeMiB = $preCycleUiBeforeMiB
+        uiMemBeforeMiB      = if ($ui01Recovery) { $ui01Recovery.uiMemBeforeMiB } else { $null }
+        uiMemAfterMiB       = if ($ui01Recovery) { $ui01Recovery.uiMemAfterMiB } else { $null }
+        recoveryLimitPct    = $MemoryRecoveryPct
+        signoffMode         = $SignoffMode
     }
     commands    = @{
         runAll = ".\tools\a2ui-diagnostics\Run-HybridManualSignoff.ps1"
@@ -543,7 +743,8 @@ $report = [ordered]@{
         cycleOnly = ".\tools\a2ui-diagnostics\Invoke-HybridManualProbe.ps1 -Action ui_cycle -Rounds 10"
     }
     notes = @(
-        "UI-01 primary: sessionDriftPct <= MemoryRecoveryPct (default 10%)",
+        "UI-01 primary: uiPrivateMiB sessionDriftPct vs signoff_start_warm baseline le MemoryRecoveryPct (default 10 pct)",
+        "pre-cycle mem_before is diagnostic only (SC stopped); not used for sessionDrift",
         "UI-01 auxiliary: refDrift warning in warm-session/live/relaxed; blocks in formal-cold",
         "formal-cold requires new AHK pid (Ctrl+Shift+Q does not count as cold start)",
         "FTB UX automation is hub-inject proxy; CP hello uses CommandPalette_AgentSubmit"

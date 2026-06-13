@@ -108,6 +108,22 @@ Palette Agent 超时：`OPENCLAW_PALETTE_AGENT_WS_TIMEOUT_MS`（长于普通聊�
 
 Adapter **不**替换 Gateway WS 协议；它是 TPA 侧编排层。
 
+### 5.1 nmer-hub / Adapter connect 身份（CP4）
+
+Gateway 对 `client.id=openclaw-control-ui` + `mode=webchat` 会执行 **浏览器 origin 校验**，非浏览器 WS（Go adapter）会收到 `CONTROL_UI_ORIGIN_NOT_ALLOWED`。
+
+nmer-hub adapter 须使用 **loopback backend 客户端**（见 Gateway protocol）：
+
+| 字段 | 值 |
+|------|-----|
+| `client.id` | `gateway-client`（可用 `OPENCLAW_GATEWAY_CLIENT_ID` 覆盖） |
+| `client.mode` | `backend`（可用 `OPENCLAW_GATEWAY_CLIENT_MODE` 覆盖） |
+| `role` | `operator` |
+| `scopes` | `operator.read`, `operator.write` |
+| `auth.token` | `OPENCLAW_GATEWAY_TOKEN` |
+
+若仍失败，检查本机 OpenClaw `gateway.controlUi.allowedOrigins`（仅影响 control-ui 浏览器客户端，不影响 backend）。
+
 ---
 
 ## 6. 验收探针

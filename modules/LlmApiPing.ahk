@@ -734,19 +734,23 @@ LlmApiPing_TestOpenClaw(base, key, timeoutMs := 8000) {
     port := Integer(ep.Get("port", 18789))
     t0 := A_TickCount
     budget := Max(3000, Integer(timeoutMs))
-    httpMs := Min(2500, Max(800, budget // 4))
-    if LlmApiPing_OpenClawHttpReachable(host, port, httpMs)
-        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "http")
-    tcpMs := Min(3000, Max(800, budget // 3))
+    ; 本机 Gateway 18789 偶发需 5–8s 才 accept；TCP 优先，避免 HTTP+短 TCP 失败后落入 10s+ CLI
+    tcpMs := Min(8000, Max(1500, budget // 2))
     if LlmApiPing_TcpPortOpen(host, port, tcpMs)
         return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "tcp")
-    ; openclaw gateway status 在本机常需 6–8s，勿把 CLI 超时压在 5s 内
-    cliMs := Max(10000, budget)
-    if LlmApiPing_OpenClawGatewayStatusOk(cliMs)
+    remain1 := budget - (A_TickCount - t0)
+    httpMs := Min(2500, Max(600, remain1 // 3))
+    if (httpMs >= 600 && LlmApiPing_OpenClawHttpReachable(host, port, httpMs))
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "http")
+    remain2 := budget - (A_TickCount - t0)
+    cliMs := Min(Max(8000, budget), remain2)
+    if (cliMs >= 3000 && LlmApiPing_OpenClawGatewayStatusOk(cliMs))
         return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "cli_status")
-    if LlmApiPing_TcpPortOpen(host, port, tcpMs)
+    remain3 := budget - (A_TickCount - t0)
+    if (remain3 >= 800 && LlmApiPing_TcpPortOpen(host, port, Min(tcpMs, remain3)))
         return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "tcp_retry")
-    if LlmApiPing_OpenClawHttpReachable(host, port, httpMs + 1500)
+    remain4 := budget - (A_TickCount - t0)
+    if (remain4 >= 600 && LlmApiPing_OpenClawHttpReachable(host, port, Min(httpMs + 1500, remain4)))
         return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "http_retry")
     return Map(
         "ok", false,

@@ -545,6 +545,8 @@ FloatingToolbarWails_RegisterExternalFtb(entry := "hybrid_register") {
         g_FTBWails_HybridRegistered := true
         g_FTBWails_HybridReady := false
         FloatingToolbarWails_Log("hybrid_register_ok entry=" . String(entry))
+        if FuncExists("Nmer_HybridSignoffBootstrapEnsure")
+            SetTimer(Nmer_HybridSignoffBootstrapEnsure, -1)
     } else {
         FloatingToolbarWails_Log("hybrid_register_fail code=" . (res is Map ? res.Get("code", "?") : "?"))
     }
@@ -573,6 +575,8 @@ FloatingToolbarWails_RegisterExternalReady(*) {
         g_FTBWails_HybridReady := true
         g_FTBWails_HybridInjectFailStreak := 0
         FloatingToolbarWails_Log("hybrid_ready_ok")
+        if FuncExists("Nmer_HybridSignoffBootstrapEnsure")
+            SetTimer(Nmer_HybridSignoffBootstrapEnsure, -1)
     }
     return ok
 }
@@ -650,8 +654,6 @@ FloatingToolbarWails_EnsureHybridBridge(*) {
 FloatingToolbarWails_EnsureInjectPump(*) {
     global g_FTBWails_InjectPumpOn
     if !FloatingToolbarWails_ShouldUseHybrid()
-        return
-    if g_FTBWails_InjectPumpOn
         return
     g_FTBWails_InjectPumpOn := true
     SetTimer(FloatingToolbarWails_InjectPumpTick, 150)

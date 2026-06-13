@@ -370,8 +370,122 @@ ABORT(gen, reason)
 |----|------|
 | 方案 | **阶段 1（当前）**：`CommandPaletteRouter` + `CommandPaletteWailsHost`；Intent/Dispose 经路由器；`wailsBridge.commandPaletteHost` 切换 `ahk`/`wails`；Wails 路径激活侧车窗并记 `cp_host_show`，失败回退 AHK CP。**阶段 2+**：CP UI 迁入 [`apps/nmer-wails/`](../apps/nmer-wails/) |
 | 目标 | `g_CmdPal_WV2` 可卸；`rollback.legacySurfaceLifecycle:true` 一键回 AHK CP |
-| 验收 | 静态：`Diagnose-S8B3Gate.ps1`；灰度：`commandPaletteHost:wails` + `legacySurfaceLifecycle:false` 时开 CP 出现 `cp_host_show`；默认 `ahk` 行为不变 |
-| 门禁 | `tools/a2ui-diagnostics/Diagnose-S8B3Gate.ps1`；看板卡片 **S8 B3 CP** |
+| 验收 | 静态：`Diagnose-S8B3Gate.ps1`；灰度：`Run-Cp6WailsGrayGate.ps1 -WithSmoke -SkipPrompt`（`commandPaletteHost:wails` + `legacySurfaceLifecycle:false` → 新鲜 `cp_host_show` + `host=wails`）；默认 `ahk` 行为不变 |
+| 门禁 | `tools/a2ui-diagnostics/surface/Diagnose-S8B3Gate.ps1`；CP6：`command-palette/Run-Cp6WailsGrayGate.ps1`；看板卡片 **S8 B3 CP** |
+| 阶段 1 状态 | **已关闭**（2026-06-13）— 见 §十四关闭凭据 |
+| 阶段 2 状态 | **已关闭（自动化，2026-06-13）** — CP7/8/9/10 + fixtures 160/160；人工签 off 清单仍建议手测 |
+
+### S8 B3 阶段 2 — 验收标准（草案）
+
+**Ticket 目标**：`commandPaletteHost=wails` 时，CP **UI 在 `nmer-wails` 内渲染**；AHK 不再为 CP 创建/持有 `g_CmdPal_WV2`；`CommandPalette_PushToWeb` / 入站消息经 Wails inject↔egress 送达 `html/palette/*`（或等价 Wails frontend 包）。
+
+**非目标**（本 ticket 不做）：
+
+- 一次性把 `CommandPalette.html` 全量重写进 Lit（参考 S10：先 iframe/懒加载壳，再逐步拆包）
+- 迁移 FTB 聊天壳（FTB-5）
+- 默认切生产灰度（默认仍为 `commandPaletteHost:ahk`）
+- OpenClaw/Hermes 适配器迁入 Go（仍走 hub + 既有 `palette-agent-bridge` 契约）
+
+**参考模式**：S10 FTB Shell（`shell_ftb.go` + `nmer-ftb-shell-host` + inject/drain + AHK 退役守卫）。
+
+---
+
+#### 子阶段与交付物
+
+| 子阶段 | 交付 | 说明 |
+|--------|------|------|
+| **2a 壳层接线** | `shell_cp.go`（或等价）+ `cp-shell-host.ts` + `NmerWailsBridge` `/shell/cp/inject` + `/shell/cp/egress` | 镜像 FTB shell HTTP 契约；`CommandPaletteWails_Show` 挂载 CP 壳而非仅 `WinActivate` |
+| **2b UI 承载** | Wails 窗内加载 `CommandPalette.html`（iframe 或 `wails://` 静态路由，首版可 iframe） | `cp_host_show` 的 `meta.shellPhase≥2`；`palette_ready` 由 Wails 侧上报 |
+| **2c 双向桥** | `CommandPalette_PushToWeb` 在 `host=wails` 时走 inject，不依赖 `g_CmdPal_WV2`；egress 回 AHK `CommandPalette_OnWebMessage` 或 Router 分发 | **协议字段不变**（`PaletteHostAdapter` / `postMessage` type 清单与现网一致） |
+| **2d AHK WebView 退役** | `CommandPalette_Show` 在 `host=wails` 时**不创建** `g_CmdPal_Gui`/`g_CmdPal_WV2`；`CommandPaletteRouter_Dispose` 仅清 Wails 路径 | 空载/开 CP 后 scoped WV2 计数相对阶段 1 **下降**（见内存项） |
+
+---
+
+#### 静态门禁（`Diagnose-S8B3Phase2Gate.ps1`）
+
+| ID | 检查项 | 通过标准 |
+|----|--------|----------|
+| P2-S1 | Go shell CP API | `apps/nmer-wails/poc/shell_cp.go` 含 `/shell/cp/inject`、`/shell/cp/inject/drain`、`/shell/cp/egress`（或统一前缀文档化） |
+| P2-S2 | Wails frontend 壳 | `frontend/src/cp-shell/cp-shell-host.ts`（或等价）+ `main.ts` 监听 `shell:cp` |
+| P2-S3 | AHK bridge 接线 | `NmerWailsBridge.ahk` 含 CP shell inject/egress；`CommandPaletteWailsHost` 调用 shell mount（非仅 activate） |
+| P2-S4 | PushToWeb 路由 | `CommandPalette_PushToWeb` / `CommandPalette_InjectPalettePayload` 在 `Nmer_CommandPaletteHost()=wails` 时不读 `g_CmdPal_WV2` |
+| P2-S5 | 退役守卫 | `CommandPalette_Show` 或 Router 层：`host=wails` 时 `CommandPalette_AhkWebViewEnabled()` 为 false（命名可沿 S10 `*AhkWebViewEnabled` 模式） |
+| P2-S6 | 前置 | `cp6_wails_gray_gate.json` → `overallPass=true`；`cp5_modular_shell_gate.json` → `overallPass=true` |
+| P2-S7 | Fixtures | `node html/run-palette-fixtures.mjs` 全绿（含 `ActionHistoryShell`） |
+
+---
+
+#### 运行时 / Live 烟测（`Run-Cp7WailsCpShellGate.ps1`）
+
+前置：`wails build`；`commandPaletteHost=wails` + `legacySurfaceLifecycle=false`；重载牛马。
+
+| ID | 检查项 | 通过标准 |
+|----|--------|----------|
+| P2-R1 | 壳层就绪 | 新鲜 `cp_host_show` 且 `meta.host=wails`、`meta.shellPhase≥2`（或等价 `cp_shell_mounted` ndjson） |
+| P2-R2 | UI ready | `command_palette_perf.ndjson` 或 surface 事件中出现 `palette_ready`（Wails 路径，非 AHK WV2） |
+| P2-R3 | 搜索模式 | IPC `show_cp` 后：键入查询 → `query_start` + `paint_samples≥5`（可复用 `Run-CommandPalettePerfGate.ps1` pipeline 段，宿主=wails） |
+| P2-R4 | 动作模式 + hub | 短句提交 → hub 真回复（复用 CP4 `hub_openclaw_live_reply` 或 `Invoke-Cp4OpenClawLiveReply.ps1` 契约）；卡片 `palette_agent_card_sync` 经 inject 可见 |
+| P2-R5 | 历史列表 | `prepare_tier` → `TIER_READY`（`actualCards≥1`） |
+| P2-R6 | egress | Wails → AHK：`palette_query` / `palette_turbo_search` 等 egress 被 AHK 消费 |
+| P2-R7 | 无 AHK CP WebView | `host=wails` 会话内无 `g_CmdPal_WV2`；`CommandPaletteRouter_AhkGuiExists()` 为 false |
+| P2-R9 | AHK WebView 退役 | 首次 wails shell show 后无 AHK CP GUI/WV2 |
+| P2-R8 | 回滚 | flags 恢复 `ahk`/`hub`/`legacy:true` |
+
+**阶段 2 签 off**：`Run-Cp10WailsCpPhase2Signoff.ps1`（聚合 CP7/8/9 报告 + fixtures + 默认 flags）
+
+**Live 入口**：
+
+```powershell
+.\Run-Cp7WailsCpShellGate.ps1              # 静态
+.\Run-Cp7WailsCpShellGate.ps1 -WithSmoke -SkipPrompt   # live（CP6 + 2c 桥接探针）
+.\Run-Cp7WailsCpShellGate.ps1 -RevertFlags
+```
+
+---
+
+#### 内存与 Surface 预算（建议阈值，签 off 前实测填 baseline）
+
+| ID | 检查项 | 通过标准 |
+|----|--------|----------|
+| P2-M1 | WV2 计数 | `host=wails` 开 CP 后，相对阶段 1 同场景 **少 1 个** CP 专用 WebView2（以 `SurfaceDisposeProbe` / 任务管理器 scoped 计数为准） |
+| P2-M2 | Dispose | `CommandPaletteRouter_Dispose` → Wails hide + 无 AHK CP GUI 泄漏；重复 show/hide 10 次无 hwnd 累积 |
+| P2-M3 | 侧车单实例 | `nmer-wails.exe` 仍单实例；CP shell 与 FTB/hybrid 不互抢前台（无 POC 窗抢焦点，沿用 S11 规则） |
+
+---
+
+#### 人工签 off 清单（**产品默认 AHK CP**；Wails 路径另见 CP7～10 架构签收）
+
+1. CapsLock 双击开 CP（**AHK 窗**：无边框、置顶、居中）— 焦点在输入框  
+2. 搜索模式：命令索引、Turbo、Resize  
+3. 动作模式：选「龙虾」→ 流式回复 → 历史列表  
+4. 与 FTB hybrid 并存：FTB 缩放/拖拽 + CP 开闭无死锁  
+5. `legacySurfaceLifecycle:true` 回滚后 AHK CP 全功能恢复  
+6. **Raycast UX（AHK）**：Esc 隐藏、失焦策略、无多余窗框/抢焦点  
+
+自动化记录：`Run-CpManualReleaseChecklist.ps1` → `cp_manual_release_checklist.json`
+
+---
+
+#### Ticket 关闭条件
+
+**阶段 2b+2c（已关闭，2026-06-13）**：
+
+1. `Diagnose-S8B3Phase2Gate.ps1` → P2-S1～S8 PASS  
+2. `Run-Cp7WailsCpShellGate.ps1 -WithSmoke -SkipPrompt` → P2-R1/R2/R3/R6/R7/R8 PASS  
+3. 默认 `local/nmer-flags.json` 仍为 `commandPaletteHost:ahk`  
+4. P2-R4/R5（hub agent live）defer 至 2d 手测  
+
+**阶段 2 整体（含 2d）Overall PASS**：
+
+1. 上述 2b+2c 条件  
+2. `html/run-palette-fixtures.mjs` 全绿  
+3. P2-M1～M3 内存 / Dispose 预算实测通过  
+4. P2-R4/R5 hub agent live（或人工签 off）  
+5. §十四快照更新为 **「S8 阶段 2 已关闭」**
+
+**报告产物**：`Cache/debug/s8b3_phase2_gate.json`、`Cache/debug/cp7_wails_cp_shell_gate.json`、`Cache/debug/cp6_wails_gray_live_smoke.json`
+
+---
 
 ### S9 — 域 C 原生化 MVP（约 2～4 周）
 
@@ -457,7 +571,7 @@ W6+    S7 FTB-1 → S8 B3 → S9 域 C → S10 合壳   原生化可拆 stream
 
 ---
 
-## 十四、当前状态快照（2026-06-10）
+## 十四、当前状态快照（2026-06-13）
 
 | 步骤 | 状态 |
 |------|------|
@@ -469,10 +583,129 @@ W6+    S7 FTB-1 → S8 B3 → S9 域 C → S10 合壳   原生化可拆 stream
 | S5 | **已通过** — 预算计划链 baseline + 双开压测触发 budget_pressure |
 | S6 | **已通过** — 热键 `shouldEnforce=1` + 主面板冲突解决 |
 | S7 | **已通过** — `palette-agent-bridge.js` v1.2 含 `runPaletteAgentStreamOnce`；看板 `s7_gate_pass=True`（静态） |
-| S8 | **完成（阶段 1）** — `CommandPaletteRouter_*` + 静态门禁 PASS；默认 `commandPaletteHost:ahk` |
+| S8 | **阶段 1 已关闭** — CP6 live PASS。**阶段 2 已关闭（自动化）** — CP10 signoff PASS；默认 `commandPaletteHost:ahk` 已验 |
 | S9 | **完成（阶段 1）** — `SearchCenterRouter_*` / `ConfigWebViewRouter_*` + `DomainCWailsHost`；默认两 host 均为 `ahk` |
 | S10 | **完成（阶段 4）** — shell 模式退役 AHK FTB WebView；Wails 底栏 iframe + inject/egress；rollback 保留 ahk 宿主 |
 | S10 阶段 1 | **完成** — Router + `ftb_host_show` 侧车 |
 | S11 | **完成（代码）** — `floatingToolbarHost:hybrid`；AHK 呈现 + external presentation + inject drain；bridge-only 侧车 |
 
-**下一步行动**：`local/nmer-flags.json` 设 `floatingToolbarHost:hybrid` 后重载牛马；`wails build` 更新 `nmer-wails.exe`；跑 `Diagnose-S11HybridFTBGate.ps1`；手动回归缩放/光标/CP hello。
+**S8 B3 阶段 1 关闭凭据**（2026-06-13）：
+
+- 静态：`Cache/debug/s8b3_gate_diagnosis.json` → `s8_gate_pass=true`
+- 灰度：`Cache/debug/cp6_wails_gray_gate.json` → `overallPass=true`（`mode=wails_gray_static+live_automation`）
+- Live：`Cache/debug/cp6_wails_gray_live_smoke.json` → `freshHost=wails`、`probeCode=CP_SHOWN`
+- 入口：`Run-Cp6WailsGrayGate.ps1 -WithSmoke -SkipPrompt`；回滚：`Run-Cp6WailsGrayGate.ps1 -RevertFlags`
+
+**S8 B3 阶段 2a～2c 关闭凭据**（2026-06-13）：
+
+- 静态：`Cache/debug/s8b3_phase2_gate.json` → `overallPass=true`（P2-S1～S8）
+- Live：`Cache/debug/cp7_wails_cp_shell_gate.json` → `overallPass=true`（scope `2b_ui_shell+2c_bidirectional_bridge`）
+- 壳层：`Cache/debug/cp6_wails_gray_live_smoke.json` → `freshHost=wails`、`shellPhase=2`、`cpShellMounted=true`
+- 桥接：`cp_wails_bridge_smoke` 探针 → `CP_WAILS_BRIDGE_OK`（`inject=1 egress=2`，无 `g_CmdPal_WV2`）
+- 入口：`Run-Cp7WailsCpShellGate.ps1 -WithSmoke -SkipPrompt -BootSec 180`；回滚：`-RevertFlags`
+- 后续已关闭：2d（见下）、P2-M、P2-R4/R5（CP9）
+
+**S8 B3 阶段 2d 关闭凭据**（2026-06-13）：
+
+- 代码：`CommandPalette_DisposeAhkWebViewIfRetired` + `CommandPaletteWails_RetireAhkWebView`（首次 shell show 触发）
+- 静态：P2-S5 → `dispose_if_retired` + `wails_retire_hook`
+- Live：CP7 P2-R9 → `ahkGuiExists=false`、`cmdPalWv2=false`（与 P2-R7 同探针 `cp_wails_bridge_smoke`）
+**S8 B3 P2-M 内存 soak 关闭凭据**（2026-06-13）：
+
+- Live：`Cache/debug/cp8_wails_cp_memory_soak.json` → `overallPass=true`
+- P2-M1：`ahkHadWv2=true` + `wailsNoAhkWv2=true`（AHK CP 专用 WV2 退役）
+- P2-M2：`cp_wails_memory_soak` ×10 cycles → `CP_WAILS_MEMORY_SOAK_OK`，`leakAfterDispose=false`
+- P2-M3：`nmer-wails.exe` 单实例（before=after=1）
+- 入口：`Run-Cp8WailsCpMemorySoak.ps1 -BootSec 180 -Cycles 10`
+- 快照：`cp8_memory_ahk_open.json`、`cp8_memory_wails_open.json`
+
+**S8 B3 P2-R4/R5 hub agent live 关闭凭据**（2026-06-13）：
+
+- Live：`Cache/debug/cp9_wails_cp_hub_agent_live.json` → `overallPass=true`
+- P2-R4：`cp_wails_agent_submit` + `liveAnswer=true`、`cardCount≥1`、`host=wails`
+- P2-R5：`prepare_tier` → `TIER_READY`（`actualCards≥1`）
+- 入口：`Run-Cp9WailsCpHubAgentLive.ps1 -SkipGatewayRestart`；或 CP7 `-WithHubLive`
+
+**S8 B3 阶段 2 关闭凭据**（2026-06-13，自动化）：
+
+- 签 off：`Cache/debug/s8b3_phase2_signoff.json` → `overallPass=true`、`automatedCloseReady=true`
+- 静态：`s8b3_phase2_gate.json`（P2-S1～S8）
+- Fixtures：`run-palette-fixtures.mjs` → **160/160** `ok=true`
+- Live：CP7（2b+2c+2d）、CP8（P2-M）、CP9（P2-R4/R5）
+- 默认 flags：`commandPaletteHost=ahk`、`sidecarHost=hub`、`legacySurfaceLifecycle=true`
+- 入口：`Run-Cp10WailsCpPhase2Signoff.ps1`
+
+**人工签 off（产品发布 P0）**：见 §十五 CP 发布票；`cp_manual_release_checklist.json` 六项 + `Run-HybridCpSignoffPipeline.ps1` → `cpReleasePass`。
+
+**重要区分**：
+
+- **CP 产品默认 = AHK**（`commandPaletteHost:ahk`）
+- **Wails CP = architecture ready / non-default**（CP7～10 自动化签收，仅记 `wailsArchitecturePass`）
+- **CP 发布票已关 ≠ Wails 默认票已关**（默认切 Wails 需独立 P4.1 Raycast UX Gate，当前 spec only）
+
+**下一步行动（修订路线图）**：
+
+| 线 | 内容 |
+|----|------|
+| **P0** | 关 CP 发布票（默认 AHK）：手动 6 项 + Hybrid warm-session + `manual_equivalent` PerfGate + `defaultHost=ahk` + legacy rollback |
+| **P1** | 文档与 Git 收口（本 §、diagnostics README）；commit 用 `release: sign off CommandPalette on AHK host` / `docs: mark Wails CP as architecture-ready non-default` |
+| **P2** | 内存与侧车（CP 发布后下一主线）：Hub private ≤50 PASS / 50–55 WARN / >55 FAIL；30min slope hub ≤1 MiB/h、UI ≤5 MiB/h 或 abs ≤30 MiB；10 轮恢复 after ≤ before+10% |
+| **P3** | A2UI 产品灰度（独立线）：Wave0/2、7×24、Day4、`Run-A2uiRolloutGate.ps1`；**`rolloutGatePass=true` 不改变 `commandPaletteHost` 或 `wailsDefaultEligible`** |
+| **P4.1** | Wails Raycast UX Gate — **spec only**，暂不实现（见 `docs/cp-wails-raycast-ux-gate-spec.md`） |
+| **P4.2** | SearchCenter / Config WebView → Wails 灰度（S9 域 C） |
+| **P4.3** | Surface-by-surface eligibility（不做全面默认 Wails 化） |
+
+---
+
+## 十五、CP 发布票（P0，默认 AHK）
+
+**目标**：在 `commandPaletteHost=ahk` 前提下关闭 **CP 产品发布票**；Wails CP 架构签收单独记录，**不**作为默认切换条件。
+
+### 必须同时满足
+
+| # | 条件 | 产物 / 字段 |
+|---|------|-------------|
+| 1 | 手动 6 项 PASS | `cp_manual_release_checklist.json` → `manualReleasePass=true` |
+| 2 | Hybrid warm-session PASS | `hybrid_manual_signoff.json` + pipeline `hybridPass` |
+| 3 | official/manual CP PerfGate PASS | `command_palette_perf_gate.json`（`captureMode=manual_equivalent`）→ `perfGateOfficial=true` |
+| 4 | `defaultHost=ahk` | `local/nmer-flags.json` → `wailsBridge.commandPaletteHost` |
+| 5 | legacy rollback 可用 | `commandPaletteHost=ahk` + `sidecarHost=hub` + `rollback.legacySurfaceLifecycle=true` |
+
+### 流水线输出（`hybrid_cp_signoff_pipeline.json`）
+
+```json
+{
+  "cpReleasePass": true,
+  "manualReleasePass": true,
+  "hybridPass": true,
+  "perfGatePass": true,
+  "perfGateOfficial": true,
+  "defaultHost": "ahk",
+  "wailsArchitecturePass": true,
+  "wailsDefaultEligible": false,
+  "wailsDefaultBlockedReason": "raycast_ux_gate_not_passed"
+}
+```
+
+- `wailsArchitecturePass`：读 CP7/8/9/10 报告，**只记录，不阻断** `cpReleasePass`
+- `wailsDefaultEligible`：固定 `false`，直至 P4.1 Raycast UX Gate 通过
+
+### 入口
+
+```powershell
+# 1) 初始化并逐项记录手动验收
+.\tools\a2ui-diagnostics\Run-CpManualReleaseChecklist.ps1 -Init
+.\tools\a2ui-diagnostics\Run-CpManualReleaseChecklist.ps1 -RecordId capslock_cp -Pass
+# ... 其余五项 ...
+
+# 2) Hybrid + PerfGate + 发布聚合
+.\tools\a2ui-diagnostics\Run-HybridCpSignoffPipeline.ps1
+```
+
+### 与 Wails 默认票的关系
+
+| 票 | 含义 | 当前状态 |
+|----|------|----------|
+| CP 发布票 | AHK 宿主产品可发布 | P0 门禁 |
+| Wails 架构票 | CP7～10 自动化签收 | 已通过（informational） |
+| Wails 默认票 | 可将 `commandPaletteHost` 默认改为 `wails` | **未开** — 阻塞原因 `raycast_ux_gate_not_passed` |

@@ -12,7 +12,7 @@ import (
 const (
 	OpenClawAdapterActionPath = "/a2ui/openclaw/action"
 	maxOpenClawActionBody     = 256 * 1024
-	openClawAdapterTimeout    = 90 * time.Second
+	openClawAdapterTimeout    = 120 * time.Second
 )
 
 // OpenClawActionRequest is the ADP-1 ingress before OpenClaw WS orchestration.
@@ -106,19 +106,24 @@ func (h *Hub) handleOpenClawAdapterAction(w http.ResponseWriter, r *http.Request
 	client := NewOpenClawGatewayClient(cfg)
 	chatMessage := composeOpenClawChatMessage(req.SystemPrompt, req.Query)
 	answer, err := client.SendChatStreaming(ctx, sessionRef, chatMessage, func(delta string) {
-		if strings.TrimSpace(delta) == "" {
+		d := strings.TrimSpace(delta)
+		if d == "" {
 			return
 		}
-		h.BroadcastEvent(AgentEvent{
-			Kind:   EventReplyDelta,
-			CardID: req.CardID,
-			Payload: map[string]interface{}{
-				"reqId":   req.RequestID,
-				"delta":   delta,
-				"cardId":  req.CardID,
-				"source":  "openclaw_adapter",
-			},
-		})
+		cardID := req.CardID
+		reqID := req.RequestID
+		go func(text, cardID, reqID string) {
+			h.BroadcastEvent(AgentEvent{
+				Kind:   EventReplyDelta,
+				CardID: cardID,
+				Payload: map[string]interface{}{
+					"reqId":  reqID,
+					"delta":  text,
+					"cardId": cardID,
+					"source": "openclaw_adapter",
+				},
+			})
+		}(d, cardID, reqID)
 	})
 	if err != nil {
 		writeOpenClawActionError(w, http.StatusBadGateway, "OPENCLAW_CHAT_FAILED", err.Error())

@@ -574,10 +574,10 @@ UserStudio_ProbeOpenClawGateway(base, token, timeoutMs := 12000) {
         } catch {
         }
     }
-    tcpMs := Min(Max(800, Integer(timeoutMs)), 3000)
+    tcpMs := Min(8000, Max(1500, Integer(timeoutMs) // 2))
     if UserStudio_TcpPortOpen(host, port, tcpMs)
         return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "tcp")
-    cliMs := Max(10000, Integer(timeoutMs))
+    cliMs := Min(Max(8000, Integer(timeoutMs)), Max(0, Integer(timeoutMs) - (A_TickCount - t0)))
     if UserStudio_OpenClawGatewayCliOk(cliMs)
         return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "cli_status")
     return Map(
@@ -974,7 +974,7 @@ UserStudio_ReadOpenClawGatewayToken(fastProbe := false) {
             }
         }
     }
-    cli := UserStudio_FetchOpenClawTokenViaCli(fastProbe ? 6000 : 20000)
+    cli := UserStudio_FetchOpenClawTokenViaCli(fastProbe ? 3000 : 20000)
     cliTok := Trim(String(cli.Get("token", "")))
     if (cliTok != "") {
         return Map(

@@ -3,6 +3,7 @@ package poc
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -33,7 +34,8 @@ func TestOpenClawAdapterIngestWithMockGateway(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status: %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status: %d body: %s", resp.StatusCode, string(body))
 	}
 	var out openClawActionResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
@@ -103,6 +105,7 @@ func newMockOpenClawGatewayServer(t *testing.T) *httptest.Server {
 			if method == "connect" {
 				connected = true
 				_ = conn.WriteJSON(map[string]interface{}{"type": "res", "id": id, "ok": true, "result": map[string]interface{}{}})
+				_ = conn.WriteJSON(map[string]interface{}{"type": "event", "event": "hello-ok"})
 				continue
 			}
 			if connected && method == "chat.send" {

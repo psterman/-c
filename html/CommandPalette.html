@@ -2051,6 +2051,19 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 <script src="palette/app/palette-layout.js?v=2"></script>
 <script src="palette/app/stream-batcher.js?v=1"></script>
 <script src="palette/app/agent-chunk-coalescer.js?v=1"></script>
+<script src="palette/app/intent-router.js?v=1"></script>
+<script src="palette/app/palette-store.js?v=1"></script>
+<script src="palette/app/bootstrap.js?v=1"></script>
+<script src="palette/app/palette-shell.js?v=1"></script>
+<script src="palette/views/result-row.js?v=1"></script>
+<script src="palette/search/result-merger.js?v=1"></script>
+<script src="palette/views/detail-pane.js?v=1"></script>
+<script src="palette/views/command-results.js?v=1"></script>
+<script src="palette/agent/agent-summary.js?v=1"></script>
+<script src="palette/agent/agent-detail.js?v=1"></script>
+<script src="palette/agent/agent-card-sync.js?v=1"></script>
+<script src="palette/app/host-bridge.js?v=1"></script>
+<script src="palette/views/action-bar.js?v=1"></script>
 </head>
 <body>
 <div id="root" data-ready="1">
@@ -2072,52 +2085,24 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 <script>
 (function () {
   if (typeof PalettePerfMarks !== "undefined") PalettePerfMarks.mark("palette_init_start");
-  var IntentRouter = (function () {
-    var ORDER = ["local", "ai", "action"];
-    var LABELS = { local: "本地", ai: "问 AI", action: "动作" };
-    var PLACEHOLDERS = {
-      local: "搜索文件、路径或剪贴板…",
-      ai: "选择模型，Enter 原地流式回答…",
-      action: "描述任务 Enter 提交至上方所选引擎（龙虾/Hermes）…"
-    };
-    function nextIntent(cur) {
-      var i = ORDER.indexOf(cur);
-      return ORDER[(i < 0 ? 0 : i + 1) % ORDER.length];
-    }
-    function applyTag(el, intent) {
-      if (!el) return;
-      el.setAttribute("data-intent", intent);
-      el.textContent = LABELS[intent] || intent;
-      el.title = "Tab 切换意图";
-    }
-    return { ORDER: ORDER, LABELS: LABELS, PLACEHOLDERS: PLACEHOLDERS, nextIntent: nextIntent, applyTag: applyTag };
-  })();
-
-  var state = {
-    input: "",
-    intent: "action",
-    actions: [],
-    turboItems: [],
-    aiProviders: [],
-    selectedAiProvider: "",
-    resultMode: "command",
-    selected: 0,
-    voiceStatus: "idle",
-    voiceHint: "",
-    showResults: false,
-    turboQuery: "",
-    querySeq: 0,
-    _userPickedCommand: false,
-    actionCmdBrowse: false,
-    _actionQueryCache: [],
-    paletteFlags: {
-      fastInput: false,
-      discreteLayout: false,
-      streamBatching: false,
-      stateStore: false,
-      agentTransport: "auto",
-      openclawAnswerSync: true
-    }
+  var IntentRouter =
+    typeof PaletteIntentRouter !== "undefined"
+      ? PaletteIntentRouter
+      : { PLACEHOLDERS: {}, nextIntent: function (c) { return c; }, applyTag: function () {} };
+  var state = typeof PaletteStore !== "undefined" ? PaletteStore.getState() : {};
+  var actionState = typeof PaletteStore !== "undefined" ? PaletteStore.getActionState() : { cards: {} };
+  var getInputEl =
+    typeof PaletteBootstrap !== "undefined"
+      ? PaletteBootstrap.getInputEl
+      : function () {
+          return document.getElementById("command-input");
+        };
+  var currentRows = function () {
+    if (typeof PaletteResultMerger !== "undefined") return PaletteResultMerger.currentRows(state);
+    return state.resultMode === "turbo" ? state.turboItems : state.actions;
+  };
+  var syncActionDetailNav = function () {
+    if (typeof PaletteDetailPane !== "undefined" && PaletteDetailPane.syncNav) PaletteDetailPane.syncNav();
   };
   var aiChunkBatcher = null;
   var agentChunkCoalescer = null;
@@ -2190,7 +2175,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         enabled: true
       });
     }
-    actionCardManager.transitionCardState(cardId, "Done");
+    if (actionCardManager) actionCardManager.transitionCardState(cardId, "Done");
     refreshActionCardDom(card);
     ensureCardPipelineRendered(card);
     var dom = document.getElementById("card-" + cardId);
@@ -2245,25 +2230,23 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function applyPaletteFlags(d) {
-    if (!d || typeof d !== "object") return;
-    state.paletteFlags = {
-      fastInput: !!d.fastInput,
-      discreteLayout: !!d.discreteLayout,
-      streamBatching: !!d.streamBatching,
-      stateStore: !!d.stateStore,
-      stateStoreShadow: !!d.stateStoreShadow,
-      agentTransport: String(d.agentTransport || "auto"),
-      openclawAnswerSync: d.openclawAnswerSync !== false
-    };
-    ensureAiChunkBatcher();
-    ensureAgentChunkCoalescer();
-    if (paletteFastInput() || paletteDiscreteLayout()) teardownResultsMutationObserver();
-    if (paletteDiscreteLayout() && typeof PaletteLayout !== "undefined") {
-      PaletteLayout.resetMode();
-      setTimeout(function () {
-        if (typeof publishDiscreteLayout === "function") publishDiscreteLayout();
-      }, 0);
-    }
+    if (typeof PaletteStore === "undefined") return;
+    PaletteStore.applyPaletteFlags(d, {
+      afterApply: function () {
+        ensureAiChunkBatcher();
+        ensureAgentChunkCoalescer();
+        if (paletteFastInput() || paletteDiscreteLayout()) teardownResultsMutationObserver();
+        if (paletteDiscreteLayout() && typeof PaletteLayout !== "undefined") {
+          PaletteLayout.resetMode();
+          setTimeout(function () {
+            if (typeof publishDiscreteLayout === "function") publishDiscreteLayout();
+          }, 0);
+        }
+        if (paletteStateStoreShadowEnabled() && state.intent === "action" && !actionHasStoredCards()) {
+          setTimeout(requestAgentCardSync, 80);
+        }
+      }
+    });
   }
   function ensureAgentChunkCoalescer() {
     if (!paletteStreamBatching()) {
@@ -2358,54 +2341,18 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     { id: "openclaw", label: "龙虾 OpenClaw", short: "龙虾" },
     { id: "hermes", label: "Hermes", short: "Hermes" }
   ];
-  var CARD_SUMMARY_CACHE_KEY = "nmer_cp_card_summary_v1";
-
-  function buildCardSummaryCachePayload() {
-    var ids = Object.keys(actionState.cards);
-    if (!ids.length) return null;
-    sortCardIds(ids);
-    var out = [];
-    for (var i = 0; i < ids.length && out.length < 20; i++) {
-      var c = actionState.cards[ids[i]];
-      if (!c) continue;
-      out.push({
-        cardId: c.id,
-        id: c.id,
-        uiState: c.uiState || "Done",
-        title: c.title || c.query || "",
-        query: c.query || "",
-        rawAnswer: String(c._summaryPreview || c.rawAnswer || "").slice(0, 480),
-        summaryOnly: true,
-        ended: c.ended !== false,
-        running: !!c.running,
-        updatedAt: c.updatedAt || "",
-        createdAt: c.createdAt || "",
-        provider: c.provider || "",
-        reqId: c.reqId || ""
-      });
-    }
-    return out.length ? out : null;
-  }
 
   function persistCardSummaryCache() {
-    if (!(state.paletteFlags && state.paletteFlags.stateStore)) return;
-    try {
-      var payload = buildCardSummaryCachePayload();
-      if (payload) sessionStorage.setItem(CARD_SUMMARY_CACHE_KEY, JSON.stringify(payload));
-    } catch (_) {}
+    if (typeof PaletteAgentCardSync !== "undefined" && PaletteAgentCardSync.persistCardSummaryCache) {
+      PaletteAgentCardSync.persistCardSummaryCache();
+    }
   }
 
   function restoreCardSummaryCache() {
-    try {
-      var raw = sessionStorage.getItem(CARD_SUMMARY_CACHE_KEY);
-      if (!raw) return false;
-      var cards = JSON.parse(raw);
-      if (!Array.isArray(cards) || !cards.length) return false;
-      renderActionCardSync(cards, { summary: true, fromCache: true });
-      return true;
-    } catch (_) {
-      return false;
+    if (typeof PaletteAgentCardSync !== "undefined" && PaletteAgentCardSync.restoreCardSummaryCache) {
+      return PaletteAgentCardSync.restoreCardSummaryCache();
     }
+    return false;
   }
 
   function clearActionHistoryLoading() {
@@ -2413,16 +2360,6 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     if (el) el.remove();
   }
 
-  var actionState = {
-    activeCardId: null,
-    detailCardId: null,
-    cards: {},
-    _pendingCardId: null,
-    _batchUpsert: 0,
-    historyFilter: "all",
-    focusMode: false,
-    showAllDone: true
-  };
   var ACTION_CARD_MEMORY_LIMIT = 20;
   var ACTION_CARD_MESSAGE_LIMIT = 30;
   var STREAM_TEXT_MEMORY_LIMIT = 120000;
@@ -3508,7 +3445,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   function createAgentParser(cardId) {
     if (typeof StreamTagParser !== "undefined") {
       return new StreamTagParser(function (b) {
-        actionCardManager.onBlockUpdate(cardId, b);
+        if (actionCardManager) actionCardManager.onBlockUpdate(cardId, b);
       });
     }
     var stub = { _buf: "" };
@@ -3518,7 +3455,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     stub.onChunk = function (t) {
       stub._buf = clipStreamText(stub._buf + String(t || ""));
       var c = getActionCard(cardId);
-      if (c && c.uiState === "Planning") actionCardManager.transitionCardState(cardId, "Running");
+      if (c && c.uiState === "Planning" && actionCardManager) actionCardManager.transitionCardState(cardId, "Running");
       var dom = document.getElementById("card-" + cardId);
       var log = dom && dom.querySelector(".card-status-log");
       if (log) {
@@ -3584,21 +3521,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function showActionEmptyIfNeeded() {
-    if (actionHasStoredCards() || state.input.trim() || state.actionCmdBrowse) return;
-    state.actions = [];
-    state.showResults = true;
-    clearActionCmdResultsDom();
-    purgeActionEmptyHint();
-    var box = document.getElementById("results");
-    if (box && !box.querySelector(".action-card-stack")) {
-      var stack = document.createElement("div");
-      stack.className = "action-card-stack";
-      box.appendChild(stack);
+    if (typeof PaletteAgentCardSync !== "undefined" && PaletteAgentCardSync.showActionEmptyIfNeeded) {
+      PaletteAgentCardSync.showActionEmptyIfNeeded();
     }
-    showActionIntentEmpty();
-    var panel = document.getElementById("palette-panel");
-    if (panel) panel.classList.add("has-results");
-    syncWindowSize();
   }
 
   function actionHasRunningCard() {
@@ -3718,40 +3643,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function requestAgentCardSync() {
-    if (actionState._cardPullPending) return;
-    if (paletteFastInput() && actionHasRunningCard()) return;
-    actionState._cardPullPending = true;
-    var finishPull = function () {
-      actionState._cardPullPending = false;
-    };
-    var pullFromAhk = function () {
-      try {
-        post({ type: "palette_agent_pull" });
-      } catch (_) {}
-      setTimeout(finishPull, 1500);
-    };
-    if (paletteStateStoreShadowEnabled()) {
-      var hubFallbackTimer = setTimeout(function () {
-        if (!actionState._cardPullPending) return;
-        pullFromAhk();
-      }, 1200);
-      fetchAgentSummaryFromHub(function (data) {
-        clearTimeout(hubFallbackTimer);
-        if (!actionState._cardPullPending) return;
-        if (data && data.cards && data.cards.length > 0) {
-          agentDebugLog(
-            "hub_summary_pull",
-            "n=" + data.cards.length + " seq=" + String(data.writeSeq || "")
-          );
-          renderActionCardSync(data.cards, { summary: true, source: "hub" });
-          finishPull();
-          return;
-        }
-        pullFromAhk();
-      });
-      return;
+    if (typeof PaletteAgentCardSync !== "undefined" && PaletteAgentCardSync.requestSync) {
+      PaletteAgentCardSync.requestSync();
     }
-    pullFromAhk();
   }
 
   function actionHasStoredCards() {
@@ -3759,209 +3653,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function refreshActionHistoryHead() {
-    var box = document.getElementById("results");
-    if (!box) return;
-    var stack = box.querySelector(".action-card-stack");
-    if (!stack) {
-      if (Object.keys(actionState.cards).length < 1) return;
-      stack = document.createElement("div");
-      stack.className = "action-card-stack";
-      box.insertBefore(stack, box.firstChild);
-    }
-    var toolbar = stack.querySelector(".action-history-toolbar");
-    if (!toolbar) {
-      toolbar = document.createElement("div");
-      toolbar.className = "action-history-toolbar";
-      toolbar.innerHTML =
-        '<button type="button" class="action-history-filter active" data-filter="all">全部</button>' +
-        '<button type="button" class="action-history-filter" data-filter="running">进行中</button>' +
-        '<button type="button" class="action-history-filter" data-filter="done">已归档</button>' +
-        '<button type="button" class="action-history-tool action-focus-mode" title="只展开当前任务">聚焦当前</button>' +
-        '<button type="button" class="action-history-tool action-collapse-others" title="折叠非当前任务">折叠其他</button>' +
-        '<button type="button" class="action-history-browse-cmd">本地命令</button>' +
-        '<button type="button" class="action-history-clear">清除已完成</button>';
-      stack.insertBefore(toolbar, stack.firstChild);
-      var browseBtn = toolbar.querySelector(".action-history-browse-cmd");
-      if (browseBtn) {
-        browseBtn.addEventListener("click", function () {
-          state.actionCmdBrowse = !state.actionCmdBrowse;
-          browseBtn.classList.toggle("active", state.actionCmdBrowse);
-          browseBtn.textContent = state.actionCmdBrowse ? "隐藏本地命令" : "本地命令";
-          var rbox = document.getElementById("results");
-          if (rbox) rbox.classList.toggle("show-cmd-browse", state.actionCmdBrowse);
-          if (state.actionCmdBrowse && state._actionQueryCache && state._actionQueryCache.length) {
-            state.actions = state._actionQueryCache.slice();
-          }
-          if (paletteFastInput() && state.actionCmdBrowse && state.input.trim()) {
-            scheduleActionCommandPaint(state.input.trim());
-          } else {
-          updateResults();
-          }
-        });
-      }
-      toolbar.querySelectorAll(".action-history-filter").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          actionState.historyFilter = btn.getAttribute("data-filter") || "all";
-          toolbar.querySelectorAll(".action-history-filter").forEach(function (b) {
-            b.classList.toggle("active", b === btn);
-          });
-          renderActionHistoryList();
-        });
-      });
-      var focusBtn = toolbar.querySelector(".action-focus-mode");
-      if (focusBtn) {
-        focusBtn.addEventListener("click", function () {
-          actionState.focusMode = !actionState.focusMode;
-          focusBtn.classList.toggle("active", actionState.focusMode);
-          if (actionState.focusMode) collapseNonActiveCards();
-          renderActionHistoryList();
-        });
-      }
-      var collapseBtn = toolbar.querySelector(".action-collapse-others");
-      if (collapseBtn) {
-        collapseBtn.addEventListener("click", function () {
-          collapseNonActiveCards();
-          renderActionHistoryList();
-        });
-      }
-      var clr = toolbar.querySelector(".action-history-clear");
-      if (clr) {
-        clr.addEventListener("click", function () {
-          Object.keys(actionState.cards).forEach(function (id) {
-            var c = actionState.cards[id];
-            if (c && c.uiState === "Done") removeActionCard(id);
-          });
-          renderActionHistoryList();
-          syncActionResultsLayout();
-        });
-      }
-    }
-    var head = stack.querySelector(".action-history-head");
-    var n = Object.keys(actionState.cards).length;
-    var runN = 0;
-    var doneN = 0;
-    Object.keys(actionState.cards).forEach(function (id) {
-      var c = actionState.cards[id];
-      if (!c) return;
-      if (c.uiState === "Done") doneN++;
-      else runN++;
-    });
-    if (n < 1) {
-      if (head) head.remove();
-      if (toolbar) toolbar.style.display = "none";
-      return;
-    }
-    if (toolbar) toolbar.style.display = "flex";
-    if (!head) {
-      head = document.createElement("div");
-      head.className = "action-history-head";
-      var tb = stack.querySelector(".action-history-toolbar");
-      if (tb && tb.nextSibling) stack.insertBefore(head, tb.nextSibling);
-      else stack.insertBefore(head, stack.firstChild);
-    }
-    head.textContent =
-      "任务 · 共 " + n + " 张（进行中 " + runN + " · 已归档 " + doneN + "）→ " + agentProviderLabel(state.agentProvider);
-  }
-
-  function actionDetailSectionTarget(dom, section) {
-    if (!dom) return null;
-    if (section === "structure") return dom.querySelector(".card-a2ui:not([hidden])");
-    if (section === "answer") return dom.querySelector(".card-replies");
-    if (section === "process")
-      return dom.querySelector(".card-status-log:not(:empty)") ||
-        dom.querySelector(".card-live-thought") ||
-        dom.querySelector(".card-timeline");
-    if (section === "followup") return dom.querySelector(".card-followup");
-    return dom.querySelector(".cmd-action-card-head");
-  }
-
-  function scrollActionDetailSection(section) {
-    var cardId = actionState.detailCardId;
-    var dom = cardId ? document.getElementById("card-" + cardId) : null;
-    var results = document.getElementById("results");
-    var target = actionDetailSectionTarget(dom, section);
-    if (!target || !results) return;
-    var resultsRect = results.getBoundingClientRect();
-    var targetRect = target.getBoundingClientRect();
-    results.scrollTo({
-      top: results.scrollTop + targetRect.top - resultsRect.top - 112,
-      behavior: "smooth"
-    });
-    var nav = results.querySelector(".action-detail-nav");
-    if (nav) {
-      nav.querySelectorAll(".action-detail-tab").forEach(function (btn) {
-        btn.classList.toggle("active", btn.getAttribute("data-section") === section);
-      });
-    }
-  }
-
-  function ensureActionDetailNav(stack) {
-    if (!stack) return null;
-    var nav = stack.querySelector(":scope > .action-detail-nav");
-    if (nav) return nav;
-    nav = document.createElement("div");
-    nav.className = "action-detail-nav";
-    nav.innerHTML =
-      '<button type="button" class="action-detail-back">← 任务列表</button>' +
-      '<div class="action-detail-identity">' +
-      '<div class="action-detail-breadcrumb"><span>任务</span><span>/</span><span class="crumb-state"></span><span>/</span><span class="crumb-current"></span></div>' +
-      '<div class="action-detail-title"></div></div>' +
-      '<div class="action-detail-tabs">' +
-      '<button type="button" class="action-detail-tab" data-section="structure">结构</button>' +
-      '<button type="button" class="action-detail-tab" data-section="answer">回答</button>' +
-      '<button type="button" class="action-detail-tab" data-section="process">过程</button>' +
-      '<button type="button" class="action-detail-tab" data-section="followup">补充</button>' +
-      "</div>";
-    stack.insertBefore(nav, stack.firstChild);
-    nav.querySelector(".action-detail-back").addEventListener("click", closeActionCardDetail);
-    nav.querySelectorAll(".action-detail-tab").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        scrollActionDetailSection(btn.getAttribute("data-section") || "top");
-      });
-    });
-    return nav;
-  }
-
-  function syncActionDetailNav() {
-    var box = document.getElementById("results");
-    var stack = box && box.querySelector(".action-card-stack");
-    var panel = document.getElementById("palette-panel");
-    var cardId = actionState.detailCardId;
-    var card = cardId ? getActionCard(cardId) : null;
-    if (!box || !stack || !card) {
-      if (stack) stack.classList.remove("detail-mode");
-      if (box) box.classList.remove("action-detail-mode");
-      if (panel) panel.classList.remove("action-detail-open");
-      return;
-    }
-    var nav = ensureActionDetailNav(stack);
-    var dom = document.getElementById("card-" + cardId);
-    stack.classList.add("detail-mode");
-    box.classList.add("action-detail-mode");
-    if (panel) panel.classList.add("action-detail-open");
-    if (!nav) return;
-    var title = card.title || card.query || "代理任务";
-    var stateEl = nav.querySelector(".crumb-state");
-    var currentEl = nav.querySelector(".crumb-current");
-    var titleEl = nav.querySelector(".action-detail-title");
-    if (stateEl) stateEl.textContent = actionCardUiLabel(card.uiState);
-    if (currentEl) currentEl.textContent = agentProviderLabel(card.provider || state.agentProvider);
-    if (titleEl) titleEl.textContent = title;
-    nav.querySelectorAll(".action-detail-tab").forEach(function (btn) {
-      var section = btn.getAttribute("data-section") || "";
-      var target = actionDetailSectionTarget(dom, section);
-      var empty =
-        !target ||
-        target.hidden ||
-        (section === "answer" && !target.querySelector(".card-reply, .card-reply-segment")) ||
-        (section === "process" && !String(target.textContent || "").trim());
-      btn.hidden = empty;
-      if (empty) btn.classList.remove("active");
-    });
-    var activeTab = nav.querySelector(".action-detail-tab.active:not([hidden])");
-    if (!activeTab) {
-      var firstTab = nav.querySelector(".action-detail-tab:not([hidden])");
-      if (firstTab) firstTab.classList.add("active");
+    if (typeof PaletteAgentSummary !== "undefined" && PaletteAgentSummary.refreshActionHistoryHead) {
+      PaletteAgentSummary.refreshActionHistoryHead();
     }
   }
 
@@ -4500,13 +4193,27 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     return html;
   }
 
-  function hydrateResultIcons(box) {
-    if (!box) return;
-    box.querySelectorAll("img.result-icon-img[data-provider-id]").forEach(function (img) {
-      var pid = img.getAttribute("data-provider-id") || "";
-      bindResultIconImg(img, iconUrlListForItem(findAiProviderItem(pid)));
-    });
+  function getResultRowCtx() {
+    return {
+      esc: esc,
+      kindIcon: kindIcon,
+      renderProviderIconHtml: renderProviderIconHtml,
+      isAiConfigured: isAiConfigured,
+      selectedAiProvider: state.selectedAiProvider,
+      findAiProviderItem: findAiProviderItem,
+      bindResultIconImg: bindResultIconImg,
+      iconUrlListForItem: iconUrlListForItem
+    };
   }
+
+  var buildCommandResultRowHtml = function (item, idx, active) {
+    if (typeof PaletteResultRow !== "undefined") return PaletteResultRow.buildHtml(item, idx, active, getResultRowCtx());
+    return "";
+  };
+
+  var hydrateResultIcons = function (box) {
+    if (typeof PaletteResultRow !== "undefined") PaletteResultRow.hydrateIcons(box, getResultRowCtx());
+  };
 
   function scrollResultItemIntoView(scroller, node) {
     if (!scroller || !node) return;
@@ -4525,7 +4232,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
     } catch (_) {}
-    if (!document.getElementById("palette-panel")) ensureShell();
+    if (!document.getElementById("palette-panel")) invokePaletteEnsureShell();
     if (state.intent === "ai") ensureInputForIntent();
     syncIntentUI();
     var inp = getInputEl();
@@ -5174,7 +4881,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     var blocks = CommandPaletteReplyStructurer.structurePlainAgentReply(t);
     if (!blocks || !blocks.length) return false;
     for (var bi = 0; bi < blocks.length; bi++) {
-      actionCardManager.onBlockUpdate(cardId, blocks[bi]);
+      if (actionCardManager) actionCardManager.onBlockUpdate(cardId, blocks[bi]);
     }
     agentDebugLog(
       "structurer",
@@ -5949,15 +5656,6 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     getInputEl()?.focus();
   }
 
-  function currentRows() {
-    if (state.resultMode === "turbo") return state.turboItems;
-    return state.actions;
-  }
-
-  function getInputEl() {
-    return document.getElementById("command-input");
-  }
-
   function readInputValue() {
     var el = getInputEl();
     return el ? String(el.value || "") : state.input;
@@ -6060,15 +5758,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function bindActionSubmitButton() {
-    var btn = document.getElementById("action-agent-submit");
-    if (!btn || btn.dataset.bound) return;
-    btn.dataset.bound = "1";
-    btn.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      handleActionEnterKey(null);
-      getInputEl()?.focus();
-    });
+    if (typeof PaletteActionBar !== "undefined" && PaletteActionBar.bindSubmit) {
+      PaletteActionBar.bindSubmit();
+    }
   }
 
   function syncInputHeight() {
@@ -6137,53 +5829,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function renderAgentEngineBar() {
-    var bar = document.getElementById("action-agent-bar");
-    var panel = document.getElementById("palette-panel");
-    if (panel) panel.classList.toggle("intent-action", state.intent === "action");
-    if (!bar) return;
-    bar.hidden = state.intent !== "action";
-    if (state.intent !== "action") return;
-    var chips = bar.querySelector(".action-agent-chips");
-    if (!chips) return;
-    chips.innerHTML =
-      AGENT_PROVIDERS.map(function (p) {
-      var active = p.id === state.agentProvider ? " active" : "";
-      return (
-        '<button type="button" class="action-agent-chip' +
-        active +
-        '" data-prov="' +
-        esc(p.id) +
-        '" title="' +
-        esc(p.label) +
-        '">' +
-        esc(p.short) +
-        "</button>"
-      );
-      }).join("");
-    var submitBtn = document.getElementById("action-agent-submit");
-    if (!submitBtn) {
-      submitBtn = document.createElement("button");
-      submitBtn.type = "button";
-      submitBtn.id = "action-agent-submit";
-      submitBtn.className = "action-agent-submit-btn";
-      submitBtn.title = "Enter 提交托管任务";
-      submitBtn.textContent = "提交";
-      bar.appendChild(submitBtn);
+    if (typeof PaletteActionBar !== "undefined" && PaletteActionBar.render) {
+      PaletteActionBar.render();
     }
-    bindActionSubmitButton();
-    chips.querySelectorAll(".action-agent-chip").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        state.agentProvider = btn.getAttribute("data-prov") || "openclaw";
-        renderAgentEngineBar();
-        refreshActionHistoryHead();
-        if (state.intent === "action" && !Object.keys(actionState.cards).length && !state.input.trim()) {
-          maybeRequestAgentCardSync();
-          if (!actionHasStoredCards()) showActionEmptyIfNeeded();
-        }
-        window.nmerPalette.setStatus("已选引擎 · " + agentProviderLabel(state.agentProvider) + " · 输入后 Enter 提交", "idle");
-        syncWindowSize();
-      });
-    });
   }
 
   function syncIntentUI() {
@@ -6240,25 +5888,6 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     syncWindowSize();
   }
 
-  function showActionIntentEmpty() {
-    var box = document.getElementById("results");
-    if (!box) return;
-    purgeActionEmptyHint();
-    var hint = document.createElement("div");
-    hint.className = "action-intent-empty";
-    hint.textContent =
-      "输入任务后 Enter 提交至 " +
-      agentProviderLabel(state.agentProvider) +
-      "；点「本地命令」可浏览 VK；Ctrl+Enter 执行选中命令";
-    var stack = box.querySelector(".action-card-stack");
-    if (stack) stack.appendChild(hint);
-    else box.appendChild(hint);
-    state.showResults = true;
-    var panel = document.getElementById("palette-panel");
-    if (panel) panel.classList.add("has-results");
-    syncActionResultsLayout();
-  }
-
   function resetActionsForIntent(intent) {
     state.turboItems = [];
     state.resultMode = "command";
@@ -6301,13 +5930,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           syncWindowSize();
           return;
         }
-        if (pulledN >= 0) {
-          showActionEmptyIfNeeded();
-          return;
-        }
+        renderActionHistoryList();
         window.nmerPalette.setStatus(
           "正在加载历史任务… · " + agentProviderLabel(state.agentProvider),
-          "idle"
+          "loading"
         );
         purgeActionEmptyHint();
         syncActionResultsLayout();
@@ -7299,325 +6925,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     refreshActionCardDom(card);
   }
 
-  var _renderActionHistoryLock = false;
-
+  var actionCardManager = null;
   function renderActionHistoryList() {
-    if (_renderActionHistoryLock) return;
-    _renderActionHistoryLock = true;
-    try {
-    hideCardHoverPreview();
-    var box = document.getElementById("results");
-    if (!box) return;
-    syncExpandedCardsToHistoryFilter();
-    if (Object.keys(actionState.cards).length > 0) purgeActionEmptyHint();
-    var stack = box.querySelector(".action-card-stack");
-    if (!stack) {
-      stack = document.createElement("div");
-      stack.className = "action-card-stack";
-      var cmdKeep = box.querySelector(".action-cmd-list");
-      if (cmdKeep) box.insertBefore(stack, cmdKeep);
-      else box.insertBefore(stack, box.firstChild);
-    }
-    refreshActionHistoryHead();
-    removeActionLiveDock(stack);
-
-    var oldFlat = stack.querySelector(":scope > .action-card-list");
-    if (oldFlat) oldFlat.remove();
-    stack.querySelectorAll(".action-done-more-btn").forEach(function (b) {
-      b.remove();
-    });
-
-    var runningIds = [];
-    var doneIds = [];
-    Object.keys(actionState.cards).forEach(function (cid) {
-      var c = actionState.cards[cid];
-      if (!c) return;
-      if (!cardMatchesHistoryFilter(c)) {
-        var hideEl = document.getElementById("card-" + cid);
-        if (hideEl) hideEl.style.display = "none";
-        return;
-      }
-      if (isActionCardRunning(c)) runningIds.push(cid);
-      else doneIds.push(cid);
-    });
-
-    sortCardIds(runningIds);
-    sortCardIds(doneIds);
-
-    var showRunning = actionState.historyFilter === "all" || actionState.historyFilter === "running";
-    var showDone = actionState.historyFilter === "all" || actionState.historyFilter === "done";
-
-    stack.querySelectorAll(".action-card-section").forEach(function (sec) {
-      sec.style.display = "none";
-    });
-
-    if (showRunning && runningIds.length) {
-      var runSec = ensureActionCardSection(stack, "running");
-      runSec.style.display = "";
-      var runHead = runSec.querySelector(".action-card-section-head");
-      if (runHead) {
-        runHead.innerHTML =
-          '<span>进行中</span><span class="section-count">' + runningIds.length + "</span>" +
-          '<span class="section-hint">实时进度与操作见下方任务卡</span>';
-      }
-      var runList = runSec.querySelector(".action-card-list");
-      if (runList) {
-        runList.innerHTML = "";
-        runningIds.forEach(function (cid) {
-          var card = actionState.cards[cid];
-          if (!card) return;
-          card.expanded = actionState.detailCardId === cid;
-          mountActionCardIntoList(card, runList);
-        });
-      }
-    }
-
-    if (showDone && doneIds.length) {
-      var doneSec = ensureActionCardSection(stack, "done");
-      doneSec.style.display = "";
-      var doneHead = doneSec.querySelector(".action-card-section-head");
-      var doneLimit = actionState.showAllDone ? doneIds.length : 4;
-      var doneVisible = doneIds.slice(0, doneLimit);
-      if (
-        actionState.detailCardId &&
-        doneIds.indexOf(actionState.detailCardId) >= 0 &&
-        doneVisible.indexOf(actionState.detailCardId) < 0
-      ) {
-        doneVisible.push(actionState.detailCardId);
-      }
-      if (doneHead) {
-        doneHead.innerHTML =
-          '<span>已归档</span><span class="section-count">' + doneIds.length + "</span>" +
-          '<span class="section-hint">默认紧凑 · 悬浮看各轮摘要 · 点击展开</span>';
-      }
-      var doneList = doneSec.querySelector(".action-card-list");
-      if (doneList) {
-        doneList.innerHTML = "";
-        doneVisible.forEach(function (cid) {
-          var card = actionState.cards[cid];
-          if (!card) return;
-          card.expanded = actionState.detailCardId === cid;
-          mountActionCardIntoList(card, doneList);
-        });
-      }
-      if (!actionState.showAllDone && doneIds.length > doneLimit) {
-        var moreBtn = document.createElement("button");
-        moreBtn.type = "button";
-        moreBtn.className = "action-done-more-btn";
-        moreBtn.textContent = "展开更多已归档（+" + (doneIds.length - doneLimit) + "）";
-        moreBtn.addEventListener("click", function () {
-          actionState.showAllDone = true;
-          renderActionHistoryList();
-        });
-        doneSec.appendChild(moreBtn);
-      }
-    }
-
-    stack.querySelectorAll(".action-filter-empty").forEach(function (n) {
-      n.remove();
-    });
-
-    if (runningIds.length + doneIds.length > 0) {
-      var panel = document.getElementById("palette-panel");
-      if (panel) panel.classList.add("has-results", "intent-action");
-      box.classList.add("palette-results", "has-action-cards");
-    } else {
-      removeActionLiveDock(stack);
-      if (Object.keys(actionState.cards).length > 0) {
-        var filtEmpty = document.createElement("div");
-        filtEmpty.className = "action-intent-empty action-filter-empty";
-        filtEmpty.textContent = historyFilterEmptyMessage();
-        stack.appendChild(filtEmpty);
-      } else if (
-        state.intent === "action" &&
-        !state.input.trim() &&
-        !state.actionCmdBrowse
-      ) {
-        purgeActionEmptyHint();
-        var empty = document.createElement("div");
-        empty.className = "action-intent-empty";
-        empty.textContent =
-          "暂无历史任务。输入描述后 Enter 提交至 " +
-          agentProviderLabel(state.agentProvider) +
-          "；提交后会在此按「进行中 / 已归档」分区显示。";
-        stack.appendChild(empty);
-      }
-    }
-    replayExpandedCardPipelineBlocks();
-    syncActionDetailNav();
-    requestAnimationFrame(syncActionListLayout);
-    } finally {
-      _renderActionHistoryLock = false;
-    }
+    if (typeof PaletteAgentSummary !== "undefined") PaletteAgentSummary.renderActionHistoryList();
   }
 
-  var actionCardManager = {
-    transitionCardState: function (cardId, newState) {
-      var card = getActionCard(cardId);
-      if (!card) return;
-      card.uiState = newState;
-      var dom = ensureActionCardDom(card);
-      if (!dom) return;
-      dom.className =
-        "cmd-action-card state-" +
-        newState +
-        (card.expanded ? " is-expanded" : " is-collapsed") +
-        (card.id === actionState.activeCardId ? " is-active" : "") +
-        (card.id === actionState.detailCardId ? " is-detail-card" : "") +
-        (dom.classList.contains("has-status-log") ? " has-status-log" : "");
-      var loader = dom.querySelector(".card-pulse-loader");
-      var badge = dom.querySelector(".cmd-action-card-badge");
-      var inputEl = getInputEl();
-      if (badge) badge.textContent = actionCardUiLabel(newState);
-      if (loader)
-        loader.style.display =
-          card.expanded && (newState === "Planning" || newState === "Running") ? "block" : "none";
-      refreshActionCardPreview(cardId);
-      if (cardId === actionState.activeCardId) updateActionLiveDock(cardId);
-      if (inputEl) {
-        if (newState === "Planning") inputEl.placeholder = "引擎正在重新规划任务流…";
-        else if (newState === "Running") inputEl.placeholder = "正在执行云端代理具身流，请稍候…";
-        else if (newState === "Waiting") {
-          inputEl.placeholder = "大脑向您提问！请就地输入修正回复…";
-          dom.classList.add("waiting-user-reply");
-          inputEl.focus();
-        } else if (newState === "Done") {
-          inputEl.placeholder = IntentRouter.PLACEHOLDERS.action || "描述任务 Enter 提交至上方所选引擎（龙虾/Hermes）…";
-          dom.classList.remove("waiting-user-reply");
-        } else {
-          inputEl.placeholder = IntentRouter.PLACEHOLDERS[state.intent] || IntentRouter.PLACEHOLDERS.local;
-        }
-      }
-      if (newState === "Running") {
-        var logEl = dom.querySelector(".card-status-log");
-        if (logEl) logEl.scrollTop = logEl.scrollHeight;
-      }
-      if (card.id === actionState.detailCardId) syncActionDetailNav();
-      syncActionResultsLayout();
-    },
-    onBlockUpdate: function (cardId, block) {
-      var card = getActionCard(cardId);
-      if (!card || !block) return;
-      agentDebugLog(
-        "block_" + String(block.type || "unknown"),
-        "seq=" +
-          block.seq +
-          " closed=" +
-          (block.closed ? 1 : 0) +
-          (block.parseWarn ? " warn=" + block.parseWarn : "") +
-          (block.replan ? " replan=1" : "")
-      );
-      var dom = ensureActionCardDom(card);
-      if (!dom) return;
-      if (block.type === "plan") {
-        if (block.closed) {
-          card._protoStarted = true;
-          card.blocks.plan = block.steps || [];
-          if (block.replan) actionCardManager.transitionCardState(cardId, "Planning");
-          var tl = dom.querySelector(".card-timeline");
-          if (tl) {
-            tl.innerHTML = (block.steps || [])
-              .map(function (s, i) {
-                return '<div class="card-timeline-step">' + esc("步骤" + (i + 1) + "：" + s) + "</div>";
-              })
-              .join("");
-          }
-          refreshActionCardPreview(cardId);
-          if (card.uiState === "Planning") actionCardManager.transitionCardState(cardId, "Running");
-        }
-      } else if (block.type === "status") {
-        card._protoStarted = true;
-        if (!card.blocks.status) card.blocks.status = [];
-        var idx = card.blocks.status.length - 1;
-        if (!block.closed && idx >= 0 && card.blocks.status[idx] && card.blocks.status[idx].seq === block.seq) {
-          card.blocks.status[idx] = block;
-        } else if (block.closed) {
-          card.blocks.status.push(block);
-        } else {
-          card.blocks.status.push(block);
-        }
-        var open = card.blocks.status[card.blocks.status.length - 1];
-        var logBox = dom.querySelector(".card-status-log");
-        if (logBox) {
-          var tail = logBox.querySelector('.b-status[data-seq="' + block.seq + '"]');
-          if (!tail) {
-            tail = document.createElement("div");
-            tail.className = "b-status";
-            tail.setAttribute("data-seq", String(block.seq));
-            tail.innerHTML = '<div class="b-status-title"></div><div class="b-status-log"></div>';
-            logBox.appendChild(tail);
-          }
-          if (tail) {
-            tail.querySelector(".b-status-title").textContent = open.title || "[执行中]";
-            writeAgentRichText(tail.querySelector(".b-status-log"), open.log || open.body || "");
-          }
-          logBox.scrollTop = logBox.scrollHeight;
-          PaletteCardRenderer.syncActionCardStatusLogVisibility(dom);
-        }
-        refreshActionCardPreview(cardId);
-        if (cardId === actionState.activeCardId) updateActionLiveDock(cardId);
-        if (card.uiState !== "Waiting" && card.uiState !== "Done") actionCardManager.transitionCardState(cardId, "Running");
-      } else if (block.type === "orphan" && block.closed) {
-        var orphanBody = String(block.content || block.body || "").trim();
-        if (orphanBody) {
-          var orphanLog = dom.querySelector(".card-status-log");
-          if (orphanLog) {
-            var orphanHit = orphanLog.querySelector('.b-status[data-seq="' + block.seq + '"]');
-            if (!orphanHit) {
-              orphanHit = document.createElement("div");
-              orphanHit.className = "b-status";
-              orphanHit.setAttribute("data-seq", String(block.seq));
-              orphanHit.innerHTML =
-                '<div class="b-status-title">[回复]</div><div class="b-status-log md-body"></div>';
-              orphanLog.appendChild(orphanHit);
-            }
-            var orphanLogEl = orphanHit.querySelector(".b-status-log");
-            if (orphanLogEl && orphanLogEl.getAttribute("data-raw-md") !== orphanBody) {
-              writeAgentRichText(orphanLogEl, orphanBody);
-            }
-            orphanLog.scrollTop = orphanLog.scrollHeight;
-            PaletteCardRenderer.syncActionCardStatusLogVisibility(dom);
-          }
-        }
-        refreshActionCardPreview(cardId);
-        if (cardId === actionState.activeCardId) updateActionLiveDock(cardId);
-        if (card.uiState !== "Waiting" && card.uiState !== "Done") actionCardManager.transitionCardState(cardId, "Running");
-      } else if (block.type === "question" && block.closed) {
-        card.blocks.question = block;
-        card.waitingForUser = true;
-        var qEl = dom.querySelector(".card-question");
-        if (qEl) {
-          qEl.hidden = false;
-          var qBody = String(block.content || block.body || "").trim();
-          qEl.innerHTML =
-            '<div class="card-question-title">' +
-            esc(block.title || "需要您的确认") +
-            '</div><div class="card-question-body md-body">' +
-            renderAgentPlainMarkdown(qBody) +
-            "</div>";
-        }
-        actionCardManager.transitionCardState(cardId, "Waiting");
-      } else if (block.type === "reply" && block.closed) {
-        var rBodyCheck = String(block.content || block.body || "").trim();
-        if (!rBodyCheck || isAgentStatusPreview(rBodyCheck)) return;
-        card.blocks.reply = block;
-        card.waitingForUser = false;
-        var rEl = dom.querySelector(".card-reply");
-        if (rEl) {
-          rEl.hidden = false;
-          var rBody = String(block.content || block.body || "").trim();
-          var rTitle = String(block.title || "任务完结").trim();
-          rEl.innerHTML =
-            '<div class="card-reply-title">' +
-            esc(rTitle) +
-            '</div><div class="card-reply-body md-body">' +
-            renderAgentPlainMarkdown(rBody || block.body || "") +
-            "</div>";
-        }
-        actionCardManager.transitionCardState(cardId, "Done");
-      }
-    }
-  };
+
 
   var _lastPublishedPaletteH = 0;
   var layoutResizeObserver = null;
@@ -7814,7 +7127,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     }
     if (batch) return;
     refreshActionCardDom(card);
-    actionCardManager.transitionCardState(id, card.uiState);
+    if (actionCardManager) actionCardManager.transitionCardState(id, card.uiState);
     if (!summaryDto && restoredBlocks && (card.uiState === "Done" || dto.uiState === "Done")) {
       if (shouldEagerPipelineFinalize(card)) ensureCardPipelineRendered(card);
       else maybeHealDoneCardPipelineBlocks(card, id);
@@ -7958,7 +7271,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       active._runningSince = Date.now();
       active.uiState = kind === "append" ? "Planning" : "Running";
       active.liveThought = "已收到补充，继续执行…";
-      actionCardManager.transitionCardState(active.id, active.uiState);
+      if (actionCardManager) actionCardManager.transitionCardState(active.id, active.uiState);
       refreshActionCardDom(active);
     }
     var submitMsg = {
@@ -8109,91 +7422,12 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       box.insertBefore(stack, box.firstChild);
     }
     ensureActionCardListHost(stack);
-    if (paletteDiscreteLayout() && typeof PaletteLayout !== "undefined") {
-      PaletteLayout.resetMode();
-      publishDiscreteLayout(true);
-    } else {
-      syncWindowSize();
-    }
   }
 
   function renderActionCardSync(cards, syncOpts) {
-    syncOpts = syncOpts || {};
-    cards = limitActionCardDtos(cards);
-    var hostIds = {};
-    for (var hi = 0; hi < cards.length; hi++) {
-      var hid = String(cards[hi].cardId || cards[hi].id || "");
-      if (hid) hostIds[hid] = true;
+    if (typeof PaletteAgentCardSync !== "undefined" && PaletteAgentCardSync.renderSync) {
+      PaletteAgentCardSync.renderSync(cards, syncOpts);
     }
-    Object.keys(actionState.cards).forEach(function (id) {
-      if (!hostIds[id] && id !== actionState._pendingCardId) removeActionCard(id, false);
-    });
-    beginActionCardBatchUpsert();
-    try {
-      for (var i = 0; i < cards.length; i++) {
-        upsertActionCardFromDto(cards[i], { batch: true, summary: !!syncOpts.summary });
-      }
-    } finally {
-      endActionCardBatchUpsert();
-    }
-    if (!cards.length && !actionHasStoredCards()) return;
-    purgeActionEmptyHint();
-    if (!actionState.activeCardId || !getActionCard(actionState.activeCardId)) {
-      var pick = "";
-      Object.keys(actionState.cards).forEach(function (cid) {
-        if (!pick && isActionCardRunning(actionState.cards[cid])) pick = cid;
-      });
-      if (!pick) {
-        var all = Object.keys(actionState.cards);
-        sortCardIds(all);
-        if (all.length) pick = all[0];
-      }
-      if (pick) {
-        actionState.activeCardId = pick;
-        if (isActionCardRunning(actionState.cards[pick])) actionState.cards[pick].expanded = true;
-      }
-    }
-    if (Object.keys(actionState.cards).length === 1) {
-      var sole = Object.keys(actionState.cards)[0];
-      actionState.activeCardId = sole;
-      actionState.cards[sole].expanded = isActionCardRunning(actionState.cards[sole]);
-    }
-    if (actionState.focusMode) collapseNonActiveCards();
-    clearActionHistoryLoading();
-    finishActionCardSyncPaint(syncOpts);
-    if (!syncOpts.fromCache) {
-      requestAnimationFrame(function () {
-        persistCardSummaryCache();
-      });
-    }
-    if (!syncOpts.fromCache) {
-      setTimeout(scheduleAgentCardsRecover, syncOpts.summary ? 3500 : 1200);
-    }
-    requestAnimationFrame(replayExpandedCardPipelineBlocks);
-  }
-
-  function finishActionCardSyncPaint(syncOpts) {
-    syncOpts = syncOpts || {};
-    ensureActionResultsVisible();
-    var paint = function () {
-      renderActionHistoryList();
-      syncActionResultsLayout();
-      if (paletteDiscreteLayout() && typeof PaletteLayout !== "undefined") {
-        PaletteLayout.resetMode();
-        publishDiscreteLayout(true);
-      } else {
-        syncWindowSize();
-      }
-      if (actionHasStoredCards() && !syncOpts.fromCache) {
-        window.nmerPalette.setStatus(
-          "已加载 " + Object.keys(actionState.cards).length + " 个历史任务",
-          "success"
-        );
-      }
-    };
-    requestAnimationFrame(function () {
-      requestAnimationFrame(paint);
-    });
   }
 
   function applyAgentCardNew(d) {
@@ -8234,58 +7468,19 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     syncWindowSize();
   }
 
-  function ensureShell() {
-    if (!document.getElementById("palette-panel")) {
-      root.innerHTML =
-        '<main class="palette-root">' +
-        '<section class="palette-panel" id="palette-panel" aria-label="命令面板">' +
-        '<header class="palette-header">' +
-        '<span id="intent-tag" data-intent="action" title="Tab 切换意图">动作</span>' +
-        '<input id="command-input" class="palette-search" type="text" lang="zh-CN" autocomplete="off" spellcheck="false" placeholder="搜索文件、路径或剪贴板…" />' +
-        '<button type="button" id="debug-btn" class="palette-debug-btn" title="命令面板诊断 (Ctrl+Shift+D 搜索 / Ctrl+Shift+A 动作托管)" aria-label="打开命令面板诊断">诊</button>' +
-        "</header>" +
-        '<p id="voice-hint" class="palette-status"></p>' +
-        '<div id="action-agent-bar" class="action-agent-bar" hidden>' +
-        '<span class="action-agent-label">托管引擎</span>' +
-        '<div class="action-agent-chips"></div></div>' +
-        '<div id="results" class="palette-results"><div class="action-history-loading" id="action-history-loading">加载历史任务…</div></div>' +
-        "</section></main>";
-    }
-    root.dataset.ready = "1";
-    if (root.dataset.shellBound) return;
-    root.dataset.shellBound = "1";
-    syncIntentUI();
-    bindUI();
-    bindLayoutObservers();
-    bindActionSubmitButton();
-    if (typeof PalettePerfMarks !== "undefined") {
-      if (PalettePerfMarks.setSender) {
-        PalettePerfMarks.setSender(function (payload) {
-          post(payload);
-        });
-      }
-      PalettePerfMarks.mark("palette_ready");
-      PalettePerfMarks.flush();
-    }
-    post({ type: "palette_ready" });
-    setTimeout(probeAgentHostBridge, 400);
-    if (!shouldDeferAgentCardPullOnReady()) setTimeout(requestAgentCardSync, 120);
-  }
-
-  function bindResultsScrollHide(box) {
-    if (!box || box.dataset.scrollBound) return;
-    box.dataset.scrollBound = "1";
-    box.addEventListener(
-      "scroll",
-      function () {
-        box.classList.add("is-scrolling");
-        clearTimeout(scrollHideTimer);
-        scrollHideTimer = setTimeout(function () {
-          box.classList.remove("is-scrolling");
-        }, 750);
-      },
-      { passive: true }
-    );
+  function invokePaletteEnsureShell() {
+    if (typeof PaletteBootstrap === "undefined" || !PaletteBootstrap.ensureShell) return;
+    PaletteBootstrap.ensureShell({
+      root: root,
+      post: post,
+      syncIntentUI: syncIntentUI,
+      bindUI: bindUI,
+      bindLayoutObservers: bindLayoutObservers,
+      bindActionSubmitButton: bindActionSubmitButton,
+      probeAgentHostBridge: probeAgentHostBridge,
+      shouldDeferAgentCardPullOnReady: shouldDeferAgentCardPullOnReady,
+      requestAgentCardSync: requestAgentCardSync
+    });
   }
 
   function updateVoiceHint() {
@@ -8298,200 +7493,24 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     syncWindowSize();
   }
 
+  function bindResultsScrollHide(box) {
+    if (typeof PaletteCommandResults !== "undefined") PaletteCommandResults.bindResultsScrollHide(box);
+  }
+
   function renderTurboResults(box, rows) {
-    var frag = document.createDocumentFragment();
-    var cap = Math.min(20, rows.length);
-    for (var i = 0; i < cap; i++) {
-      var item = rows[i];
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "result-item kind-file" + (i === state.selected ? " active" : "");
-      btn.setAttribute("data-idx", String(i));
-      if (item.path) btn.setAttribute("data-path", item.path);
-      var icon = document.createElement("span");
-      icon.className = "result-icon";
-      icon.setAttribute("aria-hidden", "true");
-      icon.textContent = kindIcon(item.kind || "file");
-      var body = document.createElement("span");
-      body.className = "result-body";
-      var title = document.createElement("span");
-      title.className = "result-title";
-      title.textContent = item.label || item.title || "";
-      var desc = document.createElement("span");
-      desc.className = "result-desc";
-      desc.textContent = item.desc || item.subtitle || item.path || "";
-      body.appendChild(title);
-      body.appendChild(desc);
-      btn.appendChild(icon);
-      btn.appendChild(body);
-      frag.appendChild(btn);
-    }
-    box.replaceChildren(frag);
+    if (typeof PaletteCommandResults !== "undefined") PaletteCommandResults.renderTurboResults(box, rows);
   }
 
   function renderActionCmdList(rows) {
-    var box = document.getElementById("results");
-    if (!box) return;
-    var cmdHost = box.querySelector(".action-cmd-list");
-    if (!rows || !rows.length) {
-      if (cmdHost) cmdHost.remove();
-      return;
-    }
-    if (!cmdHost) {
-      cmdHost = document.createElement("div");
-      cmdHost.className = "action-cmd-list";
-      var stack = box.querySelector(".action-card-stack");
-      if (stack) box.appendChild(cmdHost);
-      else box.appendChild(cmdHost);
-    }
-    if (state.resultMode === "turbo") renderTurboResults(cmdHost, rows);
-    else renderCommandResults(cmdHost, rows);
-    bindResultClicks(cmdHost);
-  }
-
-  function buildCommandResultRowHtml(item, idx, active) {
-    var activeCls = active ? " active" : "";
-        var matched = item.matched ? " matched" : "";
-        var kind = item.kind ? " kind-" + esc(item.kind) : "";
-        var binding = item.binding ? '<span class="result-binding">' + esc(item.binding) + "</span>" : "";
-        if (!binding && item.kind === "ai_provider") {
-          if (String(item.id || "") === state.selectedAiProvider) binding = '<span class="result-binding">已选</span>';
-          else if (isAiConfigured(item)) binding = '<span class="result-binding">已配置</span>';
-        }
-        var icon = item.kind === "ai_provider" ? renderProviderIconHtml(item) : kindIcon(item.kind || "command");
-    var rowKey =
-      typeof PaletteResultList !== "undefined"
-        ? PaletteResultList.rowKey(item, idx)
-        : String(item.id || item.label || idx);
-        return (
-      '<button class="result-item' + activeCls + matched + kind + '" type="button" data-idx="' + idx + '" data-row-key="' + esc(rowKey) + '">' +
-          '<span class="result-icon" aria-hidden="true">' + icon + "</span>" +
-          '<span class="result-body">' +
-          '<div class="result-row"><span class="result-title">' + esc(item.label || item.name || "") + "</span>" + binding + "</div>" +
-          '<span class="result-desc">' + esc(item.desc || "") + "</span></span></button>"
-        );
+    if (typeof PaletteCommandResults !== "undefined") PaletteCommandResults.renderActionCmdList(rows);
   }
 
   function renderCommandResults(box, rows) {
-    if (!box) return;
-    if (state.intent === "action" && box.id === "results") {
-      renderActionCmdList(rows);
-      return;
-    }
-    var limited = rows;
-    if (typeof PaletteResultList !== "undefined") {
-      limited = rows.slice(0, PaletteResultList.MAX_ROWS);
-    }
-    if (paletteFastInput() && typeof PaletteResultList !== "undefined") {
-      PaletteResultList.patchList(box, limited, state.selected, buildCommandResultRowHtml, {
-        hydrateFn: hydrateResultIcons
-      });
-      return;
-    }
-    box.innerHTML = limited
-      .map(function (item, idx) {
-        return buildCommandResultRowHtml(item, idx, idx === state.selected);
-      })
-      .join("");
-    hydrateResultIcons(box);
-  }
-
-  function bindResultClicks(box) {
-    if (!box) return;
-    if (box.dataset.clickDelegated) return;
-    box.dataset.clickDelegated = "1";
-    box.addEventListener("click", function (e) {
-      var node = e.target && e.target.closest ? e.target.closest("[data-idx]") : null;
-      if (!node || !box.contains(node)) return;
-      var idx = Number(node.getAttribute("data-idx"));
-      if (idx < 0 || isNaN(idx)) return;
-          state.selected = idx;
-        var rows = currentRows();
-        var item = rows[idx];
-        if (item && item.kind === "ai_provider") {
-          pickAiProvider(item.id);
-          return;
-        }
-          updateResults();
-          executeSelected();
-    });
+    if (typeof PaletteCommandResults !== "undefined") PaletteCommandResults.renderCommandResults(box, rows);
   }
 
   function updateResults() {
-    if (aiPhase === "compact" && state.intent === "ai") {
-      refreshAiProvidersUnderCard();
-      return;
-    }
-    if (state.intent === "action") purgeAiResultsDom();
-    var box = document.getElementById("results");
-    var panel = document.getElementById("palette-panel");
-    if (!box || !panel) return;
-    var rows = currentRows();
-    var hasActionCards = actionHasStoredCards() || !!box.querySelector(".cmd-action-card");
-    state.showResults = rows.length > 0 || hasActionCards || state.intent === "action";
-    panel.classList.toggle("has-results", state.showResults);
-    panel.classList.toggle("has-ai-providers", state.intent === "ai" && rows.length > 0);
-    box.classList.toggle("has-action-cards", hasActionCards);
-    box.classList.toggle("show-cmd-browse", !!state.actionCmdBrowse);
-    if (state.intent === "action" && !hasActionCards && !state.actionCmdBrowse && !state.input.trim()) {
-      maybeRequestAgentCardSync();
-      renderActionHistoryList();
-      purgeActionEmptyHint();
-      syncWindowSize();
-      return;
-    }
-    if (state.intent === "action" && hasActionCards && state._actionCmdQueryActive && state.input.trim() && rows.length) {
-      updateActionCmdOverlay(rows);
-      return;
-    }
-    if (state.intent === "action" && hasActionCards) {
-      renderActionHistoryList();
-      var cmdHost = box.querySelector(".action-cmd-list");
-      if (!rows.length || !state.actionCmdBrowse) {
-        if (cmdHost) cmdHost.remove();
-      } else {
-        if (!cmdHost) {
-          cmdHost = document.createElement("div");
-          cmdHost.className = "action-cmd-list";
-          box.appendChild(cmdHost);
-        }
-        if (state.resultMode === "turbo") renderTurboResults(cmdHost, rows);
-        else renderCommandResults(cmdHost, rows);
-        bindResultClicks(cmdHost);
-        var activeNode = cmdHost.querySelector(".result-item.active");
-        if (activeNode) scrollResultItemIntoView(box, activeNode);
-      }
-      bindResultsScrollHide(box);
-      syncWindowSize();
-      return;
-    }
-    if (state.intent === "action") {
-      if (hasActionCards) {
-        renderActionHistoryList();
-        if (state.actionCmdBrowse && rows.length) renderActionCmdList(rows);
-        else {
-          var ch = box.querySelector(".action-cmd-list");
-          if (ch) ch.remove();
-        }
-      } else if (state.actionCmdBrowse && rows.length) {
-        renderActionCmdList(rows);
-      } else if (!state.input.trim()) {
-        maybeRequestAgentCardSync();
-        if (!actionHasStoredCards()) showActionEmptyIfNeeded();
-        return;
-      }
-      bindResultsScrollHide(box);
-      syncWindowSize();
-      return;
-    }
-    box.className = "palette-results" + (hasActionCards ? " has-action-cards" : "");
-    if (state.resultMode === "turbo") renderTurboResults(box, rows);
-    else renderCommandResults(box, rows);
-    bindResultsScrollHide(box);
-    bindResultClicks(box);
-    var activeNode2 = box.querySelector(".result-item.active");
-    if (activeNode2) scrollResultItemIntoView(box, activeNode2);
-    syncWindowSize();
+    if (typeof PaletteCommandResults !== "undefined") PaletteCommandResults.updateResults();
   }
 
   function runLocalCommandQuery(q, gen, opts) {
@@ -9365,6 +8384,18 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     );
   }
 
+  var _discreteLayoutTimer = 0;
+
+  function scheduleDiscreteLayout(force) {
+    if (!paletteDiscreteLayout() || typeof PaletteLayout === "undefined") return;
+    if (_discreteLayoutTimer) clearTimeout(_discreteLayoutTimer);
+    var wait = force ? 0 : 56;
+    _discreteLayoutTimer = setTimeout(function () {
+      _discreteLayoutTimer = 0;
+      publishDiscreteLayout(!!force);
+    }, wait);
+  }
+
   function publishDiscreteLayout(force) {
     if (!paletteDiscreteLayout() || typeof PaletteLayout === "undefined") return false;
     var mode;
@@ -9583,23 +8614,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function bindUI() {
-    var input = getInputEl();
-    var debugBtn = document.getElementById("debug-btn");
-    var results = document.getElementById("results");
-    if (!input) return;
-    bindResultsScrollHide(results);
-    bindInputEvents(input);
-    document.getElementById("intent-tag")?.addEventListener("click", function (e) {
-      e.preventDefault();
-      cycleIntent();
-    });
-    debugBtn?.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      var tab = state.intent === "action" ? "agent" : "search";
-      post({ type: "palette_search_debug", tab: tab });
-    });
-    input.focus();
+    if (typeof PaletteShell !== "undefined" && PaletteShell.bindUI) {
+      PaletteShell.bindUI();
+    }
   }
 
   window.__nmerPaletteHostInject = function (jsonStr) {
@@ -9631,701 +8648,6 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     else if (typeof client.connect === "function") client.connect();
   }
 
-  function handleHubAgentEvent(ev) {
-    if (!ev || !ev.kind) return;
-    var kind = String(ev.kind || "");
-    var cardId = String(ev.cardId || "");
-    var payload = ev.payload && typeof ev.payload === "object" ? ev.payload : {};
-    if (!cardId && payload.cardId) cardId = String(payload.cardId || "");
-    var reqId = String(payload.reqId || "");
-    var hubCard = cardId ? getActionCard(cardId) : null;
-    if (hubCard && shouldSkipProseFinalize(hubCard, { source: "hub_ws" })) {
-      agentDebugLog("hub_ws_skip_prose", "kind=" + kind + " card=" + cardId);
-      return;
-    }
-    if (kind === "reply_delta") {
-      handleHostMessage({
-        type: "palette_agent_chunk",
-        cardId: cardId,
-        reqId: reqId,
-        delta: String(payload.delta || ""),
-        source: "hub_ws"
-      });
-      return;
-    }
-    if (kind === "reply_final") {
-      handleHostMessage({
-        type: "palette_agent_end",
-        cardId: cardId,
-        reqId: reqId,
-        answer: String(payload.answer || ""),
-        source: "hub_ws"
-      });
-    }
-  }
-
-  function handleHostMessage(d) {
-    if (!d || !d.type) return;
-    if (d.type === "palette_oc5_probe_request") {
-      var oc5ReqId = String(d.reqId || "");
-      try {
-        var out =
-          typeof probeOc5ProtocolClosure === "function"
-            ? probeOc5ProtocolClosure()
-            : { ok: false, code: "OC5_PROBE_FN_MISSING" };
-        var payload = {
-          type: "palette_oc5_probe_result",
-          reqId: oc5ReqId,
-          ok: !!out.ok,
-          code: String(out.code || ""),
-          engine: out.engine || {},
-          stats: out.stats || {},
-          samples: out.samples || []
-        };
-        if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.send) {
-          PaletteHostAdapter.send("palette_oc5_probe_result", payload);
-        } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
-          window.chrome.webview.postMessage(JSON.stringify(payload));
-        }
-      } catch (e) {
-        var errPayload = {
-          type: "palette_oc5_probe_result",
-          reqId: oc5ReqId,
-          ok: false,
-          code: "OC5_PROBE_ERR",
-          err: String((e && e.message) || e)
-        };
-        if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.send) {
-          PaletteHostAdapter.send("palette_oc5_probe_result", errPayload);
-        } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
-          window.chrome.webview.postMessage(JSON.stringify(errPayload));
-        }
-      }
-      return;
-    }
-    if (d.type === "palette_gray_probe_request") {
-      var grayReqId = String(d.reqId || "");
-      var grayQuery = String(d.query || "/search 测试");
-      try {
-        var grayOut =
-          typeof probeGrayRoute === "function"
-            ? probeGrayRoute(grayQuery)
-            : { ok: false, code: "GRAY_PROBE_FN_MISSING" };
-        var grayPayload = {
-          type: "palette_gray_probe_result",
-          reqId: grayReqId,
-          ok: !!grayOut.ok,
-          code: String(grayOut.code || ""),
-          detail: grayOut
-        };
-        if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.send) {
-          PaletteHostAdapter.send("palette_gray_probe_result", grayPayload);
-        } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
-          window.chrome.webview.postMessage(JSON.stringify(grayPayload));
-        }
-      } catch (e) {
-        var grayErr = {
-          type: "palette_gray_probe_result",
-          reqId: grayReqId,
-          ok: false,
-          code: "GRAY_PROBE_ERR",
-          detail: { err: String((e && e.message) || e) }
-        };
-        if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.send) {
-          PaletteHostAdapter.send("palette_gray_probe_result", grayErr);
-        } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
-          window.chrome.webview.postMessage(JSON.stringify(grayErr));
-        }
-      }
-      return;
-    }
-    if (d.type === "palette_adp_demo_prepare") {
-      if (typeof prepareAdapterOfficialA2uiProbe === "function") {
-        prepareAdapterOfficialA2uiProbe();
-      }
-      return;
-    }
-    if (d.type === "palette_adp_probe_request") {
-      var adpReqId = String(d.reqId || "");
-      try {
-        var adpPrep =
-          typeof prepareAdapterOfficialA2uiProbe === "function"
-            ? prepareAdapterOfficialA2uiProbe()
-            : { ok: false, code: "ADP_PREP_FN_MISSING" };
-        var adpOut =
-          typeof probeAdapterOfficialA2ui === "function"
-            ? probeAdapterOfficialA2ui()
-            : { ok: false, code: "ADP_PROBE_FN_MISSING" };
-        if (adpOut && typeof adpOut === "object") {
-          adpOut.prep = adpPrep;
-        }
-        var adpPayload = {
-          type: "palette_adp_probe_result",
-          reqId: adpReqId,
-          ok: !!adpOut.ok,
-          code: String(adpOut.code || ""),
-          detail: adpOut
-        };
-        if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.send) {
-          PaletteHostAdapter.send("palette_adp_probe_result", adpPayload);
-        } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
-          window.chrome.webview.postMessage(JSON.stringify(adpPayload));
-        }
-      } catch (e) {
-        var adpErr = {
-          type: "palette_adp_probe_result",
-          reqId: adpReqId,
-          ok: false,
-          code: "ADP_PROBE_ERR",
-          detail: { err: String((e && e.message) || e) }
-        };
-        if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.send) {
-          PaletteHostAdapter.send("palette_adp_probe_result", adpErr);
-        } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
-          window.chrome.webview.postMessage(JSON.stringify(adpErr));
-        }
-      }
-      return;
-    }
-    if (d.type === "palette_wails_bridge_config") {
-      applyWailsBridgeConfig(d);
-      return;
-    }
-    if (d.type === "palette_flags") {
-      applyPaletteFlags(d);
-      return;
-    }
-    if (d.type === "palette_command_snapshot") {
-      if (typeof PaletteCommandIndex !== "undefined") {
-        PaletteCommandIndex.load(d);
-      }
-      return;
-    }
-    if (d.type === "palette_results") {
-      if (state.intent === "local" && state.input.trim()) return;
-      var remoteGen = d.generation != null ? Number(d.generation) : Number(d.seq || 0);
-      if (paletteFastInput() && typeof PaletteQueryController !== "undefined" && remoteGen > 0 && PaletteQueryController.dropIfStale(remoteGen)) {
-        return;
-      }
-      if (paletteFastInput() && state._actionCmdQueryActive && state.actions.length > 0 && remoteGen > 0 && remoteGen !== state.querySeq) {
-        return;
-      }
-      if (d.seq && Number(d.seq) !== state.querySeq) return;
-      var items = Array.isArray(d.items) ? d.items : [];
-      if (state.intent === "action") {
-        items = items.filter(function (it) {
-          return it && String(it.kind || "") !== "ai_provider";
-        });
-      }
-      state.actions = items;
-      state.resultMode = "command";
-      state.turboItems = [];
-      if (state.selected >= state.actions.length) state.selected = 0;
-      state.voiceStatus = "idle";
-      state.voiceHint = "";
-      updateVoiceHint();
-      if (state.intent === "action") {
-        if (Object.keys(actionState.cards).length > 0 && !state.actionCmdBrowse) {
-          purgeActionEmptyHint();
-          renderActionHistoryList();
-          syncActionResultsLayout();
-          syncWindowSize();
-          return;
-        }
-        if (!state.input.trim() && !state.actionCmdBrowse) {
-          maybeRequestAgentCardSync();
-          if (actionHasStoredCards()) {
-            renderActionHistoryList();
-            syncActionResultsLayout();
-            syncWindowSize();
-          } else {
-            purgeActionEmptyHint();
-            window.nmerPalette.setStatus("正在加载历史任务…", "idle");
-          }
-          return;
-        }
-        if (!state.actionCmdBrowse) {
-          state._actionQueryCache = items;
-          if (Object.keys(actionState.cards).length > 0) {
-            renderActionHistoryList();
-            syncActionResultsLayout();
-          }
-          return;
-        }
-        purgeActionEmptyHint();
-        updateResults();
-        scheduleQueryPaintMark(remoteGen || state.querySeq, state.actions.length, {
-          source: "host_browse",
-          emptyResult: !state.actions.length
-        });
-        return;
-      }
-      if (typeof PalettePerfMarks !== "undefined") {
-        PalettePerfMarks.mark("remote_results_painted", {
-          generation: remoteGen || state.querySeq,
-          resultCount: state.actions.length
-        });
-      }
-      updateResults();
-    } else if (d.type === "palette_turbo_results") {
-      if (state.intent !== "local") return;
-      if (d.seq && Number(d.seq) !== state.querySeq) return;
-      if (d.query && String(d.query) !== state.turboQuery && String(d.query) !== state.input.trim()) return;
-      state.turboItems = Array.isArray(d.items) ? d.items.slice(0, 20) : [];
-      state.resultMode = "turbo";
-      state.actions = [];
-      if (state.selected >= state.turboItems.length) state.selected = 0;
-      state.voiceStatus = "idle";
-      state.voiceHint = "";
-      if (!state.turboItems.length) {
-        state.voiceHint = "无本地匹配结果";
-        state.voiceStatus = "idle";
-      }
-      updateVoiceHint();
-      updateResults();
-      scheduleQueryPaintMark(d.seq || state.querySeq, state.turboItems.length, {
-        source: "turbo",
-        emptyResult: !state.turboItems.length
-      });
-    } else if (d.type === "palette_turbo_error") {
-      if (state.intent !== "local") return;
-      state.turboItems = [];
-      state.resultMode = "command";
-      window.nmerPalette.setStatus(d.message || "本地搜索不可用", "error");
-      updateResults();
-    } else if (d.type === "palette_ai_status") {
-      window.nmerPalette.setStatus(d.message || "", d.status || "idle");
-    } else if (d.type === "palette_ai_chunk") {
-      if (d.reqId) aiStreamReqId = String(d.reqId);
-      appendAiChunk(d.delta || d.text || "");
-    } else if (d.type === "palette_ai_end") {
-      if (aiChunkBatcher) aiChunkBatcher.flushNow();
-      if (d.reqId) aiStreamReqId = String(d.reqId);
-      if (d.answer && String(d.answer).trim()) aiStreamText = String(d.answer);
-      finishAiStream(d);
-    } else if (d.type === "palette_ai_error") {
-      if (aiChunkBatcher) aiChunkBatcher.flushNow();
-      if (d.reqId) aiStreamReqId = String(d.reqId);
-      showAiStreamError(d.message || d.error || "请求失败");
-    } else if (d.type === "palette_ai_reset") {
-      resetAiStreamState();
-      if (state.intent === "ai") {
-        runQuery(true);
-        syncWindowSize();
-      } else updateResults();
-    } else if (d.type === "palette_ai_restore") {
-      restoreAiSession(d);
-      ensureHeaderInputVisible();
-    } else if (d.type === "palette_ai_providers") {
-      applyAiProviders(d.items, d.activeProvider || "");
-      if (state.intent === "ai") {
-        var hint = state.selectedAiProvider ? "已选模型 · Enter 发送" : "请选择模型";
-        window.nmerPalette.setStatus(hint, "idle");
-      }
-    } else if (d.type === "palette_status") {
-      window.nmerPalette.setStatus(d.message || "", d.status || "idle");
-    } else if (d.type === "palette_agent_card_sync") {
-      agentDebugLog("host_card_sync", "n=" + (Array.isArray(d.cards) ? d.cards.length : 0) + (d.summary ? " summary" : ""));
-      var syncCards = d.cards || [];
-      renderActionCardSync(syncCards, { summary: !!d.summary });
-      if (!syncCards.length && state.intent === "action" && !state.input.trim() && !state.actionCmdBrowse) {
-        showActionEmptyIfNeeded();
-      }
-    } else if (d.type === "palette_agent_card_detail") {
-      var detailCard = d.card;
-      if (detailCard && detailCard.cardId) {
-        agentDebugLog("host_card_detail", "card=" + String(detailCard.cardId));
-        applyAgentCardDetailDto(detailCard);
-      }
-    } else if (d.type === "palette_agent_card_new") {
-      agentDebugLog("host_card_new", "card=" + (d.cardId || "") + " req=" + (d.reqId || ""));
-      applyAgentCardNew(d);
-    } else if (d.type === "palette_agent_tool_event") {
-      agentDebugLog(
-        "host_tool_event",
-        "card=" +
-          (d.cardId || "") +
-          " tool=" +
-          (d.tool || "") +
-          " phase=" +
-          (d.phase || "")
-      );
-      var toolResolved = resolveActionCard(d.cardId, d.reqId);
-      if (toolResolved.card && toolResolved.id) {
-        applyPipelineToolEvent(toolResolved.id, {
-          tool: d.tool,
-          phase: d.phase,
-          text: d.text || d.message || "",
-          level: d.level || "info",
-          ts: d.ts
-        });
-        refreshActionCardPreview(toolResolved.id);
-      }
-    } else if (d.type === "palette_agent_chunk") {
-      agentDebugLog("host_chunk", "card=" + (d.cardId || "") + " req=" + (d.reqId || "") + " Δ=" + String(d.delta || d.text || "").slice(0, 48));
-      var resolved = resolveActionCard(d.cardId, d.reqId);
-      var card = resolved.card;
-      var cid = resolved.id;
-      if (!card && cid) {
-        upsertActionCardFromDto({
-          cardId: cid,
-          reqId: d.reqId || "",
-          uiState: "Running",
-          title: "代理任务",
-          query: "",
-          running: true,
-          ended: false
-        });
-        card = getActionCard(cid);
-      }
-      if (!card && (d.cardId || d.reqId)) {
-        upsertActionCardFromDto({
-          cardId: String(d.cardId || ""),
-          reqId: d.reqId || "",
-          uiState: "Running",
-          title: "代理任务",
-          query: "",
-          running: true,
-          ended: false
-        });
-        resolved = resolveActionCard(d.cardId, d.reqId);
-        card = resolved.card;
-        cid = resolved.id;
-      }
-      if (card) {
-        var delta = String(d.delta || d.text || "");
-        var preview = delta.replace(/\s+/g, " ").trim().slice(0, 160);
-        var statusPreview = preview && isAgentStatusPreview(preview);
-        if (cardIsOfficialA2uiRoute(card)) {
-          if (statusPreview || !delta) {
-            if (d.liveThought && statusPreview) setCardLiveThought(cid, String(d.liveThought), true);
-            scheduleAgentCardDomRefresh(cid);
-            return;
-          }
-          agentDebugLog("host_chunk_skip_prose", "route=r3 card=" + cid);
-          return;
-        }
-        if (
-          card.ended &&
-          card.uiState === "Done" &&
-          cardHasPipelineReply(card) &&
-          (!delta || statusPreview)
-        ) {
-          return;
-        }
-        card.running = true;
-        card.ended = false;
-        card._summaryOnly = false;
-        card._summaryPreview = "";
-        if (isActionCardRunning(card) || card.uiState === "Planning" || card.uiState === "Running") {
-          actionState.activeCardId = cid;
-        }
-        if (d.sessionRef) card.sessionRef = String(d.sessionRef);
-        var domC = document.getElementById("card-" + cid);
-        if (domC && isActionCardRunning(card)) {
-          domC.classList.add("is-active");
-          domC.classList.remove("is-collapsed");
-        }
-        var statusLive = d.liveThought && isAgentStatusPreview(d.liveThought);
-        var hasBody = card.rawAnswer && !isAgentStatusPreview(card.rawAnswer);
-        if (cardHasPipelineReply(card)) hasBody = true;
-        if (card.parser && card.parser._buf && !isAgentStatusPreview(card.parser._buf)) hasBody = true;
-        if (delta && !statusPreview) {
-          if (!card.rawAnswer || isAgentStatusPreview(card.rawAnswer))
-            card.rawAnswer = clipStreamText(delta);
-          else card.rawAnswer = clipStreamText(String(card.rawAnswer || "") + delta);
-        }
-        var pipelineActive =
-          typeof PaletteBlockPipeline !== "undefined" && typeof PaletteBlockPipeline.ingestDelta === "function";
-        if (pipelineActive && delta) {
-          var ingestOut = scheduleAgentPipelineIngest(cid, delta);
-          var ingestStatusOnly = ingestOut && ingestOut.meta && ingestOut.meta.statusOnly;
-          var ingestHasReply = cardHasPipelineReply(card);
-          if (ingestHasReply) {
-            hideCardLiveThoughtIfReply(cid);
-            window.nmerPalette.setStatus("流式输出中…", "loading");
-          } else if (ingestStatusOnly) {
-            if (d.liveThought && (!hasBody || !statusLive))
-              setCardLiveThought(cid, String(d.liveThought), true);
-            else if (preview && statusPreview && !hasBody) setCardLiveThought(cid, preview, true);
-            if (statusLive || statusPreview)
-              window.nmerPalette.setStatus(
-                (d.liveThought || preview || "").slice(0, 80),
-                "loading"
-              );
-          } else if (preview && !statusPreview) {
-            var mergedBlocks =
-              (ingestOut && ingestOut.blocks) ||
-              getCardPipelineBlocks(card);
-            var sum =
-              (mergedBlocks.length &&
-                PaletteBlockPipeline.blockPreviewSummary &&
-                PaletteBlockPipeline.blockPreviewSummary(mergedBlocks)) ||
-              "";
-            if (!sum && preview) sum = preview;
-            if (card._protoStarted || (domC && domC.classList.contains("has-status-log"))) {
-              window.nmerPalette.setStatus("流式输出中…", "loading");
-            } else if (sum) {
-              setCardLiveThought(cid, sum, true);
-              window.nmerPalette.setStatus("流式输出中…", "loading");
-            }
-          }
-        } else if (preview && !statusPreview) {
-          if (card.parser && delta) {
-            if (agentTextHasProtocolTags(delta)) card._protoStarted = true;
-            card.parser.onChunk(delta);
-          }
-          if (card._protoStarted || (domC && domC.classList.contains("has-status-log"))) {
-            window.nmerPalette.setStatus("流式输出中…", "loading");
-          } else {
-            var bodyPreview = "";
-            var pipeBlocksPreview = getCardPipelineBlocks(card);
-            if (
-              pipeBlocksPreview.length &&
-              typeof PaletteBlockPipeline !== "undefined" &&
-              PaletteBlockPipeline.blockPreviewSummary
-            ) {
-              bodyPreview = PaletteBlockPipeline.blockPreviewSummary(pipeBlocksPreview);
-            }
-            if (!bodyPreview && card.parser && card.parser._buf) {
-              bodyPreview = sanitizeLiveThoughtDisplay(String(card.parser._buf).trim());
-            }
-            if (!bodyPreview) bodyPreview = sanitizeLiveThoughtDisplay(preview);
-            if (bodyPreview) setCardLiveThought(cid, bodyPreview, true);
-            window.nmerPalette.setStatus("流式输出中…", "loading");
-          }
-        } else if (d.liveThought && (!hasBody || !statusLive)) {
-          setCardLiveThought(cid, String(d.liveThought), true);
-          if (statusLive) window.nmerPalette.setStatus(String(d.liveThought).slice(0, 80), "loading");
-        } else if (preview && statusPreview && !hasBody) {
-          setCardLiveThought(cid, preview, true);
-          window.nmerPalette.setStatus(preview.slice(0, 80), "loading");
-        }
-        if (card.uiState === "Planning") actionCardManager.transitionCardState(cid, "Running");
-        if (
-          card.uiState === "Done" &&
-          !card.ended &&
-          !cardHasPipelineReply(card) &&
-          (statusPreview || statusLive || /同步 Niuma|OpenClaw 处理|chat\.send/i.test(preview))
-        )
-          actionCardManager.transitionCardState(cid, "Running");
-        scheduleAgentCardDomRefresh(cid);
-      }
-    } else if (d.type === "palette_agent_end") {
-      agentDebugLog("host_end", "card=" + (d.cardId || "") + " req=" + (d.reqId || "") + " len=" + String(d.answer || "").length);
-      var endR = resolveActionCard(d.cardId, d.reqId);
-      var cid2 = endR.id;
-      if (cid2) flushAgentCardDomRefresh(cid2);
-      var card2 = endR.card;
-      var endSource = String(d.source || "host");
-      if (card2 && shouldSkipProseFinalize(card2, { source: endSource === "hub_ws" ? "hub_ws" : "openclaw_sync" })) {
-        agentDebugLog("host_end_skip_prose", "card=" + cid2 + " route=r3 source=" + endSource);
-        if (card2 && d.sessionRef) card2.sessionRef = String(d.sessionRef);
-        return;
-      }
-      var endAns = dedupeRepeatedAgentText(String(d.answer || "").trim());
-      var prevRawLen = card2 ? String(card2.rawAnswer || "").length : 0;
-      var endReady = endAns && agentEndAnswerReady(endAns, card2);
-      var gatewayPrefer =
-        card2 && shouldPreferIncomingGatewayAnswer(card2.rawAnswer, endAns, card2) && endAns.length >= 120;
-      var forceFinalize =
-        endAns &&
-        (endReady ||
-          gatewayPrefer ||
-          (endAns.length >= 800 && endAns.length > prevRawLen) ||
-          (endAns.length > prevRawLen + 120 && !agentLooksLikeThinkingPreambleOnly(endAns)));
-      var followUpQuery = card2 ? String(card2._lastFollowUpQuery || card2.activeQuery || "").trim() : "";
-      var wasCollapsed = card2 && !card2.expanded;
-      if (card2 && forceFinalize && cardEndFinalizeNeeded(card2, d.reqId, endAns)) {
-        ensureFollowUpPriorBlocks(card2);
-        card2._summaryOnly = false;
-        card2._summaryPreview = "";
-        card2.error = "";
-        card2.rawAnswer = endAns;
-        card2._rawReplaySig = endAns;
-        card2.activeQuery = "";
-        card2._lastAgentEndKey =
-          String(d.reqId || card2.reqId || "") + ":" + endAns.length + ":" + endAns.slice(0, 160);
-        card2._lastAgentEndTick = Date.now();
-        finalizeAgentCardAnswer(cid2, endAns);
-        card2._followUpMergedTick = Date.now();
-        refreshActionCardDom(card2);
-        ensureCardPipelineRendered(card2);
-        scheduleExpandedCardLayout(card2);
-      } else if (card2 && forceFinalize) {
-        card2._summaryOnly = false;
-        card2._summaryPreview = "";
-        card2.rawAnswer = endAns;
-        card2._rawReplaySig = endAns;
-        card2.activeQuery = "";
-        card2._lastAgentEndTick = Date.now();
-        var fuPending =
-          cardFollowUpInFlight(card2) ||
-          String(card2._lastFollowUpQuery || "").trim();
-        var needFuFinalize = false;
-        if (fuPending) {
-          ensureFollowUpPriorBlocks(card2);
-          var latestFuMd = getLatestReplyMarkdownFromBlocks(getCardPipelineBlocks(card2)) || "";
-          needFuFinalize = latestFuMd.trim() !== endAns.trim();
-        }
-        if (
-          needFuFinalize ||
-          cardMissingExpectedA2ui(card2, getCardPipelineBlocks(card2)) ||
-          !cardHasPipelineReply(card2)
-        ) {
-          finalizeAgentCardAnswer(cid2, endAns);
-          card2._followUpMergedTick = Date.now();
-        }
-        refreshActionCardDom(card2);
-      }
-      if (card2 && card2.parser && card2.parser.flush) card2.parser.flush();
-      if (card2 && d.sessionRef) card2.sessionRef = String(d.sessionRef);
-      if (card2) {
-        if (!forceFinalize && (cardFollowUpInFlight(card2) || !cardHasPipelineReply(card2))) {
-          card2.running = true;
-          card2.ended = false;
-          if (card2.uiState === "Done") actionCardManager.transitionCardState(cid2, "Running");
-          card2.liveThought = card2.liveThought || "⏳ 等待 OpenClaw 回复同步…";
-          refreshActionCardDom(card2);
-          scheduleAgentCardsRecover();
-          syncActionResultsLayout();
-          return;
-        }
-        card2.running = false;
-        card2.ended = true;
-        var pipeBlocks =
-          (card2.blockStore && card2.blockStore.blocks) || card2.pipelineBlocks || [];
-        var waitingQ = false;
-        for (var wi = 0; wi < pipeBlocks.length; wi++) {
-          if (pipeBlocks[wi].type === "question" && pipeBlocks[wi].status === "waiting") {
-            waitingQ = true;
-            break;
-          }
-        }
-        var endState =
-          waitingQ || card2.waitingForUser || card2.uiState === "Waiting" ? "Waiting" : "Done";
-        actionCardManager.transitionCardState(cid2, endState);
-        if (endState === "Done") {
-          card2.liveThought = "";
-          maybeHealDoneCardPipelineBlocks(card2, cid2);
-          ensureCardPipelineRendered(card2);
-          var domDone = document.getElementById("card-" + cid2);
-          if (domDone && cardHasPipelineReply(card2)) {
-            var logDone = domDone.querySelector(".card-status-log");
-            if (logDone) logDone.innerHTML = "";
-            domDone.classList.remove("has-status-log");
-            var ltDone = domDone.querySelector(".card-live-thought");
-            if (ltDone) ltDone.style.display = "none";
-          }
-        }
-        if (endState === "Done" && (pipelineTurnCount(card2) > 1 || followUpQuery)) {
-          showFollowUpCompleteToast(cid2, followUpQuery);
-          if (!wasCollapsed && card2.expanded) {
-            setTimeout(function () {
-              scrollToLatestReply(cid2);
-            }, 80);
-          }
-        }
-      }
-      updateActionLiveDock(cid2);
-      document.querySelectorAll(".cmd-action-card").forEach(function (el) {
-        el.classList.toggle("is-active", el.id === "card-" + cid2);
-        el.classList.toggle("is-collapsed", el.id !== "card-" + cid2);
-      });
-      window.nmerPalette.setStatus("托管任务已完结", "idle");
-      syncActionResultsLayout();
-    } else if (d.type === "palette_agent_error" || (d.type === "palette_agent_status" && d.status === "error")) {
-      var errMsg = d.message || "代理任务失败";
-      agentDebugLog("host_error", errMsg, "err");
-      window.nmerPalette.setStatus(errMsg, "error");
-      var er = resolveActionCard(d.cardId, d.reqId);
-      if (er.card && er.id) {
-        er.card.running = false;
-        er.card.ended = true;
-        er.card.uiState = "Done";
-        er.card.liveThought = errMsg;
-        er.card.error = errMsg;
-        actionCardManager.transitionCardState(er.id, "Done");
-        setCardLiveThought(er.id, errMsg, false);
-        var errDom = document.getElementById("card-" + er.id);
-        if (errDom) {
-          var errLog = errDom.querySelector(".card-status-log");
-          if (errLog) {
-            var errTail = errLog.querySelector(".b-status:last-child");
-            if (errTail) {
-              errTail.querySelector(".b-status-title").textContent = "[失败]";
-              var errLogEl = errTail.querySelector(".b-status-log");
-              if (errLogEl) errLogEl.textContent = errMsg;
-            }
-          }
-        }
-        flushAgentCardDomRefresh(er.id);
-      }
-    } else if (d.type === "palette_agent_status") {
-      agentDebugLog("host_status", String(d.message || "").slice(0, 80));
-      window.nmerPalette.setStatus(d.message || "", d.status || "idle");
-      var stR = resolveActionCard(d.cardId, d.reqId);
-      if (stR.id) {
-        setCardLiveThought(stR.id, d.message || "", d.status === "loading");
-      }
-    } else if (d.type === "palette_agent_heartbeat") {
-      agentDebugLog("host_heartbeat", String(d.message || "").slice(0, 60), "warn");
-      var hb = resolveActionCard(d.cardId, d.reqId);
-      var hbMsg = String(d.liveThought || d.message || "等待响应…");
-      if (hb.id) {
-        setCardLiveThought(hb.id, hbMsg, true);
-        window.nmerPalette.setStatus(hbMsg.slice(0, 80), "loading");
-      }
-    } else if (d.type === "palette_agent_session") {
-      var cid3 = String(d.cardId || "");
-      var card3 = getActionCard(cid3);
-      if (card3) card3.sessionRef = String(d.sessionRef || "");
-    } else if (d.type === "PALETTE_PHYSICAL_FEEDBACK") {
-      var cid4 = String(d.cardId || "");
-      var card4 = getActionCard(cid4);
-      if (card4) {
-        actionCardManager.onBlockUpdate(cid4, {
-          type: "status",
-          closed: true,
-          seq: Date.now(),
-          title: "[本地触达] " + String(d.actionType || ""),
-          log: String(d.status || "") + (d.detail ? " · " + d.detail : ""),
-          body: ""
-        });
-      }
-    } else if (d.type === "palette_set_input") {
-      window.nmerPalette.setInputText(d.text || "");
-    } else if (d.type === "palette_set_intent") {
-      state.intent = String(d.intent || "local");
-      syncIntentUI();
-      if (state.intent === "action") requestAgentCardSync();
-      refreshIntentResults(true);
-      syncWindowSize();
-    } else if (d.type === "palette_memory_tier_mount") {
-      var tierIds = Array.isArray(d.cardIds) ? d.cardIds : [];
-      var tierFixture = String(d.fixtureId || "happy-six-components");
-      for (var ti = 0; ti < tierIds.length; ti++) {
-        mountOfficialA2uiFixture(String(tierIds[ti] || ""), tierFixture);
-      }
-      syncActionResultsLayout();
-    } else if (d.type === "palette_focus" || d.type === "palette_show") {
-      ensureHeaderInputVisible();
-      if (state.intent === "action") {
-        refreshIntentResults(true);
-        ensureActionResultsVisible();
-        renderActionHistoryList();
-      }
-      if (paletteDiscreteLayout() && state.intent === "action" && typeof PaletteLayout !== "undefined") {
-        PaletteLayout.resetMode();
-        publishDiscreteLayout(true);
-      } else {
-        syncWindowSize();
-      }
-      getInputEl()?.focus();
-    } else if (d.type === "set_theme") {
-      applyTheme(d.themeMode || d.theme || "dark");
-    }
-  }
 
   document.addEventListener(
     "keydown",
@@ -10348,8 +8670,176 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   applyTheme("dark");
 
-  if (typeof PaletteHostAdapter !== "undefined" && PaletteHostAdapter.onMessage) {
-    PaletteHostAdapter.onMessage(handleHostMessage);
+  function buildPaletteAgentBridgeApi() {
+    return {
+      get state() {
+        return state;
+      },
+      get actionState() {
+        return actionState;
+      },
+      get aiPhase() {
+        return aiPhase;
+      },
+      get aiStreamReqId() {
+        return aiStreamReqId;
+      },
+      set aiStreamReqId(v) {
+        aiStreamReqId = v;
+      },
+      get aiStreamText() {
+        return aiStreamText;
+      },
+      set aiStreamText(v) {
+        aiStreamText = v;
+      },
+      get aiChunkBatcher() {
+        return aiChunkBatcher;
+      },
+      get composing() {
+        return composing;
+      },
+      IntentRouter: IntentRouter,
+      probeOc5ProtocolClosure: probeOc5ProtocolClosure,
+      probeGrayRoute: probeGrayRoute,
+      prepareAdapterOfficialA2uiProbe: prepareAdapterOfficialA2uiProbe,
+      probeAdapterOfficialA2ui: probeAdapterOfficialA2ui,
+      applyWailsBridgeConfig: applyWailsBridgeConfig,
+      applyPaletteFlags: applyPaletteFlags,
+      paletteFastInput: paletteFastInput,
+      updateVoiceHint: updateVoiceHint,
+      purgeActionEmptyHint: purgeActionEmptyHint,
+      renderActionHistoryList: renderActionHistoryList,
+      syncActionResultsLayout: syncActionResultsLayout,
+      syncWindowSize: syncWindowSize,
+      maybeRequestAgentCardSync: maybeRequestAgentCardSync,
+      actionHasStoredCards: actionHasStoredCards,
+      updateResults: updateResults,
+      scheduleQueryPaintMark: scheduleQueryPaintMark,
+      appendAiChunk: appendAiChunk,
+      finishAiStream: finishAiStream,
+      showAiStreamError: showAiStreamError,
+      resetAiStreamState: resetAiStreamState,
+      runQuery: runQuery,
+      restoreAiSession: restoreAiSession,
+      applyAiProviders: applyAiProviders,
+      agentDebugLog: agentDebugLog,
+      clearActionHistoryLoading: clearActionHistoryLoading,
+      renderActionCardSync: renderActionCardSync,
+      showActionEmptyIfNeeded: showActionEmptyIfNeeded,
+      applyAgentCardDetailDto: applyAgentCardDetailDto,
+      applyAgentCardNew: applyAgentCardNew,
+      resolveActionCard: resolveActionCard,
+      applyPipelineToolEvent: applyPipelineToolEvent,
+      refreshActionCardPreview: refreshActionCardPreview,
+      getActionCard: getActionCard,
+      upsertActionCardFromDto: upsertActionCardFromDto,
+      cardIsOfficialA2uiRoute: cardIsOfficialA2uiRoute,
+      isAgentStatusPreview: isAgentStatusPreview,
+      setCardLiveThought: setCardLiveThought,
+      scheduleAgentCardDomRefresh: scheduleAgentCardDomRefresh,
+      cardHasPipelineReply: cardHasPipelineReply,
+      clipStreamText: clipStreamText,
+      scheduleAgentPipelineIngest: scheduleAgentPipelineIngest,
+      hideCardLiveThoughtIfReply: hideCardLiveThoughtIfReply,
+      flushAgentCardDomRefresh: flushAgentCardDomRefresh,
+      cardFollowUpInFlight: cardFollowUpInFlight,
+      finalizeAgentCardAnswer: finalizeAgentCardAnswer,
+      cardEndFinalizeNeeded: cardEndFinalizeNeeded,
+      cardMissingExpectedA2ui: cardMissingExpectedA2ui,
+      cardHasSubstantialRawAnswer: cardHasSubstantialRawAnswer,
+      cardAnswerLooksIncomplete: cardAnswerLooksIncomplete,
+      shouldSkipProseFinalize: shouldSkipProseFinalize,
+      shouldPreferIncomingGatewayAnswer: shouldPreferIncomingGatewayAnswer,
+      finalizeOfficialA2uiCard: finalizeOfficialA2uiCard,
+      pipelineTurnCount: pipelineTurnCount,
+      cardHasPipelineA2ui: cardHasPipelineA2ui,
+      cardLatestTurnHasReply: cardLatestTurnHasReply,
+      maybeHealDoneCardPipelineBlocks: maybeHealDoneCardPipelineBlocks,
+      ensureCardPipelineRendered: ensureCardPipelineRendered,
+      showFollowUpCompleteToast: showFollowUpCompleteToast,
+      scrollToLatestReply: scrollToLatestReply,
+      scheduleAgentCardsRecover: scheduleAgentCardsRecover,
+      ensureHeaderInputVisible: ensureHeaderInputVisible,
+      refreshIntentResults: refreshIntentResults,
+      ensureActionResultsVisible: ensureActionResultsVisible,
+      scheduleDiscreteLayout: scheduleDiscreteLayout,
+      applyTheme: applyTheme,
+      mountOfficialA2uiFixture: mountOfficialA2uiFixture,
+      hideCardHoverPreview: hideCardHoverPreview,
+      syncExpandedCardsToHistoryFilter: syncExpandedCardsToHistoryFilter,
+      refreshActionHistoryHead: refreshActionHistoryHead,
+      removeActionLiveDock: removeActionLiveDock,
+      cardMatchesHistoryFilter: cardMatchesHistoryFilter,
+      isActionCardRunning: isActionCardRunning,
+      sortCardIds: sortCardIds,
+      ensureActionCardSection: ensureActionCardSection,
+      mountActionCardIntoList: mountActionCardIntoList,
+      historyFilterEmptyMessage: historyFilterEmptyMessage,
+      agentProviderLabel: agentProviderLabel,
+      replayExpandedCardPipelineBlocks: replayExpandedCardPipelineBlocks,
+      syncActionDetailNav: syncActionDetailNav,
+      syncActionListLayout: syncActionListLayout,
+      getInputEl: getInputEl,
+      ensureActionCardDom: ensureActionCardDom,
+      actionCardUiLabel: actionCardUiLabel,
+      updateActionLiveDock: updateActionLiveDock,
+      esc: esc,
+      writeAgentRichText: writeAgentRichText,
+      renderAgentPlainMarkdown: renderAgentPlainMarkdown,
+      collapseNonActiveCards: collapseNonActiveCards,
+      removeActionCard: removeActionCard,
+      scheduleActionCommandPaint: scheduleActionCommandPaint,
+      beginActionCardBatchUpsert: beginActionCardBatchUpsert,
+      endActionCardBatchUpsert: endActionCardBatchUpsert,
+      limitActionCardDtos: limitActionCardDtos,
+      paletteStateStoreShadowEnabled: paletteStateStoreShadowEnabled,
+      fetchAgentSummaryFromHub: fetchAgentSummaryFromHub,
+      post: post,
+      paletteDiscreteLayout: paletteDiscreteLayout,
+      actionHasRunningCard: actionHasRunningCard,
+      handleActionEnterKey: handleActionEnterKey,
+      clearActionCmdResultsDom: clearActionCmdResultsDom
+    };
+  }
+
+  var paletteAgentBridgeApi = buildPaletteAgentBridgeApi();
+  if (typeof PaletteShell !== "undefined" && PaletteShell.install) {
+    PaletteShell.install({
+      state: state,
+      getInputEl: getInputEl,
+      bindResultsScrollHide: bindResultsScrollHide,
+      bindInputEvents: bindInputEvents,
+      cycleIntent: cycleIntent,
+      post: post
+    });
+  }
+  if (typeof PaletteAgentDetail !== "undefined" && PaletteAgentDetail.createActionCardManager) {
+    actionCardManager = PaletteAgentDetail.createActionCardManager(paletteAgentBridgeApi);
+  }
+  if (typeof PaletteAgentSummary !== "undefined" && PaletteAgentSummary.install) {
+    PaletteAgentSummary.install(paletteAgentBridgeApi);
+  }
+  if (typeof PaletteAgentCardSync !== "undefined" && PaletteAgentCardSync.install) {
+    PaletteAgentCardSync.install(paletteAgentBridgeApi);
+  }
+  if (typeof PaletteActionBar !== "undefined" && PaletteActionBar.install) {
+    PaletteActionBar.install({
+      state: state,
+      actionState: actionState,
+      esc: esc,
+      getInputEl: getInputEl,
+      agentProviderLabel: agentProviderLabel,
+      handleActionEnterKey: handleActionEnterKey,
+      maybeRequestAgentCardSync: maybeRequestAgentCardSync,
+      actionHasStoredCards: actionHasStoredCards,
+      showActionEmptyIfNeeded: showActionEmptyIfNeeded,
+      syncWindowSize: syncWindowSize
+    });
+  }
+  if (typeof PaletteHostBridge !== "undefined" && PaletteHostBridge.install) {
+    PaletteHostBridge.install(paletteAgentBridgeApi);
+    PaletteHostBridge.bindAdapter();
   }
 
   function onPaletteActionResult(result) {
@@ -10395,11 +8885,62 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   document.addEventListener("palette-hub-agent-event", function (e) {
     try {
-      handleHubAgentEvent(e && e.detail);
+      if (typeof PaletteHostBridge !== "undefined" && PaletteHostBridge.handleHubAgentEvent) {
+        PaletteHostBridge.handleHubAgentEvent(e && e.detail);
+      }
     } catch (_) {}
   });
 
-  ensureShell();
+  if (typeof PaletteDetailPane !== "undefined" && PaletteDetailPane.install) {
+    PaletteDetailPane.install({
+      getState: function () {
+        return state;
+      },
+      getActionState: function () {
+        return actionState;
+      },
+      getActionCard: getActionCard,
+      actionCardUiLabel: actionCardUiLabel,
+      agentProviderLabel: agentProviderLabel,
+      closeActionCardDetail: closeActionCardDetail
+    });
+  }
+
+  if (typeof PaletteCommandResults !== "undefined" && PaletteCommandResults.install) {
+    PaletteCommandResults.install({
+      getState: function () {
+        return state;
+      },
+      getAiPhase: function () {
+        return aiPhase;
+      },
+      currentRows: currentRows,
+      paletteFastInput: paletteFastInput,
+      kindIcon: kindIcon,
+      buildCommandResultRowHtml: buildCommandResultRowHtml,
+      hydrateResultIcons: hydrateResultIcons,
+      getScrollHideTimer: function () {
+        return scrollHideTimer;
+      },
+      setScrollHideTimer: function (v) {
+        scrollHideTimer = v;
+      },
+      pickAiProvider: pickAiProvider,
+      executeSelected: executeSelected,
+      refreshAiProvidersUnderCard: refreshAiProvidersUnderCard,
+      purgeAiResultsDom: purgeAiResultsDom,
+      maybeRequestAgentCardSync: maybeRequestAgentCardSync,
+      renderActionHistoryList: renderActionHistoryList,
+      purgeActionEmptyHint: purgeActionEmptyHint,
+      syncWindowSize: syncWindowSize,
+      updateActionCmdOverlay: updateActionCmdOverlay,
+      actionHasStoredCards: actionHasStoredCards,
+      showActionEmptyIfNeeded: showActionEmptyIfNeeded,
+      scrollResultItemIntoView: scrollResultItemIntoView
+    });
+  }
+
+  invokePaletteEnsureShell();
   if (restoreCardSummaryCache()) {
     clearActionHistoryLoading();
   }

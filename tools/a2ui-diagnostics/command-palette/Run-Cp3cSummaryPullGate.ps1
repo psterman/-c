@@ -14,6 +14,12 @@ $hubAddr = "127.0.0.1:18791"
 $shadowUrl = "http://${hubAddr}/v1/palette/state/shadow"
 $summaryUrl = "http://${hubAddr}/v1/palette/state/summary"
 $cpHtml = Join-Path $repo "html\CommandPalette.html"
+$syncJs = Join-Path $repo "html\palette\agent\agent-card-sync.js"
+
+function Get-SourceText([string]$path) {
+    if (-not (Test-Path $path)) { return "" }
+    return Get-Content $path -Encoding UTF8 -Raw
+}
 
 function Get-JsonFile([string]$path) {
     if (-not (Test-Path $path)) { return $null }
@@ -65,13 +71,18 @@ if (-not $shadowFlag) { [void]$failures.Add("palette.stateStoreShadow!=true") }
 $htmlOk = $false
 $htmlHubPull = $false
 if (Test-Path $cpHtml) {
-    $htmlText = Get-Content $cpHtml -Encoding UTF8 -Raw
-    $htmlOk = $htmlText -match "/v1/palette/state/summary" -and $htmlText -match "paletteStateStoreShadowEnabled" -and $htmlText -match "hub_summary_pull"
-    $htmlHubPull = $htmlText -match "fetchAgentSummaryFromHub"
+    $htmlText = Get-SourceText $cpHtml
+    $syncText = Get-SourceText $syncJs
+    $combined = $htmlText + "`n" + $syncText
+    $htmlHubPull = $combined -match "fetchAgentSummaryFromHub"
+    $htmlOk = $combined -match "/v1/palette/state/summary" `
+        -and $combined -match "paletteStateStoreShadowEnabled" `
+        -and $combined -match "hub_summary_pull" `
+        -and $htmlHubPull
 }
 $checks += @{ name = "html_summary_pull_wired"; pass = $htmlOk; value = $htmlOk }
 $checks += @{ name = "html_hub_fetch_helper"; pass = $htmlHubPull; value = $htmlHubPull }
-if (-not $htmlOk) { [void]$failures.Add("CommandPalette.html missing CP3c hub summary pull wiring") }
+if (-not $htmlOk) { [void]$failures.Add("CommandPalette.html / agent-card-sync.js missing CP3c hub summary pull wiring") }
 
 $probeSeq = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())
 $probeCards = @()

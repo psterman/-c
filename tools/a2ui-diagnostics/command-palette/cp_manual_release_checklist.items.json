@@ -1,0 +1,8 @@
+[
+  { "id": "capslock_cp", "title": "CapsLock 双击开 CP (AHK)" },
+  { "id": "search_turbo", "title": "搜索 / Turbo / Resize" },
+  { "id": "action_stream_history", "title": "动作 / 流式 / 历史" },
+  { "id": "ftb_coexist", "title": "FTB hybrid 并存" },
+  { "id": "legacy_rollback", "title": "legacy rollback → AHK CP 可回退" },
+  { "id": "raycast_ux_ahk", "title": "Raycast UX (AHK): 无边框/置顶/居中/focus/Esc hide" }
+]

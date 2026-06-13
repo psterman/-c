@@ -68,18 +68,27 @@ CommandPaletteRouter_Hide(meta := 0) {
 
 CommandPaletteRouter_AhkGuiExists(*) {
     global g_CmdPal_Gui
-    return IsObject(g_CmdPal_Gui) && g_CmdPal_Gui.Hwnd
+    return !!(IsObject(g_CmdPal_Gui) && g_CmdPal_Gui.Hwnd)
 }
 
 CommandPaletteRouter_Dispose(reason := "") {
     host := Nmer_CommandPaletteHost()
     CommandPaletteRouter_Log("dispose host=" . host . " reason=" . String(reason))
-    if (host = "wails" && FuncExists("CommandPaletteWails_Dispose")) {
-        try CommandPaletteWails_Dispose(reason)
-        catch {
+    if (host = "wails") {
+        if FuncExists("CommandPaletteWails_Dispose") {
+            try CommandPaletteWails_Dispose(reason)
+            catch {
+            }
         }
-        if !CommandPaletteRouter_AhkGuiExists()
-            return
+        if FuncExists("CommandPaletteWails_RetireAhkWebView")
+            try CommandPaletteWails_RetireAhkWebView("router_dispose")
+            catch {
+            }
+        else if FuncExists("CommandPalette_DisposeAhkWebViewIfRetired")
+            try CommandPalette_DisposeAhkWebViewIfRetired("router_dispose")
+            catch {
+            }
+        return
     }
     if FuncExists("CommandPalette_Dispose")
         CommandPalette_Dispose(reason)

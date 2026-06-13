@@ -68,7 +68,7 @@ $perfRows = if ($SkipFirstPaintSamples -gt 0) {
 
 $localStats = Get-CpPerfEventStats $perfRows @("local_results_painted")
 $queryStats = Get-CpPerfEventStats $perfRows @("query_to_paint")
-$showStats = Get-CpPerfEventStats $gateRows @("show_to_visible")
+$showStats = Get-CpPerfEventStats $perfRows @("show_to_visible")
 
 $stats = @{
     local_results_painted = $localStats

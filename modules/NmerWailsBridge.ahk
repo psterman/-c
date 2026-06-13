@@ -395,19 +395,34 @@ Nmer_HubBridgeExe(*) {
     )
 }
 
+; S8 B3 阶段 2：CP UI 在 nmer-wails 内渲染，须 shell:cp emit；hub-only 侧车无 WebView 无法承载 iframe。
+Nmer_WailsBridgePrefersWailsSidecar(*) {
+    if Nmer_LegacySurfaceLifecycleEnabled()
+        return false
+    if FuncExists("Nmer_CommandPaletteHost")
+        return Nmer_CommandPaletteHost() = "wails"
+    return Nmer_CommandPaletteHostFlag() = "wails"
+}
+
 Nmer_WailsBridgeExe(*) {
     root := Nmer_InstallRoot()
+    wailsExe := Nmer_ToolFirstExisting(
+        root . "\apps\nmer-wails\build\bin\nmer-wails.exe",
+        root . "\tools\wails\nmer-wails.exe",
+        root . "\bin\nmer-wails.exe"
+    )
+    if Nmer_WailsBridgePrefersWailsSidecar() {
+        if (wailsExe != "" && FileExist(wailsExe))
+            return wailsExe
+        Nmer_WailsBridgeLog("cp_wails_sidecar_missing fallback_hub")
+    }
     if (Nmer_BridgeSidecarMode() = "hub") {
         hub := Nmer_HubBridgeExe()
         if (hub != "" && FileExist(hub))
             return hub
         Nmer_WailsBridgeLog("hub_missing fallback_wails")
     }
-    return Nmer_ToolFirstExisting(
-        root . "\apps\nmer-wails\build\bin\nmer-wails.exe",
-        root . "\tools\wails\nmer-wails.exe",
-        root . "\bin\nmer-wails.exe"
-    )
+    return wailsExe
 }
 
 Nmer_WailsBridgeLog(message) {
@@ -458,6 +473,26 @@ Nmer_WailsBridgeShellFtbEgressUrl(*) {
 
 Nmer_WailsBridgeShellFtbInjectDrainUrl(*) {
     return Nmer_WailsBridgeHttpBase() . "/shell/ftb/inject/drain"
+}
+
+Nmer_WailsBridgeShellCpUrl(*) {
+    return Nmer_WailsBridgeHttpBase() . "/shell/cp"
+}
+
+Nmer_WailsBridgeShellCpStatusUrl(*) {
+    return Nmer_WailsBridgeHttpBase() . "/shell/cp/status"
+}
+
+Nmer_WailsBridgeShellCpInjectUrl(*) {
+    return Nmer_WailsBridgeHttpBase() . "/shell/cp/inject"
+}
+
+Nmer_WailsBridgeShellCpEgressUrl(*) {
+    return Nmer_WailsBridgeHttpBase() . "/shell/cp/egress"
+}
+
+Nmer_WailsBridgeShellCpInjectDrainUrl(*) {
+    return Nmer_WailsBridgeHttpBase() . "/shell/cp/inject/drain"
 }
 
 Nmer_WailsBridgeParseShellFtbJson(text) {
@@ -678,6 +713,219 @@ Nmer_WailsBridgeGetShellFtbStatus(*) {
     }
 }
 
+Nmer_WailsBridgeParseShellCpJson(text) {
+    if FuncExists("Nmer_WailsBridgeParseShellFtbJson")
+        return Nmer_WailsBridgeParseShellFtbJson(text)
+    return Map("ok", false, "code", "SHELL_STATUS_PARSE")
+}
+
+Nmer_WailsBridgePostShellCp(action, entry := "", extra := 0) {
+    if !Nmer_WailsBridgeHealthy()
+        return Map("ok", false, "code", "BRIDGE_DOWN")
+    url := Nmer_WailsBridgeShellCpUrl()
+    body := Map("action", String(action))
+    if (entry != "")
+        body["entry"] := String(entry)
+    if (extra is Map) {
+        for k, v in extra
+            body[String(k)] := v
+    }
+    try {
+        payload := Jxon_Dump(body)
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(url)
+            try whr.SetProxy(1)
+        whr.Open("POST", url, false)
+        whr.SetTimeouts(2000, 2000, 12000, 12000)
+        whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
+        whr.Send(payload)
+        status := Integer(whr.Status)
+        text := String(whr.ResponseText)
+        ok := (status = 200) && InStr(text, "ok") > 0
+        out := Map("ok", ok, "code", ok ? "SHELL_CP_OK" : "SHELL_CP_FAIL", "status", status, "body", SubStr(text, 1, 400))
+        if ok {
+            try {
+                parsed := Nmer_WailsBridgeParseShellCpJson(text)
+                if parsed.Get("ok", false)
+                    out["statusObj"] := parsed
+            } catch {
+            }
+        }
+        return out
+    } catch as err {
+        return Map("ok", false, "code", "SHELL_CP_ERR", "detail", err.Message)
+    }
+}
+
+Nmer_WailsBridgePostShellCpInject(payload) {
+    if !Nmer_WailsBridgeHealthy()
+        return Map("ok", false, "code", "BRIDGE_DOWN")
+    if !(payload is Map)
+        return Map("ok", false, "code", "SHELL_INJECT_BAD_PAYLOAD")
+    url := Nmer_WailsBridgeShellCpInjectUrl()
+    try {
+        body := Jxon_Dump(payload)
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(url)
+            try whr.SetProxy(1)
+        whr.Open("POST", url, false)
+        whr.SetTimeouts(2000, 2000, 30000, 30000)
+        whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
+        whr.Send(body)
+        status := Integer(whr.Status)
+        text := String(whr.ResponseText)
+        ok := (status = 200) && (InStr(text, "SHELL_CP_INJECT_OK") > 0 || InStr(text, "SHELL_CP_INJECT_QUEUED") > 0)
+        code := "SHELL_CP_INJECT_FAIL"
+        if ok {
+            if InStr(text, "SHELL_CP_INJECT_QUEUED") > 0
+                code := "SHELL_CP_INJECT_QUEUED"
+            else
+                code := "SHELL_CP_INJECT_OK"
+        }
+        return Map("ok", ok, "code", code, "status", status)
+    } catch as err {
+        return Map("ok", false, "code", "SHELL_CP_INJECT_ERR", "detail", err.Message)
+    }
+}
+
+Nmer_WailsBridgeDrainShellCpInject(*) {
+    if !Nmer_WailsBridgeHealthy()
+        return []
+    url := Nmer_WailsBridgeShellCpInjectDrainUrl()
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(url)
+            try whr.SetProxy(1)
+        whr.Open("GET", url, false)
+        whr.SetTimeouts(1500, 1500, 8000, 8000)
+        whr.Send()
+        if (Integer(whr.Status) != 200)
+            return []
+        text := String(whr.ResponseText)
+        if (Trim(text) = "")
+            return []
+        parsed := Jxon_Load(text)
+        if !(parsed is Map)
+            return []
+        msgs := parsed.Get("messages", [])
+        if !(msgs is Array)
+            return []
+        out := []
+        for _, item in msgs {
+            if (item is Map)
+                out.Push(item)
+            else if (item is String) && Trim(item) != "" {
+                try {
+                    m := Jxon_Load(item)
+                    if (m is Map)
+                        out.Push(m)
+                } catch {
+                }
+            }
+        }
+        return out
+    } catch {
+        return []
+    }
+}
+
+Nmer_WailsBridgeDrainShellCpEgress(*) {
+    if !Nmer_WailsBridgeHealthy()
+        return []
+    url := Nmer_WailsBridgeShellCpEgressUrl()
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(url)
+            try whr.SetProxy(1)
+        whr.Open("GET", url, false)
+        whr.SetTimeouts(1500, 1500, 8000, 8000)
+        whr.Send()
+        if (Integer(whr.Status) != 200)
+            return []
+        text := String(whr.ResponseText)
+        if (Trim(text) = "")
+            return []
+        parsed := Jxon_Load(text)
+        if !(parsed is Map)
+            return []
+        msgs := parsed.Get("messages", [])
+        if !(msgs is Array)
+            return []
+        out := []
+        for _, item in msgs {
+            if (item is Map)
+                out.Push(item)
+            else if (item is String) && Trim(item) != "" {
+                try {
+                    m := Jxon_Load(item)
+                    if (m is Map)
+                        out.Push(m)
+                } catch {
+                }
+            }
+        }
+        return out
+    } catch {
+        return []
+    }
+}
+
+Nmer_WailsBridgePostShellCpEgress(payload) {
+    if !Nmer_WailsBridgeHealthy()
+        return Map("ok", false, "code", "BRIDGE_DOWN")
+    if !(payload is Map)
+        return Map("ok", false, "code", "SHELL_EGRESS_BAD_PAYLOAD")
+    url := Nmer_WailsBridgeShellCpEgressUrl()
+    try {
+        body := Jxon_Dump(payload)
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(url)
+            try whr.SetProxy(1)
+        whr.Open("POST", url, false)
+        whr.SetTimeouts(2000, 2000, 15000, 15000)
+        whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
+        whr.Send(body)
+        status := Integer(whr.Status)
+        text := String(whr.ResponseText)
+        ok := (status = 200) && (InStr(text, "SHELL_CP_EGRESS_OK") > 0)
+        return Map("ok", ok, "code", ok ? "SHELL_CP_EGRESS_OK" : "SHELL_CP_EGRESS_FAIL", "status", status)
+    } catch as err {
+        return Map("ok", false, "code", "SHELL_CP_EGRESS_ERR", "detail", err.Message)
+    }
+}
+
+Nmer_WailsBridgeGetShellCpStatus(*) {
+    if !Nmer_WailsBridgeHealthy()
+        return Map("ok", false, "code", "BRIDGE_DOWN", "visible", false, "mounted", false, "ready", false, "phase", 2)
+    url := Nmer_WailsBridgeShellCpStatusUrl()
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        if FuncExists("NiumaOllama_IsLoopbackUrl") && NiumaOllama_IsLoopbackUrl(url)
+            try whr.SetProxy(1)
+        whr.Open("GET", url, false)
+        whr.SetTimeouts(1500, 1500, 5000, 5000)
+        whr.Send()
+        status := Integer(whr.Status)
+        text := String(whr.ResponseText)
+        if (status != 200)
+            return Map("ok", false, "code", "SHELL_STATUS_FAIL", "status", status)
+        parsed := Nmer_WailsBridgeParseShellCpJson(text)
+        if !parsed.Get("ok", false)
+            return Map("ok", false, "code", "SHELL_STATUS_PARSE")
+        return Map(
+            "ok", true,
+            "code", "SHELL_STATUS_OK",
+            "visible", !!parsed.Get("visible", false),
+            "mounted", !!parsed.Get("mounted", false),
+            "ready", !!parsed.Get("ready", false),
+            "phase", Integer(parsed.Get("phase", 2)),
+            "entry", String(parsed.Get("entry", ""))
+        )
+    } catch as err {
+        return Map("ok", false, "code", "SHELL_STATUS_ERR", "detail", err.Message, "phase", 2)
+    }
+}
+
 Nmer_WailsBridgeIngestDemoJsonl(relPath := "apps\nmer-wails\poc\testdata\a2ui-adapter-demo.jsonl") {
     if !Nmer_WailsBridgeHealthy()
         return Map("ok", false, "code", "BRIDGE_DOWN")
@@ -758,6 +1006,10 @@ Nmer_WailsBridgePrepareForScriptReload(*) {
     catch {
     }
     try SetTimer(Nmer_HybridSignoffDrainBootstrap, 0)
+    catch {
+    }
+    if FuncExists("FloatingToolbarWails_StopInjectPump")
+        try FloatingToolbarWails_StopInjectPump()
     catch {
     }
     try Nmer_WailsBridgeLog("prepare_reload timers_off")
@@ -1041,7 +1293,11 @@ Nmer_AutoStartWailsBridge(*) {
         return
     }
     if Nmer_WailsBridge_ProcessExists() {
-        Nmer_WailsBridgeLog("autostart_skip process_exists")
+        Nmer_WailsBridgeLog("autostart_reconcile process_exists healthy=" . (Nmer_WailsBridgeHealthy() ? 1 : 0))
+        g_Nmer_WailsBridgeHealthCacheTick := 0
+        if !Nmer_WailsBridgeHealthy() && Nmer_WailsBridgeTcpOpen()
+            g_Nmer_WailsBridgeHealthCacheOk := true
+        Nmer_HybridManualProbeMaybeEnsure()
         return
     }
     Nmer_WailsBridgeLog("autostart_begin")
@@ -1132,15 +1388,28 @@ Nmer_HybridSignoffDrainBootstrap(*) {
         try Nmer_HybridSignoffDrainInjectQueue()
 }
 
+Nmer_HybridSignoffStartupEnsure(*) {
+    global g_Nmer_WailsBridgeShuttingDown, g_Nmer_WailsBridgeHealthCacheTick
+    g_Nmer_WailsBridgeShuttingDown := false
+    g_Nmer_WailsBridgeHealthCacheTick := 0
+    if FuncExists("Nmer_HybridSignoffBootstrapEnsure")
+        try Nmer_HybridSignoffBootstrapEnsure()
+        catch {
+        }
+}
+
 Nmer_HybridSignoffBootstrapEnsure(*) {
     if !Nmer_HybridManualProbeIsHybridHost()
         return
-    global g_Nmer_HybridSignoffDrainOn
+    global g_Nmer_HybridSignoffDrainOn, g_Nmer_WailsBridgeShuttingDown
+    g_Nmer_WailsBridgeShuttingDown := false
     if !g_Nmer_HybridSignoffDrainOn {
         g_Nmer_HybridSignoffDrainOn := true
         SetTimer(Nmer_HybridSignoffDrainBootstrap, 300)
         if FuncExists("Nmer_HybridManualProbeLog")
             Nmer_HybridManualProbeLog("signoff_drain_timer_on")
+    } else {
+        SetTimer(Nmer_HybridSignoffDrainBootstrap, 300)
     }
     if FuncExists("FloatingToolbarWails_EnsureInjectPump")
         try FloatingToolbarWails_EnsureInjectPump()
@@ -1706,3 +1975,16 @@ Nmer_HybridManualProbeUiCycle(id, root) {
     catch {
     }
 }
+
+Nmer_HybridSignoffScheduleEarlyBootstraps(*) {
+    if FuncExists("Nmer_HybridSignoffStartupEnsure")
+        SetTimer(Nmer_HybridSignoffStartupEnsure, -600)
+    if FuncExists("Nmer_HybridSignoffBootstrapEnsure") {
+        SetTimer(Nmer_HybridSignoffBootstrapEnsure, -3200)
+        SetTimer(Nmer_HybridSignoffBootstrapEnsure, -11000)
+    }
+    if FuncExists("Nmer_AutoStartWailsBridge")
+        SetTimer(Nmer_AutoStartWailsBridge, -1800)
+}
+
+SetTimer(Nmer_HybridSignoffScheduleEarlyBootstraps, -1)

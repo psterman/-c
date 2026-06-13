@@ -102,6 +102,12 @@
         return { ok: true, via: "postMessage_object" };
       }
     } catch (_2) {}
+    try {
+      if (root.parent && root.parent !== root) {
+        root.parent.postMessage(payloadStr, "*");
+        return { ok: true, via: "parent_postMessage" };
+      }
+    } catch (_3) {}
     return { ok: false, reason: "webview_unavailable" };
   }
 

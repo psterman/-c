@@ -33,6 +33,9 @@
 # Hybrid 终验一条龙（采集 + 浏览器看板）
 powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Run-HybridSignoff.ps1
 
+# Hybrid 终验 + CP PerfGate 自动化（Patch C D→E）
+powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Run-HybridCpSignoffPipeline.ps1
+
 # 仅采内存基线
 powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\capture-memory-baseline.ps1
 

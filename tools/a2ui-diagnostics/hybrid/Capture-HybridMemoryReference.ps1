@@ -34,6 +34,7 @@ $ref = [ordered]@{
     referenceFile         = "hybrid_signoff_reference_$Mode.json"
     repoRoot              = $RepoRoot
     totalPrivateMiB       = [double]$bl.processes.totalPrivateMiB
+    uiPrivateMiB          = Get-MemoryBaselineUiPrivate $bl
     emptyLoadPrivateMiB   = [double]$bl.processes.emptyLoadPrivateMiB
     hubPrivateMiB         = $null
     wailsPrivateMiB       = $null
@@ -81,4 +82,4 @@ if ($flagsSnap -and $flagsSnap.wailsBridge) {
 }
 
 $ref | ConvertTo-Json -Depth 8 | Set-Content -Path $OutPath -Encoding UTF8
-Write-Host "hybrid memory reference ($Mode) -> $OutPath totalPrivateMiB=$($ref.totalPrivateMiB) hub=$($ref.hubPrivateMiB) scanPhase=$($scSnap.searchCore.scanPhase)"
+Write-Host "hybrid memory reference ($Mode) -> $OutPath totalPrivateMiB=$($ref.totalPrivateMiB) uiPrivateMiB=$($ref.uiPrivateMiB) hub=$($ref.hubPrivateMiB) scanPhase=$($scSnap.searchCore.scanPhase)"

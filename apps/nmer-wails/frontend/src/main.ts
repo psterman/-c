@@ -2,10 +2,13 @@ import './style.css';
 import './poc/poc.css';
 import './a2ui-spike/spike-element';
 import './ftb-shell/ftb-shell-host';
+import './cp-shell/cp-shell-host';
 import { GetAppInfo, GetWsHubStatus, GetWsUrl, StartWsFakePump, StopWsFakePump } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import type { FtbShellEventDetail } from './ftb-shell/ftb-shell-host';
 import type { NmerFtbShellHostElement } from './ftb-shell/ftb-shell-host';
+import type { CpShellEventDetail } from './cp-shell/cp-shell-host';
+import type { NmerCpShellHostElement } from './cp-shell/cp-shell-host';
 import { reduceAgentEvent } from './poc/agentReducer';
 import { initialReducerState } from './poc/types';
 import { fakeCompareProvider } from './poc/fakeProvider';
@@ -20,6 +23,19 @@ let poc2State: ReducerState = initialReducerState();
 let wsClient: AgentWsClient | null = null;
 let poc1Running = false;
 let ftbShellHost: NmerFtbShellHostElement | null = null;
+let cpShellHost: NmerCpShellHostElement | null = null;
+
+function ensureCpShellHost(): NmerCpShellHostElement {
+  if (!cpShellHost) {
+    cpShellHost = document.createElement('nmer-cp-shell-host') as NmerCpShellHostElement;
+    document.body.appendChild(cpShellHost);
+  }
+  return cpShellHost;
+}
+
+function applyCpShellEvent(detail: CpShellEventDetail) {
+  ensureCpShellHost().applyShellEvent(detail || {});
+}
 
 function ensureFtbShellHost(): NmerFtbShellHostElement {
   if (!ftbShellHost) {
@@ -199,6 +215,11 @@ async function boot() {
     if (meta) meta.textContent = 'browser preview (Wails bindings unavailable)';
   }
 
+  ensureCpShellHost();
+  EventsOn('shell:cp', (detail: CpShellEventDetail) => {
+    applyCpShellEvent(detail || {});
+  });
+
   if (!bridgeOnly) {
     EventsOn('ws:agent_event', (data: AgentEvent) => {
       if (data && data.kind) applyPoc2Event(data, 'wails');
@@ -239,6 +260,29 @@ async function boot() {
     }) as EventListener);
 
     connectWs();
+  }
+
+  try {
+    const hub = await GetWsHubStatus();
+    const addr = hub?.addr || '127.0.0.1:18791';
+    const cpRes = await fetch(`http://${addr}/shell/cp/status`);
+    if (cpRes.ok) {
+      const cpBody = (await cpRes.json()) as { status?: CpShellEventDetail & { htmlUrl?: string } };
+      const cp = cpBody?.status;
+      if (cp?.visible) {
+        applyCpShellEvent({
+          action: 'show',
+          visible: true,
+          mounted: cp.mounted,
+          ready: cp.ready,
+          entry: cp.entry,
+          htmlUrl: cp.htmlUrl,
+          phase: cp.phase,
+        });
+      }
+    }
+  } catch {
+    // hub may not be up in browser preview
   }
 }
 
