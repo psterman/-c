@@ -154,9 +154,12 @@ cd ..\..\tools\a2ui-diagnostics\command-palette
 
 | 步骤 | 脚本 |
 |------|------|
-| 手动 6 项 | `Run-CpManualReleaseChecklist.ps1` |
+| 手动 6 项 | `Run-CpManualReleaseChecklist.ps1`（`-SignoffAll` 或 `-RecordId <id>`） |
+| 仅发布聚合 | `Run-HybridCpSignoffPipeline.ps1 -SkipHybrid -SkipPerfGate` |
 | Hybrid + Perf + 聚合 | `Run-HybridCpSignoffPipeline.ps1` |
+
+示例 schema：[`cp_release_gate.example.json`](cp_release_gate.example.json)
 
 **`cpReleasePass` 条件**：`manualReleasePass` + `hybridPass`（warm-session）+ `perfGateOfficial`（`manual_equivalent`）+ `defaultHost=ahk` + legacy rollback。`wailsArchitecturePass` 只记录。
 
-详见 [`docs/surface-manager-execution-plan.md`](../../../docs/surface-manager-execution-plan.md) §十五。
+详见 [`docs/cp-release-signoff.md`](../../../docs/cp-release-signoff.md)、[`docs/surface-manager-execution-plan.md`](../../../docs/surface-manager-execution-plan.md) §十五。

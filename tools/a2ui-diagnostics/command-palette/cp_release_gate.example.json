@@ -1,0 +1,12 @@
+{
+  "cpReleasePass": true,
+  "manualReleasePass": true,
+  "hybridPass": true,
+  "perfGatePass": true,
+  "perfGateOfficial": true,
+  "defaultHost": "ahk",
+  "wailsArchitecturePass": true,
+  "wailsDefaultEligible": false,
+  "wailsDefaultBlockedReason": "raycast_ux_gate_not_passed",
+  "_comment": "Example P0 release aggregation from hybrid_cp_signoff_pipeline.json release block. wailsArchitecturePass is informational only."
+}
